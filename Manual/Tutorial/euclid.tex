@@ -312,63 +312,54 @@ OK..
  \verb+PROVE_TAC [divides, MULT_CLAUSES]+
 \end{tabular}
 
-\item
-[\small{({\it DIVIDES\_ZERO\/})}]
+\item[\small{({\it DIVIDES\_ZERO\/})}]
 \begin{tabular}[t]{l}
 \verb+!x. 0 divides x = (x = 0)+ \\ \hline
  \verb+PROVE_TAC [divides, MULT_CLAUSES]+
 \end{tabular}
 
-\item
-[\small{({\it DIVIDES\_ONE\/})}]
+\item[\small{({\it DIVIDES\_ONE\/})}]
 \begin{tabular}[t]{l}
 \verb+!x. x divides 1 = (x = 1)+ \\ \hline
  \verb+PROVE_TAC [divides, MULT_CLAUSES, MULT_EQ_1]+
 \end{tabular}
 
-\item
-[\small{({\it DIVIDES\_REFL\/})}]
+\item[\small{({\it DIVIDES\_REFL\/})}]
 \begin{tabular}[t]{l}
 \verb+!x. x divides x+ \\ \hline
  \verb+PROVE_TAC [divides, MULT_CLAUSES]+ \\
 \end{tabular}
 
-\item
-[\small{({\it DIVIDES\_TRANS\/})}]
+\item[\small{({\it DIVIDES\_TRANS\/})}]
 \begin{tabular}[t]{l}
 \verb+!a b c. a divides b /\ b divides c ==> a divides c+ \\ \hline
  \verb+PROVE_TAC [divides, MULT_ASSOC]+ \\
 \end{tabular}
-\item
-[\small{({\it DIVIDES\_ADD\/})}]
+\item[\small{({\it DIVIDES\_ADD\/})}]
 \begin{tabular}[t]{l}
 \verb|!d a b. d divides a /\ d divides b ==> d divides (a+b)| \\ \hline
  \verb|PROVE_TAC [divides,LEFT_ADD_DISTRIB]|
 \end{tabular}
 
-\item
-[\small{({\it DIVIDES\_SUB\/})}]
+\item[\small{({\it DIVIDES\_SUB\/})}]
 \begin{tabular}[t]{l}
 \verb+!d a b. d divides a /\ d divides b ==> d divides (a-b)+ \\ \hline
  \verb+PROVE_TAC [divides, LEFT_SUB_DISTRIB]+ \\
 \end{tabular}
 
-\item
-[\small{({\it DIVIDES\_ADDL\/})}]
+\item[\small{({\it DIVIDES\_ADDL\/})}]
 \begin{tabular}[t]{l}
 \verb|!d a b. d divides a /\ d divides (a+b) ==> d divides b| \\ \hline
  \verb+PROVE_TAC [ADD_SUB, ADD_SYM, DIVIDES_SUB]+ \\
 \end{tabular}
 
-\item
-[\small{({\it DIVIDES\_LMUL\/})}]
+\item[\small{({\it DIVIDES\_LMUL\/})}]
 \begin{tabular}[t]{l}
 \verb+!d a x. d divides a ==> d divides (x * a)+ \\ \hline
  \verb+PROVE_TAC [divides, MULT_ASSOC, MULT_SYM]+ \\
 \end{tabular}
 
-\item
-[\small{({\it DIVIDES\_RMUL\/})}]
+\item[\small{({\it DIVIDES\_RMUL\/})}]
 \begin{tabular}[t]{l}
 \verb+!d a x. d divides a ==> d divides (a * x)+ \\ \hline
  \verb+PROVE_TAC [MULT_SYM, DIVIDES_LMUL]+ \\
@@ -1030,15 +1021,13 @@ primes are positive. These are all quite simple to prove.
 \verb+ARW_TAC [prime,DIVIDES_0]+ \\
 \end{tabular}
 
-\item
-[\small{({\it NOT\_PRIME\_1\/})}]
+\item [\small{({\it NOT\_PRIME\_1\/})}]
 \begin{tabular}[t]{l}
 \verb+~prime 1+ \\ \hline
 \verb+ARW_TAC [prime]+ \\
 \end{tabular}
 
-\item
-[\small{({\it PRIME\_2\/})}]
+\item [\small{({\it PRIME\_2\/})}]
 \begin{tabular}[t]{l}
 \verb+prime 2+ \\ \hline
 \verb+ARW_TAC [prime]+ \\
@@ -1047,8 +1036,7 @@ primes are positive. These are all quite simple to prove.
 \verb+                 DECIDE `x <= 2 = (x=0) \/ (x=1) \/ (x=2)`]+ \\
 \end{tabular}
 
-\item
-[\small{({\it PRIME\_POS\/})}]
+\item [\small{({\it PRIME\_POS\/})}]
 \begin{tabular}[t]{l}
 \verb+!p. prime p ==> 0<p+ \\ \hline
 \verb+Cases THEN ARW_TAC[NOT_PRIME_0]+ \\
