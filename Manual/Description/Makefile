@@ -22,7 +22,8 @@ description.dvi: description.tex $(CHAPTERS) ../LaTeX/commands.tex
 	latex description.tex
 
 description.ps: description.dvi
-	dvips -Ppdf -G0 -f description.dvi > description.ps
+	dvips -Ppdf -G0 -f description.dvi > description.ps.tmp
+	mv description.ps.tmp $@
 
 description.pdf: description.ps
 	ps2pdf description.ps
