@@ -1,2 +1,2 @@
 simpledump lts_to_latex hollex.ml *.cm[iox] .depend
-Net_hostLTSScript.sml
+Net_hostLTSScript.tex

@@ -213,8 +213,71 @@ let print_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)) =
                |  None   -> "");
   print_newline()
 
+
+let texify_list =
+  [('_', "\\_")
+  ;('~', "\\neg ")
+  ;('$', "\\$")
+  ;('%', "\\%")
+  ;('&', "\\&")
+  ;('\\', "\\backslash ")
+  ;('^', "\\hat{\\phantom{x}}")
+  ;('{', "\\{")
+  ;('}', "\\}")
+  ]
+
+let texify s =
+  let go c =
+    try List.assoc c texify_list
+    with Not_found -> String.make 1 c
+  in
+  let mapString f s =
+    let rec mapS f i n s =
+      if i>=n then [] else f (String.get s i) :: mapS f (i+1) n s
+    in
+    mapS f 0 (String.length s) s
+  in
+  String.concat "" (mapString go s)
+
+let mtok t =
+  match t with
+    Ident(s)   -> texify s
+  | Indent(n)  -> ""
+  | White(s)   -> s
+  | Comment(s) -> "\\text{\\small(*"^s^"*)}"
+  | Sep(s)     -> texify s
+
+let rec munges ls = (* munge a list of lines *)
+  match ls with
+    (l::[]) -> munge l
+  | (l::ls) -> munge l^"\\\\\\relax\n"^munges ls
+  | []      -> ""
+
+and munge xs = (* munge a line of tokens *)
+  match xs with
+    (x::xs) -> mtok x^munge xs
+  | []      -> ""
+
+and munget s = (* munge a string *)
+  s
+
+let latex_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)) =
+  print_string ("\\rrule"^if side == [] then "n" else "c"
+                         ^match comm with Some _ -> "c" | None -> "n");
+  print_string ("{"^texify n^"}{"^texify cat^"}");
+  print_string ("{"^(match desc with Some d -> texify d | None -> "")^"}\n");
+  print_string ("{"^munges lhs^"}\n");
+  print_string ("{"^munge lab^"}\n");
+  print_string ("{"^munges rhs^"}\n");
+  print_string ("{"^munges side^"}\n");
+  print_string "{";
+  (match comm with
+     Some c -> print_string (munget c)
+   | None   -> ());
+  print_string "}\n\n"
+
 let latex_render () =
-  ignore (parse_rules_and_process print_rule tokstream)
+  ignore (parse_rules_and_process latex_rule tokstream)
 
 let _ =
   latex_render ()

@@ -6,7 +6,7 @@ OCAMLDEP=$(OCAMLPATH)/ocamldep
 
 # main target:
 
-all: simpledump lts_to_latex
+all: simpledump lts_to_latex hostlts.dvi
 
 # program targets:
 
@@ -20,10 +20,18 @@ LTS_TO_LATEX_OBJS=hollex.cmo lts_to_latex.cmo
 lts_to_latex : $(LTS_TO_LATEX_OBJS)
 	$(OCAMLC) $(LTS_TO_LATEX_OBJS) -o lts_to_latex
 
+# document targets:
+
+Net_hostLTSScript.tex : ../HOL-model/Net_hostLTSScript.sml lts_to_latex
+	./lts_to_latex < $< > $@
+
+hostlts.dvi : hostlts.tex Net_hostLTSScript.tex ltsmunge.sty
+	latex hostlts.tex
+
 # other targets:
 
 clean:
-	rm -f simpledump hollex.ml *.cm[iox] *~ '#*#' .depend
+	rm -f simpledump lts_to_latex hollex.ml *.cm[iox] *~ '#*#' .depend Net_hostLTSScript.tex
 
 depend:
 	$(OCAMLDEP) *.mli *.mll *.ml > .depend
