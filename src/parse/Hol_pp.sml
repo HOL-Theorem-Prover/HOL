@@ -69,19 +69,4 @@ in
     end_block()
  end;
 
-(*
-fun print_theory_to_outstream theory outstream =
-  let val consumer = {consumer = Portable.outputc outstream,
-                      flush = TextIO.flushOut,
-                      linewidth = !Globals.linewidth}
-      val _ = pp_theory (Portable.mk_ppstream consumer) theory
-      val _ = TextIO.flush_out outstream
-  in outstream end
-
-fun print_theory_to_file theory file =
-    let val outfile = Portable.open_out file
-    in Portable.close_out (print_theory_to_outstream theory outfile)
-    end
-
-*)
 end

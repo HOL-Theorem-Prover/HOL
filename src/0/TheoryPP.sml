@@ -107,10 +107,9 @@ fun pp_sig pp_thm info_record ppstrm = let
         add_newline(); add_newline())
 
   fun pr_thm class (s,th) =
-    (begin_block CONSISTENT 0;
+    (begin_block CONSISTENT 3;
      add_string (String.concat ["[", s, "]"]);
-     add_newline();
-     add_string class;
+     add_string ("  "^class);
      add_newline(); add_newline(); 
      if null (Thm.hyp th) andalso Tag.isEmpty (Thm.tag th)
        then pp_thm th
@@ -120,8 +119,7 @@ fun pp_sig pp_thm info_record ppstrm = let
   fun pr_thms _ [] = ()
     | pr_thms heading plist =
        ( begin_block CONSISTENT 0;
-         pr_list (pr_thm heading)
-                 (fn () => ())
+         pr_list (pr_thm heading) (K ())
                  (fn () => (add_newline(); add_newline()))
                  plist;
          end_block();

@@ -3,9 +3,8 @@ struct
 
 open HolKernel boolSyntax boolTheory Abbrev clauses compute_rules equations;
 
-(* reexporting types from clauses *)
+(* re-exporting types from clauses *)
 
-type rewrite = rewrite;
 type compset = comp_rws;
 
 val new_compset = from_list;
@@ -145,6 +144,11 @@ fun extern_of_conv rws conv tm =
 fun add_conv (cst,arity,conv) rws =
   add_extern (cst,arity,extern_of_conv rws conv) rws;
 
+fun set_skip compset c opt = 
+ let val {Name,Thy,...} = dest_thy_const c
+ in clauses.set_skip compset (Name,Thy) opt
+ end
+ handle HOL_ERR _ => raise ERR "set_skip" "";
 
 (*---------------------------------------------------------------------------
        Support for a global compset.

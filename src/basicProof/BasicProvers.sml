@@ -162,19 +162,17 @@ fun breakable tm =
 
  ---------------------------------------------------------------------------*)
 
-(* Just hash the name, but could also toss in the theory name. *)
+fun tyinfol() = TypeBasePure.listItems (TypeBase.theTypeBase());
 
 fun hash_const c = Polyhash.hash (#Name(dest_thy_const c));
 
-fun mkCSET CSET tyl = 
- let fun inCSET tm = 
-       case Polyhash.peek CSET tm
-        of NONE => false
-         | SOME _ => true
+fun mkCSET () = 
+ let val CSET = PolyHash.mkTable (hash_const, uncurry same_const)
+                                 (31, ERR "CSET" "not found")
+     val inCSET = Option.isSome o Polyhash.peek CSET
      fun addCSET c = Polyhash.insert CSET (c,c)
-     fun add_constr tyinfo = 
-         List.app addCSET (TypeBasePure.constructors_of tyinfo)
-     val _ = List.app add_constr tyl
+     val _ = List.app 
+               (List.app addCSET o TypeBasePure.constructors_of) (tyinfol())
      fun constructed tm =
       let val (lhs,rhs) = dest_eq tm
       in aconv lhs rhs orelse
@@ -190,10 +188,7 @@ fun mkCSET CSET tyl =
  end;
 
 fun PRIM_STP_TAC ss finisher =
- let val has_constr_eqn = 
-       mkCSET (Polyhash.mkTable (hash_const, uncurry same_const)
-                                (31, ERR "CSET" "not found"))
-              (TypeBasePure.listItems (TypeBase.theTypeBase()))
+ let val has_constr_eqn = mkCSET ()
      val ASM_SIMP = simpLib.ASM_SIMP_TAC ss []
   in
     REPEAT (GEN_TAC ORELSE CONJ_TAC)
@@ -236,10 +231,7 @@ fun LIFT_SPLIT_SIMP ss simp tm =
 fun SPLIT_SIMP simp = TRY IF_CASES_TAC THEN simp ;
 
 fun PRIM_NORM_TAC ss =
- let val has_constr_eqn = 
-       mkCSET (Polyhash.mkTable (hash_const, uncurry same_const)
-                                (31, ERR "CSET" "not found"))
-              (TypeBasePure.listItems (TypeBase.theTypeBase()))
+ let val has_constr_eqn = mkCSET()
      val ASM_SIMP = simpLib.ASM_SIMP_TAC ss []
   in
     REPEAT (GEN_TAC ORELSE CONJ_TAC)
@@ -263,19 +255,13 @@ fun PRIM_NORM_TAC ss =
     PRIM_STP tac instead.
  ---------------------------------------------------------------------------*)
 
-fun STP_TAC ss finisher =
-  let val tyl = TypeBasePure.listItems (TypeBase.theTypeBase())
-      val ss' = rev_itlist add_simpls tyl ss
-  in
-    PRIM_STP_TAC ss' finisher
-  end;
+fun STP_TAC ss finisher 
+  = PRIM_STP_TAC (rev_itlist add_simpls (tyinfol()) ss) finisher
 
 fun RW_TAC ss thl = STP_TAC (ss && thl) NO_TAC
 
-fun NORM_TAC ss thl = 
- PRIM_NORM_TAC (rev_itlist add_simpls 
-                   (TypeBasePure.listItems (TypeBase.theTypeBase()))
-               (ss && thl))
+fun NORM_TAC ss thl 
+  = PRIM_NORM_TAC (rev_itlist add_simpls (tyinfol()) (ss && thl))
 
 val bool_ss = boolSimps.bool_ss; 
 
@@ -292,17 +278,14 @@ val srw_ss_initialised = ref false
 val pending_updates = ref ([]: simpLib.ssdata list)
 
 fun initialise_srw_ss() =
-    if !srw_ss_initialised then !srw_ss
-    else let
-        val tyl = TypeBasePure.listItems (TypeBase.theTypeBase())
-      in
-        HOL_MESG "Initialising SRW simpset - this will happen just once";
-        srw_ss := rev_itlist add_simpls tyl (!srw_ss);
-        srw_ss :=
-          foldl (fn (ssd,ss) => ss ++ ssd) (!srw_ss) (!pending_updates);
-        srw_ss_initialised := true;
-        !srw_ss
-      end
+  if !srw_ss_initialised then !srw_ss
+  else let in
+     HOL_MESG "Initialising SRW simpset - this will happen just once"
+   ; srw_ss := rev_itlist add_simpls (tyinfol()) (!srw_ss)
+   ; srw_ss := foldl (fn (ssd,ss) => ss ++ ssd) (!srw_ss) (!pending_updates)
+   ; srw_ss_initialised := true
+   ; !srw_ss
+  end
 
 fun augment_srw_ss ssdl =
     if !srw_ss_initialised then
@@ -310,8 +293,8 @@ fun augment_srw_ss ssdl =
     else
       pending_updates := !pending_updates @ ssdl
 
-fun update_fn tyi =
-    augment_srw_ss [simpLib.rewrites (TypeBasePure.simpls_of tyi)]
+fun update_fn tyi 
+  = augment_srw_ss [simpLib.rewrites (TypeBasePure.simpls_of tyi)]
 
 val _ = TypeBase.register_update_fn update_fn
 

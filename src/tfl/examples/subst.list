@@ -55,25 +55,11 @@ val FV =
  /\  (FV (Abs v M) A  = if MEM v A then FV M A else DEL1 v (FV M A))`;
 
 (*---------------------------------------------------------------------------
-       Concatenate two strings.
- ---------------------------------------------------------------------------*)
-
-val STRCAT =
-   Define `STRCAT s1 s2 = IMPLODE (APPEND (EXPLODE s1) (EXPLODE s2))`;
-
-(*---------------------------------------------------------------------------
        Stick a prime on the end of a string.
  ---------------------------------------------------------------------------*)
 
 val PRIME = 
    Define `PRIME s = STRCAT s "'"`;
-
-(*---------------------------------------------------------------------------
-       Is one string a prefix of another?
- ---------------------------------------------------------------------------*)
-
-val isPrefix =
-   Define `isPrefix s1 s2 = ?s3. s2 = STRCAT s1 s3`;
 
 (*---------------------------------------------------------------------------
      Rename a string so that it isn't a member of a (fixed) list.
@@ -232,20 +218,6 @@ val GSPEC_DEF = Q.prove
  NTAC 2 (CONV_TAC FUN_EQ_CONV THEN GEN_TAC) THEN
  PROVE_TAC [GSPECIFICATION,SPECIFICATION]);
 
-val STRCAT_ASSOC = Q.prove
-(`!s1 s2 s3. STRCAT s1 (STRCAT s2 s3) = STRCAT (STRCAT s1 s2) s3`,
- RW_TAC std_ss [STRCAT,IMPLODE_11,EXPLODE_IMPLODE,APPEND_ASSOC]);
-
-val STRCAT_11 = Q.prove
-(`!s1 s2 s3. (STRCAT s1 s2 = STRCAT s1 s3) = (s2=s3)`,
- RW_TAC std_ss [STRCAT,IMPLODE_11,EXPLODE_11,APPEND_11]);
-
-val STRCAT_ACYCLIC = Q.prove
-(`!s1 s2. (s1 = STRCAT s1 s2) = (s2 = "")`,
- RW_TAC std_ss [] THEN 
- `!x. x = STRCAT x ""` by RW_TAC list_ss [STRCAT,EXPLODE_EQNS,IMPLODE_EXPLODE]
- THEN PROVE_TAC [STRCAT_11]);
-
 
 (*---------------------------------------------------------------------------
    Termination of AWAY. The function terminates because the set of 
@@ -259,7 +231,7 @@ val STRCAT_ACYCLIC = Q.prove
 
 val (AWAY,AWAY_IND) = Defn.tprove
 (AWAY_defn,
- WF_REL_TAC `measure \x. CARD (combin$C MEM L INTER isPrefix x)`
+ WF_REL_TAC `measure \x. CARD ((combin$C MEM L) INTER (isPREFIX x))`
    THEN RW_TAC std_ss [SPECIFICATION,combinTheory.C_DEF]
    THEN MATCH_MP_TAC (Ho_Rewrite.REWRITE_RULE 
           [GSYM RIGHT_FORALL_IMP_THM,AND_IMP_INTRO] CARD_PSUBSET) 
@@ -272,11 +244,11 @@ val (AWAY,AWAY_IND) = Defn.tprove
          THEN RW_TAC std_ss [FINITE_INSERT]],
     RW_TAC std_ss [PSUBSET_DEF,SUBSET_DEF,INTER_DEF,GSPEC_DEF,SPECIFICATION]
     THENL [POP_ASSUM MP_TAC THEN REPEAT (WEAKEN_TAC (K true))
-            THEN RW_TAC std_ss [isPrefix,PRIME]
+            THEN RW_TAC std_ss [isPREFIX,PRIME]
             THEN Q.EXISTS_TAC `STRCAT "'" s3` 
             THEN RW_TAC std_ss [STRCAT_ASSOC],
       CONV_TAC (DEPTH_CONV FUN_EQ_CONV)
-        THEN RW_TAC std_ss [isPrefix]
+        THEN RW_TAC std_ss [isPREFIX]
         THEN Q.EXISTS_TAC `x`
         THEN RW_TAC std_ss [PRIME,GSYM STRCAT_ASSOC,STRCAT_11,STRCAT_ACYCLIC]
         THEN RW_TAC list_ss [STRCAT,EXPLODE_EQNS,IMPLODE_EQNS]]]);

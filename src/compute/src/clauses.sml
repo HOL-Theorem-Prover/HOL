@@ -162,24 +162,23 @@ datatype comp_rws
 fun empty_rws () = RWS (Polyhash.mkPolyTable(29,CL_ERR "empty_rws" ""));
 
 fun assoc_clause (RWS rws) cst =
-  case Polyhash.peek rws cst of
-    SOME rl => rl
-  | NONE =>
-      let val mt = ref (EndDb, NONE) in
-      Polyhash.insert rws (cst,mt);
-      mt
-      end
+  case Polyhash.peek rws cst 
+   of SOME rl => rl
+    | NONE => let val mt = ref (EndDb, NONE) 
+              in Polyhash.insert rws (cst,mt)
+               ; mt
+              end
 ;
 
 fun add_in_db_upd rws (name,arity,hcst) act =
-  let val (rl as ref(db,sk)) = assoc_clause rws name in
-  rl := (add_in_db (arity,hcst,act,db), sk)
+  let val (rl as ref(db,sk)) = assoc_clause rws name 
+  in rl := (add_in_db (arity,hcst,act,db), sk)
   end
 ;
 
-fun set_skip (rws as RWS htbl) (p as (name,thy)) sk =
-  let val (rl as ref(db,_)) = assoc_clause rws p in
-  rl := (db,sk)
+fun set_skip (rws as RWS htbl) p sk =
+  let val (rl as ref(db,_)) = assoc_clause rws p 
+  in rl := (db,sk)
   end;
 
 
