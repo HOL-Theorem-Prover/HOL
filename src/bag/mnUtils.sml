@@ -181,12 +181,10 @@ val FULL_SIMP_TAC = simpLib.FULL_SIMP_TAC
 val SIMP_RULE = simpLib.SIMP_RULE
 val ARITH_CONV = arithLib.ARITH_CONV
 (* val hol_ss = HOLSimps.hol_ss *)
-local
-val base_ss =
-simpLib.++
-  (simpLib.++
-     (simpLib.++(simpLib.++(boolSimps.bool_ss,boolSimps.NOT_ss),
-      pairSimps.PAIR_ss), UnwindSimps.UNWIND_ss), combinSimps.COMBIN_ss);
+
+local val base_ss =
+        simpLib.++(simpLib.++(boolSimps.bool_ss, pairSimps.PAIR_ss),
+                   combinSimps.COMBIN_ss)
 in
 val mn_ss = simpLib.++(base_ss, arithSimps.ARITH_ss)
 end;

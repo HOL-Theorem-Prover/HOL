@@ -1,10 +1,12 @@
-open HolKernel basicHol90Lib mn_tactics
-open Parse
+open HolKernel Parse basicHol90Lib mnUtils;
+
 infix THEN ORELSE THENL THENC ORELSEC >- ++ |->;
 
 val _ = new_theory "bag";
-(* fun mload s = (print ("Loading "^s^"\n"); load s);
-   app mload ["pred_setTheory", "mn_tactics", "QLib"] *)
+(* 
+   fun mload s = (print ("Loading "^s^"\n"); load s);
+   app mload ["pred_setTheory", "mnUtils", "QLib"]
+*)
 
 val hol_ss = mn_ss;
 
