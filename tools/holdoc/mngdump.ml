@@ -251,11 +251,11 @@ let do_subscript s =
   else
     (texify_math s,"")
 
-let rec do_var v s =
+let rec do_var0 depth v s =
   (* return fully texified variable or number, or raise Not_found if it's not a var *)
   if s = "" then
     raise Not_found
-  else if List.mem s v || is_field s then  (* field names often reused as var names *)
+  else if List.mem s v || (depth < 1 && is_field s) then  (* field names often reused as var names *)
     "\\tsvar{"^texify_math s^"}"
   else if Str.string_match (Str.regexp "[0-9]+") s 0 then  (* digits *)
     s
@@ -279,11 +279,12 @@ let rec do_var v s =
                  ^(if s2 <> "" then s2 else "")           (* primes *)
                  ^(if s1 <> "" then "_{"^s1^"}" else "")  (* digits *) in
      if s3 = "_" then
-       "{"^sbase^"}_{"^do_var v s4^"}"  (* recurse on subscript; avoid TeX multiple-subscript error *)
+       "{"^sbase^"}_{"^do_var0 (depth+1) v s4^"}"  (* recurse on subscript; avoid TeX multiple-subscript error *)
      else
        sbase)  (* no recursion *)
   else
     raise Not_found (* not a variable *)
+let do_var v s = do_var0 0 v s
 
 
 (* -------------------------------------------------------------------- *)
