@@ -1,0 +1,72 @@
+Taupo-5 is similar to Taupo-4.  Apart from the features and bug-fixes
+described below, it also compiles under both MoscowML 2.00 and
+MoscowML 1.44.
+
+----------------------------------------------------------------------
+
+Bugs fixed:
+-----------
+  * The term grammar had the wrong precedences between the
+       let v = e in e
+    and
+       e => e | e
+    syntax.  This could be seen in the term
+       let v = e1 in e2 => e3 | e4
+    which parsed as
+       (let v = e1 in e2) => e3 | e4
+    Now let is as loose as possible, so that the above term will bind
+    with the let having as much scope as possible.  This was a bug
+    because it was incompatible with the earlier behaviour of the
+    parser (in the Athabasca and hol90 implementations).  All the
+    above notwithstanding, we recommend using
+        if e1 then e2 else e3
+    instead of the "arrow-bar" syntax for conditional expressions.
+    Thanks to Steve Brackin for the report of this bug.
+  * The datatype parser invoked by define_type and Hol_datatype was
+    refusing constructor names with apostrophes (primes) in them.
+    Thanks to Steve Brackin for the report of this bug.
+  * The record type package was failing to prove the "record
+    theorems", causing Hol_datatype to raise an exception, if the name
+    of the record type began with an "x" or a "z", or if the name of
+    the type was "r1" or "r2".  Thanks to Steve Brackin for the report
+    of these bugs.
+  * Fixed a bug in Hol_datatype where some forms of nested recursive
+    definitions were failing.  Thanks to Kim Sunesen for the bug
+    report.
+
+New features:
+-------------
+  * Addition of Q.SPEC_THEN (and others in the same line, such as
+    Q.ISPECL_THEN), allows better use of "parsing in goal context"
+    when specialising goals.  Where before you might have had to
+    write
+       SUBST1_TAC (Q.SPEC `x:num` thm)
+    you can now write
+       Q.SPEC_THEN `x` SUBST1_TAC thm
+    and the `x` will be parsed in the context of the current goal,
+    something not possible in the first example because the call to
+    Q.SPEC happened completely independently of the goal.
+  * The term pretty-printer can now be set directly by the user, with
+    the function Parse.set_term_printer.  This can be useful if you
+    have embedded a rich sub-language into the HOL logic.  The user
+    can also access the default pretty-printer (and use it in their
+    own pretty-printers) with Parse.get_term_printer.  Thanks to Peter
+    Homeier for the implementation of this feature.
+
+New theories:
+-------------
+
+New tools:
+----------
+  * bagLib, a library for doing things with the theory of bags (aka
+    multisets).  bagLib includes a set of useful syntax manipulation
+    functions (things like mk_insert, strip_union, is_diff), and some
+    simpset fragments:
+      - BAG_ss contains a useful set of trivial identities,
+      - BAG_AC_ss AC-normalises BAG_UNION terms, so that a term which
+        is a basically just a series of BAG_UNIONs will take on just
+        one canonical form, with the sub-terms sorted into an
+        unspecified order
+      - SBAG_SOLVE_ss uses the arithmetic decision procedure to prove
+        simple SUB_BAG and bag equality goals.
+
