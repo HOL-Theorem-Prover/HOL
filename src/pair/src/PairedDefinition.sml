@@ -2,6 +2,7 @@ structure PairedDefinition =
 struct
  
 local open HolKernel boolLib PairedLambda pairSyntax
+
 infix ORELSEC;
 
 val ERR = mk_HOL_ERR "PairedDefinition";

@@ -47,7 +47,7 @@ fun mk_pair(fst,snd) =
  let val ty1 = type_of fst
      and ty2 = type_of snd
  in list_mk_comb(inst [alpha |-> ty1, beta |-> ty2] comma_tm, [fst,snd])
- end;
+ end 
 
 val list_mk_pair = end_itlist (curry mk_pair);
 
