@@ -1,5 +1,7 @@
-structure mnUtils =
-struct
+structure mnUtils = struct
+
+infix ##
+
 local
   open HolKernel boolLib Parse
   val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
@@ -193,13 +195,6 @@ val mn_ss = simpLib.++(base_ss, numSimps.ARITH_ss)
 end;
 
 
-fun strip_quant_CONV c term = let
-   fun strip_quant_conval term =
-      if (is_quant term) then
-         RAND_CONV o ABS_CONV o
-            strip_quant_conval (snd (dest_quant term))
-      else I in
-   (strip_quant_conval term) c term end;
 val dest_quant_CONV = RAND_CONV o ABS_CONV;
 fun strip_imp_CONV c term =
   let fun strip_imp_conval term =
@@ -371,7 +366,7 @@ fun myMATCH_MP impthm thm =
         disj_mps (CONJUNCT2 th) (disj_mps (CONJUNCT1 th) acc)
       else if ((con_imp >- fst >- is_disj) th) then
         disj_mps (CONV_RULE (
-          strip_quant_CONV (REWR_CONV DISJ_IMP_THM) THENC
+          STRIP_QUANT_CONV (REWR_CONV DISJ_IMP_THM) THENC
           REPEATC (LAST_FORALL_CONV FORALL_AND_CONV)) th) acc
       else
         th::acc
@@ -582,19 +577,46 @@ local
       if (nres = 0) then
         c thm
       else if null thml orelse (is_var (hd thml)) then
-        if cex_seen andalso is_forall (concl thm) then
-          c thm
-        else if con_is_imp thm then
-          if (is_exists (con_hyp thm)) then
-            res_search' nres cex_seen des thml sl c
-              (CONV_RULE (strip_quant_CONV LEFT_IMP_EXISTS_CONV) thm)
-          else if (is_conj (con_hyp thm)) then
-            res_search' nres cex_seen des thml sl c
-              (CONV_RULE (strip_quant_CONV
-                             (REWR_CONV (GSYM IMP2_THM))) thm)
-          else
-            f_a (myMATCH_MP thm >-
-                 res_search' (nres - 1) cex_seen des newthml sl c)
+        if con_is_imp thm then let
+            val stdfinish0 =
+                f_a (MATCH_MP thm >-
+                     res_search' (nres - 1) cex_seen des newthml sl c)
+            val stdfinish = if cex_seen then stdfinish0 ORELSE c thm
+                            else stdfinish0
+          in
+            if is_exists (con_hyp thm) then
+              res_search' nres cex_seen des thml sl c
+                          (CONV_RULE (STRIP_QUANT_CONV LEFT_IMP_EXISTS_CONV)
+                                     thm)
+            else if is_conj (con_hyp thm) then
+              res_search' nres cex_seen des thml sl c
+                          (CONV_RULE (STRIP_QUANT_CONV
+                                        (REWR_CONV (GSYM IMP2_THM))) thm)
+            else if is_disj (con_hyp thm) then let
+                val (fa_vars, _) = strip_forall (concl thm)
+                val (th1, th2) =
+                    (GENL fa_vars ## GENL fa_vars)
+                      (CONJ_PAIR (SPEC_ALL (CONV_RULE
+                                              (STRIP_QUANT_CONV
+                                                 (REWR_CONV DISJ_IMP_THM))
+                                              thm)))
+              in
+                stdfinish ORELSE
+                res_search' nres cex_seen des thml sl c th1 ORELSE
+                res_search' nres cex_seen des thml sl c th2
+              end
+            else if is_eq (con_hyp thm) then let
+                val (l,r) = dest_eq (con_hyp thm)
+              in
+                if compare(l,r) = EQUAL then
+                  res_search' (nres - 1) cex_seen des thml sl c
+                              (MATCH_MP thm (ALPHA l r))
+                else
+                  stdfinish
+              end
+            else
+              stdfinish
+          end
         else if is_exists (concl thm) then
           if null sl then
             CHOOSE_THEN (res_search' (nres - 1) true des thml sl c) thm
