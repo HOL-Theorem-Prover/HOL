@@ -21,7 +21,7 @@ val _ = new_theory "integer";
 (* interactive mode
   app load ["jrhUtils", "EquivType", "hol88Lib", "liteLib", "QLib",
         "SingleStep", "BasicProvers", "boolSimps", "pairSimps", "arithSimps",
-        "numLib", "arithLib"];
+        "numLib"];
 *)
 open jrhUtils EquivType hol88Lib arithLib Psyntax
      arithmeticTheory prim_recTheory numTheory
@@ -31,37 +31,35 @@ infix ++;
 
 val int_ss = boolSimps.bool_ss ++ arithSimps.ARITH_ss ++ pairSimps.PAIR_ss;
 
-val DECIDE_TAC = CONV_TAC ARITH_CONV;
-
 (*--------------------------------------------------------------------------*)
 (* Required lemmas about the natural numbers - mostly to drive CANCEL_TAC   *)
 (*--------------------------------------------------------------------------*)
 
 val EQ_LADD = store_thm("EQ_LADD",
 			Term `!x y z. (x + y = x + z) = (y = z)`,
-			DECIDE_TAC)
+			ARITH_TAC)
 
 
 val EQ_ADDL = store_thm("EQ_ADDL",
 			Term `!x y. (x = x + y) = (y = 0)`,
-			DECIDE_TAC)
+			ARITH_TAC)
 
 val LT_LADD = store_thm("LT_LADD",
 			Term `!x y z. (x + y) < (x + z) = y < z`,
-			DECIDE_TAC)
+			ARITH_TAC)
 
 val LT_ADDL = store_thm("LT_ADDL",
 			Term `!x y. x < (x + y) = 0 < y`,
-			DECIDE_TAC)
+			ARITH_TAC)
 
 val LT_ADDR = store_thm("LT_ADDR",
 			Term `!x y. ~((x + y) < x)`,
-			DECIDE_TAC)
+			ARITH_TAC)
 
 val LT_ADD2 =
     store_thm("LT_ADD2",
 	      Term`!x1 x2 y1 y2. x1 < y1 /\ x2 < y2 ==> (x1 + x2) < (y1 + y2)`,
-		  DECIDE_TAC);
+		  ARITH_TAC);
 
 (*--------------------------------------------------------------------------*)
 (* CANCEL_CONV - Try to cancel, rearranging using AC laws as needed         *)
@@ -195,13 +193,13 @@ val TINT_EQ_SYM =
     store_thm("TINT_EQ_SYM",
 	      Term `!x y. x tint_eq y = y tint_eq x`,
 	      REPEAT GEN_PAIR_TAC THEN REWRITE_TAC[tint_eq]
-	                          THEN DECIDE_TAC)
+	                          THEN ARITH_TAC)
 
 val TINT_EQ_TRANS =
     store_thm("TINT_EQ_TRANS",
 	      Term `!x y z. x tint_eq y /\ y tint_eq z ==> x tint_eq z`,
 		  REPEAT GEN_PAIR_TAC THEN REWRITE_TAC[tint_eq]
-	                          THEN DECIDE_TAC)
+	                          THEN ARITH_TAC)
 
 
 val TINT_EQ_EQUIV = store_thm("TINT_EQ_EQUIV",
@@ -220,7 +218,7 @@ val TINT_EQ_AP =
 	      Term `!p q. (p = q) ==> p tint_eq q`,
 		  REPEAT GEN_PAIR_TAC
 		  THEN REWRITE_TAC[tint_eq,pairTheory.PAIR_EQ]
-		  THEN DECIDE_TAC)
+		  THEN ARITH_TAC)
 
 (*--------------------------------------------------------------------------*)
 (* Prove the properties of representatives                                  *)
@@ -232,14 +230,14 @@ val TINT_10 =
     store_thm("TINT_10",
 	      Term `~(tint_1 tint_eq tint_0)`,
 	      REWRITE_TAC[tint_1, tint_0, tint_eq]
-	      THEN DECIDE_TAC)
+	      THEN ARITH_TAC)
 
 val TINT_ADD_SYM =
     store_thm("TINT_ADD_SYM",
 	      Term `!x y. x tint_add y = y tint_add x`,
 	      REPEAT GEN_PAIR_TAC
 	      THEN REWRITE_TAC[tint_eq,tint_add,pairTheory.PAIR_EQ]
-	      THEN DECIDE_TAC)
+	      THEN ARITH_TAC)
 
 val TINT_MUL_SYM =
     store_thm("TINT_MUL_SYM",
@@ -282,7 +280,7 @@ val TINT_ADD_LID =
      Term `!x. (tint_0 tint_add x) tint_eq x`,
      REPEAT GEN_PAIR_TAC
      THEN REWRITE_TAC[tint_add,tint_0,tint_eq]
-     THEN DECIDE_TAC);
+     THEN ARITH_TAC);
 
 val TINT_MUL_LID =
     store_thm
@@ -290,7 +288,7 @@ val TINT_MUL_LID =
      Term `!x. (tint_1 tint_mul x) tint_eq x`,
      REPEAT GEN_PAIR_TAC
      THEN REWRITE_TAC[tint_mul,tint_1,tint_eq]
-     THEN DECIDE_TAC)
+     THEN ARITH_TAC)
 
 
 val TINT_ADD_LINV =
@@ -299,7 +297,7 @@ val TINT_ADD_LINV =
      Term `!x. ((tint_neg x) tint_add x) tint_eq tint_0`,
      REPEAT GEN_PAIR_TAC
      THEN REWRITE_TAC[tint_add,tint_0,tint_eq,tint_neg]
-     THEN DECIDE_TAC)
+     THEN ARITH_TAC)
 
 val TINT_LT_TOTAL =
     store_thm
@@ -307,16 +305,16 @@ val TINT_LT_TOTAL =
      Term `!x y. x tint_eq y \/ x tint_lt y \/ y tint_lt x`,
      REPEAT GEN_PAIR_TAC
      THEN REWRITE_TAC[tint_lt,tint_eq]
-     THEN DECIDE_TAC)
+     THEN ARITH_TAC)
 
 val TINT_LT_REFL =
     store_thm("TINT_LT_REFL",
 	      Term `!x. ~(x tint_lt x)`,
 	      REPEAT GEN_PAIR_TAC
 	      THEN REWRITE_TAC[tint_lt]
-	      THEN DECIDE_TAC)
+	      THEN ARITH_TAC)
 
-fun unfold_dec l =  REPEAT GEN_PAIR_TAC THEN REWRITE_TAC l THEN DECIDE_TAC;
+fun unfold_dec l =  REPEAT GEN_PAIR_TAC THEN REWRITE_TAC l THEN ARITH_TAC;
 
 val TINT_LT_TRANS =
     store_thm
@@ -525,25 +523,21 @@ val _ = overload_on (">=", Term`$int_ge`);
 val int_of_num =
     new_prim_rec_definition
     ("int_of_num",
-     Term `(& 0 = int_0) /\
-           (& (SUC n) = (& n) + int_1)`);
+     Term `(int_of_num 0 = int_0) /\
+           (int_of_num (SUC n) = (int_of_num n) + int_1)`);
 
-val _ = add_numeral_form(#"i", SOME "&");
+val _ = add_numeral_form(#"i", SOME "int_of_num");
 
-(*
-val num_incl = new_definition ("&", Term `& = int_of_num`)
-val _ = Rewrite.add_implicit_rewrites[num_incl]
-*)
 
 val INT_0 =
     store_thm("INT_0",
-	      Term `int_0 = 0`,
+	      Term `int_0 = 0i`,
 	      REWRITE_TAC[int_of_num]);
 
 val INT_1 =
     store_thm("INT_1",
-	      Term `int_1 = 1`,
-	      REWRITE_TAC[num_CONV (Term `1n`), int_of_num, INT_ADD_LID]);
+	      Term `int_1 = 1i`,
+	      REWRITE_TAC[ONE, int_of_num, INT_ADD_LID]);
 
 (*--------------------------------------------------------------------------*)
 (* Prove lots of boring field theorems                                      *)
@@ -556,6 +550,7 @@ val INT_ADD_LID =
     store_thm("INT_ADD_LID",
               Term`!x:int. 0 + x = x`,
               SIMP_TAC int_ss [GSYM INT_0, INT_ADD_LID]);
+
 val INT_ADD_RID =
     store_thm("INT_ADD_RID",
 	      Term `!x:int. x + 0 = x`,
@@ -877,13 +872,13 @@ val INT_LE_SQUARE =
 
 val INT_LE_01 =
     store_thm("INT_LE_01",
-	      Term `0i <= 1`,
+	      Term `0 <= 1`,
 	      SUBST1_TAC(SYM(Q.SPEC `1` INT_MUL_LID)) THEN
 	      SIMP_TAC int_ss [INT_LE_SQUARE,INT_1]);
 
 val INT_LT_01 =
     store_thm("INT_LT_01",
-	      Term `0i < 1`,
+	      Term `0i < 1i`,
 	      SIMP_TAC int_ss [INT_LT_LE, INT_LE_01,
 			       GSYM INT_0,GSYM INT_1,INT_10])
 
@@ -1157,25 +1152,25 @@ val _ = print "Prove homomorphisms for the inclusion map\n"
 
 val INT =
     store_thm("INT",
-	      Term `!n. &(SUC n) = &n + 1`,
+	      Term `!n. &(SUC n) = &n + 1i`,
 	      GEN_TAC THEN REWRITE_TAC[int_of_num] THEN
 	      REWRITE_TAC[INT_1]);
 
 val INT_POS =
     store_thm("INT_POS",
-	      Term `!n. 0 <= &n`,
+	      Term `!n. 0i <= &n`,
 	      INDUCT_TAC THEN REWRITE_TAC[INT_LE_REFL] THEN
 	      MATCH_MP_TAC INT_LE_TRANS THEN
-	      EXISTS_TAC (Term `&n`) THEN ASM_REWRITE_TAC[INT] THEN
+	      EXISTS_TAC (Term `&n:int`) THEN ASM_REWRITE_TAC[INT] THEN
 	      REWRITE_TAC[INT_LE_ADDR, INT_LE_01]);
 
 val INT_LE =
     store_thm("INT_LE",
-	      Term `!m n. &m <= &n = m <= n`,
+	      Term `!m n. &m:int <= &n = m <= n`,
 	      REPEAT INDUCT_TAC THEN ASM_REWRITE_TAC
 	      [INT, INT_LE_RADD, ZERO_LESS_EQ, LESS_EQ_MONO, INT_LE_REFL] THEN
 	      REWRITE_TAC[GSYM NOT_LESS, LESS_0] THENL
-	      [MATCH_MP_TAC INT_LE_TRANS THEN EXISTS_TAC (Term `&n`) THEN
+	      [MATCH_MP_TAC INT_LE_TRANS THEN EXISTS_TAC (Term `&n:int`) THEN
 	       ASM_REWRITE_TAC[ZERO_LESS_EQ, INT_LE_ADDR, INT_LE_01],
 	       DISCH_THEN(MP_TAC o C CONJ (SPEC (Term `m:num`) INT_POS)) THEN
 	       DISCH_THEN(MP_TAC o MATCH_MP INT_LE_TRANS) THEN
@@ -1183,7 +1178,7 @@ val INT_LE =
 
 val INT_LT =
     store_thm("INT_LT",
-	      Term `!m n. &m < &n = m < n`,
+	      Term `!m n. &m:int < &n = m < n`,
 	      REPEAT GEN_TAC
 	      THEN MATCH_ACCEPT_TAC ((REWRITE_RULE[] o
                                       AP_TERM (Term `$~:bool->bool`) o
@@ -1193,7 +1188,7 @@ val INT_LT =
 
 val INT_INJ =
     store_thm("INT_INJ",
-	      Term `!m n. (&m = &n) = (m = n)`,
+	      Term `!m n. (&m:int = &n) = (m = n)`,
 	      let val th = PROVE(Term `(m:num = n) = m <= n /\ n <= m`,
 				 EQ_TAC
 				 THENL [DISCH_THEN SUBST1_TAC
@@ -1206,7 +1201,7 @@ val INT_INJ =
 
 val INT_ADD =
     store_thm("INT_ADD",
-	      Term `!m n. &m + &n = &(m + n)`,
+	      Term `!m n. &m:int + &n = &(m + n)`,
 	      INDUCT_TAC THEN REWRITE_TAC[INT, ADD, INT_ADD_LID]
 	      THEN
 	      RULE_ASSUM_TAC GSYM THEN GEN_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -1214,7 +1209,7 @@ val INT_ADD =
 
 val INT_MUL =
     store_thm("INT_MUL",
-	      Term `!m n. &m * &n = &(m * n)`,
+	      Term `!m n. &m:int * &n = &(m * n)`,
 	      INDUCT_TAC THEN REWRITE_TAC[INT_MUL_LZERO, MULT_CLAUSES, INT,
 					  GSYM INT_ADD, INT_RDISTRIB] THEN
 	      FIRST_ASSUM(fn th => REWRITE_TAC[GSYM th]) THEN
@@ -1636,7 +1631,7 @@ val INT_NUM_CASES = store_thm(
 (* Theorems about mapping both ways between :num and :int                   *)
 (*--------------------------------------------------------------------------*)
 
-val Num = new_definition("Num", Term `Num i = @n. i = &n`);
+val Num = new_definition("Num", Term `Num (i:int) = @n. i = &n`);
 
 val NUM_OF_INT =
     store_thm("NUM_OF_INT",
@@ -1666,12 +1661,12 @@ val _ = print "Integer division\n"
 val int_div = new_definition(
   "int_div",
   Term`int_div x y =
-         if y = 0 then ARB x
+         if y = 0i then ARB x
          else
-           if 0 <= x then if 0 < y then fromNum(Num(x) DIV Num(y))
-                          else ~(fromNum (Num(x) DIV Num(~y)))
-           else           if 0 < y then ~fromNum (Num(~x) DIV Num(y))
-                          else fromNum (Num(~x) DIV Num(~y))`);
+           if 0 <= x then if 0 < y then &(Num(x) DIV Num(y))
+                          else ~(& (Num(x) DIV Num(~y)))
+           else           if 0 < y then ~& (Num(~x) DIV Num(y))
+                          else & (Num(~x) DIV Num(~y))`);
 
 val _ = add_infix("/", 600, HOLgrammars.LEFT);
 val _ = allow_for_overloading_on("/", Type`:'a -> 'a -> 'a`);
@@ -1767,7 +1762,7 @@ val _ = print "Integer modulus\n"
 
 val int_mod = new_definition(
   "int_mod",
-  Term`int_mod p q = if q = 0 then ARB p
+  Term`int_mod p q = if q = 0i then ARB p
                      else p - p / q * q`);
 
 val _ = add_infix("%", 650, HOLgrammars.LEFT);
