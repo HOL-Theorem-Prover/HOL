@@ -15,8 +15,9 @@ Calling {overload_on(name,tm)} establishes {tm} as a possible
 resolution of the overloaded {name}.  The term {tm} must be a
 constant.  The call to {overload_on} also ensures that {tm} is the
 first in the list of possible resolutions chosen when a string might
-be parsed into a term in more than one way.
-
+be parsed into a term in more than one way, and this is the only
+effect if this combination is already recorded as a possible
+overloading.
 
 \FAILURE
 Fails if the term argument is not a constant.
@@ -28,13 +29,7 @@ We define the equivalent of intersection over predicates:
    <<HOL message: inventing new type variable names: 'a.>>
    > val inter = |- !p q x. inter p q x = p x /\ q x : Thm.thm
 }
-\noindent Then we can set up the overloading we want.  One of the
-possible meanings for the string {/\} is usual logical conjunction:
-{
-   - overload_on ("/\\", Term`$/\`);
-   > val it = () : unit
-}
-\noindent We also overload on our new intersection constant, and can
+\noindent We overload on our new intersection constant, and can
 be sure that in ambiguous situations, it will be preferred:
 {
    - overload_on ("/\\", Term`inter`);
@@ -47,10 +42,13 @@ be sure that in ambiguous situations, it will be preferred:
    - type_of it;
    > val it = `:'a -> bool` : Type.hol_type
 }
-\noindent In order to make normal conjunction the preferred choice, we
-can repeat the call to {overload_on}:
+\noindent Note that the original constant is considered overloaded to
+itself, so that our one call to {overload_on} now allows for two
+possibilities whenever the identifier {/\} is seen.  In order to make
+normal conjunction the preferred choice, we can call {overload_on}
+with the original constant:
 {
-   - overload_on ("/\\", Term`$/\ :bool -> bool -> bool`);
+   - overload_on ("/\\", Term`bool$/\`);
    > val it = () : unit
    - Term`p /\ q`;
    <<HOL message: more than one resolution of overloading was possible.>>
@@ -58,10 +56,16 @@ can repeat the call to {overload_on}:
    - type_of it;
    > val it = `:bool` : Type.hol_type
 }
-\noindent Note that in order to override the overloading, we had to
-specify the type of the logical conjunction explicitly.  Otherwise,
-the parsing would have taken the {/\} to mean our previously preferred
-alternative ({inter}).
+\noindent Note that in order to specify the original conjunction
+constant, we used the qualified identifier syntax, with the {$}.  If
+we'd used just {/\}, the overloading would have ensured that this was
+parsed as {inter}.  Instead of the qualified identifier syntax, we
+could have also constrained the type of conjunction explicitly so that
+the original constant would be the only possibility.  Thus:
+{
+   - overload_on ("/\\", Term`/\ :bool->bool->bool`);
+   > val it = () : unit
+}
 
 \COMMENTS
 Overloading with abandon can lead to input that is very hard to make

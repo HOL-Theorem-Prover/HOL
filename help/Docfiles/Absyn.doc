@@ -1,6 +1,6 @@
-\DOC parse_preTerm
+\DOC Absyn
 
-\TYPE {Parse.parse_preTerm : term quotation -> Absyn.absyn}
+\TYPE {Parse.Absyn : term quotation -> Absyn.absyn}
 
 \SYNOPSIS
 Implements the first phase of term parsing; the removal of special syntax.
@@ -14,13 +14,13 @@ Parsing
 The ``let'' expression {`let x = e1 in e2`} will turn into
 {
    APP(APP(IDENT "LET", LAM(VIDENT "x", IDENT "e2")), IDENT "e1")
-}  
+}
 \noindent The record syntax {`rec.fld1`} is converted into something of
 the form
 {
    APP(IDENT "....fld1", IDENT "rec")
-} 
-\noindent where the dots will actually be equal to the value of 
+}
+\noindent where the dots will actually be equal to the value of
 {GrammarSpecials.recsel_special} (a string).
 
 \FAILURE
@@ -28,15 +28,7 @@ Fails if the quotation provided includes a syntax error.  This phase
 of parsing is unconcerned with types, and will happily parse
 meaningless expressions that are syntactically valid.
 
-\EXAMPLE
-
-
-\USES
-
-
-\COMMENTS
-
-
 \SEEALSO
+Term
 
 \ENDDOC
