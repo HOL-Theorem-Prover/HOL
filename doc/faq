@@ -11,6 +11,17 @@ Q. Are error messages during the build like the following a source for
 
      > /local/scratch/kxs/144/bin/mosmlyac: 4 shift/reduce conflicts.
 
+Q. How do I prove strings equal or inequal? (1)
+
+  -- Use stringLib.string_EQ_CONV, which reduces equalities over
+     string literals to either T or F.  For example, to demonstrate
+     that ``(if "foo" = "bar" then 3 else 1) = 1``, you could write:
+
+     - val t = ``(if "foo" = "bar" then 3 else 1)``;
+     > val t = ``(if "foo" = "bar" then 3 else 1)`` : Term.term
+     - (DEPTH_CONV stringLib.string_EQ_CONV THENC REWRITE_CONV []) t;
+     > val it = |- (if "foo" = "bar" then 3 else 1) = 1 : Thm.thm
+
 Q. How do I antiquote types? (1)
 
   -- Antiquoting types works as you would expect when parsing types,
