@@ -8,8 +8,8 @@
 (* ported from Caml Light source by Michael Norrish, November 1999           *)
 (* ========================================================================= *)
 
-(* 
-   app load ["HOLSimps", "Q", "numLib", "IndDefLib", "tautLib"] 
+(*
+   app load ["HOLSimps", "Q", "numLib", "IndDefLib", "tautLib"]
 *)
 
 structure ind_types :> ind_types =
@@ -1298,7 +1298,7 @@ local
   fun create_auxiliary_clauses nty avoids = let
     val id = fst(dest_var(safeid_genvar Type.bool))
     val (tycon,tyargs) = dest_type nty
-    val (k,ith,rth0) =
+    val (k,ith0,rth0) =
       valOf (get_nestedty_info tycon)
       handle Option.Option =>
         raise HOL_ERR {origin_function = "define_type_nested",
@@ -1308,6 +1308,7 @@ local
     val rth0_tvs = map dest_vartype (Term.type_vars_in_term (concl rth0))
     val avoid_tyal = mk_thm_avoid rth0_tvs avoids
     val rth = Thm.INST_TYPE avoid_tyal rth0
+    val ith = Thm.INST_TYPE avoid_tyal ith0
 
     val (evs,bod) = strip_exists(snd(strip_forall(concl rth)))
     val cjs = map (lhand o snd o strip_forall) (conjuncts bod)
