@@ -36,7 +36,10 @@ val iBITWISE = prove(
 val iBITWISE = save_thm("iBITWISE", SUC_RULE iBITWISE);
 
 val NUMERAL_BITWISE = store_thm("NUMERAL_BITWISE",
-  `!x op a b. BITWISE x op (NUMERAL a) (NUMERAL b) = NUMERAL (iBITWISE x op (NUMERAL a) (NUMERAL b))`,
+  `(!x op a. BITWISE x op 0 0 = NUMERAL (iBITWISE x op 0 0)) /\
+   (!x op a. BITWISE x op (NUMERAL a) 0 = NUMERAL (iBITWISE x op (NUMERAL a) 0)) /\
+   (!x op b. BITWISE x op 0 (NUMERAL b) = NUMERAL (iBITWISE x op 0 (NUMERAL b))) /\
+    !x op a b. BITWISE x op (NUMERAL a) (NUMERAL b) = NUMERAL (iBITWISE x op (NUMERAL a) (NUMERAL b))`,
   REWRITE_TAC [iBITWISE_def,NUMERAL_DEF]
 );
  
