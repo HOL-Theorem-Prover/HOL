@@ -2550,6 +2550,21 @@ val REAL_BIGNUM = store_thm
    THEN REWRITE_TAC [REAL_LT_01, REAL_MUL_RID]
    THEN PROVE_TAC []);
 
+val REAL_INV_LT_ANTIMONO = store_thm
+  ("REAL_INV_LT_ANTIMONO",
+   ``!x y : real. 0 < x /\ 0 < y ==> (inv x < inv y = y < x)``,
+   RW_TAC boolSimps.bool_ss []
+   THEN (REVERSE EQ_TAC THEN1 PROVE_TAC [REAL_LT_INV])
+   THEN STRIP_TAC
+   THEN ONCE_REWRITE_TAC [GSYM REAL_INV_INV]
+   THEN MATCH_MP_TAC REAL_LT_INV
+   THEN RW_TAC boolSimps.bool_ss [REAL_INV_POS]);
+
+val REAL_INV_INJ = store_thm
+  ("REAL_INV_INJ",
+   ``!x y : real. (inv x = inv y) = (x = y)``,
+   PROVE_TAC [REAL_INV_INV])
+
 (* ------------------------------------------------------------------------- *)
 (* Define a constant for extracting "the positive part" of real numbers.     *)
 (* ------------------------------------------------------------------------- *)
@@ -2947,6 +2962,81 @@ val SUP_EPSILON = store_thm
    THEN POP_ASSUM (MP_TAC o Q.SPEC `n`)
    THEN RW_TAC boolSimps.bool_ss [prim_recTheory.LESS_SUC_REFL, GSYM real_lt]
    THEN PROVE_TAC [REAL_LT_LE]);
+
+val REAL_LE_SUP = store_thm
+  ("REAL_LE_SUP",
+   ``!p x : real.
+       (?y. p y) /\ (?y. !z. p z ==> z <= y) ==>
+       (x <= sup p = !y. (!z. p z ==> z <= y) ==> x <= y)``,
+   RW_TAC boolSimps.bool_ss []
+   THEN EQ_TAC
+   THENL [RW_TAC boolSimps.bool_ss []
+          THEN MATCH_MP_TAC REAL_LE_EPSILON
+          THEN RW_TAC boolSimps.bool_ss [GSYM REAL_LE_SUB_RADD]
+          THEN (KNOW_TAC ``(x:real) - e < sup p``
+                THEN1 (MATCH_MP_TAC REAL_LTE_TRANS
+                       THEN Q.EXISTS_TAC `x`
+                       THEN RW_TAC boolSimps.bool_ss
+                            [REAL_LT_SUB_RADD, REAL_LT_ADDR]))
+          THEN Q.PAT_ASSUM `0 < e` (K ALL_TAC)
+          THEN Q.PAT_ASSUM `x <= sup p` (K ALL_TAC)
+          THEN Q.SPEC_TAC (`x - e`, `x`)
+          THEN GEN_TAC
+          THEN MP_TAC (Q.SPEC `p` REAL_SUP_LE)
+          THEN MATCH_MP_TAC (PROVE [] ``x /\ (y ==> z) ==> (x ==> y) ==> z``)
+          THEN (CONJ_TAC THEN1 PROVE_TAC [])
+          THEN DISCH_THEN (fn th => REWRITE_TAC [GSYM th])
+          THEN STRIP_TAC
+          THEN MATCH_MP_TAC REAL_LE_TRANS
+          THEN PROVE_TAC [REAL_LT_LE],
+          RW_TAC boolSimps.bool_ss []
+          THEN MATCH_MP_TAC REAL_LE_EPSILON
+          THEN RW_TAC boolSimps.bool_ss [GSYM REAL_LE_SUB_RADD]
+          THEN (SUFF_TAC ``(x:real) - e < sup p`` THEN1 PROVE_TAC [REAL_LT_LE])
+          THEN Q.PAT_ASSUM `!y. P y` (MP_TAC o Q.SPEC `x - e`)
+          THEN (KNOW_TAC ``!a b : real. a <= a - b = ~(0 < b)``
+                THEN1 (RW_TAC boolSimps.bool_ss [real_lt, REAL_LE_SUB_LADD]
+                       THEN PROVE_TAC [REAL_ADD_RID, REAL_LE_LADD]))
+          THEN DISCH_THEN (fn th => ASM_REWRITE_TAC [th])
+          THEN POP_ASSUM (K ALL_TAC)
+          THEN Q.SPEC_TAC (`x - e`, `x`)
+          THEN GEN_TAC
+          THEN RW_TAC boolSimps.bool_ss []
+          THEN MP_TAC (Q.SPEC `p` REAL_SUP_LE)
+          THEN MATCH_MP_TAC (PROVE [] ``x /\ (y ==> z) ==> (x ==> y) ==> z``)
+          THEN (CONJ_TAC THEN1 PROVE_TAC [])
+          THEN DISCH_THEN (fn th => REWRITE_TAC [GSYM th])
+          THEN PROVE_TAC [real_lt]]);
+
+val REAL_INF_LE = store_thm
+  ("REAL_INF_LE",
+   ``!p x : real.
+       (?y. p y) /\ (?y. !z. p z ==> y <= z) ==>
+       (inf p <= x = !y. (!z. p z ==> y <= z) ==> y <= x)``,
+   RW_TAC boolSimps.bool_ss []
+   THEN MP_TAC (Q.SPECL [`\r. p ~r`, `~x`] REAL_LE_SUP)
+   THEN MATCH_MP_TAC (PROVE [] ``x /\ (y ==> z) ==> (x ==> y) ==> z``)
+   THEN (CONJ_TAC THEN1 PROVE_TAC [REAL_NEGNEG, REAL_LE_NEG])
+   THEN ONCE_REWRITE_TAC [GSYM REAL_NEGNEG]
+   THEN REWRITE_TAC [GSYM inf_def]
+   THEN REWRITE_TAC [REAL_LE_NEG]
+   THEN RW_TAC boolSimps.bool_ss [REAL_NEGNEG]
+   THEN POP_ASSUM (K ALL_TAC)
+   THEN EQ_TAC
+   THEN RW_TAC boolSimps.bool_ss []
+   THEN Q.PAT_ASSUM `!a. (!b. P a b) ==> Q a` (MP_TAC o Q.SPEC `~y''`)
+   THEN PROVE_TAC [REAL_NEGNEG, REAL_LE_NEG]);
+
+val REAL_SUP_CONST = store_thm
+  ("REAL_SUP_CONST",
+   ``!x : real. sup (\r. r = x) = x``,
+   RW_TAC boolSimps.bool_ss []
+   THEN ONCE_REWRITE_TAC [GSYM REAL_LE_ANTISYM]
+   THEN CONJ_TAC
+   THENL [MATCH_MP_TAC REAL_IMP_SUP_LE
+          THEN PROVE_TAC [REAL_LE_REFL],
+          MATCH_MP_TAC REAL_IMP_LE_SUP
+          THEN PROVE_TAC [REAL_LE_REFL]]);
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems to put in the real simpset                                       *)
