@@ -188,14 +188,14 @@ fun report n tb =
  end;
 
 (*****************************************************************************)
-(* Use HolBddTheory.ReachIn_rec                                              *)
+(* Use DerivedBddRulesTheory.ReachIn_rec                                     *)
 (*****************************************************************************)
 
 val (in_th0,in_thsuc) = 
  time
   (REWRITE_RULE[SolitaireInit_def] ## REWRITE_RULE[SolitaireTrans_def])
   (MkIterThms 
-    HolBddTheory.ReachIn_rec 
+    DerivedBddRulesTheory.ReachIn_rec 
     (lhs(concl(SPEC_ALL SolitaireTrans_def)))
     (lhs(concl(SPEC_ALL SolitaireInit_def))));
 
@@ -231,14 +231,14 @@ val solitaireSimpReachInTermBdd =
 
 
 (*****************************************************************************)
-(* Use HolBddTheory.ReachBy_rec                                              *)
+(* Use DerivedBddRulesTheory.ReachBy_rec                                     *)
 (*****************************************************************************)
 
 val (by_th0,by_thsuc) = 
  time
   (REWRITE_RULE[SolitaireInit_def] ## REWRITE_RULE[SolitaireTrans_def])
   (MkIterThms 
-    HolBddTheory.ReachBy_rec 
+    DerivedBddRulesTheory.ReachBy_rec 
     (lhs(concl(SPEC_ALL SolitaireTrans_def)))
     (lhs(concl(SPEC_ALL SolitaireInit_def))));
 
