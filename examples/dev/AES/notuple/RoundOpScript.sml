@@ -12,13 +12,13 @@
 
 (* For interactive work
   quietdec := true;
-  app load ["sboxTheory","metisLib","MultTheory"];
+  app load ["metisLib","MultTheory"];
   open word8Theory pairTheory metisLib;
   quietdec := false;
 *)
 
 open HolKernel Parse boolLib bossLib 
-     pairTools numLib metisLib pairTheory word8Theory tablesTheory MultTheory;
+     metisLib pairTheory word8Theory tablesTheory MultTheory;
 
 (*---------------------------------------------------------------------------*)
 (* Make bindings to pre-existing stuff                                       *)
@@ -236,28 +236,53 @@ val InvMultCol_def = Define
     (B_HEX ** a) # (D_HEX ** b) # (NINE  ** c) # (E_HEX ** d))`;
 
 (*---------------------------------------------------------------------------*)
+(* Table-lookup versions of MultCol and InvMultCol.Faster to use, but        *)
+(* require tables (consume space).                                           *)
+(*---------------------------------------------------------------------------*)
+
+val TabledMultCol = Q.store_thm
+("TabledMultCol",
+ `MultCol(a,b,c,d) =
+    (GF256_by_2 a # GF256_by_3 b # c # d,
+     a # GF256_by_2 b # GF256_by_3 c # d,
+     a # b # GF256_by_2 c # GF256_by_3 d,
+     GF256_by_3 a # b # c # GF256_by_2 d)`,
+ SIMP_TAC std_ss [MultCol_def] THEN
+ SIMP_TAC std_ss (tcm_thm::map SYM (CONJUNCTS (SPEC_ALL MultEquiv))));
+
+val TabledInvMultCol = 
+ Q.store_thm
+ ("TabledInvMultCol",
+  `InvMultCol (a,b,c,d) =
+    (GF256_by_14 a # GF256_by_11 b # GF256_by_13 c # GF256_by_9 d,
+     GF256_by_9 a # GF256_by_14 b # GF256_by_11 c # GF256_by_13 d,
+     GF256_by_13 a # GF256_by_9 b # GF256_by_14 c # GF256_by_11 d,
+     GF256_by_11 a # GF256_by_13 b # GF256_by_9 c # GF256_by_14 d)`,
+ SIMP_TAC std_ss [InvMultCol_def] THEN
+ SIMP_TAC std_ss (tcm_thm::map SYM (CONJUNCTS (SPEC_ALL MultEquiv))));
+
+
+(*---------------------------------------------------------------------------*)
 (* Inversion lemmas for column multiplication. Proved with an ad-hoc tactic  *)
 (*                                                                           *)
 (* Note: could just use case analysis with Sbox_ind, then EVAL_TAC, but      *)
 (* that's far slower.                                                        *)
 (*---------------------------------------------------------------------------*)
 
-val BYTE_CASES_TAC =
- Ho_Rewrite.ONCE_REWRITE_TAC [FORALL_BYTE_VARS] THEN EVAL_TAC
- THEN REWRITE_TAC [REWRITE_RULE [ZERO_def] XOR8_ZERO]
- THEN Cases THEN PURE_REWRITE_TAC [COND_CLAUSES]
- THEN REPEAT Cases 
- THEN EVAL_TAC;
+val BYTE_CASES_TAC = 
+  SIMP_TAC std_ss (tcm_thm::map SYM (CONJUNCTS (SPEC_ALL MultEquiv)))
+    THEN Ho_Rewrite.ONCE_REWRITE_TAC [FORALL_BYTE_BITS]
+    THEN EVAL_TAC;
 
-val lemma_a1 = Q.prove
+val lemma_a1 = Count.apply Q.prove
 (`!a. E_HEX ** (TWO ** a) # B_HEX ** a # D_HEX ** a # NINE ** (THREE ** a) = a`,
  BYTE_CASES_TAC);
 
-val lemma_a2 = Q.prove
+val lemma_a2 = Count.apply Q.prove
 (`!b. E_HEX ** (THREE ** b) # B_HEX ** (TWO ** b) # D_HEX ** b # NINE  ** b = ZERO`,
  BYTE_CASES_TAC);
 
-val lemma_a3 = Q.prove
+val lemma_a3 = Count.apply Q.prove
 (`!c. E_HEX ** c # B_HEX ** (THREE ** c) # D_HEX ** (TWO ** c) # NINE ** c = ZERO`,
  BYTE_CASES_TAC);
 
@@ -265,15 +290,15 @@ val lemma_a4 = Count.apply Q.prove
 (`!d. E_HEX ** d # B_HEX ** d # D_HEX ** (THREE ** d) # NINE ** (TWO ** d) = ZERO`,
  BYTE_CASES_TAC);
 
-val lemma_b1 = Q.prove
+val lemma_b1 = Count.apply Q.prove
 (`!a. NINE ** (TWO ** a) # E_HEX ** a # B_HEX ** a # D_HEX  ** (THREE ** a) = ZERO`,
  BYTE_CASES_TAC);
 
-val lemma_b2 = Q.prove
+val lemma_b2 = Count.apply Q.prove
 (`!b. NINE ** (THREE ** b) # E_HEX ** (TWO ** b) # B_HEX ** b # D_HEX ** b = b`,
  BYTE_CASES_TAC);
 
-val lemma_b3 = Q.prove
+val lemma_b3 = Count.apply Q.prove
 (`!c. NINE ** c # E_HEX ** (THREE ** c) # B_HEX ** (TWO ** c) # D_HEX ** c = ZERO`,
  BYTE_CASES_TAC);
 
@@ -281,15 +306,15 @@ val lemma_b4 = Count.apply Q.prove
 (`!d. NINE ** d # E_HEX ** d # B_HEX ** (THREE ** d) # D_HEX ** (TWO ** d) = ZERO`,
  BYTE_CASES_TAC);
 
-val lemma_c1 = Q.prove
+val lemma_c1 = Count.apply Q.prove
 (`!a. D_HEX ** (TWO ** a) # NINE ** a # E_HEX ** a # B_HEX  ** (THREE ** a) = ZERO`,
  BYTE_CASES_TAC THEN EVAL_TAC);
 
-val lemma_c2 = Q.prove
+val lemma_c2 = Count.apply Q.prove
 (`!b. D_HEX ** (THREE ** b) # NINE ** (TWO ** b) # E_HEX ** b # B_HEX ** b = ZERO`,
  BYTE_CASES_TAC);
 
-val lemma_c3 = Q.prove
+val lemma_c3 = Count.apply Q.prove
 (`!c. D_HEX ** c # NINE ** (THREE ** c) # E_HEX ** (TWO ** c) # B_HEX ** c = c`,
  BYTE_CASES_TAC);
 
@@ -297,15 +322,15 @@ val lemma_c4 = Count.apply Q.prove
 (`!d. D_HEX ** d # NINE ** d # E_HEX ** (THREE ** d) # B_HEX ** (TWO ** d) = ZERO`,
  BYTE_CASES_TAC);
 
-val lemma_d1 = Q.prove
+val lemma_d1 = Count.apply Q.prove
 (`!a. B_HEX ** (TWO ** a) # D_HEX ** a # NINE ** a # E_HEX  ** (THREE ** a) = ZERO`,
  BYTE_CASES_TAC);
 
-val lemma_d2 = Q.prove
+val lemma_d2 = Count.apply Q.prove
 (`!b. B_HEX ** (THREE ** b) # D_HEX ** (TWO ** b) # NINE ** b # E_HEX ** b = ZERO`,
  BYTE_CASES_TAC);
 
-val lemma_d3 = Q.prove
+val lemma_d3 = Count.apply Q.prove
 (`!c. B_HEX ** c # D_HEX ** (THREE ** c) # NINE ** (TWO ** c) # E_HEX ** c = ZERO`,
  BYTE_CASES_TAC THEN EVAL_TAC);
 
@@ -437,5 +462,6 @@ val InvMixColumns_Distrib = Q.store_thm
  SIMP_TAC std_ss [FORALL_BLOCK] THEN
  RW_TAC std_ss [XOR_BLOCK_def, AddRoundKey_def, InvMixColumns_def, LET_THM,
                 genMixColumns_def, InvMultCol_def, ConstMultDistrib, AC a c]);
+
 
 val _ = export_theory();

@@ -1,8 +1,8 @@
-open HolKernel bossLib;
+open HolKernel bossLib word8Theory;
 
 val _ = new_theory "tables";
 
-val Sbox = Count.apply Define
+val Sbox_def = Count.apply Define
  `(Sbox (F,F,F,F,F,F,F,F) = (F,T,T,F,F,F,T,T)) /\
   (Sbox (F,F,F,F,F,F,F,T) = (F,T,T,T,T,T,F,F)) /\
   (Sbox (F,F,F,F,F,F,T,F) = (F,T,T,T,F,T,T,T)) /\
@@ -260,7 +260,7 @@ val Sbox = Count.apply Define
   (Sbox (T,T,T,T,T,T,T,F) = (T,F,T,T,T,F,T,T)) /\
   (Sbox (T,T,T,T,T,T,T,T) = (F,F,F,T,F,T,T,F))`;
 
-val InvSbox = Count.apply Define
+val InvSbox_def = Count.apply Define
  `(InvSbox (F,F,F,F,F,F,F,F) = (F,T,F,T,F,F,T,F)) /\
   (InvSbox (F,F,F,F,F,F,F,T) = (F,F,F,F,T,F,F,T)) /\
   (InvSbox (F,F,F,F,F,F,T,F) = (F,T,T,F,T,F,T,F)) /\
@@ -518,7 +518,7 @@ val InvSbox = Count.apply Define
   (InvSbox (T,T,T,T,T,T,T,F) = (F,F,F,F,T,T,F,F)) /\
   (InvSbox (T,T,T,T,T,T,T,T) = (F,T,T,T,T,T,F,T))`;
 
-val GF256_by_2 = Count.apply Define
+val GF256_by_2_def = Count.apply Define
  `(GF256_by_2 (F,F,F,F,F,F,F,F) = (F,F,F,F,F,F,F,F)) /\
   (GF256_by_2 (F,F,F,F,F,F,F,T) = (F,F,F,F,F,F,T,F)) /\
   (GF256_by_2 (F,F,F,F,F,F,T,F) = (F,F,F,F,F,T,F,F)) /\
@@ -776,7 +776,7 @@ val GF256_by_2 = Count.apply Define
   (GF256_by_2 (T,T,T,T,T,T,T,F) = (T,T,T,F,F,T,T,T)) /\
   (GF256_by_2 (T,T,T,T,T,T,T,T) = (T,T,T,F,F,T,F,T))`;
 
-val GF256_by_3 = Count.apply Define
+val GF256_by_3_def = Count.apply Define
  `(GF256_by_3 (F,F,F,F,F,F,F,F) = (F,F,F,F,F,F,F,F)) /\
   (GF256_by_3 (F,F,F,F,F,F,F,T) = (F,F,F,F,F,F,T,T)) /\
   (GF256_by_3 (F,F,F,F,F,F,T,F) = (F,F,F,F,F,T,T,F)) /\
@@ -1034,7 +1034,7 @@ val GF256_by_3 = Count.apply Define
   (GF256_by_3 (T,T,T,T,T,T,T,F) = (F,F,F,T,T,F,F,T)) /\
   (GF256_by_3 (T,T,T,T,T,T,T,T) = (F,F,F,T,T,F,T,F))`;
 
-val GF256_by_9 = Count.apply Define
+val GF256_by_9_def_def = Count.apply Define
  `(GF256_by_9 (F,F,F,F,F,F,F,F) = (F,F,F,F,F,F,F,F)) /\
   (GF256_by_9 (F,F,F,F,F,F,F,T) = (F,F,F,F,T,F,F,T)) /\
   (GF256_by_9 (F,F,F,F,F,F,T,F) = (F,F,F,T,F,F,T,F)) /\
@@ -1292,7 +1292,7 @@ val GF256_by_9 = Count.apply Define
   (GF256_by_9 (T,T,T,T,T,T,T,F) = (F,T,F,F,T,T,T,T)) /\
   (GF256_by_9 (T,T,T,T,T,T,T,T) = (F,T,F,F,F,T,T,F))`;
 
-val GF256_by_11 = Count.apply Define
+val GF256_by_11_def = Count.apply Define
  `(GF256_by_11 (F,F,F,F,F,F,F,F) = (F,F,F,F,F,F,F,F)) /\
   (GF256_by_11 (F,F,F,F,F,F,F,T) = (F,F,F,F,T,F,T,T)) /\
   (GF256_by_11 (F,F,F,F,F,F,T,F) = (F,F,F,T,F,T,T,F)) /\
@@ -1550,7 +1550,7 @@ val GF256_by_11 = Count.apply Define
   (GF256_by_11 (T,T,T,T,T,T,T,F) = (T,F,T,F,T,F,F,F)) /\
   (GF256_by_11 (T,T,T,T,T,T,T,T) = (T,F,T,F,F,F,T,T))`;
 
-val GF256_by_13 = Count.apply Define
+val GF256_by_13_def = Count.apply Define
  `(GF256_by_13 (F,F,F,F,F,F,F,F) = (F,F,F,F,F,F,F,F)) /\
   (GF256_by_13 (F,F,F,F,F,F,F,T) = (F,F,F,F,T,T,F,T)) /\
   (GF256_by_13 (F,F,F,F,F,F,T,F) = (F,F,F,T,T,F,T,F)) /\
@@ -1808,7 +1808,7 @@ val GF256_by_13 = Count.apply Define
   (GF256_by_13 (T,T,T,T,T,T,T,F) = (T,F,F,T,T,F,T,F)) /\
   (GF256_by_13 (T,T,T,T,T,T,T,T) = (T,F,F,T,F,T,T,T))`;
 
-val GF256_by_14 = Count.apply Define
+val GF256_by_14_def = Count.apply Define
  `(GF256_by_14 (F,F,F,F,F,F,F,F) = (F,F,F,F,F,F,F,F)) /\
   (GF256_by_14 (F,F,F,F,F,F,F,T) = (F,F,F,F,T,T,T,F)) /\
   (GF256_by_14 (F,F,F,F,F,F,T,F) = (F,F,F,T,T,T,F,F)) /\
@@ -2065,5 +2065,10 @@ val GF256_by_14 = Count.apply Define
   (GF256_by_14 (T,T,T,T,T,T,F,T) = (T,F,F,T,F,F,F,T)) /\
   (GF256_by_14 (T,T,T,T,T,T,T,F) = (T,F,F,F,F,F,T,T)) /\
   (GF256_by_14 (T,T,T,T,T,T,T,T) = (T,F,F,F,T,T,F,T))`;
+
+val Sbox_Inversion = Q.store_thm
+("Sbox_Inversion",
+ `!w:word8. InvSbox (Sbox w) = w`,
+ SIMP_TAC std_ss [FORALL_BYTE_BITS, Sbox_def, InvSbox_def]);
 
 val _ = export_theory();
