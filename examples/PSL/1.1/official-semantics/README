@@ -6,6 +6,7 @@ The contents of this directory are
 README ......................... This file
 SyntaxScript.sml ............... Abstract syntax of core PSL
 ModelScript.sml ................ Theory of models
+ModelLemmasScript.sml .......... Properties of models and automata
 UnclockedSemanticsScript.sml ... Unclocked semantics
 ClockedSemanticsScript.sml ..... Clocked Semantics
 ExtendedSyntaxScript.sml ....... Abstract syntax of full PSL 
@@ -27,5 +28,4 @@ To run Holmake including the path directory, use:
    Holmake -I ../../path
 
 MJCG
-Wed Apr 14 2004
-
+Wed Jan 05 2005
