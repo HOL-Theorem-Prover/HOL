@@ -36,7 +36,7 @@ fun PROVE_TAC thl =
     THEN EXPAND_COND_TAC
     THEN mesonLib.ASM_MESON_TAC (map EXPAND_COND thl)
 
-fun GEN_PROVE_TAC x y z thl =   (* only for ZAP_TAC *)
+fun GEN_PROVE_TAC x y z thl =   (* for ZAP_TAC *)
   REPEAT (POP_ASSUM MP_TAC)
     THEN EXPAND_COND_TAC
     THEN mesonLib.GEN_MESON_TAC x y z (map EXPAND_COND thl)
@@ -213,8 +213,6 @@ fun STP_TAC ss finisher =
 fun RW_TAC ss thl = STP_TAC (ss && thl) NO_TAC
 
 
-val bool_ss  =
-  simpLib.++(simpLib.++(boolSimps.bool_ss,boolSimps.NOT_ss),
-             UnwindSimps.UNWIND_ss)
+val bool_ss = boolSimps.bool_ss;
 
 end;
