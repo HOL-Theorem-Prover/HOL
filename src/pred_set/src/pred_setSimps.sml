@@ -1,7 +1,7 @@
 structure pred_setSimps :> pred_setSimps =
 struct
 
-  open HolKernel basicHol90Lib pred_setTheory
+  open HolKernel boolLib pred_setTheory
   val PRED_SET_ss = simpLib.rewrites
     [
      (* cardinality theorems *)

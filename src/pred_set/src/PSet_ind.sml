@@ -25,7 +25,7 @@
 structure PSet_ind :> PSet_ind =
 struct
 
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib Rsyntax;
 infix THEN THENL |->;
 
 type tactic = Abbrev.tactic;

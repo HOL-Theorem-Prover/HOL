@@ -12,7 +12,7 @@
 structure pred_setScript =
 struct
 
-open HolKernel Parse basicHol90Lib
+open HolKernel Parse boolLib Rsyntax Prim_rec
      arithmeticTheory prim_recTheory numTheory Num_induct Num_conv;
 
 type thm = Thm.thm
@@ -26,7 +26,6 @@ val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 val _ = new_theory "pred_set";
 
 val set = ty_antiq(Type`:'a->bool`);
-
 
 (* =====================================================================*)
 (* Membership. 								*)
@@ -101,7 +100,7 @@ val GSPEC_DEF_LEMMA =
 (* --------------------------------------------------------------------- *)
 
 val GSPECIFICATION =
-    new_specification
+    Rsyntax.new_specification
       {name = "GSPECIFICATION",
       sat_thm = GSPEC_DEF_LEMMA,
       consts = [{const_name = "GSPEC", fixity = Prefix}]};
@@ -957,7 +956,7 @@ val CHOICE_EXISTS =
      CONV_TAC (ONCE_DEPTH_CONV NOT_FORALL_CONV) THEN
      REWRITE_TAC []);
 
-val CHOICE_DEF = new_specification
+val CHOICE_DEF = Rsyntax.new_specification
                    {name= "CHOICE_DEF",sat_thm=CHOICE_EXISTS,
                     consts=[{const_name="CHOICE",fixity=Prefix}]};
 
@@ -1642,7 +1641,7 @@ val CARD_REL_EXISTS =  prove_rec_fn_exists num_Axiom card_rel_def;
 
 val CARD_REL_DEL_LEMMA =
     TAC_PROOF
-    ((Dsyntax.strip_conj card_rel_def,
+    ((strip_conj card_rel_def,
       (--`!(n:num) s (x:'a).
        x IN s ==>
        R (s DELETE x) n  ==>
@@ -1680,7 +1679,7 @@ val CARD_REL_DEL_LEMMA =
 
 val CARD_REL_UNIQUE =
     TAC_PROOF
-    ((Dsyntax.strip_conj card_rel_def,
+    ((strip_conj card_rel_def,
       (--`!n:num. !s:^set. R s n ==> (!m. R s m ==> (n = m))`--)),
      INDUCT_TAC THEN ASM_REWRITE_TAC [] THENL
      [GEN_TAC THEN STRIP_TAC THEN INDUCT_TAC THEN
@@ -1697,7 +1696,7 @@ val CARD_REL_UNIQUE =
 (* --------------------------------------------------------------------- *)
 
 val CARD_REL_EXISTS_LEMMA = TAC_PROOF
-((Dsyntax.strip_conj card_rel_def,
+((strip_conj card_rel_def,
  (--`!s:^set. FINITE s ==> ?n:num. R s n`--)),
      SET_INDUCT_TAC THENL
      [EXISTS_TAC (--`0`--) THEN ASM_REWRITE_TAC[],
@@ -1713,7 +1712,7 @@ val CARD_REL_EXISTS_LEMMA = TAC_PROOF
 
 val CARD_REL_THM =
     TAC_PROOF
-    ((Dsyntax.strip_conj card_rel_def,
+    ((strip_conj card_rel_def,
      (--`!m s. FINITE s ==> (((@n:num. R (s:^set) n) = m) = R s m)`--)),
      REPEAT STRIP_TAC THEN
      IMP_RES_TAC CARD_REL_EXISTS_LEMMA THEN
@@ -2505,7 +2504,7 @@ val FINITE_WEAK_ENUMERATE = store_thm(
   ``!s. FINITE s = ?f b. !e. e IN s = ?n. n < b /\ (e = f n)``,
   ONCE_REWRITE_TAC [EQ_IMP_THM] THEN
   SIMP_TAC bool_ss [FORALL_AND_THM] THEN CONJ_TAC THENL [
-    Ho_resolve.MATCH_MP_TAC FINITE_INDUCT THEN
+    HO_MATCH_MP_TAC FINITE_INDUCT THEN
     SIMP_TAC bool_ss [IN_INSERT, NOT_IN_EMPTY] THEN
     REPEAT STRIP_TAC THENL [
       Q.EXISTS_TAC `0` THEN SIMP_TAC arith_ss [],
@@ -2613,7 +2612,7 @@ open pairTheory
 val CROSS_DEF = new_definition(
   "CROSS_DEF",
   ``CROSS P Q = { p | FST p IN P /\ SND p IN Q }``);
-val _ = set_fixity "CROSS" (Infixl 600);
+val _ = set_fixity ("CROSS", Infixl 600);
 
 val IN_CROSS = store_thm(
   "IN_CROSS",
@@ -2643,7 +2642,7 @@ val FINITE_CROSS = store_thm(
   "FINITE_CROSS",
   ``!P Q. FINITE P /\ FINITE Q ==> FINITE (P CROSS Q)``,
   SIMP_TAC bool_ss [GSYM AND_IMP_INTRO, RIGHT_FORALL_IMP_THM] THEN
-  Ho_resolve.MATCH_MP_TAC FINITE_INDUCT THEN
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN
   SIMP_TAC bool_ss [CROSS_EMPTY, FINITE_EMPTY] THEN
   REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC [CROSS_INSERT_LEFT] THEN
   ASM_SIMP_TAC bool_ss [FINITE_UNION] THEN
@@ -2664,7 +2663,7 @@ val CROSS_SINGS = store_thm(
 val CARD_SING_CROSS = store_thm(
   "CARD_SING_CROSS",
   ``!x P. FINITE P ==> (CARD ({x} CROSS P) = CARD P)``,
-  GEN_TAC THEN Ho_resolve.MATCH_MP_TAC FINITE_INDUCT THEN
+  GEN_TAC THEN HO_MATCH_MP_TAC FINITE_INDUCT THEN
   SIMP_TAC bool_ss [CROSS_EMPTY, CARD_EMPTY] THEN REPEAT STRIP_TAC THEN
   ONCE_REWRITE_TAC [CROSS_INSERT_RIGHT] THEN
   ASM_SIMP_TAC bool_ss [CROSS_SINGS, GSYM INSERT_SING_UNION] THEN
@@ -2677,7 +2676,7 @@ val CARD_CROSS = store_thm(
   "CARD_CROSS",
   ``!P Q. FINITE P /\ FINITE Q ==> (CARD (P CROSS Q) = CARD P * CARD Q)``,
   SIMP_TAC bool_ss [GSYM AND_IMP_INTRO, RIGHT_FORALL_IMP_THM] THEN
-  Ho_resolve.MATCH_MP_TAC FINITE_INDUCT THEN
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN
   SIMP_TAC bool_ss [CROSS_EMPTY, CARD_EMPTY, CARD_INSERT,
                     MULT_CLAUSES] THEN
   ONCE_REWRITE_TAC [CROSS_INSERT_LEFT] THEN
@@ -2709,7 +2708,7 @@ val FINITE_CROSS_EQ_lemma0 = prove(
   Term`!x. FINITE x ==>
            !P Q. (x = P CROSS Q) ==>
                  (P = {}) \/ (Q = {}) \/ FINITE P /\ FINITE Q`,
-  Ho_resolve.MATCH_MP_TAC FINITE_COMPLETE_INDUCTION THEN
+  HO_MATCH_MP_TAC FINITE_COMPLETE_INDUCTION THEN
   REPEAT STRIP_TAC THEN POP_ASSUM SUBST_ALL_TAC THEN
   `(P = {}) \/ ?p P0. (P = p INSERT P0) /\ ~(p IN P0)` by
      MESON_TAC [SET_CASES] THEN
@@ -2766,7 +2765,7 @@ val FINITE_BIGUNION = store_thm(
   "FINITE_BIGUNION",
   ``!P. FINITE P /\ (!s. s IN P ==> FINITE s) ==> FINITE (BIGUNION P)``,
   SIMP_TAC bool_ss [GSYM AND_IMP_INTRO] THEN
-  Ho_resolve.MATCH_MP_TAC FINITE_INDUCT THEN
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN
   SIMP_TAC bool_ss [NOT_IN_EMPTY, FINITE_EMPTY, BIGUNION_EMPTY,
                     IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM,
                     BIGUNION_INSERT, FINITE_UNION]);

@@ -13,7 +13,7 @@ structure PFset_conv :> PFset_conv =
 struct
 
 type conv = Abbrev.conv;
-open HolKernel Parse boolTheory Drule Conv;
+open HolKernel Parse boolTheory boolSyntax Drule Conv;
 infix ## |->;
 
 fun FSET_CONV_ERR{function,message} =
@@ -42,17 +42,17 @@ fun check st = assert (fn c => #Name(dest_const c) = st)
 
 local exception FAIL
       val finE = pred_setTheory.FINITE_EMPTY
-val finI = 
+val finI =
    let val th1 =  pred_setTheory.FINITE_INSERT
        val th2 = snd(EQ_IMP_RULE(SPECL[(--`x:'a`--),(--`s:'a->bool`--)] th1))
-   in GEN (--`s:'a->bool`--) 
+   in GEN (--`s:'a->bool`--)
           (DISCH_ALL (GEN (--`x:'a`--) (UNDISCH th2)))
    end
-fun strip_set tm = 
-   let val (_,[h,t]) = (check "INSERT" ## I)(strip_comb tm) 
+fun strip_set tm =
+   let val (_,[h,t]) = (check "INSERT" ## I)(strip_comb tm)
    in (h::strip_set t)
    end handle _ => if (#Name(dest_const tm) = "EMPTY")
-                   then [] 
+                   then []
                    else raise FAIL
 fun itfn ith x th = SPEC x (MP (SPEC (rand(concl th)) ith) th)
 in
@@ -89,55 +89,55 @@ end;
 
 local
 val inI = pred_setTheory.IN_INSERT
-val inE = GEN (--`x:'a`--) 
-              (EQF_INTRO (SPEC (--`x:'a`--) 
+val inE = GEN (--`x:'a`--)
+              (EQF_INTRO (SPEC (--`x:'a`--)
                                (pred_setTheory.NOT_IN_EMPTY)))
-val T = (--`T`--) 
-and F = (--`F`--) 
+val T = (--`T`--)
+and F = (--`F`--)
 and gv = genvar Type.bool
 val DISJ = AP_TERM (--`$\/`--)
 val F_OR = el 3 (CONJUNCTS (SPEC gv OR_CLAUSES))
 val OR_T = el 2 (CONJUNCTS (SPEC gv OR_CLAUSES))
-fun in_conv conv (eth,ith) x S = 
+fun in_conv conv (eth,ith) x S =
    let val (_,[y,S']) = (check "INSERT" ## I) (strip_comb S)
        val thm = SPEC S' (SPEC y ith)
        val rectm = rand(rand(concl thm))
    in
-   if (aconv x y) 
-   then EQT_INTRO (EQ_MP (SYM thm) (DISJ1 (ALPHA x y) rectm)) 
+   if (aconv x y)
+   then EQT_INTRO (EQ_MP (SYM thm) (DISJ1 (ALPHA x y) rectm))
    else let val eql = conv (mk_eq {lhs=x, rhs=y})
-            val res = rand(concl eql) 
+            val res = rand(concl eql)
         in
-        if (res=T) 
-        then EQT_INTRO (EQ_MP (SYM thm) (DISJ1 (EQT_ELIM eql) rectm)) 
-        else if (res=F) 
-             then let val rthm = in_conv conv (eth,ith) x S' 
+        if (res=T)
+        then EQT_INTRO (EQ_MP (SYM thm) (DISJ1 (EQT_ELIM eql) rectm))
+        else if (res=F)
+             then let val rthm = in_conv conv (eth,ith) x S'
                       val thm2 = MK_COMB (DISJ eql,rthm)
 	              val thm3 = INST[{redex=gv,residue=rand(concl rthm)}]F_OR
                   in TRANS thm (TRANS thm2 thm3)
                   end
              else raise FSET_CONV_ERR{function = "in_conv",message=""}
         end
-        handle _ => let val rthm = in_conv conv (eth,ith) x S' 
-                    in if (rand(concl rthm)=T) 
+        handle _ => let val rthm = in_conv conv (eth,ith) x S'
+                    in if (rand(concl rthm)=T)
                        then let val eqn = mk_eq{lhs=x,rhs=y}
-                                val thm2 = MK_COMB(DISJ (REFL eqn), rthm) 
-                                val thm3 = TRANS thm2 
+                                val thm2 = MK_COMB(DISJ (REFL eqn), rthm)
+                                val thm3 = TRANS thm2
                                                  (INST [{redex=gv,residue=eqn}]
                                                        OR_T)
-                            in TRANS thm thm3 
+                            in TRANS thm thm3
                             end
                        else raise FSET_CONV_ERR{function="in_conv",message=""}
                     end
-   end handle _ => let val e = check "EMPTY" S 
+   end handle _ => let val e = check "EMPTY" S
                    in eth
-                   end 
+                   end
 in
 fun IN_CONV conv tm =
    let val (_,[x,S]) = (check "IN" ## I) (strip_comb tm)
-       val ith = ISPEC x inI 
-       and eth = ISPEC x inE 
-   in in_conv conv (eth,ith) x S 
+       val ith = ISPEC x inI
+       and eth = ISPEC x inE
+   in in_conv conv (eth,ith) x S
    end handle _ => raise FSET_CONV_ERR{function="IN_CONV",message=""}
 end;
 
@@ -158,15 +158,15 @@ end;
 (* =====================================================================*)
 
 local val bv = genvar Type.bool
-      val Edel = pred_setTheory.EMPTY_DELETE 
-       val Dins = GENL [(--`y:'a`--),(--`x:'a`--)] 
+      val Edel = pred_setTheory.EMPTY_DELETE
+       val Dins = GENL [(--`y:'a`--),(--`x:'a`--)]
                  (SPECL [(--`x:'a`--),(--`y:'a`--)]
-                       (pred_setTheory.DELETE_INSERT)) 
-fun del_conv conv (eth,ith) x S = 
-   let val (_,[y,S']) = (check "INSERT" ## I) (strip_comb S) 
+                       (pred_setTheory.DELETE_INSERT))
+fun del_conv conv (eth,ith) x S =
+   let val (_,[y,S']) = (check "INSERT" ## I) (strip_comb S)
        val thm = SPEC S' (SPEC y ith)
        val eql = if (aconv x y)
-                 then EQT_INTRO (ALPHA y x) 
+                 then EQT_INTRO (ALPHA y x)
                  else conv (mk_eq{lhs=y,rhs=x})
        val rthm = del_conv conv (eth,ith) x S'
        val v = genvar (type_of S)
@@ -176,13 +176,13 @@ fun del_conv conv (eth,ith) x S =
                                    rarm=mk_comb{Rator=rator S,Rand=v}}}
        val thm2 = SUBST [v |-> rthm, bv |-> eql] pat thm
    in TRANS thm2 (COND_CONV (rand(concl thm2)))
-   end handle _ => let val _ = check "EMPTY" S 
+   end handle _ => let val _ = check "EMPTY" S
                    in eth
                    end
 in
 fun DELETE_CONV conv tm =
    let val (_,[S,x]) = (check "DELETE" ## I) (strip_comb tm)
-       val ith = ISPEC x Dins 
+       val ith = ISPEC x Dins
        and eth = ISPEC x Edel
    in del_conv conv (eth,ith) x S
    end handle _ => raise FSET_CONV_ERR{function="DELETE_CONV",message=""}
@@ -208,16 +208,16 @@ local
 val InU  = pred_setTheory.INSERT_UNION
 val InUE = pred_setTheory.INSERT_UNION_EQ
 val Eu  = CONJUNCT1 (pred_setTheory.UNION_EMPTY)
-fun strip_set tm = 
-   let val [h,t] = snd ((check "INSERT" ## I) (strip_comb tm)) 
-   in (h::strip_set t) 
+fun strip_set tm =
+   let val [h,t] = snd ((check "INSERT" ## I) (strip_comb tm))
+   in (h::strip_set t)
    end
    handle _ => if (#Name(dest_const tm) = "EMPTY")
-               then [] 
+               then []
                else raise FSET_CONV_ERR{function="UNION_CONV.strip_set",
                                         message =""}
 fun mkIN x s =
-   let val ty = type_of x 
+   let val ty = type_of x
        fun fun_ty ty1 ty2 = mk_type{Tyop="fun",Args=[ty1,ty2]}
        val sty = fun_ty ty Type.bool
        val INty = fun_ty ty (fun_ty sty Type.bool)
@@ -225,25 +225,25 @@ fun mkIN x s =
                             Rand=x}, Rand=s}
    end
 val bv = genvar Type.bool
-fun itfn conv (ith,iith) x th = 
+fun itfn conv (ith,iith) x th =
    let val (_,[S,T]) = strip_comb(lhs(concl th))
        val eql = IN_CONV conv (mkIN x T)
        val thm = SPEC T (SPEC S (SPEC x ith))
        val {lhs,rhs} = dest_eq(concl thm)
        val ins = (rator o rand) rhs
        val v = genvar (type_of S)
-       val pat = mk_eq{lhs = lhs, 
+       val pat = mk_eq{lhs = lhs,
                        rhs = mk_cond{cond=bv,larm=v,
                                      rarm=mk_comb{Rator=ins,Rand=v}}}
-       val thm2 = SUBST [v |->th, bv |-> eql] pat thm 
+       val thm2 = SUBST [v |->th, bv |-> eql] pat thm
    in
    TRANS thm2 (COND_CONV (rand(concl thm2)))
-   handle _ 
+   handle _
    => let val v = genvar (type_of S)
           val thm = SPEC T (SPEC S (SPEC x iith))
           val {lhs,rhs} = dest_eq(concl thm)
           val r = rator rhs
-      in SUBST [v |->th] (mk_eq{lhs=lhs, rhs=mk_comb{Rator=r,Rand=v}}) thm 
+      in SUBST [v |->th] (mk_eq{lhs=lhs, rhs=mk_comb{Rator=r,Rand=v}}) thm
       end
    end
 in
@@ -283,26 +283,26 @@ end;
 (* =====================================================================*)
 
 local
-val absth = 
+val absth =
    let val th = pred_setTheory.ABSORPTION
        val th1 = fst(EQ_IMP_RULE(SPECL[(--`x:'a`--),(--`s:'a->bool`--)] th))
    in GENL [(--`x:'a`--),(--`s:'a->bool`--)] th1
    end
 fun mkIN x s =
-   let val ty = type_of x 
+   let val ty = type_of x
        val sty = mk_type{Tyop="fun",Args=[ty,Type.bool]}
        val INty = mk_type{Tyop="fun",
                           Args=[ty,mk_type{Tyop="fun",Args=[sty,Type.bool]}]}
    in mk_comb{Rator=mk_comb{Rator=mk_const{Name="IN",Ty=INty},Rand=x},Rand=s}
    end
-val T = (--`T`--) 
+val T = (--`T`--)
 fun isT thm = rand(concl thm)=T
 in
 fun INSERT_CONV conv tm =
    let val (_,[x,s]) = (check "INSERT" ## I) (strip_comb tm)
        val thm = IN_CONV conv (mkIN x s)
    in
-   if (isT thm) 
+   if (isT thm)
    then MP (SPEC s (ISPEC x absth))
            (EQT_ELIM thm)
    else raise FSET_CONV_ERR{function="",message=""}
@@ -330,17 +330,17 @@ end;
 
 
 local
-val Ith = pred_setTheory.IMAGE_INSERT 
+val Ith = pred_setTheory.IMAGE_INSERT
 and Eth = pred_setTheory.IMAGE_EMPTY
-fun iconv IN cnv1 cnv2 ith eth s = 
+fun iconv IN cnv1 cnv2 ith eth s =
    let val (_,[x,t]) = (check "INSERT" ## I) (strip_comb s)
        val thm1 = SPEC t (SPEC x ith)
        val el = rand(rator(rand(concl thm1)))
-       val cth = MK_COMB(AP_TERM IN (cnv1 el),iconv IN cnv1 cnv2 ith eth t) 
+       val cth = MK_COMB(AP_TERM IN (cnv1 el),iconv IN cnv1 cnv2 ith eth t)
        val thm2 = TRY_CONV (INSERT_CONV cnv2) (rand(concl cth))
    in TRANS thm1 (TRANS cth thm2)
-   end handle _ => if (#Name(dest_const s) = "EMPTY") 
-                   then eth 
+   end handle _ => if (#Name(dest_const s) = "EMPTY")
+                   then eth
                    else raise FSET_CONV_ERR{function="IMAGE_CONV.iconv",
                                             message=""}
 in
@@ -348,9 +348,9 @@ fun IMAGE_CONV conv1 conv2 tm =
    let val (_,[f,s]) = (check "IMAGE" ## I) (strip_comb tm)
        val {Args=[_,ty],...} = dest_type(type_of f)
        val sty = mk_type{Tyop="fun",Args=[ty,Type.bool]}
-       val INty = mk_type{Tyop="fun", 
+       val INty = mk_type{Tyop="fun",
                           Args=[ty,mk_type{Tyop="fun",Args=[sty,sty]}]}
-       val IN = mk_const{Name="INSERT", Ty=INty} 
+       val IN = mk_const{Name="INSERT", Ty=INty}
    in
    iconv IN conv1 conv2 (ISPEC f Ith) (ISPEC f Eth) s
    end handle _ => raise FSET_CONV_ERR{function="IMAGE_CONV",message=""}
