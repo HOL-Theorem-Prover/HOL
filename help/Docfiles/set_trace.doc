@@ -21,19 +21,20 @@ should evoke: each tool registered for tracing can treat its trace level
 in its own way.
 
 \FAILURE
-A call to {set_trace n i} fails if {n} has not previously been 
-registered via {register_trace}.
+A call to {set_trace n i} fails if {n} has not previously been
+registered via {register_trace}.  It also fails if {i} is less than
+zero, or if it is greater than the trace's specified maximum value.
 
 \EXAMPLE
 {
-    - set_trace "Rewrite" 1;
+   - set_trace "Rewrite" 1;
 
-    - PURE_REWRITE_CONV [AND_CLAUSES] (Term `x /\ T /\ y`);
+   - PURE_REWRITE_CONV [AND_CLAUSES] (Term `x /\ T /\ y`);
 
-    <<HOL message: Rewrite:
-    |- T /\ y = y.>>
+   <<HOL message: Rewrite:
+   |- T /\ y = y.>>
 
-    > val it = |- x /\ T /\ y = x /\ y : thm
+   > val it = |- x /\ T /\ y = x /\ y : thm
 }
 
 \SEEALSO

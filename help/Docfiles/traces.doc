@@ -1,6 +1,9 @@
 \DOC traces
 
-\TYPE {traces : unit -> {{name : string, current_value : int, default_value : int}} list}
+\BLTYPE
+traces : unit -> {{name : string, current_value : int,
+                  default_value : int, maximum : int}} list}
+\ELTYPE
 
 \SYNOPSIS
 Returns a list of registered tracing variables.
@@ -21,12 +24,11 @@ Never fails.
 
 \EXAMPLE
 {
-    - traces();
-
-    > val it =
-        [{{default = 10, name = "Subgoal number", trace_level = 10}},
-         {{default = 0, name = "Rewrite", trace_level = 0}},
-         {{default = 0, name = "Ho_Rewrite", trace_level = 0}}]
+- traces();
+> val it =
+    [{{default = 10, name = "Subgoal number", trace_level = 10}},
+     {{default = 0, name = "Rewrite", trace_level = 0}},
+     {{default = 0, name = "Ho_Rewrite", trace_level = 0}}]
 }
 
 \SEEALSO

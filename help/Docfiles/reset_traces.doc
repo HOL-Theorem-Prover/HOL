@@ -9,7 +9,8 @@ Resets all registered tracing variables to their default values.
 Tracing.
 
 \FAILURE
-Never fails.
+Fails if a {set} function associated with a "functional" trace
+(see {register_ftrace}) fails.
 
 \SEEALSO
 Feedback, set_trace, register_trace, reset_trace, trace, traces.

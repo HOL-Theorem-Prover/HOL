@@ -38,3 +38,5 @@ is not saved to a theory file.
 
 \SEEALSO
 clear_overloads_on, overload_on.
+
+\ENDDOC
