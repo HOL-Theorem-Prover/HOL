@@ -29,15 +29,15 @@ fun parse_in_context FVs q =
  in
    case mapfilter bargle tmfrees
     of [] => tm
-     | L => 
+     | L =>
        let val (L1,L2) = (map type_of##map type_of) (unzip L)
            val fty1 = end_itlist (curry (op -->)) L1
            val fty2 = end_itlist (curry (op -->)) L2
            val tytheta = match_type fty1 fty2
-       in 
+       in
            inst tytheta tm
        end
- end 
+ end
   handle HOL_ERR _ => raise STEP_ERR "parse_in_context" "";
 
 (*---------------------------------------------------------------------------*
@@ -57,7 +57,7 @@ fun away gfrees0 bvlist =
        let val v' = prim_variant gfrees v
        in ((v,v')::plist, v'::gfrees)
        end) bvlist ([], gfrees0)));
-    
+
 fun FREEUP [] g = ALL_TAC g
   | FREEUP tofree (g as (asl,w)) =
      let val (V,_) = strip_forall w
@@ -113,7 +113,7 @@ fun prim_find_subterm FVs tm (asl,w) =
 fun find_subterm qtm (g as (asl,w)) =
   let val FVs = free_varsl (w::asl)
       val tm = parse_in_context FVs qtm
-  in 
+  in
     prim_find_subterm FVs tm g
   end;
 
@@ -252,7 +252,7 @@ fun Induct (g as (_,w)) =
 local val ss = simpLib.++(boolSimps.bool_ss,boolSimps.NOT_ss)
 in
 fun SPOSE_NOT_THEN ttac =
-  CCONTR_TAC THEN 
+  CCONTR_TAC THEN
   POP_ASSUM (fn th => ttac (simpLib.SIMP_RULE ss [] th))
 end;
 
@@ -262,11 +262,13 @@ end;
 
 infix 8 by;
 
-fun (q by tac) (g as (asl,w)) = 
+fun (q by tac) (g as (asl,w)) =
   let val tm = parse_in_context (free_varsl (w::asl)) q
   in
      Tactic.via(tm,tac) g
   end
-  handle e as HOL_ERR _ => raise STEP_ERR "by" "";
+  handle e as HOL_ERR {message,origin_function,...} =>
+    raise STEP_ERR "by" ("Trapped message: \""^message^"\", from: "^
+                         origin_function);
 
 end;
