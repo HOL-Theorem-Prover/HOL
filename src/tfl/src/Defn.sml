@@ -586,7 +586,7 @@ fun stdrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
       Nested recursion.
  ---------------------------------------------------------------------------*)
 
-fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} argslen =
+fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
  let val R1 = rand WFR
      val (f,rhs_proto_def) = dest_eq proto_def
      (* make parameterized definition *)
@@ -640,7 +640,7 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} argslen =
 
      val aux_ind = Induction.mk_induction theory1
                        {fconst=faux_const, R=R1,SV=SV,
-                        pat_TCs_list=pat_TCs_list,args=argslen}
+                        pat_TCs_list=pat_TCs_list}
      val nested_guards = op_set_diff aconv (hyp rules) (hyp aux_ind)
      val ics = strip_conj(fst(dest_imp(snd(dest_forall(concl aux_ind)))))
      fun dest_ic tm = if is_imp tm then strip_conj (fst(dest_imp tm)) else []
@@ -799,7 +799,7 @@ fun mutrec thy bindstem eqns =
       val defn =
         if exists I (#3(unzip3 (#extracta wfrec_res)))   (* nested *)
         then let val {rules,ind,aux_rules, aux_ind, theory, def,aux_def,...}
-                     = nestrec thy mut_name wfrec_res 1
+                     = nestrec thy mut_name wfrec_res
              in {rules=rules, ind=ind, theory=theory,
                  aux=SOME{rules=aux_rules, ind=aux_ind}}
               end
@@ -807,8 +807,7 @@ fun mutrec thy bindstem eqns =
                    = stdrec thy mut_name wfrec_res
              val f = #1(dest_comb(lhs (concl(Lib.trye hd rules))))
              val ind = Induction.mk_induction theory
-                         {fconst=f, R=R, SV=SV, 
-                          pat_TCs_list=full_pats_TCs,args=1}
+                         {fconst=f, R=R, SV=SV, pat_TCs_list=full_pats_TCs}
              in {rules=rules, ind=ind, theory=theory, aux=NONE}
              end
       val theory1 = #theory defn
@@ -920,7 +919,7 @@ fun pairf (stem,eqs0) =
  let val ((f,args),rhs) = dest_hd_eqn eqs0
      val argslen = length args
  in if argslen = 1   (* not curried ... do eta-expansion *)
-    then (tuple_args[(f,(f,map type_of args))] eqs0, stem, I,argslen)
+    then (tuple_args[(f,(f,map type_of args))] eqs0, stem, I)
  else
  let val stem'name = stem^"_tupled"
      val argtys    = map type_of args
@@ -957,7 +956,7 @@ fun pairf (stem,eqs0) =
          (rules', induction')
       end
  in
-    (tuple_args [(f,(stem',argtys))] eqs0, stem'name, untuple_args,argslen)
+    (tuple_args [(f,(stem',argtys))] eqs0, stem'name, untuple_args)
  end end;
 
 
@@ -993,9 +992,9 @@ fun mutrec_defn (facts,stem,eqns) =
  end
 
 
-fun nestrec_defn (fb,(stem,stem'),wfrec_res,untuple,argslen) =
+fun nestrec_defn (fb,(stem,stem'),wfrec_res,untuple) =
   let val {rules,ind,SV,R,aux_rules,aux_ind,...} 
-         = nestrec fb stem' wfrec_res argslen
+         = nestrec fb stem' wfrec_res
       val (rules', ind') = untuple (rules, ind)
   in NESTREC {eqs=rules', ind=ind', R=R, SV=SV, stem=stem,
               aux=STDREC{eqs=aux_rules, ind=aux_ind,
@@ -1003,11 +1002,11 @@ fun nestrec_defn (fb,(stem,stem'),wfrec_res,untuple,argslen) =
   end;
 
 
-fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple,argslen) =
+fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
  let val {rules,R,SV,full_pats_TCs,...} = stdrec facts stem' wfrec_res
      val ((f,_),_) = dest_hd_eqnl rules
      val ind = Induction.mk_induction facts
-               {fconst=f, R=R, SV=SV, pat_TCs_list=full_pats_TCs,args=argslen}
+                  {fconst=f, R=R, SV=SV, pat_TCs_list=full_pats_TCs}
  in
  case hyp (LIST_CONJ rules)
  of []     => raise ERR "stdrec_defn" "Empty hypotheses"
@@ -1049,14 +1048,14 @@ fun mk_defn stem eqns =
   => if 1 < length(all_fns eqns)
      then mutrec_defn (facts,stem,eqns)
      else
-     let val (tup_eqs,stem',untuple,argslen) = pairf(stem,eqns)
+     let val (tup_eqs,stem',untuple) = pairf(stem,eqns)
           handle HOL_ERR _ => raise ERR "mk_defn"
                "failure in internal translation to tupled format"
          val wfrec_res = wfrec_eqns facts tup_eqs
      in
         if exists I (#3 (unzip3 (#extracta wfrec_res)))   (* nested *)
-        then nestrec_defn (facts,(stem,stem'),wfrec_res,untuple,argslen)
-        else stdrec_defn  (facts,(stem,stem'),wfrec_res,untuple,argslen)
+        then nestrec_defn (facts,(stem,stem'),wfrec_res,untuple)
+        else stdrec_defn  (facts,(stem,stem'),wfrec_res,untuple)
      end
  end;
 

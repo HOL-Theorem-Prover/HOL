@@ -174,7 +174,7 @@ val EVAL_TAC = Tactic.CONV_TAC EVAL_CONV;
 infix Orelse;
 fun (p Orelse q) x = p x orelse q x;
 
-fun OR [] = raise ERR "OR" "empty list"
+fun OR [] = false
   | OR [x] = same_const x
   | OR (h::t) = same_const h Orelse OR t;
 

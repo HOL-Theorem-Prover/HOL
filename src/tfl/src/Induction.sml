@@ -281,7 +281,7 @@ fun detuple newvar =
  * the antecedent of Rinduct.                                                *
  *---------------------------------------------------------------------------*)
 
-fun mk_induction thy {fconst, R, SV, pat_TCs_list, args} =
+fun mk_induction thy {fconst, R, SV, pat_TCs_list} =
 let val Sinduction = UNDISCH (ISPEC R relationTheory.WF_INDUCTION_THM)
     val (pats,TCsl) = unzip pat_TCs_list
     val case_thm = complete_cases thy pats
@@ -302,12 +302,12 @@ let val Sinduction = UNDISCH (ISPEC R relationTheory.WF_INDUCTION_THM)
     val dant = GEN v (DISJ_CASESL (ISPEC v case_thm) abs_cases)
     val dc = MP Sinduct dant
     val (vstruct,vars) = detuple (wfrecUtils.vary[P]) (hd pats)
+    val dc' = itlist GEN vars (SPEC vstruct dc)
 (*
     val Parg_ty = type_of(fst(dest_forall(concl dc)))
     val vars = map (wfrecUtils.vary[P]) (nstrip_prod_type args Parg_ty)
     val dc' = itlist GEN vars (SPEC (fst(mk_vstruct Parg_ty vars)) dc) 
 *)
-    val dc' = itlist GEN vars (SPEC vstruct dc)
 in
    GEN P (DISCH (concl Rinduct_assum) dc')
 end
