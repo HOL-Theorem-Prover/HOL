@@ -1,6 +1,6 @@
-open HolKernel basicHol90Lib Parse
+open HolKernel boolLib Parse
 
-open SingleStep mesonLib
+open SingleStep mesonLib Rsyntax Prim_rec
 
 local open listTheory optionTheory pairTheory in end;
 
@@ -8,6 +8,8 @@ infix THEN THENL THENC ++
 infix 8 by
 
 open simpLib boolSimps
+
+val is_pair = pairSyntax.is_pair
 
 val UNCURRY_THM = prove(
   ``!p f. UNCURRY f p = f (FST p) (SND p)``,
@@ -72,7 +74,7 @@ val _ = new_theory "llist";
 
 (* representing type is :'a list -> 'a option *)
 
-val lrep_take = Rsyntax.new_recursive_definition {
+val lrep_take = Prim_rec.new_recursive_definition {
   rec_axiom = prim_recTheory.num_Axiom,
   def = ``(lrep_take f 0 = SOME []) /\
           (lrep_take f (SUC n) =
@@ -91,10 +93,8 @@ val type_inhabited = prove(
   Q.EXISTS_TAC `\x. NONE` THEN
   SIMP_TAC bool_ss [lrep_ok, optionTheory.NOT_NONE_SOME]);
 
-val llist_tydef = new_type_definition{
-  name = "llist",
-  pred = ``lrep_ok``,
-  inhab_thm = type_inhabited};
+val llist_tydef = Rsyntax.new_type_definition
+  {name = "llist", inhab_thm = type_inhabited};
 
 val repabs_fns = define_new_type_bijections {
   name = "llist_absrep",
@@ -141,7 +141,7 @@ val LCONS = new_definition(
   "LCONS",
   ``LCONS h t = llist_abs (lcons_rep h (llist_rep t))``);
 
-val lbuildn_rep = Rsyntax.new_recursive_definition {
+val lbuildn_rep = Prim_rec.new_recursive_definition {
   name = "lbuildn_rep",
   rec_axiom = prim_recTheory.num_Axiom,
   def = ``(lbuildn_rep (f:'a -> ('a # 'b) option) x 0 = SOME ([], x)) /\
@@ -498,7 +498,7 @@ val LHDTL_EQ_SOME = store_thm(
 
 
 (* now we can define MAP  *)
-val LMAP = new_specification {
+val LMAP = Rsyntax.new_specification {
   consts = [{const_name = "LMAP", fixity = Prefix}], name = "LMAP",
   sat_thm = prove(
     ``?LMAP. (!f. LMAP f LNIL = LNIL) /\
@@ -521,7 +521,7 @@ val LMAP = new_specification {
 
 
 
-val LTAKE = new_recursive_definition {
+val LTAKE = Prim_rec.new_recursive_definition {
   def = ``(LTAKE 0 ll = SOME []) /\
           (LTAKE (SUC n) ll =
              option_case
@@ -950,10 +950,10 @@ val LFINITE_MAP = store_thm(
     STRIP_TAC THEN Q.ABBREV_TAC `ll1 = LMAP f ll` THEN
     POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `ll` THEN
     POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `ll1` THEN
-    Ho_resolve.MATCH_MP_TAC LFINITE_INDUCTION THEN REPEAT STRIP_TAC THEN
+    HO_MATCH_MP_TAC LFINITE_INDUCTION THEN REPEAT STRIP_TAC THEN
     REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC (Q.SPEC `ll1` llist_CASES) THEN
     FULL_SIMP_TAC hol_ss [LMAP, LCONS_NOT_NIL, LFINITE_THM, LCONS_11],
-    Q.ID_SPEC_TAC `ll` THEN Ho_resolve.MATCH_MP_TAC LFINITE_INDUCTION THEN
+    Q.ID_SPEC_TAC `ll` THEN HO_MATCH_MP_TAC LFINITE_INDUCTION THEN
     SIMP_TAC hol_ss [LFINITE_THM, LMAP]
   ]);
 
@@ -964,13 +964,13 @@ val LFINITE_APPEND = store_thm(
     STRIP_TAC THEN Q.ABBREV_TAC `ll0 = LAPPEND ll1 ll2` THEN
     POP_ASSUM MP_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`ll1`, `ll2`] THEN
     POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `ll0` THEN
-    Ho_resolve.MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN REPEAT STRIP_TAC THEN
+    HO_MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN REPEAT STRIP_TAC THEN
     REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC (Q.SPEC `ll1` llist_CASES) THEN
     FULL_SIMP_TAC hol_ss [LFINITE_THM, LAPPEND, LCONS_NOT_NIL, LCONS_11] THEN
     ASM_MESON_TAC [],
     REWRITE_TAC [GSYM AND_IMP_INTRO] THEN
     Q.ID_SPEC_TAC `ll1` THEN
-    Ho_resolve.MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
+    HO_MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
     SIMP_TAC hol_ss [LFINITE_THM, LAPPEND]
   ]);
 
@@ -992,7 +992,7 @@ val LLENGTH_MAP = store_thm(
   ``!ll f. LLENGTH (LMAP f ll) = LLENGTH ll``,
   REPEAT GEN_TAC THEN Cases_on `LFINITE ll` THENL [
     POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `ll` THEN
-    Ho_resolve.MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
+    HO_MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
     SIMP_TAC hol_ss [LLENGTH_THM, LMAP],
     ASM_MESON_TAC [NOT_LFINITE_NO_LENGTH, LFINITE_MAP]
   ]);
@@ -1012,7 +1012,7 @@ val LLENGTH_APPEND = store_thm(
     ASM_SIMP_TAC hol_ss [] THEN
     POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `ll2` THEN
     POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `ll1` THEN
-    Ho_resolve.MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
+    HO_MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
     SIMP_TAC hol_ss [LLENGTH_THM, LAPPEND] THEN REPEAT STRIP_TAC THEN
     IMP_RES_TAC LFINITE_HAS_LENGTH THEN ASM_SIMP_TAC hol_ss [],
     `LLENGTH (LAPPEND ll1 ll2) = NONE`
@@ -1061,13 +1061,13 @@ val from_toList = store_thm(
 val LFINITE_toList = store_thm(
   "LFINITE_toList",
   ``!ll. LFINITE ll ==> ?l. toList ll = SOME l``,
-  Ho_resolve.MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
+  HO_MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
   REPEAT STRIP_TAC THEN ASM_SIMP_TAC hol_ss [toList_THM]);
 
 val to_fromList = store_thm(
   "to_fromList",
   ``!ll. LFINITE ll ==> (fromList (THE (toList ll)) = ll)``,
-  Ho_resolve.MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
+  HO_MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
   SIMP_TAC hol_ss [fromList, toList_THM] THEN REPEAT STRIP_TAC THEN
   IMP_RES_TAC LFINITE_toList THEN FULL_SIMP_TAC hol_ss [fromList]);
 
@@ -1389,7 +1389,7 @@ val LFILTER_APPEND = store_thm(
                 (LFILTER P (LAPPEND ll1 ll2) =
                  LAPPEND (LFILTER P ll1) (LFILTER P ll2))``,
   REPEAT GEN_TAC THEN Q.ID_SPEC_TAC `ll1` THEN
-  Ho_resolve.MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
+  HO_MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
   SIMP_TAC hol_ss [LAPPEND, LFILTER_THM] THEN REPEAT STRIP_TAC THEN
   COND_CASES_TAC THEN ASM_SIMP_TAC hol_ss [LAPPEND]);
 
