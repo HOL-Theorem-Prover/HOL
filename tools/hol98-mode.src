@@ -385,7 +385,7 @@ that the buffer has already had HOL terms, comments and strings removed."
       (concat ";\\|"
               (word-list-to-regexp
                '("val" "fun" "in" "infix[lr]?" "open" "local" "type"
-                 "datatype" "nonfix" "exception"))))
+                 "datatype" "nonfix" "exception" "end"))))
 
 (setq sml-struct-id-regexp "[A-Za-z][A-Za-z0-9_]*")
 
