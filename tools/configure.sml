@@ -341,46 +341,30 @@ val _ =
     put it in bin/
  ---------------------------------------------------------------------------*)
 
-val _ =
-  if OS <> "winNT"
-  then let val _ = print "Attempting to compile quote filter ... "
-           open Process
-           fun make_src () = let
-             val qfdir = fullPath [holdir, "src/quote-filter"]
-           in
-             system ("cd "^qfdir^" ; make -s filter.c")
-           end
-           val src    = fullPath [holdir, "src/quote-filter/filter.c"]
-           val target = fullPath [holdir, "bin/unquote"]
-           fun check_src () =
-               FileSys.access(src, [FileSys.A_READ]) orelse
-               (print "(filter.c: ";
-                if make_src() = success then
-                  (print "OK) "; true)
-                else (print "failed!) "; false))
-       in
-         if check_src() andalso
-            systeml [CC,src,"-o",target] = success
-         then (mk_xable target; print "successful.\n") handle _
-                => print(String.concat["\n>>>>>Failed to move quote filter!",
-                              "(continuing anyway)\n\n"])
-         else print
-             "\n>>>>>>Couldn't compile quote filter! (continuing anyway)\n\n"
-       end
-  else let
-    val src = fullPath[holdir, "tools", "win-binaries", "hol_filt.exe"]
-    val target = fullPath[holdir, "bin", "unquote.exe"]
-    val instrm = BinIO.openIn src
-    val ostrm = BinIO.openOut target
-    val v = BinIO.inputAll instrm
-    val _ = BinIO.output(ostrm,v)
-  in
-    BinIO.closeIn instrm;
-    BinIO.closeOut ostrm
-  end
-handle e =>
-  print"\n>>>>>>Couldn't install quote filter! (continuing anyway)\n\n";
-
+val _ = let
+  val _ = print "Attempting to compile quote filter... \n"
+  val cwd = FileSys.getDir()
+  val tgt0 = fullPath [holdir, "tools/quote-filter/quote-filter"]
+  val tgt = fullPath [holdir, "bin/unquote"]
+  val _ = FileSys.chDir (fullPath [holdir, "tools/quote-filter"])
+in
+  if systeml [fullPath [holdir, "bin/Holmake"]] = Process.success andalso let
+       val instrm = BinIO.openIn tgt0
+       val ostrm = BinIO.openOut tgt
+       val v = BinIO.inputAll instrm
+     in
+       BinIO.output(ostrm, v);
+       BinIO.closeIn instrm;
+       BinIO.closeOut ostrm;
+       mk_xable tgt0;
+       true
+     end handle e => false
+  then
+    print "Quote-filter done\n"
+  else
+    print "Quote-filter failed (continuing anyway)\n";
+  FileSys.chDir cwd
+end
 
 (*---------------------------------------------------------------------------
     Configure the muddy library.
