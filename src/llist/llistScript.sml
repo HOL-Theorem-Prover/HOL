@@ -1583,6 +1583,11 @@ val LFLATTEN_APPEND = store_thm(
     ]
   ]);
 
+val _ = BasicProvers.export_rewrites
+          ["LCONS_NOT_NIL", "LCONS_11", "LMAP", "LAPPEND", "LFILTER_THM"]
+
+
+
 val _ = export_theory();
 
 end;
