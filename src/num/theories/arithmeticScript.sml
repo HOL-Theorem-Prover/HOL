@@ -2405,6 +2405,81 @@ val DIV_LE_MONOTONE = store_thm(
   MATCH_MP_TAC LESS_EQ_TRANS THEN Q.EXISTS_TAC `q * n` THEN
   ASM_REWRITE_TAC []);
 
+val LE_LT1 = store_thm(
+  "LE_LT1",
+  ``!x y. x <= y = x < y + 1``,
+  REWRITE_TAC [LESS_OR_EQ, GSYM ADD1,
+               IMP_ANTISYM_RULE (SPEC_ALL prim_recTheory.LESS_LEMMA1)
+                                (SPEC_ALL prim_recTheory.LESS_LEMMA2)] THEN
+  REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC [])
+
+val X_LE_DIV = store_thm(
+  "X_LE_DIV",
+  ``!x y z. 0 < z ==> (x <= y DIV z = x * z <= y)``,
+  REPEAT STRIP_TAC THEN
+  Q.SPEC_THEN `z` MP_TAC DIVISION THEN
+  ASM_REWRITE_TAC [] THEN
+  DISCH_THEN (Q.SPEC_THEN `y` STRIP_ASSUME_TAC) THEN
+  Q.ABBREV_TAC `q = y DIV z` THEN
+  Q.ABBREV_TAC `r = y MOD z` THEN ASM_REWRITE_TAC [] THEN EQ_TAC THENL [
+    STRIP_TAC THEN MATCH_MP_TAC LESS_EQ_TRANS THEN
+    Q.EXISTS_TAC `q * z` THEN
+    ASM_SIMP_TAC bool_ss [LE_MULT_RCANCEL, LESS_EQ_ADD],
+    STRIP_TAC THEN REWRITE_TAC [LE_LT1] THEN
+    Q_TAC SUFF_TAC `x * z < (q + 1) * z`
+          THEN1 SIMP_TAC bool_ss [LT_MULT_RCANCEL] THEN
+    REWRITE_TAC [RIGHT_ADD_DISTRIB,
+                 MULT_CLAUSES] THEN
+    MATCH_MP_TAC LESS_EQ_LESS_TRANS THEN
+    Q.EXISTS_TAC `q * z + r` THEN
+    ASM_SIMP_TAC bool_ss [LT_ADD_LCANCEL]
+  ]);
+
+val X_LT_DIV = store_thm(
+  "X_LT_DIV",
+  ``!x y z. 0 < z ==> (x < y DIV z = (x + 1) * z <= y)``,
+  REPEAT STRIP_TAC THEN
+  Q.SPEC_THEN `z` MP_TAC DIVISION THEN
+  ASM_REWRITE_TAC [] THEN
+  DISCH_THEN (Q.SPEC_THEN `y` STRIP_ASSUME_TAC) THEN
+  Q.ABBREV_TAC `q = y DIV z` THEN
+  Q.ABBREV_TAC `r = y MOD z` THEN ASM_REWRITE_TAC [] THEN EQ_TAC THENL [
+    STRIP_TAC THEN MATCH_MP_TAC LESS_EQ_TRANS THEN
+    Q.EXISTS_TAC `q * z` THEN
+    ASM_SIMP_TAC bool_ss [LE_MULT_RCANCEL, LESS_EQ_ADD] THEN
+    ASM_SIMP_TAC bool_ss [LE_LT1, LT_ADD_RCANCEL],
+    STRIP_TAC THEN
+    CCONTR_TAC THEN
+    POP_ASSUM (ASSUME_TAC o REWRITE_RULE [NOT_LESS]) THEN
+    Q.SUBGOAL_THEN `(x + 1) * z  <= x * z + r` ASSUME_TAC THENL [
+      MATCH_MP_TAC LESS_EQ_TRANS THEN
+      Q.EXISTS_TAC `q * z + r` THEN
+      ASM_SIMP_TAC bool_ss [LE_ADD_RCANCEL, LE_MULT_RCANCEL],
+      POP_ASSUM MP_TAC THEN
+      ASM_REWRITE_TAC [RIGHT_ADD_DISTRIB, MULT_CLAUSES,
+                       LE_ADD_LCANCEL, GSYM NOT_LESS,
+                       LT_ADD_LCANCEL]
+    ]
+  ]);
+
+val DIV_LT_X = store_thm(
+  "DIV_LT_X",
+  ``!x y z. 0 < z ==> (y DIV z < x = y < x * z)``,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC [GSYM NOT_LESS_EQUAL] THEN
+  AP_TERM_TAC THEN MATCH_MP_TAC X_LE_DIV THEN
+  ASM_REWRITE_TAC []);
+
+val DIV_LE_X = store_thm(
+  "DIV_LE_X",
+  ``!x y z. 0 < z ==> (y DIV z <= x = y < (x + 1) * z)``,
+  REPEAT STRIP_TAC THEN
+  CONV_TAC (FORK_CONV (REWR_CONV (GSYM NOT_LESS),
+                       REWR_CONV (GSYM NOT_LESS_EQUAL))) THEN
+  AP_TERM_TAC THEN MATCH_MP_TAC X_LT_DIV THEN
+  ASM_REWRITE_TAC []);
+
+
 (* ----------------------------------------------------------------------
     Some additional theorems (nothing to do with DIV and MOD)
    ---------------------------------------------------------------------- *)
