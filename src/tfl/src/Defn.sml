@@ -219,8 +219,23 @@ fun define stem eqs0 =
      val mutual    = 1<length fns
      val facts     = TypeBase.theTypeBase()
  in
-  if mutual
-  then let val {rules, ind, SV, R, union as {rules=r,ind=i,aux,...},...}
+  if mutual then (let
+    (* following is a temporary hack to allow for some nested recursive
+       definitions in the absence of proper size information being
+       available for these types. *)
+    val (f,args)  = strip_comb (hd lhsl)
+    val fname     = atom_name f
+    val tyinfo    =
+      valOf (TypeBase.read
+             (#Tyop (Type.dest_type (type_of (first is_constructor args)))))
+      handle Option.Option => raise ERR "" "" (* this to be caught *)
+    val def = new_recursive_definition {name = stem, def = eqs0,
+                                        rec_axiom = TypeBase.axiom_of tyinfo}
+    val ind = TypeBase.induction_of tyinfo
+  in
+    PRIMREC{eqs = def, ind = ind}
+  end handle HOL_ERR _ =>
+  let val {rules, ind, SV, R, union as {rules=r,ind=i,aux,...},...}
               = Tfl.mutual_function facts stem eqs0
        in
         MUTREC {eqs=rules, ind=ind, R=R, SV=SV,
@@ -231,7 +246,7 @@ fun define stem eqs0 =
                     NESTREC{eqs=r,ind=i,R=R,SV=SV,
                         aux=STDREC{eqs=raux,ind=iaux,R=R,SV=SV}}
           }
-       end
+       end)
   else
    let val (f,args)  = strip_comb (hd lhsl)
        val fname     = atom_name f
