@@ -678,7 +678,7 @@ fun parse_term (G : grammar) typeparser = let
             case (inv, tt) of
               (true, Numeral _) => let
               in
-                print "Can't have numerals in binding positions\n";
+                Lib.mesg true "can't have numerals in binding positions";
                 raise Temp
               end
             | (false, Numeral(dp, copt)) => let
