@@ -1,7 +1,8 @@
 signature ringLib =
 sig
 
-  local open HolKernel Abbrev in
+  type thm = Thm.thm
+  type term = Term.term
 
   val mk_ring_thm   : string -> thm -> thm
 
@@ -32,10 +33,9 @@ sig
    *    equivalent polynomial expressions sharing the same valuation.
    *    Not useful for the casual user.
    *)
-  val RING_NORM_CONV : conv
-  val RING_CONV      : conv
+  val RING_NORM_CONV : Abbrev.conv
+  val RING_CONV      : Abbrev.conv
   val reify : term list -> {Metamap : term, Poly : term list}
 
-  end
 
 end;

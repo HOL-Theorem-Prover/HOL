@@ -1,9 +1,7 @@
 signature integerRingLib =
 sig
-  local open Abbrev in
 
-  val INT_NORM_CONV : conv
-  val INT_RING_CONV : conv
+  val INT_NORM_CONV : Abbrev.conv
+  val INT_RING_CONV : Abbrev.conv
 
-  end
 end
