@@ -2,9 +2,11 @@
 % HOL Manual LaTeX Source: pred_sets library (standard latex style)
 % =====================================================================
 
-\documentstyle[12pt,fleqn,
-               ../../../Manual/LaTeX/alltt,
-               ../../../Manual/LaTeX/layout]{book}
+\documentclass[12pt]{book}
+
+\usepackage{fleqn}
+\usepackage{alltt}
+\usepackage{../../../Manual/LaTeX/layout}
 
 % ---------------------------------------------------------------------
 % Input defined macros and commands
@@ -22,9 +24,9 @@
 
 % --------------------------------------------------------------------- %
 % Macro to make a nice underscore in the library name when typeset in   %
-% boldface.  Standard \_ macro doesn't give tall enough underscore.	%
+% boldface.  Standard \_ macro doesn't give tall enough underscore.     %
 % The underscore is used on the titlepage and in Chapter 1 title (hence %
-% also on running heads) --- all in boldface.				%
+% also on running heads) --- all in boldface.                           %
 % --------------------------------------------------------------------- %
 
 \def\und{\leavevmode%
@@ -37,26 +39,26 @@
 
 \begin{document}
 
-   \setlength{\unitlength}{1mm}		  % unit of length = 1mm
+   \setlength{\unitlength}{1mm}           % unit of length = 1mm
    \setlength{\baselineskip}{16pt}        % line spacing = 16pt
 
    % ---------------------------------------------------------------------
    % prelims
    % ---------------------------------------------------------------------
 
-   \pagenumbering{roman}	          % roman page numbers for prelims
-   \setcounter{page}{1}		          % start at page 1
+   \pagenumbering{roman}                  % roman page numbers for prelims
+   \setcounter{page}{1}                   % start at page 1
 
-   \include{title}			  % title page
-   \tableofcontents			  % table of contents
+   \include{title}                        % title page
+   \tableofcontents                       % table of contents
 
    % ---------------------------------------------------------------------
-   % Systematic description of the library 
+   % Systematic description of the library
    % ---------------------------------------------------------------------
 
-   \cleardoublepage			 % kick to a right-hand page
-   \pagenumbering{arabic}		 % arabic page numbers
-   \setcounter{page}{1}		         % start at page 1
+   \cleardoublepage                      % kick to a right-hand page
+   \pagenumbering{arabic}                % arabic page numbers
+   \setcounter{page}{1}                  % start at page 1
    \include{description}
 
    % ---------------------------------------------------------------------
@@ -72,7 +74,7 @@
    \include{theorems}
 
    % ---------------------------------------------------------------------
-   % References 
+   % References
    % ---------------------------------------------------------------------
 
    \include{references}
@@ -80,8 +82,8 @@
    % ---------------------------------------------------------------------
    % Index
    % ---------------------------------------------------------------------
- 
-   {\def\_{{\char'137}}		         % \tt style `_' character
+
+   {\def\_{{\char'137}}                  % \tt style `_' character
 
     \include{index}}
 
