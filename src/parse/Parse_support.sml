@@ -179,10 +179,15 @@ end;
 fun gen_overloaded_const oinfo s = let
   open Overload
   val opinfo = valOf (info_for_name oinfo s)
-  val base_pretype0 = TCPretype.fromType (#base_type opinfo)
-  val new_pretype = TCPretype.rename_typevars base_pretype0
 in
-  Preterm.Overloaded{Name = s, Ty = new_pretype, Info = opinfo}
+  case #actual_ops opinfo of
+    [(ty, s)] => Preterm.Const{Name = s, Ty = TCPretype.fromType ty}
+  | _ => let
+      val base_pretype0 = TCPretype.fromType (#base_type opinfo)
+      val new_pretype = TCPretype.rename_typevars base_pretype0
+    in
+      Preterm.Overloaded{Name = s, Ty = new_pretype, Info = opinfo}
+    end
 end
 
 
