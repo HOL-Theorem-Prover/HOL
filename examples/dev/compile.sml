@@ -321,17 +321,20 @@ fun RecConvert defth totalth =
                        (mk_comb(fb,args),
                         mk_comb(f1,args),
                         mk_comb(func,mk_comb(f2,args)))))
-       val th4 = REWRITE_RULE
-                  [thb,th1,th2,PALPHA  (fst(dest_imp(concl th3))) ptm]
-                  th3
-       val th5 = MP th4 (PGEN args defth)
+       val th4 = CONV_RULE 
+                    (RATOR_CONV
+                      (RAND_CONV
+                        (REWR_CONV(PALPHA  (fst(dest_imp(concl th3))) ptm))))
+                    th3
+       val th5 = REWRITE_RULE [thb,th1,th2] th4
+       val th6 = MP th5 (PGEN args defth)
    in
     CONV_RULE
      (RHS_CONV 
       ((RAND_CONV Convert_CONV) 
         THENC (RATOR_CONV(RAND_CONV Convert_CONV))
         THENC (RATOR_CONV(RATOR_CONV(RAND_CONV Convert_CONV)))))
-     th5
+     th6
    end
   else if occurs_in func rt
    then (print "definition of: "; print_term func; 
@@ -579,10 +582,9 @@ val default_simps =
 
 fun hwDefine defq =
  let val absyn0 = Parse.Absyn defq
-     open Absyn pairSyntax
  in 
    case absyn0
-    of APP(_,APP(_,IDENT(loc,"measuring"),def),f) =>
+    of Absyn.APP(_,Absyn.APP(_,Absyn.IDENT(loc,"measuring"),def),f) =>
         let val (deftm,names) = Defn.parse_defn def
             val hdeqn = hd (boolSyntax.strip_conj deftm)
             val (l,r) = boolSyntax.dest_eq hdeqn
@@ -591,7 +593,7 @@ fun hwDefine defq =
             val fty = Pretype.fromType (domty --> numSyntax.num)
             val typedf = Parse.absyn_to_term 
                              (Parse.term_grammar())
-                             (TYPED(loc,f,fty))
+                             (Absyn.TYPED(loc,f,fty))
             val defn = Defn.mk_defn (hd names) deftm
             val tac = EXISTS_TAC (mk_measure typedf)
                        THEN TotalDefn.TC_SIMP_TAC [] default_simps
@@ -613,7 +615,16 @@ fun hwDefine defq =
          (defth,ind,devth)
         end
      | otherwise => 
-        let val defth = Define defq
+        let val defth = SPEC_ALL(Define defq)
+            val _ =
+             if occurs_in 
+                 (fst(strip_comb(lhs(concl defth)))) 
+                 (rhs(concl defth))
+              then (print "definition of "; 
+                    print (fst(dest_const(fst(strip_comb(lhs(concl defth))))));
+                    print " is recusive; must have a measure";
+                    raise ERR "hwDefine" "recursive definition without a measure")
+              else ()
             val devth = PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
                           (CompileConvert defth)
         in (defth,boolTheory.TRUTH,devth)

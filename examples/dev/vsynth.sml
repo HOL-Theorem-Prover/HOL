@@ -1314,7 +1314,7 @@ and inputs = [("inp", "5")];
 val maxtime_default  = ref 1000
 and period_default   = ref 10
 and stimulus_default = ref(fn (inputs:(string * string) list)
-                           => [(13, 13, inputs, 13)]);
+                           => [(0, 13, inputs, 13)]);
 
 fun SIMULATE thm inputs =
  let val name = fst(dest_const(#1(dest_cir thm)))
