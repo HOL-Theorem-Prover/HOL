@@ -123,7 +123,6 @@ val _ = add_rule("gspec special", Closefix,
                   term_grammar.TOK "}"])
 (* the phrase "gspec special" is dealt with in the translation from
    pre-pre-terms to terms *)
-val _ = remove_termtok {term_name = "COND", tok = "=>"}
 
 (* --------------------------------------------------------------------- *)
 (* A theorem from homeier@org.aero.uniblab (Peter Homeier)		 *)

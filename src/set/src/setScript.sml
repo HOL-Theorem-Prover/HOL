@@ -139,7 +139,6 @@ val _ = add_rule("gspec special", Closefix,
                  [term_grammar.TOK "{", term_grammar.TM,
                   term_grammar.TOK "|", term_grammar.TM,
                   term_grammar.TOK "}"])
-val _ = remove_termtok {term_name = "COND", tok = "=>"}
 
 (* --------------------------------------------------------------------- *)
 (* Set up the {x1;...;xn} notation.					 *)
