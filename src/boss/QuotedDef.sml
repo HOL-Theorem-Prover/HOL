@@ -1,21 +1,20 @@
 structure QuotedDef :> QuotedDef =
 struct
 
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse basicHol90Lib ;
 
-  type term = Term.term
-  type fixity = Parse.fixity
-  type thm = Thm.thm
-  type tactic = Abbrev.tactic
-  type simpset = simpLib.simpset
-  type defn = Defn.defn
+  type term     = Term.term
+  type thm      = Thm.thm
+  type tactic   = Abbrev.tactic
+  type defn     = Defn.defn
+  type proofs   = GoalstackPure.proofs
   type 'a quotation = 'a Portable.frag list 
 
 infix THEN THENL ORELSE |->;
 infixr -->;
 
 fun DEF_ERR func mesg =
-     HOL_ERR{origin_structure = "Def",
+     HOL_ERR{origin_structure = "QuotedDef",
              origin_function = func,
              message = mesg};
 
@@ -208,8 +207,8 @@ fun xDefine bindstem ql =
         in
           Lib.say (String.concat
            ["Schematic definition.\nEquations stored under ",
-            Lib.quote defname, " in current theory.\nInduction stored under ",
-            Lib.quote indname, " in current theory.\n"]);
+            Lib.quote defname, ".\nInduction stored under ",
+            Lib.quote indname, ".\n"]);
           save_thm(indname, ind);
           save_thm(defname, Defn.eqns_of defn)
         end
@@ -227,8 +226,9 @@ fun xDefine bindstem ql =
                save_thm(defname, Defn.eqns_of defn')
             end
        else (Lib.say (String.concat
-               ["Unable to prove totality! Use Hol_fun for ",
-               "do-it-yourself termination proofs.\n"]);
+               ["Unable to prove totality!\nUse \"Hol_fun\" to make ",
+               "the definition,\nand \"Defn.tgoal <defn>\" to set up the ",
+               "termination proof.\n"]);
              mapfilter delete_const (map dest_atom (constants_of defn));
              Theory.scrub();
              raise DEF_ERR "xDefine" "Unable to prove termination")
@@ -272,7 +272,7 @@ fun Define ql =
                    else let val name = gen_symbolic_name()
                         in
                           Lib.say (String.concat
-                             ["Non-alphanumeric being defined.\n ",
+                             ["Non-alphanumeric being defined.\n",
                               "Invented stem for binding(s): ", 
                               Lib.quote name,".\n"]);
                           name
@@ -281,7 +281,7 @@ fun Define ql =
              let val name = "mutrec"^Lib.int_to_string(inc_mutl names)
              in 
                Lib.say (String.concat
-                  ["Mutually recursive definition.\n ",
+                  ["Mutually recursive definition.\n",
                    "Invented stem for bindings is ", 
                    Lib.quote name,".\n"]);
                name
@@ -290,5 +290,6 @@ fun Define ql =
     xDefine bindstem qtm
  end               
 end;
+
 
 end;

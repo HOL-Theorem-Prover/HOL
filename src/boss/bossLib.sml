@@ -53,6 +53,18 @@ val ind_suffix = QuotedDef.ind_suffix
 val def_suffix = QuotedDef.def_suffix;
 
 (*---------------------------------------------------------------------------
+     Support for higher-order recursion. There should be a better 
+     place for this. Probably listTheory would be right, but then 
+     Context would have to be known earlier.
+ ---------------------------------------------------------------------------*)
+
+local open Context listTheory
+     val hocongs = [EXISTS_CONG,EVERY_CONG,MAP_CONG,ITLIST_CONG,list_size_cong]
+in 
+  val _ = write_context (hocongs@read_context())
+end;
+
+(*---------------------------------------------------------------------------
             Automated proof operations
  ---------------------------------------------------------------------------*)
 
@@ -102,6 +114,7 @@ fun ZAP_TAC ss thl =
 
 val Cases  = SingleStep.Cases
 val Induct = SingleStep.Induct
+val recInduct = SingleStep.recInduct
 
 val Cases_on          = SingleStep.Cases_on
 val Induct_on         = SingleStep.Induct_on
@@ -111,6 +124,5 @@ val measureInduct_on  = SingleStep.measureInduct_on;
 val SPOSE_NOT_THEN    = SingleStep.SPOSE_NOT_THEN
 
 val by = SingleStep.by; (* infix 8 by *)
-
 
 end;

@@ -34,6 +34,7 @@ in
   val Induct_on : term quotation -> tactic
   val measureInduct_on  : term quotation -> tactic
   val completeInduct_on : term quotation -> tactic
+  val recInduct         : thm -> tactic
 
   (* Support for proof by contradiction *)
   val SPOSE_NOT_THEN : (thm -> tactic) -> tactic

@@ -208,7 +208,6 @@ fun measureInduct_on q (g as (asl,w)) =
  end
 end;
 
-
 fun Cases (g as (_,w)) =
   let val {Bvar,...} = dest_forall w handle HOL_ERR _
                        => raise STEP_ERR "Cases" "not a forall"
@@ -231,6 +230,68 @@ fun Induct (g as (_,w)) =
       un-necessarily. *)
    (Tactic.GEN_TAC THEN Induct_on [QUOTE Name]) g
  end;
+
+
+(*---------------------------------------------------------------------------
+         Recursion induction tactic. Taken from tflLib.
+ ---------------------------------------------------------------------------*)
+
+fun mk_aabs(vstr,body) = 
+   mk_abs{Bvar=vstr,Body=body}
+   handle HOL_ERR _ => 
+   mk_pabs{varstruct=vstr, body=body};
+
+fun list_mk_aabs (vstrl,tm) =
+    itlist (fn vstr => fn tm => mk_aabs(vstr,tm)) vstrl tm;
+
+fun strip_type ty =
+ case dest_type ty
+  of {Tyop="fun", Args=[ty1,ty2]} => 
+          let val (D,r) = strip_type ty2 in (ty1::D, r) end
+   | _ =>  ([],ty);
+
+local fun break [] = raise STEP_ERR "mk_vstruct" "unable"
+        | break (h::t) = (h,t)
+in
+fun mk_vstruct ty V =
+  if (is_vartype ty) then break V
+  else
+   case Type.dest_type ty
+    of {Tyop="prod", Args = [ty1,ty2]} =>
+           let val (ltm,vs1) = mk_vstruct ty1 V
+               val (rtm,vs2) = mk_vstruct ty2 vs1
+           in
+             (Dsyntax.mk_pair{fst=ltm, snd=rtm}, vs2)
+           end
+     | _ => break V
+end;
+
+fun mk_vstrl [] V A = rev A
+  | mk_vstrl (ty::rst) V A = 
+      let val (vstr,V1) = mk_vstruct ty V
+      in mk_vstrl rst V1 (vstr::A)
+      end;
+
+fun recInduct thm =
+  let open Rsyntax Let_conv
+      val {Bvar=prop,Body} = dest_forall(concl thm)
+      val parg_tyl = #1(strip_type (type_of prop))
+      val n = (length o #1 o strip_forall o #2 o strip_imp) Body
+      fun ndest_forall trm = 
+          let fun dest (0,tm,V) = (rev V,tm)
+                | dest (n,tm,V) = let val {Bvar,Body} = dest_forall tm
+                                  in dest(n-1,Body, Bvar::V) end
+          in dest(n,trm,[])
+          end
+      fun tac (asl,w) =
+       let val (V,body) = ndest_forall w
+           val P = list_mk_aabs(mk_vstrl parg_tyl V [], body)
+           val thm' = CONV_RULE(DEPTH_CONV GEN_BETA_CONV) (ISPEC P thm)
+       in MATCH_MP_TAC thm' (asl,w)
+       end
+  in tac
+  end;
+
 
 (*---------------------------------------------------------------------------*
  * A simple aid to reasoning by contradiction.                               *

@@ -16,21 +16,20 @@ open HolKernel Parse basicHol90Lib;
 
 infix THEN THENL ORELSE;
 
-fun AUTO_ERR func mesg =
+fun ERR func mesg =
      HOL_ERR{origin_structure = "BasicProvers",
              origin_function = func,
              message = mesg};
 
-local
-  open simpLib
-  infix ++
-  val EXPAND_COND_CONV =
-    SIMP_CONV (pureSimps.pure_ss ++ boolSimps.COND_elim_ss) []
-  val EXPAND_COND_TAC = CONV_TAC EXPAND_COND_CONV
-  val EXPAND_COND = CONV_RULE EXPAND_COND_CONV
+local open simpLib
+      infix ++
+      val EXPAND_COND_CONV =
+           SIMP_CONV (pureSimps.pure_ss ++ boolSimps.COND_elim_ss) []
+      val EXPAND_COND_TAC = CONV_TAC EXPAND_COND_CONV
+      val EXPAND_COND = CONV_RULE EXPAND_COND_CONV
 in
 fun PROVE thl tm = Tactical.prove (tm,
- EXPAND_COND_TAC THEN mesonLib.MESON_TAC (map EXPAND_COND thl))
+  EXPAND_COND_TAC THEN mesonLib.MESON_TAC (map EXPAND_COND thl))
 
 fun PROVE_TAC thl =
   REPEAT (POP_ASSUM MP_TAC)
@@ -111,7 +110,7 @@ fun LIFT_SIMP ss tm =
 
 
 local fun DTHEN (ttac:Abbrev.thm_tactic) :tactic = fn (asl,w) =>
-        if (is_neg w) then raise AUTO_ERR "DTHEN" "negation"
+        if (is_neg w) then raise ERR "DTHEN" "negation"
         else let val {ant,conseq} = Dsyntax.dest_imp w
                  val (gl,prf) = ttac (Thm.ASSUME ant) (asl,conseq)
              in (gl, Thm.DISCH ant o prf)
