@@ -7,7 +7,7 @@
 # ---------------------------------------------------------------------
 
 
-HOLMANDIR=/usr/groups/hol/hol90/
+HOLMANDIR=../../../
 
 Help=../help
 LATEX=latex
