@@ -547,9 +547,9 @@ local
     val gtf = give_types_to_fvs ctxt
   in
     case tm of
-      Var{Name, Ty} => let
+      Var{Name, Ty, ...} => let
       in
-        if has_any_uvars Ty andalso not(Lib.mem tm boundvars) then
+        if has_any_uvars Ty andalso not(Lib.op_mem Preterm.eq tm boundvars) then
           case List.find (fn ctxttm => name_eq Name ctxttm) ctxt of
             NONE => ()
           | SOME ctxt_tm =>
@@ -563,9 +563,9 @@ local
         else
           ()
       end
-    | Comb{Rator, Rand} => (gtf boundvars Rator; gtf boundvars Rand)
-    | Abs{Bvar, Body} => gtf (Bvar::boundvars) Body
-    | Constrained(ptm, _) => gtf boundvars ptm
+    | Comb{Rator, Rand, ...} => (gtf boundvars Rator; gtf boundvars Rand)
+    | Abs{Bvar, Body, ...} => gtf (Bvar::boundvars) Body
+    | Constrained{Ptm, ...} => gtf boundvars Ptm
     | _ => ()
   end
 in

@@ -9,7 +9,7 @@ sig
   type bvar_in_env    = env -> (preterm -> preterm) * env
   type binder_in_env  = string -> bvar_in_env
 
-  val gen_overloaded_const  : term_grammar.overload_info -> string -> preterm
+  val gen_overloaded_const  : term_grammar.overload_info -> locn.locn -> string -> preterm
   val make_preterm          : preterm_in_env -> preterm
   val make_aq               : locn.locn -> term -> preterm_in_env
   val make_binding_occ      : locn.locn -> string -> binder_in_env

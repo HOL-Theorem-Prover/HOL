@@ -5,14 +5,23 @@ sig
   type term = Term.term
 
   datatype preterm =
-    Var of   {Name : string, Ty : pretype}
-  | Const of {Name : string, Thy : string, Ty : pretype}
+    Var of   {Name : string, Ty : pretype, Locn : locn.locn}
+  | Const of {Name : string, Thy : string, Ty : pretype, Locn : locn.locn}
   | Overloaded of {Name : string, Ty : pretype,
-                   Info : Overload.overloaded_op_info}
-  | Comb of  {Rator: preterm, Rand : preterm}
-  | Abs of   {Bvar : preterm, Body : preterm}
-  | Constrained of preterm * pretype
-  | Antiq of term
+                   Info : Overload.overloaded_op_info, Locn : locn.locn}
+  | Comb of  {Rator: preterm, Rand : preterm, Locn : locn.locn}
+  | Abs of   {Bvar : preterm, Body : preterm, Locn : locn.locn}
+  | Constrained of {Ptm:preterm, Ty:pretype, Locn:locn.locn}
+  | Antiq of {Tm:Term.term, Locn:locn.locn}
+  (* | HackHack of bool -> bool *)
+  (* Because of the Locn fields, preterms should *not* be compared
+     with the built-in equality, but should use eq defined below.
+     To check this has been done everywhere, uncomment this constructor. *)
+
+  val locn : preterm -> locn.locn
+
+  val eq : preterm -> preterm -> bool
+
 
   (* Performs the first phase of type-checking, altering the types
      attached to the various components of the preterm, but without

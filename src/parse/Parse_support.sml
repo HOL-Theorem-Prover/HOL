@@ -52,35 +52,35 @@ fun make_preterm tm_in_e = fst(tm_in_e empty_env)
  *       Antiquotes                                                          *
  *---------------------------------------------------------------------------*)
 
-fun make_aq _ tm {scope,free} = let
+fun make_aq l tm {scope,free} = let
   open Term Preterm
   fun from ltm (E as (lscope,scope,free)) =
     case ltm of
       VAR (v as (Name,Ty)) =>
        let val pty = Pretype.fromType Ty
-           val v' = {Name=Name, Ty=pty}
+           val v' = {Name=Name, Ty=pty, Locn=l}
        in if mem v' lscope then (Var v', E)
           else
           case assoc1 Name scope
-           of SOME(_,ntv) => (Constrained(Var{Name=Name,Ty=ntv}, pty), E)
+           of SOME(_,ntv) => (Constrained{Ptm=Var{Name=Name,Ty=ntv,Locn=l}, Ty=pty, Locn=l}, E)
             | NONE => let in
                case assoc1 Name free
                 of NONE => (Var v', (lscope,scope, (Name,pty)::free))
-                 | SOME(_,ntv) => (Constrained(Var{Name=Name,Ty=ntv},pty), E)
+                 | SOME(_,ntv) => (Constrained{Ptm=Var{Name=Name,Ty=ntv,Locn=l},Ty=pty,Locn=l}, E)
                end
        end
-    | CONST{Name,Thy,Ty} => (Const{Name=Name,Thy=Thy,Ty=Pretype.fromType Ty},E)
+    | CONST{Name,Thy,Ty} => (Const{Name=Name,Thy=Thy,Ty=Pretype.fromType Ty,Locn=l},E)
     | COMB(Rator,Rand)   =>
        let val (ptm1,E1) = from (dest_term Rator) E
            val (ptm2,E2) = from (dest_term Rand) E1
-       in (Comb{Rator=ptm1, Rand=ptm2}, E2)
+       in (Comb{Rator=ptm1, Rand=ptm2, Locn=l}, E2)
        end
     | LAMB(Bvar,Body) =>
        let val (s,ty) = dest_var Bvar
-           val v' = {Name=s, Ty = Pretype.fromType ty}
+           val v' = {Name=s, Ty = Pretype.fromType ty, Locn=l}
            val (Body',(_,_,free')) = from (dest_term Body)
                                           (v'::lscope, scope, free)
-       in (Abs{Bvar=Var v', Body=Body'}, (lscope,scope,free'))
+       in (Abs{Bvar=Var v', Body=Body', Locn=l}, (lscope,scope,free'))
        end
   val (ptm, (_,_,free)) = from (dest_term tm) ([],scope,free)
 in
@@ -92,9 +92,9 @@ end;
  * Generating fresh constant instances                                       *
  *---------------------------------------------------------------------------*)
 
-fun gen_thy_const (thy,s) =
+fun gen_thy_const l (thy,s) =
   let val c = Term.prim_mk_const{Name=s, Thy=thy}
-  in Preterm.Const {Name=s, Thy=thy,
+  in Preterm.Const {Name=s, Thy=thy, Locn=l,
         Ty=Pretype.rename_typevars
                  (Pretype.fromType (Term.type_of c))}
   end
@@ -104,7 +104,7 @@ fun gen_const l s =
   of [] => raise ERRORloc "gen_const" l ("unable to find constant "^Lib.quote s)
    | h::_ => let val {Name,Thy,Ty} = Term.dest_thy_const h
              in Preterm.Const
-                  {Name=Name, Thy=Thy,
+                  {Name=Name, Thy=Thy, Locn = l,
                    Ty=Pretype.rename_typevars (Pretype.fromType Ty)}
              end
 
@@ -125,23 +125,23 @@ fun make_binding_occ l s binder E =
      val E' = add_scope((s,ntv),E)
  in
   case binder
-   of "\\" => ((fn b => Abs{Bvar=Var{Name=s, Ty=ntv},Body=b}), E')
-    |  _   => ((fn b => Comb{Rator=gen_const l binder,
-                             Rand=Abs{Bvar=Var{Name=s,Ty=ntv}, Body=b}}), E')
+   of "\\" => ((fn b => Abs{Bvar=Var{Name=s, Ty=ntv, Locn=l},Body=b,Locn=locn.near (Preterm.locn b)}), E')
+    |  _   => ((fn b => Comb{Rator=gen_const l binder, Locn=locn.near (Preterm.locn b),
+                                  Rand=Abs{Bvar=Var{Name=s,Ty=ntv,Locn=l}, Body=b, Locn=locn.near (Preterm.locn b)}}), E')
  end;
 
 
 fun make_aq_binding_occ l aq binder E = let
   val (v as (Name,Ty)) = Term.dest_var aq
   val pty = Pretype.fromType Ty
-  val v' = {Name=Name, Ty=Pretype.fromType Ty}
+  val v' = {Name=Name, Ty=Pretype.fromType Ty, Locn=l}
   val E' = add_scope ((Name,pty),E)
   open Preterm
 in
   case binder of
-    "\\"   => ((fn b => Abs{Bvar=Var v', Body=b}), E')
-  | binder => ((fn b => Comb{Rator=gen_const l binder,
-                             Rand=Abs{Bvar=Var v', Body=b}}),  E')
+    "\\"   => ((fn b => Abs{Bvar=Var v', Body=b, Locn=locn.near (Preterm.locn b)}), E')
+  | binder => ((fn b => Comb{Rator=gen_const l binder, Locn=locn.near (Preterm.locn b),
+                             Rand=Abs{Bvar=Var v', Body=b, Locn=locn.near (Preterm.locn b)}}),  E')
 end
 
 
@@ -149,12 +149,12 @@ end
  * Free occurrences of variables.
  *---------------------------------------------------------------------------*)
 
-fun make_free_var (s,E) =
+fun make_free_var l (s,E) =
  let open Preterm
- in (Var{Name=s, Ty=lookup_fvar(s,E)}, E)
+ in (Var{Name=s, Ty=lookup_fvar(s,E), Locn=l}, E)
      handle HOL_ERR _ =>
        let val tyv = Pretype.new_uvar()
-       in (Var{Name=s, Ty=tyv}, add_free((s,tyv), E))
+       in (Var{Name=s, Ty=tyv, Locn=l}, add_free((s,tyv), E))
        end
  end
 
@@ -162,25 +162,25 @@ fun make_free_var (s,E) =
  * Bound occurrences of variables.
  *---------------------------------------------------------------------------*)
 
-fun make_bvar (s,E) = (Preterm.Var{Name=s, Ty=lookup_bvar(s,E)}, E);
+fun make_bvar l (s,E) = (Preterm.Var{Name=s, Ty=lookup_bvar(s,E), Locn=l}, E);
 
 (* ----------------------------------------------------------------------
      Treatment of overloaded identifiers
  ---------------------------------------------------------------------- *)
 
-fun gen_overloaded_const oinfo s =
+fun gen_overloaded_const oinfo l s =
  let open Overload
      val opinfo = valOf (info_for_name oinfo s)
          handle Option => raise Fail "gen_overloaded_const: invariant failure"
  in
   case #actual_ops opinfo
    of [{Ty,Name,Thy}] =>
-         Preterm.Const{Name=Name, Thy=Thy,
+         Preterm.Const{Name=Name, Thy=Thy, Locn=l,
                    Ty=Pretype.rename_typevars (Pretype.fromType Ty)}
   | otherwise =>
      let val base_pretype0 = Pretype.fromType (#base_type opinfo)
          val new_pretype = Pretype.rename_typevars base_pretype0
-     in Preterm.Overloaded{Name = s, Ty = new_pretype, Info = opinfo}
+     in Preterm.Overloaded{Name = s, Ty = new_pretype, Info = opinfo, Locn = l}
     end
  end
 
@@ -216,26 +216,26 @@ local val num_ty = Pretype.Tyop{Thy="num", Tyop = "num", Args = []}
       val char_ty   = Pretype.Tyop{Thy="string", Tyop="char", Args = []}
       val string_ty = Pretype.Tyop{Thy="string", Tyop="string", Args = []}
       fun funty ty1 ty2 = Pretype.Tyop{Thy="min", Tyop="fun", Args=[ty1,ty2]}
-      fun mk_comb(ptm1,ptm2) = Preterm.Comb{Rator=ptm1,Rand=ptm2}
+      fun mk_comb l (ptm1,ptm2) = Preterm.Comb{Rator=ptm1,Rand=ptm2,Locn=l}
       val CHR = Preterm.Const
-                   {Name="CHR",Thy="string",Ty=funty num_ty char_ty}
+                   {Name="CHR",Thy="string",Ty=funty num_ty char_ty,Locn=locn.Loc_None}
       val STRING = Preterm.Const {Name="STRING",Thy="string",
-                      Ty=funty char_ty (funty string_ty string_ty)}
+                      Ty=funty char_ty (funty string_ty string_ty), Locn=locn.Loc_None}
       val EMPTY = Preterm.Const
-                      {Name="EMPTYSTRING",Thy="string",Ty=string_ty}
-      fun mk_chr ptm = Preterm.Comb{Rator=CHR,Rand=ptm}
-      fun mk_string (ptm1,ptm2) =
-          Preterm.Comb{Rator=Preterm.Comb{Rator=STRING,Rand=ptm1},Rand=ptm2}
-      val mk_numeral = Literal.gen_mk_numeral
-          {mk_comb = mk_comb,
-          ZERO = Preterm.Const {Name="0",Thy="num",Ty=num_ty},
-          ALT_ZERO = Preterm.Const{Name="ALT_ZERO",Thy="arithmetic",Ty=num_ty},
+                      {Name="EMPTYSTRING",Thy="string",Ty=string_ty, Locn=locn.Loc_None}
+      fun mk_chr l ptm = Preterm.Comb{Rator=CHR,Rand=ptm,Locn=l}
+      fun mk_string l (ptm1,ptm2) =
+          Preterm.Comb{Rator=Preterm.Comb{Rator=STRING,Rand=ptm1,Locn=l},Rand=ptm2,Locn=l}
+      fun mk_numeral l = Literal.gen_mk_numeral
+          {mk_comb = mk_comb l,
+          ZERO = Preterm.Const {Name="0",Thy="num",Ty=num_ty,Locn=locn.Loc_None},
+          ALT_ZERO = Preterm.Const{Name="ALT_ZERO",Thy="arithmetic",Ty=num_ty,Locn=l},
           NUMERAL = Preterm.Const
-                     {Name="NUMERAL",Thy="arithmetic",Ty=funty num_ty num_ty},
+                     {Name="NUMERAL",Thy="arithmetic",Ty=funty num_ty num_ty,Locn=l},
           BIT1 = Preterm.Const {Name="NUMERAL_BIT1",
-                                Thy="arithmetic",Ty=funty num_ty num_ty},
+                                Thy="arithmetic",Ty=funty num_ty num_ty, Locn=l},
           BIT2 = Preterm.Const {Name="NUMERAL_BIT2",
-                                Thy="arithmetic",Ty=funty num_ty num_ty}}
+                                Thy="arithmetic",Ty=funty num_ty num_ty, Locn=l}}
 in
 fun make_string_literal l s =
     if not (mem "string" (ancestry "-")) andalso
@@ -246,10 +246,10 @@ fun make_string_literal l s =
                     "load \"stringTheory\" first."))
     else
       Literal.mk_string_lit
-        {mk_string = mk_string,
+        {mk_string = mk_string l,
          emptystring = EMPTY,
          fromMLchar = fn ch =>
-                         mk_chr(mk_numeral(Arbnum.fromInt (Char.ord ch)))}
+                         mk_chr l(mk_numeral l(Arbnum.fromInt (Char.ord ch)))}
         (String.substring(s,1,String.size s - 2))
 end;
 
@@ -259,18 +259,18 @@ end;
     treated as visible.
  ---------------------------------------------------------------------------*)
 
-fun make_qconst _ _ (p as (thy,s)) E = (gen_thy_const p, E);
+fun make_qconst _ l (p as (thy,s)) E = (gen_thy_const l p, E);
 
 fun make_atom oinfo l s E =
- make_bvar(s,E) handle HOL_ERR _
+ make_bvar l (s,E) handle HOL_ERR _
   =>
   if Overload.is_overloaded oinfo s then
-    (gen_overloaded_const oinfo s, E)
+    (gen_overloaded_const oinfo l s, E)
   else
   case List.find (fn rfn => String.isPrefix rfn s)
                  [recsel_special, recupd_special, recfupd_special]
    of NONE => if Lexis.is_string_literal s then (make_string_literal l s, E)
-              else make_free_var (s, E)
+              else make_free_var l (s, E)
     | SOME rfn =>
         Raise (ERRORloc "make_atom" l
                      ("Record field "^String.extract(s, size rfn, NONE)^
@@ -280,20 +280,20 @@ fun make_atom oinfo l s E =
  * Combs
  *---------------------------------------------------------------------------*)
 
-fun list_make_comb _ (tm1::(rst as (_::_))) E =
+fun list_make_comb l (tm1::(rst as (_::_))) E =
      rev_itlist (fn tm => fn (trm,e) =>
         let val (tm',e') = tm e
-        in (Preterm.Comb{Rator = trm, Rand = tm'}, e') end)     rst (tm1 E)
+        in (Preterm.Comb{Rator = trm, Rand = tm', Locn=l}, e') end)     rst (tm1 E)
   | list_make_comb l _ _ = raise ERRORloc "list_make_comb" l "insufficient args";
 
 (*---------------------------------------------------------------------------
  * Constraints
  *---------------------------------------------------------------------------*)
 
-fun make_constrained _ tm ty E = let
+fun make_constrained l tm ty E = let
   val (tm',E') = tm E
 in
-  (Preterm.Constrained(tm', ty), E')
+  (Preterm.Constrained{Ptm = tm', Ty = ty, Locn = l}, E')
 end;
 
 
@@ -362,7 +362,7 @@ fun bind_restr_term l binder vlist restr tm (E as {scope=scope0,...}:env)=
           rev_itlist (fn v => fn (e,f)
              => let val (prefix,e') = list_make_comb l [replicate_rbinder,restr] e
                     val (g,e'') = v "\\" e'
-                    fun make_cmb ptm = Preterm.Comb{Rator=prefix,Rand=ptm}
+                    fun make_cmb ptm = Preterm.Comb{Rator=prefix,Rand=ptm,Locn=l}
                 in (e'', f o make_cmb o g) end)         vlist (E,I)
        val (tm',({free=free1,...}:env)) = tm E'
    in
@@ -377,15 +377,15 @@ fun split ty =
 
 local open Preterm
 in
-fun cdom _ M [] = M
-  | cdom l (Abs{Bvar,Body}) (ty::rst) =
-       Abs{Bvar = Constrained(Bvar,ty), Body = cdom l Body rst}
-  | cdom l (Comb{Rator as Const{Name="UNCURRY",...},Rand}) (ty::rst) =
-       Comb{Rator=Rator, Rand=cdom l Rand (split ty@rst)}
-  | cdom l x y = raise ERRORloc "cdom" l "missing case"
+fun cdom M [] = M
+  | cdom (Abs{Bvar,Body,Locn}) (ty::rst) =
+       Abs{Bvar = Constrained{Ptm=Bvar,Ty=ty,Locn=Locn}, Body = cdom Body rst, Locn = Locn}
+  | cdom (Comb{Rator as Const{Name="UNCURRY",...},Rand,Locn}) (ty::rst) =
+       Comb{Rator=Rator, Rand=cdom Rand (split ty@rst), Locn=Locn}
+  | cdom x y = raise ERRORloc "cdom" (Preterm.locn x) "missing case"
 end;
 
-fun cdomf l (f,e) ty = ((fn tm => cdom l (f tm) [ty]), e)
+fun cdomf (f,e) ty = ((fn tm => cdom (f tm) [ty]), e)
 
 fun make_vstruct l bvl tyo binder E = let
   open Preterm
@@ -394,17 +394,17 @@ fun make_vstruct l bvl tyo binder E = let
         val (f,e) = v "\\" E
         val (F,E') = loop(rst,e)
       in
-        ((fn b => Comb{Rator=gen_const l "UNCURRY",Rand=f(F b)}), E')
+        ((fn b => Comb{Rator=gen_const l "UNCURRY",Rand=f(F b),Locn=l}), E')
       end
     | loop _ = raise ERRORloc "make_vstruct" l "impl. error, empty vstruct"
   val (F,E') =
     case tyo of
       NONE    => loop(bvl,E)
-    | SOME ty => cdomf l (hd bvl "\\" E) ty
+    | SOME ty => cdomf (hd bvl "\\" E) ty
 in
   case binder of
     "\\" => (F,E')
-  | _ => ((fn b => Comb{Rator=gen_const l binder,Rand=F b}), E')
+  | _ => ((fn b => Comb{Rator=gen_const l binder,Rand=F b,Locn=l}), E')
 end;
 
 
@@ -423,7 +423,7 @@ fun make_let l bindings tm env =
        val (core,E') = bind_term l "\\" body_bvars tm E
    in
      ( rev_itlist (fn arg => fn core =>
-            Comb{Rator=Comb{Rator=gen_const l "LET",Rand=core},Rand=arg})
+            Comb{Rator=Comb{Rator=gen_const l "LET",Rand=core,Locn=l},Rand=arg,Locn=l})
            args core, E')
    end
    handle HOL_ERR _ => raise ERRORloc "make_let" l "bad let structure";
@@ -463,8 +463,8 @@ fun make_set_abs l (tm1,tm2) (E as {scope=scope0,...}:env) =
          let val quants' = map
                 (fn (bnd as (Name,Ty)) =>
                      (fn (s:string) => fn E =>
-                       ((fn b => Preterm.Abs{Bvar=Preterm.Var{Name=Name,Ty=Ty},
-                                             Body=b}),
+                       ((fn b => Preterm.Abs{Bvar=Preterm.Var{Name=Name,Ty=Ty,Locn=l(*ugh*)},
+                                             Body=b, Locn=l}),
                                 add_scope(bnd,E))))
                (rev quants) (* make_vstruct expects reverse occ. order *)
          in list_make_comb l
