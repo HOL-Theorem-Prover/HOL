@@ -39,7 +39,6 @@ sig
   val FIRST_X_ASSUM  : thm_tactic -> tactic
   val ASSUM_LIST     : (Thm.thm list -> tactic) -> tactic
   val POP_ASSUM      : thm_tactic -> tactic
-  val PAT_ASSUM      : Term.term -> thm_tactic -> tactic
   val POP_ASSUM_LIST : (Thm.thm list -> tactic) -> tactic
   val SUBGOAL_THEN   : Term.term -> thm_tactic -> tactic
   val CHANGED_TAC    : tactic -> tactic

@@ -200,16 +200,6 @@ fun POP_ASSUM thfun (a::asl, w) = thfun (ASSUME a) (asl,w)
   | POP_ASSUM   _   ([], _) = raise TACTICAL_ERR "POP_ASSUM" "no assum";
 
 (*---------------------------------------------------------------------------
- * Pop the first assumption that matches the pattern and give it to
- * a function (tactic).
- *---------------------------------------------------------------------------*)
-fun PAT_ASSUM pat thfun (asl, w) =
-  let val (ob,asl') = Lib.pluck (Lib.can (Term.match_term pat)) asl
-  in
-     thfun (ASSUME ob) (asl',w)
-  end;
-
-(*---------------------------------------------------------------------------
  * Pop off the entire assumption list and give it to a function (tactic)
  *---------------------------------------------------------------------------*)
 fun POP_ASSUM_LIST asltac (asl,w) = asltac (map ASSUME asl) ([],w);
