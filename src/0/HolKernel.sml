@@ -36,10 +36,32 @@ val is_ty_antiq = Lib.can dest_ty_antiq
           General term operations
  ---------------------------------------------------------------------------*)
 
+fun dest_monop c e M =
+ let val (c1,N) = with_exn dest_comb M e
+ in if same_const c c1 then N else raise e end
+
+local fun dest tm = 
+       let val (Rator,N) = dest_comb tm
+           val (c,M) = dest_comb Rator
+       in (c,(M,N)) end
+in
+fun dest_binop c e tm =
+   let val (c1,pair) = with_exn dest tm e
+   in if same_const c c1 then pair else raise e end
+end
+
+local fun dest M = let val (c,Rand) = dest_comb M in (c,dest_abs Rand) end
+in
+fun dest_binder c e M =
+  let val (c1,p) = with_exn dest M e
+  in if same_const c c1 then p else raise e end
+end
+
+
 local fun dest M =
        let val (Rator,Rand) = dest_comb M in (dest_thy_const Rator,Rand) end
 in
-fun dest_monop (name,thy) e M =
+fun sdest_monop (name,thy) e M =
  let val ({Name,Thy,...},Rand) = with_exn dest M e
  in if Name=name andalso Thy=thy then Rand else raise e
  end;
@@ -51,15 +73,26 @@ local fun dest tm =
        in (dest_thy_const c,(M,N))
        end
 in
-fun dest_binop (name,thy) e tm =
+fun sdest_binop (name,thy) e tm =
    let val ({Name,Thy,...},pair) = with_exn dest tm e
    in if Name=name andalso Thy=thy then pair else raise e
    end
+end;
+local fun dest M =
+       let val (c, Rand) = dest_comb M
+       in (dest_thy_const c,dest_abs Rand)
+       end
+in
+fun sdest_binder (name,thy) e M =
+  let val ({Name,Thy,...}, p) = with_exn dest M e
+  in if Name=name andalso Thy=thy then p else raise e
+  end
 end;
 
 fun single x = [x];
 
 (* Breaks term down until binop no longer occurs at top level in result list *)
+
 fun strip_binop dest =
  let fun strip A [] = rev A
        | strip A (h::t) =
@@ -70,6 +103,7 @@ fun strip_binop dest =
  end;
 
 (* For right-associative binary operators. Tail recursive. *)
+
 fun list_mk_rbinop _ [] = raise ERR "list_mk_rbinop" "empty list"
   | list_mk_rbinop mk_binop alist = 
        let val (h::t) = List.rev alist
@@ -79,18 +113,6 @@ fun list_mk_rbinop _ [] = raise ERR "list_mk_rbinop" "empty list"
 fun mk_binder c f (p as (Bvar,_)) =
    mk_comb(inst[alpha |-> type_of Bvar] c, mk_abs p)
    handle HOL_ERR {message,...} => raise ERR f message;
-
-
-local fun dest M =
-       let val (c, Rand) = dest_comb M
-       in (dest_thy_const c,dest_abs Rand)
-       end
-in
-fun dest_binder (name,thy) e M =
-  let val ({Name,Thy,...}, p) = with_exn dest M e
-  in if Name=name andalso Thy=thy then p else raise e
-  end
-end;
 
 fun list_mk_fun (dtys, rty) = List.foldr op--> rty dtys
 

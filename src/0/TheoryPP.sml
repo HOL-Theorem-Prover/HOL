@@ -109,9 +109,9 @@ fun pp_sig pp_thm info_record ppstrm = let
   fun pr_thm class (s,th) =
     (begin_block CONSISTENT 0;
      add_string (String.concat ["[", s, "]"]);
-     add_break(2,0);
+     add_newline();
      add_string class;
-     add_break(2,0);
+     add_newline(); add_newline(); 
      if null (Thm.hyp th) andalso Tag.isEmpty (Thm.tag th)
        then pp_thm th
        else with_flag(Globals.show_tags,true)

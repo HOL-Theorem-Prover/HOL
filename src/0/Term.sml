@@ -192,8 +192,7 @@ fun FVL [] A = A
 
 
 (*---------------------------------------------------------------------------*
- * Does tm occur free in M. This is not defined modulo aconv. Maybe it       *
- * should be?                                                                *
+ * free_in tm M : does tm occur free in M? This is not defined modulo aconv. *
  *---------------------------------------------------------------------------*)
 
 fun free_in tm =
@@ -346,7 +345,7 @@ val all_consts = map #const o TermSig.all_entries;
 val thy_consts = map #const o TermSig.slice;
 
 fun same_const (Const(id1,_)) (Const(id2,_)) = same_id (id1,id2)
-  | same_const _ _ = raise ERR "same_const" "expected two constants"
+  | same_const _ _ = false
 
 (*---------------------------------------------------------------------------*
  *        Making applications                                                *
@@ -516,24 +515,28 @@ fun dest_comb (Comb r) = r
        abstractions.
   ---------------------------------------------------------------------------*)
 
+local val FORMAT = ERR "list_mk_binder" 
+   "expected first arg to be a constant of type :(<ty>_1 -> <ty>_2) -> <ty>_3"
+   fun check_opt NONE = Lib.I 
+     | check_opt (SOME c) =
+        if not(is_const c) then raise FORMAT
+        else case total (fst o Type.dom_rng o fst o Type.dom_rng o type_of) c
+              of NONE => raise FORMAT
+               | SOME ty => (fn abs => 
+                   let val dom = fst(Type.dom_rng(type_of abs))
+                   in mk_comb (inst[ty |-> dom] c, abs)
+                   end)
+in
 fun list_mk_binder opt =
- let val f = case opt 
-             of NONE => Lib.I 
-              | SOME c => 
-                 if is_const c then 
-                    (fn abs => 
-                       let val dom = fst(Type.dom_rng(type_of abs))
-                       in mk_comb (inst[Type.alpha |-> dom] c, abs)
-                       end)
-                 else raise ERR "list_mk_binder" "expected a constant"
+ let val f = check_opt opt
  in fn (vlist,tm) 
  => if not (all is_var vlist) then raise ERR "list_mk_binder" "" 
     else
   let open Polyhash
      val varmap = mkPolyTable(length vlist, Fail "varmap")
-     fun enumerate [] _ A = A
-       | enumerate (h::t) i A = (insert varmap (h,i); enumerate t (i-1) (h::A))
-     val rvlist = enumerate vlist (length vlist - 1) []
+     fun enum [] _ A = A
+       | enum (h::t) i A = (insert varmap (h,i); enum t (i-1) (h::A))
+     val rvlist = enum vlist (length vlist - 1) []
      fun lookup v vmap = case peek vmap v of NONE => v | SOME i => Bv i
      fun increment vmap = transform (fn x => x+1) vmap
      fun bind (v as Fv _) vmap k = k (lookup v vmap)
@@ -546,8 +549,9 @@ fun list_mk_binder opt =
   in
      rev_itlist (fn v => fn M => f(Abs(v,M))) rvlist (bind tm varmap I)
   end
+  handle e => raise wrap_exn "Term" "list_mk_binder" e
  end
- handle e => raise wrap_exn "Term" "list_mk_binder" e;
+end;
 
 val list_mk_abs = list_mk_binder NONE;
 
@@ -586,8 +590,7 @@ local fun peel f (t as Clos _) A = peel f (push_clos t) A
       datatype occtype = PREFIX of int | BODY
       fun array_to_revlist A =
         let val top = Array.length A - 1
-            fun For i acc =
-              if i>top then acc else For (i+1) (Array.sub(A,i)::acc)
+            fun For i B = if i>top then B else For (i+1) (Array.sub(A,i)::B)
         in For 0 []
         end
       val vi_empty = HOLset.empty (fn ((v1,i1),(v2,i2)) => var_compare(v1,v2))
@@ -652,7 +655,7 @@ fun strip_binder opt =
        | unbind (t as Clos _) j k = unbind (push_clos t) j k
        | unbind tm j k = k tm
  in
-     unclash insertAVprefix dupls
+     unclash insertAVprefix (List.rev dupls)
    ; unclash (insertAVbody o fst) (HOLset.listItems(CVs body vi_empty I))
    ; (array_to_revlist prefix, unbind body 0 I)
  end
@@ -827,9 +830,9 @@ local val err = ERR "dest_eq_ty" ""
 in
 fun dest_eq_ty t =
  let val ((c,M),N) = with_exn ((dest_comb##I) o dest_comb) t err
- in if same_const c eqc
-      then (M,N,fst(Type.dom_rng (type_of c)))
-      else  raise err
+ in if same_const c eqc 
+       then (M,N,fst(Type.dom_rng (type_of c))) 
+       else raise err
  end
 end;
 
@@ -905,4 +908,4 @@ fun pp_raw_term index pps tm =
    end_block()
  end;
 
-end; (* Term *)
+end (* Term *)
