@@ -10,13 +10,7 @@
 
  ---------------------------------------------------------------------------*)
 
-load "robddLib";
-
-(* infix_at_front := true;       (* For readability of large formulas *) *)
-stack_infixes := false;
-show_tags := true;
-
-
+(* load "robddLib";
 fun bdd_oracle q =
   let val tm = Parse.Term q
       val V = free_vars tm
@@ -24,6 +18,20 @@ fun bdd_oracle q =
     Lib.say (String.concat [int_to_string (length V), " variables.\n"]);
     time robddLib.mk_bdd_thm tm
   end;
+*)
+
+load "muddyLib";
+fun bdd_oracle q =
+  let val tm = Parse.Term q
+      val V = free_vars tm
+  in 
+    Lib.say (String.concat [int_to_string (length V), " variables.\n"]);
+    time muddyLib.mk_bdd_thm tm
+  end;
+
+(* infix_at_front := true;       (* For readability of large formulas *) *)
+(* stack_infixes := false; *)
+show_tags := true;
 
 
 val mjcg_yes = bdd_oracle 
@@ -578,7 +586,7 @@ val syn071_1 = bdd_oracle
   (v12 \/ v13) /\
   (v14 \/ v15))` ;
 
-(* Hard *)
+(* Hard : takes buddy17 73 secs. on sole *)
 val aim_50_1_6_no_3 = bdd_oracle
 `~
 ((v15 \/ v20 \/ v41) /\
@@ -662,7 +670,8 @@ val aim_50_1_6_no_3 = bdd_oracle
  (~v9 \/ ~v9 \/ ~v27) /\
  (v1 \/ v9 \/ v25))` ;
 
-(* Hard *)
+(* Harder: runtime: 526.970s,    gctime: 21.640s,     systime: 0.650s. *)
+
 val aim_50_1_6_no_4 = bdd_oracle
 `~
 ((v1 \/ v32 \/ v34) /\
@@ -820,7 +829,7 @@ val hostint1_be  = bdd_oracle
        eof /\ eos /\ s1 /\ ~s2 \/
        ~eos /\ ~s1 /\ ~s2)` ;
 
-(* Hard *)
+(* Hard : runtime: 73.140s,    gctime: 0.640s,     systime: 0.020s. *)
 val aim_50_2_0_no_4 = bdd_oracle
 `~
 ((v2 \/ v26 \/ v32) /\
@@ -924,7 +933,7 @@ val aim_50_2_0_no_4 = bdd_oracle
  (v14 \/ v38 \/ ~v38) /\
  (~v28 \/ ~v28 \/ ~v40))` ;
 
-(* Hard *)
+(* Hard runtime: 170.440s,    gctime: 1.940s,     systime: 0.050s. *)
 val aim_50_2_0_no_1 = bdd_oracle
 `~
 ((v7 \/ v11 \/ v19) /\

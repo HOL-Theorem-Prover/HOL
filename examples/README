@@ -55,10 +55,12 @@ Currently on offer are the following:
   * lambda
 
        This directory develops a "de Bruijn" style lambda calculus, and
-       also a name-carrying version. Both are untyped. The development is
-       a revision of the proofs underlying the "5 Axioms of Alpha
-       Conversion" paper of Andy Gordon and Tom Melham (Proceedings of
-       TPHOLs'96, Springer LNCS 1125).
+       also a name-carrying version. (Both are untyped.) The development
+       is a revision of the proofs underlying the paper
+
+           "5 Axioms of Alpha Conversion",
+            Andy Gordon and Tom Melham,
+            Proceedings of TPHOLs'96, Springer LNCS 1125.
 
   * taut.sml
 
@@ -70,3 +72,16 @@ Currently on offer are the following:
 
        This file is a template for making a separately compilable HOL
        theory script.
+
+  * thery
+
+       This file is a simple introductory example of proof in HOL,
+       extracted from 
+
+         "A quick overview of PVS and HOL"
+
+       by Laurent Thery of INRIA, Sophia-Antipolis, which was presented 
+       at
+     
+         "Types summer school'99: Theory and practice of formal proofs",
+         Giens, France, August 30 - September 10, 1999.
