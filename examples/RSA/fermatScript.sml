@@ -2,19 +2,17 @@ structure fermatScript =
 struct
 
 (* For interactive use:
- 
+
  app load ["bossLib", "Q", "numLib",
-     "gcdTheory", "primeTheory", "dividesTheory", "factorialTheory", 
+     "gcdTheory", "primeTheory", "dividesTheory", "factorialTheory",
      "binomialTheory", "congruentTheory", "summationTheory", "powerTheory"] ;
 *)
 
-open HolKernel Parse boolLib bossLib 
-     numLib arithmeticTheory prim_recTheory 
-     gcdTheory primeTheory dividesTheory factorialTheory 
+open HolKernel Parse boolLib bossLib
+     numLib arithmeticTheory prim_recTheory
+     gcdTheory primeTheory dividesTheory factorialTheory
      binomialTheory congruentTheory summationTheory powerTheory ;
 
-infix THEN THENC THENL;
-infix 8 by;
 val ARW = RW_TAC arith_ss;
 
 val _ = new_theory "fermat";
@@ -26,7 +24,7 @@ val DIV_FACT = store_thm("DIV_FACT",
                         THEN Cases_on `divides p (SUC n)` THENL[
                           EXISTS_TAC (Term `SUC n`) THEN ARW[],
                           IMP_RES_TAC P_EUCLIDES THEN TRY (PROVE_TAC[])
-                            THEN `0 < n` by ALL_TAC 
+                            THEN `0 < n` by ALL_TAC
                             THENL [
                               Cases_on `n=0` THEN ARW[]
                                 THEN `~(divides p (fact 0))` by REWRITE_TAC[fact_def, ONE]
@@ -39,7 +37,7 @@ val DIV_FACT = store_thm("DIV_FACT",
 val DIV_FACT_LESS = store_thm("DIV_FACT_LESS",
                               Term `!p n. prime p /\ divides p (fact n) ==> p <= n`,
                               Cases_on `n` THENL[
-                                ARW[fact_def] 
+                                ARW[fact_def]
                                   THEN `p <= 1` by ARW[DIVIDES_LE]
                                   THEN Cases_on `p=1`
                                   THEN ARW[NOT_PRIME_1] THEN PROVE_TAC[NOT_PRIME_1],
@@ -48,10 +46,10 @@ val DIV_FACT_LESS = store_thm("DIV_FACT_LESS",
                               ]
                               );
 
-                              
+
 val P_DIV_BINOMIAL = store_thm("P_DIV_BINOMIAL",
 			Term `!p n. prime p /\ 0<n /\ n<p ==>  divides p (binomial p n)`,
-                        ARW[] 
+                        ARW[]
                         THEN `0<p` by (Cases_on `p=0` THEN ARW[] THEN PROVE_TAC[NOT_PRIME_0])
                         THEN `divides p ((binomial ((p-n)+n) n) * (fact (p-n) * fact n))` by ARW[BINOMIAL_FACT,DIVIDES_FACT]
                         THEN  Cases_on `divides p (fact (p-n) * fact n)`
@@ -71,35 +69,35 @@ val P_DIV_BINOMIAL = store_thm("P_DIV_BINOMIAL",
                         ]
                       );
 
-val FERMAT_1 = store_thm("FERMAT_1",
-                               Term `!p k. prime p
-                                            ==>
-                                           congruent (power (k+1) p)  
-                                                     (power k p + 1) p`,
-                               Cases_on `p` THEN REWRITE_TAC[NOT_PRIME_0]
-                               THEN Cases_on `n` 
-                               THEN REWRITE_TAC[NOT_PRIME_1, SYM ONE]
-                               THEN ARW[EXP_PASCAL]
-                               THEN ONCE_REWRITE_TAC[SUMMATION_1]
-                               THEN ARW[SUMMATION_2,BINOMIAL_DEF1,MULT_CLAUSES,POWER_1,ADD_CLAUSES]
-                               THEN ARW[BINOMIAL_DEF3,power_def]
-                               THEN MATCH_MP_TAC CONGRUENT_ADD THEN ARW[CONGRUENT_REF]
-                               THEN `1=0+1` by ARW[]
-                               THEN POP_ASSUM (fn th => ONCE_REWRITE_TAC[th])
-                               THEN MATCH_MP_TAC CONGRUENT_ADD
-                               THEN ARW[CONGRUENT_REF]
-                               THEN MATCH_MP_TAC (BETA_RULE (Q.SPECL 
-                                    [`n'`, `SUC 0`,  
-                                     `\k'. binomial (SUC(SUC n')) k' 
-                                            * power k (SUC(SUC n') - k')`,
-                                     `\a. congruent a 0 (SUC (SUC n'))`] INV_SUMMATION))
-                               THEN ARW[ADD_CLAUSES] THENL [
-                                 PROVE_TAC[CONGRUENT_ADD,ADD_CLAUSES],
-                                `divides (SUC (SUC n')) (binomial (SUC(SUC n')) (k' + 1))` 
-                                  by ARW[P_DIV_BINOMIAL]
-                                 THEN PROVE_TAC[CONGRUENT_MULT_0,DIVIDES_CONGRUENT,ADD1]
-                               ]
-                        );
+val FERMAT_1 = store_thm(
+  "FERMAT_1",
+  Term `!p k. prime p
+               ==>
+              congruent (power (k+1) p)
+                        (power k p + 1) p`,
+  Cases_on `p` THEN REWRITE_TAC[NOT_PRIME_0]
+  THEN Cases_on `n`
+  THEN REWRITE_TAC[NOT_PRIME_1, SYM ONE]
+  THEN ARW[EXP_PASCAL]
+  THEN ONCE_REWRITE_TAC[SUMMATION_1]
+  THEN ARW[SUMMATION_2,BINOMIAL_DEF1,MULT_CLAUSES,POWER_1,ADD_CLAUSES]
+  THEN ARW[BINOMIAL_DEF3,power_def]
+  THEN MATCH_MP_TAC CONGRUENT_ADD THEN ARW[CONGRUENT_REF]
+  THEN `1=0+1` by ARW[]
+  THEN POP_ASSUM (fn th => ONCE_REWRITE_TAC[th])
+  THEN MATCH_MP_TAC CONGRUENT_ADD
+  THEN ARW[CONGRUENT_REF]
+  THEN MATCH_MP_TAC (SIMP_RULE std_ss [] (Q.SPECL
+       [`n'`, `SUC 0`,
+        `\k'. binomial (SUC(SUC n')) k'
+               * power k (SUC(SUC n') - k')`,
+        `\a. congruent a 0 (SUC (SUC n'))`] INV_SUMMATION))
+  THEN ARW[ADD_CLAUSES] THENL [
+    PROVE_TAC[CONGRUENT_ADD,ADD_CLAUSES],
+   `divides (SUC (SUC n')) (binomial (SUC(SUC n')) (k' + 1))`
+     by ARW[P_DIV_BINOMIAL]
+    THEN PROVE_TAC[CONGRUENT_MULT_0,DIVIDES_CONGRUENT,ADD1]
+  ]);
 
 
 val FERMAT_2 = store_thm("FERMAT_2",
@@ -114,7 +112,7 @@ val FERMAT_2 = store_thm("FERMAT_2",
 val FERMAT = store_thm("FERMAT",
                         Term `!k p. prime p ==> congruent (power k (p-1)) 1 p \/ divides p k`,
                         Cases_on `k` THEN Cases_on `p` THEN ARW[power_def,CONGRUENT_REF,ALL_DIVIDES_0]
-                        THEN Cases_on `divides (SUC n') (SUC n)` THEN ARW[] 
+                        THEN Cases_on `divides (SUC n') (SUC n)` THEN ARW[]
                         THEN `SUC n <= power (SUC n) (SUC n')` by ARW[POWER_LE]
                         THEN `divides (SUC n) ((power (SUC n) (SUC n')) - (SUC n))`
                            by ARW[DIVIDES_SUB,DIVIDES_REF,power_def,DIVIDES_MULT,MULT_SYM]
@@ -124,7 +122,7 @@ val FERMAT = store_thm("FERMAT",
                         THEN `divides (SUC n') q` by PROVE_TAC[L_EUCLIDES,MULT_SYM]
                         THEN POP_ASSUM MP_TAC THEN ARW[divides_def,congruent_def]
                         THEN EXISTS_TAC (Term `0`) THEN EXISTS_TAC (Term `q':num`) THEN ARW[MULT_CLAUSES]
-                        THEN `((power (SUC n) n' -1)*(SUC n)) = (q' * SUC n') * (SUC n)` 
+                        THEN `((power (SUC n) n' -1)*(SUC n)) = (q' * SUC n') * (SUC n)`
                            by (REWRITE_TAC[RIGHT_SUB_DISTRIB] THEN PROVE_TAC[power_def,MULT_SYM,MULT_LEFT_1])
                         THEN `(power (SUC n) n' -1) = q' + q'* n'` by PROVE_TAC[ MULT_SUC_EQ,MULT_SYM,MULT_CLAUSES]
                         THEN `1 <= power (SUC n) n'` by PROVE_TAC[POWER_LE_1]
