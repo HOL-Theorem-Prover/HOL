@@ -97,6 +97,8 @@ let register_newlines lexbuf s =
 let directive_alist =
   [
    (* normal holdoc_init directives *)
+   ("CLASS_LIST"       ,CLASS_LIST       );
+   ("CLASS"            ,CLASS            );
    ("TYPE_LIST"        ,TYPE_LIST        );
    ("CON_LIST"         ,CON_LIST         );
    ("FIELD_LIST"       ,FIELD_LIST       );
@@ -388,7 +390,7 @@ let print_token eds t =
   | From       -> (match eds with
                      (ed::eds') -> ((delim_info ed).sclose, eds')
                    | []         -> ((delim_info DelimEOF).sclose, []))
-  | TYPE_LIST | CON_LIST | FIELD_LIST | LIB_LIST | AUX_LIST
+  | CLASS_LIST | CLASS | TYPE_LIST | CON_LIST | FIELD_LIST | LIB_LIST | AUX_LIST
   | AUX_INFIX_LIST | VAR_PREFIX_LIST | VAR_PREFIX_ALIST | AUTO_BINDERS | NOAUTO_BINDERS | HOL_OP_LIST
   | HOL_SYM_ALIST | HOL_ID_ALIST | HOL_CURRIED_ALIST | SMART_PREFIX
   | NO_SMART_PREFIX | INDENT | NOINDENT | RULES | NORULES | COMMENTS
@@ -414,7 +416,7 @@ let render_token t =
   | ToMosml(d) | ToHol(d) | ToText(d) | ToTex(d) | ToDir(d)
                -> "{D:"^render_mode (to_token_mode t)^(delim_info d).sopen
   | From       -> ":D}"
-  | TYPE_LIST | CON_LIST | FIELD_LIST | LIB_LIST | AUX_LIST
+  | CLASS_LIST | CLASS | TYPE_LIST | CON_LIST | FIELD_LIST | LIB_LIST | AUX_LIST
   | AUX_INFIX_LIST | VAR_PREFIX_LIST | VAR_PREFIX_ALIST | AUTO_BINDERS | NOAUTO_BINDERS | HOL_OP_LIST
   | HOL_SYM_ALIST | HOL_ID_ALIST | HOL_CURRIED_ALIST | SMART_PREFIX
   | NO_SMART_PREFIX | INDENT | NOINDENT | RULES | NORULES | COMMENTS

@@ -9,17 +9,21 @@ type curried_info = {
     cy_multiline : bool; (* allow multi-line *)
 }
 
+type class_info = {
+    cl_cmd : string;           (* the TeX command to use *)
+    cl_dosub : bool;           (* do subscripting? *)
+    cl_highpri : bool;         (* if class and var, class wins *)
+}
+
+
+(* modal settings first (these depend on the current mode) *)
+
 type modalsettings = {
-  tYPE_LIST : string list ref;
-  cON_LIST : string list ref;
-  fIELD_LIST : string list ref;
-  lIB_LIST : string list ref;
-  aUX_LIST : string list ref;
-  aUX_INFIX_LIST : string list ref;
+  cLASSES : (string * class_info) list ref;
+  cLASS_IDS_LIST : (string, string) Hashtbl.t;
   vAR_PREFIX_LIST : string list ref;
   vAR_PREFIX_ALIST : (string * string) list ref;
   aUTO_BINDERS : bool ref;
-  hOL_OP_LIST : string list ref;
   hOL_SYM_ALIST : (string * string) list ref;
   hOL_ID_ALIST : (string * string) list ref;
   hOL_CURRIED_ALIST : (string * curried_info) list ref;

@@ -192,26 +192,13 @@ let texify_text = dotexify texify_text_list
 
 (* recognisers for various syntactic categories *)
 
-let is_rule s =
-  !(!curmodals.rULES) &&
-  Str.string_match
-     (Str.regexp ".*_[0-9]+")
-     s
-     0
-
-let is_type s = List.mem s !(!curmodals.tYPE_LIST)
-
-let is_con s = List.mem s !(!curmodals.cON_LIST)
-
-let is_field s = List.mem s !(!curmodals.fIELD_LIST)
-
-let is_lib s = List.mem s !(!curmodals.lIB_LIST) (* lib not constructor, as special case *)
-
-let is_aux s = List.mem s !(!curmodals.aUX_LIST)
-
-let is_aux_infix s = List.mem s !(!curmodals.aUX_INFIX_LIST)
-
 let is_var_prefix s = List.mem s !(!curmodals.vAR_PREFIX_LIST)
+
+let is_field s =  (* fields are treated specially *)
+  try
+    Hashtbl.find !curmodals.cLASS_IDS_LIST s = "FIELD"
+  with
+    Not_found -> false
 
 let is_curried s =
   try Some (List.assoc s !(!curmodals.hOL_CURRIED_ALIST))
@@ -235,8 +222,6 @@ let is_var v s = (* v is a list of universally-quantified rule variables *)
 
 let is_num s =
   Str.string_match (Str.regexp "[0-9]+") s 0
-
-let is_holop s = List.mem s !(!curmodals.hOL_OP_LIST)
 
 
 
@@ -387,20 +372,34 @@ let munge_ident : pvars -> string -> unit
         try List.assoc s !(!curmodals.hOL_ID_ALIST)
         with Not_found ->
           if (is_num s) then texify_math s else
-          let normal c s = "\\"^c^"{"^texify_math s^"}" in
-          let under  c s = (let (sb,ss) = do_subscript s in "\\"^c^"{"^sb^"}"^ss) in
+          let normal c s = c^"{"^texify_math s^"}" in
+          let under  c s = (let (sb,ss) = do_subscript s in c^"{"^sb^"}"^ss) in
           let copy   c s = c in
-          let (c,sub)  = if (is_rule s)        then ("tsrule"    ,normal) else
-                         if (is_con s)         then ("tscon"     ,normal) else
-                         if (is_aux s)         then ("tsaux"     ,normal) else
-                         if (is_aux_infix s)   then ("tsauxinfix",normal) else
-                         if (is_lib s)         then ("tslib"     ,under ) else
-                         try let c = do_var pvs s
-                             in (c, copy)
-                         with Not_found ->
-                         if (is_holop s)       then ("tsholop"   ,normal) else
-                         if (is_type s)        then ("tstype"    ,normal) else
-                         (log_unseen_string s;      ("tsunknown" ,normal)) in
+          let cliopt =
+            try
+              let cls = Hashtbl.find !curmodals.cLASS_IDS_LIST s in
+              let cli = List.assoc cls !(!curmodals.cLASSES) in
+              Some(cli)
+            with
+              Not_found -> None
+          in
+          let (c,sub) =
+            match cliopt with
+            | Some(cli) when cli.cl_highpri ->
+                (cli.cl_cmd, if cli.cl_dosub then under else normal)
+            | _ ->
+                try
+                  let c = do_var pvs s in
+                  (c, copy)
+                with
+                  Not_found ->
+                    match cliopt with
+                    | Some(cli) ->
+                        (cli.cl_cmd, if cli.cl_dosub then under else normal)
+                    | None ->
+                        log_unseen_string s;
+                        ("\\tsunknown", normal)
+          in
           sub c s
       in
       print_string s_out

@@ -98,55 +98,72 @@ file.
 
 The rest of the directives are defined in holdoc_init.ml.
 
-(*[ TYPE_LIST id id id *]) adds the named identifiers to the list of
-"type" identifiers, typeset with \tstype{} except that that is
-currently commented out.
+(*[ CLASS_LIST class id id id ]*) adds the named identifiers to the
+list of identifiers for the named class.
 
-(*[ CON_LIST id id id *]) adds the named identifiers to the list of
-"constructor" identifiers, typeset with \tscon{}. [small caps]
+(*[ CLASS class "\texcommand" ]*) defines a new class of identifier,
+and provides the command that will be used to render identifiers in
+this class.  For the above example, the identifier x will be rendered
+as \texcommand{x}.
 
-(*[ FIELD_LIST id id id *]) adds the named identifiers to the list of
-"field" identifiers, typeset with \tsvar{} at the moment just like
-variables because field names are usually the default variable name
-for that field.
 
-(*[ LIB_LIST id id id *]) adds the named identifiers to the list of
-"library call" identifiers, typeset with \tslib{}. [charter]
+For historical reasons, the following classes are predefined, and have
+equivalent special syntax.
 
-(*[ AUX_LIST id id id *]) adds the named identifiers to the list of
-"auxiliary function" identifiers, typeset with \tsaux{}. [roman]
+  (*[ TYPE_LIST id id id ]*) adds the named identifiers to the list of
+  "type" identifiers, typeset with \tstype{}.  Class: TYPE.
 
-(*[ AUX_INFIX_LIST id id id *]) adds the named identifiers to the list
-of "infix auxiliary function" identifiers, typeset with
-\tsauxinfix{}. [roman, spacing]
+  (*[ CON_LIST id id id ]*) adds the named identifiers to the list of
+  "constructor" identifiers, typeset with \tscon{}. [small caps]
+  Class: CON.
+
+  (*[ FIELD_LIST id id id ]*) adds the named identifiers to the list
+  of "field" identifiers, which are treated exactly the same as
+  variable names, because field names are usually the default variable
+  name for that field.  This is slightly magic.  Class: FIELD.
+
+  (*[ LIB_LIST id id id ]*) adds the named identifiers to the list of
+  "library call" identifiers, typeset with \tslib{}. [charter] Class:
+  LIB.
+
+  (*[ AUX_LIST id id id ]*) adds the named identifiers to the list of
+  "auxiliary function" identifiers, typeset with \tsaux{}. [roman]
+  Class: AUX.
+
+  (*[ AUX_INFIX_LIST id id id ]*) adds the named identifiers to the
+  list of "infix auxiliary function" identifiers, typeset with
+  \tsauxinfix{}. [roman, spacing] Class: AUX_INFIX.
+
+  (*[ HOL_OP_LIST id id id ]*) adds the named identifiers to the list
+  of "HOL operators", typeset with \tsholop{}.  [bold lowercase]
+  Class: HOL_OP.
+
 
 (*[ AUTO_BINDERS ]*) turns on automatic detection of variables, from
 lists of variables after a binder such as !.  This is on by default.
 
 (*[ NOAUTO_BINDERS ]*) turns it off.
 
-(*[ VAR_PREFIX_LIST id id id *]) adds the named identifiers to the
+(*[ VAR_PREFIX_LIST id id id ]*) adds the named identifiers to the
 list of variable prefixes; identifiers with these names, possibly with
 appended numbers, primes, or underscore-followed-by-variable, will be
 typeset with \tsvar{}.  [italic]
 
-(*[ VAR_PREFIX_ALIST id "str" id "str" *]) adds the named identifiers
+(*[ VAR_PREFIX_ALIST id "str" id "str" ]*) adds the named identifiers
 to the list of variable prefixes; identifiers with these names,
 possibly with appended numbers, primes, or
 underscore-followed-by-variable will be typeset by the given TeX
 strings.
 
-(*[ HOL_OP_LIST id id id *]) adds the named identifiers to the list of
-"HOL operators", typeset with \tsholop{}.  [bold lowercase]
 
 
-(*[ HOL_SYM_ALIST ++ "\TeXery" ==> "\more\texery" *]) adds the named
+(*[ HOL_SYM_ALIST ++ "\TeXery" ==> "\more\texery" ]*) adds the named
 symbols to the list of "HOL symbols", which are typeset with the
 specified TeX, literally.  Since HOL strings have no escapes, you
 don't need to escape the backslash, but you can't write a double
 quote.
 
-(*[ HOL_ID_ALIST id "\TeXery" id "\more\texery" *]) adds the named
+(*[ HOL_ID_ALIST id "\TeXery" id "\more\texery" ]*) adds the named
 identifiers to the list of "HOL identifiers", which are typeset with
 the specified TeX, literally.  Since HOL strings have no escapes, you
 don't need to escape the backslash, but you can't write a double

@@ -10,6 +10,18 @@ let delim_wrap d s = (delim_info d).sopen ^ s ^ (delim_info d).sclose
 
 let add_to_list r xs = (r := !r @ xs)
 
+let add_to_class_list r tbl (cls,_) xs =
+  if List.mem_assoc cls !r then
+    List.iter (fun x -> Hashtbl.add tbl x cls) xs
+  else
+    raise Parse_error  (* unknown class *)
+
+let new_class r (cls,_) cmd =
+  if List.mem_assoc cls !r then
+    raise Parse_error  (* class already defined *)
+  else
+    r := (cls, { cl_cmd = cmd; cl_dosub = false; cl_highpri = true }) :: !r
+
 let extractstrs ds =
   let rec go strs whites = function
       [] -> (List.rev strs, List.rev whites)
@@ -42,6 +54,8 @@ let extractstrs ds =
 %token                         From
 
 /* directives */
+%token CLASS
+%token CLASS_LIST
 %token TYPE_LIST       
 %token CON_LIST        
 %token FIELD_LIST      
@@ -203,19 +217,21 @@ directive :
 
 directive0 :
 /* category lists: */
-  TYPE_LIST         ident_list      { DirThunk (fun () -> add_to_list (!curmodals.tYPE_LIST        ) $2) }
-| CON_LIST          ident_list      { DirThunk (fun () -> add_to_list (!curmodals.cON_LIST         ) $2) }
-| FIELD_LIST        ident_list      { DirThunk (fun () -> add_to_list (!curmodals.fIELD_LIST       ) $2) }
-| LIB_LIST          ident_list      { DirThunk (fun () -> add_to_list (!curmodals.lIB_LIST         ) $2) }
-| AUX_LIST          ident_list      { DirThunk (fun () -> add_to_list (!curmodals.aUX_LIST         ) $2) }
-| AUX_INFIX_LIST    ident_list      { DirThunk (fun () -> add_to_list (!curmodals.aUX_INFIX_LIST   ) $2) }
+| CLASS_LIST        opt_whitestuff Ident ident_list { DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) $3 $4) }
+| TYPE_LIST         ident_list      { DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) ("TYPE"     ,true) $2) }
+| CON_LIST          ident_list      { DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) ("CON"      ,true) $2) }
+| FIELD_LIST        ident_list      { DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) ("FIELD"    ,true) $2) }
+| LIB_LIST          ident_list      { DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) ("LIB"      ,true) $2) }
+| AUX_LIST          ident_list      { DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) ("AUX"      ,true) $2) }
+| AUX_INFIX_LIST    ident_list      { DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) ("AUX_INFIX",true) $2) }
+| HOL_OP_LIST       ident_list      { DirThunk (fun () -> add_to_class_list (!curmodals.cLASSES) (!curmodals.cLASS_IDS_LIST) ("HOL_OP"   ,true) $2) }
 | VAR_PREFIX_LIST   ident_list      { DirThunk (fun () -> add_to_list (!curmodals.vAR_PREFIX_LIST  ) $2) }
 | VAR_PREFIX_ALIST  ident_alist     { DirThunk (fun () -> add_to_list (!curmodals.vAR_PREFIX_ALIST ) $2) }
-| HOL_OP_LIST       ident_list      { DirThunk (fun () -> add_to_list (!curmodals.hOL_OP_LIST      ) $2) }
 | HOL_SYM_ALIST     ident_alist     { DirThunk (fun () -> add_to_list (!curmodals.hOL_SYM_ALIST    ) $2) }
 | HOL_ID_ALIST      ident_alist     { DirThunk (fun () -> add_to_list (!curmodals.hOL_ID_ALIST     ) $2) }
 | HOL_CURRIED_ALIST curryspec_alist { DirThunk (fun () -> add_to_list (!curmodals.hOL_CURRIED_ALIST) $2) }
 /* other modals: */
+| CLASS             opt_whitestuff Ident opt_whitestuff Str opt_whitestuff { DirThunk (fun () -> new_class (!curmodals.cLASSES) $3 $5) }
 | AUTO_BINDERS      opt_whitestuff { DirThunk (fun () -> !curmodals.aUTO_BINDERS := true ) }
 | NOAUTO_BINDERS    opt_whitestuff { DirThunk (fun () -> !curmodals.aUTO_BINDERS := false) }
 | SMART_PREFIX      opt_whitestuff { DirThunk (fun () -> !curmodals.sMART_PREFIX := true ) }
