@@ -1399,12 +1399,23 @@ fun mutual_function thy name eqns =
           itlist (fn f => fn (L,thy) => 
              let val (d,thy') = define_subfn f thy in (d::L,thy') end)
            fnl ([],theory1)
-      fun outmaps tm = assoc (#1(dest_comb tm)) RNG_OUTS
+      fun outmap th = 
+         let val c = rator(lhs(concl th))
+             val v = mk_var(dest_const c)
+         in (assoc v RNG_OUTS, th)
+         end
+      val mut_rules1 = Rules.simplify (map GSYM defns) mut_rules
+      val mut_rules2 = LIST_CONJ(map (uncurry Thm.AP_TERM o outmap) 
+                                     (CONJUNCTS mut_rules1))
+      val mut_rules3 = Rules.simplify [OUTL,OUTR] mut_rules2
+(*    fun outmap_orig tm = assoc (#1(dest_comb tm)) RNG_OUTS
       val mut_rules1 = LIST_CONJ 
             (map (uncurry Thm.AP_TERM) 
-                 (zip (map outmaps L) (CONJUNCTS mut_rules)))
+                 (zip (map outmap_orig L) (CONJUNCTS mut_rules)))
       val simp = Rules.simplify (OUTL::OUTR::map GSYM defns)
       val mut_rules2 = simp mut_rules1 (* finally *)
+*)
+      val simp = Rules.simplify (OUTL::OUTR::map GSYM defns)
 
       (* induction *)
       val mut_ind0 = simp (#ind defn)
@@ -1431,7 +1442,7 @@ fun mutual_function thy name eqns =
                       Vinj
       val mut_ind2 = GENL preds (DISCH ant (LIST_CONJ  tmpl))
   in 
-    { rules = mut_rules2,
+    { rules = mut_rules3,
       ind =  mut_ind2,
       SV = #SV wfrec_res, 
       R = rand (#WFR wfrec_res),

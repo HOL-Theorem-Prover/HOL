@@ -313,8 +313,8 @@ fun constants_of defn =
  ---------------------------------------------------------------------------*)
 
 fun xDefine bindstem qtm =
- let val defname = bindstem ^"_"^ !def_suffix
-     val indname = bindstem ^"_"^ !ind_suffix
+ let val defname = bindstem^"_"^ !def_suffix
+     val indname = bindstem^"_"^ !ind_suffix
      val defn = Defn.Hol_defn bindstem qtm
                  handle e => (Lib.say "Unable to define function!\n"; raise e)
  in

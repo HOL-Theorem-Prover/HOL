@@ -34,7 +34,7 @@ infix |->;
 infix THEN;
 
 
-fun RW_ERR{func,mesg} =
+fun RW_ERR func mesg =
    HOL_ERR{origin_structure = "RW",
             origin_function = func,
                     message = mesg};
@@ -145,7 +145,7 @@ fun strip_imp tm =
           if (tm = istrue) then [] else
           [EQT_INTRO th]
       end
-      handle HOL_ERR _ => raise RW_ERR{func = "mk_simpls",mesg = ""}
+      handle HOL_ERR _ => raise RW_ERR "mk_simpls" ""
   in
     filter (not o might_loop) o mk_rewrs
   end;
@@ -235,7 +235,7 @@ fun add_rws (RW{thms,rw_net,congs, cong_net}) thl =
                             end)
                   (flatten (map MK_RULES_APART thl)))        rw_net}
  handle HOL_ERR _
- => raise RW_ERR{func="add_rws", mesg="Unable to deal with input"};
+ => raise RW_ERR "add_rws" "Unable to deal with input";
 
 
 fun add_congs (RW{cong_net, congs, thms, rw_net}) thl =
@@ -250,7 +250,7 @@ fun add_congs (RW{cong_net, congs, thms, rw_net}) thl =
                 end)
               (map (GSPEC_ALL o GEN_ALL) thl))         cong_net}
   handle HOL_ERR _ =>
-  raise RW_ERR{func="add_congs", mesg="Unable to deal with input"}
+  raise RW_ERR"add_congs" "Unable to deal with input"
 
 
 (*----------------------------------------------------------------------------
@@ -278,7 +278,7 @@ fun drop_opt [] = []
 
 local fun sys_var tm = (is_var tm andalso
                         not(Lexis.ok_identifier(#Name(dest_var tm))))
-      val failed = RW_ERR{func="RW_STEP",mesg="all applications failed"}
+      val failed = RW_ERR "RW_STEP" "all applications failed"
 in
 fun RW_STEP {context=(cntxt,_),prover,simpls as RW{rw_net,...}} tm =
  let fun match f =
@@ -412,7 +412,7 @@ fun ORELSEQC cnv1 cnv2 cp tm =
 fun REPEATQC conv cp tm =
    ORELSEQC (THENQC conv (REPEATQC conv)) ALL_QCONV cp tm;
 
-local val CHANGED_QRW_ERR = RW_ERR{func = "CHANGED_QRW",mesg = ""}
+local val CHANGED_QRW_ERR = RW_ERR "CHANGED_QRW" ""
 in
 fun CHANGED_QCONV cnv cp tm =
    let val th = cnv cp tm handle UNCHANGED => raise CHANGED_QRW_ERR
@@ -513,9 +513,8 @@ let val ant_frees = free_vars ant
     val (L,{lhs,rhs}) = (I##dest_eq) (strip_imp ceqn')
     val outcome =
      if (aconv lhs rhs) then NO_CHANGE (L,lhs)
-     else let val lhs_beta_maybe =
-                  Conv.DEPTH_CONV Let_conv.GEN_BETA_CONV lhs
-                  handle HOL_ERR _ => REFL lhs
+     else let val lhs_beta_maybe = Conv.DEPTH_CONV Let_conv.GEN_BETA_CONV lhs
+                                   handle HOL_ERR _ => REFL lhs
               val lhs' = Dsyntax.rhs(concl lhs_beta_maybe)
               val cps' =
                case L of []  => cps
@@ -528,17 +527,23 @@ let val ant_frees = free_vars ant
                   | UNCHANGED => if (aconv lhs lhs') then NO_CHANGE (L,lhs)
                                  else CHANGE lhs_beta_maybe
          end
-in case outcome
-   of CHANGE th =>
-    let val Mnew = Dsyntax.rhs(concl th)
-        val g = pairTools.list_mk_aabs(vstrl1,Mnew)
-        val gvstrl1 = list_mk_comb(g,vstrl1)
-        val eq = SYM(DEPTH_CONV pairTools.GEN_BETA_CONV gvstrl1
-                     handle HOL_ERR _ => REFL gvstrl1)
-        val thm = TRANS th eq (* f vstrl1 = g vstrl1 *)
-    in (CHANGE (itlist2 pairTools.PGEN args vstrl1 (itlist DISCH L thm)),
-        map (subst [rhsv |-> g]) rst)
-    end
+in 
+ case outcome
+  of CHANGE th =>
+      let val Mnew = Dsyntax.rhs(concl th)
+          val g = pairTools.list_mk_aabs(vstrl1,Mnew)
+          val gvstrl1 = list_mk_comb(g,vstrl1)
+          val eq = SYM(DEPTH_CONV pairTools.GEN_BETA_CONV gvstrl1
+                       handle HOL_ERR _ => REFL gvstrl1)
+          val thm = TRANS th eq (* f vstrl1 = g vstrl1 *)
+          val pairs = zip args vstrl1
+          fun generalize v th =
+                case assoc1 v pairs
+                 of SOME (_,tup) => pairTools.PGEN v tup th
+                  | NONE => raise RW_ERR "complex" "generalize"
+      in (CHANGE (itlist generalize vlist (itlist DISCH L thm)),
+          map (subst [rhsv |-> g]) rst)
+      end
    | _ => (outcome, map (subst [rhsv |-> f]) rst)
 end;
 
@@ -643,19 +648,19 @@ fun RAND f cntxt tm =
    let val {Rator,Rand} = dest_comb tm
    in AP_TERM Rator (f cntxt Rand)
    end
-   handle HOL_ERR _ => raise RW_ERR{func = "RAND", mesg=""}
+   handle HOL_ERR _ => raise RW_ERR "RAND" ""
 
 fun RATOR f cntxt tm =
    let val {Rator,Rand} = dest_comb tm
    in AP_THM (f cntxt Rator) Rand
    end
-   handle HOL_ERR _  => raise RW_ERR{func = "RATOR", mesg = ""}
+   handle HOL_ERR _  => raise RW_ERR "RATOR" ""
 
 fun ABST f cntxt tm =
    let val {Bvar,Body} = dest_abs tm
    in ABS Bvar (f cntxt Body)
    end
-   handle HOL_ERR _ => raise RW_ERR{func = "ABST", mesg=""};
+   handle HOL_ERR _ => raise RW_ERR "ABST" "";
 
 
 (*---------------------------------------------------------------------------*
@@ -775,7 +780,7 @@ fun ASM_REWRITE_TAC style controls =
  * makes a recursive invocation of the rewriter.
  *---------------------------------------------------------------------------*)
 
-fun solver_err() = raise RW_ERR{func = "solver error", mesg =""};
+fun solver_err() = raise RW_ERR "solver error" "";
 fun always_fails x y z = solver_err();
 
 (*---------------------------------------------------------------------------
