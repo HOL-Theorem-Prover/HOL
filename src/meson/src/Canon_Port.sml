@@ -156,15 +156,50 @@ fun has_abs tm =
 
 val DELAMB_CONV =
   let val pth = prove(
-      --`(((\x. s x) = t) = (!x:'a. s x:'b = t x)) /\
-         ((s = \x. t x) = (!x. s x = t x))`--,
-      CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC THEN
-      REWRITE_TAC [])
-    val qconv =
-      THENQC (TOP_DEPTH_QCONV BETA_CONV,
-              REPEATQC (THENCQC
-                         (GEN_REWRITE_CONV ONCE_DEPTH_QCONV [pth],
-                          TRY_CONV(TOP_DEPTH_QCONV BETA_CONV))))
+        --`(((\x. s x) = t) = (!x:'a. s x:'b = t x)) /\
+           ((s = \x. t x) = (!x. s x = t x))`--,
+        CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC THEN
+        REWRITE_TAC [])
+      val qconv =
+          TOP_DEPTH_CONV BETA_CONV THENC
+          REPEATC (QCHANGED_CONV (GEN_REWRITE_CONV ONCE_DEPTH_CONV [pth]) THENC
+                   TOP_DEPTH_CONV BETA_CONV)
+
+      (* used to be:
+          THENQC (TOP_DEPTH_QCONV BETA_CONV,
+                  REPEATQC (THENCQC
+                             (GEN_REWRITE_CONV ONCE_DEPTH_QCONV [pth],
+                              TRY_CONV(TOP_DEPTH_QCONV BETA_CONV))))
+         using the liteLib converionals.  Here's the argument as to why the
+         replacement has the right effect, and fixes a bug when UNCHANGED
+         exceptions might be flying around
+
+           THENQC(c1, c2) raises a HOL_ERR iff c1 and c2 both raise errors
+           THENCQC(c1, c2) raises a HOL_ERR iff c1 raises an error
+
+         so
+
+           if TOP_DEPTH_QCONV raises a HOL_ERR it will be because it
+           hasn't managed to change the input term at all.  The outermost
+           THENQC traps this and moves onto its second argument, which is a
+           REPEATQC.  This will raise an error if its argument fails
+           immediately.  Its argument will fail iff the GEN_REWRITE_CONV
+           fails, which will happen only if it doesn't change the argument.
+
+           This suggests that the TRY_CONV is redundant.  Not only is it
+           redundant, but when it introduces UNCHANGED, it causes the
+           whole conversion to raise UNCHANGED, even though the rewriting
+           has actually done some good.
+
+         so
+
+           the replacement drops the TRY_CONV, and replaces THENQC with
+           THENC, and THENCQC with (QCHANGED_CONV ... THENC ...)  This
+           is not always valid, because THENC only traps UNCHANGED, whereas
+           THENQC traps everything, but here the only exceptions coming out
+           of the first argument to THENC will be caused by the input term
+           not changing.
+       *)
   in
     fn tm => if has_abs tm then TRY_CONV qconv tm else ALL_CONV tm
   end;

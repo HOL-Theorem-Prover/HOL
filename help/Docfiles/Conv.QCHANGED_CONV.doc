@@ -1,0 +1,37 @@
+\DOC QCHANGED_CONV
+
+\TYPE {QCHANGED_CONV : conv -> conv}
+
+\SYNOPSIS
+Makes a conversion fail if applying it raises the {UNCHANGED} exception.
+
+\KEYWORDS
+conversional.
+
+\DESCRIBE
+If {c} is a conversion that maps a term {t} to a theorem {|- t = t'},
+then so too is {QCHANGED_CONV c}.  If {c} applied to {t} raises the
+special {UNCHANGED} exception used by conversions to indicate that
+they haven't changed an input, then {QCHANGED_CONV c} will fail when
+applied to {t}.
+
+This behaviour is similar to that of {CHANGED_CONV}, except that that
+conversion also fails if the conversion {c} returns a theorem when
+applied to {t}, and if that theorem has alpha-convertible left and
+right hand sides.
+
+\FAILURE
+{QCHANGED_CONV c t} fails if {c} applied {t} raises the {UNCHANGED}
+exception, or if {c} fails when applied to {t}.
+
+\USES
+{QCHANGED_CONV} can be used in places where {CHANGED_CONV} is
+appropriate, and where one knows that the conversion argument will not
+return an instance of reflexivity, or if one does not mind this
+occurring and not being trapped.  Because it is no more than an
+exception handler, {QCHANGED_CONV} is very efficient.
+
+\SEEALSO
+Conv.CHANGED_CONV
+
+\ENDDOC

@@ -32,6 +32,7 @@ sig
    val EVERY_CONV            : conv list -> conv
    val REPEATC               : conv -> conv
    val CHANGED_CONV          : conv -> conv
+   val QCHANGED_CONV         : conv -> conv
    val TRY_CONV              : conv -> conv
    val SUB_CONV              : conv -> conv
    val DEPTH_CONV            : conv -> conv

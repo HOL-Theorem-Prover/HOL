@@ -254,6 +254,17 @@ fun CHANGED_CONV conv tm =
       else th
    end;
 
+(* ----------------------------------------------------------------------
+    Cause a failure if the conversion causes the UNCHANGED exception to
+    be raised.  Doesn't "waste time" doing an equality check.  Mnemonic:
+    "quick changed_conv".
+   ---------------------------------------------------------------------- *)
+
+fun QCHANGED_CONV conv tm =
+    conv tm
+    handle UNCHANGED => raise ERR "QCHANGED_CONV" "Input term unchanged"
+
+
 fun TRY_CONV conv = conv ORELSEC ALL_CONV;
 
 fun COMB_CONV conv tm = let
