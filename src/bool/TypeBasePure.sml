@@ -9,7 +9,6 @@ open HolKernel boolSyntax Rsyntax Drule Conv Prim_rec;
 
 type ppstream = Portable.ppstream
 
-
 val ERR = mk_HOL_ERR "TypeBasePure";
 
 

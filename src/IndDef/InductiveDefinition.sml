@@ -710,7 +710,7 @@ fun check_definition schemevars tm = let
 
   (* here, generalise on the extra free variables if we're not being strict *)
   fun check_clause (n, c) = let
-    val fvs = FVL [c]
+    val fvs = FVL [c] empty_tmset
   in
     if not (HOLset.isSubset(fvs, okvars)) then let
         val really_free = HOLset.difference(fvs, okvars)

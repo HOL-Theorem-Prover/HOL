@@ -203,7 +203,8 @@ end;
 val HIGHER_REWRITE_CONV =
   let fun GINST th =
       let val fvs = HOLset.listItems
-                      (HOLset.difference (FVL [concl th], thm_hypfrees th))
+                       (HOLset.difference(FVL[concl th]empty_tmset, 
+                                          thm_hypfrees th))
           val gvs = map (genvar o type_of) fvs
       in INST (map2 (curry op |->) fvs gvs) th
       end

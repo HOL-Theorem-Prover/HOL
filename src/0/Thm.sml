@@ -17,6 +17,8 @@ struct
 
 open Feedback Lib Term KernelTypes
 
+type 'a set = 'a HOLset.set;
+
 val --> = Type.-->;
 infixr 3 -->;
 infix 5 |-> ;
@@ -142,10 +144,9 @@ fun thm_hypfreetys th =
                     (hyp th)
 
 fun thm_hypfrees th =
-    HOLset.foldl (fn (h,tms) => HOLset.union(Term.FVL[h],tms))
-                    empty_hyp
-                    (hyp th)
-
+  HOLset.foldl 
+      (fn (h,tms) => HOLset.union(Term.FVL[h] empty_tmset,tms))
+      empty_hyp (hyp th);
 
 fun is_bool tm = (type_of tm = bool);
 

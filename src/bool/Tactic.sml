@@ -675,7 +675,8 @@ local fun efn v (tm,th) =
          end
 in
 fun MATCH_MP_TAC thm :tactic = let
-  val lconsts      = HOLset.intersection (FVL [concl thm], thm_hypfrees thm)
+  val lconsts      = HOLset.intersection 
+                        (FVL [concl thm] empty_tmset, thm_hypfrees thm)
   val hyptyvars    = HOLset.listItems (thm_hypfreetys thm)
   val (gvs,imp)    = strip_forall (concl thm)
   val (ant,conseq) = with_exn dest_imp imp

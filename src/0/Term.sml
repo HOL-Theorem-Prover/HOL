@@ -14,6 +14,8 @@ struct
 
 open Feedback Lib Subst KernelTypes
 
+type 'a set = 'a HOLset.set;
+
 val ERR = mk_HOL_ERR "Term";
 val WARN = HOL_WARNING "Term";
 
@@ -33,7 +35,6 @@ structure TermSig =
       val ERR = ERR
       val table_size = 1999)
 
-val thy_consts = map #const o TermSig.slice;
 
 (*---------------------------------------------------------------------------*
  * Builtin constants. These are in every HOL signature, and it is            *
@@ -51,12 +52,7 @@ val INITIAL {const=imp,...} = TermSig.insert imp_const
 end;
 
 (*---------------------------------------------------------------------------*
- * Useful functions to hide explicit substitutions                           *
- *---------------------------------------------------------------------------*)
-
-fun is_clos (Clos _) = true | is_clos _ = false;
-
-(*---------------------------------------------------------------------------
+    Useful functions to hide explicit substitutions                          
     Important invariant: never delay subst on atoms, and compose Clos.
     Therefore, in Clos{Env,Body}, Body is either a Comb or an Abs.
     This invariant is enforced if we always use mk_clos instead of Clos.
@@ -73,8 +69,6 @@ fun mk_clos (s, Bv i) =
   | mk_clos (s,t)              = Clos(s, t)
 ;
 
-val subs_comp = Subst.comp mk_clos;
-
 (*---------------------------------------------------------------------------
     Propagate substitutions so that we are sure the head of the term is
     not a delayed substitution.
@@ -84,7 +78,6 @@ fun push_clos (Clos(E, Comb(f,x))) = Comb(mk_clos(E,f), mk_clos(E,x))
   | push_clos (Clos(E, Abs(v,M)))  = Abs(v, mk_clos (Subst.lift(1,E),M))
   | push_clos _ = raise ERR "push_clos" "not a subst"
 ;
-
 
 (*---------------------------------------------------------------------------*
  * Computing the type of a term.                                             *
@@ -150,7 +143,7 @@ fun free_vars_lr tm =
 end;
 
 (*---------------------------------------------------------------------------*
- * The *set* of all variables in a term.                                     *
+ * The set of all variables in a term, represented as a list.                *
  *---------------------------------------------------------------------------*)
 
 local fun vars (v as Fv _) A        = Lib.insert v A
@@ -166,7 +159,7 @@ fun free_varsl tm_list = itlist (union o free_vars) tm_list []
 fun all_varsl tm_list  = itlist (union o all_vars) tm_list [];
 
 (*---------------------------------------------------------------------------
-        Free variables of a term. Tail recursive. Returns a set.
+     Support for efficient sets of variables
  ---------------------------------------------------------------------------*)
 
 fun var_compare (Fv(s1,ty1), Fv(s2,ty2)) =
@@ -177,6 +170,10 @@ fun var_compare (Fv(s1,ty1), Fv(s2,ty2)) =
 
 val empty_varset = HOLset.empty var_compare
 
+(*---------------------------------------------------------------------------
+        Free variables of a term. Tail recursive. Returns a set.
+ ---------------------------------------------------------------------------*)
+
 fun FVL [] A = A
   | FVL ((v as Fv _)::rst) A      = FVL rst (HOLset.add(A,v))
   | FVL (Comb(Rator,Rand)::rst) A = FVL (Rator::Rand::rst) A
@@ -184,22 +181,19 @@ fun FVL [] A = A
   | FVL ((t as Clos _)::rst) A    = FVL (push_clos t::rst) A
   | FVL (_::rst) A                = FVL rst A
 
-val FVL0 = FVL
-fun FVL tmlist = FVL0 tmlist empty_varset
-
 
 (*---------------------------------------------------------------------------*
  * Does tm occur free in M. This is not defined modulo aconv. Maybe it       *
  * should be?                                                                *
  *---------------------------------------------------------------------------*)
 
-fun free_in tm M =
+fun free_in tm =
    let fun f1 (Comb(Rator,Rand)) = (f2 Rator) orelse (f2 Rand)
          | f1 (Abs(_,Body)) = f2 Body
 	 | f1 (t as Clos _) = f2 (push_clos t)
          | f1 _ = false
        and f2 t = t=tm orelse f1 t
-   in f2 M
+   in f2
    end;
 
 (*---------------------------------------------------------------------------
@@ -207,51 +201,16 @@ fun free_in tm M =
      does variable v occur free in the assumptions).
  ---------------------------------------------------------------------------*)
 
-fun tyvar_occurs tyv =
- let val tyvOcc = Type.type_var_in tyv
-     fun occ (Fv(_,Ty))       = tyvOcc Ty
-       | occ (Const(_,POLY Ty)) = tyvOcc Ty
-       | occ (Const(_,GRND Ty)) = false
-       | occ (Bv _)             = false
-       | occ (Comb(Rator,Rand)) = occ Rand orelse occ Rator
-       | occ (Abs(Bvar,Body))   = occ Bvar orelse occ Body
-       | occ (t as Clos _)      = occ (push_clos t)
- in occ
- end;
-
 fun var_occurs M =
   let val v = (case M of Fv v => v | _ => raise ERR "" "")
       fun occ (Fv u)             = (v=u)
         | occ (Bv _)             = false
         | occ (Const _)          = false
         | occ (Comb(Rator,Rand)) = occ Rand orelse occ Rator
-        | occ (Abs(_,Body))    = occ Body
+        | occ (Abs(_,Body))      = occ Body
         | occ (t as Clos _)      = occ (push_clos t)
    in occ end
    handle HOL_ERR _ => raise ERR "var_occurs" "not a variable";
-
-
-fun existsFV P =
-  let fun occ (Fv u)             = P u
-        | occ (Bv _)             = false
-        | occ (Const _)          = false
-        | occ (Comb(Rator,Rand)) = occ Rand orelse occ Rator
-        | occ (Abs(_,Body))    = occ Body
-        | occ (t as Clos _)      = occ (push_clos t)
-   in occ end
-   handle HOL_ERR _ => raise ERR "existsFV" "";
-
-fun existsTYV P =
-  let val check = Type.exists_tyvar P
-      fun occ (Fv(_,Ty))       = check Ty
-        | occ (Const(_,POLY Ty)) = check Ty
-        | occ (Const(_,GRND _))  = false
-        | occ (Bv _)             = false
-        | occ (Comb(Rator,Rand)) = occ Rand orelse occ Rator
-        | occ (Abs(Bvar,Body))   = occ Bvar orelse occ Body
-        | occ (t as Clos _)      = occ (push_clos t)
-   in occ end
-   handle HOL_ERR _ => raise ERR "existsTYV" "";
 
 
 (*---------------------------------------------------------------------------*
@@ -319,13 +278,15 @@ fun gen_variant P caller =
   end;
 
 val variant      = gen_variant inST "variant"
-val prim_variant = gen_variant (fn _ => false) "prim_variant";
+val prim_variant = gen_variant (K false) "prim_variant";
 
 (*---------------------------------------------------------------------------
    Normalizing names (before pretty-printing with pp_raw, or trav) and
    full propagation of substitutions.
  ---------------------------------------------------------------------------*)
 
+local val subs_comp = Subst.comp mk_clos
+in
 fun vars_sigma_norm (s,t) =
   case t of
     Comb(Rator,Rand) =>
@@ -345,7 +306,7 @@ fun vars_sigma_norm (s,t) =
   | Fv _ => (t,[t])
   | Clos(Env,Body) => vars_sigma_norm (subs_comp(s,Env), Body)
   | _ => (t, [])
-;
+end
 
 fun norm_clos tm = fst (vars_sigma_norm(Subst.id,tm));
 
@@ -401,6 +362,7 @@ val current_const = first_decl "current_const";
 fun mk_const(Name,Ty) = create_const"mk_const" (first_decl"mk_const" Name) Ty;
 
 val all_consts = map #const o TermSig.all_entries;
+val thy_consts = map #const o TermSig.slice;
 
 fun same_const (Const(id1,_)) (Const(id2,_)) = same_id (id1,id2)
   | same_const _ _ = raise ERR "same_const" "expected two constants"
@@ -433,10 +395,64 @@ val list_mk_comb = lmk_comb (INCOMPAT_TYPES "list_mk_comb")
 end;
 
 
+fun dest_var (Fv v) = v
+  | dest_var _ = raise ERR "dest_var" "not a var"
+
+val is_var = can dest_var;
+
 (*---------------------------------------------------------------------------
-           Make a lambda abstraction. Could use sharing types,
-           but it's not clear that would improve anything.
- *---------------------------------------------------------------------------*)
+       Making abstractions. list_mk_binder is there for 
+       efficiency reasons. It still needs to be made tail
+       recursive.
+  ---------------------------------------------------------------------------*)
+(*
+local fun enumerate [] _ acc = acc
+        | enumerate (h::t) i acc = enumerate t (i-1) ((h,i)::acc)
+in
+fun list_mk_binder f (vlist,tm) =
+ if not (all is_var vlist) then raise ERR "list_mk_binder" "" else 
+ let open Polyhash
+     val varmap = mkPolyTable(length vlist, Fail "varmap")
+     val evlist = enumerate vlist (length vlist - 1) []
+     val () = app (insert varmap) evlist
+     fun lookup v vmap = case peek vmap v of NONE => v | SOME i => Bv i
+     fun increment vmap = transform (fn x => x+1) vmap
+     fun bind (v as Fv _) vmap = lookup v vmap
+       | bind (Comb(M,N)) vmap = Comb(bind M vmap, bind N vmap)
+       | bind (Abs(v,M)) vmap = Abs(v, bind M (increment vmap))
+       | bind (t as Clos _) vmap = bind (push_clos t) vmap
+       | bind tm vmap = tm
+ in
+   rev_itlist (fn (v,_) => fn tm => f (Abs(v,tm))) evlist (bind tm varmap)
+ end
+end;
+*)
+
+local fun enumerate [] _ acc = acc
+        | enumerate (h::t) i acc = enumerate t (i-1) ((h,i)::acc)
+in
+fun list_mk_binder f (vlist,tm) =
+ if not (all is_var vlist) then raise ERR "list_mk_binder" "" else 
+ let open Polyhash
+     val varmap = mkPolyTable(length vlist, Fail "varmap")
+     val evlist = enumerate vlist (length vlist - 1) []
+     val () = app (insert varmap) evlist
+     fun lookup v vmap = case peek vmap v of NONE => v | SOME i => Bv i
+     fun increment vmap = transform (fn x => x+1) vmap
+     fun bind (v as Fv _) vmap k = k (lookup v vmap)
+       | bind (Comb(M,N)) vmap k = bind M vmap (fn m =>
+                                   bind N vmap (fn n => k (Comb(m,n))))
+       | bind (Abs(v,M)) vmap k = bind M (increment vmap) 
+                                         (fn q => k (Abs(v,q)))
+       | bind (t as Clos _) vmap k = bind (push_clos t) vmap k
+       | bind tm vmap k = k tm
+     val body' = bind tm varmap I
+ in
+   rev_itlist (fn (v,_) => fn tm => f (Abs(v,tm))) evlist body'
+ end
+end;
+
+val list_mk_abs = list_mk_binder I;
 
 local val mk_bv = Bv  (* formerly used for sharing *)
 in
@@ -455,9 +471,6 @@ end;
 (*---------------------------------------------------------------------------
             Taking terms apart
  ---------------------------------------------------------------------------*)
-
-fun dest_var (Fv v) = v
-  | dest_var _ = raise ERR "dest_var" "not a var"
 
 fun dest_thy_const (Const(id,ty)) =
       let val (name,thy) = dest_id id
@@ -668,6 +681,7 @@ fun inst [] tm = tm
     A total ordering on terms.  Fv < Bv < Const < Comb < Abs
       (respects alpha equivalence)
    ---------------------------------------------------------------------- *)
+
 local val EQ = Portable.pointer_eq
 in
 fun compare (t1, t2) =
@@ -715,7 +729,7 @@ local fun MERR() = raise ERR "match_term.red" ""
         | free _ _ = true
       val tymatch = Type.raw_match_type
 in
-fun raw_match tyavoids avoidset pat ob  (S as (tmS,tyS)) = 
+fun raw_match tyavoids avoidset pat ob (S as (tmS,tyS)) = 
  let val raw_match = raw_match tyavoids avoidset
  in
   case (pat, ob) 
@@ -748,16 +762,17 @@ fun norm_subst tytheta =
      fun del A [] = A
        | del A ({redex,residue}::rst) =
          del (let val redex' = Theta(redex)
-              in if residue=redex' then A else (redex' |-> residue)::A end) rst
+              in if residue=redex' then A 
+                 else (redex' |-> residue)::A 
+              end) rst
  in del []
  end
 
-fun match_terml tyavoids avoids pat ob = let
-  val (tm_subst, (ty_subst, _)) =
-      raw_match tyavoids avoids pat ob ([], ([], []))
-in
-  (norm_subst ty_subst tm_subst, ty_subst)
-end
+fun match_terml tyavoids avoids pat ob = 
+ let val (tmS,(tyS,_)) = raw_match tyavoids avoids pat ob ([],([],[]))
+ in
+   (norm_subst tyS tmS, tyS)
+ end
 
 val match_term = match_terml [] (HOLset.empty compare)
 
@@ -777,7 +792,7 @@ fun prim_mk_imp tm1 tm2  = Comb(Comb(imp, tm1),tm2);
 local val err = ERR "dest_eq_ty" ""
 in
 fun dest_eq_ty t =
- let val (Rator,N) = dest_comb t
+ let val (Rator,N) = with_exn dest_comb t err
  in case dest_comb Rator
      of (c as Const(_,holty),M) => 
            if same_const eqc c 

@@ -54,6 +54,7 @@ sig
   type hol_type = KernelTypes.hol_type
   type term = KernelTypes.term
   type ('a,'b)subst = ('a,'b)Lib.subst
+  type 'a set       = 'a HOLset.set
 
   structure TermSig : Sig where type ty = KernelTypes.term
 
@@ -62,16 +63,13 @@ sig
   val type_of       : term -> hol_type
   val free_vars     : term -> term list
   val free_vars_lr  : term -> term list
-  val FVL           : term list -> term HOLset.set
+  val FVL           : term list -> term set -> term set
   val free_in       : term -> term -> bool
   val all_vars      : term -> term list
   val free_varsl    : term list -> term list
   val all_varsl     : term list -> term list
   val type_vars_in_term : term -> hol_type list
-  val tyvar_occurs  : hol_type -> term -> bool
   val var_occurs    : term -> term -> bool
-  val existsFV      : (string * hol_type -> bool) -> term -> bool
-  val existsTYV     : (hol_type -> bool) -> term -> bool
   val genvar        : hol_type -> term
   val genvars       : hol_type -> int -> term list
   val variant       : term list -> term -> term
@@ -86,6 +84,8 @@ sig
   val mk_const      : string * hol_type -> term
   val list_mk_comb  : term * term list -> term
   val mk_comb       : term * term -> term
+  val list_mk_binder: (term -> term) -> term list * term -> term
+  val list_mk_abs   : term list * term -> term
   val mk_abs        : term * term -> term
   val dest_var      : term -> string * hol_type
   val dest_const    : term -> string * hol_type
@@ -107,20 +107,20 @@ sig
   val eta_conv      : term -> term
   val subst         : (term,term) Lib.subst -> term -> term
   val inst          : (hol_type,hol_type) Lib.subst -> term -> term
-  val raw_match     : hol_type list -> term HOLset.set -> term -> term ->
+  val raw_match     : hol_type list -> term set -> term -> term ->
                       (term,term)Lib.subst *
                       ((hol_type,hol_type)Lib.subst * hol_type list) ->
                       (term,term)Lib.subst *
                       ((hol_type,hol_type)Lib.subst * hol_type list)
   val match_term     : term -> term
                        -> (term,term)Lib.subst * (hol_type,hol_type)Lib.subst
-  val match_terml    : hol_type list -> term HOLset.set -> term -> term
+  val match_terml    : hol_type list -> term set -> term -> term
                        -> (term,term)Lib.subst * (hol_type,hol_type)Lib.subst
   val norm_subst    : (hol_type,hol_type)subst
                         -> (term,term)subst -> (term,term)subst
   val thy_consts     : string -> term list
   val compare        : term * term -> order
-  val is_clos        : term -> bool
+  (* val is_clos        : term -> bool *)
   val push_clos      : term -> term
   val norm_clos      : term -> term
   val lazy_beta_conv : term -> term
@@ -156,15 +156,16 @@ sig
   type tag      = KernelTypes.tag
   type term     = KernelTypes.term
   type hol_type = KernelTypes.hol_type
+  type 'a set   = 'a HOLset.set
 
   val tag           : thm -> tag
   val hyp           : thm -> term list
-  val hypset        : thm -> term HOLset.set
+  val hypset        : thm -> term set
   val concl         : thm -> term
   val dest_thm      : thm -> term list * term
   val thm_frees     : thm -> term list
-  val thm_hypfrees  : thm -> term HOLset.set
-  val thm_hypfreetys: thm -> hol_type HOLset.set
+  val thm_hypfrees  : thm -> term set
+  val thm_hypfreetys: thm -> hol_type set
   val ASSUME        : term -> thm
   val REFL          : term -> thm
   val BETA_CONV     : term -> thm

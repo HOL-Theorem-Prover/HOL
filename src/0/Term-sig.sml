@@ -15,22 +15,20 @@ sig
   eqtype term
   type hol_type     = Type.hol_type
   type ('a,'b)subst = ('a,'b)Lib.subst
+  type 'a set       = 'a HOLset.set
 
   val empty_tmset   : term HOLset.set
 
   val type_of       : term -> hol_type
   val free_vars     : term -> term list
   val free_vars_lr  : term -> term list
-  val FVL           : term list -> term HOLset.set
+  val FVL           : term list -> term set -> term set
   val free_in       : term -> term -> bool
   val all_vars      : term -> term list
   val free_varsl    : term list -> term list
   val all_varsl     : term list -> term list
   val type_vars_in_term : term -> hol_type list
-  val tyvar_occurs  : hol_type -> term -> bool
   val var_occurs    : term -> term -> bool
-  val existsFV      : (string * hol_type -> bool) -> term -> bool
-  val existsTYV     : (hol_type -> bool) -> term -> bool
 
   val genvar        : hol_type -> term
   val genvars       : hol_type -> int -> term list
@@ -47,6 +45,8 @@ sig
   val list_mk_comb  : term * term list -> term
   val mk_comb       : term * term -> term
   val mk_abs        : term * term -> term
+  val list_mk_binder: (term -> term) -> term list * term -> term
+  val list_mk_abs   : term list * term -> term
   val dest_var      : term -> string * hol_type
   val dest_const    : term -> string * hol_type
   val dest_thy_const: term -> {Thy:string, Name:string, Ty:hol_type}
@@ -69,14 +69,14 @@ sig
   val subst         : (term,term) subst -> term -> term
   val inst          : (hol_type,hol_type) subst -> term -> term
 
-  val raw_match     : hol_type list -> term HOLset.set -> term -> term
+  val raw_match     : hol_type list -> term set -> term -> term
                        -> (term,term)subst
                            * ((hol_type,hol_type)subst * hol_type list)
                        -> (term,term)subst
                             * ((hol_type,hol_type)subst * hol_type list)
   val match_term    : term -> term
                         -> (term,term)subst * (hol_type,hol_type)subst
-  val match_terml   : hol_type list -> term HOLset.set -> term -> term
+  val match_terml   : hol_type list -> term set -> term -> term
                         -> (term,term)subst * (hol_type,hol_type)subst
   val norm_subst    : (hol_type,hol_type)subst
                         -> (term,term)subst -> (term,term)subst

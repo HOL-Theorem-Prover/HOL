@@ -44,7 +44,7 @@ fun fst (x,_) = x   and   snd (_,y) = y;
 
 
 (*---------------------------------------------------------------------------*
- * Success and failure. Interrupt has a special status.                      *
+ * Success and failure. Interrupt has a special status in MoscowML.          *
  *---------------------------------------------------------------------------*)
 
 fun can f x =
@@ -522,10 +522,7 @@ end;
 
 datatype 'a delta = SAME | DIFF of 'a;
 
-fun delta_apply f x = 
-  case f x 
-   of SAME => x
-    | DIFF y => y;
+fun delta_apply f x = case f x of SAME => x | DIFF y => y;
 
 fun delta_map f =
  let fun map [] = SAME

@@ -62,10 +62,6 @@ fun HEAD_BETA_CONV tm =
 fun CONJS_CONV c tm =
   if is_conj tm then BINOP_CONV (CONJS_CONV c) tm else c tm;
 
-
-local val RIGHT_BETAS =
-        rev_itlist (fn a => CONV_RULE (RAND_CONV BETA_CONV) o C AP_THM a)
-in
 fun mymatch_and_instantiate axth pattern instance = let
   val (patvars, patbody) = strip_exists pattern
   val (instvars, instbody) = strip_exists instance
@@ -157,11 +153,13 @@ in
   PROVE_HYP ixth (itlist SIMPLE_CHOOSE urfns rixth)
 end
 
-(* ------------------------------------------------------------------------- *)
-(* Prove existence when PR argument always comes first in argument lists.    *)
-(* ------------------------------------------------------------------------- *)
+(* ------------------------------------------------------------------------ *)
+(* Prove existence when PR argument always comes first in argument lists.   *)
+(* ------------------------------------------------------------------------ *)
 
-val prove_canon_recursive_functions_exist = let
+val prove_canon_recursive_functions_exist = 
+let val RIGHT_BETAS =
+        rev_itlist (fn a => CONV_RULE (RAND_CONV BETA_CONV) o C AP_THM a)
   fun canonize t = let
     val (avs,bod) = strip_forall t
     val {lhs = l, rhs = r} = dest_eq bod
@@ -188,9 +186,9 @@ in
   end
 end
 
-(* ------------------------------------------------------------------------- *)
-(* General version to prove existence.                                       *)
-(* ------------------------------------------------------------------------- *)
+(* ------------------------------------------------------------------------ *)
+(* General version to prove existence.                                      *)
+(* ------------------------------------------------------------------------ *)
 
 fun universalise_clauses tm =
  let val rawcls = conjuncts tm
@@ -205,7 +203,7 @@ fun universalise_clauses tm =
 
 val prove_recursive_functions_exist =
  let fun reshuffle fnn args acc =
-      let val args' = uncurry (C (curry op@)) (partition is_var args)
+      let val args' = uncurry (C (curry op@)) (Lib.partition is_var args)
       in if args = args' then acc
          else
           let val gvs = map (genvar o type_of) args
@@ -221,8 +219,8 @@ val prove_recursive_functions_exist =
           end
       end
      fun scrub_def t th =
-      let val {lhs=l, rhs=r} = dest_eq t
-      in MP (Thm.INST [l |-> r] (DISCH t th)) (REFL r)
+      let val {lhs, rhs} = dest_eq t
+      in MP (Thm.INST [lhs |-> rhs] (DISCH t th)) (REFL rhs)
       end
      fun prove_once_universalised ax tm =
       let val rawcls = conjuncts tm
@@ -230,7 +228,7 @@ val prove_recursive_functions_exist =
           val lpats = map (strip_comb o lhand) spcls
           val ufns = itlist (insert o fst) lpats []
           val uxargs = map (C assoc lpats) ufns
-          val oxargs = map (uncurry (C (curry op@)) o partition is_var) uxargs
+          val oxargs = map (uncurry (C (curry op@)) o Lib.partition is_var) uxargs
           val trths = itlist2 reshuffle ufns uxargs []
           val tth = REPEATC (CHANGED_CONV
                       (PURE_REWRITE_CONV trths THENC DEPTH_CONV BETA_CONV)) tm
@@ -247,9 +245,9 @@ end
 
 val prove_rec_fn_exists = prove_recursive_functions_exist
 
-(* ------------------------------------------------------------------------- *)
-(* Version that defines function(s).                                         *)
-(* ------------------------------------------------------------------------- *)
+(* ------------------------------------------------------------------------ *)
+(* Version that defines function(s).                                        *)
+(* ------------------------------------------------------------------------ *)
 
 fun new_recursive_definition0 ax name tm =
  let val eth = prove_recursive_functions_exist ax tm
@@ -259,9 +257,7 @@ fun new_recursive_definition0 ax name tm =
     {sat_thm=eth, name=name,
      consts = map (fn t => {const_name = #Name (dest_var t),
                             fixity = Parse.Prefix}) evs }
- end
-
-end (* local *)
+ end;
 
 (* test with:
      load "listTheory";
@@ -671,9 +667,9 @@ fun INDUCT_THEN th =
         | HOL_ERR _ => raise ERR "INDUCT_THEN" "ill-formed induction theorem"
 end;
 
-(*---------------------------------------------------------------------------
+(*--------------------------------------------------------------------------
  * Now prove_induction_thm and prove_cases_thm.
- *---------------------------------------------------------------------------*)
+ *--------------------------------------------------------------------------*)
 
 infixr 3 ==;
 infixr 4 ==>;
@@ -1563,7 +1559,7 @@ in
    When function f is defined, it is then easy to distinguish any
    two constructors Ci and Cj.
        Assume           (Ci xn) = (Cj = yn)
-       then           f (Ci xn) = f (Cj yn)            (Liebnitz)
+       then           f (Ci xn) = f (Cj yn)            (Leibnitz)
        so     f (Ci xn) [| i |] = f (Cj yn) [| i |]      (ditto)
    But f is constructed in such a way that the term on the left will be
    true, while that on the right will be false.  We derive a contradiction
@@ -1727,8 +1723,7 @@ fun ctrs_with_args clauses =
  end
 
 fun prove_constructors_distinct thm = let
-  val all_eqns =
-    strip_conj (snd (strip_exists (snd(strip_forall(concl thm)))))
+  val all_eqns = strip_conj(snd(strip_exists(snd(strip_forall(concl thm)))))
   val axtypes = doms_of_tyaxiom thm
   fun eqn_type eq = type_of (rand (lhs (#2 (strip_forall eq))))
   fun same_domain eq1 eq2 = eqn_type eq1 = eqn_type eq2
@@ -1754,12 +1749,12 @@ fun prove_constructors_distinct thm = let
       SOME (CHOOSE (f, fn_exists) thm)
     end
   end
-  fun maybe_prove_cd_for_type eqns = let
-    val ctrs = ctrs_with_args eqns
-  in
-    if (Lib.mem (type_of (hd ctrs)) axtypes) then SOME (prove_cd_for_type eqns)
-    else NONE
-  end
+  fun maybe_prove_cd_for_type eqns = 
+    let val ctrs = ctrs_with_args eqns
+    in if Lib.mem (type_of (hd ctrs)) axtypes 
+          then SOME (prove_cd_for_type eqns)
+          else NONE
+    end
 in
   List.mapPartial maybe_prove_cd_for_type (partition same_domain all_eqns)
 end

@@ -195,7 +195,7 @@ fun find_free_terms P t = let
   fun recurse binders acc tm = let
     val newset =
         if P tm then let
-            val tm_frees = FVL [tm]
+            val tm_frees = FVL [tm] empty_tmset
           in
             if HOLset.isEmpty (HOLset.intersection(tm_frees, binders)) then
               HOLset.add(acc, tm)
@@ -392,8 +392,9 @@ end
 
 fun reduce_if_ground tm =
   (* calls REDUCE_CONV on a ground term, does nothing otherwise *)
-  if is_exists tm orelse not (HOLset.isEmpty (FVL [tm])) then ALL_CONV tm
-  else REDUCE_CONV tm
+  if is_exists tm orelse not (HOLset.isEmpty (FVL [tm] empty_tmset))
+     then ALL_CONV tm
+     else REDUCE_CONV tm
 
 
 fun fixup_newvar tm = let

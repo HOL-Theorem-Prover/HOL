@@ -50,18 +50,17 @@ end
         Some basic values
  ---------------------------------------------------------------------------*)
 
-val bool      = Tyapp (bool_tyc, []);
-val ind       = Tyapp (ind_tyc,  []);
+val bool = Tyapp (bool_tyc,[])
+val ind  = Tyapp (ind_tyc, []);
 
 (*---------------------------------------------------------------------------
        Function types
  ---------------------------------------------------------------------------*)
 
-infixr 3 -->;
-fun (X --> Y) = Tyapp (fun_tyc,  [X,Y]);
+infixr 3 -->;   fun (X --> Y) = Tyapp (fun_tyc, [X,Y]);
 
-fun dom_rng (Tyapp(tyc,[x,y])) =
-      if tyc=fun_tyc then (x,y)
+fun dom_rng (Tyapp(tyc,[X,Y])) =
+      if tyc=fun_tyc then (X,Y)
       else raise ERR "dom_rng" "not a function type"
   | dom_rng _ = raise ERR "dom_rng" "not a function type";
 
@@ -84,16 +83,15 @@ fun mk_thy_type {Thy,Tyop,Args} =
 
 local fun dest e =
         let val (c,_) = #const e
-        in {Tyop=KernelTypes.name_of c, Thy=KernelTypes.seg_of c}
-        end
+        in {Tyop=KernelTypes.name_of c, Thy=KernelTypes.seg_of c}  end
 in
 val decls = map dest o TypeSig.resolve
 end;
 
 fun first_decl fname Tyop =
  case TypeSig.resolve Tyop
-  of []            => raise ERR fname (Lib.quote Tyop^" has not been declared")
-   | [{const,...}]  => const
+  of []           => raise ERR fname (Lib.quote Tyop^" has not been declared")
+   | [{const,...}] => const
    | {const,...}::_ => (WARN fname "more than one possibility"; const)
 
 fun mk_type (Tyop,Args) =
@@ -264,8 +262,6 @@ fun compare (Tyv s1, Tyv s2) = String.compare (s1,s2)
       case KernelTypes.compare (c1, c2)
        of EQUAL => Lib.list_compare compare (A1,A2)
         |   x   => x;
-
-
 
 (*---------------------------------------------------------------------------
      Automatically generated type variables. The goofy names make

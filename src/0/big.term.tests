@@ -1,0 +1,102 @@
+(*===========================================================================
+    Testing term construction (and soon destruction) for big terms
+
+    When the terms get bigger, various things barf, like the 
+    prettyprinter, and the naive way of doing list_mk_conj:
+
+      itlist (curry mk_conj) vlist tm
+
+    blows the stack, so things have to be made tail recursive.
+ ===========================================================================*)
+ 
+fun upto f b t = 
+  let fun up i acc = if i < t then up (i+1) (f i::acc) else rev acc
+  in up b []
+  end;
+
+
+val vars10 = upto (fn i => mk_var("v"^Int.toString i, bool)) 0 10;
+val vars100 = upto (fn i => mk_var("v"^Int.toString i, bool)) 0 100;
+val vars1K = upto (fn i => mk_var("v"^Int.toString i, bool)) 0 1000;
+val vars10K = upto (fn i => mk_var("v"^Int.toString i, bool)) 0 10000;
+val vars50K = upto (fn i => mk_var("v"^Int.toString i, bool)) 0 50000;
+val vars100K = upto (fn i => mk_var("v"^Int.toString i, bool)) 0 100000;
+val vars500K = upto (fn i => mk_var("v"^Int.toString i, bool)) 0 500000;
+val vars1M = upto (fn i => mk_var("v"^Int.toString i, bool)) 0 1000000;
+
+val body10 = list_mk_conj vars10;
+val body100 = list_mk_conj vars100;
+val body1K = list_mk_conj vars1K;
+max_print_depth := 10;
+val body10K = list_mk_conj vars10K;
+val body50K = list_mk_conj vars50K;
+val body100K = list_mk_conj vars100K;
+val body500K = list_mk_conj vars500K;
+val body1M = list_mk_conj vars1M;
+
+fun old_list_mk_abs(V,t) = itlist(curry mk_abs) V t;
+fun old_list_mk_forall(V,t) = itlist(curry mk_forall) V t;
+
+val old_abs10 = (time old_list_mk_abs(vars10,body10); ());
+val old_abs100 = (time old_list_mk_abs(vars100,body100); ());
+val old_abs1K = (time old_list_mk_abs(vars1K,body1K); ());
+(* After this, it's too slow *)
+val abs10K = (time old_list_mk_abs(vars10K,body10K);()); 
+val abs100K = time old_list_mk_abs(vars100K,body100K); ());
+val abs500K = time old_list_mk_abs(vars500K,body500K);
+val abs1M = time old_list_mk_abs(vars1M,body1M);
+
+
+val abs10   = (time HolKernel.list_mk_abs(vars10,body10); ());
+val abs100  = (time HolKernel.list_mk_abs(vars100,body100); ())
+val abs1K   = (time HolKernel.list_mk_abs(vars1K,body1K); ());
+val abs10K  = (time HolKernel.list_mk_abs(vars10K,body10K); ());
+val abs100K = (time HolKernel.list_mk_abs(vars100K,body100K); ());
+val abs500K = (time HolKernel.list_mk_abs(vars500K,body500K); ());
+val abs1M   = (time HolKernel.list_mk_abs(vars1M,body1M); ());
+
+
+val ALL10 =   (time list_mk_forall(vars10,body10); ());
+val ALL100 =  (time list_mk_forall(vars100,body100); ())
+val ALL1K =   (time list_mk_forall(vars1K,body1K); ());
+val ALL10K =  (time list_mk_forall(vars10K,body10K); ());
+val ALL100K = (time list_mk_forall(vars100K,body100K); ());
+val ALL500K = (time list_mk_forall(vars500K,body500K); ());
+val ALL1M =   (time list_mk_forall(vars1M,body1M); ());
+
+
+(*---------------------------------------------------------------------------
+    dribble used to develop list_mk_binder
+
+fun enumerate [] _ acc = acc
+  | enumerate (h::t) i acc = enumerate t (i+1) ((h,i)::acc);
+
+fun mk_varmap vlist = 
+ let open Polyhash
+    val vmap :(term,int) hash_table = mkPolyTable(length vlist, Fail "varmap")
+    val addin = insert vmap
+ in app addin (enumerate (rev vlist) 0 [])
+  ; vmap
+ end;
+
+fun max i [] = i
+  | max i (h::t) = max (if h>i then h else i) t;
+
+val varmap10 = mk_varmap vars10;
+val varmap100 = mk_varmap vars100;
+val varmap1K = mk_varmap vars1K;
+val varmap10K = mk_varmap vars10K;
+val varmap100K = mk_varmap vars100K;
+val varmap500K = mk_varmap vars500K;
+val varmap1M = mk_varmap vars1M;
+
+Polyhash.listItems varmap 10;
+
+max 0 (Polyhash.bucketSizes varmap10);    (* 1 *)
+max 0 (Polyhash.bucketSizes varmap100);   (* 2 *)
+max 0 (Polyhash.bucketSizes varmap1K);    (* 3 *)
+max 0 (Polyhash.bucketSizes varmap10K);   (* 4 *)
+max 0 (Polyhash.bucketSizes varmap100K);  (* 4 *)
+max 0 (Polyhash.bucketSizes varmap1M);    (* 5 *) (* tweaking? *)
+
+ ---------------------------------------------------------------------------*)

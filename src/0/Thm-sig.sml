@@ -19,6 +19,7 @@ sig
   type tag      = Tag.tag
   type term     = Term.term
   type hol_type = Type.hol_type
+  type 'a set   = 'a HOLset.set
 
 
 
@@ -26,12 +27,12 @@ sig
 
   val tag           : thm -> tag
   val hyp           : thm -> term list
-  val hypset        : thm -> term HOLset.set
+  val hypset        : thm -> term set
   val concl         : thm -> term
   val dest_thm      : thm -> term list * term
   val thm_frees     : thm -> term list
-  val thm_hypfrees  : thm -> term HOLset.set
-  val thm_hypfreetys: thm -> hol_type HOLset.set
+  val thm_hypfrees  : thm -> term set
+  val thm_hypfreetys: thm -> hol_type set
 
 
   (* The primitive rules of inference *)

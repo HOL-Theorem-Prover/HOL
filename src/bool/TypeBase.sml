@@ -11,9 +11,9 @@ open HolKernel TypeBasePure;
 val ERR = mk_HOL_ERR "TypeBase";
 
 
-(*---------------------------------------------------------------------------*
- * Create the database.                                                      *
- *---------------------------------------------------------------------------*)
+(*--------------------------------------------------------------------------*
+ * Create the database.                                                     *
+ *--------------------------------------------------------------------------*)
 
 local val dBase = ref empty
       val update_fns = ref ([]:(tyinfo -> unit) list)
@@ -46,17 +46,16 @@ fun case_const_of s   = TypeBasePure.case_const_of (valOf s (read s))
 fun case_cong_of s    = TypeBasePure.case_cong_of (valOf s (read s))
 fun case_def_of s     = TypeBasePure.case_def_of (valOf s (read s))
 fun nchotomy_of s     = TypeBasePure.nchotomy_of (valOf s (read s))
-fun distinct_of s =
-  valOf2 s "distinct_of" (TypeBasePure.distinct_of (valOf s (read s)))
-fun one_one_of s =
-  valOf2 s "one_one_of" (TypeBasePure.one_one_of (valOf s (read s)))
-fun simpls_of s = TypeBasePure.simpls_of (valOf s (read s))
-fun size_of s =
-  valOf2 s "size_of" (TypeBasePure.size_of (valOf s (read s)))
-
-fun axiom_of0 s     = TypeBasePure.axiom_of0 (valOf s (read s))
-fun induction_of0 s = TypeBasePure.induction_of0 (valOf s (read s))
-fun size_of0 s      = TypeBasePure.size_of0 (valOf s (read s))
+fun distinct_of s     =  valOf2 s "distinct_of" 
+                            (TypeBasePure.distinct_of (valOf s (read s)))
+fun one_one_of s      =  valOf2 s "one_one_of" 
+                            (TypeBasePure.one_one_of (valOf s (read s)))
+fun simpls_of s       = TypeBasePure.simpls_of (valOf s (read s))
+fun size_of s         =  valOf2 s "size_of" 
+                            (TypeBasePure.size_of (valOf s (read s)))
+fun axiom_of0 s       = TypeBasePure.axiom_of0 (valOf s (read s))
+fun induction_of0 s   = TypeBasePure.induction_of0 (valOf s (read s))
+fun size_of0 s        = TypeBasePure.size_of0 (valOf s (read s))
 
 
 

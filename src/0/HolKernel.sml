@@ -69,6 +69,13 @@ fun strip_binop dest =
  in strip [] o single
  end;
 
+(* For right-associative binary operators. Tail recursive. *)
+fun list_mk_rbinop _ [] = raise ERR "list_mk_rbinop" "empty list"
+  | list_mk_rbinop mk_binop alist = 
+       let val (h::t) = List.rev alist
+       in rev_itlist mk_binop t h
+       end;
+
 fun mk_binder c f (p as (Bvar,_)) =
    mk_comb(inst[alpha |-> type_of Bvar] c, mk_abs p)
    handle HOL_ERR {message,...} => raise ERR f message;
@@ -93,11 +100,11 @@ fun strip_binder dest =
   in strip []
   end
 
+val strip_abs = strip_binder (total dest_abs);
+
 fun list_mk_fun (dtys, rty) = List.foldr op--> rty dtys
 val strip_fun = strip_binder (total dom_rng);
 
-fun list_mk_abs(V,t) = itlist(curry mk_abs) V t;
-val strip_abs = strip_binder (total dest_abs);
 
 local val destc = total dest_comb
 in
@@ -109,7 +116,6 @@ val strip_comb =
  in strip []
  end
 end;
-
 
 datatype lambda
    = VAR   of string * hol_type

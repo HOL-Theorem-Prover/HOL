@@ -8,9 +8,7 @@
 structure relationScript =
 struct
 
-
-open HolKernel Parse boolLib QLib tautLib mesonLib Rsyntax;
-open simpLib boolSimps
+open HolKernel Parse boolLib QLib tautLib mesonLib Rsyntax simpLib boolSimps;
 infix ORELSE ORELSEC THEN THENL |->;
 
 val _ = new_theory "relation";
@@ -19,9 +17,8 @@ val _ = new_theory "relation";
 val TC_DEF =
 Q.new_definition
 ("TC_DEF",
-  `TC (R:'a->'a->bool) a b =
-    !P.
-       (!x y. R x y ==> P x y) /\
+ `TC (R:'a->'a->bool) a b =
+    !P.(!x y. R x y ==> P x y) /\
        (!x y z. P x y /\ P y z ==> P x z)
        ==> P a b`);
 

@@ -85,9 +85,9 @@ fun mk_bool_case(a0,a1,b) =
 fun mk_arb ty = inst [alpha |-> ty] arb;
 
 
-(*---------------------------------------------------------------------------*
- *     Destructors                                                           *
- *---------------------------------------------------------------------------*)
+(*--------------------------------------------------------------------------*
+ *     Destructors                                                          *
+ *--------------------------------------------------------------------------*)
 
 local val dest_eq_ty_err = ERR "dest_eq(_ty)"   "not an \"=\""
       val lhs_err        = ERR "lhs"            "not an \"=\""
@@ -116,9 +116,9 @@ val dest_select  = dest_binder("@", "min")  (ERR"dest_select"  "not a \"@\"")
 val dest_forall  = dest_binder("!", "bool") (ERR"dest_forall"  "not a \"!\"")
 val dest_exists  = dest_binder("?", "bool") (ERR"dest_exists"  "not a \"?\"")
 val dest_exists1 = dest_binder("?!","bool") (ERR"dest_exists1" "not a \"?!\"")
-val dest_conj    = dest_binop("/\\","bool") (ERR"dest_conj"    "not a \"/\\\"")
-val dest_disj    = dest_binop("\\/","bool") (ERR"dest_disj"    "not a \"\\/\"")
-val dest_let     = dest_binop("LET","bool") (ERR"dest_let"    "not a let term")
+val dest_conj   = dest_binop("/\\","bool") (ERR"dest_conj"    "not a \"/\\\"")
+val dest_disj   = dest_binop("\\/","bool") (ERR"dest_disj"    "not a \"\\/\"")
+val dest_let    = dest_binop("LET","bool") (ERR"dest_let"    "not a let term")
 
 fun dest_cond M =
  let val (Rator,t2) = with_exn dest_comb M dest_cond_err
@@ -162,13 +162,19 @@ val is_arb       = can dest_arb;
  * Construction and destruction functions that deal with SML lists           *
  *---------------------------------------------------------------------------*)
 
-val list_mk_comb        = HolKernel.list_mk_comb
-val list_mk_abs         = HolKernel.list_mk_abs
-fun list_mk_forall(V,t) = itlist(curry mk_forall) V t
-fun list_mk_exists(V,t) = itlist(curry mk_exists) V t
-val list_mk_conj        = end_itlist(curry mk_conj)
-val list_mk_disj        = end_itlist(curry mk_disj)
-fun list_mk_imp(A,c)    = itlist(curry mk_imp) A c
+val list_mk_comb = HolKernel.list_mk_comb
+val list_mk_abs  = HolKernel.list_mk_abs
+
+val list_mk_forall = list_mk_binder 
+ (fn abs => mk_comb(inst[alpha |-> fst(dom_rng(type_of abs))]universal,abs))
+
+val list_mk_exists = list_mk_binder
+ (fn abs => mk_comb(inst[alpha |-> fst(dom_rng(type_of abs))]existential,abs))
+
+val list_mk_conj     = list_mk_rbinop (curry mk_conj)
+val list_mk_disj     = list_mk_rbinop (curry mk_disj)
+fun list_mk_imp(A,c) = itlist(curry mk_imp) A c;
+
 
 val strip_comb   = HolKernel.strip_comb
 val strip_abs    = HolKernel.strip_abs

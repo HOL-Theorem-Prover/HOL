@@ -784,8 +784,8 @@ end;
 
 fun GEN_ALL th =
    HOLset.foldl (fn (v, th) => GEN v th)
-                   th
-                   (HOLset.difference (FVL [concl th], thm_hypfrees th))
+       th
+      (HOLset.difference (FVL [concl th] empty_tmset, thm_hypfrees th))
 
 
 (*---------------------------------------------------------------------------
@@ -1256,7 +1256,7 @@ fun GSPEC th =
 
 fun PART_MATCH partfn th =
   let val pth = GSPEC (GEN_ALL th)
-      val conclfvs = Term.FVL [concl th]
+      val conclfvs = Term.FVL [concl th] empty_tmset
       val hypfvs = Thm.thm_hypfrees th
       val hyptyvars = HOLset.listItems (Thm.thm_hypfreetys th)
       val pat = partfn(concl pth)
@@ -1313,9 +1313,9 @@ in
 fun MATCH_MP ith =
  let val bod = fst(dest_imp(snd(strip_forall(concl ith))))
      val hyptyvars = HOLset.listItems (thm_hypfreetys ith)
-     val lconsts = HOLset.intersection (FVL [concl ith], thm_hypfrees ith)
- in
- fn th =>
+     val lconsts = HOLset.intersection 
+                     (FVL [concl ith] empty_tmset, thm_hypfrees ith)
+ in fn th =>
    let val mfn = C (Term.match_terml hyptyvars lconsts) (concl th)
        val tth = INST_TYPE (snd(mfn bod)) ith
        val tbod = fst(dest_imp(snd(strip_forall(concl tth))))
@@ -1548,7 +1548,7 @@ fun HO_PART_MATCH partfn th =
        in if null npossbetas then Lib.I
           else CONV_RULE (EVERY_CONV (mapfilter (C assoc npossbetas) ivs))
        end
-     val lconsts = HOLset.intersection (FVL [pbod], thm_hypfrees th)
+     val lconsts = HOLset.intersection (FVL[pbod]empty_tmset, thm_hypfrees th)
      val ltyconsts = HOLset.listItems (thm_hypfreetys th)
  in fn tm =>
     let val (tmin,tyin) = ho_match_term ltyconsts lconsts pbod tm
@@ -1729,8 +1729,8 @@ fun canon (fl,th) =
         end else
    if is_forall w then
      let val (vs,_) = strip_forall w
-         val fvs = HOLset.listItems (HOLset.union(thm_hypfrees th,
-                                                        FVL [concl th]))
+         val fvs = HOLset.listItems 
+                    (HOLset.union(thm_hypfrees th, FVL[concl th] empty_tmset))
          val nvs = itlist (fn v => fn nv => variant (nv @ fvs) v::nv) vs []
      in
         canon (fl, SPECL nvs th)
