@@ -22,7 +22,7 @@ app load ["bossLib","metisLib","intLib","res_quanTools","pred_setLib",
           "FinitePathTheory","PathTheory","SyntaxTheory",
           "UnclockedSemanticsTheory","ClockedSemanticsTheory",
           "SyntacticSugarTheory"
-         (*, "PropertiesTheory"*)
+          (*, "PropertiesTheory"*)
          ];
 val _ = intLib.deprecate_int();
 
@@ -300,16 +300,47 @@ val UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL =
    PROVE_TAC[UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL1,UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL2]);
 end;
 
+(* A list of letters is neutral iff it contains no occurrences of TOP or BOTTOM *)
+
+val NEUTRAL_LIST_def =
+ Define
+  `(NEUTRAL_LIST[] = T)          /\
+   (NEUTRAL_LIST(TOP::p) = F)    /\
+   (NEUTRAL_LIST(BOTTOM::p) = F) /\
+   (NEUTRAL_LIST(STATE f::p) = NEUTRAL_LIST p)`;
+
+val MAP_COMPLEMENT_LETTER_NEUTRAL_LIST =
+ store_thm
+  ("MAP_COMPLEMENT_LETTER_NEUTRAL_LIST",
+   ``!p. NEUTRAL_LIST p ==> (MAP COMPLEMENT_LETTER p = p)``,
+   Induct
+    THEN RW_TAC list_ss [COMPLEMENT_LETTER_def,NEUTRAL_LIST_def]
+    THEN Cases_on `h`
+    THEN FULL_SIMP_TAC list_ss [COMPLEMENT_LETTER_def,NEUTRAL_LIST_def]);
+
+val COMPLEMENT_FINITE_NEUTRAL_LIST =
+ store_thm
+  ("COMPLEMENT_FINITE_NEUTRAL_LIST",
+   ``!p. NEUTRAL_LIST p ==> (COMPLEMENT(FINITE p) = FINITE p)``,
+   Induct
+    THEN RW_TAC list_ss [COMPLEMENT_def,NEUTRAL_LIST_def]
+    THEN Cases_on `h`
+    THEN FULL_SIMP_TAC list_ss [COMPLEMENT_LETTER_def,NEUTRAL_LIST_def]
+    THEN RW_TAC std_ss [MAP_COMPLEMENT_LETTER_NEUTRAL_LIST]);
+
 (******************************************************************************
 * w |= {r}(f)  <==>  w |=_|w| {r}(f)
 ******************************************************************************)
 val UF_SEM_F_SUFFIX_IMP_FINITE_REC =
  store_thm
   ("UF_SEM_F_SUFFIX_IMP_FINITE_REC",
-   ``UF_SEM (FINITE w) (F_SUFFIX_IMP(r,f)) = 
-      UF_SEM_F_SUFFIX_IMP_FINITE_REC (FINITE w) (r,f) (LENGTH w)``,
+   ``NEUTRAL_LIST w 
+     ==>
+     (UF_SEM (FINITE w) (F_SUFFIX_IMP(r,f)) = 
+       UF_SEM_F_SUFFIX_IMP_FINITE_REC (FINITE w) (r,f) (LENGTH w))``,
    RW_TAC list_resq_ss [UF_SEM_def]
-    THEN PROVE_TAC[UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL]);
+    THEN PROVE_TAC
+          [UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL,COMPLEMENT_FINITE_NEUTRAL_LIST]);
 
 (******************************************************************************
 * Define w |=_x {r}(f) where x is an extended number (xnum)
@@ -322,18 +353,38 @@ val UF_SEM_F_SUFFIX_IMP_REC_def =
    (UF_SEM_F_SUFFIX_IMP_REC w (r,f) INFINITY = 
      !n. US_SEM (SEL w (0,n)) r ==> UF_SEM (RESTN w n) f)`;
 
+(* A path is neutral iff it contains no occurrences of TOP or BOTTOM *)
+
+val NEUTRAL_PATH_def =
+ Define
+  `(NEUTRAL_PATH(FINITE p) = NEUTRAL_LIST p) /\
+   (NEUTRAL_PATH(INFINITE f) = !n. ?s. f n = STATE s)`;
+
+val COMPLEMENT_NEUTRAL_PATH =
+ store_thm
+  ("COMPLEMENT_NEUTRAL_PATH",
+   ``NEUTRAL_PATH w ==> (COMPLEMENT w = w)``,
+   Cases_on `w`
+    THEN RW_TAC list_ss [NEUTRAL_PATH_def,COMPLEMENT_FINITE_NEUTRAL_LIST,COMPLEMENT_def]
+    THEN CONV_TAC FUN_EQ_CONV
+    THEN Induct
+    THEN RW_TAC std_ss []
+    THEN PROVE_TAC[COMPLEMENT_LETTER_def]);
+
 (******************************************************************************
 * w |= {r}(f)  <==>  w |=_|w| {r}(f)  (for finite and infinite paths w)
 ******************************************************************************)
 val UF_SEM_F_SUFFIX_IMP_REC =
  store_thm
   ("UF_SEM_F_SUFFIX_IMP_REC",
-   ``UF_SEM w (F_SUFFIX_IMP(r,f)) = 
-      UF_SEM_F_SUFFIX_IMP_REC w (r,f) (LENGTH w)``,
+   ``NEUTRAL_PATH w
+     ==>
+     (UF_SEM w (F_SUFFIX_IMP(r,f)) = 
+       UF_SEM_F_SUFFIX_IMP_REC w (r,f) (LENGTH w))``,
    Cases_on `w`
     THEN RW_TAC list_resq_ss
-          [UF_SEM_def,UF_SEM_F_SUFFIX_IMP_FINITE_REC,
-           UF_SEM_F_SUFFIX_IMP_REC_def]);
+          [UF_SEM_def,UF_SEM_F_SUFFIX_IMP_FINITE_REC,NEUTRAL_PATH_def,
+           UF_SEM_F_SUFFIX_IMP_REC_def,COMPLEMENT_NEUTRAL_PATH]);
 
 (*---------------------------------------------------------------------------*)
 (* Converting regexps from SyntaxTheory to regexpTheory.                     *)
@@ -411,12 +462,15 @@ val EVAL_US_SEM = store_thm
 val EVAL_UF_SEM_F_SUFFIX_IMP = store_thm
   ("EVAL_UF_SEM_F_SUFFIX_IMP",
    ``!w r f.
-       UF_SEM (FINITE w) (F_SUFFIX_IMP (r,f)) =
-       if S_CLOCK_FREE r then acheck (sere2regexp r) (\x. UF_SEM (FINITE x) f) w
-       else UF_SEM (FINITE w) (F_SUFFIX_IMP (r,f))``,
+      NEUTRAL_LIST w
+      ==>
+      (UF_SEM (FINITE w) (F_SUFFIX_IMP (r,f)) =
+        if S_CLOCK_FREE r then acheck (sere2regexp r) (\x. UF_SEM (FINITE x) f) w
+        else UF_SEM (FINITE w) (F_SUFFIX_IMP (r,f)))``,
    RW_TAC list_resq_ss [acheck, UF_SEM_def, sere2regexp, RESTN_FINITE]
    ++ RW_TAC arith_ss
-      [RESTN_is_BUTFIRSTN, SEL_FINITE_is_BUTFIRSTN_FIRSTN, BUTFIRSTN]
+      [RESTN_is_BUTFIRSTN, SEL_FINITE_is_BUTFIRSTN_FIRSTN, BUTFIRSTN,
+       COMPLEMENT_FINITE_NEUTRAL_LIST]
    ++ METIS_TAC []);
 
 val FINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP = store_thm
