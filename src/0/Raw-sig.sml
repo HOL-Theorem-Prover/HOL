@@ -100,6 +100,7 @@ sig
   val rand          : term -> term
   val bvar          : term -> term
   val body          : term -> term
+  val rename_bvar   : string -> term -> term
   val is_bvar       : term -> bool
   val same_const    : term -> term -> bool
   val aconv         : term -> term -> bool

@@ -50,7 +50,7 @@ val INITIAL {const=imp,...} = TermSig.insert imp_const
 end;
 
 (*---------------------------------------------------------------------------*
-    Useful functions to hide explicit substitutions                          
+    Useful functions to hide explicit substitutions
     Important invariant: never delay subst on atoms, and compose Clos.
     Therefore, in Clos{Env,Body}, Body is either a Comb or an Abs.
     This invariant is enforced if we always use mk_clos instead of Clos.
@@ -105,9 +105,9 @@ local fun tyV (Fv(_,Ty)) k         = k (Type.type_vars Ty)
         | tyV (Bv _) k             = k []
         | tyV (Const(_,GRND _)) k  = k []
         | tyV (Const(_,POLY Ty)) k = k (Type.type_vars Ty)
-        | tyV (Comb(Rator,Rand)) k = tyV Rand (fn q1 => 
+        | tyV (Comb(Rator,Rand)) k = tyV Rand (fn q1 =>
                                      tyV Rator(fn q2 => k (union q2 q1)))
-        | tyV (Abs(Bvar,Body)) k   = tyV Body (fn q1 => 
+        | tyV (Abs(Bvar,Body)) k   = tyV Body (fn q1 =>
                                      tyV Bvar (fn q2 => k (union q2 q1)))
         | tyV (t as Clos _) k      = tyV (push_clos t) k
 in
@@ -375,7 +375,7 @@ val is_var = can dest_var;
   ---------------------------------------------------------------------------*)
 
 fun list_mk_binder f (vlist,tm) =
- if not (all is_var vlist) then raise ERR "list_mk_binder" "" else 
+ if not (all is_var vlist) then raise ERR "list_mk_binder" "" else
  let open Polyhash
      val varmap = mkPolyTable(length vlist, Fail "varmap")
      fun enumerate [] _ A = A
@@ -386,7 +386,7 @@ fun list_mk_binder f (vlist,tm) =
      fun bind (v as Fv _) vmap k = k (lookup v vmap)
        | bind (Comb(M,N)) vmap k = bind M vmap (fn m =>
                                    bind N vmap (fn n => k (Comb(m,n))))
-       | bind (Abs(v,M)) vmap k  = bind M (increment vmap) 
+       | bind (Abs(v,M)) vmap k  = bind M (increment vmap)
                                           (fn q => k (Abs(v,q)))
        | bind (t as Clos _) vmap k = bind (push_clos t) vmap k
        | bind tm vmap k = k tm
@@ -411,40 +411,40 @@ fun mk_abs(Bvar as Fv _, Body) =
 (*---------------------------------------------------------------------------
             Taking terms apart
 
-    These operations are all easy, except for taking apart multiple 
+    These operations are all easy, except for taking apart multiple
     abstractions. It can happen, via beta-conversion or substitution,
     or instantiation, that a free variable is bound by the scope. One
-    of the tasks of strip_abs is to sort the resulting mess out. 
+    of the tasks of strip_abs is to sort the resulting mess out.
     strip_abs works by first classifying all the free variables in the
     body as being captured by the prefix bindings or not. Each capturing
-    prefix binder is then renamed until it doesn't capture. Then we go 
-    through the body and replace the dB indices of the prefix with the 
+    prefix binder is then renamed until it doesn't capture. Then we go
+    through the body and replace the dB indices of the prefix with the
     corresponding free variables. These may in fact fall under another
     binder; the renaming of that will, if necessary, get done if that
     binder is taken apart (by a subsequent dest/strip_binder).
  ---------------------------------------------------------------------------*)
 
 local fun peel f (t as Clos _) A = peel f (push_clos t) A
-        | peel f tm A = 
+        | peel f tm A =
             case f tm
              of SOME(Abs(v,M)) => peel f M (v::A)
               | otherwise => (A,tm)
       datatype occtype = PREFIX of int | BODY
       fun array_to_revlist A =
         let val top = Array.length A - 1
-            fun For i acc = 
+            fun For i acc =
               if i>top then acc else For (i+1) (Array.sub(A,i)::acc)
         in For 0 []
         end
       val vi_empty = HOLset.empty (fn ((v1,i1),(v2,i2)) => var_compare(v1,v2))
-      fun add_vi viset vi = 
+      fun add_vi viset vi =
          if HOLset.member(viset,vi) then viset else HOLset.add(viset,vi)
 in
 fun strip_binder f tm =
  let val (prefixl,body) = peel f tm []
      val prefix = Array.fromList prefixl
      val vmap = curry Array.sub prefix
-     val (insertAVbody,insertAVprefix,lookAV,dupls) = 
+     val (insertAVbody,insertAVprefix,lookAV,dupls) =
         let open Polyhash  (* AV is hashtable  of (var,occtype) elems *)
             val AV = mkPolyTable(Array.length prefix, Fail"AV")
             fun insertl [] _ dupls = dupls
@@ -460,12 +460,12 @@ fun strip_binder f tm =
             peek AV,                              (* lookAV *)
             dupls)
         end
-     fun variantAV n = 
+     fun variantAV n =
        let val next = Lexis.nameStrm n
            fun loop s = case lookAV s of NONE => s | SOME _ => loop (next())
        in loop n
        end
-     fun CVs (v as Fv(n,_)) capt k = 
+     fun CVs (v as Fv(n,_)) capt k =
           (case lookAV n
             of SOME (PREFIX i) => k (add_vi capt (vmap i,i))
              | SOME BODY => k capt
@@ -567,6 +567,12 @@ fun is_abs(Abs _) = true | is_abs(Clos(_,Abs _)) = true | is_abs _ = false;
 (*---------------------------------------------------------------------------*
  *       Alpha conversion                                                    *
  *---------------------------------------------------------------------------*)
+
+fun rename_bvar s t =
+    case t of
+      Abs(Fv(_, Ty), Body) => Abs(Fv(s,Ty), Body)
+    | Clos(Env, Abs(Fv(_, Ty), Body)) => Clos(Env, Abs(Fv(s, Ty), Body))
+    | _ => raise ERR "rename_bvar" "not an abstraction"
 
 local val EQ = Portable.pointer_eq
 in
@@ -682,7 +688,7 @@ fun inst [] tm = tm
 
 
 (* ----------------------------------------------------------------------
-    A total ordering on terms that respects alpha equivalence. 
+    A total ordering on terms that respects alpha equivalence.
     Fv < Bv < Const < Comb < Abs
    ---------------------------------------------------------------------- *)
 
@@ -699,18 +705,18 @@ fun compare p =
     | (Const _, Fv _)        => GREATER
     | (Const _, Bv _)        => GREATER
     | (Const(c1,ty1),
-       Const(c2,ty2))        => (case KernelTypes.compare (c1,c2) 
+       Const(c2,ty2))        => (case KernelTypes.compare (c1,c2)
                                   of EQUAL => Type.compare (to_hol_type ty1,
                                                             to_hol_type ty2)
                                    | x => x)
     | (Const _, _)           => LESS
-    | (Comb(M,N),Comb(P,Q))  => (case compare (M,P) 
+    | (Comb(M,N),Comb(P,Q))  => (case compare (M,P)
                                   of EQUAL => compare (N,Q)
                                    | x => x)
     | (Comb _, Abs _)        => LESS
     | (Comb _, _)            => GREATER
     | (Abs(Fv(_, ty1),M),
-       Abs(Fv(_, ty2),N))    => (case Type.compare(ty1,ty2) 
+       Abs(Fv(_, ty2),N))    => (case Type.compare(ty1,ty2)
                                   of EQUAL => compare (M,N)
                                    | x => x)
     | (Abs _, _)             => GREATER;
@@ -730,10 +736,10 @@ local fun MERR() = raise ERR "match_term.red" ""
         | free _ _ = true
       val tymatch = Type.raw_match_type
 in
-fun raw_match tyavoids avoidset pat ob (S as (tmS,tyS)) = 
+fun raw_match tyavoids avoidset pat ob (S as (tmS,tyS)) =
  let val matchr = raw_match tyavoids avoidset
  in
-  case (pat, ob) 
+  case (pat, ob)
    of (v as Fv(_,Ty), tm) =>
       if HOLset.member(avoidset,v) andalso v <> tm then MERR()
       else if not(free tm 0) then MERR()
@@ -743,12 +749,12 @@ fun raw_match tyavoids avoidset pat ob (S as (tmS,tyS)) =
             tymatch tyavoids Ty (type_of tm) tyS)
     | (Const(c1, ty1), Const(c2, ty2)) =>
        if c1 <> c2 then MERR()
-       else (case (ty1,ty2) 
+       else (case (ty1,ty2)
               of (GRND _, POLY _) => MERR()
                | (GRND pat,GRND obj) => if pat=obj then (tmS,tyS) else MERR()
                | (POLY pat,GRND obj) => (tmS, tymatch tyavoids pat obj tyS)
                | (POLY pat,POLY obj) => (tmS, tymatch tyavoids pat obj tyS))
-    | (Abs(Fv(_,ty1),M), Abs(Fv(_,ty2),N)) 
+    | (Abs(Fv(_,ty1),M), Abs(Fv(_,ty2),N))
          => matchr M N (tmS, tymatch tyavoids ty1 ty2 tyS)
     | (Comb(M,N),Comb(P,Q)) => matchr M P (matchr N Q S)
     | (Bv i, Bv j)       => if i=j then S else MERR()
@@ -763,13 +769,13 @@ fun norm_subst tytheta =
      fun del A [] = A
        | del A ({redex,residue}::rst) =
          del (let val redex' = Theta(redex)
-              in if residue=redex' then A 
-                 else (redex' |-> residue)::A 
+              in if residue=redex' then A
+                 else (redex' |-> residue)::A
               end) rst
  in del []
  end
 
-fun match_terml tyavoids avoids pat ob = 
+fun match_terml tyavoids avoids pat ob =
  let val (tmS,(tyS,_)) = raw_match tyavoids avoids pat ob ([],([],[]))
  in
    (norm_subst tyS tmS, tyS)
@@ -795,9 +801,9 @@ fun prim_mk_imp tm1 tm2  = Comb(Comb(imp, tm1),tm2);
 
 local val err = ERR "dest_eq_ty" ""
 in
-fun dest_eq_ty t = 
+fun dest_eq_ty t =
  let val ((c,M),N) = with_exn ((dest_comb##I) o dest_comb) t err
- in if same_const c eqc 
+ in if same_const c eqc
       then (M,N,fst(Type.dom_rng (type_of c)))
       else  raise err
  end
@@ -810,7 +816,7 @@ end;
 
 local val subs_comp = Subst.comp mk_clos
   fun vars_sigma_norm (s,t) =
-    case t 
+    case t
      of Comb(Rator,Rand) =>
          let val (a,fva) = vars_sigma_norm (s,Rator)
              val (b,fvb) = vars_sigma_norm (s,Rand)

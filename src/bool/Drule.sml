@@ -1147,16 +1147,21 @@ end end;
  *
  *---------------------------------------------------------------------------*)
 
-fun ALPHA_CONV x t =
-   let val x' = variant (free_vars t) x
-       val cmb = mk_comb(t, x')
-       val th1 = SYM(ETA_CONV(mk_abs(x', cmb)))
-       and th2 = ABS x' (BETA_CONV cmb)
-   in
-     TRANS th1 th2
-   end
-   handle HOL_ERR _ => raise ERR "ALPHA_CONV" "";
-
+fun ALPHA_CONV x t = let
+  (* avoid calling dest_abs *)
+  val (dty, _) = dom_rng (type_of t)
+                 handle HOL_ERR _ =>
+                        raise ERR "ALPHA_CONV" "Second term not an abstraction"
+  val (xstr, xty) = dest_var x
+                    handle HOL_ERR _ =>
+                           raise ERR "ALPHA_CONV" "First term not a variable"
+  val _ = Type.compare(dty, xty) = EQUAL
+          orelse raise ERR "ALPHA_CONV"
+                           "Type of variable not compatible with abstraction"
+  val t' = rename_bvar xstr t
+in
+  ALPHA t t'
+end
 
 (*----------------------------------------------------------------------------
  * Version of  ALPHA_CONV that renames "x" when necessary, but then it doesn't
@@ -1313,7 +1318,7 @@ in
 fun MATCH_MP ith =
  let val bod = fst(dest_imp(snd(strip_forall(concl ith))))
      val hyptyvars = HOLset.listItems (thm_hypfreetys ith)
-     val lconsts = HOLset.intersection 
+     val lconsts = HOLset.intersection
                      (FVL [concl ith] empty_tmset, thm_hypfrees ith)
  in fn th =>
    let val mfn = C (Term.match_terml hyptyvars lconsts) (concl th)
@@ -1729,7 +1734,7 @@ fun canon (fl,th) =
         end else
    if is_forall w then
      let val (vs,_) = strip_forall w
-         val fvs = HOLset.listItems 
+         val fvs = HOLset.listItems
                     (HOLset.union(thm_hypfrees th, FVL[concl th] empty_tmset))
          val nvs = itlist (fn v => fn nv => variant (nv @ fvs) v::nv) vs []
      in

@@ -46,7 +46,7 @@ val empty_tag = Tag.empty_tag
 
 (*---------------------------------------------------------------------------
     The following are here because I didn't want to Thm to be dependent
-    on soem derived syntax (now in boolSyntax). 
+    on some derived syntax (now in boolSyntax).
  ---------------------------------------------------------------------------*)
 
 val F = Susp.delay (fn () => mk_thy_const{Name="F", Thy="bool", Ty=bool});
@@ -142,7 +142,7 @@ fun thm_hypfreetys th =
                     (hypset th)
 
 fun thm_hypfrees th =
-  HOLset.foldl 
+  HOLset.foldl
       (fn (h,tms) => HOLset.union(Term.FVL[h] empty_tmset,tms))
       empty_hyp (hypset th);
 
@@ -303,7 +303,7 @@ fun ALPHA t1 t2 =
    if aconv t1 t2 then
      make_thm Count.Alpha (empty_tag, empty_hyp,
                            mk_eq_nocheck (type_of t1) t1 t2)
-   else ERR "ALPHA" "";
+   else ERR "ALPHA" "Terms not alpha-convertible";
 
 
 (*---------------------------------------------------------------------------
@@ -1179,7 +1179,7 @@ local val mk_disk_thm  = make_thm Count.Disk
 in
 fun disk_thm vect =
   let val rtp = parse_raw vect
-  in fn (s,asl,w) => 
+  in fn (s,asl,w) =>
         mk_disk_thm(Tag.read_disk_tag s,list_hyp (map rtp asl),rtp w)
   end
 end;

@@ -1713,17 +1713,16 @@ val GSYM = CONV_RULE(ONCE_DEPTH_CONV SYM_CONV);
  ---------------------------------------------------------------------------*)
 local
   fun rename vname t = let
-    val (dest, mk) =
-        if is_exists t then (dest_exists, mk_exists) else
-        if is_forall t then (dest_forall, mk_forall) else
-        if is_abs t then (dest_abs, mk_abs) else
-        if is_select t then (dest_select, mk_select) else
-        if is_exists1 t then (dest_exists1, mk_exists1)
+    val (accessor, C_ACC) =
+        if is_exists t orelse is_forall t orelse is_select t orelse
+           is_exists1 t
+        then (rand, RAND_CONV)
+        else if is_abs t then (I, I)
         else raise ERR "rename_vars" "Term not a binder"
-    val {Bvar=oldv, Body=body} = dest t
-    val newv = mk_var{Name=vname, Ty=type_of oldv}
+    val (ty, _) = dom_rng (type_of (accessor t))
+    val newv = mk_var{Name=vname, Ty=ty}
   in
-    ALPHA t (mk{Bvar=newv, Body=subst [oldv |-> newv] body})
+    C_ACC (ALPHA_CONV newv) t
   end
 in
   fun RENAME_VARS_CONV varlist  =
