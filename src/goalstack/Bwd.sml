@@ -13,6 +13,10 @@ fun ERR func mesg =
             message = mesg}
 
 val chatting = ref true;
+val show_nsubgoals = ref 100;
+
+
+val _ = Lib.register_trace "Subgoal number" show_nsubgoals;
 
 fun say s = if !chatting then Lib.say s else ();
 
@@ -82,7 +86,7 @@ fun rotate(GSTK{prop=PROVED _, ...}) _ =
         raise ERR "rotate" "goal has already been proved"
   | rotate(GSTK{prop, stack, final}) n =
      if n<0 then raise ERR"rotate" "negative rotations not allowed"
-     else 
+     else
       case stack
        of [] => raise ERR"rotate" "No goals to rotate"
         | ({goals,validation}::rst) =>
@@ -200,11 +204,27 @@ fun pp_gstk ppstrm  =
                add_newline(); add_newline();
                pr_goal g;
                end_block())
-         | pr (GSTK{prop = POSED _, stack = ({goals,...}::_), ...}) =
-             (begin_block Portable.CONSISTENT 0;
-              Portable.pr_list
-                   pr_goal (fn () => ()) add_newline (rev goals);
-              end_block())
+         | pr (GSTK{prop = POSED _, stack = ({goals,...}::_), ...}) = let
+             val (ellipsis_action, goals_to_print) =
+               if length goals > !show_nsubgoals then let
+                 val num_elided = length goals - !show_nsubgoals
+               in
+                 ((fn () =>
+                   (add_string ("..."^Int.toString num_elided ^ " subgoal"^
+                                (if num_elided = 1 then "" else "s") ^
+                                " elided...");
+                    add_newline(); add_newline())),
+                  List.take (rev goals, !show_nsubgoals))
+               end
+               else
+                 ((fn () => ()), rev goals)
+           in
+             begin_block Portable.CONSISTENT 0;
+             ellipsis_action();
+             Portable.pr_list
+               pr_goal (fn () => ()) add_newline (rev goals_to_print);
+             end_block()
+           end
          | pr (GSTK{prop = PROVED (th,_), ...}) =
              (begin_block Portable.CONSISTENT 0;
               add_string "Initial goal proved.";
