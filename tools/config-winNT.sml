@@ -44,7 +44,7 @@ fun emit_hol_unquote_script target qfilter mosml std_prelude qinit qend =
        fun munge s = String.translate (fn #"/" => "\\" | c => str c) s
    in
       output  "rem The hol98 script (with quote preprocessing)\n\n";
-      output  (String.concat [munge qfilter " | ", munge mosml,
+      output  (String.concat [munge qfilter, " | ", munge mosml,
                               " -P full ",
                               std_prelude, " ", qinit, " %* ", qend, "\n"]);
       TextIO.closeOut ostrm
