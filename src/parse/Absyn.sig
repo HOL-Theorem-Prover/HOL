@@ -5,19 +5,21 @@ sig
   type 'a quotation = 'a Portable.quotation
 
    datatype vstruct
-       = VAQ    of term
-       | VIDENT of string
-       | VPAIR  of vstruct * vstruct
-       | VTYPED of vstruct * pretype
+       = VAQ    of locn.locn * term
+       | VIDENT of locn.locn * string
+       | VPAIR  of locn.locn * vstruct * vstruct
+       | VTYPED of locn.locn * vstruct * pretype
 
    datatype absyn
-       = AQ     of term
-       | IDENT  of string
-       | QIDENT of string * string
-       | APP    of absyn * absyn
-       | LAM    of vstruct * absyn
-       | TYPED  of absyn * pretype
+       = AQ     of locn.locn * term
+       | IDENT  of locn.locn * string
+       | QIDENT of locn.locn * string * string
+       | APP    of locn.locn * absyn * absyn
+       | LAM    of locn.locn * vstruct * absyn
+       | TYPED  of locn.locn * absyn * pretype
 
+  val locn_of_absyn   : absyn -> locn.locn
+  val locn_of_vstruct : vstruct -> locn.locn
 
   val mk_AQ    : term -> absyn
   val mk_ident : string -> absyn

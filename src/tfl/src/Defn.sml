@@ -13,6 +13,7 @@ infix 3 |->;
 infix 4 ##;
 
 val ERR = mk_HOL_ERR "Defn";
+val ERRloc = mk_HOL_ERRloc "Defn";
 
 (*---------------------------------------------------------------------------
       Miscellaneous support
@@ -1109,18 +1110,18 @@ end;
 
 local open Absyn
 in
-fun vnames_of (VAQ tm) S = union (map (fst o Term.dest_var) (all_vars tm)) S
-  | vnames_of (VIDENT s) S = union [s] S
-  | vnames_of (VPAIR(v1,v2)) S = vnames_of v1 (vnames_of v2 S)
-  | vnames_of (VTYPED(v,_)) S = vnames_of v S
+fun vnames_of (VAQ(_,tm)) S = union (map (fst o Term.dest_var) (all_vars tm)) S
+  | vnames_of (VIDENT(_,s)) S = union [s] S
+  | vnames_of (VPAIR(_,v1,v2)) S = vnames_of v1 (vnames_of v2 S)
+  | vnames_of (VTYPED(_,v,_)) S = vnames_of v S
 
-fun names_of (AQ tm) S = union (map (fst o Term.dest_var) (all_vars tm)) S
-  | names_of (IDENT s) S = union [s] S
-  | names_of (APP(IDENT "case_arrow__magic", _)) S = S
-  | names_of (APP(M,N)) S = names_of M (names_of N S)
-  | names_of (LAM (v,M)) S = names_of M (vnames_of v S)
-  | names_of (TYPED(M,_)) S = names_of M S
-  | names_of (QIDENT _) S = S
+fun names_of (AQ(_,tm)) S = union (map (fst o Term.dest_var) (all_vars tm)) S
+  | names_of (IDENT(_,s)) S = union [s] S
+  | names_of (APP(_,IDENT(_,"case_arrow__magic"), _)) S = S
+  | names_of (APP(_,M,N)) S = names_of M (names_of N S)
+  | names_of (LAM(_,v,M)) S = names_of M (vnames_of v S)
+  | names_of (TYPED(_,M,_)) S = names_of M S
+  | names_of (QIDENT(_,_,_)) S = S
 end;
 
 local val v_vary = vary "v"
@@ -1139,49 +1140,49 @@ local val v_vary = vary "v"
          | LAMB _ => raise ERR "tm_exp" "abstraction in pattern"
        open Absyn
 in
-fun exp (AQ tm) S = let val (tm',S') = tm_exp tm S in (AQ tm',S') end
-  | exp (IDENT s) S =
+fun exp (AQ(locn,tm)) S = let val (tm',S') = tm_exp tm S in (AQ(locn,tm'),S') end
+  | exp (IDENT (p as (locn,s))) S =
       if wildcard s
-        then let val (s',S') = v_vary S in (IDENT s', S') end
-        else (IDENT s, S)
-  | exp (QIDENT (p as (s,_))) S =
-      if wildcard s then raise ERR "exp" "wildcard in long id. in pattern"
+        then let val (s',S') = v_vary S in (IDENT(locn,s'), S') end
+        else (IDENT p, S)
+  | exp (QIDENT (p as (locn,s,_))) S =
+      if wildcard s then raise ERRloc "exp" locn "wildcard in long id. in pattern"
       else (QIDENT p, S)
-  | exp (APP(M,N)) S =
+  | exp (APP(locn,M,N)) S =
       let val (M',S')   = exp M S
           val (N', S'') = exp N S'
-      in (APP (M',N'), S'')
+      in (APP (locn,M',N'), S'')
       end
-  | exp (TYPED(M,pty)) S = let val (M',S') = exp M S in (TYPED(M',pty),S') end
-  | exp (LAM _) _ = raise ERR "exp" "abstraction in pattern"
+  | exp (TYPED(locn,M,pty)) S = let val (M',S') = exp M S in (TYPED(locn,M',pty),S') end
+  | exp (LAM(locn,_,_)) _ = raise ERRloc "exp" locn "abstraction in pattern"
 
 fun expand_wildcards asy (asyl,S) =
    let val (asy',S') = exp asy S in (asy'::asyl, S') end
 end;
 
 
-local fun dest_pvar (Absyn.VIDENT s) = s
-        | dest_pvar _ = raise ERR "munge" "dest_pvar"
+local fun dest_pvar (Absyn.VIDENT(_,s)) = s
+        | dest_pvar other = raise ERRloc "munge" (Absyn.locn_of_vstruct other) "dest_pvar"
       fun dest_atom tm = (dest_const tm handle HOL_ERR _ => dest_var tm);
-      fun dest_head (Absyn.AQ tm) = fst(dest_atom tm)
-        | dest_head (Absyn.IDENT s) = s
-        | dest_head (Absyn.TYPED(a,_)) = dest_head a
-        | dest_head (Absyn.QIDENT _) = raise ERR "dest_head" "qual. ident."
-        | dest_head (Absyn.APP _)    = raise ERR "dest_head" "app. node"
-        | dest_head (Absyn.LAM _)    = raise ERR "dest_head" "lam. node"
+      fun dest_head (Absyn.AQ(_,tm)) = fst(dest_atom tm)
+        | dest_head (Absyn.IDENT(_,s)) = s
+        | dest_head (Absyn.TYPED(_,a,_)) = dest_head a
+        | dest_head (Absyn.QIDENT(locn,_,_)) = raise ERRloc "dest_head" locn "qual. ident."
+        | dest_head (Absyn.APP(locn,_,_))    = raise ERRloc "dest_head" locn "app. node"
+        | dest_head (Absyn.LAM(locn,_,_))    = raise ERRloc "dest_head" locn "lam. node"
       fun strip_tyannote0 acc absyn =
           case absyn of
-            Absyn.TYPED(a, ty) => strip_tyannote0 (ty::acc) a
+            Absyn.TYPED(locn, a, ty) => strip_tyannote0 ((ty,locn)::acc) a
           | x => (List.rev acc, x)
       val strip_tyannote = strip_tyannote0 []
       fun list_mk_tyannote(tyl,a) =
-          List.foldl (fn (ty,t) => Absyn.TYPED(t,ty)) a tyl
+          List.foldl (fn ((ty,locn),t) => Absyn.TYPED(locn,t,ty)) a tyl
 in
 fun munge eq (eqs,fset,V) =
  let val (vlist,body) = Absyn.strip_forall eq
      val (lhs0,rhs)   = Absyn.dest_eq body
      val   _          = if exists wildcard (names_of rhs [])
-                        then raise ERR "munge" "wildcards on rhs" else ()
+                        then raise ERRloc "munge" (Absyn.locn_of_absyn rhs) "wildcards on rhs" else ()
      val (tys, lhs)   = strip_tyannote lhs0
      val (f,pats)     = Absyn.strip_app lhs
      val (pats',V')   = rev_itlist expand_wildcards pats

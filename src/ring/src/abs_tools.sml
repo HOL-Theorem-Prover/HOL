@@ -10,12 +10,12 @@ in
 local open Absyn in
 
 val add_ip =
-  let fun add_ip (c as IDENT s) = foldl (fn (v,pt) => APP(pt,v)) c (impl_of s)
-        | add_ip (c as QIDENT (t,n)) = 
-             foldl (fn (v,pt) => APP(pt,v)) c (impl_of n)
-  	| add_ip (APP(Rator,Rand)) = APP(add_ip Rator, add_ip Rand)
-  	| add_ip (LAM(vs,body))    = LAM(vs, add_ip body)
-  	| add_ip (TYPED(pt,ty))    = TYPED(add_ip pt ,ty)
+  let fun add_ip (c as IDENT(locn,s)) = foldl (fn (v,pt) => APP(locn,pt,v)) c (impl_of s)
+        | add_ip (c as QIDENT (locn,t,n)) = 
+             foldl (fn (v,pt) => APP(locn(*TODO:not quite*),pt,v)) c (impl_of n)
+  	| add_ip (APP(locn,Rator,Rand)) = APP(locn, add_ip Rator, add_ip Rand)
+  	| add_ip (LAM(locn,vs,body))    = LAM(locn, vs, add_ip body)
+  	| add_ip (TYPED(locn,pt,ty))    = TYPED(locn, add_ip pt ,ty)
   	| add_ip pt = pt
   in add_ip
   end

@@ -1104,10 +1104,10 @@ val recupd_errstring =
 
 fun to_vabsyn vs =
   case vs of
-    (SIMPLE x,_) => Absyn.VIDENT x
-  | (VPAIR(v1,v2),_) => Absyn.VPAIR(to_vabsyn v1, to_vabsyn v2)
-  | (TYPEDV(v,(ty,_)),_) => Absyn.VTYPED(to_vabsyn v, ty)
-  | (VS_AQ x,_) => Absyn.VAQ x
+    (SIMPLE x,locn) => Absyn.VIDENT (locn,x)
+  | (VPAIR(v1,v2),locn) => Absyn.VPAIR(locn,to_vabsyn v1, to_vabsyn v2)
+  | (TYPEDV(v,(ty,_)),locn) => Absyn.VTYPED(locn,to_vabsyn v, ty)
+  | (VS_AQ x,locn) => Absyn.VAQ (locn,x)
   | (RESTYPEDV _,locn) =>
       raise ParseTermError
         ("Attempt to convert a vstruct still containing a RESTYPEDV",locn)
@@ -1119,61 +1119,61 @@ fun remove_specials t =
     in
       case #1 t1 of
         VAR s => if s = bracket_special then remove_specials t2
-                 else APP(IDENT s, remove_specials t2)
+                 else APP(#2 t, IDENT (#2 t1,s), remove_specials t2)
       | COMB ((VAR s,slocn), f) => let
         in
-          if s = fnapp_special then APP(remove_specials f, remove_specials t2)
+          if s = fnapp_special then APP(#2 t, remove_specials f, remove_specials t2)
           else if s = recsel_special then
             case #1 t2 of
-              VAR fldname => APP(IDENT (recsel_special ^ fldname),
+              VAR fldname => APP(#2 t, IDENT (#2 t2, recsel_special ^ fldname),
                                  remove_specials f)
             | _ => raise ParseTermError
                 ("Record selection must have single id to right",#2 t2)
           else if s = reccons_special then
-            remove_recupdate f t2 (IDENT "ARB")
+            remove_recupdate (#2 t) f t2 (IDENT (locn.Loc_None,"ARB"))
           else if s = recwith_special then
-            remove_recupdate' t2 (remove_specials f)
+            remove_recupdate' (#2 t) t2 (remove_specials f)
           else
             if s = recupd_special orelse s = recfupd_special then
               raise ParseTermError
                 ("May not use record update functions at top level",slocn)
             else
-              APP(remove_specials t1, remove_specials t2)
+              APP(#2 t, remove_specials t1, remove_specials t2)
         end
-      | _ => APP(remove_specials t1, remove_specials t2)
+      | _ => APP(#2 t, remove_specials t1, remove_specials t2)
     end
-  | ABS(v, t2) => Absyn.LAM(to_vabsyn v, remove_specials t2)
-  | TYPED(t, (ty,_)) => Absyn.TYPED(remove_specials t, ty)
-  | VAR s => Absyn.IDENT s
-  | QIDENT x => Absyn.QIDENT x
-  | AQ x => Absyn.AQ x
-and remove_recupdate upd1 updates bottom = let
+  | ABS(v, t2) => Absyn.LAM(#2 t, to_vabsyn v, remove_specials t2)
+  | TYPED(t, (ty,_)) => Absyn.TYPED(#2 t, remove_specials t, ty)
+  | VAR s => Absyn.IDENT(#2 t, s)
+  | QIDENT(x,y) => Absyn.QIDENT(#2 t, x, y)
+  | AQ x => Absyn.AQ(#2 t, x)
+and remove_recupdate locn upd1 updates bottom = let
   open Absyn
 in
   case #1 upd1 of
-    COMB((COMB((VAR s,slocn), (VAR fld,_)),_), newvalue) => let
+    COMB((COMB((VAR s,slocn), (VAR fld,_)),sflocn), newvalue) => let
     in
       if s = recupd_special orelse s = recfupd_special then
-        APP(APP(IDENT (s^fld), remove_specials newvalue),
-             remove_recupdate' updates bottom)
+        APP(locn, APP(#2 upd1, IDENT (sflocn,s^fld), remove_specials newvalue),
+             remove_recupdate' (#2 updates) updates bottom)
       else raise ParseTermError (recupd_errstring,slocn)
     end
   | _ =>
     raise ParseTermError (recupd_errstring,#2 upd1)
 end
-and remove_recupdate' updatelist bottom = let
+and remove_recupdate' locn updatelist bottom = let
   open Absyn
 in
   case #1 updatelist of
     VAR s => if s = recnil_special then bottom
              else raise ParseTermError (recupd_errstring,#2 updatelist)
-  | COMB((COMB((VAR s,slocn), upd1),_), updates) => let
+  | COMB((COMB((VAR s,slocn), upd1),sflocn), updates) => let
     in
-      if s = reccons_special then remove_recupdate upd1 updates bottom
+      if s = reccons_special then remove_recupdate locn upd1 updates bottom
       else
         if s = recupd_special orelse s = recfupd_special then
           case #1 upd1 of
-            VAR fldname => APP(APP(IDENT (s^fldname),
+            VAR fldname => APP(locn,APP(#2 upd1, IDENT (sflocn,s^fldname),
                                      remove_specials updates),
                                 bottom)
           | _ => raise ParseTermError

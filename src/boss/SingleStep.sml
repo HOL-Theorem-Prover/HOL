@@ -332,9 +332,9 @@ fun (q by tac) (g as (asl,w)) = let
   val a = Absyn q
   val (goal_pt, finisher) =
       case Lib.total Absyn.dest_eq a of
-        SOME (Absyn.IDENT "_", r) =>
+        SOME (Absyn.IDENT(_,"_"), r) =>
         if not (null asl) andalso is_labeq (hd asl) then
-          (absyn_to_preterm (Absyn.mk_eq(Absyn.AQ (labrhs (hd asl)), r)),
+          (absyn_to_preterm (Absyn.mk_eq(Absyn.mk_AQ (labrhs (hd asl)), r)),
            POP_ASSUM o eqTRANS)
         else
           raise ERR "by" "Top assumption must be an equality"

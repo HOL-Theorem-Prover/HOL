@@ -8,6 +8,7 @@ open HolKernel Abbrev;
 type monoset = InductiveDefinition.monoset;
 
 val ERR = mk_HOL_ERR "IndDefLib";
+val ERRloc = mk_HOL_ERRloc "IndDefLib";
 
 local open Absyn
       fun head clause =
@@ -17,10 +18,10 @@ local open Absyn
       fun determ M =
           fst(Term.dest_var M handle HOL_ERR _ => Term.dest_const M)
            handle HOL_ERR _ => raise ERR "determ" "Non-atom in antiquote"
-      fun dest (AQ tm) = determ tm
-        | dest (IDENT s) = s
-        | dest other = raise ERR "names_of.reln_names.dest"
-                                 "Unexpected structure"
+      fun dest (AQ (_,tm)) = determ tm
+        | dest (IDENT (_,s)) = s
+        | dest other = raise ERRloc "names_of.reln_names.dest"
+                                    (locn_of_absyn other) "Unexpected structure"
 in
 fun term_of_absyn absyn =
   let val clauses   = strip_conj absyn

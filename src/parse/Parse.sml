@@ -379,18 +379,18 @@ fun print_thm thm     = Portable.output(Portable.std_out, thm_to_string thm);
 
 fun to_vstruct t = let
   open Absyn
-  fun ultimately s (IDENT s')      = (s = s')
-    | ultimately s (TYPED (t', _)) = ultimately s t'
+  fun ultimately s (IDENT (_, s'))      = (s = s')
+    | ultimately s (TYPED (_, t', _))   = ultimately s t'
     | ultimately s _ = false
 in
   case t of
-    IDENT s      => VIDENT s
-  | TYPED (t,ty) => VTYPED(to_vstruct t, ty)
-  | AQ x         => VAQ x
-  | APP(APP(comma, t1), t2) =>
-      if ultimately "," comma then VPAIR(to_vstruct t1, to_vstruct t2)
-      else raise Fail "term not suitable as varstruct"
-  | _ => raise Fail "term not suitable as varstruct"
+    IDENT (locn,s)    => VIDENT (locn,s)
+  | TYPED (locn,t,ty) => VTYPED(locn,to_vstruct t, ty)
+  | AQ (locn,x)       => VAQ (locn,x)
+  | APP(locn,APP(_,comma, t1), t2) =>
+      if ultimately "," comma then VPAIR(locn,to_vstruct t1, to_vstruct t2)
+      else raise Fail ("term "^locn.toString locn^" not suitable as varstruct")
+  | t => raise Fail ("term "^locn.toString (locn_of_absyn t)^" not suitable as varstruct")
 end
 
 fun reform_def (t1, t2) =
@@ -398,24 +398,27 @@ fun reform_def (t1, t2) =
   handle Fail _ =>
    let open Absyn
        val (f, args) = strip_app t1
-       val newrhs = List.foldr (fn (a,body) => LAM(to_vstruct a,body)) t2 args
+       val newlocn = locn.Loc_Near (locn_of_absyn t2) (*TODO:not quite right*)
+       val newrhs = List.foldr (fn (a,body) => LAM(newlocn,to_vstruct a,body)) t2 args
    in (to_vstruct f, newrhs)
    end
 
 fun munge_let binding_term body = let
   open Absyn
-  fun strip_and(APP(APP(IDENT"and",t1),t2)) A = strip_and t1 (strip_and t2 A)
+  fun strip_and(APP(_,APP(_,IDENT(_,"and"),t1),t2)) A = strip_and t1 (strip_and t2 A)
     | strip_and tm acc = tm::acc
   val binding_clauses = strip_and binding_term []
-  fun is_eq tm = case tm of APP(APP(IDENT "=", _), _) => true | _ => false
-  fun dest_eq (APP(APP(IDENT "=", t1), t2)) = (t1, t2)
-    | dest_eq _ = raise Fail "(pre-)term not an equality"
+  fun is_eq tm = case tm of APP(_,APP(_,IDENT (_,"="), _), _) => true | _ => false
+  fun dest_eq (APP(_,APP(_,IDENT (_,"="), t1), t2)) = (t1, t2)
+    | dest_eq t = raise Fail (locn.toString (locn_of_absyn t)^":\n(pre-)term not an equality")
   val _ = List.all is_eq binding_clauses
-    orelse raise ERROR "Term" "let with non-equality"
+    orelse raise ERRORloc "Term" (locn_of_absyn binding_term) "let with non-equality"
   val (L,R) = ListPair.unzip (map (reform_def o dest_eq) binding_clauses)
-  val central_abstraction = List.foldr LAM body L
+  val binding_locn = locn.Loc_Near (locn_of_absyn binding_term) (*:TODO:not quite right*)
+  val central_locn = locn.Loc_Near (locn_of_absyn body) (*TODO:not quite right*)
+  val central_abstraction = List.foldr (fn (v,M) => LAM(central_locn,v,M)) body L
 in
-  List.foldl (fn(arg, b) => APP(APP(IDENT "LET", b), arg))
+  List.foldl (fn(arg, b) => APP(central_locn,APP(binding_locn,IDENT (binding_locn,"LET"), b), arg))
   central_abstraction R
 end
 
@@ -425,22 +428,22 @@ fun traverse applyp f t = let
 in
   if applyp t then f traverse t
   else case t of
-    APP(t1,t2)   => APP(traverse t1, traverse t2)
-  | LAM(vs,t)    => LAM(vs, traverse t)
-  | TYPED(t,pty) => TYPED(traverse t, pty)
-  | allelse      => allelse
+    APP(locn,t1,t2)   => APP(locn,traverse t1, traverse t2)
+  | LAM(locn,vs,t)    => LAM(locn,vs, traverse t)
+  | TYPED(locn,t,pty) => TYPED(locn,traverse t, pty)
+  | allelse           => allelse
 end
 
 
 fun remove_lets t0 = let
   open Absyn
-  fun let_remove f (APP(APP(IDENT "let", t1), t2)) = munge_let (f t1) (f t2)
+  fun let_remove f (APP(_,APP(_,IDENT (_,"let"), t1), t2)) = munge_let (f t1) (f t2)
     | let_remove _ _ = raise Fail "Can't happen"
-  val t1 = traverse (fn APP(APP(IDENT "let", _), _) => true
+  val t1 = traverse (fn APP(_,APP(_,IDENT (_,"let"), _), _) => true
                       | otherwise => false) let_remove t0
   val _ =
-    traverse (fn IDENT("and") => true | _ => false)
-    (fn _ => raise ERROR "Term" "Invalid use of reserved word and") t1
+    traverse (fn IDENT(_,"and") => true | _ => false)
+    (fn _ => fn t => raise ERRORloc "Term" (locn_of_absyn t) "Invalid use of reserved word and") t1
 in
   t1
 end
@@ -456,24 +459,24 @@ end
 
 
 local open Parse_support Absyn
-  fun binder(VIDENT s)      = make_binding_occ s
-    | binder(VPAIR(v1,v2))  = make_vstruct [binder v1, binder v2] NONE
-    | binder(VAQ x)         = make_aq_binding_occ x
-    | binder(VTYPED(v,pty)) = make_vstruct [binder v] (SOME pty)
+  fun binder(VIDENT (_,s))    = make_binding_occ s
+    | binder(VPAIR(_,v1,v2))  = make_vstruct [binder v1, binder v2] NONE
+    | binder(VAQ (_,x))       = make_aq_binding_occ x
+    | binder(VTYPED(_,v,pty)) = make_vstruct [binder v] (SOME pty)
 in
   fun absyn_to_preterm_in_env ginfo t = let
     open parse_term Absyn Parse_support
     val to_ptmInEnv = absyn_to_preterm_in_env ginfo
   in
     case t of
-      APP(APP(IDENT "gspec special", t1), t2) =>
+      APP(_,APP(_,IDENT (_,"gspec special"), t1), t2) =>
         make_set_abs (to_ptmInEnv t1, to_ptmInEnv t2)
-    | APP(t1, t2)   => list_make_comb (map to_ptmInEnv [t1, t2])
-    | IDENT s       => make_atom ginfo s
-    | QIDENT p      => make_qconst ginfo p
-    | LAM(vs, t)    => bind_term "\\" [binder vs] (to_ptmInEnv t)
-    | TYPED(t, pty) => make_constrained (to_ptmInEnv t) pty
-    | AQ t          => make_aq t
+    | APP(_, t1, t2)     => list_make_comb (map to_ptmInEnv [t1, t2])
+    | IDENT (_, s)       => make_atom ginfo s
+    | QIDENT (_, s1, s2) => make_qconst ginfo (s1,s2)
+    | LAM(_, vs, t)      => bind_term "\\" [binder vs] (to_ptmInEnv t)
+    | TYPED(_, t, pty)   => make_constrained (to_ptmInEnv t) pty
+    | AQ (_, t)          => make_aq t
   end
 end;
 
