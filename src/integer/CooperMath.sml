@@ -35,8 +35,9 @@ fun gcd (i,j) = let
   end
 in
   (if ((i < zero) orelse (j < zero)) then raise non_neg
-  else if (i < j) then gcd' (j,i) else gcd' (i,j))
-  handle _ => raise ERR "gcd" "negative arguments to gcd"
+   else if i = zero then j else if j = zero then i
+   else if (i < j) then gcd' (j,i) else gcd' (i,j))
+  handle non_neg => raise ERR "gcd" "negative arguments to gcd"
 end;
 
 fun gcdl l =
