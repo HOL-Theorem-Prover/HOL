@@ -110,17 +110,14 @@ end;
  * The type variables of a lambda term. Tail recursive (from Ken Larsen).    *
  *---------------------------------------------------------------------------*)
 
-local fun union [] S k = k S
-        | union S [] k = k S
-        | union (a::rst) S2 k = union rst (insert a S2) k
-      fun tyV (Fv(_,Ty)) k         = k (Type.type_vars Ty)
+local fun tyV (Fv(_,Ty)) k         = k (Type.type_vars Ty)
         | tyV (Bv _) k             = k []
         | tyV (Const(_,GRND _)) k  = k []
         | tyV (Const(_,POLY Ty)) k = k (Type.type_vars Ty)
         | tyV (Comb(Rator,Rand)) k = tyV Rand (fn q1 => tyV Rator 
-                                              (fn q2 => union q2 q1 k))
+                                              (fn q2 => k (union q2 q1)))
         | tyV (Abs(Bvar,Body)) k   = tyV Body (fn q1 => tyV Bvar
-                                              (fn q2 => union q2 q1 k))
+                                              (fn q2 => k (union q2 q1)))
         | tyV (t as Clos _) k      = tyV (push_clos t) k
 in
 fun type_vars_in_term tm = tyV tm Lib.I
