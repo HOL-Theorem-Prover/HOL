@@ -1,0 +1,47 @@
+Theory for an example by C.A.R. Hoare 
+
+(example found in Isabelle/HOLCF sources)
+
+--------------------------------------------------------------
+
+p x = if b1 x 
+         then p (g x)
+         else x fi
+
+q x = if b1 x orelse b2 x 
+         then q (g x)
+         else x fi
+
+Prove: for all b1 b2 g. q o p = q 
+
+---------------------------------------------------------------
+
+Our Assumptions: 
+
+    (1) that we are interested in total correctness;
+    (2) that "orelse" can be translated to disjunction
+
+We attack the problem by making schematic definitions, which 
+become constrained by termination conditions. The main insight driving
+the proof is that if the function named "q" above terminates then 
+so does "p". 
+
+
+val G_def = Define `G x = if b1 x then G (g x) else x`
+val H_def = Define `H x = if b1 x \/ b2 x then H (g x) else x`;
+
+infix 8 by;
+
+val THM = Q.prove 
+(`WF R /\ (!x. b1 x \/ b2 x ==> R (g x) x)
+       ==> 
+ (H b1 b2 g o G b1 g = H b1 b2 g)`,
+RW_TAC std_ss [combinTheory.o_DEF,FUN_EQ_THM] 
+ THEN Q.ID_SPEC_TAC `x`
+ THEN recInduct (theorem "H_ind")
+ THEN RW_TAC std_ss []
+ THEN `!x. b1 x ==> R (g x) x` by PROVE_TAC[]
+ THEN ONCE_REWRITE_TAC [G_def]
+ THEN PROVE_TAC [H_def]);
+
+
