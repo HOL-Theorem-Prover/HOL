@@ -17,10 +17,10 @@ possible. However, when we know that an abstraction will never be
 applied, reductions are performed under it, so that we can actually
 reach the full normal form.
 
-The strategy is intentionnaly close to ML. This allows to think \HOL\
-has a programming language, and \ml{CBV\_CONV} is an evaluator which
-have the same complexity (with a large slow down factor, though) as
-usual compiled ML programs.
+The strategy is intentionally close to that of ML. This allows one to
+think \HOL\ has a programming language, and \ml{CBV\_CONV} is an 
+evaluator which have the same complexity (with a large slow down factor,
+though) as usual compiled ML programs.
 
 The strategy differs from ML for abstractions: $\beta$-redexes are
 reduced in call by need. The usual call by value strategy can be

@@ -32,7 +32,7 @@ fun check_arg_form trm =
       end
     else if (is_var t) andalso (stk=[]) then
       let val newi = length free in
-      (free, Pvar (newi - index t free - 1))
+      (free, Pvar (newi - index (equal t) free - 1))
       handle HOL_ERR _ => (t::free, Pvar newi)
       end
     else if is_const t then (free, Papp{Head=t, Args=rev stk})
@@ -182,7 +182,7 @@ fun set_skip (rws as RWS htbl) (p as (name,thy)) sk =
 fun from_term (rws,env,t) =
   let fun down (env,t,c) =
         case dest_term t of
-	  VAR _ => up((Bv (index t env) handle HOL_ERR _ => Fv), c)
+	  VAR _ => up((Bv (index (equal t) env) handle HOL_ERR _ => Fv), c)
   	| CONST{Name,Thy,...} => up(Cst (t,assoc_clause rws (Name,Thy)),c)
   	| COMB(Rator,Rand) => down(env,Rator,Zrator{Rand=(env,Rand),Ctx=c})
   	| LAMB(Bvar,Body) => down(Bvar :: env, Body, Zabs{Bvar=(), Ctx=c})

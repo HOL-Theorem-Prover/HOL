@@ -34,8 +34,8 @@ val triple_def = Define_rw ` triple l = append l (append l l) `
 
 val merge_def = Define_rw
  ` (merge (h1 :: t1) (h2 :: t2) =
-      if (le_nat h1 h2) then h1 :: (merge t1 (h2 :: t2))
-      else h2 :: (merge (h1 :: t1) t2))
+      if le_nat h1 h2 then h1 :: merge t1 (h2 :: t2)
+      else h2 :: merge (h1 :: t1) t2)
 /\ (merge [] l2 = l2)
 /\ (merge l1 [] = l1) `
 ;
