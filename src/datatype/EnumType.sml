@@ -289,7 +289,7 @@ fun define_case initiality =
                 end) V fclause)
 
      val gclause_thms = LIST_CONJ (map(GENL V o reduce) (zip gclauses bodythl))
-     val exists_tm = mk_exists(g,subst [gfun |-> g] 
+     val exists_tm = mk_exists(g,subst [gfun |-> g]
                         (list_mk_conj (map (curry list_mk_forall V) gclauses)))
      val gexists = CHOOSE(f,inst_initiality)
                      (EXISTS(exists_tm,gfun) gclause_thms)
@@ -355,7 +355,7 @@ fun case_cong_thm nchotomy case_def =
  let val case_def = SPEC_ALL case_def
      val clause1 =
        let val c = concl case_def in fst(dest_conj c) handle HOL_ERR _ => c end
-     val V = butlast (snd(strip_comb(lhs clause1)))
+     val V = butlast (snd(strip_comb(lhs (#2 (strip_forall clause1)))))
      val gl = case_cong_term case_def
      val (ant,conseq) = dest_imp gl
      val imps = CONJUNCTS (ASSUME ant)
@@ -381,7 +381,8 @@ fun case_cong_thm nchotomy case_def =
        in (TRANS th1 (SYM rth), (vlist, #1 theta))
        end
      val thm_substs = map2 zot
-                       (zip (Lib.trye tl case_assms) (CONJUNCTS case_def))
+                       (zip (Lib.trye tl case_assms)
+                            (map SPEC_ALL (CONJUNCTS case_def)))
                        (zip (Lib.trye tl imps) disjrl)
      val aag = map (TRANS lconseq_thm o EQ_EXISTS_LINTRO) thm_substs
  in
@@ -406,7 +407,7 @@ fun enum_type_to_tyinfo (ty, constrs) = let
                       val thl = CONJUNCTS (SPEC_ALL case_def)
                   in LIST_CONJ (map (GENL V) thl)
                   end
-  open TypeBase TypeInfo
+  open TypeBase TypeBase.TypeInfo
   val tyinfo0 =
       mk_tyinfo { ax = ORIG initiality,
                   induction = ORIG induction,
