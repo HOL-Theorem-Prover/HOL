@@ -68,18 +68,13 @@ Cases_on `n`
   THEN RW_TAC arith_ss [exp_eqns]);
 
 
-local open computeLib
-      val compset = bossLib.initial_rws()
-      val _ = add_thms [alt_exp_eqns] compset
-in
-val Eval = Count.apply (CBV_CONV compset) o Term
-end;
+val _ = computeLib.add_funs [alt_exp_eqns];
 
-Eval `exp 2 1`;
-Eval `exp 2 4 * exp 4 2`;
-Eval `exp 2 10`;
-Eval `exp 2 16`;
-Eval `exp 2 100`;
+EVAL (Term `exp 2 1`);
+EVAL (Term `exp 2 4 * exp 4 2`);
+EVAL (Term `exp 2 10`);
+EVAL (Term `exp 2 16`);
+EVAL (Term `exp 2 100`);
 
 (*---------------------------------------------------------------------------
    REDUCE_CONV is faster than Eval for exp because of 

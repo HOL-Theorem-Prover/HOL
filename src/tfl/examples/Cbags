@@ -12,14 +12,14 @@ val _ = Hol_datatype
 val _ = Hol_datatype
   `CType = Void 
          | Unsigned of basic_integral_type
-         | Signed of basic_integral_type
-         | Ptr of CType
-         | Array of CType => num
-         | Struct of string
+         | Signed   of basic_integral_type
+         | Ptr      of CType
+         | Array    of CType => num
+         | Struct   of string
          | Function of CType => CType list`;
 
 val _ = Hol_datatype 
- `MemObj = MByte of bool word 
+ `MemObj = MByte   of bool word 
          | MFunRef of string => num
          | MUndefined`;
 
@@ -47,28 +47,29 @@ val _ = Hol_datatype
          | CNullFunRef`;
 
 val _ = Hol_datatype
-  `CExpr = Cnum of num  
-         | Cchar of num 
-         | Cnullptr of CType
-         | Var of string 
-         | CFunRef of string
-         | COr of CExpr => CExpr
-         | CAnd of CExpr => CExpr
-         | CCond of CExpr => CExpr => CExpr
-         | CApBinary of c_binops => CExpr => CExpr
-         | CApUnary of c_unops => CExpr
-         | Deref of CExpr
-         | Addr of CExpr
-         | Assign of c_binops => CExpr => CExpr => (num -> num)
-         | SVar of CExpr => string
-         | FnApp of CExpr => CExpr list
-         | CommaSep of CExpr => CExpr
-         | Cast of CType => CExpr
-         | PostInc of CExpr |CAndOr_sqpt of CExpr
-         | FnApp_sqpt of CExpr => CExpr list
-         | LVal of num => CType
-         | RValreq of CExpr
-         | ECompVal of MemObj list => CType
+  `CExpr = Cnum        of num  
+         | Cchar       of num 
+         | Cnullptr    of CType
+         | Var         of string 
+         | CFunRef     of string
+         | COr         of CExpr => CExpr
+         | CAnd        of CExpr => CExpr
+         | CCond       of CExpr => CExpr => CExpr
+         | CApBinary   of c_binops => CExpr => CExpr
+         | CApUnary    of c_unops => CExpr
+         | Deref       of CExpr
+         | Addr        of CExpr
+         | Assign      of c_binops => CExpr => CExpr => (num -> num)
+         | SVar        of CExpr => string
+         | FnApp       of CExpr => CExpr list
+         | CommaSep    of CExpr => CExpr
+         | Cast        of CType => CExpr
+         | PostInc     of CExpr 
+         | CAndOr_sqpt of CExpr
+         | FnApp_sqpt  of CExpr => CExpr list
+         | LVal        of num => CType
+         | RValreq     of CExpr
+         | ECompVal    of MemObj list => CType
          | UndefinedExpr`;
 
 
@@ -78,31 +79,40 @@ val _ = Hol_datatype
 
 val rbags_defn = 
  Defn.Hol_defn "rbags"
-  `(rbags (COr e1 e2)          = BAG_UNION (rbags e1) (rbags e2)) /\
-   (rbags (CAnd e1 e2)         = BAG_UNION (rbags e1) (rbags e2)) /\
-   (rbags (CApBinary bf e1 e2) = BAG_UNION (rbags e1) (rbags e2)) /\
-   (rbags (CApUnary uf e)      = rbags e) /\
-   (rbags (Deref e)            = rbags e) /\
-   (rbags (Addr e)             = rbags e) /\
-   (rbags (Assign f e1 e2 b)   = BAG_UNION (rbags e1) b) /\
-   (rbags (SVar e s)           = rbags e) /\
-   (rbags (FnApp e el)         = BAG_UNION (rbags e) (rbagsl el)) /\
-   (rbags (CommaSep e1 e2)     = BAG_UNION (rbags e1) (rbags e2)) /\
-   (rbags (Cast t e)           = rbags e) /\
-   (rbags (PostInc e)          = rbags e) /\
-   (rbags (CAndOr_sqpt e)      = rbags e) /\
-   (rbags (RValreq e)          = rbags e) /\
-   (rbags (CCond e1 e2 e3)     = BAG_UNION (BAG_UNION(rbags e1) (rbags e2))
-                                           (rbags e3)) /\
-   (rbags __________           = {||}) /\
+  `(rbags (COr e1 e2)         = BAG_UNION (rbags e1) (rbags e2)) /\
+   (rbags (CAnd e1 e2)        = BAG_UNION (rbags e1) (rbags e2)) /\
+   (rbags (CApBinary _ e1 e2) = BAG_UNION (rbags e1) (rbags e2)) /\
+   (rbags (CApUnary _ e)      = rbags e) /\
+   (rbags (Deref e)           = rbags e) /\
+   (rbags (Addr e)            = rbags e) /\
+   (rbags (Assign _ e1 _ b)   = BAG_UNION (rbags e1) b) /\
+   (rbags (SVar e _)          = rbags e) /\
+   (rbags (FnApp e el)        = BAG_UNION (rbags e) (rbagsl el)) /\
+   (rbags (CommaSep e1 e2)    = BAG_UNION (rbags e1) (rbags e2)) /\
+   (rbags (Cast t e)          = rbags e) /\
+   (rbags (PostInc e)         = rbags e) /\
+   (rbags (CAndOr_sqpt e)     = rbags e) /\
+   (rbags (RValreq e)         = rbags e) /\
+   (rbags (CCond e1 e2 e3)    = BAG_UNION (BAG_UNION(rbags e1) (rbags e2))
+                                          (rbags e3)) /\
+   (rbags  ____________       = {||}) /\
 
    (rbagsl []      = {||}) /\
    (rbagsl (e::es) = BAG_UNION (rbags e) (rbagsl es))`;
 
+(*---------------------------------------------------------------------------
+      One of the guessed termination relations is correct, but 
+      wasn't solved by the automatic prover. So we will
+      instantiate the termination relation and prove the resulting
+      termination conditions ourselves.
+ ---------------------------------------------------------------------------*)
+
+val (_::R::_) = TotalDefn.guessR rbags_defn;
+
 val (rbags_eqns,rbags_ind) = 
  Defn.tprove
   (rbags_defn,
-   TotalDefn.WF_REL_TAC `^(hd(tl(TotalDefn.guessR rbags_defn)))`
+   TotalDefn.WF_REL_TAC `^R`
       THEN Induct_on `el`
       THEN RW_TAC list_ss [listTheory.list_size_def]
       THEN POP_ASSUM (MP_TAC o SPEC_ALL)

@@ -2,22 +2,9 @@
            McCarthy's 91 function.
  ---------------------------------------------------------------------------*)
 
-app load ["TotalDefn", "BasicProvers", "SingleStep", "numLib"];
+app load ["bossLib", "numLib"];
 
-open TotalDefn BasicProvers SingleStep numLib;
-infix 8 by;
-
-(*---------------------------------------------------------------------------
-         Miscellaneous support
- ---------------------------------------------------------------------------*)
-
-val measure_def   = prim_recTheory.measure_def;
-val inv_image_def = relationTheory.inv_image_def;
-
-val arith_ss  = simpLib.++(bool_ss,arithSimps.ARITH_ss);
-fun ARITH q  = ARITH_PROVE (Term q);
-
-val lem = ARITH `~(x > 100) ==> (101-y < 101-x = x<y)`;
+open TotalDefn bossLib numLib;
 
 
 (*---------------------------------------------------------------------------
@@ -35,8 +22,7 @@ val N_defn =
  Defn.Hol_defn "N" 
                `N(x) = if x>100 then x-10 else N (N (x+11))`;
 
-
-val Neqn = Defn.eqns_of N_defn;
+val [Neqn] = Defn.eqns_of N_defn;
 
 (*---------------------------------------------------------------------------
       Prove partial correctness for N, to see how such a proof
@@ -56,49 +42,42 @@ val Npartly_correct = Q.prove(
 STRIP_TAC THEN recInduct Nind
   THEN REPEAT STRIP_TAC
   THEN ONCE_REWRITE_TAC [Neqn]
-  THEN RW_TAC bool_ss [DECIDE (Term`x+11-10 = x+1`)]
+  THEN RW_TAC bool_ss [DECIDE(Term`x+11-10 = x+1`)]
   THEN RW_TAC arith_ss [])
 end;
 
 
 (*---------------------------------------------------------------------------
-      Prove termination for N. The termination relation is 
-      "measure \x. 101 - x". Termination is shown by proving
-      the termination of N_aux.  We also make another definition, 
-      Nine1, just for readability in the proofs.
+         Miscellaneous support
  ---------------------------------------------------------------------------*)
 
-val Nine1_def = Define `Nine1 = N_aux (measure \x. 101 - x)`;
+val measure_def   = prim_recTheory.measure_def;
+val inv_image_def = relationTheory.inv_image_def;
 
-val Nine1_def' = BETA_RULE(REWRITE_RULE [measure_def,inv_image_def] Nine1_def);
-
-
-local val SOME N_aux_defn = Defn.aux_defn N_defn
-in
-val eqn0 = 
-  REWRITE_RULE [prim_recTheory.WF_measure]
-    (BETA_RULE
-      (Q.INST [`R` |-> `measure \x. 101 - x`]
-            (Defn.eqns_of N_aux_defn)))
-end;
+fun ARITH q = DECIDE (Term q);
+val lem = ARITH `~(x > 100) ==> (101-y < 101-x = x<y)`;
 
 
-val eqn1 = Q.prove(`!x. x>100 ==> (Nine1 x = x-10)`,
-RW_TAC bool_ss [Nine1_def] 
-  THEN MP_TAC eqn0 
-  THEN RW_TAC bool_ss []);
 
+(*---------------------------------------------------------------------------
+      Prove termination for N. The termination relation is 
+      "measure \x. 101 - x". 
+ ---------------------------------------------------------------------------*)
 
-val eqn2 = Q.prove
-(`!x. ~(x>100) /\ x < Nine1 (x+11) 
-         ==> 
-     (Nine1 x = Nine1 (Nine1 (x+11)))`,
- RW_TAC bool_ss [Nine1_def] 
-   THEN MP_TAC eqn0 THEN RW_TAC bool_ss []
-   THEN FIRST_ASSUM (MATCH_MP_TAC o REWRITE_RULE [AND_IMP_INTRO])
-   THEN CONJ_TAC THENL [ALL_TAC, Q.PAT_ASSUM `x<y` MP_TAC]
-   THEN RW_TAC arith_ss [lem,measure_def,inv_image_def]);
+val N_defn_1 = Defn.set_reln N_defn (Term `measure \x. 101 - x`);
 
+val tcs as [nested, tc1,tc2] = Defn.tcs_of N_defn_1;
+
+val non_nested_tcs = prove
+(mk_conj(tc1,tc2),
+ TotalDefn.TC_SIMP_TAC [] []);
+
+val N_defn_2 = Defn.elim_tcs N_defn_1 (CONJUNCTS non_nested_tcs);
+
+val SOME aux_defn_2 = Defn.aux_defn N_defn_2;
+val [E0] = Defn.eqns_of aux_defn_2;
+val E1 = CONV_RULE (TC_SIMP_CONV []) (DISCH_ALL E0);
+val E2 = simpLib.SIMP_RULE std_ss [lem] E1;
 
 (*---------------------------------------------------------------------------
 
@@ -116,6 +95,22 @@ val eqn2 = Q.prove
          such cases, partial correctness need not be involved.]
 
  ---------------------------------------------------------------------------*)
+
+Defn.tgoal N_defn_2;
+e (TC_SIMP_TAC [] []);
+e (simpLib.SIMP_TAC std_ss [lem]);
+e (GEN_TAC THEN measureInduct_on `(\m. 101 - m) x`);
+e (RW_TAC std_ss []);
+e (IMP_RES_THEN (fn th => RULE_ASSUM_TAC (REWRITE_RULE [th])) lem);
+e (MP_TAC (Q.SPEC `x+11` (GEN_ALL E2)));
+e (RW_TAC std_ss [DECIDE (Term `x < x+11-10`)]);
+e (`x + 11 < N_aux (\x y. 101 - x < 101 - y) (x + 11 + 11)`
+   by PROVE_TAC [DECIDE (Term `x < x+11`)]);
+e (RW_TAC std_ss []);  (* Unroll the function *)
+e (WEAKEN_TAC is_imp);
+
+e (MP_TAC (Q.SPEC `x+11` (GEN_ALL E2)));
+e (Cases_on `N_aux (\x y. 101 - x < 101 - y) (x + 11 + 11) - 11 > 100`);
 
 val (N_eqn, N_ind) = Defn.tprove(N_defn,
 WF_REL_TAC `measure \x. 101 - x`  (* non-nested TC proved here *)
