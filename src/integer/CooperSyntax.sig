@@ -71,6 +71,7 @@ signature CooperSyntax = sig
      expand to (?x. p) \/ (?x.q) \/ (?x.r) ...
   *)
   val push_one_exists_over_many_disjs : conv
+  val push_in_exists : conv
 
   val simple_divides : term -> term -> bool
 

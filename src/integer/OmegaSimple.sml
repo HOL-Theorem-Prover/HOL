@@ -27,7 +27,7 @@ fun c1 ORELSEC c2 = ORELSEQC c1 c2
 val BINOP_CONV = BINOP_QCONV
 val ALL_CONV = ALL_QCONV
 
-fun ERR f msg = HOL_ERR { origin_structure = "OmegaEq",
+fun ERR f msg = HOL_ERR { origin_structure = "OmegaSimple",
                           origin_function = f,
                           message = msg}
 
@@ -60,9 +60,9 @@ end
     in the database that contradicts what we have).
    ---------------------------------------------------------------------- *)
 
-fun add_term_to_db db t next kont = let
+fun add_term_to_db db vars t next kont = let
   open OmegaMLShadow
-  val df as (f,d) = term_to_dfactoid t
+  val df as (f,d) = term_to_dfactoid vars t
 in
   if false_factoid f then kont (CONTR d)
   else if true_factoid f then next db kont
@@ -284,12 +284,13 @@ end
 
 fun simple_CONV t = let
   val (vars, body) = strip_exists t
+  val svars = Listsort.sort Term.compare vars
   val bcs = strip_conj body
   fun add_ts db tl next kont =
       case tl of
         [] => next db kont
       | (t::ts) =>
-        add_term_to_db db t (fn db => fn k => add_ts db ts next k) kont
+        add_term_to_db db svars t (fn db => fn k => add_ts db ts next k) kont
   open OmegaMLShadow
   val ordered_vars = Listsort.sort Term.compare vars
 in
@@ -318,8 +319,10 @@ end
 
    fun test l = let
      val body = list_mk_conj (map toTerm l)
+     val g = list_mk_exists(free_vars body, body)
    in
-     time simple_CONV (list_mk_exists(free_vars body, body))
+     time simple_CONV g;
+     time Cooper.COOPER_CONV g
    end;
 
    test [[2,3,6],[~1,~4,7]];  (* exact elimination *)

@@ -499,6 +499,58 @@ in
   K th THENC RAND_CONV (RAND_CONV NEG_SUM_CONV THENC SORT_AND_GATHER1_CONV)
 end tm
 
+(* ----------------------------------------------------------------------
+    NORMALISE_MULT tm
+
+    normalises the multiplicative term tm, gathering up coefficients,
+    and turning it into the form n * (v1 * v2 * ... vn), where
+    n is a numeral and the v's are the variables in the term, sorted
+    into the order specified by Term.compare.  Works over both :num
+    and :int.
+   ---------------------------------------------------------------------- *)
+
+fun NORMALISE_MULT t = let
+  open arithmeticTheory
+  (* t is a multiplication term, over either :num or :int *)
+  val (dest, strip, mk, listmk, AC, is_lit, MULT_LID) =
+      if numSyntax.is_mult t then
+        (numSyntax.dest_mult,
+         numSyntax.strip_mult,
+         numSyntax.mk_mult,
+         numSyntax.list_mk_mult,
+         EQT_ELIM o AC_CONV (MULT_ASSOC, MULT_COMM),
+         numSyntax.is_numeral,
+         GSYM arithmeticTheory.MULT_LEFT_1)
+      else
+        (intSyntax.dest_mult,
+         intSyntax.strip_mult,
+         intSyntax.mk_mult,
+         intSyntax.list_mk_mult,
+         EQT_ELIM o AC_CONV (INT_MUL_ASSOC, INT_MUL_COMM),
+         intSyntax.is_int_literal,
+         GSYM INT_MUL_LID)
+in
+  case strip t of
+    [ _ ] => if is_lit t then NO_CONV else REWR_CONV MULT_LID
+  | ms => let
+      val (nums, others) = partition is_lit ms
+    in
+      if null nums then
+        REWR_CONV MULT_LID
+      else if length nums = 1 andalso hd nums = #1 (dest t) then
+        NO_CONV
+      else if null others then
+        REDUCE_CONV
+      else let
+          val newt =
+              mk(listmk nums, listmk (Listsort.sort Term.compare others))
+        in
+          K (AC (mk_eq(t,newt))) THENC LAND_CONV REDUCE_CONV
+        end
+    end
+end t
+
+
 
 
 end

@@ -6,6 +6,8 @@ sig
   val gcd_le_check          : conv
   val gcd_check             : conv
 
+  val addzero               : conv
+
   val INT_NORM_CONV         : conv
   val NAIVE_INT_NORM_CONV   : conv
   val RLIB_INT_NORM_CONV    : conv
@@ -18,6 +20,7 @@ sig
 
   val MOVE_VCOEFF_TO_FRONT  : term -> conv
   val NEG_SUM_CONV          : conv
+  val NORMALISE_MULT        : conv
 
 end;
 
@@ -50,6 +53,10 @@ end;
 
    [gcd_check tm] applies either gcd_eq_check or gcd_le_check depending
    on tm's relational operator.  Fails with HOL_ERR otherwise.
+
+   [addzero t] if t (of integer type and not a numeral itself) does
+   not have a numeral as its 'rand, then return thm |- t = t + 0,
+   otherwise ALL_CONV.
 
    [INT_NORM_CONV tm] normalises tm, distributing multiplications over
    sums and collecting up variable coefficients.
@@ -89,6 +96,12 @@ end;
 
    [NEG_SUM_CONV] simplifies ~(c1*v1 + c2 * v2 .. + cn * vn + n), by
    pushing the negation inwards.
+
+   [NORMALISE_MULT tm] normalises the multiplicative term tm,
+   gathering up coefficients, and turning it into the form n * (v1 *
+   v2 * ... vn), where n is a numeral and the v's are the variables
+   in the term, sorted into the order specified by Term.compare.
+   Works over both :num and :int.
 
 *)
 

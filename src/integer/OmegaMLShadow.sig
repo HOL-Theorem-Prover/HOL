@@ -17,7 +17,7 @@ sig
   val false_factoid      : factoid -> bool
   val true_factoid       : factoid -> bool
 
-  val term_to_dfactoid   : term -> dfactoid
+  val term_to_dfactoid   : term list -> term -> dfactoid
   val gcd_check_dfactoid : dfactoid -> dfactoid
 
   val add_check_factoid  : cstdb -> dfactoid ->

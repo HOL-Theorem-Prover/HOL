@@ -99,16 +99,6 @@ val congruential_simplification = QConv.QCONV congruential_simplification
 
 
 
-fun push_in_exists tm =
-    (* takes all existentials that are over disjuncts, and pushes them *)
-    (* over the disjuncts, preserving the order *)
-    if is_exists tm then
-      (BINDER_CONV push_in_exists THENC
-                   push_one_exists_over_many_disjs) tm
-    else
-      ALL_CONV tm
-
-
 val unwind_constraint = UNCONSTRAIN THENC resquan_remove
 
 val p6_step = prove(

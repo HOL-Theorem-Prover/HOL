@@ -165,20 +165,35 @@ fun factoid_gcd f =
       end
 
 (* ----------------------------------------------------------------------
-    term_to_factoid tm
+    term_to_factoid vars tm
 
     returns the factoid corresponding to tm.  tm is thus of the form
       0 <= c1 * v1 + ... + cn * vn + num
-    Assumes that the variables are in the "correct" order.
+    Assumes that the variables are in the "correct" order (as given in the
+    list vars), but that all are not necessarily present.  Omission
+    indicates a coefficient of zero, of course.
    ---------------------------------------------------------------------- *)
 
-fun term_to_factoid tm = let
+fun term_to_factoid vars tm = let
   val summands = strip_plus (rand tm)
-  fun sum2c t =
-      int_of_term (#1 (dest_mult t))
-      handle HOL_ERR _ => int_of_term t
+  fun mk_coeffs vlist slist =
+    case (vlist,slist) of
+      ([],[]) => [Arbint.zero]
+    | ([],[s]) => [int_of_term s]
+    | ([], _) => raise HOL_ERR { origin_function = "term_to_factoid",
+                                origin_structure = "OmegaMLShadow",
+                                message = "Too many summands in term"}
+    | (v::vs, []) => Arbint.zero :: mk_coeffs vs []
+    | (v::vs, s::ss) =>
+        if is_mult s then let
+          val (c, mv) = dest_mult s
+        in
+          if mv = v then int_of_term c :: mk_coeffs vs ss
+          else Arbint.zero :: mk_coeffs vs slist
+        end
+        else Arbint.zero :: mk_coeffs vs slist
 in
-  ALT (Vector.fromList (map sum2c summands))
+  ALT (Vector.fromList (mk_coeffs vars summands))
 end
 
 (* ----------------------------------------------------------------------
@@ -232,7 +247,7 @@ fun split_dfactoid (f, d) = (factoid_key f, (factoid_constant f, d))
 fun dfactoid_key (f, d) = factoid_key f
 fun dfactoid_derivation (f, d) = d
 
-fun term_to_dfactoid t = (term_to_factoid t, ASM t)
+fun term_to_dfactoid vars t = (term_to_factoid vars t, ASM t)
 
 (* ----------------------------------------------------------------------
     The "elimination mode" datatype.

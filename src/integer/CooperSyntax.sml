@@ -468,6 +468,14 @@ fun push_one_exists_over_many_disjs tm =
   ((myEXISTS_OR_CONV THENC BINOP_CONV push_one_exists_over_many_disjs) ORELSEC
    ALL_CONV) tm
 
+fun push_in_exists tm =
+    (* takes all existentials that are over disjuncts, and pushes them *)
+    (* over the disjuncts, preserving the order *)
+    if is_exists tm then
+      (BINDER_CONV push_in_exists THENC
+                   push_one_exists_over_many_disjs) tm
+    else
+      ALL_CONV tm
 
 fun remove_vacuous_existential tm = let
   (* term is of form  ?x. x = e *)
