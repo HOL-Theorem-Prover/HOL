@@ -78,8 +78,10 @@ sig
 
   val stdhol         : grammar
   val merge_grammars : grammar * grammar -> grammar
-  val fupdate_overload_info
-    : (overload_info -> overload_info) -> grammar -> grammar
+  val fupdate_overload_info :
+    (overload_info -> overload_info) -> grammar -> grammar
+  val mfupdate_overload_info :
+    (overload_info -> overload_info * 'a) -> grammar -> grammar * 'a
 
   val rules          : grammar -> (int option * grammar_rule) list
   val grammar_rules  : grammar -> grammar_rule list
@@ -101,7 +103,6 @@ sig
    *-------------------------------------------------------------------------*)
 
   val known_constants : grammar -> string list
-  val hide_constant   : string -> grammar -> grammar
 
   val binders          : grammar -> string list
   val is_binder        : grammar -> string -> bool

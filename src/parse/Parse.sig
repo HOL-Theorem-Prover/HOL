@@ -181,16 +181,20 @@ signature Parse = sig
   val export_theorems_as_docfiles : string -> (string * thm) list -> unit
 
   val update_grms   : ('a -> unit) -> 'a -> unit
-  val mk_local_grms 
+  val mk_local_grms
     : (string * (parse_type.grammar * term_grammar.grammar)) list -> unit
 
 
-  val hide   : string -> unit
+  val hide   : string -> ({Name : string, Thy : string} list *
+                          {Name : string, Thy : string} list)
+  val update_overload_maps :
+    string -> ({Name : string, Thy : string} list *
+               {Name : string, Thy : string} list) -> unit
+
   val reveal : string -> unit
   val hidden : string -> bool
   val known_constants     : unit -> string list
   val set_known_constants : string list -> unit
-  val remember_const      : string -> unit
 
   val LEFT       : associativity
   val RIGHT      : associativity

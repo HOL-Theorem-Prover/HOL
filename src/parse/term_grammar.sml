@@ -118,13 +118,17 @@ fun fupdate_specials f (GCONS{rules, specials, numeral_info, overload_info}) =
 fun fupdate_numinfo f (GCONS {rules, specials, numeral_info, overload_info}) =
   GCONS {rules = rules, specials = specials, numeral_info = f numeral_info,
          overload_info = overload_info}
-fun fupdate_overload_info f (GCONS {rules, specials, numeral_info,
-                                    overload_info}) =
-  GCONS {rules = rules, specials = specials, numeral_info = numeral_info,
-         overload_info = f overload_info}
 
-fun hide_constant s =
-  fupdate_overload_info (Overload.remove_overloaded_form s)
+fun mfupdate_overload_info f (GCONS g) = let
+  val {rules, specials, numeral_info, overload_info} = g
+  val (new_oinfo,result) = f overload_info
+in
+  (GCONS{rules = rules, specials = specials, numeral_info = numeral_info,
+         overload_info = new_oinfo},
+   result)
+end
+fun fupdate_overload_info f g =
+  #1 (mfupdate_overload_info (fn oi => (f oi, ())) g)
 
 fun update_restr_binders rb
   {lambda, endbinding, type_intro, restr_binders, res_quanop} =

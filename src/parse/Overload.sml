@@ -2,6 +2,7 @@ structure Overload :> Overload =
 struct
 
 open HolKernel Lexis
+infix ##
 
 (* invariant on the type overloaded_op_info;
      base_type is the anti-unification of all the types in the actual_ops
@@ -11,12 +12,29 @@ open HolKernel Lexis
 *)
 
 type const_rec = {Name : string, Ty : hol_type, Thy : string}
+type nthy_rec = {Name : string, Thy : string}
 
 fun lose_constrec_ty {Name,Ty,Thy} = {Name = Name, Thy = Thy}
+
+(* though const_rec's are stored, the Ty component is there just to
+   tell us what the generic type of a term is, it will never be a
+   specialisation of a polymorphic type *)
 
 type overloaded_op_info =
   {base_type : Type.hol_type,
    actual_ops : const_rec list}
+
+(* the overload info is thus a pair:
+   * first component is for the "parsing direction"; it's a map from
+     identifier name to an overloaded_op_info record.
+   * second component is for the "printing direction"; it takes constant
+     specifications {Name,Thy} records, and returns the preferred
+     identifier. If no entry exists, the constant should be printed in
+     thy$constant name form.
+*)
+
+
+
 type overload_info = ((string,overloaded_op_info) Binarymap.dict *
                       ({Name:string,Thy:string} * string) list)
 
@@ -133,18 +151,35 @@ end
 
 fun remove_overloaded_form s (oinfo:overload_info) = let
   val (op2cnst, cnst2op) = oinfo
-  val (okopc, badopc) = Binarymap.remove(op2cnst, s)
+  val (okopc, badopc) =
+    (I ## map lose_constrec_ty o #actual_ops) (Binarymap.remove(op2cnst, s))
+    handle Binarymap.NotFound => (op2cnst, [])
   (* will keep okopc, but should now remove from cnst2op all pairs of the form
        (c, s)
-     where c is an actual op from one of the badopc and s is the s above *)
-  val allbad_ops = map lose_constrec_ty (#actual_ops badopc)
-  fun goodcop (crec, str) =
-    str <> s orelse
-    Lib.mem crec allbad_ops
-  val okcop = List.filter goodcop cnst2op
+     where s is the s above *)
+  val (okcop, badcop) = List.partition (fn (c,s') => s' <> s) cnst2op
 in
-  (okopc, okcop)
-end handle Binarymap.NotFound => oinfo
+  ((okopc, okcop), (badopc, map #1 badcop))
+end
+
+fun raw_map_insert s (new_op2cs, new_c2ops) (op2c_map, c2op_map) = let
+  fun install_ty (r as {Name,Thy}) =
+    {Name = Name, Thy = Thy, Ty = type_of (Term.prim_mk_const r)}
+    handle HOL_ERR _ =>
+      raise OVERLOAD_ERR ("No such constant: "^Thy^"$"^Name)
+  val withtypes = map install_ty new_op2cs
+  val new_c2op_map =
+    foldl (fn (crec,ass) => update_assoc crec s ass) c2op_map new_c2ops
+in
+  case withtypes of
+    [] => (op2c_map, new_c2op_map)
+  | (r::rs) => let
+      val au = foldl (fn (r1, t) => anti_unify (#Ty r1) t) (#Ty r) rs
+    in
+      (Binarymap.insert(op2c_map, s, {base_type = au, actual_ops = withtypes}),
+       new_c2op_map)
+    end
+end
 
 (* a predicate on pairs of operations and types that returns true if
    they're equal, given that two types are equal if they can match
@@ -180,11 +215,7 @@ fun add_actual_overloading {opname, realname, realthy} oinfo = let
     else
       Binarymap.insert(opc0, opname,
                        {actual_ops = [newrec], base_type = #Ty newrec})
-  val cop = if opname <> realname then update_assoc newrec' opname cop0
-            else (* opname = realname - possible that newrec binds to some
-                                        other in the map; need to remove
-                                        this *)
-              List.filter (fn (r,v) => r <> newrec') cop0
+  val cop = update_assoc newrec' opname cop0
 in
   (opc, cop)
 end
@@ -277,7 +308,7 @@ fun remove_omapping crec str opdict = let
 in
   if (null (#actual_ops new_rec)) then dictlessk
   else Binarymap.insert(dictlessk, str, new_rec)
-end
+end handle Binarymap.NotFound => opdict
 
 
 fun remove_mapping str crec (oi:overload_info) =
