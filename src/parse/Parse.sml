@@ -999,16 +999,17 @@ fun mk_local_grms [] = raise ERROR "mk_local_grms" "no grammars"
          the_ltm_grm := tm_grm0
       end;
 
-fun parent_grammars () =
- let open Theory
-     fun echo s = (quote s, s)
-     fun grm_string "min" = echo "min_grammars"
-       | grm_string s     = echo (s^"Theory."^s^"_grammars")
-     val ct = current_theory()
- in case parents ct
-     of [] => raise ERROR "parent_grammars"
+fun parent_grammars () = let
+  open Theory
+  fun echo s = (quote s, s)
+  fun grm_string "min" = echo "min_grammars"
+    | grm_string s     = echo (s^"Theory."^s^"_grammars")
+  val ct = current_theory()
+in
+  case parents ct of
+    [] => raise ERROR "parent_grammars"
                         ("no parents found for theory "^quote ct)
-      | plist => map grm_string plist
+  | plist => map grm_string plist
  end;
 
 
@@ -1133,5 +1134,39 @@ fun TM x = x; fun TOK x = x;   (* remove constructor status *)
 
 val TM = term_grammar.RE term_grammar.TM
 val TOK = term_grammar.RE o term_grammar.TOK
+
+(*---------------------------------------------------------------------------
+     Install grammar rules for the theory "min".
+ ---------------------------------------------------------------------------*)
+
+val _ = List.app temp_add_type ["bool", "ind"];
+val _ = temp_add_infix_type
+            {Name="fun", ParseName=SOME"->", Prec=50, Assoc=RIGHT};
+
+val _ = List.app reveal ["=", "==>", "@"];
+val _ = temp_add_binder ("@", std_binder_precedence);
+
+(*---------------------------------------------------------------------------
+   Using the standard rules for infixes for ==> and = seems to result in bad
+   pretty-printing of goals.  I think the following customised printing
+   spec works better.  The crucial difference is that the blocking style
+   is CONSISTENT rather than INCONSISTENT.
+ ---------------------------------------------------------------------------*)
+
+val _ = temp_add_rule
+         {term_name   = "==>",
+          block_style = (AroundSamePrec, (Portable.CONSISTENT, 0)),
+          fixity      = Infix(RIGHT, 200),
+          pp_elements = [HardSpace 1, TOK "==>", BreakSpace(1,0)],
+          paren_style = OnlyIfNecessary};
+
+val _ = temp_add_rule
+         {term_name   = "=",
+          block_style = (AroundSamePrec, (Portable.CONSISTENT, 0)),
+          fixity      = Infix(NONASSOC, 100),
+          pp_elements = [HardSpace 1, TOK "=", BreakSpace(1,0)],
+          paren_style = OnlyIfNecessary};
+
+val min_grammars = current_grammars();
 
 end

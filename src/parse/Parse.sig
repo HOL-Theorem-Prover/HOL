@@ -226,4 +226,8 @@ signature Parse = sig
   val AroundSamePrec   : PhraseBlockStyle
   val AroundSameName   : PhraseBlockStyle
 
+  val min_grammars : parse_type.grammar * term_grammar.grammar
+  val current_lgrms : unit -> parse_type.grammar * term_grammar.grammar
+
+
 end
