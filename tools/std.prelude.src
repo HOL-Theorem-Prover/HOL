@@ -26,15 +26,21 @@ infix 8 via by;
  *       Find out if bossLib is requested, by looking at argv.               *
  *---------------------------------------------------------------------------*)
 
-val _ = 
+val _ =
   case List.rev(Mosml.argv())
    of end_init_path::_ =>
-        (case Path.base(Path.file end_init_path) 
-          of "end-init-boss" => 
-                let open TextIO
-                in output(stdOut,"\n...loading HOL power tools ...\n")
-                 ; flushOut stdOut
-                 ; load "bossLib"
+        (case Path.base(Path.file end_init_path)
+          of "end-init-boss" =>
+                let fun dotload f = (print "."; load f)
+                in
+                  print "                                     |\r";
+                  print "loading HOL power tools ";
+                  app dotload ["optionTheory", "pairLib", "sumTheory",
+                               "numTheory", "arithmeticTheory", "Arith",
+                               "numLib", "mesonLib", "BasicProvers",
+                               "SingleStep", "Datatype",
+                               "listTheory", "bossLib"];
+                  print "done\n"
                 end
            | otherwise       => ())
     | [] => raise Fail "std.prelude: bizarre invocation of HOL"
