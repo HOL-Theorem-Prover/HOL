@@ -22,7 +22,7 @@ fun normalise_quotation frags =
 
 fun contextTerm ctxt q = Parse.parse_in_context ctxt (normalise_quotation q);
 
-fun ptm_with_ctxtty ctxt ty q = 
+fun ptm_with_ctxtty ctxt ty q =
  let val q' = QUOTE "(" :: (q @ [QUOTE "):", ANTIQUOTE(ty_antiq ty), QUOTE ""])
  in Parse.parse_in_context ctxt (normalise_quotation q')
 end
@@ -30,10 +30,10 @@ end
 fun ptm_with_ty q ty = ptm_with_ctxtty [] ty q;
 fun btm q = ptm_with_ty q Type.bool;
 
-val mk_term_rsubst =
+fun mk_term_rsubst ctxt =
   map (fn {redex,residue} =>
-          let val residue' = ptm residue
-              val redex' = ptm_with_ty redex (type_of residue')
+          let val redex' = contextTerm ctxt redex
+              val residue' = ptm_with_ctxtty ctxt (type_of redex') residue
           in redex' |-> residue'
           end);
 
@@ -116,7 +116,7 @@ end;
 
 (* Generalizes first free variable with given name to itself. *)
 
-fun ID_SPEC_TAC q (g as (asl,w)) = 
+fun ID_SPEC_TAC q (g as (asl,w)) =
  let val ctxt = free_varsl (w::asl)
      val tm = Parse.parse_in_context ctxt q
  in
@@ -125,7 +125,7 @@ fun ID_SPEC_TAC q (g as (asl,w)) =
 
 val EXISTS = Thm.EXISTS o (btm##btm);
 
-fun EXISTS_TAC q (g as (asl, w)) = 
+fun EXISTS_TAC q (g as (asl, w)) =
  let val ctxt = free_varsl (w::asl)
      val exvartype = type_of (fst (dest_exists w))
        handle HOL_ERR _ => raise Q_ERR "EXISTS_TAC" "goal not an exists"
@@ -151,9 +151,9 @@ in
   (asl, w)
 end
 
-fun X_CHOOSE_THEN q ttac thm (g as (asl,w)) = 
+fun X_CHOOSE_THEN q ttac thm (g as (asl,w)) =
  let val ty = type_of (fst (dest_exists (concl thm)))
-       handle HOL_ERR _ => 
+       handle HOL_ERR _ =>
           raise Q_ERR "X_CHOOSE_THEN" "provided thm not an exists"
      val ctxt = free_varsl (w::asl)
  in
@@ -162,7 +162,7 @@ fun X_CHOOSE_THEN q ttac thm (g as (asl,w)) =
 
 val X_CHOOSE_TAC = C X_CHOOSE_THEN Tactic.ASSUME_TAC;
 
-fun DISCH q th = 
+fun DISCH q th =
  let val (asl,c) = dest_thm th
      val V = free_varsl (c::asl)
      val tm = ptm_with_ctxtty V Type.bool q
@@ -172,18 +172,19 @@ fun DISCH q th =
 fun PAT_UNDISCH_TAC q (g as (asl,w)) =
 let val ctxt = free_varsl (w::asl)
     val pat = ptm_with_ctxtty ctxt Type.bool q
-    val asm = first (can (ho_match_term [] pat)) asl
+    val asm =
+        first (can (ho_match_term [] Term.empty_tmset pat)) asl
 in Tactic.UNDISCH_TAC asm g
 end;
 
 fun UNDISCH_THEN q ttac = PAT_UNDISCH_TAC q THEN DISCH_THEN ttac;
 
-fun PAT_ASSUM q ttac (g as (asl,w)) = 
+fun PAT_ASSUM q ttac (g as (asl,w)) =
  let val ctxt = free_varsl (w::asl)
  in Tactical.PAT_ASSUM (ptm_with_ctxtty ctxt Type.bool q) ttac g
  end
 
-fun SUBGOAL_THEN q ttac (g as (asl,w)) = 
+fun SUBGOAL_THEN q ttac (g as (asl,w)) =
 let val ctxt = free_varsl (w::asl)
 in Tactical.SUBGOAL_THEN (ptm_with_ctxtty ctxt Type.bool q) ttac g
 end
@@ -195,14 +196,14 @@ end
 
 val ASSUME = ASSUME o btm
 
-fun X_GEN_TAC q (g as (asl, w)) = 
+fun X_GEN_TAC q (g as (asl, w)) =
  let val ctxt = free_varsl (w::asl)
      val ty = type_of (fst(dest_forall w))
  in
    Tactic.X_GEN_TAC (ptm_with_ctxtty ctxt ty q) g
  end
 
-fun X_FUN_EQ_CONV q tm = 
+fun X_FUN_EQ_CONV q tm =
  let val ctxt = free_vars tm
      val ty = #1 (dom_rng (type_of (lhs tm)))
  in
@@ -216,7 +217,7 @@ fun skolem_ty tm =
     else raise Q_ERR"XSKOLEM_CONV" "no universal prefix"
   end;
 
-fun X_SKOLEM_CONV q tm = 
+fun X_SKOLEM_CONV q tm =
  let val ctxt = free_vars tm
      val ty = skolem_ty tm
  in
@@ -234,7 +235,7 @@ fun AP_TERM q th =
    Thm.AP_TERM (Term.inst theta tm) th
  end;
 
-fun AP_THM th q = 
+fun AP_THM th q =
  let val (lhs,rhs) = dest_eq(concl th)
      val ty = fst (dom_rng (type_of lhs))
      val ctxt = free_vars (concl th)
@@ -242,7 +243,7 @@ fun AP_THM th q =
    Thm.AP_THM th (ptm_with_ctxtty ctxt ty q)
  end;
 
-fun ASM_CASES_TAC q (g as (asl,w)) = 
+fun ASM_CASES_TAC q (g as (asl,w)) =
  let val ctxt = free_varsl (w::asl)
  in Tactic.ASM_CASES_TAC (ptm_with_ctxtty ctxt bool q) g
  end
@@ -251,7 +252,11 @@ fun AC_CONV p = Conv.AC_CONV p o ptm;
 
 (* Could be smarter *)
 
-val INST = Thm.INST o mk_term_rsubst;
+fun INST subst th = let
+  val ctxt = free_vars (concl th)
+in
+  Thm.INST (mk_term_rsubst ctxt subst) th
+end
 val INST_TYPE = Thm.INST_TYPE o mk_type_rsubst;
 
 
@@ -259,7 +264,7 @@ val INST_TYPE = Thm.INST_TYPE o mk_type_rsubst;
  * A couple from jrh.
  *---------------------------------------------------------------------------*)
 
-fun ABBREV_TAC q (g as (asl,w)) = 
+fun ABBREV_TAC q (g as (asl,w)) =
  let val ctxt = free_varsl(w::asl)
      val (lhs,rhs) = dest_eq (Parse.parse_in_context ctxt q)
  in
