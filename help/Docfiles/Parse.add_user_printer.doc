@@ -187,6 +187,9 @@ Another approach to printing conjunctions is not possible with
     (grav * grav * grav -> int -> term -> 'a) -> grav * 'b * 'c ->
     int -> ppstream -> term -> unit
 
+  - temp_add_user_printer ({Tyop = "bool", Thy = "min"}, myprint2);
+  > val it = () : unit
+
   - ``p /\ q /\ r /\ s /\ t /\ u /\ p /\ p /\ p /\ p /\ p /\ p /\
       p /\ p /\ p /\ p/\ p /\ p /\ q /\ r /\ s /\ t /\ u /\ v /\
       (w /\ x) /\ (p \/ q) /\ r``;
