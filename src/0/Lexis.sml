@@ -31,20 +31,20 @@ fun LEXIS_ERR {func,mesg} =
  *---------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------
- * We work only with ascii characters, so we allocate bytearrays of size 128. 
- * A bytearray is compact - each element of the array occupies only 1 byte. 
+ * We work only with ascii characters, so we allocate bytearrays of size 128.
+ * A bytearray is compact - each element of the array occupies only 1 byte.
  * Since we are using only 0 and 1, we could probably use "bit"arrays, but
  * sheer laziness prevents us.
  *---------------------------------------------------------------------------*)
 
 
 (* Portability hack by Ken Larsen, bzero is the representation of a byte/bit
-   zero, bone is the representation of one *) 
+   zero, bone is the representation of one *)
 val bzero = 0wx0 : Word8.word
 val bone  = 0wx1 : Word8.word
 
 val ordof = Portable_String.ordof;
- 
+
 val hol_symbols   = Portable_ByteArray.array(128,bzero);
 val sml_symbols   = Portable_ByteArray.array(128,bzero);
 val alphabet      = Portable_ByteArray.array(128,bzero);
@@ -54,7 +54,7 @@ val alphanumerics = Portable_ByteArray.array(128,bzero);
 val parens        = Portable_ByteArray.array(128,bzero);
 
 fun setup table pred =
-   Lib.for_se 0 127 
+   Lib.for_se 0 127
      (fn i => if pred(Portable_String.charof i)
                then Portable_ByteArray.update(table,i,bone) else ());
 
@@ -63,21 +63,21 @@ fun setup table pred =
  *
  * fun accum table =
  *    implode
- *      (Lib.for 0 127 
- *      (fn i => if (Portable_ByteArray.sub(table,i) = bone) then chr i 
+ *      (Lib.for 0 127
+ *      (fn i => if (Portable_ByteArray.sub(table,i) = bone) then chr i
                  else ""));
  *---------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------
- * Various familiar predicates, used only to build the tables, so we can 
+ * Various familiar predicates, used only to build the tables, so we can
  * afford to write them naively.
  *---------------------------------------------------------------------------*)
-fun is_alphabetic ch = 
+fun is_alphabetic ch =
    (ch >= "a" andalso ch <= "z" orelse ch >= "A" andalso ch <= "Z");
 
 fun is_numeric ch = (ch >= "0" andalso ch <= "9");
 
-fun is_alphanumeric ch = 
+fun is_alphanumeric ch =
    is_alphabetic ch orelse is_numeric ch orelse ch = "_" orelse ch = "'";
 
 fun is_paren "(" = true
@@ -89,7 +89,7 @@ fun is_paren "(" = true
  * Used for type variables, in which a prime is required in the first
  * position in the string, but allowed nowhere else.
  *---------------------------------------------------------------------------*)
-fun is_alphanumeric_no_prime ch = 
+fun is_alphanumeric_no_prime ch =
    is_alphabetic ch orelse is_numeric ch orelse ch = "_";
 
 fun in_string str =
@@ -122,11 +122,11 @@ fun in_class(table,i) = (Portable_ByteArray.sub(table,i) = bone)
  *---------------------------------------------------------------------------*)
 
 fun ok_identifier str =
-   let fun loop i =(Portable_ByteArray.sub(alphanumerics,ordof(str,i)) = bone) 
+   let fun loop i =(Portable_ByteArray.sub(alphanumerics,ordof(str,i)) = bone)
                      andalso loop(i+1)
-   in 
+   in
    ((Portable_ByteArray.sub(alphabet,ordof(str,0)) = bone) handle _ => false)
-   andalso 
+   andalso
    (loop 1 handle _ => true)
    end;
 
@@ -136,25 +136,25 @@ val allowed_type_constant = ok_identifier;
 local val prime = ordof("'",0)
 in
 fun allowed_user_type_var str =
-   let fun loop i = (Portable_ByteArray.sub(tyvar_ids,ordof(str,i)) = bone) 
+   let fun loop i = (Portable_ByteArray.sub(tyvar_ids,ordof(str,i)) = bone)
                      andalso loop(i+1)
-   in 
+   in
    ((ordof(str,0) = prime) handle _ => false)
-   andalso 
+   andalso
    ((Portable_ByteArray.sub(alphabet,ordof(str,1)) = bone) handle _ => false)
-   andalso 
+   andalso
    (loop 2 handle _ => true)
    end
 end;
 
 
 fun ok_symbolic str =
-   let fun loop i = (Portable_ByteArray.sub(hol_symbols,ordof(str,i)) = bone) 
+   let fun loop i = (Portable_ByteArray.sub(hol_symbols,ordof(str,i)) = bone)
                      andalso loop(i+1)
-   in 
-   ((Portable_ByteArray.sub(hol_symbols,ordof(str,0)) = bone) 
+   in
+   ((Portable_ByteArray.sub(hol_symbols,ordof(str,0)) = bone)
     handle _ => false)
-   andalso 
+   andalso
    (loop 1 handle _ => true)
    end;
 
@@ -162,9 +162,9 @@ fun ok_sml_identifier str =
   let val sub = Portable_ByteArray.sub
       fun alphaloop i =
              (sub(alphanumerics,ordof(str,i)) = bone) andalso alphaloop(i+1)
-      fun symloop i = 
+      fun symloop i =
              (sub(sml_symbols,ordof(str,i)) = bone) andalso symloop(i+1)
-   in  
+   in
      if ((sub(alphabet,ordof(str,0)) = bone) handle _ => false)
      then (alphaloop 1 handle _ => true)
      else if ((sub(sml_symbols,ordof(str,0)) = bone) handle _ => false)
@@ -174,9 +174,9 @@ fun ok_sml_identifier str =
 
 
 (*---------------------------------------------------------------------------
- * Predicate to tell if a prospective constant to-be-defined has an 
+ * Predicate to tell if a prospective constant to-be-defined has an
  * acceptable name. Note that this function does not recognize members of
- * constant families (just those that serve to define such families). 
+ * constant families (just those that serve to define such families).
  *---------------------------------------------------------------------------*)
 fun allowed_term_constant "let" = false
   | allowed_term_constant "in"  = false
@@ -187,9 +187,7 @@ fun allowed_term_constant "let" = false
   | allowed_term_constant "=>"  = false
   | allowed_term_constant "|"   = false
   | allowed_term_constant ":"   = false
-  | allowed_term_constant "0"   = not (Globals.nums_defined())
-  | allowed_term_constant "\"\""= not (Globals.strings_defined())
-  | allowed_term_constant str = 
+  | allowed_term_constant str =
      if (Portable_ByteArray.sub(alphabet,ordof(str,0)) = bone)
      then ok_identifier str
      else
@@ -203,11 +201,11 @@ fun allowed_term_constant "let" = false
  * (currently) interested in :num.
  *---------------------------------------------------------------------------*)
 fun is_num_literal str =
-   let fun loop i = (Portable_ByteArray.sub(numbers,ordof(str,i)) = bone) 
+   let fun loop i = (Portable_ByteArray.sub(numbers,ordof(str,i)) = bone)
                      andalso loop(i+1)
-   in 
+   in
    ((Portable_ByteArray.sub(numbers,ordof(str,0)) = bone) handle _ => false)
-   andalso 
+   andalso
    (loop 1 handle _ => true)
    end;
 
@@ -216,7 +214,7 @@ in
 fun is_string_literal s =
     (Portable_String.size s > 1)
     andalso (Portable_String.substring(s,0,1) = dquote)
-    andalso (Portable_String.substring(s,Portable_String.size s - 1,1) 
+    andalso (Portable_String.substring(s,Portable_String.size s - 1,1)
 	     = dquote)
 end;
 

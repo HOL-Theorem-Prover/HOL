@@ -61,9 +61,7 @@ sig
                               alphanumeric : string list}
 *)
 
-  val nums_defined           : unit -> bool
   val strings_defined        : unit -> bool
-  val assert_nums_defined    : unit -> unit
   val assert_strings_defined : unit -> unit
 
 end
