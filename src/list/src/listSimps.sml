@@ -4,6 +4,9 @@ struct
 open HolKernel Parse basicHol90Lib simpLib listTheory;
 infix THEN
 
+val (Type,Term) = parse_from_grammars listTheory.list_grammars
+fun -- q x = Term q
+
 val MAP_EQ_NIL = prove(
   (--`!(l:'a list) (f:'a->'b). (MAP f l = []) = (l = [])`--),
   INDUCT_THEN list_INDUCT ASSUME_TAC THEN
