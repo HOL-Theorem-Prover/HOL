@@ -108,24 +108,11 @@ val RESQ_EXISTS_REORDER = store_thm("RESQ_EXISTS_REORDER",
 
 val _ = export_theory();
 
-fun export_doc_theorems() = let
-  open Theory Parse
-  val thydir = Path.concat(Path.parentArc, Path.concat("help", "thms"))
-  val _ = if FileSys.access(thydir, []) then () else FileSys.mkDir thydir
-  val thms = theorems() @ axioms() @ definitions()
-  fun write_thm (thname, thm) = let
-    open TextIO
-    val outstream = openOut (Path.concat(thydir, thname^".doc"))
-  in
-    output(outstream, "\\THEOREM "^thname^" "^current_theory()^"\n");
-    output(outstream, thm_to_string thm);
-    output(outstream, "\n\\ENDTHEOREM\n");
-    closeOut outstream
-  end
+val _ = let
+  val ^^ = Path.concat
+  infix ^^
 in
-  app write_thm thms
+  export_theory_as_docfiles (Path.parentArc ^^ "help" ^^ "thms")
 end
-
-val _ = export_doc_theorems()
 
 end;
