@@ -1575,7 +1575,7 @@ val add_sup = store_thm
    ++ Q.EXISTS_TAC `sup (\r. ?y. (q y \/ (y = 0)) /\ (r = sup p + y))`
    ++ REVERSE CONJ_TAC
    >> (REVERSE (RW_TAC std_ss [sup_le]) >> RW_TAC std_ss [sup_le, add_rzero]
-       ++ Suff `sup p <= y - y''` >> RW_TAC std_ss [le_sub_eq]
+       ++ Suff `sup p <= y - y'` >> RW_TAC std_ss [le_sub_eq]
        ++ RW_TAC std_ss [sup_le]
        ++ MATCH_MP_TAC le_sub_imp
        ++ RW_TAC std_ss []

@@ -8,7 +8,7 @@
 (* ------------------------------------------------------------------------- *)
 (*
 val () = app load
-  ["bossLib", "realLib", "metisLib", "posetTheory", "posrealTheory"]
+  ["bossLib", "realLib", "metisLib", "posetTheory", "posrealLib"]
 val () = quietdec := true;
 *)
 
@@ -525,7 +525,7 @@ val expect_monotonic_min = store_thm
        monotonic (expect,Leq) t1 /\ monotonic (expect,Leq) t2 ==>
        monotonic (expect,Leq) (\e. Min (t1 e) (t2 e))``,
    RW_TAC real_ss [monotonic_def, expect_def]
-   ++ REPEAT (Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPECL [`x`, `y`]))
+   ++ REPEAT (Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPECL [`e`, `e'`]))
    ++ ASM_REWRITE_TAC []
    ++ METIS_TAC [min_leq2_imp]);
 
@@ -535,7 +535,7 @@ val expect_monotonic_max = store_thm
        monotonic (expect,Leq) t1 /\ monotonic (expect,Leq) t2 ==>
        monotonic (expect,Leq) (\e. Max (t1 e) (t2 e))``,
    RW_TAC real_ss [monotonic_def, expect_def]
-   ++ REPEAT (Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPECL [`x`, `y`]))
+   ++ REPEAT (Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPECL [`e`, `e'`]))
    ++ ASM_REWRITE_TAC []
    ++ METIS_TAC [max_leq2_imp]);
 
