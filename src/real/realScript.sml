@@ -62,10 +62,10 @@ val num_EQ_CONV = Arithconv.NEQ_CONV;
 (*---------------------------------------------------------------------------*)
 
 val real_of_num = new_prim_rec_definition("real_of_num",
-  (--`(& 0 = real_0) /\
-      (&(SUC n) = &n + real_1)`--));
+  (--`(real_of_num 0 = real_0) /\
+      (real_of_num(SUC n) = real_of_num n + real_1)`--));
 
-val _ = add_numeral_form(#"r", SOME "&");
+val _ = add_numeral_form(#"r", SOME "real_of_num");
 
 val REAL_0 = prove_thm("REAL_0",
   (--`real_0 = &0`--),
