@@ -44,16 +44,17 @@ cd developers/help
 make
 
 echo Now building documentation
-cd /tmp/hol98/Manual/Reference
-make all
-mv reference.dvi /tmp
-cd ../Description
-make all
-mv description.dvi /tmp
-/bin/rm description.ps
-cd ../Tutorial
-make all
-mv tutorial.dvi /tmp
+for man_name in Reference Description Tutorial
+do
+    lcname=$(echo $man_name | tr A-Z a-z)
+    echo Making $man_name
+    cd /tmp/hol98/Manual/$man_name
+    make all
+    for i in .dvi .ps .pdf
+    do
+        mv $lcname.$i /tmp/$name-$lcname.$i
+    done
+done
 
 echo Now starting to clean up and make tar ball
 cd /tmp/hol98
