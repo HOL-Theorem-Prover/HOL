@@ -64,7 +64,7 @@ val SRCDIRS =
   "src/datatype",  "src/list/src", "src/tree", "src/datatype/basicrec",
   "src/datatype/mutrec/utils", "src/datatype/mutrec",
   "src/datatype/nestrec", "src/datatype/mutual",
-  "src/decision/src", "src/tfl/src", "src/unwind", "src/boss",
+  "src/decision/src", "src/tfl/src", "src/unwind", "src/boss", "src/llist",
   "src/integer", "src/res_quan/src", "src/set/src", "src/pred_set/src",
   "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src", "src/BoyerMoore",
@@ -182,7 +182,10 @@ val _ =
     systeml [compiler, " -c ", "Parser.sml"];
     systeml [compiler, " -c ", "Lexer.sml" ];
     systeml [compiler, " -c ", "Holdep.sml"];
-    systeml [compiler, " -standalone -o ", bin, space, target];
+    if OS <> "winNT" then
+      systeml [compiler, " -standalone -o ", bin, space, target]
+    else
+      systeml [compiler, " -o ", bin, space, target];
     mk_xable bin;
     FileSys.chDir current_dir
   end
