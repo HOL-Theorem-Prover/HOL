@@ -113,9 +113,29 @@ val SIMPLE_KRIPKE_STRUCTURE =
 val bexp_def =
  Hol_datatype
   `bexp = B_PROP   of 'a                         (* atomic proposition       *)
-        | B_TRUE                                 (* truth                    *)
         | B_NOT    of bexp                       (* negation                 *)
         | B_AND    of bexp # bexp`;              (* conjunction              *)
+
+(******************************************************************************
+* Definition of truth
+******************************************************************************)
+
+val B_OR_def =
+ Define `B_OR(b1,b2) = B_NOT(B_AND(B_NOT b1, B_NOT b2))`;
+
+(******************************************************************************
+* Definition of truth
+******************************************************************************)
+
+val B_TRUE_def =
+ Define `B_TRUE = B_OR(B_PROP ARB, B_NOT(B_PROP ARB))`;
+
+(******************************************************************************
+* Definition of falsity
+******************************************************************************)
+
+val B_FALSE_def =
+ Define `B_FALSE = B_NOT B_TRUE`;
 
 (******************************************************************************
 * Sugar Extended Regular Expressions (SEREs) 
@@ -171,6 +191,12 @@ val getP_def  = Define `getP  (S,S0,R,P,L) = P`;
 val getL_def  = Define `getL  (S,S0,R,P,L) = L`;
 
 (******************************************************************************
+* L and \hat{L} operators used in the semantics
+******************************************************************************)
+val L_def    = Define `L M = getL M`;
+val LHAT_def = Define `LHAT M = MAP (getL M)`;
+
+(******************************************************************************
 * B_SEM M l b means "l |= b" 
 * and also that b only contains atomic propositions in getP M
 ******************************************************************************)
@@ -178,13 +204,59 @@ val B_SEM_def =
  Define
   `(B_SEM M l (B_PROP(p:'p)) = p IN (getP M) /\ p IN l)
    /\
-   (B_SEM M l B_TRUE         = T)
-   /\
    (B_SEM M l (B_NOT b)      = ~(B_SEM M l b))
    /\
    (B_SEM M l (B_AND(b1,b2)) = B_SEM M l b1 /\ B_SEM M l b2)`;
 
+val B_SEM =
+ store_thm
+  ("B_SEM",
+   ``(B_SEM M l (B_PROP(p:'p)) = p IN (getP M) /\ p IN l)
+     /\
+     (B_SEM M l B_TRUE         = T)
+     /\
+     (B_SEM M l B_FALSE        = F)
+     /\
+     (B_SEM M l (B_NOT b)      = ~(B_SEM M l b))
+     /\
+     (B_SEM M l (B_AND(b1,b2)) = B_SEM M l b1 /\ B_SEM M l b2)
+     /\
+     (B_SEM M l (B_OR(b1,b2)) = B_SEM M l b1 \/ B_SEM M l b2)``,
+   RW_TAC std_ss [B_SEM_def,B_OR_def,B_TRUE_def,B_FALSE_def]
+    THEN PROVE_TAC[]);
+
 (******************************************************************************
+* Unclocked semantics of SEREs
+* US_SEM M w r means "w is in the language of r" in the unclocked semantics
+******************************************************************************)
+val US_SEM_def =
+ Define
+  `(US_SEM M w (S_BOOL b) = ?l. (w = [l]) /\ B_SEM M l b)
+   /\
+   (US_SEM M w (S_CAT(r1,r2)) = 
+     ?w1 w2. (w = w1 <> w2) /\ US_SEM M w1 r1 /\ US_SEM M w2 r2)
+   /\
+   (US_SEM M w (S_FUSION(r1,r2)) = 
+     ?w1 w2 l. (w = w1 <> [l] <> w2) /\ 
+               US_SEM M (w1<>[l]) r1 /\ US_SEM M ([l]<>w2) r2) 
+   /\
+   (US_SEM M w (S_OR(r1,r2)) = 
+     US_SEM M w r1 \/ US_SEM M w r2) 
+   /\
+   (US_SEM M w (S_RIG_AND(r1,r2)) = 
+     US_SEM M w r1 /\ US_SEM M w r2) 
+   /\
+   (US_SEM M w (S_FLEX_AND(r1,r2)) = 
+     ?w1 w2. (w = w1 <> w2) /\ 
+             ((US_SEM M w r1 /\ US_SEM M w1 r2) 
+              \/
+              (US_SEM M w r2 /\ US_SEM M w1 r1) ))
+   /\
+   (US_SEM M w (S_REPEAT r) = 
+     ?wlist. (w = CONCAT wlist) /\ EVERY (\w. US_SEM M w r) wlist)`;
+
+(******************************************************************************
+* Clocked semantics of SEREs
 * S_SEM M w c r means "w is in the language of r in context c"
 ******************************************************************************)
 val S_SEM_def =
@@ -221,12 +293,103 @@ val S_SEM_def =
      S_SEM M w c1 r)`;
 
 (******************************************************************************
-* Contexts (strong or weak clock)
+* Unclocked semantics of Sugar formulas
+* UF_SEM M p f means "p |= f"  in the unclocked semantics
+* (F_WEAK_IMP case unfolded to make totality proof go through)
 ******************************************************************************)
-val context_def =
- Hol_datatype
-  `context = STRONG_CLOCK  of 'a bexp       (* strong clock: c!              *)
-           | WEAK_CLOCK    of 'a bexp`;     (* weak clock:  c                *)
+val UF_SEM_def =
+ Define
+   `(UF_SEM M p (F_BOOL b) = 
+      B_SEM M (L M (PATH_EL p 0)) b)
+    /\
+    (UF_SEM M p (F_NOT f) = 
+      ~(UF_SEM M p f)) 
+    /\
+    (UF_SEM M p (F_AND(f1,f2)) = 
+      UF_SEM M p f1 /\ UF_SEM M p f2)
+    /\
+    (UF_SEM M p (F_NEXT f) = 
+      PL p 1 /\ UF_SEM M (RESTN p 1) f)
+    /\
+    (UF_SEM M p (F_UNTIL(f1,f2)) = 
+      ?k :: PL p. UF_SEM M (RESTN p k) f2 /\
+                  !j :: PL p. j < k ==> UF_SEM M (RESTN p j) f1)
+    /\
+    (UF_SEM M p (F_SUFFIX_IMP(r,f)) = 
+      !j :: PL p. US_SEM M (LHAT M (PATH_SEG p (0,j))) r
+                  ==>
+                  UF_SEM M (RESTN p j) f)
+    /\
+    (UF_SEM M p (F_STRONG_IMP(r1,r2)) = 
+      !j :: PL p. US_SEM M (LHAT M (PATH_SEG p (0,j))) r1
+                  ==>
+                  ?k :: PL p. j <= k /\ US_SEM M (LHAT M (PATH_SEG p (j,k))) r2)
+    /\
+    (UF_SEM M p (F_WEAK_IMP(r1,r2)) = 
+      !j :: PL p. US_SEM M (LHAT M (PATH_SEG p (0,j))) r1 ==>
+                  (?k :: PL p. j <= k /\ US_SEM M (LHAT M (PATH_SEG p (j,k))) r2) 
+                  \/
+                  !k :: PL p. 
+                   j <= k ==> ?w. US_SEM M (LHAT M (PATH_SEG p (j,k)) <> w) r2)  
+    /\
+    (UF_SEM M p (F_ABORT (f,b)) =
+      UF_SEM M p f 
+      \/
+      ?j :: PL p. 0 < j
+        /\
+        ?p'. (* IS_INFINITE_PATH p'          /\ *)
+             UF_SEM M (RESTN p j) (F_BOOL b) /\ 
+             UF_SEM M (PATH_CAT(PATH_SEG p (0,j-1),p')) f)`;
+
+(******************************************************************************
+* UF_SEM M p f means "p |= f"  in the unclocked semantics
+* Derivation of folded equation
+******************************************************************************)
+val UF_SEM =
+ store_thm
+  ("UF_SEM",
+   ``(UF_SEM M p (F_BOOL b) = 
+       B_SEM M (L M (PATH_EL p 0)) b)
+     /\
+     (UF_SEM M p (F_NOT f) = 
+       ~(UF_SEM M p f)) 
+     /\
+     (UF_SEM M p (F_AND(f1,f2)) = 
+       UF_SEM M p f1 /\ UF_SEM M p f2)
+     /\
+     (UF_SEM M p (F_NEXT f) = 
+       PL p 1 /\ UF_SEM M (RESTN p 1) f)
+     /\
+     (UF_SEM M p (F_UNTIL(f1,f2)) = 
+       ?k :: PL p. UF_SEM M (RESTN p k) f2 /\
+                   !j :: PL p. j < k ==> UF_SEM M (RESTN p j) f1)
+     /\
+     (UF_SEM M p (F_SUFFIX_IMP(r,f)) = 
+       !j :: PL p. US_SEM M (LHAT M (PATH_SEG p (0,j))) r
+                   ==>
+                   UF_SEM M (RESTN p j) f)
+     /\
+     (UF_SEM M p (F_STRONG_IMP(r1,r2)) = 
+       !j :: PL p. US_SEM M (LHAT M (PATH_SEG p (0,j))) r1
+                   ==>
+                   ?k :: PL p. j <= k /\ US_SEM M (LHAT M (PATH_SEG p (j,k))) r2)
+     /\
+    (UF_SEM M p (F_WEAK_IMP(r1,r2)) = 
+       !j :: PL p. US_SEM M (LHAT M (PATH_SEG p (0,j))) r1 ==>
+                   (?k :: PL p. j <= k /\ US_SEM M (LHAT M (PATH_SEG p (j,k))) r2) 
+                   \/  
+                    !k :: PL p. 
+                      j <= k ==> ?w. US_SEM M (LHAT M (PATH_SEG p (j,k)) <> w) r2)  
+     /\
+     (UF_SEM M p (F_ABORT (f,b)) =
+       UF_SEM M p f 
+       \/
+       ?j :: PL p. 0 < j 
+        /\
+        ?p'. (* IS_INFINITE_PATH p'          /\ *)
+             UF_SEM M (RESTN p j) (F_BOOL b) /\ 
+             UF_SEM M (PATH_CAT(PATH_SEG p (0,j-1),p')) f)``,
+   SIMP_TAC std_ss [UF_SEM_def]);
 
 (******************************************************************************
 * FIRST_RISE M p c i  =  LHAT(p(0,i))  |=T=  {(\neg c)[*];c}
@@ -255,18 +418,15 @@ val NEXT_RISE_def =
      (S_CAT(S_REPEAT(S_BOOL(B_NOT c)),S_BOOL c))`;
 
 (******************************************************************************
-* L and \hat{L}
+* Contexts (strong or weak clock)
 ******************************************************************************)
-val L_def    = Define `L M = getL M`;
-val LHAT_def = Define `LHAT M = MAP (getL M)`;
+val context_def =
+ Hol_datatype
+  `context = STRONG_CLOCK  of 'a bexp       (* strong clock: c!              *)
+           | WEAK_CLOCK    of 'a bexp`;     (* weak clock:  c                *)
 
 (******************************************************************************
-* PL p n means length p < n
-******************************************************************************)
-val PL_def =
- Define `PL p n = IS_FINITE_PATH p ==> n < PATH_LENGTH p`;
-
-(******************************************************************************
+* Clocked semantics of Sugar formulas
 * Definition due to Konrad Slind that uses
 * cunning feature of TFL to prove that F_SEM is total
 ******************************************************************************)
@@ -508,6 +668,176 @@ val O_SEM_def =
    /\
    (O_SEM M s (O_EG f) = 
      ?p. PATH M p /\ (PATH_EL p 0 = s) /\ !j :: PL p. O_SEM M (PATH_EL p j) f)`;
+
+(******************************************************************************
+* Rules for compiling clocked SEREs to unclocked SEREs
+* (from B.1, page 66, of Sugar 2.0 Accellera document)
+******************************************************************************)
+val S_CLOCK_COMP_def =
+ Define
+  `(S_CLOCK_COMP c (S_BOOL b) = 
+     (S_CAT (S_REPEAT (S_BOOL (B_NOT c)),S_BOOL(B_AND(c, b)))))
+   /\
+   (S_CLOCK_COMP c (S_CAT(r1,r2)) =  
+     S_CAT(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2))
+   /\
+   (S_CLOCK_COMP c (S_FUSION(r1,r2)) = 
+     S_FUSION(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2))
+   /\
+   (S_CLOCK_COMP c (S_OR(r1,r2)) = 
+     S_OR(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2))
+   /\
+   (S_CLOCK_COMP c (S_RIG_AND(r1,r2))  = 
+     S_RIG_AND(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2))
+   /\
+   (S_CLOCK_COMP c (S_FLEX_AND(r1,r2)) = 
+     S_FLEX_AND(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2))
+   /\
+   (S_CLOCK_COMP c (S_REPEAT r) = 
+     S_REPEAT(S_CLOCK_COMP c r))
+   /\
+   (S_CLOCK_COMP c (S_CLOCK(r, c1)) = 
+     S_CLOCK_COMP c1 r)`;
+
+(******************************************************************************
+* Some abbreviations needed for definition of F_CLOCK_COMP
+******************************************************************************)
+
+val F_U_CLOCK_def =
+ Define
+  `F_U_CLOCK c f = F_UNTIL(F_BOOL(B_NOT c),F_AND(F_BOOL c, f))`;
+
+val F_OR_def =
+ Define
+  `F_OR(f1,f2) = F_NOT(F_AND(F_NOT f1, F_NOT f2))`;
+
+val F_F_def =
+ Define
+  `F_F f = F_UNTIL(F_BOOL B_TRUE, f)`;
+      
+val F_G_def =
+ Define
+  `F_G f = F_NOT(F_F(F_NOT f))`;
+
+val F_WEAK_NEXT_def =
+ Define `F_WEAK_NEXT f = F_NOT(F_NEXT(F_NOT f))`;
+
+val F_W_def =
+ Define
+  `F_W(f1,f2) = F_OR(F_UNTIL(f1,f2), F_G f1)`;
+
+val F_W_CLOCK_def =
+ Define
+  `F_W_CLOCK c f = F_W(F_BOOL(B_NOT c),F_AND(F_BOOL c, f))`;
+
+(******************************************************************************
+* Rules for compiling clocked FL formulas to unclocked formulas
+* (from B.1, page 66 and 67, of Sugar 2.0 Accellera document)
+*
+* Update from IBM: the correct rewrite rules for X! should be:
+*  
+*  (X! f)@clk! = [!clk U clk & X! (!clk U clk & (f@clk!))]
+*  (X! f)@clk  = [!clk W clk & X! (!clk U clk & (f@clk!))]
+*  
+* Change by MJCG on 12.09.02:
+*  (X! f)@clk  = [!clk W clk & X! (!clk U clk & (f@clk))]
+******************************************************************************)
+val F_CLOCK_COMP_def =
+ Define
+  `(F_CLOCK_COMP (STRONG_CLOCK c) (F_BOOL b) = 
+     F_U_CLOCK c (F_BOOL b))
+    /\
+    (F_CLOCK_COMP (STRONG_CLOCK c) (F_NOT f) = 
+      F_NOT(F_CLOCK_COMP (WEAK_CLOCK c) f))
+    /\
+    (F_CLOCK_COMP (STRONG_CLOCK c) (F_AND(f1,f2)) = 
+      F_U_CLOCK c (F_AND(F_CLOCK_COMP (STRONG_CLOCK c) f1, 
+                         F_CLOCK_COMP (STRONG_CLOCK c) f2)))
+    /\
+    (F_CLOCK_COMP (STRONG_CLOCK c) (F_NEXT f) = 
+      F_U_CLOCK c (F_NEXT(F_U_CLOCK c (F_CLOCK_COMP (STRONG_CLOCK c) f))))
+    /\
+(*
+    (F_CLOCK_COMP (STRONG_CLOCK c) (F_UNTIL(f1,f2)) = 
+      F_UNTIL(F_U_CLOCK c (F_CLOCK_COMP (STRONG_CLOCK c) f1),
+              F_U_CLOCK c (F_CLOCK_COMP (STRONG_CLOCK c) f2)))
+*)
+    (F_CLOCK_COMP (STRONG_CLOCK c) (F_UNTIL(f1,f2)) = 
+      F_U_CLOCK c (F_UNTIL(F_U_CLOCK c (F_CLOCK_COMP (STRONG_CLOCK c) f1),
+                           F_U_CLOCK c (F_CLOCK_COMP (STRONG_CLOCK c) f2))))
+    /\
+    (F_CLOCK_COMP (STRONG_CLOCK c) (F_SUFFIX_IMP(r,f)) = 
+      F_U_CLOCK c (F_SUFFIX_IMP(S_CLOCK_COMP c r, 
+                                F_CLOCK_COMP (STRONG_CLOCK c) f)))
+    /\
+    (F_CLOCK_COMP (STRONG_CLOCK c) (F_STRONG_IMP(r1,r2)) = 
+      F_U_CLOCK c (F_STRONG_IMP (S_CLOCK_COMP c r1,
+                                 S_CLOCK_COMP c r2)))
+    /\
+    (F_CLOCK_COMP (STRONG_CLOCK c) (F_WEAK_IMP(r1,r2)) = 
+      F_U_CLOCK c (F_OR
+                    (F_STRONG_IMP(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2),
+                     F_AND
+                      (F_G(F_F(F_BOOL c)),
+                       F_WEAK_IMP(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2)))))
+    /\
+    (F_CLOCK_COMP (STRONG_CLOCK c) (F_ABORT (f,b)) =
+      F_U_CLOCK c (F_ABORT(F_CLOCK_COMP (STRONG_CLOCK c) f, B_AND(c,b))))
+    /\
+    (F_CLOCK_COMP (STRONG_CLOCK c) (F_WEAK_CLOCK(f,c1)) =   
+      F_CLOCK_COMP (WEAK_CLOCK c1) f)
+    /\
+    (F_CLOCK_COMP (STRONG_CLOCK c) (F_STRONG_CLOCK(f,c1)) =   
+      F_CLOCK_COMP (STRONG_CLOCK c1) f)
+    /\ 
+(******************************************************************************
+* Start of weak clock clauses
+******************************************************************************)
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_BOOL b) = 
+      F_W_CLOCK c (F_BOOL b))
+    /\
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_NOT f) = 
+      F_NOT(F_CLOCK_COMP (STRONG_CLOCK c) f))
+    /\
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_AND(f1,f2)) = 
+      F_W_CLOCK c (F_AND(F_CLOCK_COMP (WEAK_CLOCK c) f1, 
+                         F_CLOCK_COMP (WEAK_CLOCK c) f2)))
+    /\
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_NEXT f) = 
+      F_W_CLOCK c (F_NEXT(F_U_CLOCK c (F_CLOCK_COMP (WEAK_CLOCK c) f))))
+    /\
+(*
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_UNTIL(f1,f2)) = 
+      F_UNTIL(F_W_CLOCK c (F_CLOCK_COMP (WEAK_CLOCK c) f1), 
+              F_W_CLOCK c (F_CLOCK_COMP (WEAK_CLOCK c) f2)))
+*)
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_UNTIL(f1,f2)) = 
+      F_W_CLOCK c (F_UNTIL(F_W_CLOCK c (F_CLOCK_COMP (WEAK_CLOCK c) f1),
+                           F_W_CLOCK c (F_CLOCK_COMP (WEAK_CLOCK c) f2))))
+    /\
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_SUFFIX_IMP(r,f)) = 
+      F_W_CLOCK c (F_SUFFIX_IMP(S_CLOCK_COMP c r, 
+                                F_CLOCK_COMP (WEAK_CLOCK c) f)))
+    /\
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_STRONG_IMP(r1,r2)) = 
+      F_W_CLOCK c (F_OR
+                    (F_STRONG_IMP(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2),
+                     F_AND
+                      (F_F(F_G(F_BOOL(B_NOT c))),
+                       F_WEAK_IMP(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2)))))
+    /\
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_WEAK_IMP(r1,r2)) = 
+      F_W_CLOCK c (F_WEAK_IMP (S_CLOCK_COMP c r1,
+                               S_CLOCK_COMP c r2)))
+    /\
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_ABORT (f,b)) =
+      F_W_CLOCK c (F_ABORT(F_CLOCK_COMP (WEAK_CLOCK c) f, B_AND(c,b))))
+    /\
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_WEAK_CLOCK(f,c1)) =   
+      F_CLOCK_COMP (WEAK_CLOCK c1) f)
+    /\
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_STRONG_CLOCK(f,c1)) =   
+      F_CLOCK_COMP (STRONG_CLOCK c1) f)`;
 
 val _ = export_theory();
 
