@@ -15,8 +15,8 @@ conversion {FORK_CONV (c1,c2)} maps terms of the form {f t1 t2} to
 theorems of the form {|- f t1 t2 = f t1' t2'}.
 
 \FAILURE
-{FORK_CONV (c1,c2) t} will fail if {t} is not of the general form {f
-t1 t2}, or if {c1} fails when applied to {t1}, or if {c2} fails when
+{FORK_CONV (c1,c2) t} will fail if {t} is not of the general form
+{f t1 t2}, or if {c1} fails when applied to {t1}, or if {c2} fails when
 applied to {t2}, or if {c1} or {c2} aren't really conversions, and
 thereby fail to return appropriate equational theorems.
 
