@@ -16,8 +16,8 @@ struct
       where some or none of the ci may be (integer) equalities,
       involving variables that may or may not be among the quantified
       vs.  Each conjunct is either an equality or a <= term, and in
-      either, the variables must all be collected up, though they
-      don't need to be on any particular side of the relation symbol.
+      either, the variables must all be collected up and on the right
+      side of the relation symbol.
 
     Output:
 
@@ -27,9 +27,13 @@ struct
    ---------------------------------------------------------------------- *)
 
 open HolKernel boolLib
-open intSyntax CooperSyntax CooperMath QConv
+open intSyntax CooperSyntax CooperMath QConv integerTheory
+
+open OmegaTheory
 
 infix THENC ORELSEC ##
+
+val (Type, Term) = parse_from_grammars Omega_grammars
 
 fun c1 THENC c2 = THENQC c1 c2
 fun c1 ORELSEC c2 = ORELSEQC c1 c2
@@ -45,21 +49,54 @@ fun myfind f [] = NONE
     | x => x
 fun lhand t = rand (rator t)
 
+val INT_NORM_CONV =
+    integerRingLib.INT_NORM_CONV THENC
+    REWRITE_CONV [int_sub, INT_NEG_LMUL, INT_ADD_ASSOC]
+
+(* ----------------------------------------------------------------------
+    rel_coeff v tm
+
+    returns the coefficient (a term that is a numeral) of variable v in
+    relational term tm.  A relational term is of the form
+       0 <relop>  r1 + ... + rn
+    where all of the li and ri are either numerals multiplied by variables,
+    or bare numerals.  Further, it is assumed that any given variable
+    occurs once.  Returns zero as the coefficient of a variable not
+    present.
+   ---------------------------------------------------------------------- *)
+
 fun rel_coeff v tm = let
-  val (l,r) = (strip_plus ## strip_plus) (dest_eq tm)
   fun ok t = if is_mult t andalso rand t = v then SOME (lhand t) else NONE
 in
-  case myfind ok l of
+  case myfind ok (strip_plus (rand tm)) of
     SOME c => c
-  | _ => case myfind ok r of
-           SOME c => c
-         | NONE => zero_tm
+  | _ => zero_tm
 end
 
 
-fun find_eliminable_equality vs (acc as (elimp, leastv, conj, rest)) cs = let
+(* ----------------------------------------------------------------------
+    find_eliminable_equality vset acc conjunctions
+
+    finds an equality that can be eliminated from the conjunctions.  This
+    has to be done wrt a set of variables that have scope over the
+    conjunctions.  Returns a new version of acc, the fields of which are
+      (leastv, conj, rest)
+    of types
+      ((term * Arbint) option * term option * term list)
+
+    leastv is the variable that has the least coefficient coupled with
+    that least coefficient.  NONE if there is none such.
+
+    conj is the conjunct in which leastv was found to be least.  Again,
+    NONE if there is nothing eliminable.
+
+    rest is the list of all the unsatisfactory conjuncts.
+
+   ---------------------------------------------------------------------- *)
+
+fun find_eliminable_equality vs (acc as (leastv, conj, rest)) cs = let
   fun ocons NONE xs = xs | ocons (SOME x) xs = x::xs
-  fun doclause (acc as (elimp, leastv, conj, rest)) c = let
+  fun doclause (acc as (leastv, conj, rest)) c k = let
     val fvs = FVL [c] empty_tmset
     val i = HOLset.intersection(vs,fvs)
     fun check_mins (v, (leastv, changed)) = let
@@ -71,33 +108,92 @@ fun find_eliminable_equality vs (acc as (elimp, leastv, conj, rest)) cs = let
       | SOME(v', min) => if v_coeff < min then (SOME (v,v_coeff), true)
                          else (leastv, changed)
     end
+    (* if this clause isn't interesting, we need to continue (by calling k)
+       but we also need to put c onto the list of things seen so far; here's
+       the "unchanged" accumulated state that we'll pass to k in these
+       cases *)
+    val unchanged_acc = (leastv, conj, c::rest)
   in
     case HOLset.numItems i of
-      0 => (false, acc)
+      0 => k unchanged_acc
     | 1 => let
         val v = hd (HOLset.listItems i)
       in
         if Arbint.abs (int_of_term (rel_coeff v c)) = Arbint.one then
-          (true, (true, SOME (v,Arbint.one), SOME c, ocons conj rest))
-        else (false, acc)
+          (SOME (v,Arbint.one), SOME c, ocons conj rest)
+        else k unchanged_acc
       end
     | sz => let
       in
         case HOLset.foldl check_mins (leastv, false) i of
-          (least', true) => (false, (true, least', SOME c, ocons conj rest))
-        | (_, false) => (false, acc)
+          (least', true) => k (least', SOME c, ocons conj rest)
+        | (_, false) => k unchanged_acc
       end
   end
 in
   case cs of
     [] => acc
   | (c::cs) => if not (is_eq c) then
-                 find_eliminable_equality vs (elimp,leastv,conj,c::rest) cs
+                 find_eliminable_equality vs (leastv,conj,c::rest) cs
                else
-                 case doclause acc c of
-                   (true, (_,lv,c,r')) => (true,lv,c,cs @ r')
-                 | (_, acc') => find_eliminable_equality vs acc' cs
+                 doclause acc c
+                 (fn acc' => find_eliminable_equality vs acc' cs)
 end
+
+(* ----------------------------------------------------------------------
+    sum_to_sumc tm
+
+    takes tm (a sum of the form t1 + .. + tn) and returns a theorem of
+    the form
+       |- tm = sumc cs vs
+    where cs is a list of numeral coefficients, and vs a list of
+    variables (except that one of the vs will actually be the numeral 1.
+   ---------------------------------------------------------------------- *)
+
+val sumc_t = ``sumc``
+fun sum_to_sumc tm = let
+  fun dest_m t = dest_mult t handle HOL_ERR _ => (t, one_tm)
+  val (cs, vs) = ListPair.unzip (map dest_m (strip_plus tm))
+  fun mk_list l = listSyntax.mk_list(l, int_ty)
+  val (cs_t, vs_t) = (mk_list ## mk_list) (cs, vs)
+  val sumc_t = list_mk_comb(sumc_t, [cs_t, vs_t])
+in
+  SYM (REWRITE_CONV [INT_ADD_ASSOC, sumc_def, INT_ADD_RID, INT_MUL_RID] sumc_t)
+end
+
+(* ----------------------------------------------------------------------
+    eliminate_equality v tm
+
+    Takes a variable v, and an equality tm, of the general form
+        0 = r1 + .. + rn
+    and returns a theorem which is an equation of the general form
+
+      |- tm = ?s. (v = ....) /\ tm
+
+   ---------------------------------------------------------------------- *)
+
+fun eliminate_equality v tm = let
+  val instantiate_eqremoval =
+      C MP TRUTH o CONV_RULE (LAND_CONV REDUCE_CONV) o
+      PART_MATCH (lhand o rand) equality_removal
+  val rhs = rand tm
+  val (v_t, rest) = Lib.pluck (fn t => rand t = v) (strip_plus rhs)
+  val new_rhs = mk_plus(v_t, list_mk_plus rest)
+  val rhs_th = EQT_ELIM (integerRingLib.INT_RING_CONV (mk_eq(rhs, new_rhs)))
+  val dealwith_negative_coefficient =
+      if is_negated (lhand v_t) then
+        REWR_CONV (GSYM INT_EQ_NEG) THENC
+        FORK_CONV (REWR_CONV INT_NEG_0,
+                   REWRITE_CONV [INT_NEG_ADD, INT_NEG_LMUL, INT_NEGNEG])
+      else ALL_QCONV
+in
+  RAND_CONV (K rhs_th) THENC
+  dealwith_negative_coefficient THENC
+  RAND_CONV (RAND_CONV sum_to_sumc) THENC
+  instantiate_eqremoval THENC
+  REWRITE_CONV [listTheory.MAP, modhat_def, sumc_def, INT_MUL_LZERO,
+                INT_ADD_RID, INT_ADD_ASSOC] THENC REDUCE_CONV
+end tm
 
 
 
@@ -108,20 +204,41 @@ end
     Put all of the above together
    ---------------------------------------------------------------------- *)
 
+fun push_exvar_to_bot v tm = let
+  val (bv, body) = dest_exists tm
+in
+  if bv = v then (SWAP_VARS_CONV THENC
+                  BINDER_CONV (push_exvar_to_bot v) ORELSEC
+                  ALL_CONV)
+  else (BINDER_CONV (push_exvar_to_bot v))
+end tm
+
 fun OmegaEq t = let
   val (exvars, body) = strip_exists t
   val exv_set = HOLset.addList(empty_tmset, exvars)
   val _ = length exvars > 0 orelse
           raise ERR "OmegaEq" "Term not existentially quantified"
   val conjns = strip_conj body
-  val (elimp, vwithleast, conj, rest) =
-      find_eliminable_equality exv_set (false, NONE, NONE, conjns) conjns
-  val _ = elimp orelse raise UNCHANGED
-  val to_elim = valOf vwithleast
+  val (vwithleast, conj, rest) =
+      find_eliminable_equality exv_set (NONE, NONE, []) conjns
+  val _ = isSome vwithleast orelse raise UNCHANGED
+  val (to_elim, elimc) = valOf vwithleast
   val c = valOf conj
+  val reordered_thm =
+      EQT_ELIM (AC_CONV(CONJ_ASSOC, CONJ_COMM)
+                       (mk_eq(body, mk_conj(c, list_mk_conj rest))))
+  val bring_veq_to_top =
+      if elimc = Arbint.one then
+        LAND_CONV (phase2_CONV to_elim THENC LAND_CONV (REWR_CONV INT_MUL_LID))
+      else
+        LAND_CONV (eliminate_equality to_elim) THENC LEFT_AND_EXISTS_CONV THENC
+        BINDER_CONV (REWR_CONV (GSYM CONJ_ASSOC))
 in
-  AC_CONV(CONJ_ASSOC, CONJ_COMM) (mk_eq(body, mk_conj(c, list_mk_conj rest)))
-end
+  STRIP_QUANT_CONV (K reordered_thm THENC bring_veq_to_top THENC
+                    STRIP_QUANT_CONV (RAND_CONV (mk_abs_CONV to_elim))) THENC
+  push_exvar_to_bot to_elim THENC
+  LAST_EXISTS_CONV (REWR_CONV UNWIND_THM2 THENC BETA_CONV)
+end t
 
 
 end;

@@ -148,9 +148,9 @@ val equality_removal = store_thm(
   "equality_removal",
   ``!c x cs vs.
        0 < c ==>
-       ((c * x + sumc cs vs = 0) =
+       ((0 = c * x + sumc cs vs) =
         ?s. (x = ~(c + 1) * s + sumc (MAP (\x. modhat x (c + 1)) cs) vs) /\
-            (c * x + sumc cs vs = 0))``,
+            (0 = c * x + sumc cs vs))``,
   REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THEN SRW_TAC [][] THEN
   MATCH_MP_TAC equality_removal0 THEN SRW_TAC [][]);
 
