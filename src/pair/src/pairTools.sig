@@ -2,13 +2,6 @@ signature pairTools =
 sig
  include Abbrev
 
- val let_CONV         : conv   (* from Let_conv *)
- val PAIRED_BETA_CONV : conv   (* from Let_conv *)
- val PAIRED_ETA_CONV  : conv   (* from Let_conv *)
- val GEN_BETA_CONV    : conv   (* from Let_conv *)
- val GEN_BETA_RULE    : thm -> thm
- val GEN_BETA_TAC     : tactic
-
  val PGEN             : term -> term -> thm -> thm
  val PGEN_TAC         : term -> tactic
 

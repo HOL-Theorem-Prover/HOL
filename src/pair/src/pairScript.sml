@@ -1,11 +1,12 @@
 (* ===================================================================== *)
-(* FILE          : mk_pair.sml                                           *)
+(* FILE          : pairScript.sml                                        *)
 (* DESCRIPTION   : The theory of pairs. This is a mix of the original    *)
 (*                 non-definitional theory of pairs from hol88           *)
 (*                 and John Harrison's definitional theory of pairs from *)
-(*                 GTT.                                                  *)
+(*                 GTT, plus some subsequent simplifications from        *)
+(*                 Konrad Slind.                                         *)
 (*                                                                       *)
-(* AUTHOR        : (c) Mike Gordon, John Harrison, Konrad Slind          *)
+(* AUTHORS       : (c) Mike Gordon, John Harrison, Konrad Slind          *)
 (*                 Jim Grundy                                            *)
 (*                 University of Cambridge                               *)
 (* DATE          : August 7, 1997                                        *)
@@ -18,11 +19,15 @@ struct
  app load ["Q", "relationTheory", "mesonLib"]; 
  open Parse relationTheory mesonLib;
 *)
-open HolKernel Parse boolLib QLib relationTheory mesonLib Rsyntax;
+open HolKernel Parse boolLib relationTheory mesonLib Rsyntax;
 
 infix THEN THENL |->;
 
 val _ = new_theory "pair";
+
+(*---------------------------------------------------------------------------
+ * Define the type of pairs.
+ *---------------------------------------------------------------------------*)
 
 val MK_PAIR_DEF = Q.new_definition
  ("MK_PAIR_DEF",
@@ -38,12 +43,7 @@ val PAIR_EXISTS = Q.prove
   THEN MAP_EVERY Q.EXISTS_TAC [`MK_PAIR p q`, `p`,  `q`]
   THEN REFL_TAC);
 
-
-(*---------------------------------------------------------------------------
- * Define the type of pairs.
- *---------------------------------------------------------------------------*)
-
-val prod_TY_DEF = Definition.new_type_definition("prod", PAIR_EXISTS);
+val prod_TY_DEF = new_type_definition("prod", PAIR_EXISTS);
 
 val _ = add_infix_type
          {Prec = 70,
@@ -69,6 +69,10 @@ val REP_ABS_PAIR = Q.prove
   THEN REWRITE_TAC[IS_PAIR_MK_PAIR]);
 
 
+(*---------------------------------------------------------------------------*
+ *  Define the constructor for pairs.                                        *
+ *---------------------------------------------------------------------------*)
+
 val COMMA_DEF = 
  Q.new_definition("COMMA_DEF", `$, x y = ABS_prod(MK_PAIR x y)`);
 
@@ -77,13 +81,10 @@ val _ = add_rule {term_name = ",", fixity = Infixr 50,
                   paren_style = ParoundName,
                   block_style = (AroundSameName, (PP.INCONSISTENT, 0))};
 
-(*---------------------------------------------------------------------------*
- * Projections.                                                              *
- *---------------------------------------------------------------------------*)
 
-val FST_DEF = Q.new_definition("FST_DEF", `FST p = @x. ?y. p = (x,y)`);
-val SND_DEF = Q.new_definition("SND_DEF", `SND p = @y:'b. ?x. p = (x,y)`);
-
+(*---------------------------------------------------------------------------
+     The constructor for pairs is one-to-one.
+ ---------------------------------------------------------------------------*)
 
 val PAIR_EQ = Q.store_thm
 ("PAIR_EQ",
@@ -99,8 +100,12 @@ val PAIR_EQ = Q.store_thm
   STRIP_TAC THEN ASM_REWRITE_TAC[]]);
 
 val CLOSED_PAIR_EQ =
-  save_thm("CLOSED_PAIR_EQ", itlist Q.GEN [`x`,  `y`, `a`, `b`] PAIR_EQ);
+  save_thm("CLOSED_PAIR_EQ", itlist Q.GEN [`x`, `y`, `a`, `b`] PAIR_EQ);
 
+
+(*---------------------------------------------------------------------------
+     Case analysis for pairs.
+ ---------------------------------------------------------------------------*)
 
 val ABS_PAIR_THM = Q.store_thm
 ("ABS_PAIR_THM",
@@ -116,51 +121,36 @@ val ABS_PAIR_THM = Q.store_thm
   THEN REFL_TAC);
 
 
-(*---------------------------------------------------------------------------
- * Useful rewrite rules.
+(*---------------------------------------------------------------------------*
+ * Surjective pairing and definition of projection functions.                *
+ *                                                                           *
+ *        PAIR = |- !x. (FST x,SND x) = x                                    *
+ *        FST  = |- !x y. FST (x,y) = x                                      *
+ *        SND  = |- !x y. SND (x,y) = y                                      *
  *---------------------------------------------------------------------------*)
 
-val FST = Q.store_thm("FST",
- `!x y. FST(x,y) = x`,
-REPEAT GEN_TAC
- THEN REWRITE_TAC[FST_DEF]
- THEN MATCH_MP_TAC (BETA_RULE
-      (Q.SPECL [`\x'. ?y'. (x,y) = (x',y')`, `x`] SELECT_UNIQUE))
- THEN GEN_TAC THEN REWRITE_TAC[PAIR_EQ]
- THEN EQ_TAC THEN STRIP_TAC
- THEN ASM_REWRITE_TAC[]
- THEN Q.EXISTS_TAC `y`
- THEN ASM_REWRITE_TAC[]);
+val PAIR =
+  new_specification{name="PAIR", 
+     sat_thm=Ho_Rewrite.REWRITE_RULE[SKOLEM_THM] (GSYM ABS_PAIR_THM),
+     consts=[{const_name="FST", fixity=Parse.Prefix},
+             {const_name="SND", fixity=Parse.Prefix}]};
 
 
-val SND = Q.store_thm ("SND",
- `!x y. SND(x,y) = y`,
-REPEAT GEN_TAC
- THEN REWRITE_TAC[SND_DEF]
- THEN MATCH_MP_TAC (BETA_RULE
-        (Q.SPECL [`\y'. ?x'. (x,y) = (x',y')`, `y`]
-           (Thm.INST_TYPE [alpha |-> beta] SELECT_UNIQUE)))
- THEN GEN_TAC THEN REWRITE_TAC[PAIR_EQ]
- THEN EQ_TAC THEN STRIP_TAC
- THEN ASM_REWRITE_TAC[]
- THEN Q.EXISTS_TAC `x`
- THEN ASM_REWRITE_TAC[]);
+local val th1 = REWRITE_RULE [PAIR_EQ] (SPEC (Term`(x,y):'a#'b`) PAIR)
+      val (th2,th3) = (CONJUNCT1 th1, CONJUNCT2 th1)
+in
+val FST = save_thm("FST", itlist Q.GEN [`x`,`y`] th2);
+val SND = save_thm("SND", itlist Q.GEN [`x`,`y`] th3);
+end;
 
 
-val PAIR = Q.store_thm ("PAIR",
- `!x. (FST x, SND x) = x`,
-GEN_TAC
-  THEN STRIP_ASSUME_TAC (SPEC_ALL ABS_PAIR_THM)
-   THEN POP_ASSUM SUBST1_TAC
-   THEN REWRITE_TAC[FST,SND]);
-
-
-(*---------------------------------------------------------------------------
- * UNCURRY is needed for terms of the form `\(x,y).t`
+(*---------------------------------------------------------------------------*
+ * CURRY and UNCURRY. UNCURRY is needed for terms of the form `\(x,y).t`     *
  *---------------------------------------------------------------------------*)
 
-val UNCURRY = 
- Q.new_definition
+val CURRY_DEF = Q.new_definition ("CURRY_DEF", `CURRY f x y :'c = f (x,y)`);
+
+val UNCURRY = Q.new_definition
   ("UNCURRY",
    `UNCURRY f (v:'a#'b) = f (FST v) (SND v)`);
 
@@ -171,10 +161,14 @@ val UNCURRY_DEF = Q.store_thm
   `!f x y. UNCURRY f (x,y) :'c = f x y`,
   REWRITE_TAC [UNCURRY,FST,SND])
 
-val CURRY_DEF =
- Q.new_definition
- ("CURRY_DEF",
-  `CURRY f x y :'c = f (x,y)`);
+(* ------------------------------------------------------------------------- *)
+(* pair_Axiom = |- !f. ?fn. !x y. fn (x,y) = f x y                           *)
+(* ------------------------------------------------------------------------- *)
+
+val pair_Axiom = Q.store_thm("pair_Axiom",
+ `!f:'a->'b->'c. ?fn. !x y. fn (x,y) = f x y`,
+ GEN_TAC THEN Q.EXISTS_TAC`UNCURRY f` THEN
+ REWRITE_TAC[UNCURRY_DEF]);
 
 (* ------------------------------------------------------------------------- *)
 (* CURRY_UNCURRY_THM = |- !f. CURRY(UNCURRY f) = f                           *)
@@ -253,35 +247,65 @@ val UNCURRY_ONE_ONE_THM =
 
 val _ = save_thm("UNCURRY_ONE_ONE_THM",UNCURRY_ONE_ONE_THM);
 
+(* -------------------------------------------------------------------------*)
+(*   UNCURRY_CONG =                                                         *)
+(*           |- !f' f M' M.                                                 *)
+(*                (M = M') /\                                               *)
+(*                (!x y. (M' = (x,y)) ==> (f x y = f' x y))                 *)
+(*                     ==>                                                  *)
+(*                (UNCURRY f M = UNCURRY f' M')                             *)
+(* -------------------------------------------------------------------------*)
+
+val UNCURRY_CONG =
+  save_thm("UNCURRY_CONG", Prim_rec.case_cong_thm ABS_PAIR_THM UNCURRY_DEF);
+
+
+(*---------------------------------------------------------------------------
+         LAMBDA_PROD = |- !P. (\p. P p) = (\(p1,p2). P (p1,p2))
+ ---------------------------------------------------------------------------*)
+
+val LAMBDA_PROD = Q.store_thm("LAMBDA_PROD",
+`!P:'a#'b->'c. (\p. P p) = \(p1,p2). P(p1,p2)`,
+ GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN GEN_TAC 
+   THEN STRUCT_CASES_TAC (Q.SPEC `p` ABS_PAIR_THM)
+   THEN REWRITE_TAC [UNCURRY,FST,SND]
+   THEN BETA_TAC THEN REFL_TAC)
+
+(*---------------------------------------------------------------------------
+         EXISTS_PROD = |- (?p. P p) = ?p_1 p_2. P (p_1,p_2)
+ ---------------------------------------------------------------------------*)
 
 val EXISTS_PROD = Q.store_thm("EXISTS_PROD",
- `(?p. P p) = (?p_1 p_2. P (p_1,p_2))`,
- EQ_TAC THEN STRIP_TAC THENL
-     [MAP_EVERY EXISTS_TAC [Term`FST (p:'a # 'b)`, Term`SND (p:'a # 'b)`],
-      EXISTS_TAC (Term`p_1, p_2`)]
- THEN ASM_REWRITE_TAC[PAIR]);
+ `(?p. P p) = ?p_1 p_2. P (p_1,p_2)`,
+ EQ_TAC THEN STRIP_TAC 
+   THENL [MAP_EVERY Q.EXISTS_TAC [`FST p`, `SND p`], Q.EXISTS_TAC `p_1, p_2`]
+   THEN ASM_REWRITE_TAC[PAIR]);
 
+(*---------------------------------------------------------------------------
+         FORALL_PROD = |- (!p. P p) = !p_1 p_2. P (p_1,p_2)
+ ---------------------------------------------------------------------------*)
 
 val FORALL_PROD = Q.store_thm("FORALL_PROD",
- `(!p. P p) = (!p_1 p_2. P (p_1,p_2))`,
+ `(!p. P p) = !p_1 p_2. P (p_1,p_2)`,
  EQ_TAC THENL
  [DISCH_THEN(fn th =>
      REPEAT GEN_TAC THEN ASSUME_TAC (SPEC (Term`p_1, p_2`) th)),
   REPEAT STRIP_TAC
     THEN REPEAT_TCL CHOOSE_THEN SUBST_ALL_TAC
-        (SPEC (Term`p:'a#'b`) ABS_PAIR_THM)]
- THEN ASM_REWRITE_TAC[]);
+                (SPEC (Term`p:'a#'b`) ABS_PAIR_THM)]
+    THEN ASM_REWRITE_TAC[]);
 
 val pair_induction =
  save_thm("pair_induction",
           #2(EQ_IMP_RULE FORALL_PROD));
+
 
 (* ------------------------------------------------------------------------- *)
 (* PFORALL_THM = |- !P. (!x y. P x y) = (!(x,y). P x y)                      *)
 (* ------------------------------------------------------------------------- *)
 
 val PFORALL_THM = Q.prove
-(`!P. (!(x:'a) (y:'b). P x y) = !(x,y):'a#'b. P x y`,
+(`!P:'a -> 'b -> bool. (!x y. P x y) = !(x,y). P x y`,
  GEN_TAC THEN EQ_TAC THENL
  [ DISCH_TAC THEN
    REWRITE_TAC [FORALL_DEF] THEN BETA_TAC THEN ASM_REWRITE_TAC []
@@ -302,28 +326,21 @@ val _ = save_thm("PFORALL_THM",PFORALL_THM);
 (* ------------------------------------------------------------------------- *)
 
 val PEXISTS_THM = Q.prove
-(`!P. (?(x:'a) (y:'b). P x y) = ?(x,y):'a#'b. P x y`,
-GEN_TAC THEN EQ_TAC THEN
-SUBST1_TAC (SYM (ETA_CONV
-                 (Term`\p. UNCURRY (\x:'a y:'b. P x y:bool) p`))) THENL [
-  STRIP_TAC THEN
-  Q.EXISTS_TAC `(x,y)` THEN REWRITE_TAC [UNCURRY_VAR, FST, SND] THEN
-  BETA_TAC THEN ASM_REWRITE_TAC [],
-  REWRITE_TAC [UNCURRY_VAR] THEN BETA_TAC THEN STRIP_TAC THEN
-  mesonLib.ASM_MESON_TAC []
-]);
-
+(`!P:'a -> 'b -> bool. (?x y. P x y) = ?(x,y). P x y`,
+GEN_TAC THEN EQ_TAC
+  THEN SUBST1_TAC 
+        (SYM (ETA_CONV (Term`\p. UNCURRY (\x:'a y:'b. P x y:bool) p`))) THENL 
+  [STRIP_TAC
+      THEN Q.EXISTS_TAC `(x,y)` 
+      THEN REWRITE_TAC [UNCURRY_VAR, FST, SND] THEN BETA_TAC 
+      THEN ASM_REWRITE_TAC [],
+   REWRITE_TAC [UNCURRY_VAR] THEN BETA_TAC 
+     THEN STRIP_TAC 
+     THEN Q.EXISTS_TAC `FST p` 
+     THEN Q.EXISTS_TAC `SND p`
+     THEN ASM_REWRITE_TAC[]]);
 
 val _ = save_thm("PEXISTS_THM",PEXISTS_THM);
-
-
-val pair_Axiom = Q.store_thm("pair_Axiom",
- `!f:'a->'b->'c. ?fn. !x y. fn (x,y) = f x y`,
- GEN_TAC THEN EXISTS_TAC(--`UNCURRY f :'a#'b ->'c`--) THEN
- REWRITE_TAC[UNCURRY_DEF]);
-
-val UNCURRY_CONG =
-  save_thm("UNCURRY_CONG", Prim_rec.case_cong_thm ABS_PAIR_THM UNCURRY_DEF);
 
 (*---------------------------------------------------------------------------
      Standard helpful combinator
@@ -354,16 +371,6 @@ val pair_case_cong = save_thm("pair_case_cong",
  Rewrite.PURE_REWRITE_RULE[GSYM pair_case_def] UNCURRY_CONG);
 
 val pair_rws = [PAIR, FST, SND];
-
-(* pair_rws formerly also had
-
-    CLOSED_PAIR_EQ,
-    CURRY_UNCURRY_THM, UNCURRY_CURRY_THM,
-    CURRY_ONE_ONE_THM, UNCURRY_ONE_ONE_THM];
-
-  but they weren't getting used.
-*)
-
 
 (*---------------------------------------------------------------------------
     Generate some ML that gets evaluated at theory load time.
@@ -450,7 +457,7 @@ REWRITE_TAC [LEX_DEF, relationTheory.WF_DEF]
 
 (*---------------------------------------------------------------------------
  * The relational product of two wellfounded relations is wellfounded. This
- * is a consequence of WF_X.
+ * is a consequence of WF_LEX.
  *---------------------------------------------------------------------------*)
 
 val RPROD_DEF =

@@ -1,0 +1,297 @@
+(*---------------------------------------------------------------------------
+    Raising basic lambda calculus conversions to handle pairs
+ ---------------------------------------------------------------------------*)
+
+structure PairedLambda :> PairedLambda =
+struct
+
+open HolKernel boolLib pairTheory pairSyntax;
+
+infix |-> THENC ORELSEC ##;
+infixr -->;
+
+val ERR = mk_HOL_ERR "PairedLambda";
+
+fun is_uncurry_tm c = 
+ case total dest_thy_const c
+  of SOME{Name="UNCURRY",Thy="pair",...} => true
+   | otherwise => false;
+
+val is_uncurry = is_uncurry_tm o rator;
+
+(* ---------------------------------------------------------------------*)
+(* PAIRED_BETA_CONV: Generalized beta conversions for tupled lambda	*)
+(*		    abstractions applied to tuples (i.e. redexes)	*)
+(*									*)
+(* Given the term:                                    			*)
+(*                                                                      *)
+(*   "(\(x1, ... ,xn).t) (t1, ... ,tn)"                                	*)
+(*                                                                      *)
+(* PAIRED_BETA_CONV proves that:					*)
+(*                                                                      *)
+(*   |- (\(x1, ... ,xn).t) (t1, ... ,tn) = t[t1, ... ,tn/x1, ... ,xn]   *)
+(*                                                                      *)
+(* where t[t1,...,tn/x1,...,xn] is the result of substituting ti for xi	*)
+(* in parallel in t, with suitable renaming of variables to prevent	*)
+(* free variables in t1,...,tn becoming bound in the result.     	*)
+(*                                                                      *)
+(* The conversion works for arbitrarily nested tuples.  For example:	*)
+(*									*)
+(*   PAIRED_BETA_CONV "(\((a,b),(c,d)).t) ((1,2),(3,4))"		*)
+(*									*)
+(* gives:								*)
+(*									*)
+(*  |- (\((a,b),(c,d)).t) ((1,2),(3,4)) = t[1,2,3,4/a,b,c,d]     	*)
+(*									*)
+(* Bugfix: INST used instead of SPEC to avoid priming.    [TFM 91.04.17]*)
+(* ---------------------------------------------------------------------*)
+
+local val vs = map genvar [alpha --> beta --> gamma, alpha, beta]
+      val DEF = SPECL vs pairTheory.UNCURRY_DEF
+      val RBCONV = RATOR_CONV BETA_CONV THENC BETA_CONV
+      fun conv tm = 
+       let val (Rator,Rand) = dest_comb tm
+           val (fst,snd) = dest_pair Rand
+           val (Rator,f) = dest_comb Rator
+           val _ = assert is_uncurry_tm Rator
+           val (t1,ty') = dom_rng (type_of f)
+           val (t2,t3) = dom_rng ty'
+           val iDEF = INST_TYPE [alpha |-> t1, beta |-> t2, gamma |-> t3] DEF
+           val (fv,[xv,yv]) = strip_comb(rand(concl iDEF))
+           val def = INST [yv |-> snd, xv |-> fst, fv |-> f] iDEF
+       in
+         TRANS def 
+          (if Term.is_abs f 
+           then if Term.is_abs (body f) 
+                then RBCONV (rhs(concl def))
+                else CONV_RULE (RAND_CONV conv)
+                      (AP_THM(BETA_CONV(mk_comb(f, fst))) snd)
+           else let val recc = conv (rator(rand(concl def)))
+                in if Term.is_abs (rhs(concl recc))
+                   then RIGHT_BETA (AP_THM recc snd)
+                   else TRANS (AP_THM recc snd) 
+                           (conv(mk_comb(rhs(concl recc), snd)))
+                end)
+       end
+in
+fun PAIRED_BETA_CONV tm 
+    = conv tm handle HOL_ERR _ => raise ERR "PAIRED_BETA_CONV" ""
+end;
+
+
+(*-------------------------------------------------------*)
+(* PAIRED_ETA_CONV "\(x1,.(..).,xn). P (x1,.(..).,xn)" = *)
+(*       |- \(x1,.(..).,xn). P (x1,.(..).,xn) = P        *)
+(* [JRH 91.07.17]                                        *)
+(*-------------------------------------------------------*)
+
+local val pthm = GEN_ALL (SYM (SPEC_ALL pairTheory.PAIR))
+      fun pairify tm =
+        let val step = ISPEC tm pthm
+            val (Rator,r) = dest_comb (rhs (concl step))
+            val (pop,l) = dest_comb Rator
+        in
+          TRANS step (MK_COMB(AP_TERM pop (pairify l), pairify r))
+        end
+        handle HOL_ERR _ => REFL tm
+in
+fun PAIRED_ETA_CONV tm =
+   let val (varstruct,body) = dest_abs tm
+       val (f,Rand) = dest_comb body
+       val _ = assert (equal varstruct) Rand
+       val xv = mk_var("x", type_of varstruct)
+       val peq = pairify xv
+       val par = rhs (concl peq)
+       val bth = PAIRED_BETA_CONV (mk_comb(tm, par))
+   in
+     EXT (GEN xv (SUBS [SYM peq] bth))
+   end
+   handle HOL_ERR _ => raise ERR "PAIRED_ETA_CONV" ""
+end;
+
+(*--------------------------------------------------------------------*)
+(* GEN_BETA_CONV - reduces single or paired abstractions, introducing *)
+(* arbitrarily nested "FST" and "SND" if the rand is not sufficiently *)
+(* paired. Example:                                                   *)
+(*                                                                    *)
+(*   #GEN_BETA_CONV "(\(x,y). x + y) numpair";                        *)
+(*   |- (\(x,y). x + y)numpair = (FST numpair) + (SND numpair)        *)
+(* [JRH 91.07.17]                                                     *)
+(*--------------------------------------------------------------------*)
+
+local val pair = CONV_RULE (ONCE_DEPTH_CONV SYM_CONV) pairTheory.PAIR
+      val uncth = SPEC_ALL pairTheory.UNCURRY_DEF
+in
+val GEN_BETA_CONV = 
+ let fun gbc tm =
+   let val (abst,arg) = dest_comb tm
+   in if Term.is_abs abst 
+      then BETA_CONV tm 
+      else let val _ = assert is_uncurry abst
+               val eqv = if can dest_pair arg then REFL arg else ISPEC arg pair
+               val _ = dest_pair (rhs (concl eqv))
+               val res = AP_TERM abst eqv
+               val rt0 = TRANS res (PART_MATCH lhs uncth (rhs (concl res)))
+               val (tm1a,tm1b) = dest_comb (rhs (concl rt0))
+               val rt1 = AP_THM (gbc tm1a) tm1b
+               val rt2 = gbc (rhs (concl rt1))
+           in
+              TRANS rt0 (TRANS rt1 rt2) 
+           end
+   end
+ in 
+   fn tm => gbc tm handle HOL_ERR _ => raise ERR "GEN_BETA_CONV" ""
+ end
+end;
+
+local open Tactic Conv 
+in
+val GEN_BETA_RULE = CONV_RULE (DEPTH_CONV GEN_BETA_CONV)
+val GEN_BETA_TAC  = CONV_TAC (DEPTH_CONV GEN_BETA_CONV)
+end;
+
+
+(*---------------------------------------------------------------------------
+        Let reduction
+ ---------------------------------------------------------------------------*)
+
+(* ---------------------------------------------------------------------*)
+(* Internal function: ITER_BETA_CONV (iterated, tupled beta-conversion).*)
+(*									*)
+(* The conversion ITER_BETA_CONV reduces terms of the form:		*)
+(*									*)
+(*     (\v1 v2...vn.tm) x1 x2 ... xn xn+1 ... xn+i			*)
+(*									*)
+(* where the v's can be varstructs. The behaviour is similar to		*)
+(* LIST_BETA_CONV, but this function also does paired abstractions.	*)
+(* ---------------------------------------------------------------------*)
+
+fun ITER_BETA_CONV tm = 
+  let val (Rator,Rand) = dest_comb tm 
+      val thm = AP_THM (ITER_BETA_CONV Rator) Rand
+      val redex = rand(concl thm)
+      val red = TRY_CONV(BETA_CONV ORELSEC PAIRED_BETA_CONV) redex
+  in
+    TRANS thm red
+  end
+  handle HOL_ERR _ => REFL tm;
+
+
+(* ---------------------------------------------------------------------*)
+(* Internal function: ARGS_CONV (apply a list of conversions to the 	*)
+(* arguments of a curried function application).			*)
+(*									*)
+(* ARGS_CONV [conv1;...;convn] "f a1 ... an" applies convi to ai.	*)
+(* ---------------------------------------------------------------------*)
+
+local fun appl [] [] = []
+        | appl (f::frst) (a::arest) = f a::appl frst arest
+        | appl _ _ = raise ERR "ARGS_CONV" "appl"
+in
+fun ARGS_CONV cs tm =
+  let val (f,ths) = (I ## appl cs) (strip_comb tm)
+  in rev_itlist (C (curry MK_COMB)) ths (REFL f) 
+  end
+end;
+
+(* ---------------------------------------------------------------------*)
+(* Internal function RED_WHERE.						*)
+(*									*)
+(* Given the arguments "f" and "tm[f]", this function produces a 	*)
+(* conversion that will apply ITER_BETA_CONV to its argument at all	*)
+(* subterms that correspond to occurrences of f (bottom-up).		*)
+(* ---------------------------------------------------------------------*)
+
+fun RED_WHERE fnn body = 
+ if is_var body orelse is_const body then REFL 
+ else let val (_,Body) = Term.dest_abs body 
+      in ABS_CONV (RED_WHERE fnn Body)
+      end
+   handle HOL_ERR _ => 
+    let val (f,args) = strip_comb body 
+    in if f=fnn
+       then ARGS_CONV (map (RED_WHERE fnn) args) THENC ITER_BETA_CONV
+       else let val (Rator,Rand) = dest_comb body 
+            in RAND_CONV(RED_WHERE fnn Rand)
+                  THENC 
+               RATOR_CONV (RED_WHERE fnn Rator)
+            end
+    end;
+
+(* ---------------------------------------------------------------------*)
+(* Internal function: REDUCE						*)
+(* 									*)
+(* This function does the appropriate beta-reductions in the result of	*)
+(* expanding a let-term.  For terms of the form:			*)
+(*									*)
+(*      "let f x1 ... xn = t in tm[f]"					*)
+(*									*)
+(* we have that:							*)
+(*									*)
+(*      th |- <let term> = tm[\x1 ... xn. t/f]				*)
+(*									*)
+(* And the arguments x and f will be:					*)
+(*									*)
+(*       x = \x1 ... xn. t						*)
+(*       f = \f. tm[f]							*)
+(*									*)
+(* REDUCE searches in tm[f] for places in which f occurs, and then does	*)
+(* an iterated beta-reduction (possibly of varstruct-abstractions) in	*)
+(* the right-hand side of the input theorem th, at the places that	*)
+(* correspond to occurrences of f in tm[f].				*)
+(* ---------------------------------------------------------------------*)
+
+fun REDUCE f x th =
+  if not(is_abs x orelse is_uncurry x) then th 
+  else let val (Bvar,Body) = Term.dest_abs f 
+       in CONV_RULE (RAND_CONV (RED_WHERE Bvar Body)) th
+       end;
+
+(* ---------------------------------------------------------------------*)
+(* let_CONV: conversion for reducing "let" terms.			*)
+(*									*)
+(* Given a term:                                    			*)
+(*                                                                      *)
+(*   "let v1 = x1 and ... and vn = xn in tm[v1,...,vn]"			*)
+(*                                                                      *)
+(* let_CONV proves that:						*)
+(*                                                                      *)
+(*   |- let v1 = x1 and ... and vn = xn in tm[v1,...,vn] 		*)
+(*	=								*)
+(*      tm[x1,...,xn/v1,...,vn]						*)
+(*                                                                      *)
+(* where t[t1,...,tn/x1,...,xn] is the result of "substituting" the 	*)
+(* value xi for vi  in parallel in tm (see below).			*)
+(*									*)
+(* Note that the vi's can take any one of the following forms:  	*)
+(*									*)
+(*    Variables:    "x" etc.    					*)
+(*    Tuples:       "(x,y)" "(a,b,c)" "((a,b),(c,d))" etc.		*)
+(*    Applications: "f (x,y) z" "f x" etc.				*)
+(*									*)
+(* Variables are just substituted for. With tuples, the substitution is	*)
+(* done component-wise, and function applications are effectively	*)
+(* rewritten in the body of the let-term.				*)
+(* ---------------------------------------------------------------------*)
+
+local
+fun conv tm = 
+   let val (func,arg) = dest_let tm
+       val (ty1,ty2) = dom_rng (type_of func)
+       val defn = INST_TYPE [alpha |-> ty1, beta |-> ty2] LET_DEF
+       val thm = RIGHT_BETA(AP_THM(RIGHT_BETA(AP_THM defn func))arg)
+   in 
+   if Term.is_abs func
+   then REDUCE func arg (RIGHT_BETA thm) 
+   else if is_uncurry func
+        then CONV_RULE (RAND_CONV PAIRED_BETA_CONV) thm 
+        else CONV_RULE (RAND_CONV conv) 
+                       (AP_THM(AP_TERM (rator(rator tm)) (conv func)) arg)
+   end
+in
+fun let_CONV tm = conv tm 
+ handle HOL_ERR _ => raise ERR "let_CONV" "cannot reduce the let"
+end;
+
+
+end

@@ -1,7 +1,7 @@
 structure pairTools :> pairTools =
 struct
 
-open HolKernel Parse boolLib boolSyntax;
+open HolKernel Parse boolLib pairSyntax;
 
 infix |-> ## THEN;
 infixr -->
@@ -18,10 +18,10 @@ val PERR = mk_HOL_ERR "pairTools";
 
 fun VSTRUCT_ABS bind th =
   let fun CHOOSER v (tm,thm) =
-        let val ex_tm = boolSyntax.mk_exists(v,tm)
+        let val ex_tm = mk_exists(v,tm)
         in (ex_tm, CHOOSE(v, ASSUME ex_tm) thm)
         end
-      val L = rev (free_vars (boolSyntax.rhs bind))
+      val L = rev (free_vars (rhs bind))
   in snd(itlist CHOOSER L (bind, SUBS[SYM(ASSUME bind)] th))
   end;
 
@@ -39,15 +39,14 @@ in
 fun PAIR_EX x vstruct =
  let fun pair_exists node value thm =
       if Term.is_var value
-      then EXISTS
-            (mk_exists(value,Term.subst[node|->value] (concl thm)), node) thm
+      then EXISTS (mk_exists(value,subst[node|->value] (concl thm)), node) thm
       else
-      let val (V,(lhs,rhs)) = (I##dest_eq)(strip_exists(concl thm))
+      let val (V,(l,r)) = (I##dest_eq)(strip_exists(concl thm))
           val v = genvar(type_of node)
-          val template = list_mk_exists(V,mk_eq(lhs, Term.subst[node|->v] rhs))
+          val template = list_mk_exists(V,mk_eq(l, subst[node|->v] r))
           val expansion = ISPEC node pthm
           val pthm' = Thm.SUBST[v |-> expansion] template thm
-          val (node1, node2) = dest_pair(boolSyntax.rhs(concl expansion))
+          val (node1, node2) = dest_pair(rhs(concl expansion))
           val (value1,value2) = dest_pair value
       in pair_exists node1 value1 (pair_exists node2 value2 pthm')
       end 
@@ -73,8 +72,8 @@ fun PGEN a vstr th =
           else PROVE_HYP (PAIR_EX a vstr) (VSTRUCT_ABS (mk_eq(a,vstr)) th))
 
 fun PGEN_TAC vars (asl:Term.term list,tm) =
- let val (v,_) = Psyntax.dest_forall tm
-     val tm'   = Term.beta_conv(mk_comb(Term.rand tm,vars))
+ let val (v,_) = dest_forall tm
+     val tm'   = beta_conv(mk_comb(rand tm,vars))
  in
    ([(asl,tm')], fn [th] => PGEN v vars th 
                      | _ => raise PERR "PGEN_TAC" "validation")
@@ -86,16 +85,15 @@ fun PGEN_TAC vars (asl:Term.term list,tm) =
  *              !v. M[FST v, FST(SND v), ... SND(SND ... v)]                 *
  *---------------------------------------------------------------------------*)
 
-local fun mk_const(s,ty) = Term.mk_const{Name=s,Ty=ty}
-      fun trav tm A = trav (mk_fst tm) (trav (mk_snd tm) A)
-                      handle HOL_ERR _ => (tm::A)
+local fun trav tm A = 
+         trav (mk_fst tm) (trav (mk_snd tm) A) handle HOL_ERR _ => (tm::A)
 in
 fun TUPLE v thm = GEN v (SPECL (trav v []) thm)
 
 fun TUPLE_TAC vtuple:tactic = fn (asl,w) =>
-   let val {Bvar,Body} = boolSyntax.dest_forall w
-       val w1 = Term.subst [Bvar |-> vtuple] Body
-       val w2 = boolSyntax.list_mk_forall(strip_pair vtuple,w1)
+   let val (Bvar,Body) = dest_forall w
+       val w1 = subst [Bvar |-> vtuple] Body
+       val w2 = list_mk_forall(strip_pair vtuple,w1)
    in ([(asl,w2)],
        fn [th] => PURE_REWRITE_RULE[pairTheory.PAIR] (TUPLE Bvar th))
    end
@@ -122,7 +120,8 @@ fun flat_vstruct tuple rhs =
   let fun flat tuple (v,rhs) =
       if is_var tuple then [(tuple, rhs)]
       else let val (fst,snd) = dest_pair tuple
-           in  flat fst (v, mk_fst rhs) @ flat snd (v, mk_snd rhs)
+           in  flat fst (v, mk_fst rhs) @ 
+               flat snd (v, mk_snd rhs)
            end
   in map mk_eq (flat tuple (genvar alpha,rhs))
   end;
@@ -138,7 +137,7 @@ fun flat_vstruct tuple rhs =
 
 local val LET_THM1 = GSYM LET_THM
       val PAIR_RW = PURE_REWRITE_RULE [pairTheory.PAIR]
-      fun lhs_repl th = (boolSyntax.lhs(concl th) |-> th)
+      fun lhs_repl th = (lhs(concl th) |-> th)
 in
 fun LET_INTRO thm =
   let val (ant,conseq) = dest_imp(concl thm)
@@ -147,10 +146,10 @@ fun LET_INTRO thm =
       val thl = map ASSUME bindings
       val th0 = UNDISCH thm
       val th1 = SUBS thl th0
-      val Bredex = Term.mk_comb{Rator=pairSyntax.mk_abs(lhs,conseq),Rand=rhs}
-      val th2 = EQ_MP (GSYM(GEN_BETA_CONV Bredex)) th1
+      val Bredex = mk_comb(mk_pabs(lhs,conseq),rhs)
+      val th2 = EQ_MP (GSYM(PairedLambda.GEN_BETA_CONV Bredex)) th1
       val th3 = PURE_ONCE_REWRITE_RULE[LET_THM1] th2
-      val vstruct_thm = Drule.SUBST_CONV (map lhs_repl thl) lhs lhs;
+      val vstruct_thm = SUBST_CONV (map lhs_repl thl) lhs lhs;
       val th4 = PROVE_HYP (PAIR_RW vstruct_thm) th3
   in
   rev_itlist (fn bind => fn th =>
@@ -167,7 +166,7 @@ end;
  *---------------------------------------------------------------------------*)
 
 fun unpabs tm =
-   let val (vstr,body) = pairSyntax.dest_abs tm
+   let val (vstr,body) = dest_pabs tm
        val V = free_vars_lr vstr
    in list_mk_abs(V,body)
    end;
@@ -176,10 +175,10 @@ fun unpabs tm =
 local
 fun dot 0 vstr tm away = (vstr,tm)
   | dot n vstr tm away =
-    let val {Bvar,Body} = Term.dest_abs tm
+    let val (Bvar,Body) = dest_abs tm
         val v' = variant away Bvar
-        val tm'  = Term.beta_conv(Term.mk_comb{Rator=tm, Rand=v'})
-        val vstr' = Term.subst[Bvar |-> v'] vstr
+        val tm'  = beta_conv(mk_comb(tm, v'))
+        val vstr' = subst[Bvar |-> v'] vstr
     in dot (n-1) vstr' tm' (v'::away)
     end
 in
@@ -191,9 +190,9 @@ in
 
 val LET_INTRO_TAC :tactic =
 fn  (asl,w) =>
-  let val (func,arg) = boolSyntax.dest_let w
+  let val (func,arg) = dest_let w
       val func' = unpabs func
-      val (vstr,body) = pairSyntax.dest_abs func
+      val (vstr,body) = dest_pabs func
       val away0 = Lib.op_union aconv (free_vars func) (free_varsl asl)
       val (vstr', body') = dot (length (free_vars vstr)) vstr func' away0
       val bind = mk_eq(vstr', arg)

@@ -1,128 +1,65 @@
 signature pairLib =
-    sig
-   type term = Term.term
-   type thm = Thm.thm
-   type conv = Abbrev.conv
-   type tactic = Abbrev.tactic
-   type goal = Abbrev.goal
-   type thm_tactic = Abbrev.thm_tactic
-   type thm_tactical = Abbrev.thm_tactical
+sig
+ include Abbrev
 
-	val MK_PAIR : thm * thm -> thm
-	val PABS : term -> thm -> thm
-	val PABS_CONV : conv -> conv
-	val PSUB_CONV : conv -> conv
-	val CURRY_CONV : conv
-	val UNCURRY_CONV : conv
-	val PBETA_CONV : conv
-	val PBETA_RULE : thm -> thm
-	val PBETA_TAC : tactic
-	val RIGHT_PBETA : thm -> thm
-	val LIST_PBETA_CONV : conv
-	val RIGHT_LIST_PBETA : thm -> thm
-	val LEFT_PBETA : thm -> thm
-	val LEFT_LIST_PBETA : thm -> thm
-	val UNPBETA_CONV : term -> conv
-	val PETA_CONV : conv
-	val PALPHA_CONV : term -> conv
-	val GEN_PALPHA_CONV : term -> conv
-	val PALPHA : term -> conv
-	val paconv : term -> term -> bool
-	val PAIR_CONV : conv -> conv
+ val mk_prod           : hol_type * hol_type -> hol_type
+ val dest_prod         : hol_type -> hol_type * hol_type
+ val list_mk_prod      : hol_type list -> hol_type
+ val strip_prod        : hol_type -> hol_type list
 
-	val CURRY_FORALL_CONV : term -> thm
-	val CURRY_EXISTS_CONV : term -> thm
-	val UNCURRY_FORALL_CONV : term -> thm
-	val UNCURRY_EXISTS_CONV : term -> thm
+ val comma_tm          : term
+ val fst_tm            : term
+ val snd_tm            : term 
+ val uncurry_tm        : term
+ val curry_tm          : term
+ val pair_fun_tm       : term
 
-	val PSPEC: term -> thm -> thm
-	val PSPECL: term list -> thm -> thm
-	val IPSPEC: term -> thm -> thm
-	val IPSPECL: term list -> thm -> thm
-	val PSPEC_PAIR: thm -> term * thm
-	val PSPEC_ALL: thm -> thm
-	val GPSPEC: thm -> thm
-	val PSPEC_TAC: term * term -> tactic
-	val PGEN: term -> thm -> thm
-	val PGENL: term list -> thm -> thm
-	val P_PGEN_TAC: term -> tactic
-	val PGEN_TAC: tactic
-	val FILTER_PGEN_TAC: term -> tactic
+ val mk_pair           : term * term -> term
+ val dest_pair         : term -> term * term
+ val list_mk_pair      : term list -> term
+ val strip_pair        : term -> term list
+ val unstrip_pair      : hol_type -> term list -> term * term list
+ val mk_fst            : term -> term
+ val mk_snd            : term -> term
 
-	val PEXISTS_CONV : term -> thm
-	val PSELECT_RULE : thm -> thm
-	val PSELECT_CONV : term -> thm
-	val PEXISTS_RULE : thm -> thm
-	val PSELECT_INTRO : thm -> thm
-	val PSELECT_ELIM : thm -> term * thm -> thm
-	val PEXISTS : term * term -> thm -> thm
-	val PCHOOSE : term * thm -> thm -> thm
-	val P_PCHOOSE_THEN 
-	  : term
-	    -> (thm -> term list * term -> goal list * (thm list -> thm))
-	       -> thm -> tactic
-	val PCHOOSE_THEN 
-	    : (thm -> term list * term -> goal list * (thm list -> thm))
-               -> thm -> tactic
-	val P_PCHOOSE_TAC : term -> thm -> tactic
-	val PCHOOSE_TAC : thm -> tactic
-	val PEXISTS_TAC : term -> tactic
-	val PEXISTENCE : thm -> thm
-	val PEXISTS_UNIQUE_CONV : term -> thm
-	val P_PSKOLEM_CONV : term -> conv
-	val PSKOLEM_CONV : term -> thm
+ val mk_pabs           : term * term -> term
+ val mk_pforall        : term * term -> term
+ val mk_pexists        : term * term -> term
+ val mk_pexists1       : term * term -> term
+ val mk_pselect        : term * term -> term
+ val dest_pabs         : term -> term * term
+ val pbvar             : term -> term
+ val pbody             : term -> term
+ val dest_pforall      : term -> term * term
+ val dest_pexists      : term -> term * term
+ val dest_pexists1     : term -> term * term
+ val dest_pselect      : term -> term * term
+ val dest_pbinder      : term -> exn -> term -> term * term
 
-	val PSTRIP_THM_THEN : thm_tactical
-	val PSTRIP_ASSUME_TAC : thm_tactic
-	val PSTRUCT_CASES_TAC : thm_tactic
-	val PSTRIP_GOAL_THEN : thm_tactic -> tactic
-	val FILTER_PSTRIP_THEN : thm_tactic -> term -> tactic
-	val PSTRIP_TAC : tactic
-	val FILTER_PSTRIP_TAC : term -> tactic
-	val PEXT : thm -> thm
-	val P_FUN_EQ_CONV : term -> conv
-	val MK_PABS : thm -> thm
-	val HALF_MK_PABS : thm -> thm
-	val MK_PFORALL : thm -> thm
-	val MK_PEXISTS : thm -> thm
-	val MK_PSELECT : thm -> thm
-	val PFORALL_EQ : term -> thm -> thm
-	val PEXISTS_EQ : term -> thm -> thm
-	val PSELECT_EQ : term -> thm -> thm
-	val LIST_MK_PFORALL : term list -> thm -> thm
-	val LIST_MK_PEXISTS : term list -> thm -> thm
-	val PEXISTS_IMP : term -> thm -> thm
-	val SWAP_PFORALL_CONV : conv
-	val SWAP_PEXISTS_CONV : conv
-	val PART_PMATCH : (term -> term) -> thm -> term -> thm
-	val PMATCH_MP_TAC : thm_tactic
-	val PMATCH_MP : thm -> thm -> thm
+ val strip_pabs        : term -> term list * term
+ val strip_pforall     : term -> term list * term
+ val strip_pexists     : term -> term list * term
+ val list_mk_pabs      : term list * term -> term
+ val list_mk_pforall   : term list * term -> term
+ val list_mk_pexists   : term list * term -> term
 
-	val NOT_PFORALL_CONV : conv
-	val NOT_PEXISTS_CONV : conv
-	val PEXISTS_NOT_CONV : conv
-	val PFORALL_NOT_CONV : conv
-	val PFORALL_AND_CONV : conv
-	val PEXISTS_OR_CONV : conv
-	val AND_PFORALL_CONV : conv
-	val LEFT_AND_PFORALL_CONV : conv
-	val RIGHT_AND_PFORALL_CONV : conv
-	val OR_PEXISTS_CONV : conv
-	val LEFT_OR_PEXISTS_CONV : conv
-	val RIGHT_OR_PEXISTS_CONV : conv
-	val PEXISTS_AND_CONV : conv
-	val AND_PEXISTS_CONV : conv
-	val LEFT_AND_PEXISTS_CONV : conv
-	val RIGHT_AND_PEXISTS_CONV : conv
-	val PFORALL_OR_CONV : conv
-	val OR_PFORALL_CONV : conv
-	val LEFT_OR_PFORALL_CONV : conv
-	val RIGHT_OR_PFORALL_CONV : conv
-	val PFORALL_IMP_CONV : conv
-	val LEFT_IMP_PEXISTS_CONV : conv
-	val RIGHT_IMP_PFORALL_CONV : conv
-	val PEXISTS_IMP_CONV : conv
-	val LEFT_IMP_PFORALL_CONV : conv
-	val RIGHT_IMP_PEXISTS_CONV : conv
+ val is_pair           : term -> bool
+ val is_pabs           : term -> bool
+ val is_pforall        : term -> bool
+ val is_pexists        : term -> bool
+ val is_pexists1       : term -> bool
+ val is_pselect        : term -> bool
+ val is_vstruct        : term -> bool
 
-    end;
+ val genvarstruct      : hol_type -> term
+
+  val PAIRED_BETA_CONV : conv 
+  val PAIRED_ETA_CONV  : conv 
+  val GEN_BETA_CONV    : conv 
+  val let_CONV         : conv 
+
+  val GEN_BETA_RULE    : thm -> thm
+  val GEN_BETA_TAC     : tactic
+
+
+end
