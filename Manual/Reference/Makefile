@@ -18,7 +18,8 @@ default:
 	@echo "   Type \"make thmdoc\" to make doc files for theorems"
 
 clean:
-	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind *.toc
+	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind *.toc \
+         entries.tex theorems.tex
 
 tex: ids theorems
 	@echo "TeX files made"
