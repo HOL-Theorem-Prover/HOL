@@ -1,22 +1,48 @@
-How to rewrite with a theorem the other way round?
+Q. Are error messages during the build like the following a source for
+   concern? (2)
+
+   > File "Term.sml", line 1328, characters 10-42:
+   > !   let val {const=Const(r1,_),theory,place} = const_decl name
+   > !           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   > ! Warning: pattern matching is not exhaustive
+
+  -- No.  Nor is the following sort of output, when configuring the
+     system before building:
+
+     > /local/scratch/kxs/144/bin/mosmlyac: 4 shift/reduce conflicts.
+
+Q. How do I antiquote types? (1)
+
+  -- Antiquoting types works as you would expect when parsing types,
+     so that it is fine to write:
+       - val ty = Type`:bool`;
+     and then
+       - Type`:num -> ^ty`;
+     However, you may wish to also introduce type antiquotations into
+     term parses (as a type constraint on a variable for example).
+     The problem is that you can't just write ^ty in this context,
+     because the parsing function's type insists that all antiquotes
+     be of type term.  You must use the ty_antiq function, which
+     magically makes a type appear as a term:
+       - val antity = ty_antiq ty;
+       > val antity = `(ty_antiq(`:bool`))` : Term.term
+     Then:
+       - val x = Term`x:^antity`;
+
+Q. How to rewrite with a theorem the other way round? (0)
+
   -- Use GSYM
 
-What's with all this "cut looping" stuff?
+Q. What's with all this "cut looping" stuff? (0)
+
   -- It's the simplifier, and it's turned off in Taupo releases
      onwards unless you set the trace level to one or higher.
 
-How can I find out more information about a HOL_ERR <poly> exception?
+Q. How can I find out more information about a HOL_ERR <poly>
+   exception? (0)
+
   -- If expression e is causing the grief, then write
         (e) handle E => raise E
      (Often the parentheses around e will not be required.)
 
-Are error messages during the build like the following a source for
-concern?
-
-> File "Term.sml", line 1328, characters 10-42:
-> !   let val {const=Const(r1,_),theory,place} = const_decl name
-> !           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-> ! Warning: pattern matching is not exhaustive
-
-  -- No.
 
