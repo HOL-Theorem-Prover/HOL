@@ -82,7 +82,7 @@ Term`!m n. m<n ==> ?p. (n = m + p) /\ 0<p`,
   REWRITE_TAC[NOT_LESS_0],
   REWRITE_TAC[LESS_THM]
     THEN DISCH_THEN (DISJ_CASES_THEN2 SUBST1_TAC ASSUME_TAC) THENL[
-      EXISTS_TAC (--`SUC 0`--) 
+      EXISTS_TAC (--`SUC 0`--)
     	THEN REWRITE_TAC[LESS_0,ADD_CLAUSES],
     	RES_TAC THEN EXISTS_TAC (--`SUC p`--)
     	THEN ASM_REWRITE_TAC[ADD_CLAUSES,LESS_0]]]);
@@ -230,30 +230,18 @@ val EQ_LENGTH_SNOC_INDUCT_TAC =
      THEN REWRITE_TAC[LENGTH,LENGTH_SNOC,NOT_SUC,INV_SUC_EQ]
      THEN GEN_TAC THEN REPEAT (CONV_TAC FORALL_IMP_CONV) THEN DISCH_TAC];
 
-end (* local *)
-
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 
 fun export_doc_theorems() = let
-  open Theory Parse
-  val thydir0 = Path.concat(Path.parentArc, Path.concat("help", "thms"))
-  val _ = if FileSys.access(thydir0, []) then () else FileSys.mkDir thydir0
-  val thydir = Path.concat(thydir0, current_theory())
-  val _ = if FileSys.access(thydir, []) then () else FileSys.mkDir thydir
-  val thms = theorems() @ axioms() @ definitions()
-  fun write_thm (thname, thm) = let
-    open TextIO
-    val outstream = openOut (Path.concat(thydir, thname^".doc"))
-  in
-    output(outstream, "\\THEOREM "^thname^" "^current_theory()^"\n");
-    output(outstream, thm_to_string thm);
-    output(outstream, "\n\\ENDTHEOREM\n");
-    closeOut outstream
-  end
+  infix ^^
+  val op^^ = Path.concat
 in
-  app write_thm thms
+  export_theory_as_docfiles (Path.parentArc ^^ "help" ^^ "thms" ^^
+                             current_theory())
 end
 
+
+end (* local *)
 
 
 end;
