@@ -52,13 +52,23 @@ fun add_overloaded_form opname basety oinfo =
 fun remove_overloaded_form s (oinfo:overload_info) =
   List.filter (fn x => #overloaded_op x <> s) oinfo
 
+(* a predicate on pairs of operations and types that returns true if
+   they're equal, given that two types are equal if they can match
+   each other *)
+fun compare_real_things (ty1,n1:string) (ty2,n2) =
+  type_compare (ty1, ty2) = SOME EQUAL andalso n1 = n2
+
+
 fun add_actual_overloading {opname, realname, realtype} oinfo =
   if is_overloaded oinfo opname then let
     val {base_type, ...} = valOf (info_for_name oinfo opname)
   in
     if Lib.can (Type.match_type base_type) realtype then
       valOf (fupd_list_at_P (fn x => #overloaded_op x = opname)
-             (fupd_actual_ops (fn ops => (realtype, realname)::ops)) oinfo)
+             (fupd_actual_ops
+              (fn ops =>
+               Lib.op_insert compare_real_things (realtype, realname) ops))
+             oinfo)
     else
       raise OVERLOAD_ERR "Given type is not instance of type pattern"
   end
@@ -121,7 +131,9 @@ fun merge_oinfos O1 O2 = let
               | _ => ty1
             val newopinfo =
               {overloaded_op = name, base_type = newty,
-               actual_ops = Lib.union (#actual_ops op1) (#actual_ops op2)}
+               actual_ops =
+               Lib.op_union compare_real_things
+               (#actual_ops op1) (#actual_ops op2)}
           in
             merge (newopinfo::acc) op1s' op2s'
           end
