@@ -466,22 +466,34 @@ val grandbeta_substitutive = store_thm(
   "grandbeta_substitutive",
   ``!M N x P. grandbeta M N ==> grandbeta ([P/x]M) ([P/x]N)``,
   SIMP_TAC (srw_ss()) [RIGHT_FORALL_IMP_THM] THEN
-  HO_MATCH_MP_TAC grandbeta_ind THEN SRW_TAC [][SUB_THM] THENL [
-    METIS_TAC [grandbeta_rules],
-    Q_TAC (NEW_TAC "z") `{x;x'} UNION FV M UNION FV P UNION FV N` THEN
-    `(LAM x M = LAM z (swap z x M)) /\ (LAM x N = LAM z (swap z x N))`
+  HO_MATCH_MP_TAC grandbeta_ind THEN REPEAT CONJ_TAC THEN
+  SIMP_TAC (srw_ss()) [SUB_THM, grandbeta_rules] THENL [
+    Q_TAC SUFF_TAC
+       `!M N v. (!x P. grandbeta ([P/x] M) ([P/x]N)) ==>
+                !x P. grandbeta ([P/x] (LAM v M)) ([P/x] (LAM v N))` THEN1
+       SRW_TAC [][] THEN
+    REPEAT STRIP_TAC THEN
+    Q_TAC (NEW_TAC "z") `{v;x} UNION FV M UNION FV P UNION FV N` THEN
+    `(LAM v M = LAM z (swap z v M)) /\ (LAM v N = LAM z (swap z v N))`
         by SRW_TAC [][swap_ALPHA] THEN
     SRW_TAC [][SUB_THM, swap_subst_out, grandbeta_rules],
-    METIS_TAC [grandbeta_rules],
-    Q_TAC (NEW_TAC "z") `{x; x'} UNION FV M UNION FV P UNION FV N'` THEN
-    `LAM x M = LAM z (swap z x M)` by SRW_TAC [][swap_ALPHA] THEN
-    SRW_TAC [][SUB_THM] THEN
-    `grandbeta ([P/x'] (swap z x M)) ([P/x'] (swap z x N'))`
-       by SRW_TAC [][swap_subst_out] THEN
-    `grandbeta ([P/x'] M') ([P/x']N'')` by SRW_TAC [][] THEN
+
     Q_TAC SUFF_TAC
-          `[[P/x']N'' / z] ([P/x'] (swap z x N')) =
-           [P/x'] ([N''/x] N')` THEN1 METIS_TAC [grandbeta_rules] THEN
+       `!M1 M2 N1 N2 v.
+           (!x P. grandbeta ([P/x]M1) ([P/x]N1)) /\
+           (!x P. grandbeta ([P/x]M2) ([P/x]N2)) ==>
+           !x P. grandbeta ([P/x](LAM v M1) @@ [P/x]M2)
+                           ([P/x]([N2/v] N1))` THEN1 SRW_TAC [][] THEN
+    REPEAT STRIP_TAC THEN
+    Q_TAC (NEW_TAC "z") `{v; x} UNION FV M1 UNION FV P UNION FV N1` THEN
+    `LAM v M1 = LAM z (swap z v M1)` by SRW_TAC [][swap_ALPHA] THEN
+    SRW_TAC [][SUB_THM] THEN
+    `grandbeta ([P/x] (swap z v M1)) ([P/x] (swap z v N1))`
+       by SRW_TAC [][swap_subst_out] THEN
+    `grandbeta ([P/x] M2) ([P/x]N2)` by SRW_TAC [][] THEN
+    Q_TAC SUFF_TAC
+          `[[P/x]N2 / z] ([P/x] (swap z v N1)) =
+           [P/x] ([N2/v] N1)` THEN1 METIS_TAC [grandbeta_rules] THEN
     SRW_TAC [][GSYM fresh_var_swap, GENERAL_SUB_COMMUTE]
   ]);
 
