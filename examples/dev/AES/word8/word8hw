@@ -1,44 +1,51 @@
 loadPath := "../../" :: "../../dff/" :: !loadPath;
 
 Globals.priming := SOME "";
-app load ["word8CasesLib", "compile", "MultTheory", "RoundOpTheory"];
-open word8Theory compile MultTheory;
+app load ["word8CasesLib", "compile", "aesTheory"];
+open word8Theory compile MultTheory RoundOpTheory aesTheory;
+
+val MAKE_NETLIST = Count.apply MAKE_NETLIST;
+
+(*---------------------------------------------------------------------------*)
+(* xtime                                                                     *)
+(*---------------------------------------------------------------------------*)
 
 val xtime_dev = 
   PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
            (CompileConvert (SPEC_ALL xtime_def));
-val xtime_atm = REFINE (DEPTHR ATM_REFINE) xtime_dev;
-val xtimeNetlist = MAKE_NETLIST xtime_atm;
+val xtimeNetlist = MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) xtime_dev);
 
 
 (*---------------------------------------------------------------------------*)
 (* Iterative multiplication.                                                 *)
 (*---------------------------------------------------------------------------*)
 
-val defth = (SPEC_ALL IterConstMult_def);
-val (lt,rt) = boolSyntax.dest_eq(concl defth)
-val (func,args) = dest_comb lt
-val (b,t1,t2) = dest_cond rt
-val fb = mk_pabs(args,b)
-val f1 = mk_pabs(args,t1)
-val f2 = mk_pabs(args,rand t2)
-
+local
+ val defth = SPEC_ALL IterConstMult_def
+ val (lt,rt) = boolSyntax.dest_eq(concl defth)
+ val (func,args) = dest_comb lt
+ val (b,t1,t2) = dest_cond rt
+ val fb = mk_pabs(args,b)
+ val f1 = mk_pabs(args,t1)
+ val f2 = mk_pabs(args,rand t2)
+in
 val total_thm = Q.prove
 (`TOTAL(^fb,^f1,^f2)`,
  RW_TAC list_ss [composeTheory.TOTAL_def,pairTheory.FORALL_PROD] 
   THEN WF_REL_TAC `w2n o FST` THEN STRIP_TAC THEN
    word8CasesLib.word8Cases_on `p_1` THEN 
-   RW_TAC std_ss [] THEN REPEAT (POP_ASSUM MP_TAC) THEN word8Lib.WORD_TAC);
-
+   RW_TAC std_ss [] THEN REPEAT (POP_ASSUM MP_TAC) THEN word8Lib.WORD_TAC)
 val iter_mult_dev = 
   PURE_REWRITE_RULE[GSYM DEV_IMP_def] (RecCompileConvert defth total_thm);
 val iter_mult_atm = REFINE (DEPTHR ATM_REFINE) iter_mult_dev;
 val iter_mult_Netlist = MAKE_NETLIST iter_mult_atm;
+end;
 
 val iter_mult1_dev =
  REFINE (DEPTHR(LIB_REFINE[xtime_dev])) iter_mult_dev;
-val iter_mult1_atm = REFINE (DEPTHR ATM_REFINE) iter_mult1_dev;
-val iter_mult1_Netlist = MAKE_NETLIST iter_mult1_atm;
+
+val iter_mult1_Netlist = 
+  MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) iter_mult1_dev);
 
 
 (*---------------------------------------------------------------------------*)
@@ -48,120 +55,108 @@ val iter_mult1_Netlist = MAKE_NETLIST iter_mult1_atm;
 val to_state_dev = 
   PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
            (CompileConvert (SPEC_ALL to_state_def));
-val to_state_atm = REFINE (DEPTHR ATM_REFINE) to_state_dev;
-val to_stateNetlist = MAKE_NETLIST to_state_atm;
+val to_stateNetlist = MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) to_state_dev);
 
 val from_state_dev = 
   PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
            (CompileConvert (SPEC_ALL from_state_def));
-val from_state_atm = REFINE (DEPTHR ATM_REFINE) from_state_dev;
-val from_stateNetlist = MAKE_NETLIST from_state_atm;
-
-val simps = Q.prove
-(`(!f x. FST (f x) = (FST o f) x) /\ (!f x. SND (f x) = (SND o f) x)`,
- SIMP_TAC std_ss [combinTheory.o_THM]);
-
-val th0 = 
-SIMP_RULE pure_ss [GSYM BUS_CONCAT_def]
-(CONV_RULE (DEPTH_CONV ETA_CONV)
-(SIMP_RULE pure_ss [GSYM FUN_EQ_THM]
-(CONV_RULE (DEPTH_CONV (REWRITE_CONV  [simps]))
-  (SIMP_RULE std_ss 
-    [FORALL_AND_THM,compileTheory.BUS_CONCAT_def]
-   (CONV_RULE (DEPTH_CONV pairLib.GEN_BETA_CONV) 
-     (SIMP_RULE std_ss [composeTheory.COMB_def ]to_stateNetlist))))));
-
-
-(* --------------------------------------------------------------------- *)
-(* A nice theorem from Tom Melham. Lifted from                           *)
-(* "5 Axioms of Alpha Conversion" paper. States ability to express a     *)
-(* function:                                                             *)
-(*                                                                       *)
-(*    h : A -> B x C                                                     *)
-(*                                                                       *)
-(* as the combination h = <f,g> of two component functions               *)
-(*                                                                       *)
-(*   f : A -> B   and   g : A -> C                                       *)
-(*                                                                       *)
-(* The following lemma lets us do this.                                  *)
-(* --------------------------------------------------------------------- *)
-(*
-val COMPONENT_THM = Q.prove(
-`!P. (?!f:'A->('B#'C). P f) = ?!p. P(\a.(FST p a, SND p a))`,
-e (RW_TAC std_ss [EXISTS_UNIQUE_THM] THEN EQ_TAC THEN RW_TAC std_ss []);
-THENL
-  [Q.EXISTS_TAC `FST o f, SND o f`
-    THEN RW_TAC std_ss [combinTheory.o_THM,ETA_THM],
-   FULL_SIMP_TAC std_ss [PAIR]
-   FIRST_ASSUM MATCH_MP_TAC
-   Cases_on `p` THEN Cases_on `p1`
-     THEN FULL_SIMP_TAC std_ss []
-     THEN RULE_ASSUM_TAC (REWRITE_RULE pairTheory.pair_rws)
-     THEN `(\a:'A. (q a, r a):'B#'C) =  \a:'A. (q' a, r' a)` by RES_TAC
-     THEN PROVE_TAC [pairTheory.PAIR_EQ,EQ_EXT],
-   PROVE_TAC[],
-   Q.PAT_ASSUM `$! M`
-      (MP_TAC o Q.SPECL [`(FST o f, SND o f)`, `(FST o y, SND o y)`])
-     THEN RW_TAC std_ss [combinTheory.o_THM, FUN_EQ_THM,ETA_THM]
-     THEN PROVE_TAC [pairTheory.PAIR_EQ,pairTheory.PAIR,FUN_EQ_THM]]);
-*)
-
+val from_stateNetlist = MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) from_state_dev);
 
 val SubBytes_def' = 
-   SIMP_RULE std_ss [FUN_EQ_THM,FORALL_PROD,genSubBytes_def] SubBytes_def;
+   SIMP_RULE std_ss [genSubBytes_def,FUN_EQ_THM,FORALL_BLOCK] SubBytes_def;
 val SubBytes_dev = 
   PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
            (CompileConvert (SPEC_ALL SubBytes_def'));
-val SubBytes_atm = REFINE (DEPTHR ATM_REFINE) SubBytes_dev;
-val SubBytesNetlist = MAKE_NETLIST SubBytes_atm;
+(* Slow *)
+val SubBytesNetlist = 
+  Count.apply MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) SubBytes_dev);
 
 val InvSubBytes_def' = 
-   SIMP_RULE std_ss [FUN_EQ_THM,FORALL_PROD,genSubBytes_def] InvSubBytes_def;
+   SIMP_RULE std_ss [FUN_EQ_THM,FORALL_BLOCK,genSubBytes_def] InvSubBytes_def;
 val InvSubBytes_dev = 
   PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
            (CompileConvert (SPEC_ALL InvSubBytes_def'));
-val InvSubBytes_atm = REFINE (DEPTHR ATM_REFINE) InvSubBytes_dev;
-val InvSubBytesNetlist = MAKE_NETLIST InvSubBytes_atm;
+(* Slow *)
+val InvSubBytesNetlist = MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) InvSubBytes_dev);
 
 val ShiftRows_dev = 
   PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
            (CompileConvert (SPEC_ALL ShiftRows_def));
-val ShiftRows_atm = REFINE (DEPTHR ATM_REFINE) ShiftRows_dev;
-val ShiftRowsNetlist = MAKE_NETLIST ShiftRows_atm;
+val ShiftRowsNetlist = MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) ShiftRows_dev);
 
 val InvShiftRows_dev = 
   PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
            (CompileConvert (SPEC_ALL InvShiftRows_def));
-val InvShiftRows_atm = REFINE (DEPTHR ATM_REFINE) InvShiftRows_dev;
-val InvShiftRowsNetlist = MAKE_NETLIST InvShiftRows_atm;
+val InvShiftRowsNetlist = MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) InvShiftRows_dev);
 
 val MultCol_dev =
   PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
            (CompileConvert (SPEC_ALL MultCol_def));
-val MultCol_atm = REFINE (DEPTHR ATM_REFINE) MultCol_dev;
-val MultColNetlist = MAKE_NETLIST MultCol_atm;
+val MultColNetlist = MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) MultCol_dev);
 
 val InvMultCol_dev =
   PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
            (CompileConvert (SPEC_ALL InvMultCol_def));
-val InvMultCol_atm = REFINE (DEPTHR ATM_REFINE) InvMultCol_dev;
-val InvMultColNetlist = MAKE_NETLIST InvMultCol_atm;
+val InvMultColNetlist = MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) InvMultCol_dev);
 
 (* Need to eliminate lets *)
 val MixColumns_def' = 
-   SIMP_RULE std_ss [FUN_EQ_THM,FORALL_PROD,genMixColumns_def,LET_THM] MixColumns_def;
+ GEN_BETA_RULE
+  (SIMP_RULE std_ss [FUN_EQ_THM,FORALL_BLOCK,genMixColumns_def,LET_THM] MixColumns_def);
+
 val MixColumns_dev =
   PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
            (CompileConvert (SPEC_ALL MixColumns_def'));
+val MixColumnsNetlist = 
+  MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) MixColumns_dev);
 
-InvMixColumns_def;
+val InvMixColumns_def' = 
+ GEN_BETA_RULE
+  (SIMP_RULE std_ss 
+      [FUN_EQ_THM,FORALL_BLOCK,genMixColumns_def,LET_THM] InvMixColumns_def);
 
-XOR_BLOCK
-AddRoundKey_def
+val InvMixColumns_dev =
+  PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+           (CompileConvert (SPEC_ALL InvMixColumns_def'));
+val InvMixColumnsNetlist = 
+  MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) InvMixColumns_dev);
 
-DUMMY_KEYS
-REVKEYS
-ROTKEYS
+val XOR_BLOCK_def = 
+ Define 
+   `XOR_BLOCK ((a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15):block,
+               (b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15):block)
+       =
+      (a0 # b0,   a1 # b1,   a2 # b2,   a3 # b3,
+       a4 # b4,   a5 # b5,   a6 # b6,   a7 # b7,
+       a8 # b8,   a9 # b9,   a10 # b10, a11 # b11,
+       a12 # b12, a13 # b13, a14 # b14, a15 # b15)`;
+
+val XOR_BLOCK_dev =
+  PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+           (CompileConvert (SPEC_ALL XOR_BLOCK_def));
+val XOR_BLOCKNetlist = 
+  MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) XOR_BLOCK_dev);
+
+* AddRoundKey_def
+
+(*---------------------------------------------------------------------------*)
+(* aesTheory                                                                 *)
+(*---------------------------------------------------------------------------*)
+
+* DUMMY_KEYS
+
+val ROTKEYS_dev =
+  PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+           (CompileConvert (SPEC_ALL ROTKEYS_def));
+val ROTKEYSNetlist = 
+  MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) ROTKEYS_dev);
+
+val REVKEYS_dev =
+  PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+           (CompileConvert (SPEC_ALL REVKEYS_def));
+val REVKEYSNetlist = 
+  MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) REVKEYS_dev);
+
 Round_def
 InvRound_def
 AES_FWD
