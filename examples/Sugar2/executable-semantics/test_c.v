@@ -8,28 +8,23 @@ module Sender (BtoS_ACK, StoB_REQ, DI);
 input         BtoS_ACK;
 output        StoB_REQ;
 output [31:0] DI;
-
-// Can't assign to output wires, so need to connect them to registers
-reg           StoB_REQ_reg;      // Drives StoB_REQ
-reg    [31:0] DI_reg;            // Drives DI (with 0, 1, 2, ... , 99)
-
-assign StoB_REQ = StoB_REQ_reg;  // Drive wire StoB_REQ
-assign DI       = DI_reg;        // Drive wire DI (actually a 32-bit bus)
+reg           StoB_REQ;
+reg    [31:0] DI;
 
 initial
  begin
-  DI_reg = 0;
+  DI = 0;
   #10
-  while (DI_reg < 100)
+  while (DI < 100)
    begin
-    StoB_REQ_reg = 1;            // Assert request
+    StoB_REQ = 1;                // Assert request
      @(posedge BtoS_ACK)         // Wait for ack to be asserted
      #10                         // Wait 10 time units
-     StoB_REQ_reg = 0;           // Deassert request
+     StoB_REQ = 0;               // Deassert request
      #10                         // Wait 10 time units
      @(negedge BtoS_ACK)         // Wait for ack to be de-asserted
      #10                         // Wait 10 time units before incrementing data
-     DI_reg = DI_reg + 1;        // Increment data to be sent next iteration
+     DI = DI + 1;                // Increment data to be sent next iteration
     end
   #10 $finish;
  end
@@ -48,24 +43,18 @@ input  [31:0] DI;
 output        BtoS_ACK;
 output        BtoR_REQ;
 output [31:0] DO;
-
-// Can't assign to output wires, so need to connect them to registers
-reg           BtoS_ACK_reg;      // Drives BtoS_ACK
-reg           BtoR_REQ_reg;      // Drives BtoR_REQ
-reg    [31:0] DO_reg;            // Drives DO
+reg           BtoS_ACK;
+reg           BtoR_REQ;
+reg    [31:0] DO;
 
 // BUF internal state registers
 reg           free;              // Flag to say if BUF is free to receive new data
 reg    [31:0] data;              // Data last read from Sender
 
-assign BtoS_ACK = BtoS_ACK_reg;  // Drive wire BtoS_ACK
-assign BtoR_REQ = BtoR_REQ_reg;  // Drive wire BtoR_REQ
-assign DO       = DO_reg;        // Drive wire DO (actually a 32-bit bus)
-
 initial 
  begin 
-  BtoS_ACK_reg = 0;              // Initially BtoS_ACK not asserted
-  BtoR_REQ_reg = 0;              // Initially BtoR_REQ not asserted
+  BtoS_ACK = 0;                  // Initially BtoS_ACK not asserted
+  BtoR_REQ = 0;                  // Initially BtoR_REQ not asserted
   free = 1;                      // Initially free is true
  end  
 
@@ -74,12 +63,12 @@ always @(posedge clk)
   begin 
    free = 0;                     // Set BUF to be not free
    data = DI;                    // Read data
-   #10 BtoS_ACK_reg = 1;         // Tell Sender data is aquired
-   #10 DO_reg = data;            // Put dat on DO
-   #10 BtoR_REQ_reg = 1;         // Assert BtoR_REQ
+   #10 BtoS_ACK = 1;             // Tell Sender data is aquired
+   #10 DO = data;                // Put dat on DO
+   #10 BtoR_REQ = 1;             // Assert BtoR_REQ
    @(posedge RtoB_ACK)           // Wait for Receiver to acknowledge receipt of data
-   #10 BtoR_REQ_reg = 0;         // Deassert BtoR_REQ
-   #10 BtoS_ACK_reg = 0;         // Deassert BtoS_ACK
+   #10 BtoR_REQ = 0;             // Deassert BtoR_REQ
+   #10 BtoS_ACK = 0;             // Deassert BtoS_ACK
    free = 1;                     // Set BUF to be free
   end
  else 
@@ -97,24 +86,20 @@ module Receiver (BtoR_REQ, DO, RtoB_ACK);
 input         BtoR_REQ;
 input  [31:0] DO;
 output        RtoB_ACK;
-
-// Can't assign to output wire RtoB_ACK, so need to connect it to a register
-reg           RtoB_ACK_reg;      // Drives BtoR_REQ
+reg           RtoB_ACK;
 
 // Receiver internal state registers
 reg    [31:0] data;              // Data last read from BUF
 
-assign RtoB_ACK = RtoB_ACK_reg;  // Drive wire RtoB_ACK
-
-initial RtoB_ACK_reg = 0;        // Initially RtoB_ACK not asserted
+initial RtoB_ACK = 0;            // Initially RtoB_ACK not asserted
 
 always
  @(posedge BtoR_REQ)             // Wait for BtoR_REQ to be asserted
  begin
   #10 data = DO;                 // Copy data from DO
-  #10 RtoB_ACK_reg = 1;          // Assert RtoB_ACK to say data aquired
+  #10 RtoB_ACK = 1;              // Assert RtoB_ACK to say data aquired
   #10 @(negedge BtoR_REQ)        // Wait for BtoR_REQ to be deasserted
-  #10 RtoB_ACK_reg = 0;          // Deassert RtoB_ACK
+  #10 RtoB_ACK = 0;              // Deassert RtoB_ACK
  end
 
 endmodule
@@ -126,10 +111,11 @@ endmodule
 //    S_BOOL (B_AND (B_NOT (B_PROP StoB_REQ),B_PROP BtoS_ACK)) ;;
 //    S_BOOL (B_PROP StoB_REQ))
 
-module Checker (StoB_REQ, BtoS_ACK, BtoR_REQ, RtoB_ACK);
+module Checker (StoB_REQ, BtoS_ACK, BtoR_REQ, RtoB_ACK, state);
 
 input StoB_REQ, BtoS_ACK, BtoR_REQ, RtoB_ACK;
-reg   [2:0] state;
+output [2:0] state;
+reg    [2:0] state;
 
 initial state = 0;
 
@@ -154,9 +140,9 @@ begin
         if (BtoS_ACK) state = 2;
         else state = 1;
     
-    3: $display ("Checker: property violated!");
+    3: begin $display ("Checker: property violated!"); $finish; end
     
-    default: $display ("Checker: unknown state");
+    default: begin $display ("Checker: unknown state"); $finish; end
   endcase
 end
 
@@ -169,12 +155,16 @@ module test ();
 
 wire         StoB_REQ, BtoS_ACK, BtoR_REQ, RtoB_ACK;
 wire  [31:0] DI, DO;
+wire   [2:0] state;
 reg          clk;
+
 
 Sender   M1(BtoS_ACK, StoB_REQ, DI);
 BUF      M2(clk,StoB_REQ, RtoB_ACK, DI, BtoS_ACK, BtoR_REQ, DO);
 Receiver M3(BtoR_REQ, DO, RtoB_ACK);
-Checker  M4(StoB_REQ, BtoS_ACK, BtoR_REQ, RtoB_ACK);
+Checker  M4(StoB_REQ, BtoS_ACK, BtoR_REQ, RtoB_ACK, state);
+
+initial $monitor("State: %0d", state);
 
 // Make clock tick
 initial
