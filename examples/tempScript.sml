@@ -11,14 +11,14 @@
  * First, make standard environment available.                               *
  *---------------------------------------------------------------------------*)
 
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib;
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
 
 (*---------------------------------------------------------------------------*
  * Next, bring in extra tools used. For example, if you were going to use    *
- * bossLib, then while you were working interactively, you would have to     *
+ * bossLib, then while you were working interactively, you may have to       *
  * execute                                                                   *
  *                                                                           *
       load "bossLib";                                                        *
@@ -27,8 +27,7 @@ infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
  *                                                                           *
       open bossLib; infix &&; infix 8 by;                                    *
  *                                                                           *
- * However, when using the batch compiler, the call to "load" must be        *
- * removed.                                                                  *
+ * However, when using the batch compiler, the call to "load" isn't allowed. *
  *                                                                           *
  * The following opening of bossLib is only for example. You should only     *
  * refer to modules that are used.                                           *
