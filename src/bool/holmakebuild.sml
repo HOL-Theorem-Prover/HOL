@@ -1,4 +1,4 @@
-structure holmakebuild =
+structure holmakebuild :> holmakebuild =
 struct
 
 open Feedback
@@ -14,4 +14,4 @@ fun basic_prover (t, tac: Abbrev.tactic) =
 
 val _ = Tactical.set_prover basic_prover
 
-end;
+end

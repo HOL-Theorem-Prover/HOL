@@ -5,7 +5,7 @@
 structure TypeBasePure :> TypeBasePure =
 struct
 
-open HolKernel boolSyntax Rsyntax Drule Conv Prim_rec;
+open HolKernel boolSyntax Drule Conv Prim_rec;
 
 type ppstream = Portable.ppstream
 
@@ -29,7 +29,8 @@ datatype tyinfo =
                      case_const   : term,
                      constructors : term list,
                      size         : (term * shared_thm) option,
-                     boolify      : (term * shared_thm) option,
+                     encode       : (term * shared_thm) option,
+                     lift         : term option,
                      distinct     : thm option,
                      one_one      : thm option,
                      simpls       : simpfrag};
@@ -56,10 +57,11 @@ fun size_of0 (FACTS(_,{size,...})) = size;
 fun size_of (FACTS(_,{size=NONE,...})) = NONE
   | size_of (FACTS(_,{size=SOME(tm,def),...})) = SOME(tm,thm_of def);
 
-fun boolify_of0(FACTS(_,{boolify,...})) = boolify;
-fun boolify_of(FACTS(_,{boolify=NONE,...})) = NONE
-  | boolify_of(FACTS(_,{boolify=SOME(tm,def),...})) = SOME(tm,thm_of def)
+fun encode_of0(FACTS(_,{encode,...})) = encode;
+fun encode_of(FACTS(_,{encode=NONE,...})) = NONE
+  | encode_of(FACTS(_,{encode=SOME(tm,def),...})) = SOME(tm,thm_of def)
 
+fun lift_of(FACTS(_,{lift,...})) = lift;
 
 (*---------------------------------------------------------------------------
                     Making alterations
@@ -67,50 +69,64 @@ fun boolify_of(FACTS(_,{boolify=NONE,...})) = NONE
 
 fun put_nchotomy th (FACTS(s,
  {axiom, case_const,case_cong,case_def,constructors,
-  induction, nchotomy, distinct, one_one, simpls, size, boolify}))
+  induction, nchotomy, distinct, one_one, simpls, 
+  size, encode, lift}))
   =
   FACTS(s, {axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def, constructors=constructors,
             induction=induction, nchotomy=th, distinct=distinct,
-            one_one=one_one, simpls=simpls, size=size, boolify=boolify})
+            one_one=one_one, simpls=simpls, 
+            size=size, encode=encode,lift=lift})
 
 fun put_simpls thl (FACTS(s,
  {axiom, case_const, case_cong, case_def, constructors,
-  induction, nchotomy, distinct, one_one, simpls, size, boolify}))
+  induction, nchotomy, distinct, one_one, simpls, size, encode,lift}))
   =
   FACTS(s, {axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, simpls=thl, size=size, boolify=boolify});
+            one_one=one_one, simpls=thl, 
+            size=size, encode=encode,lift=lift});
 
 fun put_induction th (FACTS(s,
  {axiom, case_const,case_cong,case_def,constructors,
-  induction, nchotomy, distinct, one_one, simpls, size, boolify}))
+  induction, nchotomy, distinct, one_one, simpls, size, encode,lift}))
   =
   FACTS(s, {axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def, constructors=constructors,
             induction=th, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, simpls=simpls, size=size, boolify=boolify})
+            one_one=one_one, simpls=simpls, 
+            size=size, encode=encode,lift=lift})
 
 fun put_size (size_tm,size_rw) (FACTS(s,
  {axiom, case_const,case_cong,case_def,constructors,
-  induction, nchotomy, distinct, one_one, simpls, size, boolify}))
+  induction, nchotomy, distinct, one_one, simpls, size, encode,lift}))
   =
   FACTS(s, {axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, simpls=simpls, size=SOME(size_tm,size_rw),
-            boolify=boolify});
+            encode=encode,lift=lift});
 
-fun put_boolify (boolify_tm,boolify_rw) (FACTS(s,
+fun put_encode (encode_tm,encode_rw) (FACTS(s,
  {axiom, case_const,case_cong,case_def,constructors,
-  induction, nchotomy, distinct, one_one, simpls, size, boolify}))
+  induction, nchotomy, distinct, one_one, simpls, size, encode,lift}))
   =
   FACTS(s, {axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, simpls=simpls,
-            size=size, boolify=SOME(boolify_tm,boolify_rw)});
+            size=size, encode=SOME(encode_tm,encode_rw), lift=lift});
+
+fun put_lift lift_tm (FACTS(s,
+ {axiom, case_const,case_cong,case_def,constructors,
+  induction, nchotomy, distinct, one_one, simpls, size, encode, lift}))
+  =
+  FACTS(s, {axiom=axiom, case_const=case_const,
+            case_cong=case_cong,case_def=case_def,constructors=constructors,
+            induction=induction, nchotomy=nchotomy, distinct=distinct,
+            one_one=one_one, simpls=simpls,
+            size=size, encode=encode, lift=SOME lift_tm});
 
 
 (*---------------------------------------------------------------------------*
@@ -120,11 +136,11 @@ fun put_boolify (boolify_tm,boolify_rw) (FACTS(s,
 
 fun basic_info case_def =
  let val clauses = (strip_conj o concl) case_def
-     val lefts   = map (#lhs o dest_eq o #2 o strip_forall) clauses
+     val lefts   = map (fst o dest_eq o #2 o strip_forall) clauses
      val constrs = map (#1 o strip_comb o rand) lefts
      val ty      = type_of (rand (Lib.trye hd lefts))
  in
-   (#Tyop(dest_type ty), constrs)
+   (fst(dest_type ty), constrs)
  end
  handle HOL_ERR _ => raise ERR "basic_info" "";
 
@@ -140,7 +156,7 @@ val defn_const =
  *---------------------------------------------------------------------------*)
 
 fun mk_tyinfo {ax,case_def,case_cong,induction,
-               nchotomy,size,boolify,one_one,distinct} =
+               nchotomy,size,encode,lift,one_one,distinct} =
   let val (ty_name,constructors) = basic_info case_def
       val inj = case one_one of NONE => [] | SOME x => [x]
       val D  = case distinct of NONE => [] | SOME x => CONJUNCTS x
@@ -154,9 +170,10 @@ fun mk_tyinfo {ax,case_def,case_cong,induction,
       nchotomy     = nchotomy,
       one_one      = one_one,
       distinct     = distinct,
-      simpls       = { rewrs = case_def :: (D@map GSYM D@inj), convs = []},
+      simpls       = {rewrs = case_def :: (D@map GSYM D@inj), convs = []},
       size         = size,
-      boolify      = boolify,
+      encode       = encode,
+      lift         = lift,
       axiom        = ax})
   end;
 
@@ -164,8 +181,8 @@ fun mk_tyinfo {ax,case_def,case_cong,induction,
 local fun mk_ti (n,ax,ind)
                 (cdef::cds) (ccong::cgs) (oo::oos) (d::ds) (nch::nchs) =
             mk_tyinfo{ax=COPY(n,ax), induction=COPY(n,ind), case_def=cdef,
-                      case_cong=ccong, nchotomy=nch, size=NONE, boolify=NONE,
-                      one_one=oo, distinct=d}
+                      case_cong=ccong, nchotomy=nch, one_one=oo, distinct=d,
+                      size=NONE, encode=NONE,lift=NONE}
             :: mk_ti (n,ax,ind) cds cgs oos ds nchs
         | mk_ti _ [] [] [] [] [] = []
         | mk_ti _ [] _ _ _ _ = raise ERR "gen_tyinfo" "Too few case defns"
@@ -184,7 +201,7 @@ fun gen_tyinfo {ax, ind, case_defs} =
      val tyinfo_1 = mk_tyinfo
            {ax=ORIG ax, induction=ORIG ind,
             case_def=hd case_defs, case_cong=hd case_congs,
-            nchotomy=hd nchotomyl, size=NONE, boolify=NONE,
+            nchotomy=hd nchotomyl, size=NONE, encode=NONE, lift=NONE,
             one_one=hd one_ones, distinct=hd distincts}
  in
    if length nchotomyl = 1 then [tyinfo_1]
@@ -204,7 +221,7 @@ fun pp_tyinfo ppstrm (FACTS(ty_name,recd)) =
      val pp_term = Parse.pp_term ppstrm
      val pp_thm = Parse.pp_thm ppstrm
      val {constructors, case_const, case_def, case_cong, induction,
-          nchotomy, one_one, distinct, simpls, size, boolify, axiom} = recd
+          nchotomy,one_one,distinct,simpls,size,encode,lift,axiom} = recd
  in
    begin_block CONSISTENT 0;
      begin_block INCONSISTENT 0;
@@ -234,12 +251,12 @@ fun pp_tyinfo ppstrm (FACTS(ty_name,recd)) =
          ; end_block(); add_break(1,0));
 
 (*   add_break(1,0); *)
-   case boolify
+   case encode
     of NONE => ()
-     | SOME (tm,boolify_def) =>
+     | SOME (tm,encode_def) =>
         (begin_block CONSISTENT 1;
-         add_string "Boolification:"; add_break (1,0);
-         (case boolify_def
+         add_string "Encoder:"; add_break (1,0);
+         (case encode_def
            of COPY(s,th) => add_string ("see "^Lib.quote s)
             | ORIG th    => if is_const tm
                             then pp_thm th else pp_term tm);
@@ -305,7 +322,7 @@ fun typeValue (theta,gamma,undef) =
       case theta ty
        of SOME fvar => fvar
         | NONE =>
-          let val {Tyop,Args} = dest_type ty
+          let val (Tyop,Args) = dest_type ty
           in case gamma Tyop
               of SOME f =>
                   let val vty = drop Args (type_of f)
@@ -325,7 +342,7 @@ end
 local fun num() = mk_thy_type{Tyop="num",Thy="num",Args=[]}
       fun Zero() = mk_thy_const{Name="0",Thy="num", Ty=num()}
         handle HOL_ERR _ => raise ERR "type_size.Zero()" "Numbers not declared"
-      fun K0 ty = mk_abs{Bvar=mk_var{Name="v",Ty=ty}, Body=Zero()};
+      fun K0 ty = mk_abs(mk_var("v",ty),Zero())
       fun tysize_env db = Option.map fst o
                           Option.composePartial (size_of,get db)
 in
@@ -340,13 +357,119 @@ end
  ---------------------------------------------------------------------------*)
 
 local
-  fun tyboolify_env db =
-    Option.map fst o Option.composePartial (boolify_of, get db)
-  fun undef _ = raise ERR "type_boolify" "unknown type"
+  fun tyencode_env db =
+    Option.map fst o Option.composePartial (encode_of, get db)
+  fun undef _ = raise ERR "type_encode" "unknown type"
   fun theta ty =
-    if is_vartype ty then raise ERR "type_boolify" "type variable" else NONE
+    if is_vartype ty then raise ERR "type_encode" "type variable" else NONE
 in
-  fun type_boolify db = typeValue (theta, tyboolify_env db, undef)
+fun type_encode db = typeValue (theta, tyencode_env db, undef)
+end;
+
+(*---------------------------------------------------------------------------*)
+(* Lifters are a bit different, since they are ML-level definitions.         *)
+(*                                                                           *)
+(* Build a HOL term that represents an ML expression that will construct a   *)
+(* compound HOL type.                                                        *)
+(*---------------------------------------------------------------------------*)
+
+local 
+  val string_tyv = mk_vartype "'string"
+  val type_tyv   = mk_vartype "'type"
+  val typelist_tyv = mk_vartype "'typelist"
+  val stringXtypelist_tyv = mk_vartype "'string_X_typelist"
+  val mk_type_var = mk_var("mk_type", stringXtypelist_tyv --> type_tyv)
+  val cons_var  = mk_var ("cons",type_tyv --> typelist_tyv --> typelist_tyv)
+  val nil_var   = mk_var ("nil",typelist_tyv)
+  val comma_var = mk_var (",",string_tyv --> typelist_tyv 
+                                          --> stringXtypelist_tyv)
+  val mk_vartype_var = mk_var("mk_vartype",string_tyv --> type_tyv)
+  fun Cons x y = list_mk_comb(cons_var,[x,y])
+  fun to_list alist = itlist Cons alist nil_var
+  fun tyop_var tyop = mk_var(Lib.quote tyop,string_tyv)
+  fun Pair x y = list_mk_comb(comma_var,[x,y])
+  val bool_var = mk_var("bool",type_tyv)
+in
+fun enc_type ty =
+  if is_vartype ty 
+  then mk_comb(mk_vartype_var,
+               mk_var(Lib.quote (dest_vartype ty),string_tyv))
+  else
+  if ty = Type.bool then bool_var
+  else
+  let val (tyop,args) = dest_type ty
+      val enc_args = to_list(map enc_type args)
+      val enc_tyop = tyop_var tyop
+      val pair = Pair enc_tyop enc_args
+  in 
+    mk_comb(mk_type_var,pair)
+  end
+end;
+
+(*---------------------------------------------------------------------------*)
+(* Implements the interpretation of a type, which yields a function to be    *)
+(* applied to a term. (Except that in this case, it is applied to an ML      *)
+(* value.)                                                                   *)
+(*                                                                           *)
+(*    [| v |] = Theta(v), where v is a type variable                         *)
+(*   [| ty |] = Gamma(c) ty [| t1 |] ... [| tn |], where ty is (t1,...,tn)c  *)
+(*                                                                           *)
+(*---------------------------------------------------------------------------*)
+
+local fun drop [] ty = fst(dom_rng ty)
+        | drop (_::t) ty = drop t (snd(dom_rng ty))
+in
+fun tyValue (theta,gamma,undef) =
+ let fun tyVal ty = 
+      case theta ty  (* map type variable *)
+       of SOME x => x
+        | NONE =>    (* map compound type *)
+          let val (Tyop,Args) = dest_type ty
+          in case gamma Tyop
+              of SOME f =>
+                  let val vty = drop (alpha::Args) (type_of f)
+                      val sigma = match_type vty ty
+                  in list_mk_comb(inst sigma f, 
+                                  enc_type ty::map tyVal Args)
+                  end
+               | NONE => undef Tyop
+          end
+  in tyVal
+  end
 end
+
+fun Undef tyop = raise ERR "Undef"
+                           (Lib.quote tyop^" is an unknown type operator");
+
+(*---------------------------------------------------------------------------*)
+(* Used to synthesize lifters                                                *)
+(*---------------------------------------------------------------------------*)
+
+local fun mk_K_1(tm,ty) = 
+        let val ty1 = type_of tm
+            val K = mk_thy_const{Name="K",Thy="combin",
+                                 Ty = ty1 --> ty --> ty1}
+        in mk_comb(K,tm)
+        end
+in
+fun type_lift db ty =
+  let val TYV = type_vars ty
+      val tyv_fns = map (fn tyv => mk_K_1(boolSyntax.mk_arb tyv, tyv)) TYV
+      val Theta = C assoc (zip TYV tyv_fns)
+      val Gamma = Option.composePartial (lift_of, get db)
+  in 
+     tyValue (total Theta, Gamma, Undef) ty
+  end
+end;
+
+(*---------------------------------------------------------------------------*)
+(* Instantiate a constructor to a type. Used in lifting                      *)
+(*---------------------------------------------------------------------------*)
+
+fun cinst ty c =
+  let val cty = snd(strip_fun(type_of c))
+      val theta = match_type cty ty
+  in inst theta c
+  end
 
 end

@@ -117,4 +117,9 @@ sig
   val new_infixr_definition : string * term * int -> thm
   val new_binder_definition : string * term -> thm
 
+
+  (* Lifter from ML bool to HOL bool *)
+
+  val lift_bool : hol_type -> bool -> term
+
 end

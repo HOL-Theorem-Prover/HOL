@@ -62,12 +62,12 @@ fun one_one_of s      = valOf2 s "one_one_of"
 fun simpls_of s       = TypeBasePure.simpls_of (valOf s (read s))
 fun size_of s         = valOf2 s "size_of"
                             (TypeBasePure.size_of (valOf s (read s)))
-fun boolify_of s      = valOf2 s "boolify_of"
-                            (TypeBasePure.boolify_of (valOf s (read s)))
+fun encode_of s       = valOf2 s "encode_of"
+                            (TypeBasePure.encode_of (valOf s (read s)))
 fun axiom_of0 s       = TypeBasePure.axiom_of0 (valOf s (read s))
 fun induction_of0 s   = TypeBasePure.induction_of0 (valOf s (read s))
 fun size_of0 s        = TypeBasePure.size_of0 (valOf s (read s))
-fun boolify_of0 s     = TypeBasePure.boolify_of0 (valOf s (read s))
+fun encode_of0 s      = TypeBasePure.encode_of0 (valOf s (read s))
 
 
 

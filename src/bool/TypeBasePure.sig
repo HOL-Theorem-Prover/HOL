@@ -21,9 +21,12 @@ sig
                           case_cong : thm,
                           nchotomy  : thm,
                           size      : (term * shared_thm) option,
-                          boolify   : (term * shared_thm) option,
+                          encode    : (term * shared_thm) option,
+                          lift      : term option,
                           one_one   : thm option,
                           distinct  : thm option} -> tyinfo
+
+   val pp_tyinfo       : ppstream -> tyinfo -> unit
 
    val ty_name_of      : tyinfo -> string
    val axiom_of        : tyinfo -> thm
@@ -37,20 +40,20 @@ sig
    val one_one_of      : tyinfo -> thm option
    val simpls_of       : tyinfo -> simpfrag
    val size_of         : tyinfo -> (term * thm) option
-   val boolify_of         : tyinfo -> (term * thm) option
+   val encode_of       : tyinfo -> (term * thm) option
+   val lift_of         : tyinfo -> term option
 
    val axiom_of0       : tyinfo -> shared_thm
    val induction_of0   : tyinfo -> shared_thm
    val size_of0        : tyinfo -> (term * shared_thm) option
-   val boolify_of0        : tyinfo -> (term * shared_thm) option
-
-   val pp_tyinfo       : ppstream -> tyinfo -> unit
+   val encode_of0      : tyinfo -> (term * shared_thm) option
 
    val put_nchotomy    : thm -> tyinfo -> tyinfo
    val put_simpls      : simpfrag -> tyinfo -> tyinfo
    val put_induction   : shared_thm -> tyinfo -> tyinfo
    val put_size        : term * shared_thm -> tyinfo -> tyinfo
-   val put_boolify     : term * shared_thm -> tyinfo -> tyinfo
+   val put_encode      : term * shared_thm -> tyinfo -> tyinfo
+   val put_lift        : term -> tyinfo -> tyinfo
 
    (* Functional databases of datatype facts and associated operations *)
 
@@ -61,15 +64,17 @@ sig
 
   (* Support for polytypism *)
 
-   val typeValue
-      : (hol_type -> term option) *
-        (string -> term option)   *
-        (hol_type -> term)
-        -> hol_type -> term
+   val typeValue       : (hol_type -> term option) *
+                         (string -> term option)   *
+                         (hol_type -> term) -> hol_type -> term
+   val tyValue         : (hol_type -> term option) *
+                         (string -> term option)   *
+                         (string -> term) -> hol_type -> term
 
-  (* Size of a type *)
+   val type_size       : typeBase -> hol_type -> term
+   val type_encode     : typeBase -> hol_type -> term
+   val type_lift       : typeBase -> hol_type -> term
 
-   val type_size    : typeBase -> hol_type -> term
-   val type_boolify : typeBase -> hol_type -> term
+   val cinst           : hol_type -> term -> term
 
 end
