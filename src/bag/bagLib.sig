@@ -37,9 +37,10 @@ signature bagLib = sig
   (* stuff that will help prove theorems *)
   val BAG_AC_ss : simpLib.ssdata (* AC-normalises BAG_UNION terms *)
 
-  val CANCEL_CONV : Abbrev.conv  (* cancels out common sub-terms in SUB_BAG,
-                                    equalities and BAG_DIFFs between
-                                    BAG_UNION terms *)
+  val CANCEL_CONV : Abbrev.conv
+  (* cancels out common sub-terms in SUB_BAG, equalities and
+     BAG_DIFFs between BAG_UNION terms.  Will return the reflexive
+     equation when both arguments are {| |}.  *)
 
   val BAG_ss : simpLib.ssdata
   (* includes CANCEL_CONV and a bunch of rewriting theorems, mainly those

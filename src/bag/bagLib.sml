@@ -191,7 +191,7 @@ end tm
 val x = mk_var("x", bag_ty)
 val y = mk_var("y", bag_ty)
 fun mk_cancelconv (t, s) =
-  {conv = K (K CANCEL_CONV),
+  {conv = K (K (CHANGED_CONV CANCEL_CONV)),
    key = SOME ([], list_mk_comb(t, [x, y])),
    name = "CANCEL_CONV ("^s^")", trace = 2}
 
