@@ -42,6 +42,8 @@ sig
   val tstore_defn : defn * tactic -> thm * thm
 
 
+  val SUC_TO_NUMERAL_DEFN_CONV_hook : (term -> thm) ref
+
    (* Historical relics *)
 
    val prim_wfrec_definition :

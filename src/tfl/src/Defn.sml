@@ -1,8 +1,8 @@
 structure Defn :> Defn =
 struct
 
-open HolKernel Parse boolLib;
-open pairLib Rules wfrecUtils Functional Induction DefnBase;
+open HolKernel Parse boolLib 
+     pairLib Rules wfrecUtils Functional Induction DefnBase;
 
 type thry   = TypeBasePure.typeBase
 type proofs = GoalstackPure.proofs
@@ -344,21 +344,28 @@ fun prove_tcs (STDREC {eqs, ind, R, SV, stem}) tac =
    what is assumed at present.
  ---------------------------------------------------------------------------*)
 
+local fun is_suc tm = 
+       case total dest_thy_const tm
+        of NONE => false
+         | SOME{Name,Thy,...} => Name="SUC" andalso Thy="num"
+in
+val SUC_TO_NUMERAL_DEFN_CONV_hook = 
+      ref (fn _ => raise ERR "SUC_TO_NUMERAL_DEFN_CONV_hook" "not initialized")
 fun add_persistent_funs l =
   if not (!computeLib.auto_import_definitions) then () else
-    let
-      val has_lhs_SUC =
-        List.exists (can (find_term numLib.is_suc) o lhs o #2 o strip_forall) o
-        strip_conj o concl
+    let val has_lhs_SUC = List.exists 
+              (can (find_term is_suc) o lhs o #2 o strip_forall) 
+                                      o strip_conj o concl
       fun f (s, th) =
         [(s, th)] @
         (if has_lhs_SUC th then
-           [("(Conv.CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV " ^ s ^ ")",
-             CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV th)]
+           [("(Conv.CONV_RULE TotalDefn.SUC_TO_NUMERAL_DEFN_CONV " ^ s ^ ")",
+             CONV_RULE (!SUC_TO_NUMERAL_DEFN_CONV_hook) th)]
          else [])
     in
       computeLib.add_persistent_funs (List.concat (map f l))
-    end;
+    end
+end;
 
 fun been_stored s thm =
   (add_persistent_funs [(s,thm)];
@@ -1323,7 +1330,8 @@ fun tgoal defn = Lib.with_flag (goalstackLib.chatting,false) tgoal0 defn;
 
 fun tprove p   =
   let val (eqns,ind) = Lib.with_flag (goalstackLib.chatting,false) tprove0 p
-  in computeLib.add_funs [eqns, CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV eqns]
+  in computeLib.add_funs [eqns, 
+                          CONV_RULE (!SUC_TO_NUMERAL_DEFN_CONV_hook) eqns]
    ; (eqns, ind)
   end
 
