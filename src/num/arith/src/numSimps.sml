@@ -278,6 +278,64 @@ in
   List.exists (same_const f) boring_ts
 end handle HOL_ERR _ => is_const t
 
+fun prim_dest_const t = let
+  val {Thy,Name,...} = dest_thy_const t
+in
+  (Thy,Name)
+end
+
+fun dp_vars t = let
+  fun recurse bnds acc t = let
+    val (f, args) = strip_comb t
+    fun go1() = recurse bnds acc (hd args)
+    fun go2() = recurse bnds (recurse bnds acc (hd args)) (hd (tl args))
+  in
+    case Lib.total prim_dest_const f of
+      SOME ("bool", "~") => go1()
+    | SOME ("bool", "/\\") => go2()
+    | SOME ("bool", "\\/") => go2()
+    | SOME ("min", "==>") => go2()
+    | SOME ("min", "=") => go2()
+    | SOME ("bool", "COND") => let
+        val (t1,t2,t3) = (hd args, hd (tl args), hd (tl (tl args)))
+      in
+        recurse bnds (recurse bnds (recurse bnds acc t1) t2) t3
+      end
+    | SOME ("num", "SUC") => go1()
+    | SOME ("prim_rec", "<") => go2()
+    | SOME ("arithmetic", "+") => go2()
+    | SOME ("arithmetic", "-") => go2()
+    | SOME ("arithmetic", "<=") => go2()
+    | SOME ("arithmetic", ">") => go2()
+    | SOME ("arithmetic", ">=") => go2()
+    | SOME ("arithmetic", "*") => let
+        val (t1, t2) = (hd args, hd (tl args))
+      in
+        if numSyntax.is_numeral t1 then recurse bnds acc t2
+        else if numSyntax.is_numeral t2 then
+          recurse bnds acc t1
+        else HOLset.add(acc, t)
+      end
+    | SOME ("bool", "!") => let
+        val (v, bod) = dest_abs (hd args)
+      in
+        recurse (HOLset.add(bnds, v)) acc bod
+      end
+    | SOME ("bool", "?") => let
+        val (v, bod) = dest_abs (hd args)
+      in
+        recurse (HOLset.add(bnds, v)) acc bod
+      end
+    | SOME _ => if numSyntax.is_numeral t then acc
+                else HOLset.add(acc, t)
+    | NONE => if is_var t then if HOLset.member(bnds, t) then acc
+                               else HOLset.add(acc, t)
+              else HOLset.add(acc, t)
+  end
+in
+  HOLset.listItems (recurse empty_tmset empty_tmset t)
+end
+
 val (CACHED_ARITH,arith_cache) = let
   fun check tm = let
     val ty = type_of tm
@@ -286,28 +344,11 @@ val (CACHED_ARITH,arith_cache) = let
     (ty=Type.bool andalso (is_arith tm orelse tm = F))
   end
 in
-  RCACHE (check, CTXT_ARITH)
+  RCACHE (dp_vars, check, CTXT_ARITH)
   (* the check function determines whether or not a term might be handled
      by the decision procedure -- we want to handle F, because it's possible
      that we have accumulated a contradictory context. *)
 end;
-
-val hack = ref false
-val _ = register_btrace ("hack", hack)
-val CACHED_ARITH = fn thl => fn t => let
-                                  val result = CACHED_ARITH thl t
-                                in
-                                  if !hack then (
-                                  print "RCACHE success [";
-                                  app (fn th => (print_thm th; print " "))
-                                      thl;
-                                  print "], ";
-                                  print_term t;
-                                  print " -- ";
-                                  print_thm result;
-                                  print "\n") else ();
-                                  result
-                                end
 
 (* This needs to be done more systematically! *)
 local open arithmeticTheory

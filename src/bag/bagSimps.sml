@@ -125,7 +125,8 @@ val diff_free = not o can (find_term is_diff)
 fun is_ok t =
   (is_sub_bag t orelse (is_eq t andalso is_bag_ty (type_of (rand t)))) andalso
   diff_free t
-val (CACHED_SBAG_SOLVE, sbag_cache) = Cache.RCACHE(is_ok, SBAG_SOLVE)
+val (CACHED_SBAG_SOLVE, sbag_cache) =
+    Cache.RCACHE(free_vars, is_ok, SBAG_SOLVE)
 
 
 val SBAG_SOLVER = let

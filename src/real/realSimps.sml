@@ -439,6 +439,78 @@ in
   trace(1,PRODUCE(tm,"REAL_ARITH",thm)); thm
 end
 
+fun crossprod (ll : 'a list list) : 'a list list =
+    case ll of
+      [] => [[]]
+    | h::t => let
+        val c = crossprod t
+      in
+        List.concat (map (fn hel => map (cons hel) c) h)
+      end
+fun prim_dest_const t = let
+  val {Thy,Name,...} = dest_thy_const t
+in
+  (Thy,Name)
+end
+fun dpvars t = let
+  fun recurse bnds acc t = let
+    val (f, args) = strip_comb t
+    fun go2() = let
+      val (t1, t2) = (hd args, hd (tl args))
+    in
+      recurse bnds (recurse bnds acc t1) t2
+    end
+    fun go1 () = recurse bnds acc (hd args)
+  in
+    case Lib.total prim_dest_const f of
+      SOME ("bool", "~") => go1()
+    | SOME ("bool", "/\\") => go2()
+    | SOME ("bool", "\\/") => go2()
+    | SOME ("min", "==>") => go2()
+    | SOME ("min", "=") => go2()
+    | SOME ("bool", "COND") => let
+        val (t1,t2,t3) = (hd args, hd (tl args), hd (tl (tl args)))
+      in
+        recurse bnds (recurse bnds (recurse bnds acc t1) t2) t3
+      end
+    | SOME ("realax", "real_add") => go2()
+    | SOME ("real", "real_sub") => go2()
+    | SOME ("real", "real_gt") => go2()
+    | SOME ("realax", "real_lt") => go2()
+    | SOME ("real", "real_lte") => go2()
+    | SOME ("real", "real_ge") => go2()
+    | SOME ("realax", "real_neg") => go1()
+    | SOME ("real", "abs") => go1()
+    | SOME ("realax", "real_mul") => let
+        val args = realSyntax.strip_mult t
+        val arg_vs = map (HOLset.listItems o recurse bnds empty_tmset) args
+        val cs = crossprod (filter (not o null) arg_vs)
+        val var_ts = map (realSyntax.list_mk_mult o Listsort.sort Term.compare)
+                         cs
+      in
+        List.foldl (fn (t,acc)=>HOLset.add(acc,t)) acc var_ts
+      end
+    | SOME ("bool", "!") => let
+        val (v, bod) = dest_abs (hd args)
+      in
+        recurse (HOLset.add(bnds, v)) acc bod
+      end
+    | SOME ("bool", "?") => let
+        val (v, bod) = dest_abs (hd args)
+      in
+        recurse (HOLset.add(bnds, v)) acc bod
+      end
+    | SOME _ => if realSyntax.is_real_literal t then acc
+                else HOLset.add(acc, t)
+    | NONE => if is_var t then if HOLset.member(bnds, t) then acc
+                               else HOLset.add(acc, t)
+              else HOLset.add(acc, t)
+  end
+in
+  HOLset.listItems (recurse empty_tmset empty_tmset t)
+end
+
+
 val (CACHED_ARITH,arith_cache) = let
   fun check tm =
     let val ty = type_of tm
@@ -446,7 +518,7 @@ val (CACHED_ARITH,arith_cache) = let
        (ty=Type.bool andalso (is_arith tm orelse tm = F))
     end;
 in
-  RCACHE (check,CTXT_ARITH)
+  RCACHE (dpvars, check,CTXT_ARITH)
   (* the check function determines whether or not a term might be handled
      by the decision procedure -- we want to handle F, because it's possible
      that we have accumulated a contradictory context. *)

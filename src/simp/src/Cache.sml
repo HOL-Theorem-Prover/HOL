@@ -142,8 +142,8 @@ in
   List.foldl find_component_acc ([], empty_tmset) vs
 end
 
-fun make_links (t, G) = let
-  val fvs = free_vars t
+fun make_links fvs_of (t, G) = let
+  val fvs = fvs_of t
   fun mk_link1 t1 t2 G = let
     val newset =
         case Binarymap.peek(G, t1) of
@@ -166,20 +166,8 @@ in
   | _ => mk_links fvs G
 end
 
-val build_graph = List.foldl make_links (Binarymap.mkDict Term.compare)
-
-fun find_first_fv t = let
-  fun recurse bound t =
-      case dest_term t of
-        COMB(t1, t2) => (case recurse bound t1 of
-                           NONE => recurse bound t2
-                         | x => x)
-      | LAMB(v, body) => recurse (HOLset.add(bound, v)) body
-      | VAR _ => if HOLset.member(bound, t) then NONE else SOME t
-      | _ => NONE
-in
-  recurse empty_tmset t
-end
+fun build_graph fvs_of tmlist =
+    List.foldl (make_links fvs_of) (Binarymap.mkDict Term.compare) tmlist
 
 val build_var_to_group_map = let
   fun foldthis (tlist, acc) = let
@@ -191,18 +179,6 @@ in
   List.foldl foldthis (Binarymap.mkDict Term.compare)
 end
 
-fun build_up_ctxt mp th = let
-  val c = concl th
-in
-  case find_first_fv c of
-    NONE => ()
-  | SOME v => let
-      val r = Binarymap.find(mp,v)
-      val (oldhyps, oldthms) = !r
-    in
-      r := (HOLset.union(oldhyps, hypset th), th::oldthms)
-    end
-end
 
 fun thmlistrefcmp(r1, r2) =
     if r1 = r2 then EQUAL
@@ -267,8 +243,20 @@ in
 end
 
 
-fun RCACHE (check, conv : thm list -> conv) = let
+fun RCACHE (dpfvs, check, conv) = let
   val cache = ref(new_table())
+  fun build_up_ctxt mp th = let
+    val c = concl th
+  in
+    case dpfvs c of
+      [] => ()
+    | (v::_) => let
+        val r = Binarymap.find(mp,v)
+        val (oldhyps, oldthms) = !r
+      in
+        r := (HOLset.union(oldhyps, hypset th), th::oldthms)
+      end
+  end
   fun decider ctxt t = let
     val _ = if check t then ()
             else raise mk_HOL_ERR "Cache" "RCACHE" "not applicable"
@@ -283,16 +271,15 @@ fun RCACHE (check, conv : thm list -> conv) = let
     | NONE => let
         (* do connected component analysis to test for false *)
         val ctxt_ts = map concl ctxt
-        val G = build_graph (t::ctxt_ts)
+        val G = build_graph dpfvs (t::ctxt_ts)
         val vs = Binarymap.foldl (fn (k,v,acc) => k::acc) [] G
         val (comps, _) = ccs G vs
         val group_map = build_var_to_group_map comps
         val _ = app (build_up_ctxt group_map) ctxt
-        val (group_map', glstmtref) = let
-          val glvar = valOf (find_first_fv t)
-        in
-          Binarymap.remove(group_map, glvar)
-        end handle Option => (group_map, ref (empty_tmset, []))
+        val (group_map', glstmtref) =
+          case dpfvs t of
+            [] => (group_map, ref (empty_tmset, []))
+          | (glvar::_) => Binarymap.remove(group_map, glvar)
         fun foldthis (k, v, acc as (setlist, seenreflist)) =
             if mem v seenreflist then acc
             else (!v::setlist, v::seenreflist)

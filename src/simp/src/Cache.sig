@@ -17,7 +17,10 @@
     The RCACHE variant of this function should be used for those
     functions where is inappropriate to have hypotheses that don't
     include the variables mentioned in the "goal term", the one that
-    is to be shown equal to some other value.
+    is to be shown equal to some other value.  The extra, first, parameter
+    to RCACHE is a function that when applied to a term that might be
+    passed to the underlying decision procedure, returns a list of those
+    terms within it that will be treated as variables.
 
     The relevance analysis behind RCACHE c will return a c' that
     strips out irrelevant hypotheses when checking to see if their is
@@ -35,5 +38,6 @@ sig
   val CACHE :(term -> bool) * (thm list->conv) -> (thm list -> conv) * cache
   val clear_cache : cache -> unit;
   val cache_values : cache -> (term * (term list * thm option) list) list
-  val RCACHE :(term -> bool) * (thm list -> conv) -> (thm list -> conv) * cache
+  val RCACHE : (term -> term list) * (term -> bool) * (thm list -> conv) ->
+               (thm list -> conv) * cache
 end
