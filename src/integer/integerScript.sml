@@ -2247,10 +2247,42 @@ val INT_DIVIDES_0 = store_thm(
   Term`(!x. x int_divides 0) /\ (!x. 0 int_divides x = (x = 0))`,
   PROVE_TAC [INT_DIVIDES, INT_MUL_RZERO, INT_MUL_LZERO]);
 
+val int_eq_calculate = prove(
+  Term`!n m. ((&n = ~&m) = (n = 0) /\ (m = 0)) /\
+             ((~&n = &m) = (n = 0) /\ (m = 0))`,
+  Induct THENL [
+    SIMP_TAC int_ss [INT_NEG_0, INT_INJ, GSYM INT_NEG_EQ],
+    SIMP_TAC int_ss [INT] THEN GEN_TAC THEN CONJ_TAC THENL [
+      SIMP_TAC int_ss [GSYM INT_EQ_SUB_LADD, int_sub, GSYM INT_NEG_ADD] THEN
+      ASM_SIMP_TAC int_ss [INT_ADD],
+      SIMP_TAC int_ss [INT_NEG_ADD, GSYM INT_EQ_SUB_LADD, int_sub] THEN
+      ASM_SIMP_TAC int_ss [INT_NEGNEG, INT_ADD]
+    ]
+  ]);
+
 val INT_DIVIDES_1 = store_thm(
   "INT_DIVIDES_1",
-  Term`!x. 1 int_divides x`,
-  PROVE_TAC [INT_DIVIDES, INT_MUL_RID]);
+  Term`!x. 1 int_divides x /\
+           (x int_divides 1 = (x = 1) \/ (x = ~1))`,
+  REPEAT STRIP_TAC THENL [
+    PROVE_TAC [INT_DIVIDES, INT_MUL_RID],
+    SIMP_TAC bool_ss [INT_DIVIDES] THEN EQ_TAC THEN STRIP_TAC THENL [
+      ALL_TAC,
+      ASM_SIMP_TAC bool_ss [INT_MUL_RID],
+      ASM_SIMP_TAC bool_ss [INT_NEG_EQ, GSYM INT_NEG_RMUL, INT_MUL_RID]
+    ] THEN
+    Q.SPEC_THEN `m` STRIP_ASSUME_TAC INT_NUM_CASES THEN
+    FIRST_X_ASSUM SUBST_ALL_TAC THENL [
+      ALL_TAC,
+      ALL_TAC,
+      FULL_SIMP_TAC int_ss [INT_MUL_LZERO, INT_INJ]
+    ] THEN
+    Q.SPEC_THEN `x` STRIP_ASSUME_TAC INT_NUM_CASES THEN
+    FIRST_X_ASSUM SUBST_ALL_TAC THEN
+    FULL_SIMP_TAC int_ss [INT_MUL_RZERO, INT_MUL, GSYM INT_NEG_LMUL,
+                          GSYM INT_NEG_RMUL, INT_NEGNEG, int_eq_calculate,
+                          INT_INJ, INT_EQ_NEG]
+  ]);
 
 val INT_DIVIDES_REFL = store_thm(
   "INT_DIVIDES_REFL",
@@ -2667,19 +2699,6 @@ val INT_LT_REDUCE = store_thm(
   CONV_TAC ARITH_CONV);
 
 val INT_LE_CALCULATE = save_thm("INT_LE_CALCULATE", INT_LE_LT);
-
-val int_eq_calculate = prove(
-  Term`!n m. ((&n = ~&m) = (n = 0) /\ (m = 0)) /\
-             ((~&n = &m) = (n = 0) /\ (m = 0))`,
-  Induct THENL [
-    SIMP_TAC int_ss [INT_NEG_0, INT_INJ, GSYM INT_NEG_EQ],
-    SIMP_TAC int_ss [INT] THEN GEN_TAC THEN CONJ_TAC THENL [
-      SIMP_TAC int_ss [GSYM INT_EQ_SUB_LADD, int_sub, GSYM INT_NEG_ADD] THEN
-      ASM_SIMP_TAC int_ss [INT_ADD],
-      SIMP_TAC int_ss [INT_NEG_ADD, GSYM INT_EQ_SUB_LADD, int_sub] THEN
-      ASM_SIMP_TAC int_ss [INT_NEGNEG, INT_ADD]
-    ]
-  ]);
 
 val INT_LE_REDUCE = store_thm(
   "INT_LE_REDUCE",

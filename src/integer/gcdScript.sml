@@ -28,7 +28,7 @@ val IS_GCD_UNIQUE = store_thm("IS_GCD_UNIQUE",
 val IS_GCD_REF = store_thm(
   "IS_GCD_REF",
   Term `!a. is_gcd a a a`,
-  PROVE_TAC[IS_GCD,DIVIDES_REF]);
+  PROVE_TAC[IS_GCD,DIVIDES_REFL]);
 
 val IS_GCD_SYM = store_thm("IS_GCD_SYM",
 			Term `!a b c. (is_gcd a b c) = is_gcd b a c`,
@@ -36,11 +36,11 @@ val IS_GCD_SYM = store_thm("IS_GCD_SYM",
 
 val IS_GCD_0R = store_thm("IS_GCD_0R",
 			Term `!a. is_gcd a 0 a`,
-                        PROVE_TAC[IS_GCD,DIVIDES_REF,ALL_DIVIDES_0]);
+                        PROVE_TAC[IS_GCD,DIVIDES_REFL,ALL_DIVIDES_0]);
 
 val IS_GCD_0L = store_thm("IS_GCD_0R",
 			Term `!a. is_gcd 0 a a`,
-                        PROVE_TAC[IS_GCD,DIVIDES_REF,ALL_DIVIDES_0]);
+                        PROVE_TAC[IS_GCD,DIVIDES_REFL,ALL_DIVIDES_0]);
 
 val PRIME_IS_GCD = store_thm("PRIME_IS_GCD",
                         Term `!p b. prime p ==> divides p b \/ is_gcd p b 1`,
@@ -96,10 +96,6 @@ val GCD_0L = store_thm("GCD_0L",
                         Term `!a. gcd 0 a = a`,
                         PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,IS_GCD_0L]);
 
-val GCD_0L = store_thm("GCD_0L",
-                        Term `!a. gcd 0 a = a`,
-                        PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,IS_GCD_0L]);
-
 val GCD_ADD_R = store_thm("GCD_ADD_R",
                         Term `!a b. gcd a (a+b) = gcd a b`,
                         ARW[] THEN MATCH_MP_TAC (SPECL[Term `a:num`, Term `a+b`] IS_GCD_UNIQUE)
@@ -139,7 +135,7 @@ val L_EUCLIDES = store_thm("L_EUCLIDES",
   ARW[]
   THEN `c=c* gcd a b` by ARW[MULT_CLAUSES]
   THEN ONCE_ASM_REWRITE_TAC[]
-  THEN PROVE_TAC[EUCLIDES_AUX,DIVIDES_MULT,MULT_SYM,DIVIDES_REF]);
+  THEN PROVE_TAC[EUCLIDES_AUX,DIVIDES_MULT,MULT_SYM,DIVIDES_REFL]);
 
 
 val P_EUCLIDES = store_thm(
@@ -244,6 +240,49 @@ val LINEAR_GCD = store_thm(
   `~(i = 0)` by (STRIP_TAC THEN FULL_SIMP_TAC arith_ss []) THEN
   `~(j = 0)` by (STRIP_TAC THEN FULL_SIMP_TAC arith_ss []) THEN
   PROVE_TAC [GCD_SYM, gcd_lemma]);
+
+val gcd_lemma0 = prove(
+  ``!a b. gcd a b = if b <= a then gcd (a - b) b
+                    else gcd a (b - a)``,
+  Cases THEN SIMP_TAC arith_ss [] THEN
+  Cases THEN SIMP_TAC arith_ss [] THEN
+  REWRITE_TAC [GCD]);
+
+val gcd_lemma = prove(
+  ``!n a b. n * b <= a ==> (gcd a b = gcd (a - n * b) b)``,
+  Induct THENL [
+    SIMP_TAC arith_ss [],
+    SIMP_TAC std_ss [MULT_CLAUSES] THEN REPEAT STRIP_TAC THEN
+    `n * b <= a` by ASM_SIMP_TAC arith_ss [] THEN
+    SIMP_TAC std_ss [SUB_PLUS] THEN
+    Q.SPECL_THEN [`a - n * b`, `b`] MP_TAC gcd_lemma0 THEN
+    ASM_SIMP_TAC arith_ss []
+  ]);
+
+val GCD_EFFICIENTLY = store_thm(
+  "GCD_EFFICIENTLY",
+  ``!a b.
+       gcd a b = if a = 0 then b
+                 else gcd (b MOD a) a``,
+  REPEAT STRIP_TAC THEN
+  Cases_on `a = 0` THENL [
+    ASM_SIMP_TAC arith_ss [GCD_0L],
+    ALL_TAC
+  ] THEN Cases_on `b = 0` THENL [
+    ASM_SIMP_TAC arith_ss [GCD_0L, GCD_0R, ZERO_MOD],
+    ALL_TAC
+  ] THEN
+  Q.SPEC_THEN `a` MP_TAC DIVISION THEN
+  ASM_SIMP_TAC arith_ss [] THEN
+  DISCH_THEN (Q.SPEC_THEN `b` STRIP_ASSUME_TAC) THEN
+  Q.ABBREV_TAC `q = b DIV a` THEN Q.ABBREV_TAC `r = b MOD a` THEN
+  NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN
+  FIRST_X_ASSUM SUBST_ALL_TAC THEN
+  `q * a <= q * a + r` by SIMP_TAC arith_ss [] THEN
+  POP_ASSUM (SUBST_ALL_TAC o ONCE_REWRITE_RULE [GCD_SYM] o
+             MATCH_MP gcd_lemma) THEN
+  SIMP_TAC std_ss [DECIDE `(x:num) + y - x = y`] THEN
+  CONV_TAC (RAND_CONV (REWR_CONV GCD_SYM)) THEN REWRITE_TAC []);
 
 val _ = export_theory();
 

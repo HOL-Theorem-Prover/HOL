@@ -112,12 +112,18 @@ fun mk_divides (tm1, tm2) = list_mk_comb(divides_tm, [tm1, tm2])
 
 
 val int_injection = prim_mk_const{Name = "int_of_num", Thy = "integer"}
-val negate_tm = prim_mk_const{Name = "int_neg", Thy = "integer"}
-fun is_int_literal t =
-  (rator t = int_injection andalso numSyntax.is_numeral (rand t)) orelse
-  (rator t = negate_tm andalso is_int_literal (rand t))
-  handle HOL_ERR _ => false
+fun dest_injected tm = let
+  val (f,x) = dest_comb tm
+    handle HOL_ERR _ => raise ERR "dest_injected" "term not an injection"
+in
+  if f = int_injection then x
+  else raise ERR "dest_injected" "term not an injection"
+end
+val is_injected = can dest_injected
+fun mk_injected tm = mk_comb(int_injection, tm)
 
+
+val negate_tm = prim_mk_const{Name = "int_neg", Thy = "integer"}
 fun dest_negated tm = let
   val (l,r) = dest_comb tm
     handle HOL_ERR _ => raise ERR "dest_negated" "term not a negation"
@@ -128,6 +134,11 @@ end
 val is_negated = can dest_negated
 fun mk_negated tm = mk_comb(negate_tm, tm)
 
+
+fun is_int_literal t =
+  (rator t = int_injection andalso numSyntax.is_numeral (rand t)) orelse
+  (rator t = negate_tm andalso is_int_literal (rand t))
+  handle HOL_ERR _ => false
 
 fun int_of_term tm = let
   val _ =

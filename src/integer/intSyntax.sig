@@ -23,14 +23,18 @@ sig
   (* discriminators, constructors, etc *)
 
   val is_int_literal : term -> bool
+  val int_of_term    : term -> Arbint.int
+  val term_of_int    : Arbint.int -> term
+
+  val mk_injected    : term -> term
+  val dest_injected  : term -> term
+  val is_injected    : term -> bool
 
   val is_negated     : term -> bool  (* if a term is of form ~ e *)
   val mk_negated     : term -> term
   val dest_negated   : term -> term
 
 
-  val int_of_term    : term -> Arbint.int
-  val term_of_int    : Arbint.int -> term
 
   val is_plus        : term -> bool
   val mk_plus        : (term * term) -> term

@@ -4,7 +4,7 @@ open HolKernel boolLib Parse
 infix THEN THENC THENL |-> ORELSE
 infixr -->
 
-open integerTheory intSyntax intSimps Psyntax listTheory
+open integerTheory intSyntax intSimps Psyntax listTheory dividesTheory
 
 open simpLib boolSimps BasicProvers SingleStep
 infix ++
@@ -671,7 +671,50 @@ val gcdthm2 = store_thm(
     CONV_TAC (AC_CONV(INT_MUL_ASSOC, INT_MUL_COMM))
   ]);
 
+val gcd1_thm = store_thm(
+  "gcd1thm",
+  ``!m n p q. (p * &m + q * &n = 1i) ==> (gcd m n = 1n)``,
+  REPEAT STRIP_TAC THEN
+  Q.SUBGOAL_THEN `&(gcd m n) int_divides (p * &m + q * &n)` ASSUME_TAC
+  THENL [
+    Q.SUBGOAL_THEN `&(gcd m n) int_divides (p * &m)`
+    (REWRITE_TAC o C cons [] o MATCH_MP INT_DIVIDES_LADD) THENL [
+       Q.SPEC_THEN `p` STRIP_ASSUME_TAC INT_NUM_CASES THEN
+       FIRST_X_ASSUM SUBST_ALL_TAC THEN
+       SIMP_TAC bool_ss [INT_NUM_DIVIDES, INT_MUL_CALCULATE,
+                         INT_DIVIDES_NEG, INT_MUL_LZERO,
+                         ALL_DIVIDES_0] THEN
+       `divides (gcd m n) m` by PROVE_TAC [GCD_IS_GCD, is_gcd_def] THEN
+       PROVE_TAC [DIVIDES_TRANS, DIVIDES_MULT, MULT_COMM],
+
+       Q.SPEC_THEN `q` STRIP_ASSUME_TAC INT_NUM_CASES THEN
+       FIRST_X_ASSUM SUBST_ALL_TAC THEN
+       SIMP_TAC bool_ss [INT_NUM_DIVIDES, INT_MUL_CALCULATE,
+                         INT_DIVIDES_NEG, INT_MUL_LZERO,
+                         ALL_DIVIDES_0] THEN
+       `divides (gcd m n) n` by PROVE_TAC [GCD_IS_GCD, is_gcd_def] THEN
+       PROVE_TAC [DIVIDES_TRANS, DIVIDES_MULT, MULT_COMM]
+    ],
+
+    FIRST_X_ASSUM SUBST_ALL_TAC THEN
+    FULL_SIMP_TAC bool_ss [INT_DIVIDES_1, INT_EQ_CALCULATE]
+  ]);
+
 val arith_ss = bool_ss ++ arithSimps.ARITH_ss
+val gcd21_thm = store_thm(
+  "gcd21_thm",
+  ``!m a x b p q.
+      (p * &a + q * &m = 1i) /\ ~(m = 0) /\ ~(a = 0) ==>
+      (&m int_divides &a * x + b = ?t. x = ~p * b + t * &m)``,
+  REPEAT STRIP_TAC THEN
+  `1 = gcd a m` by PROVE_TAC [gcd1_thm] THEN
+  `~(1n = 0)` by ASM_SIMP_TAC arith_ss []  THEN
+  Q.PAT_ASSUM `x = 1i` (ASSUME_TAC o SYM) THEN
+  Q.SPECL_THEN [`m`, `a`, `x`, `b`, `1`, `p`, `q`] MP_TAC gcdthm2 THEN
+  REPEAT (FIRST_X_ASSUM (MP_TAC o SYM)) THEN
+  ASM_SIMP_TAC bool_ss [INT_DIV_1, INT_DIVIDES_1]);
+
+
 val elim_lt_coeffs1 = store_thm(
   "elim_lt_coeffs1",
   ``!n m x:int.  ~(m = 0) ==> (&n < &m * x = &n / &m < x)``,

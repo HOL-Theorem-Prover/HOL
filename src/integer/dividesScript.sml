@@ -16,7 +16,7 @@ val ALL_DIVIDES_0 = store_thm("ALL_DIVIDES_0",
                         Term `!a. divides a 0`,
                         PROVE_TAC[DIVIDES,MULT_CLAUSES]);
 
-val DIVIDES_REF = store_thm("DIVIDES_REF",
+val DIVIDES_REFL = store_thm("DIVIDES_REFL",
 			Term `!a. divides a a`,
                         PROVE_TAC[DIVIDES,MULT_CLAUSES]);
 
@@ -55,6 +55,11 @@ val DIVIDES_ANTISYM = store_thm("DIVIDES_ANTISYM",
                           THEN PROVE_TAC [LESS_EQUAL_ANTISYM,
                                     DIVIDES_LE,prim_recTheory.LESS_0]);
 
+val DIVIDES_TRANS = store_thm(
+  "DIVIDES_TRANS",
+  ``!p q r. divides p q ==> divides q r ==> divides p r``,
+  ARW [DIVIDES] THEN PROVE_TAC [MULT_ASSOC]);
+
 val DIVIDES_MULT = store_thm("DIVIDES_MULT",
                               Term `!a b c. divides a b ==> divides a (b*c)`,
                               PROVE_TAC[DIVIDES,MULT_SYM,MULT_ASSOC]);
@@ -69,7 +74,7 @@ val DIVIDES_MULT_LEFT = store_thm(
   "DIVIDES_MULT_LEFT",
   ``!n m. divides (n * m) m = (m = 0) \/ (n = 1)``,
   SIMP_TAC arith_ss [FORALL_AND_THM, EQ_IMP_THM, DISJ_IMP_THM,
-                     ALL_DIVIDES_0, DIVIDES_REF] THEN
+                     ALL_DIVIDES_0, DIVIDES_REFL] THEN
   SIMP_TAC std_ss [DIVIDES] THEN REPEAT STRIP_TAC THEN
   `m * 1 = m * (n * q)` by (POP_ASSUM (CONV_TAC o LAND_CONV o
                                        ONCE_REWRITE_CONV o C cons []) THEN
