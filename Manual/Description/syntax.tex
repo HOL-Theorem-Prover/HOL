@@ -1,0 +1,485 @@
+\chapter{Syntax}
+{
+ \newcommand{\term}       {\mbox{\it term}}
+ \newcommand{\bs}         {\mbox{$\backslash$}}
+ \newcommand{\IMP}       {\mbox{\tt ==>}}
+ \newcommand{\ALL}       {\mbox{\tt !}}
+ \newcommand{\EXISTS}       {\mbox{\tt ?}}
+ \newcommand{\CHOOSE}       {\mbox{\tt @}}
+ \newcommand{\EXISTSONE}       {\mbox{\tt ?!}}
+ \newcommand{\LET}       {\mbox{\tt let}}
+ \newcommand{\und}       {\mbox{\tt and}}
+ \newcommand{\IN}       {\mbox{\tt in}}
+ \newcommand{\CONS}       {\mbox{\tt CONS}}
+ \newcommand{\INSERT}    {\mbox{\tt INSERT}}
+ \newcommand{\SUC}       {\mbox{\tt SUC}}
+ \newcommand{\vstr}       {\mbox{\it vstr}}
+ \newcommand{\numeral}    {\mbox{\it numeral}}
+ \newcommand{\charseq}    {\mbox{\it charseq}}
+
+The HOL logic is a classical higher-order predicate calculus. Its
+syntax enjoys two main differences from the syntax of standard first
+order logic.\footnote{We assume the reader is familiar with first
+  order logic.}  First, there is no distinction in HOL between terms
+and formulas: HOL has only terms. Second, each term has a type: types
+are used in order to build well-formed terms. There are two ways to
+construct types and terms in HOL: by use of a parser, or by use of the
+programmer's interface. In this chapter, we will focus on the concrete
+syntax accepted by the parsers, leaving the programmer's interface for
+Chapter~\ref{api}.
+
+
+\section{Types}
+
+A HOL type can be a variable, a constant, or a compound type, which is
+a constant of arity $n$ applied to a list of $n$ types.
+\[
+\begin{array}{rclr}
+  \type & ::= & \mbox{\bf '}\ident & \mbox{(type variable)} \\
+  & | &  \verb+bool+ & \mbox{(type of truth values)} \\
+  & | &  \verb+ind+ & \mbox{(type of individuals)} \\
+  & | &  \type\ \verb+->+\ \type & \mbox{(function arrow)} \\
+  & | &  \type\ \ident\ \type\ & \mbox{(binary compound type)}\\
+  & | &  \ident & \mbox{(nullary type constant)} \\
+  & | & \type\; \ident & \mbox{(unary compound type)} \\
+  & | & (\type_1,\ldots,\type_n) \ident & \mbox{(compound type)}
+\end{array}
+\]
+Type constants are also known as type operators. They must be
+alphanumeric. Type variables are alphanumerics written with a leading
+prime ('). In Hol98, the type constants {\tt bool}, {\tt fun}, and
+{\tt ind} are primitive. The introduction of new type constants is
+described in Chapter \ref{thy-ops}. {\tt bool} is the two element type
+of truth values. The binary operator {\tt fun} is used to denote
+function types; it can be written with an infix arrow. The nullary
+type constant {\tt ind} denotes an infinite set of individuals; it is
+used for a few highly technical developments in the system and can be
+ignored by beginners.  Thus
+\begin{verbatim}
+     'a -> 'b
+     (bool -> 'a) -> ind
+\end{verbatim}
+are both well-formed types. The function arrow is "right associative",
+which means that ambiguous uses of the arrow in types are resolved by
+adding parentheses in a right-to-left sweep: thus the type expression
+\begin{verbatim}
+     ind -> ind -> ind -> ind
+\end{verbatim}
+is identical to
+\begin{verbatim}
+     ind -> (ind -> (ind -> ind)).
+\end{verbatim}
+The product (\verb+#+) and sum (\verb!+!) are other infix type
+operators, also right associative; however, they are not loaded by
+default in Hol98. How to load in useful logical context is dealt with
+in Chapter~\ref{context}.
+
+\section{Terms}
+
+Ultimately, a HOL term can only be a variable, a constant, an
+application, or a lambda term.
+\[
+\begin{array}{rclr}
+  \term & ::= & \ident & \mbox{(variable or constant)} \\
+  & | &  \term\  \term & \mbox{(combination)} \\
+  & | &  \bs\ident.\  \term &
+  \mbox{(lambda abstraction)}
+\end{array}
+\]
+In the system, the usual logical operators have already been defined,
+including truth (\verb+T+), falsity (\verb+F+), negation (\verb+~+),
+equality (\verb+=+), conjunction (\verb+/\+), disjunction (\verb+\/+),
+implication (\verb+==>+), universal (\verb+!+) and existential
+(\verb+?+) quantification, and an indefinite description operator
+(\verb+@+). As well, the basis includes conditional, lambda, and `let'
+expressions. Thus the set of terms available is, in general, an
+extension of the following grammar:
+\[
+\begin{array}{rclr}
+  \mbox{\it term} & ::= & \term : \type & \mbox{(type constraint)} \\
+  & | & \term\ \term & \mbox{(application)} \\
+  & | & \verb+~+ \term & \mbox{(negation)} \\
+  & | & \term\ =\ \term & \mbox{(equality)} \\
+  & | & \term\ \IMP\ \term & \mbox{(implication)} \\
+  & | & \term\ \verb+\/+\ \term & \mbox{(disjunction)} \\
+  & | & \term\ \verb+/\+\ \term & \mbox{(conjunction)} \\
+  & | & \texttt{if}\ \term\ \texttt{then}\ \term\ \texttt{else}\ \term &
+  \mbox{(conditional)} \\
+  & | & \bs\ident_1\ldots\ident_n.\  \term & \mbox{(lambda abstraction)} \\
+  & | & \ALL \ident_1\ldots\ident_n.\ \term & \mbox{(forall)} \\
+  & | & \EXISTS \ident_1\ldots\ident_n.\ \term & \mbox{(exists)} \\
+  & | & \CHOOSE \ident_1\ldots\ident_n.\ \term & \mbox{(choose)} \\
+  & | & \EXISTSONE \ident_1\ldots\ident_n.\ \term &\mbox{(exists-unique)} \\
+  & | & \LET\; \ident = \term  & \\
+  &   & [\und\ \ident = \term]^{*}\ \IN\ \term & \mbox{(let expression)} \\
+  & | & \verb+T+ & \mbox{(truth)} \\
+  & | & \verb+F+ & \mbox{(falsity)} \\
+  & | & \ident & \mbox{(constant or variable)} \\
+  & | & \verb+(+ \term \verb+)+ & \mbox{(parenthesized term)}
+\end{array}
+\]
+
+Some examples may be found in Table \ref{syntaxExamples}. Term
+application can be iterated. Application is left associative so that
+$\term\ \term\ \term \ldots \term$ is equivalent in the eyes of the
+parser to $(\ldots((\term\ \term)\ \term) \ldots)\ \term$.
+
+The lexical structure for term identifiers is much like that for
+ML: identifiers can be alphanumeric or symbolic. Variables must be
+alphanumeric. A symbolic identifier is any concatenation of the characters
+in the following list:
+\begin{verbatim}
+    #?+*/\\=<>&%@!,:;_|~-
+\end{verbatim}
+with the exception of the keywords \verb+\\+, \verb+;+, \verb+=>+,
+\verb+|+, and \verb+:+ (colon). Any alphanumeric can be a constant except the
+keywords \verb+let+, \verb+in+, \verb+and+, and \verb+of+.
+
+ \begin{table}[h]
+\begin{center}
+ \begin{tabular}{|r|l|} \hline
+ \verb+x = T+ & {\it x is equal to true.} \\
+ \verb+!x. Person x ==> Mortal x+ & {\it All persons are mortal.} \\
+ \verb+!x y z. (x ==> y) /\ (y ==> z) ==> x ==> z+ & {\it Implication is
+ transitive.} \\
+ \verb+!x. P x ==> Q x+ & {\it P is a subset of Q} \\
+ \verb+S = \f g x. f x (g x)+ & {\it Definition of a famous combinator.} \\ \hline
+ \end{tabular}
+ \caption{Concrete Syntax Examples}\label{syntaxExamples}
+\end{center}
+ \end{table}
+
+
+\subsection{Constants}
+
+The HOL grammar gets extended when a new constant is introduced. The
+introduction of new constants will be discussed in section
+\ref{thy-ops}. In order to provide some notational flexibility,
+constants come in various flavours or {\it fixities}: besides being an
+ordinary constant (with a fixity of {\sf Prefix}), constants can also
+be {\it binders}, {\it true prefixes}\footnote{The use of the term
+  ``true prefix'' is forced upon us by the history of the system,
+  which reserved the classification ``prefix'' for terms without any
+  special syntactic features.}, {\it suffixes}, {\it infixes}, or {\it
+  closefixes}.  More generally, terms can also be represented using
+reasonably arbitrary {\it mixfix} specifications.  The degree to which
+terms bind their associated arguments is known as precedence.  The
+higher this number, the tighter the binding.  For example, when
+introduced, \verb-+- has a precedence of 500, while the tighter
+binding multiplication (\verb+*+) has a precedence of 600.
+
+\subsubsection{Binders}
+
+A binder is a construct that binds a variable; for example, the
+universal quantifier. In HOL, this is represented using a trick that
+goes back to Alonzo Church: a binder is a constant that takes a lambda
+abstraction as its argument. The lambda binding is used to implement
+the binding of the construct. This is an elegant and uniform solution.
+Thus the concrete syntax \verb+!v. M+ is represented by the
+application of the constant \verb+!+ to the abstraction \verb+(\v. M)+.
+
+The most common binders are \verb+!+, \verb+?+, \verb+?!+, and
+\verb+@+. Sometimes one wants to iterate applications of the same
+binder, \eg,
+\begin{alltt}
+  !x. !y. ?p. ?q. ?r. \term.
+\end{alltt}
+This can instead be rendered
+\begin{alltt}
+  !x y. ?p q r. \term.
+\end{alltt}
+
+\subsubsection{Infixes}
+
+Infix constants can associate in one of three different ways: right,
+left or not at all.  (If \verb-+- were non-associative, then {\tt 3 +
+  4 + 5} would fail to parse; one would have to write {\tt (3 + 4) +
+  5} or {\tt 3 + (4 + 5)} depending on the desired meaning).  The
+precedence ordering for the initial set of infixes is \verb+/\+,
+\verb+\/+, \verb+==>+, \verb+=+,
+ \begin{Large}\verb+,+\end{Large} (comma\footnote{When {\tt pairTheory} has
+   been loaded.}). Moreover, all of these constants are right
+ associative. Thus
+\begin{verbatim}
+     X /\ Y ==> C \/ D, P = E, Q
+\end{verbatim}
+ is equal to
+\begin{verbatim}
+     ((X /\ Y) ==> (C \/ D)), ((P = E), Q).
+\end{verbatim}
+
+\noindent An expression \[\term\ \verb+<infix>+\ \term\] is internally
+represented as \[((\verb+<infix>+\ \term)\ \term)\].
+
+\subsubsection{True prefixes}
+
+Where infixes appear between their arguments, true prefixes appear
+before theirs.  This might initially appear to be the same thing as
+happens with normal function application (is $f$ in $f(x)$ not acting
+as a prefix?), but in fact, it is useful to allow for prefixes to have
+binding power less than that associated with function application.  An
+example of this is \verb+~+, logical negation.  This is a prefix with
+lower precedence than function application.  Normally
+\[
+   f\;x\; y\qquad \mbox{is parsed as}\qquad (f\; x)\; y
+\] but \[
+  \mbox{\tt \~{}}\; x\; y\qquad\mbox{is parsed as}\qquad
+  \mbox{\tt \~{}}\; (x\; y)
+\] because the precedence of \verb+~+ is lower than that of function
+application.  The unary negation symbol would also typically be
+defined as a true prefix, if only to allow one to write \[ {\it
+  negop}\,{\it negop}\,3
+\] (whatever {\it negop} happened to be) without needing extra parentheses.
+
+\subsubsection{Suffixes}
+
+Suffixes appear after their arguments.  There are no suffixes
+introduced into the standard theories available in HOL, but users are
+always able to introduce their own if they choose.  Suffixes are
+associated with a precedence just as infixes and true prefixes are.
+If \verb+p+ is a true prefix, \verb+i+ an infix, and \verb+s+ a
+suffix, then there are six possible orderings for the three different
+operators based on their precedences, giving five parses for
+$\verb+p+\; t_1\; \verb+i+\; t_2\; \verb+s+$ depending on the relative
+precedences:
+\[
+\begin{array}{cl}
+\mbox{\begin{tabular}{c}Precedences\\(lowest to highest)\end{tabular}} &
+\multicolumn{1}{c}{\mbox{Parses}}\\
+\hline
+p,\;i,\;s & \verb+p+\;(t_1\;\verb+i+\;(t_2\;\verb+s+))\\
+p,\;s,\;i & \verb+p+\;((t_1\;\verb+i+\;t_2)\;\verb+s+)\\
+i,\;p,\;s & (\verb+p+\;t_1)\;\verb+i+\;(t_2\;\verb+s+)\\
+i,\;s,\;p & (\verb+p+\;t_1)\;\verb+i+\;(t_2\;\verb+s+)\\
+s,\;p,\;i & (\verb+p+\;(t_1\;\verb+i+\;t_2))\;\verb+s+\\
+s,\;i,\;p & ((\verb+p+\;t_1)\;\verb+i+\;t_2)\;\verb+s+\\
+\end{array}
+\]
+
+\subsection{Type constraints}
+
+A term can be constrained to be of a certain type.  For example,
+\verb+X:bool+ constrains the variable \verb+X+ to have type
+\verb+bool+. Similarly, \verb+T:bool+ performs a (vacuous) constraint
+of the constant \verb+T+ to \verb+bool+. An attempt to constrain a
+term inappropriately will raise an exception: for example,
+\begin{verbatim}
+  if T then (X:ind) else (Y:bool)
+\end{verbatim}
+will fail because both branches of a conditional must be of the same
+type.  Type constraints can be seen as a suffix that binds more
+tightly than everything except function application.  Thus $\term\
+\ldots\ \term \ : \type$ is equal to $(\term\ \ldots\ \term)\ :
+\type$, but $x < y:\mbox{\tt num}$ is a legitimate (though, again
+redundant) constraint on just the variable $y$.
+
+The inclusion of \verb+:+ in the symbolic identifiers means that some
+constraints may need to be separated by white space. For example,
+\begin{verbatim}
+    $=:bool->bool->bool
+\end{verbatim}
+will be broken up by the HOL lexer as
+\begin{verbatim}
+    $=: bool -> bool -> bool
+\end{verbatim}
+and parsed as an application of the symbolic identifier \verb+$=:+ to
+the argument list of terms [\verb+bool+, \verb+->+, \verb+bool+,
+\verb+->+, \verb+bool+]. A well-placed space will avoid this problem:
+\begin{verbatim}
+    $= :bool->bool->bool
+\end{verbatim}
+is parsed as the symbolic identifier "=" constrained by a type.
+
+\subsubsection{Closefixes}
+
+Closefix terms are operators that completely enclose their arguments.
+An example one might use in the development of a theory of
+denotational semantics is semantic brackets.  Thus, the HOL parsing
+facilities can be configured to allow one to write \texttt{denotation x}
+as \texttt{[| x |]}.  Closefixes are not associated with precedences
+because they can not compete for arguments with other operators.
+
+\subsubsection{Type inference}
+
+Consider the term \verb+x = T+.  Each term (and all of its subterms),
+has a type in the HOL logic. Now, \verb+T+ has type \verb+bool+. This
+means that the constant \verb+=+ has type \verb+xty -> bool -> bool+,
+for some type \verb+xty+. Since the type scheme for \verb+=+ is
+\verb+'a -> 'a -> bool+, we know that \verb+xty+ must in fact be
+\verb+bool+ in order for the type instance to be well-formed. Knowing
+this, we can deduce that the type of `x' must be \verb+bool+.
+
+Ignoring the jargon ("scheme" and "instance") in the previous
+paragraph, we have conducted a type assignment to the term structure,
+ending up with a well-typed term. It would be very tedious for users
+to conduct such argumentation by hand for each term entered to Hol98.
+Thus, Hol98 uses an adaptation of Milner's type inference algorithm
+for ML when constructing terms via parsing. At the end of type
+inference, unconstrained type variables get assigned by the system.
+Usually, this assignment does the right thing. However, at times, the
+most general type is not what is desired and the user must add type
+constraints to the relevant subterms. For tricky situations, the
+global variable \verb+show_types+ can be assigned. When this flag is
+set, the prettyprinters for terms and theorems will show how types
+have been assigned to subterms. If you do not want the system to
+assign type variables for you, the global variable
+\verb+guessing_tyvars+ can be set to \verb+false+, in which case the
+existence of unassigned type variables at the end of type inference
+will raise an exception.
+
+\subsection{Expanded term grammar}
+
+There is some further syntax that is specially treated by the parser.
+The theory of pairs introduces the infix pairing operator
+(\begin{Large}\verb+,+\end{Large}) as well as the corresponding infix
+product (\verb+#+) type operator. The theory of sets introduces
+notation for the empty set \verb+{}+ (or \verb+EMPTY+), membership
+(the infix \verb+IN+) insertion (the infix \verb+INSERT+), set
+comprehension, enumerated sets, and many other defined constants. The
+theory of lists introduces the constants \verb+NIL+ (the surface
+syntax \verb+[]+ can be used) and \verb+CONS+, as well as notation for
+enumerated lists. The theories of (Peano) numbers and strings
+introduce the constructors \verb+0+, \verb+SUC+, \verb+""+, and
+\verb+STRING+, as well as literals for numbers and strings. If the
+theory of restricted quantifiers is present, syntax is provided for
+constraining bound variables by predicates.
+
+Thus, if the theories of pairs, sets, numbers, strings, lists, and
+restricted quantifiers are loaded, the HOL grammar is an extension of
+that in Table \ref{expanded-grammar}.
+\begin{table}
+  \[
+  \begin{array}{rclr}
+    \term & ::= & \term : \type & \mbox{(type constraint)} \\
+    & | & \term\ \term & \mbox{(application)} \\
+    & | & \CONS\ \term \ \term & \mbox{(list builder)} \\
+    & | & \INSERT\ \term \ \term & \mbox{(set builder)} \\
+    & | & \SUC\ \term & \mbox{(successor)} \\
+    & | & \verb+~+ \term & \mbox{(negation)} \\
+    & | & \term\ =\ \term & \mbox{(equality)} \\
+    & | & \term\ \IMP\ \term & \mbox{(implication)} \\
+    & | & \term\ \verb+\/+\ \term & \mbox{(disjunction)} \\
+    & | & \term\ \verb+/\+\ \term & \mbox{(conjunction)} \\
+    & | & \term\ \verb+<+ \ \term & \mbox{(less-than)} \\
+    & | & \term\ \verb!+! \ \term & \mbox{(addition)} \\
+    & | & \term\ \verb!*! \ \term & \mbox{(multiplication)} \\
+    & | & \term\ \verb!-! \ \term & \mbox{(subtraction)} \\
+    & | & \term\ \verb+=>+\ \term\ |\ \term & \mbox{(conditional)} \\
+    & | & \bs\vstr_1\ldots\vstr_n.\ \term & \mbox{(lambda abstraction)} \\
+    & | & \ALL \vstr_1\ldots\vstr_n.\ \term & \mbox{(forall)} \\
+    & | & \EXISTS \vstr_1\ldots\vstr_n.\ \term & \mbox{(exists)} \\
+    & | & \CHOOSE \vstr_1\ldots\vstr_n.\ \term & \mbox{(choose)} \\
+    & | & \EXISTSONE \vstr_1\ldots\vstr_n.\ \term &\mbox{(exists-unique)} \\
+    & | & \LET\; \vstr = \term  & \\
+    &   & [\und\ \vstr = \term]^{*}\ \IN\ \term & \mbox{(let expression)} \\
+    & | & \verb+T+ & \mbox{(truth)} \\
+    & | & \verb+F+ & \mbox{(falsity)} \\
+    & | & \verb+[]+ & \mbox{(empty list)} \\
+    & | & \verb+{}+ & \mbox{(empty set)} \\
+    & | & \verb+(+ \term \verb+,+ \term \verb+)+ & \mbox{(pair)} \\
+    & | & \ident & \mbox{(constant or variable)} \\
+    & | & \numeral & \mbox{(numeric literal)} \\
+    & | & \verb+"+\charseq \verb+"+& \mbox{(string literal)} \\
+    & | & \verb+(+ \term \verb+)+ & \mbox{(parenthesized term)} \\
+    & | & \verb+[+ \term \verb+;+ \ldots \verb+;+ \term \verb+]+ &
+    \mbox{(enumerated list)} \\
+    & | & \verb+{+ \term \verb+;+ \ldots \verb+;+ \term \verb+}+ &
+    \mbox{(enumerated set)} \\
+    & | & \verb+{+ \term \ \verb+|+\  \term \verb+}+ & \mbox{(set comprehension)}
+  \end{array}
+  \]
+  \caption{Expanded Term Grammar} \label{expanded-grammar}
+\end{table}
+
+In the table, the varstruct ({\it vstr\/}) construct is used. A
+varstruct is (apparently) an arbitrarily nested tuple of variables,
+where each variable only occurs once. The translation of varstructs
+into the internal abstract syntax trees is complex, so we avoid the
+explanation (for this draft).
+\[
+\begin{array}{rcl}
+  \vstr & ::= & \ident : \type \\
+  & | & \ident  \\
+  & | & \vstr \verb+,+ \vstr \\
+  & | & \verb+(+ \vstr \verb+)+\\
+  & | & \verb+(+\vstr {\tt ::} \term\verb+)+\\
+\end{array}
+\] The {\tt ::} syntax is used with restricted quantifiers to allow
+arbitrary predicates to restrict binding variables.  Further to the
+above, the default grammar also allows restricted quantification of
+all of a sequence of binding variables by putting the restriction at
+the end of the sequence, thus with a universal quantification: \[
+\forall x \, y \, z \, {\tt ::} \; P \, . \; Q(x,y,z)
+\] Here the predicate $P$ restricts all of $x$, $y$ and $z$.
+
+Also, in the term grammar a \charseq\ is just a finite sequence of
+characters.
+
+
+\section{Changes from older versions}
+
+This section of the manual documents the (extensive) changes made to
+the parsing of HOL terms and types in the Taupo release and beyond
+from the point of view of a user who doesn't want to know how to use
+the new facilities, but wants to make sure that their old code
+continues to work cleanly.
+
+The changes which may cause old terms to fail to parse are:
+\begin{itemize}
+\newcommand\condexp{\mbox{$p \; {\tt =>} \; q \; {\tt |} \; r$}}
+\item The precedence of type annotations has completely changed.  It
+  is now a very tight suffix (though with a precedence weaker than
+  that associated with function application), instead of a weak one.
+  This means that \mbox{\tt (x,y:bool \# bool)} should now be written
+  as \mbox{\tt (x,y):bool \# bool}. The previous form will now be
+  parsed as a type annotation applying to just the \verb+y+.  This
+  change brings the syntax of the logic closer to that of SML and
+  should make it generally easier to annotate tuples, as one can now
+  write \[ (x\,:\,\tau_1,\;y\,:\,\tau_2,\dots z\,:\,\tau_n)
+  \] instead of \[
+  (x\,:\,\tau_1, \;(y\,:\,\tau_2, \dots (z\,:\,\tau_n)))
+  \] where extra parentheses have had to be added just to allow one to
+  write a frequently occurring form of constraint.
+\item Most arithmetic operators are now left associative instead of
+  right associative.  In particular, $+$, $-$, $*$ and {\tt DIV} are
+  all left associative.  Similarly, the analogous operators in other
+  numeric theories such as {\tt integer} and {\tt real} are also left
+  associative.  This brings the HOL parser in line with standard
+  mathematical practice.
+\item The binding equality in {\tt let} expressions is treated exactly
+  the same way as equalities in other contexts.  In previous versions
+  of HOL, equalities in this context have a different, weak binding
+  precedence.  This difference can be seen in the following expression
+  which parses successfully in the old version:
+  \[ {\tt let} \; x \; = \; \condexp \; {\tt
+  in} \;Q \] In Taupo releases and later, this expression will not
+  parse because the conditional expression binds to the left more
+  weakly than the equality binds to the right, and the parser ends up
+  believing that the binding between the \verb+let+ and the \verb+in+
+  is not an equality after all, as it should be.
+\item Old style conditional expressions in the right half of set
+  comprehensions have to be parenthesised to avoid confusing the
+  parser.  Thus \[
+  \{ \; x \; | \; \condexp \; \}
+   \qquad\mbox{must be written} \qquad
+  \{ \; x \; | \; (\condexp) \; \}
+  \] Better yet, {\tt if}-{\tt then}-{\tt else} syntax could be used
+  for the conditional expression.
+\item Some lexical categories are more strictly policed.  String
+  literals (strings inside double quotes) and numerals can't be used
+  unless the relevant theories have been loaded.  Nor can these
+  literals be used as variables inside binding scopes.
+\end{itemize}
+
+\subsection{Error messages}
+
+When complete this subsection will document all of the possibly
+confusing error messages that the new parser and lexing code might
+generate.
+
+}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:
