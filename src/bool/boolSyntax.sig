@@ -32,7 +32,7 @@ sig
   val disjunction    : term
   val negation       : term
   val conditional    : term
-  val letc           : term
+  val let_tm         : term
   val arb            : term
 
   (* Construction routines *)

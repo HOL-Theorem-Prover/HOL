@@ -36,7 +36,7 @@ val conjunction = prim_mk_const {Name="/\\",  Thy="bool"};
 val disjunction = prim_mk_const {Name="\\/",  Thy="bool"};
 val negation    = prim_mk_const {Name="~",    Thy="bool"};
 val conditional = prim_mk_const {Name="COND", Thy="bool"};
-val letc        = prim_mk_const {Name="LET",  Thy="bool"};
+val let_tm      = prim_mk_const {Name="LET",  Thy="bool"};
 val arb         = prim_mk_const {Name="ARB",  Thy="bool"};
 
 
@@ -74,7 +74,7 @@ fun mk_cond (cond,larm,rarm) =
 
 fun mk_let (func,arg) =
  let val (dom,rng) = dom_rng (type_of func)
- in list_mk_comb(inst[alpha |-> dom, beta |-> rng] letc, [func,arg])
+ in list_mk_comb(inst[alpha |-> dom, beta |-> rng] let_tm, [func,arg])
  end handle HOL_ERR _ => raise ERR "mk_let" "";
 
 fun mk_arb ty = inst [alpha |-> ty] arb;
@@ -146,29 +146,20 @@ val is_arb      = can dest_arb;
  * Construction and destruction functions that deal with SML lists           *
  *---------------------------------------------------------------------------*)
 
-val list_mk_comb        = Term.list_mk_comb
-fun list_mk_abs(V,t)    = itlist(curry mk_abs) V t
-fun list_mk_exists(V,t) = itlist(curry mk_exists) V t
+val list_mk_comb        = HolKernel.list_mk_comb
+val list_mk_abs         = HolKernel.list_mk_abs
 fun list_mk_forall(V,t) = itlist(curry mk_forall) V t
-fun list_mk_imp(A,c)    = itlist(curry mk_imp) A c
+fun list_mk_exists(V,t) = itlist(curry mk_exists) V t
 val list_mk_conj        = end_itlist(curry mk_conj)
 val list_mk_disj        = end_itlist(curry mk_disj)
-fun gen_all tm          = list_mk_forall (free_vars tm, tm);
+fun list_mk_imp(A,c)    = itlist(curry mk_imp) A c
 
-
-local val destc = total dest_comb
-in
-fun acc_strip_comb rands M =
-  case destc M
-   of NONE => (M, rands)
-    | SOME(Rator,Rand) => acc_strip_comb (Rand::rands) Rator 
-
-val strip_comb = acc_strip_comb []
-end
-
-val strip_abs    = strip_binder (total dest_abs)
+val strip_comb   = HolKernel.strip_comb
+val strip_abs    = HolKernel.strip_abs
 val strip_forall = strip_binder (total dest_forall)
 val strip_exists = strip_binder (total dest_exists)
+val strip_conj   = strip_binop  (total dest_conj)
+val strip_disj   = strip_binop  (total dest_disj)
 
 val strip_imp =
   let val desti = total dest_imp
@@ -179,23 +170,7 @@ val strip_imp =
   in strip []
   end;
 
-val strip_conj =
-  let val destc = total dest_conj   
-      fun strip A M =
-        case destc M
-         of NONE => List.rev (M::A)
-          | SOME(conj1,conj2) => strip (conj1::A) conj2
-  in strip []
-  end;
-
-val strip_disj =
-  let val destd = total dest_disj 
-      fun strip A M =
-        case destd M
-         of NONE => List.rev (M::A)
-          | SOME(disj1,disj2) => strip (disj1::A) disj2
-  in strip []
-  end;
+fun gen_all tm = list_mk_forall (free_vars tm, tm);
 
 
 (*---------------------------------------------------------------------------*
@@ -203,15 +178,8 @@ val strip_disj =
  * Michael Norrish - December 1999                                           *
  *---------------------------------------------------------------------------*)
 
-fun list_mk_fun (dtys, rty) = List.foldr op--> rty dtys
-
-local fun strip acc ty = 
-        case total dom_rng ty
-         of SOME(dom,rng) => strip (dom::acc) rng
-          | NONE => (List.rev acc,ty)
-in
-val strip_fun = strip []
-end
+val list_mk_fun = HolKernel.list_mk_fun;
+val strip_fun   = HolKernel.strip_fun
 
 
 

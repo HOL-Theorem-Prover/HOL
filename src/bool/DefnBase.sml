@@ -16,17 +16,17 @@ datatype defn
    | PRIMREC of {eqs:thm, ind:thm, bind:string}
    | NONREC  of {eqs:thm, ind:thm, stem:string}
    | STDREC  of {eqs:thm, ind:thm, R:term,SV:term list,stem:string}
+   | MUTREC  of {eqs:thm, ind:thm, R:term,SV:term list,stem:string,union:defn}
    | NESTREC of {eqs:thm, ind:thm, R:term,SV:term list,stem:string,aux:defn}
-   | MUTREC  of {eqs:thm, ind:thm, R:term,SV:term list,stem:string,union:defn};
 
 
 local open Portable
-      fun kind (ABBREV _) = "abbreviation"
+      fun kind (ABBREV _)  = "abbreviation"
         | kind (NONREC  _) = "non-recursive"
         | kind (STDREC  _) = "recursive"
         | kind (PRIMREC _) = "primitive recursion"
-        | kind (NESTREC _) = "nested recursion"
         | kind (MUTREC  _) = "mutual recursion"
+        | kind (NESTREC _) = "nested recursion"
 in
 fun pp_defn ppstrm = 
  let val {add_string,add_break,

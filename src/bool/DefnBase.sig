@@ -8,8 +8,8 @@ sig
    | PRIMREC of {eqs:thm, ind:thm, bind:string}
    | NONREC  of {eqs:thm, ind:thm, stem:string}
    | STDREC  of {eqs:thm, ind:thm, R:term,SV:term list,stem:string}
+   | MUTREC  of {eqs:thm, ind:thm, R:term,SV:term list,stem:string,union:defn}
    | NESTREC of {eqs:thm, ind:thm, R:term,SV:term list,stem:string,aux:defn}
-   | MUTREC  of {eqs:thm, ind:thm, R:term,SV:term list,stem:string,union:defn};
 
 
   val pp_defn : ppstream -> defn -> unit
