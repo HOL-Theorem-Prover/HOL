@@ -386,10 +386,10 @@ in
        normalise_eqs var) tm
     end handle HOL_ERR _ =>
       if is_divides tm then
-        (TRY_CONV (REWR_CONV (CONJUNCT2 INT_DIVIDES_NEG)) THENQC
+        (TRY_QCONV (REWR_CONV (CONJUNCT2 INT_DIVIDES_NEG)) THENQC
          RAND_CONV (collect_in_sum var) THENQC
          dealwith_negative_divides THENQC
-         RAND_CONV collect_up_other_freevars THENQC
+         RAND_CONV (TRY_QCONV (RAND_CONV collect_up_other_freevars)) THENQC
          REWRITE_CONV [INT_MUL_LZERO] THENQC REDUCE_CONV) tm
       else ALL_QCONV tm
     else ALL_QCONV tm
@@ -2352,8 +2352,8 @@ end tm
 
 fun finish_pure_goal tm =
     if is_exists tm then
-      (finish_pure_goal1 THENC obvious_improvements THENC
-       EVERY_DISJ_CONV finish_pure_goal) tm
+      (finish_pure_goal1 THENC
+       EVERY_DISJ_CONV (obvious_improvements THENC finish_pure_goal)) tm
     else REDUCE_CONV tm
 
 
@@ -2447,7 +2447,7 @@ fun counter_example tm = let
       if n > 0 then
         ((rule (SPEC zero_tm) ++ rule (SPEC tm100)) >>
          spec (n - 1))
-      else rule (SPEC one_tm) >> spec 0
+      else rule (SPEC one_tm) >> spec (n - 1)
     else
       rule (CONV_RULE REDUCE_CONV) >> test
   end th
@@ -2480,7 +2480,7 @@ fun decide_pure_presburger_term tm0 = let
     | EITHER => REDUCE_CONV tm
     | qsUNIV =>
         (move_quants_up THENC
-         (counter_example ORELSEC
+         ((* counter_example ORELSEC *)
           (flip_foralls THENC
            RAND_CONV pure_goal THENC REDUCE_CONV))) tm
     | qsEXISTS => (move_quants_up THENC pure_goal) tm
