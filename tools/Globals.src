@@ -12,8 +12,6 @@
 structure Globals :> Globals =
 struct
 
-open Portable;
-
 (*---------------------------------------------------------------------------*
  * Installation-specific information.                                        *
  *---------------------------------------------------------------------------*)
@@ -91,7 +89,7 @@ val term_pp_prefix = ref ""  and term_pp_suffix = ref ""
 (*---------------------------------------------------------------------------*
  * Tells the prettyprinters how wide the page is.                            *
  *---------------------------------------------------------------------------*)
-val linewidth = Portable.linewidth;
+val linewidth = ref 72;
 
 (*---------------------------------------------------------------------------*
  * Controls depth of printing for terms. Since the pp recursively decrements *
