@@ -12,6 +12,7 @@
 (*   Mon Oct  8 10:27:40 BST 2001 -- created file                            *)
 (*   Thu Nov  1 21:04:27 GMT 2001 -- updated for judgement assumptions       *)
 (*   Mon Nov  5 11:15:51 GMT 2001 -- updated documentation in comments       *)
+(*   Wed Nov  7 11:38:19 GMT 2001 -- changed to MachineTransitionTheory      *)
 (*                                                                           *)
 (*****************************************************************************)
 
@@ -20,7 +21,7 @@ load "pairLib";
 load "Pair_basic";
 load "numLib";
 load "PrimitiveBddRules";
-load "DerivedBddRulesTheory";
+load "MachineTransitionTheory";
 
 val _ = if not(bdd.isRunning()) then bdd.init 1000000 10000 else ();
 *)
@@ -689,8 +690,8 @@ fun TraceBack vm trl pth Rth =
       time
        (simpLib.SIMP_RULE
         boolSimps.bool_ss
-        [pairTheory.EXISTS_PROD,DerivedBddRulesTheory.Eq_def,pairTheory.PAIR_EQ,Rth])
-       (ISPECL[Rcon,``Eq ^s'``,s]DerivedBddRulesTheory.Prev_def)
+        [pairTheory.EXISTS_PROD,MachineTransitionTheory.Eq_def,pairTheory.PAIR_EQ,Rth])
+       (ISPECL[Rcon,``Eq ^s'``,s]MachineTransitionTheory.Prev_def)
      val _ = (TraceBackPrevThm := PrevTh)
      val PrevThTb = eqToTermBdd failfn vm PrevTh
      val _ = print "done.\nSimplified theorem is !TraceBackPrevThm\n";
