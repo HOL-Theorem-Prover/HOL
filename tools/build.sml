@@ -34,7 +34,7 @@ val SRCDIRS0 =
   "src/num/reduce/src", "src/num/arith/src","src/num", "src/IndDef",
   "src/datatype/parse", "src/datatype/equiv", "src/datatype/record",
   "src/datatype", "src/list/src", "src/tfl/src", "src/unwind",
-  "src/boss", "src/Boolify/src", "src/word32", "src/string",
+  "src/boss", "src/Boolify/src", "src/n_bit", "src/string",
   "src/llist", "src/pred_set/src", "src/path", "src/ring/src",
   "src/integer", "src/res_quan/src", "src/word/theories",
   "src/word/src", "src/finite_map", "src/hol88", "src/real",
