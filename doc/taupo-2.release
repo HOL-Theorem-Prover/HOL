@@ -18,6 +18,17 @@ Bugs fixed:
   * Hol_datatype failed in bizarre ways when constructor names were
     duplicated.  This error is now caught earlier and reported.
 
+  * Hol_datatype failed on nested recursive definitions when a type
+    variable in the attempted definition was the same as the variable
+    used as the range type of the recursive function in the recursion
+    theorem for the type under which the recursion was nested.
+
+  * Hol_datatype returned type axioms with poor choices of type
+    variables ('Z, 'Z0, 'Z1 etc)
+
+  * Type inference failed if it was required to guess more than 26
+    type variables.
+
 New theories:
 -------------
   * A theory of lazy lists
