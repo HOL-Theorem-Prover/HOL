@@ -20,7 +20,7 @@ struct
  open Parse relationTheory mesonLib;
 *)
 
-open HolKernel Parse boolLib relationTheory mesonLib Rsyntax;
+open HolKernel Parse boolLib relationTheory mesonLib;
 
 val _ = new_theory "pair";
 
@@ -257,8 +257,7 @@ val _ = save_thm("UNCURRY_ONE_ONE_THM",UNCURRY_ONE_ONE_THM);
 
 val pair_Axiom = Q.store_thm("pair_Axiom",
  `!f:'a->'b->'c. ?fn. !x y. fn (x,y) = f x y`,
- GEN_TAC THEN Q.EXISTS_TAC`UNCURRY f` THEN
- REWRITE_TAC[UNCURRY_DEF]);
+ GEN_TAC THEN Q.EXISTS_TAC`UNCURRY f` THEN REWRITE_TAC[UNCURRY_DEF]);
 
 (* -------------------------------------------------------------------------*)
 (*   UNCURRY_CONG =                                                         *)
@@ -425,6 +424,40 @@ val FORALL_UNCURRY = store_thm(
     ALL_TAC
   ] THEN
   SRW_TAC [][FORALL_PROD, FST, SND]);
+
+(* --------------------------------------------------------------------- *)
+(* A nice theorem from Tom Melham, lifted from examples/lambda/ncScript  *)
+(* States ability to express a function:                                 *)
+(*                                                                       *)
+(*    h : A -> B x C                                                     *)
+(*                                                                       *)
+(* as the combination h = <f,g> of two component functions               *)
+(*                                                                       *)
+(*   f : A -> B   and   g : A -> C                                       *)
+(*                                                                       *)
+(* --------------------------------------------------------------------- *)
+
+val PAIR_FUN_THM = Q.store_thm
+("PAIR_FUN_THM",
+ `!P. (?!f:'a->('b#'c). P f) = 
+      (?!p:('a->'b)#('a->'c). P(\a.(FST p a, SND p a)))`,
+RW_TAC bool_ss [EXISTS_UNIQUE_THM] 
+ THEN EQ_TAC THEN RW_TAC bool_ss []
+ THENL
+  [Q.EXISTS_TAC `FST o f, SND o f`
+    THEN RW_TAC bool_ss [FST,SND,combinTheory.o_THM,PAIR,ETA_THM],
+   STRIP_ASSUME_TAC (Q.ISPEC `p:('a -> 'b) # ('a -> 'c)` ABS_PAIR_THM) THEN 
+   STRIP_ASSUME_TAC (Q.ISPEC `p':('a -> 'b) # ('a -> 'c)` ABS_PAIR_THM) 
+    THEN RW_TAC bool_ss [] 
+    THEN RULE_ASSUM_TAC (REWRITE_RULE [FST,SND])
+    THEN ``(\a:'a. (q a:'b,r a:'c)) = (\a:'a. (q' a:'b,r' a:'c))`` via RES_TAC
+    THEN simpLib.FULL_SIMP_TAC bool_ss [FUN_EQ_THM,PAIR_EQ],
+   PROVE_TAC[],
+   Q.PAT_ASSUM `$! M`
+      (MP_TAC o Q.SPECL [`(FST o f, SND o f)`, `(FST o y, SND o y)`])
+     THEN RW_TAC bool_ss [FST,SND,combinTheory.o_THM,
+                          PAIR,PAIR_EQ,FUN_EQ_THM,ETA_THM]
+     THEN PROVE_TAC [PAIR_EQ,PAIR]]);
 
 (*---------------------------------------------------------------------------
        TFL support.
