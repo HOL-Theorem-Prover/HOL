@@ -346,7 +346,7 @@ in
   in
     (!term_printer) pps t
   end
-  val term_to_string = Portable.pp_to_string 75 pp_term
+  fun term_to_string t = Portable.pp_to_string (!Globals.linewidth) pp_term t;
   fun print_term t = Portable.output(Portable.std_out, term_to_string t);
 
   fun parse_preTerm q = let
@@ -556,6 +556,10 @@ in
   end
 
   fun temp_add_bare_numeral_form x = let
+    val _ =
+      Lib.mem "arithmetic" (current_theory() :: ancestry "-") orelse
+      raise ERROR "add_numeral_form"
+        ("Natural numbers not defined; try load \"arithmeticTheory\"")
   in
     the_term_grammar := term_grammar.add_numeral_form (term_grammar()) x;
     term_grammar_changed := true
@@ -805,10 +809,12 @@ in
 
 
   fun temp_add_numeral_form (c, stropt) = let
+    val _ =
+      Lib.mem "arithmetic" (current_theory() :: ancestry "-") orelse
+      raise ERROR "add_numeral_form"
+        ("Natural numbers not defined; try load \"arithmeticTheory\"")
+
     val num_ty = Type.mk_type {Tyop = "num", Args = []}
-      handle HOL_ERR _ =>
-        raise ERROR "add_numeral_form"
-          "Can't add numeral forms without having natural numbers defined"
     val fromNum_type = Type.-->(num_ty, Type.mk_vartype("'a"))
     val num2num_ty = Type.-->(num_ty, num_ty)
     val (injectionfn_name, ifn_ty) =
@@ -816,12 +822,11 @@ in
         NONE => (nat_elim_term, num2num_ty)
       | SOME s => (s, type_of (#const (const_decl s)))
           handle HOL_ERR _ =>
-            raise ERROR "add_numeral_form"
-              ("Couldn't find a constant with name "^s)
+            raise ERROR "add_numeral_form" ("No constant with name "^s)
   in
+    temp_add_bare_numeral_form (c, stropt);
     temp_allow_for_overloading_on (fromNum_str, fromNum_type);
-    temp_overload_on_by_nametype (fromNum_str, injectionfn_name, ifn_ty);
-    temp_add_bare_numeral_form (c, stropt)
+    temp_overload_on_by_nametype (fromNum_str, injectionfn_name, ifn_ty)
   end
 
   fun add_numeral_form (c, stropt) = let
