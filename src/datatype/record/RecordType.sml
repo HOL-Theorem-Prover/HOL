@@ -10,6 +10,10 @@ struct
 
 local open HolKernel Parse basicHol90Lib
       infix THEN
+
+fun map3 f ([], _, _) = []
+  | map3 f (x::xs, ys, zs) = f (x, hd ys, hd zs) :: map3 f (xs, tl ys, tl zs)
+
 fun insert n e l =
     if n < 1 then raise Fail "Bad position to insert at" else
     if n = 1 then e::l else (hd l)::(insert (n-1) e (tl l));
@@ -115,40 +119,36 @@ fun foldl f zero []      = zero
 (* an imperative style, as its result is not as important as the side *)
 (* effect it brings about in the state.                               *)
 in
-  fun create_record typename fieldtypelist =
-    let
-      infix com
-      open Psyntax
-      fun l1 com l2 = zip l1 l2
-      val app2 = C (curry op^)
-      val (fields, types) = split fieldtypelist
-      val typestrs = map (fn x => "("^(type2string x)^")") types
-      fun arrowapp x y = x^" => "^y
-      val typestr  = foldl arrowapp (hd typestrs) (tl typestrs)
-      val cons_str = typename
-      val initial_string = typename^" = "^cons_str^" of "
-      val deftyp_str = initial_string^typestr;
-      val _ = Datatype.Hol_datatype [QUOTE deftyp_str]
-      val tyinfo = valOf (TypeBase.read typename)
-      val typthm = TypeBase.axiom_of tyinfo
+  fun create_record typename fieldtypelist = let
+    open Psyntax
+    val app2 = C (curry op^)
+    val (fields, types) = split fieldtypelist
+    val typthm =
+      Define_type.dtype {save_name = typename^"_Axiom",
+                         ty_name = typename,
+                         clauses = [{constructor = typename,
+                                     args = map SOME types,
+                                     fixity = Prefix}]}
+    val type_case_def = Prim_rec.define_case_constant typthm
+    val tyinfo = TypeBase.gen_tyinfo {ax = typthm, case_def = type_case_def}
 
-      (* we now have the type actually defined in typthm *)
-      fun letgen x y = x @ [variant x (Psyntax.mk_var (app_letter y,y))]
-      val typeletters = foldl letgen [] types
-      val typ = mk_type (typename, Lib.mk_set(Type.type_varsl types))
+    (* we now have the type actually defined in typthm *)
+    fun letgen x y = x @ [variant x (Psyntax.mk_var (app_letter y,y))]
+    val typeletters = foldl letgen [] types
+    val typ = mk_type (typename, Lib.mk_set(Type.type_varsl types))
 
-      (* now generate accessor functions *)
-      val accfn_types = map (fn x => mk_type("fun",[typ, x])) types
-      fun funemup x y = mk_type("fun",[x,y])
-      val constype = foldr funemup typ types
-      val constructor = Psyntax.mk_const(cons_str, constype)
-      local
-        fun constructor_args [] =
-          let fun mkarb typ = Psyntax.mk_const("ARB", typ) in
-            map mkarb types
-          end |
-          constructor_args ((f,t)::xs) =
-          let val rest = constructor_args xs
+    (* now generate accessor functions *)
+    val accfn_types = map (fn x => Type.-->(typ, x)) types
+    val constype = List.foldr Type.--> typ types
+    val constructor = Psyntax.mk_const(typename, constype)
+    local
+      fun constructor_args [] = let
+        fun mkarb typ = Psyntax.mk_const("ARB", typ)
+      in
+        map mkarb types
+      end
+        | constructor_args ((f,t)::xs) = let
+            val rest = constructor_args xs
             val posn = findi f fields handle _ =>
               raise Fail "Bad field name"
           in
@@ -159,61 +159,60 @@ in
           list_mk_comb(constructor, constructor_args ftl)
       end
       val cons_comb = list_mk_comb(constructor,  typeletters)
-      val access_defn_strs =
-        map2 (fn (fldname,typeletter) => fn accfn_type =>
-      (--`^(Psyntax.mk_var(fldname,accfn_type)) ^cons_comb = ^typeletter`--))
-        (fields com typeletters) accfn_types
+      val access_fn_names = map (fn n => typename^"_"^n) fields
+      val access_defn_terms =
+        map3 (fn (afn_name, typeletter, accfn_type) =>
+              mk_eq(mk_comb(mk_var(afn_name, accfn_type),
+                            cons_comb),
+                    typeletter))
+        (access_fn_names, typeletters, accfn_types)
       val access_defns =
-        map2 (fn x => fn y =>
-              Rsyntax.new_recursive_definition
-              {def = y, fixity = Prefix, name = x, rec_axiom = typthm})
-        fields access_defn_strs
+        ListPair.map
+        (fn (name, tm) => Rsyntax.new_recursive_definition
+         {def = tm, fixity = Prefix, name = name, rec_axiom = typthm})
+        (access_fn_names, access_defn_terms)
       val accessor_thm =
         save_thm(typename^"_accessors", LIST_CONJ access_defns)
-      val accfn_terms = map2 (fn name => fn typ =>
-                              Psyntax.mk_const (name, typ)) fields accfn_types
+      val accfn_terms = ListPair.map mk_const (access_fn_names, accfn_types)
 
       (* now generate update functions *)
       val update_type = mk_type("fun", [typ,typ])
       val update_pairs = gen_update_pairs typeletters
-      val updfn_names = map (app2 "_update") fields
+      val updfn_names = map (fn s => s^ "_update") access_fn_names
       val updfn_terms =
-        map2 (fn n => fn t => Psyntax.mk_var(n,mk_type("fun",[t,update_type])))
-        updfn_names types
-      val updfn_defn_strs =
-        map2 (fn updfn_term => fn (newvar,newvlist) =>
-              (--`^updfn_term ^newvar ^cons_comb =
-               ^(list_mk_comb(constructor, newvlist))`--))
-        updfn_terms update_pairs
+        ListPair.map (fn (n, t) => mk_var(n,Type.-->(t,update_type)))
+        (updfn_names, types)
+      val updfn_defn_terms =
+        ListPair.map
+        (fn (updfn_term, (newvar,newvlist)) =>
+         mk_eq (list_mk_comb(updfn_term, [newvar, cons_comb]),
+                list_mk_comb(constructor, newvlist)))
+        (updfn_terms, update_pairs)
       val updfn_defns =
-        map2 (fn x => fn y =>
-              Rsyntax.new_recursive_definition
-              {fixity    = Prefix,
-               rec_axiom = typthm,
-               name      = x,
-               def       = y})
-        updfn_names updfn_defn_strs
+        ListPair.map
+        (fn (name, tm) =>
+         Rsyntax.new_recursive_definition
+         {fixity = Prefix, rec_axiom = typthm, name = name, def = tm})
+        (updfn_names, updfn_defn_terms)
       val updfn_thm =
         save_thm(typename^"_updates",  LIST_CONJ updfn_defns)
       (* updfn_terms is a list of variables, not constants, so we need to *)
       (* convert them into constants                                      *)
-      val updfn_terms = map (Psyntax.mk_const o dest_var) updfn_terms
+      val updfn_terms = map (mk_const o dest_var) updfn_terms
 
       (* generate functional update functions *)
       (* these are of the form :
        field_fupd f o = field_update (f (field o)) o
        *)
-      val fupd_names = map (app2 "_fupd") fields
-      val fupd_fun_types = map (fn t => mk_type("fun",[t,t])) types
-      val fupd_types =
-        map (fn t => mk_type("fun", [t,update_type])) fupd_fun_types
-      val fupd_terms = map2 (curry Psyntax.mk_var) fupd_names fupd_types
-      fun combine fld (fldupd, fldfupd) =
+      val fupd_names = map (fn s => s ^ "_fupd") access_fn_names
+      val fupd_fun_types = map (fn t => Type.-->(t,t)) types
+      val fupd_types = map (fn t => Type.-->(t, update_type)) fupd_fun_types
+      val fupd_terms = ListPair.map mk_var (fupd_names, fupd_types)
+      fun combine (fld, fldupd, fldfupd) =
         (--`^fldfupd f x = ^fldupd (f (^fld x)) x`--)
-      val fupd_def_terms =
-        map2 combine accfn_terms (updfn_terms com fupd_terms)
-      fun combine fn_name def = new_definition(fn_name,def)
-      val fupdfn_thms = map2 combine fupd_names fupd_def_terms
+      val fupd_def_terms = map3 combine (accfn_terms, updfn_terms, fupd_terms)
+      val fupdfn_thms =
+        ListPair.map new_definition (fupd_names, fupd_def_terms)
       val fupdfn_thm =
         save_thm(typename^"_fn_updates", LIST_CONJ fupdfn_thms)
 
@@ -226,17 +225,13 @@ in
       val var = Psyntax.mk_var(app_letter typ, typ)
       val tactic = STRUCT_CASES_TAC (SPEC var cases_thm) THEN
                 REWRITE_TAC [accessor_thm,updfn_thm]
-      val accessfn_terms =
-        map2 (fn name => fn t =>
-              Psyntax.mk_const (name,mk_type("fun",[typ,t])))
-        fields types
-      val combinations = crosslessdiag accessfn_terms updfn_terms
+      val combinations = crosslessdiag accfn_terms updfn_terms
       fun create_goal (acc, upd) =
         (--`^acc (^upd x ^var) = ^acc ^var`--)
       val goals = map create_goal combinations
       val diag_goals =
         map2 (fn acc => fn upd => (--`^acc (^upd x ^var) = x`--))
-        accessfn_terms updfn_terms
+        accfn_terms updfn_terms
       val thms = map (C (curry prove) tactic) (goals@diag_goals)
       val accupd_thm =
         save_thm(typename^"_accupds", LIST_CONJ (map GEN_ALL thms))
@@ -244,7 +239,7 @@ in
       (* do updates of access theorems *)
       (* theorems of the form: fld_upd (fld r) r = r *)
       fun mk_accfn_and_arg t = mk_comb(t,var)
-      val accessfns_and_args = map mk_accfn_and_arg accessfn_terms
+      val accessfns_and_args = map mk_accfn_and_arg accfn_terms
       val map_mk_comb = curry Psyntax.mk_comb
       val lhses = map2 map_mk_comb updfn_terms accessfns_and_args
       val goals = map (fn t => (--`^t ^var = ^var`--)) lhses
@@ -297,19 +292,15 @@ in
 
       val oneone_thm = valOf (TypeBase.one_one_of tyinfo)
 
-      fun prove_semi11 str =
-        let
-          val upd_str = str^"_update"
-          val upd_t = Psyntax.mk_const(upd_str, get_const_type upd_str)
-          fun tac s = STRUCT_CASES_TAC (SPEC (Psyntax.mk_var(s,typ)) cases_thm)
-        in
-          store_thm(str^"_upd_semi11",
-                    --`!x y r1 r2. (^upd_t x r1 = ^upd_t y r2) ==>
-                                   (x = y)`--,
-                    REPEAT GEN_TAC THEN MAP_EVERY tac ["r1", "r2"] THEN
-                    REWRITE_TAC [updfn_thm, oneone_thm] THEN STRIP_TAC)
+      fun prove_semi11 upd_t = let
+        fun tac s = STRUCT_CASES_TAC (SPEC (Psyntax.mk_var(s,typ)) cases_thm)
+      in
+        store_thm(#Name (Rsyntax.dest_const upd_t)^ "_semi11",
+                  --`!x y r1 r2. (^upd_t x r1 = ^upd_t y r2) ==> (x = y)`--,
+                  REPEAT GEN_TAC THEN MAP_EVERY tac ["r1", "r2"] THEN
+                  REWRITE_TAC [updfn_thm, oneone_thm] THEN STRIP_TAC)
         end
-      val _ = map prove_semi11 fields
+      val _ = map prove_semi11 updfn_terms
 
       (* add to the TypeBase's simpls entry for the record type *)
       val existing_simpls = TypeBase.simpls_of tyinfo
@@ -318,6 +309,18 @@ in
       val new_tyinfo =
         TypeBase.put_simpls (existing_simpls @ new_simpls) tyinfo
       val _ = TypeBase.write new_tyinfo
+
+      (* set up parsing for the record type *)
+      (* want to overload fieldnames as synonyms for the field functions,
+         by doing this before the add_record, this will make the overloading
+         resolution prefer the latter option. *)
+      fun do_accfn (name, tm) = let
+      in
+        Parse.allow_for_overloading_on (name, Type`:'a -> 'b`);
+        Parse.overload_on(name, tm)
+      end
+      val _ = ListPair.app do_accfn (fields, accfn_terms)
+      val _ = ListPair.app add_record_field (fields, accfn_terms)
 
     in
       {type_axiom = typthm,
