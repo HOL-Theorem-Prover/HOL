@@ -39,6 +39,6 @@ sig
   val known_constants : overload_info -> string list
 
   val remove_mapping :
-    {Name:string, Thy:string} -> string -> overload_info -> overload_info
+    string -> {Name:string, Thy:string} -> overload_info -> overload_info
 
 end

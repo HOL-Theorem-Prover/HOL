@@ -841,9 +841,7 @@ fun temp_clear_overloads_on s = let open term_grammar in
   the_term_grammar :=
     fupdate_overload_info
     (Overload.remove_overloaded_form s) (term_grammar());
-  case Term.decls s of
-    [] => ()
-  | (c::_) => temp_overload_on(s,c);
+  app (curry temp_overload_on s) (Term.decls s);
   term_grammar_changed := true
 end
 
@@ -851,6 +849,20 @@ fun clear_overloads_on s = let in
   temp_clear_overloads_on s;
   update_grms ("temp_clear_overloads_on", quote s)
 end
+
+fun temp_remove_ovl_mapping s crec = let open term_grammar in
+  the_term_grammar :=
+    fupdate_overload_info (Overload.remove_mapping s crec) (term_grammar())
+end
+
+fun remove_ovl_mapping s (crec as {Name,Thy}) = let
+in
+  temp_remove_ovl_mapping s crec;
+  update_grms ("(temp_remove_ovl_mapping "^quote s^")",
+               String.concat
+               [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"])
+end
+
 
 fun temp_add_record_field (fldname, term) = let
   val recfldname = recsel_special^fldname

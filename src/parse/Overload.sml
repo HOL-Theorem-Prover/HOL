@@ -256,9 +256,11 @@ fun merge_oinfos (O1:overload_info) (O2:overload_info) = let
           | GREATER => merge_cops (r2::acc) cop1s r2s
           | EQUAL => let
             in
-              HOL_MESG ("Merging overload information: "^
-                        "arbitrarily choosing to map "^
-                        #Thy (#1 r1)^"$"^ #Name (#1 r1)^" to "^ #2 r2);
+              if #2 r1 <> #2 r2 then
+                HOL_MESG ("Merging overload information: "^
+                          "arbitrarily choosing to map "^
+                          #Thy (#1 r1)^"$"^ #Name (#1 r1)^" to "^ #2 r2)
+              else ();
               merge_cops (r1::acc) r1s r2s
             end
         end
@@ -283,7 +285,7 @@ fun remove_omapping crec str oplist =
       else r::remove_omapping crec str rs
 
 
-fun remove_mapping crec str (oi:overload_info) =
+fun remove_mapping str crec (oi:overload_info) =
   (remove_omapping crec str (#1 oi),
    List.filter (fn (r,str') => r <> crec orelse str <> str') (#2 oi))
 
