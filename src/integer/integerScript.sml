@@ -1144,6 +1144,10 @@ val INT_EQ_RMUL =
 	      REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[INT_MUL_SYM] THEN
 	      MATCH_ACCEPT_TAC INT_EQ_LMUL);
 
+
+
+
+
 (*--------------------------------------------------------------------------*)
 (* Prove homomorphisms for the inclusion map                                *)
 (*--------------------------------------------------------------------------*)
@@ -2189,6 +2193,31 @@ val INT_MUL_DIV = store_thm(
   ]);
 
 (*----------------------------------------------------------------------*)
+(* Define divisibility                                                  *)
+(*----------------------------------------------------------------------*)
+
+val INT_DIVIDES = new_definition (
+  "INT_DIVIDES",
+  Term`int_divides p q = ?m:int. m * p = q`);
+val _ = set_fixity "int_divides" (Infixr 450);
+
+val INT_DIVIDES_MOD0 = store_thm(
+  "INT_DIVIDES_MOD0",
+  Term`!p q. p int_divides q =
+             ((q % p = 0) /\ ~(p = 0)) \/ ((p = 0) /\ (q = 0))`,
+  REWRITE_TAC [INT_DIVIDES] THEN REPEAT GEN_TAC THEN EQ_TAC THEN
+  STRIP_TAC THENL [
+    Cases_on `p = 0` THENL [
+      POP_ASSUM SUBST_ALL_TAC THEN POP_ASSUM (SUBST_ALL_TAC o SYM) THEN
+      REWRITE_TAC [INT_MUL_RZERO],
+      FIRST_X_ASSUM (SUBST_ALL_TAC o SYM) THEN
+      PROVE_TAC [INT_MOD_COMMON_FACTOR]
+    ],
+    PROVE_TAC [INT_MOD_EQ0],
+    ASM_REWRITE_TAC [INT_MUL_RZERO]
+  ]);
+
+(*----------------------------------------------------------------------*)
 (* Define exponentiation                                                *)
 (*----------------------------------------------------------------------*)
 
@@ -2408,4 +2437,28 @@ val INT_EQ_CALCULATE = save_thm(
   LIST_CONJ [INT_INJ, INT_EQ_NEG, int_eq_calculate]);
 
 (* val _ = Globals.show_numeral_types := true *)
+
+(* more theorems *)
+val int_cases = prove(
+  Term`!x:int. (?n. x = &n) \/ (?n. ~(n = 0) /\ (x = ~&n))`,
+  PROVE_TAC [INT_NUM_CASES]);
+
+val INT_DISCRETE = store_thm(
+  "INT_DISCRETE",
+  Term`!x:int y. ~(x < y /\ y < x + 1)`,
+  REPEAT GEN_TAC THEN
+  STRUCT_CASES_TAC (Q.SPEC `x` int_cases) THEN
+  STRUCT_CASES_TAC (Q.SPEC `y` int_cases) THENL [
+    REWRITE_TAC [INT_ADD, INT_LT, LESS_LESS_SUC, GSYM ADD1],
+    REWRITE_TAC [INT_LT_CALCULATE],
+    ASM_REWRITE_TAC [INT_LT_CALCULATE, INT_ADD_CALCULATE] THEN
+    `?m. n = SUC m` by PROVE_TAC [num_CASES] THEN POP_ASSUM SUBST_ALL_TAC THEN
+    REWRITE_TAC [ONE, LESS_MONO_EQ, SUB_MONO_EQ, LESS_EQ_MONO, SUB_0] THEN
+    COND_CASES_TAC THEN
+    REWRITE_TAC [INT_LT_CALCULATE, prim_recTheory.NOT_LESS_0],
+    REWRITE_TAC [INT_LT_CALCULATE, INT_ADD_CALCULATE] THEN
+    COND_CASES_TAC THEN ASM_REWRITE_TAC [INT_LT_CALCULATE] THEN
+    ASM_SIMP_TAC int_ss []
+  ]);
+
 val _ = export_theory();
