@@ -26,4 +26,4 @@ pdf:
 	pdflatex description.tex
 
 all:
-	make clean; make description; make index; make description; make pdf
+	make clean; make description; make index; make description; make pdf ps
