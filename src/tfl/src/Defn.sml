@@ -666,12 +666,14 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
          end
      val ng_thms = map nested_guard nested_guards
      val nested_ihs' = map (Rules.simpl_conv ng_thms) nested_ihs
-     fun disch_context thm = 
+     val nested_ihs''' = nested_ihs'
+(*     fun disch_context thm = 
           if length(hyp thm) = 2
           then DISCH (#ant(dest_imp(lhs (concl thm)))) thm
           else thm
      val nested_ihs'' = map disch_context nested_ihs'
      val nested_ihs''' = map (simplify [imp_elim]) nested_ihs''
+*)
      val ind0 = simplify nested_ihs''' aux_ind
      val ind1 = UNDISCH_ALL (SPEC R2 (GEN R1 (DISCH_ALL ind0)))
      val ind2 = simplify [GSYM def1] ind1
@@ -1041,7 +1043,7 @@ fun mk_defn stem eqns =
  in
   non_wfrec_defn (facts, defSuffix stem, eqns) 
   handle HOL_ERR _ 
-  => if 1 < length(all_fns eqns) 
+  => if 1 < length(all_fns eqns)
      then mutrec_defn (facts,stem,eqns) 
      else
      let val (tup_eqs,stem',untuple) = pairf(stem,eqns)
@@ -1246,7 +1248,7 @@ fun TC_INTRO_TAC defn =
      val E = eqns_of defn
      val I = Option.valOf (ind_of defn)
  in MATCH_MP_TAC
-       (REWRITE_RULE [boolTheory.AND_IMP_INTRO]
+       (PURE_REWRITE_RULE [boolTheory.AND_IMP_INTRO]
              (GEN_ALL(DISCH_ALL (CONJ E I))))
  end;
 

@@ -18,7 +18,9 @@ fun simpl_conv thl =
   let open RW
       val RWC = Rewrite Fully 
                    (Simpls(std_simpls,thl), 
-                    Context([],DONT_ADD),Congs[],Solver always_fails)
+                    Context([],DONT_ADD),
+                    Congs[boolTheory.IMP_CONG],
+                    Solver always_fails)
       fun simpl tm =
        let val th = Conv.THENC(RWC, Conv.DEPTH_CONV GEN_BETA_CONV) tm
            val {lhs,rhs} = dest_eq(concl th)
@@ -27,6 +29,20 @@ fun simpl_conv thl =
   in simpl
   end;
 
+(*
+fun simpl_conv thl = 
+  let open RW
+      val RWC = Rewrite Fully 
+                   (Simpls(std_simpls,thl), 
+                    Context([],DONT_ADD),Congs[],Solver always_fails)
+      fun simpl tm =
+       let val th = Conv.THENC(RWC, Conv.DEPTH_CONV GEN_BETA_CONV) tm
+           val {lhs,rhs} = dest_eq(concl th)
+       in if (aconv lhs rhs) then th else TRANS th (simpl rhs)
+       end
+  in simpl
+  end;
+*)
 
 fun simplify thl = 
   let val rewrite = PURE_REWRITE_RULE thl
