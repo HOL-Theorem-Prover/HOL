@@ -168,22 +168,17 @@ first phase consisted in experiments with different ways of linking
 higher order logic (HOL) terms to binary decision diagrams (BDDs).
 These are described in the paper {\it Reachability programming in
 HOL98 using BDDs\/} \cite{tphols2000-Gordon}. The first release of
-\t{HolBddLib}, called now Version~1, consisted of an ad hoc collection
-of tools developed for these experiments.  The positive results of
-Hasan Amjad \cite{Amjad:TPHOLs2001} have lead us to adopt an
-approaches based on a protected type of `BDD representation
-judgements', analogous to the LCF protected type of theorems.  The goal
-of \t{HolBddLib} Version~2, described here, is to use a kernel of representation
-judgement rules to provide core infrastructure for building
-`fully-expansive' or `LCF-style' combinations of HOL theorem proving
-and BDD-based symbolic calculation algorithms, like model checkers.
-
-Version~1 of {\tt{HolBddLib}} was more elaborate than Version~2
-because it mixed together code from a number of experiments.
-Version~2 narrows attention to the representation judgement approach,
-and provides a fixed set of `inference rules' that link terms to
-BDDs. All higher level tools, such as model checkers, are programmed
-in ML as `derived rules'.
+\t{HolBddLib}, now called Version~1, consisted of an ad hoc collection
+of tools developed for these experiments.  One of the approaches we
+experimented with was based on a protected type of `BDD representation
+judgements', analogous to the LCF protected type of theorems.
+Positive results of Hasan Amjad \cite{Amjad:TPHOLs2001} have lead us
+to narrow attention to just this approach. \t{HolBddLib} Version~2,
+which is described here, provides a set of representation judgement
+rules as core infrastructure for building `fully-expansive' or
+`LCF-style' combinations of HOL theorem proving and BDD-based symbolic
+calculation algorithms. All higher level tools, such as model
+checkers, are programmed in ML as `derived rules'.
 
 The primitive inference rules for representation judgements are in the structure
 {\tt{PrimitiveBddRules}}. A few example derived rules are in the
@@ -192,7 +187,10 @@ ones to compute reachable states and find sequences of transitions to
 states with given properties.  It is hoped to soon add a module for
 checking properties expressed in the modal $\mu$-calculus (and hence CTL).
 
-In {\tt{HolBddLib}} Version~1 there was a function, called
+
+Version~1 of {\tt{HolBddLib}} was more elaborate than Version~2
+because it mixed together code from a number of experiments.
+In Version~1 there was a function, called
 {\texttt{termToBdd}}, that tried to represent a \HOL{} term as a BDD
 using a dynamically extendable global table mapping \HOL{} terms to
 BDDs.  $\t{TermToBdd}$ constructed the BDD of a term $t$ using any
@@ -2123,8 +2121,7 @@ fun BddEqualTest tb1 tb2 = bdd.equal (getBdd tb1) (getBdd tb2);
 (*****************************************************************************)
 (* Test if the BDD part is TRUE or FALSE                                     *)
 (*****************************************************************************)
-$bnind&isTRUE%
-$bnind&isFALSE%
+$bnind&isTRUE%$bnind&isFALSE%
 fun isTRUE  tb = bdd.equal (getBdd tb) bdd.TRUE
 and isFALSE tb = bdd.equal (getBdd tb) bdd.FALSE;
 
@@ -2607,6 +2604,7 @@ sig
    Definition
    |- !x x1 x2 x3. IsTrace x x1 x2 x3 = IsTrace_tupled (x,x1,x2,x3)
    
+
 
 
 
