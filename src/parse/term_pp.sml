@@ -126,8 +126,12 @@ in
   mk_case(split_on, split)
 end
 
+val dollar_escape = ref true
 
+fun dollarise s = if !dollar_escape then "$" ^ s
+                  else "(" ^ s ^ ")"
 
+val _ = Feedback.register_btrace ("pp_dollar_escapes", dollar_escape);
 
 open term_pp_types
 fun grav_name (Prec(n, s)) = s | grav_name _ = ""
@@ -848,7 +852,8 @@ fun pp_term (G : grammar) TyG = let
           case rules of
             [LISTRULE _] => add_string n
           | _ =>
-              if isSome (Polyhash.peek spec_table n) then add_string ("$"^n)
+              if isSome (Polyhash.peek spec_table n) then
+                add_string (dollarise n)
               else add_string n
         end
     end
@@ -1138,7 +1143,7 @@ fun pp_term (G : grammar) TyG = let
           if isSome vrule then pr_sole_name vname (map #2 (valOf vrule))
           else
             if isSome (Polyhash.peek spec_table vname) then
-              add_string ("$"^vname)
+              add_string (dollarise vname)
             else
               add_string vname;
           if print_type then add_type() else ();

@@ -503,7 +503,9 @@ fun pop_pstack p = upd_stack p (tl (pstack p))
 fun push t (cs, p) = ((cs, push_pstack p t), SOME ())
 fun topterm (cs, p) =
   ((cs, p), List.find (is_terminal o #1) (pstack p))
-fun pop (cs, p) = ((cs, pop_pstack p), SOME (top_pstack p))
+fun pop (cs, p) =
+    ((cs, pop_pstack p), SOME (top_pstack p))
+    handle Empty => ((cs, p), NONE)
 fun getstack (cs, p) = ((cs, p), SOME (pstack p))
 
 
@@ -980,21 +982,54 @@ fun parse_term (G : grammar) typeparser = let
             shift
         end
       | _ => shift
+    (* a "paren escape" is a CAML style escaping of what would otherwise
+       be a special token by parenthesising it.  Thus (/\) instead of $/\.
+       The analysis is done at this level rather than inside the lexer to
+       allow for white-space etc.  People will have to write ( * ) to escape
+       the multiplication symbol, because without the space, it will look like
+       a comment *)
+    val check_for_paren_escape = let
+      fun require (s:string option) =
+          getstack >-
+          (fn [] => fail
+            | (tt :: _ ) =>
+              (case tt of
+                 (Terminal (STD_HOL_TOK s'), _) =>
+                 (case s of NONE => pop >> return s'
+                          | SOME s'' => if s' = s'' then
+                                          pop >> return s'
+                                        else fail)
+               | _ => fail))
+    in
+      if input_term = STD_HOL_TOK ")" then
+          require NONE >-
+          (fn s =>
+              require (SOME "(") >>
+              shift >> pop >> invstructp >- (return o #1 o hd) >-
+              (fn vstate =>
+                  if vstate <> VSRES_VS then
+                    push (NonTerminal (VAR s), Token (Ident "XXX"))
+                  else
+                    push (NonTermVS [SIMPLE s], Token (Ident "XXX"))))
+      else fail
+    end
     val usual_action =
-      case Polyhash.peek prec_matrix (top, input_term) of
-        NONE => let
-        in
-          print ("Don't expect to find a "^STtoString G input_term^" in this "^
-                 "position after a "^STtoString G top^"\n");
-          fail
-        end
-      | SOME order => let
-        in
-          case order of
-            LESS => getstack >- less_action
-          | EQUAL => shift
-          | GREATER => do_reduction
-        end
+      check_for_paren_escape ++
+      (fn x =>
+          (case Polyhash.peek prec_matrix (top, input_term) of
+             NONE => let
+             in
+               print ("Don't expect to find a "^STtoString G input_term^
+                      " in this position after a "^STtoString G top^"\n");
+               fail
+             end
+           | SOME order => let
+             in
+               case order of
+                 LESS => getstack >- less_action
+               | EQUAL => shift
+               | GREATER => do_reduction
+             end) x)
   in
     case input_term of
       TypeColon => let
