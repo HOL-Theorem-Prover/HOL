@@ -87,17 +87,20 @@ local open Time
 in
   val timestamp : unit -> time = now
   val time_to_string : time -> string = toString
-  fun dest_time t : {sec : Int.int, usec : Int.int} =
-     let val sec = toSeconds t
-         val usec = toMicroseconds (t - fromSeconds sec)
+  fun dest_time t =
+     let val r = toReal t
+         val sec = Arbnum.floor (toReal t)
+         val sec_million = Arbnum.*(sec, Arbnum.fromInt 1000000)
+         val r_million = r * 1000000.0
+         val usec = Arbnum.-(Arbnum.floor r_million, sec_million)
      in
-        {sec = IntInf.toInt sec, usec = IntInf.toInt usec}
+        {sec=sec, usec=usec}
      end
-  fun mk_time {sec,usec} = fromSeconds sec + fromMicroseconds usec
+  fun mk_time {sec,usec} =
+      fromReal (Real.+(Arbnum.toReal sec, Arbnum.toReal usec / 1000000.0))
   fun time_eq (t1:time) t2 = (t1 = t2)
   fun time_lt (t1:time) t2 = Time.<(t1,t2)
 end
-
 
 (*---------------------------------------------------------------------------
     Pretty Printing
