@@ -69,7 +69,7 @@ val SRCDIRS =
   "src/llist", "src/integer", "src/res_quan/src",
   "src/set/src", "src/pred_set/src",  "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src",
-  "src/hol90", "src/finite_map", "src/real", "src/bag", "src/ring/src", 
+  "src/hol90", "src/finite_map", "src/real", "src/bag", "src/ring/src",
   "src/temporal/src", "src/temporal/smv.2.4.3", "src/BoyerMoore",
   "src/prob"]
   @
@@ -390,17 +390,6 @@ val _ =
         ]
   end;
 
-(*
-fun help mosmldir holdir =
- let open TextIO
-     val _ = echo "Setting up the help database Makefile."
-     val src    = Path.concat(holdir, "help/src/Makefile.dbase.src")
-     val target = Path.concat(holdir, "help/src/Makefile")
-  in
-     fill_holes (src,target)
-       ["MOSMLHOME=\n" -->  String.concat["MOSMLHOME=", mosmldir,"\n"]]
-  end;
-*)
-
+val _ = use (fullPath [holdir, "tools", "helpdb", "mk_helpdb.sml"]);
 
 val _ = print "\nFinished configuration!\n";
