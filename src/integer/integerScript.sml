@@ -79,7 +79,7 @@ val LT_ADD2 =
 (*                                                                          *)
 (* For some operator (written as infix &) and relation (~).                 *)
 (*                                                                          *)
-(* Theorems may be of the form |- ~ P or |- P, rather that equations, they  *)
+(* Theorems may be of the form |- ~ P or |- P, rather than equations, they  *)
 (* will be transformed to |- P = F and |- P = T automatically if needed.    *)
 (*                                                                          *)
 (* Note that terms not cancelled will remain in their original order, but   *)
@@ -101,12 +101,11 @@ fun CANCEL_CONV (assoc,sym,lcancelthms) tm =
       val mk_binop = ((curry mk_comb) o (curry mk_comb binop))
       val list_mk_binop = end_itlist mk_binop
 
-      fun rmel i []     = []
-	| rmel i (h::t) = if (i = h) then t else h::(rmel i t)
+      fun rmel i list = op_set_diff aconv list [i]
 
       val (_,[l1,r1]) = (assert (curry op= eqop) ## I) (strip_comb tm)
       val [l, r] = map strip_binop [l1, r1]
-      val i = intersect l r
+      val i = op_intersect aconv l r
   in
       if i = [] then raise Fail ""
       else
@@ -268,9 +267,8 @@ val TINT_LDISTRIB =
     store_thm
     ("TINT_LDISTRIB",
      Term `!x y z. x tint_mul (y tint_add z) =
-     (x tint_mul y) tint_add (x tint_mul z)`,
-     REPEAT GEN_PAIR_TAC
-     THEN
+                   (x tint_mul y) tint_add (x tint_mul z)`,
+     REPEAT GEN_PAIR_TAC THEN
      REWRITE_TAC[tint_mul, tint_add,pairTheory.PAIR_EQ, LEFT_ADD_DISTRIB]
      THEN CANCEL_TAC);
 
