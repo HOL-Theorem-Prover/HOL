@@ -1,7 +1,6 @@
 signature Induction =
 sig
-  type term = Term.term
-  type thm  = Thm.thm
+  include Abbrev
   type thry = TypeBase.typeBase
 
    val mk_induction 

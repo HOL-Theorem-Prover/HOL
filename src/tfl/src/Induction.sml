@@ -1,7 +1,7 @@
 structure Induction :> Induction =
 struct
 
-open HolKernel boolLib Rules wfrecUtils Rsyntax;
+open HolKernel boolLib Rules wfrecUtils;
 
 type thry = TypeBase.typeBase
 
@@ -18,7 +18,7 @@ case TypeBase.get db s
                        constructors = TypeBase.constructors_of facts}
   | NONE => NONE
 
-(*------------------------  Miscellaneous function  --------------------------
+(* -----------------------  Miscellaneous function  --------------------------
  *
  *           [x_1,...,x_n]     ?v_1...v_n. M[v_1,...,v_n]
  *     -----------------------------------------------------------
@@ -35,7 +35,7 @@ case TypeBase.get db s
  * quantified variables as arguments to C. Since we have no control over this
  * aspect of the nchotomy theorem, we make the correspondence explicit by
  * pairing the incoming new variable with the term it gets beta-reduced into.
- *---------------------------------------------------------------------------*)
+ * ------------------------------------------------------------------------- *)
 
 local fun assoc1 eq item =
         let val eek = eq item
@@ -55,7 +55,7 @@ fun alpha_ex_unroll xlist tm =
       val args' = map foo args
       fun build ex [] = []
         | build ex (v::rst) =
-           let val ex1 = beta_conv(mk_comb{Rator=rand ex, Rand=v})
+           let val ex1 = beta_conv(mk_comb(rand ex, v))
            in ex1::build ex1 rst
            end
   in
@@ -74,25 +74,27 @@ end;
  *---------------------------------------------------------------------------*)
 
 fun ipartition gv (constructors,rows) =
-  let fun pfail s = raise ERR"partition.part" s
+  let fun pfail s = raise ERR"ipartition.part" s
       fun part {constrs = [],   rows = [],   A} = rev A
         | part {constrs = [],   rows = _::_, A} = pfail"extra cases in defn"
         | part {constrs = _::_, rows = [],   A} = pfail"cases missing in defn"
         | part {constrs = c::crst, rows,     A} =
-          let val {Name,Ty} = dest_const c
+          let val {Name,Thy,Ty} = dest_thy_const c
               val (L,_) = strip_fun_type Ty
               fun func (row as (p::rst, rhs)) (in_group,not_in_group) =
                         let val (pc,args) = strip_comb p
-                        in if (#Name(dest_const pc) = Name)
-                            then ((args@rst, rhs)::in_group, not_in_group)
-                            else (in_group, row::not_in_group)
+                            val {Name=nm,Thy=thyn,...} = dest_thy_const pc
+                        in if (nm,thyn) = (Name,Thy)
+                             then ((args@rst, rhs)::in_group, not_in_group)
+                             else (in_group, row::not_in_group)
                         end
                 | func _ _ = pfail "func" ""
               val (in_group, not_in_group) = itlist func rows ([],[])
               val col_types = #1(wfrecUtils.gtake type_of
                                    (length L, #1(Lib.trye hd in_group)))
           in
-          part{constrs = crst, rows = not_in_group,
+          part{constrs = crst, 
+               rows = not_in_group,
                A = {constructor = c,
                     new_formals = map gv col_types,
                     group = in_group}::A}
@@ -126,7 +128,7 @@ fun mk_case ty_info FV thy =
           in mk{path=rstp, rows=zip pat_rectangle' rights'}
           end
      else               (* column 0 is all constructors *)
-     let val ty_name = (#Tyop o dest_type o type_of) p
+     let val ty_name = (fst o dest_type o type_of) p
      in
      case ty_info ty_name
       of NONE => fail("Not a known datatype: "^ty_name)
@@ -157,67 +159,42 @@ fun mk_case ty_info FV thy =
  in mk
  end;
 
+
 type row = term list * (thm * (term, term) subst)
 
+(*---------------------------------------------------------------------------
+    The fourth argument to "mk_case" says whether we are generating the
+    case theorem from a set of patterns or from a type. Probably the
+    first could be subsumed in the second, but in our implementation,
+    generation from patterns came first.
+ ---------------------------------------------------------------------------*)
+ 
 fun complete_cases thy =
- let fun pmk_var n ty = mk_var{Name=n,Ty=ty}
-     val ty_info = induct_info thy
+ let val ty_info = induct_info thy
  in fn pats =>
- let val FV0 = free_varsl pats
-     val a = variant FV0 (pmk_var "a" (type_of(Lib.trye hd pats)))
-     val v = variant (a::FV0) (pmk_var "v" (type_of a))
-     val FV = a::v::FV0
-     val a_eq_v = mk_eq{lhs=a, rhs=v}
-     val ex_th0 = EXISTS (mk_exists{Bvar=v,Body=a_eq_v},a) (REFL a)
-     val th0    = ASSUME a_eq_v
-     val rows:row list = map (fn x => ([x], (th0,[]))) pats
- in
- GEN a (RIGHT_ASSOC
-          (CHOOSE(v, ex_th0)
-                (mk_case ty_info FV thy {path=[v], rows=rows})))
- end end;
+     let val FV0 = free_varsl pats
+         val a = variant FV0 (mk_var("a",type_of(Lib.trye hd pats)))
+         val v = variant (a::FV0) (mk_var("v",type_of a))
+         val FV = a::v::FV0
+         val a_eq_v = mk_eq(a,v)
+         val ex_th0 = EXISTS (mk_exists(v,a_eq_v),a) (REFL a)
+         val th0    = ASSUME a_eq_v
+         val rows:row list = map (fn x => ([x], (th0,[]))) pats
+     in
+       GEN a (RIGHT_ASSOC
+               (CHOOSE(v, ex_th0)
+                 (mk_case ty_info FV thy {path=[v], rows=rows})))
+     end 
+ end;
 
 
 (*---------------------------------------------------------------------------*
  * Constructing induction hypotheses: one for each recursive call.           *
  *---------------------------------------------------------------------------*)
 
-(*
 local nonfix ^ ;   infix 9 ^  ;     infix 5 ==>
-      fun (tm1 ^ tm2)   = mk_comb{Rator=tm1, Rand=tm2}
-      fun (tm1 ==> tm2) = mk_imp{ant=tm1, conseq=tm2}
-      val /\ = list_mk_conj
-in
-fun build_ih f (P,R,SV) (pat,TCs) =
- let val pat_vars = free_vars_lr pat
-     val globals = (if is_var R then [R] else [])@pat_vars@SV
-     fun nested tm = can(find_term (aconv f)) tm handle _ => false
-     fun dest_TC tm =
-         let val (cntxt,R_y_pat) = wfrecUtils.strip_imp(#2(strip_forall tm))
-             val (R,y,_) = wfrecUtils.dest_relation R_y_pat
-             val P_y     = if nested tm then R_y_pat ==> P^y else P^y
-         in case cntxt
-             of [] => (P_y, (tm,[]))
-              | _  => let
-                    val imp = /\cntxt ==> P_y
-                    val lvs = op_set_diff aconv (free_vars_lr imp) globals
-                    val locals = #2(pluck (aconv P) lvs) handle _ => lvs
-                  in (list_mk_forall(locals,imp), (tm,locals)) end
-         end
- in case TCs
-     of [] => (list_mk_forall(pat_vars, P^pat), [])
-      |  _ => let val (ihs, TCs_locals) = unzip(map dest_TC TCs)
-                  val ind_clause = /\ihs ==> P^pat
-              in
-                 (list_mk_forall(pat_vars,ind_clause), TCs_locals)
-              end
- end
-end;
-*)
-
-local nonfix ^ ;   infix 9 ^  ;     infix 5 ==>
-      fun (tm1 ^ tm2)   = mk_comb{Rator=tm1, Rand=tm2}
-      fun (tm1 ==> tm2) = mk_imp{ant=tm1, conseq=tm2}
+      fun (tm1 ^ tm2)   = mk_comb(tm1, tm2)
+      fun (tm1 ==> tm2) = mk_imp(tm1, tm2)
       val /\ = list_mk_conj
       val diff = op_set_diff aconv
 in
@@ -255,10 +232,10 @@ end;
  *---------------------------------------------------------------------------*)
 
 fun prove_case f thy (tm,TCs_locals,thm) =
- let val antc = #ant(dest_imp tm)
+ let val antc = fst(dest_imp tm)
      val thm' = SPEC_ALL thm
      fun nested tm = can(find_term (aconv f)) tm handle HOL_ERR _ => false
-     fun get_cntxt TC = #ant(dest_imp(#2(strip_forall(concl TC))))
+     fun get_cntxt TC = fst(dest_imp(#2(strip_forall(concl TC))))
      fun mk_ih ((TC,locals),th2,nested) =
          GENL locals
             (if nested
@@ -286,10 +263,6 @@ fun prove_case f thy (tm,TCs_locals,thm) =
  end;
 
 
-fun combize M N = mk_comb{Rator=M,Rand=N};
-fun eq v tm = mk_eq{lhs=v,rhs=tm};
-
-
 (*---------------------------------------------------------------------------*
  * Input : f, R, SV, and  [(pat1,TCs1),..., (patn,TCsn)]                     *
  *                                                                           *
@@ -302,25 +275,23 @@ fun mk_induction thy {fconst, R, SV, pat_TCs_list} =
 let val Sinduction = UNDISCH (ISPEC R relationTheory.WF_INDUCTION_THM)
     val (pats,TCsl) = unzip pat_TCs_list
     val case_thm = complete_cases thy pats
-    val domain = (type_of o (Lib.trye hd)) pats
-    val P = variant (all_varsl (pats@flatten TCsl))
-                    (mk_var{Name="P", Ty=domain --> bool})
+    val domn = (type_of o (Lib.trye hd)) pats
+    val P = variant (all_varsl (pats@flatten TCsl)) (mk_var("P",domn-->bool))
     val Sinduct = SPEC P Sinduction
-    val Sinduct_assumf = rand ((#ant o dest_imp o concl) Sinduct)
+    val Sinduct_assumf = rand ((fst o dest_imp o concl) Sinduct)
     val Rassums_TCl' = map (build_ih fconst (P,R,SV)) pat_TCs_list
     val (Rassums,TCl') = unzip Rassums_TCl'
     val Rinduct_assum = ASSUME (list_mk_conj Rassums)
-    val cases = map (beta_conv o combize Sinduct_assumf) pats
+    val cases = map (beta_conv o curry mk_comb Sinduct_assumf) pats
     val tasks = zip3 cases TCl' (CONJUNCTS Rinduct_assum)
     val proved_cases = map (prove_case fconst thy) tasks
-    val v = variant (free_varsl (map concl proved_cases))
-                    (mk_var{Name="v", Ty=domain})
-    val substs = map (SYM o ASSUME o eq v) pats
+    val v = variant (free_varsl (map concl proved_cases)) (mk_var("v",domn))
+    val substs = map (SYM o ASSUME o curry mk_eq v) pats
     val proved_cases1 = map2 (fn th => SUBS[th]) substs proved_cases
     val abs_cases = map Rules.LEFT_ABS_VSTRUCT proved_cases1
     val dant = GEN v (DISJ_CASESL (ISPEC v case_thm) abs_cases)
     val dc = MP Sinduct dant
-    val Parg_ty = type_of(#Bvar(dest_forall(concl dc)))
+    val Parg_ty = type_of(fst(dest_forall(concl dc)))
     val vars = map (wfrecUtils.vary[P]) (strip_prod_type Parg_ty)
     val dc' = itlist GEN vars (SPEC (fst(mk_vstruct Parg_ty vars)) dc)
 in
