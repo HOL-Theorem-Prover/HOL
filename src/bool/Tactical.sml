@@ -20,12 +20,19 @@ val ERR = mk_HOL_ERR "Tactical";
 
 
 (*---------------------------------------------------------------------------
- * TAC_PROOF (g,tac) uses tac to prove the goal g
+ * TAC_PROOF (g,tac) uses tac to prove the goal g. An alpha conversion 
+ * step needs to be done if the proof returns a theorem that is 
+ * alpha-equivalent but not equal to the goal. To be really precise,
+ * we should do this check in the hypotheses of the goal as well.
  *---------------------------------------------------------------------------*)
 
 fun TAC_PROOF (g,tac) =
    case tac g
-     of ([],p) => p []
+     of ([],p) => (let val thm = p []  
+                       val c = concl thm
+                   in if c = snd g then thm  
+                      else EQ_MP (ALPHA c (snd g)) thm
+                  end handle e => raise ERR "TAC_PROOF" "Can't alpha convert")
       |    _   => raise ERR "TAC_PROOF" "unsolved goals";
 
 
