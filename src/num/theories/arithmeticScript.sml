@@ -2909,6 +2909,28 @@ val LEAST_ELIM = store_thm(
           Q ($LEAST P)``,
   PROVE_TAC [LEAST_INTRO, LESS_LEAST]);
 
+val LEAST_EXISTS = store_thm
+  ("LEAST_EXISTS",
+   ``!p. (?n. p n) = (p ($LEAST p) /\ !n. n < $LEAST p ==> ~p n)``,
+   GEN_TAC
+   THEN MATCH_MP_TAC EQ_TRANS
+   THEN Q.EXISTS_TAC `?n. p n /\ (!m. m < n ==> ~p m)`
+   THEN CONJ_TAC
+   THENL [(Tactical.REVERSE EQ_TAC THEN1 PROVE_TAC [])
+          THEN REPEAT STRIP_TAC
+          THEN CCONTR_TAC
+          THEN (SUFF_TAC ``!n : num. ~p n`` THEN1 PROVE_TAC [])
+          THEN HO_MATCH_MP_TAC COMPLETE_INDUCTION
+          THEN PROVE_TAC [],
+          (Tactical.REVERSE EQ_TAC THEN1 PROVE_TAC [])
+          THEN STRIP_TAC
+          THEN PROVE_TAC [LESS_LEAST, LEAST_INTRO]]);
+
+val LEAST_EXISTS_IMP = store_thm
+  ("LEAST_EXISTS_IMP",
+   ``!p. (?n. p n) ==> (p ($LEAST p) /\ !n. n < $LEAST p ==> ~p n)``,
+   REWRITE_TAC [LEAST_EXISTS]);
+
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME
