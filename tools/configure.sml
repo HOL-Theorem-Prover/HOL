@@ -56,7 +56,7 @@ end;
 val SRCDIRS =
  ["src/portableML", "src/0", "src/parse",
   "src/bool", "src/basicHol90", "src/compute/src", "src/goalstack", "src/q",
-  "src/combin", "src/lite", "src/ho_match", "src/refute", "src/simp/src",
+  "src/combin", "src/refute", "src/simp/src",
   "src/meson/src", "src/relation", "src/pair/src", "src/sum", "src/one",
   "src/option", "src/num", "src/reduce/src", "src/arith/src", "src/list/src",
   "src/tree", "src/taut", "src/hol88", "src/ind_def/src", "src/IndDef",
