@@ -389,46 +389,79 @@ in
   myfind check_conj (cpstrip_conj tm)
 end
 
-fun rarest_var vars tm =
-    (* Finds the variable in the list vars that occurs least in
-       term tm.  Weights variables slightly higher for appearing earlier
-       in the list vars, this means that unnecessary swapping of existential
-       variables is avoided. Assume that all variables in term
-       and all the variables in the list are of type int.
-       Return SOME n, or NONE if vars is the empty list *)
-    case vars of
-      [] => NONE
-    | [x] => SOME x
-    | _ => let
-        open Binarymap
-        val bmap0 = mkDict String.compare
-        val increment = 1.0 / real (length vars)
-        val (init_bmap,_) =
-            List.foldr (fn (v,(m,r)) =>
-                           (insert(m,#1 (dest_var v), r), r + increment))
-                       (bmap0,0.0) vars
-        fun recurse (tm, bmap) =
-            case strip_comb tm of
-              (f, []) => let
-              in let
-                  val n = #1 (dest_var f)
-                in
-                  case peek(bmap, n) of
-                    NONE => bmap
-                  | SOME i => insert(bmap,n,i+1.0)
-                end handle HOL_ERR _ => bmap
-              end
-            | (_, args) => List.foldl recurse bmap args
-        val final_map = recurse (tm, init_bmap)
-        fun find_minimum (n,i,acc) =
-            case acc of
-              NONE => SOME(n,i)
-            | SOME(curn,curi) => if i < curi then SOME (n,i)
-                                 else acc
-        fun string_to_int_var n = mk_var(n,intSyntax.int_ty)
+fun best_var vars tm = let
+  (* Finds the variable in the list vars that occurs in term tm so as
+     to minimise the number of splits necessary if that variable was
+     chosen to eliminate.  The rating given to a variable is
+     the minimum of its a and b-var counts.
+
+     Weights variables slightly higher for appearing earlier in the
+     list vars, this means that unnecessary swapping of existential
+     variables is avoided. Assume that all variables in term and all
+     the variables in the list are of type int.  Return SOME n, or
+     NONE if vars is the empty list *)
+  fun assess_leaf v negp t = let
+    (* returns a-count and b-count for v in term t, with negp true if
+       term is under a negation *)
+    val (f, args) = strip_comb t
+    val (arg1, arg2) = (hd args, hd (tl args))
+    val c1 = sum_var_coeffs v arg1
+    val c2 = sum_var_coeffs v arg2
+    open Arbint
+  in
+    if c1 = c2 then (zero,zero)
+    else if same_const f less_tm then
+      if negp then
+        if Arbint.<(c1, c2) then (one,zero) else (zero,one)
+      else
+        if Arbint.<(c1, c2) then (zero,one) else (one,zero)
+    else (one,one)  (* must be an equality *)
+  end
+  fun assess negp map t = let
+    val (f, args) = strip_comb t
+  in
+    if same_const f boolSyntax.negation then assess (not negp) map (hd args)
+    else if same_const f boolSyntax.conjunction orelse
+            same_const f boolSyntax.disjunction
+    then
+      assess negp (assess negp map (hd args)) (hd (tl args))
+    else if is_const t then
+      (* happens when we have a vacuous quantification over true or false *)
+      map
+    else let
+        fun foldthis (v, map) = let
+          open Arbint
+          val (a,b) = assess_leaf v negp t
+          val (a0,b0) = Binarymap.find(map, v)
+              handle Binarymap.NotFound => (zero,zero)
+        in
+          Binarymap.insert(map, v, (a + a0, b + b0))
+        end
       in
-        Option.map (string_to_int_var o #1) (foldl find_minimum NONE final_map)
+        List.foldl foldthis map vars
       end
+  end
+  val initial_map = Binarymap.mkDict Term.compare
+in
+  case vars of
+    [] => NONE
+  | [x] => SOME x
+  | (v::vs) => let
+      val final_map = assess false initial_map tm
+      val start = (v, Arbint.min(Binarymap.find(final_map, v))
+                      handle Binarymap.NotFound => Arbint.zero)
+      fun findmin (v, acc as (minvar, minc)) = let
+        val vc = Arbint.min(Binarymap.find(final_map, v))
+                            handle Binarymap.NotFound => Arbint.zero
+      in
+        if Arbint.<=(vc, minc) then (v, vc) else acc
+      end
+    in
+      SOME (#1 (List.foldl findmin start vs))
+    end
+end
+
+
 
 fun pull_last_exists_to_top tm = let
   val (v, body) = dest_exists tm
@@ -499,7 +532,11 @@ fun finish_pure_goal1 tm = let
   val (div_constraints, others) = partition is_divides nonconstraints
   val divc_rhses = map (#2 o dest_divides) div_constraints
   val canonicalise_varsets = Listsort.sort Term.compare
-  val div_varsets = map (canonicalise_varsets o free_vars) divc_rhses
+  fun free_vars' t = (t, free_vars t)
+  fun nzero_coeffs (t, vlist) =
+      filter (fn v => sum_var_coeffs v t <> Arbint.zero) vlist
+  val div_varsets =
+      map (canonicalise_varsets o nzero_coeffs o free_vars') divc_rhses
 in
   case List.find (fn lst => length lst = 1) div_varsets of
     SOME vs => let
@@ -507,6 +544,7 @@ in
       val v = hd vs
     in
       push_exvar_to_bot v THENC
+      STRIP_QUANT_CONV (phase2_CONV v) THENC
       LAST_EXISTS_CONV simplify_constrained_disjunct THENC
       do_muls
     end
@@ -624,7 +662,7 @@ in
   else let
     val next_var =
       case find_equality body of
-        NONE => valOf (rarest_var vars body)
+        NONE => valOf (best_var vars body)
       | SOME v => v
   in
       push_exvar_to_bot next_var THENC

@@ -25,12 +25,8 @@ val false_tm = boolSyntax.F
 (* Generally applicable conversions                                       *)
 (* ---------------------------------------------------------------------- *)
 
-fun mk_abs_CONV var term = let
-  val rhs = Rsyntax.mk_abs {Body = term, Bvar = var}
-  val newrhs = Rsyntax.mk_comb {Rator = rhs, Rand = var}
-in
-  SYM (BETA_CONV newrhs)
-end
+fun mk_abs_CONV var term =
+  SYM (BETA_CONV (mk_comb(mk_abs(var,term), var)))
 
 fun UNBETA_CONV to_elim t = let
   (* find all instances of to_elim in t, and convert t
@@ -430,16 +426,16 @@ fun myEXISTS_OR_CONV tm = let
 in
   BINDER_CONV (BINOP_CONV (mk_abs_CONV v)) THENC
   REWR_CONV EXISTS_OR_THM THENC
-  BINOP_CONV (BINDER_CONV BETA_CONV)
+  BINOP_CONV (BINDER_CONV BETA_CONV (* THENC RAND_CONV (ALPHA_CONV v) *))
 end tm
 
 
 
-(* with ?x. p \/ q \/ r...          (with or's right associated)
+(* with ?x. p \/ q \/ r...
    expand to (?x. p) \/ (?x.q) \/ (?x.r) ...
 *)
 fun push_one_exists_over_many_disjs tm =
-  ((myEXISTS_OR_CONV THENC RAND_CONV push_one_exists_over_many_disjs) ORELSEC
+  ((EXISTS_OR_CONV THENC BINOP_CONV push_one_exists_over_many_disjs) ORELSEC
    ALL_CONV) tm
 
 
