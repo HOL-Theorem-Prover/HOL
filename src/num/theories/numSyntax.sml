@@ -2,7 +2,7 @@ structure numSyntax :> numSyntax =
 struct
   open HolKernel Abbrev;
 
-  local open arithmeticTheory whileTheory in end;
+  local open arithmeticTheory whileTheory numeralTheory in end;
 
   infix |->
   infixr -->
@@ -39,6 +39,7 @@ struct
   val funpow_tm    = prim_mk_const {Name="FUNPOW",  Thy="arithmetic"}
   val while_tm     = prim_mk_const {Name="WHILE",   Thy="while"}
   val least_tm     = prim_mk_const {Name="LEAST",   Thy="while"};
+  val divmod_tm    = prim_mk_const {Name="DIVMOD",  Thy="arithmetic"};
 
 
 (*---------------------------------------------------------------------------
@@ -75,6 +76,9 @@ struct
 
   fun mk_least P = 
       mk_comb(inst [alpha |-> fst(dom_rng(type_of P))] least_tm, P);
+
+  fun mk_divmod(m,n,a) = list_mk_comb(divmod_tm, [m,n,a]);
+
 
 (*---------------------------------------------------------------------------
           Destructors
@@ -120,7 +124,15 @@ struct
          if same_const while_tm whle
          then (P,g,x)
          else raise ERR "dest_while" "not an application of \"WHILE\""
-      | _ => raise ERR "dest_funpow" "not an application of \"WHILE\"";
+      | _ => raise ERR "dest_while" "not an application of \"WHILE\"";
+
+  fun dest_divmod tm =
+    case strip_comb tm
+     of (dm,[m,n,a]) =>
+         if same_const divmod_tm dm
+         then (m,n,a)
+         else raise ERR "dest_divmod" "not an application of \"divmod\""
+      | _ => raise ERR "dest_divmod" "not an application of \"divmod\"";
 
 
 (*---------------------------------------------------------------------------
@@ -144,8 +156,9 @@ struct
   val is_num_case = can dest_num_case
   val is_fact     = can dest_fact
   val is_funpow   = can dest_funpow
-  val is_while   = can dest_while
-  val is_least   = can dest_least
+  val is_while    = can dest_while
+  val is_least    = can dest_least
+  val is_divmod   = can dest_divmod
 
 
 (*---------------------------------------------------------------------------

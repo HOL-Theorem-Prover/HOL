@@ -2995,20 +2995,9 @@ val SUB_MOD = Q.store_thm
 
 (*---------------------------------------------------------------------------*)
 (* Calculating DIV and MOD by repeated subtraction. We define a              *)
-(* tail-recursive function DIVMOD by wellfounded recursion. Unfortunately,   *)
-(* TFL isn't available at this point (it uses pairs, but the natural number  *)
-(* theories don't) so we hand-roll the definition and induction theorem.     *)
-(* Note that using DIVMOD can be slow (dividing 4 billion by 2 will result   *)
-(* in 4 billion/2 invocations of subtraction). A faster version ala Knuth    *)
-(* would be good but probably heroic in its proof.                           *)
-(*                                                                           *)
-(* Ooops, I lied about pairs .... Duh. This stuff will be stuck here until   *)
-(* I figure out where DIVMOD should go (if anywhere).                        *)
-(*---------------------------------------------------------------------------*)
-
-(*---------------------------------------------------------------------------*)
-(* DIVMOD m n a = if n=0 then (0,0) else                                     *)
-(*                if m<n then (a,m) else DIVMOD (m-n) n (a+1)                *)
+(* tail-recursive function DIVMOD by wellfounded recursion. We hand-roll the *)
+(* definition and induction theorem, because, as of now, tfl is not          *)
+(* at this point in the build.                                               *)
 (*---------------------------------------------------------------------------*)
 
 val findq_lemma = prove(
@@ -3106,7 +3095,14 @@ val divmod_lemma = prove(
     PROVE_TAC [LESS_LESS_EQ_TRANS]
   ]);
 
-val divmod_thm = let
+(*---------------------------------------------------------------------------*)
+(* DIVMOD (a,m,n) = if n = 0 then (0,0) else                                 *)
+(*                  if m < n then (a, m) else                                *)
+(*                  let q = findq (1, m, n)                                  *)
+(*                  in DIVMOD (a + q, m - n * q, n)                          *)
+(*---------------------------------------------------------------------------*)
+
+val DIVMOD_THM = let
   open relationTheory pairTheory
   val M = ``\f (a,m,n). if n = 0 then (0,0)
                         else if m < n then (a, m)
@@ -3114,7 +3110,7 @@ val divmod_thm = let
                              in
                                f (a + q, m - n * q, n)``
   val measure = ``measure ((FST o SND) : num#num#num -> num)``
-  val defn = new_definition("divmod_def", ``divmod = WFREC ^measure ^M``)
+  val defn = new_definition("DIVMOD_DEF", ``DIVMOD = WFREC ^measure ^M``)
   val th0 = REWRITE_RULE [prim_recTheory.WF_measure]
                          (MATCH_MP WFREC_COROLLARY defn)
   val th1 = SIMP_RULE (srw_ss()) [RESTRICT_DEF, prim_recTheory.measure_thm]
@@ -3125,7 +3121,7 @@ val divmod_thm = let
        (let q = findq (1,m,n) in f q))``,
     SRW_TAC [][LET_THM, divmod_lemma])
 in
-  save_thm("divmod_thm", SIMP_RULE (srw_ss()) [lemma] th1)
+  save_thm("DIVMOD_THM", SIMP_RULE (srw_ss()) [lemma] th1)
 end
 
 (*---------------------------------------------------------------------------*)
@@ -3154,15 +3150,6 @@ val core_divmod_sub_lemma = prove(
     SIMP_TAC (srw_ss()) [AC MULT_COMM MULT_ASSOC]
   ]);
 
-val DIV_SUB = store_thm(
-  "DIV_SUB",
-  ``0 < n /\ n * q <= m ==> ((m - n * q) DIV n = m DIV n - q)``,
-  REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC DIV_UNIQUE THEN Q.EXISTS_TAC `m MOD n` THEN
-  Q.SUBGOAL_THEN `~(n = 0)` ASSUME_TAC THEN1 SRW_TAC [][NOT_ZERO_LT_ZERO] THEN
-  ASM_SIMP_TAC (srw_ss()) [DIVISION, RIGHT_SUB_DISTRIB, SUB_RIGHT_ADD,
-                           LE_MULT_RCANCEL, DIV_LE_X, core_divmod_sub_lemma]);
-
 val MOD_SUB = store_thm(
   "MOD_SUB",
   ``0 < n /\ n * q <= m ==> ((m - n * q) MOD n = m MOD n)``,
@@ -3172,19 +3159,26 @@ val MOD_SUB = store_thm(
   ASM_SIMP_TAC (srw_ss()) [RIGHT_SUB_DISTRIB, DIVISION, SUB_RIGHT_ADD,
                            LE_MULT_RCANCEL, DIV_LE_X, core_divmod_sub_lemma]);
 
+val DIV_SUB = store_thm(
+  "DIV_SUB",
+  ``0 < n /\ n * q <= m ==> ((m - n * q) DIV n = m DIV n - q)``,
+  REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC DIV_UNIQUE THEN Q.EXISTS_TAC `m MOD n` THEN
+  Q.SUBGOAL_THEN `~(n = 0)` ASSUME_TAC THEN1 SRW_TAC [][NOT_ZERO_LT_ZERO] THEN
+  ASM_SIMP_TAC (srw_ss()) [DIVISION, RIGHT_SUB_DISTRIB, SUB_RIGHT_ADD,
+                           LE_MULT_RCANCEL, DIV_LE_X, core_divmod_sub_lemma]);
 
-val divmod_correct = Q.store_thm (
-  "divmod_correct",
-  `!m n a. 0<n ==> (divmod (a,m,n) = (a + (m DIV n), m MOD n))`,
+val DIVMOD_CORRECT = Q.store_thm (
+  "DIVMOD_CORRECT",
+  `!m n a. 0<n ==> (DIVMOD (a,m,n) = (a + (m DIV n), m MOD n))`,
   HO_MATCH_MP_TAC COMPLETE_INDUCTION THEN
   SRW_TAC [DNF_ss][AND_IMP_INTRO] THEN
-  PURE_ONCE_REWRITE_TAC [divmod_thm] THEN
+  PURE_ONCE_REWRITE_TAC [DIVMOD_THM] THEN
   RW_TAC bool_ss [] THENL [
     METIS_TAC [LESS_REFL],
     METIS_TAC [LESS_REFL],
     METIS_TAC [LESS_DIV_EQ_ZERO,ADD_CLAUSES],
     METIS_TAC [LESS_MOD,ADD_CLAUSES],
-
     LET_ELIM_TAC THEN
     FIRST_X_ASSUM (Q.SPECL_THEN [`m - n * q`, `n`, `a + q`] MP_TAC) THEN
     ASM_SIMP_TAC (srw_ss()) [SUB_RIGHT_LESS] THEN
@@ -3218,9 +3212,9 @@ val divmod_correct = Q.store_thm (
 
 val DIVMOD_CALC = Q.store_thm
 ("DIVMOD_CALC",
- `(!m n. 0<n ==> (m DIV n = FST(divmod(0, m, n)))) /\
-  (!m n. 0<n ==> (m MOD n = SND(divmod(0, m, n))))`,
- SRW_TAC [][divmod_correct,ADD_CLAUSES]);
+ `(!m n. 0<n ==> (m DIV n = FST(DIVMOD(0, m, n)))) /\
+  (!m n. 0<n ==> (m MOD n = SND(DIVMOD(0, m, n))))`,
+ SRW_TAC [][DIVMOD_CORRECT,ADD_CLAUSES]);
 
 
 val _ = adjoin_to_theory
