@@ -4,9 +4,6 @@ open HolKernel boolLib bossLib Q Parse computeLib
      arithmeticTheory pairTheory onestepTheory word32Theory
      armTheory coreTheory lemmasTheory;
 
-infix 8 by;
-infix THEN THENC THENL ++;
- 
 (* -------------------------------------------------------- *)
 
 fun core_rws () =
@@ -40,9 +37,9 @@ fun core3_rws () =
      rws
 end;
 
-val CORE_CONV = CBV_CONV (core_rws ());
-val CORE2_CONV = CBV_CONV (core2_rws ());
-val CORE3_CONV = CBV_CONV (core3_rws ());
+val CORE_CONV = WEAK_CBV_CONV (core_rws ());
+val CORE2_CONV = WEAK_CBV_CONV (core2_rws ());
+val CORE3_CONV = WEAK_CBV_CONV (core3_rws ());
 
 val CORE_ss = simpLib.SIMPSET
   {convs = [{name = "CORE_CONV", trace = 3,
