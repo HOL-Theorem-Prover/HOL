@@ -97,13 +97,17 @@ local val dest_eq_ty_err = ERR "dest_eq(_ty)"   "not an \"=\""
       val bool_case_err  = ERR "dest_bool_case" "not a \"bool_case\""
 in
 val dest_eq = dest_binop ("=","min")      dest_eq_ty_err
+
 fun dest_eq_ty M = let val (l,r) = dest_eq M in (l, r, type_of l) end
+
 fun lhs M = fst(dest_eq M) handle HOL_ERR _ => raise lhs_err
+
 fun rhs M = snd(dest_eq M) handle HOL_ERR _ => raise rhs_err
 
 val dest_neg = dest_monop ("~","bool") (ERR"dest_neg" "not a negation");
 
 val dest_imp_only = dest_binop ("==>", "min")   dest_imp_err;
+
 fun dest_imp M = 
   dest_imp_only M handle HOL_ERR _ => (dest_neg M, F) 
                   handle HOL_ERR _ => raise dest_imp_err
@@ -175,6 +179,15 @@ val strip_disj   = strip_binop  (total dest_disj)
 
 val strip_imp =
   let val desti = total dest_imp
+      fun strip A M =
+        case desti M
+         of NONE => (List.rev A, M)
+          | SOME(ant,conseq) => strip (ant::A) conseq
+  in strip []
+  end;
+
+val strip_imp_only =
+  let val desti = total dest_imp_only
       fun strip A M =
         case desti M
          of NONE => (List.rev A, M)

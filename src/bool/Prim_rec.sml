@@ -30,7 +30,7 @@ open HolKernel Parse boolTheory boolSyntax Rsyntax
 
 infix THEN THENL ORELSE ## |-> --> THENC;
 
-val ERR = Feedback.mk_HOL_ERR "Prim_rec";
+val ERR = mk_HOL_ERR "Prim_rec";
 
 
 (*---------------------------------------------------------------------------
@@ -1260,7 +1260,7 @@ end; (* prove_cases_thm *)
          /\ ... /\
         (!x1,...,xj. (M' = Cn x1..xj) ==> (fn x1..xj = fn' x1..xj))
         ==>
-       (ty_case f1..fn M = ty_case f1'..fn' m')
+       (ty_case f1..fn M = ty_case f1'..fn' M')
 
  ---------------------------------------------------------------------------*)
 

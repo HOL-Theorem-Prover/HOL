@@ -105,6 +105,7 @@ sig
   val strip_comb     : term -> term * term list
   val strip_abs      : term -> term list * term
   val strip_imp      : term -> term list * term
+  val strip_imp_only : term -> term list * term
   val strip_forall   : term -> term list * term
   val strip_exists   : term -> term list * term
   val strip_conj     : term -> term list
