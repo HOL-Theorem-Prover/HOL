@@ -1,5 +1,16 @@
 structure Net_HOLextras :> Net_HOLextras = struct
 
+(*
+
+  Code to automatically generate .imn information for theories at
+  export time.  Output is in file <thyname>.imn.
+
+  To get this to work it must be the last module opened (more
+  accurately, it must override bossLib and HolKernel, and so must
+  follow these two).
+
+*)
+
 val empty_set = Binaryset.empty String.compare
 val defns = ref empty_set
 
