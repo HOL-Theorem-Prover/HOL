@@ -1,3 +1,7 @@
+(*---------------------------------------------------------------------------
+      A type of propositions and algorithms on it.
+ ---------------------------------------------------------------------------*)
+
 app load ["bossLib", "computeLib"]; 
 open computeLib bossLib;
 
@@ -5,6 +9,11 @@ Hol_datatype `prop = VAR of 'a
                    | NOT of prop
                    | AND of prop => prop
                    | OR  of prop => prop`;
+
+
+(*---------------------------------------------------------------------------
+       Wang's algorithm.
+ ---------------------------------------------------------------------------*)
 
 val Pr_def = 
  Hol_defn "Pr"
@@ -20,7 +29,7 @@ val Pr_def =
  /\  (Pr vl [] [] vr           = EXISTS (\y. MEM y vl) vr)`;
 
 
-val Prove_def = Define `Prove P = Pr [] [] [P] []`;
+val Wang_def = Define `Wang P = Pr [] [] [P] []`;
 
 
 (*---------------------------------------------------------------------------
@@ -65,7 +74,7 @@ local open computeLib
       val EXISTS_DEF' = CONJ (CONJUNCT1 listTheory.EXISTS_DEF) EXISTS_IF
       val compset = reduceLib.reduce_rws()
       val _ = add_thms (false,[REFL_CLAUSE]) compset
-      val _ = add_thms (true,[Pr_eqns,Prove_def,MEM_DEF',EXISTS_DEF']) compset
+      val _ = add_thms (true,[Pr_eqns,Wang_def,MEM_DEF',EXISTS_DEF']) compset
       val eval_iota = CBV_CONV compset
 in
 fun Eval q = Count.apply eval_iota (Term q)
@@ -87,20 +96,20 @@ val s = Term`VAR s`;
 fun imp x y = Term`OR (NOT ^x) ^y`;
 fun iff x y = Term`AND ^(imp x y) ^(imp y x)`;
 
-val BOOL_CASES = Eval `Prove (OR ^x (NOT ^x))`;
-val NOT_BCASES = Eval `Prove (OR ^x (NOT ^y))`;
-val IMP_REFL   = Eval `Prove (OR (NOT ^x) ^x)`;
-val DISTRIB    = Eval `Prove ^(iff (Term`AND ^x (OR ^y ^z)`)
+val BOOL_CASES = Eval `Wang (OR ^x (NOT ^x))`;
+val NOT_BCASES = Eval `Wang (OR ^x (NOT ^y))`;
+val IMP_REFL   = Eval `Wang (OR (NOT ^x) ^x)`;
+val DISTRIB    = Eval `Wang ^(iff (Term`AND ^x (OR ^y ^z)`)
                                        (Term`OR (AND ^x ^y) (AND ^x ^z)`))`;
 
-val PEIRCE = Eval `Prove ^(imp (imp (imp p q) p) p)`;
+val PEIRCE = Eval `Wang ^(imp (imp (imp p q) p) p)`;
 
-val ANDREWS = Eval `Prove
+val ANDREWS = Eval `Wang
  ^(imp (Term`AND ^(imp p (Term`AND ^q (OR ^r ^s)`))
                 (OR (NOT ^q) (NOT ^r))`)
      (imp p s))`;
 
-val CLASSIC = Eval `Prove
+val CLASSIC = Eval `Wang
  ^(imp (imp (Term`AND ^p ^q`) r)
        (Term `OR ^(imp p r) ^(imp q r)`))`;
 
@@ -124,14 +133,14 @@ set_fixity "OR" (Infixr 300);
 set_fixity "AND" (Infixr 400);
 
 val syn323_1 = Eval 
-`Prove (NOT((^v0 OR ^v1) AND 
+`Wang (NOT((^v0 OR ^v1) AND 
             (NOT ^v0 OR ^v1) AND 
             (NOT ^v1 OR ^v0) AND 
             (NOT ^v0 OR NOT ^v1)))`;
 
 
 val syn029_1 = Eval
-`Prove
+`Wang
    (NOT((NOT ^v2 OR NOT ^v1) AND
         ^v0 AND 
         (NOT ^v0 OR NOT ^v1 OR ^v2) AND 
@@ -139,7 +148,7 @@ val syn029_1 = Eval
 
 
 val syn052_1 = Eval
-`Prove
+`Wang
    (NOT((NOT ^v1 OR ^v0) AND 
         (NOT ^v0 OR ^v1) AND 
         (^v1 OR ^v0)     AND 
@@ -147,7 +156,7 @@ val syn052_1 = Eval
         (NOT ^v0 OR NOT ^v1)))`;
 
 val syn051_1 = Eval
-`Prove
+`Wang
   (NOT(( ^v1 OR ^v0) AND
        (^v1 OR ^v2) AND
        (NOT ^v0 OR NOT ^v1) AND
@@ -156,7 +165,7 @@ val syn051_1 = Eval
        (NOT ^v1 OR ^v2)))`;
 
 val syn044_1 = Eval
-`Prove
+`Wang
   (NOT((^v0 OR ^v1) AND
        (NOT ^v0 OR NOT ^v1) AND
        (NOT ^v0 OR ^v1 OR ^v2) AND
@@ -165,7 +174,7 @@ val syn044_1 = Eval
        (NOT ^v1 OR ^v2)))`;
 
 val syn011_1 = Eval
-`Prove
+`Wang
   (NOT(^v6 AND
        (NOT ^v0 OR NOT ^v2) AND
        (^v0 OR ^v1 OR ^v5) AND
@@ -176,7 +185,7 @@ val syn011_1 = Eval
        (NOT ^v5 OR NOT ^v6)))`;
 
 val syn032_1 = Eval
-`Prove
+`Wang
   (NOT((NOT ^v5 OR NOT ^v1) AND
        (NOT ^v4 OR NOT ^v0) AND
        (NOT ^v4 OR ^v0) AND
@@ -186,7 +195,7 @@ val syn032_1 = Eval
        (NOT ^v3 OR ^v4 OR ^v5)))`;
 
 val syn030_1 = Eval
-`Prove
+`Wang
    (NOT((NOT ^v4 OR NOT ^v0 OR NOT ^v1) AND
         (NOT ^v3 OR NOT ^v4 OR ^v0) AND
         (NOT ^v1 OR ^v0) AND
@@ -198,7 +207,7 @@ val syn030_1 = Eval
         (NOT ^v2 OR NOT ^v3 OR ^v4)))`;
 
 val syn054_1 = Eval
-`Prove
+`Wang
   (NOT((NOT ^v1 OR NOT ^v7) AND
        (NOT ^v2 OR NOT ^v0) AND
        (NOT ^v3 OR ^v7 OR ^v4) AND
@@ -213,7 +222,7 @@ val syn054_1 = Eval
 
 (* Takes a long time, but it gets there in the end. *)
 val gra001_1 = Eval
-`Prove
+`Wang
   (NOT((NOT ^v1 OR ^v0) AND
        (NOT ^v0 OR ^v1) AND
        (NOT ^v4 OR NOT ^v2 OR NOT ^v0) AND
@@ -229,7 +238,7 @@ val gra001_1 = Eval
 
 
 val syn321_1 =  Eval
-`Prove
+`Wang
   (NOT((NOT ^v0 OR ^v9) AND
        (NOT ^v0 OR ^v6) AND
        (NOT ^v0 OR ^v7) AND
@@ -276,7 +285,7 @@ fun Prv vl [] (VAR v::r) vr    = Prv vl [] r (v::vr)
 infixr 5 AND;
 infixr 4 OR;
 
-fun prove M = Prv [] [] [M] [];
+fun Wang M = Prv [] [] [M] [];
 
 val x = VAR "x";
 val y = VAR "y";
@@ -289,23 +298,17 @@ val s = VAR "s";
 fun imp x y = NOT x OR y;
 fun iff x y = (imp x y) AND (imp y x);
 
-val BOOL_CASES = time prove (x OR (NOT x));
-val NOT_BCASES = time prove (x OR (NOT y));
-val IMP_REFL   = time prove (imp x x);
-val DISTRIB    = time prove (iff (x AND (y OR z))
+val BOOL_CASES = time Wang (x OR (NOT x));
+val NOT_BCASES = time Wang (x OR (NOT y));
+val IMP_REFL   = time Wang (imp x x);
+val DISTRIB    = time Wang (iff (x AND (y OR z))
                             ((x AND y) OR (x AND z)));
 
-val PEIRCE     = time prove (imp (imp (imp p q) p) p);
+val PEIRCE     = time Wang (imp (imp (imp p q) p) p);
 
-val ANDREWS    = time prove
+val ANDREWS    = time Wang
  (imp ((imp p (q AND (r OR s))) AND ((NOT q) OR (NOT r)))
      (imp p s));
-
-
-(*---------------------------------------------------------------------------
-      The following are adapted from jrh's tautology collection
-      in the examples directory.
- ---------------------------------------------------------------------------*)
 
 val v0 = VAR "v0";
 val v1 = VAR "v1";
@@ -318,7 +321,7 @@ val v7 = VAR "v7";
 val v8 = VAR "v8";
 val v9 = VAR "v9";
 
-val syn323_1 = time prove 
+val syn323_1 = time Wang 
   (NOT((v0 OR v1) AND 
        (NOT v0 OR v1) AND 
        (NOT v1 OR v0) AND 
@@ -326,7 +329,7 @@ val syn323_1 = time prove
 
 
 val syn029_1 = 
-time prove
+time Wang
    (NOT((NOT v2 OR NOT v1) AND
         v0 AND 
         (NOT v0 OR NOT v1 OR v2) AND 
@@ -334,13 +337,13 @@ time prove
 
 
 val syn052_1 = 
-time prove
+time Wang
    (NOT((NOT v1 OR v0) AND 
         (NOT v0 OR v1) AND 
         (v1 OR v0) AND (NOT v1 OR v1) AND (NOT v0 OR NOT v1)));
 
 val syn051_1 = 
-time prove
+time Wang
   (NOT((v1 OR v0) AND
        (v1 OR v2) AND
        (NOT v0 OR NOT v1) AND
@@ -349,7 +352,7 @@ time prove
        (NOT v1 OR v2)));
 
 val syn044_1 = 
-time prove
+time Wang
   (NOT((v0 OR v1) AND
        (NOT v0 OR NOT v1) AND
        (NOT v0 OR v1 OR v2) AND
@@ -358,7 +361,7 @@ time prove
        (NOT v1 OR v2)));
 
 val syn011_1 = 
-time prove
+time Wang
   (NOT(v6 AND
        (NOT v0 OR NOT v2) AND
        (v0 OR v1 OR v5) AND
@@ -369,7 +372,7 @@ time prove
        (NOT v5 OR NOT v6)));
 
 val syn032_1 = 
-time prove
+time Wang
   (NOT((NOT v5 OR NOT v1) AND
        (NOT v4 OR NOT v0) AND
        (NOT v4 OR v0) AND
@@ -379,7 +382,7 @@ time prove
        (NOT v3 OR v4 OR v5)));
 
 val syn030_1 = 
-time prove
+time Wang
    (NOT((NOT v4 OR NOT v0 OR NOT v1) AND
         (NOT v3 OR NOT v4 OR v0) AND
         (NOT v1 OR v0) AND
@@ -391,7 +394,7 @@ time prove
         (NOT v2 OR NOT v3 OR v4)));
 
 val syn054_1 =  
-time prove
+time Wang
   (NOT((NOT v1 OR NOT v7) AND
        (NOT v2 OR NOT v0) AND
        (NOT v3 OR v7 OR v4) AND
@@ -406,7 +409,7 @@ time prove
 
 
 val gra001_1 = 
-time prove
+time Wang
   (NOT((NOT v1 OR v0) AND
        (NOT v0 OR v1) AND
        (NOT v4 OR NOT v2 OR NOT v0) AND
@@ -421,7 +424,7 @@ time prove
        (v3 OR v4)));
 
 val syn321_1 = 
-time prove 
+time Wang 
   (NOT((NOT v0 OR v9) AND
        (NOT v0 OR v6) AND
        (NOT v0 OR v7) AND
@@ -442,3 +445,180 @@ time prove
 
      End of SML version.
  ---------------------------------------------------------------------------*)
+
+
+(*---------------------------------------------------------------------------
+        Negation normal form (from Paulson's ML book). First a naive
+        version, which has a complicated termination proof, and then
+        a faster mutually recursive version, which has an easy 
+        termination proof.
+ ---------------------------------------------------------------------------*)
+
+val nnf_defn0 =
+ Hol_defn "nnf0"
+     `(nnf (VAR x)        = VAR x)
+ /\   (nnf (NOT (VAR x))  = NOT(VAR x))
+ /\   (nnf (NOT(NOT p))   = nnf p)
+ /\   (nnf (NOT(AND p q)) = nnf (OR  (NOT p) (NOT q)))
+ /\   (nnf (NOT(OR p q))  = nnf (AND (NOT p) (NOT q)))
+ /\   (nnf (AND p q)      = AND (nnf p) (nnf q))
+ /\   (nnf (OR p q)       = OR (nnf p) (nnf q))`;
+
+(*---------------------------------------------------------------------------
+    The size of the largest NOT expression in a proposition.
+ ---------------------------------------------------------------------------*)
+
+val prop_size_def = definition "prop_size_def";
+
+val MAX_def = Define `MAX x y = if x<y then y else x`;
+
+val NOT_SIZE_def = 
+ Define
+    `(NOT_SIZE (VAR x)   = 0)
+  /\ (NOT_SIZE (NOT p)   = prop_size (\v.0) p)
+  /\ (NOT_SIZE (AND p q) = MAX (NOT_SIZE p) (NOT_SIZE q))
+  /\ (NOT_SIZE (OR p q)  = MAX (NOT_SIZE p) (NOT_SIZE q))`;
+
+
+val NOT_SIZE_LESS = Q.prove
+(`!p. NOT_SIZE p < prop_size (\v.0) p + 1`,
+ Induct
+   THEN RW_TAC arith_ss [NOT_SIZE_def, MAX_def, prop_size_def]);
+ 
+val (nnf0_eqns, nnf0_ind) = 
+Defn.tprove
+ (nnf_defn0,
+  WF_REL_TAC nnf_defn0 
+      `inv_image ($< LEX $<) (\x. (NOT_SIZE x, prop_size (\v.0) x))`
+    THEN RW_TAC arith_ss [NOT_SIZE_def, MAX_def, 
+                          prop_size_def, NOT_SIZE_LESS]);
+
+
+val nnf_mutrec_eqns =
+ xDefine "nnf1"
+     `(nnfpos (VAR x)   = VAR x)
+ /\   (nnfpos (NOT p)   = nnfneg p)
+ /\   (nnfpos (AND p q) = AND (nnfpos p) (nnfpos q))
+ /\   (nnfpos (OR p q)  = OR  (nnfpos p) (nnfpos q))
+ /\   (nnfneg (VAR x)   = NOT (VAR x))
+ /\   (nnfneg (NOT p)   = nnfpos p)
+ /\   (nnfneg (AND p q) = OR  (nnfneg p) (nnfneg q))
+ /\   (nnfneg (OR p q)  = AND (nnfneg p) (nnfneg q))`;
+
+local open computeLib
+      val compset = reduceLib.reduce_rws()
+      val _ = add_thms (false,[REFL_CLAUSE]) compset
+      val _ = add_thms (true,[nnf_mutrec_eqns]) compset
+      val eval_nnf = CBV_CONV compset
+in
+fun Eval q = Count.apply eval_nnf (Term q)
+end;
+
+val syn052_1 = Eval
+`nnfpos
+   (NOT((NOT ^v1 OR ^v0) AND 
+        (NOT ^v0 OR ^v1) AND 
+        (^v1 OR ^v0)     AND 
+        (NOT ^v1 OR ^v1) AND 
+        (NOT ^v0 OR NOT ^v1)))`;
+
+val syn051_1 = Eval
+`nnfpos
+  (NOT(( ^v1 OR ^v0) AND
+       (^v1 OR ^v2) AND
+       (NOT ^v0 OR NOT ^v1) AND
+       (NOT ^v2 OR NOT ^v1) AND
+       (NOT ^v0 OR ^v1) AND
+       (NOT ^v1 OR ^v2)))`;
+
+val syn044_1 = Eval
+`nnfpos
+  (NOT((^v0 OR ^v1) AND
+       (NOT ^v0 OR NOT ^v1) AND
+       (NOT ^v0 OR ^v1 OR ^v2) AND
+       (NOT ^v2 OR ^v1) AND
+       (NOT ^v2 OR ^v0) AND
+       (NOT ^v1 OR ^v2)))`;
+
+val syn011_1 = Eval
+`nnfpos
+  (NOT(^v6 AND
+       (NOT ^v0 OR NOT ^v2) AND
+       (^v0 OR ^v1 OR ^v5) AND
+       (NOT ^v2 OR NOT ^v1) AND
+       (NOT ^v4 OR ^v2) AND
+       (NOT ^v3 OR ^v2) AND
+       (^v3 OR ^v4 OR ^v5) AND
+       (NOT ^v5 OR NOT ^v6)))`;
+
+val syn032_1 = Eval
+`nnfpos
+  (NOT((NOT ^v5 OR NOT ^v1) AND
+       (NOT ^v4 OR NOT ^v0) AND
+       (NOT ^v4 OR ^v0) AND
+       (NOT ^v5 OR ^v1) AND
+       (NOT ^v2 OR ^v4 OR ^v3) AND
+       (^v4 OR ^v2 OR ^v3) AND
+       (NOT ^v3 OR ^v4 OR ^v5)))`;
+
+val syn030_1 = Eval
+`nnfpos
+   (NOT((NOT ^v4 OR NOT ^v0 OR NOT ^v1) AND
+        (NOT ^v3 OR NOT ^v4 OR ^v0) AND
+        (NOT ^v1 OR ^v0) AND
+        (^v0 OR ^v1) AND
+        (NOT ^v0 OR ^v1) AND
+        (NOT ^v1 OR NOT ^v0 OR ^v2) AND
+        (NOT ^v2 OR ^v1) AND
+        (NOT ^v1 OR ^v3) AND
+        (NOT ^v2 OR NOT ^v3 OR ^v4)))`;
+
+val syn054_1 = Eval
+`nnfpos
+  (NOT((NOT ^v1 OR NOT ^v7) AND
+       (NOT ^v2 OR NOT ^v0) AND
+       (NOT ^v3 OR ^v7 OR ^v4) AND
+       (NOT ^v6 OR ^v0 OR ^v5) AND
+       (NOT ^v7 OR ^v1) AND
+       (NOT ^v0 OR ^v2) AND
+       (NOT ^v4 OR ^v1) AND
+       (NOT ^v5 OR ^v2) AND
+       (NOT ^v3 OR NOT ^v4) AND
+       (NOT ^v6 OR NOT ^v5) AND
+       (^v6 OR ^v7)))`;
+
+(* Takes a long time, but it gets there in the end. *)
+val gra001_1 = Eval
+`nnfpos
+  (NOT((NOT ^v1 OR ^v0) AND
+       (NOT ^v0 OR ^v1) AND
+       (NOT ^v4 OR NOT ^v2 OR NOT ^v0) AND
+       (NOT ^v4 OR ^v2 OR ^v0) AND
+       (NOT ^v2 OR ^v4 OR ^v0) AND
+       (NOT ^v0 OR ^v4 OR ^v2) AND
+       (NOT ^v3 OR NOT ^v2 OR NOT ^v1) AND
+       (NOT ^v3 OR ^v2 OR ^v1) AND
+       (NOT ^v2 OR ^v3 OR ^v1) AND
+       (NOT ^v1 OR ^v3 OR ^v2) AND
+       (NOT ^v3 OR NOT ^v4) AND
+       (^v3 OR ^v4)))`;
+
+
+val syn321_1 =  Eval
+`nnfpos
+  (NOT((NOT ^v0 OR ^v9) AND
+       (NOT ^v0 OR ^v6) AND
+       (NOT ^v0 OR ^v7) AND
+       (NOT ^v8 OR ^v9) AND
+       (NOT ^v8 OR ^v6) AND
+       (NOT ^v8 OR ^v7) AND
+       (NOT ^v1 OR ^v9) AND
+       (NOT ^v1 OR ^v6) AND
+       (NOT ^v1 OR ^v7) AND
+       (NOT ^v2 OR ^v3) AND
+       (NOT ^v4 OR ^v5) AND
+       (NOT ^v7 OR ^v8) AND
+       (^v8 OR ^v9) AND
+       (^v8 OR ^v6) AND
+       (^v8 OR ^v7) AND
+       (NOT ^v8 OR NOT ^v9)))` ;

@@ -521,6 +521,7 @@ val (Pr_eqns, Pr_ind) = Defn.tprove
                       list_size Meas x + list_size Meas y`
   THEN RW_TAC arith_ss [Meas_def,listTheory.list_size_def]);
 
+
 (*---------------------------------------------------------------------------
       The following definition is in destructor style, and fails 
       to prove termination. (Very strange looking definition - is it
@@ -624,6 +625,11 @@ Define
  /\ (Maj (h::t) (leader,0)     = Maj t ((if h=leader then leader else h),1))
  /\ (Maj (h::t) (leader,SUC m) = Maj t (leader, if h=leader then m+2 else m))`;
 
+Define 
+   `(Maj [] (winner,lead)      = (winner,lead))
+ /\ (Maj (h::t) (leader,0)     = Maj t (h,1))
+ /\ (Maj (h::t) (leader,SUC m) = Maj t (leader, if h=leader then m+2 else m))`;
+
 (* Fails. Would need wildcards before this would succeed. *)
 Define 
    `(Maj [] (winner,lead) = (winner,lead))
@@ -661,6 +667,18 @@ Define
    (&& (SUC n) = !! n) /\
    (!! 0 = F)          /\
    (!! (SUC n) = && n)`;
+
+val nnf_mutrec_eqns =
+ xDefine "nnf1"
+     `(nnfpos (VAR x)   = VAR x)
+ /\   (nnfpos (NOT p)   = nnfneg p)
+ /\   (nnfpos (AND p q) = AND (nnfpos p) (nnfpos q))
+ /\   (nnfpos (OR p q)  = OR  (nnfpos p) (nnfpos q))
+ /\   (nnfneg (VAR x)   = NOT (VAR x))
+ /\   (nnfneg (NOT p)   = nnfpos p)
+ /\   (nnfneg (AND p q) = OR  (nnfneg p) (nnfneg q))
+ /\   (nnfneg (OR p q)  = AND (nnfneg p) (nnfneg q))`;
+
 
 (*---------------------------------------------------------------------------
       Higher order recursion. First we prove and install a

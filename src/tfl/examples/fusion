@@ -89,7 +89,10 @@ val fusion_def =
 
 (*---------------------------------------------------------------------------
      Prove that unfolding and then reducing is the same as doing 
-     a fusion. 
+     a fusion. We want to lift "let" bindings from the goal and 
+     put them on the assumptions. To do that, we need to supply
+     the following rewrite rules that lift a let that binds
+     3 values. 
  ---------------------------------------------------------------------------*)
 
 val LET3_RAND = Q.prove
