@@ -7,8 +7,8 @@ Tests if a string has a permissible name for a term constant.
 
 \DESCRIBE
 When applied to a string, {allowed_term_constant} returns {true} if
-the string is a permissible constant name, that is, if it is an
-identifier (see the DESCRIPTION for more details), and {false}
+the string is a permissible constant name for a term, that is, if it
+is an identifier (see the DESCRIPTION for more details), and {false}
 otherwise.
 
 \FAILURE
