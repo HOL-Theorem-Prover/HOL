@@ -1638,7 +1638,8 @@ fun HO_PART_MATCH partfn th =
  let val sth = SPEC_ALL th
      val bod = concl sth
      val pbod = partfn bod
-     val possbetas = mapfilter (fn v => (v,BETA_VAR v bod)) (free_vars bod)
+     val possbetas = mapfilter (fn v => (v,BETA_VAR v bod))
+                               (filter (can dom_rng o type_of) (free_vars bod))
      fun finish_fn tyin ivs =
        let val npossbetas =
             if null tyin then possbetas else map (inst tyin ## I) possbetas
