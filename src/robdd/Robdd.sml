@@ -13,7 +13,7 @@ struct
 	
     local
 	open Dynlib
-	val hdl  = dlopen {lib = Globals.HOLDIR^"/src/robdd/mlrobdd.so", 
+	val hdl  = dlopen {lib = Globals.HOLDIR^"/sigobj/mlrobdd.so", 
 			   flag = RTLD_LAZY, global = false}
 	val symb = Dynlib.dlsym hdl
 	    
