@@ -1130,7 +1130,8 @@ val FUPDATE_LIST_SAME_KEYS_UNWIND = store_thm(
     to close...
    ---------------------------------------------------------------------- *)
 
-val _ = export_rewrites ["FDOM_FUPDATE", "FDOM_FEMPTY", "FAPPLY_FUPDATE"]
+val _ = export_rewrites ["FDOM_FUPDATE", "FDOM_FEMPTY", "FAPPLY_FUPDATE",
+                         "DRESTRICT_FEMPTY", "FRANGE_FEMPTY"]
 
 
 
