@@ -250,6 +250,15 @@ val MAP2 =
       }
   end
 
+val MAP2_FAIL = Q.prove
+(`(!f h t. 
+   (MAP2 (f:'a->'b->'c) [] (h::t) = 
+    FAIL MAP2 ^(mk_var("unequal length lists",bool)) f [] (h::t))) /\
+  !f h t.
+    (MAP2 (f:'a->'b->'c) (h::t) [] = 
+     FAIL MAP2 ^(mk_var("unequal length lists",bool)) f (h::t) [])`,
+ REWRITE_TAC [combinTheory.FAIL_THM]);
+
 (* ---------------------------------------------------------------------*)
 (* Proofs of some theorems about lists.					*)
 (* ---------------------------------------------------------------------*)
