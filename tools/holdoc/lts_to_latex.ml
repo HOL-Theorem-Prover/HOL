@@ -104,6 +104,10 @@ and sp = parser
   | [< 'Comment(c); s1 = sp >] -> Comment(c) :: s1
   | [<>]                       -> []
 
+and wopt = parser
+    [< 'White(s)  ; s1 = wopt >] -> White(s)   :: s1
+  | [<>]                         -> []
+
 and sp' = parser
     [< 'White(s)  ; s1 = sp' >] -> White(s)   :: s1
   | [< 'Indent(n) ; s1 = sp' >] -> Indent(n)  :: s1
@@ -157,7 +161,7 @@ and rule_vars = parser
   | [<>]                             -> []
 
 and rule_name = parser
-    [< 'Indent(_); 'Ident(n) ?? "rule name"; _ = sp; 'Ident("/*") ?? "/*"; _ = sp; 'Ident(cat) ?? "category"; _ = sp;
+    [< 'Indent(_); 'Ident(n) ?? "rule name"; _ = sp; 'Ident("/*") ?? "/*"; _ = sp; 'Ident(cat) ?? "category"; _ = wopt;
        desc = optcomm; _ = sp; 'Ident("*/") ?? "*/"; _ = sp >]
       -> (n,cat,desc)
   | [<>] -> raise (Stream.Error("rule name on new line"));
