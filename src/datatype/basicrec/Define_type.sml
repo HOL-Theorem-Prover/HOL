@@ -1277,12 +1277,18 @@ fun ERR1 i s =
 fun info {origin_structure, origin_function,message}
   = String.concat [origin_function,": ",message];
 
-fun make_type i pty = SOME (Parse.pretype2type pty)
-   handle Exception.HOL_ERR triple => ERR1 i (info triple)
+fun make_type i pty = let
+  open ParseDatatype
+  fun mt (dVartype s) = mk_vartype s
+    | mt (dTyop(s, args)) = mk_type{Tyop = s, Args = map mt args}
+    | mt (dAQ ty) = ty
+in
+  SOME (mt pty)
+end handle Exception.HOL_ERR triple => ERR1 i (info triple)
 
 (* Does a name occur in a pretype or a type *)
 local
-  open parse_type
+  open ParseDatatype
 in
   fun tyocc n ty =
     if is_vartype ty then (dest_vartype ty=n)
@@ -1291,14 +1297,14 @@ in
     in
       Tyop=n orelse exists (tyocc n) Args
     end
-  fun occurs n (pVartype s) = (n = s)
-    | occurs n (pAQ ty) = tyocc n ty
-    | occurs n (pType(x,l)) = (n = x) orelse exists (occurs n) l
+  fun occurs n (dVartype s) = (n = s)
+    | occurs n (dAQ ty) = tyocc n ty
+    | occurs n (dTyop(x,l)) = (n = x) orelse exists (occurs n) l
 end;
 
 fun make_type_clause tyname (i,(constructor, args)) =
- let open parse_type
-     fun munge (pty as pType(gr,args)) =
+ let open ParseDatatype
+     fun munge (pty as dTyop(gr,args)) =
        if gr=tyname then
          if null args then NONE  (* found OK occ. of tyname *)
          else

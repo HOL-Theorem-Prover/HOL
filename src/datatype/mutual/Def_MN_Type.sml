@@ -434,21 +434,21 @@ fun prim_define_type desc axioms =
  ---------------------------------------------------------------------------*)
 
 local
-  open DefTypeInfo parse_type
+  open DefTypeInfo ParseDatatype
   fun dexl [] A = SOME(rev A) (* all in list were existing *)
     | dexl (existing ty::t) A = dexl t (ty::A)
     | dexl _ _ = NONE
 in
   fun make_type_clause tynames (constructor, args) = let
-    fun munge (pVartype s) = existing(mk_vartype s)
-      | munge (pAQ ty) = existing ty
-      | munge (pType(gr, [])) = let
+    fun munge (dVartype s) = existing(mk_vartype s)
+      | munge (dAQ ty) = existing ty
+      | munge (dTyop(gr, [])) = let
           val name = gr
         in
           if mem name tynames then being_defined name
           else existing(mk_type{Tyop=name, Args=[]})
         end
-      | munge (pType(gr,A)) = let
+      | munge (dTyop(gr,A)) = let
           val name = gr
           val A1 = map munge A
         in
