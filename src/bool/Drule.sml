@@ -1843,7 +1843,7 @@ fun prove_rep_fn_one_one th =
       GEN a (GEN a' (IMP_ANTISYM_RULE (DISCH Ra_eq_Ra' th2) th3))
    end
    handle HOL_ERR _ => raise ERR "prove_rep_fn_one_one"  ""
-        | Bind => raise ERR "prove_abs_fn_one_one"
+        | Bind => raise ERR "prove_rep_fn_one_one"
                             ("Theorem not of right form: must be\n "^
                              "|- (!a. to (from a) = a) /\\ "^
                              "(!r. P r = (from (to r) = r))")
@@ -1886,7 +1886,7 @@ fun prove_rep_fn_onto th =
    GEN Bvar (TRANS (SPEC Bvar th2) swap)
    end
    handle HOL_ERR _ => raise ERR "prove_rep_fn_onto" ""
-        | Bind => raise ERR "prove_abs_fn_one_one"
+        | Bind => raise ERR "prove_rep_fn_onto"
                             ("Theorem not of right form: must be\n "^
                              "|- (!a. to (from a) = a) /\\ "^
                              "(!r. P r = (from (to r) = r))")
@@ -1924,7 +1924,7 @@ fun prove_abs_fn_onto th =
    in GEN bv_th1 (EXISTS(ex,rb) (CONJ thm2 thm1))
    end
    handle HOL_ERR _ => raise ERR "prove_abs_fn_onto" ""
-        | Bind => raise ERR "prove_abs_fn_one_one"
+        | Bind => raise ERR "prove_abs_fn_one_onto"
                             ("Theorem not of right form: must be\n "^
                              "|- (!a. to (from a) = a) /\\ "^
                              "(!r. P r = (from (to r) = r))")
