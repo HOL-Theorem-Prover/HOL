@@ -49,14 +49,17 @@ sig
 
   (* Simplification *)
 
-  val std_ss   : simpset   (* bool + option + pair + sum *)
-  val arith_ss : simpset
-  val list_ss  : simpset
-  val &&       : simpset * thm list -> simpset  (* infix && *)
-  val RW_TAC   : simpset -> thm list -> tactic
-  val SRW_TAC  : simpLib.ssdata list -> thm list -> tactic
-  val EVAL     : term -> thm
-  val EVAL_TAC : tactic
+  val std_ss         : simpset   (* bool + option + pair + sum *)
+  val arith_ss       : simpset
+  val list_ss        : simpset
+  val &&             : simpset * thm list -> simpset  (* infix && *)
+  val RW_TAC         : simpset -> thm list -> tactic
+  val SRW_TAC        : simpLib.ssdata list -> thm list -> tactic
+  val srw_ss         : unit -> simpset
+  val augment_srw_ss : simpLib.ssdata list -> unit
+
+  val EVAL           : term -> thm
+  val EVAL_TAC       : tactic
 
   (* A compound automated reasoner. *)
 

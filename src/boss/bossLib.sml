@@ -48,12 +48,14 @@ val WF_REL_TAC = TotalDefn.WF_REL_TAC;
             Automated proof operations
  ---------------------------------------------------------------------------*)
 
-val PROVE     = BasicProvers.PROVE
-val PROVE_TAC = BasicProvers.PROVE_TAC
-val RW_TAC    = BasicProvers.RW_TAC
-val SRW_TAC   = BasicProvers.SRW_TAC
-val EVAL      = computeLib.EVAL_CONV;
-val EVAL_TAC  = CONV_TAC EVAL;
+val PROVE          = BasicProvers.PROVE
+val PROVE_TAC      = BasicProvers.PROVE_TAC
+val RW_TAC         = BasicProvers.RW_TAC
+val SRW_TAC        = BasicProvers.SRW_TAC
+val srw_ss         = BasicProvers.srw_ss
+val augment_srw_ss = BasicProvers.augment_srw_ss
+val EVAL           = computeLib.EVAL_CONV;
+val EVAL_TAC       = CONV_TAC EVAL;
 
 val && = BasicProvers.&&;
 infix &&;
@@ -94,8 +96,8 @@ fun DECIDE_TAC (g as (asl,_)) =
 ((MAP_EVERY UNDISCH_TAC (filter numSimps.is_arith asl)
       THEN numLib.ARITH_TAC)
  ORELSE
- tautLib.TAUT_TAC 
- ORELSE 
+ tautLib.TAUT_TAC
+ ORELSE
  NO_TAC) g;
 
 fun ZAP_TAC ss thl =
