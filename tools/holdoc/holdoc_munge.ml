@@ -426,7 +426,8 @@ let rec readarg cf ml ts tss = (* read a single arg: spaces then (id.id.id or ma
     | _                             -> (List.rev ds,ts,tss)
   in
   match sp ts tss with
-    (Ident(s,_)::ts,tss)    -> dotted [Ident(s,true)] ts tss
+    (Ident(s,true)::ts,tss)    -> dotted [Ident(s,true)] ts tss
+  | (Ident(s,false)::ts,tss) -> ([Ident(s,false)],ts,tss)  (* no fields in a symbolic ident *)
   | (Sep(s)::ts,tss) when List.mem_assoc s balanced
                             -> readbal [] (Sep(s)::ts) tss cf ml (* commas to add extra args? *)
   | (t::ts,tss)             -> raise (BadArg ("4: "^render_token t))
