@@ -12,7 +12,7 @@ Match two terms while restricting some instantiations.
 match, substitution.
 
 \DESCRIBE
-An invocation {raw_match avoid_tys avoid_tms pat ob (tmS,tyS)}, if
+An invocation {match_terml avoid_tys avoid_tms pat ob (tmS,tyS)}, if
 it does not raise an exception, returns a pair of substitutions {(S,T)}
 such that 
 {
@@ -27,7 +27,7 @@ in {S} and {T}.
 can be found. If a match {(S,T)} between {pat} and {ob} can be found,
 but elements of {avoid_tys} would appear as redexes in {T} or 
 elements of {avoid_tms} would appear as redexes in {S}, then 
-{raw_match} will also fail.
+{match_terml} will also fail.
 
 \EXAMPLE
 {
