@@ -952,6 +952,7 @@ fun no_full_extra_rule tgt =
       NONE => true
     | SOME cl => null cl
 
+val done_some_work = ref false
 val up_to_date_cache:(File, bool)Polyhash.hash_table =
   Polyhash.mkPolyTable(50, NotFound)
 fun cache_insert(f, b) = (Polyhash.insert up_to_date_cache (f, b); b)
@@ -985,12 +986,14 @@ in
             (print ("Secondary dependencies for "^fromFile target^" are: ");
              print (print_list (map fromFile secondaries) ^ "\n"))
         in
-          if (List.all (make_up_to_date (target::ctxt)) secondaries) then
+          if List.all (make_up_to_date (target::ctxt)) secondaries then
             if (List.exists
                 (fn dep =>
                  (fromFile dep) forces_update_of (fromFile target))
                 (pdep::secondaries)) then
-              cache_insert (target, do_a_build_command target pdep secondaries)
+              (done_some_work := true;
+               cache_insert (target,
+                             do_a_build_command target pdep secondaries))
             else
               cache_insert (target, true)
           else
@@ -1036,7 +1039,7 @@ in
                    tgt_str in_target ".PHONY"
                 then
                   if null commands then
-                    (if null ctxt then
+                    (if null ctxt andalso not (!done_some_work) then
                        info ("Nothing to be done for `"^tgt_str^"'.")
                      else ();
                      cache_insert(target, true))
@@ -1044,7 +1047,7 @@ in
                     cache_insert(target,
                                  run_extra_commands tgt_str commands =
                                  Process.success)
-                else (* target is up-to-date wrts its dependencies already *)
+                else (* target is up-to-date wrt its dependencies already *)
                   (if null ctxt then
                      if null commands then
                        info ("Nothing to be done for `"^tgt_str^ "'.")
@@ -1109,6 +1112,7 @@ fun do_target x = let
                 false
              end
            | DirNotFound => true
+  val _ = done_some_work := false
 in
   if not (member x dontmakes) then
     case extra_rule_for x of

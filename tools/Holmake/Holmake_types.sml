@@ -20,19 +20,21 @@ fun ok_symbolvars c = c = #"<" orelse c = #"@"
 
 fun check_for_vref (startc, endc) acc ss k = let
   open Substring
-  val (var, rest) = splitl (fn c => c <> endc) ss
+  (* scan forward for balancing endc *)
+  fun recurse (count, depth, ss) =
+      case getc ss of
+        NONE => raise Fail ("Unclosed variable reference, beginning: $"^
+                            str startc ^
+                            string (slice(ss, 0, SOME(Int.min(size ss, 10)))))
+      | SOME(c, ss') => if c = endc then
+                          if depth = 0 then (count, slice(ss, 1, NONE))
+                          else recurse (count + 1, depth - 1, ss')
+                        else if c = startc then
+                          recurse (count + 1, depth + 1, ss')
+                        else recurse (count + 1, depth, ss')
+  val (varlength, rest) = recurse(0, 0, ss)
 in
-  if size rest = 0 then
-    raise Fail ("Unclosed variable reference, beginning: $"^
-                str startc ^ string (slice(ss, 0, SOME(Int.min(size ss, 10)))))
-  else (* make very preliminary check on sensible-ness of variable *) let
-      val rem = dropl (not o Char.isSpace) var
-      val _ = size rem = 0 orelse
-              raise Fail ("Var reference includes white-space, starting: "^
-                          string (slice(var, 0, SOME(Int.min(size var, 10)))))
-    in
-      k (VREF (string var) :: acc) (#2 (valOf (getc rest)))
-    end
+  k (VREF (string (slice(ss, 0, SOME varlength))) :: acc) rest
 end
 
 fun quotable c =
@@ -207,24 +209,86 @@ fun commafy0 [] = []
   | commafy0 (h::t) = h :: ", " :: commafy0 t
 val commafy = String.concat o commafy0
 
+fun callsubst(from,to,on) = let
+  open Substring
+  val (from,to,on) = (all from, all to, all on)
+  val _ = size from > 0 orelse
+          raise Fail "empty from argument to `subst' function"
+  fun recurse acc ss = let
+    val (ok, rest) = position (string from) ss
+  in
+    if size rest > 0 then
+      recurse (to::ok::acc) (slice(rest, size from, NONE))
+    else concat (List.rev (ok::acc))
+  end
+in
+  recurse [] on
+end
+
 fun perform_substitution env q = let
+  open Substring
+  fun finisher q =
+      case normquote [] q of
+        [LIT s] => s
+      | [] => ""
+      | _ => raise Fail "Can't happen"
   fun recurse visited fraglist =
       case fraglist of
         [] => []
       | (LIT s :: rest) => LIT s :: recurse visited rest
       | VREF s :: rest => let
-          val _ = not (mem s visited) orelse
-                  raise Fail ("Variable loop through "^commafy visited)
-          val s_expanded0 = env s
-          val s_expanded = recurse (s :: visited) s_expanded0
+          val ss = all s
+          val (fnpart, spc_rest) = position " " ss
+          val result =
+              if size spc_rest > 0 then let
+                  (* have a function call to evaluate *)
+                  val fnname = string fnpart
+                  val args =
+                      tokens (fn c => c = #",") (dropl Char.isSpace spc_rest)
+                in
+                  [LIT (make_function_call visited (fnname, args))]
+                end
+              else let
+                  val _ = not (mem s visited) orelse
+                          raise Fail ("Variable loop through: "^
+                                      commafy visited)
+                  val s_expanded0 = env s
+                in
+                  recurse (s :: visited) s_expanded0
+                end
         in
-          s_expanded @ recurse visited rest
+          result @ recurse visited rest
         end
+  and make_function_call visited (fnname, args) = let
+    val eval = finisher o recurse visited o extract_normal_quotation
+  in
+    case fnname of
+      "if" =>
+      if length args <> 2 andalso length args <> 3 then
+        raise Fail "Bad number of arguments to `if' function."
+      else let
+          val condition = dropr Char.isSpace (hd args)
+          val condition_evalled = eval condition
+        in
+          if condition_evalled <> "" then eval (List.nth(args, 1))
+          else if length args = 3 then eval (List.nth(args, 2))
+          else ""
+        end
+    | "subst" =>
+      if length args <> 3 then
+        raise Fail "Bad number of arguments to `subst' function."
+      else let
+          val args_evalled = map eval args
+          val tuple = case args_evalled of
+                        [x,y,z] => (x,y,z)
+                      | _ => raise Fail "Can't happen"
+        in
+          callsubst tuple
+        end
+    | _ => raise Fail ("Unknown function name: "^fnname)
+  end
 in
-  case normquote [] (recurse [] q) of
-    [LIT s] => s
-  | [] => ""
-  | _ => raise Fail "Can't happen"
+  finisher (recurse [] q)
 end
 
 fun extend_env toks e s =
