@@ -27,15 +27,18 @@ syntax is used for input, the term is printed out in the
 {
    - Term`p => q | r`;
    <<HOL message: inventing new type variable names: 'a.>>
-   > val it = `if p then q else r` : Term.term
+   > val it = `(if p then q else r)` : Term.term
+}
+\noindent If {clear_prefs_for_term} is applied, neither syntax will print:
+{
+   - clear_prefs_for_term "COND";
+   > val it = () : unit
+   - Term`p => q | r`;
+   <<HOL message: inventing new type variable names: 'a.>>
+   > val it = `COND p q r` : Term.term
 }
 
-\USES
-
-
-\COMMENTS
-
-
 \SEEALSO
+prefer_form_with_tok
 
 \ENDDOC
