@@ -59,8 +59,7 @@ val (Pr_eqns, Pr_ind) =
 
 
 (*---------------------------------------------------------------------------
-    Build a computing base that knows basic facts about 
-    booleans, plus whatever list operations are used in Pr.
+    Build a computing base.
  ---------------------------------------------------------------------------*)
 
 local open computeLib
@@ -72,18 +71,20 @@ local open computeLib
             RW_TAC list_ss [listTheory.EXISTS_DEF])
       val MEM_DEF'    = CONJ (CONJUNCT1 listTheory.MEM) MEM_IF
       val EXISTS_DEF' = CONJ (CONJUNCT1 listTheory.EXISTS_DEF) EXISTS_IF
-      val compset = reduceLib.reduce_rws()
+      val compset = bossLib.initial_rws()
       val _ = add_thms (false,[REFL_CLAUSE]) compset
       val _ = add_thms (true,[Pr_eqns,Wang_def,MEM_DEF',EXISTS_DEF']) compset
-      val eval_iota = CBV_CONV compset
 in
-fun Eval q = Count.apply eval_iota (Term q)
+val Eval = Count.apply (CBV_CONV compset) o Term
 end;
 
 
 (*---------------------------------------------------------------------------
       Examples.
  ---------------------------------------------------------------------------*)
+
+set_fixity "OR" (Infixr 300);
+set_fixity "AND" (Infixr 400);
 
 val x = Term`VAR x`;
 val y = Term`VAR y`;
@@ -93,25 +94,20 @@ val q = Term`VAR q`;
 val r = Term`VAR r`;
 val s = Term`VAR s`;
 
-fun imp x y = Term`OR (NOT ^x) ^y`;
-fun iff x y = Term`AND ^(imp x y) ^(imp y x)`;
+fun imp x y = Term`(NOT ^x) OR ^y`;
+fun iff x y = Term`^(imp x y) AND ^(imp y x)`;
 
-val BOOL_CASES = Eval `Wang (OR ^x (NOT ^x))`;
-val NOT_BCASES = Eval `Wang (OR ^x (NOT ^y))`;
-val IMP_REFL   = Eval `Wang (OR (NOT ^x) ^x)`;
-val DISTRIB    = Eval `Wang ^(iff (Term`AND ^x (OR ^y ^z)`)
-                                       (Term`OR (AND ^x ^y) (AND ^x ^z)`))`;
-
-val PEIRCE = Eval `Wang ^(imp (imp (imp p q) p) p)`;
-
-val ANDREWS = Eval `Wang
- ^(imp (Term`AND ^(imp p (Term`AND ^q (OR ^r ^s)`))
-                (OR (NOT ^q) (NOT ^r))`)
-     (imp p s))`;
-
-val CLASSIC = Eval `Wang
- ^(imp (imp (Term`AND ^p ^q`) r)
-       (Term `OR ^(imp p r) ^(imp q r)`))`;
+val BOOL_CASES = Term `^x OR (NOT ^x)`;
+val NOT_BCASES = Term `^x OR (NOT ^y)`;
+val IMP_REFL   = Term `(NOT ^x) OR ^x`;
+val DISTRIB    = iff (Term`^x AND (^y OR ^z)`)
+                     (Term`(^x AND ^y) OR (^x AND ^z)`);
+val PEIRCE     = imp (imp (imp p q) p) p;
+val ANDREWS    = imp (Term`^(imp p (Term`^q AND (^r OR ^s)`))
+                            AND ((NOT ^q) OR (NOT ^r))`)
+                     (imp p s);
+val CLASSIC    = imp (imp (Term`^p AND ^q`) r)
+                     (Term `^(imp p r) OR ^(imp q r)`);
 
 (*---------------------------------------------------------------------------
       The following are adapted from jrh's tautology collection
@@ -129,74 +125,64 @@ val v7 = Term`VAR v7`;
 val v8 = Term`VAR v8`;
 val v9 = Term`VAR v9`;
 
-set_fixity "OR" (Infixr 300);
-set_fixity "AND" (Infixr 400);
-
-val syn323_1 = Eval 
-`Wang (NOT((^v0 OR ^v1) AND 
+val syn323_1 = Term
+       `NOT((^v0 OR ^v1) AND 
             (NOT ^v0 OR ^v1) AND 
             (NOT ^v1 OR ^v0) AND 
-            (NOT ^v0 OR NOT ^v1)))`;
+            (NOT ^v0 OR NOT ^v1))`;
 
 
-val syn029_1 = Eval
-`Wang
-   (NOT((NOT ^v2 OR NOT ^v1) AND
+val syn029_1 = Term
+   `NOT((NOT ^v2 OR NOT ^v1) AND
         ^v0 AND 
         (NOT ^v0 OR NOT ^v1 OR ^v2) AND 
-        (NOT ^v2 OR ^v1) AND (^v1 OR ^v2)))`;
+        (NOT ^v2 OR ^v1) AND (^v1 OR ^v2))`;
 
 
-val syn052_1 = Eval
-`Wang
-   (NOT((NOT ^v1 OR ^v0) AND 
+val syn052_1 = Term
+   `NOT((NOT ^v1 OR ^v0) AND 
         (NOT ^v0 OR ^v1) AND 
         (^v1 OR ^v0)     AND 
         (NOT ^v1 OR ^v1) AND 
-        (NOT ^v0 OR NOT ^v1)))`;
+        (NOT ^v0 OR NOT ^v1))`;
 
-val syn051_1 = Eval
-`Wang
-  (NOT(( ^v1 OR ^v0) AND
+val syn051_1 = Term
+  `NOT(( ^v1 OR ^v0) AND
        (^v1 OR ^v2) AND
        (NOT ^v0 OR NOT ^v1) AND
        (NOT ^v2 OR NOT ^v1) AND
        (NOT ^v0 OR ^v1) AND
-       (NOT ^v1 OR ^v2)))`;
+       (NOT ^v1 OR ^v2))`;
 
-val syn044_1 = Eval
-`Wang
-  (NOT((^v0 OR ^v1) AND
+val syn044_1 = Term
+  `NOT((^v0 OR ^v1) AND
        (NOT ^v0 OR NOT ^v1) AND
        (NOT ^v0 OR ^v1 OR ^v2) AND
        (NOT ^v2 OR ^v1) AND
        (NOT ^v2 OR ^v0) AND
-       (NOT ^v1 OR ^v2)))`;
+       (NOT ^v1 OR ^v2))`;
 
-val syn011_1 = Eval
-`Wang
-  (NOT(^v6 AND
+val syn011_1 = Term
+  `NOT(^v6 AND
        (NOT ^v0 OR NOT ^v2) AND
        (^v0 OR ^v1 OR ^v5) AND
        (NOT ^v2 OR NOT ^v1) AND
        (NOT ^v4 OR ^v2) AND
        (NOT ^v3 OR ^v2) AND
        (^v3 OR ^v4 OR ^v5) AND
-       (NOT ^v5 OR NOT ^v6)))`;
+       (NOT ^v5 OR NOT ^v6))`;
 
-val syn032_1 = Eval
-`Wang
-  (NOT((NOT ^v5 OR NOT ^v1) AND
+val syn032_1 = Term
+  `NOT((NOT ^v5 OR NOT ^v1) AND
        (NOT ^v4 OR NOT ^v0) AND
        (NOT ^v4 OR ^v0) AND
        (NOT ^v5 OR ^v1) AND
        (NOT ^v2 OR ^v4 OR ^v3) AND
        (^v4 OR ^v2 OR ^v3) AND
-       (NOT ^v3 OR ^v4 OR ^v5)))`;
+       (NOT ^v3 OR ^v4 OR ^v5))`;
 
-val syn030_1 = Eval
-`Wang
-   (NOT((NOT ^v4 OR NOT ^v0 OR NOT ^v1) AND
+val syn030_1 = Term
+   `NOT((NOT ^v4 OR NOT ^v0 OR NOT ^v1) AND
         (NOT ^v3 OR NOT ^v4 OR ^v0) AND
         (NOT ^v1 OR ^v0) AND
         (^v0 OR ^v1) AND
@@ -204,11 +190,10 @@ val syn030_1 = Eval
         (NOT ^v1 OR NOT ^v0 OR ^v2) AND
         (NOT ^v2 OR ^v1) AND
         (NOT ^v1 OR ^v3) AND
-        (NOT ^v2 OR NOT ^v3 OR ^v4)))`;
+        (NOT ^v2 OR NOT ^v3 OR ^v4))`;
 
-val syn054_1 = Eval
-`Wang
-  (NOT((NOT ^v1 OR NOT ^v7) AND
+val syn054_1 = Term
+  `NOT((NOT ^v1 OR NOT ^v7) AND
        (NOT ^v2 OR NOT ^v0) AND
        (NOT ^v3 OR ^v7 OR ^v4) AND
        (NOT ^v6 OR ^v0 OR ^v5) AND
@@ -218,12 +203,10 @@ val syn054_1 = Eval
        (NOT ^v5 OR ^v2) AND
        (NOT ^v3 OR NOT ^v4) AND
        (NOT ^v6 OR NOT ^v5) AND
-       (^v6 OR ^v7)))`;
+       (^v6 OR ^v7))`;
 
-(* Takes a long time, but it gets there in the end. *)
-val gra001_1 = Eval
-`Wang
-  (NOT((NOT ^v1 OR ^v0) AND
+val gra001_1 = Term
+  `NOT((NOT ^v1 OR ^v0) AND
        (NOT ^v0 OR ^v1) AND
        (NOT ^v4 OR NOT ^v2 OR NOT ^v0) AND
        (NOT ^v4 OR ^v2 OR ^v0) AND
@@ -234,12 +217,11 @@ val gra001_1 = Eval
        (NOT ^v2 OR ^v3 OR ^v1) AND
        (NOT ^v1 OR ^v3 OR ^v2) AND
        (NOT ^v3 OR NOT ^v4) AND
-       (^v3 OR ^v4)))`;
+       (^v3 OR ^v4))`;
 
 
-val syn321_1 =  Eval
-`Wang
-  (NOT((NOT ^v0 OR ^v9) AND
+val syn321_1 =  Term
+  `NOT((NOT ^v0 OR ^v9) AND
        (NOT ^v0 OR ^v6) AND
        (NOT ^v0 OR ^v7) AND
        (NOT ^v8 OR ^v9) AND
@@ -254,10 +236,114 @@ val syn321_1 =  Eval
        (^v8 OR ^v9) AND
        (^v8 OR ^v6) AND
        (^v8 OR ^v7) AND
-       (NOT ^v8 OR NOT ^v9)))` ;
+       (NOT ^v8 OR NOT ^v9))`;
+
+Eval `Wang ^BOOL_CASES`;
+Eval `Wang ^NOT_BCASES`;
+Eval `Wang ^IMP_REFL`;
+Eval `Wang ^DISTRIB`;
+Eval `Wang ^PEIRCE`;
+Eval `Wang ^ANDREWS`;
+Eval `Wang ^CLASSIC`;
+Eval `Wang ^syn323_1`;
+Eval `Wang ^syn029_1`;
+Eval `Wang ^syn052_1`;
+Eval `Wang ^syn051_1`;
+Eval `Wang ^syn044_1`;
+Eval `Wang ^syn011_1`;
+Eval `Wang ^syn032_1`;
+Eval `Wang ^syn030_1`;
+Eval `Wang ^syn054_1`;
+Eval `Wang ^gra001_1`; (* 45,395,214 inference steps (takes a long time) *)
+Eval `Wang ^syn321_1`; (* Takes longer, but not that much: 57,451,380 steps *)
+
+
 
 (*---------------------------------------------------------------------------
-         The SML version
+        Negation normal form (from Paulson's ML book). First a naive
+        version, which has a slightly complicated termination proof, 
+        and then a faster mutually recursive version, which has an 
+        easy termination proof.
+ ---------------------------------------------------------------------------*)
+
+val nnf_defn0 =
+ Hol_defn "nnf0"
+     `(nnf (VAR x)        = VAR x)
+ /\   (nnf (NOT (VAR x))  = NOT(VAR x))
+ /\   (nnf (NOT(NOT p))   = nnf p)
+ /\   (nnf (NOT(p AND q)) = nnf ((NOT p) OR (NOT q)))
+ /\   (nnf (NOT(p OR q))  = nnf ((NOT p) AND (NOT q)))
+ /\   (nnf (p AND q)      = (nnf p) AND (nnf q))
+ /\   (nnf (p OR q)       = (nnf p) OR (nnf q))`;
+
+(*---------------------------------------------------------------------------
+    The size of the largest NOT expression in a proposition.
+ ---------------------------------------------------------------------------*)
+
+val prop_size_def = definition "prop_size_def";
+
+val MAX_def = Define `MAX x y = if x<y then y else x`;
+
+val NOT_SIZE_def = 
+ Define
+    `(NOT_SIZE (VAR x)   = 0)
+  /\ (NOT_SIZE (NOT p)   = prop_size (\v.0) p)
+  /\ (NOT_SIZE ($AND p q) = MAX (NOT_SIZE p) (NOT_SIZE q))
+  /\ (NOT_SIZE ($OR p q)  = MAX (NOT_SIZE p) (NOT_SIZE q))`;
+
+
+val NOT_SIZE_LESS = Q.prove
+(`!p. NOT_SIZE p < prop_size (\v.0) p + 1`,
+ Induct
+   THEN RW_TAC arith_ss [NOT_SIZE_def, MAX_def, prop_size_def]);
+ 
+val (nnf0_eqns, nnf0_ind) = 
+Defn.tprove
+ (nnf_defn0,
+  WF_REL_TAC nnf_defn0 
+      `inv_image ($< LEX $<) (\x. (NOT_SIZE x, prop_size (\v.0) x))`
+    THEN RW_TAC arith_ss [NOT_SIZE_def, MAX_def, 
+                          prop_size_def, NOT_SIZE_LESS]);
+
+
+val nnf_mutrec_eqns =
+ xDefine "nnf1"
+     `(nnfpos (VAR x)   = VAR x)
+ /\   (nnfpos (NOT p)   = nnfneg p)
+ /\   (nnfpos (p AND q) = (nnfpos p) AND (nnfpos q))
+ /\   (nnfpos (p OR q)  = (nnfpos p) OR (nnfpos q))
+ /\   (nnfneg (VAR x)   = NOT (VAR x))
+ /\   (nnfneg (NOT p)   = nnfpos p)
+ /\   (nnfneg (p AND q) = (nnfneg p) OR (nnfneg q))
+ /\   (nnfneg (p OR q)  = (nnfneg p) AND (nnfneg q))`;
+
+(*---------------------------------------------------------------------------
+      Evaluation with nnfpos.
+ ---------------------------------------------------------------------------*)
+
+local open computeLib
+      val compset = bossLib.initial_rws()
+      val _ = add_thms (false,[REFL_CLAUSE]) compset
+      val _ = add_thms (true,[nnf_mutrec_eqns]) compset
+in
+val Eval = Count.apply (CBV_CONV compset) o Term
+end;
+
+Eval `nnfpos ^syn052_1`;
+Eval `nnfpos ^syn051_1`;
+Eval `nnfpos ^syn044_1`;
+Eval `nnfpos ^syn011_1`;
+Eval `nnfpos ^syn032_1`;
+Eval `nnfpos ^syn030_1`;
+Eval `nnfpos ^syn054_1`;
+Eval `nnfpos ^gra001_1`;
+Eval `nnfpos ^syn321_1`;
+
+
+
+
+(*---------------------------------------------------------------------------
+         The SML version of Wang's algorithm.
 
 fun mem x [] = false
   | mem x (h::t) = (x=h) orelse mem x t;
@@ -287,13 +373,12 @@ infixr 4 OR;
 
 fun Wang M = Prv [] [] [M] [];
 
-val x = VAR "x";
-val y = VAR "y";
-val z = VAR "z";
-val p = VAR "p";
-val q = VAR "q";
-val r = VAR "r";
-val s = VAR "s";
+val x = VAR "x"; val y = VAR "y"; val z = VAR "z"; val p = VAR "p";
+val q = VAR "q"; val r = VAR "r"; val s = VAR "s";
+
+val v0 = VAR "v0"; val v1 = VAR "v1"; val v2 = VAR "v2"; val v3 = VAR "v3";
+val v4 = VAR "v4"; val v5 = VAR "v5"; val v6 = VAR "v6"; val v7 = VAR "v7";
+val v8 = VAR "v8"; val v9 = VAR "v9";
 
 fun imp x y = NOT x OR y;
 fun iff x y = (imp x y) AND (imp y x);
@@ -310,23 +395,11 @@ val ANDREWS    = time Wang
  (imp ((imp p (q AND (r OR s))) AND ((NOT q) OR (NOT r)))
      (imp p s));
 
-val v0 = VAR "v0";
-val v1 = VAR "v1";
-val v2 = VAR "v2";
-val v3 = VAR "v3";
-val v4 = VAR "v4";
-val v5 = VAR "v5";
-val v6 = VAR "v6";
-val v7 = VAR "v7";
-val v8 = VAR "v8";
-val v9 = VAR "v9";
-
 val syn323_1 = time Wang 
   (NOT((v0 OR v1) AND 
        (NOT v0 OR v1) AND 
        (NOT v1 OR v0) AND 
        (NOT v0 OR NOT v1)));
-
 
 val syn029_1 = 
 time Wang
@@ -445,180 +518,3 @@ time Wang
 
      End of SML version.
  ---------------------------------------------------------------------------*)
-
-
-(*---------------------------------------------------------------------------
-        Negation normal form (from Paulson's ML book). First a naive
-        version, which has a complicated termination proof, and then
-        a faster mutually recursive version, which has an easy 
-        termination proof.
- ---------------------------------------------------------------------------*)
-
-val nnf_defn0 =
- Hol_defn "nnf0"
-     `(nnf (VAR x)        = VAR x)
- /\   (nnf (NOT (VAR x))  = NOT(VAR x))
- /\   (nnf (NOT(NOT p))   = nnf p)
- /\   (nnf (NOT(AND p q)) = nnf (OR  (NOT p) (NOT q)))
- /\   (nnf (NOT(OR p q))  = nnf (AND (NOT p) (NOT q)))
- /\   (nnf (AND p q)      = AND (nnf p) (nnf q))
- /\   (nnf (OR p q)       = OR (nnf p) (nnf q))`;
-
-(*---------------------------------------------------------------------------
-    The size of the largest NOT expression in a proposition.
- ---------------------------------------------------------------------------*)
-
-val prop_size_def = definition "prop_size_def";
-
-val MAX_def = Define `MAX x y = if x<y then y else x`;
-
-val NOT_SIZE_def = 
- Define
-    `(NOT_SIZE (VAR x)   = 0)
-  /\ (NOT_SIZE (NOT p)   = prop_size (\v.0) p)
-  /\ (NOT_SIZE (AND p q) = MAX (NOT_SIZE p) (NOT_SIZE q))
-  /\ (NOT_SIZE (OR p q)  = MAX (NOT_SIZE p) (NOT_SIZE q))`;
-
-
-val NOT_SIZE_LESS = Q.prove
-(`!p. NOT_SIZE p < prop_size (\v.0) p + 1`,
- Induct
-   THEN RW_TAC arith_ss [NOT_SIZE_def, MAX_def, prop_size_def]);
- 
-val (nnf0_eqns, nnf0_ind) = 
-Defn.tprove
- (nnf_defn0,
-  WF_REL_TAC nnf_defn0 
-      `inv_image ($< LEX $<) (\x. (NOT_SIZE x, prop_size (\v.0) x))`
-    THEN RW_TAC arith_ss [NOT_SIZE_def, MAX_def, 
-                          prop_size_def, NOT_SIZE_LESS]);
-
-
-val nnf_mutrec_eqns =
- xDefine "nnf1"
-     `(nnfpos (VAR x)   = VAR x)
- /\   (nnfpos (NOT p)   = nnfneg p)
- /\   (nnfpos (AND p q) = AND (nnfpos p) (nnfpos q))
- /\   (nnfpos (OR p q)  = OR  (nnfpos p) (nnfpos q))
- /\   (nnfneg (VAR x)   = NOT (VAR x))
- /\   (nnfneg (NOT p)   = nnfpos p)
- /\   (nnfneg (AND p q) = OR  (nnfneg p) (nnfneg q))
- /\   (nnfneg (OR p q)  = AND (nnfneg p) (nnfneg q))`;
-
-local open computeLib
-      val compset = reduceLib.reduce_rws()
-      val _ = add_thms (false,[REFL_CLAUSE]) compset
-      val _ = add_thms (true,[nnf_mutrec_eqns]) compset
-      val eval_nnf = CBV_CONV compset
-in
-fun Eval q = Count.apply eval_nnf (Term q)
-end;
-
-val syn052_1 = Eval
-`nnfpos
-   (NOT((NOT ^v1 OR ^v0) AND 
-        (NOT ^v0 OR ^v1) AND 
-        (^v1 OR ^v0)     AND 
-        (NOT ^v1 OR ^v1) AND 
-        (NOT ^v0 OR NOT ^v1)))`;
-
-val syn051_1 = Eval
-`nnfpos
-  (NOT(( ^v1 OR ^v0) AND
-       (^v1 OR ^v2) AND
-       (NOT ^v0 OR NOT ^v1) AND
-       (NOT ^v2 OR NOT ^v1) AND
-       (NOT ^v0 OR ^v1) AND
-       (NOT ^v1 OR ^v2)))`;
-
-val syn044_1 = Eval
-`nnfpos
-  (NOT((^v0 OR ^v1) AND
-       (NOT ^v0 OR NOT ^v1) AND
-       (NOT ^v0 OR ^v1 OR ^v2) AND
-       (NOT ^v2 OR ^v1) AND
-       (NOT ^v2 OR ^v0) AND
-       (NOT ^v1 OR ^v2)))`;
-
-val syn011_1 = Eval
-`nnfpos
-  (NOT(^v6 AND
-       (NOT ^v0 OR NOT ^v2) AND
-       (^v0 OR ^v1 OR ^v5) AND
-       (NOT ^v2 OR NOT ^v1) AND
-       (NOT ^v4 OR ^v2) AND
-       (NOT ^v3 OR ^v2) AND
-       (^v3 OR ^v4 OR ^v5) AND
-       (NOT ^v5 OR NOT ^v6)))`;
-
-val syn032_1 = Eval
-`nnfpos
-  (NOT((NOT ^v5 OR NOT ^v1) AND
-       (NOT ^v4 OR NOT ^v0) AND
-       (NOT ^v4 OR ^v0) AND
-       (NOT ^v5 OR ^v1) AND
-       (NOT ^v2 OR ^v4 OR ^v3) AND
-       (^v4 OR ^v2 OR ^v3) AND
-       (NOT ^v3 OR ^v4 OR ^v5)))`;
-
-val syn030_1 = Eval
-`nnfpos
-   (NOT((NOT ^v4 OR NOT ^v0 OR NOT ^v1) AND
-        (NOT ^v3 OR NOT ^v4 OR ^v0) AND
-        (NOT ^v1 OR ^v0) AND
-        (^v0 OR ^v1) AND
-        (NOT ^v0 OR ^v1) AND
-        (NOT ^v1 OR NOT ^v0 OR ^v2) AND
-        (NOT ^v2 OR ^v1) AND
-        (NOT ^v1 OR ^v3) AND
-        (NOT ^v2 OR NOT ^v3 OR ^v4)))`;
-
-val syn054_1 = Eval
-`nnfpos
-  (NOT((NOT ^v1 OR NOT ^v7) AND
-       (NOT ^v2 OR NOT ^v0) AND
-       (NOT ^v3 OR ^v7 OR ^v4) AND
-       (NOT ^v6 OR ^v0 OR ^v5) AND
-       (NOT ^v7 OR ^v1) AND
-       (NOT ^v0 OR ^v2) AND
-       (NOT ^v4 OR ^v1) AND
-       (NOT ^v5 OR ^v2) AND
-       (NOT ^v3 OR NOT ^v4) AND
-       (NOT ^v6 OR NOT ^v5) AND
-       (^v6 OR ^v7)))`;
-
-(* Takes a long time, but it gets there in the end. *)
-val gra001_1 = Eval
-`nnfpos
-  (NOT((NOT ^v1 OR ^v0) AND
-       (NOT ^v0 OR ^v1) AND
-       (NOT ^v4 OR NOT ^v2 OR NOT ^v0) AND
-       (NOT ^v4 OR ^v2 OR ^v0) AND
-       (NOT ^v2 OR ^v4 OR ^v0) AND
-       (NOT ^v0 OR ^v4 OR ^v2) AND
-       (NOT ^v3 OR NOT ^v2 OR NOT ^v1) AND
-       (NOT ^v3 OR ^v2 OR ^v1) AND
-       (NOT ^v2 OR ^v3 OR ^v1) AND
-       (NOT ^v1 OR ^v3 OR ^v2) AND
-       (NOT ^v3 OR NOT ^v4) AND
-       (^v3 OR ^v4)))`;
-
-
-val syn321_1 =  Eval
-`nnfpos
-  (NOT((NOT ^v0 OR ^v9) AND
-       (NOT ^v0 OR ^v6) AND
-       (NOT ^v0 OR ^v7) AND
-       (NOT ^v8 OR ^v9) AND
-       (NOT ^v8 OR ^v6) AND
-       (NOT ^v8 OR ^v7) AND
-       (NOT ^v1 OR ^v9) AND
-       (NOT ^v1 OR ^v6) AND
-       (NOT ^v1 OR ^v7) AND
-       (NOT ^v2 OR ^v3) AND
-       (NOT ^v4 OR ^v5) AND
-       (NOT ^v7 OR ^v8) AND
-       (^v8 OR ^v9) AND
-       (^v8 OR ^v6) AND
-       (^v8 OR ^v7) AND
-       (NOT ^v8 OR NOT ^v9)))` ;
