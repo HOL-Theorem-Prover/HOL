@@ -227,9 +227,14 @@ fun funpow n f x =
  end;
 
 fun repeat f =
-  let fun loop x = 
-        loop (f x) handle Interrupt => raise Interrupt | HOL_ERR _ => x
-  in loop
+ let exception LAST of 'a
+     fun loop x = 
+       let val y = (f x handle 
+                        Interrupt => raise Interrupt
+                      | otherwise => raise (LAST x))
+       in loop y 
+       end
+  in fn x => loop x handle (LAST y) => y
   end;
 
 fun enumerate i [] = []
