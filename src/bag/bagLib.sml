@@ -17,12 +17,14 @@ fun remove x [] = raise ERR "remove" "no such element"
 
 val num_ty = mk_type("num", [])
 val bag_ty = Type.alpha --> num_ty
+fun is_bag_ty ty = #2 (dom_rng ty) = num_ty handle HOL_ERR _ => false
 
 val BAG_INSERT_tm = mk_const("BAG_INSERT", alpha --> bag_ty --> bag_ty);
 val BAG_UNION_tm = mk_const("BAG_UNION", bag_ty --> bag_ty --> bag_ty);
 val BAG_DIFF_tm = mk_const("BAG_DIFF", bag_ty --> bag_ty --> bag_ty);
 val EMPTY_BAG_tm = mk_const("EMPTY_BAG", bag_ty);
 val SUB_BAG_tm = mk_const("SUB_BAG", bag_ty --> bag_ty --> bool);
+val BAG_EQ_tm = mk_const("=", bag_ty --> bag_ty --> bool);
 
 fun base_type tm = let
   val ty = type_of tm
@@ -140,12 +142,18 @@ val SUB_BAG_UNION_eliminate' =
   hd (CONJUNCTS
       (CONV_RULE (SIMP_CONV bool_ss [FORALL_AND_THM])
        SUB_BAG_UNION_eliminate))
+val BAG_DIFF_UNION_eliminate' =
+  hd (CONJUNCTS
+      (CONV_RULE (SIMP_CONV bool_ss [FORALL_AND_THM])
+       BAG_DIFF_UNION_eliminate))
 val BU_EMPTY_R = hd (CONJUNCTS BAG_UNION_EMPTY)
 
 fun CANCEL_CONV tm = let
   val (mk_rel, thm, (arg1, arg2)) =
     (mk_sub_bag, SUB_BAG_UNION_eliminate', dest_sub_bag tm)
-    handle HOL_ERR _ => (mk_eq, BAG_UNION_LEFT_CANCEL, dest_eq tm)
+    handle HOL_ERR _ =>
+      (mk_diff, BAG_DIFF_UNION_eliminate', dest_diff tm)
+      handle HOL_ERR _ => (mk_eq, BAG_UNION_LEFT_CANCEL, dest_eq tm)
   val basetype = base_type arg1
   val bag_type = basetype --> num_ty
   val arg1_ts = strip_union arg1 and arg2_ts = strip_union arg2
@@ -180,8 +188,70 @@ in
   REWR_CONV thm
 end tm
 
-val BAG_ss = rewrites [BAG_UNION_EMPTY, BAG_DIFF_EMPTY, SUB_BAG_REFL,
-                       SUB_BAG_EMPTY]
+val x = mk_var("x", bag_ty)
+val y = mk_var("y", bag_ty)
+fun mk_cancelconv (t, s) =
+  {conv = K (K CANCEL_CONV),
+   key = SOME ([], list_mk_comb(t, [x, y])),
+   name = "CANCEL_CONV ("^s^")", trace = 2}
 
+
+val BAG_ss = SIMPSET
+  {ac = [], congs = [],
+   convs = map mk_cancelconv [(BAG_DIFF_tm, "DIFF"),
+                              (SUB_BAG_tm, "SUB_BAG"),
+                              (BAG_EQ_tm, "=")],
+   filter = NONE, dprocs = [],
+   rewrs = [BAG_UNION_EMPTY, BAG_DIFF_EMPTY, SUB_BAG_REFL,
+            SUB_BAG_EMPTY]};
+
+fun transform t =
+  ((if is_sub_bag t then
+      REWR_CONV SUB_BAG_LEQ
+    else if is_eq t then
+      FUN_EQ_CONV
+    else NO_CONV) THENC
+   PURE_REWRITE_CONV [BAG_UNION] THENC DEPTH_CONV BETA_CONV) t
+
+fun SBAG_SOLVE thms tm = let
+  val newgoal_thm = transform tm
+  val newgoal_tm = rhs (concl newgoal_thm)
+  val (gvar, gbody) = dest_forall newgoal_tm
+  val newasms = map (SPEC gvar o CONV_RULE transform) thms
+  val newasms_tm = list_mk_conj (map concl newasms)
+  val goal_thm0 = arithLib.ARITH_PROVE (mk_imp(newasms_tm, gbody))
+  val goal_thm1 = MP goal_thm0 (LIST_CONJ newasms)
+  val goal_thm2 = EQT_INTRO (GEN gvar goal_thm1)
+  val thm = TRANS newgoal_thm goal_thm2
+  val _  =  Trace.trace(1,Trace.PRODUCE(tm,"SBAG_SOLVE",thm))
+in
+  thm
+end
+
+val diff_free = not o can (find_term is_diff)
+fun is_ok t =
+  (is_sub_bag t orelse (is_eq t andalso is_bag_ty (type_of (rand t)))) andalso
+  diff_free t
+val (CACHED_SBAG_SOLVE, sbag_cache) = Cache.CACHE(is_ok, SBAG_SOLVE)
+
+
+val SBAG_SOLVER = let
+  exception CTXT of thm list;
+  fun get_ctxt e = (raise e) handle CTXT c => c
+  fun add_ctxt(ctxt, newthms) = let
+    val addthese = filter (is_ok o concl) (flatten (map CONJUNCTS newthms))
+  in
+    CTXT (addthese @ get_ctxt ctxt)
+  end
+in
+  Traverse.REDUCER
+  {addcontext = add_ctxt,
+   apply = fn args => CACHED_SBAG_SOLVE (get_ctxt (#context args)),
+   initial = CTXT []}
+end;
+
+val SBAG_SOLVE_ss = SIMPSET
+  {ac = [], convs = [], filter = NONE, rewrs = [],
+   dprocs = [SBAG_SOLVER], congs = []}
 
 end;

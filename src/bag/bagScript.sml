@@ -466,6 +466,12 @@ val PSUB_BAG_NOT_EQ = store_thm(
   (--`!(b1:'a -> num) b2. PSUB_BAG b1 b2 ==> ~(b1 = b2)`--),
   SIMP_TAC hol_ss [PSUB_BAG]);
 
+val SUB_BAG_LEQ = store_thm(
+  "SUB_BAG_LEQ",
+  ``!b1 b2:'a -> num. SUB_BAG b1 b2 = !x. b1 x <= b2 x``,
+  SIMP_TAC hol_ss [SUB_BAG, BAG_INN, geq_lemma] THEN
+  SIMP_TAC hol_ss [arithmeticTheory.GREATER_EQ]);
+
 val _ = print "Properties of BAG_DIFF\n"
 val BAG_DIFF_EMPTY = store_thm(
   "BAG_DIFF_EMPTY",
