@@ -38,6 +38,7 @@ fun TAC_PROOF (g,tac) =
 
 
 fun prove(t,tac) = TAC_PROOF(([],t), tac);
+
 fun store_thm (name, tm, tac) =
   Theory.save_thm (name, prove (tm, tac)) handle e =>
     (print ("Failed to prove theorem "^name^"\n");
@@ -204,6 +205,32 @@ fun POP_ASSUM thfun (a::asl, w) = thfun (ASSUME a) (asl,w)
  *---------------------------------------------------------------------------*)
 fun POP_ASSUM_LIST asltac (asl,w) = asltac (map ASSUME asl) ([],w);
 
+(*---------------------------------------------------------------------------
+ * Pop the first assumption matching (higher-order match) the given term
+ * and give it to a function (tactic).
+ *---------------------------------------------------------------------------*)
+
+local fun match_with_constants constants pat_tm actual_tm = 
+       let val (tm_inst, ty_inst) = Ho_match.match_term [] pat_tm actual_tm
+           val bound_vars = map #2 tm_inst
+       in
+          null (intersect constants bound_vars)
+       end handle HOL_ERR _ => false
+in
+fun PAT_ASSUM pat thfun (asl, w) = 
+  case List.filter (can (Ho_match.match_term [] pat)) asl
+   of [] => raise TACTICAL_ERR "PAT_ASSUM" "No assumptions match pattern"
+    | [x] => let val (ob, asl') = Lib.pluck (fn t => t = x) asl
+             in
+               thfun (ASSUME ob) (asl', w)
+             end
+    | _ => let val fvars = free_varsl (w::asl)
+               val (ob,asl') = Lib.pluck (match_with_constants fvars pat) asl
+           in
+             thfun (ASSUME ob) (asl',w)
+           end
+end
+
 
 (*-- Tactical quantifiers -- Apply a list of tactics in succession. -------*)
 
@@ -234,6 +261,7 @@ val EVERY_ASSUM = ASSUM_LIST o MAP_EVERY;
 (*---------------------------------------------------------------------------
  * Call a thm-tactic for the first assumption at which it succeeds.
  *---------------------------------------------------------------------------*)
+
 fun FIRST_ASSUM ttac (A,g) =
    let fun find ttac []     = raise TACTICAL_ERR "FIRST_ASSUM"  ""
          | find ttac (a::L) =
@@ -245,20 +273,21 @@ fun FIRST_ASSUM ttac (A,g) =
 (*----------------------------------------------------------------------
  * Call a thm-tactic for the first assumption at which it succeeds and
  * remove that assumption from the list.
- *----------------------------------------------------------------------*)
+ * Note that  UNDISCH_THEN is actually defined for public consumption
+ * in Thm_cont.sml, but we can't use that here because Thm_cont builds
+ * on this module. Arguably all of the ASSUM tactics are not tacticals
+ * at all, and shouldn't be here along with THEN etc.
+ ---------------------------------------------------------------------------*)
 
-(* UNDISCH_THEN is actually defined for public consumption in Thm_cont.sml,
-   but we can't use that here because Thm_cont builds on this module.
-   Arguably all of the ASSUM tactics are not tacticals at all, and
-   shouldn't be here along with THEN etc. *)
-fun UNDISCH_THEN tm ttac (asl, w) = let
-  val (_, asl') = Lib.pluck (fn a => a = tm) asl
+local fun UNDISCH_THEN tm ttac (asl, w) = 
+       let val (_, asl') = Lib.pluck (fn a => a = tm) asl
+       in
+         ttac (ASSUME tm) (asl', w)
+       end
 in
-  ttac (ASSUME tm) (asl', w)
-end
 fun FIRST_X_ASSUM ttac =
   FIRST_ASSUM (fn th => UNDISCH_THEN (concl th) ttac)
-
+end;
 
 (*---------------------------------------------------------------------------
  * Split off a new subgoal and provide it as a theorem to a tactic
@@ -269,6 +298,7 @@ fun FIRST_X_ASSUM ttac =
  * Most convenient when the tactic solves the original goal, leaving only the
  * new subgoal wa.
  *---------------------------------------------------------------------------*)
+
 fun SUBGOAL_THEN wa ttac (asl,w) =
     let val (gl,p) = ttac (ASSUME wa) (asl,w)
     in
@@ -278,6 +308,7 @@ fun SUBGOAL_THEN wa ttac (asl,w) =
 (*---------------------------------------------------------------------------
  * A tactical that makes a tactic fail if it has no effect.
  *---------------------------------------------------------------------------*)
+
 fun CHANGED_TAC tac g =
  let val (gl,p) = tac g
  in if (set_eq gl [g]) then raise TACTICAL_ERR "CHANGED_TAC" "no change"

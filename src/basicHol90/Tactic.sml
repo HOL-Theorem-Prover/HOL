@@ -557,8 +557,8 @@ local fun ERR s = raise TACTIC_ERR"AP_THM_TAC" s
 in 
 fun AP_THM_TAC (asl,gl) =
  let val {lhs,rhs} = dest_eq gl handle HOL_ERR _ => ERR "not an equation"
-   val {Rator=g,Rand=x} = dest_comb lhs handle HOL_ERR _ => ERR "lhs not a comb"
-   val {Rator=f,Rand=y} = dest_comb rhs handle HOL_ERR _ => ERR "rhs not a comb"
+  val {Rator=g,Rand=x} = dest_comb lhs handle HOL_ERR _ => ERR "lhs not a comb"
+  val {Rator=f,Rand=y} = dest_comb rhs handle HOL_ERR _ => ERR "rhs not a comb"
  in 
    if not(x = y) then ERR "arguments on lhs and rhs differ"
      else ([(asl, mk_eq{lhs=g, rhs=f})], (C AP_THM x o hd))
