@@ -11,15 +11,29 @@ val _ = new_theory "num";
 (*---------------------------------------------------------------------------
  * Define successor `SUC_REP:ind->ind` on ind.
  *---------------------------------------------------------------------------*)
-val SUC_REP_DEF = new_definition("SUC_REP_DEF",
-     --`SUC_REP = @f:ind->ind. ONE_ONE f /\ ~ONTO f`--);
+
+val SUC_REP_DEF = new_specification {
+  name = "SUC_REP_DEF",
+  sat_thm = boolTheory.INFINITY_AX,
+  consts = [{fixity = Prefix, const_name = "SUC_REP"}]
+};
+
+val ZERO_REP_EXISTS = prove(
+  Term`?z. !y. ~(z = SUC_REP y)`,
+  STRIP_ASSUME_TAC ((CONV_RULE (BINDER_CONV NOT_EXISTS_CONV) o
+                     CONV_RULE NOT_FORALL_CONV o
+                     REWRITE_RULE [ONTO_DEF] o
+                     CONJUNCT2) SUC_REP_DEF) THEN
+  mesonLib.ASM_MESON_TAC []);
 
 (*---------------------------------------------------------------------------
  * `ZERO_REP:ind` represents `0:num`
  *---------------------------------------------------------------------------*)
-val ZERO_REP_DEF = new_definition("ZERO_REP_DEF",
-      --`ZERO_REP = @x:ind. !y. ~(x = SUC_REP y)`--);
-
+val ZERO_REP_DEF = new_specification{
+  name = "ZERO_REP_DEF",
+  sat_thm = ZERO_REP_EXISTS,
+  consts = [{fixity = Prefix, const_name = "ZERO_REP"}]
+};
 
 (*---------------------------------------------------------------------------*)
 (* `IS_NUM:ind->bool` defines the subset of `:ind` used to represent 	     *)
@@ -94,30 +108,14 @@ val IS_NUM_REP_SUC_REP =
       EXISTS_TAC (--`n:num`--) THEN REFL_TAC);
 
 (*---------------------------------------------------------------------------
- * Prove that SUC_REP is one-to-one and ZERO_REP ~= SUC_REP i.
- *---------------------------------------------------------------------------*)
-
-val thm1 = REWRITE_RULE [SYM SUC_REP_DEF] (SELECT_RULE INFINITY_AX);
-val thm2 = REWRITE_RULE [ONE_ONE_DEF,ONTO_DEF] thm1;
-
-
-(*---------------------------------------------------------------------------
  * |- !x1 x2. (SUC_REP x1 = SUC_REP x2) ==> (x1 = x2)
  *---------------------------------------------------------------------------*)
-val SUC_REP_11 = CONJUNCT1 thm2;
+val SUC_REP_11 = CONJUNCT1 (REWRITE_RULE [ONE_ONE_DEF] SUC_REP_DEF);
 
 (*---------------------------------------------------------------------------
  *  |- !x. ~(SUC_REP x = ZERO_REP)
  *---------------------------------------------------------------------------*)
-val NOT_SUC_ZERO =
-    let val th1 = CONV_RULE NOT_FORALL_CONV (CONJUNCT2 thm2)
-        val th2 = CONV_RULE (ONCE_DEPTH_CONV NOT_EXISTS_CONV) th1
-        val th3 = SELECT_RULE th2
-        val th4 = REWRITE_RULE [SYM ZERO_REP_DEF] th3
-    in
-    CONV_RULE (ONCE_DEPTH_CONV SYM_CONV) th4
-    end;
-
+val NOT_SUC_ZERO = GSYM ZERO_REP_DEF;
 
 (*----------------------------------------------------------------------*)
 (* Proof of NOT_SUC : |- !n. ~(SUC n = ZERO)				*)
