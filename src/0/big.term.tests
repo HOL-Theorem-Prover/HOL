@@ -23,14 +23,14 @@ val vars100K = upto (fn i => mk_var("v"^Int.toString i, bool)) 0 100000;
 val vars500K = upto (fn i => mk_var("v"^Int.toString i, bool)) 0 500000;
 val vars1M = upto (fn i => mk_var("v"^Int.toString i, bool)) 0 1000000;
 
-val body10 = list_mk_conj vars10;
-val body100 = list_mk_conj vars100;
-val body1K = list_mk_conj vars1K;
+val body10 = time list_mk_conj vars10;
+val body100 = time list_mk_conj vars100;
+val body1K = time list_mk_conj vars1K;
 max_print_depth := 10;
-val body10K = list_mk_conj vars10K;
-val body50K = list_mk_conj vars50K;
-val body100K = list_mk_conj vars100K;
-val body500K = list_mk_conj vars500K;
+val body10K = time list_mk_conj vars10K;
+val body50K = time list_mk_conj vars50K;
+val body100K = time list_mk_conj vars100K;
+val body500K = time list_mk_conj vars500K;
 val body1M = time list_mk_conj vars1M;   (* 9 secs *)
 
 val abs10   = (time HolKernel.list_mk_abs(vars10,body10); ());
