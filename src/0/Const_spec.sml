@@ -100,8 +100,9 @@ fun no_free_vars th =
 
 fun check_name const_name =
   if not(Lexis.allowed_term_constant const_name)
-  then raise CONST_SPEC_ERR (String.concat
-       [Lib.quote const_name, " is not allowed to be the name of a constant"])
+  then Lib.mesg true (String.concat
+       [Lib.quote const_name, 
+         " is not a standard constant name (continuing anyway)"])
   else ();
 
 
@@ -136,67 +137,8 @@ fun check_specification name_fixl th =
    (vars, body)
  end;
 
-(*
-if not(List.null(Thm.hyp th))
- then raise CONST_SPEC_ERR"no assumptions to theorem allowed in specifications"
- else
- if not(List.null(Term.free_vars(Thm.concl th)))
- then raise CONST_SPEC_ERR
-               (Lib.itlist (fn t => fn s => "\""^(#Name(dest_var t))^"\" "^s)
-                       (Term.free_vars(Thm.concl th))
-                       "is (are) unbound variable(s) in specification")
- else map (fn {const_name,...} =>
-            if not(Lexis.allowed_term_constant const_name)
-            then Lib.mesg true (String.concat
-                   [Lib.quote const_name,
-                    " should be changed to an alphanumeric. Use ",
-                    Lib.quote "set_MLname"])
-            else ())
-          (flag_name_prec_list :{fixity:Term.fixity,const_name:string} list)
-  ;
- let val (vars,body) =
-    n_strip_quant dest_exists (List.length flag_name_prec_list)
-                  (Thm.concl th) handle HOL_ERR _
-    => raise CONST_SPEC_ERR"too few existentially quantified variables"
- in
-   Lib.C map vars
-    (fn var =>
-       if not(List.null
-              (Lib.set_diff (Term.type_vars_in_term body)
-                            (Term.type_vars_in_term var)))
-       then raise CONST_SPEC_ERR
-           (Lib.itlist (fn vty => fn s => ((Type.dest_vartype vty)^" "^s))
-               (Lib.set_diff (Term.type_vars_in_term body)
-                             (Term.type_vars_in_term var))
-              ("should occur in the type of "^ (#Name(dest_var var))))
-       else ())
-    ;
-    Lib.map2 (fn {fixity = Term.Infix _,...} => (fn var =>
-               if (not(is_infix_type(Term.type_of var)))
-               then raise CONST_SPEC_ERR
-                       (#Name(dest_var var)^" doesn't have infix type")
-               else ())
-            | {fixity = Term.Binder, ...} => (fn var =>
-               if (not(is_binder_type(Term.type_of var)))
-               then raise CONST_SPEC_ERR
-                      (#Name(dest_var var)^" doesn't have binder type")
-               else ())
-            | _ => fn _ => ())
-       flag_name_prec_list vars
-    ;
-    (vars,body)
- end;
-*)
-
-local
-  open Theory Term
-in
-  fun const_intro const_name var = let
-    val ty = type_of var
-  in
-    new_constant{Name=const_name, Ty=ty}
-  end
-end;
+fun const_intro const_name var = 
+    Theory.new_constant{Name=const_name, Ty=Term.type_of var}
 
 fun cnst s v = v |-> mk_const{Name=s,Ty=Term.type_of v};
 

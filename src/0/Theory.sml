@@ -981,7 +981,8 @@ fun new_type {Name,Arity} =
   if Lexis.allowed_type_constant Name
   then add_typeCT {name=Name, arity=Arity, theory = CTname()}
   else Lib.mesg true
-        ("new_type: "^Lib.quote Name^ " is not a standard type name");
+        ("new_type: "^Lib.quote Name
+          ^" is not a standard type name (continuing anyway)");
 
 fun install_type(s,a,thy) = add_typeCT {name=s, arity=a, theory=thy};
 
@@ -991,17 +992,17 @@ fun install_type(s,a,thy) = add_typeCT {name=s, arity=a, theory=thy};
  *---------------------------------------------------------------------------*)
 
 local fun dollar{name,theory,htype} = {name="$"^name,theory=theory,htype=htype}
-      fun write_constant err_str (c as {Name,Ty}) =
-        (if (Lexis.allowed_term_constant Name) then ()
-         else Lib.mesg true
-             (err_str ^" "^Lib.quote Name^ " is not a standard constant name");
-         let val trec = {name=Name, htype=Ty, theory=CTname()}
-             val dtrec = dollar trec
-         in
-           add_termCT trec; add_termCT dtrec
-         end)
 in
-  val new_constant = write_constant "new_constant"
+fun new_constant (c as {Name,Ty}) =
+  (if (Lexis.allowed_term_constant Name) then ()
+    else Lib.mesg true
+          ("new_constant: "^Lib.quote Name
+           ^ " is not a standard constant name (continuing anyway)");
+   let val trec = {name=Name, htype=Ty, theory=CTname()}
+       val dtrec = dollar trec
+   in
+      add_termCT trec; add_termCT dtrec
+   end)
 
   (*-------------------------------------------------------------------------*
    * Add a constant to the signature. This entrypoint is for adding          *
