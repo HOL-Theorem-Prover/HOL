@@ -113,8 +113,9 @@ val FactIterRecThm =  (* proof from KXS *)
     (`!n acc. SND(FactIter (n,acc)) = acc * FACT n`,
      recInduct FactIter_ind THEN RW_TAC arith_ss []
       THEN RW_TAC arith_ss [Once FactIter,FACT]
-      THEN Cases_on `n` THEN FULL_SIMP_TAC arith_ss [FACT]
-      THEN PROVE_TAC [MULT_ASSOC,MULT_SYM]));
+      THEN Cases_on `n` 
+      THEN FULL_SIMP_TAC arith_ss [FACT, AC MULT_ASSOC MULT_SYM]));
+
 
 (*****************************************************************************)
 (* Implement a function Fact to compute SND(FactIter (n,1))                  *)
@@ -146,6 +147,6 @@ val FACT_def =
 (*****************************************************************************)
 (* Temporary hack to work around a system prettyprinter bug                  *)
 (*****************************************************************************)
-val _ = overload_on(" * ", numSyntax.mult_tm);
+val _ = temp_overload_on(" * ", numSyntax.mult_tm);
 
 val _ = export_theory();
