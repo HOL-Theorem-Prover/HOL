@@ -65,7 +65,7 @@ val GCD =
  /\   (gcd (SUC x) (SUC y) = if y <= x then gcd (x-y) (SUC y) 
                                        else gcd (SUC x) (y-x))`;
 
-val gcd_ind = GEN_ALL (theorem "gcd_ind");
+val gcd_ind = GEN_ALL (fetch "-" "gcd_ind");
 
 
 val GCD_IS_GCD = store_thm("GCD_IS_GCD",

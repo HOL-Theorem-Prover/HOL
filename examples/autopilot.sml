@@ -79,8 +79,8 @@ val tran_att_cws_def =
                  <| att_cws := engaged; 
                     fpa_sel := off; 
                     alt_eng := Mode off;
-                    fpa_disp := current; 
-                    alt_disp := current|>
+                   fpa_disp := current; 
+                   alt_disp := current|>
          else st`;
 
 
@@ -106,7 +106,7 @@ val tran_fpa_sel_def =
                   fpa_disp := current; 
                    att_cws := engaged;
                    alt_eng := Mode off; 
-                   alt_disp := current|>)`;
+                  alt_disp := current|>)`;
 
 val tran_alt_eng_def = 
  Define 
@@ -132,10 +132,10 @@ val tran_input_alt_def =
          then st with alt_disp := pre_selected
          else if (st.alt_eng = armed) \/ (st.alt_eng = Mode engaged) 
               then st with
-                    <|alt_eng := Mode off; 
+                    <|alt_eng  := Mode off; 
                       alt_disp := pre_selected;
-                      att_cws := engaged; 
-                      fpa_sel := off; 
+                      att_cws  := engaged; 
+                      fpa_sel  := off; 
                       fpa_disp := current|>
               else st`;
 
@@ -159,8 +159,8 @@ val tran_alt_gets_near_def =
          if st.alt_eng = armed 
          then st with
                 <|altitude := near_pre_selected; 
-                  alt_eng := Mode engaged;
-                  fpa_sel := off; 
+                  alt_eng  := Mode engaged;
+                  fpa_sel  := off; 
                   fpa_disp := current|>
          else
            (st with altitude := near_pre_selected)`;
@@ -172,8 +172,8 @@ val tran_alt_reached_def =
         then st with
               <|altitude := at_pre_selected; 
                 alt_disp := current;
-                alt_eng := Mode engaged; 
-                fpa_sel := off; 
+                alt_eng  := Mode engaged; 
+                fpa_sel  := off; 
                 fpa_disp := current|>
         else (st with <|altitude := at_pre_selected; alt_disp := current|>)`;
 

@@ -66,7 +66,7 @@ val LAM =  Define  `LAM x m = ABS_nc (dLAMBDA x (REP_nc m))`;
 val APP =  xDefine
             "APP"  `$@@ m n = ABS_nc (dAPP (REP_nc m) (REP_nc n))`
 
-val _ = set_fixity ("@@", Infixl 901);
+val _ = set_fixity "@@" (Infixl 901);
 
 
 (* --------------------------------------------------------------------- *)
@@ -450,13 +450,13 @@ val COPY_THEOREM =
      val lp = Term`\^v1. ^P`
      val lq = Term`\^v2. ^Q`
      val th2 = BETA_RULE (ISPECL [lp,lq] pair_lemma)
-     val th3 = GEN_ALL (MP th2 th1)
-     val th4 = Q.SPECL [`\f. lam (\y. SND(f y)) (\y. FST(f y))`,
-                        `\p q. app (SND p) (SND q) (FST p) (FST q)`,
-                        `var`, `con`] th3
-    val th5 = REWRITE_RULE [] (BETA_RULE th4)
+     val th3 = Q.INST [`var` |-> `var`, `con` |-> `con`,
+                 `app` |-> `\p q. app (SND p) (SND q) (FST p) (FST q)`,
+                 `lam` |-> `\f. lam (\y. SND(f y)) (\y. FST(f y))`]
+               (MP th2 th1)
+    val th4 = REWRITE_RULE [] (BETA_RULE th3)
   in
-    REWRITE_RULE pairTheory.pair_rws (BETA_RULE th5)
+    REWRITE_RULE pairTheory.pair_rws (BETA_RULE th4)
   end;
 
 val nc_RECURSION = Q.store_thm ("nc_RECURSION",
@@ -633,20 +633,18 @@ fun nc_INDUCT_TAC (A,g) =
 (*     A |- P(u)    A, ~(x=y) |- P(VAR y)                                *)
 (* --------------------------------------------------------------------- *)
 
-local fun fullname {Name,Thy,Ty} = (Name,Thy)
-      fun chk p  = assert (equal p)
-      val ERR = HOL_ERR{origin_structure = "ncScript.sml",
-                  origin_function = "dest_sub", message = ""}
+local val SUBconst = prim_mk_const{Thy="nc",Name="SUB"}
+      val VARconst = prim_mk_const{Thy="nc",Name="VAR"}
 in
 fun dest_sub tm =
  case strip_comb tm
   of (sub,[new,old,VARapp]) =>
-      let val _ = assert(equal("SUB","nc") o fullname o dest_thy_const) sub
+      let val _ = assert (same_const SUBconst) sub
           val (Rator,Rand) = dest_comb VARapp
-          val _ = assert(equal("VAR","nc") o fullname o dest_thy_const) Rator
+          val _ = assert (same_const VARconst) Rator
         in (Rand,new,old)
         end
-   |   _ => raise ERR
+   |   _ => raise mk_HOL_ERR "ncScript.sml" "dest_sub" ""
 end
 
 fun VAR_SUB_TAC (A,g) =
@@ -659,8 +657,8 @@ fun VAR_SUB_TAC (A,g) =
            PURE_ONCE_REWRITE_TAC [MATCH_MP (el 3 (CONJUNCTS SUB_THM)) neq])
     (SPEC (mk_eq(old, v)) EXCLUDED_MIDDLE)
     (A,g)
-    handle e => raise (wrap_exn "ncScript" "VAR_SUB_TAC" e)
- end;
+ end
+ handle e => raise wrap_exn "ncScript" "VAR_SUB_TAC" e;
 
 (* ===================================================================== *)
 (* Sanity check - try to prove Lemma 1.14 from Hindley and Seldin using  *)
@@ -768,9 +766,8 @@ fun nc_INDUCT_TAC2 (A,g) =
       val ith = ISPEC P nc_INDUCTION2
       fun bconv tm
         = if not(rator tm = P) then
-            raise HOL_ERR{origin_structure = "ncScript.sml",
-                          origin_function = "nc_INDUCT_TAC2",
-                          message = "function bconv failed"}
+            raise mk_HOL_ERR "ncScript.sml" "nc_INDUCT_TAC2"
+                             "function bconv failed"
           else BETA_CONV tm
       val bth = CONV_RULE (ONCE_DEPTH_CONV bconv) ith
   in
@@ -783,7 +780,7 @@ fun nc_INDUCT_TAC2 (A,g) =
 (* ===================================================================== *)
 (* So, we can now prove some of Hindley and Seldin's theorems using both *)
 (* induction theorems.  The comparison is interesting, as is the         *)
-(* senstivity to order of quantifiers.                                   *)
+(* sensitivity to order of quantifiers.                                   *)
 (* ===================================================================== *)
 
 (* --------------------------------------------------------------------- *)
@@ -904,7 +901,7 @@ val ISUB_DEF =
      `($ISUB t [] = t)
   /\  ($ISUB t ((s,x)::rst) = $ISUB ([s/x]t) rst)`;
 
-val _ = set_fixity ("ISUB", Infixr 501);
+val _ = set_fixity "ISUB" (Infixr 501);
 
 val DOM_DEF =
  Define

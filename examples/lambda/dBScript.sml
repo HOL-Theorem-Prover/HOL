@@ -15,7 +15,8 @@ structure dBScript =
 struct
 
 open HolKernel Parse boolLib 
-     bossLib pred_setTheory arithmeticTheory IndDefLib;
+     bossLib numLib IndDefLib
+     pred_setTheory arithmeticTheory 
 
 infixr 3 -->;
 infix && ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
@@ -502,7 +503,7 @@ Induct
   `?m. n-d = SUC m` by PROVE_TAC [SUB_ELIM_LEM]
     THEN ZAP_TAC (list_ss && [NTH])
           [DECIDE (Term `(n-d = SUC m) ==> (n-SUC d = m)`),NTH],
-  `n - d = 0` by (REPEAT (POP_ASSUM MP_TAC) THEN CONV_TAC arithLib.ARITH_CONV)
+  `n - d = 0` by (REPEAT (POP_ASSUM MP_TAC) THEN CONV_TAC ARITH_CONV)
     THEN RW_TAC list_ss [NTH]]);
 
 
@@ -544,6 +545,7 @@ val PSUB_Lemma2 = Q.store_thm("PSUB_Lemma2",
    !x. (PSUB 0 (x::xs) t = PSUB 0 (x::ys) u')`,
 PROVE_TAC [PSUB_Lemma1]);
 
+
 val PSUB_Lemma3 = Q.store_thm("PSUB_Lemma3",
 `!t xs u ys.
      (PSUB 0 xs t = PSUB 0 ys u)
@@ -551,11 +553,11 @@ val PSUB_Lemma3 = Q.store_thm("PSUB_Lemma3",
      (^chom xs t = ^chom ys u)`,
 Induct THEN RW_TAC std_ss [] THENL
   map IMP_RES_TAC [PSUB_dCON, PSUB_dVAR, PSUB_dBOUND, PSUB_dABS, PSUB_dAPP]
-  THEN RW_TAC std_ss [CHOM]
-  THEN TRY (PAT_ASSUM (Term `COND x y z`) MP_TAC
-            THEN RW_TAC std_ss [] THEN RW_TAC list_ss [CHOM] THEN NO_TAC)
-  THEN PAT_ASSUM (Term`x = y`) MP_TAC THEN RW_TAC std_ss [CHOM,PSUB]
-  THENL [AP_TERM_TAC THEN PROVE_TAC[PSUB_Lemma2],PROVE_TAC[]]);
+  THEN BasicProvers.NORM_TAC std_ss [CHOM]
+  THEN IMP_RES_TAC (PROVE [] (Term `x ==> ~x ==> F`))
+  THEN Q.PAT_ASSUM `PSUB p q r = PSUB a b c` MP_TAC 
+  THEN RW_TAC std_ss [CHOM,PSUB]
+  THENL [AP_TERM_TAC THEN PROVE_TAC[PSUB_Lemma2], PROVE_TAC []]);
 
 val HOM_lemma = Q.store_thm("HOM_lemma",
   `(!x.   ^hom (dVAR x)   = var x) /\
@@ -708,3 +710,4 @@ Q.EXISTS_TAC
 val _ = export_theory();
 
 end; (* structure dBScript *)
+

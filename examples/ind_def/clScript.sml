@@ -46,15 +46,15 @@ val confluent_def = Define`
 val confluent_normforms_unique = store_thm(
   "confluent_normforms_unique",
   ``!R. confluent R ==>
-        !x y z. RTC R x y /\ normform R y /\ RTC
-                R x z /\ normform R z ==> (y = z)``,
+        !x y z. RTC R x y /\ normform R y /\ RTC R x z /\ normform R z  
+                  ==> 
+                (y = z)``,
   RW_TAC std_ss [confluent_def] THEN
   `?u. RTC R y u /\ RTC R z u` by PROVE_TAC [] THEN
   PROVE_TAC [normform_def, RTC_cases]);
 
 val diamond_def = Define
-    `diamond R = !x y z. R x y /\ R x z ==>
-                         ?u. R y u /\ R z u`;
+    `diamond R = !x y z. R x y /\ R x z ==> ?u. R y u /\ R z u`;
 
 val confluent_diamond_RTC = store_thm(
   "confluent_diamond_RTC",
@@ -116,9 +116,7 @@ val _ = set_fixity "-||->" (Infix(NONASSOC, 510));
 val (predn_rules, predn_ind, predn_cases) =
     IndDefLib.Hol_reln
       `(!x. x -||-> x) /\
-       (!x y u v. x -||-> y /\ u -||-> v
-                         ==>
-                  x # u -||-> y # v) /\
+       (!x y u v. x -||-> y /\ u -||-> v ==> x # u -||-> y # v) /\
        (!x y. K # x # y -||-> x) /\
        (!f g x. S # f # g # x -||-> (f # x) # (g # x))`;
 
@@ -145,14 +143,11 @@ val _ = set_fixity "-||->*" (Infix(NONASSOC, 510));
 
 val RTCpredn_def = xDefine "RTCpredn" `$-||->* = RTC $-||->`;
 
-val RTCredn_rules =
-  REWRITE_RULE [SYM RTCredn_def] (Q.ISPEC `$-->` RTC_rules)
-val RTCredn_ind =
-  REWRITE_RULE [SYM RTCredn_def] (Q.ISPEC `$-->` RTC_ind)
-val RTCpredn_rules =
-  REWRITE_RULE [SYM RTCpredn_def] (Q.ISPEC `$-||->` RTC_rules)
-val RTCpredn_ind =
-  REWRITE_RULE [SYM RTCpredn_def] (Q.ISPEC `$-||->` RTC_ind);
+val RTCredn_rules  = REWRITE_RULE[SYM RTCredn_def] (Q.ISPEC `$-->` RTC_rules)
+val RTCredn_ind    = REWRITE_RULE[SYM RTCredn_def] (Q.ISPEC `$-->` RTC_ind)
+val RTCpredn_rules = REWRITE_RULE[SYM RTCpredn_def](Q.ISPEC `$-||->` RTC_rules)
+val RTCpredn_ind   = REWRITE_RULE[SYM RTCpredn_def](Q.ISPEC `$-||->` RTC_ind)
+;
 
 val RTCredn_RTCpredn = store_thm(
   "RTCredn_RTCpredn",
@@ -175,8 +170,7 @@ val predn_RTCredn = store_thm(
   "predn_RTCredn",
   ``!x y. x -||-> y  ==>  x -->* y``,
   HO_MATCH_MP_TAC predn_ind THEN
-  PROVE_TAC [RTCredn_rules, redn_rules, RTCredn_RTCredn,
-             RTCredn_ap_monotonic]);
+  PROVE_TAC [RTCredn_rules,redn_rules,RTCredn_RTCredn,RTCredn_ap_monotonic]);
 
 
 val RTCpredn_RTCredn = store_thm(
@@ -192,18 +186,17 @@ val RTCpredn_EQ_RTCredn = store_thm(
   CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN
   PROVE_TAC [RTCpredn_RTCredn, RTCredn_RTCpredn]);
 
-val cl_11 = theorem "cl_11";
-val cl_distinct0 = theorem "cl_distinct";
-val cl_distinct =
-   CONJ cl_distinct0 (ONCE_REWRITE_RULE [EQ_SYM_EQ] cl_distinct0);
+val cl_11 = DB.fetch "-" "cl_11";
+val cl_distinct0 = DB.fetch "-" "cl_distinct";
+val cl_distinct = 
+ CONJ cl_distinct0 (ONCE_REWRITE_RULE [EQ_SYM_EQ] cl_distinct0);
 
-fun characterise t =
-    SIMP_RULE std_ss [cl_11,cl_distinct] (SPEC t predn_cases);
+fun characterise t = SIMP_RULE std_ss [cl_11,cl_distinct] (SPEC t predn_cases);
 
 val K_predn = characterise ``K``;
 val S_predn = characterise ``S``;
-
 val Sx_predn0 = characterise ``S # x``;
+
 val Sx_predn = prove(
   ``!x y. S # x -||-> y = ?z. (y = S # z) /\ (x -||-> z)``,
   REPEAT GEN_TAC THEN EQ_TAC THEN
@@ -236,8 +229,7 @@ val Sxyz_predn = prove(
                        w -||-> p /\ x -||-> q /\ y -||-> r) \/
               (z = (w # y) # (x # y))``,
   REPEAT GEN_TAC THEN EQ_TAC THEN
-  RW_TAC std_ss [characterise ``S # w # x # y``, predn_rules,
-                 Sxy_predn]);
+  RW_TAC std_ss [characterise ``S # w # x # y``, predn_rules, Sxy_predn]);
 
 val x_ap_y_predn = characterise ``x # y``;
 

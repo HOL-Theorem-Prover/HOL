@@ -7,7 +7,7 @@ load "bossLib"; open bossLib;
 
 val PARITY_def = 
  Define
-     `(PARITY 0 f       = T) 
+     `(PARITY 0 f  = T) 
    /\ (PARITY (SUC n) f = if f (SUC n) then ~PARITY n f else PARITY n f)`;
 
 
@@ -27,13 +27,11 @@ val ONE_def = Define `ONE(out:num->bool) = !t. out t = T`;
 
 val NOT_def = Define `NOT(inp, out:num->bool) = !t. out t = ~inp t`;
 
-val MUX_def = Define`
-    MUX(sw,in1,in2,out:num->bool) =
-      !t. out t = if sw t then in1 t else in2 t`;
+val MUX_def = Define `MUX(sw,in1,in2,out:num->bool) 
+                       = !t. out t = if sw t then in1 t else in2 t`;
 
-val REG_def =
-    Define `REG(inp,out:num->bool) =
-              !t. out t = if (t=0) then F else inp(t-1)`;
+val REG_def = Define `REG(inp,out:num->bool) 
+                       = !t. out t = if (t=0) then F else inp(t-1)`;
 
 val PARITY_IMP_def = Define
    `PARITY_IMP(inp,out) =

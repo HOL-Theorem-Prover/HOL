@@ -1,4 +1,4 @@
-(*---------------------------------------------------------------------------
+`(*---------------------------------------------------------------------------
 
     A cute introductory proof example, extracted from 
 
@@ -135,7 +135,7 @@ val eight_three_five = prove(Term `!i. ?j k. i+8 = 3*j + 5*k`,
      deciding full Presburger arithmetic allows a one step proof!
 
      Note that Norrish's implementation handles both natural numbers
-     and integers. The proof for integers is much faster.
+     and integers. The proof for integers is about twice as fast.
  ---------------------------------------------------------------------------*)
 
 load "intLib";
