@@ -51,6 +51,7 @@ index:
 
 res_quan:
 	$(LATEX) res_quan.tex
+	$(LATEX) summary.tex
 
 all:
 	make clean; make tex; make res_quan; make index; make res_quan

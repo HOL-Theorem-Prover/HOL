@@ -98,19 +98,19 @@
 % The labels are left justified.
 \def\labeledlabel#1{#1\hfil}
 \newenvironment{typelist}%
-	{\begin{list}{\ }%
-	{\typefont \setlength{\leftmargin}{0.8in}%
-	 \setlength{\labelwidth}{0.7in}\setlength{\labelsep}{0.1in}%
-	\renewcommand{\makelabel}{\labeledlabel}}}%
-	{\end{list}}
+        {\begin{list}{\ }%
+        {\typefont \setlength{\leftmargin}{0.8in}%
+         \setlength{\labelwidth}{0.7in}\setlength{\labelsep}{0.1in}%
+        \renewcommand{\makelabel}{\labeledlabel}}}%
+        {\end{list}}
 
 % The Axioms, definitions and theorems sections are set in thmlist environment
 \newenvironment{thmlist}
-	{\begin{list}{\ }%
-	{\setholprec \setlength{\leftmargin}{0.8in}%
-	 \setlength{\labelwidth}{0.7in}\setlength{\labelsep}{0.1in}%
-	\renewcommand{\makelabel}{\labeledlabel}}}%
-	{\end{list}}
+        {\begin{list}{\ }%
+        {\setholprec \setlength{\leftmargin}{0.8in}%
+         \setlength{\labelwidth}{0.7in}\setlength{\labelsep}{0.1in}%
+        \renewcommand{\makelabel}{\labeledlabel}}}%
+        {\end{list}}
 
 
 \def\monthname{\ifcase\month
@@ -122,11 +122,11 @@ v  \or Jan\or Feb\or Mar\or Apr\or May\or Jun%
    \count4 = \time \multiply\count0 by 60
    \advance\count4 by -\count0 % the minute
    \ifnum\count4<10 \toks1 = {0}% get a leading zero
-   \else	    \toks1 = {}%
+   \else            \toks1 = {}%
    \fi
    \ifnum\count2<12 \toks0 = {a.m.}%
-   \else	    \toks0 = {p.m.}%
-	\advance\count2 by -12
+   \else            \toks0 = {p.m.}%
+        \advance\count2 by -12
    \fi
    \ifnum\count2=0 \count2 = 12 \fi
    \number\count2:\the\toks1 \number\count4
@@ -141,16 +141,16 @@ v  \or Jan\or Feb\or Mar\or Apr\or May\or Jun%
 % They may be redefined to suit your style.
 % \sec{section_name} marks the sections within a theory, e.g., Types, Theorems.
 % \theory{theory_name} marks the beginning of the theory, if the file is
-%	generated for being included in other LaTeX files.
+%       generated for being included in other LaTeX files.
 % \endthy{theory_name} marks the end of the theory.
 %
 \def\sec#1{\section*{#1}\noindent}
 \def\theory#1{\section{#1}}
 \def\endthy#1{\hbox to\hsize{\hrulefill\ End of theory {\tt#1}\ \hrulefill}}
 
-\def\typefont{\tt}	% for types, ML identifiers
-\def\constfont{\sf}	% for HOL constants
-\def\keyfont{\bf}	% for keywords
+\def\typefont{\tt}      % for types, ML identifiers
+\def\constfont{\sf}     % for HOL constants
+\def\keyfont{\bf}       % for keywords
 
 
 
@@ -223,4 +223,4 @@ v  \or Jan\or Feb\or Mar\or Apr\or May\or Jun%
 \def\holthm{\begingroup\makeulother\doholthm}
 \let\endholthm=\endflushleft
 
-\font\sfc=cmssc12 \def\constfont{\sfc}
+\def\sfc\sf \def\constfont{\sfc}
