@@ -996,6 +996,12 @@ val FUPDATE_LIST_THM = store_thm(
         (!h t. f FUPDATE_LIST (h::t) = (FUPDATE f h) FUPDATE_LIST t)``,
   SRW_TAC [][FUPDATE_LIST]);
 
+val FUPDATE_LIST_APPLY_NOT_MEM = store_thm(
+  "FUPDATE_LIST_APPLY_NOT_MEM",
+  ``!kvl f k. ~MEM k (MAP FST kvl) ==> ((f FUPDATE_LIST kvl) ' k = f ' k)``,
+  Induct THEN SRW_TAC [][FUPDATE_LIST_THM] THEN
+  Cases_on `h` THEN FULL_SIMP_TAC (srw_ss()) [FAPPLY_FUPDATE_THM]);
+
 (* ----------------------------------------------------------------------
     More theorems
    ---------------------------------------------------------------------- *)
@@ -1049,6 +1055,75 @@ val FUPD_SAME_KEY_UNWIND = store_thm(
   SRW_TAC [][FDOM_FEMPTY, FDOM_FUPDATE, GSYM fmap_EQ_THM,
              DISJ_IMP_THM, FORALL_AND_THM, FAPPLY_FUPDATE_THM,
              EXTENSION] THEN PROVE_TAC[]);
+
+val FUPD11_SAME_UPDATE = store_thm(
+  "FUPD11_SAME_UPDATE",
+  ``!f1 f2 k v. (f1 |+ (k,v) = f2 |+ (k,v)) =
+                (DRESTRICT f1 (COMPL {k}) = DRESTRICT f2 (COMPL {k}))``,
+  SRW_TAC [][GSYM fmap_EQ_THM, EXTENSION, DRESTRICT_DEF, FDOM_FUPDATE,
+             FAPPLY_FUPDATE_THM] THEN PROVE_TAC []);
+
+val LMEM_DEF = new_definition("LMEM_DEF", ``LMEM l x = MEM x l``);
+
+val LMEM_THM = store_thm(
+  "LMEM_THM",
+  ``(LMEM [] = {}) /\ (!h t. LMEM (h::t) = h INSERT LMEM t)``,
+  SRW_TAC [][EXTENSION, SPECIFICATION, LMEM_DEF]);
+
+val FDOM_FUPDATE_LIST = store_thm(
+  "FDOM_FUPDATE_LIST",
+  ``!kvl fm. FDOM (fm FUPDATE_LIST kvl) =
+             FDOM fm UNION LMEM (MAP FST kvl)``,
+  Induct THEN
+  ASM_SIMP_TAC (srw_ss()) [FUPDATE_LIST_THM, LMEM_THM,
+                           FDOM_FUPDATE, pairTheory.FORALL_PROD,
+                           EXTENSION] THEN PROVE_TAC []);
+
+val FUPDATE_LIST_SAME_UPDATE = store_thm(
+  "FUPDATE_LIST_SAME_UPDATE",
+  ``!kvl f1 f2. (f1 FUPDATE_LIST kvl = f2 FUPDATE_LIST kvl) =
+                (DRESTRICT f1 (COMPL (LMEM (MAP FST kvl))) =
+                 DRESTRICT f2 (COMPL (LMEM (MAP FST kvl))))``,
+  Induct THENL [
+    SRW_TAC [][GSYM fmap_EQ_THM, FUPDATE_LIST_THM, DRESTRICT_DEF,
+               LMEM_THM] THEN
+    PROVE_TAC [],
+    ASM_SIMP_TAC (srw_ss()) [FUPDATE_LIST_THM, pairTheory.FORALL_PROD] THEN
+    POP_ASSUM (K ALL_TAC) THEN
+    SRW_TAC [][GSYM fmap_EQ_THM, FUPDATE_LIST_THM, DRESTRICT_DEF,
+               FDOM_FUPDATE, FDOM_FUPDATE_LIST, EXTENSION,
+               LMEM_THM, FAPPLY_FUPDATE_THM] THEN
+    EQ_TAC THEN REPEAT STRIP_TAC THEN REPEAT COND_CASES_TAC THEN
+    SRW_TAC [][] THEN PROVE_TAC []
+  ]);
+
+val FUPDATE_LIST_SAME_KEYS_UNWIND = store_thm(
+  "FUPDATE_LIST_SAME_KEYS_UNWIND",
+  ``!f1 f2 kvl1 kvl2.
+       (f1 FUPDATE_LIST kvl1 = f2 FUPDATE_LIST kvl2) /\
+       (MAP FST kvl1 = MAP FST kvl2) /\ ALL_DISTINCT (MAP FST kvl1) ==>
+       (kvl1 = kvl2) /\
+       !kvl. (MAP FST kvl = MAP FST kvl1) ==>
+             (f1 FUPDATE_LIST kvl = f2 FUPDATE_LIST kvl)``,
+  CONV_TAC (BINDER_CONV SWAP_VARS_CONV THENC SWAP_VARS_CONV) THEN
+  Induct THEN ASM_SIMP_TAC (srw_ss()) [FUPDATE_LIST_THM] THEN
+  REPEAT GEN_TAC THEN
+  `?k v. h = (k,v)` by PROVE_TAC [TypeBase.nchotomy_of "prod"] THEN
+  POP_ASSUM SUBST_ALL_TAC THEN SIMP_TAC (srw_ss()) [] THEN
+  `(kvl2 = []) \/ ?k2 v2 t2. kvl2 = (k2,v2) :: t2` by
+       PROVE_TAC (map TypeBase.nchotomy_of ["prod", "list"]) THEN
+  POP_ASSUM SUBST_ALL_TAC THEN SIMP_TAC (srw_ss()) [] THEN
+  SIMP_TAC (srw_ss()) [FUPDATE_LIST_THM] THEN STRIP_TAC THEN
+  `kvl1 = t2` by PROVE_TAC [] THEN POP_ASSUM SUBST_ALL_TAC THEN
+  `v = v2` by (FIRST_X_ASSUM (MP_TAC o C Q.AP_THM `k` o Q.AP_TERM `(')`) THEN
+               SRW_TAC [][FUPDATE_LIST_APPLY_NOT_MEM, FAPPLY_FUPDATE]) THEN
+  SRW_TAC [][] THEN
+  `(kvl = []) \/ (?k' v' t. kvl = (k',v') :: t)` by
+     PROVE_TAC (map TypeBase.nchotomy_of ["prod", "list"]) THEN
+  POP_ASSUM SUBST_ALL_TAC THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+  Q.PAT_ASSUM `fm : 'a |-> 'b = fm1` MP_TAC THEN
+  SIMP_TAC (srw_ss()) [GSYM FUPDATE_LIST_THM] THEN
+  ASM_SIMP_TAC (srw_ss()) [FUPDATE_LIST_SAME_UPDATE]);
 
 (* ----------------------------------------------------------------------
     to close...
