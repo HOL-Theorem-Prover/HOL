@@ -735,7 +735,7 @@ val _ = adjoin_to_theory
   in S "val _ = ConstMapML.prim_insert "; NL();
      S "         (Term.prim_mk_const{Name=\"0\",Thy=\"num\"},"; NL();
      S "          (\"num\",\"ZERO\",Type.mk_type(\"num\",[])));";
-     NL(); NL()
+     NL()
   end)};
 
 (*---------------------------------------------------------------------------*)
@@ -744,7 +744,7 @@ val _ = adjoin_to_theory
 (*---------------------------------------------------------------------------*)
 
 val _ = 
-  let open Drop whileTheory pairSyntax combinSyntax
+  let open EmitML whileTheory pairSyntax combinSyntax
   in 
     exportML("num",
      DATATYPE (ParseDatatype.parse `num = ZERO
@@ -760,7 +760,7 @@ val _ =
           numeral_pre,iDUB_removal,iSUB_THM, numeral_sub,
           numeral_mult,iSQR,numeral_exp,even,odd,
           numeral_fact,numeral_funpow,numeral_MIN,numeral_MAX,
-          WHILE,LEAST_DEF, findq_thm,DIVMOD_THM,div_eqns, mod_eqns]
+          WHILE, LEAST_DEF, findq_thm,DIVMOD_THM,div_eqns, mod_eqns]
      @ 
      [MLSIG "val ONE :num",
       MLSIG "val TWO :num",
