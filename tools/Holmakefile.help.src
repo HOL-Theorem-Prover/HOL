@@ -9,7 +9,7 @@ makebase.uo: Keepers.uo Htmlsigs.uo HOLPage.uo Database.ui Printbase.uo Parsspec
 Doc2Html : Doc2Html.uo 
 (2)
 
-Doc2Html.uo : Doc2Html.sml Symbolic.ui
+Doc2Html.uo : Doc2Html.sml Symbolic.uo
 	HOLMOSMLC -c Doc2Html.sml
 
 Hasht.uo: Hasht.sml Hasht.ui
@@ -42,7 +42,7 @@ Htmlsigs.uo: Database.uo Htmlsigs.ui Htmlsigs.sml
 Database.uo: Database.sml Database.ui
 	HOLMOSMLC -c Database.sml
 
-Symbolic.uo: Symbolic.sml
+Symbolic.uo: Symbolic.sml Symbolic.ui
 	HOLMOSMLC -c Symbolic.sml
 
 Lexer.sml: Lexer.lex
