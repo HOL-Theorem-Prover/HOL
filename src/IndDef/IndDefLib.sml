@@ -8,9 +8,8 @@ struct
  type thm_tactic = Abbrev.thm_tactic
 
 
-open ho_matchLib refuteLib ; (* ancestor libraries *)
-open HolKernel Parse basicHol90Lib liteLib
-     AC Ho_rewrite Ho_resolve Psyntax;
+open refuteLib ; (* ancestor libraries *)
+open HolKernel Parse basicHol90Lib liteLib AC Ho_rewrite Ho_resolve Psyntax;
 
 infix |->;
 infix THEN THENC
@@ -466,12 +465,12 @@ type monoset = (string * tactic) list;
  * MONO_ALL = |- (!x. P x ==> Q x) ==> ((!x. P x) ==> (!x. Q x))
  * MONO_EXISTS = |- (!x. P x ==> Q x) ==> ((?x. P x) ==> (?x. Q x))
  *---------------------------------------------------------------------------*)
-val MONO_AND = Ho_theorems.MONO_AND;
-val MONO_OR  = Ho_theorems.MONO_OR;
-val MONO_IMP = Ho_theorems.MONO_IMP;
-val MONO_NOT = Ho_theorems.MONO_NOT;
-val MONO_ALL = Ho_theorems.MONO_ALL;
-val MONO_EXISTS = Ho_theorems.MONO_EXISTS;
+val MONO_AND = Ho_boolTheory.MONO_AND;
+val MONO_OR  = Ho_boolTheory.MONO_OR;
+val MONO_IMP = Ho_boolTheory.MONO_IMP;
+val MONO_NOT = Ho_boolTheory.MONO_NOT;
+val MONO_ALL = Ho_boolTheory.MONO_ALL;
+val MONO_EXISTS = Ho_boolTheory.MONO_EXISTS;
 
 local val pth = prove
  (--`(!x:'a. P x ==> Q x) ==> ($? P ==> $? Q)`--,
@@ -606,8 +605,8 @@ fun derive_existence th =
 
 fun make_definitions th =
   let val defs = filter is_eq (hyp th)
-      val dths = map (fn tm => new_definition(fst(dest_var(fst(strip_comb(lhs
-tm)))),tm)) defs
+      val dths = map (fn tm => new_definition(fst(dest_var
+                                  (fst(strip_comb(lhs tm)))),tm)) defs
       val insts = map2 (curry op |->) (map lhs defs) (map (lhs o concl) dths)
   in rev_itlist (C MP) dths (INST insts (itlist DISCH defs th))
   end;;
