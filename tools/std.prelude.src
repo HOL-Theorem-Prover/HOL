@@ -37,7 +37,7 @@ in
   val _ = installPP goalstackLib.pp_proofs
   val _ = installPP goalstackLib.pp_goalstack
   val _ = installPP Rewrite.pp_rewrites
-  val _ = installPP TypeBase.pp_tyinfo
+  val _ = installPP TypeBase.TypeInfo.pp_tyinfo
   val _ = installPP DefnBase.pp_defn
 end;
 
