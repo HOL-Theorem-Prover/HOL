@@ -47,7 +47,7 @@ val FV =
 
 val AWAY_defn =
   Hol_defn "AWAY" 
-     `AWAY x = if MEM x L then AWAY (PRIME x) else x`;
+           `AWAY x = if MEM x L then AWAY (PRIME x) else x`;
 
 (*---------------------------------------------------------------------------
      The substitution function. Terminates because it always recurses
@@ -57,14 +57,14 @@ val AWAY_defn =
 val Var_subst = 
  Define `Var_subst (x,P) v Sc = 
             if MEM v Sc then Var(v) else 
-            if v=x then P else (Var v)`;
+            if v=x then P else Var(v)`;
 
 val SUBST_defn =
  Defn.Hol_Rdefn 
    "SUBST"   
    `measure (\(x,y,z). lam_size (\v. 0) (\v. 0) y)`
 
-   `(SUBST pr    (Var v)    Sc = Var_subst pr v Sc)
+   `(SUBST  pr   (Var v)    Sc = Var_subst pr v Sc)
  /\ (SUBST  ___  (Const c)  __ = Const c)
  /\ (SUBST (x,Q) (Comb M N) Sc = Comb (SUBST (x,Q) M Sc) (SUBST (x,Q) N Sc))
  /\ (SUBST (x,Q) (Abs v M)  Sc = 

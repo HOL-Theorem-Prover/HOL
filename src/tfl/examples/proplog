@@ -1,5 +1,5 @@
 (*---------------------------------------------------------------------------
-      A type of propositions and algorithms on it.
+      A type of propositions and a few algorithms on it.
  ---------------------------------------------------------------------------*)
 
 app load ["bossLib"]; open bossLib;
@@ -12,7 +12,7 @@ Hol_datatype `prop = VAR of 'a
 
 
 (*---------------------------------------------------------------------------
-       Wang's algorithm.
+       Wang's algorithm (implements the sequent calculus).
  ---------------------------------------------------------------------------*)
 
 val Pr_def = 
@@ -269,8 +269,8 @@ val MAX_def = Define `MAX x y = if x<y then y else x`;
 
 val NOT_SIZE_def = 
  Define
-    `(NOT_SIZE (VAR x)   = 0)
-  /\ (NOT_SIZE (NOT p)   = prop_size (\v.0) p)
+    `(NOT_SIZE (VAR x)    = 0)
+  /\ (NOT_SIZE (NOT p)    = prop_size (\v.0) p)
   /\ (NOT_SIZE ($AND p q) = MAX (NOT_SIZE p) (NOT_SIZE q))
   /\ (NOT_SIZE ($OR p q)  = MAX (NOT_SIZE p) (NOT_SIZE q))`;
 
@@ -279,7 +279,11 @@ val NOT_SIZE_LESS = Q.prove
 (`!p. NOT_SIZE p < prop_size (\v.0) p + 1`,
  Induct
    THEN RW_TAC arith_ss [NOT_SIZE_def, MAX_def, prop_size_def]);
- 
+
+(*---------------------------------------------------------------------------
+     Termination of nnf, using NOT_SIZE_LESS
+ ---------------------------------------------------------------------------*)
+
 val (nnf0_eqns, nnf0_ind) = 
 Defn.tprove
  (nnf_defn0,
@@ -289,12 +293,18 @@ Defn.tprove
                           prop_size_def, NOT_SIZE_LESS]);
 
 
+(*---------------------------------------------------------------------------
+      Mutually recursive algorithm. Termination is easy to prove,
+      and automatic.
+ ---------------------------------------------------------------------------*)
+
 val nnf_mutrec_eqns =
  xDefine "nnf1"
      `(nnfpos (VAR x)   = VAR x)
  /\   (nnfpos (NOT p)   = nnfneg p)
  /\   (nnfpos (p AND q) = (nnfpos p) AND (nnfpos q))
  /\   (nnfpos (p OR q)  = (nnfpos p) OR (nnfpos q))
+
  /\   (nnfneg (VAR x)   = NOT (VAR x))
  /\   (nnfneg (NOT p)   = nnfpos p)
  /\   (nnfneg (p AND q) = (nnfneg p) OR (nnfneg q))
