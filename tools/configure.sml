@@ -13,8 +13,8 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = 
-val holdir   = 
+val mosmldir =
+val holdir   =
 val OS       = "linux";   (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
 
@@ -55,26 +55,26 @@ end;
 
 val SRCDIRS =
  ["src/portableML", "src/0", "src/parse",
-  "src/bool", "src/basicHol90", "src/compute/src", "src/goalstack", "src/q",
+  "src/bool", "src/basicHol90", "src/taut", "src/compute/src",
+  "src/goalstack", "src/q",
   "src/combin", "src/refute", "src/simp/src", "src/meson/src","src/basicProof",
   "src/relation", "src/pair/src", "src/sum", "src/one", "src/option",
   "src/num/theories", "src/num/reduce/src", "src/num/arith/src","src/num",
-  "src/hol88", "src/taut", "src/ind_def/src", "src/IndDef",
+  "src/hol88", "src/ind_def/src", "src/IndDef",
   "src/datatype/parse", "src/datatype/equiv",  "src/datatype/record",
-  "src/datatype",  "src/list/src", "src/tree", 
+  "src/datatype",  "src/list/src", "src/tree",
   "src/decision/src", "src/tfl/src", "src/unwind", "src/boss",
   "src/datatype/basicrec", "src/datatype/mutrec/utils", "src/datatype/mutrec",
   "src/datatype/nestrec", "src/datatype/mutual",
-  "src/llist", "src/integer", "src/res_quan/src", 
+  "src/llist", "src/integer", "src/res_quan/src",
   "src/set/src", "src/pred_set/src",  "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src",
-  "src/hol90", "src/finite_map", "src/real", "src/bag", "src/ring/src", 
+  "src/hol90", "src/finite_map", "src/real", "src/bag", "src/ring/src",
   "src/temporal/src", "src/temporal/smv.2.4.3", "src/BoyerMoore"]
   @
-  (if OS="linux" orelse OS="solaris" 
+  (if OS="linux" orelse OS="solaris"
    then ["src/muddy/muddyC", "src/muddy", "src/HolBdd"]
    else []);
-
 
 (*---------------------------------------------------------------------------
           String and path operations.
@@ -311,17 +311,17 @@ val _ =
  ---------------------------------------------------------------------------*)
 
 val _ =
-  if OS <> "winNT" 
+  if OS <> "winNT"
   then let val _ = print "Attempting to compile quote filter ... "
            val src    = fullPath [holdir, "src/quote-filter/filter.c"]
            val target = fullPath [holdir, "bin/unquote"]
            open Process
        in
-         if system (String.concat [CC," ", src," -o ", target]) = success 
-           then (mk_xable target; print "successful.\n") handle _ 
+         if system (String.concat [CC," ", src," -o ", target]) = success
+           then (mk_xable target; print "successful.\n") handle _
                 => print(String.concat["\n>>>>>Failed to move quote filter!",
                               "(continuing anyway)\n\n"])
-           else print 
+           else print
              "\n>>>>>>Couldn't compile quote filter! (continuing anyway)\n\n"
        end
   else
@@ -331,11 +331,11 @@ val _ =
         val ostrm = BinIO.openOut target
         val v = BinIO.inputAll instrm
         val _ = BinIO.output(ostrm,v)
-    in 
+    in
        BinIO.closeIn instrm;
-       BinIO.closeOut ostrm 
+       BinIO.closeOut ostrm
     end
-    handle e => 
+    handle e =>
        print"\n>>>>>>Couldn't install quote filter! (continuing anyway)\n\n");
 
 
@@ -357,7 +357,7 @@ val _ =
 
 
 (*---------------------------------------------------------------------------
-    Configure the muddy library. 
+    Configure the muddy library.
  ---------------------------------------------------------------------------*)
 
 val _ = use (fullPath [holdir, "tools", "config-muddy.sml"]);
