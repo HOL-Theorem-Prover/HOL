@@ -462,7 +462,7 @@ fun runholdep arg destination_file = let
   val result =
     Success(Holdep.main debug (std_include_flags @ additional_includes @
                                [fromFile arg]))
-    handle _ => (print "Holdep failed."; Failure "")
+    handle _ => (print "Holdep failed.\n"; Failure "")
   fun myopen s =
     if FileSys.access(DEPDIR, []) then
       if FileSys.isDir DEPDIR then TextIO.openOut s
