@@ -1,4 +1,10 @@
-# Unix makefile for holdep
+# Unix makefile for Holmake
+
+# This makefile does NOT build Holmake when hol is installed.  Rather, it is
+# just a convenience for developers.  In particular, the little script
+# fake_src.pl is not what does the substitutions in Holmake.src; developers
+# must ensure that tools/configure.sml does the right thing with these
+# substitutions.
 
 MOSMLDIR=/local/scratch/kxs/200
 MOSMLLEX=${MOSMLDIR}/bin/mosmllex
@@ -9,15 +15,6 @@ MOSMLC=${MOSMLDIR}/bin/mosmlc
 REMOVE=rm -f
 MOVE=mv
 EXEFILE=
-
-# DOS
-#REMOVE=del
-#MOVE=move
-#EXEFILE=.exe
-
-
-#all: holdep
-#holdep: Parser.uo Holdep.uo          ; $(MOSMLC) -o holdep Holdep.uo
 
 all: Holmake Holdep.uo Parser.uo Holmake.uo Holmake_rules.uo
 
@@ -60,5 +57,6 @@ Holmake_types.uo: Holmake_types.sml
 	$(MOSMLC) -c $<
 
 clean:
-	${REMOVE} *.u? holdep Holmake {Lexer,Parser}.{sml,sig}
+	${REMOVE} *.u? holdep Holmake {Lexer,Parser}.{sml,sig} Holmake.sml \
+                  Holmake_{parse,tokens}.{sig,sml}
 
