@@ -8,6 +8,7 @@ composeScript.sml ......... definition of devices and their composition
 devScript.sml.............. definition and theorems on liveness
 compileScript.sml ......... definitions and theorems to support compiler
 compile.sml ............... convert to combinators and compile to circuits
+vsynth.sml ................ convert a circuit made with MAKE_CIRCUIT to Verilog
 FactScript.sml ............ an example
 dff ....................... Melham's temporal abstraction theory
 Holmakefile ............... instructions for Holmake
@@ -24,7 +25,8 @@ There are six levels of abstraction:
 
 The main user-level functions are hwDefine, REFINE and MAKE_NETLIST
 for creating hardware, refining it and then creating a netlist
-representation. Translation to Verilog is not yet implemented.
+representation, and MAKE_CIRCUIT and MAKE_VERILOG for creating
+Verilog HDL output.
 *******************************************************************************
 
 To make generated hardware devices a bit more readable, the following
@@ -297,12 +299,83 @@ implementations using REG and REGF and then, uing Melham's temporal
 abstraction theory in dff, refines the unclocked REG and REGF to
 clocked Dtype and Dff, and returns:
 
- |- <circuit> 
+ |- InfClock clk
+    ==>
+    <circuit> 
     ==> 
     DEV f (load at clk,inp at clk,done at clk,out at clk)
 
 See FactScript.sml for examples (e.g. FACT_cir).
 
+
+MAKE_VERILOG : string 
+                -> int 
+                -> int 
+                -> thm
+                -> (int * int * (string * string) list * int) list
+                -> unit
+------------------------------------------------------------------
+
+Evaluating
+
+ MAKE_VERILOG
+  file
+  maxtime 
+  period
+  (|- InRise clk 
+      ==>
+      (?v0 .... vn. (inp = inp1 <> ... <> inpu) /\
+                    (out = out1 <> ... <> outv) /\
+                    <circuit>)
+      ==>
+      DEV Spec (load at clk,inp at clk,done at clk,out at clk))
+  stimulus 
+ 
+creates a file "file.vl" containing the definitions of the modules
+used in <circuit> and a module Main corresponding to the circuit
+represented by the supplied theorem (assumed made with MAKE_CIRCUIT).
+
+The module Main has a parameter maxtime giving the length of the
+simulation.
+
+The clock line clk and the handshake completion line done are declared
+to be boolean wires. The internal variables v0, ... ,vn are declared
+to be wires of appropriate widths (computed from their types).
+
+The input load is declared to be a boolean register and the inputs
+inp1, ... ,inpu are declared to be registers of the appropriate width.
+
+A dumpfile called "file.vcd" is created and clk, load, and signals
+inp1, ... ,inpu, done, out1, ... ,outv are declared to have their value
+changes dumped to the VCD file.
+
+The module Main also has an instance for each occurrence of a module
+in <circuit> (with the sizes computed from the types).
+
+An instance of Clock is created with time between edges as specified
+by the parameter period.
+
+The input variables are driven according to the parameter stimulus,
+which is an ML list of tuples of the form:
+
+ (start_delay, load_delay, [("inp1",val),...,("inpu",val)], end_delay)
+
+Each such tuple specifies a transaction:
+
+ 1. delay of start_delay;
+ 2. "load" is set to 0;
+ 3. delay of load_delay (a positive integer);
+ 4. each input is driven with the supplied value
+    (a string that prints to a valid Verilog expression);
+ 5. delay of end_delay;
+ 6. "load" is driven high.
+
+Current code is extremely "alpha" having only been tested on one example!
+
+I am using Icarus Verilog for simulation
+(http://www.icarus.com/eda/verilog/) and GTKWave
+(http://www.cs.man.ac.uk/apt/tools/gtkwave/) for viewing VCD files.
+Both are public domain and seem to work.
 
 *******************************************************************************
 
@@ -488,4 +561,5 @@ ML reference "if_print_flag" to false.
 == [08.02.05: MJCG added ?-quantification of internal wires to MAKE_CIRCUIT  ==
 == [10.02.05: MJCG split input and output busses                             ==
 == [11.02.05: Holmakefile (thanks to MN) + code improvements (thanks to KXS) ==
+== [14.02.05: MJCG added vsynth (defines MAKE_VERILOG)                       ==
 ===============================================================================
