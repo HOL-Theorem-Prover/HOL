@@ -1453,6 +1453,48 @@ val ABORT_FREE_F_CLOCK_COMP_CORRECT_COR =
        else (UNINT F_SEM) w c f``,
    RW_TAC std_ss [UNINT_def,ABORT_FREE_F_CLOCK_COMP_CORRECT]);
 
+(******************************************************************************
+* Associativity of SERE concantenation (;)
+******************************************************************************)
+
+val S_CAT_ASSOC =
+ store_thm
+  ("S_CAT_ASSOC",
+   ``!w r1 r2 r3.
+      US_SEM w (S_CAT(S_CAT(r1,r2),r3)) =
+       US_SEM w (S_CAT(r1, S_CAT(r2,r3)))``,
+   RW_TAC simp_list_ss [US_SEM_def]
+    THEN PROVE_TAC[APPEND_ASSOC]);
+
+val CONCAT_APPEND =
+ store_thm
+  ("CONCAT_APPEND",
+   ``!ll1 ll2. CONCAT(ll1<>ll2) = (CONCAT ll1)<>(CONCAT ll2)``,
+   Induct
+    THEN RW_TAC simp_list_ss [CONCAT_def]);
+
+(******************************************************************************
+* Idempotency  of r[*]: r[*];r[*] = [*]
+******************************************************************************)
+
+val S_REPEAT_IDEMPOTENT =
+ store_thm
+  ("S_REPEAT_IDEMPOTENT",
+   ``!w r. US_SEM w (S_CAT(S_REPEAT r,S_REPEAT r)) = US_SEM w (S_REPEAT r)``,
+   RW_TAC simp_list_ss [US_SEM_def,B_SEM]
+    THEN EQ_TAC
+    THEN RW_TAC simp_list_ss []
+    THENL
+     [Q.EXISTS_TAC `wlist<>wlist'`
+       THEN RW_TAC simp_list_ss [ALL_EL_APPEND,CONCAT_APPEND],
+      Q.EXISTS_TAC `[]` THEN Q.EXISTS_TAC `CONCAT wlist`
+       THEN RW_TAC simp_list_ss []
+       THENL
+        [Q.EXISTS_TAC `[]`
+          THEN RW_TAC simp_list_ss [CONCAT_def],
+         PROVE_TAC[]]]);
+
+
 val _ = export_theory();
 
 
