@@ -1,11 +1,11 @@
-open HolKernel Parse boolLib bossLib
+open HolKernel Parse boolLib bossLib metisLib
 
 val _ = new_theory "chap3";
 
 local open pred_setLib in end;
 
 open ncLib
-open chap2Theory ncTheory
+open chap2Theory ncTheory swapTheory
 
 val compatible_def =
     Define`compatible R = !x y c. R x y /\ one_hole_context c ==>
@@ -29,7 +29,82 @@ val (compat_closure_rules, compat_closure_ind, compat_closure_cases) =
              (!x y z. compat_closure R x y ==>
                       compat_closure R (x @@ z) (y @@ z)) /\
              (!x y v. compat_closure R x y ==>
-                      compat_closure R (LAM v x) (LAM v y))`
+                 compat_closure R (LAM v x) (LAM v y))`
+
+val swap_ALPHA = store_thm(
+  "swap_ALPHA",
+  ``~(v IN FV M) ==> (LAM v (swap v u M) = LAM u M)``,
+  SRW_TAC [][GSYM fresh_var_swap, GSYM SIMPLE_ALPHA]);
+
+(* Barendregt definition 3.1.14 *)
+val substitutive_def = Define`
+  substitutive R = !M M'. R M M' ==> !N v. R ([N/v]M) ([N/v]M')
+`;
+
+val permutative_def = Define`
+  permutative R = !M M'. R M M' ==> !x y. R (swap x y M) (swap x y M')
+`;
+
+val compat_closure_permutative = store_thm(
+  "compat_closure_permutative",
+  ``permutative R ==> permutative (compat_closure R)``,
+  STRIP_TAC THEN ASM_SIMP_TAC (srw_ss()) [permutative_def] THEN
+  HO_MATCH_MP_TAC compat_closure_ind THEN SRW_TAC [][swap_thm] THEN
+  METIS_TAC [permutative_def, compat_closure_rules]);
+
+val permutative_compat_closure_eqn = store_thm(
+  "permutative_compat_closure_eqn",
+  ``permutative R ==>
+    (compat_closure R (swap x y M) (swap x y N) = compat_closure R M N)``,
+  STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+    `permutative (compat_closure R)`
+       by METIS_TAC [compat_closure_permutative] THEN
+    `compat_closure R (swap x y (swap x y M)) (swap x y (swap x y N))`
+       by METIS_TAC [permutative_def] THEN
+    FULL_SIMP_TAC (srw_ss()) [swap_inverse],
+    METIS_TAC [permutative_def, compat_closure_permutative]
+  ]);
+val _ = BasicProvers.export_rewrites ["permutative_compat_closure_eqn"]
+
+val swap_eq_3substs = store_thm(
+  "swap_eq_3substs",
+  ``~(z IN FV M) /\ ~(x = z) /\ ~(y = z) ==>
+    (swap x y M = [VAR y/z] ([VAR x/y] ([VAR z/x] M)))``,
+  SRW_TAC [][fresh_var_swap] THEN
+  `~(x IN FV (swap z x M))` by SRW_TAC [][FV_swap, IN_swapset] THEN
+  SRW_TAC [][fresh_var_swap] THEN
+  ONCE_REWRITE_TAC [swap_swap] THEN
+  SRW_TAC [][swapstr_def] THEN
+  `~(y IN FV (swap z y (swap x y M)))` by SRW_TAC [][FV_swap, IN_swapset] THEN
+  SRW_TAC [][fresh_var_swap]);
+
+val substitutive_implies_permutative = store_thm(
+  "substitutive_implies_permutative",
+  ``substitutive R ==> permutative R``,
+  SRW_TAC [][substitutive_def, permutative_def] THEN
+  Q_TAC (NEW_TAC "z") `{x; y} UNION FV M UNION FV M'` THEN
+  `(swap x y M = [VAR y/z] ([VAR x/y] ([VAR z/x] M))) /\
+   (swap x y M'= [VAR y/z] ([VAR x/y] ([VAR z/x] M')))`
+      by SRW_TAC [][swap_eq_3substs] THEN
+  ASM_SIMP_TAC (srw_ss()) []);
+
+
+val compat_closure_substitutive = store_thm(
+  "compat_closure_substitutive",
+  ``substitutive R ==> substitutive (compat_closure R)``,
+  STRIP_TAC THEN SIMP_TAC (srw_ss()) [substitutive_def] THEN
+  HO_MATCH_MP_TAC compat_closure_ind THEN SRW_TAC [][SUB_THM] THENL [
+    PROVE_TAC [compat_closure_rules, substitutive_def],
+    PROVE_TAC [compat_closure_rules],
+    PROVE_TAC [compat_closure_rules],
+    Q_TAC (NEW_TAC "z") `{v;v'} UNION FV M UNION FV M' UNION FV N` THEN
+    `(LAM v M = LAM z (swap z v M)) /\ (LAM v M' = LAM z (swap z v M'))`
+       by SRW_TAC [][swap_ALPHA] THEN
+    ASM_SIMP_TAC (srw_ss()) [SUB_THM, swap_subst_out] THEN
+    MATCH_MP_TAC (last (CONJUNCTS (SPEC_ALL compat_closure_rules))) THEN
+    `permutative R` by METIS_TAC [substitutive_implies_permutative] THEN
+    ASM_SIMP_TAC (srw_ss()) []
+  ]);
 
 val (equiv_closure_rules, equiv_closure_ind, equiv_closure_cases) =
     Hol_reln`(!x y. R x y ==> equiv_closure R x y) /\
@@ -38,11 +113,36 @@ val (equiv_closure_rules, equiv_closure_ind, equiv_closure_cases) =
              (!x y z. equiv_closure R x y /\ equiv_closure R y z ==>
                       equiv_closure R x z)`;
 
+val equiv_closure_substitutive = store_thm(
+  "equiv_closure_substitutive",
+  ``substitutive R ==> substitutive (equiv_closure R)``,
+  STRIP_TAC THEN SIMP_TAC (srw_ss()) [substitutive_def] THEN
+  HO_MATCH_MP_TAC equiv_closure_ind THEN SRW_TAC [][] THEN
+  METIS_TAC [substitutive_def, equiv_closure_rules]);
+
 val conversion_def =
     Define`conversion R = equiv_closure (compat_closure R)`;
 
+val conversion_substitutive = store_thm(
+  "conversion_substitutive",
+  ``substitutive R ==> substitutive (conversion R)``,
+  METIS_TAC [compat_closure_substitutive, equiv_closure_substitutive,
+             conversion_def]);
+
+val RTC_substitutive = store_thm(
+  "RTC_substitutive",
+  ``substitutive R ==> substitutive (RTC R)``,
+  STRIP_TAC THEN SIMP_TAC (srw_ss()) [substitutive_def] THEN
+  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
+  METIS_TAC [relationTheory.RTC_RULES, substitutive_def]);
+
 val reduction_def =
     Define`reduction R = RTC (compat_closure R)`;
+
+val reduction_substitutive = store_thm(
+  "reduction_substitutive",
+  ``substitutive R ==> substitutive (reduction R)``,
+  METIS_TAC [compat_closure_substitutive, RTC_substitutive, reduction_def]);
 
 val conversion_rules = store_thm(
   "conversion_rules",
@@ -117,17 +217,19 @@ val conversion_compatible = store_thm(
   HO_MATCH_MP_TAC equiv_closure_ind THEN SRW_TAC [][] THEN
   PROVE_TAC [compatible_def, equiv_closure_rules, compat_closure_compatible]);
 
+(* "Follows from an induction on the structure of M, and the
+    compatibility of reduction R" *)
 val lemma3_8 = store_thm(
   "lemma3_8",
   ``!R M N N'. reduction R N N' ==> reduction R ([N/x] M) ([N'/x] M)``,
   GEN_TAC THEN HO_MATCH_MP_TAC nc_INDUCTION THEN
-  SRW_TAC [][SUB_THM, reduction_rules] THENL [
-    Cases_on `x = x'` THEN SRW_TAC [][SUB_VAR, reduction_rules],
+  SRW_TAC [][SUB_THM, SUB_VAR] THENL [
     PROVE_TAC [reduction_rules],
-    Q_TAC (NEW_TAC "newv") `FV M UNION FV N UNION FV N' UNION {x'}` THEN
-    `LAM x' M = LAM newv ([VAR newv/x']M)` by SRW_TAC [][FV_THM, ALPHA] THEN
-    Cases_on `newv = x` THEN
-    ASM_SIMP_TAC (srw_ss()) [SUB_THM, reduction_rules]
+    PROVE_TAC [reduction_rules],
+    PROVE_TAC [reduction_rules],
+    Q_TAC (NEW_TAC "z") `FV M UNION FV N UNION FV N' UNION {x; x'}` THEN
+    `LAM x' M = LAM z ([VAR z/x'] M)` by SRW_TAC [][SIMPLE_ALPHA] THEN
+    ASM_SIMP_TAC (srw_ss()) [SUB_THM] THEN PROVE_TAC [reduction_rules]
   ]);
 
 val redex_def = Define`redex (R:'a -> 'a -> bool) t = ?u. R t u`;
@@ -151,60 +253,26 @@ val beta_def = Define`beta M N = ?x body arg. (M = LAM x body @@ arg) /\
                                               (N = [arg/x]body)`;
 
 
-
-
-val cc_beta_isub = store_thm(
-  "cc_beta_isub",
-  ``!M N. compat_closure beta M N ==>
-          !R. compat_closure beta (M ISUB R) (N ISUB R)``,
-  HO_MATCH_MP_TAC compat_closure_ind THEN REPEAT CONJ_TAC THENL [
-    Q_TAC SUFF_TAC `!M N. beta M N ==>
-                          !R. compat_closure beta (M ISUB R) (N ISUB R)` THEN1
-          PROVE_TAC [] THEN
-    REPEAT STRIP_TAC THEN
-    `?v body arg. (M = (LAM v body) @@ arg) /\ (N = [arg/v]body)` by
-         PROVE_TAC [beta_def] THEN
-    Q_TAC (NEW_TAC "z") `FV body UNION FV arg UNION FVS R UNION DOM R` THEN
-    `LAM v body = LAM z ([VAR z/v] body)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-    `(LAM v body @@ arg) ISUB R =
-        LAM z ([VAR z/v]body ISUB R) @@ (arg ISUB R)`
-        by SRW_TAC [][ISUB_LAM, ISUB_APP] THEN
-    `beta (LAM z ([VAR z/v]body ISUB R) @@ (arg ISUB R))
-          ([arg ISUB R/z] ([VAR z/v]body ISUB R))` by PROVE_TAC [beta_def] THEN
-    `[arg ISUB R/z] ([VAR z/v]body ISUB R) = [arg/v] body ISUB R` by
-          SRW_TAC [][ISUB_SUB_COMMUTE] THEN
-    `beta (M ISUB R) (N ISUB R)` by PROVE_TAC [] THEN
-    PROVE_TAC [compat_closure_rules],
-
-    SRW_TAC [][ISUB_APP] THEN PROVE_TAC [compat_closure_rules],
-    SRW_TAC [][ISUB_APP] THEN PROVE_TAC [compat_closure_rules],
-
-    Q_TAC SUFF_TAC
-          `!M N v.
-             (!Q. compat_closure beta (M ISUB Q) (N ISUB Q)) ==>
-             !R. compat_closure beta (LAM v M ISUB R) (LAM v N ISUB R)` THEN1
-          PROVE_TAC [] THEN
-    REPEAT STRIP_TAC THEN
-    Q_TAC (NEW_TAC "u") `FVS R UNION DOM R UNION FV M UNION FV N` THEN
-    `(LAM v M = LAM u ([VAR u/v] M)) /\ (LAM v N = LAM u ([VAR u/v] N))` by
-        SRW_TAC [][SIMPLE_ALPHA] THEN
-    ASM_SIMP_TAC (srw_ss()) [ISUB_LAM, SUB_ISUB_SINGLETON, ISUB_APPEND] THEN
-    PROVE_TAC [compat_closure_rules]
-  ]);
+val beta_substitutive = store_thm(
+  "beta_substitutive",
+  ``substitutive beta``,
+  SRW_TAC [][substitutive_def, beta_def] THEN
+  Q_TAC (NEW_TAC "z") `{v; x} UNION FV body UNION FV arg UNION FV N` THEN
+  `LAM x body = LAM z ([VAR z/x] body)` by SRW_TAC [][SIMPLE_ALPHA] THEN
+  Q.EXISTS_TAC `z` THEN SRW_TAC [][SUB_THM, GENERAL_SUB_COMMUTE]);
 
 val cc_beta_subst = store_thm(
   "cc_beta_subst",
   ``!M N. compat_closure beta M N ==>
           !P v. compat_closure beta ([P/v]M) ([P/v]N)``,
-  SRW_TAC [][SUB_ISUB_SINGLETON, cc_beta_isub]);
+  METIS_TAC [beta_substitutive, compat_closure_substitutive,
+             substitutive_def]);
 
 val reduction_beta_subst = store_thm(
   "reduction_beta_subst",
   ``!M N. reduction beta M N ==>
           !P v. reduction beta ([P/v]M) ([P/v]N)``,
-  SIMP_TAC (srw_ss()) [reduction_def] THEN
-  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
-  PROVE_TAC [relationTheory.RTC_RULES, cc_beta_subst]);
+  METIS_TAC [beta_substitutive, reduction_substitutive, substitutive_def]);
 
 val cc_beta_FV_SUBSET = store_thm(
   "cc_beta_FV_SUBSET",
@@ -365,7 +433,7 @@ val diamond_TC = store_thm(
   ]);
 
 
-val (grandbeta_rules, grandbeta_indn, grandbeta_cases) =
+val (grandbeta_rules, grandbeta_ind, grandbeta_cases) =
     Hol_reln`(!M. grandbeta M M) /\
              (!M M' x. grandbeta M M' ==> grandbeta (LAM x M) (LAM x M')) /\
              (!M N M' N'. grandbeta M M' /\ grandbeta N N' ==>
@@ -393,77 +461,45 @@ val app_grandbeta = store_thm(  (* property 3 on p. 37 *)
     SRW_TAC [][] THEN PROVE_TAC [grandbeta_rules]
   ]);
 
+val grandbeta_permutative = store_thm(
+  "grandbeta_permutative",
+  ``!M N. grandbeta M N ==> !x y. grandbeta (swap x y M) (swap x y N)``,
+  HO_MATCH_MP_TAC grandbeta_ind THEN SRW_TAC [][swap_thm, swap_subst] THEN
+  METIS_TAC [grandbeta_rules]);
+
+val grandbeta_permutative_eqn = store_thm(
+  "grandbeta_permutative_eqn",
+  ``grandbeta (swap x y M) (swap x y N) = grandbeta M N``,
+  METIS_TAC [swap_inverse, grandbeta_permutative]);
+val _ = BasicProvers.export_rewrites ["grandbeta_permutative_eqn"]
 
 val grandbeta_substitutive = store_thm(
   "grandbeta_substitutive",
   ``!M N x P. grandbeta M N ==> grandbeta ([P/x]M) ([P/x]N)``,
-  completeInduct_on `size M` THEN
-  FULL_SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM] THEN
-  GEN_TAC THEN Q.SPEC_THEN `M` STRUCT_CASES_TAC nc_CASES THEN
-  SRW_TAC [][SUB_THM, SUB_VAR] THENL [
-    POP_ASSUM MP_TAC THEN ONCE_REWRITE_TAC [grandbeta_cases] THEN
-    SRW_TAC [][SUB_THM],
-    POP_ASSUM MP_TAC THEN
-    CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [grandbeta_cases])) THEN
-    SRW_TAC [][SUB_THM, SUB_VAR, grandbeta_rules],
-    POP_ASSUM MP_TAC THEN ONCE_REWRITE_TAC [grandbeta_cases] THEN
-    SRW_TAC [][SUB_THM, SUB_VAR],
-    POP_ASSUM MP_TAC THEN ONCE_REWRITE_TAC [grandbeta_cases] THEN
-    SRW_TAC [][SUB_THM] THEN SRW_TAC [][SUB_THM] THENL [
-      FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [size_thm],
-      Q_TAC (NEW_TAC "z") `FV P UNION FV M UNION FV M' UNION FV N'' UNION
-                           {x; x'}` THEN
-      `LAM x' M = LAM z ([VAR z/x'] M)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-      REPEAT DISJ2_TAC THEN SRW_TAC [][SUB_THM] THEN
-      MAP_EVERY Q.EXISTS_TAC [`[P/x] ([VAR z/x'] M)`, `[P/x]([VAR z/x'] M')`,
-                              `[P/x] N''`, `z`] THEN
-      SRW_TAC [][GENERAL_SUB_COMMUTE] THEN
-      FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [size_thm]
-    ],
-    POP_ASSUM MP_TAC THEN
-    CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [grandbeta_cases])) THEN
-    SRW_TAC [][] THEN SRW_TAC [][grandbeta_rules] THEN
-    IMP_RES_TAC INJECTIVITY_LEMMA1 THEN SRW_TAC [][] THEN
-    FULL_SIMP_TAC (srw_ss()) [size_thm] THEN
-    Q_TAC (NEW_TAC "z") `FV P UNION FV M UNION FV M' UNION {x; x'}` THEN
-    `(LAM x'' M = LAM z ([VAR z/x''] M)) /\
-     (LAM x'' M' = LAM z ([VAR z/x''] M'))` by SRW_TAC [][SIMPLE_ALPHA] THEN
+  SIMP_TAC (srw_ss()) [RIGHT_FORALL_IMP_THM] THEN
+  HO_MATCH_MP_TAC grandbeta_ind THEN SRW_TAC [][SUB_THM] THENL [
+    METIS_TAC [grandbeta_rules],
+    Q_TAC (NEW_TAC "z") `{x;x'} UNION FV M UNION FV P UNION FV N` THEN
+    `(LAM x M = LAM z (swap z x M)) /\ (LAM x N = LAM z (swap z x N))`
+        by SRW_TAC [][swap_ALPHA] THEN
+    SRW_TAC [][SUB_THM, swap_subst_out, grandbeta_rules],
+    METIS_TAC [grandbeta_rules],
+    Q_TAC (NEW_TAC "z") `{x; x'} UNION FV M UNION FV P UNION FV N'` THEN
+    `LAM x M = LAM z (swap z x M)` by SRW_TAC [][swap_ALPHA] THEN
     SRW_TAC [][SUB_THM] THEN
-    SRW_TAC [ARITH_ss][grandbeta_rules]
-  ]);
-
-val grandbeta_varsubst = store_thm(
-  "grandbeta_varsubst",
-  ``!M N. grandbeta M N ==>
-          !R. grandbeta (M ISUB R) (N ISUB R)``,
-  HO_MATCH_MP_TAC grandbeta_indn THEN REPEAT CONJ_TAC THENL [
-    PROVE_TAC [grandbeta_rules],
-    MAP_EVERY Q.X_GEN_TAC [`M`, `N`, `x`] THEN REPEAT STRIP_TAC THEN
-    Q_TAC (NEW_TAC "newx") `DOM R UNION FVS R UNION FV M UNION FV N` THEN
-    `(LAM x M = LAM newx ([VAR newx/x] M)) /\
-     (LAM x N = LAM newx ([VAR newx/x] N))` by SRW_TAC [][SIMPLE_ALPHA] THEN
-    SRW_TAC [][SUB_THM, ISUB_LAM, GSYM ISUB_def, grandbeta_rules],
-    SRW_TAC [][ISUB_APP, grandbeta_rules],
-    MAP_EVERY Q.X_GEN_TAC [`M1`, `M2`, `N1`, `N2`, `x`] THEN
-    REPEAT STRIP_TAC THEN
-    Q_TAC (NEW_TAC "newx") `DOM R UNION FVS R UNION FV M1 UNION FV M2 UNION
-                            FV N1 UNION FV N2` THEN
-    `LAM x M1 = LAM newx ([VAR newx/x] M1)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-    SRW_TAC [][ISUB_LAM, ISUB_APP] THEN
-    `grandbeta ([VAR newx/x] M1 ISUB R) ([VAR newx/x]N1 ISUB R)` by
-       SRW_TAC [][GSYM ISUB_def] THEN
-    `grandbeta (M2 ISUB R) (N2 ISUB R)` by SRW_TAC [][] THEN
+    `grandbeta ([P/x'] (swap z x M)) ([P/x'] (swap z x N'))`
+       by SRW_TAC [][swap_subst_out] THEN
+    `grandbeta ([P/x'] M') ([P/x']N'')` by SRW_TAC [][] THEN
     Q_TAC SUFF_TAC
-       `[N2/x]N1 ISUB R = [N2 ISUB R/newx] ([VAR newx/x] N1 ISUB R)` THEN1
-       SRW_TAC [][grandbeta_rules] THEN
-    PROVE_TAC [ISUB_SUB_COMMUTE]
+          `[[P/x']N'' / z] ([P/x'] (swap z x N')) =
+           [P/x'] ([N''/x] N')` THEN1 METIS_TAC [grandbeta_rules] THEN
+    SRW_TAC [][GSYM fresh_var_swap, GENERAL_SUB_COMMUTE]
   ]);
-
 
 val grandbeta_FV = store_thm(
   "grandbeta_FV",
   ``!M N. grandbeta M N ==> FV N SUBSET FV M``,
-  HO_MATCH_MP_TAC grandbeta_indn THEN
+  HO_MATCH_MP_TAC grandbeta_ind THEN
   SRW_TAC [][FV_THM, pred_setTheory.SUBSET_DEF, FV_SUB] THEN
   PROVE_TAC []);
 
@@ -509,67 +545,52 @@ val grandbeta_cosubstitutive = store_thm(
   `LAM x M = LAM z ([VAR z/x] M)` by SRW_TAC [][SIMPLE_ALPHA] THEN
   SRW_TAC [][SUB_THM] THEN PROVE_TAC [grandbeta_rules]);
 
-
-
-open metisLib
-val grandbeta_subst = store_thm(  (* property 1 on p37 *)
+(* property 1 on p37, and Barendregt's lemma 3.2.4 *)
+val grandbeta_subst = store_thm(
   "grandbeta_subst",
   ``!M N M' N' x. grandbeta M M' /\ grandbeta N N' ==>
                   grandbeta ([N/x]M) ([N'/x]M')``,
-  HO_MATCH_MP_TAC ncTheory.nc_INDUCTION THEN REPEAT CONJ_TAC THENL [
-    SRW_TAC [][SUB_THM, con_grandbeta],
-    SRW_TAC [][SUB_VAR, var_grandbeta],
-    MAP_EVERY Q.X_GEN_TAC [`f`, `x`] THEN STRIP_TAC THEN
-    Q_TAC SUFF_TAC
-       `!N1 N2 fx v.
-           grandbeta (f @@ x) fx /\ grandbeta N1 N2 ==>
-           grandbeta ([N1/v] (f @@ x)) ([N2/v] fx)` THEN1 METIS_TAC [] THEN
+  Q_TAC SUFF_TAC
+        `!M M'. grandbeta M M' ==>
+                !N N' x. grandbeta N N' ==>
+                         grandbeta ([N/x] M) ([N'/x]M')` THEN1
+        METIS_TAC [] THEN
+  HO_MATCH_MP_TAC grandbeta_ind THEN REPEAT CONJ_TAC THENL [
+    METIS_TAC [grandbeta_cosubstitutive],
     REPEAT STRIP_TAC THEN
-    `(?f' x'. (fx = f' @@ x') /\ grandbeta f f' /\ grandbeta x x')
-             \/
-     (?z body0 body x'.
-                (f = LAM z body0) /\ (fx = [x'/z]body) /\
-                grandbeta body0 body /\ grandbeta x x')` by
-        (FULL_SIMP_TAC (srw_ss()) [app_grandbeta] THEN PROVE_TAC []) THEN
-    SRW_TAC [][SUB_THM] THENL [
-      PROVE_TAC [grandbeta_rules],
-      `grandbeta (LAM z body0) (LAM z body)` by
-         PROVE_TAC [grandbeta_rules] THEN
-      `grandbeta ([N1/v] (LAM z body0)) ([N2/v] (LAM z body))` by
-         PROVE_TAC [] THEN
-      Q_TAC (NEW_TAC "z'") `v INSERT FV N1 UNION FV N2 UNION
-                            FV body0 UNION FV body UNION FV x'` THEN
-      `LAM z body0 = LAM z' ([VAR z'/z] body0)` by
-         SRW_TAC [][ALPHA, FV_THM] THEN
-      `LAM z body = LAM z' ([VAR z'/z]body)` by
-         SRW_TAC [][ALPHA, FV_THM] THEN
-      FULL_SIMP_TAC (srw_ss())[SUB_THM] THEN
-      `grandbeta ([N1/v] ([VAR z'/z] body0)) ([N2/v] ([VAR z'/z]body))` by
-         FULL_SIMP_TAC (srw_ss()) [abs_grandbeta, LAM_VAR_INJECTIVE] THEN
-      `grandbeta ([N1/v]x) ([N2/v]x')` by PROVE_TAC [] THEN
-      Q_TAC SUFF_TAC
-        `[N2/v] ([x'/z] body) =
-         [[N2/v] x'/z'] ([N2/v] ([VAR z'/z] body))` THEN1
-        SRW_TAC [][grandbeta_rules] THEN
-      PROVE_TAC [GENERAL_SUB_COMMUTE]
-    ],
-    MAP_EVERY Q.X_GEN_TAC [`x`, `M`] THEN STRIP_TAC THEN
-    MAP_EVERY Q.X_GEN_TAC [`N1`, `xM'`, `N2`, `v`] THEN STRIP_TAC THEN
-    Q_TAC (NEW_TAC "x'") `{v;x} UNION FV M UNION FV xM' UNION FV N1 UNION
-                          FV N2` THEN
-    `LAM x M = LAM x' ([VAR x'/x]M)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-    FULL_SIMP_TAC (srw_ss()) [SUB_THM, FV_THM, abs_grandbeta] THEN
-    SRW_TAC [][] THEN
-    `~(x' IN FV N0)` by (FULL_SIMP_TAC (srw_ss())[FV_THM] THEN
-                           FULL_SIMP_TAC std_ss[]) THEN
-    `LAM x N0 = LAM x' ([VAR x'/x]N0)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-    SRW_TAC [][SUB_THM, FV_THM, LAM_VAR_INJECTIVE] THEN
-    FIRST_X_ASSUM MATCH_MP_TAC THEN PROVE_TAC [ISUB_def, grandbeta_varsubst]
+    Q_TAC (NEW_TAC "z")
+          `{x;x'} UNION FV N UNION FV M UNION FV N' UNION FV M'` THEN
+    `(LAM x M = LAM z (swap z x M)) /\ (LAM x M' = LAM z (swap z x M'))`
+        by SRW_TAC [][swap_ALPHA] THEN
+    SRW_TAC [][SUB_THM, swap_subst_out] THEN
+    MATCH_MP_TAC (List.nth(CONJUNCTS grandbeta_rules, 1)) THEN
+    SRW_TAC [][],
+    SRW_TAC [][SUB_THM] THEN METIS_TAC [grandbeta_rules],
+    Q_TAC SUFF_TAC
+          `!M M' N N' P x.
+              (!P P' v. grandbeta P P' ==> grandbeta ([P/v]M) ([P'/v]M')) /\
+              (!P P' v. grandbeta P P' ==> grandbeta ([P/v]N) ([P'/v]N')) ==>
+              !P P' v.
+                 grandbeta P P' ==>
+                 grandbeta ([P/v] (LAM x M @@ N)) ([P'/v] ([N'/x] M'))` THEN1
+          METIS_TAC [] THEN
+    REPEAT STRIP_TAC THEN
+    Q_TAC (NEW_TAC "z") `{x;v} UNION FV (M @@ M' @@ N @@ N' @@ P @@ P')` THEN
+    FULL_SIMP_TAC (srw_ss()) [] THEN
+    `LAM x M = LAM z (swap z x M)` by SRW_TAC [][swap_ALPHA] THEN
+    ASM_SIMP_TAC (srw_ss()) [SUB_THM] THEN
+    `grandbeta ([P/v] (swap z x M)) ([P'/v] (swap z x M'))`
+       by SRW_TAC [][swap_subst_out] THEN
+    `grandbeta ([P/v] N) ([P'/v] N')` by SRW_TAC [][] THEN
+    Q_TAC SUFF_TAC `[P'/v] ([N'/x] M') =
+                    [[P'/v] N' / z] ([P'/v] (swap z x M'))`
+          THEN1 METIS_TAC [grandbeta_rules] THEN
+    SRW_TAC [][GSYM fresh_var_swap, GSYM GENERAL_SUB_COMMUTE]
   ]);
 
-val strong_grandbeta_indn =
+val strong_grandbeta_ind =
     IndDefRules.derive_strong_induction (CONJUNCTS grandbeta_rules,
-                                         grandbeta_indn)
+                                         grandbeta_ind)
 
 val lemma3_16 = store_thm( (* p. 37 *)
   "lemma3_16",
@@ -578,7 +599,7 @@ val lemma3_16 = store_thm( (* p. 37 *)
                          !M2. grandbeta M M2 ==>
                               ?M3. grandbeta M1 M3 /\ grandbeta M2 M3` THEN1
     PROVE_TAC [diamond_property_def] THEN
-  HO_MATCH_MP_TAC strong_grandbeta_indn THEN REPEAT CONJ_TAC THENL [
+  HO_MATCH_MP_TAC strong_grandbeta_ind THEN REPEAT CONJ_TAC THENL [
     (* reflexive case *)
     PROVE_TAC [grandbeta_rules],
     (* lambda case *)
@@ -664,7 +685,7 @@ val theorem3_17 = store_thm(
       THEN1 (REWRITE_TAC [reduction_def] THEN
              PROVE_TAC [relationTheory.TC_IDEM, relationTheory.TC_RC_EQNS,
                         relationTheory.TC_MONOTONE]) THEN
-    HO_MATCH_MP_TAC grandbeta_indn THEN PROVE_TAC [reduction_rules, beta_def],
+    HO_MATCH_MP_TAC grandbeta_ind THEN PROVE_TAC [reduction_rules, beta_def],
 
     Q_TAC SUFF_TAC `!M N. RC (compat_closure beta) M N ==> grandbeta M N`
       THEN1 PROVE_TAC [relationTheory.TC_MONOTONE,
@@ -876,7 +897,6 @@ val hindley_rosen_lemma = store_thm( (* p43 *)
     FULL_SIMP_TAC (srw_ss()) [RTC_OUT, CC_RUNION_DISTRIB]
   ]);
 
-
 val eta_def =
     Define`eta M N = ?v. (M = LAM v (N @@ VAR v)) /\ ~(v IN FV N)`;
 
@@ -926,87 +946,22 @@ val cc_eta_thm = store_thm(
                        LEFT_AND_OVER_OR, FORALL_AND_THM,
                        is_comb_APP_EXISTS, GSYM LEFT_EXISTS_AND_THM]);
 
-val VSUB_EQ_VAR' =
-    CONV_RULE (STRIP_QUANT_CONV (LAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])))
-              VSUB_EQ_VAR
-
-val ISUB_VAR_UNCHANGED = store_thm(
-  "ISUB_VAR_UNCHANGED",
-  ``!R v. ~(v IN DOM R) ==> (VAR v ISUB R = VAR v)``,
-  Induct THEN
-  ASM_SIMP_TAC (srw_ss()) [ISUB_def, pairTheory.FORALL_PROD, DOM_def,
-                           SUB_VAR]);
-
-val FV_ISUB_UPPERBOUND = store_thm(
-  "FV_ISUB_UPPERBOUND",
-  ``!R t. FV (t ISUB R) SUBSET FV t UNION FVS R``,
-  REWRITE_TAC [pred_setTheory.SUBSET_DEF] THEN
-  Induct THEN
-  ASM_SIMP_TAC (srw_ss()) [ISUB_def, pairTheory.FORALL_PROD, FVS_def] THEN
-  REPEAT STRIP_TAC THEN
-  `x IN FV ([p_1/p_2] t) \/ x IN FVS R`
-      by PROVE_TAC [pred_setTheory.IN_UNION] THEN
-  FULL_SIMP_TAC (srw_ss() ++ boolSimps.COND_elim_ss) [FV_SUB] THEN
-  PROVE_TAC []);
-
-val cc_eta_isub = store_thm(
-  "cc_eta_isub",
-  ``!M N. compat_closure eta M N ==>
-    !R. compat_closure eta (M ISUB R) (N ISUB R)``,
-  HO_MATCH_MP_TAC compat_closure_ind THEN REPEAT CONJ_TAC THENL [
-    (* eta case *)
-    Q_TAC SUFF_TAC `!M N. eta M N ==>
-                          !R. compat_closure eta (M ISUB R) (N ISUB R)` THEN1
-          PROVE_TAC [] THEN
-    REPEAT STRIP_TAC THEN
-    `?v. (M = LAM v (N @@ VAR v)) /\ ~(v IN FV N)` by
-         PROVE_TAC [eta_def] THEN
-    Q_TAC (NEW_TAC "z") `{v} UNION FV N UNION FVS R UNION DOM R` THEN
-    `LAM v (N @@ VAR v) = LAM z ([VAR z/v](N @@ VAR v))` by
-       SRW_TAC [][SIMPLE_ALPHA] THEN
-    `LAM v (N @@ VAR v) = LAM z (N @@ VAR z)` by
-       SRW_TAC [][lemma14b, SUB_THM] THEN
-    `M ISUB R = LAM z ((N ISUB R) @@ VAR z)` by
-       SRW_TAC [][ISUB_LAM, ISUB_APP, ISUB_VAR_UNCHANGED] THEN
-    `~(z IN FV (N ISUB R))` by PROVE_TAC [FV_ISUB_UPPERBOUND,
-                                          pred_setTheory.SUBSET_DEF,
-                                          pred_setTheory.IN_UNION] THEN
-    `eta (LAM z ((N ISUB R) @@ VAR z)) (N ISUB R)` by
-       ASM_SIMP_TAC (srw_ss()) [eta_def] THEN
-    PROVE_TAC [compat_closure_rules],
-
-    (* left app *)
-    SRW_TAC [][ISUB_APP] THEN PROVE_TAC [compat_closure_rules],
-
-    (* right app *)
-    SRW_TAC [][ISUB_APP] THEN PROVE_TAC [compat_closure_rules],
-
-    (* abs *)
-    Q_TAC SUFF_TAC
-       `!M N v.
-           (!Q. compat_closure eta (M ISUB Q) (N ISUB Q)) ==>
-           (!R. compat_closure eta (LAM v M ISUB R) (LAM v N ISUB R))`
-       THEN1 PROVE_TAC [] THEN
-    REPEAT STRIP_TAC THEN
-    Q_TAC (NEW_TAC "z")
-          `FV M UNION FV N UNION FVS R UNION DOM R UNION {v}` THEN
-    `LAM v M = LAM z ([VAR z/v] M)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-    `LAM v N = LAM z ([VAR z/v] N)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-    `LAM v M ISUB R = LAM z ([VAR z/v] M ISUB R)` by
-       SRW_TAC [][ISUB_LAM] THEN
-    `LAM v N ISUB R = LAM z ([VAR z/v] N ISUB R)` by
-       SRW_TAC [][ISUB_LAM] THEN
-    `compat_closure eta ([VAR z/v] M ISUB R) ([VAR z/v] N ISUB R)` by
-       SRW_TAC [][SUB_ISUB_SINGLETON, ISUB_APPEND] THEN
-    PROVE_TAC [compat_closure_rules]
-  ]);
-
+val eta_substitutive = store_thm(
+  "eta_substitutive",
+  ``substitutive eta``,
+  SRW_TAC [][substitutive_def, eta_def] THEN
+  Q_TAC (NEW_TAC "z") `{v;v'} UNION FV M' UNION FV N` THEN
+  `LAM v (M' @@ VAR v) = LAM z ([VAR z/v] (M' @@ VAR v))`
+     by SRW_TAC [][SIMPLE_ALPHA] THEN
+  ` _ = LAM z ([VAR z/v] M' @@ VAR z)` by SRW_TAC [][SUB_THM] THEN
+  ASM_SIMP_TAC (srw_ss()) [SUB_THM, lemma14b] THEN
+  Q.EXISTS_TAC `z` THEN SRW_TAC [][FV_SUB]);
 
 val cc_eta_subst = store_thm(
   "cc_eta_subst",
   ``!M N. compat_closure eta M N ==>
           !P v. compat_closure eta ([P/v] M) ([P/v] N)``,
-  SRW_TAC [][SUB_ISUB_SINGLETON, cc_eta_isub]);
+  METIS_TAC [eta_substitutive, compat_closure_substitutive, substitutive_def]);
 
 val eta_deterministic = store_thm(
   "eta_deterministic",
@@ -1058,8 +1013,6 @@ val eta_LAM = store_thm(
     PROVE_TAC [LAM_INJ_ALPHA_FV, FV_THM, pred_setTheory.IN_UNION],
     PROVE_TAC [is_comb_rator_rand]
   ]);
-
-
 
 val CR_eta_lemma = prove(
   ``!M M1 M2. eta M M1 /\ compat_closure eta M M2 /\ ~(M1 = M2) ==>
@@ -1453,44 +1406,12 @@ val SUB_MERGE = store_thm(
   FULL_SIMP_TAC (srw_ss()) [lemma14a] THEN
   Cases_on `v = u` THEN SRW_TAC [][lemma14a]);
 
-val ISUB_MERGE_FRONT2 = store_thm(
-  "ISUB_MERGE_FRONT2",
-  ``!R t u v w. ~(u IN FV t) ==>
-                (t ISUB ((VAR u,v) :: (VAR w, u) :: R) =
-                 t ISUB ((VAR w,v) :: R))``,
-  SRW_TAC [][ISUB_def, SUB_MERGE]);
-
 val (hnf_thm, _) =
     define_recursive_term_function
     `(hnf (VAR s) = T) /\
      (hnf (CON k) = T) /\
      (hnf (x @@ y) = hnf x /\ ~is_abs x) /\
      (hnf (LAM v t) = hnf t)`;
-
-(*
-val _ = add_infix ("head_reduce1", 750, NONASSOC);
-val (head_reduce1_rules, head_reduce1_ind, head_reduce1_cases) =
-    Hol_reln`(!v t u. t head_reduce1 u ==>
-                      (LAM v t) head_reduce1 (LAM v u)) /\
-             (!t u w. t head_reduce1 u ==>
-                      (t @@ w) head_reduce1 (u @@ w)) /\
-             (!v t u. (LAM v t @@ u) head_reduce1 ([u/v] t))`;
-
-
-val (standard_reduces_rules, standard_reduces_ind, standard_reduces_cases) =
-    Hol_reln`(!v t u. standard_reduces t u ==>
-                      standard_reduces (LAM v t) (LAM v u)) /\
-             (!t u w. standard_reduces t u ==>
-                      standard_reduces (t @@ w) (u @@ w)) /\
-             (!t u w. standard_reduces t u /\ bnf w ==>
-                      standard_reduces (w @@ t) (w @@ u)) /\
-             (!v t u. standard_reduces (LAM v t @@ u) ([u/v] t))`;
-
-val head_is_standard = store_thm(
-   "head_is_standard",
-   ``!t u. t head_reduce1 u ==> standard_reduces t u``,
-   HO_MATCH_MP_TAC head_reduce1_ind THEN PROVE_TAC [standard_reduces_rules]);
-*)
 
 val _ = export_theory();
 
