@@ -79,6 +79,7 @@ Change Log
        numbers, lists and sets.
      * Removed multiple provers, METIS_TAC is now solely based on ordered
        resolution.
+     * Changed the normalization to eliminate let terms.
 
   Version 1.5: 14 January 2004
 

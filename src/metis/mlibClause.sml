@@ -443,9 +443,7 @@ end;
 fun DEMODULATE units (cl as CL (p,i,th,c,d)) =
   let
     val lits = mlibThm.clause th
-    val th =
-      case first (mlibUnits.prove units o wrap) lits of SOME [t] => t
-      | _ => mlibUnits.demod units th
+    val th = mlibUnits.strengthen units th
   in
     if mlibThm.clause th = lits then cl else CL (p,i,th,c,d)
   end;

@@ -114,6 +114,15 @@ fun prove (INL th) = SOME o map (fn False => th | lit => CONTR lit th)
 fun demod (INL th) = K th
   | demod (INR uns) = udemod uns;
 
+fun strengthen units th =
+    let
+      val th = demod units th
+    in
+      case first (fn lit => prove units [lit]) (clause th) of
+        SOME [th] => th
+      | _ => th
+    end;
+
 fun info ((INL _) : units) = "*"
   | info (INR uns) = int_to_string (N.size uns);
 
