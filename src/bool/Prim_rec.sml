@@ -157,9 +157,9 @@ end
 (* Prove existence when PR argument always comes first in argument lists.   *)
 (* ------------------------------------------------------------------------ *)
 
-val prove_canon_recursive_functions_exist =
-let val RIGHT_BETAS =
-        rev_itlist (fn a => CONV_RULE (RAND_CONV BETA_CONV) o C AP_THM a)
+val prove_canon_recursive_functions_exist = let
+  val RIGHT_BETAS =
+      rev_itlist (fn a => CONV_RULE (RAND_CONV BETA_CONV) o C AP_THM a)
   fun canonize t = let
     val (avs,bod) = strip_forall t
     val {lhs = l, rhs = r} = dest_eq bod
@@ -168,7 +168,7 @@ let val RIGHT_BETAS =
     and vargs = tl args
     val l' = mk_comb{Rator = fnn, Rand = rarg}
     and r' = list_mk_abs(vargs,r)
-    val fvs = List.rev (free_vars rarg)
+    val fvs = #2 (strip_comb rarg)
     val def = ASSUME(list_mk_forall(fvs,mk_eq{lhs = l', rhs = r'}))
   in
     GENL avs (RIGHT_BETAS vargs (SPECL fvs def))
@@ -195,7 +195,7 @@ fun universalise_clauses tm =
      val spcls = map (snd o strip_forall) rawcls
      val lpats = map (strip_comb o lhand) spcls
      val ufns = itlist (insert o fst) lpats []
-     val fvs = map (fn t => List.rev (subtract (free_vars t) ufns)) rawcls
+     val fvs = map (fn t => subtract (free_vars t) ufns) rawcls
      val gcls = map2 (curry list_mk_forall) fvs rawcls
  in
    list_mk_conj gcls
@@ -429,7 +429,7 @@ fun generate_case_constant_eqns ty clist =
                     Ty = list_mk_fun(map type_of arg_list, ty)}
      val preamble = list_mk_comb(v,arg_list)
      fun clause (a,c) = mk_eq{lhs = mk_comb{Rator=preamble,Rand=c},
-                              rhs = list_mk_comb(a, rev(free_vars c))}
+                              rhs = list_mk_comb(a, #2 (strip_comb c))}
  in
    list_mk_conj (ListPair.map clause (arg_list, clist))
  end
@@ -1184,12 +1184,14 @@ local val make_args =
     end;
 
  val prove_cases_thm0 =
- let fun mk_exclauses x rpats =
-       let val xts = map
-           (fn t => list_mk_exists(List.rev (free_vars t),
-                                   boolSyntax.mk_eq(x,t))) rpats
-       in mk_abs{Bvar=x, Body=list_mk_disj xts}
-       end
+ let fun mk_exclauses x rpats = let
+       (* order of existentially quantified variables is same order
+          as they appear as arguments to the constructor *)
+       val xts = map (fn t => list_mk_exists(#2 (strip_comb t),
+                                             boolSyntax.mk_eq(x,t))) rpats
+     in
+       mk_abs{Bvar=x, Body=list_mk_disj xts}
+     end
      fun prove_triv tm =
        let val (evs,bod) = strip_exists tm
            val (l,r) = boolSyntax.dest_eq bod
