@@ -64,10 +64,10 @@ val SUBST_defn =
    "SUBST"   
    `measure (\(x,y,z). lam_size (\v. 0) (\v. 0) y)`
 
-   `(SUBST pr (Var v) Sc = Var_subst pr v Sc)
- /\ (SUBST  ___  (Const c) __  = Const c)
+   `(SUBST pr    (Var v)    Sc = Var_subst pr v Sc)
+ /\ (SUBST  ___  (Const c)  __ = Const c)
  /\ (SUBST (x,Q) (Comb M N) Sc = Comb (SUBST (x,Q) M Sc) (SUBST (x,Q) N Sc))
- /\ (SUBST (x,Q) (Abs v M) Sc  = 
+ /\ (SUBST (x,Q) (Abs v M)  Sc = 
      if MEM x (v::Sc) then Abs v M else          (* x is bound in v::Sc *)
      if MEM x (FV M []) /\ MEM v (FV Q []) then  (* capture would happen *)
         let v' = AWAY (FV M (v::Sc)) PRIME v
@@ -96,6 +96,7 @@ val Fn_def =
     `Fn = SUBST_tupled_aux (measure (\(x,y,z). lam_size (\v.0) (\v.0) y))`;
 
 local val SOME aux_defn = Defn.aux_defn SUBST_defn
+      val SOME ind  = Defn.ind_of aux_defn
       val [e1,e2,e3,e4] = CONJUNCTS (Defn.eqns_of aux_defn)
       val trivs = prove(list_mk_conj(Defn.tcs_of aux_defn),
                         TotalDefn.TC_SIMP_TAC [] [])
@@ -104,11 +105,39 @@ val [E1,E2,E3,E4a] = map (REWRITE_RULE [SYM Fn_def,trivs]) [e1,e2,e3,e4]
 val E4 = simpLib.SIMP_RULE arith_ss 
        [combinTheory.o_DEF,prim_recTheory.measure_def,
               relationTheory.inv_image_def] E4a
+val Fn_ind = simpLib.SIMP_RULE std_ss []
+                 (REWRITE_RULE [SYM Fn_def,trivs] (DISCH_ALL ind))
+val Fn_ind1 = Q.GEN `P` (DISCH_ALL (Q.GEN`v` 
+               (Q.SPECL [`v`,`Var w`] (UNDISCH(SPEC_ALL Fn_ind)))))
 end;
 
 val lam_size_def = definition "lam_size_def";
 val lamty = ty_antiq(Type`:('a,'b)lam`);
 
+Defn.tgoal SUBST_defn;
+REWRITE_TAC [SYM Fn_def]
+  THEN TotalDefn.TC_SIMP_TAC [] []
+  THEN RW_TAC std_ss [DECIDE `x<1+y = x<=y`]
+  THEN REPEAT (POP_ASSUM (K ALL_TAC))
+  THEN Q.SPEC_TAC (`AWAY (FV M (v::Sc)) PRIME v`, `w`) 
+  THEN Q.SPEC_TAC (`[]`,`Scope`)
+  THEN Q.ID_SPEC_TAC `M`
+  THEN Q.ID_SPEC_TAC `v` 
+  THEN recInduct Fn_ind1
+  THEN RW_TAC std_ss []
+  THENL
+    [RW_TAC arith_ss [E1,lam_size_def,Var_subst],
+     RW_TAC arith_ss [E2,lam_size_def],
+     RW_TAC arith_ss [E3,lam_size_def],
+     MP_TAC (REWRITE_RULE [lam_size_def,DECIDE `x<1+y = x<=y`,
+              arithmeticTheory.ADD_CLAUSES] E4) 
+     THEN RW_TAC std_ss [] 
+     THENL
+       [RW_TAC arith_ss [E4,lam_size_def],
+        ??,
+     MP_TAC E4 THEN ASM_REWRITE_TAC[]
+RW_TAC arith_ss [E4,lam_size_def
+(*
 val (SUBST_eqns, SUBST_ind) = 
 Defn.tprove(SUBST_defn,
 REWRITE_TAC [SYM Fn_def]
@@ -147,3 +176,4 @@ REWRITE_TAC [SYM Fn_def]
                          arithmeticTheory.ADD_CLAUSES]
        THEN DISCH_TAC THEN Q.PAT_ASSUM `x ==> y` MP_TAC
        THEN RW_TAC arith_ss [lam_size_def,DECIDE`x<y+1 = x<=y`]]]);
+*)

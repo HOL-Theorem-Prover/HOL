@@ -389,6 +389,14 @@ Define
          then Brh v (merge_heap R b1 b2) (Brh w c1 c2)
          else Brh w (Brh v b1 b2) (merge_heap R c1 c2))`;
 
+Define
+   `(merge_heap (Leaf x) b = b)                         
+ /\ (merge_heap (Brh v b1 b2) (Leaf x) = Brh v b1 b2) 
+ /\ (merge_heap (Brh v b1 b2) (Brh w c1 c2) 
+       = if R v w 
+         then Brh v (merge_heap b1 b2) (Brh w c1 c2)
+         else Brh w (Brh v b1 b2) (merge_heap c1 c2))`;
+
 (*---------------------------------------------------------------------------*
  * This one fails, because you need to know a relation between term_size and *
  * list_size. Would work with multiset ordering.                             *
