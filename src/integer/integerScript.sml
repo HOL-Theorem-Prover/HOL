@@ -561,7 +561,7 @@ do (map reeducate thlist, map (load_theorem "-" o fst) thlist);
 
 val INT_ADD_RID =
     prove_thm("INT_ADD_RID",
-	      Term `!x. x + 0 = x`,
+	      Term `!x:int. x + 0 = x`,
 	      SIMP_TAC int_ss [INT_ADD_SYM,GSYM INT_0,INT_ADD_LID])
 
 val INT_ADD_RINV =
@@ -571,7 +571,7 @@ val INT_ADD_RINV =
 
 val INT_MUL_RID =
     prove_thm("INT_MUL_RID",
-	      Term `!x. x * 1 = x`,
+	      Term `!x:int. x * 1 = x`,
 	      SIMP_TAC int_ss [INT_MUL_SYM,GSYM INT_1,INT_MUL_LID])
 
 val INT_RDISTRIB =
@@ -589,20 +589,20 @@ val INT_EQ_LADD =
 
 val INT_EQ_RADD =
     prove_thm("INT_EQ_RADD",
-	      Term `!x y z. (x +_ z = y +_ z) = (x = y)`,
+	      Term `!x:int y z. (x + z = y + z) = (x = y)`,
 	      REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[INT_ADD_SYM] THEN
 	      SIMP_TAC int_ss [INT_EQ_LADD]);
 
 val INT_ADD_LID_UNIQ =
     prove_thm("INT_ADD_LID_UNIQ",
-	      Term `!x y. (x + y = y) = (x = 0)`,
+	      Term `!x:int y. (x + y = y) = (x = 0)`,
 	      REPEAT GEN_TAC THEN
 	      GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [] [GSYM INT_ADD_LID]
 	      THEN SIMP_TAC int_ss [INT_0,INT_EQ_RADD])
 
 val INT_ADD_RID_UNIQ =
     prove_thm("INT_ADD_RID_UNIQ",
-	      Term `!x y. (x + y = x) = (y = 0)`,
+	      Term `!x:int y. (x + y = x) = (y = 0)`,
 	      REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[INT_ADD_SYM] THEN
 	      SIMP_TAC int_ss [INT_ADD_LID_UNIQ])
 
@@ -632,14 +632,14 @@ val INT_NEG_ADD =
 
 val INT_MUL_LZERO =
     prove_thm("INT_MUL_LZERO",
-	      Term `!x. 0 * x = 0`,
+	      Term `!x:int. 0 * x = 0`,
 	      GEN_TAC THEN SUBST1_TAC
-	      (SYM(SPECL [Term `0 * x`, Term `0 * x`] INT_ADD_LID_UNIQ))
+	      (SYM(Q.SPECL [`0 * x`, `0 * x`] INT_ADD_LID_UNIQ))
 	      THEN REWRITE_TAC[GSYM INT_RDISTRIB, INT_ADD_RID]);
 
 val INT_MUL_RZERO
     = prove_thm("INT_MUL_RZERO",
-		Term `!x. x * 0 = 0`,
+		Term `!x. x * 0i = 0`,
 		GEN_TAC THEN ONCE_REWRITE_TAC[INT_MUL_SYM] THEN
 		SIMP_TAC int_ss [INT_MUL_LZERO]);
 
@@ -652,7 +652,7 @@ val INT_NEG_LMUL =
 
 val INT_NEG_RMUL =
     prove_thm("INT_NEG_RMUL",
-	      Term `!x y. --(x * y) = x * (--y)`,
+	      Term `!x y. ~(x * y) = x * ~y`,
 	      REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[INT_MUL_SYM] THEN
 	      SIMP_TAC int_ss [INT_NEG_LMUL]);
 
@@ -810,10 +810,8 @@ val INT_LTE_ANTSYM =
 val INT_NEG_LT0 =
     prove_thm("INT_NEG_LT0",
 	      Term `!x. (--x) <_ 0 = 0 <_ x`,
-	      GEN_TAC THEN SUBST1_TAC(SYM(SPECL [Term `--x`,
-						 Term `0`,
-						 Term`x:int`] INT_LT_RADD))
-	      THEN
+	      GEN_TAC THEN
+              SUBST1_TAC(SYM(Q.SPECL [`--x`, `0`,`x`] INT_LT_RADD)) THEN
 	      REWRITE_TAC[INT_ADD_LINV, INT_ADD_LID, GSYM INT_0]);
 
 val INT_NEG_GT0 =
@@ -855,7 +853,7 @@ val INT_LE_MUL =
     ("INT_LE_MUL",
      Term `!x y. 0 <=_ x /\ 0 <=_ y ==> 0 <=_ (x *_ y)`,
 	 REPEAT GEN_TAC THEN REWRITE_TAC[INT_LE_LT] THEN
-	 MAP_EVERY ASM_CASES_TAC [Term `0 = x`, Term `0 = y`] THEN
+	 MAP_EVERY ASM_CASES_TAC [Term `0i = x`, Term `0i = y`] THEN
 	 ASM_REWRITE_TAC[] THEN TRY(FIRST_ASSUM(SUBST1_TAC o SYM)) THEN
 	 REWRITE_TAC[INT_MUL_LZERO, INT_MUL_RZERO] THEN
 	 DISCH_TAC THEN DISJ1_TAC
@@ -872,19 +870,19 @@ val INT_LE_SQUARE =
 
 val INT_LE_01 =
     prove_thm("INT_LE_01",
-	      Term `0 <=_ 1`,
-	      SUBST1_TAC(SYM(SPEC (Term `1`) INT_MUL_LID)) THEN
+	      Term `0i <= 1`,
+	      SUBST1_TAC(SYM(Q.SPEC `1` INT_MUL_LID)) THEN
 	      SIMP_TAC int_ss [INT_LE_SQUARE,INT_1]);
 
 val INT_LT_01 =
     prove_thm("INT_LT_01",
-	      Term `0 <_ 1`,
+	      Term `0i < 1`,
 	      SIMP_TAC int_ss [INT_LT_LE, INT_LE_01,
 			       GSYM INT_0,GSYM INT_1,INT_10])
 
 val INT_LE_LADD =
     prove_thm("INT_LE_LADD",
-	      Term `!x y z. (x +_ y) <=_ (x +_ z) = y <=_ z`,
+	      Term `!x:int y z. (x + y) <= (x + z) = y <= z`,
 	      REPEAT GEN_TAC THEN REWRITE_TAC[int_le] THEN
 	      AP_TERM_TAC THEN MATCH_ACCEPT_TAC INT_LT_LADD);
 
@@ -1033,18 +1031,16 @@ val INT_NEG_SUB =
 
 val INT_SUB_LT =
     prove_thm("INT_SUB_LT",
-	      Term `!x y. 0 <_ x -_ y = y <_ x`,
+	      Term `!x:int y. 0 < x - y = y < x`,
 	      REPEAT GEN_TAC THEN
-	      SUBST1_TAC(SYM(SPECL [Term `0`, Term `x -_ y`,
-				    Term `y:int`] INT_LT_RADD)) THEN
+	      SUBST1_TAC(SYM(Q.SPECL [`0`, `x - y`, `y`] INT_LT_RADD)) THEN
 	      REWRITE_TAC[INT_SUB_ADD, INT_ADD_LID,GSYM INT_0]);
 
 val INT_SUB_LE =
     prove_thm("INT_SUB_LE",
-	      Term `!x y. 0 <=_ (x -_ y) = y <=_ x`,
+	      Term `!x:int y. 0 <= (x - y) = y <= x`,
 	      REPEAT GEN_TAC THEN
-	      SUBST1_TAC(SYM(SPECL [Term `0`, Term `x -_ y`,
-				    Term `y:int`] INT_LE_RADD)) THEN
+	      SUBST1_TAC(SYM(Q.SPECL [`0`, `x - y`, `y`] INT_LE_RADD)) THEN
 	      REWRITE_TAC[INT_SUB_ADD, INT_ADD_LID, GSYM INT_0]);
 
 val INT_ADD_SUB =
@@ -1090,8 +1086,7 @@ val INT_LE_ADDR =
     prove_thm("INT_LE_ADDR",
 	      Term `!x y. x <=_ x +_ y = 0 <=_ y`,
 	      REPEAT GEN_TAC THEN
-	      SUBST1_TAC(SYM(SPECL [Term `x:int`, Term `0`,
-				    Term `y:int`] INT_LE_LADD)) THEN
+	      SUBST1_TAC(SYM(Q.SPECL [ `x`,  `0`, `y`] INT_LE_LADD)) THEN
 	      REWRITE_TAC[INT_ADD_RID,INT_0]);
 
 val INT_LE_ADDL =
@@ -1104,8 +1099,7 @@ val INT_LT_ADDR =
     prove_thm("INT_LT_ADDR",
 	      Term `!x y. x <_ x +_ y = 0 <_ y`,
 	      REPEAT GEN_TAC THEN
-	      SUBST1_TAC(SYM(SPECL [Term `x:int`, Term `0`,
-				    Term `y:int`] INT_LT_LADD)) THEN
+	      SUBST1_TAC(SYM(Q.SPECL [`x`, `0`,`y`] INT_LT_LADD)) THEN
 	      REWRITE_TAC[INT_ADD_RID,INT_0]);
 
 val INT_LT_ADDL =
@@ -1116,7 +1110,7 @@ val INT_LT_ADDL =
 
 val INT_ENTIRE =
     prove_thm("INT_ENTIRE",
-	      Term `!x y. (x *_ y = 0) = (x = 0) \/ (y = 0)`,
+	      Term `!x:int y. (x * y = 0) = (x = 0) \/ (y = 0)`,
 	      REPEAT GEN_TAC THEN EQ_TAC THENL
 	      [CONV_TAC CONTRAPOS_CONV THEN REWRITE_TAC[DE_MORGAN_THM] THEN
 	       STRIP_TAC THEN
@@ -1184,7 +1178,8 @@ val INT_LT =
     prove_thm("INT_LT",
 	      Term `!m n. &m <_ &n = m < n`,
 	      REPEAT GEN_TAC
-	      THEN MATCH_ACCEPT_TAC ((REWRITE_RULE[] o AP_TERM (Term `$~`) o
+	      THEN MATCH_ACCEPT_TAC ((REWRITE_RULE[] o
+                                      AP_TERM (Term `$~:bool->bool`) o
 				      REWRITE_RULE[GSYM NOT_LESS,
 						   GSYM INT_NOT_LT])
 				     (SPEC_ALL INT_LE)));
@@ -1232,7 +1227,7 @@ val INT_LT_NZ =
 
 val INT_NZ_IMP_LT =
     prove_thm("INT_NZ_IMP_LT",
-	      Term `!n. ~(n = 0n) ==> 0 <_ &n`,
+	      Term `!n. ~(n = 0) ==> 0 <_ &n`,
 	      GEN_TAC THEN REWRITE_TAC[GSYM INT_INJ, INT_LT_NZ]);
 
 val INT_DOUBLE =
@@ -1261,8 +1256,7 @@ val INT_LT_SUB_RADD =
     prove_thm("INT_LT_SUB_RADD",
 	      Term `!x y z. (x -_ y) <_ z = x <_ z +_ y`,
 	      REPEAT GEN_TAC THEN
-	      SUBST1_TAC(SYM(SPECL [Term `x -_ y`, Term `z:int`,
-				    Term `y:int`] INT_LT_RADD)) THEN
+	      SUBST1_TAC(SYM(Q.SPECL [`x - y`, `z`, `y`] INT_LT_RADD)) THEN
 	      REWRITE_TAC[INT_SUB_ADD]);
 
 val INT_LT_SUB_LADD =
@@ -1340,8 +1334,8 @@ val INT_LET_ADD =
     prove_thm("INT_LET_ADD",
 	      Term `!x y. 0 <=_ x /\ 0 <_ y ==> 0 <_ (x +_ y)`,
 		  REPEAT GEN_TAC THEN DISCH_TAC THEN
-		  SUBST1_TAC(SYM(SPEC (Term `0`) (REWRITE_RULE [INT_0]
-						   INT_ADD_LID)))
+		  SUBST1_TAC(SYM(Q.SPEC `0` (REWRITE_RULE [INT_0]
+                                             INT_ADD_LID)))
 		  THEN
 		  MATCH_MP_TAC INT_LET_ADD2 THEN
 		  ASM_REWRITE_TAC[]);
@@ -1350,8 +1344,8 @@ val INT_LTE_ADD =
     prove_thm("INT_LTE_ADD",
 	      Term `!x y. 0 <_ x /\ 0 <=_ y ==> 0 <_ (x +_ y)`,
 		  REPEAT GEN_TAC THEN DISCH_TAC THEN
-		  SUBST1_TAC(SYM(SPEC (Term `0`) (REWRITE_RULE [INT_0]
-						   INT_ADD_LID))) THEN
+		  SUBST1_TAC(SYM(Q.SPEC `0` (REWRITE_RULE [INT_0]
+                                             INT_ADD_LID))) THEN
 		  MATCH_MP_TAC INT_LTE_ADD2 THEN
 		  ASM_REWRITE_TAC[]);
 
@@ -1523,14 +1517,13 @@ val INT_DECOMPOSE =
     prove_thm("INT_DECOMPOSE",
 	      Term `!i. ?m n. i = mk_int($tint_eq(m,n))`,
 	      GEN_TAC THEN
-	      MP_TAC(SPEC (Term `dest_int i`) (CONJUNCT2 int_tybij)) THEN
+	      MP_TAC(Q.SPEC `dest_int i` (CONJUNCT2 int_tybij)) THEN
 	      REWRITE_TAC[CONJUNCT1 int_tybij] THEN BETA_TAC THEN
 	      DISCH_THEN(X_CHOOSE_THEN (Term `x:num#num`) MP_TAC) THEN
 	      DISCH_THEN(MP_TAC o AP_TERM (Term `mk_int`)) THEN
 	      REWRITE_TAC[CONJUNCT1 int_tybij] THEN
 	      DISCH_THEN SUBST1_TAC THEN
-	      MAP_EVERY EXISTS_TAC [Term `FST(x:num#num)`,
-				    Term `SND(x:num#num)`] THEN
+	      MAP_EVERY Q.EXISTS_TAC [`FST (x:num#num)`,`SND (x:num#num)`] THEN
 	      SIMP_TAC int_ss []);
 
 val DEST_MK_EQCLASS =
@@ -1565,7 +1558,7 @@ val NUM_LEMMA =
 		  CONV_TAC CONTRAPOS_CONV THEN REWRITE_TAC[GSYM NOT_LESS] THEN
 		  DISCH_TAC THEN
 		  SUBGOAL_THEN (Term `$@($tint_eq(m,n)) tint_eq (m,n) /\
-				$@($tint_eq tint_0) tint_eq (1n,1n)`)
+				$@($tint_eq tint_0) tint_eq (1,1)`)
 		  (fn th => REWRITE_TAC[MATCH_MP TINT_LT_WELLDEF th])
 		  THENL [REWRITE_TAC[REP_EQCLASS, tint_0], ALL_TAC] THEN
 		  REWRITE_TAC[tint_lt] THEN
@@ -1574,7 +1567,7 @@ val NUM_LEMMA =
 
 val NUM_DECOMPOSE =
     prove_thm("NUM_DECOMPOSE",
-	      Term `!n. &n = mk_int($tint_eq (n,0n))`,
+	      Term `!n. &n = mk_int($tint_eq (n,0))`,
 	      INDUCT_TAC THEN REWRITE_TAC[int_of_num, definition "int_0",
 					  tint_0] THENL
 	      [AP_TERM_TAC THEN REWRITE_TAC[GSYM TINT_EQ_EQUIV,
@@ -1584,8 +1577,8 @@ val NUM_DECOMPOSE =
 	       AP_TERM_TAC THEN REWRITE_TAC[GSYM TINT_EQ_EQUIV,
 					    DEST_MK_EQCLASS] THEN
 	       REWRITE_TAC[TINT_EQ_EQUIV] THEN
-	       SUBGOAL_THEN (Term `$@($tint_eq(n,0n)) tint_eq (n,0n) /\
-			     $@($tint_eq(1n + 1n,1n)) tint_eq (1n + 1n,1n)`)
+	       SUBGOAL_THEN (Term `$@($tint_eq(n,0)) tint_eq (n,0) /\
+			     $@($tint_eq(1 + 1,1)) tint_eq (1 + 1,1)`)
 	       (fn th => REWRITE_TAC[REWRITE_RULE[TINT_EQ_EQUIV]
 				     (MATCH_MP TINT_ADD_WELLDEF th)])
 	       THENL [REWRITE_TAC[REP_EQCLASS, tint_0], ALL_TAC] THEN
