@@ -9,10 +9,7 @@ struct
 
 (*
 app load ["numLib",
-          "reduceLib",
-          "pairTheory",
-          "EquivType",
-          "PairedLambda",
+          "pairLib",          
           "jrhUtils",
           "seqTheory"];
 *)
@@ -37,6 +34,7 @@ val tends_real_real = new_definition(
         (f tends l)(mtop(mr1),tendsto(mr1,x0))`--));
 
 val _ = overload_on (GrammarSpecials.case_arrow_special, ``tends_real_real``);
+
 
 val LIM = prove_thm("LIM",
   (--`!f y0 x0. (f -> y0)(x0) =
