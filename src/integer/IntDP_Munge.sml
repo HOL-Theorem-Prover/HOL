@@ -450,4 +450,12 @@ in
   natvalidation (stage2 natgoal)
 end
 
+fun ok_asm th =
+    List.all (C mem [intSyntax.int_ty, numSyntax.num] o type_of)
+             (non_presburger_subterms (concl th))
+
+fun conv_tac c =
+    REPEAT (FIRST_X_ASSUM (MP_TAC o assert ok_asm)) THEN
+    CONV_TAC c
+
 end; (* struct *)

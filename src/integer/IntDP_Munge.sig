@@ -10,6 +10,8 @@ sig
   val non_presburger_subterms : term -> term list
   val dealwith_nats : term -> term * (thm -> thm)
 
+  val conv_tac : conv -> tactic
+
 end;
 
 (*
@@ -40,4 +42,11 @@ end;
    is "equivalent" to the original (but with possible extra
    generalisations introduced).  The function f will take a theorem of the
    form |- t' = T and produce |- t = T
+
+   [conv_tac c] creates a tactic that pulls appropriate assumptions out
+   of the assumption list, adds them to the goal (using MP_TAC), and then
+   calls the conversion c on that goal.  c is assumed to be a complete
+   arithmetic decision procedure for integers and/or natural numbers.
+   Appropriate assumptions are those whose non_presburger_subterms all
+   have type ``:int`` or ``:num``.
 *)
