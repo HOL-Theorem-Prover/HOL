@@ -9,7 +9,7 @@ val keepers =
 
      (*0*)
       "Type.sig", "Term.sig", "Thm.sig", "Theory.sig", "Definition.sig",
-      "Net.sig", "Count.sig", "Feedback.sig", "Lexis.sig", 
+      "Net.sig", "Count.sig", "Feedback.sig", "Lexis.sig", "Tag.sig",
       "Lib.sig", "Globals.sig",
 
      (* parse *)
