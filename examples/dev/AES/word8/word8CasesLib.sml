@@ -6,7 +6,7 @@
   load "word8Lib";
   load "word8CasesTheory";
 *)
-structure word8CasesLib = struct
+structure word8CasesLib :> word8CasesLib = struct
 open HolKernel Parse boolLib bossLib word8Lib word8Theory word8CasesTheory
 
 datatype clause = Var of term * term
@@ -114,8 +114,11 @@ fun word8Define def_term =
         map (fn e => prove (e, PURE_ONCE_REWRITE_TAC [simp_def] THEN WORD_TAC))
             eqns
   in
-    (def, simp_def, WORD_RULE (LIST_CONJ thms))
+    save_thm (fst (dest_var name) ^ "_def", WORD_RULE (LIST_CONJ thms))
   end
+
+fun word8Cases_on var = 
+ASSUME_TAC (Q.SPEC var word8Nchotomy) THEN RW_TAC bool_ss []
 
 
 end

@@ -1,4 +1,4 @@
-open HolKernel bossLib word8Theory word8CasesLib;
+open HolKernel boolLib bossLib Parse word8Theory word8CasesLib;
 
 val _ = new_theory "tables";
 val Sbox = Count.apply word8Define
@@ -2064,5 +2064,11 @@ val GF256_by_14 = Count.apply word8Define
    (GF256_by_14 0xFDw = 0x91w) /\
    (GF256_by_14 0xFEw = 0x83w) /\
    (GF256_by_14 0xFFw = 0x8Dw)``;
+
+
+val Sbox_Inversion = Q.store_thm
+("Sbox_Inversion",
+ `!w:word8. InvSbox (Sbox w) = w`,
+ STRIP_TAC THEN word8Cases_on `w` THEN RW_TAC bool_ss [Sbox, InvSbox]);
 
 val _ = export_theory();
