@@ -429,7 +429,7 @@ fun NORMALISE_MULT0 t = let
          EQT_ELIM o AC_CONV (MULT_ASSOC, MULT_COMM),
          numSyntax.is_numeral,
          GSYM arithmeticTheory.MULT_LEFT_1)
-      else
+      else if intSyntax.is_mult t then
         (intSyntax.dest_mult,
          intSyntax.strip_mult,
          intSyntax.mk_mult,
@@ -437,6 +437,7 @@ fun NORMALISE_MULT0 t = let
          EQT_ELIM o AC_CONV (INT_MUL_ASSOC, INT_MUL_COMM),
          intSyntax.is_int_literal,
          GSYM INT_MUL_LID)
+      else raise ERR "NORMALISE_MULT" "Term not a multiplication"
 in
   case strip t of
     [ _ ] => if is_lit t then NO_CONV else REWR_CONV MULT_LID
@@ -490,13 +491,18 @@ local
   val ge_elim = prove(``x:int >= y = y <= x``, tac)
   val gt_elim = prove(``x > y = y + 1i <= x``, tac)
   val eq_elim = prove(``(x:int = y) = (x <= y /\ y <= x)``, tac)
+  val mult1 = GSYM INT_MUL_LID
 in
+
+fun MULT1_CONV tm = if not (is_mult tm) andalso not (is_int_literal tm) then
+                      REWR_CONV mult1 tm
+                    else ALL_CONV tm
 
 val sum_normalise =
     REWRITE_CONV [INT_NEG_ADD, INT_LDISTRIB, INT_RDISTRIB,
                   INT_NEG_LMUL, INT_NEGNEG, INT_NEG_0,
                   int_sub] THENC
-    EVERY_SUMMAND (TRY_CONV NORMALISE_MULT) THENC
+    EVERY_SUMMAND (TRY_CONV NORMALISE_MULT THENC MULT1_CONV) THENC
     REWRITE_CONV [GSYM INT_NEG_RMUL, GSYM INT_NEG_LMUL,
                   INT_NEGNEG] THENC
     REWRITE_CONV [INT_NEG_LMUL] THENC

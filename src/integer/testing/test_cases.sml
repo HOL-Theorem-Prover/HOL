@@ -99,6 +99,8 @@ val terms_to_test =
    ("BIGINT1", Term`!x. 100i * x > 213 ==> 100 * x > 251`),
    ("BIGINT2", Term`!x. ~213 < 100i * x ==> ~251 < 100 * x`),
    ("MIKE.NUM", Term`!q r:num. (7 = r + q * 3) /\ r < 3 ==> (r = 1)`),
+   ("INT_MULT_NORM", Term`(2 * m = r + k' * (2 * p)) ==> ?s. r = 2i * s`),
+   ("NUM_MULT_NORM", Term`(2 * m = r + k' * (2 * p)) ==> ?s. r = 2n * s`),
    A "ZERO_LESS_EQ", A "TWO", A "TIMES2", A "SUC_SUB1", A "SUC_ONE_ADD",
    A "SUC_NOT", A "SUC_ADD_SYM", A "SUB_SUB", A "SUB_RIGHT_SUB",
    A "SUB_RIGHT_LESS_EQ", A "SUB_RIGHT_LESS", A "SUB_RIGHT_GREATER_EQ",
