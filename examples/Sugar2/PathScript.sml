@@ -1,6 +1,13 @@
+
 (*****************************************************************************)
-(* Create PathTheory to support Sugar2Theory                                 *)
-(* Version with finite paths are non-empty                                   *)
+(* Create "PathTheory", the theory of (finite and infinite) sequences.       *)
+(* Note that finite paths can be empty in the "SEM_1" semantics.             *)
+(*                                                                           *)
+(* Created Wed Dec 25 23:02:12 GMT 2002                                      *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* START BOILERPLATE                                                         *)
 (*****************************************************************************)
 
 (******************************************************************************
@@ -8,23 +15,36 @@
 * (commented out for compilation)
 ******************************************************************************)
 (* 
-load "rich_listTheory"; load "intLib";
+quietdec := true;
+map load ["intLib","FinitePathTheory"];
+open intLib rich_listTheory FinitePathTheory;
+val _ = intLib.deprecate_int();
+quietdec := false;
 *)
 
 (******************************************************************************
 * Boilerplate needed for compilation
 ******************************************************************************)
-open HolKernel Parse boolLib bossLib listTheory rich_listTheory intLib;
+open HolKernel Parse boolLib bossLib;
 
 (******************************************************************************
-* Versions of simpsets that deal properly with theorems containing SUC
+* Open theories
 ******************************************************************************)
-val arith_ss' = simpLib.++ (arith_ss, numSimps.SUC_FILTER_ss);
+open intLib rich_listTheory FinitePathTheory;
 
 (******************************************************************************
 * Set default parsing to natural numbers rather than integers 
 ******************************************************************************)
 val _ = intLib.deprecate_int();
+
+(*****************************************************************************)
+(* END BOILERPLATE                                                           *)
+(*****************************************************************************)
+
+(******************************************************************************
+* Simpsets to deal properly with theorems containing SUC
+******************************************************************************)
+val simp_arith_ss = simpLib.++ (arith_ss, numSimps.SUC_FILTER_ss);
 
 (******************************************************************************
 * Start a new theory called Path
@@ -38,49 +58,41 @@ val _ = set_fixity "<>" (Infixl 500);
 val _ = overload_on ("<>", Term`APPEND`);
 
 (******************************************************************************
-* Concatenate a list of lists
-******************************************************************************)
-val CONCAT_def =
- Define `(CONCAT [] = []) /\ (CONCAT(l::ll) = l <> CONCAT ll)`;
-
-(******************************************************************************
 * A path is finite or infinite
-* Finite paths are non-empty and so are represented by a pair (x,xl) 
-* where x is the head and xl the tail
 ******************************************************************************)
 val path_def =
  Hol_datatype
-  `path = FINITE_PATH   of ('s # 's list)
-        | INFINITE_PATH of (num -> 's)`;
+  `path = FINITE   of ('s list)
+        | INFINITE of (num -> 's)`;
 
 (******************************************************************************
 * Tests
 ******************************************************************************)
-val IS_FINITE_PATH_def = 
- Define `(IS_FINITE_PATH(FINITE_PATH p)   = T)
+val IS_FINITE_def = 
+ Define `(IS_FINITE(FINITE p)   = T)
          /\
-         (IS_FINITE_PATH(INFINITE_PATH f) = F)`;
+         (IS_FINITE(INFINITE f) = F)`;
 
-val IS_INFINITE_PATH_def = 
- Define `(IS_INFINITE_PATH(FINITE_PATH p)   = F)
+val IS_INFINITE_def = 
+ Define `(IS_INFINITE(FINITE p)   = F)
          /\
-         (IS_INFINITE_PATH(INFINITE_PATH f) = T)`;
+         (IS_INFINITE(INFINITE f) = T)`;
 
 (******************************************************************************
 * HEAD (p0 p1 p2 p3 ...) = p0
 ******************************************************************************)
 val HEAD_def = 
- Define `(HEAD (FINITE_PATH p) = FST p)
+ Define `(HEAD (FINITE p) = HD p)
          /\
-         (HEAD (INFINITE_PATH f)  = f 0)`;
+         (HEAD (INFINITE f)  = f 0)`;
 
 (******************************************************************************
 * REST (p0 p1 p2 p3 ...) = (p1 p2 p3 ...)
 ******************************************************************************)
 val REST_def = 
- Define `(REST (FINITE_PATH p) = FINITE_PATH(HD(SND p), TL(SND p)))
+ Define `(REST (FINITE p) = FINITE(TL p))
          /\
-         (REST (INFINITE_PATH f) = INFINITE_PATH(\n. f(n+1)))`;
+         (REST (INFINITE f) = INFINITE(\n. f(n+1)))`;
 
 (******************************************************************************
 * RESTN (p0 p1 p2 p3 ...) n = (pn p(n+1) p(n+2) ...)
@@ -91,94 +103,251 @@ val RESTN_def =
 (******************************************************************************
 * Simple properties
 ******************************************************************************)
-val NOT_IS_INFINITE_PATH =
+val NOT_IS_INFINITE =
  store_thm
-  ("NOT_IS_INFINITE_PATH",
-   ``IS_INFINITE_PATH p = ~(IS_FINITE_PATH p)``,
+  ("NOT_IS_INFINITE",
+   ``IS_INFINITE p = ~(IS_FINITE p)``,
    Cases_on `p`
-    THEN RW_TAC std_ss [IS_INFINITE_PATH_def,IS_FINITE_PATH_def]);
+    THEN RW_TAC std_ss [IS_INFINITE_def,IS_FINITE_def]);
 
-val NOT_IS_FINITE_PATH =
+val NOT_IS_FINITE =
  store_thm
-  ("NOT_IS_FINITE_PATH",
-   ``IS_FINITE_PATH p = ~(IS_INFINITE_PATH p)``,
+  ("NOT_IS_FINITE",
+   ``IS_FINITE p = ~(IS_INFINITE p)``,
    Cases_on `p`
-    THEN RW_TAC std_ss [IS_INFINITE_PATH_def,IS_FINITE_PATH_def]);
+    THEN RW_TAC std_ss [IS_INFINITE_def,IS_FINITE_def]);
 
-val IS_INFINITE_PATH_REST =
+val IS_INFINITE_REST =
  store_thm
-  ("IS_INFINITE_PATH_REST",
-   ``!p. IS_INFINITE_PATH(REST p) = IS_INFINITE_PATH p``,
+  ("IS_INFINITE_REST",
+   ``!p. IS_INFINITE(REST p) = IS_INFINITE p``,
    Induct
-    THEN RW_TAC list_ss [REST_def,IS_INFINITE_PATH_def,IS_FINITE_PATH_def]);
+    THEN RW_TAC list_ss [REST_def,IS_INFINITE_def,IS_FINITE_def]);
 
-val IS_INFINITE_PATH_RESTN =
+val IS_INFINITE_RESTN =
  store_thm
-  ("IS_INFINITE_PATH_RESTN",
-   ``!n p. IS_INFINITE_PATH(RESTN p n) = IS_INFINITE_PATH p``,
+  ("IS_INFINITE_RESTN",
+   ``!n p. IS_INFINITE(RESTN p n) = IS_INFINITE p``,
    Induct
-    THEN RW_TAC list_ss [RESTN_def,IS_INFINITE_PATH_REST]);
+    THEN RW_TAC list_ss [RESTN_def,IS_INFINITE_REST]);
 
-val IS_FINITE_PATH_REST =
+val IS_FINITE_REST =
  store_thm
-  ("IS_FINITE_PATH_REST",
-   ``!p. IS_FINITE_PATH(REST p) = IS_FINITE_PATH p``,
+  ("IS_FINITE_REST",
+   ``!p. IS_FINITE(REST p) = IS_FINITE p``,
    Induct
-    THEN RW_TAC list_ss [REST_def,IS_INFINITE_PATH_def,IS_FINITE_PATH_def]);
+    THEN RW_TAC list_ss [REST_def,IS_INFINITE_def,IS_FINITE_def]);
 
-val IS_FINITE_PATH_RESTN =
+val IS_FINITE_RESTN =
  store_thm
-  ("IS_FINITE_PATH_RESTN",
-   ``!n p. IS_FINITE_PATH(RESTN p n) = IS_FINITE_PATH p``,
+  ("IS_FINITE_RESTN",
+   ``!n p. IS_FINITE(RESTN p n) = IS_FINITE p``,
    Induct
-    THEN RW_TAC list_ss [RESTN_def,IS_FINITE_PATH_REST]);
+    THEN RW_TAC list_ss [RESTN_def,IS_FINITE_REST]);
+
+val RESTN_FINITE =
+ store_thm
+  ("RESTN_FINITE",
+   ``!l n. RESTN (FINITE l) n = FINITE(RESTN l n)``,
+   Induct_on `n`
+    THEN RW_TAC std_ss 
+          [RESTN_def,FinitePathTheory.RESTN_def,
+           REST_def,FinitePathTheory.REST_def]);
+
+val FINITE_TL =
+ store_thm
+  ("FINITE_TL",
+   ``!l. 0 < LENGTH l ==> (FINITE(TL l) = REST(FINITE l))``,
+   Induct
+    THEN RW_TAC list_ss [REST_def]);
 
 (******************************************************************************
-* PATH_LENGTH(FINITE_PATH(x,l)) = 1 + LENGTH l
-* (PATH_LENGTH is not specified on infinite paths)
+* LENGTH(FINITE l) = LENGTH l
+* LENGTH is not specified on infinite paths, but LEN (defined below) is.
 ******************************************************************************)
-val PATH_LENGTH_def = 
- Define `PATH_LENGTH (FINITE_PATH p)   = 1 + LENGTH(SND p)`;
+val LENGTH_def = 
+ Define `LENGTH (FINITE l)   = list$LENGTH l`;
 
 (******************************************************************************
-* PL p n means length p < n
+* Extended numbers.
 ******************************************************************************)
-val PL_def =
- Define `PL p n = IS_FINITE_PATH p ==> n < PATH_LENGTH p`;
+val xnum_def =
+ Hol_datatype
+  `xnum = INFINITY                            (* length of an infinite path  *)
+        | XNUM of num`;                       (* length of a finite path     *)
 
 (******************************************************************************
-* Finite paths are non-empty
+* The constant ``to`` is a left associative infix with precedence 500.
+* It is overloaded so that
+* (m to n) i        means m <= i /\ i < n  (num_to_def)
+* (m to XNUM n) i   means m <= i /\ i < n  (xnum_to_def)
+* (m to INFINITY) i means m <= i           (xnum_to_def)
 ******************************************************************************)
+val num_to_def =
+ Define `$num_to m n i = m <= i /\ i < n`; 
 
-val FINITE_PATH_NONEMPTY =
+val xnum_to_def =
+ Define 
+  `($xnum_to m (XNUM n) i = m <= i /\ i < n)
+   /\
+   ($xnum_to m INFINITY i = m <= i)`;
+
+val _ = overload_on("to", ``num_to``);
+val _ = overload_on("to", ``xnum_to``);
+
+val _ = set_fixity "to" (Infixl 500);
+
+(******************************************************************************
+* Extend subtraction (-) to extended numbers
+******************************************************************************)
+val SUB_num_xnum_def =
+ Define 
+  `$SUB_num_xnum (m:num) (XNUM (n:num)) = XNUM((m:num) - (n:num))	`;
+
+val SUB_xnum_num_def =
+ Define `$SUB_xnum_num (XNUM (m:num)) (n:num) = XNUM((m:num) - (n:num))`;
+
+val SUB_xnum_xnum_def =
+ Define 
+  `($SUB_xnum_xnum (XNUM (m:num)) (XNUM (n:num)) = XNUM((m:num) - (n:num)))
+   /\
+   ($SUB_xnum_xnum INFINITY (XNUM (n:num)) = INFINITY)`;
+
+val SUB = 
+ save_thm
+  ("SUB",
+   LIST_CONJ(type_rws "xnum"@[SUB_num_xnum_def,SUB_xnum_num_def,SUB_xnum_xnum_def]));
+
+val _ = overload_on("-", ``SUB_num_xnum``);
+val _ = overload_on("-", ``SUB_xnum_num``);
+val _ = overload_on("-", ``SUB_xnum_xnum``);
+
+(******************************************************************************
+* Extend less-than predicate (<) to extended numbers
+******************************************************************************)
+val LS_num_xnum_def =
+ Define 
+  `($LS_num_xnum (m:num) (XNUM (n:num)) = (m:num) < (n:num))
+   /\
+   ($LS_num_xnum (m:num) INFINITY = T)`;
+
+val LS_xnum_num_def =
+ Define 
+  `($LS_xnum_num (XNUM (m:num)) (n:num) = (m:num) < (n:num))
+   /\
+   ($LS_xnum_num INFINITY (n:num) = F)`;
+
+val LS_xnum_xnum_def =
+ Define `$LS_xnum_xnum (XNUM (m:num)) (XNUM (n:num)) = (m:num) < (n:num)`;
+
+val LS = 
+ save_thm("LS",LIST_CONJ[LS_num_xnum_def,LS_xnum_num_def,LS_xnum_xnum_def]);
+
+val _ = overload_on("<", ``LS_num_xnum``);
+val _ = overload_on("<", ``LS_xnum_num``);
+val _ = overload_on("<", ``LS_xnum_xnum``);
+
+(******************************************************************************
+* Extend greater-than predicate (>) to extended numbers
+******************************************************************************)
+val GT_num_xnum_def =
+ Define `$GT_num_xnum (m:num) (XNUM (n:num)) = (m:num) > (n:num)`;
+
+val GT_num_xnum_def =
+ Define 
+  `($GT_num_xnum (m:num) (XNUM (n:num)) = (m:num) > (n:num))
+   /\
+   ($GT_num_xnum (m:num) INFINITY = F)`;
+
+val GT_xnum_num_def =
+ Define 
+  `($GT_xnum_num (XNUM (m:num)) (n:num) = (m:num) > (n:num))
+   /\
+   ($GT_xnum_num INFINITY (n:num) = T)`;
+
+val GT_xnum_xnum_def =
+ Define `$GT_xnum_xnum (XNUM (m:num)) (XNUM (n:num)) = (m:num) > (n:num)`;
+
+val GT = 
+ save_thm("GT",LIST_CONJ[GT_num_xnum_def,GT_xnum_num_def,GT_xnum_xnum_def]);
+
+val _ = overload_on(">", ``GT_num_xnum``);
+val _ = overload_on(">", ``GT_xnum_num``);
+val _ = overload_on(">", ``GT_xnum_xnum``);
+
+(******************************************************************************
+* LENGTH(FINITE l)   = XNUM(LENGTH l)
+* LENGTH(INFINITE l) = INFINITY
+******************************************************************************)
+val LENGTH_def = 
+ Define `(LENGTH(FINITE l)   = XNUM(list$LENGTH l))
+         /\
+         (LENGTH(INFINITE p) = INFINITY)`;
+
+(******************************************************************************
+* ELEM (p0 p1 p2 p3 ...) n = pn
+******************************************************************************)
+val ELEM_def = Define `ELEM p n = HEAD(RESTN p n)`;
+
+val LENGTH_REST =
  store_thm
-  ("FINITE_PATH_NONEMPTY",
-   ``!p. IS_FINITE_PATH p ==> 0 < PATH_LENGTH p``,
-   Induct
-    THEN RW_TAC arith_ss [IS_FINITE_PATH_def,PATH_LENGTH_def]);
-
-(******************************************************************************
-* PATH_EL (p0 p1 p2 p3 ...) n = pn
-******************************************************************************)
-val PATH_EL_def = Define ` PATH_EL p n = HEAD(RESTN p n)`;
-
-val PATH_LENGTH_REST =
- store_thm
-  ("PATH_LENGTH_REST",
-   ``!p. IS_FINITE_PATH p /\ 1 < PATH_LENGTH p
-           ==> (PATH_LENGTH(REST p) = PATH_LENGTH p - 1)``,
+  ("LENGTH_REST",
+   ``!p. IS_FINITE p /\ 0 < LENGTH p
+           ==> (LENGTH(REST p) = LENGTH p - 1)``,
     Cases
-     THEN RW_TAC list_ss [PATH_LENGTH_def,REST_def,IS_FINITE_PATH_def,LENGTH_CONS,
-                         Cooper.COOPER_PROVE``1 < n + 1 = ?m. n = SUC m``]
+     THEN RW_TAC std_ss 
+           [LENGTH_def,REST_def,IS_FINITE_def,LENGTH_CONS,SUB,LS,IS_FINITE_def,
+           Cooper.COOPER_PROVE``0 < n = ?m. n = SUC m``]
      THEN RW_TAC list_ss []);
 
-val PATH_LENGTH_RESTN =
+val LENGTH_REST_COR =
  store_thm
-  ("PATH_LENGTH_RESTN",
-   ``!n p. IS_FINITE_PATH p /\ n < PATH_LENGTH p
-           ==> (PATH_LENGTH(RESTN p n) = PATH_LENGTH p - n)``,
+  ("LENGTH_REST_COR",
+   ``!l. 0 < LENGTH(FINITE l) ==> (LENGTH(REST(FINITE l)) = LENGTH(FINITE l) - 1)``,
+    PROVE_TAC[LENGTH_REST,IS_FINITE_def]);
+
+val LENGTH_RESTN =
+ store_thm
+  ("LENGTH_RESTN",
+   ``!n p. IS_FINITE p /\ n < LENGTH p
+           ==> (LENGTH(RESTN p n) = LENGTH p - n)``,
    Induct
-    THEN RW_TAC arith_ss [PATH_LENGTH_def,RESTN_def, PATH_LENGTH_REST,IS_FINITE_PATH_REST]);
+    THEN Cases
+    THEN RW_TAC list_ss 
+          [LENGTH_def,RESTN_def,IS_FINITE_REST,SUB,
+           IS_FINITE_def,REST_def,LENGTH_RESTN,LS]
+    THEN `Path$LENGTH(FINITE(TL l)) = XNUM(list$LENGTH(TL l))` by RW_TAC std_ss [LENGTH_def]
+    THEN Cases_on `l`
+    THEN FULL_SIMP_TAC list_ss [DECIDE ``~(SUC n < 0)``]
+    THEN ASSUM_LIST(fn thl => ASSUME_TAC(Q.SPEC `FINITE t` (el 3 thl)))
+    THEN FULL_SIMP_TAC std_ss [IS_FINITE_def,LENGTH_def,LS,SUB]);
+
+val LENGTH_RESTN_COR =
+ store_thm
+  ("LENGTH_RESTN_COR",
+   ``!n l. n < LENGTH(FINITE l) 
+           ==> 
+           (LENGTH(RESTN(FINITE l) n) = LENGTH(FINITE l) - n)``,
+   PROVE_TAC[LENGTH_RESTN,IS_FINITE_def]);
+
+(******************************************************************************
+* 0 < i ==> (RESTN (REST(INFINITE f)) (i-1) = RESTN (INFINITE f) i)
+******************************************************************************)
+val RESTN_REST_INFINITE =
+ store_thm
+  ("RESTN_REST_INFINITE",
+   ``!f i. 0 < i ==> (RESTN (REST(INFINITE f)) (i-1) = RESTN (INFINITE f) i)``,
+   Induct_on `i`
+    THEN RW_TAC list_ss [RESTN_def]);
+
+(******************************************************************************
+* RESTN (REST (INFINITE f)) k = RESTN (INFINITE f) (k + 1)
+******************************************************************************)
+val RESTN_REST_INFINITE_COR =
+ save_thm
+  ("RESTN_REST_INFINITE_COR",
+   SIMP_RULE arith_ss 
+    [DECIDE``(k+1)-1=k``](Q.SPECL[`f`,`k+1`]RESTN_REST_INFINITE));
 
 
 (******************************************************************************
@@ -193,69 +362,85 @@ val RESTN_AUX =
 val _ = computeLib.add_funs[RESTN_AUX];
 
 (******************************************************************************
-* PATH_SEG_REC m n p = [p(n); p(n+1); ... ; p(n+m)]
+* SEL_REC m n p = [p(n); p(n+1); ... ; p(n+m)]
 * (Recursive form for easy definition using Define)
 ******************************************************************************)
-val PATH_SEG_REC_def =
+val SEL_REC_def =
  Define
-  `(PATH_SEG_REC 0 n p = [])
+  `(SEL_REC 0 n p = [])
    /\
-   (PATH_SEG_REC (SUC m) 0 p = (HEAD p)::PATH_SEG_REC m 0 (REST p))
+   (SEL_REC (SUC m) 0 p = (HEAD p)::SEL_REC m 0 (REST p))
    /\
-   (PATH_SEG_REC (SUC m) (SUC n) p = PATH_SEG_REC (SUC m) n (REST p))`;
+   (SEL_REC (SUC m) (SUC n) p = SEL_REC (SUC m) n (REST p))`;
 
 (******************************************************************************
-* PATH_SEG_REC m n p = [p(n); p(n+1); ... ; p(n+m-1)]
+* SEL_REC m n p = [p(n); p(n+1); ... ; p(n+m-1)]
 * (Version for computeLib)
 ******************************************************************************)
-val PATH_SEG_REC_AUX =
+val SEL_REC_AUX =
  store_thm
-  ("PATH_SEG_REC_AUX",
-   ``PATH_SEG_REC m n p =
+  ("SEL_REC_AUX",
+   ``SEL_REC m n p =
       if m = 0   then [] else
-      if (n = 0) then (HEAD p)::PATH_SEG_REC (m-1) 0 (REST p) 
-                 else PATH_SEG_REC m (n-1) (REST p)``,
-    Cases_on `m` THEN Cases_on `n` THEN RW_TAC arith_ss [PATH_SEG_REC_def]);
+      if (n = 0) then (HEAD p)::SEL_REC (m-1) 0 (REST p) 
+                 else SEL_REC m (n-1) (REST p)``,
+    Cases_on `m` THEN Cases_on `n` THEN RW_TAC arith_ss [SEL_REC_def]);
 
-val _ = computeLib.add_funs[PATH_SEG_REC_AUX];
+val _ = computeLib.add_funs[SEL_REC_AUX];
 
-val PATH_SEG_REC_SUC =
+val SEL_REC_SUC =
  store_thm
-  ("PATH_SEG_REC_SUC",
-   ``!p. PATH_SEG_REC (SUC m) n p = PATH_EL p n :: PATH_SEG_REC m (SUC n) p``,
+  ("SEL_REC_SUC",
+   ``!p. SEL_REC (SUC m) n p = ELEM p n :: SEL_REC m (SUC n) p``,
    Induct_on `n`
-    THEN RW_TAC arith_ss [PATH_SEG_REC_def,PATH_EL_def,RESTN_def]
+    THEN RW_TAC arith_ss [SEL_REC_def,ELEM_def,RESTN_def]
     THEN Induct_on `m`
-    THEN RW_TAC arith_ss' [PATH_SEG_REC_def,PATH_EL_def,RESTN_def]);
+    THEN RW_TAC simp_arith_ss [SEL_REC_def,ELEM_def,RESTN_def]);
 
 (******************************************************************************
-* PATH_SEG p (m,n) = [p m; ... ; p n]
+* SEL p (m,n) = [p m; ... ; p n]
 ******************************************************************************)
-val PATH_SEG_def = Define `PATH_SEG p (m,n) = PATH_SEG_REC (n-m+1) m p`;
+val SEL_def = Define `SEL p (m,n) = SEL_REC (n-m+1) m p`;
 
 (******************************************************************************
-* PATH_CONS(x,p) add x to the fron of p
+* CONS(x,p) add x to the fron of p
 ******************************************************************************)
-val PATH_CONS_def = 
+val CONS_def = 
  Define 
-  `(PATH_CONS(x, FINITE_PATH p) = FINITE_PATH(x, FST p :: SND p))
+  `(CONS(x, FINITE l) = FINITE(list$CONS x l))
    /\
-   (PATH_CONS(x, INFINITE_PATH f) = 
-     INFINITE_PATH(\n. if n=0 then x else f(n-1)))`;
+   (CONS(x, INFINITE f) = 
+     INFINITE(\n. if n=0 then x else f(n-1)))`;
 
-val IS_INFINITE_PATH_CONS =
+val IS_INFINITE_CONS =
  store_thm
-  ("IS_INFINITE_PATH_CONS",
-   ``!p x. IS_INFINITE_PATH(PATH_CONS(x,p)) = IS_INFINITE_PATH p``,
+  ("IS_INFINITE_CONS",
+   ``!p x. IS_INFINITE(CONS(x,p)) = IS_INFINITE p``,
    Induct
-    THEN RW_TAC list_ss [IS_INFINITE_PATH_def,PATH_CONS_def]);
+    THEN RW_TAC list_ss [IS_INFINITE_def,CONS_def]);
 
-val IS_FINITE_PATH_CONS =
+val IS_FINITE_CONS =
  store_thm
-  ("IS_FINITE_PATH_CONS",
-   ``!p x. IS_FINITE_PATH(PATH_CONS(x,p)) = IS_FINITE_PATH p``,
+  ("IS_FINITE_CONS",
+   ``!p x. IS_FINITE(CONS(x,p)) = IS_FINITE p``,
    Induct
-    THEN RW_TAC list_ss [IS_FINITE_PATH_def,PATH_CONS_def]);
+    THEN RW_TAC list_ss [IS_FINITE_def,CONS_def]);
+
+val HEAD_CONS =
+ store_thm
+  ("HEAD_CONS",
+   ``!x p. HEAD(CONS(x,p)) = x``,
+   REPEAT GEN_TAC
+    THEN Cases_on `p`
+    THEN RW_TAC list_ss [HEAD_def,CONS_def]);
+
+val REST_CONS =
+ store_thm
+  ("REST_CONS",
+   ``!x p. REST(CONS(x,p)) = p``,
+   REPEAT GEN_TAC
+    THEN Cases_on `p`
+    THEN RW_TAC list_ss [REST_def,CONS_def,ETA_AX]);
 
 (******************************************************************************
 * RESTN (RESTN p m) n = RESTN p (m+n)
@@ -268,217 +453,205 @@ val RESTN_RESTN =
     THEN RW_TAC arith_ss [RESTN_def,arithmeticTheory.ADD_CLAUSES]);
 
 (******************************************************************************
-* PATH_EL (RESTN p m) n = PATH_EL p (m+n)
+* ELEM (RESTN p m) n = ELEM p (m+n)
 ******************************************************************************)
-val PATH_EL_RESTN =
+val ELEM_RESTN =
  store_thm
-  ("PATH_EL_RESTN",
-   ``!m n p.  PATH_EL (RESTN p m) n = PATH_EL p (n+m)``,
+  ("ELEM_RESTN",
+   ``!m n p.  ELEM (RESTN p m) n = ELEM p (n+m)``,
    Induct
-    THEN RW_TAC arith_ss [RESTN_def,PATH_EL_def,RESTN_RESTN]);
+    THEN RW_TAC arith_ss [RESTN_def,ELEM_def,RESTN_RESTN]);
 
 (******************************************************************************
-* PATH_CAT(w,p) creates a new path by concatenating w in front of p
+* 0 < i /\ 0 < LENGTH l ==> (ELEM (FINITE(TL l)) (i-1) = ELEM (FINITE l) i)
 ******************************************************************************)
-val PATH_CAT_def = 
+val ELEM_FINITE_TL =
+ store_thm
+  ("ELEM_FINITE_TL",
+   ``!l i. 0 < i /\ 0 < LENGTH l
+           ==>
+           (ELEM (FINITE(TL l)) (i-1) = ELEM (FINITE l) i)``,
+   Induct_on `i`
+    THEN RW_TAC list_ss [ELEM_def,REST_def,RESTN_def]);
+
+(******************************************************************************
+* 0 < LENGTH l ==> (ELEM (FINITE (TL l)) k = ELEM (FINITE l) (k + 1))
+******************************************************************************)
+val ELEM_FINITE_TL_COR =
+ save_thm
+  ("ELEM_FINITE_TL_COR",
+   SIMP_RULE arith_ss [DECIDE``(k+1)-1=k``](Q.SPECL[`l`,`k+1`]ELEM_FINITE_TL));
+
+(******************************************************************************
+* REST(INFINITE f) = INFINITE(\n. f(n+1))
+******************************************************************************)
+val REST_INFINITE =
+ store_thm
+  ("REST_INFINITE",
+   ``!f. REST (INFINITE f) = INFINITE(\n. f(n+1))``,
+   RW_TAC list_ss [REST_def]);
+
+(******************************************************************************
+* RESTN (INFINITE f) i = INFINITE(\n. f(n+i))
+******************************************************************************)
+val RESTN_INFINITE =
+ store_thm
+  ("RESTN_INFINITE",
+   ``!f i. RESTN (INFINITE f) i = INFINITE(\n. f(n+i))``,
+   Induct_on `i`
+    THEN RW_TAC list_ss 
+          [REST_INFINITE,ETA_AX,RESTN_def,
+           DECIDE``i + (n + 1) = n + SUC i``]);
+
+(******************************************************************************
+* LENGTH (RESTN (INFINITE p) n) = INFINITY
+******************************************************************************)
+val LENGTH_RESTN_INFINITE =
+ store_thm
+  ("LENGTH_RESTN_INFINITE",
+   ``!p n. LENGTH (RESTN (INFINITE p) n) = INFINITY``,
+   RW_TAC std_ss [RESTN_INFINITE,LENGTH_def]);
+
+(******************************************************************************
+* 0 < i  ==> (ELEM (FINITE(TL l)) (i-1) = ELEM (FINITE l) i)
+******************************************************************************)
+val ELEM_REST_INFINITE =
+ store_thm
+  ("ELEM_REST_INFINITE",
+   ``!f i. 0 < i ==> (ELEM (REST(INFINITE f)) (i-1) = ELEM (INFINITE f) i)``,
+   Induct_on `i`
+    THEN RW_TAC list_ss [ELEM_def,RESTN_def]);
+
+(******************************************************************************
+* ELEM (REST (INFINITE l)) k = ELEM (INFINITE l) (k + 1)
+******************************************************************************)
+val ELEM_REST_INFINITE_COR =
+ save_thm
+  ("ELEM_REST_INFINITE_COR",
+   SIMP_RULE arith_ss [DECIDE``(k+1)-1=k``](Q.SPECL[`l`,`k+1`]ELEM_REST_INFINITE));
+
+(******************************************************************************
+* CAT(w,p) creates a new path by concatenating w in front of p
+******************************************************************************)
+val CAT_def = 
  Define 
-  `(PATH_CAT([], p) = p) 
+  `(CAT([], p) = p) 
    /\ 
-   (PATH_CAT((x::w), p) = PATH_CONS(x, PATH_CAT(w,p)))`;
+   (CAT((x::w), p) = CONS(x, CAT(w,p)))`;
 
-val IS_INFINITE_PATH_CAT =
+val IS_INFINITE_CAT =
  store_thm
-  ("IS_INFINITE_PATH_CAT",
-   ``!p l. IS_INFINITE_PATH(PATH_CAT(l,p)) = IS_INFINITE_PATH p``,
-   Induct
-    THEN RW_TAC std_ss []
-    THEN Induct_on `l`
-    THEN RW_TAC list_ss [IS_INFINITE_PATH_def,PATH_CAT_def,IS_INFINITE_PATH_CONS]);
-
-val IS_FINITE_PATH_CAT =
- store_thm
-  ("IS_FINITE_PATH_CAT",
-   ``!p l. IS_FINITE_PATH(PATH_CAT(l,p)) = IS_FINITE_PATH p``,
-   Induct
-    THEN RW_TAC std_ss []
-    THEN Induct_on `l`
-    THEN RW_TAC list_ss [IS_FINITE_PATH_def,PATH_CAT_def,IS_FINITE_PATH_CONS]);
-
-val ALL_EL_F =
- store_thm
-  ("ALL_EL_F",
-   ``ALL_EL (\x. F) l = (l = [])``,
-   Cases_on `l`
-    THEN RW_TAC list_ss []);
-
-val ALL_EL_CONCAT =
- store_thm
-  ("ALL_EL_CONCAT",
-   ``!P. ALL_EL (\l. (LENGTH l = 1) /\ P(EL(LENGTH l - 1)l)) ll 
-          ==> ALL_EL P (CONCAT ll)``,
-   Induct_on `ll`
-    THEN RW_TAC list_ss [CONCAT_def]
-    THEN RW_TAC list_ss [EVERY_EL,DECIDE``n<1 ==> (n=0)``]
-    THEN ASSUM_LIST(fn thl => ACCEPT_TAC(SIMP_RULE arith_ss [el 4 thl,EL] (el 3 thl))));
-
-val CONCAT_MAP_SINGLETON =
- store_thm
-  ("CONCAT_MAP_SINGLETON",
-   ``!ll. CONCAT (MAP (\l. [l]) ll) = ll``,
-   Induct
-    THEN RW_TAC list_ss [CONCAT_def,MAP]);
-
-val LENGTH_EL_MAP_SINGLETON =
- store_thm
-  ("LENGTH_EL_MAP_SINGLETON",
-   ``!ll n. n < LENGTH ll ==> (LENGTH (EL n (MAP (\l. [l]) ll)) = 1)``,
-   Induct
-    THEN RW_TAC list_ss [MAP]
-    THEN Cases_on `n`
-    THEN RW_TAC list_ss [EL]);
-
-val HD_EL_MAP =
- store_thm
-  ("HD_EL_MAP",
-   ``!ll n. n < LENGTH ll ==> ((HD (EL n (MAP (\l. [l]) ll))) = EL n ll)``,
-   Induct
-    THEN RW_TAC list_ss [MAP]
-    THEN Cases_on `n`
-    THEN RW_TAC list_ss [EL]);
-
-val EQ_SINGLETON =
- store_thm
-  ("EQ_SINGLETON",
-   ``(l = [x]) = (x = HD l) /\ (l = [HD l])``,
+  ("IS_INFINITE_CAT",
+   ``!p l. IS_INFINITE(CAT(l,p)) = IS_INFINITE p``,
    Induct_on `l`
-    THEN ZAP_TAC list_ss []);
+    THEN RW_TAC list_ss [IS_INFINITE_def,CAT_def,IS_INFINITE_CONS]);
 
-val PATH_SEG_REC_SPLIT =
+val IS_FINITE_CAT =
  store_thm
-  ("PATH_SEG_REC_SPLIT",
-   ``!n. PATH_SEG_REC (m+k) n p = 
-          APPEND (PATH_SEG_REC k n p) (PATH_SEG_REC m (n+k) p)``,
+  ("IS_FINITE_CAT",
+   ``!p l. IS_FINITE(CAT(l,p)) = IS_FINITE p``,
+   Induct_on `l`
+    THEN RW_TAC list_ss [IS_FINITE_def,CAT_def,IS_FINITE_CONS]);
+
+val ELEM_CAT_SEL =
+ store_thm
+  ("ELEM_CAT_SEL",
+   ``!(w:'a path) i (w':'a path). ELEM (CAT (SEL w (0,i),w')) 0 = ELEM w 0``,
+   Induct_on `i`
+    THEN RW_TAC simp_arith_ss
+          [SEL_ELEM,CAT_def,ELEM_def,HEAD_def,RESTN_def,REST_def,HEAD_CONS,
+           SEL_def,SEL_REC_def,FinitePathTheory.SEL_def,FinitePathTheory.SEL_REC_def,
+           CAT_def,DECIDE``SUC i + 1= SUC(i+1)``]);
+
+val SEL_REC_SPLIT =
+ store_thm
+  ("SEL_REC_SPLIT",
+   ``!n. SEL_REC (m+k) n p = 
+          APPEND (SEL_REC k n p) (SEL_REC m (n+k) p)``,
     Induct_on `k`
-     THEN RW_TAC list_ss [PATH_SEG_def,PATH_SEG_REC_def,arithmeticTheory.ONE]
+     THEN RW_TAC list_ss [SEL_def,SEL_REC_def,arithmeticTheory.ONE]
      THEN RW_TAC std_ss [DECIDE ``m + SUC k = SUC(m+k)``,
-                         PATH_SEG_REC_SUC,APPEND,arithmeticTheory.ADD]);
+                         SEL_REC_SUC,APPEND,arithmeticTheory.ADD]);
 
-val PATH_SEG_SPLIT =
+val SEL_SPLIT =
  store_thm
-  ("PATH_SEG_SPLIT",
+  ("SEL_SPLIT",
    ``!p k m n.
       m <= k /\ k < n 
       ==> 
-      (PATH_SEG p (m,n) = APPEND (PATH_SEG p (m,k)) (PATH_SEG p (k+1,n)))``,
-   RW_TAC list_ss [PATH_SEG_def]
+      (SEL p (m,n) = APPEND (SEL p (m,k)) (SEL p (k+1,n)))``,
+   RW_TAC list_ss [SEL_def]
     THEN IMP_RES_TAC
           (DECIDE ``m <= k ==> k < n ==> (n + 1 - m = (n-k) + (k+1-m))``)
     THEN IMP_RES_TAC(DECIDE ``m <= k ==> (k+ 1 = m + (k + 1 - m))``)
     THEN ASSUM_LIST(fn thl => CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[el 2 thl])))
     THEN ASSUM_LIST(fn thl => CONV_TAC(RHS_CONV(RAND_CONV(ONCE_REWRITE_CONV[el 1 thl]))))
-    THEN REWRITE_TAC[PATH_SEG_REC_SPLIT]);
+    THEN REWRITE_TAC[SEL_REC_SPLIT]);
 
-val PATH_SEG_EL =
+val SEL_ELEM =
  store_thm
-  ("PATH_SEG_EL",
-   ``!p m. PATH_SEG p (m,m) = [PATH_EL p m]``,
+  ("SEL_ELEM",
+   ``!p m. SEL p (m,m) = [ELEM p m]``,
    Induct_on `m`
-    THEN RW_TAC arith_ss' [PATH_SEG_def,PATH_SEG_REC_def,PATH_EL_def,
-                           RESTN_def, PATH_SEG_REC_SUC]);
+    THEN RW_TAC simp_arith_ss [SEL_def,SEL_REC_def,ELEM_def,
+                               RESTN_def, SEL_REC_SUC]);
 
-val APPEND_CANCEL =
+val SEL_APPEND_SINGLETON_IMP =
  store_thm
-  ("APPEND_CANCEL",
-   ``(APPEND l1 [x1] = APPEND l2 [x2]) = (l1 = l2) /\ (x1 = x2)``,
-   ZAP_TAC list_ss [GSYM SNOC_APPEND,SNOC_11]);
-
-val MAP_PATH_SEG_APPEND_SINGLETON_IMP =
- store_thm
-  ("MAP_PATH_SEG_APPEND_SINGLETON_IMP",
+  ("SEL_APPEND_SINGLETON_IMP",
    ``j > i
      ==>
-     (MAP f (PATH_SEG p (i,j)) = APPEND w [l])
-     ==>
-     ((MAP f (PATH_SEG p (i,j-1)) = w)
-      /\
-      (f(PATH_EL p j) = l))``,
+     (SEL p (i,j) = APPEND w [l]) ==> (SEL p (i,j-1) = w) /\ (ELEM p j = l)``,
    REPEAT DISCH_TAC
     THEN IMP_RES_TAC(DECIDE ``j > i ==> (i <= (j-1) /\ (j-1) < j)``)
-    THEN IMP_RES_TAC(DECIDE``j > i ==> (j - 1 + 1 = j)``)
-    THEN IMP_RES_TAC(ISPEC ``p :'b path`` PATH_SEG_SPLIT)
-    THEN ASSUM_LIST
-          (fn thl => 
-            ASSUME_TAC
-             (AP_TERM 
-               ``MAP(f:'b -> 'a)`` 
-               (SPEC_ALL(SIMP_RULE std_ss [el 2 thl,PATH_SEG_EL](el 1 thl)))))
-    THEN ASSUM_LIST(fn thl => ASSUME_TAC(TRANS (GSYM(el 6 thl)) (el 1 thl)))
-    THEN POP_ASSUM(ASSUME_TAC o SIMP_RULE std_ss [APPEND_CANCEL,MAP_APPEND,MAP])
+    THEN IMP_RES_TAC(DECIDE``j:num > i:num ==> (j - 1 + 1 = j)``)
+    THEN IMP_RES_TAC(ISPEC ``p :'a path`` SEL_SPLIT)
+    THEN POP_ASSUM(ASSUME_TAC o SPEC_ALL)
+    THEN ASSUM_LIST(fn thl => ASSUME_TAC(TRANS (GSYM(el 5 thl)) (el 1 thl)))
+    THEN ASSUM_LIST(fn thl => ASSUME_TAC(SIMP_RULE std_ss [SEL_ELEM,el 3 thl] (el 1 thl)))
+    THEN POP_ASSUM(ASSUME_TAC o SIMP_RULE std_ss [APPEND_CANCEL])
     THEN RW_TAC std_ss []);
 
-val MAP_PATH_SEG_APPEND_SINGLETON_IMP0 =
+val SEL_APPEND_SINGLETON =
  store_thm
-  ("MAP_PATH_SEG_APPEND_SINGLETON_IMP0",
-   ``i > 0
-     ==>
-     (MAP f (PATH_SEG p (0,i)) = APPEND w [l])
-     ==>
-     ((MAP f (PATH_SEG p (0,i-1)) = w)
-      /\
-      (f(PATH_EL p i) = l))``,
-   ZAP_TAC arith_ss [MAP_PATH_SEG_APPEND_SINGLETON_IMP]);
-
-val MAP_PATH_SEG_APPEND_SINGLETON =
- store_thm
-  ("MAP_PATH_SEG_APPEND_SINGLETON",
+  ("SEL_APPEND_SINGLETON",
    ``j > i
      ==>
-     ((MAP f (PATH_SEG p (i,j)) = APPEND w [l])
+     ((SEL p (i,j) = APPEND w [l])
       =
-      ((MAP f (PATH_SEG p (i,j-1)) = w)
-       /\
-       (f(PATH_EL p j) = l)))``,
+      (SEL p (i,j-1) = w) /\ (ELEM p j = l))``,
    REPEAT STRIP_TAC
     THEN EQ_TAC
-    THEN ZAP_TAC std_ss [MAP_PATH_SEG_APPEND_SINGLETON_IMP]
+    THEN ZAP_TAC std_ss [SEL_APPEND_SINGLETON_IMP]
     THEN IMP_RES_TAC(DECIDE ``j > i ==> i <= j - 1 /\ j - 1 < j``)
     THEN IMP_RES_TAC
-          (ISPECL [``p :'b path``,``j-1``,``i:num``,``j:num``] PATH_SEG_SPLIT)
-    THEN RW_TAC arith_ss [MAP_APPEND,APPEND_CANCEL,PATH_SEG_EL,MAP]);
+          (ISPECL [``p :'a path``,``j:num-1``,``i:num``,``j:num``] SEL_SPLIT)
+    THEN POP_ASSUM(ASSUME_TAC o SPEC_ALL)
+    THEN IMP_RES_TAC(DECIDE``j:num > i:num ==> (j - 1 + 1 = j)``)
+    THEN ASSUM_LIST(fn thl => ASSUME_TAC(SIMP_RULE std_ss [SEL_ELEM,el 1 thl] (el 2 thl)))
+    THEN ZAP_TAC arith_ss [APPEND_CANCEL,SEL_ELEM]);
 
-val MAP_PATH_SEG_APPEND_SINGLETON0 =
+val LENGTH_SEL_REC =
  store_thm
-  ("MAP_PATH_SEG_APPEND_SINGLETON0",
-   ``i > 0
-     ==>
-     ((MAP f (PATH_SEG p (0,i)) = APPEND w [l])
-      =
-      ((MAP f (PATH_SEG p (0,i-1)) = w)
-       /\
-       (f(PATH_EL p i) = l)))``,
-   RW_TAC arith_ss [MAP_PATH_SEG_APPEND_SINGLETON]);
-
-val LENGTH_PATH_SEG_REC =
- store_thm
-  ("LENGTH_PATH_SEG_REC",
-   ``!m n p. LENGTH(PATH_SEG_REC m n p) = m``,
+  ("LENGTH_SEL_REC",
+   ``!m n p. LENGTH(SEL_REC m n p) = m``,
    Induct_on `m`THEN Induct_on `n`
-    THEN RW_TAC list_ss [PATH_SEG_REC_def]);
+    THEN RW_TAC list_ss [SEL_REC_def]);
 
-val LENGTH_PATH_SEG =
+val LENGTH_SEL =
  store_thm
-  ("LENGTH_PATH_SEG",
-   ``!m n p. LENGTH(PATH_SEG p (m,n)) = n-m+1``,
-   RW_TAC arith_ss [PATH_SEG_def,PATH_SEG_REC_def,LENGTH_PATH_SEG_REC]);
+  ("LENGTH_SEL",
+   ``!m n p. LENGTH(SEL p (m,n)) = n-m+1``,
+   RW_TAC arith_ss [SEL_def,SEL_REC_def,LENGTH_SEL_REC]);
    
-val HD_PATH_SEG =
+val HD_SEL =
  store_thm
-  ("HD_PATH_SEG",
-   ``!i j p. i <= j ==> (HD(PATH_SEG p (i,j)) = PATH_EL p i)``,
+  ("HD_SEL",
+   ``!i j p. i <= j ==> (HD(SEL p (i,j)) = ELEM p i)``,
    Induct
     THEN RW_TAC list_ss 
-          [PATH_SEG_def,PATH_SEG_REC_def,GSYM arithmeticTheory.ADD1,
-           PATH_EL_def,RESTN_def]
+          [SEL_def,SEL_REC_def,GSYM arithmeticTheory.ADD1,
+           ELEM_def,RESTN_def]
     THEN IMP_RES_TAC(DECIDE ``SUC i <= j ==> ((SUC (j - SUC i)) = (j-i))``)
     THEN RW_TAC arith_ss []
     THEN ASSUM_LIST
@@ -486,23 +659,23 @@ val HD_PATH_SEG =
            ASSUME_TAC
             (GSYM
              (Q.GEN `p`
-              (SIMP_RULE arith_ss thl (Q.SPECL [`p`,`i`,`j-1`] PATH_SEG_def)))))
-    THEN RW_TAC arith_ss [PATH_EL_def]);
+              (SIMP_RULE arith_ss thl (Q.SPECL [`p`,`i`,`j-1`] SEL_def)))))
+    THEN RW_TAC arith_ss [ELEM_def]);
 
-val HD_PATH_SEG0 =
+val HD_SEL0 =
  store_thm
-  ("HD_PATH_SEG0",
-   ``HD(PATH_SEG p (0,i)) = HEAD p``,
-   RW_TAC list_ss [PATH_SEG_def,PATH_SEG_REC_def,GSYM arithmeticTheory.ADD1]);
+  ("HD_SEL0",
+   ``HD(SEL p (0,i)) = HEAD p``,
+   RW_TAC list_ss [SEL_def,SEL_REC_def,GSYM arithmeticTheory.ADD1]);
 
-val TL_PATH_SEG_SUC =
+val TL_SEL_SUC =
  store_thm
-  ("TL_PATH_SEG_SUC",
-   ``!i j p. i <= j ==> (TL(PATH_SEG p (i,SUC j)) = PATH_SEG (REST p) (i,j))``,
+  ("TL_SEL_SUC",
+   ``!i j p. i <= j ==> (TL(SEL p (i,SUC j)) = SEL (REST p) (i,j))``,
    Induct
     THEN RW_TAC list_ss 
-          [PATH_SEG_def,PATH_SEG_REC_def,GSYM arithmeticTheory.ADD1,
-           PATH_EL_def,RESTN_def]
+          [SEL_def,SEL_REC_def,GSYM arithmeticTheory.ADD1,
+           ELEM_def,RESTN_def]
     THEN IMP_RES_TAC(DECIDE ``SUC i <= j ==> ((SUC (j - SUC i)) = (j-i))``)
     THEN RW_TAC arith_ss []
     THEN ASSUM_LIST
@@ -510,7 +683,7 @@ val TL_PATH_SEG_SUC =
            ASSUME_TAC
             (GSYM
              (Q.GEN `p`
-              (SIMP_RULE arith_ss thl (Q.SPECL [`p`,`i`,`j`] PATH_SEG_def)))))
+              (SIMP_RULE arith_ss thl (Q.SPECL [`p`,`i`,`j`] SEL_def)))))
     THEN IMP_RES_TAC(DECIDE ``SUC i <= j ==> (SUC (j - i) = j + 1 - i)``)
     THEN RW_TAC arith_ss []
     THEN IMP_RES_TAC(DECIDE ``SUC i <= j ==> i <= j-1``)
@@ -518,78 +691,70 @@ val TL_PATH_SEG_SUC =
     THEN IMP_RES_TAC(DECIDE ``SUC i <= j ==> (SUC(j-1)=j)``)
     THEN ASSUM_LIST
           (fn thl => ASSUME_TAC(SIMP_RULE std_ss [el 1 thl] (el 2 thl)))
-    THEN RW_TAC arith_ss [PATH_SEG_def]);
+    THEN RW_TAC arith_ss [SEL_def]);
 
-val TL_PATH_SEG =
+val TL_SEL =
  store_thm
-  ("TL_PATH_SEG",
-   ``!i j p. i < j ==> (TL(PATH_SEG p (i,j)) = PATH_SEG (REST p) (i,j-1))``,
+  ("TL_SEL",
+   ``!i j p. i < j ==> (TL(SEL p (i,j)) = SEL (REST p) (i,j-1))``,
    RW_TAC std_ss []
     THEN IMP_RES_TAC(DECIDE ``i < j ==> i <= j-1``)
-    THEN IMP_RES_TAC TL_PATH_SEG_SUC
-    THEN IMP_RES_TAC(DECIDE ``i < j ==> (SUC(j-1)=j)``)
+    THEN IMP_RES_TAC TL_SEL_SUC
+    THEN IMP_RES_TAC(DECIDE ``i:num < j:num ==> (SUC(j-1)=j)``)
     THEN ASSUM_LIST
           (fn thl => ASSUME_TAC(SIMP_RULE std_ss [el 1 thl] (el 2 thl)))
     THEN RW_TAC arith_ss []);
 
-val TL_PATH_SEG0 =
+val TL_SEL0 =
  store_thm
-  ("TL_PATH_SEG0",
-   ``TL(PATH_SEG p (0,SUC i)) = PATH_SEG (REST p) (0,i)``,
-   RW_TAC list_ss [PATH_SEG_def,PATH_SEG_REC_def,GSYM arithmeticTheory.ADD1]);
+  ("TL_SEL0",
+   ``TL(SEL p (0,SUC i)) = SEL (REST p) (0,i)``,
+   RW_TAC list_ss [SEL_def,SEL_REC_def,GSYM arithmeticTheory.ADD1]);
 
-val EL_PATH_SEG_LEMMA =
+val EL_SEL_LEMMA =
  prove
   (``!m i j p. 
-      i <= j /\ m <= j-i ==> (EL m (PATH_SEG p (i,j)) = PATH_EL p (i+m))``,
+      i <= j /\ m <= j-i ==> (EL m (SEL p (i,j)) = ELEM p (i+m))``,
    Induct
     THEN RW_TAC list_ss 
-          [PATH_SEG_REC_def,PATH_EL_def,RESTN_def,
-           HD_PATH_SEG,TL_PATH_SEG,RESTN_def,DECIDE``i + SUC m = SUC(i+m)``]);
+          [SEL_REC_def,ELEM_def,RESTN_def,
+           HD_SEL,TL_SEL,RESTN_def,DECIDE``i + SUC m = SUC(i+m)``]);
 
-val EL_PATH_SEG =
+val EL_SEL =
  store_thm
-  ("EL_PATH_SEG",
+  ("EL_SEL",
    ``!i k j p. 
-      i <= k ==> k <= j  ==> (EL (k-i) (PATH_SEG p (i,j)) = PATH_EL p k)``,
-   RW_TAC arith_ss [EL_PATH_SEG_LEMMA]);
+      i <= k ==> k <= j  ==> (EL (k-i) (SEL p (i,j)) = ELEM p k)``,
+   RW_TAC arith_ss [EL_SEL_LEMMA]);
    
-val EL_PATH_SEG0 =
+val EL_SEL0 =
  store_thm
-  ("EL_PATH_SEG0",
-   ``!j i p. j <= i ==> (EL j (PATH_SEG p (0,i)) = PATH_EL p j)``,
+  ("EL_SEL0",
+   ``!j i p. j <= i ==> (EL j (SEL p (0,i)) = ELEM p j)``,
    Induct
-    THEN RW_TAC list_ss [PATH_SEG_REC_def,PATH_EL_def,RESTN_def,HD_PATH_SEG0]
+    THEN RW_TAC list_ss [SEL_REC_def,ELEM_def,RESTN_def,HD_SEL0]
     THEN Induct_on `i`
-    THEN RW_TAC list_ss [PATH_SEG_REC_def,PATH_EL_def,RESTN_def,TL_PATH_SEG0]);
+    THEN RW_TAC list_ss [SEL_REC_def,ELEM_def,RESTN_def,TL_SEL0]);
 
-val PATH_SEG_REC_REST =
+val SEL_REC_REST =
  store_thm
-  ("PATH_SEG_REC_REST",
-   ``!p. PATH_SEG_REC m n (REST p) = PATH_SEG_REC m (SUC n) p``,
+  ("SEL_REC_REST",
+   ``!p. SEL_REC m n (REST p) = SEL_REC m (SUC n) p``,
    Induct_on `m`
-    THEN RW_TAC arith_ss [PATH_SEG_REC_def]);
+    THEN RW_TAC arith_ss [SEL_REC_def]);
 
-val PATH_SEG_REC_RESTN =
+val SEL_REC_RESTN =
  store_thm
-  ("PATH_SEG_REC_RESTN",
-   ``!p. PATH_SEG_REC m n (RESTN p r) = PATH_SEG_REC m (n + r) p``,
+  ("SEL_REC_RESTN",
+   ``!p. SEL_REC m n (RESTN p r) = SEL_REC m (n + r) p``,
    Induct_on `r`
-    THEN RW_TAC arith_ss [PATH_SEG_REC_def,RESTN_def,arithmeticTheory.ADD_CLAUSES]
-    THEN PROVE_TAC[PATH_SEG_REC_REST]);
+    THEN RW_TAC arith_ss [SEL_REC_def,RESTN_def,arithmeticTheory.ADD_CLAUSES]
+    THEN PROVE_TAC[SEL_REC_REST]);
 
-val PATH_SEG_RESTN =
+val SEL_RESTN =
  store_thm
-  ("PATH_SEG_RESTN",
-   ``!p. PATH_SEG (RESTN p r) (n,m) = PATH_SEG p (r + n, r + m)``,
-   RW_TAC arith_ss [PATH_SEG_def,PATH_SEG_REC_RESTN]);
-
-val LENGTH1 =
- store_thm
-  ("LENGTH1",
-   ``(LENGTH l = 1) = ?x. l=[x]``,
-   REWRITE_TAC [arithmeticTheory.ONE]
-    THEN EQ_TAC
-    THEN RW_TAC list_ss [LENGTH,LENGTH_NIL,LENGTH_CONS]);
+  ("SEL_RESTN",
+   ``!p. SEL (RESTN p r) (n,m) = SEL p (r + n, r + m)``,
+   RW_TAC arith_ss [SEL_def,SEL_REC_RESTN]);
 
 val _ = export_theory();
