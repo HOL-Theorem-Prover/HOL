@@ -246,6 +246,30 @@ A refined circuit is then build up using the "monotonicity" theorems:
 Note that "DEPTHR refine" should never fail.
 
 
+add_combinational : string list -> unit
+---------------------------------------
+
+Add a list of constant names to the constants that are implemented as
+combinational by the compiler. The definition is:
+
+ fun add_combinational l = 
+  (combinational_constants := union l (!combinational_constants)); 
+
+The initial list of combinational constant names (i.e. the initial
+value of the reference combinational_constants) is:
+
+  ["T","F","/\\","\\/","~",",","o","CURRY","UNCURRY","COND",
+   "FST","SND","=","Seq","Par","Ite","0","NUMERAL","BIT1","BIT2","ZERO",
+   "+","-"];
+
+
+COMBINATIONAL : term -> bool
+----------------------------
+
+Test whether a terms is a combinational function of its free variables
+(i.e. is built up using only combinational constants).
+
+
 MAKE_NETLIST : thm -> thm
 -------------------------
 

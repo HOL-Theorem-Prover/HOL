@@ -383,6 +383,9 @@ val combinational_constants =
      "FST","SND","=","Seq","Par","Ite","0","NUMERAL","BIT1","BIT2","ZERO",
      "+","-"];
 
+fun add_combinational l = 
+ (combinational_constants := union l (!combinational_constants)); 
+
 fun COMBINATIONAL tm =
  is_var tm
   orelse (is_const tm 
@@ -1360,7 +1363,7 @@ val MAKE_NETLIST =
  REWRITE_RULE 
   [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
    ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
-   Par_def,Seq_def,o_THM];
+   Ite_def,Par_def,Seq_def,o_THM];
 
 (*****************************************************************************)
 (* Compile a device implementation into a clocked circuit represented in HOL *)
@@ -1393,7 +1396,7 @@ val MAKE_CIRCUIT =
   [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
    ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
    GSYM DEL_IMP_THM,DEL_IMP_def,
-   Par_def,Seq_def,o_THM];
+   Ite_def,Par_def,Seq_def,o_THM];
 
 
 
