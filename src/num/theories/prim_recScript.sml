@@ -301,93 +301,52 @@ val SIMP_REC_REL =
                 (fun 0 = x) /\
                 !m. (m < n) ==> (fun(SUC m) = f(fun m))`);
 
-val SIMP_REC_FUN =
- new_definition
-  ("SIMP_REC_FUN",
-   --`SIMP_REC_FUN (x:'a) (f:'a->'a) (n:num) =
-     @fun. SIMP_REC_REL fun x f n`--);
-
-val SIMP_REC =
- new_definition
-  ("SIMP_REC",
-   --`SIMP_REC (x:'a) (f:'a->'a) (n:num) =
-     SIMP_REC_FUN x f (SUC n) n`--);
-
-(*---------------------------------------------------------------------------
-   |- (?fun. SIMP_REC_REL fun x f n)  =
-       (SIMP_REC_FUN x f n 0  =  x)  /\
-       (!m.
-         m < n  ==>
-         (SIMP_REC_FUN x f n (SUC m)  =  f(SIMP_REC_FUN x f n m)))
- *---------------------------------------------------------------------------*)
-
-val SIMP_REC_FUN_LEMMA =
- let val t1 = --`?(fun:num->'a). SIMP_REC_REL fun x f n`--
-     val t2 = --`SIMP_REC_REL (@(fun:num->'a). SIMP_REC_REL fun x f n) x f n`--
-     val th1 = DISCH t1 (SELECT_RULE(ASSUME t1))
-     val th2 = DISCH t2 (EXISTS(t1,--`@(fun:num->'a).SIMP_REC_REL fun x f n`--)
-                               (ASSUME t2))
-     val th3 = PURE_REWRITE_RULE[SYM(SPEC_ALL SIMP_REC_FUN)]
-                                (IMP_ANTISYM_RULE th1 th2)
- in
-     save_thm("SIMP_REC_FUN_LEMMA",
-     TRANS th3 (DEPTH_CONV(REWR_CONV SIMP_REC_REL)(rhs(concl th3))))
- end;
-
 val SIMP_REC_EXISTS = store_thm("SIMP_REC_EXISTS",
    --`!x f n. ?fun:num->'a. SIMP_REC_REL fun x f n`--,
-   GEN_TAC THEN
-   GEN_TAC THEN
-   INDUCT_THEN INDUCTION STRIP_ASSUME_TAC THEN
-   PURE_REWRITE_TAC[SIMP_REC_REL] THENL
-   [EXISTS_TAC (--`\p:num. (x:'a)`--) THEN
-    REWRITE_TAC[NOT_LESS_0]
-    ,
-    EXISTS_TAC (--`\p. (p=(SUC n))
-                       => f(SIMP_REC_FUN (x:'a) f n n)
-                        | SIMP_REC_FUN x f n p`--) THEN
-    CONV_TAC(ONCE_DEPTH_CONV BETA_CONV) THEN
-    ASM_REWRITE_TAC[NOT_EQ_SYM(SPEC_ALL NOT_SUC)] THEN
-    IMP_RES_TAC SIMP_REC_FUN_LEMMA THEN
-    ASM_REWRITE_TAC[] THEN
-    REPEAT STRIP_TAC THEN
-    ASM_CASES_TAC (--`m:num = n`--) THEN
-    IMP_RES_TAC LESS_NOT_EQ THEN
-    IMP_RES_TAC LESS_SUC_IMP THEN
-    RES_TAC THEN
-    ASM_REWRITE_TAC[LESS_THM,INV_SUC_EQ,SUC_ID]]);
+   GEN_TAC THEN GEN_TAC THEN INDUCT_THEN INDUCTION STRIP_ASSUME_TAC THEN
+   PURE_REWRITE_TAC[SIMP_REC_REL] THENL [
+     EXISTS_TAC (--`\p:num. (x:'a)`--) THEN REWRITE_TAC[NOT_LESS_0],
+     Q.EXISTS_TAC `\p. if p = SUC n then f (fun n) else fun p` THEN
+     BETA_TAC THEN REWRITE_TAC [INV_SUC_EQ, GSYM NOT_SUC] THEN
+     POP_ASSUM (STRIP_ASSUME_TAC o REWRITE_RULE [SIMP_REC_REL]) THEN
+     ASM_REWRITE_TAC [] THEN REPEAT STRIP_TAC THEN
+     Q.ASM_CASES_TAC `m = SUC n` THENL [
+       POP_ASSUM SUBST_ALL_TAC THEN IMP_RES_TAC LESS_REFL,
+       ALL_TAC
+     ] THEN ASM_REWRITE_TAC [] THEN COND_CASES_TAC THEN
+     ASM_REWRITE_TAC [] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
+     IMP_RES_TAC LESS_SUC_IMP
+   ]);
 
-(*---------------------------------------------------------------------------
-   |- !x f n.
-       (SIMP_REC_FUN x f n 0  =  x)  /\
-       (!m.
-         m < n  ==>
-         (SIMP_REC_FUN x f n (SUC m)  =  f(SIMP_REC_FUN x f n m)))
- *---------------------------------------------------------------------------*)
+val SIMP_REC_REL_UNIQUE = store_thm(
+  "SIMP_REC_REL_UNIQUE",
+  Term`!x f g1 g2 m1 m2.
+          SIMP_REC_REL g1 x f m1 /\ SIMP_REC_REL g2 x f m2 ==>
+          !n. n < m1 /\ n < m2 ==> (g1 n = g2 n)`,
+  REWRITE_TAC [SIMP_REC_REL] THEN REPEAT GEN_TAC THEN STRIP_TAC THEN
+  INDUCT_THEN INDUCTION STRIP_ASSUME_TAC THEN ASM_REWRITE_TAC [] THEN
+  DISCH_THEN (CONJUNCTS_THEN (ASSUME_TAC o MATCH_MP SUC_LESS)) THEN
+  RES_TAC THEN ASM_REWRITE_TAC []);
 
-val SIMP_REC_FUN_THM =
-   GEN_ALL(EQ_MP(SPEC_ALL SIMP_REC_FUN_LEMMA)
-                (SPEC_ALL SIMP_REC_EXISTS));
+open simpLib boolSimps
+val SIMP_REC_REL_UNIQUE_RESULT = store_thm(
+  "SIMP_REC_REL_UNIQUE_RESULT",
+  Term`!x f n.
+         ?!y. ?g. SIMP_REC_REL g x f (SUC n) /\ (y = g n)`,
+  REPEAT GEN_TAC THEN
+  SIMP_TAC bool_ss [EXISTS_UNIQUE_THM, SIMP_REC_EXISTS] THEN
+  REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [] THEN
+  ASSUME_TAC (Q.SPEC `n` LESS_SUC_REFL) THEN
+  IMP_RES_TAC SIMP_REC_REL_UNIQUE);
 
-val SIMP_REC_FUN_THM1 = GEN_ALL(CONJUNCT1(SPEC_ALL SIMP_REC_FUN_THM));
-val SIMP_REC_FUN_THM2 = GEN (--`n:num`--)
-                            (CONJUNCT2(SPEC_ALL SIMP_REC_FUN_THM));
-
-val SIMP_REC_UNIQUE =prove
-   (--`!n m1 m2 (x:'a) f.
-       (n < m1) ==>
-       (n < m2) ==>
-       (SIMP_REC_FUN x f m1 n = SIMP_REC_FUN x f m2 n)`--,
-    INDUCT_TAC
-     THEN ASM_REWRITE_TAC[SIMP_REC_FUN_THM1]
-     THEN REPEAT GEN_TAC
-     THEN REPEAT DISCH_TAC
-     THEN IMP_RES_TAC SUC_LESS
-     THEN IMP_RES_TAC SIMP_REC_FUN_THM2
-     THEN ASM_REWRITE_TAC[]
-     THEN RES_TAC
-     THEN AP_TERM_TAC THEN
-     FIRST_ASSUM MATCH_ACCEPT_TAC);
+val SIMP_REC = new_specification{
+  name = "SIMP_REC",
+  sat_thm = ((CONJUNCT1 o
+              SIMP_RULE bool_ss [EXISTS_UNIQUE_THM] o
+              SIMP_RULE bool_ss [Ho_boolTheory.UNIQUE_SKOLEM_THM])
+             SIMP_REC_REL_UNIQUE_RESULT),
+  consts = [{const_name = "SIMP_REC", fixity = Prefix}]
+};
 
 val LESS_SUC_SUC =
  store_thm
@@ -396,21 +355,26 @@ val LESS_SUC_SUC =
    INDUCT_TAC
     THEN ASM_REWRITE_TAC[LESS_THM]);
 
-val SIMP_REC_THM =
- store_thm
-  ("SIMP_REC_THM",
-   --`!(x:'a) f.
-     (SIMP_REC x f 0 = x) /\
-     (!m. SIMP_REC x f (SUC m) = f(SIMP_REC x f m))`--,
-    ASM_REWRITE_TAC
-     [SIMP_REC, SIMP_REC_FUN_THM1,
-      MP(SPECL[--`SUC(SUC m)`--, --`(m:num)`--]SIMP_REC_FUN_THM2)
-        (CONJUNCT2(SPEC_ALL LESS_SUC_SUC)),
-      MP
-       (MP(SPEC_ALL(SPECL[--`(m:num)`--, --`SUC(SUC m)`--, --`SUC m`--]
-                         SIMP_REC_UNIQUE))
-          (CONJUNCT2(SPEC_ALL LESS_SUC_SUC)))
-       (CONJUNCT1(SPEC_ALL LESS_SUC_SUC))]);
+val SIMP_REC_THM = store_thm (
+  "SIMP_REC_THM",
+  --`!(x:'a) f.
+       (SIMP_REC x f 0 = x) /\
+       (!m. SIMP_REC x f (SUC m) = f(SIMP_REC x f m))`--,
+  REPEAT GEN_TAC THEN
+  ASSUME_TAC (SPECL [Term`x:'a`, Term`f:'a -> 'a`] SIMP_REC) THEN
+  CONJ_TAC THENL [
+    POP_ASSUM (STRIP_ASSUME_TAC o REWRITE_RULE [SIMP_REC_REL] o
+               Q.SPEC `0`) THEN ASM_REWRITE_TAC [],
+    GEN_TAC THEN
+    FIRST_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `SUC m`) THEN
+    FIRST_X_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `m`) THEN
+    ASM_REWRITE_TAC [] THEN
+    Q.SUBGOAL_THEN `g (SUC m) = f (g m)` SUBST1_TAC THENL [
+      FULL_SIMP_TAC bool_ss [SIMP_REC_REL, LESS_SUC_SUC],
+      ALL_TAC
+    ] THEN AP_TERM_TAC THEN STRIP_ASSUME_TAC (Q.SPEC `m` LESS_SUC_SUC) THEN
+    IMP_RES_TAC SIMP_REC_REL_UNIQUE
+  ]);
 
 (*---------------------------------------------------------------------------
  * We now use simple recursion to prove that:
@@ -436,20 +400,12 @@ val PRE_DEF = new_definition("PRE_DEF",
     --`PRE m = ((m=0) => 0 | @n. m = SUC n)`--);
 
 
-(* |- (@n. m = n) = m *)
-val SELECT_LEMMA =
-   let val th = SELECT_INTRO(EQ_MP (SYM(BETA_CONV (--`(\n:'a. m = n) m`--)))
-                                   (REFL (--`m: 'a`--)))
-   in
-   SYM(EQ_MP(BETA_CONV(concl th))th)
-   end;
-
 val PRE =
  store_thm
   ("PRE",
    --`(PRE 0 = 0) /\ (!m. PRE(SUC m) = m)`--,
    REPEAT STRIP_TAC
-    THEN REWRITE_TAC[PRE_DEF, INV_SUC_EQ, NOT_SUC, SELECT_LEMMA]);
+    THEN REWRITE_TAC[PRE_DEF, INV_SUC_EQ, NOT_SUC, SELECT_REFL_2]);
 
 val PRIM_REC_FUN =
  new_definition
