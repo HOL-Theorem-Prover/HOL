@@ -217,13 +217,13 @@ val sum_Axiom = store_thm(
   REPEAT GEN_TAC THEN
   STRIP_ASSUME_TAC
     ((SPECL [Term`f:'a -> 'c`, Term`g:'b -> 'c`] o
-      Ho_rewrite.REWRITE_RULE [Ho_theorems.EXISTS_UNIQUE_THM])
-     sum_Axiom0) THEN
+         Ho_rewrite.REWRITE_RULE [EXISTS_UNIQUE_THM]) sum_Axiom0) THEN
   EXISTS_TAC (Term`h:'a + 'b -> 'c`) THEN
   ASM_REWRITE_TAC []);
+
 val sum_CASES = save_thm("sum_CASES", hd (prove_cases_thm sum_INDUCT));
-val sum_distinct = store_thm(
-  "sum_distinct",
+
+val sum_distinct = store_thm("sum_distinct",
   Term`!x:'a y:'b. ~(INL x = INR y)`,
   REPEAT STRIP_TAC THEN
   STRIP_ASSUME_TAC ((BETA_RULE o REWRITE_RULE [EXISTS_UNIQUE_DEF] o
@@ -333,6 +333,7 @@ val OUTR = new_specification
 (*       ((!x. x(INL x) = f x) /\ (!x. x(INR x) = g x)) /\		*)
 (*       ((!x. y(INL x) = f x) /\ (!x. y(INR x) = g x)) ==>		*)
 (*       (!s. x s = y s)						*)
+(* ---------------------------------------------------------------------*)
 
 (* GEN_ALL gives problems, so changed to be more precise. kls.          *)
 val [sum_EXISTS,sum_UNIQUE] =
@@ -380,15 +381,15 @@ val _ = adjoin_to_theory
    let val S = PP.add_string ppstrm
        fun NL() = PP.add_newline ppstrm
    in
-      S "val _ = TypeBase.write";             NL();
-      S "  (TypeBase.mk_tyinfo";              NL();
-      S "     {ax=sum_Axiom,";                NL();
-      S "      case_def=sum_case_def,";       NL();
-      S "      case_cong=sum_case_cong,";     NL();
-      S "      induction=sum_INDUCT,";        NL();
-      S "      nchotomy=sum_CASES,";          NL();
-      S "      size=NONE,";                   NL();
-      S "      one_one=SOME INR_INL_11,";     NL();
+      S "val _ = TypeBase.write";                           NL();
+      S "  (TypeBase.mk_tyinfo";                            NL();
+      S "     {ax=TypeBase.ORIG sum_Axiom,";                NL();
+      S "      case_def=sum_case_def,";                     NL();
+      S "      case_cong=sum_case_cong,";                   NL();
+      S "      induction=TypeBase.ORIG sum_INDUCT,";        NL();
+      S "      nchotomy=sum_CASES,";                        NL();
+      S "      size=NONE,";                                 NL();
+      S "      one_one=SOME INR_INL_11,";                   NL();
       S "      distinct=SOME sum_distinct});"
   end)};
 
