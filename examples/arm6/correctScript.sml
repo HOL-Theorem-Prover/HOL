@@ -909,9 +909,10 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
              THEN NTAC 3 (UNFOLD_NEXT THEN ASM_SIMP_TAC (arith_ss++CORE3_ss) [])
              THEN ASM_SIMP_TAC arith_ss [ABS_ARM6_def,NEXT_ARM_def,DECODE_PSR_def,REG_WRITE_WRITE_PC,
                                          REG_WRITE_COMMUTES,FETCH_SUB8,BITS_W32_NUM,MEMREAD_ALIGNED,iclass_distinct]
-             THEN RULE_ASSUM_TAC (SIMP_RULE arith_ss [iseq_distinct,iclass_distinct,PSRDAT_def,SHIFTER_def,
-                                                      PSRA_def,AREGN1_def,RAA_def,RBA_def,ALU6_def])
-             THEN ASM_SIMP_TAC arith_ss [iseq_distinct,iclass_distinct,BIT_W32_NUM,BITS_W32_NUM,PSRA_def,FETCH_SUB8,
+             THEN RULE_ASSUM_TAC (SIMP_RULE arith_ss [iseq_distinct,iclass_distinct,SYM software,
+                                                      PSRDAT_def,SHIFTER_def,PSRA_def,AREGN1_def,RAA_def,RBA_def,ALU6_def])
+             THEN ASM_SIMP_TAC arith_ss [iseq_distinct,iclass_distinct,exception2num_software,
+                                         BIT_W32_NUM,BITS_W32_NUM,PSRA_def,FETCH_SUB8,
                                          RBA_def,SWI_def,EXCEPTION_def,AREGN1_def,SHIFTER_def,LSL_ZERO,
                                          GSYM ONE_COMPw_THREE_ADD,ALU6_def,ALUOUT_ALU_logic,ALUOUT_ADD]
              THEN NTAC 4 (POP_ASSUM (fn th => SIMP_TAC arith_ss [SYM th,ALUOUT_ALU_logic,REG_WRITE_WRITE_R14,
@@ -926,9 +927,10 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
              THEN NTAC 4 (UNFOLD_NEXT THEN ASM_SIMP_TAC (arith_ss++CORE3_ss) [])
              THEN ASM_SIMP_TAC arith_ss [ABS_ARM6_def,NEXT_ARM_def,DECODE_PSR_def,REG_WRITE_WRITE_PC,
                                          REG_WRITE_COMMUTES,FETCH_SUB8,BITS_W32_NUM,MEMREAD_ALIGNED,iclass_distinct]
-             THEN RULE_ASSUM_TAC (SIMP_RULE arith_ss [iseq_distinct,iclass_distinct,PSRDAT_def,SHIFTER_def,
-                                                      PSRA_def,AREGN1_def,RAA_def,RBA_def,ALU6_def])
-             THEN ASM_SIMP_TAC arith_ss [iseq_distinct,iclass_distinct,BIT_W32_NUM,BITS_W32_NUM,PSRA_def,FETCH_SUB8,
+             THEN RULE_ASSUM_TAC (SIMP_RULE arith_ss [iseq_distinct,iclass_distinct,SYM undefined,
+                                                      PSRDAT_def,SHIFTER_def,PSRA_def,AREGN1_def,RAA_def,RBA_def,ALU6_def])
+             THEN ASM_SIMP_TAC arith_ss [iseq_distinct,iclass_distinct,exception2num_undefined,
+                                         BIT_W32_NUM,BITS_W32_NUM,PSRA_def,FETCH_SUB8,
                                          RBA_def,SWI_def,EXCEPTION_def,AREGN1_def,SHIFTER_def,LSL_ZERO,
                                          GSYM ONE_COMPw_THREE_ADD,ALU6_def,ALUOUT_ALU_logic,ALUOUT_ADD]
              THEN NTAC 4 (POP_ASSUM (fn th => SIMP_TAC arith_ss [SYM th,ALUOUT_ALU_logic,REG_WRITE_WRITE_R14,

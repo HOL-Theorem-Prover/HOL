@@ -369,14 +369,8 @@ val PSRDAT_def = Define`
                else
                   ARB
       else if (is = t3) /\ (ic = swi_ex) then
-         if aregn = 0 then SET_IFMODE T T svc cpsrl               else
-         if aregn = 1 then SET_IFMODE T (BITw 6 cpsrl) und cpsrl else
-         if aregn = 2 then SET_IFMODE T (BITw 6 cpsrl) svc cpsrl else
-         if aregn = 3 then SET_IFMODE T (BITw 6 cpsrl) abt cpsrl else
-         if aregn = 4 then SET_IFMODE T (BITw 6 cpsrl) abt cpsrl else
-         if aregn = 5 then SET_IFMODE T (BITw 6 cpsrl) svc cpsrl else
-         if aregn = 6 then SET_IFMODE T (BITw 6 cpsrl) irq cpsrl else
-         if aregn = 7 then SET_IFMODE T T fiq cpsrl               else ARB
+         SET_IFMODE T (if (aregn = 0) \/ (aregn = 7) then T else BITw 6 cpsrl)
+                    (exception2mode (num2exception aregn)) cpsrl
       else if (is = t4) /\ (ic = swi_ex) then
          psrfb
       else

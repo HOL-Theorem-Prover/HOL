@@ -13,7 +13,8 @@ val _ = overload_on("w32",``n2w``);
 (* -------------------------------------------------------- *)
 
 val _ = Hol_datatype `word30 = w30 of num`;
-val _ = Hol_datatype `exception = reset | undefined | software | pabort | dabort | interrupt | fast`;
+val _ = Hol_datatype `exception = reset | undefined | software | address |
+                                  pabort | dabort | interrupt | fast`;
 val _ = Hol_datatype `mode = usr | fiq | irq | svc | abt | und | safe`;
 val _ = Hol_datatype `spsr = spsr_fiq | spsr_irq | spsr_svc | spsr_abt | spsr_und`;
 val _ = Hol_datatype `reg_usr = w4 of num`;
@@ -204,20 +205,26 @@ val FETCH_PC_def = Define`
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
 
+val exception2mode_def = Define`
+  exception2mode e =
+    case e of
+       reset     -> svc
+    || undefined -> und
+    || software  -> svc
+    || address   -> svc
+    || pabort    -> abt
+    || dabort    -> abt
+    || interrupt -> irq
+    || fast      -> fiq`;
+
 val EXCEPTION_def = Define`
   EXCEPTION (ARM mem reg psr) type =
     let cpsr = CPSR_READ psr in
     let fiq' = if (type = reset) \/ (type = fast) then T else BITw 6 cpsr
-    and (mode',pc') = case type of
-                         reset     -> (svc,0)
-                      || undefined -> (und,4)
-                      || software  -> (svc,8)
-                      || pabort    -> (abt,12)
-                      || dabort    -> (abt,16)
-                      || interrupt -> (irq,24)
-                      || fast      -> (fiq,28) in
+    and mode' = exception2mode type
+    and pc' = w32 (4 * exception2num type) in
    let reg' = REG_WRITE reg mode' 14 (FETCH_PC reg + w32 4) in
-     ARM mem (REG_WRITE reg' usr 15 (w32 pc'))
+     ARM mem (REG_WRITE reg' usr 15 pc')
          (CPSR_WRITE (SPSR_WRITE psr mode' cpsr) (SET_IFMODE T fiq' mode' cpsr))`;
 
 (* Note that PC+4 is stored in r14. This is memory address of next instruction,
