@@ -392,7 +392,8 @@ fun merge_rules (r1, r2) =
   | (SUFFIX TYPE_annotation, SUFFIX TYPE_annotation) => r1
   | (PREFIX (STD_prefix pl1), PREFIX (STD_prefix pl2)) =>
       PREFIX (STD_prefix (Lib.union pl1 pl2))
-  | (PREFIX (BINDER b1), PREFIX (BINDER b2)) => PREFIX (BINDER (b1 @ b2))
+  | (PREFIX (BINDER b1), PREFIX (BINDER b2)) =>
+      PREFIX (BINDER (Lib.union b1 b2))
   | (INFIX(STD_infix (i1, a1)), INFIX(STD_infix(i2, a2))) =>
       if a1 <> a2 then
         raise GrammarError
@@ -407,12 +408,40 @@ fun merge_rules (r1, r2) =
   | (LISTRULE lr1, LISTRULE lr2) => LISTRULE (Lib.union lr1 lr2)
   | _ => raise GrammarError "Attempt to have different forms at same level"
 
+fun optmerge r NONE = SOME r
+  | optmerge r1 (SOME r2) = SOME (merge_rules (r1, r2))
 
-fun resolve_same_precs [] = []
-  | resolve_same_precs [x] = [x]
-  | resolve_same_precs ((p1, r1)::(rules1 as (p2, r2)::rules2)) = let
+(* the listrule and closefix rules don't have precedences and sit at the
+   end of the list.  When merging grammars, we will have a list of possibly
+   intermingled closefix and listrule rules to look at, we want to produce
+   just one closefix and one listrule rule for the final grammar *)
+
+(* This allows for reducing more than just two closefix and listrules, but
+   when merging grammars with only one each, this shouldn't eventuate *)
+fun resolve_nullprecs listrule closefix rules =
+  case rules of
+    [] => let
     in
-      if p1 <> p2 orelse not (isSome p1) then
+      case (listrule, closefix) of
+        (NONE, NONE) => [] (* should never really happen *)
+      | (SOME lr, NONE) => [(NONE, lr)]
+      | (NONE, SOME cf) => [(NONE, cf)]
+      | (SOME lr, SOME cf) => [(NONE, lr), (NONE, cf)]
+    end
+  | (_, r as LISTRULE _)::xs =>
+    resolve_nullprecs (optmerge r listrule) closefix xs
+  | (_, r as CLOSEFIX _)::xs =>
+    resolve_nullprecs listrule (optmerge r closefix) xs
+  | _ => raise Fail "resolve_nullprecs: can't happen"
+
+
+fun resolve_same_precs rules =
+  case rules of
+    [] => []
+  | [x] => [x]
+  | ((p1 as SOME _, r1)::(rules1 as (p2, r2)::rules2)) => let
+    in
+      if p1 <> p2 then
         (p1, r1)::(resolve_same_precs rules1)
       else let
         val merged_rule = merge_rules (r1, r2)
@@ -422,6 +451,8 @@ fun resolve_same_precs [] = []
         (p1, merged_rule) :: resolve_same_precs rules2
       end
     end
+  | ((NONE, _)::_) => resolve_nullprecs NONE NONE rules
+
 
 infix Gmerge
 (* only merges rules, keeps rest as in g1 *)
