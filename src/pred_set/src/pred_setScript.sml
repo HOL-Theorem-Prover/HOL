@@ -3366,6 +3366,77 @@ val GSPEC_OR = store_thm(
   SRW_TAC [][EXTENSION, IN_UNION] THEN sspec_tac THEN REWRITE_TAC []);
 
 
+(* ----------------------------------------------------------------------
+    A proof of Koenig's Lemma
+   ---------------------------------------------------------------------- *)
+
+open metisLib
+val finitely_branching_def = new_definition(
+  "finitely_branching_def",
+  ``finitely_branching R = !x. FINITE {y | R x y}``);
+
+(* a counting exercise for R-trees.  If x0 has finitely many successors, and
+   each of these successors has finite trees underneath, then x0's tree is
+   also finite *)
+val KL_lemma1 = prove(
+  ``FINITE { x | R x0 x} /\
+    (!y. R x0 y ==> FINITE { x | RTC R y x }) ==>
+    FINITE { x | RTC R x0 x}``,
+  REPEAT STRIP_TAC THEN
+  `{ x | RTC R x0 x} =
+   x0 INSERT BIGUNION (IMAGE (\x. {y | RTC R x y}) {x | R x0 x})`
+      by (REWRITE_TAC [EXTENSION] THEN
+          SRW_TAC [][GSYM RIGHT_EXISTS_AND_THM, IN_BIGUNION, IN_IMAGE,
+                     GSPECIFICATION] THEN
+          PROVE_TAC [relationTheory.RTC_CASES1]) THEN
+  POP_ASSUM SUBST_ALL_TAC THEN SRW_TAC [][] THEN
+  MATCH_MP_TAC FINITE_BIGUNION THEN
+  SRW_TAC [][IMAGE_FINITE, IN_IMAGE, GSPECIFICATION] THEN
+  RES_TAC);
+
+(* effectively taking the contrapositive of the above, saying that if R is
+   finitely branching, and we're on top of an infinite R tree, then one of
+   the immediate children is on top of an infinite R tree *)
+val KL_lemma2 = prove(
+  ``finitely_branching R ==>
+    !y. ~ FINITE {x | RTC R y x} ==>
+        ?z. R y z /\ ~FINITE { x | RTC R z x}``,
+  METIS_TAC [KL_lemma1, finitely_branching_def]);
+
+(* now throw in the unavoidable use of the axiom of choice, and say that
+   there's a function to do this for us. *)
+
+val KL_lemma3 =
+    CONV_RULE (ONCE_DEPTH_CONV RIGHT_IMP_EXISTS_CONV THENC
+               ONCE_DEPTH_CONV SKOLEM_CONV) KL_lemma2
+
+val KoenigsLemma = store_thm(
+  "KoenigsLemma",
+  ``!R. finitely_branching R ==>
+        !x. ~FINITE {y | RTC R x y} ==>
+            ?f. (f 0 = x) /\ !n. R (f n) (f (SUC n))``,
+  REPEAT STRIP_TAC THEN
+  `?g. !y. ~FINITE { x | RTC R y x} ==>
+           R y (g y) /\ ~FINITE {x | RTC R (g y) x}`
+     by METIS_TAC [KL_lemma3] THEN
+  Q.SPECL_THEN [`x`, `\n r. g r`]
+               (Q.X_CHOOSE_THEN `f` STRIP_ASSUME_TAC o BETA_RULE)
+               (TypeBase.axiom_of "num") THEN
+  Q.EXISTS_TAC `f` THEN ASM_REWRITE_TAC [] THEN
+  Q_TAC SUFF_TAC
+        `!n. R (f n) (g (f n)) /\ ~FINITE { x | RTC R (f n) x}` THEN1
+        METIS_TAC [] THEN
+  Induct THEN METIS_TAC []);
+
+val KoenigsLemma_WF = store_thm(
+  "KoenigsLemma_WF",
+  ``!R. finitely_branching R /\ WF (inv R) ==> !x. FINITE {y | RTC R x y}``,
+  SRW_TAC [][prim_recTheory.WF_IFF_WELLFOUNDED,
+             prim_recTheory.wellfounded_def,
+             relationTheory.inv_DEF] THEN
+  METIS_TAC [KoenigsLemma]);
+
+
 val _ = export_rewrites
     [
      (* BIGUNION/BIGINTER theorems *)
