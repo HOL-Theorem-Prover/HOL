@@ -161,7 +161,10 @@ fun mv b = if b then mv0 else cp b
 fun transfer_file uploadfn targetdir (df as (dir,file)) = let
   fun transfer binaryp (dir,file1,file2) =
     uploadfn binaryp (fullPath [dir,file1]) (fullPath [targetdir,file2])
-  fun idtransfer binaryp (dir,file) = transfer binaryp (dir,file,file)
+  fun idtransfer binaryp (dir,file) =
+      case Path.base file of
+        "selftest" => ()
+      | _ => transfer binaryp (dir,file,file)
   fun digest_sig file =
       let val b = Path.base file
       in if (String.extract(b,String.size b -4,NONE) = "-sig"
