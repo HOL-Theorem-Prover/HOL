@@ -13,7 +13,6 @@ val HOLDIR = _;
 val MOSMLDIR = _;
 val DEPDIR = _;
 fun MK_XABLE file = _;
-val SRCDIRS = _;
 
 fun normPath s = Path.toString(Path.fromString s)
 fun itlist f L base =
@@ -34,14 +33,14 @@ val spacify =
    in String.concat o enspace
    end;
 
+fun nspaces f n = if n <= 0 then () else (f " "; nspaces f (n - 1))
+
 fun compile debug args =
   let val comm = spacify (MOSMLCOMP::args)
       val _ = if debug then print ("  with command "^comm^"\n") else ()
   in
     Process.system comm
   end;
-
-val src_paths = itlist (fn s => fn L => "-I" :: s :: L) SRCDIRS [];
 
 fun collapse_bslash_lines s = let
   val charlist = explode s
@@ -115,12 +114,12 @@ fun parse_command_line list = let
   val (rem4, show_version) = find_alternative_tags ["--version", "-v"] rem3
   val (rem5, rebuild_deps) = find_alternative_tags ["--rebuild_deps","-r"] rem4
   val (rem6, actual_HOLDIRs) = find_pairs "--holdir" rem5
-(*val (rem7, use_sigobj) = find_alternative_tags ["--use_sigobj", "-u"] rem6 *)
+  val (rem7, no_sigobj) = find_alternative_tags ["--no_sigobj", "-n"] rem6
 in
-  {targets=rem6, debug=debug, show_usage=help, show_version=show_version,
+  {targets=rem7, debug=debug, show_usage=help, show_version=show_version,
    always_rebuild_deps=rebuild_deps,
    additional_includes=List.foldr(fn (s,L) => "-I"::s::L) [] includes,
-   dontmakes=dontmakes,
+   dontmakes=dontmakes, no_sigobj = no_sigobj,
    actual_HOLDIR =
      case actual_HOLDIRs
       of []  => HOLDIR
@@ -135,10 +134,10 @@ end
 
 (* parameters which vary from run to run according to the command-line *)
 val {targets, debug, dontmakes, show_usage, show_version,
-     always_rebuild_deps, additional_includes, actual_HOLDIR} =
+     always_rebuild_deps, additional_includes, actual_HOLDIR, no_sigobj} =
   parse_command_line (CommandLine.arguments())
 
-val std_include_flags = ["-I", SIGOBJ]
+val std_include_flags = if no_sigobj then [] else ["-I", SIGOBJ]
 (*
   if not use_sigobj then
     List.foldr
@@ -152,7 +151,7 @@ in
   print ("HOLDIR = "^actual_HOLDIR^"\n");
   print ("Targets = "^print_list targets^"\n");
   print ("Additional includes = "^print_list additional_includes^"\n");
-  print ("Show version = "^Bool.toString show_version^"\n")
+  print ("Using HOL sigobj dir = "^Bool.toString (not no_sigobj) ^"\n")
 end else ()
 
 (** Top level sketch of algorithm *)
@@ -298,8 +297,10 @@ fun mk_depfile_name s = fullPath [DEPDIR, s^".d"]
 fun runholdep arg destination_file = let
   open Mosml
   val _ = print ("Analysing "^fromFile arg^"\n")
-  val result = Success(Holdep.main debug (src_paths @ [fromFile arg]))
-               handle _ => (print "Holdep failed."; Failure "")
+  val result =
+    Success(Holdep.main debug (std_include_flags @ additional_includes @
+                               [fromFile arg]))
+    handle _ => (print "Holdep failed."; Failure "")
   fun myopen s =
     if FileSys.access(DEPDIR, []) then
       if FileSys.isDir DEPDIR then TextIO.openOut s
@@ -551,7 +552,12 @@ val up_to_date_cache:(File, bool)Polyhash.hash_table =
   Polyhash.mkPolyTable(50, NotFound)
 fun cache_insert(f, b) = (Polyhash.insert up_to_date_cache (f, b); b)
 fun make_up_to_date ctxt target = let
-  (* val _ = print ("target: "^quote (string_part target)^"\n") *)
+  fun print s =
+    if debug then (nspaces TextIO.print (length ctxt);
+                   TextIO.print s)
+    else ()
+  fun warn s = (TextIO.output(TextIO.stdErr, s); TextIO.flushOut TextIO.stdErr)
+  val _ = print ("Working on target: "^fromFile target^"\n")
   val pdep = primary_dependent target
   val _ = List.all (fn d => d <> target) ctxt orelse raise CircularDependency
   val cached_result = Polyhash.peek up_to_date_cache target
@@ -560,14 +566,17 @@ in
     valOf cached_result
   else
    if Path.dir (string_part target) <> "" then (* path outside of currDir *)
-    (* if member #"/" (explode (string_part target)) then *)
-      cache_insert (target, true)
+     (print (fromFile target ^" outside current directory; considered OK.\n");
+      cache_insert (target, true))
     else
       if isSome pdep then let
         val pdep = valOf pdep
       in
         if make_up_to_date (target::ctxt) pdep then let
           val secondaries = get_dependencies target
+          val _ =
+            (print ("Secondary dependencies for "^fromFile target^" are: ");
+             print (print_list (map fromFile secondaries) ^ "\n"))
         in
           if (List.all (make_up_to_date (target::ctxt)) secondaries) then
             if (List.exists
@@ -585,10 +594,11 @@ in
       end
       else
         if FileSys.access(fromFile target, [FileSys.A_READ]) then
-          cache_insert (target, true)
+          (print (fromFile target ^ " found and OK.\n");
+           cache_insert (target, true))
         else let
         in
-          print ("Don't know how to make "^fromFile target^"\n");
+          warn ("Don't know how to make "^fromFile target^"\n");
           cache_insert (target, false)
         end
 end handle CircularDependency => cache_insert (target, false)
@@ -700,8 +710,8 @@ val _ =
      "    --debug             : print debugging information\n",
      "    --help | -h         : show this message\n",
      "    --holdir directory  : use specified directory as HOL root\n",
+     "    --no_sigobj | -n    : don't use any HOL files from sigobj\n",
      "    --rebuild_deps | -r : always rebuild dependency info files \n",
-(*     "    --use_sigobj | -u   : use sigobj directory in HOL tree\n", *)
      "    --version | -v      : show version information\n"]
   else
     if show_version then
