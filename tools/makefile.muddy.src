@@ -37,7 +37,7 @@ SIGOBJ=bdd.ui  bvec.ui  fdd.ui
 all:
 
 muddy.so: $(COBJS) $(BUDDYLIB)
-	$(DYNLD) -o $@ $(COBJS) $(LIBS)
+	DLLIBCOMP
 
 $(BUDDYLIB):
 	cd buddy17; make
@@ -52,11 +52,11 @@ $(BUDDYLIB):
 	$(CC) -c $(CFLAGS) -o $@ $<
 
 clean:
-	rm -f *.u? 
+	rm -f *.u?
 	rm -f *.o *.so
 	rm -f Makefile.bak
 
-depend : 
+depend :
 	mv Makefile Makefile.bak
 	(sed -n -e '1,/^### DO NOT DELETE THIS LINE/p' Makefile.bak;	 \
          $(CC) -MM $(CINCLUDE) $(OPTS) *.c) > Makefile
@@ -66,8 +66,8 @@ depend :
 ### EVERYTHING THAT GOES BEYOND THIS COMMENT WILL BE ERASED WITHOUT WARNING
 ### DO NOT DELETE THIS LINE
 muddy.o: muddy.c
-fdd.uo: fdd.ui bdd.ui MuddyCore.uo 
-fdd.ui: bdd.ui 
-bvec.uo: bvec.ui bdd.ui fdd.ui MuddyCore.uo 
-bvec.ui: bdd.ui fdd.ui 
-bdd.uo: bdd.ui MuddyCore.uo 
+fdd.uo: fdd.ui bdd.ui MuddyCore.uo
+fdd.ui: bdd.ui
+bvec.uo: bvec.ui bdd.ui fdd.ui MuddyCore.uo
+bvec.ui: bdd.ui fdd.ui
+bdd.uo: bdd.ui MuddyCore.uo

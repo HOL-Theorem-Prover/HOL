@@ -43,8 +43,3 @@ fun emit_hol_unquote_script target qfilter mosml std_prelude qinit qend =
       mk_xable target
    end;
 
-(*---------------------------------------------------------------------------
-        Set C-compiler options for building robdd library.
- ---------------------------------------------------------------------------*)
-
-use (fullPath [holdir, "tools", "config-robdd.sml"]);

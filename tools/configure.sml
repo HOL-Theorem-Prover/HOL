@@ -60,12 +60,12 @@ val SRCDIRS =
   "src/relation", "src/pair/src", "src/sum", "src/one", "src/option",
   "src/num/theories", "src/num/reduce/src", "src/num/arith/src","src/num",
   "src/hol88", "src/taut", "src/ind_def/src", "src/IndDef",
-  "src/datatype/parse", "src/datatype/equiv",  "src/datatype/record", 
-  "src/datatype",  "src/list/src", "src/tree", "src/datatype/basicrec", 
+  "src/datatype/parse", "src/datatype/equiv",  "src/datatype/record",
+  "src/datatype",  "src/list/src", "src/tree", "src/datatype/basicrec",
   "src/datatype/mutrec/utils", "src/datatype/mutrec",
   "src/datatype/nestrec", "src/datatype/mutual",
   "src/decision/src", "src/tfl/src", "src/unwind", "src/boss",
-  "src/integer", "src/res_quan/src", "src/set/src", "src/pred_set/src", 
+  "src/integer", "src/res_quan/src", "src/set/src", "src/pred_set/src",
   "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src", "src/BoyerMoore",
   "src/hol90", "src/finite_map", "src/real", "src/bag", "src/ring/src",
@@ -352,24 +352,33 @@ fun help mosmldir holdir =
     more about how it should configure on other systems than linux.
  ---------------------------------------------------------------------------*)
 
+val _ = use (fullPath [holdir, "tools", "config-muddy.sml"]);
+
 val _ =
  let open TextIO
      val _ = echo "Setting up the muddy library Makefile."
      val src    = fullPath [holdir, "tools/makefile.muddy.src"]
      val target = fullPath [holdir, "src/muddy/Makefile"]
-     val all = if not(OS="linux")
-        then (print (String.concat
-               ["   Warning! (non-fatal):\n    The muddy package is not ",
-                "expected to build in OS flavour ", quote OS,
-                ".\n   Only linux and solaris are currently supported.\n",
-                "   End Warning.\n"]);
-              "unknownOS")
-         else "$(SMLOBJ) $(SIGOBJ) muddy.so"
+     val (cflags, dllibcomp, all) =
+       case (CFLAGS, DLLIBCOMP, ALL) of
+         (SOME s1, SOME s2, SOME s3) => (s1, s2, s3)
+       | _ => let
+         in
+           print (String.concat
+                  ["   Warning! (non-fatal):\n    The muddy package is not ",
+                   "expected to build in OS flavour ", quote OS,
+                   ".\n   Only linux and solaris are currently supported.\n",
+                   "   End Warning.\n"]);
+           ("unknownOS", "unknownOS", "unknownOS")
+         end
   in
      fill_holes (src,target)
        ["MOSMLHOME=\n"  -->  String.concat["MOSMLHOME=", mosmldir,"\n"],
-        "CC=\n"          -->  String.concat["CC=", CC,"\n"],
-        "all:\n"         -->  String.concat["all: ",all,"\n"]]
+        "CC=\n"         -->  String.concat["CC=", CC,"\n"],
+        "CFLAGS="     -->  String.concat["CFLAGS=",cflags,"\n"],
+        "all:\n"        -->  String.concat["all: ",all,"\n"],
+        "DLLIBCOMP"     -->  String.concat["\t", dllibcomp, "\n"]
+        ]
   end;
 
 val _ = print "\nFinished configuration!\n";
