@@ -992,6 +992,49 @@ val FINITE_PRED_11 = Q.store_thm
    ]
  ]);
 
+(* ----------------------------------------------------------------------
+    Domain subtraction (at a single point)
+   ---------------------------------------------------------------------- *)
+
+val fmap_domsub = new_definition(
+  "fmap_domsub",
+  ``(\\) fm k = DRESTRICT fm (COMPL {k})``);
+
+val _ = set_fixity "\\\\" (Infixl 600)
+
+val DOMSUB_FEMPTY = store_thm(
+  "DOMSUB_FEMPTY",
+  ``!k. FEMPTY \\ k = FEMPTY``,
+  SRW_TAC [][GSYM fmap_EQ_THM, fmap_domsub, FDOM_DRESTRICT]);
+
+val DOMSUB_FUPDATE = store_thm(
+  "DOMSUB_FUPDATE",
+  ``!fm k v. fm |+ (k,v) \\ k = fm \\ k``,
+  SRW_TAC [][GSYM fmap_EQ_THM, fmap_domsub,
+             pred_setTheory.EXTENSION, DRESTRICT_DEF,
+             FAPPLY_FUPDATE_THM] THEN PROVE_TAC []);
+
+val DOMSUB_FUPDATE_NEQ = store_thm(
+  "DOMSUB_FUPDATE_NEQ",
+  ``!fm k1 k2 v. ~(k1 = k2) ==> (fm |+ (k1, v) \\ k2 = fm \\ k2 |+ (k1, v))``,
+  SRW_TAC [][GSYM fmap_EQ_THM, fmap_domsub,
+             pred_setTheory.EXTENSION, DRESTRICT_DEF,
+             FAPPLY_FUPDATE_THM] THEN PROVE_TAC []);
+
+val DOMSUB_FUPDATE_THM = store_thm(
+  "DOMSUB_FUPDATE_THM",
+  ``!fm k1 k2 v. fm |+ (k1,v) \\ k2 = if k1 = k2 then fm \\ k2
+                                      else (fm \\ k2) |+ (k1, v)``,
+  SRW_TAC [][GSYM fmap_EQ_THM, fmap_domsub,
+             pred_setTheory.EXTENSION, DRESTRICT_DEF,
+             FAPPLY_FUPDATE_THM] THEN PROVE_TAC []);
+
+val FDOM_DOMSUB = store_thm(
+  "FDOM_DOMSUB",
+  ``!fm k. FDOM (fm \\ k) = FDOM fm DELETE k``,
+  SRW_TAC [][fmap_domsub, FDOM_DRESTRICT, pred_setTheory.EXTENSION]);
+
+val _ = export_rewrites ["DOMSUB_FEMPTY", "DOMSUB_FUPDATE"]
 
 (* ----------------------------------------------------------------------
     Iterated updates
