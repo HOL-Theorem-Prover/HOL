@@ -510,6 +510,7 @@ val int_of_num =
                    (int_of_num (SUC n) = (int_of_num n) + int_1)`};
 
 val _ = add_numeral_form(#"i", SOME "int_of_num");
+val _ = overload_on("&", ``int_of_num``);
 
 
 val INT_0 =
@@ -1580,9 +1581,9 @@ val NUM_LEMMA =
 val NUM_DECOMPOSE =
     store_thm("NUM_DECOMPOSE",
 	      Term `!n. &n = mk_int($tint_eq (n,0))`,
-	      INDUCT_TAC THEN 
+	      INDUCT_TAC THEN
               REWRITE_TAC[int_of_num, fetch "-" "int_0", tint_0] THENL
-	      [AP_TERM_TAC THEN 
+	      [AP_TERM_TAC THEN
                 REWRITE_TAC[GSYM TINT_EQ_EQUIV, tint_eq, ADD_CLAUSES],
 	       ASM_REWRITE_TAC
                    [fetch "-" "int_1", fetch "-" "int_add",tint_1] THEN

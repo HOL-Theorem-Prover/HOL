@@ -952,7 +952,7 @@ val final_equivalence = store_thm(
                       INT_LT_SUB_RADD, INT_SUB_LDISTRIB] THEN
     `&d * x - R <= (&(c * d) - &c - &d) / &c` by
        PROVE_TAC [div_le, INT_LT] THEN
-    MAP_EVERY Q.EXISTS_TAC [`x`, `&d * x - R`, `&d`, `R`] THEN
+    MAP_EVERY Q.EXISTS_TAC [`x`, `&d * x - R`, `d`, `R`] THEN
     SRW_TAC [][INT_LE_SUB_LADD] THEN
     MATCH_MP_TAC INT_LE_TRANS THEN
     Q.EXISTS_TAC ` (&(c * d) - &c - &d) / &c` THEN SRW_TAC [][] THEN

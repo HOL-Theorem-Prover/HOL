@@ -12,7 +12,7 @@ struct
   val vs_cons_special = " _ vs cons"
   val resquan_special = " _ res quan special"
   val nat_elim_term = "nat_elim__magic"
-  val fromNum_str = "&"
+  val fromNum_str = "_ inject_number"
   val std_binder_precedence = 0
 
   val case_special = "case__magic"
