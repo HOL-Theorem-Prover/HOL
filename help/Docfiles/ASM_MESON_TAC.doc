@@ -10,7 +10,7 @@ assumptions and the theorems given.
 
 \LIBRARY meson
 
-\structure mesonLib
+\STRUCTURE mesonLib
 
 \DESCRIBE
 {ASM_MESON_TAC} is identical in behaviour to {MESON_TAC} except that

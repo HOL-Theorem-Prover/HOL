@@ -7,7 +7,7 @@ Breaks apart a type (other than a variable type).
 
 \DESCRIBE
 If {ty} is a base type, then {dest_type t} returns {("ty",[])}.
-If {ty} is a compound type {(ty1,...,tyn)tyop}, then (dest_type ty}
+If {ty} is a compound type {(ty1,...,tyn)tyop}, then {dest_type ty}
 returns {(tyop,[ty1,...,tyn])}.
 
 \EXAMPLE

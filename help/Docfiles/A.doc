@@ -20,6 +20,6 @@ The application {A f x} equals {f x}.
 }
 
 \SEEALSO
-Lib, ##, B, C, I, K, S, W
+Lib, \#\#, B, C, I, K, S, W
 
 \ENDDOC

@@ -18,7 +18,7 @@ resulting composite tactic {REVERSE T} fails when applied to a goal if
 and only if {T} fails.
 
 \COMMENTS
-Intended for use with {THEN1} to pick the 'easy' subgoal.
+Intended for use with {THEN1} to pick the `easy' subgoal.
 
 \EXAMPLE
 Given a goal

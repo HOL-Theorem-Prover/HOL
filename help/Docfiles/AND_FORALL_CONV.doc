@@ -17,7 +17,7 @@ When applied to a term of the form {(!x.P) /\ (!x.Q)}, the conversion
 \FAILURE
 Fails if applied to a term not of the form {(!x.P) /\ (!x.Q)}.
 
-\COMMENT
+\COMMENTS
 It may be easier to use higher order rewriting with {FORALL_AND_THM}.
 
 \SEEALSO
