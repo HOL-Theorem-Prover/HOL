@@ -18,7 +18,7 @@ val _ = app load ["HolKernel", "boolLib", "goalstackLib"];
 
 open HolKernel Parse boolLib goalstackLib;
 
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
+infix ++ && ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 infixr 3 -->;
 infix 8 via by;
 
@@ -66,6 +66,26 @@ end
 
 val _ = quotation := true
 val _ = Help.displayLines := 40;
+
+(*---------------------------------------------------------------------------*
+ *  Set up compile_theory function                                           *
+ *---------------------------------------------------------------------------*)
+
+fun compile_theory () = let
+  val name = current_theory()
+  val signame = name^"Theory.sig"
+  val smlname = name^"Theory.sml"
+  fun readable f = FileSys.access(f, [FileSys.A_READ])
+in
+  if readable signame andalso readable smlname then let
+  in
+     Meta.compileStructure ["Overlay"] signame;
+     Meta.compileStructure ["Overlay"] smlname;
+     print ("Compiled "^name^" theory files.\n")
+  end
+  else
+     print "No theory files on disk; perhaps export_theory() required.\n"
+end
 
 
 (*---------------------------------------------------------------------------*
