@@ -33,11 +33,18 @@ RW_TAC arith_ss [n2w_11, w2n_EVAL, MOD_WL_THM, GSYM BIT_BITS_THM, HB_def,
 
 val xtime_def = Define
   `xtime (w : word8) =
+     w << 1 # (if MSB w then
+                 0x1Bw
+               else
+                 0w)`;
+(*
+val xtime_def = Define
+  `xtime (w : word8) =
      if MSB w then
        w << 1 # 0x1Bw
      else
        w << 1`;
-
+*)
 val MSB_lem = Q.prove (
 `!a b. MSB (a # b) = ~(MSB a = MSB b)`,
 REPEAT STRIP_TAC THEN n2w_TAC `a` THEN n2w_TAC `b` THEN 
@@ -48,7 +55,7 @@ RW_TAC arith_ss [EOR_EVAL, EOR_def, MSB_EVAL, MSBn_def, HB_def, WL_def,
 val xtime_distrib = Q.store_thm
 ("xtime_distrib",
  `!a b. xtime (a # b) = xtime a # xtime b`,
- RW_TAC std_ss [EQ_BIT_THM, xtime_def, MSB_lem] THEN
+ RW_TAC std_ss [EQ_BIT_THM, xtime_def, MSB_lem, WORD_EOR_ID] THEN
  FULL_SIMP_TAC std_ss [] THEN RW_TAC std_ss [] THEN
  n2w_TAC `a` THEN n2w_TAC `b` THEN
  RW_TAC arith_ss [EOR_EVAL, LSL_EVAL, HB_def, MUL_EVAL, w2n_EVAL, MOD_WL_THM,
@@ -172,6 +179,7 @@ LIST_CONJ (map (Count.apply build_table)
                [``0x2w``, ``0x3w``, ``0x9w``, ``0xBw``, ``0xDw``, ``0xEw``])
 
 val _ = save_thm ("mult_tables", mult_tables)
+ 
 (*---------------------------------------------------------------------------*)
 (* Directly looking up answers in specialized tables is equivalent to        *)
 (* the multiplication algorithm each time. And should be much faster!        *)
