@@ -48,7 +48,7 @@ fun mapshape [] _ _ =  []
      in f1 f1_args :: mapshape nums funcs args'
      end;
 
-infix THEN THENL ORELSE;
+infix THEN THENL THEN1 ORELSE;
 
 (*---------------------------------------------------------------------------
  * fun (tac1:tactic) THEN (tac2:tactic) : tactic = fn g =>
@@ -102,6 +102,43 @@ fun (tac1:tactic) THENL (tacl:tactic list) :tactic = fn g =>
 
 fun (tac1 ORELSE tac2) g = tac1 g handle HOL_ERR _ => tac2 g;
 
+
+(*---------------------------------------------------------------------------
+ * tac1 THEN1 tac2: A tactical like THEN that applies tac2 only to the
+ *                  first subgoal of tac1
+ *---------------------------------------------------------------------------*)
+
+fun op THEN1 (tac1 : tactic, tac2 : tactic) : tactic =
+  fn g =>
+  let
+    val (gl, jf) = tac1 g
+    val (h_g, t_gl) =
+      case gl of []
+        => raise ERR "THEN1" "goal completely solved by first tactic"
+      | h :: t => (h, t)
+    val (h_gl, h_jf) = tac2 h_g
+    val _ =
+      if null h_gl then ()
+      else raise ERR "THEN1" "first subgoal not solved by second tactic"
+  in
+    (t_gl, fn thl => jf (h_jf [] :: thl))
+  end
+  handle e => raise wrap_exn "Tactical" "THEN1" e;
+
+(*---------------------------------------------------------------------------
+ * REVERSE tac: A tactical that reverses the list of subgoals of tac.
+ *              Intended for use with THEN1 to pick the `easy' subgoal, e.g.:
+ *              - CONJ_TAC THEN1 SIMP_TAC
+ *                  if the first conjunct is easily dispatched
+ *              - REVERSE CONJ_TAC THEN1 SIMP_TAC
+ *                  if it is the second conjunct that yields.
+ *---------------------------------------------------------------------------*)
+
+fun REVERSE tac g
+  = let val (gl, jf) = tac g
+    in (rev gl, jf o rev)
+    end
+    handle e => raise wrap_exn "Tactical" "REVERSE" e;
 
 (*---------------------------------------------------------------------------
  * Fail with the given token.  Useful in tactic programs to check that a

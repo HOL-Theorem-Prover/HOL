@@ -26,6 +26,8 @@ sig
   val THEN           : tactic * tactic -> tactic
   val THENL          : tactic * tactic list -> tactic
   val ORELSE         : tactic * tactic -> tactic
+  val THEN1          : tactic * tactic -> tactic
+  val REVERSE        : tactic -> tactic
   val FAIL_TAC       : string -> tactic
   val NO_TAC         : tactic
   val ALL_TAC        : tactic
