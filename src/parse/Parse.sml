@@ -558,7 +558,7 @@ in
   in
     typecheck_phase1 (SOME(term_to_string, type_to_string)) ptm;
     give_types_to_fvs FVs [] ptm;
-    to_term (overloading_resolution ptm)
+    remove_case_magic (to_term (overloading_resolution ptm))
   end
 
   fun parse_in_context FVs q =

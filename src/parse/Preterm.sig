@@ -33,15 +33,19 @@ sig
      unassigned pretypes if Globals.guessing_tyvars is true.
      Will fail if the preterm contains any Overloaded constructors, or
      if the types attached to the leaves aren't valid for the kernel.  *)
-
   val to_term : preterm -> term
 
-  (* essentially the composition of all three of the above *)
 
+  (* deals with case expressions, which need to be properly typed and
+     analysed before they can be converted into type-specific case-
+     constants *)
+  val remove_case_magic : term -> term
+
+
+  (* essentially the composition of all four of the above *)
   val typecheck:
     ((term -> string) * (hol_type -> string)) option -> preterm -> term
 
-  val remove_case_magic : term -> term
 
 end;
 
