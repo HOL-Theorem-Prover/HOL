@@ -369,11 +369,50 @@ val EVERY_MEM = store_thm(
   GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [EVERY_DEF, MEM] THEN
   mesonLib.MESON_TAC []);
 
+val EVERY_MAP = store_thm(
+  "EVERY_MAP",
+  ``!P f l:'a list. EVERY P (MAP f l) = EVERY (\x. P (f x)) l``,
+  NTAC 2 GEN_TAC THEN LIST_INDUCT_TAC THEN
+  ASM_REWRITE_TAC [EVERY_DEF, MAP] THEN BETA_TAC THEN REWRITE_TAC []);
+
+val EVERY_SIMP = store_thm(
+  "EVERY_SIMP",
+  ``!c l:'a list. EVERY (\x. c) l = (l = []) \/ c``,
+  GEN_TAC THEN LIST_INDUCT_TAC THEN
+  ASM_REWRITE_TAC [EVERY_DEF, NOT_CONS_NIL] THEN
+  EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC []);
+
 val EXISTS_MEM = store_thm(
   "EXISTS_MEM",
   ``!P l:'a list. EXISTS P l = ?e. MEM e l /\ P e``,
   GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [EXISTS_DEF, MEM] THEN
   mesonLib.MESON_TAC []);
+
+val EXISTS_MAP = store_thm(
+  "EXISTS_MAP",
+  ``!P f l:'a list. EXISTS P (MAP f l) = EXISTS (\x. P (f x)) l``,
+  NTAC 2 GEN_TAC THEN LIST_INDUCT_TAC THEN
+  ASM_REWRITE_TAC [EXISTS_DEF, MAP] THEN BETA_TAC THEN REWRITE_TAC []);
+
+val EXISTS_SIMP = store_thm(
+  "EXISTS_SIMP",
+  ``!c l:'a list. EXISTS (\x. c) l = ~(l = []) /\ c``,
+  GEN_TAC THEN LIST_INDUCT_TAC THEN
+  ASM_REWRITE_TAC [EXISTS_DEF, NOT_CONS_NIL] THEN
+  EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC []);
+
+val EVERY_NOT_EXISTS = store_thm(
+  "EVERY_NOT_EXISTS",
+  ``!P l. EVERY P l = ~EXISTS (\x. ~P x) l``,
+  GEN_TAC THEN LIST_INDUCT_TAC THEN
+  ASM_REWRITE_TAC [EVERY_DEF, EXISTS_DEF] THEN BETA_TAC THEN
+  REWRITE_TAC [DE_MORGAN_THM]);
+
+val EXISTS_NOT_EVERY = store_thm(
+  "EXISTS_NOT_EVERY",
+  ``!P l. EXISTS P l = ~EVERY (\x. ~P x) l``,
+  REWRITE_TAC [EVERY_NOT_EXISTS] THEN BETA_TAC THEN REWRITE_TAC [] THEN
+  CONV_TAC (DEPTH_CONV ETA_CONV) THEN REWRITE_TAC []);
 
 val MEM_APPEND = store_thm(
   "MEM_APPEND",
@@ -883,7 +922,8 @@ val _ = BasicProvers.export_rewrites
            "LENGTH_APPEND", "LENGTH_MAP", "MAP_APPEND",
            "NOT_CONS_NIL", "NOT_NIL_CONS", "MAP_EQ_NIL", "APPEND_NIL",
            "CONS_ACYCLIC", "list_case_def", "APPEND_eq_NIL", "ZIP",
-           "UNZIP", "EVERY_APPEND", "EXISTS_APPEND", "MEM_APPEND",
+           "UNZIP", "EVERY_APPEND", "EXISTS_APPEND", "EVERY_SIMP",
+           "EXISTS_SIMP", "NOT_EVERY", "NOT_EXISTS", "MEM_APPEND",
            "LAST_CONS", "FRONT_CONS", "FOLDL", "FOLDR"];
 
 
