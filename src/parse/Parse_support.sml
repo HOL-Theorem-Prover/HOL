@@ -8,6 +8,7 @@ type term    = Term.term
 open HolKernel GrammarSpecials;
 
 val ERROR = mk_HOL_ERR "Parse_support";
+val ERRORloc = mk_HOL_ERRloc "Parse_support";
 
 (*---------------------------------------------------------------------------
        Parsing environments
@@ -51,7 +52,7 @@ fun make_preterm tm_in_e = fst(tm_in_e empty_env)
  *       Antiquotes                                                          *
  *---------------------------------------------------------------------------*)
 
-fun make_aq tm {scope,free} = let
+fun make_aq _ tm {scope,free} = let
   open Term Preterm
   fun from ltm (E as (lscope,scope,free)) =
     case ltm of
@@ -98,9 +99,9 @@ fun gen_thy_const (thy,s) =
                  (Pretype.fromType (Term.type_of c))}
   end
 
-fun gen_const s =
+fun gen_const l s =
  case Term.decls s
-  of [] => raise ERROR "gen_const" ("unable to find constant "^Lib.quote s)
+  of [] => raise ERRORloc "gen_const" l ("unable to find constant "^Lib.quote s)
    | h::_ => let val {Name,Thy,Ty} = Term.dest_thy_const h
              in Preterm.Const
                   {Name=Name, Thy=Thy,
@@ -113,24 +114,24 @@ fun gen_const s =
  * Binding occurrences of variables
  *---------------------------------------------------------------------------*)
 
-fun make_binding_occ s binder E =
+fun make_binding_occ l s binder E =
  let open Preterm
      val _ =
        Lexis.ok_identifier s orelse
        Lexis.ok_symbolic s orelse
-       raise ERROR "make_binding_occ"
+       raise ERRORloc "make_binding_occ" l
          (s ^ " is not lexically permissible as a binding variable")
      val ntv = Pretype.new_uvar()
      val E' = add_scope((s,ntv),E)
  in
   case binder
    of "\\" => ((fn b => Abs{Bvar=Var{Name=s, Ty=ntv},Body=b}), E')
-    |  _   => ((fn b => Comb{Rator=gen_const binder,
+    |  _   => ((fn b => Comb{Rator=gen_const l binder,
                              Rand=Abs{Bvar=Var{Name=s,Ty=ntv}, Body=b}}), E')
  end;
 
 
-fun make_aq_binding_occ aq binder E = let
+fun make_aq_binding_occ l aq binder E = let
   val (v as (Name,Ty)) = Term.dest_var aq
   val pty = Pretype.fromType Ty
   val v' = {Name=Name, Ty=Pretype.fromType Ty}
@@ -139,7 +140,7 @@ fun make_aq_binding_occ aq binder E = let
 in
   case binder of
     "\\"   => ((fn b => Abs{Bvar=Var v', Body=b}), E')
-  | binder => ((fn b => Comb{Rator=gen_const binder,
+  | binder => ((fn b => Comb{Rator=gen_const l binder,
                              Rand=Abs{Bvar=Var v', Body=b}}),  E')
 end
 
@@ -205,7 +206,7 @@ fun gen_overloaded_const oinfo s =
  * "free"s include new ones found in the body of the Abs.
  *---------------------------------------------------------------------------*)
 
-fun make_const s E = (gen_const s, E)
+fun make_const l s E = (gen_const l s, E)
 
 (*---------------------------------------------------------------------------
     Making preterm string literals.
@@ -236,11 +237,11 @@ local val num_ty = Pretype.Tyop{Thy="num", Tyop = "num", Args = []}
           BIT2 = Preterm.Const {Name="NUMERAL_BIT2",
                                 Thy="arithmetic",Ty=funty num_ty num_ty}}
 in
-fun make_string_literal s =
+fun make_string_literal l s =
     if not (mem "string" (ancestry "-")) andalso
        current_theory() <> "string"
     then
-      Raise (ERROR "make_string_literal"
+      Raise (ERRORloc "make_string_literal" l
                    ("String literals not allowed - "^
                     "load \"stringTheory\" first."))
     else
@@ -258,9 +259,9 @@ end;
     treated as visible.
  ---------------------------------------------------------------------------*)
 
-fun make_qconst _ (p as (thy,s)) E = (gen_thy_const p, E);
+fun make_qconst _ _ (p as (thy,s)) E = (gen_thy_const p, E);
 
-fun make_atom oinfo s E =
+fun make_atom oinfo l s E =
  make_bvar(s,E) handle HOL_ERR _
   =>
   if Overload.is_overloaded oinfo s then
@@ -268,10 +269,10 @@ fun make_atom oinfo s E =
   else
   case List.find (fn rfn => String.isPrefix rfn s)
                  [recsel_special, recupd_special, recfupd_special]
-   of NONE => if Lexis.is_string_literal s then (make_string_literal s, E)
+   of NONE => if Lexis.is_string_literal s then (make_string_literal l s, E)
               else make_free_var (s, E)
     | SOME rfn =>
-        Raise (ERROR "make_atom"
+        Raise (ERRORloc "make_atom" l
                      ("Record field "^String.extract(s, size rfn, NONE)^
                       " not registered"))
 
@@ -279,17 +280,17 @@ fun make_atom oinfo s E =
  * Combs
  *---------------------------------------------------------------------------*)
 
-fun list_make_comb (tm1::(rst as (_::_))) E =
+fun list_make_comb _ (tm1::(rst as (_::_))) E =
      rev_itlist (fn tm => fn (trm,e) =>
         let val (tm',e') = tm e
         in (Preterm.Comb{Rator = trm, Rand = tm'}, e') end)     rst (tm1 E)
-  | list_make_comb _ _ = raise ERROR "list_make_comb" "insufficient args";
+  | list_make_comb l _ _ = raise ERRORloc "list_make_comb" l "insufficient args";
 
 (*---------------------------------------------------------------------------
  * Constraints
  *---------------------------------------------------------------------------*)
 
-fun make_constrained tm ty E = let
+fun make_constrained _ tm ty E = let
   val (tm',E') = tm E
 in
   (Preterm.Constrained(tm', ty), E')
@@ -313,7 +314,7 @@ end;
   found in tm to E.
  ----------------------------------------------------------------------------*)
 
-fun bind_term binder alist tm (E as {scope=scope0,...}:env) =
+fun bind_term _ binder alist tm (E as {scope=scope0,...}:env) =
    let val (E',F) = rev_itlist (fn a => fn (e,f) =>
              let val (g,e') = a binder e in (e', f o g) end) alist (E,I)
        val (tm',({free=free1,...}:env)) = tm E'
@@ -332,34 +333,34 @@ fun bind_term binder alist tm (E as {scope=scope0,...}:env) =
 local val restricted_binders = ref ([] : (string * string) list)
 in
 fun binder_restrictions() = !restricted_binders
-fun associate_restriction(p as (binder_str,const_name)) =
+fun associate_restriction l (p as (binder_str,const_name)) =
   case (Lib.assoc1 binder_str (!restricted_binders)) of
     NONE => restricted_binders := p :: !restricted_binders
   | SOME _ =>
-      raise ERROR "restrict_binder"
+      raise ERRORloc "restrict_binder" l
         ("Binder "^Lib.quote binder_str^" is already restricted")
 
-fun delete_restriction binder =
+fun delete_restriction l binder =
  restricted_binders :=
   Lib.set_diff (!restricted_binders)
          [(binder,Lib.assoc binder(!restricted_binders))]
   handle HOL_ERR _
-   => raise ERROR"delete_restriction" (Lib.quote binder^" is not restricted")
+   => raise ERRORloc "delete_restriction" l (Lib.quote binder^" is not restricted")
 end;
 
-fun restr_binder s =
+fun restr_binder l s =
    assoc s (binder_restrictions()) handle HOL_ERR _
-   => raise ERROR "restr_binder"
+   => raise ERRORloc "restr_binder" l
                       ("no restriction associated with "^Lib.quote s)
 
-fun bind_restr_term binder vlist restr tm (E as {scope=scope0,...}:env)=
+fun bind_restr_term l binder vlist restr tm (E as {scope=scope0,...}:env)=
    let fun replicate_rbinder e =
-            (gen_const (restr_binder binder),e)
-             handle HOL_ERR _ => raise ERROR "bind_restr_term"
+            (gen_const l (restr_binder l binder),e)
+             handle HOL_ERR _ => raise ERRORloc "bind_restr_term" l
               ("Can't find constant associated with "^Lib.quote binder)
        val (E',F) =
           rev_itlist (fn v => fn (e,f)
-             => let val (prefix,e') = list_make_comb[replicate_rbinder,restr] e
+             => let val (prefix,e') = list_make_comb l [replicate_rbinder,restr] e
                     val (g,e'') = v "\\" e'
                     fun make_cmb ptm = Preterm.Comb{Rator=prefix,Rand=ptm}
                 in (e'', f o make_cmb o g) end)         vlist (E,I)
@@ -376,61 +377,61 @@ fun split ty =
 
 local open Preterm
 in
-fun cdom M [] = M
-  | cdom (Abs{Bvar,Body}) (ty::rst) =
-       Abs{Bvar = Constrained(Bvar,ty), Body = cdom Body rst}
-  | cdom (Comb{Rator as Const{Name="UNCURRY",...},Rand}) (ty::rst) =
-       Comb{Rator=Rator, Rand=cdom Rand (split ty@rst)}
-  | cdom x y = raise ERROR"cdom" "missing case"
+fun cdom _ M [] = M
+  | cdom l (Abs{Bvar,Body}) (ty::rst) =
+       Abs{Bvar = Constrained(Bvar,ty), Body = cdom l Body rst}
+  | cdom l (Comb{Rator as Const{Name="UNCURRY",...},Rand}) (ty::rst) =
+       Comb{Rator=Rator, Rand=cdom l Rand (split ty@rst)}
+  | cdom l x y = raise ERRORloc "cdom" l "missing case"
 end;
 
-fun cdomf (f,e) ty = ((fn tm => cdom (f tm) [ty]), e)
+fun cdomf l (f,e) ty = ((fn tm => cdom l (f tm) [ty]), e)
 
-fun make_vstruct bvl tyo binder E = let
+fun make_vstruct l bvl tyo binder E = let
   open Preterm
   fun loop ([v],E) = v "\\" E
     | loop ((v::rst),E) = let
         val (f,e) = v "\\" E
         val (F,E') = loop(rst,e)
       in
-        ((fn b => Comb{Rator=gen_const "UNCURRY",Rand=f(F b)}), E')
+        ((fn b => Comb{Rator=gen_const l "UNCURRY",Rand=f(F b)}), E')
       end
-    | loop _ = raise ERROR"make_vstruct" "impl. error, empty vstruct"
+    | loop _ = raise ERRORloc "make_vstruct" l "impl. error, empty vstruct"
   val (F,E') =
     case tyo of
       NONE    => loop(bvl,E)
-    | SOME ty => cdomf (hd bvl "\\" E) ty
+    | SOME ty => cdomf l (hd bvl "\\" E) ty
 in
   case binder of
     "\\" => (F,E')
-  | _ => ((fn b => Comb{Rator=gen_const binder,Rand=F b}), E')
+  | _ => ((fn b => Comb{Rator=gen_const l binder,Rand=F b}), E')
 end;
 
 
 (*---------------------------------------------------------------------------
  * Let bindings
  *---------------------------------------------------------------------------*)
-fun make_let bindings tm env =
+fun make_let l bindings tm env =
    let open Preterm
        val {body_bvars, args, E} =
           itlist (fn (bvs,arg) => fn {body_bvars,args,E} =>
                     let val (b,rst) = (hd bvs,tl bvs)
                         val (arg',E') =
-                          case rst of [] => arg E | L => bind_term "\\" L arg E
+                          case rst of [] => arg E | L => bind_term l "\\" L arg E
                     in {body_bvars = b::body_bvars, args=arg'::args, E=E'}
                     end) bindings {body_bvars=[], args=[], E=env}
-       val (core,E') = bind_term "\\" body_bvars tm E
+       val (core,E') = bind_term l "\\" body_bvars tm E
    in
      ( rev_itlist (fn arg => fn core =>
-            Comb{Rator=Comb{Rator=gen_const "LET",Rand=core},Rand=arg})
+            Comb{Rator=Comb{Rator=gen_const l "LET",Rand=core},Rand=arg})
            args core, E')
    end
-   handle HOL_ERR _ => raise ERROR "make_let" "bad let structure";
+   handle HOL_ERR _ => raise ERRORloc "make_let" l "bad let structure";
 
-fun make_set_const fname s E =
- (gen_const s, E)
+fun make_set_const l fname s E =
+ (gen_const l s, E)
   handle HOL_ERR _
-    => raise ERROR fname ("The theory "^Lib.quote "pred_set"^" is not loaded");
+    => raise ERRORloc fname l ("The theory "^Lib.quote "pred_set"^" is not loaded");
 
 
 (*---------------------------------------------------------------------------
@@ -445,7 +446,7 @@ fun make_set_const fname s E =
  * will subsequently get bound in the set abstraction.
  *---------------------------------------------------------------------------*)
 
-fun make_set_abs (tm1,tm2) (E as {scope=scope0,...}:env) =
+fun make_set_abs l (tm1,tm2) (E as {scope=scope0,...}:env) =
    let val (_,(e1:env)) = tm1 empty_env
        val (_,(e2:env)) = tm2 empty_env
        val (_,(e3:env)) = tm2 e1
@@ -457,7 +458,7 @@ fun make_set_abs (tm1,tm2) (E as {scope=scope0,...}:env) =
        val init_fv = #free e3
    in
    case gather (fn (name,_) => mem name fv_names) init_fv
-     of [] => raise ERROR "make_set_abs" "no free variables in set abstraction"
+     of [] => raise ERRORloc "make_set_abs" l "no free variables in set abstraction"
       | quants =>
          let val quants' = map
                 (fn (bnd as (Name,Ty)) =>
@@ -466,10 +467,10 @@ fun make_set_abs (tm1,tm2) (E as {scope=scope0,...}:env) =
                                              Body=b}),
                                 add_scope(bnd,E))))
                (rev quants) (* make_vstruct expects reverse occ. order *)
-         in list_make_comb
-               [(make_set_const "make_set_abs" "GSPEC"),
-                (bind_term "\\" [make_vstruct quants' NONE]
-                          (list_make_comb[make_const ",",tm1,tm2]))] E
+         in list_make_comb l
+               [(make_set_const l "make_set_abs" "GSPEC"),
+                (bind_term l "\\" [make_vstruct l quants' NONE]
+                          (list_make_comb l [make_const l ",",tm1,tm2]))] E
          end
    end;
 

@@ -57,7 +57,7 @@ and 'a preterm
   | AQ of 'a
   | TYPED of ('a preterm locn.located * Pretype.pretype locn.located)
 
-fun CCOMB(x,y) = (COMB(y,x),locn.between (#2 y) (#2 x))
+fun CCOMB(x,y) = (COMB(y,x),locn.between (#2 x) (#2 y))
 
 infix --
 fun (l1 -- []) = l1
@@ -1138,7 +1138,7 @@ fun remove_specials t =
           else
             if s = recupd_special orelse s = recfupd_special then
               raise ParseTermError
-                ("May not use record update functions at top level",slocn)
+                ("May not use record update functions at top level (possibly missing semicolon)",slocn)
             else
               APP(#2 t, remove_specials t1, remove_specials t2)
         end

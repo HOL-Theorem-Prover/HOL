@@ -214,15 +214,14 @@ in
       raise ERRORloc "parse_Type" locn "types must begin with a colon"
     else let
         val _ = if size s = 1 then advance qb
-                else let val (locn',locn'') = locn.split_at 1 locn in
-                     replace_current (BT_Ident (String.extract(s, 1, NONE)),locn'') qb end
+                else let val locn' = locn.move_start 1 locn in
+                     replace_current (BT_Ident (String.extract(s, 1, NONE)),locn') qb end
         val pt = parser qb
       in
         case current qb of
             (BT_EOI,_) => Pretype.toType pt
           | (_,locn) => raise ERRORloc "parse_Type" locn
-                                       ("Couldn't make any sense of remaining input: "^
-                                        toString qb)
+                                       ("Couldn't make any sense of remaining input.")
       end
   | (_,locn) => raise ERRORloc "parse_Type" locn "types must begin with a colon"
 end
@@ -457,24 +456,24 @@ end
 
 
 local open Parse_support Absyn
-  fun binder(VIDENT (_,s))    = make_binding_occ s
-    | binder(VPAIR(_,v1,v2))  = make_vstruct [binder v1, binder v2] NONE
-    | binder(VAQ (_,x))       = make_aq_binding_occ x
-    | binder(VTYPED(_,v,pty)) = make_vstruct [binder v] (SOME pty)
+  fun binder(VIDENT (l,s))    = make_binding_occ l s
+    | binder(VPAIR(l,v1,v2))  = make_vstruct l [binder v1, binder v2] NONE
+    | binder(VAQ (l,x))       = make_aq_binding_occ l x
+    | binder(VTYPED(l,v,pty)) = make_vstruct l [binder v] (SOME pty)
 in
   fun absyn_to_preterm_in_env ginfo t = let
     open parse_term Absyn Parse_support
     val to_ptmInEnv = absyn_to_preterm_in_env ginfo
   in
     case t of
-      APP(_,APP(_,IDENT (_,"gspec special"), t1), t2) =>
-        make_set_abs (to_ptmInEnv t1, to_ptmInEnv t2)
-    | APP(_, t1, t2)     => list_make_comb (map to_ptmInEnv [t1, t2])
-    | IDENT (_, s)       => make_atom ginfo s
-    | QIDENT (_, s1, s2) => make_qconst ginfo (s1,s2)
-    | LAM(_, vs, t)      => bind_term "\\" [binder vs] (to_ptmInEnv t)
-    | TYPED(_, t, pty)   => make_constrained (to_ptmInEnv t) pty
-    | AQ (_, t)          => make_aq t
+      APP(l,APP(_,IDENT (_,"gspec special"), t1), t2) =>
+        make_set_abs l (to_ptmInEnv t1, to_ptmInEnv t2)
+    | APP(l, t1, t2)     => list_make_comb l (map to_ptmInEnv [t1, t2])
+    | IDENT (l, s)       => make_atom ginfo l s
+    | QIDENT (l, s1, s2) => make_qconst ginfo l (s1,s2)
+    | LAM(l, vs, t)      => bind_term l "\\" [binder vs] (to_ptmInEnv t)
+    | TYPED(l, t, pty)   => make_constrained l (to_ptmInEnv t) pty
+    | AQ (l, t)          => make_aq l t
   end
 end;
 

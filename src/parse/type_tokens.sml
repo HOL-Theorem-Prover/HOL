@@ -26,7 +26,7 @@ fun split_and_check fb s locn = let
   fun nadvance n tt =
       if size s = n then ((fn () => advance fb),(tt,locn))
       else let val (locn',locn'') = locn.split_at n locn in
-        ((fn () => replace_current (BT_Ident (String.extract(s, n, NONE)),locn') fb),
+        ((fn () => replace_current (BT_Ident (String.extract(s, n, NONE)),locn'') fb),
          (tt,locn')) end
 in
   if Char.isAlpha s0 then ((fn () => advance fb), (TypeIdent s,locn))
