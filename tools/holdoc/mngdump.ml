@@ -17,7 +17,7 @@ exception BadArg of string
 
 (* non-fatal error condition *)
 let write_warning s =
-  print_string ("\n% WARNING: "^s^".\n");
+  print_string ("% WARNING: "^s^".\n");
   prerr_endline ("WARNING: " ^ s ^ ".")
 
 (* log an unrecognised string *)
