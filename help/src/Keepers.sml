@@ -192,9 +192,5 @@ val keepers =
      "fxpTheory.sig",
  
      (* HolCheck model checker *)
-     "ctlTheory.sig", "muTheory.sig",
-     "muSyntaxTheory.sig", "ctl2muTheory.sig",
-     "cacheTheory.sig", "decompTheory.sig", "envTheory.sig",
-     "ksTheory.sig", "reachTheory.sig", "envTheory.sig",
-     "cearTheory.sig"
+     "holCheck.sig","holCheckLib.sig"
   ];
