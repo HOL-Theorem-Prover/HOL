@@ -247,26 +247,40 @@ fun STP_TAC ss finisher =
 
 fun RW_TAC ss thl = STP_TAC (ss && thl) NO_TAC
 
-val bool_ss = boolSimps.bool_ss;
+val bool_ss = boolSimps.bool_ss; (* needed for signature *)
+val (srw_ss : simpset ref) = ref bool_ss
+val srw_ss_initialised = ref false
+val pending_updates = ref ([]: simpLib.ssdata list)
 
-val (srw_ss : simpset ref) = 
- let val base = bool_ss
-     val tyl = TypeBasePure.listItems (TypeBase.theTypeBase())
- in
-    ref (rev_itlist add_simpls tyl base)
- end;
+fun initialise_srw_ss() =
+    if !srw_ss_initialised then !srw_ss
+    else let
+        val tyl = TypeBasePure.listItems (TypeBase.theTypeBase())
+      in
+        HOL_MESG "Initialising SRW simpset - this will happen just once";
+        srw_ss := rev_itlist add_simpls tyl (!srw_ss);
+        srw_ss :=
+          foldl (fn (ssd,ss) => ss ++ ssd) (!srw_ss) (!pending_updates);
+        srw_ss_initialised := true;
+        !srw_ss
+      end
 
-fun update_fn tyi = srw_ss := (!srw_ss && TypeBasePure.simpls_of tyi)
+
+fun augment_srw_ss ssdl =
+    if !srw_ss_initialised then
+      srw_ss := foldl (fn (ssd,ss) => ss ++ ssd) (!srw_ss) ssdl
+    else
+      pending_updates := !pending_updates @ ssdl
+
+fun update_fn tyi =
+    augment_srw_ss [simpLib.rewrites (TypeBasePure.simpls_of tyi)]
 
 val _ = TypeBase.register_update_fn update_fn
 
-fun get_srw_ss () = !srw_ss
-
-fun augment_srw_ss ssdl =
-    (srw_ss := foldl (fn (ssd,ss) => ss ++ ssd) (!srw_ss) ssdl)
+fun get_srw_ss () = initialise_srw_ss()
 
 fun SRW_TAC ssdl thl = let
-  val ss = foldl (fn (ssd, ss) => ss ++ ssd) (!srw_ss) ssdl
+  val ss = foldl (fn (ssd, ss) => ss ++ ssd) (get_srw_ss()) ssdl
 in
   PRIM_STP_TAC (ss && thl) NO_TAC
 end;
