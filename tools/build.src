@@ -73,8 +73,8 @@ fun map_dir f dir =  (* map a function over the files in a directory *)
   let val dstrm = FileSys.openDir dir
       fun loop() =
         case FileSys.readDir dstrm
-         of ""   => FileSys.closeDir dstrm
-          | file => (f (dir,file) ; loop())
+         of NONE => FileSys.closeDir dstrm
+          | SOME file => (f (dir,file) ; loop())
   in loop()
   end;
 

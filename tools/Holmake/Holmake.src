@@ -586,14 +586,13 @@ exception DirNotFound
 
 (** Dealing with the command-line *)
 fun do_target x = let
-  fun read_files ds P action  = let
-    val nextfile = FileSys.readDir ds
-  in
-    if nextfile = "" then FileSys.closeDir ds
-    else
-      (if P nextfile then action nextfile else ();
-       read_files ds P action)
-  end
+  fun read_files ds P action = 
+     case FileSys.readDir ds
+      of NONE => FileSys.closeDir ds
+       | SOME nextfile => 
+           (if P nextfile then action nextfile else ();
+            read_files ds P action)
+
   fun clean_action () = let
     val cdstream = FileSys.openDir "."
     fun to_delete f =
@@ -639,8 +638,9 @@ end
 fun generate_all_plausible_targets () = let
   fun find_files ds P =
     case FileSys.readDir ds of
-      "" => []
-    | fname => if P fname then fname::find_files ds P else find_files ds P
+      NONE => []
+    | SOME fname => if P fname then fname::find_files ds P 
+                               else find_files ds P
   val cds = FileSys.openDir "."
   fun ok_file f =
     case (toFile f) of
