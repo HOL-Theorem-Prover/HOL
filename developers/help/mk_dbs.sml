@@ -279,6 +279,15 @@ fun buildDb holpath = let
     Path.concat(holpath, Path.concat ("tools",
                                       Path.concat("helpdb", "textdb")))
   val outs = TextIO.openOut destination
+    handle Io{cause,name,function} =>
+      ((raise cause)
+         handle OS.SysErr(s, SOME error) =>
+           (print ("Got error: "^OS.errorMsg error^
+                   "\nfrom call to openOut on "^ name^"\n");
+            Process.exit Process.failure)
+              | _ =>
+           (print ("I/O error opening "^name^"\n");
+            Process.exit Process.failure))
   val _ = print_entrylist outs all_indices
 in
   TextIO.closeOut outs
