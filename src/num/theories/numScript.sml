@@ -20,11 +20,11 @@ val SUC_REP_DEF = new_specification {
 
 val ZERO_REP_EXISTS = prove(
   Term`?z. !y. ~(z = SUC_REP y)`,
-  STRIP_ASSUME_TAC ((CONV_RULE (BINDER_CONV NOT_EXISTS_CONV) o
-                     CONV_RULE NOT_FORALL_CONV o
-                     REWRITE_RULE [ONTO_DEF] o
-                     CONJUNCT2) SUC_REP_DEF) THEN
-  mesonLib.ASM_MESON_TAC []);
+  Q.X_CHOOSE_THEN `zrep` ASSUME_TAC ((CONV_RULE NOT_FORALL_CONV o
+                                      REWRITE_RULE [ONTO_DEF] o
+                                      CONJUNCT2) SUC_REP_DEF) THEN
+  POP_ASSUM (ASSUME_TAC o CONV_RULE NOT_EXISTS_CONV) THEN
+  Q.EXISTS_TAC `zrep` THEN POP_ASSUM ACCEPT_TAC);
 
 (*---------------------------------------------------------------------------
  * `ZERO_REP:ind` represents `0:num`
