@@ -131,14 +131,42 @@ end tm handle HOL_ERR {origin_function = "REWR_CONV", ...} =>
 
 
 val dealwith_nats = let
-  open arithmeticTheory
+  open arithmeticTheory numSyntax
   val rewrites = [GSYM INT_INJ, GSYM INT_LT, GSYM INT_LE,
                   GREATER_DEF, GREATER_EQ, GSYM INT_ADD,
                   GSYM INT_MUL, INT, INT_NUM_COND, INT_NUM_EVEN,
                   INT_NUM_ODD]
+  val p_var = mk_var("p", num)
+  val q_var = mk_var("q", num)
+  fun elim_div_mod0 t = let
+    val divmods =
+        HOLset.listItems (find_free_terms (fn t => is_mod t orelse is_div t) t)
+    fun elim_t to_elim = let
+      val ((num,divisor), thm) = (dest_div to_elim, DIV_P)
+          handle HOL_ERR _ => (dest_mod to_elim, MOD_P)
+      val div_nzero = EQT_ELIM (REDUCE_CONV (mk_less(zero_tm, divisor)))
+      val rwt = MP (Thm.INST [p_var |-> num, q_var |-> divisor] (SPEC_ALL thm))
+                   div_nzero
+    in
+      UNBETA_CONV to_elim THENC REWR_CONV rwt THENC
+      STRIP_QUANT_CONV (RAND_CONV (RAND_CONV BETA_CONV))
+    end
+  in
+    EVERY_CONV (map elim_t divmods) t
+  end
+  fun elim_div_mod t = let
+    fun recurse tm = let
+    in
+      if is_exists tm orelse is_forall tm then BINDER_CONV recurse
+      else
+        elim_div_mod0 THENC SUB_CONV recurse
+    end tm
+  in
+    recurse t
+  end
 in
-  Sub_and_cond.SUB_AND_COND_ELIM_CONV THENC PURE_REWRITE_CONV rewrites THENC
-  eliminate_nat_quants
+  Sub_and_cond.SUB_AND_COND_ELIM_CONV THENC elim_div_mod THENC
+  PURE_REWRITE_CONV rewrites THENC eliminate_nat_quants
 end
 
 (* subterms is a list of subterms all of integer type *)

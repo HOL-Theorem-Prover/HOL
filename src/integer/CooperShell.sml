@@ -664,38 +664,6 @@ in
   | SOME ((th,()),_) => th
 end
 
-fun UNBETA_CONV to_elim t = let
-  (* find all instances of to_elim in t, and convert t
-     to (\v. t[v/to_elim]) to_elim
-     v can be a genvar because we expect to get rid of it later. *)
-  val gv = genvar (type_of to_elim)
-  val newbody = Term.subst [to_elim |-> gv] t
-in
-  SYM (BETA_CONV (mk_comb(mk_abs(gv,newbody), to_elim)))
-end
-
-fun find_free_terms P t = let
-  fun recurse binders acc tm = let
-    val newset =
-        if P tm then let
-            val tm_frees = FVL [tm]
-          in
-            if HOLset.isEmpty (HOLset.intersection(tm_frees, binders)) then
-              HOLset.add(acc, tm)
-            else acc
-          end
-        else acc
-  in
-    case dest_term tm of
-      LAMB(v, body) => recurse (HOLset.add(binders, v)) newset body
-    | COMB(f,x) => recurse binders (recurse binders newset f) x
-    | _ => newset
-  end
-in
-  recurse empty_tmset empty_tmset t
-end
-
-
 val x_var = mk_var("x", int_ty)
 val c_var = mk_var("c", int_ty)
 fun elim_div_mod0 t = let

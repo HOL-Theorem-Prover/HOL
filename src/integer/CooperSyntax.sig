@@ -1,45 +1,58 @@
 signature CooperSyntax = sig
 
   include Abbrev
-  val not_tm  : Term.term
-  val num_ty  : Type.hol_type
-  val true_tm : Term.term
-  val false_tm : Term.term
+  val not_tm  : term
+  val num_ty  : hol_type
+  val true_tm : term
+  val false_tm : term
 
-  val mk_abs_CONV : Term.term -> Term.term -> Thm.thm
-  val cpis_conj : Term.term -> bool
-  val cpis_disj : Term.term -> bool
+  (* these are both basically the same function; given argument t0 they turn
+       t
+     into
+       (\v. t[v/t0]) t0
+     mk_abs_CONV only works if t0 is a var, and is more efficient because
+     it doesn't need to do a substitution (the "v" above can just be t0) *)
+  val mk_abs_CONV : term -> conv
+  val UNBETA_CONV : term -> conv
 
-  val cpstrip_conj : Term.term -> Term.term list
-  val cpstrip_disj : Term.term -> Term.term list
 
-  val cpEVERY_CONJ_CONV : (Term.term -> Thm.thm) -> (Term.term -> Thm.thm)
-  val cpEVERY_DISJ_CONV : (Term.term -> Thm.thm) -> (Term.term -> Thm.thm)
+  val cpis_conj : term -> bool
+  val cpis_disj : term -> bool
 
-  val has_exists : Term.term -> bool
-  val has_forall : Term.term -> bool
-  val has_quant : Term.term -> bool
+  val cpstrip_conj : term -> term list
+  val cpstrip_disj : term -> term list
+
+  val cpEVERY_CONJ_CONV : (term -> Thm.thm) -> (term -> Thm.thm)
+  val cpEVERY_DISJ_CONV : (term -> Thm.thm) -> (term -> Thm.thm)
+
+  val has_exists : term -> bool
+  val has_forall : term -> bool
+  val has_quant : term -> bool
+
+  (* finds sub-terms satisfying given predicate that do not have any of their
+     free variables bound by binders higher in the same term *)
+  val find_free_terms : (term -> bool) -> term -> term HOLset.set
 
   datatype qstatus = EITHER | NEITHER | qsUNIV | qsEXISTS
   datatype term_op = CONJN | DISJN | NEGN
   datatype reltype = rEQ | rDIV | rLT
 
 
-  val goal_qtype : Term.term -> qstatus
-  val bop_characterise : Term.term -> term_op option
+  val goal_qtype : term -> qstatus
+  val bop_characterise : term -> term_op option
   val categorise_leaf : term -> reltype
 
-  val move_quants_up : Term.term -> Thm.thm
-  val flip_forall : Term.term -> Thm.thm
-  val flip_foralls : Term.term -> Thm.thm
+  val move_quants_up : term -> Thm.thm
+  val flip_forall : term -> Thm.thm
+  val flip_foralls : term -> Thm.thm
 
-  val count_vars : Term.term -> (string * int) list
+  val count_vars : term -> (string * int) list
 
-  val move_conj_left : (Term.term -> bool) -> Term.term -> Thm.thm
+  val move_conj_left : (term -> bool) -> term -> Thm.thm
 
-  val mk_constraint : Term.term * Term.term -> Term.term
-  val is_constraint : Term.term -> bool
-  val is_vconstraint : Term.term -> Term.term -> bool
+  val mk_constraint : term * term -> term
+  val is_constraint : term -> bool
+  val is_vconstraint : term -> term -> bool
 
   val MK_CONSTRAINT : conv
   val UNCONSTRAIN : conv
