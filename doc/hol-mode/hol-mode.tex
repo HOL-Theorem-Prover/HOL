@@ -16,11 +16,8 @@ All of these commands are executed by first typing the HOL prefix
   in, so that the most text is visible with the bottom of the text
   at the bottom of the screen.
 \item [C-v ``hol-scroll-up''] Scrolls the HOL window.
-\item [M-v ``hol-scroll-down'']Scrolls the HOL window.
+\item [M-v ``hol-scroll-down''] Scrolls the HOL window.
 \item [b   ``hol-backup''] Backs up one stage in the goalstack.
-\item [d   ``send-region''] Sends the \emph{region} to the HOL
-  process, where it is evaluated at the top level.  Can be used both
-  to define new ML bindings, and to evaluate existing ones.
 \item [e ``expand-hol-tactic''] Sends the region to the HOL process as
   a tactic, where it is applied to the current goal.
 \item [g ``hol-goal''] Sets the current goal.  With a \emph{prefix
@@ -36,8 +33,12 @@ All of these commands are executed by first typing the HOL prefix
   out of the way will still need to be proved eventually.  With a
   numeric \emph{prefix argument} rotates that many out of the way,
   instead of just one.
+\item [R ``hol-restart''] Restarts the current proof.
+\item [M-r   ``send-region''] Sends the \emph{region} to the HOL
+  process, where it is evaluated at the top level.  Can be used both
+  to define new ML bindings, and to evaluate existing ones.
 \item [s ``send-string-to-hol''] Prompts for a string to be evaluated
-  by SML, like ``d''.
+  by SML, like ``M-r''.
 \item [u ``hol-use-file''] Prompts for a file-name to be \emph{use}-d
   at the top level.
 
