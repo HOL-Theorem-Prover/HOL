@@ -489,11 +489,12 @@ fun pp_term (G : grammar) TyG = let
             | _ => false
           val lprec = if addparens then Top else lgrav
           val prec = Prec(fprec, fname)
+          val real_args = args @ [Rand]
         in
           begin_block INCONSISTENT 2; pbegin addparens;
-          pr_term (hd args) lprec prec (depth - 1);
+          pr_term (hd real_args) lprec prec (depth - 1);
           add_break(1, 0);
-          recurse_els (elements, tl args @ [Rand]);
+          recurse_els (elements, tl real_args);
           pend addparens; end_block()
         end
       | SUFFIX TYPE_annotation =>
