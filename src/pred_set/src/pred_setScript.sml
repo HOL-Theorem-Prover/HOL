@@ -3193,6 +3193,15 @@ val COMMUTING_ITSET_RECURSES = store_thm(
     ASM_SIMP_TAC bool_ss [COMMUTING_ITSET_INSERT, delete_non_element]
   ]);
 
+(* ----------------------------------------------------------------------
+    SUM_IMAGE
+
+    This constant is the same as standard mathematics \Sigma operator:
+
+     \Sigma_{x\in P}{f(x)} = SUM_IMAGE f P
+
+    Where f's range is the natural numbers and P is finite.
+   ---------------------------------------------------------------------- *)
 
 val SUM_IMAGE_DEF = new_definition(
   "SUM_IMAGE_DEF",
@@ -3311,6 +3320,32 @@ val SUM_IMAGE_UNION = store_thm(
     ASM_SIMP_TAC arith_ss []
   ]);
 
+val SUM_IMAGE_lower_bound = store_thm(
+  "SUM_IMAGE_lower_bound",
+  ``!s. FINITE s ==>
+        !n. (!x. x IN s ==> n <= f x) ==>
+            CARD s * n <= SUM_IMAGE f s``,
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN
+  SRW_TAC [][DISJ_IMP_THM, FORALL_AND_THM, SUM_IMAGE_THM,
+             MULT_CLAUSES, CARD_EMPTY, CARD_INSERT] THEN
+  `s DELETE e = s` by (SRW_TAC [][EXTENSION, IN_DELETE] THEN PROVE_TAC []) THEN
+  SRW_TAC [][] THEN
+  PROVE_TAC [LESS_EQ_LESS_EQ_MONO, ADD_COMM]);
+
+val SUM_IMAGE_upper_bound = store_thm(
+  "SUM_IMAGE_upper_bound",
+  ``!s. FINITE s ==>
+        !n. (!x. x IN s ==> f x <= n) ==>
+            SUM_IMAGE f s <= CARD s * n``,
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN
+  SRW_TAC [][DISJ_IMP_THM, FORALL_AND_THM, SUM_IMAGE_THM,
+             MULT_CLAUSES, CARD_EMPTY, CARD_INSERT] THEN
+  `s DELETE e = s` by (SRW_TAC [][EXTENSION, IN_DELETE] THEN PROVE_TAC []) THEN
+  SRW_TAC [][] THEN
+  PROVE_TAC [LESS_EQ_LESS_EQ_MONO, ADD_COMM]);
+
+(* SUM_SET sums the elements of a set of natural numbers *)
+
 val SUM_SET_DEF = new_definition("SUM_SET_DEF", ``SUM_SET = SUM_IMAGE I``);
 
 val SUM_SET_THM = store_thm(
@@ -3347,6 +3382,8 @@ val SUM_SET_UNION = store_thm(
           (SUM_SET (s UNION t) =
              SUM_SET s + SUM_SET t - SUM_SET (s INTER t))``,
   SRW_TAC [][SUM_SET_DEF, SUM_IMAGE_UNION]);
+
+(* every finite, non-empty set of natural numbers has a maximum element *)
 
 val max_lemma = prove(
   ``!s. FINITE s ==> ~(s = {}) ==> ?x. x IN s /\ !y. y IN s ==> y <= x``,
@@ -3461,15 +3498,22 @@ val GSPEC_EQ = store_thm(
   ``{ x | x = y} = {y}``,
   SRW_TAC [][EXTENSION] THEN sspec_tac THEN REWRITE_TAC []);
 
-val _ = export_rewrites ["GSPEC_F", "GSPEC_T", "GSPEC_ID", "GSPEC_EQ"]
+val GSPEC_EQ2 = store_thm(
+  "GSPEC_EQ2",
+  ``{ x | y = x} = {y}``,
+  SRW_TAC [][EXTENSION] THEN sspec_tac THEN EQ_TAC THEN STRIP_TAC THEN
+  ASM_REWRITE_TAC []);
+
+val _ = export_rewrites ["GSPEC_F", "GSPEC_T", "GSPEC_ID", "GSPEC_EQ",
+                         "GSPEC_EQ2"]
 
 (* Following rewrites are useful, but probably not suitable for
    automatic application.  Sadly even those above fail in the presence
    of more complicated GSPEC expressions, such as { (x,y) | F }.
 
-   We could cope with the above by using the conditional rewrites below,
-   but again, these are probably not suitable for automatic inclusion in
-   rewrite sets *)
+   We could cope with that particular example using the conditional
+   rewrite below, but again, this is probably not suitable for
+   automatic inclusion in rewrite sets *)
 
 val GSPEC_F_COND = store_thm(
   "GSPEC_F_COND",
