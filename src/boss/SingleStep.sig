@@ -16,4 +16,8 @@ sig
   val by                : term quotation * tactic -> tactic  (* infix *)
   val on                : (thm -> tactic) * (term quotation * tactic) -> tactic
                           (* infix *)
+
+  val PURE_CASE_TAC     : tactic      (* An intelligent case split *)
+  val CASE_TAC          : tactic      (* PURE_CASE_TAC THEN simplification *)
+
 end

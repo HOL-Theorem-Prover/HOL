@@ -122,4 +122,6 @@ val SPOSE_NOT_THEN    = SingleStep.SPOSE_NOT_THEN
 
 val op by             = SingleStep.by; (* infix 8 by *)
 
+val CASE_TAC          = SingleStep.CASE_TAC;
+
 end

@@ -355,5 +355,52 @@ fun ((ttac:thm->tactic) on (q:term frag list, tac:tactic)) : tactic =
     (SUBGOAL_THEN tm ttac THEN1 tac) g
   end)
 
+(*---------------------------------------------------------------------------
+    A special-purpose case-splitting tactic.
+ ---------------------------------------------------------------------------*)
+
+fun exists_p [] _ = false
+  | exists_p (p :: ps) x = p x orelse exists_p ps x;
+
+fun strip_dom_rng ty =
+  (case total dom_rng ty of NONE => ([], ty)
+   | SOME (d, r) => (cons d ## I) (strip_dom_rng r));
+
+local
+  fun rator_n 0 f tm = f tm
+    | rator_n n f tm = is_comb tm andalso rator_n (n - 1) f (rator tm);
+
+  fun case_p c =
+    let val (doms, _) = strip_dom_rng (type_of c)
+    in rator_n (length doms) (same_const c)
+    end;
+
+  val cases_p =
+    exists_p o map (case_p o TypeBasePure.case_const_of) o
+    TypeBasePure.listItems o TypeBase.theTypeBase;
+
+  fun free_cases tm =
+    let val cp = cases_p ()
+    in fn t => is_comb t andalso cp t andalso free_in t tm
+    end;
+
+  fun find_free_case tm = rand (find_term (free_cases tm) tm);
+
+  fun case_rws tyi =
+    List.mapPartial I
+    [SOME (TypeBasePure.case_def_of tyi),
+     TypeBasePure.distinct_of tyi,
+     TypeBasePure.one_one_of tyi];
+
+  val all_case_rws =
+    flatten o map case_rws o TypeBasePure.listItems o TypeBase.theTypeBase;
+in
+  fun PURE_CASE_TAC g =
+    let val t = find_free_case (snd g) in Cases_on `^t` g end;
+
+  fun CASE_TAC g =
+    (PURE_CASE_TAC THEN
+     simpLib.SIMP_TAC boolSimps.bool_ss (all_case_rws ())) g;
+end;
 
 end;
