@@ -110,6 +110,13 @@ val UNION_APPEND = Q.store_thm
    THEN RW_TAC bool_ss [LIST_TO_SET_THM,UNION_EMPTY,listTheory.APPEND]
    THEN PROVE_TAC [INSERT_UNION_EQ]);
 
+(* I think this version is the more likely rewrite *)
+val LIST_TO_SET_APPEND = store_thm(
+  "LIST_TO_SET_APPEND",
+  ``!l1 l2. LIST_TO_SET (APPEND l1 l2) = LIST_TO_SET l1 UNION LIST_TO_SET l2``,
+  REWRITE_TAC [UNION_APPEND]);
+val _ = export_rewrites ["LIST_TO_SET_APPEND"]
+
 val FINITE_LIST_TO_SET = store_thm(
   "FINITE_LIST_TO_SET",
   ``!l. FINITE (LIST_TO_SET l)``,
