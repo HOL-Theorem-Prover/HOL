@@ -1,10 +1,23 @@
+(*---------------------------------------------------------------------------
+          Theory of list permutations
+ ---------------------------------------------------------------------------*)
 structure permScript =
 struct
 
+(* interactive use:
+app load ["listTheory", "BasicProvers", "TotalDefn", "SingleStep",
+          "listSimps", "arithSimps"];
+open listTheory BasicProvers TotalDefn SingleStep;
+*)
 
-open HolKernel basicHol90Lib listTheory listXTheory bossLib;
+open HolKernel basicHol90Lib Parse listTheory 
+     BasicProvers TotalDefn SingleStep;
+
 infix THEN THENL |-> ;
 infix 8 by;
+
+val list_ss = 
+  simpLib.++(simpLib.++(bool_ss,listSimps.list_ss), arithSimps.ARITH_ss);
 
 val _ = new_theory"perm";
 
@@ -15,124 +28,126 @@ val _ = new_theory"perm";
  * as an inductive definition, or as a particular kind of function.          *
  *---------------------------------------------------------------------------*)
 
-val perm_def = Define
-  `perm L1 L2 = !x. filter ($= x) L1 = filter ($= x) L2`;
+val PERM_def = Define `PERM L1 L2 = !x. FILTER ($= x) L1 = FILTER ($= x) L2`;
 
 
-val perm_refl = Q.store_thm
-("perm_refl",
-    `!L. perm L L`,
-    PROVE_TAC[perm_def]);
+val PERM_refl = Q.store_thm
+("PERM_refl",
+    `!L. PERM L L`,
+    PROVE_TAC[PERM_def]);
 
 
-val perm_intro = Q.store_thm
-("perm_intro",
-    `!x y. (x=y) ==> perm x y`,
-    PROVE_TAC[perm_refl]);
+val PERM_intro = Q.store_thm
+("PERM_intro",
+    `!x y. (x=y) ==> PERM x y`,
+    PROVE_TAC[PERM_refl]);
 
 
-val perm_trans =  
+val PERM_trans =  
 Q.store_thm
-("perm_trans",
-  `transitive perm`,
- RW_TAC list_ss [TCTheory.transitive_def] 
-  THEN PROVE_TAC[perm_def]);
+("PERM_trans",
+  `transitive PERM`,
+ RW_TAC list_ss [relationTheory.transitive_def] 
+  THEN PROVE_TAC[PERM_def]);
 
 
-val trans_permute = save_thm
-("trans_permute",
- REWRITE_RULE [TCTheory.transitive_def] perm_trans);
+val PERM_trans1 = save_thm
+("PERM_trans1",
+ REWRITE_RULE [relationTheory.transitive_def] PERM_trans);
 
 
-val perm_sym = 
+val PERM_sym = 
 Q.store_thm
-("perm_sym",
-  `!l1 l2. perm l1 l2 = perm l2 l1`,
-PROVE_TAC [perm_def]);
+("PERM_sym",
+  `!l1 l2. PERM l1 l2 = PERM l2 l1`,
+PROVE_TAC [PERM_def]);
 
+val FILTER_APPEND_distrib = Q.prove(
+`!P L M. FILTER P (APPEND L M) = APPEND (FILTER P L) (FILTER P M)`,
+Induct_on `L` THEN RW_TAC list_ss [FILTER]);
 
-val perm_cong = 
+val PERM_cong = 
 Q.store_thm
-("perm_cong",
+("PERM_cong",
 `!(L1:'a list) L2 L3 L4. 
-     perm L1 L3 /\ 
-     perm L2 L4
-     ==> perm (APPEND L1 L2) (APPEND L3 L4)`,
-PROVE_TAC [perm_def,filter_append_distrib]);
+     PERM L1 L3 /\ 
+     PERM L2 L4
+     ==> PERM (APPEND L1 L2) (APPEND L3 L4)`,
+PROVE_TAC [PERM_def,FILTER_APPEND_distrib]);
 
-val cons_append = PROVE [APPEND] `!L h. CONS h L = APPEND [h] L`;
+val CONS_APPEND = PROVE [APPEND] (Term`!L h. h::L = APPEND [h] L`);
 
-val perm_mono = 
+val PERM_mono = 
 Q.store_thm
-("perm_mono",
-`!l1 l2 x. perm l1 l2 ==> perm (CONS x l1) (CONS x l2)`,
-PROVE_TAC [cons_append,perm_cong, perm_refl]);
+("PERM_mono",
+`!l1 l2 x. PERM l1 l2 ==> PERM (x::l1) (x::l2)`,
+PROVE_TAC [CONS_APPEND,PERM_cong, PERM_refl]);
 
 
-val perm_cons_iff = 
+val PERM_CONS_iff = 
 let val lem = 
-Q.prove`perm (CONS x l1) (CONS x l2) ==> perm l1 l2`
-(RW_TAC list_ss [perm_def,filter_def]
+Q.prove(`PERM (x::l1) (x::l2) ==> PERM l1 l2`,
+RW_TAC list_ss [PERM_def,FILTER]
    THEN POP_ASSUM (MP_TAC o Q.SPEC`x'`)
    THEN RW_TAC list_ss [])
 in 
-  save_thm ("perm_cons_iff",
-            GEN_ALL(IMP_ANTISYM_RULE lem (SPEC_ALL perm_mono)))
+  save_thm ("PERM_CONS_iff",
+            GEN_ALL(IMP_ANTISYM_RULE lem (SPEC_ALL PERM_mono)))
 end;
 
-val perm_nil = 
+val PERM_nil = 
 Q.store_thm
-("perm_nil",
- `!L. (perm L [] = (L=[])) /\ 
-      (perm [] L = (L=[]))`,
-Cases THEN RW_TAC list_ss [perm_def,filter_def]
+("PERM_nil",
+ `!L. (PERM L [] = (L=[])) /\ 
+      (PERM [] L = (L=[]))`,
+Cases THEN RW_TAC list_ss [PERM_def,FILTER]
  THEN Q.EXISTS_TAC `h`
  THEN RW_TAC list_ss []);
 
 
-val lem = Q.prove
- `!h l1 l2. APPEND (filter ($=h) l1) (CONS h l2)
-            = CONS h (APPEND (filter ($=h) l1) l2)`
-(Induct_on `l1` 
-   THEN RW_TAC list_ss [filter_def] 
+val lem = Q.prove(
+ `!h l1 l2. APPEND (FILTER ($=h) l1) (h::l2)
+            = h::APPEND (FILTER ($=h) l1) l2`,
+Induct_on `l1` 
+   THEN RW_TAC list_ss [FILTER] 
    THEN PROVE_TAC[]);
 
 
-val perm_append = 
+val PERM_APPEND = 
 Q.store_thm
-("perm_append",
- `!l1 l2. perm (APPEND l1 l2) (APPEND l2 l1)`,
-RW_TAC list_ss [perm_def,filter_append_distrib]
+("PERM_APPEND",
+ `!l1 l2. PERM (APPEND l1 l2) (APPEND l2 l1)`,
+RW_TAC list_ss [PERM_def,FILTER_APPEND_distrib]
   THEN Induct_on `l1` 
-  THEN RW_TAC list_ss [filter_def,lem]
+  THEN RW_TAC list_ss [FILTER,lem]
   THEN PROVE_TAC[]);;
 
 
-val cons_perm = 
+val CONS_PERM = 
 Q.store_thm
-("cons_perm",
-`!x L M N. perm L (APPEND M N) 
+("CONS_PERM",
+`!x L M N. PERM L (APPEND M N) 
             ==> 
-          perm (CONS x L) (APPEND M (CONS x N))`,
+          PERM (x::L) (APPEND M (x::N))`,
 RW_TAC bool_ss []
- THEN MATCH_MP_TAC trans_permute
- THEN PROVE_TAC [perm_mono, perm_append, APPEND, trans_permute]);
+ THEN MATCH_MP_TAC PERM_trans1
+ THEN PROVE_TAC [PERM_mono, PERM_APPEND, APPEND, PERM_trans1]);
 
 
-val append_perm_sym = 
+val APPEND_PERM_sym = 
 Q.store_thm
-("append_perm_sym",
-`!A B C. perm (APPEND A B) C ==> perm (APPEND B A) C`,
-PROVE_TAC [trans_permute, perm_append]);
+("APPEND_PERM_sym",
+`!A B C. PERM (APPEND A B) C ==> PERM (APPEND B A) C`,
+PROVE_TAC [PERM_trans1, PERM_APPEND]);
 
-val perm_split = 
+val PERM_split = 
 Q.store_thm
-("perm_split",
-`!P l. perm l (APPEND (filter P l) (filter (~ o P) l))`,
+("PERM_split",
+`!P l. PERM l (APPEND (FILTER P l) (FILTER ($~ o P) l))`,
 RW_TAC bool_ss [combinTheory.o_DEF]
  THEN Induct_on `l`
- THEN RW_TAC list_ss [filter_def,perm_refl] 
- THEN PROVE_TAC [APPEND,perm_mono,cons_perm]);
+ THEN RW_TAC list_ss [FILTER,PERM_refl] 
+ THEN PROVE_TAC [APPEND,PERM_mono,CONS_PERM]);
 
 
 (*---------------------------------------------------------------------------
@@ -140,32 +155,37 @@ RW_TAC bool_ss [combinTheory.o_DEF]
     are permutations of each other.
  *---------------------------------------------------------------------------*)
 
-val perm_sort_step = Q.prove
-`!l h t. perm (CONS h t) l ==> ?rst. CONS h rst = filter ($=h) l`
-(RW_TAC list_ss [perm_def,filter_def] 
+val PERM_sort_step = Q.prove
+(`!l h t. PERM (h::t) l ==> ?rst. h::rst = FILTER ($=h) l`,
+RW_TAC list_ss [PERM_def,FILTER] 
   THEN POP_ASSUM (MP_TAC o Q.SPEC`h`)
   THEN RW_TAC bool_ss []
   THEN PROVE_TAC[]);
 
 
-val perm_step = Q.prove
-`!l h t. perm (CONS h t) l 
-          ==> ?u. perm l (CONS h u) /\ 
-                  (LENGTH l = LENGTH (CONS h u))`
-(RW_TAC bool_ss []
-  THEN IMP_RES_TAC perm_sort_step
-  THEN Q.EXISTS_TAC `APPEND rst (filter ($~ o $= h) l)`
-  THEN PROVE_TAC [APPEND, length_append_filter,perm_split]);
-
-
-val perm_length = Q.store_thm("perm_length",
-`!l1 l2. perm l1 l2 ==> (LENGTH l1 = LENGTH l2)`,
+val LENGTH_APPEND_FILTER = Q.prove
+(`!L. LENGTH L = LENGTH (APPEND (FILTER P L) (FILTER ($~ o P) L))`,
 Induct 
-  THEN RW_TAC list_ss [perm_nil]
-  THEN IMP_RES_TAC perm_step
-  THEN `perm l1 u` by PROVE_TAC [trans_permute,perm_cons_iff]
-  THEN RW_TAC list_ss []);
+ THEN RW_TAC list_ss [FILTER, combinTheory.o_DEF] 
+ THEN PROVE_TAC []);
 
+val PERM_step = Q.prove
+(`!l h t. PERM (h::t) l 
+            ==> 
+          ?u. PERM l (h::u) /\ (LENGTH l = LENGTH (h::u))`,
+RW_TAC bool_ss []
+  THEN IMP_RES_TAC PERM_sort_step
+  THEN Q.EXISTS_TAC `APPEND rst (FILTER ($~ o $= h) l)`
+  THEN PROVE_TAC [APPEND, LENGTH_APPEND_FILTER,PERM_split]);
+
+
+val PERM_LENGTH = Q.store_thm("PERM_LENGTH",
+`!l1 l2. PERM l1 l2 ==> (LENGTH l1 = LENGTH l2)`,
+Induct 
+  THEN RW_TAC list_ss [PERM_nil]
+  THEN IMP_RES_TAC PERM_step
+  THEN `PERM l1 u` by PROVE_TAC [PERM_trans1,PERM_CONS_iff]
+  THEN RW_TAC list_ss []);
 
 val _ = export_theory();
 

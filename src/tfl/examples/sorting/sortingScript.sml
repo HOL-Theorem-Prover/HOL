@@ -5,16 +5,31 @@
 structure sortingScript =
 struct
 
-open HolKernel basicHol90Lib bossLib;
-infix THEN THENL |->;
+(* interactive use:
+app load ["permTheory", "BasicProvers", "TotalDefn", "SingleStep", 
+          "listSimps", "arithSimps", "pairSimps", "Q"];
+open permTheory listTheory BasicProvers TotalDefn SingleStep;
+*)
+
+open HolKernel Parse basicHol90Lib
+     permTheory listTheory BasicProvers TotalDefn SingleStep;
+
+infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
+infixr 3 -->;
 infix 8 by;
 
-local open permTheory QLib in end;
+val list_ss = 
+ let val ++ = simpLib.++ infix ++
+ in bool_ss ++ listSimps.list_ss ++ arithSimps.ARITH_ss ++ pairSimps.PAIR_ss
+ end;
+
+val MEM_APPEND_DISJ = Q.prove
+(`!x l1 l2. MEM x (APPEND l1 l2) = MEM x l1 \/ MEM x l2`,
+Induct_on `l1` THEN RW_TAC list_ss [APPEND,MEM] THEN PROVE_TAC[]);
+
 
 val _ = new_theory"sorting";
 
-val mem_def        = listXTheory.mem_def;
-val transitive_def = TCTheory.transitive_def;
 
 (*---------------------------------------------------------------------------*
  * The idea of sortedness requires a "permutation" relation for lists, and   *
@@ -22,54 +37,47 @@ val transitive_def = TCTheory.transitive_def;
  * all adjacent elements of the list.                                        *
  *---------------------------------------------------------------------------*)
 
-val sorted_def = 
+val SORTED_def = 
  Define
-    `(sorted R  [] = T) /\
-     (sorted R [x] = T) /\   
-     (sorted R (CONS x (CONS y rst)) = R x y /\ sorted R (CONS y rst))`;
+    `(SORTED R  [] = T)
+ /\  (SORTED R [x] = T)
+ /\  (SORTED R (x::y::rst) = R x y /\ SORTED R (y::rst))`;
 
 
 val performs_sorting_def = 
  Define
-    `performs_sorting f R = !l. perm l (f R l) /\ sorted R (f R l)`;
+    `performs_sorting f R = !l. PERM l (f R l) /\ SORTED R (f R l)`;
 
-
-(*---------------------------------------------------------------------------*
- *                    THEOREMS ABOUT SORTEDNESS                              *
- *---------------------------------------------------------------------------*)
-
-val sorted_eqns      = save_thm("sorted_eqns", CONJUNCT1 sorted_def);
-val sorted_induction = save_thm("sorted_induction", CONJUNCT2 sorted_def);
 
 (*---------------------------------------------------------------------------*
  *    When consing onto a sorted list yields a sorted list                   *
  *---------------------------------------------------------------------------*)
 
-val sorted_eq = Q.store_thm("sorted_eq",
+val SORTED_eq = Q.store_thm("SORTED_eq",
 `!R L x. transitive R
-         ==> (sorted R (CONS x L) = sorted R L /\ !y. mem y L ==> R x y)`,
+         ==> (SORTED R (x::L) = SORTED R L /\ !y. MEM y L ==> R x y)`,
 Induct_on `L`
- THEN RW_TAC list_ss [sorted_eqns,mem_def] 
- THEN PROVE_TAC [transitive_def]);
+ THEN RW_TAC list_ss [SORTED_def,MEM] 
+ THEN PROVE_TAC [relationTheory.transitive_def]);
 
 
 (*---------------------------------------------------------------------------*
  *       When appending sorted lists gives a sorted list.                    *
  *---------------------------------------------------------------------------*)
 
-val sorted_append = Q.store_thm("sorted_append",
+val SORTED_APPEND = Q.store_thm("SORTED_APPEND",
 `!R L1 L2. 
      transitive R 
- /\  sorted R L1
- /\  sorted R L2
- /\ (!x y. mem x L1 /\ mem y L2 ==> R x y)
+ /\  SORTED R L1
+ /\  SORTED R L2
+ /\ (!x y. MEM x L1 /\ MEM y L2 ==> R x y)
   ==> 
-    sorted R (APPEND L1 L2)`,
+    SORTED R (APPEND L1 L2)`,
 Induct_on `L1`
- THEN RW_TAC list_ss [mem_def] 
- THEN `sorted R L1 /\ !y. mem y L1 ==> R h y` by PROVE_TAC [sorted_eq]
- THEN RW_TAC bool_ss [sorted_eq] 
- THEN `mem y L1 \/ mem y L2` by PROVE_TAC [listXTheory.mem_of_append]
+ THEN RW_TAC list_ss [MEM] 
+ THEN `SORTED R L1 /\ !y. MEM y L1 ==> R h y` by PROVE_TAC [SORTED_eq]
+ THEN RW_TAC bool_ss [SORTED_eq] 
+ THEN `MEM y L1 \/ MEM y L2` by PROVE_TAC [MEM_APPEND_DISJ]
  THEN PROVE_TAC []);
 
 

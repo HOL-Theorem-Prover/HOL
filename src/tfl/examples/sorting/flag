@@ -1,45 +1,20 @@
-(*----------------------------------------------------------------------------*
- *                                                                            *
- *       The Dutch National Flag - Term Rewriting Emulation                   *
- *                                                                            *
- *                                                                            *
- *         ML version                                                         *
- *      ----------------                                                      *
- *                                                                            *
- *   datatype colour = R | W | B;                                             *
- *                                                                            *
- *   val cons = curry (op ::);                                                *
- *   infix 3 ##;                                                              *
- *   fun (f##g) (x,y) = (f x, g y);                                           *
- *                                                                            *
- *   fun dnf []          = ([],false)                                         *
- *     | dnf (W::R::rst) = (R::W::rst, true)                                  *
- *     | dnf (B::R::rst) = (R::B::rst, true)                                  *
- *     | dnf (B::W::rst) = (W::B::rst, true)                                  *
- *     | dnf (x::rst)    = (cons x##I)(dnf rst);                              *
- *                                                                            *
- *  fun flag L = let val (alist,changed) = dnf L                              *
- *               in if changed then flag alist else alist                     *
- *               end;                                                         *
- *                                                                            *
- *  flag [R,W,W,B,R,W,W,R,B,B];                                               *
+(*---------------------------------------------------------------------------*
+ *                                                                           *
+ *       The Dutch National Flag - Term Rewriting Emulation                  *
+ *                                                                           *
  *---------------------------------------------------------------------------*)
+
 
 (*---------------------------------------------------------------------------*
  * Load and open useful libraries and theories.                              *
  *---------------------------------------------------------------------------*)
 
-app load ["bossLib", "tflLib", "permTheory", "QLib"]; 
-open bossLib tflLib; 
-infix &&; infix 8 by;
-open combinTheory listTheory listXTheory permTheory;
+app load ["bossLib", "permTheory", "Q"]; 
+open bossLib;
 
-(*---------------------------------------------------------------------------*
- * Set up an inference counter.                                              *
- *---------------------------------------------------------------------------*)
+infix 8 by;
 
-val meter = Count.mk_meter();
-
+open listTheory permTheory;
 
 (*---------------------------------------------------------------------------*
  * Define Red, White, and Blue to be the colours.                            *
@@ -49,273 +24,199 @@ Hol_datatype `colour = R | W | B`;
 
 
 (*---------------------------------------------------------------------------*
- * Define a standard combinator for functions and pairs.                     *
+ * Define the swapping function.                                             *
  *---------------------------------------------------------------------------*)
-val fpair_def =
+
+val Swap_def =
  Define 
-    `## (f:'a->'b) (g:'c->'d) (x,y) = (f x, g y)`;
- 
-  set_MLname "##_def" "fpair_def"; 
-  set_fixity "##" (Infix 400);
+   `(Swap  []         = NONE) 
+ /\ (Swap (W::R::rst) = SOME(R::W::rst))
+ /\ (Swap (B::R::rst) = SOME(R::B::rst))
+ /\ (Swap (B::W::rst) = SOME(W::B::rst))
+ /\ (Swap (x::rst)    = option_APPLY (CONS x) (Swap rst))`;
+
+val Swap_def' = 
+  let val Swap_NIL = CONJUNCT1 Swap_def
+  in 
+    CONJ Swap_NIL 
+     (REWRITE_RULE [Swap_NIL,optionTheory.option_APPLY_DEF] 
+             (CONJUNCT2 Swap_def))
+  end;
+
+val Swap_ind_thm = Q.prove
+(`!P. P [] /\ P [B] /\ P [W] /\
+      (!rst. P (W::R::rst))   /\ 
+      (!rst. P (B::R::rst))   /\
+      (!rst. P (B::W::rst)) /\ (!v7. P (B::v7) ==> P (B::B::v7)) /\
+      (!v3. P (B::v3) ==> P (W::B::v3)) /\
+      (!v3. P (W::v3) ==> P (W::W::v3)) /\ 
+      (!rst. P rst ==> P (R::rst)) 
+    ==>
+        !v. P v`,
+GEN_TAC THEN DISCH_TAC 
+ THEN MATCH_MP_TAC (theorem "Swap_ind")
+ THEN RW_TAC std_ss []);
 
 
 (*---------------------------------------------------------------------------*
- * Define the swap function.                                                 *
+ * Define the Flag function. Note that eta-expansion "\l. Flag l" needed.    *
+ *                                                                           *
+ * ML equivalent: fun Flag l = case Swap list                                *
+ *                              of NONE    => l                              *
+ *                               | SOME l' => Flag l'                        *
  *---------------------------------------------------------------------------*)
-val Dnf_def0 = 
- Define 
-    `(Dnf [] = ([], F))
- /\  (Dnf (CONS W (CONS R rst)) = (CONS R (CONS W rst), T))
- /\  (Dnf (CONS B (CONS R rst)) = (CONS R (CONS B rst), T))
- /\  (Dnf (CONS B (CONS W rst)) = (CONS W (CONS B rst), T))
- /\  (Dnf (CONS x rst)          = (CONS x##I) (Dnf rst))`;
 
-val Dnf_def = CONJUNCT1 Dnf_def0
-and Dnf_ind = CONJUNCT2 Dnf_def0;
+val Flag_defn = 
+ Defn.Hol_defn "Flag" 
+               `Flag list = option_case list (\l. Flag l) (Swap list)`;
 
 
 (*---------------------------------------------------------------------------*
- * Define the flag function.                                                 *
+ * Termination (measure function courtesy of jrh).                           *
  *---------------------------------------------------------------------------*)
 
-val flag_def = 
-Define 
- `flag l0 = let (l1, changed) = Dnf l0
-              in 
-                changed => flag l1 | l1`;
-
-(*---------------------------------------------------------------------------*
- * Get nice-looking equations and induction thm for Dnf.                     *
- *---------------------------------------------------------------------------*)
-
-val Dnf_eqns = save_thm("Dnf",
-   let val [dnf_nil,a,b,c,d,e,f,g,h,i] = CONJUNCTS Dnf_def
-       val simpl = REWRITE_RULE [dnf_nil,fpair_def,I_THM]
-   in 
-      LIST_CONJ [dnf_nil, simpl e, simpl h, a,b,c,d,f,g,i]
-   end);
-
-val Dnf_induction = save_thm("Dnf_induction",
-let val taut = Q.TAUT_CONV
-        `^(#ant(dest_imp(#Body(dest_forall((concl Dnf_ind)))))) = 
-         P [] /\
-         P [B] /\
-         P [W] /\
-         (!rst. P (CONS W (CONS R rst))) /\
-         (!rst. P (CONS B (CONS R rst))) /\
-         (!rst. P (CONS B (CONS W rst))) /\
-         (!rst. P (CONS B rst) ==> P (CONS B (CONS B rst))) /\
-         (!rst. P (CONS B rst) ==> P (CONS W (CONS B rst))) /\
-         (!rst. P (CONS W rst) ==> P (CONS W (CONS W rst))) /\
-         (!rst. P rst ==> P (CONS R rst))`
- in 
-    REWRITE_RULE[taut] Dnf_ind
- end);
+val Weight_def =
+ Define
+     `(Weight (R::rst) = 3 + 2*Weight rst) 
+  /\  (Weight (W::rst) = 2 + 2*Weight rst)
+  /\  (Weight (B::rst) = 1 + 2*Weight rst)
+  /\  (Weight []       = 0)`;
 
 
-(*---------------------------------------------------------------------------*
- * Termination measure function (suggestion of jrh). Earlier I was counting  *
- * the total number of swaps that take place. This way seems MUCH simpler.   *
- *---------------------------------------------------------------------------*)
+val option_APPLY_lem1 = Q.prove
+(`!f opt x. (option_APPLY f opt = SOME x) ==> ?y. opt = SOME y`,
+Cases_on `opt` THEN RW_TAC std_ss []);
 
-val Weight_def = CONJUNCT1
-  (Define
-     `(Weight (CONS R rst) = 3 + 2*Weight rst) /\
-      (Weight (CONS W rst) = 2 + 2*Weight rst) /\
-      (Weight (CONS B rst) = 1 + 2*Weight rst) /\
-      (Weight []           = 0)`);
+val option_APPLY_lem2 = Q.prove
+(`!f opt x. (option_APPLY f opt = NONE) ==> (opt = NONE)`,
+Cases_on `opt` THEN RW_TAC std_ss []);
+
+
+val option_APPLY_eq_SOME_TAC =
+     IMP_RES_THEN (CHOOSE_THEN SUBST_ALL_TAC) option_APPLY_lem1
+        THEN Q.PAT_ASSUM `M = N` MP_TAC 
+        THEN RW_TAC std_ss [];
+
+
+val (Flag_eqns,Flag_ind) = 
+Defn.tprove
+(Flag_defn,
+ WF_REL_TAC Flag_defn `measure Weight`
+  THEN recInduct Swap_ind_thm
+  THEN RW_TAC std_ss [Swap_def',Weight_def] 
+  THENL [ALL_TAC,ALL_TAC,ALL_TAC,
+         option_APPLY_eq_SOME_TAC,option_APPLY_eq_SOME_TAC,
+         option_APPLY_eq_SOME_TAC,option_APPLY_eq_SOME_TAC]
+   THEN RW_TAC arith_ss [Weight_def]);
+
+val _ = save_thm("Flag_eqns", Flag_eqns);
+val _ = save_thm("Flag_ind", Flag_ind);
 
 (*---------------------------------------------------------------------------*
  * Some miscellaneous stuff used in later proofs.	                     *
  *---------------------------------------------------------------------------*)
 
-val func_to_prod_lem = Q.prove
-`!(x:'a) (y:'b) (z:'a#'b). 
-   ((x,y) = (f##g) z) ==> ?p0 p1. ((p0,p1) = z) /\ (x = f p0) /\ (y = g p1)`
-(Cases_on `z` THEN RW_TAC bool_ss [fpair_def]);
+val MEM_FILTER = Q.prove
+(`!P L x. MEM x (FILTER P L) = P x /\ MEM x L`,
+Induct_on `L`  
+ THEN RW_TAC list_ss [MEM,FILTER] 
+ THEN PROVE_TAC [MEM]);
 
-val prod_fg_var = Q.prove
-`!(f:'a->'b) (g:'c->'d) x. (f##g) x = (f(FST x), g(SND x))`
-(Cases_on `x` THEN RW_TAC bool_ss [fpair_def]);
-
-val lem = Q.prove 
- `!x M. (x=FST M) /\ ~SND M ==> ((x,F) = M)`
-(GEN_TAC THEN Cases THEN RW_TAC bool_ss []);;
-
-val filter_lem = Q.prove
-`!P l h t. (filter P l = CONS h t) ==> P h`
-(Induct_on `l`
-  THEN RW_TAC list_ss [filter_def]
+val FILTER_lem = Q.prove
+(`!P l h t. (FILTER P l = h::t) ==> P h`,
+Induct_on `l`
+  THEN RW_TAC list_ss [FILTER]
   THEN PROVE_TAC[]);
 
-val append_filters_lem = Q.prove
-`!P Q l1 l2 h t. 
-   (APPEND (filter P l1) (filter Q l2) = CONS h t) ==> P h \/ Q h`
-(REPEAT GEN_TAC 
-  THEN Cases_on `filter P l1` 
-  THEN RW_TAC list_ss [filter_def]
-  THEN PROVE_TAC [filter_lem]);
-
-val flag_ss = bossLib.list_ss && [I_THM];
+val APPEND_FILTER_lem = Q.prove
+(`!P Q l1 l2 h t. 
+   (APPEND (FILTER P l1) (FILTER Q l2) = h::t) ==> P h \/ Q h`,
+REPEAT GEN_TAC 
+  THEN Cases_on `FILTER P l1` 
+  THEN RW_TAC list_ss [FILTER]
+  THEN PROVE_TAC [FILTER_lem]);
 
 
 (*---------------------------------------------------------------------------*
- * Instantiate the definition of `flag' with the termination relation.       *
+ * Swap permutes its input when it returns a SOME'd item.                    *
  *---------------------------------------------------------------------------*)
 
-val flag_def1 = 
-  UNDISCH 
-  (REWRITE_RULE [WFTheory.WF_measure] 
-       (Q.INST [`R'` |-> `measure Weight`] 
-               (DISCH_ALL flag_def)));
+val Swap_SOME = Q.prove
+(`!l1 l2. (Swap l1 = SOME l2) ==> PERM l1 l2`,
+ recInduct Swap_ind_thm
+  THEN RW_TAC std_ss [Swap_def']
+  THEN ((RW_TAC list_ss [PERM_def,FILTER] THEN RW_TAC list_ss [] THEN NO_TAC)
+       ORELSE
+       (option_APPLY_eq_SOME_TAC THEN PROVE_TAC [PERM_mono])));
+
 
 (*---------------------------------------------------------------------------*
- * Termination proof for flag.                                               *
+ * When no Swaps get made, the arrangement of the list is correct.           *
  *---------------------------------------------------------------------------*)
 
-val flag_terminates = Q.prove
-`^(hd(#1(dest_thm(flag_def1))))`
-(RW_TAC flag_ss [WFTheory.measure_def,primWFTheory.inv_image_def]
-  THEN POP_ASSUM (SUBST_ALL_TAC o EQT_INTRO) THEN POP_ASSUM MP_TAC
-  THEN Q.ID_SPEC_TAC`l1` THEN Q.ID_SPEC_TAC`l0`
-  THEN INDUCT_THEN Dnf_induction MP_TAC
-  THEN RW_TAC flag_ss [Dnf_eqns,Weight_def]  (* 4 remaining subgoals *)
-  THEN IMP_RES_THEN MP_TAC func_to_prod_lem
-  THEN RW_TAC flag_ss []
-  THEN RES_TAC
-  THEN RW_TAC arith_ss [Weight_def]);
-
-val [flag_eqn,flag_induction] = CONJUNCTS(PROVE_HYP flag_terminates flag_def1);
-val _ = save_thm("flag_eqn", flag_eqn);
-val _ = save_thm("flag_induction", flag_induction);
- 
-
-(*---------------------------------------------------------------------------*
- * Dnf permutes its input.                                                   *
- *---------------------------------------------------------------------------*)
-
-val Dnf_perm = Q.prove
-`!L. perm L (FST (Dnf L))`
-(PROGRAM_TAC{rules = Dnf_eqns, induction = Dnf_induction}
-  THEN RW_TAC flag_ss [perm_refl]
-  THEN ((REWRITE_TAC [perm_def,filter_def] 
-         THEN RW_TAC flag_ss [] THEN NO_TAC)
-        ORELSE
-         RW_TAC flag_ss [prod_fg_var,perm_mono]));
-
-
-(*---------------------------------------------------------------------------*
- * On the last call to Dnf, the input and output lists are the same.         *
- *---------------------------------------------------------------------------*)
-
-val Dnf_no_swaps = Q.prove
-`!L alist. ((alist,F) = Dnf L) ==> (alist=L)`
-(REC_INDUCT_TAC Dnf_induction
-   THEN RW_TAC flag_ss [Dnf_eqns]
-   THEN IMP_RES_THEN MP_TAC func_to_prod_lem
-   THEN RW_TAC flag_ss []);
-
-
-(*---------------------------------------------------------------------------*
- * When no swaps get made, the arrangement of the list is correct.           *
- *---------------------------------------------------------------------------*)
-
-val final_step_correct = Q.prove
-`!L. ((L,F) = Dnf L)
-      ==>
-     (L = APPEND (filter ($= R) L) 
-           (APPEND (filter ($= W) L) 
-                    (filter ($= B) L)))`
-(PROGRAM_TAC{rules=Dnf_eqns, induction=Dnf_induction}
-  THEN POP_ASSUM MP_TAC 
-  THEN RW_TAC flag_ss [filter_def,Dnf_eqns,prod_fg_var] 
-  THENL [`(CONS B rst,F) = Dnf (CONS B rst)` by PROVE_TAC [lem],
-         `(CONS B rst,F) = Dnf (CONS B rst)` by PROVE_TAC [lem],
-         `(CONS W rst,F) = Dnf (CONS W rst)` by PROVE_TAC [lem],
-         `(rst,F) = Dnf rst`                 by PROVE_TAC [lem]]
-  THEN RES_THEN MP_TAC THEN REPEAT (POP_ASSUM (K ALL_TAC))
-  THEN RW_TAC flag_ss [filter_def] THEN POP_ASSUM MP_TAC
-  THENL [Cases_on `APPEND (filter ($= R) rst) (filter ($= W) rst)`,
-         Cases_on `filter ($= R) rst`, Cases_on `filter ($= R) rst`]
-  THEN RW_TAC flag_ss []
-  THENL map IMP_RES_TAC [append_filters_lem,filter_lem,filter_lem,filter_lem]
-  THEN PROVE_TAC (type_rws"colour"));
-
+val Swap_NONE = Q.prove
+(`!L. (Swap L = NONE)
+       ==>
+      (L = APPEND (FILTER ($= R) L) 
+             (APPEND (FILTER ($= W) L) 
+                       (FILTER ($= B) L)))`,
+recInduct Swap_ind_thm THEN RW_TAC std_ss [Swap_def']
+ THEN ((RW_TAC list_ss [FILTER,APPEND] THEN NO_TAC)
+       ORELSE IMP_RES_TAC option_APPLY_lem2 THEN RES_THEN MP_TAC)
+ THEN IMP_RES_TAC option_APPLY_lem2 THEN RES_THEN MP_TAC THENL 
+  [REWRITE_TAC (APPEND_ASSOC::FILTER::type_rws"colour")
+     THEN Cases_on `APPEND (FILTER ($= R) v7) (FILTER ($= W) v7)`
+     THEN RW_TAC std_ss [APPEND]
+     THEN IMP_RES_THEN MP_TAC APPEND_FILTER_lem,
+   REWRITE_TAC (FILTER::type_rws"colour")
+     THEN Cases_on `FILTER ($= R) v3` THEN RW_TAC std_ss [APPEND]
+     THEN IMP_RES_THEN MP_TAC FILTER_lem,
+   REWRITE_TAC (FILTER::type_rws"colour")
+     THEN Cases_on `FILTER ($= R) v3` THEN RW_TAC std_ss [APPEND]
+     THEN IMP_RES_THEN MP_TAC FILTER_lem,
+   REWRITE_TAC (FILTER::type_rws"colour")
+     THEN Cases_on `FILTER ($= R) rst` THEN RW_TAC std_ss [APPEND]
+     THEN IMP_RES_THEN MP_TAC FILTER_lem]
+ THEN RW_TAC std_ss []);
 
 
 
 (*---------------------------------------------------------------------------*
- * Needed to implement a higher-order rewrite with a first order rewriter.   *
- * (The simplifier fails to deal with paired lets.)                          *
- *---------------------------------------------------------------------------*)
-val let_lem = 
- BETA_RULE(Q.ISPECL 
- [`\h. h = APPEND (filter ($= R) L) 
-             (APPEND (filter ($= W) L) (filter ($= B) L))`,
-  `Dnf L`,
-  `\alist changed. changed => (flag alist) | alist`]  pairTools.PULL_LET2);
-
-
-(*---------------------------------------------------------------------------*
- * Correctness: All occurrences of R in "flag L" are before all              *
+ * Correctness: All occurrences of R in "Flag L" are before all              *
  * occurrences of W, which are before all occurrences of B. This is          *
  * expressible in terms of append:                                           *
  *                                                                           *
- *    !L. ?l1 l2 l3. (flag L = APPEND l1 (APPEND l2 l3)) /\                  *
+ *    !L. ?l1 l2 l3. (Flag L = APPEND l1 (APPEND l2 l3)) /\                  *
  *                   (!x. mem x l1 ==> (x=R)) /\                             *
  *                   (!x. mem x l2 ==> (x=W)) /\                             *
  *                   (!x. mem x l3 ==> (x=B))                                *
  *                                                                           *
- * Witnesses for l1, l2, and l3 can be given explicitly by filtering L       *
- * for the particular colour.                                                *
- *                                                                           *
  *---------------------------------------------------------------------------*)
 
-val flag_correct = Q.store_thm
-("flag_correct",
-`!L. ?l1 l2 l3. (flag L = APPEND l1 (APPEND l2 l3))  /\
-                 (!x. mem x l1 ==> (x=R)) /\
-                 (!x. mem x l2 ==> (x=W)) /\
-                 (!x. mem x l3 ==> (x=B))`,
-GEN_TAC 
- THEN MAP_EVERY Q.EXISTS_TAC 
-       [`filter ($=R) L`, `filter ($=W) L`, `filter ($=B) L`]
- THEN RW_TAC bool_ss [mem_filter]
- THEN Q.ID_SPEC_TAC `L`
- THEN PROGRAM_TAC{induction = flag_induction, rules=flag_eqn}
- THEN PURE_REWRITE_TAC[let_lem] THEN pairTools.LET_INTRO_TAC
- THEN MAP_EVERY Q.SPEC_TAC [(`x:colour list`,`alist`), (`y:bool`,`changed`)]
- THEN RW_TAC bool_ss [] THENL
- [`alist:colour list = FST(Dnf l0)` by PROVE_TAC pairTheory.pair_rws
-   THEN RW_TAC bool_ss 
-         [GSYM (REWRITE_RULE [perm_def] Dnf_perm)],
-  IMP_RES_TAC Dnf_no_swaps THEN ZAP_TAC bool_ss [final_step_correct]]);
+val Flag_correct = Q.store_thm
+("Flag_correct",
+`!L. ?l1 l2 l3. (Flag L = APPEND l1 (APPEND l2 l3))  /\
+                 (!x. MEM x l1 ==> (x=R)) /\
+                 (!x. MEM x l2 ==> (x=W)) /\
+                 (!x. MEM x l3 ==> (x=B))`,
+recInduct Flag_ind 
+  THEN RW_TAC std_ss []
+  THEN ONCE_REWRITE_TAC [Flag_eqns]
+  THEN Cases_on `Swap list` 
+  THEN RW_TAC std_ss [] 
+  THEN MAP_EVERY Q.EXISTS_TAC 
+         [`FILTER ($=R) list`, `FILTER ($=W) list`, `FILTER ($=B) list`]
+  THEN RW_TAC std_ss [MEM_FILTER] THEN PROVE_TAC [Swap_NONE]);
 
 
-(*---------------------------------------------------------------------------*
- * We also need to specify that flag permutes its input. Otherwise it        *
- * could just return an empty list!                                          *
- *---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------
+         Flag is honest!
+ ---------------------------------------------------------------------------*)
 
-val let_lem1 = 
- BETA_RULE(Q.ISPECL 
- [`\h:colour list. perm l0 h`,
-  `Dnf l0`,
-  `\l1 changed. changed => (flag l1) | l1`]  pairTools.PULL_LET2);
-
-val perm_trans = REWRITE_RULE [TCTheory.transitive_def] permTheory.perm_trans;
-
-
-val flag_permutes = Q.store_thm("flag_permutes",
-`!l. perm l (flag l)`,
-PROGRAM_TAC{induction = flag_induction, rules=flag_eqn}
- THEN PURE_REWRITE_TAC [let_lem1] THEN pairTools.LET_INTRO_TAC
- THEN MAP_EVERY Q.SPEC_TAC [(`x:colour list`,`alist`), (`y:bool`,`changed`)]
- THEN RW_TAC bool_ss [] THENL 
- [`alist:colour list = FST(Dnf l0)` by PROVE_TAC pairTheory.pair_rws THEN
-  `perm alist (flag alist)`  by (RES_TAC THEN PROVE_TAC[]) THEN
-  PROVE_TAC [perm_trans,Dnf_perm],
-  PROVE_TAC [Dnf_no_swaps, perm_refl]]);
-
-Count.report (Count.read meter);
+val Flag_PERM = Q.store_thm("Flag_PERM",
+`!l. PERM l (Flag l)`,
+recInduct Flag_ind THEN RW_TAC std_ss [] 
+ THEN ONCE_REWRITE_TAC [Flag_eqns]
+ THEN Cases_on `Swap list` THEN RW_TAC std_ss [PERM_refl]
+ THEN PROVE_TAC [Swap_SOME,PERM_trans1]);;
 
