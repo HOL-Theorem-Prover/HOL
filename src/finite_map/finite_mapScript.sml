@@ -37,6 +37,9 @@ local open pred_setLib listTheory in end
 
 val _ = new_theory "finite_map";
 
+val _ = set_fixity "'" (Infixr 2001);
+val _ = set_fixity "|+" (Infixl 600);
+
 (*---------------------------------------------------------------------------
         Definition of a finite map
 
@@ -142,6 +145,8 @@ val FUPDATE_DEF = Q.new_definition
  `FUPDATE (f:'a |-> 'b) (x,y)
     = fmap_ABS (\a. if a=x then INL y else fmap_REP f a)`);
 
+val _ = overload_on ("|+", ``FUPDATE``);
+
 val FEMPTY_DEF = Q.new_definition
 ("FEMPTY_DEF",
  `(FEMPTY:'a |-> 'b) = fmap_ABS (\a. INR one)`);
@@ -149,6 +154,8 @@ val FEMPTY_DEF = Q.new_definition
 val FAPPLY_DEF = Q.new_definition
 ("FAPPLY_DEF",
  `FAPPLY (f:'a |-> 'b) x = OUTL (fmap_REP f x)`);
+
+val _ = overload_on ("'", ``FAPPLY``);
 
 val FDOM_DEF = Q.new_definition
 ("FDOM_DEF",
@@ -989,6 +996,59 @@ val FUPDATE_LIST_THM = store_thm(
         (!h t. f FUPDATE_LIST (h::t) = (FUPDATE f h) FUPDATE_LIST t)``,
   SRW_TAC [][FUPDATE_LIST]);
 
+(* ----------------------------------------------------------------------
+    More theorems
+   ---------------------------------------------------------------------- *)
+
+val FAPPLY_FUPD_EQ = prove(
+  ``!fmap k1 v1 k2 v2.
+       ((fmap |+ (k1, v1)) ' k2 = v2) =
+       (k1 = k2) /\ (v1 = v2) \/ ~(k1 = k2) /\ (fmap ' k2 = v2)``,
+  SRW_TAC [][FAPPLY_FUPDATE_THM, EQ_IMP_THM]);
+
+
+(* (pseudo) injectivity results about fupdate *)
+
+val FUPD11_SAME_KEY_AND_BASE = store_thm(
+  "FUPD11_SAME_KEY_AND_BASE",
+  ``!f k v1 v2. (f |+ (k, v1) = f |+ (k, v2)) = (v1 = v2)``,
+  SRW_TAC [][GSYM fmap_EQ_THM, FDOM_FUPDATE, DISJ_IMP_THM,
+             FAPPLY_FUPDATE_THM, FORALL_AND_THM, EQ_IMP_THM]);
+
+val FUPD11_SAME_NEW_KEY = store_thm(
+  "FUPD11_SAME_NEW_KEY",
+  ``!f1 f2 k v1 v2.
+         ~(k IN FDOM f1) /\ ~(k IN FDOM f2) ==>
+         ((f1 |+ (k, v1) = f2 |+ (k, v2)) = (f1 = f2) /\ (v1 = v2))``,
+  SRW_TAC [][GSYM fmap_EQ_THM, FDOM_FUPDATE, DISJ_IMP_THM,
+             FAPPLY_FUPDATE_THM, FORALL_AND_THM, EQ_IMP_THM, EXTENSION] THEN
+  PROVE_TAC []);
+
+val SAME_KEY_UPDATES_DIFFER = store_thm(
+  "SAME_KEY_UPDATES_DIFFER",
+  ``!f1 f2 k v1 v2. ~(v1 = v2) ==> ~(f1 |+ (k, v1) = f2 |+ (k, v2))``,
+  SRW_TAC [][GSYM fmap_EQ_THM, FDOM_FUPDATE, RIGHT_AND_OVER_OR,
+             EXISTS_OR_THM, FAPPLY_FUPDATE]);
+
+val FUPD11_SAME_BASE = store_thm(
+  "FUPD11_SAME_BASE",
+  ``!f k1 v1 k2 v2.
+        (f |+ (k1, v1) = f |+ (k2, v2)) =
+        (k1 = k2) /\ (v1 = v2) \/
+        ~(k1 = k2) /\ k1 IN FDOM f /\ k2 IN FDOM f /\
+        (f |+ (k1, v1) = f) /\ (f |+ (k2, v2) = f)``,
+  SRW_TAC [][FDOM_FEMPTY, FDOM_FUPDATE, GSYM fmap_EQ_THM,
+             DISJ_IMP_THM, FORALL_AND_THM, FAPPLY_FUPDATE_THM,
+             EXTENSION] THEN PROVE_TAC[]);
+
+val FUPD_SAME_KEY_UNWIND = store_thm(
+  "FUPD_SAME_KEY_UNWIND",
+  ``!f1 f2 k v1 v2.
+       (f1 |+ (k, v1) = f2 |+ (k, v2)) ==>
+       (v1 = v2) /\ (!v. f1 |+ (k, v) = f2 |+ (k, v))``,
+  SRW_TAC [][FDOM_FEMPTY, FDOM_FUPDATE, GSYM fmap_EQ_THM,
+             DISJ_IMP_THM, FORALL_AND_THM, FAPPLY_FUPDATE_THM,
+             EXTENSION] THEN PROVE_TAC[]);
 
 (* ----------------------------------------------------------------------
     to close...
@@ -996,17 +1056,6 @@ val FUPDATE_LIST_THM = store_thm(
 
 val _ = export_rewrites ["FDOM_FUPDATE", "FDOM_FEMPTY", "FAPPLY_FUPDATE"]
 
-val _ = add_rule { block_style = (AroundSamePrec, (PP.INCONSISTENT, 2)),
-                   paren_style = OnlyIfNecessary,
-                   fixity = Infixr 2001,
-                   term_name = "FAPPLY",
-                   pp_elements = [HardSpace 1, TOK "'", BreakSpace(1,0)]};
-
-val _ = add_rule { block_style = (AroundSameName, (PP.INCONSISTENT, 2)),
-                   paren_style = OnlyIfNecessary,
-                   fixity = Infixl 600,
-                   term_name = "FUPDATE",
-                   pp_elements = [HardSpace 1, TOK "|+", BreakSpace(1,0)]};
 
 
 
