@@ -178,16 +178,13 @@ Induct
  * all adjacent elements of the list.                                        *
  *---------------------------------------------------------------------------*)
 
-val SORTED_DEF = 
- Define
-    `(SORTED R  [] = T)
- /\  (SORTED R [x] = T)
- /\  (SORTED R (x::y::rst) = R x y /\ SORTED R (y::rst))`;
+val SORTED_DEF = Define `(SORTED R [] = T) /\ (SORTED R [x] = T) /\
+ (SORTED R (x::y::rst) = R x y /\ SORTED R (y::rst))`;
 
 
-val PERFORMS_SORTING_DEF = 
+val SORTS_DEF = 
  Define
-    `PERFORMS_SORTING f R = !l. PERM l (f R l) /\ SORTED R (f R l)`;
+    `SORTS f R = !l. PERM l (f R l) /\ SORTED R (f R l)`;
 
 
 (*---------------------------------------------------------------------------*
@@ -414,14 +411,14 @@ Q.store_thm
 
 val QSORT_SORTS = Q.store_thm
 ("QSORT_SORTS",
- `!R. transitive R /\ total R ==> PERFORMS_SORTING QSORT R`,
-  PROVE_TAC [PERFORMS_SORTING_DEF, QSORT_PERM, QSORT_SORTED]);
+ `!R. transitive R /\ total R ==> SORTS QSORT R`,
+  PROVE_TAC [SORTS_DEF, QSORT_PERM, QSORT_SORTED]);
 
 
 val _ = export_theory();
 
 val _ = 
- let open Drop
+ let open EmitML
  in exportML("sorting",
   [OPEN ["list"],
    DEFN PART_DEF, 

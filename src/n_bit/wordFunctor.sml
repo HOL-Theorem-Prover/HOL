@@ -2537,7 +2537,7 @@ val wH_def = new_definition("wH",`wH = 2**HB`);
 val wL_def = new_definition("wL",`wL = 2**HB - 1`);
 
 val _ = 
- let open arithmeticTheory numeral_bitsTheory bitsTheory Drop
+ let open arithmeticTheory numeral_bitsTheory bitsTheory EmitML
      val THE_WL = SIMP_RULE arith_ss [HB_def,ADD1] WL_def
      val wL_thma = SIMP_RULE arith_ss [HB_def] wL_def
      val wH_thma = SIMP_RULE arith_ss [HB_def] wH_def

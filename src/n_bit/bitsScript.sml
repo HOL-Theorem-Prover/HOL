@@ -920,7 +920,7 @@ val MOD_ADD_1 = store_thm("MOD_ADD_1",
 (* -------------------------------------------------------- *)
 
 val _ = 
- let open Drop 
+ let open EmitML 
  in 
    exportML("bits", 
     MLSIG    "type num = numML.num" :: OPEN ["num"] 

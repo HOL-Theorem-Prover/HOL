@@ -383,7 +383,7 @@ val THE_NONE = Q.prove
   REWRITE_TAC [combinTheory.FAIL_THM]);
 
 val _ = 
- let open Drop combinSyntax
+ let open EmitML combinSyntax
  in exportML("option",
         map DEFN
          [OPTION_MAP_DEF, IS_SOME_DEF, IS_NONE_DEF, 

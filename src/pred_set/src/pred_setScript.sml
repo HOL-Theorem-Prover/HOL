@@ -3945,7 +3945,7 @@ val MIN_SET_EMPTY = Q.prove
 (*---------------------------------------------------------------------------*)
 
 val _ = 
- let open Drop combinSyntax
+ let open EmitML combinSyntax
      val setdecl = scoped_parse `set = EMPTY | INSERT of 'a => set`
      val _ = new_type("set",1)
   in try exportML ("set",

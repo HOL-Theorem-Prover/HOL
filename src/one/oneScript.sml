@@ -170,7 +170,7 @@ val _ = adjoin_to_theory
       S "        end;"
    end)};
 
-val _ = Drop.is_one_hook 
+val _ = EmitML.is_one_hook 
         := Lib.equal (Term.prim_mk_const{Name="one",Thy="one"});
 
 val _ = export_theory();

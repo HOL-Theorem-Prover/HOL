@@ -7,9 +7,6 @@ struct
 
 open HolKernel boolLib pairTheory pairSyntax;
 
-infix |-> THENC ORELSEC ##;
-infixr -->;
-
 val ERR = mk_HOL_ERR "PairedLambda";
 
 fun is_uncurry_tm c = same_const uncurry_tm c;

@@ -56,12 +56,13 @@ val SET_TO_LIST_IND = save_thm("SET_TO_LIST_IND",SET_TO_LIST_IND);
       Map a list into a set.
  ---------------------------------------------------------------------------*)
 
-val LIST_TO_SET_THM = store_thm(
-  "LIST_TO_SET_THM",
-  ``(LIST_TO_SET []     = {}) /\
-    (LIST_TO_SET (h::t) = h INSERT (LIST_TO_SET t))``,
-  SRW_TAC [][EXTENSION]);
-val _ = export_rewrites ["LIST_TO_SET_THM"]
+val LIST_TO_SET_THM = Q.store_thm
+("LIST_TO_SET_THM",
+ `(LIST_TO_SET []     = {}) /\
+  (LIST_TO_SET (h::t) = h INSERT (LIST_TO_SET t))`,
+ SRW_TAC [][EXTENSION]);
+
+val _ = export_rewrites ["LIST_TO_SET_THM"];
 
 
 (*---------------------------------------------------------------------------
@@ -96,11 +97,12 @@ val SET_TO_LIST_IN_MEM = Q.store_thm("SET_TO_LIST_IN_MEM",
 
 (* this version of the above is a more likely rewrite: a complicated LHS
    turns into a simple RHS *)
-val MEM_SET_TO_LIST = store_thm(
-  "MEM_SET_TO_LIST",
-  ``!s. FINITE s ==> !x. MEM x (SET_TO_LIST s) = x IN s``,
-  PROVE_TAC [SET_TO_LIST_IN_MEM]);
-val _ = export_rewrites ["MEM_SET_TO_LIST"]
+val MEM_SET_TO_LIST = Q.store_thm
+("MEM_SET_TO_LIST",
+ `!s. FINITE s ==> !x. MEM x (SET_TO_LIST s) = x IN s`,
+ PROVE_TAC [SET_TO_LIST_IN_MEM]);
+
+val _ = export_rewrites ["MEM_SET_TO_LIST"];
 
 val UNION_APPEND = Q.store_thm
  ("UNION_APPEND",
@@ -111,17 +113,18 @@ val UNION_APPEND = Q.store_thm
    THEN PROVE_TAC [INSERT_UNION_EQ]);
 
 (* I think this version is the more likely rewrite *)
-val LIST_TO_SET_APPEND = store_thm(
-  "LIST_TO_SET_APPEND",
-  ``!l1 l2. LIST_TO_SET (APPEND l1 l2) = LIST_TO_SET l1 UNION LIST_TO_SET l2``,
-  REWRITE_TAC [UNION_APPEND]);
+val LIST_TO_SET_APPEND = Q.store_thm
+("LIST_TO_SET_APPEND",
+ `!l1 l2. LIST_TO_SET (APPEND l1 l2) = LIST_TO_SET l1 UNION LIST_TO_SET l2`,
+ REWRITE_TAC [UNION_APPEND]);
 val _ = export_rewrites ["LIST_TO_SET_APPEND"]
 
-val FINITE_LIST_TO_SET = store_thm(
-  "FINITE_LIST_TO_SET",
-  ``!l. FINITE (LIST_TO_SET l)``,
-  Induct THEN SRW_TAC [][]);
-val _ = export_rewrites ["FINITE_LIST_TO_SET"]
+val FINITE_LIST_TO_SET = Q.store_thm
+("FINITE_LIST_TO_SET",
+ `!l. FINITE (LIST_TO_SET l)`,
+ Induct THEN SRW_TAC [][]);
+
+val _ = export_rewrites ["FINITE_LIST_TO_SET"];
 
 (*---------------------------------------------------------------------------
     Lists and bags. Note that we also have SET_OF_BAG and BAG_OF_SET
@@ -187,11 +190,12 @@ val BAG_IN_MEM = Q.store_thm("BAG_IN_MEM",
                    BAG_INSERT_CHOICE_REST,BAG_IN_BAG_INSERT]);
 
 (* version with the equation the "rewrite" way round *)
-val MEM_BAG_TO_LIST = store_thm(
-  "MEM_BAG_TO_LIST",
-  ``!b. FINITE_BAG b ==> !x. MEM x (BAG_TO_LIST b) = BAG_IN x b``,
+val MEM_BAG_TO_LIST = Q.store_thm
+("MEM_BAG_TO_LIST",
+ `!b. FINITE_BAG b ==> !x. MEM x (BAG_TO_LIST b) = BAG_IN x b`,
   PROVE_TAC [BAG_IN_MEM]);
-val _ = export_rewrites ["MEM_BAG_TO_LIST"]
+
+val _ = export_rewrites ["MEM_BAG_TO_LIST"];
 
 
 val _ = export_theory ();

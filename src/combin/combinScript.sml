@@ -166,7 +166,7 @@ val _ = adjoin_to_theory
 
 
 val _ = 
- let open Drop
+ let open EmitML
  in exportML ("combin", 
        map DEFN [S_THM, K_THM, I_THM, W_THM, C_THM, o_THM, FAIL_THM])
  end;

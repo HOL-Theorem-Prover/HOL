@@ -423,7 +423,7 @@ val ISR_THM = Q.prove
  REWRITE_TAC[ISR]);
 
 val _ = 
- let open Drop combinSyntax
+ let open EmitML combinSyntax
  in exportML ("sum",
     DATATYPE (ParseDatatype.parse `sum = INL of 'a | INR of 'b`)
     :: map DEFN [CONJ OUTL OUTL_INR, OUTR, ISL_THM, ISR_THM])

@@ -132,7 +132,7 @@ val NUMERAL_MOD_2EXP = save_thm("NUMERAL_MOD_2EXP", SUC_RULE iMOD_2EXP_CLAUSES);
 (* -------------------------------------------------------- *)
 
 val _ = 
- let open Drop
+ let open EmitML
  in exportML("numeral_bits", 
      MLSIG  "type num = numML.num" :: OPEN ["num"] 
      ::

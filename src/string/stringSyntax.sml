@@ -96,8 +96,8 @@ fun lift_string ty s = fromMLstring s;
 (* For support of ML code generation                                         *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Drop.is_string_literal_hook := is_string_literal
-val _ = Drop.dest_string_literal_hook := fromHOLstring
+val _ = EmitML.is_string_literal_hook := is_string_literal
+val _ = EmitML.dest_string_literal_hook := fromHOLstring
 
 (*---------------------------------------------------------------------------*)
 (* Prettyprinter for characters (one for strings is already hardwired in the *)

@@ -1060,9 +1060,9 @@ fun dest_list M =
                else raise ERR "dest_list" "not terminated with nil"
      | SOME(h,t) => h::dest_list t
 
-val _ = Drop.dest_cons_hook := dest_cons;
-val _ = Drop.dest_list_hook := dest_list;
-val _ = Drop.is_list_hook   := can dest_list;
+val _ = EmitML.dest_cons_hook := dest_cons;
+val _ = EmitML.dest_list_hook := dest_list;
+val _ = EmitML.is_list_hook   := can dest_list;
 
 (*---------------------------------------------------------------------------*)
 (* Need to install the constructors for lists into the const map.          *)
@@ -1102,7 +1102,7 @@ val ZIP_THM = let val [a,b] = CONJUNCTS ZIP
                end;
 
 val _ = 
- let open Drop 
+ let open EmitML 
  in exportML("list",
          MLSIG "type num = numML.num"
          :: OPEN ["num"]

@@ -8,8 +8,6 @@ struct
 
 open HolKernel boolTheory pairTheory boolSyntax Abbrev;
 
-infix |->;
-
 val ERR = mk_HOL_ERR "pairSyntax";
 
 (*---------------------------------------------------------------------------
@@ -363,7 +361,7 @@ fun lift_prod ty =
 
 
 (*---------------------------------------------------------------------------*)
-(* Resolving forward references from bool/Drop                               *)
+(* Resolving forward references from bool/EmitML                             *)
 (*---------------------------------------------------------------------------*)
 
 fun is_let tm = 
@@ -371,12 +369,13 @@ fun is_let tm =
    of (c,[f,x]) => same_const c boolSyntax.let_tm
     | other => false;
 
-val _ = Drop.dest_pair_hook := dest_pair
-val _ = Drop.strip_let_hook := strip_anylet
-val _ = Drop.dest_pabs_hook := dest_pabs
-val _ = Drop.is_pair_hook   := is_pair
-val _ = Drop.is_let_hook    := is_let
-val _ = Drop.is_pabs_hook   := is_pabs
+val _ = EmitML.list_mk_prod_hook := list_mk_prod
+val _ = EmitML.dest_pair_hook := dest_pair
+val _ = EmitML.strip_let_hook := strip_anylet
+val _ = EmitML.dest_pabs_hook := dest_pabs
+val _ = EmitML.is_pair_hook   := is_pair
+val _ = EmitML.is_let_hook    := is_let
+val _ = EmitML.is_pabs_hook   := is_pabs
 
 
 end

@@ -1815,7 +1815,7 @@ fun scoped_parse q =
  end;
 
 val _ = 
- let open Drop combinSyntax
+ let open EmitML combinSyntax
      val bagdecl = scoped_parse `bag = EMPTY_BAG | BAG_INSERT of 'a => bag`
      val _ = new_type("bag",1)
   in try exportML ("bag",

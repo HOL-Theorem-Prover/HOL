@@ -529,16 +529,13 @@ val _ = adjoin_to_theory
      NL();
      S "val _ = ConstMapML.insert (prim_mk_const{Name=\"STRING\",Thy=\"string\"});";
      NL(); 
+     S "val _ = ConstMapML.prim_insert(prim_mk_const{Name=\"EMPTYSTRING\",Thy=\"string\"},"; NL();
+     S "                   (\"\",\"\\\"\\\"\",mk_type(\"string\",[])));";
      NL()
   end)}
 
-(*      S "val _ = ConstMapML.prim_insert(prim_mk_const{Name=\"EMPTYSTRING\",Thy=\"string\"},\n\
-                               (\"\","\"\"",Type`:string`));
-
-*)
-
 val _ = 
- let open Drop
+ let open EmitML
  in exportML("string",
     OPEN ["num", "list", "option"]
     :: MLSIG "type num = numML.num"
