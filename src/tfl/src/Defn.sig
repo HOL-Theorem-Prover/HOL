@@ -16,6 +16,7 @@ sig
   val Hol_defn   : string -> term quotation -> defn
   val Hol_Rdefn  : string -> term quotation -> term quotation -> defn
 
+  val name_of    : defn -> string
   val eqns_of    : defn -> thm list
   val ind_of     : defn -> thm option
   val tcs_of     : defn -> term list

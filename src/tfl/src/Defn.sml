@@ -144,6 +144,13 @@ fun ModusPonens th1 th2 =
   handle _ => raise ERR "ModusPonens" "failed";
 
 
+fun name_of (ABBREV {bind, ...})           = bind
+  | name_of (PRIMREC{bind, ...})           = bind
+  | name_of (NONREC {eqs, ind, stem, ...}) = stem
+  | name_of (STDREC {eqs, ind, stem, ...}) = stem
+  | name_of (MUTREC {eqs,ind,stem,...})    = stem
+  | name_of (NESTREC{eqs,ind,stem, ...})   = stem
+
 fun eqns_of (ABBREV  {eqn, ...}) = [eqn]
   | eqns_of (NONREC  {eqs, ...}) = [eqs]
   | eqns_of (PRIMREC {eqs, ...}) = [eqs]
@@ -1267,9 +1274,9 @@ fun tprove p   =
    ; (eqns, ind)
   end
 
-fun tstore_defn (n,d,t) = 
+fun tstore_defn (d,t) = 
   let val (def,ind) = tprove0 (d,t)
-  in store (n,def,ind)
+  in store (name_of d,def,ind)
    ; (def,ind)
   end;
 
