@@ -5,7 +5,10 @@ in
     Ident of string | Symbol of string | Antiquote of 'a |
     Numeral of (string * char option)
 
-  val lex : string list -> ('a term_token, 'a frag) Parser
+  exception LEX_ERR of string
+
+  val lex :
+    string list -> (unit -> string list) -> ('a term_token, 'a frag) Parser
 
   val token_string : 'a term_token -> string
   val dest_aq : 'a term_token -> 'a

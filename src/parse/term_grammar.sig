@@ -19,15 +19,6 @@ in
   val rule_elements : pp_element list -> rule_element list
   val pp_elements_ok : pp_element list -> bool
 
-  val fnapp_special : string
-  val bracket_special : string
-  val vs_cons_special : string
-  val resquan_special : string
-  val recsel_special : string
-  val std_binder_precedence : int
-
-  val nat_elim_term : string
-  val fromNum_str : string
 
   val reltoString : rule_element -> string
 

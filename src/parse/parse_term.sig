@@ -33,6 +33,7 @@ signature parse_term = sig
 
     val parse_term :
       grammar -> (TCPretype.pretype, ''a frag) Parser ->
+      (unit -> string list) -> (* ancestry function *)
       (''a frag list * ''a PStack) ->
       (''a frag list * ''a PStack) * unit option
 

@@ -1,4 +1,5 @@
 open monadic_parse optmonad term_tokens term_grammar HOLgrammars
+open GrammarSpecials
 infix >> >- ++ >->
 
 exception ParseTermError of string
@@ -473,7 +474,7 @@ fun findpos P [] = NONE
   | findpos P (x::xs) = if P x then SOME(0,x)
                         else Option.map (fn (n,x) => (n + 1, x)) (findpos P xs)
 
-fun parse_term (G : grammar) typeparser = let
+fun parse_term (G : grammar) typeparser afn = let
   val Grules = grammar_rules G
   val {type_intro, lambda, endbinding, restr_binders, res_quanop} = specials G
   val num_info = numeral_info G
@@ -488,7 +489,7 @@ fun parse_term (G : grammar) typeparser = let
   val prec_matrix = mk_prec_matrix G
   val rule_db = mk_ruledb G
   val is_binder = is_binder G
-  val lex = lift (term_tokens.lex (grammar_tokens G))
+  val lex = lift (term_tokens.lex (grammar_tokens G) afn)
   fun itemP P = lex >- (fn t => if P t then return t else fail)
   fun item t = itemP (fn t' => t = t')
 
@@ -714,7 +715,7 @@ fun parse_term (G : grammar) typeparser = let
                       (Lib.mesg true  "No numerals currently allowed";
                        raise Temp)
                   else let
-                    val fns = term_grammar.fromNum_str
+                    val fns = fromNum_str
                   in
                     if Overload.is_overloaded overload_info fns then
                       NonTerminal (inject_np (SOME fns))
@@ -974,13 +975,17 @@ fun remove_specials t =
       | COMB (VAR s, f) => let
         in
           if s = fnapp_special then COMB(remove_specials f, remove_specials t2)
+          else if s = recsel_special then
+            case t2 of
+              VAR fldname => COMB(VAR (recsel_special ^ fldname),
+                                  remove_specials f)
+            | _ => raise ParseTermError
+                "Record selection must have single id to right"
+          else if s = reccons_special then
+            remove_recupdate f t2 (VAR "ARB")
           else
-            if s = recsel_special then
-              case t2 of
-                VAR fldname => COMB(VAR (recsel_special ^ fldname),
-                                    remove_specials f)
-              | _ => raise ParseTermError
-                  "Record selection must have single id to right"
+            if s = recwith_special then
+              remove_recupdate' t2 (remove_specials f)
             else
               COMB(remove_specials t1, remove_specials t2)
         end
@@ -989,10 +994,41 @@ fun remove_specials t =
   | ABS(v, t2) => ABS(v, remove_specials t2)
   | TYPED(t, ty) => TYPED(remove_specials t, ty)
   | x => x
+and remove_recupdate upd1 updates bottom =
+  case upd1 of
+    COMB(COMB(VAR s, VAR fld), newvalue) => let
+    in
+      if s = recupd_special then
+        COMB(COMB(VAR (recupd_special^fld), remove_specials newvalue),
+             remove_recupdate' updates bottom)
+      else raise ParseTermError
+        "Record list must have (fld := value) elements only"
+    end
+  | _ =>
+    raise ParseTermError "Record list must have (fld := value) elements only"
+and remove_recupdate' updatelist bottom =
+  case updatelist of
+    VAR s => if s = recnil_special then bottom
+             else
+               raise ParseTermError
+                 "Record list must have (fld := value) elements only"
+  | COMB(COMB(VAR s, upd1), updates) => let
+    in
+      if s = reccons_special then remove_recupdate upd1 updates bottom
+      else raise ParseTermError
+        "Record list must have (fld := value) elements only"
+    end
+  | _ => raise ParseTermError
+    "Record list must have (fld := value) elements only"
+
+
+
 
 infix Gmerge
 
 
+(*
+Useful functions to test with:
 fun do_parse0 G ty = let
   val pt = parse_term G ty
 in
@@ -1006,8 +1042,6 @@ in
   end
 end
 
-(*
-Useful functions to test with:
 Remember to start with
   quotation := true
 in raw MoscowML sessions

@@ -1,11 +1,12 @@
 open Term HolKernel Portable term_grammar HOLtokens HOLgrammars
+open GrammarSpecials
 
 fun PP_ERR f mesg = HOL_ERR {origin_structure = "term_pp",
                              origin_function = f,
                              message = mesg}
 
 fun string_of_nspaces n = String.concat (List.tabulate(n, (fn _ => " ")))
-
+val isPrefix = String.isPrefix
 
 datatype grav = Top | RealTop | Prec of (int * string)
 fun grav_name (Prec(n, s)) = s | grav_name _ = ""
@@ -338,7 +339,7 @@ fun pp_term (G : grammar) TyG = let
       val numinfo_search_string = Option.map (#Name o dest_const) injtermopt
       val (injname0, injty) =
         case injtermopt of
-          NONE => (term_grammar.nat_elim_term, num2numty)
+          NONE => (nat_elim_term, num2numty)
         | SOME t => (fn {Name,Ty}=>(Name,Ty)) (dest_const t)
       val injname =
         case overloading_of_nametype overload_info (injname0, injty) of
@@ -348,7 +349,7 @@ fun pp_term (G : grammar) TyG = let
       pbegin (!Globals.show_types);
       add_string (Arbnum.toString (Term.dest_numeral tm));
       if
-        injname <> term_grammar.fromNum_str orelse
+        injname <> fromNum_str orelse
         !Globals.show_numeral_types
       then let
         val (k, _) =
@@ -408,8 +409,7 @@ fun pp_term (G : grammar) TyG = let
         in
           case rname_opt of
             SOME s =>
-              if String.isPrefix term_grammar.recsel_special s andalso
-                 isSome recsel_info
+              if isPrefix recsel_special s andalso isSome recsel_info
               then let
                 val (prec0, fldtok) = let
                   open term_grammar
@@ -428,20 +428,20 @@ fun pp_term (G : grammar) TyG = let
                   case rgrav of
                     Prec(n, _) => n >= prec0
                   | _ => false
-                val prec = Prec(prec0, term_grammar.recsel_special)
+                val prec = Prec(prec0, recsel_special)
                 val add_parens = add_l orelse add_r
                 val lprec = if add_parens then Top else lgrav
                 val rprev = if add_parens then Top else rgrav
                 val fldname =
-                  String.extract(s, size term_grammar.recsel_special, NONE)
+                  String.extract(s, size recsel_special, NONE)
               in
                 begin_block INCONSISTENT 0;
-                pbegin addparens;
+                pbegin add_parens;
                 pr_term t2 prec lprec prec (depth - 1);
                 add_string fldtok;
                 add_break(0,0);
                 add_string fldname;
-                pend addparens;
+                pend add_parens;
                 end_block (); raise SimpleExit
               end
               else ()
@@ -755,7 +755,7 @@ fun pp_term (G : grammar) TyG = let
       | CONST{Name = cname0, Ty} => let
           val cname =
             case Overload.overloading_of_term overload_info tm of
-              SOME s => s
+              SOME s => if not (isPrefix recsel_special s) then s else cname0
             | NONE => cname0
           val crules = lookup_term cname
           val is_string_literal =
@@ -895,7 +895,10 @@ fun pp_term (G : grammar) TyG = let
           if (is_atom f) then let
             val name_to_use =
               case (Overload.overloading_of_term overload_info f) of
-                SOME s => s
+                SOME s =>
+                  if not (String.isPrefix recsel_special s) then
+                    s
+                  else #Name (dest_atom f)
               | NONE => #Name (dest_atom f)
           in
             pr_atomf name_to_use

@@ -3,6 +3,8 @@ struct
 
 open Exception Lib;
 
+open GrammarSpecials
+
 fun PRETERM_ERR function message =
  Exception.HOL_ERR{origin_structure = "Preterm",
                    origin_function = function,
@@ -234,7 +236,7 @@ fun remove_elim_magics ptm =
   | Const _ => ptm
   | Antiq _ => ptm
   | Comb{Rator = (rator as Const{Name, Ty}), Rand = ptm1} =>
-      if Name = term_grammar.nat_elim_term then ptm1
+      if Name = nat_elim_term then ptm1
       else Comb{Rator = rator, Rand = remove_elim_magics ptm1}
   | Comb{Rator, Rand} => Comb{Rator = remove_elim_magics Rator,
                               Rand = remove_elim_magics Rand}

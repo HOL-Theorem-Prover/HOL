@@ -1,4 +1,4 @@
-open HolKernel HOLgrammars
+open HolKernel HOLgrammars GrammarSpecials
 
 fun ERROR f msg =
   HOL_ERR {origin_structure = "Parse",
@@ -282,17 +282,19 @@ in
 
   fun do_parse G ty = let
     open optmonad
-    val pt = parse_term G ty
+    val pt = parse_term G ty (fn () => current_theory() :: ancestry "-")
       handle PrecConflict(st1, st2) =>
         raise ERROR "Term"
           ("Grammar introduces precedence conflict between tokens "^
            term_grammar.STtoString G st1^" and "^
            term_grammar.STtoString G st2)
-           | ParseTermError s => raise ERROR "Term" s
   in
     fn q => let
       val ((cs, p), _) = pt (q, PStack {lookahead = [], stack = [],
                                         in_vstruct = false})
+        handle term_tokens.LEX_ERR s =>
+          raise ERROR "Term" ("Lexical error - "^s)
+
     in
       case pstack p of
         [(NonTerminal pt, _), (Terminal BOS, _)] => let
@@ -302,7 +304,8 @@ in
              fragstr.eof) cs
         in
           case res of
-            SOME _ => remove_specials pt
+            SOME _ => (remove_specials pt
+                       handle ParseTermError s => raise ERROR "Term" s)
           | NONE =>
               raise ERROR "Term"
                 ("Can't make sense of remaining: \""^ftoString cs)
@@ -448,7 +451,7 @@ in
   fun add_binder (name, prec) = let
     val cmdstring =
       "val _ = Parse.temp_add_binder("^quote name^
-      ", term_grammar.std_binder_precedence);"
+      ", GrammarSpecials.std_binder_precedence);"
   in
     temp_add_binder(name, prec);
     adjoin_to_theory (toThyaddon cmdstring)
@@ -460,7 +463,7 @@ in
       Prefix => ()
     | Binder => let
       in
-        temp_add_binder(term_name, term_grammar.std_binder_precedence);
+        temp_add_binder(term_name, std_binder_precedence);
         term_grammar_changed := true
       end
     | RF rf => let
@@ -703,6 +706,19 @@ in
     adjoin_to_theory (toThyaddon cmdstring)
   end
 
+  fun temp_add_record_field (fldname, term) = let
+    val recfldname = recsel_special^fldname
+  in
+    temp_allow_for_overloading_on(recfldname, Type.-->(Type.alpha, Type.beta));
+    temp_overload_on(recfldname, term)
+  end
+  fun add_record_field (fldname, term) = let
+    val recfldname = recsel_special^fldname
+  in
+    allow_for_overloading_on(recfldname, Type.-->(Type.alpha, Type.beta));
+    overload_on(recfldname, term)
+  end
+
 
   fun temp_add_numeral_form (c, stropt) = let
     val num_ty = Type.mk_type {Tyop = "num", Args = []}
@@ -713,15 +729,14 @@ in
     val num2num_ty = Type.-->(num_ty, num_ty)
     val (injectionfn_name, ifn_ty) =
       case stropt of
-        NONE => (term_grammar.nat_elim_term, num2num_ty)
+        NONE => (nat_elim_term, num2num_ty)
       | SOME s => (s, type_of (#const (const_decl s)))
           handle HOL_ERR _ =>
             raise ERROR "add_numeral_form"
               ("Couldn't find a constant with name "^s)
   in
-    temp_allow_for_overloading_on (term_grammar.fromNum_str, fromNum_type);
-    temp_overload_on_by_nametype (term_grammar.fromNum_str,
-                                  injectionfn_name, ifn_ty);
+    temp_allow_for_overloading_on (fromNum_str, fromNum_type);
+    temp_overload_on_by_nametype (fromNum_str, injectionfn_name, ifn_ty);
     temp_add_bare_numeral_form (c, stropt)
   end
 
@@ -808,7 +823,7 @@ fun new_binder_definition (s, t) = let
   val res = new_definition(s, t)
   val t_name = atom_name (get_head_tm t)
 in
-  add_binder (t_name, term_grammar.std_binder_precedence);
+  add_binder (t_name, std_binder_precedence);
   res
 end
 
@@ -822,7 +837,7 @@ end
 fun new_binder {Name, Ty} = let
   val res = new_constant{Name = Name, Ty = Ty}
 in
-  add_binder (Name, term_grammar.std_binder_precedence); res
+  add_binder (Name, std_binder_precedence); res
 end
 
 fun new_type{Name,Arity} = let

@@ -6,6 +6,8 @@ type pretype = TCPretype.pretype;
 
 open Exception Lib;
 
+open GrammarSpecials
+
 fun ERROR function message =
  Exception.HOL_ERR{origin_structure = "Parse_support",
                    origin_function = function,
@@ -220,12 +222,17 @@ fun make_atom oinfo s E = make_bvar(s,E)
       if Overload.is_overloaded oinfo s then
         (gen_overloaded_const oinfo s, E)
       else
-        (gen_const s, E)
-        handle HOL_ERR _ =>
-          if (Lexis.is_string_literal s) then
-            raise ERROR "make_atom"
-              "string literals not lexically OK until stringTheory loaded"
-          else make_free_var (s,E);
+        if String.isPrefix recsel_special s then
+          raise ERROR "make_atom"
+            ("Record field "^String.extract(s, size recsel_special, NONE)^
+             " not registered")
+        else
+          (gen_const s, E)
+          handle HOL_ERR _ =>
+            if (Lexis.is_string_literal s) then
+              raise ERROR "make_atom"
+                "string literals not lexically OK until stringTheory loaded"
+            else make_free_var (s,E);
 
 (*---------------------------------------------------------------------------
  * Combs

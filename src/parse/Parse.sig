@@ -118,11 +118,13 @@ in
     val overload_on : string * term -> unit
     val overload_on_by_nametype : string * string * Type.hol_type -> unit
     val clear_overloads_on : string -> unit
+    val add_record_field : string * term -> unit
 
     val temp_allow_for_overloading_on : string * Type.hol_type -> unit
     val temp_overload_on : string * term -> unit
     val temp_overload_on_by_nametype : string * string * Type.hol_type -> unit
     val temp_clear_overloads_on : string -> unit
+    val temp_add_record_field : string * term -> unit
 
     (* the following functions affect the grammar, but not so that the
        grammar exported to disk will be modified *)

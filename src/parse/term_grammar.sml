@@ -1,4 +1,5 @@
-open HOLgrammars
+open HOLgrammars GrammarSpecials
+
   type block_info = PP.break_style * int
   datatype rule_element = TOK of string | TM
   datatype pp_element =
@@ -49,13 +50,6 @@ open HOLgrammars
 
 
 
-val fnapp_special = "_ fnapp"
-val bracket_special = "_ bracket"
-val recsel_special = "_ record select"
-val vs_cons_special = " _ vs cons"
-val resquan_special = " _ res quan special"
-val nat_elim_term = " _ elim_nat"
-val fromNum_str = "fromNum"
 
 fun reltoString (TOK s) = s
   | reltoString TM = "TM"
@@ -214,14 +208,32 @@ fun STtoString (G:grammar) x =
   | EndBinding => #endbinding (#specials G) ^ " (end binding)"
   | ResquanOpTok => #res_quanop (#specials G)^" (res quan operator)"
 
-val std_binder_precedence = 0
-
 val stdhol : grammar =
   {rules = [(SOME 0, PREFIX (BINDER [LAMBDA])),
             (SOME 4, INFIX RESQUAN_OP),
             (SOME 5, VSCONS),
+            (SOME 6,
+             INFIX (STD_infix([{term_name = recupd_special,
+                                elements = [RE (TOK ":=")],
+                                preferred = false,
+                                block_style = (AroundEachPhrase,
+                                                (PP.CONSISTENT, 0)),
+                                 paren_style = OnlyIfNecessary},
+                               {term_name = recwith_special,
+                                elements = [RE (TOK "with")],
+                                preferred = false,
+                                block_style = (AroundEachPhrase,
+                                                (PP.CONSISTENT, 0)),
+                                 paren_style = OnlyIfNecessary}], NONASSOC))),
             (SOME 1000, SUFFIX TYPE_annotation),
             (SOME 2000, FNAPP),
+            (SOME 2500,
+             INFIX (STD_infix ([{term_name = recsel_special,
+                                 elements = [RE (TOK "->")],
+                                 preferred = false,
+                                 block_style = (AroundEachPhrase,
+                                                (PP.CONSISTENT, 0)),
+                                 paren_style = OnlyIfNecessary}], LEFT))),
             (NONE,
              CLOSEFIX [{term_name = bracket_special,
                         elements = [RE (TOK "("), RE TM, RE (TOK ")")],
@@ -229,7 +241,10 @@ val stdhol : grammar =
                         (* these two elements here will not actually
                          ever be looked at by the printer *)
                         block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
-                        paren_style = Always}])],
+                        paren_style = Always}]),
+            (NONE,
+             LISTRULE [{separator = ";", leftdelim = "<[", rightdelim = "]>",
+                        cons = reccons_special, nilstr = recnil_special}])],
    specials = {lambda = "\\", type_intro = ":", endbinding = ".",
                restr_binders = [], res_quanop = "::"},
    numeral_info = [],

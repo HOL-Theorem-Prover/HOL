@@ -8,6 +8,8 @@ open fragstr
 
 infix >- >> ++ >->
 
+exception LEX_ERR of string
+
 open HOLtokens
 infix OR
 
@@ -125,7 +127,7 @@ in
   else Int.compare(s1, s2)
 end
 
-fun lex keywords0 = let
+fun lex keywords0 afn = let
   val non_agg_specials = List.filter s_has_nonagg_char keywords0
   val keywords =
     Listsort.sort (fn (s1, s2) => Int.compare(size s2, size s1)) keywords0
@@ -152,10 +154,16 @@ fun lex keywords0 = let
     else
       pushback_s (string sfx) >> deal_with_tokensubstring pfx
   end
-
 in
   (token antiq >- return o Antiquote) ++
   (token quoted_string >- return o Ident) ++
+  (token (many1_charP HOLid >-                               (fn thyname =>
+          item #"$" >>
+          (many1_charP HOLsym ++ many_charP HOLid) >-        (fn partname =>
+          if member thyname (afn()) then
+            return (Ident(thyname^"$"^partname))
+          else
+            raise LEX_ERR ("Invalid theory name: "^thyname))))) ++
   (token (many1_charP Char.isDigit >-       (fn dp =>
           optional (itemP Char.isAlpha) >-  (fn csuffix =>
           return (Numeral(dp, Option.map Char.toLower csuffix)))))) ++
