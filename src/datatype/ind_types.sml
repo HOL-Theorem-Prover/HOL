@@ -1336,7 +1336,7 @@ end
 fun canonicalise_tyvars def thm = let
   val thm_tyvars = Term.type_vars_in_term (concl thm)
   val utys = Lib.U (itlist (union o map snd o snd) def [])
-  val def_tyvars = Lib.mk_set (List.filter is_vartype utys)
+  val def_tyvars = Type.type_varsl utys
   fun gen_canonicals tyvs avoids =
     case tyvs of
       [] => []
