@@ -36,25 +36,52 @@ val elim_eq = store_thm(
     ASM_REWRITE_TAC []
   ]);
 
-val move_all_right = store_thm(
-  "move_all_right",
+val lt_move_all_right = store_thm(
+  "lt_move_all_right",
   ``!x y. x < y = 0 < y + ~x``,
   REWRITE_TAC [INT_LT_ADDNEG, INT_ADD_LID]);
-val move_all_left = store_thm(
-  "move_all_left",
+val lt_move_all_left = store_thm(
+  "lt_move_all_left",
   ``!x y. x < y = x + ~y < 0``,
   REWRITE_TAC [INT_LT_ADDNEG2, INT_ADD_LID]);
-val move_left_left = store_thm(
-  "move_left_left",
+val lt_move_left_left = store_thm(
+  "lt_move_left_left",
   ``!x y z. x < y + z = x + ~y < z``,
   REPEAT GEN_TAC THEN REWRITE_TAC [INT_LT_ADDNEG2] THEN
   CONV_TAC (LHS_CONV (RAND_CONV (REWR_CONV INT_ADD_COMM))) THEN REFL_TAC);
-val move_left_right = store_thm(
-  "move_left_right",
+val lt_move_left_right = store_thm(
+  "lt_move_left_right",
   ``!x y z. x + y < z = y < z + ~x``,
   REPEAT GEN_TAC THEN REWRITE_TAC [INT_LT_ADDNEG] THEN
   CONV_TAC (LHS_CONV (RATOR_CONV (RAND_CONV (REWR_CONV INT_ADD_COMM)))) THEN
   REFL_TAC);
+
+val eq_move_all_right = store_thm(
+  "eq_move_all_right",
+  ``!x y. (x = y) = (0 = y + ~x)``,
+  REPEAT GEN_TAC THEN EQ_TAC THENL [
+    SIMP_TAC bool_ss [INT_ADD_RINV],
+    SIMP_TAC bool_ss [GSYM int_sub, INT_EQ_SUB_LADD, INT_ADD_LID]
+  ]);
+val eq_move_all_left = store_thm(
+  "eq_move_all_left",
+  ``!x y. (x = y) = (x + ~y = 0)``,
+  PROVE_TAC [INT_ADD_COMM, eq_move_all_right]);
+val eq_move_left_left = store_thm(
+  "eq_move_left_left",
+  ``!x y z. (x = y + z) = (x + ~y = z)``,
+  REPEAT GEN_TAC THEN EQ_TAC THENL [
+    DISCH_THEN SUBST1_TAC THEN
+    ONCE_REWRITE_TAC [INT_ADD_COMM] THEN
+    REWRITE_TAC [INT_ADD_ASSOC, INT_ADD_LINV, INT_ADD_LID],
+    DISCH_THEN (SUBST1_TAC o SYM) THEN
+    ONCE_REWRITE_TAC [INT_ADD_COMM] THEN
+    REWRITE_TAC [GSYM INT_ADD_ASSOC, INT_ADD_LINV, INT_ADD_RID]
+  ]);
+val eq_move_left_right = store_thm(
+  "eq_move_left_right",
+  ``!x y z. (x + y = z) = (y = z + ~x)``,
+  PROVE_TAC [INT_ADD_COMM, eq_move_left_left]);
 
 val lcm_eliminate = store_thm(
   "lcm_eliminate",
@@ -63,8 +90,8 @@ val lcm_eliminate = store_thm(
   PROVE_TAC [INT_MUL_SYM]);
 
 
-val justify_multiplication = store_thm(
-  "justify_multiplication",
+val lt_justify_multiplication = store_thm(
+  "lt_justify_multiplication",
   --`!n x y:int. 0 < n ==> (x < y = n * x < n * y)`--,
   REPEAT STRIP_TAC THEN
   `n * x < n * y = 0 < n * y - n * x`
@@ -73,6 +100,11 @@ val justify_multiplication = store_thm(
   ASM_REWRITE_TAC [GSYM INT_SUB_LDISTRIB, INT_MUL_SIGN_CASES] THEN
   `~(n < 0)` by PROVE_TAC [INT_LT_TRANS, INT_LT_REFL] THEN
   ASM_REWRITE_TAC [INT_ADD_LID, GSYM INT_LT_ADD_SUB]);
+
+val eq_justify_multiplication = store_thm(
+  "eq_justify_multiplication",
+  --`!n x y:int. 0 < n ==> ((x = y) = (n * x = n * y))`--,
+  PROVE_TAC [INT_EQ_RMUL, INT_LT_REFL, INT_MUL_COMM]);
 
 val justify_divides = store_thm(
   "justify_divides",
@@ -128,7 +160,7 @@ val can_get_small = store_thm(
     ONCE_REWRITE_TAC [GSYM INT_LT_NEG] THEN
     REWRITE_TAC [INT_NEG_RMUL, INT_NEG_SUB] THEN
     Q.SUBGOAL_THEN `0 < 2 * d - 1`
-      (fn th => PROVE_TAC [th, justify_multiplication, INT_MUL_SYM]) THEN
+      (fn th => PROVE_TAC [th, lt_justify_multiplication, INT_MUL_SYM]) THEN
     `?n. d = &n` by PROVE_TAC [NUM_POSINT_EXISTS, INT_LE_LT] THEN
     POP_ASSUM SUBST_ALL_TAC THEN
     Cases_on `n` THEN
@@ -278,7 +310,7 @@ val subtract_to_small = store_thm(
       FIRST_X_ASSUM SUBST_ALL_TAC THEN
       FULL_SIMP_TAC bool_ss [INT_LT, prim_recTheory.NOT_LESS_0] THEN
       ONCE_REWRITE_TAC [INT_ADD_COMM] THEN
-      FULL_SIMP_TAC bool_ss [GSYM move_all_right, INT_ABS_NEG, INT_ABS_NUM],
+      FULL_SIMP_TAC bool_ss [GSYM lt_move_all_right, INT_ABS_NEG, INT_ABS_NUM],
       REWRITE_TAC [GSYM INT_NOT_LT] THEN
       ONCE_REWRITE_TAC [INT_ADD_COMM] THEN
       REWRITE_TAC [INT_LT_ADDR] THEN ASM_REWRITE_TAC [INT_NOT_LT, INT_LE_LT]
@@ -377,5 +409,19 @@ val HO_SUB_ELIM = store_thm(
                                            RIGHT_AND_OVER_OR, INT_NOT_LT,
                                            int_sub] THEN
   PROVE_TAC [INT_LE_LT, INT_LT_TOTAL, INT_LET_TRANS, INT_LT_REFL])
+
+val CONJ_EQ_ELIM = store_thm(
+  "CONJ_EQ_ELIM",
+  Term`!P v e. (v = e) /\ P v = (v = e) /\ P e`,
+  REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+    FIRST_X_ASSUM (SUBST1_TAC o SYM) THEN ASM_REWRITE_TAC [],
+    ASM_REWRITE_TAC []
+  ]);
+
+val elim_neg_ones = store_thm(
+  "elim_neg_ones",
+  Term`!x. x + ~1 + 1 = x`,
+  REWRITE_TAC [GSYM INT_ADD_ASSOC, INT_ADD_LINV, INT_ADD_RID]);
+
 
 val _ = export_theory();

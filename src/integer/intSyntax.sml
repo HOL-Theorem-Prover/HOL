@@ -1,4 +1,4 @@
-structure intSyntax :> intSyntax = 
+structure intSyntax :> intSyntax =
 struct
 
 open HolKernel basicHol90Lib Parse integerTheory Psyntax;
@@ -26,7 +26,6 @@ val geq_tm = Term`$>= : int -> int -> bool`
 val divides_tm = Term`$int_divides : int -> int -> bool`;
 val absval_tm = Term`ABS : int -> int`;
 val min_tm = Term.mk_const{Name = "int_min", Ty = int_ty --> int_ty --> int_ty}
-val zero_tm = Term`0i`
 
 fun is_plus tm = let
   val (hd, args) = strip_comb tm
@@ -142,6 +141,9 @@ in
   else
     mk_comb(int_injection, Term.mk_numeral (toNat i))
 end
+
+val zero_tm = term_of_int Arbint.zero
+val one_tm = term_of_int Arbint.one
 
 
 end (* struct *)

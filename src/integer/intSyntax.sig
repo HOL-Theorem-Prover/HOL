@@ -1,9 +1,10 @@
-signature intSyntax = 
+signature intSyntax =
 sig
 
   (* terms and types *)
   val int_ty : Type.hol_type
   val zero_tm : Term.term
+  val one_tm : Term.term
   val negate_tm : Term.term
   val absval_tm : Term.term
   val plus_tm : Term.term
