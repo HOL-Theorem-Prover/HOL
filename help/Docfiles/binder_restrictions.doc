@@ -1,0 +1,30 @@
+\DOC binder_restrictions
+
+\TYPE {binder_restrictions : unit -> (string * string) list}
+
+\SYNOPSIS
+Shows the list of binder restrictions currently in force.
+
+\DESCRIBE
+{associate_restriction} is used to control the parsing and prettyprinting of
+restricted binders, which give the illusion of dependent types. The list 
+of current restrictions is found by calling {binder_restrictions}. There 
+are always at least the following restricted binders: ["!","?","@","\\"].
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{
+    associate_restriction("DURING","RES_DURING");
+    () : unit
+
+    binder_restrictions();
+    [("DURING","RES_DURING"),("!","RES_FORALL"),("?","RES_EXISTS"),
+     ("@","RES_SELECT"),("\\","RES_ABSTRACT")] : (string * string) list
+
+}
+\SEEALSO
+associate_restrictions, delete_restriction
+
+\ENDDOC

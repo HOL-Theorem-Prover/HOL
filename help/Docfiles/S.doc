@@ -1,0 +1,17 @@
+\DOC S
+
+\TYPE {S : ((* -> ** -> ***) -> (* -> **) -> * -> ***)}
+
+\SYNOPSIS
+Performs function composition: {S f g x} = {f x (g x)} (the {S} combinator).
+
+\KEYWORDS
+combinator.
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+\#, B, C, CB, Co, I, K, KI, o, oo, W.
+
+\ENDDOC

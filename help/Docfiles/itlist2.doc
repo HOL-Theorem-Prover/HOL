@@ -1,0 +1,29 @@
+\DOC itlist2
+
+\TYPE {itlist2 : (((* # **) -> *** -> ***) -> (* list # ** list) -> *** -> ***)}
+
+\SYNOPSIS
+Applies a paired function between adjacent elements of 2 lists.
+
+\KEYWORDS
+list.
+
+\DESCRIBE
+{itlist2 f ([x1;...;xn],[y1;...;yn]) z} returns
+{
+   f (x1,y1) (f (x2,y2) ... (f (xn,yn) z)...)
+}
+\noindent It returns {z} if both lists are empty.
+
+\FAILURE
+Fails with {itlist2} if the two lists are of different lengths.
+
+\EXAMPLE
+{
+#itlist2 (\(x,y) z. (x * y) + z) ([1;2],[3;4]) 0;;
+11 : int
+}
+\SEEALSO
+itlist, rev_itlist, end_itlist, uncurry.
+
+\ENDDOC

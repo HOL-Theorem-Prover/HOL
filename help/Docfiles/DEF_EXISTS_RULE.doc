@@ -1,0 +1,36 @@
+\DOC DEF_EXISTS_RULE
+
+\TYPE {DEF_EXISTS_RULE : (term -> thm)}
+
+\SYNOPSIS
+Proves that a function defined by a definitional equation exists.
+
+\KEYWORDS
+rule, definition.
+
+\DESCRIBE
+This rule accepts a term of the form {"c = ..."} or {"f x1 ... xn = ..."}, the
+variables of which may be universally quantified, and returns an existential
+theorem. The resulting theorem is typically used for generating HOL
+specifications.
+
+\FAILURE
+{DEF_EXISTS_RULE} fails if the definition is not an equation, if there
+is any variable in the right-hand side which does not occur in the
+left-hand side, if the definition is recursive, if there is a free type
+variable, or if the name being defined by the function is not allowed.
+
+\EXAMPLE
+The effect of this rule can be understood more clearly through an
+example:
+{
+   #DEF_EXISTS_RULE "max a b = ((a < b) => b | a)" ;;
+   |- ?max. !a b. max a b = (a < b => b | a)
+}
+\COMMENTS
+In later versions of HOL this function may be made internal.
+
+\SEEALSO
+new_definition, new_gen_definition, new_specification.
+
+\ENDDOC

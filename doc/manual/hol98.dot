@@ -1,0 +1,115 @@
+digraph G {
+	size = "7, 10";
+	ranksep = 0.65;
+	nodesep = 0.20;
+
+/*	min */
+	bool
+        combin
+	pair
+	one
+	sum
+	TC
+	num
+	prim_rec
+	option
+	finite_map
+	primWF
+	arithmetic
+	list
+	real
+	pred_set
+	/* multiset */
+	integer
+	set
+	List
+	ltree
+
+	IndDefLib [shape = box]
+	ind_defLib [shape = box]
+	robddLib [shape = box]
+	setLib [shape = box]
+	pred_setLib [shape = box]
+	arithLib [shape = box]
+	mesonLib [shape = box]
+	simpLib [shape = box]
+	tflLib [shape = box]
+	bossLib [shape = box]
+	mutrecLib [shape = box]
+	nestrecLib [shape = box]
+	mutualLib [shape = box]
+	listLib [shape = box]
+	decisionLib [shape = box]
+	Datatype [shape = box]
+	realLib [shape = box]
+	wordLib [shape = box]
+
+	/* min -> bool */
+
+	bool -> pair
+	bool -> num
+	bool -> one
+	bool -> combin
+	bool -> simpLib
+	bool -> ind_defLib
+	bool -> IndDefLib
+	bool -> robddLib
+
+	pair -> list
+	pair -> finite_map
+
+	num -> prim_rec -> arithmetic
+
+	one -> option
+	one -> finite_map
+
+	combin -> sum
+	combin -> ltree
+	combin -> TC
+
+	sum -> option
+	sum -> finite_map
+
+	arithmetic -> list
+	arithmetic -> integer
+	arithmetic -> arithLib
+	arithmetic -> real
+	/* arithmetic -> multiset */
+	arithmetic -> pred_set -> pred_setLib
+	arithmetic -> set -> setLib
+
+	real -> others -> realLib
+
+	tflLib -> bossLib
+
+	decisionLib -> bossLib
+	arithLib -> bossLib
+
+	list -> tree -> ltree
+	list -> List
+	list -> decisionLib
+	list -> WF -> bossLib
+
+	ltree -> rec_type
+
+	rec_type -> Define_type
+	sum -> Define_type
+	one -> Define_type
+
+	Define_type -> Datatype -> bossLib
+	Define_type -> mutrecLib
+	mutrecLib -> nestrecLib
+	nestrecLib -> mutualLib
+
+	combin -> mesonLib -> bossLib
+
+	simpLib -> bossLib
+	option -> bossLib
+
+	TC -> primWF
+	primWF -> arithmetic
+	primWF -> tflLib
+
+	List -> listLib
+	List -> wordLib
+}

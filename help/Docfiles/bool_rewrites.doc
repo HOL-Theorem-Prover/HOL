@@ -1,0 +1,79 @@
+\DOC bool_rewrites
+
+\TYPE {bool_rewrites: unit -> rewrites}
+
+\SYNOPSIS
+Contains a number of built-in tautologies used, by default, in rewriting.
+
+\DESCRIBE
+The variable {bool_rewrites} represents a kind of database of rewrite rules 
+commonly used to simplify expressions. These rules include the clause for
+reflexivity:
+{
+   |- !x. (x = x) = T
+}
+\noindent as well as rules to reason about equality:
+{
+   |- !t.
+      ((T = t) = t) /\ ((t = T) = t) /\ ((F = t) = ~t) /\ ((t = F) = ~t)
+}
+Negations are manipulated by the following clauses:
+{
+   |- (!t. ~~t = t) /\ (~T = F) /\ (~F = T)
+}
+The set of tautologies includes truth tables for conjunctions,
+disjunctions, and implications:
+{
+   |- !t.
+       (T /\ t = t) /\
+       (t /\ T = t) /\
+       (F /\ t = F) /\
+       (t /\ F = F) /\
+       (t /\ t = t)
+   |- !t.
+       (T \/ t = T) /\
+       (t \/ T = T) /\
+       (F \/ t = t) /\
+       (t \/ F = t) /\
+       (t \/ t = t)
+   |- !t.
+       (T ==> t = t) /\
+       (t ==> T = T) /\
+       (F ==> t = T) /\
+       (t ==> t = T) /\
+       (t ==> F = ~t)
+}
+Simple rules for reasoning about conditionals are given by:
+{
+   |- !t1 t2. ((T => t1 | t2) = t1) /\ ((F => t1 | t2) = t2)
+}
+Rewriting with the following tautologies allows simplification of
+universally and existentially quantified variables and abstractions:
+{
+   |- !t. (!x. t) = t
+   |- !t. (?x. t) = t
+   |- !t1 t2. (\x. t1)t2 = t1
+}
+\USES
+The {bool_rewrites} are automatically included in the simplifications 
+performed by some of the rewriting tools.
+
+The {bool_rewrites} used to include rules for reasoning about
+pairs in HOL:
+{
+   |- !x. FST x,SND x = x
+   |- !x y. FST(x,y) = x
+   |- !x y. SND(x,y) = y
+}
+However, because of recent changes in the system, the theory of pairs 
+need not be loaded at the same time as the "bool" theory, so the 
+above rewrites can be accessed through {pairTheory.pair_rws}.
+
+
+\SEEALSO
+ABS_SIMP, AND_CLAUSES, COND_CLAUSES, EQ_CLAUSES, EXISTS_SIMP,
+FORALL_SIMP, FST, GEN_REWRITE_RULE, GEN_REWRITE_TAC, IMP_CLAUSES,
+NOT_CLAUSES, OR_CLAUSES, PAIR, REFL_CLAUSE, REWRITE_RULE, REWRITE_TAC,
+SND, set_bool_rewrites, add_bool_rewrites.
+
+\ENDDOC

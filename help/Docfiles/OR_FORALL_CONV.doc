@@ -1,0 +1,25 @@
+\DOC OR_FORALL_CONV
+
+\TYPE {OR_FORALL_CONV : conv}
+
+\SYNOPSIS
+Moves a universal quantification outwards through a disjunction.
+
+\KEYWORDS
+conversion, quantifier, universal, disjunction.
+
+\DESCRIBE
+When applied to a term of the form {(!x.P) \/ (!x.Q)}, where {x} is free
+in neither {P} nor {Q}, {OR_FORALL_CONV} returns the theorem:
+{
+   |- (!x. P) \/ (!x. Q) = (!x. P \/ Q)
+}
+\FAILURE
+{OR_FORALL_CONV} fails if it is applied to a term not of the form
+{(!x.P) \/ (!x.Q)}, or if it is applied to a term {(!x.P) \/ (!x.Q)}
+in which the variable {x} is free in either {P} or {Q}.
+
+\SEEALSO
+FORALL_OR_CONV, LEFT_OR_FORALL_CONV, RIGHT_OR_FORALL_CONV.
+
+\ENDDOC

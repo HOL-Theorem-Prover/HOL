@@ -1,0 +1,29 @@
+\DOC subtract
+
+\TYPE {subtract : (* list -> * list -> * list)}
+
+\SYNOPSIS
+Computes the set-theoretic difference of two `sets'.
+
+\KEYWORDS
+list, set.
+
+\DESCRIBE
+{subtract l1 l2} returns a list consisting of those elements of {l1} that do
+not appear in {l2}.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{
+#subtract [1;2;3] [3;5;4;1];;
+[2] : int list
+
+#subtract [1;2;4;1] [4;5];;
+[1; 2; 1] : int list
+}
+\SEEALSO
+setify, set_equal, union, intersect.
+
+\ENDDOC

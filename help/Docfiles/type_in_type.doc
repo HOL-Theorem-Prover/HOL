@@ -1,0 +1,26 @@
+\DOC type_in_type
+
+\TYPE {type_in_type : (type -> type -> bool)}
+
+\SYNOPSIS
+Determines whether a given type is a subtype of another.
+
+\DESCRIBE
+The predicate {type_in_type} returns {true} if the type
+given as the first argument is a subtype of the second.
+
+\EXAMPLE
+{
+   #type_in_type ":num" ":num # bool";;
+   true : bool
+
+   #type_in_type ":num" ":(num)list";;
+   true :bool
+
+   #type_in_type ":bool" ":num + bool";;
+   true : bool
+}
+\SEEALSO
+find_term, find_terms, type_in
+
+\ENDDOC

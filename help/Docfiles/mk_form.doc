@@ -1,0 +1,9 @@
+\DOC mk_form
+
+\TYPE {mk_form : (term -> form)}
+
+\SYNOPSIS
+This function is for internal use only and is to be deleted from a future
+version of the system. It should not be used.
+
+\ENDDOC

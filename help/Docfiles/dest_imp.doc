@@ -1,0 +1,41 @@
+\DOC dest_imp
+
+\TYPE {dest_imp : term -> {{ant :term, conseq :term}}}
+
+\SYNOPSIS
+Breaks apart an implication (or negation) into antecedent and consequent.
+
+\DESCRIBE
+{dest_imp} is a term destructor for implications, which treats negations as
+implications with consequent {F}. Thus
+{
+   dest_imp (--`t1 ==> t2`--)
+}
+\noindent returns
+{
+   {{ant = t1, conseq = t2}}
+}
+\noindent and also
+{
+   dest_imp (--`~t`--)
+}
+\noindent returns
+{
+   {{ant = t, conseq = (--`F`--)}}
+}
+
+\FAILURE
+Fails with 
+
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_imp", 
+            message = "not an ==>"}}
+
+if term is neither an implication nor a negation.
+
+\COMMENTS
+Destructs negations for increased functionality of HOL-style resolution.
+
+\SEEALSO
+mk_imp, is_imp, strip_imp.
+
+\ENDDOC

@@ -1,0 +1,22 @@
+\DOC mk_forall
+
+\TYPE {mk_forall : {{Bvar : term, Body : term}} -> term}
+
+\SYNOPSIS
+Term constructor for universal quantification.
+
+\DESCRIBE
+{mk_forall{{Bvar = v, Body = t}}} returns {--`!v. t`--}. 
+
+\FAILURE
+Fails with 
+
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_forall", 
+            message = ""}}
+
+if {Bvar} is not a variable or if {Body} is not of type {==`:bool`==}.
+
+\SEEALSO
+dest_forall, is_forall, list_mk_forall.
+
+\ENDDOC

@@ -1,0 +1,26 @@
+\DOC rev_itlist
+
+\TYPE {rev_itlist : ((* -> ** -> **) -> * list -> ** -> **)}
+
+\SYNOPSIS
+Applies a binary function between adjacent elements of the reverse of a list.
+
+\KEYWORDS
+list.
+
+\DESCRIBE
+{rev_itlist f [x1;...;xn] y} returns {f xn ( ... (f x2 (f x1 y))...)}.
+It returns {y} if the list is empty.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{
+#rev_itlist (\x y. x * y) [1;2;3;4] 1;;
+24 : int
+}
+\SEEALSO
+itlist, end_itlist.
+
+\ENDDOC

@@ -1,0 +1,42 @@
++ =====================================================================	+
+|									|
+| LIBRARY	: bmark							|
+| 									|
+| DESCRIPTION   : A verification of a multiplier circuit. This has      |
+|                 become a standard benchmark for the HOL system.       |
+|									|
+| AUTHOR	: Mike Gordon						|
+| AFFILIATION   : Cambridge University					|
+|									|
++ =====================================================================	+
+
+
++ --------------------------------------------------------------------- +
+|									|
+| FILES: 								|
+|									|
++ --------------------------------------------------------------------- +
+
+There is only one file making up the example: Bmark.sml. Several
+theories are produced in the course of execution.  They are currently
+represented by the structures
+
+    NEXTTheory,  MULT_FUN_CURRYTheory, MULT_FUNTheory, 
+    primsTheory, MULT_IMPTheory, MULT_VERTheory
+
+which are automatically cleaned up after the benchmark finishes.
+
++ --------------------------------------------------------------------- +
+|									|
+| TO RUN: invoke "run_bmark <hol98> in the shell, where <hol98> is a    |
+| path to Hol98.                                                        |
++ --------------------------------------------------------------------- +
+
+
++ --------------------------------------------------------------------- +
+|									|
+| DOCUMENTATION:							|
+|									|
++ --------------------------------------------------------------------- +
+
+The multiplier was documented in the original LCF-LSM paper. 

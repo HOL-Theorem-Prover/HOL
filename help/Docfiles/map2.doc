@@ -1,0 +1,22 @@
+\DOC map2
+
+\TYPE {map2 : (((* # **) -> ***) -> (* list # ** list) -> *** list)}
+
+\SYNOPSIS
+Maps a binary function over two lists to create one new list.
+
+\DESCRIBE
+{map2 f ([x1;...;xn],[y1;...;yn])} returns {[f(x1,y1);...;f(xn,yn)]}.
+
+\FAILURE
+Fails with {map2} if the two lists are of different lengths.
+
+\EXAMPLE
+{
+#map2 $+ ([1;2;3],[3;2;1]);;
+[4; 4; 4] : int list
+}
+\SEEALSO
+map, uncurry.
+
+\ENDDOC

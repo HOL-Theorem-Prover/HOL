@@ -1,0 +1,27 @@
+\DOC dest_select
+
+\TYPE {dest_select : term -> {{Bvar :term, Body :term}}}
+
+\SYNOPSIS
+Breaks apart a choice term into selected variable and body.
+
+\DESCRIBE
+{dest_select} is a term destructor for choice terms:
+{
+   dest_select (--`@var. t`--)
+}
+\noindent returns {{Bvar = var, Body = t}}.
+
+
+\FAILURE
+Fails with 
+
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_select", 
+            message = "not a @"}}
+
+if term is not an epsilon-term.
+
+\SEEALSO
+mk_select, is_select.
+
+\ENDDOC

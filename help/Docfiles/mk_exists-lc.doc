@@ -1,0 +1,22 @@
+\DOC mk_exists
+
+\TYPE {mk_exists : {{Bvar : term, Body : term}} -> term}
+
+\SYNOPSIS
+Term constructor for existential quantification.
+
+\DESCRIBE
+{mk_exists{{Bvar = v, Body = t}}} returns {--`?v. t`--}. 
+
+\FAILURE
+Fails with 
+
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_exists", 
+            message = ""}}
+
+if {Bvar} is not a variable or if {Body} is not of type {==`:bool`==}.
+
+\SEEALSO
+dest_exists, is_exists, list_mk_exists.
+
+\ENDDOC

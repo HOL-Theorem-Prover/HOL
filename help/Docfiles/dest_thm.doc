@@ -1,0 +1,22 @@
+\DOC dest_thm
+
+\TYPE {dest_thm : (thm -> goal)}
+
+\SYNOPSIS
+Breaks a theorem into assumption list and conclusion.
+
+\DESCRIBE
+{dest_thm (t1,...,tn |- t)} returns {(["t1";...;"tn"],"t")}.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{
+#dest_thm (ASSUME "p=T");;
+(["p = T"], "p = T") : goal
+}
+\SEEALSO
+concl, hyp.
+
+\ENDDOC

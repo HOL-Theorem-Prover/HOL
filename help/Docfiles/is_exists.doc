@@ -1,0 +1,18 @@
+\DOC is_exists
+
+\TYPE {is_exists : (term -> bool)}
+
+\SYNOPSIS
+Tests a term to see if it as an existential quantification.
+
+\DESCRIBE
+{is_exists "?var. t"} returns {true}. If the term is not an existential
+quantification the result is {false}.
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+mk_exists, dest_exists.
+
+\ENDDOC

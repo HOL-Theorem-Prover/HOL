@@ -1,0 +1,30 @@
+\DOC LIST_MP
+
+\TYPE {LIST_MP : (thm list -> thm -> thm)}
+
+\SYNOPSIS
+Performs a chain of Modus Ponens inferences.
+
+\KEYWORDS
+rule, modus, ponens.
+
+\DESCRIBE
+When applied to theorems {A1 |- t1, ..., An |- tn} and a theorem which is a
+chain of implications with the successive antecedents the same as the
+conclusions of the theorems in the list (up to alpha-conversion),
+{A |- t1 ==> ... ==> tn ==> t}, the {LIST_MP} inference rule performs a chain
+of {MP} inferences to deduce {A u A1 u ... u An |- t}.
+{
+    A1 |- t1 ... An |- tn      A |- t1 ==> ... ==> tn ==> t
+   ---------------------------------------------------------  LIST_MP
+                    A u A1 u ... u An |- t
+}
+\FAILURE
+Fails unless the theorem is a chain of implications whose consequents are the
+same as the conclusions of the list of theorems (up to alpha-conversion), in
+sequence.
+
+\SEEALSO
+EQ_MP, MATCH_MP, MATCH_MP_TAC, MP, MP_TAC.
+
+\ENDDOC

@@ -1,0 +1,41 @@
+\begin{thebibliography}{1}
+
+\bibitem{andrews:book}
+Peter Andrews.
+\newblock {\em An Introduction to Mathematical Logic and Type Theory: To Truth
+  Through Proof}.
+\newblock Academic Press, 1986.
+
+\bibitem{church:stt}
+Alonzo Church.
+\newblock A formulation of the {S}imple {T}heory of {T}ypes.
+\newblock {\em Journal of Symbolic Logic}, 5:56--68, 1940.
+
+\bibitem{lcf:book}
+Michael Gordon, Robin Milner, and Christopher Wadsworth.
+\newblock {\em Edinburgh LCF: A Mechanised Logic of Computation}, volume~78 of
+  {\em Lecture Notes in Computer Science}.
+\newblock Springer-Verlag, 1979.
+
+\bibitem{hol88:book}
+Mike Gordon and Tom Melham.
+\newblock {\em Introduction to {HOL}, a theorem proving environment for higher
+  order logic}.
+\newblock Cambridge University Press, 1993.
+
+\bibitem{SML97}
+Robin Milner, Mads Tofte, Robert Harper, and David MacQueen.
+\newblock {\em The Definition of Standard ML (Revised)}.
+\newblock The MIT Press, 1997.
+
+\bibitem{lcp:ml}
+Lawrence Paulson.
+\newblock {\em ML for the working programmer}.
+\newblock Cambridge University Press, second edition, 1996.
+
+\bibitem{ullman:mlbook}
+J.~Ullman.
+\newblock {\em Elements of ML Programming}.
+\newblock Prentice-Hall, second edition, 1997.
+
+\end{thebibliography}

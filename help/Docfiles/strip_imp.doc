@@ -1,0 +1,27 @@
+\DOC strip_imp
+
+\TYPE {strip_imp : (term -> goal)}
+
+\SYNOPSIS
+Iteratively breaks apart implications.
+
+\DESCRIBE
+{strip_imp "t1 ==> ( ... (tn ==> t)...)"} returns {(["t1";...;"tn"],"t")}.
+Note that
+{
+   strip_imp(list_mk_imp(["t1";...;"tn"],"t"))
+}
+\noindent will not return {(["t1";...;"tn"],"t")} if {t} is an implication.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{
+#strip_imp "(T ==> F) ==> (T ==> F)";;
+(["T ==> F"; "T"], "F") : goal
+}
+\SEEALSO
+list_mk_imp, dest_imp.
+
+\ENDDOC

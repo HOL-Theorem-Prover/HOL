@@ -1,0 +1,25 @@
+\DOC dest_cons
+
+\TYPE {dest_cons : term -> {{hd :term, tl :term}}}
+
+\SYNOPSIS
+Breaks apart a `CONS pair' into head and tail.
+
+\DESCRIBE
+{dest_cons} is a term destructor for `CONS pairs'. When applied to a term
+representing a nonempty list {--`[t;t1;...;tn]`--} (which is equivalent to
+{--`CONS t [t1;...;tn]`--}), it returns the pair of terms 
+{{hd = t, tl = --`[t1;...;tn]`--}}. 
+
+\FAILURE
+Fails with 
+
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_cons", 
+            message = "not a cons"}}
+
+if the term is not a non-empty list.
+
+\SEEALSO
+mk_cons, is_cons, mk_list, dest_list, is_list.
+
+\ENDDOC

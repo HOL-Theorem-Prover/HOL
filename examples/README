@@ -1,0 +1,61 @@
+This is the examples directory for Hol98.
+
+Currently on offer are the following:
+
+  * MLSyntax
+
+       This example shows the use of a facility for defining mutually
+       recursive types, due to Elsa Gunter of Bell Labs. In the example,
+       the type of abstract syntax for a small but not totally
+       unrealistic subset of ML is defined, along with a simple mutually
+       recursive function over the syntax.
+
+
+  * autopilot.sml
+
+       This example is a Hol98 rendition of a PVS example due to Ricky
+       Butler of NASA. The example shows the use of a record-definition
+       package due to Mike Norrish and Phil Windley, as well as
+       illustrating some aspects of the automation available in Hol98.
+
+
+  * bmark
+
+       This example is an old and standard HOL benchmark: the proof of
+       correctness of a multiplier circuit, due to Mike Gordon.
+
+
+  * euclid.sml
+
+       This example is a proof of Euclid's theorem on the infinitude of
+       the prime numbers. It has been extracted and modified by Konrad
+       Slind from a much larger development originally due to John 
+       Harrison.
+
+
+  * fol.sml
+
+      This file exercises John Harrison's implementation of a
+      model-elimination style first order prover. 
+
+  * ind_def
+
+      This directory contains some examples of Tom Melham's inductive
+      definition package in action. Featured are an operational
+      semantics for a small imperative programming language, a small
+      process algebra, and combinatory logic with its type system. The
+      files are extensively commented.  NB. most of the proofs in these
+      theories can now be done much more easily by using some of the
+      recently developed tools, namely the simplifier and the first
+      order prover.
+
+  * taut.sml
+
+      This file presents some tautologies, and uses an ML binding of
+      J"orn Lind's ROBDD (Reduced Ordered Binary Decision Diagram) package 
+      to attempt to prove them.
+
+  * tempScript.sml
+
+      This file is a template for making a separately compilable HOL
+      theory script.

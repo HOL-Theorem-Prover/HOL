@@ -1,0 +1,23 @@
+\DOC EQF_INTRO
+
+\TYPE {EQF_INTRO : (thm -> thm)}
+
+\SYNOPSIS
+Converts negation to equality with {F}.
+
+\KEYWORDS
+rule, negation, falsity.
+
+\DESCRIBE
+{
+     A |- ~tm
+   -------------  EQF_INTRO
+    A |- tm = F
+}
+\FAILURE
+Fails if the argument theorem is not a negation.
+
+\SEEALSO
+EQF_ELIM, EQT_ELIM, EQT_INTRO.
+
+\ENDDOC

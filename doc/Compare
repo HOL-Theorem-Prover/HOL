@@ -1,0 +1,61 @@
+This file compares the performance of hol98 (MoscowML 1.43 based) to
+hol90.10 (SML/NJ 110 based).
+
+
+A. The multiplier benchmark found in the examples directory.
+
+            |  size    runtime/GC     Machine
+   --------------------------------------------------------------
+   hol98    |  5.5M    21.6/1.4s      Linux/Pentium/80M
+   hol98    |  ---     38.4s/3s       Linux/Pentium/16M (Libretto)
+   hol90.10 |  30M     29.4/0.4s      Linux/Pentium/80M
+
+
+
+B. Defining the following type using Elsa Gunter's mutrecLib:
+
+
+       atexp ::= <var> 
+               | let <dec> in <exp> end
+    
+         exp ::= <atexp>
+               | <exp> <atexp>
+               | fn <match>
+    
+       match ::= <rule>
+               | <rule> "|" <match>
+    
+        rule ::= <pat> => <exp>
+                
+         dec ::= val <valbind>
+               | local <dec> in <dec> end
+               | <dec> ; <dec>
+    
+     valbind ::= <pat> = <exp>
+               | <pat> = <exp> and <valbind>
+               | valrec <valbind>
+    
+       pat   ::= "_"  (* wildcard *)
+               | <var>
+
+   Result:
+            |  size    runtime/GC  Machine
+   --------------------------------------------------
+   hol98    |  6.3M    38.6/5.5    Linux/Pentium/80M
+   hol90.10 |  32M     35.3/0.3       ""
+
+
+C. Running MESON_TAC. The following tests of John Harrison's MESON_TAC
+   were done (examples taken from the library source directory):
+   LOS, CAT001_3, and CAT005_1.
+
+            |  size    runtime/GC     Example      Machine
+   --------------------------------------------------------------
+   hol98    |  5.5M    8.1/0.5        LOS          Linux/Pentium/80M
+   hol90.10 |  30M     11.3/0.1                     ""
+  --------------------------------------------------------------
+   hol98    |  5.5M    10.0/0.3       CAT001_3      ""
+   hol90.10 |  30M     10.4/0.3                     ""
+  --------------------------------------------------------------
+   hol98    |  5.8M    100/4.4        CAT005_1      ""
+   hol90.10 |  30M     128/0.1                      ""

@@ -1,0 +1,18 @@
+\DOC is_var
+
+\TYPE {is_var : (term -> bool)}
+
+\SYNOPSIS
+Tests a term to see if it is a variable.
+
+\DESCRIBE
+{is_var "var:ty"} returns {true}. If the term is not a variable the result
+is {false}.
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+mk_var, dest_var, is_const, is_comb, is_abs.
+
+\ENDDOC

@@ -1,0 +1,16 @@
+\DOC add_base_rewrites
+
+\TYPE {add_base_rewrites: thm list -> unit}
+
+\SYNOPSIS
+Augments the built-in database of simplifications automatically included in
+rewriting.
+
+\DESCRIBE
+\USES
+Used to build up the power of the built-in simplification set.
+
+\SEEALSO
+base_rewrites, set_base_rewrites.
+
+\ENDDOC

@@ -1,0 +1,23 @@
+\DOC mapfilter
+
+\TYPE {mapfilter : ((* -> **) -> * list -> ** list)}
+
+\SYNOPSIS
+Applies a function to every element of a list, returning a list of results
+for those elements for which application succeeds.
+
+\KEYWORDS
+list.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{
+#mapfilter hd [[1;2;3];[4;5];[];[6;7;8];[]];;
+[1; 4; 6] : int list
+}
+\SEEALSO
+filter, map.
+
+\ENDDOC

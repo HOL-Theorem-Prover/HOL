@@ -1,0 +1,30 @@
+\DOC itlist
+
+\TYPE {itlist : ((* -> ** -> **) -> * list -> ** -> **)}
+
+\SYNOPSIS
+List iteration function. Applies a binary function between adjacent elements
+of a list.
+
+\KEYWORDS
+list.
+
+\DESCRIBE
+{itlist f [x1;...;xn] y} returns
+{
+   f x1 (f x2 ... (f xn y)...)
+}
+\noindent It returns {y} if list is empty.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{
+#itlist (\x y. x + y) [1;2;3;4] 0;;
+10 : int
+}
+\SEEALSO
+rev_itlist, end_itlist.
+
+\ENDDOC

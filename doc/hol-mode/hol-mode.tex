@@ -1,0 +1,47 @@
+\documentclass[10pt]{article}
+
+\begin{document}
+
+\section*{Emacs HOL mode commands}
+
+All of these commands are executed by first typing the HOL prefix
+(Meta-h, or {\tt Esc}-h) and then the appropriate letter.
+
+\begin{description}
+
+\item [h ``hol98''] Starts the HOL session.
+\item [C-c ``hol-interrupt''] Interrupts the HOL session.  Useful for
+  those tactics that don't always return.
+\item [C-l ``hol-recentre''] Recentres the screen that HOL is running
+  in, so that the most text is visible with the bottom of the text
+  at the bottom of the screen.
+\item [C-v ``hol-scroll-up''] Scrolls the HOL window.
+\item [M-v ``hol-scroll-down'']Scrolls the HOL window.
+\item [b   ``hol-backup''] Backs up one stage in the goalstack.
+\item [d   ``send-region''] Sends the \emph{region} to the HOL
+  process, where it is evaluated at the top level.  Can be used both
+  to define new ML bindings, and to evaluate existing ones.
+\item [e ``expand-hol-tactic''] Sends the region to the HOL process as
+  a tactic, where it is applied to the current goal.
+\item [g ``hol-goal''] Sets the current goal.  With a \emph{prefix
+    argument}, replaces the existing one.
+\item [l ``hol-load-file''] Loads a HOL library.  Prompts for the name
+  of the library.
+\item [n ``hol-name-top-theorem''] Prompts for a name to give to the
+  ``top theorem'' (i.e., the theorem just proved in the goalstack).
+\item [p ``hol-print''] Prints the top goal in the goalstack.
+\item [r ``hol-rotate''] Rotates goals in the goalstack (typically
+  used after a case split where you want to prove things in a
+  different order.  Can't make a logical difference as a goal rotated
+  out of the way will still need to be proved eventually.  With a
+  numeric \emph{prefix argument} rotates that many out of the way,
+  instead of just one.
+\item [s ``send-string-to-hol''] Prompts for a string to be evaluated
+  by SML, like ``d''.
+\item [u ``hol-use-file''] Prompts for a file-name to be \emph{use}-d
+  at the top level.
+
+\end{description}
+
+\end{document}
+

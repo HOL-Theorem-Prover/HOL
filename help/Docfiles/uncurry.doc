@@ -1,0 +1,20 @@
+\DOC uncurry
+
+\TYPE {uncurry : ((* -> ** -> ***) -> (* # **) -> ***)}
+
+\SYNOPSIS
+Converts a function taking two arguments into a function taking a single
+paired argument.
+
+\DESCRIBE
+The application {uncurry f} returns {\(x,y). f x y}, so that
+{
+   uncurry f (x,y) = f x y
+}
+\FAILURE
+Never fails.
+
+\SEEALSO
+curry.
+
+\ENDDOC

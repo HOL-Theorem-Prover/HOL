@@ -1,0 +1,24 @@
+\DOC end_itlist
+
+\TYPE {end_itlist : ((* -> * -> *) -> * list -> *)}
+
+\SYNOPSIS
+List iteration function. Applies a binary function between adjacent elements
+of a list.
+
+\DESCRIBE
+{end_itlist f [x1;...;xn]} returns {f x1 ( ... (f x(n-1) xn)...)}.
+Returns {x} for a one-element list {[x]}.
+
+\FAILURE
+Fails with {end_itlist} if list is empty.
+
+\EXAMPLE
+{
+#end_itlist (\x y. x + y) [1;2;3;4];;
+10 : int
+}
+\SEEALSO
+itlist, rev_itlist.
+
+\ENDDOC

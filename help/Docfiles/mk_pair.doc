@@ -1,0 +1,17 @@
+\DOC mk_pair
+
+\TYPE {mk_pair : {{fst :term, snd :term}} -> term}
+
+\SYNOPSIS
+Constructs object-level pair from a pair of terms.
+
+\DESCRIBE
+{mk_pair{{fst = t1, snd = t2}}} returns {--`(t1,t2)`--}. 
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+dest_pair, is_pair, list_mk_pair.
+
+\ENDDOC

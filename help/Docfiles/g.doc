@@ -1,0 +1,34 @@
+\DOC g
+
+\TYPE {g : (term -> void)}
+
+\SYNOPSIS
+Initializes the subgoal package with a new goal which has no assumptions.
+
+\DESCRIBE
+The call
+{
+   g "tm"
+}
+\noindent is equivalent to
+{
+   set_goal([],"tm")
+}
+\noindent and clearly more convenient if a goal has no assumptions.
+For a description of the subgoal package, see  {set_goal}.
+
+\FAILURE
+Fails unless the argument term has type {bool}.
+
+\EXAMPLE
+{
+g "(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])";;
+"(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])"
+
+() : void
+}
+\SEEALSO
+b, backup, backup_limit, e, expand, expandf, get_state, p, print_state, r,
+rotate, save_top_thm, set_goal, set_state, top_goal, top_thm.
+
+\ENDDOC

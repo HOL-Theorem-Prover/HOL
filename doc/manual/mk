@@ -1,0 +1,1 @@
+latex $1.tex; dvips -f $1.dvi > $1.ps

@@ -1,0 +1,17 @@
+\DOC rhs
+
+\TYPE {rhs : (term -> term)}
+
+\SYNOPSIS
+Returns the right-hand side of an equation.
+
+\DESCRIBE
+{rhs "t1 = t2"} returns {"t2"}.
+
+\FAILURE
+Fails with {rhs} if term is not an equality.
+
+\SEEALSO
+lhs, dest_eq.
+
+\ENDDOC

@@ -1,0 +1,18 @@
+\DOC ETA_CONV
+
+\TYPE {ETA_CONV : conv}
+
+\SYNOPSIS
+Performs a toplevel eta-conversion.
+
+\KEYWORDS
+conversion, extentionality.
+
+\DESCRIBE
+{ETA_CONV} maps an eta-redex {"\x. t x"}, where {x} does not occur free in {t},
+to the theorem {|- (\x. t x) = t}.
+
+\FAILURE
+Fails if the input term is not an eta-redex.
+
+\ENDDOC

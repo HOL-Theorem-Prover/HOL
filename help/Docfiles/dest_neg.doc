@@ -1,0 +1,18 @@
+\DOC dest_neg
+
+\TYPE {dest_neg : (term -> term)}
+
+\SYNOPSIS
+Breaks apart a negation, returning its body.
+
+\DESCRIBE
+{dest_neg} is a term destructor for negations:
+{dest_neg "~t"} returns {"t"}.
+
+\FAILURE
+Fails with {dest_neg} if term is not a negation.
+
+\SEEALSO
+mk_neg, is_neg.
+
+\ENDDOC

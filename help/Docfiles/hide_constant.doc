@@ -1,0 +1,24 @@
+\DOC hide_constant
+
+\TYPE {hide_constant : (string -> void)}
+
+\SYNOPSIS
+Stops the quotation parser from recognizing a constant.
+
+\DESCRIBE
+A call {hide_constant `c`} where {c} is the name of a constant, will
+prevent the quotation parser from parsing it as such; it will just be parsed as
+a variable. The effect can be reversed by {unhide_constant `c`}.
+
+\FAILURE
+Fails if the given name is not a constant of the current theory, or if the
+named constant is already hidden.
+
+\COMMENTS
+The hiding of a constant only affects the quotation parser; the constant is
+still there in a theory, and may not be redefined.
+
+\SEEALSO
+unhide_constant.
+
+\ENDDOC

@@ -1,0 +1,28 @@
+\DOC term_lt
+
+\TYPE {term_lt : term -> term -> unit}
+
+\SYNOPSIS
+A total ordering function on terms.
+
+\DESCRIBE
+{term_lt} tells whether one term is less than another in the ordering.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{
+    - term_lt (--`\x.x = T`--) (--`3 + 4`--)
+    val it = false : bool
+}
+
+\COMMENTS
+If {not (term_lt tm1 tm2)} and {not (term_lt tm2 tm1)}, then {tm1 = tm2}, 
+although it is faster to directly test for equality. Ordering of terms may 
+be useful in implementing search trees and the like.
+
+\SEEALSO
+type_lt
+
+\ENDDOC

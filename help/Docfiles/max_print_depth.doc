@@ -1,0 +1,31 @@
+\DOC max_print_depth
+
+\TYPE {max_print_depth : (int -> int)}
+
+\SYNOPSIS
+Sets depth of block nesting.
+
+\DESCRIBE
+The function {max_print_depth} is used to define the maximum depth of
+nesting that the pretty printer will allow. If the number of blocks
+is greater than the the value set by {max_print_depth} then
+the blocks are truncated and this is indicated by the holophrast {&}.
+The function always returns the previous maximum depth setting.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+\noindent If the maximum depth setting is the default (500) and we want to
+change this to 20 the command will be:
+{
+   #max_print_depth 20;;
+}
+\noindent The system will then return the following:
+{
+   500 : int
+}
+\SEEALSO
+print_begin, print_ibegin, print_end, set_margin, print_break
+
+\ENDDOC

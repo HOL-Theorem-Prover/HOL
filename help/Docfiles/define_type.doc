@@ -1,0 +1,123 @@
+\DOC define_type
+
+\TYPE {define_type :{{name :string, type_spec :term frag list, 
+                      fixities : fixity list}} -> thm}
+
+\SYNOPSIS
+Automatically defines a user-specified concrete recursive data type.
+
+\DESCRIBE The ML function {define_type} automatically defines any
+required concrete recursive type in the logic. The {name} argument is
+the name under which the results of making the definition will be stored
+in the current theory segment. The {type_spec} argument is a
+user-supplied specification of the type to be defined. This
+specification (explained below) simply states the names of the new
+type's constructors and the logical types of their arguments. The
+{fixities} argument gives the parsing status of the introduced
+constants: it may be {Prefix}, {Binder}, or {Infix <positive int>}. The
+theorem returned by {define_type} is an automatically-proved abstract
+characterization of the concrete data type described by this
+specification.
+
+The {type_spec} argument to {define_type} must be a quotation of the form:
+{
+  `op = C1 of ty => ... => ty | C2 of ty=> ...=>ty | ... | Cn of ty=> ... =>ty`
+}
+\noindent where {op} is the name of the type constant or type operator to be
+defined, {C1}, ..., {Cn} are identifiers, and each {ty} is either a (logical)
+type expression valid in the current theory (in which case {ty} must not
+contain {op}) or just the identifier `{op}' itself.
+
+A quotation of this form describes an n-ary type operator {op}, where n is the
+number of distinct type variables in the types {ty} on the right hand side of
+the equation.  If n is zero then {op} is a type constant; otherwise {op} is an
+n-ary type operator.  The type described by the specification has {n} distinct
+constructors {C1}, ..., {Cn}.  Each constructor {Ci} is a function that takes
+arguments whose types are given by the associated type expressions {ty} in the
+specification. If one or more of the type expressions {ty} is the type {op}
+itself, then the equation specifies a recursive data type.  In any
+specification, at least one constructor must be non-recursive, i.e. all its
+arguments must have types which already exist in the current theory.
+
+Given a type specification of the form described above, {define_type} makes an
+appropriate type definition for the type operator {op}.  It then makes
+appropriate definitions for the constants {C1}, ..., {Cn}, and automatically
+proves a theorem that states an abstract characterization of the newly-defined
+type {op}.  This theorem, which is stored in the current theory segment under
+the name supplied as the first argument and also returned by {define_type}, has
+the form of a `primitive recursion theorem' for the concrete type {op} (see the
+examples given below). This property provides an abstract characterization of
+the type {op} which is both succinct and complete, in the sense that it
+completely determines the structure of the values of {op} up to isomorphism.
+
+\FAILURE
+Evaluating
+{
+ define_type{{type_spec = `op = C1 of ty=>...=>ty | ... | Cn of ty=>...=>ty`,
+             name, fixities}}
+}
+\noindent fails if HOL is not in draft mode; if {op} is already the name of a
+type constant or type operator in the current theory; if the supplied constant
+names {C1}, ..., {Cn} are not distinct; if any one of {C1}, ..., {Cn} is
+already a constant in the current theory or is not an allowed name for a
+constant; if {ABS_op} or {REP_op} are already constants in the current theory;
+if there is already an axiom, definition, constant specification or type
+definition stored under either the name {op_TY_DEF} or the name {op_ISO_DEF} in
+the current theory segment; if there is already a theorem stored under the name
+{`name`} in the current theory segment; or (finally) if the input type
+specification does not conform in any other respect to the syntax described
+above.
+
+\EXAMPLE
+The following call to {define_type} defines {tri} to be a simple enumerated
+type with exactly three distinct values:
+{
+   - define_type{{name = "tri_DEF",
+                type_spec = `tri = ONE | TWO | THREE`,
+                fixities = [Prefix,Prefix,Prefix]}}
+   |- !e0 e1 e2. ?! fn. (fn ONE = e0) /\ (fn TWO = e1) /\ (fn THREE = e2)
+}
+\noindent The theorem returned is a degenerate `primitive recursion' theorem
+for the concrete type {tri}.  An example of a recursive type that can be
+defined using {define_type} is a type of binary trees:
+{
+   - define_type {{type_spec = `btree = LEAF of 'a 
+                                      | NODE of btree => btree`,
+                  name = "tree_DEF",
+                  fixities = [Prefix,Prefix]}}
+   |- !f0 f1.
+        ?! fn.
+        (!x. fn(LEAF x) = f0 x) /\
+        (!b1 b2. fn(NODE b1 b2) = f1(fn b1)(fn b2)b1 b2)
+}
+\noindent The theorem returned by {define_type} in this case asserts the unique
+existence of functions defined by primitive recursion over labelled binary
+trees.
+
+Note that the type being defined may not occur as a proper subtype in
+any of the types of the arguments of the constructors:
+{
+  - define_type{{type_spec = `ty = NUM of num | FUN of (ty -> ty)`,
+               name = "num_funcs", fixities = [Prefix, Prefix]}};
+
+  Exception raised at Term.make_type_clause.check:
+  recursive occurrence of defined type is deeper than the first level
+
+}
+\noindent In this example, there is an error because {ty} occurs within the
+type expression {(ty -> ty)}.
+
+\COMMENTS
+
+The "=>" that may be used in type specifications is merely a delimiter
+that shows a constructor to be Curried. It must occur at the "top-level"
+in the argument list to a constructor. i.e., parsing of the type
+specification will fail if the "=>" occurs underneath an existing type
+constructor.
+
+\SEEALSO
+INDUCT_THEN, new_recursive_definition, prove_cases_thm,
+prove_constructors_distinct, prove_constructors_one_one, prove_induction_thm,
+prove_rec_fn_exists.
+
+\ENDDOC

@@ -1,0 +1,24 @@
+\DOC ALL_CONV
+
+\TYPE {ALL_CONV : conv}
+
+\SYNOPSIS
+Conversion that always succeeds and leaves a term unchanged.
+
+\KEYWORDS
+conversion, identity.
+
+\DESCRIBE
+When applied to a term {"t"}, the conversion {ALL_CONV} returns the
+theorem {|- t = t}.
+
+\FAILURE
+Never fails.
+
+\USES
+Identity element for {THENC}.
+
+\SEEALSO
+NO_CONV, REFL.
+
+\ENDDOC

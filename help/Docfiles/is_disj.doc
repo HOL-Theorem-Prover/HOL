@@ -1,0 +1,18 @@
+\DOC is_disj
+
+\TYPE {is_disj : (term -> bool)}
+
+\SYNOPSIS
+Tests a term to see if it is a disjunction.
+
+\DESCRIBE
+{is_disj "t1 \/ t2"} returns {true}. If the term is not a disjunction the
+result is {false}.
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+mk_disj, dest_disj.
+
+\ENDDOC

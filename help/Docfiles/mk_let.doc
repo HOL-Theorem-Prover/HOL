@@ -1,0 +1,35 @@
+\DOC mk_let
+
+\TYPE {mk_let : {{func : term, arg : term}} -> term}
+
+\SYNOPSIS
+Constructs a {let} term.
+
+\DESCRIBE
+{mk_let {{func = f, arg = x)} returns {--`LET f x`--}. If {func} is of the form
+{--`\y. t`--} then the result will be pretty-printed as {--`let y = x in t`--}.
+
+\FAILURE
+Fails with 
+
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_let", 
+            message = ""}}
+
+if the types of {func} and {arg} are such that {--`LET func arg`--} is
+not well-typed. {--`LET`--} has most general type:
+{
+   ==`:('a -> 'b) -> 'a -> 'b`==
+}
+
+\EXAMPLE
+{
+- mk_let{{func = --`$= 1`--, arg = --`2`--}};
+(--`LET ($= 1) 2`--) : term
+
+- mk_let{{func= --`\y. y = 1`--, arg = --`2`--}};
+val it = (--`let y = 2 in (y = 1)`--) : term
+}
+\SEEALSO
+dest_let, is_let.
+
+\ENDDOC

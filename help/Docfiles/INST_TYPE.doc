@@ -1,0 +1,55 @@
+\DOC INST_TYPE
+
+\TYPE {INST_TYPE : (hol_type,hol_type) subst -> thm -> thm}
+
+\SYNOPSIS
+Instantiates types in a theorem.
+
+\KEYWORDS
+rule, type, instantiate.
+
+\DESCRIBE
+{INST_TYPE} is a primitive rule in the HOL logic, which allows
+instantiation of type variables.
+{
+                             
+              A |- t                 INST_TYPE[vty1|->ty1,..., vtyn|->tyn]
+  -----------------------------------
+    A |- t[ty1,...,tyn/vty1,...,vtyn]
+}
+\noindent where none of the types {vtyi} are free in the assumption list.
+Variables will be renamed if necessary to prevent distinct variables becoming
+identical after the instantiation.
+
+
+\FAILURE
+{INST_TYPE} fails if any of the type variables occurs free in the
+hypotheses of the theorem, or if upon instantiation two distinct
+variables (with the same name) become equal.
+
+\USES
+{INST_TYPE} is employed to make use of polymorphic theorems.
+
+\EXAMPLE
+Suppose one wanted to specialize the theorem {EQ_SYM_EQ} for
+particular values, the first attempt could be to use {SPECL} as
+follows:
+{
+   - SPECL [``a:num``, ``b:num``] EQ_SYM_EQ;
+   uncaught exception HOL_ERR
+
+}
+\noindent The failure occurred because {EQ_SYM_EQ} contains polymorphic types.
+The desired specialization can be obtained by using {INST_TYPE}:
+
+{  - load "numTheory";
+
+   - SPECL [(--`a:num`--), (--`b:num`--)] 
+           (INST_TYPE [``:'a`` |-> ``:num``] EQ_SYM_EQ);
+
+   val it = |- (a = b) = (b = a)
+}
+\SEEALSO
+INST, INST_TY_TERM.
+
+\ENDDOC

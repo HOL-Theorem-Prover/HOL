@@ -1,0 +1,18 @@
+\DOC is_eq
+
+\TYPE {is_eq : (term -> bool)}
+
+\SYNOPSIS
+Tests a term to see if it is an equation.
+
+\DESCRIBE
+{is_eq "t1 = t2"} returns {true}. If the term is not an equation the result
+is {false}.
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+mk_eq, dest_eq.
+
+\ENDDOC

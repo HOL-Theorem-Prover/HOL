@@ -1,0 +1,17 @@
+\DOC CB
+
+\TYPE {$CB : ((* -> **) -> (** -> ***) -> * -> ***)}
+
+\SYNOPSIS
+Composes two functions: {(f CB g) x} = {g (f x)}.
+
+\KEYWORDS
+combinator.
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+\#, B, C, Co, I, K, KI, o, oo, S, W.
+
+\ENDDOC

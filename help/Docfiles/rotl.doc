@@ -1,0 +1,27 @@
+\DOC rotl
+
+\TYPE {rotl : ('a list -> 'a list)}
+
+\SYNOPSIS
+Rotate a list left by one position.
+
+\KEYWORDS
+list.
+
+\DESCRIBE
+If {l1} is a list, then {rotl l1} returns the result of taking the
+first element from the list and placing it at the end of the list.
+
+\FAILURE
+Fails when applied to an empty list.
+
+\EXAMPLE
+{
+- rotl [1,2,3];
+val it = [2,3,1] : int list
+}
+
+\SEEALSO
+rotr
+
+\ENDDOC

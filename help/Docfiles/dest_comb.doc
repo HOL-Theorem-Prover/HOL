@@ -1,0 +1,24 @@
+\DOC dest_comb
+
+\TYPE {dest_comb : term -> {{Rator :term, Rand :term}}}
+
+\SYNOPSIS
+Breaks apart a combination (function application) into rator and rand.
+
+\DESCRIBE
+{dest_comb} is a term destructor for combinations:
+{
+   dest_comb (--`t1 t2`--)
+}
+\noindent returns {{Rator = t1, Rand = t2}}. 
+
+\FAILURE
+Fails with 
+
+    HOL_ERR{{origin_structure = "Term", origin_function = "dest_comb", 
+            message = "not a comb"}}
+
+\SEEALSO
+mk_comb, is_comb, dest_var, dest_const, dest_abs, strip_comb.
+
+\ENDDOC
