@@ -1,4 +1,4 @@
-\DOC 
+\DOC ==
 
 \TYPE {== : hol_type quotation -> 'a -> hol_type}
 

@@ -1,4 +1,4 @@
-\DOC 
+\DOC gen_tyvar 
 
 \TYPE {gen_tyvar : unit -> hol_type}
 

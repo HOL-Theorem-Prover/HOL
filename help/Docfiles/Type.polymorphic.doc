@@ -1,4 +1,4 @@
-\DOC 
+\DOC polymorphic 
 
 \TYPE {polymorphic : hol_type -> bool}
 

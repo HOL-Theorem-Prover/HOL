@@ -1,4 +1,4 @@
-\DOC 
+\DOC with_exn 
 
 \TYPE {with_exn : ('a -> 'b) -> 'a -> exn -> 'b}
 

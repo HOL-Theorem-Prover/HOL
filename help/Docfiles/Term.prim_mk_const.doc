@@ -1,4 +1,4 @@
-\DOC 
+\DOC prim_mk_const 
 
 \TYPE {prim_mk_const : {{Thy:string, Name:string}} -> term}
 
@@ -17,7 +17,7 @@ If {Name} is not the name of a constant declared in theory {Thy}.
 
 \EXAMPLE
 {
-- prim_mk_const {Thy="min", Name="="};
+- prim_mk_const {{Thy="min", Name="="}};
 > val it = `$=` : term
 
 - type_of it;

@@ -12,7 +12,7 @@ Breaks apart a type (other than a variable type).
 \DESCRIBE
 If {ty} is an application of a type operator {Tyop}, which 
 was declared in theory {Thy}, to a list of types {Args}, then 
-{dest_thy_type ty} returns {{Tyop,Thy,Args}}.
+{dest_thy_type ty} returns {{{Tyop,Thy,Args}}}.
 
 \FAILURE
 Fails if {ty} is a type variable.
@@ -20,7 +20,7 @@ Fails if {ty} is a type variable.
 \EXAMPLE
 {
 - dest_thy_type (alpha --> bool);
-> val it = {Args = [`:'a`, `:bool`], Thy = "min", Tyop = "fun"} :
+> val it = {{Args = [`:'a`, `:bool`], Thy = "min", Tyop = "fun"}} :
 
 - try dest_thy_type alpha;
 

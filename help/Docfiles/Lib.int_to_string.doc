@@ -1,4 +1,4 @@
-\DOC 
+\DOC int_to_string 
 
 \TYPE {int_to_string : int -> string}
 

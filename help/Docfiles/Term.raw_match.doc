@@ -1,4 +1,4 @@
-\DOC 
+\DOC raw_match 
 
 \BLTYPE 
 raw_match : hol_type list -> term set 
@@ -28,11 +28,11 @@ that are not allowed to become {redex}es in {S} and {T}.
 
 The pair {(tmS,tyS)} is an accumulator argument. This allows {raw_match}
 to be folded through lists of terms to be matched. {(S,T)} must agree
-with {(tmS,tyS)}. This means that if there is a {{redex,residue}} in {S} 
-and also a {{redex,residue}} in {tmS} so that both {redex} fields are
+with {(tmS,tyS)}. This means that if there is a {{{redex,residue}}} in {S} 
+and also a {{{redex,residue}}} in {tmS} so that both {redex} fields are
 equal, then the {residue} fields must be alpha-convertible. Similarly 
-for types: if there is a {{redex,residue}} in {T} and also a 
-{{redex,residue}} in {tyS} so that both {redex} fields are equal, then 
+for types: if there is a {{{redex,residue}}} in {T} and also a 
+{{{redex,residue}}} in {tyS} so that both {redex} fields are equal, then 
 the {residue} fields must also be equal. If these conditions hold, then 
 the result {(S,T)} includes {(tmS,tyS)}.
 
@@ -51,12 +51,12 @@ also alpha-convertibility.
                     (Term `\x:'a. x = f (y:'b)`)
                     (Term `\a.    a = ~p`) ([],([],[]));
    > val S =
-       [{redex = `(f :'b -> 'a)`, residue = `$~`},
-        {redex = `(y :'b)`,       residue = `(p :bool)`}] : ...
+       [{{redex = `(f :'b -> 'a)`, residue = `$~`}},
+        {{redex = `(y :'b)`,       residue = `(p :bool)`}}] : ...
 
      val T =
-       ([{redex = `:'b`, residue = `:bool`}, 
-         {redex = `:'a`, residue = `:bool`}], []) : ...
+       ([{{redex = `:'b`, residue = `:bool`}}, 
+         {{redex = `:'a`, residue = `:bool`}}], []) : ...
 }
 \noindent One of the main differences between {raw_match} and more 
 refined derivatives of it, is that the returned substitutions are

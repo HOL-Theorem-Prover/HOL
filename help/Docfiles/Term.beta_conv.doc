@@ -1,4 +1,4 @@
-\DOC 
+\DOC beta_conv 
 
 \TYPE {beta_conv : term -> term}
 

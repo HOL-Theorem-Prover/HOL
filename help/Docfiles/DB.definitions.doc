@@ -1,4 +1,4 @@
-\DOC 
+\DOC definitions 
 
 \TYPE {definitions : string -> (string * thm) list}
 

@@ -1,4 +1,4 @@
-\DOC 
+\DOC merge 
 
 \TYPE {merge : tag -> tag -> tag}
 

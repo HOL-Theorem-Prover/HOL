@@ -1,4 +1,4 @@
-\DOC 
+\DOC matcher 
 
 \TYPE {matcher : (term -> term -> 'a) -> string list -> term -> data list}
 

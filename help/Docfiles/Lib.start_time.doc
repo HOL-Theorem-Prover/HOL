@@ -1,4 +1,4 @@
-\DOC 
+\DOC start_time 
 
 \TYPE {start_time : unit -> Timer.cpu_timer}
 

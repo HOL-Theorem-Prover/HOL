@@ -1,4 +1,4 @@
-\DOC 
+\DOC repeat 
 
 \TYPE {repeat : ('a -> 'a) -> 'a -> 'a}
 

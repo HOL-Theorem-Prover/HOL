@@ -1,4 +1,4 @@
-\DOC 
+\DOC thms 
 
 \TYPE {thms : string -> (string * thm) list}
 

@@ -1,4 +1,4 @@
-\DOC 
+\DOC matchp 
 
 \TYPE {matchp : (thm -> bool) -> string list -> data list}
 

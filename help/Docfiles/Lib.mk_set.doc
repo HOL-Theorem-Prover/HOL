@@ -1,4 +1,4 @@
-\DOC 
+\DOC mk_set 
 
 \TYPE {mk_set : ''a list -> ''a list}
 

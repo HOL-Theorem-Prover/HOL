@@ -1,4 +1,4 @@
-\DOC 
+\DOC delta_map 
 
 \TYPE {delta_map : ('a -> 'a delta) -> 'a list -> 'a list delta}
 

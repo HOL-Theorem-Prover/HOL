@@ -47,10 +47,10 @@ Internal goal solved with 2 MESON inferences.
 - traces();
 
 > val it =
-    [{default = 1, name = "meson", trace_level = 1},
-     {default = 10, name = "Subgoal number", trace_level = 10},
-     {default = 0, name = "Rewrite", trace_level = 0},
-     {default = 0, name = "Ho_Rewrite", trace_level = 0}]
+    [{{default = 1, name = "meson", trace_level = 1}},
+     {{default = 10, name = "Subgoal number", trace_level = 10}},
+     {{default = 0, name = "Rewrite", trace_level = 0}},
+     {{default = 0, name = "Ho_Rewrite", trace_level = 0}}]
 }
 
 \SEEALSO

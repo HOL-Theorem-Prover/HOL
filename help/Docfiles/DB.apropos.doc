@@ -1,4 +1,4 @@
-\DOC 
+\DOC apropos 
 
 \TYPE {apropos : term -> data list}
 

@@ -1,4 +1,4 @@
-\DOC
+\DOC int_sort
 
 \TYPE {int_sort : int list -> int list}
 

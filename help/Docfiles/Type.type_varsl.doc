@@ -1,4 +1,4 @@
-\DOC 
+\DOC type_varsl 
 
 \TYPE {type_varsl : hol_type list -> hol_type list}
 

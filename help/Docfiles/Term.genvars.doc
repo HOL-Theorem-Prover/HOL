@@ -1,4 +1,4 @@
-\DOC 
+\DOC genvars 
 
 \TYPE {genvars : hol_type -> int -> term list}
 

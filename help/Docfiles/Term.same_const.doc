@@ -1,4 +1,4 @@
-\DOC 
+\DOC same_const 
 
 \TYPE {same_const : term -> term -> bool}
 

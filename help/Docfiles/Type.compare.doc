@@ -1,4 +1,4 @@
-\DOC 
+\DOC compare 
 
 \TYPE {compare : hol_type * hol_type -> order}
 
@@ -9,7 +9,7 @@ An ordering on HOL types.
 ordering, type.
 
 \DESCRIBE
-An invocation {compare (ty1,ty2)} returns one of {{LESS, EQUAL, GREATER}}.
+An invocation {compare (ty1,ty2)} returns one of {{{LESS, EQUAL, GREATER}}}.
 This is a total and transitive order.
 
 \FAILURE

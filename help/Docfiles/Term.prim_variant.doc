@@ -1,4 +1,4 @@
-\DOC 
+\DOC prim_variant 
 
 \TYPE {prim_variant : term list -> term -> term}
 

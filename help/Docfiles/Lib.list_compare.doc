@@ -1,4 +1,4 @@
-\DOC 
+\DOC list_compare 
 
 \TYPE {list_compare : ('a * 'a -> order) -> 'a list * 'a list -> order}
 
@@ -11,7 +11,7 @@ comparison, lexicographic.
 \DESCRIBE
 An application {list_compare comp (L1,L2)} uses {comp} as a basis for
 comparing the lists {L1} and {L2} lexicographically, in left-to-right order.
-The returned value is one of {{LESS, EQUAL, GREATER}}.
+The returned value is one of {{{LESS, EQUAL, GREATER}}}.
 
 \FAILURE
 If {comp} fails when applied to corresponding elements of {L1} and {L2}.

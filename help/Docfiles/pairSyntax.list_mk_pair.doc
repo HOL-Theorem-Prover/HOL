@@ -1,4 +1,4 @@
-\DOC 
+\DOC list_mk_pair 
 
 \TYPE {list_mk_pair : term list -> term}
 

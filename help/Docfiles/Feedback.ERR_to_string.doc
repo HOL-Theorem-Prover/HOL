@@ -14,15 +14,15 @@ The default value of {ERR_to_string} is {format_ERR}.
 
 \EXAMPLE
 {
-- fun alt_ERR_report {origin_structure,origin_function,message} =
+- fun alt_ERR_report {{origin_structure,origin_function,message}} =
      String.concat["This just in from ",origin_function, " at ",
                    origin_structure, " : ", message, "\n"];
 
 - ERR_to_string := alt_ERR_report;
 
-- Raise (HOL_ERR {origin_structure = "Foo",
+- Raise (HOL_ERR {{origin_structure = "Foo",
                   origin_function = "bar",
-                  message = "incomprehensible input"});
+                  message = "incomprehensible input"}});
 
 This just in from bar at Foo : incomprehensible input
 ! Uncaught exception:

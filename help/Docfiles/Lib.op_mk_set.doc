@@ -1,4 +1,4 @@
-\DOC 
+\DOC op_mk_set 
 
 \TYPE {op_mk_set : ('a -> 'a -> bool) -> 'a list -> 'a list}
 

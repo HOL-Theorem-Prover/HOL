@@ -1,4 +1,4 @@
-\DOC 
+\DOC insert 
 
 \TYPE {insert ''a -> ''a list -> ''a list}
 

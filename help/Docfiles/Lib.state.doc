@@ -1,4 +1,4 @@
-\DOC 
+\DOC state 
 
 \TYPE {state : ('a,'b) istream -> 'b}
 

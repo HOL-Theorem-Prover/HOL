@@ -1,4 +1,4 @@
-\DOC 
+\DOC delta_pair 
 
 \BLTYPE {delta_pair : ('a -> 'a delta) -> 
              ('b -> 'b delta) -> 

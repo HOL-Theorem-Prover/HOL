@@ -1,4 +1,4 @@
-\DOC
+\DOC PROVE
 
 \TYPE {PROVE : term * tactic -> thm}
 

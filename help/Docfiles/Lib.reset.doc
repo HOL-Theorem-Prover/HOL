@@ -1,4 +1,4 @@
-\DOC 
+\DOC reset 
 
 \TYPE {reset : ('a,'b) istream -> ('a,'b) istream}
 

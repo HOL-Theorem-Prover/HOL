@@ -1,4 +1,4 @@
-\DOC 
+\DOC rename_bvar 
 
 \TYPE {rename_bvar : string -> term -> term}
 

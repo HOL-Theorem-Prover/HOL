@@ -1,4 +1,4 @@
-\DOC 
+\DOC match_terml 
 
 \BLTYPE match_terml 
      : hol_type list -> term set -> term -> term 
@@ -34,11 +34,11 @@ elements of {avoid_tms} would appear as redexes in {S}, then
 - val (S,T) = match_terml [] empty_varset 
                   (Term `\x:'a. x = f (y:'b)`)
                   (Term `\a.    a = ~p`);
-> val S = [{redex = `(f :'b -> 'a)`, residue = `$~`},
-           {redex = `(y :'b)`,       residue = `(p :bool)`}] : ...
+> val S = [{{redex = `(f :'b -> 'a)`, residue = `$~`}},
+           {{redex = `(y :'b)`,       residue = `(p :bool)`}}] : ...
 
-  val T = [{redex = `:'b`, residue = `:bool`}, 
-           {redex = `:'a`, residue = `:bool`}] : ...
+  val T = [{{redex = `:'b`, residue = `:bool`}}, 
+           {{redex = `:'a`, residue = `:bool`}}] : ...
 
 - match_terml [alpha] empty_varset  (* forbid instantiation of 'a *)
           (Term `\x:'a. x = f (y:'b)`)

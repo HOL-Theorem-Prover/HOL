@@ -1,4 +1,4 @@
-\DOC 
+\DOC theorems 
 
 \TYPE {theorems : string -> (string * thm) list}
 

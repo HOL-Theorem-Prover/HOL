@@ -1,4 +1,4 @@
-\DOC 
+\DOC free_vars_lr 
 `
 \TYPE {free_vars_lr : term -> term list}
 

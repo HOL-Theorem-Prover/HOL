@@ -1,4 +1,4 @@
-\DOC 
+\DOC mk_istream 
 
 \TYPE {mk_istream : ('a -> 'a) -> 'a -> ('a -> 'b) -> ('a,'b) istream}
 

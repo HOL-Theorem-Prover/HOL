@@ -1,4 +1,4 @@
-\DOC 
+\DOC op_arity 
 
 \TYPE {op_arity : {{Thy:string, Tyop:string}} -> int option}
 
@@ -19,10 +19,10 @@ Never fails.
 
 \EXAMPLE
 {
-- op_arity{Tyop="fun", Thy="min"};
+- op_arity{{Tyop="fun", Thy="min"}};
 > val it = SOME 2 : int option
 
-- op_arity{Tyop="foo", Thy="min"};
+- op_arity{{Tyop="foo", Thy="min"}};
 > val it = NONE : int option
 }
 

@@ -1,4 +1,4 @@
-\DOC 
+\DOC isEmpty 
 
 \TYPE {isEmpty : tag -> bool}
 

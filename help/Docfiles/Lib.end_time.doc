@@ -1,4 +1,4 @@
-\DOC 
+\DOC end_time 
 
 \TYPE {end_time : Timer.cpu_timer -> unit}
 

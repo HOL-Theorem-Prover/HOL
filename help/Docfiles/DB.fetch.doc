@@ -1,4 +1,4 @@
-\DOC 
+\DOC fetch 
 
 \TYPE {fetch : string -> string -> thm}
 

@@ -1,4 +1,4 @@
-\DOC 
+\DOC compare 
 
 \TYPE {compare : term * term -> order}
 

@@ -1,4 +1,4 @@
-\DOC 
+\DOC for 
 
 \TYPE {for : int -> int -> (int -> 'a) -> 'a list}
 

@@ -1,4 +1,4 @@
-\DOC 
+\DOC strip_abs 
 
 \TYPE {strip_abs : term -> term list * term}
 

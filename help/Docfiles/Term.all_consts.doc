@@ -1,4 +1,4 @@
-\DOC 
+\DOC all_consts
 
 \TYPE {all_consts : unit -> term list}
 

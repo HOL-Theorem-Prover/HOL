@@ -1,4 +1,4 @@
-\DOC 
+\DOC op_U 
 
 \TYPE {op_U : ('a -> 'a -> bool) -> 'a list list -> 'a list}
 

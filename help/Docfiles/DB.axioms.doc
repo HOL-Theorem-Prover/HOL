@@ -1,4 +1,4 @@
-\DOC 
+\DOC axioms 
 
 \TYPE {axioms : string -> (string * thm) list}
 

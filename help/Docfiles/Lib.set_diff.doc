@@ -1,4 +1,4 @@
-\DOC
+\DOC set_diff
 
 \TYPE {set_diff : ''a list -> ''a list -> ''a list}
 

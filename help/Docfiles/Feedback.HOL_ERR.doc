@@ -17,9 +17,9 @@ when they encounter an anomalous situation.
 Building an application of {HOL_ERR} and binding it to an ML variable
 {
    val test_exn =
-      HOL_ERR {origin_structure = "Foo",
+      HOL_ERR {{origin_structure = "Foo",
                origin_function = "bar",
-               message = "incomprehensible input"};
+               message = "incomprehensible input"}};
 }
 yields
 {
@@ -30,9 +30,9 @@ pattern matching:
 {
    - val HOL_ERR r = test_exn;
 
-   > val r = {message = "incomprehensible input",
+   > val r = {{message = "incomprehensible input",
               origin_function = "bar",
-              origin_structure = "Foo"}
+              origin_structure = "Foo"}}
 }
 In current ML implementations supporting HOL, exceptions that propagate
 to the top level without being handled do not print informatively:

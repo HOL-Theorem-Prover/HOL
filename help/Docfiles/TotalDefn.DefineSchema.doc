@@ -1,4 +1,4 @@
-\DOC 
+\DOC DefineSchema 
 
 \TYPE {DefineSchema : term quotation -> thm}
 

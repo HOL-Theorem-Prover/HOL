@@ -1,4 +1,4 @@
-\DOC 
+\DOC match_typel 
 
 \BLTYPE {match_typel : hol_type list -> hol_type -> hol_type 
         -> (hol_type, hol_type) subst}
@@ -21,7 +21,7 @@ process.
 An invocation of {match_typel away pat ty} will fail 
 if {match_type pat ty} would fail. It will also fail if {match_type pat ty} 
 would succeed giving a substitution 
-{[{redex_1,residue_1},...,{redex_n,residue_n}]} where one or more of the
+{[{{redex_1,residue_1}},...,{{redex_n,residue_n}}]} where one or more of the
 {redex_i} are members of {away}.
 
 \EXAMPLE
@@ -29,9 +29,9 @@ In the first example, we perform a normal match operation
 {
    - match_typel [] (alpha --> beta --> gamma)
                     (bool --> ind --> delta);
-   > val it = [{redex = `:'c`, residue = `:'d`}, 
-               {redex = `:'b`, residue = `:ind`},
-               {redex = `:'a`, residue = `:bool`}] : ...
+   > val it = [{{redex = `:'c`, residue = `:'d`}}, 
+               {{redex = `:'b`, residue = `:ind`}},
+               {{redex = `:'a`, residue = `:bool`}}] : ...
 }
 \noindent Now we require that {gamma}, although a type variable in the
 pattern, not be instantiable. In the first try, the match succeeds because
@@ -40,8 +40,8 @@ association is made between {'c} and {'d}.
 {
    - match_typel [gamma] (alpha --> beta --> gamma)
                          (bool --> ind --> gamma);
-   > val it = [{redex = `:'b`, residue = `:ind`},
-               {redex = `:'a`, residue = `:bool`}] : ...
+   > val it = [{{redex = `:'b`, residue = `:ind`}},
+               {{redex = `:'a`, residue = `:bool`}}] : ...
 
    - match_typel [gamma] (alpha --> beta --> gamma)
                          (bool --> ind --> delta);

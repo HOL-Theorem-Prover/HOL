@@ -1,4 +1,4 @@
-\DOC 
+\DOC pp_tag 
 
 \TYPE {pp_tag : ppstream -> tag -> unit}
 

@@ -1,4 +1,4 @@
-\DOC 
+\DOC var_occurs 
 
 \TYPE {var_occurs : term -> term -> bool}
 

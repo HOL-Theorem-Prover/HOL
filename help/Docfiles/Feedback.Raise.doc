@@ -1,4 +1,4 @@
-\DOC
+\DOC Raise
 
 \TYPE {Raise : exn -> 'a}
 

@@ -1,4 +1,4 @@
-\DOC 
+\DOC type_var_in 
 
 \TYPE {type_var_in : hol_type -> hol_type -> bool}
 

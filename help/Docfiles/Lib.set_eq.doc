@@ -1,4 +1,4 @@
-\DOC 
+\DOC set_eq 
 
 \TYPE {set_eq : ''a list -> ''a list -> bool}
 

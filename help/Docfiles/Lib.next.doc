@@ -1,4 +1,4 @@
-\DOC 
+\DOC next 
 
 \TYPE {next : ('a,'b) istream -> ('a,'b) istream}
 

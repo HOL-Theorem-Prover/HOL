@@ -118,9 +118,9 @@ of a function {Label} which extracts the label from a leaf node.  The value of
 {Label} applied to an internal node is left unspecified:
 {
    - val Label = new_recursive_definition
-                   {name = "Label",
+                   {{name = "Label",
                     rec_axiom = th,
-                     def = --`Label (LEAF (x:'a)) = x`--};
+                     def = --`Label (LEAF (x:'a)) = x`--}};
    > val Label = |- !x. Label (LEAF x) = x : thm
 }
 \noindent Curried functions can also be defined, and the recursion can be on

@@ -1,4 +1,4 @@
-\DOC 
+\DOC type_vars_in_term 
 
 \TYPE {type_vars_in_term : term -> hol_type list}
 

@@ -1,4 +1,4 @@
-\DOC 
+\DOC decls 
 
 \TYPE {decls : string -> term list}
 

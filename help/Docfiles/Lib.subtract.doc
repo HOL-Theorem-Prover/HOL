@@ -1,4 +1,4 @@
-\DOC
+\DOC subtract
 
 \TYPE {subtract : ''a list -> ''a list -> ''a list}
 

@@ -1,4 +1,4 @@
-\DOC 
+\DOC eta_conv 
 
 \TYPE {eta_conv : term -> term}
 

@@ -1,4 +1,4 @@
-\DOC
+\DOC Hol_reln
 
 \TYPE {Hol_reln : term quotation -> (thm * thm * thm)}
 

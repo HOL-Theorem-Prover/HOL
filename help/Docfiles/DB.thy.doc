@@ -1,4 +1,4 @@
-\DOC 
+\DOC thy 
 
 \TYPE {thy : string -> data list}
 

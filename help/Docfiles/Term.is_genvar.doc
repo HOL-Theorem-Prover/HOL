@@ -1,4 +1,4 @@
-\DOC 
+\DOC is_genvar 
 
 \TYPE {is_genvar : term -> bool}
 

@@ -1,4 +1,4 @@
-\DOC 
+\DOC hash 
 
 \TYPE {hash : int -> string -> int * int -> int}
 

@@ -1,4 +1,4 @@
-\DOC
+\DOC op_set_diff
 
 \TYPE {op_set_diff : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list}
 

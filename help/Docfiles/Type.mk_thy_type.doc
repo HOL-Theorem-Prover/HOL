@@ -20,10 +20,10 @@ the length of {tyl}.
 
 \EXAMPLE
 {
-- mk_thy_type {Tyop="fun", Thy="min", Args = [alpha,bool]};
+- mk_thy_type {{Tyop="fun", Thy="min", Args = [alpha,bool]}};
 > val it = `:'a -> bool` : hol_type
 
-- try mk_thy_type {Tyop="bar", Thy="foo", Args = []};
+- try mk_thy_type {{Tyop="bar", Thy="foo", Args = []}};
  
 Exception raised at Type.mk_thy_type:
 "foo$bar" not found

@@ -1,4 +1,4 @@
-\DOC
+\DOC allowed_type_constant
 
 \TYPE {allowed_type_constant : string -> bool}
 

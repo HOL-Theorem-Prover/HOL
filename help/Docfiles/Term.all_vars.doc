@@ -1,4 +1,4 @@
-\DOC 
+\DOC all_vars 
 `
 \TYPE {all_vars : term -> term list}
 

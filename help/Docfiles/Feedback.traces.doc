@@ -2,7 +2,7 @@
 
 \BLTYPE
 traces : unit -> {{name : string, current_value : int,
-                  default_value : int, maximum : int}} list}
+                  default_value : int, maximum : int}} list
 \ELTYPE
 
 \SYNOPSIS

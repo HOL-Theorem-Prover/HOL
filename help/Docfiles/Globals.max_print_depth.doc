@@ -1,4 +1,4 @@
-\DOC 
+\DOC max_print_depth 
 
 \TYPE {max_print_depth : int ref}
 

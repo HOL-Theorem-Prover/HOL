@@ -1,4 +1,4 @@
-\DOC 
+\DOC commafy 
 
 \TYPE {commafy : string list -> string list}
 

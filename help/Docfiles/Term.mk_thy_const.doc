@@ -21,10 +21,10 @@ instance of {ty}.
 
 \EXAMPLE
 {
-   - mk_thy_const {Name="T", Thy="bool", Ty=bool};
+   - mk_thy_const {{Name="T", Thy="bool", Ty=bool}};
    > val it = `T` : term
 
-   - try mk_thy_const {Name = "bar", Thy="foo", Ty=bool};
+   - try mk_thy_const {{Name = "bar", Thy="foo", Ty=bool}};
    Exception raised at Term.mk_thy_const:
    "foo$bar" not found
 }

@@ -1,4 +1,4 @@
-\DOC 
+\DOC op_insert 
 
 \TYPE {op_insert ('a -> 'a -> bool) -> 'a -> 'a list -> 'a list}
 

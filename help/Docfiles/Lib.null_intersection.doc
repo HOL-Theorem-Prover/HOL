@@ -1,4 +1,4 @@
-\DOC 
+\DOC null_intersection 
 
 \TYPE {null_intersection : ''a list -> ''a list -> bool}
 

@@ -1,4 +1,4 @@
-\DOC 
+\DOC is_gen_tyvar 
 
 \TYPE {is_gen_tyvar : hol_type -> bool}
 

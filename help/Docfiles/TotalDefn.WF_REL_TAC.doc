@@ -302,7 +302,7 @@ define a `fold` function for finite sets as follows:
      Defn.Hol_defn "FOLD_SET"
      `FOLD_SET (s:'a->bool) (b:'b) =
         if FINITE s then
-           if s={} then b
+           if s={{}} then b
            else FOLD_SET (REST s) (f (CHOICE s) b)
         else ARB`;
 }
@@ -318,7 +318,7 @@ define a `fold` function for finite sets as follows:
 \noindent The desired recursion equation
 {
    |- FINITE s ==> (FOLD_SET f s b =
-                      if s = {} then b
+                      if s = {{}} then b
                       else FOLD_SET f (REST s) (f (CHOICE s) b))
 }
 \noindent is easy to obtain from {FOLD_SET_0}.

@@ -1,4 +1,4 @@
-\DOC 
+\DOC show_tags 
 
 \TYPE {show_tags : bool ref}
 

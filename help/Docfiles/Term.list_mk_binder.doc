@@ -1,4 +1,4 @@
-\DOC 
+\DOC list_mk_binder 
 
 \TYPE {list_mk_binder : (term -> term) -> term list * term -> term}
 

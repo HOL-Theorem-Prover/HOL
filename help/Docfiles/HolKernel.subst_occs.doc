@@ -6,7 +6,7 @@
 Substitutes for particular occurrences of subterms of a given term.
 
 \DESCRIBE
-For each {{redex,residue}} in the second argument, there should be a 
+For each {{{redex,residue}}} in the second argument, there should be a 
 corresponding integer list {l_i} in the first argument that specifies which
 free occurrences of {redex_i} in the third argument should be substituted 
 by {residue_i}.

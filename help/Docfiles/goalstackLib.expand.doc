@@ -109,7 +109,7 @@ Exception raised at Tactical.VALID:
 Invalid tactic
 ! Uncaught exception: 
 ! HOL_ERR
-
+}
 \USES
 Doing a step in an interactive goal-directed proof.
 

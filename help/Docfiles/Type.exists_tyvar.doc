@@ -1,4 +1,4 @@
-\DOC 
+\DOC exists_tyvar 
 
 \TYPE {exists_tyvar : (hol_type -> bool) -> hol_type -> bool}
 

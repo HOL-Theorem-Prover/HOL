@@ -1,4 +1,4 @@
-\DOC 
+\DOC strip_binder 
 
 \TYPE {strip_binder : (term -> term option) -> term -> term list * term}
 

@@ -1,4 +1,4 @@
-\DOC 
+\DOC match 
 
 \TYPE {match : string list -> term -> data list}
 

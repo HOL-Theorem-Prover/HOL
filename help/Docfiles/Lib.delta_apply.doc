@@ -1,4 +1,4 @@
-\DOC 
+\DOC delta_apply 
 
 \TYPE {delta_apply : ('a -> 'a delta) -> 'a -> 'a}
 

@@ -1,4 +1,4 @@
-\DOC
+\DOC try
 
 \TYPE {try : ('a -> 'b) -> 'a -> 'b}
 

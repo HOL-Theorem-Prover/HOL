@@ -1,4 +1,4 @@
-\DOC 
+\DOC time 
 
 \TYPE {time : ('a -> 'b) -> 'a -> 'b}
 

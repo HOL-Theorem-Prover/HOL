@@ -1,4 +1,4 @@
-\DOC 
+\DOC FVL 
 
 \TYPE {FVL : term list -> term set -> term set}
 

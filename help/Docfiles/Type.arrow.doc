@@ -1,4 +1,4 @@
-\DOC
+\DOC -->
 
 \TYPE {op --> : hol_type * hol_type -> hol_type}
 
