@@ -48,7 +48,7 @@ val _ = Hol_datatype ` arbin =
 
 val Tree2List_def = Define_rw
  ` (Tree2List Lf           = [])
-/\ (Tree2List (Nd n a1 a2) = n :: (merge (Tree2List a1) (Tree2List a2))) `
+/\ (Tree2List (Nd n a1 a2) = n :: merge (Tree2List a1) (Tree2List a2)) `
 ;
 
 val insTree_def = Define_rw
@@ -64,7 +64,7 @@ val List2Tree_def = Define_rw
 ;
 
 val merge_sort_def = Define_rw
- ` (merge_sort l = Tree2List (List2Tree l)) `
+ ` merge_sort l = Tree2List (List2Tree l) `
 ;
 
 
