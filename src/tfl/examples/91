@@ -92,19 +92,19 @@ val E1  = GEN_ALL (simpLib.SIMP_RULE std_ss [lem,lem1] E0);
 
 (*---------------------------------------------------------------------------
 
-        Termination of the nested t.c. We'll use NAUX to abbreviate 
+        Termination of the nested t.c. We'll use NA to abbreviate 
         the instantiated auxiliary function. The proof goes as follows:
 
         Induct on the termination relation, then tidy up the goal 
         with [lem,lem1]. The goal is now to show
 
-          `x < NAUX (x+11)`
+          `x < NA (x+11)`
 
         - Unroll the function at x+11. Doing this first requires 
           manually instantiating the fn with `x+11`. In order to unroll
           the function, the nested t.c.
 
-           `x+11 < NAUX (x+22)` 
+           `x+11 < NA (x+22)` 
 
           needs to be proved. This is accomplished by applying the 
           ind. hyp. After being proved, the nested t.c. is also added 
@@ -113,34 +113,33 @@ val E1  = GEN_ALL (simpLib.SIMP_RULE std_ss [lem,lem1] E0);
           exposing the nested call of the function. The goal is now to 
           prove 
 
-           `x < NAUX(NAUX(x+22))
+           `x < NA(NA(x+22))
 
         - At this point, we know by simple arithmetic
 
-           `x < NAUX (x+22) -11`
+           `x < NA (x+22) -11`
 
         - Now a case split is made, on 
 
-            `NAUX (x+22) -11 > 100`
+            `NA (x+22) -11 > 100`
 
           The motivation for this is rather mysterious. Consider the 
           two branches coming from the case split. 
 
-          A. NAUX (x+22) -11 > 100, so NAUX (x+22) > 100, so
-             in the goal, NAUX(NAUX(x+22)) reduces to NAUX(x+22) -10. 
-             Our task is now to show that x < NAUX(x+22) -10, and this
-             is easy.
+          A. NA (x+22) -11 > 100, so NA (x+22) > 100, so in the goal, 
+             NA(NA(x+22)) reduces to NA(x+22) -10. Our task is now to
+             show that x < NA(x+22) -10, and this is easy.
 
-          B. ~(NAUX (x+22) -11 > 100), so the i.h. may be used to 
-             deliver NAUX(x+22) -11 < NAUX(NAUX(x+22) -11+11)
-                                    = NAUX(NAUX(x+22))
+          B. ~(NA (x+22) -11 > 100), so the i.h. may be used to 
+             deliver NA(x+22) -11 < NA(NA(x+22) -11+11)
+                                  = NA(NA(x+22))
              After that, the proof of this branch is also easy.
 
           That finishes the whole proof. Revisiting the case-split, 
           we see that part A does not use the i.h. since it unrolls 
-          NAUX to the non-recursive case. Part B, in contrast, uses
-          the induction hypothesis instead of unrolling NAUX to 
-          the recursive case, which would lead to madness. We see that
+          NA to the non-recursive case. Part B, in contrast, uses
+          the induction hypothesis instead of unrolling NA to the 
+          recursive case, which would lead to madness. We see that
           the case split was aimed at making the conclusion of the 
           inductive hypothesis work out, so part B is very smooth. 
    
