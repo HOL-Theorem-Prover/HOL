@@ -16,7 +16,7 @@ struct
 (*---------------------------------------------------------------------------
  * Declare parent theory structures.
  *---------------------------------------------------------------------------*)
-local open oneTheory sumTheory restr_binderTheory rec_typeTheory in end;
+local open oneTheory sumTheory res_quanTheory rec_typeTheory in end;
 
 val _ = Parse.new_theory "HOL";
 val _ = Parse.export_theory ();
