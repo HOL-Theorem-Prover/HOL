@@ -37,6 +37,12 @@ in
 
   fun mk_xable file =
       if systeml ["chmod", "a+x", file] = success then file
+      else if FileSys.access (file,[FileSys.A_EXEC]) then
+          (* if we can execute it, then continue with a warning *)
+          (* NB: MoSML docs say FileSys.access uses real uid/gid, not effective uid/gid,
+             so this test may be bogus if we are setuid.  This is unlikely(!). *)
+          (print ("Non-fatal warning: couldn't set world execute permission on "^file^",\n  but continuing anyway since at least the current user has execute permission.\n");
+           file)
       else (print ("unable to set execute permission on "^file^".\n");
             raise Fail "mk_xable")
 
