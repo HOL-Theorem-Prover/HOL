@@ -112,6 +112,9 @@ val _ = adjoin_to_theory
     NL()
   end)};
 
+val _ = Drop.exportML ("combin",
+                       map Drop.DEFN [S_THM, K_THM, I_THM, W_THM, C_THM, o_THM]);
+
 val _ = export_theory();
 
 end;
