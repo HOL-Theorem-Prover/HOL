@@ -1326,9 +1326,9 @@ fun make_type_clause tyname (i,(constructor, args)) =
 
 fun parse_tyspec q =
    case ParseDatatype.parse q of
-     [(name, ParseDatatype.WithConstructors clauses)] =>
+     [(name, ParseDatatype.Constructors clauses)] =>
        {ty_name=name, clauses=map_enum (make_type_clause name) clauses}
-   | [(_, ParseDatatype.RecordType _)] =>
+   | [(_, ParseDatatype.Record _)] =>
        raise ERR "parse_tyspec" "Can't handle record definitions"
    | [] => raise ERR "parse_tyspec" "empty type specification"
    | _ => raise ERR "parse_tyspec" "more than one type specified";

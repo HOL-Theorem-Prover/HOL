@@ -467,9 +467,9 @@ end;
 
 fun transAST tynames (tyn,dtform) =
   case dtform of
-    ParseDatatype.WithConstructors cargs =>
+    ParseDatatype.Constructors cargs =>
       {type_name = tyn, constructors = map (make_type_clause tynames) cargs}
-  | ParseDatatype.RecordType _ =>
+  | ParseDatatype.Record _ =>
       raise ERR "transAST"
         "Can't handle record forms in middle of mutual and/or nested type defn"
 
