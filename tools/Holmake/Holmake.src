@@ -13,6 +13,7 @@ val HOLDIR = _;
 val MOSMLDIR = _;
 val DEPDIR = _;
 fun MK_XABLE file = _;
+val DEFAULT_OVERLAY = _;
 
 fun normPath s = Path.toString(Path.fromString s)
 fun itlist f L base =
@@ -24,7 +25,6 @@ fun fullPath slist = normPath
    (itstrings (fn chunk => fn path => Path.concat (chunk,path)) slist);
 
 
-val SIGOBJ    = normPath(Path.concat(HOLDIR, "sigobj"));
 val MOSMLCOMP = fullPath [MOSMLDIR, "bin/mosmlc"]
 val UNQUOTER  = fullPath [HOLDIR, "bin/unquote"]
 
@@ -64,7 +64,7 @@ fun unquote_to file1 file2 = Process.system
 
 (** Command line parsing *)
 
-(*** list functions *)
+(*** list functions and others *)
 fun member m [] = false
   | member m (x::xs) = if x = m then true else member m xs
 fun set_union s1 s2 =
@@ -86,8 +86,12 @@ fun print_list0 [] = "]"
   | print_list0 [x] = x^"]"
   | print_list0 (x::xs) = x^", "^print_list0 xs
 fun print_list l = "["^print_list0 l
+fun I x = x
 
 (*** parse command line *)
+fun includify [] = []
+  | includify (h::t) = "-I" :: h :: includify t
+
 fun parse_command_line list = let
   fun find_pairs0 tag remainder includes [] =
     (List.rev remainder, List.rev includes)
@@ -116,47 +120,122 @@ fun parse_command_line list = let
         (rem1, b0 orelse b1)
       end
 
+  fun find_one_pairtag tag nov somev list = let
+    val (rem, vals) = find_pairs tag list
+  in
+    case vals of
+      [] => (rem, nov)
+    | [x] => (rem, somev x)
+    | _ => let
+        open TextIO
+      in
+        output(stdErr,"Ignoring all but last "^tag^" spec.\n");
+        flushOut stdErr;
+        (rem, somev (List.last vals))
+      end
+  end
+
   val (rem0, includes) = find_pairs "-I" list
   val (rem1, dontmakes) = find_pairs "-d" rem0
   val (rem2, debug) = find_toggle "--debug" rem1
   val (rem3, help) = find_alternative_tags  ["--help", "-h"] rem2
   val (rem4, show_version) = find_alternative_tags ["--version", "-v"] rem3
   val (rem5, rebuild_deps) = find_alternative_tags ["--rebuild_deps","-r"] rem4
-  val (rem6, actual_HOLDIRs) = find_pairs "--holdir" rem5
+  val (rem6, actual_HOLDIR) = find_one_pairtag "--holdir" HOLDIR I rem5
   val (rem7, no_sigobj) = find_alternative_tags ["--no_sigobj", "-n"] rem6
   val (rem8, allfast) = find_toggle "--fast" rem7
   val (rem9, fastfiles) = find_pairs "-f" rem8
   val (rem10, qofp) = find_toggle "--qof" rem9
+  val (rem11, no_hmakefile) = find_toggle "--no_holmakefile" rem10
+  val (rem12, user_hmakefile) =
+    find_one_pairtag "--holmakefile" NONE SOME rem11
+  val (rem13, no_overlay) = find_toggle "--no_overlay" rem12
+  val (rem14, user_overlay) = find_one_pairtag "--overlay" NONE SOME rem13
 in
-  {targets=rem10, debug=debug, show_usage=help, show_version=show_version,
+  {targets=rem14, debug=debug, show_usage=help, show_version=show_version,
    always_rebuild_deps=rebuild_deps,
-   additional_includes=List.foldr(fn (s,L) => "-I"::s::L) [] includes,
+   additional_includes=includify includes,
    dontmakes=dontmakes, no_sigobj = no_sigobj,
-   quit_on_failure = qofp,
+   quit_on_failure = qofp, no_hmakefile = no_hmakefile,
    allfast = allfast, fastfiles = fastfiles,
-   actual_HOLDIR =
-     case actual_HOLDIRs
-      of []  => HOLDIR
-       | [x] => x
-       |  _  => let open TextIO
-                in output(stdErr,"Ignoring all but last --holdir spec.\n");
-                   flushOut stdErr;
-                   List.last actual_HOLDIRs
-                end}
+   actual_HOLDIR = actual_HOLDIR,
+   user_hmakefile = user_hmakefile,
+   no_overlay = no_overlay,
+   user_overlay = user_overlay}
 end
 
 
 (* parameters which vary from run to run according to the command-line *)
 val {targets, debug, dontmakes, show_usage, show_version, allfast, fastfiles,
-     always_rebuild_deps, additional_includes, actual_HOLDIR, no_sigobj,
-     quit_on_failure} =
+     always_rebuild_deps,
+     additional_includes = cline_additional_includes,
+     actual_HOLDIR, no_sigobj,
+     quit_on_failure, no_hmakefile, user_hmakefile, no_overlay,
+     user_overlay} =
   parse_command_line (CommandLine.arguments())
+
+val SIGOBJ    = normPath(Path.concat(actual_HOLDIR, "sigobj"));
+
 
 val _ =
   if quit_on_failure andalso allfast then
     print "Warning: quit on (tactic) failure ignored for fast built theories"
   else
     ()
+
+fun die_with message = let
+  open TextIO
+in
+  output(stdErr, message ^ "\n");
+  flushOut stdErr;
+  Process.exit Process.failure
+end
+
+val hmakefile =
+  case user_hmakefile of
+    NONE => "Holmakefile"
+  | SOME s =>
+      if FileSys.access(s, [FileSys.A_READ]) then s
+      else die_with ("Couldn't read/find makefile: "^s)
+
+val hmakefile_doc =
+  if FileSys.access(hmakefile, [FileSys.A_READ]) andalso not no_hmakefile
+  then
+    (if debug then
+       print ("Reading additional information from "^hmakefile^"\n")
+     else ();
+     Holmake_rules.parse_from_file hmakefile)
+  else Holmake_types.empty_doc
+
+val hmake_includes = includify (#includes hmakefile_doc)
+val additional_includes =
+  remove_duplicates (cline_additional_includes @ hmake_includes)
+
+val hmake_preincludes = includify (#pre_includes hmakefile_doc)
+val hmake_no_overlay = member "NO_OVERLAY" (#options hmakefile_doc)
+
+val actual_overlay =
+  if no_overlay orelse hmake_no_overlay then NONE
+  else
+    case user_overlay of
+      NONE => DEFAULT_OVERLAY
+    | SOME s => let
+      in
+        case DEFAULT_OVERLAY of
+          NONE =>
+            die_with "Can't use overlays with this version of HOL."
+        | SOME _ => user_overlay
+      end
+
+
+val extra_rules = #rules hmakefile_doc
+
+fun extra_deps t =
+  Option.map #dependencies (List.find (fn r => #target r = t) extra_rules)
+
+fun extra_commands t =
+  Option.map #commands (List.find (fn  r => #target r = t) extra_rules)
+
 
 val std_include_flags = if no_sigobj then [] else ["-I", SIGOBJ]
 (*
@@ -166,6 +245,52 @@ val std_include_flags = if no_sigobj then [] else ["-I", SIGOBJ]
     [] SRCDIRS
   else ["-I", SIGOBJ]
 *)
+
+
+fun run_extra_command c =
+  case c of
+    [] => (* empty command; do nothing *) Process.success
+  | (w0 :: ws) => let
+      (* w0 subject to substitution *)
+      (* idea for future : allow for special form of quotation around a
+         file-name in ws to indicate that it should have the dq munging
+         done on it *)
+      val w_list =
+        case w0 of
+          "HOLMOSMLC" =>
+            MOSMLCOMP :: "-q" :: (hmake_preincludes @ std_include_flags @
+                                  additional_includes)
+        | "HOLMOSMLC-C" => let
+            val overlay_string =
+              case actual_overlay of
+                NONE => ""
+              | SOME s => s
+          in
+            MOSMLCOMP :: "-q" :: (hmake_preincludes @ std_include_flags @
+                                  additional_includes @
+                                  ["-c", overlay_string])
+          end
+        | "MOSMLC" => MOSMLCOMP :: additional_includes
+        | _ => [w0]
+      val command = spacify (w_list @ ws)
+    in
+      TextIO.output(TextIO.stdOut, spacify c ^ "\n");
+      TextIO.flushOut TextIO.stdOut;
+      Process.system command
+    end
+
+
+fun run_extra_commands tgt commands =
+  case commands of
+    [] => Process.success
+  | (c::cs) =>
+      if run_extra_command c = Process.success then
+        run_extra_commands tgt cs
+      else
+        (TextIO.output(TextIO.stdOut, "Failed. Couldn't build "^tgt^"\n");
+         Process.failure)
+
+
 
 val _ = if (debug) then let
 in
@@ -306,12 +431,18 @@ fun fromFile f =
 (*** Construct primary dependencies *)
 (* Next, construct the primary dependency chain, for a given target *)
 fun primary_dependent f =
-  case f of
-    UO c => SOME (SML c)
-  | UI c => SOME (SIG c)
-  | SML (Theory s) => SOME (SML (Script s))
-  | SIG (Theory s) => SOME (SML (Script s))
-  | _ => NONE
+  case extra_deps (fromFile f) of
+    SOME [] => NONE
+  | SOME (h::_) => SOME (toFile h)
+  | _ => let
+    in
+      case f of
+        UO c => SOME (SML c)
+      | UI c => SOME (SIG c)
+      | SML (Theory s) => SOME (SML (Script s))
+      | SIG (Theory s) => SOME (SML (Script s))
+      | _ => NONE
+    end
 
 (*** Construction of secondary dependencies *)
 
@@ -335,8 +466,8 @@ fun runholdep arg destination_file = let
   fun myopen s =
     if FileSys.access(DEPDIR, []) then
       if FileSys.isDir DEPDIR then TextIO.openOut s
-      else raise Fail ("Want to put dependency information in directory "^
-                       DEPDIR^", but it already exists as a file\n")
+      else die_with ("Want to put dependency information in directory "^
+                     DEPDIR^", but it already exists as a file")
     else
      (print ("Trying to create directory "^DEPDIR^" for dependency files\n");
       FileSys.mkDir DEPDIR;
@@ -464,48 +595,54 @@ in
 end
 
 fun get_dependencies (f : File) : File list = let
-  val file_dependencies = get_direct_dependencies f
 in
-  case f of
-    SML (Theory x) => let
-      (* there may be theory files mentioned in the Theory.sml file that
-         aren't mentioned in the script file.  If so, we are really
-         dependent on these, and should add them.  They will be listed
-         in the dependencies for UO (Theory x). *)
-      val additional_theories =
-        if FileSys.access(fromFile f, [FileSys.A_READ]) then
-          List.mapPartial (fn (x as (UO (Theory s))) => SOME x | _ => NONE)
-          (get_dependencies (UO (Theory x)))
-        else
-          []
-
-      val firstcut = set_union file_dependencies additional_theories
-      (* because we have to build an executable in order to build a
-         theory, this build depends on all of the dependencies
-         (meaning the transitive closure of the direct dependency
-         relation) in their .UO form, not just .UI *)
-      fun collect_all_dependencies sofar tovisit =
-        case tovisit of
-          [] => sofar
-        | (f::fs) => let
-            val deps =
-              if Path.dir (string_part f) <> "" then []
-              else
-                case f of
-                  UI x => (get_direct_dependencies f @
-                           get_direct_dependencies (UO x))
-                | _ => get_direct_dependencies f
-            val newdeps = set_diff deps sofar
-          in
-            collect_all_dependencies (sofar @ newdeps) (set_union newdeps fs)
-          end
-      val alldeps = collect_all_dependencies [] [f]
-      val uo_deps =
-        List.mapPartial (fn (UI x) => SOME (UO x) | _ => NONE) alldeps
+  case (extra_deps (fromFile f)) of
+    SOME l => map toFile l
+  | NONE => let
+      val file_dependencies = get_direct_dependencies f
     in
-      set_union uo_deps (set_union alldeps firstcut)
+      case f of
+        SML (Theory x) => let
+          (* there may be theory files mentioned in the Theory.sml file that
+             aren't mentioned in the script file.  If so, we are really
+             dependent on these, and should add them.  They will be listed
+             in the dependencies for UO (Theory x). *)
+          val additional_theories =
+            if FileSys.access(fromFile f, [FileSys.A_READ]) then
+              List.mapPartial (fn (x as (UO (Theory s))) => SOME x | _ => NONE)
+              (get_dependencies (UO (Theory x)))
+            else
+              []
+
+          val firstcut = set_union file_dependencies additional_theories
+          (* because we have to build an executable in order to build a
+             theory, this build depends on all of the dependencies
+             (meaning the transitive closure of the direct dependency
+             relation) in their .UO form, not just .UI *)
+          fun collect_all_dependencies sofar tovisit =
+            case tovisit of
+              [] => sofar
+            | (f::fs) => let
+                val deps =
+                  if Path.dir (string_part f) <> "" then []
+                  else
+                    case f of
+                      UI x => (get_direct_dependencies f @
+                               get_direct_dependencies (UO x))
+                    | _ => get_direct_dependencies f
+                val newdeps = set_diff deps sofar
+              in
+                collect_all_dependencies (sofar @ newdeps)
+                                         (set_union newdeps fs)
+              end
+          val alldeps = collect_all_dependencies [] [f]
+          val uo_deps =
+            List.mapPartial (fn (UI x) => SOME (UO x) | _ => NONE) alldeps
+        in
+          set_union uo_deps (set_union alldeps firstcut)
+        end
+      | _ => file_dependencies
     end
-  | _ => file_dependencies
 end
 
 (** Build graph *)
@@ -547,7 +684,12 @@ fun variant str =  (* get an unused file name in the current directory *)
 (*** Compilation of files *)
 
 fun build_command c arg = let
-  val include_flags = std_include_flags @ additional_includes
+  val include_flags = hmake_preincludes @ std_include_flags @
+                      additional_includes
+  val overlay_string =
+    case actual_overlay of
+      NONE => ""
+    | SOME s => s
 (*  val include_flags = ["-I",SIGOBJ] @ additional_includes *)
   exception CompileFailed
   exception FileNotFound
@@ -568,16 +710,18 @@ in
                                    FileSys.rename{old=clone, new=file})
                in
                  if unquote_to clone file = Process.success
-                 then let val res =
-                            compile debug ("-q"::(include_flags@["-c",file]))
-                             handle e => (revert();
-                                       print("Unable to compile: "^file^"\n");
-                                      raise CompileFailed)
-                      in revert(); res
-                      end
+                 then let
+                   val res =
+                     compile debug ("-q"::(include_flags@["-c",overlay_string,
+                                                          file]))
+                     handle e => (revert();
+                                  print("Unable to compile: "^file^"\n");
+                                  raise CompileFailed)
+                 in revert(); res
+                 end
                  else (revert(); raise CompileFailed)
                end
-          else compile debug ("-q"::(include_flags@["-c",file]))
+          else compile debug ("-q"::(include_flags@["-c",overlay_string,file]))
      in
         res = success
      end
@@ -628,12 +772,17 @@ in
 end
 
 fun do_a_build_command target pdep secondaries =
-  case target of
-    UO c           => build_command MOSMLC pdep
-  | UI c           => build_command MOSMLC pdep
-  | SML (Theory s) => build_command (BuildScript s) pdep
-  | SIG (Theory s) => build_command (BuildScript s) pdep
-  | x => raise Fail ("Don't know how to build a "^fromFile x^"\n")
+  case (extra_commands (fromFile target)) of
+    SOME cs => run_extra_commands (fromFile target) cs = Process.success
+  | NONE => let
+    in
+      case target of
+         UO c           => build_command MOSMLC pdep
+       | UI c           => build_command MOSMLC pdep
+       | SML (Theory s) => build_command (BuildScript s) pdep
+       | SIG (Theory s) => build_command (BuildScript s) pdep
+       | x => raise Fail ("Don't know how to build a "^fromFile x^"\n")
+    end
 
 
 exception CircularDependency
@@ -692,9 +841,15 @@ in
           (print (fromFile target ^ " found and OK.\n");
            cache_insert (target, true))
         else let
+          fun cantbuild () =
+            (warn ("Don't know how to make "^fromFile target^"\n");
+             cache_insert (target, false))
         in
-          warn ("Don't know how to make "^fromFile target^"\n");
-          cache_insert (target, false)
+          case extra_commands (fromFile target) of
+            SOME [] => cantbuild()
+          | SOME cs =>
+              run_extra_commands (fromFile target) cs = Process.success
+          | NONE => cantbuild()
         end
 end handle CircularDependency => cache_insert (target, false)
          | Fail s => raise Fail s
@@ -762,6 +917,10 @@ in
 end
 
 fun generate_all_plausible_targets () = let
+  val extra_targets =
+    case extra_rules of
+      [] => []
+    | (er::_) => [toFile (#target er)]
   fun find_files ds P =
     case FileSys.readDir ds of
       NONE => []
@@ -780,7 +939,7 @@ fun generate_all_plausible_targets () = let
     | src_to_target (SIG s) = (UO s)
     | src_to_target _ = raise Fail "Can't happen"
 in
-  remove_duplicates (map (src_to_target o toFile) src_files)
+  remove_duplicates (map (src_to_target o toFile) src_files @ extra_targets)
 end
 
 
@@ -803,21 +962,25 @@ val _ =
     List.app print
     ["Holmake [targets]\n",
      "  special targets are:\n",
-     "    clean               : remove all object code in directory\n",
-     "    cleanDeps           : remove dependency information\n",
-     "    cleanAll            : do all of above\n",
+     "    clean                : remove all object code in directory\n",
+     "    cleanDeps            : remove dependency information\n",
+     "    cleanAll             : do all of above\n",
      "  additional command-line options are:\n",
-     "    -I file             : include directory (can be repeated)\n",
-     "    -d file             : ignore file (can be repeated)\n",
-     "    -f theory           : toggles fast build (can be repeated)\n",
-     "    --debug             : print debugging information\n",
-     "    --fast              : files default to fast build; -f toggles\n",
-     "    --help | -h         : show this message\n",
-     "    --holdir directory  : use specified directory as HOL root\n",
-     "    --no_sigobj | -n    : don't use any HOL files from sigobj\n",
-     "    --qof               : quit on tactic failure\n",
-     "    --rebuild_deps | -r : always rebuild dependency info files \n",
-     "    --version | -v      : show version information\n"]
+     "    -I <file>            : include directory (can be repeated)\n",
+     "    -d <file>            : ignore file (can be repeated)\n",
+     "    -f <theory>          : toggles fast build (can be repeated)\n",
+     "    --debug              : print debugging information\n",
+     "    --fast               : files default to fast build; -f toggles\n",
+     "    --help | -h          : show this message\n",
+     "    --holdir <directory> : use specified directory as HOL root\n",
+     "    --holmakefile <file> : use file as Holmakefile\n",
+     "    --no_holmakefile     : don't use any Holmakefile\n",
+     "    --no_overlay         : don't use an overlay file\n",
+     "    --no_sigobj | -n     : don't use any HOL files from sigobj\n",
+     "    --overlay <file>     : use given .ui file as overlay\n",
+     "    --qof                : quit on tactic failure\n",
+     "    --rebuild_deps | -r  : always rebuild dependency info files \n",
+     "    --version | -v       : show version information\n"]
   else
     if show_version then
       print "Holmake version 2.1.1\n"
@@ -827,12 +990,12 @@ val _ =
         handle Fail s => (print ("Fail exception: "^s^"\n"); exit failure)
     in
       if result then exit success
-      else (print "Something went wrong somewhere\n"; exit failure)
+      else die_with "Something went wrong somewhere."
     end
 
 
 (** Local variable rubbish *)
 (* local variables: *)
-(* mode: outline-minor *)
+(* mode: sml *)
 (* outline-regexp: " *(\\*\\*+" *)
 (* end: *)

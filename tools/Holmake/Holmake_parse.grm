@@ -1,0 +1,73 @@
+%{
+fun concat_with_spaces [] = ""
+  | concat_with_spaces [x] = x
+  | concat_with_spaces (h::t) = h ^ " " ^ concat_with_spaces t
+open Holmake_types
+%}
+
+%token EOF COLON TAB NEWLINE INCLUDES OPTIONS PRE_INCLUDES EQUALS
+%token <string> ID
+
+%start MakefileDoc
+%type <Holmake_types.doc> MakefileDoc
+%type <Holmake_types.preliminary> Preliminary Preliminaries
+%type <Holmake_types.rule list> Rules
+%type <Holmake_types.rule> Rule
+%type <string list> Idlist
+%type <string list list> Commlist
+%type <unit> Whitespace Tabsequence
+
+%%
+
+MakefileDoc:
+  Rules  { {rules = $1, pre_includes = [], includes = [], options = []} }
+| Preliminaries Whitespace Rules {
+    {rules = $3, pre_includes = #pre_includes $1, includes = #includes $1,
+     options = #options $1}
+  }
+
+Preliminaries:
+    Preliminary { $1 }
+  | Preliminary Preliminaries { merge_prelims $1 $2 }
+
+Preliminary:
+    OPTIONS EQUALS Idlist { {options = $3, includes = [], pre_includes = []} }
+  | INCLUDES EQUALS Idlist { {options = [], includes = $3, pre_includes = []} }
+  | PRE_INCLUDES EQUALS Idlist {
+      {options = [], includes = [], pre_includes = $3}
+    }
+
+
+Rules:
+    Whitespace EOF  { [] }
+  | Rule Whitespace Rules { $1 :: $3 }
+
+
+Rule:
+  ID COLON Idlist Commlist { {target = $1, dependencies = $3,
+                              commands = $4} }
+
+Idlist:  /* sequence of strings terminated by newline */
+         /* strings are separated by spaces (done for us by the lexer)
+            or tabs */
+   /* empty list */ Tabsequence NEWLINE { [] }
+   | ID Tabsequence Idlist { $1 :: $3 }
+
+Commlist:
+   /* empty list */ { [] }
+   | TAB Idlist Commlist { $2 :: $3 }
+
+Whitespace:
+   /* empty */ { () }
+   | NEWLINE Whitespace  { () }
+   | TAB Whitespace      { () }
+
+Tabsequence:
+   /* empty */ { () }
+   | TAB Tabsequence { () }
+
+%%
+
+(* Local variables: *)
+(* mode: sml *)
+(* end: *)
