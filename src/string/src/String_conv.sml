@@ -12,7 +12,7 @@
 structure String_conv :> String_conv =
 struct
 
-open HolKernel;
+open HolKernel boolLib Rsyntax
 
 fun STRING_CONV_ERR m = HOL_ERR{origin_structure="String_conv",
                                 origin_function = "string_CONV",
@@ -35,8 +35,8 @@ local val T = Parse.Term `T`
       and A = Parse.Term `ASCII`
       val STRING = Parse.Term`STRING`
       fun bits 0 _ = []
-        | bits n m = 
-           let val hm = m div 2 
+        | bits n m =
+           let val hm = m div 2
             in (if (hm*2 = m) then F else T) :: (bits (n-1) hm)
             end
       val string_CONV_tag = Tag.read"string_CONV"
@@ -46,14 +46,14 @@ fun string_CONV tm =
      val _ = assert (fn t => #Tyop(dest_type t) = "string") ty
  in
  if (str = "emptystring") then raise STRING_CONV_ERR "empty string"
- else 
+ else
  case String.explode str
   of (#"\""::h::t) =>
         let val code = rev (bits 8 (Char.ord h))
             val tm1 = mk_comb {Rator=STRING, Rand=list_mk_comb(A,code)}
             val def = mk_comb {Rator=tm1,
                 Rand=mk_const{Name=String.implode (#"\""::t),Ty=ty}}
-        in 
+        in
            Thm.mk_oracle_thm string_CONV_tag ([], mk_eq{lhs=tm, rhs=def})
         end
    | _ => raise STRING_CONV_ERR "badly formed string literal"

@@ -15,7 +15,7 @@
 structure Ascii :> Ascii =
 struct
 
-open HolKernel Parse Drule Conv;
+open HolKernel Parse boolLib Drule Conv Rsyntax;
 
 fun ASCII_ERR{function, message} = HOL_ERR{origin_structure = "Ascii",
                                            origin_function = function,
@@ -43,31 +43,31 @@ val ckargs = assert (all (fn tm => tm=T orelse tm=F))
 (* strip checks that term is ASCII applied to 8 args, all of which are T or F,
    returns the list of args *)
 
-val strip = snd o (check##ckargs) o strip_comb 
+val strip = snd o (check##ckargs) o strip_comb
 
 
 (* end result: THM says that if an ASCII combination is equal then
- the args of the ASCII constructor are equal, and VARS are the 16 args of 
+ the args of the ASCII constructor are equal, and VARS are the 16 args of
  the ASCII constructors of the combinations *)
 
 val (thm,vars) = let val th = asciiTheory.ASCII_11
-                     val vars = fst(strip_forall(concl th)) 
+                     val vars = fst(strip_forall(concl th))
                in
                (fst(EQ_IMP_RULE (SPECL vars th)), vars)
                end
 
 (* argument to fc is something like .|- (b0 = b0') /\ ... /\ (b6 = b6') .
- If all these pairs are indeed equal, then it returns the argument, 
+ If all these pairs are indeed equal, then it returns the argument,
  else returns the first offending pair *)
 fun fc th =
    let val (t,c) = CONJ_PAIR th
        val {lhs, rhs} = dest_eq(concl t)
-   in if (lhs=rhs) 
+   in if (lhs=rhs)
       then fc c
       else t
    end handle _ => th;
 
-fun mk_subst (t::terms, v::vars) = 
+fun mk_subst (t::terms, v::vars) =
     (v |-> t)::mk_subst (terms, vars)
   | mk_subst ([],[]) = []
   | mk_subst (_, _) = raise ASCII_ERR{function = "ascii_EQ_CONV", message = ""}
@@ -78,12 +78,12 @@ in
  |- (ASCII b0 ... b7 = ASCII b0' ... b7) = Q
  where Q is a T if the terms are indeed equal and Q is a F if not *)
 
-fun ascii_EQ_CONV tm = 
+fun ascii_EQ_CONV tm =
     let val {lhs,rhs} = dest_eq tm
         val l = strip lhs
         val r = strip rhs
-    in if (l=r) 
-       then EQT_INTRO(REFL(rand tm)) 
+    in if (l=r)
+       then EQT_INTRO(REFL(rand tm))
        else let val cntr = fc(UNDISCH (INST (mk_subst (l@r,vars)) thm))
                 val false_thm = EQ_MP (bool_EQ_CONV (concl cntr)) cntr
             in EQF_INTRO (NOT_INTRO (DISCH tm false_thm))
@@ -95,7 +95,7 @@ end;
 (* -------------------------------------------------- TESTS ---
 ascii_EQ_CONV (--`ASCII T T T T T T T T = ASCII F F F F F F F F`--);
 ascii_EQ_CONV (--`ASCII F F F F F F F F = ASCII T T T T T T T T`--);
- 
+
 ascii_EQ_CONV (--`ASCII T T T T T T T T = ASCII T F F F F F F F`--);
 ascii_EQ_CONV (--`ASCII F F F F F F F F = ASCII F T T T T T T T`--);
 
