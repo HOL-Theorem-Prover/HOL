@@ -538,6 +538,7 @@ val BAG_UNION_EMPTY = store_thm(
               SIMP_RULE hol_ss [] >- ASSUME_TAC)) THEN
   REPEAT STRIP_TAC THEN FUN_EQ_TAC THEN
   ASSUM_LIST (fn thl => SIMP_TAC hol_ss (map SPEC_ALL thl)));
+val _ = export_rewrites ["BAG_UNION_EMPTY"]
 
 val BAG_UNION_DIFF = store_thm(
   "BAG_UNION_DIFF",
