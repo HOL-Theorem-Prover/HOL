@@ -72,6 +72,10 @@ val NUMERAL_BIT2 =
   new_definition("NUMERAL_BIT2",
                  --`NUMERAL_BIT2 n = n + (n + SUC (SUC 0))`--);
 
+val _ = new_definition(
+  GrammarSpecials.nat_elim_term,
+  --`^(mk_var(GrammarSpecials.nat_elim_term, Type`:num->num`)) n = n`--);
+
 (*---------------------------------------------------------------------------*
  * After this call, numerals parse into `NUMERAL( ... )`                     *
  *---------------------------------------------------------------------------*)
