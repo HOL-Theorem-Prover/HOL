@@ -48,6 +48,11 @@ in
   (not (null expks), rest)
 end
 
+val (do_selftests, cmdline) = let
+  val (selftests, rest) = List.partition (fn e => e = "-selftest") cmdline
+in
+  (not (null selftests), rest)
+end
 
 val SRCDIRS =
     map (fn s => fullPath [HOLDIR, s])
@@ -62,7 +67,20 @@ open Systeml;
 val SYSTEML = Systeml.systeml
 
 fun Holmake dir =
-  if SYSTEML [HOLMAKE, "--qof"] = Process.success then ()
+  if SYSTEML [HOLMAKE, "--qof"] = Process.success then
+    if do_selftests andalso
+       FileSys.access("selftest.exe", [FileSys.A_EXEC])
+    then
+      (print "Performing self-test...\n";
+       if SYSTEML [dir ^ "/selftest.exe"] =
+          Process.success
+       then
+         print "Self-test was successful\n"
+       else
+         (print ("Selftest failed in directory "^dir);
+          raise Fail "Couldn't do selftest"))
+    else
+      ()
   else (print ("Build failed in directory "^dir^"\n");
         raise Fail "Couldn't make directory");
 
@@ -389,7 +407,8 @@ val help_mesg = "Usage: build\n\
                 \   or: build clean\n\
                 \   or: build cleanAll\n\
                 \   or: build help.\n\
-                \Add -expk to build an experimental kernel.\n";
+                \Add -expk to build an experimental kernel.\n\
+                \Add -selftest to do self-tests, where defined.\n";
 
 fun check_against s = let
   open Time
