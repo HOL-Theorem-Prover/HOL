@@ -162,4 +162,8 @@ val keepers =
      "wordLib.sig",
      "bword_arithTheory.sig","wordTheory.sig","word_numTheory.sig",
      "bword_bitopTheory.sig","word_baseTheory.sig",
-     "bword_numTheory.sig","word_bitopTheory.sig"];
+     "bword_numTheory.sig","word_bitopTheory.sig",
+
+     (* HolSat *)
+     "HolSatLib.sig", "canon_supportTheory.sig",
+     "canonTools.sig"];
