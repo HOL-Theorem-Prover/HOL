@@ -13,9 +13,7 @@ An application {strip_binder f M} iteratively uses {f} to break
 apart a consecutive sequence of applications of a particular 
 binder. The function {f} expects a binder term as an argument. If it doesn't 
 get a binder, it returns {NONE}. Otherwise, it breaks the binder apart 
-(if necessary) in order get its lambda abstraction (N), and returns {SOME N}. 
-
-
+(if necessary) in order get its lambda abstraction {N}, and returns {SOME N}. 
 
 \FAILURE
 Never fails.
@@ -44,5 +42,7 @@ and {strip_exists}. In the current implementation of HOL, iterating
 with many consecutive binders.
 
 \SEEALSO
-Term.list_mk_binder, Term.strip_abs, boolSyntax.strip_forall, boolSyntax.strip_exists.
+Term.list_mk_binder, 
+Term.strip_abs, boolSyntax.strip_forall, boolSyntax.strip_exists.
+
 \ENDDOC

@@ -11,11 +11,12 @@ variable, binding, abstraction.
 \DESCRIBE
 An application {list_mk_binder f ([v1,...,vn],M)} builds the term
 {f (\v1. ... f (\vn. M) ...)}. The argument {f} is a function that
-takes a lambda abstraction and returns a bound term. This implement 
-Church's reduction of all variable binding operations to lambda-binding.
+takes a lambda abstraction and returns a bound term. Thus {list_mk_binder}
+can be seen as implementing Church's reduction of all variable binding 
+operations to lambda-binding.
 
 \FAILURE
-{list_mk_binder f ([v1,...,vn],M)} fails if some {vi} (1 <= i <= n) is
+{list_mk_binder f ([v1,...,vn],M)} fails if some {vi} {1 <= i <= n} is
 not a variable. It also fails if the constructed term 
 {f (\v1. ... f (\vn. M) ...)} is not well typed.
 
@@ -86,8 +87,8 @@ and {list_mk_exists}. In the current implementation of HOL, iterating
 {mk_abs}, {mk_forall}, or {mk_exists} is far slower for terms with many
 consecutive binders.
 
-{list_mk_binder} should be generalized to handle paired binding structures.
-
 \SEEALSO
-Term.list_mk_abs, boolSyntax.list_mk_forall, boolSyntax.list_mk_exists.
+Term.list_mk_abs, boolSyntax.list_mk_forall, boolSyntax.list_mk_exists,
+Term.strip_binder.
+
 \ENDDOC

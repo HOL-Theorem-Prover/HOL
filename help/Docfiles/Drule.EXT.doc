@@ -20,7 +20,7 @@ When applied to a theorem {A |- !x. t1 x = t2 x}, the inference rule
 
 \FAILURE
 Fails if the theorem does not have the form indicated above, or
-if the variable {x} is free either of the functions {t1} or {t2}.
+if the variable {x} is free in either of the functions {t1} or {t2}.
 
 \COMMENTS
 This rule is expressed as an equivalence in the theorem
