@@ -17,39 +17,143 @@ struct
 
 open HolKernel basicHol90Lib Parse Psyntax
 open numTheory arithmeticTheory prim_recTheory simpLib boolSimps
-open jrh_simplelib ind_typeTheory
+open ind_typeTheory
 
 type hol_type     = Type.hol_type
 type thm          = Thm.thm
 type constructor  = string * hol_type list
 type tyspec       = hol_type * constructor list
 
-infix F_F THEN THENC THENL |-> ORELSEC
-infixr -->;
+infix THEN THENC THENL |-> ORELSEC
+infixr --> ##;
 
 (* ------------------------------------------------------------------------- *)
 (* Handy utility to produce "SUC o SUC o SUC ..." form of numeral.           *)
 (* ------------------------------------------------------------------------- *)
 
+fun ERR f s = 
+  HOL_ERR{origin_structure="ind_types",
+          origin_function=f,message=s};
+
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
 fun -- q x = Term q
 fun == q x = Type q
 
-val sucivate = let
-  val zero = Term`0` and suc = Term`SUC`
-in
-  fn n => funpow n (curry mk_comb suc) zero
-end
+(*---------------------------------------------------------------------------
+   First some JRH HOL-Light portability stuff. This was in jrh_simple_lib, 
+   but I got rid of that ... probably the wrong thing to do.
+ ---------------------------------------------------------------------------*)
+   
+fun chop_list 0 l      = ([], l)
+  | chop_list n []     = raise ERR "chop_list" "Empty list"
+  | chop_list n (h::t) = let val (m,l') = chop_list (n-1) t in (h::m, l') end;
+
+val lhand = rand o rator;
+val LAND_CONV = RATOR_CONV o RAND_CONV;
+val RIGHT_BETAS = rev_itlist(fn a=>CONV_RULE(RAND_CONV BETA_CONV) o C AP_THM a)
+
+val sucivate = 
+  let val zero = Term`0` and suc = Term`SUC`
+  in fn n => funpow n (curry mk_comb suc) zero
+  end
+
+val make_args = 
+  let fun margs n s avoid [] = []
+        | margs n s avoid (h::t) =
+           let val v = variant avoid (mk_var(s^Int.toString n, h))
+           in v::margs (n + 1) s (v::avoid) t
+           end
+  in fn s => fn avoid => fn tys =>
+       if length tys = 1 
+         then [variant avoid (mk_var(s, hd tys))]
+         else margs 0 s avoid tys
+   end handle _ => raise ERR "make_args" "";
+
+fun mk_binop op_t tm1 tm2 = list_mk_comb(op_t, [tm1, tm2])
+fun mk_const (n, theta) = 
+  let val c = #const (const_decl n)
+      val ty = type_of c
+  in
+    Term.mk_const{Name = n, Ty = Type.type_subst theta ty}
+  end;
+
+fun mk_icomb(tm1,tm2) = 
+   let val (ty, _) = Type.dom_rng (type_of tm1)
+       val tyins = Type.match_type ty (type_of tm2)
+   in
+      mk_comb(Term.inst tyins tm1, tm2)
+   end;
+
+fun list_mk_icomb cname = 
+  let val cnst = mk_const(cname,[])
+  in fn args => rev_itlist (C (curry mk_icomb)) args cnst
+  end;
+
+val variables = 
+  let fun vars(acc,tm) =
+        if is_var tm then insert tm acc
+        else if is_const tm then acc
+        else if is_abs tm 
+             then let val (v, bod) = dest_abs tm in vars(insert v acc,bod) end
+             else let val (l,r)    = dest_comb tm in vars(vars(acc,l),r)   end
+  in
+    fn tm => vars([],tm)
+  end;
+
+fun striplist dest = 
+  let fun strip x acc = 
+        let val (l,r) = dest x
+        in strip l (strip r acc)
+        end handle HOL_ERR _ => x::acc
+  in
+     fn x => strip x []
+  end;
+
+fun SUBS_CONV [] tm = REFL tm
+  | SUBS_CONV ths tm = 
+     let val lefts = map (lhand o concl) ths
+         val gvs = map (genvar o type_of) lefts
+         val pat = Term.subst (map2 (curry op|->) lefts gvs) tm
+         val abs = list_mk_abs(gvs,pat)
+         val th = rev_itlist (fn y => fn x => 
+                   CONV_RULE (RAND_CONV BETA_CONV THENC
+                           (RATOR_CONV o RAND_CONV) BETA_CONV)(MK_COMB(x,y)))
+                   ths (REFL abs)
+     in
+       if rand(concl th) = tm then REFL tm else th
+     end
+
+val GEN_REWRITE_RULE = fn c => fn thl => GEN_REWRITE_RULE c empty_rewrites thl
+val GEN_REWRITE_CONV = fn c => fn thl => GEN_REWRITE_CONV c empty_rewrites thl
+
+fun SIMPLE_EXISTS v th = EXISTS (mk_exists(v, concl th),v) th;
+fun SIMPLE_CHOOSE v th = CHOOSE(v,ASSUME (mk_exists(v, hd(hyp th)))) th;
+
+fun new_basic_type_definition tyname (mkname, destname) thm = 
+  let open Rsyntax
+      val {Rator=pred, Rand=witness} = dest_comb(concl thm)
+      val predty = type_of pred
+      val dom_ty = #1 (dom_rng predty)
+      val x = mk_var{Name="x", Ty=dom_ty}
+      val witness_exists = EXISTS 
+            (mk_exists{Bvar=x, Body=mk_comb{Rator=pred, Rand=x}},witness) thm
+      val tyax = new_type_definition{name=tyname, pred=pred,
+                                          inhab_thm=witness_exists}
+      val (mk_dest, dest_mk) = CONJ_PAIR(define_new_type_bijections 
+              {name=(tyname^"_repfns"), ABS=mkname, REP=destname, tyax=tyax})
+  in
+      (SPEC_ALL mk_dest, SPEC_ALL dest_mk)
+  end;
+
 
 (* ------------------------------------------------------------------------- *)
 (* Eliminate local "definitions" in hyps.                                    *)
 (* ------------------------------------------------------------------------- *)
 
-fun SCRUB_EQUATION eq th = let
-  val (l,r) = dest_eq eq
-in
-  MP (Rsyntax.INST [l |-> r] (DISCH eq th)) (REFL r)
-end
+fun SCRUB_EQUATION eq th = 
+   let val (l,r) = dest_eq eq
+   in MP (Rsyntax.INST [l |-> r] (DISCH eq th)) (REFL r)
+   end;
 
 (* ------------------------------------------------------------------------- *)
 (* Proves existence of model (inductively); use pseudo-constructors.         *)
@@ -62,18 +166,11 @@ end
 val justify_inductive_type_model = let
   val aty = Type.alpha
   val T_tm = Term`T` and n_tm = Term`n:num` and beps_tm = Term`@x:bool. T`
-  fun munion s1 s2 =
-    if s1 = [] then s2
-    else let
-      val h1 = hd s1
-      and s1' = tl s1
-    in
-      let
-        val (_,s2') = Lib.pluck (fn h2 => h2 = h1) s2
-      in
-         h1::(munion s1' s2')
-      end handle HOL_ERR _ => h1::(munion s1' s2)
-    end
+  fun munion [] s2 = s2
+    | munion (h1::s1') s2 = 
+       let val (_,s2') = Lib.pluck (fn h2 => h2 = h1) s2
+       in h1::munion s1' s2'
+       end handle HOL_ERR _ => h1::munion s1' s2
 in
   fn def => let
     val (newtys,rights) = unzip def
@@ -204,8 +301,7 @@ fun define_inductive_type cdefs exth = let
   val th2 = TRANS th1 (SUBS_CONV cdefs (rand(concl th1)))
   val th3 = EQ_MP (AP_THM th2 (rand extm)) exth
   val th4 = itlist SCRUB_EQUATION (hyp th3) th3
-  val mkname = "ii_internal_mk_"^ename
-  and destname = "ii_internal_dest_"^ename
+  val mkname = "mk_"^ename and destname = "dest_"^ename
   val (bij1,bij2) = new_basic_type_definition ename (mkname,destname) th4
   val bij2a = AP_THM th2 (rand(rand(concl bij2)))
   val bij2b = TRANS bij2a bij2
@@ -253,14 +349,14 @@ end
 fun instantiate_induction_theorem consindex ith = let
   val (avs,bod) = strip_forall(concl ith)
   val corlist =
-    map((repeat rator F_F repeat rator) o dest_imp o body o rand)
+    map((repeat rator ## repeat rator) o dest_imp o body o rand)
     (strip_conj(rand bod))
   val consindex' =
     map (fn v => let val w = rev_assoc v corlist in (w,assoc w consindex) end)
     avs
   val recty = (hd o snd o dest_type o type_of o fst o snd o hd) consindex
   val newtys = map (hd o snd o dest_type o type_of o snd o snd) consindex'
-  val ptypes = map (C mk_fun_ty Type.bool) newtys
+  val ptypes = map (C (curry op -->) Type.bool) newtys
   val preds = make_args "P" [] ptypes
   val args = make_args "x" [] (map (K recty) preds)
   val lambs = map2 (fn (r,(m,d)) => fn (p,a) =>
@@ -276,10 +372,8 @@ end
 (* ------------------------------------------------------------------------- *)
 
 fun pullback_induction_clause tybijpairs conthms = let
-  val PRERULE =
-    GEN_REWRITE_RULE (funpow 3 RAND_CONV) (map SYM conthms)
-  val IPRULE =
-    SYM o GEN_REWRITE_RULE I (map snd tybijpairs)
+  val PRERULE = GEN_REWRITE_RULE (funpow 3 RAND_CONV) (map SYM conthms)
+  val IPRULE  = SYM o GEN_REWRITE_RULE I (map snd tybijpairs)
 in
   fn rthm => fn tm => let
     val (avs,bimp) = strip_forall tm
@@ -391,8 +485,8 @@ fun create_recursive_functions tybijpairs consindex conthms rth = let
   val domtys = map (hd o snd o dest_type o type_of o snd o snd) consindex
   val recty = (hd o snd o dest_type o type_of o fst o snd o hd) consindex
   val ranty = mk_vartype "'Z"
-  val fnn = mk_var("fn",mk_fun_ty recty ranty)
-  and fns = make_args "fn" [] (map (C mk_fun_ty ranty) domtys)
+  val fnn = mk_var("fn", recty --> ranty)
+  and fns = make_args "fn" [] (map (C (curry op -->) ranty) domtys)
   val args = make_args "a" [] domtys
   val rights =
     map2 (fn (_,(_,d)) => fn a =>
@@ -478,7 +572,7 @@ in
     val recty = hd(snd(dest_type(type_of(fst(hd consindex)))))
     val domty = hd(snd(dest_type recty))
     val i = mk_var("i",domty)
-    and r = mk_var("r",mk_fun_ty numty recty)
+    and r = mk_var("r", numty --> recty)
     val mks = map (fst o snd) consindex
     val mkindex = map (fn t => (hd(tl(snd(dest_type(type_of t)))),t)) mks
   in
@@ -498,7 +592,7 @@ in
         artys rindexed
       val sargs' = map (curry mk_comb s) indices
       val allargs = cargs'@ rargs' @ sargs'
-      val funty = itlist (mk_fun_ty o type_of) allargs zty
+      val funty = itlist (curry op --> o type_of) allargs zty
       val funname = fst(dest_const(repeat rator (lhand(concl cth))))^"'"
       val funarg = mk_var(funname,funty)
     in
@@ -754,7 +848,7 @@ in
         val (args',args'') = unzip pargs
         val inl = assoc (rator l) inlalist
         val rty = hd(snd(dest_type(type_of inl)))
-        val nty = itlist (mk_fun_ty o type_of) args' rty
+        val nty = itlist (curry op --> o type_of) args' rty
         val fn' = mk_var(fst(dest_var fnn),nty)
         val r' = list_mk_abs(args'',mk_comb(inl,list_mk_comb(fn',args')))
       in
@@ -1124,36 +1218,37 @@ end
 
 fun define_type_basecase def = let
   fun add_id s = fst(dest_var(safeid_genvar Type.bool))
-  val def' = map (I F_F (map (add_id F_F I))) def
+  val def' = map (I ## (map (add_id ## I))) def
 in
   define_type_mutual def'
 end
 
-val SIMPLE_BETA_RULE = GSYM o SIMP_RULE bool_ss [Ho_theorems.FUN_EQ_THM];
+val SIMPLE_BETA_RULE = GSYM o SIMP_RULE bool_ss [FUN_EQ_THM];
 val ISO_USAGE_RULE = MATCH_MP ISO_USAGE;
 val SIMPLE_ISO_EXPAND_RULE = CONV_RULE(REWR_CONV ISO);
 
-fun REWRITE_FUN_EQ_RULE thl = SIMP_RULE bool_ss (Ho_theorems.FUN_EQ_THM::thl)
+fun REWRITE_FUN_EQ_RULE thl = SIMP_RULE bool_ss (FUN_EQ_THM::thl)
 
 
-fun get_nestedty_info tyname = let
-  fun hol98_to_jrh_ind ind0 = let
-    fun CONJUNCTS_CONV c tm =
-      if is_conj tm then BINOP_CONV (CONJUNCTS_CONV c) tm
-      else c tm
-  in
-    CONV_RULE (STRIP_QUANT_CONV
+fun get_nestedty_info tyname = 
+  let fun hol98_to_jrh_ind ind0 = 
+       let fun CONJUNCTS_CONV c tm =
+             if is_conj tm then BINOP_CONV (CONJUNCTS_CONV c) tm else c tm
+       in
+        CONV_RULE (STRIP_QUANT_CONV
                (RATOR_CONV (RAND_CONV
                             (CONJUNCTS_CONV
                              (REDEPTH_CONV RIGHT_IMP_FORALL_CONV))))) ind0
-  end
-in
-  case TypeBase.read tyname of
-    SOME tyinfo => SOME (length (TypeBase.constructors_of tyinfo),
+       end
+ in
+  case TypeBase.read tyname 
+   of SOME tyinfo => SOME (length (TypeBase.constructors_of tyinfo),
                          hol98_to_jrh_ind (TypeBase.induction_of tyinfo),
                          TypeBase.axiom_of tyinfo)
-  | NONE => NONE
-end
+    | NONE => NONE
+ end
+
+
 
 (* JRH's package returns the list type's induction theorem as:
       !P. P [] /\ (!h t. P t ==> P (h::t)) ==> !l. P l
@@ -1239,7 +1334,7 @@ end
 
 fun canonicalise_tyvars def thm = let
   val thm_tyvars = Term.type_vars_in_term (concl thm)
-  val utys = Union (itlist (union o map snd o snd) def [])
+  val utys = Lib.U (itlist (union o map snd o snd) def [])
   val def_tyvars = Lib.mk_set (List.filter is_vartype utys)
   fun gen_canonicals tyvs avoids =
     case tyvs of
@@ -1321,14 +1416,14 @@ local
     val cls' = zip mtys (map (map (recover_clause id)) pcons)
     val tyal =
       map (fn ty => (mk_vartype("'"^fst(dest_type ty)^id),ty)) mtys
-    val cls'' = map (modify_type tyal F_F map (modify_item tyal)) cls'
+    val cls'' = map (modify_type tyal ## map (modify_item tyal)) cls'
   in
     (k,tyal,cls'',Thm.INST_TYPE tyins ith, Thm.INST_TYPE tyins rth)
   end
   fun define_type_nested def = let
     val n = length(itlist (curry op@) (map (map fst o snd) def) [])
     val newtys = map fst def
-    val utys = Union (itlist (union o map snd o snd) def [])
+    val utys = Lib.U (itlist (union o map snd o snd) def [])
     val utyvars = Lib.mk_set (List.filter is_vartype utys)
     val rectys = filter (is_nested newtys) utys
   in

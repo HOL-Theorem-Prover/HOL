@@ -1,12 +1,21 @@
-open HolKernel basicHol90Lib Parse Psyntax
-open numTheory arithmeticTheory prim_recTheory simpLib boolSimps
+structure ind_typeScript =
+struct
+
+open HolKernel basicHol90Lib Parse Psyntax simpLib boolSimps
+open numTheory arithmeticTheory prim_recTheory 
 
 infix THEN THENC THENL |-> ++
 
 val hol_ss = bool_ss ++ arithSimps.ARITH_ss ++ arithSimps.REDUCE_ss
 
+val lhand = rand o rator
+val AND_FORALL_THM = GSYM FORALL_AND_THM;
+val GEN_REWRITE_TAC = fn c => fn thl => 
+   Rewrite.GEN_REWRITE_TAC c Rewrite.empty_rewrites thl
+
 
 val _ = new_theory "ind_type";
+
 
 (* ------------------------------------------------------------------------- *)
 (* Abstract left inverses for binary injections (we could construct them...) *)
@@ -102,7 +111,7 @@ val INJA = new_definition(
 val INJA_INJ = store_thm(
   "INJA_INJ",
   ``!a1 a2. (INJA a1 = INJA a2) = (a1:'a = a2)``,
-  REPEAT GEN_TAC THEN SIMP_TAC bool_ss [INJA, Ho_theorems.FUN_EQ_THM] THEN
+  REPEAT GEN_TAC THEN SIMP_TAC bool_ss [INJA, FUN_EQ_THM] THEN
   EQ_TAC THENL [
     DISCH_THEN(MP_TAC o Q.SPEC `a1:'a`) THEN REWRITE_TAC[],
     DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[]
@@ -120,7 +129,7 @@ val INJF_INJ = store_thm(
   "INJF_INJ",
   ``!f1 f2. (INJF f1 :num->'a->bool = INJF f2) = (f1 = f2)``,
   REPEAT GEN_TAC THEN EQ_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[Ho_theorems.FUN_EQ_THM] THEN
+  REWRITE_TAC[FUN_EQ_THM] THEN
   MAP_EVERY Q.X_GEN_TAC [`n:num`, `m:num`, `a:'a`] THEN
   POP_ASSUM(MP_TAC o REWRITE_RULE[INJF]) THEN
   DISCH_THEN(MP_TAC o C Q.AP_THM `a:'a` o C Q.AP_THM `NUMPAIR n m`) THEN
@@ -140,8 +149,8 @@ val INJP_INJ = store_thm(
   Term`!(f1:num->'a->bool) f1' f2 f2'.
         (INJP f1 f2 = INJP f1' f2') = (f1 = f1') /\ (f2 = f2')`,
   REPEAT GEN_TAC THEN EQ_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[] THEN
-  ONCE_REWRITE_TAC[Ho_theorems.FUN_EQ_THM] THEN
-  SIMP_TAC bool_ss [Ho_theorems.AND_FORALL_THM] THEN
+  ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
+  SIMP_TAC bool_ss [AND_FORALL_THM] THEN
   Q.X_GEN_TAC `n:num` THEN POP_ASSUM(MP_TAC o REWRITE_RULE[INJP]) THEN
   DISCH_THEN(MP_TAC o GEN ``b:bool`` o C Q.AP_THM `NUMSUM b n`) THEN
   DISCH_THEN(fn th => MP_TAC(Q.SPEC `T` th) THEN MP_TAC(Q.SPEC `F` th)) THEN
@@ -174,9 +183,26 @@ val (ZRECSPACE_RULES,ZRECSPACE_INDUCT,ZRECSPACE_CASES) =
    ``ZRECSPACE (ZBOT:num->'a->bool) /\
     (!c i r. (!n. ZRECSPACE (r n)) ==> ZRECSPACE (ZCONSTR c i r))``;
 
-open jrh_simplelib
-val recspace_tydef = new_basic_type_definition "recspace" ("mk_rec","dest_rec")
-  (CONJUNCT1 ZRECSPACE_RULES);
+local fun new_basic_type_definition tyname (mkname, destname) thm = 
+       let open Rsyntax
+           val {Rator=pred, Rand=witness} = dest_comb(concl thm)
+           val predty = type_of pred
+           val dom_ty = #1 (dom_rng predty)
+           val x = mk_var{Name="x", Ty=dom_ty}
+           val witness_exists = EXISTS 
+              (mk_exists{Bvar=x, Body=mk_comb{Rator=pred, Rand=x}},witness) thm
+           val tyax = new_type_definition{name=tyname, pred=pred,
+                                          inhab_thm=witness_exists}
+           val (mk_dest, dest_mk) = CONJ_PAIR(define_new_type_bijections 
+               {name=(tyname^"_repfns"), ABS=mkname, REP=destname, tyax=tyax})
+       in
+         (SPEC_ALL mk_dest, SPEC_ALL dest_mk)
+       end
+in
+val recspace_tydef = 
+      new_basic_type_definition "recspace" ("mk_rec","dest_rec")
+                     (CONJUNCT1 ZRECSPACE_RULES)
+end;
 
 
 (* ------------------------------------------------------------------------- *)
@@ -236,7 +262,7 @@ val CONSTR_INJ = store_thm(
     SIMP_TAC bool_ss [fst recspace_tydef, snd recspace_tydef],
     ASM_REWRITE_TAC[] THEN REWRITE_TAC[ZCONSTR] THEN
     REWRITE_TAC[INJP_INJ, INJN_INJ, INJF_INJ, INJA_INJ] THEN
-    ONCE_REWRITE_TAC[Ho_theorems.FUN_EQ_THM] THEN BETA_TAC THEN
+    ONCE_REWRITE_TAC[FUN_EQ_THM] THEN BETA_TAC THEN
     REWRITE_TAC[INV_SUC_EQ, DEST_REC_INJ]
   ]);
 
@@ -287,13 +313,12 @@ val CONSTR_REC = store_thm(
     DISCH_THEN MATCH_MP_TAC THEN CONJ_TAC THEN REPEAT GEN_TAC THENL [
       FIRST_ASSUM
         (fn t => GEN_REWRITE_TAC BINDER_CONV [GSYM t]) THEN
-      REWRITE_TAC[GSYM CONSTR_BOT, Ho_theorems.EXISTS_UNIQUE_REFL],
-      DISCH_THEN(MP_TAC o SIMP_RULE bool_ss [Ho_theorems.EXISTS_UNIQUE_THM,
-                                             FORALL_AND_THM]) THEN
-      DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
-      DISCH_THEN(MP_TAC o SIMP_RULE bool_ss [Ho_theorems.SKOLEM_THM]) THEN
+      REWRITE_TAC[GSYM CONSTR_BOT, Ho_boolTheory.EXISTS_UNIQUE_REFL],
+      DISCH_THEN(MP_TAC o SIMP_RULE bool_ss [EXISTS_UNIQUE_THM,FORALL_AND_THM])
+      THEN DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
+      DISCH_THEN(MP_TAC o SIMP_RULE bool_ss [Ho_boolTheory.SKOLEM_THM]) THEN
       DISCH_THEN(Q.X_CHOOSE_THEN `y:num->'b` ASSUME_TAC) THEN
-      REWRITE_TAC[Ho_theorems.EXISTS_UNIQUE_THM] THEN
+      REWRITE_TAC[EXISTS_UNIQUE_THM] THEN
       FIRST_ASSUM(fn th => CHANGED_TAC(ONCE_REWRITE_TAC[GSYM th])) THEN
       CONJ_TAC THENL [
         Q.EXISTS_TAC
@@ -304,12 +329,12 @@ val CONSTR_REC = store_thm(
         REWRITE_TAC[CONSTR_BOT, CONSTR_INJ, GSYM CONJ_ASSOC] THEN
         SIMP_TAC hol_ss [RIGHT_EXISTS_AND_THM] THEN
         REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-        REPEAT AP_TERM_TAC THEN ONCE_REWRITE_TAC[Ho_theorems.FUN_EQ_THM] THEN
+        REPEAT AP_TERM_TAC THEN ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
         Q.X_GEN_TAC `w:num` THEN FIRST_ASSUM MATCH_MP_TAC THEN
         Q.EXISTS_TAC `w` THEN ASM_REWRITE_TAC[]
       ]
     ],
-    REWRITE_TAC[Ho_theorems.UNIQUE_SKOLEM_ALT] THEN
+    REWRITE_TAC[Ho_boolTheory.UNIQUE_SKOLEM_ALT] THEN
     DISCH_THEN(Q.X_CHOOSE_THEN `fn:'a recspace->'b` (ASSUME_TAC o GSYM)) THEN
     Q.EXISTS_TAC `fn:'a recspace->'b` THEN ASM_REWRITE_TAC[] THEN
     REPEAT GEN_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN GEN_TAC THEN
@@ -327,7 +352,7 @@ val FCONS = new_recursive_definition num_Axiom "FCONS"
 
 val FCONS_UNDO = prove(
   ``!f:num->'a. f = FCONS (f 0) (f o SUC)``,
-  GEN_TAC THEN REWRITE_TAC[Ho_theorems.FUN_EQ_THM] THEN
+  GEN_TAC THEN REWRITE_TAC[FUN_EQ_THM] THEN
   numLib.INDUCT_TAC THEN REWRITE_TAC[FCONS, combinTheory.o_THM]);
 
 val FNIL = new_definition("FNIL", ``FNIL (n:num) = @x:'a. T``);
@@ -354,7 +379,7 @@ val ISO_FUN = store_thm(
   "ISO_FUN",
   Term`ISO (f:'a->'c) f' /\ ISO (g:'b->'d) g' ==>
        ISO (\h a'. g(h(f' a'))) (\h a. g'(h(f a)))`,
-  REWRITE_TAC [ISO] THEN SIMP_TAC bool_ss [ISO, Ho_theorems.FUN_EQ_THM]);
+  REWRITE_TAC [ISO] THEN SIMP_TAC bool_ss [ISO, FUN_EQ_THM]);
   (* bug in the simplifier requires first rewrite to be performed *)
 
 (* ------------------------------------------------------------------------- *)
@@ -367,7 +392,9 @@ val ISO_USAGE = store_thm(
          (!P. (!x. P x) = (!x. P(g x))) /\
          (!P. (?x. P x) = (?x. P(g x))) /\
          (!a b. (a = g b) = (f a = b))`,
-  SIMP_TAC bool_ss [ISO, Ho_theorems.FUN_EQ_THM] THEN MESON_TAC[]);
+  SIMP_TAC bool_ss [ISO, FUN_EQ_THM] THEN MESON_TAC[]);
 
 
 val _ = export_theory();
+
+end;

@@ -74,10 +74,16 @@ fun ERR func mesg =
             message = mesg};
 
 val numty = mk_type{Tyop="num",Args=[]};
+
 val defn_const =
   #1 o strip_comb o lhs o #2 o strip_forall o hd o strip_conj o concl;
 
-fun head tm = head (rator tm) handle HOL_ERR _ => tm;
+fun repeat f =
+ let fun loop x = loop (f x) handle HOL_ERR _ => x
+ in loop
+ end;
+
+val head = repeat rator;
 
 local fun find_dup [] = NONE
         | find_dup [x] = NONE
@@ -211,7 +217,7 @@ fun define_size ax db =
                              ([],free_varsl capplist)))
      val fparams_tyl = map type_of fparams
      fun proto_const n ty = 
-         mk_var{Name=n, Ty = itlist (curry op-->) fparams_tyl (ty --> numty)}
+         mk_var{Name=n, Ty=itlist (curry op-->) fparams_tyl (ty --> numty)}
      fun tyop_binding ty = 
        let val root_tyop = #Tyop(dest_type ty)
        in (root_tyop, (ty, proto_const(root_tyop^"_size") ty))
@@ -316,14 +322,15 @@ fun to_tyspecs ASTs =
   end
 end;
 
-val new_asts_datatype  = define_type o to_tyspecs
-fun new_datatype q = new_asts_datatype (ParseDatatype.parse q);
+val new_asts_datatype  = define_type o to_tyspecs;
+fun new_datatype q     = new_asts_datatype (ParseDatatype.parse q);
 
 
 (*---------------------------------------------------------------------------
     Returns a list of tyinfo thingies
  ---------------------------------------------------------------------------*)
 
+(*
 fun build_tyinfos db {induction,recursion} = 
  let val case_defs = Prim_rec.define_case_constant recursion
      val tyinfol = TypeBase.gen_tyinfo 
@@ -341,7 +348,32 @@ fun build_tyinfos db {induction,recursion} =
                 end)
             tyinfol handle HOL_ERR _ => tyinfol
  end;
+*)
 
+fun build_tyinfos db {induction,recursion} = 
+ let val case_defs = Prim_rec.define_case_constant recursion
+     val tyinfol = TypeBase.gen_tyinfo 
+                      {ax=recursion, ind=induction, case_defs=case_defs}
+ in case define_size recursion db
+     of NONE => (Lib.mesg true "Couldn't define size function"; tyinfol)
+      | SOME {def,const_tyopl} =>
+        (case tyinfol 
+         of [] => raise ERR "build_tyinfos" "empty tyinfo list"
+          | tyinfo::rst => 
+             let val first_tyname = TypeBase.ty_name_of tyinfo
+                 fun insert_size info size_eqs = 
+                    let val tyname = TypeBase.ty_name_of info
+                    in case assoc2 tyname const_tyopl
+                       of SOME(c,tyop) => TypeBase.put_size(c,size_eqs) info
+                        | NONE => (Lib.mesg true 
+                                     ("Can't find size constant for"^tyname); 
+                                    raise ERR "build_tyinfos" "")
+                    end
+             in insert_size tyinfo (TypeBase.ORIG def)
+                :: map (C insert_size (TypeBase.COPY(first_tyname,def))) rst
+             end
+             handle HOL_ERR _ => tyinfol)
+ end;
 
 local fun add_record_facts (tyinfo, NONE) = (tyinfo, [])
         | add_record_facts (tyinfo, SOME fields) = 
@@ -380,9 +412,6 @@ end;
    gets exported and loaded in a later session, these "datatype"
    theorems are loaded automatically into theTypeBase.
 
-
-   First some code to generate and install a prettyprinter for importing
-   a previously declared datatype from an external theory.
  ---------------------------------------------------------------------------*)
 
 fun adjoin {ax,case_def,case_cong,induction,nchotomy,size,one_one,distinct}
@@ -393,75 +422,96 @@ fun adjoin {ax,case_def,case_cong,induction,nchotomy,size,one_one,distinct}
      (fn ppstrm => 
       let val S = PP.add_string ppstrm
           fun NL() = PP.add_newline ppstrm
-          fun do_size NONE = (S "      size = NONE,"; NL())
+          fun do_size NONE = (S "         size = NONE,"; NL())
             | do_size (SOME (c,s)) = 
-               let val strc = String.concat["(", term_to_string c, ") ", 
-                                            type_to_string (type_of c)]
+               let val strc = String.concat
+                     ["(", term_to_string c, ") ",type_to_string (type_of c)]
                    val line = String.concat ["SOME(Parse.Term`", strc, "`,"]
-               in S ("      size="^line); NL();
-                  S ("                "^s^"),")
+               in S ("         size="^line); NL();
+                  S ("                   "^s^"),")
                end
           fun do_simpls () = (S "["; app S (Lib.commafy record_rw_names); S "]")
+          fun do_field_rws() =
+            if null record_rw_names then (S " tyinfo0")
+            else (NL();S "       (TypeBase.put_simpls ("; do_simpls();
+                  S " @ TypeBase.simpls_of tyinfo0) tyinfo0)")
       in
-        S "val _ =";                           NL();
-        S "   let val tyinfo0 = ";             NL();
-        S "     TypeBase.mk_tyinfo";           NL();
-        S ("     {ax="^ax^",");                NL();
-        S ("      case_def="^case_def^",");    NL();
-        S ("      case_cong="^case_cong^",");  NL();
-        S ("      induction="^induction^",");  NL();
-        S ("      nchotomy="^nchotomy^",");    NL();
-        do_size size;                          NL();
-        S ("      one_one="^one_one^",");      NL();
-        S ("      distinct="^distinct^"}");    NL();
-        S "   in";                             NL();
-        S "    TypeBase.write ";               NL();
-        if not (null record_rw_names)
-          then (S "    (TypeBase.put_simpls (";
-                do_simpls();
-                S " @ TypeBase.simpls_of tyinfo0) tyinfo0)")
-          else (S "    tyinfo0");             NL();
-        S "   end;";                           NL()
+        S "val _ =";                              NL();
+        S "   let open TypeBase";                 NL();
+        S "       val tyinfo0 = mk_tyinfo";       NL();
+        S ("        {ax="^ax^",");                NL();
+        S ("         case_def="^case_def^",");    NL();
+        S ("         case_cong="^case_cong^",");  NL();
+        S ("         induction="^induction^",");  NL();
+        S ("         nchotomy="^nchotomy^",");    NL();
+        do_size size;                             NL();
+        S ("         one_one="^one_one^",");      NL();
+        S ("         distinct="^distinct^"}");    NL();
+        S "   in";                                NL();
+        S "    TypeBase.write "; do_field_rws();  NL();
+        S "   end;";                              NL()
       end)};
 
-fun write_tyinfo (tyinfo, record_rw_names) = let
-  fun name s = TypeBase.ty_name_of tyinfo ^ s
-  val one_one = TypeBase.one_one_of tyinfo
-  val distinct = TypeBase.distinct_of tyinfo
-  val ax = TypeBase.axiom_of tyinfo
-  val _ = save_thm (name"_case_cong",TypeBase.case_cong_of tyinfo)
-  val _ = save_thm (name"_induction",TypeBase.induction_of tyinfo)
-  val _ = save_thm (name"_nchotomy",TypeBase.nchotomy_of tyinfo)
-  val _ = save_thm (name"_Axiom", TypeBase.axiom_of tyinfo)
-  val one_one_name =
-    case one_one of
-      NONE => "NONE"
-    | SOME th => (save_thm(name "_11", th); "SOME "^name "_11")
-  val distinct_name =
-    case distinct 
-     of NONE => "NONE"
-      | SOME th => (save_thm(name "_distinct", th); "SOME "^name "_distinct")
-  val size_info =
-    case TypeBase.size_of tyinfo 
-     of NONE => NONE
-      | SOME (tm, def) => SOME (tm, name "_size_def")
-in
-  adjoin{ax        = name"_Axiom",
+fun write_tyinfo (tyinfo, record_rw_names) = 
+ let open TypeBase
+     fun name s = ty_name_of tyinfo ^ s
+     val one_one_name =
+       case one_one_of tyinfo
+        of NONE => "NONE"
+         | SOME th => (save_thm(name "_11", th); "SOME "^name "_11")
+     val distinct_name =
+       case distinct_of tyinfo 
+        of NONE => "NONE"
+         | SOME th => (save_thm(name "_distinct", th); "SOME "^name "_distinct")
+     val case_cong_name = 
+        let val ccname = name"_case_cong"
+        in save_thm (ccname,case_cong_of tyinfo);
+           ccname
+        end
+     val nchotomy_name = 
+       let val nchname = name"_nchotomy"
+       in save_thm (nchname,nchotomy_of tyinfo);
+          nchname
+       end
+     val axiom_name = 
+        let val axname = name"_Axiom"
+        in 
+        case axiom_of0 tyinfo
+         of ORIG th => (save_thm (axname, th); "ORIG "^axname)
+          | COPY (s,th) => "COPY ("^Lib.quote s^","^s^"_Axiom)"
+        end
+     val induction_name = 
+        let val indname = name"_induction"
+        in 
+        case induction_of0 tyinfo
+         of ORIG th => (save_thm (indname, th); "ORIG "^indname)
+          | COPY (s,th) => "COPY ("^Lib.quote s^","^s^"_induction)"
+        end
+     val size_info =
+       let val sd_name = name"_size_def"
+       in
+       case size_of0 tyinfo 
+        of NONE => NONE
+         | SOME (tm, ORIG def) => SOME (tm, "ORIG "^sd_name)
+         | SOME (tm, COPY(s,def))
+            => SOME (tm, "COPY ("^Lib.quote s^","^s^"_size_def)")
+       end
+ in
+  adjoin{ax        = axiom_name,
+         induction = induction_name,
          case_def  = name"_case_def",
-         case_cong = name"_case_cong",
-         induction = name"_induction",
-         nchotomy  = name"_nchotomy",
+         case_cong = case_cong_name,
+         nchotomy  = nchotomy_name,
          size      = size_info,
          one_one   = one_one_name,
          distinct  = distinct_name}
      record_rw_names
-end
+ end;
 
 
 fun Hol_datatype q =
-  List.app (fn (x as (tyinfo,_)) => 
-                 (TypeBase.write tyinfo; write_tyinfo x))
-      (primHol_datatype (TypeBase.theTypeBase()) q);
+ List.app (fn (x as (tyinfo,_)) => (TypeBase.write tyinfo; write_tyinfo x))
+          (primHol_datatype (TypeBase.theTypeBase()) q);
 
 
 end (* struct *)
