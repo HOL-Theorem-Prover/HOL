@@ -49,7 +49,7 @@ val ARM6_DATA_ABSTRACTION = store_thm("ARM6_DATA_ABSTRACTION",
   `DATA_ABSTRACTION ABS_ARM6 (STATE_ARM 0) (STATE_ARM6 0)`,
   RW_TAC bool_ss [DATA_ABSTRACTION_def]
    THEN Cases_on `a`
-   THEN EXISTS_TAC `ARM6 f (DP (ADD8_PC f0) p a d alua alub) c`
+   THEN EXISTS_TAC `ARM6 f (DP (ADD8_PC f0) f1 a d alua alub) c`
    THEN Cases_on `c`
    THEN SIMP_TAC std_ss [ABS_ARM6_def,SUB8_INV,STATE_ARM_def,STATE_ARM6_def,INIT_ARM6_def]
 );
@@ -476,7 +476,7 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                  THEN Cases_on `BITw 20 i`
                  THENL [
                    Cases_on `BITSw 15 12 i = 15`
-                     THEN ASM_SIMP_TAC std_ss [SPSR_READ_def,PSRDAT_def,PSRA_def,SPSR_READ_THM,
+                     THEN ASM_SIMP_TAC std_ss [PSRDAT_def,PSRA_def,SPSR_READ_THM,
                                                iseq_distinct,iclass_distinct]
                      THENL [
                        REWRITE_TAC [LET_THM]
@@ -493,7 +493,7 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                          THEN RW_TAC std_ss [NOOP_REG,REG_READ_SUB8_PC,NZCV_ALUOUT_THM,REGISTER_RANGES]
                          THEN FULL_SIMP_TAC std_ss []
                      ],
-                   ASM_SIMP_TAC std_ss [SPSR_READ_def,PSRDAT_def,PSRA_def,SPSR_READ_THM,
+                   ASM_SIMP_TAC std_ss [PSRDAT_def,PSRA_def,SPSR_READ_THM,
                                         iseq_distinct,iclass_distinct]
                      THEN REWRITE_TAC [LET_THM]
                      THEN PBETA_TAC
@@ -515,7 +515,7 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                                            ALUAWRITE_def,ALUBWRITE_def,PSRFBWRITE_def,BUSA_def,BUSB_def,
                                            FIELD_def,RBA_def,iseq_distinct,iclass_distinct]
                      THEN Cases_on `BITw 20 i`
-                     THEN ASM_SIMP_TAC std_ss [SPSR_READ_def,PSRDAT_def,PSRA_def,SPSR_READ_THM,
+                     THEN ASM_SIMP_TAC std_ss [PSRDAT_def,PSRA_def,SPSR_READ_THM,
                                             BITSw118_LEM,SHIFTER_def,iseq_distinct,iclass_distinct]
                      THEN Cases_on `BITw 25 i`
                      THEN IMP_RES_TAC DATA_PROC_IMP_NOT_BIT4
@@ -534,7 +534,7 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                                            ALUAWRITE_def,ALUBWRITE_def,PSRFBWRITE_def,BUSA_def,BUSB_def,
                                            FIELD_def,RBA_def,iseq_distinct,iclass_distinct]
                      THEN Cases_on `BITw 20 i`
-                     THEN ASM_SIMP_TAC std_ss [SPSR_READ_def,PSRDAT_def,PSRA_def,SPSR_READ_THM,
+                     THEN ASM_SIMP_TAC std_ss [PSRDAT_def,PSRA_def,SPSR_READ_THM,
                                             BITSw118_LEM,SHIFTER_def,iseq_distinct,iclass_distinct]
                      THEN Cases_on `BITw 25 i`
                      THEN IMP_RES_TAC DATA_PROC_IMP_NOT_BIT4
@@ -561,7 +561,7 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                  THEN Cases_on `BITw 20 i`
                  THENL [
                    Cases_on `BITSw 15 12 i = 15`
-                     THEN ASM_SIMP_TAC std_ss [SPSR_READ_def,PSRDAT_def,PSRA_def,SPSR_READ_THM,
+                     THEN ASM_SIMP_TAC std_ss [PSRDAT_def,PSRA_def,SPSR_READ_THM,
                                                iseq_distinct,iclass_distinct]
                      THENL [
                        REWRITE_TAC [LET_THM]
@@ -575,7 +575,7 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                          THEN PBETA_TAC
                          THEN RW_TAC std_ss [INC_PC_READ,NOOP_REG,REG_READ_SUB8_PC,NZCV_ALUOUT_THM,REGISTER_RANGES]
                      ],
-                   ASM_SIMP_TAC std_ss [SPSR_READ_def,PSRDAT_def,PSRA_def,SPSR_READ_THM,
+                   ASM_SIMP_TAC std_ss [PSRDAT_def,PSRA_def,SPSR_READ_THM,
                                         iseq_distinct,iclass_distinct]
                      THEN REWRITE_TAC [LET_THM]
                      THEN PBETA_TAC
@@ -597,7 +597,7 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                                            ALUAWRITE_def,ALUBWRITE_def,PSRFBWRITE_def,BUSA_def,BUSB_def,
                                            FIELD_def,RBA_def,iseq_distinct,iclass_distinct]
                      THEN Cases_on `BITw 20 i`
-                     THEN ASM_SIMP_TAC std_ss [SPSR_READ_def,PSRDAT_def,PSRA_def,SPSR_READ_THM,
+                     THEN ASM_SIMP_TAC std_ss [PSRDAT_def,PSRA_def,SPSR_READ_THM,
                                                BITSw118_LEM,SHIFTER_def,RAA_def,SHIFT_REGISTER_THM2,
                                                iseq_distinct,iclass_distinct]
                      THEN UNABBREV_TAC `pc`
@@ -614,7 +614,7 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                                            ALUAWRITE_def,ALUBWRITE_def,PSRFBWRITE_def,BUSA_def,BUSB_def,
                                            FIELD_def,RBA_def,iseq_distinct,iclass_distinct]
                      THEN Cases_on `BITw 20 i`
-                     THEN ASM_SIMP_TAC std_ss [SPSR_READ_def,PSRDAT_def,PSRA_def,SPSR_READ_THM,
+                     THEN ASM_SIMP_TAC std_ss [PSRDAT_def,PSRA_def,SPSR_READ_THM,
                                                BITSw118_LEM,SHIFTER_def,ARITHMETIC_THM2,RAA_def,SHIFT_REGISTER_THM2,
                                                iseq_distinct,iclass_distinct]
                      THEN ONCE_REWRITE_TAC [DISJ_TO_CONJ]

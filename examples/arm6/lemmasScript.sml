@@ -1,5 +1,5 @@
 (* app load ["word32Theory","word32Lib","armTheory","coreTheory"]; *)
-open HolKernel boolLib Q Parse bossLib numLib
+open HolKernel boolLib bossLib Q Parse numLib
      arithmeticTheory bitsTheory word32Theory word32Lib
      armTheory coreTheory;
 
@@ -32,6 +32,8 @@ val ROR2_THM2 = store_thm("ROR2_THM2",
 );
 
 (* -------------------------------------------------------- *)
+
+val DIV1 = REDUCE_RULE DIV_ONE;
 
 val IMMEDIATE_THM = store_thm("IMMEDIATE_THM",
   `!c i. IMMEDIATE c (BITSw 11 0 i) =
@@ -147,10 +149,12 @@ val ADD4_SUB8_THM = store_thm("ADD4_SUB8_THM",
   STRIP_TAC THEN REWRITE_TAC [ADD_SUB_ASSOC] THEN WORD_TAC
 );
 
+(*
 val SUB8_ADD4_SUB8_THM = store_thm("SUB8_ADD4_SUB8_THM",
   `!a. a - w32 8 + w32 4 + w32 8 = a + w32 4`,
   REWRITE_TAC [GSYM ADD_SUB_SYM,ADD_SUBw]
 );
+*)
 
 val ADD4_ADD4_SUB8_THM = store_thm("ADD4_ADD4_SUB8_THM",
   `!a. a + w32 4 + w32 4 - w32 8 = a`,
@@ -183,7 +187,7 @@ val MEMREAD_ALIGNED = store_thm("MEMREAD_ALIGNED",
   SIMP_TAC arith_ss [MEM_READ_WORD_def,MEMREAD_def,WORD_ALIGN_def,TO_W30_def,
                      HB_def,BITS_EVAL,MODw_THM,BITS_COMP_THM,BITS_SLICEw_THM]
     THEN SIMP_TAC arith_ss [SLICEw_THM,BITSw_COMP_THM,MOD_EQ_0,ZERO_SHIFT2,
-                            SIMP_RULE arith_ss [DIV1] (SPECL [`1`,`0`] BITS2_THM)]
+                            SIMP_RULE arith_ss [DIV1] (SPECL [`1`,`0`] BITS_THM2)]
 );
 *)
 
@@ -446,7 +450,8 @@ val DISJ_TO_CONJ = store_thm("DISJ_TO_CONJ",
 val SPSR_READ_THM = store_thm("SPSR_READ_THM",
   `!psr mode. (if USER mode then CPSR_READ psr else SPSR_READ psr mode)
                     = SPSR_READ psr mode`,
-  Cases THEN RW_TAC std_ss [CPSR_READ_def,SPSR_READ_def]
+  RW_TAC bool_ss [CPSR_READ_def,SPSR_READ_def,mode2psr_def,USER_def]
+    THEN REWRITE_TAC [mode_case_def]
 );
 
 val NZCV_ALUOUT_THM = store_thm("NZCV_ALUOUT_THM",
@@ -596,9 +601,9 @@ val ONE_COMPw_THREE_ADD = store_thm("ONE_COMPw_THREE_ADD",
 val CPSR_WRITE_READ = store_thm("CPSR_WRITE_READ",
   `(!psr m x. CPSR_READ (SPSR_WRITE psr m x) = CPSR_READ psr) /\
    (!psr x. CPSR_READ (CPSR_WRITE psr x) = x)`,
-  REPEAT STRIP_TAC
-    THEN Cases_on `psr`
-    THEN RW_TAC std_ss [CPSR_READ_def,CPSR_WRITE_def,SPSR_WRITE_def,SUBST_def]
+  RW_TAC bool_ss [CPSR_READ_def,CPSR_WRITE_def,SPSR_WRITE_def,SUBST_def,USER_def,mode2psr_def]
+    THEN Cases_on `m`
+    THEN FULL_SIMP_TAC bool_ss [mode_case_def,psrs_distinct]
 );
 
 val DECODE_MODE_LEM = store_thm("DECODE_MODE_LEM",
@@ -607,7 +612,7 @@ val DECODE_MODE_LEM = store_thm("DECODE_MODE_LEM",
                        || irq -> 18 || svc -> 19
                        || abt -> 23 || und -> 27 || _ -> 0`,
   Cases THEN RW_TAC arith_ss [w2n_EVAL,SET_MODE_def,MODw_THM,HB_def,BITS_COMP_THM,SLICEw_THM]
-    THEN SIMP_TAC std_ss [MOD_TIMES,MOD_EQ_0,SIMP_RULE arith_ss [DIV1] (SPECL [`4`,`0`] BITS2_THM)]
+    THEN SIMP_TAC std_ss [MOD_TIMES,MOD_EQ_0,SIMP_RULE arith_ss [DIV1] (SPECL [`4`,`0`] BITS_THM2)]
 );
 
 val DECODE_MODE_THM = store_thm("DECODE_MODE_THM",
@@ -617,7 +622,9 @@ val DECODE_MODE_THM = store_thm("DECODE_MODE_THM",
   
 val PSR_WRITE_COMM = store_thm("PSR_WRITE_COMM",
   `!psr m x y. SPSR_WRITE (CPSR_WRITE psr x) m y = CPSR_WRITE (SPSR_WRITE psr m y) x`,
-  Cases THEN RW_TAC std_ss [SPSR_WRITE_def,CPSR_WRITE_def]
+  RW_TAC bool_ss [SPSR_WRITE_def,CPSR_WRITE_def,USER_def,mode2psr_def]
+    THEN Cases_on `m`
+    THEN FULL_SIMP_TAC bool_ss [mode_distinct,mode_case_def,psrs_distinct,SUBST_NE_COMMUTES]
 );
 
 (* -------------------------------------------------------- *)

@@ -1,5 +1,5 @@
 (* app load ["onestepTheory","bitsTheory","word32Theory"]; *)
-open HolKernel boolLib Q Parse bossLib prim_recTheory combinTheory
+open HolKernel boolLib bossLib Q Parse prim_recTheory combinTheory
      onestepTheory bitsTheory word32Theory;
 
 (* -------------------------------------------------------- *)
@@ -21,11 +21,11 @@ val _ = Hol_datatype `register =
                                                  r13_svc | r14_svc |
                                                  r13_abt | r14_abt |
                                                  r13_und | r14_und`;
-val _ = Hol_datatype `spsr = spsr_fiq | spsr_irq | spsr_svc | spsr_abt | spsr_und`;
+val _ = Hol_datatype `psrs = CPSR | SPSR_fiq | SPSR_irq | SPSR_svc | SPSR_abt | SPSR_und`;
  
 val _ = type_abbrev("mem", ``:word30->word32``);
 val _ = type_abbrev("reg", ``:register->word32``);
-val _ = Hol_datatype `psr = PSR of word32=>(spsr->word32)`;
+val _ = type_abbrev("psr", ``:psrs->word32``);
  
 val _ = Hol_datatype `state_ARM = ARM of mem=>reg=>psr`;
  
@@ -86,15 +86,16 @@ val DECODE_PSR_def = Define`
   DECODE_PSR cpsr = let n = w2n cpsr in
     (BIT 31 n,BIT 30 n,BIT 29 n,BIT 28 n,DECODE_MODE n)`;
 
-val MODE_SPSR_def = Define`
-   MODE_SPSR mode =
+val mode2psr_def = Define`
+   mode2psr mode =
      case mode of
-        fiq -> spsr_fiq
-     || irq -> spsr_irq
-     || svc -> spsr_svc
-     || abt -> spsr_abt
-     || und -> spsr_und
-     || _   -> ARB`;
+        usr -> CPSR
+     || fiq -> SPSR_fiq
+     || irq -> SPSR_irq
+     || svc -> SPSR_svc
+     || abt -> SPSR_abt
+     || und -> SPSR_und
+     || _   -> CPSR`;
 
 val USER_def = Define`
    USER mode = (mode = usr) \/ (mode = safe)`;
@@ -102,24 +103,17 @@ val USER_def = Define`
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
 
-val CPSR_READ_def = Define`CPSR_READ (PSR cpsr spsrs) = cpsr`;
-
+val CPSR_READ_def = Define`CPSR_READ psr = psr CPSR`;
+ 
 val CPSR_WRITE_def = Define`
-  CPSR_WRITE (PSR cpsr spsrs) cpsr' = PSR cpsr' spsrs`;
-
+  CPSR_WRITE psr cpsr = SUBST psr (CPSR,cpsr)`;
+ 
 val SPSR_READ_def = Define`
-  SPSR_READ (PSR cpsr spsrs) mode =
-    if USER mode then
-      cpsr
-    else
-      spsrs (MODE_SPSR mode)`;
-
+  SPSR_READ psr mode = psr (mode2psr mode)`;
+ 
 val SPSR_WRITE_def = Define`
-  SPSR_WRITE (PSR cpsr spsrs) mode spsr =
-    if USER mode then
-      PSR cpsr spsrs
-    else
-      PSR cpsr (SUBST spsrs (MODE_SPSR mode,spsr))`;
+  SPSR_WRITE psr mode spsr =
+    if USER mode then psr else SUBST psr (mode2psr mode,spsr)`;
 
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
