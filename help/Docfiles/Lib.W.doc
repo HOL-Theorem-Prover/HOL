@@ -31,6 +31,6 @@ that then gets applied to {x}.
 }
 
 \SEEALSO
-Lib, Lib.##, Lib.A, Lib.B, Lib.C, Lib.I, Lib.K, Lib.S.
+Lib, Lib.\#\#, Lib.A, Lib.B, Lib.C, Lib.I, Lib.K, Lib.S.
 
 \ENDDOC

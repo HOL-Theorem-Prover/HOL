@@ -13,6 +13,6 @@ Forms a constant function: {K x y} = {x}.
 Never fails.
 
 \SEEALSO
-Lib, Lib.##, Lib.A, Lib.B, Lib.C, Lib.I, Lib.S, Lib.W.
+Lib, Lib.\#\#, Lib.A, Lib.B, Lib.C, Lib.I, Lib.S, Lib.W.
 
 \ENDDOC

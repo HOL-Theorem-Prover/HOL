@@ -1,6 +1,6 @@
 \DOC dest_thy_type
 
-\TYPE {dest_thy_type : hol_type -> {Thy:string, Name:string, Args:hol_type list}}
+\TYPE {dest_thy_type : hol_type -> {{Thy:string, Name:string, Args:hol_type list}}}
 
 \SYNOPSIS
 Breaks apart a type (other than a variable type).

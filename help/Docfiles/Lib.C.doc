@@ -20,6 +20,6 @@ fails.
 }
 
 \SEEALSO
-Lib, Lib.##, Lib.A, Lib.B, Lib.I, Lib.K, Lib.S, Lib.W.
+Lib, Lib.\#\#, Lib.A, Lib.B, Lib.I, Lib.K, Lib.S, Lib.W.
 
 \ENDDOC
