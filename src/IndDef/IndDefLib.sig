@@ -2,6 +2,6 @@ signature IndDefLib =
 sig
   include Abbrev
 
-  val new_inductive_definition : term -> thm * thm * thm
+  val new_inductive_definition : term quotation -> thm * thm * thm
 
 end

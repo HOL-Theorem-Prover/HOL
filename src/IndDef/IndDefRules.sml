@@ -67,21 +67,22 @@ fun simp_axiom (ax,tm) =
 (* ---------------------------------------------------------------------*)
 
 local fun reduce Fn tm =
-  let val (conj1,conj2) = dest_conj tm
-      val imp = reduce Fn conj2
-  in if fst(strip_comb conj1) = Fn then 
-     let val (t1,t2) = CONJ_PAIR(EQ_MP (LIST_BETA_CONV conj1) (ASSUME conj1))
-         val thm1 = CONJ t1 (CONJ t2 (UNDISCH imp))
-         val asm = mk_conj(conj1,rand(rator(concl imp)))
-         val (h1,h2) = CONJ_PAIR (ASSUME asm)
-     in DISCH asm (PROVE_HYP h1 (PROVE_HYP h2 thm1))
-     end
-     else IMP_CONJ (DISCH conj1 (ASSUME conj1)) imp
-  end
-  handle HOL_ERR _ => 
-     if fst(strip_comb tm) = Fn
-        then fst(EQ_IMP_RULE(LIST_BETA_CONV tm))
-        else DISCH tm (ASSUME tm)
+       let val (conj1,conj2) = dest_conj tm
+           val imp = reduce Fn conj2
+       in 
+       if fst(strip_comb conj1) = Fn 
+       then let val (t1,t2) = 
+                     CONJ_PAIR (EQ_MP (LIST_BETA_CONV conj1) (ASSUME conj1))
+                val thm1 = CONJ t1 (CONJ t2 (UNDISCH imp))
+                val asm = mk_conj(conj1,rand(rator(concl imp)))
+                val (h1,h2) = CONJ_PAIR (ASSUME asm)
+            in DISCH asm (PROVE_HYP h1 (PROVE_HYP h2 thm1))
+            end
+       else IMP_CONJ (DISCH conj1 (ASSUME conj1)) imp
+       end handle HOL_ERR _ => 
+            if fst(strip_comb tm) = Fn
+            then fst(EQ_IMP_RULE(LIST_BETA_CONV tm))
+            else DISCH tm (ASSUME tm)
 in
 fun reduce_asm Fn asm =
    let val (vs,body) = strip_exists asm
@@ -93,53 +94,52 @@ fun prove_asm P tm =
    let fun test t = not(fst(strip_comb(concl t)) = P)
        val (vs,body) = strip_exists tm
        val newc = LIST_CONJ(filter test (CONJUNCTS(ASSUME body)))
-   in
-   itlist EXISTS_IMP vs (DISCH body newc)
+   in itlist EXISTS_IMP vs (DISCH body newc)
    end;
 
 fun simp_concl rul tm =
-   let val (vs,(ant,conseq)) = (I ## dest_imp) (strip_forall tm)
-       val srul = SPECL vs rul
-       val (cvs,(_,conj2)) = (I ## dest_conj) (strip_forall conseq)
-       val simpl = prove_asm (fst(strip_comb conj2)) ant
-       val thm1 = SPECL cvs (UNDISCH (IMP_TRANS simpl srul))
-       val newasm = list_mk_forall(vs,mk_imp(ant,list_mk_forall(cvs,conj2)))
-       val thm2 = CONJ thm1 (SPECL cvs (UNDISCH (SPECL vs (ASSUME newasm))))
-   in DISCH newasm (GENL vs (DISCH ant (GENL cvs thm2)))
-   end;
+ let val (vs,(ant,conseq)) = (I ## dest_imp) (strip_forall tm)
+     val srul = SPECL vs rul
+     val (cvs,(_,conj2)) = (I ## dest_conj) (strip_forall conseq)
+     val simpl = prove_asm (fst(strip_comb conj2)) ant
+     val thm1 = SPECL cvs (UNDISCH (IMP_TRANS simpl srul))
+     val newasm = list_mk_forall(vs,mk_imp(ant,list_mk_forall(cvs,conj2)))
+     val thm2 = CONJ thm1 (SPECL cvs (UNDISCH (SPECL vs (ASSUME newasm))))
+ in DISCH newasm (GENL vs (DISCH ant (GENL cvs thm2)))
+ end;
 
 fun simp_rule (rul,tm) =
-   let val (vs,(ant,conseq)) = (I ## dest_imp) (strip_forall tm)
-       val (cvs,red) = strip_forall conseq
-       val bth = itlist FORALL_EQ cvs (LIST_BETA_CONV red)
-       val basm = reduce_asm (fst(strip_comb red)) ant
-       val asm = list_mk_forall(vs,mk_imp(rand(concl basm),rand(concl bth)))
-       val thm1 = UNDISCH (IMP_TRANS basm (SPECL vs (ASSUME asm)))
-       val thm2 = DISCH asm (GENL vs (DISCH ant (EQ_MP (SYM bth) thm1)))
-       val thm3 = simp_concl rul (rand(rator(concl thm2)))
-   in IMP_TRANS thm3 thm2
-   end;
+ let val (vs,(ant,conseq)) = (I ## dest_imp) (strip_forall tm)
+     val (cvs,red) = strip_forall conseq
+     val bth = itlist FORALL_EQ cvs (LIST_BETA_CONV red)
+     val basm = reduce_asm (fst(strip_comb red)) ant
+     val asm = list_mk_forall(vs,mk_imp(rand(concl basm),rand(concl bth)))
+     val thm1 = UNDISCH (IMP_TRANS basm (SPECL vs (ASSUME asm)))
+     val thm2 = DISCH asm (GENL vs (DISCH ant (EQ_MP (SYM bth) thm1)))
+     val thm3 = simp_concl rul (rand(rator(concl thm2)))
+ in IMP_TRANS thm3 thm2
+ end;
 
 fun simp p = simp_rule p handle HOL_ERR _ => simp_axiom p;
 
 fun derive_strong_induction (rules,ind) =
-   let val rules = map GEN_ALL rules
-       val (vs,(_,conseq)) = (I ## dest_imp) (strip_forall (concl ind))
-       val srules = map (SPECL (butlast vs)) rules
-       val (cvs,(rel,pred)) = (I ## dest_imp) (strip_forall conseq)
-       val newp = list_mk_abs(cvs,mk_conj(rel,pred))
-       val (pvar,args) = strip_comb pred
-       val ith = INST [pvar |-> newp] (SPECL vs ind)
-       val (ant,co) = dest_imp (concl ith)
-       val bth = LIST_BETA_CONV (list_mk_comb(newp,args))
-       val sth = CONJUNCT2 (EQ_MP bth (UNDISCH (SPECL args (ASSUME co))))
-       val thm1 = IMP_TRANS ith (DISCH co (GENL args (DISCH rel sth)))
-       val ths = map simp (combine (srules,strip_conj ant))
-   in
+ let val rules = map GEN_ALL rules
+     val (vs,(_,conseq)) = (I ## dest_imp) (strip_forall (concl ind))
+     val srules = map (SPECL (butlast vs)) rules
+     val (cvs,(rel,pred)) = (I ## dest_imp) (strip_forall conseq)
+     val newp = list_mk_abs(cvs,mk_conj(rel,pred))
+     val (pvar,args) = strip_comb pred
+     val ith = INST [pvar |-> newp] (SPECL vs ind)
+     val (ant,co) = dest_imp (concl ith)
+     val bth = LIST_BETA_CONV (list_mk_comb(newp,args))
+     val sth = CONJUNCT2 (EQ_MP bth (UNDISCH (SPECL args (ASSUME co))))
+     val thm1 = IMP_TRANS ith (DISCH co (GENL args (DISCH rel sth)))
+     val ths = map simp (combine (srules,strip_conj ant))
+ in
    GENL vs (IMP_TRANS (end_itlist IMP_CONJ ths) thm1)
-   end
-   handle e => raise (wrap_exn "SimpleIndDefRules" 
-                               "derive_strong_induction_thm" e)
+ end
+ handle e => raise (wrap_exn "SimpleIndDefRules" 
+                             "derive_strong_induction_thm" e);
 
 
 
@@ -278,7 +278,7 @@ local fun mkred Fn (c::cs) =
                      in MK_COMB(AP_TERM boolSyntax.conjunction (cfn conj1),
                                 rest conj2)
                      end
-               end
+                end
         end
 in
 fun RED_CASE Fn pat =
