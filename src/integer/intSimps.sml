@@ -22,7 +22,8 @@ fun is_int_literal t =
 val elim_thms = [INT_ADD_REDUCE, INT_SUB_REDUCE, INT_MUL_REDUCE,
                  INT_DIV_REDUCE, INT_MOD_REDUCE, INT_EXP_REDUCE,
                  INT_LT_REDUCE, INT_LE_REDUCE, INT_EQ_REDUCE,
-                 INT_GT_REDUCE, INT_GE_REDUCE, INT_DIVIDES_REDUCE]
+                 INT_GT_REDUCE, INT_GE_REDUCE, INT_DIVIDES_REDUCE,
+                 INT_ABS_NUM, INT_ABS_NEG]
 
 fun int_compset () = let
   open computeLib
