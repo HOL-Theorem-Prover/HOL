@@ -276,12 +276,10 @@ fun IMP_EQ_CANON thm =
                                                free_vars(lhs conc)))
 		            then undisch_thm
 		            else EQT_INTRO undisch_thm
-                 val flip_eqp = let
-                   val (ll, lr) = dest_eq (lhs (concl base))
-                 in
-                   not (can (match_term (mk_eq(lr,ll)))
-                            (rhs (concl base)))
-                 end handle HOL_ERR _ => false
+                 val flip_eqp = let val (l,r) = dest_eq (concl base)
+                                in
+                                  is_eq l andalso not (is_eq r)
+                                end
                in
                  if flip_eqp then
                    [base, CONV_RULE (LAND_CONV (REWR_CONV EQ_SYM_EQ)) base]
