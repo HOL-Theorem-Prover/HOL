@@ -14,7 +14,7 @@ end;
  *       Establish the basic environment.                                    *
  *---------------------------------------------------------------------------*)
 
-app load ["Mosml", "Path", "boolLib", "goalstackLib"];
+app load ["Mosml", "Process", "Path", "boolLib", "goalstackLib"];
 
 open HolKernel Parse boolLib goalstackLib;
 
@@ -31,16 +31,24 @@ val _ =
    of end_init_path::_ =>
         (case Path.base(Path.file end_init_path)
           of "end-init-boss" =>
-                let fun dotload f = (print "."; load f)
+                let val terminfo = case Process.getEnv "TERM" of
+                                     SOME s => s
+                                   | NONE => ""
+                    val (prelude, dotchar) =
+                        if terminfo <> "emacs" andalso terminfo <> "dumb"
+                        then
+                          ("                          ____________ ]\r", "*")
+                        else ("", ".")
+                    fun dotload f = (print dotchar; load f)
                 in
-                  print "                                     |\r";
-                  print "loading HOL power tools ";
+                  print prelude;
+                  print "[loading HOL power tools ";
                   app dotload ["optionTheory", "pairLib", "sumTheory",
                                "numTheory", "arithmeticTheory", "Arith",
                                "numLib", "mesonLib", "BasicProvers",
                                "SingleStep", "Datatype",
                                "listTheory", "bossLib"];
-                  print "done\n"
+                  print " ]"
                 end
            | otherwise       => ())
     | [] => raise Fail "std.prelude: bizarre invocation of HOL"
