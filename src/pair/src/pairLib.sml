@@ -7,7 +7,7 @@
 structure pairLib :> pairLib =
 struct
 
-local open pairTheory PairedDefinition pairSimps pairTools in end;
+local open pairTheory pairSimps pairTools in end;
 
 open pairSyntax PairedLambda 
 

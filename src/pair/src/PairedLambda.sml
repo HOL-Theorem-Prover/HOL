@@ -46,37 +46,8 @@ val is_uncurry = is_uncurry_tm o rator;
 (* Bugfix: INST used instead of SPEC to avoid priming.    [TFM 91.04.17]*)
 (* ---------------------------------------------------------------------*)
 
-local val vs = map genvar [alpha --> beta --> gamma, alpha, beta]
-      val DEF = SPECL vs pairTheory.UNCURRY_DEF
-      val RBCONV = RATOR_CONV BETA_CONV THENC BETA_CONV
-      fun conv tm = 
-       let val (Rator,Rand) = dest_comb tm
-           val (fst,snd) = dest_pair Rand
-           val (Rator,f) = dest_comb Rator
-           val _ = assert is_uncurry_tm Rator
-           val (t1,ty') = dom_rng (type_of f)
-           val (t2,t3) = dom_rng ty'
-           val iDEF = INST_TYPE [alpha |-> t1, beta |-> t2, gamma |-> t3] DEF
-           val (fv,[xv,yv]) = strip_comb(rand(concl iDEF))
-           val def = INST [yv |-> snd, xv |-> fst, fv |-> f] iDEF
-       in
-         TRANS def 
-          (if Term.is_abs f 
-           then if Term.is_abs (body f) 
-                then RBCONV (rhs(concl def))
-                else CONV_RULE (RAND_CONV conv)
-                      (AP_THM(BETA_CONV(mk_comb(f, fst))) snd)
-           else let val recc = conv (rator(rand(concl def)))
-                in if Term.is_abs (rhs(concl recc))
-                   then RIGHT_BETA (AP_THM recc snd)
-                   else TRANS (AP_THM recc snd) 
-                           (conv(mk_comb(rhs(concl recc), snd)))
-                end)
-       end
-in
-fun PAIRED_BETA_CONV tm 
-    = conv tm handle HOL_ERR _ => raise ERR "PAIRED_BETA_CONV" ""
-end;
+
+val PAIRED_BETA_CONV = pairTheory.PAIRED_BETA_CONV;
 
 
 (*-------------------------------------------------------*)

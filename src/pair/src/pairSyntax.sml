@@ -34,7 +34,7 @@ val list_mk_prod = end_itlist (curry mk_prod);
 val comma_tm    = prim_mk_const {Name=",",       Thy="pair"};
 val fst_tm      = prim_mk_const {Name="FST",     Thy="pair"};
 val snd_tm      = prim_mk_const {Name="SND",     Thy="pair"};
-val uncurry_tm  = prim_mk_const {Name="UNCURRY", Thy="pair"};
+val uncurry_tm  = pairTheory.uncurry_tm;
 val curry_tm    = prim_mk_const {Name="CURRY",   Thy="pair"};
 val pair_map_tm = prim_mk_const {Name="##",      Thy="pair"};
 
@@ -56,9 +56,8 @@ val list_mk_pair = end_itlist (curry mk_pair);
       in left-to-right order.
  ---------------------------------------------------------------------------*)
 
-val dest_pair = dest_binop (",","pair") (ERR "dest_pair" "not a pair")
-
-val strip_pair = strip_binop (total dest_pair);
+val dest_pair = pairTheory.dest_pair;
+val strip_pair = pairTheory.strip_pair;
 
 (*---------------------------------------------------------------------------
     Inverse of strip_pair ... returns unconsumed elements in input list.
@@ -160,12 +159,7 @@ val is_pair_map = can dest_pair_map;
 (* [JRH 91.07.17]                                                            *)
 (*---------------------------------------------------------------------------*)
 
-fun mk_pabs(vstruct,body) =
-  if is_var vstruct then Term.mk_abs(vstruct, body)
-  else let val (fst,snd) = dest_pair vstruct
-       in mk_comb(mk_uncurry_tm(type_of fst, type_of snd, type_of body),
-                  mk_pabs(fst,mk_pabs(snd,body)))
-       end handle HOL_ERR _ => raise ERR "mk_pabs" "";
+val mk_pabs = pairTheory.mk_pabs;
 
 fun mk_plet (p as (vstruct,rhs,body)) = 
   mk_let (mk_pabs (vstruct,body),rhs) 
@@ -254,12 +248,7 @@ val strip_pexists = strip (total dest_pexists);
      A "vstruct" is a tuple of variables, with no duplicate occurrences.
  ---------------------------------------------------------------------------*)
 
-local fun check [] = true
-        | check (h::t) = is_var h andalso not(mem h t) andalso check t
-in
-fun is_vstruct M = check (strip_pair M)
-end;
-
+val is_vstruct = pairTheory.is_vstruct;
 
 (* ===================================================================== *)
 (* Generates a pair structure of variable with the same structure as     *)
