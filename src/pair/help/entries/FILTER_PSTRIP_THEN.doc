@@ -19,9 +19,9 @@ A negation {~t} is treated as the implication {t ==> F}. The theorem-tactic
 {ttac} is applied only when stripping an implication, by using the antecedent
 stripped off. {FILTER_PSTRIP_THEN} also breaks conjunctions.
 
-{FILTER_PSTRIP_THEN} behaves like {PSTRIP_GOAL_THEN}, if the term being stripped
-does not contain a free instance of {u}. In particular, {FILTER_PSTRIP_THEN
-PSTRIP_ASSUME_TAC} behaves like {FILTER_PSTRIP_TAC}.
+{FILTER_PSTRIP_THEN} behaves like {PSTRIP_GOAL_THEN}, if the term
+being stripped does not contain a free instance of {u}. In particular,
+{FILTER_PSTRIP_THEN PSTRIP_ASSUME_TAC} behaves like {FILTER_PSTRIP_TAC}.
 
 \FAILURE
 {FILTER_PSTRIP_THEN ttac u (A,t)} fails if {t} is not a paired universally
