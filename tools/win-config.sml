@@ -1,7 +1,7 @@
 val cmdline_args = CommandLine.arguments()
 fun warn s = (TextIO.output(TextIO.stdErr, s); TextIO.flushOut TextIO.stdErr)
 
-val holdir   =
+val holdir =
     case cmdline_args of
       [x] => x
     | _ => (warn "Must specify HOLDIR as first and only argument\n";
@@ -42,15 +42,6 @@ val sigobj = fullPath [holdir, "sigobj"]
 
 fun echo s = (TextIO.output(TextIO.stdOut, s^"\n");
               TextIO.flushOut TextIO.stdOut);
-
-local val expand_backslash =
-            String.translate
-                (fn #"\\" => "\\\\"
-                  | #"\"" => "\\\""
-                  | ch => String.str ch)
-in
-fun quote s = String.concat["\"", expand_backslash s, "\""]
-end;
 
 (*---------------------------------------------------------------------------
       File handling. The following implements a very simple line
@@ -95,22 +86,16 @@ val config_src = fullPath [holdir, "tools", "configure.sml"]
 val config_dest = fullPath [holdir, "tools", "newconfig.sml"]
 
 val _ = fill_holes(config_src, config_dest)
-        ["val mosmldir =" --> ("val mosmldir = \""^mosmldir^"\"\n"),
-         "val holdir =" --> ("val holdir = \""^holdir^"\"\n")]
-
+        ["val mosmldir" --> ("val mosmldir = \""^
+                             String.toString mosmldir^"\"\n"),
+         "val holdir" --> ("val holdir = \""^String.toString holdir^"\"\n")]
 
 
 val _ = print "Configuring the system\n";
 val _ = FileSys.mkDir (fullPath [holdir, "src", "0"]) handle _ => ()
 val _ = Process.system ("mosml < \"" ^ config_dest ^ "\"")
 
-val _ = FileSys.chDir (fullPath [holdir, "sigobj"])
-val _ = Systeml.systeml [fullPath [holdir, "bin", "Holmake"],
-                         "Globals.uo"]
-
 val _ = print "Building the help system \n";
 val _ = Systeml.systeml [fullPath [holdir, "bin", "build"], "help"];
 
-
-val _ = print "\nFinished configuration!\n";
 val _ = Process.exit Process.success;
