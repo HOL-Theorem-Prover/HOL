@@ -244,7 +244,13 @@ let do_subscript s =
 
 let rec do_var v s =
   (* return fully texified variable or number, or raise Not_found if it's not a var *)
-  if s = "" then raise Not_found else
+  if s = "" then
+    raise Not_found
+  else if List.mem s v || is_field s then  (* field names often reused as var names *)
+    "\\tsvar{"^texify_math s^"}"
+  else if Str.string_match (Str.regexp "[0-9]+") s 0 then  (* digits *)
+    s
+  else
   let _ = (Str.search_forward
              (Str.regexp "\\([0-9]*\\)\\([']*\\)\\($\\|_\\)")  (* always matches *)
              s
@@ -267,10 +273,6 @@ let rec do_var v s =
        "{"^sbase^"}_{"^do_var v s4^"}"  (* recurse on subscript; avoid TeX multiple-subscript error *)
      else
        sbase)  (* no recursion *)
-  else if List.mem s v || is_field s then  (* field names often reused as var names *)
-    "\\tsvar{"^texify_math s^"}"
-  else if Str.string_match (Str.regexp "[0-9]+") s 0 then  (* digits *)
-    s
   else
     raise Not_found (* not a variable *)
 
