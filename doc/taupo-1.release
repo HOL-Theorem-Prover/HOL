@@ -1,12 +1,16 @@
 Release notes for the Taupo-1 release of Hol98
 ==============================================
 
-The forthcoming Hol98 release (called Taupo-1) is joint work with
-Bruno Barras, Mike Gordon, and Michael Norrish. Since the release
-offers some significant changes due mainly to work by Michael Norrish,
-we have decided to change the release name from "Athabasca" (a river
-in Alberta) to "Taupo" (a lake in New Zealand).
+----------------------------------------------------------------------
+Konrad Slind writes:
 
+  The forthcoming Hol98 release (called Taupo-1) is joint work with
+  Bruno Barras, Mike Gordon, and Michael Norrish. Since the release
+  offers some significant changes due mainly to work by Michael
+  Norrish, we have decided to change the release name from "Athabasca"
+  (a river in Alberta) to "Taupo" (a lake in New Zealand).
+
+----------------------------------------------------------------------
 The following is a brief summary of the new features in this release
 (new since Athabasca-4):
 
