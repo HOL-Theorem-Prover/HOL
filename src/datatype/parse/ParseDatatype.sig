@@ -1,7 +1,6 @@
 signature ParseDatatype =
 sig
  include Abbrev
- type tyname   = string
 
  datatype pretype =
    dVartype of string
@@ -17,7 +16,7 @@ sig
    Constructors of constructor list
  | Record of field list
 
- type AST = tyname * datatypeForm
+ type AST = string * datatypeForm
 
  val parse : hol_type quotation -> AST list
 

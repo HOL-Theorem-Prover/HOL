@@ -320,10 +320,9 @@ fun new_datatype q     = new_asts_datatype (ParseDatatype.parse q);
     Determine if a parsed type spec is calling for an enumerated type
    ---------------------------------------------------------------------- *)
 
-(* returns false if there is more than one type called for.  Really, *)
-(* if there is more than one type, but they are all for enumerated types *)
-(* we should be able to disentangle them and call type definition for each *)
-(* of them independently *)
+(* Returns false if there is more than one type called for, because an
+   earlier sorting process will ensure that enumerated types are
+   presented singly. *)
 
 fun is_enum_type_spec astl =
     case astl of
@@ -391,9 +390,13 @@ in
     end;
 end
 
-val bigrec_subdivider_string = "__brss__"
+(* ----------------------------------------------------------------------
+    Topological sort of datatype declarations so that the system can
+    automatically separate out those types that aren't recursively linked
+   ---------------------------------------------------------------------- *)
 
 fun pretype_ops acc ptysl =
+    (* find all of the operator names in a list of pretype lists *)
     case ptysl of
       [] => acc
     | (ptys :: rest) => let
@@ -409,23 +412,9 @@ fun pretype_ops acc ptysl =
           end
       end
 
-fun toLists a = let
-  open Array2
-  val (m, n) = dimensions a
-  fun foldthis (i,j,v,acc) =
-      if j = n - 1 then
-        if i = m - 1 then
-          List.rev (List.rev (v :: hd acc) :: tl acc)
-        else
-          List.rev (v :: hd acc) :: tl acc
-      else if j = 0 then [v] :: acc
-      else (v :: hd acc) :: tl acc
-in
-  foldi RowMajor foldthis [] {base = a, row = 0, col = 0, nrows = NONE,
-                              ncols = NONE}
-end
-
 fun build_reference_matrix astl = let
+  (* turns a astl into an adjacency matrix, position (n,m) is true if
+     ast n refers to ast m. *)
   val newnames = map #1 astl
   val n = length newnames
   exception NoDex
@@ -457,6 +446,8 @@ in
 end
 
 fun calculate_transitive_closure a = let
+  (* updates a 2D array so that it represents the transitive closure of the
+     relation it used to represent  O(n^3) *)
   open Array2
   nonfix via
   val n = nCols a
@@ -534,55 +525,6 @@ in
   pull_out_oks blocks
 end
 
-
-
-
-(*
-fun really_handle_big_record (tyname, fields) = let
-  fun split_fields fldlist = let
-    val len = length fldlist
-  in
-    if len <= 20 then let
-        val (l1, l2) = split_after (len div 2) fldlist
-      in
-        [l1, l2]
-      end
-    else let
-        val (pfx, sfx) = split_after 10 fldlist
-      in
-        pfx :: split_fields sfx
-      end
-  end
-in
-  ()
-end
-
-fun handle_big_record ast =
-    case ast of
-      (tyname, Constructors _) => ast
-    | (tyname, Record fields) => if length fields > 10 then
-                                   really_handle_big_record (tyname, fields)
-                                 else ast
-
-fun handle_big_records astl =
-    map handle_big_record astl
-
-*)
-
-local fun add_record_facts (tyinfo, NONE) = (tyinfo, "")
-        | add_record_facts (tyinfo, SOME fields) =
-               RecordType.prove_recordtype_thms (tyinfo, fields);
-      fun field_names_of (_,Record l) = SOME (map fst l)
-        | field_names_of _ = NONE
-in
-fun prim_define_type_from_astl db astl =
-  if is_enum_type_spec astl then
-    build_enum_tyinfos astl
-  else map add_record_facts
-           (zip (build_tyinfos db (new_asts_datatype astl))
-                (map field_names_of astl))
-end (* local *)
-
 fun sort_astl astl = let
   val adjs = build_reference_matrix astl
   val _ = calculate_transitive_closure adjs
@@ -592,22 +534,357 @@ in
   map (map dex_to_astl) sorted
 end
 
-fun define_type_from_astl db astl = let
-  val sorted_astll = sort_astl astl
-  fun foldthis (astl, (db, tyinfo_acc)) = let
-    val new_tyinfos = prim_define_type_from_astl db astl
-    fun foldthis' ((tyi, _), db) = TypeBasePure.add db tyi
-  in
-    (List.foldl foldthis' db new_tyinfos, tyinfo_acc @ new_tyinfos)
-  end
+(* ----------------------------------------------------------------------
+    Handle big record type declarations
+   ---------------------------------------------------------------------- *)
+
+val bigrec_subdivider_string = GrammarSpecials.bigrec_subdivider_string
+
+val big_record_size = 8 (* arbitrary choice *)
+
+(* these functions generate the "magic" names used to represent big records
+   as two level trees of smaller records.  There is a coupling between the
+   choices made here, and the choice of names for functions in the
+   RecordType code, and also in the examination made of these names in the
+   term pretty-printer.  In other words, if you change something in the next
+   two functions, you may need to change code in term_pp.sml and
+   RecordType.sml as well.  I can't see an easy and nice way to fix this
+   problem, so I'm letting it rest for the moment. *)
+fun subrecord_tyname tyn n =
+    (* the name of the type that inhabits the top level record *)
+    tyn ^ "_" ^ bigrec_subdivider_string ^ Int.toString n
+fun subrecord_fldname tyn n =
+    (* the name of the field in the top level record *)
+    bigrec_subdivider_string ^ "sf" ^Int.toString n
+fun leaf_fldname tyn fld = fld
+
+(* generates the sub-record number to look in, given the number of the
+   original field.  Needs to know the total number of fields too. *)
+fun subfld_num max = let
+  fun builddexlist base m =
+      if m <= 2 * big_record_size then
+        [base, base + m div 2]
+      else
+        base :: builddexlist (base + big_record_size) (m - big_record_size)
+  val dexlist = builddexlist 0 max
+  fun finddex n i dexlist =
+      case dexlist of
+        [] => i - 1
+      | h::t => if n >= h then finddex n (i + 1) t
+                else i - 1
 in
-  #2 (List.foldl foldthis (db, []) sorted_astll)
+  (fn n => finddex n 0 dexlist)
+end
+
+
+
+
+fun really_handle_big_record (tyname, fields) = let
+  (* return a fresh list of datatype declarations that splits the list
+     fields over multiple record types, that are then in turn included
+     in one top-level record of the given name.  Just reformulates;
+     definition work done elsewhere. *)
+  open ParseDatatype
+  fun split_fields fldlist = let
+    val len = length fldlist
+  in
+    if len <= 2 * big_record_size then let
+        val (l1, l2) = split_after (len div 2) fldlist
+      in
+        [l1, l2]
+      end
+    else let
+        val (pfx, sfx) = split_after big_record_size fldlist
+      in
+        pfx :: split_fields sfx
+      end
+  end
+  val splitflds = split_fields fields
+  fun generate_newtyspec (fldlist, (n, acc)) = let
+    val newtyname = subrecord_tyname tyname n
+    val newfldlist =
+        map (fn (s, ty) => (leaf_fldname tyname s, ty)) fldlist
+  in
+    (n + 1, (newtyname, Record newfldlist) :: acc)
+  end
+  fun gen_top_record_fld n = let
+    val fldname = subrecord_fldname tyname n
+    val fldtyname = subrecord_tyname tyname n
+  in
+    (fldname, dTyop{Tyop = fldtyname, Thy = NONE, Args = []})
+  end
+  val (n, subrecords) = List.foldl generate_newtyspec (0, []) splitflds
+  val toprecord_spec = (tyname, Record (List.tabulate(n, gen_top_record_fld)))
+in
+  toprecord_spec :: subrecords
+end
+
+fun handle_big_record ast =
+    case ast of
+      (tyname, Constructors _) => ([ast], [])
+    | (tyname, Record fields) =>
+      if length fields >= big_record_size then
+        (really_handle_big_record (tyname, fields), [(tyname, fields)])
+      else ([ast], [])
+
+
+fun pairconcat [] = ([], [])
+  | pairconcat ((x, y) :: rest) = let
+      val (xs, ys) = pairconcat rest
+    in
+      (x @ xs, y @ ys)
+    end
+
+fun reformulate_record_types astl = pairconcat (map handle_big_record astl)
+
+val includes_big_record = let
+  open ParseDatatype
+  fun is_big_record (_, Constructors _) = false
+    | is_big_record (tyn, Record fldl) =
+        not (is_substring bigrec_subdivider_string tyn) andalso
+        length fldl >= big_record_size
+in
+  fn astl => List.exists is_big_record astl
+end
+
+fun define_bigrec_functions (tyname, fldlist) = let
+  (* given a type-name and the list of fields (names + pretypes),
+     define the accessor and update functions for this type, knowing
+     that this is a big record and that its fields have been
+     distributed across various sub-record types *)
+  open ParseDatatype
+  val subn = subfld_num (length fldlist)
+  fun define_functions n (fld, _) acc = let
+    val subn = subn n
+    fun defn_hd th = #1 (strip_comb (lhs (#2 (strip_forall (concl th)))))
+
+    (* accessor *)
+    val subrec_accname = tyname ^ "_" ^ subrecord_fldname tyname subn
+    val subrec_accessor = prim_mk_const { Name = subrec_accname,
+                                          Thy = current_theory()}
+    val (toprec_ty, subrec_ty) = dom_rng (type_of subrec_accessor)
+    val leaf_accname = subrecord_tyname tyname subn ^ "_" ^ fld
+    val leaf_accessor = prim_mk_const {Name = leaf_accname,
+                                       Thy = current_theory()}
+    val field_ty = #2 (dom_rng (type_of leaf_accessor))
+    val acc_const_name = tyname ^ "_" ^ fld
+    val acc_const = mk_var(acc_const_name, toprec_ty --> field_ty)
+    val rvar = mk_var("r", toprec_ty)
+    val acc_defn = mk_eq(mk_comb(acc_const, rvar),
+                     mk_comb(leaf_accessor,
+                             mk_comb(subrec_accessor, rvar)))
+    val acc_defn_th = new_definition(acc_const_name, acc_defn)
+    val acc_defn_const = defn_hd acc_defn_th
+    val _ = add_record_field (fld, acc_defn_const)
+    (* update function *)
+    val subrec_updname =
+        tyname ^ "_" ^ subrecord_fldname tyname subn ^ "_update"
+    val subrec_update = prim_mk_const { Name = subrec_updname,
+                                        Thy = current_theory()}
+    val leaf_updname = leaf_accname ^ "_update"
+    val leaf_upd = prim_mk_const {Name = leaf_updname, Thy = current_theory()}
+    val upd_const_name = acc_const_name ^ "_update"
+    val upd_const =
+        mk_var(upd_const_name, field_ty --> (toprec_ty --> toprec_ty))
+    val field_valvar = mk_var("x", field_ty)
+    val upd_defn =
+        mk_eq(list_mk_comb(upd_const, [field_valvar, rvar]),
+              list_mk_comb(subrec_update,
+                           [list_mk_comb(leaf_upd,
+                                         [field_valvar,
+                                          mk_comb(subrec_accessor, rvar)]),
+                            rvar]))
+    val upd_defn_th = new_definition(upd_const_name, upd_defn)
+    val upd_defn_const = defn_hd upd_defn_th
+    val _ = add_record_update(fld, upd_defn_const)
+    (* fupdate function *)
+    val subrec_fupdname =
+        tyname ^ "_" ^ subrecord_fldname tyname subn ^ "_fupd"
+    val subrec_fupd = prim_mk_const {Name = subrec_fupdname,
+                                     Thy = current_theory()}
+    val leaf_fupdname = leaf_accname ^ "_fupd"
+    val leaf_fupd = prim_mk_const{Name = leaf_fupdname, Thy = current_theory()}
+    val fupd_const_name = acc_const_name ^ "_fupd"
+    val fupd_const = mk_var(fupd_const_name, (field_ty --> field_ty) -->
+                                             (toprec_ty --> toprec_ty))
+    val field_fvar = mk_var("f", field_ty --> field_ty)
+    val fupd_defn =
+        mk_eq(list_mk_comb(fupd_const, [field_fvar, rvar]),
+              list_mk_comb(subrec_fupd,
+                           [mk_comb(leaf_fupd, field_fvar), rvar]))
+    val fupd_defn_th = new_definition(fupd_const_name, fupd_defn)
+    val fupd_defn_const = defn_hd fupd_defn_th
+    val _ = add_record_fupdate(fld, fupd_defn_const)
+  in
+    (acc_const_name, acc_defn_th) :: (upd_const_name, upd_defn_th) ::
+    (fupd_const_name, fupd_defn_th) :: acc
+  end
+  fun foldthis (fld, (n, sthlist)) =
+      (n + 1, define_functions n fld sthlist)
+in
+  (tyname, #2 (List.foldl foldthis (0, []) fldlist))
+end
+
+(* ----------------------------------------------------------------------
+    do the hard work of type definition
+   ---------------------------------------------------------------------- *)
+
+fun augment_tyinfos tyis thminfo_list = let
+  (* [tyis] is a list of tyinfos coupled with strings representing how to
+     recreate them (strings which when eval-ed will be a function of type
+     tyinfo -> tyinfo; these functions will be applied to the basic tyinfo
+     created for the record type).
+
+     [thminfo_list] is of type (string * (string * thm) list) list,
+     basically an association list from type names to extra stuff.
+     The theorems need to be added to the corresponding tyinfos, and
+     they are accompanied by the names under which they have been
+     stored in the theory segment. *)
+  fun tyi_compare((ty1, _), (ty2, _)) =
+      String.compare(TypeBasePure.ty_name_of ty1,
+                     TypeBasePure.ty_name_of ty2)
+  val tyis = Listsort.sort tyi_compare tyis
+  val thminfo_list = Listsort.sort
+                       (fn ((s1,_), (s2,_)) => String.compare(s1, s2))
+                       thminfo_list
+  fun merge acc tyis (thmi_list : (string * (string * thm) list) list)  =
+      case (tyis, thmi_list) of
+        ([], _ :: _ ) => raise Fail "Datatype.sml: invariant failure 101"
+      | ([], []) => acc
+      | (_, []) => tyis @ acc
+      | ((tyi_s as (tyi, ty_s))::tyi_rest, (th_s, thms)::thmi_rest) => let
+        in
+          case String.compare (TypeBasePure.ty_name_of tyi, th_s) of
+            LESS => merge (tyi_s::acc) tyi_rest thmi_list
+          | GREATER => raise Fail "Datatype.sml: invariant failure 102"
+          | EQUAL => let
+              val tyi' = RecordType.update_tyinfo (map #2 thms) tyi
+              val ty_s' = "(RecordType.update_tyinfo [" ^
+                          String.concat (Lib.commafy (map #1 thms)) ^
+                          "] o " ^ ty_s ^ ")"
+            in
+              merge ((tyi', ty_s') :: acc) tyi_rest thmi_rest
+            end
+        end
+in
+  merge [] tyis thminfo_list
+end
+
+
+local
+  fun add_record_facts (tyinfo, NONE) = (tyinfo, "")
+    | add_record_facts (tyinfo, SOME fields) =
+      RecordType.prove_recordtype_thms (tyinfo, fields)
+  fun field_names_of (_,Record l) = SOME (map fst l)
+    | field_names_of _ = NONE
+  fun astpty_map f ast = let
+    open ParseDatatype
+  in
+    case ast of
+      Constructors clist =>
+        Constructors (map (fn (s, ptys) => (s, map f ptys)) clist)
+    | Record flds => Record (map (fn (s, pty) => (s, f pty)) flds)
+  end
+  fun reform_tyops prevtypes pty = let
+    open ParseDatatype
+  in
+    case pty of
+      dTyop{Tyop, Thy, Args} => let
+      in
+        case (Lib.assoc1 Tyop prevtypes, Args) of
+          (SOME (_, strset), []) => let
+            val thytyop =
+                case Thy of
+                  NONE => hd (Type.decls Tyop)
+                | SOME s => {Thy = s, Tyop = Tyop}
+            val arity = valOf (Type.op_arity thytyop)
+            val _ = arity = HOLset.numItems strset orelse
+                    raise ERR "reform_tyops" (Tyop ^ " has unexpected arity")
+          in
+            dTyop{Tyop = Tyop, Thy = Thy,
+                  Args = map dVartype (HOLset.listItems strset)}
+          end
+        | _ => dTyop{Tyop = Tyop, Thy = Thy,
+                     Args = map (reform_tyops prevtypes) Args}
+      end
+    | _ => pty
+  end
+
+  fun insert_tyarguments prevtypes astl =
+      map (fn (s, dt) => (s, astpty_map (reform_tyops prevtypes) dt)) astl
+in
+fun prim_define_type_from_astl prevtypes f db astl0 = let
+  (* precondition: astl has been sorted, so that, for example,  those
+     ast elements not referring to any others will be present only as
+     singleton lists *)
+  val astl = insert_tyarguments prevtypes astl0
+in
+  if includes_big_record astl then let
+      val (newastls, bigrecords) = reformulate_record_types astl
+      val (db, tyinfos) = f prevtypes db newastls
+      val function_defns = map define_bigrec_functions bigrecords
+      val tyinfos = augment_tyinfos tyinfos function_defns
+    in
+      (db, tyinfos)
+    end
+  else if is_enum_type_spec astl then
+    (db, build_enum_tyinfos astl)
+  else (db,
+        map add_record_facts
+            (zip (build_tyinfos db (new_asts_datatype astl))
+                 (map field_names_of astl)))
+end
+end (* local *)
+
+fun find_vartypes (pty, acc) = let
+  open ParseDatatype
+in
+  case pty of
+    dVartype s => HOLset.add(acc, s)
+  | dAQ ty => List.foldl (fn (ty, acc) => HOLset.add(acc, dest_vartype ty))
+                         acc (Type.type_vars ty)
+  | dTyop {Args, ...} => List.foldl find_vartypes acc Args
+end
+
+fun dtForm_vartypes (dtf, acc) =
+    case dtf of
+      Constructors clist => List.foldl (fn ((s, ptyl), acc) =>
+                                           List.foldl find_vartypes acc ptyl)
+                                       acc clist
+    | Record fldlist => List.foldl
+                          (fn ((s, pty), acc) => find_vartypes (pty, acc))
+                          acc fldlist
+
+
+val empty_stringset = HOLset.empty String.compare
+(* prevtypes below is an association list mapping the names of types
+   previously defined in this "session" to the list of type variables that
+   occurred on the RHS of the type definitions *)
+fun define_type_from_astl prevtypes db astl = let
+  val sorted_astll = sort_astl astl
+  val f = define_type_from_astl
+  fun handle_astl (astl, (prevtypes, db, tyinfo_acc)) = let
+    val (db, new_tyinfos) = prim_define_type_from_astl prevtypes f db astl
+    fun addtyi ((tyi, _), db) = TypeBasePure.add db tyi
+    val alltyvars =
+        List.foldl (fn ((_, dtf), acc) => dtForm_vartypes(dtf, acc))
+                   empty_stringset
+                   astl
+  in
+    (prevtypes @ map (fn (s, dtf) => (s, alltyvars)) astl,
+     List.foldl addtyi db new_tyinfos,
+     tyinfo_acc @ new_tyinfos)
+  end
+  val (_, db, tyinfos) =
+      List.foldl handle_astl (prevtypes, db, []) sorted_astll
+in
+  (db, tyinfos)
 end
 
 fun primHol_datatype db q =
  let val astl = ParseDatatype.parse q handle (e as HOL_ERR _) => Raise e
  in
-   define_type_from_astl db astl
+   #2 (define_type_from_astl [] db astl)
  end
 
 
@@ -768,7 +1045,9 @@ fun persistent_tyinfo tyinfos_etc =
 
 fun Hol_datatype q = let
   val tyinfos_etc = primHol_datatype (TypeBase.theTypeBase()) q
-  val tynames = map (Lib.quote o TypeBasePure.ty_name_of o #1) tyinfos_etc
+  val tynames = map (TypeBasePure.ty_name_of o #1) tyinfos_etc
+  val tynames = filter (not o is_substring bigrec_subdivider_string) tynames
+  val tynames = map Lib.quote tynames
   val message = "Defined "^(if length tynames > 1 then "types" else "type")^
                 ": "^String.concat (Lib.commafy tynames)
 in

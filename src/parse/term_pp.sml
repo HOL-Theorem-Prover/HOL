@@ -34,6 +34,13 @@ in
   list_mk_comb(c,[fst,snd])
 end;
 
+fun isSuffix s1 s2 = (* s1 is a suffix of s2 *) let
+  val ss = Substring.all s2
+  val (pref, suff) = Substring.position s1 ss
+in
+  Substring.size suff = String.size s1
+end
+
 fun acc_strip_comb M rands =
  let val (Rator,Rand) = dest_comb M
  in acc_strip_comb Rator (Rand::rands)
@@ -125,6 +132,16 @@ fun convert_case tm = let
 in
   mk_case(split_on, split)
 end
+
+(* ----------------------------------------------------------------------
+    A flag controlling whether to print escaped syntax with a dollar
+    or enclosing parentheses.  Thus whether the term mk_comb(+, 3) comes
+    out as
+      $+ 3
+    or
+      (+) 3
+    The parser accepts either form.
+   ---------------------------------------------------------------------- *)
 
 val dollar_escape = ref true
 
@@ -233,6 +250,10 @@ fun nthy_compare ({Name = n1, Thy = thy1}, {Name = n2, Thy = thy2}) =
   case String.compare(n1, n2) of
     EQUAL => String.compare(thy1, thy2)
   | x => x
+
+val prettyprint_bigrecs = ref true;
+
+val _ = register_btrace ("pp_bigrecs", prettyprint_bigrecs)
 
 fun pp_term (G : grammar) TyG = let
   val {restr_binders,lambda,endbinding,type_intro,res_quanop} = specials G
@@ -729,15 +750,22 @@ fun pp_term (G : grammar) TyG = let
 
       val _ = (* check for record update *)
         if isSome recwith_info andalso isSome reclist_info then let
+          open Overload
           (* function to determine if t is a record update *)
           fun is_record_update t =
             if is_comb t andalso is_const (rator t) then let
-              val rname = Overload.overloading_of_term overload_info (rator t)
+              val rname = overloading_of_term overload_info (rator t)
             in
               case rname of
                 SOME s =>
-                  (isPrefix recupd_special s andalso isSome recupd_info) orelse
-                  (isPrefix recfupd_special s andalso isSome recfupd_info)
+                (isSome recupd_info andalso
+                 (isPrefix recupd_special s orelse
+                  !prettyprint_bigrecs andalso isSuffix "_update" s andalso
+                  is_substring bigrec_subdivider_string s)) orelse
+                (isSome recfupd_info andalso
+                 (isPrefix recfupd_special s orelse
+                  !prettyprint_bigrecs andalso isSuffix "_fupd" s andalso
+                  is_substring bigrec_subdivider_string s))
               | NONE => false
             end else false
           (* descend the rands of a term until one that is not a record
@@ -748,26 +776,74 @@ fun pp_term (G : grammar) TyG = let
               find_first_non_update ((rator t)::acc) (rand t)
             else
               (List.rev acc, t)
+          fun categorise_bigrec_updates v = let
+            fun bigrec_update t =
+                if is_comb t then
+                  case overloading_of_term overload_info (rator t) of
+                    SOME s => if is_substring bigrec_subdivider_string s then
+                                SOME (s, rand t)
+                              else NONE
+                  | NONE => NONE
+                else NONE
+            fun strip_bigrec_updates acc t = let
+              (* don't look at end of update chain; maybe dodgy *)
+              val (f, x) = dest_comb t
+            in
+              case bigrec_update f of
+                SOME p => strip_bigrec_updates (p::acc) x
+              | NONE => List.rev acc
+            end handle HOL_ERR _ => List.rev acc
+            fun categorise_bigrec_update (s, value) = let
+              (* first strip suffix, and decide if a normal update *)
+              val (s, value_upd) =
+                  if isSuffix "_update" s then
+                    (String.extract(s, 0, SOME (size s - 7)), true)
+                  else (* suffix will be "_fupd" *)
+                    (String.extract(s, 0, SOME (size s - 5)), false)
+              val ss = Substring.all s
+              val (_, ss) = (* drop initial typename *)
+                  Substring.position bigrec_subdivider_string ss
+              val ss = (* drop bigrec_subdivider_string *)
+                  Substring.slice(ss, size bigrec_subdivider_string, NONE)
+              val ss = (* drop subrecord number *)
+                  Substring.dropl Char.isDigit ss
+              val ss = (* drop underscore before field name *)
+                  Substring.slice(ss, 1, NONE)
+            in
+              (Substring.string ss, value, value_upd)
+            end
+          in
+            map categorise_bigrec_update (strip_bigrec_updates [] v)
+          end
+          fun categorise_update t = let
+            (* t is an update, possibly a bigrec monster.  Here we generate
+               a list of real updates (i.e., the terms corresponding to the
+               new value in the update), each with an accompanying field
+               string, and a boolean, which is true iff the update is a value
+               update (not a "fupd") *)
+            val (fld, value) = dest_comb t
+            val rname = valOf (Overload.overloading_of_term overload_info fld)
+          in
+            if isPrefix recupd_special rname then
+              [(String.extract(rname, size recupd_special, NONE), value, true)]
+            else if isPrefix recfupd_special rname then
+              [(String.extract(rname,size recfupd_special, NONE), value,false)]
+            else (* is a big record - examine value *)
+              categorise_bigrec_updates value
+          end
         in
           if is_record_update t1 then let
             val (updates0, base) = find_first_non_update [] t2
-            val updates = t1::updates0
+            val updates = List.concat (map categorise_update (t1::updates0))
             val (with_prec, with_tok) = valOf recwith_info
             val (ldelim, rdelim, sep) = valOf reclist_info
-            fun print_update t = let
-              val (fld,value) = dest_comb t
-              val rname =
-                valOf (Overload.overloading_of_term overload_info fld)
-              val (fld_tok, (upd_prec, updtok)) =
-                if isPrefix recupd_special rname then
-                  (String.extract(rname, size recupd_special, NONE),
-                   valOf recupd_info)
-                else
-                  (String.extract(rname, size recfupd_special, NONE),
-                   valOf recfupd_info)
+            fun print_update (fld, value, normal_upd) = let
+              val (upd_prec, updtok) =
+                if normal_upd then valOf recupd_info
+                else valOf recfupd_info
             in
               begin_block INCONSISTENT 2;
-              add_string fld_tok ;
+              add_string fld ;
               add_string " ";
               add_string updtok;
               add_break(1,0);

@@ -19,8 +19,6 @@
 structure ParseDatatype :> ParseDatatype =
 struct
 
- type tyname   = string
-
 val ERR = Feedback.mk_HOL_ERR "ParseDatatype";
 val ERRloc = Feedback.mk_HOL_ERRloc "ParseDatatype";
 
@@ -37,7 +35,7 @@ datatype datatypeForm
    = Constructors of constructor list
    | Record of field list
 
-type AST = tyname * datatypeForm
+type AST = string * datatypeForm
 
 fun pretypeToType pty =
   case pty of
