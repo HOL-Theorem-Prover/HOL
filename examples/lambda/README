@@ -10,7 +10,7 @@ ncScript.sml : builds a theory of name-carrying terms, where terms are
                  Andy Gordon and Tom Melham,
                  Proceedings of TPHOLs'96, Springer LNCS 1125.
 
-The remaining files underly the development described in
+The remaining files are the basis of the development described in
 
                 "Mechanising Hankin and Barendregt using the
                  Gordon-Melham axioms"
@@ -26,22 +26,30 @@ chap2Script.sml :
                a guide for computer scientists"
 
 chap3Script.sml :
-               mechanisation of most of chapter 3 of Hankin
+               mechanisation of much of chapter 3 of Hankin with bits
+               of Barendregt's chapter 3 thrown in too
 
 labelledTermsScript.sml :
                mechanisation of section 11.1 from Barendregt's "The
                lambda calculus: its syntax and semantics"
 
 term_posnsScript.sml :
-               establishes a type for labelling reductions
+               establishes a type for labelling reductions, and
+               positions within terms more generally
 
 finite_developmentsScript.sml :
                Barendregt's proof of the finite-ness of developments
                (section 11.2), mechanising this notion as well as that
                of residuals.
 
-standardisationScript.sml
+standardisationScript.sml :
                Barendregt's proof of the standardisation theorem, from
                section 11.4.
 
+raw_syntaxScript.sml :
+               a diversion: proof that a raw syntax of lambda terms
+               (not identified up to alpha equivalence) with its own
+               notions of substitution, alpha equivalence and beta
+               reduction can indeed be collapsed into the type of
+               terms from ncTheory.
 
