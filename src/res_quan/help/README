@@ -1,0 +1,12 @@
+This directory contains the documentation for the version of the
+restricted quantifier library created by Wai Wong in 1993.
+
+For the kananaskis release, I've shrunk down the restricted
+quantification library, since proof tools like the simplifier and
+first-order prover have subsumed many of the lower-level tactics. I've
+ported some of the old documentation to the help/Docfiles directory;
+the rest remains here in case there's a demand for more of the old
+functionality.
+
+Joe Hurd
+June 2002
