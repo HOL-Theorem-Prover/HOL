@@ -18,6 +18,6 @@ pdf:
 	pdflatex tutorial.tex
 
 all:
-	make clean; make tutorial; make tutorial ; make pdf
+	make clean; make tutorial; make tutorial ; make pdf ps
 
 
