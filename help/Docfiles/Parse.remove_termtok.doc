@@ -37,9 +37,9 @@ expressions, this would be achievable as follows:
    <<HOL message: inventing new type variable names: 'a.>>
    > val it = `COND p q r` : term
 }
-The second invocation of the parser above demonstrates that
-once the rule for the {if-then-else} syntax has been removed, a string
-that used to parse as a conditional expression then parses as a big
+The first invocation of the parser above demonstrates that once the
+rule for the {if-then-else} syntax has been removed, a string that
+used to parse as a conditional expression then parses as a big
 function application (the function {if} applied to five arguments).
 
 The fact that the pretty-printer does not print the term using the
