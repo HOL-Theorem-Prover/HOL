@@ -948,6 +948,8 @@ val IN_LIST_TO_SET = store_thm(
   SRW_TAC [][LIST_TO_SET, boolTheory.IN_DEF]);
 val _ = export_rewrites ["IN_LIST_TO_SET"]
 
+
+
 (* --------------------------------------------------------------------- *)
 
 val _ = adjoin_to_theory
