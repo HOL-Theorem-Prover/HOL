@@ -45,14 +45,18 @@ val () = computeLib.add_funs
 (******************************************************************************
 * Evaluating Sugar2 formulas
 ******************************************************************************)
-val _ = computeLib.add_funs 
+val _ = computeLib.add_funs
          ([PathTheory.SEL_REC_AUX,
            UF_SEM_F_UNTIL_REC,
+(* Joe: I _think_ these might not be necessary anymore.
            UF_SEM_F_SUFFIX_IMP_FINITE_REC_AUX,
            UF_SEM_F_SUFFIX_IMP_FINITE_REC,
            UF_SEM_F_SUFFIX_IMP_REC,
+*)
            B_SEM,
-           EVAL_US_SEM]);
+           EVAL_US_SEM,
+           EVAL_UF_SEM_F_SUFFIX_IMP,
+           EVAL_UF_SEM_F_STRONG_IMP]);
 
 (******************************************************************************
 * For simplification during symbolic evaluation of Sugar2 formulas
@@ -216,6 +220,14 @@ EVAL ``US_SEM [{1};{2};{3}] (S_CAT(S_REPEAT S_TRUE, S_BOOL(B_PROP 2)))``;
 EVAL ``US_SEM 
         [{1};{2};{3};{4};{5}] 
         (S_CAT(S_REPEAT S_TRUE, S_CAT(S_BOOL(B_PROP 2), S_REPEAT S_TRUE)))``;
+
+(******************************************************************************
+* [{1};{2};{3};{4};{5};{6};{7};{8};{9}]  |=  {1|3} |-> {[*];3}!
+******************************************************************************)
+EVAL
+``UF_SEM (FINITE[{1};{2};{3};{4};{5};{6};{7};{8};{9}])
+   (F_STRONG_IMP ((S_OR (S_BOOL (B_PROP 1), S_BOOL (B_PROP 3))),
+                  (S_CAT (S_REPEAT S_TRUE, S_BOOL (B_PROP 3)))))``;
 
 (* 
 ** Generated this from a Verilog model of the BUF example in

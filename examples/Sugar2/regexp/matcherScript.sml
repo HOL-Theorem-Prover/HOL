@@ -75,6 +75,7 @@ val set_of_list = prove
 
 (*---------------------------------------------------------------------------*)
 (* BIGLIST is designed to speed up evaluation of very long lists.            *)
+(* (But it doesn't seem to have the desired effect, so we don't use it.)     *)
 (*---------------------------------------------------------------------------*)
 
 val drop_def = pureDefine
@@ -962,20 +963,21 @@ val eval_transitions_def = pureDefine
   `eval_transitions r l c =
    calc_transitions r l c (SUC (initial_regexp2na r)) []`;
 
-val (astep_def, astep_ind) = Defn.tprove
-  (Hol_defn "astep"
-   `astep r l cs =
-    if NULL cs then EXISTS (accept_regexp2na r) l
-    else astep r (eval_transitions r l (HD cs)) (TL cs)`,
-   WF_REL_TAC `measure (LENGTH o SND o SND)`
-   ++ Cases
-   ++ RW_TAC arith_ss [NULL_DEF, TL, LENGTH]);
-
-val _ = save_thm ("astep_def", astep_def);
-val _ = save_thm ("astep_ind", astep_ind);
+val astep_def = Define
+  `(astep r l [] = EXISTS (accept_regexp2na r) l) /\
+   (astep r l (c :: cs) = astep r (eval_transitions r l c) cs)`;
 
 val amatch_def = Define
   `amatch r l = let i = initial_regexp2na r in astep r [i] l`;
+
+val asignal_def = Define
+  `(asignal r f l [] = T) /\
+   (asignal r f l (c :: cs) =
+    let l' = eval_transitions r l c
+    in (EXISTS (accept_regexp2na r) l' ==> f (c :: cs)) /\ asignal r f l' cs)`;
+
+val acheck_def = Define
+  `acheck r f l = let i = initial_regexp2na r in asignal r f [i] l`;
 
 (*---------------------------------------------------------------------------*)
 (* Correctness of this version of the automata matcher.                      *)
@@ -1033,5 +1035,24 @@ val amatch = store_thm
    ++ ONCE_REWRITE_TAC [astep_def]
    ++ SIMP_TAC std_ss [da_step_regexp2na, eval_transitions_def, NULL_DEF, TL]
    ++ RW_TAC std_ss [initial_regexp2na_def, HD]);
+
+val acheck = store_thm
+  ("acheck",
+   ``!r l.
+       acheck r f l =
+       !n. n < LENGTH l /\ sem r (FIRSTN (SUC n) l) ==> f (BUTFIRSTN n l)``,
+   RW_TAC std_ss
+   [GSYM da_match, da_match_def, regexp2da_def, da_accepts_na2da, acheck_def]
+   ++ RW_TAC std_ss [initial_regexp2na_def]
+   ++ Q.SPEC_TAC (`[initial (regexp2na r)]`, `k`)
+   ++ Induct_on `l` >> RW_TAC arith_ss [asignal_def, LENGTH]
+   ++ ONCE_REWRITE_TAC [asignal_def]
+   ++ RW_TAC std_ss []
+   ++ HO_MATCH_MP_TAC
+      (METIS_PROVE [num_CASES]
+       ``(P = Q 0 /\ !n. Q (SUC n)) ==> (P = !n. Q n)``)
+   ++ RW_TAC arith_ss
+      [LENGTH, FIRSTN, BUTFIRSTN, da_step_regexp2na,
+       accept_regexp2na_def, eval_transitions_def, initial_regexp2na_def]);
 
 val () = export_theory ();

@@ -35,9 +35,9 @@ quietdec := true;
 open bossLib metisLib rich_listTheory pred_setLib intLib;
 open regexpTheory matcherTheory;
 open FinitePathTheory PathTheory UnclockedSemanticsTheory
-     ClockedSemanticsTheory PropertiesTheory
+     ClockedSemanticsTheory PropertiesTheory;
 
-(* 
+(*
 quietdec := false;
 *)
 
@@ -292,6 +292,31 @@ val CONCAT_is_CONCAT = prove
    ++ Induct_on `x`
    ++ RW_TAC std_ss [FinitePathTheory.CONCAT_def, regexpTheory.CONCAT_def]);
 
+val RESTN_is_BUTFIRSTN = prove
+  (``!n l. n <= LENGTH l ==> (RESTN l n = BUTFIRSTN n l)``,
+   Induct_on `l`
+   >> RW_TAC arith_ss [LENGTH, BUTFIRSTN, FinitePathTheory.RESTN_def]
+   ++ GEN_TAC
+   ++ Cases >> RW_TAC arith_ss [LENGTH, BUTFIRSTN, FinitePathTheory.RESTN_def]
+   ++ RW_TAC arith_ss
+      [LENGTH, BUTFIRSTN, FinitePathTheory.RESTN_def,
+       FinitePathTheory.REST_def, TL]);
+
+val SEL_FINITE_0_is_FIRSTN = prove
+  (``!n l. n < LENGTH l ==> (SEL (FINITE l) (0,n) = FIRSTN (SUC n) l)``,
+   SIMP_TAC std_ss [SEL_def]
+   ++ Induct_on `l` >> RW_TAC arith_ss [LENGTH, FIRSTN]
+   ++ GEN_TAC
+   ++ Cases
+   >> (ONCE_REWRITE_TAC [SEL_REC_AUX]
+       ++ RW_TAC arith_ss [LENGTH, FIRSTN, HEAD_def, HD]
+       ++ ONCE_REWRITE_TAC [SEL_REC_AUX]
+       ++ RW_TAC arith_ss [])
+   ++ FULL_SIMP_TAC arith_ss [LENGTH]
+   ++ ONCE_REWRITE_TAC [SEL_REC_AUX]
+   ++ RW_TAC arith_ss 
+      [LENGTH, FIRSTN, arithmeticTheory.ADD1, HEAD_def, HD, REST_def, TL]);
+
 val sere2regexp_def = Define
   `(sere2regexp (S_BOOL b) = Atom (\l. B_SEM l b)) /\
    (sere2regexp (S_CAT (r1, r2)) = Cat (sere2regexp r1) (sere2regexp r2)) /\
@@ -301,9 +326,8 @@ val sere2regexp_def = Define
    (sere2regexp (S_REPEAT r) = Repeat (sere2regexp r))`;
 
 val sere2regexp = prove
-  (``!r l. S_CLOCK_FREE r ==> (US_SEM l r = amatch (sere2regexp r) l)``,
-   SIMP_TAC std_ss [amatch]
-   ++ INDUCT_THEN sere_induct ASSUME_TAC
+  (``!r l. S_CLOCK_FREE r ==> (US_SEM l r = sem (sere2regexp r) l)``,
+   INDUCT_THEN sere_induct ASSUME_TAC
    ++ RW_TAC std_ss
       [US_SEM_def, sem_def, sere2regexp_def, ELEM_EL, EL, S_CLOCK_FREE_def]
    ++ CONV_TAC (DEPTH_CONV ETA_CONV)
@@ -314,41 +338,43 @@ val EVAL_US_SEM = store_thm
    ``!l r.
        US_SEM l r =
        if S_CLOCK_FREE r then amatch (sere2regexp r) l else US_SEM l r``,
-   RW_TAC std_ss [GSYM sere2regexp]);
+   RW_TAC std_ss [GSYM sere2regexp, amatch]);
 
-(* Some examples of using EVAL
-val _ = computeLib.add_funs 
-         ([SEL_REC_AUX,
-           UF_SEM_F_UNTIL_REC ,
-           UF_SEM_F_SUFFIX_IMP_FINITE_REC_AUX,
-           UF_SEM_F_SUFFIX_IMP_FINITE_REC(*,
-           UF_SEM_F_SUFFIX_IMP_REC*)]
-          @
-          CONJUNCTS B_SEM
-          @
-          [(*EVAL_US_SEM*)]);
+val EVAL_UF_SEM_F_SUFFIX_IMP = store_thm
+  ("EVAL_UF_SEM_F_SUFFIX_IMP",
+   ``!w r f.
+       UF_SEM (FINITE w) (F_SUFFIX_IMP (r,f)) =
+       if S_CLOCK_FREE r then acheck (sere2regexp r) (\x. UF_SEM (FINITE x) f) w
+       else UF_SEM (FINITE w) (F_SUFFIX_IMP (r,f))``,
+   RW_TAC list_resq_ss [acheck, UF_SEM_def, sere2regexp, RESTN_FINITE]
+   ++ RW_TAC arith_ss [RESTN_is_BUTFIRSTN, SEL_FINITE_0_is_FIRSTN]
+   ++ METIS_TAC []);
 
-val _ = 
- computeLib.add_convs
-  [(``$IN``,
-    2,
-    (pred_setLib.SET_SPEC_CONV ORELSEC pred_setLib.IN_CONV EVAL))];
-
-EVAL ``UF_SEM (FINITE[s0;s1;s2]) (F_UNTIL(f1,f2))``;
-EVAL ``UF_SEM (FINITE[s0;s1;s2]) (F_UNTIL(F_BOOL b1, F_BOOL b2))``;
-EVAL ``UF_SEM (FINITE[s0;s1;s2]) (F_UNTIL(F_BOOL(B_PROP p1), F_BOOL(B_PROP p2)))``;
-EVAL ``UF_SEM (FINITE[s0;s1;s2]) (F_UNTIL(F_BOOL(B_PROP 1), F_BOOL(B_PROP 2)))``;
-EVAL ``UF_SEM (FINITE[{1};{1};{2}]) (F_UNTIL(F_BOOL(B_PROP 1), F_BOOL(B_PROP 2)))``;
-EVAL ``UF_SEM (FINITE[{1};{3};{2}]) (F_UNTIL(F_BOOL(B_PROP 1), F_BOOL(B_PROP 2)))``;
-
-(* Can't evaluate a variable regular expression
-EVAL ``UF_SEM (FINITE[s0;s1;s2]) (F_SUFFIX_IMP(r,f))``;
-*)
-
-EVAL ``UF_SEM (FINITE[{1};{3};{2}])
-       (F_SUFFIX_IMP (S_BOOL (B_PROP n), f))``;
-
-EVAL ``UF_SEM (FINITE[{1};{3};{2}]) (F_UNTIL(F_BOOL(B_PROP 1), F_BOOL(B_PROP 2)))``;
-*)
+val EVAL_UF_SEM_F_STRONG_IMP = store_thm
+  ("EVAL_UF_SEM_F_STRONG_IMP",
+   ``!w r1 r2.
+       UF_SEM (FINITE w) (F_STRONG_IMP (r1,r2)) =
+       UF_SEM (FINITE w)
+       (F_SUFFIX_IMP (r1, F_NOT (F_SUFFIX_IMP (r2, F_BOOL B_FALSE))))``,
+   RW_TAC list_resq_ss [UF_SEM_def, B_SEM, AND_IMP_INTRO]
+   ++ HO_MATCH_MP_TAC
+      (METIS_PROVE []
+       ``(!j. P j ==> (Q j = R j)) ==> ((!j. P j ==> Q j) = !j. P j ==> R j)``)
+   ++ RW_TAC std_ss []
+   ++ HO_MATCH_MP_TAC
+      (METIS_PROVE []
+       ``!R. (!k. P k ==> (?k'. k = k' + j)) /\ (!k. P (k + j) = Q k) ==>
+             ((?j. P j) = ?j. Q j)``)
+   ++ CONJ_TAC
+   >> (RW_TAC std_ss []
+       ++ Q.EXISTS_TAC `k - j`
+       ++ RW_TAC arith_ss [])
+   ++ RW_TAC arith_ss []
+   ++ Know `(j,j+k) = (j+0,j+k)` >> RW_TAC arith_ss []
+   ++ DISCH_THEN (fn th => REWRITE_TAC [th, GSYM SEL_RESTN])
+   ++ MATCH_MP_TAC (PROVE [] ``(a ==> (b = c)) ==> (b /\ a = c /\ a)``)
+   ++ STRIP_TAC
+   ++ RW_TAC arith_ss [xnum_to_def, RESTN_FINITE, LENGTH_def]
+   ++ RW_TAC arith_ss [FinitePathTheory.LENGTH_RESTN]);
 
 val _ = export_theory();

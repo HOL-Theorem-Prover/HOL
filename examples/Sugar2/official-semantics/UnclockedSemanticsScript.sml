@@ -177,24 +177,24 @@ val UF_SEM_def =
       LENGTH w > 1 /\ UF_SEM (RESTN w 1) f)
     /\
     (UF_SEM w (F_UNTIL(f1,f2)) = 
-      ?k :: (0 to LENGTH w). 
+      ?k :: (0 to LENGTH w).
         UF_SEM (RESTN w k) f2 /\ !j :: (0 to k). UF_SEM (RESTN w j) f1)
     /\
     (UF_SEM w (F_SUFFIX_IMP(r,f)) = 
-      !j :: (0 to LENGTH w). 
-        US_SEM (SEL w (0,j)) r ==> UF_SEM (RESTN w j) f) 
+      !j :: (0 to LENGTH w).
+        US_SEM (SEL w (0,j)) r ==> UF_SEM (RESTN w j) f)
     /\
-    (UF_SEM w (F_STRONG_IMP(r1,r2)) = 
-      !j :: (0 to LENGTH w). 
+    (UF_SEM w (F_STRONG_IMP(r1,r2)) =
+      !j :: (0 to LENGTH w).
         US_SEM (SEL w (0,j)) r1
         ==>
         ?k :: (j to LENGTH w). US_SEM (SEL w (j,k)) r2)
     /\
-    (UF_SEM w (F_WEAK_IMP(r1,r2)) = 
+    (UF_SEM w (F_WEAK_IMP(r1,r2)) =
       !j :: (0 to LENGTH w).
-        US_SEM (SEL w (0,j)) r1 
+        US_SEM (SEL w (0,j)) r1
         ==>
-        ((?k :: (j to LENGTH w). US_SEM (SEL w (j,k)) r2) 
+        ((?k :: (j to LENGTH w). US_SEM (SEL w (j,k)) r2)
          \/
          (!k :: (j to LENGTH w). ?w'. US_SEM (SEL w (j,k) <> w') r2)))
     /\
