@@ -204,15 +204,15 @@ REWRITE_TAC[WF_DEF]
  * The empty relation is wellfounded.
  *---------------------------------------------------------------------------*)
 
-val Empty_def = 
+val EMPTY_REL_DEF = 
 Q.new_definition
-        ("Empty_def", `Empty (x:'a) (y:'a) = F`);
+        ("EMPTY_REL_DEF", `EMPTY_REL (x:'a) (y:'a) = F`);
 
 val WF_Empty = 
 Q.store_thm
-  ("WF_Empty", 
-   `WF (Empty:'a->'a->bool)`, 
-REWRITE_TAC[Empty_def,WF_DEF]);
+  ("WF_EMPTY_REL", 
+   `WF (EMPTY_REL:'a->'a->bool)`, 
+REWRITE_TAC[EMPTY_REL_DEF,WF_DEF]);
 
 
 (*---------------------------------------------------------------------------
