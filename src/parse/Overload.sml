@@ -59,6 +59,10 @@ fun compare_real_things (ty1,n1:string) (ty2,n2) =
   type_compare (ty1, ty2) = SOME EQUAL andalso n1 = n2
 
 
+(* put a new overloading resolution into the database.  If it's already
+   there for a given operator, don't mind.  In either case, make sure that
+   it's at the head of the list, meaning that it will be the first choice
+   in ambigous resolutions. *)
 fun add_actual_overloading {opname, realname, realtype} oinfo =
   if is_overloaded oinfo opname then let
     val {base_type, ...} = valOf (info_for_name oinfo opname)
@@ -67,7 +71,8 @@ fun add_actual_overloading {opname, realname, realtype} oinfo =
       valOf (fupd_list_at_P (fn x => #overloaded_op x = opname)
              (fupd_actual_ops
               (fn ops =>
-               Lib.op_insert compare_real_things (realtype, realname) ops))
+               (realtype, realname) ::
+               Lib.op_set_diff compare_real_things ops [(realtype, realname)]))
              oinfo)
     else
       raise OVERLOAD_ERR "Given type is not instance of type pattern"
