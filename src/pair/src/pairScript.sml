@@ -483,14 +483,11 @@ REPEAT STRIP_TAC THEN MATCH_MP_TAC relationTheory.WF_SUBSET
 
 
 (*---------------------------------------------------------------------------
-        Distribution laws for LET. The first should go in boolTheory.
+        Distribution laws for paired lets. Only will work for the
+        exact form!
  ---------------------------------------------------------------------------*)
 
-val LET_DISTRIB = store_thm("LET_DISTRIB",
-Term`!P M N. P (let (x:'a) = M in N x) = (let x = M in P (N x))`,
-REWRITE_TAC[boolTheory.LET_DEF] THEN BETA_TAC THEN REWRITE_TAC[]);
-
-val LET_DISTRIB2 = store_thm("LET_DISTRIB2",
+val LET2_RAND = store_thm("LET2_RAND",
 Term`!(P:'c->'d) (M:'a#'b) N.
     P (let (x,y) = M in N x y) = (let (x,y) = M in P (N x y))`,
 REWRITE_TAC[boolTheory.LET_DEF] THEN REPEAT GEN_TAC THEN BETA_TAC
@@ -498,6 +495,12 @@ REWRITE_TAC[boolTheory.LET_DEF] THEN REPEAT GEN_TAC THEN BETA_TAC
        (SPEC (Term `M:'a#'b`) ABS_PAIR_THM)
  THEN REWRITE_TAC[UNCURRY_DEF] THEN BETA_TAC THEN REFL_TAC);
 
+val LET2_RATOR = store_thm("LET2_RATOR",
+Term`!(M:'a1#'a2) (N:'a1->'a2->'b->'c) (b:'b). 
+      (let (x,y) = M in N x y) b = let (x,y) = M in N x y b`,
+REWRITE_TAC [boolTheory.LET_DEF] THEN BETA_TAC 
+  THEN REWRITE_TAC [UNCURRY_VAR] THEN BETA_TAC 
+  THEN REWRITE_TAC[]);
 
 val _ = export_theory();
 val _ =
