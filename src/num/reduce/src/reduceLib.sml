@@ -100,7 +100,14 @@ val _ = let open computeLib
 (* reduction.                                                            *)
 (*-----------------------------------------------------------------------*)
 
-val REDUCE_CONV = computeLib.CBV_CONV (num_compset());
+val REDUCE_CONV = let
+  val cs = num_compset ()
+  val _ = computeLib.set_skip cs boolSyntax.conditional NONE
+          (* ensure that REDUCE_CONV will look at all of a term, even
+             conditionals' branches *)
+in
+  computeLib.CBV_CONV cs
+end
 
 val REDUCE_RULE = CONV_RULE REDUCE_CONV;
 
