@@ -255,16 +255,19 @@ val sem_def =
    (sem (Prefix r) w =
      ?w'. sem r (w <> w'))`;
 
-val sem_Dot = prove
-  (``!l. sem Dot l = (LENGTH l = 1)``,
+val sem_Dot = store_thm
+  ("sem_Dot",
+   ``!l. sem Dot l = (LENGTH l = 1)``,
    RW_TAC std_ss [sem_def, Dot_def]);
 
-val sem_Zero = prove
-  (``!l. ~(sem Zero l)``,
+val sem_Zero = store_thm
+  ("sem_Zero",
+   ``!l. ~(sem Zero l)``,
    RW_TAC std_ss [sem_def, Zero_def]);
 
-val sem_One = prove
-  (``!l. sem One l = (l = [])``,
+val sem_One = store_thm
+  ("sem_One",
+   ``!l. sem One l = (l = [])``,
    RW_TAC std_ss [sem_def, One_def]
    ++ REVERSE EQ_TAC
    >> (RW_TAC std_ss []

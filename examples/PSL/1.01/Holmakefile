@@ -5,22 +5,27 @@
 .PHONY: all clean world
 
 all:
-	cd regexp ; Holmake
-	cd official-semantics ; Holmake
-	cd executable-semantics ; Holmake -I ../regexp -I ../official-semantics
+	cd ../path ; Holmake
+	cd ../regexp ; Holmake
+	cd official-semantics ; Holmake -I ../../path
+	cd executable-semantics ; Holmake -I ../../path -I ../official-semantics -I ../../regexp
 	cd parser.mosmlyacc ; Holmake
-	cd parser ; Holmake -I ../regexp -I ../official-semantics  -I ../executable-semantics -I ../parser.mosmlyacc
+	cd parser ; Holmake -I ../../path -I ../official-semantics -I ../../regexp -I ../executable-semantics -I ../parser.mosmlyacc
 
 strict:
-	cd regexp ; Holmake --qof
-	cd official-semantics ; Holmake --qof
-	cd executable-semantics ; Holmake -I ../regexp -I ../official-semantics --qof
+	cd ../path ; Holmake --qof
+	cd ../regexp ; Holmake --qof
+	cd official-semantics ; Holmake -I ../../path --qof
+	cd executable-semantics ; Holmake -I ../../path -I ../official-semantics -I ../../regexp --qof
+	cd parser.mosmlyacc ; Holmake --qof
+	cd parser ; Holmake -I ../../path -I ../official-semantics -I ../../regexp -I ../executable-semantics -I ../parser.mosmlyacc --qof
 
 clean:
-	cd regexp ; Holmake cleanAll
+	cd ../path ; Holmake cleanAll
+	cd ../regexp ; Holmake cleanAll
 	cd official-semantics ; Holmake cleanAll
 	cd executable-semantics ; Holmake cleanAll
 	cd parser ; Holmake cleanAll
-	cd parser.mosmlyacc ; Holmake clean
+	cd parser.mosmlyacc ; Holmake cleanAll
 
 world: clean all
