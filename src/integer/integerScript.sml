@@ -1631,10 +1631,10 @@ val INT_DIV_NEG = store_thm(
   "INT_DIV_NEG",
   Term`!p q. ~(q = 0) ==> ((~p / q = ~(p / q)) /\ (p/~q = ~p/q))`,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
-  Cases_on `0i <= q` THENL [
+  Cases_on `0 <= q` THENL [
     `?n. q = &n` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
     POP_ASSUM SUBST_ALL_TAC THEN
-    Cases_on `0i <= p` THENL [
+    Cases_on `0 <= p` THENL [
       `?m. p = &m` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
       POP_ASSUM SUBST_ALL_TAC THEN
       RULE_ASSUM_TAC (REWRITE_RULE [INT_INJ, INT_LE]) THEN
@@ -1653,7 +1653,7 @@ val INT_DIV_NEG = store_thm(
    ],
    `?n. q = ~&n` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_NOT_LE] THEN
    POP_ASSUM SUBST_ALL_TAC THEN
-   Cases_on `0i <= p` THENL [
+   Cases_on `0 <= p` THENL [
      `?m. p = &m` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
       POP_ASSUM SUBST_ALL_TAC THEN
       RULE_ASSUM_TAC (REWRITE_RULE [INT_LE, INT_NEG_EQ0, INT_NEG_GE0,
@@ -1717,7 +1717,7 @@ val INT_ABS_NEG = store_thm(
 val INT_ABS_ABS = store_thm(
   "INT_ABS_ABS",
   Term`!p. ABS (ABS p) = ABS p`,
-  GEN_TAC THEN Cases_on `0i <= p` THENL [
+  GEN_TAC THEN Cases_on `0 <= p` THENL [
     `?n. p = &n` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
     ASM_SIMP_TAC bool_ss [INT_ABS_NUM],
     FULL_SIMP_TAC bool_ss [INT_NOT_LE, INT_ABS, INT_NEGNEG, INT_NEG_LT0,
@@ -1730,7 +1730,7 @@ val INT_ABS_DIV = store_thm(
   REPEAT STRIP_TAC THEN Cases_on `0i <= p` THENL  [
     `?n. p = &n` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
     POP_ASSUM SUBST_ALL_TAC THEN
-    Cases_on `0i <= q` THENL [
+    Cases_on `0 <= q` THENL [
       `?m. q = &m` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
       POP_ASSUM SUBST_ALL_TAC THEN
       RULE_ASSUM_TAC (REWRITE_RULE [INT_LE, INT_INJ]) THEN
@@ -1746,7 +1746,7 @@ val INT_ABS_DIV = store_thm(
     ],
     `?n. p = ~&n` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_NOT_LE] THEN
     POP_ASSUM SUBST_ALL_TAC THEN
-    Cases_on `0i <= q` THENL [
+    Cases_on `0 <= q` THENL [
       `?m. q = &m` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
       POP_ASSUM SUBST_ALL_TAC THEN
       RULE_ASSUM_TAC (REWRITE_RULE [INT_NEG_GE0, INT_INJ, INT_LE,
