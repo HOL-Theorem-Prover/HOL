@@ -79,9 +79,9 @@ fun html (name,sectionl) ostrm =
                                         outlinks t)
              in
                (out "<dt><span class = \"FIELD-NAME\">SEEALSO</span></dt>\n";
-                out "<span class = \"FIELD-BODY\"><dd>";
+                out "<dd><div class = \"FIELD-BODY\"><dd>";
                 outlinks sslist;
-                out "</dd></span>\n")
+                out "</div></dd>\n")
              end
        | markout_section (TYPE _) = raise Fail "markout_section: TYPE"
 
