@@ -200,19 +200,19 @@ exception BddReplaceError;
 fun BddReplace tbl (TermBdd(vm,tm,b)) =
  let val ((l,l'),replacel) = 
        List.foldr
-        (fn(((TermBdd(vm1,tm,b)),(TermBdd(vm2,tm',b'))), ((l,l'),replacel))
+        (fn(((TermBdd(vm1,v,b)),(TermBdd(vm2,v',b'))), ((l,l'),replacel))
            =>
            if not(Varmap.eq(vm,vm1) andalso Varmap.eq(vm,vm2))
             then (                print "unequal varmaps\n";       raise BddReplaceError) else
-           if not(is_var tm)
-            then (print_term tm ; print " should be a variable\n"; raise BddReplaceError) else
-           if not(is_var tm')
-            then (print_term tm'; print " should be a variable\n"; raise BddReplaceError) else
-           if mem tm l
-            then (print_term tm ; print" repeated\n";              raise BddReplaceError) else
-           if mem tm' l'
-            then (print_term tm'; print" repeated\n";              raise BddReplaceError) 
-            else ((tm :: l, tm' :: l'),
+           if not(is_var v)
+            then (print_term v  ; print " should be a variable\n"; raise BddReplaceError) else
+           if not(is_var v')
+            then (print_term v' ; print " should be a variable\n"; raise BddReplaceError) else
+           if mem v l
+            then (print_term v  ; print" repeated\n";              raise BddReplaceError) else
+           if mem v' l'
+            then (print_term v' ; print" repeated\n";              raise BddReplaceError) 
+            else ((v :: l, v' :: l'),
                   ((bdd.var b, bdd.var b')::replacel)))
         (([],[]), [])
         tbl
@@ -267,11 +267,11 @@ fun BddCompose (TermBdd(vm,v,b), TermBdd(vm1,tm1,b1)) (TermBdd(vm2,tm2,b2)) =
   else (print "different varmaps\n"; raise BddComposeError);
 
 (*****************************************************************************)
-(*                    [(vm v1 |--> b1 , vm v1' |--> b1'),                    *)
+(*                    [(vm v1 |--> b1 , vm tm1 |--> b1'),                    *)
 (*                                    .                                      *)
 (*                                    .                                      *)
 (*                                    .                                      *)
-(*                     (vm vi |--> bi , vm vi' |--> bi')]                    *)
+(*                     (vm vi |--> bi , vm tmi |--> bi')]                    *)
 (*                    vm tm |--> b                                           *)
 (*  ------------------------------------------------------------------------ *)
 (*   vm (subst[v1 |-> v1', ... , vi |-> vi']tm)                              *)
@@ -284,24 +284,24 @@ exception BddListComposeError;
 fun BddListCompose tbl (TermBdd(vm,tm,b)) =
  let val ((l,l'),composel) = 
        List.foldr
-        (fn(((TermBdd(vm1,tm,b)),(TermBdd(vm2,tm',b'))), ((l,l'),composel))
+        (fn(((TermBdd(vm1,v,b)),(TermBdd(vm2,tm,b'))), ((l,l'),composel))
            =>
            if not(Varmap.eq(vm,vm1) andalso Varmap.eq(vm,vm2))
             then (                print "unequal varmaps\n";
                                   raise BddListComposeError) else
-           if not(is_var tm)
-            then (print_term tm ; print " should be a variable\n";
+           if not(is_var v)
+            then (print_term v  ; print " should be a variable\n";
                                   raise BddListComposeError) else
-           if mem tm l
-            then (print_term tm ; print" repeated\n";
+           if mem v l
+            then (print_term v  ; print" repeated\n";
                                   raise BddListComposeError) 
-            else ((tm :: l, tm' :: l'),
+            else ((v :: l, tm :: l'),
                   ((bdd.var b, b')::composel)))
         (([],[]), [])
         tbl
  in
   TermBdd(vm, 
-          subst (ListPair.map (fn(v,v')=>(v|->v')) (l,l')) tm, 
+          subst (ListPair.map (fn(v,tm)=>(v|->tm)) (l,l')) tm, 
           bdd.veccompose (bdd.composeSet composel) b)
  end;
 
@@ -376,7 +376,7 @@ fun BddRestrict tbl tb =
            =>
            if not(Varmap.eq(vm,vm1) andalso Varmap.eq(vm,vm2))
             then (print "unequal varmaps\n"; raise BddRestrictError) 
-            else (((tm |-> c)::substl), 
+            else (((v |-> c)::substl), 
                   ((bdd.var b, mlval c)::restrictl)))
         ([],[])
         tbl
