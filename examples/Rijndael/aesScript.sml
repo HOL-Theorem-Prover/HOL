@@ -14,8 +14,8 @@ open HolKernel boolLib bossLib RoundOpTheory pairTools;
 
 val RESTR_EVAL_TAC = computeLib.RESTR_EVAL_TAC;
 
-val STATE_VAR_TAC = PGEN_TAC (Term `(b0,b1,b2,b3,b4,b5,b6,b7,b8,
-                                     b9,b10,b11,b12,b13,b14,b15):state`);
+val BLOCK_VAR_TAC = PGEN_TAC (Term `(b0,b1,b2,b3,b4,b5,b6,b7,b8,
+                                     b9,b10,b11,b12,b13,b14,b15):block`);
 
 val _ = new_theory "aes";
 
@@ -75,6 +75,48 @@ val (InvRound_def,InvRound_ind) = Defn.tprove
 val _ = save_thm ("InvRound_def", InvRound_def);
 val _ = save_thm ("InvRound_ind", InvRound_ind);
 
+(*---------------------------------------------------------------------------*)
+(* The following versions are better for computeLib                          *)
+(*---------------------------------------------------------------------------*)
+
+val Round_eqns = Q.store_thm
+ ("Round_eqns",
+  `Round n keys state = 
+     if n=0 
+      then if LENGTH keys = 1 
+             then AddRoundKey (HD keys) (ShiftRows (SubBytes state))
+             else ARB
+      else if NULL keys then ARB
+             else Round (n-1) (TL keys)
+                   (AddRoundKey (HD keys) 
+                     (MixColumns (ShiftRows (SubBytes state))))`,
+ Cases_on `keys` 
+   THEN CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [Round_def]))
+   THEN RW_TAC list_ss [listTheory.LENGTH_NIL]
+   THEN Cases_on `t` THEN FULL_SIMP_TAC list_ss []);
+
+
+val InvRound_eqns = Q.store_thm
+ ("InvRound_eqns",
+  `InvRound n keys state =
+      if n=0 
+       then if LENGTH keys = 1
+              then AddRoundKey (HD keys) (InvSubBytes (InvShiftRows state))
+              else ARB
+       else if NULL keys then ARB
+              else InvRound (n-1) (TL keys)
+                    (InvMixColumns 
+                       (AddRoundKey (HD keys) 
+                          (InvSubBytes (InvShiftRows state))))`,
+ Cases_on `keys` 
+   THEN CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [InvRound_def]))
+   THEN RW_TAC list_ss [listTheory.LENGTH_NIL]
+   THEN Cases_on `t` THEN FULL_SIMP_TAC list_ss []);
+
+val _ = computeLib.add_persistent_funs [("Round_eqns",Round_eqns)];
+val _ = computeLib.add_persistent_funs [("InvRound_eqns",InvRound_eqns)];
+
+
 (*---------------------------------------------------------------------------
      Generate the key schedule from key. We work using 4-tuples of
      bytes. Unpacking moves from four contiguous 4-tuples to a 16-tuple,
@@ -105,7 +147,7 @@ val unpack_def = Define
 
 (*---------------------------------------------------------------------------*)
 (* Build the keyschedule from a key. This definition is too specific, but    *)
-(* should work for now.                                                      *)
+(* works fine for 128 bit blocks.                                            *)
 (*---------------------------------------------------------------------------*)
 
 val (expand_def,expand_ind) = 
@@ -123,6 +165,7 @@ Defn.tprove
 
 val _ = save_thm ("expand_def", expand_def);
 val _ = save_thm ("expand_ind", expand_ind);
+val _ = computeLib.add_persistent_funs [("expand_def", expand_def)];
 
 val mk_keysched_def = Define
  `mk_keysched ((b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15):key)
@@ -146,73 +189,6 @@ val AES_def = Define
                   o AddRoundKey (HD sched) o to_state),
       (from_state o InvRound 9 (TL isched) 
                   o AddRoundKey (HD isched) o to_state))`;
-
-(*---------------------------------------------------------------------------*)
-(* Example.
-
-key = (0wx00, 0wx01, 0wx02, 0wx03, 0wx04, 0wx05, 0wx06, 0wx07,
-       0wx08, 0wx09, 0wx0a, 0wx0b, 0wx0c, 0wx0d, 0wx0e, 0wx0f) : state;
-
-plaintext = (0wx00,0wx11,0wx22,0wx33,0wx44,0wx55,0wx66,0wx77,
-             0wx88,0wx99,0wxaa,0wxbb,0wxcc,0wxdd,0wxee,0wxff) : state
-
-ciphertext = (0wx69, 0wxC4, 0wxE0, 0wxD8, 0wx6A, 0wx7B, 0wx4, 0wx30, 
-              0wxD8, 0wxCD, 0wxB7, 0wx80, 0wx70, 0wxB4, 0wxC5, 0wx5A) :state;
-
-load "aesTheory";
-
-val key = Term 
-   `((F,F,F,F,F,F,F,F),
-     (F,F,F,F,F,F,F,T),
-     (F,F,F,F,F,F,T,F),
-     (F,F,F,F,F,F,T,T),
-     (F,F,F,F,F,T,F,F),
-     (F,F,F,F,F,T,F,T),
-     (F,F,F,F,F,T,T,F),
-     (F,F,F,F,F,T,T,T),
-     (F,F,F,F,T,F,F,F),
-     (F,F,F,F,T,F,F,T),
-     (F,F,F,F,T,F,T,F),
-     (F,F,F,F,T,F,T,T),
-     (F,F,F,F,T,T,F,F),
-     (F,F,F,F,T,T,F,T),
-     (F,F,F,F,T,T,T,F),
-     (F,F,F,F,T,T,T,T)):state`;
-
-val plaintext = Term
-  `((F,F,F,F,F,F,F,F),
-    (F,F,F,T,F,F,F,T),
-    (F,F,T,F,F,F,T,F),
-    (F,F,T,T,F,F,T,T),
-    (F,T,F,F,F,T,F,F),
-    (F,T,F,T,F,T,F,T),
-    (F,T,T,F,F,T,T,F),
-    (F,T,T,T,F,T,T,T),
-    (T,F,F,F,T,F,F,F),
-    (T,F,F,T,T,F,F,T),
-    (T,F,T,F,T,F,T,F),
-    (T,F,T,T,T,F,T,T),
-    (T,T,F,F,T,T,F,F),
-    (T,T,F,T,T,T,F,T),
-    (T,T,T,F,T,T,T,F),
-    (T,T,T,T,T,T,T,T)) : state`;
-
-computeLib.add_funs [aesTheory.expand_def,
-                     aesTheory.Round_def,
-                     aesTheory.InvRound_def,
-                     RoundOpTheory.ConstMult_def];
-
-val tm = Term`let (encrypt,decrypt) = AES ^key 
-              in decrypt(encrypt ^plaintext) = ^plaintext`;
-
-val expand_tm = fst(strip_comb(lhs(concl(aesTheory.expand_def))));
-computeLib.monitoring := SOME (same_const expand_tm);
-computeLib.monitoring := NONE;
-
-val thm = Count.apply EVAL tm;
-
-*)
-(*---------------------------------------------------------------------------*)
 
 
 (*---------------------------------------------------------------------------*)
@@ -373,10 +349,10 @@ val lemma = Q.prove
        o Round 9 (TL sched) 
        o AddRoundKey (HD sched) 
        o to_state) plaintext = plaintext)`,
- STATE_VAR_TAC THEN RW_TAC std_ss [length_11]
+ BLOCK_VAR_TAC THEN RW_TAC std_ss [length_11]
    THEN RESTR_EVAL_TAC [MultCol,InvMultCol,genMixColumns]
    THEN RW_TAC std_ss [ShiftRows_Inversion,SubBytes_Inversion,
-                       AddRoundKey_Idemp,MixColumns_Inversion,
+                       XOR_BLOCK_IDEM,MixColumns_Inversion,
                        from_state_Inversion,from_state_def]);
 
 
@@ -448,6 +424,24 @@ val (EqInvRound_def,EqInvRound_ind) = Defn.tprove
 
 val _ = save_thm ("EqInvRound_def",EqInvRound_def);
 val _ = save_thm ("EqInvRound_ind",EqInvRound_ind);
+
+val EqInvRound_eqns = Q.store_thm
+("EqInvRound_eqns",
+ `EqInvRound n keys state =
+      if n=0 
+       then if LENGTH keys = 1
+               then AddRoundKey (HD keys) (InvShiftRows (InvSubBytes state))
+               else ARB
+       else if NULL keys then ARB
+              else EqInvRound (n-1) (TL keys)
+                     (AddRoundKey (HD keys)
+                       (InvMixColumns (InvShiftRows (InvSubBytes state))))`,
+ Cases_on `keys` 
+   THEN CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [EqInvRound_def]))
+   THEN RW_TAC list_ss [listTheory.LENGTH_NIL]
+   THEN Cases_on `t` THEN FULL_SIMP_TAC list_ss []);
+
+val _ = computeLib.add_persistent_funs [("EqInvRound_eqns",EqInvRound_eqns)];
 
 (*---------------------------------------------------------------------------*)
 (* Grab some constants (to help control symbolic evaluation)                 *)

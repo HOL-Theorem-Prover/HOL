@@ -16,4 +16,8 @@ The dependencies are:
       RoundOpTheory  (basic operations that happen during a round)
          |
          |
-      RijndaelTheory (defn of rounds and key schedule, correctness)
+      aesTheory      (defn of rounds, key schedule, AES, correctness)
+         |
+         |
+      modesTheory    (modes of operation, padding, correctness of CBC_AES)
+

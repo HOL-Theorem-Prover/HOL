@@ -10,7 +10,7 @@
 (*                                                                           *)
 (*---------------------------------------------------------------------------*)
 
-open HolKernel Parse boolLib bossLib pairTools;
+open HolKernel Parse boolLib bossLib pairTools numLib metisLib;
 
 (*---------------------------------------------------------------------------*)
 (* Make bindings to pre-existing stuff                                       *)
@@ -31,25 +31,23 @@ val _ = new_theory "RoundOp";
 
 
 (*---------------------------------------------------------------------------*)
-(* The state is 16 bytes                                                     *)
+(* A block is 16 bytes. A state also has that type, although states have     *)
+(* a special format.                                                         *)
 (*---------------------------------------------------------------------------*)
 
-val _ = type_abbrev("state", 
+val _ = type_abbrev("block", 
                     Type`:word8 # word8 # word8 # word8 # 
                           word8 # word8 # word8 # word8 # 
                           word8 # word8 # word8 # word8 # 
                           word8 # word8 # word8 # word8`);
 
-val STATE_VAR_TAC = PGEN_TAC (Term `(b0,b1,b2,b3,b4,b5,b6,b7,b8,
-                                     b9,b10,b11,b12,b13,b14,b15):state`);
-val STATE_EVAL_TAC = STATE_VAR_TAC THEN EVAL_TAC;
-
-val _ = type_abbrev("key", Type`:state`);
-
-val _ = type_abbrev("w8x4",Type`:word8 # word8 # word8 # word8`);
+val _ = type_abbrev("state", Type`:block`);
+val _ = type_abbrev("key",   Type`:state`);
+val _ = type_abbrev("w8x4",  Type`:word8 # word8 # word8 # word8`);
 
 (*---------------------------------------------------------------------------*)
-(*      Name some constants used in the code and specification               *)
+(*  Bits and bytes and numbers. First name some constants used in the code   *)
+(*  and specification.                                                       *)
 (*---------------------------------------------------------------------------*)
 
 val ZERO_def   = Define   `ZERO = (F,F,F,F,F,F,F,F)`;
@@ -63,16 +61,89 @@ val B_HEX_def  = Define  `B_HEX = (F,F,F,F,T,F,T,T)`;
 val D_HEX_def  = Define  `D_HEX = (F,F,F,F,T,T,F,T)`;
 val E_HEX_def  = Define  `E_HEX = (F,F,F,F,T,T,T,F)`;
 
-(*---------------------------------------------------------------------------
-    Bits and bytes and numbers
- ---------------------------------------------------------------------------*)
-
 val B2N = Define `(B2N T = 1) /\ (B2N F = 0)`;
 
 val BYTE_TO_NUM = Define 
    `BYTE_TO_NUM (b7,b6,b5,b4,b3,b2,b1,b0) =
       128*B2N(b7) + 64*B2N(b6) + 32*B2N(b5) + 
        16*B2N(b4) +  8*B2N(b3) +  4*B2N(b2) + 2*B2N(b1) + B2N(b0)`;
+
+val NUM_TO_BYTE = Define
+   `NUM_TO_BYTE n7 =
+      let n6 = n7 DIV 2 in 
+      let n5 = n6 DIV 2 in 
+      let n4 = n5 DIV 2 in 
+      let n3 = n4 DIV 2 in 
+      let n2 = n3 DIV 2 in 
+      let n1 = n2 DIV 2 in 
+      let n0 = n1 DIV 2 
+      in
+        (ODD n0, ODD n1, ODD n2, ODD n3, 
+         ODD n4, ODD n5, ODD n6, ODD n7)`; 
+     
+val lemma = Q.prove
+(`!b7 b6 b5 b4 b3 b2 b1 b0. 
+   NUM_TO_BYTE 
+      (BYTE_TO_NUM (b7,b6,b5,b4,b3,b2,b1,b0)) = (b7,b6,b5,b4,b3,b2,b1,b0)`,
+  REPEAT Cases THEN EVAL_TAC);
+
+val BYTE_TO_NUM_TO_BYTE = Q.prove
+(`!b. NUM_TO_BYTE(BYTE_TO_NUM b) = b`,
+  METIS_TAC [lemma, pairTheory.ABS_PAIR_THM]);
+
+val NUM_TO_BYTE_TO_NUM = Q.prove
+(`!n. n < 256 ==> (BYTE_TO_NUM (NUM_TO_BYTE n) = n)`,
+ CONV_TAC (REPEATC (BOUNDED_CONV EVAL)) THEN PROVE_TAC []);
+
+(*---------------------------------------------------------------------------
+        Shift a byte left and right
+ ---------------------------------------------------------------------------*)
+
+val LeftShift = Define
+   `LeftShift (b7,b6,b5,b4,b3,b2,b1,b0) = (b6,b5,b4,b3,b2,b1,b0,F)`;
+
+val RightShift = Define
+   `RightShift (b7,b6,b5,b4,b3,b2,b1,b0) = (F,b7,b6,b5,b4,b3,b2,b1)`;
+
+(*---------------------------------------------------------------------------
+       Compare bits and bytes as if they were numbers. Not currently used
+ ---------------------------------------------------------------------------*)
+
+(*
+
+val _ = Hol_datatype `order = LESS | EQUAL | GREATER`;
+
+val BIT_COMPARE = Define 
+  `(BIT_COMPARE F T = LESS) /\
+   (BIT_COMPARE T F = GREATER) /\
+   (BIT_COMPARE x y = EQUAL)`;
+                        
+
+val BYTE_COMPARE = Define
+  `BYTE_COMPARE (a7,a6,a5,a4,a3,a2,a1,a0)
+                (b7,b6,b5,b4,b3,b2,b1,b0) = 
+    case BIT_COMPARE a7 b7 
+     of EQUAL -> 
+        (case BIT_COMPARE a6 b6
+          of EQUAL -> 
+             (case BIT_COMPARE a5 b5
+               of EQUAL -> 
+                  (case BIT_COMPARE a4 b4
+                    of EQUAL ->
+                       (case BIT_COMPARE a3 b3
+                         of EQUAL -> 
+                            (case BIT_COMPARE a2 b2
+                              of EQUAL -> 
+                                 (case BIT_COMPARE a1 b1
+                                   of EQUAL -> BIT_COMPARE a0 b0
+                                   || other -> other) 
+                              || other -> other) 
+                         || other -> other) 
+                    || other -> other) 
+               || other -> other) 
+          || other -> other) 
+     || other -> other`;
+*)
 
 (*---------------------------------------------------------------------------*)
 (* XOR and AND on bytes                                                      *)
@@ -135,6 +206,59 @@ val XOR8_AC = Q.store_thm
 
 
 (*---------------------------------------------------------------------------*)
+(* XOR on blocks                                                             *)
+(*---------------------------------------------------------------------------*)
+
+val BLOCK_VAR_TAC = PGEN_TAC 
+   (Term `(b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15):block`);
+
+val BLOCK_EVAL_TAC = BLOCK_VAR_TAC THEN EVAL_TAC;
+
+val TWO_BLOCK_VAR_TAC = 
+ BLOCK_VAR_TAC THEN 
+ PGEN_TAC (Term`(c0,c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15):block`);
+
+
+val XOR_BLOCK_def = Define
+ `XOR_BLOCK ((a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15):block)
+            ((b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15):block)
+       =
+      (a0 XOR8 b0,   a1 XOR8 b1,   a2 XOR8 b2,   a3 XOR8 b3,
+       a4 XOR8 b4,   a5 XOR8 b5,   a6 XOR8 b6,   a7 XOR8 b7,
+       a8 XOR8 b8,   a9 XOR8 b9,   a10 XOR8 b10, a11 XOR8 b11,
+       a12 XOR8 b12, a13 XOR8 b13, a14 XOR8 b14, a15 XOR8 b15)`;
+
+val ZERO_BLOCK_def = Define
+ `ZERO_BLOCK = (ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,
+                ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO) : block`;
+
+val XOR_BLOCK_ZERO = Q.store_thm
+("XOR_BLOCK_ZERO",
+ `!x:block. XOR_BLOCK x ZERO_BLOCK = x`,
+ BLOCK_EVAL_TAC THEN PROVE_TAC [XOR8_ZERO,ZERO_def]);
+
+val XOR_BLOCK_INV = Q.store_thm
+("XOR_BLOCK_INV",
+ `!x:block. XOR_BLOCK x x = ZERO_BLOCK`,
+ BLOCK_EVAL_TAC THEN PROVE_TAC [XOR8_INV,ZERO_def]);
+
+val XOR_BLOCK_AC = Q.store_thm
+("XOR_BLOCK_AC",
+ `(!x y z:block. XOR_BLOCK (XOR_BLOCK x y) z = XOR_BLOCK x (XOR_BLOCK y z)) /\
+  (!x y:block. XOR_BLOCK x y = XOR_BLOCK y x)`, 
+ CONJ_TAC THEN TWO_BLOCK_VAR_TAC THEN 
+ TRY (PGEN_TAC (Term`(d0,d1,d2,d3,d4,d5,d6,d7,d8,
+                      d9,d10,d11,d12,d13,d14,d15):block`)) THEN
+ EVAL_TAC THEN PROVE_TAC [XOR8_AC]);
+
+val XOR_BLOCK_IDEM = Q.store_thm
+("XOR_BLOCK_IDEM",
+ `(!v u. XOR_BLOCK (XOR_BLOCK v u) u = v) /\
+  (!v u. XOR_BLOCK v (XOR_BLOCK v u) = u)`,
+ PROVE_TAC [XOR_BLOCK_INV,XOR_BLOCK_AC,XOR_BLOCK_ZERO]);
+
+
+(*---------------------------------------------------------------------------*)
 (*    Moving data into and out of a state                                    *)
 (*---------------------------------------------------------------------------*)
 
@@ -153,18 +277,19 @@ val from_state_def = Define
               b3,b7,b11,b15) 
  = (b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15)`;
 
+
 val to_state_Inversion = 
   Q.store_thm
   ("to_state_Inversion",
    `!s:state. from_state(to_state s) = s`,
-   STATE_EVAL_TAC);
+   BLOCK_EVAL_TAC);
 
 
 val from_state_Inversion = 
   Q.store_thm
   ("from_state_Inversion",
    `!s:state. to_state(from_state s) = s`,
-   STATE_EVAL_TAC);
+   BLOCK_EVAL_TAC);
 
 
 (*---------------------------------------------------------------------------*)
@@ -191,7 +316,7 @@ val InvSubBytes_def = Define `InvSubBytes = genSubBytes InvSbox`;
 val SubBytes_Inversion = Q.store_thm
 ("SubBytes_Inversion",
  `!s:state. genSubBytes InvSbox (genSubBytes Sbox s) = s`,
- STATE_EVAL_TAC THEN RW_TAC std_ss [Sbox_Inversion]);
+ BLOCK_EVAL_TAC THEN RW_TAC std_ss [Sbox_Inversion]);
 
 
 (*---------------------------------------------------------------------------
@@ -228,7 +353,7 @@ val InvShiftRows_def = Define
 val ShiftRows_Inversion = Q.store_thm
 ("ShiftRows_Inversion",
  `!s:state. InvShiftRows (ShiftRows s) = s`,
- STATE_EVAL_TAC);
+ BLOCK_EVAL_TAC);
 
 
 (*---------------------------------------------------------------------------*)
@@ -238,64 +363,14 @@ val ShiftRows_Inversion = Q.store_thm
 val ShiftRows_SubBytes_Commute = Q.store_thm
  ("ShiftRows_SubBytes_Commute",
   `!s. ShiftRows (SubBytes s) = SubBytes (ShiftRows s)`,
-  STATE_EVAL_TAC);
+  BLOCK_EVAL_TAC);
 
 
 val InvShiftRows_InvSubBytes_Commute = Q.store_thm
  ("InvShiftRows_InvSubBytes_Commute",
   `!s. InvShiftRows (InvSubBytes s) = InvSubBytes (InvShiftRows s)`,
-  STATE_EVAL_TAC);
+  BLOCK_EVAL_TAC);
 
-
-(*---------------------------------------------------------------------------
-        Shift a byte left and right
- ---------------------------------------------------------------------------*)
-
-val LeftShift = Define
-   `LeftShift (b7,b6,b5,b4,b3,b2,b1,b0) = (b6,b5,b4,b3,b2,b1,b0,F)`;
-
-val RightShift = Define
-   `RightShift (b7,b6,b5,b4,b3,b2,b1,b0) = (F,b7,b6,b5,b4,b3,b2,b1)`;
-
-(*---------------------------------------------------------------------------
-       Compare bits and bytes as if they were numbers. Not currently used
- ---------------------------------------------------------------------------*)
-
-(*
-
-val _ = Hol_datatype `order = LESS | EQUAL | GREATER`;
-
-val BIT_COMPARE = Define 
-  `(BIT_COMPARE F T = LESS) /\
-   (BIT_COMPARE T F = GREATER) /\
-   (BIT_COMPARE x y = EQUAL)`;
-                        
-
-val BYTE_COMPARE = Define
-  `BYTE_COMPARE (a7,a6,a5,a4,a3,a2,a1,a0)
-                (b7,b6,b5,b4,b3,b2,b1,b0) = 
-    case BIT_COMPARE a7 b7 
-     of EQUAL -> 
-        (case BIT_COMPARE a6 b6
-          of EQUAL -> 
-             (case BIT_COMPARE a5 b5
-               of EQUAL -> 
-                  (case BIT_COMPARE a4 b4
-                    of EQUAL ->
-                       (case BIT_COMPARE a3 b3
-                         of EQUAL -> 
-                            (case BIT_COMPARE a2 b2
-                              of EQUAL -> 
-                                 (case BIT_COMPARE a1 b1
-                                   of EQUAL -> BIT_COMPARE a0 b0
-                                   || other -> other) 
-                              || other -> other) 
-                         || other -> other) 
-                    || other -> other) 
-               || other -> other) 
-          || other -> other) 
-     || other -> other`;
-*)
 
 (*---------------------------------------------------------------------------
     Multiply a byte (representing a polynomial) by x. 
@@ -345,6 +420,7 @@ Lib.with_flag (Globals.priming,SOME "")
 
 val _ = save_thm("ConstMult_def",ConstMult_def);
 val _ = save_thm("ConstMult_ind",ConstMult_ind);
+val _ = computeLib.add_persistent_funs [("ConstMult_def",ConstMult_def)];
 
 val ConstMultDistrib = Q.store_thm
 ("ConstMultDistrib",
@@ -531,7 +607,6 @@ val rearrange_xors = Q.prove
   (d1 XOR8 d2 XOR8 d3 XOR8 d4)`,
  RW_TAC (std_ss ++ simpLib.ac_ss [(c,a)]) []);
 
-
 val mix_lemma1 = Q.prove
 (`!a b c d. 
    (E_HEX ** ((TWO ** a) XOR8 (THREE ** b) XOR8 c XOR8 d)) XOR8
@@ -618,7 +693,7 @@ val InvMixColumns_def = Define `InvMixColumns = genMixColumns InvMultCol`;
 val MixColumns_Inversion = Q.store_thm
 ("MixColumns_Inversion",
  `!s. genMixColumns InvMultCol (genMixColumns MultCol s) = s`,
- STATE_VAR_TAC
+ BLOCK_VAR_TAC
   THEN RESTR_EVAL_TAC [mult,B_HEX,D_HEX,E_HEX,TWO,THREE,NINE]
   THEN RW_TAC std_ss [mix_lemma1,mix_lemma2,mix_lemma3,mix_lemma4]);
 
@@ -627,26 +702,7 @@ val MixColumns_Inversion = Q.store_thm
     Pairwise XOR the state with the round key
  ---------------------------------------------------------------------------*)
 
-val AddRoundKey_def = Define
- `AddRoundKey 
-         (k00,k01,k02,k03,k10,k11,k12,k13,k20,k21,k22,k23,k30,k31,k32,k33)
-         (b00,b01,b02,b03,b10,b11,b12,b13,b20,b21,b22,b23,b30,b31,b32,b33)
-       =
-  (b00 XOR8 k00, b01 XOR8 k01, b02 XOR8 k02, b03 XOR8 k03,
-   b10 XOR8 k10, b11 XOR8 k11, b12 XOR8 k12, b13 XOR8 k13, 
-   b20 XOR8 k20, b21 XOR8 k21, b22 XOR8 k22, b23 XOR8 k23,
-   b30 XOR8 k30, b31 XOR8 k31, b32 XOR8 k32, b33 XOR8 k33)`;
-
-
-val AddRoundKey_Idemp = Q.store_thm
-("AddRoundKey_Idemp",
- `!v u. AddRoundKey v (AddRoundKey v u) = u`,
- PGEN_TAC (Term `(v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,
-                  v10,v11,v12,v13,v14,v15):state`) THEN 
- PGEN_TAC (Term `(u0,u1,u2,u3,u4,u5,u6,u7,u8,u9,
-                  u10,u11,u12,u13,u14,u15):state`)
- THEN EVAL_TAC THEN RW_TAC std_ss [CONJUNCT1 XOR8_AC,XOR8_INV,XOR8_ZERO]);
-
+val AddRoundKey_def = Define `AddRoundKey = XOR_BLOCK`;
 
 (*---------------------------------------------------------------------------*)
 (* For alternative decryption scheme                                         *)
@@ -657,12 +713,9 @@ val InvMixColumns_Distrib = Q.store_thm
  `!s k. InvMixColumns (AddRoundKey s k) 
             = 
         AddRoundKey (InvMixColumns s) (InvMixColumns k)`,
- PGEN_TAC (Term `(s0,s1,s2,s3,s4,s5,s6,s7,s8,s9,
-                  s10,s11,s12,s13,s14,s15):state`) THEN
- PGEN_TAC (Term `(k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,
-                  k10,k11,k12,k13,k14,k15):key`) THEN
+ TWO_BLOCK_VAR_TAC THEN
  RW_TAC (std_ss ++ simpLib.ac_ss [(c,a)]) 
-        [AddRoundKey_def, InvMixColumns_def,
+        [AddRoundKey_def, XOR_BLOCK_def, InvMixColumns_def,
          genMixColumns_def, InvMultCol_def, ConstMultDistrib]);
 
 
