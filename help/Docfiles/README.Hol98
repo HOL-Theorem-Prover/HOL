@@ -121,7 +121,7 @@ HOL currently offers the following libraries.
     | reduceLib       | basic reasoners for nums and bools          |
     | tautLib         | tautology prover                            |
     | HolBddLib       | BDD-based state-exploration tools           |
-    | HolSatLib       | Support for external satisfaibility tools   |
+    | HolSatLib       | Support for external satisfiability tools   |
     | hol88Lib        | support for hol88 compatibility             |
     | liteLib         | support for HOL-Light portability           |
     ----------------------------------------------------------------
