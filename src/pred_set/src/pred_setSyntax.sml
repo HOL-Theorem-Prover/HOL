@@ -38,4 +38,16 @@ val bigunion_tm = prim_mk_const{Name = "BIGUNION", Thy = "pred_set"}
 val cross_tm    = prim_mk_const{Name = "CROSS",    Thy = "pred_set"};
 
 
+fun mk_in (x,s) = list_mk_comb (inst [alpha |-> type_of x] in_tm, [x,s])
+
+fun strip_set e =
+ let fun strip tm = 
+      let val (_,[h,t]) = (assert (same_const insert_tm) ## I) (strip_comb tm)
+      in h::strip t
+      end 
+      handle HOL_ERR _ 
+      => if same_const tm empty_tm then [] else raise e
+ in strip
+ end;
+
 end

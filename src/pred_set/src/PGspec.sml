@@ -2,9 +2,12 @@
 (* FILE		: gspec.ml						*)
 (* DESCRIPTION  : Generalized set specification : {tm[xi...xn] | P}	*)
 (*								        *)
-(* REWRITTEN    : T Melham (adapted for pred_set: January 1992)	*)
+(* REWRITTEN    : T Melham (adapted for pred_set: January 1992)	        *)
 (* DATE		: 90.07.30						*)
-(* TRANSLATED to hol90: Feb 20 1992, Konrad Slind                       *)
+(* TRANSLATED   : Feb 20 1992, Konrad Slind                             *)
+(*                                                                      *)
+(* WARNING      : This code cannot statically depend on pred_setTheory, *)
+(*                since it is used in pred_setScript.                   *)
 (* =====================================================================*)
 
 
@@ -13,10 +16,7 @@ struct
 
 open HolKernel Parse boolLib pairSyntax PairedLambda
 
-infix THENC ORELSEC ## |->;
-
 val PAIR = pairTheory.PAIR;
-
 
 (* --------------------------------------------------------------------- *)
 (* Local function: MK_PAIR						 *)
@@ -84,14 +84,15 @@ end;
 (* --------------------------------------------------------------------- *)
 
 local
-val EQT = el 1 (CONJUNCTS (SPEC (--`c:bool`--) EQ_CLAUSES))
-val PEQ = let val inst = INST_TYPE [beta |-> bool]
-                           (GENL[--`x:'a`--, --`y:'b`--,
-                                 --`a:'a`--, --`b:'b`--] pairTheory.PAIR_EQ)
-              val spec = SPECL [(--`a:'a`--),(--`T`--),
-                                (--`b:'a`--),(--`c:bool`--)] inst
-          in GENL [(--`a:'a`--),(--`b:'a`--),(--`c:bool`--)] (SUBS [EQT] spec)
-          end
+  val EQT = el 1 (CONJUNCTS (SPEC (--`c:bool`--) EQ_CLAUSES))
+  val PEQ = 
+     let val inst = INST_TYPE [beta |-> bool]
+                      (GENL[--`x:'a`--, --`y:'b`--,
+                            --`a:'a`--, --`b:'b`--] pairTheory.PAIR_EQ)
+         val spec = SPECL [(--`a:'a`--),(--`T`--),
+                           (--`b:'a`--),(--`c:bool`--)] inst
+     in GENL [(--`a:'a`--),(--`b:'a`--),(--`c:bool`--)] (SUBS [EQT] spec)
+     end
 in
 fun PAIR_EQ_CONV tm =
    let val (vs,body) = strip_exists tm
@@ -180,57 +181,60 @@ fun list_variant l1 l2 =
 (*   GSPEC (\(x1,...,xn). (t[x1,...,xn], p[x1,...,xn]))		        *)
 (* ---------------------------------------------------------------------*)
 
-fun check_const (s,thy) =
-  assert (fn c =>
-           let val {Name, Thy, ...} = dest_thy_const c
-           in s=Name andalso thy=Thy
-           end handle HOL_ERR _ => false);
+val checkIN = assert (fn tm =>    
+            (case dest_thy_const tm
+             of {Name="IN", Thy="bool",...} => true
+              | other => false) handle HOL_ERR _ => false)
 
-local
-val RAconv = RAND_CONV o ABS_CONV
-val conv = RAND_CONV(RAconv(RAND_CONV BETA_CONV))
-val conv2 = RAND_CONV (PAIR_EQ_CONV THENC PROVE_EXISTS)
-(* Would be simpler with dest_pabs *)
-fun mktup tm =
-   let val (Bvar,Body) = dest_abs(rand tm)
-       val (xs,res) = mktup Body
-   in (Bvar::xs,res)
-   end handle HOL_ERR _ =>
-        let val (Bvar,Body) = dest_abs tm
-        in ([Bvar], fst(dest_pair Body))
-        end
+val checkGSPEC = assert (fn tm => (* Dynamic dependence on pred_set *)
+            (case dest_thy_const tm
+             of {Name="GSPEC", Thy="pred_set",...} => true
+              | other => false) handle HOL_ERR _ => false)
+
+local val RAconv = RAND_CONV o ABS_CONV
+      val conv = RAND_CONV(RAconv(RAND_CONV BETA_CONV))
+      val conv2 = RAND_CONV (PAIR_EQ_CONV THENC PROVE_EXISTS)
+      (* Would be simpler with dest_pabs *)
+      fun mktup tm =
+         let val (Bvar,Body) = dest_abs(rand tm)
+             val (xs,res) = mktup Body
+         in (Bvar::xs,res)
+         end handle HOL_ERR _ 
+             => let val (Bvar,Body) = dest_abs tm
+                in ([Bvar], fst(dest_pair Body))
+                end
 in
 fun SET_SPEC_CONV th =
  let val GSPEC = let val vs = fst(strip_forall(concl th))
                  in GENL (rev vs) (SPECL vs th)
                 end
  in fn tm =>
-   let val (_,[v,set]) = (check_const ("IN","bool") ## I) (strip_comb tm)
-       val (Rator,f) = dest_comb set
-       val _ = check_const ("GSPEC","pred_set") Rator
-       val vty = type_of v
-       and [uty,_] = snd(dest_type(type_of f))
-       val inst = SPEC v (INST_TYPE [alpha |-> vty, beta |-> uty] GSPEC)
-       val (vs,res) = mktup f
-   in
-   if all (not o (C free_in res)) vs
-   then let val spec = CONV_RULE conv (SPEC f inst)
-     	    val thm1 = CONV_RULE conv2 spec
-        in thm1
-        end
-   else if is_var res
-        then let val spec = CONV_RULE conv (SPEC f inst)
-                 val thm1 = CONV_RULE (RAND_CONV PAIR_EQ_CONV) spec
-             in TRANS thm1 (ELIM_EXISTS_CONV (rhs(concl thm1)))
-             end
-        else let val spec = SPEC f inst
-                 val exsts = rhs(concl spec)
-                 val nvs = list_variant (free_vars v) vs
-                 val thm = EXISTS_TUPLE_CONV nvs exsts
-             in TRANS spec (CONV_RULE (RAND_CONV PAIR_EQ_CONV) thm)
-             end
-   end
-   handle e => raise (wrap_exn "PGspec" "SET_SPEC_CONV" e)
+  let val (_,[v,set]) = (checkIN ## I) (strip_comb tm)
+      val (Rator,f) = dest_comb set
+      val _ = checkGSPEC Rator
+      val vty = type_of v
+      val [uty,_] = snd(dest_type(type_of f))
+      val inst = SPEC v (INST_TYPE [alpha |-> vty, beta |-> uty] GSPEC)
+      val (vs,res) = mktup f
+  in
+  if all (not o (C free_in res)) vs
+  then let val spec = CONV_RULE conv (SPEC f inst)
+           val thm1 = CONV_RULE conv2 spec
+       in thm1
+       end
+  else if is_var res
+       then let val spec = CONV_RULE conv (SPEC f inst)
+                val thm1 = CONV_RULE (RAND_CONV PAIR_EQ_CONV) spec
+            in TRANS thm1 (ELIM_EXISTS_CONV (rhs(concl thm1)))
+            end
+       else let val spec = SPEC f inst
+                val exsts = rhs(concl spec)
+                val nvs = list_variant (free_vars v) vs
+                val thm = EXISTS_TUPLE_CONV nvs exsts
+            in TRANS spec (CONV_RULE (RAND_CONV PAIR_EQ_CONV) thm)
+            end
+  end
+  handle e => raise wrap_exn "PGspec" "SET_SPEC_CONV" e
 end end;
 
-end; (* Gspec *)
+end (* Gspec *)

@@ -31,4 +31,7 @@ sig
   val union_tm    : term 
   val univ_tm     : term 
 
+  val mk_in       : term * term -> term 
+
+  val strip_set   : exn -> term -> term list
 end

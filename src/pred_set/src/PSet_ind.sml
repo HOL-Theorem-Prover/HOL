@@ -9,6 +9,9 @@
 (*									*)
 (* REMARKS	: Dependence on taut library removed. Use of rewriting  *)
 (*		  eliminated.  Optimized for speed.  Simplified. 	*)
+(*                                                                      *)
+(*                This code cannot statically depend on pred_setTheory, *)
+(*                since it is used in pred_setScript.                   *)
 (* =====================================================================*)
 
 structure PSet_ind :> PSet_ind =
@@ -27,8 +30,6 @@ struct
 (* ---------------------------------------------------------------------*)
 
 open HolKernel Parse boolLib;
-
-infix THEN THENL |->;
 
 local val check = assert (fn tm => 
             (case dest_thy_const (rator tm)
