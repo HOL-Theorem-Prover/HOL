@@ -1,6 +1,6 @@
 (*---------------------------------------------------------------------------
        Mapping finite sets into lists. Needs a constraint that 
-       the set is finite. Ordinarily, one would introduce this 
+       the set is finite. One might think to introduce this 
        function via a constant specification, but in this case, 
        TFL technology makes an easy job of it.
  ---------------------------------------------------------------------------*)
@@ -12,9 +12,7 @@ open pred_setTheory bossLib;
        Make definition of set2list function.
  ---------------------------------------------------------------------------*)
 
-val set2list_defn = 
- Hol_defn
-  "set2list"
+val set2list_defn = Hol_defn "set2list"
   `set2list s = 
      if FINITE s then 
         if s={} then []
@@ -33,13 +31,12 @@ val (set2list_eqn0, set2list_ind) =
 (*---------------------------------------------------------------------------
       Desired recursion equation.
 
-      |- FINITE s ==> (set2list s = if s = {} then [] 
-                                    else CHOICE s::set2list (REST s))
+      FINITE s |- set2list s = if s = {} then [] 
+                               else CHOICE s::set2list (REST s)
 
  ---------------------------------------------------------------------------*)
 
-val set2list_eqn = 
-  DISCH_ALL (ASM_REWRITE_RULE [ASSUME (Term`FINITE s`)] set2list_eqn0);
+val set2list_eqn = ASM_REWRITE_RULE [ASSUME (Term`FINITE s`)] set2list_eqn0;
 
 
 (*---------------------------------------------------------------------------
@@ -53,23 +50,31 @@ val list2set =
 
 
 (*---------------------------------------------------------------------------
-       A couple of useful consequences.
+            Some consequences
  ---------------------------------------------------------------------------*)
 
-val setlist_thm = Q.prove
+val set2list_thm = Q.prove
 (`!s. FINITE s ==> (list2set(set2list s) = s)`,
  recInduct set2list_ind
    THEN RW_TAC std_ss [] 
-   THEN ONCE_REWRITE_TAC [set2list]
+   THEN ONCE_REWRITE_TAC [set2list_eqn]
    THEN RW_TAC std_ss [list2set]
    THEN PROVE_TAC [REST_DEF, FINITE_DELETE, CHOICE_INSERT_REST]);
 
+val set2list_CARD = Q.prove
+(`!s. FINITE s ==> (LENGTH (set2list s) = CARD s)`,
+ recInduct set2list_ind
+   THEN RW_TAC std_ss [] 
+   THEN ONCE_REWRITE_TAC [set2list_eqn]
+   THEN RW_TAC std_ss [listTheory.LENGTH,CARD_EMPTY]
+   THEN RW_TAC std_ss [REST_DEF, FINITE_DELETE]
+   THEN `FINITE (REST s)` by PROVE_TAC [REST_DEF,FINITE_DELETE]
+   THEN PROVE_TAC[CHOICE_INSERT_REST,CARD_INSERT,CHOICE_NOT_IN_REST,REST_DEF]);
 
 val setlist_IN_MEM = Q.prove
 (`!s. FINITE s ==> !x. x IN s = MEM x (set2list s)`,
  recInduct set2list_ind
    THEN RW_TAC std_ss [] 
-   THEN ONCE_REWRITE_TAC [set2list]
+   THEN ONCE_REWRITE_TAC [set2list_eqn]
    THEN RW_TAC std_ss [listTheory.MEM,NOT_IN_EMPTY]
    THEN PROVE_TAC [REST_DEF, FINITE_DELETE, IN_INSERT, CHOICE_INSERT_REST]);
-
