@@ -17,14 +17,6 @@ fun ERR func mesg = HOL_ERR{origin_structure = "Functional",
       Miscellaneous support
  ---------------------------------------------------------------------------*)
 
-fun list_to_string p delim =
-  let fun stringulate [] = []
-        | stringulate [x] = [p x]
-        | stringulate (h::t) = p h::delim::stringulate t
-  in 
-    fn l => String.concat (stringulate l)
-  end;
-
 val stringize = list_to_string int_to_string ", ";
 
 fun enumerate l = map (fn (x,y) => (y,x)) (Lib.enumerate 0 l);

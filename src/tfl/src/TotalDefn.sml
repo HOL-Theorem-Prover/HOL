@@ -1,7 +1,11 @@
+(*---------------------------------------------------------------------------
+       Proving that definitions terminate.
+ ---------------------------------------------------------------------------*)
+
 structure TotalDefn :> TotalDefn =
 struct
 
-open HolKernel Parse basicHol90Lib arithLib Let_conv NonRecSize;
+open HolKernel Parse basicHol90Lib arithLib Let_conv NonRecSize Defn0;
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
@@ -9,7 +13,7 @@ type thm    = Thm.thm;
 type conv   = Abbrev.conv
 type tactic = Abbrev.tactic;
 type proofs = GoalstackPure.proofs
-type defn   = Defn.defn;
+type defn   = Defn0.defn;
 type 'a quotation = 'a Portable.frag list
 
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
@@ -91,7 +95,7 @@ fun strip_prod_ty [] _ = raise ERR "strip_prod_ty" ""
             | _ => raise ERR "strip_prod_ty" "expected a product type"
 
 val numty = mk_type{Tyop="num", Args=[]};
-val Zero = Term`0`;
+val Zero = Term`0n`;
 val Plus = mk_const{Name="+", Ty=Type`:num -> num -> num`};
 fun mk_plus x y = list_mk_comb(Plus,[x,y]);
 fun K0 ty = mk_abs{Bvar=mk_var{Name="v",Ty=ty}, Body=Zero};
@@ -107,7 +111,7 @@ fun list_mk_prod_tyl L =
      in
        mk_pabs {varstruct=mk_pair{fst=x,snd=y},
                  body = mk_plus (mk_comb{Rator=(if b then tysize else K0) ty1,
-                                               Rand=x})
+                                         Rand=x})
                                 (mk_comb{Rator=M,Rand=y})}
      end) front last'
  end;
@@ -127,7 +131,7 @@ fun list_mk_prod_tyl L =
  * The second measure is just the total size of the arguments.               *
  *---------------------------------------------------------------------------*)
 
-local open Defn
+local open Defn0
 in
 fun guessR defn =
  if null (tcs_of defn) then []
@@ -148,25 +152,15 @@ fun guessR defn =
        end
 end;
 
-local open Defn
-in
-fun try_proof def tac r =
-   let val def' = set_reln def r
-       val tcs = tcs_of def'
-       val thm = prove(list_mk_conj tcs, tac)
-       val thml = CONJUNCTS thm
-    in
-       elim_tcs def' thml
-    end
-fun proveTotal0 tac def =
-  case guessR def
-    of [] => def
-     | cands => Lib.tryfind (try_proof def tac) cands
-end;
+
+fun proveTotal tac defn = 
+       elim_tcs defn (CONJUNCTS (prove(list_mk_conj (tcs_of defn), tac)))
 
 (*---------------------------------------------------------------------------
-      TC prover. Terribly terribly naive, but it still gets a lot.
+      Default TC simplifier and prover. Terribly terribly naive, but 
+      still useful. It knows all about the sizes of types.
  ---------------------------------------------------------------------------*)
+
 fun get_orig (TypeBase.ORIG th) = th
   | get_orig _ = raise ERR "get_orig" "not the original"
 
@@ -184,9 +178,63 @@ fun TC_SIMP_CONV simps tm =
   THENC REDEPTH_CONV BETA_CONV
   THENC Rewrite.REWRITE_CONV [arithmeticTheory.ADD_CLAUSES]) tm;
 
+
+(*---------------------------------------------------------------------------
+ * Trivial wellfoundedness prover for combinations of wellfounded relations.
+ *--------------------------------------------------------------------------*)
+
+local fun BC_TAC th = 
+        if (is_imp (#2 (Dsyntax.strip_forall (concl th))))
+        then MATCH_ACCEPT_TAC th ORELSE MATCH_MP_TAC th
+        else MATCH_ACCEPT_TAC th;
+      open relationTheory prim_recTheory pairTheory
+      val WFthms =  [WF_inv_image, WF_measure, WF_LESS, WF_Empty,
+                     WF_PRED, WF_RPROD, WF_LEX, WF_TC]
+in
+fun WF_TAC thms = REPEAT (MAP_FIRST BC_TAC (thms@WFthms) ORELSE CONJ_TAC)
+end;
+
 val default_simps =
-  [combinTheory.o_DEF,combinTheory.I_THM,prim_recTheory.measure_def, 
-   relationTheory.inv_image_def, pairTheory.LEX_DEF];
+         [combinTheory.o_DEF,
+          combinTheory.I_THM,
+          prim_recTheory.measure_def, 
+          relationTheory.inv_image_def, 
+          pairTheory.LEX_DEF];
+
+val ASM_ARITH_TAC = 
+      REPEAT STRIP_TAC
+        THEN REPEAT (POP_ASSUM 
+               (fn th => if arithSimps.is_arith (concl th) 
+                         then MP_TAC th else ALL_TAC))
+        THEN numLib.ARITH_TAC;
+
+fun TC_SIMP_TAC WFthl thl = 
+   WF_TAC WFthl THEN 
+   CONV_TAC (TC_SIMP_CONV (thl@default_simps)) THEN 
+   TRY ASM_ARITH_TAC;
+
+
+(*---------------------------------------------------------------------------
+    Rquote is a quotation denoting the termination relation. 
+ ---------------------------------------------------------------------------*)
+
+fun PRIM_WF_REL_TAC defn Rquote WFthms simps g =
+  (Defn.TC_INTRO_TAC defn 
+    THEN Q.EXISTS_TAC Rquote
+    THEN TC_SIMP_TAC WFthms simps) g;
+
+
+fun WF_REL_TAC defn Rquote = PRIM_WF_REL_TAC defn Rquote [] default_simps;
+
+
+(*---------------------------------------------------------------------------
+       Definition principles that automatically attempt
+       to prove termination. If the termination proof
+       fails, the definition attempt fails.
+ ---------------------------------------------------------------------------*)
+
+val ind_suffix = ref "_ind";
+val def_suffix = ref "_def";
 
 
 (*---------------------------------------------------------------------------
@@ -199,199 +247,105 @@ val default_simps =
 local open prim_recTheory relationTheory
 in
 fun default_prover g =
-(CONV_TAC (TC_SIMP_CONV (WF_measure::WF_LESS::WF_Empty::default_simps))
-  THEN REPEAT STRIP_TAC
-  THEN REPEAT (POP_ASSUM (fn th =>
-       if arithSimps.is_arith (concl th)
-       then MP_TAC th else ALL_TAC))
-  THEN CONV_TAC arithLib.ARITH_CONV) g
+ (CONV_TAC (TC_SIMP_CONV (WF_measure::WF_LESS::WF_Empty::default_simps))
+   THEN ASM_ARITH_TAC) g
 end;
 
-val proveTotal = proveTotal0 default_prover;
-
-val TC_SIMP_TAC = CONV_TAC (TC_SIMP_CONV []);
 
 (*---------------------------------------------------------------------------
-        Support for interactive termination proofs. Brought over
-        from Defn.
- ---------------------------------------------------------------------------*)
+    primDefine bindstem <defn> operates as follows:
 
-val tgoal        = Defn.tgoal
-val tprove       = Defn.tprove
-val TC_INTRO_TAC = Defn.TC_INTRO_TAC
-
-
- (*---------------------------------------------------------------------------
-  * Trivial wellfoundedness prover for combinations of wellfounded relations.
-  *--------------------------------------------------------------------------*)
-
-local fun BC_TAC th = 
-        if (is_imp (#2 (Dsyntax.strip_forall (concl th))))
-        then MATCH_ACCEPT_TAC th ORELSE MATCH_MP_TAC th
-        else MATCH_ACCEPT_TAC th;
-      open relationTheory prim_recTheory pairTheory listTheory
-      val WFthms =  [WF_inv_image, WF_measure, WF_LESS, WF_Empty,
-                     WF_PRED, WF_LIST_PRED, WF_RPROD, WF_LEX, WF_TC]
-in
-fun WF_TAC thms = REPEAT (MAP_FIRST BC_TAC (thms@WFthms) ORELSE CONJ_TAC)
-end;
-
-(*---------------------------------------------------------------------------
-    Rquote is a quotation denoting the termination relation. 
- ---------------------------------------------------------------------------*)
-
-fun PRIM_WF_REL_TAC defn Rquote WFthms simps g =
-  (TC_INTRO_TAC defn 
-    THEN Q.EXISTS_TAC Rquote
-    THEN WF_TAC WFthms
-    THEN CONV_TAC (TC_SIMP_CONV simps)) g;
-
-
-fun WF_REL_TAC defn Rquote = PRIM_WF_REL_TAC defn Rquote [] default_simps;
-
-
-(*---------------------------------------------------------------------------
-       Definition principles that automatically attempt
-       to prove termination. If the termination proof
-       fails, the definition attempt fails.
- ---------------------------------------------------------------------------*)
-
-val ind_suffix = ref "ind";
-val def_suffix = ref "def";
-
-(*---------------------------------------------------------------------------
-    Not quite right, since have to consider pairing translation, and
-    the sub-definitions in a mutual recursion.
- ---------------------------------------------------------------------------*)
-
-fun constants_of defn =
-  let val eqns = Defn.eqns_of defn
-      val nest_eqns = case Defn.aux_defn defn
-                       of NONE => [] 
-                        | SOME nest => [Defn.eqns_of nest]
-      val mut_eqns = case Defn.union_defn defn
-                      of NONE => [] 
-                       | SOME mut => 
-                           Defn.eqns_of mut 
-                            ::(case Defn.aux_defn mut
-                                of NONE => []
-                                 | SOME nest => [Defn.eqns_of nest])
-  in 
-     mk_set (map (wfrecUtils.func_of_cond_eqn o hd o strip_conj o concl)
-                       (eqns::(nest_eqns@mut_eqns)))
-  end;
-
-
-(*---------------------------------------------------------------------------
-    xDefine bindstem ` ... ` operates as follows:
-
-        1. It takes a defn probably made using Hol_fun.
-        2. If the definition is not recursive or is
+        1. If the definition is not recursive or is
            primitive recursive, the defining equations are 
            stored under bindstem_def (and returned).
-        3. Otherwise, we check to see if the definition
+        2. Otherwise, we check to see if the definition
            is schematic. If so, the induction theorem is stored
            under bindstem_ind and the recursion equations are stored
            under bindstem_def.
-        4. Otherwise, an attempt is made to prove termination. If this fails, 
+        3. Otherwise, an attempt is made to prove termination. If this fails, 
            then xDefine fails (and cleans up after itself).
-        5. Otherwise, the termination conditions are eliminated, and
+        4. Otherwise, the termination conditions are eliminated, and
            the induction theorem is stored under bindstem_ind and
            the recursion equations are stored under bindstem_def, before
            the recursion equations are returned.
  ---------------------------------------------------------------------------*)
 
-fun defn_to_eqns bindstem defn =
- let val defname = bindstem^"_"^ !def_suffix
-     val indname = bindstem^"_"^ !ind_suffix
+local val term_prover = proveTotal default_prover
+      fun try_proof defn Rcand = term_prover (Defn0.set_reln defn Rcand)
+in
+fun primDefine bindstem defn =
+ let val defname = bindstem^ !def_suffix
+     val indname = bindstem^ !ind_suffix
  in
-   if Defn.is_abbrev defn orelse Defn.is_primrec defn 
+   if Defn0.is_nonrec defn 
    then (Theory.set_MLname bindstem defname;
          Lib.say ("Definition stored under "^Lib.quote defname^".\n");
-         Defn.eqns_of defn)
+         (case Defn0.ind_of defn
+           of NONE => ()
+            | SOME th => (Lib.say (String.concat 
+                       ["Induction stored under ", Lib.quote indname, ".\n"]);
+                       save_thm(indname, th); ()));
+         Defn0.eqns_of defn)
+   else 
+   if Defn0.is_primrec defn 
+   then (Theory.set_MLname bindstem defname;
+         Lib.say ("Definition stored under "^Lib.quote defname^".\n");
+         Defn0.eqns_of defn)
    else
-   if not(null(Defn.params_of defn)) 
-   then let val ind = Option.valOf (Defn.ind_of defn)
+   if not(null(Defn0.params_of defn)) 
+   then let val ind = Option.valOf (Defn0.ind_of defn)
         in
           Lib.say (String.concat
            ["Schematic definition.\nEquations stored under ",
             Lib.quote defname, ".\nInduction stored under ",
             Lib.quote indname, ".\n"]);
           save_thm(indname, ind);
-          save_thm(defname, Defn.eqns_of defn)
+          save_thm(defname, Defn0.eqns_of defn)
         end
    else 
-    let val defn' = proveTotal defn handle HOL_ERR _ => defn
+    let val defn' = Lib.tryfind (try_proof defn) (guessR defn) 
+                    handle HOL_ERR _ => defn
     in 
-       if null(Defn.tcs_of defn')
-       then let val ind = Option.valOf (Defn.ind_of defn')
+       if null(Defn0.tcs_of defn')
+       then let val ind = Option.valOf (Defn0.ind_of defn')
             in
                Lib.say (String.concat
                 ["Equations stored under ",    Lib.quote defname,
                  ".\nInduction stored under ", Lib.quote indname, ".\n"]);
                save_thm(indname, ind);
-               save_thm(defname, Defn.eqns_of defn')
+               save_thm(defname, Defn0.eqns_of defn')
             end
        else (Lib.say (String.concat
                ["Unable to prove totality!\nUse \"Defn.Hol_defn\" to make ",
                "the definition,\nand \"Defn.tgoal <defn>\" to set up the ",
                "termination proof.\n"]);
-             mapfilter delete_const 
-                 (map wfrecUtils.atom_name (constants_of defn));
-             Theory.scrub();
-             raise ERR "xDefine" "Unable to prove termination")
+             raise ERR "primDefine" "Unable to prove termination")
     end
- end;
+ end
+end;
 
-fun xDefine bindstem q = defn_to_eqns bindstem (Defn.Hol_defn bindstem q);
+fun xDefine stem q = primDefine stem (Defn.Hol_defn stem q);
 
 
 (*---------------------------------------------------------------------------
-    Define ` ... ` creates a bindstem for the definition to be made, 
-    then calls xDefine. In the case of a single-recursive function
-    with an alphanumeric name, everything is simple. If the name
-    is symbolic, then the bindstem is generated from "symbol_". If 
-    the definition is mutually recursive, then the name is generated
-    from "mutrec" in a bizarre fashion.
+     Define and DefineR
  ---------------------------------------------------------------------------*)
 
-local val mut_namesl = ref []:string list list ref
-      val sort = Lib.sort (curry (op= :string*string->bool))
-      fun index_of x [] i = NONE
-        | index_of x (y::rst) i = if x=y then SOME i else index_of x rst (i+1)
-      fun inc_mutl names =
-        let val names' = sort names
-        in case index_of names' (!mut_namesl) 0
-            of NONE => (mut_namesl := !mut_namesl@[names']; 
-                        Option.valOf(index_of names' (!mut_namesl) 0))
-             | SOME i => i
-        end
-      val symbr = ref 0
-      fun gen_symbolic_name() = 
-         let val s = "symbol_"^Lib.int_to_string (!symbr)
-         in Portable.inc symbr; s
-         end
-      fun mk_bindstem []  = raise ERR "Define" "Can't find name of function"
-        | mk_bindstem [x] = 
-              if Lexis.ok_identifier x then x
-              else let val name = gen_symbolic_name()
-                   in Lib.say (String.concat
-                      ["Non-alphanumeric being defined.\n",
-                       "Invented stem for binding(s): ",Lib.quote name,".\n"]);
-                      name
-                   end
-        | mk_bindstem names =
-             let val name = "mutrec"^Lib.int_to_string(inc_mutl names)
-             in Lib.say (String.concat ["Mutually recursive definition.\n",
-                   "Invented stem for bindings is ", Lib.quote name,".\n"]);
-                name
-             end
+local fun msg alist invoc = String.concat
+          ["Definition failed! Can't make name for storing definition\n", 
+           "because there is no alphanumeric identifier in: \n\n   ",
+           wfrecUtils.list_to_string Lib.quote "," alist,
+           ".\n\nTry \"",invoc, "\" instead.\n\n"]
+       fun mk_bindstem exn invoc alist = 
+            Lib.first Lexis.ok_identifier alist
+            handle HOL_ERR _ => (Lib.say (msg alist invoc); raise exn)
 in
 fun Define q =
-   let val (ptm,names) = Defn.prepare_quote q
-       val bindstem = mk_bindstem names
+   let val (tm,names) = Defn.parse_defn q
+       val bindstem = mk_bindstem (ERR "Define" "") 
+            "xDefine <alphanumeric-stem> <eqns-quotation>" names 
    in 
-       defn_to_eqns bindstem (Defn.Hol_defn0 bindstem (ptm,names))
+       primDefine bindstem (Defn.mk_defn bindstem tm)
    end               
 end;
 

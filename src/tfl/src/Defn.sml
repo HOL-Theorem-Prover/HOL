@@ -2,7 +2,7 @@ structure Defn :> Defn =
 struct
 
 open HolKernel Parse Drule Conv 
-     Rules wfrecUtils Functional Induction pairTools;
+     Rules wfrecUtils Functional Induction pairTools Defn0;
 
 type hol_type     = Type.hol_type
 type term         = Term.term
@@ -11,7 +11,9 @@ type conv         = Abbrev.conv
 type tactic       = Abbrev.tactic
 type thry         = TypeBase.typeBase
 type proofs       = GoalstackPure.proofs
+type defn         = Defn0.defn
 type absyn        = Absyn.absyn
+type ppstream     = Portable.ppstream
 type 'a quotation = 'a Portable.frag list
 
 infixr 3 -->;
@@ -118,34 +120,11 @@ fun ModusPonens th1 th2 =
 
 
 
-(*---------------------------------------------------------------------------
-    The type of definitions. This is an attempt to gather all the 
-    information about a definition in one place.
- ---------------------------------------------------------------------------*)
-
-datatype defn
-   = ABBREV  of thm
-   | PRIMREC of {eqs:thm, ind:thm}
-   | STDREC  of {eqs:thm, ind:thm, R:term, SV:term list}
-   | NESTREC of {eqs:thm, ind:thm, R:term, SV:term list,aux:defn}
-   | MUTREC  of {eqs:thm, ind:thm, R:term, SV:term list,union:defn};
-
-fun is_abbrev  (ABBREV _)  = true | is_abbrev _  = false;
-fun is_primrec (PRIMREC _) = true | is_primrec _ = false;
-fun is_nestrec (NESTREC _) = true | is_nestrec _ = false;
-fun is_mutrec  (MUTREC _)  = true | is_mutrec _  = false;
 
 
 (*---------------------------------------------------------------------------
         Termination condition extraction
  ---------------------------------------------------------------------------*)
-
-local open boolTheory
-      val non_datatype_context = ref [LET_CONG, COND_CONG]
-in
-  fun read_context() = !non_datatype_context
-  fun write_context L = (non_datatype_context := L)
-end;
 
 fun extraction_thms thy = 
  let val {case_rewrites,case_congs} = extract_info thy
@@ -595,8 +574,9 @@ fun mutrec thy name eqns =
              val Uapp  = mk_comb(mut_constSV,
                             beta_conv(mk_comb(inbar,list_mk_pair defvars)))
              val drhs  = beta_conv (mk_comb(outbar,Uapp))
+             val thybind = fvarname^"_from_"^mut_name
          in 
-           (make_definition thy fvarname (mk_eq(dlhs,drhs)) , (Uapp,outbar))
+           (make_definition thy thybind (mk_eq(dlhs,drhs)) , (Uapp,outbar))
          end
       fun mk_def (f,ftup) (defl,thy,Uout_map) =
             let val ((d,thy'),Uout) = define_subfn (f,ftup) thy 
@@ -667,22 +647,6 @@ fun dest_hd_eqn eqs =
   in (strip_comb lhs, rhs)
   end;
 
-(*---------------------------------------------------------------------------
-   Not needed in overwriting model of theories, provided that internal
-   definitions made in course of an intended definition don't get
-   overwritten.
-
-fun safe_defname n =
-  let val taken = C mem (map (#2 o #1) (DB.thy "-"))
-  in if taken n 
-     then let fun loop k = 
-                let val n' = n^Lib.int_to_string k
-                in if taken n' then loop (k+1) else n' 
-                end
-          in loop 0 end
-     else n
- end;
- --------------------------------------------------------------------------- *)
 
 (*---------------------------------------------------------------------------
        The purpose of pairf is to translate a prospective definition 
@@ -756,7 +720,7 @@ fun non_wfrec_defn (facts,stem,eqns) =
                val ind = TypeBase.induction_of tyinfo
            in PRIMREC{eqs=def, ind=ind}
            end
-    else ABBREV (new_definition (stem,eqns))
+    else NONREC {eqs=new_definition (stem,eqns), ind=NONE}
  end
 end;
 
@@ -796,8 +760,8 @@ fun stdrec_defn (facts,stem',wfrec_res,untuple) =
             val r2        = MATCH_MP (DISCH_ALL r1) Empty_thm
             val i2        = MATCH_MP (DISCH_ALL i1) Empty_thm
         in
-           STDREC {eqs=r2, ind=i2, R=rand(concl Empty_thm), SV=SV}
-        end handle HOL_ERR _ => raise ERR "std_rec_defn" "")
+           NONREC {eqs=r2, ind=SOME i2}
+        end handle HOL_ERR _ => raise ERR "stdrec_defn" "")
   | otherwise => 
         let val (rules', ind') = untuple (rules, ind)
         in STDREC {eqs=rules',ind=ind', R=R, SV=SV}
@@ -828,7 +792,6 @@ fun mk_defn stem eqns =
      else
      let val (tup_eqs,stem',untuple) = pairf(stem,eqns)
          val wfrec_res = wfrec_eqns facts tup_eqs 
-         handle e as HOL_ERR _ => (Lib.say"Definition failed.\n"; raise e)
      in
         if exists I (#3 (unzip3 (#extracta wfrec_res)))   (* nested *)
         then nestrec_defn (facts,stem',wfrec_res,untuple)
@@ -836,192 +799,12 @@ fun mk_defn stem eqns =
      end 
  end;
 
-
-fun eqns_of (ABBREV th)          = th
-  | eqns_of (PRIMREC {eqs, ...}) = eqs
-  | eqns_of (STDREC  {eqs, ...}) = eqs
-  | eqns_of (NESTREC {eqs, ...}) = eqs
-  | eqns_of (MUTREC  {eqs, ...}) = eqs;
-
-fun eqnl_of d = CONJUNCTS (eqns_of d)
-
-fun aux_defn (NESTREC {aux, ...}) = SOME aux
-  | aux_defn     _  = NONE;
-
-fun union_defn (MUTREC {union, ...}) = SOME union
-  | union_defn     _  = NONE;
-
-fun ind_of (ABBREV th)          = NONE
-  | ind_of (PRIMREC {ind, ...}) = SOME ind
-  | ind_of (STDREC  {ind, ...}) = SOME ind
-  | ind_of (NESTREC {ind, ...}) = SOME ind
-  | ind_of (MUTREC  {ind, ...}) = SOME ind;
-
-
-fun params_of (ABBREV _)  = []
-  | params_of (PRIMREC _) = []
-  | params_of (STDREC  {SV, ...}) = SV
-  | params_of (NESTREC {SV, ...}) = SV
-  | params_of (MUTREC  {SV, ...}) = SV;
-
-fun tcs_of (ABBREV _)  = []
-  | tcs_of (PRIMREC _) = []
-  | tcs_of (STDREC  {ind, ...}) = hyp ind
-  | tcs_of (NESTREC {ind, ...}) = hyp ind  (* this is wrong! *)
-  | tcs_of (MUTREC  {ind, ...}) = hyp ind;
-
-
-fun reln_of (ABBREV _)  = NONE
-  | reln_of (PRIMREC _) = NONE
-  | reln_of (STDREC  {R, ...}) = SOME R
-  | reln_of (NESTREC {R, ...}) = SOME R
-  | reln_of (MUTREC  {R, ...}) = SOME R;
-
-
-fun schematic defn = not(List.null (params_of defn));
-
-fun nUNDISCH n th = if n<1 then th else nUNDISCH (n-1) (UNDISCH th)
-
-fun INST_THM theta th =
-  let val asl = hyp th
-      val th1 = rev_itlist DISCH asl th
-      val th2 = INST_TY_TERM theta th1
-  in
-   nUNDISCH (length asl) th2
+fun mk_Rdefn stem R eqs =
+  let val defn = mk_defn stem eqs
+  in case reln_of defn 
+      of NONE => defn
+       | SOME Rvar => inst_defn defn (Term.match_term Rvar R)
   end;
-
-
-fun isubst (tmtheta,tytheta) tm = subst tmtheta (inst tytheta tm);
-fun inst_defn (STDREC{eqs,ind,R,SV}) theta =
-      STDREC {eqs=INST_THM theta eqs,
-              ind=INST_THM theta ind,
-              R=isubst theta R,
-              SV=map (isubst theta) SV}
-  | inst_defn (NESTREC{eqs,ind,R,SV,aux}) theta =
-      NESTREC {eqs=INST_THM theta eqs,
-               ind=INST_THM theta ind,
-               R=isubst theta R,
-               SV=map (isubst theta) SV,
-               aux=inst_defn aux theta}
-  | inst_defn (MUTREC{eqs,ind,R,SV,union}) theta =
-      MUTREC {eqs=INST_THM theta eqs,
-              ind=INST_THM theta ind,
-              R=isubst theta R,
-              SV=map (isubst theta) SV,
-              union=inst_defn union theta}
-  | inst_defn (PRIMREC{eqs,ind}) theta =
-      PRIMREC{eqs=INST_THM theta eqs,
-              ind=INST_THM theta ind}
-  | inst_defn (ABBREV eq) theta = ABBREV (INST_THM theta eq)
-
-
-fun set_reln (STDREC {eqs, ind, R, SV}) R1 =
-     let val (theta as (_,tytheta)) = Term.match_term R R1
-         val subs = INST_THM theta
-     in
-       STDREC{R=R1, SV=map (inst tytheta) SV,
-              eqs=subs eqs,
-              ind=subs ind}
-     end
-  | set_reln (NESTREC {eqs, ind, R, SV, aux}) R1 =
-     let val (theta as (_,tytheta)) = Term.match_term R R1
-         val subs = INST_THM theta
-     in
-       NESTREC{R=R1, SV=map (inst tytheta) SV,
-               eqs=subs eqs,
-               ind=subs ind,
-               aux=set_reln aux R1}
-     end
-  | set_reln (MUTREC {eqs, ind, R, SV, union}) R1 =
-     let val (theta as (_,tytheta)) = Term.match_term R R1
-         val subs = INST_THM theta
-     in
-       MUTREC{R=R1, SV=map (inst tytheta) SV,
-              eqs=subs eqs,
-              ind=subs ind,
-              union=set_reln union R1}
-     end
-  | set_reln x _ = x;
-
-
-fun PROVE_HYPL thl th =
-  let val thm = itlist PROVE_HYP thl th
-  in if null(hyp thm) then thm
-     else raise ERR "PROVE_HYPL" "remaining termination conditions"
-  end;
-
-
-(* Should perhaps be extended to existential theorems. *)
-
-fun elim_tcs (STDREC {eqs, ind, R, SV}) thms =
-     STDREC{R=R, SV=SV,
-            eqs=PROVE_HYPL thms eqs,
-            ind=PROVE_HYPL thms ind}
-  | elim_tcs (NESTREC {eqs, ind, R,  SV, aux}) thms =
-     NESTREC{R=R, SV=SV,
-            eqs=PROVE_HYPL thms eqs,
-            ind=PROVE_HYPL thms ind,
-            aux=elim_tcs aux thms}
-  | elim_tcs (MUTREC {eqs, ind, R, SV, union}) thms =
-     MUTREC{R=R, SV=SV,
-            eqs=PROVE_HYPL thms eqs,
-            ind=PROVE_HYPL thms ind,
-            union=elim_tcs union thms}
-  | elim_tcs x _ = x;
-
-
-local fun isT M = (#Name(dest_const M) = "T") handle HOL_ERR _ => false
-      val lem = let val (tm1,tm2) = (Term`M:bool=M1`,  Term`M ==> P`)
-                in DISCH tm1 (DISCH tm2 (SUBS [ASSUME tm1] (ASSUME tm2)))
-                end
-in
-fun simp_assum conv tm th =
-  let val th' = DISCH tm th
-      val tmeq = conv tm
-      val tm' = rhs(concl tmeq)
-  in
-    if isT tm' then MP th' (EQT_ELIM tmeq)
-    else UNDISCH(MATCH_MP (MATCH_MP lem tmeq) th')
-  end
-end;
-
-fun SIMP_HYPL conv th = itlist (simp_assum conv) (hyp th) th;
-
-fun simp_tcs (STDREC {eqs, ind, R, SV}) conv =
-     STDREC{R=rhs(concl(conv R)), SV=SV,
-            eqs=SIMP_HYPL conv eqs,
-            ind=SIMP_HYPL conv ind}
-  | simp_tcs (NESTREC {eqs, ind, R,  SV, aux}) conv =
-     NESTREC{R=rhs(concl(conv R)), SV=SV,
-            eqs=SIMP_HYPL conv eqs,
-            ind=SIMP_HYPL conv ind,
-            aux=simp_tcs aux conv}
-  | simp_tcs (MUTREC {eqs, ind, R, SV, union}) conv =
-     MUTREC{R=rhs(concl(conv R)), SV=SV,
-            eqs=SIMP_HYPL conv eqs,
-            ind=SIMP_HYPL conv ind,
-            union=simp_tcs union conv}
-  | simp_tcs x _ = x;
-
-
-fun TAC_HYPL tac th = 
-  PROVE_HYPL (mapfilter (C (curry Tactical.prove) tac) (hyp th)) th;
-
-fun prove_tcs (STDREC {eqs, ind, R, SV}) tac =
-     STDREC{R=R, SV=SV,
-            eqs=TAC_HYPL tac eqs,
-            ind=TAC_HYPL tac ind}
-  | prove_tcs (NESTREC {eqs, ind, R,  SV, aux}) tac =
-     NESTREC{R=R, SV=SV,
-            eqs=TAC_HYPL tac eqs,
-            ind=TAC_HYPL tac ind,
-            aux=prove_tcs aux tac}
-  | prove_tcs (MUTREC {eqs, ind, R, SV, union}) tac =
-     MUTREC{R=R, SV=SV,
-            eqs=TAC_HYPL tac eqs,
-            ind=TAC_HYPL tac ind,
-            union=prove_tcs union tac}
-  | prove_tcs x _ = x;
 
 
 (*---------------------------------------------------------------------------
@@ -1043,9 +826,7 @@ fun vary s S =
       let val s' = s^Lib.int_to_string n
       in if mem s' S then V (n+1) else (s',s'::S)
       end
- in 
-   V 0
- end;
+ in V 0 end;
 
 (*---------------------------------------------------------------------------
     A wildcard is a contiguous sequence of underscores. This is 
@@ -1107,7 +888,7 @@ fun exp (AQ tm) S = let val (tm',S') = tm_exp tm S in (AQ tm',S') end
   | exp(TYPED(M,pty)) S = let val (M',S') = exp M S in (TYPED(M',pty),S') end
   | exp(LAM _) _ = raise ERR "exp" "abstraction in pattern"
 
-fun top_exp asy (asyl,S) = 
+fun expand_wildcards asy (asyl,S) = 
    let val (asy',S') = exp asy S 
    in (asy'::asyl, S') 
    end
@@ -1124,7 +905,7 @@ fun munge eq (eqs,fset,V) =
                         then raise ERR "munge" "wildcards on rhs" else ()
      val (f,pats)     = Absyn.strip_app lhs
      val fstr         = Absyn.dest_ident f
-     val (pats',V')   = rev_itlist top_exp pats 
+     val (pats',V')   = rev_itlist expand_wildcards pats 
                             ([],Lib.union V (map dest_pvar vlist))
      val new_eq       = Absyn.list_mk_forall(vlist,
                           Absyn.mk_eq(Absyn.list_mk_app(f,rev pats'), rhs))
@@ -1140,23 +921,30 @@ fun elim_wildcards eqs =
    (Absyn.list_mk_conj (rev eql), fset)
  end;
 
-fun prepare_quote q = 
-  let val absyn0 = Absyn.quote_to_absyn q
-      val (absyn,fset) = elim_wildcards absyn0
-  in (absyn, map drop_dollar fset)
-  end
+fun parse_defn q = 
+ let val absyn0 = Absyn.quote_to_absyn q
+     val (absyn,fset) = elim_wildcards absyn0
+     val fn_names = map drop_dollar fset
+     val allfn_names = map dollar fn_names @ fn_names
+     val  _   = List.app Parse.hide allfn_names
+     val tm = Absyn.absyn_to_term absyn
+              handle e => (List.app Parse.reveal allfn_names; raise e)
+     val _ = List.app Parse.reveal allfn_names
+ in 
+    (tm, fn_names)
+ end;
 
+fun Hol_defn bindstem q = mk_defn bindstem (fst(parse_defn q));
 
-fun Hol_defn0 bindstem (absyn,fn_names) = 
-  let val allfn_names = map dollar fn_names @ fn_names
-      val  _   = List.app Parse.hide allfn_names
-      val defn = mk_defn bindstem (Absyn.absyn_to_term absyn)
-      handle e => (List.app Parse.reveal allfn_names; raise e)
-  in
-     List.app Parse.reveal allfn_names  ;  defn
-  end
-
-fun Hol_defn bindstem q = Hol_defn0 bindstem (prepare_quote q);
+fun Hol_Rdefn bindstem Rquote eqs_quote = 
+  let val defn = Hol_defn bindstem eqs_quote
+  in case reln_of defn
+      of NONE => defn
+       | SOME Rvar =>
+          let val R = Parse.typedTerm Rquote (type_of Rvar)
+          in inst_defn defn (Term.match_term Rvar R) 
+          end
+  end;
 
 
 (*---------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 structure Rules :> Rules = 
 struct
 
-open HolKernel Drule Conv Rewrite Let_conv tflUtils
+open HolKernel Drule Conv Rewrite Let_conv wfrecUtils
 
 type ('a,'b) subst = ('a,'b)Lib.subst
 type term = Term.term
@@ -133,7 +133,7 @@ fun solver (restrf,f,G,nref) simps context tm =
       val rcontext = rev context
       val antl = case rcontext of [] => [] 
                                | _   => [list_mk_conj(map concl rcontext)]
-      val (R,arg,pat) = tflUtils.dest_relation tm
+      val (R,arg,pat) = wfrecUtils.dest_relation tm
       val TC = genl(list_mk_imp(antl, tm))
   in 
      if can(find_term (aconv restrf)) arg

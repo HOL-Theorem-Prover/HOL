@@ -29,7 +29,16 @@ fun gtake f =
   end;
 
 
-fun mk_sum_type ty1 ty2  = Type.mk_type{Tyop="sum",Args=[ty1,ty2]}
+fun list_to_string f delim =
+  let fun stringulate [] = []
+        | stringulate [x] = [f x]
+        | stringulate (h::t) = f h::delim::stringulate t
+  in 
+    fn l => String.concat (stringulate l)
+  end;
+
+
+fun mk_sum_type ty1 ty2  = Type.mk_type{Tyop="sum", Args=[ty1,ty2]}
 fun mk_prod_type ty1 ty2 = Type.mk_type{Tyop="prod",Args=[ty1,ty2]}
 
 val list_mk_fun_type  = end_itlist (curry(op -->));
@@ -44,7 +53,7 @@ fun strip_fun_type ty =
    | _ =>  ([],ty);
 
 fun strip_prod_type ty =
- if (Type.is_vartype ty) then [ty]
+ if Type.is_vartype ty then [ty]
  else case Type.dest_type ty
        of {Tyop="prod", Args=[l,r]}
             => strip_prod_type l @ strip_prod_type r
@@ -62,9 +71,7 @@ fun strip_imp tm =
         end
    else ([],tm);
 
-fun gen_all tm =
-  itlist (fn v => fn M => Dsyntax.mk_forall{Bvar=v,Body=M})
-        (free_vars_lr tm) tm;
+fun gen_all tm = itlist (curry Psyntax.mk_forall) (free_vars_lr tm) tm;
 
 
 local fun break [] = raise ERR "mk_vstruct" "unable"

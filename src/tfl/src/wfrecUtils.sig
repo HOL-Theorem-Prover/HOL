@@ -7,6 +7,7 @@ sig
   val zip3              : 'a list -> 'b list -> 'c list -> ('a * 'b * 'c) list
   val unzip3            : ('a * 'b * 'c) list -> 'a list * 'b list * 'c list
   val gtake             : ('a -> 'b) -> int * 'a list -> 'b list * 'a list
+  val list_to_string    : ('a -> string) -> string -> 'a list -> string
 
   val mk_sum_type       : hol_type -> hol_type -> hol_type
   val mk_prod_type      : hol_type -> hol_type -> hol_type

@@ -7,48 +7,25 @@ sig
   type tactic       = Abbrev.tactic
   type thry         = TypeBase.typeBase
   type proofs       = GoalstackPure.proofs
+  type defn         = Defn0.defn
   type absyn        = Absyn.absyn
+  type ppstream     = Portable.ppstream
   type 'a quotation = 'a Portable.frag list
 
-  type defn
 
-  val monitoring : bool ref
-
-  val read_context  : unit -> thm list
-  val write_context : thm list -> unit
+  val monitoring : bool ref    (* currently useless *)
 
   val mk_defn    : string -> term -> defn
+  val mk_Rdefn   : string -> term -> term -> defn
   val Hol_defn   : string -> term quotation -> defn
+  val Hol_Rdefn  : string -> term quotation -> term quotation -> defn
 
-  val is_abbrev  : defn -> bool
-  val is_primrec : defn -> bool
-  val is_nestrec : defn -> bool
-  val is_mutrec  : defn -> bool
-
-  val eqns_of    : defn -> thm
-  val eqnl_of    : defn -> thm list
-  val ind_of     : defn -> thm option
-  val tcs_of     : defn -> term list
-  val reln_of    : defn -> term option
-  val params_of  : defn -> term list
-
-  val aux_defn   : defn -> defn option
-  val union_defn : defn -> defn option
-
-  val set_reln   : defn -> term -> defn
-
-  val inst_defn  : defn -> (term,term)Lib.subst * 
-                           (hol_type,hol_type)Lib.subst -> defn
-  val elim_tcs   : defn -> thm list -> defn
-  val simp_tcs   : defn -> conv -> defn
-  val prove_tcs  : defn -> tactic -> defn
-
+  (* val save_defn : defn -> unit *)
   val tgoal      : defn -> proofs
   val tprove     : defn * tactic -> thm * thm
-  val TC_INTRO_TAC  : defn -> tactic
+  val TC_INTRO_TAC : defn -> tactic
 
-  val prepare_quote : term quotation -> absyn * string list
-  val Hol_defn0     : string -> absyn * string list -> defn
+  val parse_defn : term quotation -> term * string list
 
 
    (* Historical relics *)
@@ -61,11 +38,12 @@ sig
    val gen_wfrec_definition : 
          thry -> string
               -> {R:term, eqs:term}
-              -> {rules:thm, 
-                  TCs: term list list,
-                  full_pats_TCs: (term * term list) list,
-                  patterns :Functional.pattern list,
+              -> {rules : thm, 
+                  TCs : term list list,
+                  full_pats_TCs : (term * term list) list,
+                  patterns : Functional.pattern list,
                   theory:thry}
+
 
 (*---------------------------------------------------------------------------
 
@@ -76,8 +54,8 @@ sig
      constraints are automatically synthesized. The following kinds of
      equations are handled:
 
-       1. Non-recursive definition, varstructs (tuples of variables)
-          are allowed on the left hand side.
+       1. Single equation, Non-recursive, varstructs (tuples of variables)
+          allowed on the left hand side.
              -- use standard abbreviation mechanism of HOL
 
        2. Primitive recursive (or non-recursive) over known datatype.
@@ -88,8 +66,8 @@ sig
                 (all arguments to recursive calls are immediate subterms
                 of the argument to the initiating call).
 
-       3. Non-recursive definition, over more complex patterns than
-          allowed in 1 or 2.
+       3. Non-recursive set of equations, over more complex patterns than
+          allowed in 1.
              -- use wellfounded recursion, and automatically eliminate 
                 the vacuous wellfoundedness requirement. There will be
                 no other termination conditions.
@@ -106,7 +84,7 @@ sig
                 to be deferred. The termination conditions will be 
                 those of the auxiliary function.
 
-       6. Mutual recursions.
+       6. Mutual recursions that aren't handled by 2.
              -- use wellfounded recursion. An auxiliary `union' function
                 is defined , from which the specified functions are derived.
                 If the union function is a nested recursion, then 5 is 
