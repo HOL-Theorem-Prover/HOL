@@ -276,7 +276,7 @@ val PAR_DEV_IMP =
 val ITE_DEV_IMP =
  store_thm
   ("ITE_DEV_IMP",
-   ``!P1 P2 Q1 Q2. 
+   ``!P1 P2 P3 Q1 Q2 Q3. 
        P1 ===> Q1 /\ P2 ===> Q2 /\ P3 ===> Q3
        ==>
        (ITE P1 P2 P3 ===> ITE Q1 Q2 Q3)``,   
@@ -287,7 +287,7 @@ val ITE_DEV_IMP =
 val REC_DEV_IMP =
  store_thm
   ("REC_DEV_IMP",
-   ``!P1 P2 Q1 Q2. 
+   ``!P1 P2 P3 Q1 Q2 Q3. 
        P1 ===> Q1 /\ P2 ===> Q2 /\ P3 ===> Q3
        ==>
        (REC P1 P2 P3 ===> REC Q1 Q2 Q3)``,   
