@@ -14,15 +14,14 @@
 (* =====================================================================*)
 
 (* Interactive prelude
-  app load ["stringLib", "ind_defLib", "Datatype"];
+  app load ["stringLib", "IndDefLib", "bossLib"];
 *)
 
 
 structure opsemScript =
 struct
 
-open HolKernel Parse boolLib
-     stringLib indDefLib Datatype;
+open HolKernel Parse boolLib bossLib stringLib IndDefLib IndDefRules;
 
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
@@ -33,7 +32,7 @@ infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 (* Open a new theory and load the required libraries.			*)
 (* ---------------------------------------------------------------------*)
 
-val _ = new_theory"opsem";
+val _ = new_theory "opsem";
 
 (* ===================================================================== *)
 (* Syntax of the programming language.					 *)
@@ -113,64 +112,25 @@ val _ = set_fixity ";;" (Infixr 350);
 (* inductively by the set of rules shown below.  			*)
 (* ---------------------------------------------------------------------*)
 
-infix 5 -------------------------------------------------------------------;
-fun (x ------------------------------------------------------------------- y)
-    = (x,y);
-
-(* Lift type antiquotes so they can be used in term quotations. *)
-
 val State = ty_antiq state;
 val Bexp = ty_antiq bexp;
 
-val {rules,induction} =
- let val EVAL = Term`EVAL : comm -> ^State -> ^State -> bool`
- in
-  indDefine "trans"
-   [
-
-    ([],                                                            [])
-    -------------------------------------------------------------------
-                         `^EVAL Skip s s`                             ,
-
-    ([],                                                            [])
-    -------------------------------------------------------------------
-               `^EVAL (V :== E) s (\v. (v=V) => E s | s v)`            ,
-
-
-    ([        `^EVAL C1 s1 s2`,         `^EVAL C2 s2 s3`          ],[])
-    -------------------------------------------------------------------
-                       `^EVAL (C1;;C2) s1 s3`                         ,
-
-
-    ([`                     ^EVAL C1 s1 s2`         ],[`(B:^Bexp) s1`])
-    -------------------------------------------------------------------
-                       `^EVAL (If B C1 C2) s1 s2`                     ,
-
-
-    ([                    `^EVAL C2 s1 s2`      ], [ `~(B:^Bexp) s1` ])
-    -------------------------------------------------------------------
-                      `^EVAL (If B C1 C2) s1 s2`                      ,
-
-
-    ([],[                  `~(B:^Bexp) s`                            ])
-    -------------------------------------------------------------------
-                        `^EVAL (While B C) s s`                        ,
-
-
-    ([`^EVAL C s1 s2`,     `^EVAL (While B C) s2 s3`], [`(B:^Bexp) s1`])
-    -------------------------------------------------------------------
-                      `^EVAL (While B C) s1 s3`                        ]
-
-    Prefix (`^EVAL C s1 s2`, [])
-
-end;
-
+val (rules,induction,ecases) =
+ Hol_reln
+  `(!s. EVAL Skip s s) /\
+   (!s V E. EVAL (V :== E) s (\v. if v=V then E s else s v)) /\
+   (!s1 s2 s3 C1 C2.EVAL C1 s1 s2 /\ EVAL C2 s2 s3 ==> EVAL (C1;;C2) s1 s3) /\
+   (!s1 s2 B C1 C2. EVAL C1 s1 s2 /\ B s1 ==> EVAL (If B C1 C2) s1 s2) /\
+   (!s1 s2 B C1 C2. EVAL C2 s1 s2 /\ ~B s1 ==> EVAL (If B C1 C2) s1 s2) /\
+   (!s B C. ~B s ==> EVAL (While B C) s s) /\
+   (!s1 s2 s3 B C. EVAL C s1 s2 /\ EVAL (While B C) s2 s3 /\ B s1
+                     ==> EVAL (While B C) s1 s3)`;
 
 (* --------------------------------------------------------------------- *)
 (* Stronger form of rule induction.					 *)
 (* --------------------------------------------------------------------- *)
 
-val sind = derive_strong_induction(rules,induction);
+val sind = derive_strong_induction(CONJUNCTS rules,induction);
 
 (* ---------------------------------------------------------------------*)
 (* Construct the standard rule induction tactic for EVAL.  This uses	*)
@@ -185,11 +145,6 @@ val sind = derive_strong_induction(rules,induction);
 val RULE_INDUCT_TAC =
     RULE_INDUCT_THEN induction STRIP_ASSUME_TAC STRIP_ASSUME_TAC;
 
-(* ---------------------------------------------------------------------*)
-(* Prove the case analysis theorem for the evaluation rules.		*)
-(* ---------------------------------------------------------------------*)
-
-val ecases = derive_cases_thm (rules,induction);
 
 (* =====================================================================*)
 (* Derivation of backwards case analysis theorems for each rule.        *)
@@ -201,7 +156,7 @@ val ecases = derive_cases_thm (rules,induction);
 (*									*)
 (*    1: EVAL C s1 s2 							*)
 (*									*)
-(* for a specific command C (e.g. for C = (--`Skip`--)) that the        *)
+(* for a specific command C (e.g. for C = `Skip`) that the              *)
 (* corresponding instance of the premisses of the rule(s) for C must    *)
 (* also hold, since  (1) can hold only by virtue of being derivable by  *)
 (* the rule for C. This kind of reasoning occurs frequently in proofs   *)
@@ -210,64 +165,13 @@ val ecases = derive_cases_thm (rules,induction);
 (* distinct, a fact automatically proved by the recursive types package.*)
 (* =====================================================================*)
 
-(* ---------------------------------------------------------------------*)
-(* The following rule is used to simplify special cases of the general  *)
-(* exhaustive case analysis theorem, which looks something like:	*)
-(*									*)
-(*      |- !C s1 s2.							*)
-(*          EVAL C s1 s2 =						*)
-(*             (C = Skip) ... \/					*)
-(*             (?V E. (C = V :== E) ...) \/				*)
-(*             (?C1 C2 s2'. (C = C1 ; C2) ...) \/			*)
-(*             (?C1 B C2. (C = If B C1 C2) /\ B s1 ...) \/		*)
-(*             (?C2 B C1. (C = If B C1 C2) /\ ~B s1 ...) \/		*)
-(*             (?B C'. (C = While B C') /\ ~B s1 ... ) \/		*)
-(*             (?C' B s2'. (C = While B C') /\ B s1 ...)		*)
-(*  									*)
-(* If C is specialized to some particular syntactic form, for example   *)
-(* to `C1;;C2`, then most of the disjuncts in the conclusion become     *)
-(* just false because of the syntactic inequality of different commands.*)
-(* These false can be simplified away by rewriting with the theorem	*)
-(* distinct.  The disjuncts that match the command to which C is 	*)
-(* specialized can also be simplified by rewriting with const11.  This  *)
-(* changes equalities between similar commands, for example:		*)
-(*									*)
-(*    (C1 ;; C2) = (C1' ;; C2')						*)
-(*									*)
-(* to equalities between their coresponding constitutents:		*)
-(*									*)
-(*    C1 = C1'  /\  C2 = C2'						*)
-(*									*)
-(* These can then generally be used for substitution.			*)
-(* ---------------------------------------------------------------------*)
 
 val (distinct,const11) =
-  let val (SOME facts) = TypeBase.read "comm"
-      val (SOME thm1) = TypeBase.distinct_of facts
-      val (SOME thm2) = TypeBase.one_one_of facts
+  let val thm1 = TypeBase.distinct_of "comm"
+      val thm2 = TypeBase.one_one_of "comm"
   in
     (CONJ thm1 (GSYM thm1),thm2)
   end;
-
-val SIMPLIFY = REWRITE_RULE [distinct, const11];
-
-(* --------------------------------------------------------------------- *)
-(* CASE_TAC : this is applicable to goals of the form:			 *)
-(*									 *)
-(*      TRANS C s1 s2 ==> P						 *)
-(*									 *)
-(* When applied to such a goal, the antecedant is matched to the general *)
-(* case analysis theorem and a corresponding instance of its conclusion  *)
-(* is obtained.  This is simplified using the SIMPLIFY rule described    *)
-(* above and the result is assumed in stripped form.  Given this tactic, *)
-(* the sequence of theorems given below are simple to prove.  The proofs *)
-(* are fairly uniform; with a careful analysis of the regularities, one  *)
-(* should be able to devise an automatic proof procedure for deriving    *)
-(* sets of theorems of this type.					 *)
-(* --------------------------------------------------------------------- *)
-
-val CASE_TAC = DISCH_THEN
-               (STRIP_ASSUME_TAC o SIMPLIFY o ONCE_REWRITE_RULE[ecases]);
 
 (* --------------------------------------------------------------------- *)
 (* SKIP_THM : EVAL Skip s1 s2 is provable only by the Skip rule, which   *)
@@ -275,23 +179,24 @@ val CASE_TAC = DISCH_THEN
 (* --------------------------------------------------------------------- *)
 
 val SKIP_THM = store_thm("SKIP_THM",
-     (--`!s1 s2. EVAL Skip s1 s2 = (s1 = s2)`--),
-     REPEAT GEN_TAC THEN EQ_TAC THENL
-     [CASE_TAC THEN ASM_REWRITE_TAC [],
-      DISCH_THEN SUBST1_TAC THEN MAP_FIRST RULE_TAC rules]);
-
+ (--`!s1 s2. EVAL Skip s1 s2 = (s1 = s2)`--),
+ REPEAT (GEN_TAC ORELSE EQ_TAC) 
+ THENL [ONCE_REWRITE_TAC [ecases] THEN RW_TAC std_ss [],
+        PROVE_TAC [rules]]);
 
 (* --------------------------------------------------------------------- *)
 (* ASSIGN_THM : EVAL (V :== E) s1 s2 is provable only by the assignment	 *)
 (* rule, which requires that s2 be the state s1 with V updated to E.	 *)
 (* --------------------------------------------------------------------- *)
 
-val ASSIGN_THM = store_thm ("ASSIGN_THM",
- (--`!s1 s2 V E. EVAL (V :== E) s1 s2 =
-                 ((\v. if v=V then  E s1 else s1 v) = s2)`--),
-     REPEAT GEN_TAC THEN EQ_TAC THENL
-     [CASE_TAC THEN ASM_REWRITE_TAC [],
-      DISCH_THEN (SUBST1_TAC o SYM) THEN MAP_FIRST RULE_TAC rules]);
+val ASSIGN_THM = store_thm 
+("ASSIGN_THM",
+ --`!s1 s2 V E. EVAL (V :== E) s1 s2 
+                  =
+               ((\v. if v=V then  E s1 else s1 v) = s2)`--,
+ REPEAT (GEN_TAC ORELSE EQ_TAC) 
+ THENL [ONCE_REWRITE_TAC [ecases] THEN RW_TAC std_ss [], 
+        RW_TAC std_ss [] THEN RW_TAC std_ss [rules]]);
 
 
 (* --------------------------------------------------------------------- *)
@@ -302,10 +207,9 @@ val ASSIGN_THM = store_thm ("ASSIGN_THM",
 
 val SEQ_THM = store_thm("SEQ_THM",
 --`!s1 s2 C1 C2.EVAL (C1;;C2) s1 s2 = (?s3. EVAL C1 s1 s3 /\ EVAL C2 s3 s2)`--,
-  REPEAT GEN_TAC THEN EQ_TAC THENL
-  [CASE_TAC THEN EXISTS_TAC (--`s2':^State`--) THEN ASM_REWRITE_TAC [],
-   DISCH_THEN (fn th => MAP_FIRST RULE_TAC rules THEN MATCH_ACCEPT_TAC th)]);
-
+ REPEAT (GEN_TAC ORELSE EQ_TAC)
+ THENL [DISCH_THEN(MP_TAC o ONCE_REWRITE_RULE[ecases]) THEN RW_TAC std_ss [],
+        PROVE_TAC [rules]]);
 
 (* --------------------------------------------------------------------- *)
 (* IF_T_THM : if B(s1) is true, then EVAL (If B C2 C2) s1 s2 is provable *)
@@ -314,11 +218,12 @@ val SEQ_THM = store_thm("SEQ_THM",
 (* --------------------------------------------------------------------- *)
 
 val IF_T_THM = store_thm ("IF_T_THM",
-(--`!s1 s2 B C1 C2. B s1 ==> (EVAL (If B C1 C2) s1 s2 = EVAL C1 s1 s2)`--),
-     REPEAT STRIP_TAC THEN EQ_TAC THENL
-     [CASE_TAC THEN EVERY_ASSUM (TRY o SUBST_ALL_TAC) THENL
-      [FIRST_ASSUM ACCEPT_TAC, RES_TAC],
-      DISCH_TAC THEN MAP_FIRST RULE_TAC rules THEN FIRST_ASSUM ACCEPT_TAC]);
+--`!s1 s2 B C1 C2. B s1 ==> (EVAL (If B C1 C2) s1 s2 = EVAL C1 s1 s2)`--,
+ REPEAT (GEN_TAC ORELSE EQ_TAC ORELSE DISCH_TAC)
+ THENL [RULE_ASSUM_TAC (ONCE_REWRITE_RULE[ecases]) 
+          THEN RW_TAC std_ss []
+          THEN PROVE_TAC [],
+        PROVE_TAC [rules]]);
 
 
 (* --------------------------------------------------------------------- *)
@@ -329,12 +234,11 @@ val IF_T_THM = store_thm ("IF_T_THM",
 
 val IF_F_THM = store_thm ("IF_F_THM",
 (--`!s1 s2 B C1 C2. ~B s1 ==> (EVAL (If B C1 C2) s1 s2 = EVAL C2 s1 s2)`--),
-   REPEAT STRIP_TAC THEN EQ_TAC THENL
-   [CASE_TAC THEN EVERY_ASSUM (TRY o SUBST_ALL_TAC) THENL
-    [RES_TAC, FIRST_ASSUM ACCEPT_TAC],
-     DISCH_TAC THEN MAP_FIRST RULE_TAC (rev rules) THEN
-     FIRST_ASSUM ACCEPT_TAC]);
-
+ REPEAT (GEN_TAC ORELSE EQ_TAC ORELSE DISCH_TAC)
+ THENL [RULE_ASSUM_TAC (ONCE_REWRITE_RULE[ecases]) 
+          THEN RW_TAC std_ss []
+          THEN PROVE_TAC [],
+        PROVE_TAC [rules]]);
 
 (* ---------------------------------------------------------------------*)
 (* WHILE_T_THM : if B(s1) is true, then EVAL (While B C) s1 s2 is 	*)
@@ -344,17 +248,15 @@ val IF_F_THM = store_thm ("IF_F_THM",
 (* ---------------------------------------------------------------------*)
 
 val WHILE_T_THM = store_thm ("WHILE_T_THM",
-     (--`!s1 s2 B C.
-      B s1 ==> (EVAL (While B C) s1 s2 =
-                (?s3. EVAL C s1 s3 /\ EVAL (While B C) s3 s2))`--),
-   REPEAT STRIP_TAC THEN EQ_TAC THENL
-   [CASE_TAC THEN EVERY_ASSUM (TRY o SUBST_ALL_TAC) THENL
-    [RES_TAC,
-     EXISTS_TAC (--`s2':^State`--) THEN CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC],
-    STRIP_TAC THEN MAP_FIRST RULE_TAC (rev rules) THEN
-    EXISTS_TAC (--`s3:^State`--) THEN
-    REPEAT CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC]);
-
+--`!s1 s2 B C. 
+     B s1 ==> (EVAL (While B C) s1 s2 
+                 =
+              ?s3. EVAL C s1 s3 /\ EVAL (While B C) s3 s2)`--,
+ REPEAT (STRIP_TAC ORELSE EQ_TAC)
+ THENL [RULE_ASSUM_TAC (ONCE_REWRITE_RULE[ecases]) 
+          THEN RW_TAC std_ss [],
+        ALL_TAC]
+ THEN PROVE_TAC [rules]);
 
 (* ---------------------------------------------------------------------*)
 (* WHILE_F_THM : if B(s1) is false, then EVAL (While B C) s1 s2 is	*)
@@ -363,14 +265,12 @@ val WHILE_T_THM = store_thm ("WHILE_T_THM",
 (* ---------------------------------------------------------------------*)
 
 val WHILE_F_THM = store_thm ("WHILE_F_THM",
-     (--`!s1 s2 B C. ~B s1 ==> (EVAL (While B C) s1 s2 = (s1 = s2))`--),
-     REPEAT STRIP_TAC THEN EQ_TAC THENL
-     [CASE_TAC THENL
-      [CONV_TAC SYM_CONV THEN FIRST_ASSUM ACCEPT_TAC,
-       EVERY_ASSUM (TRY o SUBST_ALL_TAC) THEN RES_TAC],
-      DISCH_THEN (SUBST1_TAC o SYM) THEN MAP_FIRST RULE_TAC rules THEN
-      FIRST_ASSUM ACCEPT_TAC]);
-
+--`!s1 s2 B C. ~B s1 ==> (EVAL (While B C) s1 s2 = (s1 = s2))`--,
+ REPEAT (STRIP_TAC ORELSE EQ_TAC)
+ THENL [RULE_ASSUM_TAC (ONCE_REWRITE_RULE[ecases]) 
+          THEN RW_TAC std_ss [],
+        ALL_TAC]
+ THEN PROVE_TAC [rules]);
 
 (* ===================================================================== *)
 (* THEOREM: the operational semantics is deterministic.			 *)
@@ -383,57 +283,25 @@ val WHILE_F_THM = store_thm ("WHILE_F_THM",
 (* ===================================================================== *)
 
 val DETERMINISTIC = store_thm ("DETERMINISTIC",
-(--`!C st1 st2. EVAL C st1 st2 ==> !st3. EVAL C st1 st3 ==> (st2 = st3)`--),
-     RULE_INDUCT_TAC THEN REPEAT GEN_TAC THENL
-     [REWRITE_TAC [SKIP_THM],
-      REWRITE_TAC [ASSIGN_THM],
-      PURE_ONCE_REWRITE_TAC [SEQ_THM] THEN STRIP_TAC THEN
-      FIRST_ASSUM MATCH_MP_TAC THEN RES_TAC THEN ASM_REWRITE_TAC [],
-      IMP_RES_TAC IF_T_THM THEN ASM_REWRITE_TAC [],
-      IMP_RES_TAC IF_F_THM THEN ASM_REWRITE_TAC [],
-      IMP_RES_TAC WHILE_F_THM THEN ASM_REWRITE_TAC [],
-      IMP_RES_THEN (fn th =>  PURE_ONCE_REWRITE_TAC [th]) WHILE_T_THM THEN
-      STRIP_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN
-      RES_TAC THEN ASM_REWRITE_TAC []]);
+--`!C st1 st2. EVAL C st1 st2 ==> !st3. EVAL C st1 st3 ==> (st2 = st3)`--,
+  RULE_INDUCT_TAC THEN REPEAT GEN_TAC 
+  THEN RW_TAC std_ss 
+     [SKIP_THM,ASSIGN_THM,SEQ_THM,IF_T_THM, IF_F_THM, WHILE_F_THM,WHILE_T_THM]
+  THEN PROVE_TAC []);
 
 
 (* ===================================================================== *)
 (* Definition of partial correctness and derivation of proof rules.	 *)
 (* ===================================================================== *)
 
-val SPEC_DEF = new_definition ("SPEC_DEF",
-     (--`SPEC P C Q = !s1 s2. (P s1 /\ EVAL C s1 s2) ==> Q s2`--));
+val SPEC_DEF = 
+ new_definition 
+   ("SPEC_DEF",
+    --`SPEC P C Q = !s1 s2. (P s1 /\ EVAL C s1 s2) ==> Q s2`--);
 
 (* --------------------------------------------------------------------- *)
 (* Proof of the While rule in Hoare logic.				 *)
 (* --------------------------------------------------------------------- *)
-
-(* --------------------------------------------------------------------- *)
-(* In the following proofs, theorems of the form:			 *)
-(*									 *)
-(*     |- !y1...yn. (C x1 ... xn = C y1 ... yn) ==> tm[y1,...,yn]	 *)
-(*									 *)
-(* frequently arise, where C is one of the constructors of the data type *)
-(* of commands.  The following theorem-tactic simplifies such theorems   *)
-(* by specializing yi to xi and then removing the resulting trivially    *)
-(* true antecedent.  The result is:					 *)
-(*									 *)
-(*     |- tm[x1,...,xn/y1,...,yn]					 *)
-(*									 *)
-(* which is passed to the theorem continuation function. The tactic just *)
-(* discards theorems not of the form shown above.   For the While proof  *)
-(* given below, this has the effect of thinning out useless induction	 *)
-(* hypotheses of the form:						 *)
-(*									 *)
-(*     |- !B' C'. (C = While B' C') ==> tm[B',C']			 *)
-(* 									 *)
-(* These are just discarded.						 *)
-(* --------------------------------------------------------------------- *)
-
-fun REFL_MP_THEN ttac th =
-   let val tm = lhs(#ant(dest_imp(snd(strip_forall(concl th)))))
-   in ttac (MATCH_MP th (REFL tm))
-   end handle HOL_ERR _ => ALL_TAC;
 
 (* --------------------------------------------------------------------- *)
 (* The following lemma states that the condition B in While B C must be  *)
@@ -458,17 +326,13 @@ fun REFL_MP_THEN ttac th =
 (* Showing that the above set is closed under the two While rules is     *)
 (* likewise trivial.  For the While axiom, we get ~(B s2) immediately 	 *)
 (* from the side condition. For the other While rule, the statement to	 *)
-(* prove is just one of the induction hypotheses; since RULE_INDUCT_TAC  *)
-(* uses STRIP_ASSUME_TAC on this hypothesis, this subgoal is solved	 *)
-(* immediately.								 *)
+(* prove is just one of the induction hypotheses.                        *)
 (* --------------------------------------------------------------------- *)
 
 
 val WHILE_LEMMA1 = TAC_PROOF(([],
- (--`!C s1 s2. EVAL C s1 s2 ==> !B' C'. (C = While B' C') ==> ~(B' s2)`--)),
-     RULE_INDUCT_TAC THEN REWRITE_TAC [distinct, const11] THEN
-     REPEAT GEN_TAC THEN DISCH_THEN (STRIP_THM_THEN SUBST_ALL_TAC) THEN
-     FIRST_ASSUM ACCEPT_TAC);
+--`!C s1 s2. EVAL C s1 s2 ==> !B' C'. (C = While B' C') ==> ~(B' s2)`--),
+  RULE_INDUCT_TAC THEN REWRITE_TAC [distinct, const11] THEN PROVE_TAC []);
 
 (* ---------------------------------------------------------------------*)
 (* The second lemma deals with the invariant part of the Hoare proof 	*)
@@ -494,12 +358,6 @@ val WHILE_LEMMA1 = TAC_PROOF(([],
 (* desired conclusion in the step case of the While rule.  To see why, 	*)
 (* try replacing strong by weak induction in the tactic proof below.	*)
 (*									*)
-(* Note that REFL_MP_THEN is used to simplify the induction hypotheses  *)
-(* before adding them to the assumption list.  This avoids having the 	*)
-(* assumptions in an awkward form (try using ASSUME_TAC instead). Note	*)
-(* also that in the case of the While axiom, the states s1 and s2 are	*)
-(* identical, so the corresponding subgoal is trivial and is solved by	*)
-(* the rewriting step.							*)
 (* ---------------------------------------------------------------------*)
 
 val WHILE_LEMMA2 =
@@ -509,10 +367,7 @@ val WHILE_LEMMA2 =
      !B' C'. (C = While B' C') ==>
              (!s1 s2. P s1 /\ B' s1 /\ EVAL C' s1 s2 ==> P s2) ==>
              (P s1 ==> P s2)`--),
-     RULE_INDUCT_THEN sind (REFL_MP_THEN ASSUME_TAC) ASSUME_TAC THEN
-     REWRITE_TAC [distinct, const11] THEN REPEAT GEN_TAC THEN
-     DISCH_THEN (STRIP_THM_THEN SUBST_ALL_TAC) THEN
-     REPEAT STRIP_TAC THEN RES_TAC);
+ HO_MATCH_MP_TAC sind THEN RW_TAC std_ss [] THEN PROVE_TAC []);
 
 (* ---------------------------------------------------------------------*)
 (* The proof rule for While commands in Hoare logic is:			*)
@@ -528,14 +383,12 @@ val WHILE_LEMMA2 =
 (* ---------------------------------------------------------------------*)
 
 val WHILE = store_thm ("WHILE",
-     (--`!P C. SPEC (\s. P s /\ B s) C P ==>
-            SPEC P (While B C) (\s. P s /\ ~B s)`--),
-     PURE_ONCE_REWRITE_TAC [SPEC_DEF] THEN
-     CONV_TAC (ONCE_DEPTH_CONV BETA_CONV) THEN
-     PURE_ONCE_REWRITE_TAC [SYM(SPEC_ALL CONJ_ASSOC)] THEN
-     REPEAT STRIP_TAC THENL
-     [IMP_RES_THEN (REFL_MP_THEN IMP_RES_TAC) WHILE_LEMMA2,
-      IMP_RES_THEN (REFL_MP_THEN IMP_RES_TAC) WHILE_LEMMA1]);
+--`!P C. SPEC (\s. P s /\ B s) C P 
+         ==>
+         SPEC P (While B C) (\s. P s /\ ~B s)`--,
+ RW_TAC std_ss [SPEC_DEF] 
+ THENL [PROVE_TAC [WHILE_LEMMA2],
+        PROVE_TAC [WHILE_LEMMA1]]);
 
 (* ---------------------------------------------------------------------*)
 (* End of example.							*)
