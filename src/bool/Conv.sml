@@ -281,14 +281,14 @@ val or_F = List.nth(OR_CLAUSES', 3);
 fun EVERY_DISJ_CONV c tm =
     case Lib.total Psyntax.dest_disj tm of
       SOME (d1, d2) => let
-        val d1_thm = c d1
+        val d1_thm = EVERY_DISJ_CONV c d1
         val d1' = rhs (concl d1_thm)
       in
         if Term.compare(d1', boolSyntax.T) = EQUAL then
           TRANS (AP_THM (AP_TERM boolSyntax.disjunction d1_thm) d2)
                 (SPEC d2 T_or)
         else let
-            val d2_thm = c d2
+            val d2_thm = EVERY_DISJ_CONV c d2
             val d2' = rhs (concl d2_thm)
             val result0 =
                 MK_COMB(AP_TERM boolSyntax.disjunction d1_thm, d2_thm)
@@ -314,14 +314,14 @@ val and_F = List.nth(AND_CLAUSES', 3)
 fun EVERY_CONJ_CONV c tm =
     case Lib.total Psyntax.dest_conj tm of
       SOME (c1, c2) => let
-        val c1_thm = c c1
+        val c1_thm = EVERY_CONJ_CONV c c1
         val c1' = rhs (concl c1_thm)
       in
         if Term.compare(c1', boolSyntax.F) = EQUAL then
           TRANS (AP_THM (AP_TERM boolSyntax.conjunction c1_thm) c2)
                 (SPEC c2 F_and)
         else let
-            val c2_thm = c c2
+            val c2_thm = EVERY_CONJ_CONV c c2
             val c2' = rhs (concl c2_thm)
             val result0 =
                 MK_COMB(AP_TERM boolSyntax.conjunction c1_thm, c2_thm)
