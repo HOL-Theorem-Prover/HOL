@@ -142,12 +142,10 @@ val FUNPOW = new_recursive_definition
                         THEOREMS
  ---------------------------------------------------------------------------*)
 
-val ONE = store_thm("ONE",
-  Term `1 = SUC 0`,
+val ONE = store_thm("ONE", Term `1 = SUC 0`,
 REWRITE_TAC [NUMERAL_DEF, NUMERAL_BIT1, ALT_ZERO, ADD]);
 
-val TWO = store_thm("TWO",
-  Term`2 = SUC 1`,
+val TWO = store_thm("TWO", Term`2 = SUC 1`,
 REWRITE_TAC
    [NUMERAL_DEF, NUMERAL_BIT2, ONE,
     ADD, ALT_ZERO,NUMERAL_BIT1]);
@@ -220,7 +218,7 @@ val NOT_ZERO_LT_ZERO = store_thm(
 (* LESS_ADD proof rewritten: TFM 90.O9.21                               *)
 (* --------------------------------------------------------------------- *)
 val LESS_ADD = store_thm ("LESS_ADD",
-     --`!m n. (n<m) ==> ?p. p+n = m`--,
+     --`!m n. n<m ==> ?p. p+n = m`--,
      INDUCT_TAC THEN GEN_TAC THEN
      REWRITE_TAC[NOT_LESS_0,LESS_THM] THEN
      REPEAT STRIP_TAC THENL

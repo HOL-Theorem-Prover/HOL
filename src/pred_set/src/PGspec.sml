@@ -15,12 +15,6 @@ open HolKernel Parse boolLib pairSyntax PairedLambda
 
 infix THENC ORELSEC ## |->;
 
-fun SPEC_ERR{function,message} =
-      HOL_ERR{origin_structure="Gspec",
-              origin_function=function,
-              message=message};
-
-
 val PAIR = pairTheory.PAIR;
 
 
@@ -59,10 +53,9 @@ fun MK_PAIR vs v =
 (*  |- (?v. tm' = (\(x1,...,xn). tm) v ) = ?x1...xn. tm' = tm		*)
 (* ---------------------------------------------------------------------*)
 
-local
-fun EX v tm th = EXISTS (mk_exists(v,subst[tm |-> v] (concl th)),tm) th
-and CH tm th = CHOOSE (tm,ASSUME (mk_exists(tm,hd(hyp th)))) th
-val conv = RAND_CONV (BETA_CONV ORELSEC PAIRED_BETA_CONV)
+local fun EX v tm th = EXISTS (mk_exists(v,subst[tm |-> v] (concl th)),tm) th
+      and CH tm th = CHOOSE (tm,ASSUME (mk_exists(tm,hd(hyp th)))) th
+      val conv = RAND_CONV (BETA_CONV ORELSEC PAIRED_BETA_CONV)
 in
 fun EXISTS_TUPLE_CONV vs tm =
    let val tup = end_itlist (curry mk_pair) vs
@@ -92,8 +85,7 @@ end;
 
 local
 val EQT = el 1 (CONJUNCTS (SPEC (--`c:bool`--) EQ_CLAUSES))
-val PEQ = let val inst = INST_TYPE
-                           [beta |-> bool]
+val PEQ = let val inst = INST_TYPE [beta |-> bool]
                            (GENL[--`x:'a`--, --`y:'b`--,
                                  --`a:'a`--, --`b:'b`--] pairTheory.PAIR_EQ)
               val spec = SPECL [(--`a:'a`--),(--`T`--),
@@ -129,7 +121,7 @@ fun ELIM_EXISTS_CONV tm =
        val asm = subst [Bvar  |-> r] body
        val imp2 = DISCH asm (EXISTS (tm,r) (CONJ (REFL r) (ASSUME asm)))
    in
-   IMP_ANTISYM_RULE imp1 imp2
+     IMP_ANTISYM_RULE imp1 imp2
    end
 
 (* ---------------------------------------------------------------------*)
@@ -146,7 +138,7 @@ fun PROVE_EXISTS tm =
        val imp1 = DISCH tm (CHOOSE (v,ASSUME tm) (ASSUME Body))
        val imp2 = DISCH Body (EXISTS (tm,v) (ASSUME Body))
    in
-   IMP_ANTISYM_RULE imp1 imp2
+      IMP_ANTISYM_RULE imp1 imp2
    end;
 
 (* ---------------------------------------------------------------------*)
@@ -208,10 +200,9 @@ fun mktup tm =
         end
 in
 fun SET_SPEC_CONV th =
- let val GSPEC = 
-        let val vs = fst(strip_forall(concl th))
-        in GENL (rev vs) (SPECL vs th)
-        end
+ let val GSPEC = let val vs = fst(strip_forall(concl th))
+                 in GENL (rev vs) (SPECL vs th)
+                end
  in fn tm =>
    let val (_,[v,set]) = (check_const ("IN","pred_set") ## I) (strip_comb tm)
        val (Rator,f) = dest_comb set

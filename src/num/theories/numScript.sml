@@ -1,8 +1,8 @@
 structure numScript =
 struct
 
-open HolKernel Parse boolLib;
-open boolTheory;
+open HolKernel Parse boolLib boolTheory;
+
 infix THEN THENL;
 
 val _ = new_theory "num";
@@ -28,6 +28,7 @@ val ZERO_REP_EXISTS = prove(
 (*---------------------------------------------------------------------------
  * `ZERO_REP:ind` represents `0:num`
  *---------------------------------------------------------------------------*)
+
 val ZERO_REP_DEF = new_specification{
   name = "ZERO_REP_DEF",
   sat_thm = ZERO_REP_EXISTS,
@@ -39,6 +40,7 @@ val ZERO_REP_DEF = new_specification{
 (* numbers.  It is the smallest subset containing `ZERO_REP` and closed	     *)
 (* under `SUC_REP`.                                                          *)
 (*---------------------------------------------------------------------------*)
+
 val IS_NUM_REP = new_definition("IS_NUM_REP",
      --`IS_NUM_REP m =
       !P:ind->bool. (P ZERO_REP /\ (!n. P n ==> P(SUC_REP n))) ==> P m`--);
@@ -46,6 +48,7 @@ val IS_NUM_REP = new_definition("IS_NUM_REP",
 (*---------------------------------------------------------------------------
  * Prove that there is a representation in :ind of at least one number.
  *---------------------------------------------------------------------------*)
+
 val EXISTS_NUM_REP = TAC_PROOF(([],--`?n. IS_NUM_REP n`--),
      PURE_REWRITE_TAC [IS_NUM_REP] THEN
      EXISTS_TAC (--`ZERO_REP`--) THEN
@@ -80,12 +83,14 @@ val ZERO_DEF = new_definition("ZERO_DEF", --`^zero = ABS_num ZERO_REP`--);
 (*---------------------------------------------------------------------------
  * Define the successor function on num.
  *---------------------------------------------------------------------------*)
+
 val SUC_DEF = new_definition("SUC_DEF",
  --`SUC m = ABS_num(SUC_REP(REP_num m))`--);
 
 (*---------------------------------------------------------------------------
  * Prove that IS_NUM_REP ZERO_REP.
  *---------------------------------------------------------------------------*)
+
 val IS_NUM_REP_ZERO =
     TAC_PROOF
     (([], --`IS_NUM_REP ZERO_REP`--),
@@ -94,6 +99,7 @@ val IS_NUM_REP_ZERO =
 (*---------------------------------------------------------------------------
  * Prove that IS_NUM_REP (SUC_REP x).
  *---------------------------------------------------------------------------*)
+
 val IS_NUM_SUC_REP =
     TAC_PROOF
     (([], --`!i. IS_NUM_REP i ==> IS_NUM_REP (SUC_REP i)`--),
@@ -110,16 +116,19 @@ val IS_NUM_REP_SUC_REP =
 (*---------------------------------------------------------------------------
  * |- !x1 x2. (SUC_REP x1 = SUC_REP x2) ==> (x1 = x2)
  *---------------------------------------------------------------------------*)
+
 val SUC_REP_11 = CONJUNCT1 (REWRITE_RULE [ONE_ONE_THM] SUC_REP_DEF);
 
 (*---------------------------------------------------------------------------
  *  |- !x. ~(SUC_REP x = ZERO_REP)
  *---------------------------------------------------------------------------*)
+
 val NOT_SUC_ZERO = GSYM ZERO_REP_DEF;
 
 (*----------------------------------------------------------------------*)
 (* Proof of NOT_SUC : |- !n. ~(SUC n = ZERO)				*)
 (* ---------------------------------------------------------------------*)
+
 val NOT_SUC = store_thm("NOT_SUC",
     --`!n. ~(SUC n = 0)`--,
      PURE_REWRITE_TAC [SUC_DEF,ZERO_DEF] THEN GEN_TAC THEN
@@ -131,6 +140,7 @@ val NOT_SUC = store_thm("NOT_SUC",
 (* ---------------------------------------------------------------------*)
 (* Prove that |-  !m n. (SUC m = SUC n) ==> (m = n)			*)
 (* ---------------------------------------------------------------------*)
+
 val INV_SUC = store_thm("INV_SUC",
     --`!m n. (SUC m = SUC n) ==> (m = n)`--,
      REPEAT GEN_TAC THEN REWRITE_TAC [SUC_DEF] THEN
@@ -143,10 +153,12 @@ val INV_SUC = store_thm("INV_SUC",
 (* ---------------------------------------------------------------------*)
 (* Prove induction theorem.						*)
 (* ---------------------------------------------------------------------*)
+
 val ind_lemma1 =
     TAC_PROOF
-    (([], --`!P. (P ZERO_REP /\ (!i. (P i ==> P(SUC_REP i)))) ==>
-	      (!i. IS_NUM_REP i ==> P i)`--),
+    (([], --`!P. P ZERO_REP /\ (!i. P i ==> P(SUC_REP i))
+                 ==>
+	      !i. IS_NUM_REP i ==> P i`--),
      PURE_ONCE_REWRITE_TAC [IS_NUM_REP] THEN
      REPEAT STRIP_TAC THEN RES_TAC);
 
@@ -155,8 +167,9 @@ val lemma =
                ASM_CASES_TAC (--`A:bool`--) THEN ASM_REWRITE_TAC []);
 
 val ind_lemma2 = TAC_PROOF(([],
-  --`!P. (P ZERO_REP /\ (!i. ((IS_NUM_REP i /\ P i) ==> P(SUC_REP i)))) ==>
-	 (!i. IS_NUM_REP i ==> P i)`--),
+  --`!P. P ZERO_REP /\ (!i. IS_NUM_REP i /\ P i ==> P(SUC_REP i)) 
+           ==>
+         !i. IS_NUM_REP i ==> P i`--),
      GEN_TAC THEN STRIP_TAC THEN
      MP_TAC (SPEC (--`\i. IS_NUM_REP i /\ P i`--) ind_lemma1) THEN
      CONV_TAC(DEPTH_CONV BETA_CONV) THEN
