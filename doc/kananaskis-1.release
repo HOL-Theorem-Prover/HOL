@@ -6,16 +6,50 @@ Bugs fixed:
     place.  Thanks to Hasan Amjad for reporting this bug.
 
   * Define_type.define_type wouldn't work.  This code is deprecated
-    with a capital 'd', but we've provided a fix anyway.  Thanks to
+    with a capital 'D', but we've provided a fix anyway.  Thanks to
     Viktor Sabelfeld for the report of the bug.  It was caused by the
     now correct behaviour of constant hiding that wasn't correct prior
     to Taupo-6.
 
+Behaviours changed:
+-------------------
+
+  * Overloading now works slightly differently.  Constants are
+    automatically overloaded to "themselves".  Thus, if you define a
+    constant called "foo", and then another called "bar", and want to
+    have "bar" overload to "foo", then you need only call
+        overload_on ("foo", ``bar``);
+
+  * The names of record fields are not now overloaded to the accessor
+    function.  This function needs to be accessed as the constant
+      ``<rcd-type-name>_<fldname>``
+    E.g.,
+      ``rcd_fld``
+    If you really like the 'dot' syntax, you can always write
+      ``\r. r.fld``
+    which eta-converts to the above.
+
 New features:
 -------------
 
+  * relationTheory now defines the constants RTC and RC (reflexive and
+    transitive closure, and reflexive closure) and proves a variety of
+    properties about them.
+
+  * Holmake will now read and act under the supervision of make-files.
+    These files can be used to control construction of object files in
+    languages other than SML, and also have a number of other
+    convenient functions.  The basic format of the make-files read by
+    Holmake is very much like that of standard make-files, but there
+    is no support for patterns.  For more documentation of this, see
+    the Holmake section of the DESCRIPTION.
+
 New theories:
 -------------
+
+  * Laurent Thery's theories of divisibility, primality, and gcd are
+    now part of the system, under the name dividesTheory, primeTheory
+    and gcdTheory.
 
 New tools:
 ----------
