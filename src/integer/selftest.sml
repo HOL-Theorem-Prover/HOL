@@ -1,9 +1,9 @@
+val progs = ["test_omega", "test_coopers"]
+
 val _ = (FileSys.chDir "testing";
-         Systeml.systeml [Globals.HOLDIR^"/bin/Holmake"])
+         Systeml.systeml (Globals.HOLDIR^"/bin/Holmake" :: progs))
 
 fun can_run s = FileSys.access (s, [FileSys.A_EXEC])
-
-val progs = ["test_omega", "test_coopers"]
 
 val _ =
     case List.find (not o can_run) progs of
