@@ -21,8 +21,7 @@ struct
 
 local open operatorTheory listTheory in end;
 
-open HolKernel Parse basicHol90Lib Num_conv Num_induct Let_conv
-     Prim_rec Type_def_support ;
+open HolKernel Parse boolLib Num_conv Num_induct Prim_rec ;
 
 infix THEN THENL ORELSE;
 type thm = Thm.thm
@@ -32,6 +31,9 @@ val list_Axiom = listTheory.list_Axiom;
 val list_Axiom_old = listTheory.list_Axiom_old;
 
 val _ = new_theory "rich_list";
+
+val let_CONV = pairSyntax.let_CONV
+val new_specification = Rsyntax.new_specification
 
 (* abbreviation for list definitions - from src/3/list_conv.sml         *)
 fun new_list_rec_definition (name,tm) =
@@ -398,7 +400,7 @@ val FIRSTN =
         STRIP_ASSUME_TAC thm1 THEN EXISTS_TAC (--`firstn:num->('a)list->('a)list`--)
         THEN ASM_REWRITE_TAC[HD,TL])
    in
-    new_specification{name = "FIRSTN",
+    Rsyntax.new_specification{name = "FIRSTN",
                       sat_thm = thm,
                       consts =  [{const_name = "FIRSTN", fixity = Prefix}]
                      }
@@ -414,7 +416,7 @@ val BUTFIRSTN =
         STRIP_ASSUME_TAC thm2 THEN EXISTS_TAC (--`butfirstn:num->('a)list->('a)list`--)
         THEN ASM_REWRITE_TAC[HD,TL])
    in
-    new_specification{name = "BUTFIRSTN",
+    Rsyntax.new_specification{name = "BUTFIRSTN",
                       sat_thm = thm,
                       consts =  [{const_name = "BUTFIRSTN", fixity = Prefix}]
                      }
@@ -434,7 +436,7 @@ val SEG =
         ((BUTFIRSTN:num -> 'a list -> 'a list) k l)`--)
     THEN BETA_TAC THEN REWRITE_TAC[FIRSTN,BUTFIRSTN])
     in
-    new_specification{name = "SEG",
+    Rsyntax.new_specification{name = "SEG",
                       sat_thm = SEG_exists,
                       consts =  [{const_name = "SEG", fixity = Prefix}]
                      }
@@ -487,7 +489,7 @@ val LASTN =
         STRIP_ASSUME_TAC thm1 THEN EXISTS_TAC (--`lastn:num->('a)list->('a)list`--)
         THEN ASM_REWRITE_TAC[LAST,BUTLAST])
    in
-    new_specification{name = "LASTN",
+    Rsyntax.new_specification{name = "LASTN",
                       sat_thm = thm,
                       consts =  [{const_name = "LASTN", fixity = Prefix}]
                      }
@@ -503,7 +505,7 @@ val BUTLASTN =
         STRIP_ASSUME_TAC thm1 THEN EXISTS_TAC (--`butlastn:num->('a)list->('a)list`--)
         THEN ASM_REWRITE_TAC[BUTLAST])
     in
-    new_specification{name = "BUTLASTN",
+    Rsyntax.new_specification{name = "BUTLASTN",
                       sat_thm = thm,
                       consts =  [{const_name = "BUTLASTN", fixity = Prefix}]
                      }
@@ -562,7 +564,7 @@ val IS_PREFIX =
         THEN ASM_REWRITE_TAC[HD,TL,NULL_DEF]
         end)
    in
-    new_specification
+    Rsyntax.new_specification
         {consts = [{const_name = "IS_PREFIX", fixity = Prefix}],
          name = "IS_PREFIX",
          sat_thm = lemma
@@ -680,7 +682,7 @@ val IS_SUFFIX = let
         THEN ASM_REWRITE_TAC[BUTLAST,LAST,NULL_DEF,NOT_NULL_SNOC]
     end)
   in
-    new_specification
+    Rsyntax.new_specification
         {consts = [{const_name = "IS_SUFFIX", fixity = Prefix}],
          name = "IS_SUFFIX",
          sat_thm = lemma

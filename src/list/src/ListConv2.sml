@@ -1,13 +1,18 @@
 structure ListConv2 :> ListConv2 =
 struct
 
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib;
 
 infix THEN THENL THENC ##;
 
 type term = Term.term;
 type thm = Thm.thm;
 type conv = Abbrev.conv;
+
+val (Type,Term) = parse_from_grammars rich_listTheory.rich_list_grammars
+fun -- q x = Term q
+fun == q x = Type q
+open Rsyntax
 
 
 (* ========================================================================  *)
@@ -185,7 +190,7 @@ val RIGHT_ID_ADD_0 = TAC_PROOF(([], --`RIGHT_ID $+ 0`--),
 
 val LEFT_ID_ADD_0 = TAC_PROOF(([],    --`LEFT_ID $+ 0`--),
     REWRITE_TAC[LEFT_ID_DEF,ADD_CLAUSES]);
- 
+
 val MONOID_ADD_0 = TAC_PROOF(([],  --`MONOID $+ 0`--),
     REWRITE_TAC[MONOID_DEF,ASSOC_ADD,
     	LEFT_ID_ADD_0,RIGHT_ID_ADD_0]);
@@ -234,9 +239,9 @@ val FILTER_FOLDL = rich_listTheory.FILTER_FOLDL;
 val NULL_FOLDL = rich_listTheory.NULL_FOLDL;
 val LENGTH_FOLDL = rich_listTheory.LENGTH_FOLDL;
 val FLAT_FOLDL = rich_listTheory.FLAT_FOLDL;
-val SUM_FOLDL = rich_listTheory.SUM_FOLDL; 
-val MAP_FOLDL = rich_listTheory.MAP_FOLDL;  
-val APPEND_FOLDL = rich_listTheory.APPEND_FOLDL;  
+val SUM_FOLDL = rich_listTheory.SUM_FOLDL;
+val MAP_FOLDL = rich_listTheory.MAP_FOLDL;
+val APPEND_FOLDL = rich_listTheory.APPEND_FOLDL;
 
 val OR_EL_FOLDR = rich_listTheory.OR_EL_FOLDR;
 val AND_EL_FOLDR = rich_listTheory.AND_EL_FOLDR;
@@ -248,10 +253,10 @@ val FILTER_FOLDR = rich_listTheory.FILTER_FOLDR;
 val NULL_FOLDR = rich_listTheory.NULL_FOLDR;
 val LENGTH_FOLDR = rich_listTheory.LENGTH_FOLDR;
 val FLAT_FOLDR = rich_listTheory.FLAT_FOLDR;
-val SUM_FOLDR = rich_listTheory.SUM_FOLDR; 
-val MAP_FOLDR = rich_listTheory.MAP_FOLDR;  
-val APPEND_FOLDR = rich_listTheory.APPEND_FOLDR;  
-val PREFIX_FOLDR = rich_listTheory.PREFIX_FOLDR;  
+val SUM_FOLDR = rich_listTheory.SUM_FOLDR;
+val MAP_FOLDR = rich_listTheory.MAP_FOLDR;
+val APPEND_FOLDR = rich_listTheory.APPEND_FOLDR;
+val PREFIX_FOLDR = rich_listTheory.PREFIX_FOLDR;
 val SNOC_FOLDR = rich_listTheory.SNOC_FOLDR;
 
 
@@ -447,7 +452,7 @@ REWRITE_TAC[]
 val COMM_ASSOC_FOLDR_REVERSE2 = prove(
 (--`!(f:'a->'a->'a) .
      COMM f /\ ASSOC f ==>
-       (!(g:'b->'a) l. FOLDR (\x l. f (g x) l) e (REVERSE l) = 
+       (!(g:'b->'a) l. FOLDR (\x l. f (g x) l) e (REVERSE l) =
                    FOLDR (\x l. f (g x) l) e l)
 `--),
 REWRITE_TAC [FOLDR_FOLDR_MAP] THEN
@@ -485,7 +490,7 @@ REWRITE_TAC[]
 val COMM_ASSOC_FOLDL_REVERSE2 = prove(
 (--`!(f:'a->'a->'a) .
      COMM f /\ ASSOC f ==>
-       (!(g:'b->'a) l. FOLDL (\l x. f l (g x)) e (REVERSE l) = 
+       (!(g:'b->'a) l. FOLDL (\l x. f l (g x)) e (REVERSE l) =
                    FOLDL (\l  x. f l (g x)) e l)
 `--),
 REWRITE_TAC [FOLDL_FOLDL_MAP] THEN
@@ -535,8 +540,8 @@ REWRITE_TAC[APPEND,APPEND_NIL,APPEND_ASSOC]
 );
 (* ======================================================================== *)
 val FLAT_REVERSE_FOLDR = prove(
-(--`!l. 
-     (FLAT o REVERSE) (l:'a list list) = 
+(--`!l.
+     (FLAT o REVERSE) (l:'a list list) =
             FOLDR (\l1 l2. APPEND l2 l1) [] l
 `--),
 
@@ -548,8 +553,8 @@ ASM_REWRITE_TAC [FLAT_SNOC]
 );
 (* ======================================================================== *)
 val FLAT_REVERSE_FOLDL = prove(
-(--`!l. 
-     (FLAT o REVERSE) (l:'a list list) = 
+(--`!l.
+     (FLAT o REVERSE) (l:'a list list) =
             FOLDL (\l1 l2. APPEND l2 l1) [] l
 `--),
 
@@ -785,11 +790,11 @@ fun get_operator tm = fst (strip_comb tm);
 fun get_arglist tm = snd (strip_comb tm);
 
 fun get_def_lhs th =
-       #Rand(dest_comb (#Rator (dest_comb 
+       #Rand(dest_comb (#Rator (dest_comb
                   (snd (strip_forall(snd (dest_thm th)))))));
 
 fun get_def_rhs th =
-       #Rand (dest_comb 
+       #Rand (dest_comb
                   (snd (strip_forall(snd (dest_thm th)))));
 
 (* Is a definition of the form ... = OP ... *)
@@ -808,7 +813,7 @@ fun is_X_def op0 th =
      end;
 
 (* Is a theorem of the form |- !... .OP .... where the name of op is s *)
-fun is_X_thm s th = 
+fun is_X_thm s th =
     let val tm = snd (dest_thm th)
         val oper = get_operator (snd (strip_forall tm))
     in
@@ -842,7 +847,7 @@ fun get_list_posn a l =
                                origin_function = "get_list_posn",
                                message = ""}
        |   get_list_posn1 a (x :: xs) n =
-                  if a = x 
+                  if a = x
                   then  n
                   else get_list_posn1 a xs (n + 1)
   in
@@ -862,10 +867,10 @@ fun get_subs_term folddef tm =
     else
         el n tm_arglist
   end ;
- 
+
 
 (*
-fun is_list_ty ty = 
+fun is_list_ty ty =
         (#Tyop (dest_type ty) = "list")
         handle _ => false;
 *)
@@ -921,7 +926,7 @@ val get_fcomml_g = get_fcomm_g 1;
 val get_fcommr_g = get_fcomm_g 2;
 
 
-(* Filters out the elements of thl  which match according to check_fn 
+(* Filters out the elements of thl  which match according to check_fn
    (which is expected to instantiate the theorems with the match)
 *)
 
@@ -930,7 +935,7 @@ fun find_all_thms check_fn [] = []
         ((check_fn x) :: find_all_thms check_fn xs)
         handle HOL_ERR _ =>  find_all_thms check_fn xs (* No match *);
 (*
-Returns the first theorem that matches according to check_fn 
+Returns the first theorem that matches according to check_fn
    (which is expected to instantiate the theorems with the match)
 *)
 
@@ -1041,7 +1046,7 @@ fun PROVE_BACK_CHOP_LCONV get_fcomm_g mainthm all_folddefs e auxthms
          val tm2 = (--`(^f1, ^e1)`--)
      in
        is_term_match tm2 tm1
-     end handle HOL_ERR _ => false; 
+     end handle HOL_ERR _ => false;
 
      fun find_folddef_match  g e thl =
          filter (folddef_match g e) thl;
@@ -1049,8 +1054,8 @@ fun PROVE_BACK_CHOP_LCONV get_fcomm_g mainthm all_folddefs e auxthms
      val [fcomm_thms, id_thms] = auxthms;
      val g = get_fcomm_g (hd fcomm_thms)
      val back_folddef = find_folddef_match g e all_folddefs
- in     
-    PROVE_LCONV mainthm 
+ in
+    PROVE_LCONV mainthm
                    auxthms
                    var_folddef
                    ((chop_folddef_arg var_folddef) :: back_folddef) tm
@@ -1062,7 +1067,7 @@ fun PROVE_BACK_CHOP_LCONV get_fcomm_g mainthm all_folddefs e auxthms
 (*                                                                          *)
 (* ======================================================================== *)
 
-fun PROVE_APPEND_CONV block 
+fun PROVE_APPEND_CONV block
         (check_fcomm_fn, get_fcomm_g_fn,
          var_pthm, monoid_pthm,assoc_pthm, fcomm_monoid_pthm,fcomm_id_pthm)
         (all_monoid_thms, all_fcomm_thms, all_comm_thms,
@@ -1073,7 +1078,7 @@ fun PROVE_APPEND_CONV block
   in
    if is_var (snd (get_folddef_fe var_folddef)) andalso (not block)
    then PROVE_CONV1 var_folddef [var_pthm] tm
-   else 
+   else
     let val monoid_thms = find_thms (check_monoid_th f e) all_monoid_thms;
         val not_monoid_nil = not_eq_nil monoid_thms;
     in
@@ -1098,7 +1103,7 @@ fun PROVE_APPEND_CONV block
         in
          if not_fcomm_monoid_nil
          then
-            PROVE_LCONV1 fcomm_monoid_pthm 
+            PROVE_LCONV1 fcomm_monoid_pthm
                          fcomm_monoid_thms
                          var_folddef tm
          else
@@ -1108,9 +1113,9 @@ fun PROVE_APPEND_CONV block
           in
            if not_fcomm_id_nil
            then
-             PROVE_LCONV1 fcomm_id_pthm 
+             PROVE_LCONV1 fcomm_id_pthm
                           fcomm_id_thms var_folddef tm
-           else 
+           else
             raise HOL_ERR
                    {message = "I do not know enough auxiliary information",
                     origin_function = "LIST_CONV: ",
@@ -1142,8 +1147,8 @@ fun PROVE_FLAT_CONV
       val not_monoid_nil = not_eq_nil monoid_thms;
   in
    if not_monoid_nil
-   then 
-       PROVE_CHOP_LCONV monoid_pthm 
+   then
+       PROVE_CHOP_LCONV monoid_pthm
                         [monoid_thms] var_folddef tm
    else
     let val assoc_thms = find_thms (check_assoc_th f) all_assoc_thms;
@@ -1154,7 +1159,7 @@ fun PROVE_FLAT_CONV
      if not_assoc_nil andalso
         not_id_nil
      then
-        PROVE_CHOP_LCONV assoc_pthm 
+        PROVE_CHOP_LCONV assoc_pthm
                          [assoc_thms, id_thms] var_folddef tm
      else
       let val fcomm_thms = find_all_thms (check_fcomm_fn f) all_fcomm_thms;
@@ -1164,8 +1169,8 @@ fun PROVE_FLAT_CONV
       in
        if not_fcomm_monoid_nil
        then
-         PROVE_BACK_CHOP_LCONV get_fcomm_g_fn fcomm_monoid_pthm 
-                    all_folddefs e 
+         PROVE_BACK_CHOP_LCONV get_fcomm_g_fn fcomm_monoid_pthm
+                    all_folddefs e
                     fcomm_monoid_thms var_folddef tm
        else
         let val fcomm_id_thms =
@@ -1174,10 +1179,10 @@ fun PROVE_FLAT_CONV
         in
          if not_fcomm_id_nil
          then
-           PROVE_BACK_CHOP_LCONV get_fcomm_g_fn fcomm_id_pthm 
-                   all_folddefs e 
+           PROVE_BACK_CHOP_LCONV get_fcomm_g_fn fcomm_id_pthm
+                   all_folddefs e
                    fcomm_id_thms var_folddef tm
-         else raise HOL_ERR{message = 
+         else raise HOL_ERR{message =
               "I do not know enough auxiliary information",
                origin_function = "LIST_CONV: ",
                origin_structure = ""}
@@ -1205,7 +1210,7 @@ fun PROVE_CONS_CONV proofthms folddef tm =
 fun PROVE_SNOC_CONV block proofthms folddef tm =
      if not block
      then
-        raise HOL_ERR{message = 
+        raise HOL_ERR{message =
               "Only the symmetrical form of this theorem can be proven",
                origin_function = "LIST_CONV: ",
                origin_structure = ""}
@@ -1218,7 +1223,7 @@ fun PROVE_SNOC_CONV block proofthms folddef tm =
 (*                         REVERSE                                          *)
 (*                                                                          *)
 (* ======================================================================== *)
-fun PROVE_REVERSE_CONV1 f e 
+fun PROVE_REVERSE_CONV1 f e
        (monoid_pthm, assoc_pthm)
        (all_monoid_thms, all_comm_thms, all_assoc_thms) folddef tm =
 
@@ -1229,7 +1234,7 @@ fun PROVE_REVERSE_CONV1 f e
  in
  if not_monoid_nil andalso
     not_comm_nil
- then 
+ then
      PROVE_LCONV1 monoid_pthm
                  [comm_thms,monoid_thms]folddef tm
  else
@@ -1238,16 +1243,16 @@ fun PROVE_REVERSE_CONV1 f e
   in
    if not_assoc_nil andalso
       not_comm_nil
-   then 
+   then
      PROVE_LCONV1 assoc_pthm [comm_thms,assoc_thms]folddef tm
-   else raise HOL_ERR{message = 
+   else raise HOL_ERR{message =
             "I do not know enough auxiliary information",
              origin_function = "LIST_CONV: ",
              origin_structure = ""}
   end
  end;
 
-fun PROVE_REVERSE_CONV 
+fun PROVE_REVERSE_CONV
       (m, monoid_pthm, assoc_pthm, split_monoid_pthm, split_assoc_pthm)
       (all_monoid_thms, all_fcomm_thms, all_comm_thms,
        all_assoc_thms, all_id_thms)
@@ -1258,13 +1263,13 @@ fun PROVE_REVERSE_CONV
   in
   if not (is_term_match m f)
   then
-    PROVE_REVERSE_CONV1 f e 
+    PROVE_REVERSE_CONV1 f e
        (monoid_pthm, assoc_pthm)
        (all_monoid_thms, all_comm_thms, all_assoc_thms) folddef tm
   else
    let val g = get_g_from_abs2 f; (* get g from (\x l. g a b) *)
    in
-    PROVE_REVERSE_CONV1 g e 
+    PROVE_REVERSE_CONV1 g e
        (split_monoid_pthm, split_assoc_pthm)
        (all_monoid_thms, all_comm_thms, all_assoc_thms) folddef tm
    end
@@ -1306,7 +1311,7 @@ fun PROVE_LIST_CONV
       then raise HOL_ERR{message = "I cannot prove anything useful",
                         origin_function = "LIST_CONV: ",
                         origin_structure = ""}
-      else th 
+      else th
    end;
 
 val foldl_thms = ref
@@ -1457,21 +1462,21 @@ fun X_LIST_CONV {Fold_thms = folddefs, Aux_thms = auxthms} tm =
     in
      let val all_foldr_defs =  user_foldr @ (!foldr_thms);
          val foldr = get_fold_def all_foldr_defs tm;
-         val all_auxthms = 
+         val all_auxthms =
           (user_monoid @ !monoid_thms, user_fcomm @ !fcomm_thms,
            user_comm @ !comm_thms, user_assoc @ !assoc_thms,
            user_left_id @ !left_id_thms);
      in
       PROVE_RIGHT_LIST_CONV all_foldr_defs all_auxthms foldr tm
      end
-    handle HOL_ERR _ => 
+    handle HOL_ERR _ =>
     (let
         val user_foldl = filter (is_fold_def "FOLDL") folddefs;
         val user_right_id = filter_X_thm "RIGHT_ID" auxthms;
 
         val all_foldl_defs =  user_foldl @ (!foldl_thms);
         val foldl = get_fold_def all_foldl_defs tm;
-        val all_auxthms = 
+        val all_auxthms =
          (user_monoid @ !monoid_thms,  user_fcomm @ !fcomm_thms,
           user_comm @ !comm_thms,  user_assoc @ !assoc_thms,
           user_right_id @ !right_id_thms);
@@ -1492,7 +1497,7 @@ val LIST_CONV = X_LIST_CONV {Fold_thms = [], Aux_thms = []};
 
 fun PURE_LIST_CONV {Fold_thms = folddefs, Aux_thms = auxthms} tm =
    (let val foldr = get_fold_def (filter (is_fold_def "FOLDR") folddefs) tm;
-        val sorted_auxthms = 
+        val sorted_auxthms =
               (filter_X_thm "MONOID" auxthms,
                filter_X_thm "FCOMM" auxthms,
                filter_X_thm "COMM" auxthms,
@@ -1501,9 +1506,9 @@ fun PURE_LIST_CONV {Fold_thms = folddefs, Aux_thms = auxthms} tm =
     in
      PROVE_RIGHT_LIST_CONV folddefs sorted_auxthms foldr tm
     end)
-  handle HOL_ERR _ => 
+  handle HOL_ERR _ =>
    (let val foldl = get_fold_def (filter (is_fold_def "FOLDL") folddefs) tm;
-        val sorted_auxthms = 
+        val sorted_auxthms =
               (filter_X_thm "MONOID" auxthms,
                filter_X_thm "FCOMM" auxthms,
                filter_X_thm "COMM" auxthms,
@@ -1535,7 +1540,7 @@ fun set_list_thm_database {Fold_thms = fold_thms, Aux_thms = aux_thms} =
       foldr_thms   := filter (is_fold_def "FOLDR") fold_thms;
       foldl_thms   := filter (is_fold_def "FOLDL") fold_thms
      );
- 
+
 
 
 end;  (* List_conv2 *)

@@ -4,8 +4,8 @@
 (*                 type is defined and the following "axiomatization" is *)
 (*                 proven from the definition of the type:               *)
 (*                                                                       *)
-(*                    |- !x f. ?!fn. (fn [] = x) /\                     *)
-(*                             (!h t. fn (h::t) = f (fn t) h t)      *)
+(*                    |- !x f. ?!fn. (fn [] = x) /\                      *)
+(*                             (!h t. fn (h::t) = f (fn t) h t)          *)
 (*                                                                       *)
 (*                 Translated from hol88.                                *)
 (*                                                                       *)
@@ -34,7 +34,7 @@ val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
  * Open structures used in the body.
  *---------------------------------------------------------------------------*)
 
-open HolKernel Parse basicHol90Lib Num_conv ;
+open HolKernel Parse boolLib Num_conv Prim_rec;
 infix THEN ORELSE THENL THENC ORELSEC  |->;
 
 type thm = Thm.thm;
@@ -95,7 +95,7 @@ val list_Axiom_old = store_thm(
     ASSUME_TAC list_Axiom THEN
     POP_ASSUM (ACCEPT_TAC o BETA_RULE o Q.SPECL [`x`, `\x y z. f z x y`]),
     REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN
-    Ho_resolve.MATCH_MP_TAC (TypeBase.induction_of listinfo) THEN
+    HO_MATCH_MP_TAC (TypeBase.induction_of listinfo) THEN
     simpLib.ASM_SIMP_TAC boolSimps.bool_ss []
   ]);
 
@@ -224,8 +224,10 @@ val MAP2 =
       THEN ASM_REWRITE_TAC [HD,TL]
       end)
   in
-  new_specification{name = "MAP2", sat_thm = lemma,
-                    consts = [{const_name="MAP2", fixity=Prefix}]}
+      Rsyntax.new_specification{
+        name = "MAP2", sat_thm = lemma,
+        consts = [{const_name="MAP2", fixity=Prefix}]
+      }
   end
 
 (* ---------------------------------------------------------------------*)
@@ -335,6 +337,13 @@ val MAP_APPEND = store_thm ("MAP_APPEND",
 val LENGTH_MAP = store_thm ("LENGTH_MAP",
  --`!l. !(f:'a->'b). LENGTH (MAP f l) = LENGTH l`--,
      LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [MAP, LENGTH]);
+
+val MAP_EQ_NIL = store_thm(
+  "MAP_EQ_NIL",
+  --`!(l:'a list) (f:'a->'b).
+         ((MAP f l = []) = (l = [])) /\
+         (([] = MAP f l) = (l = []))`--,
+  LIST_INDUCT_TAC THEN REWRITE_TAC [MAP, NOT_CONS_NIL, NOT_NIL_CONS]);
 
 val EVERY_EL = store_thm ("EVERY_EL",
  --`!(l:'a list) P. EVERY P l = !n. n < LENGTH l ==> P (EL n l)`--,
@@ -491,7 +500,7 @@ val WF_LIST_PRED = store_thm("WF_LIST_PRED",
 Term`WF \L1 L2. ?h:'a. L2 = h::L1`,
 REWRITE_TAC[relationTheory.WF_DEF] THEN BETA_TAC THEN GEN_TAC
   THEN CONV_TAC CONTRAPOS_CONV
-  THEN Ho_rewrite.REWRITE_TAC
+  THEN Ho_Rewrite.REWRITE_TAC
          [NOT_FORALL_THM,NOT_EXISTS_THM,NOT_IMP,DE_MORGAN_THM]
   THEN REWRITE_TAC [GSYM IMP_DISJ_THM] THEN STRIP_TAC
   THEN LIST_INDUCT_TAC THENL [ALL_TAC,GEN_TAC]
@@ -654,7 +663,7 @@ val ZIP =
     THEN ASM_REWRITE_TAC[pairTheory.UNCURRY_DEF,HD,TL]
      end)
     in
-    new_specification
+    Rsyntax.new_specification
         {consts = [{const_name = "ZIP", fixity = Prefix}],
          name = "ZIP",
          sat_thm = lemma

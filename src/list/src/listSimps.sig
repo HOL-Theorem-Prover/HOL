@@ -1,5 +1,5 @@
 signature listSimps =
 sig
      val list_ss  : simpLib.ssdata
-     val list_rws : computeLib.comp_rws -> unit
+     val list_rws : computeLib.compset -> unit
 end
