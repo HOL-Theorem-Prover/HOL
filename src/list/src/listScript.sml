@@ -278,7 +278,7 @@ val LIST_INDUCT_TAC = INDUCT_THEN list_INDUCT ASSUME_TAC;
 (*---------------------------------------------------------------------------*)
 
 val FORALL_LIST = Q.store_thm 
- ("FORALL_LIST_THM",
+ ("FORALL_LIST",
   `(!l. P l) = P [] /\ !h t. P t ==> P (h::t)`,
   METIS_TAC [list_INDUCT]);
 
