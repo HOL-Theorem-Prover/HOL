@@ -553,7 +553,7 @@ val grandbeta_subst = store_thm(
         by SRW_TAC [][swap_ALPHA] THEN
     SRW_TAC [][SUB_THM, swap_subst_out] THEN
     MATCH_MP_TAC (List.nth(CONJUNCTS grandbeta_rules, 1)) THEN
-    SRW_TAC [][],
+    SRW_TAC [][grandbeta_rules],
     SRW_TAC [][SUB_THM] THEN METIS_TAC [grandbeta_rules],
     Q_TAC SUFF_TAC
           `!M M' N N' P x.
