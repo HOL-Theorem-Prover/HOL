@@ -6,21 +6,17 @@ app load ["bossLib", "numLib"];
 
 open TotalDefn bossLib numLib;
 
+val ARITH = DECIDE o Term;
 
 (*---------------------------------------------------------------------------
-       Define the function. Note that the definition of nested
-       functions is achieved by the invisible definition of an
-       "auxiliary" function from which the desired function is 
-       obtained. The termination proof of the desired function
-       is reduced to that of the auxiliary function.
-
-       We use Hol_defn to make the definition, since we tackle
-       the termination proof ourselves.
+       Define the 91 function. We call it "N". We use Hol_defn to 
+       make the definition, since we tackle the termination proof 
+       ourselves.
  ---------------------------------------------------------------------------*)
 
 val N_defn = 
- Defn.Hol_defn "N" 
-               `N(x) = if x>100 then x-10 else N (N (x+11))`;
+ Hol_defn "N" 
+          `N(x) = if x>100 then x-10 else N (N (x+11))`;
 
 val [Neqn] = Defn.eqns_of N_defn;
 
@@ -42,26 +38,38 @@ val Npartly_correct = Q.prove(
 STRIP_TAC THEN recInduct Nind
   THEN REPEAT STRIP_TAC
   THEN ONCE_REWRITE_TAC [Neqn]
-  THEN RW_TAC bool_ss [DECIDE(Term`x+11-10 = x+1`)]
+  THEN RW_TAC std_ss [ARITH `x+11-10 = x+1`]
   THEN RW_TAC arith_ss [])
 end;
 
 
 (*---------------------------------------------------------------------------
-         Miscellaneous support
- ---------------------------------------------------------------------------*)
+      Prove termination for N. Unlike normal recursive functions, this
+      is a multi-step process.
 
-val measure_def   = prim_recTheory.measure_def;
-val inv_image_def = relationTheory.inv_image_def;
+      1. One termination relation that works is "measure \x. 101 - x".
+         (Determined by introspection).
 
-fun ARITH q = DECIDE (Term q);
-val lem = ARITH `~(x > 100) ==> (101-y < 101-x = x<y)`;
+      2. Instantiate the defn with the relation, via Defn.set_reln.
 
+      3. Find the termination conditions of (2), via Defn.tcs_of.
 
+      4. Prove the non-nested termination conditions. 
 
-(*---------------------------------------------------------------------------
-      Prove termination for N. The termination relation is 
-      "measure \x. 101 - x". 
+      5. Remove (4) from the result of (2), via Defn.elim_tcs.
+         The easy stuff is now finished.
+
+      6. Get the auxiliary definition from the result of (5), 
+         via Defn.aux_defn.
+
+      7. Get the equations from (6), via Defn.eqns_of.
+
+      8. The result of (7) is a list of equations, constrained by the 
+         nested termination condition. Simplify the nested t.c.
+         with TotalDefn.TC_SIMP_CONV.
+
+      9. Do the termination proof, using Defn.tgoal on (5)
+         
  ---------------------------------------------------------------------------*)
 
 val N_defn_1 = Defn.set_reln N_defn (Term `measure \x. 101 - x`);
@@ -75,70 +83,90 @@ val non_nested_tcs = prove
 val N_defn_2 = Defn.elim_tcs N_defn_1 (CONJUNCTS non_nested_tcs);
 
 val SOME aux_defn_2 = Defn.aux_defn N_defn_2;
-val [E0] = Defn.eqns_of aux_defn_2;
-val E1 = CONV_RULE (TC_SIMP_CONV []) (DISCH_ALL E0);
-val E2 = simpLib.SIMP_RULE std_ss [lem] E1;
+val E0  = DISCH_ALL (hd (Defn.eqns_of aux_defn_2));
+val lem = ARITH `~(x > 100) ==> (101-y < 101-x = x<y)`;
+val lem1 = Q.prove(`measure f x y = f x < f y`, 
+            RW_TAC std_ss [prim_recTheory.measure_def, 
+                           relationTheory.inv_image_def]);
+val E1  = GEN_ALL (simpLib.SIMP_RULE std_ss [lem,lem1] E0);
 
 (*---------------------------------------------------------------------------
 
-        Termination proof. It's worth noting that termination is
-        completely independent of the partial correctness proof.
-        [People used to think that termination and partial correctness
-         of nested recursive functions had to be proved simultaneously;
-         instead of unrolling the function definition for the nested 
-         application of the function, the partial correctness would be
-         used instead. The fear was that it would be circular to expand
-         the function definition before the termination of the function 
-         was proved, i.e., to use it in its own termination proof. This 
-         isn't so: one can validly unroll the definition at "sufficiently 
-         small" instances. Often this suffices to get the proof, and, in
-         such cases, partial correctness need not be involved.]
+        Termination of the nested t.c. We'll use NAUX to abbreviate 
+        the instantiated auxiliary function. The proof goes as follows:
 
+        Induct on the termination relation, then tidy up the goal 
+        with [lem,lem1]. The goal is now to show
+
+          `x < NAUX (x+11)`
+
+        - Unroll the function at x+11. Doing this first requires 
+          manually instantiating the fn with `x+11`. In order to unroll
+          the function, the nested t.c.
+
+           `x+11 < NAUX (x+22)` 
+
+          needs to be proved. This is accomplished by applying the 
+          ind. hyp. After being proved, the nested t.c. is also added 
+          to the hypotheses, since it is used again later. Now  
+          conditional rewriting will unroll the function at `x+11`, 
+          exposing the nested call of the function. The goal is now to 
+          prove 
+
+           `x < NAUX(NAUX(x+22))
+
+        - At this point, we know by simple arithmetic
+
+           `x < NAUX (x+22) -11`
+
+        - Now a case split is made, on 
+
+            `NAUX (x+22) -11 > 100`
+
+          The motivation for this is rather mysterious. Consider the 
+          two branches coming from the case split. 
+
+          A. NAUX (x+22) -11 > 100, so NAUX (x+22) > 100, so
+             in the goal, NAUX(NAUX(x+22)) reduces to NAUX(x+22) -10. 
+             Our task is now to show that x < NAUX(x+22) -10, and this
+             is easy.
+
+          B. ~(NAUX (x+22) -11 > 100), so the i.h. may be used to 
+             deliver NAUX(x+22) -11 < NAUX(NAUX(x+22) -11+11)
+                                    = NAUX(NAUX(x+22))
+             After that, the proof of this branch is also easy.
+
+          That finishes the whole proof. Revisiting the case-split, 
+          we see that part A does not use the i.h. since it unrolls 
+          NAUX to the non-recursive case. Part B, in contrast, uses
+          the induction hypothesis instead of unrolling NAUX to 
+          the recursive case, which would lead to madness. We see that
+          the case split was aimed at making the conclusion of the 
+          inductive hypothesis work out, so part B is very smooth. 
+   
  ---------------------------------------------------------------------------*)
 
-Defn.tgoal N_defn_2;
-e (TC_SIMP_TAC [] []);
-e (simpLib.SIMP_TAC std_ss [lem]);
-e (GEN_TAC THEN measureInduct_on `(\m. 101 - m) x`);
-e (RW_TAC std_ss []);
-e (IMP_RES_THEN (fn th => RULE_ASSUM_TAC (REWRITE_RULE [th])) lem);
-e (MP_TAC (Q.SPEC `x+11` (GEN_ALL E2)));
-e (RW_TAC std_ss [DECIDE (Term `x < x+11-10`)]);
-e (`x + 11 < N_aux (\x y. 101 - x < 101 - y) (x + 11 + 11)`
-   by PROVE_TAC [DECIDE (Term `x < x+11`)]);
-e (RW_TAC std_ss []);  (* Unroll the function *)
-e (WEAKEN_TAC is_imp);
+val (N,N_INDUCT) = Defn.tprove
+(N_defn_2,
+ GEN_TAC THEN measureInduct_on `(\m. 101 - m) x`
+   THEN DISCH_TAC THEN Q.PAT_ASSUM`!y. Q y` MP_TAC THEN RW_TAC std_ss[lem,lem1]
+   THEN MP_TAC (Q.SPEC `x+11` E1) THEN RW_TAC std_ss [ARITH `x < x+11-10`]
+   THEN `x+11 < N_aux(measure($- 101)) (x+11+11)` by PROVE_TAC[ARITH`x<x+11`]
+   THEN RW_TAC std_ss [] THEN WEAKEN_TAC is_imp (* g.c. *)
+   THEN Cases_on `N_aux(measure ($- 101)) (x+11+11) -11 > 100` THENL
+   [WEAKEN_TAC is_forall (* i.h. not used in this branch *)
+      THEN `N_aux(measure($- 101)) (x+11+11) > 100` by DECIDE_TAC
+      THEN MP_TAC (Q.SPEC `N_aux(measure ($- 101)) (x+11+11)` E1)
+      THEN RW_TAC std_ss [] THEN DECIDE_TAC,
+    PROVE_TAC [arithmeticTheory.LESS_TRANS, 
+           ARITH `x+y < p ==> x < p-y`, ARITH `x+y < p ==> ((p-y)+y = p)`]]);
 
-e (MP_TAC (Q.SPEC `x+11` (GEN_ALL E2)));
-e (Cases_on `N_aux (\x y. 101 - x < 101 - y) (x + 11 + 11) - 11 > 100`);
-
-val (N_eqn, N_ind) = Defn.tprove(N_defn,
-WF_REL_TAC `measure \x. 101 - x`  (* non-nested TC proved here *)
-  THEN RW_TAC bool_ss [GSYM Nine1_def', lem]
-  THEN measureInduct_on `(\m. 101 - m) x`
-  THEN RW_TAC bool_ss [] 
-  THEN IMP_RES_THEN (fn th => RULE_ASSUM_TAC (REWRITE_RULE [th])) lem
-  THEN Cases_on `x+11 > 100` THENL
-   [RW_TAC arith_ss [eqn1],
-    `x+11 < Nine1((x+11)+11)`  by PROVE_TAC [ARITH `x<x+11`]            THEN
-    `x < Nine1((x+11)+11) -11` by PROVE_TAC [ARITH `x+y < z = x < z-y`] THEN
-    `Nine1 (x+11) = Nine1 (Nine1 ((x+11) + 11))` by PROVE_TAC[eqn2]     THEN
-    Cases_on `Nine1((x+11)+11) -11 > 100` THENL
-     [`Nine1((x+11)+11) > 100` by PROVE_TAC [ARITH`x-11 > 100 ==> x>100`] THEN
-      `Nine1(Nine1((x+11)+11)) = Nine1((x+11)+11) -10` by PROVE_TAC[eqn1] 
-        THEN Q.PAT_ASSUM `Nine1 (x+11) = M` (SUBST_ALL_TAC o SYM) 
-        THEN PROVE_TAC[ARITH`x>100 ==> x-11<x-10`,arithmeticTheory.LESS_TRANS],
-      RES_TAC 
-       THEN IMP_RES_THEN SUBST_ALL_TAC (ARITH`w+11<y ==> ((y-11)+11 = y)`)
-       THEN PROVE_TAC [eqn2,arithmeticTheory.LESS_TRANS]]]);
  
-
-
 (*---------------------------------------------------------------------------
       Note that the above development is slightly cranky, since
       the partial correctness theorem has constraints remaining. 
-      These were actually addressed by the termination proof, but 
-      the witnesses were proved and then thrown away. 
+      These were addressed by the termination proof, but the 
+      constraints were proved and then thrown away. 
 
       Now try some computations with N.
  ---------------------------------------------------------------------------*)
