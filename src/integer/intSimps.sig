@@ -7,6 +7,9 @@ sig
 
   val int_ss : simpLib.simpset
 
+  val INT_MUL_AC_ss : simpLib.ssdata
+  val INT_ADD_AC_ss : simpLib.ssdata
+
   val REDUCE_CONV : Term.term -> Thm.thm
   val RED_CONV : Term.term -> Thm.thm
 

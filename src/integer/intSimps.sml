@@ -104,4 +104,13 @@ in
     end
 end
 
+open simpLib
+
+val INT_ADD_AC_ss =
+    SIMPSET {ac = [(SPEC_ALL INT_ADD_ASSOC, SPEC_ALL INT_ADD_COMM)],
+             convs = [], dprocs = [], filter = NONE, rewrs = [], congs = []}
+val INT_MUL_AC_ss =
+    SIMPSET {ac = [(SPEC_ALL INT_MUL_ASSOC, SPEC_ALL INT_MUL_COMM)],
+             convs = [], dprocs = [], filter = NONE, rewrs = [], congs = []}
+
 end;

@@ -3220,14 +3220,14 @@ val _ = BasicProvers.export_rewrites
          "INT_MOD", "INT_REM", "INT_MOD0", "INT_REM0",
          "INT_MOD_COMMON_FACTOR", "INT_REM_COMMON_FACTOR",
          "INT_MOD_ID", "INT_REM_ID", "INT_MOD_NEG", "INT_REM_NEG",
-         "INT_MUL", "INT_MUL_ASSOC", "INT_MUL_EQ_1", "INT_MUL_LID",
-         "INT_MUL_LZERO", "INT_MUL_RID", "INT_MUL_RZERO",
-         "INT_NEGNEG", "INT_NEG_0", "INT_NEG_EQ0", "INT_NEG_GE0",
-         "INT_NEG_GT0", "INT_NEG_LE0", "INT_NEG_LT0", "INT_NEG_MUL2",
-         "INT_NEG_SAME_EQ", "INT_NEG_SUB", "INT_SUB_0", "INT_SUB_ADD",
-         "INT_SUB_ADD2", "INT_SUB_LZERO", "INT_SUB_NEG2",
-         "INT_SUB_REFL", "INT_SUB_RNEG", "INT_SUB_RZERO",
-         "INT_SUB_SUB", "INT_SUB_SUB2", "NUM_OF_INT"]
+         "INT_MUL", "INT_MUL_EQ_1", "INT_MUL_LID", "INT_MUL_LZERO",
+         "INT_MUL_RID", "INT_MUL_RZERO", "INT_NEGNEG", "INT_NEG_0",
+         "INT_NEG_EQ0", "INT_NEG_GE0", "INT_NEG_GT0", "INT_NEG_LE0",
+         "INT_NEG_LT0", "INT_NEG_MUL2", "INT_NEG_SAME_EQ",
+         "INT_NEG_SUB", "INT_SUB_0", "INT_SUB_ADD", "INT_SUB_ADD2",
+         "INT_SUB_LZERO", "INT_SUB_NEG2", "INT_SUB_REFL",
+         "INT_SUB_RNEG", "INT_SUB_RZERO", "INT_SUB_SUB",
+         "INT_SUB_SUB2", "NUM_OF_INT"]
 
 val _ = export_theory();
 
