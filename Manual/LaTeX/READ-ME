@@ -1,0 +1,16 @@
++ ===================================================================== +
+| HOL DISTRIBUTION DIRECTORY: Manual/LaTeX				|
++ ===================================================================== +
+
+This directory contains the LaTeX style file and macro definitions for the
+HOL manual.  The contents are:
+
+  * READ-ME           : This file
+  * ack.tex           : Acknowledgements chapter for all three manual volumes
+  * commands.tex      : General macro definitions for the manual
+  * layout.sty        : File specifying layout style for docs.
+  * layout.tex        : Test file for manual page layout
+  * makeindex         : The index-making program
+  * pic-macros.tex    : Extra macros for picture mode
+  * ref-macros.tex    : Reference manual macros for typesetting .doc files
+

@@ -1,0 +1,231 @@
+% =====================================================================
+% HOL Manual LaTeX Source: layout test file
+% =====================================================================
+
+\documentclass[12pt]{book}
+\usepackage{fleqn}
+\input{layout.sty}
+
+
+\begin{document}
+
+\setlength{\unitlength}{1mm}
+
+% ---------------------------------------------------------------------
+% \rsize = the width of lines around stuff
+% ---------------------------------------------------------------------
+
+\newlength{\rsize}
+\setlength{\rsize}{0.1mm}
+
+\linethickness{\rsize}
+
+% ---------------------------------------------------------------------
+% \textw = \textwidth  - width of two lines
+% \texth = \textheight - width of two lines
+% \headh = \headheigth - width of two lines
+% ---------------------------------------------------------------------
+
+\newlength{\textw}
+\setlength{\textw}{\textwidth}
+\addtolength{\textw}{-2\rsize}
+
+\newlength{\texth}
+\setlength{\texth}{\textheight}
+\addtolength{\texth}{-2\rsize}
+
+\newlength{\headh}
+\setlength{\headh}{\headheight}
+\addtolength{\headh}{-2\rsize}
+
+%\newlength{\footh}
+%\setlength{\footh}{\footheight}
+%\addtolength{\footh}{-2\rsize}
+
+% ---------------------------------------------------------------------
+% \eveninner = size of even-page inner margin
+% \oddouter = size of odd-page outer margin
+% ---------------------------------------------------------------------
+
+\newdimen\eveninner
+\eveninner=210mm
+\advance\eveninner by -1\textwidth
+\advance\eveninner by -1.0in
+\advance\eveninner by -\evensidemargin
+
+\newdimen\oddouter
+\oddouter=210mm
+\advance\oddouter by -1\textwidth
+\advance\oddouter by -1.0in
+\advance\oddouter by -\oddsidemargin
+
+
+% ---------------------------------------------------------------------
+% For frames around things
+% ---------------------------------------------------------------------
+\newbox\textbox
+
+\long\def\Frame#1{\leavevmode
+    \hbox{\vbox{\hrule height\rsize
+              \hbox{\vrule width\rsize #1\vrule width\rsize}
+              \hrule height\rsize}}}
+
+% ---------------------------------------------------------------------
+% Change the head/foot
+% ---------------------------------------------------------------------
+
+\makeatletter
+
+%\def\@oddfoot{\Frame{\vbox to \footh {\vfil {\hbox to \textw{\hfill}\vfil}}}}
+
+%\def\@evenfoot{\Frame{\vbox to \footh {\vfil {\hbox to \textw {\hfill}\vfil}}}}
+
+\def\@evenhead{\Frame{\vbox to \headh {\vspace*{0.5mm} {\hbox to \textw {\hspace*{1mm}\thepage\hfil}\vfil}}}}
+
+\def\@oddhead{\Frame{\vbox to \headh {\vspace*{0.5mm} {\hbox to \textw {\hfil
+\thepage\hspace*{1mm}}\vfil}}}}
+
+\makeatother
+
+% ---------------------------------------------------------------------
+% For converting point dimensions to mm
+% ---------------------------------------------------------------------
+
+\newcount\cnt
+\newcount\cntt
+\newcount\cnttt
+\newdimen\dimn
+
+\def\conv#1{\cntt=#1 \divide\cntt by 186467
+            \dimn=#1 \multiply\dimn by 10
+            \cnt=\dimn \divide\cnt by 186467
+            \cnttt=\cntt \multiply\cnttt by 10
+            \advance\cnt by -\cnttt \the\cntt.\the\cnt\ mm}
+
+\def\addconv#1{\dimn=#1 \advance\dimn by 1in \cntt=\dimn
+               \divide\cntt by 186467
+               \dimn=#1 \advance\dimn by 1in \multiply\dimn by 10
+               \cnt=\dimn \divide\cnt by 186467
+               \cnttt=\cntt \multiply\cnttt by 10
+               \advance\cnt by -\cnttt \the\cntt.\the\cnt\ mm}
+
+
+% ---------------------------------------------------------------------
+% Page 1
+% ---------------------------------------------------------------------
+
+\setbox\textbox=\vbox to \texth {\vfil {\hbox to \textw {\hfil
+
+\begin{tabular}{@{}ll}
+width of text:  & \conv{\textwidth} \\
+height of text:  & \conv{\textheight} \\
+inner margin:  & \addconv{\oddsidemargin} \\
+outer margin:  & \conv{\oddouter} \\
+top margin:  & \addconv{\topmargin} \\
+\end{tabular}
+
+
+\hfil}\vfil}}
+
+\noindent \Frame{\box\textbox}
+
+\newpage
+
+% ---------------------------------------------------------------------
+% Page 2
+% ---------------------------------------------------------------------
+
+\makeatletter
+
+\def\@oddfoot{}
+\def\@evenfoot{}
+
+\makeatother
+
+\setbox\textbox=\vbox to \texth {\vfil {\hbox to \textw {\hfil
+
+\begin{tabular}{@{}ll}
+width of text:  & \conv{\textwidth} \\
+height of text:  & \conv{\textheight} \\
+inner margin:  & \conv{\eveninner} \\
+outer margin:  & \addconv{\evensidemargin} \\
+top margin:  & \addconv{\topmargin} \\
+\end{tabular}
+
+
+\hfil}\vfil}}
+
+\noindent \Frame{\box\textbox}
+
+\newpage
+
+
+
+% ---------------------------------------------------------------------
+% Page 3
+% ---------------------------------------------------------------------
+
+\setbox\textbox=\vbox to \texth {\vfil {\hbox to \textw {\hfil
+
+\begin{tabular}{@{}ll}
+width of text:  & \conv{\textwidth} \\
+height of text:  & \conv{\textheight} \\
+inner margin:  & \addconv{\oddsidemargin} \\
+outer margin:  & \conv{\oddouter} \\
+top margin:  & \addconv{\topmargin} \\
+\end{tabular}
+
+
+\hfil}\vfil}}
+
+\noindent \Frame{\box\textbox}
+\newpage
+
+% ---------------------------------------------------------------------
+% Page 4
+% ---------------------------------------------------------------------
+
+\setbox\textbox=\vbox to \texth {\vfil {\hbox to \textw {\hfil
+
+\begin{tabular}{@{}ll}
+width of text:  & \conv{\textwidth} \\
+height of text:  & \conv{\textheight} \\
+inner margin:  & \conv{\eveninner} \\
+outer margin:  & \addconv{\evensidemargin} \\
+top margin:  & \addconv{\topmargin} \\
+\end{tabular}
+
+
+\hfil}\vfil}}
+
+\noindent \Frame{\box\textbox}
+
+\makeatletter
+
+\def\@oddfoot{\hfil \Frame{\phantom{1}}\hfil}
+\def\@evenfoot{\hfil \Frame{\phantom{1}}\hfil}
+\def\@evenhead{}  \def\@oddhead{}
+
+\makeatother
+
+\newpage
+
+% ---------------------------------------------------------------------
+% Page 5
+% ---------------------------------------------------------------------
+
+\setbox\textbox=\vbox to \texth {\vfil {\hbox to \textw {\hfil
+
+\begin{tabular}{@{}ll}
+width of text:  & \conv{\textwidth} \\
+height of text:  & \conv{\textheight} \\
+inner margin:  & \conv{\eveninner} \\
+outer margin:  & \addconv{\evensidemargin} \\
+top margin:  & \addconv{\topmargin} \\
+\end{tabular}
+
+\hfil}\vfil}}
+
+\noindent \Frame{\box\textbox}
+
+\end{document}

@@ -1,0 +1,174 @@
+% =====================================================================
+% Macros for typesetting hol reference manual entries
+% =====================================================================
+
+% ---------------------------------------------------------------------
+% boolean flag for verbose printing of reference manual typesetting
+% ---------------------------------------------------------------------
+
+\newif\ifverboseref
+\verbosereffalse			  % don't be verbose
+
+% ---------------------------------------------------------------------
+% Macro for generating right-hand page running titles.
+% ---------------------------------------------------------------------
+
+\makeatletter
+
+\def\mkhead{\futurelet\@t\chsize}
+\def\chsize#1.{\ifx a\@t \markright{{\protect\bf #1}}\else
+   	       \ifx b\@t \markright{{\protect\bf #1}}\else
+	       \ifx c\@t \markright{{\protect\bf #1}}\else
+	       \ifx d\@t \markright{{\protect\bf #1}}\else
+	       \ifx e\@t \markright{{\protect\bf #1}}\else
+	       \ifx f\@t \markright{{\protect\bf #1}}\else
+	       \ifx g\@t \markright{{\protect\bf #1}}\else
+	       \ifx h\@t \markright{{\protect\bf #1}}\else
+	       \ifx i\@t \markright{{\protect\bf #1}}\else
+	       \ifx j\@t \markright{{\protect\bf #1}}\else
+	       \ifx k\@t \markright{{\protect\bf #1}}\else
+	       \ifx l\@t \markright{{\protect\bf #1}}\else
+	       \ifx m\@t \markright{{\protect\bf #1}}\else
+	       \ifx n\@t \markright{{\protect\bf #1}}\else
+	       \ifx o\@t \markright{{\protect\bf #1}}\else
+	       \ifx p\@t \markright{{\protect\bf #1}}\else
+	       \ifx q\@t \markright{{\protect\bf #1}}\else
+	       \ifx r\@t \markright{{\protect\bf #1}}\else
+	       \ifx s\@t \markright{{\protect\bf #1}}\else
+	       \ifx t\@t \markright{{\protect\bf #1}}\else
+	       \ifx u\@t \markright{{\protect\bf #1}}\else
+	       \ifx v\@t \markright{{\protect\bf #1}}\else
+	       \ifx w\@t \markright{{\protect\bf #1}}\else
+	       \ifx z\@t \markright{{\protect\bf #1}}\else
+	       \ifx y\@t \markright{{\protect\bf #1}}\else
+	       \ifx z\@t \markright{{\protect\bf #1}}\else
+               \markright{{\protect\small\bf #1}}\fi
+	       \fi\fi\fi\fi\fi\fi\fi\fi\fi\fi\fi\fi\fi\fi\fi
+	       \fi\fi\fi\fi\fi\fi\fi\fi\fi\fi}
+
+\makeatother
+
+% ---------------------------------------------------------------------
+% \DOC{<object>}  : start a manual entry for <object>.
+% ---------------------------------------------------------------------
+
+\newcommand{\DOC}[1]%
+{\bigskip
+ {\ifverboseref{\def\_{\string_}\typeout{Typesetting: #1}}\fi}
+ \bgroup\samepage		% ended after \TYPE
+ \mkhead #1.
+ \begin{flushleft}
+ \begin{tabular}{|c|}\hline
+ \begin{minipage}{\minipagewidth}
+ \bigskip
+ {\def\_{\char'137}\LARGE\tt #1}\autoindex{#1@{\tt #1}}
+ \bigskip
+ \end{minipage}\\ \hline
+ \end{tabular}
+ \end{flushleft}
+ \vskip10pt}
+
+% ---------------------------------------------------------------------
+% \setseps = set the spacing parameters for above and below displays
+% ---------------------------------------------------------------------
+\def\setseps{\partopsep=0mm\topsep=12pt plus2pt minus2pt}
+
+% ---------------------------------------------------------------------
+% flag for typesetting SEEALSO list
+% ---------------------------------------------------------------------
+\newif\ifseealso
+\seealsofalse			  % start false.
+
+% ---------------------------------------------------------------------
+% \TYPE {<thing>} : {<type>}
+% ---------------------------------------------------------------------
+\def\TYPE{\noindent}
+
+% ---------------------------------------------------------------------
+% Commands for parts of a \DOC:
+%    \SYNOPSIS 
+%    \DESCRIBE
+%    \FAILURE
+%    \EXAMPLE
+%    \USES
+%    \SEEALSO
+% ---------------------------------------------------------------------
+
+\newcommand\beforeskip{\vspace{12pt plus4pt minus4pt}}
+
+\newcommand{\SYNOPSIS}%
+{\beforeskip\leftline{\large\bf Synopsis}\nobreak\noindent}
+
+\newcommand{\DESCRIBE}%
+{\beforeskip\leftline{\large\bf Description}\nobreak\noindent}
+
+\newcommand{\FAILURE}%
+{\beforeskip\leftline{\large\bf Failure}\nobreak\noindent}
+
+\newcommand{\EXAMPLE}%
+{\beforeskip\leftline{\large\bf Example}\nobreak\noindent}
+
+\newcommand{\USES}%
+{\beforeskip\leftline{\large\bf Uses}\nobreak\noindent}
+
+\newcommand{\COMMENTS}%
+{\beforeskip\leftline{\large\bf Comments}\nobreak\noindent}
+
+\newcommand{\SEEALSO}%
+{\beforeskip\seealsotrue\leftline{\large\bf See also}\nobreak\noindent%
+\bgroup\raggedright\small\tt\catcode`\_=12}
+
+% ---------------------------------------------------------------------
+% \ENDDOC = do nothing, but close off the group started by \SEEALSO
+% ---------------------------------------------------------------------
+
+\newcommand{\ENDDOC}{\ifseealso \egroup\seealsofalse \else \relax \fi}
+
+% =====================================================================
+% Commands for typesetting theorems
+% =====================================================================
+
+\makeatletter
+
+% ---------------------------------------------------------------------
+% define \@xboxverb<thing>\ENDTHEOREM to mean <thing>\ENDTHEOREM
+% ---------------------------------------------------------------------
+
+\begingroup \catcode `|=0 \catcode `[= 1
+\catcode`]=2 \catcode `\{=12 \catcode `\}=12
+\catcode`\\=12 |gdef|@xboxverb#1\ENDTHEOREM[#1|ENDTHEOREM]
+|endgroup
+
+% ---------------------------------------------------------------------
+% \bboxverb<thing> = <thing> in a verbatim box 5mm from left margin
+% ---------------------------------------------------------------------
+
+\def\@boxverb{\bgroup\leftskip=5mm\parindent\z@
+\parfillskip=\@flushglue\parskip\z@
+\obeylines\small\tt \catcode``=13 \@noligs \let\do\@makeother \dospecials}
+
+\def\boxverb{\@boxverb \frenchspacing\@vobeyspaces \@xboxverb}
+
+% ---------------------------------------------------------------------
+% \ENDTHEOREM just finishes off the group (and kick page if necessary)
+% ---------------------------------------------------------------------
+
+\def\ENDTHEOREM{\egroup\filbreak}
+
+% ---------------------------------------------------------------------
+% \THEOREM <name> <thy> ... \ENDTHEOREM = typeset a theorem
+% ---------------------------------------------------------------------
+
+\def\THEOREM #1 #2 {
+ \autoindex{#1@{\tt #1}}
+   \vspace{4mm plus2mm minus1mm}
+\noindent {\def\_{{\char'137}}\small\tt #1}\quad({\small\tt #2}) \par \boxverb 
+}
+
+\makeatother
+
+% ---------------------------------------------------------------------
+% The theory name \none = italic "none"
+% ---------------------------------------------------------------------
+
+\def\none{{\it none}}
