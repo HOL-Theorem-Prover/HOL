@@ -8,36 +8,36 @@
 
 \section{Introduction}
 
-The result, if any, of a session with the \HOL\ system is an object
+The result, if any, of a session with the \HOL{} system is an object
 called a {\it theory\/}.  This object is closely related to what a
-logician would call a theory\index{theories, in HOL logic@theories, in \HOL\ logic!abstract form of}, but there are some differences arising
-from the needs of mechanical proof.  A \HOL\ theory, like a logician's
+logician would call a theory\index{theories, in HOL logic@theories, in \HOL{} logic!abstract form of}, but there are some differences arising
+from the needs of mechanical proof.  A \HOL{} theory, like a logician's
 theory, contains sets of types, constants, definitions and axioms.  In
-addition, however, a \HOL\ theory, at any point in time, contains an
+addition, however, a \HOL{} theory, at any point in time, contains an
 explicit list of theorems that have already been proved from the
 axioms and definitions. Logicians have no need to distinguish theorems
 actually proved from those merely provable; hence they do not normally
 consider sets of proven theorems as part of a theory; rather, they
 take the theorems of a theory to be the (often infinite) set of all
 consequences of the axioms and definitions.  A related difference
-between logicians' theories and \HOL\ theories is that for logicians,
-theories are static objects, but in \HOL\ they can be thought of as
-potentially extendable. For example, the \HOL\ system provides tools
+between logicians' theories and \HOL{} theories is that for logicians,
+theories are static objects, but in \HOL{} they can be thought of as
+potentially extendable. For example, the \HOL{} system provides tools
 for adding to theories and combining theories.  A typical interaction
-with \HOL\ consists in combining some existing theories, making some
+with \HOL{} consists in combining some existing theories, making some
 definitions, proving some theorems and then saving the new results.
 
-The purpose of the \HOL\ system is to provide tools to enable
-well-formed theories to be constructed.  The \HOL\ logic is typed:
+The purpose of the \HOL{} system is to provide tools to enable
+well-formed theories to be constructed.  The \HOL{} logic is typed:
 each theory specifies a signature of type and individual constants;
 these then determine the sets of types and terms as in the previous
 chapter.  All the theorems of such theories are logical consequences
-of the definitions and axioms of the theory.  The \HOL\ system ensures
+of the definitions and axioms of the theory.  The \HOL{} system ensures
 that only well-formed theories can be constructed by allowing theorems
 to be created only by {\it formal proof\/}. Explicating this involves
 defining what it means to be a theorem, which leads to the description
 of the proof system of \HOL, to be given below. It is shown to be {\em
-sound\/} for the set theoretic semantics of \HOL\ described in the
+sound\/} for the set theoretic semantics of \HOL{} described in the
 previous chapter.  This means that a theorem is satisfied by a model
 if it has a formal proof from axioms which are themselves satisfied by
 the model. Since a logical contradiction is not satisfied by any
@@ -48,14 +48,14 @@ formally proved from its axioms.
 This chapter also describes the various mechanisms by which \HOL\
 theories can be extended to new theories. Each mechanism is shown
 to preserve the property of possessing a model. Thus theories built
-up from the initial \HOL\ theory (which does possess a model) using
+up from the initial \HOL{} theory (which does possess a model) using
 these mechanisms are guaranteed to be consistent.
 
 
 \section{Sequents}
 \label{sequents}
 
-The \HOL\ logic is phrased in terms of hypothetical assertions called
+The \HOL{} logic is phrased in terms of hypothetical assertions called
 {\em sequents}.\index{sequents!in natural deduction} Fixing a
 (standard) signature $\Sigma_\Omega$, a sequent is a pair $(\Gamma,
 t)$ where $\Gamma$ is a finite set of formulas over $\Sigma_\Omega$
@@ -172,32 +172,32 @@ imposing a {\em side condition\/} on the rule.
 \subsection{The HOL deductive system}
 \label{HOLrules}
 
-The deductive system of the \HOL\ logic is specified by eight
+The deductive system of the \HOL{} logic is specified by eight
 rules of inference, given below.  The first three rules
 have no hypotheses; their conclusions can always be deduced. The
 identifiers in square brackets are the names of the \ML\ functions in
-the \HOL\ system that implement the corresponding inference rules (See
+the \HOL{} system that implement the corresponding inference rules (See
 Section~\ref{rules}). Any side conditions restricting the scope of a
 rule are given immediately below it.
 
 \bigskip
 
 \subsubsection*{Assumption introduction [{\small\tt
-ASSUME}]}\index{assumption introduction, in HOL logic@assumption introduction, in \HOL\ logic!abstract form of}
+ASSUME}]}\index{assumption introduction, in HOL logic@assumption introduction, in \HOL{} logic!abstract form of}
 \[
 \over t
 \turn t
 \]
 
 \subsubsection*{Reflexivity [{\small\tt
-REFL}]}\index{REFL@\ml{REFL}}\index{reflexivity, in HOL logic@reflexivity, in \HOL\ logic!abstract form of}
+REFL}]}\index{REFL@\ml{REFL}}\index{reflexivity, in HOL logic@reflexivity, in \HOL{} logic!abstract form of}
 \[
 \over
 \turn t = t
 \]
 
 \subsubsection*{Beta-conversion [{\small\tt BETA\_CONV}]}
-\index{beta-conversion, in HOL logic@beta-conversion, in \HOL\ logic!abstract form of}\index{BETA_CONV@\ml{BETA\_CONV}}
+\index{beta-conversion, in HOL logic@beta-conversion, in \HOL{} logic!abstract form of}\index{BETA_CONV@\ml{BETA\_CONV}}
 \[
 \over
 \turn (\lquant{x}t_1)t_2 = t_1[t_2/x]
@@ -210,7 +210,7 @@ in $t_2$ becoming bound after substitution.
 \end{itemize}
 
 \subsubsection*{Substitution [{\small\tt
-SUBST}]}\index{SUBST@\ml{SUBST}} \index{substitution rule, in HOL logic@substitution rule, in \HOL\ logic!abstract form of}
+SUBST}]}\index{SUBST@\ml{SUBST}} \index{substitution rule, in HOL logic@substitution rule, in \HOL{} logic!abstract form of}
 \[
 {\Gamma_1\turn t_1 = t_1'\qquad\cdots\qquad\Gamma_n\turn t_n =
 t_n'\qquad\qquad \Gamma\turn t[t_1,\ldots,t_n]
@@ -227,7 +227,7 @@ bound after substitution.
 \end{itemize}
 
 \subsubsection*{Abstraction [{\small\tt ABS}]}
-\index{ABS@\ml{ABS}}\index{abstraction rule, in HOL logic@abstraction rule, in \HOL\ logic!abstract form of}
+\index{ABS@\ml{ABS}}\index{abstraction rule, in HOL logic@abstraction rule, in \HOL{} logic!abstract form of}
 \[
 \Gamma\turn t_1 = t_2
 \over
@@ -258,7 +258,7 @@ bound after substitution.
 \end{itemize}
 
 \subsubsection*{Discharging an assumption [{\small\tt
-DISCH}]}\index{discharging assumptions, in HOL logic@discharging assumptions, in \HOL\ logic!abstract form of}\index{DISCH@\ml{DISCH}}
+DISCH}]}\index{discharging assumptions, in HOL logic@discharging assumptions, in \HOL{} logic!abstract form of}\index{DISCH@\ml{DISCH}}
 \[
 \Gamma\turn t_2
 \over
@@ -270,7 +270,7 @@ from $\Gamma$.
 \end{itemize}
 
 \subsubsection*{Modus Ponens [{\small\tt
-MP}]}\index{MP@\ml{MP}}\index{Modus Ponens, in HOL logic@Modus Ponens, in \HOL\ logic!abstract form of}
+MP}]}\index{MP@\ml{MP}}\index{Modus Ponens, in HOL logic@Modus Ponens, in \HOL{} logic!abstract form of}
 \[
 \Gamma_1 \turn t_1 \imp t_2  \qquad\qquad   \Gamma_2\turn t_1
 \over
@@ -290,9 +290,9 @@ The particular set of rules and axioms chosen to axiomatize the \HOL\
 logic is rather arbitrary. It is partly based on the rules that were
 used in the
 \LCF\index{LCF@\LCF}\ logic
-\PPL\index{PPlambda (same as PPLAMBDA), of LCF system@\ml{PP}$\lambda$ (same as \ml{PPLAMBDA}), of \ml{LCF} system}, since \HOL\ was
+\PPL\index{PPlambda (same as PPLAMBDA), of LCF system@\ml{PP}$\lambda$ (same as \ml{PPLAMBDA}), of \ml{LCF} system}, since \HOL{} was
 implemented by modifying the \LCF\ system. In particular, the
-substitution\index{substitution rule, in HOL logic@substitution rule, in \HOL\ logic!implementation of} rule {\small\tt SUBST} is exactly
+substitution\index{substitution rule, in HOL logic@substitution rule, in \HOL{} logic!implementation of} rule {\small\tt SUBST} is exactly
 the same as the corresponding rule in \LCF; the code implementing this
 was written by Robin Milner and is highly optimized. Because
 substitution is such a pervasive activity in proof, it was felt to be
@@ -302,10 +302,10 @@ substitution primitive, such as `Rule R' of Andrews' logic ${\cal
 Q}_0$, and then to derive more complex rules from it.
 
 \subsection{Soundness theorem}
-\index{soundness!of HOL deductive system@of \HOL\ deductive system}
+\index{soundness!of HOL deductive system@of \HOL{} deductive system}
 \label{soundness}
 
-\emph{The rules of the the \HOL\ deductive system are {\em sound} for
+\emph{The rules of the the \HOL{} deductive system are {\em sound} for
 the notion of satisfaction defined
 in Section~\ref{sequents}:
 for any instance of the rules of inference,
@@ -334,7 +334,7 @@ MP}\index{MP@\ml{MP}}.
 \section{HOL Theories}
 \label{theories}
 
-A \HOL\ {\it theory\/}\index{theories, in HOL logic@theories, in \HOL\ logic!abstract form of} ${\cal T}$ is a $4$-tuple:
+A \HOL{} {\it theory\/}\index{theories, in HOL logic@theories, in \HOL{} logic!abstract form of} ${\cal T}$ is a $4$-tuple:
 \begin{eqnarray*}
 {\cal T} & = & \langle{\sf Struc}_{\cal T},{\sf Sig}_{\cal T},
                {\sf Axioms}_{\cal T},{\sf Theorems}_{\cal T}\rangle
@@ -342,20 +342,20 @@ A \HOL\ {\it theory\/}\index{theories, in HOL logic@theories, in \HOL\ logic!abs
 where
 \begin{myenumerate}
 
-\item ${\sf Struc}_{\cal T}$ is a type structure\index{type structures, of HOL theories@type structures, of \HOL\ theories}  called the type
+\item ${\sf Struc}_{\cal T}$ is a type structure\index{type structures, of HOL theories@type structures, of \HOL{} theories}  called the type
 structure of ${\cal T}$;
 
-\item ${\sf Sig}_{\cal T}$ is a signature\index{signatures, of HOL logic@signatures, of \HOL\ logic!of HOL theories@of \HOL\ theories}
+\item ${\sf Sig}_{\cal T}$ is a signature\index{signatures, of HOL logic@signatures, of \HOL{} logic!of HOL theories@of \HOL{} theories}
 over ${\sf Struc}_{\cal T}$ called the signature of ${\cal T}$;
 
 \item ${\sf Axioms}_{\cal T}$ is a set of sequents over ${\sf Sig}_{\cal T}$
-called the  axioms\index{axioms, in a HOL theory@axioms, in a \HOL\ theory}
+called the  axioms\index{axioms, in a HOL theory@axioms, in a \HOL{} theory}
  of  ${\cal T}$;
 
 \item ${\sf Theorems}_{\cal T}$ is a set of sequents over
-${\sf Sig}_{\cal T}$ called the theorems\index{theorems, in a HOL theory@theorems, in \HOL\ logic!abstract form of} of ${\cal T}$, with
+${\sf Sig}_{\cal T}$ called the theorems\index{theorems, in a HOL theory@theorems, in \HOL{} logic!abstract form of} of ${\cal T}$, with
 the property that every member follows from ${\sf Axioms}_{\cal T}$ by
-the \HOL\ deductive system.
+the \HOL{} deductive system.
 
 \end{myenumerate}
 
@@ -377,7 +377,7 @@ Theorems}_{\cal T}$.
 \subsection{The theory {\tt MIN}}
 \label{sec:min-thy}
 
-The {\it minimal theory\/}\index{MIN@\ml{MIN}}\index{minimal theory, of HOL logic@minimal theory, of \HOL\ logic} \theory{MIN} is defined by:
+The {\it minimal theory\/}\index{MIN@\ml{MIN}}\index{minimal theory, of HOL logic@minimal theory, of \HOL{} logic} \theory{MIN} is defined by:
 \[
 \theory{MIN} =
 \langle\{(\bool,0),\ (\ind,0)\},\
@@ -391,7 +391,7 @@ standard items and has no axioms, it possesses a unique standard model,
 which will be denoted {\em Min}.
 
 Although the theory \theory{MIN} contains only the minimal standard
-syntax, by exploiting the higher order constructs of \HOL\ one can
+syntax, by exploiting the higher order constructs of \HOL{} one can
 construct a rather rich collection of terms over it. The following
 theory introduces names for some of these terms that denote useful
 logical operations in the model {\em Min}.
@@ -409,15 +409,15 @@ structure as \theory{MIN}. Its signature contains the constants in
 \theory{MIN} and the following constants:
 \[
 \T_\ty{bool}
-\index{T@\ml{T}!abstract form of}\index{truth values, in HOL logic@truth values, in \HOL\ logic!abstract form of}
+\index{T@\ml{T}!abstract form of}\index{truth values, in HOL logic@truth values, in \HOL{} logic!abstract form of}
 \]
 \[
 \forall_{(\alpha\fun\ty{bool})\fun\ty{bool}}
-\index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic!abstract form of}
+\index{universal quantifier, in HOL logic@universal quantifier, in \HOL{} logic!abstract form of}
 \]
 \[
 \exists_{(\alpha\fun\ty{bool})\fun\ty{bool}}
-\index{existential quantifier, in HOL logic@existential quantifier, in \HOL\ logic!abstract form of}
+\index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!abstract form of}
 \]
 \[
 \F_\ty{bool}
@@ -425,31 +425,31 @@ structure as \theory{MIN}. Its signature contains the constants in
 \]
 \[
 \neg_{\ty{bool}\fun\ty{bool}}
-\index{negation, in HOL logic@negation, in \HOL\ logic!abstract form of}
+\index{negation, in HOL logic@negation, in \HOL{} logic!abstract form of}
 \]
 \[
 \wedge_{\ty{bool}\fun\ty{bool}\fun\ty{bool}}
-\index{conjunction, in HOL logic@conjunction, in \HOL\ logic!abstract form of}
+\index{conjunction, in HOL logic@conjunction, in \HOL{} logic!abstract form of}
 \]
 \[
 \vee_{\ty{bool}\fun\ty{bool}\fun\ty{bool}}
-\index{disjunction, in HOL logic@disjunction, in \HOL\ logic!abstract form of}
+\index{disjunction, in HOL logic@disjunction, in \HOL{} logic!abstract form of}
 \]
 \[
 \OneOne_{(\alpha\fun\beta)\fun\ty\bool}
-\index{one-to-one predicate, in HOL logic@one-to-one predicate, in \HOL\ logic!abstract form of}
+\index{one-to-one predicate, in HOL logic@one-to-one predicate, in \HOL{} logic!abstract form of}
 \]
 \[
 \Onto_{(\alpha\fun\beta)\fun\ty\bool}
-\index{onto predicate, in HOL logic@onto predicate, in \HOL\ logic!abstract form of}
+\index{onto predicate, in HOL logic@onto predicate, in \HOL{} logic!abstract form of}
 \]
 \[
 \TyDef_{(\alpha\fun\ty{bool})\fun(\beta\fun\alpha)\fun\ty{bool}}
 \]
 The following special notation is used in connection with these constants:
 \begin{center}
-\index{existential quantifier, in HOL logic@existential quantifier, in \HOL\ logic!abbreviation for multiple}
-\index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic!abbreviation for multiple}
+\index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!abbreviation for multiple}
+\index{universal quantifier, in HOL logic@universal quantifier, in \HOL{} logic!abbreviation for multiple}
 \begin{tabular}{|l|l|}\hline
 {\rm Notation} & {\rm Meaning}\\ \hline $\uquant{x_{\sigma}}t$ &
 $\forall(\lambda x_{\sigma}.\ t)$\\ \hline $\uquant{x_1\ x_2\ \cdots\
@@ -517,21 +517,21 @@ unique standard model of
 because, given the semantics of terms set out in
 Section~\ref{semantics of terms}, to satisfy the above equations one
 is forced to interpret the new constants in the following way:
-\index{axioms!formal semantics of HOL logic's@formal semantics of \HOL\ logic's|(}
+\index{axioms!formal semantics of HOL logic's@formal semantics of \HOL{} logic's|(}
 \begin{itemize}
 
 \item $\den{\T_{\bool}}\index{T@\ml{T}!formal semantics of} = 1 \in \two$
 
-\item \index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic!formal semantics of}
+\item \index{universal quantifier, in HOL logic@universal quantifier, in \HOL{} logic!formal semantics of}
 $\den{\forall_{(\alpha\fun\bool)\fun\bool}}\in\prod_{X\in{\cal
  U}}(X\fun\two)\fun\two$ sends $X\in{\cal U}$ and $f\in X\fun\two$ to
 \[
 \den{\forall}(X)(f) = \left\{ \begin{array}{ll} 1 & \mbox{if
 $f^{-1}\{1\}=X$} \\ 0 & \mbox{otherwise} \end{array} \right.
 \]
-\index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic!formal semantics of}
+\index{universal quantifier, in HOL logic@universal quantifier, in \HOL{} logic!formal semantics of}
 
-\item \index{existential quantifier, in HOL logic@existential quantifier, in \HOL\ logic!formal semantics of}
+\item \index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!formal semantics of}
 $\den{\exists_{(\alpha\fun\bool)\fun\bool}}\in\prod_{X\in{\cal
  U}}(X\fun\two)\fun\two$ sends $X\in{\cal U}$ and $f\in X\fun\two$ to
 \[
@@ -548,7 +548,7 @@ $\den{\exists_{(\alpha\fun\bool)\fun\bool}}\in\prod_{X\in{\cal
                              1 & \mbox{if $b=0$} \\
                              0 & \mbox{otherwise}
                             \end{array}
-                    \right. \]\index{negation, in HOL logic@negation, in \HOL\ logic!formal semantics of}
+                    \right. \]\index{negation, in HOL logic@negation, in \HOL{} logic!formal semantics of}
 
 \item $\den{\wedge_{\bool\fun\bool\fun\bool}}\in\two\fun\two\fun\two$ sends
 $b,b'\in\two$ to
@@ -556,7 +556,7 @@ $b,b'\in\two$ to
                                    1 & \mbox{if $b=1=b'$} \\
                                     0 & \mbox{otherwise}
                                   \end{array}
-                           \right. \]\index{conjunction, in HOL logic@conjunction, in \HOL\ logic!formal semantics of}
+                           \right. \]\index{conjunction, in HOL logic@conjunction, in \HOL{} logic!formal semantics of}
 
 \item $\den{\vee_{\bool\fun\bool\fun\bool}}\in\two\fun\two\fun\two$ sends
 $b,b'\in\two$ to
@@ -564,7 +564,7 @@ $b,b'\in\two$ to
                                  0 & \mbox{if $b=0=b'$} \\
                                  1 & \mbox{otherwise}
                                 \end{array}
-                        \right. \]\index{disjunction, in HOL logic@disjunction, in \HOL\ logic!formal semantics of}
+                        \right. \]\index{disjunction, in HOL logic@disjunction, in \HOL{} logic!formal semantics of}
 
 \item $\den{\OneOne_{(\alpha\fun\beta)\fun\bool}}\in\prod_{(X,Y)\in{\cal
  U}^{2}} (X\fun Y)\fun \two$ sends $(X,Y)\in{\cal U}^{2}$ and
@@ -574,7 +574,7 @@ $b,b'\in\two$ to
                                                for some $x\not=x'$ in $X$} \\
                                      1 & \mbox{otherwise}
                                     \end{array}
-                            \right. \]\index{one-to-one predicate, in HOL logic@one-to-one predicate, in \HOL\ logic!formal semantics of}
+                            \right. \]\index{one-to-one predicate, in HOL logic@one-to-one predicate, in \HOL{} logic!formal semantics of}
 
 \item $\den{\Onto_{(\alpha\fun\beta)\fun\bool}}\in\prod_{(X,Y)\in{\cal
  U}^{2}} (X\fun Y)\fun \two$ sends $(X,Y)\in{\cal U}^{2}$ and
@@ -583,7 +583,7 @@ $b,b'\in\two$ to
                                    1 & \mbox{if $\{f(x):x\in X\}=Y$} \\
                                    0 & \mbox{otherwise}
                                   \end{array}
-                           \right. \]\index{onto predicate, in HOL logic@onto predicate, in \HOL\ logic!formal semantics of}
+                           \right. \]\index{onto predicate, in HOL logic@onto predicate, in \HOL{} logic!formal semantics of}
 
 \item $\den{\TyDef_{(\alpha\fun\bool)\fun(\beta\fun\alpha)\fun\bool}}\in
  \prod_{(X,Y)\in{\cal U}^{2}} (X\fun\two)\fun(Y\fun X)\fun\two$ \\
@@ -598,7 +598,7 @@ $b,b'\in\two$ to
                                \right.
 \]
 \end{itemize}
-\index{axioms!formal semantics of HOL logic's@formal semantics of \HOL\ logic's|)}
+\index{axioms!formal semantics of HOL logic's@formal semantics of \HOL{} logic's|)}
 Since these definitions were obtained by applying the semantics of
 terms to the left hand sides of the equations which form the axioms of
 \theory{LOG}, these axioms are satisfied and one obtains a model of
@@ -609,7 +609,7 @@ the theory \theory{LOG}.
 \label{INIT}
 
 The theory \theory{INIT}\index{INIT@\ml{INIT}!abstract form of} is
-obtained by adding the following four axioms\index{axioms!abstract form of HOL logic's@abstract form of \HOL\ logic's} to the theory
+obtained by adding the following four axioms\index{axioms!abstract form of HOL logic's@abstract form of \HOL{} logic's} to the theory
 \theory{LOG}.
 \[
 \index{BOOL_CASES_AX@\ml{BOOL\_CASES\_AX}!abstract form of}
@@ -642,8 +642,8 @@ $\den{\hilbert}$ given in Section~\ref{standard-signatures}; for axiom
 an infinite set.)
 
 The theory \theory{INIT} is the initial theory\index{initial theory,
-  of HOL logic@initial theory, of \HOL\ logic!abstract form of} of the
-\HOL\ logic. A theory which extends \theory{INIT} will be called a
+  of HOL logic@initial theory, of \HOL{} logic!abstract form of} of the
+\HOL{} logic. A theory which extends \theory{INIT} will be called a
 {\em standard theory}\index{standard theory}.
 
 \subsection{Implementing theories \texttt{LOG} and \texttt{INIT}}
@@ -661,7 +661,7 @@ Section~\ref{boolfull}.
 
 A (standard) theory is {\em consistent\/}\index{consistent theory} if
 it is not the case that every sequent over its signature can be
-derived from the theory's axioms using the \HOL\ logic, or
+derived from the theory's axioms using the \HOL{} logic, or
 equivalently, if the particular sequent $\turn\F$ cannot be so derived.
 
 The existence of a (standard) model of a theory is sufficient to
@@ -677,14 +677,14 @@ standard\/} model is quite restrictive---in particular there is no
 choice how to interpret the integers and their arithmetic in such a
 model. The famous incompleteness theorem of G\"odel ensures that there
 are sequents which are satisfied in all standard models (\ie\ which are
-`true'), but which are not provable in the \HOL\ logic.
+`true'), but which are not provable in the \HOL{} logic.
 
 
 
 
 
 \section{Extensions of theories}
-\index{extension, of HOL logic@extension, of \HOL\ logic!abstract form of}
+\index{extension, of HOL logic@extension, of \HOL{} logic!abstract form of}
 \label{extensions}
 
 A theory ${\cal T}'$ is said to be an {\em
@@ -754,7 +754,7 @@ that consistency is preserved. The advantages of postulation over
 definition have been likened by Bertrand Russell to the advantages of
 theft over honest toil.\footnote{See page 71 of Russell's book {\sl
 Introduction to Mathematical Philosophy\/}.} As it is all too easy to
-introduce inconsistent axiomatizations, users of the \HOL\ system are
+introduce inconsistent axiomatizations, users of the \HOL{} system are
 strongly advised to resist the temptation to add axioms, but to toil
 through definitional theories honestly.
 
@@ -763,7 +763,7 @@ through definitional theories honestly.
 
 
 \subsection{Extension by constant definition}
-\index{extension, of HOL logic@extension, of \HOL\ logic!by constant definition|(}
+\index{extension, of HOL logic@extension, of \HOL{} logic!by constant definition|(}
 \label{defs}
 
 A {\it constant definition\/}\index{constant definition} over a
@@ -783,7 +783,7 @@ all the type variables occurring in $t_\sigma$ also occur in $\sigma$
 \end{myenumerate}
 
 Given a theory $\cal T$ and such a constant definition over ${\sf
-Sig}_{\cal T}$, then the {\em definitional extension\/}\index{constant definition extension, of HOL logic@constant definition extension, of \HOL\ logic!abstract form of} of ${\cal T}$
+Sig}_{\cal T}$, then the {\em definitional extension\/}\index{constant definition extension, of HOL logic@constant definition extension, of \HOL{} logic!abstract form of} of ${\cal T}$
 by $\con{c}_{\sigma}=t_{\sigma}$ is the theory ${\cal T}{+_{\it
 def}}\langle
 \con{c}_{\sigma}=t_{\sigma}\rangle$ defined by:
@@ -805,22 +805,22 @@ the theory \theory{MIN} in Section~\ref{LOG}. Thus with the notation
 of this section one has
 \[
 \theory{LOG}\; =\; \theory{MIN}\;\begin{array}[t]{@{}l}
-   {+_{\it def}} \langle \T\index{T@\ml{T}!abstract form of}\index{truth values, in HOL logic@truth values, in \HOL\ logic!abstract form of} \ =\
+   {+_{\it def}} \langle \T\index{T@\ml{T}!abstract form of}\index{truth values, in HOL logic@truth values, in \HOL{} logic!abstract form of} \ =\
      ((\lquant{x_{\ty{bool}}}x) = (\lquant{x_{\ty{bool}}}x))\rangle\\
-   {+_{\it def}}\langle {\forall}\index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic!abstract form of}\ =\ \lquant{P_{\alpha\fun\ty{bool}}}\ P =
+   {+_{\it def}}\langle {\forall}\index{universal quantifier, in HOL logic@universal quantifier, in \HOL{} logic!abstract form of}\ =\ \lquant{P_{\alpha\fun\ty{bool}}}\ P =
      (\lquant{x}\T )\rangle\\
-   {+_{\it def}}\langle {\exists}\index{existential quantifier, in HOL logic@existential quantifier, in \HOL\ logic!abstract form of}\ =\
+   {+_{\it def}}\langle {\exists}\index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!abstract form of}\ =\
      \lquant{P_{\alpha\fun\ty{bool}}}\ P({\hilbert}\ P)\rangle\\
    {+_{\it def}}\langle \F\index{F@\ml{F}!abstract form of}
  \ =\ \uquant{b_{\ty{bool}}}\ b\rangle\\
-   {+_{\it def}}\langle \neg\ =\ \lquant{b}\ b \imp \F \rangle\index{negation, in HOL logic@negation, in \HOL\ logic!abstract form of}\\
-   {+_{\it def}}\langle {\wedge}\index{conjunction, in HOL logic@conjunction, in \HOL\ logic!abstract form of}\ =\ \lquant{b_1\ b_2}\uquant{b}
+   {+_{\it def}}\langle \neg\ =\ \lquant{b}\ b \imp \F \rangle\index{negation, in HOL logic@negation, in \HOL{} logic!abstract form of}\\
+   {+_{\it def}}\langle {\wedge}\index{conjunction, in HOL logic@conjunction, in \HOL{} logic!abstract form of}\ =\ \lquant{b_1\ b_2}\uquant{b}
      (b_1\imp (b_2 \imp b)) \imp b\rangle\\
-   {+_{\it def}}\langle {\vee}\index{disjunction, in HOL logic@disjunction, in \HOL\ logic!abstract form of}\ =\ \lquant{b_1\ b_2}\uquant{b}
+   {+_{\it def}}\langle {\vee}\index{disjunction, in HOL logic@disjunction, in \HOL{} logic!abstract form of}\ =\ \lquant{b_1\ b_2}\uquant{b}
      (b_1 \imp b)\imp ((b_2 \imp b) \imp b)\rangle\\
    {+_{\it def}}\langle\OneOne \ =\ \lquant{f_{\alpha \fun\beta}}
-     \uquant{x_1\ x_2} (f\ x_1 = f\ x_2)  \imp (x_1 = x_2)\rangle\index{one-to-one predicate, in HOL logic@one-to-one predicate, in \HOL\ logic!abstract form of}\\
-   {+_{\it def}}\langle\Onto \  =\ \lquant{f_{\alpha\fun\beta}}\index{onto predicate, in HOL logic@onto predicate, in \HOL\ logic!abstract form of}
+     \uquant{x_1\ x_2} (f\ x_1 = f\ x_2)  \imp (x_1 = x_2)\rangle\index{one-to-one predicate, in HOL logic@one-to-one predicate, in \HOL{} logic!abstract form of}\\
+   {+_{\it def}}\langle\Onto \  =\ \lquant{f_{\alpha\fun\beta}}\index{onto predicate, in HOL logic@onto predicate, in \HOL{} logic!abstract form of}
      \uquant{y}\equant{x} y = f\ x\rangle\\
    {+_{\it def}}\langle\TyDef \  =\
         \begin{array}[t]{@{}l}
@@ -867,13 +867,13 @@ to $\ty{bool}$ makes the negation of the right hand side provable
 from the axioms of $\theory{INIT}$, and hence $\con{c}_\ty{bool}=\F$ is
 also provable in the extended theory. Combining these theorems, one
 has that $\T=\F$, \ie\ $\F$ is provable in the extended theory.
-\index{extension, of HOL logic@extension, of \HOL\ logic!by constant definition|)}
+\index{extension, of HOL logic@extension, of \HOL{} logic!by constant definition|)}
 
 \subsection{Extension by constant specification}
-\index{extension, of HOL logic@extension, of \HOL\ logic!by constant specification|(}
+\index{extension, of HOL logic@extension, of \HOL{} logic!by constant specification|(}
 \label{specs}
 
-Constant specifications\index{constant specification extension, of HOL logic@constant specification extension, of \HOL\ logic!abstract form
+Constant specifications\index{constant specification extension, of HOL logic@constant specification extension, of \HOL{} logic!abstract form
 of} introduce constants (or sets of constants)
 that satisfy arbitrary given (consistent) properties.  For example, a
 theory could be extended by a constant specification to have two new
@@ -882,7 +882,7 @@ $\neg(\con{b}_1=\con{b}_2)$.  This specification does not uniquely
 define $\con{b}_1$ and $\con{b}_2$, since it is satisfied by either
 $\con{b}_1=\T$ and $\con{b}_2=\F$, or $\con{b}_1=\F$ and
 $\con{b}_2=\T$.  To ensure that such specifications are
-consistent\index{consistency, of HOL logic@consistency, of \HOL\ logic!under constant specification}, they can only be made if it has
+consistent\index{consistency, of HOL logic@consistency, of \HOL{} logic!under constant specification}, they can only be made if it has
 already been proved that the properties which the new constants are to
 have are consistent.  This rules out, for example, introducing three
 boolean constants $\con{b}_1$, $\con{b}_2$ and $\con{b}_3$ such that
@@ -977,7 +977,7 @@ Interpreting this term-in-context in the model $M$ yields
 \fun \two
 \]
 Now $\equant{x\!s}t$ is in ${\sf Theorems}_{\cal T}$ and hence by the
-Soundness Theorem \ref{soundness}\index{consistency, of HOL logic@consistency, of \HOL\ logic!under constant specification} this
+Soundness Theorem \ref{soundness}\index{consistency, of HOL logic@consistency, of \HOL{} logic!under constant specification} this
 sequent is satisfied by $M$. Using the semantics of $\exists$ given in
 Section~\ref{LOG}, this means that for all $X\!s\in{\cal
 U}^{m}$ the set
@@ -1064,7 +1064,7 @@ T}{+_{\it def}}\langle\con{c}_{\sigma}=t_{\sigma}\rangle$ whose
 restriction to $\cal T$ is $M$. In contrast with the case of constant
 specifications, $M'$ is uniquely determined by $M$ and the constant
 definition.
-\index{extension, of HOL logic@extension, of \HOL\ logic!by constant specification|)}
+\index{extension, of HOL logic@extension, of \HOL{} logic!by constant specification|)}
 
 \subsection{Remarks about constants in HOL}
 \label{constants}
@@ -1077,7 +1077,7 @@ type variables as does the formula loosely specifying them. The
 situation is the same as that discussed in the Remark in
 Section~\ref{defs}. In a sense, what is causing the problem in the
 example given in that Remark is not so much the method of extension by
-introducing constants, but rather the syntax of \HOL\ which does not
+introducing constants, but rather the syntax of \HOL{} which does not
 allow constants to depend explicitly on type variables (in the way
 that type operators can). Thus in the example one would like to
 introduce a `polymorphic' constant $\con{c}_\ty{bool}(\alpha)$
@@ -1090,7 +1090,7 @@ $\con{c}_\ty{bool}(\ty{ind})$ and $\con{c}_\ty{bool}(\ty{bool})$
 are different.
 
 In the current version of \HOL, constants are (name,type)-pairs.
-One can envision a slight extension of the \HOL\ syntax with
+One can envision a slight extension of the \HOL{} syntax with
 `polymorphic' constants, specified by pairs
 $(\con{c},\alpha\!s.\sigma)$ where now $\alpha\!s.\sigma$ is a
 type-in-context and the list $\alpha\!s$ may well contain extra type
@@ -1129,8 +1129,8 @@ somewhat the applicability of these theory extension mechanisms.
 
 
 \subsection{Extension by type definition}
-\index{extension, of HOL logic@extension, of \HOL\ logic!by type definition|(}
-\index{representing types, in HOL logic@representing types, in \HOL\ logic!abstract form of|(}
+\index{extension, of HOL logic@extension, of \HOL{} logic!by type definition|(}
+\index{representing types, in HOL logic@representing types, in \HOL{} logic!abstract form of|(}
 \label{tydefs}
 
 Every (monomorphic) type $\sigma$ in the initial theory \theory{INIT}
@@ -1144,7 +1144,7 @@ closed term $p$ of type $\sigma\fun\ty{bool}$ determines the subset
 $\{x\in\den{\sigma} : \den{p}(x)=1\}$ (which is a set in the universe
 provided it is non-empty).  However, it is useful to have a
 mechanism for introducing new types which are subtypes of existing
-ones. Such types are defined\index{extension, of HOL logic@extension, of \HOL\ logic!by type definition} in \HOL\ by introducing a new type
+ones. Such types are defined\index{extension, of HOL logic@extension, of \HOL{} logic!by type definition} in \HOL{} by introducing a new type
 constant and asserting an axiom that characterizes it as denoting a
 set in bijection (\ie\ one-to-one correspondence) with a non-empty
 subset of an existing type (called the {\it representing type\/}).
@@ -1164,8 +1164,8 @@ $\sigma_2$, a subset of $\sigma[\sigma_1;\sigma_2]$ represents the
 cartesian product of $\sigma_1$ and $\sigma_2$.  The details of such a
 definition are given in Section~\ref{prod}.
 
-Types in \HOL\ must denote non-empty sets.  Thus it is only
-consistent\index{consistency, of HOL logic@consistency, of \HOL\ logic!under type definition} to define a new type isomorphic to a
+Types in \HOL{} must denote non-empty sets.  Thus it is only
+consistent\index{consistency, of HOL logic@consistency, of \HOL{} logic!under type definition} to define a new type isomorphic to a
 subset specified by a predicate $p$, if there is at least one thing
 for which $p$ holds, \ie\ $\turn\equant{x}p\ x$.  For example, it
 would be inconsistent to define a binary type operator \ty{iso} such
@@ -1202,7 +1202,7 @@ $(\alpha_1,\ldots,\alpha_n)\ty{op}$ is to be isomorphic.\footnote{The
 reason for restricting $p$ to be closed, \ie\ to have no free
 variables, is that otherwise for consistency the defined type operator
 would have to {\em depend\/} upon (\ie\ be a function of) those
-variables. Such dependent types are not (yet!) a part of the \HOL\ system.}
+variables. Such dependent types are not (yet!) a part of the \HOL{} system.}
 
 \item
 Proving $\turn \equant{x_{\sigma}} p\ x$.
@@ -1229,7 +1229,7 @@ p\ f
 Defining a new type $(\alpha_1,\ldots,\alpha_n)\ty{op}$ in a theory
 ${\cal T}$ thus consists of introducing $\ty{op}$ as a new $n$-ary
 type operator and the above axiom as a new axiom.  Formally, a {\em
-type definition\/}\index{type definitions, in HOL logic@type definitions, in \HOL\ logic!abstract structure of} for a theory ${\cal
+type definition\/}\index{type definitions, in HOL logic@type definitions, in \HOL{} logic!abstract structure of} for a theory ${\cal
 T}$ is given by
 
 \medskip
@@ -1287,12 +1287,12 @@ standard model if the theory ${\cal T}$ does.}
 
 Instead of giving a direct proof of this result, it will be deduced as
 a corollary of the corresponding proposition in the next section.
-\index{extension, of HOL logic@extension, of \HOL\ logic!by type definition|)}
-\index{representing types, in HOL logic@representing types, in \HOL\ logic!abstract form of|)}
+\index{extension, of HOL logic@extension, of \HOL{} logic!by type definition|)}
+\index{representing types, in HOL logic@representing types, in \HOL{} logic!abstract form of|)}
 
 
 \subsection{Extension by type specification\protect\footnotemark}
-\index{extension, of HOL logic@extension, of \HOL\ logic!by type specification|(}
+\index{extension, of HOL logic@extension, of \HOL{} logic!by type specification|(}
 \label{tyspecs}
 \footnotetext{This theory extension mechanism is not implemented in
   the HOL4 system. It was proposed by T.~Melham and refines a
@@ -1326,9 +1326,9 @@ general way of ensuring the consistency of introducing a new atomic
 type $\nu$ satisfying $q[\nu/\alpha]$ would be to prove
 `$\equant{\alpha}q$'. However, such a
 formula with quantification over types is not\footnote{yet!} a part of
-the \HOL\ logic and one must proceed indirectly---replacing the
+the \HOL{} logic and one must proceed indirectly---replacing the
 formula by (a logically weaker) one that can be expressed formally with
-\HOL\ syntax. The formula used is
+\HOL{} syntax. The formula used is
 \[
 (\equant{f_{\alpha\fun\sigma}}{\sf Type\_Definition}\ p\ f)\ \imp\ q
 \]
@@ -1574,7 +1574,7 @@ restriction to $\cal T$ is a given model $M$. By contrast, a type
 definition determines the new type constant uniquely up to bijection,
 and any two models of the extended theory which restrict to the same
 model of the original theory will be isomorphic.
-\index{extension, of HOL logic@extension, of \HOL\ logic!by type specification|)}
+\index{extension, of HOL logic@extension, of \HOL{} logic!by type specification|)}
 
 
 

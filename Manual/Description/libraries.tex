@@ -1,5 +1,14 @@
 \chapter{Libraries}\label{HOLlibraries}
 
+% LaTeX macros in HOL manuals
+%
+% \holtxt{..}     for typewriter text that is HOL types or terms.  To
+%                 produce backslashes, for /\, \/ and \x. x + 1, use \bs
+% \ml{..}         for typewriter text that is ML input, including the
+%                 names of HOL API functions, such as mk_const
+% \theoryimp{..}  for names of HOL theories.
+
+
 \newcommand{\simpset}{simpset}
 \newcommand{\Simpset}{Simpset}
 
@@ -107,31 +116,36 @@ A term can be constrained to be of a certain type.  For example,
 of the constant \verb+T+ to \verb+bool+. An attempt to constrain a
 term inappropriately will raise an exception: for example,
 \begin{verbatim}
-  if T then (X:ind) else (Y:bool)
+   if T then (X:ind) else (Y:bool)
 \end{verbatim}
 will fail because both branches of a conditional must be of the same
 type.  Type constraints can be seen as a suffix that binds more
 tightly than everything except function application.  Thus $\term\
 \ldots\ \term \ : \type$ is equal to $(\term\ \ldots\ \term)\ :
-\type$, but $x < y:\mbox{\tt num}$ is a legitimate constraint on just
+\type$, but $x < y:\holtxt{num}$ is a legitimate constraint on just
 the variable $y$.
 
-The inclusion of \verb+:+ in the symbolic identifiers means that some
+The inclusion of \holtxt{:} in the symbolic identifiers means that some
 constraints may need to be separated by white space. For example,
 \begin{verbatim}
-    $=:bool->bool->bool
+   $=:bool->bool->bool
 \end{verbatim}
 will be broken up by the HOL lexer as
 \begin{verbatim}
-    $=: bool -> bool -> bool
+   $=: bool -> bool -> bool
 \end{verbatim}
-and parsed as an application of the symbolic identifier \verb+$=:+ to
-the argument list of terms [\verb+bool+, \verb+->+, \verb+bool+,
-\verb+->+, \verb+bool+]. A well-placed space will avoid this problem:
+and parsed as an application of the symbolic identifier \holtxt{\$=:} to
+the argument list of terms [\holtxt{bool}, \holtxt{->}, \holtxt{bool},
+\holtxt{->}, \holtxt{bool}]. A well-placed space will avoid this problem:
 \begin{verbatim}
-    $= :bool->bool->bool
+   $= :bool->bool->bool
 \end{verbatim}
 is parsed as the symbolic identifier ``='' constrained by a type.
+Instead of the \holtxt{\$}, one can also use parentheses to remove
+special parsing behaviour from lexemes:
+\begin{verbatim}
+   (=):bool->bool->bool
+\end{verbatim}
 
 \subsubsection{Type inference}
 
@@ -192,7 +206,7 @@ the example, \holtxt{\~{}} could be consistently chosen to have type
 mechanism has chosen the former. For finer control, explicit type
 constraints may be used. In the following session, the
 \holtxt{\~{}\~{}x} in the first quotation has type \holtxt{:bool},
-while in the second, a type constraint ensures that \holtxt{\~[]\~{}x} has
+while in the second, a type constraint ensures that \holtxt{\~{}\~{}x} has
 type \holtxt{:int}.
 
 \begin{session}
@@ -209,7 +223,7 @@ type \holtxt{:int}.
 \end{verbatim}
 \end{session}
 
-Note that the symbol \holtxt{\~[]} stands for two different constants in
+Note that the symbol \holtxt{\~{}} stands for two different constants in
 the second quotation; its first occurrence is boolean negation, while
 the other two occurrences are the additive inverse operation for integers.
 For more information on how to set up and use overloading, consult
@@ -260,7 +274,7 @@ left or not at all.  (If \holtxt{+} were non-associative, then
 \holtxt{(3 + 4) + 5} or \holtxt{3 + (4 + 5)} depending on the desired
 meaning).  The precedence ordering for the initial set of infixes is
 \holtxt{/\bs}, \holtxt{\bs/}, \holtxt{==>}, \holtxt{=},
- \begin{Large}\holtxt{,}\end{Large} (comma\footnote{When {\tt pairTheory} has
+ \begin{Large}\holtxt{,}\end{Large} (comma\footnote{When \theoryimp{pairTheory} has
    been loaded.}). Moreover, all of these constants are right
  associative. Thus
 \begin{verbatim}
@@ -292,8 +306,8 @@ lower precedence than function application.  Normally
 \[
    f\;x\; y\qquad \mbox{is parsed as}\qquad (f\; x)\; y
 \] but \[
-  \mbox{\tt \~{}}\; x\; y\qquad\mbox{is parsed as}\qquad
-  \mbox{\tt \~{}}\; (x\; y)
+  \holtxt{\~{}}\; x\; y\qquad\mbox{is parsed as}\qquad
+  \holtxt{\~{}}\; (x\; y)
 \] because the precedence of \verb+~+ is lower than that of function
 application.  The unary negation symbol would also typically be
 defined as a true prefix, if only to allow one to write \[ {\it
@@ -306,22 +320,22 @@ Suffixes appear after their arguments.  There are no suffixes
 introduced into the standard theories available in HOL, but users are
 always able to introduce their own if they choose.  Suffixes are
 associated with a precedence just as infixes and true prefixes are.
-If \verb+p+ is a true prefix, \verb+i+ an infix, and \verb+s+ a
+If \holtxt{p} is a true prefix, \holtxt{i} an infix, and \holtxt{s} a
 suffix, then there are six possible orderings for the three different
 operators based on their precedences, giving five parses for
-$\verb+p+\; t_1\; \verb+i+\; t_2\; \verb+s+$ depending on the relative
+$\holtxt{p}\; t_1\; \holtxt{i}\; t_2\; \holtxt{s}$ depending on the relative
 precedences:
 \[
 \begin{array}{cl}
 \mbox{\begin{tabular}{c}Precedences\\(lowest to highest)\end{tabular}} &
 \multicolumn{1}{c}{\mbox{Parses}}\\
 \hline
-p,\;i,\;s & \verb+p+\;(t_1\;\verb+i+\;(t_2\;\verb+s+))\\
-p,\;s,\;i & \verb+p+\;((t_1\;\verb+i+\;t_2)\;\verb+s+)\\
-i,\;p,\;s & (\verb+p+\;t_1)\;\verb+i+\;(t_2\;\verb+s+)\\
-i,\;s,\;p & (\verb+p+\;t_1)\;\verb+i+\;(t_2\;\verb+s+)\\
-s,\;p,\;i & (\verb+p+\;(t_1\;\verb+i+\;t_2))\;\verb+s+\\
-s,\;i,\;p & ((\verb+p+\;t_1)\;\verb+i+\;t_2)\;\verb+s+\\
+p,\;i,\;s & \holtxt{p}\;(t_1\;\holtxt{i}\;(t_2\;\holtxt{s}))\\
+p,\;s,\;i & \holtxt{p}\;((t_1\;\holtxt{i}\;t_2)\;\holtxt{s})\\
+i,\;p,\;s & (\holtxt{p}\;t_1)\;\holtxt{i}\;(t_2\;\holtxt{s})\\
+i,\;s,\;p & (\holtxt{p}\;t_1)\;\holtxt{i}\;(t_2\;\holtxt{s})\\
+s,\;p,\;i & (\holtxt{p}\;(t_1\;\holtxt{i}\;t_2))\;\holtxt{s}\\
+s,\;i,\;p & ((\holtxt{p}\;t_1)\;\holtxt{i}\;t_2)\;\holtxt{s}\\
 \end{array}
 \]
 
@@ -360,7 +374,7 @@ val _ = add_rule{term_name = "COND", fixity = TruePrefix 70,
                  block_style =
                    (AroundEachPhrase, (PP.CONSISTENT, 0))};
 \end{verbatim}
-\noindent The actual rule is slightly more complicated, and 
+\noindent The actual rule is slightly more complicated, and
 may be found in the sources for the theory \theoryimp{bool}.
 
 \paragraph{Mix-fix syntax for term substitution:}
@@ -953,6 +967,9 @@ intermediate \ml{(p * 1)} term, but also re-ordered the addition to
 put the simpler term on the left.
 
 \subsection{The standard \simpset{}s}
+
+\HOL{} comes with a number of standard \simpset{}s.  All of these are
+accessible from within \ml{bossLib}.
 
 \subsection{\Simpset{} fragments}
 

@@ -1,5 +1,13 @@
 \chapter{Theories}\label{HOLtheories}
 
+% LaTeX macros in HOL manuals
+%
+% \holtxt{..}     for typewriter text that is HOL types or terms.  To
+%                 produce backslashes, for /\, \/ and \x. x + 1, use \bs
+% \ml{..}         for typewriter text that is ML input, including the
+%                 names of HOL API functions, such as mk_const
+% \theoryimp{..}  for names of HOL theories.
+
 \newcommand{\konst}[1]{\ensuremath{\mbox{\small{\textbf{\sf{#1}}}}}}
 \newcommand{\nil}{\mathbf{[} \;\mathbf{]}}
 \newcommand{\cons}[2]{{#1}\mathbf{:}\mathbf{:}{#2}}
@@ -18,26 +26,26 @@ complete list of all the axioms, definitions and theorems in \HOL, see
 \section{The theory {\tt min}}\label{minTheory}
 
 The starting theory of \HOL{} is the theory \ml{min}.
-\index{min, the HOL theory@\ml{min}, the \HOL\ theory|(}
+\index{min, the HOL theory@\ml{min}, the \HOL{} theory|(}
 In this theory, the type constant {\small\verb+bool+} of booleans,
 the binary type operator $(\alpha,\beta)${\small\verb+fun+} of functions, and the type
 constant {\small\verb+ind+} of individuals are declared. Building on
 these types, three primitive constants
-\index{constants, in HOL logic@constants, in \HOL\ logic!primitive logical}
-\index{primitive constants, of HOL logic@primitive constants, of \HOL\ logic}
+\index{constants, in HOL logic@constants, in \HOL{} logic!primitive logical}
+\index{primitive constants, of HOL logic@primitive constants, of \HOL{} logic}
 are declared: equality, implication, and a choice operator:
-\index{ equality, in HOL logic@\ml{=} (equality, in \HOL\ logic)}
-\index{equality, in HOL logic@equality, in \HOL\ logic}
+\index{ equality, in HOL logic@\ml{=} (equality, in \HOL{} logic)}
+\index{equality, in HOL logic@equality, in \HOL{} logic}
 \begin{description}
 \item [Equality] Equality ({\small\verb+= : 'a -> 'a -> bool+}) is an
   infix operator.
-\index{equality, in HOL logic@equality, in \HOL\ logic}
+\index{equality, in HOL logic@equality, in \HOL{} logic}
 \item [Implication] Implication
   ({\small\verb+==> : bool -> bool -> bool+}) is the
   \emph{material implication} and is an infix operator that is
   right-associative, \ie, \verb+x ==> y ==> z+ parses to the same term
   as \verb+x ==> (y ==> z)+.
-\index{implication, in HOL logic@implication, in \HOL\ logic}
+\index{implication, in HOL logic@implication, in \HOL{} logic}
 \item [Choice] Equality
 and implication are standard predicate calculus notions, but choice is
 more exotic: if $t$ is a term having type $\sigma${\small\verb+->bool+},
@@ -81,7 +89,7 @@ in the theory of pairs (\theoryimp{prod}), disjoint sums
 
 \subsection{The theory \theoryimp{bool}}\label{boolfull}
 
-\index{axioms!primitive, of HOL logic@primitive, of \HOL\ logic|(}
+\index{axioms!primitive, of HOL logic@primitive, of \HOL{} logic|(}
 %
 At start-up, the initial theory for users of the \HOL{} system is
 called \ml{bool}\index{HOL@\HOL{}}, which is constructed when the
@@ -94,7 +102,7 @@ the four axioms
 %
 for higher order logic. These axioms, together with the rules of
 inference described in Section~\ref{rules}, constitute the core of the
-\HOL\ logic.  Because of the way the \HOL\ system evolved from \LCF,
+\HOL{} logic.  Because of the way the \HOL{} system evolved from \LCF,
 %
 \index{LCF@\LCF}
 %
@@ -103,16 +111,16 @@ inference described in Section~\ref{rules}, constitute the core of the
   logic built-in to LCF) as possible.} the particular
 axiomatization
 %
-\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL\ logic}
+\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic}
 %
 of higher order logic it uses differs from the classical
 axiomatization due to Church\index{Church, A.}  \cite{Church}.  The
 biggest difference is that in Church's formulation type
 variables
 %
-\index{type variables, in HOL logic@type variables, in \HOL\ logic!differences from classical}
+\index{type variables, in HOL logic@type variables, in \HOL{} logic!differences from classical}
 %
-are in the meta-language, whereas in the \HOL\ logic they are part of
+are in the meta-language, whereas in the \HOL{} logic they are part of
 the object language.
 
 The logical constants
@@ -121,7 +129,7 @@ The logical constants
 %
 \holtxt{T}~(truth),
 %
-\index{truth values, in HOL logic@truth values, in \HOL\ logic!constants for}
+\index{truth values, in HOL logic@truth values, in \HOL{} logic!constants for}
 \index{T@\holtxt{T}!defined in terms of primitives}
 %
 \holtxt{F}~(falsity),
@@ -238,7 +246,7 @@ the first three are the following:
 \end{hol}
 
 \noindent
-The fourth and last axiom of the \HOL\ logic is the Axiom of
+The fourth and last axiom of the \HOL{} logic is the Axiom of
 Infinity\index{axiom of infinity}. Its statement is phrased in terms of
 the function properties {\small\verb+ONE_ONE+} and {\small\verb+ONTO+}. The
 definitions are:
@@ -246,8 +254,8 @@ definitions are:
 \begin{hol}
 \index{ONE_ONE_DEF@\ml{ONE\_ONE\_DEF}}
 \index{ONTO_DEF@\ml{ONTO\_DEF}}
-\index{one-to-one predicate, in HOL logic@one-to-one predicate, in \HOL\ logic!definitional axiom for}
-\index{onto predicate, in HOL logic@onto predicate, in \HOL\ logic!definitional axiom for}
+\index{one-to-one predicate, in HOL logic@one-to-one predicate, in \HOL{} logic!definitional axiom for}
+\index{onto predicate, in HOL logic@onto predicate, in \HOL{} logic!definitional axiom for}
 \begin{verbatim}
    ONE_ONE_DEF |- ONE_ONE f = (!x1 x2. (f x1 = f x2) ==> (x1 = x2))
 
@@ -260,7 +268,7 @@ definitions are:
 \begin{hol}
 \index{INFINITY_AX@\ml{INFINITY\_AX}}
 \index{axiom of infinity}
-\index{existential quantifier, in HOL logic@existential quantifier, in \HOL\ logic!in infinity axiom}
+\index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!in infinity axiom}
 \begin{verbatim}
   INFINITY_AX  |- ?f:ind->ind. ONE_ONE f /\ ~(ONTO f)
 \end{verbatim}
@@ -294,10 +302,10 @@ useful constants.
 \begin{hol}
 \index{LET_DEF@\ml{LET\_DEF}}
 \index{COND_DEF@\ml{COND\_DEF}}
-\index{COND@\ml{COND}}
+\index{COND@\holtxt{COND}}
 \index{LET@\ml{LET}}
-\index{conditional predicate, in HOL logic@conditional predicate, in \HOL\ logic!definitional axiom for}
-\index{conditionals, in HOL logic@conditionals, in \HOL\ logic}
+\index{conditional predicate, in HOL logic@conditional predicate, in \HOL{} logic!definitional axiom for}
+\index{conditionals, in HOL logic@conditionals, in \HOL{} logic}
 \begin{verbatim}
    LET_DEF  |- LET  = \f x. f x
    COND_DEF |- COND = \t t1 t2.@x.((t=T)==>(x=t1))/\((t=F)==>(x=t2))
@@ -305,24 +313,26 @@ useful constants.
 \end{verbatim}
 \end{hol}
 
-The constant {\small\verb+LET+}\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL\ logic!constant for} is used in representing terms
+The constant {\small\verb+LET+}\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL{} logic!constant for} is used in representing terms
 containing local variable bindings (\ie\
 {\small\verb+let+}-terms)
-\index{let-terms, in HOL logic@\ml{let}-terms,in \HOL\ logic!definitional axiom for}.
+\index{let-terms, in HOL logic@\ml{let}-terms,in \HOL{} logic!definitional axiom for}.
 For example, the concrete syntax
 {\small\verb+let v = M in N+} is translated by the parser to the term
 {\small\verb+LET (\v.N) M+}. For the full description of how
 {\small\verb+let+} expressions are translated, see Section \ref{prod}.
 
 The constant {\small\verb+COND+} is used in representing conditional
-expressions. The concrete syntax \index{terms, in HOL logic@terms, in
-  \HOL\ logic!conditional}\index{conditional predicate, in HOL
-  logic@conditional predicate, in \HOL\ logic}\index{conditionals, in
-  HOL logic@conditionals, in \HOL\ logic} \ml{`if $t_1\ $then$\ t_2\
-  $else$\ t_3$`} abbreviates the application \ml{COND\ $t_1\ t_2\
-  t_3$}. The syntax \ml{$t_1\; $=>$\;t_2\;$|$\;t_3$} is also
-permitted. The system prints out conditionals in the "if $t_1$ then
-$t_2$ else $t_3$" form.
+expressions. The concrete syntax
+%
+\index{terms, in HOL logic@terms, in \HOL{} logic!conditional}
+\index{conditional predicate, in HOL logic@conditional predicate, in \HOL{} logic}
+\index{conditionals, in HOL logic@conditionals, in \HOL{} logic}
+%
+\holtxt{if $t_1$ then $t_2$ else $t_3$} abbreviates the application
+\holtxt{COND $t_1$ $t_2$ $t_3$}. The syntax \holtxt{$t_1$ => $t_2$ |
+  $t_3$} is also permitted. The system prints out conditionals in the
+\holtxt{if $t_1$ then $t_2$ else $t_3$} form by default.
 
 The constant {\small\verb+IN+} (written as an infix) is the basis of
 the modelling of sets by their characteristic functions.  The term
@@ -435,27 +445,27 @@ values (of type \ml{term}) as the other quotations in the same row.
 \bigskip
 
 \begin{center}
-\index{choice operator, in HOL logic@choice operator, in \HOL\ logic!syntax of}
-\index{ negation, in HOL logic@{\small\verb+~+} (negation, in \HOL\ logic)}
-\index{ disjunction, in HOL logic@{\small\verb+\/+} (disjunction, in \HOL\ logic)}
-\index{ conjunction, in HOL logic@\holtxt{/\bs} (conjunction, in \HOL\ logic)}
-\index{ implication, in HOL logic@\holtxt{==>} (implication, in \HOL\ logic)}
-\index{ equality, in HOL logic@\ml{=} (equality, in \HOL\ logic)}
-\index{ universal quantifier, in HOL logic@{\small\verb+"!+} (universal quantifier, in \HOL\ logic)}
-\index{ existential quantifier, in HOL logic@{\small\verb+?+} (existential quantifier, in \HOL\ logic)}
-\index{ choice function, in HOL logic@{\small\verb+"@+} (choice function, in \HOL\ logic)}
-\index{terms, in HOL logic@terms, in \HOL\ logic!non-primitive}
-\index{terms, in HOL logic@terms, in \HOL\ logic!constructors for}
-\index{conditional predicate, in HOL logic@conditional predicate, in \HOL\ logic}
-\index{conditionals, in HOL logic@conditionals, in \HOL\ logic}
-\index{conjunction, in HOL logic@conjunction, in \HOL\ logic!constructor for}
-\index{disjunction, in HOL logic@disjunction, in \HOL\ logic!constructor for}
-\index{equality, in HOL logic@equality, in \HOL\ logic!syntax of}
-\index{negation, in HOL logic@negation, in \HOL\ logic!syntax of}
-\index{negation, in HOL logic@negation, in \HOL\ logic!constructor for}
-\index{existential quantifier, in HOL logic@existential quantifier, in \HOL\ logic!syntax of}
-\index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic!syntax of}
-\index{implication, in HOL logic@implication, in \HOL\ logic!syntax of}
+\index{choice operator, in HOL logic@choice operator, in \HOL{} logic!syntax of}
+\index{ negation, in HOL logic@\holtxt{\~{}} (negation, in \HOL{} logic)}
+\index{ disjunction, in HOL logic@\holtxt{\bs/} (disjunction, in \HOL{} logic)}
+\index{ conjunction, in HOL logic@\holtxt{/\bs} (conjunction, in \HOL{} logic)}
+\index{ implication, in HOL logic@\holtxt{==>} (implication, in \HOL{} logic)}
+\index{ equality, in HOL logic@\ml{=} (equality, in \HOL{} logic)}
+\index{ universal quantifier, in HOL logic@\holtxt{"!} (universal quantifier, in \HOL{} logic)}
+\index{ existential quantifier, in HOL logic@\holtxt{?} (existential quantifier, in \HOL{} logic)}
+\index{ choice function, in HOL logic@\holtxt{"@} (choice function, in \HOL{} logic)}
+\index{terms, in HOL logic@terms, in \HOL{} logic!non-primitive}
+\index{terms, in HOL logic@terms, in \HOL{} logic!constructors for}
+\index{conditional predicate, in HOL logic@conditional predicate, in \HOL{} logic}
+\index{conditionals, in HOL logic@conditionals, in \HOL{} logic}
+\index{conjunction, in HOL logic@conjunction, in \HOL{} logic!constructor for}
+\index{disjunction, in HOL logic@disjunction, in \HOL{} logic!constructor for}
+\index{equality, in HOL logic@equality, in \HOL{} logic!syntax of}
+\index{negation, in HOL logic@negation, in \HOL{} logic!syntax of}
+\index{negation, in HOL logic@negation, in \HOL{} logic!constructor for}
+\index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!syntax of}
+\index{universal quantifier, in HOL logic@universal quantifier, in \HOL{} logic!syntax of}
+\index{implication, in HOL logic@implication, in \HOL{} logic!syntax of}
 \index{mk_neg@\ml{mk\_neg}}
 \index{mk_disj@\ml{mk\_disj}}
 \index{mk_conj@\ml{mk\_conj}}
@@ -466,7 +476,7 @@ values (of type \ml{term}) as the other quotations in the same row.
 \index{mk_select@\ml{mk\_select}}
 \index{mk_cond@\ml{mk\_cond}}
 \index{mk_let@\ml{mk\_let}}
-\index{conjunction, in HOL logic@conjunction, in \HOL\ logic!syntax of}
+\index{conjunction, in HOL logic@conjunction, in \HOL{} logic!syntax of}
 \begin{tabular}{|l|l|l|l|} \hline
 \multicolumn{4}{|c|}{ } \\
 \multicolumn{4}{|c|}{\bf Non-primitive terms} \\
@@ -479,7 +489,7 @@ values (of type \ml{term}) as the other quotations in the same row.
 Disjunction & $t_1${\small\verb+\/+}$t_2$ & {\small\verb+$\/ +}$t_1\ t_2$ &
 {\small\verb+mk_disj(+}$t_1${\small\verb+,+}$t_2${\small\verb+)+} \\ \hline
 %
-Conjunction & $t_1${\small\verb+/\+}$t_2$ & {\small\verb+$/\ +}$t_1\ t_2$ &
+Conjunction & $t_1$\holtxt{/\bs}$t_2$ & \holtxt{/\bs}$t_1\ t_2$ &
 {\small\verb+mk_conj(+}$t_1${\small\verb+,+}$t_2${\small\verb+)+} \\
 \hline
 %
@@ -490,21 +500,21 @@ Equality & $t_1${\small\verb+=+}$t_2$ & {\small\verb+$= +}$t_1\ t_2$ &
 {\small\verb+mk_eq(+}$t_1${\small\verb+,+}$t_2${\small\verb+)+} \\ \hline
 %
 $\forall$-quantification & {\small\verb+!+}$x${\small\verb+.+}$t$ &
-{\small\verb+$!(\+}$x${\small\verb+.+}$t${\small\verb+)+} & {\small\verb+mk_forall(+}$x${\small\verb+,+}$t${\small\verb+)+} \\ \hline
+\holtxt{\$!(\bs}$x${\small\verb+.+}$t${\small\verb+)+} & {\small\verb+mk_forall(+}$x${\small\verb+,+}$t${\small\verb+)+} \\ \hline
 %
 $\exists$-quantification & {\small\verb+?+}$x${\small\verb+.+}$t$ &
-{\small\verb+$?(\+}$x${\small\verb+.+}$t${\small\verb+)+} & {\small\verb+mk_exists(+}$x${\small\verb+,+}$t${\small\verb+)+} \\ \hline
+\holtxt{\$?(\bs}$x${\small\verb+.+}$t${\small\verb+)+} & {\small\verb+mk_exists(+}$x${\small\verb+,+}$t${\small\verb+)+} \\ \hline
 %
 $\hilbert$-term & {\small\verb+@+}$x${\small\verb+.+}$t$ &
-{\small\verb+$@(\+}$x${\small\verb+.+}$t${\small\verb+)+} & {\small\verb+mk_select(+}$x${\small\verb+,+}$t${\small\verb+)+} \\ \hline
+\holtxt{\$@(\bs}$x${\small\verb+.+}$t${\small\verb+)+} & {\small\verb+mk_select(+}$x${\small\verb+,+}$t${\small\verb+)+} \\ \hline
 %
-Conditional\index{COND@\ml{COND}} & {\small\verb+if +}$t\ ${\small\verb+then +}$t_1${\small\verb+ else +}$t_2$ &
+Conditional\index{COND@\holtxt{COND}} & {\small\verb+if +}$t\ ${\small\verb+then +}$t_1${\small\verb+ else +}$t_2$ &
 {\small\verb+COND +}$t\ t_1\ t_2$ & {\small\verb+mk_cond(+}$t${\small\verb+,+}$t_1${\small\verb+,+}$t_2${\small\verb+)+}
  \\ \hline
 %
 {\small\verb+let+}-expression & {\small\verb+let +}$x${\small\verb+=+}$t_1${\small\verb+ in +}$t_2$ &
-{\small\verb+LET(\+}$x${\small\verb+.+}$t_2${\small\verb+)+}$t_1$ &
-{\small\verb+mk_let(\+}$x${\small\verb+.+}$t_1${\small\verb+,+}$t_2${\small\verb+)+} \\ \hline
+\holtxt{LET(\bs}$x${\small\verb+.+}$t_2${\small\verb+)+}$t_1$ &
+\holtxt{mk\_let(\bs}$x${\small\verb+.+}$t_1${\small\verb+,+}$t_2${\small\verb+)+} \\ \hline
 \end{tabular}
 \end{center}
 
@@ -515,40 +525,55 @@ constructs. (Indicators, \eg\ \ml{is\_neg}, return truth values
 indicating whether or not a term belongs to the syntax class in
 question.) In addition to the constructors listed in the table there
 are constructors, destructors, and indicators for pairs and lists,
-namely \ml{mk\_pair}\index{mk_pair@\ml{mk\_pair}},
-\ml{mk\_cons}\index{mk_cons@\ml{mk\_cons}} and
-\ml{mk\_list}\index{mk_list@\ml{mk\_list}} (see \REFERENCE).  The
-constants {\small\verb+COND+}\index{COND@\ml{COND}} and
-{\small\verb+LET+} are explained in Section~\ref{boolfull}.  The
-constants {\small\verb+\/+}\index{disjunction, in HOL
-  logic@disjunction, in \HOL\ logic!syntax of}, {\small\verb+/\+},
-{\small\verb+==>+} and {\small\verb+=+} are examples of {\it
-  infixes\/} and represent $\vee$, $\wedge$, $\imp$ and equality,
-respectively. If $c$ is declared to be an infix, then the \HOL\ parser
-will translate $t_1\ c\ t_2$ to {\small\verb+$+}$c\ t_1\ t_2$.
+namely \ml{mk\_pair},
+%
+\index{mk_pair@\ml{mk\_pair}}
+%
+\ml{mk\_cons}
+%
+\index{mk_cons@\ml{mk\_cons}}
+%
+and \ml{mk\_list}
+%
+\index{mk_list@\ml{mk\_list}}
+%
+(see \REFERENCE).  The constants
+\holtxt{COND}
+%
+\index{COND@\holtxt{COND}}
+%
+and \holtxt{LET} are explained in Section~\ref{boolfull}.  The
+constants \holtxt{\bs/},
+%
+\index{disjunction, in HOL logic@disjunction, in \HOL{} logic!syntax of}
+%
+\holtxt{/\bs}, \holtxt{==>} and \holtxt{=} are examples of
+\textit{infixes} and represent $\vee$, $\wedge$, $\imp$ and equality,
+respectively. If $c$ is declared to be an infix, then the \HOL{}
+parser will translate $t_1\ c\ t_2$ to {\small\verb+$+}$c\ t_1\ t_2$.
 
 The constants {\small\verb+!+}, {\small\verb+?+} and {\small\verb+@+}
-are examples of \label{binder} \textit{binders}\index{binders, in HOL
-logic@binders, in \HOL\ logic} and represent $\forall$, $\exists$ and
-$\hilbert$, respectively.  If $c$ is declared to be a binder, then the
-\HOL\ parser will translate $c\ x${\small\verb+.+}$t$ to the
-combination
-{\small\verb+$+}$c${\small\verb+(\+}$x${\small\verb+.+}$t${\small\verb+)+}
+are examples of \label{binder} \textit{binders}
+%
+\index{binders, in HOL logic@binders, in \HOL{} logic}
+%
+and represent $\forall$, $\exists$ and $\hilbert$, respectively.  If
+$c$ is declared to be a binder, then the \HOL{} parser will translate
+\holtxt{$c$ $x$.$t$} to the combination \holtxt{\$$c$(\bs$x$.$t$)}
 (\ie\ the application of the constant $c$ to the representation of the
-abstraction $\lquant{x}t$)\index{ function abstraction binder, in HOL
-logic@{\small\verb+\+} (function abstraction binder, in \HOL\ logic)}.
-
+abstraction $\lquant{x}t$).
+\index{ function abstraction binder, in HOL logic@\holtxt{\bs} (function abstraction binder, in \HOL{} logic)}
 
 \begin{center}
 
-\index{variables, in HOL logic@variables, in \HOL\ logic!multiple bound}
+\index{variables, in HOL logic@variables, in \HOL{} logic!multiple bound}
 \index{list_mk_comb@\ml{list\_mk\_comb}|pin}
 \index{list_mk_abs@\ml{list\_mk\_abs}|pin}
 \index{list_mk_forall@\ml{list\_mk\_forall}|pin}
 \index{list_mk_exists@\ml{list\_mk\_exists}|pin}
-\index{combinations, in HOL logic@combinations, in \HOL\ logic!abbreviation for multiple}
-\index{existential quantifier, in HOL logic@existential quantifier, in \HOL\ logic!abbreviation for multiple}
-\index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic!abbreviation for multiple}
+\index{combinations, in HOL logic@combinations, in \HOL{} logic!abbreviation for multiple}
+\index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!abbreviation for multiple}
+\index{universal quantifier, in HOL logic@universal quantifier, in \HOL{} logic!abbreviation for multiple}
 \begin{tabular}{|l|l|l|} \hline
 \multicolumn{3}{|c|}{ } \\
 \multicolumn{3}{|c|}{\bf Syntactic abbreviations} \\
@@ -559,8 +584,8 @@ logic@{\small\verb+\+} (function abstraction binder, in \HOL\ logic)}.
 $t\ t_1 \cdots t_n$ &
 {\small\verb+(+}$\cdots${\small\verb+(+}$t\ t_1${\small\verb+)+}$\cdots t_n${\small\verb+)+} &
 {\small\verb+list_mk_comb(+}$t${\small\verb+,[+}$t_1${\small\verb+, +}$\ldots${\small\verb+ ,+}$t_n${\small\verb+])+} \\ \hline
-{\small\verb+\+}$x_1\cdots x_n${\small\verb+.+}$t$ &
-{\small\verb+\+}$x_1${\small\verb+. +}$\cdots${\small\verb+ \+}$x_n${\small\verb+.+}$t$ &
+\holtxt{\bs}$x_1\cdots x_n${\small\verb+.+}$t$ &
+\holtxt{\bs}$x_1${\small\verb+. +}$\cdots$\holtxt{ \bs}$x_n${\small\verb+.+}$t$ &
 {\small\verb+list_mk_abs([+}$x_1${\small\verb+, +}$\ldots${\small\verb+ ,+}$x_n${\small\verb+],+}$t${\small\verb+)+}
 \\ \hline
 {\small\verb+!+}$x_1\cdots x_n${\small\verb+.+}$t$ &
@@ -580,8 +605,8 @@ $t\ t_1 \cdots t_n$ &
 \ml{list\_mk\_imp}\index{list_mk_imp@\ml{list\_mk\_imp}} and
 for conjunctions, disjunctions, and implications respectively.
 The corresponding destructor functions are called \ml{strip\_comb}, \etc,
-\index{term constructors, in HOL logic@term constructors, in \HOL\ logic|)}
-\index{terms, in HOL logic@terms, in \HOL\ logic!constructors for|)}
+\index{term constructors, in HOL logic@term constructors, in \HOL{} logic|)}
+\index{terms, in HOL logic@terms, in \HOL{} logic!constructors for|)}
 
 \subsubsection{Theorems}
 
@@ -699,6 +724,7 @@ as mnemonic names for variables (\eg\ \ml{S} to range over sets and
 \ml{o} to range over outputs).  Variables (though not constants) with
 these names can be used in the current system if \ml{o}, \ml{S}, \ml{K},
 \ml{I}, \ml{W}, and \ml{C} are first hidden (see Section~\ref{hidden}).
+%
 \index{function composition operator, in HOL logic@\ml{o} (function composition operator), in \HOL{} logic|)}
 \index{function composition, in HOL logic@function composition, in \HOL{} logic|)}
 
@@ -708,22 +734,34 @@ these names can be used in the current system if \ml{o}, \ml{S}, \ml{K},
 \index{representing types, in HOL logic@representing types, in \HOL{} logic!pair example of|(}
 \index{pairs, in HOL logic@pairs, in \HOL{} logic|(}
 \index{product types!in HOL logic@in \HOL{} logic|(}
+%
 The Cartesian  product  type  operator
+%
 \index{type operators, in HOL logic@type operators, in \HOL{} logic!for pairs}
-\ml{prod}
-\index{prod@\ml{prod}}
-is  defined  in  the  theory \ml{pair}. Values of type
-{\small\verb%(%}$\sigma_1${\small\verb%,%}$\sigma_2${\small\verb%)prod%} are
-ordered pairs  whose  first  component  has  type  $\sigma_1$  and whose second
-component has type $\sigma_2$.  The \HOL{} parser
+%
+\holtxt{prod}
+%
+\index{prod@\holtxt{prod}}
+%
+is defined in the theory \theoryimp{pair}. Values of type
+\holtxt{($\sigma_1$,$\sigma_2$)prod} are ordered pairs whose first
+component has type $\sigma_1$ and whose second component has type
+$\sigma_2$.  The \HOL{} type parser
+%
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!of pairs}
-converts type expressions of the
-form \ml{`:}$\sigma_1${\small\verb%#%}$\sigma_2$\ml{`}
-\index{ product type operator, in HOL logic@{\small\verb+#+} (product type operator, in \HOL{} logic)}
- into\ml{(}$\sigma_1$\ml{,}$\sigma_2$\ml{)prod}
-\index{ pair constructor, in HOL logic@\ml{,} (pair constructor, in \HOL{} logic)},
+%
+converts type expressions of the form \holtxt{:$\sigma_1$\#$\sigma_2$}
+%
+\index{ product type operator, in HOL logic@\holtxt{\#} (product type operator, in \HOL{} logic)}
+%
+into \holtxt{($\sigma_1$,$\sigma_2$)prod},
+%
+\index{ pair constructor, in HOL logic@\ml{,} (pair constructor, in \HOL{} logic)}
+%
 and the printer inverts this transformation. Pairs
+%
 \index{pairing constructor, in HOL logic@pairing constructor, in \HOL{} logic}
+%
 are constructed with an infixed comma symbol
 
 \begin{hol}
@@ -732,17 +770,16 @@ are constructed with an infixed comma symbol
 \end{verbatim}
 \end{hol}
 
-\noindent so, for example, if $t_1$ and $t_2$ have types $\sigma_1$ and
-$\sigma_2$
-respectively, then $t_1$\ml{,}$t_2$ is a term with type
-$\sigma_1${\small\verb%#%}$\sigma_2$. Usually, pairs are written
-within brackets:
-\ml{(}$t_1$\ml{,}$t_2$\ml{)}. The comma symbol associates
-\index{pairing constructor, in HOL logic@pairing constructor, in \HOL\ logic!associativity of}
- to the right, so  that
-\ml{(}$t_1$\ml{,}$t_2$\ml{,}$\ldots$\ml{,}$t_n$\ml{)}
-means
-\ml{(}$t_1$\ml{,(}$t_2$\ml{,}$\ldots$\ml{,}$t_n$\ml{))}.
+\noindent
+so, for example, if $t_1$ and $t_2$ have types $\sigma_1$ and
+$\sigma_2$ respectively, then $t_1$\ml{,}$t_2$ is a term with type
+$\sigma_1$\holtxt{\#}$\sigma_2$. Usually, pairs are written within
+brackets: \holtxt{($t_1$,$t_2$)}. The comma symbol associates
+%
+\index{pairing constructor, in HOL logic@pairing constructor, in \HOL{} logic!associativity of}
+%
+to the right, so that \holtxt{($t_1$,$t_2$,$\ldots$,$t_n$)} means
+\holtxt{($t_1$,($t_2$,$\ldots$,$t_n$))}.
 
 \paragraph {Defining the product type}
 
@@ -766,14 +803,15 @@ required by the type definition principle.}
 \begin{hol}
 {\small
 \begin{verbatim}
-  |- ?p:'a->'b->bool. (\p. ?x y. p = \a b. (a = x) /\ (b = y)) p
-\end{verbatim}}
+   |- ?p:'a->'b->bool. (\p. ?x y. p = \a b. (a = x) /\ (b = y)) p
+\end{verbatim}
+}
 \end{hol}
 %
 The type operator {\small\verb%prod%} is defined
 by invoking \verb+new_type_definition+ with this theorem
  which results in the definitional axiom
-\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL\ logic}
+\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic}
 \index{axioms!in bool theory@in \ml{bool} theory}
 \ml{prod\_TY\_DEF} shown below being asserted in the theory \ml{pair}.
 %
@@ -797,7 +835,8 @@ the following characterizing theorem, by use of the function
 \begin{verbatim}
   |- (!a. ABS_prod (REP_prod a) = a) /\
      (!r. (\p. ?x y. p = (\a b. (a=x) /\ (b=y)) r = (REP_prod(ABS_prod r) = r)
-\end{verbatim}}
+\end{verbatim}
+}
 \end{hol}
 
 \paragraph {Pairs and projections}
@@ -1099,15 +1138,19 @@ the surface syntax.
 
 \subsection{Disjoint sums}\label{sum}
 
-The theory \ml{sum}\index{sum@\ml{sum}} defines the binary  disjoint
-union\index{disjoint union theory, in HOL
-logic@disjoint union theory, in \HOL{} logic|(}  type operator \ml{sum}.
+The theory \theoryimp{sum}\index{sum@\ml{sum}} defines the binary  disjoint
+union
+%
+\index{disjoint union theory, in HOL logic@disjoint union theory, in \HOL{} logic|(}
+%
+type operator \holtxt{sum}.
 A type  {\small\verb%(%}$\sigma_1${\small\verb%,%}$\sigma_2${\small\verb%)sum%}
 denotes the  disjoint  union  of  types  $\sigma_1$  and $\sigma_2$.   The type
 operator {\small\verb%sum%} can be defined, just as {\small\verb%prod%} was, but
 the details are omitted here.\footnote{The definition of disjoint  unions in
 the HOL system is due to Tom Melham. The technical details of this definition can
 be found in~\cite{Melham-banff}.}  The \HOL{} parser
+%
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!of sum types}
 converts
 \ml{":}$\sigma_1${\small\verb%+%}$\sigma_2$\ml{"}\index{ disjoint union
@@ -1704,16 +1747,16 @@ constants.
 {\small
 \begin{tabular}{@{}ccc}
 Operator & Strength & Associativity \\ \hline
-{\small\verb+>=+} & 450 & right \\
-{\small\verb+<=+} & 450 & right \\
-{\small\verb+>+} & 450 & right \\
-{\small\verb+<+} & 450 & right \\
-{\small\verb%+%} & 500 & left \\
-{\small\verb%-%} & 500 & left \\
-{\small\verb%*%} & 600& left \\
-{\small\verb%DIV%} & 600 & left \\
-{\small\verb%MOD%} & 650 & left \\
-{\small\verb%EXP%} & 700 & right \\
+\holtxt{>=} & 450 & right \\
+\holtxt{<=} & 450 & right \\
+\holtxt{>} & 450 & right \\
+\holtxt{<} & 450 & right \\
+\holtxt{+} & 500 & left \\
+\holtxt{-} & 500 & left \\
+\holtxt{*} & 600& left \\
+\holtxt{DIV} & 600 & left \\
+\holtxt{MOD} & 650 & left \\
+\holtxt{EXP} & 700 & right \\
 \end{tabular}}
 \end{center}
 
@@ -1721,7 +1764,7 @@ Operator & Strength & Associativity \\ \hline
 the construction of in HOL logic@\ml{numeral}, the construction of in \HOL{} logic}
 
 The type \ml{num}
-\index{num, the type in \HOL\ logic@\ml{num}, the type in \HOL{} logic}
+\index{num, the type in \HOL{} logic@\ml{num}, the type in \HOL{} logic}
 is usually thought of as being supplied with an infinite collection of
 numerals: \ml{1}, \ml{2}, \ml{3}, \etc.  However, the \HOL{} logic has
 no way to define such infinite families of constants; instead, all
@@ -3821,7 +3864,7 @@ set. These notions have recursive versions as well
                       else RRESTRICT (DRESTRICT f (COMPL {x})) r)
 \end{verbatim}}
 \noindent The removal of a single element from the domain of a map
-(\verb+\\+, infix) is a simple application of
+(\holtxt{\bs\bs}, infix) is a simple application of
 ({\small\verb+DRESTRICT+}), but sufficiently useful to deserve its own
 definition. Again, this concept has a alternate recursive presentation
 ({\small\verb+DOMSUB_FUPDATE_THM+}).
