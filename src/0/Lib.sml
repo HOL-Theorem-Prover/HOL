@@ -235,7 +235,6 @@ fun funpow n f x =
      if (n<0) then x else iter(n,x)
    end;
 
-
 fun enumerate i [] = []
   | enumerate i (h::t) = (i,h)::enumerate (i+1) t
 

@@ -53,7 +53,7 @@ fun is_empty (NODE []) = true
 (*---------------------------------------------------------------------------*
  * Determining the top constructor of a term. The following is a bit         *
  * convoluted, since doing a dest_abs requires a full traversal to replace   *
- * the bound variable with a free one. Therefore we make a separate checks   *
+ * the bound variable with a free one. Therefore we make a separate check    *
  * for abstractions.                                                         *
  *---------------------------------------------------------------------------*)
 
