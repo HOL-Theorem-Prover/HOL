@@ -2674,7 +2674,7 @@ val _ = overload_on ("**", Term`$int_exp`);
 
 val INT_EXP = store_thm(
   "INT_EXP",
-  Term`!n m. &n ** m = &(n ** m)`,
+  Term`!n m. &n ** m = &(n EXP m)`,
   REPEAT GEN_TAC THEN Induct_on `m` THENL [
     REWRITE_TAC [int_exp, EXP],
     ASM_REWRITE_TAC [int_exp, EXP, INT_MUL]
