@@ -25,7 +25,7 @@ fun emit_hol_script target mosml std_prelude qend =
       output  "#!/bin/sh\n";
       output  "# The bare hol98 script\n\n";
       output (String.concat[mosml," -quietdec -P full ",
-                            std_prelude, " $*", qend, "\n"]);
+                            std_prelude, " $* ", qend, "\n"]);
       TextIO.closeOut ostrm;
       mk_xable target
    end;
