@@ -11,12 +11,12 @@ sig
        | VTYPED of vstruct * pretype
 
    datatype absyn
-       = AQ    of term
-       | IDENT of string
+       = AQ     of term
+       | IDENT  of string
        | QIDENT of string * string
-       | APP   of absyn * absyn
-       | LAM   of vstruct * absyn
-       | TYPED of absyn * pretype
+       | APP    of absyn * absyn
+       | LAM    of vstruct * absyn
+       | TYPED  of absyn * pretype
 
 
   val mk_AQ    : term -> absyn
