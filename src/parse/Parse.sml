@@ -276,6 +276,45 @@ end
       Interlude: prettyprinting terms and theorems
  ---------------------------------------------------------------------------*)
 
+local
+  fun char_occurs c s = let
+    fun loop ss =
+        case Substring.getc ss of
+          SOME (c', ss') => c = c' orelse loop ss'
+        | NONE => false
+  in
+    loop (Substring.all s)
+  end
+in
+fun respect_width_ref iref pprinter pps x = let
+  val slist = ref ([] : string list)
+  fun output_slist () =
+    (app (PP.add_string pps) (List.rev (!slist));
+     slist := [])
+  fun flush () = output_slist()
+  fun consume_string s = let
+    open Substring
+    val (pfx, sfx) = splitl (fn c => c <> #"\n") (all s)
+  in
+    if size sfx = 0 then slist := s :: !slist
+    else
+      (output_slist();
+       PP.add_newline pps;
+       if size sfx > 1 then consume_string (string (triml 1 sfx))
+       else ())
+  end
+  val consumer = {consumer = consume_string, linewidth = !iref, flush = flush}
+  val newpps = PP.mk_ppstream consumer
+in
+  PP.begin_block pps PP.INCONSISTENT 0;
+  PP.begin_block newpps PP.INCONSISTENT 0;
+  pprinter newpps x;
+  PP.end_block newpps;
+  PP.flush_ppstream newpps;
+  PP.end_block pps
+end
+end (* local *)
+
 fun pp_term pps t = let in update_term_fns(); !term_printer pps t end
 fun term_to_string t = Portable.pp_to_string (!Globals.linewidth) pp_term t;
 fun print_term t = Portable.output(Portable.std_out, term_to_string t);

@@ -153,6 +153,9 @@ signature Parse = sig
     (General.ppstream -> 'a -> unit) -> (General.ppstream -> 'a -> unit)
   val term_pp_with_delimiters :
     (General.ppstream -> term -> unit) -> General.ppstream -> term -> unit
+  val respect_width_ref :
+      int ref -> (General.ppstream -> 'a -> unit) ->
+      (General.ppstream -> 'a -> unit)
   val type_pp_with_delimiters :
     (General.ppstream -> hol_type -> unit) ->
     General.ppstream -> hol_type -> unit

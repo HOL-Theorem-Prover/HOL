@@ -58,8 +58,10 @@ val _ =
  *   Install prettyprinters                                                  *
  *---------------------------------------------------------------------------*)
 
-local fun with_pp ppfn pps x = ppfn pps x handle e => Raise e
-      fun pp_from_stringfn sf pps x = PP.add_string pps (sf x)
+local
+  fun with_pp ppfn pps x =
+      Parse.respect_width_ref Globals.linewidth ppfn pps x handle e => Raise e
+  fun pp_from_stringfn sf pps x = PP.add_string pps (sf x)
 in
   val _ = installPP (with_pp (Parse.term_pp_with_delimiters Hol_pp.pp_term))
   val _ = installPP (with_pp (Parse.type_pp_with_delimiters Hol_pp.pp_type))
@@ -68,12 +70,12 @@ in
   val _ = installPP (with_pp type_grammar.prettyprint_grammar)
   val _ = installPP (with_pp term_grammar.prettyprint_grammar)
 
-  val _ = installPP goalstackLib.pp_proofs
-  val _ = installPP goalstackLib.pp_goalstack
-  val _ = installPP Rewrite.pp_rewrites
-  val _ = installPP TypeBasePure.pp_tyinfo
-  val _ = installPP DefnBase.pp_defn
-  val _ = installPP (pp_from_stringfn Arbint.toString)
+  val _ = installPP (with_pp goalstackLib.pp_proofs)
+  val _ = installPP (with_pp goalstackLib.pp_goalstack)
+  val _ = installPP (with_pp Rewrite.pp_rewrites)
+  val _ = installPP (with_pp TypeBasePure.pp_tyinfo)
+  val _ = installPP (with_pp DefnBase.pp_defn)
+  val _ = installPP (with_pp (pp_from_stringfn Arbint.toString))
 end;
 
 
