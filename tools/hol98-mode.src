@@ -593,9 +593,9 @@ or at level 10 with a bare prefix. "
   "Toggles the boolean variable STRING."
   (message (concat "Toggling " s))
   (send-raw-string-to-hol
-   (format (concat "val _ = (Globals.%s := not (!Globals.%s);"
+   (format (concat "val _ = (%s := not (!%s);"
                    "print (\"*** %s now \" ^"
-                   "Bool.toString (!Globals.%s)^\" ***\\n\"))")
+                   "Bool.toString (!%s)^\" ***\\n\"))")
            s s s s)))
 
 (defun hol-toggle-show-types (arg)
@@ -603,18 +603,23 @@ or at level 10 with a bare prefix. "
 variable show_types_verbosely instead."
   (interactive "P")
   (if arg
-      (hol-toggle-var "show_types_verbosely")
-    (hol-toggle-var "show_types")))
+      (hol-toggle-var "Globals.show_types_verbosely")
+    (hol-toggle-var "Globals.show_types")))
 
 (defun hol-toggle-show-numeral-types()
   "Toggles the global show_numeral_types variable."
   (interactive)
-  (hol-toggle-var "show_numeral_types"))
+  (hol-toggle-var "Globals.show_numeral_types"))
 
 (defun hol-toggle-show-assums()
   "Toggles the global show_assums variable."
   (interactive)
-  (hol-toggle-var "show_assums"))
+  (hol-toggle-var "Globals.show_assums"))
+
+(defun hol-toggle-quietdec ()
+  "Toggles the ML \"meta\" variable, quietdec."
+  (interactive)
+  (hol-toggle-var "Meta.quietdec"))
 
 (defun hol-toggle-show-times()
   "Toggles the elisp variable 'hol-emit-time-elapsed-p."
@@ -699,6 +704,7 @@ already loaded.)"
 (define-key hol-map "\C-c" 'hol-interrupt)
 (define-key hol-map "\C-l" 'hol-recentre)
 (define-key hol-map "\C-n" 'hol-toggle-show-numeral-types)
+(define-key hol-map "\C-q" 'hol-toggle-quietdec)
 (define-key hol-map "\C-t" 'hol-toggle-show-types)
 (define-key hol-map "\C-v" 'hol-scroll-up)
 (define-key hol-map "\M-f" 'forward-hol-tactic)
