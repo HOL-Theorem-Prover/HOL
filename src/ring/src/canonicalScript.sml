@@ -3,6 +3,9 @@ load "abs_tools";
 load "semi_ringTheory";
 load "quoteTheory";
 load "prelimTheory";
+load "BasicProvers";
+load "SingleStep";
+load "Datatype";
 *)
 open HolKernel Parse basicHol90Lib abs_tools;
 open BasicProvers SingleStep Datatype;
@@ -41,7 +44,7 @@ fun ARW_TAC l = BasicProvers.RW_TAC bool_ss
 
 
 val _ = Hol_datatype
- ` canonical_sum = 
+ ` canonical_sum =
      Nil_monom
    | Cons_monom of 'a => index list => canonical_sum
    | Cons_varlist of index list => canonical_sum `;
@@ -130,10 +133,10 @@ val canonical_sum_scalar3_def = Define `
 
 val canonical_sum_prod_def = Define `
    (canonical_sum_prod (Cons_monom c1 l1 t1) s2 =
-	canonical_sum_merge (canonical_sum_scalar3 c1 l1 s2) 
+	canonical_sum_merge (canonical_sum_scalar3 c1 l1 s2)
 			    (canonical_sum_prod t1 s2))
 /\ (canonical_sum_prod (Cons_varlist l1 t1) s2 =
-	canonical_sum_merge (canonical_sum_scalar2 l1 s2) 
+	canonical_sum_merge (canonical_sum_scalar2 l1 s2)
                             (canonical_sum_prod t1 s2))
 /\ (canonical_sum_prod Nil_monom s2 = Nil_monom) `;
 
@@ -244,7 +247,7 @@ PROVE_TAC [plus_sym, compare_list_index]);
 
 val varlist_insert_ok = asm_store_thm
     ("varlist_insert_ok",
-     --` !vm l s. interp_cs vm (varlist_insert l s) 
+     --` !vm l s. interp_cs vm (varlist_insert l s)
                   = SRP (interp_vl vm l) (interp_cs vm s) `--,
 Induct_on `s` THEN REPEAT GEN_TAC THEN
 Cases_on `list_compare index_compare l' l` THEN
@@ -268,7 +271,7 @@ val canonical_sum_scalar2_ok =asm_store_thm
                    = SRM (interp_vl vm l)  (interp_cs vm s) `--,
 Induct_on `s` THEN REPEAT GEN_TAC THEN
 ARW_TAC [ interp_cs_def, interp_m_ok, mult_assoc, distr_right, ics_aux_ok,
-	  monom_insert_ok, varlist_merge_ok, varlist_insert_ok, 
+	  monom_insert_ok, varlist_merge_ok, varlist_insert_ok,
 	  canonical_sum_scalar2_def ] THEN APP_DIFF THEN
 PROVE_TAC[mult_sym]);
 
@@ -279,7 +282,7 @@ val canonical_sum_scalar3_ok =asm_store_thm
                  = SRM (SRM c (interp_vl vm l))  (interp_cs vm s) `--,
 Induct_on `s` THEN REPEAT GEN_TAC THEN
 ARW_TAC [ interp_cs_def, interp_m_ok, mult_assoc, distr_right, ics_aux_ok,
-	  monom_insert_ok, varlist_merge_ok, varlist_insert_ok, 
+	  monom_insert_ok, varlist_merge_ok, varlist_insert_ok,
 	  canonical_sum_scalar3_def ] THEN APP_DIFF THEN
 PROVE_TAC[mult_permute]);
 
@@ -321,10 +324,10 @@ val spolynom_normalize_def = Define `
    (spolynom_normalize (SPvar i) = (Cons_varlist [i] Nil_monom))
 /\ (spolynom_normalize (SPconst c) = (Cons_monom c [] Nil_monom))
 /\ (spolynom_normalize (SPplus l r) =
-      (canonical_sum_merge (spolynom_normalize l) 
+      (canonical_sum_merge (spolynom_normalize l)
       	                      (spolynom_normalize r)))
 /\ (spolynom_normalize (SPmult l r) =
-      (canonical_sum_prod (spolynom_normalize l) 
+      (canonical_sum_prod (spolynom_normalize l)
       	                     (spolynom_normalize r))) `;
 
 

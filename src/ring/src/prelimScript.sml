@@ -9,6 +9,10 @@ val _ = new_theory "prelim";
 (* ternary comparisons *)
 val _ = Hol_datatype ` ordering = LESS | EQUAL | GREATER `;
 
+val _ = set_MLname "LESS" "LESS_def";
+val _ = set_MLname "EQUAL" "EQUAL_def";
+val _ = set_MLname "GREATER" "GREATER_def";
+
 val compare_def = Define `
    (compare LESS    lt eq gt = lt)
 /\ (compare EQUAL   lt eq gt = eq)
