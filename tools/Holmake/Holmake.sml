@@ -258,18 +258,20 @@ val hostname = if Systeml.isUnix then
                  | _ => ""
                else "" (* what to do under windows? *)
 
-val () = if FileSys.access (logfilename, []) then
-           warn "Make log exists; new logging will concatenate on this file"
-         else let
-             (* touch the file *)
-             val outs = TextIO.openOut logfilename
-           in
-             TextIO.closeOut outs
-           end handle Io _ => warn "Couldn't set up make log"
+val () = if do_logging_flag then
+           if FileSys.access (logfilename, []) then
+             warn "Make log exists; new logging will concatenate on this file"
+           else let
+               (* touch the file *)
+               val outs = TextIO.openOut logfilename
+             in
+               TextIO.closeOut outs
+             end handle Io _ => warn "Couldn't set up make log"
+         else ()
 
 fun finish_logging buildok = let
 in
-  if FileSys.access(logfilename, []) then let
+  if do_logging_flag andalso FileSys.access(logfilename, []) then let
       open Date
       val timestamp = fmt "%Y-%m-%dT%H:%M" (fromTimeLocal (Time.now()))
       val newname0 = hostname^timestamp
@@ -278,7 +280,7 @@ in
       FileSys.rename {old = logfilename, new = newname}
     end
   else ()
-end handle Io _ => warn "Had problems making permanent record of build log"
+end handle Io _ => warn "Had problems making permanent record of make log"
 
 val _ = Process.atExit (fn () => finish_logging false)
 
