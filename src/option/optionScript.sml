@@ -244,6 +244,13 @@ val option_CLAUSES = save_thm("option_CLAUSES",
                 (CONJUNCTS option_case_def)@
                 (CONJUNCTS option_APPLY_DEF)));
 
+val option_case_compute = store_thm("option_case_compute",
+  --`option_case (e:'b) f (x:'a option) =
+             if IS_SOME x then f (THE x) else e`--,
+    OPTION_CASES_TAC (--`(x :'a option)`--)
+    THEN ASM_REWRITE_TAC option_rws);
+
+
 val option_case_cong =
   save_thm("option_case_cong",
       Prim_rec.case_cong_thm option_nchotomy option_case_def);
