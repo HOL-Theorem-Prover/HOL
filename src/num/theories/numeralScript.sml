@@ -418,7 +418,8 @@ val iSUB_DEF = new_recursive_definition {
   name = "iSUB_DEF",
   rec_axiom = bit_initiality};
 
-val bit_induction = Prim_rec.prove_induction_thm old_style_bit_initiality;
+val bit_induction = save_thm
+  ("bit_induction", Prim_rec.prove_induction_thm old_style_bit_initiality);
 
 val iSUB_ZERO = prove(
   Term`(!n b. iSUB b ALT_ZERO n = ALT_ZERO) /\ (!n. iSUB T n ALT_ZERO = n)`,
