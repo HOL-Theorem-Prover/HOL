@@ -232,7 +232,7 @@ fun inst_defn (STDREC{eqs,ind,R,SV,stem}) theta =
               ind=INST_THM theta ind, bind=bind}
   | inst_defn (NONREC {eqs,ind,SV,stem}) theta =
       NONREC {eqs=INST_THM theta eqs,
-              ind=INST_THM theta ind, 
+              ind=INST_THM theta ind,
               SV=map (isubst theta) SV,stem=stem}
   | inst_defn (ABBREV {eqn,bind}) theta =
       ABBREV {eqn=INST_THM theta eqn,bind=bind}
@@ -247,7 +247,7 @@ fun set_reln def R =
 
 fun PROVE_HYPL thl th = itlist PROVE_HYP thl th
 
-fun MATCH_HYPL thms th = 
+fun MATCH_HYPL thms th =
   let val aslthms = mapfilter (EQT_ELIM o REWRITE_CONV thms) (hyp th)
   in itlist PROVE_HYP aslthms th
   end;
@@ -343,7 +343,7 @@ fun prove_tcs (STDREC {eqs, ind, R, SV, stem}) tac =
    termination has not been proved for a nested recursion.
 
    Another (easier) way to look at it would be to require termination
-   and suchlike to be taken care of in the current theory. That is 
+   and suchlike to be taken care of in the current theory. That is
    what is assumed at present.
  ---------------------------------------------------------------------------*)
 
@@ -576,7 +576,7 @@ fun stdrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
            MP (BETA_RULE(ISPECL[R2abs, R1] boolTheory.SELECT_AX)) var_wits
  in
     {theory = theory, R=R1, SV=SV,
-     rules = CONJUNCTS 
+     rules = CONJUNCTS
               (rev_itlist (C ModusPonens) (CONJUNCTS TC_choice_thm) def'),
      full_pats_TCs = merge (map pat_of pats) (zip (givens pats) TCl),
      patterns = pats}
@@ -839,7 +839,7 @@ fun mutrec thy bindstem eqns =
       val (defns,theory2,Uout_map) =
             itlist mk_def (Lib.enumerate 0 fnvar_map) ([],theory1,[])
       fun apply_outmap th =
-         let fun matches (pat,_) = Lib.can (Term.match_term pat) 
+         let fun matches (pat,_) = Lib.can (Term.match_term pat)
                                            (lhs (concl th))
              val (_,outf) = Lib.first matches Uout_map
          in AP_TERM outf th
@@ -1154,13 +1154,15 @@ local fun dest_pvar (Absyn.VIDENT s) = s
         | dest_head (Absyn.QIDENT _) = raise ERR "dest_head" "qual. ident."
         | dest_head (Absyn.APP _)    = raise ERR "dest_head" "app. node"
         | dest_head (Absyn.LAM _)    = raise ERR "dest_head" "lam. node"
+      fun remove_tyannote (Absyn.TYPED(a, _)) = remove_tyannote a
+        | remove_tyannote x = x
 in
 fun munge eq (eqs,fset,V) =
  let val (vlist,body) = Absyn.strip_forall eq
      val (lhs,rhs)    = Absyn.dest_eq body
      val   _          = if exists wildcard (names_of rhs [])
                         then raise ERR "munge" "wildcards on rhs" else ()
-     val (f,pats)     = Absyn.strip_app lhs
+     val (f,pats)     = Absyn.strip_app (remove_tyannote lhs)
      val (pats',V')   = rev_itlist expand_wildcards pats
                             ([],Lib.union V (map dest_pvar vlist))
      val new_eq       = Absyn.list_mk_forall(vlist,
@@ -1269,13 +1271,13 @@ fun tprove0 (defn,tactic) =
 
 fun tgoal defn = Lib.with_flag (goalstackLib.chatting,false) tgoal0 defn;
 
-fun tprove p   = 
+fun tprove p   =
   let val (eqns,ind) = Lib.with_flag (goalstackLib.chatting,false) tprove0 p
   in computeLib.add_funs [eqns]
    ; (eqns, ind)
   end
 
-fun tstore_defn (d,t) = 
+fun tstore_defn (d,t) =
   let val (def,ind) = tprove0 (d,t)
   in store (name_of d,def,ind)
    ; (def,ind)
