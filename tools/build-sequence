@@ -1,0 +1,75 @@
+# This file specifies the sequence of directories that the build
+# program builds, after first building the kernel.  Each non-comment,
+# non-blank line specifies a directory under the root HOL directory
+# which will be visited by the build program.  Build is special-cased
+# so that some directories are treated differently, but the default
+# behaviour is that in each, it will call Holmake --qof.
+
+# Comments can be added; all text on a line after a # symbol is
+# ignored.  Similarly blank lines are ignored.  If you are going to
+# edit this file, be aware that it does not record various
+# dependencies between the directories.  If dir1 is earlier than dir2,
+# then dir1 can not depend on dir2, but if dir1 is later than dir2,
+# then it may or may not depend on dir2.
+
+# these three directories are required to even run hol.bare.unquote
+src/parse
+src/bool
+src/goalstack
+
+src/taut
+src/compute/src
+src/q
+src/combin
+src/marker
+src/labels
+src/lite
+src/refute
+src/simp/src
+src/metis
+src/meson/src
+src/basicProof
+src/relation
+src/pair/src
+src/sum
+src/one
+src/option
+src/num/theories
+src/num/reduce/src
+src/num/arith/src
+src/num
+src/IndDef
+src/datatype/parse
+src/datatype/equiv
+src/datatype/record
+src/datatype
+src/list/src
+src/tfl/src
+src/unwind
+src/boss
+# Up to this point is needed for hol.unquote (which loads bossLib).
+# (Maybe unwind could be omitted).
+
+src/Boolify/src
+src/n_bit
+src/string
+src/llist
+src/pred_set/src
+src/path
+src/ring/src
+src/integer
+src/res_quan/src
+src/word/theories
+src/word/src
+src/finite_map
+src/hol88
+src/real
+src/float
+src/bag
+src/temporal/src
+src/temporal/smv.2.4.3
+src/prob
+src/HolSat
+src/muddy/muddyC
+src/muddy
+src/HolBdd
