@@ -14,7 +14,9 @@ load "rich_listTheory"; load "intLib";
 (******************************************************************************
 * Boilerplate needed for compilation
 ******************************************************************************)
-open Globals HolKernel Parse boolLib bossLib listTheory rich_listTheory intLib;
+open HolKernel Parse boolLib bossLib listTheory rich_listTheory intLib;
+
+val arith_ss' = simpLib.++ (arith_ss, numSimps.SUC_FILTER_ss);
 
 (******************************************************************************
 * Set default parsing to natural numbers rather than integers 
@@ -215,7 +217,7 @@ val PATH_SEG_REC_SUC =
    Induct_on `n`
     THEN RW_TAC arith_ss [PATH_SEG_REC_def,PATH_EL_def,RESTN_def]
     THEN Induct_on `m`
-    THEN RW_TAC arith_ss [PATH_SEG_REC_def,PATH_EL_def,RESTN_def]);
+    THEN RW_TAC arith_ss' [PATH_SEG_REC_def,PATH_EL_def,RESTN_def]);
 
 (******************************************************************************
 * PATH_SEG p (m,n) = [p m; ... ; p n]
@@ -372,9 +374,8 @@ val PATH_SEG_EL =
   ("PATH_SEG_EL",
    ``!p m. PATH_SEG p (m,m) = [PATH_EL p m]``,
    Induct_on `m`
-    THEN RW_TAC arith_ss [PATH_SEG_def,PATH_SEG_REC_def,PATH_EL_def,
-                          arithmeticTheory.ONE,RESTN_def,
-                          PATH_SEG_REC_SUC]);
+    THEN RW_TAC arith_ss' [PATH_SEG_def,PATH_SEG_REC_def,PATH_EL_def,
+                           RESTN_def, PATH_SEG_REC_SUC]);
 
 val APPEND_CANCEL =
  store_thm
@@ -578,14 +579,8 @@ val LENGTH1 =
  store_thm
   ("LENGTH1",
    ``(LENGTH l = 1) = ?x. l=[x]``,
-   EQ_TAC
-    THEN RW_TAC list_ss [LENGTH,LENGTH_NIL,LENGTH_CONS,arithmeticTheory.ONE]);
+   REWRITE_TAC [arithmeticTheory.ONE]
+    THEN EQ_TAC
+    THEN RW_TAC list_ss [LENGTH,LENGTH_NIL,LENGTH_CONS]);
 
 val _ = export_theory();
-
-
-
-
-
-
-
