@@ -1,257 +1,152 @@
 (* =====================================================================
     FILE: mk_res_quan.ml	    DATE: 1 Aug 92
     BY: Wai Wong
+    CHANGED BY: Joe Hurd, June 2001 (to use predicate sets)
+    CHANGED BY: Joe Hurd, June 2001 (to remove the ARB from RES_ABSTRACT)
+    CHANGED BY: Joe Hurd, October 2001 (moved definitions to boolTheory)
 
     Create the theory res_quan containing all theorems about
     restricted quantifiers.
-
-  Original documentation (drawn from versions file for 1.12
-
- Syntactic support for restricted quantification and abstraction is now
- provided. This follows a suggestion discussed at the Second HOL Users
- Meeting and implements a methods of simulating subtypes and dependent
- types with predicates.
-
- Currently no derived rules are provided to support this notation, so
- any inferences will need to work on the underlying semantic
- representation.
-
- The new syntax automatically translates as follows:
-
-    \v::P. B    <---->   RES_ABTRACT P (\v. B)
-    !v::P. B    <---->   RES_FORALL  P (\v. B)
-    ?v::P. B    <---->   RES_EXISTS  P (\v. B)
-    @v::P. B    <---->   RES_SELECT  P (\v. B)
-
- Anything can be written between the binder and `::` that could be
- written between the binder and `.` in the old notation. See the
- examples below.
-
- The flag `print_restrict` has default true, but if set to false will
- disable the pretty printing. This is useful for seeing what the
- semantics of particular restricted abstractions are.
-
- The constants RES_ABSTRACT, RES_FORALL, RES_EXISTS and RES_SELECT are
- defined in the theory `bool` by:
-
-    |- RES_ABSTRACT P B =  \x:'a. (P x => B x | ARB:'b )
-
-    |- RES_FORALL P B   =  !x:'a. P x ==> B x
-
-    |- RES_EXISTS P B   =  ?x:'a. P x /\ B x
-
-    |- RES_SELECT P B   =  @x:'a. P x /\ B x
-
- where ARB is defined in the theory `bool` by:
-
-    |- ARB  =  @x:'a. T
-
- User defined binders can also have restricted forms. If B is the name
- of a binder and RES_B is the name of a suitable constant (which
- must be explicitly defined), then executing:
-
-    associate_restriction(`B`, `RES_B`);;
-
- will cause the parser and pretty-printer to support:
-
-    Bv::P. B    <---->   RES_B  P (\v. B)
-
- Note that associations between user defined binders and their
- restrictions are not stored in the theory, so they have to be set up
- for each hol session (e.g. with a hol-init.ml file).
-
- Examples of built-in restrictions:
-
-    #"!x y::P. x<y";;
-    "!x y :: P. x < y" : term
-
-    #set_flag(`print_restrict`, false);;
-    true : bool
-
-    #"!x y::P. x<y";;
-    "RES_FORALL P(\x. RES_FORALL P(\y. x < y))" : term
-
-    #"?(x,y) p::(\(m,n).m<n). p=(x,y)";;
-    "RES_EXISTS
-     (\(m,n). m < n)
-     (\(x,y). RES_EXISTS(\(m,n). m < n)(\p. p = x,y))"
-    : term
-
-    #"\x y z::P.[0;x;y;z]";;
-    "RES_ABSTRACT P(\x. RES_ABSTRACT P(\y. RES_ABSTRACT P(\z. [0;x;y;z])))"
-    : term
-
- A conversion that rewrites away the constants RES_ABSTRACT,
- RES_FORALL, RES_EXISTS and RES_SELECT is:
-
-    let RESTRICT_CONV =
-     DEPTH_CONV
-      (REWRITE_CONV (definition `bool` `RES_ABSTRACT`) ORELSEC
-       REWRITE_CONV (definition `bool` `RES_FORALL`)   ORELSEC
-       REWRITE_CONV (definition `bool` `RES_EXISTS`)   ORELSEC
-       REWRITE_CONV (definition `bool` `RES_SELECT`))
-     THENC DEPTH_CONV BETA_CONV;;
-
- This is a bit unsatisfactory, as is shown by the example below:
-
-    #let t = "!x y::P.?f:num->num::Q. f(@n::R.T) = (x+y)";;
-    t = "!x y :: P. ?f :: Q. f(@n :: R. T) = x + y" : term
-
-    #RESTRICT_CONV t;;
-    |- (!x y :: P. ?f :: Q. f(@n :: R. T) = x + y) =
-       (!x. P x ==> (!x'. P x' ==> (?x. Q x /\ (x(@x. R x /\ T) = x + x'))))
-
- The variable "x" in the definitions of RES_ABSTRACT, RES_FORALL,
- RES_EXISTS and RES_SELECT gets confused with the variable in t.  This
- can be avoided by changing RESTRICT_CONV to perform explicit
- alpha-conversion. For example:
-
-    RES_FORALL P (\v. B[v]) ---> !v. P v ==> B[v]
-
- This is straightforward (but not yet implemented). Dealing with the case
- when v is a variable structure is also desirable. For example:
-
-    #let t1 = "!(m,n)::P. m<n";;
-    t1 = "!(m,n) :: P. m < n" : term
-
-    #RESTRICT_CONV t1;;
-    |- (!(m,n) :: P. m < n) = (!x. P x ==> (\(m,n). m < n)x)
-
- If anyone writes the desired conversions please let us know!
-
- Example of a user-defined restriction:
-
-    #new_binder_definition(`DURING`, "DURING(p:num#num->bool) = $!p");;
-    |- !p. $DURING p = $! p
-
-    #"DURING x::(m,n). p x";;
-    no restriction constant associated with DURING
-    skipping: x " ;; parse failed
-
-    #new_definition
-    # (`RES_DURING`, "RES_DURING(m,n)p = !x. m<=x /\ x<=n ==> p x");;
-    |- !m n p. RES_DURING(m,n)p = (!x. m <= x /\ x <= n ==> p x)
-
-    #associate_restriction(`DURING`,`RES_DURING`);;
-    () : void
-
-    #"DURING x::(m,n). p x";;
-    "DURING x :: (m,n). p x" : term
-
-    #set_flag(`print_restrict`,false);;
-    true : bool
-
-    #"DURING x::(m,n). p x";;
-    "RES_DURING(m,n)(\x. p x)" : term
-
  ===================================================================== *)
 
+(* interactive use
+app load ["combinTheory", "pred_setTheory", "BasicProvers", "SingleStep"];
+*)
 
+(* non-interactive use
+*)
 structure res_quanScript =
 struct
 
+open HolKernel Parse boolLib combinTheory pred_setTheory BasicProvers
+  SingleStep;
 
-open HolKernel Parse boolLib;
-
-val _ = new_theory"res_quan";
+val _ = new_theory "res_quan";
 
 type thm = Thm.thm
 infix THEN THENL;
+
+infixr 0 ++ << || THENC ORELSEC ORELSER ##;
+infix 1 >>;
+
+val op++ = op THEN;
+val op<< = op THENL;
+val op|| = op ORELSE;
+val op>> = op THEN1;
 
 (* --------------------------------------------------------------------- *)
 (* Definitions to support restricted abstractions and quantifications    *)
 (* --------------------------------------------------------------------- *)
 
-val RES_FORALL = new_definition
- ("RES_FORALL", (--`RES_FORALL P B = !x:'a. P x ==> B x`--));
+(* JEH: Moved to boolTheory: the following versions remove some lambdas *)
 
-val RES_EXISTS = new_definition
- ("RES_EXISTS", (--`RES_EXISTS P B = ?x:'a. P x /\ B x`--));
+val RES_FORALL = store_thm
+  ("RES_FORALL",
+   ``!p m. RES_FORALL p m = !x. x IN p ==> m x``,
+   RW_TAC bool_ss [RES_FORALL_DEF]);
 
-val RES_SELECT = new_definition
- ("RES_SELECT", (--`RES_SELECT P B = @x:'a. P x /\ B x`--));
+val RES_EXISTS = store_thm
+  ("RES_EXISTS",
+   ``!p m. RES_EXISTS p m = ?x. x IN p /\ m x``,
+   RW_TAC bool_ss [RES_EXISTS_DEF]);
 
-val RES_ABSTRACT = new_definition
- ("RES_ABSTRACT", (--`RES_ABSTRACT P B = \x:'a. (P x => B x | ARB:'b)`--));
+val RES_EXISTS_UNIQUE = store_thm
+  ("RES_EXISTS_UNIQUE",
+   ``!p m. RES_EXISTS_UNIQUE p m = ?x::p. m x /\ !y::p. m y ==> (y = x)``,
+   RW_TAC bool_ss [RES_EXISTS_UNIQUE_DEF]);
 
-val _ = associate_restriction ("\\", "RES_ABSTRACT");
-val _ = associate_restriction ("!",  "RES_FORALL");
-val _ = associate_restriction ("?",  "RES_EXISTS");
-val _ = associate_restriction ("@",  "RES_SELECT");
+val RES_SELECT = store_thm
+  ("RES_SELECT",
+   ``!p m. RES_SELECT p m = @x. x IN p /\ m x``,
+   RW_TAC bool_ss [RES_SELECT_DEF]);
 
+val RES_ABSTRACT = save_thm ("RES_ABSTRACT", RES_ABSTRACT_DEF);
 
 (* ===================================================================== *)
 (* Properties of restricted quantification.                              *)
 (* --------------------------------------------------------------------- *)
 
 (* --------------------------------------------------------------------- *)
-(* RESQ_FORALL	    	    	    					*)
+(* RES_FORALL	    	    	    					*)
 (* --------------------------------------------------------------------- *)
 
-val RESQ_FORALL_CONJ_DIST = store_thm("RESQ_FORALL_CONJ_DIST",
+val RES_FORALL_CONJ_DIST = store_thm("RES_FORALL_CONJ_DIST",
     (--`!P Q R.
      (!(i:'a) :: P. (Q i /\ R i)) = (!i :: P. Q i) /\ (!i :: P. R i)`--),
     REPEAT STRIP_TAC THEN REWRITE_TAC [RES_FORALL]
     THEN BETA_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN RES_TAC);
 
-val RESQ_FORALL_DISJ_DIST = store_thm("RESQ_FORALL_DISJ_DIST",
+val RES_FORALL_DISJ_DIST = store_thm("RES_FORALL_DISJ_DIST",
     (--`!P Q R.
-     (!(i:'a) :: \i. P i \/ Q i. R i) = (!i :: P. R i) /\ (!i :: Q. R i)`--),
-    REPEAT STRIP_TAC THEN REWRITE_TAC [RES_FORALL] THEN
+     (!(i:'a) :: \j. P j \/ Q j. R i) = (!i :: P. R i) /\ (!i :: Q. R i)`--),
+    REPEAT STRIP_TAC THEN REWRITE_TAC [RES_FORALL, SPECIFICATION] THEN
     BETA_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN RES_TAC);
 
-val RESQ_FORALL_UNIQUE = store_thm("RESQ_FORALL_UNIQUE",
+val RES_FORALL_UNIQUE = store_thm("RES_FORALL_UNIQUE",
     (--`!P j. (!(i:'a) :: ($= j). P i) = P j`--),
-    REWRITE_TAC [RES_FORALL] THEN BETA_TAC THEN
-    REPEAT GEN_TAC THEN EQ_TAC THENL
-       [DISCH_THEN (fn th =>
-             ACCEPT_TAC(MP (SPEC (--`j:'a`--) th) (REFL (--`j:'a`--)) )),
-        DISCH_TAC THEN GEN_TAC THEN DISCH_THEN (fn th => SUBST1_TAC (SYM th))
-        THEN FIRST_ASSUM ACCEPT_TAC]);
+    REWRITE_TAC [RES_FORALL, SPECIFICATION] THEN BETA_TAC THEN
+    PROVE_TAC []);
 
-val RESQ_FORALL_FORALL = store_thm("RESQ_FORALL_FORALL",
+val RES_FORALL_FORALL = store_thm("RES_FORALL_FORALL",
     (--`!(P:'a->bool) (R:'a->'b->bool) (x:'b).
         (!x. !i :: P. R i x) = (!i :: P. !x. R i x)`--),
-    REPEAT STRIP_TAC THEN REWRITE_TAC [RES_FORALL]
+    REPEAT STRIP_TAC THEN REWRITE_TAC [RES_FORALL, SPECIFICATION]
     THEN BETA_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN RES_TAC
     THEN FIRST_ASSUM MATCH_ACCEPT_TAC);
 
-val RESQ_FORALL_REORDER = store_thm("RESQ_FORALL_REORDER",
+val RES_FORALL_REORDER = store_thm("RES_FORALL_REORDER",
     (--`!(P:'a->bool) (Q:'b->bool) (R:'a->'b->bool).
         (!i :: P. !j :: Q. R i j) = (!j :: Q. !i :: P. R i j)`--),
-    REPEAT STRIP_TAC THEN REWRITE_TAC [RES_FORALL] THEN
+    REPEAT STRIP_TAC THEN REWRITE_TAC [RES_FORALL, SPECIFICATION] THEN
     BETA_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN RES_TAC);
 
+val RES_FORALL_EMPTY = store_thm
+  ("RES_FORALL_EMPTY",
+   ``!(p : 'a -> bool). RES_FORALL {} p``,
+   RW_TAC bool_ss [RES_FORALL, NOT_IN_EMPTY]);
+
+val RES_FORALL_UNIV = store_thm
+  ("RES_FORALL_UNIV",
+   ``!(p : 'a -> bool). RES_FORALL UNIV p = $! p``,
+   RW_TAC bool_ss [RES_FORALL, IN_UNIV, ETA_AX]);
+
+val RES_FORALL_NULL = store_thm
+  ("RES_FORALL_NULL",
+   ``!(p : 'a -> bool) m. RES_FORALL p (\x. m) = ((p = {}) \/ m)``,
+   RW_TAC bool_ss [RES_FORALL, EXTENSION, NOT_IN_EMPTY]
+   THEN Cases_on `m`
+   THEN PROVE_TAC []);
+   
 (* --------------------------------------------------------------------- *)
-(* RESQ_EXISTS	    	    	    					*)
+(* RES_EXISTS	    	    	    					*)
 (* --------------------------------------------------------------------- *)
 
-val RESQ_EXISTS_DISJ_DIST = store_thm("RESQ_EXISTS_DISJ_DIST",
+val RES_EXISTS_DISJ_DIST = store_thm("RES_EXISTS_DISJ_DIST",
     (--`!P Q R.
      (?(i:'a) :: P. (Q i \/ R i)) = (?i :: P. Q i) \/ (?i :: P. R i)`--),
-    REPEAT STRIP_TAC THEN REWRITE_TAC [RES_EXISTS]
+    REPEAT STRIP_TAC THEN REWRITE_TAC [RES_EXISTS, SPECIFICATION]
     THEN BETA_TAC THEN PURE_ONCE_REWRITE_TAC[CONJ_SYM]
     THEN PURE_ONCE_REWRITE_TAC[RIGHT_AND_OVER_OR]
     THEN CONV_TAC (ONCE_DEPTH_CONV EXISTS_OR_CONV) THEN REFL_TAC);
 
-val RESQ_DISJ_EXISTS_DIST = store_thm("RESQ_DISJ_EXISTS_DIST",
+val RES_DISJ_EXISTS_DIST = store_thm("RES_DISJ_EXISTS_DIST",
     (--`!P Q R.
      (?(i:'a) :: \i. P i \/ Q i. R i) = (?i :: P. R i) \/ (?i :: Q. R i)`--),
-    REPEAT STRIP_TAC THEN REWRITE_TAC [RES_EXISTS]
+    REPEAT STRIP_TAC THEN REWRITE_TAC [RES_EXISTS, SPECIFICATION]
     THEN BETA_TAC THEN PURE_ONCE_REWRITE_TAC[RIGHT_AND_OVER_OR]
     THEN CONV_TAC (ONCE_DEPTH_CONV EXISTS_OR_CONV) THEN REFL_TAC);
 
-val RESQ_EXISTS_UNIQUE = store_thm("RESQ_EXISTS_UNIQUE",
+val RES_EXISTS_EQUAL = store_thm("RES_EXISTS_EQUAL",
     (--`!P j. (?(i:'a) :: ($= j). P i) = P j`--),
-    REWRITE_TAC [RES_EXISTS] THEN BETA_TAC THEN REPEAT GEN_TAC
+    REWRITE_TAC [RES_EXISTS, SPECIFICATION] THEN BETA_TAC THEN REPEAT GEN_TAC
     THEN EQ_TAC THENL[
       DISCH_THEN (CHOOSE_THEN STRIP_ASSUME_TAC) THEN ASM_REWRITE_TAC[],
       DISCH_TAC THEN EXISTS_TAC (--`j:'a`--) THEN  ASM_REWRITE_TAC[]]);
 
-val RESQ_EXISTS_REORDER = store_thm("RESQ_EXISTS_REORDER",
+val RES_EXISTS_REORDER = store_thm("RES_EXISTS_REORDER",
     (--`!(P:'a->bool) (Q:'b->bool) (R:'a->'b->bool).
         (?i :: P. ?j :: Q. R i j) = (?j :: Q. ?i :: P. R i j)`--),
-    REPEAT STRIP_TAC THEN REWRITE_TAC [RES_EXISTS] THEN BETA_TAC
+    REPEAT STRIP_TAC THEN REWRITE_TAC [RES_EXISTS, SPECIFICATION] THEN BETA_TAC
     THEN EQ_TAC THEN DISCH_THEN (CHOOSE_THEN STRIP_ASSUME_TAC) THENL[
       EXISTS_TAC (--`x':'b`--) THEN CONJ_TAC THENL[
     	ALL_TAC, EXISTS_TAC(--`x:'a`--) THEN CONJ_TAC],
@@ -259,6 +154,104 @@ val RESQ_EXISTS_REORDER = store_thm("RESQ_EXISTS_REORDER",
     	ALL_TAC, EXISTS_TAC(--`x:'b`--) THEN CONJ_TAC]]
     THEN FIRST_ASSUM ACCEPT_TAC);
 
+val RES_EXISTS_EMPTY = store_thm
+  ("RES_EXISTS_EMPTY",
+   ``!(p : 'a -> bool). ~RES_EXISTS {} p``,
+   RW_TAC bool_ss [RES_EXISTS, NOT_IN_EMPTY]);
+
+val RES_EXISTS_UNIV = store_thm
+  ("RES_EXISTS_UNIV",
+   ``!(p : 'a -> bool). RES_EXISTS UNIV p = $? p``,
+   RW_TAC bool_ss [RES_EXISTS, IN_UNIV, ETA_AX]);
+
+val RES_EXISTS_NULL = store_thm
+  ("RES_EXISTS_NULL",
+   ``!(p : 'a -> bool) m. RES_EXISTS p (\x. m) = (~(p = {}) /\ m)``,
+   RW_TAC bool_ss [RES_EXISTS, EXTENSION, NOT_IN_EMPTY]
+   THEN Cases_on `m`
+   THEN PROVE_TAC []);
+   
+val RES_EXISTS_ALT = store_thm
+  ("RES_EXISTS_ALT",
+   ``!(p : 'a -> bool) m.
+       RES_EXISTS p m = (RES_SELECT p m) IN p /\ m (RES_SELECT p m)``,
+   RW_TAC bool_ss [RES_EXISTS, EXISTS_DEF, RES_SELECT, SPECIFICATION]);
+
+(* --------------------------------------------------------------------- *)
+(* RES_EXISTS_UNIQUE                                                     *)
+(* --------------------------------------------------------------------- *)
+
+val RES_EXISTS_UNIQUE_EMPTY = store_thm
+  ("RES_EXISTS_UNIQUE_EMPTY",
+   ``!(p : 'a -> bool). ~RES_EXISTS_UNIQUE {} p``,
+   RW_TAC bool_ss [RES_EXISTS_UNIQUE, RES_EXISTS_EMPTY, NOT_IN_EMPTY]);
+
+val RES_EXISTS_UNIQUE_UNIV = store_thm
+  ("RES_EXISTS_UNIQUE_UNIV",
+   ``!(p : 'a -> bool). RES_EXISTS_UNIQUE UNIV p = $?! p``,
+   RW_TAC bool_ss [RES_EXISTS_UNIQUE, RES_EXISTS_UNIV, IN_UNIV,
+                   RES_FORALL_UNIV, EXISTS_UNIQUE_DEF]
+   ++ KNOW_TAC ``$? (p:'a->bool) = ?x. p x`` >> RW_TAC bool_ss [ETA_AX]
+   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
+   ++ PROVE_TAC []);
+
+val RES_EXISTS_UNIQUE_NULL = store_thm
+  ("RES_EXISTS_UNIQUE_NULL",
+   ``!(p : 'a -> bool) m. RES_EXISTS_UNIQUE p (\x. m) = ((?x. p = {x}) /\ m)``,
+   RW_TAC bool_ss [RES_EXISTS_UNIQUE, RES_EXISTS_NULL, NOT_IN_EMPTY,
+                   RES_FORALL_NULL, EXISTS_UNIQUE_DEF, EXTENSION, IN_SING]
+   ++ RW_TAC bool_ss [RES_EXISTS, RES_FORALL]
+   ++ Cases_on `m`
+   ++ PROVE_TAC []);
+
+val RES_EXISTS_UNIQUE_ALT = store_thm
+  ("RES_EXISTS_UNIQUE_ALT",
+   ``!(p : 'a -> bool) m.
+       RES_EXISTS_UNIQUE p m = (?x :: p. m x /\ !y :: p. m y ==> (x = y))``,
+   RW_TAC bool_ss [SPECIFICATION, RES_EXISTS_UNIQUE, RES_EXISTS, RES_FORALL]
+   THEN PROVE_TAC []);
+
+(* --------------------------------------------------------------------- *)
+(* RES_SELECT                                                            *)
+(* --------------------------------------------------------------------- *)
+
+val RES_SELECT_EMPTY = store_thm
+  ("RES_SELECT_EMPTY",
+   ``!(p : 'a -> bool). RES_SELECT {} p = @x. F``,
+   RW_TAC bool_ss [RES_SELECT, NOT_IN_EMPTY, ETA_AX]);
+
+val RES_SELECT_UNIV = store_thm
+  ("RES_SELECT_UNIV",
+   ``!(p : 'a -> bool). RES_SELECT UNIV p = $@ p``,
+   RW_TAC bool_ss [RES_SELECT, IN_UNIV, ETA_AX]);
+
+(* --------------------------------------------------------------------- *)
+(* RES_ABSTRACT                                                          *)
+(* --------------------------------------------------------------------- *)
+
+val RES_ABSTRACT =
+  save_thm ("RES_ABSTRACT", CONJUNCT1 RES_ABSTRACT_DEF);
+
+val RES_ABSTRACT_EQUAL =
+  save_thm ("RES_ABSTRACT_EQUAL", CONJUNCT2 RES_ABSTRACT_DEF);
+
+val RES_ABSTRACT_IDEMPOT = store_thm
+  ("RES_ABSTRACT_IDEMPOT",
+   ``!p m. RES_ABSTRACT p (RES_ABSTRACT p m) = RES_ABSTRACT p m``,
+   REPEAT STRIP_TAC
+   THEN MATCH_MP_TAC RES_ABSTRACT_EQUAL
+   THEN RW_TAC bool_ss [RES_ABSTRACT]);
+
+(* Sanity check for RES_ABSTRACT definition suggested by Lockwood Morris *)
+val RES_ABSTRACT_EQUAL_EQ = store_thm
+  ("RES_ABSTRACT_EQUAL_EQ",
+   ``!p m1 m2.
+       (RES_ABSTRACT p m1 = RES_ABSTRACT p m2) =
+       (!x. x IN p ==> (m1 x = m2 x))``,
+   REPEAT STRIP_TAC
+   THEN EQ_TAC THENL
+   [PROVE_TAC [RES_ABSTRACT],
+    PROVE_TAC [RES_ABSTRACT_EQUAL]]);
 
 val _ = export_theory();
 
