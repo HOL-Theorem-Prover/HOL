@@ -132,56 +132,28 @@ mosml_parse :
   mosml_parse_rev             { List.rev $1 }
 
 mosml_parse_rev :
-  /* empty */                     { [] }
-| mosml_parse_rev mosml_token_rev { $2 @ $1 }
+  /* empty */                 { [] }
+| mosml_parse_rev mosml_token { $2 :: $1 }
 
-/* note horrible hackery to allow whitespace between Ident and
-   backtick.  This whitespace (incl. comments or TeX or directives)
-   appears *before* the MosmlHol in the output stream. */
-/* note worse hackery: if there's an indent (i.e., newline) in between,
-   it just appears as inline MosmlContent... sorry! */
-mosml_token_rev :
-  Str                     { [MosmlStr $1] }
-| Dot                     { [MosmlContent "."] }
-| Int                     { [MosmlContent $1] }
-| Real                    { [MosmlContent $1] }
-| Word                    { [MosmlContent $1] }
-| Char                    { [MosmlContent ("#\"" ^ $1 ^ "\"")] }
-| Sep                     { [MosmlContent $1] }
-| Ident opt_mosml_interstuff_rev mosml_to_hol_rev
-                          { $3 ($1,$2) }
-| ToHol hol_parse From    { [MosmlHol(None,
-                                      (match $1 with
+mosml_token :
+  Str                      { MosmlStr $1 }
+| Dot                      { MosmlContent "." }
+| Int                      { MosmlContent $1 }
+| Real                     { MosmlContent $1 }
+| Word                     { MosmlContent $1 }
+| Char                     { MosmlContent ("#\"" ^ $1 ^ "\"") }
+| Sep                      { MosmlContent $1 }
+| Ident                    { MosmlIdent(snd $1, fst $1) }
+| White                    { MosmlWhite $1 }
+| Indent                   { MosmlIndent $1 }
+| ToHol hol_parse From     { MosmlHol((match $1 with
                                          DelimHolMosml  -> MosmlHolBT
                                        | DelimHolMosmlD -> MosmlHolBTBT
                                        | _ -> raise (NeverHappen "mosml_token_rev")),
-                                      $2)] }
-| mosmlwhitetok           { [$1] }
-
-mosml_to_hol_rev :
-  /* empty */ %prec below_mosmlintertok
-                          { fun (x,y) -> y @ [MosmlContent (fst x)] }
-| ToHol hol_parse From    { fun (x,y) -> let (strs,whites) = extractstrs y in
-                                         MosmlHol(Some (fst x,
-                                                        List.rev strs),
-                                                  (match $1 with
-                                                     DelimHolMosml  -> MosmlHolBT
-                                                   | DelimHolMosmlD -> MosmlHolBTBT
-                                                   | _ -> raise (NeverHappen "mosml_to_hol_rev")),
-                                                  $2) :: whites }
-
-opt_mosml_interstuff_rev :
-  /* empty */                             { [] }
-| opt_mosml_interstuff_rev mosmlwhitetok  { $2 :: $1 }
-| opt_mosml_interstuff_rev Str            { MosmlStr $2 :: $1 }
-
-mosmlwhitetok :
-  White                    { MosmlWhite $1 }
-| Indent                   { MosmlIndent $1 }
+                                      $2) }
 | ToTex tex_parse From     { MosmlTex $2 }
 | ToText text_parse From   { MosmlText $2 }
 | ToDir directive From     { MosmlDir $2 }
-
 
 hol_parse :
   hol_parse_rev            { List.rev $1 }

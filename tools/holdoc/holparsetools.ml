@@ -32,7 +32,7 @@ let from_filelist files =
   let files_r = ref files in
   let chan_r = ref None in
   let rec read buf len =
-    let Some lexbuf = !lexbuf_r in
+    let lexbuf = match !lexbuf_r with Some x -> x | None -> raise (Failure "from_filelist") in
     match !chan_r with
       Some chan ->
         let n = input chan buf 0 len in

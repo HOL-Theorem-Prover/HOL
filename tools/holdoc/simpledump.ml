@@ -33,10 +33,10 @@ and dumpmosml_content = function
   | MosmlWhite s -> s
   | MosmlStr s -> "\"" ^ s ^ "\""
   | MosmlIndent n -> make_indent n
-  | MosmlHol(io,md,d) ->
-      let is = (match io with None -> "" | Some (i,ss) -> i^" "^String.concat " " (List.map (fun s -> "\""^s^"\"") ss)) in
+  | MosmlIdent (b,s) -> s
+  | MosmlHol(md,d) ->
       let bt = (match md with MosmlHolBT -> "`" | MosmlHolBTBT -> "``") in
-      is ^ bt ^ dumpholdoc d ^ bt
+      bt ^ dumpholdoc d ^ bt
   | MosmlText d -> "(*" ^ dumptextdoc d ^ "*)"
   | MosmlTex d -> "(*:" ^ dumptexdoc d ^ ":*)"
   | MosmlDir d -> dumpdirective d

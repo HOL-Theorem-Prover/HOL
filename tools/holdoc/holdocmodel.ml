@@ -25,7 +25,8 @@ and mosml_content =
    | MosmlWhite of string
    | MosmlStr of string
    | MosmlIndent of int
-   | MosmlHol of (string * string list) option * mosmlholmode * holdoc  (* ident preceding delim, strings preceding delim  *)
+   | MosmlIdent of bool * string
+   | MosmlHol of mosmlholmode * holdoc
    | MosmlText of textdoc
    | MosmlTex of texdoc
    | MosmlDir of directive
