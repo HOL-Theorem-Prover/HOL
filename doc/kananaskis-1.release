@@ -16,6 +16,9 @@ Bugs fixed:
         if e1 then e2 else e3
     instead of the "arrow-bar" syntax for conditional expressions.
     Thanks to Steve Brackin for the report of this bug.
+  * The datatype parser invoked by define_type and Hol_datatype was
+    refusing constructor names with apostrophes (primes) in them.
+    Thanks to Steve Brackin for the report of this bug.
 
 New features:
 -------------
