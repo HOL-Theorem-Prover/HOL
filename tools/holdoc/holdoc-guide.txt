@@ -227,6 +227,10 @@ embeds the command \showrule{\selectXD} in the source at that point.
 This is useful for including rules.  I've shown the TeX form of the
 directive, but of course the leading % may be omitted.
 
+Be warned, however, that whether it is introduced with % or not, the
+remainder of the SHOWRULE line will be commented out in the generated
+TeX!
+
 
 Known bugs
 ~~~~~~~~~~

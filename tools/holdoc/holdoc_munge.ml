@@ -293,7 +293,7 @@ let mdir v n ts = (* munge a directive *)
                           raise BadDirective
   in
   match n with
-    "SHOWRULE" -> "\\showrule{"^texify_command (go ts)^"}%\n"
+    "SHOWRULE" -> "\\showrule{"^texify_command (go ts)^"}%"  (* NB: don't put TeX after a showrule! *)
   | _          -> ""
 
 let balanced = [ ("(",")"); ("[","]"); ("{","}")]
