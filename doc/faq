@@ -115,16 +115,20 @@ Q. Is there a nice way to print an arbitrary theory, or list its
    current theory) (1)
 
   -- You can use
-       DB.theorems "thyname"
 
-     to get a list of theorems in a theory.  Often, the nicest
-     presentation is the theory file's signature itself.  For example,
-     listTheory.sig, in <holdir>/src/list/src/.
+       DB.thy thyname;
+
+     to get a list of the axioms, theorems, and definitions in a 
+     theory.  Often, the nicest presentation is the theory file's
+     signature itself.  For example, listTheory.sig, in
+     <holdir>/src/list/src/.
 
 Q. Why can't I write ``MAP ~ x``? (1)
 
   -- When you attempt this, you will get the error message
+
        No rule for [~]
+
      meaning that the parser wants to do a reduction involving just
      the special symbol ~, and it can't find a rule that allows this.
      The rule in the grammar is TM ::= ~ TM.
@@ -195,3 +199,16 @@ Q. How can I find out more information about a HOL_ERR <poly>
      (Often the parentheses around e will not be required.)
 
 
+Q. How do I put hol98 in a state so that theorem assumptions are 
+   printed? (1)
+
+  -- show_assums := true;
+
+     It along with several other flags that control HOL behaviour can 
+     be found in the Globals structure. 
+
+Q. Is there a diagram of the theory hierarchy? (1)
+
+  -- See 
+
+        http://www.cl.cam.ac.uk/Research/HVG/FTP/
