@@ -127,58 +127,32 @@ val fixed_width_prod = store_thm
    ``!c1 c2 n1 n2.
        fixed_width n1 c1 /\ fixed_width n2 c2 ==>
        fixed_width (n1 + n2) (prod_coder c1 c2)``,
-   SIMP_TAC arith_ss
-   [prod_coder_def, fixed_width_def, domain_def, encoder_def,
-    encode_prod_def, LENGTH]);
-
-   SIMP_TAC arith_ss
-   [fixed_width_def, domain_def, encoder_def, encode_bool_def, LENGTH]);
-
-val wf_parser' = Define
-  `wf_parser' p =
-   !l l' x.
-     (p l = SOME (x, l')) ==>
-     ?t. (APPEND t l' = l) /\ (p t = SOME (x, []))`;
-
-val x = prove
-  (``!p. wf_parser' p ==>
-       (!y l l' x.
-          (p l = SOME (x, l')) ==>
-          (p (APPEND l y) = SOME (x, APPEND l' y)))``,
-   RW_TAC bool_ss [wf_parser'] THEN
-   RES_TAC THEN
-   
-
-val prod_fixed_width = prove
-  (``!dx dy nx ny.
-       fixed_width_type dx nx /\ fixed_width_type dy ny ==>
-       fixed_width_type (decode_prod dx dy) (nx + ny)``,
-   SIMP_TAC arith_ss [fixed_width_type_def, fixed_width_def] THEN
-   REPEAT STRIP_TAC THEN
-   Cases_on `x` THEN
-   Q.PAT_ASSUM `!x. P x` (STRIP_ASSUME_TAC o Q.SPEC `r`) THEN
-   Q.PAT_ASSUM `!x. P x` (STRIP_ASSUME_TAC o Q.SPEC `q`) THEN
-   Q.EXISTS_TAC `APPEND w' w` THEN
-   ASM_SIMP_TAC arith_ss [LENGTH_APPEND, decode_prod_def]
-
-, LENGTH_APPEND, prod_to_bool_def]);
+   REPEAT GEN_TAC
+   ++ Know `?p1 e1 d1. c1 = (p1, e1, d1)` >> PROVE_TAC [pairTheory.ABS_PAIR_THM]
+   ++ Know `?p2 e2 d2. c2 = (p2, e2, d2)` >> PROVE_TAC [pairTheory.ABS_PAIR_THM]
+   ++ RW_TAC std_ss []
+   ++ REPEAT (POP_ASSUM MP_TAC)
+   ++ RW_TAC std_ss [fixed_width_def, prod_coder_def, domain_def, encoder_def]
+   ++ Cases_on `x`
+   ++ FULL_SIMP_TAC std_ss [lift_prod_def, encode_prod_def, LENGTH_APPEND]);
 
 (*---------------------------------------------------------------------------
         Sums
  ---------------------------------------------------------------------------*)
 
-val sum_to_bool_def =
-  TotalDefn.Define
-  `(sum_to_bool xb yb (INL (x : 'a)) : bool list = APPEND ^encInl (xb x)) /\
-   (sum_to_bool xb yb (INR (y : 'b)) = APPEND ^encInr (yb y))`;
-
-(* Don't know exactly what this should be...
-val sum_fixed_width = prove
-  (``!xb yb n x y.
-       x IN fixed_width xb n /\ y IN fixed_width yb n ==>
-       (x, y) IN fixed_width (prod_to_bool xb yb) (m + n)``,
-   SIMP_TAC arith_ss [fixed_width_def, LENGTH_APPEND, prod_to_bool_def]);
-*)
+val fixed_width_sum = store_thm
+  ("fixed_width_sum",
+   ``!c1 c2 n.
+       fixed_width n c1 /\ fixed_width n c2 ==>
+       fixed_width (SUC n) (sum_coder c1 c2)``,
+   REPEAT GEN_TAC
+   ++ Know `?p1 e1 d1. c1 = (p1, e1, d1)` >> PROVE_TAC [pairTheory.ABS_PAIR_THM]
+   ++ Know `?p2 e2 d2. c2 = (p2, e2, d2)` >> PROVE_TAC [pairTheory.ABS_PAIR_THM]
+   ++ RW_TAC std_ss []
+   ++ REPEAT (POP_ASSUM MP_TAC)
+   ++ RW_TAC std_ss [fixed_width_def, sum_coder_def, domain_def, encoder_def]
+   ++ Cases_on `x`
+   ++ FULL_SIMP_TAC std_ss [lift_sum_def, encode_sum_def, LENGTH]);
 
 (*---------------------------------------------------------------------------
         Options
