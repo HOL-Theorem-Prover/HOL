@@ -331,7 +331,7 @@ val UNCURRY_CONG =
      Standard helpful combinator
  ---------------------------------------------------------------------------*)
 
-val PROD_FUN = Q.new_infixr_definition
+val PROD_FUN = Q.new_infixl_definition
  ("PROD_FUN",
   `## (f:'a->'c) (g:'b->'d) p = (f (FST p), g (SND p))`, 500);
 
