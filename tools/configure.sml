@@ -309,12 +309,17 @@ val _ =
       val target = fullPath [holdir, "bin/unquote"]
       open Process
   in
-    if system (String.concat [CC," ", src," -o ", target]) = success
-    then ((mk_xable target; print "successful.\n")
-          handle _
-           => print(String.concat["\n>>>>>Failed to move quote filter!",
-                    "(continuing anyway)\n\n"]))
-    else print "\n>>>>>>Couldn't compile quote filter! (continuing anyway)\n\n"
+    if OS <> "winNT" then
+      if system (String.concat [CC," ", src," -o ", target]) = success then
+        (mk_xable target; print "successful.\n")
+        handle _ =>
+          print(String.concat["\n>>>>>Failed to move quote filter!",
+                              "(continuing anyway)\n\n"])
+      else
+        print "\n>>>>>>Couldn't compile quote filter! (continuing anyway)\n\n"
+    else
+      FileSys.rename {old = fullPath[holdir, "src/quote-filter/hol_filt.exe"],
+                      new = fullPath[holdir, "bin/unquote.exe"]}
  end
 
 (*---------------------------------------------------------------------------
