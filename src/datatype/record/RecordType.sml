@@ -278,7 +278,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
   end
   val diag_goals = ListPair.map create_goal (accfn_terms, fupdfn_terms)
   val tactic = STRUCT_CASES_TAC (SPEC var cases_thm) THEN
-    REWRITE_TAC [accessor_thm, fupdfn_thm, updfn_thm] THEN
+    REWRITE_TAC [accessor_thm, fupdfn_thm, updfn_thm, combinTheory.o_THM] THEN
     BETA_TAC THEN REWRITE_TAC []
   val thms = map (C (curry prove) tactic) (goals @ diag_goals)
   val accfupd_thm =
@@ -295,19 +295,6 @@ fun prove_recordtype_thms (tyinfo, fields) = let
   val updacc_thm =
     save_thm(typename^"_updaccs", LIST_CONJ (map GEN_ALL thms))
 
-  (* a more useful form of the same thing, given the conditional *)
-  (* rewrite tools available to us is: *)
-  (*   (val = fld s) ==> (fld_upd val s = s) *)
-  val valvars = map (fn ty => Psyntax.mk_var("val", ty)) types
-  val conditions = map2 (curry mk_eq) valvars accessfns_and_args
-  val lhses = map2 map_mk_comb updfn_terms valvars
-  fun mk_goal c lhs = (--`^c ==> (^lhs ^var = ^var)`--)
-  val goals = map2 mk_goal conditions lhses
-  val thms =
-    map (C (curry prove) (DISCH_THEN SUBST1_TAC THEN tactic)) goals
-  val updacc_c_thm =
-    save_thm(typename^"_cupdaccs", LIST_CONJ (map GEN_ALL thms))
-
   (* do updates of (same) updates *)
   fun create_goal upd =
     (--`^upd x1 (^upd x2 ^var) = ^upd x1 ^var`--)
@@ -316,7 +303,35 @@ fun prove_recordtype_thms (tyinfo, fields) = let
   val updupd_thm =
     save_thm(typename^"_updupds", LIST_CONJ (map GEN_ALL thms))
 
+  (* do updates of updates, expressed with function compositions *)
+  (* i.e., upd_fld1 v1 o upd_fld1 v2 = upd_fld1 v1 *)
+  fun to_composition t = let
+    val (f, gx) = dest_comb t
+  in
+    if is_comb gx then let
+        val (g, x) = dest_comb gx
+      in
+        SYM (ISPECL [f, g, x] combinTheory.o_THM)
+      end
+    else REFL t
+  end
+  fun munge_to_composition thm = let
+    val thm = SPEC_ALL thm
+    val (l, r) = dest_eq (concl thm)
+    val lthm = SYM (to_composition l)
+    val rthm = to_composition r
+    val new_eq = TRANS (TRANS lthm thm) rthm
+    val gnew_eq = GEN (rand (rand (concl new_eq))) new_eq
+  in
+    GEN_ALL (EXT gnew_eq)
+  end
+  val updupd_comp_thm =
+      save_thm(typename^"_updupd_comp",
+               LIST_CONJ (map munge_to_composition (CONJUNCTS updupd_thm)))
+
+
   (* do fupdates of (same) fupdates *)
+  (* i.e., fupd_fld1 f (fupd_fld1 g r) = fupd_fld1 (f o g) r *)
   fun create_goal fupd = let
     val fty = #1 (dom_rng (type_of fupd))
     val f = variant [var] (mk_var("f", fty))
@@ -324,7 +339,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
     val x = variant [var, f, g] (mk_var("x", #1 (dom_rng fty)))
   in
     mk_eq(list_mk_comb(fupd, [f, list_mk_comb(fupd, [g, var])]),
-          list_mk_comb(fupd, [mk_abs(x, mk_comb(f, mk_comb(g, x))), var]))
+          list_mk_comb(fupd, [combinSyntax.mk_o(f, g), var]))
   end
   val goals = map create_goal fupdfn_terms
   val thms = map (C (curry prove) tactic) goals
@@ -354,36 +369,36 @@ fun prove_recordtype_thms (tyinfo, fields) = let
     (* in the case where there is only one constructor, goals and thms
      will both be empty.  In this case, we don't want to apply LIST_CONJ
      to them *)
-  val updcanon_thm =
+  val (updcanon_thm, updcanon_comp_thm) =
     if (List.length upd_canon_thms > 0) then
-      save_thm(typename^"_updcanon",
-               (LIST_CONJ (map GEN_ALL upd_canon_thms)))
+      (save_thm(typename^"_updcanon",
+                (LIST_CONJ (map GEN_ALL upd_canon_thms))),
+       save_thm(typename^"_updcanon_comp",
+                (LIST_CONJ (map munge_to_composition upd_canon_thms))))
     else
-      TRUTH
+      (TRUTH, TRUTH)
+
+  (* do fupdates of (different) fupdates *)
+  val combinations = crossprod fupdfn_terms fupdfn_terms
+  val lower_triangle = nfilter filterfn combinations
+  fun create_goal(f1,f2) = let
+    val (f_t, _) = dom_rng (type_of f1)
+    val (g_t, _) = dom_rng (type_of f2)
+    val f = variant [var] (mk_var("f", f_t))
+    val g = variant [var, f] (mk_var("g", g_t))
+  in
+    mk_eq(list_mk_comb(f1, [f, list_mk_comb(f2, [g, var])]),
+          list_mk_comb(f2, [g, list_mk_comb(f1, [f, var])]))
+  end
+  val goals = map create_goal lower_triangle
+  val fupdcanon_thms = map (C (curry prove) tactic) goals
+  val fupdcanon_thm =
+      if length fupdcanon_thms > 0 then
+        save_thm(typename^"_fupdcanon",
+                 LIST_CONJ (map GEN_ALL fupdcanon_thms))
+      else TRUTH
 
   val oneone_thm = valOf (TypeBasePure.one_one_of tyinfo)
-
-  fun prove_semi11 upd_t = let
-    fun tac s = STRUCT_CASES_TAC (SPEC (mk_var(s,typ)) cases_thm)
-    val r1 = mk_var("r1", typ)
-    val r2 = mk_var("r2", typ)
-    val upd_tty = type_of upd_t
-    val (dom_ty, _) = dom_rng upd_tty
-    val x = mk_var("x", dom_ty)
-    val y = mk_var("y", dom_ty)
-    val hyp_eq = mk_eq(list_mk_comb(upd_t, [x,r1]),
-                       list_mk_comb(upd_t, [y,r2]))
-    val concl_eq = mk_eq(x,y)
-    val goal = mk_imp(hyp_eq, concl_eq)
-    val thm0 =
-      prove(goal,
-            MAP_EVERY tac ["r1", "r2"] THEN
-            REWRITE_TAC [updfn_thm, oneone_thm] THEN STRIP_TAC)
-  in
-    save_thm(#Name (Rsyntax.dest_const upd_t)^ "_semi11",
-             GENL [x,y,r1,r2] thm0)
-  end
-  val _ = map prove_semi11 updfn_terms
 
   (* prove that equality of values is equivalent to equality of fields:
      i.e. for a record type with two fields:
@@ -527,7 +542,8 @@ fun prove_recordtype_thms (tyinfo, fields) = let
                         updupd_thm, accfupd_thm, literal_equality,
                         literal_11, fupdfupd_thm]
   in
-    if not (null upd_canon_thms) then updcanon_thm :: new_simpls0
+    if not (null upd_canon_thms) then
+      updcanon_thm :: fupdcanon_thm ::  updcanon_comp_thm :: new_simpls0
     else new_simpls0
   end
   val new_tyinfo = update_tyinfo new_simpls tyinfo
@@ -568,7 +584,9 @@ fun prove_recordtype_thms (tyinfo, fields) = let
      (["_accessors", "_updates", "_updates_eq_literal", "_updaccs",
        "_accupds", "_accfupds", "_updupds", "_fn_updates", "_fupdfupds",
        "_literal_11"] @
-      (if not (null upd_canon_thms) then ["_updcanon"] else []))
+      (if not (null upd_canon_thms) then
+         ["_updcanon", "_updcanon_comp", "_fupdcanon"]
+       else []))
   in
     (new_tyinfo,
      "RecordType.update_tyinfo ["^String.concat (Lib.commafy thm_str_list)^
