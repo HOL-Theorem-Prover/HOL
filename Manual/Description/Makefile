@@ -8,7 +8,7 @@
 MAKEINDEX=makeindex
 CHAPTERS = conv.tex drules.tex libraries.tex logic.tex misc.tex \
            preface.tex references.tex semantics.tex syntax.tex \
-           tactics.tex theories.tex title.tex
+           tactics.tex theories.tex title.tex system.tex
 
 default:
 	@echo "INSTRUCTIONS: Type \"make all\" to make DESCRIPTION"
