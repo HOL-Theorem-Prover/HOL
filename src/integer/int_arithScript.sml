@@ -824,6 +824,119 @@ val elim_eq_coeffs = store_thm(
   ]);
 
 
+val int_acnorm_ss = SIMPSET{
+  ac = [(SPEC_ALL INT_ADD_ASSOC, SPEC_ALL INT_ADD_COMM),
+        (SPEC_ALL INT_MUL_ASSOC, SPEC_ALL INT_MUL_COMM)],
+  convs = [], congs = [], dprocs = [], filter = NONE,
+  rewrs = []};
+
+(* lemma 1 from Cooper's paper
+
+     (d = gcd(um, an) = pum + qan) ==>
+     ( m | ax + b /\ n | ux + v =
+        mn | dx + bqn + vpm /\ d | av - ub )
+*)
+val adhoc_lemma = prove(
+  ``!a b c.  a + (b - c) = (a - c) + b:int``,
+  SIMP_TAC (bool_ss ++ int_acnorm_ss) [INT_SUB_CALCULATE]);
+
+
+val cooper_lemma_1 = store_thm(
+  "cooper_lemma_1",
+  ``!m n a b u v p q x d.
+       (d = gcd (u * m) (a * n)) /\
+       (&d = p * &u * &m + q * &a * &n) /\
+       ~(m = 0) /\ ~(n = 0) /\ ~(a = 0) /\ ~(u = 0) ==>
+       (&m int_divides &a * x + b /\ &n int_divides &u * x + v =
+        &m * &n int_divides &d * x + v * &m * p + b * &n * q /\
+        &d int_divides &a * v - &u * b)``,
+  REPEAT STRIP_TAC THEN
+  EQ_TAC THEN REPEAT STRIP_TAC THENL [
+    (* m | ax + b /\ n | ux + v ==> mn | dx + vmp + bnq *)
+    `&m * &n int_divides (&a * x + b) * &n` by
+        PROVE_TAC [INT_INJ, INT_DIVIDES_LRMUL] THEN
+    `&m * &n int_divides (&u * x + v) * &m` by
+        PROVE_TAC [INT_INJ, INT_MUL_COMM, INT_DIVIDES_LRMUL] THEN
+    `&m * &n int_divides (&a * x + b) * &n * q` by
+        PROVE_TAC [INT_DIVIDES_LMUL] THEN
+    `&m * &n int_divides (&u * x + v) * &m * p` by
+        PROVE_TAC [INT_DIVIDES_LMUL] THEN
+    `&m * &n int_divides (&a * x + b) * &n * q + (&u * x + v) * &m * p` by
+        PROVE_TAC [INT_DIVIDES_LADD] THEN
+    `&m * &n int_divides &a * x * &n * q + b * &n * q +
+                         &u * x * &m * p + v * &m * p` by
+        (POP_ASSUM MP_TAC THEN
+         SIMP_TAC bool_ss [INT_RDISTRIB, INT_ADD_ASSOC]) THEN
+    `&m * &n int_divides (p * &u * &m + q * &a * &n) * x +
+                         v * &m * p + b * &n * q` by
+        (POP_ASSUM MP_TAC THEN
+         SIMP_TAC (bool_ss ++ int_acnorm_ss)[INT_LDISTRIB]) THEN
+    POP_ASSUM MP_TAC THEN ASM_SIMP_TAC bool_ss [],
+    (* m | ax + b /\ n | ux + v ==> d | av - ub *)
+    `?j. &m * j = &a * x + b` by PROVE_TAC [INT_DIVIDES, INT_MUL_COMM] THEN
+    `?k. &n * k = &u * x + v` by PROVE_TAC [INT_DIVIDES, INT_MUL_COMM] THEN
+    `b = &m * j - &a * x` by
+        PROVE_TAC [INT_EQ_SUB_LADD, INT_ADD_COMM] THEN
+    `v = &n * k - &u * x` by
+        PROVE_TAC [INT_EQ_SUB_LADD, INT_ADD_COMM] THEN
+    `&u * b = &u * &m * j - &u * &a * x` by
+        PROVE_TAC [INT_SUB_LDISTRIB, INT_MUL_ASSOC] THEN
+    `&a * v = &a * &n * k - &a * &u * x` by
+        PROVE_TAC [INT_SUB_LDISTRIB, INT_MUL_ASSOC] THEN
+    `&a * v = &a * &n * k - &u * &a * x` by
+        (POP_ASSUM MP_TAC THEN SIMP_TAC (bool_ss ++ int_acnorm_ss)[]) THEN
+    `&a * v - &u * b = &a * &n * k - &u * &m * j` by
+        ASM_SIMP_TAC bool_ss [INT_SUB_SUB3, INT_SUB_ADD] THEN
+    `&d int_divides &u * &m /\ &d int_divides &a * &n` by
+        PROVE_TAC [is_gcd_def, GCD_IS_GCD, INT_NUM_DIVIDES, INT_MUL] THEN
+    `&d int_divides &u * &m * j /\ &d int_divides &a * &n * k` by
+        PROVE_TAC [INT_DIVIDES_LMUL, INT_MUL_ASSOC] THEN
+    `&d int_divides &a * &n * k - &u * &m * j` by
+        PROVE_TAC [INT_DIVIDES_LSUB] THEN
+    PROVE_TAC [],
+    (* mn | dx + vmp + bnq /\ d | av - ub ==> m | ax + b *)
+    Q.PAT_ASSUM `&m * &n int_divides &d * x + v * &m * p + b * &n * q`
+       ASSUME_TAC THEN
+    `&m * &n int_divides &m * p * (&u * x + v) + &n * q * (&a * x + b)` by
+       (POP_ASSUM MP_TAC THEN
+        ASM_SIMP_TAC (bool_ss ++ int_acnorm_ss)[INT_LDISTRIB]) THEN
+    `&a * &u * &m * &n int_divides
+         &u * &m * p * (&u * &a * x + &a * v) +
+         &a * &n * q * (&u * &a * x + &u * b)` by
+       (`~(&a * &u = 0)` by PROVE_TAC [INT_ENTIRE, INT_INJ, INT_MUL] THEN
+        `(&a * &u) * (&m * &n) int_divides
+             (&a * &u) * (&m * p * (&u * x + v) + &n * q * (&a * x + b))` by
+           PROVE_TAC [INT_DIVIDES_LRMUL, INT_MUL_COMM] THEN
+        POP_ASSUM MP_TAC THEN
+        SIMP_TAC (bool_ss ++ int_acnorm_ss)[INT_LDISTRIB]) THEN
+    `&a * &n * q = &d - &u * &m * p` by
+       (FULL_SIMP_TAC (bool_ss ++ int_acnorm_ss) [] THEN
+        PROVE_TAC [INT_EQ_SUB_RADD, INT_ADD_COMM]) THEN
+    POP_ASSUM SUBST_ALL_TAC THEN
+    POP_ASSUM (ASSUME_TAC o REWRITE_RULE [INT_SUB_RDISTRIB, adhoc_lemma]) THEN
+    POP_ASSUM (ASSUME_TAC o REWRITE_RULE [GSYM INT_SUB_LDISTRIB,
+                                          INT_ADD2_SUB2, INT_ADD_LID,
+                                          INT_SUB_REFL,
+                                          INT_MUL_RZERO]) THEN
+    `&u * (&a * &m * &n) int_divides
+        &u * (&m * p * (&a * v - &u * b) + &d * (&a * x + b))` by
+      (POP_ASSUM MP_TAC THEN
+       SIMP_TAC (bool_ss ++ int_acnorm_ss) [INT_LDISTRIB]) THEN
+    `&a * &m * &n int_divides
+         &m * p * (&a * v - &u * b) + &d * (&a * x + b)` by
+       PROVE_TAC [INT_DIVIDES_LRMUL, INT_INJ, INT_MUL_COMM] THEN
+    `?k. &d * k = &a * v - &u * b` by
+       PROVE_TAC [INT_DIVIDES, INT_MUL_COMM] THEN
+    `&d int_divides &a * &n` by
+       PROVE_TAC [GCD_IS_GCD, is_gcd_def, INT_MUL, INT_NUM_DIVIDES] THEN
+    ALL_TAC
+
+  ]);
+
+
+
+
+
 
 val _ = export_theory();
 
