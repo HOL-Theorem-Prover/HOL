@@ -218,15 +218,15 @@ fun add tm =
   end;
 
 
-(*---------------------------------------------------------------------------
- * Get the vector index of an atom.
- *---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(* Get the vector index of an atom.                                          *)
+(*---------------------------------------------------------------------------*)
 
 fun index tm =
   let val i = hash_atom tm 0
       val els = Array.sub(share_table, i)
-      fun loop [] = raise ERR"index" "not found in table"
-        | loop ((x,index)::rst) = if (x=tm) then index else loop rst
+      fun loop [] = raise ERR "index" "not found in table"
+        | loop ((x,index)::rst) = if x=tm then index else loop rst
   in
     loop els
   end;

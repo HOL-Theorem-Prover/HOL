@@ -1160,7 +1160,8 @@ fun take_numb ss0 =
        | NONE   => ERR "take_numb" ""
   end
 end;
-  (* we don't allow numbers to be split across fragments; think this is reasonable *)
+
+(* we don't allow numbers to be split across fragments; think this is reasonable *)
 
 fun lexer (ss1,qs1) =
   case Substring.getc (Lib.deinitcommentss ss1)
@@ -1221,7 +1222,7 @@ fun parse_raw table =
    | otherwise => ERR "raw term parser" "expected a quotation"
  end;
 
-local val mk_disk_thm  = make_thm Count.Disk
+local val mk_disk_thm = make_thm Count.Disk
 in
 fun disk_thm vect =
   let val rtp = parse_raw vect

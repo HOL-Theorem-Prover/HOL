@@ -31,15 +31,13 @@ fun read s =
  if Lexis.ok_identifier s then TAG ([s],[])
   else raise ERR "read" (Lib.quote s^" is not an identifier");
 
-fun read_disk_tag "" = empty_tag
-  | read_disk_tag s  = TAG (Lib.words2 " " s, [])
-
 (*---------------------------------------------------------------------------
       Merge two tags
  ---------------------------------------------------------------------------*)
 
 local fun smerge t1 [] = t1
         | smerge [] t2 = t2 
+        | smerge (t as ["DISK_THM"]) ["DISK_THM"] = t
         | smerge (l0 as s0::rst0) (l1 as s1::rst1) = 
             case String.compare (s0,s1)
              of LESS    => s0::smerge rst0 l1
@@ -47,6 +45,9 @@ local fun smerge t1 [] = t1
               | EQUAL   => s0::smerge rst0 rst1
 in
 fun merge (TAG(o1,ax1)) (TAG(o2,ax2)) = TAG(smerge o1 o2, Lib.union ax1 ax2)
+fun read_disk_tag s  = 
+     if s = "" then TAG (["DISK_THM"],[])
+               else TAG (smerge ["DISK_THM"] (Lib.words2 " " s), [])
 end;
 
 
