@@ -137,8 +137,11 @@ fun GenTermToTermBdd leaffn vm tm =
    then BddCon false vm else
   if is_var tm 
    then BddVar true vm tm else
-  if is_neg tm andalso is_var(dest_neg tm) 
-   then BddVar false vm (dest_neg tm) else
+  if is_neg tm 
+   then let val tm' = dest_neg tm
+        in
+         if is_var tm' then BddVar false vm tm' else BddNot(recfn tm')
+        end else
   if is_cond tm 
    then (BddIte o fn3(recfn,recfn,recfn) o dest_cond) tm else
   if is_forall tm 
@@ -215,7 +218,7 @@ fun TermBddToEqThm tb =
      val tm' = bddToTerm vm b
      val tb' = GenTermToTermBdd failfn vm tm'
  in
-  BddThmOracle(BddOp(Biimp,tb,tb'))
+  BddThmOracle(BddOp(bdd.Biimp,tb,tb'))
  end;
 
 (*****************************************************************************)
