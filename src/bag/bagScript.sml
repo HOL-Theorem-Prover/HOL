@@ -905,12 +905,14 @@ val SET_OF_EMPTY = store_thm (
   (--`BAG_OF_SET (EMPTY:'a->bool) = EMPTY_BAG`--),
   FUN_EQ_TAC THEN
   SIMP_TAC hol_ss [BAG_OF_SET, EMPTY_BAG, NOT_IN_EMPTY]);
+val _ = export_rewrites ["SET_OF_EMPTY"]
 
 val BAG_OF_EMPTY = store_thm (
   "BAG_OF_EMPTY",
   (--`SET_OF_BAG (EMPTY_BAG:'a->num) = EMPTY`--),
   FUN_EQ_TAC THEN
   SIMP_TAC hol_ss [SET_OF_BAG, NOT_IN_EMPTY_BAG, EMPTY_DEF]);
+val _ = export_rewrites ["BAG_OF_EMPTY"]
 
 val SET_BAG_I = store_thm (
   "SET_BAG_I",
