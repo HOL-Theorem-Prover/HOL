@@ -1955,6 +1955,8 @@ val MOD_UNIQUE = store_thm("MOD_UNIQUE",
    DISCH_THEN (STRIP_THM_THEN (fn th => fn g => ACCEPT_TAC (SYM th) g))
    end);
 
+
+
 (* ---------------------------------------------------------------------*)
 (* Properties of MOD and DIV proved using uniqueness.                   *)
 (* ---------------------------------------------------------------------*)
@@ -2205,6 +2207,35 @@ REWRITE_TAC [ONE] THEN REPEAT STRIP_TAC
     [DISJ1_TAC THEN RULE_ASSUM_TAC (REWRITE_RULE[LESS_MONO_EQ]), ALL_TAC]
     THEN ASM_REWRITE_TAC[]]);
 
+val DIV_P = store_thm(
+  "DIV_P",
+  ``!P p q. 0 < q ==>
+            (P (p DIV q) = ?k r. (p = k * q + r) /\ r < q /\ P k)``,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+    MAP_EVERY Q.EXISTS_TAC [`p DIV q`, `p MOD q`] THEN
+    ASM_REWRITE_TAC [] THEN MATCH_MP_TAC DIVISION THEN
+    FIRST_ASSUM ACCEPT_TAC,
+    Q.SUBGOAL_THEN `p DIV q = k` (fn th => SUBST1_TAC th THEN
+                                           FIRST_ASSUM ACCEPT_TAC) THEN
+    MATCH_MP_TAC DIV_UNIQUE THEN Q.EXISTS_TAC `r` THEN ASM_REWRITE_TAC []
+  ]);
+
+val MOD_P = store_thm(
+  "MOD_P",
+  ``!P p q. 0 < q ==>
+            (P (p MOD q) = ?k r. (p = k * q + r) /\ r < q /\ P r)``,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+    MAP_EVERY Q.EXISTS_TAC [`p DIV q`, `p MOD q`] THEN
+    ASM_REWRITE_TAC [] THEN MATCH_MP_TAC DIVISION THEN
+    FIRST_ASSUM ACCEPT_TAC,
+    Q.SUBGOAL_THEN `p MOD q = r` (fn th => SUBST1_TAC th THEN
+                                           FIRST_ASSUM ACCEPT_TAC) THEN
+    MATCH_MP_TAC MOD_UNIQUE THEN Q.EXISTS_TAC `k` THEN ASM_REWRITE_TAC []
+  ]);
+
+(* ----------------------------------------------------------------------
+    Some additional theorems (nothing to do with DIV and MOD)
+   ---------------------------------------------------------------------- *)
 
 val num_case_cong =
   save_thm("num_case_cong", Prim_rec.case_cong_thm num_CASES num_case_def);
