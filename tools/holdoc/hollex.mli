@@ -1,8 +1,8 @@
 (* hollex.mli  --  (approximate) HOL lexer interface *)
 (* Keith Wansbrough 2001 *)
 
-exception Eof
-exception BadChar
+exception Eof     of string
+exception BadChar of string
 
 type token =
     Ident of string * bool  (* alphanumeric? *)

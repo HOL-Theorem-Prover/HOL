@@ -2,10 +2,10 @@
 (* Keith Wansbrough 2001 *)
 
 {
-exception Eof         (* raised by holtoken at end of file *)
-exception BadChar     (* raised by holtoken if unrecognised char scanned *)
-exception BadTerm     (* raised if HOL in TeX is ill-terminated *)
-exception BadDir      (* raised if bad directive scanned *)
+exception Eof     of string  (* raised by holtoken at end of file *)
+exception BadChar of string  (* raised by holtoken if unrecognised char scanned *)
+exception BadTerm of string  (* raised if HOL in TeX is ill-terminated *)
+exception BadDir  of string  (* raised if bad directive scanned *)
 
 let comments = ref []
 
@@ -155,8 +155,8 @@ rule
   | white+                 { White (Lexing.lexeme lexbuf) }
   | backtick               { Backtick }
   | backtick backtick      { DBacktick }
-  | eof                    { raise Eof }
-  | _                      { raise BadChar }
+  | eof                    { raise (Eof "in HOL source") }
+  | _                      { raise (BadChar ("didn't expect char '"^Lexing.lexeme lexbuf^"'")) }
 
 and
   comment = parse
@@ -193,7 +193,7 @@ and
   | '%' [^ '\n']* '\n'                             { TeXNormal (Lexing.lexeme lexbuf) }
   | _                                              { TeXNormal (Lexing.lexeme lexbuf) }
 
-  | eof            { raise Eof }
+  | eof            { raise (Eof "in TeX source") }
 
 
 {
@@ -251,7 +251,7 @@ let tokstream p chan =
       | '$'  -> let rest = Str.string_after s 1 in
                 (match split_ident nonagg_specs rest with
                    (Ident(s',b),r) -> (Ident("$"^s',b),r)
-                 | _               -> raise BadChar)
+                 | _               -> raise (BadChar "expected ident after $"))
       | c    -> let possible_nonaggs = List.filter (function spec -> isPrefix spec s)
                                                    nonagg_specs in
                 if possible_nonaggs = [] then
@@ -287,9 +287,9 @@ let tokstream p chan =
                                 let rec go () = match next () with
                                                   Ident(s,_) -> (match split_ident !nonagg_specials s with
                                                                    (Ident(s,_),r) -> push r; s
-                                                                 | _              -> raise BadDir)
+                                                                 | _              -> raise (BadDir "not an ident after splitting in directive"))
                                                 | White(_)   -> go ()
-                                                | _          -> raise BadDir
+                                                | _          -> raise (BadDir "expected ident or whitespace in directive")
                                 in go ()
                               in
                               let rec go ts =
@@ -301,7 +301,7 @@ let tokstream p chan =
                                 | t      -> go (t::ts)
                               in
                               go []
-            | DirEnd       -> raise BadDir
+            | DirEnd       -> raise (BadDir "directive-end symbol without directive-begin")
             | TeXStartHol  -> lex := holtoken; t
             | TeXStartHol0 -> lex := holtoken; t
             | TeXEndHol    -> lex := textoken; t
@@ -312,11 +312,11 @@ let tokstream p chan =
                                match t with
                                  TeXEndHol  -> lex := textoken; push r; t
                                | TeXEndHol0 -> lex := textoken; push r; t
-                               | DirEnd     -> raise BadDir
+                               | DirEnd     -> raise (BadDir "directive-end symbol without directive-begin after split")
                                | _          -> push r; t)
             | t            -> t)
     with
-      Eof -> None
+      (Eof _) -> None
   in
   Stream.from f
 

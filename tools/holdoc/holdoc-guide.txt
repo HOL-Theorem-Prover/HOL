@@ -5,7 +5,7 @@ HOLDoc -- Typesetting for HOL and LaTeX
   http://www.cl.cam.ac.uk/users/kw217/
   Cambridge University Computer Laboratory
 
-  July, 2001.
+  July, 2001 -- June, 2003.
 
 
 Contents
@@ -21,7 +21,8 @@ Contents
 Makefile magic
 ~~~~~~~~~~~~~~
 
-This is a model Makefile.  It arranges things so that
+There is a model Makefile in the examples/ directory.  It arranges
+things so that
 
  - for HOL source to be processed by LTS, %Script.tex will
    automatically be built from %Script.sml.
@@ -38,55 +39,6 @@ BE VERY CAREFUL TO LOOK AT THE ERRORS, because make won't
 automatically detect them :-(.
 
 
-# Model Makefile for munging:
-
-#
-# locations of various programs:
-#
-LTSTOLATEX=../../HOLDoc/lts_to_latex
-MNGTOLATEX=../../HOLDoc/mng_to_latex
-LATEX=latex
-DVIPS=dvips
-
-#
-# location of ltsmunge.sty and other TeX style files:
-#
-EXTRATEXINPUTS=../../HOLDoc
-
-#
-# list of .imn include files to use:
-#
-IMNFILES=../../HOL-model/Timed/TNet.imn timedthreads.imn
-
-#
-# implicit munging rules:
-#
-%.tex : %.mng $(IMNFILES)
-	cat $(IMNFILES) $*.mng \
-		| $(MNGTOLATEX) 2>&1 > $*.tex \
-		| sort | uniq -c | tee $*.errs
-
-%Script.tex : %Script.sml $(IMNFILES)
-	cat $(IMNFILES) $*Script.sml \
-		| $(LTSTOLATEX) 2>&1 > $*Script.tex \
-		| sort | uniq -c | tee $*Script.errs
-
-.PRECIOUS : %.tex  # we want to keep these around for debugging purposes
-
-%.dvi : %.tex
-	TEXINPUTS=$(EXTRATEXINPUTS):$(TEXINPUTS) $(LATEX) $<
-
-%.ps : %.dvi
-	$(DVIPS) $< -o $@
-
-#
-# extra dependencies (hostsem.tex has an \include directive):
-#
-hostsem.dvi : TNet_hostLTSScript.tex
-
-#
-# end of Makefile
-#
 
 
 Syntax
