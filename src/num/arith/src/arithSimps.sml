@@ -8,10 +8,10 @@
  * ---------------------------------------------------------------------*)
 structure arithSimps :> arithSimps =
 struct
-  
-open Arbint HolKernel Parse boolLib liteLib 
+
+open Arbint HolKernel Parse boolLib liteLib
      arithLib reduceLib
-     Arith_cons Arith 
+     Arith_cons Arith
      simpLib Traverse Cache Trace;
 
 val num_ty = Arith_cons.num_ty
@@ -257,9 +257,9 @@ fun CTXT_ARITH thms tm =
     else failwith "CTXT_ARITH: not applicable";
 
 val (CACHED_ARITH,arith_cache) = let
-  fun check tm = 
+  fun check tm =
     let val ty = type_of tm
-    in ty = num_ty orelse 
+    in ty = num_ty orelse
        (ty=Type.bool andalso (is_arith tm orelse tm = F))
   end;
 in
@@ -276,9 +276,11 @@ local open arithmeticTheory
       val one_suc = Rewrite.PURE_REWRITE_RULE [arithmeticTheory.ONE]
       val add_sym = Rewrite.ONCE_REWRITE_RULE [ADD_SYM]
 in
-val arithmetic_rewrites = [LESS_EQ_0,
-MULT_EQ_0, sym_lhs MULT_EQ_0, ADD_EQ_0, sym_lhs ADD_EQ_0,
+val arithmetic_rewrites = [
+   (* multiplication *)
+   MULT_EQ_0, sym_lhs MULT_EQ_0, ADD_EQ_0, sym_lhs ADD_EQ_0,
    MULT_EQ_1, sym_lhs MULT_EQ_1,
+   MULT_0, ONCE_REWRITE_RULE [MULT_COMM] MULT_0,
    one_suc MULT_EQ_1, one_suc (sym_lhs MULT_EQ_1),
    MULT_RIGHT_1, MULT_LEFT_1,
    ARITH(Term `!x. ((SUC x = 1) = (x=0)) /\ ((1 = SUC x) = (x = 0))`),
@@ -290,7 +292,7 @@ MULT_EQ_0, sym_lhs MULT_EQ_0, ADD_EQ_0, sym_lhs ADD_EQ_0,
    SUB_RIGHT_GREATER_EQ, SUB_RIGHT_LESS_EQ,
 
    (* order relations and arith. ops *)
-   LESS_MONO_ADD_EQ, add_sym LESS_MONO_ADD_EQ,
+   LESS_EQ_0, LESS_MONO_ADD_EQ, add_sym LESS_MONO_ADD_EQ,
    ADD_MONO_LESS_EQ, add_sym ADD_MONO_LESS_EQ,
    EQ_MONO_ADD_EQ, add_sym EQ_MONO_ADD_EQ,
    ARITH (Term `!x y w. x + y < w + x = y < w`),
@@ -301,7 +303,11 @@ MULT_EQ_0, sym_lhs MULT_EQ_0, ADD_EQ_0, sym_lhs ADD_EQ_0,
    MULT_EXP_MONO,
   (* falsities *)
    NOT_EXP_0, NOT_ODD_EQ_EVEN, NOT_SUC_ADD_LESS_EQ,
-   NOT_SUC_LESS_EQ_0, prim_recTheory.NOT_LESS_0
+   NOT_SUC_LESS_EQ_0, prim_recTheory.NOT_LESS_0,
+
+   (* mins and maxs *)
+   MIN_0, MAX_0, MIN_IDEM, MAX_IDEM, MIN_LE, MAX_LE, MIN_LT, MAX_LT,
+   MIN_MAX_EQ, MIN_MAX_LT
    ]
 end;
 
@@ -326,7 +332,7 @@ val SUC = --`SUC`--
 val x = Psyntax.mk_var("x", num_ty)
 val y = Psyntax.mk_var("y", num_ty)
 
-fun reducer t = 
+fun reducer t =
  let open numSyntax
      val (_, args) = strip_comb t
      fun reducible t =
