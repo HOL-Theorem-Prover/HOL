@@ -58,10 +58,10 @@ the value to be tested for membership is alpha-equivalent to an actual element:
 able in this case to prove the required result.
 
 \FAILURE
-{IN_CONV conv} fails if applied to a term that is not of the form {"t IN
-{{t1,...,tn}}"}.  A call {IN_CONV conv "t IN {{t1,...,tn}}"} fails unless the
-term {t} is alpha-equivalent to some {ti}, or {conv "t = ti"} returns
-{|- (t = ti) = T} for some {ti}, or {conv "t = ti"} returns
+{IN_CONV conv} fails if applied to a term that is not of the form 
+{"t IN {{t1,...,tn}}"}.  A call {IN_CONV conv "t IN {{t1,...,tn}}"} fails 
+unless the term {t} is alpha-equivalent to some {ti}, or {conv "t = ti"} 
+returns {|- (t = ti) = T} for some {ti}, or {conv "t = ti"} returns
 {|- (t = ti) = F} for every {ti}.
 
 \ENDDOC

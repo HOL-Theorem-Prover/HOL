@@ -43,11 +43,10 @@ elements of the set.
 }
 
 \FAILURE 
-{DELETE_CONV conv} fails if applied to a term not of the form {"{{t1,...,tn}}
-DELETE t"}.  A call {DELETE_CONV conv "{{t1,...,tn}} DELETE t"} fails unless
-for each element {ti} of the set {{{t1,...,tn}}}, the term {t} is either
-alpha-equivalent to {ti} or {conv "ti = t"} returns {|- (ti = t) = T} or 
-{|- (ti = t) = F}.
+{DELETE_CONV conv} fails if applied to a term not of the form 
+{"{{t1,...,tn}} DELETE t"}.  A call {DELETE_CONV conv "{{t1,...,tn}} DELETE t"} fails unless for each element {ti} of the set {{{t1,...,tn}}}, the 
+term {t} is either alpha-equivalent to {ti} or {conv "ti = t"} returns 
+{|- (ti = t) = T} or {|- (ti = t) = F}.
 
 \SEEALSO
 INSERT_CONV.
