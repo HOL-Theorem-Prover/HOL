@@ -35,6 +35,7 @@ struct
   val toString = Arbnum.toString
   val fromString = Arbnum.fromString
 
+(*
   val _ = app ConstMapML.insert
               [(numSyntax.zero_tm,   ("numML","zero")),
                (numSyntax.plus_tm,   ("numML","+")),
@@ -54,4 +55,6 @@ struct
                (numSyntax.funpow_tm, ("numML","funpow")),
                (numSyntax.while_tm,  ("numML","While")),
                (numSyntax.least_tm,  ("numML","least"))];
+*)
+
 end

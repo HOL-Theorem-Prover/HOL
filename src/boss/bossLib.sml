@@ -23,7 +23,6 @@ open HolKernel Parse boolLib pairLib simpLib;
 
 local open listTheory optionTheory
            combinSyntax listSyntax optionSyntax numSyntax oneSyntax sumSyntax
-           combinML listML optionML numML oneML sumML boolML pairML
            EvalRef Lift Drop
 in end;
 

@@ -1,7 +1,5 @@
 open HolKernel Parse boolLib
 
-infix THEN ORELSE
-
 val _ = new_theory "marker";
 
 (* stmarker stands for "short term marker"; use this constant to mark

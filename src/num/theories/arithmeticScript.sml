@@ -2932,7 +2932,6 @@ val SUC_MOD = store_thm
           THEN ASM_REWRITE_TAC [LESS_MONO_ADD_EQ, ADD_MONO_LESS_EQ, ONE]
           THEN PROVE_TAC [LESS_OR]]);
 
-
 (*---------------------------------------------------------------------------*)
 (* We should be able to use "by" construct at this phase of development,     *)
 (* surely?                                                                   *)
@@ -2955,7 +2954,6 @@ GEN_TAC THEN HO_MATCH_MP_TAC COMPLETE_INDUCTION
     THEN RW_TAC bool_ss []
     THEN METIS_TAC [SUB_ADD,GREATER_OR_EQ,GREATER_DEF,LESS_OR_EQ,ADD_MODULUS],
     METIS_TAC [LESS_MOD,NOT_LESS,LESS_OR_EQ,GREATER_OR_EQ, GREATER_DEF]]);
-
 
 val DOUBLE_LT = store_thm
   ("DOUBLE_LT",
@@ -3140,6 +3138,7 @@ val LEAST_EXISTS_IMP = store_thm
   ("LEAST_EXISTS_IMP",
    ``!p. (?n. p n) ==> (p ($LEAST p) /\ !n. n < $LEAST p ==> ~p n)``,
    REWRITE_TAC [LEAST_EXISTS]);
+
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,

@@ -48,7 +48,7 @@ val zchaff =
   {name           = "zchaff", 
    URL            =
     "http://www.ee.princeton.edu/~chaff/zchaff/zchaff.2001.2.17.linux.gz",
-   executable     = "sat_solvers/zchaff/zchaff.2001.2.17.linux",
+   executable     = "sat_solvers/zchaff/zchaff",
    notime_run     = (fn ex => fn (infile,outfile) => 
                       (ex ^ " " ^ infile ^ " > " ^ outfile)),
    time_run       = (fn ex => fn ((infile,outfile),time) => 

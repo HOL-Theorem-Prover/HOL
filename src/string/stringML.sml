@@ -11,6 +11,7 @@ val is_prefix = String.isPrefix;
 (* Dodgy? *)
 fun chr n = Char.chr (Arbnum.toInt n);
 
+(*
 val _ = app ConstMapML.insert
            [(stringSyntax.chr_tm,        ("stringML","chr")),
             (stringSyntax.emptystring_tm,("stringML","emptystring")),
@@ -20,5 +21,5 @@ val _ = app ConstMapML.insert
             (stringSyntax.strcat_tm,     ("stringML","strcat")),
             (stringSyntax.isprefix_tm,   ("stringML","is_prefix"))];
 
-
+*)
 end

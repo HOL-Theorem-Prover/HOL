@@ -223,7 +223,8 @@ val numeral_lt = store_thm(
   "numeral_lt",
   Term
   `!n m.
-    (ALT_ZERO < NUMERAL_BIT1 n = T) /\ (ALT_ZERO < NUMERAL_BIT2 n = T) /\
+    (ALT_ZERO < NUMERAL_BIT1 n = T) /\ 
+    (ALT_ZERO < NUMERAL_BIT2 n = T) /\
     (n < ALT_ZERO = F) /\
     (NUMERAL_BIT1 n < NUMERAL_BIT1 m = n < m) /\
     (NUMERAL_BIT2 n < NUMERAL_BIT2 m = n < m) /\
@@ -237,7 +238,8 @@ val numeral_lt = store_thm(
 val numeral_lte = store_thm(
   "numeral_lte", Term
   `!n m. (ALT_ZERO <= n = T) /\
-         (NUMERAL_BIT1 n <= ALT_ZERO = F) /\ (NUMERAL_BIT2 n <= ALT_ZERO = F) /\
+         (NUMERAL_BIT1 n <= ALT_ZERO = F) /\ 
+         (NUMERAL_BIT2 n <= ALT_ZERO = F) /\
          (NUMERAL_BIT1 n <= NUMERAL_BIT1 m = n <= m) /\
          (NUMERAL_BIT1 n <= NUMERAL_BIT2 m = n <= m) /\
          (NUMERAL_BIT2 n <= NUMERAL_BIT1 m = ~(m <= n)) /\
