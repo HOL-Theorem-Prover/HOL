@@ -1002,11 +1002,24 @@ fun EXISTS_OUT_CONV t =
 (* Compile a device implementation into a netlist represented in HOL         *)
 (*****************************************************************************)
 val MAKE_NETLIST =
- SIMP_RULE std_ss 
-  [COMB_ID,COMB_CONSTANT_1,COMB_CONSTANT_2,COMB_CONSTANT_3,COMB_BINOP,
-   COMB_FST,COMB_SND,GSYM BUS_CONCAT_def,COMP_SEL_CLAUSES(*,SEL_DEFS*)]    o
  CONV_RULE(RATOR_CONV(RAND_CONV(PABS_CONV EXISTS_OUT_CONV)))               o
+ Ho_Rewrite.REWRITE_RULE[BUS_CONCAT_ELIM]                                  o
+ Ho_Rewrite.REWRITE_RULE
+   [FUN_EXISTS_PROD,LAMBDA_PROD,COMB_ID,COMB_CONSTANT_1,COMB_CONSTANT_2,
+    COMB_CONSTANT_3,COMB_FST,COMB_SND,GSYM BUS_CONCAT_def,
+    COMP_SEL_CLAUSES,SEL_CONCAT_CLAUSES,BUS_CONCAT_PAIR,BUS_CONCAT_o,
+    FST,SND,BUS_CONCAT_ETA,ID_CONST,ID_o,o_ID,
+    DEL_CONCAT,DFF_CONCAT,MUX_CONCAT,
+    COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_CONCAT_SPLIT,
+    COMB_SUB1]                                                             o
  GEN_BETA_RULE                                                             o
  REWRITE_RULE 
   [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
-   (*COMB_SYNTH,*)PRECEDE_SYNTH,PRECEDE_ID,Par_def,Seq_def,o_THM];
+   ETA_THM,PRECEDE_SYNTH,PRECEDE_ID,Par_def,Seq_def,o_THM];
+
+
+
+
+
+
+

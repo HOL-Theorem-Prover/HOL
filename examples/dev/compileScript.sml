@@ -123,12 +123,29 @@ val PRECEDE_ID =
     THEN CONV_TAC(LHS_CONV PETA_CONV)
     THEN RW_TAC std_ss []);
 
+(*
 val PRECEDE_SYNTH =
  store_thm
   ("PRECEDE_SYNTH",
    ``PRECEDE f d = 
       \(load,inp,done,out). ?v. (v = f o inp) /\ d(load,v,done,out)``,
    RW_TAC std_ss [PRECEDE_def,o_DEF,ETA_THM]);
+*)
+
+val PRECEDE_SYNTH =
+ store_thm
+  ("PRECEDE_SYNTH",
+   ``PRECEDE f d = 
+      \(load,inp,done,out). ?v. COMB f (inp,v) /\ d(load,v,done,out)``,
+   RW_TAC std_ss [PRECEDE_def,COMB_def,FUN_EQ_THM,o_DEF]
+    THEN GEN_BETA_TAC
+    THEN EQ_TAC
+    THEN RW_TAC std_ss []
+    THENL
+     [Q.EXISTS_TAC `(\x'. f (FST (SND x) x'))`
+       THEN RW_TAC std_ss [],
+      `v = \t. f (FST (SND x) t)` by RW_TAC std_ss [FUN_EQ_THM]
+       THEN RW_TAC std_ss []]);
 
 (*****************************************************************************)
 (* Precede a device with a combinational circuit                             *)
@@ -385,11 +402,73 @@ val COMB_SND =
    RW_TAC std_ss [COMB_def,BUS_CONCAT_def,FUN_EQ_THM]
     THEN PROVE_TAC[]);
 
-val COMB_SYNTH =
+val COMB_CONCAT_FST =
  store_thm
-  ("COMB_SYNTH",
-   ``COMB f (inp,out) = (out = f o inp)``,
-   RW_TAC std_ss [COMB_def,FUN_EQ_THM]);
+  ("COMB_CONCAT_FST",
+   ``COMB (\(x,y). P x) (inp1 <> inp2, out) = COMB P (inp1,out)``,
+   RW_TAC std_ss [COMB_def,BUS_CONCAT_def,FUN_EQ_THM]
+    THEN PROVE_TAC[]);
+
+val COMB_CONCAT_SND =
+ store_thm
+  ("COMB_CONCAT_SND",
+   ``COMB (\(x,y). P y) (inp1 <> inp2, out) = COMB P (inp2,out)``,
+   RW_TAC std_ss [COMB_def,BUS_CONCAT_def,FUN_EQ_THM]
+    THEN PROVE_TAC[]);
+
+val COMB_CONCAT_SPLIT =
+ store_thm
+  ("COMB_CONCAT_SPLIT",
+   ``COMB (f <> g) (inp, out1 <> out2) = 
+      COMB f (inp,out1) /\ COMB g (inp,out2)``,
+   RW_TAC std_ss [COMB_def,BUS_CONCAT_def,FUN_EQ_THM]
+    THEN PROVE_TAC[]);
+
+val FUN_EXISTS_PROD =
+ store_thm
+  ("FUN_EXISTS_PROD",
+   ``(?f. P f) = ?f1 f2. P(f1 <> f2)``,
+   RW_TAC std_ss [BUS_CONCAT_def]
+    THEN EQ_TAC
+    THEN RW_TAC std_ss []
+    THENL
+     [Q.EXISTS_TAC `\t. FST(f t)` THEN Q.EXISTS_TAC `\t. SND(f t)`
+       THEN RW_TAC std_ss [ETA_THM],
+      PROVE_TAC[]]);
+
+val FUN_FORALL_PROD =
+ store_thm
+  ("FUN_FORALL_PROD",
+   ``(!f. P f) = !f1 f2. P(f1 <> f2)``,
+   RW_TAC std_ss [BUS_CONCAT_def]
+    THEN EQ_TAC
+    THEN RW_TAC std_ss []
+    THEN POP_ASSUM(ASSUME_TAC o Q.SPECL[`FST o f`,`SND o f`])
+    THEN FULL_SIMP_TAC std_ss [ETA_THM]);
+
+val BUS_CONCAT_ETA =
+ store_thm
+  ("BUS_CONCAT_ETA",
+   ``(\t. (f <> g) t) = f <> g``,
+   ZAP_TAC std_ss [ETA_THM]);
+
+val ID_o =
+ store_thm
+  ("ID_o",
+   ``((\x. x) o f) = f``,
+   RW_TAC std_ss [FUN_EQ_THM]);
+
+val o_ID =
+ store_thm
+  ("o_ID",
+   ``(f o (\x. x)) = f``,
+   RW_TAC std_ss [FUN_EQ_THM]);
+
+val ID_CONST =
+ store_thm
+  ("ID_CONST",
+   ``((\x. c) o f) = \t. c``,
+   RW_TAC std_ss [FUN_EQ_THM]);
 
 (*****************************************************************************)
 (* Bus selector operators                                                    *)
@@ -483,6 +562,43 @@ val COMP_SEL_CLAUSES =
     [COMP_SEL_2_1,COMP_SEL_2_2,
      COMP_SEL_3_1,COMP_SEL_3_2,COMP_SEL_3_3]);
 
+val SEL_2_1_CONCAT =
+ store_thm
+  ("SEL_2_1_CONCAT",
+   ``SEL_2_1(inp1 <> inp2, out) = (out = inp1)``,
+   RW_TAC std_ss [SEL_2_1_def,FUN_EQ_THM,BUS_CONCAT_def]);
+
+val SEL_2_2_CONCAT =
+ store_thm
+  ("SEL_2_2_CONCAT",
+   ``SEL_2_2(inp1 <> inp2, out) = (out = inp2)``,
+   RW_TAC std_ss [SEL_2_2_def,FUN_EQ_THM,BUS_CONCAT_def]);
+
+val SEL_3_1_CONCAT =
+ store_thm
+  ("SEL_3_1_CONCAT",
+   ``SEL_3_1(inp1 <> (inp2 <> inp3), out) = (out = inp1)``,
+   RW_TAC std_ss [SEL_3_1_def,FUN_EQ_THM,BUS_CONCAT_def]);
+
+val SEL_3_2_CONCAT =
+ store_thm
+  ("SEL_3_2_CONCAT",
+   ``SEL_3_2(inp1 <> (inp2 <> inp3), out) = (out = inp2)``,
+   RW_TAC std_ss [SEL_3_2_def,FUN_EQ_THM,BUS_CONCAT_def])
+
+val SEL_3_3_CONCAT =
+ store_thm
+  ("SEL_3_3_CONCAT",
+   ``SEL_3_3(inp1 <> (inp2 <> inp3), out) = (out = inp3)``,
+   RW_TAC std_ss [SEL_3_3_def,FUN_EQ_THM,BUS_CONCAT_def]);
+
+val SEL_CONCAT_CLAUSES =
+ save_thm
+  ("SEL_CONCAT_CLAUSES",
+   LIST_CONJ
+    [SEL_2_1_CONCAT,SEL_2_2_CONCAT,
+     SEL_3_1_CONCAT,SEL_3_2_CONCAT,SEL_3_3_CONCAT]);
+
 (*****************************************************************************)
 (* Identitly device (i.e. piece of wire)                                     *)
 (*****************************************************************************)
@@ -523,20 +639,130 @@ val COMB_CONSTANT_3 =
     THEN GEN_BETA_TAC
     THEN PROVE_TAC[]);
 
+val DEL_CONCAT =
+ store_thm
+  ("DEL_CONCAT",
+   ``DEL(inp1 <> inp2, out1 <> out2) = DEL(inp1,out1) /\ DEL(inp2,out2)``,
+   RW_TAC std_ss [DEL_def,BUS_CONCAT_def]
+    THEN PROVE_TAC[]);
+
+val DFF_CONCAT =
+ store_thm
+  ("DFF_CONCAT",
+   ``DFF(inp1 <> inp2, clk, out1 <> out2) = 
+      DFF(inp1,clk,out1) /\ DFF(inp2,clk,out2)``,
+   RW_TAC std_ss [DFF_def,BUS_CONCAT_def]
+    THEN EQ_TAC
+    THEN RW_TAC std_ss []
+    THEN Cases_on `POSEDGE clk (t + 1)`
+    THEN RW_TAC std_ss []
+    THEN ASSUM_LIST(fn thl => ASSUME_TAC(SPEC_ALL(el 2 thl)))
+    THEN PROVE_TAC[PAIR_EQ]);
+
+val MUX_CONCAT =
+ store_thm
+  ("MUX_CONCAT",
+   ``MUX(sel, inp11 <> inp12, inp21 <> inp22, out1 <> out2) = 
+      MUX(sel,inp11,inp21,out1) /\ MUX(sel,inp12,inp22,out2)``,
+   RW_TAC std_ss [MUX_def,BUS_CONCAT_def]
+    THEN EQ_TAC
+    THEN RW_TAC std_ss []
+    THEN Cases_on `sel t`
+    THEN RW_TAC std_ss []
+    THEN ASSUM_LIST(fn thl => ASSUME_TAC(SPEC_ALL(el 2 thl)))
+    THEN PROVE_TAC[PAIR_EQ]);
+
+(* Not used 
+
 (*****************************************************************************)
 (* Combinational device computing a binary operation                         *)
 (*****************************************************************************)
 val BINOP_def =
  Define
-  `BINOP f (in1,in2,out) = !t. out t = f(in1 t,in2 t)`;
+  `BINOP f (in1,in2,out) = !t. out t = f (in1 t) (in2 t)`;
 
 val COMB_BINOP =
  store_thm
   ("COMB_BINOP",
-   ``COMB f (in1 <> in2, out) = BINOP f (in1,in2,out)``,
-   RW_TAC std_ss [COMB_def,BINOP_def,BUS_CONCAT_def]
-    THEN GEN_BETA_TAC
+   ``COMB (UNCURRY f) (inp1 <> inp2, out) = BINOP f (inp1,inp2,out)``,
+   RW_TAC std_ss 
+    [COMB_def,BUS_CONCAT_def,FUN_EQ_THM,BINOP_def]);
+
+val BINOP_ELIM2 =
+ store_thm
+  ("BINOP_ELIM2",
+   ``BINOP (\x (y,z). x) (inp1, inp2 <> inp3, out) = (out = inp1)``,
+   RW_TAC std_ss [BINOP_def,FUN_EQ_THM,BUS_CONCAT_def]);
+
+val COMB_UNCURRY =
+ store_thm
+  ("COMB_UNCURRY",
+   ``COMB (UNCURRY f) (inp1 <> inp2, out1 <> out2) =
+      ?out. BINOP f (inp1,inp2,out) /\ 
+            SEL_2_1(out,out1) /\ SEL_2_2(out,out2)``,
+   RW_TAC std_ss 
+    [COMB_def,BUS_CONCAT_def,FUN_EQ_THM,BINOP_def,SEL_2_1_def,SEL_2_2_def]
+    THEN EQ_TAC
+    THEN RW_TAC std_ss []
+    THENL
+     [Q.EXISTS_TAC `\t.(out1 t, out2 t)`
+       THEN RW_TAC std_ss []
+       THEN PROVE_TAC[FST,SND],
+      RW_TAC std_ss []]);
+
+val BINOP_CONCAT_OUT =
+ store_thm
+  ("BINOP_CONCAT_OUT",
+   ``BINOP f (inp1, inp2, out1 <> out2) =
+      ?out. BINOP f (inp1,inp2,out) /\ 
+            SEL_2_1(out,out1) /\ SEL_2_2(out,out2)``,
+   RW_TAC std_ss 
+    [BUS_CONCAT_def,FUN_EQ_THM,BINOP_def,SEL_2_1_def,SEL_2_2_def]
+    THEN EQ_TAC
+    THEN RW_TAC std_ss []
+    THEN RW_TAC std_ss [] (* Not sure why two RW_TACs in a row are needed! *)
+    THEN Q.EXISTS_TAC `\t.(out1 t, out2 t)`
+    THEN RW_TAC std_ss []
+    THEN PROVE_TAC[FST,SND]);
+
+val TERNOP_def =
+ Define
+  `TERNOP f (in1,in2,in3,out) = !t. out t = f (in1 t) (in2 t) (in3 t)`;
+
+val BINOP_TERNOP =
+ store_thm
+  ("BINOP_TERNOP",
+   ``BINOP (\x. UNCURRY(f x)) (inp1, inp2 <> inp3, out1 <> out2) =
+      ?out. TERNOP f (inp1,inp2,inp3,out) /\
+            SEL_2_1(out,out1) /\ SEL_2_2(out,out2)``,
+   RW_TAC std_ss 
+    [BINOP_def,BUS_CONCAT_def,FUN_EQ_THM,TERNOP_def,SEL_2_1_def,SEL_2_2_def]
+    THEN EQ_TAC
+    THEN RW_TAC std_ss []
+    THEN RW_TAC std_ss []
+    THEN Q.EXISTS_TAC `\t.(out1 t, out2 t)`
+    THEN RW_TAC std_ss []
+    THEN PROVE_TAC[FST,SND]);
+*)
+
+val BUS_CONCAT_ELIM =
+ store_thm
+  ("BUS_CONCAT_ELIM",
+   ``(\x1. P1 x1) <> (\x2. P2 x2) = \x. (P1 x, P2 x)``,
+   RW_TAC std_ss [BUS_CONCAT_def,FUN_EQ_THM]);
+
+val BUS_CONCAT_PAIR =
+ store_thm
+  ("BUS_CONCAT_PAIR",
+   ``(f1 <> g1 = f2 <> g2) = (f1 = f2) /\ (g1 = g2)``,
+   RW_TAC std_ss [BUS_CONCAT_def,FUN_EQ_THM]
     THEN PROVE_TAC[]);
+
+val BUS_CONCAT_o =
+ store_thm
+  ("BUS_CONCAT_o",
+   ``(f <> g) o h = (f o h) <> (g o h)``,
+   RW_TAC std_ss [BUS_CONCAT_def,FUN_EQ_THM]);
 
 (*****************************************************************************)
 (* Versions of POSEDGE_IMP, CALL, SELECT, FINISH, ATM, SEQ, PAR, ITE and REC *)
@@ -658,6 +884,26 @@ val SeqId =
   ("SeqId",
    ``(Seq I f = f) /\ (Seq f I = f)``,
    RW_TAC std_ss [FUN_EQ_THM,Seq_def,UNCURRY]);
+
+val SUB1_def =
+ Define
+  `SUB1(inp,out) = !t. out t = (inp t) - 1`;
+
+val COMB_SUB1 =
+ store_thm
+  ("COMB_SUB1",
+   ``COMB (\n. n - 1) (inp,out) = SUB1(inp,out)``,
+   RW_TAC std_ss [COMB_def,SUB1_def]);
+
+val EQ_def =
+ Define
+  `EQ(inp1,inp2,out) = !t. out t = (inp1 t = inp2 t)`;
+
+val COMB_EQ =
+ store_thm
+  ("COMB_EQ",
+   ``COMB (UNCURRY $=) (inp1 <> inp2, out) = EQ(inp1,inp2,out)``,
+   RW_TAC std_ss [COMB_def,BUS_CONCAT_def,EQ_def]);
 
 
 val _ = export_theory();
