@@ -110,7 +110,7 @@ in
 
   fun toThyaddon s =
     {sig_ps = NONE,
-     struct_ps = SOME (fn pps => Portable_PrettyPrint.add_string pps s)}
+     struct_ps = SOME (fn pps => Portable.add_string pps s)}
 
 
   fun == q x = Type q
@@ -165,11 +165,11 @@ end
 fun pp_type pps ty = let
   val _ = update_type_fns()
 in
-  Portable_PrettyPrint.add_string pps ":";
+  Portable.add_string pps ":";
   (!type_printer) pps (Type.prettify ty) type_pp.Top 100
 end
 
-val type_to_string = Portable_PrettyPrint.pp_to_string 75 pp_type
+val type_to_string = Portable.pp_to_string 75 pp_type
 fun print_type ty = Portable.output(Portable.std_out, type_to_string ty);
 
 
@@ -363,7 +363,7 @@ in
   in
     (!term_printer) pps t
   end
-  val term_to_string = Portable_PrettyPrint.pp_to_string 75 pp_term
+  val term_to_string = Portable.pp_to_string 75 pp_term
   fun print_term t = Portable.output(Portable.std_out, term_to_string t);
 
   fun parse_preTerm q = let
@@ -610,9 +610,9 @@ in
   end
 
   fun pp_thm ppstrm th = let
-    open Portable_PrettyPrint
+    open Portable
     fun repl ch alist =
-      Portable_String.implode (itlist (fn _ => fn chs => (ch::chs)) alist [])
+      String.implode (itlist (fn _ => fn chs => (ch::chs)) alist [])
     val {add_string,add_break,begin_block,end_block,...} = with_ppstream ppstrm
     val pp_term = pp_term ppstrm
     fun pp_terms b L =
@@ -638,12 +638,12 @@ in
   end;
 
   fun thm_to_string thm =
-    Portable_PrettyPrint.pp_to_string (!Globals.linewidth) pp_thm thm;
+    Portable.pp_to_string (!Globals.linewidth) pp_thm thm;
 
   fun print_thm thm = Portable.output(Portable.std_out, thm_to_string thm);
 
   fun pp_with_bquotes ppfn pp x = let
-    open Portable_PrettyPrint
+    open Portable
   in
     add_string pp "`"; ppfn pp x; add_string pp "`"
   end

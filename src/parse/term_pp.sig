@@ -9,6 +9,6 @@ val parenthesise_pairs : bool ref
 val space_in_pairs : bool ref
 
 val pp_term :
-  term_grammar -> type_grammar -> Portable_PrettyPrint.ppstream -> term -> unit
+  term_grammar -> type_grammar -> Portable.ppstream -> term -> unit
 
 end

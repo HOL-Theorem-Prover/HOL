@@ -1,7 +1,4 @@
-(* PROSPER project (Plug-in Interface) *)
-(* Copyright University of Cambridge 1999 *)
 (* Author: Michael Norrish *)
-(* $Id$ *)
 
 type ('a, 'b) optmonad = 'a -> ('a * 'b option)
 

@@ -1,4 +1,4 @@
-open Type Portable_PrettyPrint parse_type
+open Type Portable parse_type
 open HOLgrammars
 
 datatype mygrav =
@@ -115,7 +115,7 @@ end
 
 val G = parse_type.BaseHOLgrammar;
 fun p ty =
-  Portable_PrettyPrint.pp_to_string 75
+  Portable.pp_to_string 75
    (fn pp => fn ty => type_pp.pp_type G pp ty type_pp.Top 100) ty;
 
 new_type {Name = "fmap", Arity = 2};
@@ -129,7 +129,7 @@ val G' = [(0, parse_type.INFIX("->", "fun", parse_type.RIGHT)),
      (102, parse_type.SUFFIX("prod", false)),
      (103, parse_type.SUFFIX("sum", false))];
 fun p ty =
-  Portable_PrettyPrint.pp_to_string 75
+  Portable.pp_to_string 75
    (fn pp => fn ty => type_pp.pp_type G' pp ty type_pp.Top 100) ty;
 
 p (Type`:(bool,num)fmap`)

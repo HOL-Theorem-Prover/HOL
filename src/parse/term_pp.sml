@@ -1,4 +1,4 @@
-open Term HolKernel Portable_PrettyPrint term_grammar HOLtokens HOLgrammars
+open Term HolKernel Portable term_grammar HOLtokens HOLgrammars
 
 (* Some comments on what this code should achieve:
      prefix commands
@@ -100,7 +100,7 @@ end
 exception SimpleExit
 exception DoneExit
 
-fun symbolic s = List.all HOLsym (explode s)
+fun symbolic s = List.all HOLsym (String.explode s)
 
 fun has_name s tm =
   (is_const tm andalso #Name (dest_const tm) = s) orelse
@@ -358,11 +358,11 @@ fun pp_term (G : grammar) TyG = let
     fun can_pr_numeral stropt = List.exists (fn (k,s') => s' = stropt) num_info
     fun pr_numeral stropt tm =
       if #2 (hd num_info) = stropt then
-        add_string (arbnum.toString (Term.dest_numeral tm))
+        add_string (Arbnum.toString (Term.dest_numeral tm))
       else let
         val (k, _) = valOf (List.find (fn (_, s') => s' = stropt) num_info)
       in
-        add_string (arbnum.toString (Term.dest_numeral tm) ^ str k)
+        add_string (Arbnum.toString (Term.dest_numeral tm) ^ str k)
       end
 
     fun pr_comb tm t1 t2 = let
@@ -819,10 +819,10 @@ fun pp_term (G : grammar) TyG = let
 in
   (fn pps => fn t => let
   in
-    Portable_PrettyPrint.begin_block pps CONSISTENT 0;
+    Portable.begin_block pps CONSISTENT 0;
     pr_term false (!Globals.show_types) (start_names())
     pps t RealTop RealTop 100;
-    Portable_PrettyPrint.end_block pps
+    Portable.end_block pps
   end)
 end
 
@@ -835,7 +835,7 @@ in
   stdhol Gmerge simple_arith Gmerge semantics_rules
 end
 fun p tm =
-  Portable_PrettyPrint.pp_to_string 75
+  Portable.pp_to_string 75
    (fn pp => fn tm => pp_term G parse_type.BaseHOLgrammar pp tm) tm;
 fun pr q = print (p (Term q) ^ "\n")
 
@@ -850,7 +850,7 @@ val G' = [(0, parse_type.INFIX("->", "fun", parse_type.RIGHT)),
      (102, parse_type.SUFFIX("prod", false)),
      (103, parse_type.SUFFIX("sum", false))];
 fun p ty =
-  Portable_PrettyPrint.pp_to_string 75
+  Portable.pp_to_string 75
    (fn pp => fn ty => type_pp.pp_type G' pp ty type_pp.Top 100) ty;
 
 p (Type`:(bool,num)fmap`)

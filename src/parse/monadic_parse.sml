@@ -1,7 +1,4 @@
-(* PROSPER project (Plug-in Interface) *)
-(* Copyright University of Cambridge 1999 *)
 (* Author: Michael Norrish *)
-(* $Id$ *)
 
 structure monadic_parse :> monadic_parse = struct
 open optmonad

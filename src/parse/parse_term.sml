@@ -686,7 +686,7 @@ fun parse_term (G : grammar) typeparser = let
                   Term.prim_mk_numeral
                   {mkCOMB = (fn {Rator, Rand} => COMB(Rator, Rand)),
                    mkNUM_CONST = VAR,
-                   mkNUM2_CONST = VAR} (arbnum.fromString dp)
+                   mkNUM2_CONST = VAR} (Arbnum.fromString dp)
                 fun inject_np NONE = numeral_part
                   | inject_np (SOME s) = COMB(VAR s, numeral_part)
               in

@@ -133,14 +133,12 @@ end end;
  * variables for the remaining unconstrained type variables.
  *---------------------------------------------------------------------------*)
 
-local fun string_tl str = String.substring(str,1, size str - 1)
-      val ascii_dollar = ordof("$",0)
-in
-fun zap_dollar s =
- if (s="") then raise PRETERM_ERR"zap_dollar" "empty string"
-  else if (ordof(s,0) = ascii_dollar) then string_tl s
-    else s
-end;
+
+fun zap_dollar ""  = raise PRETERM_ERR"zap_dollar" "empty string"
+  | zap_dollar s = 
+      if String.sub(s,0) = #"$" 
+       then String.substring(s,1,String.size s-1)
+      else s;
 
 val tyVars =
  let fun union [] S = S
@@ -171,6 +169,7 @@ end;
  * the quantity equal to the length of the list (1st parameter to V). The
  * 2nd parameter to V is just the accumulator, which is not hidden.
  *---------------------------------------------------------------------------*)
+
 fun vary src taken =
   let fun V [] fresh = rev fresh
         | V (_::rst) fresh =
