@@ -74,7 +74,7 @@ fun word_compset () =
       LSL_EVAL, LSR_THM, ASR_THM, ROR_THM, RRX_EVAL2,
       WORD_BIT_def, WORD_BITS_def, WORD_SLICE_def,
       MSB_EVAL2, LSB_EVAL2,
-      NUMERAL_BITWISE, NUMERAL_DIV2,
+      iBITWISE, NUMERAL_BITWISE, NUMERAL_DIV2,
       DIVMOD_2EXP, iMOD_2EXP, NUMERAL_MOD_2EXP, NUMERAL_DIV_2EXP, TIMES_2EXP_def,
       MSBn_def, LSBn_def, BITV_def, SBIT_def, BITS_def, BIT_def, SLICE_def
       ] rws

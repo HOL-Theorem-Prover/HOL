@@ -8,17 +8,36 @@ val _ = new_theory "numeral_bits";
  
 (* -------------------------------------------------------- *)
 
+val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
+
+(* -------------------------------------------------------- *)
+
 val iMOD_2EXP_def = Define`
   (iMOD_2EXP 0 n = 0) /\
   (iMOD_2EXP (SUC x) n =
       2 * (iMOD_2EXP x (n DIV 2)) + SBIT (ODD n) 0)`;
 
+val iBITWISE_def = Define `iBITWISE = BITWISE`;
+
 (* -------------------------------------------------------- *)
 
-val NUMERAL_BITWISE = save_thm("NUMERAL_BITWISE",
-  CONJ (CONJUNCT1 BITWISE_def)
-       ((CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV o
-         SIMP_RULE arith_ss [SBIT_def,EXP,LSB_ODD,GSYM DIV2_def]) BITWISE_EVAL)
+val SIMP_NUMERAL_BIT1 = (GSYM o SIMP_RULE arith_ss []) NUMERAL_BIT1;
+
+val iBITWISE = prove(
+  `(!op a b. iBITWISE 0 op a b = ALT_ZERO) /\
+   (!x op a b.
+     iBITWISE (SUC x) op a b =
+       let w = iBITWISE x op (DIV2 a) (DIV2 b) in
+       if op (ODD a) (ODD b) then NUMERAL_BIT1 w else iDUB w)`,
+  RW_TAC arith_ss [iBITWISE_def,iDUB,SIMP_NUMERAL_BIT1,SBIT_def,EXP,LSB_ODD,GSYM DIV2_def,BITWISE_EVAL]
+    THEN REWRITE_TAC [BITWISE_def,ALT_ZERO]
+);
+
+val iBITWISE = save_thm("iBITWISE", SUC_RULE iBITWISE);
+
+val NUMERAL_BITWISE = store_thm("NUMERAL_BITWISE",
+  `!x op a b. BITWISE x op (NUMERAL a) (NUMERAL b) = NUMERAL (iBITWISE x op (NUMERAL a) (NUMERAL b))`,
+  REWRITE_TAC [iBITWISE_def,NUMERAL_DEF]
 );
  
 val NUMERAL_DIV2 = store_thm("NUMERAL_DIV2",
@@ -32,13 +51,11 @@ val NUMERAL_DIV2 = store_thm("NUMERAL_DIV2",
 val DIV_2EXP = prove(
   `(!n. DIV_2EXP 0 n = n) /\
    (!x. DIV_2EXP x 0 = 0) /\
-   (!x n. DIV_2EXP (SUC x) n = DIV_2EXP x (DIV2 n))`,
+   (!x n. DIV_2EXP (SUC x) (NUMERAL n) = DIV_2EXP x (DIV2 (NUMERAL n)))`,
   RW_TAC arith_ss [DIV_2EXP_def,DIV2_def,EXP,ZERO_DIV,DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP]
 );
 
-val NUMERAL_DIV_2EXP = save_thm("NUMERAL_DIV_2EXP",
-  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV DIV_2EXP
-);
+val NUMERAL_DIV_2EXP = save_thm("NUMERAL_DIV_2EXP", SUC_RULE DIV_2EXP);
 
 (* -------------------------------------------------------- *)
 
@@ -106,8 +123,7 @@ val iMOD_2EXP_CLAUSES = prove(
 
 val iMOD_2EXP = save_thm("iMOD_2EXP",CONJ MOD_2EXP_ZERO iMOD_2EXP);
 
-val NUMERAL_MOD_2EXP = save_thm("NUMERAL_MOD_2EXP",
-  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV iMOD_2EXP_CLAUSES);
+val NUMERAL_MOD_2EXP = save_thm("NUMERAL_MOD_2EXP", SUC_RULE iMOD_2EXP_CLAUSES);
 
 (* -------------------------------------------------------- *)
  
