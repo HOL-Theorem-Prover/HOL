@@ -158,15 +158,26 @@ val (redn_rules, redn_ind, redn_cases) =
          (!f g x. P (S # f # g # x) (f # x # (g # x))) ==>
          !a0 a1. a0 --> a1 ==> P a0 a1 : thm
 \end{verbatim}\end{session}
-    We also need to set the ML name for the constant
-    \texttt{-->}.\footnote{Normally, \texttt{-->} would be a fine name
-      for an ML identifier, but the problem here is that when the
-      theory is compiled, the identifier \texttt{-->} is already
-      declared as an infix.}
+    In addition to proving these three theorems for us, the inductive
+    definitions package has also saved them to disk.  Unfortunately,
+    it does so in a way that generates names that will be
+    unacceptable.  Only experience tells you this at this stage, but
+    when (if) we later export and compile the theory we will get nasty
+    errors.  So, we need to set the ML names for the theorem defining
+    the constant \texttt{-->} and for the theorems that have been
+    given the names \texttt{-->\_rules}, \texttt{-->\_ind} and
+    \texttt{-->\_cases}.\footnote{Normally, \texttt{-->} would be a
+      fine name for an ML identifier, but the problem here is that
+      when the theory is compiled, the identifier \texttt{-->} is
+      already declared as an infix.}
 \begin{session}\begin{verbatim}
-- set_MLname "-->" "redn";
+- app (uncurry set_MLname) [
+    ("-->", "redn"), ("-->_rules", "redn_rules"),
+    ("-->_ind", "redn_ind"), ("-->_cases", "redn_cases")
+  ];
 > val it = () : unit
 \end{verbatim}\end{session}
+
 
 Now, using our theorem \texttt{redn\_rules} we can demonstrate single
 steps of our reduction relation:
@@ -217,8 +228,16 @@ steps.  The second \[
 \] says that if you can take a single step from $x$ to $y$, and then
 take zero or more steps to get $y$ to $z$, then it's possible to take
 zero or more steps to get between $x$ and $z$.  The realisation of
-these rules in HOL is again straightforward:
+these rules in HOL is again straightforward.
+
+(In fact, \con{RTC} is already a defined constant in the context we're
+working in, so we'll hide it from view before we begin.  We thus avoid
+messages telling us that we are inputting ambiguous terms.  The
+ambiguities would always be resolved in the favour of more recent
+definition, but the warnings are annoying.)
 \begin{session}\begin{verbatim}
+val _ = hide "RTC";
+
 val (RTC_rules, RTC_ind, RTC_cases) =
   IndDefLib.Hol_reln `
     (!x.     RTC R x x) /\
@@ -829,6 +848,15 @@ choice of variable name, so we rename the bound variables.
          (!x y. P (K # x # y) x) /\
          (!f g x. P (S # f # g # x) (f # x # (g # x))) ==>
          !a0 a1. a0 -||-> a1 ==> P a0 a1 : thm
+\end{verbatim}\end{session}
+    Again, we have to change the names that the inductive definitions
+    package has chosen for our theorems:
+\begin{session}\begin{verbatim}
+- app (uncurry set_MLname) [
+    ("-||->_rules", "predn_rules"), ("-||->_ind", "predn_ind"),
+    ("-||->_cases", "predn_cases")
+  ];
+> val it = () : unit
 \end{verbatim}\end{session}
 
 \subsection{Using \con{RTC}}
