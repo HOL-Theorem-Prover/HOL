@@ -1,4 +1,4 @@
-structure llistScript = 
+structure llistScript =
 struct
 
 (* interactive use:
@@ -6,11 +6,11 @@ app load ["boolSimps","pairSimps","combinSimps",
           "optionSimps", "arithSimps", "listSimps",
           "mesonLib","SingleStep", "Q", "numLib"];
 
- open SingleStep mesonLib Rsyntax Prim_rec simpLib 
+ open SingleStep mesonLib Rsyntax Prim_rec simpLib
       boolSimps pairSimps combinSimps optionSimps arithSimps listSimps;
 *)
 open HolKernel boolLib Parse
-      SingleStep mesonLib Rsyntax Prim_rec simpLib 
+      SingleStep mesonLib Rsyntax Prim_rec simpLib
       boolSimps pairSimps combinSimps optionSimps arithSimps listSimps;
 
 local open listTheory optionTheory pairTheory in end;
@@ -99,7 +99,7 @@ val type_inhabited = prove(
   Q.EXISTS_TAC `\x. NONE` THEN
   SIMP_TAC bool_ss [lrep_ok, optionTheory.NOT_NONE_SOME]);
 
-val llist_tydef = 
+val llist_tydef =
   new_type_definition ("llist", type_inhabited);
 
 val repabs_fns = define_new_type_bijections {
@@ -1231,9 +1231,8 @@ val firstPelemAt_SUC = store_thm(
   "firstPelemAt_SUC",
   ``!P n h t. firstPelemAt P (SUC n) (LCONS h t) ==> firstPelemAt P n t``,
   SIMP_TAC hol_ss [firstPelemAt, LNTH_THM] THEN REPEAT STRIP_TAC THEN
-  ASM_SIMP_TAC hol_ss [] THEN
   FIRST_X_ASSUM (ASSUME_TAC o GEN_ALL o SIMP_RULE hol_ss [LNTH_THM] o
-                 Q.SPEC `SUC q`) THEN RES_TAC);
+                 Q.SPEC `SUC q`) THEN ASM_MESON_TAC []);
 
 val LFILTER = new_specification {
   consts = [{const_name = "LFILTER", fixity = Prefix}], name = "LFILTER",
@@ -1284,7 +1283,7 @@ val LFILTER = new_specification {
           Q.SUBGOAL_THEN
             `!x.
                option_case F P (LNTH x (LCONS h t)) /\
-               (!m. m < x ==> (OPTION_MAP P (LNTH m (LCONS h t)) = SOME F)) =
+               (!m. m < x ==> ?z. (LNTH m (LCONS h t) = SOME z) /\ ~P z) =
                (x = 0)`
           (fn th => SIMP_TAC hol_ss [th]) THEN
           GEN_TAC THEN EQ_TAC THEN ASM_SIMP_TAC hol_ss [LNTH_THM] THEN
@@ -1315,7 +1314,7 @@ val LFILTER = new_specification {
           Q.SUBGOAL_THEN
            `!x.
              option_case F P (LNTH x (LCONS h t)) /\
-             (!m. m < x ==> (OPTION_MAP P (LNTH m (LCONS h t)) = SOME F)) =
+             (!m. m < x ==> ?z. (LNTH m (LCONS h t) = SOME z) /\ ~P z) =
              (x = n)`
           (fn th => SIMP_TAC hol_ss [th]) THEN
           GEN_TAC THEN EQ_TAC THEN ASM_SIMP_TAC hol_ss [] THEN
@@ -1412,7 +1411,7 @@ val firstPelemAt_CONS = store_thm(
                      Q.SPEC `SUC m'`) THEN RES_TAC,
       FIRST_X_ASSUM (ASSUME_TAC o SIMP_RULE hol_ss [LNTH_THM] o
                      Q.SPEC `0`) THEN RES_TAC
-    ],
+    ] THEN ASM_MESON_TAC [],
     REPEAT STRIP_TAC THENL [
       ASM_SIMP_TAC hol_ss [],
       Cases_on `m` THEN ASM_SIMP_TAC hol_ss [LNTH_THM]
