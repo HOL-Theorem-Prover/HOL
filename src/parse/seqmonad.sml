@@ -5,23 +5,23 @@ fun return x env = seq.result (env, x)
 fun ok env = seq.result (env, ())
 
 infix >- ++ >> >-> +++
-fun (m1 >- f) env = let
-  val res0 = m1 env
-in
-  seq.flatten (seq.map (fn (e, v) => f v e) res0)
-end
+fun (m1 >- f) env =
+    seq.delay (fn () => let val res0 = m1 env
+                        in
+                          seq.flatten (seq.map (fn (e, v) => f v e) res0)
+                        end)
 fun (m1 >> m2) = (m1 >- (fn _ => m2))
 fun (m1 ++ m2) env =
   seq.append (seq.delay (fn () => m1 env)) (seq.delay (fn () => m2 env))
 fun (m1 >-> m2) = m1 >- (fn x => m2 >> return x)
 
-fun (m1 +++ m2) env = let
-  val batch1 = m1 env
-in
-  case (seq.cases batch1) of
-    NONE => m2 env
-  | SOME _ => batch1
-end
+fun (m1 +++ m2) env =
+    seq.delay (fn () => let val batch1 = m1 env
+                        in
+                          case (seq.cases batch1) of
+                            NONE => m2 env
+                          | SOME _ => batch1
+                        end)
 
 fun pair1 pm (a, b) = seq.map (fn (a',res) => ((a',b), res)) (pm a)
 fun pair2 pm (a, b) = seq.map (fn (b',res) => ((a,b'), res)) (pm b)

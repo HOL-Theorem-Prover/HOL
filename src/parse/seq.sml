@@ -64,12 +64,9 @@ fun map f LNIL = LNIL
 fun mapPartial f s =
   case s of
     LNIL => LNIL
-  | LCONS(e, es) => let
-    in
-      case f e of
-        NONE => delay (fn () => mapPartial f es)
-      | SOME x => delay (fn () => LCONS(x, mapPartial f es))
-    end
+  | LCONS(e, es) => delay (fn () => case f e of
+                                      NONE => mapPartial f es
+                                    | SOME x => LCONS(x, mapPartial f es))
   | LDELAYED x => raise Fail "seq - shouldn't happen"
   | x => delay (fn () => mapPartial f (force x))
 
