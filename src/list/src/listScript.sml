@@ -884,7 +884,7 @@ val _ = BasicProvers.export_rewrites
            "NOT_CONS_NIL", "NOT_NIL_CONS", "MAP_EQ_NIL", "APPEND_NIL",
            "CONS_ACYCLIC", "list_case_def", "APPEND_eq_NIL", "ZIP",
            "UNZIP", "EVERY_APPEND", "EXISTS_APPEND", "MEM_APPEND",
-           "LAST_CONS", "FRONT_CONS"];
+           "LAST_CONS", "FRONT_CONS", "FOLDL", "FOLDR"];
 
 
 val _ = export_theory();
