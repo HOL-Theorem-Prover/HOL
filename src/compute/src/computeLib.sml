@@ -1,11 +1,11 @@
-(*
 structure computeLib :> computeLib =
 struct 
-*)
-local open HolKernel rules equations;
-in
 
-open clauses;
+open HolKernel clauses rules equations;
+
+(* reexporting types from clauses *)
+type rewrite = rewrite;
+type comp_rws = comp_rws;
 
 
 fun push_in_stk env (arg,(th,stk)) =
@@ -40,7 +40,7 @@ fun cbv_wk ((th,CLOS{Env, Term=App(a,args)}), stk) =
   | cbv_wk ((th,CLOS{Env, Term=Abs body}), (mka,(thb,cl))::s') =
       cbv_wk ((Beta(mka th thb), mk_clos(cl :: Env, body)), s')
   | cbv_wk (clos as (_,CLOS _), []) = clos
-  | cbv_wk ((_, CLOS _), _) = dead_code "cbv_wk"
+  | cbv_wk ((_, CLOS _), _) = raise DEAD_CODE "cbv_wk"
   | cbv_wk ((th, NEUTR), stk) =
       (out_stk_fun (fn clos => strong(cbv_wk(clos,[]))) (th,stk), NEUTR)
   | cbv_wk ((th, CST cargs), stk) =
@@ -56,31 +56,37 @@ and cbv_wk_cst (th, cargs, [])                = (th, CST cargs)
 
 (* [strong] continues the reduction of a term in head normal form under
  * abstractions, and in the arguments of non reduced constant.
- * - the arguments of a constant are strongly normalized from right to left
- *   (they already are in head normal form), and out_stk rebuilds the whole
- *   application.
+ * - the arguments of a constant are first moved to the stack, and then
+ *   out_stk_fun strongly normalize them from left to right (they already 
+ *   are in head normal form).
  * - in the case of neutral terms, we are already done
  * - we cross an abstraction by creating a new free variable we push in the
- *   environment, reduce the body, and rebuild the abstraction.
+ *   environment, reduce the body, and rebuild the abstraction. We then try
+ *   eta-reduction.
  *) 
 and strong (th, CST {Args,...}) =
       let fun eval_arg ((_,arg),tstk) = 
-	        APPL_DOWN_FUN (fn thb => strong (thb,arg)) tstk in
-      out_stk (foldl eval_arg (th,[]) Args)
+	        APPL_DOWN_FUN (fn thb => (thb,arg)) tstk in
+      out_stk_fun strong (foldl eval_arg (th,[]) Args)
       end
   | strong (th, NEUTR) = th
   | strong (th, CLOS{Env, Term=Abs t}) =
       let val (_,thb,mkl) = Mk_abs th in
-      mkl(strong (cbv_wk ((thb, mk_clos(NEUTR :: Env, t)),[])))
-      end (* We could try eta-reduction here *)
-  | strong _ = dead_code "strong: found a closure which is not an abstraction"
+      try_eta(mkl(strong (cbv_wk ((thb, mk_clos(NEUTR :: Env, t)),[]))))
+      end
+  | strong _ = raise DEAD_CODE "strong: closure should be an abstraction"
 ;
 
-fun norm_wk rws t = cbv_wk ((REFL t, mk_clos([],from_term rws [] t)), []);
+fun norm_wk rws t =
+  let val clos = mk_clos([],from_term rws [] t) in
+  cbv_wk ((REFL t, clos), [])
+  end;
+
 
 (* [CBV_CONV rws t] is a conversion that does the full normalization of t,
  * using rewrites rws.
  *)
 fun CBV_CONV rws t = strong (norm_wk rws t);
+fun WEAK_CBV_CONV rws t = fst (norm_wk rws t);
 
 end;

@@ -69,7 +69,7 @@ fun remap_assoc x y v [] = [(x,y,[v])]
  *   that arguments of a variable are immediatly strongly reduced.
  *)
 datatype fterm =
-  (* order: outermost ahead *)
+  (* order of Args: outermost ahead *)
   CST of { Head : term, Args : (term * fterm) list, Rws : rewrite db }
 | NEUTR
 | CLOS of { Env : fterm list, Term : dterm }
@@ -116,11 +116,11 @@ fun key_of (RW{cst, lhs, cty,...}) = (cst, length lhs, cty)
  * Rules are packed according to their head constant, and then sorted
  * according to the width of their lhs.
  *)
-type comp_rws = (string, rewrite db ref) Polyhash.hash_table;
+datatype comp_rws = RWS of (string, rewrite db ref) Polyhash.hash_table;
 
-fun new_rws () = Polyhash.mkPolyTable(29,CL_ERR "new_rws" "");
+fun new_rws () = RWS (Polyhash.mkPolyTable(29,CL_ERR "new_rws" ""));
 
-fun assoc_clause rws cst =
+fun assoc_clause (RWS rws) cst =
   case Polyhash.peek rws cst of
     SOME rl => rl
   | NONE =>
@@ -155,7 +155,7 @@ fun inst_dt tysub v = if null tysub then v else tyi_dt tysub v;
  *)
 fun mk_rewrite rws str thm =
   let val thm1 = Drule.SPEC_ALL thm
-      val eq_thm = if not str then prepare_thm thm1 else thm1
+      val eq_thm = if str then thm1 else lazyfy_thm thm1
       val {lhs,rhs} = dest_eq (concl eq_thm)
       val (fv,cst,ty,pats) = check_arg_form lhs 
       val gen_thm = foldr (uncurry GEN) eq_thm fv

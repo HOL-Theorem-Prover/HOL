@@ -1,10 +1,15 @@
-local open HolKernel
+local open HolKernel boolTheory
 in
 
 fun RULES_ERR function message =
     HOL_ERR{origin_structure = "rules",
 		      origin_function = function,
 		      message = message};
+
+(* Serious anomaly of the code (an internal invariant was broken). We don't
+ * want these to be caught. We prefer a bug report.
+ *)
+exception DEAD_CODE of string;
 
 (* less efficient implementation of Mk_comb, Mk_abs and Beta: *)
 
@@ -20,6 +25,8 @@ fun Mk_abs th =
 
 val Beta = Drule.RIGHT_BETA;
 
+fun Eta thm = TRANS thm (ETA_CONV (rhs (concl thm)));
+
 val lazy_beta_conv = beta_conv;
 
 fun dest_eq_ty tm =
@@ -27,8 +34,10 @@ fun dest_eq_ty tm =
   {lhs=lhs, rhs=rhs, ty=type_of lhs}
   end;
 
-(**)
+(* end of inefficient implementation. *)
 
+
+fun try_eta thm = (Eta thm) handle HOL_ERR _ => thm;
 
 
 
@@ -45,31 +54,44 @@ fun APPL_UP_FUN f (thma,((thm,thmb)::stk)) = (thm thma (f thmb), stk)
   | APPL_UP_FUN f _ = raise RULES_ERR "APPL_UP_FUN" ""
 
 
-fun while_fun p f x = if p x then x else while_fun p f (f x);
-fun is_nil [] = true | is_nil _ = false;
+fun until_fun p f x = if p x then x else until_fun p f (f x);
 
-fun out_stk thstk = fst (while_fun (null o snd) APPL_UP thstk);
-
-fun out_stk_fun f thstk = fst (while_fun (null o snd) (APPL_UP_FUN f) thstk);
+fun out_stk x = (fst o (until_fun (null o snd) APPL_UP)) x;
+fun out_stk_fun f = fst o (until_fun (null o snd) (APPL_UP_FUN f));
 
 
-(* More Beta, less matching! *)
+(* Does conversions between
+                            FUNIFY
+     (c t_1 .. t_n x) = M    --->   (c t_1 .. t_n) = \x. M
+                             <---
+                           UNFUNIFY
+   In UNFUNIFY, we must avoid choosing an x that appears free in t_1..t_n.
+ *)
 local open Conv
 in
-fun FUN_IFY thm =
-  let val {lhs,...} = dest_eq(concl thm)
-      val x = rand lhs
-      val _ = dest_var x in
-  CONV_RULE (RATOR_CONV (RAND_CONV (REWR_CONV boolTheory.ETA_AX)))
-    (ABS x thm)
+fun FUNIFY thm =
+  let val x = rand (lhs (concl thm)) in
+  CONV_RULE (RATOR_CONV (RAND_CONV (REWR_CONV ETA_AX))) (ABS x thm)
+  end
   handle HOL_ERR _ => raise RULES_ERR "FUNIFY" ""
-  end;
+
+and UNFUNIFY thm =
+  let val {lhs,rhs} = dest_eq (concl thm)
+      val x = variant (free_vars lhs) (bvar rhs) in
+  CONV_RULE (RAND_CONV BETA_CONV) (AP_THM thm x)
+  end
+  handle HOL_ERR _ => raise RULES_ERR "UNFUNIFY" ""
+
 end;
-    
-fun prepare_thm thm =
-  prepare_thm (FUN_IFY thm)
+  
+fun lazyfy_thm thm =
+  lazyfy_thm (FUNIFY thm)
   handle HOL_ERR _ => thm
 ;
 
+fun strictify_thm thm =
+  strictify_thm (UNFUNIFY thm)
+  handle HOL_ERR _ => thm
+;
 
 end;
