@@ -5,7 +5,7 @@ fun ERROR f msg =
            origin_function = f,
            message = msg};
 
-val quote = Lib.quote
+val quote = Lib.mlquote
 
 datatype fixity = RF of term_grammar.rule_fixity | Prefix | Binder
 
