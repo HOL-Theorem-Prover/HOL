@@ -142,14 +142,23 @@ val HexSolitaireTrans_def =
 (* Final goal state                                                          *)
 (*****************************************************************************)
 
+(* Old version
 val HexSolitaireFinish_def =
  bossLib.Define 
-  `HexSolitaireEnd ^s = 
+  `HexSolitaireFinish ^s = 
      ^(list_mk_conj
         (map (fn n => if (n=10 orelse n=18)
                        then mk_v n 
                        else mk_neg(mk_v n)) vl))`;
+*)
 
+val HexSolitaireFinish_def =
+ bossLib.Define 
+  `HexSolitaireFinish ^s = 
+     ^(list_mk_conj
+        (map (fn n => if (n=10)
+                       then mk_v n 
+                       else mk_neg(mk_v n)) vl))`;
 
 (*****************************************************************************)
 (* Compute set of reachable states                                           *)

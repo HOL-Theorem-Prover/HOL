@@ -351,6 +351,39 @@ fun BddApThm th tb =
  end;
 
 (*****************************************************************************)
+(*  BddApRestrict : term_bdd -> term -> term_bdd                             *)
+(*                                                                           *)
+(*   ass vm t  |--> b                                                        *)
+(*   -----------------                                                       *)
+(*   ass vm tm |--> b'                                                       *)
+(*                                                                           *)
+(* Generates the BDD of a supplied term if it can be obtained by restricting *)
+(* a given term_bdd                                                          *)
+(*****************************************************************************)
+
+exception BddApRestrictError;
+
+fun BddApRestrict tb tm =
+ let val (_,vm,t,_) = dest_term_bdd tb
+     val (sub_tm,sub_ty) = match_term t tm
+     val _ = if null sub_ty 
+              then () 
+              else (print "match produced a non-empty type instasntiation\n";
+                    raise BddApRestrictError)
+     val sub_tb = List.map 
+                   (fn {redex = v, residue = c} => 
+                    (BddVar true vm v, 
+                     if c=T then BddCon true  vm else 
+                     if c=F then BddCon false vm 
+                            else (print_term c;
+                                  print " not a boolean constant\n";
+                                  raise BddApRestrictError)))
+                   sub_tm
+ in
+  BddRestrict sub_tb tb
+ end;
+
+(*****************************************************************************)
 (*  ass vm t |--> b                                                          *)
 (*  ----------------                                                         *)
 (*  ass vm tm |--> b'                                                        *)

@@ -2281,6 +2281,21 @@ $bnind&BddApReplace%
 BddApReplace : term_bdd -> term -> term_bdd
 
 (*****************************************************************************)
+(*   ass vm t  |--> b                                                        *)
+(*   -----------------                                                       *)
+(*   ass vm tm |--> b'                                                       *)
+(*                                                                           *)
+(* Generates the BDD of a supplied term if it can be obtained by restricting *)
+(* a given term_bdd                                                          *)
+(*****************************************************************************)
+
+exception BddApRestrictError;
+$bnind&BddApRestrict%
+BddApRestrict : term_bdd -> term -> term_bdd
+
+
+
+(*****************************************************************************)
 (* BddSubst applies a substitution [(oldtb1,newtb1),...,(oldtni,newtbi)]     *)
 (* to a term_bdd, where oldtbp (1 <= p <= i) must be of the form             *)
 (* ass vm vp |--> bp where vp is a variable, and the varmaps are distinct    *)
@@ -2290,10 +2305,6 @@ BddApReplace : term_bdd -> term -> term_bdd
 (* renaming (replacement).  A more elaborate scheme will be implemented      *)
 (* using BuDDy's bdd_veccompose.                                             *)
 (*****************************************************************************)
-
-
-
-
 
 (*****************************************************************************)
 (* Split a substitution                                                      *)
@@ -2327,6 +2338,7 @@ val split_subst =
 fun BddSubst tbl tb =
  let val (res,rep) = split_subst tbl
  in BddReplace rep (BddRestrict res tb) end;
+
 
 (*****************************************************************************)
 (*  ass vm t |--> b                                                          *)
@@ -2368,6 +2380,11 @@ fun intToTerm n = numSyntax.mk_numeral(Arbnum.fromInt n);
 $bnind&BddApConv%
 fun BddApConv conv tb = BddEqMp (conv(getTerm tb)) tb;
 
+
+
+
+
+
 (*****************************************************************************)
 (* Iterate a function f : int -> 'a -> 'a                                    *)
 (* from an initial value, applying it successively to 0,1,2,... until        *)
@@ -2382,8 +2399,6 @@ fun iterate p f =
       let val x'  = f n x
       in if p x' then x' else iter (n+1) x' end
  in iter 0 end;
-
-
 
 (*****************************************************************************)
 (*   |- f 0 s = ... s ...     |- !n. f (SUC n) s = ... f n ... s ...         *)
@@ -2402,6 +2417,18 @@ fun iterate p f =
 exception computeFixedpointError;
 $bnind&computeFixedpoint%
 computeFixedpoint : (int -> term_bdd -> 'a) -> varmap -> thm * thm -> term_bdd
+
+
+
+
+
+
+
+
+
+
+
+
 
 (*****************************************************************************)
 (*              ass vm tm |--> b                                             *)
@@ -2444,6 +2471,9 @@ BddSatone : term_bdd -> (term_bdd * term_bdd) list
 exception computeTraceError;
 $bnind&computeTrace%
 computeTrace : (int->term_bdd->'a) -> varmap -> thm -> thm*thm -> term_bdd list
+
+
+
 
 (*****************************************************************************)
 (*  traceBack vm                                                             *)
@@ -2489,6 +2519,9 @@ by the derived rules in \t{DerivedBddRules}. The signature file
 
 \begin{footnotesize}
 \begin{Verbatim}[commandchars=\$\&\%]
+
+
+
 signature MachineTransitionTheory =
 sig
   type thm = Thm.thm
@@ -2595,11 +2628,9 @@ sig
                    (v2,v3) ->
                      case v1 of
                         (v4,v5) ->
-                          case v5 of
-                             0 -> v4 0 = v3
-                          || SUC v6 ->
-                               FinPath_tupled ((v2,v3),v4,v6) /\
-                               v2 (v4 v6,v4 (v6 + 1)))
+                          case v5 of 0 -> v4 0 = v3
+                          || SUC v6 -> FinPath_tupled ((v2,v3),v4,v6) /\
+                                       v2 (v4 v6,v4 (v6 + 1)))
    
    [FnPair_def]  Definition  |- !f g x. FnPair f g x = (f x,g x)$bnind&FnPair\_def%
    
@@ -2607,18 +2638,11 @@ sig
    Definition
    |- !x x1 x2 x3. IsTrace x x1 x2 x3 = IsTrace_tupled (x,x1,x2,x3)
    
-
-
-
-
-
    [IsTrace_tupled_primitive_def]$bnind&IsTrace\_tupled\_primitive\_def%
    Definition
    |- IsTrace_tupled =
       WFREC
-        (@R'.
-           WF R' /\
-           !s0 B tr Q s1 R. R' (R,Eq s1,Q,s1::tr) (R,B,Q,s0::s1::tr))
+        (@R'. WF R' /\ !s0 B tr Q s1 R. R' (R,Eq s1,Q,s1::tr) (R,B,Q,s0::s1::tr))
         (\IsTrace_tupled a.
            case a of
               (v,v1) ->
@@ -2631,9 +2655,8 @@ sig
                           || v6::v7 ->
                                case v7 of
                                   [] -> v2 v6 /\ v4 v6
-                               || v8::v9 ->
-                                    v2 v6 /\ v (v6,v8) /\
-                                    IsTrace_tupled (v,Eq v8,v4,v8::v9))
+                               || v8::v9 -> v2 v6 /\ v (v6,v8) /\
+                                  IsTrace_tupled (v,Eq v8,v4,v8::v9))
    
    [Live_def]$bnind&Live\_def%
    Definition
@@ -2655,8 +2678,6 @@ sig
    Definition
    |- !R B state. Next R B state = ?state_. B state_ /\ R (state_,state)
    
-
-
    [Path_def]$bnind&Path\_def%
    Definition
    |- !R s f. Path (R,s) f = (f 0 = s) /\ !n. R (f n,f (n + 1))
@@ -2679,9 +2700,8 @@ sig
    |- !R B state. Reachable R B state = ?n. ReachIn R B n state
    
    [Stable_def]$bnind&Stable\_def%
-   Definition
-   |- !R state.
-        Stable R state = !state'. R (state,state') ==> (state' = state)
+   Definition 
+   |- !R state. Stable R state = !state'. R (state,state') ==> (state' = state)
    
    [Total_def]  Definition  |- !R. Total R = !s. ?s'. R (s,s')$bnind&Total\_def%
    
@@ -2745,8 +2765,6 @@ sig
         Total R /\ FinPath (R,s) f n ==>
         ?g. (!m. m <= n ==> (f m = g m)) /\ Path (R,s) g
    
-
-
    [FinPathThm]$bnind&FinPathThm%
    Theorem
    |- !n. FinPath (R,s) f n = (f 0 = s) /\ !m. m < n ==> R (f m,f (m + 1))
@@ -2772,6 +2790,8 @@ sig
    Theorem
    |- !P. (?tr. P tr) = ?tr1 tr2. P (FnPair tr1 tr2)
    
+
+
    [FnPairForall]$bnind&FnPairForall%
    Theorem
    |- !P. (!tr. P tr) = !tr1 tr2. P (FnPair tr1 tr2)
@@ -2789,8 +2809,6 @@ sig
         (!R B Q s0 s1 tr.
            P R (Eq s1) Q (s1::tr) ==> P R B Q (s0::s1::tr)) ==>
         !v v1 v2 v3. P v v1 v2 v3
-   
-
 
    [ModelCheckAlways]$bnind&ModelCheckAlways%
    Theorem
@@ -2878,10 +2896,6 @@ sig
         (ReachBy R B n = ReachBy R B (SUC n)) ==>
         (Reachable R B = ReachBy R B n)
    
-
-
-
-
    [ReachBy_rec]$bnind&ReachBy\_rec%
    Theorem
    |- (!R B state. ReachBy R B 0 state = B state) /\
@@ -2892,14 +2906,12 @@ sig
    
    [ReachInFinPath]$bnind&ReachInFinPath%
    Theorem
-   |- !R B n s.
-        ReachIn R B n s = ?f s0. B s0 /\ FinPath (R,s0) f n /\ (s = f n)
+   |- !R B n s. ReachIn R B n s = ?f s0. B s0 /\ FinPath (R,s0) f n /\ (s = f n)
    
    [ReachInPath]$bnind&ReachInPath%
    Theorem
    |- !R B n s.
-        Total R ==>
-        (ReachIn R B n s = ?f s0. B s0 /\ Path (R,s0) f /\ (s = f n))
+        Total R ==> (ReachIn R B n s = ?f s0. B s0 /\ Path (R,s0) f /\ (s = f n))
    
    [ReachIn_rec]$bnind&ReachIn\_rec%
    Theorem
