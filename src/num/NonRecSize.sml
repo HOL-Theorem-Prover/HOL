@@ -40,7 +40,7 @@ local
   val sum_info = Option.valOf(TypeBase.read "sum")
   val sum_case = Term`sum$sum_case`
   val num = numSyntax.num_ty
-  val sum_case_into_num = Rsyntax.inst [alpha |-> num] sum_case
+  val sum_case_into_num = inst [alpha |-> num] sum_case
   val f = mk_var{Name="f",Ty=beta-->num}
   val g = mk_var{Name="g",Ty=mk_vartype"'c" --> num}
   val s = mk_var{Name="s",Ty=mk_type{Tyop="sum",Args=[beta, mk_vartype "'c"]}}

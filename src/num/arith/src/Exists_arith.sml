@@ -22,20 +22,12 @@ struct
   val << = String.<
 
 
-open Arith_cons;
+open HolKernel boolLib Rsyntax reduceLib Arith_cons;
 open Term_coeffs;
 open Qconv; infix THENC;
 open Norm_arith;
 open Norm_ineqs;
 open Sol_ranges;
-open reduceLib;
-open Drule;
-open Term;
-open boolSyntax;
-open Thm;
-open Lib;
-open Feedback;
-
 
 fun failwith function = raise HOL_ERR{origin_structure = "Exists_arith",
                                       origin_function = function,

@@ -20,21 +20,15 @@
 structure Boolconv :> Boolconv =
 struct
 
-open HolKernel boolTheory Drule Rewrite Parse
+open HolKernel boolLib Parse
 infix |->;
 
 val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
 fun -- q x = Term q
 fun == q x = Type q
 
-val type_of = Term.type_of;
-val aconv = Term.aconv;
-val rator = Term.rator;
 
-val T = Term`T`
-and F = Term`F`
-and alpha = Type`:'a`
-and notop = Term`$~`
+val notop = Term`$~`
 and andop = Term`$/\`
 and orop  = Term`$\/`
 and impop = Term`$==>`
@@ -104,10 +98,8 @@ val AND_CONV =
         if xn = yn then SPEC xn c5 else
         if aconv xn yn
         then SUBST [zv |-> ALPHA xn yn]
-		 (mk_comb{Rator=mk_comb{Rator=beqop,
-                    Rand=mk_comb{Rator=
-                     mk_comb{Rator=andop,Rand=xn}, Rand=zv}}, Rand=xn})
-		 (SPEC xn c5)
+              (mk_comb(mk_comb(beqop,mk_comb(mk_comb(andop,xn), zv)), xn))
+              (SPEC xn c5)
 	else failwith "AND_CONV")
      | _ => failwith "AND_CONV"
  end;
@@ -137,9 +129,7 @@ val OR_CONV =
         if xn = yn then SPEC xn c5 else
         if aconv xn yn
         then SUBST [zv |-> ALPHA xn yn]
-                   (mk_comb{Rator=mk_comb{Rator= beqop,
-                    Rand=mk_comb{Rator= mk_comb{Rator= orop,Rand= xn},
-			Rand= zv}}, Rand= xn})
+                   (mk_comb(mk_comb(beqop,mk_comb(mk_comb(orop,xn),zv)),xn))
 		   (SPEC xn c5)
        else failwith "OR_CONV")
     | _ => failwith "OR_CONV"
@@ -170,9 +160,7 @@ val IMP_CONV =
        if xn = yn then SPEC xn c5 else
        if aconv xn yn
        then SUBST [zv |-> ALPHA xn yn]
-		   (mk_comb{Rator= mk_comb{Rator= beqop,
-                     Rand=mk_comb{Rator= mk_comb{Rator= impop, Rand= xn},
-		                  Rand= zv}}, Rand= T})
+		   (mk_comb(mk_comb(beqop,mk_comb(mk_comb(impop,xn),zv)),T))
 		  (SPEC xn c5)
        else failwith "IMP_CONV")
    | _ => failwith "IMP_CONV"

@@ -17,17 +17,14 @@
 
 structure Prenex :> Prenex =
 struct
-  open Arbint
+  open HolKernel boolLib Arbint Qconv;
+
   val << = String.<
+  infix THENC ORELSEC;
 
-
-type term = Term.term
-type conv = Abbrev.conv;
-
-open Qconv; infix THENC; infix ORELSEC;
-open Term boolSyntax Drule Feedback;
 
 (* Bindings from Conv structure *)
+
 val TOP_DEPTH_CONV = Conv.TOP_DEPTH_CONV;
 val EQ_IMP_THM = boolTheory.EQ_IMP_THM;
 val NOT_EXISTS_CONV = Conv.NOT_EXISTS_CONV
@@ -58,7 +55,7 @@ fun failwith function = raise HOL_ERR{origin_structure = "Prenex",
 (*---------------------------------------------------------------------------*)
 
 fun QUANT_EQ_IMP_CONV tm =
- (let val {lhs,rhs} = dest_eq tm
+ (let val (lhs,rhs) = dest_eq tm
   in  if (is_forall lhs) orelse (is_exists lhs) orelse
          (is_forall rhs) orelse (is_exists rhs)
       then SPECL [lhs,rhs] EQ_IMP_THM
@@ -74,13 +71,13 @@ fun is_prenex tm =
    let fun contains_quant tm =
           if (is_forall tm) orelse (is_exists tm)
           then true
-          else (let val {Rator = f,Rand = x} = dest_comb tm
+          else (let val (f,x) = dest_comb tm
                 in  (contains_quant f) orelse (contains_quant x)
                 end)
                handle _ => (contains_quant (body tm))
                handle _ => false
-   in  is_prenex (#Body (dest_forall tm)) handle _ =>
-       is_prenex (#Body (dest_exists tm)) handle _ =>
+   in  is_prenex (snd (dest_forall tm)) handle _ =>
+       is_prenex (snd (dest_exists tm)) handle _ =>
        not (contains_quant tm)
    end;
 

@@ -8,15 +8,13 @@
  * ---------------------------------------------------------------------*)
 structure arithSimps :> arithSimps =
 struct
-  open Arbint
-  val << = String.<
+  
+open Arbint HolKernel Parse boolLib liteLib 
+     arithLib reduceLib
+     Arith_cons Arith 
+     simpLib Traverse Cache Trace;
 
-
-open arithLib reduceLib;
-open HolKernel Parse Drule Conv boolSyntax Psyntax
-open liteLib Arith_cons Arith simpLib Traverse Cache Trace;
-
-type conv = Abbrev.conv;
+val num_ty = Arith_cons.num_ty
 
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
 fun -- q x = Term q
@@ -61,7 +59,6 @@ val zero_tm = (--`0`--);
 fun dest_SUC tm =
     if (fst(dest_const(rator tm)) = "SUC") then rand tm else fail();
 
-val num_ty = Type`:num`;
 
 val mk_lin =
   let fun tmord ((term1,n1:int),(term2,n2)) =
@@ -226,13 +223,13 @@ fun is_arith_thm thm =
 
 type ctxt = thm list;
 
-val False = Term.mk_const{Name = "F", Ty = Type.bool}
+
 val ARITH = EQT_ELIM o ARITH_CONV;
 
 fun CTXT_ARITH thms tm =
   if
     (type_of tm = Type.bool) andalso
-    (is_arith tm orelse (tm = False andalso not (null thms)))
+    (is_arith tm orelse (tm = F andalso not (null thms)))
   then let
     val context = map concl thms
     fun try gl = let
@@ -242,7 +239,7 @@ fun CTXT_ARITH thms tm =
     end
     val thm = EQT_INTRO (try tm)
       handle (e as HOL_ERR _) =>
-        if tm <> False then EQF_INTRO (try(mk_neg tm)) else raise e
+        if tm <> F then EQF_INTRO (try(mk_neg tm)) else raise e
   in
     trace(1,PRODUCE(tm,"ARITH",thm)); thm
   end
@@ -266,7 +263,7 @@ val (CACHED_ARITH,arith_cache) = let
   fun check tm = let
     val ty = type_of tm
   in
-    ty = num_ty orelse (ty=Type.bool andalso (is_arith tm orelse tm = False))
+    ty = num_ty orelse (ty=Type.bool andalso (is_arith tm orelse tm = F))
   end;
 in
   CACHE (check,CTXT_ARITH)
@@ -329,11 +326,11 @@ end;
 val a_v = --`NUMERAL a`--
 val b_v = --`NUMERAL b`--
 val SUC = --`SUC`--
-val x = Psyntax.mk_var("x", ==`:num`==)
-val y = Psyntax.mk_var("y", ==`:num`==)
+val x = Psyntax.mk_var("x", num_ty)
+val y = Psyntax.mk_var("y", num_ty)
 
 fun reducer t = let
-  open Psyntax numSyntax
+  open numSyntax
   val (_, args) = strip_comb t
   fun reducible t =
     is_numeral t orelse (is_SUC t andalso reducible (snd (dest_comb t)))

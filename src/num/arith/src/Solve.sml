@@ -17,29 +17,11 @@
 
 structure Solve :> Solve =
 struct
-  open Arbint
-  val << = String.<
+  open Arbint HolKernel boolLib;
+  open Arith_cons Term_coeffs Qconv Theorems Thm_convs
+       Norm_arith Norm_ineqs Solve_ineqs;
 
-
-type term = Term.term
-type conv = Abbrev.conv;
-
-open Arith_cons;
-open Term_coeffs;
-open Qconv; infix THENC;
-open Theorems;
-open Thm_convs;
-open Norm_arith;
-open Norm_ineqs;
-open Solve_ineqs;
-open Drule;
-open boolSyntax;
-open Thm;
-open Lib;
-open Feedback;
-
-
-(* datatype frag = datatype Portable.frag; *)
+infix THENC;
 
 fun failwith function = raise
  HOL_ERR{origin_structure = "Solve",
@@ -124,8 +106,8 @@ fun NOT_NOT_INTRO_CONV tm =
 (* Discriminator functions for T (true) and F (false)                        *)
 (*---------------------------------------------------------------------------*)
 
-val is_T = let val T = Psyntax.mk_const("T", Type.bool) in fn tm => tm = T end
-and is_F = let val F = Psyntax.mk_const("F", Type.bool) in fn tm => tm = F end;
+val is_T = equal T
+and is_F = equal F
 
 (*---------------------------------------------------------------------------*)
 (* NEGATE_CONV : conv -> conv                                                *)
@@ -141,7 +123,8 @@ and is_F = let val F = Psyntax.mk_const("F", Type.bool) in fn tm => tm = F end;
 (* take a CONV as its argument.                                              *)
 (*---------------------------------------------------------------------------*)
 
-val neg_tm = Term.mk_const{Name = "~", Ty = Type.-->(Type.bool, Type.bool)}
+val neg_tm = boolSyntax.negation
+
 fun NEGATE_CONV conv tm =
  let val neg = is_neg tm
      val th = RULE_OF_CONV conv (if neg then (dest_neg tm) else (mk_neg tm))

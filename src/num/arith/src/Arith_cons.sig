@@ -1,11 +1,10 @@
 signature Arith_cons =
 sig
+ include Abbrev
 
  local type int = Arbint.int
  in
-
-   type term = Term.term
-
+   val num_ty : hol_type
    val mk_plus : term * term -> term
    val mk_minus : term * term -> term
    val mk_mult : term * term -> term

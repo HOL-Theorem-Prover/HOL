@@ -18,13 +18,7 @@
 
 structure Sub_and_cond :> Sub_and_cond =
 struct
-  open Arbint
-  val << = String.<
-
-
-type conv = Abbrev.conv;
-
-open Qconv Thm_convs HolKernel Drule Parse;
+  open Arbint HolKernel boolLib Qconv Thm_convs Parse Rsyntax;
 
 val COND_ABS       = boolTheory.COND_ABS;
 val TOP_DEPTH_CONV = Conv.TOP_DEPTH_CONV;
@@ -36,9 +30,6 @@ fun failwith function =
                  origin_function = function,
                  message = ""};
 
-
-val alpha = Type`:'a`
-and beta  = Type`:'b`;
 
 (*---------------------------------------------------------------------------*)
 (* COND_ABS_CONV : conv                                                      *)

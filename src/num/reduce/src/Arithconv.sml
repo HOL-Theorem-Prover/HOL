@@ -29,8 +29,7 @@ fun failwith function = raise
                    origin_function = function,
                            message = ""};
 
-open HolKernel boolTheory boolLib Parse
-open Num_conv;
+open HolKernel boolTheory boolLib Parse Rsyntax Num_conv;
 
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
 fun -- q x = Term q
@@ -43,7 +42,7 @@ val num_CONV = Num_conv.num_CONV;
 val MATCH_MP = Drule.MATCH_MP;
 
 open Rsyntax
-val num_ty   = Rsyntax.mk_type{Tyop="num",  Args=[]};
+val num_ty   = mk_thy_type{Tyop="num", Thy="num", Args=[]};
 val bool_ty  = Type.bool
 val fun_ty   = fn (op_ty,arg_ty) => mk_type{Tyop="fun", Args=[op_ty,arg_ty]};
 val b_b_ty   = fun_ty(bool_ty,bool_ty);

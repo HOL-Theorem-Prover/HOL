@@ -56,6 +56,7 @@ val ADD = new_recursive_definition
     rec_axiom = num_Axiom,
     def = --`($+ 0 n = n) /\
              ($+ (SUC m) n = SUC($+ m n))`--};
+
 val _ = set_fixity ("+", Infixl 500);
 
 (*---------------------------------------------------------------------------*
@@ -153,7 +154,7 @@ REWRITE_TAC
 
 fun INDUCT_TAC g = INDUCT_THEN INDUCTION ASSUME_TAC g;
 
-val EQ_SYM_EQ' = Rsyntax.INST_TYPE [alpha |-> Type`:num`] EQ_SYM_EQ;
+val EQ_SYM_EQ' = INST_TYPE [alpha |-> Type`:num`] EQ_SYM_EQ;
 
 
 (*---------------------------------------------------------------------------*)
@@ -1821,7 +1822,7 @@ val MOD_DIV_exist = prove
             Now define MOD and DIV by a constant specification.
  ---------------------------------------------------------------------------*)
 
-val DIVISION = Rsyntax.new_specification
+val DIVISION = new_specification
    {name = "DIVISION",
     consts = [{fixity = Infixl 650, const_name = "MOD"},
               {fixity = Infixl 600, const_name = "DIV"}],

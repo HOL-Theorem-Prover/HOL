@@ -28,11 +28,7 @@ open Exists_arith;
 open Sub_and_cond;
 open Prenex;
 open Instance;
-open Lib;
-open Feedback;
-open Term;
-open boolSyntax;
-
+open HolKernel boolLib Rsyntax;
 
 val REWRITE_CONV = Rewrite.REWRITE_CONV;
 
@@ -125,7 +121,7 @@ fun non_presburger_subterms tm =
 (* number arithmetic.                                                        *)
 (*---------------------------------------------------------------------------*)
 
-val num_ty = Parse.Type`:num`
+val num_ty = Arith_cons.num_ty
 fun is_num_var tm = is_var tm andalso type_of tm = num_ty
 val is_presburger = (all is_num_var) o non_presburger_subterms;
 

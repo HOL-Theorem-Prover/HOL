@@ -11,7 +11,7 @@ val _ = new_theory "num";
  * Define successor `SUC_REP:ind->ind` on ind.
  *---------------------------------------------------------------------------*)
 
-val SUC_REP_DEF = Rsyntax.new_specification {
+val SUC_REP_DEF = new_specification {
   name = "SUC_REP_DEF",
   sat_thm = boolTheory.INFINITY_AX,
   consts = [{fixity = Prefix, const_name = "SUC_REP"}]
@@ -28,7 +28,7 @@ val ZERO_REP_EXISTS = prove(
 (*---------------------------------------------------------------------------
  * `ZERO_REP:ind` represents `0:num`
  *---------------------------------------------------------------------------*)
-val ZERO_REP_DEF = Rsyntax.new_specification{
+val ZERO_REP_DEF = new_specification{
   name = "ZERO_REP_DEF",
   sat_thm = ZERO_REP_EXISTS,
   consts = [{fixity = Prefix, const_name = "ZERO_REP"}]
@@ -54,9 +54,8 @@ val EXISTS_NUM_REP = TAC_PROOF(([],--`?n. IS_NUM_REP n`--),
 (*---------------------------------------------------------------------------
  * Make the type definition.
  *---------------------------------------------------------------------------*)
-val num_TY_DEF = Rsyntax.new_type_definition
-    {name = "num",
-     inhab_thm = EXISTS_NUM_REP};
+
+val num_TY_DEF = new_type_definition ("num", EXISTS_NUM_REP);
 
 val num_ISO_DEF = define_new_type_bijections
                    {name = "num_ISO_DEF",
@@ -72,7 +71,9 @@ and A_ONTO = prove_abs_fn_onto    num_ISO_DEF;
 (*---------------------------------------------------------------------------
  * Define ZERO.
  *---------------------------------------------------------------------------*)
-val zero = mk_var("0", ``:num``)
+
+val zero = mk_var("0", mk_thy_type{Tyop="num",Thy="num",Args=[]});
+
 val ZERO_DEF = new_definition("ZERO_DEF", --`^zero = ABS_num ZERO_REP`--);
 
 

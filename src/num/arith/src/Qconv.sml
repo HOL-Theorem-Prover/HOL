@@ -19,29 +19,13 @@
 
 structure Qconv :> Qconv =
 struct
-  open Arbint
-  val << = String.<
 
+open HolKernel boolLib Rsyntax Arbint;
+val << = String.<
 
-open Drule;
+val ERR = mk_HOL_ERR "Qconv";
 
-fun failwith function = raise
- Feedback.HOL_ERR{origin_structure = "Qconv",
-                    origin_function = function,
-                            message = ""};
-
-type conv = Abbrev.conv;
-open HolKernel;
-
-val rhs = boolSyntax.rhs;
-val aconv = Term.aconv;
-
-(*---------------------------------------------------------------------------*)
-(* Exception indicating that a term has not been changed by the conversion   *)
-(* applied to it.                                                            *)
-(*---------------------------------------------------------------------------*)
-
-exception UNCHANGED;
+fun failwith function = raise (ERR function "");
 
 (*---------------------------------------------------------------------------*)
 (* RULE_OF_CONV : conv -> (term -> thm)                                      *)
@@ -50,8 +34,8 @@ exception UNCHANGED;
 (* its argument term, and produces an ordinary conversion.                   *)
 (*---------------------------------------------------------------------------*)
 
-fun RULE_OF_CONV conv tm = conv tm
-                           handle UNCHANGED => REFL tm;
+val RULE_OF_CONV = QConv.QCONV;
+
 
 (*---------------------------------------------------------------------------*)
 (* ALL_CONV : conv                                                           *)
@@ -59,7 +43,7 @@ fun RULE_OF_CONV conv tm = conv tm
 (* Identity conversion for conversions using failure.                        *)
 (*---------------------------------------------------------------------------*)
 
-val ALL_CONV:conv = fn _ => raise UNCHANGED;
+val ALL_CONV = QConv.ALL_QCONV
 
 (*---------------------------------------------------------------------------*)
 (* THENC : (conv * conv) -> conv                                             *)
@@ -71,13 +55,7 @@ val ALL_CONV:conv = fn _ => raise UNCHANGED;
 
 infix THENC;
 
-fun ((conv1:conv) THENC (conv2:conv)) tm =
-   let val th1 = conv1 tm
-   in
-   TRANS th1 (conv2 (rhs (concl th1)))
-   handle UNCHANGED => th1
-   end
-   handle UNCHANGED => conv2 tm;
+fun (c1 THENC c2) = QConv.THENQC c1 c2;
 
 (*---------------------------------------------------------------------------*)
 (* ORELSEC : (conv * conv) -> conv                                           *)
@@ -89,10 +67,7 @@ fun ((conv1:conv) THENC (conv2:conv)) tm =
 
 infix ORELSEC;
 
-fun ((conv1:conv) ORELSEC (conv2:conv)) tm =
-   conv1 tm
-   handle UNCHANGED => raise UNCHANGED
-        | _ => conv2 tm;
+fun (c1 ORELSEC c2) = QConv.ORELSEQC c1 c2;
 
 (*---------------------------------------------------------------------------*)
 (* REPEATC : conv -> conv                                                    *)
@@ -100,8 +75,7 @@ fun ((conv1:conv) ORELSEC (conv2:conv)) tm =
 (* Applies a conversion zero or more times.                                  *)
 (*---------------------------------------------------------------------------*)
 
-fun REPEATC conv tm =
-   ((conv THENC (REPEATC conv)) ORELSEC ALL_CONV) tm;
+val REPEATC = QConv.REPEATQC;
 
 (*---------------------------------------------------------------------------*)
 (* CHANGED_CONV : conv -> conv                                               *)
@@ -111,14 +85,7 @@ fun REPEATC conv tm =
 (* way.                                                                      *)
 (*---------------------------------------------------------------------------*)
 
-fun CHANGED_CONV conv (tm:term) =
-   let val th = conv tm
-                handle UNCHANGED => failwith "CHANGED_CONV"
-       val {lhs,rhs} = Rsyntax.dest_eq (concl th)
-   in  if (aconv lhs rhs)
-       then failwith "CHANGED_CONV"
-       else th
-   end;
+val CHANGED_CONV = QConv.CHANGED_QCONV;
 
 (*---------------------------------------------------------------------------*)
 (* TRY_CONV : conv -> conv                                                   *)
@@ -126,7 +93,7 @@ fun CHANGED_CONV conv (tm:term) =
 (* Applies a conversion, and if it fails, raises an UNCHANGED exception.     *)
 (*---------------------------------------------------------------------------*)
 
-fun TRY_CONV conv = conv ORELSEC ALL_CONV;
+val TRY_CONV = QConv.TRY_QCONV
 
 (*---------------------------------------------------------------------------*)
 (* CONV_RULE : conv -> thm -> thm                                            *)
@@ -145,10 +112,8 @@ fun CONV_RULE conv th = EQ_MP (RULE_OF_CONV conv (concl th)) th;;
 (*---------------------------------------------------------------------------*)
 
 fun RAND_CONV conv tm =
-   let val {Rator,Rand} = dest_comb tm
-           handle _ => failwith "RAND_CONV"
-   in
-   AP_TERM Rator (conv Rand)
+   let val {Rator,Rand} = with_exn dest_comb tm (ERR "RAND_CONV" "")
+   in AP_TERM Rator (conv Rand)
    end;
 
 (*---------------------------------------------------------------------------*)
@@ -159,10 +124,8 @@ fun RAND_CONV conv tm =
 (*---------------------------------------------------------------------------*)
 
 fun RATOR_CONV conv tm =
-   let val {Rator,Rand} = dest_comb tm
-           handle _ => failwith "RATOR_CONV"
-   in
-   AP_THM (conv Rator) Rand
+   let val {Rator,Rand} = with_exn dest_comb tm (ERR "RATOR_CONV" "")
+   in AP_THM (conv Rator) Rand
    end;
 
 (*---------------------------------------------------------------------------*)
@@ -173,14 +136,12 @@ fun RATOR_CONV conv tm =
 (*---------------------------------------------------------------------------*)
 
 fun ABS_CONV conv tm =
-   let val {Bvar,Body} = dest_abs tm
-           handle _ => failwith "ABS_CONV"
-       val bodyth = conv Body
-   in
-   ABS Bvar bodyth
-   handle (e as Feedback.HOL_ERR _) => raise e
-        | _ => failwith "ABS_CONV"
-   end;
+  let val {Bvar,Body} = with_exn dest_abs tm (ERR "ABS_CONV" "")
+  in ABS Bvar (conv Body)
+        handle (e as HOL_ERR _) => raise e
+             | Interrupt => raise Interrupt
+             | other => failwith "ABS_CONV"
+  end;
 
 (*---------------------------------------------------------------------------*)
 (* ARGS_CONV : conv -> conv                                                  *)
@@ -192,12 +153,12 @@ fun ABS_CONV conv tm =
 (*---------------------------------------------------------------------------*)
 
 fun ARGS_CONV conv tm =
-   let val {Rator=fx,Rand=y} = dest_comb tm handle _ => failwith "ARGS_CONV"
-       val {Rator=f,Rand=x} = dest_comb fx handle _ => failwith "ARGS_CONV"
-   in  (let val th = AP_TERM f (conv x)
-        in  (MK_COMB (th,conv y) handle UNCHANGED => (AP_THM th y))
-        end)
-       handle UNCHANGED => (AP_TERM fx (conv y))
-   end;
+ let val {Rator=fx,Rand=y} = with_exn dest_comb tm (ERR "ARGS_CONV" "")
+     val {Rator=f,Rand=x} = with_exn dest_comb fx (ERR "ARGS_CONV" "")
+ in  (let val th = AP_TERM f (conv x)
+      in  (MK_COMB (th,conv y) handle QConv.UNCHANGED => (AP_THM th y))
+      end)
+     handle QConv.UNCHANGED => (AP_TERM fx (conv y))
+ end;
 
 end

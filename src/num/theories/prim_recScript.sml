@@ -339,7 +339,7 @@ val SIMP_REC_REL_UNIQUE_RESULT = store_thm(
   ASSUME_TAC (Q.SPEC `n` LESS_SUC_REFL) THEN
   IMP_RES_TAC SIMP_REC_REL_UNIQUE);
 
-val SIMP_REC = Rsyntax.new_specification{
+val SIMP_REC = new_specification{
   name = "SIMP_REC",
   sat_thm = ((CONJUNCT1 o
               SIMP_RULE bool_ss [EXISTS_UNIQUE_THM] o

@@ -309,7 +309,7 @@ val bit_initiality = store_thm(
         (!n. f (NUMERAL_BIT2 n) = b2f n (f n))`,
   REPEAT STRIP_TAC THEN
   ASSUME_TAC
-    (MP (Rsyntax.INST_TYPE [Type.beta |-> Type.alpha]
+    (MP (INST_TYPE [Type.beta |-> Type.alpha]
            (ISPEC (--`$<`--) relationTheory.WF_RECURSION_THM))
         WF_LESS) THEN
   POP_ASSUM (STRIP_ASSUME_TAC o CONJUNCT1 o

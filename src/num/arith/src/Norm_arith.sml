@@ -17,36 +17,21 @@
 
 structure Norm_arith :> Norm_arith =
 struct
-  open Arbint
+  open Arbint Arith_cons Term_coeffs Qconv Theorems Thm_convs 
+       reduceLib HolKernel boolLib Rsyntax;
+
+
   val << = String.<
-  infix <<
-
-
-type conv = Abbrev.conv;
+  infix << ## THENC;
+  infixr -->
 
 val num_CONV = Num_conv.num_CONV;
 
 
 fun failwith function = raise
- Feedback.HOL_ERR{origin_structure = "Norm_arith",
+            HOL_ERR{origin_structure = "Norm_arith",
                     origin_function = function,
                             message = ""};
-
-open Arith_cons;
-open Term_coeffs;
-open Qconv;
-open Theorems;
-open Thm_convs;
-open reduceLib;
-open HolKernel Drule ;
-open boolSyntax
-
-infix ##;
-infix THENC;
-
-type thm = Thm.thm
-type conv = Abbrev.conv
-
 
 (*===========================================================================*)
 (* Conversions for normalizing arithmetic                                    *)
@@ -223,9 +208,8 @@ val multiplication_theorems = fn () => !multiplication_theorems;
 (* where const' is the numeric constant one greater than const.              *)
 (*---------------------------------------------------------------------------*)
 
-val num_ty = Type.mk_type{Tyop = "num", Args = []}
-val plus_tm = Term.mk_const{Name = "+",
-                            Ty = Type.-->(num_ty, Type.-->(num_ty, num_ty))}
+val num_ty = Arith_cons.num_ty
+val plus_tm = mk_const{Name = "+",Ty = num_ty --> num_ty --> num_ty}
 fun SUM_OF_PRODUCTS_SUC_CONV tm =
  let val add1 = term_of_int o (curry (op +) one) o int_of_term
  in

@@ -18,10 +18,11 @@
 
 structure Arith_cons :> Arith_cons =
 struct
-  open Arbint
-  val << = String.<
 
+open HolKernel boolLib Rsyntax Arbint Abbrev;
+infixr -->;
 
+val << = String.<
 
 local open arithmeticTheory in end;
 
@@ -29,29 +30,25 @@ fun failwith function = raise
  Feedback.HOL_ERR{origin_structure = "Arith_cons",
                    origin_function = function,
                            message = ""};
-open HolKernel;
-
-type term = Term.term
 
 (*===========================================================================*)
 (* Constructors, destructors and discriminators for +,-,*                    *)
 (*===========================================================================*)
+
+val num_ty = numSyntax.num_ty
+val num2num = num_ty --> num_ty;
+val num_op_ty = num_ty --> num_ty --> num_ty;
+val num_rel_ty = num_ty --> num_ty --> bool
 
 (*---------------------------------------------------------------------------*)
 (* mk_plus, mk_minus, mk_mult                                                *)
 (*---------------------------------------------------------------------------*)
 
 fun mk_arith_op tok ftok =
- let val num_ty = mk_type{Tyop = "num",Args = []}
-     val fun_ty = mk_type{Tyop = "fun",
-                          Args = [num_ty,mk_type{Tyop = "fun",
-                                                 Args = [num_ty,num_ty]}]}
- in  fn (t1,t2) => (mk_comb{Rator = mk_comb{Rator = mk_const{Name = tok,
-                                                             Ty = fun_ty},
-                                            Rand = t1},
-                            Rand = t2}
-                    handle _ => failwith ftok)
- end;
+ fn (t1,t2) => 
+    (mk_comb{Rator=
+        mk_comb{Rator=mk_thy_const{Name=tok, Thy="arithmetic", Ty=num_op_ty},
+                Rand = t1}, Rand = t2} handle _ => failwith ftok);
 
 val mk_plus  = mk_arith_op "+" "mk_plus"
 and mk_minus = mk_arith_op "-" "mk_minus"
@@ -62,11 +59,7 @@ and mk_mult  = mk_arith_op "*" "mk_mult";
 (*---------------------------------------------------------------------------*)
 
 fun dest_arith_op tok ftok =
- let val num_ty = mk_type{Tyop = "num",Args = []}
-     val fun_ty = mk_type{Tyop = "fun",
-                          Args = [num_ty,mk_type{Tyop = "fun",
-                                                 Args = [num_ty,num_ty]}]}
-     val check = Lib.assert (fn c => dest_const c = {Name = tok,Ty = fun_ty})
+ let val check = Lib.assert (fn c => dest_const c = {Name=tok,Ty=num_op_ty})
  in  fn tm => ((let val {Rator,Rand = c2} = dest_comb tm
                     val {Rator,Rand = c1} = dest_comb Rator
                     val _ = check Rator
@@ -88,12 +81,7 @@ and is_minus = can dest_minus
 and is_mult  = can dest_mult;
 
 val is_arith_op =
- let val num_ty = mk_type{Tyop = "num",Args = []}
-     val fun_ty = mk_type{Tyop = "fun",
-                          Args = [num_ty,mk_type{Tyop = "fun",
-                                                 Args = [num_ty,num_ty]}]}
- in  fn tm => (type_of (rator (rator tm)) = fun_ty handle _ => false)
- end;
+ fn tm => (type_of (rator (rator tm)) = num_op_ty handle _ => false)
 
 (*===========================================================================*)
 (* Constructors, destructors and discriminators for <,<=,>,>=                *)
@@ -103,18 +91,12 @@ val is_arith_op =
 (* mk_less, mk_leq, mk_great, mk_geq                                         *)
 (*---------------------------------------------------------------------------*)
 
+
 fun mk_num_reln tok ftok =
- let val bool_ty = mk_type{Tyop = "bool",Args = []}
-     val num_ty = mk_type{Tyop = "num",Args = []}
-     val fun_ty = mk_type{Tyop = "fun",
-                          Args = [num_ty,mk_type{Tyop = "fun",
-                                                 Args = [num_ty,bool_ty]}]}
- in  fn (t1,t2) => (mk_comb{Rator = mk_comb{Rator = mk_const{Name = tok,
-                                                             Ty = fun_ty},
-                                            Rand = t1},
-                            Rand = t2}
-                    handle _ => failwith ftok)
- end;
+ fn (t1,t2) => 
+  (mk_comb
+     {Rator=mk_comb {Rator=mk_const{Name=tok, Ty = num_rel_ty}, Rand=t1},
+      Rand = t2} handle _ => failwith ftok)
 
 val mk_less  = mk_num_reln "<" "mk_less"
 and mk_leq   = mk_num_reln "<=" "mk_leq"
@@ -126,12 +108,7 @@ and mk_geq   = mk_num_reln ">=" "mk_geq";
 (*---------------------------------------------------------------------------*)
 
 fun dest_num_reln tok ftok =
- let val bool_ty = mk_type{Tyop = "bool",Args = []}
-     val num_ty = mk_type{Tyop = "num",Args = []}
-     val fun_ty = mk_type{Tyop = "fun",
-                          Args = [num_ty,mk_type{Tyop = "fun",
-                                                 Args = [num_ty,bool_ty]}]}
-     val check = Lib.assert (fn c => dest_const c = {Name = tok,Ty = fun_ty})
+ let val check = Lib.assert (fn c => dest_const c = {Name=tok,Ty=num_rel_ty})
  in  fn tm => ((let val {Rator,Rand = c2} = dest_comb tm
                     val {Rator,Rand = c1} = dest_comb Rator
                     val _ = check Rator
@@ -155,29 +132,18 @@ and is_great = can dest_great
 and is_geq   = can dest_geq;
 
 val is_num_reln =
- let val bool_ty = mk_type{Tyop = "bool",Args = []}
-     val num_ty = mk_type{Tyop = "num",Args = []}
-     val fun_ty = mk_type{Tyop = "fun",
-                          Args = [num_ty,mk_type{Tyop = "fun",
-                                                 Args = [num_ty,bool_ty]}]}
- in  fn tm => (type_of (rator (rator tm)) = fun_ty handle _ => false)
- end;
+ fn tm => (type_of (rator (rator tm)) = num_rel_ty handle _ => false)
 
 (*===========================================================================*)
 (* Constructor, destructor and discriminator for SUC                         *)
 (*===========================================================================*)
 
 val mk_suc =
- let val num_ty = mk_type{Tyop = "num",Args = []}
-     val fun_ty = mk_type{Tyop = "fun",Args = [num_ty,num_ty]}
- in  fn t => (mk_comb{Rator = mk_const{Name = "SUC",Ty = fun_ty},Rand = t}
+ fn t => (mk_comb{Rator = mk_const{Name = "SUC",Ty = num2num}, Rand = t}
               handle _ => failwith "mk_suc")
- end;
 
 val dest_suc =
- let val num_ty = mk_type{Tyop = "num",Args = []}
-     val fun_ty = mk_type{Tyop = "fun",Args = [num_ty,num_ty]}
-     val check = Lib.assert (fn c => dest_const c = {Name = "SUC",Ty = fun_ty})
+ let val check = Lib.assert (fn c => dest_const c = {Name="SUC",Ty=num2num})
  in  fn tm => ((let val {Rator,Rand = c} = dest_comb tm
                     val _ = check Rator
                 in  c
@@ -192,16 +158,11 @@ val is_suc = can dest_suc;
 (*===========================================================================*)
 
 val mk_pre =
- let val num_ty = mk_type{Tyop = "num",Args = []}
-     val fun_ty = mk_type{Tyop = "fun",Args = [num_ty,num_ty]}
- in  fn t => (mk_comb{Rator = mk_const{Name = "PRE",Ty = fun_ty},Rand = t}
+ fn t => (mk_comb{Rator=mk_const{Name="PRE",Ty = num2num},Rand = t}
               handle _ => failwith "mk_pre")
- end;
 
 val dest_pre =
- let val num_ty = mk_type{Tyop = "num",Args = []}
-     val fun_ty = mk_type{Tyop = "fun",Args = [num_ty,num_ty]}
-     val check = assert (fn c => dest_const c = {Name = "PRE",Ty = fun_ty})
+ let val check = assert (fn c => dest_const c = {Name = "PRE",Ty = num2num})
  in  fn tm => ((let val {Rator,Rand = c} = dest_comb tm
                     val _ = check Rator
                 in  c
@@ -232,9 +193,7 @@ val term_of_int = numSyntax.mk_numeral o toNat
 (*===========================================================================*)
 
 val mk_num_var =
- let val num_ty = mk_type{Tyop = "num",Args = []}
- in  fn s => (mk_var{Name = s,Ty = num_ty} handle _ => failwith "mk_num_var")
- end;
+ fn s => (mk_var{Name=s,Ty = num_ty} handle _ => failwith "mk_num_var")
 
 (*===========================================================================*)
 (* Functions to extract the arguments from an application of a binary op.    *)

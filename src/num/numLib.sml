@@ -24,16 +24,10 @@ local open numeralTheory in end;
 open HolKernel boolLib Rsyntax Num_conv Parse;
 infix THEN THENC THENL;
 
-type conv = Abbrev.conv
-type tactic = Abbrev.tactic
+val ERR = mk_HOL_ERR "numLib";
 
-fun ERR function message =
-    HOL_ERR{origin_structure = "numLib",
-            origin_function = function,
-            message = message};
-
-infix 5 |->
-infix ##;
+infix |-> ##;
+infixr -->;
 
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
 fun -- q x = Term q
@@ -73,7 +67,7 @@ fun EXISTS_LEAST_CONV tm =
    in
    IMP_ANTISYM_RULE imp1 (DISCH eltm thm5)
    end
-   handle _ => raise ERR "EXISTS_LEAST_CONV" ""
+   handle HOL_ERR _ => raise ERR "EXISTS_LEAST_CONV" ""
 end;
 
 (*---------------------------------------------------------------------------*)
@@ -124,8 +118,8 @@ fun SUC_ELIM_CONV tm =
    let val (v,bod) = dest_forall tm
        val _ = assert (fn x => type_of x = N) v
        val (sn,n) = (genvar N, genvar N)
-       val suck_suc = Rsyntax.subst [mk_SUC v |-> sn] bod
-       val suck_n = Rsyntax.subst [v |-> n] suck_suc
+       val suck_suc = subst [mk_SUC v |-> sn] bod
+       val suck_n = subst [v |-> n] suck_suc
        val _ = assert (fn x => x <> tm) suck_n
        val th1 = ISPEC (list_mk_abs ([sn,n],suck_n))
                      arithmeticTheory.SUC_ELIM_THM
@@ -147,5 +141,24 @@ val REDUCE_TAC  = reduceLib.REDUCE_TAC
 val ARITH_CONV  = arithLib.ARITH_CONV
 val ARITH_PROVE = arithLib.ARITH_PROVE
 val ARITH_TAC   = CONV_TAC ARITH_CONV;
+
+(* Numeral handling *)
+local fun mk_arith_fun s = mk_thy_const{Name=s, Thy="arithmetic", Ty=N-->N}
+in
+val mk_numeral = 
+ Numeral.gen_mk_numeral
+    {mk_comb  = Term.mk_comb,
+     ZERO     = mk_thy_const{Name="0", Thy="num", Ty=N},
+     ALT_ZERO = mk_thy_const{Name="ALT_ZERO", Thy="arithmetic",Ty=N},
+     NUMERAL  = mk_arith_fun "NUMERAL",
+     BIT1     = mk_arith_fun "NUMERAL_BIT1",
+     BIT2     = mk_arith_fun "NUMERAL_BIT1"}
+end;
+
+
+(* takes a numeral term and turns it into a string *)
+val n2i = Arbnum.toString o Numeral.dest_numeral
+
+(* Should also include con-/de-structors for all the standard operations. *)
 
 end; (* numLib *)

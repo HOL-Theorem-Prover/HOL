@@ -21,18 +21,19 @@ struct
   val << = String.<
 
 
-open HolKernel boolTheory Drule ;
+open HolKernel boolLib
 
 (*---------------------------------------------------------------------------
  * The following ensures that the theory of arithmetic is loaded. In the
  * future, it might be better to explicitly have an "Arithmetic" structure
  * and depend on that.
  *---------------------------------------------------------------------------*)
+
 local open arithmeticTheory in end;
 
-val num_ty = Type.mk_type{Tyop = "num", Args = []}
-val m_tm = Term.mk_var{Name = "m", Ty = num_ty}
-val n_tm = Term.mk_var{Name = "n", Ty = num_ty}
+val num_ty = Arith_cons.num_ty;
+val m_tm = mk_var("m", num_ty)
+val n_tm = mk_var("n", num_ty)
 
 
 (*===========================================================================*)
