@@ -21,18 +21,18 @@ sig
  val parse : hol_type quotation -> AST list
 
 (*---------------------------------------------------------------------------
-  grammar we're parsing is:
+  Grammar we're parsing is:
 
-    G ::=              id "=" <form>
-    form ::=           <phrase> ( "|" <phrase> ) *  |  <record_defn>
-    phrase ::=         id  | id "of" <ptype> ( "=>" <ptype> ) *
-    record_defn ::=    "<|"  <idtype_pairs> "|>"
-    idtype_pairs ::=   id ":" <type> | id : <type> ";" <idtype_pairs>
-    ptype ::=          <type> | "(" <type> ")"
+      G            ::=  id "=" <form>
+      form         ::=  <phrase> ( "|" <phrase> ) *  |  <record_defn>
+      phrase       ::=  id  | id "of" <ptype> ( "=>" <ptype> ) *
+      record_defn  ::=  "<|"  <idtype_pairs> "|>"
+      idtype_pairs ::=  id ":" <type> | id : <type> ";" <idtype_pairs>
+      ptype        ::=  <type> | "(" <type> ")"
 
   It had better be the case that => is not a type infix.  This is true of
   the standard HOL distribution.  In the event that => is an infix, this
   code will still work as long as the input puts the types in parentheses.
  ---------------------------------------------------------------------------*)
 
-end;
+end

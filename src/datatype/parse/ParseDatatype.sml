@@ -22,7 +22,8 @@ struct
 val ERR = Feedback.mk_HOL_ERR "ParseDatatype";
 val ERRloc = Feedback.mk_HOL_ERRloc "ParseDatatype";
 
-    open Abbrev
+open Abbrev
+
 datatype pretype
    = dVartype of string
    | dTyop of {Tyop : string, Thy : string option, Args : pretype list}
@@ -212,14 +213,12 @@ parse `ty = C1 of 'a
           | C4 of ty => 'c => ty => 'a => 'b
           | C5 of ty => ty`;
 parse `bintree = LEAF of 'a | TREE of bintree => bintree`;
-parse `typ = C of one
-                  => (one#one)
-                  => (one -> one -> 'a list)
-                  => ('a,one#one,'a list) ty`;
-parse `Typ = D of one
-                  # (one#one)
-                  # (one -> one -> 'a list)
-                  # ('a, one#one, 'a list) ty`;
+parse `typ = C of one => (one#one)
+                      => (one -> one -> 'a list)
+                      => ('a,one#one,'a list) ty`;
+parse `Typ = D of one # (one#one)
+                      # (one -> one -> 'a list)
+                      # ('a, one#one, 'a list) ty`;
 
 parse `atexp = var_exp of var
            | let_exp of dec => exp ;
@@ -258,4 +257,4 @@ parse `ascii = ASCII of bool=>bool=>bool=>bool=>bool=>bool=>bool=>bool`;
 *)
 
 
-end;
+end

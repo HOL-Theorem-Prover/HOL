@@ -45,8 +45,7 @@ local open ind_typeTheory in end;
 
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
 
-infix ## |-> THEN THENC THENL;
-infixr -->;
+infix ## |-> THEN THENC THENL;   infixr -->;
 
 type hol_type     = Type.hol_type
 type thm          = Thm.thm
@@ -71,6 +70,7 @@ type record_rw_names = string list
  ---------------------------------------------------------------------------*)
 
 val ERR = mk_HOL_ERR "Datatype";
+
 val num = numSyntax.num
 
 val defn_const =
@@ -140,14 +140,7 @@ fun tysize (theta,omega,gamma) clause ty =
                                 map (tysize (theta,omega,gamma) clause) Args)
                     end
                 | NONE => Kzero ty
-             end
-
-fun type_size db ty =
-  let fun theta ty = if is_vartype ty then SOME (Kzero ty) else NONE
-      fun omega ty = NONE
-  in
-    tysize (theta,omega,tysize_env db) ty
-  end
+           end
 end;
 
 fun dupls [] (C,D) = (rev C, rev D)
@@ -163,7 +156,7 @@ fun crunch [] = []
 local open arithmeticTheory
       val zero_rws = [Rewrite.ONCE_REWRITE_RULE [ADD_SYM] ADD_0, ADD_0]
       val Zero  = numSyntax.zero_tm
-      val One   = numSyntax.mk_numeral (Arbnum.fromInt 1)
+      val One   = numSyntax.term_of_int 1
 in
 fun define_size ax db =
  let val dtys = Prim_rec.doms_of_tyaxiom ax  (* primary types in axiom *)
@@ -353,13 +346,12 @@ val new_asts_datatype  = define_type o to_tyspecs;
 fun new_datatype q     = new_asts_datatype (ParseDatatype.parse q);
 
 
-(* ----------------------------------------------------------------------
-    Determine if a parsed type spec is calling for an enumerated type
-   ---------------------------------------------------------------------- *)
-
-(* Returns false if there is more than one type called for, because an
-   earlier sorting process will ensure that enumerated types are
-   presented singly. *)
+(*---------------------------------------------------------------------------*)
+(* Determine if a parsed type spec is calling for an enumerated type.        *)
+(* Returns false if there is more than one type called for, because an       *)
+(* earlier sorting process will ensure that enumerated types are presented   *)
+(* singly.                                                                   *)
+(*---------------------------------------------------------------------------*)
 
 fun is_enum_type_spec astl =
     case astl of
@@ -368,22 +360,20 @@ fun is_enum_type_spec astl =
     | _ => false
 
 
-(* ----------------------------------------------------------------------
-    Build a tyinfo list for an enumerated type.
-   ---------------------------------------------------------------------- *)
+(*---------------------------------------------------------------------------*)
+(*  Build a tyinfo list for an enumerated type.                              *)
+(*---------------------------------------------------------------------------*)
 
-fun build_enum_tyinfo (tyname, ast) = let
-  open EnumType
-in
-  case ast of
-    Constructors clist => let
-      val constructors = map #1 clist
-    in
-      case duplicate_names constructors of
-        NONE => (enum_type_to_tyinfo (tyname, constructors))
-      | SOME s => raise ERR "build_enum" ("Duplicate constructor name: "^s)
-    end
-  | otherwise => raise ERR "build_enum_tyinfo" "Should never happen"
+fun build_enum_tyinfo (tyname, ast) = 
+ let open EnumType
+ in case ast 
+    of Constructors clist => 
+       let val constructors = map #1 clist
+       in case duplicate_names constructors 
+          of NONE => (enum_type_to_tyinfo (tyname, constructors))
+           | SOME s => raise ERR "build_enum"("Duplicate constructor name: "^s)
+       end
+    | otherwise => raise ERR "build_enum_tyinfo" "Should never happen"
 end
 
 fun build_enum_tyinfos astl = let
@@ -397,39 +387,37 @@ end
     Returns a list of tyinfo thingies
  ---------------------------------------------------------------------------*)
 
-local
+local 
   fun insert_size {def, const_tyopl} tyinfol =
-    (case tyinfol of [] => raise ERR "build_tyinfos" "empty tyinfo list"
+   case tyinfol 
+    of [] => raise ERR "build_tyinfos" "empty tyinfo list"
      | tyinfo::rst =>
-       let
-         val first_tyname = TypeBasePure.ty_name_of tyinfo
-         fun insert_size info size_eqs =
-           let
-             val tyname = TypeBasePure.ty_name_of info
-           in
-             case assoc2 tyname const_tyopl of SOME(c,tyop)
-               => TypeBasePure.put_size(c,size_eqs) info
-             | NONE => (HOL_MESG
-                        ("Can't find size constant for"^tyname);
-                        raise ERR "build_tyinfos" "")
-           end
+       let val first_tyname = TypeBasePure.ty_name_of tyinfo
+           fun insert_size info size_eqs =
+            let val tyname = TypeBasePure.ty_name_of info
+            in case assoc2 tyname const_tyopl 
+                of SOME(c,tyop) => TypeBasePure.put_size(c,size_eqs) info
+                 | NONE => (HOL_MESG
+                              ("Can't find size constant for"^tyname)
+                             ; raise ERR "build_tyinfos" "")
+            end
        in
-         insert_size tyinfo (TypeBasePure.ORIG def) ::
-         map (C insert_size (TypeBasePure.COPY (first_tyname,def))) rst
+         insert_size tyinfo (TypeBasePure.ORIG def) 
+         :: map (C insert_size (TypeBasePure.COPY (first_tyname,def))) rst
        end
-       handle HOL_ERR _ => tyinfol);
+       handle HOL_ERR _ => tyinfol
 in
-  fun build_tyinfos db {induction,recursion} =
-    let
-      val case_defs = Prim_rec.define_case_constant recursion
-      val tyinfol = TypeBasePure.gen_tyinfo
-        {ax=recursion, ind=induction, case_defs=case_defs}
-    in
-      case define_size recursion db
-        of NONE => (HOL_MESG "Couldn't define size function"; tyinfol)
-      | SOME s => insert_size s tyinfol
-    end;
-end
+
+fun build_tyinfos db {induction,recursion} =
+ let val case_defs = Prim_rec.define_case_constant recursion
+     val tyinfol = TypeBasePure.gen_tyinfo
+                    {ax=recursion, ind=induction, case_defs=case_defs}
+ in
+   case define_size recursion db
+    of NONE => (HOL_MESG "Couldn't define size function"; tyinfol)
+     | SOME s => insert_size s tyinfol
+    end
+end;
 
 (* ----------------------------------------------------------------------
     Topological sort of datatype declarations so that the system can
@@ -1033,18 +1021,19 @@ in
         map add_record_facts
             (zip (build_tyinfos db (new_asts_datatype astl))
                  (map field_names_of astl)))
-end
+end (* let *)
 end (* local *)
 
-fun find_vartypes (pty, acc) = let
-  open ParseDatatype
-in
+
+fun find_vartypes (pty, acc) = 
+ let open ParseDatatype
+ in
   case pty of
     dVartype s => HOLset.add(acc, s)
   | dAQ ty => List.foldl (fn (ty, acc) => HOLset.add(acc, dest_vartype ty))
                          acc (Type.type_vars ty)
   | dTyop {Args, ...} => List.foldl find_vartypes acc Args
-end
+ end
 
 fun dtForm_vartypes (dtf, acc) =
     case dtf of
@@ -1102,7 +1091,8 @@ fun primHol_datatype db q =
         4. ty_induction     (* induction thm for datatype *)
         5. ty_nchotomy      (* case completeness *)
         6. ty_size_def      (* size of type defn *)
-        7. ty_to_bool_def   (* boolification of type defn *)
+        7. ty_to_bool_def   (* encoder for the type *)
+        7. lift             (* lifter (ML -> HOL) for the type  *)
         8. one_one          (* one-one-ness of the constructors *)
         9. distinct         (* distinctness of the constructors *)
 
@@ -1128,18 +1118,18 @@ fun adjoin [] = raise ERR "Hol_datatype" "no tyinfos"
                in S ("         size="^line); NL();
                   S ("                   "^s^"),")
                end
-          fun do_boolify NONE = S "         boolify = NONE,"
-            | do_boolify (SOME (c,s)) =
+          fun do_encode NONE = S "         encode = NONE,"
+            | do_encode (SOME (c,s)) =
                let val strc = String.concat
                      ["(", term_to_string c, ") ",type_to_string (type_of c)]
                    val line = String.concat ["SOME(Parse.Term`", strc, "`,"]
-               in S ("         boolify="^line); NL();
+               in S ("         encode="^line); NL();
                   S ("                   "^s^"),")
                end
           fun do_extras extra_string =
               (S ("      val tyinfo0 = " ^ extra_string ^ "tyinfo0"); NL())
           fun do_string_etc ({ax,case_def,case_cong,induction,nchotomy,
-            one_one,distinct,boolify,size}, extra_simpls_string) =
+            one_one,distinct,encode,lift,size}, extra_simpls_string) =
             (S "    let";                                               NL();
              S "      open TypeBasePure";                               NL();
              S "      val tyinfo0 = mk_tyinfo";                         NL();
@@ -1149,7 +1139,8 @@ fun adjoin [] = raise ERR "Hol_datatype" "no tyinfos"
              S("         induction="^induction^",");                    NL();
              S("         nchotomy="^nchotomy^",");                      NL();
              do_size size;                                              NL();
-             do_boolify boolify;                                        NL();
+             do_encode encode;                                          NL();
+             S("         lift=NONE,");                                  NL();
              S("         one_one="^one_one^",");                        NL();
              S("         distinct="^distinct^"}");                      NL();
              do_extras extra_simpls_string;
@@ -1211,15 +1202,16 @@ fun write_tyinfo tyinfo =
          | SOME (tm, COPY(s,def))
             => SOME (tm, "COPY ("^Lib.quote s^","^s^"_size_def)")
        end
-     val boolify_info =
-       let val sd_name = name"_to_bool_def"
+     val encode_info =
+       let val sd_name = "encode_"^name"_def"
        in
-       case boolify_of0 tyinfo
+       case encode_of0 tyinfo
         of NONE => NONE
          | SOME (tm, ORIG def) => SOME (tm, "ORIG "^sd_name)
          | SOME (tm, COPY(s,def))
-            => SOME (tm, "COPY ("^Lib.quote s^","^s^"_to_bool_def)")
+            => SOME (tm, "COPY ("^Lib.quote s^",encode_"^s^"_def)")
        end
+     val lift_info = NONE
  in
    {ax        = axiom_name,
     induction = induction_name,
@@ -1227,7 +1219,8 @@ fun write_tyinfo tyinfo =
     case_cong = case_cong_name,
     nchotomy  = nchotomy_name,
     size      = size_info,
-    boolify   = boolify_info,
+    encode    = encode_info,
+    lift      = lift_info,
     one_one   = one_one_name,
     distinct  = distinct_name}
  end;
@@ -1235,26 +1228,25 @@ fun write_tyinfo tyinfo =
 val write_tyinfos = adjoin o map (write_tyinfo ## I);
 
 fun persistent_tyinfo tyinfos_etc =
-  let
-    val (tyinfos, etc) = unzip tyinfos_etc
-    val tyinfos = TypeBase.write tyinfos
-    val () = app computeLib.write_datatype_info tyinfos
+  let val (tyinfos, etc) = unzip tyinfos_etc
+      val tyinfos = TypeBase.write tyinfos
+      val () = app computeLib.write_datatype_info tyinfos
   in
     write_tyinfos (zip tyinfos etc)
   end;
 
-fun Hol_datatype q = let
+fun Hol_datatype q = 
+ let
   val tyinfos_etc = primHol_datatype (TypeBase.theTypeBase()) q
   val tynames = map (TypeBasePure.ty_name_of o #1) tyinfos_etc
   val tynames = filter (not o is_substring bigrec_subdivider_string) tynames
   val tynames = map Lib.quote tynames
   val message = "Defined "^(if length tynames > 1 then "types" else "type")^
                 ": "^String.concat (Lib.commafy tynames)
-in
+ in
   persistent_tyinfo tyinfos_etc;
   HOL_MESG message
-end handle ? as HOL_ERR _ => Raise (wrap_exn "Datatype" "Hol_datatype" ?);
+ end handle ? as HOL_ERR _ => Raise (wrap_exn "Datatype" "Hol_datatype" ?);
 
+end
 
-
-end (* struct *)

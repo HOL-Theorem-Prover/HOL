@@ -338,15 +338,11 @@ fun enum_type_to_tyinfo (ty, constrs) = let
   val (result as {constrs,TYPE,...}) = define_enum_type(ty,constrs,abs,rep)
   val abs_thm = save_thm(abs ^ "_thm", LIST_CONJ (map SYM (#defs result)))
   val rep_name = rep ^ "_thm"
-  val rep_thm = let
-    val nvs      = num_values (#REP_ABS result) (#defs result)
-  in
-    save_thm(rep_name, LIST_CONJ nvs)
-  end
+  val rep_thm = save_thm(rep_name, 
+                   LIST_CONJ (num_values (#REP_ABS result) (#defs result)))
   val eq_elim_name = ty^"_EQ_"^ty
   val eq_elim_th = save_thm(eq_elim_name, GSYM (#REP_11 result))
   val simpls = [rep_thm, eq_elim_th]
-
   val nchotomy = prove_cases_thm (#ABS_ONTO result) (List.rev (#defs result))
   val induction = prove_induction_thm nchotomy
   val size = mk_size_definition TYPE
@@ -365,7 +361,8 @@ fun enum_type_to_tyinfo (ty, constrs) = let
                   case_cong = case_cong,
                   nchotomy = nchotomy,
                   size = size,
-                  boolify = NONE,
+                  encode = NONE,
+                  lift = NONE,
                   one_one = NONE,
                   distinct = distinct }
 in
