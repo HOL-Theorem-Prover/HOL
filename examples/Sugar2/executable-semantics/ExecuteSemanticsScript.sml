@@ -340,6 +340,10 @@ val EVAL_US_SEM = store_thm
        if S_CLOCK_FREE r then amatch (sere2regexp r) l else US_SEM l r``,
    RW_TAC std_ss [GSYM sere2regexp, amatch]);
 
+
+(******************************************************************************
+* w |= {r1} |-> {r2}!  <==>  w |= {r1}(not({r2}(F)))
+******************************************************************************)
 val EVAL_UF_SEM_F_SUFFIX_IMP = store_thm
   ("EVAL_UF_SEM_F_SUFFIX_IMP",
    ``!w r f.
@@ -350,8 +354,8 @@ val EVAL_UF_SEM_F_SUFFIX_IMP = store_thm
    ++ RW_TAC arith_ss [RESTN_is_BUTFIRSTN, SEL_FINITE_0_is_FIRSTN]
    ++ METIS_TAC []);
 
-val EVAL_UF_SEM_F_STRONG_IMP = store_thm
-  ("EVAL_UF_SEM_F_STRONG_IMP",
+val FINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP = store_thm
+  ("FINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP",
    ``!w r1 r2.
        UF_SEM (FINITE w) (F_STRONG_IMP (r1,r2)) =
        UF_SEM (FINITE w)
@@ -377,8 +381,8 @@ val EVAL_UF_SEM_F_STRONG_IMP = store_thm
    ++ RW_TAC arith_ss [xnum_to_def, RESTN_FINITE, LENGTH_def]
    ++ RW_TAC arith_ss [FinitePathTheory.LENGTH_RESTN]);
 
-val INFINITE_UF_SEM_F_STRONG_IMP = store_thm
-  ("INFINITE_UF_SEM_F_STRONG_IMP",
+val INFINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP = store_thm
+  ("INFINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP",
    ``!p r1 r2.
        UF_SEM (INFINITE p) (F_STRONG_IMP (r1,r2)) =
        UF_SEM (INFINITE p)
@@ -393,13 +397,52 @@ val INFINITE_UF_SEM_F_STRONG_IMP = store_thm
     THENL[Q.EXISTS_TAC `k-j`, Q.EXISTS_TAC `j+j'`]
     THEN RW_TAC arith_ss []);
 
-val UF_SEM_F_STRONG_IMP = store_thm
-  ("UF_SEM_F_STRONG_IMP",
+val UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP = store_thm
+  ("UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP",
    ``!w r1 r2.
        UF_SEM w (F_STRONG_IMP (r1,r2)) =
        UF_SEM w
        (F_SUFFIX_IMP (r1, F_NOT (F_SUFFIX_IMP (r2, F_BOOL B_FALSE))))``,
    Cases_on `w`
-    THEN PROVE_TAC[EVAL_UF_SEM_F_STRONG_IMP, INFINITE_UF_SEM_F_STRONG_IMP]);
+    THEN PROVE_TAC
+          [FINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP,
+           INFINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP]);
+
+(******************************************************************************
+* always{r} = {T[*]} |-> {r}!
+* (N.B. in the LRM weak implication is used)
+******************************************************************************)
+val F_ALWAYS_def =
+ pureDefine `F_ALWAYS r = F_STRONG_IMP(S_REPEAT S_TRUE, r)`;
+
+val EVAL_UF_SEM_F_ALWAYS =
+ store_thm
+  ("EVAL_UF_SEM_F_ALWAYS",
+   ``!w r.
+      UF_SEM w (F_ALWAYS r) =
+       UF_SEM w
+         (F_SUFFIX_IMP
+            (S_REPEAT S_TRUE,F_NOT (F_SUFFIX_IMP (r,F_BOOL B_FALSE))))``,
+   RW_TAC std_ss [F_ALWAYS_def,UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP]);
+
+(******************************************************************************
+* never{r} = {T[*];r} |-> {F}!
+* (N.B. in the LRM weak implication is used)
+******************************************************************************)
+val F_NEVER_def =
+ pureDefine `F_NEVER r = F_STRONG_IMP(S_CAT(S_REPEAT S_TRUE, r), S_FALSE)`;
+
+val EVAL_UF_SEM_F_NEVER =
+ store_thm
+  ("EVAL_UF_SEM_F_NEVER",
+   ``!w r.
+      UF_SEM w (F_NEVER r) =
+       UF_SEM w
+         (F_SUFFIX_IMP
+            (S_CAT (S_REPEAT S_TRUE,r),
+             F_NOT (F_SUFFIX_IMP (S_FALSE,F_BOOL B_FALSE))))``,
+   RW_TAC std_ss [F_NEVER_def,UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP]);
 
 val _ = export_theory();
+
+
