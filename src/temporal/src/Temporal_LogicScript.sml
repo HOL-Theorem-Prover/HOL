@@ -1,10 +1,10 @@
 (* 
-  app load ["tautLib", "hol88Lib", "numLib", "pairTheory", "schneiderUtils"];
+  app load ["tautLib", "numLib", "pairLib", "schneiderUtils"];
 *)
 
-open HolKernel Parse basicHol90Lib;
-open numLib numTheory prim_recTheory arithmeticTheory pairTheory;
-open Rsyntax schneiderUtils;
+open HolKernel Parse boolLib numLib pairLib
+     numTheory prim_recTheory arithmeticTheory pairTheory
+     Rsyntax schneiderUtils;
 
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
@@ -12,6 +12,7 @@ infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
 val _ = new_theory "Temporal_Logic";
 
+fun TAC_PROOF(g,t) = Tactical.TAC_PROOF(g,t) handle e => Raise e;
 
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 
@@ -365,9 +366,6 @@ val UNTIL_SIGNAL = TAC_PROOF(
 		  IMP_RES_TAC LESS_ADD_1 THEN POP_ASSUM SUBST1_TAC
 		  THEN SUBST1_TAC(EQT_ELIM(ARITH_CONV(--`(d+(p+1))+t0 = (SUC(p+(d+t0)))`--)))]
 	    THEN RES_TAC THEN ASM_REWRITE_TAC[]])
-
-
-
 
 
 
@@ -943,8 +941,6 @@ val WHEN_AS_BEFORE =
 	val thm5 = (CONV_RULE(DEPTH_CONV ETA_CONV)) thm4
      in thm5
     end
-
-
 
 
 val SWHEN_AS_BEFORE = TAC_PROOF(

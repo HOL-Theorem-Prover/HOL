@@ -3,7 +3,7 @@
             "schneiderUtils", "Temporal_LogicTheory"];
 *)
 
-open HolKernel Parse basicHol90Lib Rsyntax 
+open HolKernel Parse boolLib Rsyntax 
      numLib numTheory prim_recTheory arithmeticTheory pairTheory
      schneiderUtils Temporal_LogicTheory;
 

@@ -1,13 +1,8 @@
 structure schneiderUtils :> schneiderUtils =
 struct
 
-    type term = Term.term
-    type thm = Thm.thm
-    type goal = Abbrev.goal
-    type conv = Abbrev.conv
-    type tactic = Abbrev.tactic 
+open HolKernel Parse boolLib;
 
-open HolKernel Parse basicHol90Lib;
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
@@ -73,25 +68,26 @@ fun COPY_ASM_NO i (asm,g) =
 (* ************************************************************	*)
 (* ************************************************************	*)
 fun FORALL_UNFREE_CONV t =
-    let val {Bvar=x,Body=f} = dest_forall t
+    let val (x,f) = dest_forall t
 	val lemma = TAC_PROOF(([],--`!P.(!x:'a.P) = P`--),
 		GEN_TAC THEN EQ_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[])
-	val lemma'=INST_TYPE[{redex=(==`:'a`==),residue=type_of x}] lemma
+	val lemma' = INST_TYPE[alpha |-> type_of x] lemma
      in
 	BETA_RULE(SPEC f lemma')
     end
 
 
 fun FORALL_IN_CONV t = 
-    if is_forall t then 
-	let val {Bvar=x,Body=f} = dest_forall t
-	 in if mem x (hol88Lib.frees f) then 
-		((FORALL_AND_CONV t) handle _=> REFL t)
+  if is_forall t then 
+	let val (x,f) = dest_forall t
+	 in if mem x (free_vars f) then 
+		((FORALL_AND_CONV t) handle HOL_ERR _=> REFL t)
 	    else FORALL_UNFREE_CONV t
-	end
-    else if is_abs t then (ABS_CONV FORALL_IN_CONV) t
-    else if is_comb t then ((RAND_CONV FORALL_IN_CONV) THENC (RATOR_CONV FORALL_IN_CONV)) t
-    else REFL t
+	end else 
+  if is_abs t then (ABS_CONV FORALL_IN_CONV) t else 
+  if is_comb t then ((RAND_CONV FORALL_IN_CONV) THENC 
+                     (RATOR_CONV FORALL_IN_CONV)) t
+  else REFL t
 	
 
 	
@@ -142,7 +138,7 @@ fun LEFT_DISJ_TAC (asm,g) =
     let val lem = TAC_PROOF(([],--`!a b. a\/b = ~b==>a`--),
 		REPEAT GEN_TAC THEN BOOL_CASES_TAC (--`a:bool`--)
 		THEN REWRITE_TAC[])
-	val {disj1=a,disj2=b} = dest_disj g
+	val (a,b) = dest_disj g
      in (SUBST1_TAC(SPECL[a,b]lem) THEN DISCH_TAC) (asm,g)
     end
 
@@ -150,7 +146,7 @@ fun RIGHT_DISJ_TAC (asm,g) =
     let val lem = TAC_PROOF(([],--`!a b. a\/b = ~a==>b`--),
 		REPEAT GEN_TAC THEN BOOL_CASES_TAC (--`a:bool`--)
 		THEN REWRITE_TAC[])
-	val {disj1=a,disj2=b} = dest_disj g
+	val (a,b) = dest_disj g
      in (SUBST1_TAC(SPECL[a,b]lem) THEN DISCH_TAC) (asm,g)
     end
 
@@ -166,16 +162,18 @@ fun LEFT_CONJ_TAC (asm,g) =
     let val lem = TAC_PROOF(([],--`!a b. a/\b = a /\ (a==>b)`--),
 		REPEAT GEN_TAC THEN BOOL_CASES_TAC (--`a:bool`--)
 		THEN REWRITE_TAC[])
-	val {conj1=a,conj2=b} = dest_conj g
-     in (SUBST1_TAC(SPECL[a,b]lem) THEN CONJ_TAC THENL[ALL_TAC,DISCH_TAC]) (asm,g)
+	val (a,b) = dest_conj g
+     in 
+     (SUBST1_TAC(SPECL[a,b]lem) THEN CONJ_TAC THENL[ALL_TAC,DISCH_TAC]) (asm,g)
     end
 
 fun RIGHT_CONJ_TAC (asm,g) =
     let val lem = TAC_PROOF(([],--`!a b. a/\b = b /\ (b==>a)`--),
 		REPEAT GEN_TAC THEN BOOL_CASES_TAC (--`b:bool`--)
 		THEN REWRITE_TAC[])
-	val {conj1=a,conj2=b} = dest_conj g
-     in (SUBST1_TAC(SPECL[a,b]lem) THEN CONJ_TAC THENL[ALL_TAC,DISCH_TAC]) (asm,g)
+	val (a,b) = dest_conj g
+     in 
+    (SUBST1_TAC(SPECL[a,b]lem) THEN CONJ_TAC THENL[ALL_TAC,DISCH_TAC]) (asm,g)
     end
 
 
@@ -190,7 +188,7 @@ fun RIGHT_CONJ_TAC (asm,g) =
 (* ************************************************************	*)
 
 fun LEFT_LEMMA_DISJ_CASES_TAC th = 
-    let val {disj1=a,disj2=b} = dest_disj (concl th)
+    let val (a,b) = dest_disj (concl th)
 	val absorb_lem = TAC_PROOF(([],--`!a b. a\/b = a \/(~a/\b)`--),
 			REPEAT GEN_TAC THEN BOOL_CASES_TAC (--`a:bool`--)
 			THEN REWRITE_TAC[])
@@ -200,7 +198,7 @@ fun LEFT_LEMMA_DISJ_CASES_TAC th =
 
 
 fun RIGHT_LEMMA_DISJ_CASES_TAC th = 
-    let val {disj1=a,disj2=b} = dest_disj (concl th)
+    let val (a,b) = dest_disj (concl th)
 	val absorb_lem = TAC_PROOF(([],--`!a b. a\/b = (a/\~b) \/ b`--),
 			REPEAT GEN_TAC THEN BOOL_CASES_TAC (--`b:bool`--)
 			THEN REWRITE_TAC[])
@@ -219,7 +217,7 @@ fun RIGHT_LEMMA_DISJ_CASES_TAC th =
 (* ************************************************************	*)
 
 fun MP2_TAC th ((asm,g):goal) =
-    let val {ant=s,conseq=t} = dest_imp(concl th)
+    let val (s,t) = dest_imp(concl th)
      in ([(asm,s)],fn [t]=> MP th t)
     end
 
@@ -252,9 +250,9 @@ fun TAC_CONV (tac:tactic) t =
     let val goal = ([],t)
 	val subgoals = fst (tac goal)
 	val terms = map (fn (asm,g) =>if null asm then g
-                                      else mk_imp{ant=(list_mk_conj asm),conseq=g}) subgoals
+           else mk_imp(list_mk_conj asm, g)) subgoals
 	val term = list_mk_conj terms
-	val eq = mk_eq{lhs = t,rhs=term}
+	val eq = mk_eq(t,term)
      in 
 	TAC_PROOF(([],eq),tac THEN REWRITE_TAC[])
     end
@@ -285,7 +283,7 @@ val num_Axiom2 = TAC_PROOF(
        ([],--`!e:'a.!f. ?fn1. (fn1 t0 = e) /\ 
                               (!t. fn1(SUC(t+t0)) = f (fn1 (t+t0)) (t+t0))`--),
        let val lemma = BETA_RULE(EXISTENCE(SPECL[(--`e:'a`--),
-                                       (--`\n:'a.\m.(f n (m+t0)):'a`--)] num_Axiom))
+                            (--`\n:'a.\m.(f n (m+t0)):'a`--)] num_Axiom))
         in
                REPEAT GEN_TAC THEN ASSUME_TAC lemma THEN LEFT_EXISTS_TAC
                THEN EXISTS_TAC (--`\t.fn1(t-t0):'a`--) THEN BETA_TAC
@@ -321,13 +319,13 @@ fun BOOL_VAR_ELIM_CONV v Pv =
 				GEN_TAC THEN BOOL_CASES_TAC (--`b:bool`--)]
 			THEN ASM_REWRITE_TAC[])
      in
-	BETA_RULE (SPEC (mk_abs{Body=Pv,Bvar=v})lemma)
+	BETA_RULE (SPEC (mk_abs(v,Pv)) lemma)
     end
 
 
 fun BOOL_VAR_ELIM_TAC v (asm,g) =
-    let val x = genvar (==`:bool`==)
-	val Pv = subst[{redex=v,residue=x}]g
+    let val x = genvar bool
+	val Pv = subst[v |-> x]g
 	val lemma = snd(EQ_IMP_RULE(BOOL_VAR_ELIM_CONV x Pv))
      in
 	(SPEC_TAC(v,x) THEN MATCH_MP_TAC lemma) (asm,g)
@@ -341,12 +339,12 @@ fun BOOL_VAR_ELIM_TAC v (asm,g) =
 (* ************************************************************	*)
 
 fun COND_FUN_EXT_CONV condi = 
-    let val {Rand=x,Rator=t} = dest_comb condi
-	val {cond=c,larm=f,rarm=g} = dest_cond t
-	val fx = mk_comb{Rand=x,Rator=f}
-	val gx = mk_comb{Rand=x,Rator=g}
-	val t' = mk_cond{cond=c,larm=fx,rarm=gx}
-	val gl = mk_eq{lhs=condi,rhs=t'}
+    let val (t,x) = dest_comb condi
+	val (c,f,g) = dest_cond t
+	val fx = mk_comb(f,x)
+	val gx = mk_comb(g,x)
+	val t' = mk_cond(c,fx,gx)
+	val gl = mk_eq(condi,t')
      in
 	prove(gl,COND_CASES_TAC THEN REWRITE_TAC[])
     end
@@ -361,14 +359,15 @@ val COND_FUN_EXT_TAC = CONV_TAC (TOP_DEPTH_CONV COND_FUN_EXT_CONV);
 (* ************************************************************	*)
 
 fun COND_EQ_CONV t =
-    let val {cond=c,larm=l,rarm=r} = dest_cond t
-	val {lhs=a1,rhs=b} = dest_eq l
-	val {lhs=a2,rhs=d} = dest_eq r
-        val lemma = TAC_PROOF(([],--`!a b c d. (c=>(a=b)|(a:'a=d)) = (a = (c=>b|d))`--),
+    let val (c,l,r) = dest_cond t
+	val (a1,b) = dest_eq l
+	val (a2,d) = dest_eq r
+        val lemma = TAC_PROOF(([],
+           --`!a b c d. (c=>(a=b)|(a:'a=d)) = (a = (c=>b|d))`--),
 			REPEAT GEN_TAC THEN BOOL_CASES_TAC (--`c:bool`--)
 			THEN REWRITE_TAC[])
 	val aty = type_of a1
-	val lemma' = INST_TYPE[{redex=(==`:'a`==),residue=aty}]lemma
+	val lemma' = INST_TYPE[alpha |-> aty]lemma
      in
 	SPECL[a1,b,c,d]lemma'
     end
@@ -395,11 +394,11 @@ fun SELECT_EXISTS_TAC t (asm,g) =
 	    REPEAT GEN_TAC 
 	    THEN SUBST1_TAC(SYM(SELECT_CONV(--`P(@x:'a.P x)`--)))
 	    THEN STRIP_TAC THEN RES_TAC)
-	val {Bvar=x,Body=Px} = dest_select t
-	val P = mk_abs{Bvar=x,Body=Px}
+	val (x,Px) = dest_select t
+	val P = mk_abs(x,Px)
 	val y = genvar(type_of x)
-	val Q = mk_abs {Bvar=y,Body=subst[{redex=t,residue=y}]g}
-	val lemma1 = INST_TYPE[{redex=(==`:'a`==),residue=(type_of x)}] SELECT_ELIM_THM
+	val Q = mk_abs (y, subst[t |-> y]g)
+	val lemma1 = INST_TYPE[alpha |-> type_of x] SELECT_ELIM_THM
 	val lemma2 = BETA_RULE(SPECL[P,Q]lemma1)
      in
 	(MP2_TAC lemma2 THEN CONJ_TAC)(asm,g)
@@ -418,20 +417,20 @@ fun SELECT_EXISTS_TAC t (asm,g) =
 
 
 fun SELECT_TAC t (asm,g) =
-    let val SELECT_THM = TAC_PROOF( 
-	    ([],--`!P Q. ((?x:'a.P x) => !y. P y ==> Q y | !y.Q y) ==> Q(@x.P x) `--),
+    let val SELECT_THM = TAC_PROOF(([],
+         --`!P Q. ((?x:'a.P x) => !y. P y ==> Q y | !y.Q y) ==> Q(@x.P x) `--),
 	    REPEAT GEN_TAC
 	    THEN DISJ_CASES_TAC(SPEC(--`?x:'a.P x`--)BOOL_CASES_AX) 
 	    THEN ASM_REWRITE_TAC[] THEN STRIP_TAC
-	    THENL[RULE_ASSUM_TAC (REWRITE_RULE [SYM(SELECT_CONV (--`P(@x:'a.P x)`--))])
+	    THENL[RULE_ASSUM_TAC 
+                    (REWRITE_RULE [SYM(SELECT_CONV (--`P(@x:'a.P x)`--))])
 		  THEN RES_TAC THEN ASM_REWRITE_TAC[],
 		  ASM_REWRITE_TAC[]])
-	val {Bvar=x,Body=Px} = dest_select t
-	val P = mk_abs{Bvar=x,Body=Px}
+	val (x,Px) = dest_select t
+	val P = mk_abs(x,Px)
 	val y = genvar(type_of x)
-	val Q = mk_abs {Bvar=y,Body=subst[{redex=t,residue=y}]g}
-	val lemma1 = INST_TYPE[{redex=(==`:'a`==),residue=(type_of x)}] 
-							SELECT_THM
+	val Q = mk_abs (y,subst[t |-> y]g)
+	val lemma1 = INST_TYPE[alpha |-> type_of x] SELECT_THM
 	val lemma2 = BETA_RULE(SPECL[P,Q]lemma1)
      in
 	(MP2_TAC lemma2 THEN COND_CASES_TAC)(asm,g)
@@ -450,8 +449,8 @@ fun SELECT_TAC t (asm,g) =
 (* ************************************************************	*)
 
 
-val SELECT_UNIQUE_THM = TAC_PROOF(
-	([],--`!Q y. Q y /\ (!x y:'a.(Q x /\ Q y) ==> (x=y)) ==> ((@x.Q x) = y)`--),
+val SELECT_UNIQUE_THM = TAC_PROOF(([],
+ --`!Q y. Q y /\ (!x y:'a.(Q x /\ Q y) ==> (x=y)) ==> ((@x.Q x) = y)`--),
 	REPEAT STRIP_TAC THEN SELECT_EXISTS_TAC (--`@x.(Q:'a->bool) x`--)
 	THENL[EXISTS_TAC(--`y:'a`--) THEN ASM_REWRITE_TAC[],
 	      GEN_TAC THEN DISCH_TAC THEN RES_TAC])
@@ -459,25 +458,23 @@ val SELECT_UNIQUE_THM = TAC_PROOF(
 
 
 fun SELECT_UNIQUE_RULE y th1 th2 =
-    let val Q=(hd o hol88Lib.conjuncts o #ant o dest_imp o snd o strip_forall o 
-           concl) th2
-        val x=(hd o (filter(C mem(hol88Lib.frees Q))) o fst o strip_forall o 
-           concl)th2
-        val Q'= mk_abs{Bvar=x,Body=Q}
-        val th1'=SUBST [(--`b:bool`--) |-> SYM (BETA_CONV (--`^Q' ^y`--))] 
+ let val Q=(hd o strip_conj o fst o dest_imp o snd o strip_forall o concl) th2
+    val x = (hd o (filter(C mem(free_vars Q))) o fst o strip_forall o concl)th2
+    val Q' = mk_abs(x,Q)
+    val th1'=SUBST [(--`b:bool`--) |-> SYM (BETA_CONV (--`^Q' ^y`--))] 
                        (--`b:bool`--) th1
-        in
-          (MP (SPECL [(--`$@ ^Q'`--), y] th2)
-              (CONJ (BETA_RULE (SELECT_INTRO th1')) th1))
-        end
+ in
+   (MP (SPECL [(--`$@ ^Q'`--), y] th2)
+       (CONJ (BETA_RULE (SELECT_INTRO th1')) th1))
+ end
 
 
 fun SELECT_UNIQUE_TAC (asm,g) = 
-    let val {lhs=Qx,rhs=y} = dest_eq g
-	val {Bvar=x,Body=Q} = dest_select Qx
+    let val (Qx,y) = dest_eq g
+	val (x,Q) = dest_select Qx
 	val xty = type_of x
-	val Qy = mk_abs{Bvar=x,Body=Q}
-	val lemma1 = INST_TYPE[{redex=(==`:'a`==),residue=xty}] SELECT_UNIQUE_THM
+	val Qy = mk_abs(x,Q)
+	val lemma1 = INST_TYPE[alpha |-> xty] SELECT_UNIQUE_THM
 	val lemma2 = BETA_RULE(SPECL[Qy,y] lemma1)
      in
 	(MATCH_MP_TAC lemma2 THEN CONJ_TAC) (asm,g)
@@ -485,10 +482,11 @@ fun SELECT_UNIQUE_TAC (asm,g) =
 
 
 fun COND_ELIM_CONV t =
-    let val lem = TAC_PROOF(([],--`!a b c. (a=> b|c) = (a==>b) /\ (~a==> c)`--),
+    let val lem = TAC_PROOF(([],
+      --`!a b c. (a=> b|c) = (a==>b) /\ (~a==> c)`--),
 		REPEAT GEN_TAC THEN BOOL_CASES_TAC (--`a:bool`--)
 		THEN REWRITE_TAC[])
-	val {cond=a,larm=b,rarm=c} = dest_cond t
+	val (a,b,c) = dest_cond t
      in SPECL[a,b,c] lem
     end
 

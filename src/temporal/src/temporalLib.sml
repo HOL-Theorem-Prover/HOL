@@ -17,18 +17,15 @@ val smv_path    = ref (Path.concat(Globals.HOLDIR,"sigobj/"));
 val smv_call    = ref "smv.xable -r -v -f ";
 
 
-    type term = Term.term
-    type thm = Thm.thm
-    type conv = Abbrev.conv
+open HolKernel Parse boolLib Rsyntax;
 
-open HolKernel Parse basicHol90Lib;
+infixr 3 -->;
+infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
+
 val (Type,Term) =
   parse_from_grammars Omega_AutomataTheory.Omega_Automata_grammars
 fun -- q x = Term q
 fun == q x = Type q
-
-infixr 3 -->;
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
 local open Omega_AutomataTheory in end;
 
@@ -77,8 +74,8 @@ datatype temp_formula =
 (* Converting functions: hol2temporal & temporal2hol				*)
 (* ****************************************************************************	*)
 
-val thetrue   = Term`T`
-val thefalse  = Term`F`
+val thetrue   = T
+val thefalse  = F
 val NEXT      = Term`NEXT`
 val ALWAYS    = Term`ALWAYS`
 val EVENTUAL  = Term`EVENTUAL`
