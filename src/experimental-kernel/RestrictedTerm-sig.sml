@@ -92,4 +92,9 @@ sig
   val del_segment : string -> unit
   val uptodate_term : term -> bool
 
+  (* raw pretty-printer for theory export *)
+  val pp_raw_term : (term -> int) -> ppstream -> term -> unit
+  val parse_raw : term Vector.vector -> 'a frag list -> term
+
+
 end

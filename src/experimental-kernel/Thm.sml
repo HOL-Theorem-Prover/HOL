@@ -1266,9 +1266,9 @@ end
 local
   val mk_disk_thm  = make_thm Count.Disk
 in
-fun disk_thm vect (s, intlist) = let
-  val c = Vector.sub(vect, hd intlist)
-  val asl = map (fn i => Vector.sub(vect, i)) (tl intlist)
+fun disk_thm (s, termlist) = let
+  val c = hd termlist
+  val asl = tl termlist
 in
   mk_disk_thm(Tag.read_disk_tag s,list_hyp asl,c)
 end

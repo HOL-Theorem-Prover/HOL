@@ -19,8 +19,33 @@ val concat = String.concat;
 val sort = Lib.sort (fn s1:string => fn s2 => s1<=s2);
 val psort = Lib.sort (fn (s1:string,_:Thm.thm) => fn (s2,_:Thm.thm) => s1<=s2);
 val thid_sort = Lib.sort (fn (s1:string,_:int,_:int) => fn (s2,_,_) => s1<=s2);
-fun thm_terms th = Thm.concl th :: Thm.hyp th;
+fun thm_atoms acc th k = let
+  open Term
+  fun term_atoms acc t k =
+      if is_var t then k (HOLset.add(acc, t))
+      else if is_const t then k (HOLset.add(acc, t))
+      else if is_comb t then let
+          val (f,x) = dest_comb t
+        in
+          term_atoms acc f (fn a' => term_atoms a' x k)
+        end
+      else let
+          val (v, body) = dest_abs t
+        in
+          term_atoms (HOLset.add(acc, v)) body k
+        end
+  fun terml_atoms tlist k acc =
+      case tlist of
+        [] => k acc
+      | (t::ts) => term_atoms acc t (terml_atoms ts k)
+in
+  terml_atoms (Thm.concl th :: Thm.hyp th) k acc
+end
 
+fun thml_atoms thlist acc =
+    case thlist of
+      [] => acc
+    | (th::ths) => thm_atoms acc th (thml_atoms ths)
 
 fun Thry s = s^"Theory";
 fun ThrySig s = Thry s
@@ -177,6 +202,34 @@ end;
 
 val stringify = Lib.mlquote
 
+fun is_atom t = Term.is_var t orelse Term.is_const t
+fun strip_comb t = let
+  fun recurse acc t = let
+    val (f, x) = Term.dest_comb t
+  in
+    recurse (x::acc) f
+  end handle HOL_ERR _ => (t, List.rev acc)
+in
+  recurse [] t
+end
+
+fun strip_rbinop t = let
+  open Term
+  val (f, args) = strip_comb t
+  val _ = length args = 2 orelse raise ERR "foo" "foo"
+  val _ = is_atom f orelse raise ERR "foo" "foo"
+  fun recurse acc arg_t = let
+    val (f', args') = strip_comb arg_t
+  in
+    if length args' = 2 andalso f' = f then
+      recurse (hd args' :: acc) (hd (tl args'))
+    else List.rev(arg_t :: acc)
+  end
+in
+  (f, recurse [hd args] (hd (tl args)))
+end
+
+
 fun pp_struct info_record ppstrm =
  let open Term Thm
      val {theory as (name,i1,i2), parents=parents0,
@@ -185,7 +238,7 @@ fun pp_struct info_record ppstrm =
      val {add_string,add_break,begin_block,end_block, add_newline,
           flush_ppstream,...} = Portable.with_ppstream ppstrm
      val thml = axioms@definitions@theorems
-     val all_terms = List.concat (map (thm_terms o #2) thml)
+     val all_term_atoms_set = thml_atoms (map #2 thml) empty_tmset
      open SharingTables
      fun dotypes (ty, (idtable, tytable)) = let
        val (_, idtable, tytable) = make_shared_type ty idtable tytable
@@ -196,16 +249,13 @@ fun pp_struct info_record ppstrm =
          List.foldl dotypes (empty_idtable, empty_tytable) (map #2 constants)
      fun doterms (c, tables) = #2 (make_shared_term c tables)
      val (idtable, tytable, tmtable) =
-         List.foldl doterms (idtable, tytable, empty_termtable) all_terms
+         HOLset.foldl doterms (idtable, tytable, empty_termtable)
+                      all_term_atoms_set
      fun pp_ty_dec (s,n) =
          add_string ("("^stringify s^", "^Int.toString n^")")
      fun pp_const_dec (s, ty) =
          add_string ("("^stringify s^", "^
                      Int.toString (Map.find(#tymap tytable, ty)) ^ ")")
-     fun pp_tm t =
-         add_string (Int.toString(Map.find(#termmap tmtable, t)))
-
-
      fun pblock(header, ob_pr, obs) =
          case obs
          of [] => ()
@@ -248,6 +298,9 @@ fun pp_struct info_record ppstrm =
 
      fun pparent (s,i,j) = Thry s
 
+     fun pp_tm tm =
+         (add_string "$";
+          Term.pp_raw_term (fn t => Map.find(#termmap tmtable, t)) ppstrm tm)
      fun pr_bind(s, th) = let
        val (tg, asl, w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
      in
@@ -268,7 +321,8 @@ fun pp_struct info_record ppstrm =
            (begin_block CONSISTENT 0;
             add_string "local"; add_break(1,0);
             begin_block CONSISTENT 0;
-            add_string"val DT = Thm.disk_thm tmvector";
+            add_string"val DT = Thm.disk_thm"; add_break(1,0);
+            add_string"val $ = Term.parse_raw tmvector";
             end_block();
             add_newline();
             add_string"in"; add_newline();

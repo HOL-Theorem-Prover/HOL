@@ -263,7 +263,7 @@ fun output_termtable pps names (tmtable: termtable) = let
   fun output_shtms [] = ()
     | output_shtms [t] = output_shtm t
     | output_shtms (t::ts) = (output_shtm t; out (",");
-                              PP.add_newline pps;
+                              PP.add_break pps (1, 0);
                               output_shtms ts)
 in
   out ("local open SharingTables"); nl();
@@ -271,7 +271,9 @@ in
   out ("val "^termtable_nm^" = build_term_vector "^idtable_nm^" "^
        tytable_nm); nl();
   out ("[");
+  PP.begin_block pps PP.INCONSISTENT 0;
   output_shtms (List.rev (#termlist tmtable));
+  PP.end_block pps;
   out ("]"); nl();
   out "end"; nl()
 end;

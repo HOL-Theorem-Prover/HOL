@@ -568,6 +568,118 @@ end
 local
   open Map Susp
 
+  type termset = term HOLset.set
+  val fvsingle = HOLset.singleton compare
+
+  datatype fvinfo = FVI of { current : termset,
+                             left : fvinfo option,
+                             right : fvinfo option,
+                             inabs : fvinfo option}
+  fun leaf s = FVI {current = s, left = NONE, right = NONE, inabs = NONE}
+  fun left (FVI r) = valOf (#left r)
+  fun right (FVI r) = valOf (#right r)
+  fun inabs (FVI r) = valOf (#inabs r)
+  fun current (FVI r) = #current r
+  fun calculate_fvinfo t =
+      case t of
+        v as Var _ => leaf (fvsingle v)
+      | Const _ => leaf empty_tmset
+      | App(f, x) => let
+          val fvs = calculate_fvinfo f
+          val xvs = calculate_fvinfo x
+        in
+          FVI {current = HOLset.union(current fvs, current xvs),
+               left = SOME fvs, right = SOME xvs, inabs = NONE}
+        end
+      | Abs(v, body) => let
+          val bodyvs = calculate_fvinfo body
+        in
+          FVI {current = safe_delete(current bodyvs, v),
+               left = NONE, right = NONE, inabs = SOME bodyvs}
+        end
+
+  fun filtertheta theta fvset = let
+    (* Removes entries in theta for things not in fvset.  theta likely to
+       be much smaller than fvset, so fold over that rather than the
+       other *)
+    fun foldthis (k,v,acc) = if HOLset.member(fvset, k) then insert(acc, k, v)
+                             else acc
+  in
+    foldl foldthis emptyvsubst theta
+  end
+
+
+
+  fun augvsubst theta fvi tm =
+      case tm of
+        Var _ => (case peek(theta, tm) of NONE => raise Unchanged
+                                        | SOME (_, t) => t)
+      | Const _ => raise Unchanged
+      | App(f, x) => let
+          val xfvi = right fvi
+        in
+          let
+            val ffvi = left fvi
+            val f' = augvsubst theta ffvi f
+          in
+            let val x' = augvsubst theta xfvi x
+            in
+              App(f', x')
+            end handle Unchanged => App(f', x)
+          end handle Unchanged => let val x' = augvsubst theta xfvi x
+                                  in
+                                    App(f, x')
+                                  end
+        end
+      | Abs(v, body) => let
+          val theta = #1 (remove(theta, v)) handle NotFound => theta
+          val (vname, vty) = dest_var v
+          val currentfvs = current fvi
+          (* first calculate the new names we are about to introduce into
+             the term *)
+          fun foldthis (k,v,acc) =
+              if HOLset.member(currentfvs, k) then
+                HOLset.union(acc, force (#1 v))
+              else acc
+          val newnames = foldl foldthis empty_stringset theta
+          val new_fvi = inabs fvi
+        in
+          if HOLset.member(newnames, vname) then let
+              (* now need to vary v, avoiding both newnames, and also the
+                 existing free-names of the whole term. *)
+              fun foldthis (fv, acc) = HOLset.add(acc, #1 (dest_var fv))
+              val allfreenames = HOLset.foldl foldthis newnames (current fvi)
+              val new_vname = set_name_variant allfreenames vname
+              val new_v = mk_var(new_vname, vty)
+              val new_theta =
+                  if HOLset.member(current new_fvi, v) then let
+                      val singleton = HOLset.singleton String.compare new_vname
+                    in
+                      insert(theta, v, (Susp.delay (fn () => singleton),
+                                        new_v))
+                    end
+                  else theta
+            in
+              Abs(new_v, augvsubst new_theta new_fvi body)
+            end
+          else
+            Abs(v, augvsubst theta new_fvi body)
+        end
+
+  fun vsubst theta tm =
+      case tm of
+        Var _ => (case peek(theta, tm) of NONE => raise Unchanged
+                                        | SOME (_, t) => t)
+      | Const _ => raise Unchanged
+      | App p  => qcomb App (vsubst theta) p
+      | Abs _ => let
+          val fvi = calculate_fvinfo tm
+          val theta' = filtertheta theta (current fvi)
+        in
+          if numItems theta' = 0 then raise Unchanged
+          else augvsubst theta' fvi tm
+        end
+(*
   fun vasubst theta tm =
       case tm of
         Var _ => (case peek(theta, tm) of
@@ -629,7 +741,7 @@ local
       | Const _ => raise Unchanged
       | App p  => qcomb App (vsubst theta) p
       | Abs _ => #1 ((* Profile.profile "vasubst" *) (vasubst theta) tm)
-
+*)
   fun ssubst theta t =
       (* only used to substitute in fresh variables (genvars), so no
          capture check.  *)
@@ -785,7 +897,7 @@ fun bvar_free (bvmap, tm) = let
       | App(f,x) => recurse bs f andalso recurse bs x
       | Abs(v, body) => recurse (HOLset.add(bs, v)) body
 in
-  recurse empty_varset tm
+  Map.numItems bvmap = 0 orelse recurse empty_varset tm
 end
 
 fun MERR s = raise ERR "raw_match_term error" s
@@ -929,6 +1041,114 @@ fun prim_mk_eq ty t1 t2 =
 fun prim_mk_imp t1 t2 = App(App(imp, t1), t2)
 
 (* val prim_mk_imp = (fn t1 => Profile.profile "prim_mk_imp" (prim_mk_imp t1))*)
+
+
+(*---------------------------------------------------------------------------*
+ *  Raw syntax prettyprinter for terms.                                      *
+ *---------------------------------------------------------------------------*)
+
+val dot     = "."
+val percent = "%";
+
+fun pp_raw_term index pps tm =
+ let open Portable
+     val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
+     fun pp (Abs(Bvar,Body)) =
+          ( add_string "(\\";
+            pp Bvar; add_string dot; add_break(1,0);
+            pp Body; add_string ")" )
+      | pp (App(Rator,Rand)) =
+         ( add_string "("; pp Rator; add_break(1,0);
+                           pp Rand; add_string ")")
+      | pp a      = add_string (percent^Lib.int_to_string (index a))
+ in
+   begin_block INCONSISTENT 0;
+   add_string "`";
+   pp tm;
+   add_string "`";
+   end_block()
+ end;
+
+
+(*---------------------------------------------------------------------------*
+ * Fetching theorems from disk. The following parses the "raw" term          *
+ * representation found in exported theory files.                            *
+ *---------------------------------------------------------------------------*)
+
+datatype lexeme
+   = dot
+   | lamb
+   | lparen
+   | rparen
+   | ident of int
+
+local val numeric = Char.contains "0123456789"
+in
+fun take_numb ss0 =
+  let val (ns, ss1) = Substring.splitl numeric ss0
+  in case Int.fromString (Substring.string ns)
+      of SOME i => (i,ss1)
+       | NONE   => raise ERR "take_numb" ""
+  end
+end;
+  (* we don't allow numbers to be split across fragments; think this is reasonab
+le *)
+
+fun lexer (ss1,qs1) =
+  case Substring.getc (Lib.deinitcommentss ss1) of
+    NONE => (case qs1 of
+               (QUOTE s::qs2) => lexer (Substring.all s,qs2)
+             | []             => NONE
+             | _              => raise ERR "raw lexer" "expected a quotation")
+  | SOME (c,ss2) =>
+    case c of
+      #"."  => SOME(dot,   (ss2,qs1))
+    | #"\\" => SOME(lamb,  (ss2,qs1))
+    | #"("  => SOME(lparen,(ss2,qs1))
+    | #")"  => SOME(rparen,(ss2,qs1))
+    | #"%"  => let val (n,ss3) = take_numb ss2 in SOME(ident n, (ss3,qs1)) end
+    |   _   => raise ERR "raw lexer" "bad character";
+
+fun eat_rparen ss =
+  case lexer ss
+   of SOME (rparen, ss') => ss'
+    |   _ => raise ERR "eat_rparen" "expected right parenthesis";
+
+fun eat_dot ss =
+  case lexer ss
+   of SOME (dot, ss') => ss'
+    |   _ => raise ERR "eat_dot" "expected a \".\"";
+
+fun parse_raw table =
+ let fun index i = Vector.sub(table,i)
+     fun parse (stk,ss) =
+      case lexer ss
+       of SOME (ident n, rst) => (index n::stk,rst)
+        | SOME (lparen,  rst) =>
+           (case lexer rst
+             of SOME (lamb, rst') => parse (glamb (stk,rst'))
+              |    _              => parse (parsel (parse (stk,rst))))
+        |  _ => (stk,ss)
+     and
+     parsel (stk,ss) =
+        case parse (stk,ss)
+         of (h1::h2::t, ss') => (App(h2,h1)::t, eat_rparen ss')
+          |   _              => raise ERR "raw.parsel" "impossible"
+     and
+     glamb(stk,ss) =
+      case lexer ss
+       of SOME (ident n, rst) =>
+            (case parse (stk, eat_dot rst)
+              of (h::t,rst1) => (mk_abs(index n,h)::t, eat_rparen rst1)
+               |   _         => raise ERR "glamb" "impossible")
+        | _ => raise ERR "glamb" "expected an identifier"
+ in
+  fn (QUOTE s::qs) =>
+       (case parse ([], (Substring.all s,qs))
+         of ([v], _)  => v
+          | otherwise => raise ERR "raw term parser" "parse failed")
+   | otherwise => raise ERR "raw term parser" "expected a quotation"
+ end;
 
 
 end (* struct *)

@@ -641,4 +641,5 @@ fun new_theory str =
     )
   end;
 
+
 end (* Theory *)
