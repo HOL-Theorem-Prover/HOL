@@ -2,10 +2,9 @@ structure Base =
 struct
 
 local
- open numLib arithLib
- open rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory
- open HolKernel Parse boolLib Prim_rec Num_conv Num_induct
- infix THEN THENL |->;
+ open HolKernel Parse boolLib Prim_rec numLib 
+      rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory
+  infix THEN THENL |->;
 
 in
 val _ = Portable.output(Portable.std_out, "\nloading Base.\n");
@@ -96,7 +95,7 @@ val MATCH_EQ_MP = fn eq => fn lh => EQ_MP (PART_MATCH lhs eq (concl lh)) lh;
 val REWRITE1_TAC = fn t => REWRITE_TAC[t];
 
 fun ARITH_TAC (asml,gl) =
-    let val a = filter is_presburger asml in
+    let val a = filter arithLib.is_presburger asml in
     (MAP_EVERY (MP_TAC o ASSUME) a THEN CONV_TAC ARITH_CONV)(asml,gl)
     end;
 

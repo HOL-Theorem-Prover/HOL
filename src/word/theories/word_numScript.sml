@@ -11,9 +11,8 @@
 
 
 
-open HolKernel Parse boolLib Prim_rec Num_conv Num_induct;
+open HolKernel Parse boolLib Prim_rec numLib res_quanLib;
 open Base;
-open arithLib numLib res_quanLib;
 open rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory;
 infix THEN THENL THENC ORELSE ORELSEC;
 open Res_quan word_baseTheory;

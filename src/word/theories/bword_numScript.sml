@@ -9,8 +9,7 @@
 (* ===================================================== *)
 
 
-open HolKernel Parse boolLib Prim_rec Num_conv Num_induct;
-open arithLib numLib res_quanLib;
+open HolKernel Parse boolLib Prim_rec numLib res_quanLib;
 open rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory;
 open Cond_rewrite Res_quan word_baseTheory word_bitopTheory word_numTheory;
 open Base;

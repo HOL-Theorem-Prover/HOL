@@ -7,8 +7,7 @@
 (*-----------------------------------------------------------------------*)
 
 
-open HolKernel Parse boolLib Prim_rec Num_conv Num_induct;
-open arithLib numLib res_quanLib;
+open HolKernel Parse boolLib Prim_rec numLib res_quanLib;
 open rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory;
 open Cond_rewrite Res_quan;
 open word_baseTheory word_numTheory bword_numTheory;
@@ -18,14 +17,12 @@ infix THEN THENL THENC ORELSE ORELSEC;
 
 val _ = new_theory"bword_arith";
 
-(* butlast [x1;...x(n-1);xn]   --->   [x1;...;x(n-1)] *)
 
-fun butlast l =
- if null (tl l) then [] else (hd l) :: (butlast(tl l));
 (*-----------------------------------------------------------------------*)
 (* We begin with with lemmas about arithmetic of natural numbers.	 *)
 (* They are used to proof the interesting theorems about word arithmetic *)
 (*-----------------------------------------------------------------------*)
+
 val MULT_LEFT_1 = GEN_ALL (el 3 (CONJ_LIST 6 (SPEC_ALL MULT_CLAUSES)));
 
 val ADD_DIV_SUC_DIV = prove(
