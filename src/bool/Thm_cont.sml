@@ -204,7 +204,7 @@ fun DISCH_THEN ttac (asl,w) =
  *---------------------------------------------------------------------------*)
 
 fun UNDISCH_THEN tm ttac (asl, w) =
- let val (_, asl') = with_exn (Lib.pluck (equal tm)) asl
+ let val (_, asl') = with_exn (Lib.pluck (aconv tm)) asl
                      (ERR "UNDISCH_THEN" "Term given not an assumption")
  in ttac (ASSUME tm) (asl', w)
  end;
@@ -371,7 +371,7 @@ local
   fun MATCH_MP impth = let
     val sth = SPEC_ALL impth
     val hyptyvars = HOLset.listItems (hyp_tyvars sth)
-    val lconstants = HOLset.intersection 
+    val lconstants = HOLset.intersection
                          (FVL [concl sth] empty_tmset, hyp_frees sth)
     val matchfn =
         match_terml hyptyvars lconstants (fst(dest_imp(concl sth)))
