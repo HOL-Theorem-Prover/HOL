@@ -1,0 +1,30 @@
+\DOC overload_on
+
+\TYPE {Parse.overload_on : string * term -> unit}
+
+\SYNOPSIS
+Establishes a constant as one of the overloading possibilities for a string.
+
+\KEYWORDS
+Parsing, pretty-printing, overloading.
+
+\LIBRARY Parse
+
+\DESCRIBE
+
+
+\FAILURE
+
+
+\EXAMPLE
+
+
+\USES
+
+
+\COMMENTS
+
+
+\SEEALSO
+
+\ENDDOC
