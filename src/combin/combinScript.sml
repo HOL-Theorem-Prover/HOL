@@ -47,6 +47,11 @@ val o_ASSOC = store_thm("o_ASSOC",
    THEN CONV_TAC (REDEPTH_CONV BETA_CONV)
    THEN REFL_TAC);
 
+val o_ABS_R = store_thm(
+  "o_ABS_R",
+  ``f o (\x. g x) = (\x. f (g x))``,
+  REWRITE_TAC [FUN_EQ_THM, o_THM] THEN BETA_TAC THEN REWRITE_TAC []);
+
 val K_THM = store_thm("K_THM",
     --`!x y. K x y = x`--,
     REPEAT GEN_TAC
@@ -61,12 +66,27 @@ val S_THM = store_thm("S_THM",
    THEN CONV_TAC (DEPTH_CONV BETA_CONV)
    THEN REFL_TAC);
 
+val S_ABS_L = store_thm(
+  "S_ABS_L",
+  ``S (\x. f x) g = \x. (f x) (g x)``,
+  REWRITE_TAC [FUN_EQ_THM, S_THM] THEN BETA_TAC THEN REWRITE_TAC []);
+
+val S_ABS_R = store_thm(
+  "S_ABS_R",
+  ``S f (\x. g x) = \x. (f x) (g x)``,
+  REWRITE_TAC [FUN_EQ_THM, S_THM] THEN BETA_TAC THEN REWRITE_TAC[]);
+
 val C_THM = store_thm("C_THM",
    --`!f x y. C f x y = f y x`--,
    REPEAT GEN_TAC
    THEN PURE_REWRITE_TAC [ C_DEF ]
    THEN CONV_TAC (DEPTH_CONV BETA_CONV)
    THEN REFL_TAC);
+
+val C_ABS_L = store_thm(
+  "C_ABS_L",
+  ``C (\x. f x) y = (\x. f x y)``,
+  REWRITE_TAC [FUN_EQ_THM, C_THM] THEN BETA_TAC THEN REWRITE_TAC []);
 
 val W_THM = store_thm("W_THM",
    --`!f x. W f x = f x x`--,
@@ -90,6 +110,26 @@ val K_o_THM = store_thm("K_o_THM",
   --`(!f v. K v o f = K v) /\ (!f v. f o K v = K (f v))`--,
   REWRITE_TAC [o_THM, K_THM, FUN_EQ_THM]);
 
+(* theorems using combinators to specify let-movements *)
+val GEN_LET_RAND = store_thm(
+  "GEN_LET_RAND",
+  ``P (LET f v) = LET (P o f) v``,
+  REWRITE_TAC [LET_THM, o_THM]);
+
+val GEN_LET_RATOR = store_thm(
+  "GEN_LET_RATOR",
+  ``(LET f v) x = LET (C f x) v``,
+  REWRITE_TAC [LET_THM, C_THM]);
+
+val LET_FORALL_ELIM = store_thm(
+  "LET_FORALL_ELIM",
+  ``LET f v = (!) (S ((==>) o Abbrev o (C (=) v)) f)``,
+  REWRITE_TAC [S_DEF, LET_THM, C_DEF] THEN BETA_TAC THEN
+  REWRITE_TAC [o_THM, markerTheory.Abbrev_def] THEN BETA_TAC THEN
+  EQ_TAC THEN REPEAT STRIP_TAC THENL [
+    ASM_REWRITE_TAC [],
+    FIRST_X_ASSUM MATCH_MP_TAC THEN REFL_TAC
+  ]);
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,

@@ -25,6 +25,10 @@ sig
   val augment_srw_ss  : simpLib.ssdata list -> unit
   val export_rewrites : string list -> unit
 
+  (* LET manoeuvres *)
+  val LET_ELIM_TAC    : tactic
+  val new_let_thms    : thm list -> unit
+
   (* Compound automated reasoners. *)
 
   val PRIM_STP_TAC    : simpset -> tactic -> tactic

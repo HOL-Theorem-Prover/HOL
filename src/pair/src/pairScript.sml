@@ -402,45 +402,16 @@ REWRITE_TAC [boolTheory.LET_DEF] THEN BETA_TAC
   THEN REWRITE_TAC[]);
 
 open BasicProvers
-val GEN_LET_RAND = store_thm(
-  "GEN_LET_RAND",
-  ``P (LET f v) = LET (P o f) v``,
-  SRW_TAC [][LET_THM]);
-
-val GEN_LET_RATOR = store_thm(
-  "GEN_LET_RATOR",
-  ``(LET f v) x = LET (combin$C f x) v``,
-  SRW_TAC [][LET_THM]);
-
-val o_ABS_R = store_thm(
-  "o_ABS_R",
-  ``f o (\x. g x) = (\x. f (g x))``,
-  SRW_TAC [][FUN_EQ_THM]);
 
 val o_UNCURRY_R = store_thm(
   "o_UNCURRY_R",
   ``f o UNCURRY g = UNCURRY ((o) f o g)``,
   SRW_TAC [][FUN_EQ_THM, UNCURRY]);
 
-val C_ABS_L = store_thm(
-  "C_ABS_L",
-  ``combin$C (\x. f x) y = (\x. f x y)``,
-  SRW_TAC [][FUN_EQ_THM]);
-
 val C_UNCURRY_L = store_thm(
   "C_UNCURRY_L",
   ``combin$C (UNCURRY f) x = UNCURRY (combin$C (combin$C o f) x)``,
   SRW_TAC [][FUN_EQ_THM, UNCURRY]);
-
-val LET_FORALL_ELIM = store_thm(
-  "LET_FORALL_ELIM",
-  ``LET f v = (!) (S ((==>) o ((=) v)) f)``,
-  SRW_TAC [][combinTheory.S_DEF, LET_THM]);
-
-val S_ABS_R = store_thm(
-  "S_ABS_R",
-  ``S f (\x. g x) = \x. (f x) (g x)``,
-  SRW_TAC [][FUN_EQ_THM]);
 
 val S_UNCURRY_R = store_thm(
   "S_UNCURRY_R",
@@ -460,14 +431,6 @@ val FORALL_UNCURRY = store_thm(
     ALL_TAC
   ] THEN
   SRW_TAC [][FORALL_PROD, FST, SND]);
-
-(* this conversion seems to do much of what's necessary
-val c = SIMP_CONV bool_ss [o_ABS_R, o_UNCURRY_R, LET_FORALL_ELIM, S_ABS_R,
-                   S_UNCURRY_R, combinTheory.o_THM, FORALL_UNCURRY]
-*)
-
-
-
 
 (*---------------------------------------------------------------------------
        TFL support.
@@ -779,7 +742,7 @@ val _ = Drop.is_comma_hook := Term.same_const comma_tm;
 val _ = Drop.is_pair_hook := is_pair
 val _ = Drop.dest_pair_hook := dest_pair
 
-val _ = Drop.exportML ("pair", 
+val _ = Drop.exportML ("pair",
           map Drop.DEFN [CURRY_DEF,UNCURRY_DEF,FST,SND,PAIR_MAP_THM,LEX_DEF_THM]);
 
 val _ = adjoin_to_theory
@@ -789,6 +752,14 @@ val _ = adjoin_to_theory
       fun NL() = PP.add_newline ppstrm
   in S "val _ = ConstMapML.insert comma_tm;"; NL(); NL()
   end)}
+
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME(fn pps =>
+                     (PP.add_string pps "val _ = BasicProvers.new_let_thms\
+                          \[o_UNCURRY_R, C_UNCURRY_L, S_UNCURRY_R, \
+                          \FORALL_UNCURRY]";
+                      PP.add_newline pps))}
 
 val _ = export_theory();
 

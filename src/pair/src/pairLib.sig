@@ -11,7 +11,7 @@ sig
 
  val comma_tm         : term
  val fst_tm           : term
- val snd_tm           : term 
+ val snd_tm           : term
  val uncurry_tm       : term
  val curry_tm         : term
  val pair_map_tm      : term
@@ -71,10 +71,10 @@ sig
 
  (* From PairedLambda *)
 
- val PAIRED_BETA_CONV : conv 
- val PAIRED_ETA_CONV  : conv 
- val GEN_BETA_CONV    : conv 
- val let_CONV         : conv 
+ val PAIRED_BETA_CONV : conv
+ val PAIRED_ETA_CONV  : conv
+ val GEN_BETA_CONV    : conv
+ val let_CONV         : conv
  val GEN_BETA_RULE    : thm -> thm
  val GEN_BETA_TAC     : tactic
 
@@ -110,7 +110,6 @@ sig
  val PGEN_TAC         : term -> tactic
  val PFUN_EQ_RULE     : thm -> thm
  val LET_INTRO        : thm -> thm
-(* val LET_INTRO_TAC    : tactic *)
  val LET_EQ_TAC       : thm list -> tactic
  val TUPLE            : term -> thm -> thm
  val TUPLE_TAC        : term -> tactic

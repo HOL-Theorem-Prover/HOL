@@ -141,6 +141,52 @@ fun breakable tm =
     notF = tm    orelse
     T=tm orelse F=tm
 
+(* ----------------------------------------------------------------------
+    LET_ELIM_TAC
+
+    eliminates lets by pulling them up, turning them into universal
+    quantifiers, and eventually moving new abbreviations into the
+    assumption list.
+   ---------------------------------------------------------------------- *)
+
+val let_movement_thms = let
+  open combinTheory
+in
+  ref [o_THM, o_ABS_R, C_ABS_L, C_THM,
+       GEN_LET_RAND, GEN_LET_RATOR, S_ABS_R]
+end
+
+val IMP_CONG' = REWRITE_RULE [GSYM AND_IMP_INTRO] (SPEC_ALL IMP_CONG)
+
+fun ABBREV_CONV tm = let
+  val t = rand tm
+  val (l, r) = dest_eq t
+in
+  if not (is_var l) orelse is_var r then
+    REWR_CONV markerTheory.Abbrev_def
+  else ALL_CONV
+end tm
+
+val ABBREV_ss =
+    simpLib.SIMPSET { ac = [], congs = [],
+                      convs = [{conv = K (K ABBREV_CONV),
+                                key = SOME ([], ``marker$Abbrev x``),
+                                trace = 2, name = "ABBREV_CONV"}],
+                      dprocs = [], filter = NONE, rewrs = []}
+
+fun LET_ELIM_TAC goal = let
+  open simpLib pureSimps boolSimps
+  (* two successive calls to SIMP_TAC ensure that the LET_FORALL_ELIM
+     theorem is applied after all the movement is possible *)
+in
+  SIMP_TAC pure_ss (!let_movement_thms) THEN
+  SIMP_TAC pure_ss (combinTheory.LET_FORALL_ELIM :: !let_movement_thms) THEN
+  SIMP_TAC (pure_ss ++ ABBREV_ss ++ UNWIND_ss) [Cong IMP_CONG'] THEN
+  REPEAT STRIP_TAC
+end goal
+
+fun new_let_thms thl = let_movement_thms := thl @ !let_movement_thms
+
 
 (*---------------------------------------------------------------------------
       STP_TAC (Simplify then Prove)
