@@ -1005,7 +1005,7 @@ fun INST [] th = th
 fun Beta th =
    let val (lhs, rhs, ty) = Term.dest_eq_ty (concl th)
    in make_thm Count.Beta
-        (empty_tag, hypset th, mk_eq_nocheck ty lhs (Term.lazy_beta_conv rhs))
+        (tag th, hypset th, mk_eq_nocheck ty lhs (Term.lazy_beta_conv rhs))
    end
    handle HOL_ERR _ => ERR "Beta" "";
 
@@ -1021,7 +1021,7 @@ fun Beta th =
 fun Eta th =
   let val (lhs, rhs, ty) = Term.dest_eq_ty (concl th)
   in make_thm Count.EtaConv
-       (empty_tag, hypset th, mk_eq_nocheck ty lhs (eta_conv rhs))
+       (tag th, hypset th, mk_eq_nocheck ty lhs (eta_conv rhs))
   end
   handle HOL_ERR _ => ERR "Eta" "";
 
@@ -1119,6 +1119,7 @@ fun Specialize t th =
 
 fun mk_oracle_thm tg (asl,c) =
   (Assert (Lib.all is_bool (c::asl)) "mk_oracle_thm"  "not a proposition"
+   ; Assert ((not o Tag.isEmpty) tg) "mk_oracle_thm"  "invalid user tag"
    ; make_thm Count.Oracle (tg,list_hyp asl,c));
 
 
