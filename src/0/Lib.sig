@@ -118,6 +118,7 @@ sig
   val prime : string -> string
 
   val front_last : 'a list -> 'a list * 'a
+  val butlast    : 'a list -> 'a list
   val last : 'a list -> 'a
   val funpow : int -> ('a -> 'a) -> 'a -> 'a
   val with_flag :'a ref * 'a -> ('b -> 'c) -> 'b -> 'c

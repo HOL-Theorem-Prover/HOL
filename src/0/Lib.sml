@@ -209,6 +209,9 @@ fun front_last []     = raise ERR "front_last" "empty list"
   | front_last [x]    = ([],x)
   | front_last (h::t) = let val (L,b) = front_last t in (h::L,b) end;
 
+fun butlast l = 
+  fst (front_last l) handle HOL_ERR _ => raise ERR "butlast" "empty list";
+
 fun last []     = raise ERR "last" "empty list"
   | last [x]    = x
   | last (_::t) = last t
@@ -311,7 +314,7 @@ type ('a,'b) subst = {redex:'a, residue:'b} list
 fun subst_assoc test =
  let fun assc [] = NONE
        | assc ({redex,residue}::rst) =
-          if (test redex) then SOME(residue) else assc rst
+          if test redex then SOME(residue) else assc rst
    in assc
    end;
 

@@ -16,6 +16,7 @@ struct
 
 local val ERR = mk_HOL_ERR "HolKernel"
       infix |-> 
+      infixr -->
 in
 
  (*---------------------------------------------------------------------------
@@ -33,7 +34,7 @@ val is_ty_antiq = Lib.can dest_ty_antiq
 
 
 (*---------------------------------------------------------------------------
-          General destructor operations
+          General term operations
  ---------------------------------------------------------------------------*)
 
 local fun dest M =
@@ -56,6 +57,17 @@ fun dest_binop (name,thy) e tm =
    in if Name=name andalso Thy=thy then pair else raise e
    end
 end;
+
+fun single x = [x];
+
+fun strip_binop dest = 
+ let fun strip A [] = rev A
+       | strip A (h::t) =
+          case dest h
+           of NONE => strip (h::A) t
+            | SOME(c1,c2) => strip A (c1::c2::t)
+ in strip [] o single
+ end;
 
 fun mk_binder c f (p as (Bvar,_)) =
    mk_comb(inst[alpha |-> type_of Bvar] c, mk_abs p)
@@ -80,6 +92,23 @@ fun strip_binder dest =
          | SOME(Bvar,Body) => strip (Bvar::A) Body
   in strip []
   end
+
+fun list_mk_fun (dtys, rty) = List.foldr op--> rty dtys
+val strip_fun = strip_binder (total dom_rng);
+
+fun list_mk_abs(V,t) = itlist(curry mk_abs) V t;
+val strip_abs = strip_binder (total dest_abs);
+
+local val destc = total dest_comb
+in
+val strip_comb =
+ let fun strip rands M =
+      case destc M
+       of NONE => (M, rands)
+        | SOME(Rator,Rand) => strip (Rand::rands) Rator 
+ in strip []
+ end
+end;
 
 
 datatype lambda 
