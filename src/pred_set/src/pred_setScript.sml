@@ -3312,6 +3312,60 @@ val MIN_SET_THM = store_thm(
     REPEAT STRIP_TAC THEN RES_TAC THEN ASM_SIMP_TAC arith_ss [MIN_DEF]
   ]);
 
+(* ----------------------------------------------------------------------
+    Simple lemmas about GSPECIFICATIONs
+   ---------------------------------------------------------------------- *)
+
+val sspec_tac = CONV_TAC (DEPTH_CONV SET_SPEC_CONV)
+
+val GSPEC_F = store_thm(
+  "GSPEC_F",
+  ``{ x | F} = {}``,
+  SRW_TAC [][EXTENSION] THEN sspec_tac THEN REWRITE_TAC []);
+
+val GSPEC_T = store_thm(
+  "GSPEC_T",
+  ``{x | T} = UNIV``,
+  SRW_TAC [][EXTENSION, IN_UNIV] THEN sspec_tac);
+
+val GSPEC_ID = store_thm(
+  "GSPEC_ID",
+  ``{x | x IN y} = y``,
+  SRW_TAC [][EXTENSION] THEN sspec_tac THEN REWRITE_TAC []);
+
+val GSPEC_EQ = store_thm(
+  "GSPEC_EQ",
+  ``{ x | x = y} = {y}``,
+  SRW_TAC [][EXTENSION] THEN sspec_tac THEN REWRITE_TAC []);
+
+val _ = export_rewrites ["GSPEC_F", "GSPEC_T", "GSPEC_ID", "GSPEC_EQ"]
+
+(* Following rewrites are useful, but probably not suitable for
+   automatic application.  Sadly even those above fail in the presence
+   of more complicated GSPEC expressions, such as { (x,y) | F }.
+
+   We could cope with the above by using the conditional rewrites below,
+   but again, these are probably not suitable for automatic inclusion in
+   rewrite sets *)
+
+val GSPEC_F_COND = store_thm(
+  "GSPEC_F_COND",
+  ``!f. (!x. ~SND (f x)) ==> (GSPEC f = {})``,
+  SRW_TAC [][EXTENSION, GSPECIFICATION] THEN
+  POP_ASSUM (Q.SPEC_THEN `x'` MP_TAC) THEN
+  Cases_on `f x'` THEN SRW_TAC [][]);
+
+val GSPEC_AND = store_thm(
+  "GSPEC_AND",
+  ``!P Q. {x | P x /\ Q x} = {x | P x} INTER {x | Q x}``,
+  SRW_TAC [][EXTENSION, IN_INTER] THEN sspec_tac THEN REWRITE_TAC []);
+
+val GSPEC_OR = store_thm(
+  "GSPEC_OR",
+  ``!P Q. {x | P x \/ Q x} = {x | P x} UNION {x | Q x}``,
+  SRW_TAC [][EXTENSION, IN_UNION] THEN sspec_tac THEN REWRITE_TAC []);
+
+
 val _ = export_rewrites
     [
      (* BIGUNION/BIGINTER theorems *)
@@ -3351,6 +3405,32 @@ val _ = export_rewrites
      (* UNIV *)
      "IN_UNIV", "EMPTY_NOT_UNIV"
 ];
+
+val sspec_conv_str =
+"local\n\
+\  val GSPEC_t = prim_mk_const{Name = \"GSPEC\", Thy = \"pred_set\"}\n\
+\  val IN_t = mk_thy_const{Name = \"IN\", Thy = \"bool\",\n\
+\                          Ty = alpha --> (alpha --> bool) --> bool}\n\
+\  val f_t = mk_var(\"f\", beta --> pairSyntax.mk_prod(alpha, bool))\n\
+\  val x_t = mk_var(\"x\", alpha)\n\
+\  \n\
+\  val SET_SPEC_CONV =\n\
+\    {conv = Lib.K (Lib.K (PGspec.SET_SPEC_CONV GSPECIFICATION)),\n\
+\     key = SOME ([], list_mk_comb(IN_t, [x_t, mk_comb(GSPEC_t, f_t)])),\n\
+\     name = \"SET_SPEC_CONV\",\n\
+\     trace = 2}\n\
+\  in\n\
+\  val SET_SPEC_ss = simpLib.SIMPSET { ac = [], congs = [],\n\
+\                                      convs = [SET_SPEC_CONV], dprocs = [],\n\
+\                                      filter = NONE, rewrs = []}\n\
+\  val _ = BasicProvers.augment_srw_ss [SET_SPEC_ss]\n  end\n"
+
+fun sigps pps = (PP.add_string pps "val SET_SPEC_ss : simpLib.ssdata";
+                 PP.add_newline pps)
+
+val _ = adjoin_to_theory {sig_ps = SOME sigps,
+                          struct_ps =
+                          SOME (fn pps => PP.add_string pps sspec_conv_str)}
 
 
 val _ = export_theory();
