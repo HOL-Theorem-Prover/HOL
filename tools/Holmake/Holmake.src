@@ -15,6 +15,12 @@ val DEPDIR = _;
 fun MK_XABLE file = _;
 val DEFAULT_OVERLAY = _;
 
+(* magic to ensure that interruptions (SIGINTs) are actually seen by the
+   linked executable as Interrupt exceptions *)
+prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
+val _ = catch_interrupt true;
+
+
 fun normPath s = Path.toString(Path.fromString s)
 fun itlist f L base =
    let fun it [] = base | it (a::rst) = f a (it rst) in it L end;
@@ -273,6 +279,8 @@ fun run_extra_command c =
                                   ["-c", overlay_string])
           end
         | "MOSMLC" => MOSMLCOMP :: additional_includes
+        | "MOSMLLEX" => [fullPath [MOSMLDIR, "bin/mosmllex"]]
+        | "MOSMLYAC" => [fullPath [MOSMLDIR, "bin/mosmlyac"]]
         | _ => [w0]
       val command = spacify (w_list @ ws)
     in
