@@ -373,6 +373,8 @@ val REDUCE_ss = simpLib.SIMPSET
                            --`$>=`--, --`$= : num -> num -> bool`--],
    rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
 
+val _ = BasicProvers.augment_srw_ss [REDUCE_ss]
+
 fun clear_arith_caches() = clear_cache arith_cache;
 
 end (* struct *)

@@ -392,6 +392,10 @@ val _ = adjoin_to_theory
       S "        end;"
    end)};
 
+val _ = BasicProvers.export_rewrites ["ISL", "ISR", "OUTL", "OUTR",
+                                      "sum_distinct", "INR_INL_11",
+                                      "sum_case_def", "INL", "INR"]
+
 
 val _ = export_theory();
 

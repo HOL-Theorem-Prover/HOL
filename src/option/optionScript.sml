@@ -320,4 +320,7 @@ val _ = adjoin_to_theory
     S "        end;"
   end)};
 
+val _ = BasicProvers.export_rewrites ["option_CLAUSES", "OPTION_MAP_EQ_SOME",
+                                      "OPTION_MAP_EQ_NONE"]
+
 val _ = export_theory();

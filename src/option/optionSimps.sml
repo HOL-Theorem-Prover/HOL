@@ -3,7 +3,6 @@ struct
 
 open simpLib optionTheory
 
-val OPTION_ss = rewrites [option_CLAUSES, OPTION_MAP_EQ_SOME,
-                          OPTION_MAP_EQ_NONE]
+val OPTION_ss = option_rwts
 
 end;
