@@ -19,6 +19,9 @@ fun COND_REWR_ERR {function,message} =
 
 val frees = rev o Term.free_vars;
 
+val subtract = op_set_diff aconv
+val intersect = op_intersect aconv
+
 fun match_aa tm1 tm2 = [match_term tm1 tm2] handle e => [] ;
 
 fun match_ok vs (l:((term,term) subst * (hol_type,hol_type) subst) list) =
@@ -135,7 +138,7 @@ fun MATCH_SUBS th fvs asm mlist =
     let val mll = map (MATCH_SUBS1 th fvs asm) mlist
     val (tms,thms) = (flatten ## I) (split mll)
     in
-    ((if (null tms) then [] else [list_mk_conj (mk_set tms)]), thms)
+    ((if (null tms) then [] else [list_mk_conj (op_mk_set aconv tms)]), thms)
     end;
 
 (* --------------------------------------------------------------------- *)
