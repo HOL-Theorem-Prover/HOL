@@ -110,6 +110,8 @@ sig
     type nodetable = int * (varnum * int * int) Vector.vector
     val nodetable  : bdd -> nodetable 
 
+    val nodecount : bdd -> int
+
     val stats    : unit -> {produced     : int,
 			    nodenum      : int,
 			    maxnodenum   : int,
@@ -295,6 +297,8 @@ end
    satisfy r, in the file fname.
 
    [nodetable r] returns the nodetable for r.
+
+   [nodecount r] returns the number of nodes used in r.
 
    [stats()] gives various statstistical information from the
    underlying C library:
