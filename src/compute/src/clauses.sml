@@ -30,16 +30,20 @@ fun check_arg_form trm =
           val (free',pat1) = chk Rand [] free in
       chk Rator (pat1::stk) free'
       end
-    else if (is_var t) andalso (stk=[]) then
-      let val newi = length free in
-      (free, Pvar (newi - index (equal t) free - 1))
-      handle HOL_ERR _ => (t::free, Pvar newi)
-      end
+    else if (is_var t) 
+         then if stk=[] 
+              then let val newi = length free 
+                   in (free, Pvar (newi - index (equal t) free - 1))
+                      handle HOL_ERR _ => (t::free, Pvar newi)
+                   end
+              else raise CL_ERR "check_arg_form" 
+                  (Lib.quote (fst(dest_var t))^
+                   " occurs as a variable on lhs")
     else if is_const t then (free, Papp{Head=t, Args=rev stk})
-    else raise CL_ERR "check_arg_form" "ill-formed pattern"
+    else raise CL_ERR "check_arg_form" "lambda abstraction not allowed on lhs"
   in case chk trm [] [] of
        (fv,Papp{Head,Args}) => (rev fv,Head,Args)
-     | _ => raise CL_ERR "check_arg_form" "ill-formed pattern"
+     | _ => raise CL_ERR "check_arg_form" "ill-formed lhs"
   end
 ;
 
@@ -219,11 +223,10 @@ fun mk_rewrite rws eq_thm =
 
 fun enter_thm rws thm0 =
   let val thm = eq_intro thm0
-      val rw =
- 	mk_rewrite rws thm
-  	handle HOL_ERR _ =>
-	  raise CL_ERR "enter_thm"
-	    ("computeLib cannot use thm\n"^Parse.thm_to_string thm0)
+      val rw  = mk_rewrite rws thm handle e 
+                => raise (wrap_exn "clauses" 
+                             ("enter_thm: computeLib cannot use thm\n"
+                              ^Parse.thm_to_string thm0) e)
   in add_in_db_upd rws (key_of rw) (Rewrite [rw])
   end;
 
