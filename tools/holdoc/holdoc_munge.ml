@@ -3,6 +3,27 @@
 
 (* TO DO:
 
+IMPORTANT
+~~~~~~~~~
+
+- can we have field names in roman?  (anything preceding := or following . ?)
+(imagine the reader parsing the s's in sendto_4, eg)
+
+- labels need Lh_Call(  ) etc omitting
+
+- Fail/FAIL and space following
+
+- some space between s and h.s in select.2, select_3
+
+? for the timed, it would be nice to write fupdate ts (x,y) as
+ts\oplus(x\maptso y)
+
+? also, Timed(x,d) as (x)_d   (is x the largest well-bracketed
+string?)
+
+REMAINDER
+~~~~~~~~~
+
 - could autogenerate various sets used in is_foo checking.
 
 - do quoted strings
