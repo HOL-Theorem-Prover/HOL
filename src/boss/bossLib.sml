@@ -85,17 +85,20 @@ infix &&;
      such as running time.  For example, RW_TAC with arith_ss (and thus 
      with list_ss) may take a long time on some goals featuring arithmetic 
      terms (since the arithmetic decision procedure may be invoked). In 
-     such cases, it may be worth dropping down to use the base_ss, 
+     such cases, it may be worth dropping down to use std_ss, 
      supplying whatever arithmetic theorems are required, so that 
      simplification is quick.
  ---------------------------------------------------------------------------*)
 
-val base_ss = simpLib.++(BasicProvers.bool_ss,pairSimps.PAIR_ss)
+(* val bool_ss = boolSimps.bool_ss *)
+val std_ss  = simpLib.++(boolSimps.bool_ss,pairSimps.PAIR_ss)
               && let open sumTheory optionTheory
-                 in [ISL,ISR,OUTL,OUTR,INL,INR,
+                 in type_rws "sum" @
+                    type_rws "option" @
+                    [ISL,ISR,OUTL,OUTR,INL,INR,
                      THE_DEF, option_APPLY_DEF] end;
 
-val arith_ss = simpLib.++(base_ss, arithSimps.ARITH_ss)
+val arith_ss = simpLib.++(std_ss, arithSimps.ARITH_ss)
 val list_ss  = simpLib.++(arith_ss, listSimps.list_ss);
 
 

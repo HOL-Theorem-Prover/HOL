@@ -53,7 +53,8 @@ in
   val DECIDE_TAC : tactic
 
   (* Simplification *)
-  val base_ss  : simpset
+
+  val std_ss   : simpset   (* bool + option + pair + sum *)
   val arith_ss : simpset
   val list_ss  : simpset
   val &&       : simpset * thm list -> simpset  (* infix && *)

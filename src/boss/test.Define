@@ -329,7 +329,7 @@ e (TotalDefn.TC_INTRO_TAC variant_def
      THEN Q.EXISTS_TAC`measure \(x,L). LENGTH(FILTER (\y. x <= y) L)`
      THEN TotalDefn.TC_SIMP_TAC);
 *)
-e (RW_TAC base_ss []   (* Blasted eta-conv. to be done before induction *)
+e (RW_TAC std_ss []   (* Blasted eta-conv. to be done before induction *)
    THEN Induct_on `L` THEN RW_TAC list_ss [listTheory.FILTER,listTheory.MEM]);
 
 (* Need a lemma *)
@@ -351,7 +351,7 @@ val (variant_eqn, variant_ind) =
 Defn.tprove 
   (variant_def, WF_REL_TAC variant_def 
       `measure \(x,L). LENGTH(FILTER (\y. x<=y) L)`
-     THEN RW_TAC base_ss []
+     THEN RW_TAC std_ss []
      THEN Induct_on `L` 
      THEN RW_TAC list_ss [listTheory.FILTER,listTheory.MEM,
                           DECIDE `x<SUC y = x <= y`,LENGTH_FILTER_SUBSET]);
@@ -363,9 +363,9 @@ Defn.tprove
 val variant_correct = Q.prove(
 `!x L. ~MEM (variant x L) L`,
 recInduct variant_ind
- THEN RW_TAC base_ss []
+ THEN RW_TAC std_ss []
  THEN ONCE_REWRITE_TAC [variant_eqn]
- THEN RW_TAC base_ss []);
+ THEN RW_TAC std_ss []);
 
 (*---------------------------------------------------------------------------*
  *   Of all the numbers that aren't in L, variant x L is the                 *
@@ -375,9 +375,9 @@ recInduct variant_ind
 val variant_minimal = Q.prove(
 `!x L y. ~MEM y L /\ x<=y ==> variant x L <= y`,
 recInduct variant_ind
-  THEN RW_TAC base_ss []
+  THEN RW_TAC std_ss []
   THEN ONCE_REWRITE_TAC [variant_eqn]
-  THEN RW_TAC base_ss []
+  THEN RW_TAC std_ss []
   THEN `x < y` by PROVE_TAC [arithmeticTheory.LESS_OR_EQ]
   THEN RW_TAC arith_ss []);
 
@@ -448,8 +448,8 @@ Induct THEN RW_TAC list_ss [listTheory.FILTER,combinTheory.K_DEF]);
 
 val lem = REWRITE_RULE [FILTER_KT]
             (Q.INST [`Q` |-> `K T`] LENGTH_FILTER_SUBSET);
-e (RW_TAC base_ss [lem, combinTheory.K_DEF]);
-e (RW_TAC base_ss [lem, combinTheory.K_DEF]);
+e (RW_TAC std_ss [lem, combinTheory.K_DEF]);
+e (RW_TAC std_ss [lem, combinTheory.K_DEF]);
 
 (* Done, make ML bindings, and should also add into theory *)
 
@@ -705,8 +705,8 @@ val (ltree_map_eqn, ltree_map_ind) =
 val ltree_map_o = Q.prove(
 `!g t f. ltree_map f (ltree_map g t) = ltree_map (f o g) t`,
 recInduct ltree_map_ind
-  THEN RW_TAC base_ss [ltree_map_eqn]
-  THENL [RW_TAC base_ss [combinTheory.o_DEF],
+  THEN RW_TAC std_ss [ltree_map_eqn]
+  THENL [RW_TAC std_ss [combinTheory.o_DEF],
          Induct_on `tl` THEN ZAP_TAC list_ss [listTheory.MEM]]);
 
 val ltree_occurs_def =
