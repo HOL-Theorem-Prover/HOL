@@ -1204,9 +1204,11 @@ fun COMB_SYNTH_CONV tm =
            (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
-     else raise ERR "COMB_SYNTH_CONV" "disallowed case"
+     else (if_print "COMB_SYNTH_CONV warning, case not handled:\n";
+           if_print_term bdy;if_print"\n";
+           raise ERR "COMB_SYNTH_CONV" "case not handled")
    end
-  else raise ERR "SYNTH_COMB" "not an application of COMB to args";
+  else raise ERR "COMB_SYNTH_COMB" "not an application of COMB to args";
 
 
 (*****************************************************************************)
