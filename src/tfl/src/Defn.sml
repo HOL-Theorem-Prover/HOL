@@ -1162,28 +1162,31 @@ fun elim_wildcards eqs =
    (Absyn.list_mk_conj (rev eql), rev fset)
  end;
 
+(* to parse a purported definition, we have to convince the parser that the
+   names to be defined aren't constants.  We can do this using "hide".
+   After the parsing has been done, the grammar has to be put back the
+   way it was.  If a definition is subsequently made, this will update
+   the grammar further (ultimately using add_const).
+*)
+
 fun parse_defn q =
  let val absyn0 = Parse.Absyn q
      val (absyn,fn_names) = elim_wildcards absyn0
-     val kcs = Parse.known_constants()
-     val  _  = List.app Parse.hide fn_names
+     val restore_these = map (fn s => (s, Parse.hide s)) fn_names
+     fun restore() =
+       List.app (fn (s, data) => Parse.update_overload_maps s data)
+                restore_these
      val tm  = Parse.absyn_to_term (Parse.term_grammar()) absyn
-               handle e => (Parse.set_known_constants kcs; raise e)
+               handle e => (restore(); raise e)
  in
-    (tm, fn_names)
+   restore();
+   (tm, fn_names)
  end;
 
 fun Hol_defn bindstem q =
-  let val kcs = Parse.known_constants()
-      val (def,fn_names) = parse_defn q
+  let val (def,fn_names) = parse_defn q
       val is_constant = not o null o decls
       val def_thm = mk_defn bindstem def
-        handle e => (Parse.set_known_constants
-                       (Lib.union kcs (filter is_constant fn_names));
-                     raise e)
-          (* if an exception is raised after a constant is defined, then
-             the union-ing above will ensure that the new constants are
-             put into the set of known constants *)
   in
       def_thm
   end
