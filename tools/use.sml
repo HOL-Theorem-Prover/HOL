@@ -17,7 +17,7 @@ fun has_dq file =
          | _ => loop()
       val status = loop()
   in 
-     TextIO.closeIn instrm;
+     TextIO.closeIn istrm;
      status
   end
 
