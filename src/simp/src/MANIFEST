@@ -1,0 +1,41 @@
+High-level view of what the simplifier files in this directory do
+
+Cache.sml:     Caching for context-aware decision procedures.
+
+Cond_rewr.sml: The fundamental rewriting-at-a-point implementation:
+               the equivalent of REWRITE_TAC's REWR_CONV.  Handles
+               side conditions, hence Cond(itional)_rewr(iting), and
+               permutative equations.
+
+               Also includes the fundamental functions for
+               transforming arbitrary theorems into rewrite rules
+               (e.g.,  p /\ q  --> [p, q])
+
+Opening.sml:   Moving into a term under the control of a congruence
+               rule.
+
+Satisfy.sml:   Simplistic code to try to simplify existential goals
+               through unification and examination of context.
+               Available through the simpset fragment in
+               SatisfySimps.
+
+Sequence.sml:  Another lazy list implementation, used only in
+               Satisfy.sml.
+
+Trace.sml:     Support
+
+Traverse.sml:  High-level specification of traversal strategy.
+               Roughly, this is
+                 do rewrites at current level as much as possible,
+                 then descend.  When you come back from this, if
+                 something changed, then try for another rewrite.  If
+                 there is one, loop.  Otherwise, try a decision
+                 procedures.  If any succeeds, loop.
+
+Unwind.sml:    One-point eliminations of variables under universal and
+               existential quantifiers.  Turns
+                  (?x. P x /\ (x = 4) /\ Q x)
+               into
+                  P 4 /\ Q 4
+
+
