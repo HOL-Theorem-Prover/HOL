@@ -88,7 +88,7 @@ val intset_to_string = to_string (pp_map Intset.listItems (pp_list pp_int));
 fun psym lit =
   let
     val (s,(x,y)) = (I ## dest_eq) (dest_literal lit)
-    val () = assert (x <> y) (ERR "psym" "refl")
+    val () = assert (x <> y) (Error "psym: refl")
   in
     mk_literal (s, mk_eq (y,x))
   end;
@@ -224,7 +224,7 @@ fun qsimplify set = let val SET {rewrites = r, ...} = set in QREWRITE r end;
 fun simplify set = let val SET {rewrites = r, ...} = set in REWRITE r end;
 
 local
-  fun taut c = assert (not (mlibCanon.tautologous (literals c))) (ERR "taut" "");
+  fun taut c = assert (not (mlibCanon.tautologous (literals c))) (Error "taut");
   fun beef_up (SET {units, ...}) cl =
     let
       val () = taut cl
@@ -245,7 +245,7 @@ end;
 local
   fun new_pred () =
     case new_var () of Var v => Atom (Fn (v, []))
-    | Fn _ => raise BUG "new_pred" "new_var didn't return a var";
+    | Fn _ => raise Bug "new_pred: new_var didn't return a var";
 
   fun AX cl lits = mk_clause (#parm (dest_clause cl)) (mlibThm.AXIOM lits);
 
@@ -263,7 +263,7 @@ local
   and components acc [] = acc
     | components acc ((vs,lit) :: rest) = dfs acc [lit] vs rest;
 
-  fun spl _ _ [] = raise BUG "split" "empty"
+  fun spl _ _ [] = raise Bug "split: empty"
     | spl cl acc [c] = rev (AX cl c :: acc)
     | spl cl acc (c1 :: c2 :: cs) =
     let val p = new_pred ()
@@ -383,7 +383,7 @@ fun deduce set =
     in
       rev res
     end
-    handle ERR_EXN _ => raise BUG "deduce" "shouldn't fail"
+    handle Error _ => raise Bug "deduce: shouldn't fail"
   end;
 
 (* ------------------------------------------------------------------------- *)
@@ -409,7 +409,7 @@ local
     in
       case ro of NONE => () | SOME r =>
         assert (mlibTermorder.compare ord (tm, term_subst sub r) = SOME GREATER)
-        (ERR "rewr_reducibles" "order violation")
+        (Error "rewr_reducibles: order violation")
     end;
 
   fun consider_rw l ro ((c,n,p),s) =
@@ -427,7 +427,7 @@ local
 
       fun pk i =
         case peek r i of SOME x => x
-        | NONE => raise BUG "rewr_reducibles" "vanishing rewrite"
+        | NONE => raise Bug "rewr_reducibles: vanishing rewrite"
 
       fun red l ro s = foldl (consider_rw l ro) s (T.matched p l)
 
@@ -464,7 +464,7 @@ local
         val SET {clauses = c, rewrites = r, ...} = set
         fun pk i =
           case List.find (fn cl => #id (dest_clause cl) = i) c of SOME cl => cl
-          | NONE => raise BUG "reducibles" "not a clause"
+          | NONE => raise Bug "reducibles: not a clause"
         fun i_to_string f =
           to_string (pp_list pp_clause) o map (f o pk) o Intset.listItems
         val _ = chat "finding rewritable clauses in the clause set\n"
@@ -478,7 +478,7 @@ local
                     "rewr_reducibles = " ^ intset_to_string rewr_i ^ "\n" ^
                     i_to_string I rewr_i ^ " -->\n" ^
                     i_to_string (REWRITE r) rewr_i ^ "\n");
-             raise BUG "purge_reducibles" "rewr <> clause")
+             raise Bug "purge_reducibles: rewr <> clause")
       in
         rewr_i
       end;
@@ -519,7 +519,7 @@ in
             (cls,set)
           end
       end
-      handle ERR_EXN _ => raise BUG "purge_reducibles" "shouldn't fail";
+      handle Error _ => raise Bug "purge_reducibles: shouldn't fail";
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -584,7 +584,7 @@ in
     in
       res
     end
-    handle ERR_EXN _ => raise BUG "mlibClauseset.initialize" "shouldn't fail";
+    handle Error _ => raise Bug "mlibClauseset.initialize: shouldn't fail";
 end;
 
 (* ------------------------------------------------------------------------- *)

@@ -40,7 +40,7 @@ in
   fun chatting l = tracing {module = module, level = l};
   fun chat s = (trace s; true)
   val ERR = mk_HOL_ERR module;
-  val BUG = BUG;
+  fun BUG f m = Bug (f ^ ": " ^ m);
 end;
 
 (* ------------------------------------------------------------------------- *)

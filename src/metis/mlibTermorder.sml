@@ -134,7 +134,7 @@ local
   fun unbounded q = M.exists (fn ("",_) => false | (_,n) => 0 < n) q;
 in
   fun good_eqn (parm : parameters) eqn =
-    if inconsistent_eqn eqn then raise ERR "good_eqn" "inconsistent"
+    if inconsistent_eqn eqn then raise Error "good_eqn: inconsistent"
     else if #precision parm <= 0 then false
     else if #precision parm <= 1 then not (unbounded eqn orelse trivial eqn)
     else if #precision parm <= 2 then not (bad eqn)
@@ -247,7 +247,7 @@ local
 
   fun wf_eqn vars eqn =
     if M.all (fn ("",_) => true | (v,_) => mem v vars) eqn then ()
-    else raise BUG "wf_eqn" ("malformed equation: " ^ q2s eqn);
+    else raise Bug ("wf_eqn: malformed equation: " ^ q2s eqn);
 in
   fun chatto n s (to as TO (_,vars,eqns,_)) =
     if not (chatting n) then () else
@@ -276,7 +276,7 @@ fun add_leq lr (to as TO (parm,vars,eqns,_)) =
       good_eqn parm eqn andalso
       not (superfluous eqn eqns) andalso
       (if not (strictly_superfluous (M.compl eqn) eqns) then true
-       else raise ERR "add_leq" "direct contradiction")
+       else raise Error "add_leq: direct contradiction")
 
     fun inc eqn =
       let
@@ -291,7 +291,7 @@ fun add_leq lr (to as TO (parm,vars,eqns,_)) =
   in
     case mk_eqn parm lr of Equal => to
     | Less => to
-    | Greater => raise ERR "add_leq" "violates order (weight)"
+    | Greater => raise Error "add_leq: violates order (weight)"
     | Equation eqn => if keep eqn then inc eqn else to
   end;
 

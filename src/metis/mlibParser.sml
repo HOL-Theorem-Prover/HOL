@@ -56,14 +56,20 @@ fun op >>++ (parser, treatment) input =
 fun op || (parser1, parser2) input = parser1 input
 handle Noparse => parser2 input;
 
-fun many parser input =
+fun smany parser state input =
   let
-    val (result, next) = parser input
-    val (results, rest) = many parser next
+    val (state,input) = parser state input
   in
-    ((result :: results), rest)
+    smany parser state input
   end
-  handle Noparse => ([], input);
+  handle Noparse => (state,input);
+
+fun many parser =
+    let
+      fun sparser l = parser >> (fn x => x :: l)
+    in
+      smany sparser [] >> rev      
+    end;
 
 fun atleastone p = (p ++ many p) >> op::;
 
@@ -75,10 +81,23 @@ fun optional p = (p >> SOME) || (nothing >> K NONE);
 (* mlibStream-based.                                                             *)
 (* ------------------------------------------------------------------------- *)
 
-type ('a, 'b) parser = 'a stream -> 'b * 'a stream
+type ('a,'b) parser = 'a stream -> 'b * 'a stream
+
+fun everything parser =
+    let
+      fun f input =
+          let
+            val (result,input) = parser input
+          in
+            S.append (S.from_list result) (fn () => f input)
+          end
+          handle Noparse => if S.null input then S.NIL else raise Noparse
+    in
+      f
+    end;
 
 fun maybe p S.NIL = raise Noparse
-  | maybe p (S.CONS (h, t)) =
+  | maybe p (S.CONS (h,t)) =
   case p h of SOME r => (r, t ()) | NONE => raise Noparse;
 
 fun finished S.NIL = ((), S.NIL)
@@ -105,7 +124,7 @@ local
     ([(left_assoc, [tok])], prec)
     | unflatten ({tok, prec, left_assoc}, ((a, l) :: dealt, p)) =
     if p = prec then
-      (assert (left_assoc = a) (BUG "infix parser/printer" "mixed assocs");
+      (assert (left_assoc = a) (Bug "infix parser/printer: mixed assocs");
        ((a, tok :: l) :: dealt, p))
     else
       ((left_assoc, [tok]) :: (a, l) :: dealt, prec);
@@ -157,7 +176,7 @@ fun parse_infixes ops =
     fun iparser (a, t) = (if a then parse_left_infix else parse_right_infix) t
     val iparsers = map iparser layeredops
   in
-    fn con => fn subparser => foldl (fn (p, sp) => p con sp) subparser iparsers
+    fn con => fn subparser => foldl (fn (p,sp) => p con sp) subparser iparsers
   end;
 
 fun pp_gen_infix left toks : 'a des -> 'a iprinter -> 'a iprinter =
@@ -168,16 +187,16 @@ fun pp_gen_infix left toks : 'a des -> 'a iprinter -> 'a iprinter =
     let
       fun dest' tm =
         case dest tm of NONE => NONE
-        | SOME (t, a, b) => omap (pair (a, b)) (List.find (equal t o snd) spc)
+        | SOME (t, a, b) => omap (pair (a,b)) (List.find (equal t o snd) spc)
       open PP
-      fun pp_go pp (tmr as (tm, r)) =
+      fun pp_go pp (tmr as (tm,r)) =
         case dest' tm of NONE => pp_sub pp tmr
-        | SOME ((a, b), ((lspc, rspc), tok))
-          => ((if left then pp_go else pp_sub) pp (a, true);
+        | SOME ((a,b),((lspc,rspc),tok))
+          => ((if left then pp_go else pp_sub) pp (a,true);
               lspc pp; add_string pp tok; rspc pp;
-              (if left then pp_sub else pp_go) pp (b, r))
+              (if left then pp_sub else pp_go) pp (b,r))
     in
-      fn pp => fn tmr as (tm, _) =>
+      fn pp => fn tmr as (tm,_) =>
       case dest' tm of NONE => pp_sub pp tmr
       | SOME _ => (begin_block pp INCONSISTENT 0; pp_go pp tmr; end_block pp)
     end
@@ -191,15 +210,15 @@ fun pp_infixes ops =
   let
     val layeredops = layerops ops
     val toks = List.concat (map (map op_clean o snd) layeredops)
-    fun iprinter (a, t) = (if a then pp_left_infix else pp_right_infix) t
+    fun iprinter (a,t) = (if a then pp_left_infix else pp_right_infix) t
     val iprinters = map iprinter layeredops
   in
     fn dest => fn pp_sub =>
     let
-      fun printer sub = foldl (fn (ip, p) => ip dest p) sub iprinters
-      fun is_op t = case dest t of SOME (x, _, _) => mem x toks | _ => false
+      fun printer sub = foldl (fn (ip,p) => ip dest p) sub iprinters
+      fun is_op t = case dest t of SOME (x,_,_) => mem x toks | _ => false
       open PP
-      fun subpr pp (tmr as (tm, _)) =
+      fun subpr pp (tmr as (tm,_)) =
         if is_op tm then
           (begin_block pp INCONSISTENT 1; add_string pp "(";
            printer subpr pp (tm, false); add_string pp ")"; end_block pp)

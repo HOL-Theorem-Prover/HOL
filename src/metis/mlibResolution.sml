@@ -282,7 +282,7 @@ fun resolution' (name, parm : parameters) =
        (name ^ "--initializing--#thms=" ^ int_to_string (length thms) ^
         "--#hyps=" ^ int_to_string (length hyps) ^ ".\n")
      val solution_stream =
-       S.map (Option.map (wrap o #thm o mlibClause.dest_clause)) o
+       S.map (Option.map (sing o #thm o mlibClause.dest_clause)) o
        resolution_stream slice_ref units_ref
    in
      fn [False] => solution_stream (parm,thms,hyps) | _ => S.NIL

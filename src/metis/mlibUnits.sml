@@ -37,7 +37,7 @@ fun lift_options f =
 fun psym lit =
   let
     val (s, (x,y)) = (I ## dest_eq) (dest_literal lit)
-    val () = assert (x <> y) (ERR "psym" "refl")
+    val () = assert (x <> y) (Error "psym: refl")
   in
     mk_literal (s, mk_eq (y,x))
   end;
@@ -87,7 +87,7 @@ fun udemod uns =
     fun demod (lit,th) =
       case uprove uns [negate lit] of NONE => th
       | SOME [dth] => RESOLVE lit th dth
-      | SOME _ => raise BUG "unit_demod" "corrupt"
+      | SOME _ => raise Bug "unit_demod: corrupt"
   in
     fn th => foldl demod th (clause th)
   end;

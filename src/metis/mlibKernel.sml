@@ -35,13 +35,13 @@ val clause = fst o dest_thm;
 
 fun AXIOM cl =
   if List.all is_literal cl then mlibThm (cl, (Axiom, []))
-  else raise ERR "AXIOM" "argument not a list of literals";
+  else raise Error "AXIOM: argument not a list of literals";
 
 fun REFL tm = mlibThm ([mk_eq (tm,tm)], (Refl, []));
 
 fun ASSUME fm =
   if is_literal fm then mlibThm ([fm, negate fm], (Assume, []))
-  else raise ERR "ASSUME" "argument not a literal";
+  else raise Error "ASSUME: argument not a literal";
 
 fun INST env (th as mlibThm (cl, pr)) =
   let

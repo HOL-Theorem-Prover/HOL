@@ -6,10 +6,10 @@
 signature mlibTerm =
 sig
 
-type 'a pp           = 'a mlibUseful.pp
-type ('a, 'b) maplet = ('a, 'b) mlibUseful.maplet
-type 'a quotation    = 'a mlibParser.quotation
-type infixities      = mlibParser.infixities
+type 'a pp = 'a mlibUseful.pp
+type ('a,'b) maplet = ('a, 'b) mlibUseful.maplet
+type 'a quotation = 'a mlibParser.quotation
+type infixities = mlibParser.infixities
 
 (* Datatypes for terms and formulas *)
 datatype term =
@@ -29,43 +29,43 @@ datatype formula =
 | Exists of string * formula
 
 (* Contructors and destructors *)
-val dest_var        : term -> string
-val is_var          : term -> bool
+val dest_var : term -> string
+val is_var   : term -> bool
 
-val dest_fn         : term -> string * term list
-val is_fn           : term -> bool
-val fn_name         : term -> string
-val fn_args         : term -> term list
-val fn_arity        : term -> int
-val fn_function     : term -> string * int
+val dest_fn     : term -> string * term list
+val is_fn       : term -> bool
+val fn_name     : term -> string
+val fn_args     : term -> term list
+val fn_arity    : term -> int
+val fn_function : term -> string * int
 
-val mk_const        : string -> term
-val dest_const      : term -> string
-val is_const        : term -> bool
+val mk_const   : string -> term
+val dest_const : term -> string
+val is_const   : term -> bool
 
-val mk_binop        : string -> term * term -> term
-val dest_binop      : string -> term -> term * term
-val is_binop        : string -> term -> bool
+val mk_binop   : string -> term * term -> term
+val dest_binop : string -> term -> term * term
+val is_binop   : string -> term -> bool
 
-val dest_atom       : formula -> term
-val is_atom         : formula -> bool
+val dest_atom : formula -> term
+val is_atom   : formula -> bool
 
-val dest_neg        : formula -> formula
-val is_neg          : formula -> bool
+val dest_neg : formula -> formula
+val is_neg   : formula -> bool
 
-val list_mk_conj    : formula list -> formula
-val strip_conj      : formula -> formula list
-val flatten_conj    : formula -> formula list
+val list_mk_conj : formula list -> formula
+val strip_conj   : formula -> formula list
+val flatten_conj : formula -> formula list
 
-val list_mk_disj    : formula list -> formula
-val strip_disj      : formula -> formula list
-val flatten_disj    : formula -> formula list
+val list_mk_disj : formula list -> formula
+val strip_disj   : formula -> formula list
+val flatten_disj : formula -> formula list
 
-val list_mk_forall  : string list * formula -> formula
-val strip_forall    : formula -> string list * formula
+val list_mk_forall : string list * formula -> formula
+val strip_forall   : formula -> string list * formula
 
-val list_mk_exists  : string list * formula -> formula
-val strip_exists    : formula -> string list * formula
+val list_mk_exists : string list * formula -> formula
+val strip_exists   : formula -> string list * formula
 
 (* New variables *)
 val new_var  : unit -> term

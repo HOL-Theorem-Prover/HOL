@@ -48,7 +48,7 @@ val blind_pick = S.find (K true);
 
 fun retrieve known i =
   (case M.peek (known,i) of SOME rw_ort => rw_ort
-   | NONE => raise ERR "rewrite" "rewr has been rewritten away!");
+   | NONE => raise Error "rewrite: rewr has been rewritten away!");
 
 (* ------------------------------------------------------------------------- *)
 (* Representing ordered rewrites.                                            *)
@@ -148,7 +148,7 @@ fun add (i,th) (rw as REWRS {known, ...}) =
       val REWRS {order, rewrites, subterms, waiting, ...} = rw
       val ort =
         case orient (order (dest_unit_eq th)) of SOME x => x
-        | NONE => raise BUG "mlibRewrite.add" "can't add reflexive eqns"
+        | NONE => raise Bug "mlibRewrite.add: can't add reflexive eqns"
       val known = M.insert (known, i, (th,ort))
       val rewrites = add_rewrite i (th,ort) rewrites
       val waiting = S.add (waiting,i)
@@ -167,7 +167,7 @@ fun thm_match known order (i,th) =
   let
     fun orw (l,r) tm =
       let val sub = match l tm
-      in assert (order (tm, term_subst sub r) = SOME GREATER) (ERR "orw" "")
+      in assert (order (tm, term_subst sub r) = SOME GREATER) (Error "orw")
       end
     fun rw ((l,_),LtoR) tm = can (match l) tm
       | rw ((_,r),RtoL) tm = can (match r) tm
@@ -211,15 +211,15 @@ local
         let
           fun f tm (j,lr) =
             let
-              val () = assert (j <> i) (ERR "rewrite" "same theorem")
+              val () = assert (j <> i) (Error "rewrite: same theorem")
               val (rw,ort) = retrieve known j
-              val () = assert (agree lr ort) (ERR "rewrite" "bad orientation")
+              val () = assert (agree lr ort) (Error "rewrite: bad orientation")
               val (l,r) = redex_residue lr rw
               val sub = match l tm
               val r' = term_subst sub r
               val () = assert
                 (ort <> Both orelse order (tm,r') = SOME GREATER)
-                (ERR "rewrite" "order violation")
+                (Error "rewrite: order violation")
             in
               (INST sub rw, r', lr)
             end
@@ -228,7 +228,7 @@ local
           fun conv tm =
             case rewr_conv tm of SOME x => x
             | NONE => (case neq_conv tm of SOME x => x
-                       | NONE => raise ERR "rewrite" "no matching rewrites")
+                       | NONE => raise Error "rewrite: no matching rewrites")
         in
           DEPTH1 conv
         end
@@ -272,7 +272,7 @@ local
           val m = thm_match known order (i,th')
           val _ = chat ("rewrite:\n" ^ thm_to_string th
                         ^ "\n ->\n" ^ thm_to_string th' ^ "\n")
-          val () = assert (not m) (BUG "rewrite" "should be normalized")
+          val () = assert (not m) (Bug "rewrite: should be normalized")
         in
           th'
         end
@@ -320,7 +320,7 @@ fun find_rws order known subterms i =
         val s = match l t
       in
         assert (ord orelse order (t, term_subst s r) = SOME GREATER)
-               (ERR "valid" "violates order")
+               (Error "valid: violates order")
       end
 
     fun check_subtm lr (jp as (j,_), todo) =
@@ -426,7 +426,7 @@ fun reduce' rw =
       val m = List.exists (thm_match known order) eqs
       val _ = chatrewrs "reduce before" rw
       val _ = chatrewrs "reduce after" rw'
-      val () = assert (not m) (BUG "reduce" "not fully reduced")
+      val () = assert (not m) (Bug "reduce: not fully reduced")
     in
       res
     end;

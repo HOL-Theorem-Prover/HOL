@@ -39,7 +39,7 @@ fun insert (Atom a |-> b) ((p,n),tf)       = ((T.insert (a |-> b) p, n), tf)
   | insert (Not (Atom a) |-> b) ((p,n),tf) = ((p, T.insert (a |-> b) n), tf)
   | insert (True |-> b) (pn,((n,l),f))     = (pn, ((n + 1, b :: l), f))
   | insert (False |-> b) (pn,(t,(n,l)))    = (pn, (t, (n + 1, b :: l)))
-  | insert (f |-> _) _ = raise BUG "insert" ("not a lit: "^formula_to_string f);
+  | insert (f |-> _) _ = raise Bug ("insert: not a lit: "^formula_to_string f);
 
 local
   fun pos     ((pos, _  ), _               ) = T.size pos;
@@ -55,19 +55,19 @@ fun match ((pos,_),_) (Atom a) = T.match pos a
   | match ((_,neg),_) (Not (Atom a)) = T.match neg a
   | match (_,((_,t),_)) True = t
   | match (_,(_,(_,f))) False = f
-  | match _ _ = raise BUG "match" "not a literal";
+  | match _ _ = raise Bug "match: not a literal";
 
 fun matched ((pos,_),_) (Atom a) = T.matched pos a
   | matched ((_,neg),_) (Not (Atom a)) = T.matched neg a
   | matched (_,((_,t),_)) True = t
   | matched (_,(_,(_,f))) False = f
-  | matched _ _ = raise BUG "matched" "not a literal";
+  | matched _ _ = raise Bug "matched: not a literal";
 
 fun unify ((pos,_),_) (Atom a) = T.unify pos a
   | unify ((_,neg),_) (Not (Atom a)) = T.unify neg a
   | unify (_,((_,t),_)) True = t
   | unify (_,(_,(_,f))) False = f
-  | unify _ _ = raise BUG "unify" "not a literal";
+  | unify _ _ = raise Bug "unify: not a literal";
 
 fun filter pred =
   let

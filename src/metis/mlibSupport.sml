@@ -142,7 +142,7 @@ in
     end;
 end;
 
-fun sat_mod_fms _ [] _ = raise BUG "sat_mod_fms" "no formulas"
+fun sat_mod_fms _ [] _ = raise Bug "sat_mod_fms: no formulas"
   | sat_mod_fms m fms n =
   let val sum = foldl (fn (fm,x) => sat_mod_fm m fm n + x) 0.0 fms
   in sum / Real.fromInt (length fms)

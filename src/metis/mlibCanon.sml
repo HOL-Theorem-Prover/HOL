@@ -10,9 +10,9 @@ app load ["mlibUseful", "mlibTerm"];
 structure mlibCanon :> mlibCanon =
 struct
 
-open mlibUseful mlibTerm mlibThm;
+open mlibUseful mlibTerm;
 
-infixr |-> ::> oo;
+infixr |-> ::>
 
 type subst        = mlibSubst.subst;
 val |<>|          = mlibSubst.|<>|;
@@ -27,7 +27,7 @@ val formula_subst = mlibSubst.formula_subst;
 fun sym lit =
   let
     val (x,y) = dest_eq lit
-    val () = assert (x <> y) (ERR "sym" "refl")
+    val () = assert (x <> y) (Error "sym: refl")
   in
     mk_eq (y,x)
   end;
@@ -195,57 +195,17 @@ in
     | simpcnf fm = List.filter (non tautologous) (push fm);
 end;
 
-val fullcnf =
+val clausal =
   List.concat o map (simpcnf o specialize o prenex) o flatten_conj o
   skolemize o nnf o simplify;
 
 val purecnf = list_mk_conj o map list_mk_disj o simpcnf;
 
-val cnf = list_mk_conj o map list_mk_disj o fullcnf;
+val cnf = list_mk_conj o map list_mk_disj o clausal;
 
 val is_clause = List.all is_literal o strip_disj o snd o strip_forall;
 
 val is_cnf = List.all is_clause o strip_conj;
-
-(* ------------------------------------------------------------------------- *)
-(* Converting to clauses.                                                    *)
-(* ------------------------------------------------------------------------- *)
-
-val clausal = fullcnf;
-
-val axiomatize = map AXIOM o clausal;
-
-val eq_axioms =
-  let
-    val functions' = List.filter (fn (_,n) => 0 < n) o functions
-    val relations' = List.filter (non (equal eq_rel)) o relations
-    val eqs = [REFLEXIVITY, SYMMETRY, TRANSITIVITY]
-    val rels = map REL_CONGRUENCE o relations'
-    val funs = map FUN_CONGRUENCE o functions'
-  in
-    fn fm => eqs @ funs fm @ rels fm
-  end;
-
-local
-  fun eq_axs g = if eq_occurs g then eq_axioms g else [];
-  fun raw a b = (axiomatize a, axiomatize b);
-  fun semi g a b = (eq_axs g @ axiomatize a, axiomatize (Not b));
-  fun full g = ([], eq_axs g @ axiomatize (Not g));
-  fun is_raw a b = is_cnf a andalso is_cnf b;
-  fun is_semi a b = is_cnf a andalso is_clause b andalso b <> False;
-in
-  fun clauses g =
-      let
-        val g = generalize g
-        val (thms,hyps) =
-            case g of
-              Imp (a, Imp (b, False)) => if is_raw a b then raw a b else full g
-            | Imp (a,b) => if is_semi a b then semi g a b else full g
-            | _ => full g
-      in
-        {thms = thms, hyps = hyps}
-      end;
-end;
 
 (* ------------------------------------------------------------------------- *)
 (* Categorizing sets of clauses.                                             *)

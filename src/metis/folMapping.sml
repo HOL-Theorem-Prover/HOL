@@ -25,7 +25,6 @@ type thm1     = mlibThm.thm;
 type vars     = term list * hol_type list;
 
 val assert     = mlibUseful.assert;
-val wrap       = mlibUseful.wrap;
 val pinst      = matchTools.pinst;
 val INST_TY    = matchTools.INST_TY;
 val PINST      = matchTools.PINST;
@@ -42,7 +41,7 @@ in
   fun chatting l = tracing {module = module, level = l};
   fun chat s = (trace s; true)
   val ERR = mk_HOL_ERR module;
-  val BUG = BUG;
+  fun BUG f m = Bug (f ^ ": " ^ m);
 end;
 
 (* ------------------------------------------------------------------------- *)

@@ -3,12 +3,6 @@
 (* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
-(*
-app load ["mlibUseful", "mlibStream", "mlibParser", "Mosml", "Binarymap"];
-*)
-
-(*
-*)
 structure mlibTerm :> mlibTerm =
 struct
 
@@ -46,14 +40,14 @@ datatype formula =
 (* Variables *)
 
 fun dest_var (Var v) = v
-  | dest_var (Fn _) = raise ERR "dest_var" "";
+  | dest_var (Fn _) = raise Error "dest_var";
 
 val is_var = can dest_var;
 
 (* Functions *)
 
 fun dest_fn (Fn f) = f
-  | dest_fn (Var _) = raise ERR "dest_fn" "";
+  | dest_fn (Var _) = raise Error "dest_fn";
 
 val is_fn = can dest_fn;
 
@@ -70,7 +64,7 @@ fun fn_function tm = (fn_name tm, fn_arity tm);
 fun mk_const c = (Fn (c, []));
 
 fun dest_const (Fn (c, [])) = c
-  | dest_const _ = raise ERR "dest_const" "";
+  | dest_const _ = raise Error "dest_const";
 
 val is_const = can dest_const;
 
@@ -79,22 +73,22 @@ val is_const = can dest_const;
 fun mk_binop f (a, b) = Fn (f, [a, b]);
 
 fun dest_binop f (Fn (x, [a, b])) =
-  if x = f then (a, b) else raise ERR "dest_binop" "wrong binop"
-  | dest_binop _ _ = raise ERR "dest_binop" "not a binop";
+  if x = f then (a, b) else raise Error "dest_binop: wrong binop"
+  | dest_binop _ _ = raise Error "dest_binop: not a binop";
 
 fun is_binop f = can (dest_binop f);
 
 (* Atoms *)
 
 fun dest_atom (Atom a) = a
-  | dest_atom _ = raise ERR "dest_atom" "";
+  | dest_atom _ = raise Error "dest_atom";
 
 val is_atom = can dest_atom;
 
 (* Negations *)
 
 fun dest_neg (Not p) = p
-  | dest_neg _ = raise ERR "dest_neg" "";
+  | dest_neg _ = raise Error "dest_neg";
 
 val is_neg = can dest_neg;
 
@@ -217,8 +211,10 @@ val reserved = ["!", "?", "(", ")", ".", "~"];
 (* Deciding whether a string denotes a variable or constant.                 *)
 (* ------------------------------------------------------------------------- *)
 
-local val initials = [#"_",#"v",#"w",#"x",#"y",#"z",#"V",#"W",#"X",#"Y",#"Z"];
-in val var_string = ref (C mem initials o Char.toLower o hd o explode);
+local
+  val initials = explode "_vwxyz";
+in
+  val var_string = ref (C mem initials o Char.toLower o hd o explode);
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -263,7 +259,7 @@ fun pp_term' ops =
             add_break pp (1, 0);
             if is_q body then pr pp body else pp_tm pp (body, false)
           end
-          | pr pp tm = raise BUG "pp_term" "not a quantifier"
+          | pr pp tm = raise Bug "pp_term: not a quantifier"
         fun pp_q pp t = (begin_block pp INCONSISTENT 2; pr pp t; end_block pp)
       in
         (if is_q tm then (if r then pp_bracket "(" ")" else I) pp_q
@@ -434,8 +430,8 @@ local
     | sz n (Forall (_, p) :: fms) = sz (n + 1) (p :: fms)
     | sz n (Exists (_, p) :: fms) = sz (n + 1) (p :: fms);
 in
-  val term_size    = szt 0 o wrap;
-  val formula_size = sz  0 o wrap;
+  val term_size    = szt 0 o sing;
+  val formula_size = sz  0 o sing;
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -486,8 +482,8 @@ local
     | cm ((Exists (v, p), Exists (w, q)) :: l) =
     lex (String.compare (v, w)) (cm o cons (p, q)) l;
 in
-  val term_compare    = cmt o wrap;
-  val formula_compare = cm o wrap;
+  val term_compare    = cmt o sing;
+  val formula_compare = cm o sing;
 end;
   
 (* ------------------------------------------------------------------------- *)
@@ -499,7 +495,7 @@ fun mk_literal (true,  a) = a
 
 fun dest_literal (a as Atom _)       = (true,  a)
   | dest_literal (Not (a as Atom _)) = (false, a)
-  | dest_literal _                   = raise ERR "dest_literal" "";
+  | dest_literal _                   = raise Error "dest_literal";
 
 val is_literal = can dest_literal;
 
@@ -539,7 +535,7 @@ local
     | func fs (Forall (_, p)      :: fms) = func fs (p :: fms)
     | func fs (Exists (_, p)      :: fms) = func fs (p :: fms);
 in
-  val functions = func [] o wrap;
+  val functions = func [] o sing;
 end;
 
 val function_names = map fst o functions;
@@ -558,7 +554,7 @@ local
     | rel rs (Forall (_, p)    :: fms) = rel rs (p :: fms)
     | rel rs (Exists (_, p)    :: fms) = rel rs (p :: fms);
 in
-  val relations = rel [] o wrap;
+  val relations = rel [] o sing;
 end;
 
 val relation_names = map fst o relations;
@@ -572,7 +568,7 @@ val eq_rel = ("=", 2);
 fun mk_eq (a, b) = Atom (Fn ("=", [a, b]));
 
 fun dest_eq (Atom (Fn ("=", [a, b]))) = (a, b)
-  | dest_eq _ = raise ERR "dest_eq" "";
+  | dest_eq _ = raise Error "dest_eq";
 
 val is_eq = can dest_eq;
 
@@ -629,19 +625,19 @@ fun generalize fm = list_mk_forall (FV fm, fm);
 (* ------------------------------------------------------------------------- *)
 
 fun subterm [] tm = tm
-  | subterm (_ :: _) (Var _) = raise ERR "subterm" "Var"
+  | subterm (_ :: _) (Var _) = raise Error "subterm: Var"
   | subterm (h :: t) (Fn (_, args)) =
   subterm t (List.nth (args, h))
-  handle Subscript => raise ERR "subterm" "bad path";
+  handle Subscript => raise Error "subterm: bad path";
 
 fun literal_subterm p = subterm p o dest_atom o literal_atom;
 
 local
-  fun update _ _ [] = raise ERR "rewrite" "bad path"
+  fun update _ _ [] = raise Error "rewrite: bad path"
     | update f n (h :: t) = if n = 0 then f h :: t else h :: update f (n - 1) t;
 in
   fun rewrite ([] |-> res) _ = res
-    | rewrite _ (Var _) = raise ERR "rewrite" "Var"
+    | rewrite _ (Var _) = raise Error "rewrite: Var"
     | rewrite ((h :: t) |-> res) (Fn (f, args)) =
     Fn (f, update (rewrite (t |-> res)) h args);
 end;
@@ -649,7 +645,7 @@ end;
 local
   fun atom_rewrite r = Atom o rewrite r o dest_atom;
 in
-  fun literal_rewrite ([] |-> _) = raise ERR "literal_rewrite" "empty path"
+  fun literal_rewrite ([] |-> _) = raise Error "literal_rewrite: empty path"
     | literal_rewrite r = mk_literal o (I ## atom_rewrite r) o dest_literal;
 end;
 

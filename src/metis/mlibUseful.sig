@@ -7,10 +7,8 @@ signature mlibUseful =
 sig
 
 (* Exceptions, profiling and tracing *)
-exception ERR_EXN of {origin_function : string, message : string}
-exception BUG_EXN of {origin_function : string, message : string}
-val ERR         : string -> string -> exn
-val BUG         : string -> string -> exn
+exception Error of string
+exception Bug of string
 val report      : exn -> string
 val assert      : bool -> exn -> unit
 val try         : ('a -> 'b) -> 'a -> 'b
@@ -31,7 +29,7 @@ val K      : 'a -> 'b -> 'a
 val S      : ('a -> 'b -> 'c) -> ('a -> 'b) -> 'a -> 'c
 val W      : ('a -> 'a -> 'b) -> 'a -> 'b
 val oo     : ('a -> 'b) * ('c -> 'd -> 'a) -> 'c -> 'd -> 'b
-val ##     : ('a -> 'b) * ('c -> 'd) -> 'a * 'c -> 'b * 'd
+val ##     : ('a -> 'c) * ('b -> 'd) -> 'a * 'b -> 'c * 'd
 val funpow : int -> ('a -> 'a) -> 'a -> 'a
 
 (* Booleans *)
@@ -59,9 +57,9 @@ val mwhile : ('a -> bool) -> ('a -> 's -> 'a * 's) -> 'a -> 's -> 'a * 's
 
 (* Lists: note we count elements from 0 *)
 val cons         : 'a -> 'a list -> 'a list
+val hd_tl        : 'a list -> 'a * 'a list
 val append       : 'a list -> 'a list -> 'a list
-val wrap         : 'a -> 'a list
-val unwrap       : 'a list -> 'a
+val sing         : 'a -> 'a list
 val first        : ('a -> 'b option) -> 'a list -> 'b option
 val index        : ('a -> bool) -> 'a list -> int option
 val maps         : ('a -> 's -> 'b * 's) -> 'a list -> 's -> 'b list * 's
@@ -74,6 +72,7 @@ val cartwith     : ('a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list
 val cart         : 'a list -> 'b list -> ('a * 'b) list
 val divide       : 'a list -> int -> 'a list * 'a list      (* Subscript *)
 val update_nth   : ('a -> 'a) -> int -> 'a list -> 'a list  (* Subscript *)
+val shared_map   : ('a -> 'a) -> 'a list -> 'a list  (* preserves sharing *)
 
 (* Lists-as-sets *)
 val mem       : ''a -> ''a list -> bool
@@ -88,15 +87,22 @@ val distinct  : ''a list -> bool
 
 (* Comparisons *)
 type 'a ordering = 'a * 'a -> order
-val rev_order    : 'a ordering -> 'a ordering
-val lex_combine  : 'a ordering -> 'b ordering -> ('a * 'b) ordering
-val lex_compare  : 'a ordering -> 'a list ordering
+val order_to_string : order -> string
+val map_order       : ('a -> 'b) -> 'b ordering -> 'a ordering
+val rev_order       : 'a ordering -> 'a ordering
+val lex_order       : 'a ordering -> 'b ordering -> ('a * 'b) ordering
+val lex_order2      : 'a ordering -> ('a * 'a) ordering
+val lex_order3      : 'a ordering -> ('a * 'a * 'a) ordering
+val lex_seq_order   : 'a ordering -> 'a ordering -> 'a ordering
+val lex_list_order  : 'a ordering -> 'a list ordering
 
 (* Sorting and searching *)
-val min      : ('a * 'a -> order) -> 'a list -> 'a * 'a list
-val merge    : ('a * 'a -> order) -> 'a list -> 'a list -> 'a list
-val sort     : ('a * 'a -> order) -> 'a list -> 'a list
-val sort_map : ('a -> 'b) -> ('b * 'b -> order) -> 'a list -> 'a list
+val min      : 'a ordering -> 'a list -> 'a * 'a list
+val max      : 'a ordering -> 'a list -> 'a * 'a list
+val merge    : 'a ordering -> 'a list -> 'a list -> 'a list
+val sort     : 'a ordering -> 'a list -> 'a list
+val sort_map : ('a -> 'b) -> 'b ordering -> 'a list -> 'a list
+val top_sort : 'a ordering -> ('a -> 'a list) -> 'a list -> 'a list
 
 (* Integers *)
 val int_to_string : int -> string
@@ -106,6 +112,8 @@ val bits_to_int   : bool list -> int              (* Overflow *)
 val int_to_base64 : int -> char
 val base64_to_int : char -> int
 val interval      : int -> int -> int list
+val even          : int -> bool
+val odd           : int -> bool
 val divides       : int -> int -> bool
 val primes        : int -> int list
 val gcd           : int -> int -> int
@@ -137,6 +145,7 @@ val pp_map      : ('a -> 'b) -> 'b pp -> 'a pp
 val pp_bracket  : string -> string -> 'a pp -> 'a pp
 val pp_sequence : string -> 'a pp -> 'a list pp
 val pp_binop    : string -> 'a pp -> 'b pp -> ('a * 'b) pp
+val pp_char     : char pp
 val pp_string   : string pp
 val pp_unit     : unit pp
 val pp_bool     : bool pp
@@ -150,35 +159,40 @@ val pp_triple   : 'a pp -> 'b pp -> 'c pp -> ('a * 'b * 'c) pp
 val to_string   : 'a pp -> 'a -> string           (* Uses LINE_LENGTH *)
 
 (* Sum datatype *)
-datatype ('a, 'b) sum = INL of 'a | INR of 'b
-val is_inl : ('a, 'b) sum -> bool
-val is_inr : ('a, 'b) sum -> bool
-val pp_sum : 'a pp -> 'b pp -> ('a, 'b) sum pp
+datatype ('a,'b) sum = INL of 'a | INR of 'b
+val is_inl : ('a,'b) sum -> bool
+val is_inr : ('a,'b) sum -> bool
+val pp_sum : 'a pp -> 'b pp -> ('a,'b) sum pp
 
 (* Maplets *)
-datatype ('a, 'b) maplet = |-> of 'a * 'b
-val pp_maplet : 'a pp -> 'b pp -> ('a, 'b) maplet pp
+datatype ('a,'b) maplet = |-> of 'a * 'b
+val pp_maplet : 'a pp -> 'b pp -> ('a,'b) maplet pp
 
 (* Trees *)
-datatype ('a, 'b) tree = BRANCH of 'a * ('a, 'b) tree list | LEAF of 'b
-val tree_size  : ('a, 'b) tree -> {branches : int, leaves : int}
+datatype ('a,'b) tree = BRANCH of 'a * ('a,'b) tree list | LEAF of 'b
+val tree_size  : ('a,'b) tree -> {branches : int, leaves : int}
 val tree_foldr : ('a -> 'c list -> 'c) -> ('b -> 'c) -> ('a, 'b) tree -> 'c
 val tree_foldl : ('a->'c->'c) -> ('b->'c->'d) -> 'c -> ('a,'b) tree -> 'd list
 val tree_partial_foldl :
   ('a->'c->'c option) -> ('b->'c->'d option) -> 'c -> ('a,'b) tree -> 'd list
 
-(* mlibUseful imperative features *)
-val lazify_thunk : (unit -> 'a) -> unit -> 'a
-val new_int      : unit -> int
-val new_ints     : int -> int list
-val uniform      : unit -> real
-val coin_flip    : unit -> bool
-val with_flag    : 'r ref * ('r -> 'r) -> ('a -> 'b) -> 'a -> 'b
-val mk_textfile  : string -> string -> unit  (* mk_textfile filename contents *)
+(* mlibUseful impure features *)
+val ==        : 'a * 'a -> bool  (* pointer equality *)
+val memoize   : (unit -> 'a) -> unit -> 'a
+val new_int   : unit -> int
+val new_ints  : int -> int list
+val uniform   : unit -> real
+val coin_flip : unit -> bool
+val with_flag : 'r ref * ('r -> 'r) -> ('a -> 'b) -> 'a -> 'b
+val cached    : 'a ordering -> ('a -> 'b) -> 'a -> 'b
 
-(* Information about the environment *)
-val host  : string
-val date  : unit -> string
-val today : unit -> string
+(* The environment *)
+val host           : string
+val date           : unit -> string
+val today          : unit -> string
+val warn           : string -> unit
+val die            : string -> unit
+val read_textfile  : {filename : string} -> string
+val write_textfile : {filename : string, contents : string} -> unit
 
 end

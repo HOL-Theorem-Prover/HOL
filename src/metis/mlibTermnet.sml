@@ -40,7 +40,7 @@ type 'a vmap = (string, 'a) M.dict;
 fun empty_vmap () : 'a vmap = M.mkDict String.compare;
 
 type 'a fmap = (string * int, 'a) M.dict;
-fun empty_fmap () : 'a fmap = M.mkDict (lex_combine String.compare Int.compare);
+fun empty_fmap () : 'a fmap = M.mkDict (lex_order String.compare Int.compare);
 
 (* ------------------------------------------------------------------------- *)
 (* Dealing with the terms that emerge from termnets.                         *)
@@ -73,14 +73,14 @@ end;
 local
   fun update sub v qtm =
     (case M.peek (sub,v) of NONE => M.insert (sub,v,qtm)
-     | SOME qtm' => if qtm = qtm' then sub else raise ERR "matchq" "vars");
+     | SOME qtm' => if qtm = qtm' then sub else raise Error "matchq: vars");
 
   fun qn sub [] = sub
     | qn sub ((Var v, qtm) :: rest) = qn (update sub v qtm) rest
-    | qn _ ((Fn _, VAR) :: _) = raise ERR "matchq" "match fn var"
+    | qn _ ((Fn _, VAR) :: _) = raise Error "matchq: match fn var"
     | qn sub ((Fn (f,a), FN ((g,n),b)) :: rest) =
     if f = g andalso length a = n then qn sub (zip a b @ rest)
-    else raise ERR "matchq" "match fn fn";
+    else raise Error "matchq: match fn fn";
 in
   fun matchq sub tm qtm = qn sub [(tm,qtm)];
 end;
@@ -89,7 +89,11 @@ local
   fun qv VAR x = x
     | qv x VAR = x
     | qv (FN (f,a)) (FN (g,b)) =
-    (assert (f = g) (ERR "qunify" "incompatible vars"); FN (f, zipwith qv a b));
+      let
+        val () = assert (f = g) (Error "qunify: incompatible vars")
+      in
+        FN (f, zipwith qv a b)
+      end;
 
   fun qu sub [] = sub
     | qu sub ((VAR, _) :: rest) = qu sub rest
@@ -99,7 +103,7 @@ local
     end
     | qu sub ((FN ((f,n),a), Fn (g,b)) :: rest) =
     if f = g andalso n = length b then qu sub (zip a b @ rest)
-    else raise ERR "unifyq" "structurally different";
+    else raise Error "unifyq: structurally different";
 in
   fun qunify qtm qtm' = total (qv qtm) qtm';
   fun unifyq sub qtm tm = total (qu sub) [(qtm,tm)];
@@ -135,14 +139,14 @@ local
     | add a (VAR::tms) (MULTIPLE (vs,fs)) = MULTIPLE (SOME (oadd a tms vs), fs)
     | add a (FN (f,l) :: tms) (MULTIPLE (vs,fs)) =
     MULTIPLE (vs, M.insert (fs, f, oadd a (l @ tms) (M.peek (fs,f))))
-    | add _ _ _ = raise BUG "mlibTermnet.insert" "mlibMatch"
+    | add _ _ _ = raise Bug "mlibTermnet.insert: mlibMatch"
   and oadd a tms NONE = singles tms a
     | oadd a tms (SOME n) = add a tms n;
   fun ins a tm (i,n) = SOME (i + 1, oadd (RESULT [a]) [tm] n);
 in
   fun insert (tm |-> a) (NET (p,k,n)) =
     NET (p, k + 1, ins (k,a) (qterm tm) (pre n))
-    handle ERR_EXN _ => raise BUG "mlibTermnet.insert" "should never fail";
+    handle Error _ => raise Bug "mlibTermnet.insert: should never fail";
 end;
 
 local
@@ -161,11 +165,11 @@ local
     in
       mat acc rest
     end
-    | mat _ _ = raise BUG "mlibTermnet.match" "mlibMatch";
+    | mat _ _ = raise Bug "mlibTermnet.match: mlibMatch";
 in
   fun match (NET (_,_,NONE)) _ = []
     | match (NET (p, _, SOME (_,n))) tm = finally p (mat [] [(n,[tm])])
-    handle ERR_EXN _ => raise BUG "mlibTermnet.match" "should never fail";
+    handle Error _ => raise Bug "mlibTermnet.match: should never fail";
 end;
 
 fun harvest inc =
@@ -177,7 +181,7 @@ fun harvest inc =
       in chk ((pl, fl, FN (f, rev a) :: b, n) :: l) acc
       end
       | chk ((pl, (f,j)::fl, sl, n) :: l) acc = get (pl,(f,j-1)::fl,sl,n) l acc
-      | chk _ _ = raise BUG "mlibTermnet.harvest" "mlibMatch 1"
+      | chk _ _ = raise Bug "mlibTermnet.harvest: mlibMatch 1"
     and get (p :: pl, fl, sl, SINGLE (t,n)) l acc =
       (case qunify p t of NONE => chk l acc
        | SOME t => chk ((pl, fl, t :: sl, n) :: l) acc)
@@ -192,7 +196,7 @@ fun harvest inc =
       | get (FN (f as (_,i), a) :: pl, fl, sl, MULTIPLE (_,fs)) l acc =
       (case M.peek (fs,f) of NONE => chk l acc
        | SOME n => chk ((a @ pl, (f,i) :: fl, sl, n) :: l) acc)
-      | get _ _ _ = raise BUG "mlibTermnet.harvest" "mlibMatch 2"
+      | get _ _ _ = raise Bug "mlibTermnet.harvest: mlibMatch 2"
   in
     fn pat => fn net => fn acc => get ([pat],[],[],net) [] acc
   end;
@@ -217,12 +221,12 @@ local
     in
       mat acc (case vs of NONE => rest | SOME n => (sub,n,tms) :: rest)
     end
-    | mat _ _ = raise BUG "mlibTermnet.unify" "mlibMatch";
+    | mat _ _ = raise Bug "mlibTermnet.unify: mlibMatch";
 in
   fun unify (NET (_,_,NONE)) _ = []
     | unify (NET (p, _, SOME (_,n))) tm =
     finally p (mat [] [(empty_vmap (), n, [tm])])
-    handle ERR_EXN _ => raise BUG "mlibTermnet.unify" "should never fail";
+    handle Error _ => raise Bug "mlibTermnet.unify: should never fail";
 end;
 
 local
@@ -245,12 +249,12 @@ local
     | mat acc ((sub, MULTIPLE (_,fs), Fn (f,l) :: tms) :: rest) =
     mat acc (case M.peek (fs, (f, length l)) of NONE => rest
              | SOME n => (sub, n, l @ tms) :: rest)
-    | mat _ _ = raise BUG "mlibTermnet.matched" "mlibMatch";
+    | mat _ _ = raise Bug "mlibTermnet.matched: mlibMatch";
 in
   fun matched (NET (_,_,NONE)) _ = []
     | matched (NET (p, _, SOME (_,n))) tm =
     finally p (mat [] [(empty_vmap(),n,[tm])])
-    handle ERR_EXN _ => raise BUG "mlibTermnet.matched" "should never fail";
+    handle Error _ => raise Bug "mlibTermnet.matched: should never fail";
 end;
 
 fun filter pred =
@@ -274,13 +278,13 @@ fun filter pred =
     fn net as NET (_,_,NONE) => net
      | NET (p, k, SOME (_,n)) => NET (p, k, filt n)
   end
-  handle ERR_EXN _ => raise BUG "mlibTermnet.filter" "should never fail";
+  handle Error _ => raise Bug "mlibTermnet.filter: should never fail";
 
 fun from_maplets p l = foldl (uncurry insert) (empty p) l;
 
 local
   fun inc tm (RESULT l) acc = foldl (fn (x,y) => (qterm' tm |-> x) :: y) acc l
-    | inc _ _ _ = raise BUG "mlibTermnet.to_maplets" "mlibMatch";
+    | inc _ _ _ = raise Bug "mlibTermnet.to_maplets: mlibMatch";
   fun fin (tm |-> (n,a)) = (n, tm |-> a);
 in
   fun to_maplets (NET (_,_,NONE)) = []

@@ -60,7 +60,7 @@ val input_chars = S.flatten o S.map (S.from_list o explode);
 datatype tok_type = Lower | Upper | Punct;
 
 local
-  fun f [] = raise BUG "exact_puncts" ""
+  fun f [] = raise Bug "exact_puncts"
     | f [x] = x | f (h :: t) = (h ++ f t) >> K ();
 in
   val exact_puncts = f o map (fn c => exact (Punct, str c) >> K ()) o explode;
@@ -189,7 +189,7 @@ local
   fun name n = "% File     : " ^ n ^ "\n";
 
   fun varify s =
-    case explode s of [] => raise ERR "write_cnf" "empty string variable"
+    case explode s of [] => raise Error "write_cnf: empty string variable"
     | x :: xs => if Char.isUpper x then s else implode (Char.toUpper x :: xs);
 
   fun funify r s =
@@ -198,7 +198,7 @@ local
     in
       case List.find g (!renaming) of SOME {tptp, ...} => tptp
       | NONE =>
-        case explode s of [] => raise ERR "write_cnf" "empty string function"
+        case explode s of [] => raise Error "write_cnf: empty string function"
         | x :: y => if Char.isLower x then s else implode (Char.toLower x :: y)
     end;
 
@@ -214,7 +214,7 @@ local
 
   fun literal pr (Not (Atom a)) = (pr "--"; term pr a)
     | literal pr (Atom a) = (pr "++"; term pr a)
-    | literal _ _ = raise ERR "write_cnf" "not in CNF";
+    | literal _ _ = raise Error "write_cnf: not in CNF";
 
   fun clause pr ty (cl, n) =
     let
@@ -239,13 +239,13 @@ in
       val () = pr separator
       val n = foldl (clause pr "hypothesis") 0 (strip_conj a)
       val n = foldl (clause pr "conjecture") n (strip_conj b)
-      val () = assert (0 < n) (ERR "write" "no clauses")
+      val () = assert (0 < n) (Error "write: no clauses")
       val () = pr separator
       val () = closeOut h
     in
       ()
     end
-    | write _ _ = raise ERR "write" "not in CNF format";
+    | write _ _ = raise Error "write: not in CNF format";
 end;
 
 (* Quick testing
@@ -257,7 +257,7 @@ val () = write num1 "../file";
 (* ------------------------------------------------------------------------- *)
 
 local
-  fun cycle _ ([], _) = raise BUG "cycle" ""
+  fun cycle _ ([], _) = raise Bug "cycle"
     | cycle f (h :: t, avoid) =
     let val h' = f h avoid in (h', (t @ [h], h' :: avoid)) end;
 

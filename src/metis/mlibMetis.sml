@@ -186,7 +186,7 @@ val limit : limit ref = ref {time = NONE, infs = NONE};
 
 fun prove goal =
     let
-      val {thms,hyps} = mlibCanon.clauses goal
+      val {thms,hyps} = clauses goal
       val solv = metis' (!settings)
     in
       refute (initialize solv {limit = !limit, thms = thms, hyps = hyps})
@@ -194,6 +194,6 @@ fun prove goal =
 
 fun query database =
   initialize M.prolog
-  {thms = mlibCanon.axiomatize database, hyps = [], limit = unlimited};
+  {thms = axiomatize database, hyps = [], limit = unlimited};
 
 end

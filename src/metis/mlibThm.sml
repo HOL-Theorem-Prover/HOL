@@ -63,7 +63,7 @@ val clause = fst o dest_thm;
 
 fun dest_axiom th =
   case dest_thm th of (lits,(Axiom,[])) => lits
-  | _ => raise ERR "dest_axiom" "";
+  | _ => raise Error "dest_axiom";
 
 val is_axiom = can dest_axiom;
   
@@ -225,7 +225,7 @@ local
         val (l1,(p1,ths1)) = dest_thm th1
         val (l2,(p2,ths2)) = dest_thm th2
       in
-        case lex_compare formula_compare (l1,l2) of EQUAL
+        case lex_list_order formula_compare (l1,l2) of EQUAL
           => (case cmp p1 p2 of EQUAL => cm (zip ths1 ths2 @ l) | x => x)
         | x => x
       end;
@@ -316,8 +316,8 @@ fun reconstruct (cl,(Axiom,[])) = Axiom' cl
       | NONE =>
         case first f (List.tabulate (length cl, divide cl)) of SOME l => l
         | NONE =>
-          raise BUG "inference"
-          ("couldn't reconstruct resolvant" ^
+          raise Bug
+          ("inference: couldn't reconstruct resolvant" ^
            "\nth = " ^ thm_to_string (AXIOM cl) ^
            "\nth1 = " ^ thm_to_string th1 ^
            "\nth2 = " ^ thm_to_string th2)
@@ -341,7 +341,7 @@ fun reconstruct (cl,(Axiom,[])) = Axiom' cl
           in
             Equality' (lit,p,r,lr,th)
           end
-        | NONE => raise BUG "inference" "couldn't reconstruct weak equality"
+        | NONE => raise Bug "inference: couldn't reconstruct weak equality"
       end
     else
       let
@@ -352,18 +352,19 @@ fun reconstruct (cl,(Axiom,[])) = Axiom' cl
         case sync l r of SOME (lit,p) => Equality' (lit,p,r,true,th)
         | NONE =>
           case sync r l of SOME (lit,p) => Equality' (lit,p,l,false,th)
-          | NONE => raise BUG "inference" "couldn't reconstruct equality step"
+          | NONE => raise Bug "inference: couldn't reconstruct equality step"
       end
-  | reconstruct _ = raise BUG "inference" "malformed inference";
+  | reconstruct _ = raise Bug "inference: malformed inference";
 
 fun inference th =
   let
     val i = reconstruct (dest_thm th)
     val _ =
       (primitive_inference i = th) orelse
-      raise BUG "inference"
-      ("failed:\nth = " ^ thm_to_string th ^ "\ninf = " ^ inference_to_string i
-       ^ "\ninf_th = " ^ thm_to_string (primitive_inference i))
+      raise Bug
+        ("inference: failed:\nth = " ^ thm_to_string th ^ "\ninf = "
+         ^ inference_to_string i ^ "\ninf_th = "
+         ^ thm_to_string (primitive_inference i))
   in
     i
   end;
@@ -377,7 +378,7 @@ val proof = rev o thm_foldr (fn (th,l) => (th, inference th) :: l) [];
 val is_contradiction = null o clause;
 
 fun dest_unit th =
-  case clause th of [lit] => lit | _ => raise ERR "dest_unit" "not a unit";
+  case clause th of [lit] => lit | _ => raise Error "dest_unit: not a unit";
 
 val is_unit = can dest_unit;
 
@@ -402,12 +403,12 @@ fun FRESH_VARSL ths =
   in
     map (INST sub) ths
   end
-  handle ERR_EXN _ => raise BUG "FRESH_VARSL" "shouldn't fail";
+  handle Error _ => raise Bug "FRESH_VARSL: shouldn't fail";
 
-val FRESH_VARS = unwrap o FRESH_VARSL o wrap;
+val FRESH_VARS = hd o FRESH_VARSL o sing;
 
 fun UNIT_SQUASH th =
-  case clause th of [] => raise ERR "UNIT_SQUASH" "contradiction"
+  case clause th of [] => raise Error "UNIT_SQUASH: contradiction"
   | [_] => th
   | _ :: _ :: _ =>
     let
@@ -460,7 +461,7 @@ local
   fun psym lit =
     let
       val (s,(x,y)) = (I ## dest_eq) (dest_literal lit)
-      val () = assert (x <> y) (ERR "psym" "refl")
+      val () = assert (x <> y) (Error "psym: refl")
     in
       mk_literal (s, mk_eq (y,x))
     end;
@@ -524,21 +525,21 @@ fun DEPTH1 conv =
   in
     fn (th,lit) =>
     let
-      val () = assert (mem lit (clause th)) (BUG "DEPTH1" "no such literal")
+      val () = assert (mem lit (clause th)) (Bug "DEPTH1: no such literal")
       val (th',lit') = rewr_lit th lit
       val () = chattrans 3 "DEPTH1 (thm)" th th' thm_to_string
       val () = chattrans 2 "DEPTH1 (lit)" lit lit' formula_to_string
     in
       (th',lit')
     end
-    handle ERR_EXN _ => raise BUG "DEPTH1" "shouldn't fail"
+    handle Error _ => raise Bug "DEPTH1: shouldn't fail"
   end;
 
 fun DEPTH conv =
   let
     fun rewr_lit (lit,th) =
       if mem lit (clause th) then fst (DEPTH1 conv (th,lit))
-      else (assert (is_eq (negate lit)) (BUG "DEPTH" "vanished"); th)
+      else (assert (is_eq (negate lit)) (Bug "DEPTH: vanished"); th)
   in
     fn th =>
     let
@@ -547,7 +548,45 @@ fun DEPTH conv =
     in
       th'
     end
-    handle ERR_EXN _ => raise BUG "DEPTH" "shouldn't fail"
+    handle Error _ => raise Bug "DEPTH: shouldn't fail"
   end;
+
+(* ------------------------------------------------------------------------- *)
+(* Converting to clauses                                                     *)
+(* ------------------------------------------------------------------------- *)
+
+val axiomatize = map AXIOM o mlibCanon.clausal;
+
+val eq_axioms =
+  let
+    val functions' = List.filter (fn (_,n) => 0 < n) o functions
+    val relations' = List.filter (non (equal eq_rel)) o relations
+    val eqs = [REFLEXIVITY, SYMMETRY, TRANSITIVITY]
+    val rels = map REL_CONGRUENCE o relations'
+    val funs = map FUN_CONGRUENCE o functions'
+  in
+    fn fm => eqs @ funs fm @ rels fm
+  end;
+
+local
+  fun eq_axs g = if eq_occurs g then eq_axioms g else [];
+  fun raw a b = (axiomatize a, axiomatize b);
+  fun semi g a b = (eq_axs g @ axiomatize a, axiomatize (Not b));
+  fun full g = ([], eq_axs g @ axiomatize (Not g));
+  fun is_raw a b = mlibCanon.is_cnf a andalso mlibCanon.is_cnf b;
+  fun is_semi a b = mlibCanon.is_cnf a andalso mlibCanon.is_clause b andalso b <> False;
+in
+  fun clauses g =
+      let
+        val g = generalize g
+        val (thms,hyps) =
+            case g of
+              Imp (a, Imp (b, False)) => if is_raw a b then raw a b else full g
+            | Imp (a,b) => if is_semi a b then semi g a b else full g
+            | _ => full g
+      in
+        {thms = thms, hyps = hyps}
+      end;
+end;
 
 end

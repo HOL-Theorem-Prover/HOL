@@ -38,7 +38,7 @@ fun hd NIL = raise Empty | hd (CONS (h, _)) = h;
 
 fun tl NIL = raise Empty | tl (CONS (_, t)) = t ();
 
-fun dest s = (hd s, tl s);
+fun hd_tl s = (hd s, tl s);
 
 fun sing s = CONS (s, K NIL);
 
@@ -68,7 +68,7 @@ fun zipwith f =
   let
     fun z NIL _ = NIL
       | z _ NIL = NIL
-      | z (CONS (x, xs)) (CONS (y, ys)) =
+      | z (CONS (x,xs)) (CONS (y,ys)) =
       CONS (f x y, fn () => z (xs ()) (ys ()))
   in
     z
@@ -87,7 +87,9 @@ fun drop n s = funpow n tl s handle Empty => raise Subscript;
 (* mlibStream versions of standard list operations: these might not terminate    *)
 (* ------------------------------------------------------------------------- *)
 
-fun length NIL = 0 | length (CONS (_,t)) = 1 + length (t ());
+local fun len n NIL = n | len n (CONS (_,t)) = len (n + 1) (t ());
+in fun length s = len 0 s;
+end;
 
 fun exists pred =
   let fun f NIL = false | f (CONS (h,t)) = pred h orelse f (t ()) in f end;
@@ -136,8 +138,11 @@ fun partial_maps f =
   end;
 
 (* ------------------------------------------------------------------------- *)
-(* Maps to other data structures                                             *)
+(* mlibStream operations                                                         *)
 (* ------------------------------------------------------------------------- *)
+
+fun memoize NIL = NIL
+  | memoize (CONS (h,t)) = CONS (h, mlibUseful.memoize (fn () => memoize (t ())));
 
 local
   fun to_lst res NIL = rev res
@@ -164,10 +169,9 @@ fun from_textfile {filename = f} =
   let
     open TextIO
     val (h,c) = if f = "-" then (stdIn, K ()) else (openIn f, closeIn)
-    fun res () =
-      case inputLine h of "" => (c h; NIL) | s => CONS (s, lazify_thunk res)
+    fun res () = case inputLine h of "" => (c h; NIL) | s => CONS (s,res)
   in
-    res ()
+    memoize (res ())
   end;
 
 end

@@ -30,15 +30,15 @@ fun raw_match env x tm =
   (case mlibSubst.find_redex x env of NONE => (x |-> tm) ::> env
    | SOME tm' =>
      if tm = tm' then env
-     else raise ERR "match" "one var trying to match two different terms");
+     else raise Error "match: one var trying to match two different terms");
 
 fun matchl env [] = env
   | matchl env ((Var x, tm) :: rest) = matchl (raw_match env x tm) rest
   | matchl env ((Fn (f, args), Fn (f', args')) :: rest) =
   if f = f' andalso length args = length args' then
     matchl env (zip args args' @ rest)
-  else raise ERR "match" "can't match two different functions"
-  | matchl _ _ = raise ERR "match" "different structure";
+  else raise Error "match: can't match two different functions"
+  | matchl _ _ = raise Error "match: different structure";
 
 fun match tm tm' = mlibSubst.norm (matchl |<>| [(tm, tm')]);
 
@@ -47,7 +47,7 @@ local
     | conv (Not p,  Not q)   = conv (p, q)
     | conv (True,   True)    = NONE
     | conv (False,  False)   = NONE
-    | conv _                 = raise ERR "match_literals" "incompatible";
+    | conv _                 = raise Error "match_literals: incompatible";
 in
   fun matchl_literals sub = matchl sub o List.mapPartial conv;
 end;
@@ -66,7 +66,7 @@ local
     solve' env (term_subst env tm1) (term_subst env tm2) rest
   and solve' env (Var x) tm rest =
     if Var x = tm then solve env rest
-    else if occurs x tm then raise ERR "unify" "occurs check"
+    else if occurs x tm then raise Error "unify: occurs check"
     else
       (case mlibSubst.find_redex x env of NONE
          => solve (mlibSubst.refine env ((x |-> tm) ::> |<>|)) rest
@@ -75,7 +75,7 @@ local
     | solve' env (Fn (f, args)) (Fn (f', args')) rest =
     if f = f' andalso length args = length args' then
       solve env (zip args args' @ rest)
-    else raise ERR "unify" "different structure";
+    else raise Error "unify: different structure";
 in
   val unifyl = solve;
 end;
@@ -89,7 +89,7 @@ local
     | conv (Not p,  Not q)   = conv (p, q)
     | conv (True,   True)    = NONE
     | conv (False,  False)   = NONE
-    | conv _                 = raise ERR "unify_literals" "incompatible";
+    | conv _                 = raise Error "unify_literals: incompatible";
 in
   fun unifyl_literals env = unifyl env o List.mapPartial conv;
 end;

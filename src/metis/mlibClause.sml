@@ -102,7 +102,7 @@ val new_id = new_int;
 fun dest_refl lit =
   let
     val (x,y) = dest_eq lit
-    val () = assert (x = y) (ERR "dest_refl" "")
+    val () = assert (x = y) (Error "dest_refl")
   in
     x
   end;
@@ -115,7 +115,7 @@ fun mk_peq (s,xy) = mk_literal (s, mk_eq xy);
 fun psym lit =
   let
     val (s,(x,y)) = dest_peq lit
-    val () = assert (x <> y) (ERR "psym" "refl")
+    val () = assert (x <> y) (Error "psym: refl")
   in
     mk_peq (s,(y,x))
   end;
@@ -152,14 +152,14 @@ fun tm_order (parm : parameters) lrs c =
   end;
 
 fun term_order (parm : parameters) l r c =
-  if l = r then raise ERR "term_order" "refl"
+  if l = r then raise Error "term_order: refl"
   else if #term_order parm then tm_order parm [(r,l)] c
   else c;
 
 local
   fun f (Eq x) (Eq y) = SOME (x,y)
     | f (Eq x) (Pred y) = NONE
-    | f (Pred x) (Eq y) = raise ERR "obj_order" "Pred > Eq"
+    | f (Pred x) (Eq y) = raise Error "obj_order: Pred > Eq"
     | f (Pred x) (Pred y) = SOME (x,y);
 in
   fun obj_order {literal_order = false, ...} _ _ c = c
@@ -192,7 +192,7 @@ fun constraint_consistent (p : parameters) to =
     (chatting 1 andalso
      chat ("merge_orderings: resulting termorder is inconsistent:\n" ^
            PP.pp_to_string (!LINE_LENGTH) T.pp_termorder to);
-     raise ERR "consistent" "inconsistent orderings");
+     raise Error "consistent: inconsistent orderings");
 
 fun constraint_subsumes sub to1 to2 =
   case total (T.subst sub) to1 of NONE => false
@@ -229,9 +229,9 @@ val is_empty = null o literals;
 fun dest_rewr cl =
   let
     val {parm, thm, id, ...} = dest_clause cl
-    val () = assert (#term_order parm) (ERR "dest_rewr" "no rewrs")
+    val () = assert (#term_order parm) (Error "dest_rewr: no rewrs")
     val (x,y) = mlibThm.dest_unit_eq thm
-    val () = assert (x <> y) (ERR "dest_rewr" "refl")
+    val () = assert (x <> y) (Error "dest_rewr: refl")
   in
     (id,thm)
   end;
@@ -265,7 +265,7 @@ end;
 (* ------------------------------------------------------------------------- *)
 
 local
-  fun fail _ = raise ERR "gen_largest_lits" "fail";
+  fun fail _ = raise Error "gen_largest_lits: fail";
 
   fun gen_largest_lits f g (CL (p,i,th,c,d)) =
     let
@@ -413,8 +413,8 @@ local
       val v =
         case l of Var v => v
         | Fn (":", [Var v, _]) => v
-        | _ => raise ERR "match_occurs" "not a variable"
-      val () = assert (not (mem v (FVT r))) (ERR "match_occurs" "")
+        | _ => raise Error "match_occurs: not a variable"
+      val () = assert (not (mem v (FVT r))) (Error "match_occurs")
       val sub = match l r
     in
       INST sub cl
@@ -423,7 +423,7 @@ local
   fun dest_neq cl lit =
     let
       val (l,r) = dest_eq (dest_neg lit)
-      val () = assert (l <> r) (ERR "dest_neq" "reflexive")
+      val () = assert (l <> r) (Error "dest_neq: reflexive")
     in
       case total (match_occurs cl l) r of SOME cl => cl
       | NONE => match_occurs cl r l
@@ -437,7 +437,7 @@ local
 in
   fun NEQ_VARS cl =
     (case neq_simp1 cl of NONE => cl | SOME cl => eq_factor (neq_simp cl))
-    handle ERR_EXN _ => raise BUG "NEQ_VARS" "shouldn't fail";
+    handle Error _ => raise Bug "NEQ_VARS: shouldn't fail";
 end;
 
 fun DEMODULATE units (cl as CL (p,i,th,c,d)) =
@@ -470,7 +470,7 @@ in
       in
         res
       end
-      handle ERR_EXN _ => raise BUG "mlibClause.REWRITE" "shouldn't fail";
+      handle Error _ => raise Bug "mlibClause.REWRITE: shouldn't fail";
 
   fun QREWRITE rws cl =
     if not (chatting 1) then GEN_REWRITE false rws cl else
@@ -482,7 +482,7 @@ in
       in
         res
       end
-      handle ERR_EXN _ => raise BUG "mlibClause.QREWRITE" "shouldn't fail";
+      handle Error _ => raise Bug "mlibClause.QREWRITE: shouldn't fail";
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -543,13 +543,13 @@ local
   fun hit _ [] _ = Miss | hit a (h :: t) x = if h = x then a else hit Sym t x;
   fun first_hit true = Id | first_hit false = Sym;
   fun flip_hit Id = Sym | flip_hit Sym = Id | flip_hit Miss = Miss;
-  fun norm_hits _ [] = raise BUG "norm_hits" ""
+  fun norm_hits _ [] = raise Bug "norm_hits"
     | norm_hits lr (Miss :: rest) = norm_hits lr rest
     | norm_hits lr (Id :: rest) = first_hit lr :: rest
     | norm_hits lr (Sym :: rest) = map flip_hit (first_hit lr :: rest);
   fun calc_hits lr targs lits = norm_hits lr (map (hit Id targs) lits);
 
-  val empty = (S.empty (lex_compare hit_compare), []);
+  val empty = (S.empty (lex_list_order hit_compare), []);
   fun is_new h (s,_) = not (S.member (s,h));
   fun insert (h,c) (s,l) = (S.add (s,h), ocons c l);
   fun finish (_,l) = l;
@@ -558,7 +558,7 @@ local
     let
       val s' = unify_literals s l l'
       val () = assert (formula_subst s l <> formula_subst s l')
-                      (ERR "assimilate" "already included")
+                      (Error "assimilate: already included")
     in
       s'
     end;
@@ -578,9 +578,9 @@ local
       fun f acc =
         let
           val lits = map (formula_subst sub) (literals cl)
-          val () = assert (List.all (not o is_refl) lits) (ERR "final" "refl")
+          val () = assert (List.all (not o is_refl) lits) (Error "final: refl")
           val hits = calc_hits lr (map (formula_subst sub) targs) lits
-          val () = assert (is_new hits acc) (ERR "final" "already seen")
+          val () = assert (is_new hits acc) (Error "final: already seen")
         in
           (hits, total (FAC x lits sub) cl)
         end
@@ -592,7 +592,7 @@ local
 
   fun factor ((cl,n) |-> lit) =
     let
-      val x = object_map (Pred o dest_atom) (fn _ => raise BUG "factor" "") lit
+      val x = object_map (Pred o dest_atom) (fn _ => raise Bug "factor") lit
       fun f [] acc = acc
         | f ((s,[]) :: paths) acc = f paths (final cl s true x [lit] acc)
         | f ((s, l :: ls) :: paths) acc =
@@ -638,7 +638,7 @@ local
     in
       finish (fac (fac_eq empty))
     end
-    handle ERR_EXN _ => raise BUG "mlibClause.FACTOR" "shouldn't fail";
+    handle Error _ => raise Bug "mlibClause.FACTOR: shouldn't fail";
 in
   fun FACTOR cl =
     if not (chatting 1) then FACTOR' cl else
@@ -679,7 +679,7 @@ in
            PP.pp_to_string 70 (pp_sum pp_clause pp_string) res ^ "\n")
         val res =
           RESOLVE' arg1 arg2
-          handle e as ERR_EXN _ => (p (INR (report e)); raise e)
+          handle e as Error _ => (p (INR (report e)); raise e)
       in
         (p (INL res); res)
       end;
@@ -688,7 +688,7 @@ end;
 local
   fun pick (0 :: _) (x,_) = x
     | pick (1 :: _) (_,y) = y
-    | pick _ _ = raise BUG "into_obj" "bad path";
+    | pick _ _ = raise Bug "into_obj: bad path";
 
   fun into_obj p = object_map (Pred o dest_atom) (Eq o pick p);
 
@@ -713,7 +713,7 @@ local
         let val eq_th = mlibThm.EQUALITY lit2 p2 r1 lr1 th2
         in mlibThm.EQ_FACTOR (mlibThm.RESOLVE lit1 th1 eq_th)
         end
-        handle ERR_EXN _ => raise BUG "PARAMODULATE (rule)" "shouldn't fail"
+        handle Error _ => raise Bug "PARAMODULATE (rule): shouldn't fail"
     in
       CL (p, new_id (), th, c, Paramodulation (cl1,cl2))
     end;
@@ -728,7 +728,7 @@ in
            "\n" ^ PP.pp_to_string 70 (pp_sum pp_clause pp_string) res ^ "\n")
         val res =
           PARAMODULATE' arg1 arg2
-          handle e as ERR_EXN _ => (p (INR (report e)); raise e)
+          handle e as Error _ => (p (INR (report e)); raise e)
       in
         (p (INL res); res)
       end;

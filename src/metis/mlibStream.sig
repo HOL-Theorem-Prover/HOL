@@ -21,7 +21,7 @@ val cons        : 'a -> (unit -> 'a stream) -> 'a stream
 val null        : 'a stream -> bool
 val hd          : 'a stream -> 'a                      (* raises Empty *)
 val tl          : 'a stream -> 'a stream               (* raises Empty *)
-val dest        : 'a stream -> 'a * 'a stream          (* raises Empty *)
+val hd_tl       : 'a stream -> 'a * 'a stream          (* raises Empty *)
 val sing        : 'a -> 'a stream
 val append      : 'a stream -> (unit -> 'a stream) -> 'a stream
 val map         : ('a -> 'b) -> 'a stream -> 'b stream
@@ -41,7 +41,8 @@ val flatten      : 'a stream stream -> 'a stream
 val partial_map  : ('a -> 'b option) -> 'a stream -> 'b stream
 val partial_maps : ('a -> 's -> 'b option * 's) -> 's -> 'a stream -> 'b stream
 
-(* Maps to other data structures *)
+(* mlibStream operations *)
+val memoize       : 'a stream -> 'a stream
 val to_list       : 'a stream -> 'a list
 val from_list     : 'a list -> 'a stream
 val to_textfile   : {filename : string} -> string stream -> unit

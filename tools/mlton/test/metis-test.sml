@@ -124,7 +124,7 @@ val METIS_PROVE = (profile o try o mlibUseful.try o metisLib.METIS_PROVE);
 
 local
   fun LIST_MK_CONJUNCTS ths =
-    case rev ths of [] => raise mlibUseful.BUG "LIST_MK_CONJUNCTS" ""
+    case rev ths of [] => raise mlibUseful.Bug "LIST_MK_CONJUNCTS"
     | h :: t => foldl (uncurry CONJ) h t;
 
   fun f ((tmV, _), ths) =
@@ -440,6 +440,21 @@ val t =
   METIS_PROVE (group_def :: [IN_DEF, res_quanTheory.RES_FORALL])
   ``GROUP G /\ G.carrier x  ==> G.carrier (G.inv x)``;
 
+(* From Konrad: one that MESON can't seem to do *)
+val EXP2 =
+  METIS_PROVE
+  [arithmeticTheory.ONE, arithmeticTheory.TWO,
+   arithmeticTheory.EXP,arithmeticTheory.MULT_CLAUSES]
+  ``!n:num. n**2 = n*n``;
+
+(* From Konrad: one that MESON does, but METIS can't seem to
+val EXP2_LEM = prove
+    (``!x y:num. ((2*x)**2 = 2*(y**2)) = (2*(x**2) = y**2)``,
+     REWRITE_TAC [arithmeticTheory.TWO,EXP2]
+     THEN METIS_TAC (* bossLib.PROVE_TAC *)
+       [arithmeticTheory.MULT_MONO_EQ,
+        arithmeticTheory.MULT_ASSOC,arithmeticTheory.MULT_COMM]); *)
+
 (* ------------------------------------------------------------------------- *)
 val () = METIS_TEST "solving a selection of first-order HOL goals";
 (* ------------------------------------------------------------------------- *)
@@ -534,6 +549,14 @@ val t =
 val t =
   METIS_PROVE [combinTheory.K_THM]
   ``(!f. P (f a) a /\ !f. Q (f b) b) ==> ?x y. !g. P g x /\ Q g y``;
+
+(* A hard-ish example from Konrad using lists *)
+(* too expensive
+val MEM_FILTER = prove
+    (``!P L x. MEM x (FILTER P L) = (P x /\ MEM x L)``,
+     GEN_TAC
+     THEN INDUCT_THEN listTheory.list_INDUCT ASSUME_TAC
+     THEN METIS_TAC [listTheory.MEM,listTheory.FILTER]); *)
 
 (* ------------------------------------------------------------------------- *)
 val () = METIS_TEST "higher-order goals requiring combinator reductions";
@@ -646,6 +669,11 @@ val t =
   (MPROVE [listTheory.list_CASES, listTheory.HD, listTheory.TL])
   ``~(k = []) /\ ~(l = []) /\ (HD k = HD l) /\ (TL k = TL l) ==>
     ((k:bool list) = l)``;
+
+(* From Hasan Amjad *)
+val t =
+  WITH_PARM (BOOLEAN o TYPES o HIGHER_ORDER) (MPROVE [])
+  ``x /\ P x ==> P T``;
 
 (* ------------------------------------------------------------------------- *)
 val () = METIS_TEST "some things that MESON can't do";

@@ -8,7 +8,6 @@ sig
 
 type term    = mlibTerm.term
 type formula = mlibTerm.formula
-type thm     = mlibThm.thm
 
 (* Simplification *)
 val simplify : formula -> formula
@@ -28,16 +27,11 @@ val full_skolemize : formula -> formula
 val tautologous : formula list -> bool
 
 (* Conjunctive normal form *)
+val clausal   : formula -> formula list list
 val purecnf   : formula -> formula
-val cnf       : formula -> formula
+val cnf       : formula -> formula  (* simp + nnf + skolemize + purecnf *)
 val is_clause : formula -> bool
 val is_cnf    : formula -> bool
-
-(* Converting to clauses *)
-val clausal    : formula -> formula list list
-val axiomatize : formula -> thm list
-val eq_axioms  : formula -> thm list
-val clauses    : formula -> {thms : thm list, hyps : thm list}
 
 (* Categorizing sets of clauses *)
 datatype prop = Propositional | Effectively_propositional | Non_propositional

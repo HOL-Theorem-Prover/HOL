@@ -181,12 +181,12 @@ datatype 'a choice = CHOICE of unit -> 'a * 'a choice;
 
 fun dest_choice (CHOICE c) = c;
 
-val no_choice = (fn () => raise ERR "no_choice" "always fails");
+val no_choice = (fn () => raise Error "no_choice: always fails");
 
 fun binary_choice f g =
   (fn () =>
    let val (a, c) = f () in (a, CHOICE (binary_choice (dest_choice c) g)) end
-   handle ERR_EXN _ => g ());
+   handle Error _ => g ());
 
 fun first_choice [] = no_choice
   | first_choice [f] = f
@@ -194,7 +194,7 @@ fun first_choice [] = no_choice
 
 fun choice_stream f =
   let val (a, CHOICE c) = f () in S.CONS (a, fn () => choice_stream c) end
-  handle ERR_EXN _ => S.NIL;
+  handle Error _ => S.NIL;
 
 fun swivel m n l =
   let
@@ -249,7 +249,7 @@ val sort_lits = sort_map literal_size (rev_order Int.compare);
 
 local
   fun quality (_ |-> ({asmn, c, ...} : rule)) = (asmn, literal_size c);
-  val qualitywise = lex_combine Int.compare (rev_order Int.compare);
+  val qualitywise = lex_order Int.compare (rev_order Int.compare);
 in
   val sort_ruls = sort_map quality qualitywise;
 end;
@@ -361,7 +361,7 @@ fun cache_cont c ({offset, ...} : state) =
         val l = listify env
         fun p (n', l') = n <= n' andalso l = l'
       in
-        if List.exists p (!mem) then raise ERR "cache_cut" "repetition"
+        if List.exists p (!mem) then raise Error "cache_cut: repetition"
         else (mem := (n, l) :: (!mem); update_env (K (mlibSubst.from_maplets l)) s)
       end
   in
@@ -384,17 +384,19 @@ fun grab_unit units (s as {proof = th :: _, ...} : state) =
   in
     update_proof (cons th o tl) s
   end
-  | grab_unit _ {proof = [], ...} = raise BUG "grab_unit" "no thms";
+  | grab_unit _ {proof = [], ...} = raise Bug "grab_unit: no thms";
 
 fun use_unit units g c (s as {env, ...}) =
-  let val prove = partial (ERR "use_unit" "NONE") (U.prove (!units))
-  in c (update_proof (cons (unwrap (prove [formula_subst env g]))) s)
+  let
+    val prove = partial (Error "use_unit: NONE") (U.prove (!units))
+  in
+    c (update_proof (cons (hd (prove [formula_subst env g]))) s)
   end;
 
 fun unit_cut false _ = I
   | unit_cut true units =
   fn f => fn a => fn g => fn c => fn s =>
-  use_unit units g c s handle ERR_EXN _ => f a g (c o grab_unit units) s;
+  use_unit units g c s handle Error _ => f a g (c o grab_unit units) s;
 
 (* ------------------------------------------------------------------------- *)
 (* The core of meson: ancestor unification or Prolog-style extension.        *)
@@ -424,9 +426,9 @@ fun reward r = update_depth (fn n => n + r);
 fun spend m f c (s as {depth = n, ...} : state) =
   let
     val low = n - m
-    val () = assert (0 <= low) (ERR "meson" "impossible divide and conquer")
+    val () = assert (0 <= low) (Error "meson: impossible divide and conquer")
     fun check (s' as {depth = n', ...} : state) =
-      if n' <= low then s' else raise ERR "meson" "divide and conquer"
+      if n' <= low then s' else raise Error "meson: divide and conquer"
   in
     f (c o check) s
   end;
@@ -442,14 +444,14 @@ local
 in
   fun next_state false env r g = unify env r g
     | next_state true env r g =
-      match env r g handle ERR_EXN _ => unify env r g;
+      match env r g handle Error _ => unify env r g;
 end;
 
 local
   fun mp _ th [] p = FACTOR th :: p
     | mp env th (g :: gs) (th1 :: p) =
     mp env (RESOLVE (formula_subst env g) (INST env th1) th) gs p
-    | mp _ _ (_ :: _) [] = raise BUG "modus_ponens" "fresh out of thms"
+    | mp _ _ (_ :: _) [] = raise Bug "modus_ponens: fresh out of thms"
 in
   fun modus_ponens th gs (state as {env, ...}) =
     update_proof (mp env (INST env th) (rev gs)) state;
@@ -467,7 +469,7 @@ fun meson_expand {parm : parameters, rules, cut, meter, saturated} =
        if meter_expired (!meter) then
          (NONE, CHOICE (fn () => expand ancestors g cont state))
        else if ancestor_prune ancestor_pruning env g ancestors then
-         raise ERR "meson" "ancestor pruning"
+         raise Error "meson: ancestor pruning"
        else if ancestor_cut ancestor_cutting env g ancestors then
          cont (update_proof (cons (ASSUME g)) state)
        else
@@ -490,7 +492,7 @@ fun meson_expand {parm : parameters, rules, cut, meter, saturated} =
         val depth = depth - #asmn r
         val () =
           if 0 <= depth then ()
-          else (saturated := false; raise ERR "meson" "too deep")
+          else (saturated := false; raise Error "meson: too deep")
         val (r',offset) = freshen_rule r offset
         val (th,asms,env) = next_state state_simplify env r' g
         val asms = if 2 <= sort_literals then sort_lits asms else asms
@@ -524,14 +526,14 @@ fun meson_expand {parm : parameters, rules, cut, meter, saturated} =
 
 fun meson_finally g ({env, proof, ...} : state) =
   let
-    val () = assert (length proof = length g) (BUG "meson" "bad final state")
+    val () = assert (length proof = length g) (Bug "meson: bad final state")
     val g' = map (formula_subst env) g
     val proof' = map (INST env) (rev proof)
     val _ = chatting 4 andalso chat
       (foldl (fn (h,t)=>t^"  "^thm_to_string h^"\n") "meson_finally:\n" proof')
     val () =
       assert (List.all (uncurry thm_proves) (zip proof' g'))
-      (BUG "meson" "did not prove goal list")
+      (Bug "meson: did not prove goal list")
   in
     (SOME (FRESH_VARSL proof'), CHOICE no_choice)
   end;

@@ -50,7 +50,7 @@ local
   fun psym lit =
     let
       val (s,(x,y)) = (I ## dest_eq) (dest_literal lit)
-      val () = assert (x <> y) (ERR "psym" "refl")
+      val () = assert (x <> y) (Error "psym: refl")
     in
       mk_literal (s, mk_eq (y,x))
     end;
@@ -64,7 +64,7 @@ local
     | sz n (Fn (_,a) :: l) = sz (n + 1) (a @ l)
     | sz n (Var _ :: l) = sz n l;
 in
-  val literal_size = sz 0 o wrap o dest_atom o literal_atom;
+  val literal_size = sz 0 o sing o dest_atom o literal_atom;
 end;
 
 val sort_literals = sort_map literal_size (rev_order Int.compare);

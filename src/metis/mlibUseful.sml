@@ -6,53 +6,46 @@
 structure mlibUseful :> mlibUseful =
 struct
 
-infixr 0 oo ## |->;
+infixr 0 oo ## |-> ==;
 
 (* ------------------------------------------------------------------------- *)
 (* Exceptions, profiling and tracing.                                        *)
 (* ------------------------------------------------------------------------- *)
 
-exception ERR_EXN of {origin_function : string, message : string};
-exception BUG_EXN of {origin_function : string, message : string};
+exception Error of string;
+exception Bug of string;
 
-fun ERR f s = ERR_EXN {origin_function = f, message = s};
-fun BUG f s = BUG_EXN {origin_function = f, message = s};
+fun Error_to_string (Error message) =
+  "\nError: " ^ message ^ "\n"
+  | Error_to_string _ = raise Bug "Error_to_string: not an Error exception";
 
-fun ERR_to_string (ERR_EXN {origin_function, message}) =
-  "\nERR in function " ^ origin_function ^ ":\n" ^ message ^ "\n"
-  | ERR_to_string _ = raise BUG "ERR_to_string" "not an ERR_EXN";
+fun Bug_to_string (Bug message) =
+  "\nBug: " ^ message ^ "\n"
+  | Bug_to_string _ = raise Bug "Bug_to_string: not a Bug exception";
 
-fun BUG_to_string (BUG_EXN {origin_function, message}) =
-  "\nBUG in function " ^ origin_function ^ ":\n" ^ message ^ "\n"
-  | BUG_to_string _ = raise BUG "BUG_to_string" "not a BUG_EXN";
-
-local
-  fun p {origin_function, message} = origin_function ^ ": \"" ^ message ^ "\"";
-in
-  fun report (ERR_EXN m) = "ERR in " ^ p m
-    | report (BUG_EXN m) = "BUG in " ^ p m
-    | report _ = raise BUG "report" "not an ERR_EXN or BUG_EXN";
-end;
+fun report (e as Error _) = Error_to_string e
+  | report (e as Bug _) = Bug_to_string e
+  | report _ = raise Bug "report: not an Error or Bug exception";
 
 fun assert b e = if b then () else raise e;
 
 fun try f a = f a
-  handle h as ERR_EXN _ => (print (ERR_to_string h); raise h)
-       | b as BUG_EXN _ => (print (BUG_to_string b); raise b)
+  handle h as Error _ => (print (Error_to_string h); raise h)
+       | b as Bug _ => (print (Bug_to_string b); raise b)
        | e => (print "\ntry: strange exception raised\n"; raise e);
 
-fun total f x = SOME (f x) handle ERR_EXN _ => NONE;
+fun total f x = SOME (f x) handle Error _ => NONE;
 
 fun can f = Option.isSome o total f;
 
-fun partial (e as ERR_EXN _) f x = (case f x of SOME y => y | NONE => raise e)
-  | partial _ _ _ = raise BUG "partial" "must take a ERR_EXN";
+fun partial (e as Error _) f x = (case f x of SOME y => y | NONE => raise e)
+  | partial _ _ _ = raise Bug "partial: must take an Error exception";
 
 fun timed f a =
   let
     val tmr = Timer.startCPUTimer ()
     val res = f a
-    val {usr, sys, ...} = Timer.checkCPUTimer tmr
+    val {usr,sys,...} = Timer.checkCPUTimer tmr
   in
     (Time.toReal usr + Time.toReal sys, res)
   end;
@@ -96,11 +89,17 @@ val trace = print;
 (* ------------------------------------------------------------------------- *)
 
 fun C f x y = f y x;
+
 fun I x = x;
+
 fun K x y = x;
+
 fun S f g x = f x (g x);
+
 fun W f x = f x x;
+
 fun f oo g = fn x => f o (g x);
+
 fun funpow 0 _ x = x | funpow n f x = funpow (n - 1) f (f x);
 
 (* ------------------------------------------------------------------------- *)
@@ -121,18 +120,27 @@ fun bool_compare (true,false) = LESS
 (* ------------------------------------------------------------------------- *)
 
 fun op## (f,g) (x,y) = (f x, g y);
+
 fun D x = (x,x);
+
 fun Df f = f ## f;
+
 fun fst (x,_) = x;
+
 fun snd (_,y) = y;
-fun pair x y = (x,y)     (* Note: val add_fst = pair and add_snd = C pair; *)
+
+fun pair x y = (x,y);
+
 fun swap (x,y) = (y,x);
+
 fun curry f x y = f (x,y);
+
 fun uncurry f (x,y) = f x y;
+
 fun equal x y = (x = y);
 
 (* ------------------------------------------------------------------------- *)
-(* State transformers.                                                       *)
+(* State transformers                                                        *)
 (* ------------------------------------------------------------------------- *)
 
 val unit : 'a -> 's -> 'a * 's = pair;
@@ -146,13 +154,16 @@ fun mjoin (f : 's -> ('s -> 'a * 's) * 's) = bind f I;
 fun mwhile c b = let fun f a = if c a then bind (b a) f else unit a in f end;
 
 (* ------------------------------------------------------------------------- *)
-(* Lists.                                                                    *)
+(* Lists                                                                     *)
 (* ------------------------------------------------------------------------- *)
 
 fun cons x y = x :: y;
+
+fun hd_tl l = (hd l, tl l);
+
 fun append xs ys = xs @ ys;
-fun wrap a = [a];
-fun unwrap [a] = a | unwrap _ = raise ERR "unwrap" "not a singleton";
+
+fun sing a = [a];
 
 fun first f [] = NONE
   | first f (x :: xs) = (case f x of NONE => first f xs | s => s);
@@ -165,36 +176,15 @@ fun index p =
     idx 0
   end;
 
-(* This is the pure version
 fun maps (_ : 'a -> 's -> 'b * 's) [] = unit []
   | maps f (x :: xs) =
   bind (f x) (fn y => bind (maps f xs) (fn ys => unit (y :: ys)));
-*)
 
-(* This is an optimized version *)
-fun maps f =
-  let fun g (x, (ys, s)) = let val (y, s) = f x s in (y :: ys, s) end
-  in fn l => fn (s : 's) => (rev ## I) (foldl g ([], s) l)
-  end;
-
-(* This is the pure version
 fun partial_maps (_ : 'a -> 's -> 'b option * 's) [] = unit []
   | partial_maps f (x :: xs) =
   bind (f x)
   (fn yo => bind (partial_maps f xs)
    (fn ys => unit (case yo of NONE => ys | SOME y => y :: ys)));
-*)
-
-(* This is an optimized version *)
-fun partial_maps f =
-  let
-    fun g (x, (ys, s)) =
-      let val (yo, s) = f x s
-      in (case yo of NONE => ys | SOME y => y :: ys, s)
-      end
-  in
-    fn l => fn (s : 's) => (rev ## I) (foldl g ([], s) l)
-  end;
 
 fun enumerate n = fst o C (maps (fn x => fn m => ((m, x), m + 1))) n;
 
@@ -202,7 +192,7 @@ fun zipwith f =
   let
     fun z l [] [] = l
       | z l (x :: xs) (y :: ys) = z (f x y :: l) xs ys
-      | z _ _ _ = raise ERR "zipwith" "lists different lengths";
+      | z _ _ _ = raise Error "zipwith: lists different lengths";
   in
     fn xs => fn ys => rev (z [] xs ys)
   end;
@@ -241,8 +231,22 @@ fun update_nth f n l =
     | h :: t => a @ (f h :: t)
   end;
 
+fun shared_map f =
+    let
+      fun map _ (a,b) [] = List.revAppend (a,b)
+        | map c (a,b) (x :: xs) =
+          let
+            val y = f x
+            val c = y :: c
+          in
+            map c (if mlibPortable.pointer_eq x y then (a,b) else (c,xs)) xs
+          end
+    in
+      fn l => map [] ([],l) l
+    end;
+
 (* ------------------------------------------------------------------------- *)
-(* Lists-as-sets.                                                            *)
+(* Lists-as-sets                                                             *)
 (* ------------------------------------------------------------------------- *)
 
 fun mem x = List.exists (equal x);
@@ -268,12 +272,25 @@ fun distinct [] = true
 
 type 'a ordering = 'a * 'a -> order;
 
+fun order_to_string LESS = "LESS"
+  | order_to_string EQUAL = "EQUAL"
+  | order_to_string GREATER = "GREATER";
+
+fun map_order mf f (a,b) = f (mf a, mf b);
+
 fun rev_order f xy =
   case f xy of LESS => GREATER | EQUAL => EQUAL | GREATER => LESS;
 
-fun lex_combine f g ((a,c),(b,d)) = case f (a,b) of EQUAL => g (c,d) | x => x;
+fun lex_order f g ((a,c),(b,d)) = case f (a,b) of EQUAL => g (c,d) | x => x;
 
-fun lex_compare f =
+fun lex_order2 f = lex_order f f;
+
+fun lex_order3 f =
+    map_order (fn (a,b,c) => (a,(b,c))) (lex_order f (lex_order2 f));
+
+fun lex_seq_order f g (a,b) = lex_order f g ((a,a),(b,b));
+
+fun lex_list_order f =
   let
     fun lex [] [] = EQUAL
       | lex [] (_ :: _) = LESS
@@ -284,7 +301,7 @@ fun lex_compare f =
   end;
 
 (* ------------------------------------------------------------------------- *)
-(* Finding the minimal element of a list, wrt some order.                    *)
+(* Finding the minimum and maximum element of a list, wrt some order.        *)
 (* ------------------------------------------------------------------------- *)
 
 fun min cmp =
@@ -293,9 +310,11 @@ fun min cmp =
       | min_acc (best as (_,m,_)) l (x :: r) =
       min_acc (case cmp (x,m) of LESS => (l,x,r) | _ => best) (x :: l) r
   in
-    fn [] => raise ERR "min" "empty list"
+    fn [] => raise Error "min: empty list"
      | h :: t => min_acc ([],h,t) [h] t
   end;
+
+fun max cmp = min (rev_order cmp);
 
 (* ------------------------------------------------------------------------- *)
 (* Merge (for the following merge-sort, but generally useful too).           *)
@@ -313,7 +332,7 @@ fun merge cmp =
   end;
 
 (* ------------------------------------------------------------------------- *)
-(* Merge sort.                                                               *)
+(* Merge sort.(stable)                                                       *)
 (* ------------------------------------------------------------------------- *)
 
 fun sort cmp =
@@ -338,12 +357,34 @@ fun sort_map _ _ [] = []
   end;
 
 (* ------------------------------------------------------------------------- *)
+(* Topological sort                                                          *)
+(* ------------------------------------------------------------------------- *)
+
+fun top_sort cmp parents =
+    let
+      fun f stack (x,(acc,seen)) =
+          if Binaryset.member (stack,x) then raise Error "top_sort: cycle"
+          else if Binaryset.member (seen,x) then (acc,seen)
+          else
+            let
+              val stack = Binaryset.add (stack,x)
+              val (acc,seen) = foldl (f stack) (acc,seen) (parents x)
+              val acc = x :: acc
+              val seen = Binaryset.add (seen,x)
+            in
+              (acc,seen)
+            end
+    in
+      rev o fst o foldl (f (Binaryset.empty cmp)) ([], Binaryset.empty cmp)
+    end
+
+(* ------------------------------------------------------------------------- *)
 (* Integers.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
 val int_to_string = Int.toString;
 fun string_to_int s =
-  case Int.fromString s of SOME n => n | NONE => raise ERR "string_to_int" "";
+  case Int.fromString s of SOME n => n | NONE => raise Error "string_to_int";
 
 fun int_to_bits 0 = []
   | int_to_bits n = (n mod 2 <> 0) :: (int_to_bits (n div 2));
@@ -360,17 +401,21 @@ local
 in
   fun int_to_base64 n =
     if 0 <= n andalso n < max then String.sub (enc,n)
-    else raise ERR "int_to_base64" "out of range";
+    else raise Error "int_to_base64: out of range";
 
   fun base64_to_int c =
     case Binarymap.peek (rev_enc, c) of SOME n => n
-    | NONE => raise ERR "base64_to_int" "out of range";
+    | NONE => raise Error "base64_to_int: out of range";
 end;
 
 fun interval m 0 = []
   | interval m len = m :: interval (m + 1) (len - 1);
 
 fun divides a b = if a = 0 then b = 0 else b mod (Int.abs a) = 0;
+
+fun even n = divides 2 n;
+
+fun odd n = not (even n);
 
 local
   fun both f g n = f n andalso g n;
@@ -471,7 +516,7 @@ fun variant_num x vars =
 
 fun dest_prefix p =
   let
-    fun check s = assert (String.isPrefix p s) (ERR "dest_prefix" "")
+    fun check s = assert (String.isPrefix p s) (Error "dest_prefix")
     val size_p = size p
   in
     fn s => (check s; String.extract (s, size_p, NONE))
@@ -549,7 +594,9 @@ fun pp_string pp s =
    PP.add_string pp s;
    PP.end_block pp);
 
-fun pp_unit pp = pp_map (K "()") pp_string pp;
+val pp_unit = pp_map (fn () => "()") pp_string;
+
+val pp_char = pp_map str pp_string;
 
 val pp_bool = pp_map bool_to_string pp_string;
 
@@ -557,13 +604,10 @@ val pp_int = pp_map int_to_string pp_string;
 
 val pp_real = pp_map real_to_string pp_string;
 
-val pp_order =
-  pp_map (fn LESS => "LESS" | EQUAL => "EQUAL" | GREATER => "GREATER")
-  pp_string;
+val pp_order = pp_map order_to_string pp_string;
 
 val pp_porder =
-  pp_map (fn NONE => "INCOMPARABLE" | SOME LESS => "LESS" |
-          SOME EQUAL => "EQUAL" | SOME GREATER => "GREATER") pp_string;
+  pp_map (fn NONE => "INCOMPARABLE" | SOME x => order_to_string x) pp_string;
 
 fun pp_list pp_a = pp_bracket "[" "]" (pp_sequence "," pp_a);
 
@@ -575,9 +619,9 @@ fun pp_triple pp_a pp_b pp_c =
    (pp_binop "," pp_a (pp_binop "," pp_b pp_c)));
 
 fun to_string pp_a a = PP.pp_to_string (!LINE_LENGTH) pp_a a;
-  
+
 (* ------------------------------------------------------------------------- *)
-(* Sums.                                                                     *)
+(* Sums                                                                      *)
 (* ------------------------------------------------------------------------- *)
 
 datatype ('a, 'b) sum = INL of 'a | INR of 'b
@@ -635,10 +679,12 @@ fun tree_partial_foldl f_b f_l =
   end;
 
 (* ------------------------------------------------------------------------- *)
-(* mlibUseful imperative features.                                               *)
+(* mlibUseful impure features                                                    *)
 (* ------------------------------------------------------------------------- *)
 
-fun lazify_thunk f = let val s = Susp.delay f in fn () => Susp.force s end;
+fun op== (x,y) = mlibPortable.pointer_eq x y;
+
+fun memoize f = let val s = Susp.delay f in fn () => Susp.force s end;
 
 local
   val generator = ref 0
@@ -667,18 +713,24 @@ fun with_flag (r,update) f x =
     y
   end;
 
-fun mk_textfile f s =
-  let
-    open TextIO
-    val h = openOut f
-    val () = output (h,s)
-    val () = closeOut h
-  in
-    ()
-  end;
+fun cached cmp f =
+    let
+      val cache = ref (Binarymap.mkDict cmp)
+    in
+      fn x =>
+      case Binarymap.peek (!cache,x) of
+        SOME y => y
+      | NONE =>
+        let
+          val y = f x
+          val () = cache := Binarymap.insert (!cache,x,y)
+        in
+          y
+        end
+    end;
 
 (* ------------------------------------------------------------------------- *)
-(* Information about the environment.                                        *)
+(* Environment.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
 val host = Option.getOpt (OS.Process.getEnv "HOSTNAME", "unknown");
@@ -686,5 +738,32 @@ val host = Option.getOpt (OS.Process.getEnv "HOSTNAME", "unknown");
 val date = Date.fmt "%H:%M:%S %d/%m/%Y" o Date.fromTimeLocal o Time.now;
 
 val today = Date.fmt "%d/%m/%Y" o Date.fromTimeLocal o Time.now;
+
+local
+  fun err x s = TextIO.output (TextIO.stdErr, x ^ ": " ^ s ^ "\n");
+in
+  val warn = err "WARNING";
+  fun die s = (err "\nFATAL ERROR" s; OS.Process.exit OS.Process.failure);
+end
+
+fun read_textfile {filename} =
+  let
+    open TextIO
+    val h = openIn filename
+    val contents = inputAll h
+    val () = closeIn h
+  in
+    contents
+  end;
+
+fun write_textfile {filename,contents} =
+  let
+    open TextIO
+    val h = openOut filename
+    val () = output (h,contents)
+    val () = closeOut h
+  in
+    ()
+  end;
 
 end

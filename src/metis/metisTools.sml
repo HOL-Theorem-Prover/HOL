@@ -49,7 +49,7 @@ in
   fun chatting l = tracing {module = module, level = l};
   fun chat s = (trace s; true)
   val ERR = mk_HOL_ERR module;
-  val BUG = BUG;
+  fun BUG f m = Bug (f ^ ": " ^ m);
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -414,8 +414,7 @@ local
     end;
 in
   fun classify fms = order (First,empty) fms
-    handle HOL_ERR _ =>
-      raise mlibUseful.BUG "metisTools.classify" "shouldn't fail";
+    handle HOL_ERR _ => raise BUG "metisTools.classify" "shouldn't fail";
 end;
 
 fun METIS_TTAC (cs,ths) =

@@ -9,7 +9,7 @@ sig
 include Abbrev
 type ssdata  = simpLib.ssdata
 type simpset = simpLib.simpset
-
+  
 (* ------------------------------------------------------------------------- *)
 (* Replace genvars with variants on `v`.                                     *)
 (*                                                                           *)
@@ -53,7 +53,7 @@ val SKI_CONV : conv
 (* ------------------------------------------------------------------------- *)
 
 val SKICo_CONV : conv
-
+  
 (* ------------------------------------------------------------------------- *)
 (* Beta reduction and simplifying boolean rewrites.                          *)
 (*                                                                           *)
@@ -65,7 +65,7 @@ val SKICo_CONV : conv
 
 val simplify_ss   : simpset             (* pure + BOOL *)
 val SIMPLIFY_CONV : conv
-
+  
 (* ------------------------------------------------------------------------- *)
 (* Negation normal form.                                                     *)
 (*                                                                           *)
@@ -80,7 +80,7 @@ val PURE_NNF_CONV' : conv -> conv       (* takes a 'leaf conversion' *)
 val PURE_NNF_CONV  : conv
 val NNF_CONV'      : conv -> conv       (* takes a 'leaf conversion' *)
 val NNF_CONV       : conv
-
+  
 (* ------------------------------------------------------------------------- *)
 (* Skolemization.                                                            *)
 (*                                                                           *)
@@ -109,7 +109,7 @@ val ANTI_PRENEX_CONV : conv
 
 val TAUTOLOGY_CONV : conv
 val CONTRACT_CONV : conv
-
+  
 (* ------------------------------------------------------------------------- *)
 (* Conjunctive Normal Form.                                                  *)
 (*                                                                           *)
@@ -123,7 +123,7 @@ val tautology_checking : bool ref
 val PURE_CNF_CONV  : conv
 val CNF_CONV'      : conv -> conv       (* takes a 'leaf conversion' *)
 val CNF_CONV       : conv
-
+  
 (* ------------------------------------------------------------------------- *)
 (* Disjunctive Normal Form.                                                  *)
 (*                                                                           *)
@@ -146,7 +146,7 @@ val DNF_CONV       : conv
 (* ------------------------------------------------------------------------- *)
 
 val DEF_NNF_CONV : conv
-
+  
 (* ------------------------------------------------------------------------- *)
 (* Definitional Conjunctive Normal Form                                      *)
 (*                                                                           *)
@@ -199,7 +199,7 @@ val CLEANUP_SKOLEM_CONSTS_RULE : rule
 (* ------------------------------------------------------------------------- *)
 
 val DELAMB_CONV : conv
-
+  
 (* ------------------------------------------------------------------------- *)
 (* Eliminating Hilbert's epsilon operator.                                   *)
 (*                                                                           *)
@@ -212,9 +212,10 @@ val DELAMB_CONV : conv
 
 val SELECT_TAC : tactic
 
-(* ----------------------------------------------------------------------
-   Eliminate Abbrev terms
-   ---------------------------------------------------------------------- *)
+(* ------------------------------------------------------------------------- *)
+(* Remove all Abbrev terms from a goal by rewriting them away (Abbrev = I)   *)
+(* ------------------------------------------------------------------------- *)
+
 val REMOVE_ABBR_TAC : tactic
 
 (* ------------------------------------------------------------------------- *)
@@ -234,7 +235,7 @@ val cond_lift_ss : simpset      (* pure + cond_lift *)
 
 val condify_SS : ssdata
 val condify_ss : simpset      (* pure + condify *)
-
+  
 (* ------------------------------------------------------------------------- *)
 (* Definitional CNF minimizing number of clauses.                            *)
 (*                                                                           *)

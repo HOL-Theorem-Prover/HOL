@@ -448,7 +448,7 @@ local
 in
   val ANTI_PRENEX_CONV = DEPTH_CONV p;
 end;
-
+  
 (* ------------------------------------------------------------------------- *)
 (* A basic tautology prover and simplifier for clauses                       *)
 (*                                                                           *)
@@ -510,7 +510,7 @@ local
       in
         prove_case d ((a, (false, b) :: path) :: (b, (true, a) :: path) :: rest)
       end
-    else if aconv tm d then
+    else if tm = d then
       foldl (fn ((true, a), th) => DISJ2 a th | ((false, b), th) => DISJ1 th b)
       (ASSUME d) path
     else prove_case d rest
@@ -804,15 +804,15 @@ val CLEAN_DEF_CNF_CONV =
 
 local
   datatype btree = LEAF of term | BRANCH of btree * btree;
-
+    
   fun btree_fold b f (LEAF tm) = b tm
     | btree_fold b f (BRANCH (s, t)) = f (btree_fold b f s) (btree_fold b f t);
-
+    
   fun btree_strip_conj tm =
     if is_conj tm then
       (BRANCH o (btree_strip_conj ## btree_strip_conj) o dest_conj) tm
     else LEAF tm;
-
+      
   val rewr = QCONV (CLEAN_DEF_CNF_CONV ORELSEC DEPTH_CONV DISJ_RASSOC_CONV);
 
   fun cleanup tm =
@@ -982,7 +982,7 @@ fun SPEC_VSELECT_TAC vsel =
 
 local
   fun get vs tm =
-    case
+    case 
       (case dest_term tm of COMB (x, y) =>
          (case get vs x of s as SOME _ => s | NONE => get vs y)
        | LAMB (v, b) => get (v :: vs) b
@@ -999,19 +999,14 @@ val SPEC_ONE_SELECT_TAC = W (fn (_, tm) => SPEC_VSELECT_TAC (get_vselect tm));
 
 val SELECT_TAC = CONV_TAC SELECT_NORM_CONV THEN REPEAT SPEC_ONE_SELECT_TAC;
 
-(* ----------------------------------------------------------------------
-    REMOVE_ABBR_TAC
-
-    remove all marker$Abbrev terms from a goal by rewriting them away
-    (Abbrev = I)
-   ---------------------------------------------------------------------- *)
-
+(* ------------------------------------------------------------------------- *)
+(* Remove all Abbrev terms from a goal by rewriting them away (Abbrev = I)   *)
+(* ------------------------------------------------------------------------- *)
+  	 
 val REMOVE_ABBR_TAC =
     PURE_REWRITE_TAC [markerTheory.Abbrev_def] THEN
-    RULE_ASSUM_TAC (PURE_REWRITE_RULE [markerTheory.Abbrev_def])
-
-
-
+    RULE_ASSUM_TAC (PURE_REWRITE_RULE [markerTheory.Abbrev_def]);
+  	
 (* ------------------------------------------------------------------------- *)
 (* Lifting conditionals through function applications.                       *)
 (*                                                                           *)
@@ -1177,7 +1172,7 @@ end;
 (*
 local
   fun is_a_bool (p,vs,tm) =
-    p = Inside_pos andalso
+    p = Inside_pos andalso    
     type_of tm = bool andalso
     tm <> T andalso tm <> F andalso
     not let val (t,ws) = strip_comb tm in is_var t andalso subset ws vs end;

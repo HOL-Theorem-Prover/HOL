@@ -71,7 +71,7 @@ local
     | contr th gs = map (C CONTR th) gs;
 in
   fun contradiction_solver th =
-    (assert (is_contradiction th) (ERR "contradiction_solver" "thm not |- F");
+    (assert (is_contradiction th) (Error "contradiction_solver: thm not |- F");
      fn gs => S.CONS (SOME (contr th gs), K S.NIL));
 end;
 
@@ -82,7 +82,7 @@ end;
 local
   fun concl [] = False
     | concl [lit] = lit
-    | concl _ = raise BUG "concl" "not a literal";
+    | concl _ = raise Bug "concl: not a literal";
 in
   fun solved_filter solver goals =
     let
@@ -98,7 +98,7 @@ local
   fun munge s n = "MUNGED__" ^ int_to_string n ^ "__" ^ s;
   fun munge_lit (n, Atom (Fn (p, a))) = Atom (Fn (munge p n, a))
     | munge_lit (n, Not (Atom (Fn (p, a)))) = Not (Atom (Fn (munge p n, a)))
-    | munge_lit _ = raise BUG "munge_lit" "bad literal";
+    | munge_lit _ = raise Bug "munge_lit: bad literal";
   fun distinctivize fms = map munge_lit (enumerate 0 fms);    
   fun advance NONE s = (SOME NONE, s)
     | advance (SOME ths) s =
@@ -108,7 +108,7 @@ local
       if non S.null (mlibSubsume.subsumes s fms) then (NONE, s)
       else (SOME (SOME ths), mlibSubsume.add (fms |-> ()) s)
     end
-    handle ERR_EXN _ => raise BUG "advance" "shouldn't fail";
+    handle Error _ => raise Bug "advance: shouldn't fail";
 in
   fun subsumed_filter s g = S.partial_maps advance (mlibSubsume.empty ()) (s g);
 end;
@@ -126,9 +126,9 @@ in
   fun solve s n q = tk n (fn () => raw_solve s q);
 end;
 
-fun find s = total unwrap o (solve s 1);
+fun find s q = case solve s 1 q of [x] => SOME x | _ => NONE;
 
-fun refute s = Option.map unwrap (find s [False]);
+fun refute s = Option.map hd (find s [False]);
 
 (* ------------------------------------------------------------------------- *)
 (* mlibSolver nodes must construct themselves from the following form.           *)

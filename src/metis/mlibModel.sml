@@ -35,7 +35,7 @@ val gen = Random.newgenseed 1.0;
 
 type fp = string * int list;
 
-val fp_compare = lex_combine String.compare (lex_compare Int.compare);
+val fp_compare = lex_order String.compare (lex_list_order Int.compare);
 
 val pp_fp = pp_map
   (fn (f,a) => Fn (f, map (fn n => Fn (int_to_string n, [])) a)) pp_term;
@@ -95,7 +95,7 @@ val basic_fix : fix =
 
 local
   type div_set = (int * int) Binaryset.set
-  val empty : div_set = Binaryset.empty (lex_combine Int.compare Int.compare);
+  val empty : div_set = Binaryset.empty (lex_order Int.compare Int.compare);
   fun member i (s : div_set) = Binaryset.member (s,i);
   fun add i (s : div_set) = Binaryset.add (s,i);
 
@@ -217,7 +217,7 @@ fun insertv (v |-> n) s : valuation = Binarymap.insert (s,v,n);
 
 fun lookupv (s : valuation) v =
   case Binarymap.peek (s,v) of SOME n => n
-  | NONE => raise BUG "mlibModel.lookupv" "";
+  | NONE => raise Bug "mlibModel.lookupv";
 
 fun randomv n =
   let fun f (v,s) = insertv (v |-> Random.range (0,n) gen) s
@@ -258,7 +258,7 @@ local
   fun extract N =
     let
       val base_mod_N = BASE mod N
-      fun ext _ _ [] = raise BUG "mlibModel.extract" "ran out of data"
+      fun ext _ _ [] = raise Bug "mlibModel.extract: ran out of data"
         | ext t i (c :: cs) =
           let
             val i = (base_mod_N * i + base64_to_int c) mod N
@@ -301,7 +301,7 @@ in
     let
       val {size = n, fix = r} = parm
       val {func = fixf, pred = fixp} = r n
-      val () = assert (1 <= n) (BUG "mlibModel.new" "nonpositive size")
+      val () = assert (1 <= n) (Bug "mlibModel.new: nonpositive size")
       val id = new_id ()
       val cachef = ref (Binarymap.mkDict fp_compare)
       val cachep = ref (Binarymap.mkDict fp_compare)
@@ -369,7 +369,7 @@ fun eval_formula m =
   let
     fun e True _ = true
       | e False _ = false
-      | e (Atom (Var _)) _ = raise BUG "eval_formula" "boolean var"
+      | e (Atom (Var _)) _ = raise Bug "eval_formula: boolean var"
       | e (Atom (Fn (p,a))) v = eval_pred m (p, map (eval_term m v) a)
       | e (Not p) v = not (e p v)
       | e (Or (p,q)) v = e p v orelse e q v
@@ -444,9 +444,9 @@ fun perturbation_to_string p = PP.pp_to_string (!LINE_LENGTH) pp_perturbation p;
 
 fun comparep (PredP _, FnP _) = LESS
   | comparep (PredP (p1 |-> b1), PredP (p2 |-> b2)) =
-  lex_combine fp_compare bool_compare ((p1,b1),(p2,b2))
+  lex_order fp_compare bool_compare ((p1,b1),(p2,b2))
   | comparep (FnP (f1 |-> n1), FnP (f2 |-> n2)) =
-  lex_combine fp_compare Int.compare ((f1,n1),(f2,n2))
+  lex_order fp_compare Int.compare ((f1,n1),(f2,n2))
   | comparep (FnP _, PredP _) = GREATER;
 
 val emptyp : perturbation Binaryset.set = Binaryset.empty comparep;
@@ -518,7 +518,7 @@ fun perturb_formula m =
     fun f _ _ True = emptyp
       | f _ _ False = emptyp
       | f s v (Not p) = f (not s) v p
-      | f _ _ (Atom (Var _)) = raise BUG "perturb_formula" "boolean var"
+      | f _ _ (Atom (Var _)) = raise Bug "perturb_formula: boolean var"
       | f s v (Atom (Fn p)) = perturb_atom m v s p
       | f true v (Or (p,q)) = fl unionp [(v,p),(v,q)]
       | f false v (Or (p,q)) = f true v (And (Not p, Not q))
@@ -533,7 +533,7 @@ fun perturb_formula m =
     and flc c l = fl c (List.filter (fn (v,p) => not (eval_formula m v p)) l)
     and fl c l =
       case map (fn (v,p) => f true v p) l of
-        [] => raise BUG "perturb_formula" "no identity"
+        [] => raise Bug "perturb_formula: no identity"
       | h :: t => foldl (fn (s,x) => c s x) h t
   in
     f true
@@ -545,11 +545,11 @@ fun override m =
   in
     fn PredP (p |-> b) =>
        (if chatting 2 andalso chat "checking pred override\n" andalso
-           Option.isSome (fixp p) then raise BUG "override" "fixp" else ();
+           Option.isSome (fixp p) then raise Bug "override: fixp" else ();
         update_overp (Binarymap.insert (overp,p,b)) m)
      | FnP (f |-> n) =>
        (if chatting 2 andalso chat "checking fn override\n" andalso
-           Option.isSome (fixf f) then raise BUG "override" "fixf" else ();
+           Option.isSome (fixf f) then raise Bug "override: fixf" else ();
         update_overf (Binarymap.insert (overf,f,n)) m)
   end;
 
@@ -640,11 +640,11 @@ local
 in
   fun term_to_string m tm =
     to_string eval_term i2s m tm (FVT tm)
-    handle Toomany => raise ERR "mlibModel.term_to_string" "too many free vars";
+    handle Toomany => raise Error "mlibModel.term_to_string: too many free vars";
 
   fun formula_to_string m fm =
     to_string eval_formula b2s m fm (FV fm)
-    handle Toomany => raise ERR "mlibModel.formula_to_string" "too many free vars";
+    handle Toomany => raise Error "mlibModel.formula_to_string: too many free vars";
 end;
 
 (* ------------------------------------------------------------------------- *)

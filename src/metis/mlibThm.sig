@@ -59,6 +59,11 @@ val REWR           : thm * bool -> thm * formula * int list -> thm
 val DEPTH1         : (term->thm*term*bool) -> thm * formula -> thm * formula
 val DEPTH          : (term->thm*term*bool) -> thm -> thm
 
+(* Converting to clauses *)
+val axiomatize : formula -> thm list
+val eq_axioms  : formula -> thm list
+val clauses    : formula -> {thms : thm list, hyps : thm list}
+
 (* Pretty-printing of theorems and inferences *)
 val pp_thm               : thm pp
 val pp_inference         : inference pp

@@ -359,14 +359,19 @@ p /\ (q ==> r) ==> s <=> (~p \/ q \/ s) /\ (~p \/ ~r \/ s)`},
  goal    = `
 (!x. f0 a x \/ !y. f0 x y) ==> ?x. !y. f0 x y`},
 
-(* ------------------------------------------------------------------------- *)
-(* Full predicate logic.                                                     *)
-(* ------------------------------------------------------------------------- *)
-
 {name    = "LOGICPROOF_L10",
  comment = "",
  goal    = `
 !x. ?y. ~(P y x <=> ~P y y)`},
+
+{name    = "BARBER",
+ comment = "One resolution of the barber paradox",
+ goal    = `
+(!x. man x ==> (shaves barber x <=> ~shaves x x)) ==> ~man barber`},
+
+(* ------------------------------------------------------------------------- *)
+(* Full predicate logic.                                                     *)
+(* ------------------------------------------------------------------------- *)
 
 {name    = "LOGICPROOF_1999",
  comment = "A non-theorem.",

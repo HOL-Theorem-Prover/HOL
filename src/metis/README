@@ -30,33 +30,32 @@ How It Works
 
    This is how METIS_TAC proves a HOL subgoal:
 
-    1. First  some  HOL  conversions and tactics simplify the subgoal and
-       convert it to conjunctive normal form.
+    1. First some HOL conversions and tactics simplify the subgoal and convert
+       it to conjunctive normal form.
     2. The normalized problem is mapped to first-order syntax.
-    3. The  Metis  first-order  prover  attacks  the first-order problem,
-       hopefully deriving a refutation.
-    4. The  first-order  refutation  is  translated to a HOL proof of the
-       original subgoal.
+    3. The Metis first-order prover attacks the first-order problem, hopefully
+       deriving a refutation.
+    4. The first-order refutation is translated to a HOL proof of the original
+       subgoal.
 
-   For  more  details  on  the  interface  please  refer to the [1]System
-   Description.  To  find  out  more  about  the Metis first-order prover
-   (including performance information) you can visit its [2]own web page.
+   For more details on the interface please refer to the [1]System Description.
+   To find out more about the Metis first-order prover (including performance
+   information) you can visit its [2]own web page.
 
 Comparison with MESON_TAC
 
-   METIS_TAC  is  generally slower than MESON_TAC on simple problems, but
-   has better coverage. For example, MESON_TAC cannot prove the following
-   theorems:
+   METIS_TAC is generally slower than MESON_TAC on simple problems, but has
+   better coverage. For example, MESON_TAC cannot prove the following theorems:
 
      METIS_PROVE [] ``?x. x``;
      METIS_PROVE [] ``p (\x. x) /\ q ==> q /\ p (\y. y)``;
 
-   The  combination  of  model  elimination  and  resolution  calculi  in
-   METIS_TAC allows some hard theorems to be proved that are too deep for
-   the  HOL  version of MESON_TAC, such as the GILMORE_9 and STEAM_ROLLER
-   problems.  Also,  the  ordered  paramodulation  used by the resolution
-   component of METIS_TAC allows it to prove harder equality problems. An
-   example to illustrate this is the following theorem:
+   The combination of model elimination and resolution calculi in METIS_TAC
+   allows some hard theorems to be proved that are too deep for the HOL version
+   of MESON_TAC, such as the GILMORE_9 and STEAM_ROLLER problems. Also, the
+   ordered paramodulation used by the resolution component of METIS_TAC allows
+   it to prove harder equality problems. An example to illustrate this is the
+   following theorem:
 
      METIS_PROVE []
      ``(!x y. x * y = y * x) /\ (!x y z. x * y * z = x * (y * z)) ==>
@@ -68,15 +67,14 @@ Known Bugs
 
 Credits
 
-   The  HOL4  Metis  library  was  written  by  Joe  Hurd,  based on John
-   Harrison's  implementation  of  MESON_TAC.  The  library has been much
-   improved  by  feedback  from  HOL4  users, especially Michael Norrish,
-   Konrad Slind and Mike Gordon.
+   The HOL4 Metis library was written by Joe Hurd, based on John Harrison's
+   implementation of MESON_TAC. The library has been much improved by feedback
+   from HOL4 users, especially Michael Norrish, Konrad Slind and Mike Gordon.
 
 Change Log
 
-     * Implemented  a  HOL  specific  finite  model,  which  knows  about
-       numbers, lists and sets.
+     * Implemented a HOL specific finite model, which knows about numbers,
+       lists and sets.
      * Removed multiple provers, METIS_TAC is now solely based on ordered
        resolution.
      * Changed the normalization to eliminate let terms.
@@ -88,12 +86,12 @@ Change Log
 
   Between Versions 1.4 and 1.5
 
-     * Scheduling  provers  is  no  longer based on time used, but rather
-       number of inferences.
+     * Scheduling provers is no longer based on time used, but rather number of
+       inferences.
      * Simplification of resolution clauses using disequation literals.
      * Implemented finite models to guide clause selection in resolution.
-     * The  model  elimination  prover  optimizes  the order of rules and
-       literals within rules.
+     * The model elimination prover optimizes the order of rules and literals
+       within rules.
 
   Version 1.4: 2 October 2003
 
@@ -103,8 +101,8 @@ Change Log
   Between Versions 1.3 and 1.4
 
      * Added an ordered resolution prover to the default set.
-     * Improved  resolution  performance  with a special-purpose datatype
-       for inter-reducing equations.
+     * Improved resolution performance with a special-purpose datatype for
+       inter-reducing equations.
 
   Version 1.3: 18 June 2003
 
@@ -113,10 +111,10 @@ Change Log
 
   Between Versions 1.2 and 1.3
 
-     * Implemention  of  definitional  CNF to reduce blow-up in number of
-       clauses (usually caused by nested boolean equivalences).
-     * Resolution  is  more  robust and efficient, and includes an option
-       (off by default) for clauses to inherit ordering constraints.
+     * Implemention of definitional CNF to reduce blow-up in number of clauses
+       (usually caused by nested boolean equivalences).
+     * Resolution is more robust and efficient, and includes an option (off by
+       default) for clauses to inherit ordering constraints.
 
   Version 1.2: 19 November 2002
 
@@ -125,10 +123,10 @@ Change Log
 
   Between Versions 1.1 and 1.2
 
-     * Ground-up  rewrite  of the resolution calculus, which now performs
-       ordered resolution and ordered paramodulation.
-     * A  single  entry-point  METIS_TAC, which uses heuristics to decide
-       whether to apply FO_METIS_TAC or HO_METIS_TAC.
+     * Ground-up rewrite of the resolution calculus, which now performs ordered
+       resolution and ordered paramodulation.
+     * A single entry-point METIS_TAC, which uses heuristics to decide whether
+       to apply FO_METIS_TAC or HO_METIS_TAC.
      * {HO|FO}_METIS_TAC  both  initially  operate  in typeless mode, and
        automatically try again with types if an error occurs during proof
        translation.
@@ -143,10 +141,10 @@ Change Log
 
   Between Versions 1.0 and 1.1
 
-     * Added  a  "metis"  entry  to  the HOL trace system: it nows prints
-       status information during proof (if HOL is in interactive mode).
-     * Restricted   (universal   and  existential)  quantifiers  are  now
-       normalized by the NNF conversion.
+     * Added a "metis" entry to the HOL trace system: it nows prints status
+       information during proof (if HOL is in interactive mode).
+     * Restricted (universal and existential) quantifiers are now normalized by
+       the NNF conversion.
      * Improved performance in the model elimination proof procedure with
        better caching (following a suggestion from John Harrison).
      * First-order substitutions are now fully Boultonized.
