@@ -51,7 +51,7 @@ sig
     val new_infixr_definition : string * term quotation * int -> thm
     val define: term quotation -> string -> fixity -> thm
     val store_thm : string * term quotation * tactic -> thm
-    val prove : term quotation -> tactic -> thm
+    val prove : term quotation * tactic -> thm
     val ABBREV_TAC : term quotation -> tactic
     val UNABBREV_TAC : term quotation -> tactic
   end
