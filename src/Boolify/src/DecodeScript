@@ -11,7 +11,7 @@ load "BoolifyTheory";
 
 open HolKernel boolLib Parse bossLib pairTheory pairTools
      arithmeticTheory listTheory rich_listTheory BoolifyTheory
-     mesonLib;
+     mesonLib optionTheory;
 
 val REVERSE = Tactical.REVERSE;
 
@@ -47,14 +47,14 @@ val _ = add_const "domain";
      The definition of some decoding parsers
  ---------------------------------------------------------------------------*)
 
-val decode_bool = Define
+val decode_bool_def = Define
   `(decode_bool [] = NONE) /\
    (decode_bool (h::t) = SOME(h,t))`;
     
-val decode_unit = Define
+val decode_unit_def = Define
    `decode_unit l = SOME((),l)`;
 
-val decode_prod = Define
+val decode_prod_def = Define
    `decode_prod p1 p2 (l:bool list) = 
        case p1 l 
         of NONE -> NONE
@@ -63,7 +63,7 @@ val decode_prod = Define
               of NONE -> NONE
               || SOME(y:'b,l2:bool list) -> SOME((x,y),l2))`;
 
-val decode_sum = Define
+val decode_sum_def = Define
   `(decode_sum p1 p2   []   = NONE) /\
    (decode_sum p1 p2 (T::t) = 
         (case p1 t
@@ -74,7 +74,7 @@ val decode_sum = Define
            of NONE -> NONE
            || SOME(y:'b,rst:bool list) -> SOME(INR y,rst)))`;
    
-val decode_num = Define
+val decode_num_def = Define
   `(decode_num (T::T::t) = SOME(0:num,t))                         /\
    (decode_num (T::F::t) = (case decode_num t
                              of NONE -> NONE
@@ -86,7 +86,7 @@ val decode_num = Define
 
 val decode_num_ind = fetch "-" "decode_num_ind";
 
-val decode_option = Define
+val decode_option_def = Define
   `(decode_option f   []   = (NONE:('a option#bool list)option)) /\
    (decode_option f (F::t) = SOME(NONE,t)) /\
    (decode_option f (T::t) = case f t
@@ -99,7 +99,7 @@ val decode_option = Define
 (* recursive polymorphic type.                                               *)
 (*---------------------------------------------------------------------------*)
 
-val decode_list = TotalDefn.DefineSchema
+val decode_list_def = TotalDefn.DefineSchema
   `(decode_list [] = NONE)            /\
    (decode_list (F::t) = SOME([],t))  /\  
    (decode_list (T::t) = 
@@ -115,10 +115,10 @@ val decode_list = TotalDefn.DefineSchema
 (* measure.                                                                  *)
 (*---------------------------------------------------------------------------*)
 
-val th = DISCH_ALL decode_list;
+val th = DISCH_ALL decode_list_def;
 val th1 = Q.INST [`R` |-> `measure LENGTH`] th;
 val th2 = REWRITE_RULE [prim_recTheory.WF_measure] th1;
-val decode_list' = 
+val decode_list_def' = 
   REWRITE_RULE [DECIDE (Term`x < SUC y = x <= y`),
                 prim_recTheory.measure_thm,listTheory.LENGTH] th2;
 
@@ -192,6 +192,18 @@ val wf_parser_alt = prove
     SIMP_TAC bool_ss [optionTheory.SOME_11, pairTheory.PAIR_EQ] THEN
     ASM_MESON_TAC []]);
 
+val swf_parser_alt = prove
+  (``!f.
+       swf_parser f =
+       !x a b.
+         (f a = SOME (x, b)) ==>
+         LENGTH b < LENGTH a /\
+         (!c. f (APPEND a c) = SOME (x, APPEND b c)) /\
+         (?c. IS_PREFIX a c /\ (f c = SOME (x, [])))``,
+   SIMP_TAC bool_ss [swf_parser_def, wf_parser_alt] THEN
+   REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
+   ASM_MESON_TAC [DECIDE ``!m n : num. m < n ==> m <= n``]);
+
 (*---------------------------------------------------------------------------*)
 (* Proofs that our basic monadic parsers are well-formed. Decoders for       *)
 (* single constructor types can only propagate well-formedness; decoders for *)
@@ -201,86 +213,279 @@ val wf_parser_alt = prove
 
 val wf_decode_bool = Q.prove
   (`swf_parser decode_bool`,
-   REWRITE_TAC [swf_parser]
-     THEN Cases_on `l`
-     THEN RW_TAC list_ss [decode_bool]);
+   REWRITE_TAC [swf_parser_alt] THEN
+   GEN_TAC THEN
+   Cases THEN
+   RW_TAC arith_ss [decode_bool_def, LENGTH, APPEND] THEN
+   Q.EXISTS_TAC `[h]` THEN
+   RW_TAC std_ss [decode_bool_def, IS_PREFIX]);
 
 val wf_decode_unit = Q.prove
   (`wf_parser decode_unit`,
-   RW_TAC list_ss [wf_parser,decode_unit]);
+   RW_TAC list_ss [wf_parser_alt, decode_unit_def, IS_PREFIX]);
 
 val wf_decode_prod = Q.prove
   (`!f g. wf_parser f /\ wf_parser g ==> wf_parser (decode_prod f g)`,
-   REWRITE_TAC [wf_parser]
-     THEN REPEAT GEN_TAC THEN STRIP_TAC 
-     THEN Cases_on `l` 
-     THEN RW_TAC list_ss [decode_prod] 
-     THEN POP_ASSUM MP_TAC
-     THENL [Cases_on `f []`, Cases_on `f (h::t)`]
-     THEN RW_TAC std_ss []
-     THEN Cases_on `x'`
-     THEN POP_ASSUM MP_TAC
-     THEN RW_TAC std_ss []
-     THEN Cases_on `g r`
-     THEN NTAC 2 (POP_ASSUM MP_TAC)
-     THEN RW_TAC std_ss []
-     THEN Cases_on `x'`
-     THEN NTAC 2 (POP_ASSUM MP_TAC)
-     THEN RW_TAC std_ss []
-     THEN PROVE_TAC [LENGTH,LESS_EQ_0,LESS_EQ_TRANS]);
+   SIMP_TAC std_ss [wf_parser_def, decode_prod_def] THEN
+   REPEAT GEN_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN
+   (REVERSE (Cases_on `?p q r s. (f a = SOME (p, q)) /\ (g q = SOME (r, s))`)
+    THEN1
+    (MATCH_MP_TAC (PROVE [] ``!a b. ~a ==> (a ==> b)``) THEN
+     POP_ASSUM MP_TAC THEN
+     REPEAT (POP_ASSUM (K ALL_TAC)) THEN
+     Cases_on `f a` THEN
+     RW_TAC std_ss [] THEN
+     Cases_on `x'` THEN
+     RW_TAC std_ss [] THEN
+     Cases_on `g r` THEN
+     RW_TAC std_ss [] THEN
+     Cases_on `x'` THEN
+     RW_TAC std_ss [])) THEN
+   POP_ASSUM STRIP_ASSUME_TAC THEN
+   RW_TAC std_ss [] THEN
+   Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPECL [`r`, `q`, `b`]) THEN
+   Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPECL [`p`, `a`, `q`]) THEN
+   RW_TAC std_ss [] THEN
+   Q.EXISTS_TAC `APPEND c c'` THEN
+   RW_TAC std_ss [GSYM APPEND_ASSOC]);
+
+val wf_decode_prod1 = Q.prove
+  (`!f g. swf_parser f /\ wf_parser g ==> swf_parser (decode_prod f g)`,
+   RW_TAC std_ss [swf_parser_def, wf_decode_prod] THEN
+   POP_ASSUM MP_TAC THEN
+   (Q_TAC KNOW_TAC `?p r. x = (p, r)` THEN1 PROVE_TAC [ABS_PAIR_THM]) THEN
+   STRIP_TAC THEN
+   POP_ASSUM SUBST1_TAC THEN
+   (REVERSE (Cases_on `?q. (f l = SOME (p, q)) /\ (g q = SOME (r, l'))`) THEN1
+    (MATCH_MP_TAC (PROVE [] ``!a b. ~a ==> (a ==> b)``) THEN
+     POP_ASSUM MP_TAC THEN
+     REPEAT (POP_ASSUM (K ALL_TAC)) THEN
+     STRIP_TAC THEN
+     Cases_on `f l` THEN
+     RW_TAC std_ss [decode_prod_def] THEN
+     Cases_on `x` THEN
+     RW_TAC std_ss [] THEN
+     Cases_on `g r'` THEN
+     RW_TAC std_ss [] THEN
+     Cases_on `x` THEN
+     RW_TAC std_ss [] THEN
+     ASM_MESON_TAC [])) THEN
+   POP_ASSUM STRIP_ASSUME_TAC THEN
+   RW_TAC std_ss [decode_prod_def] THEN
+   FULL_SIMP_TAC std_ss [wf_parser_alt] THEN
+   RES_TAC THEN
+   ASM_MESON_TAC [LESS_EQ_LESS_TRANS]);
+
+val wf_decode_prod2 = Q.prove
+  (`!f g. wf_parser f /\ swf_parser g ==> swf_parser (decode_prod f g)`,
+   RW_TAC std_ss [swf_parser_def, wf_decode_prod] THEN
+   POP_ASSUM MP_TAC THEN
+   (Q_TAC KNOW_TAC `?p r. x = (p, r)` THEN1 PROVE_TAC [ABS_PAIR_THM]) THEN
+   STRIP_TAC THEN
+   POP_ASSUM SUBST1_TAC THEN
+   (REVERSE (Cases_on `?q. (f l = SOME (p, q)) /\ (g q = SOME (r, l'))`) THEN1
+    (MATCH_MP_TAC (PROVE [] ``!a b. ~a ==> (a ==> b)``) THEN
+     POP_ASSUM MP_TAC THEN
+     REPEAT (POP_ASSUM (K ALL_TAC)) THEN
+     STRIP_TAC THEN
+     Cases_on `f l` THEN
+     RW_TAC std_ss [decode_prod_def] THEN
+     Cases_on `x` THEN
+     RW_TAC std_ss [] THEN
+     Cases_on `g r'` THEN
+     RW_TAC std_ss [] THEN
+     Cases_on `x` THEN
+     RW_TAC std_ss [] THEN
+     ASM_MESON_TAC [])) THEN
+   POP_ASSUM STRIP_ASSUME_TAC THEN
+   RW_TAC std_ss [decode_prod_def] THEN
+   FULL_SIMP_TAC std_ss [wf_parser_alt] THEN
+   RES_TAC THEN
+   ASM_MESON_TAC [LESS_LESS_EQ_TRANS]);
 
 val swf_decode_sum = Q.prove
   (`!f g. wf_parser f /\ wf_parser g ==> swf_parser (decode_sum f g)`,
-   REWRITE_TAC [swf_parser,wf_parser]
-     THEN REPEAT GEN_TAC THEN STRIP_TAC 
-     THEN Cases_on `l` THEN TRY (Cases_on `h`)
-     THEN RW_TAC list_ss [decode_sum] 
-     THEN POP_ASSUM MP_TAC
-     THENL [Cases_on `f t`, Cases_on `g t`]
-     THEN RW_TAC std_ss []
-     THEN Cases_on `x'`
-     THEN POP_ASSUM MP_TAC
-     THEN RW_TAC std_ss []
-     THEN PROVE_TAC [DECIDE (Term `x <= y ==> x < SUC y`)]);
+   RW_TAC std_ss [swf_parser_def] THENL
+   [REPEAT (POP_ASSUM MP_TAC) THEN
+    RW_TAC std_ss [wf_parser_def] THEN
+    POP_ASSUM MP_TAC THEN
+    (Cases_on `a` THEN1 RW_TAC std_ss [decode_sum_def]) THEN
+    Cases_on `h` THENL
+    [(REVERSE (Cases_on `?p. f t = SOME (p, b)`) THEN1
+      (MATCH_MP_TAC (PROVE [] ``!a b. ~a ==> (a ==> b)``) THEN
+       POP_ASSUM MP_TAC THEN
+       REPEAT (POP_ASSUM (K ALL_TAC)) THEN
+       Cases_on `f t` THEN
+       RW_TAC std_ss [decode_sum_def] THEN
+       Cases_on `x'` THEN
+       RW_TAC std_ss [] THEN
+       ASM_MESON_TAC [])) THEN
+     POP_ASSUM STRIP_ASSUME_TAC THEN
+     RW_TAC std_ss [decode_sum_def] THEN
+     RES_TAC THEN
+     Q.EXISTS_TAC `T :: c` THEN
+     RW_TAC std_ss [APPEND, decode_sum_def],
+     (REVERSE (Cases_on `?p. g t = SOME (p, b)`) THEN1
+      (MATCH_MP_TAC (PROVE [] ``!a b. ~a ==> (a ==> b)``) THEN
+       POP_ASSUM MP_TAC THEN
+       REPEAT (POP_ASSUM (K ALL_TAC)) THEN
+       Cases_on `g t` THEN
+       RW_TAC std_ss [decode_sum_def] THEN
+       Cases_on `x'` THEN
+       RW_TAC std_ss [] THEN
+       ASM_MESON_TAC [])) THEN
+     POP_ASSUM STRIP_ASSUME_TAC THEN
+     RW_TAC std_ss [decode_sum_def] THEN
+     RES_TAC THEN
+     Q.EXISTS_TAC `F :: c` THEN
+     RW_TAC std_ss [APPEND, decode_sum_def]],
+    REPEAT (POP_ASSUM MP_TAC) THEN
+    RW_TAC std_ss [wf_parser_alt] THEN
+    POP_ASSUM MP_TAC THEN
+    (Cases_on `l` THEN1 RW_TAC std_ss [decode_sum_def]) THEN
+    Cases_on `h` THENL
+    [(REVERSE (Cases_on `?p. f t = SOME (p, l')`) THEN1
+      (MATCH_MP_TAC (PROVE [] ``!a b. ~a ==> (a ==> b)``) THEN
+       POP_ASSUM MP_TAC THEN
+       REPEAT (POP_ASSUM (K ALL_TAC)) THEN
+       Cases_on `f t` THEN
+       RW_TAC std_ss [decode_sum_def] THEN
+       Cases_on `x'` THEN
+       RW_TAC std_ss [] THEN
+       ASM_MESON_TAC [])) THEN
+     POP_ASSUM STRIP_ASSUME_TAC THEN
+     RW_TAC std_ss [decode_sum_def] THEN
+     RES_TAC THEN
+     RW_TAC arith_ss [LENGTH],
+     (REVERSE (Cases_on `?p. g t = SOME (p, l')`) THEN1
+      (MATCH_MP_TAC (PROVE [] ``!a b. ~a ==> (a ==> b)``) THEN
+       POP_ASSUM MP_TAC THEN
+       REPEAT (POP_ASSUM (K ALL_TAC)) THEN
+       Cases_on `g t` THEN
+       RW_TAC std_ss [decode_sum_def] THEN
+       Cases_on `x'` THEN
+       RW_TAC std_ss [] THEN
+       ASM_MESON_TAC [])) THEN
+     POP_ASSUM STRIP_ASSUME_TAC THEN
+     RW_TAC std_ss [decode_sum_def] THEN
+     RES_TAC THEN
+     RW_TAC arith_ss [LENGTH]]]);
 
 val swf_decode_option = Q.prove
   (`!f. wf_parser f ==> swf_parser (decode_option f)`,
-   REWRITE_TAC [swf_parser, wf_parser]
-     THEN REPEAT GEN_TAC THEN STRIP_TAC 
-     THEN Cases_on `l` THEN TRY (Cases_on `h`)
-     THEN RW_TAC list_ss [decode_option] 
-     THEN POP_ASSUM MP_TAC
-     THEN Cases_on `f t`
-     THEN RW_TAC std_ss []
-     THEN Cases_on `x'`
-     THEN POP_ASSUM MP_TAC
-     THEN RW_TAC std_ss []
-     THEN PROVE_TAC [DECIDE (Term `x <= y ==> x < SUC y`)]);
+   RW_TAC std_ss [swf_parser_def] THENL
+   [REPEAT (POP_ASSUM MP_TAC) THEN
+    RW_TAC std_ss [wf_parser_def] THEN
+    POP_ASSUM MP_TAC THEN
+    (Cases_on `a` THEN1 RW_TAC std_ss [decode_option_def]) THEN
+    Cases_on `h` THENL
+    [(REVERSE (Cases_on `?p. f t = SOME (p, b)`) THEN1
+      (MATCH_MP_TAC (PROVE [] ``!a b. ~a ==> (a ==> b)``) THEN
+       POP_ASSUM MP_TAC THEN
+       REPEAT (POP_ASSUM (K ALL_TAC)) THEN
+       Cases_on `f t` THEN
+       RW_TAC std_ss [decode_option_def] THEN
+       Cases_on `x'` THEN
+       RW_TAC std_ss [] THEN
+       ASM_MESON_TAC [])) THEN
+     POP_ASSUM STRIP_ASSUME_TAC THEN
+     RW_TAC std_ss [decode_option_def] THEN
+     RES_TAC THEN
+     Q.EXISTS_TAC `T :: c` THEN
+     RW_TAC std_ss [APPEND, decode_option_def],
+     RW_TAC std_ss [decode_option_def] THEN
+     Q.EXISTS_TAC `[F]` THEN
+     RW_TAC std_ss [APPEND, decode_option_def]],
+    REPEAT (POP_ASSUM MP_TAC) THEN
+    RW_TAC std_ss [wf_parser_alt] THEN
+    POP_ASSUM MP_TAC THEN
+    (Cases_on `l` THEN1 RW_TAC std_ss [decode_option_def]) THEN
+    Cases_on `h` THENL
+    [(REVERSE (Cases_on `?p. f t = SOME (p, l')`) THEN1
+      (MATCH_MP_TAC (PROVE [] ``!a b. ~a ==> (a ==> b)``) THEN
+       POP_ASSUM MP_TAC THEN
+       REPEAT (POP_ASSUM (K ALL_TAC)) THEN
+       Cases_on `f t` THEN
+       RW_TAC std_ss [decode_option_def] THEN
+       Cases_on `x'` THEN
+       RW_TAC std_ss [] THEN
+       ASM_MESON_TAC [])) THEN
+     POP_ASSUM STRIP_ASSUME_TAC THEN
+     RW_TAC std_ss [decode_option_def] THEN
+     RES_TAC THEN
+     RW_TAC arith_ss [LENGTH],
+     RW_TAC arith_ss [decode_option_def, LENGTH]]]);
 
 (*---------------------------------------------------------------------------*)
 (* Some recursive types. Induction needed in the proofs, of course. We use   *)
 (* the custom induction theorems produced at definition time.                *)
 (*---------------------------------------------------------------------------*)
 
-val swf_decode_num = Q.prove
+val wf_decode_num = Q.prove
   (`swf_parser decode_num`,
-   REWRITE_TAC [swf_parser]
-     THEN NTAC 2 GEN_TAC THEN Q.ID_SPEC_TAC `x` THEN Q.ID_SPEC_TAC `l`
-     THEN recInduct decode_num_ind 
-     THEN RW_TAC list_ss [decode_num]
-     THEN POP_ASSUM MP_TAC 
-     THEN Cases_on `decode_num t`
-     THEN RW_TAC std_ss []
-     THEN Cases_on `x'`
-     THEN POP_ASSUM MP_TAC 
-     THEN RW_TAC std_ss []
-     THEN NTAC 2 (POP_ASSUM MP_TAC) 
-     THEN RW_TAC arith_ss []);
+   REWRITE_TAC [swf_parser_def] THEN
+   MATCH_MP_TAC (DECIDE ``!a b. a /\ (a ==> b) ==> a /\ b``) THEN
+   CONJ_TAC THENL
+   [SIMP_TAC std_ss [wf_parser_def] THEN
+    NTAC 2 GEN_TAC THEN Q.ID_SPEC_TAC `x` THEN Q.ID_SPEC_TAC `a` THEN
+    recInduct decode_num_ind THEN
+    RW_TAC list_ss [decode_num_def] THENL
+    [Q.EXISTS_TAC `[T; T]` THEN
+     RW_TAC std_ss [IS_PREFIX, decode_num_def, APPEND],
+     POP_ASSUM MP_TAC THEN
+     (REVERSE (Cases_on `?p. decode_num t = SOME (p, b)`) THEN1
+      (MATCH_MP_TAC (PROVE [] ``!a b. ~a ==> (a ==> b)``) THEN
+       POP_ASSUM MP_TAC THEN
+       REPEAT (POP_ASSUM (K ALL_TAC)) THEN
+       Cases_on `decode_num t` THEN
+       RW_TAC std_ss [] THEN
+       Cases_on `x'` THEN
+       RW_TAC std_ss [] THEN
+       ASM_MESON_TAC [])) THEN
+     POP_ASSUM STRIP_ASSUME_TAC THEN
+     RW_TAC std_ss [] THEN
+     RES_TAC THEN
+     Q.EXISTS_TAC `T::F::c` THEN
+     RW_TAC std_ss [APPEND, decode_num_def],
+     POP_ASSUM MP_TAC THEN
+     (REVERSE (Cases_on `?p. decode_num t = SOME (p, b)`) THEN1
+      (MATCH_MP_TAC (PROVE [] ``!a b. ~a ==> (a ==> b)``) THEN
+       POP_ASSUM MP_TAC THEN
+       REPEAT (POP_ASSUM (K ALL_TAC)) THEN
+       Cases_on `decode_num t` THEN
+       RW_TAC std_ss [] THEN
+       Cases_on `x'` THEN
+       RW_TAC std_ss [] THEN
+       ASM_MESON_TAC [])) THEN
+     POP_ASSUM STRIP_ASSUME_TAC THEN
+     RW_TAC std_ss [] THEN
+     RES_TAC THEN
+     Q.EXISTS_TAC `F::c` THEN
+     RW_TAC std_ss [APPEND, decode_num_def]],
+    SIMP_TAC std_ss [wf_parser_alt] THEN
+    STRIP_TAC THEN
+    NTAC 2 GEN_TAC THEN Q.ID_SPEC_TAC `x` THEN Q.ID_SPEC_TAC `l` THEN
+    recInduct decode_num_ind THEN
+    RW_TAC list_ss [decode_num_def] THEN
+    MATCH_MP_TAC LESS_EQ_IMP_LESS_SUC THEN
+    POP_ASSUM MP_TAC THEN
+    (REVERSE (Cases_on `?p. decode_num t = SOME (p, l')`) THEN1
+     (MATCH_MP_TAC (PROVE [] ``!a b. ~a ==> (a ==> b)``) THEN
+      POP_ASSUM MP_TAC THEN
+      REPEAT (POP_ASSUM (K ALL_TAC)) THEN
+      Cases_on `decode_num t` THEN
+      RW_TAC std_ss [] THEN
+      Cases_on `x'` THEN
+      RW_TAC std_ss [] THEN
+      ASM_MESON_TAC [])) THEN
+     POP_ASSUM STRIP_ASSUME_TAC THEN
+     RES_TAC THEN
+     ASM_MESON_TAC [LESS_EQ_TRANS, LESS_EQ_SUC_REFL]]);
 
-val decode_list'' = REWRITE_RULE [wf_parser'] decode_list';
+val decode_list'' = REWRITE_RULE [wf_parser'] decode_list_def';
 val decode_list_ind'' = REWRITE_RULE [wf_parser'] decode_list_ind';
 
-val swf_decode_list = Q.prove
+val wf_decode_list = Q.prove
  (`!f. wf_parser f ==> swf_parser (decode_list f)`,
   GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC [wf_parser,swf_parser] 
     THEN NTAC 2 GEN_TAC THEN Q.ID_SPEC_TAC `x` THEN Q.ID_SPEC_TAC `l`
