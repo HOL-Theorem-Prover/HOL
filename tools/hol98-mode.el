@@ -68,19 +68,19 @@ process in it."
   (skip-syntax-forward " ")
   (or (char-equal (following-char) ?,)
       (char-equal (following-char) ?=)
-      (char-equal (following-char) ?;)
-      (is-a-then (word-at-point)))))
+      (char-equal (following-char) ?\;)
+      (is-a-then (word-at-point))))
 
 (defun previous-hol-lexeme-terminates-tactic ()
   (save-excursion
     (skip-chars-backward " \n\t\r")
     (or (char-equal (preceding-char) ?,)
         (char-equal (preceding-char) ?=)
-        (char-equal (preceding-char) ?;)
+        (char-equal (preceding-char) ?\;)
         (and (condition-case nil
                  (progn (backward-char 1) t)
                  (error nil))
-             (is-a-then (word-at-point)))))))
+             (is-a-then (word-at-point))))))
 
 ;;; returns true and moves forward a sexp if this is possible, returns nil
 ;;; and stays where it is otherwise
