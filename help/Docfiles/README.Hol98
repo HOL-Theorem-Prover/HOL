@@ -1,0 +1,124 @@
+Entering expressions.
+---------------------
+
+The HOL type parser is called "Type".
+
+Example:     Type`:bool -> ('a -> bool) -> ind`
+
+The HOL term parser is called "Term".
+
+Example:     Term`!x. ?y. x = y`
+
+
+Theories.
+---------
+
+In Hol98, theories are represented by ML structures. The theories listed
+below come pre-built in the system.
+
+     ------------------------------------------------------------------
+    | minTheory          | the origin theory                           |
+    | boolTheory         | basic logical operators                     |
+    | pairTheory         | theory of pairs                             |
+    |------------------------------------------------------------------|
+    | numTheory          | Peano's axioms from the axiom of infinity   |
+    | prim_recTheory     | Primitive recursion theorem                 |
+    | arithmeticTheory   | Peano arithmetic development                |
+    | intTheory          | integers, by John Harrison                  |
+    | transcTheory       | real numbers and analysis, by John Harrison |
+    |------------------------------------------------------------------|
+    |                    | transitive closure of a relation            |
+    | relationTheory     | wellfoundedness, induction, and recursion   |
+    |                    | wellfoundedness at useful types             |
+    |----------------------------------------------------------------  |
+    | setTheory          | sets as a type (includes finite sets)       |
+    | pred_setTheory     | sets as predicates (includes finite sets)   |
+    | bagTheory          | multisets (includes finite multisets)       |
+    |------------------------------------------------------------------|
+    | listTheory         | basic theory of lists                       |
+    | rich_listTheory    | extended theory of lists                    |
+    | llistTheory        | theory of lazy lists                        |
+    |------------------------------------------------------------------|
+    | combinTheory       | combinators                                 |
+    | optionTheory       | the "option" type                           |
+    | sumTheory          | the disjoint sum type operator              |
+    | ltreeTheory        | polymorphic finitely branching trees        |
+    | finite_mapTheory   | finite maps from 'a to 'b                   |
+    |------------------------------------------------------------------|
+    | res_quanTheory     | restricted quantifier support               |
+    |------------------------------------------------------------------|
+    | asciiTheory        | ascii                                       |
+    | stringTheory       | strings                                     |
+    |------------------------------------------------------------------|
+    | wordTheory. etc.   | theory of bitstrings                        |
+    |------------------------------------------------------------------|
+    | Temporal_LogicTheory | Linear time temporal logic                |
+    | Omega_AutomataTheory | Infinite state automata                   |
+     ------------------------------------------------------------------
+
+The only theory that is initially loaded by an invocation of Hol98 is
+boolTheory. To gain access to any other theory when working
+interactively, simply invoke
+
+    load "xTheory";
+
+where "x" is the name of the theory. Once the theory has been
+loaded by the system, access to its contents is through the `dot'
+notation of ML, e.g.,
+
+    xTheory.FOO_DEF,
+
+or if you prefer, by `open'ing the structure and then directly
+accessing its contents.
+
+
+Libraries.
+-----------
+
+ As for theories, a library is represented by an ML structure and can
+thus be brought into an interactive session by invoking `load', e.g.
+
+    load "xLib";
+
+One difference between libraries and theories is that a library can in
+general consist of a collection of theories and support ML structures.
+Thus sometimes, but not always, the functionality of a library is
+distributed through a collection of ML structures, all of which have
+been brought into the interactive session by the call to `load'.  It
+currently (unhappily) falls to the user to know about the
+functionality of a library.  Some libraries provide `help' and manuals
+for their use; others do not.
+
+Hol98 currently offers the following libraries.
+
+    ----------------------------------------------------------------
+    | bossLib         | Suite of automatic tools.                   |
+    | decisionLib     | cooperating decision procedures             |
+    | mesonLib        | model- elimination first order reasoner     |
+    | simpLib         | Isabelle-style simplifier                   |
+    | tflLib          | wellfounded recursive definitions           |
+    | goalstackLib    | simple manager for building tactic proofs   |
+    | basicHol90Lib   | derived rules, tactics, convs, rewriting    |
+    | IndDefLib       | generalized inductive defn. package         |
+    | ind_defLib      | inductive defn. package                     |
+    | optionLib       | option type                                 |
+    | pairLib         | extended support for pairs                  |
+    | setLib          | sets as a separate type                     |
+    | pred_setLib     | sets as predicates                          |
+    | listLib         | extensive development of lists              |
+    | stringLib       | characters and strings                      |
+    | wordLib         | theories and proof support for bitstrings   |
+    | unwindLib       | unwinding existential quantifiers           |
+    | res_quanLib     | bounded quantification                      |
+    | numLib          | support library for numbers                 |
+    | hol88Lib        | support for hol88 compatibility             |
+    | liteLib         | support for GTT portability                 |
+    | ho_matchLib     | higher-order versions of proof tools        |
+    | refuteLib       | support for refutation procedures           |
+    | reduceLib       | basic reasoners for nums and bools          |
+    | tautLib         | tautology prover                            |
+    | BoyerMooreLib   | Nqthm-inspired automatic proof procedure    |
+    | numLib          | linear arith. decision procedures           |
+    | decisionLib     | cooperating decision procedures             |
+    | HolBddLib       | BDD-based state-exploration tools           |
+    ----------------------------------------------------------------
