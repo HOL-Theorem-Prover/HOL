@@ -3,6 +3,10 @@ struct
 
 open HolKernel Parse basicHol90Lib liteLib AC Ho_rewrite Ho_resolve Psyntax;
 
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
  type term = Term.term
  type thm = Thm.thm
  type conv = Abbrev.conv
