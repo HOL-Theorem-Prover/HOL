@@ -2281,6 +2281,24 @@ val MOD_TIMES2 = store_thm(
   ONCE_REWRITE_TAC [MULT_COMM] THEN
   IMP_RES_THEN (fn th => REWRITE_TAC [th]) MOD_TIMES);
 
+open simpLib boolSimps
+val MOD_COMMON_FACTOR = store_thm(
+  "MOD_COMMON_FACTOR",
+  ``!n p q. 0 < n /\ 0 < q ==> (n * (p MOD q) = (n * p) MOD (n * q))``,
+  REPEAT STRIP_TAC THEN Q.SPEC_THEN `q` MP_TAC DIVISION THEN
+  ASM_REWRITE_TAC [] THEN DISCH_THEN (Q.SPEC_THEN `p` STRIP_ASSUME_TAC) THEN
+  Q.ABBREV_TAC `u = p DIV q` THEN POP_ASSUM SUBST_ALL_TAC THEN
+  Q.ABBREV_TAC `v = p MOD q` THEN POP_ASSUM SUBST_ALL_TAC THEN
+  FIRST_X_ASSUM SUBST_ALL_TAC THEN REWRITE_TAC [LEFT_ADD_DISTRIB] THEN
+  move_var_left "u" THEN
+  ASM_SIMP_TAC bool_ss [MOD_TIMES, LESS_MULT2] THEN
+  SUFF_TAC ``n * v < n * q`` THENL [mesonLib.MESON_TAC [LESS_MOD],
+                                    ALL_TAC] THEN
+  SUFF_TAC ``?m. n = SUC m`` THENL [
+    STRIP_TAC THEN ASM_REWRITE_TAC [LESS_MULT_MONO],
+    mesonLib.ASM_MESON_TAC [LESS_REFL, num_CASES]
+  ]);
+
 (* ----------------------------------------------------------------------
     Some additional theorems (nothing to do with DIV and MOD)
    ---------------------------------------------------------------------- *)
@@ -2288,7 +2306,6 @@ val MOD_TIMES2 = store_thm(
 val num_case_cong =
   save_thm("num_case_cong", Prim_rec.case_cong_thm num_CASES num_case_def);
 
-open simpLib boolSimps
 val SUC_ELIM_THM = store_thm(
   "SUC_ELIM_THM",
   (--`!P. (!n. P (SUC n) n) = (!n. (0 < n ==> P n (n-1)))`--),
