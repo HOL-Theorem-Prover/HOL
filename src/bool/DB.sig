@@ -3,6 +3,7 @@ sig
 
  type term = Term.term
  type thm = Thm.thm
+ type 'a quotation = 'a Portable.frag list
 
  datatype class = Thm | Axm | Def
  
@@ -14,6 +15,7 @@ sig
   val matchp        : (thm -> bool) -> string list -> data list
   val matcher       : (term -> term -> 'a) -> string list -> term -> data list
   val match         : string list -> term -> data list 
+  val apropos       : term quotation -> data list 
   val theorem       : string -> string -> thm
   val theorem_class : string -> string -> thm * class
   val all_thms      : unit -> data list

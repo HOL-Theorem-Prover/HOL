@@ -18,6 +18,7 @@ structure DB :> DB =
 struct
 
 open HolKernel Binarymap;
+type 'a quotation = 'a Portable.frag list
 
 datatype class = Thm | Axm | Def
 
@@ -123,6 +124,8 @@ fun matcher f thyl pat =
   matchp (fn th => can (find_term (can (f pat))) (concl th)) thyl;
 
 val match = matcher Term.match_term;
+val apropos = matcher (ho_match_term []) [] o Parse.Term;
+
 
 (*---------------------------------------------------------------------------
       Some other lookup functions
