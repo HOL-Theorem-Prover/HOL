@@ -1,7 +1,8 @@
 signature Cooper =
 sig
-  include Abbrev 
+  include Abbrev
 
+  val pure_goal                   : conv
   val COOPER_CONV                 : conv
   val COOPER_PROVE                : conv
   val COOPER_TAC                  : tactic

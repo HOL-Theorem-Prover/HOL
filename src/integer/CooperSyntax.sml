@@ -67,6 +67,7 @@ fun characterise t =
    | "\\/" => SOME DISJN
    | "~" => SOME NEGN
    | _ => NONE) handle HOL_ERR _ => NONE
+val bop_characterise = characterise
 
 fun cpEVERY_CONJ_CONV c tm = let
   fun findconjunct posp tm =
@@ -233,6 +234,31 @@ fun count_vars tm = let
 in
   listItems (recurse (tm, mkDict String.compare))
 end
+
+val bmarker_tm = prim_mk_const { Name = "bmarker", Thy = "int_arith"};
+
+val mk_bmark_thm = GSYM int_arithTheory.bmarker_def
+fun mk_bmark tm = SPEC tm mk_bmark_thm
+
+fun mark_conjunct P tm = let
+in
+  if is_conj tm then
+    LAND_CONV (mark_conjunct P) ORELSEC RAND_CONV (mark_conjunct P)
+  else if is_neg tm then
+    if is_disj (rand tm) then
+      REWR_CONV NOT_OR THENC mark_conjunct P
+    else if P tm then
+      mk_bmark
+    else NO_CONV
+  else if P tm then
+    mk_bmark
+  else NO_CONV
+end tm
+
+val move_bmarked_left = PURE_REWRITE_CONV [bmarker_rewrites] THENC
+                        LAND_CONV (REWR_CONV int_arithTheory.bmarker_def)
+fun move_conj_left P = mark_conjunct P THENC move_bmarked_left
+
 
 
 end

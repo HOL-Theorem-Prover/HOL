@@ -20,12 +20,17 @@ signature CooperSyntax = sig
   val has_quant : Term.term -> bool
 
   datatype qstatus = EITHER | NEITHER | qsUNIV | qsEXISTS
+  datatype term_op = CONJN | DISJN | NEGN
+
   val goal_qtype : Term.term -> qstatus
+  val bop_characterise : Term.term -> term_op option
 
   val move_quants_up : Term.term -> Thm.thm
   val flip_forall : Term.term -> Thm.thm
   val flip_foralls : Term.term -> Thm.thm
 
   val count_vars : Term.term -> (string * int) list
+
+  val move_conj_left : (Term.term -> bool) -> Term.term -> Thm.thm
 
 end

@@ -15,6 +15,47 @@ structure CooperMath :> CooperMath = struct
   val _ = computeLib.add_thms [gcdTheory.GCD_EFFICIENTLY] cooper_compset
   val REDUCE_CONV = computeLib.CBV_CONV cooper_compset
 
+fun ERR f s = HOL_ERR { origin_function = f,
+                        origin_structure = "CooperMath",
+                        message = s};
+
+(*---------------------------------------------------------------------------*)
+(* Function to compute the Greatest Common Divisor of two integers.          *)
+(*---------------------------------------------------------------------------*)
+
+fun gcd (i,j) = let
+  exception non_neg
+  open Arbint
+  fun gcd' (i,j) = let
+    val r = (i mod j)
+  in
+    if (r = zero) then j else gcd' (j,r)
+  end
+in
+  (if ((i < zero) orelse (j < zero)) then raise non_neg
+  else if (i < j) then gcd' (j,i) else gcd' (i,j))
+  handle _ => raise ERR "gcd" "negative arguments to gcd"
+end;
+
+fun gcdl l =
+  case l of
+    [] => raise ERR "gcdl" "empty list"
+  | (h::t) => foldl gcd h t
+
+(*---------------------------------------------------------------------------*)
+(* Function to compute the Lowest Common Multiple of two integers.           *)
+(*---------------------------------------------------------------------------*)
+
+fun lcm (i,j) = let open Arbint in (i * j) div (gcd (i,j)) end
+handle _ => raise ERR "lcm" "negative arguments to lcm";
+
+fun lcml ints =
+  case ints of
+    [] => raise ERR "lcml" "empty list"
+  | [x] => x
+  | (x::y::xs) => lcml (lcm (x, y)::xs)
+
+
   fun extended_gcd(a, b) = let
     open Arbnum
   in
@@ -188,7 +229,7 @@ end tm
 
 
   val simplify_constraints = let
-    (* applied to term of the form    0 < e /\ e <= d
+    (* applied to term of the form    lo < e /\ e <= hi
      where e is generally of the form    c * x [+ b]
      *)
     fun elim_coeff tm = let
@@ -245,6 +286,169 @@ end tm
       TRANS cx_eq_thm0 reassociate
     end handle HOL_ERR _ => REFL tm
 
+  fun factor_out_lits g g_t tm =
+      if is_plus tm then BINOP_CONV (factor_out_lits g g_t) tm
+      else if is_int_literal tm then let
+          val tm_i = int_of_term tm
+          val factor = Arbint.div(tm_i, g)
+          val factor_t = term_of_int factor
+        in
+          SYM (REDUCE_CONV (mk_mult(g_t, factor_t)))
+        end
+      else REFL tm
 
 
+fun optpluck P l = SOME (Lib.pluck P l) handle HOL_ERR _ => NONE
+
+
+fun check_divides tm = let
+  val (l,r) = dest_divides tm
+  val rterms = strip_plus r
+  fun getc t = Arbint.abs (int_of_term (rand (rator t)))
+  fun pull_out_divisor tm = let
+    val (l,r) = dest_plus tm
+  in
+    if is_plus l then
+      LAND_CONV pull_out_divisor THENC REWR_CONV (GSYM INT_LDISTRIB)
+    else
+      REWR_CONV (GSYM INT_LDISTRIB)
+  end tm handle HOL_ERR _ => ALL_CONV tm
+in
+  case List.mapPartial (Lib.total getc) rterms of
+    [] => CHANGED_CONV REDUCE_CONV tm
+  | cs => let
+      val g = gcdl (int_of_term l :: cs)
+    in
+      if g <> Arbint.one then let
+          val g_t = term_of_int g
+          val g_t_lt0 = EQT_ELIM (REDUCE_CONV (mk_less(zero_tm, g_t)))
+          val divq = Arbint.div(int_of_term l, g)
+          val divisor_ok = SYM (REDUCE_CONV (mk_mult(g_t, term_of_int divq)))
+        in
+          case optpluck is_int_literal rterms of
+            NONE =>
+              RAND_CONV (factor_out g g_t THENC pull_out_divisor) THENC
+              LAND_CONV (K divisor_ok) THENC
+              REWR_CONV (GSYM (MATCH_MP justify_divides g_t_lt0)) THENC
+              REWRITE_CONV [INT_DIVIDES_1]
+          | SOME(literal,rest) => let
+              val literal_i = int_of_term literal
+              val (litq, litr) = Arbint.divmod(literal_i, g)
+              val sorted =
+                  EQT_ELIM (AC_CONV (INT_ADD_ASSOC, INT_ADD_COMM)
+                                    (mk_eq(r,
+                                           mk_plus(list_mk_plus rest,
+                                                   literal))))
+            in
+              if litr = Arbint.zero then let
+                  val literal_ok =
+                      SYM (REDUCE_CONV (mk_mult(g_t, term_of_int litq)))
+                in
+                  RAND_CONV (K sorted THENC
+                             factor_out g g_t THENC
+                             RAND_CONV (K literal_ok) THENC
+                             pull_out_divisor) THENC
+                  LAND_CONV (K divisor_ok) THENC
+                  REWR_CONV (GSYM (MATCH_MP justify_divides g_t_lt0)) THENC
+                  REWRITE_CONV [INT_DIVIDES_1] THENC
+                  TRY_CONV check_divides
+                end
+              else
+                RAND_CONV (K sorted THENC
+                           factor_out g g_t THENC
+                           REWRITE_CONV [GSYM INT_LDISTRIB]) THENC
+                LAND_CONV (K divisor_ok) THENC
+                REWR_CONV justify_divides2 THENC
+                RAND_CONV REDUCE_CONV THENC REWR_CONV F_and_r
+            end
+        end
+      else
+        (* gcd is 1, but if l divides any of the summands on the right *)
+        (* these can still be eliminated *)
+        let
+          val li = int_of_term l
+          fun getn t = getc t handle HOL_ERR _ => Arbint.abs (int_of_term t)
+          val rns = map getn rterms
+          fun ldivs t = Arbint.mod(getn t, li) = Arbint.zero
+          val (ldivs, lndivs) = partition ldivs rterms
+        in
+          if not (null ldivs) then let
+              val sorted =
+                  EQT_ELIM (AC_CONV (INT_ADD_ASSOC, INT_ADD_COMM)
+                                    (mk_eq(r,
+                                           mk_plus(list_mk_plus ldivs,
+                                                   list_mk_plus lndivs))))
+            in
+              RAND_CONV (K sorted THENC
+                         LAND_CONV (factor_out li l THENC
+                                    factor_out_lits li l THENC
+                                    REWRITE_CONV [GSYM INT_LDISTRIB])) THENC
+              REWR_CONV justify_divides3 THENC
+              TRY_CONV check_divides
+            end
+          else let
+              val r_gcd = gcdl rns
+            in
+              if r_gcd <> Arbint.one then let
+                  val r_gcdt = term_of_int r_gcd
+                  val gcd_term =
+                      list_mk_comb(gcd_t,
+                                   [dest_injected l,
+                                    numSyntax.mk_numeral (Arbint.toNat r_gcd)])
+                in
+                  RAND_CONV (factor_out r_gcd r_gcdt THENC
+                             factor_out_lits r_gcd r_gcdt THENC
+                             REWRITE_CONV [GSYM INT_LDISTRIB]) THENC
+                  REWR_CONV
+                     (MATCH_MP INT_DIVIDES_RELPRIME_MUL
+                               (REDUCE_CONV gcd_term))
+                end
+              else
+                NO_CONV
+            end
+        end
+    end tm
 end
+
+fun elim_paired_divides tm = let
+  val (c1, c2) = dest_conj tm
+  val (mi, ax_b) = dest_divides c1
+  val (ni, ux_v) = dest_divides c2
+  val (ax, b) = dest_plus ax_b
+  val (ux, v) = dest_plus ux_v
+  val (ai, x)  = dest_mult ax
+  val (ui, _)  = dest_mult ux
+  val a = dest_injected ai
+  val u = dest_injected ui
+  val m = dest_injected mi
+  val n = dest_injected ni
+  val m_nzero = EQT_ELIM (REDUCE_CONV (mk_neg(mk_eq(m, numSyntax.zero_tm))))
+  val n_nzero = EQT_ELIM (REDUCE_CONV (mk_neg(mk_eq(n, numSyntax.zero_tm))))
+  val a_nzero = EQT_ELIM (REDUCE_CONV (mk_neg(mk_eq(a, numSyntax.zero_tm))))
+  val u_nzero = EQT_ELIM (REDUCE_CONV (mk_neg(mk_eq(u, numSyntax.zero_tm))))
+  val um = numSyntax.mk_mult(u,m)
+  val an = numSyntax.mk_mult(a,n)
+  val d_eq_gcd = SYM (REDUCE_CONV (list_mk_comb(gcd_t, [um,an])))
+  val (d_an,(p_ai,q_ai)) =
+      extended_gcd (Arbint.toNat (Arbint.*(int_of_term ui, int_of_term mi)),
+                    Arbint.toNat (Arbint.*(int_of_term ai, int_of_term ni)))
+  val d = lhs (concl d_eq_gcd)
+  val di = mk_injected d
+  val p = term_of_int p_ai
+  val q = term_of_int q_ai
+  val pum = list_mk_mult [p, ui, mi]
+  val qan = list_mk_mult [q, ai, ni]
+  val d_eq_pum_qan = EQT_ELIM (REDUCE_CONV (mk_eq(di, mk_plus(pum, qan))))
+  val th0 =
+      MATCH_MP cooper_lemma_1
+               (LIST_CONJ [d_eq_gcd, d_eq_pum_qan, m_nzero,
+                           n_nzero, a_nzero, u_nzero])
+  val th = REWR_CONV th0 tm
+in
+  th
+end
+
+
+
+
+end (* struct *)

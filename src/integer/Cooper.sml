@@ -6,6 +6,7 @@ open HolKernel boolLib integerTheory Parse
 
 open CooperSyntax CooperThms CooperMath
 
+val lhand = rand o rator
 local open listTheory in end;
 
 infix THEN THENC THENL |-> ## ORELSEC
@@ -27,9 +28,6 @@ in
   if is_exists body then BINDER_CONV (LAST_EXISTS_CONV c) tm
   else c tm
 end
-fun EVERY_DISJ_CONV c tm =
-  if is_disj tm then BINOP_CONV (EVERY_DISJ_CONV c) tm
-  else c tm
 
 fun optpluck P l = SOME (Lib.pluck P l) handle HOL_ERR _ => NONE
 
@@ -64,6 +62,13 @@ fun is_constraint tm = let
 in
   f = constraint_tm andalso length args = 2
 end
+fun is_vconstraint v tm = let
+  val (f, args) = strip_comb tm
+in
+  f = constraint_tm andalso length args = 2 andalso
+  free_vars (hd (tl args)) = [v]
+end
+
 
 val K_THM = INST_TYPE [(alpha |-> bool), (beta |-> int_ty)] combinTheory.K_THM
 fun MK_CONSTRAINT tm =
@@ -103,42 +108,15 @@ fun ADDITIVE_TERMS_CONV c tm =
   else ALL_CONV tm
 
 
-(*---------------------------------------------------------------------------*)
-(* Function to compute the Greatest Common Divisor of two integers.          *)
-(*---------------------------------------------------------------------------*)
-
-fun gcd (i,j) = let
-  exception non_neg
-  open Arbint
-  fun gcd' (i,j) = let
-    val r = (i mod j)
-  in
-    if (r = zero) then j else gcd' (j,r)
-  end
+fun LIST_EL_CONV c tm = let
+  (* applies c to all elements of a literal list tm *)
+  val (f, args) = strip_comb tm
 in
-  (if ((i < zero) orelse (j < zero)) then raise non_neg
-  else if (i < j) then gcd' (j,i) else gcd' (i,j))
-  handle _ => raise ERR "gcd" "negative arguments to gcd"
-end;
-
-fun gcdl l =
-  case l of
-    [] => raise ERR "gcdl" "empty list"
-  | (h::t) => foldl gcd h t
-
-(*---------------------------------------------------------------------------*)
-(* Function to compute the Lowest Common Multiple of two integers.           *)
-(*---------------------------------------------------------------------------*)
-
-fun lcm (i,j) = let open Arbint in (i * j) div (gcd (i,j)) end
-handle _ => raise ERR "lcm" "negative arguments to lcm";
-
-fun calc_lcm ints =
-  case ints of
-    [] => raise Fail "calc_lcm: should never happen"
-  | [x] => x
-  | (x::y::xs) => calc_lcm (lcm (x, y)::xs)
-
+  case args of
+    [] => (* nil case *) ALL_CONV tm
+  | h::t => (* h the element, t the tail of the list *)
+      (LAND_CONV c THENC RAND_CONV (LIST_EL_CONV c)) tm
+end
 
 
 
@@ -400,6 +378,7 @@ in
         (TRY_CONV (REWR_CONV (CONJUNCT2 INT_DIVIDES_NEG)) THENC
          RAND_CONV (collect_in_sum var) THENC
          dealwith_negative_divides THENC
+         RAND_CONV collect_up_other_freevars THENC
          REWRITE_CONV [INT_MUL_LZERO] THENC REDUCE_CONV) tm
       else ALL_CONV tm
     else ALL_CONV tm
@@ -503,7 +482,7 @@ in
     val (var, body) = Psyntax.dest_exists term
     (* first calculate the desired LCM *)
     val coeffs = find_coeffs var body
-    val lcm = calc_lcm coeffs
+    val lcm = lcml coeffs
     (* now descend to each less-than term, and update the coefficients of
      var to be the same lcm *)
     fun multiply_by_CONV zero_lti tm = let
@@ -619,7 +598,6 @@ fun phase4_CONV tm = let
      Want to calculate F_neginf such that each term of the first type is
      replaced by TRUE and each of the second replaced by FALSE.
   *)
-  val lhand = rand o rator
   val {Bvar, Body} = Rsyntax.dest_exists tm
   val F = rand tm
   val Fx = mk_comb(F, Bvar)
@@ -761,7 +739,7 @@ fun phase4_CONV tm = let
     Lib.mk_set (List.mapPartial collect leaf_arguments)
   end
   val all_deltas = map int_of_term all_delta_tms
-  val delta = if null all_deltas then Arbint.one else calc_lcm all_deltas
+  val delta = if null all_deltas then Arbint.one else lcml all_deltas
   val delta_tm = term_of_int delta
   val divides_info =
     map (fn ld_tm =>
@@ -1351,7 +1329,6 @@ fun phase4_CONV tm = let
           else (* Bvar not present *) thm
       end handle HOL_ERR _ => let
         val (c,r) = dest_divides (if posp then thm_concl else tm)
-          handle HOL_ERR _ => raise ERR "phase4" "Unexpected term type"
         val (var, rem) = (I ## SOME) (dest_plus r)
           handle HOL_ERR _ => (r, NONE)
       in
@@ -1371,7 +1348,9 @@ fun phase4_CONV tm = let
           EQ_MP c_div_rplusd thm
         end
         else thm
-      end
+      end handle HOL_ERR _ =>
+                 if is_constraint tm then thm
+                 else raise ERR "phase4_CONV" "Unexpected term type"
       end (* need double end, because of double let at start of function *)
 
       fun brecurse posp thm tm = let
@@ -1512,7 +1491,6 @@ fun phase4_CONV tm = let
           else thm
       end handle HOL_ERR _ => let
         val (c,r) = dest_divides (if posp then thm_concl else tm)
-          handle HOL_ERR _ => raise ERR "phase4" "Unexpected term type"
         val (var, rem) = (I ## SOME) (dest_plus r)
           handle HOL_ERR _ => (r, NONE)
       in
@@ -1532,7 +1510,9 @@ fun phase4_CONV tm = let
           EQ_MP c_div_rsubd thm
         end
         else thm
-      end
+      end handle HOL_ERR _ =>
+                 if is_constraint tm then thm
+                 else raise ERR "phase4_CONV" "Unexpected term type"
       end (* again need a double end *)
 
 
@@ -1666,9 +1646,236 @@ fun expand_right_and_over_or tm =
 (* with ?x. p \/ q \/ r...          (with or's right associated)
    expand to (?x. p) \/ (?x.q) \/ (?x.r) ...
 *)
-fun push_in_exists tm =
-  ((EXISTS_OR_CONV THENC RAND_CONV push_in_exists) ORELSEC ALL_CONV) tm
+fun push_one_exists_over_many_disjs tm =
+  ((EXISTS_OR_CONV THENC RAND_CONV push_one_exists_over_many_disjs) ORELSEC
+   ALL_CONV) tm
 
+fun push_in_exists tm =
+    (* takes all existentials that are over disjuncts, and pushes them *)
+    (* over the disjuncts, preserving the order *)
+    if is_exists tm then
+      (BINDER_CONV push_in_exists THENC
+                   push_one_exists_over_many_disjs) tm
+    else
+      ALL_CONV tm
+
+
+local exception foo
+in
+fun push_in_exists_and_follow c tm = let
+  (* looking at
+       ?x. ... /\ P x /\ ...
+     where the ... don't contain any instances of x
+     Push the existential in over the conjuncts and finish by applying c
+     to ?x. P x
+  *)
+  val th0 = EXISTS_AND_CONV tm handle HOL_ERR _ => raise foo
+  val tm1 = rhs (concl th0)
+  val goleft = is_exists (#1 (dest_conj tm1))
+  val cconval = if goleft then LAND_CONV else RAND_CONV
+in
+  (K th0 THENC cconval (push_in_exists_and_follow c)) tm
+end handle foo => c tm
+end
+
+
+fun simple_divides var tm = let
+  (* true if a term is a divides, where the right hand side's only
+     free variable is the parameter var *)
+  val (l,r) = dest_divides tm
+in
+  free_vars r = [var]
+end handle HOL_ERR _ => false
+
+fun remove_vacuous_existential tm = let
+  (* term is of form  ?x. x = e *)
+  val value = rhs (#2 (dest_exists tm))
+  val thm = ISPEC value EXISTS_REFL
+in
+  EQT_INTRO thm
+end
+
+fun quick_cst_elim tm = let
+  (* eliminates constraints of the form
+        K (lo < x /\ x <= hi) x
+     where hi - lo <= 1, either replacing it with x = lo, or just false
+     fails (NO_CONV) otherwise. *)
+  val (_, args) = strip_comb tm  (* K and its args *)
+  val cst = hd args
+  val (_, cstargs) = strip_comb cst  (* two conjuncts *)
+  val lo_cst = hd cstargs
+  val hi_cst = hd (tl cstargs)
+  val lo_t = rand (rator lo_cst)
+  val hi_t = rand hi_cst
+  val lo_i = int_of_term lo_t
+  val hi_i = int_of_term hi_t
+  open Arbint
+in
+  if hi_i - lo_i <= one then
+    (UNCONSTRAIN THENC resquan_remove) tm
+  else
+    NO_CONV tm
+end
+
+fun reduce_if_ground tm =
+  (* calls REDUCE_CONV on a ground term, does nothing otherwise *)
+  if is_exists tm orelse not (null (free_vars tm)) then ALL_CONV tm
+  else REDUCE_CONV tm
+
+fun BLEAF_CONV connector c tm =
+    case bop_characterise tm of
+      NONE => c tm
+    | SOME NEGN => RAND_CONV (BLEAF_CONV connector c) tm
+    | SOME _ => connector(LAND_CONV (BLEAF_CONV connector c),
+                          RAND_CONV (BLEAF_CONV connector c))
+                         tm
+
+
+val my_INT_MUL_LID = SPEC ``c * d : int`` INT_MUL_LID (* used below *)
+
+fun simplify_constrained_disjunct tm = let
+  (* takes a term of the form
+       ?j.   ... /\ K (d1 < j /\ j <= d2) j /\ ...
+     and simplifies it *)
+  (* if there is a "conjunct" at the top level of the conjuncts of the
+     form
+       c | x [ + d]
+     where x is the bound variable of the neginf abstraction, and where
+     d, if present at all, is a numeral, then we can reduce the number
+     of cases needed to be considered, using the theorem
+     int_arithTheory.gcdthm2. *)
+  val (var, body) = dest_exists tm
+  val body_conjuncts = filter (not o is_constraint) (cpstrip_conj body)
+
+  fun find_sdivides v c tm = let
+    (* knowing that a simple divides term over variable v is a "conjunct"
+       of tm, apply conversion c to that term *)
+    val (l,r) = dest_conj tm
+  in
+    if List.exists (simple_divides v) (cpstrip_conj l) then
+      LAND_CONV (find_sdivides v c) tm
+    else
+      RAND_CONV (find_sdivides v c) tm
+  end handle HOL_ERR _ => let
+    val tm0 = dest_neg tm
+  in
+    if is_neg tm0 then
+      (REWR_CONV NOT_NOT_P THENC find_sdivides v c) tm
+    else (REWR_CONV NOT_OR THENC find_sdivides v c) tm
+  end handle HOL_ERR _ => (* must be there *) let
+    (* possible that phase2 will eliminate variable entirely, turning the
+       term into either true or false *)
+    fun check_vars tm = if is_const tm then ALL_CONV tm else c tm
+  in
+    (phase1_CONV THENC phase2_CONV v THENC check_vars) tm
+  end
+
+  fun pull_out_exists tm = let
+    (* pulls out a nested existential quantifier to the head of the term *)
+    val (c1, c2) = dest_conj tm
+    val (cvl, thm) =
+      if has_exists c1 then (LAND_CONV, GSYM LEFT_EXISTS_AND_THM)
+      else (RAND_CONV, GSYM RIGHT_EXISTS_AND_THM)
+  in
+    (cvl pull_out_exists THENC HO_REWR_CONV thm) tm
+  end handle HOL_ERR _ =>
+    if is_exists tm then ALL_CONV tm
+    else NO_CONV tm
+
+
+  fun find_cst v c tm = let
+    fun atleaf tm =
+        if is_vconstraint v tm then c tm
+        else NO_CONV tm
+  in
+    BLEAF_CONV (op ORELSEC) atleaf tm
+  end
+
+  fun simp_if_rangeonly tm = let
+    (* simplifies ?x. K (lo < x /\ x <= hi) x  to T, *)
+    (* knowing that a contradictory constraint would have already been *)
+    (* dealt with *)
+    val (bv, body) = dest_exists tm
+  in
+    if is_constraint body then
+      BINDER_CONV (UNCONSTRAIN THENC resquan_onestep) THENC
+      EXISTS_OR_CONV THENC
+      LAND_CONV remove_vacuous_existential THENC
+      REWR_CONV T_or_l
+    else
+      ALL_CONV
+  end tm
+
+  fun pull_eliminate tm =
+    (* it's possible that there is no existential to pull out because
+       elim_sdivides will have rewritten the divides term to false. *)
+    if has_exists (rand tm) then
+      (BINDER_CONV pull_out_exists THENC
+       SWAP_VARS_CONV THENC
+       BINDER_CONV Unwind.UNWIND_EXISTS_CONV THENC
+       (fn tm => let val (v, _) = dest_exists tm
+                 in
+                   BINDER_CONV (find_cst v
+                                         (IN_CONSTRAINT simplify_constraints))
+                 end tm) THENC
+       simp_if_rangeonly) tm
+    else
+      REWRITE_CONV [] tm
+
+  val mainwork =
+    if List.exists (simple_divides var) body_conjuncts then
+      BINDER_CONV (find_sdivides var elim_sdivides) THENC
+      pull_eliminate THENC
+      (* variable was present in form 1 * v; have now just replaced it with
+         things of the form c * v', so now have bunch of terms of form
+         1 * (c * v'); get rid of these *)
+      PURE_REWRITE_CONV [my_INT_MUL_LID] THENC
+      (* have another go at this, recursively, but allow for the fact that
+         we may have reduced the term to true or false or whatever *)
+      TRY_CONV simplify_constrained_disjunct
+    else if List.all (not o mem var o free_vars) body_conjuncts then
+      (* case where existential only has scope over constraint, and
+         bound variable doesn't appear elsewhere, which can happen if
+         the F term is something like (\x. F), which tends to happen in
+         the construction of the neginf term. *)
+      push_in_exists_and_follow
+          (BINDER_CONV (UNCONSTRAIN THENC resquan_onestep) THENC
+           EXISTS_OR_CONV THENC
+           LAND_CONV remove_vacuous_existential THENC
+           REWR_CONV T_or_l) THENC
+      REWRITE_CONV []
+    else
+      ALL_CONV
+in
+  (BINDER_CONV (find_cst var quick_cst_elim) THENC
+   (Unwind.UNWIND_EXISTS_CONV ORELSEC REWRITE_CONV []) THENC
+   reduce_if_ground) ORELSEC
+  mainwork
+end tm
+
+fun fixup_newvar tm = let
+  (* takes an existential term and replaces all occurrences of the bound
+     variable in the body with 1 * v, except that we don't need to go
+     looking for this variable under multiplications, nor under
+     constraint terms *)
+  val (v,body) = dest_exists tm
+  val replace_thm = SYM (SPEC v INT_MUL_LID)
+  fun recurse tm = let
+    val (f, args) = strip_comb tm
+  in
+    case args of
+      [] => if Term.compare(v,tm) = EQUAL then replace_thm
+            else ALL_CONV tm
+    | [_] => RAND_CONV recurse tm
+    | [_,_] => if Term.compare(f, constraint_tm) = EQUAL orelse
+                  Term.compare(f, mult_tm) = EQUAL then ALL_CONV tm
+               else BINOP_CONV recurse tm
+    | _ => raise ERR "fixup_newvar"
+                     ("found ternary operator - "^term_to_string tm)
+  end
+in
+  BINDER_CONV recurse tm
+end
 
 val phase5_CONV  = let
   (* have something of the form
@@ -1677,155 +1884,19 @@ val phase5_CONV  = let
   *)
   val prelim_left = BINDER_CONV (RAND_CONV BETA_CONV)
   val prelim_right =
-    (* turn minus terms F (b - k) into F (b + ~1 * k) *)
     STRIP_QUANT_CONV
     (RAND_CONV (RAND_CONV
+                  (* turn minus terms F (b - k) into F (b + ~1 * k) *)
                 (fn t => if is_minus t then
                            (REWR_CONV int_sub THENC
                             RAND_CONV (REWR_CONV INT_NEG_MINUS1)) t
-                         else ALL_CONV t)))
-
-  fun remove_vacuous_existential tm = let
-    (* term is of form  ?x. x = e *)
-    val value = rhs (#2 (dest_exists tm))
-    val thm = ISPEC value EXISTS_REFL
-  in
-    EQT_INTRO thm
-  end
-
-  fun quick_cst_elim tm = let
-    (* eliminates constraints of the form
-          K (lo < x /\ x <= hi) x
-       where hi - lo <= 1, either replacing it with x = lo, or just false
-       fails (NO_CONV) otherwise. *)
-    val (_, args) = strip_comb tm  (* K and its args *)
-    val cst = hd args
-    val (_, cstargs) = strip_comb cst  (* two conjuncts *)
-    val lo_cst = hd cstargs
-    val hi_cst = hd (tl cstargs)
-    val lo_t = rand (rator lo_cst)
-    val hi_t = rand hi_cst
-    val lo_i = int_of_term lo_t
-    val hi_i = int_of_term hi_t
-    open Arbint
-  in
-    if hi_i - lo_i <= one then
-      (UNCONSTRAIN THENC resquan_remove) tm
-    else
-      NO_CONV tm
-  end
-
-  fun reduce_if_ground tm =
-    (* calls REDUCE_CONV on a ground term, does nothing otherwise *)
-    if is_exists tm orelse not (null (free_vars tm)) then ALL_CONV tm
-    else REDUCE_CONV tm
-
-  fun simplify_constrained_disjunct tm = let
-    (* takes a term of the form
-         ?j. K (d1 < j /\ j <= d2) j /\ ...
-       and simplifies it *)
-    (* if there is a "conjunct" at the top level of the ... of the
-       form
-         c | x [ + d]
-       where x is the bound variable of the neginf abstraction, and where
-       d, if present at all, is a numeral, then we can reduce the number
-       of cases needed to be considered, using the theorem
-       int_arithTheory.gcdthm2. *)
-    val (lhs_var, lhs_body) = dest_exists tm
-    val body_conjuncts = cpstrip_conj (rand lhs_body)
-    fun simple_divides tm = let
-      (* true if a term is a divides mentioning only the existential
-         variable *)
-      val (l,r) = dest_divides tm
-    in
-      free_vars r = [lhs_var]
-    end handle HOL_ERR _ => false
-
-    fun find_sdivides c tm = let
-      (* knowing that a simple divides term is a "conjunct" of tm, apply *)
-      (* conversion c to that term *)
-      val (l,r) = dest_conj tm
-    in
-      if List.exists simple_divides (cpstrip_conj l) then
-        LAND_CONV (find_sdivides c) tm
-      else
-        RAND_CONV (find_sdivides c) tm
-    end handle HOL_ERR _ => let
-      val tm0 = dest_neg tm
-    in
-      if is_neg tm0 then
-        (REWR_CONV NOT_NOT_P THENC find_sdivides c) tm
-      else (REWR_CONV NOT_OR THENC find_sdivides c) tm
-    end handle HOL_ERR _ => (* must be there *)
-      (phase1_CONV THENC phase2_CONV lhs_var THENC c) tm
-
-    fun pull_out_exists tm = let
-      (* pulls out a nested existential quantifier to the head of the term *)
-      val (c1, c2) = dest_conj tm
-      val (cvl, thm) =
-        if has_exists c1 then (LAND_CONV, GSYM LEFT_EXISTS_AND_THM)
-        else (RAND_CONV, GSYM RIGHT_EXISTS_AND_THM)
-    in
-      (cvl pull_out_exists THENC HO_REWR_CONV thm) tm
-    end handle HOL_ERR _ =>
-      if is_exists tm then ALL_CONV tm
-      else NO_CONV tm
+                         else ALL_CONV t)) THENC
+     (* collect additive consts on elements of list *)
+     LAND_CONV (LAND_CONV
+                  (RAND_CONV (LIST_EL_CONV
+                                (TRY_CONV collect_additive_consts)))))
 
 
-    fun find_cst c tm =
-      if is_constraint tm then IN_CONSTRAINT c tm
-      else LAND_CONV (find_cst c) tm
-
-    fun simp_if_rangeonly tm = let
-      (* simplifies ?x. K (lo < x /\ x <= hi) x  to T, *)
-      (* knowing that a contradictory constraint would have already been *)
-      (* dealt with *)
-      val (bv, body) = dest_exists tm
-    in
-      if is_constraint body then
-        BINDER_CONV (UNCONSTRAIN THENC resquan_onestep) THENC
-        EXISTS_OR_CONV THENC
-        LAND_CONV remove_vacuous_existential THENC
-        REWR_CONV T_or_l
-      else
-        ALL_CONV
-    end tm
-
-    fun pull_eliminate tm =
-      (* it's possible that there is no existential to pull out because
-         elim_sdivides will have rewritten the divides term to false. *)
-      if has_exists (rand tm) then
-        (BINDER_CONV pull_out_exists THENC
-         SWAP_VARS_CONV THENC
-         BINDER_CONV Unwind.UNWIND_EXISTS_CONV THENC
-         BINDER_CONV (find_cst simplify_constraints) THENC
-         simp_if_rangeonly) tm
-      else
-        REWRITE_CONV [] tm
-
-    val mainwork =
-      if List.exists simple_divides body_conjuncts then
-        BINDER_CONV (RAND_CONV (find_sdivides elim_sdivides)) THENC
-        pull_eliminate THENC simplify_constrained_disjunct
-      else if List.all (not o mem lhs_var o free_vars) body_conjuncts then
-        (* case where existential only has scope over constraint, and
-           bound variable doesn't appear elsewhere, which can happen if
-           the F term is something like (\x. F), which tends to happen in
-           the construction of the neginf term. *)
-        EXISTS_AND_CONV THENC
-        LAND_CONV (BINDER_CONV (UNCONSTRAIN THENC resquan_onestep) THENC
-                   EXISTS_OR_CONV THENC
-                   LAND_CONV remove_vacuous_existential THENC
-                   REWR_CONV T_or_l) THENC
-        REWR_CONV T_and_l
-      else
-        ALL_CONV
-  in
-    (BINDER_CONV (LAND_CONV quick_cst_elim) THENC
-     (Unwind.UNWIND_EXISTS_CONV ORELSEC REWRITE_CONV []) THENC
-     reduce_if_ground) ORELSEC
-    mainwork
-  end tm
 
   val elim_bterms_on_right =
     (* the second disjunct produced by phase4 is of form
@@ -1847,12 +1918,12 @@ val phase5_CONV  = let
                           REWRITE_CONV [RIGHT_AND_OVER_OR]) THENC
                expand_right_and_over_or) THENC
               ((LAST_EXISTS_CONV
-                (push_in_exists THENC
+                (push_one_exists_over_many_disjs THENC
                  EVERY_DISJ_CONV (Unwind.UNWIND_EXISTS_CONV THENC
                                   (BETA_CONV ORELSEC
                                    RAND_CONV BETA_CONV) THENC
                                   reduce_if_ground)) THENC
-                TRY_CONV push_in_exists) ORELSEC
+                push_one_exists_over_many_disjs) ORELSEC
                (* if the list was empty, there won't be an equality to do
                   UNWIND_EXISTS_CONV on, and the above will fail; in that case,
                   rewrite to push falsity upwards to the top level. *)
@@ -1860,17 +1931,35 @@ val phase5_CONV  = let
 in
   LAND_CONV prelim_left THENC
   RAND_CONV (prelim_right THENC elim_bterms_on_right) THENC
-  EVERY_DISJ_CONV (TRY_CONV simplify_constrained_disjunct) THENC
+  EVERY_DISJ_CONV (TRY_CONV fixup_newvar THENC
+                   ONCE_DEPTH_CONV check_divides THENC
+                   TRY_CONV simplify_constrained_disjunct) THENC
   REWRITE_CONV [OR_CLAUSES]
 end
 
 val unwind_constraint = UNCONSTRAIN THENC resquan_remove
 
 val phase6_CONV =
+  (* succeeds on disjuncts of the form
+        ?x. K (lo < x /\ x <= hi) x /\ P x
+     and converts these to
+        P (lo + 1) \/ P (lo + 2) \/ ... P hi
+     where each argument to P is actually a real numeral (not an expression)
+  *)
   BINDER_CONV (LAND_CONV unwind_constraint THENC
                expand_right_and_over_or) THENC
-  push_in_exists THENC
+  push_one_exists_over_many_disjs THENC
   EVERY_DISJ_CONV Unwind.UNWIND_EXISTS_CONV
+
+fun vphase6_CONV tm = let
+  (* as above, but works over the constraint attached to v, not the one
+     immediately under the binder *)
+  val (v, body) = dest_exists tm
+in
+  BINDER_CONV (move_conj_left (is_vconstraint v)) THENC
+  phase6_CONV
+end tm;
+
 
 fun elim_vars_round_r tm = let
   val (l,r) = dest_eq tm
@@ -1883,63 +1972,6 @@ in
   | (h::_) => phase2_CONV (hd (free_vars h))
 end tm
 
-fun check_divides tm = let
-  val (l,r) = dest_divides tm
-  val rterms = strip_plus r
-  fun getc t = Arbint.abs (int_of_term (rand (rator t)))
-  fun pull_out_divisor tm = let
-    val (l,r) = dest_plus tm
-  in
-    if is_plus l then
-      LAND_CONV pull_out_divisor THENC REWR_CONV (GSYM INT_LDISTRIB)
-    else
-      REWR_CONV (GSYM INT_LDISTRIB)
-  end tm handle HOL_ERR _ => ALL_CONV tm
-in
-  case List.mapPartial (Lib.total getc) rterms of
-    [] => REDUCE_CONV tm
-  | cs => let
-      val g = gcdl (int_of_term l :: cs)
-      val _ = g <> Arbint.one orelse raise ERR "check_divides" "gcd = 1"
-      val g_t = term_of_int g
-      val g_t_lt0 = EQT_ELIM (REDUCE_CONV (mk_less(zero_tm, g_t)))
-      val divq = Arbint.div(int_of_term l, g)
-      val divisor_ok = SYM (REDUCE_CONV (mk_mult(g_t, term_of_int divq)))
-    in
-      case optpluck is_int_literal rterms of
-        NONE =>
-          RAND_CONV (factor_out g g_t THENC pull_out_divisor) THENC
-          LAND_CONV (K divisor_ok) THENC
-          REWR_CONV (GSYM (MATCH_MP justify_divides g_t_lt0)) THENC
-          REWRITE_CONV [INT_DIVIDES_1]
-      | SOME(literal,rest) => let
-          val literal_i = int_of_term literal
-          val (litq, litr) = Arbint.divmod(literal_i, g)
-          val sorted =
-            EQT_ELIM (AC_CONV (INT_ADD_ASSOC, INT_ADD_COMM)
-                      (mk_eq(r, mk_plus(list_mk_plus rest, literal))))
-        in
-          if litr = Arbint.zero then let
-            val literal_ok = SYM (REDUCE_CONV (mk_mult(g_t, term_of_int litq)))
-          in
-            RAND_CONV (K sorted THENC
-                       factor_out g g_t THENC
-                       RAND_CONV (K literal_ok) THENC
-                       pull_out_divisor) THENC
-            LAND_CONV (K divisor_ok) THENC
-            REWR_CONV (GSYM (MATCH_MP justify_divides g_t_lt0)) THENC
-            REWRITE_CONV [INT_DIVIDES_1]
-          end
-          else
-            RAND_CONV (K sorted THENC
-                       factor_out g g_t THENC
-                       REWRITE_CONV [GSYM INT_LDISTRIB]) THENC
-            LAND_CONV (K divisor_ok) THENC
-            REWR_CONV justify_divides2 THENC
-            RAND_CONV REDUCE_CONV THENC REWR_CONV F_and_r
-        end
-    end tm
-end
 
 val obvious_improvements =
   ADDITIVE_TERMS_CONV (TRY_CONV collect_additive_consts) THENC
@@ -2052,6 +2084,9 @@ fun reveal_a_disj tm =
     else (REWR_CONV NOT_NOT_P THENC reveal_a_disj) tm
   end
 
+
+
+
 local
   fun stop_if_exelim tm =
     if is_exists tm then NO_CONV tm
@@ -2068,8 +2103,7 @@ in
       ((REWR_CONV EXISTS_SIMP THENC REWRITE_CONV []) ORELSEC
        (phase3_CONV THENC do_equality_simplifications THENC
         (stop_if_exelim ORELSEC
-         (phase4_CONV THENC phase5_CONV THENC
-          EVERY_DISJ_CONV (TRY_CONV phase6_CONV)))))
+         (phase4_CONV THENC phase5_CONV))))
   in
     if cpis_disj body then
       BINDER_CONV reveal_a_disj THENC EXISTS_OR_CONV THENC
@@ -2080,15 +2114,22 @@ in
   end tm
 end
 
+val eliminate_existential_entirely =
+    (* used to eliminate an existential, and to lose any constraint *)
+    (* existentials underneath; basically eliminate_existential followed *)
+    (* by phase 6 *)
+    eliminate_existential THENC EVERY_DISJ_CONV (TRY_CONV phase6_CONV) THENC
+    (* variables substituted in might result in ground multiplication terms *)
+    REDUCE_CONV THENC obvious_improvements
 
 
 fun eliminate_quantifier tm = let
 (* assume that there are no quantifiers below the one we're eliminating *)
 in
   if is_forall tm then
-    flip_forall THENC RAND_CONV eliminate_existential
+    flip_forall THENC RAND_CONV eliminate_existential_entirely
   else if is_exists tm then
-    eliminate_existential
+    eliminate_existential_entirely
   else if is_exists1 tm then
     HO_REWR_CONV cpEU_THM THENC
     RAND_CONV (BINDER_CONV eliminate_quantifier THENC
@@ -2133,60 +2174,250 @@ in
   myfind check_conj (cpstrip_conj tm)
 end
 
-fun pure_goal tm = let
+fun rarest_var vars tm =
+    (* Finds the variable in the list vars that occurs least in
+       term tm.  Weights variables slightly higher for appearing earlier
+       in the list vars, this means that unnecessary swapping of existential
+       variables is avoided. Assume that all variables in term
+       and all the variables in the list are of type int.
+       Return SOME n, or NONE if vars is the empty list *)
+    case vars of
+      [] => NONE
+    | [x] => SOME x
+    | _ => let
+        open Binarymap
+        val bmap0 = mkDict String.compare
+        val increment = 1.0 / real (length vars)
+        val (init_bmap,_) =
+            List.foldr (fn (v,(m,r)) =>
+                           (insert(m,#1 (dest_var v), r), r + increment))
+                       (bmap0,0.0) vars
+        fun recurse (tm, bmap) =
+            case strip_comb tm of
+              (f, []) => let
+              in let
+                  val n = #1 (dest_var f)
+                in
+                  case peek(bmap, n) of
+                    NONE => bmap
+                  | SOME i => insert(bmap,n,i+1.0)
+                end handle HOL_ERR _ => bmap
+              end
+            | (_, args) => List.foldl recurse bmap args
+        val final_map = recurse (tm, init_bmap)
+        fun find_minimum (n,i,acc) =
+            case acc of
+              NONE => SOME(n,i)
+            | SOME(curn,curi) => if i < curi then SOME (n,i)
+                                 else acc
+        fun string_to_int_var n = mk_var(n,intSyntax.int_ty)
+      in
+        Option.map (string_to_int_var o #1) (foldl find_minimum NONE final_map)
+      end
+
+fun pull_last_exists_to_top tm = let
+  val (v, body) = dest_exists tm
+in
+  if is_exists body then
+    (BINDER_CONV pull_last_exists_to_top THENC
+     SWAP_VARS_CONV) tm
+  else
+    ALL_CONV tm
+end
+
+fun push_exvar_to_bot v tm = let
+  val (bv, body) = dest_exists tm
+in
+  if bv = v then (SWAP_VARS_CONV THENC
+                  BINDER_CONV (push_exvar_to_bot v) ORELSEC
+                  ALL_CONV)
+  else (BINDER_CONV (push_exvar_to_bot v))
+end tm
+
+fun listlex_compare c (l1, l2) =
+    (* do a lexicographic comparison of list1 and list2, using c to compare
+       their elements *)
+    case (l1, l2) of
+      ([], []) => EQUAL
+    | (h::t, []) => GREATER
+    | ([], h::t) => LESS
+    | (h1::t1, h2::t2) =>
+      case c(h1, h2) of
+        EQUAL => listlex_compare c (t1, t2)
+      | x => x
+
+fun find_dup c l =
+    (* l is a sorted list; find the first duplicated element, according to c *)
+    case l of
+      [] => NONE
+    | [_] => NONE
+    | (h1 :: (tail as (h2 :: t))) => if c(h1, h2) = EQUAL then SOME h1
+                                     else find_dup c tail
+
+fun finish_pure_goal1 tm = let
+  (* tm is of the form
+        ?x1 .. xn. K1 /\ K2 /\ .. /\ Kn /\ P (x1..xn) /\
+                   c1 | ... /\ c2 | ...
+     where the Ki's are constraints (one per existential variable).
+     In this stage of the process we try to do "delta elimination" to
+     avoid having to consider all of the possibilities in the
+     constraints.  Sometimes this is not possible, but the effect of this
+     function is to make one step of progress regardless.
+
+     The ideal situation is when one of the ex. variables is mentioned just
+     once in a divisibility term's right-hand-side.  If this situation holds
+     we can use simplify_constrained_disjunct to make progress.  Otherwise,
+     if two divisibility constraints exist with the same set of free
+     variables on the right hand side, we can make progress by using
+     Cooper's first lemma to change this, producing two new divisibility
+     constraints, one of which has one fewer variable than the original.
+
+     If neither situation holds, then we have no choice but to expand
+     one of the variables, as per phase6.  We pick the variable with the
+     smallest range.
+  *)
+  val (vars, body) = strip_exists tm
+  val (constraints, nonconstraints) =
+      partition is_constraint (cpstrip_conj body)
+  val (div_constraints, others) = partition is_divides nonconstraints
+  val divc_rhses = map (#2 o dest_divides) div_constraints
+  val canonicalise_varsets = Listsort.sort Term.compare
+  val div_varsets = map (canonicalise_varsets o free_vars) divc_rhses
+in
+  case List.find (fn lst => length lst = 1) div_varsets of
+    SOME vs => let
+      (* found a singleton divisibility constraint *)
+      val v = hd vs
+    in
+      push_exvar_to_bot v THENC
+      LAST_EXISTS_CONV simplify_constrained_disjunct
+    end
+  | NONE => let
+      val vset_compare = listlex_compare Term.compare
+      val sorted_vsets = Listsort.sort vset_compare div_varsets
+    in
+      case find_dup vset_compare sorted_vsets of
+        SOME vset => let
+          fun my_constraint tm =
+              is_divides tm andalso
+              canonicalise_varsets (free_vars (#2 (dest_divides tm))) = vset
+        in
+          STRIP_QUANT_CONV
+            (move_conj_left my_constraint THENC
+             RAND_CONV (move_conj_left my_constraint) THENC
+             REWR_CONV CONJ_ASSOC THENC
+             LAND_CONV (phase2_CONV (hd vset) THENC
+                        REWRITE_CONV [GSYM INT_ADD_ASSOC] THENC
+                        elim_paired_divides THENC
+                        REWRITE_CONV [INT_DIVIDES_1] THENC
+                        phase1_CONV THENC phase2_CONV (hd vset)))
+        end
+      | NONE => let
+          (* look for constraint with least range *)
+          fun get_range c_tm = let
+            val (_, args) = strip_comb c_tm
+            val range_tm = hd args
+            val (lo,hi) = dest_conj range_tm
+          in
+            (hd (tl args),
+             Arbint.-(int_of_term (rand hi), int_of_term (lhand lo)))
+          end
+          fun min (c_tm, acc as (accv, acci)) = let
+            val (e as (v,i)) = get_range c_tm
+          in
+            if Arbint.<(i,acci) then e else acc
+          end
+          val (minv, _) =
+              List.foldl min (get_range (hd constraints)) (tl constraints)
+        in
+          push_exvar_to_bot minv THENC
+          LAST_EXISTS_CONV vphase6_CONV THENC
+          push_in_exists
+        end
+    end
+end tm
+
+fun finish_pure_goal tm =
+    if is_exists tm then
+      (finish_pure_goal1 THENC obvious_improvements THENC
+       EVERY_DISJ_CONV finish_pure_goal) tm
+    else REDUCE_CONV tm
+
+
+(*
+  val tm0 = ``?w. ((y = 2 * w) \/ (y = 2 * w + 1)) /\ x <= w /\ w < z``
+  val tm = rhs (concl (phase1_CONV tm0))
+
+  val tm0 =
+    ``!x y z. 2 * x < y /\ y < 2 * z ==>
+   (~(1 * y + ~1 < 2 * x) /\ 1 * y + ~1 < 2 * z /\
+        2 int_divides 1 * y + ~1 \/
+        ~(1 * y < 2 * x) /\ 1 * y < 2 * z /\ 2 int_divides 1 * y) \/
+       ~(1 * y + ~1 < 2 * x) /\ 1 * y + ~1 < 2 * z /\
+       2 int_divides 1 * y + ~1 \/
+       ((2 * z + ~2 = 1 * y) \/ (2 * z + ~2 = 1 * y + ~1)) /\
+       ~(2 * z + ~2 < 2 * x)``
+ val tm = rand (rhs (concl ((phase1_CONV THENC flip_foralls) tm0)))
+
+val tm0 =
+    ``!x.
+        0 <= x ==>
+        !x'.
+          0 <= x' ==>
+          x' <= x ==>
+          !x''.
+            0 <= x'' ==>
+            (~(x <= x') \/ (x'' + x = x'' + x') \/
+             x'' <= 0 /\ x'' + x' <= x) /\
+            (x <= x' \/
+             (~(x'' + x' <= x) \/ (x'' + x' = x) \/ x'' <= 0 /\ x <= x') /\
+             (x'' + x' <= x \/ (x'' + (x + x') = x + (x'' + x')) \/
+              x'' <= 0 /\ x + (x'' + x') <= x + x')) \/
+            (x'' + x' <= x \/ x'' <= 0) /\ x'' + x' <= x + 0``
+
+val tm = rand (rhs (concl ((phase1_CONV THENC move_quants_up THENC
+                            flip_foralls) tm0)))
+
+
+*)
+
+fun pure_goal0 tm = let
   (* pure_goal is called on those goals that have all existential
      quantifiers; these are assumed to be at the head of the term  *)
   val (vars, body) = strip_exists tm
-  fun push_in_exists tm =
-    if is_exists tm then
-      (BINDER_CONV push_in_exists THENC
-       EXISTS_OR_CONV) tm
-    else
-      ALL_CONV tm
-  fun push_var_to_bot v tm = let
-    val (bv, body) = dest_exists tm
+  fun pull_out_and_recurse n tm = let
+    (* tm is of the form    ?x1 .. xn. p *)
+    (* where p may or may not have an existential quantifier *)
+    (* if there is a quantifier over p, want to pull it out to the front *)
+    (* of the list and then recurse just underneath it, otherwise recurse *)
+    (* immediately *)
+    val (vars, body) = strip_exists tm
   in
-    if bv = v then (SWAP_VARS_CONV THENC
-                    BINDER_CONV (push_var_to_bot v) ORELSEC
-                    ALL_CONV)
-    else (BINDER_CONV (push_var_to_bot v))
-  end tm
-  fun smallest_var () = let
-    val var_counts = count_vars body
-    fun recurse (m as (v0,c0)) l =
-      case l of
-        [] => v0
-      | ((e as (v,c))::t) => if c <= c0 then recurse e t
-                             else recurse m t
-  in
-    SOME (mk_var(recurse (hd var_counts) (tl var_counts), int_ty))
-  end handle Empty => NONE  (* Empty can happen if there are
-                               no variables left in the term *)
+    if length vars = n then pure_goal0 tm
+    else (pull_last_exists_to_top THENC BINDER_CONV pure_goal0) tm
+  end
 in
   if null vars then REDUCE_CONV
   else if cpis_disj body then
     STRIP_QUANT_CONV reveal_a_disj THENC
-    push_in_exists THENC BINOP_CONV pure_goal THENC
+    push_in_exists THENC BINOP_CONV pure_goal0 THENC
     REDUCE_CONV
   else let
     val next_var =
       case find_equality body of
-        NONE => let
-        in
-          case smallest_var() of
-            NONE => NONE
-          | x => x
-        end
-      | x => x
+        NONE => valOf (rarest_var vars body)
+      | SOME v => v
   in
-    case next_var of
-      NONE => REWRITE_CONV [EXISTS_SIMP] THENC REDUCE_CONV
-    | SOME v =>
-          push_var_to_bot v THENC
-          LAST_EXISTS_CONV eliminate_existential THENC
-          pure_goal
+      push_exvar_to_bot next_var THENC
+      LAST_EXISTS_CONV eliminate_existential THENC
+      TRY_CONV push_in_exists THENC
+      EVERY_DISJ_CONV (pull_out_and_recurse (length vars - 1) THENC
+                       TRY_CONV push_in_exists)
   end
 end tm
+
+val pure_goal = pure_goal0 THENC EVERY_DISJ_CONV finish_pure_goal THENC
+                REDUCE_CONV
 
 val tm100 = term_of_int (Arbint.fromInt 100)
 fun counter_example tm = let
