@@ -67,7 +67,7 @@ local open Path
       val SIGOBJ = toString(fromString(concat(HOLDIR, "sigobj")))
 in
   val () = indexfiles := HELP"HOLdbase" :: !indexfiles ;
-  val () = helpdirs := HELP"Docfiles" :: SIGOBJ   ::
+  val () = helpdirs := HELP"ADocfiles" :: SIGOBJ  ::
                        SRC"arith/help/entries"    ::
                        SRC"hol88/help/entries"    ::
                        SRC"list/help/entries"     ::
