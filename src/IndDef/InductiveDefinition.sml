@@ -745,8 +745,7 @@ end
 
 
 
-fun prove_nonschematic_inductive_relations_exist monoset tm0 = let
-  val tm = check_definition [] tm0
+fun prove_nonschematic_inductive_relations_exist monoset tm = let
   val th0 = derive_nonschematic_inductive_relations tm
   val th1 = prove_monotonicity_hyps monoset th0
 in
