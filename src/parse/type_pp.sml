@@ -39,88 +39,101 @@ fun pp_type0 (G:grammar) = let
       with_ppstream pps
     fun pbegin b = if b then add_string "(" else ()
     fun pend b = if b then add_string ")" else ()
+
   in
     if depth = 0 then add_string "..."
     else
       if is_vartype ty then add_string (dest_vartype ty)
       else let
-        val (Tyop, Args) = dest_type ty
-        fun print_args grav0 args = let
-          val parens_needed = case Args of [_] => false | _ => true
-          val grav = if parens_needed then Top else grav0
-        in
-          pbegin parens_needed;
-          begin_block INCONSISTENT 0;
-          pr_list (fn arg => pr_ty pps arg grav (depth - 1))
-                  (fn () => add_string ",") (fn () => add_break (1, 0)) args;
-          end_block();
-          pend parens_needed
-        end
-      in
-        case Args of
-          [] => add_string Tyop
-        | [arg1, arg2] => let
-            val (prec, rule) = valOf (lookup_tyop Tyop)
-              handle Option =>
-                raise ERR (Tyop^": no such type operator in grammar")
+          val (Tyop, Args) = dest_type ty
+          fun print_args grav0 args = let
+            val parens_needed = case Args of [_] => false | _ => true
+            val grav = if parens_needed then Top else grav0
           in
-            case rule of
-              SR => let
-                val addparens =
-                  case grav of
-                    Rfx(n, _) => (n > prec)
-                  | _ => false
-              in
-                pbegin addparens;
-                begin_block INCONSISTENT 0;
-                (* knowing that there are two args, we know that they will
-                   be printed with parentheses, so the gravity we pass in
-                   here makes no difference. *)
-                print_args Top Args;
-                add_break(1,0);
-                add_string Tyop;
-                end_block();
-                pend addparens
-              end
-            | IR(assoc, printthis) => let
-                val parens_needed =
-                  case grav of
-                    Sfx n => (n > prec)
-                  | Lfx (n, s) => if s = printthis then assoc <> LEFT
-                                  else (n >= prec)
-                  | Rfx (n, s) => if s = printthis then assoc <> RIGHT
-                                  else (n >= prec)
-                  | _ => false
-              in
-                pbegin parens_needed;
-                begin_block INCONSISTENT 0;
-                pr_ty pps arg1 (Lfx (prec, printthis)) (depth - 1);
-                add_break(1,0);
-                add_string printthis;
-                add_break(1,0);
-                pr_ty pps arg2 (Rfx (prec, printthis)) (depth -1);
-                end_block();
-                pend parens_needed
-              end
-          end
-        | _ => let
-            val (prec, _) = valOf (lookup_tyop Tyop)
-              handle Option =>
-                raise ERR (Tyop^": no such type constructor in grammar")
-            val addparens =
-              case grav of
-                Rfx (n, _) => (n > prec)
-              | _ => false
-          in
-            pbegin addparens;
+            pbegin parens_needed;
             begin_block INCONSISTENT 0;
-            print_args (Sfx prec) Args;
-            add_break(1,0);
-            add_string Tyop;
+            pr_list (fn arg => pr_ty pps arg grav (depth - 1))
+                    (fn () => add_string ",") (fn () => add_break (1, 0)) args;
             end_block();
-            pend addparens
+            pend parens_needed
           end
-      end
+          fun print_ghastly () = let
+            val {Thy,Tyop,...} = dest_thy_type ty
+          in
+            add_string "(";
+            begin_block INCONSISTENT 0;
+            if not (null Args) then (print_args Top Args; add_break(1,0))
+            else ();
+            add_string (Thy ^ "$" ^ Tyop);
+            end_block();
+            add_string ")"
+          end
+        in
+          case Args of
+            [] => let
+            in
+              case lookup_tyop Tyop of
+                NONE => print_ghastly ()
+              | _ => add_string Tyop
+            end
+          | [arg1, arg2] => (let
+              val (prec, rule) = valOf (lookup_tyop Tyop)
+            in
+              case rule of
+                SR => let
+                  val addparens =
+                      case grav of
+                        Rfx(n, _) => (n > prec)
+                      | _ => false
+                in
+                  pbegin addparens;
+                  begin_block INCONSISTENT 0;
+                  (* knowing that there are two args, we know that they will
+                     be printed with parentheses, so the gravity we pass in
+                     here makes no difference. *)
+                  print_args Top Args;
+                  add_break(1,0);
+                  add_string Tyop;
+                  end_block();
+                  pend addparens
+                end
+              | IR(assoc, printthis) => let
+                  val parens_needed =
+                      case grav of
+                        Sfx n => (n > prec)
+                      | Lfx (n, s) => if s = printthis then assoc <> LEFT
+                                      else (n >= prec)
+                      | Rfx (n, s) => if s = printthis then assoc <> RIGHT
+                                      else (n >= prec)
+                      | _ => false
+                in
+                  pbegin parens_needed;
+                  begin_block INCONSISTENT 0;
+                  pr_ty pps arg1 (Lfx (prec, printthis)) (depth - 1);
+                  add_break(1,0);
+                  add_string printthis;
+                  add_break(1,0);
+                  pr_ty pps arg2 (Rfx (prec, printthis)) (depth -1);
+                  end_block();
+                  pend parens_needed
+                end
+            end handle Option => print_ghastly())
+          | _ => let
+              val (prec, _) = valOf (lookup_tyop Tyop)
+              val addparens =
+                  case grav of
+                    Rfx (n, _) => (n > prec)
+                  | _ => false
+            in
+              pbegin addparens;
+              begin_block INCONSISTENT 0;
+              print_args (Sfx prec) Args;
+              add_break(1,0);
+              add_string Tyop;
+              end_block();
+              pend addparens
+            end handle Option => print_ghastly()
+        end
   end
 in
   pr_ty
