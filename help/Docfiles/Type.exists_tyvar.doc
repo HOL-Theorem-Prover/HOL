@@ -14,7 +14,7 @@ satisfying the predicate {P}. The value {true} is returned if the search
 is successful; otherwise {false} is the result.
 
 \FAILURE
-If {P} fails when applied to a type variable encountered 
+If {P} fails when applied to a type variable encountered
 in the course of searching {ty}.
 
 \EXAMPLE
@@ -27,5 +27,4 @@ in the course of searching {ty}.
 \COMMENTS
 This function is more efficient, in some cases, than {exists P o type_vars}.
 
-\SEEALSO
 \ENDDOC

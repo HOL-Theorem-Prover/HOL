@@ -2,15 +2,14 @@
 
 \BLTYPE
 SIMPSET : { ac     : (thm * thm) list,
-             congs  : thm list,
-             convs  : {conv  : (term list -> term -> thm) -> term list
-                                -> conv,
-                        key   : (term list * term) option,
-                        name  : string,
-                        trace : int} list,
-             dprocs : Traverse.reducer list,
-             filter : (thm -> thm list) option,
-             rewrs  : thm list } -> ssdata
+            congs  : thm list,
+            convs  : {conv  : (term list -> conv) -> term list -> conv,
+                      key   : (term list * term) option,
+                      name  : string,
+                      trace : int} list,
+            dprocs : Traverse.reducer list,
+            filter : (thm -> thm list) option,
+            rewrs  : thm list } -> ssdata
 \ELTYPE
 
 \SYNOPSIS
@@ -132,8 +131,8 @@ following illustrates how this can be added to a simpset:
    - SIMP_CONV (bool_ss ++ ssd) [] (Term`3 * 4`);
    > val it = |- 3 * 4 = 12 : thm
 }
-Given the theorems {ADD_SYM} and {ADD_ASSOC} from
-{arithmeticTheory}, we can construct a normaliser for additive terms.
+Given the theorems {ADD_SYM} and {ADD_ASSOC} from {arithmeticTheory},
+we can construct a normaliser for additive terms.
 {
    - val ssd2 = SIMPSET {ac = [(SPEC_ALL ADD_ASSOC, SPEC_ALL ADD_SYM)],
                          congs = [], convs = [], dprocs = [],

@@ -3,7 +3,7 @@
 \TYPE {augment_srw_ss : ssdata list -> unit}
 
 \SYNOPSIS
-Augments the "stateful} simpset used by {SRW_TAC} with a list of
+Augments the "stateful" simpset used by {SRW_TAC} with a list of
 {simpset} fragments.
 
 \DESCRIBE
