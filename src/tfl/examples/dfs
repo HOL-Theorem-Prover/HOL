@@ -1,0 +1,111 @@
+(*---------------------------------------------------------------------------*)
+(* Depth first search in directed graphs which can contain cycles.           *)
+(* Termination argument due to Scott Owens.                                  *)
+(*---------------------------------------------------------------------------*)
+
+load "pred_setLib";  open pred_setTheory pred_setLib;
+
+val SET_EQ_THM = EXTENSION;
+
+(*---------------------------------------------------------------------------*)
+(* Not used, but could be useful in pred_setTheory. Maybe.                   *)
+(*---------------------------------------------------------------------------*)
+
+val PSUBSET_DIFF = Q.prove
+(`!U A B. A PSUBSET B /\ B SUBSET U ==> (U DIFF B) PSUBSET (U DIFF A)`,
+ SRW_TAC [] [PSUBSET_MEMBER] THENL
+ [FULL_SIMP_TAC std_ss [PSUBSET_DEF,DIFF_DEF,SUBSET_DEF]
+  THEN SRW_TAC [] [] THEN PROVE_TAC [],
+  PROVE_TAC [SUBSET_DEF]]);
+
+
+(*---------------------------------------------------------------------------*)
+(* DFS is given a somewhat curious definition because of termination reqt.   *)
+(* We enforce that there are only finitely many nodes in the graph by use of *)
+(* "Nodes" (actually parent nodes). The parent nodes of the graph are those  *)
+(* that have a non-empty list of children via G. If the parent nodes are     *)
+(* then the entire graph is finite, because there can only be finitely many  *)
+(* children of any parent (because G produces a list).                       *)
+(*---------------------------------------------------------------------------*)
+
+val Nodes = Define `Nodes G = {x | ~(G x = [])}`;
+
+val DFS_defn = Hol_defn 
+ "DFS" 
+ `DFS seen to_see (acc:'b) = 
+   if FINITE (Nodes G)
+   then (case (to_see:'a list)
+          of [] -> acc 
+          || h::t -> if h IN seen 
+                       then DFS seen t acc 
+                       else DFS (h INSERT seen) (APPEND (G h) t) (f h acc))
+   else acc`;
+
+
+(*---------------------------------------------------------------------------*)
+(* Termination proof. In the first recursive call, the to_see list is        *)
+(* shorter. In the second recursive call, the seen and to_see argument can   *)
+(* both increase, but in different circumstances. The head (h)of the to_see  *)
+(* list has not been seen. But we don't know whether it's a parent in the    *)
+(* graph. Suppose it is; then adding it to seen decreases the number of      *)
+(* unseen nodes in the graph. If h is not a parent, then it has no children, *)
+(* and pushing them onto the to_see list decreases its length.               *)
+(*---------------------------------------------------------------------------*)
+
+val R = Define 
+    `Rel (G:'a -> 'a list) (seen:'a set, to_see:'a list, acc:'b)
+       = (CARD(Nodes G DIFF seen), LENGTH to_see)`;
+
+val (def,ind) = Defn.tprove
+(DFS_defn,
+ WF_REL_TAC `inv_image ($< LEX $<) (Rel (G:'a -> 'a list))` 
+   THEN RW_TAC list_ss [R]
+   THEN Cases_on `G v = []` THEN RW_TAC list_ss [] THENL
+   [DISJ2_TAC THEN `~(v IN Nodes G)` by SRW_TAC [] [Nodes] 
+      THEN PROVE_TAC [DELETE_NON_ELEMENT,DIFF_INSERT],
+    DISJ1_TAC THEN `v IN Nodes G` by SRW_TAC [] [Nodes] 
+      THEN MATCH_MP_TAC 
+             (Ho_Rewrite.REWRITE_RULE [GSYM RIGHT_FORALL_IMP_THM,AND_IMP_INTRO] 
+                  CARD_PSUBSET)
+      THEN SRW_TAC [] [FINITE_DIFF,PSUBSET_DEF, SUBSET_DEF,
+                       DIFF_INSERT,DIFF_DEF,IN_DELETE,SET_EQ_THM]
+      THEN PROVE_TAC []]);
+
+(*---------------------------------------------------------------------------*)
+(* Desired recursion equations, constrained by finiteness of graph.          *)
+(*---------------------------------------------------------------------------*)
+
+val DFS_DEF = Q.prove
+(`FINITE (Nodes G) ==> 
+  (DFS G f (seen:'a set) [] acc = (acc:'b)) /\
+  (DFS G f seen (h::t) acc =
+      if (h:'a) IN seen 
+        then DFS G f seen t acc
+        else DFS G f (h INSERT seen) (APPEND (G h) t) (f h acc))`,
+ RW_TAC std_ss [] THENL
+ [RW_TAC list_ss [def],
+  GEN_REWRITE_TAC LHS_CONV empty_rewrites [def] THEN RW_TAC list_ss [],
+  RW_TAC list_ss [def],
+  GEN_REWRITE_TAC LHS_CONV empty_rewrites [def] THEN RW_TAC list_ss []]);
+
+
+(*---------------------------------------------------------------------------*)
+(* Desired induction theorem. Use of it requires G to be instantiated first. *)
+(* Is there a more convenient way to formulate this, so that G would be      *)
+(* instantiated automatically, say by HO_MATCH_MP_TAC?                       *)
+(*---------------------------------------------------------------------------*)
+
+val DFS_IND = Q.prove
+(`!P:'a set->'a list->'b->bool. 
+     FINITE (Nodes G) /\
+     (!seen acc. P seen [] acc) /\
+     (!seen h t acc. 
+         (~(h IN seen) ==> P (h INSERT seen) (APPEND (G h) t) (f h acc)) /\
+           (h IN seen ==> P seen t acc) ==> P seen (h::t) acc) 
+      ==>
+        !v v1 v2. P v v1 v2`,
+ NTAC 2 STRIP_TAC 
+  THEN HO_MATCH_MP_TAC ind
+  THEN REPEAT GEN_TAC THEN Cases_on `to_see`
+  THEN RW_TAC list_ss []);
+
