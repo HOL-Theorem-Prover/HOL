@@ -4,7 +4,11 @@
 (*---------------------------------------------------------------------------*)
 
 (* For interactive work
-  app load [(*"tablesTheory",*) "word8Theory", "metisLib", "word8CasesLib"];
+  app load ["word8Theory", "metisLib", "word8CasesLib"];
+  quietdec := true;
+  open word8Theory (*tablesTheory*) bitsTheory
+     word8Lib arithmeticTheory metisLib word8CasesLib;
+  quietdec := false;
 *)
 
 open HolKernel Parse boolLib bossLib 
@@ -117,7 +121,7 @@ val xtime_distrib = Q.store_thm
  THEN
  Cases_on `n<1` THEN
  FULL_SIMP_TAC arith_ss [BIT_ZERO, NOT_LESS, BIT_SHIFT_THM2, BITWISE_THM] THEN
- METIS_TAC [])
+ METIS_TAC []);
 
 
 (*---------------------------------------------------------------------------*)
@@ -178,14 +182,13 @@ val _ = computeLib.add_persistent_funs [("IterConstMult_def",IterConstMult_def)]
 (* Equivalence between recursive and iterative forms.                        *)
 (*---------------------------------------------------------------------------*)
 
-
 val ConstMultEq = Q.store_thm
 ("ConstMultEq",
  `!b1 b2 acc. (b1 ** b2) # acc = SND(SND(IterConstMult (b1,b2,acc)))`,
  recInduct IterConstMult_ind THEN RW_TAC std_ss []
    THEN ONCE_REWRITE_TAC [ConstMult_def,IterConstMult_def]
    THEN RW_TAC std_ss [AC a c]
-   THEN FULL_SIMP_TAC std_ss [AC a c, EOR_ID])
+   THEN FULL_SIMP_TAC std_ss [AC a c, EOR_ID]);
 
 
 (*---------------------------------------------------------------------------*)

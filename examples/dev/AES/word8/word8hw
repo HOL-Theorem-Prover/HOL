@@ -1,10 +1,8 @@
 loadPath := "../../" :: "../../dff/" :: !loadPath;
 
 Globals.priming := SOME "";
-app load ["word8CasesLib", "compile"];
-open word8Theory compile;
-
-load "MultTheory";
+app load ["word8CasesLib", "compile", "MultTheory", "RoundOpTheory"];
+open word8Theory compile MultTheory;
 
 val xtime_dev = 
   PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
@@ -42,4 +40,81 @@ val iter_mult1_dev =
 val iter_mult1_atm = REFINE (DEPTHR ATM_REFINE) iter_mult1_dev;
 val iter_mult1_Netlist = MAKE_NETLIST iter_mult1_atm;
 
+
+(*---------------------------------------------------------------------------*)
+(* Round operations.                                                         *)
+(*---------------------------------------------------------------------------*)
+
+val to_state_dev = 
+  PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+           (CompileConvert (SPEC_ALL to_state_def));
+val to_state_atm = REFINE (DEPTHR ATM_REFINE) to_state_dev;
+val to_stateNetlist = MAKE_NETLIST to_state_atm;
+
+val from_state_dev = 
+  PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+           (CompileConvert (SPEC_ALL from_state_def));
+val from_state_atm = REFINE (DEPTHR ATM_REFINE) from_state_dev;
+val from_stateNetlist = MAKE_NETLIST from_state_atm;
+
+
+val SubBytes_def' = 
+   SIMP_RULE std_ss [FUN_EQ_THM,FORALL_PROD,genSubBytes_def] SubBytes_def;
+val SubBytes_dev = 
+  PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+           (CompileConvert (SPEC_ALL SubBytes_def'));
+val SubBytes_atm = REFINE (DEPTHR ATM_REFINE) SubBytes_dev;
+val SubBytesNetlist = MAKE_NETLIST SubBytes_atm;
+
+val InvSubBytes_def' = 
+   SIMP_RULE std_ss [FUN_EQ_THM,FORALL_PROD,genSubBytes_def] InvSubBytes_def;
+val InvSubBytes_dev = 
+  PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+           (CompileConvert (SPEC_ALL InvSubBytes_def'));
+val InvSubBytes_atm = REFINE (DEPTHR ATM_REFINE) InvSubBytes_dev;
+val InvSubBytesNetlist = MAKE_NETLIST InvSubBytes_atm;
+
+val ShiftRows_dev = 
+  PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+           (CompileConvert (SPEC_ALL ShiftRows_def));
+val ShiftRows_atm = REFINE (DEPTHR ATM_REFINE) ShiftRows_dev;
+val ShiftRowsNetlist = MAKE_NETLIST ShiftRows_atm;
+
+val InvShiftRows_dev = 
+  PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+           (CompileConvert (SPEC_ALL InvShiftRows_def));
+val InvShiftRows_atm = REFINE (DEPTHR ATM_REFINE) InvShiftRows_dev;
+val InvShiftRowsNetlist = MAKE_NETLIST InvShiftRows_atm;
+
+val MultCol_dev =
+  PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+           (CompileConvert (SPEC_ALL MultCol_def));
+val MultCol_atm = REFINE (DEPTHR ATM_REFINE) MultCol_dev;
+val MultColNetlist = MAKE_NETLIST MultCol_atm;
+
+val InvMultCol_dev =
+  PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+           (CompileConvert (SPEC_ALL InvMultCol_def));
+val InvMultCol_atm = REFINE (DEPTHR ATM_REFINE) InvMultCol_dev;
+val InvMultColNetlist = MAKE_NETLIST InvMultCol_atm;
+
+(* Need to eliminate lets *)
+val MixColumns_def' = 
+   SIMP_RULE std_ss [FUN_EQ_THM,FORALL_PROD,genMixColumns_def,LET_THM] MixColumns_def;
+val MixColumns_dev =
+  PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+           (CompileConvert (SPEC_ALL MixColumns_def'));
+
+InvMixColumns_def;
+
+XOR_BLOCK
+AddRoundKey_def
+
+DUMMY_KEYS
+REVKEYS
+ROTKEYS
+Round_def
+InvRound_def
+AES_FWD
+AES_BWD;
 
