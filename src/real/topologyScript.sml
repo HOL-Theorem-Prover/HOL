@@ -9,50 +9,28 @@ struct
 app load ["Psyntax",
           "hol88Lib",
           "numLib",
-          "reduceLib",
-          "pairTheory",
-          "arithmeticTheory",
-          "Num_conv",
-          "Num_induct",
-          "EquivType",
           "Let_conv",
           "useful",
-          "hratTheory",
-          "hrealTheory",
-          "realaxTheory",
           "realTheory"];
 *)
 
 (*
 *)
-open HolKernel basicHol90Lib Parse;
+open HolKernel Parse basicHol90Lib;
+open Psyntax hol88Lib Let_conv useful realTheory;
+
 infix THEN THENL ORELSE ORELSEC ##;
 
-open Psyntax
-     hol88Lib
-     numLib
-     reduceLib
-     pairTheory
-     arithmeticTheory
-     numTheory
-     prim_recTheory
-     Num_conv
-     Num_induct
-     Let_conv
-     useful
-     hratTheory
-     hrealTheory
-     realaxTheory
-     realTheory;
 
 val _ = new_theory "topology";
+
 
 (*---------------------------------------------------------------------------*)
 (* Minimal amount of set notation is convenient                              *)
 (*---------------------------------------------------------------------------*)
 
 val re_Union = new_definition("re_Union",
-  (--`re_Union S' = \x:'a. ?s. S' s /\ s x`--));
+  (--`re_Union P = \x:'a. ?s. P s /\ s x`--));
 
 val re_union = new_infixl_definition("re_union",
   (--`$re_union P Q = \x:'a. P x \/ Q x`--), 500);
@@ -70,14 +48,14 @@ val re_subset = new_infixr_definition("re_subset",
   (--`$re_subset P Q = !x:'a. P x ==> Q x`--), 450);
 
 val re_compl = new_definition("re_compl",
-  (--`re_compl S' = \x:'a. ~(S' x)`--));
+  (--`re_compl P = \x:'a. ~(P x):bool`--));
 
 val SUBSET_REFL = prove_thm("SUBSET_REFL",
-  (--`!S':'a->bool. S' re_subset S'`--),
+  (--`!P:'a->bool. P re_subset P`--),
   GEN_TAC THEN REWRITE_TAC[re_subset]);
 
 val COMPL_MEM = prove_thm("COMPL_MEM",
-  (--`!S':'a->bool. !x. S' x = ~(re_compl S' x)`--),
+  (--`!P:'a->bool. !x. P x = ~(re_compl P x)`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[re_compl] THEN
   BETA_TAC THEN REWRITE_TAC[]);
 
@@ -100,16 +78,16 @@ val SUBSET_TRANS = prove_thm("SUBSET_TRANS",
 (*---------------------------------------------------------------------------*)
 
 val istopology = new_definition("istopology",
-  (--`!L:('a->bool)->bool. istopology L =
-            L re_null /\
-            L re_universe /\
-     (!a b. L a /\ L b ==> L (a re_intersect b)) /\
-       (!P. P re_subset L ==> L (re_Union P))`--));
+  (--`!L. istopology L =
+              L re_null /\
+              L re_universe /\
+             (!a b. L a /\ L b ==> L (a re_intersect b)) /\
+             (!P. P re_subset L ==> L (re_Union P))`--));
 
 val topology_tydef = new_type_definition
  ("topology",
-  (--`istopology:(('a->bool)->bool)->bool`--),
-  PROVE((--`?t:('a->bool)->bool. istopology t`--),
+  (--`istopology`--),
+  PROVE((--`?t. istopology t`--),
         EXISTS_TAC (--`re_universe:('a->bool)->bool`--) THEN
         REWRITE_TAC[istopology, re_universe]));
 
@@ -117,16 +95,17 @@ val topology_tybij = define_new_type_bijections
       "topology_tybij" "topology" "open" topology_tydef;
 
 val TOPOLOGY = prove_thm("TOPOLOGY",
-  (--`!L:('a)topology. open(L) re_null /\
-                   open(L) re_universe /\
-            (!x y. open(L) x /\ open(L) y ==> open(L) (x re_intersect y)) /\
-              (!P. P re_subset (open L) ==> open(L) (re_Union P))`--),
+  (--`!L. open(L) re_null /\
+          open(L) re_universe /\
+          (!x y. open(L) x /\ open(L) y ==> open(L) (x re_intersect y)) /\
+          (!P. P re_subset (open L) ==> open(L) (re_Union P))`--),
   GEN_TAC THEN REWRITE_TAC[GSYM istopology] THEN
   REWRITE_TAC[topology_tybij]);
 
 val TOPOLOGY_UNION = prove_thm("TOPOLOGY_UNION",
-  (--`!L:('a)topology. !P. P re_subset (open L) ==> open(L) (re_Union P)`--),
+  (--`!L. !P. P re_subset (open L) ==> open(L) (re_Union P)`--),
   REWRITE_TAC[TOPOLOGY]);
+
 
 (*---------------------------------------------------------------------------*)
 (* Characterize a neighbourhood of a point relative to a topology            *)
@@ -145,7 +124,8 @@ val OPEN_OWN_NEIGH = prove_thm("OPEN_OWN_NEIGH",
   EXISTS_TAC (--`S':'a->bool`--) THEN ASM_REWRITE_TAC[SUBSET_REFL]);
 
 val OPEN_UNOPEN = prove_thm("OPEN_UNOPEN",
-  (--`!S' top. open(top) S' = (re_Union (\P:'a->bool. open(top) P /\ P re_subset S') = S')`--),
+  (--`!S' top. open(top) S' = (re_Union (\P:'a->bool. open(top) P
+                               /\ P re_subset S') = S')`--),
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [DISCH_TAC THEN ONCE_REWRITE_TAC[GSYM SUBSET_ANTISYM] THEN
     REWRITE_TAC[re_Union, re_subset] THEN BETA_TAC THEN CONJ_TAC THEN GEN_TAC THENL
@@ -234,8 +214,10 @@ val CLOSED_LIMPT = prove_thm("CLOSED_LIMPT",
 (*---------------------------------------------------------------------------*)
 
 val ismet = new_definition("ismet",
-  (--`ismet (m:'a#'a->real) = (!x y. (m(x,y) = &0) = (x = y)) /\
-                         (!x y z. m(y,z) |<=| m(x,y) |+| m(x,z))`--));
+  (--`ismet (m:'a#'a->real) 
+        = 
+      (!x y. (m(x,y) = &0) = (x = y)) /\
+      (!x y z. m(y,z) <= m(x,y) + m(x,z))`--));
 
 val metric_tydef = new_type_definition
  ("metric",
@@ -275,7 +257,7 @@ val METRIC_SAME = prove_thm("METRIC_SAME",
   REPEAT GEN_TAC THEN REWRITE_TAC[METRIC_ZERO]);
 
 val METRIC_POS = prove_thm("METRIC_POS",
-  (--`!m:('a)metric. !x y. &0 |<=| (dist m)(x,y)`--),
+  (--`!m:('a)metric. !x y. &0 <= (dist m)(x,y)`--),
   REPEAT GEN_TAC THEN ASSUME_TAC(SPEC (--`m:('a)metric`--) METRIC_ISMET) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[ismet]) THEN
   FIRST_ASSUM(MP_TAC o
@@ -296,14 +278,14 @@ val METRIC_SYM = prove_thm("METRIC_SYM",
   DISCH_TAC THEN ASM_REWRITE_TAC[GSYM REAL_LE_ANTISYM]);
 
 val METRIC_TRIANGLE = prove_thm("METRIC_TRIANGLE",
-  (--`!m:('a)metric. !x y z. (dist m)(x,z) |<=| (dist m)(x,y) |+| (dist m)(y,z)`--),
+  (--`!m:('a)metric. !x y z. (dist m)(x,z) <= (dist m)(x,y) + (dist m)(y,z)`--),
   REPEAT GEN_TAC THEN ASSUME_TAC(SPEC (--`m:('a)metric`--) METRIC_ISMET) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[ismet]) THEN
   GEN_REWR_TAC (RAND_CONV o LAND_CONV)  [METRIC_SYM] THEN
   ASM_REWRITE_TAC[]);
 
 val METRIC_NZ = prove_thm("METRIC_NZ",
-  (--`!m:('a)metric. !x y. ~(x = y) ==> &0 |<| (dist m)(x,y)`--),
+  (--`!m:('a)metric. !x y. ~(x = y) ==> &0 < (dist m)(x,y)`--),
   REPEAT GEN_TAC THEN
   SUBST1_TAC(SYM(SPECL [(--`m:('a)metric`--), (--`x:'a`--), (--`y:'a`--)] METRIC_ZERO)) THEN
   ONCE_REWRITE_TAC[TAUT_CONV (--`~a ==> b = b \/ a`--)] THEN
@@ -316,11 +298,11 @@ val METRIC_NZ = prove_thm("METRIC_NZ",
 
 val mtop = new_definition("mtop",
   (--`!m:('a)metric. mtop m =
-    topology(\S'. !x. S' x ==> ?e. &0 |<| e /\ (!y. (dist m)(x,y) |<| e ==> S' y))`--));
+    topology(\S'. !x. S' x ==> ?e. &0 < e /\ (!y. (dist m)(x,y) < e ==> S' y))`--));
 
 val mtop_istopology = prove_thm("mtop_istopology",
   (--`!m:('a)metric. istopology
-    (\S'. !x. S' x ==> ?e. &0 |<| e /\ (!y. (dist m)(x,y) |<| e ==> S' y))`--),
+    (\S'. !x. S' x ==> ?e. &0 < e /\ (!y. (dist m)(x,y) < e ==> S' y))`--),
   GEN_TAC THEN
   REWRITE_TAC[istopology, re_null, re_universe, re_Union, re_intersect, re_subset] THEN
   CONV_TAC(REDEPTH_CONV BETA_CONV) THEN
@@ -353,32 +335,32 @@ val mtop_istopology = prove_thm("mtop_istopology",
 
 val MTOP_OPEN = prove_thm("MTOP_OPEN",
   (--`!S' (m:('a)metric). open(mtop m) S' =
-      (!x. S' x ==> ?e. &0 |<| e /\ (!y. (dist m(x,y)) |<| e ==> S' y))`--),
+      (!x. S' x ==> ?e. &0 < e /\ (!y. (dist m(x,y)) < e ==> S' y))`--),
   GEN_TAC THEN REWRITE_TAC[mtop] THEN
   REWRITE_TAC[REWRITE_RULE[topology_tybij] mtop_istopology] THEN
   BETA_TAC THEN REWRITE_TAC[]);
 
 (*---------------------------------------------------------------------------*)
-(* Define open ball in metric space |+| prove basic properties                 *)
+(* Define open ball in metric space + prove basic properties                 *)
 (*---------------------------------------------------------------------------*)
 
 val ball = new_definition("ball",
-  (--`!m:('a)metric. !x e. B(m)(x,e) = \y. (dist m)(x,y) |<| e`--));
+  (--`!m:('a)metric. !x e. B(m)(x,e) = \y. (dist m)(x,y) < e`--));
 
 val BALL_OPEN = prove_thm("BALL_OPEN",
-  (--`!m:('a)metric. !x e. &0 |<| e ==> open(mtop(m))(B(m)(x,e))`--),
+  (--`!m:('a)metric. !x e. &0 < e ==> open(mtop(m))(B(m)(x,e))`--),
   REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[MTOP_OPEN] THEN
   X_GEN_TAC (--`z:'a`--) THEN REWRITE_TAC[ball] THEN BETA_TAC THEN
   DISCH_THEN(ASSUME_TAC o ONCE_REWRITE_RULE[GSYM REAL_SUB_LT]) THEN
-  EXISTS_TAC (--`e |-| dist(m:('a)metric)(x,z)`--) THEN ASM_REWRITE_TAC[] THEN
+  EXISTS_TAC (--`e - dist(m:('a)metric)(x,z)`--) THEN ASM_REWRITE_TAC[] THEN
   X_GEN_TAC (--`y:'a`--) THEN REWRITE_TAC[REAL_LT_SUB_LADD] THEN
   ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN DISCH_TAC THEN
   MATCH_MP_TAC REAL_LET_TRANS THEN
-  EXISTS_TAC (--`dist(m)(x:'a,z) |+| dist(m)(z,y)`--) THEN
+  EXISTS_TAC (--`dist(m)(x:'a,z) + dist(m)(z,y)`--) THEN
   ASM_REWRITE_TAC[METRIC_TRIANGLE]);
 
 val BALL_NEIGH = prove_thm("BALL_NEIGH",
-  (--`!m:('a)metric. !x e. &0 |<| e ==> neigh(mtop(m))(B(m)(x,e),x)`--),
+  (--`!m:('a)metric. !x e. &0 < e ==> neigh(mtop(m))(B(m)(x,e),x)`--),
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[neigh] THEN EXISTS_TAC (--`B(m)(x:'a,e)`--) THEN
   REWRITE_TAC[SUBSET_REFL] THEN CONJ_TAC THENL
@@ -392,7 +374,7 @@ val BALL_NEIGH = prove_thm("BALL_NEIGH",
 
 val MTOP_LIMPT = prove_thm("MTOP_LIMPT",
   (--`!m:('a)metric. !x S'. limpt(mtop m) x S' =
-      !e. &0 |<| e ==> ?y. ~(x = y) /\ S' y /\ (dist m)(x,y) |<| e`--),
+      !e. &0 < e ==> ?y. ~(x = y) /\ S' y /\ (dist m)(x,y) < e`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[limpt] THEN EQ_TAC THENL
    [DISCH_THEN(curry op THEN (GEN_TAC THEN DISCH_TAC) o MP_TAC o SPEC (--`B(m)(x:'a,e)`--))
     THEN FIRST_ASSUM(fn th => REWRITE_TAC[MATCH_MP BALL_NEIGH th]) THEN
@@ -417,55 +399,56 @@ val MTOP_LIMPT = prove_thm("MTOP_LIMPT",
 (*---------------------------------------------------------------------------*)
 
 val ISMET_R1 = prove_thm("ISMET_R1",
-  (--`ismet (\(x,y). abs(y |-| x))`--),
+  (--`ismet (\(x,y). abs(y - x:real))`--),
   REWRITE_TAC[ismet] THEN CONV_TAC(ONCE_DEPTH_CONV PAIRED_BETA_CONV) THEN
   CONJ_TAC THEN REPEAT GEN_TAC THENL
    [REWRITE_TAC[ABS_ZERO, REAL_SUB_0] THEN
     CONV_TAC(RAND_CONV SYM_CONV) THEN REFL_TAC,
     SUBST1_TAC(SYM(SPECL [(--`x:real`--), (--`y:real`--)] REAL_NEG_SUB)) THEN
-    REWRITE_TAC[ABS_NEG] THEN SUBGOAL_THEN (--`z |-| y = (x |-| y) |+| (z |-| x)`--)
+    REWRITE_TAC[ABS_NEG] THEN
+     SUBGOAL_THEN (--`z - y:real = (x - y) + (z - x)`--)
       (fn th => SUBST1_TAC th THEN MATCH_ACCEPT_TAC ABS_TRIANGLE) THEN
     REWRITE_TAC[real_sub] THEN
     ONCE_REWRITE_TAC[AC(REAL_ADD_ASSOC,REAL_ADD_SYM)
-      (--`(a |+| b) |+| (c |+| d) = (d |+| a) |+| (c |+| b)`--)] THEN
+      (--`(a + b) + (c + d) = (d + a) + (c + b):real`--)] THEN
     REWRITE_TAC[REAL_ADD_LINV, REAL_ADD_LID]]);
 
 val mr1 = new_definition("mr1",
-  (--`mr1 = metric(\(x,y). abs(y |-| x))`--));
+  (--`mr1 = metric(\(x,y). abs(y - x))`--));
 
 val MR1_DEF = prove_thm("MR1_DEF",
-  (--`!x y. (dist mr1)(x,y) = abs(y |-| x)`--),
+  (--`!x y. (dist mr1)(x,y) = abs(y - x)`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[mr1, REWRITE_RULE[metric_tybij] ISMET_R1]
   THEN CONV_TAC(ONCE_DEPTH_CONV PAIRED_BETA_CONV) THEN REFL_TAC);
 
 val MR1_ADD = prove_thm("MR1_ADD",
-  (--`!x d. (dist mr1)(x,x |+| d) = abs(d)`--),
+  (--`!x d. (dist mr1)(x,x + d) = abs(d)`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[MR1_DEF, REAL_ADD_SUB]);
 
 val MR1_SUB = prove_thm("MR1_SUB",
-  (--`!x d. (dist mr1)(x,x |-| d) = abs(d)`--),
+  (--`!x d. (dist mr1)(x,x - d) = abs(d)`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[MR1_DEF, REAL_SUB_SUB, ABS_NEG]);
 
 val MR1_ADD_LE = prove_thm("MR1_ADD_POS",
-  (--`!x d. &0 |<=| d ==> ((dist mr1)(x,x |+| d) = d)`--),
+  (--`!x d. &0 <= d ==> ((dist mr1)(x,x + d) = d)`--),
   REPEAT GEN_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[MR1_ADD, abs]);
 
 val MR1_SUB_LE = prove_thm("MR1_SUB_LE",
-  (--`!x d. &0 |<=| d ==> ((dist mr1)(x,x |-| d) = d)`--),
+  (--`!x d. &0 <= d ==> ((dist mr1)(x,x - d) = d)`--),
   REPEAT GEN_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[MR1_SUB, abs]);
 
 val MR1_ADD_LT = prove_thm("MR1_ADD_LT",
-  (--`!x d. &0 |<| d ==> ((dist mr1)(x,x |+| d) = d)`--),
+  (--`!x d. &0 < d ==> ((dist mr1)(x,x + d) = d)`--),
   REPEAT GEN_TAC THEN DISCH_THEN(MP_TAC o MATCH_MP REAL_LT_IMP_LE) THEN
   MATCH_ACCEPT_TAC MR1_ADD_LE);
 
 val MR1_SUB_LT = prove_thm("MR1_SUB_LT",
-  (--`!x d. &0 |<| d ==> ((dist mr1)(x,x |-| d) = d)`--),
+  (--`!x d. &0 < d ==> ((dist mr1)(x,x - d) = d)`--),
    REPEAT GEN_TAC THEN DISCH_THEN(MP_TAC o MATCH_MP REAL_LT_IMP_LE) THEN
   MATCH_ACCEPT_TAC MR1_SUB_LE);
 
 val MR1_BETWEEN1 = prove_thm("MR1_BETWEEN1",
-  (--`!x y z. x |<| z /\ (dist mr1)(x,y) |<| (z |-| x) ==> y |<| z`--),
+  (--`!x y z. x < z /\ (dist mr1)(x,y) < (z - x) ==> y < z`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[MR1_DEF, ABS_BETWEEN1]);
 
 (*---------------------------------------------------------------------------*)
@@ -476,9 +459,9 @@ val MR1_LIMPT = prove_thm("MR1_LIMPT",
   (--`!x. limpt(mtop mr1) x re_universe`--),
   GEN_TAC THEN REWRITE_TAC[MTOP_LIMPT, re_universe] THEN
   X_GEN_TAC (--`e:real`--) THEN DISCH_TAC THEN
-  EXISTS_TAC (--`x |+| (e / &2)`--) THEN
+  EXISTS_TAC (--`x + (e / &2)`--) THEN
   REWRITE_TAC[MR1_ADD] THEN
-  SUBGOAL_THEN (--`&0 |<=| (e / &2)`--) ASSUME_TAC THENL
+  SUBGOAL_THEN (--`&0 <= (e / &2)`--) ASSUME_TAC THENL
    [MATCH_MP_TAC REAL_LT_IMP_LE THEN
     ASM_REWRITE_TAC[REAL_LT_HALF1], ALL_TAC] THEN
   ASM_REWRITE_TAC[abs, REAL_LT_HALF2] THEN

@@ -82,7 +82,7 @@ val NOT_ss = rewrites [NOT_IMP,
                          NOT_EXISTS_THM,
                          TAUT (--`~x \/ y = (x ==> y)`--),
                          TAUT (--`x \/ ~y = (y ==> x)`--),
-                         TAUT(--`(~p = ~q) = (p = q)`--)];
+                         TAUT(--`(~p = ~q) = (p:bool = q)`--)];
 
 
 end (* struct *)

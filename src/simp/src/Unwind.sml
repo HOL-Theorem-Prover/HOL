@@ -62,8 +62,6 @@
  * 
  * TESTING CODE 
  *
- * use "3/simplifier/src/UNWIND.sml";
- * open UNWIND;
  *------------------------------------------------------------------------*)
 
 
@@ -271,7 +269,7 @@ handle e as HOL_ERR _ => WRAP_ERR("IMP_TO_FRONT_CONV",e);
  *     P = P /\ T
  *------------------------------------------------------------------------*)
 
-val TRUTH_CONJ_INTRO_THM = TAUT(--`!P. P = (P /\ T)`--);
+val TRUTH_CONJ_INTRO_THM = TAUT(--`!P. P = P /\ T`--);
 fun ENSURE_CONJ_CONV tm =
    if (is_conj tm) then REFL tm else SPEC tm TRUTH_CONJ_INTRO_THM;
 

@@ -542,18 +542,20 @@ val [REAL_10, REAL_ADD_SYM, REAL_MUL_SYM, REAL_ADD_ASSOC,
      REAL_MUL_ASSOC, REAL_LDISTRIB, REAL_ADD_LID, REAL_MUL_LID,
      REAL_ADD_LINV, REAL_MUL_LINV, REAL_LT_TOTAL, REAL_LT_REFL,
      REAL_LT_TRANS, REAL_LT_IADD, REAL_LT_MUL, REAL_BIJ, REAL_ISO,REAL_INV_0] =
+ let fun mk_def (d,t,n,f) = {def_name=d, fixity=f, fname=n, func=t}
+ in
   EquivType.define_equivalence_type
    {name = "real",
     equiv = TREAL_EQ_EQUIV,
-    defs = [{def_name = "real_0", fname = "real_0", func = --`treal_0`--, fixity = Prefix},
-            {def_name = "real_1", fname = "real_1", func = --`treal_1`--, fixity = Prefix},
-            {def_name = "real_neg", fname = "real_neg", func = --`treal_neg`--,  fixity = Prefix},
-            {def_name = "real_inv", fname = "real_inv", func = --`treal_inv`--,  fixity = Prefix},
-            {def_name = "|+|", fname = "|+|", func = --`$treal_add`--, fixity = Infixl 500},
-            {def_name = "|*|", fname = "|*|", func = --`$treal_mul`--, fixity = Infixl 600},
-            {def_name = "|<|", fname = "|<|",  func = --`$treal_lt`--,  fixity = Infixr 450},
-            {def_name = "real_of_hreal", fname="real_of_hreal",func= --`$treal_of_hreal`--,fixity=Prefix},
-            {def_name = "hreal_of_real", fname="hreal_of_real",func= --`$hreal_of_treal`--,fixity=Prefix}],
+    defs = [mk_def("real_0",   Term`treal_0`,   "real_0", Prefix),
+            mk_def("real_1",   Term`treal_1`,   "real_1", Prefix),
+            mk_def("real_neg", Term`treal_neg`, "real_neg", Prefix),
+            mk_def("real_inv", Term`treal_inv`, "inv", Prefix),
+            mk_def("real_add", Term`$treal_add`, "real_add", Infixl 500),
+            mk_def("real_mul",  Term`$treal_mul`, "real_mul", Infixl 600),
+            mk_def("real_lt",  Term`$treal_lt`,  "real_lt",  Infixr 450),
+            mk_def("real_of_hreal",Term`$treal_of_hreal`, "real_of_hreal",Prefix),
+            mk_def("hreal_of_real", Term`$hreal_of_treal`,"hreal_of_real",Prefix)],
     welldefs = [TREAL_NEG_WELLDEF, TREAL_INV_WELLDEF, TREAL_LT_WELLDEF,
                 TREAL_ADD_WELLDEF, TREAL_MUL_WELLDEF, TREAL_BIJ_WELLDEF],
     old_thms = ([TREAL_10]
@@ -563,14 +565,41 @@ val [REAL_10, REAL_ADD_SYM, REAL_MUL_SYM, REAL_ADD_ASSOC,
                 @ [TREAL_ADD_LID, TREAL_MUL_LID, TREAL_ADD_LINV,
                    TREAL_MUL_LINV, TREAL_LT_TOTAL, TREAL_LT_REFL,
                    TREAL_LT_TRANS, TREAL_LT_ADD, TREAL_LT_MUL, TREAL_BIJ,
-                   TREAL_ISO,TREAL_INV_0])};
+                   TREAL_ISO,TREAL_INV_0])}
+ end;
+
+(*---------------------------------------------------------------------------
+       Overload arithmetic operations.
+ ---------------------------------------------------------------------------*)
+
+val natplus  = Term`$+`;
+val natless  = Term`$<`;
+val bool_not = Term`$~`
+val natmult  = Term`$*`;
+
+val _ = allow_for_overloading_on ("+", Type`:'a -> 'a -> 'a`);
+val _ = allow_for_overloading_on ("<", Type`:'a -> 'a -> bool`);
+val _ = allow_for_overloading_on ("~", Type`:'a -> 'a`);
+val _ = allow_for_overloading_on ("*", Type`:'a -> 'a -> 'a`);
+
+val _ = overload_on ("~", bool_not);
+
+val _ = overload_on ("+", natplus);
+val _ = overload_on ("*", natmult);
+val _ = overload_on ("<", natless);
+
+val _ = overload_on ("~", Term`$real_neg`);
+val _ = overload_on ("+", Term`$real_add`);
+val _ = overload_on ("*", Term`$real_mul`);
+val _ = overload_on ("<", Term`$real_lt`);
+
 
 (*---------------------------------------------------------------------------*)
 (* Transfer of supremum property for all-positive sets - bit painful         *)
 (*---------------------------------------------------------------------------*)
 
 val REAL_ISO_EQ = prove_thm("REAL_ISO_EQ",
-  (--`!h i. h hreal_lt i = (real_of_hreal h) |<| (real_of_hreal i)`--),
+  (--`!h i. h hreal_lt i = real_of_hreal h < real_of_hreal i`--),
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [MATCH_ACCEPT_TAC REAL_ISO,
     REPEAT_TCL DISJ_CASES_THEN ASSUME_TAC
@@ -581,13 +610,13 @@ val REAL_ISO_EQ = prove_thm("REAL_ISO_EQ",
     REWRITE_TAC[REAL_LT_REFL]]);
 
 val REAL_POS = prove_thm("REAL_POS",
-  (--`!X. real_0 |<| (real_of_hreal X)`--),
+  (--`!X. real_0 < real_of_hreal X`--),
   GEN_TAC THEN REWRITE_TAC[REAL_BIJ]);
 
 val SUP_ALLPOS_LEMMA1 = prove_thm("SUP_ALLPOS_LEMMA1",
-  (--`!P y. (!x. P x ==> real_0 |<| x) ==>
-            ((?x. P x /\ y |<| x) =
-            (?X. P(real_of_hreal X) /\ y |<| (real_of_hreal X)))`--),
+  (--`!P y. (!x. P x ==> real_0 < x) ==>
+            ((?x. P x /\ y < x) =
+            (?X. P(real_of_hreal X) /\ y < (real_of_hreal X)))`--),
   REPEAT GEN_TAC THEN DISCH_TAC THEN EQ_TAC THENL
    [DISCH_THEN(X_CHOOSE_THEN (--`x:real`--) (fn th => MP_TAC th THEN POP_ASSUM
      (SUBST1_TAC o SYM o REWRITE_RULE[REAL_BIJ] o C MATCH_MP (CONJUNCT1 th))))
@@ -600,9 +629,9 @@ val SUP_ALLPOS_LEMMA2 = prove_thm("SUP_ALLPOS_LEMMA2",
   REPEAT GEN_TAC THEN BETA_TAC THEN REFL_TAC);
 
 val SUP_ALLPOS_LEMMA3 = prove_thm("SUP_ALLPOS_LEMMA3",
-  (--`!P. (!x. P x ==> real_0 |<| x) /\
+  (--`!P. (!x. P x ==> real_0 < x) /\
           (?x. P x) /\
-          (?z. !x. P x ==> x |<| z)
+          (?z. !x. P x ==> x < z)
            ==> (?X. (\h. P(real_of_hreal h)) X) /\
                (?Y. !X. (\h. P(real_of_hreal h)) X ==> X hreal_lt Y)`--),
   GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC STRIP_ASSUME_TAC) THEN
@@ -621,7 +650,7 @@ val SUP_ALLPOS_LEMMA3 = prove_thm("SUP_ALLPOS_LEMMA3",
     DISCH_THEN SUBST_ALL_TAC THEN FIRST_ASSUM ACCEPT_TAC]);
 
 val SUP_ALLPOS_LEMMA4 = prove_thm("SUP_ALLPOS_LEMMA4",
-  (--`!y. ~(real_0 |<| y) ==> !x. y |<| (real_of_hreal x)`--),
+  (--`!y. ~(real_0 < y) ==> !x. y < (real_of_hreal x)`--),
   GEN_TAC THEN DISCH_THEN(curry op THEN GEN_TAC o MP_TAC) THEN
   REPEAT_TCL DISJ_CASES_THEN ASSUME_TAC
    (SPECL [(--`y:real`--), (--`real_0`--)] REAL_LT_TOTAL) THEN
@@ -630,14 +659,14 @@ val SUP_ALLPOS_LEMMA4 = prove_thm("SUP_ALLPOS_LEMMA4",
   DISCH_THEN(ACCEPT_TAC o MATCH_MP REAL_LT_TRANS));
 
 val REAL_SUP_ALLPOS = prove_thm("REAL_SUP_ALLPOS",
-  (--`!P. (!x. P x ==> real_0 |<| x) /\ (?x. P x) /\ (?z. !x. P x ==> x |<| z)
-    ==> (?s. !y. (?x. P x /\ y |<| x) = y |<| s)`--),
+  (--`!P. (!x. P x ==> real_0 < x) /\ (?x. P x) /\ (?z. !x. P x ==> x < z)
+    ==> (?s. !y. (?x. P x /\ y < x) = y < s)`--),
   let val lemma = TAUT_CONV (--`a /\ b ==> (a = b)`--) in
   GEN_TAC THEN DISCH_TAC THEN
   EXISTS_TAC (--`real_of_hreal(hreal_sup(\h. P(real_of_hreal h)))`--) THEN
   GEN_TAC THEN
   FIRST_ASSUM(fn th => REWRITE_TAC[MATCH_MP SUP_ALLPOS_LEMMA1(CONJUNCT1 th)]) THEN
-  ASM_CASES_TAC (--`real_0 |<| y`--) THENL
+  ASM_CASES_TAC (--`real_0 < y`--) THENL
    [FIRST_ASSUM(SUBST1_TAC o SYM o REWRITE_RULE[REAL_BIJ]) THEN
     REWRITE_TAC[GSYM REAL_ISO_EQ] THEN
     GEN_REWR_TAC (RATOR_CONV o ONCE_DEPTH_CONV)

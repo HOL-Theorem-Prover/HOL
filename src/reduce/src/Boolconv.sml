@@ -23,7 +23,9 @@ struct
 open HolKernel boolTheory Drule Rewrite Parse
 infix |->;
 
-val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+fun -- q x = Term q
+fun == q x = Type q
 
 val type_of = Term.type_of;
 val aconv = Term.aconv;

@@ -32,7 +32,7 @@ val (args,ONEWAY_SKOLEM_CONV) =
   let val args = ref []
       val P = (--`P:'a->bool`--)
       and z = (--`z:'a`--)
-      and aty = (==`:'a`==)
+      and aty = Type.alpha
   and pth1 = prove
    ((--`(?x:'a. P) = P`--),
     REWRITE_TAC[EXISTS_SIMP])
@@ -105,7 +105,7 @@ val (NNF_CONV,NNF_SKOLEM_CONV) =
           TAUT (--`(if p then q else q') = (p \/ q') /\ (~p \/ q)`--)
 	val pth_pcond2 =
           TAUT (--`(if p then q else q') = (p /\ q) \/ (~p /\ q')`--)
-	val pth_nnot = TAUT (--`~ (~p) = p`--)
+	val pth_nnot = TAUT (--`~~p:bool = p`--)
 	val pth_nand = TAUT (--`~(p /\ q) = ~p \/ ~q`--)
 	val pth_nor = TAUT (--`~(p \/ q) = ~p /\ ~q`--)
 	val pth_nimp = TAUT (--`~(p ==> q) = ~q /\ p`--)
