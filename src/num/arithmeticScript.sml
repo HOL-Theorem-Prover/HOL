@@ -129,6 +129,13 @@ val num_case_def = new_recursive_definition
     def = --`(num_case b f 0 = (b:'a)) /\
              (num_case b f (SUC n) = f n)`--};
 
+val FUNPOW = new_recursive_definition
+   {name = "FUNPOW",
+    fixity = Prefix,
+    rec_axiom = num_Axiom,
+    def = --`(FUNPOW f 0 x = x) /\
+             (FUNPOW f (SUC n) x = FUNPOW f n (f x))`--};
+
 
 (*---------------------------------------------------------------------------
                         THEOREMS
