@@ -1,0 +1,33 @@
+\DOC axioms
+
+\TYPE {axioms : (string -> (string # thm) list)}
+
+\SYNOPSIS
+Returns the axioms of a given theory segment of the current theory.
+
+\DESCRIBE
+A call {axioms "thy"} returns the axioms of the theory segment {thy} together
+with their names. The theory segment {thy} must be part of the current theory.
+The names are those given to the axioms by the user when they were originally
+added to the theory segment (by a call to {new_axiom}). The name of the current
+theory segment can be abbreviated by {"-"}.
+
+\FAILURE
+The call {axioms "thy"} will fail if the theory segment {thy} is not
+part of the current theory.
+
+\EXAMPLE
+{
+- axioms"bool";
+
+val it =
+  [("INFINITY_AX",|- ?f. ONE_ONE f /\ ~(ONTO f)),
+   ("SELECT_AX",|- !P x. P x ==> P ($@ P)),
+   ("ETA_AX",|- !t. (\x. t x) = t),
+   ("IMP_ANTISYM_AX",|- !t1 t2. (t1 ==> t2) ==> (t2 ==> t1) ==> (t1 = t2)),
+   ("BOOL_CASES_AX",|- !t. (t = T) \/ (t = F))] : (string * thm) list
+}
+\SEEALSO
+axiom, definitions, load_axiom, load_axioms, new_axiom, print_theory, theorems.
+
+\ENDDOC

@@ -1,0 +1,27 @@
+\DOC RIGHT_IMP_EXISTS_CONV
+
+\TYPE {RIGHT_IMP_EXISTS_CONV : conv}
+
+\SYNOPSIS
+Moves an existential quantification of the consequent outwards through an
+implication.
+
+\KEYWORDS
+conversion, quantifier, existential, implication.
+
+\DESCRIBE
+When applied to a term of the form {P ==> (?x.Q)}, the conversion
+{RIGHT_IMP_EXISTS_CONV} returns the theorem:
+{
+   |- P ==> (?x.Q) = (?x'. P ==> (Q[x'/x]))
+}
+\noindent where {x'} is a primed variant of {x} that does not appear free in
+the input term.
+
+\FAILURE
+Fails if applied to a term not of the form {P ==> (?x.Q)}.
+
+\SEEALSO
+EXISTS_IMP_CONV, LEFT_IMP_FORALL_CONV.
+
+\ENDDOC

@@ -1,0 +1,39 @@
+\DOC mk_type
+
+\TYPE {mk_type : {{Tyop :string, Args :hol_type list}} -> hol_type}
+
+\SYNOPSIS
+Constructs a type (other than a variable type).
+
+\DESCRIBE
+{mk_type{{Tyop = "op", Args = [ty1,...,tyn]}}} returns 
+
+    {==`:(ty1,...,tyn)op`==} 
+
+where {op} is the name of a known {n}-ary type constructor. 
+
+
+\FAILURE
+Fails with 
+
+    HOL_ERR{{origin_structure = "Dsyntax",origin_function="mk_type", message}}
+
+where {message} is "type op not defined", if {Tyop} is not the name of a known
+type, or "arities don't match" if the type is known but the length of the list
+of argument types is not equal to the arity of the type constructor.
+
+\EXAMPLE
+{
+- mk_type {{Tyop = "bool", Args = []}};
+(==`:bool`==) : hol_type
+
+- mk_type {{Tyop = "list", Args = [==`:bool`==]}};
+(==`:bool list`==) : hol_type
+
+- mk_type {{Tyop = "fun", Args = [==`:num`==,  ==`:bool`==]}};
+(==`:num -> bool`==) : hol_type
+}
+\SEEALSO
+dest_type, mk_vartype.
+
+\ENDDOC

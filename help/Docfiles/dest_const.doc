@@ -1,0 +1,24 @@
+\DOC dest_const
+
+\TYPE {dest_const : term -> {{Name :string, Ty :hol_type}}}
+
+\SYNOPSIS
+Breaks apart a constant into name and type.
+
+\DESCRIBE
+{dest_const} is a term destructor for constants:
+{
+   dest_const (--`const:ty`--)
+}
+\noindent returns {{Name = "const", Ty = (==`:ty`==)}}. 
+
+\FAILURE
+Fails with 
+
+    HOL_ERR{{origin_structure = "Term", origin_function = "dest_const", 
+            message = "not a const"}}
+
+\SEEALSO
+mk_const, is_const, dest_var, dest_comb, dest_abs.
+
+\ENDDOC

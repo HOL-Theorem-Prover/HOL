@@ -1,0 +1,22 @@
+\DOC mk_select
+
+\TYPE {mk_select : {{Bvar : term, Body : term}} -> term}
+
+\SYNOPSIS
+Constructs a choice-term.
+
+\DESCRIBE
+{mk_select{{Bvar = v, Body = t}}} returns {--`@var. t`--}. 
+
+\FAILURE
+Fails with 
+
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_select", 
+            message = ""}}
+
+if {Bvar} is not a variable or if {Body} is not of type {==`:bool`==}.
+
+\SEEALSO
+dest_select, is_select.
+
+\ENDDOC

@@ -1,0 +1,21 @@
+\DOC filter
+
+\TYPE {filter : ((* -> bool) -> * list -> * list)}
+
+\SYNOPSIS
+Filters a list to the sublist of elements satisfying a predicate.
+
+\KEYWORDS
+list.
+
+\DESCRIBE
+{filter p l} applies {p} to every element of {l}, returning a list of those
+that satisfy {p}, in the order they appeared in the original list.
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+mapfilter, partition, remove.
+
+\ENDDOC

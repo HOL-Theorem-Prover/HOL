@@ -1,0 +1,18 @@
+\DOC ancestry
+
+\TYPE {ancestry : (string -> string list)}
+
+\SYNOPSIS
+Gets a list of the (proper) ancestry of a theory.
+
+\DESCRIBE
+A call to {ancestry "th"} returns a list of all the proper ancestors (i.e.
+parents, parents of parents, etc.) of the theory {th}.
+
+\FAILURE
+Fails if "th" is not an ancestor of the current theory.
+
+\SEEALSO
+parents.
+
+\ENDDOC

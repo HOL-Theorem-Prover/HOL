@@ -1,0 +1,51 @@
+\DOC new_gen_definition
+
+\TYPE {new_gen_definition : (string -> (string # term) -> thm)}
+
+\SYNOPSIS
+Defines a new constant, infix constant, or binder constant.
+
+\DESCRIBE
+The function {new_gen_definition} provides a facility for definitional
+extensions to the current theory.  It takes two arguments.  The first is a flag
+which can have one of three values: {`constant`}, {`infix`}, or {`binder`},
+indicating the status of the object being defined.  The second argument is a
+pair consisting of the name under which the resulting definition will be saved
+in the current theory segment, and a term giving the desired definition.  The
+value returned by {new_gen_definition} is a theorem which states the definition
+requested by the user.
+
+Let {v_1},...,{v_n} be tuples of distinct variables, containing the variables
+{x_1,...,x_m}.  Evaluating {new_gen_definition flag (`name`, "c v_1 ... v_n =
+t")}, where {c} is not already a constant, declares the sequent {({{}},"\v_1
+... v_n. t")} to be a definition in the current theory, and declares {c} to be
+a new constant in the current theory with this definition as its specification.
+This constant specification is returned as a theorem, generally of the form {|-
+!x_1 ... x_m. c v_1 ... v_n = t} , and is saved in the current theory under
+(the name) {name}.  If {flag} is {`infix`} or {`binder`}, the constant is given
+infix or binder status accordingly.  Optionally, the definitional term argument
+may have any of its variables universally quantified.
+
+\FAILURE
+{new_gen_definition} fails if called when HOL is not in draft mode.  It also
+fails if there is already an axiom, definition or specification of the given
+name in the current theory segment; if {c} is already a constant in the
+current theory or is not an allowed name for a constant; if {t} contains free
+variables that are not in any of the variable structures {v_1}, ..., {v_n}
+(this is equivalent to requiring {\v_1 ... v_n. t} to be a closed term); or if
+any variable occurs more than once in {v_1, ..., v_n}.  Failure also occurs if
+{flag} is not one of {`constant`}, {`infix`} or {`binder`} or if the type of {c}
+is not suitable for a constant with the syntactic status specified by {flag}.
+Finally, failure occurs if there is a type variable in {v_1}, ..., {v_n} or {t}
+that does not occur in the type of {c}.
+
+\USES
+Used to define the special purpose functions {new_definition},
+{new_infix_definition}, and {new_binder_definition}, which are used for
+defining objects with a particular status.
+
+\SEEALSO
+DEF_EXISTS_RULE, new_binder_definition, new_definition, new_infix_definition,
+new_specification.
+
+\ENDDOC

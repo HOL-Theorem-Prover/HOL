@@ -1,0 +1,219 @@
+
+Hol98 is a powerful new release of the Hol system targetted at the
+needs of future research. It is designed with the aim of providing
+building blocks that can be quickly combined to give different
+application-specific proof tools, or which can be easily integrated
+into larger systems (the principal purpose of which may not be the
+production of proofs). Although Hol98 retains much of the
+functionality and character of previous Hol implementations, it offers
+major new features and architectural improvements:
+
+A. It runs on MoscowML. 
+
+This offers significant benefits over other Hol platforms:
+
+  * Hol executables built on MoscowML are small. When running proofs,
+    the Hol98 runtime size is typically less than 6 Meg, which is 5 to 6
+    times smaller than the equivalent in SML/NJ. We have examples where
+    the runtime size can be up to an order of magnitude smaller than the
+    same example being run on top of SML/NJ.
+
+  * Execution is quick. We haven't yet found an example where SML/NJ is
+    significantly faster than MoscowML, when performing Hol proofs. In 
+    some cases, the MoscowML version is almost twice as fast. 
+
+  * Hol98 delivers good performance on modest machines like the
+    Toshiba Libretto 50 mini notebook.
+
+  * Moscow ML runs on all platforms, including Windows. A compiler to
+    the Java Virtual Machine (JVM) is in progress.
+
+  * Compilation is very quick.
+
+  * Separate compilation is supported by MoscowML. Thus Hol libraries
+    now load quickly.
+
+  * MoscowML has a nice help facility.
+
+  * It is easy to make small batch-style executables with MoscowML. 
+
+  * MoscowML features a nice interface to dynamically linked libraries,
+    due to Ken Larsen.
+
+
+B. Oracles. 
+
+   Hol98 supports arbitrary external proof procedures (oracles). The
+   representation of theorems has been augmented by a new "tag"
+   field. Once an oracle has been used to make a theorem, its tag will
+   follow the theorem through the course of proof. Thus one can ascertain
+   the provenance of any given theorem, i.e., check whether it is a "pure
+   Hol" theorem, or has been arrived at by use of external
+   methods. Oracle tracking doesn't slow inference down significantly.
+
+
+C. Theories have been redesigned.
+
+  Theories, which were data files in Hol90, are now executable:
+  Hol98 theories are compiled into ML structures. Thus a person building
+  a theory "x" will automatically generate an ML signature "xTheory.sig"
+  and a structure "xTheory.sml" when the theory is exported to disk. The
+  theory is now just like any other ML structure: for example, accesses to
+  elements of the theory will be via the standard ML "dot" notation,
+  e.g.,
+
+      boolTheory.SELECT_AX
+
+  versus 
+
+      axiom "bool" "SELECT_AX".
+
+  The module representation of theories means that dependencies of
+  theories on other theories, and on code, can be tracked with tools that
+  maintain dependencies among ML modules. 
+
+
+D. The old Hol scheme for library organization has been eliminated.
+
+   A Hol library is now simply represented by a separately compiled
+   module, which can be loaded into the image by the standard MoscowML
+   mechanism for importing modules.
+
+
+E. Powerful signature operations.
+
+   The current theory under development now acts much like a scratch pad: 
+   declarations can be freely added, overwritten, or even deleted,
+   and the current theory can be reloaded at will. The new dependency
+   tracking features ensure that no inconsistency results. 
+
+   To be more specific, after being overwritten, a constant (and any
+   term containing it) still exists but it is not "current". To maintain
+   consistency, an old constant is not equal to the current constant
+   with the same name. The prettyprinter detects non-current constants
+   and prints them surrounded by funny syntax. Non-current types,
+   constants, definitions, axioms, and theorems are not exportable to disk.
+
+
+F. Dependency maintenance for large Hol developments.
+
+   This release features the debut of "Holmake", which is a tool
+   (written by Ken Larsen) that automatically maintains dependencies
+   among the ML files, theory scripts, and theories that make up a typical 
+   Hol formalization effort.
+
+
+G. High-level interaction.
+
+   There's a prototype library intended to raise the usual level
+   of interaction with Hol. In it, a central database of facts is used
+   to ease the strain of defining datatypes and recursive functions,
+   initiating proofs by induction and case analysis, and composing
+   powerful automated reasoners.
+
+
+H. Preliminary user's manual. 
+
+   A first draft of a user's guide to the capabilities of the
+   system has been written.
+
+
+I. Nice help system.
+
+   The Hol help system has been integrated with the MoscowML help system
+   so that one can get help on:
+
+      * MoscowML libraries
+
+      * Hol online help (from hol88/hol90)
+
+      * The signature for all available ML structures in the system
+
+      * By extension, the up-to-date listing of the signatures of all
+        available Hol theories in the system
+
+      * By extension, for each Hol theory in the system, prettyprinted
+        listing of the ancestors, axioms, definitions, and  theorems of
+        the theory.
+
+
+Supported theories and libraries.
+----------------------------------
+
+The theories listed below come pre-built in the system:
+
+   minTheory          * the origin theory
+   boolTheory         * logical operators and basic axioms
+   pairTheory         * basic theory of pairs
+   pair_thmsTheory    * extended theory of pairs
+   numTheory          * Peano's axioms derived from the axiom of infinity
+   prim_recTheory,    * the primitive recursion theorem
+   arithmeticTheory   * Peano arithmetic development
+   intTheory          * integers, by John Harrison
+   TCTheory           * transitive closure of a relation
+   primWFTheory       * wellfounded relations, induction, and recursion
+   WFTheory           * instances of wellfoundedness at various types
+   setTheory          * sets as a separate type (includes finite sets)
+   pred_setTheory     * sets as predicates (includes finite sets)
+   listTheory         * lists
+   ListTheory         * extended theory of lists
+   optionTheory       * the "option" type
+   ltreeTheory        * polymorphic finitely branching trees
+   combinTheory       * combinators
+   sumTheory          * disjoint sums
+   asciiTheory        * ASCII character set
+   stringTheory       * strings
+   wordTheory         * theory of bitstrings
+   multisetTheory     * theory of multisets
+   HOLTheory          * equivalent to HOL theory from hol88/90
+   res_quanTheory     * restricted quantifier support
+   restr_binderTheory * definitions of binder restrictions
+
+
+The following libraries are also on offer:
+
+
+   decisionLib        * cooperating decision procedures
+   mesonLib           * model- elimination first order reasoner
+   simpLib            * Isabelle-style simplifier
+   IndDefLib          * generalized inductive defn. package
+   tflLib             * wellfounded recursive definitions
+   mutrecLib,         * mutually recursive datatype definitions
+   nested_recLib      * nested  recursive datatype definitions
+   goalstackLib       * simple manager for building tactic proofs
+   basicHol90Lib      * derived rules, tactics, conversions, rewriting, etc
+   ind_defLib         * inductive defn. package
+   optionLib          * option type
+   pairLib            * extended support for pairs
+   setLib             * sets as a separate type
+   pred_setLib        * sets as predicates
+   listLib            * extensive development of lists
+   stringLib          * characters and strings
+   wordLib            * theories and proof support for bitstrings
+   unwindLib          * unwinding existential quantifiers
+   res_quanLib        * bounded quantification
+   numLib             * support library for numbers
+   hol88Lib           * support for hol88 compatibility
+   liteLib            * support for Hol Lite portability
+   ho_matchLib        * higher-order versions of various proof tools
+   refuteLib          * support for refutation procedures
+   reduceLib          * basic reasoners for nums and bools
+   tautLib            * tautology prover (decisionLib is preferred
+   arithLib           * linear arith. decision procedures 
+   BoyerMooreLib      * automatic proof procedure ala Nqthm
+   phbLib             * suite of automatic tools
+
+
+Future Prospects.
+------------------
+
+We hope to promote Hol as `middle ware' for linking diverse theorem
+manipulation components. Higher order logic will act as a `glue logic',
+and Hol98 as a `glue system' for easily combining components in
+semantically coherent ways. 
+
+We also hope to see components of Hol itself become used as a batch
+tools, or even be plucked out of the system and used as components of
+other pieces of software. There are already some products that use hol90
+in this way, and we think that Hol98 is even better suited for such
+applications.

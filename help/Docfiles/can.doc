@@ -1,0 +1,26 @@
+\DOC can
+
+\TYPE {can : ((* -> **) -> * -> bool)}
+
+\SYNOPSIS
+Tests for failure.
+
+\DESCRIBE
+{can f x} evaluates to {true} if the application of {f} to {x} succeeds.
+It evaluates to {false} if the application fails.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{
+#hd [];;
+evaluation failed     hd
+
+#can hd [];;
+false : bool
+}
+\SEEALSO
+assert.
+
+\ENDDOC

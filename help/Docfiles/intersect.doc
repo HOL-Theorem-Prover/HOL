@@ -1,0 +1,29 @@
+\DOC intersect
+
+\TYPE {intersect : (* list -> * list -> * list)}
+
+\SYNOPSIS
+Computes the intersection of two `sets'.
+
+\KEYWORDS
+list, set.
+
+\DESCRIBE
+{intersect l1 l2} returns a list consisting of those elements of {l1} that
+also appear in {l2}.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{
+#intersect [1;2;3] [3;5;4;1];;
+[1; 3] : int list
+
+#intersect [1;2;4;1] [1;2;3;2];;
+[1; 2; 1] : int list
+}
+\SEEALSO
+setify, set_equal, union, subtract.
+
+\ENDDOC

@@ -1,0 +1,30 @@
+\DOC ML_eval
+
+\TYPE {ML_eval : (string -> void)}
+
+\SYNOPSIS
+Passes a string to the ML interpreter.
+
+\KEYWORDS
+interpret.
+
+\DESCRIBE
+When applied to a string, {ML_eval} will pass it to the ML interpreter, which,
+after evaluating other pending phrases, will interpret it as if it had been
+typed at toplevel.
+
+\FAILURE
+The call itself never fails, but of course the subsequent interpretation may do.
+
+\EXAMPLE
+{
+#ML_eval(`let greeting = \`Hi there!\` in tty_write greeting;;
+#`);;
+() : void
+
+Hi there!() : void
+}
+\SEEALSO
+inject_input, let_after, let_before.
+
+\ENDDOC

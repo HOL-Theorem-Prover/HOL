@@ -1,0 +1,25 @@
+\DOC CONJ_PAIR
+
+\TYPE {CONJ_PAIR : (thm -> (thm # thm))}
+
+\SYNOPSIS
+Extracts both conjuncts of a conjunction.
+
+\KEYWORDS
+rule, conjunction.
+
+\DESCRIBE
+{
+       A |- t1 /\ t2
+   ----------------------  CONJ_PAIR
+    A |- t1      A |- t2
+}
+\noindent The two resultant theorems are returned as a pair.
+
+\FAILURE
+Fails if the input theorem is not a conjunction.
+
+\SEEALSO
+BODY_CONJUNCTS, CONJUNCT1, CONJUNCT2, CONJ, LIST_CONJ, CONJ_LIST, CONJUNCTS.
+
+\ENDDOC

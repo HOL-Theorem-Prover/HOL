@@ -1,0 +1,22 @@
+\DOC mk_var
+
+\TYPE {mk_var : {{Name:string, Ty: hol_type}} -> term}
+
+\SYNOPSIS
+Constructs a variable of given name and type.
+
+\DESCRIBE 
+{mk_var{{Name = "var", Ty = ty}}} returns the variable {--`var:ty`--}. 
+
+\FAILURE
+Never fails.
+
+\COMMENTS
+{mk_var} can be used to construct variables with names which are not
+acceptable to the term parser. In particular, a variable with the name
+of a known constant can be constructed using {mk_var}. 
+
+\SEEALSO
+dest_var, is_var, mk_const, mk_comb, mk_abs.
+
+\ENDDOC

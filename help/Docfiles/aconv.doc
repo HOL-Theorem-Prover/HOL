@@ -1,0 +1,32 @@
+\DOC aconv
+
+\TYPE {aconv : (term -> term -> bool)}
+
+\SYNOPSIS
+Tests for alpha-convertibility of terms.
+
+\KEYWORDS
+alpha.
+
+\DESCRIBE
+When applied to two terms, {aconv} returns {true} if they are
+alpha-convertible, and {false} otherwise.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+A simple case of alpha-convertibility is the renaming of a single quantified
+variable:
+{
+   - let val M = Parse.term_parser `?x. x = T`
+         val N = Parse.term_parser `?y. y = T`
+     in
+     aconv M N
+     end;
+   true : bool
+}
+\SEEALSO
+ALPHA, ALPHA_CONV.
+
+\ENDDOC

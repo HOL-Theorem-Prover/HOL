@@ -1,0 +1,26 @@
+\DOC AP_THM_TAC
+
+\TYPE {AP_THM_TAC : tactic}
+
+\SYNOPSIS
+Strips identical operands from functions on both sides of an equation.
+
+\KEYWORDS
+tactic.
+
+\DESCRIBE
+When applied to a goal of the form {A ?- f x = g x}, the tactic {AP_THM_TAC}
+strips away the operands of the function application:
+{
+    A ?- f x = g x
+   ================  AP_THM_TAC
+      A ?- f = g
+}
+\FAILURE
+Fails unless the goal has the above form, namely an equation both sides of
+which consist of function applications to the same arguments.
+
+\SEEALSO
+AP_TERM, AP_TERM_TAC, AP_THM, EXT.
+
+\ENDDOC

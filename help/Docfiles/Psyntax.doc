@@ -1,0 +1,98 @@
+\DOC Psyntax
+
+\TYPE {Psyntax : Psyntax_sig}
+
+\SYNOPSIS
+A structure that provides a tuple-style environment for term manipulation.
+
+\DESCRIBE
+
+A lot of the familiar term construction and decomposition functions from
+hol88 have different types in hol90. For those longing for the good old
+days, Psyntax provides hol88-style types. The functions provided by
+Psyntax return exactly the same results as their hol90 counterparts.
+
+Each function in the Psyntax structure has a corresponding function
+in the Rsyntax structure, and {\em vice versa}. One can flip-flop
+between the two structures by opening one and then the other. One can
+also use long identifiers in order to use both syntaxes at once.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+
+The following shows how to open the Psyntax structure and the
+functions that subsequently become available in the top level
+environment. Documentation for each of these functions is available
+online.
+
+{
+    - open Psyntax;
+    open Psyntax
+      val mk_var = fn : string * hol_type -> term
+      val mk_const = fn : string * hol_type -> term
+      val mk_comb = fn : term * term -> term
+      val mk_abs = fn : term * term -> term
+      val mk_primed_var = fn : string * hol_type -> term
+      val mk_eq = fn : term * term -> term
+      val mk_imp = fn : term * term -> term
+      val mk_select = fn : term * term -> term
+      val mk_forall = fn : term * term -> term
+      val mk_exists = fn : term * term -> term
+      val mk_conj = fn : term * term -> term
+      val mk_disj = fn : term * term -> term
+      val mk_cond = fn : term * term * term -> term
+      val mk_pair = fn : term * term -> term
+      val mk_let = fn : term * term -> term
+      val mk_cons = fn : term * term -> term
+      val mk_list = fn : term list * hol_type -> term
+      val mk_pabs = fn : term * term -> term
+      val dest_var = fn : term -> string * hol_type
+      val dest_const = fn : term -> string * hol_type
+      val dest_comb = fn : term -> term * term
+      val dest_abs = fn : term -> term * term
+      val dest_eq = fn : term -> term * term
+      val dest_imp = fn : term -> term * term
+      val dest_select = fn : term -> term * term
+      val dest_forall = fn : term -> term * term
+      val dest_exists = fn : term -> term * term
+      val dest_conj = fn : term -> term * term
+      val dest_disj = fn : term -> term * term
+      val dest_cond = fn : term -> term * term * term
+      val dest_pair = fn : term -> term * term
+      val dest_let = fn : term -> term * term
+      val dest_cons = fn : term -> term * term
+      val dest_list = fn : term -> term list * term
+      val dest_pabs = fn : term -> term * term
+      val mk_type = fn : string * hol_type list -> hol_type
+      val dest_type = fn : hol_type -> string * hol_type list
+      val subst = fn : (term * term) list -> term -> term
+      val subst_occs = fn : int list list -> (term * term) list -> term -> term
+      val inst = fn : term list -> (hol_type * hol_type) list -> term -> term
+      val INST = fn : (term * term) list -> thm -> thm
+      val match_type = fn : hol_type -> hol_type -> (hol_type * hol_type) list
+      val match_term = fn
+        : term -> term -> (term * term) list * (hol_type * hol_type) list
+      val SUBST = fn : (thm * term) list -> term -> thm -> thm
+      val SUBST_CONV = fn : (thm * term) list -> term -> term -> thm
+      val INST_TYPE = fn : (hol_type * hol_type) list -> thm -> thm
+      val INST_TY_TERM = fn
+        : (term * term) list * (hol_type * hol_type) list -> thm -> thm
+      val new_type = fn : int -> string -> unit
+      val new_constant = fn : string * hol_type -> unit
+      val new_infix = fn : string * hol_type * int -> unit
+      val new_binder = fn : string * hol_type -> unit
+      val new_specification = fn
+        : string -> (string * string * int) list -> thm -> thm
+      val new_type_definition = fn : string * term * thm -> thm
+      val new_recursive_definition = fn
+        : bool * int -> thm -> string -> term -> thm
+      val define_new_type_bijections = fn
+        : string -> string -> string -> thm -> thm
+
+}
+\SEEALSO
+Rsyntax.
+
+\ENDDOC

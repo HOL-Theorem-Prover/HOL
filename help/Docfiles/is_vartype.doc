@@ -1,0 +1,29 @@
+\DOC is_vartype
+
+\TYPE {is_vartype : (type -> bool)}
+
+\SYNOPSIS
+Tests a type to see if it is a type variable.
+
+\DESCRIBE
+{is_vartype(":*...")} returns {true}. For types which are not type variables
+it returns {false}.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{
+#is_vartype ":*test";;
+true : bool
+
+#is_vartype ":bool";;
+false : bool
+
+#is_vartype ":* -> bool";;
+false : bool
+}
+\SEEALSO
+mk_vartype, dest_vartype.
+
+\ENDDOC

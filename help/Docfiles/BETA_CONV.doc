@@ -1,0 +1,49 @@
+\DOC BETA_CONV
+
+\TYPE {BETA_CONV : conv}
+
+\SYNOPSIS
+Performs a simple beta-conversion.
+
+\KEYWORDS
+conversion.
+
+\DESCRIBE
+The conversion {BETA_CONV} maps a beta-redex {"(\x.u)v"} to the theorem
+{
+   |- (\x.u)v = u[v/x]
+}
+\noindent where {u[v/x]} denotes the result of substituting {v} for all free
+occurrences of {x} in {u}, after renaming sufficient bound variables to avoid
+variable capture. This conversion is one of the primitive inference rules of
+the HOL system.
+
+\FAILURE
+{BETA_CONV tm} fails if {tm} is not a beta-redex.
+
+\EXAMPLE
+{
+- let val tm = Parse.term_parser `(\x.x+1)y`
+  in
+  BETA_CONV tm
+  end;
+ val it = |- (\x. x + 1)y = y + 1 :thm
+
+- let val tm = Parse.term_parser `(\x y. x+y)y`
+  in
+  BETA_CONV tm
+  end;
+val it = |- (\x y. x + y)y = (\y'. y + y') : thm
+}
+\COMMENTS
+This primitive inference rule is actually not very primitive, since it does
+automatic bound variable renaming. It would be logically cleaner for this
+renaming to be derived rather than built-in, but since beta-reduction is so
+common this would slow the system down a lot.  It is hoped to document the
+exact renaming algorithm used by {BETA_CONV} in the future.
+
+\SEEALSO
+BETA_RULE, BETA_TAC, LIST_BETA_CONV, PAIRED_BETA_CONV, RIGHT_BETA,
+RIGHT_LIST_BETA.
+
+\ENDDOC

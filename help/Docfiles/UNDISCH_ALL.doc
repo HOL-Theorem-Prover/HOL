@@ -1,0 +1,34 @@
+\DOC UNDISCH_ALL
+
+\TYPE {UNDISCH_ALL : (thm -> thm)}
+
+\SYNOPSIS
+Iteratively undischarges antecedents in a chain of implications.
+
+\KEYWORDS
+rule, undischarge, antecedent.
+
+\DESCRIBE
+{
+    A |- t1 ==> ... ==> tn ==> t
+   ------------------------------  UNDISCH_ALL
+        A, t1, ..., tn |- t
+}
+\noindent Note that {UNDISCH_ALL} treats {"~u"} as {"u ==> F"}.
+
+\FAILURE
+Unlike {UNDISCH}, {UNDISCH_ALL} will,
+when called on something other than an implication or negation,
+return its argument unchanged rather than failing.
+
+\COMMENTS
+Identical terms which are repeated in {A, "t1", ..., "tn"} will
+not be duplicated in the hypotheses of the resulting theorem.
+However, if two or more alpha-equivalent terms appear in {A, "t1", ..., "tn"},
+then each distinct term will appear in the result.
+
+\SEEALSO
+DISCH, DISCH_ALL, DISCH_TAC, DISCH_THEN, NEG_DISCH, FILTER_DISCH_TAC,
+FILTER_DISCH_THEN, STRIP_TAC, UNDISCH, UNDISCH_TAC.
+
+\ENDDOC

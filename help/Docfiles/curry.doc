@@ -1,0 +1,27 @@
+\DOC curry
+
+\TYPE {curry : (((* # **) -> ***) -> * -> ** -> ***)}
+
+\SYNOPSIS
+Converts a function on a pair to a corresponding curried function.
+
+\DESCRIBE
+The application {curry f} returns {\x y. f(x,y)}, so that
+{
+   curry f x y = f(x,y)
+}
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{
+#let increment = curry $+ 1;;
+increment = - : (int -> int)
+
+#increment 6;;
+7 : int
+}
+\SEEALSO
+uncurry.
+
+\ENDDOC

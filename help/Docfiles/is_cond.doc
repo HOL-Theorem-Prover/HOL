@@ -1,0 +1,18 @@
+\DOC is_cond
+
+\TYPE {is_cond : (term -> bool)}
+
+\SYNOPSIS
+Tests a term to see if it is a conditional.
+
+\DESCRIBE
+{is_cond "t => t1 | t2"} returns {true}. If the term is not a conditional the
+result is {false}.
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+mk_cond, dest_cond.
+
+\ENDDOC

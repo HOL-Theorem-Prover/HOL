@@ -1,0 +1,21 @@
+\DOC NO_TAC
+
+\TYPE {NO_TAC : tactic}
+
+\SYNOPSIS
+Tactic which always fails.
+
+\KEYWORDS
+tactic.
+
+\DESCRIBE
+Whatever goal it is applied to, {NO_TAC} always fails
+with string {`NO_TAC`}.
+
+\FAILURE
+Always fails.
+
+\SEEALSO
+ALL_TAC, ALL_THEN, FAIL_TAC, NO_THEN.
+
+\ENDDOC

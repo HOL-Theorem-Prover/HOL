@@ -1,0 +1,25 @@
+\DOC AND_EXISTS_CONV
+
+\TYPE {AND_EXISTS_CONV : conv}
+
+\SYNOPSIS
+Moves an existential quantification outwards through a conjunction.
+
+\KEYWORDS
+conversion, quantifier.
+
+\DESCRIBE
+When applied to a term of the form {(?x.P) /\ (?x.Q)}, where {x} is free
+in neither {P} nor {Q}, {AND_EXISTS_CONV} returns the theorem:
+{
+   |- (?x. P) /\ (?x. Q) = (?x. P /\ Q)
+}
+\FAILURE
+{AND_EXISTS_CONV} fails if it is applied to a term not of the form
+{(?x.P) /\ (?x.Q)}, or if it is applied to a term {(?x.P) /\ (?x.Q)}
+in which the variable {x} is free in either {P} or {Q}.
+
+\SEEALSO
+EXISTS_AND_CONV, LEFT_AND_EXISTS_CONV, RIGHT_AND_EXISTS_CONV.
+
+\ENDDOC

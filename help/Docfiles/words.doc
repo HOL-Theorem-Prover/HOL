@@ -1,0 +1,34 @@
+\DOC words
+
+\TYPE {words : (string -> string list)}
+
+\SYNOPSIS
+Splits a string into a list of words.
+
+\KEYWORDS
+string.
+
+\DESCRIBE
+{words s} splits the string {s} into a list of substrings. Splitting occurs
+at each sequence of blanks and carriage returns (white space). This white
+space does not appear in the list of substrings. Leading and trailing white
+space in the input string is also thrown away.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{
+#words `  the cat  sat on   the mat `;;
+[`the`; `cat`; `sat`; `on`; `the`; `mat`] : string list
+}
+\USES
+Useful when wanting to map a function over a list of constant strings.
+Instead of using {[`string1`;...;`stringn`]} one can use:
+{
+   (words `string1 ... stringn`)
+}
+\SEEALSO
+words2, word_separators, maptok, explode.
+
+\ENDDOC

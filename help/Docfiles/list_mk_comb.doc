@@ -1,0 +1,30 @@
+\DOC list_mk_comb
+
+\TYPE {list_mk_comb : ((term # term list) -> term)}
+
+\SYNOPSIS
+Iteratively constructs combinations (function applications).
+
+\DESCRIBE
+{list_mk_comb("t",["t1";...;"tn"])} returns {"t t1 ... tn"}.
+
+\FAILURE
+Fails with {list_mk_comb} if the types of {t1},...,{tn} are not equal to the
+argument types of {t}. It is not necessary for all the arguments of {t} to be
+given. In particular the list of terms {t1},...,{tn} may be empty.
+
+\EXAMPLE
+{
+#list_mk_comb("1",[]);;
+"1" : term
+
+#list_mk_comb("$/\",["T"]);;
+"$/\ T" : term
+
+#list_mk_comb("$/\",["1"]);;
+evaluation failed     list_mk_comb
+}
+\SEEALSO
+strip_comb, mk_comb.
+
+\ENDDOC

@@ -1,0 +1,21 @@
+\DOC strip_abs
+
+\TYPE {strip_abs : (term -> goal)}
+
+\SYNOPSIS
+Iteratively breaks apart abstractions.
+
+\DESCRIBE
+{strip_abs "\x1 ... xn. t"} returns {(["x1";...;"xn"],"t")}. Note that
+{
+   strip_abs(list_mk_abs(["x1";...;"xn"],"t"))
+}
+\noindent will not return {(["x1";...;"xn"],"t")} if {t} is an abstraction.
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+list_mk_abs, dest_abs.
+
+\ENDDOC

@@ -1,0 +1,30 @@
+\DOC new_constant
+
+\TYPE {new_constant : {{Name :string, Ty :hol_type}} -> unit}
+
+\SYNOPSIS
+Declares a new constant in the current theory.
+
+\DESCRIBE
+A call {new_constant{{Name="c", Ty = ty}}} makes {c} a constant in the current
+theory. Note that it does not specify its value. The constant may have a 
+polymorphic type, which can be used in arbitrary instantiations.
+
+\FAILURE
+Fails if HOL is not in draft mode, or if the name is not a valid constant
+name, or there is already a constant of that name in the current theory.
+
+\EXAMPLE
+{
+   - new_theory "zonk";
+   () : unit
+
+   - new_constant{{Name = "graham's_number", Ty = ==`:num`==}};
+   () : unit
+}
+\SEEALSO
+constants, infixes, binders, is_constant, is_infix, is_binder, 
+new_infix, new_binder, new_definition, new_infix_definition, 
+new_binder_definition.
+
+\ENDDOC

@@ -1,0 +1,23 @@
+\DOC tryfind
+
+\TYPE {tryfind : ((* -> **) -> * list -> **)}
+
+\SYNOPSIS
+Returns the result of the first successful application of a function to the
+elements of a list.
+
+\KEYWORDS
+list.
+
+\DESCRIBE
+{tryfind f [x1;...;xn]} returns {(f xi)} for the first {xi} in the list for
+which application of {f} succeeds.
+
+\FAILURE
+Fails with {tryfind} if the application of the function fails for all elements
+in the list. This will always be the case if the list is empty.
+
+\SEEALSO
+find, mem, exists, forall, assoc, rev_assoc.
+
+\ENDDOC

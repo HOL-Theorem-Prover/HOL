@@ -1,0 +1,97 @@
+=====================================================================
+                            ** BuDDy **
+                      BINARY DECISION DIAGRAMS
+                               with
+                  FINITE DOMAIN VARIABLE INTERFACE
+                      Library Package ver. 1.6
+                        By Jorn Lind-Nielsen
+
+            Copyright (C) 1996-1998 by Jorn Lind-Nielsen
+
+    Permission is hereby granted to reproduce and distribute this
+    package by any means and for any fee, whether alone or as part
+    of a larger distribution, in source or in binary form, provided
+    this notice is included with any such distribution and is visible 
+    for the end user, and is not removed from any of its header files. 
+
+      *** I AM NOT RESPONSIBLE FOR ANY KIND OF DAMAGE TO YOUR  ***
+      *** FILES, DATA, HARDWARE, LOSS OF MONEY, SYSTEM CRASHES *** 
+      *** OR ANY OTHER THING YOU MIGHT COME UP WITH.           ***
+      *** - USE THIS PROGRAM OF YOUR OWN FREE WILL !!!         ***
+
+      Happy Hacking
+                   Jorn Lind-Nielsen
+
+=====================================================================
+
+
+---------------------------------------------------------------------
+--- REQUIREMENTS ----------------------------------------------------
+---------------------------------------------------------------------
+
+* A (not to old) C++ compiler
+* A machine that supports 32 bit integers
+
+
+---------------------------------------------------------------------
+--- INSTALLING ------------------------------------------------------
+---------------------------------------------------------------------
+
+1) Edit the makefile to specify your compiler options and
+where the package is to be installed.
+
+2) type "make" to make the binary.
+
+3) type "make install" to copy the BDD files to their appropriate
+directories.
+
+
+---------------------------------------------------------------------
+--- USING -----------------------------------------------------------
+---------------------------------------------------------------------
+
+Assuming that the files "bdd.h" and "libbdd.a" are in directories
+"/usr/local/include" and "/usr/local/lib" then the compile command
+could be:
+
+ g++ -I/usr/local/include myfile.cc -o myfile -L/usr/local/lib -lbdd
+
+Your machine may be setup to use the above directories auto-
+matically, so you might be able to do:
+
+ g++ myfile.cc -o myfile -lbdd
+
+
+---------------------------------------------------------------------
+--- FILES -----------------------------------------------------------
+---------------------------------------------------------------------
+
+src/*:          All files needed for the BuDDy package.
+examples/       Example files
+  adder/*:      Construction of a N-bit adder. Uses reordering.
+  milner/*:     A calculation of the reachable statespace for Milner's
+                scheduler. C++.
+  cmilner/*:    As above but purely in ANSI-C.
+  queen/*:      Solution to the N-queen chess problem.
+doc/*:          Documentation.
+  bdd.ps:       Package documentation.
+  bddnotes.ps:  BDD introduction notes.
+
+
+---------------------------------------------------------------------
+--- FEEDBACK --------------------------------------------------------
+---------------------------------------------------------------------
+
+Do not hesitate to send any questions or bug reports to:
+
+  Jorn Lind-Nielsen - jl@it.dtu.dk
+
+New updates and other info can be found at:
+
+  http://britta.it.dtu.dk/~jl/buddy
+
+
+   Hope you find some use for this software
+
+      Jorn Lind-Nielsen
+

@@ -1,0 +1,3541 @@
+%\documentclass[12pt,fleqn,layout]{report}
+
+\documentstyle[12pt,fleqn,/home/kxs/hol/9.beta.1/Manual/LaTeX/alltt,
+               /home/kxs/hol/9.beta.1/Manual/LaTeX/layout,amssymb]{report}
+\input{/home/kxs/hol/9.beta.1/Manual/LaTeX/commands}
+
+\input psfig.tex
+
+%\newcommand{\eg}	{\mbox{\it e.g.}}
+%\newcommand{\ie}	{\mbox{\it i.e.}}
+%\newcommand{\etc}	{\mbox{\it etc}}
+%\newcommand{\HOL}	{\mbox{\sc hol}}
+
+% \newcommand{\comment}[1]{\marginpar{\tiny \raggedright #1}}
+\newcommand{\comment}[1]{}
+
+\newcommand{\inbox}[1]	{\begin{center}
+			 \framebox{\parbox{0.984\textwidth}{#1}}
+			 \end{center}}
+% note on the following newcommands, the mbox command permits their use
+% both inside and outside of math mode!
+
+\newcommand{\ident}      {\mbox{\it ident}}
+\newcommand{\tactic}      {\mbox{\it tactic}}
+\newcommand{\dtype}      {\mbox{\it dtype}}
+\newcommand{\clause}      {\mbox{\it clause}}
+ \newcommand{\primtactic}      {\mbox{\it primtactic}}
+ \newcommand{\numeral}    {\mbox{\it numeral}}
+ \newcommand{\charseq}    {\mbox{\it charseq}}
+ \newcommand{\vstr}       {\mbox{\it vstr}}
+ \newcommand{\type}       {\mbox{\it hol\_type}}
+ \renewcommand{\term}       {\mbox{\it term}}
+ \newcommand{\bs}         {\mbox{$\backslash$}}
+ \newcommand{\SUC}       {\mbox{\tt SUC}}
+ \newcommand{\CONS}       {\mbox{\tt CONS}}
+ \newcommand{\INSERT}    {\mbox{\tt INSERT}}
+ \newcommand{\NOT}       {\mbox{\tt ~}}
+ \newcommand{\AND}       {\mbox{\tt /\bs}}
+ \newcommand{\OR}       {\mbox{\tt \bs/}}
+ \newcommand{\IMP}       {\mbox{\tt ==>}}
+ %\newcommand{\T}       {\mbox{\tt T}}
+ %\newcommand{\F}       {\mbox{\tt F}}
+ \newcommand{\LET}       {\mbox{\tt let}}
+ \newcommand{\IN}       {\mbox{\tt in}}
+ \newcommand{\und}       {\mbox{\tt and}}
+ \newcommand{\ALL}       {\mbox{\tt !}}
+ \newcommand{\EXISTS}       {\mbox{\tt ?}}
+ \newcommand{\EXISTSONE}       {\mbox{\tt ?!}}
+ \newcommand{\CHOOSE}       {\mbox{\tt @}}
+
+ %\newcommand{\EQALPHA}	{\mbox{$\equiv_\alpha$}}
+
+ \begin{document}
+
+ \title {HOL98 Draft User's Manual \\ Athabasca Release \\ Version 2}
+ \author{Konrad Slind \\ {\tt kxs@cl.cam.ac.uk} \\
+	 Cambridge University Computer Laboratory}
+ \maketitle
+
+
+ \section*{Introduction}
+
+ {\bf Hol98} is the latest in a line of verification systems originating
+ from the original HOL system \cite{hol88:book}, which was itself
+ derived from Edinburgh LCF \cite{lcf:book}. However, Hol98 is a
+ definite break with the past: it has been re-designed to address the
+ requirements of industrial-scale formal proof in the late 1990s.
+
+ Hol98 provides an extensible set of facilities both for doing
+ verification and for writing verification tools. The system contains the
+ work of many people, accumulated over decades. (To those who know the
+ authorship of the tools, there is a slight flavour of being in a
+ museum.) As a result, Hol98 offers many ways to achieve a given task;
+ this is understandable---but tremendously frustrating for beginners.
+ The point of this document therefore, is to give a brief survey of the
+ important facilities available in Hol98; we will give only the `big
+ picture', along with some hints for deeper exploration. The reader who
+ completes the document should have an idea of how to formalize and prove
+ simple things in Hol98, as well as an idea of how to go about extending
+ the system to his or her own purposes.
+
+  We proceed as follows. In Chapter One, we give a quick lesson on how
+ to start Hol98.  In Chapter Two, the syntax of HOL (higher-order logic,
+ the logic that Hol98 implements) is described. The basic methods of
+ proof that the system provides are surveyed in Chapter Three. In
+ Chapter Four, brief summaries of the available theories and libraries
+ are given. In Chapter Five, we describe the means by which users can
+ build and maintain their own logical objects. In Chapter Six we discuss
+ a package for high-level interactive proof. Some medium-length
+ examples are the subject of Chapter Seven (at present we have only a
+ detailed proof of Euclid's theorem to offer).  Chapter Eight (currently
+ absent) contains listings of the most important parts of the
+ programmer's interface.
+
+% Those readers interested in a formal description of the HOL
+% logic---which was written by Mike Gordon and Andrew Pitts---are invited
+% to read Appendices A and B, which have been taken from
+% \cite{hol88:book}.
+
+SML'97 \cite{SML97} plays the role of a {\it programming metalanguage\/}
+ in which the HOL logic is defined. Currently, the implementation is in
+ MoscowML,\footnote{\tt
+ http://www.dina.kvl.dk/\~{}sestoft/mosml.html} 
+ an implementation of a subset of SML'97.  Thus Hol98 comprises a number
+ of ML\footnote{We will use ML and SML as synonyms for SML'97.}
+ modules. There are two main ways to utilize these modules: they can be
+ used during an interactive proof effort; or they can be used as
+ libraries in the writing of custom proof tools.  Both usages require
+ some knowledge of ML, the former much less than the latter. We shall
+ assume that the reader knows some Standard ML. Several good texts on
+ SML already exist; the ones by Paulson \cite{lcp:ml} and Ullman
+ \cite{ullman:mlbook} have been updated for SML'97.
+
+ Finally, you will find that this user's manual is filled with
+ gaps. There are many positive ways to deal with these, among them being
+ (1) asking a guru, either locally or on the \verb+info-hol+ mailing
+ list, (2) attempting to extrapolate the relevant information from
+ \cite{hol88:book} (which should in any case be used as a background
+ reference to the often facile treatments given here), or (3) diving
+ into the sources, which is the path to guruhood.
+
+\subsection*{Acknowledgements}
+
+As mentioned, Hol98 can be regarded as a conglomeration and synthesis of
+the work of many people over a long period of time. We shall refrain
+from an exhaustive listing of authorship (in this draft) since we would
+not like to omit anyone! Therefore, we limit ourselves to the much
+smaller set of people who directly contributed to this release.  Mike
+Gordon had the initial idea for tagged inference and pointed out that
+tags should be abstract. Ken Larsen got us started on using MoscowML,
+and made the initial port of many of the core libraries. He also
+implemented \verb+Holmake+. Mark Staples developed the PVS
+\verb+autopilot+ example. Mike Norrish wrote and documented the
+\verb+RecordType+ package, and served some hard time consulting on the
+syntactical perversities of various Unix shells. Finally, Peter Sestoft,
+the main developer of MoscowML, has been very responsive to our requests
+for changes to his compiler.
+
+\subsection*{Acknowledgements for Version 2}
+
+Joe Hurd ported John Harrison's development of the real numbers and
+analysis, including a decision procedure. Graham Collins donated his
+theory of finite maps. Ken Larsen and Mike Gordon ported Jorn Lind's
+BuDDy package (\verb+http://britta.it.dtu.dk/~jl/buddy+) to MoscowML and
+integrated it with Hol98. Norbert Voelker and Louise Dennis spotted some
+installation problems, one of which Mike Norrish fixed.
+
+
+\tableofcontents
+
+\chapter{Getting Started}
+
+ Starting up Hol98 is straightforward:
+ \begin{verbatim}
+     <hol-dir>/bin/hol a0 ... an
+ \end{verbatim}
+ where an argument $a_i$ to the invocation can be either (1) a path
+ (prefixed by \verb+-I+) where the system can find code or, (2) a file to
+ execute before turning control over to the user. For example, invoking 
+ \begin{verbatim}
+     <hol-dir>/bin/hol  -I /local/foo  /home/me/my-hol-init.sml
+ \end{verbatim}
+ will do the following:
+ \begin{itemize}
+ \item The path \verb+/local/foo+ is added to the pre-existing path. If
+    the user later asks for a module \verb+X+ to be loaded, the system
+    will first look in each directory on the pre-existing path before
+    looking in \verb+/local/foo+ for \verb+X+. Usually, no paths need be
+    added to the system path.
+
+ \item The ML file \verb+/home/me/my-hol-init.sml+ will be executed. The
+      order of execution of start-up files is left-to-right. There is a
+      system start-up file that gets executed before any user-given ones:
+      it can be found in the file \verb+std.prelude+ in the top level of the
+      Hol98 distribution directory. The code in \verb+std.prelude+ will
+      load and open some standard basic support (tactics, conversions,
+      simple definition principles) and set up the paths to all the
+      system libraries. 
+ \end{itemize}
+
+ As usual, at least in Unix systems, Hol98 can be exited by entering
+ \verb+^D+. Invoking \verb+quit();+ will serve the same purpose.
+
+ \section{Help}
+ There are several kinds of help available in Hol98, all accessible
+ through the same incantation: 
+ \begin{verbatim}
+     help <string>;
+ \end{verbatim}
+
+ The kinds of help available are:
+
+ \begin{description}
+
+ \item [MoscowML help.] This is uniformly excellent. Information for
+ library routines is available, whether the library is loaded or not via
+ \verb+help "Lib"+.
+
+ \item [HOL overview.] This is a short summary of important information
+about Hol98.
+
+ \item [HOL help.] This is the on-line help from Hol88 and Hol90, and is
+ intended to document all HOL-specific functions available to the
+ user. It is very detailed and often accurate; however, it can be
+ out-of-date, refer to HOL90 or HOL88, or even be missing!
+
+ \item [HOL structure information.]  For most structures in the Hol98
+  source, one can get a listing of the entrypoints found in the
+  accompanying signature. This is helpful for locating functions and is
+  automatically derived from the system sources, so it is alway
+  up-to-date. 
+
+ \item [Theory facts.] These are automatically derived from theory
+ files, so they are always up-to-date. The signature of each theory is
+ available (since theories are represented by structures in
+ Hol98). Also, each axiom, definition, and theorem in the theory can be
+ accessed by name in the help system; the theorem itself is given.
+ \end{description} 
+
+ Therefore the following example queries can be made:
+
+ \begin{table}[h]
+\begin{center}
+ \begin{tabular}{|l|l|} \hline
+  \verb+help "installPP"+ & Moscow ML help \\
+  \verb+help "hol"+ &  Hol98 overview \\
+  \verb+help "aconv"+ &  on-line HOL help \\
+  \verb+help "Tactic"+ & HOL source structure information \\
+  \verb+help "boolTheory"+ &  theory structure signature \\
+  \verb+help "list_Axiom"+ & theory structure signature and theorem
+ statement \\ \hline 
+ \end{tabular}
+\end{center}
+ \end{table}
+
+\section{Input and Output}
+
+A person usually works with Hol98  by interacting with the ML top level
+loop\footnote{So far, that is; one of the intended applications of Hol98
+is for building batch theorem proving tools.} in order to build
+formalizations and perform proofs. In this setting, the user often needs
+to enter expressions of the HOL logic to ML, and interpret the resulting
+responses. Since the ML representations of the types, terms, and
+theorems of the HOL logic are quite unreadable in their `raw' form,
+so-called {\it prettyprinters\/} for HOL logic expressions are
+automatically invoked by the ML top level when printing output.
+
+Similarly, types and terms often have to be constructed by the user,
+\eg, in order to make definitions, state goals to prove, provide
+existential witnesses, \etc\ Since it would be unbearable to make a type
+or term of any size `by hand', the system comes equipped with parsers
+for type and term expressions. The parser for types is called
+\verb+Type+, and the parser for terms is called \verb+Term+. These
+parsers take {\it quotations\/}.  A quotation {\tt `}$\ldots$ {\tt `} is
+much like an SML string, except that it can span several lines without
+requiring awkward backslashes, as an ML string
+would.\footnote{Quotations were a feature in the original LCF
+system. See the MoscowML User's Manual for more information.}
+
+\subsection{Quotation preprocessing}
+
+For convenience, the Athabasca release supplies a version of Hol98 that
+features a {\it combined parser\/} that accepts both types and
+terms. Enclosing some object language concrete syntax between
+occurrences of \verb+``+ will result in the correct parser being
+invoked. For example 
+
+\begin{verbatim}
+    ``x /\ y /\ z ==> ?p. p``
+\end{verbatim}
+
+\noindent will parse as a term while 
+
+\begin{verbatim}
+    ``:'a -> ('b -> 'h) -> bool``
+\end{verbatim} 
+
+\noindent parses as an HOL type. Note that the concrete syntax given in
+the quotation needs to provide a hint: the type parser will only be
+called if the first character after the leading {\tt ``} is a colon (\verb+:+).
+
+Knowledgeable ML users will notice that the idiom {\tt ``}$\ldots$ {\tt
+``} is not ML-typable; it is implemented as a pre-processor to ML,
+thanks to work by Richard Boulton. Preprocessing is not the default in
+this release. Users who wish to use the pre-processor should use
+
+\begin{verbatim}
+    <hol-dir>/bin/hol.enquote
+    <hol-dir>/bin/Holmake.enquote.
+\end{verbatim}
+
+Input containing instances of {\tt ``}$\ldots$ {\tt ``} will be accepted
+by these versions of Hol98. 
+
+\section{First proof}
+
+In this section we show a simple goal being stated and solved in
+Hol98. Full explanations of what is going on can be found in the rest of
+this document, but we needn't wait to exercise the system.
+
+First, we start up the system. The start-up phase executes a standard
+prelude. (System responses occur on lines starting with \verb+>+.)
+
+\begin{verbatim}
+
+     bash$ /home/kxs/hol98/bin/hol
+
+>    Enter `quit();' to quit.
+>    For HOL help, type: help "hol";
+> 
+> 
+>        HHH                 LL
+>        HHH                  LL
+>        HHH                   LL
+>        HHH                    LL
+>        HHH          OOOO       LL
+>        HHHHHHH     OO  OO       LL
+>        HHHHHHH     OO  OO       LLL
+>        HHH          OOOO        LLLL
+>        HHH                     LL  LL
+>        HHH                    LL    LL
+>        HHH                   LL      LL
+>        HHH                  LL        LL98 [Athabasca 2]
+>
+>    [closing file "/home/kxs/hol98/std.prelude"]
+
+\end{verbatim}
+
+ Now we load an automatic first order reasoner, written by John Harrison
+(and ported by Michael Norrish from Harrison's HOL-Light
+system).\footnote{One might think that this sort of tool should already
+be ``part of'' Hol98; however, all of the reasoners of Hol98 are in
+external libraries. This is a consequence of a fundamental design tenet
+for LCF-style systems: keep a very simple kernel to the implementation,
+and add libraries on top.} 
+\begin{verbatim}
+    - load"mesonLib";
+>   val it = () : unit
+\end{verbatim}
+
+Now we will set a goal for the reasoner to prove. In mathematical
+notation, it is
+
+\[\forall R.\ (\forall x.\  \exists y.\ R\ x\ y) = \exists f.\ \forall
+ x.\ R\ x\ (f\ x).\]  
+
+ This theorem is the justification of Skolemization. It says that 
+every $x$ is related to a $y$ by $R$ if and only if there is
+a function $f$ mapping each $x$ to its corresponding $y$. In Hol98
+notation, we have:
+\begin{verbatim}
+    - set_goal([], Term `!R. (!x. ?y. R x y) = ?f. !x. R x (f x)`);
+>   <<HOL message: inventing new type variable names: 'a, 'b.>>
+>   val it =
+>      Proof manager status: 1 proof.
+>      1. Incomplete:
+>            Initial goal:
+>            ``!R. (!x. ?y. R x y) = (?f. !x. R x (f x))``
+\end{verbatim}         
+
+Now we apply the reasoner to the goal with the \verb+e+ command. It says
+``OK..'' and sets to work. As it searches for a proof, it prints out a
+row of dots. The proof is found in about a third of a second, and
+consists of 615 inference steps in the HOL logic.
+\begin{verbatim}
+    - e (mesonLib.MESON_TAC[]);
+>   OK..
+>   Meson search level: ....
+>   val it =
+>       Initial goal proved.
+>       |- !R. (!x. ?y. R x y) = (?f. !x. R x (f x))
+\end{verbatim}
+
+Now we can extract the proved theorem, and
+bind it to a name in ML. 
+\begin{verbatim}
+    - val Skolem = top_thm();
+>   val Skolem = |- !R. (!x. ?y. R x y) = (?f. !x. R x (f x)) : Thm.thm
+\end{verbatim}
+
+
+ \chapter{Syntax}
+
+   The HOL logic is a classical higher-order predicate calculus. Its
+syntax enjoys two main differences from the syntax of standard first
+order logic.\footnote{We assume the reader is familiar with first order
+logic.}  First, there is no distinction in HOL between terms and
+formulas: HOL has only terms. Second, each term has a type: types are
+used in order to build well-formed terms. There are two ways to
+construct types and terms in HOL: by use of a parser, or by use of the
+programmer's interface. In this chapter, we will focus on the concrete
+syntax accepted by the parsers, leaving the programmer's interface for
+Chapter~\ref{api}.
+
+
+ \section{Types}
+
+ A HOL type can be a variable, a constant, or a compound type, which is a
+ constant of arity $n$ applied to a list of $n$ types. 
+ \[
+ \begin{array}{rclr}
+  \type & ::= & \mbox{\bf '}\ident & \mbox{(type variable)} \\
+     & | &  \verb+bool+ & \mbox{(type of truth values)} \\
+     & | &  \verb+ind+ & \mbox{(type of individuals)} \\
+     & | &  \type\ \verb+->+\ \type & \mbox{(function arrow)} \\
+     & | &  \ident & \mbox{(nullary type constant)} \\
+     & | & \type\; \ident & \mbox{(unary compound type)} \\
+     & | & (\type_1,\ldots,\type_n) \ident &
+ \mbox{(compound type)}
+ \end{array}
+ \]
+ Type constants are also known as type operators. They must be
+ alphanumeric. Type variables are
+ alphanumerics written with a leading prime ('). In Hol98, the type
+ constants {\tt bool}, {\tt fun}, and {\tt ind} are primitive. The
+ introduction of new type constants is described in Chapter
+ \ref{thy-ops}. {\tt bool} is the two element type of truth values. The
+ binary operator {\tt fun} is used to denote function types; it can be
+ written with an infix arrow. The nullary type constant {\tt ind} denotes
+ an infinite set of individuals; it is used for a few highly technical
+ developments in the system and can be ignored by beginners.  Thus 
+ \begin{verbatim}
+     'a -> 'b
+     (bool -> 'a) -> ind
+ \end{verbatim}
+ are both well-formed types. The function arrow is "right associative",
+ which means that ambiguous uses of the arrow in types are resolved by
+ adding parentheses in a right-to-left sweep: thus the type expression
+ \begin{verbatim}
+     ind -> ind -> ind -> ind
+ \end{verbatim}
+ is identical to 
+ \begin{verbatim}
+     ind -> (ind -> (ind -> ind)).
+ \end{verbatim}
+ The product (\verb+#+) and sum (\verb!+!) are other infix type
+ operators, also right associative; however, they are not loaded by
+ default in Hol98. How to load in useful logical context is
+ dealt with in Chapter~\ref{context}. 
+
+ \section{Terms}
+
+ Ultimately, a HOL term can only be a variable, a constant, an
+ application, or a lambda term. 
+ \[
+ \begin{array}{rclr}
+  \term & ::= & \ident & \mbox{(variable or constant)} \\
+     & | &  \term\  \term & \mbox{(combination)} \\
+     & | &  \bs\ident.\  \term &
+ \mbox{(lambda abstraction)}
+ \end{array}
+ \]
+In the system, the usual logical operators have already been defined,
+ including truth (\verb+T+), falsity (\verb+F+), negation (\verb+~+),
+ equality (\verb+=+), conjunction (\verb+/\+), disjunction (\verb+\/+),
+ implication (\verb+==>+), universal (\verb+!+) and existential
+ (\verb+?+)  quantification, and an indefinite description operator
+ (\verb+@+). As well, the basis includes conditional, lambda, and `let'
+ expressions. Thus the set of terms available is, in general, an extension
+ of the following grammar:
+ \[
+ \begin{array}{rclr}
+  \mbox{\it term} & ::= & \term : \type & \mbox{(type constraint)} \\
+  & | & \term\ \term & \mbox{(application)} \\
+  & | & \verb+~+ \term & \mbox{(negation)} \\
+  & | & \term\ =\ \term & \mbox{(equality)} \\
+  & | & \term\ \IMP\ \term & \mbox{(implication)} \\
+  & | & \term\ \verb+\/+\ \term & \mbox{(disjunction)} \\
+  & | & \term\ \verb+/\+\ \term & \mbox{(conjunction)} \\
+  & | & \term\ \verb+=>+\ \term\ |\ \term & \mbox{(conditional)} \\
+  & | & \bs\ident_1\ldots\ident_n.\  \term & \mbox{(lambda abstraction)} \\
+  & | & \ALL \ident_1\ldots\ident_n.\ \term & \mbox{(forall)} \\
+  & | & \EXISTS \ident_1\ldots\ident_n.\ \term & \mbox{(exists)} \\
+  & | & \CHOOSE \ident_1\ldots\ident_n.\ \term & \mbox{(choose)} \\
+  & | & \EXISTSONE \ident_1\ldots\ident_n.\ \term &\mbox{(exists-unique)} \\
+  & | & \LET\; \ident = \term  & \\
+  &   & [\und\ \ident = \term]^{*}\ \IN\ \term & \mbox{(let expression)} \\
+  & | & \verb+T+ & \mbox{(truth)} \\
+  & | & \verb+F+ & \mbox{(falsity)} \\
+  & | & \ident & \mbox{(constant or variable)} \\
+  & | & \verb+(+ \term \verb+)+ & \mbox{(parenthesized term)}
+ \end{array}
+ \]
+
+ Some examples may be found in Table \ref{syntaxExamples}. Term
+ application can be iterated. Application is left associative so that
+ $\term\ \term\ \term \ldots \term$ is equivalent in the eyes of the
+ parser to $(\ldots((\term\ \term)\ \term) \ldots)\ \term$.
+
+The lexical structure for term identifiers is much like that for
+ML: identifiers can be alphanumeric or symbolic. Variables must be 
+alphanumeric. A symbolic identifier is any concatenation of the characters 
+in the following list:
+\begin{verbatim}
+    #?+*/\\=<>&%@!,:;_|~-
+\end{verbatim}
+with the exception of the keywords \verb+\\+, \verb+;+, \verb+=>+,
+\verb+|+, and \verb+:+ (colon). Any alphanumeric can be a constant except the
+keywords \verb+let+, \verb+in+, \verb+and+, and \verb+of+.
+
+ \begin{table}[h]
+\begin{center}
+ \begin{tabular}{|r|l|} \hline
+ \verb+x = T+ & {\it x is equal to true.} \\
+ \verb+!x. Person x ==> Mortal x+ & {\it All persons are mortal.} \\
+ \verb+!x y z. (x ==> y) /\ (y ==> z) ==> x ==> z+ & {\it Implication is
+ transitive.} \\
+ \verb+!x. P x ==> Q x+ & {\it P is a subset of Q} \\
+ \verb+S = \f g x. f x (g x)+ & {\it Definition of a famous combinator.} \\ \hline
+ \end{tabular}
+ \caption{Concrete Syntax Examples}\label{syntaxExamples}
+\end{center}
+ \end{table}
+
+
+\subsection{Constants}
+
+The HOL grammar gets extended when a new constant is introduced. The
+introduction of new constants will be discussed in section
+\ref{thy-ops}. In order to provide some notational flexibility,
+constants come in various flavours: besides being an ordinary constant,
+a constant could also be a {\it binder\/} or an {\it infix}.
+
+\subsubsection{Binders} A binder is a construct that binds a variable;
+ for example, the universal quantifier. In HOL, this is represented
+ using a trick that goes back to Alonzo Church: a binder is a constant
+ that takes a lambda abstraction as its argument. The lambda binding is
+ used to implement the binding of the construct. This is an elegant and
+ uniform solution. Thus the concrete syntax \verb+!v. M+ is represented
+ by the application of the constant \verb+!+ to the abstraction
+ \verb+(\v. M)+.
+
+ The most common binders are \verb+!+, \verb+?+, \verb+?!+, and
+ \verb+@+. Sometimes one wants to iterate applications of the same binder,
+ \eg, 
+ \begin{alltt}
+    !x. !y. ?p. ?q. ?r. \term.
+ \end{alltt}
+ This can instead be rendered
+ \begin{alltt}
+     !x y. ?p q r. \term.
+ \end{alltt}
+
+ \subsubsection{Infixes}
+
+All infix constants associate to the right. The precedence ordering for the
+initial set of infixes is 
+ \verb+/\+, \verb+\/+, \verb+==>+, \verb+=+, \begin{Large}\verb+,+\end{Large}
+ (comma\footnote{When pairTheory has been loaded}). Thus 
+ \begin{verbatim}
+     X /\ Y ==> C \/ D, P = E, Q
+ \end{verbatim}
+ is equal to 
+ \begin{verbatim}
+     ((X /\ Y) ==> (C \/ D)), ((P = E), Q).
+ \end{verbatim}
+
+\noindent An expression $\term\ \verb+<infix>+\ \term$ is internally
+represented as $((\verb+<infix>+\ \term)\ \term)$.
+
+\subsection{Type constraints}
+
+ A term can be constrained to be of a certain type.  For example,
+ \verb+X:bool+ constrains the variable \verb+X+ to have type
+ \verb+bool+. Similarly, \verb+T:bool+ performs a (vacuous) constraint of
+ the constant \verb+T+ to \verb+bool+. An attempt to constrain a term
+ inappropriately will raise an exception: for example,
+ \begin{verbatim}
+    T => (X:ind) | (Y:bool)
+ \end{verbatim}
+ will fail because both branches of a conditional must be of the same type.
+ Type constraints can be seen as an infix that binds more weakly than any
+ term constant. Thus $\term\ \ldots\ \term \ : \type$ is equal to
+ $(\term\ \ldots\ \term)\ : \type$. For example, the prospective term
+ \verb+(x, y : bool)+ will not be accepted, since we are attempting to
+ constrain a pair to be a boolean. 
+
+The inclusion of \verb+:+ in the symbolic identifiers means that some
+constraints may need to be separated by white space. For example,
+\begin{verbatim}
+    $=:bool->bool->bool
+\end{verbatim}
+will be broken up by the HOL lexer as
+\begin{verbatim}
+    $=: bool -> bool -> bool
+\end{verbatim}
+and parsed as an application of the symbolic identifier \verb+$=:+ to
+the argument list of terms [\verb+bool+, \verb+->+, \verb+bool+,
+\verb+->+, \verb+bool+]. A well-placed space will avoid this problem:
+\begin{verbatim}
+    $= :bool->bool->bool
+\end{verbatim}
+is parsed as the symbolic identifier "=" constrained by a type. 
+
+ \subsubsection{Type inference}
+
+Consider the term \verb+x = T+.
+Each term (and all of its subterms), has a type in the HOL
+logic. Now, \verb+T+ has type \verb+bool+. This means that the constant
+\verb+=+ has type \verb+xty -> bool -> bool+, for some type
+\verb+xty+. Since the type scheme for \verb+=+ is 
+\verb+'a -> 'a -> bool+, we know that \verb+xty+ must in fact be
+\verb+bool+ in order for the type instance to be well-formed. Knowing
+this, we can deduce that the type of `x' must be \verb+bool+. 
+
+   Ignoring the jargon ("scheme" and "instance") in the previous
+paragraph, we have conducted a type assignment to the term structure,
+ending up with a well-typed term. It would be very tedious for users to
+conduct such argumentation by hand for each term entered to Hol98. Thus,
+Hol98 uses an adaptation of Milner's type inference algorithm for ML
+when constructing terms via parsing. At the end of type inference,
+unconstrained type variables get assigned by the system. Usually, this
+assignment does the right thing. However, at times, the most general
+type is not what is desired and the user must add type constraints to
+the relevant subterms. For tricky situations, the global variable
+\verb+show_types+ can be assigned. When this flag is set, the prettyprinters
+for terms and theorems will show how types have been assigned to
+subterms. If you do not want the system to assign type variables for
+you, the global variable \verb+guessing_tyvars+ can be set to
+\verb+false+, in which case the existence of unassigned type variables
+at the end of type inference will raise an exception.
+
+\subsection{Expanded term grammar}
+
+There is some further syntax that is specially treated by the
+ parser. The theory of pairs introduces the infix pairing operator
+ (\begin{Large}\verb+,+\end{Large}) as well as the corresponding infix
+ product (\verb+#+) type operator. The theory of sets introduces
+ notation for the empty set \verb+{}+ (or \verb+EMPTY+), membership (the
+ infix \verb+IN+) insertion (the infix \verb+INSERT+), set
+ comprehension, enumerated sets, and many other defined constants. The
+ theory of lists introduces the constants \verb+NIL+ (the surface syntax
+ \verb+[]+ can be used) and \verb+CONS+, as well as notation for
+ enumerated lists. The theories of (Peano) numbers and strings introduce
+ the constructors \verb+0+, \verb+SUC+, \verb+""+, and \verb+STRING+, as
+ well as literals for numbers and strings. If the theory of restricted
+ quantifiers is present, syntax is provided for constraining bound
+ variables by predicates.
+
+Thus, if the theories of pairs, sets, numbers, strings, lists, and
+restricted quantifiers are loaded, the HOL grammar is an extension of
+that in Table \ref{expanded-grammar}.  
+ \begin{table}
+ \[
+ \begin{array}{rclr}
+  \term & ::= & \term : \type & \mbox{(type constraint)} \\
+  & | & \term\ \term & \mbox{(application)} \\
+  & | & \CONS\ \term \ \term & \mbox{(list builder)} \\
+  & | & \INSERT\ \term \ \term & \mbox{(set builder)} \\
+  & | & \SUC\ \term & \mbox{(successor)} \\
+  & | & \verb+~+ \term & \mbox{(negation)} \\
+  & | & \term\ =\ \term & \mbox{(equality)} \\
+  & | & \term\ \IMP\ \term & \mbox{(implication)} \\
+  & | & \term\ \verb+\/+\ \term & \mbox{(disjunction)} \\
+  & | & \term\ \verb+/\+\ \term & \mbox{(conjunction)} \\
+  & | & \term\ \verb+<+ \ \term & \mbox{(less-than)} \\
+  & | & \term\ \verb!+! \ \term & \mbox{(addition)} \\
+  & | & \term\ \verb!*! \ \term & \mbox{(multiplication)} \\
+  & | & \term\ \verb!-! \ \term & \mbox{(subtraction)} \\
+  & | & \term\ \verb+=>+\ \term\ |\ \term & \mbox{(conditional)} \\
+  & | & \bs\vstr_1\ldots\vstr_n[\verb+::+\term].\ \term & \mbox{(lambda abstraction)} \\
+  & | & \ALL \vstr_1\ldots\vstr_n[\verb+::+\term].\ \term & \mbox{(forall)} \\
+  & | & \EXISTS \vstr_1\ldots\vstr_n[\verb+::+\term].\ \term & \mbox{(exists)} \\
+  & | & \CHOOSE \vstr_1\ldots\vstr_n[\verb+::+\term].\ \term & \mbox{(choose)} \\
+  & | & \EXISTSONE \vstr_1\ldots\vstr_n[\verb+::+\term].\ \term &\mbox{(exists-unique)} \\
+  & | & \LET\; \vstr = \term  & \\
+  &   & [\und\ \vstr = \term]^{*}\ \IN\ \term & \mbox{(let expression)} \\
+  & | & \verb+T+ & \mbox{(truth)} \\
+  & | & \verb+F+ & \mbox{(falsity)} \\
+  & | & \verb+0+ & \mbox{(zero)} \\
+  & | & \verb+[]+ & \mbox{(empty list)} \\
+  & | & \verb+{}+ & \mbox{(empty set)} \\
+  & | & \verb+(+ \term \verb+,+ \term \verb+)+ & \mbox{(pair)} \\
+  & | & \ident & \mbox{(constant or variable)} \\
+  & | & \numeral & \mbox{(numeric literal)} \\
+  & | & \verb+"+\charseq \verb+"+& \mbox{(string literal)} \\
+  & | & \verb+(+ \term \verb+)+ & \mbox{(parenthesized term)} \\ 
+  & | & \verb+[+ \term \verb+;+ \ldots \verb+;+ \term \verb+]+ &
+ \mbox{(enumerated list)} \\ 
+  & | & \verb+{+ \term \verb+;+ \ldots \verb+;+ \term \verb+}+ &
+ \mbox{(enumerated set)} \\
+  & | & \verb+{+ \term \ \verb+|+\  \term \verb+}+ & \mbox{(set comprehension)}
+ \end{array}
+ \]
+ \caption{Expanded Term Grammar} \label{expanded-grammar}
+ \end{table}
+
+ In the table, the varstruct ({\it vstr\/}) construct is used. A
+ varstruct is (apparently) an arbitrarily nested tuple of variables, where
+ each variable only occurs once. The translation of varstructs into the
+ internal abstract syntax trees is complex, so we avoid 
+ the explanation (for this draft).
+ \[
+ \begin{array}{rcl}
+  \vstr & ::= & \ident : \type \\
+  & | & \ident  \\
+  & | & \vstr \verb+,+ \vstr \\
+  & | & \verb+(+ \vstr \verb+)+
+ \end{array}
+ \]
+
+\noindent Also, in the term grammar a \charseq\ is just a finite sequence of
+ characters. 
+
+
+\chapter{Proof}
+
+ Hol98 provides various mechanisms for doing proof. The user can invoke
+ proof steps at very low levels of abstraction (something like doing
+ assembly programming) or use sophisticated proof procedures that may
+ perform tens or hundreds of thousands of inference steps in a single
+ invocation. We give an overview of the different means by which proof
+ can be performed in Hol98. First, the various kinds of proof procedures
+ provided will be covered. Then we discuss the available definition
+ principles of the system, and finallly, we go on to describe the
+ standard Hol98 proof manager.
+
+\section{Rules of inference}
+
+ Hol98 follows the LCF tradition of implementing the primitive inference
+ rules of the HOL logic as constructors for an ML abstract type
+ \verb+thm+. {\it Derived\/} rules are then built by arbitrary ML
+ programming. In such a design, the only way that a theorem can result is
+ when an ML function having range type \verb+thm+ is fully applied to its
+ arguments. In an LCF-style system, therefore, there is no way for the
+ system to produce a theorem other than by eventually invoking a
+ primitive rule of inference. Put another way: if one is able to get an
+ ML entity of type \verb+thm+, then it has been proved via an unbroken
+ chain of inference.
+
+ In the following subsections, we examine some packages that have been
+ built upon the \verb+thm+ type. In each of these, it is important to
+ remember that they are ``merely'' ways of organizing proofs, \ie,
+ applications of primitive rules. However, first we treat something a
+ little more radical.
+
+\section{Oracles}
+
+ Hol98 extends the LCF tradition by allowing the use of an {\it
+ oracle\/} mechanism to allow arbitrary formulas to become elements of
+ the \verb+thm+ type. Thus Hol98 can utilize arbitrary proof
+ procedures.\footnote{Some care should be taken with proof procedures
+ for theories lacking a formalization in the HOL logic. The product of
+ such procedures can be used in HOL without damage; however, in the end
+ it won't be clear --- at least in HOL --- what has been proven.} In
+ spite of such liberalness, the system can still make strong assertions
+ about the security of ML objects of type \verb+thm+.
+
+ To avoid unsoundness, the system ensures that a tag is attached to any
+ theorem coming from an oracle. The system propagates this tag through
+ every inference that the theorem participates in.\footnote{The idea is
+ due to Mike Gordon.} If it happens that falsity becomes derived, the
+ offending oracle can be found by examining the tags component of the
+ theorem. (The Hol98 authors would be quite interested to hear of cases
+ where falsity is derivable without the use of oracles.) A theorem proved
+ without use of any oracle will have an empty tag, and can be considered
+ to have been proved in the HOL logic.
+
+ Tagged theorems can be created via 
+ \begin{verbatim}
+    val mk_oracle_thm : tag -> term list * term -> thm
+ \end{verbatim}
+ which directly creates the requested theorem and attaches the given tag to
+ it. Tags may be created with 
+ \begin{verbatim}
+     Tag.read : string -> tag.
+ \end{verbatim}
+As well as providing principled access to external reasoners, tags are
+used to implement some useful `system' operations on theorems. For example,
+Hol98 allows one to directly create a theorem via \verb+mk_thm+. The
+tag \verb+MK_THM+ gets attached to each theorem created with this
+call. This allows users to directly create useful theorems, \eg, to use
+as test data for derived rules of inference. Another tag
+is used to implement validity checking in tactics. Other common
+pre-existing tags are for "definition schemas" like \verb+num_CONV+
+(which encapsulates the semantics of numeric literals) and
+\verb+string_CONV+ (which performs the analogous function for strings). 
+
+The tags in a theorem can be viewed by setting \verb+Globals.show_tags+ to
+true. For example, we have\footnote{Hol98 currently also uses tags for
+tracking the use of axioms in proofs.}
+\begin{verbatim}
+     - mk_thm([], Term `F`);
+
+     val it = [oracles: MK_THM] [axioms: ] [] |- F : thm
+\end{verbatim}
+There are three elements to the left of the turnstile in the printed
+representation of a theorem: the first two comprise the tags component and the
+third is the standard assumption list. The tag component of a theorem
+can be extracted by  
+ \begin{verbatim}
+     Thm.tag : thm -> tag
+ \end{verbatim}
+\noindent and prettyprinted by 
+ \begin{verbatim}
+     Tag.pp : ppstream -> tag -> unit.
+ \end{verbatim}
+
+\noindent{\bf Remark}
+
+ No serious attempt is made to prevent spoofing: a person may slap tag
+\verb+X+ on an assertion coming from tool \verb+Y+ if desired. However, the
+tags for \verb+mk_thm+ and validity checking cannot be spoofed. 
+
+\section{Tactics}
+
+Tactics are a well-known method for backward proof. The original
+conception of Robin Milner, which is still that of tactics in
+\HOL, is that a tactic can be represented by the type
+\[ goal \longrightarrow goal\ list * justification, \]
+{\it i.e.}, a tactic decomposes a goal\footnote{A goal $(A,c)$ has ML
+type $term\ list * term$.} into subgoals plus a
+justification function. The justification function takes the theorems
+resulting from the solved subgoals and performs inference with them to
+return a new theorem that {\it achieves} the original goal. Thus the
+justification has type
+ \[  thm\ list \longrightarrow thm.  \]
+ A theorem $\Gamma \vdash M$ achieves a goal $(\Delta,N)$ when $M =_\alpha
+ N$ and also each element of $\Gamma$ is equal, modulo $\alpha$
+ convertibility, to an element of $\Delta$. A tactic $t$ {\it solves\/} a
+ goal $g$ when $t\; g$ creates an empty list of subgoals and a
+ justification function $f$ such that $f$ applied to the empty list
+ achieves $g$. 
+
+For example, a simple tactic is \verb+CONJ_TAC+. It takes a goal and, if
+it is a conjunction, splits it into two subgoals. The justification
+function is \verb+CONJ+, which takes two theorems and returns a new
+theorem, which has as assumptions the union of the assumptions of the
+two theorems, and has as the conclusion the conjunction of the
+conclusions of the two theorems. In ML code this is expressed as:
+
+\begin{verbatim}
+   fun CONJ_TAC (asl,c) =
+      let val {conj1,conj2} = dest_conj c 
+      in 
+        ([(asl,conj1), (asl,conj2)], fn [th1,th2] => CONJ th1 th2)
+      end
+      handle HOL_ERR _ => raise TACTIC_ERR "CONJ_TAC" "";
+\end{verbatim}
+
+Tactics are composed via tacticals. The basic tacticals are \verb+THEN+,
+\verb+THENL+, \verb+ORELSE+, and \verb+REPEAT+. The workhorse tacticals
+can be found in Table \ref{tacticals}.
+
+\begin{table}
+\[
+\begin{array}{rclr}
+ \tactic & ::= & \primtactic & \mbox{(basic tactic)} \\
+ & | & \verb+NO_TAC+ & \mbox{(fail)} \\
+ & | & \verb+ALL_TAC+ & \mbox{(No-op)} \\
+ & | & \tactic\ \verb+THEN+ \ \tactic & \mbox{(composition)} \\
+ & | & \tactic\ \verb+ORELSE+ \ \tactic & \mbox{(alternative)} \\
+ & | & \tactic\ \verb+THENL+ \ [\tactic, \ldots, \tactic] &
+\mbox{(indexed composition)} \\  
+ & | & \verb+REPEAT+\ \tactic & \mbox{(iteration)} \\
+\end{array}
+\]
+\caption{Tactics and Tacticals} \label{tacticals}
+\end{table}
+
+
+\section{Conversions}
+
+Another heavily used method of arranging proofs in Hol98 is {\it
+conversions\/}, which were created by Larry Paulson. In the area of
+equational reasoning, they provide a high-level language similar to the
+language of tactics and tacticals. The rewriters and simplifiers of
+Hol98 are all implemented using conversions. Historically, conversions
+have also been heavily used in interactive proof; however, the passage
+of time has seen the emergence of advanced forms of rewriting---such as
+conditional and contextual rewriting, as well as rewriting using
+(restricted) higher order matching---which often provides a more
+convenient alternative for interactive use.
+
+\section{Theorem Continuations}
+
+Another invention of Paulson were {\it theorem continuations}. These
+provide support for interactively building tactics that perform very
+specific manipulation of theorems in the course of
+inference. Experienced HOL users often swear by theorem continuations,
+but we will not document them here; theorem continuations are something
+that one should pick up after learning higher-level proof methods.
+
+\section{Simplifiers and Automatic Reasoners}
+
+Hol98 comes with several simplifiers. Largely that is a tribute to the
+ease with which simplifiers can be written with conversions. Each of the
+following items is the name of the ML structure containing the
+simplifier(s).
+
+\begin{description}
+
+\item [Rewrite] Performs unconditional rewriting, with various
+strategies. It uses only first order matching (up to
+alpha-convertibility). This has been a workhorse proof tool over the
+years.
+
+\item [Ho\_rewrite] Performs unconditional rewriting, with various
+strategies. It employs restricted higher order matching, which is a
+significant increase in power, since it performs such things as
+quantifier movement, which was formerly done in a tedious fashion by
+conversions.
+
+\item [RW] Performs conditional and contextual rewriting, with various
+strategies. It employs first order matching up to alpha conversion. This
+is again a significant increase in power over unconditional rewriting,
+since it can automatically apply implicational theorems by instantiating
+and solving the antecedents while traversing the goal. This package was
+originally designed to implement termination condition extraction when
+using \verb+tflLib+ to define recursive functions.
+
+\item [Cond\_rewrite] Performs conditional rewriting with first order
+matching, and a fixed strategy. This is used to provide support for the
+\verb+res_quan+ library, but is also generally useful.
+
+\item [simpLib] Performs conditional and contextual rewriting, with a
+fixed top-down strategy. It employs higher order matching and also
+performs ordered rewriting for associative-commutative operators, as in
+the Boyer-Moore system. This is an `Isabelle-style' simplifier, written
+by Don Syme; he has significantly extended it past the original Isabelle
+design, by allowing free application of decision procedures throughout
+the rewriting process.
+
+The simplifier library provides a range of pre-assembled databases
+with which to work. We list the structures that must be loaded for each
+of them.
+
+\begin{center}
+\begin{tabular}{|r|l|} \hline
+\verb+empty_ss+ & The empty simplification set \\
+\verb+boolSimps+ & Standard logic simplifications \\
+\verb+combinSimps+ & Combinator rewrites \\
+\verb+pairSimps+ & Rewrite rules for pairs \\
+\verb+sumSimps+ & Rewrite rules for sums \\
+\verb+listSimps+ & Basic list theory rewrites \\ 
+\verb+ListSimps+ & Extended list theory simplifications \\
+\verb+arithSimps+ & Arithmetic simplification, using linear arithmetic proc. \\
+\verb+SatisfySimps+ & Conversions for witness instantiation \\
+\verb+UnwindSimps+ & Unwinding existentials \\
+\verb+HOLSimps+ &  All of the above \\
+ \hline
+\end{tabular}
+\end{center}
+
+By default, only \verb+empty_ss+ is available when \verb+simpLib+ is loaded.
+\end{description}
+
+Although it might seem like there ought to be only one simplification
+tool supported in Hol98, each of the above tools has found a niche in
+the system, and the differences among them have been significant enough
+to deter consideration of their unification. It is therefore up to the
+user to decide which is most suitable for the purpose at hand.
+
+
+\subsection{Automatic methods}
+
+Hol98 also provides automatic reasoners for several domains. 
+
+\begin{itemize}
+
+\item For general first order reasoning, there is \verb+mesonLib+, which
+      has been introduced already.
+
+\item For arithmetic, tautologies, pairs, datatypes, and ground
+      equational reasoning, there is \verb+decisionLib+, which
+      implements the Nelson-Oppen method for combining decision procedures.
+
+\item For in-the-logic calculations involving numbers or booleans, there
+      is \verb+reduceLib+. This has been incorporated into
+      \verb+decisionLib+, but the reasoners in \verb+reduceLib+ can be
+      helpful when writing custom proof tools.
+
+\item For the theory of lists, there are some useful conversions in
+      \verb+listLib+. 
+\end{itemize}
+
+
+\section{Definition principles}
+
+One of the main thrusts in the development of the HOL system has been a
+stubborn insistence on building formalizations by principles of
+definition, as opposed to the assertion of axioms. Users of definition
+principles have the knowledge that they have introduced no inconsistency
+into the system.  Such peace of mind comes at a price, however, since
+the principles of definition for the HOL logic are extremely simple. To
+remedy this, high-level definition mechanisms have been built as derived
+rules of inference. The definition principles listed in Table \ref{PoD}
+are currently offered by Hol98.
+
+\begin{table}[ht]
+\begin{center}
+\begin{tabular}{|r|l|r|} \hline
+Type definition & \verb+Type_def+ & primitive \\
+Recursive types & \verb+Define_type+ &  \\
+Mutually recursive types & \verb+mutrecLib+ & \\
+Nested recursive types & \verb+nested_recLib+ & \\ 
+Quotient types & \verb+EquivType+ & \\
+Record types & \verb+RecordType+ & \\\hline
+Constant specification & \verb+Const_spec+ & primitive \\
+Constant definition & \verb+Const_def+ & primitive \\
+Primitive recursive functions & \verb+Prim_rec+ & \\
+Mutually recursive functions & \verb+mutrecLib+ & \\
+Inductively defined relations & \verb+ind_defLib+,  \verb+IndDefLib+ & \\
+Wellfounded recursive functions & \verb+tflLib+ & \\
+ \hline
+\end{tabular}
+\caption{Definition Principles}\label{PoD}
+\end{center}\end{table}
+
+Unfortunately, each one of these facilties has separate entrypoint(s),
+and moreover, using some of them can be quite ungainly. For example, to
+build and use recursive type typically involves several steps: first the
+type has to be defined, then separate function calls need to be made to
+build induction theorems, standard rewrite rule sets, `case' theorems,
+\etc\ Moreover, during proof, the names of all these entities must be
+remembered, and managed. A prototype library aimed at remedying this
+problem can be found in Chapter \ref{bossLib}.
+
+\subsection{Record types}
+
+Record types \footnote{This documentation has been supplied by Michael
+Norrish} are convenient ways of bundling together a number of component
+types, and giving those components names so as to facilitate access to
+them.  Record types are semantically equivalent to big pair
+(cross-product) types, but the ability to label the fields with names of
+one's own choosing is a great convenience.  Record types as implemented
+in HOL98 are similar to C's {\tt struct} types and to Pascal's records.
+However, the current HOL implementation doesn't allow the equivalent of
+variant records, nor for records to be recursive.
+
+Done correctly, record types provide useful maintainability features.
+If one can always access the {\tt fieldn} field of a record type by
+simply writing {\tt fieldn record}, then changes to the type that
+result in the addition or deletion of other fields, will not
+invalidate this reference.  One failing in SML's record types is that
+they do not allow the same maintainability as far as (functional)
+updates of records are concerned.  The HOL implementation allows one
+to write {\tt fieldn\_update new\_value rec}, which replaces the old
+value of {\tt fieldn} in the record {\tt rec} with {\tt new\_value}.
+This expression will not need to be changed if another field is added,
+modified or deleted from the record's original definition.
+
+\subsubsection{Defining a record type in Hol98}
+
+\newcommand{\createrec}{{\tt create\_record}} The record type package
+is defined in the structure {\tt RecordType}.  Defining a record type
+is achieved with the function \createrec, which is in that structure.
+This takes two parameters, a string which is the name of the new type,
+and a list of string-type pairs, which are the names and types of the
+record type's fields.  For example, to create a record type called
+{\tt person} with boolean, string and number fields called {\tt
+  employed}, {\tt name} and {\tt age}, one would enter:
+\begin{verbatim}
+val person_result =
+  create_record "person" [("employed", ``:bool``),
+                          ("age",      ``:num``),
+                          ("name",     ``:string``)];
+\end{verbatim}
+The order in which the fields are entered is not significant. As well as
+defining the type (called {\tt person}), the \createrec{} function also
+defines three other sets of constants.  These are the field access
+functions, update functions, and functional update functions.  The
+access functions are given the same name as the fields
+chosen,\footnote{Note that this means that a field name can not be
+re-used from one record type to another, as there can only ever be one
+constant of a given name.} so that one would use the expression:
+\mbox{\tt (employed bob)} in order to return the value of {\tt bob}'s
+{\tt employed} field.
+
+The update functions are given the names {\it field\tt\_update} for
+each field in the type.  They take a value of the type of the field in
+question and a record value to be modified.  They return a new record
+value that is otherwise the same as the old value but with the
+specified field having the new value.  Having the record value as the
+second parameter means that chains of updates are easy to write, thus:
+\begin{verbatim}
+employed_update T
+  (age_update 10
+     (name_update "Child_labourer" bob))
+\end{verbatim}
+
+The functional update functions have the names {\it field\tt\_fupd}.
+Rather than specifying a new value for the record, these functions
+take a function as their first parameter, which will be an
+endomorphism on the field type, so that the resulting record is the
+same as the original, except that the specified field has had the
+given function applied to it to generate the new value for that
+field.  The functional update functions allow more concision when
+writing updates on a record that depend on the field's old value.
+
+\subsubsection{Specifying record literals}
+
+In the absence of any dedicated parsing support for record values
+(which may change in future releases), there are two ways of
+specifying record values directly.  The representing type for records
+is constructed using the standard datatype package to define a type
+with one constructor that takes arguments corresponding to the fields.
+This means that one can specify literal values by remembering the
+order of types as given in the original definition, and using the
+constructor, which has the same name as the type.  Thus, one might
+write:
+\begin{verbatim}
+(person T 10 "Child_labourer")
+\end{verbatim}
+This does not win many prizes for maintainability.  Marginally better
+is an ML function provided in the {\tt RecordType} structure, {\tt
+  create\_term\_fn}.  This takes a string specifying the name of the
+type, the accessors theorem for the type (see below), and a list of
+string-value pairs.  Thus, one might write:
+\begin{verbatim}
+val t = create_term_fn "person" (#accessor_fns person_result)
+          [("age", ``10``), ("employed", ``T``),
+           ("name", ``Child_labourer``)];
+\end{verbatim}
+If a field is omitted in this specification, then the value given to
+that field in the final record value is {\tt ARB}.
+
+\subsubsection{Using the theorems produced by \createrec}
+
+As well as defining the type and the functions described above, record
+type definition, also proves a suite of useful theorems.  Most of
+these are returned in a big record; all are stored using {\tt
+  save\_thm} so that they can be recovered.
+
+The record returned has the following fields:
+\newcommand{\rewruse}{This theorem should be included in rewrites used
+  for this type.}
+\newcommand{\field}[1]{\mbox{\it field}_{#1}}
+\newcommand{\update}{\mbox{\tt\_update}}
+\begin{description}
+\item[{\tt type\_axiom}] The type axiom for the record type, as
+  returned by the standard datatype definition package.
+\item[{\tt accessor\_fns}] The definitions of the accessor functions.
+  \rewruse
+\item[{\tt update\_fns}] The definitions of the update functions.
+  \rewruse
+\item[{\tt cases\_thm}] The usual cases theorem for a type, stating
+  that for all record values, there exist component values making it
+  up.
+\item[{\tt fn\_upd\_thm}] The definitions of the functional update
+  functions.  \rewruse
+\item[{\tt acc\_upd\_thm}] A theorem stating simpler forms for
+  expressions of the form $\field{i}\, (\field{j}\update\;v\; r)$.  If
+  $i = j$, then the RHS is $v$, if not, it is $(\field{i}\;r)$.
+  \rewruse
+\item[{\tt upd\_acc\_thm}] A theorem stating that $\field{i}\update
+  \;(\field{i}\;r)\;r = r$ for all of
+  the fields defined in the type. \rewruse
+\item[{\tt upd\_upd\_thm}] A thereom stating that $\field{i}\update
+  \;v_1 \,(\field{i}\update \;v_2\;r) = \field{i}\update\;v_1\;r$.
+  \rewruse
+\item[{\tt upd\_canon\_thm}] A theorem that states commutativity results
+  for all possible pairs of field updates.  They are constructed in
+  such a way that if used as rewrites, they will canonicalise
+  sequences of updates. \rewruse
+\item[{\tt cons\_11\_thm}] The standard result stating the type
+  constructor is injective.  \rewruse
+\item[{\tt create\_term}] This last component of the record returned
+  is not a theorem, but rather an ML function.  It is identical to the
+  {\tt create\_term\_fn} already defined in {\tt RecordType}, but is
+  pre-applied to the relevant arguments, so that it is of the type
+  string-value list to term.
+\end{description}
+
+\subsubsection{To do}
+
+\begin{itemize}
+\item Parsing and pretty-printing support would be nice.
+\item Need to have the package automatically prove that equality of
+  records is equivalent to equality of all the fields.
+\end{itemize}
+
+
+\section{A simple proof manager}\label{goalstack}
+
+The {\it goal stack\/} provides a simple interface to tactic-based
+proof. When one uses tactics to decompose a proof, many intermediate
+states arise; the goalstack takes care of the necessary bookeeping. The
+implementation of goalstacks reported here is a re-design of Larry
+Paulson's original conception.
+
+The abstract types {\it goalstack\/} and {\it proofs\/} are the focus of
+backwards proof operations. The type \verb+proofs+ can be regarded as a
+list of independent goalstacks. Most operations act on the head of the
+list of goalstacks; there are operations so that the focus can
+be changed.
+
+\subsection{Starting a goalstack proof}
+
+\begin{verbatim}
+    g        : term quotation -> proofs
+    set_goal : goal -> proofs
+\end{verbatim}
+
+Recall that the type \verb+goal+ is an abbreviation for 
+\verb+term list * term+. To start on a new goal, one gives
+\verb+set_goal+ a goal. This creates a new goalstack and makes it the
+focus of further operations. 
+
+A shorthand for \verb+set_goal+ is the function \verb+g+: it
+invokes the parser automatically, and it doesn't allow the the goal to
+have any assumptions. 
+
+
+Calling \verb+set_goal+, or \verb+g+, adds a new proof attempt to
+the existing ones, {\it i.e.}, rather than overwriting the current
+proof attempt, the new attempt is stacked on top. 
+
+\subsection{Applying a tactic to a goal}
+
+\begin{verbatim}
+    expandf : tactic -> goalstack
+    expand  : tactic -> goalstack
+    e       : tactic -> goalstack
+\end{verbatim}
+
+How does one actually do a goalstack proof then? In most cases, the
+application of tactics to the current goal is done with the function
+\verb+expand+. In the rare case that one wants to apply an
+{\it invalid\/} tactic, then \verb+expandf+ is used. (For an
+explanation of invalid tactics, see Chapter 24 of Gordon \& Melham.) The
+abbreviation \verb+e+ may also be used to expand a tactic. 
+
+
+\subsection{Undo}
+
+\begin{verbatim}
+    b          : unit -> goalstack
+    drop       : unit -> proofs
+    dropn      : int  -> proofs
+    backup     : unit -> goalstack
+    restart    : unit -> goalstack
+    set_backup : int  -> unit
+\end{verbatim}
+
+Often (we are tempted to say {\it usually}!) one takes a wrong path
+in doing a proof, or makes a mistake when setting a goal. To undo a step
+in the goalstack, the function \verb+backup+ and its abbreviation
+\verb+b+ are used. This will restore the goalstack to its previous
+state.
+
+
+To directly back up all the way to the original goal, the function
+\verb+restart+ may be used. Obviously, it is also important to get
+rid of proof attempts that are wrong; for that there is \verb+drop+,
+which gets rid of the current proof attempt, and \verb+dropn+, which
+eliminates the top $n$ proof attempts.
+
+
+Each proof attempt has its own {\it undo-list\/} of previous
+states. The undo-list for each attempt is of fixed size (initially
+12). If you wish to set this value for the current proof attempt, the
+function \verb+set_backup+ can be used. If the size of the backup
+list is set to be smaller than it currently is, the undo list will be
+immediately truncated. You can not undo a "proofs-level" operation, such
+as \verb+set_goal+ or \verb+drop+.
+
+\subsection{Viewing the state of the proof manager}
+
+\begin{verbatim}
+    p            : unit -> goalstack
+    status       : unit -> proofs
+    top_goal     : unit -> goal
+    top_goals    : unit -> goal list
+    initial_goal : unit -> goal
+    top_thm      : unit -> thm
+\end{verbatim}
+
+To view the state of the proof manager at any time, the functions
+\verb+p+ and \verb+status+ can be used. The former only shows
+the top subgoals in the current goalstack, while the second gives a
+summary of every proof attempt. 
+
+To get the top goal or goals of a proof attempt, use \verb+top_goal+
+and \verb+top_goals+. To get the original goal of a proof attempt,
+use \verb+initial_goal+. 
+
+Once a theorem has been proved, the goalstack that was used to derive it
+still exists (including its undo-list): its main job now is to
+hold the theorem. This theorem can be retrieved with
+\verb+top_thm+. 
+
+\subsection{Switch focus to a different subgoal or proof attempt}
+
+\begin{verbatim}
+    r             : int -> goalstack
+    R             : int -> proofs
+    rotate        : int -> goalstack
+    rotate_proofs : int -> proofs
+\end{verbatim}
+
+Often we want to switch our attention to a different goal in the current
+proof, or a different proof. The functions that do this are
+\verb+rotate+ and \verb+rotate_proofs+, respectively. The abbreviations
+\verb+r+ and \verb+R+ are simpler to type in.
+
+\chapter{Existing Context}\label{context}
+
+\section{Theories}
+
+In Hol98, theories are represented by separately compiled ML
+structures. The theories listed in Table \ref{nativeTheories} come
+pre-built in the system (we have omitted a few of the less commonly used
+ones). 
+\begin{table}
+\begin{center}
+\begin{tabular}{|r|l|} \hline
+minTheory & the origin theory \\
+boolTheory & definitions of logical operators and basic axioms \\
+pairTheory & basic theory of pairs \\
+numTheory & Peano's axioms derived from the axiom of infinity \\
+prim\_recTheory, & the primitive recursion theorem \\
+arithmeticTheory & Peano arithmetic development \\
+integerTheory & integers, by John Harrison \\
+TCTheory & transitive closure of a relation \\
+primWFTheory & wellfounded relations, plus WF induction and recursion \\
+WFTheory & instances of wellfoundedness at various types \\
+setTheory & sets as a separate type (includes finite sets) \\
+pred\_setTheory & sets as predicates (includes finite sets) \\
+listTheory & lists  \\
+ListTheory & extended theory of lists \\
+optionTheory & the "option" type \\
+finite\_mapTheory & finite maps from $\alpha$ to $\beta$ \\
+ltreeTheory & polymorphic finitely branching trees \\
+combinTheory & combinators \\
+sumTheory & disjoint sums \\
+restr\_binderTheory & definitions of binder restrictions \\
+res\_quanTheory & restricted quantifier support \\
+asciiTheory & ascii \\
+stringTheory & strings \\
+wordTheory & ({\it plus others}) theory of bitstrings \\
+realTheory & ({\it plus others}) real numbers and analysis \\
+HOLTheory & equivalent to HOL theory from hol88/90\\  \hline
+\end{tabular}
+\caption{Native Theories}\label{nativeTheories}
+\end{center}
+\end{table}
+
+The only theory that is initially loaded by an invocation of Hol98 is
+\verb+boolTheory+. To gain access to any other theory when working
+interactively, simply invoke  
+\begin{verbatim}
+    load "xTheory";
+\end{verbatim}
+where \verb+x+ is the name of the theory. Once the theory has been
+loaded by the system, access to its contents is through the ``dot''
+notation of ML, \eg, \verb+xTheory.FOO_DEF+, or if you prefer, by
+``opening'' the structure and then directly accessing its contents.
+
+We will consider the construction of theories in Chapter \ref{thy-ops}.
+
+\section{Libraries}
+
+Hol98 currently offers the libraries found in Table \ref{nativeLibs}.
+
+\begin{table}
+\begin{center}
+\begin{tabular}{|r|l|} \hline
+    decisionLib     & cooperating decision procedures \\
+    mesonLib        & model- elimination first order reasoner \\
+    simpLib         & Isabelle-style simplifier \\
+    ind\_defLib     & inductive defn. package \\
+    IndDefLib       & generalized inductive defn. package \\
+    tflLib          & wellfounded recursive definitions \\
+    mutrecLib,      & mutually recursive datatype definitions \\
+    nestrecLib      & nested  recursive datatype definitions \\
+    mutualLib       & improved mutual/nested datatypes  \\
+    goalstackLib    & simple manager for building tactic proofs \\
+    basicHol90Lib   & derived rules, tactics, conversions, rewriting, etc. \\
+    optionLib       & option type \\
+    pairLib         & extended support for pairs \\
+    setLib          & sets as a separate type \\
+    pred\_setLib    & sets as predicates \\
+    listLib         & extensive development of lists \\
+    stringLib       & characters and strings \\
+    wordLib         & theories and proof support for bitstrings \\
+    unwindLib       & unwinding existential quantifiers \\
+    res\_quanLib    & bounded quantification \\
+    hol88Lib        & support for hol88 compatibility \\
+    liteLib         & support for portability with HOL-Lite \\
+    ho\_matchLib    & higher-order versions of various proof tools \\
+    refuteLib       & support for refutation procedures \\
+    reduceLib       & basic reasoners for nums and bools \\
+    tautLib         & tautology prover \\
+    arithLib        & linear arith. decision procedures \\
+    BoyerMooreLib   & automatic proof procedure based on the one in Nqthm \\
+    bossLib         & collection of automatic tools \\
+    realLib         & theories for the real numbers and analysis. \\
+    robddLib        & Reduced Ordered Binary Decision Diagrams \\
+ \hline
+\end{tabular}
+\caption{Native Libraries}\label{nativeLibs}
+\end{center}
+\end{table}
+
+As for theories, a library is represented by a separately compiled ML
+structure and can thus be brought into an interactive session by
+invoking ``load'', \eg, 
+\begin{verbatim}
+    load "xLib";
+\end{verbatim}
+One difference between libraries and theories is that a library can in
+general consist of a collection of theories and support ML
+structures. Thus sometimes, but not always, the functionality of a
+library is distributed through a collection of ML structures, all of
+which have been brought into the interactive session by the call to
+``load''. It (unfortunately) falls to the user to know about the
+functionality of a library. Some libraries provide ``help'' and manuals
+for their use; others do not.
+
+\begin{figure}
+\centerline{\psfig{figure=hol98.pic}}
+\caption{System dependencies}
+\end{figure}
+
+
+\chapter {Building Logical Developments}\label{thy-ops}
+
+This chapter deals with theories and \verb+Holmake+. Theories are a
+simple structuring mechanism, with which formalizations can be broken
+into chunks. Holmake is a tool for handling all the ML code and theories
+associated with a large formalization.
+
+\section{Theories}
+
+Building theories can be considered to be the main point of work in
+Hol98. A {\it theory} is a related collection of types, constants,
+axioms, definitions, and theorems, plus `pointers' to ancestor theories.
+In Hol98, theories are built in an interactive manner: axioms,
+definitions and theorems can be entered into, or deleted from, the
+theory under construction at any time. The system maintains the required
+dependencies so that inconsistency cannot result. Once the user has
+built the theory to his or her satisfaction, it can be exported to disk,
+to be reloaded at a later date, without having to replay the proofs that
+created the theory in the first place. This is known as persistence.
+
+In Hol98, there is always a single current theory. When Hol98 starts up,
+the current theory is called \verb+scratch+. Its only parent is the
+theory \verb+bool+.  Every theory except for the initial theory (named
+\verb+min+ in Hol98) has one or more parent theories (found by calling
+\verb+parents+). The transitive closure of the parent relation provides
+the ancestry of a theory and is computed by the \verb+ancestry+
+function.
+
+
+\subsection{Building a theory}
+
+One makes a theory by a call to \verb+new_theory+.  This allocates a new
+`scratch area' where subsequent theory operations take effect.  Elements
+stored in this area may be overwritten by subsequent additions, or
+deleted outright. Any theory elements that were built on 
+those elements are now held to be {\it out-of-date}, and will not be
+included in the theory when it is exported to disk. Moreover,
+out-of-date constants and types are printed surrounded by odd-looking
+syntax to alert the user.
+\begin{verbatim} 
+    new_theory   : string -> unit
+
+    new_type     : {Name : string, Arity : int} -> unit
+    new_constant : {Name : string, Ty : hol_type} -> unit
+    new_infix    : {Name : string, Ty : hol_type, Prec :int} -> unit
+    new_binder   : {Name : string, Ty : hol_type} -> unit
+    set_fixity   : string -> fixity -> unit
+
+    new_axiom    : string * term -> thm
+    save_thm     : string * thm -> thm
+    store_thm    : string * term * tactic -> thm
+\end{verbatim}
+
+The \verb+new_+ functions listed above add types and constants to the
+current HOL signature. These entrypoints are rarely invoked directly by
+the user; instead, definition principles are typically used to update
+the logic signature. The function \verb+set_fixity+ can be used to
+change the parsing status of a constant after it has been
+declared. Notice that there is no entrypoint for adding a new parent;
+that is because a theory can be added as a parent to the current theory
+simply by \verb+load+ing it. The entire ancestry of the new parent is
+then recursively and silently loaded.
+
+Usually, when \verb+new_theory+ is called, the contents of the current
+theory are written to disk before the new theory is constructed. That
+is, unless  the theory is already consistent with disk (this is kept
+track of internally). If however, \verb+new_theory+ is invoked with the
+same name as the current theory, it is assumed that the user wishes to
+clear the scratchpad and start over, so internally that is what is
+done. This allows the current theory to be repeatedly re-loaded without
+having to restart the ML session.
+
+The functions \verb+new_axioms+ and \verb+save_thm+ add axioms and
+theorems into the current theory, under the given name. This name should
+be an acceptable  ML identifier. The function \verb+store_thm+ takes a
+term and a tactic and treats the term as a goal to apply the tactic
+to. The proved theorem is stored in the current theory under the given name.
+\begin{verbatim}
+    delete_type    : string -> unit
+    delete_const   : string -> unit
+    delete_axiom   : string -> unit
+    delete_theorem : string -> unit
+    uptodate_type  : hol_type -> bool
+    uptodate_term  : term -> bool
+    uptodate_thm   : thm -> bool
+    scrub          : unit -> unit
+\end{verbatim}
+
+There are also some functions that allow any element of a theory to be
+deleted. Any other elements that depend on that element become
+out-of-date. There is also a complementary suite of functions that tell
+whether an item is current with respect to the current theory.
+
+Finally, the following situation can often occur: an item held in the
+current theory all of a sudden becomes out-of-date because something it
+was built from got deleted. For reasons of efficiency, it is undesirable
+for the system to re-check all dependencies after every modification to
+the theory; thus the function \verb+scrub+ is made available so that the
+user can decide when to clean up a theory in disarray.
+
+\subsection{Information functions}
+
+The following functions can be used to find out information about theory
+items. Most of them are fairly self-explanatory and so we won't cover them.
+\begin{verbatim}
+    arity       : string -> int     (* of a type constant *)
+    fixity      : string -> fixity  (* of a term constant *)
+    precedence  : string -> int
+
+    is_type     : string -> bool
+    is_constant : string -> bool
+    is_binder   : string -> bool
+    is_infix    : string -> bool
+
+    parents     : string -> string list  (* of a theory *)
+    ancestry    : string -> string list
+
+    (* items from given theory *)
+    types       : string -> {Name : string, Arity : int} list
+    constants   : string -> term list
+    infixes     : string -> term list
+    binders     : string -> term list
+
+    (* named theorem from current theory *)
+    axiom       : string -> thm
+    definition  : string -> thm
+    theorem     : string -> thm
+
+    (* all items in a certain class from current theory only *)
+    axioms      : unit -> (string * thm) list
+    theorems    : unit -> (string * thm) list
+    definitions : unit -> (string * thm) list
+
+    print_theory : unit -> unit      (* The whole picture *)
+    current_theory : unit -> string
+\end{verbatim}
+
+The function \verb+print_theory+ can be used to give a listing of the
+types, constants, axioms, definitions, and theorems of the current
+theory.
+
+
+\subsection{Theories and the file system}
+
+Hol98 provides persistent theories: once a user has finished working on
+a theory, it can be written out to a file, to be used in future
+formalization efforts. Before the current theory is written out, all
+out-of-date entities are scrubbed out. Also the parenthood of the theory
+is computed: it is the fringe of the theory graph at the time
+\verb+export_theory+ is called.
+\begin{verbatim}
+    export_theory : unit -> unit
+\end{verbatim}
+There is also a more general export operation---\verb+prim_export_theory+ ---
+which invokes user-supplied prettyprinters just before printing the end
+of the theory signature and structure. This can be used to, for example,
+store theory-specific proof tools with the theory.
+
+When \verb+export_theory+ is invoked from an interactive session, the
+theory is exported, but not compiled. This makes it difficult to
+\verb+load+ the theory in a later session. Currently,
+\verb+export_theory+ is only useful when invoked under the control of
+\verb+Holmake+.
+
+\section{Holmake}
+
+  The purpose of \verb+Holmake+\footnote{{\tt Holmake} has been written by
+Ken Larsen.} is to maintain dependencies in a Hol98 source directory. A
+single invocation of {\tt Holmake} will compute dependencies between files,
+(re-)compile plain ML code, (re-)compile and execute theory scripts, and
+(re-)compile the resulting theory modules. {\tt Holmake} does not require the
+user to provide any dependency information,\eg, a Makefile. {\tt Holmake}
+can be very convenient to use, but there are some conventions and
+restrictions on it that must be followed, which we will describe in the
+sequel.
+
+{\tt Holmake} can be accessed through
+\begin{verbatim}
+   <hol-dir>/bin/Holmake.
+\end{verbatim}
+
+
+  The model of user development that {\tt Holmake} is designed to support is
+that there are two modes of work: theory construction and system
+revision.  In `theory construction' mode, the user builds up a theory by
+interacting with HOL, perhaps over many sessions. In `system rebuild'
+mode, a module that others depend on has been altered, so all
+intervening modules have to be brought up to date. System re-build mode
+is simpler so we deal with it first.
+
+
+\subsection{System Rebuild}
+
+A system rebuild happens when an existing theory has been improved in
+some way (augmented with a new theorem, a change to a definition, etc.),
+or perhaps some support ML code has been added. The user needs to find
+and recompile just those modules affected by the change. This is what an
+invocation of {\tt Holmake} does, by identifying the out-of-date modules and
+re-compiling and re-executing them.
+
+
+\subsection{Theory construction}
+
+To start a theory construction, some context (semantic, and also proof
+support) is established, typically by loading parent theories and useful
+libraries. In the course of building the theory, the user keeps track of
+the ML --- which, for example, establishes context, makes definitions,
+builds and invokes tactics, and saves theorems --- in a text file. This
+file is used to achieve inter-session persistence of the theory being
+constructed, i.e., the text file resulting from session $n$ is
+``\verb+use+''d to start session $n+1$; after that, theory construction
+resumes.
+
+Once the user finishes the perhaps long and arduous task of constructing
+a theory, the user should
+\begin{enumerate}
+\item make the script separately compilable; 
+\item invoke {\tt Holmake}. This will (a) compile and execute the script
+       file; and (b) compile the resulting theory file. After this, the
+       theory file is available for use.
+\end{enumerate}
+
+\subsection{Making the script separately compilable}
+
+First, the invocation
+\begin{verbatim}
+    val _ = export_theory();
+\end{verbatim}
+should be added at the end of the file. When the script is finally
+executed, this call writes the theory to disk.
+
+Second, we address a crucial environmental issue: if a theory script has
+been constructed using\verb+ <holdir>/bin/hol+, then it has been developed in
+an environment where some commonly used structures, \eg, \verb+Tactic+, have
+already been loaded and opened for the user's convenience. When we wish
+to apply {\tt Holmake} to a script developed in this way, we have to take some
+extra steps to ensure that the compilation environment also provides
+these structures.  In the common case, this is simple; one must only
+add, at the head of the theory script, the following ``boilerplate'':
+\begin{verbatim}
+    open HolKernel Parse basicHol90Lib;
+    infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
+    infixr -->;
+\end{verbatim}
+This will duplicate the starting environment that one obtains with
+\verb+<holdir>/bin/hol+ and \verb+<holdir>/bin/hol.enquote+.
+
+Now the script should be separately compilable. Invoke {\tt Holmake} to check;
+MoscowML will flag any unaccounted-for identifiers it finds. The user
+has to resolve these, either by using the `dot' notation to locate the
+identifier for the compiler, or by \verb+open+ing the relevant
+module. This ``compile/resolve-identifier'' loop should continue until
+{\tt Holmake} succeeds in compiling the module.
+
+The following notes may be of some help.
+
+\begin{enumerate}
+\item The filenames of theory scripts must follow the following
+convention: a HOL theory script for theory "x" should be 
+named
+\begin{verbatim}
+    xScript.sml. 
+\end{verbatim}
+If there is a corresponding signature (and there needn't be), it
+should -- following Moscow ML convention -- be named \verb+xScript.sig+. When
+\verb+export_theory+ is called during an invocation of \verb+Holmake+,
+the files  
+\begin{verbatim}
+    xTheory.{sig,sml}
+\end{verbatim}
+will be generated and then compiled.
+
+\item In the MoscowML batch compiler, modules are not allowed to have unbound
+top-level expressions. Hence, something like the following is not
+allowed:
+\begin{verbatim}
+    new_theory"ted";
+\end{verbatim}
+To make Moscow ML happy, one must instead write something like
+\begin{verbatim}
+    val _ = new_theory"ted";
+\end{verbatim}
+
+
+\item In the interactive system, one has to explicitly \verb+load+
+modules; on the other hand, the batch compiler will load modules
+automatically.  For example, in order to execute \verb+open Foo+ (or
+refer to values in \verb+Foo+) in the interactive system, one must first
+have executed \verb+load "Foo"+. Contrarily, the batch compiler will reject
+files having occurrences of \verb+load+, since \verb+load+ is only
+defined for the interactive system.
+
+\item Take care not to have the string "Theory" embedded in the name of any of
+your files. Hol98 generates files containing this string, and when it
+cleans up after itself, it removes such files using a regular
+expression. This will also remove other files with names containing
+"Theory". For example, if, in your development directory, you had a file
+of ML code named
+\begin{verbatim}
+   MyTheory.sml
+\end{verbatim}
+and you also were managing a Hol98 development there with {\tt Holmake}, then
+MyTheory.sml would get deleted if \verb+Holmake clean+ was invoked.
+
+
+\item The dependency analysis of {\tt Holmake} will generate dependencies for
+{\it all\/} files ending in ".sig" and".sml" in the directory where
+{\tt Holmake} is invoked. If you do not want a particular file to be compiled
+by {\tt Holmake}, for example, a script for a theory under construction,
+simply omit the suffix, or invent a different one.
+
+
+\item We can see that some users may not wish to use (some of) the
+support provided by \verb+basicHol90Lib+, since it is becoming dated. In
+that case, the same general principle set out above will apply: the user
+must ensure that the compilation environment for a theory script is the
+same as the interactive environment it was developed in.
+
+\item Currently, dependencies can get computed several times. This is
+not harmful, but it should eventually get fixed.
+
+\end{enumerate}
+
+
+\subsection{Summary}
+
+A complete theory construction is performed by the following steps:
+\begin{itemize}
+\item Construct theory script, perhaps over many sessions;
+\item Transform script into separately compilable form;
+\item Invoke {\tt Holmake} to generate the theory and compile it.
+\end{itemize}
+
+After that, the theory is usable as a module in MoscowML.
+
+
+\subsection{What {\tt Holmake} doesn't do}
+
+{\tt Holmake} only works properly on the current directory. If there is an
+out-of-date dependence leading up out of the current directory, {\tt Holmake}
+will follow it and attempt to build whatever has to be built. This can
+fail, and it is not the right way to use {\tt Holmake}.  If one is developing
+a system over more than one directory, one should write a master
+Makefile (or shell script) that invokes {\tt Holmake} in the subsidiary
+directories, in the correct order, \ie., such that there never is an
+out-of-date dependence leading outside of the current directory. This
+should always be achievable, simply by ordering the directories in the
+order that one would have to ``\verb+use+'' files in them. See the
+Makefile in the top level of the Hol98 distribution for a large example.
+
+
+\subsection{Options to {\tt Holmake}}
+
+There are several other options to {\tt Holmake}:
+\begin{description}
+
+\item[clean] Removes all compiled files.
+
+\item [cleanAll] Removes all compiled files as well as all of the hidden
+dependency information. 
+\end{description}
+
+Finally, the user can directly affect the workings of \verb+Holmake+ by
+writing a file named \verb+INCLUDE.mk+ to the directory where
+\verb+Holmake+ is to be invoked. This file is typically used to extend
+the load path used by the MoscowML batch compiler. The following example
+comprises the entire contents of the the file \verb+INCLUDE.mk+, and
+allows already compiled code/theories to be found by the batch system
+at the given paths:
+\begin{verbatim} 
+  INCLUDE = -I /some/full/path \ 
+            -I /some/other/path
+\end{verbatim}
+
+\chapter{High-level interactive proof support}\label{bossLib}
+
+The library \verb+bossLib+ marshalls some of the most widely used
+theorem proving tools in HOL and provides them with a convenient
+interface for interaction. The library currently focuses on two things:
+definition of datatypes and functions; and composition of automated
+reasoners. Loading \verb+bossLib+ commits one to working in a context
+that already supplies the theories of booleans, pairs, the option type,
+arithmetic, and lists.
+
+\section{Datatype definition}
+
+There are several useful consequences of an object logic datatype
+definition: structural induction, rewrite rules for constructors, \etc\
+However, these have not traditionally been automatically derived
+at the invocation of the definition package: the user would have to
+build the required theorems by explicitly invoking various proof
+procedures.  To remedy this, \verb+bossLib+ offers the
+\verb+Hol_datatype+ function.\footnote{\verb+bossLib+ does not yet
+support mutually recursive or nested datatypes.} The syntax of 
+declarations that \verb+Hol_datatype+ accepts is found in Table
+\ref{datatype}. 
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|rcl|} \hline
+\verb+Hol_datatype +\ \verb+`+\ident & \verb+=+ & [\clause\ \verb+|+]* \clause\verb+`+ \\
+       & & \\
+\clause & \verb+::=+ & \ident \\
+        & \verb+|+ & \ident\ \verb+of+\ [\type\ \verb+=>+]* \type\\ \hline
+\end{tabular}
+\caption{Datatype Declaration}\label{datatype}
+\end{center}
+\end{table}
+
+There is an underlying database of datatype facts that supports the
+activities of \verb+bossLib+. This database already contains the
+relevant entries for the types \verb+bool+, \verb+prod+, \verb+num+,
+\verb+option+, and \verb+list+.  When a datatype is defined by
+\verb+Hol_datatype+, the following information is derived and stored in
+the database.
+
+\begin{itemize}
+\item initiality theorem for the type
+\item injectivity of the constructors
+\item distinctness of the constructors
+\item structural induction theorem
+\item case analysis theorem
+\item definition of the `case' constant for the type
+\item congruence theorem for the case constant 
+\item definition of the `size' of the type
+\end{itemize}
+
+The following functions use information in the database to ease the
+application of Hol98's underlying functionality:
+\begin{verbatim}
+        type_rws     : string -> thm list
+        Induct       : tactic
+        Cases        : tactic
+        Cases_on     : term quotation -> tactic
+        Induct_on    : term quotation -> tactic
+\end{verbatim}
+
+\begin{itemize}
+
+\item
+The function \underline{\tt type\_rws} will search for the given type
+by name in the underlying database and return useful
+rewrite rules for that type. The rewrite rules of the
+datatype are built from the injectivity and distinctness theorems, along
+with the case constant definition. The pre-existing rewrite rules in the
+database are already integrated into the simplification sets provided
+by \verb+bossLib+; however rewrite rules arising from an invocation of
+\verb+Hol_datatype+, or which come from a user-defined theory, will have
+to be manually added into the simpsets used by the simplifier.
+
+\item
+The \underline{\tt Induct} tactic makes it convenient to invoke
+induction. When it is applied to a goal, the leading universal
+quantifier is examined; if its type is that of a known datatype, the
+appropriate structural induction tactic is extracted and applied.
+
+\item 
+The \underline{\tt Cases} tactic makes it convenient to invoke case
+analysis. The leading universal quantifier in the goal is examined; if
+its type is that of a known datatype, the appropriate structural
+case analysis theorem is extracted and applied. 
+
+\item The \underline{\tt Cases\_on} tactic takes a quotation, which is
+parsed into a term $M$, and then $M$ is searched for in the goal. If $M$
+is a variable, then a variable with the same name is searched for. Once
+the term to split over is known, its type and the associated facts are
+obtained from the underlying database and used to perform the case
+split. If some free variables of $M$ are bound in the goal, an attempt
+is made to remove (universal) quantifiers so that the case split has
+force. Finally, $M$ need not appear in the goal, although it should at
+least contain some free variables already appearing in the goal. Note
+that the \verb+Cases_on+ tactic is more general than \verb+Cases+, but
+it does require an explicit term to be given.
+
+\item The \underline{\tt Induct\_on} tactic takes a quotation, which is
+parsed into a term $M$, and then $M$ is searched for in the goal. If $M$
+is a variable, then a variable with the same name is searched for. Once
+the term to induct on is known, its type and the associated facts are
+obtained from the underlying database and used to perform the induction.
+If $M$ is not a variable, a new variable $v$ not already occurring in
+the goal is created, and used to build a term $v = M$ which the goal is
+made conditional on before the induction is performed. First however,
+all terms containing free variables from $M$ are moved from the
+assumptions to the conclusion of the goal, and all free variables of $M$
+are universally quantified. \verb+Induct_on+ is more general than
+\verb+Induct+, but it does require an explicit term to be given.
+
+\end{itemize}
+
+Two supplementary entrypoints have been provided for more exotic
+inductions: 
+\begin{description}
+\item [completeInduct\_on] performs complete
+induction on the term denoted by the given quotation. Complete induction allows one to assume a
+(seemingly) stronger induction hypothesis than ordinary mathematical
+induction: to wit, when inducting on
+$n$, one is allowed to assume the property holds for {\it all\/} $m$
+smaller than $n$. Formally: $\forall P.\ (\forall x.\ (\forall y.\ y < x
+\supset P\, y) \supset P\,x) \supset \forall x.\ P\,x$. This allows the
+inductive hypothesis to be used more than once, and allows instantiating
+the inductive hypothesis to other than the predecessor. Complete
+induction and ordinary mathematical induction are each derivable from
+the other, hence the use of `seemingly'.
+\item [measureInduct\_on] takes a quotation, and breaks it apart
+to find a term and a measure function with which to induct.
+\end{description}
+
+\section{Function definition}
+
+\begin{verbatim}
+    Define : term quotation -> thm
+\end{verbatim}
+
+The \underline{\tt Define} function is a general-purpose function definition
+mechanism. It will define non-recursive and primitive recursive
+functions and attempt to define recursive-but-not-primitive-recursive
+functions. For these more difficult recursions, it attempts to find a
+measure under which recursive calls become smaller (and to prove that
+they do indeed become smaller). Currently, it examines the domain type
+of the function being defined and synthesizes a "size" measure.  Then it
+does some basic simplifications and then attempts to automatically prove
+the termination constraints.  If this termination proof fails, then the
+termination constraints remain on the hypotheses. An induction theorem
+for the function is also automatically derived: the definition and the
+induction principle are conjoined. 
+
+\noindent {\bf Example.} Invoking 
+\begin{verbatim}
+      Define 
+        `(gcd 0 y = y)  /\
+         (gcd (SUC x) 0 = SUC x) /\
+         (gcd (SUC x) (SUC y) = 
+             ((y <= x) => gcd (x-y)   (SUC y) 
+                       |  gcd (SUC x) (y-x)))`;
+\end{verbatim}
+proves all termination conditions and returns
+\begin{verbatim}
+      |- ((gcd 0 y = y)           /\
+          (gcd (SUC x) 0 = SUC x) /\
+          (gcd (SUC x) (SUC y) =
+               (y <= x => (gcd (x - y) (SUC y)) 
+                       |  (gcd (SUC x) (y - x)))))
+          /\
+          !P. (!y. P 0 y)       /\
+              (!x. P (SUC x) 0) /\
+              (!x y. (~(y <= x) ==> P (SUC x) (y - x)) /\
+                       (y <= x  ==> P (x - y) (SUC y))
+                        ==> P (SUC x) (SUC y))
+                 ==>
+                   !v v1. P v v1.
+\end{verbatim}
+
+\begin{itemize}
+
+\item Nested recursive functions are currently rejected by
+      \verb+Define+. Use \verb+tflLib.Rfunction+ for such cases.
+
+\item \verb+Define+ assumes that the function being defined is to be
+      parsed as a prefix. To define an infix or binder, first make a
+      prefix definition with \verb+Define+ and then use the function
+      \verb+set_fixity+.
+
+\item \verb+Define+ assumes that the function being defined is to be 
+      given a theory-level binding built from the name of the defined
+      constant. However, this sometimes will create a badly formed ML
+      identifier, which will lead to failure of theory compilation. As a
+      result, \verb+Define+ will warn the user when a malformed name has
+      been generated. The user should then use \verb+set_MLname+ to
+      override the system-generated name.
+      
+      {\bf Example.} The system responds to 
+\begin{verbatim}
+    Define `## f g (x,y) = (f x, g y)`
+\end{verbatim}
+      with (omitting some messages)
+\begin{verbatim}
+   The name "##_def" should be changed to an alphanumeric. 
+   Use "set_MLname".
+   > val it = |- !f g x y. ## f g (x,y) = (f x,g y) : Thm.thm
+\end{verbatim}
+      If we then invoke (for example)
+\begin{verbatim}
+    set_fixity "##" (Infix 450);
+    set_MLname "##_def" "fpair_def";
+\end{verbatim}
+      then \verb+##+ will henceforth be an infix operator, and the
+theory-level binding for its definition will be accepted by ML.
+\end{itemize}
+
+
+\section{Automated reasoners}
+
+\verb+bossLib+ brings together the most powerful reasoners in Hol98 and
+tries to make it easy to compose them in a simple way. We take our basic
+reasoners from \verb+mesonLib+, \verb+simpLib+, and \verb+decisionLib+,
+but the point of \verb+bossLib+ is to provide a layer of abstraction so
+the user has to know only a few entrypoints.\footnote{In the mid 1980's
+Graham Birtwistle advocated such an approach, calling it `Ten Tactic
+HOL'.} 
+
+\begin{verbatim}
+    PROVE      : thm list -> term quotation -> thm
+    PROVE_TAC  : thm list -> tactic
+
+    DECIDE     : term quotation -> thm
+    DECIDE_TAC : tactic
+\end{verbatim}
+
+The inference rule \underline{\tt PROVE} (and the corresponding tactic
+\underline{\tt PROVE\_TAC}) takes a list of theorems and a quotation, and
+attempts to prove the term using a first order reasoner. The inference
+rule \underline{\tt DECIDE} (and the corresponding tactic \underline{\tt
+DECIDE\_TAC}) applies a decision procedure that (at least) handles
+statements of linear arithmetic.
+
+\begin{verbatim}
+    RW_TAC   : simpset -> thm list -> tactic
+    &&       : simpset * thm list -> simpset  (* infix *)
+    bool_ss  : simpset
+    arith_ss : simpset 
+    list_ss  : simpset 
+\end{verbatim}
+
+The rewriting tactic \underline{\tt RW\_TAC} works by
+first adding the given theorems into the given \underline{\tt simpset}; then it
+simplifies the goal as much as possible; then it performs case splits on any
+conditional expressions in the goal; then it repeatedly (1) eliminates
+all hypotheses of the form $v = M$ or $M = v$ where $v$ is a variable
+not occurring in $M$, (2) breaks down any equations between constructor
+terms occurring anywhere in the goal. The infix combinator \verb+&&+ is used to
+build a new simpset from a given simpset and a list of theorems.
+
+Simplification sets for its native datatypes are provided
+by \verb+bossLib+. In general, these are extended versions of those
+found in \verb+simpLib+. The simpset for pure logic and pairs and the
+\verb+option+ type is named \verb+bool_ss+. The simpset for arithmetic
+is named \verb+arith_ss+, and the simpset for lists is named
+\verb+list_ss+. The simpsets provided by {\tt bossLib} strictly increase
+in strength: {\tt bool\_ss} is contained in {\tt arith\_ss}, and {\tt
+arith\_ss} is contained in {\tt list\_ss}.
+
+\begin{verbatim}
+    STP_TAC  : simpset -> tactic -> tactic
+    ZAP_TAC  : simpset -> thm list -> tactic
+\end{verbatim}
+
+The compound reasoners of \verb+bossLib+ take a basic approach: they
+simplify the goal as much as possible with \verb+RW_TAC+ and then a
+`finishing' tactic is applied. The primitive entrypoint for this is
+\underline{\tt STP\_TAC}. Currently, the most powerful reasoner is
+\underline{\tt ZAP\_TAC}, which features a finishing tactic that first
+tries a tautology checking tactic; if that fails, \verb+DECIDE_TAC+ is
+called; if that fails, \verb+PROVE_TAC+ is called with the second
+argument. Although this general approach (simplify as much as possible,
+then apply automated reasoners in sequence) is crude, we have found that
+it allows one to make good progress in a high percentage of proof
+situations.
+
+\begin{verbatim}
+    by : term quotation * tactic -> tactic (* infix 8 *)
+    SPOSE_NOT_THEN : (thm -> tactic) -> tactic
+\end{verbatim}
+
+The function \underline{\tt by} is an infix operator that takes a 
+quotation and a tactic $tac$. The quotation is parsed into a term
+$M$. When the invocation ``$M\ \mbox{\tt by}\ tac$'' is applied to a
+goal $(A,g)$, a new subgoal $(A,M)$ is created and $tac$ is applied to
+it. If the goal is proved, the resulting theorem is broken down and
+added to the assumptions of the original goal; thus the proof proceeds
+with the goal $((M::A), g)$. (Note however, that case-splitting will
+happen if the breaking-down of $\ \vdash M$ exposes disjunctions.) Thus
+\underline{\tt by} allows a useful style  of `assertional' or
+`Mizar-like' reasoning to be mixed with ordinary tactic
+proof`\footnote{Proofs in the Mizar system are readable documents,
+unlike almost all tactic-based proofs.}
+
+
+\underline{\tt SPOSE\_NOT\_THEN} initiates a proof by
+contradiction by assuming the negation of the goal and driving the
+negation inwards through quantifiers. It provides the resulting theorem
+as an argument to the supplied function, which will use the theorem to
+build and apply a tactic.
+
+\noindent{\bf Note.} When the library \verb+bossLib+ is loaded, the
+infix parsing status of \verb+&&+ and ``{\tt by}'' must be re-asserted
+by the user. 
+
+
+\chapter{Examples}
+
+Eventually, this chapter will have a complete set of examples showing
+Hol98 in action, so that it could be used as a tutorial on the
+system. Currently, however, it is incomplete. The reader who wishes to
+see more can browse the \verb+examples+ directory of the distribution
+where the following small examples can be found.
+
+\begin{description}
+
+\item [autopilot.sml]
+
+       This example is a Hol98 rendition (by Mark Staples) of a PVS
+       example due to Ricky Butler of NASA. The example shows the use of
+       a record-definition package due to Mike Norrish (building on work
+       of Phil Windley), as well as illustrating some aspects of the
+       automation available in Hol98.
+
+
+\item [euclid.sml]
+
+       This example is a proof of Euclid's theorem on the infinitude of
+       the prime numbers, extracted and modified from a much larger
+       development due to John Harrison. It illustrates the automation
+       of HOL on a classic proof.
+
+
+\item [fol.sml]
+
+      This file illustrates John Harrison's implementation of a
+      model-elimination style first order prover. 
+
+\item [MLsyntax]
+
+       This example shows the use of a facility for defining mutually
+       recursive types, due to Elsa Gunter of Bell Labs. In the example,
+       the type of abstract syntax for a small but not totally
+       unrealistic subset of ML is defined, along with a simple mutually
+       recursive function over the syntax. 
+
+
+\item [bmark]
+
+       In this directory, there is a standard HOL benchmark: the proof
+       of correctness of a multiplier circuit, due to Mike Gordon.
+
+\end{description}
+
+\section{Euclid's Theorem}
+
+In this section, we will prove in Hol98 that for every number, there is
+a prime number that is larger, \ie, that the prime numbers form an
+infinite sequence. This proof has been excerpted and adapted from a much
+larger example due to John Harrison, in which he proved the $n = 4$ case
+of Fermat's Last Theorem. The proof development will be performed using
+the facilities of \verb+bossLib+ and is intended to serve as an
+introduction to performing high-level interactive proofs in Hol98.
+
+Some tutorial descriptions of proof systems show the system performing
+amazing feats of automated theorem proving. In this example, we will
+{\it not\/} take this approach; instead, we try to show how one actually
+goes about the business of proving theorems in Hol98: when more than one
+way to prove something is possible, we will consider the choices; when a
+difficulty rears its ugly head, we will attempt to explain how to fight
+one's way clear.
+
+One `drives' Hol98 by interacting with the ML top-level loop. In this
+interaction style, ML function calls are made to bring in
+already-established logical context (usually via \verb+load+), to define
+new context (via \verb+Hol_datatype+ and \verb+Define+ from
+\verb+bossLib+), and to perform proofs using the goalstack interface, and
+the proof tools from \verb+bossLib+ (or if they fail to do the job, from
+lower-level libraries).
+
+First, we start the system. We will use make use of the quotation
+pre-processor in the example, so we invoke
+\verb+.../<holdir>/bin/hol.enquote+. 
+{\small
+\begin{verbatim}
+>   Moscow ML version 1.43 (April 1998)
+>   Enter `quit();' to quit.
+>   For HOL help, type: help "hol";
+> 
+>           HHH                 LL
+>           HHH                  LL
+>           HHH                   LL
+>           HHH                    LL
+>           HHH          OOOO       LL
+>           HHHHHHH     OO  OO       LL
+>           HHHHHHH     OO  OO       LLL
+>           HHH          OOOO        LLLL
+>           HHH                     LL  LL
+>           HHH                    LL    LL
+>           HHH                   LL      LL
+>           HHH                  LL        LL98 [Athabasca 2]
+> 
+>   [closing file "/home/kxs/hol98/std.prelude"]
+>   [opening file "/home/kxs/hol98/tools/use.sml"]
+>   Rebinding "use" for quotation pre-processing.
+>   [closing file "/home/kxs/hol98/tools/use.sml"]
+\end{verbatim}
+}
+Then we load and open \verb+bossLib+. This library provides high-level
+support for interactive proof, as described in Chapter
+\ref{bossLib}. We also open the theory of arithmetic, since we will
+use some of its theorems.  
+{\small
+\begin{verbatim}
+    load "bossLib"; 
+    open bossLib; 
+    infix &&; infix 8 by;
+    open arithmeticTheory;
+\end{verbatim}
+}
+We specialize the rewriter provided by \verb+bossLib+ to a
+simplification set that knows about arithmetic.  This is not necessary
+and only serves to make some of the proofs typeset more nicely.
+{\small
+\begin{verbatim}
+    val ARW_TAC = RW_TAC arith_ss
+\end{verbatim}
+}
+The ML type of \verb+ARW_TAC+ is $thm\ list \longrightarrow
+tactic$. When \verb+ARW_TAC+ is applied to a list of theorems, the
+theorems will be added to \verb+arith_ss+ as rewrite rules.  We will see
+that \verb+ARW_TAC+ is fairly knowledgeable about
+arithmetic.\footnote{Linear arithmetic especially: purely universal
+statements involving the operators \verb+SUC+, $+$, $-$, numeric
+literals, $<$, $\leq$, $>$, $\geq$, $=$, and multiplication by numeric
+literals.} 
+
+We now begin the formalization. In order to define the concept of a {\it
+prime\/} number, we first need to define the {\it divisibility\/}
+relation:
+
+{\small\begin{verbatim}
+    val divides = Define `divides a b = ?x. b = a * x`
+\end{verbatim}}
+
+The definition is silently added to the current theory (see Section
+\ref{thy-ops}), and also returned from the invocation of \verb+Define+. We 
+take advantage of this and make an ML binding of the name \verb+divides+
+to the definition. In the usual way of interacting with HOL, such an ML
+binding is made for each definition and (useful) proved theorem: the ML
+environment is being used as a convenient place to hold definitions and
+theorems for later reference. 
+
+We want to treat \verb+divides+ as an infix: 
+{\small\begin{verbatim}
+     set_fixity "divides" (Infix 450)
+\end{verbatim}}
+Now we can define the property of a number being {\it prime}: a number $p$ is
+prime if and only if it is not equal to 1 and it has no divisors other
+than $1$ and itself:
+
+{\small\begin{verbatim}
+   val prime = 
+        Define `prime p = ~(p=1) /\ !x. x divides p ==> (x=1) \/ (x=p)`
+\end{verbatim}}
+
+That concludes the definitions to be made. Now we ``just'' have to prove
+that there are an infinite number of primes. If we were coming to this
+problem fresh, then we would have to go through a not-well-understood
+and often tremendously difficult process of finding the right lemmas
+required to prove our target theorem.\footnote{This is of course a
+general problem in doing any kind of proof.} Fortunately, we are working
+from a detailed and accurate source and can devote ourselves to the far
+simpler problem of explaining how to prove the required theorems.
+
+The development will illustrate that there is often more than one way to
+tackle a HOL proof, even if one has only a single (informal) proof in
+mind. We often {\it find\/} the proof using \verb+ARW_TAC+ to unwind
+definitions and perform basic simplifications, \ie, to reduce the goal
+to its essence. Sometimes this proves the goal immediately. Often
+however, we are left with a goal that requires some study before one
+realizes what lemmas are needed to conclude the proof. Once these lemmas
+have been proven (or found in ancestor theories), \verb+PROVE_TAC+ can
+be invoked with them, with the expectation that it will find the right
+instantiations needed to finish the proof. (These two operations do not
+suffice to perform all proofs; in particular, our development will also need
+case analysis and induction.)
+
+This raises the following question: how does one find the right lemmas
+to use? This is quite a problem, especially when the number of theorems
+in ancestor theories is large. There are are couple of possibilities:
+the help system can be used to look up definition and theorems, as well
+as proof procedures; for example, an invocation of \verb+help
+"arithmeticTheory"+ will display all the definitions and theorems that
+have been stored in the theory of arithmetic. However, the complete name
+of the item being searched for must be known before the help system is
+useful. Alternatively, the functions in \verb+DB+ are often more easy to
+use. \verb+DB.match+ allows the use of first order patterns to look for
+the relevant items, while  \verb+DB.find+ will use fragments of
+names as key with with to lookup information. 
+
+Once a proof of a proposition has been found, it is customary, although
+not necessary, to embark on a process of {\it revision}, in which the
+original sequence of tactics is composed into a single tactic. Sometimes
+the resulting tactic is much shorter, and more aesthetically
+pleasing. Some users spend a fair bit of time polishing these tactics,
+although there doesn't seem much real benefit in doing so, since they
+are {\it ad hoc\/} proof recipes, one for each theorem. In the
+following, we will show how this is done in a few cases.
+
+\subsection{Divisibility}
+
+We start by proving a number of theorems about the \verb+divides+
+relation. Each theorem is proved with a single invocation of
+\verb+PROVE_TAC+. Both 
+\verb+ARW_TAC+ and \verb+PROVE_TAC+ are quite powerful reasoners, and
+the choice of a reasoner in a particular situation is a matter of
+experience. In the following, the major reason that \verb+PROVE_TAC+ has
+been selected is that \verb+divides+ is defined by means of an existential
+quantifier, and \verb+PROVE_TAC+ is quite good at automatically
+instantiating existentials in the course of proof. For a simple example,
+consider proving $\forall x.\ x\; \mbox{\tt divides}\; 0$. A new
+proposition to be proved is entered to the proof manager via ``{\tt
+g}'', which starts a fresh goalstack:\footnote{System output is indicated
+by a \verb+>+ in the first column.}
+{\small\begin{verbatim}
+    g`!x. x divides 0`;
+
+>   val it =
+>    Proof manager status: 1 proof.
+>     1. Incomplete:
+>          Initial goal:
+>          !x. x divides 0
+\end{verbatim}}
+The proof manager tells us that it has only one proof to manage, and
+echoes the given goal. Now we expand the definition of
+\verb+divides+. Notice that $\alpha$-conversion takes place in order to
+keep distinct the $x$ of the goal and the $x$ in the definition of
+\verb+divides+:
+{\small\begin{verbatim}
+    e (ARW_TAC [divides]);
+
+>   OK..
+>   1 subgoal:
+>    val it =
+>      ?x'. 0 = x * x'
+\end{verbatim}}
+It is of course quite easy to instantiate the existential quantifier by
+hand.
+{\small\begin{verbatim}
+    e (EXISTS_TAC ``0``);
+
+>   OK..
+>   1 subgoal:
+>    val it =
+>      0 = x * 0
+\end{verbatim}}
+
+Then a simplification step finishes the proof.
+{\small\begin{verbatim}
+    e (ARW_TAC []);
+
+>   OK..
+>   Goal proved.
+>   |- 0 = x * 0
+> 
+>   Goal proved.
+>   |- ?x'. 0 = x * x'
+>   val it =
+>     Initial goal proved.
+>     |- !x. x divides 0
+\end{verbatim}}
+What has happened here? The application of \verb+ARW_TAC+ to the goal
+decomposed it to an empty list of subgoals, plus a justification
+function. The system then applied the justification function to 
+the empty list, and proved the goal. Once a goal has been proved, it is
+popped off the goalstack, prettyprinted to the output, and the theorem
+becomes available for use by the previous justification function on the
+stack. When all the theorems required by {\it that\/} justification
+function are available, it can then evaluate, and prove its
+corresponding goal. This `unwinding' process continues until the stack
+is empty, or until it hits a goal with more than one remaining unproved
+subgoal. This process may be hard to visualize,\footnote{Perhaps since we
+have used a stack to implement what is notionally a tree!} but that doesn't
+matter, since the goalstack was expressly written to allow the user to
+ignore such details. 
+
+If the three interactions are joined together with \verb+THEN+ to form
+a single tactic, we can try the proof again from the beginning and this
+time it will take just one step:
+{\small\begin{verbatim}
+    restart();
+    e (ARW_TAC [divides] THEN EXISTS_TAC ``0`` THEN ARW_TAC[]);
+
+>   OK..
+>   val it =
+>     Initial goal proved.
+>     |- !x. x divides 0
+\end{verbatim}}
+
+We have seen one way to prove the theorem. However, there is another:
+one can let \verb+PROVE_TAC+ expand the definition of \verb+divides+ and
+find the required instantiation for \verb+x'+ from \verb+MULT_CLAUSES+.
+{\small\begin{verbatim}
+    restart();
+    e (PROVE_TAC [divides, MULT_CLAUSES]);
+>   OK..
+>   Meson search level: .....
+>    val it =
+>      Initial goal proved.
+>      |- !x. x divides 0
+\end{verbatim}}
+We have used \verb+PROVE_TAC+ in this way to prove the following
+collection of theorems about \verb+divides+. As mentioned previously,
+the theorems supplied to \verb+PROVE_TAC+ in the following proofs did
+not (usually) come from thin air: in most cases some exploratory work
+with \verb+ARW_TAC+ was done to open up definitions and see what lemmas
+would be required by \verb+PROVE_TAC+. 
+
+\begin{description}
+
+\item [\small{({\it DIVIDES\_0\/})}] 
+\begin{tabular}[t]{l}
+\verb+!x. x divides 0+ \\ \hline
+ \verb+PROVE_TAC [divides, MULT_CLAUSES]+
+\end{tabular}
+
+\item
+[\small{({\it DIVIDES\_ZERO\/})}] 
+\begin{tabular}[t]{l}
+\verb+!x. 0 divides x = (x = 0)+ \\ \hline
+ \verb+PROVE_TAC [divides, MULT_CLAUSES]+
+\end{tabular}
+
+\item
+[\small{({\it DIVIDES\_ONE\/})}] 
+\begin{tabular}[t]{l}
+\verb+!x. x divides 1 = (x = 1)+ \\ \hline
+ \verb+PROVE_TAC [divides, MULT_CLAUSES, MULT_EQ_1]+
+\end{tabular}
+
+\item
+[\small{({\it DIVIDES\_REFL\/})}] 
+\begin{tabular}[t]{l}
+\verb+!x. x divides x+ \\ \hline
+ \verb+PROVE_TAC [divides, MULT_CLAUSES]+ \\
+\end{tabular}
+
+\item
+[\small{({\it DIVIDES\_TRANS\/})}] 
+\begin{tabular}[t]{l}
+\verb+!a b c. a divides b /\ b divides c ==> a divides c+ \\ \hline
+ \verb+PROVE_TAC [divides, MULT_ASSOC]+ \\
+\end{tabular}
+	
+\item
+[\small{({\it DIVIDES\_ADD\/})}] 
+\begin{tabular}[t]{l}
+\verb|!d a b. d divides a /\ d divides b ==> d divides (a+b)| \\ \hline
+ \verb|PROVE_TAC [divides,LEFT_ADD_DISTRIB]|
+\end{tabular}
+
+\item
+[\small{({\it DIVIDES\_SUB\/})}] 
+\begin{tabular}[t]{l}
+\verb+!d a b. d divides a /\ d divides b ==> d divides (a-b)+ \\ \hline
+ \verb+PROVE_TAC [divides, LEFT_SUB_DISTRIB]+ \\
+\end{tabular}
+
+\item
+[\small{({\it DIVIDES\_ADDL\/})}] 
+\begin{tabular}[t]{l}
+\verb|!d a b. d divides a /\ d divides (a+b) ==> d divides b| \\ \hline
+ \verb+PROVE_TAC [ADD_SUB, ADD_SYM, DIVIDES_SUB]+ \\
+\end{tabular}
+
+\item
+[\small{({\it DIVIDES\_LMUL\/})}] 
+\begin{tabular}[t]{l}
+\verb+!d a x. d divides a ==> d divides (x * a)+ \\ \hline
+ \verb+PROVE_TAC [divides, MULT_ASSOC, MULT_SYM]+ \\ 
+\end{tabular}
+
+\item
+[\small{({\it DIVIDES\_RMUL\/})}] 
+\begin{tabular}[t]{l}
+\verb+!d a x. d divides a ==> d divides (a * x)+ \\ \hline
+ \verb+PROVE_TAC [MULT_SYM, DIVIDES_LMUL]+ \\ 
+\end{tabular}
+
+\end{description}
+
+\noindent Now we encounter a lemma about divisibility that doesn't succumb to
+a single invocation of \verb+PROVE_TAC+:
+\begin{description}
+\item [\small{({\it DIVIDES\_LE\/})}] 
+\begin{tabular}[t]{l}
+\verb+!m n. m divides n ==> m <= n \/ (n = 0)+ \\ \hline
+\verb+ARW_TAC [divides]+ \\
+\verb+   THEN Cases_on `x`+ \\
+\verb+   THEN ARW_TAC [MULT_CLAUSES]+ \\
+\end{tabular}
+\end{description}
+Let's see how this is proved. The easiest way to start is to simplify
+with the definition of \verb+divides+:
+{\small\begin{verbatim}
+    g `!m n . m divides n ==> m <= n \/ (n = 0)`;
+    e (ARW_TAC [divides]);
+>   OK..
+>   1 subgoal:
+>   val it =
+>       m <= m * x \/ (m * x = 0)
+\end{verbatim}}
+Considering the goal, we basically have three choices: (1) find a
+collection of lemmas that together imply the goal and use
+\verb+PROVE_TAC+; (2) do a case split on $m$; or (3) do a case split on
+$x$. The first doesn't seem simple, because the goal doesn't really fit
+in the `shape' of any pre-proved theorem(s) that the author knows
+about. Although option (2) will be rejected in the end, let's try it
+anyway. To perform the case split, we use \verb+Cases_on+, which stands
+for ``find the given term in the goal and do a case split on the
+possible means of building it out of datatype constructors''. Since the
+occurrence of $m$ in the goal has type $num$, the cases considered will
+be whether $m$ is $0$ or a successor.
+{\small\begin{verbatim}
+    e (Cases_on `m`);
+>   OK..
+>   2 subgoals:
+>   val it =
+>      SUC n <= SUC n * x \/ (SUC n * x = 0)
+>     
+>      0 <= 0 * x \/ (0 * x = 0)
+\end{verbatim}}
+\noindent The first subgoal is trivial:
+{\small\begin{verbatim}
+    e (ARW_TAC []);
+>   OK..
+>   Goal proved.
+>      ...
+> 
+>   Remaining subgoals:
+>   val it =
+>      SUC n <= SUC n * x \/ (SUC n * x = 0)
+\end{verbatim}}
+\noindent Let's try \verb+ARW_TAC+ again:
+{\small\begin{verbatim}
+    e (ARW_TAC []);
+>   OK..
+>   1 subgoal:
+>   val it =
+>      SUC n <= SUC n * x \/ (x = 0)
+\end{verbatim}}
+The right disjunct has been simplified; however, the left disjunct has
+failed to expand the definition of multiplication in the expression
+$\mbox{\tt SUC}\ n * x$, which would have been convenient. Why not, when
+\verb+arith_ss+ and hence \verb+ARW_TAC+ is supposed to be expert in
+arithmetic? The answer is that the recursive clauses for addition and
+multiplication are not in \verb+arith_ss+ because uncontrolled
+application of them by the rewriter seemed to make some proofs {\it
+more\/} complicated, rather than simpler. OK, so let's manually add
+\verb+MULT_CLAUSES+ in.
+{\small\begin{verbatim}
+    e (ARW_TAC [MULT_CLAUSES]);
+>   OK..
+>   1 subgoal:
+>   val it =
+>      SUC n <= x + n * x \/ (x = 0)
+\end{verbatim}}
+Now we see that, in order to make progress in the proof, we will have to
+do a case split on $x$ anyway, and that we should have split on it
+originally. Hence we backup. We will have to backup (undo) three times:
+{\small\begin{verbatim}
+    b();
+>   val it =
+>      SUC n <= SUC n * x \/ (SUC n * x = 0)
+
+    b();
+>   val it =
+>      SUC n <= SUC n * x \/ (SUC n * x = 0)
+>     
+>      0 <= 0 * x \/ (0 * x = 0)
+
+    b();
+>   val it =
+>      m <= m * x \/ (m * x = 0)
+\end{verbatim}}
+And now we can go forward and do case analysis on $x$. We will also make
+a compound tactic invocation, since we already know that we'll have
+to invoke \verb+ARW_TAC+ in both branches of the case split. This can be
+done using \verb+THEN+. Recall that when $t_1 \ \mbox{\tt THEN}\ t_2$ is
+applied to a goal $g$, first $t_1$ is applied to $g$, giving a list of
+new subgoals, then $t_2$ is applied to each member of the list. All
+goals resulting from these applications of $t_2$ are gathered
+together and returned. 
+{\small\begin{verbatim}
+    e (Cases_on `x` THEN ARW_TAC [MULT_CLAUSES]);
+>   OK..
+> 
+>   Goal proved.   ...
+>   val it =
+      Initial goal proved.
+      |- !m n. m divides n ==> m <= n \/ (n = 0)
+\end{verbatim}}
+That was easy! Obviously making a case split on $x$ was the right
+choice. The process of {\it finding\/} the proof has now finished,
+and all that remains is for the proof to be packaged up into the
+single tactic we saw above. The actual ML is the
+following:\footnote{{\tt store\_thm} takes a string, a term and a
+tactic and applies the tactic to the term to get a theorem, and
+then stores the theorem in the current theory under the given name.}
+{\small\begin{verbatim}
+   val DIVIDES_LE = store_thm
+    ("DIVIDES_LE",  ``!m n. m divides n ==> m <= n \/ (n = 0)``,
+     ARW_TAC [divides] 
+       THEN Cases_on `x` 
+       THEN ARW_TAC [MULT_CLAUSES]);
+\end{verbatim}}
+
+\subsubsection{Divisibility and factorial}
+
+The next lemma, {\small{\it DIVIDES\_FACT\/}}, says that every number
+greater than $0$ and less-than-or-equal-to $n$ divides the factorial of
+$n$. Factorial is found at \verb+arithmeticTheory.FACT+ and has been
+defined by primitive recursion: 
+\begin{description}
+\item [\small{({\it FACT\/})}] 
+\begin{tabular}[t]{l}
+\verb+(FACT 0 = 1) /\+ \\
+\verb+(!n. FACT (SUC n) = SUC n * FACT n)+ \\
+\end{tabular}
+\end{description}
+A polished proof of {\small{\it DIVIDES\_FACT\/}} is the following:
+\begin{description}
+\item [\small{({\it DIVIDES\_FACT\/})}] 
+\begin{tabular}[t]{l}
+\verb+!m n. 0 < m /\ m <= n ==> m divides (FACT n)+ \\ \hline
+\verb+ARW_TAC [LESS_EQ_EXISTS]+ \\
+\verb+ THEN Induct_on `p`+ \\
+\verb+ THEN ARW_TAC [FACT,ADD_CLAUSES]+ \\
+\verb+ THENL [Cases_on `m`, ALL_TAC]+ \\
+\verb+ THEN PROVE_TAC [FACT, DECIDE `!x. ~(x < x)`,+ \\
+\verb+             DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL]+ \\
+\end{tabular}
+\end{description}
+We will examine this proof in detail, so we should first attempt to
+understand why the theorem is true. What's the underlying intuition?
+Suppose $0 < m \leq n$, and so $\mbox{\tt FACT}\ n = 1 * \cdots * m *
+\cdots * n$. To show $m\ \mbox{\tt divides}\ (\mbox{\tt FACT}\ n)$ means
+exhibiting a $q$ such that $q * m = \mbox{\tt FACT}\ n$. Thus $q =
+\mbox{\tt FACT}\ n \div m$. If we were to take this approach to the
+proof, we would end up having to find and apply lemmas about
+$\div$. This seems to take us a little out of our way; isn't there a
+proof that doesn't use division? Well yes, we can prove the theorem by
+induction on $n - m$: in the base case, we will have to prove $n\;
+\mbox{\tt divides}\ (\mbox{\tt FACT}\; n)$, which ought to be easy; in
+the inductive case, the inductive hypothesis seems like it should give
+us what we need. This last is a bit vague, because we are trying to
+mentally picture a slightly complicated formula, but we can rely on the
+system to accurately calculate the cases of the induction for us. If the
+inductive case turns out to be not what we expect, we will have to
+re-think our approach.
+{\small\begin{verbatim}
+    g`!m n. 0 < m /\ m <= n ==> m divides (FACT n)`;
+>   val it =
+>    Proof manager status: 1 proof.
+>    1. Incomplete:
+>         Initial goal:
+>         !m n. 0 < m /\ m <= n ==> m divides FACT n
+\end{verbatim}}
+Instead of directly inducting on $n-m$, we will induct on a witness
+variable, obtained by use of the theorem \verb+LESS_EQ_EXISTS+.
+{\small\begin{verbatim}
+    LESS_EQ_EXISTS;
+>   val it = |- !m n. m <= n = (?p. n = m + p)
+
+    e (ARW_TAC [LESS_EQ_EXISTS]);
+>   OK..
+>   1 subgoal:
+>    val it =
+>      m divides FACT (m + p)
+>     ------------------------------------
+>       0 < m
+\end{verbatim}}
+\noindent Now we induct on $p$:
+{\small\begin{verbatim}
+    e (Induct_on `p`);
+>   OK..
+>   2 subgoals:
+>   val it =
+>     m divides FACT (m + SUC p)
+>     ------------------------------------
+>       0.  0 < m
+>       1.  m divides FACT (m + p)
+>     
+>     m divides FACT (m + 0)
+>     ------------------------------------
+>       0 < m
+\end{verbatim}}
+\noindent The first goal can obviously be simplified:
+{\small\begin{verbatim}
+    e (ARW_TAC []);
+>   OK..
+>   1 subgoals:
+>   val it =
+>     m divides FACT m
+>     ------------------------------------
+>       0 < m
+\end{verbatim}}
+\noindent Now we can do a case analysis on $m$: if it is $0$, we have a
+trivial goal; if it is a successor, then we can use the definition of
+\verb+FACT+ and the theorems \verb+DIVIDES_RMUL+ and
+\verb+DIVIDES_REFL+.
+{\small\begin{verbatim}
+    e (Cases_on `m`);
+>   OK..
+>   2 subgoals:
+>   val it =
+>      SUC n divides FACT (SUC n)
+>      ------------------------------------
+>        0 < SUC n
+>      
+>      0 divides FACT 0
+>      ------------------------------------
+>        0 < 0
+
+    e (PROVE_TAC [DECIDE `!x. ~(x < x)`]);
+>   OK..
+>   Meson search level: ..
+>   Goal proved.  ....
+> 
+>   Remaining subgoals:
+>   val it =
+>      SUC n divides FACT (SUC n)
+>      ------------------------------------
+>        0 < SUC n
+
+    e (ARW_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]);
+>   OK..
+>   Goal proved.  ....
+> 
+>  Remaining subgoals:
+>  val it =
+>      m divides FACT (m + SUC p)
+>      ------------------------------------
+>        0.  0 < m
+>        1.  m divides FACT (m + p)
+\end{verbatim}}
+Note that this last step (the invocation of \verb+ARW_TAC+)
+could also have been accomplished with \verb+PROVE_TAC+:
+{\small\begin{verbatim}
+    b();
+    e (PROVE_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]);
+>   OK..
+>   Goal proved.  ....
+\end{verbatim}}
+Now we have finished the base case of the induction and can move to the
+step case. An obvious thing to try is simplification with the
+definitions of addition and factorial:
+{\small\begin{verbatim}
+    e (ARW_TAC [FACT, ADD_CLAUSES]);
+>   OK..
+>   1 subgoal:
+>   val it =
+>      m divides SUC (m + p) * FACT (m + p)
+>      ------------------------------------
+>        0.  0 < m
+>        1.  m divides FACT (m + p)
+\end{verbatim}}
+\noindent And now, by \verb+DIVIDES_LMUL+ and the inductive hypothesis, we are
+done:
+{\small\begin{verbatim}
+    e (PROVE_TAC [DIVIDES_LMUL]);
+>   OK..
+>   Meson search level: ...
+>   Goal proved.  ....
+>
+>   val it =
+>      Initial goal proved.
+>      |- !m n. 0 < m /\ m <= n ==> m divides FACT n
+\end{verbatim}}
+We have finished the search for the proof, and turn to the task of
+making a single tactic out of the sequence of tactic invocations we have
+just made. We assume that the sequence of invocations has been kept
+track of in a file or a text editor buffer. We would thus have something
+like the following:
+{\small\begin{verbatim}
+    e (ARW_TAC [LESS_EQ_EXISTS]);
+    e (Induct_on `p`);
+    (*1*)
+    e (ARW_TAC []);
+    e (Cases_on `m`);
+    (*1.1*)
+    e (PROVE_TAC [DECIDE `!x. ~(x < x)`]);
+    (*1.2*)
+    e (ARW_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]);
+    (*2*)
+    e (ARW_TAC [FACT, ADD_CLAUSES]);
+    e (PROVE_TAC [DIVIDES_LMUL]);
+\end{verbatim}}
+We have added a numbering scheme to keep track of the branches in the
+proof. We can stitch the above directly into the following compound
+tactic:
+{\small\begin{verbatim}
+    ARW_TAC [LESS_EQ_EXISTS]
+     THEN Induct_on `p`
+     THENL [ARW_TAC [] THEN Cases_on `m`
+            THENL [PROVE_TAC [DECIDE `!x. ~(x < x)`],
+                   ARW_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]],
+            ARW_TAC [FACT, ADD_CLAUSES] THEN PROVE_TAC [DIVIDES_LMUL]]
+\end{verbatim}}
+\noindent This can be tested to see that we have made no errors:
+{\small\begin{verbatim}
+    restart();
+    e (ARW_TAC [LESS_EQ_EXISTS]
+       THEN Induct_on `p`
+       THENL [ARW_TAC [] THEN Cases_on `m`
+              THENL [PROVE_TAC [DECIDE `!x. ~(x < x)`],
+                     ARW_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]],
+              ARW_TAC [FACT, ADD_CLAUSES] THEN PROVE_TAC [DIVIDES_LMUL]]);
+>   OK..
+>   Meson search level: ...
+>   Meson search level: ..
+>   val it =
+>      Initial goal proved.
+>      |- !m n. 0 < m /\ m <= n ==> m divides FACT n
+\end{verbatim}}
+For many users, this would be the end of dealing with this proof: the
+tactic would be packaged into an invocation of \verb+prove+ or
+\verb+store_thm+ and that would be the end of it. However, another class
+of user would notice that this tactic could be shortened. 
+
+To start, both arms of the induction start with an invocation of
+\verb+ARW_TAC+, and the semantics of \verb+THEN+ allow us to merge the
+occurrences of \verb+ARW_TAC+ above the \verb+THENL+. The recast tactic
+is 
+{\small\begin{verbatim}
+    ARW_TAC [LESS_EQ_EXISTS]
+      THEN Induct_on `p`
+      THEN ARW_TAC [FACT, ADD_CLAUSES]
+      THENL [Cases_on `m`
+              THENL [PROVE_TAC [DECIDE `!x. ~(x < x)`],
+                     ARW_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]],
+             PROVE_TAC [DIVIDES_LMUL]]
+\end{verbatim}}
+(Of course, when a tactic has been revised, it should be tested to see
+if it still proves the goal!) Now recall that the use of \verb+ARW_TAC+
+in the base case could be replaced by a call to \verb+PROVE_TAC+. Thus
+it seems possible to merge the two sub-cases of the base case into a
+single invocation of \verb+PROVE_TAC+:
+{\small\begin{verbatim}
+    ARW_TAC [LESS_EQ_EXISTS]
+      THEN Induct_on `p`
+      THEN ARW_TAC [FACT, ADD_CLAUSES]
+      THENL [Cases_on `m`
+              THEN PROVE_TAC [DECIDE `!x. ~(x < x)`,
+                              FACT, DIVIDES_RMUL, DIVIDES_REFL],
+             PROVE_TAC [DIVIDES_LMUL]]
+\end{verbatim}}
+Finally, pushing this dubious revisionism nearly to its limit, we'd like
+there to be only a single invocation of \verb+PROVE_TAC+ to finish the
+proof off. The semantics of \verb+THEN+ and \verb+ALL_TAC+ come to our
+rescue: we will split on the construction of $m$ in the base case, as in
+the current incarnation of the tactic, but we will let the inductive
+case pass unaltered through the \verb+THENL+. This is achieved by
+using \verb+ALL_TAC+, which is a tactic that acts as an identity
+function on the goal. 
+{\small\begin{verbatim}
+    ARW_TAC [LESS_EQ_EXISTS]
+      THEN Induct_on `p`
+      THEN ARW_TAC [FACT, ADD_CLAUSES]
+      THENL [Cases_on `m`, ALL_TAC]
+      THEN PROVE_TAC [DECIDE `!x. ~(x < x)`, FACT, 
+                      DIVIDES_RMUL, DIVIDES_REFL, DIVIDES_LMUL]
+\end{verbatim}}
+The result is that there will be three subgoals emerging from the
+\verb+THENL+: the two sub-cases in the base case and the unaltered step
+case. Each is proved with a call to \verb+PROVE_TAC+. We have now
+finished our exercise in tactic polishing.
+
+\subsubsection{Divisibility and factorial (again!)}
+
+In the previous proof, we made an initial simplification step in order
+to expose a variable upon which to induct. However, the proof is really by
+induction on $n - m$. Can we express this directly? The answer is a
+qualified yes: the induction can be naturally stated, but it leads to
+somewhat less natural goals.
+{\small\begin{verbatim}
+    restart();
+    e (Induct_on `n - m`);
+>   OK..
+>   2 subgoals:
+>   val it =
+>     !n m. (SUC v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
+>     ------------------------------------
+>       !n m. (v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
+>     
+>     !n m. (0 = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
+\end{verbatim}}
+This is slighly hard to read, so we use \verb+STRIP_TAC+ to move the
+antecedents of the goals to the assumptions. Use of \verb+THEN+ ensures
+that the tactic gets applied in both branches of the induction.
+{\small\begin{verbatim}
+    b();
+    e (Induct_on `n - m` THEN REPEAT STRIP_TAC);
+>   OK..
+>   2 subgoals:
+>   val it =
+>     m divides FACT n
+>     ------------------------------------
+>       0.  !n m. (v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
+>       1.  SUC v = n - m
+>       2.  0 < m
+>       3.  m <= n
+>     
+>     m divides FACT n
+>     ------------------------------------
+>       0.  0 = n - m
+>       1.  0 < m
+>       2.  m <= n
+\end{verbatim}}
+Looking at the first goal, we reason that if $0 = n - m$ and $m
+\leq n$, then $m = n$. We can prove this fact, and add it to the
+hypotheses by use of the infix operator ``{\tt by}'':
+{\small\begin{verbatim}
+    e (`m:num = n` by DECIDE_TAC);
+>   OK..
+>   1 subgoal:
+>   val it =
+>      m divides FACT n
+>      ------------------------------------
+>        0.  0 = n - m
+>        1.  0 < m
+>        2.  m <= n
+>        3.  m = n
+\end{verbatim}}
+Notice that we needed to constrain the type of $m$ (and thus that of
+$n$) because otherwise they would be assigned a polymorphic type and
+then they would not be the same as the $m$ and $n$ already occurring in
+the goal, which have type {\it num}.\footnote{The quotation in ``{\it
+quotation\/} {\tt by} {\it tactic}'' is currently parsed in ignorance of
+the assignment of types to terms in the goal.}
+We can now use \verb+ARW_TAC+ to propagate the newly derived equality
+throughout the goal.
+{\small\begin{verbatim}
+    e (ARW_TAC []);
+>   OK..
+>   1 subgoal:
+>   val it =
+>     m divides FACT m
+>     ------------------------------------
+>       0.  0 = m - m
+>       1.  0 < m
+>       2.  m <= m
+\end{verbatim}}
+At this point in the previous proof we had to do a case analysis on
+$m$. However, in the current proof, we already have the hypothesis that
+$m$ is positive. Thus we know that $m$ is the successor of some number
+$k$. We might like to assert this fact with an invocation of ``{\tt
+by}'' as follows:
+{\small\begin{verbatim}
+    `?k. m = SUC k` by <tactic>.
+\end{verbatim}}
+But what is the tactic? If we try \verb+DECIDE_TAC+, it will fail since
+it doesn't handle existential statements. An application of
+\verb+ARW_TAC+ will also prove to be unsatisfactory. What to do?
+
+When such situations occur, it is often best to start a new proof for 
+the required lemma. This can be done simply by invoking ``{\tt g}'' again. A
+new goalstack will be created and stacked upon the current
+one\footnote{This stacking of proof attempts (goalstacks) is different than the
+stacking of goals and justifications inside a particular goalstack.}
+and an overview of the extant proof attempts will be printed:
+{\small\begin{verbatim}
+    g `!m. 0 < m ==> ?k. m = SUC k`;
+
+>   val it =
+>     Proof manager status: 2 proofs.
+>     2. Incomplete:
+>          Initial goal:
+>          !m n. 0 < m /\ m <= n ==> m divides FACT n
+>          
+>          
+>          Current goal:
+>          m divides FACT m
+>          ------------------------------------
+>            0.  0 = m - m
+>            1.  0 < m
+>            2.  m <= m
+>          
+>     1. Incomplete:
+>          Initial goal:
+>          !m. 0 < m ==> (?k. m = SUC k)
+\end{verbatim}}
+Our new goal can be proved quite quickly. Once we have proved it, we
+can bind it to an ML name and use it in the previous proof, by some
+sleight of hand with the ``{\tt before}''\footnote{An infix version of
+the {\tt K} combinator, defined by {\tt fun (x before y) = x}.} function. 
+{\small\begin{verbatim}
+    e (Cases THEN ARW_TAC []);
+
+>   OK..
+>   val it =
+>      Initial goal proved.
+>      |- !m. 0 < m ==> (?k. m = SUC k)
+
+    val lem = top_thm() before drop();
+>   OK..
+>   val lem = |- !m. 0 < m ==> (?k. m = SUC k)
+
+    p ();
+>   val it =
+>      m divides FACT m
+>      ------------------------------------
+>        0.  0 = m - m
+>        1.  0 < m
+>        2.  m <= m
+\end{verbatim}}
+Now we can use \verb+lem+ in the proof. Somewhat opportunistically, we
+will tack on the invocation used in the earlier proof at (roughly) the
+same point, hoping that it will solve the goal:
+{\small\begin{verbatim}
+    e (`?k. m = SUC k` by PROVE_TAC [lem]
+         THEN ARW_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]);
+
+>   OK..
+>   Meson search level: ...
+> 
+>   Goal proved.  .....
+>   Remaining subgoals:
+>   val it =
+>     m divides FACT n
+>     ------------------------------------
+>      0.  !n m. (v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
+>      1.  SUC v = n - m
+>      2.  0 < m
+>      3.  m <= n
+\end{verbatim}}
+It does! That takes care of the base case. For the induction step,
+things look a bit more difficult than in the earlier proof. However, we
+can make progress by realizing that the hypotheses imply that $0 <
+n$ and so, again by \verb+lem+, we can transform $n$ into a successor,
+thus enabling the unfolding of \verb+FACT+, as in the previous proof:
+{\small\begin{verbatim}
+    e (`0 < n` by DECIDE_TAC THEN 
+       `?k. n = SUC k` by PROVE_TAC [lem]);
+
+>   OK..
+>   Meson search level: ...
+>   1 subgoal:
+>   val it =
+>      m divides FACT n
+>      ------------------------------------
+>       0.  !n m. (v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
+>       1.  SUC v = n - m
+>       2.  0 < m
+>       3.  m <= n
+>       4.  0 < n
+>       5.  n = SUC k
+\end{verbatim}}
+\noindent The proof now finishes in much the same manner as the previous one:
+{\small\begin{verbatim}
+    e (ARW_TAC [FACT, DIVIDES_LMUL]);
+
+>   OK..
+>   Goal proved.   ....
+>   val it =
+>     Initial goal proved.
+>     |- !m n. 0 < m /\ m <= n ==> m divides FACT n
+\end{verbatim}}
+\noindent We leave the details of stitching the proof together to the interested
+reader.
+
+\subsection{Primality}
+
+Now we move on to establish some facts about the primality of the
+first few numbers: $0$ and $1$ are not prime, but $2$ is. Also, all
+primes are positive. These are all quite simple to prove.
+
+\begin{description}
+
+\item [\small{({\it NOT\_PRIME\_0\/})}] 
+\begin{tabular}[t]{l}
+\verb+~prime 0+ \\ \hline
+\verb+ARW_TAC [prime,DIVIDES_0]+ \\
+\end{tabular}
+
+\item
+[\small{({\it NOT\_PRIME\_1\/})}] 
+\begin{tabular}[t]{l}
+\verb+~prime 1+ \\ \hline
+\verb+ARW_TAC [prime]+ \\
+\end{tabular}
+
+\item
+[\small{({\it PRIME\_2\/})}] 
+\begin{tabular}[t]{l}
+\verb+prime 2+ \\ \hline
+\verb+ARW_TAC [prime]+ \\
+\verb+ THEN PROVE_TAC [DIVIDES_LE, DIVIDES_ZERO,+ \\
+\verb+                 DECIDE `~(2=1)`, DECIDE `~(2=0)`,+ \\
+\verb+                 DECIDE `x <= 2 = (x=0) \/ (x=1) \/ (x=2)`]+ \\
+\end{tabular}
+
+\item
+[\small{({\it PRIME\_POS\/})}] 
+\begin{tabular}[t]{l}
+\verb+!p. prime p ==> 0<p+ \\ \hline
+\verb+Cases THEN ARW_TAC[NOT_PRIME_0]+ \\
+\end{tabular}
+\end{description}
+
+\subsection{Existence of prime factors}
+
+Now we are in position to prove a more substantial lemma: every number
+other than $1$ has a prime factor. The proof proceeds by a {\it
+complete induction\/} on $n$. Complete induction is
+necessary since a prime factor won't be the predecessor. After
+induction, the proof splits into cases on whether $n$ is prime or
+not. The first case ($n$ is prime) is 
+trivial. In the second case, there must be an $x$ that divides $n$, and
+$x$ is not 1 or $n$. By \verb+DIVIDES_LE+, $n=0$ or $x \leq n$. If
+$n=0$, then 2 is a prime that divides 0. On the other hand, if $x \leq
+n$, there are two cases: if $x < n$ then we can use the inductive
+hypothesis and by transitivity of divides we are done; otherwise,
+$x=n$ and then we have a contradiction with the fact that $x$ is not 1
+or $n$.  The polished tactic is the following:
+\begin{description}
+\item [\small{({\it PRIME\_FACTOR\/})}] 
+\begin{tabular}[t]{l}
+\verb+!n. ~(n = 1) ==> ?p. prime p /\ p divides n+ \\ \hline
+\verb+completeInduct_on `n`+ \\
+\verb+  THEN STRIP_TAC+ \\
+\verb+  THEN Cases `prime n` THENL+ \\
+\verb+  [PROVE_TAC [DIVIDES_REFL], + \\
+\verb+   `?x. x divides n /\ ~(x=1) /\ ~(x=n)` + \\
+\verb+    by PROVE_TAC[prime]+ \\
+\verb+     THEN PROVE_TAC [LESS_OR_EQ, PRIME_2, +\\
+\verb+                  DIVIDES_LE,DIVIDES_TRANS,DIVIDES_0]]+ \\
+\end{tabular}
+\end{description}
+We start by invoking complete induction. This gives us an inductive
+hypothesis that holds at every number $m$ strictly smaller than $n$:
+{\small\begin{verbatim}
+    e (completeInduct_on `n`);
+>   OK..
+>   1 subgoal:
+>   val it =
+>      ~(n = 1) ==> (?p. prime p /\ p divides n)
+>      ------------------------------------
+>        !m. m < n ==> ~(m = 1) ==> (?p. prime p /\ p divides m)
+\end{verbatim}}
+We can move the antecedent to the hypotheses and make our case
+split. Notice that the term given to \verb+Cases_on+ need not occur in
+the goal:
+{\small\begin{verbatim}
+    e (STRIP_TAC THEN Cases_on `prime n`);
+>   OK..
+>   2 subgoals:
+>   val it =
+>     ?p. prime p /\ p divides n
+>     ------------------------------------
+>       0.  !m. m < n ==> ~(m = 1) ==> (?p. prime p /\ p divides m)
+>       1.  ~(n = 1)
+>       2.  ~(prime n)
+>     
+>     ?p. prime p /\ p divides n
+>     ------------------------------------
+>       0.  !m. m < n ==> ~(m = 1) ==> (?p. prime p /\ p divides m)
+>       1.  ~(n = 1)
+>       2.  prime n
+\end{verbatim}}
+\noindent As mentioned, the first case is proved with the reflexivity of
+divisibility:
+{\small\begin{verbatim}
+    e (PROVE_TAC [DIVIDES_REFL]);
+>   OK..
+>   Meson search level: ...
+> 
+>   Goal proved.  .....
+\end{verbatim}}
+\noindent In the second case, we can get a divisor of $n$ that isn't $1$ or $n$
+(since $n$ is not prime):
+{\small\begin{verbatim}
+    e (`?x. x divides n /\ ~(x=1) /\ ~(x=n)` by PROVE_TAC [prime]);
+>   OK..
+>   Meson search level: ............
+>   1 subgoal:
+>   val it =
+>     ?p. prime p /\ p divides n
+>     ------------------------------------
+>      0.  !m. m < n ==> ~(m = 1) ==> (?p. prime p /\ p divides m)
+>      1.  ~(n = 1)
+>      2.  ~(prime n)
+>      3.  x divides n
+>      4.  ~(x = 1)
+>      5.  ~(x = n)
+\end{verbatim}}
+At this point, the polished tactic simply invokes \verb+PROVE_TAC+ with
+a collection of theorems. We will attempt a more detailed
+exposition. Given the hypotheses, and by \verb+DIVIDES_LE+, we can
+assert $x < n \lor n = 0$ and thus split the proof into two cases:
+{\small\begin{verbatim}
+    e (`x < n \/ (n=0)` by PROVE_TAC [DIVIDES_LE,LESS_OR_EQ]);
+>   OK..
+>   Meson search level: ......
+>   2 subgoals:
+>   val it =
+>     ?p. prime p /\ p divides n
+>     ------------------------------------
+>       0.  !m. m < n ==> ~(m = 1) ==> (?p. prime p /\ p divides m)
+>       1.  ~(n = 1)
+>       2.  ~(prime n)
+>       3.  x divides n
+>       4.  ~(x = 1)
+>       5.  ~(x = n)
+>       6.  n = 0
+>     
+>     ?p. prime p /\ p divides n
+>     ------------------------------------
+>       0.  !m. m < n ==> ~(m = 1) ==> (?p. prime p /\ p divides m)
+>       1.  ~(n = 1)
+>       2.  ~(prime n)
+>       3.  x divides n
+>       4.  ~(x = 1)
+>       5.  ~(x = n)
+>       6.  x < n
+\end{verbatim}}
+In the first subgoal, we can see that the antecedents of the inductive
+hypothesis are met and so $x$ has a prime divisor. We can then use the
+transitivity of divisibility to get the fact that this divisor of $x$ is
+also a divisor of $n$, thus finishing this branch of the proof:
+{\small\begin{verbatim}
+    e (PROVE_TAC [DIVIDES_TRANS]);
+>   OK..
+>   Meson search level: .........
+>   Goal proved.  ....
+\end{verbatim}}
+\noindent The remaining goal can be clarified by simplification:
+{\small\begin{verbatim}
+    e (ARW_TAC []);
+>   OK..
+>   1 subgoal:
+>   val it =
+>     ?p. prime p /\ p divides 0
+>     ------------------------------------
+>       0.  !m. m < 0 ==> ~(m = 1) ==> (?p. prime p /\ p divides m)
+>       1.  ~(0 = 1)
+>       2.  ~(prime 0)
+>       3.  x divides 0
+>       4.  ~(x = 1)
+>       5.  ~(x = 0)
+
+    DIVIDES_0;
+>   val it = |- !x. x divides 0 : Thm.thm
+
+    e (ARW_TAC [it]);
+>   OK..
+>   1 subgoal:
+>   val it =
+>     ?p. prime p
+>     ------------------------------------
+>       0.  !m. m < 0 ==> ~(m = 1) ==> (?p. prime p /\ p divides m)
+>       1.  ~(0 = 1)
+>       2.  ~(prime 0)
+>       3.  x divides 0
+>       4.  ~(x = 1)
+>       5.  ~(x = 0)
+\end{verbatim}}
+The two steps of exploratory simplification have led us to a state where
+all we have to do is exhibit a prime. And we already have one to hand:
+{\small\begin{verbatim}
+    e (PROVE_TAC [PRIME_2]);
+>   OK..
+>   Meson search level: ..
+> 
+>   Goal proved.  ....
+>   val it =
+>     Initial goal proved.
+>     |- !n. ~(n = 1) ==> (?p. prime p /\ p divides n)
+\end{verbatim}}
+Again, work now needs to be done to compose and perhaps polish a single
+tactic from the individual proof steps, but we will not describe
+it. Instead we move forward, because our ultimate goal is in reach.
+
+\subsection{Euclid's theorem}
+
+\noindent{\bf Theorem.} Every number has a prime greater than it.\\
+\noindent  {\it Informal proof.} \\
+\noindent Suppose the opposite; then there's an $n$
+such that all $p$ greater than $n$ are not prime. Consider $\mbox{\tt
+FACT}(n) + 1$: it's not equal to 1 so, by {\small{\it PRIME\_FACTOR}},
+there's a prime $p$ that divides it. Note that $p$ also divides
+$\mbox{\tt FACT}(n)$ because $p \leq n$. By {\small{\it DIVIDES\_ADDL}},
+we have $p=1$. But then $p$ is not prime, which is a contradiction. \\ 
+\noindent {\it End of proof}.
+
+A HOL rendition of the proof may be given as follows:
+\begin{description}
+\item [\small{({\it EUCLID\/})}] 
+\begin{tabular}[t]{l}
+\verb+!n. ?p. n < p /\ prime p+ \\ \hline
+\verb+SPOSE_NOT_THEN STRIP_ASSUME_TAC+ \\
+\verb!  THEN MP_TAC (SPEC ``FACT n + 1`` PRIME_FACTOR)! \\
+\verb+  THEN ARW_TAC [FACT_LESS, DECIDE `~(x=0) = 0<x`]+ \\
+\verb+  THEN PROVE_TAC [NOT_PRIME_1, NOT_LESS, PRIME_POS, + \\
+\verb+                  DIVIDES_FACT, DIVIDES_ADDL, DIVIDES_ONE]+ \\
+\end{tabular}
+\end{description}
+
+Let's prise this apart and look at it in some detail. A proof by
+contradiction can be started by using the \verb+bossLib+ function
+\verb+SPOSE_NOT_THEN+. With it, one assumes the negation of the current
+goal and then uses that in an attempt to prove falsity (\verb+F+). The
+assumed negation $\neg(\forall n.\ \exists p.\ n < p \land \mbox{\tt
+prime}\ p)$ is simplified a bit into $\exists n.\ \forall p.\ n < p
+\supset \, \neg \,\mbox{\tt prime}\ p$ and then is passed to the tactic
+\verb+STRIP_ASSUME_TAC+. This moves its argument to the assumption list
+of the goal after eliminating the existential quantification on $n$.
+{\small\begin{verbatim}
+    e (SPOSE_NOT_THEN STRIP_ASSUME_TAC);
+>   OK..
+>   1 subgoal:
+>   val it =
+>     F
+>     ------------------------------------
+>       !p. n < p ==> ~(prime p)
+\end{verbatim}}
+Thus we have the hypothesis that all $p$ beyond a certain unspecified
+$n$ are not prime, and our task is to show that this cannot be. At this
+point we take advantage of Euclid's great inspiration and we build an 
+explicit term from $n$. In the informal proof we are asked to `consider'
+the term $\mbox{\tt FACT}\ n + 1$.\footnote{The HOL parser thinks
+$\mbox{\tt FACT}\ n + 1$ is equivalent to $(\mbox{\tt FACT}\ n) + 1$.}
+This term will have certain properties (\ie, it has a prime factor) that
+lead to contradiction. Question: how do we `consider' this term in the
+formal HOL proof? Answer: by instantiating a lemma with it and bringing the
+lemma into the proof. The lemma and its instantiation are:\footnote{The
+function {\tt SPEC} implements the rule of universal specialization.}
+{\small\begin{verbatim}
+    PRIME_FACTOR;
+>   val it = |- !n. ~(n = 1) ==> (?p. prime p /\ p divides n) : Thm.thm
+
+    val th = SPEC ``FACT n + 1`` PRIME_FACTOR;
+>   val th =
+>      |- ~(FACT n + 1 = 1) ==> (?p. prime p /\ p divides FACT n + 1)
+\end{verbatim}}
+It is evident that the antecedent of \verb+th+ can be eliminated. In
+Hol98, one could do this in a so-called {\it forward\/} proof style (by
+proving $\vdash \neg(\mbox{\tt FACT}\ n + 1 = 1)$ and then applying {\it
+modus ponens}, the result of which can then be used in the proof), or
+one could bring \verb+th+ into the proof and simplify it {\it in
+situ}. We choose the latter approach. 
+{\small\begin{verbatim}
+    e (MP_TAC (SPEC ``FACT n + 1`` PRIME_FACTOR));
+>   OK..
+>   1 subgoal:
+>   val it =
+>     (~(FACT n + 1 = 1) ==> (?p. prime p /\ p divides FACT n + 1)) ==> F
+>     ------------------------------------
+>      !p. n < p ==> ~(prime p)
+\end{verbatim}}
+The invocation \verb+MP_TAC+ ($\vdash M$) applied to a goal $(\Delta,
+g)$ returns the goal $(\Delta, M \supset g)$. Now we simplify:
+{\small\begin{verbatim}
+    e (ARW_TAC []);
+>   OK..
+>   2 subgoals:
+>   val it =
+>      ~(p divides FACT n + 1)
+>      ------------------------------------
+>        0.  !p. n < p ==> ~(prime p)
+>        1.  prime p
+>     
+>      ~(FACT n = 0)
+>      ------------------------------------
+>        !p. n < p ==> ~(prime p)
+\end{verbatim}}
+We recall that zero is less than every factorial, a fact found in
+\verb+arithmeticTheory+ under the name \verb+FACT_LESS+. Thus we can
+solve the top goal by simplification:
+{\small\begin{verbatim}
+    e (ARW_TAC [FACT_LESS, DECIDE `!x. ~(x=0) = 0 < x`]);
+>   OK..
+> 
+>   Goal proved.  ....
+\end{verbatim}}
+Notice the `on-the-fly' use of \verb+DECIDE+ to provide an {\it ad hoc\/}
+rewrite. Looking at the remaining goal, one might think that our aim, to
+prove falsity, has been lost. But this is not so: a goal $\neg
+M$ is equivalent to $M \supset \mbox{\tt F}$. We can quickly proceed to
+show that $p \ \mbox{\tt divides}\ (\mbox{\tt FACT}\ n)$, and thus that
+$p = 1$, hence that $p$ is not prime, at which point we are done. This
+can all be packaged into a single invocation of \verb+PROVE_TAC+:
+{\small\begin{verbatim}
+    e (PROVE_TAC [PRIME_POS, NOT_LESS, DIVIDES_FACT,
+                  DIVIDES_ADDL, DIVIDES_ONE, NOT_PRIME_1]);
+>   OK..
+>   Meson search level: ............
+> 
+>   Goal proved.
+>    [..] |- ~(p divides FACT n + 1)
+> 
+>   Goal proved.
+>   [.]
+>   |- (~(FACT n + 1 = 1) ==> (?p. prime p /\ p divides FACT n + 1)) ==> F
+> 
+>   Goal proved.
+>    [.] |- F
+>   val it =
+>      Initial goal proved.
+>      |- !n. ?p. n < p /\ prime p
+\end{verbatim}}
+Euclid's theorem is now proved, and we can rest. However, this
+presentation of the final proof will be unsatisfactory to some, because
+the proof is completely hidden in the invocation of the automated
+reasoner. Well then, let's try another proof, this time employing the
+so-called `assertional' style. When used uniformly, this allows a
+readable linear presentation that mirrors the informal proof. The
+following proves Euclid's theorem in the assertional style. We think it
+is fairly readable, certainly much more so than the standard tactic
+proof just given.\footnote{Note that {\tt CCONTR\_TAC}, which is used to
+start the proof, initiates a proof by contradiction by negating
+the goal and placing it on the hypotheses, leaving {\tt F} as the new goal.}
+
+\begin{description}
+\item [\small{({\it AGAIN\/})}] 
+\begin{tabular}[t]{l}
+\verb+!n. ?p. n < p /\ prime p+ \\ \hline
+\verb|CCONTR_TAC THEN | \\
+\verb|`?n. !p. n < p ==> ~prime p`  by PROVE_TAC []             THEN| \\
+\verb|`~(FACT n + 1 = 1)`           by ARW_TAC [FACT_LESS,| \\
+\verb|                                      DECIDE`~(x=0)=0<x`] THEN| \\
+\verb|`?p. prime p /\  | \\
+\verb|     p divides (FACT n + 1)`  by PROVE_TAC [PRIME_FACTOR] THEN| \\
+\verb|`0 < p`                       by PROVE_TAC [PRIME_POS]    THEN| \\
+\verb|`p <= n`                      by PROVE_TAC [NOT_LESS]     THEN| \\
+\verb|`p divides FACT n`            by PROVE_TAC [DIVIDES_FACT] THEN| \\
+\verb|`p divides 1`                 by PROVE_TAC [DIVIDES_ADDL] THEN| \\
+\verb|`p = 1`                       by PROVE_TAC [DIVIDES_ONE]  THEN| \\
+\verb|`~prime p`                    by PROVE_TAC [NOT_PRIME_1]  THEN| \\
+\verb|PROVE_TAC []| \\
+\end{tabular}
+\end{description}
+
+\subsection{Summary}
+
+The reader has now seen an interesting theorem proved, in great detail,
+in Hol98. The discussion illustrated the high-level tools provided in
+\verb+bossLib+ and touched on issues including tool selection, undo,
+`tactic polishing', exploratory simplification, and the `forking-off' of
+new proof attempts. We also attempted to give a flavour of the thought
+processes a user would employ. Following is a more-or-less random
+collection of other observations.
+\begin{itemize}
+
+\item Even though the proof of Euclid's theorem is short and easy to
+understand when presented informally, a perhaps surprising amount of
+support development was required to set the stage for Euclid's classic
+argument.
+
+\item The proof support offered by \verb+bossLib+
+(\verb+RW_TAC+, \verb+PROVE_TAC+, \verb+DECIDE_TAC+, \verb+DECIDE+,
+\verb+Cases_on+, \verb+Induct_on+, and the ``{\tt by}'' construct) was
+nearly complete for this example: it was rarely necessary to resort to
+lower-level tactics.
+
+\item Simplification is a workhorse tactic; even when an automated
+reasoner like \verb+PROVE_TAC+ is used, its application has often been
+set up by some exploratory simplifications. It therefore pays to become
+familiar with the strengths and weaknesses of the simplifier.
+
+\item A common problem with interactive proof systems is dealing with
+hypotheses. Often \verb+PROVE_TAC+ and the ``{\tt by}'' construct allow
+the use of hypotheses without directly resorting to indexing into them
+(or naming them, which amounts to the same thing). This is desirable,
+since the hypotheses are notionally a {\it set}, and moreover,
+experience has shown that profligate indexing into hypotheses results in
+hard-to-maintain proof scripts. However, it can be clumsy to work with a
+large set of hypotheses, in which case the following approaches may be
+useful. 
+
+One can directly refer to hypotheses by using \verb+UNDISCH_TAC+ (makes
+the designated hypothesis the antecedent to the goal), \verb+ASSUM_LIST+
+(gives the entire hypothesis list to a tactic), \verb+POP_ASSUM+ (gives
+the top hypothesis to a tactic), and \verb+PAT_ASSUM+ (gives the first
+{\it matching\/} hypothesis to a tactic). The numbers attached to
+hypotheses by the proof manager could likely be used to access
+hypotheses (it would be quite simple to write such a tactic). However,
+starting a new proof is sometimes the most clarifying thing to do.
+
+In some cases, it is useful to be able to delete a hypothesis. This can
+be accomplished by passing the hypothesis to a tactic that ignores
+it. For example, to discard the top hypothesis, one could invoke
+\verb+POP_ASSUM (K ALL_TAC)+.
+
+\item In the example, we didn't use the more advanced features of
+\verb+bossLib+, largely because they do not, as yet, provide much more
+functionality than the simple sequencing of simplification, decision
+procedures, and automated first order reasoning. The \verb+THEN+
+tactical has thus served as an adequate replacement. In the future,
+these entrypoints should become more powerful.
+
+\item It is almost always necessary to have an idea of the {\it
+informal\/} proof in order to be successful when doing a formal
+proof. However, all too often the following strategy is adopted:
+(1) rewrite the goal with a few relevant definitions, and then (2)
+rely on the syntax of the resulting goal to guide subsequent tactic
+selection. Such an approach constitutes a clear case of the tail wagging
+the dog, and is a poor strategy to adopt. Insight into the high-level
+structure of the proof is one of the most important factors in
+successful verification exercises.
+
+The author has noticed that many of the most successful verification
+experts work using a sheet of paper to keep track of the main steps that
+need to be made. Perhaps looking away to the paper helps break the
+mesmerizing effect of the computer screen.
+
+On the other hand, one of the advantages of having a mechanized logic
+is that the machine can be used as a formal expression calculator,
+and thus the user can use it to quickly and accurately explore various
+proof possibilities.
+
+\item High powered tools like \verb+PROVE_TAC+, \verb+DECIDE_TAC+, and
+\verb+RW_TAC+ are the principal way of advancing a proof in
+\verb+bossLib+. In many cases, they do exactly what is desired, or even
+manage to surprise the user with their power. In the formalization of
+Euclid's theorem, the tools performed fairly well. However, sometimes
+they are overly aggressive, or they simply flounder. In such cases, more
+specialized proof tools need to be used, or even written, and hence the
+support underlying \verb+bossLib+ must eventually be learned.
+
+\item Having a good knowledge of the available lemmas, and where they
+are located, is an essential part of being successful. Often powerful
+tools can replace lemmas in a restricted domain, but in general, one has
+to know what has already been proved. We have found that the entrypoints
+in \verb+DB+ help in quickly finding lemmas.
+
+\end{itemize}
+
+\chapter{The Programmer's Interface}\label{api}
+
+\bibliographystyle{plain}
+\bibliography{/home/kxs/latex/biblio}
+\end{document}

@@ -1,0 +1,33 @@
+\DOC is_constant
+
+\TYPE {is_constant : (string -> bool)}
+
+\SYNOPSIS
+Determines whether a string is the name of a constant.
+
+\DESCRIBE
+This predicate returns {true} if the given string argument is the name
+of a constant defined in the current theory or its ancestors:
+it returns {false} otherwise.
+
+\EXAMPLE
+{
+#is_constant `SUC`;;
+true : bool
+
+#is_constant `3`;;
+true : bool
+
+#is_constant `$!`;;
+false : bool
+
+#is_constant `!`;;
+true : bool
+
+#is_constant `xx`;;
+false : bool
+}
+\SEEALSO
+is_infix, is_binder
+
+\ENDDOC

@@ -1,0 +1,29 @@
+\DOC install
+
+\TYPE {Install.install : string -> unit}
+
+\SYNOPSIS
+Informs HOL of the absolute pathname to the hol distribution directory.
+
+\DESCRIBE
+{install} reconfigures a running HOL system to a new root directory.  The
+string argument to {install} should be the absolute path name to the
+directory in which the HOL system is located. Executing
+{
+   install "/dir1/dir2/dir3/.../hol";
+}
+\noindent resets the HOLdir, help_path, theory_path, and library_path to take
+account of the new root directory for the system.
+
+\FAILURE
+Never fails.
+
+\COMMENTS
+The effect persists only for the current HOL session. To change the image
+permanently, use the {save_hol} function after calling {install}. The same 
+effect can be obtained by the unix shell command {resituate_hol90}.
+
+\SEEALSO
+resituate_hol90
+
+\ENDDOC

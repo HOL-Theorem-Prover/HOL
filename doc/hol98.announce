@@ -1,0 +1,27 @@
+April 23, 1998.
+
+
+  The `Athabasca' release of the Hol98 system is now available.
+
+
+The sources for the system are available by WWW from
+
+     http://www.cl.cam.ac.uk/ftp/hvg/hol90/hol98.tar.gz
+
+
+Once you have hol98.tar.gz, it can be unpacked by
+
+     gunzip hol98.tar.gz; tar xf hol98.tar
+
+This gives a directory hol98. In hol98/install.txt you will find
+installation instructions.
+
+
+Hol98 builds on MoscowML, version 1.43 or greater. You can find the
+sources for this at
+
+     ftp://ftp.dina.kvl.dk/pub/mosml/mos14src.tar.gz
+
+
+Please let me know of any difficulties you may encounter when installing
+Hol98.

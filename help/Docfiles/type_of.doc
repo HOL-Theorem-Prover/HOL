@@ -1,0 +1,16 @@
+\DOC type_of
+
+\TYPE {type_of : (term -> type)}
+
+\SYNOPSIS
+Returns the type of a term.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{
+#type_of "T";;
+":bool" : type
+}
+\ENDDOC

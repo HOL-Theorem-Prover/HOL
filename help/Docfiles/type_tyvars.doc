@@ -1,0 +1,23 @@
+\DOC type_tyvars
+
+\TYPE {type_tyvars : (type -> type list)}
+
+\SYNOPSIS
+Determines the type variables of a given type.
+
+\DESCRIBE
+The function {type_tyvars} returns a list of type variables
+used to construct the given type.
+
+\EXAMPLE
+{
+#type_tyvars ":bool";;
+[] : type list
+
+#type_tyvars ":(* -> **) -> (bool # ***) -> (** + num)";;
+[":*"; ":**"; ":***"] : type list
+}
+\SEEALSO
+type_abbrevs, type_in, type_in_type.
+
+\ENDDOC

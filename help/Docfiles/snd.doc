@@ -1,0 +1,17 @@
+\DOC snd
+
+\TYPE {snd : ((* # **) -> **)}
+
+\SYNOPSIS
+Extracts the second component of a pair.
+
+\DESCRIBE
+{snd (x,y)} returns {y}.
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+fst, pair.
+
+\ENDDOC

@@ -1,0 +1,22 @@
+\DOC strip_forall
+
+\TYPE {strip_forall : (term -> goal)}
+
+\SYNOPSIS
+Iteratively breaks apart universal quantifications.
+
+\DESCRIBE
+{strip_forall "!x1 ... xn. t"} returns {(["x1";...;"xn"],"t")}. Note that
+{
+   strip_forall(list_mk_forall(["x1";...;"xn"],"t"))
+}
+\noindent will not return {(["x1";...;"xn"],"t")} if {t} is a universal
+quantification.
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+list_mk_forall, dest_forall.
+
+\ENDDOC

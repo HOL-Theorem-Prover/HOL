@@ -1,0 +1,17 @@
+\DOC fst
+
+\TYPE {fst : ((* # **) -> *)}
+
+\SYNOPSIS
+Extracts the first component of a pair.
+
+\DESCRIBE
+{fst (x,y)} returns {x}.
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+snd, pair.
+
+\ENDDOC

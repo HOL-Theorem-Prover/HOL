@@ -1,0 +1,29 @@
+\DOC mk_vartype
+
+\TYPE {mk_vartype : (string -> type)}
+
+\SYNOPSIS
+Constructs a type variable of the given name.
+
+\DESCRIBE
+{mk_vartype(`*...`)} returns {":*..."}.
+
+\FAILURE
+Fails with {mk_vartype} if the string does not begin with {`*`}.
+
+\EXAMPLE
+{
+#mk_vartype `*test`;;
+":*test" : type
+
+#mk_vartype `test`;;
+evaluation failed     mk_vartype
+}
+\COMMENTS
+{mk_vartype} can be used to create type variables with names which will not
+parse, i.e. they cannot be entered by quotation.
+
+\SEEALSO
+dest_vartype, is_vartype, mk_type.
+
+\ENDDOC

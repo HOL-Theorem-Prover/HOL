@@ -1,0 +1,7 @@
+bddio.o: bddio.c kernel.h bdd.h
+bddop.o: bddop.c kernel.h bdd.h cache.h
+kernel.o: kernel.c kernel.h bdd.h cache.h
+pairs.o: pairs.c kernel.h bdd.h
+reorder.o: reorder.c kernel.h bdd.h bddtree.h
+tree.o: tree.c bddtree.h
+cppext.o: cppext.cxx kernel.h bdd.h

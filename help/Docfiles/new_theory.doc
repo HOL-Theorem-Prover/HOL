@@ -1,0 +1,51 @@
+\DOC new_theory
+
+\TYPE {new_theory : (string -> void)}
+
+\SYNOPSIS
+Creates a new theory by extending the current theory with a new theory segment.
+
+\DESCRIBE
+A theory consists of a hierarchy of named parts called theory segments. The
+theory segment at the top of the hierarchy tree in each theory is said to be
+current. All theory segments have a theory of the same name  associated with
+them consisting of the theory segment itself and all its ancestors.
+Each axiom,
+definition, specification and theorem belongs to a particular theory segment.
+
+Calling {new_theory `thy`} creates a new theory segment and associated theory
+having name {thy}. The theory segment which was current before the call becomes
+a parent of the new theory segment. The new theory therefore consists of the
+current theory extended with the new theory segment. The new theory segment
+replaces its parent as the current theory segment. The call switches the system
+into draft mode. This allows new axioms, constants, types, constant
+specifications, infix constants, binders and parents to be added to the theory
+segment. Inconsistencies will be introduced into the theory if inconsistent
+axioms are asserted.  New theorems can also be added as when in proof mode. The
+theory file in which the data of the new theory segment is ultimately stored
+will have name {thy.th} in the directory from which HOL was called. The theory
+segment might not be written to this file until the session is finished with a
+call to {close_theory}. If HOL is quitted without closing the session with
+{close_theory}, parts of the theory segment created during the session may be
+lost. If the system is in draft mode when a call to {new_theory} is made, the
+previous session is closed; all changes made in it will be written to the
+associated theory file.
+
+\FAILURE
+The call {new_theory `thy`} will fail if there already exists a file {thy.th}
+in the current search path. It will also fail if the name {thy.th} is
+unsuitable for a filename. Since it could involve writing to the file system,
+if a write fails for any reason {new_theory} will fail.
+
+\USES
+Hierarchically extending the current theory.
+By splitting a theory into theory segments using {new_theory}, the work
+required if definitions, etc., need to be changed is minimized. Only the
+associated segment and its descendants need be redefined.
+
+\SEEALSO
+close_theory, current_theory, extend_theory, load_theory, new_axiom,
+new_binder, new_constant, new_definition, new_infix, new_parent,
+new_specification, new_type, print_theory, save_thm, search_path.
+
+\ENDDOC

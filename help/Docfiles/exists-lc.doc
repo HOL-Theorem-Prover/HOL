@@ -1,0 +1,22 @@
+\DOC exists
+
+\TYPE {exists : ((* -> bool) -> * list -> bool)}
+
+\SYNOPSIS
+Tests a list to see if it has at least one element satisfying a predicate.
+
+\KEYWORDS
+list.
+
+\DESCRIBE
+{exists p l} applies {p} to the elements of {l} in order until one is found
+which satisfies {p}, or until the list is exhausted, returning {true} or
+{false} accordingly.
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+forall, find, tryfind, mem, assoc, rev_assoc.
+
+\ENDDOC

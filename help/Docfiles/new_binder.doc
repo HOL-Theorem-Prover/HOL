@@ -1,0 +1,39 @@
+\DOC new_binder
+
+\TYPE {new_binder : {{Name :string, Ty :hol_type}} -> unit}
+
+\SYNOPSIS
+Sets up a new binder in the current theory.
+
+\DESCRIBE
+A call {new_binder{{Name ="bnd",Ty = ty}}} declares a new binder {bnd} in the 
+current theory. The type must be of the form {('a -> 'b) -> 'c}, because
+being a binder, {bnd} will apply to an abstraction; for example 
+
+    {--`!x:bool. (x=T) \/ (x=F)`--} 
+
+is actually a prettyprinting of 
+
+    {--`$! (\x. (x=T) \/ (x=F))`--}.
+
+\FAILURE
+Fails if HOL is not in draft mode, or there is already a constant of some sort
+of that name in the current theory, or if the type does not correspond to the
+above pattern.
+
+\EXAMPLE
+{
+   - new_theory "anorak";
+   () : unit
+
+   - new_binder{{Name = "!!", Ty = ==`:(bool->bool)->bool`==}};
+   () : unit
+
+   - --`!!x. T`--;
+   (--`!! x. T`--) : term
+}
+\SEEALSO
+binders, is_binder, constants, infixes, new_constant, new_infix, 
+new_definition, new_infix_definition, new_binder_definition.
+
+\ENDDOC

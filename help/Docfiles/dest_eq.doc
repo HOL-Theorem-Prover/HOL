@@ -1,0 +1,20 @@
+\DOC dest_eq
+
+\TYPE {dest_eq : term -> {{lhs :term, rhs :term}}}
+
+\SYNOPSIS
+Term destructor for equality.
+
+\DESCRIBE
+{dest_eq(--`t1 = t2`--)} returns {{lhs = t1, rhs = t2}}. 
+
+\FAILURE
+Fails with 
+
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_eq", 
+            message = "not an ="}}
+
+\SEEALSO
+mk_eq, is_eq.
+
+\ENDDOC

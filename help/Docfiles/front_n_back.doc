@@ -1,0 +1,24 @@
+\DOC front_last
+
+\TYPE {Lib.front_last : 'a list -> 'a list * 'a}
+
+\SYNOPSIS
+Takes a list L of length > 0 and returns a pair (front,last) such that 
+front@[last] = L.
+
+\KEYWORDS
+list.
+
+\FAILURE
+Fails if the list is empty.
+
+\EXAMPLE
+{
+  - front_last [1];
+  ([],1)
+
+  - front_last [1,2,3];
+  ([1,2],3)
+}
+
+\ENDDOC

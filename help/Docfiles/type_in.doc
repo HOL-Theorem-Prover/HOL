@@ -1,0 +1,26 @@
+\DOC type_in
+
+\TYPE {type_in : (type -> term -> bool)}
+
+\SYNOPSIS
+Determines whether any subterm of a given term has a particular type.
+
+\DESCRIBE
+The predicate {type_in} returns {true} if a subterm of the second argument
+has the type specified by the first argument.
+
+\EXAMPLE
+{
+#type_in ":num" "5 = 4 + 1";;
+true : bool
+
+#type_in ":bool" "5 = 4 + 1";;
+true : bool
+
+#type_in ":(num)list" "SUC 0";;
+false : bool
+}
+\SEEALSO
+find_term, find_terms, type_in_type, type_tyvars.
+
+\ENDDOC

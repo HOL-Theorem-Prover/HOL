@@ -1,0 +1,15 @@
+\DOC empty_rewrites
+
+\TYPE {empty_rewrites: rewrites }
+
+\SYNOPSIS
+The empty database of rewrite rules.
+
+\DESCRIBE
+\USES
+Used to build other rewrite sets.
+
+\SEEALSO
+base_rewrites, add_base_rewrites, add_rewrites.
+
+\ENDDOC

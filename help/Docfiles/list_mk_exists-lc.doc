@@ -1,0 +1,22 @@
+\DOC list_mk_exists
+
+\TYPE {list_mk_exists : ((term list # term) -> term)}
+
+\SYNOPSIS
+Iteratively constructs existential quantifications.
+
+\DESCRIBE
+{list_mk_exists(["x1";...;"xn"],"t")} returns {"?x1 ... xn. t"}.
+
+\FAILURE
+Fails with {list_mk_exists} if the terms in the list are not variables or if
+{t} is not of type {":bool"} and the list of terms is non-empty. If the list
+of terms is empty the type of {t} can be anything.
+
+\COMMENTS
+The system shows the type as {(goal -> term)}.
+
+\SEEALSO
+strip_exists, mk_exists.
+
+\ENDDOC

@@ -1,0 +1,18 @@
+\DOC is_forall
+
+\TYPE {is_forall : (term -> bool)}
+
+\SYNOPSIS
+Tests a term to see if it is a universal quantification.
+
+\DESCRIBE
+{is_forall "!var. t"} returns {true}. If the term is not a universal
+quantification the result is {false}.
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+mk_forall, dest_forall.
+
+\ENDDOC

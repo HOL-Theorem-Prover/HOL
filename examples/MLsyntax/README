@@ -1,0 +1,25 @@
+This example defines the abstract syntax for a simple ML-like language,
+and a simple mutually-recursive function for computing the variables of
+an expression of that language.  It exercises Elsa Gunter's type
+definition package for mutually recursive concrete types.
+
+ The example is also a demonstration of how Holmake works. Just invoke
+
+     Holmake
+
+on the Unix command line and wait. When Holmake is done, a compiled
+theory corresponding to this file is found in MLTheory.u{i,o}. It
+can be loaded into an interactive session by
+
+    load"MLTheory";
+
+Loading the compiled theory can take a little while. Building the theory
+in the first place also takes some time.
+
+  If you are working interactively, i.e., you don't want to pay any
+attention to this Holmake stuff, do the following in an invocation of
+Hol98:
+
+    app load ["Datatype","mutualLib", "stringTheory", "setTheory"];
+
+and then proceed with cut-and-paste from the file MLScript.sml.

@@ -1,0 +1,37 @@
+\DOC LIST_INDUCT
+
+\TYPE {LIST_INDUCT : ((thm # thm) -> thm)}
+
+\SYNOPSIS
+Performs proof by structural induction on lists.
+
+\KEYWORDS
+rule, list, induction.
+
+\DESCRIBE
+The derived inference rule {LIST_INDUCT} implements the rule of mathematical
+induction:
+{
+     A1 |- P[NIL/l]      A2 |- !t. P[t/l] ==> !h. P[CONS h t/l]
+    ------------------------------------------------------------  LIST_INDUCT
+                      A1 u A2 |- !l. P
+}
+\noindent When supplied with a theorem {A1 |- P[NIL]}, which asserts the base
+case of a proof of the proposition {P[l]} by structural induction on the list
+{l}, and the theorem
+{
+   A2 |- !t. P[t] ==> !h. P[CONS h t]
+}
+\noindent which asserts the step case in the induction on {l}, the inference
+rule {LIST_INDUCT} returns {A1 u A2 |- !l. P[l]}.
+
+\FAILURE
+{LIST_INDUCT th1 th2} fails if the theorems {th1} and {th2} do not have the
+forms {A1 |- P[NIL]} and {A2 |- !t. P[t] ==> !h. P[CONS h t]} respectively
+(where the empty list {NIL} in {th1} and the list {CONS h t} in {th2} have
+the same type).
+
+\SEEALSO
+LIST_INDUCT_TAC.
+
+\ENDDOC

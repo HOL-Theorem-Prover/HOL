@@ -1,0 +1,28 @@
+\DOC concat
+
+\TYPE {concat : (string -> string -> string)}
+
+\SYNOPSIS
+Concatenates two ML strings.
+
+\KEYWORDS
+string, join.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{
+#concat `1` ``;;
+`1` : string
+
+#concat `hello` `world`;;
+`helloworld` : string
+
+#concat `hello` (concat ` ` `world`);;
+`hello world` : string
+}
+\SEEALSO
+concatl, \char'136.
+
+\ENDDOC

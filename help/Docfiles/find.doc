@@ -1,0 +1,26 @@
+\DOC find
+
+\TYPE {Compat.find : ('a -> bool) -> 'a list -> 'a}
+
+\SYNOPSIS
+Returns the first element of a list which satisfies a predicate.
+
+\KEYWORDS
+list.
+
+\DESCRIBE
+Found in the hol88 library. {find p [x1;...;xn]} returns the first {xi} 
+in the list such that {(p xi)} is {true}. 
+
+\FAILURE
+Fails with {find} if no element satisfies the predicate. This will always be
+the case if the list is empty.
+
+\COMMENTS 
+{find} is in Compat, because is is not found in hol90 ({Lib.first} is
+equivalent and is used instead).
+
+\SEEALSO
+tryfind, mem, exists, forall, assoc, rev_assoc.
+
+\ENDDOC

@@ -1,0 +1,29 @@
+\DOC axiom
+
+\TYPE {axiom : (string -> string -> thm)}
+
+\SYNOPSIS
+Loads an axiom from a given theory segment of the current theory.
+
+\DESCRIBE
+A call of {axiom "thy" "ax"} returns axiom {ax} from the theory segment {thy}.
+The theory segment {thy} must be part of the current theory. The name {ax} is
+the name given to the axiom by the user when it was originally added to the
+theory segment (by a call to {new_axiom}).  The name of the current theory
+segment can be abbreviated by {"-"}.
+
+\FAILURE
+The call {axiom "thy" "ax"} will fail if the theory segment {thy} is not part
+of the current theory. It will also fail if there does not exist an axiom of 
+name {ax} in theory segment {thy}.
+
+\EXAMPLE
+{
+ - axiom "bool" "BOOL_CASES_AX";
+val it = |- !t. (t = T) \/ (t = F) : thm
+
+}
+\SEEALSO
+axioms, definition, new_axiom, print_theory, theorem.
+
+\ENDDOC

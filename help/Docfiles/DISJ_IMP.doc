@@ -1,0 +1,35 @@
+\DOC DISJ_IMP
+
+\TYPE {DISJ_IMP : (thm -> thm)}
+
+\SYNOPSIS
+Converts a disjunctive theorem to an equivalent implicative theorem.
+
+\KEYWORDS
+rule, disjunction, implication.
+
+\DESCRIBE
+The left disjunct of a disjunctive theorem becomes the negated
+antecedent of the newly generated theorem.
+{
+     A |- t1 \/ t2
+   -----------------  DISJ_IMP
+    A |- ~t1 ==> t2
+}
+\FAILURE
+Fails if the theorem is not a disjunction.
+
+\EXAMPLE
+Specializing the built-in theorem {LESS_CASES} gives the theorem:
+{
+   th = |- m < n \/ n <= m
+}
+\noindent to which {DISJ_IMP} may be applied:
+{
+   #DISJ_IMP th;;
+   |- ~m < n ==> n <= m
+}
+\SEEALSO
+DISJ_CASES.
+
+\ENDDOC

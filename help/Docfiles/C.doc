@@ -1,0 +1,17 @@
+\DOC C
+
+\TYPE {C : ((* -> ** -> ***) -> ** -> * -> ***)}
+
+\SYNOPSIS
+Permutes first two arguments to curried function: {C f x y} = {f y x}.
+
+\KEYWORDS
+combinator, permute.
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+\#, B, CB, Co, I, K, KI, o, oo, S, W.
+
+\ENDDOC

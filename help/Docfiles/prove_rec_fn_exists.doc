@@ -1,0 +1,47 @@
+\DOC prove_rec_fn_exists
+
+\TYPE {prove_rec_fn_exists : (thm -> term -> thm)}
+
+\SYNOPSIS
+Proves the existence of a primitive recursive function over a concrete recursive
+type.
+
+\DESCRIBE
+{prove_rec_fn_exists} is a version of {new_recursive_definition} which proves
+only that the required function exists; it does not make a constant
+specification.  The first argument is a theorem of the form returned by
+{define_type}, and the second is a user-supplied primitive recursive function
+definition.  The theorem which is returned asserts the existence of the
+recursively-defined function in question (if it is primitive recursive over the
+type characterized by the theorem given as the first argument).  See the entry
+for {new_recursive_definition} for details.
+
+\FAILURE
+As for {new_recursive_definition}.
+
+\EXAMPLE
+Given the following primitive recursion theorem for labelled binary trees:
+{
+   |- !f0 f1.
+        ?! fn.
+        (!x. fn(LEAF x) = f0 x) /\
+        (!b1 b2. fn(NODE b1 b2) = f1(fn b1)(fn b2)b1 b2)
+}
+\noindent {prove_rec_fn_exists} can be used to prove the existence of primitive
+recursive functions over binary trees.  Suppose the value of {th} is this
+theorem.  Then the existence of a recursive function {Leaves}, which computes
+the number of leaves in a binary tree, can be proved as shown below:
+{
+   #prove_rec_fn_exists th
+   #  "(Leaves (LEAF (x:*)) = 1) /\
+   #   (Leaves (NODE t1 t2) = (Leaves t1) + (Leaves t2))";;
+   |- ?Leaves. (!x. Leaves(LEAF x) = 1) /\
+               (!t1 t2. Leaves(NODE t1 t2) = (Leaves t1) + (Leaves t2))
+}
+\noindent The result should be compared with the example given under
+{new_recursive_definition}.
+
+\SEEALSO
+define_type, new_recursive_definition.
+
+\ENDDOC

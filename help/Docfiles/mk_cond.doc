@@ -1,0 +1,23 @@
+\DOC mk_cond
+
+\TYPE {mk_cond : {{cond :term, larm :term, rarm :term}} -> term}
+
+\SYNOPSIS
+Constructs a conditional term.
+
+\DESCRIBE
+{mk_cond{{cond = t, larm = t1, rarm = t2}}} returns {--`t => t1 | t2`--}.
+
+\FAILURE
+Fails with 
+
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_cond", 
+            message = ""}}
+
+if {cond} is not of type {==`:bool`==} or if {larm} and {rarm} are
+of different types.
+
+\SEEALSO
+dest_cond, is_cond.
+
+\ENDDOC

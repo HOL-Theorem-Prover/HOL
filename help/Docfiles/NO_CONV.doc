@@ -1,0 +1,17 @@
+\DOC NO_CONV
+
+\TYPE {NO_CONV : conv}
+
+\SYNOPSIS
+Conversion that always fails.
+
+\KEYWORDS
+conversion.
+
+\FAILURE
+{NO_CONV} always fails.
+
+\SEEALSO
+ALL_CONV.
+
+\ENDDOC

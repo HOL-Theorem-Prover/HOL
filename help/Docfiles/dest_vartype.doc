@@ -1,0 +1,28 @@
+\DOC dest_vartype
+
+\TYPE {dest_vartype : (type -> string)}
+
+\SYNOPSIS
+Breaks a type variable down to its name.
+
+\DESCRIBE
+{dest_vartype ":*..."} returns {`*...`}.
+
+\FAILURE
+Fails with {dest_vartype} if the type is not a type variable.
+
+\EXAMPLE
+{
+#dest_vartype ":*test";;
+`*test` : string
+
+#dest_vartype ":bool";;
+evaluation failed     dest_vartype
+
+#dest_vartype ":* -> bool";;
+evaluation failed     dest_vartype
+}
+\SEEALSO
+mk_vartype, is_vartype, dest_type.
+
+\ENDDOC

@@ -1,0 +1,22 @@
+\DOC is_imp
+
+\TYPE {is_imp : (term -> bool)}
+
+\SYNOPSIS
+Tests a term to see if it is an implication (or a negation).
+
+\DESCRIBE
+{is_imp "t1 ==> t2"} returns {true}. {is_imp "~t"} returns {true}.
+If the term is neither an implication nor a negation the result is {false}.
+
+\FAILURE
+Never fails.
+
+\COMMENTS
+Yields true of negations because {dest_imp} destructs negations (for
+compatibility with PPLAMBDA code).
+
+\SEEALSO
+mk_imp, dest_imp.
+
+\ENDDOC

@@ -1,0 +1,35 @@
+\DOC allowed_constant
+
+\TYPE {allowed_constant : (string -> bool)}
+
+\SYNOPSIS
+Tests if a string has a permissible name for a constant.
+
+\DESCRIBE
+When applied to a string, {allowed_constant} returns {true} if the string is a
+permissible constant name, that is, if it is an identifier (see the DESCRIPTION
+for more details), and {false} otherwise.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+The following shows how the lexical rules can be altered:
+{
+   #map allowed_constant [`pi`; `@`; `a name`; `+++++`; `*`];;
+   [true; true; false; false; true] : bool list
+
+   #new_special_symbol `+++++`;;
+   () : void
+
+   #map allowed_constant [`pi`; `@`; `a name`; `+++++`; `*`];;
+   [true; true; false; true; true] : bool list
+}
+\COMMENTS
+Note that this function only performs a lexical test; it does not check whether
+there is already a constant of that name in the current theory.
+
+\SEEALSO
+constants, is_constant, new_alphanum, new_special_symbol, special_symbols.
+
+\ENDDOC

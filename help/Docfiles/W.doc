@@ -1,0 +1,17 @@
+\DOC W
+
+\TYPE {W : ((* -> * -> **) -> * -> **)}
+
+\SYNOPSIS
+Duplicates function argument : {W f x} = {f x x}.
+
+\KEYWORDS
+combinator, duplicate.
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+\#, B, C, CB, Co, I, K, KI, o, oo, S.
+
+\ENDDOC
