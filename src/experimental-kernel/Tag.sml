@@ -20,9 +20,11 @@ fun oracles_of (TAG(O,_)) = O;
 fun axioms_of  (TAG(_,A)) = A;
 
 val empty_tag  = TAG ([],[])
+val disk_tag  = TAG (["DISK"],[])
 fun ax_tag r = TAG ([],[r])
 
 val isEmpty = equal empty_tag;
+val isDisk = equal disk_tag;
 
 
 (*---------------------------------------------------------------------------

@@ -15,7 +15,7 @@ open Feedback Lib Portable;
 
 val ERR = mk_HOL_ERR "TheoryPP";
 
-val pp_sig_hook = ref (fn () => ());  (* XXX minimal change to make HOL build *)
+val pp_sig_hook = ref (fn () => ()); 
 
 val concat = String.concat;
 val sort = Lib.sort (fn s1:string => fn s2 => s1<=s2);
@@ -138,7 +138,8 @@ fun pp_sig pp_thm info_record ppstrm = let
      add_string (String.concat ["[", s, "]"]);
      add_string ("  "^class);
      add_newline(); add_newline();
-     if null (Thm.hyp th) andalso Tag.isEmpty (Thm.tag th)
+     if null (Thm.hyp th) andalso 
+         (Tag.isEmpty (Thm.tag th) orelse Tag.isDisk (Thm.tag th))
        then pp_thm th
        else with_flag(Globals.show_tags,true)
              (with_flag(Globals.show_assums, true) pp_thm) th;
@@ -163,7 +164,8 @@ fun pp_sig pp_thm info_record ppstrm = let
         end_block());
 
   fun pr_docs() =
-    (begin_block CONSISTENT 3;
+    (!pp_sig_hook();
+     begin_block CONSISTENT 3;
      add_string "(*"; add_newline();
      pr_parents parents';
      pr_thms "Axiom" axioms';

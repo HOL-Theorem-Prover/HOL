@@ -505,7 +505,7 @@ fun incorporate_consts thy tyvector consts =
  *         PRINTING THEORIES OUT AS ML STRUCTURES AND SIGNATURES.            *
  *---------------------------------------------------------------------------*)
 
-fun theory_out f ostrm =
+fun theory_out width f ostrm =
  let val ppstrm = Portable.mk_ppstream
                     {consumer = Portable.outputc ostrm,
                      linewidth=75, flush = fn () => Portable.flush_out ostrm}
@@ -593,8 +593,8 @@ fun export_theory () = let
           val tstr = Time.toString time_since
       in
         mesg ("Exporting theory "^Lib.quote thyname^" ... ");
-        theory_out (TheoryPP.pp_sig (!pp_thm) sigthry) ostrm1;
-        theory_out (TheoryPP.pp_struct structthry) ostrm2;
+        theory_out 85 (TheoryPP.pp_sig (!pp_thm) sigthry) ostrm1;
+        theory_out 75 (TheoryPP.pp_struct structthry) ostrm2;
         mesg "done.\n";
         if !report_times then
           (mesg ("Theory "^Lib.quote thyname^" took "^ tstr ^ "s to build\n");

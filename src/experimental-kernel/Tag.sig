@@ -6,10 +6,11 @@ sig
      val read_disk_tag : string -> tag
      val axioms_of : tag -> string ref list
      val empty_tag : tag
-     val isEmpty : tag -> bool
-     val merge   : tag -> tag -> tag
-     val ax_tag  : string ref -> tag
-     val pp_tag  : Portable.ppstream -> tag -> unit
+     val isEmpty   : tag -> bool
+     val isDisk    : tag -> bool
+     val merge     : tag -> tag -> tag
+     val ax_tag    : string ref -> tag
+     val pp_tag    : Portable.ppstream -> tag -> unit
      val pp_to_disk : Portable.ppstream -> tag -> unit
 
 end
