@@ -194,14 +194,14 @@ in
           if not (isEmpty rest) andalso sub(rest,0) = #"$" then let
             (* long-ID *)
             (* the id string is a possible theory name *)
-            val rest = slice(rest, 1, NONE) (* skip dollar sign *)
+            val undollared = slice(rest, 1, NONE) (* skip dollar sign *)
           in
-            case getc rest of
+            case getc undollared of
               NONE =>
                 raise LEX_ERR ("long $-id "^string id^" with no sub-part")
             | SOME(c3, rest) => let (* c3 will be alphabetic or a hol sym *)
                 fun grab_id P = let
-                  val (constant_name, push_this_back) = splitl P rest
+                  val (constant_name, push_this_back) = splitl P undollared
                   (* ignores any leading dollar-sign *)
                   val (final_frags,_) =
                     pushback_s (string push_this_back) frags3

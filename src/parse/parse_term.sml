@@ -34,14 +34,19 @@ fun quotetoString [] = ""
   | quotetoString (x::xs) = fragtoString x ^ quotetoString xs
 
 
-datatype 'a varstruct =
-  SIMPLE of string | VPAIR of ('a varstruct * 'a varstruct) |
-  TYPEDV of 'a varstruct * Pretype.pretype |
-  RESTYPEDV of 'a varstruct * 'a preterm | VS_AQ of 'a
-and 'a preterm =
-  COMB of ('a preterm * 'a preterm) | VAR of string |
-  ABS of ('a varstruct * 'a preterm) | AQ of 'a |
-  TYPED of ('a preterm * Pretype.pretype)
+datatype 'a varstruct
+  = SIMPLE of string
+  | VPAIR of ('a varstruct * 'a varstruct)
+  | TYPEDV of 'a varstruct * Pretype.pretype
+  | RESTYPEDV of 'a varstruct * 'a preterm
+  | VS_AQ of 'a
+and 'a preterm
+  = COMB of ('a preterm * 'a preterm)
+  | VAR of string
+  | QIDENT of string * string
+  | ABS of ('a varstruct * 'a preterm)
+  | AQ of 'a
+  | TYPED of ('a preterm * Pretype.pretype)
 
 fun strip_comb0 acc (COMB(t1, t2)) = strip_comb0 (t2::acc) t1
   | strip_comb0 acc t = (t, acc)
@@ -761,7 +766,11 @@ fun parse_term (G : grammar) typeparser = let
                   end
               end
             | (VSRES_VS, _) => NonTermVS [SIMPLE (token_string tt)]
+            | (_, QIdent x) => NonTerminal (QIDENT x)
             | _ => NonTerminal (VAR (token_string tt))
+              (* tt is not an antiquote because of the wider context;
+                 antiquotes are dealt with in the wider case statement
+                 above *)
         in
            push (thing_to_push, Token tt)
         end handle Temp => fail)
@@ -1059,6 +1068,7 @@ fun remove_specials t =
   | ABS(v, t2) => Absyn.LAM(to_vabsyn v, remove_specials t2)
   | TYPED(t, ty) => Absyn.TYPED(remove_specials t, ty)
   | VAR s => Absyn.IDENT s
+  | QIDENT x => Absyn.QIDENT x
   | AQ x => Absyn.AQ x
 and remove_recupdate upd1 updates bottom = let
   open Absyn
