@@ -3708,10 +3708,10 @@ derived.
 {\small
 \begin{verbatim}
   FAPPLY_FUPDATE_THM
-    |- !f a b x. (f |+ (a,b)) ' x = (if x = a then b else f'x)
-  fmap_EQ_THM
+    |- !f a b x. (f |+ (a,b)) ' x = (if x = a then b else f ' x)
+  fmap_EXT
     |- !f g. (f = g) =
-             (FDOM f = FDOM g) /\ (!x. x IN FDOM f ==> (f'x = g'x))
+             (FDOM f = FDOM g) /\ (!x. x IN FDOM f ==> (f ' x = g ' x))
   fmap_INDUCT
     |- !P. P FEMPTY /\
            (!f. P f ==> !x y. ~(x IN FDOM f) ==> P (f |+ (x,y))) ==> !f. P f
@@ -3746,7 +3746,7 @@ usual way.
   FDOM_FUPDATE
     |- !f a b. FDOM (f |+ (a,b)) = a INSERT (FDOM f)
   FRANGE_DEF
-    |- FRANGE f = {y | ?x. x IN FDOM f /\ (f'x = y)}
+    |- FRANGE f = {y | ?x. x IN FDOM f /\ (f ' x = y)}
 \end{verbatim}}
 %
 A finite map may have its domain ({\small\verb+DRESTRICT+})
@@ -3759,11 +3759,12 @@ set. These notions have recursive versions as well
   DRESTRICT_DEF
     |- !f r. (FDOM (DRESTRICT f r) = (FDOM f) INTER r) /\
              (!x. DRESTRICT f r ' x =
-                    (if x IN ((FDOM f) INTER r) then f'x else FEMPTY'x))
+                    (if x IN ((FDOM f) INTER r) then f ' x else FEMPTY'x))
   RRESTRICT_DEF
     |- !f r. (FDOM (RRESTRICT f r) = {x | x IN FDOM f /\ f ' x IN r}) /\
              (!x. RRESTRICT f r ' x =
-                    (if x IN (FDOM f) /\ f'x IN r then f'x else FEMPTY'x))
+                    (if x IN (FDOM f) /\ f ' x IN r then f ' x
+                     else FEMPTY ' x))
   DRESTRICT_FUPDATE
     |- !f r x y.
           DRESTRICT (f |+ (x,y)) r =
@@ -3800,9 +3801,10 @@ map takes precedence. The notion of a finite map being a submap of another
   FUNION_DEF
     |- !f g.
          (FDOM (FUNION f g) = FDOM f UNION FDOM g) /\
-         !x. FUNION f g ' x = (if x IN FDOM f then f'x else g'x)
+         !x. FUNION f g ' x = (if x IN FDOM f then f ' x else g ' x)
   SUBMAP_DEF
-    |- !f g. (f SUBMAP g) = (!x. x IN FDOM f ==> x IN FDOM g /\ (f'x = g'x))
+    |- !f g. (f SUBMAP g) = (!x. x IN FDOM f ==> x IN FDOM g /\
+                            (f ' x = g ' x))
 \end{verbatim}}
 
 \paragraph {Finite maps and functions}
@@ -3819,7 +3821,7 @@ by restricting the function to a finite set of arguments
 {\small
 \begin{verbatim}
   lookup_DEF
-    |- FLOOKUP f x = (if x IN FDOM f then SOME (f'x) else NONE)
+    |- FLOOKUP f x = (if x IN FDOM f then SOME (f ' x) else NONE)
   FUN_FMAP_DEF
     |- !f P. FINITE P ==>
             (FDOM (FUN_FMAP f P) = P) /\
