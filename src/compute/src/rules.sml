@@ -32,13 +32,6 @@ val beta_thm = Beta;
 
 fun evaluate th = th;
 
-(* less efficient implementation: *)
-(*
-val Beta = Drule.RIGHT_BETA;
-fun Eta thm = TRANS thm (ETA_CONV (rhs (concl thm)));
-fun Spec tm thm = SPEC tm thm;
-*)
-(* end of inefficient implementation. *)
 
 (*
 val mk_comb_r = ref Thm.Mk_comb;
@@ -57,7 +50,7 @@ fun Spec th = tickt "Spec" (!spec_r) th;
 end;
 *)
 
-(* Other impl. of thm with boolean: *)
+(* Other impl. of thm with boolean indicating progress: *)
 (* about 5 to 10 % faster
 type thm = Thm.thm * bool
 fun rhs_concl x = (rand o concl o fst) x

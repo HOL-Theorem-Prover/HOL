@@ -60,7 +60,8 @@ fun check_arg_form trm =
  *)
 datatype 'a fterm =
   (* order of Args: outermost ahead *)
-  CST of { Head : term, Args : (term * 'a fterm) list, Rws : 'a, Skip : bool }
+  CST of { Head : term, Args : (term * 'a fterm) list, Rws : 'a,
+           Skip : int option }
 | NEUTR
 | CLOS of { Env : 'a fterm list, Term : 'a dterm }
 
@@ -77,7 +78,7 @@ datatype 'a fterm =
 and 'a dterm =
     Bv of int
   | Fv
-  | Cst of term * ('a * bool) ref
+  | Cst of term * ('a * int option) ref
   | App of 'a dterm * 'a dterm list  (* order: outermost ahead *)
   | Abs of 'a dterm
 ;
@@ -137,7 +138,7 @@ fun key_of (RW{cst, lhs, ...}) =
 
 
 (* *)
-fun is_skip (_, CST {Skip=true,Rws=EndDb,...}) = true
+fun is_skip (_, CST {Skip=SOME n,Args,...}) = (n <= List.length Args)
   | is_skip _ = false
 ;
 
@@ -146,7 +147,7 @@ fun is_skip (_, CST {Skip=true,Rws=EndDb,...}) = true
  * Rules are packed according to their head constant, and then sorted
  * according to the width of their lhs.
  *)
-datatype comp_rws = RWS of (string, (db * bool) ref) Polyhash.hash_table;
+datatype comp_rws = RWS of (string, (db * int option) ref) Polyhash.hash_table;
 
 fun new_rws () = RWS (Polyhash.mkPolyTable(29,CL_ERR "new_rws" ""));
 
@@ -154,7 +155,7 @@ fun assoc_clause (RWS rws) cst =
   case Polyhash.peek rws cst of
     SOME rl => rl
   | NONE =>
-      let val mt = ref (EndDb, false) in
+      let val mt = ref (EndDb, NONE) in
       Polyhash.insert rws (cst,mt);
       mt
       end

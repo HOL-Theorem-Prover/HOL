@@ -9,7 +9,7 @@ sig
   val from_list : bool * thm list -> comp_rws
   val add_thms : bool * thm list -> comp_rws -> unit
   val add_conv : term * int * conv -> comp_rws -> unit
-  val set_skip : comp_rws -> string -> bool -> unit
+  val set_skip : comp_rws -> string -> int option -> unit
 
   val CBV_CONV      : comp_rws -> conv
   val WEAK_CBV_CONV : comp_rws -> conv
