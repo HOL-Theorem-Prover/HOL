@@ -426,14 +426,14 @@ EvalAllSERE
 * 
 * The command: 
 * 
-*  pslcheck -sere '<SERE>' -path '<PATH>' -all
+*  pslcheck -all -sere '<SERE>' -path '<PATH>'
 * 
 * reports "true on intervals [m1:n1][m2:n2] ..." 
 * (or a parser or processing error).
 *
 * The command: 
 * 
-*  pslcheck -fl   '<FL>'   -path '<PATH>' -all
+*  pslcheck -all -fl   '<FL>'   -path '<PATH>'
 * 
 * reports "true at times t1,t2, ..."
 * (or a parser or processing error).
