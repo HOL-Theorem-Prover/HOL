@@ -122,7 +122,7 @@ val is_resq_abstract = can dest_resq_abstract;
 (* --------------------------------------------------------------------- *)
 
 fun RESQ_SPEC v' th =
-    let val dthm = restr_binderTheory.RES_FORALL
+    let val dthm = res_quanTheory.RES_FORALL
     in
         let val (v,P,tm) = dest_resq_forall (concl th)
         in
@@ -196,7 +196,7 @@ fun GQSPEC_ALL th =
 (*                                                                       *)
 (* --------------------------------------------------------------------- *)
 fun RESQ_HALF_SPEC th =
-    let val dthm = restr_binderTheory.RES_FORALL
+    let val dthm = res_quanTheory.RES_FORALL
     in
       let val (v,P,tm) = dest_resq_forall (concl th)
       in
@@ -216,7 +216,7 @@ fun RESQ_HALF_SPEC th =
 (*                                                                       *)
 (* --------------------------------------------------------------------- *)
 fun RESQ_HALF_EXISTS th =
-    let val dthm = restr_binderTheory.RES_EXISTS
+    let val dthm = res_quanTheory.RES_EXISTS
     in
      let val (v,P,tm) = dest_resq_exists (concl th)
      in
@@ -238,7 +238,7 @@ fun RESQ_HALF_EXISTS th =
 (* --------------------------------------------------------------------- *)
 
 fun RESQ_GEN (v,P) th =
-    let val dthm = restr_binderTheory.RES_FORALL
+    let val dthm = res_quanTheory.RES_FORALL
     fun REV_MATCH_EQ_MP th1 th2 = MATCH_MP (snd (EQ_IMP_RULE th1)) th2
     val P' = mk_comb{Rator=P,Rand=v}
     val B' = mk_abs{Bvar=v, Body=concl th}
@@ -290,7 +290,7 @@ fun RESQ_MATCH_MP th1 th2 =
 (* --------------------------------------------------------------------- *)
 
 val (RESQ_HALF_GEN_TAC:tactic, RESQ_GEN_TAC:tactic) =
-    let val RESQ_FORALL = restr_binderTheory.RES_FORALL
+    let val RESQ_FORALL = res_quanTheory.RES_FORALL
     fun gtac tac (asl, w) =
        let val (var,cond,body) = dest_resq_forall w
        val thm = RIGHT_CONV_RULE (GEN_ALPHA_CONV var)
@@ -327,7 +327,7 @@ fun GGEN_TAC (asl,gl) =
 
 fun RESQ_EXISTS_TAC tm =
    (fn (asl, w) =>
-    let val RESQ_EXISTS = restr_binderTheory.RES_EXISTS
+    let val RESQ_EXISTS = res_quanTheory.RES_EXISTS
     val (var,cond,body) = dest_resq_exists w
     val thm = RIGHT_CONV_RULE (GEN_ALPHA_CONV var)
         (ISPECL [cond, mk_abs{Bvar=var,Body=body}] RESQ_EXISTS)
@@ -382,7 +382,7 @@ fun PRED_THENC_BODY c1 c2 =
 (* --------------------------------------------------------------------- *)
 
 val RESQ_FORALL_CONV = (fn tm =>
-    let val dthm = restr_binderTheory.RES_FORALL
+    let val dthm = res_quanTheory.RES_FORALL
     val (var,pred,t) = dest_resq_forall tm
     in
        RIGHT_CONV_RULE ((GEN_ALPHA_CONV var) THENC (ONCE_DEPTH_CONV BETA_CONV))
@@ -408,7 +408,7 @@ val LIST_RESQ_FORALL_CONV  = (fn tm =>
 (* --------------------------------------------------------------------- *)
 
 val IMP_RESQ_FORALL_CONV  = (fn tm =>
-    let val dthm = restr_binderTheory.RES_FORALL
+    let val dthm = res_quanTheory.RES_FORALL
     val {Bvar=var, Body=a} = dest_forall tm
     val {ant=ante,conseq=t} = dest_imp a
     val {Rator=pred,Rand=v} = dest_comb ante
@@ -504,7 +504,7 @@ val RESQ_FORALL_SWAP_CONV = (fn tm =>
 (*                                                                       *)
 (* --------------------------------------------------------------------- *)
 val RESQ_EXISTS_CONV = (fn tm' =>
-    let val dthm = restr_binderTheory.RES_EXISTS
+    let val dthm = res_quanTheory.RES_EXISTS
     val (v,P,tm) = dest_resq_exists tm'
     in
      RIGHT_CONV_RULE ((ONCE_DEPTH_CONV BETA_CONV)THENC (GEN_ALPHA_CONV v))
