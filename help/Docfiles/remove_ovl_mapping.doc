@@ -32,6 +32,11 @@ silently does nothing.
 To prune the overloading maps of unwanted possibilities.
 
 \COMMENTS
+Note that removing a print-mapping for a constant will result in that
+constant always printing fully qualified as {thy$name}.  This
+situation will persist until that constant is given a name to map to
+(either with {overload_on} or {update_overload_maps}).
+
 As with other parsing functions, there is a sister function,
 {temp_remove_ovl_mapping} that does the same thing, but whose effect
 is not saved to a theory file.
