@@ -1,0 +1,5 @@
+wordFunctor.uo: wordFunctor.sml selectUtil.ui bitsTheory.ui
+	HOLMOSMLC -c -toplevel wordFunctor.sml
+
+#word32Script.uo : word32Script.sml
+#	HOLMOSMLC -c -toplevel wordFunctor.ui word32Script.sml

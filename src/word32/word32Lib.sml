@@ -2,15 +2,14 @@ structure word32Lib :> word32Lib =
 struct
 
 (* app load ["bossLib","bitsTheory","word32Theory"]; *)
-open HolKernel boolLib bossLib computeLib simpLib numLib pairTheory
-     bitsTheory word32Theory;
 
-infix 8 by;
-infix THEN THENC THENL ++;
+open HolKernel boolLib computeLib bossLib 
+     simpLib numLib bitsTheory word32Theory;
+
 
 (* -------------------------------------------------------- *)
 
-fun armword_rws () =
+val word_compset =
   let val rws = reduceLib.num_compset()
       val _ = add_thms 
      [w_0,w_1,w_T,
@@ -36,18 +35,20 @@ fun armword_rws () =
       MSB_EVAL2,
       LSB_EVAL2,
       FUNPOW_EVAL,
-      UNCURRY_DEF,
+      pairTheory.UNCURRY_DEF,
       TIMES_2EXP_def,DIV_2EXP_def,MOD_2EXP_def,DIVMOD_2EXP_def,
       SET_def,BITS_THM,BIT_def,SLICE_def,LET_THM] rws
 in
    rws
 end;
 
-val word_compset = armword_rws();
-
 val WORD_CONV = CBV_CONV word_compset;
 val WORD_RULE = CONV_RULE WORD_CONV;
 val WORD_TAC = CONV_TAC WORD_CONV;
+
+val WORD32_CONV = WORD_CONV
+val WORD32_RULE = WORD_RULE
+val WORD32_TAC = WORD_TAC
 
 (* -------------------------------------------------------- *)
 
