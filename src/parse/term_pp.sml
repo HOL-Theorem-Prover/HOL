@@ -206,7 +206,45 @@ fun pp_term (G : grammar) TyG = let
   val comb_prec = #1 (hd (valOf (lookup_term fnapp_special)))
     handle Option =>
       raise PP_ERR "pp_term" "Grammar has no function application"
-  val recsel_info = lookup_term recsel_special
+  val recsel_info = (* (precedence, upd_tok) option *)
+    case lookup_term recsel_special of
+      SOME [(n, INFIX (STD_infix([{elements = [RE(TOK s)],...}], _)))] =>
+        SOME (n, s)
+    | SOME _ =>
+        raise PP_ERR "pp_term" "Invalid rule for record field select operator"
+    | NONE => NONE
+  val recupd_info = (* (precedence, upd_tok) option *)
+    case lookup_term recupd_special of
+      SOME [(n, INFIX (STD_infix([{elements = [RE(TOK s)],...}], _)))] =>
+        SOME (Prec(n, recupd_special), s)
+    | SOME _ =>
+        raise PP_ERR "pp_term" "Invalid rule for record update operator"
+    | NONE => NONE
+  val recfupd_info = (* (precedence, with_tok) option *)
+    case lookup_term recfupd_special of
+      SOME [(n, INFIX (STD_infix([{elements = [RE(TOK s)],...}], _)))] =>
+        SOME (Prec(n, recfupd_special), s)
+    | SOME _ =>
+        raise PP_ERR "pp_term" "Invalid rule for record f-update operator"
+    | NONE => NONE
+  val recwith_info = (* (precedence, with_tok) option *)
+    case (lookup_term recwith_special) of
+      SOME [(n, INFIX (STD_infix([{elements = [RE(TOK s)],...}], _)))] =>
+        SOME (n, s)
+    | SOME _ =>
+        raise PP_ERR "pp_term"
+          "Invalid form of rule for record with \"operator\""
+    | NONE => NONE
+  val reclist_info = (* (leftdelim, rightdelim, sep) option *)
+    case lookup_term reccons_special of
+      SOME [(_, LISTRULE[{separator, leftdelim, rightdelim,...}])] =>
+        SOME (leftdelim, rightdelim, separator)
+    | SOME _ =>
+        raise PP_ERR "pp_term"
+          "Invalid form of rule for record update list"
+    | NONE => NONE
+
+
   val resquan_op_prec =
     case (lookup_term resquan_special) of
       SOME [] => raise Fail "term_pp : This really shouldn't happen"
@@ -449,7 +487,7 @@ fun pp_term (G : grammar) TyG = let
           end handle HOL_ERR _ => ()
         else ()
 
-      val _ = (* check for record *)
+      val _ = (* check for record field selection *)
         if is_const t1 then let
           val rname_opt = Overload.overloading_of_term overload_info t1
         in
@@ -457,15 +495,7 @@ fun pp_term (G : grammar) TyG = let
             SOME s =>
               if isPrefix recsel_special s andalso isSome recsel_info
               then let
-                val (prec0, fldtok) = let
-                  open term_grammar
-                in
-                  case valOf recsel_info of
-                    [(n, INFIX (STD_infix([{elements = [RE(TOK s)],...}], _)))]
-                    => (n,s)
-                  | _ => raise PP_ERR "print_record"
-                      "Invalid form of rule for record selection \"operator\""
-                end
+                val (prec0, fldtok) = valOf recsel_info
                 val add_l =
                   case lgrav of
                     Prec(n, _) => n > prec0
@@ -477,7 +507,6 @@ fun pp_term (G : grammar) TyG = let
                 val prec = Prec(prec0, recsel_special)
                 val add_parens = add_l orelse add_r
                 val lprec = if add_parens then Top else lgrav
-                val rprev = if add_parens then Top else rgrav
                 val fldname =
                   String.extract(s, size recsel_special, NONE)
               in
@@ -492,6 +521,94 @@ fun pp_term (G : grammar) TyG = let
               end
               else ()
           | NONE => ()
+        end
+        else ()
+
+      val _ = (* check for record update *)
+        if isSome recwith_info andalso isSome reclist_info then let
+          (* function to determine if t is a record update *)
+          fun is_record_update t =
+            if is_comb t andalso is_const (rator t) then let
+              val rname = Overload.overloading_of_term overload_info (rator t)
+            in
+              case rname of
+                SOME s =>
+                  (isPrefix recupd_special s andalso isSome recupd_info) orelse
+                  (isPrefix recfupd_special s andalso isSome recfupd_info)
+              | NONE => false
+            end else false
+          (* descend the rands of a term until one that is not a record
+             update is found.  Return this and the list of rators up to
+             this point. *)
+          fun find_first_non_update acc t =
+            if is_comb t andalso is_record_update (rator t) then
+              find_first_non_update ((rator t)::acc) (rand t)
+            else
+              (List.rev acc, t)
+        in
+          if is_record_update t1 then let
+            val (updates0, base) = find_first_non_update [] t2
+            val updates = t1::updates0
+            val (with_prec, with_tok) = valOf recwith_info
+            val (ldelim, rdelim, sep) = valOf reclist_info
+            fun print_update t = let
+              val {Rator = fld, Rand = value} = dest_comb t
+              val rname =
+                valOf (Overload.overloading_of_term overload_info fld)
+              val (fld_tok, (upd_prec, updtok)) =
+                if isPrefix recupd_special rname then
+                  (String.extract(rname, size recupd_special, NONE),
+                   valOf recupd_info)
+                else
+                  (String.extract(rname, size recfupd_special, NONE),
+                   valOf recfupd_info)
+            in
+              begin_block INCONSISTENT 2;
+              add_string fld_tok ;
+              add_string " ";
+              add_string updtok;
+              add_break(1,0);
+              pr_term value upd_prec upd_prec Top (depth - 1);
+              end_block ()
+            end
+            fun print_updlist updates = let
+            in
+              add_string ldelim;
+              begin_block CONSISTENT 0;
+              pr_list print_update (fn () => add_string sep)
+              (fn () => add_break (1,0)) updates;
+              end_block ();
+              add_string rdelim
+            end
+          in
+            if is_const base andalso #Name (dest_const base) = "ARB" then
+              (print_updlist updates; raise SimpleExit)
+            else let
+              val add_l =
+                case lgrav of
+                  Prec(n, _) => n > with_prec
+                | _ => false
+              val add_r =
+                case rgrav of
+                  Prec(n, _) => n > with_prec
+                | _ => false
+              val addparens = add_l orelse add_r
+              val lprec = if addparens then Top else lgrav
+              val with_grav = Prec(with_prec, recwith_special)
+            in
+              begin_block INCONSISTENT 0;
+              pbegin addparens;
+              pr_term base with_grav lprec with_grav (depth - 1);
+              add_string " ";
+              add_string with_tok;
+              add_break (1,0);
+              if length updates = 1 then print_update (hd updates)
+              else print_updlist updates;
+              pend addparens;
+              end_block(); raise SimpleExit
+            end
+          end
+          else ()
         end
         else ()
 

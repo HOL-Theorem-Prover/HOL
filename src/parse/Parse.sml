@@ -719,6 +719,38 @@ in
     overload_on(recfldname, term)
   end
 
+  fun temp_add_record_update (fldname, term) = let
+    val recfldname = recupd_special ^ fldname
+    val pattern = Type.-->(Type.alpha, Type.-->(Type.beta, Type.beta))
+  in
+    temp_allow_for_overloading_on(recfldname, pattern);
+    temp_overload_on(recfldname, term)
+  end
+  fun add_record_update (fldname, term) = let
+    val recfldname = recupd_special ^ fldname
+    val pattern = Type.-->(Type.alpha, Type.-->(Type.beta, Type.beta))
+  in
+    allow_for_overloading_on(recfldname, pattern);
+    overload_on(recfldname, term)
+  end
+
+  fun temp_add_record_fupdate (fldname, term) = let
+    val recfldname = recfupd_special ^ fldname
+    val pattern = Type.-->(Type.-->(Type.alpha, Type.alpha),
+                           Type.-->(Type.beta, Type.beta))
+  in
+    temp_allow_for_overloading_on(recfldname, pattern);
+    temp_overload_on(recfldname, term)
+  end
+  fun add_record_fupdate (fldname, term) = let
+    val recfldname = recfupd_special ^ fldname
+    val pattern = Type.-->(Type.-->(Type.alpha, Type.alpha),
+                           Type.-->(Type.beta, Type.beta))
+  in
+    allow_for_overloading_on(recfldname, pattern);
+    overload_on(recfldname, term)
+  end
+
 
   fun temp_add_numeral_form (c, stropt) = let
     val num_ty = Type.mk_type {Tyop = "num", Args = []}

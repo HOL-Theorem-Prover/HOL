@@ -993,7 +993,8 @@ in
 end
 
 
-
+val recupd_errstring =
+  "Record list must have (fld := value) or (fld updated_by f) elements only"
 
 fun remove_specials t =
   case t of
@@ -1028,28 +1029,32 @@ and remove_recupdate upd1 updates bottom =
   case upd1 of
     COMB(COMB(VAR s, VAR fld), newvalue) => let
     in
-      if s = recupd_special then
-        COMB(COMB(VAR (recupd_special^fld), remove_specials newvalue),
+      if s = recupd_special orelse s = recfupd_special then
+        COMB(COMB(VAR (s^fld), remove_specials newvalue),
              remove_recupdate' updates bottom)
-      else raise ParseTermError
-        "Record list must have (fld := value) elements only"
+      else raise ParseTermError recupd_errstring
     end
   | _ =>
-    raise ParseTermError "Record list must have (fld := value) elements only"
+    raise ParseTermError recupd_errstring
 and remove_recupdate' updatelist bottom =
   case updatelist of
     VAR s => if s = recnil_special then bottom
-             else
-               raise ParseTermError
-                 "Record list must have (fld := value) elements only"
+             else raise ParseTermError recupd_errstring
   | COMB(COMB(VAR s, upd1), updates) => let
     in
       if s = reccons_special then remove_recupdate upd1 updates bottom
-      else raise ParseTermError
-        "Record list must have (fld := value) elements only"
+      else
+        if s = recupd_special orelse s = recfupd_special then
+          case upd1 of
+            VAR fldname => COMB(COMB(VAR (s^fldname),
+                                     remove_specials updates),
+                                bottom)
+          | _ => raise ParseTermError
+              "Must have field name as first argument to update operator"
+        else
+          raise ParseTermError recupd_errstring
     end
-  | _ => raise ParseTermError
-    "Record list must have (fld := value) elements only"
+  | _ => raise ParseTermError recupd_errstring
 
 
 
