@@ -1,6 +1,7 @@
 (*
 load "bossLib";
 load "ringLib";
+open bossLib arithLib arithmeticTheory semi_ringTheory;
 *)
 local
 open Parse basicHol90Lib bossLib  arithLib arithmeticTheory semi_ringTheory;

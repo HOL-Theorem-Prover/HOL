@@ -60,8 +60,7 @@ val intr_mult = prove(
     /\ (~&n *  &m = ~&(n*m))
     /\ ( &n * ~&m = ~&(n*m))
     /\ (~&n * ~&m =  &(n*m)) `--,
-ARW_TAC [INT_MUL,GSYM INT_NEG_LMUL, GSYM INT_NEG_RMUL,INT_NEGNEG])
-;
+ARW_TAC [INT_MUL,GSYM INT_NEG_LMUL, GSYM INT_NEG_RMUL,INT_NEGNEG]);
 
 val intr_opp = prove(
 --` (~~n = n:int) /\ (~0 = 0) `--,
