@@ -217,6 +217,16 @@ val BITS_ZERO3 = save_thm("BITS_ZERO3",
   (GEN_ALL o SIMP_RULE bool_ss [CONJUNCT1 EXP,DIV1] o SPECL [`h`,`0`]) BITS_THM2
 );
 
+val BIT_ZERO = store_thm("BIT_ZERO",
+  `!b. ~BIT b 0`,
+  REWRITE_TAC [BIT_def,BITS_ZERO2,DECIDE ``~(0 = 1)``]
+);
+
+val BIT_B = store_thm("BIT_B",
+  `!b. BIT b (2 EXP b)`,
+  SIMP_TAC arith_ss [BIT_def,BITS_THM,DIVMOD_ID,ZERO_LT_TWOEXP,SUC_SUB]
+);
+
 (* -------------------------------------------------------- *)
 
 val BITS_COMP_THM2 = store_thm("BITS_COMP_THM2",
@@ -250,20 +260,9 @@ val BITS_COMP_THM2 = store_thm("BITS_COMP_THM2",
 
 (* -------------------------------------------------------- *)
 
-val MOD2_EQ_0 = prove(
-  `!q. (q * 2) MOD 2 = 0`,
-  A_RW_TAC [MOD_EQ_0]
-);
-
-val ONE_TWO_LEM = prove(
-  `!n. (n MOD 2 = 0) \/ (n MOD 2 = 1)`,
-  `!n. n < 2 ==> ((n = 0) \/ (n = 1))` by DECIDE_TAC
-    THEN A_RW_TAC [DIVISION]
-);
-
 val NOT_MOD2_LEM = store_thm("NOT_MOD2_LEM",
   `!n. ~(n MOD 2 = 0) = (n MOD 2 = 1)`,
-  STRIP_TAC THEN ASSUME_TAC (SPEC `n` ONE_TWO_LEM) THEN EQ_TAC THEN A_RW_TAC []
+  A_RW_TAC [MOD_2]
 );
 
 val NOT_MOD2_LEM2 = store_thm("NOT_MOD2_LEM2",
@@ -271,21 +270,9 @@ val NOT_MOD2_LEM2 = store_thm("NOT_MOD2_LEM2",
   B_RW_TAC [GSYM NOT_MOD2_LEM]
 );
 
-val EVEN_MOD2_LEM = store_thm("EVEN_MOD2_LEM",
-  `!n. EVEN n = ((n MOD 2) = 0)`,
-  B_RW_TAC [ONCE_REWRITE_RULE [MULT_COMM] EVEN_EXISTS]
-    THEN EQ_TAC THEN STRIP_TAC
-    THENL [
-      ASM_REWRITE_TAC [MOD2_EQ_0],
-      EXISTS_TAC `n DIV 2`
-        THEN ASSUME_TAC ((SPEC `n` o REWRITE_RULE [EXP_1] o SPEC `1`) TWOEXP_DIVISION)
-        THEN A_RW_TAC []
-    ]
-);
-
 val ODD_MOD2_LEM = store_thm("ODD_MOD2_LEM",
  `!n. ODD n = ((n MOD 2) = 1)`,
-  STRIP_TAC THEN REWRITE_TAC [ODD_EVEN,EVEN_MOD2_LEM,NOT_MOD2_LEM]
+  A_RW_TAC [ODD_EVEN,MOD_2]
 );
 
 (* -------------------------------------------------------- *)
@@ -398,6 +385,10 @@ val BITS_SLICE_THM2 = store_thm("BITS_SLICE_THM2",
     THEN ASM_B_SIMP_TAC [LESS_MOD]
 );
 
+val SLICE_ZERO_THM = save_thm("SLICE_ZERO_THM",
+  (GEN_ALL o REWRITE_RULE [MULT_RIGHT_1,EXP] o SPECL [`n`,`h`,`0`]) SLICE_THM
+);
+
 val MOD_2EXP_MONO = store_thm("MOD_2EXP_MONO",
   `!n h l. l <= h ==> n MOD 2 EXP l <= n MOD 2 EXP SUC h`,
   REPEAT STRIP_TAC
@@ -486,6 +477,16 @@ val BIT_SLICE_LEM = store_thm("BIT_SLICE_LEM",
 (* |- !x n. SBIT (BIT x n) x = SLICE x x n *)
 val BIT_SLICE_THM = save_thm("BIT_SLICE_THM",
    SIMP_RULE arith_ss [EXP] (SPEC `0` BIT_SLICE_LEM)
+);
+
+val BIT_SLICE_THM2 = store_thm("BIT_SLICE_THM2",
+  `!b n. BIT b n ==> (SLICE b b n = 2 EXP b)`,
+  RW_TAC bool_ss [SBIT_def,GSYM BIT_SLICE_THM]
+);
+
+val BIT_SLICE_THM3 = store_thm("BIT_SLICE_THM3",
+  `!b n. ~BIT b n ==> (SLICE b b n = 0)`,
+  RW_TAC bool_ss [SBIT_def,GSYM BIT_SLICE_THM]
 );
 
 val SUB_BITS = prove(

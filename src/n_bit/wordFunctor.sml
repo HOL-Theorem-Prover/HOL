@@ -17,6 +17,7 @@ val RIGHT_REWRITE_RULE =
 
 (* -------------------------------------------------------- *)
 
+(*val bits = 32;*)
 val sbits = Int.toString bits;
 
 val _ = new_theory ("word"^sbits);
@@ -99,7 +100,7 @@ val MOD_WL_QT = prove(
 val MOD_WL_THM = store_thm("MOD_WL_THM",
   `MOD_WL = BITS HB 0`,
   ONCE_REWRITE_TAC [FUN_EQ_THM]
-    THEN REWRITE_TAC [MOD_WL_def,WL_def,SPEC `HB` BITS_ZERO3]
+    THEN REWRITE_TAC [MOD_WL_def,WL_def,BITS_ZERO3]
 );
 
 (* -------------------------------------------------------- *)
@@ -153,17 +154,16 @@ val ADD_CLAUSES_QT = prove(
 );
 
 val MOD_WL_0 = (REWRITE_RULE [GSYM MOD_WL_THM] o SPECL [`HB`,`0`]) BITS_ZERO2;
-val SPEC_MOD_TIMES = (REWRITE_RULE [MULT_LEFT_1] o SPEC `1`
-                        o REWRITE_RULE [ZERO_LT_TWOEXP] o SPEC `2 EXP WL`) MOD_TIMES;
-val exp_gteq = REDUCE_RULE (MATCH_MP TWOEXP_MONO2 (SPEC `WL` ZERO_LESS_EQ));
-
+val SPEC_MOD_TIMES = (REWRITE_RULE [MULT_LEFT_1] o SPEC `1` o
+                      REWRITE_RULE [ZERO_LT_TWOEXP] o SPEC `2 EXP n`) MOD_TIMES;
+val ONE_LT_EQ_TWOEXP = REWRITE_RULE [SYM ONE,LESS_EQ] ZERO_LT_TWOEXP;
 
 val SUC_EQUIV_COMP = prove(
   `!a b. SUC a == b ==> a == (b + (2 EXP WL - 1))`,
   B_RW_TAC [EQUIV_def]
     THEN ONCE_REWRITE_TAC [MOD_ADD]
     THEN POP_ASSUM (fn th => REWRITE_TAC [SYM th])
-    THEN B_SIMP_TAC [MOD_WL_def,GSYM MOD_ADD,ADD1,GSYM LESS_EQ_ADD_SUB,exp_gteq]
+    THEN B_SIMP_TAC [MOD_WL_def,GSYM MOD_ADD,ADD1,GSYM LESS_EQ_ADD_SUB,ONE_LT_EQ_TWOEXP]
     THEN A_SIMP_TAC [ONCE_REWRITE_RULE [ADD_COMM] SPEC_MOD_TIMES]
 );
 
@@ -174,7 +174,7 @@ val INV_SUC_EQ_QT = prove(
     THENL [
       B_RW_TAC []
         THEN IMP_RES_TAC (REWRITE_RULE [EQUIV_def] SUC_EQUIV_COMP)
-        THEN R_FULL_SIMP_TAC [GSYM LESS_EQ_ADD_SUB,ADD1,MOD_WL_def,exp_gteq]
+        THEN R_FULL_SIMP_TAC [GSYM LESS_EQ_ADD_SUB,ADD1,MOD_WL_def,ONE_LT_EQ_TWOEXP]
         THEN REWRITE_TAC [ONCE_REWRITE_RULE [ADD_COMM] SPEC_MOD_TIMES],
       REWRITE_TAC [ADD1]
         THEN ONCE_REWRITE_TAC [MOD_ADD]
@@ -665,6 +665,8 @@ val [WORD_ADD, WORD_ADD_0, WORD_ADD1, WORD_ADD_ASSOC, WORD_ADD_CLAUSES,
     defs = [r("word_0_def",Prefix,"word_0",(Term`0`)),
             r("word_1_def",Prefix,"word_1",(Term`AONE`)),
             r("word_T_def",Prefix,"word_T",(Term`COMP0`)),
+            r("word_L_def",Prefix,"word_L",(Term`2 EXP HB`)),
+            r("word_H_def",Prefix,"word_H",(Term`2 EXP HB - 1`)),
             r("word_suc",Prefix,"word_suc",(Term`SUC`)),
             r("word_add",Infixl 500,"word_add",(Term`$+`)),
             r("word_mul",Infixl 550,"word_mul",(Term`$*`)),
@@ -759,10 +761,12 @@ val _ = save_thm("WORD_DE_MORGAN_THM",WORD_DE_MORGAN_THM);
 
 val THE_WL = SIMP_RULE arithr_ss [HB_def,ADD1] WL_def;
 
-val word_T_def = definition "word_T_def";
+val word_L_def = save_thm("word_L_def",REWRITE_RULE [GSYM n2w_def] (definition "word_L_def"));
+val word_H_def = save_thm("word_H_def",REWRITE_RULE [GSYM n2w_def] (definition "word_H_def"));
+val word_T_def = save_thm("word_T_def",REWRITE_RULE [GSYM n2w_def,COMP0_def] (definition "word_T_def"));
 val word_0 = save_thm("word_0",REWRITE_RULE [GSYM n2w_def] (definition "word_0_def"));
 val word_1 = save_thm("word_1",REWRITE_RULE [GSYM n2w_def,AONE_def] (definition "word_1_def"));
-val word_T = save_thm("word_T",SIMP_RULE arithr_ss [GSYM n2w_def,COMP0_def,ONE_COMP_def,MOD_WL_def,THE_WL] word_T_def);
+val word_T = save_thm("word_T",REWRITE_RULE [ONE_COMP_def,MOD_WL_THM,BITS_ZERO2,SUB_0] word_T_def);
 
 val WORD_ADD_RINV = save_thm("WORD_ADD_RINV",REWRITE_RULE [MOD_WL_ELIM] WORD_ADD_RINV);
 val WORD_ADD_LINV = save_thm("WORD_ADD_LINV",ONCE_REWRITE_RULE [WORD_ADD_COMM] WORD_ADD_RINV);
@@ -1083,6 +1087,28 @@ val n2w_11 = store_thm("n2w_11",
     THEN REWRITE_TAC [n2w_def,mk_word_eq_one_one,EQUIV_QT,GSYM EQUIV_def]
 );
 
+val w2n_n2w = store_thm("w2n_n2w",
+  `!a n. (w2n a = n) ==> (a = n2w (MOD_WL n))`,
+  NTAC 2 STRIP_TAC
+    THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
+    THEN RW_TAC bool_ss [n2w_11,w2n_EVAL]
+    THEN REWRITE_TAC [MOD_WL_IDEM2]
+);
+
+val w2n_11 = store_thm("w2n_11",
+  `!a b. (w2n a = w2n b) = (a = b)`,
+  REPEAT STRIP_TAC
+    THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
+    THEN STRUCT_CASES_TAC (SPEC `b` word_nchotomy)
+    THEN REWRITE_TAC [w2n_EVAL,n2w_11]
+);
+
+val w2n_LT = store_thm("w2n_LT",
+  `!a. w2n a < 2 EXP WL`,
+  STRIP_TAC THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
+    THEN SIMP_TAC bool_ss [w2n_EVAL,REWRITE_RULE [LT_WL_def] LT_WL_MOD_WL]
+);
+
 (* -------------------------------------------------------- *)
 
 fun SELECT_WORD_TAC th1 th2 =
@@ -1330,40 +1356,38 @@ val ROR_THM = store_thm("ROR_THM",
                           n2w (BITS HB x' n + (BITS (x' - 1) 0 n) * 2 EXP (WL - x'))`,
   Induct_on `x`
     THEN REPEAT STRIP_TAC
+    THEN1 A_SIMP_TAC [ZERO_MOD,WL_POS,word_ror_def,FUNPOW,n2w_TIMES2,SYM MOD_WL_THM,MOD_WL_ELIM]
+    THEN POP_ASSUM (fn th => S_SIMP_TAC [th,ROR_LEM,ROR_ONE_EVAL,ROR_ONE_def,LSR_ONE_def])
+    THEN Cases_on `(x + 1) MOD WL = 0`
     THENL [
-      A_SIMP_TAC [ZERO_MOD,WL_POS,word_ror_def,FUNPOW,n2w_TIMES2,SYM MOD_WL_THM,MOD_WL_ELIM],
-      POP_ASSUM (fn th => S_SIMP_TAC [th,ROR_LEM,ROR_ONE_EVAL,ROR_ONE_def,LSR_ONE_def])
-        THEN Cases_on `(x + 1) MOD WL = 0`
-        THENL [
-           IMP_RES_TAC SPEC_MOD_PLUS_1
-             THEN RULE_ASSUM_TAC (SIMP_RULE bool_ss [ADD_EQ_SUB,WL_GEQ_ONE,WL_SUB_ONE])
-             THEN R_RW_TAC [lem5,lem6,ADD1,WL_SUB_HB,EXP_1,n2w_TIMES,n2w_TIMES2,MOD_WL_THM,
-                            MOD_WL_ELIM,ADD_DIV_ADD_DIV,BITS_DIV_THM2,BITS_ZERO,
-                            LSB_ODD,ODD_MOD2_LEM,MOD_TIMES]
-             THENL [
-               R_RW_TAC [SBIT_def,BIT_def] THEN B_FULL_SIMP_TAC [NOT_BITS2],
-               IMP_RES_TAC NOT_ZERO_ADD1
-                 THEN ASM_B_SIMP_TAC [SUC_SUB1,SIMP_RULE arith_ss [] (SPECL [`p`,`0`] BITS_SUC)]
-             ],
-           IMP_RES_TAC SPEC_MOD_ADD_1
-             THEN A_RW_TAC [ADD1,BITS_DIV_THM2,WL_SUB_ONE,lem5]
-             THENL [
-               R_SIMP_TAC [lem7,WL_def,LSB_ODD,ODD_MOD2_LEM,EXP,MOD_TIMES]
-                 THEN A_SIMP_TAC [GSYM BITS00,BITS_COMP_THM,GSYM BIT_def,SLICE_COR,
-                                  REWRITE_RULE [ADD] (SPECL [`HB`,`0`] BIT_SLICE_LEM)],
-               IMP_RES_TAC NOT_ZERO_ADD1 THEN POP_ASSUM (K ALL_TAC)
-                 THEN POP_ASSUM (fn th => SIMP_TAC bool_ss [th,SUC_SUB1,WL_SUB_SUC_X,SUB_PLUS] THEN
-                          ASSUME_TAC (REWRITE_RULE [th,WL_def,ADD1,LESS_MONO_ADD_EQ] (SPEC `x` MOD_WL)))
-                 THEN IMP_RES_TAC LESS_ADD_1
-                 THEN RULE_ASSUM_TAC (ONCE_REWRITE_RULE [ADD_COMM])
-                 THEN ASM_A_SIMP_TAC [LSB_ODD,ODD_MOD2_LEM,GSYM ADD1,EXP,MOD_TIMES,
-                                      lem7,BITS_DIV_THM2,ADD_DIV_ADD_DIV]
-                 THEN A_SIMP_TAC [GSYM BITS00,BITS_COMP_THM,GSYM BIT_def,BIT_SLICE_LEM]
-                 THEN B_SIMP_TAC [DECIDE (Term `a + SUC b = SUC a + b`),
-                                  BIT_SLICE_LEM,ADD_ASSOC,GSYM RIGHT_ADD_DISTRIB,GSYM SLICE_COR]
-                 THEN A_SIMP_TAC [ONCE_REWRITE_RULE [ADD_COMM] SLICE_COMP_THM]
-             ]
-        ]
+       IMP_RES_TAC SPEC_MOD_PLUS_1
+         THEN RULE_ASSUM_TAC (SIMP_RULE bool_ss [ADD_EQ_SUB,WL_GEQ_ONE,WL_SUB_ONE])
+         THEN R_RW_TAC [lem5,lem6,ADD1,WL_SUB_HB,EXP_1,n2w_TIMES,n2w_TIMES2,MOD_WL_THM,
+                        MOD_WL_ELIM,ADD_DIV_ADD_DIV,BITS_DIV_THM2,BITS_ZERO,
+                        LSB_ODD,ODD_MOD2_LEM,MOD_TIMES]
+         THENL [
+           R_RW_TAC [SBIT_def,BIT_def] THEN B_FULL_SIMP_TAC [NOT_BITS2],
+           IMP_RES_TAC NOT_ZERO_ADD1
+             THEN ASM_B_SIMP_TAC [SUC_SUB1,SIMP_RULE arith_ss [] (SPECL [`p`,`0`] BITS_SUC)]
+         ],
+       IMP_RES_TAC SPEC_MOD_ADD_1
+         THEN A_RW_TAC [ADD1,BITS_DIV_THM2,WL_SUB_ONE,lem5]
+         THENL [
+           R_SIMP_TAC [lem7,WL_def,LSB_ODD,ODD_MOD2_LEM,EXP,MOD_TIMES]
+             THEN A_SIMP_TAC [GSYM BITS00,BITS_COMP_THM,GSYM BIT_def,SLICE_COR,
+                              REWRITE_RULE [ADD] (SPECL [`HB`,`0`] BIT_SLICE_LEM)],
+           IMP_RES_TAC NOT_ZERO_ADD1 THEN POP_ASSUM (K ALL_TAC)
+             THEN POP_ASSUM (fn th => SIMP_TAC bool_ss [th,SUC_SUB1,WL_SUB_SUC_X,SUB_PLUS] THEN
+                      ASSUME_TAC (REWRITE_RULE [th,WL_def,ADD1,LESS_MONO_ADD_EQ] (SPEC `x` MOD_WL)))
+             THEN IMP_RES_TAC LESS_ADD_1
+             THEN RULE_ASSUM_TAC (ONCE_REWRITE_RULE [ADD_COMM])
+             THEN ASM_A_SIMP_TAC [LSB_ODD,ODD_MOD2_LEM,GSYM ADD1,EXP,MOD_TIMES,
+                                  lem7,BITS_DIV_THM2,ADD_DIV_ADD_DIV]
+             THEN A_SIMP_TAC [GSYM BITS00,BITS_COMP_THM,GSYM BIT_def,BIT_SLICE_LEM]
+             THEN B_SIMP_TAC [DECIDE (Term `a + SUC b = SUC a + b`),
+                              BIT_SLICE_LEM,ADD_ASSOC,GSYM RIGHT_ADD_DISTRIB,GSYM SLICE_COR]
+             THEN A_SIMP_TAC [ONCE_REWRITE_RULE [ADD_COMM] SLICE_COMP_THM]
+         ]
     ]
 );
 
@@ -1517,8 +1541,7 @@ val ASR_LIMIT = store_thm("ASR_LIMIT",
   `!x w. HB <= x ==> (w >> x = if MSB w then word_T else word_0)`,
   REPEAT STRIP_TAC
     THEN STRUCT_CASES_TAC (SPEC `w` word_nchotomy)
-    THEN A_RW_TAC [ASR_THM,MSB_EVAL,MSBn_def,BIT_def,MIN_LEM,NOT_BITS2,WL_SUB_HB,SUB_RIGHT_ADD,word_0,
-                   REWRITE_RULE [ONE_COMP_def,COMP0_def,GSYM n2w_def,MOD_WL_THM,BITS_ZERO2,SUB_0] word_T_def]
+    THEN A_RW_TAC [ASR_THM,MSB_EVAL,MSBn_def,BIT_def,MIN_LEM,NOT_BITS2,WL_SUB_HB,SUB_RIGHT_ADD,word_0,word_T]
     THEN RULE_ASSUM_TAC (REWRITE_RULE [(SYM o REWRITE_RULE [GSYM (CONJUNCT2 EXP),SYM WL_def]
                                             o REWRITE_RULE [MULT_RIGHT_1,SYM TWO]
                                             o SPECL [`2 EXP HB`,`1`,`1`]) MULT_LESS_EQ_SUC])
@@ -1568,34 +1591,28 @@ val lem3b = prove(
     ]
 );
 
-val LSB_COMP0 = (SIMP_RULE arith_ss [WL_def,GSYM LSBn_def,SYM COMP0_def] o SPEC `0`) ONE_COMP_TRUE;
-val MSB_COMP0 = (SIMP_RULE arith_ss [WL_def,GSYM MSBn_def,SYM COMP0_def] o SPEC `HB`) ONE_COMP_TRUE;
+val LSB_COMP0 = (SIMP_RULE arith_ss [WL_def,GSYM LSBn_def] o SPEC `0`) ONE_COMP_TRUE;
+val MSB_COMP0 = (SIMP_RULE arith_ss [WL_def,GSYM MSBn_def] o SPEC `HB`) ONE_COMP_TRUE;
 
 val lem4 = SIMP_RULE arith_ss [GSYM ADD1] (SPECL [`n`,`1`] lem3);
 val lem5 = SIMP_RULE arith_ss [GSYM ADD1] (SPECL [`0`,`HB`] lem3b);
 
 val ASR_word_T = store_thm("ASR_word_T",
   `!n. word_T >> n = word_T`,
-  Induct_on `n`
-    THENL [
-      REWRITE_TAC [ZERO_SHIFT2],
-      ASM_REWRITE_TAC [ASR_LEM,ASR_ONE_EVAL,word_T_def,GSYM n2w_def,ASR_ONE_def,LSR_ONE,BITS_THM,EXP_1,
-                       SBIT_def,MSB_COMP0]
-        THEN A_SIMP_TAC [COMP0_def,ONE_COMP_def,MOD_WL_THM,BITS_ZERO2,WL_def,lem4,lem5]
-        THEN REWRITE_TAC [EXP]
-    ]
+  Induct_on `n` THEN1 REWRITE_TAC [ZERO_SHIFT2]
+    THEN ASM_REWRITE_TAC [ASR_LEM,ASR_ONE_EVAL,word_T_def,ASR_ONE_def,
+                          LSR_ONE,BITS_THM,EXP_1,SBIT_def,MSB_COMP0]
+    THEN A_SIMP_TAC [ONE_COMP_def,MOD_WL_THM,BITS_ZERO2,WL_def,lem4,lem5]
+    THEN REWRITE_TAC [EXP]
 );
 
 val ROR_word_T = store_thm("ROR_word_T",
   `!n. word_T #>> n = word_T`,
-  Induct_on `n`
-    THENL [
-      REWRITE_TAC [ZERO_SHIFT2],
-      ASM_REWRITE_TAC [ROR_LEM,ROR_ONE_EVAL,word_T_def,GSYM n2w_def,ROR_ONE_def,LSR_ONE,BITS_THM,EXP_1,
-                       SBIT_def,LSB_COMP0]
-        THEN A_SIMP_TAC [COMP0_def,ONE_COMP_def,MOD_WL_THM,BITS_ZERO2,WL_def,lem4,lem5]
-        THEN REWRITE_TAC [EXP]
-    ]
+  Induct_on `n` THEN1 REWRITE_TAC [ZERO_SHIFT2]
+    THEN ASM_REWRITE_TAC [ROR_LEM,ROR_ONE_EVAL,word_T_def,ROR_ONE_def,
+                          LSR_ONE,BITS_THM,EXP_1,SBIT_def,LSB_COMP0]
+    THEN A_SIMP_TAC [ONE_COMP_def,MOD_WL_THM,BITS_ZERO2,WL_def,lem4,lem5]
+    THEN REWRITE_TAC [EXP]
 );
 
 (* -------------------------------------------------------- *)
@@ -1709,6 +1726,979 @@ val WORD_SLICE_ZERO = store_thm("WORD_SLICE_ZERO",
   `!h l n. h < l ==> (WORD_SLICE h l n = 0)`,
   B_RW_TAC [WORD_SLICE_def,SLICE_ZERO]
 );
+
+(* -------------------------------------------------------- *)
+(* -------------------------------------------------------- *)
+
+val CMP_NZCV_def = Define `
+  CMP_NZCV a b =
+    let q = w2n a + w2n (word_2comp b) in
+    let r = n2w q in
+      (MSB r,r = word_0,BIT WL q \/ (b = word_0),~(MSB a = MSB b) /\ ~(MSB r = MSB a))`;
+
+val WORD_LT_def = Define `
+  word_lt a b = let (n,z,c,v) = CMP_NZCV a b in ~(n = v)`;
+
+val WORD_GT_def = Define `
+  word_gt a b = let (n,z,c,v) = CMP_NZCV a b in ~z /\ (n = v)`;
+
+val WORD_LE_def = Define `
+  word_le a b = let (n,z,c,v) = CMP_NZCV a b in z \/ ~(n = v)`;
+
+val WORD_GE_def = Define `
+  word_ge a b = let (n,z,c,v) = CMP_NZCV a b in n = v`;
+
+val WORD_LS_def = Define `
+  word_ls a b = let (n,z,c,v) = CMP_NZCV a b in ~c \/ z`;
+
+val WORD_HI_def = Define `
+  word_hi a b = let (n,z,c,v) = CMP_NZCV a b in c /\ ~z`;
+
+val WORD_LO_def = Define `
+  word_lo a b = let (n,z,c,v) = CMP_NZCV a b in ~c`;
+
+val WORD_HS_def = Define `
+  word_hs a b = let (n,z,c,v) = CMP_NZCV a b in c`;
+
+val EQUAL_THEN_SUB_ZERO = (GEN_ALL o REWRITE_RULE [WORD_SUB_REFL] o SPECL [`b`,`a`,`b`]) WORD_LCANCEL_SUB;
+
+val WORD_LT = save_thm("WORD_LT",
+  SIMP_RULE std_ss [CMP_NZCV_def,GSYM ADD_EVAL,w2n_ELIM,GSYM word_sub_def] WORD_LT_def);
+val WORD_GT = save_thm("WORD_GT",
+  SIMP_RULE std_ss [CMP_NZCV_def,EQUAL_THEN_SUB_ZERO,GSYM ADD_EVAL,w2n_ELIM,GSYM word_sub_def] WORD_GT_def);
+val WORD_LE = save_thm("WORD_LE",
+  SIMP_RULE std_ss [CMP_NZCV_def,EQUAL_THEN_SUB_ZERO,GSYM ADD_EVAL,w2n_ELIM,GSYM word_sub_def] WORD_LE_def);
+val WORD_GE = save_thm("WORD_GE",
+  SIMP_RULE std_ss [CMP_NZCV_def,GSYM ADD_EVAL,w2n_ELIM,GSYM word_sub_def] WORD_GE_def);
+val WORD_LS = save_thm("WORD_LS",
+  SIMP_RULE std_ss [CMP_NZCV_def,EQUAL_THEN_SUB_ZERO,GSYM ADD_EVAL,w2n_ELIM,GSYM word_sub_def] WORD_LS_def);
+val WORD_HI = save_thm("WORD_HI",
+  SIMP_RULE std_ss [CMP_NZCV_def,EQUAL_THEN_SUB_ZERO,GSYM ADD_EVAL,w2n_ELIM,GSYM word_sub_def] WORD_HI_def);
+val WORD_LO = save_thm("WORD_LO",
+  SIMP_RULE std_ss [CMP_NZCV_def,GSYM ADD_EVAL,w2n_ELIM,GSYM word_sub_def] WORD_LO_def);
+val WORD_HS = save_thm("WORD_HS",
+  SIMP_RULE std_ss [CMP_NZCV_def,GSYM ADD_EVAL,w2n_ELIM,GSYM word_sub_def] WORD_HS_def);
+
+(* -------------------------------------------------------- *)
+
+val SPEC_LESS_EXP_SUC_MONO = (GEN_ALL o SIMP_RULE arith_ss [] o SPECL [`n`,`0`]) LESS_EXP_SUC_MONO;
+
+val SPLIT_2_EXP_WL = prove(`2 ** WL = 2 ** HB + 2 ** HB`,SIMP_TAC arith_ss [EXP,WL_def]);
+
+val WORD_NEG_L = store_thm("WORD_NEG_L",
+  `~word_L = word_L`,
+  SIMP_TAC bool_ss [LESS_MOD,SPEC_LESS_EXP_SUC_MONO,word_L_def,n2w_11,
+                    TWO_COMP_EVAL,TWO_COMP_def,MOD_WL_THM,BITS_ZERO3]
+    THEN REWRITE_TAC [SPLIT_2_EXP_WL,ADD_SUB]
+    THEN SIMP_TAC arith_ss [GSYM EXP,LESS_MOD,SPEC_LESS_EXP_SUC_MONO]
+);
+
+(* -------------------------------------------------------- *)
+
+val lem3 = (SIMP_RULE arith_ss [] o SPECL [`HB`,`0`,`HB - 1`,`0`]) BITS_COMP_THM;
+
+val lem8 = DECIDE (Term `!n. ~(n = 0) ==> (SUC (n - 1) = n)`);
+
+val lem6 = prove(
+  `!b n. ~(b = 0) ==>
+     (SLICE b b n + SLICE (b - 1) 0 n = SLICE b 0 n)`,
+   REPEAT STRIP_TAC
+     THEN POP_ASSUM
+          (fn th => REWRITE_TAC [(SIMP_RULE arith_ss [lem8,th] o SPECL [`b`,`b - 1`,`0`,`n`]) SLICE_COMP_THM])
+);
+
+val MSB_THM1 = prove(
+  `!a. ~(HB = 0) /\ MSB a ==> (w2n a = 2 EXP HB + WORD_BITS (HB - 1) 0 a)`,
+  STRIP_TAC THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
+    THEN RW_TAC bool_ss [MSB_EVAL,MSBn_def,w2n_EVAL,MOD_WL_THM,WORD_BITS_def,lem3]
+    THEN IMP_RES_TAC BIT_SLICE_THM2
+    THEN POP_ASSUM (SUBST1_TAC o SYM)
+    THEN ASM_SIMP_TAC bool_ss [lem6,GSYM SLICE_ZERO_THM]
+);
+
+val MSB_THM2 = prove(
+  `!a. ~(HB = 0) /\ MSB a ==> (w2n (word_2comp a) = 2 EXP HB - WORD_BITS (HB - 1) 0 a)`,
+  STRIP_TAC THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
+    THEN REPEAT STRIP_TAC THEN IMP_RES_TAC MSB_THM1
+    THEN FULL_SIMP_TAC bool_ss [MSB_EVAL,MSBn_def,w2n_EVAL,MOD_WL_THM,WORD_BITS_def,
+                                TWO_COMP_EVAL,TWO_COMP_def,lem3]
+    THEN ASM_SIMP_TAC arith_ss [BITS_ZERO3,GSYM ADD1,SPEC_MOD_TIMES,MOD_MOD,ZERO_LT_TWOEXP,lem8]
+    THEN REWRITE_TAC [SPLIT_2_EXP_WL,SUB_PLUS,ADD_SUB]
+    THEN ASSUME_TAC (SPEC `HB` SPEC_LESS_EXP_SUC_MONO)
+    THEN `2 EXP HB - n MOD 2 EXP HB <= 2 EXP HB` by DECIDE_TAC
+    THEN IMP_RES_TAC LESS_EQ_LESS_TRANS
+    THEN ASM_SIMP_TAC bool_ss [ZERO_LT_TWOEXP,LESS_MOD]
+);
+
+val MSB_THM3 = prove(
+  `!a. ~(HB = 0) /\ ~MSB a ==> (w2n a = WORD_BITS (HB - 1) 0 a)`,
+  STRIP_TAC THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
+    THEN RW_TAC bool_ss [MSB_EVAL,MSBn_def,w2n_EVAL,MOD_WL_THM,WORD_BITS_def,lem3]
+    THEN IMP_RES_TAC BIT_SLICE_THM3
+    THEN IMP_RES_TAC lem6 THEN POP_ASSUM (SPEC_THEN `n` ASSUME_TAC)
+    THEN PAT_ASSUM `SLICE HB HB n = 0` (fn th => FULL_SIMP_TAC arith_ss [th,GSYM SLICE_ZERO_THM])
+);
+
+val MSB_THM4 = prove(
+  `!a. ~(HB = 0) /\ ~(a = word_0) /\ ~MSB a ==>
+       (w2n (word_2comp a) = 2 EXP WL - WORD_BITS (HB - 1) 0 a) /\ ~(WORD_BITS (HB - 1) 0 a = 0)`,
+  STRIP_TAC THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
+    THEN REPEAT STRIP_TAC THEN IMP_RES_TAC MSB_THM3
+    THEN FULL_SIMP_TAC bool_ss [MSB_EVAL,MSBn_def,w2n_EVAL,MOD_WL_THM,WORD_BITS_def,BITS_ZERO2,
+                                word_0,n2w_11,TWO_COMP_EVAL,TWO_COMP_def,lem3]
+    THEN FULL_SIMP_TAC arith_ss [BITS_COMP_THM2,MIN_DEF]
+    THEN `2 ** WL - BITS (HB - 1) 0 n < 2 ** WL` by ASM_SIMP_TAC arith_ss [ZERO_LT_TWOEXP]
+    THEN ASM_SIMP_TAC bool_ss [SPEC `HB` BITS_ZERO3,SYM WL_def,LESS_MOD]
+);
+
+val HB_0_MSB = prove(
+  `!a. (HB = 0) /\ MSB a ==> (a = word_1)`,
+  STRIP_TAC THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
+    THEN RW_TAC bool_ss [MSB_EVAL,MSBn_def,w2n_EVAL,word_1,n2w_11,MOD_WL_THM,BIT_def]
+    THEN PAT_ASSUM `HB = 0` (fn th => FULL_SIMP_TAC arith_ss [th,BITS_ZERO3])
+);
+
+val HB_0_NOT_MSB = prove(
+  `!a. (HB = 0) /\ ~MSB a ==> (a = word_0)`,
+  STRIP_TAC THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
+    THEN RW_TAC bool_ss [MSB_EVAL,MSBn_def,w2n_EVAL,word_0,n2w_11,MOD_WL_THM,BIT_def,BITS_ZERO2]
+    THEN PROVE_TAC [NOT_BITS2]
+);
+
+val MSB_THM1b = prove(
+  `!a. (HB = 0) /\ MSB a ==> (w2n a = 1)`,
+  REPEAT STRIP_TAC THEN IMP_RES_TAC HB_0_MSB
+    THEN ASM_SIMP_TAC arith_ss [word_1,w2n_EVAL,BITS_ZERO3,MOD_WL_THM]
+);
+
+val MSB_THM2b = prove(
+  `!a. (HB = 0) /\ MSB a ==> (w2n (word_2comp a) = 1)`,
+  REPEAT STRIP_TAC THEN IMP_RES_TAC HB_0_MSB
+    THEN ASM_SIMP_TAC arith_ss [word_1,w2n_EVAL,BITS_ZERO3,MOD_WL_THM,WL_def,TWO_COMP_EVAL,TWO_COMP_def]
+);
+
+val MSB_THM3b = prove(
+  `!a. (HB = 0) /\ ~MSB a ==> (w2n a = 0)`,
+  REPEAT STRIP_TAC THEN IMP_RES_TAC HB_0_NOT_MSB
+    THEN ASM_SIMP_TAC arith_ss [word_0,w2n_EVAL,BITS_ZERO3,MOD_WL_THM]
+);
+
+val MSB_THM4b = prove(
+  `!a. (HB = 0) /\ ~MSB a ==> (w2n (word_2comp a) = 0)`,
+  REPEAT STRIP_TAC THEN IMP_RES_TAC HB_0_NOT_MSB
+    THEN ASM_REWRITE_TAC [WORD_NEG_0]
+    THEN REWRITE_TAC [word_0,w2n_EVAL,BITS_ZERO2,MOD_WL_THM]
+);
+
+(* -------------------------------------------------------- *)
+
+val lem4a = prove(
+  `!b a. ~(b = 0) ==> WORD_BITS (b - 1) 0 a < 2 EXP b`,
+  REPEAT STRIP_TAC
+    THEN POP_ASSUM (fn th => REWRITE_TAC [(SIMP_RULE arith_ss [lem8,th] o
+                                            SPECL [`b - 1`,`0`,`a`]) WORD_BITSLT_THM])
+);
+
+val lem4b = prove(
+  `!b a. ~(b = 0) ==> SLICE (b - 1) 0 a < 2 EXP b`,
+  REPEAT STRIP_TAC
+    THEN POP_ASSUM (fn th => REWRITE_TAC [SLICE_ZERO_THM,(SIMP_RULE arith_ss [lem8,th] o
+                                            SPECL [`b - 1`,`0`,`a`]) BITSLT_THM])
+);
+
+val lem4 = prove(
+  `!b a. ~(b = 0) ==> WORD_BITS (b - 1) 0 a <= 2 EXP b`,
+  PROVE_TAC [LESS_IMP_LESS_OR_EQ,lem4a]
+);
+
+val TWO_COMP_POS = store_thm("TWO_COMP_POS",
+  `!a. ~MSB a ==> (if a = word_0 then ~MSB (word_2comp a) else MSB (word_2comp a))`,
+  RW_TAC bool_ss [WORD_NEG_0]
+    THEN Cases_on `HB = 0` THEN1 PROVE_TAC [HB_0_NOT_MSB]
+    THEN REPEAT (POP_ASSUM MP_TAC) THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
+    THEN REPEAT STRIP_TAC THEN IMP_RES_TAC MSB_THM4 THEN IMP_RES_TAC w2n_n2w
+    THEN ASM_SIMP_TAC arith_ss [BITS_COMP_THM2,MIN_DEF,MSB_EVAL,MOD_WL_THM,MSBn_def,BIT_def]
+    THEN `2 EXP HB - WORD_BITS (HB - 1) 0 (n2w n) < 2 EXP HB` by ASM_SIMP_TAC arith_ss [ZERO_LT_TWOEXP]
+    THEN IMP_RES_TAC lem4
+    THEN ASM_SIMP_TAC bool_ss [BITS_THM,SUC_SUB,EXP_1,SPLIT_2_EXP_WL,LESS_EQ_ADD_SUB,DIV_MULT_1]
+    THEN REDUCE_TAC
+);
+
+val lem2 = prove(
+  `!n. ~(HB = 0) /\ ~(n2w n = word_L) /\ MSB (n2w n) ==> ~(WORD_BITS (HB - 1) 0 (n2w n) = 0)`,
+  RW_TAC arith_ss [BITS_COMP_THM2,MIN_DEF,MSB_EVAL,MSBn_def,WORD_BITS_def,w2n_EVAL,MOD_WL_THM]
+    THEN SPOSE_NOT_THEN STRIP_ASSUME_TAC
+    THEN IMP_RES_TAC BIT_SLICE_THM2
+    THEN RULE_ASSUM_TAC (REWRITE_RULE [GSYM SLICE_ZERO_THM])
+    THEN IMP_RES_TAC lem6 THEN POP_ASSUM (SPEC_THEN `n` ASSUME_TAC)
+    THEN FULL_SIMP_TAC bool_ss [word_L_def,n2w_11,MOD_WL_THM,BITS_ZERO3,LESS_MOD,SPEC_LESS_EXP_SUC_MONO]
+    THEN FULL_SIMP_TAC bool_ss [GSYM BITS_ZERO3,GSYM SLICE_ZERO_THM]
+    THEN PROVE_TAC [ADD_0]
+);
+
+val TWO_COMP_NEG = store_thm("TWO_COMP_NEG",
+  `!a. MSB a ==> if (HB = 0) \/ (a = word_L) then MSB (word_2comp a) else ~MSB (word_2comp a)`,
+  RW_TAC bool_ss []
+    THENL [
+      IMP_RES_TAC HB_0_MSB
+        THEN ASM_REWRITE_TAC [MSB_EVAL,MSB_COMP0,WORD_NEG_1,word_T_def],
+      ASM_REWRITE_TAC [WORD_NEG_L],
+      FULL_SIMP_TAC bool_ss []
+        THEN REPEAT (POP_ASSUM MP_TAC) THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
+        THEN NTAC 3 STRIP_TAC THEN IMP_RES_TAC MSB_THM2 THEN IMP_RES_TAC w2n_n2w
+        THEN ASM_SIMP_TAC arith_ss [BITS_COMP_THM2,MIN_DEF,MSB_EVAL,MOD_WL_THM,MSBn_def,BIT_def]
+        THEN IMP_RES_TAC lem2
+        THEN `2 EXP HB - WORD_BITS (HB -1) 0 (n2w n) < 2 EXP HB` by ASM_SIMP_TAC arith_ss [ZERO_LT_TWOEXP]
+        THEN ASM_SIMP_TAC arith_ss [BITS_THM,SUC_SUB,EXP_1,LESS_DIV_EQ_ZERO]
+    ]
+);
+
+val TWO_COMP_POS_NEG = store_thm("TWO_COMP_POS_NEG",
+  `!a. ~((HB = 0) \/ (a = word_0) \/ (a = word_L)) ==> (~MSB a = MSB (word_2comp a))`,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC
+    THEN1 PROVE_TAC [TWO_COMP_POS]
+    THEN PROVE_TAC [(REWRITE_RULE [WORD_NEG_L,WORD_NEG_EQ,WORD_NEG_NEG] o SPEC `word_2comp a`) TWO_COMP_NEG]
+);
+
+val TWO_COMP_NEG_POS = store_thm("TWO_COMP_NEG_POS",
+  `!a. ~((HB = 0) \/ (a = word_0) \/ (a = word_L)) ==> (MSB a = ~MSB (word_2comp a))`,
+  PROVE_TAC [(REWRITE_RULE [WORD_NEG_L,WORD_NEG_EQ,WORD_NEG_0,WORD_NEG_NEG] o
+              SPEC `word_2comp a`) TWO_COMP_POS_NEG]
+);
+
+val WORD_0_POS = store_thm("WORD_0_POS",
+  `~MSB word_0`,
+  REWRITE_TAC [word_0,MSB_EVAL,MSBn_def,BIT_ZERO]
+);
+
+val WORD_H_POS = store_thm("WORD_H_POS",
+  `~MSB word_H`,
+  `2 ** HB - 1 < 2 ** HB` by ASM_SIMP_TAC arith_ss [ZERO_LT_TWOEXP]
+     THEN ASM_SIMP_TAC arith_ss [word_H_def,MSB_EVAL,MSBn_def,BIT_def,BITS_THM,
+            LESS_DIV_EQ_ZERO,ZERO_MOD,ZERO_LT_TWOEXP]
+);
+
+val WORD_L_NEG = store_thm("WORD_L_NEG",
+  `MSB word_L`,
+  REWRITE_TAC [word_L_def,MSB_EVAL,MSBn_def,BIT_ZERO,BIT_B]
+);
+
+(* -------------------------------------------------------- *)
+
+val NOT_EQUAL_THEN_NOT = PROVE [EQUAL_THEN_SUB_ZERO] `!a b. ~(a = b) = ~(b - a = word_0)`;
+
+val ADD_EVAL3 = prove(
+  `!a b. a + b = n2w (w2n a + w2n b)`,
+  REWRITE_TAC [GSYM ADD_EVAL,w2n_ELIM]
+);
+
+val SUB_EQUAL_WORD_L_MSB = prove(
+  `!a b. ~(HB = 0) /\ (a - b = word_L) ==> ~(MSB a = MSB b)`,
+  RW_TAC bool_ss [WORD_EQ_SUB_RADD]
+    THEN STRUCT_CASES_TAC (SPEC `b` word_nchotomy)
+    THEN REWRITE_TAC [MSB_EVAL,MSBn_def,word_L_def]
+    THEN SUBST1_TAC ((SYM o SPEC `n`) MOD_WL_ELIM)
+    THEN REWRITE_TAC [ADD_EVAL,MOD_WL_THM,MSB_EVAL,MSBn_def]
+    THEN Cases_on `BIT HB n`
+    THEN IMP_RES_TAC BIT_SLICE_THM2
+    THEN IMP_RES_TAC BIT_SLICE_THM3
+    THEN IMP_RES_TAC lem6
+    THEN POP_ASSUM (fn th => ASM_SIMP_TAC arith_ss [GSYM SLICE_ZERO_THM,(SYM o SPEC `n`) th])
+    THEN ASM_SIMP_TAC bool_ss [BIT_def,BITS_THM,SUC_SUB,EXP_1,lem4b,DIV_MULT,DIV_MULT_1]
+    THEN REDUCE_TAC
+);
+
+val LEM1_TAC =
+  REPEAT STRIP_TAC
+    THEN Cases_on `MSB a`
+    THEN Cases_on `MSB b`
+    THEN Cases_on `a = b`
+    THEN FULL_SIMP_TAC bool_ss [WORD_LT,WORD_GT,WORD_LE,WORD_GE,WORD_SUB_REFL,WORD_0_POS,DECIDE (Term `~(a = ~a)`)]
+    THEN GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [GSYM WORD_NEG_SUB]
+    THEN IMP_RES_TAC NOT_EQUAL_THEN_NOT
+    THEN Cases_on `b - a = word_L`
+    THEN PROVE_TAC [SUB_EQUAL_WORD_L_MSB,TWO_COMP_POS_NEG];
+
+val LEM2_TAC =
+  REPEAT STRIP_TAC
+    THEN Cases_on `MSB a`
+    THEN Cases_on `MSB b`
+    THEN IMP_RES_TAC MSB_THM1b
+    THEN IMP_RES_TAC MSB_THM2b
+    THEN IMP_RES_TAC MSB_THM3b
+    THEN IMP_RES_TAC MSB_THM4b
+    THEN ASM_SIMP_TAC arith_ss [WORD_LT,WORD_GT,WORD_LE,WORD_GE,word_sub_def,
+           ADD_EVAL3,ADD_EVAL,MSB_EVAL,MSBn_def,word_0,n2w_11,MOD_WL_THM,BITS_ZERO2,BIT_def]
+    THEN ASM_SIMP_TAC arith_ss [BITS_ZERO3]
+    THEN PROVE_TAC [w2n_11];
+
+val WORD_GREATER = store_thm("WORD_GREATER",
+  `!a b. word_gt a b = word_lt b a`,
+  Cases_on `HB = 0` THENL [LEM2_TAC,LEM1_TAC]
+);
+
+val WORD_GREATER_EQ = store_thm("WORD_GREATER_EQ",
+  `!a b. word_ge a b = word_le b a`,
+  Cases_on `HB = 0` THENL [LEM2_TAC,LEM1_TAC]
+);
+
+val WORD_NOT_LESS = store_thm("WORD_NOT_LESS",
+  `!a b. ~(word_lt a b) = word_le b a`,
+  Cases_on `HB = 0` THENL [LEM2_TAC,LEM1_TAC]
+);
+
+val WORD_NOT_LESS_EQUAL = store_thm("WORD_NOT_LESS_EQUAL",
+  `!a b. ~(word_le a b) = word_lt b a`,
+  PROVE_TAC [WORD_NOT_LESS]
+);
+
+val WORD_LESS_OR_EQ = store_thm("WORD_LESS_OR_EQ",
+  `!a b. word_le a b = word_lt a b \/ (a = b)`,
+  LEM1_TAC
+);
+
+val WORD_GREATER_OR_EQ = store_thm("WORD_GREATER_OR_EQ",
+  `!a b. word_ge a b = word_gt a b \/ (a = b)`,
+  PROVE_TAC [WORD_GREATER,WORD_GREATER_EQ,WORD_LESS_OR_EQ]
+);
+
+(* -------------------------------------------------------- *)
+
+val LESS_EQ_ADD2 = DECIDE (Term `!a b c. a + b <= a + c ==> b <= c`);
+val LESS_ADD2 = DECIDE (Term `!a b c. a + b < a + c ==> b < c`);
+
+val lem5 = DECIDE (Term `!m n p. p <= n ==> (m + p - n = m - (n - p))`);
+
+val lem9 = prove(
+  `!a b. ~(HB = 0) /\ MSB a /\ MSB b /\ MSB (a - b) ==> w2n a < w2n b`,
+  REWRITE_TAC [word_sub_def,ADD_EVAL3]
+    THEN RW_TAC bool_ss [MSB_EVAL,MSBn_def]
+    THEN POP_ASSUM MP_TAC
+    THEN Cases_on `w2n a < w2n b` THEN ASM_REWRITE_TAC []
+    THEN IMP_RES_TAC MSB_THM1
+    THEN `w2n ~b = 2 ** HB - WORD_BITS (HB - 1) 0 b` by IMP_RES_TAC MSB_THM2
+    THEN FULL_SIMP_TAC bool_ss [NOT_LESS,GSYM LESS_EQ_ADD_SUB,DECIDE (Term `!a b. a + b + a = 2 * a + b`),lem4]
+    THEN IMP_RES_TAC LESS_EQ_ADD2
+    THEN ASM_SIMP_TAC bool_ss [lem5,BIT_def,BITS_THM,SUC_SUB,EXP_1,LESS_EQ_ADD_SUB]
+    THEN IMP_RES_TAC lem4a
+    THEN POP_ASSUM (SPEC_THEN `a` ASSUME_TAC)
+    THEN ASSUME_TAC (SPECL [`WORD_BITS (HB - 1) 0 a`,`WORD_BITS (HB - 1) 0 b`] SUB_LESS_EQ)
+    THEN `WORD_BITS (HB - 1) 0 a - WORD_BITS (HB - 1) 0 b < 2 ** HB` by IMP_RES_TAC LESS_EQ_LESS_TRANS
+    THEN ASM_SIMP_TAC arith_ss [DIV_MULT]
+);
+
+val lem10 = prove(
+  `!a b. ~(HB = 0) /\ MSB a /\ MSB b /\ ~MSB (a - b) ==> ~(w2n a < w2n b)`,
+  REWRITE_TAC [word_sub_def,ADD_EVAL3]
+    THEN RW_TAC bool_ss [MSB_EVAL,MSBn_def]
+    THEN POP_ASSUM MP_TAC
+    THEN Cases_on `w2n a < w2n b` THEN ASM_REWRITE_TAC []
+    THEN IMP_RES_TAC MSB_THM1
+    THEN `w2n ~b = 2 ** HB - WORD_BITS (HB - 1) 0 b` by IMP_RES_TAC MSB_THM2
+    THEN FULL_SIMP_TAC bool_ss [GSYM LESS_EQ_ADD_SUB,lem4]
+    THEN ONCE_REWRITE_TAC [DECIDE (Term `!a b c. (a:num) + b + c = a + c + b`)]
+    THEN PAT_ASSUM `x + y < x + z` (ASSUME_TAC o (MATCH_MP LESS_ADD2))
+    THEN IMP_RES_TAC LESS_ADD_1
+    THEN IMP_RES_TAC lem4a
+    THEN POP_ASSUM (SPEC_THEN `b` ASSUME_TAC)
+    THEN `p + 1 <= 2 EXP HB` by DECIDE_TAC
+    THEN ASM_SIMP_TAC bool_ss [SUB_PLUS,ADD_SUB]
+    THEN ASM_SIMP_TAC bool_ss [GSYM SUB_PLUS,LESS_EQ_ADD_SUB]
+    THEN `2 EXP HB - (p + 1) < 2 EXP HB` by DECIDE_TAC
+    THEN ASM_SIMP_TAC bool_ss [BIT_def,BITS_THM,DIV_MULT_1,SUC_SUB,EXP_1]
+    THEN REDUCE_TAC
+);
+
+val w2n_word_0 = SIMP_CONV arith_ss [word_0,w2n_EVAL,MOD_WL_THM,BITS_ZERO2] (Term `w2n word_0`);
+
+val lem11 = prove(
+  `!a b. ~(HB = 0) /\ ~MSB a /\ ~MSB b /\ MSB (a - b) ==> w2n a < w2n b`,
+  REWRITE_TAC [word_sub_def,ADD_EVAL3]
+    THEN NTAC 2 STRIP_TAC 
+    THEN Cases_on `b = word_0`
+    THENL [
+      ASM_REWRITE_TAC [WORD_NEG_0,w2n_word_0,ADD_0,w2n_ELIM] THEN DECIDE_TAC,
+      RW_TAC bool_ss [MSB_EVAL,MSBn_def]
+        THEN POP_ASSUM MP_TAC
+        THEN Cases_on `w2n a < w2n b` THEN ASM_REWRITE_TAC []
+        THEN IMP_RES_TAC MSB_THM3
+        THEN `w2n ~b = 2 ** WL - WORD_BITS (HB - 1) 0 b` by IMP_RES_TAC MSB_THM4
+        THEN IMP_RES_TAC lem4
+        THEN POP_ASSUM (SPEC_THEN `b` ASSUME_TAC)
+        THEN ASSUME_TAC
+             (MATCH_MP LESS_IMP_LESS_OR_EQ ((REWRITE_RULE [SYM WL_def] o SPEC `HB`) SPEC_LESS_EXP_SUC_MONO))
+        THEN `WORD_BITS (HB - 1) 0 b <= 2 ** WL` by IMP_RES_TAC LESS_EQ_TRANS
+        THEN FULL_SIMP_TAC bool_ss [NOT_LESS,GSYM LESS_EQ_ADD_SUB]
+        THEN ONCE_REWRITE_TAC [ADD_COMM]
+        THEN IMP_RES_TAC lem4a
+        THEN POP_ASSUM (SPEC_THEN `a` ASSUME_TAC)
+        THEN `WORD_BITS (HB - 1) 0 a - WORD_BITS (HB - 1) 0 b < 2 ** HB` by DECIDE_TAC
+        THEN ASM_SIMP_TAC bool_ss [BIT_def,BITS_THM,SUC_SUB,EXP_1,LESS_EQ_ADD_SUB,WL_def,EXP,DIV_MULT]
+        THEN REDUCE_TAC
+    ]
+);
+
+val lem12 = prove(
+  `!a b. ~(HB = 0) /\ ~MSB a /\ ~MSB b /\ ~MSB (a - b) ==> ~(w2n a < w2n b)`,
+  REWRITE_TAC [word_sub_def,ADD_EVAL3]
+    THEN NTAC 2 STRIP_TAC 
+    THEN Cases_on `b = word_0`
+    THENL [
+      ASM_SIMP_TAC arith_ss [w2n_word_0],
+      RW_TAC bool_ss [MSB_EVAL,MSBn_def]
+        THEN POP_ASSUM MP_TAC
+        THEN Cases_on `w2n a < w2n b` THEN ASM_REWRITE_TAC []
+        THEN IMP_RES_TAC MSB_THM3
+        THEN IMP_RES_TAC MSB_THM4 THEN NTAC 4 (POP_ASSUM (K ALL_TAC))
+        THEN IMP_RES_TAC lem4
+        THEN POP_ASSUM (SPEC_THEN `b` ASSUME_TAC)
+        THEN ASSUME_TAC
+             (MATCH_MP LESS_IMP_LESS_OR_EQ ((REWRITE_RULE [SYM WL_def] o SPEC `HB`) SPEC_LESS_EXP_SUC_MONO))
+        THEN `WORD_BITS (HB - 1) 0 b <= 2 ** WL` by IMP_RES_TAC LESS_EQ_TRANS
+        THEN FULL_SIMP_TAC bool_ss [GSYM LESS_EQ_ADD_SUB]
+        THEN ONCE_REWRITE_TAC [ADD_COMM]
+        THEN `WORD_BITS (HB - 1) 0 b <= 2 ** HB + WORD_BITS (HB - 1) 0 a` by DECIDE_TAC
+        THEN ASM_SIMP_TAC bool_ss [SPLIT_2_EXP_WL,GSYM ADD_ASSOC,LESS_EQ_ADD_SUB]
+        THEN IMP_RES_TAC LESS_IMP_LESS_OR_EQ
+        THEN `2 ** HB - (WORD_BITS (HB - 1) 0 b - WORD_BITS (HB - 1) 0 a) < 2 ** HB` by DECIDE_TAC
+        THEN ASM_SIMP_TAC bool_ss [lem5,DIV_MULT_1,BIT_def,BITS_THM,SUC_SUB,EXP_1]
+        THEN REDUCE_TAC
+    ]
+);
+
+val WORD_LT_THM = store_thm("WORD_LT_THM",
+  `!a b. word_lt a b = (MSB a = MSB b) /\ w2n a < w2n b \/ MSB a /\ ~MSB b`,
+  Cases_on `HB = 0`
+    THEN REPEAT STRIP_TAC
+    THENL [
+      Cases_on `MSB a`
+        THEN Cases_on `MSB b`
+        THEN Cases_on `MSB (n2w (w2n a + w2n ~b))`
+        THEN ASM_REWRITE_TAC [WORD_LT]
+        THEN POP_ASSUM MP_TAC
+        THEN Cases_on `w2n a < w2n b`
+        THEN ASM_REWRITE_TAC [MSB_EVAL,MSBn_def,word_sub_def,ADD_EVAL3]
+        THEN IMP_RES_TAC MSB_THM1b
+        THEN IMP_RES_TAC MSB_THM2b
+        THEN IMP_RES_TAC MSB_THM3b
+        THEN IMP_RES_TAC MSB_THM4b
+        THEN ASM_SIMP_TAC arith_ss [BIT_def,BITS_THM],
+      Cases_on `MSB a`
+        THEN Cases_on `MSB b`
+        THEN Cases_on `MSB (a - b)`
+        THEN ASM_SIMP_TAC bool_ss [WORD_LT,lem9,lem10,lem11,lem12]
+    ]
+);
+
+val WORD_GT_THM = save_thm("WORD_GT_THM",
+  (GEN `a` o GEN `b` o REWRITE_CONV [WORD_GREATER,WORD_LT_THM,GSYM GREATER_DEF]) (Term `word_gt a b`));
+
+val WORD_LE_THM = store_thm("WORD_LE_THM",
+  `!a b. word_le a b = (MSB a = MSB b) /\ (w2n a <= w2n b) \/ MSB a /\ ~MSB b`,
+  RW_TAC bool_ss [WORD_LT_THM,GSYM WORD_NOT_LESS,NOT_LESS]
+    THEN DECIDE_TAC
+);
+
+val WORD_GE_THM = save_thm("WORD_GE_THM",
+  (GEN `a` o GEN `b` o REWRITE_CONV [WORD_GREATER_EQ,WORD_LE_THM,GSYM GREATER_EQ]) (Term `word_ge a b`));
+
+val WORD_LESS_TRANS = store_thm("WORD_LESS_TRANS",
+  `!a b c. word_lt a b /\ word_lt b c ==> word_lt a c`,
+  RW_TAC bool_ss [WORD_LT_THM]
+     THEN IMP_RES_TAC LESS_TRANS
+     THEN ASM_REWRITE_TAC [] THEN PROVE_TAC []
+);
+
+val WORD_LESS_EQ_TRANS = store_thm("WORD_LESS_EQ_TRANS",
+  `!a b c. word_le a b /\ word_le b c ==> word_le a c`,
+  RW_TAC bool_ss [WORD_LE_THM]
+     THEN IMP_RES_TAC LESS_EQ_TRANS
+     THEN ASM_REWRITE_TAC [] THEN PROVE_TAC []
+);
+
+val WORD_LESS_EQ_LESS_TRANS = store_thm("WORD_LESS_EQ_LESS_TRANS",
+  `!a b c. word_le a b /\ word_lt b c ==> word_lt a c`,
+  RW_TAC bool_ss [WORD_LE_THM,WORD_LT_THM]
+     THEN IMP_RES_TAC LESS_EQ_LESS_TRANS
+     THEN ASM_REWRITE_TAC [] THEN PROVE_TAC []
+);
+
+val WORD_LESS_LESS_EQ_TRANS = store_thm("WORD_LESS_LESS_EQ_TRANS",
+  `!a b c. word_lt a b /\ word_le b c ==> word_lt a c`,
+  RW_TAC bool_ss [WORD_LE_THM,WORD_LT_THM]
+     THEN IMP_RES_TAC LESS_LESS_EQ_TRANS
+     THEN ASM_REWRITE_TAC [] THEN PROVE_TAC []
+);
+
+val WORD_LESS_EQ_CASES = store_thm("WORD_LESS_EQ_CASES",
+  `!a b. word_le a b \/ word_le b a`,
+  RW_TAC bool_ss [WORD_LE_THM]
+    THEN PROVE_TAC [LESS_EQ_CASES]
+);
+
+val WORD_LESS_CASES = store_thm("WORD_LESS_CASES",
+  `!a b. word_lt a b \/ word_le b a`,
+  PROVE_TAC [WORD_LESS_OR_EQ,WORD_LESS_EQ_CASES]
+);
+
+val WORD_LESS_CASES_IMP = store_thm("WORD_LESS_CASES_IMP",
+  `!a b. ~(word_lt a b) /\ ~(a = b) ==> word_lt b a`,
+  PROVE_TAC [WORD_NOT_LESS,WORD_LESS_OR_EQ]
+);
+
+val WORD_LESS_ANTISYM = store_thm("WORD_LESS_ANTISYM",
+  `!a b. ~(word_lt a b /\ word_lt b a)`,
+  PROVE_TAC [WORD_NOT_LESS,WORD_LESS_EQ_CASES]
+);
+
+val WORD_LESS_EQ_ANTISYM = store_thm("WORD_LESS_EQ_ANTISYM",
+  `!a b. ~(word_lt a b /\ word_le b a)`,
+  PROVE_TAC [WORD_NOT_LESS]
+);
+
+val WORD_LESS_EQ_REFL = store_thm("WORD_LESS_EQ_REFL",
+  `!a. word_le a a`,
+  REWRITE_TAC [WORD_LESS_OR_EQ]
+);
+
+val WORD_LESS_EQUAL_ANTISYM = store_thm("WORD_LESS_EQUAL_ANTISYM",
+  `!a b. word_le a b /\ word_le b a ==> (a = b)`,
+  PROVE_TAC [WORD_LESS_OR_EQ,WORD_LESS_ANTISYM]
+);
+
+val WORD_LESS_IMP_LESS_OR_EQ = store_thm("WORD_LESS_IMP_LESS_OR_EQ",
+  `!a b. word_lt a b ==> word_le a b`,
+  PROVE_TAC [WORD_LESS_OR_EQ]
+);
+
+val WORD_LESS_REFL = store_thm("WORD_LESS_REFL",
+  `!a. ~(word_lt a a)`,
+  RW_TAC bool_ss [WORD_NOT_LESS,WORD_LESS_OR_EQ]
+);
+
+val WORD_LESS_LESS_CASES = store_thm("WORD_LESS_LESS_CASES",
+  `!a b. (a = b) \/ word_lt a b \/ word_lt b a`,
+  PROVE_TAC [WORD_LESS_CASES,WORD_LESS_OR_EQ]
+);
+
+val WORD_NOT_GREATER = store_thm("WORD_NOT_GREATER",
+  `!a b. ~(word_gt a b) = word_le a b`,
+  PROVE_TAC [WORD_GREATER,WORD_NOT_LESS]
+);
+
+val WORD_LESS_NOT_EQ = store_thm("WORD_LESS_NOT_EQ",
+  `!a b. word_lt a b ==> ~(a = b)`,
+  PROVE_TAC [WORD_LESS_REFL,WORD_LESS_OR_EQ]
+);
+
+val WORD_NOT_LESS_EQ = store_thm("WORD_NOT_LESS_EQ",
+  `!a b. (a = b) ==> ~(word_lt a b)`,
+  PROVE_TAC [WORD_LESS_REFL]
+);
+
+(* -------------------------------------------------------- *)
+
+val w2n_word_L =
+  SIMP_CONV arith_ss [word_L_def,w2n_EVAL,MOD_WL_THM,BITS_ZERO3,
+                      LESS_MOD,SPEC_LESS_EXP_SUC_MONO] (Term `w2n word_L`);
+
+val w2n_word_H = prove(
+  `w2n word_H = 2 ** HB - 1`,
+  `2 ** HB - 1 < 2 ** HB` by SIMP_TAC arith_ss [ZERO_LT_TWOEXP]
+    THEN ASSUME_TAC (SPEC `HB` SPEC_LESS_EXP_SUC_MONO)
+    THEN IMP_RES_TAC LESS_TRANS
+    THEN ASM_SIMP_TAC arith_ss [word_H_def,w2n_EVAL,MOD_WL_THM,BITS_ZERO3,LESS_MOD]
+);
+
+val WORD_L_PLUS_H = store_thm("WORD_L_PLUS_H",
+  `word_L + word_H = word_T`,
+  SIMP_TAC bool_ss [ADD_EVAL3,w2n_word_L,w2n_word_H,ONE_LT_EQ_TWOEXP,word_T,
+                    SPLIT_2_EXP_WL,GSYM LESS_EQ_ADD_SUB]
+);
+
+val WORD_L_LESS_EQ = store_thm("WORD_L_LESS_EQ",
+  `!a. word_le word_L a`,
+  RW_TAC bool_ss [WORD_LE_THM,WORD_L_NEG,w2n_word_L]
+    THEN Cases_on `MSB a` THEN ASM_REWRITE_TAC []
+    THEN Cases_on `HB = 0`
+    THENL [
+      IMP_RES_TAC MSB_THM1b THEN ASM_SIMP_TAC arith_ss [],
+      NTAC 2 (POP_ASSUM MP_TAC)
+        THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
+        THEN RW_TAC bool_ss [w2n_EVAL,MOD_WL_THM,MSB_EVAL,MSBn_def]
+        THEN IMP_RES_TAC BIT_SLICE_THM2
+        THEN IMP_RES_TAC lem6
+        THEN POP_ASSUM (fn th => ASM_SIMP_TAC arith_ss [GSYM SLICE_ZERO_THM,(SYM o SPEC `n`) th])
+    ]
+);
+
+val WORD_LESS_EQ_H = store_thm("WORD_LESS_EQ_H",
+  `!a. word_le a word_H`,
+  RW_TAC bool_ss [WORD_LE_THM,WORD_H_POS,w2n_word_H]
+    THEN Cases_on `MSB a` THEN ASM_REWRITE_TAC []
+    THEN Cases_on `HB = 0`
+    THENL [
+      IMP_RES_TAC MSB_THM3b THEN ASM_SIMP_TAC arith_ss [],
+      NTAC 2 (POP_ASSUM MP_TAC)
+        THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
+        THEN RW_TAC bool_ss [w2n_EVAL,MOD_WL_THM,MSB_EVAL,MSBn_def]
+        THEN IMP_RES_TAC BIT_SLICE_THM3
+        THEN IMP_RES_TAC lem6
+        THEN POP_ASSUM (fn th => ASM_SIMP_TAC arith_ss [GSYM SLICE_ZERO_THM,(SYM o SPEC `n`) th])
+        THEN PROVE_TAC [lem4b,SUB_LESS_OR]
+    ]
+);
+
+val WORD_NOT_L_EQ_H = prove(
+  `~(word_L = word_H)`,
+  SIMP_TAC arith_ss [GSYM w2n_11,w2n_word_L,w2n_word_H,GSYM ADD_EQ_SUB,ONE_LT_EQ_TWOEXP]
+);
+
+val WORD_L_LESS_H = store_thm("WORD_L_LESS_H",
+  `word_lt word_L word_H`,
+  PROVE_TAC [WORD_L_LESS_EQ,WORD_LESS_EQ_H,WORD_LESS_EQ_TRANS,WORD_NOT_L_EQ_H,WORD_LESS_OR_EQ]
+);
+
+(* -------------------------------------------------------- *)
+(* -------------------------------------------------------- *)
+
+val w2n_TWO_COMP = prove(
+  `!a. w2n (word_2comp a) = if a = word_0 then 0 else 2 EXP WL - w2n a`,
+  RW_TAC bool_ss [WORD_NEG_0,w2n_word_0]
+    THEN POP_ASSUM MP_TAC
+    THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
+    THEN RW_TAC bool_ss [GSYM w2n_11,w2n_word_0,w2n_EVAL,TWO_COMP_EVAL,TWO_COMP_def]
+    THEN `2 ** WL - MOD_WL n < 2 ** WL` by ASM_SIMP_TAC arith_ss [ZERO_LT_TWOEXP]
+    THEN ASM_SIMP_TAC bool_ss [REWRITE_RULE [LT_WL_def] MOD_WL_IDEM]
+);
+
+val EQ_WORD_0 = prove(
+  `!a. (a = word_0) = (w2n a = 0)`,
+  REWRITE_TAC [GSYM w2n_11,w2n_word_0]
+);
+
+val NOT_EQ_WORD_0 = prove(
+  `!a. ~(a = word_0) = ~(w2n a = 0)`,
+  PROVE_TAC [EQ_WORD_0]
+);
+
+val WORD_LS_THM = store_thm("WORD_LS_THM",
+  `!a b. word_ls a b = w2n a <= w2n b`,
+  RW_TAC bool_ss [WORD_LS]
+    THEN Cases_on `b = word_0`
+    THEN ASM_SIMP_TAC arith_ss [w2n_TWO_COMP,GSYM LESS_EQ_ADD_SUB,w2n_word_0,EQ_WORD_0,
+                                MATCH_MP LESS_IMP_LESS_OR_EQ (SPEC `b` w2n_LT)]
+    THEN Cases_on `a = b` THEN1 ASM_SIMP_TAC arith_ss [BIT_B]
+    THEN Cases_on `w2n a <= w2n b` THEN ASM_REWRITE_TAC []
+    THEN ONCE_REWRITE_TAC [ADD_COMM]
+    THEN RULE_ASSUM_TAC (REWRITE_RULE [GSYM w2n_11,w2n_word_0,w2n_ELIM])
+    THENL [
+      `~(w2n b - w2n a = 0)` by DECIDE_TAC
+        THEN POP_ASSUM (fn th => `2 ** WL - (w2n b - w2n a) < 2 ** WL` by SIMP_TAC arith_ss [th,ZERO_LT_TWOEXP])
+        THEN ASM_SIMP_TAC arith_ss [GSYM SUB_SUB,BIT_def,BITS_THM,SUC_SUB,EXP_1,LESS_DIV_EQ_ZERO],
+      RULE_ASSUM_TAC (REWRITE_RULE [NOT_LESS_EQUAL])
+        THEN IMP_RES_TAC LESS_IMP_LESS_OR_EQ
+        THEN ASSUME_TAC (SPEC `a` w2n_LT)
+        THEN `w2n a - w2n b < 2 ** WL` by ASM_SIMP_TAC arith_ss [ZERO_LT_TWOEXP]
+        THEN ASM_SIMP_TAC bool_ss [LESS_EQ_ADD_SUB,BIT_def,BITS_THM,SUC_SUB,EXP_1,DIV_MULT_1]
+        THEN REDUCE_TAC
+   ]
+);
+
+val WORD_HI_THM = store_thm("WORD_HI_THM",
+  `!a b. word_hi a b = w2n a > w2n b`,
+  RW_TAC bool_ss [WORD_HI]
+    THEN Cases_on `b = word_0`
+    THEN ASM_SIMP_TAC arith_ss [w2n_TWO_COMP,GSYM LESS_EQ_ADD_SUB,w2n_word_0,GREATER_DEF,NOT_EQ_WORD_0,
+                                MATCH_MP LESS_IMP_LESS_OR_EQ (SPEC `b` w2n_LT)]
+    THEN Cases_on `a = b` THEN1 ASM_SIMP_TAC arith_ss [BIT_B]
+    THEN Cases_on `w2n a <= w2n b` THEN ASM_SIMP_TAC arith_ss []
+    THEN ONCE_REWRITE_TAC [ADD_COMM]
+    THEN RULE_ASSUM_TAC (REWRITE_RULE [GSYM w2n_11,w2n_word_0,w2n_ELIM])
+    THENL [
+      `~(w2n b - w2n a = 0)` by DECIDE_TAC
+        THEN POP_ASSUM (fn th => `2 ** WL - (w2n b - w2n a) < 2 ** WL` by SIMP_TAC arith_ss [th,ZERO_LT_TWOEXP])
+        THEN ASM_SIMP_TAC arith_ss [GSYM SUB_SUB,BIT_def,BITS_THM,SUC_SUB,EXP_1,LESS_DIV_EQ_ZERO],
+      RULE_ASSUM_TAC (REWRITE_RULE [NOT_LESS_EQUAL])
+        THEN IMP_RES_TAC LESS_IMP_LESS_OR_EQ
+        THEN ASSUME_TAC (SPEC `a` w2n_LT)
+        THEN `w2n a - w2n b < 2 ** WL` by ASM_SIMP_TAC arith_ss [ZERO_LT_TWOEXP]
+        THEN ASM_SIMP_TAC bool_ss [LESS_EQ_ADD_SUB,BIT_def,BITS_THM,SUC_SUB,EXP_1,DIV_MULT_1]
+        THEN REDUCE_TAC
+    ]
+);
+
+val WORD_LO_THM = store_thm("WORD_LO_THM",
+  `!a b. word_lo a b = w2n a < w2n b`,
+  RW_TAC bool_ss [WORD_LO]
+    THEN Cases_on `b = word_0`
+    THEN ASM_SIMP_TAC arith_ss [w2n_TWO_COMP,GSYM LESS_EQ_ADD_SUB,w2n_word_0,
+                                MATCH_MP LESS_IMP_LESS_OR_EQ (SPEC `b` w2n_LT)]
+    THEN Cases_on `a = b` THEN1 ASM_SIMP_TAC arith_ss [BIT_B]
+    THEN Cases_on `w2n a < w2n b` THEN ASM_REWRITE_TAC []
+    THEN ONCE_REWRITE_TAC [ADD_COMM]
+    THEN RULE_ASSUM_TAC (REWRITE_RULE [GSYM w2n_11,w2n_word_0,w2n_ELIM])
+    THENL [
+      IMP_RES_TAC LESS_IMP_LESS_OR_EQ
+        THEN `~(w2n b - w2n a = 0)` by DECIDE_TAC
+        THEN POP_ASSUM (fn th => `2 ** WL - (w2n b - w2n a) < 2 ** WL` by SIMP_TAC arith_ss [th,ZERO_LT_TWOEXP])
+        THEN ASM_SIMP_TAC arith_ss [GSYM SUB_SUB,BIT_def,BITS_THM,SUC_SUB,EXP_1,LESS_DIV_EQ_ZERO],
+      RULE_ASSUM_TAC (REWRITE_RULE [NOT_LESS])
+        THEN ASSUME_TAC (SPEC `a` w2n_LT)
+        THEN `w2n a - w2n b < 2 ** WL` by ASM_SIMP_TAC arith_ss [ZERO_LT_TWOEXP]
+        THEN ASM_SIMP_TAC bool_ss [LESS_EQ_ADD_SUB,BIT_def,BITS_THM,SUC_SUB,EXP_1,DIV_MULT_1]
+        THEN REDUCE_TAC
+   ]
+);
+
+val WORD_HS_THM = store_thm("WORD_HS_THM",
+  `!a b. word_hs a b = w2n a >= w2n b`,
+  RW_TAC bool_ss [WORD_HS]
+    THEN Cases_on `b = word_0`
+    THEN ASM_SIMP_TAC arith_ss [w2n_TWO_COMP,GSYM LESS_EQ_ADD_SUB,w2n_word_0,GREATER_EQ,
+                                MATCH_MP LESS_IMP_LESS_OR_EQ (SPEC `b` w2n_LT)]
+    THEN Cases_on `a = b` THEN1 ASM_SIMP_TAC arith_ss [BIT_B]
+    THEN Cases_on `w2n a < w2n b` THEN ASM_SIMP_TAC arith_ss []
+    THEN ONCE_REWRITE_TAC [ADD_COMM]
+    THEN RULE_ASSUM_TAC (REWRITE_RULE [GSYM w2n_11,w2n_word_0,w2n_ELIM])
+    THENL [
+      IMP_RES_TAC LESS_IMP_LESS_OR_EQ
+        THEN `~(w2n b - w2n a = 0)` by DECIDE_TAC
+        THEN POP_ASSUM (fn th => `2 ** WL - (w2n b - w2n a) < 2 ** WL` by SIMP_TAC arith_ss [th,ZERO_LT_TWOEXP])
+        THEN ASM_SIMP_TAC arith_ss [GSYM SUB_SUB,BIT_def,BITS_THM,SUC_SUB,EXP_1,LESS_DIV_EQ_ZERO],
+      RULE_ASSUM_TAC (REWRITE_RULE [NOT_LESS])
+        THEN ASSUME_TAC (SPEC `a` w2n_LT)
+        THEN `w2n a - w2n b < 2 ** WL` by ASM_SIMP_TAC arith_ss [ZERO_LT_TWOEXP]
+        THEN ASM_SIMP_TAC bool_ss [LESS_EQ_ADD_SUB,BIT_def,BITS_THM,SUC_SUB,EXP_1,DIV_MULT_1]
+        THEN REDUCE_TAC
+   ]
+);
+
+val WORD_HIGHER = prove(
+  `!a b. word_hi a b = word_lo b a`,
+  RW_TAC arith_ss [WORD_HI_THM,WORD_LO_THM]
+);
+
+val WORD_HIGHER_EQ = store_thm("WORD_HIGHER_EQ",
+  `!a b. word_hs a b = word_ls b a`,
+  RW_TAC arith_ss [WORD_HS_THM,WORD_LS_THM]
+);
+
+val WORD_NOT_LOWER = store_thm("WORD_NOT_LOWER",
+  `!a b. ~(word_lo a b) = word_ls b a`,
+  RW_TAC arith_ss [WORD_LO_THM,WORD_LS_THM]
+);
+
+val WORD_NOT_LOWER_EQUAL = store_thm("WORD_NOT_LOWER_EQUAL",
+  `!a b. ~(word_ls a b) = word_lo b a`,
+  PROVE_TAC [WORD_NOT_LOWER]
+);
+
+val WORD_LOWER_OR_EQ = store_thm("WORD_LOWER_OR_EQ",
+  `!a b. word_ls a b = word_lo a b \/ (a = b)`,
+  REWRITE_TAC [LESS_OR_EQ,WORD_LS_THM,WORD_LO_THM,w2n_11]
+);
+
+val WORD_HIGHER_OR_EQ = store_thm("WORD_HIGHER_OR_EQ",
+  `!a b. word_hs a b = word_hi a b \/ (a = b)`,
+  REWRITE_TAC [GREATER_OR_EQ,WORD_HS_THM,WORD_HI_THM,w2n_11]
+);
+
+val WORD_LOWER_TRANS = store_thm("WORD_LOWER_TRANS",
+  `!a b c. word_lo a b /\ word_lo b c ==> word_lo a c`,
+  PROVE_TAC [WORD_LO_THM,LESS_TRANS]
+);
+
+val WORD_LOWER_EQ_TRANS = store_thm("WORD_LOWER_EQ_TRANS",
+  `!a b c. word_ls a b /\ word_ls b c ==> word_ls a c`,
+  PROVE_TAC [WORD_LS_THM,LESS_EQ_TRANS]
+);
+
+val WORD_LOWER_EQ_LOWER_TRANS = store_thm("WORD_LOWER_EQ_LOWER_TRANS",
+  `!a b c. word_ls a b /\ word_lo b c ==> word_lo a c`,
+  PROVE_TAC [WORD_LS_THM,WORD_LO_THM,LESS_EQ_LESS_TRANS]
+);
+
+val WORD_LOWER_LOWER_EQ_TRANS = store_thm("WORD_LOWER_LOWER_EQ_TRANS",
+  `!a b c. word_lo a b /\ word_ls b c ==> word_lo a c`,
+  PROVE_TAC [WORD_LS_THM,WORD_LO_THM,LESS_LESS_EQ_TRANS]
+);
+
+val WORD_LOWER_EQ_CASES = store_thm("WORD_LOWER_EQ_CASES",
+  `!a b. word_ls a b \/ word_ls b a`,
+  RW_TAC bool_ss [WORD_LS_THM,LESS_EQ_CASES]
+);
+
+val WORD_LOWER_CASES = store_thm("WORD_LOWER_CASES",
+  `!a b. word_lo a b \/ word_ls b a`,
+  PROVE_TAC [WORD_LOWER_OR_EQ,WORD_LOWER_EQ_CASES]
+);
+
+val WORD_LOWER_CASES_IMP = store_thm("WORD_LOWER_CASES_IMP",
+  `!a b. ~(word_lo a b) /\ ~(a = b) ==> word_lo b a`,
+  PROVE_TAC [WORD_NOT_LOWER,WORD_LOWER_OR_EQ]
+);
+
+val WORD_LOWER_ANTISYM = store_thm("WORD_LOWER_ANTISYM",
+  `!a b. ~(word_lo a b /\ word_lo b a)`,
+  PROVE_TAC [WORD_NOT_LOWER,WORD_LOWER_EQ_CASES]
+);
+
+val WORD_LOWER_EQ_ANTISYM = store_thm("WORD_LOWER_EQ_ANTISYM",
+  `!a b. ~(word_lo a b /\ word_ls b a)`,
+  PROVE_TAC [WORD_NOT_LOWER]
+);
+
+val WORD_LOWER_EQ_REFL = store_thm("WORD_LOWER_EQ_REFL",
+  `!a. word_ls a a`,
+  REWRITE_TAC [WORD_LOWER_OR_EQ]
+);
+
+val WORD_LOWER_EQUAL_ANTISYM = store_thm("WORD_LOWER_EQUAL_ANTISYM",
+  `!a b. word_ls a b /\ word_ls b a ==> (a = b)`,
+  PROVE_TAC [WORD_LOWER_OR_EQ,WORD_LOWER_ANTISYM]
+);
+
+val WORD_LOWER_IMP_LOWER_OR_EQ = store_thm("WORD_LOWER_IMP_LOWER_OR_EQ",
+  `!a b. word_lo a b ==> word_ls a b`,
+  PROVE_TAC [WORD_LOWER_OR_EQ]
+);
+
+val WORD_LOWER_REFL = store_thm("WORD_LOWER_REFL",
+  `!a. ~(word_lo a a)`,
+  RW_TAC bool_ss [WORD_NOT_LOWER,WORD_LOWER_OR_EQ]
+);
+
+val WORD_LOWER_LOWER_CASES = store_thm("WORD_LOWER_LOWER_CASES",
+  `!a b. (a = b) \/ word_lo a b \/ word_lo b a`,
+  PROVE_TAC [WORD_LOWER_CASES,WORD_LOWER_OR_EQ]
+);
+
+val WORD_NOT_HIGHER = store_thm("WORD_NOT_HIGHER",
+  `!a b. ~(word_hi a b) = word_ls a b`,
+  PROVE_TAC [WORD_HIGHER,WORD_NOT_LOWER]
+);
+
+val WORD_LOWER_NOT_EQ = store_thm("WORD_LOWER_NOT_EQ",
+  `!a b. word_lo a b ==> ~(a = b)`,
+  PROVE_TAC [WORD_LOWER_REFL,WORD_LOWER_OR_EQ]
+);
+
+val WORD_NOT_LOWER_EQ = store_thm("WORD_NOT_LOWER_EQ",
+  `!a b. (a = b) ==> ~(word_lo a b)`,
+  PROVE_TAC [WORD_LOWER_REFL]
+);
+
+(* -------------------------------------------------------- *)
+
+val w2n_word_T = prove(
+  `w2n word_T = 2 ** WL - 1`,
+  `2 ** WL - 1 < 2 ** WL` by SIMP_TAC arith_ss [ZERO_LT_TWOEXP]
+    THEN ASM_SIMP_TAC arith_ss [word_T,w2n_EVAL,MOD_WL_THM,GSYM WL_def,BITS_ZERO3,LESS_MOD]
+);
+
+val WORD_ZERO_LOWER_EQ = store_thm("WORD_ZERO_LOWER_EQ",
+  `!a. word_ls word_0 a`,
+  RW_TAC arith_ss [WORD_LS_THM,w2n_word_0]
+);
+
+val WORD_LOWER_EQ_T = store_thm("WORD_LOWER_EQ_T",
+  `!a. word_ls a word_T`,
+  RW_TAC bool_ss [WORD_LS_THM,w2n_word_T]
+    THEN PROVE_TAC [w2n_LT,SUB_LESS_OR]
+);
+
+val WORD_NOT_ZERO_EQ_T = prove(
+  `~(word_0 = word_T)`,
+  SIMP_TAC arith_ss [GSYM w2n_11,w2n_word_0,w2n_word_T,NOT_LESS_EQUAL,
+                     DECIDE (Term `a < b = a <= b /\ ~(a = b)`),ONE_LT_EQ_TWOEXP]
+    THEN SIMP_TAC arith_ss [WL_def,EXP,ZERO_LT_TWOEXP]
+);
+
+val WORD_ZERO_LOWER_T = store_thm("WORD_ZERO_LOWER_T",
+  `word_lo word_0 word_T`,
+  PROVE_TAC [WORD_ZERO_LOWER_EQ,WORD_LOWER_EQ_T,WORD_LOWER_EQ_TRANS,WORD_NOT_ZERO_EQ_T,WORD_LOWER_OR_EQ]
+);
+
+(* -------------------------------------------------------- *)
+
+val LT_EVAL = prove(
+  `!m n. word_lt (n2w m) (n2w n) =
+     let sm = MSBn m
+     and sn = MSBn n
+     in (sm = sn) /\ MOD_WL m < MOD_WL n \/ sm /\ ~sn`,
+  RW_TAC std_ss [WORD_LT_THM,MSB_EVAL,w2n_EVAL]
+);
+
+val LE_EVAL = prove(
+  `!m n. word_le (n2w m) (n2w n) =
+     let sm = MSBn m
+     and sn = MSBn n
+     in (sm = sn) /\ MOD_WL m <= MOD_WL n \/ sm /\ ~sn`,
+  RW_TAC std_ss [WORD_LE_THM,MSB_EVAL,w2n_EVAL]
+);
+
+val GT_EVAL = prove(
+  `!m n. word_gt (n2w m) (n2w n) =
+     let sm = MSBn m
+     and sn = MSBn n
+     in (sm = sn) /\ MOD_WL m > MOD_WL n \/ ~sm /\ sn`,
+  RW_TAC std_ss [WORD_GT_THM,MSB_EVAL,w2n_EVAL] THEN DECIDE_TAC
+);
+
+val GE_EVAL = prove(
+  `!m n. word_ge (n2w m) (n2w n) =
+     let sm = MSBn m
+     and sn = MSBn n
+     in (sm = sn) /\ MOD_WL m >= MOD_WL n \/ ~sm /\ sn`,
+  RW_TAC std_ss [WORD_GE_THM,MSB_EVAL,w2n_EVAL] THEN DECIDE_TAC
+);
+
+val LO_EVAL = prove(
+  `!m n. word_lo (n2w m) (n2w n) = MOD_WL m < MOD_WL n`,
+  RW_TAC bool_ss [WORD_LO_THM,w2n_EVAL]
+);
+
+val LS_EVAL = prove(
+  `!m n. word_ls (n2w m) (n2w n) = MOD_WL m <= MOD_WL n`,
+  RW_TAC bool_ss [WORD_LS_THM,w2n_EVAL]
+);
+
+val HI_EVAL = prove(
+  `!m n. word_hi (n2w m) (n2w n) = MOD_WL m > MOD_WL n`,
+  RW_TAC bool_ss [WORD_HI_THM,w2n_EVAL]
+);
+
+val HS_EVAL = prove(
+  `!m n. word_hs (n2w m) (n2w n) = MOD_WL m >= MOD_WL n`,
+  RW_TAC bool_ss [WORD_HS_THM,w2n_EVAL]
+);
+
+val LT_EVAL = save_thm("LT_EVAL",REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] LT_EVAL);
+val LE_EVAL = save_thm("LE_EVAL",REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] LE_EVAL);
+val GT_EVAL = save_thm("GT_EVAL",REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] GT_EVAL);
+val GE_EVAL = save_thm("GE_EVAL",REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] GE_EVAL);
+val LO_EVAL = save_thm("LO_EVAL",REWRITE_RULE [MOD_WL_EVAL] LO_EVAL);
+val LS_EVAL = save_thm("LS_EVAL",REWRITE_RULE [MOD_WL_EVAL] LS_EVAL);
+val HI_EVAL = save_thm("HI_EVAL",REWRITE_RULE [MOD_WL_EVAL] HI_EVAL);
+val HS_EVAL = save_thm("HS_EVAL",REWRITE_RULE [MOD_WL_EVAL] HS_EVAL);
+
+(* -------------------------------------------------------- *)
+
+val _ = overload_on ("<", Term`word_lt`);
+val _ = overload_on ("<=", Term`word_le`);
+val _ = overload_on (">", Term`word_gt`);
+val _ = overload_on (">=", Term`word_ge`);
+
+val _ = overload_on ("<.", Term`word_lo`);
+val _ = overload_on ("<=.", Term`word_ls`);
+val _ = overload_on (">.", Term`word_hi`);
+val _ = overload_on (">=.", Term`word_hs`);
+
+val _ = add_infix("<.",450,HOLgrammars.RIGHT);
+val _ = add_infix("<=.",450,HOLgrammars.RIGHT);
+val _ = add_infix(">.",450,HOLgrammars.RIGHT);
+val _ = add_infix(">=.",450,HOLgrammars.RIGHT);
 
 (* -------------------------------------------------------- *)
 

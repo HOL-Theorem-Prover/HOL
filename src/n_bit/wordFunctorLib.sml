@@ -3,6 +3,8 @@ functor wordFunctorLib (structure wordTheory : sig
   val WL_def : Thm.thm
   val word_0 : Thm.thm
   val word_1 : Thm.thm
+  val word_L_def : Thm.thm
+  val word_H_def : Thm.thm
   val word_T : Thm.thm
   val MOD_WL_EVAL : Thm.thm
   val MSBn_def : Thm.thm
@@ -26,6 +28,14 @@ functor wordFunctorLib (structure wordTheory : sig
   val w2n_EVAL : Thm.thm
   val MSB_EVAL2 : Thm.thm
   val LSB_EVAL2 : Thm.thm
+  val LT_EVAL : Thm.thm
+  val LE_EVAL : Thm.thm
+  val GT_EVAL : Thm.thm
+  val GE_EVAL : Thm.thm
+  val LO_EVAL : Thm.thm
+  val LS_EVAL : Thm.thm
+  val HI_EVAL : Thm.thm
+  val HS_EVAL : Thm.thm
 end) : sig
   include Abbrev
 
@@ -53,7 +63,9 @@ val sn = Arbnum.toString wl;
 val word_compset =
   let val rws = reduceLib.num_compset()
       val _ = add_thms
-     [THE_WL, HB_def, word_0, word_1, word_T,
+     [LT_EVAL, LE_EVAL, GT_EVAL, GE_EVAL,
+      LO_EVAL, LS_EVAL, HI_EVAL, HS_EVAL,
+      THE_WL, HB_def, word_0, word_1, word_L_def, word_H_def, word_T,
       MOD_WL_EVAL, w2n_EVAL,
       ADD_EVAL2, MUL_EVAL2, word_sub,
       REDUCE_RULE ONE_COMP_EVAL2,
