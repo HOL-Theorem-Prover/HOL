@@ -275,7 +275,7 @@ theorems supplied to \ml{PROVE\_TAC} in the following proofs did not
 be required by \ml{PROVE\_TAC}.
 
 \begin{description}
-
+\label{euclid:extra-proofs}
 \item [\small{({\it DIVIDES\_0\/})}]
 \begin{tabular}[t]{l}
 \verb+!x. x divides 0+ \\ \hline
@@ -562,7 +562,10 @@ defined by primitive recursion:
 \verb+(!n. FACT (SUC n) = SUC n * FACT n)+ \\
 \end{tabular}
 \end{description}
-A polished proof of {\small{\it DIVIDES\_FACT\/}} is the following:
+A polished proof of {\small{\it DIVIDES\_FACT\/}} is the
+following\footnote{This and subsequent proofs use the theorems proved
+  on page~\pageref{euclid:extra-proofs}, which we've assumed are
+  now part of the \ML{} environment.}:
 \begin{description}
 \item [\small{({\it DIVIDES\_FACT\/})}]
 \begin{tabular}[t]{l}
@@ -572,7 +575,7 @@ A polished proof of {\small{\it DIVIDES\_FACT\/}} is the following:
 \verb+ THEN ARW_TAC [FACT,ADD_CLAUSES]+ \\
 \verb+ THENL [Cases_on `m`, ALL_TAC]+ \\
 \verb+ THEN PROVE_TAC [FACT, DECIDE ``!x. ~(x < x)``,+ \\
-\verb+             DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL]+ \\
+\verb+                 DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL]+ \\
 \end{tabular}
 \end{description}
 We will examine this proof in detail, so we should first attempt to
