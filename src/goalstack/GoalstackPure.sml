@@ -62,7 +62,7 @@ fun current_goalstack (PRFS (h::_)) = h
   | current_goalstack (PRFS []) = raise NO_PROOFS;
 
 fun rotate_proofs i (PRFS []) = PRFS []
-  | rotate_proofs i (PRFS L) = 
+  | rotate_proofs i (PRFS L) =
       if (i<0)
       then raise ERR "rotate_proofs" "negative rotation"
       else if (i > length L)
@@ -83,16 +83,16 @@ fun hd_proj f (PRFS (h::_)) = f h
  * Prettyprinting of proofs.
  *---------------------------------------------------------------------------*)
 
-fun enumerate L = snd(rev_itlist (fn x => fn (n,A) => (n+1, (n,x)::A)) 
+fun enumerate L = snd(rev_itlist (fn x => fn (n,A) => (n+1, (n,x)::A))
                                  L (1,[]));
 val inactive = can Bwd.extract_thm
 
 fun pp_proofs ppstrm =
-   let val pr_goal = Bwd.pp_goal ppstrm 
-       val pr_thm = Thm.pp_thm ppstrm
+   let val pr_goal = Bwd.pp_goal ppstrm
+       val pr_thm = Parse.pp_thm ppstrm
        val {add_string, add_break, begin_block, end_block, add_newline, ...} =
                      Portable_PrettyPrint.with_ppstream ppstrm
-       fun pr1 (GOALSTACK x) = 
+       fun pr1 (GOALSTACK x) =
             if (project inactive x)
             then (begin_block Portable_PrettyPrint.CONSISTENT 2;
                   add_string"Completed:";  add_break(1,0);
@@ -108,24 +108,24 @@ fun pp_proofs ppstrm =
                         add_break(1,0);
                         pr_goal (project Bwd.top_goal x));
                   end_block())
-       fun pr (PRFS extants) = 
+       fun pr (PRFS extants) =
           let val len = length extants
-          in if (len = 0) 
+          in if (len = 0)
              then add_string"There are currently no proofs."
              else ( begin_block Portable_PrettyPrint.CONSISTENT 2;
                     add_string("Proof manager status:");  add_break(1,0);
                     (case len of 1 => add_string "1 proof."
                           | n => add_string(int_to_string n^" proofs."));
                     end_block(); add_newline();
-                    map (fn (i,x) => 
+                    map (fn (i,x) =>
                           (begin_block Portable_PrettyPrint.CONSISTENT 0;
                            add_string(int_to_string i^". ");
-                           pr1 x; 
+                           pr1 x;
                           end_block(); add_newline()))
                         (enumerate extants);
                     ())
           end
-   in fn pl => (begin_block Portable_PrettyPrint.CONSISTENT 0; 
+   in fn pl => (begin_block Portable_PrettyPrint.CONSISTENT 0;
                 pr pl; end_block())
    end;
 end (* GoalstackPure *)

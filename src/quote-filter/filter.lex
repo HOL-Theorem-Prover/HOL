@@ -66,12 +66,12 @@ int prevstate = INITIAL;
 <INITIAL>"("      { ECHO; ++pardepth; }
 <INITIAL>")"      { ECHO; --pardepth;
                     if (antiquote && pardepth < 1) return 0; }
-<INITIAL>=={ws}*` { fprintf(yyout, "(Parse.type_parser [QUOTE \"");
+<INITIAL>=={ws}*` { fprintf(yyout, "(Parse.Type [QUOTE \"");
                     BEGIN OLDTYQUOTE; }
 <INITIAL>--{ws}*` { fprintf(yyout,
-                    "(Parse.term_parser [QUOTE \""); BEGIN OLDTMQUOTE; }
-<INITIAL>``{ws}*: { fprintf(yyout, "(Parse.type_parser [QUOTE \":"); BEGIN TYQUOTE; }
-<INITIAL>``       { fprintf(yyout, "(Parse.term_parser [QUOTE \""); BEGIN TMQUOTE; }
+                    "(Parse.Term [QUOTE \""); BEGIN OLDTMQUOTE; }
+<INITIAL>``{ws}*: { fprintf(yyout, "(Parse.Type [QUOTE \":"); BEGIN TYQUOTE; }
+<INITIAL>``       { fprintf(yyout, "(Parse.Term [QUOTE \""); BEGIN TMQUOTE; }
 <INITIAL>`        { fprintf(yyout, "[QUOTE \""); BEGIN QUOTE; }
 <INITIAL>\n       { ECHO; fflush(stdout); fflush(stdout); }
 

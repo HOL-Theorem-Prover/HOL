@@ -79,7 +79,7 @@ fun wargs tylist =
 (*---------------------------------------------------------------------------*)
 
 
-fun define_equivalence_type{name=tyname, equiv, defs = fnlist, 
+fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
                             welldefs, old_thms = thlist} =
   let
   val absname = "mk_"^tyname and repname = "dest_"^tyname
@@ -89,7 +89,7 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
     let val rtm = (--`\c. ?x. c = ^eqv x`--) in
     new_type_definition(tyname,rtm,
       PROVE((--`?c. ^rtm c`--),
-            BETA_TAC THEN 
+            BETA_TAC THEN
             MAP_EVERY EXISTS_TAC [(--`^eqv x`--), (--`x:^(ty_antiq(repty))`--)]
             THEN REFL_TAC)) end
   val tybij = BETA_RULE
@@ -141,11 +141,11 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
     ((--`!h i. (^eqv($@(^rep h)) = ^eqv($@(^rep i))) = (h = i)`--),
      let val th = SYM(REWRITE_RULE[equiv]
                                   (SPECL [(--`h:^(ty_antiq(repty))`--),
-                                          (--`h:^(ty_antiq(repty))`--)] 
+                                          (--`h:^(ty_antiq(repty))`--)]
                                          SAME_REP))
          val th2 = REWRITE_RULE[CONJUNCT1 tybij]
                                (SPEC (--`^rep h`--)(CONJUNCT2 tybij))
-         val th3 = SPEC (--`i:^(ty_antiq(absty))`--) 
+         val th3 = SPEC (--`i:^(ty_antiq(absty))`--)
                         (GEN (--`h:^(ty_antiq(absty))`--) th2) in
      REPEAT GEN_TAC THEN MAP_EVERY CHOOSE_TAC [th2, th3] THEN
      ASM_REWRITE_TAC[th] THEN EVERY_ASSUM(SUBST1_TAC o SYM) THEN EQ_TAC THENL
@@ -201,14 +201,14 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
          (mk_eq(tm1,transconv tm1),
           REWRITE_TAC[DEST_MK_EQCLASS] THEN
           REPEAT R_MK_COMB_TAC) in
-    TRANS th1 th2 
+    TRANS th1 th2
     end
 
    fun dest_funtype ty =
-      if (ty = repty) 
-      then [ty] 
-      else let val (_,[l,r]) = (assert(curry op ="fun") ## I) (dest_type ty) 
-           in [l]@(dest_funtype r) 
+      if (ty = repty)
+      then [ty]
+      else let val (_,[l,r]) = (assert(curry op ="fun") ## I) (dest_type ty)
+           in [l]@(dest_funtype r)
            end
            handle _ => [ty]
 
@@ -217,23 +217,20 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
          val ntyl = map (fn ty => if ty = repty then absty else ty) tyl
          val rty = end_itlist (fn t1 => fn t2 => mk_type("fun",[t1,t2])) ntyl
          val args = wargs (butlast ntyl)
-         val rargs = map (fn tm => if (type_of tm = absty) 
-                                   then(--`$@ (^rep ^tm)`--) 
-                                   else tm) 
+         val rargs = map (fn tm => if (type_of tm = absty)
+                                   then(--`$@ (^rep ^tm)`--)
+                                   else tm)
                          args
           val l = list_mk_comb(mk_var(fname,rty),args)
-          val r = let val r0 = list_mk_comb(tm,rargs) 
+          val r = let val r0 = list_mk_comb(tm,rargs)
                   in if (type_of r0 = repty)
-                     then (--`^abs (^eqv ^r0)`--) 
-                     else r0 
-                  end 
+                     then (--`^abs (^eqv ^r0)`--)
+                     else r0
+                  end
           val def = mk_eq(l,r)
       in
-      case fixity
-        of (Term.Infix i) => new_infix_definition(def_name, def, i)
-         | Term.Prefix    => new_definition(def_name, def)
-         | Term.Binder    => new_binder_definition(def_name, def)
-      end 
+        new_gen_definition(def_name, def, fixity)
+     end
   val newdefs = map define_fun fnlist
 
   val newthms = map (REWRITE_RULE(map GSYM newdefs) o

@@ -18,15 +18,15 @@ open Portable;
  * Installation-specific information.                                        *
  *---------------------------------------------------------------------------*)
 
-val HOLDIR = "/local/scratch/kxs/hol98";
+val HOLDIR = "/local/scratch/mn200/Work/taupo-hol98/hol98";
 
 
 (*---------------------------------------------------------------------------*
  * Version information                                                       *
  *---------------------------------------------------------------------------*)
 
-val release = "Athabasca";
-val version = 4;
+val release = "Taupo";
+val version = 0;
 
 (*---------------------------------------------------------------------------*
  * Bogus hack for defining negation. Hack is required because "~" is the     *
@@ -98,7 +98,7 @@ val show_scrub = ref true
  * Assignable function for printing errors.                                  *
  *---------------------------------------------------------------------------*)
 
-val output_HOL_ERR = 
+val output_HOL_ERR =
    ref (fn {message,origin_function,origin_structure} =>
          ( output(std_out, ("\nException raised at "^origin_structure^"."^
 			    origin_function^":\n"^message^"\n"));
@@ -134,7 +134,7 @@ val linewidth = Portable.linewidth;
 val max_print_depth = ref ~1;
 
 val pp_flags = {show_dB        = ref false,
-                show_restrict  = ref true, 
+                show_restrict  = ref true,
                 show_types     = ref false,
                 infix_at_front = ref false,
                 stack_infixes  = ref true,

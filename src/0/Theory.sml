@@ -40,7 +40,6 @@ open Term Type Lib Exception;
 type hol_type = Type.hol_type
 type term = Term.term;
 type thm = Thm.thm;
-type fixity = Term.fixity;
 type ppstream = Portable_PrettyPrint.ppstream
 
 infix ##;
@@ -161,7 +160,7 @@ fun drop_Axkind(Axiom rth) = rth
 datatype stEntry = TYPE of {occ:{name:string,revision:int},
                             arity:int,theory:string,
                             witness:Thm.thm option, utd:bool ref}
-                 | TERM of {name:string ref, theory:string, place:fixity,
+                 | TERM of {name:string ref, theory:string,
                             htype:Type.hol_type,
                             witness:Thm.thm option, utd:bool ref}
 
@@ -301,17 +300,17 @@ fun add_type_entry {name, theory, arity}
      overwritten = overwritten orelse !changed}
  end;
 
-fun add_term_entry {name,theory,place,htype}
+fun add_term_entry {name,theory,htype}
                    {thid,STH,GR,facts,con_wrt_disk,overwritten,adjoin} =
  let val _ = (changed := false)
      val (ST,hasher) = STH
      val i = hasher name
      val L = Array.sub(ST, i)
      val entry = TERM{name=ref name, utd=ref true,
-                theory=theory,place=place, htype=htype,witness=NONE}
+                theory=theory,htype=htype,witness=NONE}
     fun del [] = [entry]  (* new addition *)
       | del ((e as TYPE _)::rst) = e::del rst
-      | del ((e as TERM{name = ref n1, theory=thy1,place=pl1,
+      | del ((e as TERM{name = ref n1, theory=thy1,
                         htype=ty1,witness,utd})::rst) =
           if (name=n1) andalso (theory=thy1)
           then (changed := true; entry::rst) (* repl. an existing resident *)
@@ -356,9 +355,9 @@ fun add_tm_witness (thy as {STH, ...}:theory) s th  =
      val L = Array.sub(ST, i)
      fun get [] = raise THEORY_ERR"add_tm_witness" "no such constant"
        | get ((e as TYPE _)::rst) = e::get rst
-       | get ((e as TERM{name, theory, place, htype, witness,utd})::rst) =
+       | get ((e as TERM{name, theory, htype, witness,utd})::rst) =
            if (!name=s)
-           then TERM{name=name, theory=theory, place=place, utd=utd,
+           then TERM{name=name, theory=theory, utd=utd,
                      htype=htype, witness=SOME th}::rst
            else e::get rst
  in
@@ -371,9 +370,9 @@ fun set_place (s,pl,thyname) (thy as {STH, ...}:theory)  =
      val i = hasher s
      val L = Array.sub(ST, i)
      fun get ((e as TYPE _)::rst) = e::get rst
-       | get ((e as TERM{name, theory, place, htype, witness,utd})::rst) =
+       | get ((e as TERM{name, theory, htype, witness,utd})::rst) =
            if (!name=s) andalso (theory=thyname)
-           then TERM{name=name, theory=theory, place=pl, utd=utd,
+           then TERM{name=name, theory=theory, utd=utd,
                      htype=htype, witness=witness}::rst
            else e::get rst
        |  get [] = raise THEORY_ERR "set_place"
@@ -480,16 +479,12 @@ fun lookup_tmc ({STH,...}:theory) s e =
      get (Array.sub(ST, hasher s))
  end
 
-type term_recd = {name:string ref, theory:string, place:Term.fixity,
+type term_recd = {name:string ref, theory:string,
                   htype:Type.hol_type, witness:Thm.thm option,utd:bool ref};
 
-local datatype family = Num | String
-      fun mk Num thy e n  = (* this case never called *)
-          {name=ref n, theory="num", place=Term.Prefix, utd=ref true,
-           htype=mk_type{Tyop="num",Args=[]},
-           witness = #witness(lookup_tmc thy "0" e)}
-        | mk String thy e n =
-          {name=ref n, theory="string", place=Term.Prefix, utd=ref true,
+local
+      fun mkString thy e n =
+          {name=ref n, theory="string", utd=ref true,
            htype=mk_type{Tyop="string",Args=[]},
            witness = #witness(lookup_tmc thy "emptystring" e)}
       val table_size = 11;
@@ -511,7 +506,7 @@ fun lookup_const thy s e = lookup_tmc thy s e
     (case Globals.strings_defined()
      of false => raise e
       | true => if (Lexis.is_string_literal s)
-                  then mkX (mk String thy e) s else raise e)
+                  then mkX (mkString thy e) s else raise e)
 end;
 
 (*---------------------------------------------------------------------------
@@ -712,7 +707,7 @@ and up2date_type thy ty =
 
 and up2date_const thy tm =
   let val (r as ref str,ty) = break_const tm
-      val {name,theory,place,htype,witness,utd} =
+      val {name,theory,htype,witness,utd} =
        lookup_const thy str (THEORY_ERR"" "")
   in
     if (theory = thyid_name(theory_id thy))
@@ -755,7 +750,7 @@ in
       then (dirty (theCT()); up2date_thm (theCT()) thm) else true
 
   fun scrub_sig s thy =
-    let fun chk (TERM{name, theory, place,htype,witness,utd}) =
+    let fun chk (TERM{name, theory, htype,witness,utd}) =
              if (theory=s)
              then (!utd orelse
                    (if (up2date_thm_opt thy witness) then (utd := true; true)
@@ -822,34 +817,17 @@ fun scrubCT() = (scrub(); theCT());
  *---------------------------------------------------------------------------*)
 
 fun const_decl x =
-  let val {name,htype,place,theory,...} = lookup_const (theCT()) x
+  let val {name,htype,theory,...} = lookup_const (theCT()) x
           (THEORY_ERR "const_decl" (Lib.quote x^" not found in signature"))
   in
-    {const=Const(name,htype),theory=theory,place=place}
+    {const=Const(name,htype),theory=theory}
   end;
 
-
-(*---------------------------------------------------------------------------
- * Is a constant infix, prefix, or a binder.
- *---------------------------------------------------------------------------*)
-fun fixity x = #place(const_decl x);
-
-fun is_binder "\\" = true
-  | is_binder s = (fixity s = Binder) handle HOL_ERR _ => false;
-
-fun is_infix s =
-   (case (fixity s) of (Infix _) => true
-                     |  _        => false) handle HOL_ERR _ => false;
-
-(*---------------------------------------------------------------------------*
- * The parsing precedence of a constant.                                     *
- *---------------------------------------------------------------------------*)
-fun precedence x = case (fixity x) of Infix i => i | _ => 0;
 
 (*---------------------------------------------------------------------------*
  * Is a string the name of a defined constant.                               *
  *---------------------------------------------------------------------------*)
-fun is_constant x = Lib.can fixity x;
+fun is_constant x = Lib.can const_decl x;
 
 (*---------------------------------------------------------------------------*
  * Is a string the name of a polymorphic constant.                           *
@@ -943,43 +921,26 @@ fun install_type(s,a,thy) = add_typeCT {name=s, arity=a, theory=thy};
 (*---------------------------------------------------------------------------
  * Installing term constants.
  *---------------------------------------------------------------------------*)
-local fun dollar {name, theory, place, htype} =
-       {name = "$"^name, theory=theory, place=Prefix, htype=htype};
-fun infixx s ty =
-   if (Lib.can Type.dom_rng (snd(Type.dom_rng ty))) then ()
-   else raise THEORY_ERR s "not an infix type"
-fun binder s ty =
-   if (Lib.can Type.dom_rng (fst(Type.dom_rng ty))) then ()
-   else raise THEORY_ERR s "not a binder type"
-fun write_constant err_str fixity (c as {Name,Ty}) =
- ( case fixity
-     of Prefix => ()
-      | Binder => binder err_str Ty
-      | Infix prec =>
-         (infixx err_str Ty;
-          if (prec < 0)
-           then raise THEORY_ERR err_str "precedence must be positive"
-           else ());
-   if (Lexis.allowed_term_constant Name) then ()
+local fun dollar {name, theory, htype} =
+       {name = "$"^name, theory=theory, htype=htype};
+fun write_constant err_str (c as {Name,Ty}) =
+  (if (Lexis.allowed_term_constant Name) then ()
    else raise THEORY_ERR err_str
                  (Lib.quote Name^ " is not an allowed constant name");
-   let val trec = {name=Name, htype=Ty, place=fixity, theory=CTname()}
+   let val trec = {name=Name, htype=Ty, theory=CTname()}
        val dtrec = dollar trec
    in
       add_termCT trec; add_termCT dtrec
    end)
 in
-  val new_constant = write_constant "new_constant" Prefix
-  val new_binder   = write_constant "new_binder"   Binder
-  fun new_infix{Name,Ty,Prec} =
-     write_constant "new_infix" (Infix Prec) {Name=Name,Ty=Ty}
+  val new_constant = write_constant "new_constant"
 
   (*--------------------------------------------------------------------------
    * Add a constant to the signature. This entrypoint is for adding constants
    * from parent theories.
    *-------------------------------------------------------------------------*)
-  fun install_const(s,ty,f,thy) =
-     let val entry = {name=s, htype=ty, theory=thy, place=f}
+  fun install_const(s,ty,thy) =
+     let val entry = {name=s, htype=ty, theory=thy}
      in
        add_termCT entry;
        add_termCT (dollar entry)
@@ -1046,7 +1007,7 @@ fun incorporate_types thy tys =
   end;
 
 fun incorporate_consts thy consts =
-  let fun iconst(s,ty,f) = install_const(s,ty,f,thy)
+  let fun iconst(s,ty) = install_const(s,ty,thy)
   in app iconst consts
   end;
 
@@ -1055,8 +1016,6 @@ fun incorporate_consts thy consts =
  *              GENERAL INFORMATION ON THE CURRENT THEORY                    *
  *---------------------------------------------------------------------------*)
 local val dollar = #"$"
-      val infixed = is_infix o #Name o dest_const
-      val bindered = is_binder o #Name o dest_const
       fun convert_type_recd{occ={name,...},arity,...} = {Name=name,Arity=arity}
       fun convert_term_recd{name,htype,...} =
             if (String.sub(!name,0) = dollar)
@@ -1070,8 +1029,6 @@ local val dollar = #"$"
 in
  fun types s     = map convert_type_recd(thy_types s (theCT()))
  fun constants s = mapfilter convert_term_recd (thy_constants s (theCT()))
- fun infixes x   = Lib.gather infixed (constants x)
- fun binders x   = Lib.gather bindered (constants x)
  fun axioms()      = map drop_pthmkind (thy_axioms (theCT()))
  fun definitions() = map drop_pthmkind (thy_defns (theCT()))
  fun theorems()    = map drop_pthmkind (thy_theorems (theCT()))
@@ -1109,9 +1066,9 @@ fun theory_out f {name,style} ostrm =
  end;
 
 
-fun dconst {name,place,htype,theory,witness,utd} =
+fun dconst {name,htype,theory,witness,utd} =
   let val _ = Lib.assert (not o dollared) (!name)
-  in (!name,htype,place)
+  in (!name,htype)
   end;
 
 fun dty{occ={name,revision},arity,theory,witness,utd} = (name,arity);
@@ -1137,8 +1094,9 @@ fun unadjzip [] A = A
     theorems or whatnot, then the initial theory will be exported.
  ----------------------------------------------------------------------------*)
 
-fun gen_export_theory(thy as {thid,con_wrt_disk,STH,GR,
-                              facts,adjoin,...}:theory) =
+
+fun gen_export_theory printers (thy as {thid,con_wrt_disk,STH,GR,
+                                        facts,adjoin,...}:theory) =
   if con_wrt_disk
    then (Lib.say ("\nTheory "^Lib.quote(thyid_name thid)^" already \
                     \consistent with disk, hence not exported.\n");
@@ -1171,9 +1129,11 @@ fun gen_export_theory(thy as {thid,con_wrt_disk,STH,GR,
             val ostrm2 = Portable.open_out(concat["./",name,".sml"])
         in
           Lib.say "Exporting theory ... ";
-          theory_out (fn ppstrm => TheoryPP.pp_theory_sig ppstrm sigthry)
+          theory_out (fn ppstrm =>
+                      TheoryPP.pp_theory_sig printers ppstrm sigthry)
                      {name = name, style = "signature"} ostrm1;
-          theory_out (fn ppstrm => TheoryPP.pp_theory_struct ppstrm structthry)
+          theory_out (fn ppstrm =>
+                      TheoryPP.pp_theory_struct ppstrm structthry)
                      {name = name, style = "structure"} ostrm2;
           set_ct_consistency true;
           Lib.say "done.\n";
@@ -1193,10 +1153,10 @@ fun gen_export_theory(thy as {thid,con_wrt_disk,STH,GR,
 
 
 
-fun prim_export_theory () = gen_export_theory (scrubCT());
+fun prim_export_theory printers = gen_export_theory printers (scrubCT());
 
-fun export_theory () =
-  case prim_export_theory ()
+fun export_theory printers =
+  case prim_export_theory printers
    of SUCCESS _ => ()
     | FAILURE (CLIENT nl) => ()
     | FAILURE (INTERNAL x) => raise x
@@ -1211,7 +1171,7 @@ datatype clientfixable = BADNAMES of string list
  *    Allocate a new theory segment over an existing one.                    *
  *---------------------------------------------------------------------------*)
 
-fun gen_new_theory str (thy as {thid,con_wrt_disk,STH, GR,facts,...}:theory) =
+fun gen_new_theory printers str (thy as {thid,con_wrt_disk,STH, GR,facts,...}:theory) =
   if not(Lexis.ok_identifier str)
   then FAILURE (CLIENT(EXN (THEORY_ERR"new_theory"
        ("proposed theory name "^Lib.quote str^" is not an identifier"))))
@@ -1233,20 +1193,20 @@ fun gen_new_theory str (thy as {thid,con_wrt_disk,STH, GR,facts,...}:theory) =
      else
      if con_wrt_disk then gen_thy (Graph.add (thid, graph_fringe thy) GR)
      else (scrub_thy thyname thy;
-           case gen_export_theory thy
+           case gen_export_theory printers thy
             of SUCCESS () => gen_thy (Graph.add (thid, graph_fringe thy) GR)
              | FAILURE (CLIENT nl) => FAILURE (CLIENT (BADNAMES nl))
              | FAILURE (INTERNAL x) => FAILURE(INTERNAL x)
              | FAILURE (SYSTEM x)   => FAILURE (SYSTEM x))
    end handle e => FAILURE (INTERNAL e);
 
-fun prim_new_theory str =
-  case gen_new_theory str (theCT())
+fun prim_new_theory printers str =
+  case gen_new_theory printers str (theCT())
    of SUCCESS x => (SUCCESS (makeCT x) handle e => FAILURE (INTERNAL e))
     | FAILURE x  => FAILURE x;
 
-fun new_theory str =
-  case prim_new_theory str
+fun new_theory printers str =
+  case prim_new_theory printers str
    of FAILURE (CLIENT (EXN e)) => raise e
     | FAILURE (CLIENT (BADNAMES _)) => ()
     | FAILURE (INTERNAL e) => raise e
@@ -1261,31 +1221,31 @@ fun new_theory str =
 val CONSISTENT   = Portable_PrettyPrint.CONSISTENT
 val INCONSISTENT = Portable_PrettyPrint.INCONSISTENT;
 
-fun pp_theory ppstrm (thy as {thid,con_wrt_disk,STH,
-                              GR,facts,overwritten,adjoin}) =
- let val {add_string,add_break,begin_block,end_block, add_newline,
-          flush_ppstream,...} = Portable_PrettyPrint.with_ppstream ppstrm
-     val pp_type = Hol_pp.pp_type ppstrm
-     val pp_thm = Thm.pp_thm ppstrm
-     fun vblock(header, ob_pr, obs) =
-           ( begin_block CONSISTENT 4;
-             add_string (header^":");
-             add_newline();
-             Portable_PrettyPrint.pr_list ob_pr
-                 (fn () => ()) add_newline obs;
-             end_block(); add_newline(); add_newline())
-     fun pr_thm (heading, ths) =
-        vblock(heading, (fn (s,th) =>
-          (begin_block CONSISTENT 0; add_string s; add_break(1,0);
-              pp_thm th; end_block())),  ths)
-     val thyname = thyid_name thid
-     fun pp_consistency b =
-        add_string ("Theory "^(Lib.quote thyname)^" is "^
+fun pp_theory (printers:TheoryPP.HOLprinters) ppstrm thy = let
+  val {thid,con_wrt_disk,STH, GR,facts,overwritten,adjoin} = thy
+  val {add_string,add_break,begin_block,end_block, add_newline,
+       flush_ppstream,...} = Portable_PrettyPrint.with_ppstream ppstrm
+  val pp_thm = #pp_thm printers ppstrm
+  val pp_type = #pp_type printers ppstrm
+  fun vblock(header, ob_pr, obs) =
+    ( begin_block CONSISTENT 4;
+     add_string (header^":");
+     add_newline();
+     Portable_PrettyPrint.pr_list ob_pr
+     (fn () => ()) add_newline obs;
+     end_block(); add_newline(); add_newline())
+  fun pr_thm (heading, ths) =
+    vblock(heading, (fn (s,th) =>
+                     (begin_block CONSISTENT 0; add_string s; add_break(1,0);
+                      pp_thm th; end_block())),  ths)
+  val thyname = thyid_name thid
+  fun pp_consistency b =
+    add_string ("Theory "^(Lib.quote thyname)^" is "^
                 (if b then "consistent" else "inconsistent")^" with disk.\n")
-     val (A,D,T) = unkind facts
-     val types = map dty (thy_types thyname thy)
-     val constants = Lib.mapfilter dconst (thy_constants thyname thy)
- in
+  val (A,D,T) = unkind facts
+  val types = map dty (thy_types thyname thy)
+  val constants = Lib.mapfilter dconst (thy_constants thyname thy)
+in
     begin_block CONSISTENT 0;
     add_string ("Theory: "^thyname);
     add_newline();   add_newline() ;
@@ -1297,12 +1257,10 @@ fun pp_theory ppstrm (thy as {thid,con_wrt_disk,STH,
             rev types)
       ;
     vblock ("Term constants",
-             (fn (name,htype,place)
+             (fn (name,htype)
               => (begin_block CONSISTENT 0;
                   add_string (name^" ");
-                  add_string ("("^Term.fixity_to_string place^")");
                   add_break(3,0);
-                  add_string ":";
                   pp_type htype;
                   end_block())),
                  rev constants)
@@ -1316,24 +1274,25 @@ fun pp_theory ppstrm (thy as {thid,con_wrt_disk,STH,
  end;
 
 
-fun print_theory_to_outstream outstream =
+fun print_theory_to_outstream printers outstream =
   let val def_Cons = Portable_PrettyPrint.defaultConsumer()
       val consumer = {consumer = Portable.outputc outstream,
                       flush = #flush def_Cons,
                       linewidth = #linewidth def_Cons}
-      val _ = pp_theory (Portable_PrettyPrint.mk_ppstream consumer) (theCT())
+      val stream = Portable_PrettyPrint.mk_ppstream consumer
+      val _ = pp_theory printers stream (theCT())
       val _ = Portable.flush_out outstream
   in outstream end
 
-fun print_theory_to_file file =
+fun print_theory_to_file printers file =
     let val outfile = Portable.open_out file
-    in Portable.close_out (print_theory_to_outstream outfile)
+    in Portable.close_out (print_theory_to_outstream printers outfile)
     end
 
-fun print_theory () =
-   pp_theory (Portable_PrettyPrint.mk_ppstream
-                     (Portable_PrettyPrint.defaultConsumer()))
-             (theCT())
+fun print_theory printers =
+   pp_theory printers (Portable_PrettyPrint.mk_ppstream
+                       (Portable_PrettyPrint.defaultConsumer()))
+   (theCT())
 
 
 (* Backpatching forward references. *)

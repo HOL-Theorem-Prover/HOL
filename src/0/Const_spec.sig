@@ -12,8 +12,6 @@
 signature Const_spec =
 sig
 
-val new_specification : {name :string,
-                         consts : {fixity : Term.fixity,
-                                   const_name : string} list,
-                         sat_thm : Thm.thm} -> Thm.thm
+val new_specification :
+  {name :string, consts : string list, sat_thm : Thm.thm} -> Thm.thm
 end;

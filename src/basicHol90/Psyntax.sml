@@ -8,7 +8,7 @@ infix |->;
     type term = Term.term;
     type thm = Thm.thm;
     type hol_type = Type.hol_type;
-    type fixity = Term.fixity;
+    type fixity = Parse.fixity;
 
 fun PSYNTAX_ERR{func,mesg} =
         HOL_ERR{origin_structure = "Psyntax",
@@ -53,13 +53,13 @@ fun dest_conj tm = let val {conj1,conj2} = Dsyntax.dest_conj tm
                    in (conj1,conj2) end;
 fun dest_disj tm = let val {disj1,disj2} = Dsyntax.dest_disj tm
                    in (disj1,disj2) end;
-fun dest_cond tm = let val {cond,larm,rarm} = Dsyntax.dest_cond tm 
+fun dest_cond tm = let val {cond,larm,rarm} = Dsyntax.dest_cond tm
                    in (cond,larm,rarm)  end;
 fun dest_pair tm = let val{fst,snd} = Dsyntax.dest_pair tm in (fst,snd) end;
 fun dest_let tm = let val {func, arg} = Dsyntax.dest_let tm in (func,arg) end;
 fun dest_cons tm = let val {hd, tl} = Dsyntax.dest_cons tm in (hd,tl) end;
 fun dest_list tm = let val {els, ty} = Dsyntax.dest_list tm in (els,ty) end;
-fun dest_pabs tm = let val {varstruct, body} = Dsyntax.dest_pabs tm 
+fun dest_pabs tm = let val {varstruct, body} = Dsyntax.dest_pabs tm
                    in (varstruct,body)
                    end;
 
@@ -90,27 +90,28 @@ end;
 val INST_TYPE = Thm.INST_TYPE o mk_subst;
 val INST_TY_TERM = Conv.INST_TY_TERM o (mk_subst##mk_subst);
 
-
-fun new_type i s = Theory.new_type{Name = s, Arity = i};
+fun new_type i s = Parse.new_type{Name = s, Arity = i};
 fun new_constant(s,ty) = Theory.new_constant{Name = s, Ty = ty};
-fun new_infix(s,ty,i) = Theory.new_infix{Name = s, Ty = ty,Prec=i};
-fun new_binder(s,ty) = Theory.new_binder{Name = s, Ty = ty};
+fun new_infix(s,ty,i) = Parse.new_infix{Name = s, Ty = ty,Prec=i};
+fun new_binder(s,ty) = Parse.new_binder{Name = s, Ty = ty};
 
 local
-fun mk_fixity "binder" _ = Binder
-  | mk_fixity "constant" _ = Prefix
-  | mk_fixity "infix" i = Infix i
-  | mk_fixity s _ = raise PSYNTAX_ERR
-                   {func = "new_specification",
-                    mesg=s^" must be \"constant\", \"infix\" or \"binder\""}
+  fun mk_fixity "binder" _ = Parse.Binder
+    | mk_fixity "constant" _ = Parse.Prefix
+    | mk_fixity "infixl" i = Parse.Infixl i
+    | mk_fixity "infixr" i = Parse.Infixr i
+    | mk_fixity s _ =
+    raise PSYNTAX_ERR
+      {func = "new_specification",
+       mesg=s^" must be \"constant\", \"infixl\", \"infixr\" or \"binder\""}
 fun tran (f,n,i) = {fixity=mk_fixity f i, const_name=n}
 in
-fun new_specification s alist th = 
-     Const_spec.new_specification{name=s,consts = map tran alist,sat_thm = th}
+fun new_specification s alist th =
+  Parse.new_specification{name=s,consts = map tran alist,sat_thm = th}
 end;
 
-fun new_type_definition (n,p,th) = 
-   Type_def.new_type_definition{name = n, pred = p, inhab_thm = th};
+fun new_type_definition (n,p,th) =
+   Parse.new_type_definition{name = n, pred = p, inhab_thm = th};
 
 
 fun new_recursive_definition fix ax name tm =

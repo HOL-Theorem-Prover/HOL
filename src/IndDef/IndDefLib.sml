@@ -1,15 +1,15 @@
-structure IndDefLib :> IndDefLib = 
+structure IndDefLib :> IndDefLib =
 struct
 
  type term = Term.term
- type fixity = Term.fixity
+ type fixity = Parse.fixity
  type thm = Thm.thm
  type tactic = Abbrev.tactic
  type thm_tactic = Abbrev.thm_tactic
 
 
 open ho_matchLib refuteLib ; (* ancestor libraries *)
-open HolKernel Parse basicHol90Lib liteLib 
+open HolKernel Parse basicHol90Lib liteLib
      AC Ho_rewrite Ho_resolve Psyntax;
 
 infix |->;
@@ -218,7 +218,7 @@ local fun getequs(avs,plis) =
 in
 fun canonicalize_clause clause carg =
         let val (avs,bimp) = strip_forall clause
-            val (ant,con) = dest_imp bimp 
+            val (ant,con) = dest_imp bimp
               handle Interrupt => raise Interrupt
                    |         _ => ((--`T`--),bimp)
             val (rel,xargs) = strip_comb con
@@ -454,7 +454,7 @@ fun BACKCHAIN_TAC th =
 
 type monoset = (string * tactic) list;
 
-(*--------------------------------------------------------------------------- 
+(*---------------------------------------------------------------------------
  * MONO_AND = |- (A ==> B) /\ (C ==> D) ==> (A /\ C ==> B /\ D)
  * MONO_OR  = |- (A ==> B) /\ (C ==> D) ==> (A \/ C ==> B \/ D)
  * MONO_IMP = |- (B ==> A) /\ (C ==> D) ==> ((A ==> C) ==> (B ==> D))
@@ -508,7 +508,7 @@ val APPLY_MONOTAC =
     in fn monoset => fn (asl,w) =>
         let val (a,c) = dest_imp w
         in if aconv a c then ACCEPT_TAC (SPEC a IMP_REFL) (asl,w) else
-            let val cn = fst (dest_const(repeat rator c)) 
+            let val cn = fst (dest_const(repeat rator c))
                          handle Interrupt => raise Interrupt
                               |         _ => ""
             in tryfind (fn (k,t) => if k = cn then t (asl,w) else fail())
@@ -621,7 +621,7 @@ val unschematize_clauses =
   in fn clauses =>
       let val schem = map (fn cls =>
           let val (avs,bod) = strip_forall cls
-          in pare_comb avs (snd(dest_imp bod) 
+          in pare_comb avs (snd(dest_imp bod)
               handle Interrupt => raise Interrupt
                    |         _ => bod)
           end) clauses
@@ -738,7 +738,7 @@ fun basic_gen_RULE_INDUCT_THEN ith pcont scont (asl,w) =
       val cjs = strip_conj(fst(dest_imp(snd(strip_forall(concl ith)))))
       fun mk_cont t =
         let val bod = snd(strip_forall t)
-            val hyp = (strip_conj(fst(dest_imp bod)) 
+            val hyp = (strip_conj(fst(dest_imp bod))
                       handle Interrupt => raise Interrupt
                            |         _ => [])
             val cts = map (fn t => if free_in r0' t then pcont else scont) hyp

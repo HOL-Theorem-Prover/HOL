@@ -15,7 +15,7 @@ struct
 
 local
 
-open HolKernel Parse Hol_pp basicHol90Lib
+open HolKernel Parse basicHol90Lib
      Portable_List Psyntax DecisionConv DecisionSupport DecisionNormConvs
 infix THEN THENL THENC
 in
@@ -153,7 +153,7 @@ fun top_level_discriminate ps tm =
 (*--------------------------------------------------------------------------*)
 
 fun HOMOGENIZE_CONV new_var (procedures : decision_procedure list) tm =
-   let val new = new_var (map (#Name o Rsyntax.dest_var) (free_vars tm)) 
+   let val new = new_var (map (#Name o Rsyntax.dest_var) (free_vars tm))
        fun find_heterogeneities at_root d tm =
           if (is_neg tm) then
              let val (template,subst) =
@@ -172,7 +172,7 @@ fun HOMOGENIZE_CONV new_var (procedures : decision_procedure list) tm =
                       unzip (map (find_heterogeneities false d) subterms)
                in  (construct templates,flat substs)
                end
-               handle HOL_ERR _ 
+               handle HOL_ERR _
                  => let val v = new (type_of tm) in (v,[(v,tm)]) end
        fun SEPARATE_SUBTERM template (v,t) =
           let val P = mk_abs (v,template)
@@ -433,7 +433,7 @@ fun pair_member p ps = exists (fn p' => pair_eq (p,p')) ps;
 
 fun pair_subtract ps1 ps2 = filter (fn p => not (pair_member p ps2)) ps1;
 
-fun set_of_pairs l 
+fun set_of_pairs l
   = remove_duplicates (fn ((p1,_),(p2,_)) => pair_eq (p1,p2)) l;
 
 fun equalities_in_thm th =

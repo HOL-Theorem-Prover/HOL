@@ -29,7 +29,7 @@ val num_Axiom = prim_recTheory.num_Axiom;
  *---------------------------------------------------------------------------*)
 val ADD = new_recursive_definition
    {name = "ADD",
-    fixity = Infix 500,
+    fixity = Infixl 500,
     rec_axiom = num_Axiom,
     def = --`($+ ZERO n = n) /\
              ($+ (SUC m) n = SUC($+ m n))`--};
@@ -46,10 +46,10 @@ val ALT_ZERO = new_definition(
   --`ALT_ZERO = ZERO`--);
 val NUMERAL_BIT1 =
   new_definition("NUMERAL_BIT1",
-                 --`NUMERAL_BIT1 n = n + n + SUC ZERO`--);
+                 --`NUMERAL_BIT1 n = n + (n + SUC ZERO)`--);
 val NUMERAL_BIT2 =
   new_definition("NUMERAL_BIT2",
-                 --`NUMERAL_BIT2 n = n + n + SUC (SUC ZERO)`--);
+                 --`NUMERAL_BIT2 n = n + (n + SUC (SUC ZERO))`--);
 
 (*---------------------------------------------------------------------------*
  * After this call, numerals parse into `NUMERAL( ... )`                     *
@@ -58,32 +58,32 @@ val _ = Globals.assert_nums_defined();
 
 val SUB = new_recursive_definition
    {name = "SUB",
-    fixity = Infix 500,
+    fixity = Infixl 500,
     rec_axiom = num_Axiom,
     def = --`($- 0 m = 0) /\
              ($- (SUC m) n = ((m < n) => 0 | SUC($- m n)))`--};
 
 val MULT = new_recursive_definition
    {name = "MULT",
-    fixity = Infix 600,
+    fixity = Infixl 600,
     rec_axiom = num_Axiom,
     def = --`($* 0 n = 0) /\
              ($* (SUC m) n = ($* m n) + n)`--};
 
 val EXP = new_recursive_definition
    {name = "EXP",
-    fixity = Infix 700,
+    fixity = Infixr 700,
     rec_axiom = num_Axiom,
     def = --`($EXP m 0 = 1) /\
              ($EXP m (SUC n) = m * ($EXP m n))`--};
 
-val GREATER_DEF = new_infix_definition
+val GREATER_DEF = new_infixr_definition
   ("GREATER_DEF", --`$> m n = n < m`--,   450);
 
-val LESS_OR_EQ = new_infix_definition
+val LESS_OR_EQ = new_infixr_definition
   ("LESS_OR_EQ", --`$<= m n = m < n \/ (m = n)`--,  450);
 
-val GREATER_OR_EQ = new_infix_definition
+val GREATER_OR_EQ = new_infixr_definition
   ("GREATER_OR_EQ", --`$>= m n = m > n \/ (m = n)`--, 450);
 
 val EVEN = new_recursive_definition
@@ -726,7 +726,7 @@ val LEFT_SUB_DISTRIB = store_thm("LEFT_SUB_DISTRIB",
 
 (* The following theorem (and proof) are from tfm [rewritten TFM 90.09.21] *)
 val LESS_ADD_1 = store_thm ("LESS_ADD_1",
-  --`!m n. (n<m) ==> ?p. m = n + p + 1`--,
+  --`!m n. (n<m) ==> ?p. m = n + (p + 1)`--,
   REWRITE_TAC [ONE] THEN INDUCT_TAC THEN
   REWRITE_TAC[NOT_LESS_0,LESS_THM] THEN
   REPEAT STRIP_TAC THENL [
@@ -915,7 +915,7 @@ val leq_add_lemma = prove
 
 (* We will also need the lemma:  |- k=qn+n+p ==> k=(q+1)*n+p            *)
 val k_expr_lemma = prove
-  (--`(k=(q*n)+n+p) ==> (k=((q+1)*n)+p)`--,
+  (--`(k=(q*n)+(n+p)) ==> (k=((q+1)*n)+p)`--,
    REWRITE_TAC [RIGHT_ADD_DISTRIB,MULT_CLAUSES,ADD_ASSOC]);
 
 (* We will also need the lemma: [0<n] |- p < (n + p)                    *)
@@ -976,8 +976,8 @@ val MOD_DIV_exist = prove
 (* Now define MOD and DIV by a constant specification.                  *)
 val DIVISION = new_specification
    {name = "DIVISION",
-    consts = [{fixity = Infix 650, const_name = "MOD"},
-              {fixity = Infix 600, const_name = "DIV"}],
+    consts = [{fixity = Infixl 650, const_name = "MOD"},
+              {fixity = Infixl 600, const_name = "DIV"}],
     sat_thm = MOD_DIV_exist};
 
 
@@ -2020,7 +2020,7 @@ val _ = adjoin_to_theory
  in
    S "local";
    S "  open HolKernel basicHol90Lib Psyntax";
-   S "  infix |->";
+   S "  infix |-> THENC";
    S "  val num_ty = mk_type(\"num\", [])";
    S "  val SUC = mk_const(\"SUC\", mk_type(\"fun\", [num_ty, num_ty]))";
    S "  fun mk_SUC t = mk_comb(SUC, t)";
@@ -2036,7 +2036,13 @@ val _ = adjoin_to_theory
    S "        val suck_suc = Rsyntax.subst [mk_SUC v |-> sn] bod";
    S "        val suck_n = Rsyntax.subst [v |-> n] suck_suc";
    S "        val _ = assert (fn x => x <> tm) suck_n";
-   S "    in BETA_RULE (ISPEC (list_mk_abs ([sn,n],suck_n)) SUC_ELIM_THM)";
+   S "        val th1 = ISPEC (list_mk_abs ([sn,n],suck_n)) SUC_ELIM_THM";
+   S "        val BETA2_CONV = (RATOR_CONV BETA_CONV) THENC BETA_CONV";
+   S "        val th2 = CONV_RULE (LHS_CONV (QUANT_CONV BETA2_CONV)) th1";
+   S "        val th3 = ";
+   S "          CONV_RULE (RHS_CONV (QUANT_CONV ";
+   S "             (FORK_CONV (ALL_CONV, BETA2_CONV)))) th2";
+   S "    in th3";
    S "    end";
    S "end;";
 

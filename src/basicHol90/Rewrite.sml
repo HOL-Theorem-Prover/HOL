@@ -20,7 +20,7 @@ type conv = Abbrev.conv;
 
 infix 3 ##
 
-fun ERR function message = 
+fun ERR function message =
     HOL_ERR{origin_structure = "Rewrite",
             origin_function = function,
             message = message}
@@ -40,8 +40,8 @@ fun ERR function message =
  *---------------------------------------------------------------------------*)
 fun mk_rewrites th =
   let val th = SPEC_ALL th
-      val t = concl th 
-  in 
+      val t = concl th
+  in
   if (Dsyntax.is_eq t)
   then [th]
   else if (Dsyntax.is_conj t)
@@ -76,12 +76,12 @@ with
 
  fun pp_rewrites ppstrm (RW{thms,...}) =
     let open Portable_PrettyPrint
-        val {add_string,add_break,begin_block,end_block,add_newline,...} = 
+        val {add_string,add_break,begin_block,end_block,add_newline,...} =
                with_ppstream ppstrm
-        val pp_thm = pp_thm ppstrm
+        val pp_thm = Parse.pp_thm ppstrm
         val thms' = flatten (map mk_rewrites thms)
         val how_many = length thms'
-    in 
+    in
        begin_block CONSISTENT 0;
        if (how_many = 0)
        then (add_string "<empty rule set>")
@@ -100,10 +100,10 @@ end; (* abstype *)
 
 (* Derived manipulations *)
 
-fun add_implicit_rewrites thl = 
+fun add_implicit_rewrites thl =
     set_implicit_rewrites (add_rewrites (implicit_rewrites()) thl);
 
-val bool_rewrites = 
+val bool_rewrites =
   add_rewrites empty_rewrites
      [REFL_CLAUSE,  EQ_CLAUSES,  NOT_CLAUSES,  AND_CLAUSES,
       OR_CLAUSES,   IMP_CLAUSES, COND_CLAUSES, FORALL_SIMP,
@@ -115,7 +115,7 @@ val _ = set_implicit_rewrites bool_rewrites;
 (* Main rewriting conversion                         			*)
 (* =====================================================================*)
 
-fun GEN_REWRITE_CONV (rw_func:conv->conv) rws thl = 
+fun GEN_REWRITE_CONV (rw_func:conv->conv) rws thl =
    rw_func (REWRITES_CONV (add_rewrites rws thl));
 
 (* ---------------------------------------------------------------------*)
@@ -123,22 +123,22 @@ fun GEN_REWRITE_CONV (rw_func:conv->conv) rws thl =
 (* ---------------------------------------------------------------------*)
 
 val PURE_REWRITE_CONV = GEN_REWRITE_CONV Conv.TOP_DEPTH_CONV empty_rewrites
-and 
+and
 PURE_ONCE_REWRITE_CONV = GEN_REWRITE_CONV Conv.ONCE_DEPTH_CONV empty_rewrites;
- 
-fun REWRITE_CONV thl = GEN_REWRITE_CONV Conv.TOP_DEPTH_CONV 
+
+fun REWRITE_CONV thl = GEN_REWRITE_CONV Conv.TOP_DEPTH_CONV
                                         (implicit_rewrites()) thl
-and ONCE_REWRITE_CONV thl = GEN_REWRITE_CONV Conv.ONCE_DEPTH_CONV 
+and ONCE_REWRITE_CONV thl = GEN_REWRITE_CONV Conv.ONCE_DEPTH_CONV
                                         (implicit_rewrites()) thl;
 
 (* Main rewriting rule *)
 fun GEN_REWRITE_RULE f rws = Conv.CONV_RULE o GEN_REWRITE_CONV f rws;
 
 val PURE_REWRITE_RULE = GEN_REWRITE_RULE Conv.TOP_DEPTH_CONV empty_rewrites
-and 
+and
 PURE_ONCE_REWRITE_RULE = GEN_REWRITE_RULE Conv.ONCE_DEPTH_CONV empty_rewrites;
 
-fun REWRITE_RULE thl = GEN_REWRITE_RULE Conv.TOP_DEPTH_CONV 
+fun REWRITE_RULE thl = GEN_REWRITE_RULE Conv.TOP_DEPTH_CONV
                                         (implicit_rewrites()) thl
 and ONCE_REWRITE_RULE thl = GEN_REWRITE_RULE Conv.ONCE_DEPTH_CONV
                                              (implicit_rewrites()) thl;
@@ -147,14 +147,14 @@ and ONCE_REWRITE_RULE thl = GEN_REWRITE_RULE Conv.ONCE_DEPTH_CONV
 
 fun PURE_ASM_REWRITE_RULE thl th =
    PURE_REWRITE_RULE ((map ASSUME (hyp th)) @ thl) th
-and 
+and
 PURE_ONCE_ASM_REWRITE_RULE thl th =
    PURE_ONCE_REWRITE_RULE ((map ASSUME (hyp th)) @ thl) th
-and 
-ASM_REWRITE_RULE thl th = 
+and
+ASM_REWRITE_RULE thl th =
    REWRITE_RULE ((map ASSUME (hyp th)) @ thl) th
-and 
-ONCE_ASM_REWRITE_RULE thl th = 
+and
+ONCE_ASM_REWRITE_RULE thl th =
    ONCE_REWRITE_RULE ((map ASSUME (hyp th)) @ thl) th;
 
 
@@ -163,38 +163,38 @@ ONCE_ASM_REWRITE_RULE thl th =
 fun GEN_REWRITE_TAC f rws = Conv.CONV_TAC o GEN_REWRITE_CONV f rws;
 
 val PURE_REWRITE_TAC = GEN_REWRITE_TAC Conv.TOP_DEPTH_CONV empty_rewrites
-and 
+and
 PURE_ONCE_REWRITE_TAC = GEN_REWRITE_TAC Conv.ONCE_DEPTH_CONV empty_rewrites;
 
 fun REWRITE_TAC thl = GEN_REWRITE_TAC Conv.TOP_DEPTH_CONV (implicit_rewrites())
                                       thl
-and ONCE_REWRITE_TAC thl = 
+and ONCE_REWRITE_TAC thl =
     GEN_REWRITE_TAC Conv.ONCE_DEPTH_CONV (implicit_rewrites()) thl;
 
 
 (* Rewrite a goal with the help of its assumptions *)
 
-fun PURE_ASM_REWRITE_TAC thl :tactic = 
+fun PURE_ASM_REWRITE_TAC thl :tactic =
    Tactical.ASSUM_LIST (fn asl => PURE_REWRITE_TAC (asl @ thl))
-and ASM_REWRITE_TAC thl :tactic      = 
+and ASM_REWRITE_TAC thl :tactic      =
    Tactical.ASSUM_LIST (fn asl => REWRITE_TAC (asl @ thl))
-and PURE_ONCE_ASM_REWRITE_TAC thl :tactic = 
+and PURE_ONCE_ASM_REWRITE_TAC thl :tactic =
    Tactical.ASSUM_LIST (fn asl => PURE_ONCE_REWRITE_TAC (asl @ thl))
-and ONCE_ASM_REWRITE_TAC thl :tactic      = 
+and ONCE_ASM_REWRITE_TAC thl :tactic      =
    Tactical.ASSUM_LIST (fn asl => ONCE_REWRITE_TAC (asl @ thl));
 
 (* Rewriting using equations that satisfy a predicate  *)
 fun FILTER_PURE_ASM_REWRITE_RULE f thl th =
     PURE_REWRITE_RULE ((map ASSUME (filter f (hyp th))) @ thl) th
-and FILTER_ASM_REWRITE_RULE f thl th = 
+and FILTER_ASM_REWRITE_RULE f thl th =
     REWRITE_RULE ((map ASSUME (filter f (hyp th))) @ thl) th
 and FILTER_PURE_ONCE_ASM_REWRITE_RULE f thl th =
     PURE_ONCE_REWRITE_RULE ((map ASSUME (filter f (hyp th))) @ thl) th
-and FILTER_ONCE_ASM_REWRITE_RULE f thl th = 
+and FILTER_ONCE_ASM_REWRITE_RULE f thl th =
     ONCE_REWRITE_RULE ((map ASSUME (filter f (hyp th))) @ thl) th;;
 
 fun FILTER_PURE_ASM_REWRITE_TAC f thl =
-    Tactical.ASSUM_LIST 
+    Tactical.ASSUM_LIST
           (fn asl => PURE_REWRITE_TAC ((filter (f o concl) asl)@thl))
 and FILTER_ASM_REWRITE_TAC f thl =
     Tactical.ASSUM_LIST
@@ -203,22 +203,22 @@ and FILTER_PURE_ONCE_ASM_REWRITE_TAC f thl =
     Tactical.ASSUM_LIST
          (fn asl => PURE_ONCE_REWRITE_TAC ((filter (f o concl) asl) @ thl))
 and FILTER_ONCE_ASM_REWRITE_TAC f thl =
-    Tactical.ASSUM_LIST 
+    Tactical.ASSUM_LIST
           (fn asl => ONCE_REWRITE_TAC ((filter (f o concl) asl) @ thl));
 
 
 (*---------------------------------------------------------------------------
  * SUBST_MATCH (|-u=v) th   searches for an instance of u in
  * (the conclusion of) th and then substitutes the corresponding
- * instance of v. 
+ * instance of v.
  *---------------------------------------------------------------------------*)
 local exception FIND_MATCH_ERR
       fun find_match u =
          let fun find_mt t =
-               Term.match_term u t   
-                handle HOL_ERR _ => find_mt(Term.rator t) 
-                handle HOL_ERR _ => find_mt(Term.rand t)  
-                handle HOL_ERR _ => find_mt(#Body(Term.dest_abs t)) 
+               Term.match_term u t
+                handle HOL_ERR _ => find_mt(Term.rator t)
+                handle HOL_ERR _ => find_mt(Term.rand t)
+                handle HOL_ERR _ => find_mt(#Body(Term.dest_abs t))
                 handle HOL_ERR _ => raise FIND_MATCH_ERR
          in
            find_mt

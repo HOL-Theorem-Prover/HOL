@@ -756,24 +756,24 @@ YY_RULE_SETUP
 case 5:
 YY_RULE_SETUP
 #line 69 "filter.lex"
-{ fprintf(yyout, "(Parse.type_parser [QUOTE \"");
+{ fprintf(yyout, "(Parse.Type [QUOTE \"");
                     BEGIN OLDTYQUOTE; }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
 #line 71 "filter.lex"
 { fprintf(yyout,
-                    "(Parse.term_parser [QUOTE \""); BEGIN OLDTMQUOTE; }
+                    "(Parse.Term [QUOTE \""); BEGIN OLDTMQUOTE; }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
 #line 73 "filter.lex"
-{ fprintf(yyout, "(Parse.type_parser [QUOTE \":"); BEGIN TYQUOTE; }
+{ fprintf(yyout, "(Parse.Type [QUOTE \":"); BEGIN TYQUOTE; }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
 #line 74 "filter.lex"
-{ fprintf(yyout, "(Parse.term_parser [QUOTE \""); BEGIN TMQUOTE; }
+{ fprintf(yyout, "(Parse.Term [QUOTE \""); BEGIN TMQUOTE; }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP

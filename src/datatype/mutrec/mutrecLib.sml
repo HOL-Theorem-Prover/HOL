@@ -3,13 +3,13 @@ struct
 
 type thm = Thm.thm
 type term = Term.term
-type fixity= Term.fixity
+type fixity= Parse.fixity
 type 'a quotation = 'a frag list
 
 
  fun define_type input =
   let val (tmp as {New_Ty_Existence_Thm,
-                   New_Ty_Induct_Thm, 
+                   New_Ty_Induct_Thm,
                    New_Ty_Uniqueness_Thm}) = MutRecDef.define_type input
       val {mutual_constructors_distinct,
            mutual_constructors_one_one,

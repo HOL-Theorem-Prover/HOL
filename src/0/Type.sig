@@ -29,18 +29,13 @@ sig
   val beta    : hol_type
 
   (* matching *)
-  val type_reduce : hol_type -> hol_type 
+  val type_reduce : hol_type -> hol_type
        -> (hol_type,hol_type) Lib.subst -> (hol_type,hol_type) Lib.subst
   val match_type :  hol_type -> hol_type -> (hol_type,hol_type) Lib.subst
 
-  (* Prettyprinting *)
-  type gravity = Portable_PrettyPrint.gravity
-  type ppstream = Portable_PrettyPrint.ppstream
-  val pp_type        : ppstream -> hol_type -> int -> unit
-  val extend_pp_type :
-       (({depth:int, gravity:gravity} -> hol_type -> ppstream -> unit) ->
-        ({depth:int, gravity:gravity} -> hol_type -> ppstream -> unit)) -> unit
-  val reset_pp_type : unit -> unit
+  (* prettying up, so that types generated internally can be show to the
+     outside world *)
+  val prettify : hol_type -> hol_type
 
 
   (* Forward reference *)

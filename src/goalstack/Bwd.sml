@@ -17,20 +17,20 @@ fun cr_add_string_cr s = say ("\n"^s^"\n")
 fun rotl (a::rst) = rst@[a]
   | rotl [] = raise BWD_ERR{func = "rotl", mesg =  "empty list"}
 
-fun rotr lst = 
+fun rotr lst =
    let val (front,back) = Lib.front_last lst
    in (back::front)
-   end 
+   end
    handle _ => raise BWD_ERR{func = "rotr",mesg =  "empty list"}
 
 
 
 (* GOALSTACKS *)
 (*---------------------------------------------------------------------------
- * A goalstack is a stack of (goal list, validation_function) records. Each 
- * goal in the goal list is a (term list, term) pair. The validation 
- * function is a function from a list of theorems to a theorem. It must be 
- * that the number of goals in the goal list is equal to the number of 
+ * A goalstack is a stack of (goal list, validation_function) records. Each
+ * goal in the goal list is a (term list, term) pair. The validation
+ * function is a function from a list of theorems to a theorem. It must be
+ * that the number of goals in the goal list is equal to the number of
  * formal parameters in the validation function. Unfortunately, the type
  * system of ML is not strong enough to check that.
  ---------------------------------------------------------------------------*)
@@ -51,12 +51,12 @@ fun is_initial(GSTK{prop = POSED g, stack = []}) = true
 
 fun top_goals(GSTK{prop = POSED g, stack = []}) = [g]
   | top_goals(GSTK{prop = POSED _, stack = {goals,...}::_}) = goals
-  | top_goals(GSTK{prop = PROVED _, ...}) = raise BWD_ERR{func = "top_goals", 
+  | top_goals(GSTK{prop = PROVED _, ...}) = raise BWD_ERR{func = "top_goals",
                                                           mesg = "no goals"};
 
 val top_goal = hd o top_goals;
 
-fun new_goal (g as (asl,w)) = 
+fun new_goal (g as (asl,w)) =
    let val bool = Type.mk_type{Tyop = "bool", Args = []}
        fun is_bool tm = (Term.type_of tm = bool)
    in if (all is_bool (w::asl))
@@ -69,12 +69,12 @@ fun initial_goal(GSTK{prop = POSED g,...}) = g
   | initial_goal(GSTK{prop = PROVED th,...}) = Thm.dest_thm th;
 
 
-fun rotate(GSTK{prop = PROVED _, ...}) _ = 
+fun rotate(GSTK{prop = PROVED _, ...}) _ =
         raise BWD_ERR{func = "rotate", mesg = "goal has already been proved"}
-  | rotate(GSTK{prop, stack}) n = 
+  | rotate(GSTK{prop, stack}) n =
       if (n<0)
       then raise BWD_ERR{func="rotate", mesg="negative rotations not allowed"}
-      else 
+      else
       case stack
       of [] => raise BWD_ERR{func = "rotate",mesg = "No goals to rotate"}
        | ({goals,validation}::rst) =>
@@ -90,13 +90,13 @@ fun rotate(GSTK{prop = PROVED _, ...}) _ =
 local
 fun imp_err s = raise BWD_ERR{func = "expandf",
                               mesg = "implementation error: "^s}
-fun return(GSTK{stack = {goals = [],validation}::rst, prop}) = 
+fun return(GSTK{stack = {goals = [],validation}::rst, prop}) =
     let val th = validation []
-    in case rst 
+    in case rst
        of [] => GSTK{prop = PROVED th, stack = []}
        | ({goals = _::rst_o_goals, validation}::rst') =>
            ( cr_add_string_cr "Goal proved.";
-             add_string_cr (Thm.thm_to_string th);
+             add_string_cr (Parse.thm_to_string th);
              return(GSTK{prop = prop,
                          stack = {goals = rst_o_goals,
                                   validation=fn thl => validation(th::thl)}
@@ -105,10 +105,10 @@ fun return(GSTK{stack = {goals = [],validation}::rst, prop}) =
     end
   | return gstk = gstk
 in
-fun expandf(GSTK{prop = PROVED _, ...}) _ = 
+fun expandf(GSTK{prop = PROVED _, ...}) _ =
            raise BWD_ERR{func = "expandf", mesg="goal has already been proved"}
   | expandf(GSTK{prop as POSED g, stack}) tac =
-     let val (glist,vf) = tac (case stack of   []    => g 
+     let val (glist,vf) = tac (case stack of   []    => g
                                            | (tr::_) => hd (#goals tr))
          val dpth = length stack
          val gs = return(GSTK{prop = prop,
@@ -119,7 +119,7 @@ fun expandf(GSTK{prop = PROVED _, ...}) _ =
          | GSTK{prop, stack as {goals, ...}::_} =>
              let val dpth' = length stack
              in if (dpth' > dpth)
-                then if (dpth+1 = dpth') 
+                then if (dpth+1 = dpth')
                      then add_string_cr(case (length goals)
                                         of 0 => imp_err "1"
                                          | 1 => "1 subgoal:"
@@ -128,7 +128,7 @@ fun expandf(GSTK{prop = PROVED _, ...}) _ =
                 else cr_add_string_cr "Remaining subgoals:"
              end
          | _ => imp_err "3"
-         ; 
+         ;
          gs
      end
 end;
@@ -136,32 +136,32 @@ end;
 fun expand gs = expandf gs o Tactical.VALID;
 
 fun extract_thm (GSTK{prop = PROVED th, ...}) = th
-  | extract_thm _ = raise BWD_ERR{func = "extract_thm", 
+  | extract_thm _ = raise BWD_ERR{func = "extract_thm",
                                   mesg = "no theorem proved"};
 
 (* Prettyprinting *)
 fun enum i [] = []
-  | enum i (h::t) = 
+  | enum i (h::t) =
      (i,h)::enum (i+1) t;
 fun enumerate l = enum 0 l;
 
 local
 fun ppgoal ppstrm (asl,w) =
    let open Portable_PrettyPrint
-       val {add_string, add_break, 
+       val {add_string, add_break,
             begin_block, end_block, add_newline, ...} = with_ppstream ppstrm
-       val pr = Hol_pp.pp_term ppstrm
-       fun pr_index (i,tm) = 
+       val pr = Parse.pp_term ppstrm
+       fun pr_index (i,tm) =
             (begin_block CONSISTENT 0;
              add_string (Int.toString i^".  ");
              pr tm; end_block())
        fun pr_indexes [] = raise BWD_ERR{func="pr_indexes", mesg=""}
          | pr_indexes [x] = pr x
-         | pr_indexes L = pr_list pr_index (fn () => ()) add_newline 
+         | pr_indexes L = pr_list pr_index (fn () => ()) add_newline
                                   (enumerate (rev asl));
    in
      begin_block CONSISTENT 0;
-     pr w; 
+     pr w;
      add_newline ();
      (case asl
         of [] => ()
@@ -186,22 +186,22 @@ fun pp_gstk ppstrm  =
    let val pr_goal = pp_goal ppstrm
        val {add_string, add_break, begin_block, end_block, add_newline, ...} =
                      Portable_PrettyPrint.with_ppstream ppstrm
-       fun pr (GSTK{prop = POSED g, stack = []}) = 
+       fun pr (GSTK{prop = POSED g, stack = []}) =
               (begin_block Portable_PrettyPrint.CONSISTENT 0;
                add_string"Initial goal:";
                add_newline(); add_newline();
                pr_goal g;
                end_block())
-         | pr (GSTK{prop = POSED _, stack = {goals,...}::_}) = 
+         | pr (GSTK{prop = POSED _, stack = {goals,...}::_}) =
              (begin_block Portable_PrettyPrint.CONSISTENT 0;
-              Portable_PrettyPrint.pr_list 
+              Portable_PrettyPrint.pr_list
                    pr_goal (fn () => ()) add_newline (rev goals);
               end_block())
-         | pr (GSTK{prop = PROVED th, ...}) = 
+         | pr (GSTK{prop = PROVED th, ...}) =
              (begin_block Portable_PrettyPrint.CONSISTENT 0;
               add_string "Initial goal proved.";
               add_newline();
-              Thm.pp_thm ppstrm th;
+              Parse.pp_thm ppstrm th;
               end_block())
    in pr
    end;

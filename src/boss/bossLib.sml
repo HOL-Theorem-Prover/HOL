@@ -17,7 +17,7 @@ struct
 open HolKernel Parse basicHol90Lib;
 
   type term = Term.term
-  type fixity = Term.fixity
+  type fixity = Parse.fixity
   type thm = Thm.thm
   type tactic = Abbrev.tactic
   type simpset = simpLib.simpset
@@ -26,7 +26,7 @@ open HolKernel Parse basicHol90Lib;
 infix THEN THENL ORELSE |->;
 infixr -->;
 
-fun BOSS_ERR func mesg = 
+fun BOSS_ERR func mesg =
      HOL_ERR{origin_structure = "bossLib",
              origin_function = func,
              message = mesg};
@@ -62,7 +62,7 @@ fun FREEUP [] g = ALL_TAC g
   | FREEUP W (g as (_,w)) =
   let val (V,_) = strip_forall w
       val others = set_diff V W
-  in 
+  in
     (REPEAT GEN_TAC THEN MAP_EVERY ID_SPEC_TAC (rev others)) g
   end;
 
@@ -77,8 +77,8 @@ fun FREEUP [] g = ALL_TAC g
  * It can happen that the given term is not found anywhere in the goal. If   *
  * the term is boolean, we do a case-split on whether it is true or false.   *
  *---------------------------------------------------------------------------*)
-datatype category = Free of term  
-                  | Bound of term list * term 
+datatype category = Free of term
+                  | Bound of term list * term
                   | Alien of term
 
 fun cat_tyof (Free M)      = type_of M
@@ -86,28 +86,28 @@ fun cat_tyof (Free M)      = type_of M
   | cat_tyof (Alien M)     = type_of M
 
 fun name_eq s M = ((s = #Name(dest_var M)) handle HOL_ERR _ => false)
-fun tm_free_eq M N P = 
+fun tm_free_eq M N P =
    (aconv N P andalso free_in N M) orelse raise BOSS_ERR"" ""
 
-fun find_subterm tm (asl,w) = 
+fun find_subterm tm (asl,w) =
    if (is_var tm)
    then let val name = #Name(dest_var tm)
         in
-          Free (Lib.first(name_eq name) (free_varsl (w::asl))) 
-          handle HOL_ERR _ 
+          Free (Lib.first(name_eq name) (free_varsl (w::asl)))
+          handle HOL_ERR _
           => Bound(let val (V,_) = strip_forall w
-                       val v = Lib.first (name_eq name) V 
-                   in 
-                     ([v], v) 
+                       val v = Lib.first (name_eq name) V
+                   in
+                     ([v], v)
                    end)
         end
-   else Free (tryfind(fn x => find_term (can(tm_free_eq x tm)) x) (w::asl)) 
-        handle HOL_ERR _ 
+   else Free (tryfind(fn x => find_term (can(tm_free_eq x tm)) x) (w::asl))
+        handle HOL_ERR _
         => Bound(let val (V,body) = strip_forall w
                      val M = find_term (can (tm_free_eq body tm)) body
-                 in 
+                 in
                     (intersect (free_vars M) V, M)
-                 end) 
+                 end)
                  handle HOL_ERR _ => Alien tm;
 
 fun Cases_on qtm g =
@@ -116,20 +116,20 @@ fun Cases_on qtm g =
      val st = find_subterm tm g
      val {Tyop, ...} = Type.dest_type(cat_tyof st)
  in case TypeBase.read Tyop
-    of SOME facts => 
+    of SOME facts =>
         let val thm = TypeBase.nchotomy_of facts
         in case st
-           of Free M => 
-               if (is_var M) then VAR_INTRO_TAC (ISPEC M thm) g else 
+           of Free M =>
+               if (is_var M) then VAR_INTRO_TAC (ISPEC M thm) g else
                if (Tyop="bool") then ASM_CASES_TAC M g
                else TERM_INTRO_TAC (ISPEC M thm) g
             | Bound(V,M) => (FREEUP V THEN VAR_INTRO_TAC (ISPEC M thm)) g
             | Alien M    => if (Tyop="bool") then ASM_CASES_TAC M g
                             else TERM_INTRO_TAC (ISPEC M thm) g
         end
-     | NONE => raise BOSS_ERR "Cases_on" 
+     | NONE => raise BOSS_ERR "Cases_on"
                          ("No cases theorem found for type: "^Lib.quote Tyop)
- end 
+ end
  handle e as HOL_ERR _ => Exception.Raise e;
 
 
@@ -143,25 +143,25 @@ fun primInduct st ind_tac (g as (asl,c)) =
            val tm = mk_exists{Bvar=newvar, Body=mk_eq{lhs=newvar, rhs=M}}
            val th = EXISTS(tm,M) (REFL M)
         in
-          FREEUP V 
+          FREEUP V
             THEN MAP_EVERY UNDISCH_TAC tms
-            THEN CHOOSE_THEN MP_TAC th 
+            THEN CHOOSE_THEN MP_TAC th
             THEN MAP_EVERY ID_SPEC_TAC Mfrees
             THEN ID_SPEC_TAC newvar
             THEN ind_tac
         end
  in case st
-     of Free M => 
+     of Free M =>
          if is_var M
          then let val tms = filter (free_in M) asl
               in (MAP_EVERY UNDISCH_TAC tms THEN ID_SPEC_TAC M THEN ind_tac) g
               end
          else ind_non_var [] M g
-      | Bound(V,M) => 
+      | Bound(V,M) =>
          if is_var M then (FREEUP V THEN ID_SPEC_TAC M THEN ind_tac) g
          else ind_non_var V M g
-      | Alien M => 
-         if is_var M then raise BOSS_ERR "primInduct" "Alien variable" 
+      | Alien M =>
+         if is_var M then raise BOSS_ERR "primInduct" "Alien variable"
          else ind_non_var (free_vars M) M g
  end
  handle e as HOL_ERR _ => Exception.Raise e;
@@ -173,12 +173,12 @@ fun Induct_on qtm g =
      val st = find_subterm tm g
      val {Tyop, ...} = Type.dest_type(cat_tyof st)
  in case TypeBase.read Tyop
-     of SOME facts => 
+     of SOME facts =>
         let val thm = TypeBase.induction_of facts
             val ind_tac = INDUCT_THEN thm ASSUME_TAC
         in primInduct st ind_tac g
         end
-      | NONE => raise BOSS_ERR "Induct_on" 
+      | NONE => raise BOSS_ERR "Induct_on"
                     ("No induction theorem found for type: "^Lib.quote Tyop)
  end;
 
@@ -187,7 +187,7 @@ fun completeInduct_on qtm g =
                  (Globals.notify_on_tyvar_guess,false) Parse.Term qtm
      val st = find_subterm tm g
      val ind_tac = INDUCT_THEN arithmeticTheory.COMPLETE_INDUCTION ASSUME_TAC
- in 
+ in
      primInduct st ind_tac g
  end;
 
@@ -217,27 +217,27 @@ fun measureInduct_on q g =
      val ind_thm2 = CONV_RULE (DEPTH_CONV Let_conv.GEN_BETA_CONV)
                               (SPEC meas' ind_thm1)
      val ind_tac = INDUCT_THEN ind_thm2 ASSUME_TAC
- in 
+ in
      primInduct st ind_tac g
  end
 end;
 
 
 
-fun Cases (g as (_,w)) = 
-  let val {Bvar,...} = dest_forall w handle HOL_ERR _ 
+fun Cases (g as (_,w)) =
+  let val {Bvar,...} = dest_forall w handle HOL_ERR _
                        => raise BOSS_ERR "Cases" "not a forall"
       val {Name,...} = dest_var Bvar
-  in 
+  in
     Cases_on [QUOTE Name] g
   end;
 
 
 fun Induct (g as (_,w)) =
- let val {Bvar, ...} = Dsyntax.dest_forall w handle HOL_ERR _ 
+ let val {Bvar, ...} = Dsyntax.dest_forall w handle HOL_ERR _
                        => raise BOSS_ERR "Induct" "not a forall"
       val {Name,...} = dest_var Bvar
- in 
+ in
    Induct_on [QUOTE Name] g
  end;
 
@@ -248,12 +248,12 @@ fun Induct (g as (_,w)) =
 fun func_of_cond_eqn tm =
     #1(strip_comb(#lhs(dest_eq(#2 (strip_forall(#2(strip_imp tm)))))));
 
-val prod_tyl = 
+val prod_tyl =
   end_itlist(fn ty1 => fn ty2 => mk_type{Tyop="prod",Args=[ty1,ty2]});
 
 fun variants FV vlist = rev(fst
-  (rev_itlist (fn v => fn (V,W) => let val v' = variant W v 
-                                   in (v'::V, v'::W) 
+  (rev_itlist (fn v => fn (V,W) => let val v' = variant W v
+                                   in (v'::V, v'::W)
                                    end) vlist ([],FV)));
 
 fun drop [] x = x
@@ -275,17 +275,17 @@ fun pairf (f,argtys,range_ty,eqs0) =
                 {Name=if Lexis.ok_identifier fname
                       then "tupled_"^fname else "tupled",
                  Ty = unc_argty --> range_ty}
-     fun rebuild tm = 
+     fun rebuild tm =
       case (dest_term tm)
-      of COMB _ => 
+      of COMB _ =>
          let val (g,args) = strip_comb tm
              val args' = map rebuild args
-         in if (g=f) 
+         in if (g=f)
             then if (length args < length argtys)  (* partial application *)
                  then let val newvars = map (fn ty => mk_var{Name="a", Ty=ty})
                                             (drop args argtys)
                           val newvars' = variants (free_varsl args') newvars
-                      in list_mk_abs(newvars', 
+                      in list_mk_abs(newvars',
                           mk_comb{Rator=f',Rand=list_mk_pair(args' @newvars')})
                       end
                  else mk_comb{Rator=f', Rand=list_mk_pair args'}
@@ -293,11 +293,11 @@ fun pairf (f,argtys,range_ty,eqs0) =
          end
        | LAMB{Bvar,Body} => mk_abs{Bvar=Bvar, Body=rebuild Body}
        | _ => tm
-   in 
+   in
      rebuild eqs0
    end;
 
-fun function name eqs0 = 
+fun function name eqs0 =
  let val eqslist      = strip_conj eqs0
      val lhs1         = #lhs(dest_eq(hd eqslist))
      val (forig,args) = strip_comb lhs1
@@ -306,25 +306,25 @@ fun function name eqs0 =
      val range_ty     = type_of lhs1
      val curried      = not(length args = 1)
      val unc_eqs      = if not curried then eqs0
-                        else pairf(forig,argtys,range_ty,eqs0) 
+                        else pairf(forig,argtys,range_ty,eqs0)
      val unc_name     = if not curried then name else ("tupled_"^name)
      val R            = map (#rhs o dest_eq) eqslist
      val recursive    = exists (can (find_term (aconv forig))) R
      val facts        = TypeBase.theTypeBase()
      val {rules,R,full_pats_TCs,...} = Tfl.lazyR_def facts unc_name unc_eqs
-     val f = func_of_cond_eqn 
+     val f = func_of_cond_eqn
                 (concl(CONJUNCT1 rules handle HOL_ERR _ => rules))
-     val newvars' = variants [forig] 
+     val newvars' = variants [forig]
                      (map (fn ty => mk_var{Name="x", Ty=ty}) argtys)
      (* Pass back the definition and the new rules. If the original wasn't
         curried, do nothing -- just pass back a pair of unchanged rules. *)
-     fun def () = 
-        if curried then 
+     fun def () =
+        if curried then
            let val def = new_definition
                    (name,
-                    mk_eq{lhs=list_mk_comb (forig, newvars'), 
+                    mk_eq{lhs=list_mk_comb (forig, newvars'),
                           rhs=list_mk_comb(f, [list_mk_pair newvars'])})
-           in 
+           in
              (def,Rewrite.PURE_REWRITE_RULE[GSYM def] rules)
            end
         else (rules,rules)
@@ -332,24 +332,24 @@ in
   if recursive  (* then add induction scheme *)
   then let val induction = Tfl.mk_induction facts f R full_pats_TCs
        in if not curried
-          then CONJ (snd (def())) induction 
+          then CONJ (snd (def())) induction
          else let val (def,rules') = def()
                   val P = #Bvar(dest_forall(concl induction))
                   val Qty = itlist (curry Type.-->) argtys Type.bool
                   val Q = mk_primed_var{Name = "P", Ty = Qty}
                   val tm = mk_pabs{varstruct=list_mk_pair newvars',
                                    body=list_mk_comb(Q,newvars')}
-                  val ind1 = SPEC tm 
+                  val ind1 = SPEC tm
                       (Rewrite.PURE_REWRITE_RULE [GSYM def] induction)
                  val ind2 = CONV_RULE(DEPTH_CONV Let_conv.GEN_BETA_CONV) ind1
-              in 
+              in
                CONJ rules' (GEN Q ind2)
               end
        end
    else snd(def())
  end
 
-        
+
 (*---------------------------------------------------------------------------*
  * A preliminary attempt to have a single entrypoint for definitions. It     *
  * tries to make a basic definition or a prim. rec. definition. If those     *
@@ -360,15 +360,13 @@ in
 
 fun string_variant slist =
    let fun pass str = if (mem str slist) then pass (str^"'") else str
-   in pass 
+   in pass
    end;
 
 fun is_constructor tm = not (is_var tm orelse is_pair tm);
 
 local fun basic_defn (fname,tm) =
-        let fun D Prefix    = new_definition(fname,tm)
-              | D (Infix i) = new_infix_definition(fname,tm,i)
-              | D Binder    = new_binder_definition(fname,tm)
+        let fun D fix = new_gen_definition(fname, tm, fix)
         in D end
       fun dest_atom ac = dest_const ac handle _ => dest_var ac
 in
@@ -380,21 +378,21 @@ fun primDefine eqs0 fixity name =
    (if Lib.exists is_constructor args
     then case (TypeBase.read (#Tyop(Type.dest_type
                   (type_of(first is_constructor args)))))
-          of NONE => raise BOSS_ERR "define" 
+          of NONE => raise BOSS_ERR "define"
                       "unexpected lhs in proposed definition"
            | SOME facts => new_recursive_definition
                                 {name=name,def=eqs0,fixity=fixity,
                                  rec_axiom = TypeBase.axiom_of facts}
     else basic_defn (name,eqs0) fixity)
-    handle HOL_ERR _ 
+    handle HOL_ERR _
     =>  (* resort to TFL *)
-      let val thm = function name eqs0 
-                    handle e as HOL_ERR _ 
+      let val thm = function name eqs0
+                    handle e as HOL_ERR _
                     => (Lib.say"Definition failed.\n"; raise e)
           val thm' = case (hyp thm)
                of [WF_R] =>   (* non-recursive defn *)
                   (case (strip_comb WF_R)
-                    of (WF,[R]) => 
+                    of (WF,[R]) =>
                       let val Rty = type_of R
                           val theta = [Type.alpha |-> hd(#Args(dest_type Rty))]
                           val Empty_thm = INST_TYPE theta primWFTheory.WF_Empty
@@ -404,15 +402,15 @@ fun primDefine eqs0 fixity name =
                | [] => raise BOSS_ERR"primDefine" "Empty hyp. after use of TFL"
                | _  => Halts.halts Halts.prover thm
                         handle HOL_ERR _ => (Lib.mesg true (Lib.quote nm
-                         ^" defined: side-conditions remain in hypotheses"); 
+                         ^" defined: side-conditions remain in hypotheses");
                          thm)
           val _ = set_fixity nm fixity
-             (* val away = map fst (theorems()@definitions()@axioms()) 
+             (* val away = map fst (theorems()@definitions()@axioms())
              val save_name = string_variant away (name^"_thm") *)
           val save_name = name^"_thm"
-      in  
+      in
          save_thm(save_name,thm')
-      end 
+      end
  end
 end;
 
@@ -432,21 +430,21 @@ fun grab_first_ident s =
      val ident_ss =
        case Substring.getc ss0
         of NONE => raise BOSS_ERR "grab_first_ident" "can't find an ident"
-         | SOME(c,_) => 
-             if (symbolic c) 
+         | SOME(c,_) =>
+             if (symbolic c)
              then Substring.takel symbolic ss0
-             else if (alphabetic c) 
+             else if (alphabetic c)
                   then Substring.takel alphanumeric ss0
-                  else raise BOSS_ERR "grab_first_ident" 
+                  else raise BOSS_ERR "grab_first_ident"
                                       "can't find an ident.1"
- in 
+ in
    Substring.string ident_ss
  end;
 
-fun head tm = 
+fun head tm =
   let val a = fst(strip_comb(lhs
                  (snd(strip_forall(Lib.trye hd (strip_conj tm))))))
-  in 
+  in
     #Name(dest_var a handle HOL_ERR _ => dest_const a)
   end;
 
@@ -467,15 +465,15 @@ fun Define qtm =
                val _ = List.app Parse.hide [nm,dnm]
                val eqs0 = Parse.Term qtm
                val _ = List.app Parse.reveal [nm,dnm]
-           in 
+           in
              primDefine eqs0 Prefix (!Define_suffix nm)
            end
-       | def qtm = 
+       | def qtm =
            let val tm = Parse.Term qtm
            in
              primDefine tm Prefix (!Define_suffix (head tm))
            end
- in 
+ in
    Lib.try def qtm
  end
 
@@ -483,21 +481,21 @@ fun Define qtm =
 (*---------------------------------------------------------------------------
  * Naughty! I am overwriting the record for pairs, so that the TFL rewriter
  * will use "pair_case" as a case construct, rather than UNCURRY_DEF. This
- * (apparently) solves a deeply buried problem in TC extraction involving 
+ * (apparently) solves a deeply buried problem in TC extraction involving
  * paired beta-reduction. I don't recall the details, but there must be
- * some sort of critical pair. In the end, it was easier to invent a 
+ * some sort of critical pair. In the end, it was easier to invent a
  * new constant.
  *
  * Here we also finally fill in the "size" entries in theTypeBase for
  * some types that get built before numbers.
  *---------------------------------------------------------------------------*)
 
-local 
-  val prod_info = 
+local
+  val prod_info =
          TypeBase.gen_tyinfo
              {ax = pairTheory.pair_Axiom,
               case_def = pairTheory.pair_case_thm,
-              distinct = NONE, 
+              distinct = NONE,
               one_one = SOME pairTheory.CLOSED_PAIR_EQ}
   val prod_size_info =
        (Parse.Term`\f g. UNCURRY(\(x:'a) (y:'b). f x + g y)`,
@@ -506,19 +504,19 @@ local
 
   val bool_info = Option.valOf(TypeBase.read "bool")
   val bool_case_rw = prove(Term`!x y. bool_case x x y = (x:'a)`,
-    REPEAT GEN_TAC 
-      THEN BOOL_CASES_TAC (Term`y:bool`) 
+    REPEAT GEN_TAC
+      THEN BOOL_CASES_TAC (Term`y:bool`)
      THEN Rewrite.ASM_REWRITE_TAC[boolTheory.bool_case_DEF]);
   val bool_size_info = (Term`bool_case 0 0`, bool_case_rw)
   val bool_info' = TypeBase.put_size bool_size_info bool_info
 
   val option_info = Option.valOf(TypeBase.read "option")
   val option_size_info =
-       (Parse.Term`\f. option_case 0 (\x:'a. SUC (f x))`, 
+       (Parse.Term`\f. option_case 0 (\x:'a. SUC (f x))`,
         optionTheory.option_case_def)
   val option_info' = TypeBase.put_size option_size_info option_info
 
-in 
+in
    val _ = TypeBase.write bool_info'
    val _ = TypeBase.write prod_info'
    val _ = TypeBase.write option_info'
@@ -555,13 +553,13 @@ val list_ss  = simpLib.++(arith_ss, listSimps.list_ss)
  * When invoked, we know that th is an equality, at least one side of which  *
  * is a variable.                                                            *
  *---------------------------------------------------------------------------*)
-fun orient th = 
+fun orient th =
   let val c = concl th
       val {lhs,rhs} = dest_eq c
   in if (is_var lhs)
-     then if (is_var rhs) 
+     then if (is_var rhs)
           then if term_lt lhs rhs (* both vars, rewrite to textually smaller *)
-               then SYM th 
+               then SYM th
                else th
           else th
      else SYM th
@@ -569,13 +567,13 @@ fun orient th =
 
 fun VSUBST_TAC tm = UNDISCH_TAC tm THEN DISCH_THEN (SUBST_ALL_TAC o orient);
 
-fun var_eq tm = 
+fun var_eq tm =
    let val {lhs,rhs} = dest_eq tm
-   in 
+   in
        aconv lhs rhs
      orelse
        (is_var lhs andalso not (mem lhs (free_vars rhs)))
-     orelse 
+     orelse
        (is_var rhs andalso not (mem rhs (free_vars lhs)))
    end
    handle _ => false;
@@ -589,7 +587,7 @@ fun grab P f v =
 
 fun ASSUM_TAC f P = W (fn (asl,_) => grab P f NO_TAC asl)
 
-fun ASSUMS_TAC f P = W (fn (asl,_) => 
+fun ASSUMS_TAC f P = W (fn (asl,_) =>
   case filter P asl
     of []     => NO_TAC
      | assums => MAP_EVERY f assums);
@@ -604,22 +602,22 @@ fun constructed constr_set tm =
    let val maybe1 = #Name(dest_const(fst(strip_comb lhs)))
        val maybe2 = #Name(dest_const(fst(strip_comb rhs)))
    in Binaryset.member(constr_set,maybe1)
-         andalso 
+         andalso
       Binaryset.member(constr_set,maybe2)
    end
   end
   handle _ => false;
 
-fun LIFT_SIMP ss tm = 
-   UNDISCH_TAC tm THEN 
+fun LIFT_SIMP ss tm =
+   UNDISCH_TAC tm THEN
    DISCH_THEN (STRIP_ASSUME_TAC o simpLib.SIMP_RULE ss []);
 
 
 local
 fun DTHEN (ttac:Abbrev.thm_tactic) :tactic = fn (asl,w) =>
      if (is_neg w) then raise BOSS_ERR "DTHEN" "negation"
-     else let val {ant,conseq} = Dsyntax.dest_imp w 
-              val (gl,prf) = ttac (Thm.ASSUME ant) (asl,conseq) 
+     else let val {ant,conseq} = Dsyntax.dest_imp w
+              val (gl,prf) = ttac (Thm.ASSUME ant) (asl,conseq)
           in (gl, Thm.DISCH ant o prf)
           end
 in
@@ -633,10 +631,10 @@ fun add_constr tyinfo set =
    end;
 
 fun add_simpls tyinfo ss = ss && TypeBase.simpls_of tyinfo;
- 
+
 local val constr_set0 = Binaryset.empty String.compare
 in
-fun STP_TAC ss finisher = 
+fun STP_TAC ss finisher =
   let open TypeBase
       val tyl = listItems (theTypeBase())
       val constr_set = rev_itlist add_constr tyl constr_set0
@@ -650,7 +648,7 @@ fun STP_TAC ss finisher =
      THEN TRY (COND_CASES_TAC THEN REPEAT COND_CASES_TAC THEN ASM_SIMP)
      THEN REPEAT BOSS_STRIP_TAC
      THEN REPEAT (CHANGED_TAC
-            (ASSUM_TAC VSUBST_TAC var_eq 
+            (ASSUM_TAC VSUBST_TAC var_eq
                ORELSE ASSUMS_TAC (LIFT_SIMP ss') has_constr_eqn
                ORELSE CONCL_TAC ASM_SIMP has_constr_eqn))
      THEN TRY finisher
@@ -658,44 +656,44 @@ fun STP_TAC ss finisher =
 end;
 
 fun RW_TAC ss thl = STP_TAC (ss && thl) NO_TAC
-fun ZAP_TAC ss thl = 
-   STP_TAC ss (tautLib.TAUT_TAC ORELSE DECIDE_TAC 
+fun ZAP_TAC ss thl =
+   STP_TAC ss (tautLib.TAUT_TAC ORELSE DECIDE_TAC
                ORELSE mesonLib.GEN_MESON_TAC 0 12 1 thl);
 
 (*---------------------------------------------------------------------------*
  * A simple aid to reasoning by contradiction.                               *
  *---------------------------------------------------------------------------*)
 
-fun SPOSE_NOT_THEN ttac = 
+fun SPOSE_NOT_THEN ttac =
   CCONTR_TAC THEN POP_ASSUM (fn th => ttac (simpLib.SIMP_RULE bool_ss [] th));
 
 (*---------------------------------------------------------------------------
-     Assertional style reasoning 
+     Assertional style reasoning
  ---------------------------------------------------------------------------*)
 
 (* First we need a variant on THEN. *)
 fun mapshape [] _ _ =  []
-  | mapshape (n::nums) (f::funcs) all_args = 
+  | mapshape (n::nums) (f::funcs) all_args =
      let val (fargs,rst) = split_after n all_args
-     in 
+     in
       f fargs :: mapshape nums funcs rst
      end
   | mapshape _ _ _ = raise BOSS_ERR "mapshape" "irregular lists";
 
-fun THENF (tac1:tactic,tac2:tactic,tac3:tactic) g = 
+fun THENF (tac1:tactic,tac2:tactic,tac3:tactic) g =
  case (tac1 g)
   of (h::rst, p) =>
       let val (gl0,p0) = tac2 h
           val (gln,pn) = unzip (map tac3 rst)
-          val gll = gl0 @ flatten gln  
-      in 
+          val gll = gl0 @ flatten gln
+      in
         (gll, p o mapshape (length gl0::map length gln) (p0::pn))
       end
    | x => x;
 
 infix 8 by;
 
-fun (q by tac) = 
+fun (q by tac) =
   THENF (SUBGOAL_THEN (Term q) STRIP_ASSUME_TAC, tac, ALL_TAC)
   handle e as HOL_ERR _ => raise BOSS_ERR "by" "";
 

@@ -18,7 +18,7 @@ struct
 local open HolKernel Parse basicHol90Lib
       infix THEN
 in
-fun failwith function = 
+fun failwith function =
   raise HOL_ERR{origin_structure = "DecisionNormConvs",
                 origin_function = function, message = ""};
 
@@ -94,7 +94,7 @@ val X_AND_NOT_X_F_CONV =
 
 val NOT_EQT_INTRO_CONV =
    REWR_CONV
-      (AP_TERM (--`~`--) (SYM (el 2 (CONJUNCTS (SPEC_ALL EQ_CLAUSES)))));
+      (AP_TERM (--`$~`--) (SYM (el 2 (CONJUNCTS (SPEC_ALL EQ_CLAUSES)))));
 
 (*--------------------------------------------------------------------------*)
 (* NOT_NOT_INTRO_CONV : conv                                                *)
@@ -126,7 +126,7 @@ end;  (* local *)
 (* Lazy rules                                                               *)
 (*==========================================================================*)
 
-local  open Exception Psyntax DecisionConv DecisionSupport LazyThm 
+local  open Exception Psyntax DecisionConv DecisionSupport LazyThm
        val aconv = Term.aconv
        val dest_neg = Dsyntax.dest_neg
        val mk_neg = Dsyntax.mk_neg

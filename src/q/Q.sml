@@ -1,6 +1,6 @@
 (*---------------------------------------------------------------------------
  * A bunch of functions that fold quotation parsing in, sometimes to good
- * effect. 
+ * effect.
  *---------------------------------------------------------------------------*)
 structure Q :> Q =
 struct
@@ -9,7 +9,7 @@ open HolKernel basicHol90Lib;
 infix ORELSE THEN THENL |-> ## -->;
 
  type hol_type = Type.hol_type
- type fixity = Term.fixity
+ type fixity = Parse.fixity
  type term = Term.term
  type thm = Thm.thm
  type tactic = Abbrev.tactic
@@ -19,7 +19,7 @@ infix ORELSE THEN THENL |-> ## -->;
  type 'a quotation = 'a frag list
 
 
-fun Q_ERR func mesg = 
+fun Q_ERR func mesg =
     HOL_ERR{origin_structure = "Q",
             origin_function = func, message = mesg};
 
@@ -28,8 +28,8 @@ val pty = Parse.Type;
 val ptm_with_ty = Parse.typedTerm
 fun btm q = ptm_with_ty q bool;
 
-val mk_term_rsubst = 
-  map (fn {redex,residue} => 
+val mk_term_rsubst =
+  map (fn {redex,residue} =>
           let val residue' = ptm residue
               val redex' = ptm_with_ty redex (type_of residue')
           in redex' |-> residue'
@@ -40,14 +40,14 @@ val mk_type_rsubst = map (fn {redex,residue} => (pty redex |-> pty residue));
 
 (* The jrh abomination *)
 local fun bval w t = (type_of t = bool)
-             andalso (can (find_term is_var) t) 
+             andalso (can (find_term is_var) t)
              andalso (free_in t w)
 in
 val TAUT_CONV =
   C (curry prove)
     (REPEAT GEN_TAC THEN (REPEAT o CHANGED_TAC o W)
-      (C (curry op THEN) (Rewrite.REWRITE_TAC[]) 
-                    o BOOL_CASES_TAC o Lib.trye hd 
+      (C (curry op THEN) (Rewrite.REWRITE_TAC[])
+                    o BOOL_CASES_TAC o Lib.trye hd
                     o sort free_in
                     o Lib.W (find_terms o bval) o snd))
   o btm
@@ -56,9 +56,9 @@ end;
 fun store_thm(s,q,t) = Tactical.store_thm(s,btm q,t);
 fun prove q t = Tactical.prove(btm q,t);
 fun new_definition(s,q) = Const_def.new_definition(s,btm q);
-fun new_infix_definition(s,q,f) = Const_def.new_infix_definition(s,btm q,f);
-fun define q s f = Const_def.new_gen_definition
-                      {def = btm q, fixity = f, name = s};
+fun new_infixl_definition(s,q,f) = Parse.new_infixl_definition(s,btm q,f);
+fun new_infixr_definition(s,q,f) = Parse.new_infixr_definition(s,btm q,f);
+fun define q s f = Parse.new_gen_definition(s, btm q, f)
 
 val ABS = Thm.ABS o ptm;
 val BETA_CONV = Thm.BETA_CONV o ptm;
@@ -78,7 +78,7 @@ fun GEN [QUOTE s] th =
      end
   | GEN _ _ = raise Q_ERR "GEN" "unexpected quote format"
 
-fun SPEC q = 
+fun SPEC q =
     W(Thm.SPEC o ptm_with_ty q o (type_of o #Bvar o dest_forall o concl));
 
 val SPECL = rev_itlist SPEC;
@@ -91,7 +91,7 @@ fun same_const_name s tm = (s = #Name(dest_const tm)) handle _ => false;
 
 fun assocName s =
    let fun assq [] = NONE
-         | assq (v::rst) = 
+         | assq (v::rst) =
             if (s = #Name(dest_var v)) then SOME v else assq rst
    in assq
    end;
@@ -104,15 +104,15 @@ fun assocName s =
  * If there isn't one, look for a match.                                     *
  *---------------------------------------------------------------------------*)
 
-fun SPEC_TAC (q1,q2) (g as (_,w)) = 
+fun SPEC_TAC (q1,q2) (g as (_,w)) =
   let val N = ptm q1
       val N' = (case (dest_term N)
-           of VAR {Name,...} => 
+           of VAR {Name,...} =>
                 (case (assocName Name (free_vars w))
                  of NONE => raise Q_ERR"SPEC_TAC" "variable not found"
                   | SOME v => v)
            | CONST{Name,...} => find_term (same_const_name Name) w
-           | _ =>  find_term (aconv N) w 
+           | _ =>  find_term (aconv N) w
                       handle HOL_ERR _ => find_term (Lib.can (match_term N)) w)
   in
     Tactic.SPEC_TAC(N', ptm_with_ty q2 (type_of N')) g
@@ -127,21 +127,21 @@ fun ID_SPEC_TAC [QUOTE s] (g as (_,w)) =
            | (SOME (v,_)) => Tactic.SPEC_TAC(v,v) g
      end
   | ID_SPEC_TAC _ _ = raise Q_ERR "ID_SPEC_TAC" "unexpected quote format"
-   
+
 val EXISTS = Thm.EXISTS o (btm##btm);
 
-val EXISTS_TAC = fn q => 
+val EXISTS_TAC = fn q =>
   W(Tactic.EXISTS_TAC o ptm_with_ty q o (type_of o #Bvar o dest_exists o snd));
 
 fun ID_EX_TAC(g as (_,w)) = Tactic.EXISTS_TAC (#Bvar(Dsyntax.dest_exists w)) g;
 
 val X_CHOOSE_THEN = fn q => fn ttac =>
-      W(C X_CHOOSE_THEN ttac o ptm_with_ty q 
+      W(C X_CHOOSE_THEN ttac o ptm_with_ty q
                              o (type_of o #Bvar o dest_exists o concl));
 val X_CHOOSE_TAC = C X_CHOOSE_THEN Tactic.ASSUME_TAC;
 
 val DISCH = Thm.DISCH o btm;
-val PAT_UNDISCH_TAC = fn q => 
+val PAT_UNDISCH_TAC = fn q =>
      W(Tactic.UNDISCH_TAC o first (can (Term.match_term (ptm q))) o fst);
 fun UNDISCH_THEN q ttac = PAT_UNDISCH_TAC q THEN DISCH_THEN ttac;
 fun PAT_ASSUM q ttac = Tactical.PAT_ASSUM (ptm q) ttac;
@@ -155,36 +155,36 @@ val X_GEN_TAC = fn q =>
   W(Tactic.X_GEN_TAC o ptm_with_ty q o (type_of o #Bvar o dest_forall o snd))
 
 fun X_FUN_EQ_CONV q =
- W(Conv.X_FUN_EQ_CONV o ptm_with_ty q 
+ W(Conv.X_FUN_EQ_CONV o ptm_with_ty q
                       o (Lib.trye hd o #Args o dest_type o type_of o lhs));
 
 val list_mk_type = itlist (curry(op -->));
 
 fun skolem_ty tm =
  let val (V,tm') = Dsyntax.strip_forall tm
- in if V<>[] 
+ in if V<>[]
     then list_mk_type (map type_of V) (type_of(#Bvar(dest_exists tm')))
     else raise Q_ERR"XSKOLEM_CONV" "no universal prefix"
   end;
 
 fun X_SKOLEM_CONV q = W(Conv.X_SKOLEM_CONV o ptm_with_ty q o skolem_ty)
 
-fun AP_TERM (q as [QUOTE s]) th = 
+fun AP_TERM (q as [QUOTE s]) th =
      (let val {const,...} = Term.const_decl s
           val pat = Lib.trye hd (#Args(Type.dest_type(Term.type_of const)))
           val ty = Term.type_of (#lhs(Dsyntax.dest_eq (Thm.concl th)))
           val theta = Type.match_type pat ty
-      in 
+      in
         Thm.AP_TERM (Term.inst theta const) th
       end
       handle HOL_ERR _ => Thm.AP_TERM(ptm q) th)
   | AP_TERM _ _ = raise Q_ERR "AP_TERM" "unexpected quote format"
 
 
-fun AP_THM th = 
+fun AP_THM th =
    let val {lhs,rhs} = dest_eq(concl th)
        val ty = fst (dom_rng (type_of lhs))
-   in 
+   in
      Thm.AP_THM th o (Lib.C ptm_with_ty ty)
    end;
 
@@ -206,9 +206,9 @@ fun ABBREV_TAC q =
                      (Thm.REFL rhs))
   end;
 
-fun UNABBREV_TAC [QUOTE s] = 
+fun UNABBREV_TAC [QUOTE s] =
         FIRST_ASSUM(SUBST1_TAC o SYM o
-             assert(curry op = s o #Name o dest_var o rhs o concl)) 
+             assert(curry op = s o #Name o dest_var o rhs o concl))
          THEN BETA_TAC
   | UNABBREV_TAC _ = raise Q_ERR "UNABBREV_TAC" "unexpected quote format"
 

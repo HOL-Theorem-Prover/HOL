@@ -3,7 +3,6 @@ signature Psyntax =
     type term = Term.term;
     type thm = Thm.thm;
     type hol_type = Type.hol_type;
-    type fixity = Term.fixity;
 
     val INST : (term * term) list -> thm -> thm
     val INST_TYPE : (hol_type * hol_type) list -> thm -> thm
@@ -30,7 +29,7 @@ signature Psyntax =
     val dest_type : hol_type -> (string * hol_type list)
     val dest_var : term -> (string * hol_type)
     val inst : (hol_type * hol_type) list -> term -> term
-    val match_term : term -> term 
+    val match_term : term -> term
                      -> (term * term) list * (hol_type * hol_type) list
     val match_type : hol_type -> hol_type -> (hol_type * hol_type) list
     val mk_abs : (term * term) -> term
@@ -55,8 +54,8 @@ signature Psyntax =
     val new_binder : (string * hol_type) -> unit
     val new_constant : (string * hol_type) -> unit
     val new_infix : (string * hol_type * int) -> unit
-    val new_recursive_definition : fixity -> thm -> string -> term -> thm
-    val new_specification : string -> (string * string * int) list 
+    val new_recursive_definition : Parse.fixity -> thm -> string -> term -> thm
+    val new_specification : string -> (string * string * int) list
                             -> thm -> thm
     val new_type : int -> string -> unit
     val new_type_definition : (string * term * thm) -> thm

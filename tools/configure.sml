@@ -14,7 +14,7 @@
  ---------------------------------------------------------------------------*)
 
 val mosmldir = "/homes/kl216/lang/ml/mosml"
-val holdir   = "/local/scratch/mn200/Work/hol98"
+val holdir   = "/local/scratch/mn200/Work/taupo-hol98/hol98"
 val OS       = "unix";    (* Operating system; alternatives are: winNT      *)
 val CC       = "gcc";     (* C compiler (for building quote filter)         *)
 

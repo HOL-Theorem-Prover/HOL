@@ -21,7 +21,7 @@ sig
    type term = Term.term
    type hol_type = Type.hol_type
 
-   val INST_TY_TERM : (term,term)Lib.subst * (hol_type,hol_type)Lib.subst 
+   val INST_TY_TERM : (term,term)Lib.subst * (hol_type,hol_type)Lib.subst
                         -> thm -> thm
    val GSPEC      : thm -> thm
    val PART_MATCH : (term -> term) -> thm -> conv
@@ -30,10 +30,12 @@ sig
    val RAND_CONV  : conv -> conv
    val RATOR_CONV : conv -> conv
    val ABS_CONV   : conv -> conv
-   val FORK_CONV  : conv * conv -> conv 
+   val FORK_CONV  : conv * conv -> conv
    val BINOP_CONV : conv -> conv
    val QUANT_CONV : conv -> conv
    val BINDER_CONV : conv -> conv
+   val LHS_CONV   : conv -> conv
+   val RHS_CONV   : conv -> conv
    val NO_CONV    : conv
    val ALL_CONV   : conv
    val THENC      : conv * conv -> conv

@@ -80,8 +80,8 @@ val EXISTS_list_REP = prove
 
 (* Define the new type.							*)
 val list_TY_DEF = new_type_definition
-   {name = "list", 
-    pred = --`IS_list_REP:((num->'a) # num) -> bool`--, 
+   {name = "list",
+    pred = --`IS_list_REP:((num->'a) # num) -> bool`--,
     inhab_thm = EXISTS_list_REP};
 
 (* Define a representation function, REP_list, from the type 'a list to  *)
@@ -103,63 +103,70 @@ and R_A = CONJUNCT2 list_ISO_DEF;
 (* --------------------------------------------------------------------- *)
 
 val NIL_DEF = new_definition
- ("NIL_DEF", 
+ ("NIL_DEF",
           --`NIL = ABS_list ((\n:num. @e:'a. T),0)`--);
 
-val CONS_DEF = 
+val CONS_DEF =
 new_definition("CONS_DEF",
-    --`CONS (h:'a) (t:'a list) = 
+    --`CONS (h:'a) (t:'a list) =
         (ABS_list ((\m. ((m=0) => h | (FST(REP_list t)) (PRE m))),
 		   (SUC(SND(REP_list t)))))`--);
+
+val _ = add_listform {separator = ";", leftdelim = "[", rightdelim = "]",
+                      cons = "CONS", nilstr = "NIL"};
+(*
+val _ = add_rule ("CONS", term_grammar.Infix (HOLgrammars.RIGHT, 800),
+                  [term_grammar.TOK "::"])
+*)
 
 (* ---------------------------------------------------------------------*)
 (* Now, prove the axiomatization of lists.				*)
 (* ---------------------------------------------------------------------*)
 
-val lemma1 = 
+val lemma1 =
     TAC_PROOF(([],
     --`!x:'b. !f: 'b -> 'a -> 'a list -> 'b.
        ?fn1: (num -> 'a) # num -> 'b.
 	 (!g.   fn1(g,0)   = x) /\
-	 (!g n. fn1(g,n+1) = 
+	 (!g n. fn1(g,n+1) =
 	        f (fn1 ((\i.g(i+1)),n)) (g 0) (ABS_list((\i.g(i+1)),n)))`--),
-   REPEAT STRIP_TAC 
-   THEN EXISTS_TAC 
-   (--`\p:(num -> 'a)#num. 
-     (PRIM_REC (\g.(x:'b)) 
+   REPEAT STRIP_TAC
+   THEN EXISTS_TAC
+   (--`\p:(num -> 'a)#num.
+     (PRIM_REC (\g.(x:'b))
 	       (\b m g. f (b (\i.g(i+1))) (g 0) (ABS_list((\i.g(i+1)),m))))
      (SND p)
-     (FST p)`--) 
+     (FST p)`--)
    THEN
    CONV_TAC (DEPTH_CONV (BETA_CONV ORELSEC num_CONV)) THEN
    REWRITE_TAC [PRIM_REC_THM, ADD_CLAUSES] THEN
    CONV_TAC (DEPTH_CONV BETA_CONV) THEN
    REWRITE_TAC[]);
 
-val NIL_lemma = 
+val NIL_lemma =
     TAC_PROOF(([], --`REP_list NIL = ((\n:num.@x:'a.T), 0)`--),
               REWRITE_TAC [NIL_DEF, (SYM(SPEC_ALL R_A)), IS_list_REP] THEN
 	      MAP_EVERY EXISTS_TAC [--`\n:num.@x:'a.T`--, --`0`--] THEN
 	      REWRITE_TAC [NOT_LESS_0]);
 
-val REP_lemma = 
+val REP_lemma =
     TAC_PROOF(([], --`IS_list_REP (REP_list (l: 'a list))`--),
               REWRITE_TAC [R_ONTO] THEN
 	      EXISTS_TAC (--`l:'a list`--) THEN
 	      REFL_TAC);
 
-val CONS_lemma = TAC_PROOF(([], 
-   --`REP_list (CONS (h:'a) t) = 
+val CONS_lemma = TAC_PROOF(([],
+   --`REP_list (CONS (h:'a) t) =
      ((\m.((m=0)=>h|FST(REP_list t)(PRE m))),SUC(SND(REP_list t)))`--),
    REWRITE_TAC [CONS_DEF, (SYM(SPEC_ALL R_A)), IS_list_REP] THEN
    EXISTS_TAC (--`\n.((n=0) => (h:'a) | (FST(REP_list t)(PRE n)))`--) THEN
    EXISTS_TAC (--`SUC(SND(REP_list (t:('a)list)))`--) THEN
    REWRITE_TAC [PAIR_EQ] THEN
    CONV_TAC (REDEPTH_CONV (FUN_EQ_CONV ORELSEC BETA_CONV)) THEN
-   STRIP_TAC THEN 
+   STRIP_TAC THEN
    ASM_CASES_TAC (--`n < (SUC(SND(REP_list (t:('a)list))))`--) THEN
    ASM_REWRITE_TAC [] THEN
-   STRIP_ASSUME_TAC (REWRITE_RULE [IS_list_REP] 
+   STRIP_ASSUME_TAC (REWRITE_RULE [IS_list_REP]
                                   (SPEC (--`t:'a list`--)
                                         (GEN_ALL REP_lemma))) THEN
    POP_ASSUM SUBST_ALL_TAC THEN
@@ -173,11 +180,11 @@ val CONS_lemma = TAC_PROOF(([],
 val exists_lemma = TAC_PROOF(([],
  --`!x:'b. !(f :'b->'a->'a list->'b).
     ?fn1:'a list->'b.
-       (fn1 NIL = x) /\ 
+       (fn1 NIL = x) /\
        (!h t. fn1 (CONS h t) = f (fn1 t) h t)`--),
     REPEAT STRIP_TAC THEN
     STRIP_ASSUME_TAC (REWRITE_RULE [num_CONV (--`1`--), ADD_CLAUSES]
-		   (SPECL[--`x:'b`--, --`f:'b->'a->'a list->'b`--] 
+		   (SPECL[--`x:'b`--, --`f:'b->'a->'a list->'b`--]
                          lemma1)) THEN
     EXISTS_TAC (--`\(x:('a)list).(fn1 (REP_list x):'b)`--) THEN
     CONV_TAC (DEPTH_CONV BETA_CONV) THEN
@@ -185,33 +192,33 @@ val exists_lemma = TAC_PROOF(([],
     CONV_TAC (DEPTH_CONV BETA_CONV) THEN
     REWRITE_TAC [NOT_SUC, PRE, boolTheory.ETA_AX, A_R]);
 
-val A_11_lemma = 
+val A_11_lemma =
     REWRITE_RULE [SYM (ANTE_CONJ_CONV (--`(A /\ B) ==> C`--))]
     (DISCH_ALL(snd(EQ_IMP_RULE (UNDISCH_ALL (SPEC_ALL A_11)))));
 
-val R_A_lemma = 
+val R_A_lemma =
     TAC_PROOF(([],
-	     --`REP_list(ABS_list((\m.((m<n) => f(SUC m) | @(x:'a).T)),n)) = 
+	     --`REP_list(ABS_list((\m.((m<n) => f(SUC m) | @(x:'a).T)),n)) =
 	        ((\m.((m<n) => f(SUC m) | @(x:'a).T)),n)`--),
 	     REWRITE_TAC [SYM(SPEC_ALL R_A), IS_list_REP] THEN
 	     MAP_EVERY EXISTS_TAC [--`\n.f(SUC n):'a`--, --`(n:num)`--] THEN
 	     CONV_TAC (DEPTH_CONV BETA_CONV) THEN
 	     REFL_TAC);
 
-val cons_lemma = TAC_PROOF(([], 
-   --`ABS_list((\m.(m < SUC n) => f m | (@(x:'a).T)), (SUC n)) = 
+val cons_lemma = TAC_PROOF(([],
+   --`ABS_list((\m.(m < SUC n) => f m | (@(x:'a).T)), (SUC n)) =
       (CONS(f 0)(ABS_list ((\m.((m<n) => (f (SUC m)) | (@(x:'a).T))), n)))`--),
    REWRITE_TAC [CONS_DEF] THEN
    MATCH_MP_TAC (GEN_ALL A_11_lemma) THEN
    REPEAT STRIP_TAC THENL
    [REWRITE_TAC [R_ONTO] THEN
-   EXISTS_TAC 
+   EXISTS_TAC
    (--`CONS (f 0) (ABS_list((\m.((m<n) => (f (SUC m)) | (@x:'a.T))),n))`--)
    THEN
    REWRITE_TAC [CONS_lemma],
    REWRITE_TAC [IS_list_REP] THEN
    MAP_EVERY EXISTS_TAC [--`(f:num->'a)`--, --`SUC n`--] THEN REFL_TAC,
-   REWRITE_TAC [PAIR_EQ, R_A_lemma] THEN 
+   REWRITE_TAC [PAIR_EQ, R_A_lemma] THEN
    CONV_TAC FUN_EQ_CONV THEN CONV_TAC (DEPTH_CONV BETA_CONV) THEN
    STRIP_TAC THEN
    STRIP_ASSUME_TAC (SPEC (--`(n':num)`--) num_CASES) THEN
@@ -221,7 +228,7 @@ val cons_lemma = TAC_PROOF(([],
 
 
 val list_Axiom = store_thm("list_Axiom",
- --`!x:'b. 
+ --`!x:'b.
     !f:'b -> 'a -> 'a list -> 'b.
     ?!(fn1: 'a list -> 'b).
         (fn1 NIL = x) /\
@@ -234,8 +241,8 @@ val list_Axiom = store_thm("list_Axiom",
     CONV_TAC FUN_EQ_CONV THEN
     CONV_TAC (ONCE_DEPTH_CONV(REWR_CONV(SYM (SPEC_ALL A_R)))) THEN
     X_GEN_TAC (--`l :'a list`--) THEN
-    STRIP_ASSUME_TAC (REWRITE_RULE [IS_list_REP] 
-		          (SPEC (--`l :'a list`--) 
+    STRIP_ASSUME_TAC (REWRITE_RULE [IS_list_REP]
+		          (SPEC (--`l :'a list`--)
                                 (GEN_ALL REP_lemma))) THEN
     POP_ASSUM SUBST_ALL_TAC THEN
     SPEC_TAC (--`f':num->'a`--,--`f':num->'a`--) THEN
@@ -251,7 +258,7 @@ val NULL_DEF = new_recursive_definition
       {name = "NULL_DEF",
        fixity = Prefix,
        rec_axiom = list_Axiom,
-       def = --`(NULL (NIL:'a list) = T) /\ 
+       def = --`(NULL (NIL:'a list) = T) /\
                 (NULL (CONS (h:'a) t) = F)`--};
 
 val HD = new_recursive_definition
@@ -270,7 +277,7 @@ val SUM = new_recursive_definition
       {name = "SUM",
        fixity = Prefix,
        rec_axiom =  list_Axiom,
-       def = --`(SUM NIL = 0) /\ 
+       def = --`(SUM NIL = 0) /\
                 (!h t. SUM (CONS h t) = h + (SUM t))`--};
 
 val APPEND = new_recursive_definition
@@ -315,7 +322,7 @@ val list_case_def = new_recursive_definition
  * Added to support TFL -- kxs, Sept 1998                                    *
  *---------------------------------------------------------------------------*)
 val list_size_def = new_recursive_definition
-    {def = Term`(list_size f [] = 0) /\ 
+    {def = Term`(list_size f [] = 0) /\
                 (list_size f (CONS h t) = 1 + f h + list_size f t)`,
      fixity = Prefix, name = "list_size_def", rec_axiom = list_Axiom};
 
@@ -335,7 +342,7 @@ val list_size_def = new_recursive_definition
 
 val MAP2 =
   let val lemma = prove
-     (--`?fn. 
+     (--`?fn.
          (!f:'a -> 'b -> 'c. fn f [] [] = []) /\
          (!f h1 t1 h2 t2.
            fn f (CONS h1 t1) (CONS h2 t2) = CONS (f h1 h2) (fn f t1 t2))`--,
@@ -348,20 +355,20 @@ val MAP2 =
       THEN ASM_REWRITE_TAC [HD,TL]
       end)
   in
-  new_specification{name = "MAP2", sat_thm = lemma, 
+  new_specification{name = "MAP2", sat_thm = lemma,
                     consts = [{const_name="MAP2", fixity=Prefix}]}
   end
 
 val EL = new_recursive_definition
       {name = "EL",
-       fixity = Prefix, 
+       fixity = Prefix,
        rec_axiom = num_Axiom,
-       def = --`(!l. EL 0 l = (HD l:'a)) /\ 
+       def = --`(!l. EL 0 l = (HD l:'a)) /\
                 (!l:'a list. !n. EL (SUC n) l = EL n (TL l))`--};
 
 val EVERY_DEF = new_recursive_definition
       {name = "EVERY_DEF",
-       fixity = Prefix, 
+       fixity = Prefix,
        rec_axiom = list_Axiom,
        def = --`(!P:'a->bool. EVERY P NIL = T)  /\
                 (!P h t. EVERY P (CONS h t) = (P h /\ EVERY P t))`--};
@@ -426,19 +433,19 @@ val APPEND_NIL = store_thm("APPEND_NIL",
 
 
 val APPEND_ASSOC = store_thm ("APPEND_ASSOC",
- --`!(l1:'a list) l2 l3. 
+ --`!(l1:'a list) l2 l3.
      APPEND l1 (APPEND l2 l3) = (APPEND (APPEND l1 l2) l3)`--,
      LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [APPEND]);
 
 val LENGTH_APPEND = store_thm ("LENGTH_APPEND",
- --`!(l1:'a list) (l2:'a list). 
+ --`!(l1:'a list) (l2:'a list).
      LENGTH (APPEND l1 l2) = (LENGTH l1) + (LENGTH l2)`--,
      LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [LENGTH, APPEND, ADD_CLAUSES]);
 
 val MAP_APPEND = store_thm ("MAP_APPEND",
  --`!(f:'a->'b).!l1 l2. MAP f (APPEND l1 l2) = APPEND (MAP f l1) (MAP f l2)`--,
     STRIP_TAC THEN
-    LIST_INDUCT_TAC THEN 
+    LIST_INDUCT_TAC THEN
     ASM_REWRITE_TAC [MAP, APPEND]);
 
 val LENGTH_MAP = store_thm ("LENGTH_MAP",
@@ -473,22 +480,22 @@ val LENGTH_NIL = store_thm("LENGTH_NIL",
       REWRITE_TAC [LENGTH, NOT_SUC, NOT_CONS_NIL]);
 
 val LENGTH_CONS = store_thm("LENGTH_CONS",
- --`!l n. (LENGTH l = SUC n) = 
-          ?h:'a. ?l'. (LENGTH l' = n) /\ (l = CONS h l')`--, 
+ --`!l n. (LENGTH l = SUC n) =
+          ?h:'a. ?l'. (LENGTH l' = n) /\ (l = CONS h l')`--,
     LIST_INDUCT_TAC THENL
     [REWRITE_TAC
        [LENGTH, NOT_EQ_SYM(SPEC_ALL NOT_SUC), NOT_NIL_CONS],
      REWRITE_TAC [LENGTH, INV_SUC_EQ, CONS_11] THEN
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
-     [EXISTS_TAC (--`h:'a`--) THEN 
+     [EXISTS_TAC (--`h:'a`--) THEN
       EXISTS_TAC (--`l:'a list`--) THEN
       ASM_REWRITE_TAC [],
       ASM_REWRITE_TAC []]]);
 
 val LENGTH_EQ_CONS = store_thm("LENGTH_EQ_CONS",
  --`!P:'a list->bool.
-    !n:num. 
-      (!l. (LENGTH l = SUC n) ==> P l) =  
+    !n:num.
+      (!l. (LENGTH l = SUC n) ==> P l) =
       (!l. (LENGTH l = n) ==> (\l. !x:'a. P (CONS x l)) l)`--,
     CONV_TAC (ONCE_DEPTH_CONV BETA_CONV) THEN
     REPEAT GEN_TAC THEN EQ_TAC THENL
@@ -501,7 +508,7 @@ val LENGTH_EQ_CONS = store_thm("LENGTH_EQ_CONS",
       REPEAT STRIP_TAC THEN RES_THEN MATCH_ACCEPT_TAC]]);
 
 val LENGTH_EQ_NIL = store_thm("LENGTH_EQ_NIL",
- --`!P: 'a list->bool. 
+ --`!P: 'a list->bool.
     (!l. (LENGTH l = 0) ==> P l) = P []`--,
    REPEAT GEN_TAC THEN EQ_TAC THENL
    [REPEAT STRIP_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN
@@ -512,19 +519,19 @@ val LENGTH_EQ_NIL = store_thm("LENGTH_EQ_NIL",
 
 val CONS_ACYCLIC = store_thm("CONS_ACYCLIC",
 Term`!l x. ~(l = CONS x l) /\ ~(CONS x l = l)`,
- LIST_INDUCT_TAC 
+ LIST_INDUCT_TAC
  THEN ASM_REWRITE_TAC[CONS_11,NOT_NIL_CONS, NOT_CONS_NIL, LENGTH_NIL]);
 
 val APPEND_eq_NIL = store_thm("APPEND_eq_NIL",
-Term `(!l1 l2:'a list. ([] = APPEND l1 l2) = (l1=[]) /\ (l2=[])) /\ 
+Term `(!l1 l2:'a list. ([] = APPEND l1 l2) = (l1=[]) /\ (l2=[])) /\
       (!l1 l2:'a list. (APPEND l1 l2 = []) = (l1=[]) /\ (l2=[]))`,
-CONJ_TAC THEN 
+CONJ_TAC THEN
   INDUCT_THEN list_INDUCT STRIP_ASSUME_TAC
    THEN REWRITE_TAC [CONS_11,NOT_NIL_CONS, NOT_CONS_NIL,APPEND]
    THEN GEN_TAC THEN MATCH_ACCEPT_TAC EQ_SYM_EQ);
 
 
-val list_case_cong = 
+val list_case_cong =
   save_thm("list_case_cong", Prim_rec.case_cong_thm list_CASES list_case_def);
 
 val _ = adjoin_to_theory

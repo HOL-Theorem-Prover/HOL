@@ -13,9 +13,7 @@
 structure Ho_rewrite :> Ho_rewrite =
 struct
 
-open HolKernel Hol_pp Drule 
-     Tactic Tactical Conv liteLib 
-     Psyntax Ho_match Ho_net;
+open HolKernel Drule Tactic Tactical Conv liteLib Psyntax Ho_match Ho_net;
 
 type term = Term.term
 type thm = Thm.thm
@@ -42,8 +40,8 @@ fun WRAP_ERR p = STRUCT_WRAP "Ho_rewrite" p;
  *---------------------------------------------------------------------------*)
 fun mk_rewrites th =
   let val th = SPEC_ALL th
-      val t = concl th 
-  in 
+      val t = concl th
+  in
   if (is_eq t) then [th]
   else if (is_conj t)
        then (op @ o (mk_rewrites##mk_rewrites) o CONJ_PAIR) th
@@ -64,15 +62,15 @@ val empty_rewrites = RW{thms = [],  net = empty_net}
 fun REWRITES_CONV (RW{net,...}) tm = FIRST_CONV (lookup tm net) tm;
 
 fun REWR_CONV th =
-   let val instth = PART_MATCH lhs th handle e as (HOL_ERR _) 
+   let val instth = PART_MATCH lhs th handle e as (HOL_ERR _)
            => WRAP_ERR("REWR_CONV: bad theorem argument: "
-                       ^term_to_string (concl th),e)
-   in fn tm => 
+                       ^Parse.term_to_string (concl th),e)
+   in fn tm =>
        let val eqn = instth tm
 	   val l = lhs(concl eqn)
-       in if (l = tm) then eqn 
+       in if (l = tm) then eqn
 	  else TRANS (ALPHA tm l) eqn
-       end 
+       end
    handle HOL_ERR _ => failwith "REWR_CONV: lhs of theorem doesn't match term"
    end;
 
@@ -86,14 +84,14 @@ val implicit = ref empty_rewrites;
 fun implicit_rewrites() = #thms ((fn (RW x) => x) (!implicit));
 fun set_implicit_rewrites thl =
     implicit := add_rewrites empty_rewrites thl;
-fun add_implicit_rewrites thl = 
+fun add_implicit_rewrites thl =
     implicit := add_rewrites (!implicit) thl;
 
 (* =====================================================================*)
 (* Main rewriting conversion                         			*)
 (* =====================================================================*)
 
-fun GEN_REWRITE_CONV' rw_func rws thl = 
+fun GEN_REWRITE_CONV' rw_func rws thl =
    rw_func (REWRITES_CONV (add_rewrites rws thl));
 
 (* ---------------------------------------------------------------------*)
@@ -101,22 +99,22 @@ fun GEN_REWRITE_CONV' rw_func rws thl =
 (* ---------------------------------------------------------------------*)
 
 val PURE_REWRITE_CONV = GEN_REWRITE_CONV' TOP_DEPTH_CONV empty_rewrites
-and 
+and
 PURE_ONCE_REWRITE_CONV = GEN_REWRITE_CONV' ONCE_DEPTH_CONV empty_rewrites;
- 
-fun REWRITE_CONV thl = GEN_REWRITE_CONV' TOP_DEPTH_CONV 
+
+fun REWRITE_CONV thl = GEN_REWRITE_CONV' TOP_DEPTH_CONV
                                         (!implicit) thl
-and ONCE_REWRITE_CONV thl = GEN_REWRITE_CONV' ONCE_DEPTH_CONV 
+and ONCE_REWRITE_CONV thl = GEN_REWRITE_CONV' ONCE_DEPTH_CONV
                                         (!implicit) thl;
 
 (* Main rewriting rule *)
 fun GEN_REWRITE_RULE f rws = CONV_RULE o GEN_REWRITE_CONV' f rws;
 
 val PURE_REWRITE_RULE = GEN_REWRITE_RULE TOP_DEPTH_CONV empty_rewrites
-and 
+and
 PURE_ONCE_REWRITE_RULE = GEN_REWRITE_RULE ONCE_DEPTH_CONV empty_rewrites;
 
-fun REWRITE_RULE thl = GEN_REWRITE_RULE TOP_DEPTH_CONV 
+fun REWRITE_RULE thl = GEN_REWRITE_RULE TOP_DEPTH_CONV
                                         (!implicit) thl
 and ONCE_REWRITE_RULE thl = GEN_REWRITE_RULE ONCE_DEPTH_CONV
                                              (!implicit) thl;
@@ -125,14 +123,14 @@ and ONCE_REWRITE_RULE thl = GEN_REWRITE_RULE ONCE_DEPTH_CONV
 
 fun PURE_ASM_REWRITE_RULE thl th =
    PURE_REWRITE_RULE ((map ASSUME (hyp th)) @ thl) th
-and 
+and
 PURE_ONCE_ASM_REWRITE_RULE thl th =
    PURE_ONCE_REWRITE_RULE ((map ASSUME (hyp th)) @ thl) th
-and 
-ASM_REWRITE_RULE thl th = 
+and
+ASM_REWRITE_RULE thl th =
    REWRITE_RULE ((map ASSUME (hyp th)) @ thl) th
-and 
-ONCE_ASM_REWRITE_RULE thl th = 
+and
+ONCE_ASM_REWRITE_RULE thl th =
    ONCE_REWRITE_RULE ((map ASSUME (hyp th)) @ thl) th;
 
 
@@ -141,38 +139,38 @@ ONCE_ASM_REWRITE_RULE thl th =
 fun GEN_REWRITE_TAC f rws = CONV_TAC o GEN_REWRITE_CONV' f rws;
 
 val PURE_REWRITE_TAC = GEN_REWRITE_TAC TOP_DEPTH_CONV empty_rewrites
-and 
+and
 PURE_ONCE_REWRITE_TAC = GEN_REWRITE_TAC ONCE_DEPTH_CONV empty_rewrites;
 
 fun REWRITE_TAC thl = GEN_REWRITE_TAC TOP_DEPTH_CONV (!implicit)
                                       thl
-and ONCE_REWRITE_TAC thl = 
+and ONCE_REWRITE_TAC thl =
     GEN_REWRITE_TAC ONCE_DEPTH_CONV (!implicit) thl;
 
 
 (* Rewrite a goal with the help of its assumptions *)
 
-fun PURE_ASM_REWRITE_TAC thl  = 
+fun PURE_ASM_REWRITE_TAC thl  =
    ASSUM_LIST (fn asl => PURE_REWRITE_TAC (asl @ thl))
-and ASM_REWRITE_TAC thl       = 
+and ASM_REWRITE_TAC thl       =
    ASSUM_LIST (fn asl => REWRITE_TAC (asl @ thl))
-and PURE_ONCE_ASM_REWRITE_TAC thl  = 
+and PURE_ONCE_ASM_REWRITE_TAC thl  =
    ASSUM_LIST (fn asl => PURE_ONCE_REWRITE_TAC (asl @ thl))
-and ONCE_ASM_REWRITE_TAC thl  = 
+and ONCE_ASM_REWRITE_TAC thl  =
    ASSUM_LIST (fn asl => ONCE_REWRITE_TAC (asl @ thl));
 
 (* Rewriting using equations that satisfy a predicate  *)
 fun FILTER_PURE_ASM_REWRITE_RULE f thl th =
     PURE_REWRITE_RULE ((map ASSUME (filter f (hyp th))) @ thl) th
-and FILTER_ASM_REWRITE_RULE f thl th = 
+and FILTER_ASM_REWRITE_RULE f thl th =
     REWRITE_RULE ((map ASSUME (filter f (hyp th))) @ thl) th
 and FILTER_PURE_ONCE_ASM_REWRITE_RULE f thl th =
     PURE_ONCE_REWRITE_RULE ((map ASSUME (filter f (hyp th))) @ thl) th
-and FILTER_ONCE_ASM_REWRITE_RULE f thl th = 
+and FILTER_ONCE_ASM_REWRITE_RULE f thl th =
     ONCE_REWRITE_RULE ((map ASSUME (filter f (hyp th))) @ thl) th;;
 
 fun FILTER_PURE_ASM_REWRITE_TAC f thl =
-    ASSUM_LIST 
+    ASSUM_LIST
           (fn asl => PURE_REWRITE_TAC ((filter (f o concl) asl)@thl))
 and FILTER_ASM_REWRITE_TAC f thl =
     ASSUM_LIST
@@ -181,7 +179,7 @@ and FILTER_PURE_ONCE_ASM_REWRITE_TAC f thl =
     ASSUM_LIST
          (fn asl => PURE_ONCE_REWRITE_TAC ((filter (f o concl) asl) @ thl))
 and FILTER_ONCE_ASM_REWRITE_TAC f thl =
-    ASSUM_LIST 
+    ASSUM_LIST
           (fn asl => ONCE_REWRITE_TAC ((filter (f o concl) asl) @ thl));
 
 
@@ -215,30 +213,30 @@ fun SUBST_MATCH eqth th =
    handle FIND_MATCH_ERR => failwith "SUBST_MATCH"
 end;
 
-fun GEN_REWRITE_CONV rw_func thl = 
+fun GEN_REWRITE_CONV rw_func thl =
    rw_func (REWRITES_CONV (add_rewrites empty_rewrites thl));
 
-fun GEN_REWRITE_RULE rw_func thl = 
+fun GEN_REWRITE_RULE rw_func thl =
     CONV_RULE (GEN_REWRITE_CONV rw_func thl);
 
-fun GEN_REWRITE_TAC rw_func thl = 
+fun GEN_REWRITE_TAC rw_func thl =
     CONV_TAC (GEN_REWRITE_CONV rw_func thl);
 
 
 val TAUT =
    let fun RTAUT_TAC (asl,w) =
-      let fun ok t = 
-	  type_of t = Type.bool andalso can (find_term is_var) t andalso 
-	  free_in t w 
+      let fun ok t =
+	  type_of t = Type.bool andalso can (find_term is_var) t andalso
+	  free_in t w
       in (REPEAT(W((fn x => REWRITE_TAC[] THEN x) o BOOL_CASES_TAC o
 		 Lib.trye hd o sort free_in o (find_terms ok) o snd)) THEN
-	  REWRITE_TAC []) (asl,w) 
+	  REWRITE_TAC []) (asl,w)
       end
-      val TAUT_TAC = REPEAT(GEN_TAC ORELSE CONJ_TAC) THEN RTAUT_TAC 
+      val TAUT_TAC = REPEAT(GEN_TAC ORELSE CONJ_TAC) THEN RTAUT_TAC
   in fn tm => prove(tm,TAUT_TAC)
   end;
 
-fun TAUT_TAC (asms,gl) = 
+fun TAUT_TAC (asms,gl) =
     let val th = TAUT gl in ([],fn _ => th) end;
 
 val TAUT_CONV = EQT_INTRO o TAUT;

@@ -74,7 +74,7 @@ and INDUCTION   = numTheory.INDUCTION;
 fun INDUCT_TAC g = INDUCT_THEN INDUCTION ASSUME_TAC g;
 
 val LESS_DEF =
-  new_infix_definition
+  new_infixr_definition
   ("LESS_DEF",
       Term `$< m n = ?P. (!n. P(SUC n) ==> P n) /\ P m /\ ~(P n)`,
    450);

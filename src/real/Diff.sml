@@ -11,7 +11,7 @@ open HolKernel Parse
 
 val xreal    = Term`x:real`;
 val lreal   = Term`l:real`
-val diffl_tm = Term`diffl`;
+val diffl_tm = Term`$diffl`;
 val pow_tm   = Term`$pow`;
 
 (*---------------------------------------------------------------------------*)
@@ -52,10 +52,10 @@ fun DIFF_CONV tm =
             else
               let val th1 = ETA_CONV (mk_abs(xreal,mk_comb(tm2, xreal)))
                   val th2 = AP_TERM diffl_tm (SYM th1)
-                  val th3 = ONCE_REWRITE_RULE[th2] th 
+                  val th3 = ONCE_REWRITE_RULE[th2] th
               in
-                (fst(strip_comb tm2),th3) 
-              end 
+                (fst(strip_comb tm2),th3)
+              end
         end
       val [cths, bths] = map (map make_assoc) [comths, !basic_diffs]
       fun ICONJ th1 th2 =
@@ -73,7 +73,7 @@ fun DIFF_CONV tm =
                    val nargs = map (curry mk_abs v) args
                    val dargs = map diff nargs
                    val th2 = end_itlist ICONJ dargs
-                   val th3 = UNDISCH (SPEC xv th2) 
+                   val th3 = UNDISCH (SPEC xv th2)
                              handle HOL_ERR _ => SPEC xv th2
                    val th4 = MATCH_MP th1 th3
                    val th5 = DISCH_ALL th4 handle _ => th4
@@ -89,28 +89,28 @@ fun DIFF_CONV tm =
                    val th2 = GEN xv (SPEC (mk_comb(narg,xv)) th1)
                    val th3 = diff narg
                    val th4 = SPEC xv (ICONJ th2 th3)
-                   val th5 = MATCH_MP DIFF_CHAIN (UNDISCH th4 
+                   val th5 = MATCH_MP DIFF_CHAIN (UNDISCH th4
                              handle HOL_ERR _ => th4)
                    val th6 = CONV_RULE(REDEPTH_CONV BETA_CONV) (DISCH_ALL th5)
                in
-               GEN xv th6 
+               GEN xv th6
                end handle HOL_ERR _ =>
                     let val tm1 = mk_comb(diffl_tm, tm)
                         val var = variant (frees tm) lreal
                         val tm2 = mk_comb(tm1,var)
-                        val tm3 = mk_comb(tm2,xv) 
+                        val tm3 = mk_comb(tm2,xv)
                     in
-                      GEN xv (DISCH tm3 (ASSUME tm3)) 
-                    end) 
+                      GEN xv (DISCH tm3 (ASSUME tm3))
+                    end)
               end end
       val tha = diff tm
       val cjs = conjuncts(fst(dest_imp
                   (snd(strip_forall(concl tha))))) handle HOL_ERR _ => []
       val cj2 = filter is_diffl cjs
       val fvs = map (rand o rator) cj2
-      val thb = itlist GEN fvs tha 
+      val thb = itlist GEN fvs tha
   in
-   CONV_RULE (ONCE_DEPTH_CONV(C ALPHA tm)) thb 
+   CONV_RULE (ONCE_DEPTH_CONV(C ALPHA tm)) thb
 end;
 
 end;

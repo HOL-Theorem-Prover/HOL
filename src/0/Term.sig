@@ -69,25 +69,23 @@ sig
 
   val dest_term : term -> lambda
 
-  datatype fixity = Infix of int | Prefix | Binder
-
-  val fixity_to_string : fixity -> string
-  val const_decl : string -> {const:term, theory:string, place:fixity}
+  val const_decl : string -> {const:term, theory:string}
 
   (* Pretty printing *)
-  type gravity = Portable_PrettyPrint.gravity
+  (* type gravity = Portable_PrettyPrint.gravity
   type ppstream = Portable_PrettyPrint.ppstream
   type pparg = {boundvars:term list,depth:int,gravity:gravity}
                  -> term -> ppstream -> unit
   val pp_term : ppstream -> term -> unit
   val extend_pp_term : (pparg -> pparg) -> unit
-  val reset_pp_term : unit -> unit
-  val pp_raw_term : (term -> int) -> ppstream -> term -> unit
+  val reset_pp_term : unit -> unit *)
+  val pp_raw_term :
+    (term -> int) -> Portable_PrettyPrint.ppstream -> term -> unit
 
   (* Functor avoidance technique, via "one-time" references. *)
   val init : (string -> bool) ->
              ({Name:string, Ty:Type.hol_type} -> term) ->
-             (string -> {const:term, theory:string, place:fixity})
+             (string -> {const:term, theory:string})
              -> unit
 
   val pair_ops : (term -> {varstruct:term, body:term}) ->   (* dest_pabs *)

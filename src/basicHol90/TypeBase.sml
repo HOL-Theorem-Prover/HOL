@@ -14,22 +14,22 @@ infix THEN THENL ## |->;
  type ppstream = Portable_PrettyPrint.ppstream
 
 
-fun ERR f s = 
-  HOL_ERR{origin_structure = "TypeBase", 
+fun ERR f s =
+  HOL_ERR{origin_structure = "TypeBase",
           origin_function=f,message = s};
 
 
 datatype tyinfo =
-  FACTS of string * {axiom : thm, 
-                     case_const : term, 
-                     case_def : thm, 
+  FACTS of string * {axiom : thm,
+                     case_const : term,
+                     case_def : thm,
                      case_cong : thm,
                      constructors : term list,
                      induction : thm,
-                     nchotomy : thm, 
+                     nchotomy : thm,
                      size : (term * thm) option,
-                     distinct : thm option, 
-                     one_one : thm option, 
+                     distinct : thm option,
+                     one_one : thm option,
                      simpls : thm list};
 
 (*---------------------------------------------------------------------------
@@ -58,7 +58,7 @@ fun put_nchotomy th (FACTS(s,
   =
   FACTS(s, {axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def, constructors=constructors,
-            induction=induction, nchotomy=th, distinct=distinct, 
+            induction=induction, nchotomy=th, distinct=distinct,
             one_one=one_one, simpls=simpls, size=size})
 
 fun put_induction th (FACTS(s,
@@ -67,7 +67,7 @@ fun put_induction th (FACTS(s,
   =
   FACTS(s, {axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def, constructors=constructors,
-            induction=th, nchotomy=nchotomy, distinct=distinct, 
+            induction=th, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, simpls=simpls, size=size})
 
 fun put_simpls thl (FACTS(s,
@@ -76,7 +76,7 @@ fun put_simpls thl (FACTS(s,
   =
   FACTS(s, {axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
-            induction=induction, nchotomy=nchotomy, distinct=distinct, 
+            induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, simpls=thl, size=size});
 
 
@@ -86,7 +86,7 @@ fun put_size (size_tm,size_rw) (FACTS(s,
   =
   FACTS(s, {axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
-            induction=induction, nchotomy=nchotomy, distinct=distinct, 
+            induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, simpls=simpls, size=SOME(size_tm,size_rw)});
 
 
@@ -94,7 +94,7 @@ fun put_size (size_tm,size_rw) (FACTS(s,
  * Returns the datatype name and the constructors. The code is a copy of     *
  * the beginning of "Datatype.define_case".                                  *
  *---------------------------------------------------------------------------*)
-fun ax_info ax = 
+fun ax_info ax =
   let val exu = snd(strip_forall(concl ax))
       val {Rator,Rand} = dest_comb exu
       val {Name = "?!",...} = dest_const Rator
@@ -106,7 +106,7 @@ fun ax_info ax =
    (Tyop,  map (fst o strip_comb) clist)
   end;
 
-val defn_const = 
+val defn_const =
   #1 o strip_comb o lhs o #2 o strip_forall o hd o strip_conj o concl;
 
 
@@ -131,7 +131,7 @@ fun mk_tyinfo {ax,case_def,case_cong,induction,
       case_def     = case_def,
       case_cong    = case_cong,
       induction    = induction,
-      nchotomy     = nchotomy, 
+      nchotomy     = nchotomy,
       one_one      = one_one,
       distinct     = distinct,
       simpls       = case_def :: (D@map GSYM D@inj),
@@ -144,43 +144,43 @@ fun pp_tyinfo ppstrm (FACTS(ty_name,recd)) =
  let open Portable_PrettyPrint
      val {add_string,add_break,begin_block,end_block,...}
           = with_ppstream ppstrm
-     val pp_term = Term.pp_term ppstrm
-     val pp_thm = Thm.pp_thm ppstrm
-     val {constructors, case_const, case_def, case_cong, induction, 
+     val pp_term = Parse.pp_term ppstrm
+     val pp_thm = Parse.pp_thm ppstrm
+     val {constructors, case_const, case_def, case_cong, induction,
           nchotomy, one_one, distinct, simpls, size, axiom} = recd
- in 
+ in
    begin_block CONSISTENT 0;
-     begin_block INCONSISTENT 0; 
-        add_string "-----------------------"; add_newline ppstrm; 
-        add_string "-----------------------"; add_newline ppstrm; 
+     begin_block INCONSISTENT 0;
+        add_string "-----------------------"; add_newline ppstrm;
+        add_string "-----------------------"; add_newline ppstrm;
         add_string "HOL datatype:"; add_break(1,0);
         add_string (Lib.quote ty_name); end_block();
    add_break(1,0);
    begin_block CONSISTENT 1;
    add_string "Characterization:"; add_break (1,0); pp_thm axiom; end_block();
    add_break(1,0);
-   begin_block CONSISTENT 1; add_string "Case analysis:"; 
+   begin_block CONSISTENT 1; add_string "Case analysis:";
                              add_break (1,0); pp_thm case_def; end_block();
    add_break(1,0);
-   case size 
+   case size
     of NONE => ()
      | SOME (tm,size_def) =>
         (begin_block CONSISTENT 1;
-         add_string "Size:"; add_break (1,0); 
+         add_string "Size:"; add_break (1,0);
          if is_const tm then pp_thm size_def else pp_term tm; end_block();
          add_break(1,0));
 
    begin_block CONSISTENT 1;
    add_string "Induction:"; add_break (1,0); pp_thm induction; end_block();
    add_break(1,0);
-   begin_block CONSISTENT 1; add_string "Case completeness:"; 
+   begin_block CONSISTENT 1; add_string "Case completeness:";
    add_break (1,0); pp_thm nchotomy; end_block();
 
-   let fun do11 thm = 
-            (begin_block CONSISTENT 1; add_string "One-to-one:"; 
+   let fun do11 thm =
+            (begin_block CONSISTENT 1; add_string "One-to-one:";
              add_break (1,0); pp_thm thm; end_block());
        fun do_distinct thm =
-            (begin_block CONSISTENT 1; add_string "Distinctness:"; 
+            (begin_block CONSISTENT 1; add_string "Distinctness:";
              add_break (1,0); pp_thm thm; end_block())
    in
      case (one_one,distinct)
@@ -202,7 +202,7 @@ fun gen_tyinfo {ax, case_def, one_one, distinct} =
     mk_tyinfo {ax=ax,case_def=case_def,case_cong=case_cong,
                induction=induct_thm,nchotomy=nchotomy, size = NONE,
                one_one=one_one,distinct=distinct}
-               
+
   end;
 
 (*---------------------------------------------------------------------------*
@@ -210,8 +210,8 @@ fun gen_tyinfo {ax, case_def, one_one, distinct} =
  *---------------------------------------------------------------------------*)
 type typeBase = tyinfo Binaryset.set
 
-val empty = 
-   Binaryset.empty (fn (f1,f2) => 
+val empty =
+   Binaryset.empty (fn (f1,f2) =>
        String.compare (ty_name_of f1, ty_name_of f2));
 
 fun get db s = Binaryset.find (fn f => (s = ty_name_of f)) db;
@@ -223,7 +223,7 @@ val listItems = Binaryset.listItems;
  * Create the database.                                                      *
  *---------------------------------------------------------------------------*)
 
-local val dBase = ref empty	
+local val dBase = ref empty
 in
   fun theTypeBase() = !dBase;
 
@@ -248,11 +248,11 @@ SUBST_TAC[INST_TYPE[Type`:'a` |-> Type`:bool -> 'a`] EXISTS_UNIQUE_DEF]
                     EQF_INTRO(CONJUNCT2(BOOL_EQ_DISTINCT))]
      THEN SUBST_TAC(CONJUNCTS (SPECL [Term`e0:'a`, Term`e1:'a`] COND_CLAUSES))
      THEN CONJ_TAC THEN REFL_TAC,
-   CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN REPEAT STRIP_TAC 
+   CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN REPEAT STRIP_TAC
      THEN BOOL_CASES_TAC(Term`b:bool`)
      THEN REPEAT (POP_ASSUM SUBST1_TAC) THEN REFL_TAC]);
 
-val bool_case_def = 
+val bool_case_def =
   let val [x,y,_] = #1(strip_forall(concl boolTheory.bool_case_DEF))
       val thm  = SPEC y (SPEC x boolTheory.bool_case_DEF)
       val thmT = SPEC (Term`T`) thm
@@ -265,7 +265,7 @@ val bool_case_def =
    CONJ (gen thmT') (gen thmF')
   end;
 
-val bool_info = 
+val bool_info =
    gen_tyinfo
         {ax = boolAxiom,
          case_def = bool_case_def,

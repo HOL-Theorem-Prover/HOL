@@ -64,7 +64,7 @@ local val alpha = ==`:'a`==
                               {redex = alpha, residue = ty2}]
 in
 fun define_new_type_bijections{name,ABS,REP,tyax} =
-  if not(null (hyp tyax)) 
+  if not(null (hyp tyax))
   then raise TYPE_DEF_SUPPORT_ERR
                  "define_new_type_bijections"
                  "input theorem must have no assumptions"
@@ -72,11 +72,9 @@ fun define_new_type_bijections{name,ABS,REP,tyax} =
            val {Args=[a,r],...} = Type.dest_type (type_of rep)
            val eth = MP (SPEC P (INST_TYPE (ty_subst a r) ABS_REP_THM)) tyax
        in
-        Const_spec.new_specification 
-                {name=name, sat_thm=eth,
-                 consts = [{fixity=Prefix,const_name=REP},
-                           {fixity=Prefix,const_name=ABS}]}
-      end 
+        Const_spec.new_specification
+                {name=name, sat_thm=eth, consts = [REP, ABS]}
+      end
  handle HOL_ERR _ => raise TYPE_DEF_SUPPORT_ERR "define_new_type_bijections" ""
 end;
 
@@ -97,13 +95,13 @@ end;
 (*									*)
 (* ---------------------------------------------------------------------*)
 
-fun prove_rep_fn_one_one th = 
+fun prove_rep_fn_one_one th =
    let val thm = CONJUNCT1 th
        val {Body, ...} = dest_forall(concl thm)
        val {Rator = A, Rand} = dest_comb(lhs Body)
        val {Rator = R, ...} = dest_comb Rand
        val {Args = [aty,rty],...} = Type.dest_type (type_of R)
-       val a = mk_primed_var{Name = "a", Ty = aty} 
+       val a = mk_primed_var{Name = "a", Ty = aty}
        val a' = variant [a] a
        val a_eq_a' = mk_eq{lhs = a, rhs = a'}
        and Ra_eq_Ra' = mk_eq{lhs = mk_comb{Rator = R, Rand = a},
@@ -136,20 +134,20 @@ fun prove_rep_fn_one_one th =
 (*									*)
 (* --------------------------------------------------------------------- *)
 
-fun prove_rep_fn_onto th = 
+fun prove_rep_fn_onto th =
    let val [th1,th2] = CONJUNCTS th
        val {Bvar,Body} = dest_forall(concl th2)
        val {rhs = eq, ...} = dest_eq Body
-       val {Rator = RE, Rand = ar} = dest_comb(lhs eq) 
+       val {Rator = RE, Rand = ar} = dest_comb(lhs eq)
        val a = mk_primed_var {Name = "a", Ty = type_of ar}
        val sra = mk_eq{lhs = Bvar, rhs = mk_comb{Rator = RE, Rand = a}}
        val ex = mk_exists{Bvar = a, Body = sra}
        val imp1 = EXISTS (ex,ar) (SYM(ASSUME eq))
-       val v = genvar (type_of Bvar) 
-       and A = rator ar 
+       val v = genvar (type_of Bvar)
+       and A = rator ar
        and ass = AP_TERM RE (SPEC a th1)
        val th = SUBST[v |-> SYM(ASSUME sra)]
-                     (mk_eq{lhs = mk_comb{Rator = RE, 
+                     (mk_eq{lhs = mk_comb{Rator = RE,
                                           Rand = mk_comb{Rator = A, Rand = v}},
                             rhs = v})
                      ass
@@ -177,7 +175,7 @@ fun prove_rep_fn_onto th =
 (*									*)
 (* ---------------------------------------------------------------------*)
 
-fun prove_abs_fn_onto th = 
+fun prove_abs_fn_onto th =
    let val [th1,th2] = CONJUNCTS th
        val {Bvar = bv_th1,Body} = dest_forall(concl th1)
        val {Rator = A,Rand} = dest_comb(lhs Body)
@@ -197,7 +195,7 @@ fun prove_abs_fn_onto th =
    GEN bv_th1 (EXISTS(ex,rb) (CONJ thm2 thm1))
    end
    handle HOL_ERR _ => raise TYPE_DEF_SUPPORT_ERR "prove_abs_fn_onto" "";
-    
+
 
 (* ---------------------------------------------------------------------*)
 (* NAME: prove_abs_fn_one_one	 					*)
@@ -218,7 +216,7 @@ fun prove_abs_fn_onto th =
 (*									*)
 (* ---------------------------------------------------------------------*)
 
-fun prove_abs_fn_one_one th = 
+fun prove_abs_fn_one_one th =
    let val [th1,th2] = CONJUNCTS th
        val {Bvar = r, Body} = dest_forall(concl th2)
        val P = rator(lhs Body)
@@ -230,15 +228,15 @@ fun prove_abs_fn_one_one th =
        val Pr' = mk_comb{Rator = P, Rand = r'}
        val as1 = ASSUME Pr
        and as2 = ASSUME Pr'
-       val t1 = EQ_MP (SPEC r th2) as1 
+       val t1 = EQ_MP (SPEC r th2) as1
        and t2 = EQ_MP (SPEC r' th2) as2
        val eq = mk_eq{lhs = mk_comb{Rator = A, Rand = r},
                       rhs = mk_comb{Rator = A, Rand = r'}}
-       val v1 = genvar(type_of r) 
+       val v1 = genvar(type_of r)
        and v2 = genvar(type_of r)
-       val i1 = DISCH eq 
+       val i1 = DISCH eq
                   (SUBST [v1 |-> t1, v2 |-> t2] (mk_eq{lhs=v1, rhs=v2})
-                       (AP_TERM R (ASSUME eq))) 
+                       (AP_TERM R (ASSUME eq)))
        and i2    = DISCH r_eq_r' (AP_TERM A (ASSUME r_eq_r'))
        val thm   = IMP_ANTISYM_RULE i1 i2
        val disch = DISCH Pr (DISCH Pr' thm)

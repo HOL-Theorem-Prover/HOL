@@ -20,7 +20,7 @@ struct
 
 local
 
-open HolKernel Parse Hol_pp basicHol90Lib Psyntax BoyerMooreSupport;
+open HolKernel Parse basicHol90Lib Psyntax BoyerMooreSupport;
 infix ##;
 
 fun failwith_message function message =
@@ -265,7 +265,7 @@ fun inst_of tm patt =
    let val (tm_bind,ty_bind) = match_term patt tm
        val (insts,vars) = split tm_bind
        val f = (SPECL insts) o (GENL vars) o (INST_TYPE ty_bind)
-   in  fn th => apply_proof (f o hd) [patt] [th] 
+   in  fn th => apply_proof (f o hd) [patt] [th]
    end
    handle HOL_ERR _ => failwith "inst_of";
 
@@ -544,7 +544,7 @@ fun clausal_form_heuristic (tm,(i:bool)) =
        else let val th = BoyerMooreClausalForm.CLAUSAL_FORM_CONV tm
                 val tm' = rhs (concl th)
             in  if (is_T tm')
-                then ([],apply_proof (fn _ => EQT_ELIM th) []) 
+                then ([],apply_proof (fn _ => EQT_ELIM th) [])
                 else let val tms = conj_list tm'
                      in  (map (fn tm => (tm,i)) tms,
                           apply_proof ((EQ_MP (SYM th)) o LIST_CONJ) tms)

@@ -19,9 +19,22 @@ open HolKernel Globals;
 infix ## |->;
 infixr 3 -->;
 
-val _ = installPP Hol_pp.pp_self_parsing_term
-val _ = installPP Hol_pp.pp_self_parsing_type
-val _ = installPP Thm.pp_thm;
+val _ = load "Parse";
+open Parse
+
+local
+  fun capture_errors ppfn pps x =
+    ppfn pps x
+    handle (e as HOL_ERR _)  => (print "Pretty-printer error:\n";
+                                 print_HOL_ERR e)
+         | e => (print "Pretty-printer error:\n";
+                 print (exnMessage e);
+                 print "\n")
+in
+  val _ = installPP (capture_errors (pp_with_bquotes pp_term))
+  val _ = installPP (capture_errors (pp_with_bquotes pp_type))
+  val _ = installPP (capture_errors pp_thm)
+end
 
 val _ = quotation := true
 val _ = Help.displayLines := 40;
@@ -34,11 +47,11 @@ val _ = print "Loaded Hol Kernel.\n"
  * rewriting, etc. That's what the next few lines achieve.                   *
  *---------------------------------------------------------------------------*)
 
-val _ = app load ["Parse", "basicHol90Lib", "goalstackLib"];
-open Parse basicHol90Lib goalstackLib;
+val _ = app load ["basicHol90Lib", "goalstackLib"];
+open basicHol90Lib goalstackLib Parse;
 
 infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-	      
+
 val _ = installPP goalstackLib.pp_proofs
 val _ = installPP goalstackLib.pp_goalstack
 val _ = installPP Rewrite.pp_rewrites;
@@ -56,19 +69,19 @@ in
   val () = indexfiles := HELP"HOLdbase" :: !indexfiles ;
   val () = helpdirs := HELP"Docfiles" :: SIGOBJ   ::
                        SRC"arith/help/entries"    ::
-                       SRC"hol88/help/entries"    :: 
-                       SRC"list/help/entries"     :: 
-                       SRC"pair/help/entries"     :: 
-                       SRC"pred_set/help/entries" :: 
+                       SRC"hol88/help/entries"    ::
+                       SRC"list/help/entries"     ::
+                       SRC"pair/help/entries"     ::
+                       SRC"pred_set/help/entries" ::
                        SRC"reduce/help/entries"   ::
-                       SRC"res_quan/help/entries" :: 
-                       SRC"set/help/entries"      :: 
+                       SRC"res_quan/help/entries" ::
+                       SRC"set/help/entries"      ::
                        SRC"string/help/entries"   ::
-                       SRC"taut/help/entries"     :: 
-                       SRC"unwind/help/entries"   :: 
-                       SRC"utils/help"            :: 
+                       SRC"taut/help/entries"     ::
+                       SRC"unwind/help/entries"   ::
+                       SRC"utils/help"            ::
                        SRC"word/help/entries"     :: !helpdirs;
-  val () = Help.specialfiles := 
+  val () = Help.specialfiles :=
         {file = "README.Hol98", term = "hol", title = "Hol98 Overview"}
         :: !Help.specialfiles
 end
@@ -76,7 +89,7 @@ end
 (*---------------------------------------------------------------------------*
  * Print a banner.                                                           *
  *---------------------------------------------------------------------------*)
-val _ = 
+val _ =
 ( TextIO.output(TextIO.stdOut, "\n");
    TextIO.output(TextIO.stdOut,
 "        HHH                 LL\n \
@@ -91,6 +104,6 @@ val _ =
 \       HHH                    LL    LL\n \
 \       HHH                   LL      LL\n \
 \       HHH                  LL        LL98"
-^" [Athabasca "^Lib.int_to_string(Globals.version)^"]\n\n"));
+^" ["^Globals.release^" "^Lib.int_to_string(Globals.version)^"]\n\n"));
 
 val _ = quietdec := false;

@@ -83,11 +83,6 @@ sig
      : Term.term vector -> string * 'a frag list list * 'a frag list -> thm
 
 
-  (* Pretty printing *)
-  val pp_thm        : Portable_PrettyPrint.ppstream -> thm -> unit
-  val print_thm     : thm -> unit
-  val thm_to_string : thm -> string
-
   (* Information hiding *)
   val Theory_init : (string ref * Term.term -> thm) ref      (* mk_axiom_thm *)
                         -> (tag -> Term.term -> thm) ref      (* mk_defn_thm *)

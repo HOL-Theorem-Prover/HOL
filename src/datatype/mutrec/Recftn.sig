@@ -1,10 +1,10 @@
 signature Recftn =
-sig 
+sig
   type term = Term.term
-  type fixity = Term.fixity
+  type fixity = Parse.fixity
   type thm  = Thm.thm
 
-  val define_mutual_functions 
+  val define_mutual_functions
       : {name:string,
          def : term,
          fixities : fixity list option,

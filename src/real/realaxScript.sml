@@ -130,7 +130,7 @@ val HREAL_LT_LADD = prove_thm("HREAL_LT_LADD",
 (* will be flattened to right-associated form.                               *)
 (*---------------------------------------------------------------------------*)
 
-fun intro th = 
+fun intro th =
   if is_eq(concl th) then th else
   if is_neg(concl th) then EQF_INTRO th
   else EQT_INTRO th;
@@ -148,7 +148,7 @@ fun CANCEL_CONV(assoc,sym,lcancelthms) tm =
       val eqop = lhs_rator2 (Lib.trye hd lcthms)
       val binop = lhs_rator2 sym
       fun strip_binop tm =
-        if (rator(rator tm) = binop handle HOL_ERR _ => false) 
+        if (rator(rator tm) = binop handle HOL_ERR _ => false)
         then strip_binop (rand(rator tm)) @ strip_binop(rand tm)
         else [tm]
       val mk_binop = curry mk_comb o curry mk_comb binop
@@ -157,9 +157,9 @@ fun CANCEL_CONV(assoc,sym,lcancelthms) tm =
       val _ = assert (curry op = eqop) c
   in case alist
       of [l1,r1] =>
-          let val l = strip_binop l1 
+          let val l = strip_binop l1
               and r = strip_binop r1
-              val i = intersect l r 
+              val i = intersect l r
           in
             if (i = []) then raise ERR "unchanged"
             else let val itm = list_mk_binop i
@@ -171,10 +171,10 @@ fun CANCEL_CONV(assoc,sym,lcancelthms) tm =
                      val r2 = mk r'
                      val le = (EQT_ELIM o AC_CONV(assoc,sym) o mk_eq) (l1,l2)
                      val re = (EQT_ELIM o AC_CONV(assoc,sym) o mk_eq) (r1,r2)
-                     val eqv = MK_COMB(AP_TERM eqop le,re) 
+                     val eqv = MK_COMB(AP_TERM eqop le,re)
                  in
                    CONV_RULE(RAND_CONV
-                     (end_itlist (curry op ORELSEC) (map REWR_CONV lcthms))) 
+                     (end_itlist (curry op ORELSEC) (map REWR_CONV lcthms)))
                      eqv
                  end
           end
@@ -197,9 +197,9 @@ fun mk_rewrites th =
              else [Drule.EQT_INTRO th]
    end;
 
-val CANCEL_TAC = (C (curry op THEN) 
+val CANCEL_TAC = (C (curry op THEN)
  (PURE_REWRITE_TAC
-    (itlist (append o mk_rewrites) 
+    (itlist (append o mk_rewrites)
             [REFL_CLAUSE, EQ_CLAUSES, NOT_CLAUSES,
                AND_CLAUSES, OR_CLAUSES, IMP_CLAUSES,
                COND_CLAUSES, FORALL_SIMP, EXISTS_SIMP,
@@ -224,15 +224,15 @@ val treal_1 = new_definition("treal_1",
 val treal_neg = new_definition("treal_neg",
   (--`treal_neg (x:hreal,(y:hreal)) = (y,x)`--));
 
-val treal_add = new_infix_definition("treal_add",
+val treal_add = new_infixl_definition("treal_add",
   (--`$treal_add (x1,y1) (x2,y2) = (x1 hreal_add x2, y1 hreal_add y2)`--),500);
 
-val treal_mul = new_infix_definition("treal_mul",
-  (--`treal_mul (x1,y1) (x2,y2) = 
+val treal_mul = new_infixl_definition("treal_mul",
+  (--`treal_mul (x1,y1) (x2,y2) =
       ((x1 hreal_mul x2) hreal_add (y1 hreal_mul y2),
        (x1 hreal_mul y2) hreal_add (y1 hreal_mul x2))`--), 600);
 
-val treal_lt = new_infix_definition("treal_lt",
+val treal_lt = new_infixr_definition("treal_lt",
 --`treal_lt (x1,y1) (x2,y2) = (x1 hreal_add y2) hreal_lt (x2 hreal_add y1)`--,
    450);
 
@@ -246,7 +246,7 @@ val treal_inv = new_definition("treal_inv",
 (* Define the equivalence relation and prove it *is* one                     *)
 (*---------------------------------------------------------------------------*)
 
-val treal_eq = new_infix_definition("treal_eq",
+val treal_eq = new_infixr_definition("treal_eq",
   (--`treal_eq (x1,y1) (x2,y2) = x1 hreal_add y2 = x2 hreal_add y1`--), 450);
 
 val TREAL_EQ_REFL = prove_thm("TREAL_EQ_REFL",
@@ -261,15 +261,15 @@ val TREAL_EQ_SYM = prove_thm("TREAL_EQ_SYM",
 val TREAL_EQ_TRANS = prove_thm("TREAL_EQ_TRANS",
   (--`!x y z. x treal_eq y /\ y treal_eq z ==> x treal_eq z`--),
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_eq] THEN
-  DISCH_THEN(MP_TAC o MK_COMB o (AP_TERM (--`$hreal_add`--) ## I) o CONJ_PAIR) 
+  DISCH_THEN(MP_TAC o MK_COMB o (AP_TERM (--`$hreal_add`--) ## I) o CONJ_PAIR)
   THEN CANCEL_TAC THEN DISCH_THEN SUBST1_TAC THEN CANCEL_TAC);
 
 val TREAL_EQ_EQUIV = prove_thm("TREAL_EQ_EQUIV",
   (--`!p q. p treal_eq q = ($treal_eq p = $treal_eq q)`--),
   REPEAT GEN_TAC THEN CONV_TAC SYM_CONV THEN
-  CONV_TAC (ONCE_DEPTH_CONV (X_FUN_EQ_CONV (--`r:hreal#hreal`--))) THEN 
+  CONV_TAC (ONCE_DEPTH_CONV (X_FUN_EQ_CONV (--`r:hreal#hreal`--))) THEN
   EQ_TAC THENL
-     [DISCH_THEN(MP_TAC o SPEC (--`q:hreal#hreal`--)) THEN 
+     [DISCH_THEN(MP_TAC o SPEC (--`q:hreal#hreal`--)) THEN
       REWRITE_TAC[TREAL_EQ_REFL],
       DISCH_TAC THEN GEN_TAC THEN EQ_TAC THENL
        [RULE_ASSUM_TAC(ONCE_REWRITE_RULE[TREAL_EQ_SYM]), ALL_TAC] THEN
@@ -292,14 +292,14 @@ val TREAL_10 = prove_thm("TREAL_10",
 val TREAL_ADD_SYM = prove_thm("TREAL_ADD_SYM",
   (--`!x y. x treal_add y = y treal_add x`--),
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_add] THEN
-  GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV)  
+  GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV)
                   [HREAL_ADD_SYM] THEN
   REFL_TAC);
 
 val TREAL_MUL_SYM = prove_thm("TREAL_MUL_SYM",
   (--`!x y. x treal_mul y = y treal_mul x`--),
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_mul] THEN
-  GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV)  
+  GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV)
                   [HREAL_MUL_SYM] THEN
   REWRITE_TAC[PAIR_EQ] THEN MATCH_ACCEPT_TAC HREAL_ADD_SYM);
 
@@ -411,7 +411,7 @@ val TREAL_BIJ = prove_thm("TREAL_BIJ",
       DISCH_THEN(CONV_TAC o RAND_CONV o REWR_CONV o SYM o SELECT_RULE o
       EXISTS((--`?d. d hreal_add (SND r) = FST r`--), (--`(FST r) hreal_sub (SND r)`--)))
       THEN AP_THM_TAC THEN AP_TERM_TAC THEN
-      GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV)  
+      GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV)
                       [HREAL_ADD_SYM] THEN
       CONV_TAC(RAND_CONV(ONCE_DEPTH_CONV SYM_CONV)) THEN REFL_TAC,
       DISCH_THEN(SUBST1_TAC o SYM) THEN CANCEL_TAC]]);
@@ -542,16 +542,16 @@ val [REAL_10, REAL_ADD_SYM, REAL_MUL_SYM, REAL_ADD_ASSOC,
      REAL_MUL_ASSOC, REAL_LDISTRIB, REAL_ADD_LID, REAL_MUL_LID,
      REAL_ADD_LINV, REAL_MUL_LINV, REAL_LT_TOTAL, REAL_LT_REFL,
      REAL_LT_TRANS, REAL_LT_IADD, REAL_LT_MUL, REAL_BIJ, REAL_ISO,REAL_INV_0] =
-  EquivType.define_equivalence_type 
+  EquivType.define_equivalence_type
    {name = "real",
     equiv = TREAL_EQ_EQUIV,
     defs = [{def_name = "real_0", fname = "real_0", func = --`treal_0`--, fixity = Prefix},
             {def_name = "real_1", fname = "real_1", func = --`treal_1`--, fixity = Prefix},
             {def_name = "real_neg", fname = "real_neg", func = --`treal_neg`--,  fixity = Prefix},
             {def_name = "real_inv", fname = "real_inv", func = --`treal_inv`--,  fixity = Prefix},
-            {def_name = "|+|", fname = "|+|", func = --`$treal_add`--, fixity = Infix 500},
-            {def_name = "|*|", fname = "|*|", func = --`$treal_mul`--, fixity = Infix 600},
-            {def_name = "|<|", fname = "|<|",  func = --`$treal_lt`--,  fixity = Infix 450},
+            {def_name = "|+|", fname = "|+|", func = --`$treal_add`--, fixity = Infixl 500},
+            {def_name = "|*|", fname = "|*|", func = --`$treal_mul`--, fixity = Infixl 600},
+            {def_name = "|<|", fname = "|<|",  func = --`$treal_lt`--,  fixity = Infixr 450},
             {def_name = "real_of_hreal", fname="real_of_hreal",func= --`$treal_of_hreal`--,fixity=Prefix},
             {def_name = "hreal_of_real", fname="hreal_of_real",func= --`$hreal_of_treal`--,fixity=Prefix}],
     welldefs = [TREAL_NEG_WELLDEF, TREAL_INV_WELLDEF, TREAL_LT_WELLDEF,
@@ -560,9 +560,9 @@ val [REAL_10, REAL_ADD_SYM, REAL_MUL_SYM, REAL_ADD_ASSOC,
                 @ (map (GEN_ALL o MATCH_MP TREAL_EQ_AP o SPEC_ALL)
                        [TREAL_ADD_SYM, TREAL_MUL_SYM, TREAL_ADD_ASSOC,
                         TREAL_MUL_ASSOC, TREAL_LDISTRIB])
-                @ [TREAL_ADD_LID, TREAL_MUL_LID, TREAL_ADD_LINV, 
+                @ [TREAL_ADD_LID, TREAL_MUL_LID, TREAL_ADD_LINV,
                    TREAL_MUL_LINV, TREAL_LT_TOTAL, TREAL_LT_REFL,
-                   TREAL_LT_TRANS, TREAL_LT_ADD, TREAL_LT_MUL, TREAL_BIJ, 
+                   TREAL_LT_TRANS, TREAL_LT_ADD, TREAL_LT_MUL, TREAL_BIJ,
                    TREAL_ISO,TREAL_INV_0])};
 
 (*---------------------------------------------------------------------------*)
@@ -600,8 +600,8 @@ val SUP_ALLPOS_LEMMA2 = prove_thm("SUP_ALLPOS_LEMMA2",
   REPEAT GEN_TAC THEN BETA_TAC THEN REFL_TAC);
 
 val SUP_ALLPOS_LEMMA3 = prove_thm("SUP_ALLPOS_LEMMA3",
-  (--`!P. (!x. P x ==> real_0 |<| x) /\ 
-          (?x. P x) /\ 
+  (--`!P. (!x. P x ==> real_0 |<| x) /\
+          (?x. P x) /\
           (?z. !x. P x ==> x |<| z)
            ==> (?X. (\h. P(real_of_hreal h)) X) /\
                (?Y. !X. (\h. P(real_of_hreal h)) X ==> X hreal_lt Y)`--),
@@ -640,7 +640,7 @@ val REAL_SUP_ALLPOS = prove_thm("REAL_SUP_ALLPOS",
   ASM_CASES_TAC (--`real_0 |<| y`--) THENL
    [FIRST_ASSUM(SUBST1_TAC o SYM o REWRITE_RULE[REAL_BIJ]) THEN
     REWRITE_TAC[GSYM REAL_ISO_EQ] THEN
-    GEN_REWR_TAC (RATOR_CONV o ONCE_DEPTH_CONV)  
+    GEN_REWR_TAC (RATOR_CONV o ONCE_DEPTH_CONV)
                     [SUP_ALLPOS_LEMMA2] THEN
     FIRST_ASSUM(ASSUME_TAC o MATCH_MP HREAL_SUP o MATCH_MP SUP_ALLPOS_LEMMA3)
     THEN ASM_REWRITE_TAC[],

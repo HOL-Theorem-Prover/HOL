@@ -1,14 +1,15 @@
 signature bossLib =
 sig
 
+local
   type thm = Thm.thm
   type term = Term.term
   type hol_type = Type.hol_type
-  type fixity = Term.fixity
+  type fixity = Parse.fixity
   type tactic = Abbrev.tactic
   type simpset = simpLib.simpset
   type 'a quotation = 'a Portable_General.frag list
-
+in
 
   (* Define a datatype *)
   val Hol_datatype : hol_type quotation -> unit
@@ -41,8 +42,8 @@ sig
   (* Simplification *)
   val empty_ss : simpset
   val bool_ss  : simpset
-  val arith_ss : simpset 
-  val list_ss  : simpset 
+  val arith_ss : simpset
+  val list_ss  : simpset
   val &&       : simpset * thm list -> simpset  (* infix && *)
   val RW_TAC   : simpset -> thm list -> tactic
 
@@ -55,4 +56,6 @@ sig
 
   (* Support for assertional-style proofs *)
   val by : term quotation * tactic -> tactic
+end
+
 end;

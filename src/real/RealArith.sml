@@ -45,7 +45,7 @@ open Psyntax
      prim_recTheory
      arithmeticTheory
      listTheory
-     pred_setTheory
+(*     pred_setTheory *)
      realTheory
      Num_conv
      Num_induct
@@ -77,7 +77,7 @@ local
   in
     fun trace_list_pure f l = (trace_pure "["; tl f l; trace_pure "]")
   end
-  fun trace_term_pure t = trace_pure (Hol_pp.term_to_string t)
+  fun trace_term_pure t = trace_pure (term_to_string t)
   fun trace_thm_pure t = trace_term_pure (concl t)
 in
   fun trace s = trace_pure (s ^ "\n")

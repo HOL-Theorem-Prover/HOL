@@ -16,7 +16,7 @@ sig
   val mk_cons :{hd:Term.term, tl:Term.term} -> Term.term
   val mk_list :{els:Term.term list, ty :Type.hol_type} -> Term.term
   val mk_pabs :{varstruct:Term.term, body:Term.term} -> Term.term
-  
+
   (* Destruction routines *)
   val dest_eq:Term.term -> {lhs:Term.term, rhs:Term.term}
   val lhs:Term.term -> Term.term
@@ -34,13 +34,13 @@ sig
   val dest_cons:Term.term -> {hd:Term.term, tl:Term.term}
   val dest_list:Term.term -> {els:Term.term list, ty :Type.hol_type}
   val dest_pabs:Term.term -> {varstruct:Term.term, body:Term.term}
-  
+
   (* Query routines *)
   val is_eq:Term.term -> bool
   val is_imp:Term.term -> bool
-  val is_select:Term.term -> bool 
-  val is_forall:Term.term -> bool 
-  val is_exists:Term.term -> bool 
+  val is_select:Term.term -> bool
+  val is_forall:Term.term -> bool
+  val is_exists:Term.term -> bool
   val is_neg :Term.term -> bool
   val is_conj:Term.term -> bool
   val is_disj:Term.term -> bool
@@ -50,7 +50,7 @@ sig
   val is_cons:Term.term -> bool
   val is_list:Term.term -> bool
   val is_pabs:Term.term -> bool
-  
+
   (* Construction of a term from a list of terms *)
   val list_mk_abs:(Term.term list * Term.term) -> Term.term
   val list_mk_imp:(Term.term list * Term.term) -> Term.term
@@ -60,7 +60,7 @@ sig
   val list_mk_conj:Term.term list -> Term.term
   val list_mk_disj:Term.term list -> Term.term
   val list_mk_pair:Term.term list -> Term.term
-  
+
   (* Destructing a term to a list of terms *)
   val strip_comb:Term.term -> (Term.term * Term.term list)
   val strip_abs:Term.term -> (Term.term list * Term.term)
@@ -70,15 +70,12 @@ sig
   val strip_conj:Term.term -> Term.term list
   val strip_disj:Term.term -> Term.term list
   val strip_pair:Term.term -> Term.term list
-  
-  
+
+
   (* Miscellaneous *)
   val disch:Term.term * Term.term list -> Term.term list
   val find_term:(Term.term -> bool) -> Term.term -> Term.term
   val find_terms:(Term.term -> bool) -> Term.term -> Term.term list
-  val subst_occs:int list list -> (Term.term,Term.term) Lib.subst 
+  val subst_occs:int list list -> (Term.term,Term.term) Lib.subst
                      -> Term.term -> Term.term
-  val binder_restrictions :unit -> (string * string) list
-  val associate_restriction :(string*string) -> unit
-  val delete_restriction :string -> unit
 end;

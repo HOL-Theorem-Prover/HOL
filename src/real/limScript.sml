@@ -55,7 +55,7 @@ val _ = new_theory "lim";
 (* Specialize nets theorems to the pointwise limit of real->real functions   *)
 (*---------------------------------------------------------------------------*)
 
-val tends_real_real = new_infix_definition("tends_real_real",
+val tends_real_real = new_infixr_definition("tends_real_real",
   (--`($-> f l)(x0) =
         (f tends l)(mtop(mr1),tendsto(mr1,x0))`--), 750);
 
@@ -193,14 +193,14 @@ val LIM_TRANSFORM = prove_thm("LIM_TRANSFORM",
 (* Define differentiation and continuity                                     *)
 (*---------------------------------------------------------------------------*)
 
-val diffl = new_infix_definition("diffl",
+val diffl = new_infixr_definition("diffl",
 --`($diffl f l)(x) = ((\h. (f(x |+| h) |-| f(x)) / h) -> l)(&0)`--,
   750);
 
-val contl = new_infix_definition("contl",
+val contl = new_infixr_definition("contl",
   (--`$contl f x = ((\h. f(x |+| h)) -> f(x))(&0)`--), 750);
 
-val differentiable = new_infix_definition("differentiable",
+val differentiable = new_infixr_definition("differentiable",
   (--`$differentiable f x = ?l. (f diffl l)(x)`--), 750);
 
 (*---------------------------------------------------------------------------*)
@@ -261,7 +261,8 @@ val DIFF_CARAT = prove_thm("DIFF_CARAT",
   (--`!f l x. (f diffl l)(x) =
       ?g. (!z. f(z) |-| f(x) = g(z) |*| (z |-| x)) /\ g contl x /\ (g(x) = l)`--),
   REPEAT GEN_TAC THEN EQ_TAC THEN DISCH_TAC THENL
-   [EXISTS_TAC (--`\z. (z = x) => l | (f(z) |-| f(x)) / (z |-| x)`--) THEN
+   [EXISTS_TAC (--`\z. if (z = x) then l
+                       else (f(z) |-| f(x)) / (z |-| x)`--) THEN
     BETA_TAC THEN REWRITE_TAC[] THEN CONJ_TAC THENL
      [X_GEN_TAC (--`z:real`--) THEN COND_CASES_TAC THEN
       ASM_REWRITE_TAC[REAL_SUB_REFL, REAL_MUL_RZERO] THEN
@@ -531,7 +532,8 @@ val DIFF_CHAIN = prove_thm("DIFF_CHAIN",
   REWRITE_TAC[DIFF_CARAT] THEN
   DISCH_THEN(X_CHOOSE_THEN (--`g':real->real`--) STRIP_ASSUME_TAC) THEN
   DISCH_THEN(X_CHOOSE_THEN (--`f':real->real`--) STRIP_ASSUME_TAC) THEN
-  EXISTS_TAC (--`\z. (z = x) => l |*| m | (f(g(z):real) |-| f(g(x))) / (z |-| x)`--) THEN
+  EXISTS_TAC (--`\z. if (z = x) then l |*| m
+                     else (f(g(z):real) |-| f(g(x))) / (z |-| x)`--) THEN
   BETA_TAC THEN ASM_REWRITE_TAC[] THEN CONJ_TAC THENL
    [GEN_TAC THEN COND_CASES_TAC THEN
     ASM_REWRITE_TAC[REAL_SUB_REFL, REAL_MUL_RZERO] THEN
@@ -1202,7 +1204,8 @@ val MVT_LEMMA = prove_thm("MVT_LEMMA",
               REAL_NEG_ADD, REAL_NEGNEG] THEN
   REWRITE_TAC[GSYM REAL_ADD_ASSOC] THEN
   REWRITE_TAC[AC(REAL_ADD_ASSOC,REAL_ADD_SYM)
-    (--`w |+| x |+| y |+| z = (y |+| w) |+| (x |+| z)`--), REAL_ADD_LINV, REAL_ADD_LID] THEN
+               (--`w |+| (x |+| (y |+| z)) = (y |+| w) |+| (x |+| z)`--),
+              REAL_ADD_LINV, REAL_ADD_LID] THEN
   REWRITE_TAC[REAL_ADD_RID]);
 
 val MVT = prove_thm("MVT",
@@ -1519,9 +1522,8 @@ val DIFF_INVERSE = prove_thm("DIFF_INVERSE",
   DISCH_THEN(fn th => ASSUME_TAC(MATCH_MP DIFF_CONT th) THEN MP_TAC th) THEN
   REWRITE_TAC[DIFF_CARAT] THEN
   DISCH_THEN(X_CHOOSE_THEN (--`h:real->real`--) STRIP_ASSUME_TAC) THEN
-  EXISTS_TAC (--`\y. (y = f(x)) => inv(h(g y)) 
-                                 | (g(y) |-| g(f(x:real))) /
-                                   (y |-| f(x))`--) THEN 
+  EXISTS_TAC (--`\y. if (y = f(x)) then inv(h(g y))
+                     else (g(y) |-| g(f(x:real))) / (y |-| f(x))`--) THEN
   BETA_TAC THEN ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
    [X_GEN_TAC (--`z:real`--) THEN COND_CASES_TAC THEN
     ASM_REWRITE_TAC[REAL_SUB_REFL, REAL_MUL_RZERO] THEN
@@ -1536,7 +1538,7 @@ val DIFF_INVERSE = prove_thm("DIFF_INVERSE",
   SUBGOAL_THEN (--`g((f:real->real)(x)) = x`--) ASSUME_TAC THENL
    [FIRST_ASSUM MATCH_MP_TAC THEN REWRITE_TAC[REAL_SUB_REFL, ABS_0] THEN
     MATCH_MP_TAC REAL_LT_IMP_LE, ALL_TAC] THEN ASM_REWRITE_TAC[] THEN
-  MATCH_MP_TAC LIM_TRANSFORM THEN 
+  MATCH_MP_TAC LIM_TRANSFORM THEN
   EXISTS_TAC (--`\y:real. inv(h(g(y):real))`--) THEN
   BETA_TAC THEN CONJ_TAC THENL
    [ALL_TAC,
@@ -1555,13 +1557,13 @@ val DIFF_INVERSE = prove_thm("DIFF_INVERSE",
   STRIP_ASSUME_TAC THENL
    [ALL_TAC,
     REWRITE_TAC[LIM] THEN X_GEN_TAC (--`k:real`--) THEN DISCH_TAC THEN
-    EXISTS_TAC (--`e:real`--) THEN ASM_REWRITE_TAC[] THEN 
+    EXISTS_TAC (--`e:real`--) THEN ASM_REWRITE_TAC[] THEN
     X_GEN_TAC (--`y:real`--) THEN
     DISCH_THEN(fn th => FIRST_ASSUM(STRIP_ASSUME_TAC o C MATCH_MP th) THEN
       ASSUME_TAC(REWRITE_RULE[GSYM ABS_NZ, REAL_SUB_0] (CONJUNCT1 th))) THEN
     BETA_TAC THEN ASM_REWRITE_TAC[REAL_SUB_RZERO] THEN
-    SUBGOAL_THEN (--`y |-| f(x) = h(g(y)) |*| (g(y) |-| x)`--) 
-                 SUBST1_TAC 
+    SUBGOAL_THEN (--`y |-| f(x) = h(g(y)) |*| (g(y) |-| x)`--)
+                 SUBST1_TAC
     THENL
      [FIRST_ASSUM(fn th => GEN_REWR_TAC RAND_CONV [GSYM th]) THEN
       REWRITE_TAC[ASSUME (--`f((g:real->real)(y)) = y`--)],
@@ -1583,11 +1585,11 @@ val DIFF_INVERSE = prove_thm("DIFF_INVERSE",
       MATCH_MP_TAC REAL_MUL_LINV THEN ASM_REWRITE_TAC[]]] THEN
   SUBGOAL_THEN
     (--`?e. &0 |<| e /\
-         !y. &0 |<| abs(y |-| f(x:real)) /\ 
+         !y. &0 |<| abs(y |-| f(x:real)) /\
              abs(y |-| f(x)) |<| e ==> (f(g(y)) = y)`--)
   (X_CHOOSE_THEN (--`c:real`--) STRIP_ASSUME_TAC) THENL
-   [MP_TAC(SPECL [(--`f:real->real`--), (--`g:real->real`--), 
-                  (--`x:real`--), (--`d:real`--)] CONT_INJ_RANGE) THEN 
+   [MP_TAC(SPECL [(--`f:real->real`--), (--`g:real->real`--),
+                  (--`x:real`--), (--`d:real`--)] CONT_INJ_RANGE) THEN
     ASM_REWRITE_TAC[] THEN
     DISCH_THEN(X_CHOOSE_THEN (--`e:real`--) STRIP_ASSUME_TAC) THEN
     EXISTS_TAC (--`e:real`--) THEN ASM_REWRITE_TAC[] THEN
@@ -1600,7 +1602,7 @@ val DIFF_INVERSE = prove_thm("DIFF_INVERSE",
     FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[], ALL_TAC] THEN
   SUBGOAL_THEN
     (--`?e. &0 |<| e /\
-         !y. &0 |<| abs(y |-| f(x:real)) /\ 
+         !y. &0 |<| abs(y |-| f(x:real)) /\
              abs(y |-| f(x)) |<| e
              ==> ~((h:real->real)(g(y)) = &0)`--)
   (X_CHOOSE_THEN (--`b:real`--) STRIP_ASSUME_TAC) THENL
@@ -1617,15 +1619,15 @@ val DIFF_INVERSE = prove_thm("DIFF_INVERSE",
    [MATCH_MP_TAC CONT_COMPOSE THEN ASM_REWRITE_TAC[] THEN
     MATCH_MP_TAC CONT_INVERSE THEN EXISTS_TAC (--`d:real`--) THEN
     ASM_REWRITE_TAC[], ALL_TAC] THEN
-  REWRITE_TAC[CONTL_LIM, LIM] THEN 
+  REWRITE_TAC[CONTL_LIM, LIM] THEN
   DISCH_THEN(MP_TAC o SPEC (--`abs(l)`--)) THEN
-  ASM_REWRITE_TAC[GSYM ABS_NZ] THEN 
+  ASM_REWRITE_TAC[GSYM ABS_NZ] THEN
   (****begin new*****)
   REWRITE_TAC[ABS_NZ] THEN
   (****end new******)
   BETA_TAC THEN ASM_REWRITE_TAC[] THEN
   DISCH_THEN(X_CHOOSE_THEN (--`e:real`--) STRIP_ASSUME_TAC) THEN
-  EXISTS_TAC (--`e:real`--) THEN ASM_REWRITE_TAC[ABS_NZ] THEN 
+  EXISTS_TAC (--`e:real`--) THEN ASM_REWRITE_TAC[ABS_NZ] THEN
   X_GEN_TAC (--`y:real`--) THEN
   DISCH_THEN(fn th => FIRST_ASSUM(MP_TAC o C MATCH_MP th)) THEN
   REWRITE_TAC[GSYM ABS_NZ] THEN
@@ -1675,8 +1677,8 @@ val INTERVAL_CLEMMA = prove_thm("INTERVAL_CLEMMA",
 (*---------------------------------------------------------------------------*)
 
 val DIFF_INVERSE_OPEN = prove_thm("DIFF_INVERSE_OPEN",
-  (--`!f g l a x b. 
-        a |<| x /\ 
+  (--`!f g l a x b.
+        a |<| x /\
         x |<| b /\
         (!z. a |<| z /\ z |<|  b ==> (g(f(z)) = z) /\ f contl z) /\
         (f diffl l)(x) /\
@@ -1684,7 +1686,7 @@ val DIFF_INVERSE_OPEN = prove_thm("DIFF_INVERSE_OPEN",
         ==> (g diffl (inv l))(f x)`--),
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   MATCH_MP_TAC DIFF_INVERSE THEN
-  MP_TAC(SPECL [(--`a:real`--), (--`b:real`--), 
+  MP_TAC(SPECL [(--`a:real`--), (--`b:real`--),
                 (--`x:real`--)] INTERVAL_CLEMMA) THEN
   ASM_REWRITE_TAC[] THEN
   DISCH_THEN(X_CHOOSE_THEN (--`d:real`--) STRIP_ASSUME_TAC) THEN

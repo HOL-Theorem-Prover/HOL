@@ -30,7 +30,7 @@ infix 3 ##
 infix 5 |->
 infixr -->;
 
-fun CONV_ERR function message = 
+fun CONV_ERR function message =
      HOL_ERR{origin_structure = "Conv",
 	     origin_function = function,
                      message = message}
@@ -45,7 +45,7 @@ fun INST_TY_TERM(Stm,Sty) th = INST Stm (INST_TYPE Sty th);
  *   |- !x y z. w   --->  |- w[g1/x][g2/y][g3/z]                             *
  *---------------------------------------------------------------------------*)
 fun GSPEC th =
-   let val (_,w) = dest_thm th 
+   let val (_,w) = dest_thm th
    in if (is_forall w)
       then GSPEC (SPEC (genvar (type_of (#Bvar (dest_forall w)))) th)
       else th
@@ -58,7 +58,7 @@ fun GSPEC th =
 fun PART_MATCH partfn th =
    let val pth = GSPEC (GEN_ALL th)
        val pat = partfn(concl pth)
-       val matchfn = Term.match_term pat 
+       val matchfn = Term.match_term pat
    in
      fn tm => INST_TY_TERM (matchfn tm) pth
    end;
@@ -81,12 +81,12 @@ fun REWR_CONV th =
    let val instth = PART_MATCH lhs th handle HOL_ERR _
         => raise CONV_ERR "REWR_CONV" "bad theorem argument (not an equation)"
    in
-   fn tm => 
+   fn tm =>
      let val eqn = instth tm
          val l = lhs(concl eqn)
-     in 
+     in
        if (l = tm) then eqn else TRANS (ALPHA tm l) eqn
-     end 
+     end
      handle HOL_ERR _ => raise CONV_ERR "REWR_CONV"
                                  "lhs of theorem doesn't match term"
    end;
@@ -139,13 +139,13 @@ fun variants (_,[]) = []
       end
 fun rassoc_total x =
    let fun rassc [] = x
-         | rassc ({redex,residue}::rst) = 
+         | rassc ({redex,residue}::rst) =
              if (x=redex) then residue else rassc rst
    in rassc
-   end 
+   end
 fun rassoc_option x =
    let fun rassc [] = NONE
-         | rassc ({redex,residue}::rst) = 
+         | rassc ({redex,residue}::rst) =
              if (x=redex) then (SOME residue) else rassc rst
    in rassc
    end
@@ -159,7 +159,7 @@ fun MATCH_MP ith =
           val tth = INST_TYPE (snd(mfn bod)) ith
           val tbod = #ant(dest_imp(snd(strip_forall(concl tth))))
           val tmin = fst(mfn tbod)
-          val hy1 = free_varsl(hyp tth) 
+          val hy1 = free_varsl(hyp tth)
           and hy2 = free_varsl(hyp th)
           val (avs,{ant,conseq}) = (I ## dest_imp) (strip_forall (concl tth))
           val (rvs,fvs) = partition (C free_in ant) (free_vars conseq)
@@ -171,13 +171,13 @@ fun MATCH_MP ith =
           val fspl = map (C rassoc_total spl) avs
           val mth = MP (SPECL fspl (INST ill tth)) th
           fun loop [] = []
-            | loop (tm::rst) = 
+            | loop (tm::rst) =
                 (case (rassoc_option tm vfvs)
                    of NONE => loop rst
                     | (SOME x) => x::(loop rst))
       in
-        GENL (loop avs) mth 
-      end 
+        GENL (loop avs) mth
+      end
     end
 end;
 
@@ -190,9 +190,9 @@ end;
 (* Revised RJB 91.04.17							*)
 (* ---------------------------------------------------------------------*)
 fun RAND_CONV conv tm =
-   let val {Rator,Rand} = dest_comb tm handle (HOL_ERR _) 
+   let val {Rator,Rand} = dest_comb tm handle (HOL_ERR _)
         => raise CONV_ERR "RAND_CONV" "not a comb"
-   in AP_TERM Rator (conv Rand) handle (HOL_ERR _) 
+   in AP_TERM Rator (conv Rand) handle (HOL_ERR _)
         => raise CONV_ERR"RAND_CONV" ""
    end
 
@@ -205,12 +205,12 @@ fun RAND_CONV conv tm =
 (* Revised RJB 91.04.17							*)
 (* ---------------------------------------------------------------------*)
 fun RATOR_CONV conv tm =
-   let val {Rator,Rand} = dest_comb tm handle (HOL_ERR _) 
+   let val {Rator,Rand} = dest_comb tm handle (HOL_ERR _)
        => raise CONV_ERR "RATOR_CONV" "not a comb"
-   in AP_THM (conv Rator) Rand handle (HOL_ERR _) 
+   in AP_THM (conv Rator) Rand handle (HOL_ERR _)
        => raise CONV_ERR "RATOR_CONV" ""
    end
-   
+
 
 (* ---------------------------------------------------------------------*)
 (* ABS_CONV conv "\x. t[x]" applies conv to t[x]			*)
@@ -219,11 +219,35 @@ fun RATOR_CONV conv tm =
 (* Revised RJB 91.04.17							*)
 (* ---------------------------------------------------------------------*)
 fun ABS_CONV conv tm =
-   let val {Bvar,Body} = dest_abs tm handle (HOL_ERR _) 
+   let val {Bvar,Body} = dest_abs tm handle (HOL_ERR _)
         => raise CONV_ERR"ABS_CONV" "not an abs"
-   in ABS Bvar (conv Body) handle (HOL_ERR _) 
+   in ABS Bvar (conv Body) handle (HOL_ERR _)
         => raise CONV_ERR"ABS_CONV" ""
    end;
+
+(* -------------------------------------------------------------------- *)
+(* LHS_CONV conv "t1 = t2" applies conv to t1                           *)
+(*                                                                      *)
+(* Added MN 99.06.14                                                    *)
+(* -------------------------------------------------------------------- *)
+fun LHS_CONV conv tm =
+  if not (is_eq tm) then
+    raise CONV_ERR "LHS_CONV" "not an equality"
+  else
+    RATOR_CONV (RAND_CONV conv) tm
+
+(* -------------------------------------------------------------------- *)
+(* RHS_CONV conv "t1 = t2" applies conv to t2                           *)
+(*                                                                      *)
+(* Added MN 99.06.14                                                    *)
+(* -------------------------------------------------------------------- *)
+fun RHS_CONV conv tm =
+  if not (is_eq tm) then
+    raise CONV_ERR "RHS_CONV" "not an equality"
+  else
+    RAND_CONV conv tm
+
+
 
 (*---------------------------------------------------------------------------
  * Conversion that always fails;  identity element for ORELSEC.
@@ -232,7 +256,7 @@ fun NO_CONV _ = raise CONV_ERR "NO_CONV" "";
 
 (*---------------------------------------------------------------------------
  * Conversion that always succeeds, using reflexive law:   t --->  |- t==t
- *  Identity element for THENC 
+ *  Identity element for THENC
  *---------------------------------------------------------------------------*)
 val ALL_CONV = REFL;
 
@@ -258,14 +282,14 @@ fun (conv1 ORELSEC conv2) t = conv1 t handle HOL_ERR _ => conv2 t;
 (*---------------------------------------------------------------------------*
  * Perform the first successful conversion of those in the list.             *
  *---------------------------------------------------------------------------*)
-fun FIRST_CONV [] tm = NO_CONV tm 
+fun FIRST_CONV [] tm = NO_CONV tm
   | FIRST_CONV (c::rst) tm = c tm handle (HOL_ERR _) => FIRST_CONV rst tm;
 
 (*---------------------------------------------------------------------------
  * Perform every conversion in the list.
  *---------------------------------------------------------------------------*)
-fun EVERY_CONV convl tm = 
-   itlist (curry (op THENC)) convl ALL_CONV tm 
+fun EVERY_CONV convl tm =
+   itlist (curry (op THENC)) convl ALL_CONV tm
    handle HOL_ERR _ => raise CONV_ERR "EVERY_CONV" "";
 
 
@@ -278,12 +302,12 @@ fun REPEATC conv t = ((conv THENC (REPEATC conv)) ORELSEC ALL_CONV) t;
  * Cause the conversion to fail if it does not change its input.
  *---------------------------------------------------------------------------*)
 fun CHANGED_CONV conv tm =
-   let val th = conv tm 
-       val {lhs,rhs} = dest_eq (concl th) 
+   let val th = conv tm
+       val {lhs,rhs} = dest_eq (concl th)
    in
      if (aconv lhs rhs)
      then raise CONV_ERR"CHANGED_CONV" ""
-     else th 
+     else th
    end;
 
 fun TRY_CONV conv = conv ORELSEC ALL_CONV;
@@ -297,8 +321,8 @@ fun SUB_CONV conv tm =
    else if (is_abs tm)
         then let val {Bvar,Body} = dest_abs tm
                  val Body' = conv Body
-             in 
-               ABS Bvar Body' 
+             in
+               ABS Bvar Body'
                 handle HOL_ERR _ =>
                      let val v = genvar (type_of Bvar)
                          val th1 = ALPHA_CONV v tm
@@ -371,7 +395,7 @@ val ALL_QCONV:conv = fn _ => raise UNCHANGED;
 
 fun THENQC conv1 conv2 tm =
    let val th1 = conv1 tm
-   in  
+   in
      TRANS th1 (conv2 (rhs (concl th1))) handle UNCHANGED => th1
    end
    handle UNCHANGED => conv2 tm;
@@ -442,7 +466,7 @@ fun SUB_QCONV conv tm =
    | LAMB{Bvar,Body} =>
          let val Bth = conv Body  (* UNCHANGED will propagate, as it should *)
          in ABS Bvar Bth
-            handle HOL_ERR _ => 
+            handle HOL_ERR _ =>
               let val v = genvar (type_of Bvar)
                    val th1 = ALPHA_CONV v tm
                    val {rhs,...} = dest_eq(Thm.concl th1)
@@ -452,31 +476,31 @@ fun SUB_QCONV conv tm =
                    val at = #rhs(dest_eq(concl eq_thm'))
                    val v' = variant (free_vars at) Bvar
                    val th2 = ALPHA_CONV v' at
-               in 
+               in
                  TRANS (TRANS th1 eq_thm') th2
                end
          end
    | _ => ALL_QCONV tm;
 
 
-(*  Pre-August 1993 
+(*  Pre-August 1993
  * fun SUB_QCONV conv tm =
- *    if (is_comb tm) 
+ *    if (is_comb tm)
  *    then let val {Rator,Rand} = dest_comb tm
  *         in
  *            let val th = conv Rator
- *            in  
+ *            in
  *            MK_COMB (th, conv Rand)
  *            handle UNCHANGED => AP_THM th Rand
  *            end
  *            handle UNCHANGED => AP_TERM Rator (conv Rand)
  *         end
- *    else if (is_abs tm) 
+ *    else if (is_abs tm)
  *         then let val {Bvar,Body} = dest_abs tm
  *              in ABS Bvar (conv Body)
  *              end
  * (*               val bodyth = conv Body
- *  *           in 
+ *  *           in
  *  *           MK_ABS (GEN Bvar bodyth)
  *  *           end
  *  ***)
@@ -587,7 +611,7 @@ val ONCE_DEPTH_CONV = QCONV o ONCE_DEPTH_QCONV;;
 (* -- From John Harrison's Hol-Lite  -- *)
 
 fun TOP_SWEEP_QCONV conv tm =
-  (THENQC (REPEATQC conv) 
+  (THENQC (REPEATQC conv)
           (SUB_QCONV (TOP_SWEEP_QCONV conv))) tm;
 
 val TOP_SWEEP_CONV = QCONV o TOP_SWEEP_QCONV;
@@ -605,7 +629,7 @@ fun CONV_TAC (conv:conv) :tactic = fn (asl,w) =>
    let val th = conv w
        val {rhs,...} = dest_eq(concl th)
    in
-     if (rhs = T) 
+     if (rhs = T)
      then ([], (fn [] => EQ_MP (SYM th) TRUTH))
      else ([(asl,rhs)], fn [th'] => EQ_MP (SYM th) th')
    end
@@ -648,16 +672,16 @@ and BETA_TAC  = CONV_TAC (DEPTH_CONV BETA_CONV);
 fun NOT_FORALL_CONV tm =
    let val all = dest_neg tm
        val {Bvar,Body} = dest_forall all
-       val exists = mk_exists{Bvar = Bvar, Body = mk_neg Body} 
-       val nott = ASSUME (mk_neg Body) 
+       val exists = mk_exists{Bvar = Bvar, Body = mk_neg Body}
+       val nott = ASSUME (mk_neg Body)
        val not_all = mk_neg all
-       val th1 = DISCH all (MP nott (SPEC Bvar (ASSUME all))) 
-       val imp1 = DISCH exists (CHOOSE (Bvar, ASSUME exists) (NOT_INTRO th1)) 
+       val th1 = DISCH all (MP nott (SPEC Bvar (ASSUME all)))
+       val imp1 = DISCH exists (CHOOSE (Bvar, ASSUME exists) (NOT_INTRO th1))
        val th2 = CCONTR Body (MP (ASSUME(mk_neg exists))
-                              (EXISTS(exists,Bvar) nott)) 
-       val th3 = CCONTR exists (MP (ASSUME not_all) (GEN Bvar th2)) 
+                              (EXISTS(exists,Bvar) nott))
+       val th3 = CCONTR exists (MP (ASSUME not_all) (GEN Bvar th2))
    in
-     IMP_ANTISYM_RULE (DISCH not_all th3) imp1 
+     IMP_ANTISYM_RULE (DISCH not_all th3) imp1
    end
    handle HOL_ERR _ => raise CONV_ERR "NOT_FORALL_CONV" "";
 
@@ -668,16 +692,16 @@ fun NOT_FORALL_CONV tm =
 (*									*)
 (* ---------------------------------------------------------------------*)
 fun NOT_EXISTS_CONV tm =
-   let val {Bvar,Body} = dest_exists (dest_neg tm) 
+   let val {Bvar,Body} = dest_exists (dest_neg tm)
        val all = mk_forall{Bvar=Bvar, Body=mk_neg Body}
        val rand_tm = rand tm
-       val asm1 = ASSUME Body 
-       val thm1 = MP (ASSUME tm) (EXISTS (rand_tm, Bvar) asm1) 
-       val imp1 = DISCH tm (GEN Bvar (NOT_INTRO (DISCH Body thm1))) 
-       val asm2 = ASSUME  all 
+       val asm1 = ASSUME Body
+       val thm1 = MP (ASSUME tm) (EXISTS (rand_tm, Bvar) asm1)
+       val imp1 = DISCH tm (GEN Bvar (NOT_INTRO (DISCH Body thm1)))
+       val asm2 = ASSUME  all
        and asm3 = ASSUME rand_tm
        val thm2 = DISCH rand_tm (CHOOSE (Bvar,asm3) (MP (SPEC Bvar asm2) asm1))
-       val imp2 = DISCH all (NOT_INTRO thm2) 
+       val imp2 = DISCH all (NOT_INTRO thm2)
    in
      IMP_ANTISYM_RULE imp1 imp2
    end
@@ -689,7 +713,7 @@ fun NOT_EXISTS_CONV tm =
 (*	|- (?x.~tm) = (~!x.tm)						*)
 (*									*)
 (* ---------------------------------------------------------------------*)
-fun EXISTS_NOT_CONV tm = 
+fun EXISTS_NOT_CONV tm =
    let val {Bvar,Body} = dest_exists tm
    in
      SYM(NOT_FORALL_CONV (mk_neg (mk_forall{Bvar=Bvar, Body=dest_neg Body})))
@@ -702,7 +726,7 @@ fun EXISTS_NOT_CONV tm =
 (*	|- (!x.~tm) = (~?x.tm)						*)
 (*									*)
 (* ---------------------------------------------------------------------*)
-fun FORALL_NOT_CONV tm = 
+fun FORALL_NOT_CONV tm =
    let val {Bvar,Body} = dest_forall tm
    in
      SYM (NOT_EXISTS_CONV (mk_neg (mk_exists{Bvar=Bvar,Body=dest_neg Body})))
@@ -716,14 +740,14 @@ fun FORALL_NOT_CONV tm =
 (*									*)
 (*   |- (!x. P /\ Q) = (!x.P) /\ (!x.Q)					*)
 (* ---------------------------------------------------------------------*)
-fun FORALL_AND_CONV tm = 
+fun FORALL_AND_CONV tm =
     let val {Bvar,Body} = dest_forall tm
         val {...} = dest_conj Body
-        val (Pth,Qth) = CONJ_PAIR (SPEC Bvar (ASSUME tm)) 
-        val imp1 = DISCH tm (CONJ (GEN Bvar Pth) (GEN Bvar Qth)) 
-        val xtm = rand(concl imp1) 
+        val (Pth,Qth) = CONJ_PAIR (SPEC Bvar (ASSUME tm))
+        val imp1 = DISCH tm (CONJ (GEN Bvar Pth) (GEN Bvar Qth))
+        val xtm = rand(concl imp1)
         val spec_bv = SPEC Bvar
-        val (t1,t2) = (spec_bv##spec_bv) (CONJ_PAIR (ASSUME xtm)) 
+        val (t1,t2) = (spec_bv##spec_bv) (CONJ_PAIR (ASSUME xtm))
     in
       IMP_ANTISYM_RULE imp1 (DISCH xtm (GEN Bvar (CONJ t1 t2)))
     end
@@ -737,24 +761,24 @@ fun FORALL_AND_CONV tm =
 (*   |- (?x. P \/ Q) = (?x.P) \/ (?x.Q)					*)
 (* ---------------------------------------------------------------------*)
 (*
-fun EXISTS_OR_CONV tm = 
+fun EXISTS_OR_CONV tm =
    let val {Bvar,Body} = dest_exists tm
        val {disj1,disj2} = dest_disj Body
-       val ep = mk_exists{Bvar=Bvar, Body=disj1} 
+       val ep = mk_exists{Bvar=Bvar, Body=disj1}
        and eq = mk_exists{Bvar=Bvar, Body=disj2}
        val ep_or_eq = mk_disj{disj1=ep, disj2=eq}
        val aP = ASSUME disj1
        val aQ = ASSUME disj2
        val Pth = EXISTS(ep,Bvar) aP
-       and Qth = EXISTS(eq,Bvar) aQ 
-       val thm1 = DISJ_CASES_UNION (ASSUME Body) Pth Qth 
-       val imp1 = DISCH tm (CHOOSE (Bvar,ASSUME tm) thm1) 
-       val t1 = DISJ1 aP disj2 
-       and t2 = DISJ2 disj1 aQ 
-       val th1 = EXISTS(tm,Bvar) t1 
-       and th2 = EXISTS(tm,Bvar) t2 
-       val e1 = CHOOSE (Bvar,ASSUME ep) th1 
-       and e2 = CHOOSE (Bvar,ASSUME eq) th2 
+       and Qth = EXISTS(eq,Bvar) aQ
+       val thm1 = DISJ_CASES_UNION (ASSUME Body) Pth Qth
+       val imp1 = DISCH tm (CHOOSE (Bvar,ASSUME tm) thm1)
+       val t1 = DISJ1 aP disj2
+       and t2 = DISJ2 disj1 aQ
+       val th1 = EXISTS(tm,Bvar) t1
+       and th2 = EXISTS(tm,Bvar) t2
+       val e1 = CHOOSE (Bvar,ASSUME ep) th1
+       and e2 = CHOOSE (Bvar,ASSUME eq) th2
    in
     IMP_ANTISYM_RULE imp1 (DISCH ep_or_eq (DISJ_CASES (ASSUME ep_or_eq) e1 e2))
    end
@@ -770,7 +794,7 @@ local val alpha = mk_vartype "'a"
       val Pname = #Name(dest_var P0)
       val Qname = #Name(dest_var Q0)
 in
-fun EXISTS_OR_CONV tm = 
+fun EXISTS_OR_CONV tm =
   let val {Bvar,Body} = dest_exists tm
       val ty = type_of Bvar --> Type.bool
       val P = mk_var{Name=Pname, Ty=ty}
@@ -780,7 +804,7 @@ fun EXISTS_OR_CONV tm =
       val lamQ = mk_abs{Bvar=Bvar, Body=disj2}
       val thm = CONV_RULE (RAND_CONV (BINOP_CONV (GEN_ALPHA_CONV Bvar)))
                           (INST_TYPE [alpha |-> type_of Bvar] thm0)
-  in 
+  in
     CONV_RULE spotBeta (INST [P |-> lamP, Q |-> lamQ] thm)
   end
   handle HOL_ERR _ => raise CONV_ERR "EXISTS_OR_CONV" "";
@@ -794,7 +818,7 @@ end;
 (*   |- (!x.P) /\ (!x.Q) = (!x. P /\ Q) 				*)
 (* ---------------------------------------------------------------------*)
 
-fun AND_FORALL_CONV tm = 
+fun AND_FORALL_CONV tm =
    let val {conj1,conj2} = dest_conj tm
        val {Bvar=x, Body=P} = dest_forall conj1
        val {Bvar=y, Body=Q} = dest_forall conj2
@@ -802,10 +826,10 @@ fun AND_FORALL_CONV tm =
    if (not (x=y))
    then raise CONV_ERR "AND_FORALL_CONV" "forall'ed variables not the same"
    else let val specx = SPEC x
-            val (t1,t2) = (specx##specx) (CONJ_PAIR (ASSUME tm)) 
-            val imp1 = DISCH tm (GEN x (CONJ t1 t2)) 
-            val rtm = rand(concl imp1) 
-            val (Pth,Qth) = CONJ_PAIR (SPEC x (ASSUME rtm)) 
+            val (t1,t2) = (specx##specx) (CONJ_PAIR (ASSUME tm))
+            val imp1 = DISCH tm (GEN x (CONJ t1 t2))
+            val rtm = rand(concl imp1)
+            val (Pth,Qth) = CONJ_PAIR (SPEC x (ASSUME rtm))
         in
         IMP_ANTISYM_RULE imp1 (DISCH rtm (CONJ (GEN x Pth) (GEN x Qth)))
         end
@@ -822,16 +846,16 @@ fun AND_FORALL_CONV tm =
 (* 									*)
 (* Where x' is a primed variant of x not free in the input term		*)
 (* ---------------------------------------------------------------------*)
-fun LEFT_AND_FORALL_CONV tm = 
+fun LEFT_AND_FORALL_CONV tm =
    let val {conj1,...} = dest_conj tm
        val {Bvar,...} = dest_forall conj1
-       val x' = variant (free_vars tm) Bvar 
+       val x' = variant (free_vars tm) Bvar
        val specx' = SPEC x'
        and genx' = GEN x'
-       val (t1,t2) = (specx' ## I) (CONJ_PAIR (ASSUME tm)) 
-       val imp1 = DISCH tm (genx' (CONJ t1 t2)) 
-       val rtm = rand(concl imp1) 
-       val (Pth,Qth) = CONJ_PAIR (specx' (ASSUME rtm)) 
+       val (t1,t2) = (specx' ## I) (CONJ_PAIR (ASSUME tm))
+       val imp1 = DISCH tm (genx' (CONJ t1 t2))
+       val rtm = rand(concl imp1)
+       val (Pth,Qth) = CONJ_PAIR (specx' (ASSUME rtm))
    in
      IMP_ANTISYM_RULE imp1 (DISCH rtm (CONJ (genx' Pth)  Qth))
    end
@@ -846,16 +870,16 @@ fun LEFT_AND_FORALL_CONV tm =
 (* 									*)
 (* where x' is a primed variant of x not free in the input term		*)
 (* ---------------------------------------------------------------------*)
-fun RIGHT_AND_FORALL_CONV tm = 
+fun RIGHT_AND_FORALL_CONV tm =
    let val {conj2, ...} = dest_conj tm
        val {Bvar,...} = dest_forall conj2
        val x' = variant (free_vars tm) Bvar
        val specx' = SPEC x'
        val genx' = GEN x'
-       val (t1,t2) = (I ## specx') (CONJ_PAIR (ASSUME tm)) 
-       val imp1 = DISCH tm (genx' (CONJ t1 t2)) 
-       val rtm = rand(concl imp1) 
-       val (Pth,Qth) = CONJ_PAIR (specx' (ASSUME rtm)) 
+       val (t1,t2) = (I ## specx') (CONJ_PAIR (ASSUME tm))
+       val imp1 = DISCH tm (genx' (CONJ t1 t2))
+       val rtm = rand(concl imp1)
+       val (Pth,Qth) = CONJ_PAIR (specx' (ASSUME rtm))
    in
      IMP_ANTISYM_RULE imp1 (DISCH rtm (CONJ Pth (genx' Qth)))
    end
@@ -868,7 +892,7 @@ fun RIGHT_AND_FORALL_CONV tm =
 (*									*)
 (*   |- (?x.P) \/ (?x.Q) = (?x. P \/ Q) 				*)
 (* ---------------------------------------------------------------------*)
-fun OR_EXISTS_CONV tm = 
+fun OR_EXISTS_CONV tm =
    let val {disj1,disj2} = dest_disj tm
        val {Bvar=x, Body=P} = dest_exists disj1
        val {Bvar=y, Body=Q} = dest_exists disj2
@@ -878,16 +902,16 @@ fun OR_EXISTS_CONV tm =
             and aQ = ASSUME Q
             and P_or_Q = mk_disj{disj1 = P, disj2 = Q}
             val otm = mk_exists {Bvar = x, Body = P_or_Q}
-            val t1 = DISJ1 aP Q 
+            val t1 = DISJ1 aP Q
             and t2 = DISJ2 P aQ
-            val eotm = EXISTS(otm,x)   
+            val eotm = EXISTS(otm,x)
             val e1 = CHOOSE (x,ASSUME disj1) (eotm t1)
             and e2 = CHOOSE (x,ASSUME disj2) (eotm t2)
-            val thm1 = DISJ_CASES (ASSUME tm) e1 e2 
-            val imp1 = DISCH tm thm1 
-            val Pth = EXISTS(disj1,x) aP 
-            and Qth = EXISTS(disj2,x) aQ 
-            val thm2 = DISJ_CASES_UNION (ASSUME P_or_Q) Pth Qth 
+            val thm1 = DISJ_CASES (ASSUME tm) e1 e2
+            val imp1 = DISCH tm thm1
+            val Pth = EXISTS(disj1,x) aP
+            and Qth = EXISTS(disj2,x) aQ
+            val thm2 = DISJ_CASES_UNION (ASSUME P_or_Q) Pth Qth
         in
           IMP_ANTISYM_RULE imp1 (DISCH otm (CHOOSE (x,ASSUME otm) thm2))
         end
@@ -903,23 +927,23 @@ fun OR_EXISTS_CONV tm =
 (* 									*)
 (* Where x' is a primed variant of x not free in the input term		*)
 (* ---------------------------------------------------------------------*)
-fun LEFT_OR_EXISTS_CONV tm = 
+fun LEFT_OR_EXISTS_CONV tm =
    let val {disj1,disj2} = dest_disj tm
        val {Bvar,Body} = dest_exists disj1
-       val x' = variant (free_vars tm) Bvar 
+       val x' = variant (free_vars tm) Bvar
        val newp = subst[{redex = Bvar, residue = x'}] Body
        val newp_thm = ASSUME newp
        val new_disj = mk_disj {disj1 = newp, disj2 = disj2}
        val otm = mk_exists {Bvar = x', Body = new_disj}
        and Qth = ASSUME disj2
-       val t1 = DISJ1 newp_thm disj2 
-       and t2 = DISJ2 newp (ASSUME disj2) 
-       val th1 = EXISTS(otm,x') t1 
-       and th2 = EXISTS(otm,x') t2 
-       val thm1 = DISJ_CASES (ASSUME tm) (CHOOSE(x',ASSUME disj1)th1) th2 
-       val imp1 = DISCH tm thm1 
+       val t1 = DISJ1 newp_thm disj2
+       and t2 = DISJ2 newp (ASSUME disj2)
+       val th1 = EXISTS(otm,x') t1
+       and th2 = EXISTS(otm,x') t2
+       val thm1 = DISJ_CASES (ASSUME tm) (CHOOSE(x',ASSUME disj1)th1) th2
+       val imp1 = DISCH tm thm1
        val Pth = EXISTS(disj1,x') newp_thm
-       val thm2 = DISJ_CASES_UNION (ASSUME new_disj) Pth Qth 
+       val thm2 = DISJ_CASES_UNION (ASSUME new_disj) Pth Qth
    in
      IMP_ANTISYM_RULE imp1 (DISCH otm (CHOOSE (x',ASSUME otm) thm2))
    end
@@ -934,10 +958,10 @@ fun LEFT_OR_EXISTS_CONV tm =
 (* 									*)
 (* where x' is a primed variant of x not free in the input term		*)
 (* ---------------------------------------------------------------------*)
-fun RIGHT_OR_EXISTS_CONV tm = 
+fun RIGHT_OR_EXISTS_CONV tm =
    let val {disj1,disj2} = dest_disj tm
        val {Bvar,Body} = dest_exists disj2
-       val x' = variant (free_vars tm) Bvar 
+       val x' = variant (free_vars tm) Bvar
        val newq = subst[{redex = Bvar, residue = x'}] Body
        val newq_thm = ASSUME newq
        and Pth = ASSUME disj1
@@ -947,9 +971,9 @@ fun RIGHT_OR_EXISTS_CONV tm =
        val th1 = eotm' (DISJ2 disj1 newq_thm)
        and th2 = eotm' (DISJ1 Pth newq)
        val thm1 = DISJ_CASES (ASSUME tm) th2 (CHOOSE(x',ASSUME disj2) th1)
-       val imp1 = DISCH tm thm1 
+       val imp1 = DISCH tm thm1
        val Qth = EXISTS(disj2,x') newq_thm
-       val thm2 = DISJ_CASES_UNION (ASSUME P_or_newq) Pth Qth 
+       val thm2 = DISJ_CASES_UNION (ASSUME P_or_newq) Pth Qth
    in
      IMP_ANTISYM_RULE imp1 (DISCH otm (CHOOSE (x',ASSUME otm) thm2))
    end
@@ -965,32 +989,32 @@ fun RIGHT_OR_EXISTS_CONV tm =
 (*    |- (?x. P /\ Q) = (?x.P) /\ (?x.Q)   [x not free in P /\ Q]	*)
 (* ---------------------------------------------------------------------*)
 fun EXISTS_AND_CONV tm =
-   let val {Bvar, Body} = dest_exists tm handle HOL_ERR _ 
+   let val {Bvar, Body} = dest_exists tm handle HOL_ERR _
            => raise CONV_ERR"EXISTS_AND_CONV" "expecting `?x. P /\\ Q`"
-       val {conj1,conj2} = dest_conj Body handle HOL_ERR _ 
+       val {conj1,conj2} = dest_conj Body handle HOL_ERR _
            => raise CONV_ERR "EXISTS_AND_CONV" "expecting `?x. P /\\ Q`"
-       val fP = free_in Bvar conj1 
+       val fP = free_in Bvar conj1
        and fQ = free_in Bvar conj2
    in
-   if (fP andalso fQ) 
+   if (fP andalso fQ)
    then raise CONV_ERR"EXISTS_AND_CONV"
                       ("`"^(#Name(dest_var Bvar))^ "` free in both conjuncts")
-   else let val (t1,t2) = CONJ_PAIR(ASSUME Body) 
+   else let val (t1,t2) = CONJ_PAIR(ASSUME Body)
             val econj1 = mk_exists{Bvar = Bvar, Body = conj1}
             val econj2 = mk_exists{Bvar = Bvar, Body = conj2}
             val eP = if fQ then t1 else EXISTS (econj1,Bvar) t1
             and eQ = if fP then t2 else EXISTS (econj2,Bvar) t2
-            val imp1 = DISCH tm (CHOOSE(Bvar,ASSUME tm) (CONJ eP eQ)) 
+            val imp1 = DISCH tm (CHOOSE(Bvar,ASSUME tm) (CONJ eP eQ))
             val th = EXISTS (tm,Bvar) (CONJ(ASSUME conj1) (ASSUME conj2))
             val th1 = if (fP orelse (not fQ))
-                      then CHOOSE(Bvar,ASSUME econj1)th 
+                      then CHOOSE(Bvar,ASSUME econj1)th
                       else th
             val thm1 = if (fQ orelse (not fP))
                        then CHOOSE(Bvar,ASSUME econj2)th1
                        else th1
-            val otm = rand(concl imp1) 
-            val (t1,t2) = CONJ_PAIR(ASSUME otm) 
-            val thm2 = PROVE_HYP t1 (PROVE_HYP t2 thm1) 
+            val otm = rand(concl imp1)
+            val (t1,t2) = CONJ_PAIR(ASSUME otm)
+            val thm2 = PROVE_HYP t1 (PROVE_HYP t2 thm1)
         in
           IMP_ANTISYM_RULE imp1 (DISCH otm thm2)
         end
@@ -1008,13 +1032,13 @@ fun EXISTS_AND_CONV tm =
 (* ---------------------------------------------------------------------*)
 local val AE_ERR = CONV_ERR"AND_EXISTS_CONV" "expecting `(?x.P) /\\ (?x.Q)`"
 in
-fun AND_EXISTS_CONV tm = 
+fun AND_EXISTS_CONV tm =
  let val {conj1,conj2} = dest_conj tm handle HOL_ERR _ => raise AE_ERR
      val {Bvar=x, Body=P} = dest_exists conj1 handle HOL_ERR _ => raise AE_ERR
      val {Bvar=y, Body=Q} = dest_exists conj2 handle HOL_ERR_ => raise AE_ERR
  in
-   if (not(x=y)) then raise AE_ERR else 
-   if (free_in x P orelse free_in x Q) 
+   if (not(x=y)) then raise AE_ERR else
+   if (free_in x P orelse free_in x Q)
    then raise CONV_ERR "AND_EXISTS_CONV"
             ("`"^(#Name(dest_var x))^"` free in conjunct(s)")
    else SYM (EXISTS_AND_CONV
@@ -1034,18 +1058,18 @@ end;
 (* 									*)
 (* Where x' is a primed variant of x not free in the input term		*)
 (* ---------------------------------------------------------------------*)
-fun LEFT_AND_EXISTS_CONV tm = 
-   let val {conj1,conj2} = dest_conj tm 
-       val {Bvar,Body} = dest_exists conj1 
-       val x' = variant (free_vars tm) Bvar 
+fun LEFT_AND_EXISTS_CONV tm =
+   let val {conj1,conj2} = dest_conj tm
+       val {Bvar,Body} = dest_exists conj1
+       val x' = variant (free_vars tm) Bvar
        val newp = subst[{redex = Bvar, residue = x'}] Body
-       val new_conj = mk_conj {conj1 = newp, conj2 = conj2} 
+       val new_conj = mk_conj {conj1 = newp, conj2 = conj2}
        val otm = mk_exists{Bvar = x', Body = new_conj}
-       val (EP,Qth) = CONJ_PAIR(ASSUME tm) 
-       val thm1 = EXISTS(otm,x')(CONJ(ASSUME newp)(ASSUME conj2)) 
-       val imp1 = DISCH tm (MP (DISCH conj2 (CHOOSE(x',EP)thm1)) Qth) 
-       val (t1,t2) = CONJ_PAIR (ASSUME new_conj) 
-       val thm2 = CHOOSE (x',ASSUME otm) (CONJ (EXISTS (conj1,x') t1) t2) 
+       val (EP,Qth) = CONJ_PAIR(ASSUME tm)
+       val thm1 = EXISTS(otm,x')(CONJ(ASSUME newp)(ASSUME conj2))
+       val imp1 = DISCH tm (MP (DISCH conj2 (CHOOSE(x',EP)thm1)) Qth)
+       val (t1,t2) = CONJ_PAIR (ASSUME new_conj)
+       val thm2 = CHOOSE (x',ASSUME otm) (CONJ (EXISTS (conj1,x') t1) t2)
    in
      IMP_ANTISYM_RULE imp1 (DISCH otm thm2)
    end
@@ -1060,18 +1084,18 @@ fun LEFT_AND_EXISTS_CONV tm =
 (* 									*)
 (* where x' is a primed variant of x not free in the input term		*)
 (* ---------------------------------------------------------------------*)
-fun RIGHT_AND_EXISTS_CONV tm = 
-   let val {conj1,conj2} = dest_conj tm 
+fun RIGHT_AND_EXISTS_CONV tm =
+   let val {conj1,conj2} = dest_conj tm
        val {Bvar,Body} = dest_exists conj2
-       val x' = variant (free_vars tm) Bvar 
-       val newq = subst[{redex = Bvar, residue = x'}]Body 
+       val x' = variant (free_vars tm) Bvar
+       val newq = subst[{redex = Bvar, residue = x'}]Body
        val new_conj = mk_conj{conj1 = conj1,conj2 = newq}
        val otm = mk_exists{Bvar = x',Body = new_conj}
-       val (Pth,EQ) = CONJ_PAIR(ASSUME tm) 
-       val thm1 = EXISTS(otm,x')(CONJ(ASSUME conj1)(ASSUME newq)) 
-       val imp1 = DISCH tm (MP (DISCH conj1 (CHOOSE(x',EQ)thm1)) Pth) 
-       val (t1,t2) = CONJ_PAIR (ASSUME new_conj) 
-       val thm2 = CHOOSE (x',ASSUME otm) (CONJ t1 (EXISTS (conj2,x') t2)) 
+       val (Pth,EQ) = CONJ_PAIR(ASSUME tm)
+       val thm1 = EXISTS(otm,x')(CONJ(ASSUME conj1)(ASSUME newq))
+       val imp1 = DISCH tm (MP (DISCH conj1 (CHOOSE(x',EQ)thm1)) Pth)
+       val (t1,t2) = CONJ_PAIR (ASSUME new_conj)
+       val thm2 = CHOOSE (x',ASSUME otm) (CONJ t1 (EXISTS (conj2,x') t2))
    in
      IMP_ANTISYM_RULE imp1 (DISCH otm thm2)
    end
@@ -1093,44 +1117,44 @@ fun FORALL_OR_CONV tm =
  let val {Bvar,Body} = dest_forall tm handle HOL_ERR _ => raise FO_ERR
      val {disj1,disj2} = dest_disj Body handle HOL_ERR _ => raise FO_ERR
      val fdisj1 = free_in Bvar disj1
-     and fdisj2 = free_in Bvar disj2 
+     and fdisj2 = free_in Bvar disj2
  in
-   if (fdisj1 andalso fdisj2) 
+   if (fdisj1 andalso fdisj2)
    then raise CONV_ERR "FORALL_OR_CONV"
                ("`"^(#Name(dest_var Bvar))^"` free in both disjuncts")
-   else 
+   else
    let val disj1_thm = ASSUME disj1
      val disj2_thm = ASSUME disj2
-     val thm1 = SPEC Bvar (ASSUME tm) 
-     val imp1 = 
-      if fdisj1 
+     val thm1 = SPEC Bvar (ASSUME tm)
+     val imp1 =
+      if fdisj1
       then let val thm2 = CONTR disj1 (MP (ASSUME (mk_neg disj2)) disj2_thm)
-               val thm3 = DISJ1(GEN Bvar(DISJ_CASES thm1 disj1_thm thm2)) disj2 
+               val thm3 = DISJ1(GEN Bvar(DISJ_CASES thm1 disj1_thm thm2)) disj2
                val thm4 = DISJ2(mk_forall{Bvar=Bvar, Body=disj1})(ASSUME disj2)
            in
              DISCH tm (DISJ_CASES(SPEC disj2 EXCLUDED_MIDDLE) thm4 thm3)
            end
-      else 
-      if fdisj2 
+      else
+      if fdisj2
       then let val thm2 = CONTR disj2(MP (ASSUME (mk_neg disj1)) (ASSUME disj1))
                val thm3 = DISJ2 disj1 (GEN Bvar(DISJ_CASES thm1 thm2 disj2_thm))
                val thm4 = DISJ1(ASSUME disj1)(mk_forall{Bvar=Bvar, Body=disj2})
            in
              DISCH tm (DISJ_CASES (SPEC disj1 EXCLUDED_MIDDLE) thm4 thm3)
            end
-      else 
+      else
       let val t1 = GEN Bvar(ASSUME disj1)
-          val t2 = GEN Bvar(ASSUME disj2) 
+          val t2 = GEN Bvar(ASSUME disj2)
       in
         DISCH tm (DISJ_CASES_UNION thm1 t1 t2)
       end
-     val otm = rand(concl imp1) 
+     val otm = rand(concl imp1)
      val {disj1,disj2} = dest_disj otm
-     val thm5 = (if (fdisj1 orelse (not fdisj2)) then SPEC Bvar else I) 
-                (ASSUME disj1) 
+     val thm5 = (if (fdisj1 orelse (not fdisj2)) then SPEC Bvar else I)
+                (ASSUME disj1)
      val thm6 = (if (fdisj2 orelse (not fdisj1)) then SPEC Bvar else I)
                 (ASSUME disj2)
-     val imp2 = GEN Bvar (DISJ_CASES_UNION (ASSUME otm) thm5 thm6) 
+     val imp2 = GEN Bvar (DISJ_CASES_UNION (ASSUME otm) thm5 thm6)
    in
      IMP_ANTISYM_RULE imp1 (DISCH otm imp2)
    end
@@ -1149,13 +1173,13 @@ end;
 (* ---------------------------------------------------------------------*)
 local val OF_ERR = CONV_ERR "OR_FORALL_CONV" "expecting `(!x.P) \\/ (!x.Q)`"
 in
-fun OR_FORALL_CONV tm = 
+fun OR_FORALL_CONV tm =
  let val {disj1,disj2} = dest_disj tm handle HOL_ERR _ => raise OF_ERR
      val {Bvar=x, Body=P} = dest_forall disj1 handle HOL_ERR _ => raise OF_ERR
      val {Bvar=y, Body=Q} = dest_forall disj2 handle HOL_ERR _ => raise OF_ERR
  in
-   if not(x=y) then raise OF_ERR else 
-   if (free_in x P orelse free_in x Q) 
+   if not(x=y) then raise OF_ERR else
+   if (free_in x P orelse free_in x Q)
    then raise CONV_ERR"OR_FORALL_CONV"
              ("`"^(#Name(dest_var x))^ "` free in disjuncts(s)")
    else SYM(FORALL_OR_CONV(mk_forall{Bvar=x,Body=mk_disj{disj1=P,disj2=Q}}))
@@ -1174,21 +1198,21 @@ end;
 (* 									*)
 (* Where x' is a primed variant of x not free in the input term		*)
 (* ---------------------------------------------------------------------*)
-fun LEFT_OR_FORALL_CONV tm = 
+fun LEFT_OR_FORALL_CONV tm =
    let val {disj1,disj2} = dest_disj tm
        val {Bvar,Body} = dest_forall disj1
        val x' = variant (free_vars tm) Bvar
        val newp = subst[{redex = Bvar, residue = x'}] Body
        val aQ = ASSUME disj2
        val Pth = DISJ1 (SPEC x' (ASSUME disj1)) disj2
-       val Qth = DISJ2 newp aQ 
-       val imp1 = DISCH tm (GEN x' (DISJ_CASES (ASSUME tm) Pth Qth)) 
-       val otm = rand(concl imp1) 
-       val thm1 = SPEC x' (ASSUME otm) 
-       val thm2 = CONTR newp (MP(ASSUME(mk_neg disj2)) aQ) 
-       val thm3 = DISJ1 (GEN x' (DISJ_CASES thm1 (ASSUME newp) thm2)) disj2 
-       val thm4 = DISJ2 disj1 aQ 
-       val imp2 = DISCH otm(DISJ_CASES(SPEC disj2 EXCLUDED_MIDDLE)thm4 thm3) 
+       val Qth = DISJ2 newp aQ
+       val imp1 = DISCH tm (GEN x' (DISJ_CASES (ASSUME tm) Pth Qth))
+       val otm = rand(concl imp1)
+       val thm1 = SPEC x' (ASSUME otm)
+       val thm2 = CONTR newp (MP(ASSUME(mk_neg disj2)) aQ)
+       val thm3 = DISJ1 (GEN x' (DISJ_CASES thm1 (ASSUME newp) thm2)) disj2
+       val thm4 = DISJ2 disj1 aQ
+       val imp2 = DISCH otm(DISJ_CASES(SPEC disj2 EXCLUDED_MIDDLE)thm4 thm3)
    in
      IMP_ANTISYM_RULE imp1 imp2
    end
@@ -1203,21 +1227,21 @@ fun LEFT_OR_FORALL_CONV tm =
 (* 									*)
 (* where x' is a primed variant of x not free in the input term		*)
 (* ---------------------------------------------------------------------*)
-fun RIGHT_OR_FORALL_CONV tm = 
+fun RIGHT_OR_FORALL_CONV tm =
    let val {disj1,disj2} = dest_disj tm
        val {Bvar,Body} = dest_forall disj2
        val x' = variant (free_vars tm) Bvar
        val newq = subst[{redex = Bvar, residue = x'}] Body
        val Qth = DISJ2 disj1 (SPEC x' (ASSUME disj2))
        val Pthm = ASSUME disj1
-       val Pth = DISJ1 Pthm newq 
-       val imp1 = DISCH tm (GEN x' (DISJ_CASES (ASSUME tm) Pth Qth)) 
-       val otm = rand(concl imp1) 
-       val thm1 = SPEC x' (ASSUME otm) 
-       val thm2 = CONTR newq (MP(ASSUME(mk_neg disj1)) Pthm) 
-       val thm3 = DISJ2 disj1 (GEN x' (DISJ_CASES thm1 thm2 (ASSUME newq))) 
-       val thm4 = DISJ1 Pthm disj2 
-       val imp2 = DISCH otm(DISJ_CASES(SPEC disj1 EXCLUDED_MIDDLE)thm4 thm3) 
+       val Pth = DISJ1 Pthm newq
+       val imp1 = DISCH tm (GEN x' (DISJ_CASES (ASSUME tm) Pth Qth))
+       val otm = rand(concl imp1)
+       val thm1 = SPEC x' (ASSUME otm)
+       val thm2 = CONTR newq (MP(ASSUME(mk_neg disj1)) Pthm)
+       val thm3 = DISJ2 disj1 (GEN x' (DISJ_CASES thm1 thm2 (ASSUME newq)))
+       val thm4 = DISJ1 Pthm disj2
+       val imp2 = DISCH otm(DISJ_CASES(SPEC disj1 EXCLUDED_MIDDLE)thm4 thm3)
    in
      IMP_ANTISYM_RULE imp1 imp2
    end
@@ -1234,43 +1258,43 @@ fun RIGHT_OR_FORALL_CONV tm =
 (* ---------------------------------------------------------------------*)
 local val FI_ERR = CONV_ERR "FORALL_IMP_CONV" "expecting `!x. P ==> Q`"
 in
-fun FORALL_IMP_CONV tm = 
+fun FORALL_IMP_CONV tm =
    let val {Bvar,Body} = dest_forall tm handle HOL_ERR _ => raise FI_ERR
        val {ant,conseq} = dest_imp Body handle HOL_ERR _ => raise FI_ERR
-       val fant = free_in Bvar ant 
+       val fant = free_in Bvar ant
        and fconseq =  free_in Bvar conseq
        val ant_thm = ASSUME ant
        val tm_thm = ASSUME tm
    in
-     if (fant andalso fconseq) 
+     if (fant andalso fconseq)
      then raise CONV_ERR "FORALL_IMP_CONV"
              ("`"^(#Name(dest_var Bvar))^"` free on both sides of `==>`")
-     else 
-     if fant 
-     then let val asm = mk_exists{Bvar = Bvar, Body = ant} 
+     else
+     if fant
+     then let val asm = mk_exists{Bvar = Bvar, Body = ant}
               val th1 = CHOOSE(Bvar,ASSUME asm) (UNDISCH(SPEC Bvar tm_thm))
-              val imp1 = DISCH tm (DISCH asm th1) 
-              val cncl = rand(concl imp1) 
-              val th2 = MP (ASSUME cncl) (EXISTS (asm,Bvar) ant_thm) 
-              val imp2 = DISCH cncl (GEN Bvar (DISCH ant th2)) 
+              val imp1 = DISCH tm (DISCH asm th1)
+              val cncl = rand(concl imp1)
+              val th2 = MP (ASSUME cncl) (EXISTS (asm,Bvar) ant_thm)
+              val imp2 = DISCH cncl (GEN Bvar (DISCH ant th2))
           in
-             IMP_ANTISYM_RULE imp1 imp2 
+             IMP_ANTISYM_RULE imp1 imp2
           end
-     else 
-     if fconseq 
-     then let val imp1 = DISCH ant(GEN Bvar(UNDISCH(SPEC Bvar tm_thm))) 
-              val cncl = concl imp1 
+     else
+     if fconseq
+     then let val imp1 = DISCH ant(GEN Bvar(UNDISCH(SPEC Bvar tm_thm)))
+              val cncl = concl imp1
               val imp2 = GEN Bvar(DISCH ant(SPEC Bvar(UNDISCH(ASSUME cncl))))
           in
              IMP_ANTISYM_RULE (DISCH tm imp1) (DISCH cncl imp2)
           end
-     else let val asm = mk_exists{Bvar = Bvar, Body = ant} 
+     else let val asm = mk_exists{Bvar = Bvar, Body = ant}
               val tmp = UNDISCH (SPEC Bvar tm_thm)
               val th1 = GEN Bvar (CHOOSE(Bvar,ASSUME asm) tmp)
-              val imp1 = DISCH tm (DISCH asm th1) 
-              val cncl = rand(concl imp1) 
+              val imp1 = DISCH tm (DISCH asm th1)
+              val cncl = rand(concl imp1)
               val th2 = SPEC Bvar (MP(ASSUME cncl) (EXISTS (asm,Bvar) ant_thm))
-              val imp2 = DISCH cncl (GEN Bvar (DISCH ant th2)) 
+              val imp2 = DISCH cncl (GEN Bvar (DISCH ant th2))
           in
              IMP_ANTISYM_RULE imp1 imp2
           end
@@ -1290,14 +1314,14 @@ end;
 (* Author: Tom Melham                                                   *)
 (* Revised: [TFM 90.07.01]						*)
 (*----------------------------------------------------------------------*)
-fun LEFT_IMP_EXISTS_CONV tm = 
-   let val {ant, ...} = dest_imp tm 
-       val {Bvar,Body} = dest_exists ant 
-       val x' = variant (free_vars tm) Bvar 
-       val t' = subst [Bvar |-> x'] Body 
-       val th1 = GEN x' (DISCH t'(MP(ASSUME tm)(EXISTS(ant,x')(ASSUME t')))) 
-       val rtm = concl th1 
-       val th2 = CHOOSE (x',ASSUME ant) (UNDISCH(SPEC x'(ASSUME rtm))) 
+fun LEFT_IMP_EXISTS_CONV tm =
+   let val {ant, ...} = dest_imp tm
+       val {Bvar,Body} = dest_exists ant
+       val x' = variant (free_vars tm) Bvar
+       val t' = subst [Bvar |-> x'] Body
+       val th1 = GEN x' (DISCH t'(MP(ASSUME tm)(EXISTS(ant,x')(ASSUME t'))))
+       val rtm = concl th1
+       val th2 = CHOOSE (x',ASSUME ant) (UNDISCH(SPEC x'(ASSUME rtm)))
    in
      IMP_ANTISYM_RULE (DISCH tm th1) (DISCH rtm (DISCH ant th2))
    end
@@ -1310,16 +1334,16 @@ fun LEFT_IMP_EXISTS_CONV tm =
 (*									*)
 (* where x' is a variant of x chosen not to be free in the input term.	*)
 (*----------------------------------------------------------------------*)
-fun RIGHT_IMP_FORALL_CONV tm = 
+fun RIGHT_IMP_FORALL_CONV tm =
    let val {ant,conseq} = dest_imp tm
        val {Bvar,Body} = dest_forall conseq
-       val x' = variant (free_vars tm) Bvar 
-       val t' = subst [Bvar |-> x'] Body 
-       val imp1 = DISCH tm (GEN x' (DISCH ant(SPEC x'(UNDISCH(ASSUME tm))))) 
-       val ctm = rand(concl imp1) 
-       val alph = GEN_ALPHA_CONV Bvar (mk_forall{Bvar = x', Body = t'}) 
-       val thm1 = EQ_MP alph (GEN x'(UNDISCH (SPEC x' (ASSUME ctm)))) 
-       val imp2 = DISCH ctm (DISCH ant thm1) 
+       val x' = variant (free_vars tm) Bvar
+       val t' = subst [Bvar |-> x'] Body
+       val imp1 = DISCH tm (GEN x' (DISCH ant(SPEC x'(UNDISCH(ASSUME tm)))))
+       val ctm = rand(concl imp1)
+       val alph = GEN_ALPHA_CONV Bvar (mk_forall{Bvar = x', Body = t'})
+       val thm1 = EQ_MP alph (GEN x'(UNDISCH (SPEC x' (ASSUME ctm))))
+       val imp2 = DISCH ctm (DISCH ant thm1)
    in
      IMP_ANTISYM_RULE imp1 imp2
    end
@@ -1337,53 +1361,53 @@ fun RIGHT_IMP_FORALL_CONV tm =
 (* ---------------------------------------------------------------------*)
 local val EI_ERR = CONV_ERR"EXISTS_IMP_CONV" "expecting `?x. P ==> Q`"
 in
-fun EXISTS_IMP_CONV tm = 
+fun EXISTS_IMP_CONV tm =
  let val {Bvar,Body} = dest_exists tm handle HOL_ERR _ => raise EI_ERR
      val {ant = P,conseq = Q} = dest_imp Body handle HOL_ERR _ => raise EI_ERR
      val fP = free_in Bvar P
-     and fQ =  free_in Bvar Q 
+     and fQ =  free_in Bvar Q
  in
    if (fP andalso fQ) then raise CONV_ERR "EXISTS_IMP_CONV"
-          ("`"^(#Name(dest_var Bvar))^ "` free on both sides of `==>`") else 
-   if fP 
-   then let val allp = mk_forall{Bvar = Bvar, Body = P} 
-            val th1 = SPEC Bvar (ASSUME allp) 
-            val thm1 = MP (ASSUME Body) th1 
-            val imp1 = DISCH tm (CHOOSE(Bvar,ASSUME tm)(DISCH allp thm1)) 
-            val otm = rand(concl imp1) 
-            val thm2 = EXISTS(tm,Bvar)(DISCH P (UNDISCH(ASSUME otm))) 
+          ("`"^(#Name(dest_var Bvar))^ "` free on both sides of `==>`") else
+   if fP
+   then let val allp = mk_forall{Bvar = Bvar, Body = P}
+            val th1 = SPEC Bvar (ASSUME allp)
+            val thm1 = MP (ASSUME Body) th1
+            val imp1 = DISCH tm (CHOOSE(Bvar,ASSUME tm)(DISCH allp thm1))
+            val otm = rand(concl imp1)
+            val thm2 = EXISTS(tm,Bvar)(DISCH P (UNDISCH(ASSUME otm)))
             val notP = mk_neg P
             val notP_thm = ASSUME notP
             val nex =  mk_exists{Bvar = Bvar, Body = notP}
             val asm1 = EXISTS (nex, Bvar) notP_thm
-            val th2 = CCONTR P (MP (ASSUME (mk_neg nex)) asm1) 
-            val th3 = CCONTR nex (MP (ASSUME (mk_neg allp)) (GEN Bvar th2)) 
+            val th2 = CCONTR P (MP (ASSUME (mk_neg nex)) asm1)
+            val th3 = CCONTR nex (MP (ASSUME (mk_neg allp)) (GEN Bvar th2))
             val thm4 = DISCH P (CONTR Q (UNDISCH notP_thm))
-            val thm5 = CHOOSE(Bvar,th3)(EXISTS(tm,Bvar)thm4) 
-            val thm6 = DISJ_CASES (SPEC allp EXCLUDED_MIDDLE) thm2 thm5 
+            val thm5 = CHOOSE(Bvar,th3)(EXISTS(tm,Bvar)thm4)
+            val thm6 = DISJ_CASES (SPEC allp EXCLUDED_MIDDLE) thm2 thm5
         in
-          IMP_ANTISYM_RULE imp1 (DISCH otm thm6) 
+          IMP_ANTISYM_RULE imp1 (DISCH otm thm6)
         end
-   else 
-   if fQ 
+   else
+   if fQ
    then let val thm1 = EXISTS (mk_exists{Bvar=Bvar, Body=Q},Bvar)
-                                (UNDISCH(ASSUME Body)) 
-            val imp1 = DISCH tm (CHOOSE(Bvar,ASSUME tm) (DISCH P thm1)) 
-            val thm2 = UNDISCH (ASSUME (rand(concl imp1))) 
+                                (UNDISCH(ASSUME Body))
+            val imp1 = DISCH tm (CHOOSE(Bvar,ASSUME tm) (DISCH P thm1))
+            val thm2 = UNDISCH (ASSUME (rand(concl imp1)))
             val thm3 = CHOOSE(Bvar,thm2) (EXISTS(tm,Bvar)(DISCH P(ASSUME Q)))
             val thm4 = EXISTS(tm,Bvar)
                           (DISCH P (CONTR Q(UNDISCH(ASSUME(mk_neg P)))))
-            val thm5 = DISJ_CASES (SPEC P EXCLUDED_MIDDLE) thm3 thm4 
+            val thm5 = DISJ_CASES (SPEC P EXCLUDED_MIDDLE) thm3 thm4
         in
-          IMP_ANTISYM_RULE imp1 (DISCH(rand(concl imp1)) thm5) 
+          IMP_ANTISYM_RULE imp1 (DISCH(rand(concl imp1)) thm5)
         end
    else let val eQ = mk_exists{Bvar = Bvar, Body = Q}
             and aP = mk_forall{Bvar = Bvar, Body = P}
-            val thm1 = EXISTS(eQ,Bvar)(UNDISCH(ASSUME Body)) 
+            val thm1 = EXISTS(eQ,Bvar)(UNDISCH(ASSUME Body))
             val thm2 = DISCH aP (PROVE_HYP (SPEC Bvar (ASSUME aP)) thm1)
-            val imp1 = DISCH tm (CHOOSE(Bvar,ASSUME tm) thm2) 
+            val imp1 = DISCH tm (CHOOSE(Bvar,ASSUME tm) thm2)
             val thm2 = CHOOSE(Bvar,UNDISCH(ASSUME(rand(concl imp1))))(ASSUME Q)
-            val thm3 = DISCH P (PROVE_HYP (GEN Bvar (ASSUME P)) thm2) 
+            val thm3 = DISCH P (PROVE_HYP (GEN Bvar (ASSUME P)) thm2)
             val imp2 = DISCH (rand(concl imp1)) (EXISTS(tm,Bvar) thm3)
         in
           IMP_ANTISYM_RULE imp1 imp2
@@ -1401,26 +1425,26 @@ end;
 (*									*)
 (* where x' is a variant of x chosen not to be free in the input term	*)
 (*----------------------------------------------------------------------*)
-fun LEFT_IMP_FORALL_CONV tm = 
-   let val {ant,conseq} = dest_imp tm 
-       val {Bvar,Body} = dest_forall ant 
-       val x' = variant (free_vars tm) Bvar 
-       val t1' = subst [Bvar |-> x'] Body 
+fun LEFT_IMP_FORALL_CONV tm =
+   let val {ant,conseq} = dest_imp tm
+       val {Bvar,Body} = dest_forall ant
+       val x' = variant (free_vars tm) Bvar
+       val t1' = subst [Bvar |-> x'] Body
        val not_t1'_thm = ASSUME (mk_neg t1')
-       val th1 = SPEC x' (ASSUME ant) 
+       val th1 = SPEC x' (ASSUME ant)
        val new_imp = mk_imp{ant = t1', conseq = conseq}
-       val thm1 = MP (ASSUME new_imp) th1 
+       val thm1 = MP (ASSUME new_imp) th1
        val otm = mk_exists{Bvar = x', Body = new_imp}
-       val imp1 = DISCH otm (CHOOSE(x',ASSUME otm)(DISCH ant thm1)) 
-       val thm2 = EXISTS(otm,x') (DISCH t1' (UNDISCH(ASSUME tm))) 
+       val imp1 = DISCH otm (CHOOSE(x',ASSUME otm)(DISCH ant thm1))
+       val thm2 = EXISTS(otm,x') (DISCH t1' (UNDISCH(ASSUME tm)))
        val nex =  mk_exists{Bvar = x', Body = mk_neg t1'}
-       val asm1 = EXISTS (nex, x') not_t1'_thm 
-       val th2 = CCONTR t1' (MP (ASSUME (mk_neg nex)) asm1) 
-       val th3 = CCONTR nex (MP(ASSUME(mk_neg ant)) (GEN x' th2)) 
-       val thm4 = DISCH t1' (CONTR conseq (UNDISCH not_t1'_thm)) 
+       val asm1 = EXISTS (nex, x') not_t1'_thm
+       val th2 = CCONTR t1' (MP (ASSUME (mk_neg nex)) asm1)
+       val th3 = CCONTR nex (MP(ASSUME(mk_neg ant)) (GEN x' th2))
+       val thm4 = DISCH t1' (CONTR conseq (UNDISCH not_t1'_thm))
        val thm5 = CHOOSE(x',th3)
                       (EXISTS(mk_exists{Bvar = x',Body = concl thm4},x')thm4)
-       val thm6 = DISJ_CASES (SPEC ant EXCLUDED_MIDDLE) thm2 thm5 
+       val thm6 = DISJ_CASES (SPEC ant EXCLUDED_MIDDLE) thm2 thm5
    in
      IMP_ANTISYM_RULE (DISCH tm thm6) imp1
    end
@@ -1433,20 +1457,20 @@ fun LEFT_IMP_FORALL_CONV tm =
 (*									*)
 (* where x' is a variant of x chosen not to be free in the input term.	*)
 (*----------------------------------------------------------------------*)
-fun RIGHT_IMP_EXISTS_CONV tm = 
+fun RIGHT_IMP_EXISTS_CONV tm =
    let val {ant,conseq} = dest_imp tm
        val {Bvar,Body} = dest_exists conseq
-       val x' = variant (free_vars tm) Bvar 
+       val x' = variant (free_vars tm) Bvar
        val t2' = subst [Bvar |-> x'] Body
        val new_imp = mk_imp{ant = ant, conseq = t2'}
        val otm = mk_exists{Bvar = x', Body = new_imp}
-       val thm1 = EXISTS(conseq,x')(UNDISCH(ASSUME new_imp)) 
-       val imp1 = DISCH otm (CHOOSE(x',ASSUME otm) (DISCH ant thm1)) 
-       val thm2 = UNDISCH (ASSUME tm) 
-       val thm3 = CHOOSE (x',thm2) (EXISTS (otm,x') (DISCH ant (ASSUME t2'))) 
-       val thm4 = DISCH ant (CONTR t2'(UNDISCH(ASSUME(mk_neg ant)))) 
-       val thm5 = EXISTS(otm,x') thm4 
-       val thm6 = DISJ_CASES (SPEC ant EXCLUDED_MIDDLE) thm3 thm5 
+       val thm1 = EXISTS(conseq,x')(UNDISCH(ASSUME new_imp))
+       val imp1 = DISCH otm (CHOOSE(x',ASSUME otm) (DISCH ant thm1))
+       val thm2 = UNDISCH (ASSUME tm)
+       val thm3 = CHOOSE (x',thm2) (EXISTS (otm,x') (DISCH ant (ASSUME t2')))
+       val thm4 = DISCH ant (CONTR t2'(UNDISCH(ASSUME(mk_neg ant))))
+       val thm5 = EXISTS(otm,x') thm4
+       val thm6 = DISJ_CASES (SPEC ant EXCLUDED_MIDDLE) thm3 thm5
    in
      IMP_ANTISYM_RULE (DISCH tm thm6) imp1
    end
@@ -1461,29 +1485,29 @@ fun RIGHT_IMP_EXISTS_CONV tm =
 (*									*)
 (* The first argument is the function f.				*)
 (* ---------------------------------------------------------------------*)
-fun X_SKOLEM_CONV v = 
-   if (not(is_var v)) 
+fun X_SKOLEM_CONV v =
+   if (not(is_var v))
    then raise CONV_ERR "X_SKOLEM_CONV"  "first argument not a variable"
-  else 
+  else
  fn tm =>
   let val (xs,ex) = strip_forall tm
-      val (ab as {Bvar,Body}) = dest_exists ex handle HOL_ERR _ 
+      val (ab as {Bvar,Body}) = dest_exists ex handle HOL_ERR _
         =>  raise CONV_ERR "X_SKOLEM_CONV" "expecting `!x1...xn. ?y.tm`"
-      val fx = Term.list_mk_comb(v,xs) handle HOL_ERR _ 
+      val fx = Term.list_mk_comb(v,xs) handle HOL_ERR _
         => raise CONV_ERR "X_SKOLEM_CONV" "function variable has wrong type"
-  in 
+  in
   if (free_in v tm) then raise CONV_ERR"X_SKOLEM_CONV"
                      ("`"^(#Name(dest_var v))^"` free in the input term")
   else let val pat_bod = list_mk_forall(xs,subst[Bvar |-> fx]Body)
            val pat = mk_exists{Bvar = v, Body = pat_bod}
-           val fnn = list_mk_abs(xs,mk_select ab) 
-           val bth = SYM(LIST_BETA_CONV (Term.list_mk_comb(fnn,xs))) 
-           val thm1 = SUBST [Bvar |-> bth] Body 
+           val fnn = list_mk_abs(xs,mk_select ab)
+           val bth = SYM(LIST_BETA_CONV (Term.list_mk_comb(fnn,xs)))
+           val thm1 = SUBST [Bvar |-> bth] Body
                             (SELECT_RULE (SPECL xs (ASSUME tm)))
-           val imp1 = DISCH tm (EXISTS (pat,fnn) (GENL xs thm1)) 
+           val imp1 = DISCH tm (EXISTS (pat,fnn) (GENL xs thm1))
            val thm2 = SPECL xs (ASSUME pat_bod)
-           val thm3 = GENL xs (EXISTS (ex,fx) thm2) 
-           val imp2 = DISCH pat (CHOOSE (v,ASSUME pat) thm3) 
+           val thm3 = GENL xs (EXISTS (ex,fx) thm2)
+           val imp2 = DISCH pat (CHOOSE (v,ASSUME pat) thm3)
        in
        IMP_ANTISYM_RULE imp1 imp2
        end
@@ -1522,7 +1546,7 @@ end;
 (*----------------------------------------------------------------------*)
 local val alpha = Type`:'a`
 in
-fun SYM_CONV tm = 
+fun SYM_CONV tm =
    let val {lhs,rhs} = dest_eq tm
        val th = INST_TYPE [alpha |-> type_of lhs] EQ_SYM_EQ
    in
@@ -1532,7 +1556,7 @@ fun SYM_CONV tm =
 end;
 
 (*---------------------------------------------------------------------------
- * 
+ *
  *     A |- t1 = t2
  *    --------------   (t2' got from t2 using a conversion)
  *     A |- t1 = t2'
@@ -1549,10 +1573,10 @@ fun RIGHT_CONV_RULE conv th = TRANS th (conv(rhs(concl th)));
 (*									*)
 (* New version: TFM 88.03.31						*)
 (* ---------------------------------------------------------------------*)
-fun FUN_EQ_CONV tm = 
+fun FUN_EQ_CONV tm =
   case (Type.dest_type(type_of (lhs tm)))
    of {Tyop="fun", Args=[ty1,_]} =>
-        (let val vars = free_vars tm 
+        (let val vars = free_vars tm
              val varnm = if (Type.is_vartype ty1) then "x"
                          else Portable_String.str
                                (hd(Portable_String.explode
@@ -1574,20 +1598,20 @@ fun FUN_EQ_CONV tm =
 (*                                                                       *)
 (* fails if x free in f or g, or x not of the right type.                *)
 (* --------------------------------------------------------------------- *)
-fun X_FUN_EQ_CONV x tm = 
+fun X_FUN_EQ_CONV x tm =
  if not(is_var x)
  then raise CONV_ERR "X_FUN_EQ_CONV" "first arg is not a variable"
- else 
- if (mem x (free_vars tm)) 
+ else
+ if (mem x (free_vars tm))
  then raise CONV_ERR"X_FUN_EQ_CONV" (#Name(dest_var x)^" is a free variable")
- else 
+ else
  let val ty = case Type.dest_type(type_of(lhs tm))
                of {Tyop="fun", Args = [ty1,_]} => ty1
                 | _ => raise CONV_ERR"X_FUN_EQ_CONV" "lhs and rhs not functions"
  in
   if (ty = type_of x)
   then let val imp1 = DISCH_ALL (GEN x (AP_THM (ASSUME tm) x))
-           val asm  = ASSUME (concl (GEN x (AP_THM (ASSUME tm) x))) 
+           val asm  = ASSUME (concl (GEN x (AP_THM (ASSUME tm) x)))
        in
          IMP_ANTISYM_RULE imp1 (DISCH_ALL (EXT asm))
        end
@@ -1603,51 +1627,51 @@ fun X_FUN_EQ_CONV x tm =
 (*									*)
 (* Added: TFM 88.03.31							*)
 (* ---------------------------------------------------------------------*)
-(* fun SELECT_CONV tm =                                                 
-**   let val epsl = find_terms is_select tm                             
+(* fun SELECT_CONV tm =
+**   let val epsl = find_terms is_select tm
 **       fun findfn t = (tm = subst [{redex = #Bvar (dest_select t),
 **                                    residue = t}]
 **                                  (#Body (dest_select t)))
 **       val sel = first findfn epsl
 **       val ex  = mk_exists(dest_select sel)
-**       val imp1 = DISCH_ALL (SELECT_RULE (ASSUME ex)) 
-**       and imp2 = DISCH_ALL (EXISTS (ex,sel) (ASSUME tm)) 
+**       val imp1 = DISCH_ALL (SELECT_RULE (ASSUME ex))
+**       and imp2 = DISCH_ALL (EXISTS (ex,sel) (ASSUME tm))
 **   in
 **   IMP_ANTISYM_RULE imp2 imp1
 **   end
 **   handle _ => raise CONV_ERR{function = "SELECT_CONV", message = ""};
 *)
 
-local val f = mk_var{Name="f",Ty= ==`:'a->bool`==} 
-      val th1 = AP_THM EXISTS_DEF f 
-      val th2 = CONV_RULE (RAND_CONV BETA_CONV) th1 
-      val tyv = Type.mk_vartype "'a" 
-      fun EXISTS_CONV{Bvar,Body} = 
+local val f = mk_var{Name="f",Ty= ==`:'a->bool`==}
+      val th1 = AP_THM EXISTS_DEF f
+      val th2 = CONV_RULE (RAND_CONV BETA_CONV) th1
+      val tyv = Type.mk_vartype "'a"
+      fun EXISTS_CONV{Bvar,Body} =
         let val ty = type_of Bvar
             val ins = INST_TYPE [tyv |-> ty] th2
             val theta = [inst[tyv |-> ty] f |-> mk_abs{Bvar=Bvar,Body=Body}]
             val th = INST theta ins
-        in 
+        in
           CONV_RULE (RAND_CONV BETA_CONV) th
         end
       fun find_first p tm =
-        if (p tm) then tm 
+        if (p tm) then tm
         else if (is_abs tm)
-         then find_first p (body tm) 
-        else if is_comb tm 
-             then let val {Rator,Rand} = dest_comb tm 
+         then find_first p (body tm)
+        else if is_comb tm
+             then let val {Rator,Rand} = dest_comb tm
                   in find_first p Rator
                       handle HOL_ERR _ => find_first p Rand
                   end
              else raise CONV_ERR"SELECT_CONV.find_first" ""
 in
 fun SELECT_CONV tm =
-   let fun right t = 
+   let fun right t =
           let val {Bvar,Body} = dest_select t
-          in 
+          in
             Term.aconv (subst[Bvar |-> t] Body) tm
           end handle HOL_ERR _ => false
-       val epi = find_first right tm 
+       val epi = find_first right tm
    in
      SYM (EXISTS_CONV (dest_select epi))
    end
@@ -1666,7 +1690,7 @@ fun CONTRAPOS_CONV tm =
    let val {ant,conseq} = dest_imp tm
        val negc = mk_neg conseq
        and contra = mk_imp{ant = mk_neg conseq, conseq = mk_neg ant}
-       val imp1 = DISCH negc (NOT_INTRO(IMP_TRANS(ASSUME tm)(ASSUME negc))) 
+       val imp1 = DISCH negc (NOT_INTRO(IMP_TRANS(ASSUME tm)(ASSUME negc)))
        and imp2 = DISCH ant (CCONTR conseq (UNDISCH (UNDISCH (ASSUME contra))))
    in
      IMP_ANTISYM_RULE (DISCH tm imp1) (DISCH contra imp2)
@@ -1686,12 +1710,12 @@ fun ANTE_CONJ_CONV tm =
    let val {ant,conseq} = dest_imp tm
        val {conj1,conj2} = dest_conj ant
        val ant_thm = ASSUME ant
-       val imp1 = MP (ASSUME tm) (CONJ (ASSUME conj1) (ASSUME conj2)) 
+       val imp1 = MP (ASSUME tm) (CONJ (ASSUME conj1) (ASSUME conj2))
        and imp2 = LIST_MP [CONJUNCT1 ant_thm,CONJUNCT2 ant_thm]
-                       (ASSUME (mk_imp{ant=conj1, 
+                       (ASSUME (mk_imp{ant=conj1,
                          conseq=mk_imp{ant=conj2, conseq=conseq}}))
    in
-     IMP_ANTISYM_RULE 
+     IMP_ANTISYM_RULE
        (DISCH_ALL (DISCH conj1 (DISCH conj2 imp1)))
        (DISCH_ALL (DISCH ant imp2))
    end
@@ -1738,12 +1762,12 @@ local val (Tb::bT::_) = map (GEN (--`b:bool`--))
       val T = Term`T`
       and F = Term`F`
 in
-fun bool_EQ_CONV tm = 
+fun bool_EQ_CONV tm =
    let val {lhs,rhs} = (dest_eq tm)
-       val _ = if (type_of rhs = Type.bool) then () 
+       val _ = if (type_of rhs = Type.bool) then ()
                else raise CONV_ERR"bool_EQ_CONV" "does not have boolean type"
-   in if (lhs=rhs) then EQT_INTRO (REFL lhs) 
-      else if (lhs=T) then SPEC rhs Tb 
+   in if (lhs=rhs) then EQT_INTRO (REFL lhs)
+      else if (lhs=T) then SPEC rhs Tb
            else if (rhs=T) then SPEC lhs bT
                 else raise CONV_ERR"bool_EQ_CONV" "inapplicable"
    end
@@ -1766,24 +1790,24 @@ end;
 (* ---------------------------------------------------------------------*)
 
 local val v = genvar (==`:bool`==)
-      val AND = --`/\`--
-      val IMP = --`==>`--
+      val AND = --`$/\`--
+      val IMP = --`$==>`--
       val alpha = ==`:'a`==
       fun alpha_subst ty = [alpha |-> ty]
       val check = assert (fn c => (#Name(dest_const c) = "?!"))
-      fun MK_BIN f (e1,e2) = MK_COMB((AP_TERM f e1),e2) 
+      fun MK_BIN f (e1,e2) = MK_COMB((AP_TERM f e1),e2)
       val rule = CONV_RULE o RAND_CONV o GEN_ALPHA_CONV
-      fun MK_ALL x y tm = rule y (FORALL_EQ x tm) 
+      fun MK_ALL x y tm = rule y (FORALL_EQ x tm)
       fun handle_ant{conj1, conj2} = (BETA_CONV conj1, BETA_CONV conj2)
-      fun conv (nx,ny) t = 
+      fun conv (nx,ny) t =
          let val (V,imp) = strip_forall t
          in case V
-             of [ox,oy] => 
+             of [ox,oy] =>
                  let val {ant,conseq} = dest_imp imp
                      val ant' = MK_BIN AND (handle_ant (dest_conj ant))
                  in
-                   MK_ALL ox nx 
-                     (MK_ALL oy ny (MK_BIN IMP (ant',REFL conseq))) 
+                   MK_ALL ox nx
+                     (MK_ALL oy ny (MK_BIN IMP (ant',REFL conseq)))
                  end
               |  _ => raise CONV_ERR "EXISTS_UNIQUE" ""
          end
@@ -1793,10 +1817,10 @@ fun EXISTS_UNIQUE_CONV tm =
        val _ = check Rator
        val (ab as {Bvar,Body}) = dest_abs Rand
        val def = INST_TYPE (alpha_subst (type_of Bvar)) EXISTS_UNIQUE_DEF
-       val exp = RIGHT_BETA(AP_THM def Rand) 
+       val exp = RIGHT_BETA(AP_THM def Rand)
        and y = variant (all_vars Body) Bvar
    in
-     SUBST [v |-> conv (Bvar,y) (rand(rand(concl exp)))] 
+     SUBST [v |-> conv (Bvar,y) (rand(rand(concl exp)))]
            (mk_eq{lhs=tm, rhs=mk_conj{conj1=mk_exists ab, conj2=v}}) exp
    end
    handle HOL_ERR _ => raise CONV_ERR "EXISTS_UNIQUE_CONV" ""
@@ -1824,24 +1848,24 @@ end;
 (* ---------------------------------------------------------------------*)
 local val T = --`T`--
       and F = --`F`--
-      and vt = genvar (==`:'a`==) 
-      and vf =  genvar (==`:'a`==) 
-      val gen = GENL [vt,vf] 
+      and vt = genvar (==`:'a`==)
+      and vf =  genvar (==`:'a`==)
+      val gen = GENL [vt,vf]
       val (CT,CF) = (gen ## gen) (CONJ_PAIR (SPECL [vt,vf] COND_CLAUSES))
       val alpha = ==`:'a`==
 in
 fun COND_CONV tm =
-   let val {cond,larm,rarm} = dest_cond tm 
+   let val {cond,larm,rarm} = dest_cond tm
        val INST_TYPE' = INST_TYPE [alpha |-> type_of larm]
    in
-   if (cond=T) then SPEC rarm (SPEC larm (INST_TYPE' CT)) 
-   else if (cond=F) then SPEC rarm (SPEC larm (INST_TYPE' CF)) 
-        else if (larm=rarm) then SPEC larm (SPEC cond (INST_TYPE' COND_ID)) 
-             else if (aconv larm rarm) 
+   if (cond=T) then SPEC rarm (SPEC larm (INST_TYPE' CT))
+   else if (cond=F) then SPEC rarm (SPEC larm (INST_TYPE' CF))
+        else if (larm=rarm) then SPEC larm (SPEC cond (INST_TYPE' COND_ID))
+             else if (aconv larm rarm)
                   then let val cnd = AP_TERM (rator tm) (ALPHA rarm larm)
-                           val th = SPEC larm (SPEC cond (INST_TYPE' COND_ID)) 
+                           val th = SPEC larm (SPEC cond (INST_TYPE' COND_ID))
                        in
-                         TRANS cnd th 
+                         TRANS cnd th
                        end
                   else raise CONV_ERR "" ""
    end
@@ -1876,7 +1900,7 @@ fun EXISTENCE th =
        val {Bvar,...} = dest_abs Rand
    in
      MP (SPEC Rand (INST_TYPE [alpha |-> type_of Bvar] imp)) th
-   end 
+   end
    handle HOL_ERR _ => raise CONV_ERR "EXISTENCE" ""
 end;
 
@@ -1898,7 +1922,7 @@ fun AC_CONV(associative,commutative) tm =
        val x = mk_var{Name="x",Ty=ty}
        and y = mk_var{Name="y",Ty=ty}
        and z = mk_var{Name="z",Ty=ty}
-       val xy = mk_comb{Rator=mk_comb{Rator=opr,Rand=x},Rand=y} 
+       val xy = mk_comb{Rator=mk_comb{Rator=opr,Rand=x},Rand=y}
        and yz = mk_comb{Rator=mk_comb{Rator=opr,Rand=y},Rand=z}
        and yx = mk_comb{Rator=mk_comb{Rator=opr,Rand=y},Rand=x}
        val comm = PART_MATCH I commutative (mk_eq{lhs=xy,rhs=yx})
@@ -1915,11 +1939,11 @@ fun AC_CONV(associative,commutative) tm =
               val {Rator=xopr, Rand = l} = dest_comb Rator
           in
           if (xopr = opr)
-          then if (l = head) then REFL expr 
+          then if (l = head) then REFL expr
                else if (r = head) then INST [x |-> l, y |-> r] comm
                  else let val subb = bubble head r
                        val eqv = AP_TERM (mk_comb{Rator=xopr,Rand=l}) subb
-                    val {Rator,Rand=r'} = dest_comb(#rhs(dest_eq(concl subb))) 
+                    val {Rator,Rand=r'} = dest_comb(#rhs(dest_eq(concl subb)))
                     val {Rator=yopr,Rand=l'} = dest_comb Rator
                   in
                     TRANS eqv (INST[x |-> l, y |-> l', z |-> r'] asc)
@@ -1932,7 +1956,7 @@ fun AC_CONV(associative,commutative) tm =
           else let val {Rator,Rand=r'} = dest_comb lhs
                    val {Rator=zopr,Rand=l'} = dest_comb Rator
                in
-               if (zopr = opr) 
+               if (zopr = opr)
                then let val beq = bubble l' rhs
                         val rt = Dsyntax.rhs (concl beq)
                     in TRANS (AP_TERM (mk_comb{Rator=opr,Rand=l'})

@@ -9,7 +9,7 @@ local
 
 in
 val _ = Portable.output(Portable.std_out, "\nloading Base.\n");
-val LESS_EQ_SPLIT = 
+val LESS_EQ_SPLIT =
     let val asm_thm = ASSUME (--`(m + n) <= p`--)
     in
     GEN_ALL(DISCH_ALL
@@ -25,17 +25,17 @@ val LESS_EQ_SPLIT =
 val SUB_GREATER_EQ_ADD = prove(
     (--`!p n m. (p >= n) ==> (((p - n) >= m) = (p >= (m + n)))`--),
     REWRITE_TAC[
-      SYM (SPEC (--`n:num`--) (SPEC (--`p-n`--) (SPEC (--`m:num`--) 
+      SYM (SPEC (--`n:num`--) (SPEC (--`p-n`--) (SPEC (--`m:num`--)
            (REWRITE_RULE[GSYM GREATER_EQ] LESS_EQ_MONO_ADD_EQ))))]
     THEN REPEAT STRIP_TAC
     THEN POP_ASSUM ( fn th  => ASSUME_TAC
-      (MP (SPEC (--`n:num`--) (SPEC (--`p:num`--) SUB_ADD)) 
+      (MP (SPEC (--`n:num`--) (SPEC (--`p:num`--) SUB_ADD))
         (REWRITE_RULE[SPEC (--`n:num`--) (SPEC (--`p:num`--) GREATER_EQ)] th)))
     THEN SUBST_TAC[(SPEC_ALL ADD_SYM)] THEN ASM_REWRITE_TAC[]);
 
 (*ba bb wa wb *)
 (* ADD_LESS_EQ_SUB = |- !p n m. n <= p ==> ((n + m) <= p = m <= (p - n)) *)
-val ADD_LESS_EQ_SUB = 
+val ADD_LESS_EQ_SUB =
    GSYM (REWRITE_RULE[GREATER_EQ] SUB_GREATER_EQ_ADD);
 
 (*wa *)
@@ -76,15 +76,15 @@ val PRE_LESS_REFL = prove((--`!m . (0 < m) ==> (PRE m < m)`--),
 
 (*ba bn *)
 (* LESS_DIV_EQ_ZERO = |- !r n. r < n ==> (r DIV n = 0) *)
-val LESS_DIV_EQ_ZERO = 
+val LESS_DIV_EQ_ZERO =
     GENL [(--`r:num`--),(--`n:num`--)] (DISCH_ALL (PURE_REWRITE_RULE[MULT,ADD]
     (SPEC (--`0`--)(UNDISCH_ALL (SPEC_ALL  DIV_MULT)))));
 
 (*bn *)
 (* MULT_DIV = |- !n q. 0 < n ==> ((q * n) DIV n = q) *)
-val MULT_DIV = 
+val MULT_DIV =
     GEN_ALL (PURE_REWRITE_RULE[ADD_0]
-    (CONV_RULE RIGHT_IMP_FORALL_CONV 
+    (CONV_RULE RIGHT_IMP_FORALL_CONV
                (SPECL[(--`n:num`--),(--`0`--)] DIV_MULT)));
 
 (* ba bn *)
@@ -128,9 +128,9 @@ val MULT_RIGHT_1 = GEN_ALL (el 4 (CONJ_LIST 6 (SPEC_ALL MULT_CLAUSES)));
 
 (*ba bn *)
 (* |- !q. q DIV (SUC 0) = q *)
-val DIV_ONE = 
+val DIV_ONE =
     GEN_ALL (REWRITE_RULE[CONV_RULE (ONCE_DEPTH_CONV num_CONV) MULT_RIGHT_1]
-    (MP (SPECL [(--`SUC 0`--), (--`q:num`--)] MULT_DIV) 
+    (MP (SPECL [(--`SUC 0`--), (--`q:num`--)] MULT_DIV)
         (SPEC (--`0`--) LESS_0)));
 
 val Less_lemma = prove(
@@ -146,7 +146,7 @@ val Less_lemma = prove(
 
 val Less_MULT_lemma = prove(
     (--`!r m p. 0 < p ==> (r < m) ==> (r < (p * m))`--),
-    let val lem1 = MATCH_MP LESS_LESS_EQ_TRANS 
+    let val lem1 = MATCH_MP LESS_LESS_EQ_TRANS
     	(CONJ (SPEC (--`m:num`--) LESS_SUC_REFL)
     	      (SPECL[(--`SUC m`--), (--`p * (SUC m)`--)] LESS_EQ_ADD))
    in
@@ -214,14 +214,14 @@ val ARITH_PROVE = EQT_ELIM o ARITH_CONV;
  * entire library of lists.
  *---------------------------------------------------------------------------*)
 
-fun WORD_ERR{function,message} = 
+fun WORD_ERR{function,message} =
      HOL_ERR{origin_structure="Word library",
              origin_function = function,
              message = message};
 
 open Rsyntax;
 
-val % = Parse.term_parser;
+val % = Parse.Term
 val alpha_ty = ==`:'a`==
 val bool_ty = ==`:bool`==
 
@@ -239,10 +239,10 @@ fun LIST_INDUCT (base,step) =
    let val {Bvar,Body} = dest_forall(concl step)
        val {ant,conseq} = dest_imp Body
        val {Bvar=h,Body=con} = dest_forall conseq
-       val P  = %`\^Bvar.^ant` 
+       val P  = %`\^Bvar.^ant`
        val b1 = genvar bool_ty
        val b2 = genvar bool_ty
-       val base'  = EQ_MP (SYM(BETA_CONV (%`^P []`))) base 
+       val base'  = EQ_MP (SYM(BETA_CONV (%`^P []`))) base
        val step'  = DISCH ant (SPEC h (UNDISCH(SPEC Bvar step)))
        val hypth  = SYM(RIGHT_BETA(REFL (%`^P ^Bvar`)))
        val concth = SYM(RIGHT_BETA(REFL (%`^P(CONS ^h ^Bvar)`)))
@@ -296,9 +296,12 @@ in
 fun new_list_rec_definition (name,tm) =
   new_recursive_definition{name=name,rec_axiom=list_Axiom,def=tm,fixity=Prefix}
 
-fun new_infix_list_rec_definition (name,tm,prec) =
+fun new_infixl_list_rec_definition (name,tm,prec) =
    new_recursive_definition {name=name,rec_axiom=list_Axiom,def=tm,
-                             fixity=Infix prec}
+                             fixity=Infixl prec}
+fun new_infixr_list_rec_definition (name,tm,prec) =
+   new_recursive_definition {name=name,rec_axiom=list_Axiom,def=tm,
+                             fixity=Infixr prec}
 end;
 
 

@@ -5,7 +5,7 @@ type term = Term.term
 type hol_type = Type.hol_type;
 
 open Lib;
-fun USYNTAX_ERR{func,mesg} = 
+fun USYNTAX_ERR{func,mesg} =
    Exception.HOL_ERR{origin_structure = "Usyntax",
            origin_function = func,message=mesg};
 
@@ -43,7 +43,7 @@ val list_mk_type = end_itlist (curry(op -->));
 (* hol_type -> hol_type list * hol_type *)
 fun strip_type ty =
  case (Type.dest_type ty)
-  of {Tyop="fun", Args=[ty1,ty2]} => 
+  of {Tyop="fun", Args=[ty1,ty2]} =>
         let val (D,r) = strip_type ty2
         in (ty1::D, r)
         end
@@ -53,7 +53,7 @@ fun strip_type ty =
 fun strip_prod_type ty =
  if (Type.is_vartype ty) then [ty]
  else case Type.dest_type ty
-       of {Tyop="prod", Args=[l,r]} 
+       of {Tyop="prod", Args=[l,r]}
             => strip_prod_type l @ strip_prod_type r
         | _ => [ty];
 
@@ -62,7 +62,7 @@ fun match_type ty1 ty2 = mk_tfp_subst(Type.match_type ty1 ty2);
 (* Terms *)
 val free_vars  = Term.free_vars
 
-(* Free variables, in order of occurrence, from left to right in the 
+(* Free variables, in order of occurrence, from left to right in the
  * syntax tree. I should actually write my own here, to have full control.
  *)
 val free_vars_lr = rev o free_vars;
@@ -78,7 +78,7 @@ val variant    = Term.variant
 val type_of    = Term.type_of
 val type_vars_in_term = Term.type_vars_in_term
 val dest_term = Term.dest_term;
-  
+
   (* Prelogic *)
 val aconv     = Term.aconv
 val subst     = Term.subst o mk_hol_subst
@@ -143,7 +143,7 @@ val is_const   = Term.is_const
 val is_comb    = Term.is_comb
 val is_abs     = Term.is_abs
 val const_decl = #const o Term.const_decl
-  
+
 val is_eq     = Dsyntax.is_eq
 val is_imp    = Dsyntax.is_imp
 val is_select = Dsyntax.is_select
@@ -181,8 +181,8 @@ val strip_pair     = Dsyntax.strip_pair
 
 
 (* Miscellaneous *)
-fun gen_all tm = 
-  itlist (fn v => fn M => Dsyntax.mk_forall{Bvar=v,Body=M}) 
+fun gen_all tm =
+  itlist (fn v => fn M => Dsyntax.mk_forall{Bvar=v,Body=M})
         (free_vars_lr tm) tm;
 
 val find_term  = Dsyntax.find_term
@@ -194,11 +194,11 @@ val find_terms = Dsyntax.find_terms
          of {Tyop="prod", Args = [ty1,ty2]} =>
               let val (ltm,vs1) = follow_prod_type ty1 vs
                   val (rtm,vs2) = follow_prod_type ty2 vs1
-              in 
+              in
                 (Dsyntax.mk_pair{fst=ltm, snd=rtm}, vs2)
-              end 
+              end
           | _ => (Lib.trye hd vs, Lib.trye tl vs)
- in 
+ in
     Lib.fst(follow_prod_type ty V)
  end;
 *)
@@ -213,15 +213,15 @@ fun mk_vstruct ty V =
     of {Tyop="prod", Args = [ty1,ty2]} =>
            let val (ltm,vs1) = mk_vstruct ty1 V
                val (rtm,vs2) = mk_vstruct ty2 vs1
-           in 
+           in
              (Dsyntax.mk_pair{fst=ltm, snd=rtm}, vs2)
-           end 
+           end
      | _ => break V
 end;
 
 
 (* Prettyprinting *)
-val term_to_string = Hol_pp.term_to_string
+val term_to_string = Parse.term_to_string
 
 
 (* Typing *)
@@ -238,7 +238,7 @@ fun dest_relation tm =
             val {Rator,Rand=d} = Term.dest_comb Rator
         in (Rator,d,r)
         end
-        handle Exception.HOL_ERR _ 
+        handle Exception.HOL_ERR _
         => raise USYNTAX_ERR{func = "dest_relation",
                              mesg = "unexpected term structure"}
    else raise USYNTAX_ERR{func="dest_relation",mesg="not a boolean term"};
@@ -248,7 +248,7 @@ fun dest_relation tm =
  * Different implementations may give their own name to the "wellfoundedness"
  * constant. Probably this should be replaced by matching.
  *---------------------------------------------------------------------------*)
-fun is_WFR tm = (#Name(Term.dest_const(rator tm))="WF") 
+fun is_WFR tm = (#Name(Term.dest_const(rator tm))="WF")
                 handle Exception.HOL_ERR _ => false;
 
 fun ARB ty = Term.mk_const{Name="ARB", Ty=ty};

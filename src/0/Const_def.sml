@@ -16,7 +16,7 @@ struct
 open Exception Theory Type Term Dsyntax Lib
 infix |-> -->;
 
-fun ERR function message = 
+fun ERR function message =
     Exception.HOL_ERR{origin_structure = "Const_def",
 		      origin_function = function,
 		      message = message}
@@ -44,11 +44,11 @@ fun check_varstruct tm =
 in
 fun check_lhs tm =
   if (is_abs tm) then raise err else
-  if (is_var tm orelse is_const tm) then [tm] else 
+  if (is_var tm orelse is_const tm) then [tm] else
   let val {Rator,Rand} = dest_comb tm
       val l1 = check_lhs Rator
       and l2 = check_varstruct Rand
-  in 
+  in
     if (null_intersection l1 l2) then (l1@l2) else raise err
   end
 end;
@@ -59,7 +59,7 @@ end;
  *  type of C.                                                               *
  *                                                                           *
  *---------------------------------------------------------------------------*)
-fun get_type tm rightty = 
+fun get_type tm rightty =
    if (is_var tm orelse is_const tm) then rightty
    else if (is_comb tm)
         then let val {Rator,Rand} = dest_comb tm
@@ -80,16 +80,16 @@ fun check1 a rhs =
                      ("Attempt to redefine constant from ancestor\
                           \ theory: "^Lib.quote theory)
       fun has_name tm = (#Name(dest_atom tm) = Name) handle HOL_ERR _ => false
-   in 
+   in
      if null(Dsyntax.find_terms has_name rhs) then mk_var atom
      else raise ERR"DEF_EXISTS_RULE" "recursive definitions not allowed"
    end;
-       
+
 
 (*---------------------------------------------------------------------------
  * The derived rule
  *
- *   DEF_EXISTS_RULE : term -> thm 
+ *   DEF_EXISTS_RULE : term -> thm
  *
  * proves that a function defined by a definitional equation exists.
  * The implementation below uses mk_thm, but this will be changed eventually.
@@ -97,7 +97,7 @@ fun check1 a rhs =
 fun DEF_EXISTS_RULE tm =
  let val (vars,body0)  = strip_forall tm
      fun DEF_EX_ERR s = ERR"DEF_EXISTS_RULE" s
-     val {lhs,rhs} = dest_eq body0 handle HOL_ERR _ => 
+     val {lhs,rhs} = dest_eq body0 handle HOL_ERR _ =>
             raise DEF_EX_ERR "proposed definition is not an equation"
      val lhsvars0 = check_lhs lhs
      val a0       = Portable_List.hd lhsvars0
@@ -116,13 +116,13 @@ fun DEF_EXISTS_RULE tm =
       in
          raise DEF_EX_ERR ("unbound var(s) in rhs: "^String.concat vnamestr)
       end
- else if mem v rhsvars 
+ else if mem v rhsvars
       then raise DEF_EX_ERR"recursive definitions not allowed"
-    else 
-    case set_diff (Term.type_vars_in_term rhs) 
+    else
+    case set_diff (Term.type_vars_in_term rhs)
                   (Term.type_vars_in_term v)
      of [] => Thm.mk_oracle_thm std_tag ([],
-                 mk_exists{Bvar=v, 
+                 mk_exists{Bvar=v,
                    Body=list_mk_forall
                       (union vars (Portable_List.tl lhsvars), body)})
       | extras => raise DEF_EX_ERR (String.concat
@@ -141,11 +141,11 @@ fun DEF_EXISTS_RULE tm =
 local val used = ref false
 in
 fun define_exists() =
-  if !used 
+  if !used
   then raise ERR"define_exists" "called >1 time"
   else let val alpha = mk_vartype "'a"
          val x = mk_var{Name="x",Ty=alpha}
-         val _ = Theory.new_binder{Name="?", Ty = (alpha --> bool) --> bool}
+         val _ = Theory.new_constant{Name="?", Ty = (alpha --> bool) --> bool}
          val P = mk_var{Name="P",Ty=alpha --> bool}
          val sel = mk_const{Name="@",Ty=(alpha --> bool)-->alpha}
          val exdef = mk_eq{lhs=mk_const{Name="?", Ty=(alpha-->bool) --> bool},
@@ -159,22 +159,14 @@ fun define_exists() =
 end;
 
 
-fun new_gen_definition{name,def,fixity} =
-   let val def_thm = DEF_EXISTS_RULE def
-       val cname = (#Name o dest_var o #Bvar o dest_exists o Thm.concl) def_thm
-   in Const_spec.new_specification
-           {name = name,
-            consts = [{fixity = fixity, const_name = cname}],
-            sat_thm = def_thm}
-   end;
+fun new_gen_definition{name,def} = let
+  val def_thm = DEF_EXISTS_RULE def
+  val cname = (#Name o dest_var o #Bvar o dest_exists o Thm.concl) def_thm
+in
+  Const_spec.new_specification
+  {name = name, consts = [cname], sat_thm = def_thm}
+end;
 
-fun new_definition(name,def) = 
-    new_gen_definition{name=name, fixity=Prefix, def=def};
-
-fun new_infix_definition(name,def,prec) = 
-    new_gen_definition{name=name, fixity=Infix prec, def=def};
-
-fun new_binder_definition(name,def) = 
-    new_gen_definition{name=name, fixity=Binder, def=def};
+fun new_definition(name,def) = new_gen_definition{name=name, def=def};
 
 end; (* CONST_DEF *)

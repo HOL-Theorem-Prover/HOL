@@ -186,26 +186,26 @@ val poly = new_recursive_definition Prefix list_Axiom "poly_def"
 (* Arithmetic operations on polynomials.                                     *)
 (* ------------------------------------------------------------------------- *)
 
-val poly_add = new_recursive_definition (Infix 500) list_Axiom "poly_add_def"
+val poly_add = new_recursive_definition (Infixl 500) list_Axiom "poly_add_def"
   ``(++ [] l2 = l2) /\
     (++ (CONS h t) l2 =
-        ((l2 = []) => CONS h t
-                    | CONS (h |+| HD l2) (++ t (TL l2))))``;
+        (if (l2 = []) then CONS h t
+         else CONS (h |+| HD l2) (++ t (TL l2))))``;
 
-val poly_cmul = new_recursive_definition (Infix 600) list_Axiom "poly_cmul_def"
+val poly_cmul = new_recursive_definition (Infixl 600) list_Axiom "poly_cmul_def"
   ``(## c [] = []) /\
     (## c (CONS h t) = CONS (c |*| h) (## c t))``;
 
 val poly_neg = new_definition ("poly_neg_def",
   ``neg = $## (--(&1))``);
 
-val poly_mul = new_recursive_definition (Infix 600) list_Axiom "poly_mul_def"
+val poly_mul = new_recursive_definition (Infixl 600) list_Axiom "poly_mul_def"
   ``($** [] l2 = []) /\
     ($** (CONS h t) l2 =
-       ((t = []) => h ## l2
-                  | (h ## l2) ++ CONS (&0) ($** t l2)))``;
+       (if (t = []) then h ## l2
+        else (h ## l2) ++ CONS (&0) ($** t l2)))``;
 
-val poly_pexp = new_recursive_definition (Infix 700) num_Axiom "poly_pexp_def"
+val poly_pexp = new_recursive_definition (Infixr 700) num_Axiom "poly_pexp_def"
   ``($pexp p 0 = [&1]) /\
     ($pexp p (SUC n) = p ** $pexp p n)``;
 
@@ -219,7 +219,7 @@ val poly_diff_aux = new_recursive_definition Prefix list_Axiom
    (poly_diff_aux n (CONS h t) = CONS (&n |*| h) (poly_diff_aux (SUC n) t))``;
 
 val poly_diff = new_definition ("poly_diff_def",
-  ``diff l = ((l = []) => [] | (poly_diff_aux 1 (TL l)))``);
+  ``diff l = (if (l = []) then [] else (poly_diff_aux 1 (TL l)))``);
 
 (* ------------------------------------------------------------------------- *)
 (* Useful clausifications.                                                   *)
@@ -576,7 +576,7 @@ val POLY_ROOTS_INDEX_LEMMA = store_thm("POLY_ROOTS_INDEX_LEMMA",
         DISCH_THEN(K ALL_TAC)] THEN
       DISCH_THEN(MP_TAC o SPEC ``q:real list``) THEN ASM_REWRITE_TAC[] THEN
       DISCH_THEN(X_CHOOSE_TAC ``i:num->real``) THEN
-      EXISTS_TAC ``\m. (m = SUC n) => (a:real) | i m`` THEN
+      EXISTS_TAC ``\m. if m = SUC n then (a:real) else i m`` THEN
       REWRITE_TAC[POLY_MUL, LE, REAL_ENTIRE] THEN
       X_GEN_TAC ``x:real`` THEN DISCH_THEN(DISJ_CASES_THEN MP_TAC) THENL
        [DISCH_THEN(fn th => EXISTS_TAC ``SUC n`` THEN MP_TAC th) THEN
@@ -635,7 +635,7 @@ val POLY_ENTIRE_LEMMA = store_thm("POLY_ENTIRE_LEMMA",
   DISCH_THEN(X_CHOOSE_THEN ``N2:num`` (X_CHOOSE_TAC ``i2:num->real``)) THEN
   DISCH_THEN(X_CHOOSE_THEN ``N1:num`` (X_CHOOSE_TAC ``i1:num->real``)) THEN
   EXISTS_TAC ``N1 + N2:num`` THEN
-  EXISTS_TAC ``\n:num. n < N1 => i1(n):real | i2(n - N1)`` THEN
+  EXISTS_TAC ``\n:num. if n < N1 then i1(n):real else i2(n - N1)`` THEN
   X_GEN_TAC ``x:real`` THEN REWRITE_TAC[REAL_ENTIRE, POLY_MUL] THEN
   DISCH_THEN(DISJ_CASES_THEN (ANTE_RES_THEN (X_CHOOSE_TAC ``n:num``))) THENL
    [EXISTS_TAC ``n:num`` THEN ASM_SIMP_TAC real_ss [],
@@ -767,7 +767,7 @@ val POLY_DIFF_WELLDEF = store_thm("POLY_DIFF_WELLDEF",
 (* Basics of divisibility.                                                   *)
 (* ------------------------------------------------------------------------- *)
 
-val poly_divides = new_infix_definition ("poly_divides",
+val poly_divides = new_infixl_definition ("poly_divides",
   ``$poly_divides p1 p2 = ?q. poly p2 = poly (p1 ** q)``, 475);
 
 val POLY_PRIMES = store_thm("POLY_PRIMES",
@@ -816,7 +816,7 @@ val POLY_DIVIDES_EXP = store_thm("POLY_DIVIDES_EXP",
   REAL_ARITH_TAC);
 
 val POLY_EXP_DIVIDES = store_thm("POLY_EXP_DIVIDES",
- ``!p q m n. 
+ ``!p q m n.
       (p pexp n) poly_divides q /\ m <= n ==> (p pexp m) poly_divides q``,
   MESON_TAC[POLY_DIVIDES_TRANS, POLY_DIVIDES_EXP]);
 
@@ -1030,7 +1030,7 @@ val ORDER_DIVIDES = store_thm("ORDER_DIVIDES",
     REWRITE_TAC[FUN_EQ_THM, POLY_MUL, poly, REAL_MUL_RZERO],
     ASM_MESON_TAC[ORDER_THM, POLY_EXP_DIVIDES, NOT_LE, LE_SUC_LT]]);
 
-val ORDER_DECOMP = store_thm("ORDER_DECOMP", 
+val ORDER_DECOMP = store_thm("ORDER_DECOMP",
  ``!p a. ~(poly p = poly [])
          ==> ?q. (poly p = poly (([--a; &1] pexp (poly_order a p)) ** q)) /\
                  ~([--a; &1] poly_divides q)``,
@@ -1088,17 +1088,17 @@ val ORDER_MUL = store_thm("ORDER_MUL",
     ]
     THEN REWRITE_TAC[poly_divides]
     THEN EXISTS_TAC ``t:real list``
-    THEN SUBGOAL_THEN ``poly ([-- a; &1] pexp (poly_order a p) ** r ** s) =
+    THEN SUBGOAL_THEN ``poly ([-- a; &1] pexp (poly_order a p) ** (r ** s)) =
       poly ([-- a; &1] pexp (poly_order a p) ** ([-- a; &1] ** t))`` MP_TAC
     THENL [
       ALL_TAC,
       MESON_TAC[POLY_MUL_LCANCEL, POLY_EXP_PRIME_EQ_0]
     ]
     THEN SUBGOAL_THEN ``poly ([-- a; &1] pexp (poly_order a q) **
-                        [-- a; &1] pexp (poly_order a p) ** r ** s) =
+                        ([-- a; &1] pexp (poly_order a p) ** (r ** s))) =
                   poly ([-- a; &1] pexp (poly_order a q) **
-                        [-- a; &1] pexp (poly_order a p) **
-                        [-- a; &1] ** t)`` MP_TAC
+                        ([-- a; &1] pexp (poly_order a p) **
+                         ([-- a; &1] ** t)))`` MP_TAC
     THENL [
       ALL_TAC,
       MESON_TAC[POLY_MUL_LCANCEL, POLY_EXP_PRIME_EQ_0]
@@ -1152,8 +1152,8 @@ val ORDER_DIFF = store_thm("ORDER_DIFF",
     MATCH_MP_TAC THENL
      [REWRITE_TAC[REAL_EQ_MUL_LCANCEL, REAL_OF_NUM_EQ, NOT_SUC], ALL_TAC] THEN
     REWRITE_TAC[POLY_MUL, POLY_CMUL] THEN
-    SUBGOAL_THEN ``!a b c. &(SUC n) |*| a |*| b |*| inv(&(SUC n)) |*| c =
-                          a |*| b |*| c``
+    SUBGOAL_THEN ``!a b c. &(SUC n) |*| (a |*| (b |*| (inv(&(SUC n)) |*| c))) =
+                          a |*| (b |*| c)``
     (fn th => REWRITE_TAC[th]) THENL
       [REPEAT GEN_TAC THEN
        GEN_REWRITE_TAC LAND_CONV [REAL_MUL_SYM] THEN
@@ -1178,7 +1178,7 @@ val POLY_SQUAREFREE_DECOMP_ORDER = store_thm("POLY_SQUAREFREE_DECOMP_ORDER",
         (poly p = poly (q ** d)) /\
         (poly (diff p) = poly (e ** d)) /\
         (poly d = poly (r ** p ++ s ** diff p))
-        ==> !a. poly_order a q = ((poly_order a p = 0) => 0 | 1)``,
+        ==> !a. poly_order a q = (if (poly_order a p = 0) then 0 else 1)``,
   REPEAT STRIP_TAC THEN
   SUBGOAL_THEN ``poly_order a p = poly_order a q + poly_order a d`` MP_TAC THENL
    [MATCH_MP_TAC EQ_TRANS THEN EXISTS_TAC ``poly_order a (q ** d)`` THEN
@@ -1310,8 +1310,9 @@ val POLY_SQUAREFREE_DECOMP = store_thm("POLY_SQUAREFREE_DECOMP",
 
 val normalize = new_recursive_definition Prefix list_Axiom "normalize"
   ``(normalize [] = []) /\
-   (normalize (CONS h t) = ((normalize t = []) => (h = &0) => [] | [h]
-                                               | CONS h (normalize t)))``;
+   (normalize (CONS h t) = (if (normalize t = []) then
+                              if (h = &0) then [] else [h]
+                            else CONS h (normalize t)))``;
 
 val POLY_NORMALIZE = store_thm("POLY_NORMALIZE",
  ``!p. poly (normalize p) = poly p``,
@@ -1362,7 +1363,7 @@ val POLY_ROOTS_FINITE_SET = store_thm("POLY_ROOTS_FINITE_SET",
       SUBGOAL_THEN ``{x:real | ?n. n < SUC N /\ (x = i n)} =
                     (i N) INSERT {x:real | ?n. n < N /\ (x = i n)}``
       SUBST1_TAC THENL
-       [SIMP_TAC bool_ss [LT, EXTENSION, IN_INSERT, SPECIFICATION, 
+       [SIMP_TAC bool_ss [LT, EXTENSION, IN_INSERT, SPECIFICATION,
                           GSPEC_DEF,pairTheory.CLOSED_PAIR_EQ]
         THEN MESON_TAC[],
         MATCH_MP_TAC(CONJUNCT2 FINITE_RULES) THEN ASM_REWRITE_TAC[]]],

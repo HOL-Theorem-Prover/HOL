@@ -2,7 +2,7 @@ signature Q =
 sig
  type thm = Thm.thm
  type term = Term.term
- type fixity = Term.fixity
+ type fixity = Parse.fixity
  type hol_type = Type.hol_type
  type tactic = Abbrev.tactic
  type thm_tactic = Abbrev.thm_tactic
@@ -47,10 +47,11 @@ sig
     val INST : (term quotation,term quotation) subst -> thm -> thm
     val INST_TYPE : (hol_type quotation, hol_type quotation) subst -> thm -> thm
     val new_definition : string * term quotation -> thm
-    val new_infix_definition : string * term quotation * int -> thm
+    val new_infixl_definition : string * term quotation * int -> thm
+    val new_infixr_definition : string * term quotation * int -> thm
     val define: term quotation -> string -> fixity -> thm
     val store_thm : string * term quotation * tactic -> thm
     val prove : term quotation -> tactic -> thm
     val ABBREV_TAC : term quotation -> tactic
     val UNABBREV_TAC : term quotation -> tactic
-  end 
+  end

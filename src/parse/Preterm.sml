@@ -72,8 +72,14 @@ local val --> = Type.-->
         | type_of (Constrained(_,ty)) = ty
         | type_of (Antiq tm) = Term.type_of tm
 in
-fun TC tyvars =
-let fun check(Comb{Rator, Rand}) =
+fun TC printers tyvars = let
+  fun default_typrinter x = "<hol_type>"
+  fun default_tmprinter x = "<term>"
+  val (ptm, pty) =
+    case printers of
+      SOME (x,y) => (Lib.say o x, Lib.say o y)
+    | NONE => (Lib.say o default_tmprinter, Lib.say o default_typrinter)
+  fun check(Comb{Rator, Rand}) =
         (check Rator; check Rand;
          unify (type_of Rator)
                (type_of Rand --> Lib.state(Lib.next tyvars))
@@ -81,8 +87,6 @@ let fun check(Comb{Rator, Rand}) =
                                         origin_function="unify",message})
          => let val tmp = !Globals.show_types
                 val _   = Globals.show_types := true
-                val ptm = Lib.say o Hol_pp.term_to_string
-                val pty = Lib.say o Hol_pp.type_to_string
                 val Rator' = to_term Rator
                 val Rand'  = to_term Rand
             in
@@ -107,8 +111,6 @@ let fun check(Comb{Rator, Rand}) =
                                            origin_function="unify",message})
             => let val tmp = !Globals.show_types
                    val _ = Globals.show_types := true
-                   val ptm = Lib.say o Hol_pp.term_to_string
-                   val pty = Lib.say o Hol_pp.type_to_string
                in
                Lib.say "\nType inference failure: the term\n\n";
                ptm (to_term tm); Lib.say "\n\n";
@@ -204,6 +206,6 @@ fun cleanup tm =
         "Unconstrained type variable (and Globals.guessing_tyvars is false).";
 
 
-fun typecheck fresh_tyvs tm = (TC fresh_tyvs tm; cleanup tm);
+fun typecheck pfns fresh_tyvs tm = (TC pfns fresh_tyvs tm; cleanup tm);
 
 end; (* PRETERM *)

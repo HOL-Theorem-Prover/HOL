@@ -209,9 +209,9 @@ val BEQ_CONV =
 
 val COND_CONV =
  let val [c1,c2,c3] = CONJUNCTS
-	(Tactical.prove(Term`(!t1 t2. (T => t1 | t2) = (t1:'a)) /\
-	                     (!t1 t2. (F => t1 | t2) = (t2:'a)) /\
-		             (!b t. (b => t | t) = (t:'a))`,
+	(Tactical.prove(Term`(!t1 t2. (if T then t1 else t2) = (t1:'a)) /\
+	                     (!t1 t2. (if F then t1 else t2) = (t2:'a)) /\
+		             (!b t.   (if b then t else t) = (t:'a))`,
 	       REWRITE_TAC[COND_CLAUSES, COND_ID]))
  in
  fn tm =>

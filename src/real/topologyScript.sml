@@ -25,7 +25,7 @@ app load ["Psyntax",
 
 (*
 *)
-open HolKernel Parse basicHol90Lib;
+open HolKernel basicHol90Lib Parse;
 infix THEN THENL ORELSE ORELSEC ##;
 
 open Psyntax
@@ -54,10 +54,10 @@ val _ = new_theory "topology";
 val re_Union = new_definition("re_Union",
   (--`re_Union S' = \x:'a. ?s. S' s /\ s x`--));
 
-val re_union = new_infix_definition("re_union",
+val re_union = new_infixl_definition("re_union",
   (--`$re_union P Q = \x:'a. P x \/ Q x`--), 500);
 
-val re_intersect = new_infix_definition("re_intersect",
+val re_intersect = new_infixl_definition("re_intersect",
   (--`$re_intersect P Q = \x:'a. P x /\ Q x`--), 600);
 
 val re_null = new_definition("re_null",
@@ -66,7 +66,7 @@ val re_null = new_definition("re_null",
 val re_universe = new_definition("re_universe",
   (--`re_universe = \x:'a. T`--));
 
-val re_subset = new_infix_definition("re_subset",
+val re_subset = new_infixr_definition("re_subset",
   (--`$re_subset P Q = !x:'a. P x ==> Q x`--), 450);
 
 val re_compl = new_definition("re_compl",
@@ -241,7 +241,7 @@ val metric_tydef = new_type_definition
  ("metric",
   (--`ismet:('a#'a->real)->bool`--),
   PROVE((--`?m:('a#'a->real). ismet m`--),
-        EXISTS_TAC (--`\(x:'a,(y:'a)). (x = y) => &0 | &1`--) THEN
+        EXISTS_TAC (--`\(x:'a,(y:'a)). if (x = y) then &0 else &1`--) THEN
         REWRITE_TAC[ismet] THEN
         CONV_TAC(ONCE_DEPTH_CONV PAIRED_BETA_CONV) THEN
         CONJ_TAC THEN REPEAT GEN_TAC THENL
@@ -278,10 +278,10 @@ val METRIC_POS = prove_thm("METRIC_POS",
   (--`!m:('a)metric. !x y. &0 |<=| (dist m)(x,y)`--),
   REPEAT GEN_TAC THEN ASSUME_TAC(SPEC (--`m:('a)metric`--) METRIC_ISMET) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[ismet]) THEN
-  FIRST_ASSUM(MP_TAC o 
+  FIRST_ASSUM(MP_TAC o
              SPECL [(--`x:'a`--), (--`y:'a`--), (--`y:'a`--)] o CONJUNCT2) THEN
-  REWRITE_TAC[REWRITE_RULE[] 
-             (SPECL [(--`m:('a)metric`--), (--`y:'a`--), (--`y:'a`--)] 
+  REWRITE_TAC[REWRITE_RULE[]
+             (SPECL [(--`m:('a)metric`--), (--`y:'a`--), (--`y:'a`--)]
                     METRIC_ZERO)]
   THEN CONV_TAC CONTRAPOS_CONV THEN REWRITE_TAC[REAL_NOT_LE] THEN
   DISCH_THEN(MP_TAC o MATCH_MP REAL_LT_ADD2 o W CONJ) THEN

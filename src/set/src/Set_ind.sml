@@ -21,7 +21,7 @@ infix ##;
 
 type tactic = Abbrev.tactic;
 
-fun SET_IND_ERR{function,message} = 
+fun SET_IND_ERR{function,message} =
   HOL_ERR{origin_structure = "Set_ind",
           origin_function = function,
           message = message};
@@ -38,8 +38,8 @@ fun SET_IND_ERR{function,message} =
 (* ---------------------------------------------------------------------*)
 
 local val check = assert (fn tm => #Name(dest_const(rator tm)) = "FINITE")
-      val IMP = --`==>`--
-      val CONJ = --`/\`--
+      val IMP = --`$==>`--
+      val CONJ = --`$/\`--
       val alpha = ==`: 'a `==
       fun MK_IMP1 tm = AP_TERM (mk_comb{Rator=IMP,Rand=tm})
       fun MK_IMP2 th1 th2 = MK_COMB(AP_TERM IMP th1,th2)
@@ -47,15 +47,15 @@ local val check = assert (fn tm => #Name(dest_const(rator tm)) = "FINITE")
                         val {ant,conseq} = dest_imp Body
                     in (Bvar,(ant,conseq))
                     end
-      fun sconv tm = 
+      fun sconv tm =
         let val (s,(a,(e,(h,c)))) = (I ## (I ## dest)) (dest tm)
-            val th1 = RAND_CONV BETA_CONV a 
-            val th2 = BETA_CONV c 
+            val th1 = RAND_CONV BETA_CONV a
+            val th2 = BETA_CONV c
         in
         FORALL_EQ s (MK_IMP2 th1 (FORALL_EQ e (MK_IMP1 h th2)))
         end
-      fun conv tm = 
-        let val {conj1,conj2} = dest_conj tm 
+      fun conv tm =
+        let val {conj1,conj2} = dest_conj tm
         in  MK_COMB(AP_TERM CONJ (BETA_CONV conj1), sconv conj2)
         end
       val STAC = GEN_TAC THEN DISCH_THEN (CONJUNCTS_THEN ASSUME_TAC) THEN
@@ -72,7 +72,7 @@ fun SET_INDUCT_TAC FINITE_INDUCT (A,g) =
        val spec = SPEC s (UNDISCH (SPEC pred inst))
        val beta = GEN s (CONV_RULE (RAND_CONV BETA_CONV) spec)
        val disc = DISCH (hd(hyp beta)) beta
-       val ithm = CONV_RULE (RATOR_CONV(RAND_CONV conv)) disc 
+       val ithm = CONV_RULE (RATOR_CONV(RAND_CONV conv)) disc
    in
    (MATCH_MP_TAC ithm THEN CONJ_TAC THENL [ALL_TAC, STAC]) (A,g)
    end

@@ -15,7 +15,7 @@ struct
 open HolKernel Parse basicHol90Lib;
 
 type term   = Term.term
-type fixity = Term.fixity
+type fixity = Parse.fixity
 type thm    = Thm.thm
 type conv   = Abbrev.conv
 type tactic = Abbrev.tactic
@@ -26,7 +26,7 @@ type 'a quotation = 'a frag list
 infix ## |->;
 infix THEN THENL;
 
-fun IND_DEF_ERR{function,message} = 
+fun IND_DEF_ERR{function,message} =
         HOL_ERR{origin_structure = "Library \"Ind_def\"",
                 origin_function = function,
                 message = message};
@@ -91,14 +91,14 @@ end;
 
 
 exception checkfilter_ERR of string;
-local 
+local
 exception err
 fun check ps [] = assert null
   | check ps (H :: T) =
       let val cktl = check ps T
-      in if (mem H ps) 
+      in if (mem H ps)
          then fn (h::t) =>  if (H = h) then cktl t else raise err
-         else fn (h::t) => (h :: (cktl t)) 
+         else fn (h::t) => (h :: (cktl t))
       end
 in
 fun checkfilter ps a =
@@ -109,7 +109,7 @@ fun checkfilter ps a =
    end
 end;
 
-fun checkside R tm = 
+fun checkside R tm =
    if (free_in R tm)
    then raise IND_DEF_ERR{function = "checkside",
            message = Lib.quote(#Name(dest_var R))^" free in side-condition(s)"}
@@ -207,23 +207,23 @@ fun chk p e x = if (p x) then x else raise e
 val ckb = chk (fn t => type_of t = Type.bool) ERR1
 val ckv = chk is_var ERR2
 val ckp = chk is_var ERR3
-fun itfn ck e v l = if (mem (ck v) l) 
+fun itfn ck e v l = if (mem (ck v) l)
                     then raise e
                     else (v::l)
 val cka = C (itlist (itfn ckv ERR4)) []
 val ckpa = C (itlist (itfn ckp ERR5)) []
 in
 fun mk_mk_pred (pat,ps,vs) =
-   let val (R,args) = (ckv ## cka) (strip_comb(ckb pat)) 
+   let val (R,args) = (ckv ## cka) (strip_comb(ckb pat))
    in
-   if (exists ((op not) o (C mem args)) (ckpa ps)) 
+   if (exists ((op not) o (C mem args)) (ckpa ps))
    then raise ERR6
    else let val P = variant vs (mk_predv (set_diff args ps))
-            val checkhyp = checkfilter ps args 
+            val checkhyp = checkfilter ps args
         in
-        (R,P, fn tm => let val (f,a) = strip_comb tm 
-                       in if (f = R) 
-                          then list_mk_comb(P,checkhyp a) 
+        (R,P, fn tm => let val (f,a) = strip_comb tm
+                       in if (f = R)
+                          then list_mk_comb(P,checkhyp a)
                           else checkside R tm
                        end)
         end
@@ -273,20 +273,20 @@ end;
 (* --------------------------------------------------------------------- *)
 
 fun make_rule (P,R,ps,mkp) (ass,c) =
-   if (not (fst(strip_comb c) = R)) 
-   then raise IND_DEF_ERR{function = "make_rule", 
+   if (not (fst(strip_comb c) = R))
+   then raise IND_DEF_ERR{function = "make_rule",
                           message = "ill-formed rule conclusion"}
    else let fun getvs tm = set_diff (hol88Lib.frees tm) (P::(R::ps))
-            val con = mkp c 
+            val con = mkp c
         in
-        if (null ass) 
+        if (null ass)
         then list_mk_forall(getvs con,con)
         else let val asm = list_mk_conj (map mkp ass)
                  val pvs = getvs asm
                  val cvs = getvs con
                  val qcon = list_mk_forall(set_diff cvs pvs,con)
                  val qasm = list_mk_exists(set_diff pvs cvs,asm)
-                 val avs = intersect pvs cvs 
+                 val avs = intersect pvs cvs
              in
              list_mk_forall(avs,mk_imp{ant=qasm,conseq=qcon})
              end
@@ -318,13 +318,13 @@ fun make_definition (pat,ps) rules =
    let val rules = map (fn {hypotheses,side_conditions,conclusion} =>
                               ((hypotheses@side_conditions),conclusion))
                        rules
-       val vs = hol88Lib.freesl (flatten (map (fn (x,y) => (y::x)) rules)) 
+       val vs = hol88Lib.freesl (flatten (map (fn (x,y) => (y::x)) rules))
        val (R,P,mkp) = mk_mk_pred(pat,ps,vs)
        val frules = map ((flatten o map strip_conj) ## I) rules
        val crules = list_mk_conj(map (make_rule (P,R,ps,mkp)) frules)
        val right = mk_forall{Bvar=P,Body=mk_imp{ant=crules,conseq=mkp pat}}
        val eqn = mk_eq{lhs=pat,rhs=right}
-       val args = set_diff (snd(strip_comb pat)) ps 
+       val args = set_diff (snd(strip_comb pat)) ps
    in list_mk_forall(ps @ args,eqn)
    end;
 
@@ -363,7 +363,7 @@ fun derive_induction def =
        val {ant,conseq} = dest_imp Body
        val rvs = snd(strip_comb conseq)
        val th1 = UNDISCH (fst(EQ_IMP_RULE (SPECL vs (ASSUME def))))
-       val th2 = GENL rvs (DISCH lhs (UNDISCH (SPEC Bvar th1))) 
+       val th2 = GENL rvs (DISCH lhs (UNDISCH (SPEC Bvar th1)))
    in
    GENL (set_diff vs rvs) (GEN Bvar (DISCH ant th2))
    end;
@@ -399,17 +399,17 @@ fun derive_induction def =
 (* --------------------------------------------------------------------- *)
 
 fun usedef (rvs,th) =
-   let val (left,right) = EQ_IMP_RULE th 
+   let val (left,right) = EQ_IMP_RULE th
        val {ant,conseq} = dest_imp (concl left)
        val {Bvar,...} = dest_forall conseq
-       val lth = GENL rvs (DISCH ant (UNDISCH(SPEC Bvar (UNDISCH left)))) 
+       val lth = GENL rvs (DISCH ant (UNDISCH(SPEC Bvar (UNDISCH left))))
        fun ass tm = SPECL (snd(strip_comb tm)) lth
        val rth = GENL rvs right
        fun ab th =
-            let val ts = snd(strip_comb(rand(#Body(dest_forall(concl th))))) 
-            in MP (SPECL ts rth) th 
+            let val ts = snd(strip_comb(rand(#Body(dest_forall(concl th)))))
+            in MP (SPECL ts rth) th
             end
-   in (ab,ass) 
+   in (ab,ass)
    end;
 
 (* --------------------------------------------------------------------- *)
@@ -438,13 +438,13 @@ fun usedef (rvs,th) =
 local
 fun exfn v th = EXISTS(mk_exists{Bvar=v,Body=concl th},v) th
 fun chfn v (a,th) =
-   let val tm = mk_exists{Bvar=v,Body=a} 
+   let val tm = mk_exists{Bvar=v,Body=a}
    in
-   (tm,CHOOSE (v,ASSUME tm) th) 
+   (tm,CHOOSE (v,ASSUME tm) th)
    end
 in
 fun eximp vs th =
-   let val {ant,conseq} = dest_imp(concl th) 
+   let val {ant,conseq} = dest_imp(concl th)
    in
    itlist chfn vs (ant,itlist exfn vs (UNDISCH th))
    end
@@ -490,12 +490,12 @@ fun derive_rule rel (ab,ass) th =
       let val {ant,conseq} = dest_imp body
           val (cvs,con) = strip_forall conseq
           val (evs,asms) = (I ## strip_conj) (strip_exists ant)
-          fun mfn tm = if (free_in rel tm) 
-                       then ass tm 
+          fun mfn tm = if (free_in rel tm)
+                       then ass tm
                        else DISCH_ALL(ASSUME tm)
           val ths = map mfn asms
           val (A1,th1) = eximp evs (end_itlist IMP_CONJ ths)
-          val th3 = ab (GEN rel (DISCH R (SPECL cvs (MP thm1 th1)))) 
+          val th3 = ab (GEN rel (DISCH R (SPECL cvs (MP thm1 th1))))
       in
       GENL xs (DISCH A1 (GENL cvs th3))
       end
@@ -518,18 +518,18 @@ end;
 (*         LIST_CONJ rules;;                                             *)
 (* --------------------------------------------------------------------- *)
 
-fun derive_rules def = 
+fun derive_rules def =
    let val (vs,{lhs,rhs}) = (I ## dest_eq) (strip_forall def)
        val {Bvar,Body} = dest_forall rhs
        val {ant,conseq} = dest_imp Body
        val tms = snd(strip_comb conseq)
        val (ab,ass) = usedef (tms,SPECL vs (ASSUME def))
        val ths = CONJUNCTS (ASSUME ant)
-       val rules = map (GENL(set_diff vs tms) o derive_rule Bvar (ab,ass)) ths 
+       val rules = map (GENL(set_diff vs tms) o derive_rule Bvar (ab,ass)) ths
    in LIST_CONJ rules
    end;
-    
-fun prove_inductive_set_exists patt rules = 
+
+fun prove_inductive_set_exists patt rules =
    let val def = make_definition patt rules
        val (vs,{lhs,rhs}) = (I ## dest_eq) (strip_forall def)
        val (R,args) = strip_comb lhs
@@ -537,7 +537,7 @@ fun prove_inductive_set_exists patt rules =
        val eth = EXISTS(mk_exists{Bvar=R,Body=concl thm1},R) thm1
        val lam = list_mk_abs(vs,rhs)
        val bth = GENL vs (LIST_BETA_CONV (list_mk_comb(lam,vs)))
-       val deth = EXISTS (mk_exists{Bvar=R,Body=def},lam) bth 
+       val deth = EXISTS (mk_exists{Bvar=R,Body=def},lam) bth
    in CHOOSE (R, deth) eth
    end;
 
@@ -546,9 +546,9 @@ fun prove_inductive_set_exists patt rules =
 (* --------------------------------------------------------------------- *)
 
 fun new_inductive_definition{name,fixity,patt,rules} =
-   let val eth = prove_inductive_set_exists patt rules 
+   let val eth = prove_inductive_set_exists patt rules
        val cname = #Name(dest_var(#Bvar(dest_exists(concl eth))))
-       val (rules,ind) = 
+       val (rules,ind) =
         CONJ_PAIR(new_specification{name=name, sat_thm=eth,
                                     consts=[{const_name=cname,fixity=fixity}]})
    in {desc = CONJUNCTS rules, induction_thm = ind}
@@ -605,26 +605,26 @@ fun simp_axiom (ax,tm) =
 (*   |- asm ==> ?zs. ... /\ REL ps <args> /\ P <args> /\ ...		*)
 (*									*)
 (* --------------------------------------------------------------------- *)
-local 
+local
 fun reduce Fn tm =
    let val {conj1,conj2} = dest_conj tm
        val imp = reduce Fn conj2
    in
-   if (fst(strip_comb conj1) = Fn) 
+   if (fst(strip_comb conj1) = Fn)
    then let val (t1,t2)=CONJ_PAIR(EQ_MP (LIST_BETA_CONV conj1) (ASSUME conj1))
             val thm1 = CONJ t1 (CONJ t2 (UNDISCH imp))
             val asm = mk_conj{conj1=conj1,conj2=rand(rator(concl imp))}
-            val (h1,h2) = CONJ_PAIR (ASSUME asm) 
-        in DISCH asm (PROVE_HYP h1 (PROVE_HYP h2 thm1)) 
+            val (h1,h2) = CONJ_PAIR (ASSUME asm)
+        in DISCH asm (PROVE_HYP h1 (PROVE_HYP h2 thm1))
         end
    else IMP_CONJ (DISCH conj1 (ASSUME conj1)) imp
    end
    handle _ => if (fst(strip_comb tm) = Fn)
-               then fst(EQ_IMP_RULE(LIST_BETA_CONV tm)) 
-               else DISCH tm (ASSUME tm) 
+               then fst(EQ_IMP_RULE(LIST_BETA_CONV tm))
+               else DISCH tm (ASSUME tm)
 in
 fun reduce_asm Fn asm =
-   let val (vs,body) = strip_exists asm 
+   let val (vs,body) = strip_exists asm
    in itlist EXISTS_IMP vs (reduce Fn body)
    end
 end;
@@ -652,7 +652,7 @@ fun simp_concl rul tm =
    end;
 
 
-fun simp_rule (rul,tm) = 
+fun simp_rule (rul,tm) =
    let val (vs,{ant,conseq}) = (I ## dest_imp) (strip_forall tm)
        val (cvs,red) = strip_forall conseq
        val bth = itlist FORALL_EQ cvs (LIST_BETA_CONV red)
@@ -661,7 +661,7 @@ fun simp_rule (rul,tm) =
                                           conseq=rand(concl bth)})
        val thm1 = UNDISCH (IMP_TRANS basm (SPECL vs (ASSUME asm)))
        val thm2 = DISCH asm (GENL vs (DISCH ant (EQ_MP (SYM bth) thm1)))
-       val thm3 = simp_concl rul (rand(rator(concl thm2))) 
+       val thm3 = simp_concl rul (rand(rator(concl thm2)))
    in IMP_TRANS thm3 thm2
    end;
 
@@ -669,7 +669,7 @@ fun simp_rule (rul,tm) =
 fun simp p = simp_rule p handle _ => simp_axiom p;
 
 
-fun last [a] = a 
+fun last [a] = a
   | last (_::rst) = last rst
   | last [] = raise IND_DEF_ERR{function = "last",
                                 message = "empty list has no last element!"};
@@ -680,7 +680,7 @@ fun butlast [_] = []
                                    message = "empty list"};
 
 
-fun derive_strong_induction (rules,ind) = 
+fun derive_strong_induction (rules,ind) =
    let val (vs,{conseq,...}) = (I ## dest_imp) (strip_forall (concl ind))
        val srules = map (SPECL (butlast vs)) rules
        val (cvs,{ant=rel,conseq=pred}) = (I ## dest_imp) (strip_forall conseq)
@@ -691,7 +691,7 @@ fun derive_strong_induction (rules,ind) =
        val bth = LIST_BETA_CONV (list_mk_comb(newp,args))
        val sth = CONJUNCT2 (EQ_MP bth (UNDISCH (SPECL args (ASSUME co))))
        val thm1 = IMP_TRANS ith (DISCH co (GENL args (DISCH rel sth)))
-       val ths = map simp (combine (srules,strip_conj ant)) 
+       val ths = map simp (combine (srules,strip_conj ant))
    in
    GENL vs (IMP_TRANS (end_itlist IMP_CONJ ths) thm1)
    end
@@ -756,43 +756,43 @@ fun derive_strong_induction (rules,ind) =
 
 fun MK_CONJ_THEN Fn tm =
    let val {conj1,conj2} = dest_conj tm
-       val tcl1 = if (fst(strip_comb conj1) = Fn) 
-                  then fn t1 => fn t2 => t1 
+       val tcl1 = if (fst(strip_comb conj1) = Fn)
+                  then fn t1 => fn t2 => t1
                   else fn t1 => fn t2 => t2
        val tcl2 = MK_CONJ_THEN Fn conj2
    in
-   fn ttac1 => fn ttac2 => 
+   fn ttac1 => fn ttac2 =>
      CONJUNCTS_THEN2 (tcl1 ttac1 ttac2) (tcl2 ttac1 ttac2)
    end
-   handle _ => if (fst(strip_comb tm) = Fn) 
-               then K 
+   handle _ => if (fst(strip_comb tm) = Fn)
+               then K
                else C K;
 
-fun MK_CHOOSE_THEN Fn [] body = MK_CONJ_THEN Fn body 
+fun MK_CHOOSE_THEN Fn [] body = MK_CONJ_THEN Fn body
   | MK_CHOOSE_THEN Fn (_::t) body =
-      let val tcl = MK_CHOOSE_THEN Fn t body 
+      let val tcl = MK_CHOOSE_THEN Fn t body
       in
-      fn ttac1 => fn ttac2 => CHOOSE_THEN (tcl ttac1 ttac2) 
+      fn ttac1 => fn ttac2 => CHOOSE_THEN (tcl ttac1 ttac2)
       end;
 
 fun MK_THEN Fn tm =
-   let val (vs,body) = strip_exists tm 
+   let val (vs,body) = strip_exists tm
    in
    if (free_in Fn body)
-   then MK_CHOOSE_THEN Fn vs body 
-   else fn ttac1 => fn ttac2 => ttac2 
+   then MK_CHOOSE_THEN Fn vs body
+   else fn ttac1 => fn ttac2 => ttac2
    end;
 
-fun TACF Fn tm = 
-   let val (vs,body) = strip_forall tm 
+fun TACF Fn tm =
+   let val (vs,body) = strip_forall tm
    in
-   if (is_imp body) 
-   then let val TTAC = MK_THEN Fn (#ant(dest_imp body)) 
+   if (is_imp body)
+   then let val TTAC = MK_THEN Fn (#ant(dest_imp body))
         in
         fn ttac1 => fn ttac2 =>
-          REPEAT GEN_TAC THEN DISCH_THEN (TTAC ttac1 ttac2) 
+          REPEAT GEN_TAC THEN DISCH_THEN (TTAC ttac1 ttac2)
         end
-   else fn ttac1 => fn ttac2 => ALL_TAC 
+   else fn ttac1 => fn ttac2 => ALL_TAC
    end;
 
 (* --------------------------------------------------------------------- *)
@@ -814,8 +814,8 @@ fun TACF Fn tm =
 (*									 *)
 (* --------------------------------------------------------------------- *)
 (* Tricky coding, fall back on the original syntax *)
-fun TACS Fn tm = 
-   let val (cf,csf) = (TACF Fn ## TACS Fn) (Psyntax.dest_conj tm) 
+fun TACS Fn tm =
+   let val (cf,csf) = (TACF Fn ## TACS Fn) (Psyntax.dest_conj tm)
                       handle _ => (TACF Fn tm, fn x => fn y => [])
    in fn ttac1 => fn ttac2 => ((cf ttac1 ttac2) :: (csf ttac1 ttac2))
    end;
@@ -833,16 +833,16 @@ fun TACS Fn tm =
 (* --------------------------------------------------------------------- *)
 
 local
-val AND = --`/\`--
-val IMP = --`==>`--
+val AND = --`$/\`--
+val IMP = --`$==>`--
 fun mkred Fn (c::cs) =
-   let val cfn = if (fst(strip_comb c) = Fn) 
-                 then LIST_BETA_CONV 
-                 else REFL 
+   let val cfn = if (fst(strip_comb c) = Fn)
+                 then LIST_BETA_CONV
+                 else REFL
    in
-   if (null cs) 
-   then cfn 
-   else let val rest = mkred Fn cs 
+   if (null cs)
+   then cfn
+   else let val rest = mkred Fn cs
         in
         fn tm => let val {conj1,conj2} = dest_conj tm
                  in
@@ -852,23 +852,23 @@ fun mkred Fn (c::cs) =
    end
 in
 fun RED_CASE Fn pat =
-   let val bdy = snd(strip_forall pat) 
+   let val bdy = snd(strip_forall pat)
    in
-   if (is_imp bdy) 
+   if (is_imp bdy)
    then let val {ant,...} = dest_imp bdy
             val hyps = strip_conj(snd(strip_exists ant))
-            val redf = mkred Fn hyps 
+            val redf = mkred Fn hyps
         in fn tm =>
              let val (vs,{ant,conseq}) = (I##dest_imp) (strip_forall tm)
                  val (cvs,red) = strip_forall conseq
                  val th1 = itlist FORALL_EQ cvs (LIST_BETA_CONV red)
                  val (evs,hyp) = strip_exists ant
-                 val th2 = itlist EXISTS_EQ evs (redf hyp) 
+                 val th2 = itlist EXISTS_EQ evs (redf hyp)
              in itlist FORALL_EQ  vs  (MK_COMB((AP_TERM IMP th2),th1))
              end
         end
-   else fn tm => 
-          let val (vs,con) = strip_forall tm 
+   else fn tm =>
+          let val (vs,con) = strip_forall tm
           in itlist FORALL_EQ vs (LIST_BETA_CONV con)
           end
    end
@@ -876,21 +876,21 @@ end;
 
 
 local
-val AND = --`/\`--
+val AND = --`$/\`--
 in
 fun APPLY_CASE [f] tm = f tm
   | APPLY_CASE (f::fs) tm =
-     let val {conj1,conj2} = dest_conj tm 
-     in MK_COMB (AP_TERM AND (f conj1),APPLY_CASE fs conj2) 
+     let val {conj1,conj2} = dest_conj tm
+     in MK_COMB (AP_TERM AND (f conj1),APPLY_CASE fs conj2)
      end
 end;
 
 local
-val IMP = --`==>`--
+val IMP = --`$==>`--
 in
 fun RED_WHERE Fn body =
    let val rfns = map (RED_CASE Fn) (strip_conj (#ant(dest_imp body)))
-   in fn stm => 
+   in fn stm =>
         let val {ant,conseq} = dest_imp stm
             val hthm = APPLY_CASE rfns ant
             val cthm = RAND_CONV LIST_BETA_CONV conseq
@@ -901,7 +901,7 @@ end;
 
 fun residue_assoc itm =
    let fun assc ([]:(term,term) subst) = NONE
-         | assc ({redex,residue}::rst) = 
+         | assc ({redex,residue}::rst) =
              if (itm = residue)
              then SOME redex
              else assc rst
@@ -935,7 +935,7 @@ fun RULE_INDUCT_THEN th =
        val pvar = genvar (type_of (last vs))
        val sthm = INST [{redex=last vs, residue=pvar}] thm
        val RED = RED_WHERE (last vs) (mk_imp{ant=ant,conseq=cncl})
-       val tacs = TACS (last vs) ant 
+       val tacs = TACS (last vs) ant
    in
    fn ttac1 => fn ttac2 => fn (A,g) =>
      let val (gvs,body) = strip_forall g
@@ -948,7 +948,7 @@ fun RULE_INDUCT_THEN th =
          val spth = INST [{redex=inst ilis pvar,residue=lam}] sith
          val spec = GENL gvs (UNDISCH (CONV_RULE RED spth))
          val subgls = map (pair A) (strip_conj (hd(hyp spec)))
-         fun tactc g = (subgls,fn ths => PROVE_HYP (LIST_CONJ ths) spec) 
+         fun tactc g = (subgls,fn ths => PROVE_HYP (LIST_CONJ ths) spec)
      in (tactc THENL (tacs ttac1 ttac2)) (A,g)
      end
      handle _ => raise ERR1
@@ -963,11 +963,11 @@ end;
 
 fun axiom_tac th :tactic = fn (A,g) =>
    let val (vs,body) = strip_forall g
-       val instl = match_term (concl th) body 
+       val instl = match_term (concl th) body
    in
    ([], K (itlist ADD_ASSUM A (GENL vs (INST_TY_TERM instl th))))
    end
-   handle _ => raise IND_DEF_ERR{function = "axiom_tac", 
+   handle _ => raise IND_DEF_ERR{function = "axiom_tac",
                                  message = "axiom does not match goal"};
 
 (* --------------------------------------------------------------------- *)
@@ -980,13 +980,13 @@ fun axiom_tac th :tactic = fn (A,g) =>
 (*    find (curry $= tm o concl) ths;;                                   *)
 (* --------------------------------------------------------------------- *)
 
-fun prove_conj ths tm = 
+fun prove_conj ths tm =
    let val {conj1,conj2} = dest_conj tm
        val f = prove_conj ths
    in CONJ (f conj1) (f conj2)
    end
    handle _ => first (curry (op =) tm o concl) ths;
- 
+
 (* --------------------------------------------------------------------- *)
 (* RULE_TAC								 *)
 (*									 *)
@@ -1003,7 +1003,7 @@ fun RULE_TAC th =
    in
    let val {ant,conseq} = dest_imp rule
        val (cvs,cncl) = strip_forall conseq
-       val ith = DISCH ant (SPECL cvs (UNDISCH (SPECL vs th))) 
+       val ith = DISCH ant (SPECL cvs (UNDISCH (SPECL vs th)))
    in fn (A,g) =>
          let val (gvs,body) = strip_forall g
              val (slis,ilis) = match_term cncl body
@@ -1011,17 +1011,17 @@ fun RULE_TAC th =
              val svs = hol88Lib.freesl (map (subst slis o inst ilis) vs)
              val nvs = intersect gvs svs
              val ante = #ant(dest_imp(concl th1))
-             val newgs = map (mkg A nvs) (strip_conj ante) 
-         in (newgs, 
+             val newgs = map (mkg A nvs) (strip_conj ante)
+         in (newgs,
              fn thl => let val ths = map (SPECL nvs o ASSUME o snd) newgs
-                           val th2 = GENL gvs(MP th1 (prove_conj ths ante)) 
+                           val th2 = GENL gvs(MP th1 (prove_conj ths ante))
                        in itlist PROVE_HYP thl th2
                        end)
          end
          handle _ => raise ERR1
     end
-    handle _ => axiom_tac (SPECL vs th) 
-   end 
+    handle _ => axiom_tac (SPECL vs th)
+   end
 end;
 
 
@@ -1061,7 +1061,7 @@ fun subst_in_subst theta =
 
 fun subst_assoc tm =
    let fun assc [] = NONE
-         | assc ({redex,residue}::rst) = 
+         | assc ({redex,residue}::rst) =
             if (tm = redex)
             then (SOME residue)
             else assc rst
@@ -1071,8 +1071,8 @@ fun subst_assoc tm =
 local val ERR = IND_DEF_ERR{function="",message=""}
 in
 fun reduce vs ths res subf =
-   if (null ths) 
-   then (rev res, subf) 
+   if (null ths)
+   then (rev res, subf)
    else let val {lhs,rhs} = dest_eq(concl(hd ths))
             val (sth,pai) = if (mem lhs vs)
                             then (hd ths,{redex=lhs,residue=rhs})
@@ -1114,7 +1114,7 @@ local
   fun chfn v (a,th) =
      let val tm = mk_exists{Bvar=v,Body=a}
          val th' = if (free_in v (concl th))
-                   then EXISTS (mk_exists{Bvar=v,Body=concl th},v) th 
+                   then EXISTS (mk_exists{Bvar=v,Body=concl th},v) th
                    else th
      in (tm,CHOOSE (v,ASSUME tm) th')  end
   fun efn ss v (pat,th) =
@@ -1126,7 +1126,7 @@ local
      in (ex,EXISTS(epat,wit) th)  end
   fun prove ths cs =
      (uncurry CONJ ((prove ths ## prove ths) (Psyntax.dest_conj cs)))
-     handle _ 
+     handle _
      => (Lib.first (fn t => concl t = cs) ths)
      handle _
      => (REFL (rand cs))
@@ -1134,9 +1134,9 @@ in
 fun REDUCE tm =
    let val (vs,cs) = strip_exists tm
        val (remn,ss) = reduce vs (CONJUNCTS (ASSUME cs)) [] []
-   in if (null ss) 
+   in if (null ss)
       then raise IND_DEF_ERR{function="REDUCE",message=""}
-      else let val th1 = LIST_CONJ remn handle _ => TRUTH 
+      else let val th1 = LIST_CONJ remn handle _ => TRUTH
                val th2 = (uncurry DISCH) (itlist chfn vs (cs,th1))
                val (rvs,rcs) = strip_exists(rand(concl th2))
                val eqt = subst ss cs
@@ -1166,18 +1166,18 @@ end;
 (*                                                                      *)
 (*   |-  ~!x1 ... xi. P                                                 *)
 (*  ----------------------------                                        *)
-(*   |-  ?x1 ... xi. Q    |- R                                          *) 
+(*   |-  ?x1 ... xi. Q    |- R                                          *)
 (* ---------------------------------------------------------------------*)
 
 local fun efn v th =  EXISTS(mk_exists{Bvar=v,Body=concl th},v) th
 in
 fun LIST_NOT_FORALL f th =
-   let val (vs,body) = strip_forall (dest_neg (concl th)) 
-   in if (null vs) 
-      then f th 
+   let val (vs,body) = strip_forall (dest_neg (concl th))
+   in if (null vs)
+      then f th
       else let val (Q,R) = f (ASSUME(mk_neg body))
                val nott = itlist efn vs Q
-               val thm = CCONTR body (MP (ASSUME (mk_neg (concl nott))) nott) 
+               val thm = CCONTR body (MP (ASSUME (mk_neg (concl nott))) nott)
            in (CCONTR (concl nott) (MP th (GENL vs thm)), R)
            end
    end
@@ -1187,7 +1187,7 @@ end;
 (* simp_axiom: simplify the body of an axiom.                            *)
 (* --------------------------------------------------------------------- *)
 
-local fun chfn v (a,th) = 
+local fun chfn v (a,th) =
        let val tm = mk_exists{Bvar=v,Body=a}
        in (tm,CHOOSE (v,ASSUME tm) th)  end
 in
@@ -1207,8 +1207,8 @@ fun simp_axiom sfn vs ax th =
 end;
 
 fun crul rel th =
-   if (free_in rel (concl th)) 
-   then let val th1 = CONV_RULE LIST_BETA_CONV th 
+   if (free_in rel (concl th))
+   then let val th1 = CONV_RULE LIST_BETA_CONV th
         in CONJUNCT1 (CONV_RULE (REWR_CONV NOT_IMP) th1) end
    else th;
 
@@ -1235,7 +1235,7 @@ fun CONJ_RUL rel th =
 
 fun LIST_EXISTS_THEN f th =
    let val (vs,body) = strip_exists(concl th)
-       val th1 = DISCH body (f (ASSUME body)) 
+       val th1 = DISCH body (f (ASSUME body))
    in MP (itlist EXISTS_IMP vs th1) th
    end;
 
@@ -1243,8 +1243,8 @@ fun RULE thm1 thm2 =
    let val (xs,imp) = strip_exists (concl thm1)
        val thm =  SPECL xs thm2
        val impth = MP (ASSUME imp) thm
-       val iimp = DISCH imp impth 
-   in MATCH_MP (itlist EXISTS_IMP xs iimp) thm1 
+       val iimp = DISCH imp impth
+   in MATCH_MP (itlist EXISTS_IMP xs iimp) thm1
    end;
 
 (* --------------------------------------------------------------------- *)
@@ -1261,29 +1261,29 @@ fun RULE thm1 thm2 =
 (* --------------------------------------------------------------------- *)
 
 fun EXISTS_IMP2 x th =
-   let val {ant,conseq} = dest_imp(concl th) 
-   in if (free_in x conseq) 
+   let val {ant,conseq} = dest_imp(concl th)
+   in if (free_in x conseq)
    then let val th1 = EXISTS (mk_exists{Bvar=x,Body=conseq},x) (UNDISCH th)
-            val asm = mk_exists{Bvar=x,Body=ant} 
-        in DISCH asm (CHOOSE (x,ASSUME asm) th1) 
+            val asm = mk_exists{Bvar=x,Body=ant}
+        in DISCH asm (CHOOSE (x,ASSUME asm) th1)
         end
-   else let val asm = mk_exists{Bvar=x,Body=ant} 
+   else let val asm = mk_exists{Bvar=x,Body=ant}
         in DISCH asm (CHOOSE (x,ASSUME asm) (UNDISCH th))
         end
    end;
 
 fun efn v th =
-    if (free_in v (concl th)) 
-    then EXISTS(mk_exists{Bvar=v,Body=concl th},v) th 
+    if (free_in v (concl th))
+    then EXISTS(mk_exists{Bvar=v,Body=concl th},v) th
     else th;
 
-fun mk_new_subst L2 L1 = 
+fun mk_new_subst L2 L1 =
    map2 (fn rdx => fn rsd => {redex=rdx,residue=rsd}) L1 L2;
 
 fun RULE2 vs thm1 thm2 =
    let val (xs,P) = strip_exists(concl thm1)
        val (ys,Q) = strip_exists(concl thm2)
-       fun itfn v vs =  let val v' = variant (vs @ xs) v 
+       fun itfn v vs =  let val v' = variant (vs @ xs) v
                         in (v'::vs)
                         end
        val ys' = itlist itfn ys []
@@ -1292,7 +1292,7 @@ fun RULE2 vs thm1 thm2 =
        val cs = LIST_CONJ (CONJUNCTS asm)
        val vs = filter (C free_in (concl cs)) (xs @ ys')
        val eth = MP (itlist EXISTS_IMP2 xs (DISCH P (itlist efn vs cs))) thm1
-       val ethh = MP (itlist EXISTS_IMP2 ys' (DISCH Q' eth)) thm2 
+       val ethh = MP (itlist EXISTS_IMP2 ys' (DISCH Q' eth)) thm2
    in  ethh
    end;
 
@@ -1311,8 +1311,8 @@ fun NOT_NOT th =
 
 local
   val rule = NOT_NOT o CONV_RULE(RAND_CONV LIST_BETA_CONV)
-  fun chfn v (a,th) = 
-     let val tm = mk_exists{Bvar=v,Body=a} 
+  fun chfn v (a,th) =
+     let val tm = mk_exists{Bvar=v,Body=a}
      in (tm,CHOOSE (v,ASSUME tm) th)
      end
   and efn v th = EXISTS(mk_exists{Bvar=v,Body=concl th},v) th
@@ -1349,10 +1349,10 @@ end;
 
 
 fun simp set sfn rul th =
-   let val vs = fst(strip_forall (dest_neg (concl th))) 
-   in LIST_NOT_FORALL (simp_axiom sfn vs rul) th 
+   let val vs = fst(strip_forall (dest_neg (concl th)))
+   in LIST_NOT_FORALL (simp_axiom sfn vs rul) th
       handle _
-      => LIST_NOT_FORALL (simp_rule sfn set vs rul) th 
+      => LIST_NOT_FORALL (simp_rule sfn set vs rul) th
       handle _ =>
       raise IND_DEF_ERR{function="simp", message=""}
    end;
@@ -1364,14 +1364,14 @@ local
   fun IDISJ th1 th2 =
      let val di = mk_disj{disj1=rand(rator(concl th1)),
                           disj2=rand(rator(concl th2))}
-     in DISCH di (DISJ_CASES (ASSUME di) (UNDISCH th1) (UNDISCH th2)) 
+     in DISCH di (DISJ_CASES (ASSUME di) (UNDISCH th1) (UNDISCH th2))
      end
   fun ITDISJ th1 th2 =
-     let val ([hy1],cl1) = dest_thm th1 
-         and ([hy2],cl2) = dest_thm th2 
+     let val ([hy1],cl1) = dest_thm th1
+         and ([hy2],cl2) = dest_thm th2
          val dth = UNDISCH (INST [{redex=v1,residue=rand hy1},
                                   {redex=v2,residue=rand hy2}] thm)
-     in DISJ_CASES_UNION dth th1 th2 
+     in DISJ_CASES_UNION dth th1 th2
      end
 in
 fun LIST_DE_MORGAN f ths th =
@@ -1390,7 +1390,7 @@ fun mymap2 ([],[]) = []
 fun derive_cases_thm (rules,ind) =
    let val (vs,{ant,conseq}) = (I ## dest_imp) (strip_forall (concl ind))
        val (ps,P) = (butlast vs, last vs)
-       val sind = SPECL ps ind 
+       val sind = SPECL ps ind
        and srules = map (SPECL ps) rules
        val (cvs,con) = strip_forall conseq
        val thm1 = DISCH ant (SPECL cvs (UNDISCH (SPEC P sind)))
@@ -1411,19 +1411,19 @@ fun derive_cases_thm (rules,ind) =
        val (a,b) = LIST_DE_MORGAN (simp set sfn) srules fthm
        val th = IMP_ANTISYM_RULE (DISCH HY a) b
        val ds = map (TRY_CONV REDUCE) (strip_disj(rand(concl th)))
-       val red = end_itlist (fn t1 => fn t2 => 
+       val red = end_itlist (fn t1 => fn t2 =>
                                MK_COMB (AP_TERM (--`\/`--) t1, t2)) ds
    in GENL ps (GENL cvs (TRANS th red))
    end;
 
-type rule = (Term.term quotation list * Term.term quotation list) 
+type rule = (Term.term quotation list * Term.term quotation list)
               * Term.term quotation
 type pattern = Term.term quotation * Term.term quotation list
 
-val indDefine = fn name => fn rules => fn fixity => fn patt => 
+val indDefine = fn name => fn rules => fn fixity => fn patt =>
   let val {desc,induction_thm} =
     new_inductive_definition
-    {name = name, fixity = fixity, 
+    {name = name, fixity = fixity,
      patt = (Term ## map Term) patt,
      rules = map (fn((H,S),C) => {hypotheses=H,side_conditions=S,conclusion=C})
                  (map ((map Term ## map Term) ## Term) rules)}

@@ -221,6 +221,34 @@ fun make_constrained tm ty E =
  * found in tm to E.
  *---------------------------------------------------------------------------*)
 
+(*---------------------------------------------------------------------------
+ * For restricted binders. Adding a pair "(B,R)" to this list, if "B" is the
+ * name of a binder and "R" is the name of a constant, will enable parsing
+ * of terms with the form
+ *
+ *     B <varstruct list>::<restr>. M
+ *---------------------------------------------------------------------------*)
+local val restricted_binders = ref ([] : (string * string) list)
+in
+fun binder_restrictions() = !restricted_binders
+fun associate_restriction(p as (binder_str,const_name)) =
+  case (Lib.assoc1 binder_str (!restricted_binders)) of
+    NONE => restricted_binders := p :: !restricted_binders
+  | SOME _ =>
+      raise PARSE_SUPPORT_ERR "restrict_binder"
+        ("Binder "^Lib.quote binder_str^" is already restricted")
+
+fun delete_restriction binder =
+  restricted_binders :=
+  Lib.set_diff (!restricted_binders)
+  [(binder,Lib.assoc binder(!restricted_binders))]
+  handle HOL_ERR _ =>
+    raise
+      PARSE_SUPPORT_ERR"delete_restriction"
+      (Lib.quote binder^" is not restricted")
+end;
+
+
 fun bind_term binder alist tm (E as {scope=scope0,...}:env) =
    let val (E',F) = rev_itlist (fn a => fn (e,f) =>
              let val (g,e') = a binder e in (e', f o g) end) alist (E,I)
@@ -228,8 +256,9 @@ fun bind_term binder alist tm (E as {scope=scope0,...}:env) =
    in (F tm', {scope=scope0,free=free1})
    end;
 
+
 fun restr_binder s =
-   assoc s (Dsyntax.binder_restrictions()) handle HOL_ERR _
+   assoc s (binder_restrictions()) handle HOL_ERR _
    => raise PARSE_SUPPORT_ERR "restr_binder"
                       ("no restriction associated with "^Lib.quote s)
 
@@ -248,7 +277,6 @@ fun bind_restr_term tyvars binder vlist restr tm (E as {scope=scope0,...}:env)=
    in
    (F tm', {scope=scope0,free=free1})
    end;
-
 
 fun split ty =
   case (Type.dest_type ty)
@@ -423,66 +451,5 @@ fun make_type_clause {constructor, args} =
  in
     {constructor=constructor, args = map munge args}
  end;
-
-
-(*---------------------------------------------------------------------------*
- * Sorting out precedence between infixes.                                   *
- *---------------------------------------------------------------------------*)
-
-val dummy_least_infix = Preterm.Const{Name = "", Ty = Type.dummy}
-
-fun prec (tm as Preterm.Const{Name, ...}) =
-        if (tm = dummy_least_infix) then ~1 else Theory.precedence Name
-  | prec (Preterm.Constrained(tm,_)) = prec tm;
-
-fun is_infix_term (Preterm.Const{Name,...}) = Theory.is_infix Name
-  | is_infix_term (Preterm.Constrained(tm,_)) = is_infix_term tm
-  | is_infix_term _ = false
-
-fun is_neg(Preterm.Const{Name = "~",...}) = true
-  | is_neg(Preterm.Constrained(tm,_)) = is_neg tm
-  | is_neg _ = false
-
-fun list_make_list tmlist E =
-  let val (L,E') = rev_itlist(fn tm => fn (L,E) =>
-        let val (tm',E') = tm E in ((tm'::L),E') end) tmlist ([],E)
-   in (rev L, E')
-   end;
-
-fun G [] (f,arg) = [(f,arg)]
-  | G (stk as ((g,tm)::stk')) (f,arg) =
-        if (prec g >= prec f)
-        then let val tm' = Preterm.Comb{Rator = Preterm.Comb{Rator=g,Rand=arg},
-                                        Rand = tm}
-             in G stk' (f,tm') end
-        else ((f,arg)::stk);
-
-local fun lc [] tm = tm
-        | lc (a::rst) tm = lc rst (Preterm.Comb{Rator = tm, Rand = a})
-      fun list_comb (a::L) = lc L a
-        | list_comb [] = raise PARSE_SUPPORT_ERR"prec_parse"
-                                 "an infix is being used as a prefix"
-      fun make_neg tm [] = tm
-        | make_neg tm L = Preterm.Comb{Rator = tm, Rand = list_comb L}
-in
-fun prec_parse [f] E = f E
-  | prec_parse cl_list E =
-   let val (tm_list,E') = list_make_list cl_list E
-       fun pass tm (L,stk) =
-           if (is_infix_term tm)
-           then ([], G stk (tm, list_comb L))
-           else if (is_neg tm) then ([make_neg tm L], stk)
-                                else (tm::L, stk)
-       val (L,stk) = itlist pass tm_list ([],[])
-       val [(_,tm)] = G stk (dummy_least_infix,list_comb L)
-   in (tm,E') end
-end;
-
-
-
-(*---------------------------------------------------------------------------
- * Used in hol.lex. Could possibly be done through make_atom.
- *---------------------------------------------------------------------------*)
-val is_binder = Theory.is_binder;
 
 end; (* parse_support *)

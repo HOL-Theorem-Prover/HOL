@@ -2,7 +2,7 @@
 (* LIBRARY: pred_set							*)
 (* FILE:    mk_pred_set.sml						*)
 (* DESCRIPTION: a simple theory of predicates-as-sets			*)
-(*									*) 
+(*									*)
 (* AUTHOR:  T. Kalker							*)
 (* DATE:    8 June 1989  			         		*)
 (*									*)
@@ -12,7 +12,7 @@
 structure pred_setScript =
 struct
 
-open HolKernel Parse basicHol90Lib 
+open HolKernel Parse basicHol90Lib
      arithmeticTheory prim_recTheory numTheory Num_induct Num_conv;
 
 type thm = Thm.thm
@@ -36,8 +36,10 @@ val set = ty_antiq(Type`:'a->bool`);
 (* The axiom of specification: x IN {y | P y} iff P x			*)
 (* ---------------------------------------------------------------------*)
 
-val SPECIFICATION = new_infix_definition("SPECIFICATION", 
-   (--`!P x. $IN (x:'a) (P:^set) = P x`--), 450);
+val SPECIFICATION = new_infixr_definition(
+  "SPECIFICATION",
+  --`!P x. $IN (x:'a) (P:^set) = P x`--,
+  450);
 
 (* --------------------------------------------------------------------- *)
 (* Axiom of extension: (s = t) iff !x. x IN s = x in t			*)
@@ -49,7 +51,7 @@ val EXTENSION = store_thm
     REPEAT GEN_TAC THEN
     REWRITE_TAC [SPECIFICATION,SYM (FUN_EQ_CONV (--`f:'a->'b = g`--))]);
 
-val NOT_EQUAL_SETS = 
+val NOT_EQUAL_SETS =
     store_thm
     ("NOT_EQUAL_SETS",
 	     (--`!s:^set. !t. ~(s = t) = ?x. x IN t = ~(x IN s)`--),
@@ -59,7 +61,7 @@ val NOT_EQUAL_SETS =
      [DISCH_THEN (STRIP_THM_THEN MP_TAC) THEN
       ASM_CASES_TAC (--`(x:'a) IN s`--) THEN ASM_REWRITE_TAC [] THEN
       REPEAT STRIP_TAC THEN EXISTS_TAC (--`x:'a`--) THEN ASM_REWRITE_TAC[],
-      STRIP_TAC THEN EXISTS_TAC (--`x:'a`--) THEN 
+      STRIP_TAC THEN EXISTS_TAC (--`x:'a`--) THEN
       ASM_CASES_TAC (--`(x:'a) IN s`--) THEN ASM_REWRITE_TAC []]);
 
 (* --------------------------------------------------------------------- *)
@@ -71,8 +73,8 @@ val NUM_SET_WOP =
     ("NUM_SET_WOP",
      (--`!s. (?n. n IN s) = ?n. n IN s /\ (!m. m IN s ==> n <= m)`--),
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
-     [let val th = BETA_RULE (ISPEC (--`\n:num. n IN s`--) WOP) 
-      in IMP_RES_THEN (X_CHOOSE_THEN (--`N:num`--) STRIP_ASSUME_TAC) th 
+     [let val th = BETA_RULE (ISPEC (--`\n:num. n IN s`--) WOP)
+      in IMP_RES_THEN (X_CHOOSE_THEN (--`N:num`--) STRIP_ASSUME_TAC) th
       end THEN EXISTS_TAC (--`N:num`--) THEN CONJ_TAC THENL
       [FIRST_ASSUM ACCEPT_TAC,
        GEN_TAC THEN CONV_TAC CONTRAPOS_CONV THEN
@@ -90,7 +92,7 @@ val GSPEC_DEF_LEMMA =
      REPEAT GEN_TAC THEN
      PURE_ONCE_REWRITE_TAC [SPECIFICATION] THEN
      CONV_TAC (DEPTH_CONV BETA_CONV) THEN
-     REFL_TAC);     
+     REFL_TAC);
 
 (* --------------------------------------------------------------------- *)
 (* generalized axiom of specification:					 *)
@@ -98,7 +100,7 @@ val GSPEC_DEF_LEMMA =
 (*   GSPECIFICATION = |- !f v. v IN (GSPEC f) = (?x. v,T = f x)		 *)
 (* --------------------------------------------------------------------- *)
 
-val GSPECIFICATION = 
+val GSPECIFICATION =
     new_specification
       {name = "GSPECIFICATION",
       sat_thm = GSPEC_DEF_LEMMA,
@@ -115,6 +117,14 @@ val SET_SPEC_CONV = PGspec.SET_SPEC_CONV GSPECIFICATION;
 (* define_set_abstraction_syntax "GSPEC"; *)
 (* set_flag("print_set",true); *)
 
+val _ = add_rule("gspec special", Closefix,
+                 [term_grammar.TOK "{", term_grammar.TM,
+                  term_grammar.TOK "|", term_grammar.TM,
+                  term_grammar.TOK "}"])
+(* the phrase "gspec special" is dealt with in the translation from
+   pre-pre-terms to terms *)
+val _ = remove_termtok {term_name = "COND", tok = "=>"}
+
 (* --------------------------------------------------------------------- *)
 (* A theorem from homeier@org.aero.uniblab (Peter Homeier)		 *)
 (* --------------------------------------------------------------------- *)
@@ -125,15 +135,15 @@ val lemma =
      REPEAT STRIP_TAC THEN CONV_TAC SET_SPEC_CONV THEN
      EXISTS_TAC (--`x:'a`--) THEN ASM_REWRITE_TAC[]);
 
-val SET_MINIMUM = 
+val SET_MINIMUM =
     store_thm
     ("SET_MINIMUM",
      (--`!s:'a -> bool. !M.
       (?x. x IN s) = ?x. x IN s /\ !y. y IN s ==> M x <= M y`--),
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
      [IMP_RES_THEN (ASSUME_TAC o ISPEC (--`M:'a->num`--)) lemma THEN
-      let val th = SET_SPEC_CONV (--`(n:num) IN {M x | (x:'a) IN s}`--) 
-      in IMP_RES_THEN (STRIP_ASSUME_TAC o REWRITE_RULE [th]) NUM_SET_WOP 
+      let val th = SET_SPEC_CONV (--`(n:num) IN {M x | (x:'a) IN s}`--)
+      in IMP_RES_THEN (STRIP_ASSUME_TAC o REWRITE_RULE [th]) NUM_SET_WOP
       end THEN EXISTS_TAC (--`x':'a`--) THEN CONJ_TAC THENL
       [FIRST_ASSUM ACCEPT_TAC,
        FIRST_ASSUM (SUBST_ALL_TAC o SYM) THEN
@@ -150,7 +160,7 @@ val SET_MINIMUM =
 val EMPTY_DEF = new_definition
     ("EMPTY_DEF", (--`EMPTY = (\x:'a.F)`--));
 
-val NOT_IN_EMPTY = 
+val NOT_IN_EMPTY =
     store_thm
     ("NOT_IN_EMPTY",
      (--`!x:'a.~(x IN EMPTY)`--),
@@ -158,7 +168,7 @@ val NOT_IN_EMPTY =
      CONV_TAC (ONCE_DEPTH_CONV BETA_CONV) THEN
      REPEAT STRIP_TAC);
 
-val MEMBER_NOT_EMPTY = 
+val MEMBER_NOT_EMPTY =
     store_thm
     ("MEMBER_NOT_EMPTY",
      (--`!s:^set. (?x. x IN s) = ~(s = EMPTY)`--),
@@ -173,26 +183,26 @@ val MEMBER_NOT_EMPTY =
 val UNIV_DEF = new_definition
     ("UNIV_DEF",(--`UNIV = (\x:'a.T)`--));
 
-val IN_UNIV = 
+val IN_UNIV =
     store_thm
     ("IN_UNIV",
      (--`!x:'a. x IN UNIV`--),
      GEN_TAC THEN PURE_REWRITE_TAC [UNIV_DEF,SPECIFICATION] THEN
      CONV_TAC BETA_CONV THEN ACCEPT_TAC TRUTH);
 
-val UNIV_NOT_EMPTY = 
+val UNIV_NOT_EMPTY =
     store_thm
     ("UNIV_NOT_EMPTY",
      (--`~(UNIV:^set = EMPTY)`--),
      REWRITE_TAC [EXTENSION,IN_UNIV,NOT_IN_EMPTY]);
 
-val EMPTY_NOT_UNIV = 
+val EMPTY_NOT_UNIV =
     store_thm
     ("EMPTY_NOT_UNIV",
      (--`~(EMPTY = (UNIV:^set))`--),
      REWRITE_TAC [EXTENSION,IN_UNIV,NOT_IN_EMPTY]);
 
-val EQ_UNIV = 
+val EQ_UNIV =
     store_thm
     ("EQ_UNIV",
      (--`(!x:'a. x IN s) = (s = UNIV)`--),
@@ -203,7 +213,7 @@ val EQ_UNIV =
 (* Set inclusion.							 *)
 (* ===================================================================== *)
 
-val SUBSET_DEF = new_infix_definition
+val SUBSET_DEF = new_infixr_definition
     ("SUBSET_DEF", (--`SUBSET s t =  !x:'a. x IN s ==> x IN t`--),450);
 
 val SUBSET_TRANS = store_thm
@@ -224,29 +234,29 @@ val SUBSET_ANTISYM = store_thm
      (--`!(s:^set) t. (s SUBSET t) /\ (t SUBSET s) ==> (s = t)`--),
      REWRITE_TAC [SUBSET_DEF, EXTENSION] THEN
      REPEAT STRIP_TAC THEN
-     EQ_TAC THEN 
+     EQ_TAC THEN
      FIRST_ASSUM MATCH_ACCEPT_TAC);
 
-val EMPTY_SUBSET = 
+val EMPTY_SUBSET =
     store_thm
     ("EMPTY_SUBSET",
      (--`!s:^set. EMPTY SUBSET s`--),
      REWRITE_TAC [SUBSET_DEF,NOT_IN_EMPTY]);
 
-val SUBSET_EMPTY = 
+val SUBSET_EMPTY =
     store_thm
     ("SUBSET_EMPTY",
      (--`!s:^set. s SUBSET EMPTY = (s = EMPTY)`--),
      PURE_REWRITE_TAC [SUBSET_DEF,NOT_IN_EMPTY] THEN
      REWRITE_TAC [EXTENSION,NOT_IN_EMPTY]);
 
-val SUBSET_UNIV = 
+val SUBSET_UNIV =
     store_thm
     ("SUBSET_UNIV",
      (--`!s:^set. s SUBSET UNIV`--),
      REWRITE_TAC [SUBSET_DEF,IN_UNIV]);
 
-val UNIV_SUBSET = 
+val UNIV_SUBSET =
     store_thm
     ("UNIV_SUBSET",
      (--`!s:^set. UNIV SUBSET s = (s = UNIV)`--),
@@ -256,7 +266,7 @@ val UNIV_SUBSET =
 (* Proper subset.							 *)
 (* ===================================================================== *)
 
-val PSUBSET_DEF =  new_infix_definition("PSUBSET_DEF", 
+val PSUBSET_DEF =  new_infixr_definition("PSUBSET_DEF",
 (--`PSUBSET (s:^set) t = (s SUBSET t /\ ~(s = t))`--), 450);
 
 val PSUBSET_TRANS = store_thm ("PSUBSET_TRANS",
@@ -264,23 +274,23 @@ val PSUBSET_TRANS = store_thm ("PSUBSET_TRANS",
      PURE_ONCE_REWRITE_TAC [PSUBSET_DEF] THEN
      REPEAT GEN_TAC THEN STRIP_TAC THEN CONJ_TAC THENL
      [IMP_RES_TAC SUBSET_TRANS,
-      DISCH_THEN SUBST_ALL_TAC THEN 
+      DISCH_THEN SUBST_ALL_TAC THEN
       IMP_RES_TAC SUBSET_ANTISYM THEN
       RES_TAC]);
 
-val PSUBSET_IRREFL = 
+val PSUBSET_IRREFL =
     store_thm
     ("PSUBSET_IRREFL",
      (--`!s:^set. ~(s PSUBSET s)`--),
      REWRITE_TAC [PSUBSET_DEF,SUBSET_REFL]);
 
-val NOT_PSUBSET_EMPTY = 
+val NOT_PSUBSET_EMPTY =
     store_thm
     ("NOT_PSUBSET_EMPTY",
      (--`!s:^set. ~(s PSUBSET EMPTY)`--),
      REWRITE_TAC [PSUBSET_DEF,SUBSET_EMPTY,NOT_AND]);
 
-val NOT_UNIV_PSUBSET = 
+val NOT_UNIV_PSUBSET =
     store_thm
     ("NOT_UNIV_PSUBSET",
      (--`!s:^set. ~(UNIV PSUBSET s)`--),
@@ -289,7 +299,7 @@ val NOT_UNIV_PSUBSET =
      PURE_ONCE_REWRITE_TAC [DISJ_SYM] THEN
      MATCH_ACCEPT_TAC EXCLUDED_MIDDLE);
 
-val PSUBSET_UNIV = 
+val PSUBSET_UNIV =
     store_thm
     ("PSUBSET_UNIV",
      (--`!s:^set. (s PSUBSET UNIV) = ?x:'a. ~(x IN s)`--),
@@ -300,7 +310,7 @@ val PSUBSET_UNIV =
 (* Union								 *)
 (* ===================================================================== *)
 
-val UNION_DEF = new_infix_definition
+val UNION_DEF = new_infixl_definition
      ("UNION_DEF", (--`UNION s t = {x:'a | x IN s \/ x IN t}`--),500);
 
 val IN_UNION = store_thm
@@ -328,15 +338,15 @@ val UNION_COMM = store_thm
      REWRITE_TAC[EXTENSION, IN_UNION] THEN
      REPEAT GEN_TAC THEN MATCH_ACCEPT_TAC DISJ_SYM);
 
-val SUBSET_UNION = 
+val SUBSET_UNION =
     store_thm
     ("SUBSET_UNION",
-     (--`(!s:^set. !t. s SUBSET (s UNION t)) /\ 
+     (--`(!s:^set. !t. s SUBSET (s UNION t)) /\
       (!s:^set. !t. s SUBSET (t UNION s))`--),
      PURE_REWRITE_TAC [SUBSET_DEF,IN_UNION] THEN
      REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[]);
 
-val SUBSET_UNION_ABSORPTION = 
+val SUBSET_UNION_ABSORPTION =
     store_thm
     ("SUBSET_UNION_ABSORPTION",
      (--`!s:^set. !t. s SUBSET t = (s UNION t = t)`--),
@@ -344,14 +354,14 @@ val SUBSET_UNION_ABSORPTION =
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
      [RES_TAC,ASM_REWRITE_TAC[],RES_TAC]);
 
-val UNION_EMPTY = 
+val UNION_EMPTY =
     store_thm
     ("UNION_EMPTY",
      (--`(!s:^set. EMPTY UNION s = s) /\
       (!s:^set. s UNION EMPTY = s)`--),
      REWRITE_TAC [IN_UNION,EXTENSION,NOT_IN_EMPTY]);
 
-val UNION_UNIV = 
+val UNION_UNIV =
     store_thm
     ("UNION_UNIV",
      (--`(!s:^set. UNIV UNION s = UNIV) /\
@@ -367,7 +377,7 @@ val EMPTY_UNION = store_thm("EMPTY_UNION",
 (* Intersection								 *)
 (* ===================================================================== *)
 
-val INTER_DEF = new_infix_definition
+val INTER_DEF = new_infixl_definition
      ("INTER_DEF",
       (--`INTER s t = {x:'a | x IN s /\ x IN t}`--), 600);
 
@@ -395,15 +405,15 @@ val INTER_COMM = store_thm
      REPEAT GEN_TAC THEN
      MATCH_ACCEPT_TAC CONJ_SYM);
 
-val INTER_SUBSET = 
+val INTER_SUBSET =
     store_thm
     ("INTER_SUBSET",
-     (--`(!s:^set. !t. (s INTER t) SUBSET s) /\ 
+     (--`(!s:^set. !t. (s INTER t) SUBSET s) /\
       (!s:^set. !t. (t INTER s) SUBSET s)`--),
      PURE_REWRITE_TAC [SUBSET_DEF,IN_INTER] THEN
      REPEAT STRIP_TAC);
 
-val SUBSET_INTER_ABSORPTION = 
+val SUBSET_INTER_ABSORPTION =
     store_thm
     ("SUBSET_INTER_ABSORPTION",
      (--`!s:^set. !t. s SUBSET t = (s INTER t = s)`--),
@@ -411,14 +421,14 @@ val SUBSET_INTER_ABSORPTION =
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
      [FIRST_ASSUM ACCEPT_TAC, RES_TAC, RES_TAC]);
 
-val INTER_EMPTY = 
+val INTER_EMPTY =
     store_thm
     ("INTER_EMPTY",
      (--`(!s:^set. EMPTY INTER s = EMPTY) /\
       (!s:^set. s INTER EMPTY = EMPTY)`--),
      REWRITE_TAC [IN_INTER,EXTENSION,NOT_IN_EMPTY]);
 
-val INTER_UNIV = 
+val INTER_UNIV =
     store_thm
     ("INTER_UNIV",
      (--`(!s:^set. UNIV INTER s = s) /\
@@ -432,28 +442,28 @@ val INTER_UNIV =
 
 val UNION_OVER_INTER = store_thm
    ("UNION_OVER_INTER",
-    (--`!s:^set. !t u. 
+    (--`!s:^set. !t u.
       s INTER (t UNION u) = (s INTER t) UNION (s INTER u)`--),
     REWRITE_TAC [EXTENSION,IN_INTER,IN_UNION] THEN
-    REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN 
+    REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
     ASM_REWRITE_TAC[]);
 
 val INTER_OVER_UNION = store_thm
    ("INTER_OVER_UNION",
-    (--`!s:^set. !t u. 
+    (--`!s:^set. !t u.
       s UNION (t INTER u) = (s UNION t) INTER (s UNION u)`--),
     REWRITE_TAC [EXTENSION,IN_INTER,IN_UNION] THEN
-    REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN 
+    REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
     ASM_REWRITE_TAC[]);
 
 (* ===================================================================== *)
 (* Disjoint sets.							 *)
 (* ===================================================================== *)
 
-val DISJOINT_DEF = new_definition ("DISJOINT_DEF", 
+val DISJOINT_DEF = new_definition ("DISJOINT_DEF",
 (--`DISJOINT (s:^set) t = ((s INTER t) = EMPTY)`--));
 
-val IN_DISJOINT = 
+val IN_DISJOINT =
     store_thm
     ("IN_DISJOINT",
      (--`!s:^set. !t. DISJOINT s t = ~(?x. x IN s /\ x IN t)`--),
@@ -461,12 +471,12 @@ val IN_DISJOINT =
      CONV_TAC (ONCE_DEPTH_CONV NOT_EXISTS_CONV) THEN
      REPEAT GEN_TAC THEN REFL_TAC);
 
-val DISJOINT_SYM = 
+val DISJOINT_SYM =
     store_thm
     ("DISJOINT_SYM",
      (--`!s:^set. !t. DISJOINT s t = DISJOINT t s`--),
-     PURE_ONCE_REWRITE_TAC [DISJOINT_DEF] THEN REPEAT GEN_TAC THEN 
-     SUBST1_TAC (SPECL [--`s:^set`--, --`t:^set`--] INTER_COMM) THEN 
+     PURE_ONCE_REWRITE_TAC [DISJOINT_DEF] THEN REPEAT GEN_TAC THEN
+     SUBST1_TAC (SPECL [--`s:^set`--, --`t:^set`--] INTER_COMM) THEN
      REFL_TAC);
 
 (* --------------------------------------------------------------------- *)
@@ -478,12 +488,12 @@ val DISJOINT_EMPTY =
      (--`!s:^set. DISJOINT EMPTY s /\ DISJOINT s EMPTY`--),
      REWRITE_TAC [DISJOINT_DEF,INTER_EMPTY]);
 
-val DISJOINT_EMPTY_REFL = 
+val DISJOINT_EMPTY_REFL =
     store_thm
     ("DISJOINT_EMPTY_REFL",
      (--`!s:^set. (s = EMPTY) = (DISJOINT s s)`--),
      REWRITE_TAC [DISJOINT_DEF,INTER_IDEMPOT]);
-     
+
 (* --------------------------------------------------------------------- *)
 (* A theorem from homeier@org.aero.uniblab (Peter Homeier)		 *)
 (* --------------------------------------------------------------------- *)
@@ -494,7 +504,7 @@ val DISJOINT_UNION = store_thm ("DISJOINT_UNION",
      CONV_TAC (ONCE_DEPTH_CONV AND_FORALL_CONV) THEN
      REWRITE_TAC [DE_MORGAN_THM,RIGHT_AND_OVER_OR] THEN
      REPEAT GEN_TAC THEN EQ_TAC THEN
-     DISCH_THEN(fn th => GEN_TAC THEN 
+     DISCH_THEN(fn th => GEN_TAC THEN
                          STRIP_ASSUME_TAC (SPEC (--`x:'a`--) th)) THEN
      ASM_REWRITE_TAC []);
 
@@ -502,8 +512,8 @@ val DISJOINT_UNION = store_thm ("DISJOINT_UNION",
 (* ===================================================================== *)
 (* Set difference							 *)
 (* ===================================================================== *)
- 
-val DIFF_DEF = new_infix_definition
+
+val DIFF_DEF = new_infixl_definition
     ("DIFF_DEF",
      (--`DIFF s t = {x:'a | x IN s /\ ~ (x IN t)}`--),500);
 
@@ -515,61 +525,62 @@ val IN_DIFF = store_thm
      CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
      REFL_TAC);
 
-val DIFF_EMPTY = 
+val DIFF_EMPTY =
     store_thm
     ("DIFF_EMPTY",
      (--`!s:^set. s DIFF EMPTY = s`--),
      GEN_TAC THEN
      REWRITE_TAC [NOT_IN_EMPTY,IN_DIFF,EXTENSION]);
 
-val EMPTY_DIFF = 
+val EMPTY_DIFF =
     store_thm
     ("EMPTY_DIFF",
      (--`!s:^set. EMPTY DIFF s = EMPTY`--),
      GEN_TAC THEN
      REWRITE_TAC [NOT_IN_EMPTY,IN_DIFF,EXTENSION]);
 
-val DIFF_UNIV = 
+val DIFF_UNIV =
     store_thm
     ("DIFF_UNIV",
      (--`!s:^set. s DIFF UNIV = EMPTY`--),
      GEN_TAC THEN
      REWRITE_TAC [NOT_IN_EMPTY,IN_DIFF,IN_UNIV,EXTENSION]);
 
-val DIFF_DIFF = 
+val DIFF_DIFF =
     store_thm
     ("DIFF_DIFF",
      (--`!s:^set. !t. (s DIFF t) DIFF t = s DIFF t`--),
      REWRITE_TAC [EXTENSION,IN_DIFF,SYM(SPEC_ALL CONJ_ASSOC)]);
 
-val DIFF_EQ_EMPTY = 
+val DIFF_EQ_EMPTY =
     store_thm
     ("DIFF_EQ_EMPTY",
      (--`!s:^set. s DIFF s = EMPTY`--),
      REWRITE_TAC [EXTENSION,IN_DIFF,NOT_IN_EMPTY,DE_MORGAN_THM] THEN
      PURE_ONCE_REWRITE_TAC [DISJ_SYM] THEN
      REWRITE_TAC [EXCLUDED_MIDDLE]);
-     
+
 
 (* ===================================================================== *)
 (* The insertion function.					         *)
 (* ===================================================================== *)
 
-val INSERT_DEF = 
-    new_infix_definition
-    ("INSERT_DEF", (--`INSERT (x:'a) s = {y | (y = x) \/ y IN s}`--),500);
+val INSERT_DEF =
+    new_infixr_definition
+    ("INSERT_DEF", (--`INSERT (x:'a) s = {y | (y = x) \/ y IN s}`--),490);
 
 (* --------------------------------------------------------------------- *)
-(* Set up the {x1,...,xn} notation.					 *)
+(* set up sets as a list-form  the {x1;...;xn} notation                  *)
 (* --------------------------------------------------------------------- *)
-(* Hardwired in hol90 *)
-(* define_finite_set_syntax("EMPTY","INSERT"); *)
+
+val _ = add_listform {leftdelim = "{", rightdelim = "}", separator = ";",
+                      cons = "INSERT", nilstr = "EMPTY"};
 
 (* --------------------------------------------------------------------- *)
 (* Theorems about INSERT.						 *)
 (* --------------------------------------------------------------------- *)
 
-val IN_INSERT = 
+val IN_INSERT =
      store_thm
      ("IN_INSERT",
       (--`!x:'a. !y s. x IN (y INSERT s) = ((x=y) \/ x IN s)`--),
@@ -577,15 +588,15 @@ val IN_INSERT =
       CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
       REPEAT GEN_TAC THEN REFL_TAC);
 
-val COMPONENT = 
+val COMPONENT =
      store_thm
      ("COMPONENT",
       (--`!x:'a. !s. x IN (x INSERT s)`--),
       REWRITE_TAC [IN_INSERT]);
 
 val SET_CASES = store_thm("SET_CASES",
-(--`!s:^set. 
-       (s = EMPTY) \/ 
+(--`!s:^set.
+       (s = EMPTY) \/
        ?x:'a. ?t. ((s = x INSERT t) /\ ~(x IN t))`--),
      REWRITE_TAC [EXTENSION,NOT_IN_EMPTY] THEN GEN_TAC THEN
      DISJ_CASES_THEN MP_TAC (SPEC (--`?x:'a. x IN s`--) EXCLUDED_MIDDLE) THENL
@@ -599,7 +610,7 @@ val SET_CASES = store_thm("SET_CASES",
       CONV_TAC (ONCE_DEPTH_CONV NOT_EXISTS_CONV) THEN
       STRIP_TAC THEN DISJ1_TAC THEN FIRST_ASSUM ACCEPT_TAC]);
 
-val DECOMPOSITION = 
+val DECOMPOSITION =
     store_thm
     ("DECOMPOSITION",
      (--`!s:^set. !x. x IN s = ?t. (s = x INSERT t) /\ ~(x IN t)`--),
@@ -607,7 +618,7 @@ val DECOMPOSITION =
      [DISCH_TAC THEN EXISTS_TAC (--`{y:'a | y IN s /\ ~(y = x)}`--) THEN
       ASM_REWRITE_TAC [EXTENSION,IN_INSERT] THEN
       CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
-      REWRITE_TAC [] THEN 
+      REWRITE_TAC [] THEN
       REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
       ASM_REWRITE_TAC [EXCLUDED_MIDDLE],
       STRIP_TAC THEN ASM_REWRITE_TAC [IN_INSERT]]);
@@ -619,71 +630,72 @@ val ABSORPTION =
      REWRITE_TAC [EXTENSION,IN_INSERT] THEN
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
      ASM_REWRITE_TAC [] THEN
-     FIRST_ASSUM (fn th => fn g => PURE_ONCE_REWRITE_TAC [SYM(SPEC_ALL th)] g) 
+     FIRST_ASSUM (fn th => fn g => PURE_ONCE_REWRITE_TAC [SYM(SPEC_ALL th)] g)
      THEN DISJ1_TAC THEN REFL_TAC);
 
-val INSERT_INSERT = 
+val INSERT_INSERT =
     store_thm
     ("INSERT_INSERT",
      (--`!x:'a. !s. x INSERT (x INSERT s) = x INSERT s`--),
      REWRITE_TAC [IN_INSERT,EXTENSION] THEN
-     REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN 
+     REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
      ASM_REWRITE_TAC[]);
 
-val INSERT_COMM = 
+val INSERT_COMM =
     store_thm
     ("INSERT_COMM",
      (--`!x:'a. !y s. x INSERT (y INSERT s) = y INSERT (x INSERT s)`--),
      REWRITE_TAC [IN_INSERT,EXTENSION] THEN
-     REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN 
+     REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
      ASM_REWRITE_TAC[]);
 
-val INSERT_UNIV = 
+val INSERT_UNIV =
     store_thm
     ("INSERT_UNIV",
      (--`!x:'a. x INSERT UNIV = UNIV`--),
      REWRITE_TAC [EXTENSION,IN_INSERT,IN_UNIV]);
 
-val NOT_INSERT_EMPTY = 
+val NOT_INSERT_EMPTY =
     store_thm
     ("NOT_INSERT_EMPTY",
      (--`!x:'a. !s. ~(x INSERT s = EMPTY)`--),
      REWRITE_TAC [EXTENSION,IN_INSERT,NOT_IN_EMPTY,IN_UNION] THEN
      CONV_TAC (ONCE_DEPTH_CONV NOT_FORALL_CONV) THEN
-     REPEAT GEN_TAC THEN EXISTS_TAC (--`x:'a`--) THEN 
+     REPEAT GEN_TAC THEN EXISTS_TAC (--`x:'a`--) THEN
      REWRITE_TAC []);
 
-val NOT_EMPTY_INSERT = 
+val NOT_EMPTY_INSERT =
     store_thm
     ("NOT_EMPTY_INSERT",
      (--`!x:'a. !s. ~(EMPTY = x INSERT s)`--),
      REWRITE_TAC [EXTENSION,IN_INSERT,NOT_IN_EMPTY,IN_UNION] THEN
      CONV_TAC (ONCE_DEPTH_CONV NOT_FORALL_CONV) THEN
-     REPEAT GEN_TAC THEN EXISTS_TAC (--`x:'a`--) THEN 
+     REPEAT GEN_TAC THEN EXISTS_TAC (--`x:'a`--) THEN
      REWRITE_TAC []);
 
-val INSERT_UNION = 
-    store_thm
-    ("INSERT_UNION",
-     (--`!x:'a. !s t. 
-      (x INSERT s) UNION t = (x IN t => s UNION t | x INSERT (s UNION t))`--),
-     REPEAT GEN_TAC THEN COND_CASES_TAC THEN
-     ASM_REWRITE_TAC [EXTENSION,IN_UNION,IN_INSERT] THEN
-     REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN ASM_REWRITE_TAC []);
+val INSERT_UNION = store_thm (
+  "INSERT_UNION",
+  (--`!(x:'a) s t.
+        (x INSERT s) UNION t =
+        (if x IN t then s UNION t else x INSERT (s UNION t))`--),
+  REPEAT GEN_TAC THEN COND_CASES_TAC THEN
+  ASM_REWRITE_TAC [EXTENSION,IN_UNION,IN_INSERT] THEN
+  REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN ASM_REWRITE_TAC []);
 
-val INSERT_UNION_EQ = 
+val INSERT_UNION_EQ =
     store_thm
     ("INSERT_UNION_EQ",
      (--`!x:'a. !s t. (x INSERT s) UNION t = x INSERT (s UNION t)`--),
-     REPEAT GEN_TAC THEN 
+     REPEAT GEN_TAC THEN
      REWRITE_TAC [EXTENSION,IN_UNION,IN_INSERT,DISJ_ASSOC]);
 
-val INSERT_INTER = 
+val INSERT_INTER =
     store_thm
     ("INSERT_INTER",
-     (--`!x:'a. !s t. 
-      (x INSERT s) INTER t = (x IN t => x INSERT (s INTER t) | s INTER t)`--),
-     REPEAT GEN_TAC THEN COND_CASES_TAC THEN 
+     (--`!x:'a. !s t.
+      (x INSERT s) INTER t =
+      (if x IN t then x INSERT (s INTER t) else s INTER t)`--),
+     REPEAT GEN_TAC THEN COND_CASES_TAC THEN
      ASM_REWRITE_TAC [EXTENSION,IN_INTER,IN_INSERT] THEN
      GEN_TAC THEN EQ_TAC THENL
      [STRIP_TAC THEN ASM_REWRITE_TAC [],
@@ -699,34 +711,34 @@ val DISJOINT_INSERT = store_thm("DISJOINT_INSERT",
      CONV_TAC (ONCE_DEPTH_CONV NOT_EXISTS_CONV) THEN
      REWRITE_TAC [DE_MORGAN_THM] THEN
      REPEAT GEN_TAC THEN EQ_TAC THENL
-     [let val v = genvar (==`:'a`==) 
+     [let val v = genvar (==`:'a`==)
           val GTAC = X_GEN_TAC v
-      in DISCH_THEN (fn th => CONJ_TAC THENL [GTAC,ALL_TAC] THEN MP_TAC th) 
+      in DISCH_THEN (fn th => CONJ_TAC THENL [GTAC,ALL_TAC] THEN MP_TAC th)
          THENL [DISCH_THEN (STRIP_ASSUME_TAC o SPEC v) THEN ASM_REWRITE_TAC [],
                 DISCH_THEN (MP_TAC o SPEC (--`x:'a`--)) THEN REWRITE_TAC[]]
       end,
       REPEAT STRIP_TAC THEN ASM_CASES_TAC (--`x':'a = x`--) THENL
       [ASM_REWRITE_TAC[], ASM_REWRITE_TAC[]]]);
 
-val INSERT_SUBSET = 
+val INSERT_SUBSET =
     store_thm
     ("INSERT_SUBSET",
      (--`!x:'a. !s t. (x INSERT s) SUBSET t = (x IN t /\ s SUBSET t)`--),
      REWRITE_TAC [IN_INSERT,SUBSET_DEF] THEN
-     REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL 
+     REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
      [FIRST_ASSUM MATCH_MP_TAC THEN DISJ1_TAC THEN REFL_TAC,
       FIRST_ASSUM MATCH_MP_TAC THEN DISJ2_TAC THEN FIRST_ASSUM ACCEPT_TAC,
       ASM_REWRITE_TAC [],
       RES_TAC]);
 
-val SUBSET_INSERT = 
+val SUBSET_INSERT =
     store_thm
     ("SUBSET_INSERT",
      (--`!x:'a. !s. ~(x IN s) ==> !t. s SUBSET (x INSERT t) = s SUBSET t`--),
      PURE_REWRITE_TAC [SUBSET_DEF,IN_INSERT] THEN
      REPEAT STRIP_TAC THEN EQ_TAC THENL
      [REPEAT STRIP_TAC THEN
-      let fun tac th g = SUBST_ALL_TAC th g 
+      let fun tac th g = SUBST_ALL_TAC th g
                          handle  _ => STRIP_ASSUME_TAC th g
       in RES_THEN (STRIP_THM_THEN tac) THEN RES_TAC
       end,
@@ -734,15 +746,15 @@ val SUBSET_INSERT =
       FIRST_ASSUM MATCH_MP_TAC THEN
       FIRST_ASSUM ACCEPT_TAC]);
 
-val INSERT_DIFF = 
+val INSERT_DIFF =
     store_thm
     ("INSERT_DIFF",
-     (--`!s t. !x:'a. (x INSERT s) DIFF t = 
-     		  (x IN t => s DIFF t | (x INSERT (s DIFF t)))`--),
+     (--`!s t. !x:'a. (x INSERT s) DIFF t =
+     		  (if x IN t then s DIFF t else (x INSERT (s DIFF t)))`--),
      REPEAT GEN_TAC THEN COND_CASES_TAC THENL
      [ASM_REWRITE_TAC [EXTENSION,IN_DIFF,IN_INSERT] THEN
       GEN_TAC THEN EQ_TAC THENL
-      [STRIP_TAC THEN ASM_REWRITE_TAC[] THEN 
+      [STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
        FIRST_ASSUM (fn th => fn g => SUBST_ALL_TAC th g) THEN RES_TAC,
        STRIP_TAC THEN ASM_REWRITE_TAC[]],
       ASM_REWRITE_TAC [EXTENSION,IN_DIFF,IN_INSERT] THEN
@@ -754,18 +766,18 @@ val INSERT_DIFF =
 (* Removal of an element						 *)
 (* ===================================================================== *)
 
-val DELETE_DEF = 
-    new_infix_definition
+val DELETE_DEF =
+    new_infixl_definition
     ("DELETE_DEF", (--`DELETE s (x:'a) = s DIFF {x}`--),500);
 
-val IN_DELETE = 
+val IN_DELETE =
     store_thm
     ("IN_DELETE",
      (--`!s. !x:'a. !y. x IN (s DELETE y) = (x IN s /\ ~(x = y))`--),
      PURE_ONCE_REWRITE_TAC [DELETE_DEF] THEN
      REWRITE_TAC [IN_DIFF,IN_INSERT,NOT_IN_EMPTY]);
 
-val DELETE_NON_ELEMENT = 
+val DELETE_NON_ELEMENT =
     store_thm
     ("DELETE_NON_ELEMENT",
      (--`!x:'a. !s. ~(x IN s) = (s DELETE x = s)`--),
@@ -776,29 +788,29 @@ val DELETE_NON_ELEMENT =
       THEN RES_TAC,
       RES_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN REFL_TAC]);
 
-val IN_DELETE_EQ = 
+val IN_DELETE_EQ =
     store_thm
     ("IN_DELETE_EQ",
-     (--`!s x. !x':'a. 
+     (--`!s x. !x':'a.
       (x IN s = x' IN s) = (x IN (s DELETE x') = x' IN (s DELETE x))`--),
      REPEAT GEN_TAC THEN ASM_CASES_TAC (--`x:'a = x'`--) THENL
      [ASM_REWRITE_TAC [],
       FIRST_ASSUM (ASSUME_TAC o NOT_EQ_SYM) THEN
       ASM_REWRITE_TAC [IN_DELETE]]);
-     
-val EMPTY_DELETE = 
+
+val EMPTY_DELETE =
     store_thm
     ("EMPTY_DELETE",
      (--`!x:'a. EMPTY DELETE x = EMPTY`--),
      REWRITE_TAC [EXTENSION,NOT_IN_EMPTY,IN_DELETE]);
 
-val DELETE_DELETE = 
+val DELETE_DELETE =
     store_thm
     ("DELETE_DELETE",
      (--`!x:'a. !s. (s DELETE x) DELETE x = s DELETE x`--),
      REWRITE_TAC [EXTENSION,IN_DELETE,SYM(SPEC_ALL CONJ_ASSOC)]);
 
-val DELETE_COMM = 
+val DELETE_COMM =
     store_thm
     ("DELETE_COMM",
      (--`!x:'a. !y. !s. (s DELETE x) DELETE y = (s DELETE y) DELETE x`--),
@@ -806,14 +818,14 @@ val DELETE_COMM =
      REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THEN
      REPEAT CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC);
 
-val DELETE_SUBSET = 
+val DELETE_SUBSET =
     store_thm
     ("DELETE_SUBSET",
      (--`!x:'a. !s. (s DELETE x) SUBSET s`--),
      PURE_REWRITE_TAC [SUBSET_DEF,IN_DELETE] THEN
      REPEAT STRIP_TAC);
 
-val SUBSET_DELETE = 
+val SUBSET_DELETE =
     store_thm
     ("SUBSET_DELETE",
      (--`!x:'a. !s t. s SUBSET (t DELETE x) = (~(x IN s) /\ (s SUBSET t))`--),
@@ -822,28 +834,28 @@ val SUBSET_DELETE =
      [REPEAT STRIP_TAC THENL
       [ASSUME_TAC (REFL (--`x:'a`--)) THEN RES_TAC, RES_TAC],
       REPEAT STRIP_TAC THENL
-      [RES_TAC, FIRST_ASSUM (fn th => fn g => SUBST_ALL_TAC th g) THEN 
+      [RES_TAC, FIRST_ASSUM (fn th => fn g => SUBST_ALL_TAC th g) THEN
        RES_TAC]]);
 
-val SUBSET_INSERT_DELETE = 
+val SUBSET_INSERT_DELETE =
     store_thm
     ("SUBSET_INSERT_DELETE",
      (--`!x:'a. !s t. s SUBSET (x INSERT t) = ((s DELETE x) SUBSET t)`--),
-     REPEAT GEN_TAC THEN 
+     REPEAT GEN_TAC THEN
      REWRITE_TAC [SUBSET_DEF,IN_INSERT,IN_DELETE] THEN
      EQ_TAC THEN REPEAT STRIP_TAC THENL
      [RES_TAC THEN RES_TAC,
       ASM_CASES_TAC (--`x':'a = x`--) THEN
       ASM_REWRITE_TAC[] THEN RES_TAC]);
 
-val DIFF_INSERT = 
+val DIFF_INSERT =
     store_thm
     ("DIFF_INSERT",
      (--`!s t. !x:'a. s DIFF (x INSERT t) = (s DELETE x) DIFF t`--),
      PURE_REWRITE_TAC [EXTENSION,IN_DIFF,IN_INSERT,IN_DELETE] THEN
      REWRITE_TAC [DE_MORGAN_THM,CONJ_ASSOC]);
 
-val PSUBSET_INSERT_SUBSET = 
+val PSUBSET_INSERT_SUBSET =
     store_thm
     ("PSUBSET_INSERT_SUBSET",
      (--`!s t. s PSUBSET t = ?x:'a. ~(x IN s) /\ (x INSERT s) SUBSET t`--),
@@ -857,13 +869,13 @@ val PSUBSET_INSERT_SUBSET =
       IMP_RES_TAC INSERT_SUBSET,
       IMP_RES_TAC INSERT_SUBSET THEN
       EXISTS_TAC (--`x:'a`--) THEN ASM_REWRITE_TAC[]]);
-       
-val lemma = 
+
+val lemma =
     TAC_PROOF(([], (--`~(a:bool = b) = (b = ~a)`--)),
-    BOOL_CASES_TAC (--`b:bool`--) THEN REWRITE_TAC[]);    
+    BOOL_CASES_TAC (--`b:bool`--) THEN REWRITE_TAC[]);
 
 val PSUBSET_MEMBER = store_thm("PSUBSET_MEMBER",
-(--`!s:^set. 
+(--`!s:^set.
     !t. s PSUBSET t = (s SUBSET t /\ ?y. y IN t /\ ~(y IN s))`--),
      REPEAT GEN_TAC THEN PURE_ONCE_REWRITE_TAC [PSUBSET_DEF] THEN
      PURE_ONCE_REWRITE_TAC [EXTENSION,SUBSET_DEF] THEN
@@ -878,8 +890,9 @@ val PSUBSET_MEMBER = store_thm("PSUBSET_MEMBER",
       EXISTS_TAC (--`y:'a`--) THEN ASM_REWRITE_TAC[]]);
 
 val DELETE_INSERT = store_thm("DELETE_INSERT",
-(--`!(x:'a) y s. 
-    (x INSERT s) DELETE y = ((x=y) => s DELETE y | x INSERT (s DELETE y))`--),
+(--`!(x:'a) y s.
+    (x INSERT s) DELETE y = (if (x=y) then s DELETE y
+                             else x INSERT (s DELETE y))`--),
      REWRITE_TAC [EXTENSION,IN_DELETE,IN_INSERT] THEN
      REPEAT GEN_TAC THEN EQ_TAC THENL
      [DISCH_THEN (STRIP_THM_THEN MP_TAC) THEN DISCH_TAC THEN
@@ -889,10 +902,10 @@ val DELETE_INSERT = store_thm("DELETE_INSERT",
          COND_CASES_TAC THEN ASM_REWRITE_TAC [IN_DELETE,IN_INSERT]]
       end,
       COND_CASES_TAC THEN ASM_REWRITE_TAC [IN_DELETE,IN_INSERT] THENL
-      [STRIP_TAC THEN ASM_REWRITE_TAC [], 
+      [STRIP_TAC THEN ASM_REWRITE_TAC [],
        STRIP_TAC THEN ASM_REWRITE_TAC []]]);
 
-val INSERT_DELETE = 
+val INSERT_DELETE =
     store_thm
     ("INSERT_DELETE",
      (--`!x:'a. !s. x IN s ==> (x INSERT (s DELETE x) = s)`--),
@@ -923,8 +936,8 @@ val DISJOINT_DELETE_SYM =
      REWRITE_TAC [DISJOINT_DEF,EXTENSION,NOT_IN_EMPTY] THEN
      REWRITE_TAC [IN_INTER,IN_DELETE,DE_MORGAN_THM] THEN
      REPEAT GEN_TAC THEN EQ_TAC THEN
-     let val X = (--`X:'a`--) 
-     in DISCH_THEN (fn th => X_GEN_TAC X THEN STRIP_ASSUME_TAC (SPEC X th)) 
+     let val X = (--`X:'a`--)
+     in DISCH_THEN (fn th => X_GEN_TAC X THEN STRIP_ASSUME_TAC (SPEC X th))
         THEN ASM_REWRITE_TAC []
      end);
 
@@ -932,7 +945,7 @@ val DISJOINT_DELETE_SYM =
 (* Choice								 *)
 (* ===================================================================== *)
 
-val CHOICE_EXISTS = 
+val CHOICE_EXISTS =
     TAC_PROOF
     (([], (--`?CHOICE. !s:^set. ~(s = EMPTY) ==> (CHOICE s) IN s`--)),
      REWRITE_TAC [EXTENSION,NOT_IN_EMPTY] THEN
@@ -945,16 +958,16 @@ val CHOICE_EXISTS =
 val CHOICE_DEF = new_specification
                    {name= "CHOICE_DEF",sat_thm=CHOICE_EXISTS,
                     consts=[{const_name="CHOICE",fixity=Prefix}]};
-     
+
 (* ===================================================================== *)
 (* The REST of a set after removing a chosen element.			 *)
 (* ===================================================================== *)
 
-val REST_DEF = 
+val REST_DEF =
     new_definition
     ("REST_DEF", (--`REST (s:^set) = s DELETE (CHOICE s)`--));
 
-val CHOICE_NOT_IN_REST = 
+val CHOICE_NOT_IN_REST =
     store_thm
     ("CHOICE_NOT_IN_REST",
      (--`!s:^set. ~(CHOICE s IN REST s)`--),
@@ -968,17 +981,17 @@ val CHOICE_INSERT_REST = store_thm("CHOICE_INSERT_REST",
      [IMP_RES_TAC CHOICE_DEF THEN ASM_REWRITE_TAC [],
       ASM_REWRITE_TAC [EXCLUDED_MIDDLE]]);
 
-val REST_SUBSET = 
+val REST_SUBSET =
     store_thm
     ("REST_SUBSET",
      (--`!s:^set. (REST s) SUBSET s`--),
      REWRITE_TAC [SUBSET_DEF,REST_DEF,IN_DELETE] THEN REPEAT STRIP_TAC);
 
-val lemma = 
+val lemma =
     TAC_PROOF(([], (--`(P /\ Q = P) = (P ==> Q)`--)),
     	      BOOL_CASES_TAC (--`P:bool`--) THEN REWRITE_TAC[]);
 
-val REST_PSUBSET = 
+val REST_PSUBSET =
     store_thm
     ("REST_PSUBSET",
      (--`!s:^set. ~(s = EMPTY) ==> (REST s) PSUBSET s`--),
@@ -996,24 +1009,24 @@ val REST_PSUBSET =
 (* Singleton set.							 *)
 (* ===================================================================== *)
 
-val SING_DEF = 
+val SING_DEF =
     new_definition
     ("SING_DEF", (--`SING s = ?x:'a. s = {x}`--));
 
-val SING = 
+val SING =
     store_thm
     ("SING",
      (--`!x:'a. SING {x}`--),
      PURE_ONCE_REWRITE_TAC [SING_DEF] THEN
      GEN_TAC THEN EXISTS_TAC (--`x:'a`--) THEN REFL_TAC);
 
-val IN_SING = 
+val IN_SING =
     store_thm
     ("IN_SING",
      (--`!x y. x IN {y:'a} = (x = y)`--),
      REWRITE_TAC [IN_INSERT,NOT_IN_EMPTY]);
 
-val NOT_SING_EMPTY = 
+val NOT_SING_EMPTY =
     store_thm
     ("NOT_SING_EMPTY",
      (--`!x:'a. ~({x} = EMPTY)`--),
@@ -1021,7 +1034,7 @@ val NOT_SING_EMPTY =
      CONV_TAC (ONCE_DEPTH_CONV NOT_FORALL_CONV) THEN
      GEN_TAC THEN EXISTS_TAC (--`x:'a`--) THEN REWRITE_TAC[]);
 
-val NOT_EMPTY_SING = 
+val NOT_EMPTY_SING =
     store_thm
     ("NOT_EMPTY_SING",
      (--`!x:'a. ~(EMPTY = {x})`--),
@@ -1029,7 +1042,7 @@ val NOT_EMPTY_SING =
      CONV_TAC (ONCE_DEPTH_CONV NOT_FORALL_CONV) THEN
      GEN_TAC THEN EXISTS_TAC (--`x:'a`--) THEN REWRITE_TAC[]);
 
-val EQUAL_SING = 
+val EQUAL_SING =
     store_thm
     ("EQUAL_SING",
      (--`!x:'a. !y. ({x} = {y}) = (x = y)`--),
@@ -1038,19 +1051,19 @@ val EQUAL_SING =
      [DISCH_THEN (fn th => REWRITE_TAC [SYM(SPEC_ALL th)]),
       DISCH_THEN SUBST1_TAC THEN GEN_TAC THEN REFL_TAC]);
 
-val DISJOINT_SING_EMPTY = 
+val DISJOINT_SING_EMPTY =
     store_thm
     ("DISJOINT_SING_EMPTY",
      (--`!x:'a. DISJOINT {x} EMPTY`--),
      REWRITE_TAC [DISJOINT_DEF,INTER_EMPTY]);
 
-val INSERT_SING_UNION = 
+val INSERT_SING_UNION =
     store_thm
     ("INSERT_SING_UNION",
      (--`!s. !x:'a. x INSERT s = {x} UNION s`--),
      REWRITE_TAC [EXTENSION,IN_INSERT,IN_UNION,NOT_IN_EMPTY]);
 
-val SING_DELETE = 
+val SING_DELETE =
     store_thm
     ("SING_DELETE",
     (--`!x:'a. {x} DELETE x = EMPTY`--),
@@ -1058,7 +1071,7 @@ val SING_DELETE =
     PURE_ONCE_REWRITE_TAC [CONJ_SYM] THEN
     REWRITE_TAC [DE_MORGAN_THM,EXCLUDED_MIDDLE]);
 
-val DELETE_EQ_SING = 
+val DELETE_EQ_SING =
     store_thm
     ("DELETE_EQ_SING",
      (--`!s. !x:'a. (x IN s) ==> ((s DELETE x = EMPTY) = (s = {x}))`--),
@@ -1066,27 +1079,27 @@ val DELETE_EQ_SING =
      REWRITE_TAC [NOT_IN_EMPTY,DE_MORGAN_THM,IN_INSERT,IN_DELETE] THEN
      REPEAT STRIP_TAC THEN EQ_TAC THENL
      [DISCH_TAC THEN GEN_TAC THEN
-      FIRST_ASSUM (fn th=>fn g => STRIP_ASSUME_TAC (SPEC (--`x':'a`--) th) g) 
+      FIRST_ASSUM (fn th=>fn g => STRIP_ASSUME_TAC (SPEC (--`x':'a`--) th) g)
       THEN ASM_REWRITE_TAC [] THEN DISCH_THEN SUBST_ALL_TAC THEN RES_TAC,
-      let val th = PURE_ONCE_REWRITE_RULE [DISJ_SYM] EXCLUDED_MIDDLE 
+      let val th = PURE_ONCE_REWRITE_RULE [DISJ_SYM] EXCLUDED_MIDDLE
       in DISCH_TAC THEN GEN_TAC THEN ASM_REWRITE_TAC [th]
       end]);
 
-val CHOICE_SING = 
+val CHOICE_SING =
     store_thm
     ("CHOICE_SING",
      (--`!x:'a. CHOICE {x} = x`--),
-     GEN_TAC THEN 
+     GEN_TAC THEN
      MP_TAC (MATCH_MP CHOICE_DEF (SPEC (--`x:'a`--) NOT_SING_EMPTY)) THEN
      REWRITE_TAC [IN_SING]);
 
-val REST_SING = 
+val REST_SING =
     store_thm
     ("REST_SING",
      (--`!x:'a. REST {x} = EMPTY`--),
      REWRITE_TAC [CHOICE_SING,REST_DEF,SING_DELETE]);
 
-val SING_IFF_EMPTY_REST = 
+val SING_IFF_EMPTY_REST =
     store_thm
     ("SING_IFF_EMPTY_REST",
      (--`!s:^set. SING s = ~(s = EMPTY) /\ (REST s = EMPTY)`--),
@@ -1110,7 +1123,7 @@ val IMAGE_DEF =
     new_definition
     ("IMAGE_DEF", (--`IMAGE (f:'a->'b) s = {f x | x IN s}`--));
 
-val IN_IMAGE = 
+val IN_IMAGE =
     store_thm
     ("IN_IMAGE",
      (--`!y:'b. !s f. (y IN (IMAGE f s)) = ?x:'a. (y = f x) /\ x IN s`--),
@@ -1118,12 +1131,12 @@ val IN_IMAGE =
       CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
       REPEAT GEN_TAC THEN REFL_TAC);
 
-val IMAGE_IN = 
+val IMAGE_IN =
     store_thm
     ("IMAGE_IN",
      (--`!x s. (x IN s) ==> !(f:'a->'b). f x IN (IMAGE f s)`--),
      PURE_ONCE_REWRITE_TAC [IN_IMAGE] THEN
-     REPEAT STRIP_TAC THEN 
+     REPEAT STRIP_TAC THEN
      EXISTS_TAC (--`x:'a`--) THEN
      CONJ_TAC THENL [REFL_TAC, FIRST_ASSUM ACCEPT_TAC]);
 
@@ -1133,7 +1146,7 @@ val IMAGE_EMPTY =
       (--`!f:'a->'b. IMAGE f EMPTY = EMPTY`--),
       REWRITE_TAC[EXTENSION,IN_IMAGE,NOT_IN_EMPTY]);
 
-val IMAGE_ID = 
+val IMAGE_ID =
     store_thm
     ("IMAGE_ID",
      (--`!s:^set. IMAGE (\x:'a.x) s = s`--),
@@ -1145,7 +1158,7 @@ val IMAGE_ID =
 
 val o_THM = combinTheory.o_THM;
 
-val IMAGE_COMPOSE = 
+val IMAGE_COMPOSE =
     store_thm
     ("IMAGE_COMPOSE",
      (--`!f:'b->'c. !g:'a->'b. !s. IMAGE (f o g) s = IMAGE f (IMAGE g s)`--),
@@ -1189,7 +1202,7 @@ val IMAGE_UNION = store_thm("IMAGE_UNION",
      [DISJ1_TAC,DISJ2_TAC,ALL_TAC,ALL_TAC] THEN
      EXISTS_TAC (--`x':'a`--) THEN ASM_REWRITE_TAC []);
 
-val IMAGE_SUBSET = 
+val IMAGE_SUBSET =
     store_thm
     ("IMAGE_SUBSET",
      (--`!s t. (s SUBSET t) ==> !f:'a->'b. (IMAGE f s) SUBSET (IMAGE f t)`--),
@@ -1214,7 +1227,7 @@ val INJ_DEF =
     new_definition
     ("INJ_DEF",
      (--`INJ (f:'a->'b) s t =
-          (!x. x IN s ==> (f x) IN t) /\ 
+          (!x. x IN s ==> (f x) IN t) /\
           (!x y. (x IN s /\ y IN s) ==> (f x = f y) ==> (x = y))`--));
 
 val INJ_ID =
@@ -1224,8 +1237,8 @@ val INJ_ID =
      PURE_ONCE_REWRITE_TAC [INJ_DEF] THEN
      CONV_TAC (ONCE_DEPTH_CONV BETA_CONV) THEN
      REPEAT STRIP_TAC);
-     
-val INJ_COMPOSE = 
+
+val INJ_COMPOSE =
     store_thm
     ("INJ_COMPOSE",
      (--`!f:'a->'b. !g:'b->'c.
@@ -1251,7 +1264,7 @@ val SURJ_DEF =
     new_definition
     ("SURJ_DEF",
      (--`SURJ (f:'a->'b) s t =
-           (!x. x IN s ==> (f x) IN t) /\ 
+           (!x. x IN s ==> (f x) IN t) /\
            (!x. (x IN t) ==> ?y. y IN s /\ (f y = x))`--));
 
 val SURJ_ID =
@@ -1264,7 +1277,7 @@ val SURJ_ID =
      EXISTS_TAC (--`x:'a`--) THEN
      ASM_REWRITE_TAC []);
 
-val SURJ_COMPOSE = 
+val SURJ_COMPOSE =
     store_thm
     ("SURJ_COMPOSE",
      (--`!f:'a->'b. !g:'b->'c.
@@ -1314,7 +1327,7 @@ val BIJ_EMPTY = store_thm("BIJ_EMPTY",
 (--`!f:'a->'b. (!s. BIJ f {} s = (s = {})) /\ (!s. BIJ f s {} = (s = {}))`--),
      REWRITE_TAC [BIJ_DEF,INJ_EMPTY,SURJ_EMPTY]);
 
-val BIJ_COMPOSE = 
+val BIJ_COMPOSE =
     store_thm
     ("BIJ_COMPOSE",
      (--`!f:'a->'b. !g:'b->'c.
@@ -1327,7 +1340,7 @@ val BIJ_COMPOSE =
 (* Left and right inverses.						 *)
 (* ===================================================================== *)
 
-val lemma1 = TAC_PROOF(([], 
+val lemma1 = TAC_PROOF(([],
 (--`!(f:'a->'b) s.
       (!x y. x IN s /\ y IN s ==> (f x = f y) ==> (x = y)) =
       (!y. y IN s ==> !x.((x IN s /\ (f x = f y))=(y IN s /\ (x = y))))`--)),
@@ -1349,7 +1362,7 @@ val lemma2 = TAC_PROOF (([],
 (* --------------------------------------------------------------------- *)
 
 val LINV_DEF =
-   let val th1 = CONV_RULE (ONCE_DEPTH_CONV RIGHT_IMP_EXISTS_CONV) lemma2 
+   let val th1 = CONV_RULE (ONCE_DEPTH_CONV RIGHT_IMP_EXISTS_CONV) lemma2
        val th2 = CONV_RULE SKOLEM_CONV th1
    in new_specification{name="LINV_DEF",sat_thm=th2,
                         consts=[{const_name="LINV",fixity=Prefix}]}
@@ -1357,7 +1370,7 @@ val LINV_DEF =
 
 val lemma3 = TAC_PROOF(([],
 (--`!f:'a->'b. !s. ?g. !t. SURJ f s t ==> !x:'b. x IN t ==> (f(g x) = x)`--)),
-     REPEAT GEN_TAC THEN PURE_REWRITE_TAC [SURJ_DEF] THEN    
+     REPEAT GEN_TAC THEN PURE_REWRITE_TAC [SURJ_DEF] THEN
      EXISTS_TAC (--`\y:'b. @x:'a. x IN s /\ (f x = y)`--) THEN
      CONV_TAC (ONCE_DEPTH_CONV BETA_CONV) THEN
      REPEAT STRIP_TAC THEN
@@ -1368,7 +1381,7 @@ val lemma3 = TAC_PROOF(([],
      THEN CONV_TAC SELECT_CONV THEN
      FIRST_ASSUM MATCH_MP_TAC THEN
      FIRST_ASSUM ACCEPT_TAC);
-     
+
 (* --------------------------------------------------------------------- *)
 (* RINV_DEF:								 *)
 (*   |- !f s t. SURJ f s t ==> (!x. x IN t ==> (f(RINV f s x) = x))      *)
@@ -1385,20 +1398,20 @@ val RINV_DEF =
 (* Finiteness								 *)
 (* ===================================================================== *)
 
-val FINITE_DEF = 
+val FINITE_DEF =
  new_definition
  ("FINITE_DEF",
   (--`!s:^set.
     FINITE s = !P. P EMPTY /\ (!s. P s ==> !e. P (e INSERT s)) ==> P s`--));
 
-val FINITE_EMPTY = 
+val FINITE_EMPTY =
     store_thm
     ("FINITE_EMPTY",
      (--`FINITE (EMPTY:^set)`--),
      PURE_ONCE_REWRITE_TAC [FINITE_DEF] THEN
      REPEAT STRIP_TAC);
 
-val FINITE_INSERT = 
+val FINITE_INSERT =
     TAC_PROOF
     (([], (--`!s. FINITE s ==> !x:'a. FINITE (x INSERT s)`--)),
      PURE_ONCE_REWRITE_TAC [FINITE_DEF] THEN
@@ -1406,7 +1419,7 @@ val FINITE_INSERT =
      REPEAT (FIRST_ASSUM MATCH_MP_TAC) THEN
      CONJ_TAC THEN FIRST_ASSUM MATCH_ACCEPT_TAC);
 
-val SIMPLE_FINITE_INDUCT = 
+val SIMPLE_FINITE_INDUCT =
     TAC_PROOF
     (([], (--`!P. P EMPTY /\ (!s. P s ==> (!e:'a. P(e INSERT s)))
                 ==>
@@ -1416,11 +1429,11 @@ val SIMPLE_FINITE_INDUCT =
      GEN_TAC THEN DISCH_THEN MATCH_MP_TAC THEN
      ASM_REWRITE_TAC []);
 
-val lemma = 
-  let val tac = ASM_CASES_TAC (--`P:bool`--) THEN ASM_REWRITE_TAC[] 
-      val lem = TAC_PROOF(([],(--`(P ==> P /\ Q) = (P ==> Q)`--)), tac) 
-      val th1 = SPEC (--`\s:^set. FINITE s /\ P s`--) 
-                     SIMPLE_FINITE_INDUCT 
+val lemma =
+  let val tac = ASM_CASES_TAC (--`P:bool`--) THEN ASM_REWRITE_TAC[]
+      val lem = TAC_PROOF(([],(--`(P ==> P /\ Q) = (P ==> Q)`--)), tac)
+      val th1 = SPEC (--`\s:^set. FINITE s /\ P s`--)
+                     SIMPLE_FINITE_INDUCT
   in REWRITE_RULE [lem,FINITE_EMPTY] (BETA_RULE th1)
   end;
 
@@ -1429,7 +1442,7 @@ val FINITE_INDUCT = store_thm("FINITE_INDUCT",
        ==> !s:^set. FINITE s
                           ==> P s`--,
      GEN_TAC THEN STRIP_TAC THEN
-     MATCH_MP_TAC lemma THEN 
+     MATCH_MP_TAC lemma THEN
      ASM_REWRITE_TAC [] THEN
      REPEAT STRIP_TAC THENL
      [IMP_RES_THEN MATCH_ACCEPT_TAC FINITE_INSERT,
@@ -1443,7 +1456,7 @@ val FINITE_INDUCT = store_thm("FINITE_INDUCT",
 
 val SET_INDUCT_TAC = PSet_ind.SET_INDUCT_TAC FINITE_INDUCT;
 
-val FINITE_DELETE = 
+val FINITE_DELETE =
     TAC_PROOF
     (([], --`!s. FINITE s ==> !x:'a. FINITE (s DELETE x)`--),
      SET_INDUCT_TAC THENL
@@ -1456,7 +1469,7 @@ val FINITE_DELETE =
        IMP_RES_TAC FINITE_INSERT THEN
        FIRST_ASSUM MATCH_ACCEPT_TAC]]);
 
-val INSERT_FINITE = 
+val INSERT_FINITE =
     TAC_PROOF
     (([], (--`!x:'a. !s. FINITE(x INSERT s) ==> FINITE s`--)),
      REPEAT GEN_TAC THEN ASM_CASES_TAC (--`(x:'a) IN s`--) THENL
@@ -1465,15 +1478,15 @@ val INSERT_FINITE =
       REWRITE_TAC [DELETE_INSERT] THEN
       IMP_RES_TAC DELETE_NON_ELEMENT THEN ASM_REWRITE_TAC[]]);
 
-val FINITE_INSERT = 
+val FINITE_INSERT =
     store_thm
     ("FINITE_INSERT",
      (--`!x:'a. !s. FINITE(x INSERT s) = FINITE s`--),
      REPEAT GEN_TAC THEN EQ_TAC THENL
-     [MATCH_ACCEPT_TAC INSERT_FINITE, 
+     [MATCH_ACCEPT_TAC INSERT_FINITE,
       DISCH_THEN (MATCH_ACCEPT_TAC o MATCH_MP FINITE_INSERT)]);
 
-val DELETE_FINITE = 
+val DELETE_FINITE =
     TAC_PROOF
     (([], (--`!x:'a. !s. FINITE (s DELETE x) ==> FINITE s`--)),
      REPEAT GEN_TAC THEN ASM_CASES_TAC (--`(x:'a) IN s`--) THEN
@@ -1484,27 +1497,27 @@ val DELETE_FINITE =
       FIRST_ASSUM ACCEPT_TAC]);
 
 
-val FINITE_DELETE = 
+val FINITE_DELETE =
     store_thm
     ("FINITE_DELETE",
      (--`!x:'a. !s. FINITE(s DELETE x) = FINITE s`--),
      REPEAT GEN_TAC THEN EQ_TAC THENL
-     [MATCH_ACCEPT_TAC DELETE_FINITE, 
+     [MATCH_ACCEPT_TAC DELETE_FINITE,
       DISCH_THEN (MATCH_ACCEPT_TAC o MATCH_MP FINITE_DELETE)]);
 
-val UNION_FINITE = TAC_PROOF(([], 
+val UNION_FINITE = TAC_PROOF(([],
 --`!s:^set. FINITE s ==> !t. FINITE t ==> FINITE (s UNION t)`--),
      SET_INDUCT_TAC THENL
      [REWRITE_TAC [UNION_EMPTY],
       SET_INDUCT_TAC THENL
       [IMP_RES_TAC FINITE_INSERT THEN ASM_REWRITE_TAC [UNION_EMPTY],
-       SUBST1_TAC (SPECL [--`s':^set`--, --`e':'a`--] INSERT_SING_UNION) 
+       SUBST1_TAC (SPECL [--`s':^set`--, --`e':'a`--] INSERT_SING_UNION)
        THEN PURE_ONCE_REWRITE_TAC [SYM(SPEC_ALL UNION_ASSOC)] THEN
        PURE_REWRITE_TAC [SPECL [(--`s:^set`--),(--`{x:'a}`--)]UNION_COMM]
        THEN PURE_REWRITE_TAC [UNION_ASSOC,SYM(SPEC_ALL INSERT_SING_UNION)] THEN
        IMP_RES_THEN MATCH_ACCEPT_TAC FINITE_INSERT]]);
 
-val FINITE_UNION_LEMMA = TAC_PROOF(([], 
+val FINITE_UNION_LEMMA = TAC_PROOF(([],
 --`!s:^set. FINITE s ==> !t. FINITE (s UNION t) ==> FINITE t`--),
      SET_INDUCT_TAC THENL
      [REWRITE_TAC [UNION_EMPTY],
@@ -1514,9 +1527,9 @@ val FINITE_UNION_LEMMA = TAC_PROOF(([],
        DISCH_THEN (MP_TAC o MATCH_MP INSERT_FINITE) THEN
        FIRST_ASSUM MATCH_ACCEPT_TAC]]);
 
-val FINITE_UNION = TAC_PROOF(([], 
+val FINITE_UNION = TAC_PROOF(([],
 --`!s:^set. !t. FINITE(s UNION t) ==> (FINITE s /\ FINITE t)`--),
-     REPEAT STRIP_TAC THEN 
+     REPEAT STRIP_TAC THEN
      IMP_RES_THEN MATCH_MP_TAC FINITE_UNION_LEMMA THENL
      [SUBST1_TAC (SPECL [(--`s:^set`--),(--`t:^set`--)] UNION_COMM)
       THEN REWRITE_TAC [UNION_ASSOC,UNION_IDEMPOT] THEN
@@ -1524,7 +1537,7 @@ val FINITE_UNION = TAC_PROOF(([],
       FIRST_ASSUM ACCEPT_TAC,
       ASM_REWRITE_TAC [UNION_ASSOC,UNION_IDEMPOT]]);
 
-val FINITE_UNION = 
+val FINITE_UNION =
     store_thm
     ("FINITE_UNION",
      (--`!s:^set. !t. FINITE(s UNION t) = FINITE s /\ FINITE t`--),
@@ -1532,7 +1545,7 @@ val FINITE_UNION =
      [REPEAT STRIP_TAC THEN IMP_RES_TAC FINITE_UNION,
       REPEAT STRIP_TAC THEN IMP_RES_TAC UNION_FINITE]);
 
-val INTER_FINITE = 
+val INTER_FINITE =
     store_thm
     ("INTER_FINITE",
      (--`!s:^set. FINITE s ==> !t. FINITE (s INTER t)`--),
@@ -1546,7 +1559,7 @@ val INTER_FINITE =
        FIRST_ASSUM MATCH_ACCEPT_TAC,
        FIRST_ASSUM MATCH_ACCEPT_TAC]]);
 
-val SUBSET_FINITE = 
+val SUBSET_FINITE =
     store_thm
     ("SUBSET_FINITE",
      (--`!s:^set. FINITE s ==> (!t. t SUBSET s ==> FINITE t)`--),
@@ -1558,26 +1571,26 @@ val SUBSET_FINITE =
        STRIP_TAC THEN RES_TAC THEN IMP_RES_TAC DELETE_FINITE,
        IMP_RES_TAC SUBSET_INSERT THEN ASM_REWRITE_TAC []]]);
 
-val PSUBSET_FINITE = 
+val PSUBSET_FINITE =
     store_thm
     ("PSUBSET_FINITE",
      (--`!s:^set. FINITE s ==> (!t. t PSUBSET s ==> FINITE t)`--),
      PURE_ONCE_REWRITE_TAC [PSUBSET_DEF] THEN
      REPEAT STRIP_TAC THEN IMP_RES_TAC SUBSET_FINITE);
 
-val FINITE_DIFF = 
+val FINITE_DIFF =
     store_thm
     ("FINITE_DIFF",
      (--`!s:^set. FINITE s ==> !t. FINITE(s DIFF t)`--),
      SET_INDUCT_TAC THENL
      [REWRITE_TAC [EMPTY_DIFF,FINITE_EMPTY],
-      ASM_REWRITE_TAC [INSERT_DIFF] THEN 
+      ASM_REWRITE_TAC [INSERT_DIFF] THEN
       GEN_TAC THEN COND_CASES_TAC THENL
       [FIRST_ASSUM MATCH_ACCEPT_TAC,
        FIRST_ASSUM (fn th => fn g => ASSUME_TAC (SPEC (--`t:^set`--)th) g)
        THEN IMP_RES_THEN MATCH_ACCEPT_TAC FINITE_INSERT]]);
 
-val FINITE_SING = 
+val FINITE_SING =
     store_thm
     ("FINITE_SING",
      (--`!x:'a. FINITE {x}`--),
@@ -1585,7 +1598,7 @@ val FINITE_SING =
      SUBST1_TAC (SYM (SPEC (--`x:'a`--) SING_DELETE)) THEN
      DISCH_TAC THEN IMP_RES_THEN MATCH_ACCEPT_TAC FINITE_INSERT);
 
-val SING_FINITE = 
+val SING_FINITE =
     store_thm
     ("SING_FINITE",
      (--`!s:^set. SING s ==> FINITE s`--),
@@ -1610,7 +1623,7 @@ val IMAGE_FINITE =
 (* that the finite s has cardinality n.				 	 *)
 (* --------------------------------------------------------------------- *)
 
-val card_rel_def = 
+val card_rel_def =
     (--`(!s. R s 0 = (s = EMPTY)) /\
       (!s n. R s (SUC n) = ?x:'a. x IN s /\ R (s DELETE x) n)`--);
 
@@ -1625,29 +1638,29 @@ val CARD_REL_EXISTS =  prove_rec_fn_exists num_Axiom card_rel_def;
 (* Proof modified for Version 12 IMP_RES_THEN		 [TFM 91.01.23]	*)
 (* ---------------------------------------------------------------------*)
 
-val CARD_REL_DEL_LEMMA = 
+val CARD_REL_DEL_LEMMA =
     TAC_PROOF
     ((Dsyntax.strip_conj card_rel_def,
-      (--`!(n:num) s (x:'a). 
+      (--`!(n:num) s (x:'a).
        x IN s ==>
-       R (s DELETE x) n  ==> 
+       R (s DELETE x) n  ==>
       !y:'a. y IN s ==> R (s DELETE y) n`--)),
      INDUCT_TAC THENL
      [REPEAT GEN_TAC THEN DISCH_TAC THEN
-      IMP_RES_TAC DELETE_EQ_SING THEN ASM_REWRITE_TAC [] THEN 
+      IMP_RES_TAC DELETE_EQ_SING THEN ASM_REWRITE_TAC [] THEN
       DISCH_THEN SUBST1_TAC THEN REWRITE_TAC [IN_SING] THEN
       GEN_TAC THEN DISCH_THEN SUBST1_TAC THEN REWRITE_TAC [SING_DELETE],
       ASM_REWRITE_TAC [] THEN REPEAT STRIP_TAC THEN
       let val th = (SPEC (--`y:'a = x'`--) EXCLUDED_MIDDLE)
-      in DISJ_CASES_THEN2 SUBST_ALL_TAC ASSUME_TAC th 
-      end 
+      in DISJ_CASES_THEN2 SUBST_ALL_TAC ASSUME_TAC th
+      end
       THENL
-      [MP_TAC (SPECL [(--`s:^set`--),(--`x:'a`--),(--`x':'a`--)] 
+      [MP_TAC (SPECL [(--`s:^set`--),(--`x:'a`--),(--`x':'a`--)]
                      IN_DELETE_EQ) THEN
        ASM_REWRITE_TAC [] THEN DISCH_TAC THEN
        PURE_ONCE_REWRITE_TAC [DELETE_COMM] THEN
        EXISTS_TAC (--`x:'a`--) THEN ASM_REWRITE_TAC[],
-       let val th = (SPEC (--`x:'a = y`--) EXCLUDED_MIDDLE) 
+       let val th = (SPEC (--`x:'a = y`--) EXCLUDED_MIDDLE)
        in DISJ_CASES_THEN2 SUBST_ALL_TAC ASSUME_TAC th
        end
        THENL
@@ -1663,7 +1676,7 @@ val CARD_REL_DEL_LEMMA =
 (* So `R s` specifies a unique number.				         *)
 (* --------------------------------------------------------------------- *)
 
-val CARD_REL_UNIQUE = 
+val CARD_REL_UNIQUE =
     TAC_PROOF
     ((Dsyntax.strip_conj card_rel_def,
       (--`!n:num. !s:^set. R s n ==> (!m. R s m ==> (n = m))`--)),
@@ -1674,7 +1687,7 @@ val CARD_REL_UNIQUE =
       GEN_TAC THEN STRIP_TAC THEN INDUCT_TAC THENL
       [ASM_REWRITE_TAC [NOT_SUC,SYM(SPEC_ALL MEMBER_NOT_EMPTY)] THEN
        EXISTS_TAC (--`x:'a`--) THEN FIRST_ASSUM ACCEPT_TAC,
-       ASM_REWRITE_TAC [INV_SUC_EQ] THEN STRIP_TAC THEN 
+       ASM_REWRITE_TAC [INV_SUC_EQ] THEN STRIP_TAC THEN
        IMP_RES_TAC CARD_REL_DEL_LEMMA THEN RES_TAC]]);
 
 (* --------------------------------------------------------------------- *)
@@ -1682,26 +1695,26 @@ val CARD_REL_UNIQUE =
 (* --------------------------------------------------------------------- *)
 
 val CARD_REL_EXISTS_LEMMA = TAC_PROOF
-((Dsyntax.strip_conj card_rel_def, 
+((Dsyntax.strip_conj card_rel_def,
  (--`!s:^set. FINITE s ==> ?n:num. R s n`--)),
      SET_INDUCT_TAC THENL
      [EXISTS_TAC (--`0`--) THEN ASM_REWRITE_TAC[],
       FIRST_ASSUM (fn th => fn g => CHOOSE_THEN ASSUME_TAC th g) THEN
       EXISTS_TAC (--`SUC n`--) THEN ASM_REWRITE_TAC [] THEN
       EXISTS_TAC (--`e:'a`--) THEN IMP_RES_TAC DELETE_NON_ELEMENT THEN
-      ASM_REWRITE_TAC [DELETE_INSERT,IN_INSERT]]);     
+      ASM_REWRITE_TAC [DELETE_INSERT,IN_INSERT]]);
 
 (* ---------------------------------------------------------------------*)
 (* So (@n. R s n) = m iff R s m        (\s.@n.R s n defines a function)	*)
 (* Proof modified for Version 12 IMP_RES_THEN		 [TFM 91.01.23]	*)
 (* ---------------------------------------------------------------------*)
 
-val CARD_REL_THM = 
+val CARD_REL_THM =
     TAC_PROOF
-    ((Dsyntax.strip_conj card_rel_def, 
+    ((Dsyntax.strip_conj card_rel_def,
      (--`!m s. FINITE s ==> (((@n:num. R (s:^set) n) = m) = R s m)`--)),
-     REPEAT STRIP_TAC THEN 
-     IMP_RES_TAC CARD_REL_EXISTS_LEMMA THEN 
+     REPEAT STRIP_TAC THEN
+     IMP_RES_TAC CARD_REL_EXISTS_LEMMA THEN
      EQ_TAC THENL
      [DISCH_THEN (SUBST1_TAC o SYM) THEN CONV_TAC SELECT_CONV THEN
       EXISTS_TAC (--`n:num`--) THEN FIRST_ASSUM MATCH_ACCEPT_TAC,
@@ -1718,16 +1731,16 @@ val CARD_REL_THM =
 
 val CARD_EXISTS = TAC_PROOF(([],
 (--` ?CARD.
-       (CARD EMPTY = 0) /\ 
-       (!s. FINITE s ==> 
-       !x:'a. CARD(x INSERT s) = (x IN s => CARD s | SUC(CARD s)))`--)),
+       (CARD EMPTY = 0) /\
+       (!s. FINITE s ==>
+       !x:'a. CARD(x INSERT s) = (if x IN s then CARD s else SUC(CARD s)))`--)),
      STRIP_ASSUME_TAC CARD_REL_EXISTS THEN
      EXISTS_TAC (--`\s:^set. @n:num. R s n`--) THEN
      CONV_TAC (ONCE_DEPTH_CONV BETA_CONV) THEN CONJ_TAC THENL
      [ASSUME_TAC FINITE_EMPTY THEN IMP_RES_TAC CARD_REL_THM THEN
       FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC [],
       REPEAT STRIP_TAC THEN COND_CASES_TAC THENL
-      [IMP_RES_THEN SUBST1_TAC ABSORPTION THEN REFL_TAC, 
+      [IMP_RES_THEN SUBST1_TAC ABSORPTION THEN REFL_TAC,
        IMP_RES_THEN (ASSUME_TAC o SPEC (--`x:'a`--)) FINITE_INSERT THEN
        IMP_RES_THEN (TRY o MATCH_MP_TAC) CARD_REL_THM THEN
        ASM_REWRITE_TAC [] THEN EXISTS_TAC (--`x:'a`--) THEN
@@ -1740,7 +1753,7 @@ val CARD_EXISTS = TAC_PROOF(([],
 (* Finally, introduce the CARD function via a constant specification.	*)
 (* ---------------------------------------------------------------------*)
 
-val CARD_DEF = new_specification 
+val CARD_DEF = new_specification
                  {name="CARD_DEF", sat_thm=CARD_EXISTS,
                   consts=[{const_name="CARD",fixity=Prefix}]};
 
@@ -1752,7 +1765,7 @@ val CARD_EMPTY = save_thm("CARD_EMPTY",CONJUNCT1 CARD_DEF);
 
 val CARD_INSERT = save_thm("CARD_INSERT",CONJUNCT2 CARD_DEF);
 
-val CARD_EQ_0 = 
+val CARD_EQ_0 =
     store_thm
     ("CARD_EQ_0",
      (--`!s:^set. FINITE s ==> ((CARD s = 0) = (s = EMPTY))`--),
@@ -1760,12 +1773,13 @@ val CARD_EQ_0 =
      [REWRITE_TAC [CARD_EMPTY],
       IMP_RES_TAC CARD_INSERT THEN
       ASM_REWRITE_TAC [NOT_INSERT_EMPTY,NOT_SUC]]);
-      
-val CARD_DELETE = 
+
+val CARD_DELETE =
     store_thm
     ("CARD_DELETE",
-     (--`!s. FINITE s ==> 
-          !x:'a. CARD(s DELETE x) = (x IN s => (CARD s) - 1 | CARD s)`--),
+     (--`!s. FINITE s ==>
+          !x:'a. CARD(s DELETE x) =
+                 (if x IN s then (CARD s) - 1 else CARD s)`--),
      SET_INDUCT_TAC THENL
      [REWRITE_TAC [EMPTY_DELETE,NOT_IN_EMPTY],
       PURE_REWRITE_TAC [DELETE_INSERT,IN_INSERT] THEN
@@ -1776,24 +1790,24 @@ val CARD_DELETE =
        IMP_RES_TAC CARD_DEF THEN ASM_REWRITE_TAC [IN_DELETE,SUC_SUB1] THEN
        COND_CASES_TAC THEN ASM_REWRITE_TAC [] THEN
        STRIP_ASSUME_TAC (SPEC (--`CARD(s:^set)`--) num_CASES) THENL
-       [let fun tac th g = SUBST_ALL_TAC th g handle _ => ASSUME_TAC th g 
+       [let fun tac th g = SUBST_ALL_TAC th g handle _ => ASSUME_TAC th g
         in REPEAT_GTCL IMP_RES_THEN tac CARD_EQ_0
         end THEN IMP_RES_TAC NOT_IN_EMPTY,
 	ASM_REWRITE_TAC [SUC_SUB1]]]]);
 
 
-val lemma1 = 
+val lemma1 =
     TAC_PROOF
     (([], (--`!n m. (SUC n <= SUC m) = (n <= m)`--)),
      REWRITE_TAC [LESS_OR_EQ,INV_SUC_EQ,LESS_MONO_EQ]);
 
-val lemma2 = 
+val lemma2 =
     TAC_PROOF
     (([], (--`!n m. (n <= SUC m) = (n <= m \/ (n = SUC m))`--)),
      REWRITE_TAC [LESS_OR_EQ,LESS_THM] THEN
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN ASM_REWRITE_TAC[]);
 
-val CARD_INTER_LESS_EQ = 
+val CARD_INTER_LESS_EQ =
     store_thm
     ("CARD_INTER_LESS_EQ",
      (--`!s:^set. FINITE s ==> !t. CARD (s INTER t) <= CARD s`--),
@@ -1805,7 +1819,7 @@ val CARD_INTER_LESS_EQ =
        IMP_RES_TAC CARD_DEF THEN ASM_REWRITE_TAC [IN_INTER,lemma1],
        IMP_RES_TAC CARD_DEF THEN ASM_REWRITE_TAC [lemma2]]]);
 
-val CARD_UNION = 
+val CARD_UNION =
     store_thm
     ("CARD_UNION",
      (--`!s:^set.
@@ -1814,7 +1828,7 @@ val CARD_UNION =
            (CARD (s UNION t) + CARD (s INTER t) = CARD s + CARD t)`--),
      SET_INDUCT_TAC THENL
      [REWRITE_TAC [UNION_EMPTY,INTER_EMPTY,CARD_DEF,ADD_CLAUSES],
-      REPEAT STRIP_TAC THEN REWRITE_TAC [INSERT_UNION,INSERT_INTER] THEN 
+      REPEAT STRIP_TAC THEN REWRITE_TAC [INSERT_UNION,INSERT_INTER] THEN
       ASM_CASES_TAC (--`(e:'a) IN t`--) THENL
       [IMP_RES_THEN (ASSUME_TAC o SPEC (--`t:^set`--)) INTER_FINITE THEN
        IMP_RES_TAC CARD_DEF THEN RES_TAC THEN
@@ -1823,16 +1837,16 @@ val CARD_UNION =
        IMP_RES_TAC CARD_DEF THEN RES_TAC THEN
        ASM_REWRITE_TAC [ADD_CLAUSES, INV_SUC_EQ, IN_UNION]]]);
 
-val lemma = 
+val lemma =
     TAC_PROOF
     (([], (--`!n m. (n <= SUC m) = (n <= m \/ (n = SUC m))`--)),
      REWRITE_TAC [LESS_OR_EQ,LESS_THM] THEN
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN ASM_REWRITE_TAC[]);
 
-val CARD_SUBSET = 
+val CARD_SUBSET =
     store_thm
     ("CARD_SUBSET",
-     (--`!s:^set. 
+     (--`!s:^set.
          FINITE s ==> !t. t SUBSET s ==> CARD t <= CARD s`--),
      SET_INDUCT_TAC THENL
      [REWRITE_TAC [SUBSET_EMPTY,CARD_EMPTY] THEN
@@ -1846,33 +1860,33 @@ val CARD_SUBSET =
         IMP_RES_TAC DELETE_FINITE THEN
         IMP_RES_TAC CARD_DELETE THEN
         ASM_REWRITE_TAC [] THEN COND_CASES_TAC THENL
-        [let val th = SPEC (--`CARD (t:^set)`--) num_CASES 
+        [let val th = SPEC (--`CARD (t:^set)`--) num_CASES
          in REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC th
          end THENL
           [REWRITE_TAC [LESS_OR_EQ,LESS_0],
            REWRITE_TAC [SUC_SUB1,LESS_OR_EQ,LESS_MONO_EQ,INV_SUC_EQ]],
         STRIP_TAC THEN ASM_REWRITE_TAC [lemma]]]);
 
-val CARD_PSUBSET = 
+val CARD_PSUBSET =
     store_thm
     ("CARD_PSUBSET",
-     (--`!s:^set. 
+     (--`!s:^set.
          FINITE s ==> (!t. t PSUBSET s ==> (CARD t < CARD s))`--),
      REPEAT STRIP_TAC THEN IMP_RES_TAC PSUBSET_DEF THEN
      IMP_RES_THEN (IMP_RES_THEN MP_TAC) CARD_SUBSET THEN
-     PURE_ONCE_REWRITE_TAC [LESS_OR_EQ] THEN 
-     DISCH_THEN (STRIP_THM_THEN 
+     PURE_ONCE_REWRITE_TAC [LESS_OR_EQ] THEN
+     DISCH_THEN (STRIP_THM_THEN
                  (fn th => fn g => ACCEPT_TAC th g handle _ => MP_TAC th g))
      THEN
      IMP_RES_THEN STRIP_ASSUME_TAC PSUBSET_INSERT_SUBSET THEN
      IMP_RES_THEN (IMP_RES_THEN MP_TAC) CARD_SUBSET THEN
-     IMP_RES_TAC INSERT_SUBSET THEN 
+     IMP_RES_TAC INSERT_SUBSET THEN
      IMP_RES_TAC SUBSET_FINITE THEN
      IMP_RES_TAC CARD_INSERT THEN
      ASM_REWRITE_TAC [LESS_EQ] THEN
      REPEAT STRIP_TAC THEN FIRST_ASSUM ACCEPT_TAC);
 
-val CARD_SING = 
+val CARD_SING =
     store_thm
     ("CARD_SING",
      (--`!x:'a. CARD {x} = 1`--),
@@ -1881,16 +1895,16 @@ val CARD_SING =
      IMP_RES_THEN (ASSUME_TAC o SPEC (--`x:'a`--)) FINITE_INSERT THEN
      IMP_RES_TAC CARD_DEF THEN ASM_REWRITE_TAC [NOT_IN_EMPTY,CARD_DEF]);
 
-val SING_IFF_CARD1 = 
+val SING_IFF_CARD1 =
     store_thm
     ("SING_IFF_CARD1",
      (--`!s:^set. (SING s) = ((CARD s = 1) /\ (FINITE s))`--),
-     REWRITE_TAC [SING_DEF,num_CONV (--`1`--)] THEN 
+     REWRITE_TAC [SING_DEF,num_CONV (--`1`--)] THEN
      GEN_TAC THEN EQ_TAC THENL
      [DISCH_THEN (CHOOSE_THEN SUBST1_TAC) THEN
       CONJ_TAC THENL
       [ASSUME_TAC FINITE_EMPTY THEN
-       IMP_RES_TAC CARD_INSERT THEN 
+       IMP_RES_TAC CARD_INSERT THEN
        ASM_REWRITE_TAC [CARD_EMPTY,NOT_IN_EMPTY],
        REWRITE_TAC [FINITE_INSERT,FINITE_EMPTY]],
       STRIP_ASSUME_TAC (SPEC (--`s:^set`--) SET_CASES) THENL
@@ -1909,7 +1923,7 @@ val SING_IFF_CARD1 =
 val CARD_DIFF =
     store_thm
     ("CARD_DIFF",
-     (--`!t:^set. 
+     (--`!t:^set.
           FINITE t ==>
           !s:^set. FINITE s ==>
                        (CARD (s DIFF t) = (CARD s - CARD (s INTER t)))`--),
@@ -1920,18 +1934,18 @@ val CARD_DIFF =
       COND_CASES_TAC THENL
       [let val th = SPEC (--`s':^set`--)
                          (UNDISCH (SPEC (--`s:^set`--) INTER_FINITE))
-       in PURE_ONCE_REWRITE_TAC [MATCH_MP CARD_INSERT th] 
+       in PURE_ONCE_REWRITE_TAC [MATCH_MP CARD_INSERT th]
        end THEN
        IMP_RES_THEN (ASSUME_TAC o SPEC (--`e:'a`--)) FINITE_DELETE THEN
        IMP_RES_TAC CARD_DELETE THEN
        RES_TAC THEN ASM_REWRITE_TAC [IN_INTER,DIFF_INSERT] THEN
        PURE_ONCE_REWRITE_TAC [SYM (SPEC_ALL SUB_PLUS)] THEN
        REWRITE_TAC [num_CONV (--`1`--),ADD_CLAUSES,DELETE_INTER] THEN
-       MP_TAC (SPECL [(--`s':^set`--),(--`s:^set`--),(--`e:'a`--)] 
+       MP_TAC (SPECL [(--`s':^set`--),(--`s:^set`--),(--`e:'a`--)]
                      IN_INTER) THEN
        ASM_REWRITE_TAC [DELETE_NON_ELEMENT] THEN
        DISCH_THEN SUBST1_TAC THEN
-       SUBST1_TAC (SPECL [(--`s:^set`--),(--`s':^set`--)] INTER_COMM) 
+       SUBST1_TAC (SPECL [(--`s:^set`--),(--`s':^set`--)] INTER_COMM)
        THEN REFL_TAC,
        IMP_RES_TAC DELETE_NON_ELEMENT THEN
        PURE_ONCE_REWRITE_TAC [INTER_COMM] THEN
@@ -1949,13 +1963,13 @@ val LESS_CARD_DIFF =
      REPEAT_GTCL IMP_RES_THEN SUBST1_TAC CARD_DIFF THEN
      PURE_REWRITE_TAC [GSYM SUB_LESS_0] THEN
      let val th1 = UNDISCH (SPEC (--`s:^set`--) CARD_INTER_LESS_EQ)
-         val th2 = SPEC (--`t:^set`--) 
+         val th2 = SPEC (--`t:^set`--)
                         (PURE_ONCE_REWRITE_RULE [LESS_OR_EQ] th1)
-     in DISJ_CASES_THEN2 ACCEPT_TAC (SUBST_ALL_TAC o SYM) th2 
+     in DISJ_CASES_THEN2 ACCEPT_TAC (SUBST_ALL_TAC o SYM) th2
      end THEN
      let val th3 = SPEC (--`s:^set`--)
-                        (UNDISCH(SPEC(--`t:^set`--) CARD_INTER_LESS_EQ)) 
-         val th4 = PURE_ONCE_REWRITE_RULE [INTER_COMM] th3 
+                        (UNDISCH(SPEC(--`t:^set`--) CARD_INTER_LESS_EQ))
+         val th4 = PURE_ONCE_REWRITE_RULE [INTER_COMM] th3
      in
      IMP_RES_TAC (PURE_ONCE_REWRITE_RULE [GSYM NOT_LESS] th4)
      end);
@@ -1964,27 +1978,27 @@ val LESS_CARD_DIFF =
 (* Infiniteness								*)
 (* =====================================================================*)
 
-val INFINITE_DEF = new_definition ("INFINITE_DEF", 
+val INFINITE_DEF = new_definition ("INFINITE_DEF",
 (--`!s:^set. INFINITE s = ~(FINITE s)`--));
 
-val NOT_IN_FINITE = 
+val NOT_IN_FINITE =
     store_thm
     ("NOT_IN_FINITE",
-     (--`INFINITE (UNIV:^set) = 
-         !s:^set. 
+     (--`INFINITE (UNIV:^set) =
+         !s:^set.
          FINITE s ==> ?x. ~(x IN s)`--),
      PURE_ONCE_REWRITE_TAC [INFINITE_DEF] THEN EQ_TAC THENL
      [CONV_TAC CONTRAPOS_CONV THEN
       CONV_TAC (ONCE_DEPTH_CONV NOT_FORALL_CONV) THEN
       REWRITE_TAC [NOT_IMP] THEN
       CONV_TAC (ONCE_DEPTH_CONV NOT_EXISTS_CONV) THEN
-      REWRITE_TAC [EQ_UNIV] THEN 
+      REWRITE_TAC [EQ_UNIV] THEN
       CONV_TAC (ONCE_DEPTH_CONV SYM_CONV) THEN
       REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [],
       REPEAT STRIP_TAC THEN RES_THEN STRIP_ASSUME_TAC THEN
       ASSUME_TAC (SPEC (--`x:'a`--) IN_UNIV) THEN RES_TAC]);
 
-val INVERSE_LEMMA = 
+val INVERSE_LEMMA =
     TAC_PROOF
     (([], (--`!f:'a->'b. (!x y. (f x = f y) ==> (x = y)) ==>
                      ((\x:'b. @y:'a. x = f y) o f = \x:'a.x)`--)),
@@ -1995,35 +2009,35 @@ val INVERSE_LEMMA =
      CONV_TAC (SYM_CONV THENC SELECT_CONV) THEN
      EXISTS_TAC (--`x:'a`--) THEN REFL_TAC);
 
-val IMAGE_11_INFINITE = 
+val IMAGE_11_INFINITE =
     store_thm
     ("IMAGE_11_INFINITE",
      (--`!f:'a->'b. (!x y. (f x = f y) ==> (x = y)) ==>
       !s:^set. INFINITE s ==> INFINITE (IMAGE f s)`--),
      GEN_TAC THEN STRIP_TAC THEN GEN_TAC THEN
      CONV_TAC CONTRAPOS_CONV THEN
-     REWRITE_TAC [INFINITE_DEF] THEN STRIP_TAC THEN 
+     REWRITE_TAC [INFINITE_DEF] THEN STRIP_TAC THEN
      let val alpha = Type`:'a` and beta = Type`:'b`
-         val thm = INST_TYPE [beta |-> alpha, alpha |-> beta] IMAGE_FINITE 
-     in IMP_RES_THEN (MP_TAC o ISPEC (--`\x:'b. @y:'a. x = f y`--)) thm 
+         val thm = INST_TYPE [beta |-> alpha, alpha |-> beta] IMAGE_FINITE
+     in IMP_RES_THEN (MP_TAC o ISPEC (--`\x:'b. @y:'a. x = f y`--)) thm
      end THEN
      REWRITE_TAC [SYM(SPEC_ALL IMAGE_COMPOSE)] THEN
      IMP_RES_TAC INVERSE_LEMMA THEN
      ASM_REWRITE_TAC [IMAGE_ID]);
 
-val INFINITE_SUBSET = 
+val INFINITE_SUBSET =
     store_thm
     ("INFINITE_SUBSET",
      (--`!s:^set. INFINITE s ==> (!t. s SUBSET t ==> INFINITE t)`--),
-     PURE_ONCE_REWRITE_TAC [INFINITE_DEF] THEN 
+     PURE_ONCE_REWRITE_TAC [INFINITE_DEF] THEN
      REPEAT STRIP_TAC THEN IMP_RES_TAC SUBSET_FINITE THEN RES_TAC);
 
-val IN_INFINITE_NOT_FINITE = 
+val IN_INFINITE_NOT_FINITE =
     store_thm
     ("IN_INFINITE_NOT_FINITE",
      (--`!s t. (INFINITE s /\ FINITE t) ==> ?x:'a. x IN s /\ ~(x IN t)`--),
      CONV_TAC (ONCE_DEPTH_CONV CONTRAPOS_CONV) THEN
-     CONV_TAC (ONCE_DEPTH_CONV NOT_EXISTS_CONV) THEN 
+     CONV_TAC (ONCE_DEPTH_CONV NOT_EXISTS_CONV) THEN
      PURE_ONCE_REWRITE_TAC [DE_MORGAN_THM] THEN
      REWRITE_TAC [SYM(SPEC_ALL IMP_DISJ_THM)] THEN
      PURE_ONCE_REWRITE_TAC [SYM(SPEC_ALL SUBSET_DEF)] THEN
@@ -2053,7 +2067,7 @@ val gdef = map Term
 (* Lemma: g n is finite for all n.					*)
 (* ---------------------------------------------------------------------*)
 
-val g_finite = 
+val g_finite =
     TAC_PROOF
     ((gdef, (--`!n:num. FINITE (g n:^set)`--)),
      INDUCT_TAC THEN ASM_REWRITE_TAC[FINITE_EMPTY,FINITE_INSERT]);
@@ -2062,7 +2076,7 @@ val g_finite =
 (* Lemma: g n is contained in g (n+i) for all i.			*)
 (* ---------------------------------------------------------------------*)
 
-val g_subset = 
+val g_subset =
     TAC_PROOF
     ((gdef, (--`!n. !x:'a. x IN (g n) ==> !i. x IN (g (n+i))`--)),
      REPEAT GEN_TAC THEN DISCH_TAC THEN INDUCT_TAC THEN
@@ -2072,17 +2086,17 @@ val g_subset =
 (* Lemma: if x is in g(n) then {x} = g(n+1)-g(n) for some n.		*)
 (* ---------------------------------------------------------------------*)
 
-val lemma = 
+val lemma =
     TAC_PROOF(([], (--`((A \/ B) /\ ~B) = (A /\ ~B)`--)),
               BOOL_CASES_TAC (--`B:bool`--) THEN REWRITE_TAC[]);
 
-val g_cases = 
+val g_cases =
     TAC_PROOF
     ((gdef, (--`(!s. FINITE s ==> ?x:'a. ~(x IN s)) ==>
-    	      !x:'a. (?n. x IN (g n)) ==> 
+    	      !x:'a. (?n. x IN (g n)) ==>
 	            (?m. (x IN (g (SUC m))) /\ ~(x IN (g m)))`--)),
      DISCH_TAC THEN GEN_TAC THEN
-     DISCH_THEN (STRIP_THM_THEN MP_TAC o 
+     DISCH_THEN (STRIP_THM_THEN MP_TAC o
                  CONV_RULE numLib.EXISTS_LEAST_CONV) THEN
      REPEAT_TCL STRIP_THM_THEN SUBST1_TAC (SPEC (--`n:num`--) num_CASES) THEN
      ASM_REWRITE_TAC [NOT_IN_EMPTY,IN_INSERT] THEN STRIP_TAC THENL
@@ -2101,16 +2115,16 @@ val g_cases =
 (* Lemma: @x.~(x IN {}) is an element of every g(n+1).			*)
 (* ---------------------------------------------------------------------*)
 
-val z_in_g1 = 
+val z_in_g1 =
     TAC_PROOF
     ((gdef, (--`(@x:'a.~(x IN {})) IN (g (SUC 0))`--)),
      ASM_REWRITE_TAC [NOT_IN_EMPTY,IN_INSERT]);
 
-val z_in_gn = 
+val z_in_gn =
     TAC_PROOF
     ((gdef, (--`!n:num. (@x:'a. ~(x IN {})) IN (g (SUC n))`--)),
      PURE_ONCE_REWRITE_TAC [ADD1] THEN
-     PURE_ONCE_REWRITE_TAC [ADD_SYM] THEN 
+     PURE_ONCE_REWRITE_TAC [ADD_SYM] THEN
      MATCH_MP_TAC g_subset THEN
      REWRITE_TAC [num_CONV (--`1`--),z_in_g1]);
 
@@ -2118,7 +2132,7 @@ val z_in_gn =
 (* Lemma: @x. ~(x IN g n) is an element of g(n+1).			*)
 (* ---------------------------------------------------------------------*)
 
-val in_lemma = 
+val in_lemma =
     TAC_PROOF
     ((gdef, (--`!n:num. (@x:'a. ~(x IN (g n))) IN (g(SUC n))`--)),
      ASM_REWRITE_TAC [IN_INSERT]);
@@ -2127,7 +2141,7 @@ val in_lemma =
 (* Lemma: the x added to g(n+1) is not in g(n)				*)
 (* ---------------------------------------------------------------------*)
 
-val not_in_lemma = 
+val not_in_lemma =
     TAC_PROOF
     ((gdef, (--`(!s. FINITE s ==>
                      ?x:'a. ~(x IN s)) ==>
@@ -2135,11 +2149,11 @@ val not_in_lemma =
      DISCH_TAC THEN INDUCT_TAC THENL
      [ASM_REWRITE_TAC [ADD_CLAUSES] THEN
       GEN_TAC THEN CONV_TAC SELECT_CONV THEN
-      FIRST_ASSUM MATCH_MP_TAC THEN 
+      FIRST_ASSUM MATCH_MP_TAC THEN
       MATCH_ACCEPT_TAC g_finite,
       PURE_ONCE_REWRITE_TAC [ADD_CLAUSES] THEN
       PURE_ONCE_REWRITE_TAC [SYM(el 3 (CONJUNCTS ADD_CLAUSES))] THEN
-      GEN_TAC THEN FIRST_ASSUM (fn th => fn g => 
+      GEN_TAC THEN FIRST_ASSUM (fn th => fn g =>
                                   MP_TAC(SPEC (--`SUC n`--) th) g) THEN
       REWRITE_TAC (map ASSUME gdef) THEN
       REWRITE_TAC [IN_INSERT,DE_MORGAN_THM] THEN
@@ -2149,10 +2163,10 @@ val not_in_lemma =
 (* Lemma: each value is added to a unique g(n).				*)
 (* ---------------------------------------------------------------------*)
 
-val less_lemma = 
+val less_lemma =
     TAC_PROOF
     (([], (--`!m n. ~(m = n) = ((m < n) \/ (n < m))`--)),
-      REPEAT GEN_TAC THEN ASM_CASES_TAC (--`n < m`--) THEN 
+      REPEAT GEN_TAC THEN ASM_CASES_TAC (--`n < m`--) THEN
       ASM_REWRITE_TAC [] THENL
       [DISCH_THEN SUBST_ALL_TAC THEN IMP_RES_TAC LESS_REFL,
        IMP_RES_THEN MP_TAC NOT_LESS THEN
@@ -2161,13 +2175,13 @@ val less_lemma =
        [IMP_RES_TAC LESS_NOT_EQ, MATCH_ACCEPT_TAC LESS_REFL]]);
 
 val gn_unique = TAC_PROOF
-((gdef, 
- (--`(!s. FINITE s ==> 
+((gdef,
+ (--`(!s. FINITE s ==>
         ?x:'a. ~(x IN s)) ==>
         !(n:num) m. ((@x:'a.~(x IN (g n))) = @x:'a.~(x IN (g m))) = (n=m)`--)),
      DISCH_TAC THEN REPEAT GEN_TAC THEN EQ_TAC THENL
-     [CONV_TAC CONTRAPOS_CONV THEN 
-      REWRITE_TAC [less_lemma] THEN 
+     [CONV_TAC CONTRAPOS_CONV THEN
+      REWRITE_TAC [less_lemma] THEN
       DISCH_THEN (STRIP_THM_THEN MP_TAC) THEN
       DISCH_THEN (STRIP_THM_THEN SUBST1_TAC o MATCH_MP LESS_ADD_1) THEN
       REWRITE_TAC [num_CONV (--`1`--),ADD_CLAUSES] THEN
@@ -2175,7 +2189,7 @@ val gn_unique = TAC_PROOF
       IMP_RES_TAC not_in_lemma THEN
       DISCH_TAC THENL
       [MP_TAC (SPEC (--`n:num`--) in_lemma) THEN
-       EVERY_ASSUM (fn th => fn g => SUBST1_TAC th g handle _ => ALL_TAC g) 
+       EVERY_ASSUM (fn th => fn g => SUBST1_TAC th g handle _ => ALL_TAC g)
        THEN DISCH_TAC THEN RES_TAC,
        MP_TAC (SPEC (--`m:num`--) in_lemma) THEN
        EVERY_ASSUM (fn th=>fn g => SUBST1_TAC (SYM th) g handle _ => ALL_TAC g)
@@ -2186,12 +2200,12 @@ val gn_unique = TAC_PROOF
 (* Lemma: the value added to g(n) to get g(n+1) is unique.		*)
 (* ---------------------------------------------------------------------*)
 
-val x_unique = 
+val x_unique =
     TAC_PROOF
-    ((gdef, (--`!n. !x. !y:'a. 
+    ((gdef, (--`!n. !x. !y:'a.
 	       (~(x IN g n) /\ ~(y IN g n))
-                ==> (x IN g(SUC n)) 
-                ==> (y IN g(SUC n)) 
+                ==> (x IN g(SUC n))
+                ==> (y IN g(SUC n))
                 ==> (x = y)`--)),
      REPEAT GEN_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC [IN_INSERT] THEN
      REPEAT (DISCH_THEN SUBST1_TAC) THEN REFL_TAC);
@@ -2207,31 +2221,31 @@ val x_unique =
 (* ---------------------------------------------------------------------*)
 
 val fdef = Term
-   `\x:'a. (?n. x IN (g n)) 
-            => (@y. ~(y IN (g (SUC @n. x IN g(SUC n) /\ ~(x IN (g n)))))) 
-            |  x`;
+   `\x:'a. if (?n. x IN (g n))
+           then (@y. ~(y IN (g (SUC @n. x IN g(SUC n) /\ ~(x IN (g n))))))
+           else  x`;
 
-val cases = 
-   let val thm = GEN (--`x:'a`--) 
-                     (SPEC (--`?n:num.(x:'a) IN (g n)`--) EXCLUDED_MIDDLE) 
+val cases =
+   let val thm = GEN (--`x:'a`--)
+                     (SPEC (--`?n:num.(x:'a) IN (g n)`--) EXCLUDED_MIDDLE)
    in CONV_RULE (ONCE_DEPTH_CONV NOT_EXISTS_CONV) thm
    end;
 
 
 val INF_IMP_INFINITY = TAC_PROOF(([],
 --`(!s. FINITE s ==> ?x:'a. ~(x IN s)) ==>
-   ?f:'a->'a. 
-       (!x y. (f x = f y) ==> (x=y)) /\ 
+   ?f:'a->'a.
+       (!x y. (f x = f y) ==> (x=y)) /\
        ?y. !x. ~(f x = y)`--),
- let val xcases = SPEC (--`x:'a`--) cases 
+ let val xcases = SPEC (--`x:'a`--) cases
      and ycases = SPEC (--`y:'a`--) cases
-     fun nv x = (--`SUC(@n. ^x IN (g(SUC n)) /\ ~(^x IN (g n)))`--) 
+     fun nv x = (--`SUC(@n. ^x IN (g(SUC n)) /\ ~(^x IN (g n)))`--)
  in
  STRIP_ASSUME_TAC (prove_rec_fn_exists num_Axiom (list_mk_conj gdef)) THEN
- STRIP_TAC THEN EXISTS_TAC fdef THEN 
+ STRIP_TAC THEN EXISTS_TAC fdef THEN
  CONV_TAC (ONCE_DEPTH_CONV BETA_CONV) THEN CONJ_TAC THENL
  [REPEAT GEN_TAC THEN
-  DISJ_CASES_THEN (fn th => REWRITE_TAC[th] THEN STRIP_ASSUME_TAC th) xcases 
+  DISJ_CASES_THEN (fn th => REWRITE_TAC[th] THEN STRIP_ASSUME_TAC th) xcases
   THEN
   DISJ_CASES_THEN (fn th => REWRITE_TAC[th] THEN STRIP_ASSUME_TAC th) ycases
   THENL
@@ -2243,10 +2257,10 @@ val INF_IMP_INFINITY = TAC_PROOF(([],
    ASSUME_TAC (SPEC (nv (--`y:'a`--)) in_lemma) THEN
    DISCH_THEN SUBST_ALL_TAC THEN RES_TAC],
    EXISTS_TAC (--`@x:'a.~(x IN g 0)`--) THEN GEN_TAC THEN
-   DISJ_CASES_THEN (fn th => REWRITE_TAC[th] THEN ASSUME_TAC th) xcases 
+   DISJ_CASES_THEN (fn th => REWRITE_TAC[th] THEN ASSUME_TAC th) xcases
    THENL
    [REWRITE_TAC [UNDISCH gn_unique,NOT_SUC],
-    ASSUME_TAC (SPEC (--`n:num`--) z_in_gn) THEN 
+    ASSUME_TAC (SPEC (--`n:num`--) z_in_gn) THEN
     FIRST_ASSUM (fn th => fn g => SUBST1_TAC th g) THEN
     DISCH_THEN SUBST_ALL_TAC THEN RES_TAC]]
   end);
@@ -2260,12 +2274,12 @@ val INF_IMP_INFINITY = TAC_PROOF(([],
 (* First, a version of the primitive recursion theorem			 *)
 (* --------------------------------------------------------------------- *)
 
-val prth = 
+val prth =
     prove_rec_fn_exists num_Axiom
-    (Term`(fn f x 0       = x) /\ 
+    (Term`(fn f x 0       = x) /\
           (fn f x (SUC n) = (f:'a->'a) (fn f x n))`);
 
-val prmth = 
+val prmth =
     TAC_PROOF
     (([], (--`!x:'a. !f. ?fn. (fn 0 = x) /\ !n. fn (SUC n) = f(fn n)`--)),
      REPEAT GEN_TAC THEN STRIP_ASSUME_TAC prth THEN
@@ -2280,10 +2294,10 @@ val num_fn_thm = TAC_PROOF(([],
 (--`(?f:'a->'a. (!x y. (f x = f y) ==> (x=y)) /\ ?y. !x. ~(f x = y))
     ==>
     (?fn:num->'a. (!n m. (fn n = fn m) ==> (n=m)))`--)),
-     STRIP_TAC THEN 
+     STRIP_TAC THEN
      STRIP_ASSUME_TAC (SPECL [(--`y:'a`--),(--`f:'a->'a`--)] prmth) THEN
      EXISTS_TAC (--`fn:num->'a`--) THEN INDUCT_TAC THENL
-     [CONV_TAC (ONCE_DEPTH_CONV SYM_CONV) THEN 
+     [CONV_TAC (ONCE_DEPTH_CONV SYM_CONV) THEN
       INDUCT_TAC THEN ASM_REWRITE_TAC[],
       INDUCT_TAC THEN ASM_REWRITE_TAC [INV_SUC_EQ] THEN
       REPEAT STRIP_TAC THEN RES_TAC THEN RES_TAC]);
@@ -2292,17 +2306,17 @@ val num_fn_thm = TAC_PROOF(([],
 (* Lemma: every finite set of numbers has an upper bound.		*)
 (* --------------------------------------------------------------------- *)
 
-val finite_N_bounded = 
+val finite_N_bounded =
     TAC_PROOF
     (([], (--`!s. FINITE s ==> ?m. !n. (n IN s) ==> n < m`--)),
      SET_INDUCT_TAC THENL
      [REWRITE_TAC [NOT_IN_EMPTY],
       FIRST_ASSUM (fn th => fn g => CHOOSE_THEN ASSUME_TAC th g) THEN
-      EXISTS_TAC (--`(SUC m) + e`--) THEN REWRITE_TAC [IN_INSERT] THEN 
+      EXISTS_TAC (--`(SUC m) + e`--) THEN REWRITE_TAC [IN_INSERT] THEN
       REPEAT STRIP_TAC THENL
       [PURE_ONCE_REWRITE_TAC [ADD_SYM] THEN ASM_REWRITE_TAC [LESS_ADD_SUC],
        RES_TAC THEN IMP_RES_TAC LESS_IMP_LESS_ADD THEN
-       let val [_,_,c1,c2] = CONJUNCTS ADD_CLAUSES 
+       let val [_,_,c1,c2] = CONJUNCTS ADD_CLAUSES
        in ASM_REWRITE_TAC [c1,SYM c2]
        end]]);
 
@@ -2310,12 +2324,12 @@ val finite_N_bounded =
 (* Lemma: the set UNIV:(num->bool) is infinite.				*)
 (* --------------------------------------------------------------------- *)
 
-val N_lemma = 
+val N_lemma =
     TAC_PROOF
     (([], (--`INFINITE(UNIV:(num->bool))`--)),
      REWRITE_TAC [INFINITE_DEF] THEN STRIP_TAC THEN
      IMP_RES_THEN MP_TAC finite_N_bounded THEN
-     REWRITE_TAC [IN_UNIV] THEN 
+     REWRITE_TAC [IN_UNIV] THEN
      CONV_TAC NOT_EXISTS_CONV THEN GEN_TAC THEN
      CONV_TAC NOT_FORALL_CONV THEN EXISTS_TAC (--`SUC m`--) THEN
      REWRITE_TAC [NOT_LESS,LESS_OR_EQ,LESS_SUC_REFL]);
@@ -2324,9 +2338,9 @@ val N_lemma =
 (* Lemma: if s is finite, f:num->'a is one-one, then ?n. f(n) not in s	*)
 (* --------------------------------------------------------------------- *)
 
-val main_lemma = 
+val main_lemma =
     TAC_PROOF
-    (([], (--`!s:^set. FINITE s ==> 
+    (([], (--`!s:^set. FINITE s ==>
            !f:num->'a. (!n m. (f n = f m) ==> (n=m)) ==> ?n. ~(f n IN s)`--)),
      REPEAT STRIP_TAC THEN
      ASSUME_TAC N_lemma THEN
@@ -2346,9 +2360,9 @@ val INFINITY_IMP_INF =
     (([],(--`(?f:'a->'a. (!x y. (f x = f y) ==> (x=y)) /\ ?y. !x. ~(f x = y))
           ==> (!s. FINITE s ==> ?x:'a. ~(x IN s))`--)),
      DISCH_THEN (STRIP_ASSUME_TAC o MATCH_MP num_fn_thm) THEN
-     GEN_TAC THEN STRIP_TAC THEN 
+     GEN_TAC THEN STRIP_TAC THEN
      IMP_RES_TAC main_lemma THEN
-     EXISTS_TAC (--`(fn:num->'a) n`--) THEN 
+     EXISTS_TAC (--`(fn:num->'a) n`--) THEN
      FIRST_ASSUM ACCEPT_TAC);
 
 
@@ -2359,7 +2373,7 @@ val INFINITY_IMP_INF =
 val INFINITE_UNIV =
     store_thm
     ("INFINITE_UNIV",
-     (--`INFINITE (UNIV:^set) 
+     (--`INFINITE (UNIV:^set)
         =
       (?f:'a->'a. (!x y. (f x = f y) ==> (x = y)) /\ (?y. !x. ~(f x = y)))`--),
      PURE_ONCE_REWRITE_TAC [NOT_IN_FINITE] THEN
@@ -2367,13 +2381,13 @@ val INFINITE_UNIV =
 
 
 val FINITE_PSUBSET_INFINITE = store_thm("FINITE_PSUBSET_INFINITE",
-(--`!s. INFINITE (s:^set) = 
+(--`!s. INFINITE (s:^set) =
         !t. FINITE (t:^set) ==> ((t SUBSET s) ==> (t PSUBSET s))`--),
    PURE_REWRITE_TAC [INFINITE_DEF,PSUBSET_DEF] THEN
    GEN_TAC THEN EQ_TAC THENL
    [REPEAT STRIP_TAC THENL
     [FIRST_ASSUM ACCEPT_TAC,
-     FIRST_ASSUM (fn th => fn g => SUBST_ALL_TAC th g handle _ => NO_TAC g) 
+     FIRST_ASSUM (fn th => fn g => SUBST_ALL_TAC th g handle _ => NO_TAC g)
      THEN RES_TAC],
     REPEAT STRIP_TAC THEN RES_TAC THEN
     ASSUME_TAC (SPEC (--`s:^set`--) SUBSET_REFL) THEN
@@ -2408,27 +2422,27 @@ val FINITE_ISO_NUM =
    PURE_ONCE_REWRITE_TAC [UNDISCH (SPEC (--`s:^set`--) CARD_INSERT)] THEN
    FILTER_ASM_REWRITE_TAC is_neg [] THEN
    PURE_ONCE_REWRITE_TAC [LESS_THM] THEN
-   EXISTS_TAC (--`\n. n < (CARD (s:^set)) => f n | (e:'a)`--) THEN
+   EXISTS_TAC (--`\n. if n < (CARD (s:^set)) then f n else (e:'a)`--) THEN
    CONV_TAC (ONCE_DEPTH_CONV BETA_CONV) THEN CONJ_TAC THENL
    [REPEAT GEN_TAC THEN
-    let fun ttac th g = SUBST_ALL_TAC th g handle _ => ASSUME_TAC th g 
-    in DISCH_THEN (REPEAT_TCL STRIP_THM_THEN ttac) end 
+    let fun ttac th g = SUBST_ALL_TAC th g handle _ => ASSUME_TAC th g
+    in DISCH_THEN (REPEAT_TCL STRIP_THM_THEN ttac) end
     THENL
     [REPEAT STRIP_TAC THEN REFL_TAC,
-     let fun is_less t = (fst(strip_comb t) = (--`<`--)) handle _ => false 
+     let fun is_less t = (fst(strip_comb t) = (--`$<`--)) handle _ => false
      in FILTER_ASM_REWRITE_TAC is_less [LESS_REFL] end THEN
      FIRST_ASSUM (fn th => fn g => MP_TAC (assert (is_eq o concl) th) g) THEN
      PURE_ONCE_REWRITE_TAC [EXTENSION] THEN
      CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
      REPEAT STRIP_TAC THEN RES_TAC THEN RES_TAC,
-     let fun is_less t = (fst(strip_comb t) = (--`<`--)) handle _ => false
+     let fun is_less t = (fst(strip_comb t) = (--`$<`--)) handle _ => false
      in FILTER_ASM_REWRITE_TAC is_less [LESS_REFL] end THEN
      FIRST_ASSUM (fn th => fn g => MP_TAC (assert (is_eq o concl) th) g) THEN
      PURE_ONCE_REWRITE_TAC [EXTENSION] THEN
      CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
      CONV_TAC (ONCE_DEPTH_CONV SYM_CONV) THEN
      REPEAT STRIP_TAC THEN RES_TAC THEN RES_TAC,
-     let fun is_less t = (fst(strip_comb t) = (--`<`--)) handle _ => false
+     let fun is_less t = (fst(strip_comb t) = (--`$<`--)) handle _ => false
      in FILTER_ASM_REWRITE_TAC is_less [LESS_REFL] end THEN
      FIRST_ASSUM MATCH_MP_TAC THEN
      CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC],
@@ -2442,10 +2456,12 @@ val FINITE_ISO_NUM =
      EXISTS_TAC (--`n:num`--) THEN
      FILTER_ASM_REWRITE_TAC (fn t => (not(lhs t = (--`s:^set`--)))
                                      handle _ => true) [],
-     SUBST1_TAC (ASSUME (--`x:'a = (n < CARD (s:^set) => f n | e)`--)) THEN
+     SUBST1_TAC
+       (ASSUME (--`x:'a = (if n < CARD (s:^set) then f n else e)`--)) THEN
      SUBST1_TAC (ASSUME (--`n = CARD (s:^set)`--)) THEN
      REWRITE_TAC [LESS_REFL],
-     SUBST1_TAC (ASSUME (--`x:'a = (n < CARD (s:^set) => f n | e)`--)) THEN
+     SUBST1_TAC
+       (ASSUME (--`x:'a = (if n < CARD (s:^set) then f n else e)`--)) THEN
      DISJ2_TAC THEN EXISTS_TAC (--`n:num`--) THEN
      REWRITE_TAC [ASSUME (--`n < CARD (s:^set)`--)]]]]);
 

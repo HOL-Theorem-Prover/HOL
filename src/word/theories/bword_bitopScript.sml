@@ -23,13 +23,13 @@ val word_CASES_TAC =
        (fn w => CHOOSE_THEN SUBST1_TAC (ISPEC w cthm))
     end;
 
-val word_INDUCT_TAC = 
+val word_INDUCT_TAC =
     let val ithm = word_baseTheory.word_induct
     in
      (INDUCT_THEN ithm (fn t => ALL_TAC))
     end;
 
-val RESQ_WORDLEN_TAC = 
+val RESQ_WORDLEN_TAC =
     (CONV_TAC RESQ_FORALL_CONV THEN word_INDUCT_TAC
      THEN PURE_ONCE_REWRITE_TAC[word_baseTheory.PWORDLEN_DEF]
      THEN GEN_TAC THEN DISCH_TAC);
@@ -64,7 +64,7 @@ val BUTLASTN_MAP2 = prove(
 
 val LASTN_MAP2 = prove(
     (--`!l1 l2. (LENGTH l1 = LENGTH l2) ==> !n. (n <= LENGTH l1) ==>
-     !(f:'a->'b->'c). 
+     !(f:'a->'b->'c).
       LASTN n (MAP2 f l1 l2) = MAP2 f (LASTN n l1) (LASTN n l2)`--),
     let val lem1 = ARITH_PROVE (--`!n. n <= 0 ==> (n = 0)`--) in
     EQ_LENGTH_SNOC_INDUCT_TAC THENL[
@@ -90,7 +90,7 @@ val WNOT_DEF = new_recursive_definition {
  name = "WNOT_DEF",
  fixity = Prefix,
  rec_axiom = word_Ax,
- def = 
+ def =
  --`
    WNOT (WORD l) = WORD((MAP $~) l)
  `--
@@ -143,7 +143,7 @@ val LENGTH_MAP22 = GEN_ALL (DISCH_ALL (CONJUNCT2 (SPEC_ALL (UNDISCH_ALL
 
 val WAND_DEF = new_specification
  {name="WAND_DEF",
-  consts= [{fixity= Infix 400,const_name="WAND"}],
+  consts= [{fixity= Infixr 400,const_name="WAND"}],
   sat_thm = (ISPEC (--`$/\`--) PBITBOP_EXISTS)
 };
 
@@ -171,7 +171,7 @@ val PBITBOP_WAND_lemma = prove(
        REFL_TAC]]]);
 
 val PBITBOP_WAND = save_thm("PBITBOP_WAND",
-    EQT_ELIM (TRANS (ISPEC (--`WAND`--) PBITBOP_DEF)
+    EQT_ELIM (TRANS (ISPEC (--`$WAND`--) PBITBOP_DEF)
      (EQT_INTRO PBITBOP_WAND_lemma)));
 
 (* --------------------------------------------------------------------- *)
@@ -181,7 +181,7 @@ val PBITBOP_WAND = save_thm("PBITBOP_WAND",
 
 val WOR_DEF = new_specification
  {name="WOR_DEF",
-  consts= [{fixity= Infix 300,const_name="WOR"}],
+  consts= [{fixity= Infixr 300,const_name="WOR"}],
   sat_thm = (ISPEC (--`$\/`--) PBITBOP_EXISTS)
 };
 
@@ -209,7 +209,7 @@ val PBITBOP_WOR_lemma = prove(
        REFL_TAC]]]);
 
 val PBITBOP_WOR = save_thm("PBITBOP_WOR",
-    EQT_ELIM (TRANS (ISPEC (--`WOR`--) PBITBOP_DEF)
+    EQT_ELIM (TRANS (ISPEC (--`$WOR`--) PBITBOP_DEF)
      (EQT_INTRO PBITBOP_WOR_lemma)));
 
 (* --------------------------------------------------------------------- *)
@@ -219,7 +219,7 @@ val PBITBOP_WOR = save_thm("PBITBOP_WOR",
 
 val WXOR_DEF = new_specification
  {name="WXOR_DEF",
-  consts= [{fixity= Infix 300,const_name="WXOR"}],
+  consts= [{fixity= Infixr 300,const_name="WXOR"}],
   sat_thm = (ISPEC (--`(\x y:bool. ~(x = y))`--) PBITBOP_EXISTS)
 };
 
@@ -245,7 +245,7 @@ val PBITBOP_WXOR_lemma = prove(
        REFL_TAC]]]);
 
 val PBITBOP_WXOR = save_thm("PBITBOP_WXOR",
-    EQT_ELIM (TRANS (ISPEC (--`WXOR`--) PBITBOP_DEF)
+    EQT_ELIM (TRANS (ISPEC (--`$WXOR`--) PBITBOP_DEF)
      (EQT_INTRO PBITBOP_WXOR_lemma)));
 
 val _ = export_theory();

@@ -73,8 +73,8 @@ val POWDIFF_LEMMA = prove_thm("POWDIFF_LEMMA",
     MATCH_ACCEPT_TAC REAL_MUL_SYM]);
 
 val POWDIFF = prove_thm("POWDIFF",
-  (--`!n x y. 
-      (x pow (SUC n)) |-| (y pow (SUC n)) 
+  (--`!n x y.
+      (x pow (SUC n)) |-| (y pow (SUC n))
       =
       (x |-| y) |*| sum(0,SUC n)
                                  (\p. (x pow p) |*| (y pow (n-p)))`--),
@@ -142,7 +142,7 @@ val POWSER_INSIDEA = prove_thm("POWSER_INSIDEA",
       EXISTS_TAC (--`abs(z)`--) THEN ASM_REWRITE_TAC[ABS_POS],
       REWRITE_TAC[ABS_MUL, ABS_ABS, GSYM REAL_MUL_ASSOC] THEN
       ONCE_REWRITE_TAC[AC(REAL_MUL_ASSOC,REAL_MUL_SYM)
-       (--`a |*| b |*| c = (a |*| c) |*| b`--)] THEN
+       (--`a |*| (b |*| c) = (a |*| c) |*| b`--)] THEN
       DISJ_CASES_TAC(SPEC (--`z pow n`--) ABS_CASES) THEN
       ASM_REWRITE_TAC[ABS_0, REAL_MUL_RZERO, REAL_LE_REFL] THEN
       FIRST_ASSUM(fn th => REWRITE_TAC[MATCH_MP REAL_LE_RMUL th]) THEN
@@ -206,8 +206,8 @@ val DIFFS_NEG = prove_thm("DIFFS_NEG",
 
 val DIFFS_LEMMA = prove_thm("DIFFS_LEMMA",
   (--`!n c x. sum(0,n) (\n. (diffs c)(n) |*| (x pow n)) =
-           sum(0,n) (\n. &n |*| c(n) |*| (x pow (n - 1))) |+|
-             (&n |*| c(n) |*| x pow (n - 1))`--),
+           sum(0,n) (\n. &n |*| (c(n) |*| (x pow (n - 1)))) |+|
+             (&n |*| (c(n) |*| x pow (n - 1)))`--),
   INDUCT_TAC THEN ASM_REWRITE_TAC[sum, REAL_MUL_LZERO, REAL_ADD_LID] THEN
   REPEAT GEN_TAC THEN REWRITE_TAC[GSYM REAL_ADD_ASSOC] THEN
   AP_TERM_TAC THEN BETA_TAC THEN REWRITE_TAC[ADD_CLAUSES] THEN
@@ -215,19 +215,19 @@ val DIFFS_LEMMA = prove_thm("DIFFS_LEMMA",
   REWRITE_TAC[SUC_SUB1, REAL_MUL_ASSOC]);
 
 val DIFFS_LEMMA2 = prove_thm("DIFFS_LEMMA2",
-  (--`!n c x. sum(0,n) (\n. &n |*| c(n) |*| (x pow (n - 1))) =
+  (--`!n c x. sum(0,n) (\n. &n |*| (c(n) |*| (x pow (n - 1)))) =
            sum(0,n) (\n. (diffs c)(n) |*| (x pow n)) |-|
-                (&n |*| c(n) |*| x pow (n - 1))`--),
+                (&n |*| (c(n) |*| x pow (n - 1)))`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[REAL_EQ_SUB_LADD, DIFFS_LEMMA]);
 
 val DIFFS_EQUIV = prove_thm("DIFFS_EQUIV",
   (--`!c x. summable(\n. (diffs c)(n) |*| (x pow n)) ==>
-      (\n. &n |*| c(n) |*| (x pow (n - 1))) sums
+      (\n. &n |*| (c(n) |*| (x pow (n - 1)))) sums
          (suminf(\n. (diffs c)(n) |*| (x pow n)))`--),
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   FIRST_ASSUM(MP_TAC o REWRITE_RULE[diffs] o MATCH_MP SER_ZERO) THEN
   BETA_TAC THEN REWRITE_TAC[GSYM REAL_MUL_ASSOC] THEN DISCH_TAC THEN
-  SUBGOAL_THEN (--`(\n. &n |*| c(n) |*| (x pow (n - 1))) --> &0`--)
+  SUBGOAL_THEN (--`(\n. &n |*| (c(n) |*| (x pow (n - 1)))) --> &0`--)
   MP_TAC THENL
    [ONCE_REWRITE_TAC[SEQ_SUC] THEN BETA_TAC THEN
     ASM_REWRITE_TAC[SUC_SUB1], ALL_TAC] THEN
@@ -300,7 +300,7 @@ val TERMDIFF_LEMMA2 = prove_thm("TERMDIFF_LEMMA2",
 val TERMDIFF_LEMMA3 = prove_thm("TERMDIFF_LEMMA3",
   (--`!z h n k'. ~(h = &0) /\ abs(z) |<=| k' /\ abs(z |+| h) |<=| k' ==>
     abs(((((z |+| h) pow n) |-| (z pow n)) / h) |-| (&n |*| (z pow (n - 1))))
-        |<=| &n |*| &(n - 1) |*| (k' pow (n - 2)) |*| abs(h)`--),
+        |<=| &n |*| (&(n - 1) |*| ((k' pow (n - 2)) |*| abs(h)))`--),
   let val tac = W(curry op THEN (MATCH_MP_TAC REAL_LE_TRANS) o
            EXISTS_TAC o rand o concl o PART_MATCH (rand o rator) ABS_SUM o
            rand o rator o snd)  THEN REWRITE_TAC[ABS_SUM] in
@@ -326,7 +326,7 @@ val TERMDIFF_LEMMA3 = prove_thm("TERMDIFF_LEMMA3",
   DISCH_THEN(X_CHOOSE_THEN (--`d:num`--) SUBST_ALL_TAC o MATCH_MP LESS_ADD_1) THEN
   REWRITE_TAC[GSYM ADD1] THEN ONCE_REWRITE_TAC[ADD_SYM] THEN
   REWRITE_TAC[ADD_SUB] THEN REWRITE_TAC[ADD_CLAUSES, SUC_SUB1, ADD_SUB] THEN
-  REWRITE_TAC[POW_ADD] THEN GEN_REWR_TAC RAND_CONV 
+  REWRITE_TAC[POW_ADD] THEN GEN_REWR_TAC RAND_CONV
    [AC(REAL_MUL_ASSOC,REAL_MUL_SYM)
         (--`(a |*| b) |*| c = b |*| (c |*| a)`--)] THEN
   MATCH_MP_TAC REAL_LE_MUL2 THEN REWRITE_TAC[ABS_POS] THEN CONJ_TAC THENL
@@ -411,10 +411,10 @@ val TERMDIFF_LEMMA4 = prove_thm("TERMDIFF_LEMMA4",
     ONCE_REWRITE_TAC[GSYM REAL_LT_HALF1] THEN ASM_REWRITE_TAC[]]);
 
 val TERMDIFF_LEMMA5 = prove_thm("TERMDIFF_LEMMA5",
-  (--`!f g k. 
+  (--`!f g k.
       &0 |<| k /\
       summable(f) /\
-      (!h. &0 |<| abs(h) /\ abs(h) |<| k 
+      (!h. &0 |<| abs(h) /\ abs(h) |<| k
            ==> !n. abs(g(h) n) |<=| (f(n) |*| abs(h)))
       ==> ((\h. suminf(g h)) -> &0)(&0)`--),
   REPEAT GEN_TAC THEN
@@ -451,7 +451,7 @@ val TERMDIFF_LEMMA5 = prove_thm("TERMDIFF_LEMMA5",
   BETA_TAC THEN ASM_REWRITE_TAC[]);
 
 val TERMDIFF = prove_thm("TERMDIFF",
-  (--`!c k' x. 
+  (--`!c k' x.
       summable(\n. c(n) |*| (k' pow n)) /\
       summable(\n. (diffs c)(n) |*| (k' pow n)) /\
       summable(\n. (diffs(diffs c))(n) |*| (k' pow n)) /\
@@ -464,11 +464,11 @@ val TERMDIFF = prove_thm("TERMDIFF",
   MATCH_MP_TAC LIM_TRANSFORM THEN
   EXISTS_TAC
    (--`\h. suminf(\n. ((c(n) |*| ((x |+| h) pow n)) |-|
-                       (c(n) |*| (x pow n))) / h)`--) THEN CONJ_TAC 
+                       (c(n) |*| (x pow n))) / h)`--) THEN CONJ_TAC
   THENL
    [BETA_TAC THEN REWRITE_TAC[LIM] THEN BETA_TAC THEN
-    REWRITE_TAC[REAL_SUB_RZERO] THEN X_GEN_TAC (--`e:real`--) THEN 
-    DISCH_TAC THEN EXISTS_TAC (--`abs(k') |-| abs(x)`--) THEN 
+    REWRITE_TAC[REAL_SUB_RZERO] THEN X_GEN_TAC (--`e:real`--) THEN
+    DISCH_TAC THEN EXISTS_TAC (--`abs(k') |-| abs(x)`--) THEN
     REWRITE_TAC[REAL_SUB_LT] THEN
     ASM_REWRITE_TAC[] THEN X_GEN_TAC (--`h:real`--) THEN
     DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
@@ -491,14 +491,14 @@ val TERMDIFF = prove_thm("TERMDIFF",
   THEN
   ONCE_REWRITE_TAC[LIM_NULL] THEN BETA_TAC THEN
   MATCH_MP_TAC LIM_TRANSFORM THEN EXISTS_TAC
-    (--`\h. suminf 
+    (--`\h. suminf
              (\n. c(n) |*|
                   (((((x |+| h) pow n) |-| (x pow n)) / h)
                    |-| (&n |*| (x pow (n - 1)))))`--) THEN
-  BETA_TAC THEN CONJ_TAC 
+  BETA_TAC THEN CONJ_TAC
   THENL
    [REWRITE_TAC[LIM] THEN X_GEN_TAC (--`e:real`--) THEN DISCH_TAC THEN
-    EXISTS_TAC (--`abs(k') |-| abs(x)`--) THEN 
+    EXISTS_TAC (--`abs(k') |-| abs(x)`--) THEN
     REWRITE_TAC[REAL_SUB_LT] THEN
     ASM_REWRITE_TAC[] THEN X_GEN_TAC (--`h:real`--) THEN
     DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
@@ -511,13 +511,13 @@ val TERMDIFF = prove_thm("TERMDIFF",
      [MATCH_MP_TAC POWSER_INSIDE THEN EXISTS_TAC (--`k':real`--) THEN
       ASM_REWRITE_TAC[], ALL_TAC] THEN
     DISCH_THEN(fn th => ASSUME_TAC th THEN MP_TAC (MATCH_MP DIFFS_EQUIV th))
-    THEN DISCH_THEN(fn th => SUBST1_TAC (MATCH_MP SUM_UNIQ th) THEN MP_TAC th) 
-    THEN RULE_ASSUM_TAC(REWRITE_RULE[REAL_SUB_RZERO]) THEN 
+    THEN DISCH_THEN(fn th => SUBST1_TAC (MATCH_MP SUM_UNIQ th) THEN MP_TAC th)
+    THEN RULE_ASSUM_TAC(REWRITE_RULE[REAL_SUB_RZERO]) THEN
     C SUBGOAL_THEN MP_TAC
       (--`(\n. (c n) |*| (x pow n)) sums
            (suminf(\n. (c n) |*| (x pow n))) /\
        (\n. (c n) |*| ((x |+| h) pow n)) sums
-           (suminf(\n. (c n) |*| ((x |+| h) pow n)))`--) 
+           (suminf(\n. (c n) |*| ((x |+| h) pow n)))`--)
     THENL
      [CONJ_TAC THEN MATCH_MP_TAC SUMMABLE_SUM THEN
       MATCH_MP_TAC POWSER_INSIDE THEN EXISTS_TAC (--`k':real`--) THEN
@@ -537,21 +537,21 @@ val TERMDIFF = prove_thm("TERMDIFF",
     AP_THM_TAC THEN AP_TERM_TAC THEN (* break *)
   MATCH_ACCEPT_TAC REAL_MUL_SYM,
     ALL_TAC] THEN
-  MP_TAC(SPECL [(--`abs(x)`--), (--`abs(k')`--)] REAL_MEAN) THEN 
+  MP_TAC(SPECL [(--`abs(x)`--), (--`abs(k')`--)] REAL_MEAN) THEN
   ASM_REWRITE_TAC[] THEN
   DISCH_THEN(X_CHOOSE_THEN (--`R:real`--) STRIP_ASSUME_TAC) THEN
   MP_TAC(SPECL
-   [--`\n. abs(c n) |*| &n |*| &(n - 1) |*| (R pow (n - 2))`--,
+   [--`\n. abs(c n) |*| (&n |*| (&(n - 1) |*| (R pow (n - 2))))`--,
     --`\h n. c(n) |*| (((((x |+| h) pow n) |-| (x pow n)) / h)
                             |-|
                             (&n |*| (x pow (n - 1))))`--,
     --`R |-| abs(x)`--] TERMDIFF_LEMMA5) THEN
   BETA_TAC THEN REWRITE_TAC[REAL_MUL_ASSOC] THEN
-  DISCH_THEN MATCH_MP_TAC THEN REPEAT CONJ_TAC 
+  DISCH_THEN MATCH_MP_TAC THEN REPEAT CONJ_TAC
   THENL
    [ASM_REWRITE_TAC[REAL_SUB_LT],
     SUBGOAL_THEN (--`summable(\n. abs(diffs(diffs c) n) |*| (R pow n))`--)
-                 MP_TAC 
+                 MP_TAC
     THENL
      [MATCH_MP_TAC POWSER_INSIDEA THEN
       EXISTS_TAC (--`k':real`--) THEN ASM_REWRITE_TAC[] THEN
@@ -563,18 +563,18 @@ val TERMDIFF = prove_thm("TERMDIFF",
     REWRITE_TAC[ABS_N] THEN REWRITE_TAC[GSYM REAL_MUL_ASSOC] THEN
     C SUBGOAL_THEN (fn th => ONCE_REWRITE_TAC[GSYM th])
       (--`!n. diffs(diffs (\n. abs(c n))) n |*| (R pow n) =
-           &(SUC n) |*| &(SUC(SUC n)) |*| abs(c(SUC(SUC n)))
-           |*| (R pow n)`--) 
+           &(SUC n) |*| (&(SUC(SUC n)) |*| (abs(c(SUC(SUC n)))
+           |*| (R pow n)))`--)
     THENL
      [GEN_TAC THEN REWRITE_TAC[diffs] THEN BETA_TAC THEN
       REWRITE_TAC[REAL_MUL_ASSOC], ALL_TAC] THEN
     DISCH_THEN(MP_TAC o MATCH_MP DIFFS_EQUIV) THEN
     DISCH_THEN(MP_TAC o MATCH_MP SUM_SUMMABLE) THEN
     REWRITE_TAC[diffs] THEN BETA_TAC THEN REWRITE_TAC[GSYM REAL_MUL_ASSOC] THEN
-    SUBGOAL_THEN (--`(\n. &n |*| &(SUC n) |*| abs(c(SUC n)) 
-                          |*| (R pow (n - 1))) =
-         \n. diffs(\m. &(m - 1) |*| abs(c m) / R) n |*| (R pow n)`--)
-    SUBST1_TAC 
+    SUBGOAL_THEN (--`(\n. &n |*| (&(SUC n) |*| (abs(c(SUC n))
+                          |*| (R pow (n - 1))))) =
+         \n. diffs(\m. &(m - 1) |*| (abs(c m) / R)) n |*| (R pow n)`--)
+    SUBST1_TAC
     THENL
      [REWRITE_TAC[diffs] THEN BETA_TAC THEN REWRITE_TAC[SUC_SUB1] THEN
       ABS_TAC THEN
@@ -584,10 +584,10 @@ val TERMDIFF = prove_thm("TERMDIFF",
       REWRITE_TAC[ADD1, POW_ADD] THEN REWRITE_TAC[GSYM ADD1, POW_1] THEN
       REWRITE_TAC[GSYM REAL_MUL_ASSOC, real_div] THEN
       ONCE_REWRITE_TAC[AC(REAL_MUL_ASSOC,REAL_MUL_SYM)
-        (--`a |*| b |*| c |*| d |*| e |*| f = 
-            b |*| a |*| c |*| e |*| d |*| f`--)] THEN
-      REPEAT AP_TERM_TAC THEN SUBGOAL_THEN (--`inv(R) |*| R = &1`--) 
-                                           SUBST1_TAC 
+        (--`a |*| (b |*| (c |*| (d |*| (e |*| f)))) =
+            b |*| (a |*| (c |*| (e |*| (d |*| f))))`--)] THEN
+      REPEAT AP_TERM_TAC THEN SUBGOAL_THEN (--`inv(R) |*| R = &1`--)
+                                           SUBST1_TAC
       THENL
        [MATCH_MP_TAC REAL_MUL_LINV THEN REWRITE_TAC[ABS_NZ] THEN
         MATCH_MP_TAC REAL_LET_TRANS THEN EXISTS_TAC (--`abs(x)`--) THEN
@@ -600,19 +600,19 @@ val TERMDIFF = prove_thm("TERMDIFF",
     MATCH_MP_TAC (TAUT_CONV (--`(a = b) ==> a ==> b`--)) THEN AP_TERM_TAC THEN
     CONV_TAC(X_FUN_EQ_CONV (--`n:num`--)) THEN BETA_TAC THEN GEN_TAC THEN
     REWRITE_TAC[real_div, GSYM REAL_MUL_ASSOC] THEN
-    GEN_REWR_TAC RAND_CONV 
+    GEN_REWR_TAC RAND_CONV
      [AC(REAL_MUL_ASSOC,REAL_MUL_SYM)
-      (--`a |*| b |*| c |*| d =  b |*| c |*| a |*| d`--)] THEN
+      (--`a |*| (b |*| (c |*| d)) =  b |*| (c |*| (a |*| d))`--)] THEN
     DISJ_CASES_THEN2 SUBST1_TAC (X_CHOOSE_THEN (--`m:num`--) SUBST1_TAC)
      (SPEC (--`n:num`--) num_CASES) THEN REWRITE_TAC[REAL_MUL_LZERO] THEN
-    REWRITE_TAC[num_CONV (--`2`--), SUC_SUB1, SUB_MONO_EQ] THEN 
+    REWRITE_TAC[num_CONV (--`2`--), SUC_SUB1, SUB_MONO_EQ] THEN
     AP_TERM_TAC THEN
     DISJ_CASES_THEN2 SUBST1_TAC (X_CHOOSE_THEN (--`n:num`--) SUBST1_TAC)
      (SPEC (--`m:num`--) num_CASES) THEN REWRITE_TAC[REAL_MUL_LZERO] THEN
     REPEAT AP_TERM_TAC THEN REWRITE_TAC[SUC_SUB1] THEN
     REWRITE_TAC[ADD1, POW_ADD, POW_1] THEN
     ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN REWRITE_TAC[GSYM REAL_MUL_ASSOC] THEN
-    SUBGOAL_THEN (--`R |*| inv(R) = &1`--) 
+    SUBGOAL_THEN (--`R |*| inv(R) = &1`--)
                  (fn th => REWRITE_TAC[th, REAL_MUL_RID]) THEN
     MATCH_MP_TAC REAL_MUL_RINV THEN CONV_TAC(RAND_CONV SYM_CONV) THEN
     MATCH_MP_TAC REAL_LT_IMP_NE THEN MATCH_MP_TAC REAL_LET_TRANS THEN
@@ -624,12 +624,11 @@ val TERMDIFF = prove_thm("TERMDIFF",
     MATCH_MP_TAC TERMDIFF_LEMMA3 THEN ASM_REWRITE_TAC[ABS_NZ] THEN
     CONJ_TAC THENL
      [MATCH_MP_TAC REAL_LT_IMP_LE THEN ASM_REWRITE_TAC[],
-      MATCH_MP_TAC REAL_LE_TRANS THEN 
+      MATCH_MP_TAC REAL_LE_TRANS THEN
       EXISTS_TAC (--`abs(x) |+| abs(h)`--) THEN
       REWRITE_TAC[ABS_TRIANGLE] THEN MATCH_MP_TAC REAL_LT_IMP_LE THEN
       ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN
       ASM_REWRITE_TAC[GSYM REAL_LT_SUB_LADD]]]);
-
 
 val _ = export_theory();
 

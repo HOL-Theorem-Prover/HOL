@@ -24,13 +24,13 @@ val word_CASES_TAC =
        (fn w => CHOOSE_THEN SUBST1_TAC (ISPEC w cthm))
     end;
 
-val word_INDUCT_TAC = 
+val word_INDUCT_TAC =
     let val ithm = word_baseTheory.word_induct
     in
      (INDUCT_THEN ithm (fn t => ALL_TAC))
     end;
 
-val RESQ_WORDLEN_TAC = 
+val RESQ_WORDLEN_TAC =
     (CONV_TAC RESQ_FORALL_CONV THEN word_INDUCT_TAC
      THEN PURE_ONCE_REWRITE_TAC[word_baseTheory.PWORDLEN_DEF]
      THEN GEN_TAC THEN DISCH_TAC);
@@ -120,11 +120,11 @@ val PBITBOP_PWORDLEN = store_thm("PBITBOP_PWORDLEN",
 val PBITBOP_WSEG = store_thm("PBITBOP_WSEG",
     (--`!op:'a word  -> 'b word -> 'c word::PBITBOP.
      !n. !w1:'a word ::PWORDLEN n. !w2:'b word ::PWORDLEN n.
-     !m k. ((m + k) <= n) ==> 
+     !m k. ((m + k) <= n) ==>
      (op (WSEG m k w1) (WSEG m k w2) = WSEG m k (op w1 w2))`--),
     RESQ_GEN_TAC THEN GEN_TAC THEN  REPEAT RESQ_GEN_TAC
     THEN IMP_RES_TAC PBITBOP_DEF
-    THEN RESQ_RES_TAC 
+    THEN RESQ_RES_TAC
     THEN ASM_REWRITE_TAC[]);
 
 val PBITBOP_EXISTS = store_thm("PBITBOP_EXISTS",
@@ -150,7 +150,7 @@ val WMAP_DEF = new_recursive_definition {
  name = "WMAP_DEF",
  fixity = Prefix,
  rec_axiom = word_Ax,
- def = 
+ def =
  --`
    !f:'a->'b. !l. WMAP f (WORD l) = WORD (MAP f l)
  `--
@@ -183,7 +183,7 @@ val WMAP_WSEG = store_thm("WMAP_WSEG",
     THEN REPEAT STRIP_TAC THEN COND_REWRITE1_TAC BUTLASTN_MAP THENL[
      IMP_RES_TAC LESS_EQ_SPLIT,
      COND_REWRITE1_TAC LASTN_MAP THENL[
-      COND_REWRITE1_TAC LENGTH_BUTLASTN 
+      COND_REWRITE1_TAC LENGTH_BUTLASTN
       THEN COND_REWRITE1_TAC (GSYM ADD_LESS_EQ_SUB)
       THEN FIRST_ASSUM ACCEPT_TAC,
       REFL_TAC]]);
@@ -195,7 +195,7 @@ val WMAP_PBITOP = store_thm("WMAP_PBITOP",
      RESQ_IMP_RES_THEN MATCH_ACCEPT_TAC WMAP_PWORDLEN,
      REPEAT STRIP_TAC THEN RESQ_IMP_RES_TAC WMAP_WSEG
      THEN RES_THEN MATCH_ACCEPT_TAC]);
-     
+
 
 val WMAP_WCAT = store_thm("WMAP_WCAT",
     (--`!w1 w2 (f:'a->'b).
@@ -216,7 +216,7 @@ val FORALLBITS_DEF = new_recursive_definition {
  name = "FORALLBITS_DEF",
  fixity = Prefix,
  rec_axiom = word_Ax,
- def = 
+ def =
  --`
    !P:'a->bool. !l. FORALLBITS P (WORD l) = ALL_EL P l
  `--
@@ -234,7 +234,7 @@ val FORALLBITS = store_thm("FORALLBITS",
     THEN DISCH_THEN SUBST1_TAC THENL[
       REWRITE_TAC[NOT_LESS_0],
       GEN_TAC THEN EQ_TAC THEN PURE_ONCE_REWRITE_TAC[LESS_THM] THENL[
-    	STRIP_TAC THEN GEN_TAC 
+    	STRIP_TAC THEN GEN_TAC
     	THEN DISCH_THEN (DISJ_CASES_THEN2 SUBST1_TAC ASSUME_TAC) THENL[
     	  ASM_REWRITE_TAC[ELL_LENGTH_CONS],
     	  IMP_RES_THEN (fn t => REWRITE_TAC[t]) ELL_CONS
@@ -252,7 +252,7 @@ val FORALLBITS = store_thm("FORALLBITS",
 
 val FORALLBITS_WSEG = store_thm("FORALLBITS_WSEG",
     (--`!n. !w:('a)word::PWORDLEN n. !P.
-     FORALLBITS P w ==> 
+     FORALLBITS P w ==>
      !m k. (m + k) <= n ==> FORALLBITS P (WSEG m k w)`--),
     GEN_TAC THEN RESQ_HALF_GEN_TAC THEN word_INDUCT_TAC
     THEN REWRITE_TAC[WSEG_DEF,PWORDLEN_DEF,FORALLBITS_DEF]
@@ -318,12 +318,12 @@ val EXISTSABIT_BIT = store_thm("EXISTSABIT",
     THEN REWRITE_TAC[LENGTH,SOME_EL,NOT_LESS_0]
     THEN PURE_ONCE_REWRITE_TAC[LESS_THM] THEN EQ_TAC THENL[
        STRIP_TAC THENL[
-      EXISTS_TAC (--`LENGTH(l:'a list)`--) 
+      EXISTS_TAC (--`LENGTH(l:'a list)`--)
       THEN ASM_REWRITE_TAC[ELL_LENGTH_CONS],
     	RES_TAC THEN EXISTS_TAC (--`k:num`--)
         THEN COND_REWRITE1_TAC ELL_CONS THEN ASM_REWRITE_TAC[]],
       PURE_ONCE_REWRITE_TAC[RIGHT_AND_OVER_OR]
-      THEN DISCH_THEN (STRIP_THM_THEN 
+      THEN DISCH_THEN (STRIP_THM_THEN
     	(DISJ_CASES_THEN2 STRIP_ASSUME_TAC MP_TAC)) THENL[
     	FIRST_ASSUM SUBST_ALL_TAC
         THEN RULE_ASSUM_TAC (REWRITE_RULE[ELL_LENGTH_CONS])
@@ -365,7 +365,7 @@ val SHR_DEF = new_definition("SHR_DEF",
             (WSEG (PRE(WORDLEN w)) 1 w)), (BIT 0 w))`--));
 
 val SHL_DEF = new_definition("SHL_DEF",
-    (--`SHL f (w:('a)word) b = 
+    (--`SHL f (w:('a)word) b =
      (BIT (PRE(WORDLEN w)) w,
      WCAT((WSEG (PRE(WORDLEN w)) 0 w),(f => (WSEG 1 0 w) | WORD[b])))`--));
 
@@ -382,7 +382,7 @@ val SHR_WSEG = store_thm("SHR_WSEG",
     THEN PURE_ONCE_REWRITE_TAC[PAIR_EQ] THEN CONJ_TAC THENL[
       BOOL_CASES_TAC (--`f:bool`--) THEN PURE_ONCE_REWRITE_TAC[COND_CLAUSES]
     THEN RESQ_IMP_RES_THEN (IMP_RES_THEN SUBST1_TAC) WSEG_WORDLEN
-      THEN AP_TERM_TAC THEN PURE_ONCE_REWRITE_TAC[PAIR_EQ] 
+      THEN AP_TERM_TAC THEN PURE_ONCE_REWRITE_TAC[PAIR_EQ]
       THEN PURE_ONCE_REWRITE_TAC[PRE_SUB1] THEN CONJ_TAC THEN TRY REFL_TAC
       THEN MATCH_MP_TAC (RESQ_SPEC(--`w:'a word`--)(SPEC(--`n:num`--) WSEG_WSEG))
       THEN IMP_RES_TAC lem1 THEN ASM_REWRITE_TAC[]
@@ -421,21 +421,21 @@ val SHR_WSEG_NF = store_thm("SHR_WSEG_NF",
       IMP_RES_TAC LESS_IMP_LESS_OR_EQ,
       CONV_TAC (ONCE_DEPTH_CONV COND_CONV)
       THEN PURE_ONCE_REWRITE_TAC[PAIR_EQ] THEN CONJ_TAC THENL[
-        RESQ_IMP_RES_THEN COND_REWRITE1_TAC 
+        RESQ_IMP_RES_THEN COND_REWRITE1_TAC
           (CONV_RULE (ONCE_DEPTH_CONV SYM_CONV)WSEG_BIT)
         THEN RESQ_IMP_RES_TAC WCAT_WSEG_WSEG
         THEN POP_ASSUM (MP_TAC o (SPECL [(--`k+1`--),(--`1`--),(--`m-1`--)]))
         THEN MAP_EVERY COND_REWRITE1_TAC [SHR_WSEG_NF_lem1,SHR_WSEG_NF_lem2]
-        THEN DISCH_THEN MATCH_MP_TAC 
+        THEN DISCH_THEN MATCH_MP_TAC
      	THEN PURE_REWRITE_TAC[GSYM ADD1,ADD_CLAUSES]
      	THEN SUBST1_TAC (SPECL[(--`1`--),(--`k:num`--)]ADD_SYM)
      	THEN COND_REWRITE1_TAC SHR_WSEG_NF_lem2
     	THEN MATCH_MP_TAC LESS_OR THEN FIRST_ASSUM ACCEPT_TAC,
     	REFL_TAC]]);
 
-val SHL_WSEG = store_thm("SHL_WSEG", 
+val SHL_WSEG = store_thm("SHL_WSEG",
     (--`!n. !w:('a)word::PWORDLEN n. ! m k. ((m + k) <= n) ==> (0 < m) ==>
-     (!f b. SHL f (WSEG m k w) b = ((BIT (k+m-1) w),
+     (!f b. SHL f (WSEG m k w) b = ((BIT (k+(m-1)) w),
       (f => (WCAT((WSEG (m-1) k w),(WSEG 1 k w))) |
             (WCAT((WSEG (m-1) k w),(WORD[b])))))) `--),
     let fun f t1 tms =
@@ -479,7 +479,7 @@ val SHL_WSEG = store_thm("SHL_WSEG",
 val SHL_WSEG_1F = save_thm("SHL_WSEG_1F",
     let val th1 = SPEC_ALL(RESQ_SPEC_ALL(SPEC_ALL SHL_WSEG))
     val {Rator = P, Rand = v} = dest_comb(hd(hyp th1))
-    val ante = fst(strip_imp(concl th1)) 
+    val ante = fst(strip_imp(concl th1))
     val th2 = CONV_RULE(ONCE_DEPTH_CONV COND_CONV)
     	(SPEC (--`F`--) (UNDISCH_ALL th1))
     in
@@ -492,13 +492,13 @@ val SHL_WSEG_NF = store_thm("SHL_WSEG_NF",
     (--`!n. !w :('a)word :: PWORDLEN n.
      !m k. (m + k) <= n ==> 0 < m ==> (0 < k) ==>
       (SHL F (WSEG m k w)(BIT(k - 1)w) =
-               (BIT (k + m - 1) w, WSEG m (k - 1)w))`--),
+               (BIT (k + (m - 1)) w, WSEG m (k - 1)w))`--),
     REPEAT GGEN_TAC THEN REPEAT DISCH_TAC THEN RESQ_REWRITE1_TAC SHL_WSEG
     THEN REWRITE_TAC[PAIR_EQ]
     THEN RESQ_REWRITE1_TAC (GSYM WSEG_BIT) THENL[
       ARITH_TAC,
       RESQ_IMP_RES_THEN (MP_TAC o (SPECL [(--`k-1`--),(--`m-1`--),(--`1`--)])) WCAT_WSEG_WSEG
-      THEN PURE_ONCE_REWRITE_TAC[ADD_SYM] THEN COND_REWRITE1_TAC SUB_ADD 
+      THEN PURE_ONCE_REWRITE_TAC[ADD_SYM] THEN COND_REWRITE1_TAC SUB_ADD
       THEN TRY (CONV_TAC (ONCE_DEPTH_CONV num_CONV) THEN IMP_RES_TAC LESS_OR)
       THEN DISCH_THEN MATCH_MP_TAC THEN ARITH_TAC]);
 
@@ -507,7 +507,7 @@ val WSEG_SHL = store_thm("WSEG_SHL",
     (--`!n. !w:'a word :: PWORDLEN (SUC n). !m k.
      0 < k /\ (m + k) <= (SUC n) ==>
      (!b. WSEG m k (SND (SHL f w b)) = WSEG m (k - 1) w)`--),
-    REPEAT GGEN_TAC THEN STRIP_TAC THEN REWRITE_TAC[SHL_DEF] 
+    REPEAT GGEN_TAC THEN STRIP_TAC THEN REWRITE_TAC[SHL_DEF]
     THEN FIRST_ASSUM (SUBST1_TAC o (MATCH_EQ_MP PWORDLEN))
     THEN REPEAT STRIP_TAC THEN PURE_ONCE_REWRITE_TAC[PRE]
     THEN RESQ_REWRITE1_TAC (SPECL[(--`n:num`--), (--`1`--)] WSEG_WCAT_WSEG1) THENL[
@@ -528,9 +528,9 @@ val WSEG_SHL = store_thm("WSEG_SHL",
 val WSEG_SHL_0 = store_thm("WSEG_SHL_0",
     (--`!n. !w:'a word :: PWORDLEN (SUC n). !m b.
      0 < m /\ m <= (SUC n) ==>
-     (WSEG m 0 (SND (SHL f w b)) = 
+     (WSEG m 0 (SND (SHL f w b)) =
      WCAT((WSEG (m - 1) 0 w), (f => WSEG 1 0 w |WORD[b])))`--),
-    
+
 REPEAT GGEN_TAC THEN STRIP_TAC THEN REWRITE_TAC[SHL_DEF]
     THEN FIRST_ASSUM (SUBST1_TAC o (MATCH_EQ_MP PWORDLEN))
     THEN PURE_ONCE_REWRITE_TAC[PRE]

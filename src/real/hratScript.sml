@@ -60,13 +60,13 @@ val trat_1 = new_definition("trat_1",
 val trat_inv = new_definition("trat_inv",
   (--`trat_inv (x:num,(y:num)) = (y,x)`--));
 
-val trat_add = new_infix_definition("trat_add",
+val trat_add = new_infixl_definition("trat_add",
   --`trat_add (x,y) (x',y') =
     (PRE(((SUC x)*(SUC y')) + ((SUC x')*(SUC y))),
      PRE((SUC y)*(SUC y')))`--,
     500);
 
-val trat_mul = new_infix_definition("trat_mul",
+val trat_mul = new_infixl_definition("trat_mul",
   (--`trat_mul (x,y) (x',y') =
     (PRE((SUC x)*(SUC x')),
      PRE((SUC y)*(SUC y')))`--), 600);
@@ -79,7 +79,7 @@ val trat_sucint = new_prim_rec_definition("trat_sucint",
 (* Definition of the equivalence relation, and proof that it *is* one        *)
 (*---------------------------------------------------------------------------*)
 
-val trat_eq = new_infix_definition("trat_eq",
+val trat_eq = new_infixr_definition("trat_eq",
   (--`trat_eq (x,y) (x',y') =
     (SUC x * SUC y' = SUC x' * SUC y)`--),450);
 
@@ -117,7 +117,7 @@ val TRAT_ADD_SYM_EQ = prove_thm("TRAT_ADD_SYM_EQ",
   REPEAT GEN_PAIR_TAC THEN
   PURE_REWRITE_TAC[trat_add, PAIR_EQ] THEN CONJ_TAC THEN
   AP_TERM_TAC THEN TRY (MATCH_ACCEPT_TAC MULT_SYM) THEN
-  GEN_REWR_TAC RAND_CONV [ADD_SYM] 
+  GEN_REWR_TAC RAND_CONV [ADD_SYM]
   THEN REFL_TAC);
 
 val TRAT_MUL_SYM_EQ = prove_thm("TRAT_MUL_SYM_EQ",
@@ -252,7 +252,7 @@ val TRAT_ARCH = prove_thm("TRAT_ARCH",
   (--`!h. ?n. ?d. (trat_sucint n) trat_eq (h trat_add d)`--),
   GEN_PAIR_TAC THEN EXISTS_TAC (--`SUC(FST(h:num#num))`--) THEN
   EXISTS_TAC(--`(PRE((SUC(SUC(FST h))*(SUC(SND h))) - (SUC(FST h))),SND h)`--)
-  THEN MATCH_MP_TAC TRAT_EQ_TRANS THEN 
+  THEN MATCH_MP_TAC TRAT_EQ_TRANS THEN
   EXISTS_TAC (--`(SUC(FST(h:num#num)),0)`--)
   THEN PURE_REWRITE_TAC[TRAT_SUCINT_0] THEN PURE_REWRITE_TAC[trat_add, trat_eq]
   THEN REWRITE_TAC[] THEN UNSUCK_TAC THENL
@@ -279,9 +279,9 @@ val TRAT_SUCINT = prove_thm("TRAT_SUCINT",
 val TRAT_EQ_EQUIV = prove_thm("TRAT_EQ_EQUIV",
   (--`!p q. p trat_eq q = ($trat_eq p = $trat_eq q)`--),
   REPEAT GEN_TAC THEN CONV_TAC SYM_CONV THEN
-  CONV_TAC (ONCE_DEPTH_CONV (X_FUN_EQ_CONV (--`r:num#num`--))) THEN 
+  CONV_TAC (ONCE_DEPTH_CONV (X_FUN_EQ_CONV (--`r:num#num`--))) THEN
   EQ_TAC THENL
-     [DISCH_THEN(MP_TAC o SPEC (--`q:num#num`--)) THEN 
+     [DISCH_THEN(MP_TAC o SPEC (--`q:num#num`--)) THEN
       REWRITE_TAC[TRAT_EQ_REFL],
       DISCH_TAC THEN GEN_TAC THEN EQ_TAC THENL
        [RULE_ASSUM_TAC(ONCE_REWRITE_RULE[TRAT_EQ_SYM]), ALL_TAC] THEN
@@ -296,10 +296,10 @@ val [HRAT_ADD_SYM, HRAT_ADD_ASSOC, HRAT_MUL_SYM, HRAT_MUL_ASSOC,
      equiv = TRAT_EQ_EQUIV,
      defs = [{def_name = "hrat_1", fname = "hrat_1",  func = --`trat_1`--,   fixity = Prefix},
              {def_name = "hrat_inv", fname = "hrat_inv",func = --`trat_inv`--, fixity = Prefix},
-             {def_name = "hrat_add", fname = "hrat_add",func = --`trat_add`--, fixity = Infix 500},
-             {def_name = "hrat_mul", fname = "hrat_mul",func = --`trat_mul`--, fixity = Infix 600},
+             {def_name = "hrat_add", fname = "hrat_add",func = --`$trat_add`--, fixity = Infixl 500},
+             {def_name = "hrat_mul", fname = "hrat_mul",func = --`$trat_mul`--, fixity = Infixl 600},
              {def_name = "hrat_sucint", fname="hrat_sucint", func = --`trat_sucint`--, fixity = Prefix}],
-     welldefs = [TRAT_INV_WELLDEFINED, TRAT_ADD_WELLDEFINED2, 
+     welldefs = [TRAT_INV_WELLDEFINED, TRAT_ADD_WELLDEFINED2,
                  TRAT_MUL_WELLDEFINED2],
      old_thms = [TRAT_ADD_SYM, TRAT_ADD_ASSOC, TRAT_MUL_SYM, TRAT_MUL_ASSOC,
                  TRAT_LDISTRIB, TRAT_MUL_LID, TRAT_MUL_LINV, TRAT_NOZERO,

@@ -8,7 +8,7 @@
 signature ind_defLib =
 sig
 type term = Term.term
-type fixity = Term.fixity
+type fixity = Parse.fixity
 type thm = Thm.thm
 type tactic  = Abbrev.tactic
 type conv = Abbrev.conv
@@ -32,11 +32,11 @@ type 'a quotation = 'a frag list
   val RULE_INDUCT_THEN : thm -> thm_tactic -> thm_tactic -> tactic
   val RULE_TAC : thm_tactic
 
-  type rule = (Term.term quotation list * Term.term quotation list) 
+  type rule = (Term.term quotation list * Term.term quotation list)
               * Term.term quotation
   type pattern = Term.term quotation * Term.term quotation list
-  val indDefine : string -> rule list -> Term.fixity -> pattern 
-                  -> 
+  val indDefine : string -> rule list -> fixity -> pattern
+                  ->
                    {rules : Thm.thm list, induction : Thm.thm}
 
 end;

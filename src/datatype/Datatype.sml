@@ -42,17 +42,17 @@ type tyinfo = TypeBase.tyinfo
 type typeBase = TypeBase.typeBase;
 type 'a quotation = 'a frag list;
 
- 
-fun ERR func mesg = 
+
+fun ERR func mesg =
     HOL_ERR{origin_structure = "Datatype",
             origin_function = func,
             message = mesg};
 
-val defn_const = 
+val defn_const =
   #1 o strip_comb o lhs o #2 o strip_forall o hd o strip_conj o concl;
 
 fun join f g x =
-  case (g x) 
+  case (g x)
    of NONE => NONE
     | SOME y => (case (f y)
                   of NONE => NONE
@@ -62,12 +62,12 @@ fun num_variant vlist v =
   let val counter = ref 0
       val {Name,Ty} = dest_var v
       val slist = ref (map (#Name o dest_var) vlist)
-      fun pass str = 
-         if (mem str (!slist)) 
+      fun pass str =
+         if (mem str (!slist))
          then ( counter := !counter + 1;
                 pass (Lib.concat Name (Lib.int_to_string(!counter))))
          else (slist := str :: !slist; str)
-  in 
+  in
   mk_var{Name=pass Name,  Ty=Ty}
   end;
 
@@ -130,7 +130,7 @@ fun K0 ty = mk_abs{Bvar=mk_var{Name="v",Ty=ty}, Body=Zero};
 
 fun drop [] ty = fst(dom_rng ty)
   | drop (_::t) ty = drop t (snd(dom_rng ty));
-       
+
 
 (*---------------------------------------------------------------------------*
  * The following is the prototype code for tysize and may give some insight  *
@@ -156,10 +156,10 @@ fun tysize (theta,gamma) ty  =
       | NONE =>
          let val {Tyop,Args} = dest_type ty
          in case (gamma Tyop)
-             of SOME f => 
+             of SOME f =>
                   let val vty = drop Args (type_of f)
                       val sigma = Type.match_type vty ty
-                  in list_mk_comb(inst sigma f, 
+                  in list_mk_comb(inst sigma f,
                                   map (tysize (theta,gamma)) Args)
                   end
               | NONE => K0 ty
@@ -168,19 +168,19 @@ fun tysize (theta,gamma) ty  =
 local fun num_variant vlist v =
         let val counter = ref 1
             val {Name,Ty} = dest_var v
-            fun pass str list = 
-              if (mem str list) 
+            fun pass str list =
+              if (mem str list)
               then ( counter := !counter + 1;
                      pass (Name^Lib.int_to_string(!counter)) list)
               else str
-        in 
+        in
           mk_var{Name=pass Name (map (#Name o dest_var) vlist),  Ty=Ty}
         end
 in
-fun mk_ty_fun vty (V,away) = 
+fun mk_ty_fun vty (V,away) =
     let val fty = vty --> numty
         val v = num_variant away (mk_var{Name="f", Ty=fty})
-    in 
+    in
        (v::V, v::away)
     end
 end;
@@ -199,23 +199,23 @@ fun define_size ax tysize_env =
      val clist = map (rand o lhs o #2 o strip_forall) (strip_conj Body)
      val arglist = rev(fst(rev_itlist mk_ty_fun Args ([],free_varsl clist)))
      val v = mk_var{Name = Tyop^"_size",
-                    Ty = itlist (curry op-->) (map type_of arglist) 
+                    Ty = itlist (curry op-->) (map type_of arglist)
                                 (dty --> numty)}
      val preamble = list_mk_comb(v,arglist)
      val f0 = zip Args arglist
      fun theta tyv = case (assoc1 tyv f0) of SOME(_,x) => SOME x | _ => NONE
-     fun gamma str = 
-          if (str = Tyop) then SOME v 
+     fun gamma str =
+          if (str = Tyop) then SOME v
           else tysize_env str
      fun mk_app x = mk_comb{Rator=tysize(theta,gamma) (type_of x), Rand=x}
-     fun capp2rhs capp = 
+     fun capp2rhs capp =
           case snd(strip_comb capp)
            of [] => Zero
             | L  => end_itlist mk_plus (One::map mk_app L)
      fun clause c = mk_eq{lhs=mk_comb{Rator=preamble,Rand=c},rhs=capp2rhs c}
-     val defn = list_mk_conj (map clause clist) 
+     val defn = list_mk_conj (map clause clist)
      val red_defn = #rhs(dest_eq(concl   (* remove zero additions *)
-                       ((DEPTH_CONV BETA_CONV 
+                       ((DEPTH_CONV BETA_CONV
                            THENC Rewrite.PURE_REWRITE_CONV zero_rws) defn)))
  in
     new_recursive_definition
@@ -229,16 +229,16 @@ end;
 fun tysize_env db = join TypeBase.size_of (TypeBase.get db);
 
 
-fun type_size db ty = 
-  let fun theta ty = 
-        if (is_vartype ty) then SOME (K0 ty) else NONE 
-  in 
+fun type_size db ty =
+  let fun theta ty =
+        if (is_vartype ty) then SOME (K0 ty) else NONE
+  in
     tysize (theta,tysize_env db) ty
   end;
 
 
 (*---------------------------------------------------------------------------
-     Generate and install a prettyprinter for importing a previously 
+     Generate and install a prettyprinter for importing a previously
      declared datatype from an external theory.
  ---------------------------------------------------------------------------*)
 
@@ -248,13 +248,13 @@ fun adjoin {ax,case_def,case_cong,induction,nchotomy,size,one_one,distinct}
      struct_ps = SOME (fn ppstrm =>
        let val S = PP.add_string ppstrm
            fun NL() = PP.add_newline ppstrm
-           fun do_size(c,s) = 
-              let open Hol_pp Globals
+           fun do_size(c,s) =
+              let open Globals
                   val strc = with_flag(show_types,true) term_to_string c
                   val line = String.concat ["SOME(Parse.Term`", strc, "`,"]
-              in 
-                 S ("      size="^line); 
-                 NL(); 
+              in
+                 S ("      size="^line);
+                 NL();
                  S ("                "^s^"),")
               end
        in
@@ -287,24 +287,24 @@ fun adjoin {ax,case_def,case_cong,induction,nchotomy,size,one_one,distinct}
         7. one_one          (* one-one-ness of the constructors *)
         8. distinct         (* distinctness of the constructors *)
 
-   We also adjoin some ML to the current theory so that if the theory 
-   gets exported and loaded in a later session, these "datatype" 
+   We also adjoin some ML to the current theory so that if the theory
+   gets exported and loaded in a later session, these "datatype"
    theorems are loaded automatically into theTypeBase.
 
  ---------------------------------------------------------------------------*)
 
-fun primHol_datatype db q = 
+fun primHol_datatype db q =
   let open Define_type
       val {ty_name, clauses} = Define_type.parse_tyspec q
-      fun prefix{constructor,args} = 
+      fun prefix{constructor,args} =
           {constructor=constructor, args=args, fixity=Prefix}
       fun name s = (ty_name^s)
       val axname = name "_Axiom"
       val ax = dtype{clauses=map prefix clauses,
                      save_name=axname,ty_name=ty_name}
-      val one_one  = SOME(prove_constructors_one_one ax) 
+      val one_one  = SOME(prove_constructors_one_one ax)
                      handle HOL_ERR _ => NONE
-      val distinct = SOME(prove_constructors_distinct ax) 
+      val distinct = SOME(prove_constructors_distinct ax)
                      handle HOL_ERR _ => NONE
       val tyinfo = TypeBase.gen_tyinfo
             {ax=ax, case_def = define_case ax,
@@ -314,11 +314,11 @@ fun primHol_datatype db q =
       val _ = save_thm (name"_case_cong",TypeBase.case_cong_of tyinfo')
       val _ = save_thm (name"_induction",TypeBase.induction_of tyinfo')
       val _ = save_thm (name"_nchotomy",TypeBase.nchotomy_of tyinfo')
-      val _ = case one_one 
-               of NONE => () 
+      val _ = case one_one
+               of NONE => ()
                 | SOME th => (save_thm(name "_11", th); ())
       val _ = case distinct
-               of NONE => () 
+               of NONE => ()
                 | SOME th => (save_thm(name "_distinct", th); ())
   in
      adjoin{ax=axname,case_def=name"_case_def",
@@ -326,18 +326,18 @@ fun primHol_datatype db q =
             induction=name "_induction",
             nchotomy=name "_nchotomy",
             size=(#const(const_decl(name "_size")),name "_size_def"),
-            one_one=case one_one 
-                     of NONE => "NONE" 
+            one_one=case one_one
+                     of NONE => "NONE"
                       | _ => ("SOME "^name"_11"),
             distinct=case distinct
-                     of NONE => "NONE" 
+                     of NONE => "NONE"
                       | _ => ("SOME "^name"_distinct")};
      tyinfo'
-  end 
+  end
   handle e as HOL_ERR _ => Raise e;
 
 
-fun Hol_datatype q = 
+fun Hol_datatype q =
   TypeBase.write (primHol_datatype (TypeBase.theTypeBase()) q);
 
 end;

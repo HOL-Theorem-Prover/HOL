@@ -31,25 +31,25 @@ infix THEN THENL |->;
 type tactic = Abbrev.tactic;
 
 local val check = assert (fn tm => #Name(dest_const(rator tm)) = "FINITE")
-      val IMP = (--`==>`--) 
-      val CONJ = (--`/\`--)
+      val IMP = (--`$==>`--)
+      val CONJ = (--`$/\`--)
       fun MK_IMP1 tm = AP_TERM (mk_comb{Rator=IMP,Rand=tm})
-      and MK_IMP2 th1 th2 = MK_COMB(AP_TERM IMP th1,th2) 
-      fun dest tm = 
+      and MK_IMP2 th1 th2 = MK_COMB(AP_TERM IMP th1,th2)
+      fun dest tm =
             let val {Bvar,Body} = dest_forall tm
                 val {ant,conseq} = dest_imp Body
             in (Bvar,ant,conseq) end
       fun sconv tm =
             let val (s,a,balt) = dest tm
                 val (e,h,c) =  dest balt
-                val th1 = RAND_CONV BETA_CONV a 
-                and th2 = BETA_CONV c 
+                val th1 = RAND_CONV BETA_CONV a
+                and th2 = BETA_CONV c
             in FORALL_EQ s (MK_IMP2 th1 (FORALL_EQ e (MK_IMP1 h th2))) end
-      fun conv tm = 
-            let val {conj1,conj2} = dest_conj tm 
+      fun conv tm =
+            let val {conj1,conj2} = dest_conj tm
             in MK_COMB(AP_TERM CONJ (BETA_CONV conj1), sconv conj2) end
       val STAC = GEN_TAC THEN DISCH_THEN (CONJUNCTS_THEN ASSUME_TAC) THEN
-                 GEN_TAC THEN DISCH_THEN ASSUME_TAC 
+                 GEN_TAC THEN DISCH_THEN ASSUME_TAC
 in
 fun SET_INDUCT_TAC FINITE_INDUCT (A,g) =
    let val {Bvar,Body} = dest_forall g
@@ -65,7 +65,7 @@ fun SET_INDUCT_TAC FINITE_INDUCT (A,g) =
        val disc = DISCH (hd(hyp beta)) beta
        val ithm = CONV_RULE (RATOR_CONV(RAND_CONV conv)) disc
    in (MATCH_MP_TAC ithm THEN CONJ_TAC THENL [ALL_TAC, STAC]) (A,g)
-   end 
+   end
    handle _ => raise HOL_ERR {origin_structure="Set_ind",
                               origin_function = "SET_INDUCT_TAC", message = ""}
 end;

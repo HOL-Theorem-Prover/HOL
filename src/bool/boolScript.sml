@@ -22,6 +22,10 @@ val _ = new_theory "bool";
  *---------------------------------------------------------------------------*)
 
 val EXISTS_DEF = define_exists();  (* Grandfather *)
+val _ = add_binder ("?", term_grammar.std_binder_precedence)
+
+val TOK = term_grammar.TOK
+val TM = term_grammar.TM
 
 val T_DEF =
  new_definition
@@ -30,6 +34,8 @@ val T_DEF =
 val FORALL_DEF =
  new_binder_definition
    ("FORALL_DEF", Term `! = \P:'a->bool. P = \x. T`);
+
+val new_infix_definition = Parse.new_infixr_definition
 
 val AND_DEF =
  new_infix_definition
@@ -43,9 +49,8 @@ val F_DEF =
  new_definition
    ("F_DEF", Term `F = !t. t`);
 
-val NOT_DEF =
- new_definition
-   ("NOT_DEF", Term `~ = \t. t ==> F`);
+val NOT_DEF = new_gen_definition ("NOT_DEF", Term `~ = \t. t ==> F`,
+                                  TruePrefix 900);
 
 val EXISTS_UNIQUE_DEF =
  new_binder_definition
@@ -53,13 +58,20 @@ val EXISTS_UNIQUE_DEF =
      Term `?! = \P:'a->bool. ($? P) /\ !x y. (P x /\ P y) ==> (x=y)`);
 
 val LET_DEF =
- new_definition
-   ("LET_DEF",  Term `LET = \(f:'a->'b) (x:'a). f x`);
+ new_definition ("LET_DEF",  Term `LET = \(f:'a->'b) (x:'a). f x`);
+(* the magic in Parse, will turn the "let" term produced into one that
+   actually uses "LET", similarly for and *)
+val _ = add_rule ("let", TruePrefix 10, [TOK "let", TM, TOK "in"]);
+val _ = add_infix ("and", 9, HOLgrammars.LEFT)
 
 val COND_DEF =
  new_definition
    ("COND_DEF", Term `COND = \t t1 t2. @x:'a. ((t=T) ==> (x=t1)) /\
                                               ((t=F) ==> (x=t2))`);
+val _ = add_rule("COND", Infix (HOLgrammars.RIGHT, 11),
+                 [TOK "=>", TM, TOK "|"]);
+val _ = add_rule("COND", TruePrefix 70,
+                 [TOK "if", TM, TOK "then", TM, TOK "else"]);
 
 val ONE_ONE_DEF =
  new_definition

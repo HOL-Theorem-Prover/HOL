@@ -1,4 +1,4 @@
-signature Preterm = 
+signature Preterm =
 sig
 
   datatype preterm = Var of   {Name : string, Ty : Type.hol_type}
@@ -8,5 +8,8 @@ sig
                    | Constrained of preterm * Type.hol_type
                    | Antiq of Term.term
 
-  val typecheck :(int,Type.hol_type)Lib.istream -> preterm -> Term.term
+  val typecheck:
+    ((Term.term -> string) * (Type.hol_type -> string)) option ->
+    (int,Type.hol_type)Lib.istream ->
+    preterm -> Term.term
 end;

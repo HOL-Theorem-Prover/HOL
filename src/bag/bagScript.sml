@@ -43,15 +43,18 @@ val BAG_DIFF = new_definition (
 
 val BAG_INSERT = new_definition (
   "BAG_INSERT",
-  Term`BAG_INSERT (e:'a) b = (\x. (x = e) => b e + 1 | b x)`);
+  Term`BAG_INSERT (e:'a) b = (\x. if (x = e) then b e + 1 else b x)`);
+
+val _ = add_listform {cons = "BAG_INSERT", nilstr = "EMPTY_BAG",
+                      separator = ";", leftdelim = "{|", rightdelim = "|}"};
 
 val BAG_INTER = Q.new_definition(
   "BAG_INTER",
-  `BAG_INTER b1 b2 = (\x. (b1 x < b2 x) => b1 x | b2 x)`);
+  `BAG_INTER b1 b2 = (\x. if (b1 x < b2 x) then b1 x else b2 x)`);
 
 val BAG_MERGE = Q.new_definition(
   "BAG_MERGE",
-  `BAG_MERGE b1 b2 = (\x. (b1 x < b2 x) => b2 x | b1 x)`);
+  `BAG_MERGE b1 b2 = (\x. if (b1 x < b2 x) then b2 x else b1 x)`);
 
 val _ = print "Properties relating BAG_IN(N) to other functions\n"
 val BAG_INN_0 = store_thm (
@@ -212,7 +215,7 @@ val BAG_INN_BAG_DELETE = store_thm(
   SIMP_TAC hol_ss [BAG_INN, BAG_DELETE, BAG_INSERT] THEN
   REPEAT STRIP_TAC THEN CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN
   SIMP_TAC hol_ss [fCOND_OUT_THM, aCOND_OUT_THM] THEN
-  EXISTS_TAC (--`\x. x = e => b e - 1 | b x`--) THEN
+  EXISTS_TAC (--`\x. if x = e then b e - 1 else b x`--) THEN
   ASM_SIMP_TAC hol_ss []);
 
 val BAG_IN_BAG_DELETE = store_thm(
@@ -259,7 +262,7 @@ val BAG_DELETE_BAG_IN = store_thm(
 val BAG_DELETE_concrete = store_thm(
   "BAG_DELETE_concrete",
   (--`!b0 b e. BAG_DELETE b0 e b =
-               b0 e > 0 /\ (b = \x. (x = e) => b0 e - 1 | b0 x)`--),
+               b0 e > 0 /\ (b = \x. if (x = e) then b0 e - 1 else b0 x)`--),
   REPEAT STRIP_TAC THEN REWRITE_TAC [BAG_DELETE, BAG_INSERT] THEN EQ_TAC
   THEN STRIP_TAC THEN ELIM_TAC THEN
   CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN
@@ -598,8 +601,8 @@ val bu_comm = COMM_BAG_UNION;
 
 val ASSOC_BAG_UNION = store_thm(
   "ASSOC_BAG_UNION",
-  (--`!b1 b2 b3. BAG_UNION b1 (BAG_UNION b2 b3) 
-                 = 
+  (--`!b1 b2 b3. BAG_UNION b1 (BAG_UNION b2 b3)
+                 =
                  BAG_UNION (BAG_UNION b1 b2) b3`--),
   REWRITE_TAC [BAG_UNION] THEN
   REPEAT STRIP_TAC THEN FUN_EQ_TAC THEN SIMP_TAC hol_ss []);
@@ -817,7 +820,7 @@ val BAG_delta_rm_lemma = prove(
     ASM_CASES_TAC (--`A (x:'a) + BU x >= BD x`--) THENL [
       ASM_SIMP_TAC
         boolSimps.bool_ss
-        (map ARITH_PROVE [--`x >= y ==> (z - x - y = (z + y) - x)`--,
+        (map ARITH_PROVE [--`x >= y ==> (z - (x - y) = (z + y) - x)`--,
                           --`(x + y) - (x + z) = y - z`--]) THEN
       ASM_SIMP_TAC hol_ss [],
       ASM_SIMP_TAC boolSimps.bool_ss
@@ -839,12 +842,8 @@ val SUB_BAG_PSUB_BAG = store_thm(
   REPEAT GEN_TAC THEN EQ_TAC THEN
   SIMP_TAC hol_ss [PSUB_BAG, DISJ_IMP_THM, SUB_BAG_REFL])
 
-val mono_cond = prove(
-  (--`!(f:'a -> 'b) P Q R. f (P => Q | R) = (P => f Q | f R)`--),
-  REPEAT GEN_TAC THEN BOOL_CASES_TAC (--`P:bool`--) THEN RWT);
-val mono_cond2 = prove(
-  (--`!P (Q:'a->'b) R x. (P => Q | R) x = (P => Q x | R x)`--),
-  REPEAT GEN_TAC THEN BOOL_CASES_TAC (--`P:bool`--) THEN RWT);
+val mono_cond = COND_RAND
+val mono_cond2 = COND_RATOR
 
 val BAG_DELETE_PSUB_BAG = store_thm(
   "BAG_DELETE_PSUB_BAG",
@@ -860,7 +859,7 @@ val SET_OF_BAG = new_definition(
 
 val BAG_OF_SET = new_definition(
   "BAG_OF_SET",
-  (--`BAG_OF_SET (P:'a->bool) = \x. x IN P => 1 | 0`--));
+  (--`BAG_OF_SET (P:'a->bool) = \x. if x IN P then 1 else 0`--));
 
 open pred_setTheory
 
@@ -1120,7 +1119,7 @@ val BAG_cases = Q.store_thm(
   SIMP_TAC hol_ss [] THEN GEN_TAC THEN
   Q.ASM_CASES_TAC `!x. b x = 0` THEN ARWT THEN
   FULL_SIMP_TAC hol_ss [] THEN MAP_EVERY Q.EXISTS_TAC [
-    `\y. (y = x) => b x - 1 | b y`, `x`
+    `\y. if (y = x) then b x - 1 else b y`, `x`
   ] THEN ASM_SIMP_TAC hol_ss [fCOND_OUT_THM, aCOND_OUT_THM]);
 val BCARD_BINSERT_indifferent = prove(
   Term`!b n. BAG_CARD_RELn b n ==>

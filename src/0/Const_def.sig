@@ -12,14 +12,7 @@
 signature Const_def =
 sig
 
-  val new_gen_definition
-    : {name:string,
-       def : Term.term,
-       fixity : Term.fixity} -> Thm.thm
-
   val new_definition        : string * Term.term -> Thm.thm
-  val new_infix_definition  : string * Term.term * int -> Thm.thm
-  val new_binder_definition : string * Term.term -> Thm.thm
- 
+
   val define_exists : unit -> Thm.thm
 end

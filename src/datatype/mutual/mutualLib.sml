@@ -14,15 +14,16 @@
 structure mutualLib :> mutualLib =
 struct
 
- type 'a quotation = 'a frag list
- type hol_type = Type.hol_type
- type fixity = Term.fixity
- type term = Term.term
- type thm = Thm.thm
- type tactic = Abbrev.tactic
+   type 'a quotation = 'a frag list
+   type hol_type = Type.hol_type
+   type fixity = Parse.fixity
+   type term = Term.term
+   type thm = Thm.thm
+   type tactic = Abbrev.tactic
 
-    val define_type = Def_MN_Type.define_type
-    val define_mutual_functions = Def_MN_Func.define_mutual_functions
-    val MUTUAL_INDUCT_THEN = MutualIndThen.MUTUAL_INDUCT_THEN
+
+  val define_type = Def_MN_Type.define_type
+  val define_mutual_functions = Def_MN_Func.define_mutual_functions
+  val MUTUAL_INDUCT_THEN = MutualIndThen.MUTUAL_INDUCT_THEN
 
 end;

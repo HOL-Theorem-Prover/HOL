@@ -13,12 +13,11 @@ signature Prim_rec =
 sig
 
    type term = Term.term
-   type fixity = Term.fixity
    type thm = Thm.thm
    type tactic = Abbrev.tactic
 
-   val new_recursive_definition 
-     : {name:string, fixity:fixity, rec_axiom:thm, def:term} -> thm
+   val new_recursive_definition
+     : {name:string, fixity: Parse.fixity, rec_axiom:thm, def:term} -> thm
 
    val INDUCT_THEN         : thm -> (thm -> tactic) -> tactic
    val prove_rec_fn_exists : thm -> term -> thm

@@ -1,10 +1,10 @@
-structure Rsyntax :> Rsyntax = 
+structure Rsyntax :> Rsyntax =
 
 struct
     type term = Term.term;
     type thm = Thm.thm;
     type hol_type = Type.hol_type;
-    type fixity = Term.fixity;
+    type fixity = Parse.fixity;
 
 val mk_var = Term.mk_var;
 val mk_const = Term.mk_const;
@@ -61,14 +61,14 @@ val INST = Thm.INST;
 val INST_TY_TERM = Conv.INST_TY_TERM;
 
 
-val new_type = Theory.new_type;
+val new_type = Parse.new_type;
 val new_constant = Theory.new_constant;
-val new_infix = Theory.new_infix;
-val new_binder = Theory.new_binder;
+val new_infix = Parse.new_infix;
+val new_binder = Parse.new_binder;
 
-val new_specification = Const_spec.new_specification;
+val new_specification = Parse.new_specification;
 
-val new_type_definition = Type_def.new_type_definition;
+val new_type_definition = Parse.new_type_definition;
 
 val new_recursive_definition = Prim_rec.new_recursive_definition;
 val define_new_type_bijections = Type_def_support.define_new_type_bijections;

@@ -34,10 +34,10 @@
 structure ListConv1 :> ListConv1 =
 struct
 
-open HolKernel Parse Hol_pp basicHol90Lib Num_conv;
+open HolKernel Parse basicHol90Lib Num_conv;
 infix ## |-> THEN THENL THENC;
 
-fun LIST_CONV_ERR{function,message} = 
+fun LIST_CONV_ERR{function,message} =
    HOL_ERR{origin_structure="List_conv",
            origin_function = function,
            message = message};
@@ -48,7 +48,7 @@ fun LIST_CONV_ERR{function,message} =
  type conv   = Abbrev.conv
 
 
-val % = Parse.term_parser;
+val % = Parse.Term;
 val alpha_ty = ==`:'a`==
 val bool_ty = Type.bool;
 
@@ -68,10 +68,10 @@ fun LIST_INDUCT (base,step) =
    let val {Bvar,Body} = dest_forall(concl step)
        val {ant,conseq} = dest_imp Body
        val {Bvar=h,Body=con} = dest_forall conseq
-       val P  = %`\^Bvar.^ant` 
+       val P  = %`\^Bvar.^ant`
        val b1 = genvar bool_ty
        val b2 = genvar bool_ty
-       val base'  = EQ_MP (SYM(BETA_CONV (%`^P []`))) base 
+       val base'  = EQ_MP (SYM(BETA_CONV (%`^P []`))) base
        val step'  = DISCH ant (SPEC h (UNDISCH(SPEC Bvar step)))
        val hypth  = SYM(RIGHT_BETA(REFL (%`^P ^Bvar`)))
        val concth = SYM(RIGHT_BETA(REFL (%`^P(CONS ^h ^Bvar)`)))
@@ -112,7 +112,7 @@ val LIST_INDUCT_TAC  = INDUCT_THEN list_INDUCT ASSUME_TAC;
 (* --------------------------------------------------------------------*)
 (* PC 11/7/94 *)
 
-val SNOC_INDUCT_TAC = 
+val SNOC_INDUCT_TAC =
   let val SNOC_INDUCT = rich_listTheory.SNOC_INDUCT
   in
    INDUCT_THEN SNOC_INDUCT ASSUME_TAC
@@ -129,14 +129,14 @@ fun new_list_rec_definition (name,tm) =
 
 fun new_infix_list_rec_definition (name,tm,prec) =
    new_recursive_definition {name=name,rec_axiom=list_Axiom,def=tm,
-                             fixity=Infix prec};
+                             fixity=Infixr prec};
 
 fun dcons tm = snd(((fn c => #Name(dest_const c)="CONS")##I)(strip_comb tm))
-fun cend tm = if (#Name(dest_const tm) = "NIL") 
+fun cend tm = if (#Name(dest_const tm) = "NIL")
               then []
-              else raise LIST_CONV_ERR{function="LENGTH_CONV",  
+              else raise LIST_CONV_ERR{function="LENGTH_CONV",
                                        message="list not terminated with NIL"}
-fun stripl tm = let val [h,t] = dcons tm 
+fun stripl tm = let val [h,t] = dcons tm
                 in (h::stripl t)
                 end handle HOL_ERR _ => cend tm;
 
@@ -155,7 +155,7 @@ val numty = (==`:num`==)
 fun SUC (i,th) = let val n = mk_const{Name = int_to_string i,Ty = numty}
                  in TRANS (AP_TERM suctm th) (SYM(num_CONV n))
                  end
-fun itfn cth h (i,th) = 
+fun itfn cth h (i,th) =
    (i+1,TRANS (SPEC (rand(lhs(concl th))) (SPEC h cth)) (SUC (i,th)))
 val check = assert(curry (op =) "LENGTH" o #Name o dest_const)
 in
@@ -199,13 +199,13 @@ end;
 (* --------------------------------------------------------------------*)
 
 local
-val T = %`T` 
+val T = %`T`
 val F = %`F`
 val cnil = rich_listTheory.NOT_CONS_NIL
 val lne = rich_listTheory.LIST_NOT_EQ
 val nel = rich_listTheory.NOT_EQ_LIST
 val leq = rich_listTheory.EQ_LIST
-fun Cons ty = 
+fun Cons ty =
    let val lty = mk_type{Tyop="list",Args=[ty]}
        val cty = mk_type{Tyop="fun",
                          Args=[ty,mk_type{Tyop="fun",Args=[lty,lty]}]}
@@ -214,23 +214,23 @@ fun Cons ty =
                                          Rand=h}, Rand=t}
    end
 fun Nil ty = mk_const{Name="NIL",Ty=mk_type{Tyop="list",Args=[ty]}}
-fun split n l = 
-   if (n=0) 
-   then ([],l) 
+fun split n l =
+   if (n=0)
+   then ([],l)
    else ((curry (op ::) (hd l))##I)(split (n-1) (tl l))
 fun itfn cnv [leq,lne,nel] (h1,h2) th =
-   if (is_neg (concl th)) 
+   if (is_neg (concl th))
    then let val {lhs=l1,rhs=l2} = dest_eq(dest_neg (concl th))
         in  SPEC h2 (SPEC h1 (MP (SPEC l2 (SPEC l1 lne)) th))
         end
    else let val {lhs=l1,rhs=l2} = dest_eq(concl th)
             val heq = cnv (mk_eq{lhs=h1,rhs=h2})
         in
-        if (rand(concl heq) = T) 
-        then let val th1 = MP (SPEC h2 (SPEC h1 leq)) (EQT_ELIM heq) 
+        if (rand(concl heq) = T)
+        then let val th1 = MP (SPEC h2 (SPEC h1 leq)) (EQT_ELIM heq)
              in  MP (SPEC l2 (SPEC l1 th1)) th
              end
-        else let val th1 = MP (SPEC h2 (SPEC h1 nel)) (EQF_ELIM heq) 
+        else let val th1 = MP (SPEC h2 (SPEC h1 nel)) (EQF_ELIM heq)
              in SPEC l2 (SPEC l1 th1)
              end
         end
@@ -241,26 +241,26 @@ fun list_EQ_CONV cnv tm =
        val l2 = stripl rhs
    in
    if (l1=l2)
-   then EQT_INTRO(REFL (rand tm)) 
+   then EQT_INTRO(REFL (rand tm))
    else let val {Args=[ty],...} = dest_type(type_of(rand tm))
-            val n = length l1 
+            val n = length l1
             and m = length l2
-            val thms = map (INST_TYPE [{redex=alpha_ty,residue=ty}]) 
+            val thms = map (INST_TYPE [{redex=alpha_ty,residue=ty}])
                            [leq,lne,nel]
             val ifn = itfn cnv thms
         in
-        if (n<m) 
+        if (n<m)
         then let val (exd,(x::xs)) = split n l2
                  val rest = itlist (Cons ty) xs (Nil ty)
-                 val thm1 = SPEC rest 
+                 val thm1 = SPEC rest
                               (SPEC x (INST_TYPE [{redex=alpha_ty,residue=ty}]
                                                  cnil))
-             in EQF_INTRO(itlist ifn (combine(l1,exd))(NOT_EQ_SYM thm1)) 
+             in EQF_INTRO(itlist ifn (combine(l1,exd))(NOT_EQ_SYM thm1))
              end
-        else if (m<n) 
+        else if (m<n)
              then let val (exd,(x::xs)) = split m l1
                       val rest = itlist (Cons ty) xs (Nil ty)
-                     val thm1 = SPEC rest 
+                     val thm1 = SPEC rest
                                  (SPEC x(INST_TYPE[{residue=ty,redex=alpha_ty}]
 
                                                    cnil))
@@ -302,10 +302,10 @@ fun APPEND_CONV tm =
    let val (_,[l1,l2]) = (assert check##I) (strip_comb tm)
        val {els,ty} = dest_list l1
    in
-   if (null els) 
-   then ISPEC l2 th1 
+   if (null els)
+   then ISPEC l2 th1
    else let val cns = rator(rator l1)
-            val step = ISPEC l2 th4 
+            val step = ISPEC l2 th4
             and base = ISPEC l2 th1
         in
         itlist (itfn (cns,step)) els base
@@ -328,7 +328,7 @@ in
 fun MAP_CONV conv tm =
    let val (_,[fnn,l]) = (assert check##I) (strip_comb tm)
        val {els,ty} = dest_list l
-       val nth = ISPEC fnn mn 
+       val nth = ISPEC fnn mn
        and cth = ISPEC fnn mc
        val cns = rator(rator(rand(snd(strip_forall(concl cth)))))
        fun APcons t1 t2 = MK_COMB(AP_TERM cns t2,t1)
@@ -337,7 +337,7 @@ fun MAP_CONV conv tm =
               val th1 = SPEC t(SPEC e cth)
           in  TRANS th1 (APcons th (conv (mk_comb{Rator=fnn,Rand=e})))
           end
-   in  
+   in
    itlist itfn els nth
    end
    handle HOL_ERR _ => raise LIST_CONV_ERR{function="MAP_CONV",message=""}
@@ -387,7 +387,7 @@ fun butlast [x] = []
 fun last [x] = x
   | last (a::b) = last b
   | last _ = raise LIST_CONV_ERR{function = "last",message = "empty list"};
- 
+
 (* ------------------------------------------------------------------------- *)
 (* EQ_LENGTH_INDUCT_TAC : tactic                                             *)
 (*  A ?- !l1 l2. (LENGTH l1 = LENGTH l2) ==> t[l1, l2]                       *)
@@ -398,15 +398,15 @@ fun last [x] = x
 
 val EQ_LENGTH_INDUCT_TAC =
     let val SUC_NOT = arithmeticTheory.SUC_NOT
-	and NOT_SUC = numTheory.NOT_SUC 
-        and INV_SUC_EQ = prim_recTheory.INV_SUC_EQ 
+	and NOT_SUC = numTheory.NOT_SUC
+        and INV_SUC_EQ = prim_recTheory.INV_SUC_EQ
         and LENGTH = rich_listTheory.LENGTH
     in
 	LIST_INDUCT_TAC THENL[
          LIST_INDUCT_TAC THENL[
           REPEAT (CONV_TAC FORALL_IMP_CONV) THEN DISCH_THEN (K ALL_TAC),
           REWRITE_TAC[LENGTH,SUC_NOT]],
-         GEN_TAC THEN LIST_INDUCT_TAC 
+         GEN_TAC THEN LIST_INDUCT_TAC
           THEN REWRITE_TAC[LENGTH,NOT_SUC,INV_SUC_EQ]
           THEN GEN_TAC THEN REPEAT (CONV_TAC FORALL_IMP_CONV) THEN DISCH_TAC]
     end;
@@ -420,10 +420,10 @@ val EQ_LENGTH_INDUCT_TAC =
 (* ------------------------------------------------------------------------- *)
 
 val EQ_LENGTH_SNOC_INDUCT_TAC =
-    let val SUC_NOT = arithmeticTheory.SUC_NOT 
-        and NOT_SUC = numTheory.NOT_SUC 
-        and INV_SUC_EQ = prim_recTheory.INV_SUC_EQ 
-        and LENGTH = rich_listTheory.LENGTH 
+    let val SUC_NOT = arithmeticTheory.SUC_NOT
+        and NOT_SUC = numTheory.NOT_SUC
+        and INV_SUC_EQ = prim_recTheory.INV_SUC_EQ
+        and LENGTH = rich_listTheory.LENGTH
         and LENGTH_SNOC = rich_listTheory.LENGTH_SNOC
     in
     SNOC_INDUCT_TAC THENL[
@@ -466,18 +466,18 @@ val EQ_LENGTH_SNOC_INDUCT_TAC =
 val FOLDR_CONV  =
     let val (bthm,ithm) = CONJ_PAIR (rich_listTheory.FOLDR) in
   fn conv => fn tm =>
-    let val (_,[f,e,l]) = ((check_const"FOLDR")##I)(strip_comb tm) 
-	val ithm' = ISPECL[f,e] ithm 
-	val {els=els,ty=lty} =  (dest_list l) 
+    let val (_,[f,e,l]) = ((check_const"FOLDR")##I)(strip_comb tm)
+	val ithm' = ISPECL[f,e] ithm
+	val {els=els,ty=lty} =  (dest_list l)
 	fun itfn a th =
-	    let val [f',e',l'] = snd(strip_comb(lhs(concl th))) 
+	    let val [f',e',l'] = snd(strip_comb(lhs(concl th)))
 		val lem = SUBS [th](SPECL[a,l'] ithm')
 	    in
 		TRANS lem (conv (rhs (concl lem)))
 	    end
     in
 	(itlist itfn els (ISPECL [f,e] bthm))
-    end 
+    end
 	handle HOL_ERR {origin_structure = "List_conv",
 			origin_function = origin_function,
 			message = message}
@@ -511,8 +511,8 @@ val FOLDR_CONV  =
 val FOLDL_CONV  =
     let val (bthm,ithm) = CONJ_PAIR (rich_listTheory.FOLDL) in
   fn conv => fn tm =>
-    let val (_,[f,e,l]) = ((check_const "FOLDL")##I)(strip_comb tm) 
-	val ithm' = ISPEC f ithm 
+    let val (_,[f,e,l]) = ((check_const "FOLDL")##I)(strip_comb tm)
+	val ithm' = ISPEC f ithm
 	fun itfn (term) =
 	    let val (_,[f,e,l]) = strip_comb term
 	    in
@@ -526,16 +526,16 @@ val FOLDL_CONV  =
 			     else (ISPECL[f,e]bthm)
 			 end
 		else
-		    let val [h,t] = snd(strip_comb l) 
-			val th = ISPECL[e,h,t] ithm' 
+		    let val [h,t] = snd(strip_comb l)
+			val th = ISPECL[e,h,t] ithm'
 			val lem = CONV_RULE
 			    ((RAND_CONV o RATOR_CONV o RAND_CONV) conv) th
 		    in
-			(TRANS lem (itfn (rhs(concl lem)))) 
+			(TRANS lem (itfn (rhs(concl lem))))
 		    end
 	    end
     in
-	(itfn tm) 
+	(itfn tm)
     end
 	handle HOL_ERR {origin_structure = "List_conv",
 			origin_function = origin_function,
@@ -555,10 +555,10 @@ val FOLDL_CONV  =
 (* --------------------------------------------------------------------- *)
 val list_FOLD_CONV =
   fn foldthm => fn conv => fn tm =>
-   (let val (cname,args) = (strip_comb tm) 
-	val fthm = ISPECL args foldthm 
+   (let val (cname,args) = (strip_comb tm)
+	val fthm = ISPECL args foldthm
 	val {lhs=left,rhs=right} = dest_eq(concl fthm)
-	val const = fst(strip_comb left) 
+	val const = fst(strip_comb left)
 	val f = #Name(dest_const(fst(strip_comb right)))
     in
     if (not(cname = const))
@@ -591,19 +591,19 @@ val nv = --`n:num`--
 and mv = --`m:num`--
 and numty = ==`:num`==
 and plus = --`+`--
-val asym = SPECL [nv,mv] (arithmeticTheory.ADD_SYM) 
-val Sth = let val addc = arithmeticTheory.ADD_CLAUSES 
-              val (t1,t2) = CONJ_PAIR (CONJUNCT2(CONJUNCT2 addc)) 
+val asym = SPECL [nv,mv] (arithmeticTheory.ADD_SYM)
+val Sth = let val addc = arithmeticTheory.ADD_CLAUSES
+              val (t1,t2) = CONJ_PAIR (CONJUNCT2(CONJUNCT2 addc))
           in
           TRANS t1 (SYM t2)
           end
-val ladd0 = let val addc = arithmeticTheory.ADD_CLAUSES 
+val ladd0 = let val addc = arithmeticTheory.ADD_CLAUSES
             in
             GEN (--`n:num`--) (CONJUNCT1 addc)
             end
 val v1 = genvar (==`:num`==)
 and v2 = genvar (==`:num`==)
-fun tm_to_int tm = string_to_int(#Name(dest_const tm)) 
+fun tm_to_int tm = string_to_int(#Name(dest_const tm))
 and int_to_tm i  = mk_const{Name = int_to_string i, Ty = numty}
 val pl = --`$+`--
 val lra = mk_comb{Rator = pl, Rand = v1}
@@ -613,9 +613,9 @@ fun mk_pat (n,m) = mk_eq{lhs = mk_comb{Rator = lra, Rand = m},
 fun trans (c,mi) th =
    let val {Rator,Rand = m} = dest_comb(rand(concl th))
        val n = rand Rator
-       val nint = int_to_tm c 
+       val nint = int_to_tm c
        and mint = int_to_tm mi
-       val nth = SYM(num_CONV n) 
+       val nth = SYM(num_CONV n)
        and mth = SYM(num_CONV mint)
        val thm1 = INST [mv |-> nint, nv |-> m] Sth
    in
@@ -636,13 +636,13 @@ fun conv th (n,m) =
 
 fun ADD_CONV tm =
    let val (c,[n,m]) = (assert (fn c => (c = plus)) ## I) (strip_comb tm)
-       val nint = tm_to_int n 
-       and mint = tm_to_int m 
+       val nint = tm_to_int n
+       and mint = tm_to_int m
    in
    if not(mint < nint)
-   then conv (REFL tm) (nint,mint) 
+   then conv (REFL tm) (nint,mint)
    else let val th1 = conv(REFL(mk_comb{Rator=mk_comb{Rator=c,Rand=m},Rand=n}))
-                          (mint,nint) 
+                          (mint,nint)
         in
         TRANS (INST [nv |-> n, mv |-> m] asym) th1
         end
@@ -664,19 +664,19 @@ val FILTER_CONV =
     let val (bth,ith) = CONJ_PAIR (rich_listTheory.FILTER) in
   fn conv => fn tm =>
     (let val (_,[P,l]) =
-         ((check_const "FILTER") ## I) (strip_comb tm) 
-	 val bth' = ISPEC P bth and ith' = ISPEC P ith 
-	 val lis = #els(dest_list l) 
+         ((check_const "FILTER") ## I) (strip_comb tm)
+	 val bth' = ISPEC P bth and ith' = ISPEC P ith
+	 val lis = #els(dest_list l)
 	 fun ffn x th =
-	     let val {lhs=left,rhs=right} = dest_eq(concl th) 
-		 val (_,[p,ls]) = strip_comb left 
+	     let val {lhs=left,rhs=right} = dest_eq(concl th)
+		 val (_,[p,ls]) = strip_comb left
 		 val fthm = SPECL [x,ls] ith' and cthm = conv (--`^P ^x`--)
 	     in
 		 (CONV_RULE (RAND_CONV COND_CONV) (SUBS[cthm,th]fthm))
 	     end
      in
      (itlist ffn lis bth')
-     end) 
+     end)
         handle HOL_ERR {origin_structure = "List_conv",
 			origin_function = origin_function,
 			message = message}
@@ -693,11 +693,11 @@ val SNOC_CONV =
     let val (bthm,sthm) = CONJ_PAIR (rich_listTheory.SNOC) in
   fn tm =>
     (let val (_,[d,lst]) =
-        ((check_const "SNOC") ## I) (strip_comb tm) 
-	 val ty = type_of lst 
-	 val {els=lst',ty=ety} = (dest_list lst) 
+        ((check_const "SNOC") ## I) (strip_comb tm)
+	 val ty = type_of lst
+	 val {els=lst',ty=ety} = (dest_list lst)
 	 val EMP = (--`[]:^(ty_antiq ty)`--)
-	 and CONS = (--`CONS:^(ty_antiq ety) -> ^(ty_antiq ty) ->^(ty_antiq ty)`--) 
+	 and CONS = (--`CONS:^(ty_antiq ety) -> ^(ty_antiq ty) ->^(ty_antiq ty)`--)
 	 fun itfn x (lst,ithm) =
 	     (mk_comb{Rator=mk_comb{Rator=CONS,Rand=x},Rand=lst},
 	      (SUBS[ithm](ISPECL[d,x,lst]sthm)))
@@ -710,7 +710,7 @@ val SNOC_CONV =
 			=> (raise LIST_CONV_ERR{function="SNOC_CONV",
 			        message=(origin_function^": "^message)})
     end;
-    
+
 
 (*----------------------------------------------------------------*)
 (* REVERSE_CONV : conv                                            *)
@@ -722,7 +722,7 @@ val REVERSE_CONV =
 	val conv = ((RATOR_CONV BETA_CONV) THENC BETA_CONV)
     in
   fn tm =>
-    (let val (_,[lst]) = ((check_const "REVERSE") ## I) (strip_comb tm) 
+    (let val (_,[lst]) = ((check_const "REVERSE") ## I) (strip_comb tm)
 	 val fthm' = ISPEC lst fthm
      in
 	 TRANS fthm' (FOLDL_CONV conv (rhs(concl fthm')))
@@ -733,7 +733,7 @@ val REVERSE_CONV =
 			=> (raise LIST_CONV_ERR{function="REVERSE_CONV",
 			        message=(origin_function^": "^message)})
      end;
-					       
+
 (*----------------------------------------------------------------*)
 (* FLAT_CONV : conv                                               *)
 (*   FLAT_CONV (--`FLAT [[x00,...,x0n],...,[xm0,...xmn]]`--) ---> *)
@@ -744,15 +744,15 @@ val FLAT_CONV =
     let val lem = prove((--`APPEND = (\x1 x2:'a list. APPEND x1 x2)`--),
 			CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN BETA_TAC
 			THEN CONV_TAC FUN_EQ_CONV THEN GEN_TAC
-			THEN BETA_TAC THEN REFL_TAC) 
-	val ffthm = rich_listTheory.FLAT_FOLDR 
-	val afthm = rich_listTheory.APPEND_FOLDR 
-	val fthm = REWRITE_RULE[afthm](SUBS[lem] ffthm) 
+			THEN BETA_TAC THEN REFL_TAC)
+	val ffthm = rich_listTheory.FLAT_FOLDR
+	val afthm = rich_listTheory.APPEND_FOLDR
+	val fthm = REWRITE_RULE[afthm](SUBS[lem] ffthm)
 	val conv = (RAND_CONV (FOLDR_CONV ((RATOR_CONV BETA_CONV)
                         THENC BETA_CONV THENC (FOLDR_CONV ALL_CONV))))
     in
   fn tm =>
-    (let val (_,[lst]) = ((check_const "FLAT") ## I) (strip_comb tm) 
+    (let val (_,[lst]) = ((check_const "FLAT") ## I) (strip_comb tm)
 	 val fthm' = ISPEC lst fthm
      in
 	 CONV_RULE conv fthm'
@@ -763,7 +763,7 @@ val FLAT_CONV =
 			=> (raise LIST_CONV_ERR{function="FLAT_CONV",
 			        message=(origin_function^": "^message)})
     end;
-					       
+
 
 (*-----------------------------------------------------------------------*)
 (* EL_CONV : conv                                                        *)
@@ -774,7 +774,7 @@ val FLAT_CONV =
 (* iff 0 <= k <= n, otherwise failure occurs.                            *)
 (*-----------------------------------------------------------------------*)
 val EL_CONV =
-let val (bthm,ithm) = CONJ_PAIR (rich_listTheory.EL); 
+let val (bthm,ithm) = CONJ_PAIR (rich_listTheory.EL);
     val HD = rich_listTheory.HD;
     val TL = rich_listTheory.TL;
     fun dec n =
@@ -829,7 +829,7 @@ end;
 (*-----------------------------------------------------------------------*)
 val ELL_CONV =
     let val bthm = rich_listTheory.ELL_0_SNOC
-	and ithm = rich_listTheory.ELL_SUC_SNOC 
+	and ithm = rich_listTheory.ELL_SUC_SNOC
 	fun iter count (d,lst) elty =
 	    let val n = (ref count) and x = (ref d) and l = (ref lst)
 		val th = ref (ISPECL[(term_of_int (!n)), !x,
@@ -840,9 +840,9 @@ val ELL_CONV =
 		     x := (last (!l));
 		     l := butlast (!l);
 		     th := TRANS (RIGHT_CONV_RULE ((RATOR_CONV o RAND_CONV)
-						   num_CONV) (!th)) 
+						   num_CONV) (!th))
 		     (CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV)SNOC_CONV)
-		      (ISPECL[(term_of_int (!n)), (!x), 
+		      (ISPECL[(term_of_int (!n)), (!x),
                               mk_list{els=(!l),ty=elty}]ithm)))
 		    ;
 		    (x := last(!l); l := butlast(!l);
@@ -876,7 +876,7 @@ val ELL_CONV =
 			=> (raise LIST_CONV_ERR{function="ELL_CONV",
 			        message=(origin_function^": "^message)})
     end;
-    
+
 (* --------------------------------------------------------------------- *)
 (* MAP2_CONV conv (--`MAP2 f [x1,...,xn] [y1,...,yn]`--)                 *)
 (*                                                                       *)
@@ -886,15 +886,15 @@ val ELL_CONV =
 val MAP2_CONV =
     let val (mn,mc) = CONJ_PAIR(rich_listTheory.MAP2) in
   fn conv => fn tm =>
-     (let val (_,[fnc,l1,l2]) = ((check_const"MAP2") ## I) (strip_comb tm) 
+     (let val (_,[fnc,l1,l2]) = ((check_const"MAP2") ## I) (strip_comb tm)
 	  val {els=el1s,ty=ty1} = dest_list l1
-	  and {els=el2s,ty=ty2} = dest_list l2 
-	  val els = combine (el1s,el2s) 
-	  val nth = ISPEC fnc mn and cth = ISPEC fnc mc 
-	  val cns = rator(rator(rand(snd(strip_forall(concl cth))))) 
+	  and {els=el2s,ty=ty2} = dest_list l2
+	  val els = combine (el1s,el2s)
+	  val nth = ISPEC fnc mn and cth = ISPEC fnc mc
+	  val cns = rator(rator(rand(snd(strip_forall(concl cth)))))
 	  fun itfn (e1,e2) th =
             let val (_,[f,t1,t2]) = strip_comb(lhs(concl th))
-	        val th1 = SPECL [e1, t1, e2, t2] cth 
+	        val th1 = SPECL [e1, t1, e2, t2] cth
                 val r = conv(mk_comb{Rator=mk_comb{Rator=fnc,Rand=e1},Rand=e2})
             in
 		  (SUBS[r,th]th1)
@@ -918,24 +918,24 @@ val MAP2_CONV =
 (* --------------------------------------------------------------------- *)
 fun thm_eq th1 th2 = (Thm.dest_thm th1 = Thm.dest_thm th2);
 val ALL_EL_CONV =
-    let val (bth,ith) = CONJ_PAIR (rich_listTheory.ALL_EL) 
+    let val (bth,ith) = CONJ_PAIR (rich_listTheory.ALL_EL)
 	val AND_THM = op_mk_set thm_eq (flatten(map (CONJ_LIST 5)
             [(SPEC (--`T`--) AND_CLAUSES),(SPEC (--`F`--) AND_CLAUSES)]))
     in
   fn conv => fn tm =>
-    (let val (_,[P,l]) = ((check_const"ALL_EL") ## I)(strip_comb tm) 
+    (let val (_,[P,l]) = ((check_const"ALL_EL") ## I)(strip_comb tm)
 	 val bth' = ISPEC P bth and ith' = ISPEC P ith
-	 val lis = #els(dest_list l) 
+	 val lis = #els(dest_list l)
 	 fun ffn x th =
-	     let val {lhs=left,rhs=right} = dest_eq(concl th) 
-		 val (_,[p,ls]) = strip_comb left 
+	     let val {lhs=left,rhs=right} = dest_eq(concl th)
+		 val (_,[p,ls]) = strip_comb left
 		 val fthm = SPECL [x,ls] ith'
 		 and cthm = conv (mk_comb{Rator=P,Rand=x})
 	     in
 		 SUBS AND_THM (SUBS[cthm,th]fthm)
 	     end
      in
-	 (itlist ffn lis bth') 
+	 (itlist ffn lis bth')
      end)
 	 handle HOL_ERR {origin_structure = "List_conv",
 			 origin_function = origin_function,
@@ -957,12 +957,12 @@ val SOME_EL_CONV =
 	    [(SPEC (--`T`--) OR_CLAUSES),(SPEC (--`F`--) OR_CLAUSES)]))
     in
   fn conv => fn tm =>
-    (let val (_,[P,l]) = ((check_const"SOME_EL") ## I)(strip_comb tm) 
-	 val bth' = ISPEC P bth and ith' = ISPEC P ith 
-	 val lis = #els(dest_list l) 
+    (let val (_,[P,l]) = ((check_const"SOME_EL") ## I)(strip_comb tm)
+	 val bth' = ISPEC P bth and ith' = ISPEC P ith
+	 val lis = #els(dest_list l)
 	 fun ffn x th =
-	     let val {lhs=left,rhs=right} = dest_eq(concl th) 
-		 val (_,[p,ls]) = strip_comb left 
+	     let val {lhs=left,rhs=right} = dest_eq(concl th)
+		 val (_,[p,ls]) = strip_comb left
 		 val fthm = SPECL [x,ls] ith' and cthm = conv (--`^P ^x`--)
 	     in
 		 SUBS OR_THM (SUBS[cthm,th]fthm)
@@ -987,8 +987,8 @@ val SOME_EL_CONV =
 val IS_EL_CONV =
     let val bth = (rich_listTheory.IS_EL_DEF) in
   fn conv => fn tm =>
-    (let val (_,[x,l]) = ((check_const"IS_EL") ## I)(strip_comb tm) 
-	 val bth' = ISPECL[x,l] bth 
+    (let val (_,[x,l]) = ((check_const"IS_EL") ## I)(strip_comb tm)
+	 val bth' = ISPECL[x,l] bth
 	 val right = rhs (concl bth')
      in
 	 TRANS bth' (SOME_EL_CONV conv right)
@@ -1007,7 +1007,7 @@ val IS_EL_CONV =
 val LAST_CONV =
     let val bth = rich_listTheory.LAST in
   fn tm =>
-    (let val (_,[l]) = ((check_const"LAST") ## I) (strip_comb tm) 
+    (let val (_,[l]) = ((check_const"LAST") ## I) (strip_comb tm)
 	 val {els=l',ty=lty} = dest_list l
      in
 	 if ((length l') = 0) then raise (LIST_CONV_ERR{function="LAST_CONV",
@@ -1025,7 +1025,7 @@ val LAST_CONV =
 			=> (raise LIST_CONV_ERR{function="LAST_CONV",
 			        message=(origin_function^": "^message)})
     end;
-    
+
 (* --------------------------------------------------------------------- *)
 (* BUTLAST_CONV : conv                                                   *)
 (* BUTLAST_CONV (--`BUTLAST [x0,...,xn-1,xn]`--) --->                    *)
@@ -1037,10 +1037,10 @@ val BUTLAST_CONV =
     (let val (_,[l]) = ((check_const"BUTLAST") ## I) (strip_comb tm)
 	 val {els=l',ty=lty} = dest_list l
      in
-      if ((length l') = 0) 
+      if ((length l') = 0)
       then raise LIST_CONV_ERR{function="BUTLAST_CONV",message="empty list"}
       else
-	  (let val x = last l' and lis = mk_list{els=(butlast l'),ty=lty} 
+	  (let val x = last l' and lis = mk_list{els=(butlast l'),ty=lty}
 	       val bth' = ISPECL[x,lis] bth
 	  in
 	    CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV)SNOC_CONV) bth'
@@ -1052,7 +1052,7 @@ val BUTLAST_CONV =
 			=> (raise LIST_CONV_ERR{function="BUTLAST_CONV",
 			        message=(origin_function^": "^message)})
     end;
-    
+
 (*----------------------------------------------------------------*)
 (* This is not needed, but might be when this is placed into      *)
 (* the core system, if it is not defined yet ...                  *)
@@ -1074,7 +1074,7 @@ val SUC_CONV =
 (* |- SEG m k [x0,...,xk,...,xm+k,...xn] = [xk,...xm+k-1]        *)
 (*---------------------------------------------------------------*)
 val SEG_CONV =
-    let val [bthm,mthm,kthm] = CONJ_LIST 3 (rich_listTheory.SEG) 
+    let val [bthm,mthm,kthm] = CONJ_LIST 3 (rich_listTheory.SEG)
 	val SUC = (--`SUC`--)
 	fun mifn mthm' x th =
 	    let val [M',_,L] = snd(strip_comb(lhs(concl th))) in
@@ -1086,7 +1086,7 @@ val SEG_CONV =
 	    end
     in
   fn tm =>
-   (let val (_,[M,K,L]) = ((check_const"SEG")## I)(strip_comb tm) 
+   (let val (_,[M,K,L]) = ((check_const"SEG")## I)(strip_comb tm)
 	val {els=lis,ty=lty} = dest_list L
 	val m = int_of_term M and k = int_of_term K
     in
@@ -1094,12 +1094,12 @@ val SEG_CONV =
     then raise (LIST_CONV_ERR{function="SEG_CONV",
 			      message=("indexes too large: "^(int_to_string m)^
 				       " and "^(int_to_string k))})
-    else if (m = 0) 
+    else if (m = 0)
          then (ISPECL [K,L] bthm)
-	 else let val mthm' = INST_TYPE [{residue=lty,redex=(==`:'a`==)}] mthm 
+	 else let val mthm' = INST_TYPE [{residue=lty,redex=(==`:'a`==)}] mthm
                in
                if (k = 0) then
-                 let val (ls,lt) = Lib.split_after m lis 
+                 let val (ls,lt) = Lib.split_after m lis
                      val bthm' = ISPECL[(--`0`--),mk_list{els=lt,ty=lty}] bthm
                  in
                    (itlist (mifn mthm') ls bthm')
@@ -1107,10 +1107,10 @@ val SEG_CONV =
                else
                let val (lk,(ls,lt)) = (I##Lib.split_after m)
                                       (Lib.split_after k lis)
-                   val bthm' = ISPECL[(--`0`--),(mk_list{els=lt,ty=lty})] bthm 
+                   val bthm' = ISPECL[(--`0`--),(mk_list{els=lt,ty=lty})] bthm
                    val kthm' = SUBS[SYM(num_CONV M)]
                                 (INST_TYPE[{residue=lty,redex=(==`:'a`==)}]
-                                          (SPEC (term_of_int(m-1)) kthm)) 
+                                          (SPEC (term_of_int(m-1)) kthm))
 	           val bbthm = itlist (mifn mthm') ls bthm'
                in
                  (itlist (kifn kthm') lk bbthm)
@@ -1132,18 +1132,18 @@ val SEG_CONV =
 (*-----------------------------------------------------------------------*)
 val LASTN_CONV =
     let val LASTN_LENGTH_APPEND = rich_listTheory.LASTN_LENGTH_APPEND
-	and bthm = CONJUNCT1 (rich_listTheory.LASTN) 
-        and ithm = (rich_listTheory.LASTN_LENGTH_ID) 
+	and bthm = CONJUNCT1 (rich_listTheory.LASTN)
+        and ithm = (rich_listTheory.LASTN_LENGTH_ID)
 	fun len_conv ty lst =
 	    LENGTH_CONV(mk_comb{Rator=(--`LENGTH:(^(ty_antiq ty))list -> num`--),Rand=lst})
     in
   fn tm =>
-    (let val (_,[N,lst]) = ((check_const"LASTN") ## I) (strip_comb tm) 
+    (let val (_,[N,lst]) = ((check_const"LASTN") ## I) (strip_comb tm)
 	 val n = int_of_term N
      in
 	 if (n = 0) then (ISPEC lst bthm)
 	 else
-	     (let val {els=bits,ty=lty} = (dest_list lst) 
+	     (let val {els=bits,ty=lty} = (dest_list lst)
 		  val len = (length bits)
 	      in
 		  if (n > len)
@@ -1152,12 +1152,12 @@ val LASTN_CONV =
 	     else if (n = len) then
 		 (SUBS[(len_conv lty lst)](ISPEC lst ithm))
 	     else
-		 (let val (l1,l2) = (Lib.split_after (len - n) bits) 
+		 (let val (l1,l2) = (Lib.split_after (len - n) bits)
 		      val l1' = mk_list{els=l1,ty=lty}
-		      and l2' = mk_list{els=l2,ty=lty} 
+		      and l2' = mk_list{els=l2,ty=lty}
 		      val APP = (--`APPEND:(^(ty_antiq lty))list -> (^(ty_antiq lty))list -> (^(ty_antiq lty))list`--)
-		      val thm2 = len_conv lty l2' 
-		      val thm3 = APPEND_CONV 
+		      val thm2 = len_conv lty l2'
+		      val thm3 = APPEND_CONV
                                  (mk_comb{Rator=mk_comb{Rator=APP,Rand=l1'},
                                           Rand=l2'})
 		  in
@@ -1171,7 +1171,7 @@ val LASTN_CONV =
 			=> (raise LIST_CONV_ERR{function="SEG_CONV",
 			       message=(origin_function^": "^message)})
     end;
-    
+
 (*-----------------------------------------------------------------------*)
 (* BUTLASTN_CONV : conv                                                  *)
 (* It takes a term  (--`BUTLASTN k [x0,x1,...,x(n-k),...,x(n-1)]`--)     *)
@@ -1179,19 +1179,19 @@ val LASTN_CONV =
 (* |- BUTLASTN k  [x0, x1, ..., x(n-k),...,x(n-1)] = [x0, ..., x(n-k-1)] *)
 (*-----------------------------------------------------------------------*)
 val BUTLASTN_CONV =
-    let val bthm = CONJUNCT1 (rich_listTheory.BUTLASTN) 
-	val lthm = (rich_listTheory.BUTLASTN_LENGTH_NIL) 
-	val athm = (rich_listTheory.BUTLASTN_LENGTH_APPEND) 
+    let val bthm = CONJUNCT1 (rich_listTheory.BUTLASTN)
+	val lthm = (rich_listTheory.BUTLASTN_LENGTH_NIL)
+	val athm = (rich_listTheory.BUTLASTN_LENGTH_APPEND)
 	fun len_conv ty lst = LENGTH_CONV
            (mk_comb{Rator=(--`LENGTH:(^(ty_antiq ty))list -> num`--),Rand=lst})
     in
   fn tm =>
-    (let val (_,[N,lst]) = ((check_const"BUTLASTN") ## I) (strip_comb tm) 
+    (let val (_,[N,lst]) = ((check_const"BUTLASTN") ## I) (strip_comb tm)
 	 val n = int_of_term N
      in
 	 if (n = 0) then (ISPEC lst bthm)
      else
-      (let val {els=bits,ty=lty} = (dest_list lst) 
+      (let val {els=bits,ty=lty} = (dest_list lst)
 	   val len = (length bits)
        in
 	   if (n > len) then
@@ -1202,14 +1202,14 @@ val BUTLASTN_CONV =
 		   (SUBS[thm1](ISPEC lst lthm))
 	       end
 		else
-		    (let val (l1,l2) = (Lib.split_after (len - n) bits) 
+		    (let val (l1,l2) = (Lib.split_after (len - n) bits)
 			 val l1' = mk_list{els=l1,ty=lty}
 			 and l2' = mk_list{els=l2,ty=lty }
 			 val APP =
 			     (--`APPEND:(^(ty_antiq lty))list
 			                -> (^(ty_antiq lty))list
-			                 -> (^(ty_antiq lty))list`--) 
-			 val thm2 = len_conv lty l2' 
+			                 -> (^(ty_antiq lty))list`--)
+			 val thm2 = len_conv lty l2'
 			 val thm3 = APPEND_CONV
 			     (mk_comb{Rator=mk_comb{Rator=APP, Rand=l1'},
                                       Rand=l2'})
@@ -1224,7 +1224,7 @@ val BUTLASTN_CONV =
 			=> (raise LIST_CONV_ERR{function="BUTLASTN_CONV",
 				      message=(origin_function^": "^message)})
     end;
-    
+
 
 (*-----------------------------------------------------------------------*)
 (* BUTFIRSTN_CONV : conv                                                 *)
@@ -1232,8 +1232,8 @@ val BUTLASTN_CONV =
 (* |- BUTFIRSTN k [x0,...,xk,...,xn] = [xk,...,xn]                       *)
 (*-----------------------------------------------------------------------*)
 val BUTFIRSTN_CONV =
-    let val (bthm,ithm) = CONJ_PAIR (rich_listTheory.BUTFIRSTN) 
-	val SUC = (--`SUC`--) 
+    let val (bthm,ithm) = CONJ_PAIR (rich_listTheory.BUTFIRSTN)
+	val SUC = (--`SUC`--)
 	fun itfn ithm' x th =
 	    let val (_,[N',L']) = strip_comb(lhs(concl th)) in
 		SUBS[(SUC_CONV(mk_comb{Rator=SUC,Rand=N'})),th]
@@ -1241,15 +1241,15 @@ val BUTFIRSTN_CONV =
 	    end
     in
   fn tm =>
-   (let val (_,[K,L]) = ((check_const"BUTFIRSTN")## I)(strip_comb tm) 
+   (let val (_,[K,L]) = ((check_const"BUTFIRSTN")## I)(strip_comb tm)
 	val k = int_of_term K and {els=lis,ty=lty} = dest_list L  in
 	    if (k > (length lis))
 		then raise (LIST_CONV_ERR{function="BUTFIRSTN_CONV",
 			  message=("index too large: "^(int_to_string k))})
 	    else if (k = 0) then (ISPEC L bthm)
 		 else
-		  let val (ll,lr) = Lib.split_after k lis 
-		      val bthm' = ISPEC (mk_list{els=lr,ty=lty}) bthm 
+		  let val (ll,lr) = Lib.split_after k lis
+		      val bthm' = ISPEC (mk_list{els=lr,ty=lty}) bthm
 		     val ithm' = INST_TYPE[{residue=lty,redex=(==`:'a`==)}]ithm
 		  in
 			 itlist (itfn ithm') ll bthm'
@@ -1261,7 +1261,7 @@ val BUTFIRSTN_CONV =
 			=> (raise LIST_CONV_ERR{function="BUTFIRSTN_CONV",
 			        message=(origin_function^": "^message)})
     end;
-    
+
 
 (*-----------------------------------------------------------------------*)
 (* FIRSTN_CONV : conv                                                    *)
@@ -1269,8 +1269,8 @@ val BUTFIRSTN_CONV =
 (* |- FIRSTN k [x0,...,xk,...,xn] = [x0,...,xk]                          *)
 (*-----------------------------------------------------------------------*)
 val FIRSTN_CONV =
-    let val (bthm,ithm) = CONJ_PAIR (rich_listTheory.FIRSTN) 
-	val SUC = (--`SUC`--) 
+    let val (bthm,ithm) = CONJ_PAIR (rich_listTheory.FIRSTN)
+	val SUC = (--`SUC`--)
 	fun itfn ithm' x th =
 	    let val (_,[N',L']) = strip_comb(lhs(concl th)) in
 		SUBS[(SUC_CONV(mk_comb{Rator=SUC,Rand=N'})),th]
@@ -1278,15 +1278,15 @@ val FIRSTN_CONV =
 	    end
     in
   fn tm =>
-   (let val (_,[K,L]) = ((check_const"FIRSTN")## I)(strip_comb tm) 
+   (let val (_,[K,L]) = ((check_const"FIRSTN")## I)(strip_comb tm)
 	val k = int_of_term K and {els=lis,ty=lty} = dest_list L
     in
 	if (k > (length lis)) then raise LIST_CONV_ERR{function="FIRSTN_CONV",
 		       message=("index too large: "^(int_to_string k))}
     else if (k = 0) then (ISPEC L bthm)
     else
-        let val (ll,lr) = Lib.split_after k lis 
-	    val bthm' = ISPEC (mk_list{els=lr,ty=lty}) bthm 
+        let val (ll,lr) = Lib.split_after k lis
+	    val bthm' = ISPEC (mk_list{els=lr,ty=lty}) bthm
 	    val ithm' = INST_TYPE[{residue=lty,redex=(==`:'a`==)}]ithm
 	in
 	    itlist (itfn ithm') ll bthm'
@@ -1298,7 +1298,7 @@ val FIRSTN_CONV =
 			=> (raise LIST_CONV_ERR{function="FIRSTN_CONV",
 			        message=(origin_function^": "^message)})
     end;
-		  
+
 (*-----------------------------------------------------------------------*)
 (* SCANL_CONV : conv -> conv                                             *)
 (* SCANL_CONV conv (--`SCANL f e [x0,...,xn]`--) --->                    *)
@@ -1308,18 +1308,18 @@ val FIRSTN_CONV =
 val SCANL_CONV =
     let val (bthm,ithm) = CONJ_PAIR (rich_listTheory.SCANL) in
   fn conv => fn tm =>
-   (let val (_,[f,e,l]) = ((check_const"SCANL")##I)(strip_comb tm) 
-	val bthm' = ISPEC f bthm and ithm' = ISPEC f ithm 
+   (let val (_,[f,e,l]) = ((check_const"SCANL")##I)(strip_comb tm)
+	val bthm' = ISPEC f bthm and ithm' = ISPEC f ithm
 	fun scan_conv  tm' =
 	    let val ([_,E,L]) = snd(strip_comb tm')
 	    in
 		if (is_const L) then (SPEC E bthm')
 		else
-		    let val ([x,l]) = snd(strip_comb L) 
+		    let val ([x,l]) = snd(strip_comb L)
 			val th1 = conv (mk_comb{Rator=mk_comb{Rator=f,Rand=E},
-                                                Rand=x}) 
-			val th2 = SUBS[th1](SPECL[E,x,l] ithm') 
-			val th3 = scan_conv 
+                                                Rand=x})
+			val th2 = SUBS[th1](SPECL[E,x,l] ithm')
+			val th3 = scan_conv
                                    (last(snd(strip_comb(rhs(concl th2)))))
 		    in
 			SUBS[th3]th2
@@ -1334,7 +1334,7 @@ val SCANL_CONV =
 			=> (raise LIST_CONV_ERR{function="SCANL_CONV",
 			        message=(origin_function^": "^message)})
     end;
-    
+
 (*-----------------------------------------------------------------------*)
 (* SCANR_CONV : conv -> conv                                             *)
 (* SCANR_CONV conv (--`SCANR f e [x0,...,xn]`--) --->                    *)
@@ -1342,21 +1342,21 @@ val SCANL_CONV =
 (* where conv (--`f xi ei`--) ---> |- f xi ei = ti                       *)
 (*-----------------------------------------------------------------------*)
 val SCANR_CONV =
-    let val (bthm,ithm) = CONJ_PAIR (rich_listTheory.SCANR) 
+    let val (bthm,ithm) = CONJ_PAIR (rich_listTheory.SCANR)
 	val HD = rich_listTheory.HD in
   fn conv => fn tm =>
-   (let val (_,[f,e,l]) = ((check_const"SCANR")##I)(strip_comb tm) 
-	val bthm' = ISPEC f bthm and ithm' = ISPEC f ithm 
+   (let val (_,[f,e,l]) = ((check_const"SCANR")##I)(strip_comb tm)
+	val bthm' = ISPEC f bthm and ithm' = ISPEC f ithm
 	fun scan_conv  tm' =
 	    let val ([_,E,L]) = snd(strip_comb tm')
 	    in
 		if (is_const L) then (SPEC E bthm')
 		else
-		    let val ([x,l]) = snd(strip_comb L) 
-			val th2 = (SPECL[E,x,l] ithm') 
-			val th3 = scan_conv 
-                                    (last(snd(strip_comb(rhs(concl th2))))) 
-			val th4 = PURE_ONCE_REWRITE_RULE[HD](SUBS[th3]th2) 
+		    let val ([x,l]) = snd(strip_comb L)
+			val th2 = (SPECL[E,x,l] ithm')
+			val th3 = scan_conv
+                                    (last(snd(strip_comb(rhs(concl th2)))))
+			val th4 = PURE_ONCE_REWRITE_RULE[HD](SUBS[th3]th2)
 			val th5 = conv (hd(snd(strip_comb(rhs(concl th4)))))
 		    in
 			SUBS[th5]th4
@@ -1378,7 +1378,7 @@ val SCANR_CONV =
 (*-----------------------------------------------------------------------*)
 val REPLICATE_CONV  =
     let val (bthm,ithm) = CONJ_PAIR (rich_listTheory.REPLICATE)
-	fun dec n = term_of_int((int_of_term n) - 1) 
+	fun dec n = term_of_int((int_of_term n) - 1)
 	fun repconv (bthm', ithm') tm =
 	    let val [n,_] = snd(strip_comb tm) in
 		if ((int_of_term n) = 0) then bthm'
@@ -1392,7 +1392,7 @@ val REPLICATE_CONV  =
 	    end
     in
   fn tm =>
-   (let val (_,[n,x]) = ((check_const"REPLICATE")##I)(strip_comb tm) 
+   (let val (_,[n,x]) = ((check_const"REPLICATE")##I)(strip_comb tm)
 	val bthm' = ISPEC x bthm
         val nv = mk_var{Name="n",Ty=(==`:num`==)}
 	val ithm' = GEN nv (ISPECL[nv,x] ithm)
@@ -1412,13 +1412,13 @@ val REPLICATE_CONV  =
 (*                         |- GENLIST f n = [f 0,f 1, ...,f(n-1)]        *)
 (*-----------------------------------------------------------------------*)
 val GENLIST_CONV =
-    let val (bthm,ithm) = CONJ_PAIR (rich_listTheory.GENLIST) 
-	fun dec n = term_of_int((int_of_term n) - 1) 
+    let val (bthm,ithm) = CONJ_PAIR (rich_listTheory.GENLIST)
+	fun dec n = term_of_int((int_of_term n) - 1)
 	fun genconv (bthm,ithm) conv tm =
 	    let val n = last(snd(strip_comb tm))
 	    in
 	if ((int_of_term n) = 0) then CONV_RULE(ONCE_DEPTH_CONV conv) bthm
-	else (let val th1 = SUBS[SYM (num_CONV n)](SPEC (dec n) ithm) 
+	else (let val th1 = SUBS[SYM (num_CONV n)](SPEC (dec n) ithm)
 		  val th2 = RIGHT_CONV_RULE ((RATOR_CONV o RAND_CONV) conv) th1
               in
 		RIGHT_CONV_RULE (RAND_CONV (genconv (bthm,ithm) conv)) th2
@@ -1438,7 +1438,7 @@ val GENLIST_CONV =
 			=> (raise LIST_CONV_ERR{function="GENLIST_CONV",
 			        message=(origin_function^": "^message)})
     end;
-    
+
 
 (* PC 11/7/94 *)
 

@@ -35,7 +35,7 @@ val INDUCTION = numTheory.INDUCTION;
 local val bool_ty = ==`:bool`==
       val v1 = genvar bool_ty
       and v2 = genvar bool_ty
-      and zero = --`0`--
+      and zero = --`ZERO`--
       and SUC = --`SUC`--
 in
 fun INDUCT (base,step) =

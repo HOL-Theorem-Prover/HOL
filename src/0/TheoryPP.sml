@@ -6,13 +6,12 @@ structure TheoryPP :> TheoryPP =
 struct
 
 type hol_type = Type.hol_type
-type fixity   = Term.fixity
 type thm      = Thm.thm;
 
 open Exception Lib;
 open Portable_PrettyPrint;
 
-fun PP_THEORY_ERR f m = 
+fun PP_THEORY_ERR f m =
        HOL_ERR{origin_structure = "TheoryPP",
                origin_function = f, message = m};
 
@@ -37,10 +36,48 @@ fun thm_terms th = Thm.concl th :: Thm.hyp th;
 fun Thry s = s^"Theory";
 fun ThrySig s = Thry s
 
+type thm_printer = ppstream -> thm -> unit
+type type_printer = ppstream -> hol_type -> unit
+type HOLprinters = {pp_thm : thm_printer, pp_type : type_printer}
 
-fun pp_theory_sig ppstrm {name,parents,axioms,definitions,theorems,sig_ps} =
- let val {add_string,add_break,begin_block,end_block,
-          add_newline,flush_ppstream,...} = 
+fun print_type_to_SML pps ty = let
+  open Portable_PrettyPrint Type
+in
+  if (is_vartype ty) then
+    add_string pps ("U"^quote (dest_vartype ty))
+  else let
+    val {Tyop, Args} = dest_type ty
+  in
+    add_string pps "T";
+    begin_block pps CONSISTENT 0;
+    add_string pps (quote Tyop);
+    add_break pps (1,0);
+    add_string pps "[";
+    begin_block pps CONSISTENT 0;
+    pr_list (print_type_to_SML pps) (fn () => add_string pps ",")
+    (fn () => add_break pps (1,0)) Args;
+    end_block pps;
+    add_string pps "]";
+    end_block pps
+  end
+end
+
+fun with_parens pfn pp x = let
+  open Portable_PrettyPrint
+in
+  add_string pp "("; pfn pp x; add_string pp ")"
+end
+
+
+
+fun pp_theory_sig thm_printer ppstrm info_record = let
+  val {name,parents,axioms,definitions,theorems,sig_ps} = info_record
+  val pp_thm =
+    case thm_printer of
+      SOME ppfn => ppfn ppstrm
+    | NONE => (fn thm => add_string ppstrm "No theorem printer installed")
+  val {add_string,add_break,begin_block,end_block,
+          add_newline,flush_ppstream,...} =
                  Portable_PrettyPrint.with_ppstream ppstrm
      val parents' = sort parents
      val axioms' = psort axioms
@@ -62,40 +99,40 @@ fun pp_theory_sig ppstrm {name,parents,axioms,definitions,theorems,sig_ps} =
      fun pr_parents [] = ()
        | pr_parents slist =
              ( begin_block CONSISTENT 0;
-               pr_list pr_parent (fn () => ()) 
+               pr_list pr_parent (fn () => ())
                                  (fn () => (add_newline(); add_newline()))
                           slist;
                end_block();
                add_newline(); add_newline())
 
-     fun pr_thm class (s,th) = 
+     fun pr_thm class (s,th) =
           (begin_block CONSISTENT 0;
            add_string (String.concat ["[", s, "]"]);
            add_break(2,0);
            add_string class;
            add_break(2,0);
            Lib.with_flag(Globals.show_tags,true)
-            (Lib.with_flag(Globals.show_assums, true)
-               (Thm.pp_thm ppstrm)) th; end_block())
+            (Lib.with_flag(Globals.show_assums, true) pp_thm) th;
+           end_block())
      fun pr_thms _ [] = ()
-       | pr_thms heading plist = 
+       | pr_thms heading plist =
              ( begin_block CONSISTENT 0;
                pr_list (pr_thm heading)
-                          (fn () => ()) 
+                          (fn () => ())
                           (fn () => (add_newline(); add_newline()))
                           plist;
                end_block();
                add_newline(); add_newline())
     fun pr_sig_ps NONE = ()  (* won't be fired because of filtering below *)
-      | pr_sig_ps (SOME pp) = 
+      | pr_sig_ps (SOME pp) =
            (begin_block CONSISTENT 0; pp ppstrm; end_block());
 
     fun pr_sig_psl [] = ()
       | pr_sig_psl l =
           (add_newline(); add_newline();
-            begin_block CONSISTENT 0; 
-            pr_list pr_sig_ps (fn () => ()) 
-                    (fn () => (add_newline(); add_newline())) l; 
+            begin_block CONSISTENT 0;
+            pr_list pr_sig_ps (fn () => ())
+                    (fn () => (add_newline(); add_newline())) l;
             end_block());
 
     fun pr_docs() =
@@ -104,9 +141,9 @@ fun pp_theory_sig ppstrm {name,parents,axioms,definitions,theorems,sig_ps} =
             pr_parents parents';
             pr_thms "Axiom" axioms';
             pr_thms "Definition" definitions';
-            pr_thms "Theorem" theorems'; 
+            pr_thms "Theorem" theorems';
          end_block(); add_newline(); add_string "*)"; add_newline())
-     fun pthms (heading, ths) = vblock(heading, 
+     fun pthms (heading, ths) = vblock(heading,
           (fn (s,th) => (begin_block CONSISTENT 0;
                            add_string(concat["val ",s, " : thm"]);
                          end_block())),  ths)
@@ -117,17 +154,17 @@ fun pp_theory_sig ppstrm {name,parents,axioms,definitions,theorems,sig_ps} =
       if (name="min") then ()
       else
       (begin_block CONSISTENT 0;
-       add_string"type thm = Thm.thm"; 
-       if null axioms' then () 
+       add_string"type thm = Thm.thm";
+       if null axioms' then ()
        else (add_newline(); add_newline(); pthms ("Axioms",axioms'));
-       if null definitions' then () 
+       if null definitions' then ()
        else (add_newline(); add_newline(); pthms("Definitions", definitions'));
-       if null theorems' then () 
+       if null theorems' then ()
        else (add_newline(); add_newline(); pthms ("Theorems", theorems'));
        pr_sig_psl (filter (fn NONE => false | _ => true) sig_ps);
        end_block();
        end_block();
-       add_newline(); 
+       add_newline();
        pr_docs());  (* end of if-then-else *)
        add_string"end"; add_newline();
       end_block();
@@ -152,28 +189,28 @@ fun hash_type ty n = hash(Type.dest_vartype ty) (0,n)
               in itlist hash_type Args (hash Tyop (0,n))  end;
 
 
-fun dest_atom tm = 
+fun dest_atom tm =
   (Term.dest_var tm handle HOL_ERR _ => Term.dest_const tm)
   handle HOL_ERR _ => raise PP_THEORY_ERR"dest_atom" "not an atom";
 
-fun hash_atom tm n = 
+fun hash_atom tm n =
     let val {Name,Ty} = dest_atom tm
     in hash_type Ty (hash Name (0,n))
     end;
 
 
 (*---------------------------------------------------------------------------
- * Add an atom to the atom hash table, checking to see if it is already there 
- * first. 
+ * Add an atom to the atom hash table, checking to see if it is already there
+ * first.
  *---------------------------------------------------------------------------*)
-fun add tm = 
+fun add tm =
   let val i = hash_atom tm 0
       val els = Array.sub(share_table, i)
-      fun loop [] = 
+      fun loop [] =
                (Array.update(share_table, i, (tm,!taken)::els);
                 taken := !taken + 1)
         | loop ((x,index)::rst) = if (x=tm) then () else loop rst
-  in 
+  in
     loop els
   end;
 
@@ -181,13 +218,13 @@ fun add tm =
 (*---------------------------------------------------------------------------
  * Get the vector index of an atom.
  *---------------------------------------------------------------------------*)
-  
-fun index tm = 
+
+fun index tm =
   let val i = hash_atom tm 0
       val els = Array.sub(share_table, i)
       fun loop [] = raise PP_THEORY_ERR"index" "not found in table"
         | loop ((x,index)::rst) = if (x=tm) then index else loop rst
-  in 
+  in
     loop els
   end;
 
@@ -198,12 +235,12 @@ local val output = Portable.output
       val std_out = Portable.std_out
       val flush_out = Portable.flush_out
 in
-fun check V thml = 
+fun check V thml =
   let val _ = Lib.mesg true "Checking consistency of sharing scheme"
-      fun chk tm = 
-         if (Vector.sub(V, index tm) = tm) 
+      fun chk tm =
+         if (Vector.sub(V, index tm) = tm)
           then ()
-           else (Lib.mesg true "FAILURE in sharing scheme!"; 
+           else (Lib.mesg true "FAILURE in sharing scheme!";
                  raise PP_THEORY_ERR"check" "failure in sharing scheme")
   in Portable_List.app (app (trav chk) o thm_terms o snd) thml;
      Lib.mesg true "Completed successfully"
@@ -224,20 +261,20 @@ fun share_thy check_share thms =
 
 (*---------------------------------------------------------------------------
  * One needs to replace a backslash by two backslashes because one of them
- * disappears when sent through "output". (Occurrences of " inside a string 
- * have a similar problem.) One also needs to add string quotes at each end 
+ * disappears when sent through "output". (Occurrences of " inside a string
+ * have a similar problem.) One also needs to add string quotes at each end
  * of the string.
  *---------------------------------------------------------------------------*)
 local fun needs_backslash s =
-         let fun loop i = 
+         let fun loop i =
              let val c = String.sub(s,i)
              in (c = #"\\") orelse (c = #"\"") orelse loop (i+1)
              end handle Subscript => false
          in loop 0 end
 fun add_backslashes s =
-        let fun add i A = add (i+1) 
+        let fun add i A = add (i+1)
               (let val c = String.sub(s,i)
-               in if ((c = #"\\") orelse (c = #"\"")) then  (c:: #"\\" ::A) 
+               in if ((c = #"\\") orelse (c = #"\"")) then  (c:: #"\\" ::A)
                   else c::A end)
                handle Subscript => String.implode(rev (#"\""::A))
         in add 0 [#"\""]
@@ -248,84 +285,84 @@ fun stringify s =
  then Lib.quote s
  else add_backslashes s;
 end;
-  
+
 
 (*---------------------------------------------------------------------------
  *  Print a theory as a module.
  *---------------------------------------------------------------------------*)
 
-fun pp_theory_struct ppstrm {theory as (name,i1,i2), parents,
-                   axioms,definitions,theorems,types,constants,struct_ps} =
- let open Term
+fun pp_theory_struct ppstrm info_record = let
+  open Term
+   val {theory as (name,i1,i2), parents,
+        axioms,definitions,theorems,types,constants,struct_ps} = info_record
      val {add_string,add_break,begin_block,end_block, add_newline,
           flush_ppstream,...} = Portable_PrettyPrint.with_ppstream ppstrm
      val pp_tm = pp_raw ppstrm
-     val pp_ty = Hol_pp.pp_type ppstrm
+     val pp_ty = with_parens print_type_to_SML ppstrm
      val pp_tag = Tag.pp_to_disk ppstrm
      fun pblock(header, ob_pr, obs) =
          case obs
          of [] => ()
-          |  _ =>       
+          |  _ =>
             ( begin_block CONSISTENT 0;
-              add_string ("(*  Parents *)"); 
+              add_string ("(*  Parents *)");
               add_newline();
               add_string "local open ";
               begin_block INCONSISTENT 0;
-              pr_list ob_pr (fn () => ()) (fn () => add_break (1,0)) obs; 
+              pr_list ob_pr (fn () => ()) (fn () => add_break (1,0)) obs;
               end_block();
-              add_newline(); add_string "in end;"; 
+              add_newline(); add_string "in end;";
               end_block())
      fun pp_sml_list pfun L =
-       (begin_block CONSISTENT 0; add_string "["; 
-         begin_block INCONSISTENT 0; 
+       (begin_block CONSISTENT 0; add_string "[";
+         begin_block INCONSISTENT 0;
          pr_list pfun (fn () => add_string",") (fn () => add_break(1,0)) L;
          end_block(); add_string "]"; end_block())
-     fun pp_thid(s,i,j) = 
+     fun pp_thid(s,i,j) =
           (begin_block CONSISTENT 0; add_string"(";
             add_string (stringify s); add_string",";
             add_break(0,0); add_string(Lib.int_to_string i); add_string",";
-            add_break(0,0); add_string(Lib.int_to_string j); 
+            add_break(0,0); add_string(Lib.int_to_string j);
             add_string")"; end_block())
-     fun pp_ty_dec(s,i) = 
+     fun pp_ty_dec(s,i) =
           (begin_block CONSISTENT 0; add_string"(";
             add_string (stringify s); add_string",";
             add_break(0,0); add_string(Lib.int_to_string i);
             add_string")"; end_block())
-     fun pp_const_dec(s,ty,f) = 
+     fun pp_const_dec(s,ty) =
           (begin_block INCONSISTENT 1; add_string"(";
             add_string (stringify s); add_string",";
-            add_break(0,0); add_string"pty`:"; pp_ty ty; add_string"`,";
-            add_break(0,0);add_string("Term."^Term.fixity_to_string f);
+            add_break(0,0); pp_ty ty;
             add_string")"; end_block())
-     fun pp_incorporate theory parents types constants = 
+     fun pp_incorporate theory parents types constants =
          (begin_block CONSISTENT 0;
           begin_block CONSISTENT 8;
             add_string "val _ = Theory.link_parents"; add_break(1,0);
             pp_thid theory; add_break(1,0); pp_sml_list pp_thid parents;
             add_string ";" ;end_block(); add_newline();
           begin_block CONSISTENT 5;
-            add_string ("val _ = Theory.incorporate_types "^stringify name); 
+            add_string ("val _ = Theory.incorporate_types "^stringify name);
             add_break(1,0); pp_sml_list pp_ty_dec types;add_string ";" ;
           end_block(); add_newline();
           begin_block CONSISTENT 3;
-            add_string ("val _ = Theory.incorporate_consts "^stringify name); 
+            add_string ("val _ = Theory.incorporate_consts "^stringify name);
             add_break(1,0); pp_sml_list pp_const_dec constants;
             add_string ";" ;
           end_block(); add_newline();
           end_block())
      fun pparent (s,i,j) = Thry s
-     fun pr_fields{Name,Ty} = 
+     fun pr_fields{Name,Ty} =
          (begin_block CONSISTENT 0;
           add_string(stringify Name); add_break(1,0);
-          add_string"`:"; pp_ty Ty; add_string"`"; end_block())
+          pp_ty Ty; end_block())
      fun pr_atom a =
            (begin_block INCONSISTENT 2;
             add_string (if (is_var a) then "V " else "C ");
-            pr_fields (dest_var a handle HOL_ERR _ => dest_const a); 
+            pr_fields (dest_var a handle HOL_ERR _ => dest_const a);
             end_block())
-        handle HOL_ERR _ => 
+        handle HOL_ERR _ =>
            raise PP_THEORY_ERR"pp_theory_struct.pr_atom" "not atomic"
-     fun pr_bind (s,th) = 
+     fun pr_bind (s,th) =
       let val (tg,asl,w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
       in
          begin_block INCONSISTENT 2;
@@ -333,7 +370,7 @@ fun pp_theory_struct ppstrm {theory as (name,i1,i2), parents,
          add_string "="; add_break (1,0);
          add_string"DT("; begin_block INCONSISTENT 0;
                         pp_tag tg; add_string","; add_break(1,0);
-                        pp_sml_list pp_tm asl; add_string","; add_break(1,0); 
+                        pp_sml_list pp_tm asl; add_string","; add_break(1,0);
                         pp_tm w; end_block();
          add_string")";
          end_block()
@@ -341,7 +378,7 @@ fun pp_theory_struct ppstrm {theory as (name,i1,i2), parents,
      val thml = axioms@definitions@theorems
      val slist = share_thy false thml
 
-     fun bind_theorems () = if (null thml) then () 
+     fun bind_theorems () = if (null thml) then ()
       else (
         begin_block CONSISTENT 0;
         add_string "local"; add_break(1,0);
@@ -358,7 +395,7 @@ fun pp_theory_struct ppstrm {theory as (name,i1,i2), parents,
         add_newline();
         add_string"end"; end_block())
 
-     fun pr_dbtriple (class,th) = 
+     fun pr_dbtriple (class,th) =
         (begin_block CONSISTENT 1;
          add_string"("; add_string (stringify th); add_string",";
          add_break (0,0); add_string th; add_string","; add_break(0,0);
@@ -372,34 +409,35 @@ fun pp_theory_struct ppstrm {theory as (name,i1,i2), parents,
            begin_block INCONSISTENT 0;
            add_string "val _ = DB.bindl"; add_break(1,0);
            add_string (stringify name); add_break(1,0);
-           pp_sml_list pr_dbtriple (axl@defl@thml); 
+           pp_sml_list pr_dbtriple (axl@defl@thml);
            add_newline();
            end_block()
         end
      fun pr_ps NONE = ()
        | pr_ps (SOME pp) = (begin_block CONSISTENT 0; pp ppstrm; end_block());
      fun pr_psl l =
-          (begin_block CONSISTENT 0; 
+          (begin_block CONSISTENT 0;
             pr_list pr_ps (fn () => ())
-              (fn () => (add_newline(); add_newline())) l; 
+              (fn () => (add_newline(); add_newline())) l;
             end_block());
 
-   in 
+   in
       begin_block CONSISTENT 0;
-      add_string (concat ["structure ",Thry name," :> ", ThrySig name," ="]); 
+      add_string (concat ["structure ",Thry name," :> ", ThrySig name," ="]);
       add_newline();
       begin_block CONSISTENT 2;
       add_string "struct"; add_newline();
       begin_block CONSISTENT 0;
-      add_string"type thm = Thm.thm"; add_newline(); 
-      add_string "val pty = Parse.type_parser"; add_newline();
-      add_string"fun C s q = Term.mk_const{Name=s,Ty=pty q}"; 
+      add_string"type thm = Thm.thm"; add_newline();
+      add_string"fun C s q = Term.mk_const{Name=s,Ty=q}"; add_newline();
+      add_string"fun V s q = Term.mk_var{Name=s,Ty=q}"; add_newline();
+      add_string"fun T s args = Type.mk_type{Tyop = s, Args = args}";
+   (*   add_string("val _ = print \"Loading theory: "^Thry name^"\\n\""); *)
       add_newline();
-      add_string"fun V s q = Term.mk_var{Name=s,Ty=pty q}";
+      add_string"val U = Type.mk_vartype"; add_newline();
       add_newline();
+      pblock ("Parents", add_string o pparent, thid_sort parents);
       add_newline();
-      pblock ("Parents", add_string o pparent, thid_sort parents); 
-      add_newline(); 
       pp_incorporate theory parents types constants; add_newline();
       bind_theorems (); add_newline();
       dblist(); add_newline();

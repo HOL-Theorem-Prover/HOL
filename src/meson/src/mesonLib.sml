@@ -2,10 +2,10 @@
 (* Version of the MESON procedure a la PTTP. Various search options.         *)
 (* ========================================================================= *)
 
-structure mesonLib :> mesonLib = 
+structure mesonLib :> mesonLib =
 struct
 
-open HolKernel Parse Hol_pp basicHol90Lib;
+open HolKernel Parse basicHol90Lib;
 open liteLib Ho_rewrite Canon_Port Psyntax;
 open Exception;
 
@@ -40,8 +40,8 @@ val the_false = mk_const("F", Type.bool);
 fun TAUT q = Ho_rewrite.TAUT (Parse.Term q);
 
 fun type_match vty cty sofar =
-  if is_vartype vty 
-  then if ((vty = cty) orelse 
+  if is_vartype vty
+  then if ((vty = cty) orelse
            (case (assoc2 vty sofar)
              of SOME ty => (ty = cty)
               | NONE => false))
@@ -50,7 +50,7 @@ fun type_match vty cty sofar =
   else let val (vop,vargs) = dest_type vty
            and (cop,cargs) = dest_type cty
        in
-         if vop = cop 
+         if vop = cop
          then itlist2 type_match vargs cargs sofar
          else failwith "type_match"
        end;
@@ -59,7 +59,7 @@ fun is_beq tm =
   let val (s,ty) = dest_const(rator(rator tm))
   in
     (s = "=") andalso (Lib.trye hd (snd(dest_type ty)) = Type.bool)
-  end 
+  end
   handle HOL_ERR _ => false;
 
 (*---------------------------------------------------------------------------*
@@ -87,9 +87,9 @@ val skew = ref 3;;              (* Skew proof bias (one side is <= n / skew) *)
 
 val cache = ref true;;          (* Cache continuations                       *)
 
-val chatting = ref 1;           (* Gives intermediate info as proof runs. 
+val chatting = ref 1;           (* Gives intermediate info as proof runs.
                                    When the number is 1, then minimal output
-                                   is given. When the number is 0, no output 
+                                   is given. When the number is 0, no output
                                    is given. Otherwise, jrh's original output
                                    is given.                                 *)
 
@@ -128,14 +128,14 @@ local
       else
         (vcounter := m; n)
     end
-  fun hol_of_var v = 
+  fun hol_of_var v =
      case (assoc2 v (!vstore))
       of NONE => assoc2 v (!gstore)
        | x => x
   fun hol_of_bumped_var v =
     case (hol_of_var v)
      of SOME x => x
-      | NONE => 
+      | NONE =>
          let val v' = v mod offinc
              val hv' = case (hol_of_var v')
                         of SOME y => y
@@ -152,9 +152,9 @@ in
     in case (assoc1 v currentvars)
         of SOME x => x
          | NONE =>
-            let val n = inc_vcounter() 
-            in 
-              vstore := (v,n)::currentvars; 
+            let val n = inc_vcounter()
+            in
+              vstore := (v,n)::currentvars;
               n
             end
     end
@@ -170,16 +170,16 @@ in
     let val currentconsts = !cstore
     in case (assoc1 c currentconsts)
         of SOME x => x
-         | NONE => 
+         | NONE =>
             let val n = !ccounter
-            in ccounter := n + 1; 
-               cstore := (c,n)::currentconsts; 
+            in ccounter := n + 1;
+               cstore := (c,n)::currentconsts;
                n
             end
     end
-  fun hol_of_const c = 
-     case (assoc2 c (!cstore)) 
-      of SOME x => x 
+  fun hol_of_const c =
+     case (assoc2 c (!cstore))
+      of SOME x => x
        | NONE => failwith "hol_of_const"
 end;
 
@@ -188,13 +188,13 @@ fun fol_of_term env consts tm =
   else
     let val (f,args) = strip_comb tm
     in if mem f env then failwith "fol_of_term: higher order"
-       else let val ff = fol_of_const f 
+       else let val ff = fol_of_const f
             in Fnapp(ff, map (fol_of_term env consts) args)
             end
     end
 
 fun fol_of_atom env consts tm =
-  let val (f,args) = strip_comb tm 
+  let val (f,args) = strip_comb tm
   in
      if mem f env then failwith "fol_of_atom: higher order"
      else (fol_of_const f, map (fol_of_term env consts) args)
@@ -205,7 +205,7 @@ fun fol_of_literal env consts tm =
       val (p,a) = fol_of_atom env consts tm'
   in
     (~p,a)
-  end 
+  end
   handle HOL_ERR _ => fol_of_atom env consts tm
 
 fun fol_of_form env consts tm =
@@ -270,7 +270,7 @@ val fol_frees =
 local exception Unchanged
       fun qmap f =
         let fun app [] = raise Unchanged
-              | app (h::t) = 
+              | app (h::t) =
                  let val t' = app t
                      val h' = f h handle Unchanged => h
                  in h'::t'
@@ -281,10 +281,10 @@ local exception Unchanged
       fun qtry f arg = f arg handle Unchanged => arg
 in
 fun raw_fol_subst theta (Var v) =
-     (case (assoc2 v theta) 
+     (case (assoc2 v theta)
        of SOME x => x
         | NONE => raise Unchanged)
-  | raw_fol_subst theta (Fnapp(f,args)) = 
+  | raw_fol_subst theta (Fnapp(f,args)) =
      Fnapp(f,qmap (raw_fol_subst theta) args);;
 
 fun fol_subst theta tm = raw_fol_subst theta tm handle Unchanged => tm;
@@ -296,15 +296,15 @@ fun fol_inst theta (at as (p,args)) =
   (p,qmap (raw_fol_subst theta) args) handle Unchanged => at;;
 
 fun raw_fol_subst_bump offset theta tm =
-  case tm 
-   of Var v => 
-        if v < offinc 
-        then let val v' = v + offset 
+  case tm
+   of Var v =>
+        if v < offinc
+        then let val v' = v + offset
              in
                case (assoc2 v' theta) of SOME x => x | NONE => Var(v')
              end
         else (case (assoc2 v theta) of SOME x => x | NONE => raise Unchanged)
-    | Fnapp(f,args) => 
+    | Fnapp(f,args) =>
       Fnapp(f,qmap (raw_fol_subst_bump offset theta) args);;
 
 fun fol_subst_bump offset theta tm =
@@ -331,24 +331,24 @@ val raw_augment_insts =
   end;
 
 fun qpartition p m =
- let fun qpart l = 
-   if (l = m) then raise Unchanged else 
-   case l 
+ let fun qpart l =
+   if (l = m) then raise Unchanged else
+   case l
     of [] => raise Unchanged
-     | h::t => if p h 
+     | h::t => if p h
                  then let val (yes,no) = qpart t
                       in
                          (h::yes,no)
-                      end 
+                      end
                       handle Unchanged => ([h],t)
-                 else let val (yes,no) = qpart t 
+                 else let val (yes,no) = qpart t
                       in
                         (yes,h::no)
                       end
  in
     fn l => qpart l handle Unchanged => ([], l)
  end;
-end; 
+end;
 
 fun augment_insts offset (t,v) insts =
   let
@@ -383,7 +383,7 @@ fun fol_unify offset tm1 tm2 sofar =
                | NONE      => augment_insts offset (tm1,y') sofar
           end
       | Fnapp(f2,args2) =>
-          if f1 = f2 
+          if f1 = f2
           then rev_itlist2 (fol_unify offset) args1 args2 sofar
           else failwith "fol_unify: No match");
 
@@ -393,12 +393,12 @@ fun fol_unify offset tm1 tm2 sofar =
 
 fun fol_eq insts tm1 tm2 =
   tm1 = tm2 orelse
-  case tm1 
+  case tm1
    of Var(x) =>
       (case (assoc2 x insts)
         of SOME tm1' => fol_eq insts tm1' tm2
-         | NONE => 
-            (case tm2 
+         | NONE =>
+            (case tm2
               of Var(y) => (if x = y then true
                             else case (assoc2 y insts)
                                   of SOME tm2' => (tm1 = tm2')
@@ -406,7 +406,7 @@ fun fol_eq insts tm1 tm2 =
                | _ => false))
    | Fnapp(f1,args1) =>
       case tm2
-       of Var(y) => 
+       of Var(y) =>
            (case (assoc2 y insts)
              of SOME tm2' => fol_eq insts tm1 tm2'
               | NONE      => false)
@@ -441,14 +441,14 @@ fun cacheconts f =
 (* ------------------------------------------------------------------------- *)
 
 fun checkan insts (p:int,a) ancestors =
-  if !precheck 
+  if !precheck
   then let val p' = ~p
            val t' = (p',a)
        in
          case (assoc1 p' ancestors)
           of NONE => ancestors
            | SOME ours =>
-               if exists (fn u => fol_atom_eq insts t' (snd(fst u))) ours 
+               if exists (fn u => fol_atom_eq insts t' (snd(fst u))) ours
                then failwith "checkan"
                else ancestors
        end
@@ -474,10 +474,10 @@ fun insertan insts (p,a) ancestors =
 (* Recording MESON proof tree.                                               *)
 (* ------------------------------------------------------------------------- *)
 
-datatype fol_goal = Subgoal of fol_atom 
-                               * fol_goal list 
+datatype fol_goal = Subgoal of fol_atom
+                               * fol_goal list
                                * (int * thm)
-                               * int 
+                               * int
                                * (fol_term * int)list;;
 
 (* ------------------------------------------------------------------------- *)
@@ -488,8 +488,8 @@ fun meson_single_expand rule ((g,ancestors),(insts,offset,size)) =
  let val ((hyps,conc),tag) = rule
      val allins = rev_itlist2 (fol_unify offset) (snd g) (snd conc) insts
      val (locin,globin) = qpartition (fn (_,v) => offset <= v) insts allins
-     fun mk_ihyp h = 
-         let val h' = fol_inst_bump offset locin h 
+     fun mk_ihyp h =
+         let val h' = fol_inst_bump offset locin h
          in (h', checkan insts h' ancestors)
          end
      val newhyps =  map mk_ihyp hyps
@@ -515,12 +515,12 @@ fun meson_expand rules ((g,ancestors),(tup as (insts,offset,size))) cont =
      val newancestors = insertan insts g ancestors
      val newstate = ((g,newancestors),tup)
  in
-   (if !prefine andalso pr > 0 then failwith "meson_expand" 
+   (if !prefine andalso pr > 0 then failwith "meson_expand"
     else case (assoc1 pr ancestors)
           of SOME arules => meson_expand_cont arules newstate cont
            | NONE => failwith "not found")
    handle Cut => failwith "meson_expand"
-        | HOL_ERR _ => 
+        | HOL_ERR _ =>
            (case (assoc1 pr rules)
              of SOME x =>
                   let val crules = filter (fn ((h,_),_) => length h <= size) x
@@ -544,7 +544,7 @@ fun expand_goal rules =
          exp_goals (depth-1) newstate
          (cacheconts
           (fn (gs,(newinsts,newoffset,newsize)) =>
-           let val (locin,globin) = 
+           let val (locin,globin) =
                       qpartition (fn (_,v) => offset <= v) pinsts newinsts
                val g' = Subgoal(g,gs,apprule,offset,locin)
            in
@@ -560,7 +560,7 @@ fun expand_goal rules =
         []    => cont ([],tup)
       | [g]   => exp_goal depth (g,tup) (fn (g',stup) => cont([g'],stup))
       | g::gs =>
-        if size >= !dcutin 
+        if size >= !dcutin
         then let val lsize = size div (!skew)
                  val rsize = size - lsize
                  val (lgoals,rgoals) = chop_list (length gl div 2) gl
@@ -584,15 +584,15 @@ fun expand_goal rules =
                      exp_goals depth (gs,stup)
                         (cacheconts (fn (gs',ftup) => cont(g'::gs',ftup)))))
   in
-    fn g      => 
-     fn maxdep => 
-      fn maxinf => 
+    fn g      =>
+     fn maxdep =>
+      fn maxinf =>
          fn cont => exp_goal maxdep (g,([],2 * offinc,maxinf)) cont
   end
 
 (*
-val state = (g,([],2 * offinc,maxinf)) 
-   : ((int * fol_term list) 
+val state = (g,([],2 * offinc,maxinf))
+   : ((int * fol_term list)
       * (int * (((int * fol_term list) list * (int * fol_term list)) * (int * thm)) list) list)
      * ((fol_term * int) list * int * int);;
 
@@ -604,7 +604,7 @@ val state = (g,([],2 * offinc,maxinf))
 (* stores putative solutions then fails; that will initiate backtracking!    *)
 (* ------------------------------------------------------------------------- *)
 
-fun chat n = 
+fun chat n =
   case !chatting
    of 0 => ()
     | 1 => say "."
@@ -613,7 +613,7 @@ fun chat n =
                               "Searching with maximum size ",
                               int_to_string n, ".\n"]);
 
-fun say_solved n = 
+fun say_solved n =
   if (n <> 0 andalso n <> 1)
   then say (String.concat["Internal goal solved with ",
                           int_to_string (!inferences),
@@ -664,7 +664,7 @@ val fol_of_hol_clauses =
           ((map mk_negated flits,(1,[])),(~1,th))::basics
         else basics
       end
-    fun eek (x1,(i1,th1)) (x2,(i2,th2)) = 
+    fun eek (x1,(i1,th1)) (x2,(i2,th2)) =
            (x1=x2) andalso (i1=i2) andalso (dest_thm th1=dest_thm th2)
   in
     fn thms =>
@@ -697,7 +697,7 @@ fun optimize_rules l =
 (* Create a HOL contrapositive on demand, with a cache.                      *)
 (* ------------------------------------------------------------------------- *)
 
-local 
+local
   open boolTheory
   val DISJ_ASSOC' = SPEC_ALL DISJ_ASSOC
   val DISJ_SYM'   = SPEC_ALL DISJ_SYM
@@ -705,7 +705,7 @@ local
   val DEMORG_DISJ = CONJUNCT2 DEMORG
   val DEMORG_AND  = SYM (CONJUNCT1 DEMORG)
   val NOT2        = CONJUNCT1(SPEC_ALL NOT_CLAUSES)
-  val NOT_IMP     = IMP_ANTISYM_RULE (SPEC_ALL boolTheory.F_IMP) 
+  val NOT_IMP     = IMP_ANTISYM_RULE (SPEC_ALL boolTheory.F_IMP)
                                      (SPEC_ALL boolTheory.IMP_F);
 
   val DISJ_AC   = EQT_ELIM o AC_CONV (DISJ_ASSOC', DISJ_SYM')
@@ -735,7 +735,7 @@ in
                   val fth = if length djs = 1 then acth
                             else CONV_RULE (imp_CONV THENC push_CONV) acth
               in
-               memory := (key,fth)::(!memory); 
+               memory := (key,fth)::(!memory);
                fth
               end
     end
@@ -754,7 +754,7 @@ local
   fun hol_negate tm = dest_neg tm handle HOL_ERR _ => mk_neg tm
   fun merge_inst (t,x) current = (fol_subst current t,x)::current
   val finish_RULE = Rewrite.GEN_REWRITE_RULE I Rewrite.empty_rewrites
-    [Ho_rewrite.TAUT (Term `(~p ==> p) = p`), 
+    [Ho_rewrite.TAUT (Term `(~p ==> p) = p`),
      Ho_rewrite.TAUT (Term `(p ==> ~p) = ~p`)]
 in
   fun meson_to_hol insts (Subgoal(g,gs,(n,th),offset,locin)) =
@@ -844,32 +844,32 @@ val create_equality_axioms =
         else itlist tm_consts args (insert (fnc,length args) acc)
       end
     fun fm_consts tm (acc as (preds,funs)) =
-      fm_consts(snd(dest_forall tm)) acc 
-        handle HOL_ERR _ => fm_consts(snd(dest_exists tm)) acc 
-        handle HOL_ERR _ => 
+      fm_consts(snd(dest_forall tm)) acc
+        handle HOL_ERR _ => fm_consts(snd(dest_exists tm)) acc
+        handle HOL_ERR _ =>
               let val (l,r) = dest_conj tm
               in
                 fm_consts l (fm_consts r acc)
-              end 
-        handle HOL_ERR _ => 
+              end
+        handle HOL_ERR _ =>
               let val (l,r) = dest_disj tm
               in
                 fm_consts l (fm_consts r acc)
-              end 
-        handle HOL_ERR _ => 
+              end
+        handle HOL_ERR _ =>
               let val (l,r) = dest_imp tm
               in
                 fm_consts l (fm_consts r acc)
-              end 
-        handle HOL_ERR _ => fm_consts (dest_neg tm) acc 
-        handle HOL_ERR _ => 
+              end
+        handle HOL_ERR _ => fm_consts (dest_neg tm) acc
+        handle HOL_ERR _ =>
               let val (l,r) = dest_eq tm
               in
                 if type_of l = Type.bool
                 then fm_consts r (fm_consts l acc)
                 else failwith "atomic equality"
-              end 
-        handle HOL_ERR _ => 
+              end
+        handle HOL_ERR _ =>
               let val (pred,args) = strip_comb tm
               in
                if args = [] then acc
@@ -879,14 +879,14 @@ val create_equality_axioms =
 
     fun create_congruence_axiom pflag (tm,len) =
       let
-        val (atys,rty) = splitlist (fn ty => 
+        val (atys,rty) = splitlist (fn ty =>
                let val (opn,l) = dest_type ty
                in if opn = "fun" then (hd l,hd(tl l)) else fail()
                end) (type_of tm)
         val ctys = fst(chop_list len atys)
         val largs = map genvar ctys
         and rargs = map genvar ctys
-        val th1 = rev_itlist (C (curry MK_COMB)) 
+        val th1 = rev_itlist (C (curry MK_COMB))
                              (map (ASSUME o mk_eq) (zip largs rargs)) (REFL tm)
         val th2 = if pflag then eq_elim_RULE th1 else th1
       in
@@ -911,7 +911,7 @@ val create_equality_axioms =
           val eqs1 = filter
                (fn (t,_) => is_const t andalso fst(dest_const t) = "=") preds1
           val eqs = union eqs0 eqs1
-          val equivs = itlist 
+          val equivs = itlist
                   (Lib.op_union thm_eq o create_equivalence_axioms) eqs []
         in
           equivs@pcongs@fcongs
@@ -1024,13 +1024,13 @@ fun inform tac g =
                          " MESON inferences.\n")
   in  res  end;
 
-fun GEN_MESON_TAC min max step ths g = 
+fun GEN_MESON_TAC min max step ths g =
  inform
- (REFUTE_THEN ASSUME_TAC 
+ (REFUTE_THEN ASSUME_TAC
    THEN let open jrhTactics
-        in convert (POLY_ASSUME_TAC (map GEN_ALL ths) 
-                      THEN PREMESON_CANON_TAC 
-                      THEN PURE_MESON_TAC min max step) 
+        in convert (POLY_ASSUME_TAC (map GEN_ALL ths)
+                      THEN PREMESON_CANON_TAC
+                      THEN PURE_MESON_TAC min max step)
         end) g;
 
 val ASM_MESON_TAC = GEN_MESON_TAC 0 30 1;

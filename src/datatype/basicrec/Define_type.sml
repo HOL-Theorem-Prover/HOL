@@ -52,7 +52,7 @@ local val Z = Term`0`
       fun argsf n tylist [] = (rev tylist,n)
         | argsf n tylist (NONE::t) = argsf (SUC n) tylist  t
         | argsf n tylist (SOME ty::t) = argsf n (ty::tylist) t
-in 
+in
 fun pargs x = argsf Z [] x
 end;
 
@@ -63,7 +63,7 @@ end;
 (* ---------------------------------------------------------------------*)
 local val onety = Type`:one`
       fun mk_prod ty1 ty2 = mk_type{Tyop="prod", Args=[ty1,ty2]}
-in 
+in
 fun mk_tuple_ty l = end_itlist mk_prod l handle _ => onety
 end;
 
@@ -81,8 +81,8 @@ end;
 (* ---------------------------------------------------------------------*)
 (* mk_sum_ty : make a sum type of a list of types.			*)
 (* ---------------------------------------------------------------------*)
-local fun mk_sum ty1 ty2 = mk_type{Tyop="sum", Args=[ty1,ty2]} 
-in 
+local fun mk_sum ty1 ty2 = mk_type{Tyop="sum", Args=[ty1,ty2]}
+in
 val mk_sum_ty = end_itlist mk_sum
 end;
 
@@ -99,8 +99,8 @@ local
 fun combize tm1 tm2 = mk_comb{Rator=tm1, Rand=tm2}
 in
 fun inject ty [v] = [v]
-  | inject ty (v::vs) = 
-     let val {Args = [lty,rty],...} = dest_type ty 
+  | inject ty (v::vs) =
+     let val {Args = [lty,rty],...} = dest_type ty
          val res = mk_comb{Rator=mk_const{Name="INL",Ty=lty-->ty}, Rand=v}
          val inr = combize (mk_const{Name="INR", Ty = rty-->ty})
      in
@@ -119,18 +119,18 @@ end;
 (* ---------------------------------------------------------------------*)
 
 local
-fun fch ty = (hd o explode o #Tyop o dest_type) ty 
+fun fch ty = (hd o explode o #Tyop o dest_type) ty
              handle _ => Portable_Char.chr 120 (* "x" *)
-fun suff f c l = 
-   if (f c = "") 
-   then if (Portable_List.exists (fn x => fch x = c) l) 
+fun suff f c l =
+   if (f c = "")
+   then if (Portable_List.exists (fn x => fch x = c) l)
         then ("0", fn ch => (if (ch=c) then "0" else f ch))
         else ("",f)
-   else let val n = int_to_string(string_to_int(f c) + 1) 
+   else let val n = int_to_string(string_to_int(f c) + 1)
         in (n, fn ch => if (ch=c) then n else f ch)
         end
 fun mkvs f rvs [] = []
-  | mkvs f rvs (h::t) = 
+  | mkvs f rvs (h::t) =
       let val c = fch h
           val (s,f') = suff f c t
 (*           val v = variant rvs (mk_primed_var{Name = c^s, Ty = h}) *)
@@ -154,7 +154,7 @@ end;
 (* ---------------------------------------------------------------------*)
 
 local
-val boolty = ==`:bool`== 
+val boolty = ==`:bool`==
 val numty = ==`:num`==
 and eq = --`$= :num->num->bool`--
 and Z = --`0`--
@@ -168,18 +168,18 @@ fun LEN tl =
    end
 in
 fun mk_subset_pred tysl =
-   let val (tys,rectys) = unzip (map pargs tysl) 
+   let val (tys,rectys) = unzip (map pargs tysl)
    in
-   if (not(Portable_List.exists zero rectys)) 
+   if (not(Portable_List.exists zero rectys))
    then raise ERR "mk_subst_pred" "no non-recursive constructor"
    else let val repty = mk_sum_ty (map mk_tuple_ty tys)
             val tlty = mk_type{Tyop = "list",
                                Args = [mk_type{Tyop = "ltree",Args = [repty]}]}
-            val v = mk_var{Name = "v", Ty = repty} 
+            val v = mk_var{Name = "v", Ty = repty}
             and tlv = mk_var{Name = "tl", Ty = tlty}
             val lens = map (LEN tlv) rectys
-            val cases = if (null(tl tys)) 
-                  then let val vars = mkvars (hd tys) 
+            val cases = if (null(tl tys))
+                  then let val vars = mkvars (hd tys)
                        in [list_mk_exists(vars,mk_eq{lhs=v,rhs=mk_tuple vars})]
                        end
                   else let val vsl =  map mkvars tys
@@ -189,7 +189,7 @@ fun mk_subset_pred tysl =
                        in
                        map list_mk_exists (zip vsl eqs)
                        end
-            val body = list_mk_disj 
+            val body = list_mk_disj
                         (map2(fn tm1 => fn tm2 => mk_conj{conj1=tm1,conj2=tm2})
                               cases lens)
         in
@@ -207,8 +207,8 @@ end;
 (* changed to make it tail recursive. kls.                              *)
 (* ---------------------------------------------------------------------*)
 local
-fun split p prefix (x::suffix) = 
-   if (p x) 
+fun split p prefix (x::suffix) =
+   if (p x)
    then (rev prefix,x,suffix)
    else split p (x::prefix) suffix
 in
@@ -236,12 +236,12 @@ val alpha = ==`:'a`==
 val LEN0 = CONJUNCT1 listTheory.LENGTH
 val EXTH = rec_typeTheory.exists_TRP
 val Z = --`0`--
-fun zero tm = (tm = Z) 
+fun zero tm = (tm = Z)
 fun mk_subst vs = itlist (fn v => fn S => (v |-> variant vs v)::S)
                          vs []
-fun efn {residue,redex} th = 
+fun efn {residue,redex} th =
    let val (vs,{lhs,rhs}) = (I ## dest_eq) (strip_exists (concl th))
-       val pat = list_mk_exists(redex::vs, 
+       val pat = list_mk_exists(redex::vs,
                                 mk_eq{lhs=lhs,rhs=subst[residue |-> redex]rhs})
    in EXISTS (pat,residue) th
    end
@@ -279,8 +279,8 @@ end;
 (* =====================================================================*)
 
 local
-fun variant l1 l2 n = 
-   let val ty = mk_vartype(Portable_String.concat (l2@[int_to_string n])) 
+fun variant l1 l2 n =
+   let val ty = mk_vartype(Portable_String.concat (l2@[int_to_string n]))
    in
    if (Portable_List.exists (fn t => t=ty) l1)
    then variant l1 l2 (n+1)
@@ -311,21 +311,21 @@ end;
 (* ---------------------------------------------------------------------*)
 
 local
-fun proveimp f DS = 
+fun proveimp f DS =
    let val {disj1,disj2} = dest_disj DS
-       val res = DISCH disj1 (f (DISJ1 (ASSUME disj1) disj2)) 
+       val res = DISCH disj1 (f (DISJ1 (ASSUME disj1) disj2))
    in
    CONJ res (proveimp (f o (DISJ2 disj1)) disj2)
    end
    handle _ => DISCH DS (f (ASSUME DS))
-fun disjfn th1 th2 = 
+fun disjfn th1 th2 =
    let val D = mk_disj{disj1 = rand(rator(concl th1)),
                        disj2 = rand(rator(concl th2))}
    in
-   DISCH D (DISJ_CASES (ASSUME D) (UNDISCH th1) (UNDISCH th2)) 
+   DISCH D (DISJ_CASES (ASSUME D) (UNDISCH th1) (UNDISCH th2))
    end
 in
-fun OR_IMP_CONV tm = 
+fun OR_IMP_CONV tm =
    let val {ant,conseq} = dest_imp tm
        val imp1 = DISCH tm (proveimp (MP (ASSUME tm)) ant)
        val rtm = #conseq(dest_imp(concl imp1))
@@ -347,15 +347,15 @@ end;
 (* ---------------------------------------------------------------------*)
 
 local
-fun mconj f th = 
-   let val (th1,th2) = (f ## mconj f) (CONJ_PAIR th) 
+fun mconj f th =
+   let val (th1,th2) = (f ## mconj f) (CONJ_PAIR th)
    in CONJ th1 th2
    end
    handle _ => f th
 in
 fun FORALL_IN_CONV tm =
    let val ([x,y],cs) = (I ## strip_conj) (strip_forall tm)
-       val spec = (SPEC y) o (SPEC x) 
+       val spec = (SPEC y) o (SPEC x)
        and gen = (GEN x) o (GEN y)
        val imp1 = DISCH tm (mconj gen (spec (ASSUME tm)))
        val acs = #conseq(dest_imp(concl imp1))
@@ -374,11 +374,11 @@ end;
 (*									*)
 (* ---------------------------------------------------------------------*)
 
-local val AND = --`/\`--
+local val AND = --`$/\`--
 in
-fun CONJS_CONV conv tm = 
+fun CONJS_CONV conv tm =
    let val {conj1,conj2} = dest_conj tm
-   in 
+   in
     MK_COMB(AP_TERM AND (conv conj1), CONJS_CONV conv conj2)
    end
    handle _ => conv tm
@@ -400,14 +400,14 @@ end;
 (* 									*)
 (* ---------------------------------------------------------------------*)
 local
-fun efn nv ov th = 
+fun efn nv ov th =
    let val (vs,{lhs,rhs}) = (I ## dest_eq) (strip_exists(concl th))
-       val pat = list_mk_exists((nv::vs), 
+       val pat = list_mk_exists((nv::vs),
                                 mk_eq{lhs=lhs, rhs = subst[ov |-> nv] rhs})
-   in EXISTS (pat,ov) th 
+   in EXISTS (pat,ov) th
    end
-fun chfn f v th = 
-   let val asm = ASSUME (mk_exists{Bvar = v, Body = first f (hyp th)}) 
+fun chfn f v th =
+   let val asm = ASSUME (mk_exists{Bvar = v, Body = first f (hyp th)})
    in CHOOSE (v,asm) th
    end
 in
@@ -454,7 +454,7 @@ end;
 (* ---------------------------------------------------------------------*)
 
 local
-val IMP = --`==>`--
+val IMP = --`$==>`--
 in
 fun LENGTH_MAP_CONV eq tm =
    let val {Bvar,Body} = dest_forall tm
@@ -480,41 +480,41 @@ end;
 (* ---------------------------------------------------------------------*)
 
 local
-val ZERO = --`0`-- 
+val ZERO = --`0`--
 val ONE = --`SUC 0`--
-and N = --`n:num`-- 
+and N = --`n:num`--
 val bty = ==`:bool`==
 val alpha = ==`:'a`==
 val lcons = listTheory.LENGTH_EQ_CONS
-val lnil  = listTheory.LENGTH_EQ_NIL 
-fun mkvar ty st i = mk_primed_var{Name = st^int_to_string i, Ty = ty} 
-fun gvs bvs ty st n i = 
-   if (n=ZERO) 
+val lnil  = listTheory.LENGTH_EQ_NIL
+fun mkvar ty st i = mk_primed_var{Name = st^int_to_string i, Ty = ty}
+fun gvs bvs ty st n i =
+   if (n=ZERO)
    then []
-   else let val v = variant bvs (mkvar ty st i) 
+   else let val v = variant bvs (mkvar ty st i)
         in  v::(gvs (v::bvs) ty st (rand n) (i+1))
         end
-fun genvs bvs ty st n = 
-   if (n=ONE) 
-   then let val v = mk_primed_var{Name = st, Ty = ty} 
-        in [variant bvs v] 
+fun genvs bvs ty st n =
+   if (n=ONE)
+   then let val v = mk_primed_var{Name = st, Ty = ty}
+        in [variant bvs v]
         end
-   else gvs bvs ty st n 1 
+   else gvs bvs ty st n 1
 fun pred_ty ty = ty --> bty
-fun bconv tm = 
+fun bconv tm =
    let val {Rator,Rand} = dest_comb tm
        val {Bvar = l,Body} = dest_abs Rator
        val {Bvar = v,Body} = dest_forall Body
-       val th = FORALL_EQ v (bconv Body) 
+       val th = FORALL_EQ v (bconv Body)
    in
    RIGHT_BETA (AP_THM (ABS l th) Rand)
    end
    handle _ => BETA_CONV tm
-fun conv (cth,nth) Pv P n vs = 
+fun conv (cth,nth) Pv P n vs =
    if (n=ZERO)
-   then INST [Pv |-> P] nth 
+   then INST [Pv |-> P] nth
    else let val (h::t) = vs
-            val pre = rand n 
+            val pre = rand n
             val th1 = INST [Pv |-> P](INST [N |-> pre] cth)
             val {Body,...} = dest_forall(rand(concl th1))
             val {Bvar,Body} = dest_abs(rator(rand Body))
@@ -553,7 +553,7 @@ end;
 
 local
 val (mnil,mcons) = CONJ_PAIR listTheory.MAP
-fun conv (nth,cth) tm = 
+fun conv (nth,cth) tm =
    let val(_,[h,t]) = strip_comb tm
        val thm = SPEC t (SPEC h cth)
        val cfn = rator(rand(concl thm))
@@ -562,7 +562,7 @@ fun conv (nth,cth) tm =
    handle _ => nth
 in
 fun MAP_CONV tm =
-   let val (_,[f,l]) = strip_comb tm 
+   let val (_,[f,l]) = strip_comb tm
    in conv (ISPEC f mnil, ISPEC f mcons) l
    end
 end;
@@ -571,7 +571,7 @@ end;
 (* ELIM_MAP_CONV : use MAP_CONV where appropriate.			*)
 (* ---------------------------------------------------------------------*)
 
-fun ELIM_MAP_CONV tm = 
+fun ELIM_MAP_CONV tm =
    let val (vs,(EQ,[l,r])) = (I ## strip_comb) (strip_forall tm)
        val {Rator = fnn,Rand} = dest_comb l
        val {Rator = A,Rand} = dest_comb Rand
@@ -686,7 +686,7 @@ fun combin evs rvs [] = []
   | combin evs rvs (SOME _::t) = hd evs::combin (tl evs) rvs t
   | combin evs rvs (NONE::t)   = hd rvs::combin evs (tl rvs) t
 fun mkfnty v ty = type_of v --> ty
-fun geneq uovs odvs tm = 
+fun geneq uovs odvs tm =
    let val imp1 = GENL odvs (SPECL uovs (ASSUME tm))
        val body = concl imp1
        val imp2 = DISCH body (GENL uovs (SPECL odvs (ASSUME body)))
@@ -710,10 +710,7 @@ fun define_const (c, tys, fix, tm) =
 *)
        val name = c^"_DEF"
        val eqn = mk_eq{lhs = Ccomb, rhs = rand l}
-       val def = case fix
-                   of Prefix => new_definition(name,eqn)
-                    | Binder => new_binder_definition(name,eqn)
-                    | (Infix i) => new_infix_definition(name,eqn,i)
+       val def = new_gen_definition(name, eqn, fix)
        val dvs = fst(strip_forall(concl def))
        val thm1 = AP_TERM EQ (AP_TERM (rator l) (SPECL dvs def))
        val thm2 = itlist FORALL_EQ dvs (SYM (AP_THM thm1 r))
@@ -729,17 +726,17 @@ end;
 (* Changed to allow fixities to be specified (kls. Dec 31, 1992)        *)
 (* ---------------------------------------------------------------------*)
 
-local val AND = Term`/\`
+local val AND = Term`$/\`
       fun mkconj t1 t2 = MK_COMB(AP_TERM AND t1,t2)
       fun map4 f ([],[],[],[]) = []
-        | map4 f ((a::rst1),(b::rst2),(c::rst3),(d::rst4)) = 
+        | map4 f ((a::rst1),(b::rst2),(c::rst3),(d::rst4)) =
                 f(a,b,c,d)::map4 f (rst1,rst2,rst3,rst4)
 in
 fun DEFINE_CONSTRUCTORS cs atys fixities th =
    let val {Rator = EU,Rand} = dest_comb (concl th)
        val {Bvar,Body} = dest_abs Rand
        val dcs = map4 define_const(cs,atys,fixities, strip_conj Body)
-       val thm = end_itlist mkconj dcs 
+       val thm = end_itlist mkconj dcs
    in EQ_MP (AP_TERM EU (ABS Bvar thm)) th
    end
 end;
@@ -771,7 +768,7 @@ fun make     [c] _ _ = []
     let val {Args = [_,outty],...} = dest_type ty
         val Isl = mk_const{Name="ISL",Ty = ty-->boolty}
         val Outr = mk_const{Name="OUTR",Ty = ty-->outty}
-        val test = mk_comb{Rator = Isl, Rand = v} 
+        val test = mk_comb{Rator = Isl, Rand = v}
         and out = mk_comb{Rator = Outr, Rand = v}
     in
     test::(make cs out outty)
@@ -798,11 +795,11 @@ end;
 (* ---------------------------------------------------------------------*)
 
 fun mk_proj v [c] _ = [v]
-  | mk_proj v (c::cs) ty = 
+  | mk_proj v (c::cs) ty =
       let val {Args = [ty1,ty2],...} = dest_type ty
           val Outr = mk_const{Name="OUTR",Ty = ty --> ty2}
           val Outl = mk_const{Name="OUTL",Ty = ty --> ty1}
-          val ltm = mk_comb{Rator=Outl,Rand=v} 
+          val ltm = mk_comb{Rator=Outl,Rand=v}
           and rtm = mk_comb{Rator=Outr,Rand=v}
       in
       ltm::(mk_proj rtm cs ty2)
@@ -821,11 +818,11 @@ fun mk_proj v [c] _ = [v]
 (* Note: the list can be empty.						*)
 (* ---------------------------------------------------------------------*)
 
-fun extract_list ty = 
+fun extract_list ty =
    let val {Args=[ety],...} = dest_type ty
        val H = mk_const{Name="HD",Ty = ty --> ety}
        val T = mk_const{Name="TL",Ty = ty --> ty}
-       fun extr H T v tm = 
+       fun extr H T v tm =
           let val (_,[h,t]) = strip_comb tm
               val hval = mk_comb{Rator = H, Rand = v}
               val tval = mk_comb{Rator = T, Rand = v}
@@ -844,7 +841,7 @@ fun extract_list ty =
 (* and returns <val>.							*)
 (* ---------------------------------------------------------------------*)
 
-fun strip_inj tm = 
+fun strip_inj tm =
    let val {Rator,Rand} = dest_comb tm
        val opp = (#Name o dest_const) Rator
    in if (opp = "INR" orelse opp = "INL")
@@ -865,7 +862,7 @@ fun strip_inj tm =
 (* Note: the list will not be empty.					*)
 (* ---------------------------------------------------------------------*)
 
-fun extract_tuple ty v tm = 
+fun extract_tuple ty v tm =
    let val (_,[c1,c2]) = strip_comb tm
        val {Args = [ty1,ty2],...} = dest_type ty
        val Fst = mk_const{Name="FST",Ty = ty --> ty1}
@@ -873,7 +870,7 @@ fun extract_tuple ty v tm =
        val fval = mk_comb{Rator = Fst, Rand = v}
        val sval = mk_comb{Rator = Snd, Rand = v}
    in
-   fval::(extract_tuple ty2 sval c2) 
+   fval::(extract_tuple ty2 sval c2)
    end
    handle _ => [v];
 
@@ -896,14 +893,14 @@ fun extract_tuple ty v tm =
 local
 fun gen (ef,ff) (n,m) [] = []
   | gen (ef,ff) (n,m) ([]::t) =
-       let val ename = ("e" ^ (if ef then int_to_string n else "")) 
+       let val ename = ("e" ^ (if ef then int_to_string n else ""))
        in ename::(gen (ef,ff) (n+1,m) t)
        end
   | gen (ef,ff) (n,m) (_::t) =
        let val fname = ("f" ^ (if ff then int_to_string m else ""))
        in fname::(gen (ef,ff) (n,m+1) t)
        end
-in 
+in
 fun gen_names (ef,ff) cs =  gen (ef,ff) (0,0) cs
 end;
 
@@ -931,17 +928,17 @@ fun mk_fun_ty tm ty = (type_of tm --> ty);
 (* gives the function name for this right-hand side.			*)
 (* ---------------------------------------------------------------------*)
 
-fun make_rhs ty rv tv (fl,(pv,(name,[rl,value,tl]))) = 
+fun make_rhs ty rv tv (fl,(pv,(name,[rl,value,tl]))) =
    let val exrl = extract_list (type_of rl) rv rl
        val extl = extract_list (type_of tl) tv tl
        val svl = strip_inj value
        val extu = if fl then [] else extract_tuple (type_of pv) pv svl
        val args = exrl @ extu @ extl
        val v = mk_var{Name = name, Ty = itlist mk_fun_ty args ty}
-   in 
+   in
    (v,list_mk_comb(v,args))
    end;
-    
+
 (* ---------------------------------------------------------------------*)
 (* make_conditional : make an iterated conditional. A call to:		*)
 (*									*)
@@ -954,7 +951,7 @@ fun make_rhs ty rv tv (fl,(pv,(name,[rl,value,tl]))) =
 (* Note that n can be zero, in which case the result is `x1`.		*)
 (* ---------------------------------------------------------------------*)
 fun make_conditional [] (h::_) = h
-  | make_conditional (h1::t1) (h2::t2) = 
+  | make_conditional (h1::t1) (h2::t2) =
         mk_cond {cond = h1, larm = h2, rarm = make_conditional t1 t2};
 
 (* ---------------------------------------------------------------------*)
@@ -1005,8 +1002,8 @@ local val thm = sumTheory.OUTR
 in
 fun PROJ_CONV tm =
    let val {Rator,Rand} = dest_comb tm
-   in if #Name(dest_const Rator) = "OUTR" 
-      then let val th = AP_TERM Rator (PROJ_CONV Rand) 
+   in if #Name(dest_const Rator) = "OUTR"
+      then let val th = AP_TERM Rator (PROJ_CONV Rand)
            in TRANS th (rew (rand(concl th)))
            end
       else REFL tm
@@ -1034,13 +1031,13 @@ local val thm = sumTheory.ISL
       and Fth = EQF_INTRO th2
       val rewconv = FIRST_CONV [REWR_CONV Fth,REWR_CONV Tth]
 in
-fun TEST_SIMP_CONV cond = 
+fun TEST_SIMP_CONV cond =
    let val (C,[test,a,b]) = strip_comb cond
-       val simp = ((RAND_CONV PROJ_CONV) THENC rewconv) test 
-       val thm2 = MK_COMB(AP_THM (AP_TERM C simp) a, TEST_SIMP_CONV b) 
-   in 
+       val simp = ((RAND_CONV PROJ_CONV) THENC rewconv) test
+       val thm2 = MK_COMB(AP_THM (AP_TERM C simp) a, TEST_SIMP_CONV b)
+   in
    CONV_RULE (RAND_CONV COND_CONV) thm2
-   end handle _ => REFL cond 
+   end handle _ => REFL cond
 end;
 
 
@@ -1057,13 +1054,13 @@ end;
 local val alpha = mk_vartype "'a"
       val H = GENL [--`h:'a`--, --`t:'a list`-- ] (SPEC_ALL listTheory.HD)
       and T = GENL [--`h:'a`--, --`t:'a list`-- ] (SPEC_ALL listTheory.TL)
-fun genels (hth,tth) (hf,tf) th = 
-   let val (_,[h,t]) = strip_comb(rand(concl th)) 
+fun genels (hth,tth) (hf,tf) th =
+   let val (_,[h,t]) = strip_comb(rand(concl th))
        val thm = TRANS (hf th) (SPEC t (SPEC h hth))
-       val tthm = TRANS (tf th) (SPEC t (SPEC h tth)) 
+       val tthm = TRANS (tf th) (SPEC t (SPEC h tth))
    in
      thm::genels (hth,tth) (hf,tf) tthm
-   end handle _ => [] 
+   end handle _ => []
 in
 fun LIST_ELS tm =
    let val lty = type_of tm
@@ -1095,7 +1092,7 @@ val orth = sumTheory.OUTR
 val olth = sumTheory.OUTL
 val (v1,v2) = (==`:'a`==, ==`:'b`==)
 fun inst t1 t2 = INST_TYPE[v1 |-> t1, v2 |-> t2]
-fun conv th = 
+fun conv th =
    let val inj = rand(concl th)
        val {Rator,Rand} = dest_comb inj
        val injty = type_of inj
@@ -1104,15 +1101,15 @@ fun conv th =
    case (#Name(dest_const Rator))
      of "INR" => let val proj = mk_const{Name = "OUTR",Ty = injty --> rty}
                      val thm1 = AP_TERM proj th
-                     val thm2 = SPEC Rand (inst lty rty orth) 
+                     val thm2 = SPEC Rand (inst lty rty orth)
                  in
-                 conv (TRANS thm1 thm2) 
+                 conv (TRANS thm1 thm2)
                  end
       | "INL" => let val proj = mk_const{Name = "OUTL", Ty = injty --> lty}
                      val thm1 = AP_TERM proj th
-                     val thm2 = SPEC Rand (inst lty rty olth) 
+                     val thm2 = SPEC Rand (inst lty rty olth)
                  in
-                 conv (TRANS thm1 thm2) 
+                 conv (TRANS thm1 thm2)
                  end
       | _ => th
    end handle _ => th
@@ -1147,7 +1144,7 @@ end;
 local val onec = Term`one:one`
       val FST = pairTheory.FST
       val SND = pairTheory.SND
-fun generate th = 
+fun generate th =
    let val (_,[f,s]) = strip_comb(rand(concl th))
        val thm1 = ISPECL [f,s] FST
        val thm = TRANS (AP_TERM (rator(lhs(concl thm1))) th) thm1
@@ -1155,7 +1152,7 @@ fun generate th =
        val tthm = TRANS (AP_TERM (rator(lhs(concl thm2))) th) thm2
    in
      thm::generate tthm
-   end 
+   end
    handle _ => [th]
 in
 fun TUPLE_COMPS th = if (rand(concl th) = onec) then [] else generate th
@@ -1189,7 +1186,7 @@ end;
 (* SIMPLIFY : simplifies the type axiom into its final form.		*)
 (* ---------------------------------------------------------------------*)
 
-local val AND = --`/\`--
+local val AND = --`$/\`--
       fun mkconj t1 t2 = MK_COMB(AP_TERM AND t1,t2)
 in
 fun SIMPLIFY th =
@@ -1211,12 +1208,12 @@ local val TYDEFTHM = rec_typeTheory.TY_DEF_THM
       and delta = mk_vartype "'c"
 in
 fun dtype{save_name,ty_name,clauses} =
- let val (cs,atys,fixities) = 
+ let val (cs,atys,fixities) =
         itlist (fn {constructor,args,fixity} => fn (C,A,F) =>
                            (constructor::C, args::A, fixity::F))
                             clauses ([],[],[])
      val isodef = ty_name^"_ISO_DEF"
-     val ABS = "ABS_"^ty_name 
+     val ABS = "ABS_"^ty_name
      and REP = "REP_"^ty_name
      val pred = mk_subset_pred atys
      val eth = prove_existence_thm pred
@@ -1228,7 +1225,7 @@ fun dtype{save_name,ty_name,clauses} =
      val newty = hd(#Args(dest_type(type_of(#Bvar(dest_exists(concl tyax))))))
      val resty = variant_tyvar (type_vars rty) ["'a"]
      val Pthm = INST_TYPE[alpha|->rty, beta|->newty, delta|->resty] TYDEFTHM
-     val {Rator,Rand} = 
+     val {Rator,Rand} =
             dest_comb(lhs(#Body(dest_forall(rand(rator(concl ARth))))))
      val R = rator Rand
      val Sthm = MP (SPEC pred (SPEC Rator (SPEC R Pthm))) ARth
@@ -1265,20 +1262,20 @@ end;
 (* the axiom is stored under `name` and is returned.			*)
 (* ---------------------------------------------------------------------*)
 
-fun enumerate L = 
+fun enumerate L =
   rev(snd(rev_itlist (fn x => fn (n,A) => (n+1, (n,x)::A)) L (1,[])));
 
 fun map_enum f l = map f (enumerate l)
 
-fun ERR1 i s = 
-  let val clstr = String.concat 
-       ["parse_tyspec.make_type_clause ", 
+fun ERR1 i s =
+  let val clstr = String.concat
+       ["parse_tyspec.make_type_clause ",
         "(clause ", int_to_string i, ")"]
-  in 
+  in
    raise (ERR clstr s)
   end;
 
-fun info {origin_structure, origin_function,message} 
+fun info {origin_structure, origin_function,message}
   = String.concat [origin_function,": ",message];
 
 local open Pretype
@@ -1297,44 +1294,44 @@ fun tyocc n ty =
        end
 fun occurs name_of n (tyVar s) = (n=name_of s)
   | occurs name_of n (tyAntiq ty) = tyocc n ty
-  | occurs name_of n (tyApp(x,l)) = 
+  | occurs name_of n (tyApp(x,l)) =
       (n=name_of x) orelse exists (occurs name_of n) l
 end;
 
 fun make_type_clause tyname (i,(constructor, args)) =
  let open Pretype
-     fun munge (pty as tyApp(gr,args)) = 
-            if name_of gr=tyname 
+     fun munge (pty as tyApp(gr,args)) =
+            if name_of gr=tyname
             then if null args then NONE  (* found OK occ. of tyname *)
                  else ERR1 i "explicit argument(s) to proposed type"
             else if occurs name_of tyname pty
                  then ERR1 i ("nested occurrence of "^Lib.quote tyname)
                  else make_type i pty
         | munge pty = make_type i pty  (* type vars and antiquotes *)
- in 
+ in
     {constructor=constructor, args = map munge args}
  end;
 
-fun parse_tyspec q = 
+fun parse_tyspec q =
    case ParseDatatype.parse q
-    of [(name,clauses)] => 
+    of [(name,clauses)] =>
            {ty_name=name, clauses=map_enum (make_type_clause name) clauses}
      | [] => raise ERR "parse_tyspec" "empty type specification"
      | _ => raise ERR "parse_tyspec" "more than one type specified";
 
 fun define_type {name=save_name, type_spec, fixities} =
    let val {ty_name,clauses} = parse_tyspec type_spec
-   in 
+   in
       dtype{save_name=save_name, ty_name=ty_name,
             clauses = map2 (fn {constructor,args} => fn f =>
                                  {constructor=constructor,args=args,fixity=f})
                            clauses fixities}
    end;
 
-fun string_define_type s1 s2 fixities = 
+fun string_define_type s1 s2 fixities =
       define_type{name=s1, type_spec=[QUOTE s2], fixities = fixities};
 
-(* ===================================================================== 
+(* =====================================================================
    TESTS:
 
 new_theory "temp";
@@ -1364,21 +1361,21 @@ val List_Axiom = define_type{name="List_Axiom",
                              fixities = [Prefix,Infix 40]};
 
 val ty_Axiom = define_type{name="ty_Axiom",
-        type_spec = `ty = C1 of 'a 
-                        | C2 
+        type_spec = `ty = C1 of 'a
+                        | C2
                         | C3 of 'a => 'b => ty
-                        | C4 of ty => 'c => ty => 'a => 'b 
+                        | C4 of ty => 'c => ty => 'a => 'b
                         | C5 of ty => ty`,
         fixities = [Prefix, Prefix, Prefix, Prefix, Prefix]};
 
 define_type{name="bintree",
-            type_spec=`bintree = LEAF of 'a 
+            type_spec=`bintree = LEAF of 'a
                                | TREE of bintree => bintree`,
             fixities = [Prefix,Prefix]};
 
 define_type{name="seven",
-            type_spec= `typ = C of one 
-                                   => (one#one) 
+            type_spec= `typ = C of one
+                                   => (one#one)
                                    => (one -> one -> 'a list)
                                    => ('a,one#one,'a list) ty`,
             fixities = [Prefix]};

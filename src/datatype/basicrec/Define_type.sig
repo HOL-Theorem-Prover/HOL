@@ -12,23 +12,23 @@
 signature Define_type =
 sig
 
-  val parse_tyspec 
-    : Type.hol_type frag list 
-       -> {ty_name:string, 
+  val parse_tyspec
+    : Type.hol_type frag list
+       -> {ty_name:string,
            clauses:{constructor:string, args:Type.hol_type option list} list
           }
 
   val dtype : {save_name:string,ty_name:string,
-               clauses:{constructor:string, 
+               clauses:{constructor:string,
                         args:Type.hol_type option list,
-                        fixity :Term.fixity} list}
+                        fixity : Parse.fixity} list}
               -> Thm.thm
 
-  val define_type : {name:string, 
-                     type_spec: Type.hol_type frag list, 
-                     fixities : Term.fixity list} -> Thm.thm
+  val define_type : {name:string,
+                     type_spec: Type.hol_type frag list,
+                     fixities : Parse.fixity list} -> Thm.thm
 
-  val string_define_type 
-      : string -> string -> Term.fixity list -> Thm.thm
+  val string_define_type
+      : string -> string -> Parse.fixity list -> Thm.thm
 
 end;

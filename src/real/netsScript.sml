@@ -55,7 +55,7 @@ val dorder = new_definition("dorder",
   (--`dorder (g:'a->'a->bool) =
      !x y. g x x /\ g y y ==> ?z. g z z /\ (!w. g w z ==> g w x /\ g w y)`--));
 
-val tends = new_infix_definition("tends",
+val tends = new_infixr_definition("tends",
   (--`($tends s l)(top,g) =
       !N:'a->bool. neigh(top)(N,l) ==>
             ?n:'b. g n n /\ !m:'b. g m n ==> N(s m)`--), 750);
@@ -143,7 +143,7 @@ val MTOP_TENDS = prove_thm("MTOP_TENDS",
     W(C SUBGOAL_THEN MP_TAC o funpow 2 (rand o rator) o snd) THENL
      [MATCH_MP_TAC BALL_NEIGH THEN ASM_REWRITE_TAC[], ALL_TAC] THEN
     DISCH_THEN(fn th => REWRITE_TAC[th]) THEN REWRITE_TAC[ball] THEN
-    BETA_TAC THEN 
+    BETA_TAC THEN
     GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV) [METRIC_SYM] THEN REWRITE_TAC[],
     GEN_TAC THEN REWRITE_TAC[neigh] THEN
     DISCH_THEN(X_CHOOSE_THEN (--`P:'a->bool`--) STRIP_ASSUME_TAC) THEN
@@ -461,7 +461,7 @@ val NET_NEG = prove_thm("NET_NEG",
   GEN_TAC THEN DISCH_TAC THEN REPEAT GEN_TAC THEN
   REWRITE_TAC[MTOP_TENDS, MR1_DEF] THEN BETA_TAC THEN
   REWRITE_TAC[REAL_SUB_NEG2] THEN
-  GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV) [ABS_SUB] 
+  GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV) [ABS_SUB]
   THEN REFL_TAC);
 
 val NET_SUB = prove_thm("NET_SUB",
@@ -483,7 +483,7 @@ val NET_MUL = prove_thm("NET_MUL",
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[NET_NULL] THEN
   DISCH_TAC THEN BETA_TAC THEN
-  SUBGOAL_THEN (--`!a b c d. (a |*| b) |-| (c |*| d) = 
+  SUBGOAL_THEN (--`!a b c d. (a |*| b) |-| (c |*| d) =
                              (a |*| (b |-| d)) |+| ((a |-| c) |*| d)`--)
   (fn th => ONCE_REWRITE_TAC[th]) THENL
    [REPEAT GEN_TAC THEN
@@ -521,7 +521,7 @@ val NET_INV = prove_thm("NET_INV",
   REWRITE_TAC[MTOP_TENDS, MR1_DEF, REAL_SUB_LZERO, ABS_NEG] THEN BETA_TAC
   THEN DISCH_THEN(curry op THEN (X_GEN_TAC (--`e:real`--) THEN DISCH_TAC) o MP_TAC) THEN
   CONV_TAC(ONCE_DEPTH_CONV RIGHT_AND_FORALL_CONV) THEN
-  DISCH_THEN(ASSUME_TAC o SPEC (--`e |*| abs(x0) |*| (inv k)`--)) THEN
+  DISCH_THEN(ASSUME_TAC o SPEC (--`e |*| (abs(x0) |*| (inv k))`--)) THEN
   SUBGOAL_THEN (--`&0 |<| k`--) ASSUME_TAC THENL
    [FIRST_ASSUM(MP_TAC o CONJUNCT1) THEN
     DISCH_THEN(X_CHOOSE_THEN (--`N:'a`--) (CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
@@ -529,7 +529,7 @@ val NET_INV = prove_thm("NET_INV",
     DISCH_THEN(ASSUME_TAC o CONJUNCT1) THEN
     MATCH_MP_TAC REAL_LET_TRANS THEN EXISTS_TAC (--`abs(inv(x(N:'a)))`--) THEN
     ASM_REWRITE_TAC[ABS_POS], ALL_TAC] THEN
-  SUBGOAL_THEN (--`&0 |<| e |*| abs(x0) |*| inv k`--) ASSUME_TAC THENL
+  SUBGOAL_THEN (--`&0 |<| e |*| (abs(x0) |*| inv k)`--) ASSUME_TAC THENL
    [REPEAT(MATCH_MP_TAC REAL_LT_MUL THEN CONJ_TAC) THEN
     ASM_REWRITE_TAC[GSYM ABS_NZ] THEN
     MATCH_MP_TAC REAL_INV_POS THEN ASM_REWRITE_TAC[], ALL_TAC] THEN
@@ -540,7 +540,7 @@ val NET_INV = prove_thm("NET_INV",
   X_GEN_TAC (--`n:'a`--) THEN DISCH_THEN(ANTE_RES_THEN STRIP_ASSUME_TAC) THEN
   RULE_ASSUM_TAC BETA_RULE THEN POP_ASSUM_LIST(MAP_EVERY STRIP_ASSUME_TAC) THEN
   SUBGOAL_THEN (--`inv(x n) |-| inv x0 =
-                inv(x n) |*| inv x0 |*| (x0 |-| x(n:'a))`--) SUBST1_TAC THENL
+                inv(x n) |*| (inv x0 |*| (x0 |-| x(n:'a)))`--) SUBST1_TAC THENL
    [REWRITE_TAC[REAL_SUB_LDISTRIB] THEN
     REWRITE_TAC[MATCH_MP REAL_MUL_LINV (ASSUME (--`~(x0 = &0)`--))] THEN
     REWRITE_TAC[REAL_MUL_RID] THEN REPEAT AP_TERM_TAC THEN
@@ -548,7 +548,7 @@ val NET_INV = prove_thm("NET_INV",
     REWRITE_TAC[MATCH_MP REAL_MUL_RINV (ASSUME (--`~(x(n:'a) = &0)`--))] THEN
     REWRITE_TAC[REAL_MUL_RID], ALL_TAC] THEN
   REWRITE_TAC[ABS_MUL] THEN ONCE_REWRITE_TAC[ABS_SUB] THEN
-  SUBGOAL_THEN (--`e = e |*| (abs(inv x0) |*| abs(x0)) |*| (inv k |*| k)`--)
+  SUBGOAL_THEN (--`e = e |*| ((abs(inv x0) |*| abs(x0)) |*| (inv k |*| k))`--)
   SUBST1_TAC THENL
    [REWRITE_TAC[GSYM ABS_MUL] THEN
     REWRITE_TAC[MATCH_MP REAL_MUL_LINV (ASSUME (--`~(x0 = &0)`--))] THEN
@@ -558,7 +558,7 @@ val NET_INV = prove_thm("NET_INV",
     REWRITE_TAC[abs, REAL_LE, LESS_OR_EQ, num_CONV (--`1`--), LESS_SUC_REFL] THEN
     REWRITE_TAC[SYM(num_CONV (--`1`--)), REAL_MUL_RID], ALL_TAC] THEN
   ONCE_REWRITE_TAC[AC(REAL_MUL_ASSOC,REAL_MUL_SYM)
-    (--`a |*| (b |*| c) |*| (d |*| e) = e |*| b |*| (a |*| c |*| d)`--)] THEN
+    (--`a |*| ((b |*| c) |*| (d |*| e)) = e |*| (b |*| (a |*| (c |*| d)))`--)] THEN
   REWRITE_TAC[GSYM ABS_MUL] THEN
   MATCH_MP_TAC ABS_LT_MUL2 THEN ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[ABS_MUL] THEN SUBGOAL_THEN (--`&0 |<| abs(inv x0)`--)

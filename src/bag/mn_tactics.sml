@@ -180,8 +180,8 @@ val FULL_SIMP_TAC = simpLib.FULL_SIMP_TAC
 val SIMP_RULE = simpLib.SIMP_RULE
 val ARITH_CONV = arithLib.ARITH_CONV
 (* val hol_ss = HOLSimps.hol_ss *)
-local 
-val base_ss = 
+local
+val base_ss =
 simpLib.++
   (simpLib.++
      (simpLib.++(simpLib.++(boolSimps.bool_ss,boolSimps.NOT_ss),
@@ -376,10 +376,8 @@ val DISJ_IMP_THM =
   np (--`!P Q R. (P \/ Q ==> R) = (P ==> R) /\ (Q ==> R)`--)
 val IMP_CONJ_THM =
   np (--`!P Q R. (P ==> Q /\ R) = (P ==> Q) /\ (P ==> R)`--)
-val fCOND_OUT_THM =
-  ct (--`!(f:'a->'b) P Q R. f (P => Q | R) = (P => f Q | f R)`--)
-val aCOND_OUT_THM =
-  ct (--`!a P (Q:'a->'b) R. (P => Q | R) a = (P => Q a | R a)`--)
+val fCOND_OUT_THM = COND_RAND
+val aCOND_OUT_THM = COND_RATOR
 val LEFT_AND_EXISTS_THM =
   np (--`!P Q. (?x:'a. P x) /\ Q = ?x. P x /\ Q`--)
 val RIGHT_AND_EXISTS_THM =

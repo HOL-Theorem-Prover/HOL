@@ -11,13 +11,15 @@
 structure minScript =
 struct
 
-open Parse Theory;
+open Theory Parse;
 
 val _ = new_theory "min";
 
 val _ = new_type{Name="bool", Arity=0};
 val _ = new_type{Name="ind",  Arity=0};
-val _ = new_type{Name="fun",  Arity=2};
+
+val _ = new_infix_type{Name="fun",  Arity=2, ParseName = SOME "->",
+                       Assoc = HOLgrammars.RIGHT, Prec = 50};
 
 val _ = new_infix{Name = "=",   Ty=Type `: 'a -> 'a -> bool`,     Prec=100};
 val _ = new_infix{Name = "==>", Ty=Type `: bool -> bool -> bool`, Prec=200};
@@ -25,7 +27,7 @@ val _ = new_binder{Name ="@",   Ty=Type `: ('a -> bool) -> 'a`};
 
 val _ = adjoin_to_theory
    {sig_ps = NONE,
-    struct_ps = SOME(fn ppstrm => 
+    struct_ps = SOME(fn ppstrm =>
      (PP.begin_block ppstrm PP.CONSISTENT 2;
       PP.add_string ppstrm "val _ = ";
       PP.add_break ppstrm (1,0);

@@ -318,7 +318,7 @@ val bit_initiality0 = prove(Term
   REPEAT STRIP_TAC THEN
   ASSUME_TAC
     (MP (INST_TYPE [Type`:'b` |-> Type`:'a`]
-           (ISPEC (--`<`--) primWFTheory.WF_RECURSION_THM))
+           (ISPEC (--`$<`--) primWFTheory.WF_RECURSION_THM))
         WF_LESS) THEN
   POP_ASSUM (STRIP_ASSUME_TAC o CONJUNCT1 o
              SIMP_RULE bool_ss [EXISTS_UNIQUE_DEF] o

@@ -26,7 +26,6 @@ app load ["Char",
           "simpLib",
           "boolSimps",
           "pairSimps",
-          "UnwindSimps",
           "arithSimps",
           "Ho_rewrite",
           "Arithconv",
@@ -56,7 +55,7 @@ open Psyntax
      listTheory
      mesonLib
      tautLib
-     pred_setTheory
+(*     pred_setTheory *)
 (*      Equal *)
      arithLib
      simpLib
@@ -104,56 +103,56 @@ val inv = new_definition("inv",
 val reeducate = REWRITE_RULE[REAL_0, REAL_1, GSYM neg, GSYM inv];
 
 val REAL_10 = save_thm("REAL_10",reeducate(REAL_10));
-val REAL_ADD_SYM = 
+val REAL_ADD_SYM =
     save_thm("REAL_ADD_SYM",reeducate(REAL_ADD_SYM));
-val REAL_ADD_ASSOC = 
+val REAL_ADD_ASSOC =
     save_thm("REAL_ADD_ASSOC",reeducate(REAL_ADD_ASSOC));
-val REAL_ADD_LID = 
+val REAL_ADD_LID =
     save_thm("REAL_ADD_LID",reeducate(REAL_ADD_LID));
-val REAL_ADD_LINV = 
+val REAL_ADD_LINV =
     save_thm("REAL_ADD_LINV",reeducate(REAL_ADD_LINV));
-val REAL_LDISTRIB = 
+val REAL_LDISTRIB =
     save_thm("REAL_LDISTRIB",reeducate(REAL_LDISTRIB));
-val REAL_LT_TOTAL = 
+val REAL_LT_TOTAL =
     save_thm("REAL_LT_TOTAL",reeducate(REAL_LT_TOTAL));
-val REAL_LT_REFL = 
+val REAL_LT_REFL =
     save_thm("REAL_LT_REFL",reeducate(REAL_LT_REFL));
-val REAL_LT_TRANS = 
+val REAL_LT_TRANS =
     save_thm("REAL_LT_TRANS",reeducate(REAL_LT_TRANS));
-val REAL_LT_IADD = 
+val REAL_LT_IADD =
     save_thm("REAL_LT_IADD",reeducate(REAL_LT_IADD));
-val REAL_SUP_ALLPOS = 
+val REAL_SUP_ALLPOS =
     save_thm("REAL_SUP_ALLPOS",reeducate(REAL_SUP_ALLPOS));
-val REAL_MUL_SYM = 
+val REAL_MUL_SYM =
     save_thm("REAL_MUL_SYM",reeducate(REAL_MUL_SYM));
-val REAL_MUL_ASSOC = 
+val REAL_MUL_ASSOC =
     save_thm("REAL_MUL_ASSOC",reeducate(REAL_MUL_ASSOC));
-val REAL_MUL_LID = 
+val REAL_MUL_LID =
     save_thm("REAL_MUL_LID",reeducate(REAL_MUL_LID));
-val REAL_MUL_LINV = 
+val REAL_MUL_LINV =
     save_thm("REAL_MUL_LINV",reeducate(REAL_MUL_LINV));
-val REAL_LT_MUL = 
+val REAL_LT_MUL =
     save_thm("REAL_LT_MUL",reeducate(REAL_LT_MUL));
-val REAL_INV_0 = 
+val REAL_INV_0 =
     save_thm("REAL_INV_0",reeducate REAL_INV_0);
 
 (*---------------------------------------------------------------------------*)
 (* Define subtraction, division and the other orderings                      *)
 (*---------------------------------------------------------------------------*)
 
-val real_sub = new_infix_definition("real_sub",
+val real_sub = new_infixl_definition("real_sub",
   (--`$|-| x y = x |+| (--y)`--), 500);
 
-val |<=| = new_infix_definition("|<=|",
+val |<=| = new_infixr_definition("|<=|",
   (--`$|<=| x y = ~(y |<| x)`--), 450);
 
-val real_gt = new_infix_definition("real_gt",
+val real_gt = new_infixr_definition("real_gt",
   (--`$|>| x y = y |<| x`--), 450);
 
-val real_ge = new_infix_definition("real_ge",
+val real_ge = new_infixr_definition("real_ge",
   (--`$|>=| x y = y |<=| x`--), 450);
 
-val real_div = new_infix_definition("real_div",
+val real_div = new_infixl_definition("real_div",
   (--`$/ x y = x |*| (inv y)`--), 600);
 
 (*---------------------------------------------------------------------------*)
@@ -200,7 +199,7 @@ val REAL_EQ_RADD = prove_thm("REAL_EQ_RADD",
 val REAL_ADD_LID_UNIQ = prove_thm("REAL_ADD_LID_UNIQ",
   (--`!x y. (x |+| y = y) = (x = &0)`--),
   REPEAT GEN_TAC THEN
-  GEN_REWR_TAC (LAND_CONV o RAND_CONV) [GSYM REAL_ADD_LID] THEN 
+  GEN_REWR_TAC (LAND_CONV o RAND_CONV) [GSYM REAL_ADD_LID] THEN
   MATCH_ACCEPT_TAC REAL_EQ_RADD);
 
 val REAL_ADD_RID_UNIQ = prove_thm("REAL_ADD_RID_UNIQ",
@@ -228,7 +227,7 @@ val REAL_NEG_ADD = prove_thm("REAL_NEG_ADD",
 
 val REAL_MUL_LZERO = prove_thm("REAL_MUL_LZERO",
   (--`!x. &0 |*| x = &0`--),
-  GEN_TAC THEN 
+  GEN_TAC THEN
   SUBST1_TAC(SYM(SPECL [(--`&0 |*| x`--), (--`&0 |*| x`--)] REAL_ADD_LID_UNIQ))
   THEN REWRITE_TAC[GSYM REAL_RDISTRIB, REAL_ADD_LID]);
 
@@ -519,7 +518,7 @@ val REAL_LE_DOUBLE = prove_thm("REAL_LE_DOUBLE",
 
 val REAL_LE_NEGL = prove_thm("REAL_LE_NEGL",
   (--`!x. (--x |<=| x) = (&0 |<=| x)`--),
-  GEN_TAC THEN SUBST1_TAC 
+  GEN_TAC THEN SUBST1_TAC
   (SYM(SPECL [(--`x:real`--), (--`--x`--), (--`x:real`--)] REAL_LE_LADD))
   THEN REWRITE_TAC[REAL_ADD_RINV, REAL_LE_DOUBLE]);
 
@@ -550,14 +549,14 @@ val REAL_NEG_SUB = prove_thm("REAL_NEG_SUB",
 val REAL_SUB_LT = prove_thm("REAL_SUB_LT",
   (--`!x y. &0 |<| x |-| y = y |<| x`--),
   REPEAT GEN_TAC THEN
-  SUBST1_TAC(SYM(SPECL [(--`&0`--), (--`x |-| y`--), (--`y:real`--)] 
+  SUBST1_TAC(SYM(SPECL [(--`&0`--), (--`x |-| y`--), (--`y:real`--)]
                        REAL_LT_RADD)) THEN
   REWRITE_TAC[REAL_SUB_ADD, REAL_ADD_LID]);
 
 val REAL_SUB_LE = prove_thm("REAL_SUB_LE",
   (--`!x y. &0 |<=| (x |-| y) = y |<=| x`--),
   REPEAT GEN_TAC THEN
-  SUBST1_TAC(SYM(SPECL [(--`&0`--), (--`x |-| y`--), (--`y:real`--)] 
+  SUBST1_TAC(SYM(SPECL [(--`&0`--), (--`x |-| y`--), (--`y:real`--)]
                       REAL_LE_RADD)) THEN
   REWRITE_TAC[REAL_SUB_ADD, REAL_ADD_LID]);
 
@@ -698,7 +697,7 @@ val REAL_INV_INV = prove_thm("REAL_INV_INV",
  Term`!x. inv(inv x) = x`,
   GEN_TAC THEN ASM_CASES_TAC (Term `x = &0`) THEN
   ASM_REWRITE_TAC[REAL_INV_0] THEN
-  ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN 
+  ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN
   MATCH_MP_TAC REAL_RINV_UNIQ THEN
   MATCH_MP_TAC REAL_MUL_LINV THEN
   ASM_REWRITE_TAC[]);;
@@ -952,7 +951,7 @@ val REAL_SUB_SUB = prove_thm("REAL_SUB_SUB",
 val REAL_LT_ADD_SUB = prove_thm("REAL_LT_ADD_SUB",
   (--`!x y z. (x |+| y) |<| z = x |<| (z |-| y)`--),
   REPEAT GEN_TAC THEN
-  SUBST1_TAC(SYM(SPECL [(--`x:real`--), (--`z |-| y`--), (--`y:real`--)] 
+  SUBST1_TAC(SYM(SPECL [(--`x:real`--), (--`z |-| y`--), (--`y:real`--)]
                        REAL_LT_RADD)) THEN
   REWRITE_TAC[REAL_SUB_ADD]);
 
@@ -1118,7 +1117,7 @@ val REAL_INV_MUL = prove_thm("REAL_INV_MUL",
   GEN_REWR_TAC RAND_CONV  [GSYM REAL_MUL_LID] THEN
   BINOP_TAC THEN MATCH_MP_TAC REAL_MUL_LINV THEN ASM_REWRITE_TAC[]);
 
-(* Stronger version 
+(* Stronger version
 let REAL_INV_MUL = prove
  (`!x y. inv(x * y) = inv(x) * inv(y)`,
   REPEAT GEN_TAC THEN
@@ -1312,7 +1311,7 @@ val REAL_DIFFSQ = prove_thm("REAL_DIFFSQ",
   REPEAT GEN_TAC THEN
   REWRITE_TAC[REAL_LDISTRIB, REAL_RDISTRIB, real_sub, GSYM REAL_ADD_ASSOC] THEN
   ONCE_REWRITE_TAC[AC(REAL_ADD_ASSOC,REAL_ADD_SYM)
-    (--`a |+| b |+| c |+| d = (b |+| c) |+| (a |+| d)`--)] THEN
+    (--`a |+| (b |+| (c |+| d)) = (b |+| c) |+| (a |+| d)`--)] THEN
   REWRITE_TAC[REAL_ADD_LID_UNIQ, GSYM REAL_NEG_RMUL] THEN
   REWRITE_TAC[REAL_LNEG_UNIQ] THEN AP_TERM_TAC THEN
   MATCH_ACCEPT_TAC REAL_MUL_SYM);
@@ -1372,7 +1371,7 @@ val REAL_MIDDLE2 = prove_thm("REAL_MIDDLE2",
 (*---------------------------------------------------------------------------*)
 
 val abs = new_definition("abs",
-  (--`abs(x) = ((&0 |<=| x) => x | --x)`--));
+  (--`abs(x) = (if (&0 |<=| x) then x else --x)`--));
 
 val ABS_ZERO = prove_thm("ABS_ZERO",
   (--`!x. (abs(x) = &0) = (x = &0)`--),
@@ -1433,7 +1432,7 @@ val ABS_MUL = prove_thm("ABS_MUL",
      MP_TAC(SPEC (--`y:real`--) REAL_LE_NEGTOTAL) THEN ASM_REWRITE_TAC[] THEN
      POP_ASSUM(K ALL_TAC) THEN DISCH_TAC THEN
      GEN_REWR_TAC LAND_CONV  [GSYM ABS_NEG] THEN
-     GEN_REWR_TAC (RAND_CONV o RAND_CONV)  
+     GEN_REWR_TAC (RAND_CONV o RAND_CONV)
                      [GSYM ABS_NEG] THEN
      REWRITE_TAC[REAL_NEG_RMUL]]) THEN
   ASSUM_LIST(ASSUME_TAC o MATCH_MP REAL_LE_MUL o LIST_CONJ o rev) THEN
@@ -1598,30 +1597,30 @@ val ABS_SUB_ABS = prove_thm("ABS_SUB_ABS",
   REWRITE_TAC[REAL_SUB_ABS]);
 
 val ABS_BETWEEN2 = prove_thm("ABS_BETWEEN2",
-  (--`!x0 x y0 y. 
-        x0 |<| y0 /\ 
+  (--`!x0 x y0 y.
+        x0 |<| y0 /\
         abs(x |-| x0) |<| (y0 |-| x0) / &2 /\
         abs(y |-| y0) |<| (y0 |-| x0) / &2
         ==> x |<| y`--),
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   SUBGOAL_THEN (--`x |<| y0 /\ x0 |<| y`--) STRIP_ASSUME_TAC THENL
    [CONJ_TAC THENL
-     [MP_TAC(SPECL [(--`x0:real`--), (--`x:real`--), 
+     [MP_TAC(SPECL [(--`x0:real`--), (--`x:real`--),
                     (--`y0 |-| x0`--)] ABS_BOUND) THEN
       REWRITE_TAC[REAL_SUB_ADD2] THEN DISCH_THEN MATCH_MP_TAC THEN
       ONCE_REWRITE_TAC[ABS_SUB] THEN
       MATCH_MP_TAC REAL_LT_TRANS THEN
-      EXISTS_TAC (--`(y0 |-| x0) / &2`--) THEN 
+      EXISTS_TAC (--`(y0 |-| x0) / &2`--) THEN
       ASM_REWRITE_TAC[REAL_LT_HALF2] THEN
       ASM_REWRITE_TAC[REAL_SUB_LT],
       GEN_REWR_TAC I  [TAUT_CONV (--`a = ~~a`--)] THEN
       PURE_REWRITE_TAC[REAL_NOT_LT] THEN DISCH_TAC THEN
       MP_TAC(AC(REAL_ADD_ASSOC,REAL_ADD_SYM)
-       (--`(y0 |+| --x0) |+| (x0 |+| --y) 
+       (--`(y0 |+| --x0) |+| (x0 |+| --y)
          = (--x0 |+| x0) |+| (y0 |+| --y)`--)) THEN
       REWRITE_TAC[GSYM real_sub, REAL_ADD_LINV, REAL_ADD_LID] THEN
       DISCH_TAC THEN
-      MP_TAC(SPECL [(--`y0 |-| x0`--), 
+      MP_TAC(SPECL [(--`y0 |-| x0`--),
                     (--`x0 |-| y`--)] REAL_LE_ADDR) THEN
       ASM_REWRITE_TAC[REAL_SUB_LE] THEN DISCH_TAC THEN
       SUBGOAL_THEN (--`~(y0 |<=| y)`--) ASSUME_TAC THENL
@@ -1631,7 +1630,7 @@ val ABS_BETWEEN2 = prove_thm("ABS_BETWEEN2",
       UNDISCH_TAC (--`abs(y |-| y0) |<| (y0 |-| x0) / &2`--) THEN
       ASM_REWRITE_TAC[abs, REAL_SUB_LE] THEN
       REWRITE_TAC[REAL_NEG_SUB] THEN DISCH_TAC THEN
-      SUBGOAL_THEN (--`(y0 |-| x0) |<| (y0 |-| x0) / &2`--) 
+      SUBGOAL_THEN (--`(y0 |-| x0) |<| (y0 |-| x0) / &2`--)
                    MP_TAC THENL
        [MATCH_MP_TAC REAL_LET_TRANS THEN
         EXISTS_TAC (--`y0 |-| y`--) THEN ASM_REWRITE_TAC[], ALL_TAC] THEN
@@ -1640,29 +1639,29 @@ val ABS_BETWEEN2 = prove_thm("ABS_BETWEEN2",
     ALL_TAC] THEN
   GEN_REWR_TAC I  [TAUT_CONV (--`a = ~~a`--)] THEN
   PURE_REWRITE_TAC[REAL_NOT_LT] THEN DISCH_TAC THEN
-  SUBGOAL_THEN (--`abs(x0 |-| y) |<| (y0 |-| x0) / &2`--) ASSUME_TAC 
+  SUBGOAL_THEN (--`abs(x0 |-| y) |<| (y0 |-| x0) / &2`--) ASSUME_TAC
   THENL
    [REWRITE_TAC[abs, REAL_SUB_LE] THEN ASM_REWRITE_TAC[GSYM REAL_NOT_LT] THEN
     REWRITE_TAC[REAL_NEG_SUB] THEN MATCH_MP_TAC REAL_LET_TRANS THEN
-    EXISTS_TAC (--`x |-| x0`--) THEN 
+    EXISTS_TAC (--`x |-| x0`--) THEN
     REWRITE_TAC[real_sub, REAL_LE_RADD] THEN
     ASM_REWRITE_TAC[GSYM real_sub] THEN
     MATCH_MP_TAC REAL_LET_TRANS THEN
-    EXISTS_TAC (--`abs(x |-| x0)`--) THEN 
+    EXISTS_TAC (--`abs(x |-| x0)`--) THEN
     ASM_REWRITE_TAC[ABS_LE], ALL_TAC] THEN
-  SUBGOAL_THEN 
+  SUBGOAL_THEN
       (--`abs(y0 |-| x0) |<| ((y0 |-| x0) / &2) |+| ((y0 |-| x0) / &2)`--)
-      MP_TAC 
+      MP_TAC
   THENL
    [ALL_TAC,
     REWRITE_TAC[REAL_HALF_DOUBLE, REAL_NOT_LT, ABS_LE]] THEN
   MATCH_MP_TAC REAL_LET_TRANS THEN
-  EXISTS_TAC (--`abs(y0 |-| y) |+| abs(y |-| x0)`--) THEN 
+  EXISTS_TAC (--`abs(y0 |-| y) |+| abs(y |-| x0)`--) THEN
   CONJ_TAC THENL
    [ALL_TAC,
     MATCH_MP_TAC REAL_LT_ADD2 THEN ONCE_REWRITE_TAC[ABS_SUB] THEN
     ASM_REWRITE_TAC[]] THEN
-  SUBGOAL_THEN (--`y0 |-| x0 
+  SUBGOAL_THEN (--`y0 |-| x0
                 = (y0 |-| y) |+| (y |-| x0)`--) SUBST1_TAC THEN
   REWRITE_TAC[ABS_TRIANGLE] THEN
   REWRITE_TAC[real_sub] THEN
@@ -1839,7 +1838,7 @@ val POW_MINUS1 = prove_thm("POW_MINUS1",
 
 val POW_LT = prove_thm("POW_LT",
   (--`!n x y. &0 |<=| x /\ x |<| y ==> (x pow (SUC n)) |<| (y pow (SUC n))`--),
-  REPEAT STRIP_TAC THEN SPEC_TAC((--`n:num`--),(--`n:num`--)) 
+  REPEAT STRIP_TAC THEN SPEC_TAC((--`n:num`--),(--`n:num`--))
    THEN INDUCT_TAC THENL
    [ASM_REWRITE_TAC[pow, REAL_MUL_RID],
     ONCE_REWRITE_TAC[pow] THEN MATCH_MP_TAC REAL_LT_MUL2 THEN
@@ -1886,7 +1885,7 @@ val REAL_POW_LT2 = prove_thm("REAL_POW_LT2",
 val LT_EXISTS = prove
  (Term`!m n. m < n = ?d. n = m + SUC d`,
   REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
-  [IMP_RES_TAC LESS_ADD_1 THEN ASM_REWRITE_TAC[] 
+  [IMP_RES_TAC LESS_ADD_1 THEN ASM_REWRITE_TAC[]
      THEN EXISTS_TAC (Term`p:num`) THEN REWRITE_TAC [ADD1],
    ASM_REWRITE_TAC[LESS_ADD_SUC]]);
 
@@ -1923,20 +1922,20 @@ val REAL_SUP_SOMEPOS = prove_thm("REAL_SUP_SOMEPOS",
      (?s. !y. (?x. P x /\ y |<| x) = y |<| s)`--),
   let val lemma = TAUT_CONV (--`a /\ b ==> b`--) in
   GEN_TAC THEN DISCH_TAC THEN
-  MP_TAC (SPEC (--`\x. P x /\ &0 |<| x`--) REAL_SUP_ALLPOS) THEN 
-  BETA_TAC THEN ASM_REWRITE_TAC[lemma] THEN 
+  MP_TAC (SPEC (--`\x. P x /\ &0 |<| x`--) REAL_SUP_ALLPOS) THEN
+  BETA_TAC THEN ASM_REWRITE_TAC[lemma] THEN
   SUBGOAL_THEN
   (--`?z. !x. P x /\ &0 |<| x ==> x |<| z`--) (SUBST1_TAC o EQT_INTRO)
   THENL
-   [POP_ASSUM(X_CHOOSE_TAC (--`z:real`--) o CONJUNCT2) THEN 
+   [POP_ASSUM(X_CHOOSE_TAC (--`z:real`--) o CONJUNCT2) THEN
    EXISTS_TAC (--`z:real`--) THEN
-    GEN_TAC THEN 
+    GEN_TAC THEN
     DISCH_THEN(curry op THEN (FIRST_ASSUM MATCH_MP_TAC) o ASSUME_TAC) THEN
     ASM_REWRITE_TAC[], ALL_TAC] THEN
   REWRITE_TAC[] THEN DISCH_THEN(X_CHOOSE_THEN (--`s:real`--) MP_TAC) THEN
   DISCH_THEN(curry op THEN (EXISTS_TAC (--`s:real`--) THEN GEN_TAC) o
                    (SUBST1_TAC o SYM o SPEC (--`y:real`--))) THEN EQ_TAC THENL
-   [REPEAT_TCL DISJ_CASES_THEN MP_TAC (SPECL [(--`y:real`--), (--`&0`--)] 
+   [REPEAT_TCL DISJ_CASES_THEN MP_TAC (SPECL [(--`y:real`--), (--`&0`--)]
                                              REAL_LT_TOTAL)
     THENL
      [DISCH_THEN SUBST1_TAC THEN DISCH_THEN(X_CHOOSE_TAC (--`x:real`--)) THEN
@@ -1944,14 +1943,14 @@ val REAL_SUP_SOMEPOS = prove_thm("REAL_SUP_SOMEPOS",
       POP_ASSUM(X_CHOOSE_TAC (--`x:real`--) o CONJUNCT1) THEN
       DISCH_THEN(fn th => FIRST_ASSUM(MP_TAC o CONJ th o CONJUNCT2)) THEN
       DISCH_THEN(ASSUME_TAC o MATCH_MP REAL_LT_TRANS) THEN
-      DISCH_THEN(K ALL_TAC) THEN 
+      DISCH_THEN(K ALL_TAC) THEN
       EXISTS_TAC (--`x:real`--) THEN ASM_REWRITE_TAC[],
       POP_ASSUM(K ALL_TAC) THEN DISCH_TAC THEN
-      DISCH_THEN(X_CHOOSE_TAC (--`x:real`--)) THEN 
+      DISCH_THEN(X_CHOOSE_TAC (--`x:real`--)) THEN
       EXISTS_TAC (--`x:real`--) THEN
       ASM_REWRITE_TAC[] THEN MATCH_MP_TAC REAL_LT_TRANS THEN
       EXISTS_TAC (--`y:real`--) THEN ASM_REWRITE_TAC[]],
-    DISCH_THEN(X_CHOOSE_TAC (--`x:real`--)) THEN 
+    DISCH_THEN(X_CHOOSE_TAC (--`x:real`--)) THEN
     EXISTS_TAC (--`x:real`--) THEN
     ASM_REWRITE_TAC[]] end);
 
@@ -1969,13 +1968,13 @@ val SUP_LEMMA1 = prove_thm("SUP_LEMMA1",
 val SUP_LEMMA2 = prove_thm("SUP_LEMMA2",
   (--`!P. (?x. P x) ==> ?d. ?x. (\x. P(x |+| d)) x /\ &0 |<| x`--),
   GEN_TAC THEN DISCH_THEN(X_CHOOSE_TAC (--`x:real`--)) THEN BETA_TAC THEN
-  REPEAT_TCL DISJ_CASES_THEN MP_TAC (SPECL [(--`x:real`--), (--`&0`--)] 
+  REPEAT_TCL DISJ_CASES_THEN MP_TAC (SPECL [(--`x:real`--), (--`&0`--)]
                                            REAL_LT_TOTAL)
   THENL
    [DISCH_THEN SUBST_ALL_TAC THEN
     MAP_EVERY EXISTS_TAC [(--`--(&1)`--), (--`&1`--)] THEN
     ASM_REWRITE_TAC[REAL_ADD_RINV, REAL_LT_01],
-    DISCH_TAC THEN 
+    DISCH_TAC THEN
     MAP_EVERY EXISTS_TAC [(--`x |+| x`--), (--`-- x`--)] THEN
     ASM_REWRITE_TAC[REAL_ADD_ASSOC, REAL_ADD_LINV, REAL_ADD_LID, REAL_NEG_GT0],
     DISCH_TAC THEN MAP_EVERY EXISTS_TAC [(--`&0`--), (--`x:real`--)] THEN
@@ -2023,9 +2022,9 @@ val REAL_SUP_UBOUND = prove_thm("REAL_SUP_UBOUND",
 val SETOK_LE_LT = prove_thm("SETOK_LE_LT",
   (--`!P. (?x. P x) /\ (?z. !x. P x ==> x |<=| z) =
        (?x. P x) /\ (?z. !x. P x ==> x |<| z)`--),
-  GEN_TAC THEN AP_TERM_TAC THEN EQ_TAC THEN 
+  GEN_TAC THEN AP_TERM_TAC THEN EQ_TAC THEN
   DISCH_THEN(X_CHOOSE_TAC (--`z:real`--))
-  THENL (map EXISTS_TAC [(--`z |+| &1`--), (--`z:real`--)]) THEN 
+  THENL (map EXISTS_TAC [(--`z |+| &1`--), (--`z:real`--)]) THEN
   GEN_TAC THEN DISCH_THEN(fn th => FIRST_ASSUM(MP_TAC o C MATCH_MP th)) THEN
   REWRITE_TAC[REAL_LT_ADD1, REAL_LT_IMP_LE]);
 
@@ -2049,7 +2048,7 @@ val REAL_ARCH = prove_thm("REAL_ARCH",
   ONCE_REWRITE_TAC[TAUT_CONV (--`a = ~(~a)`--)] THEN
   CONV_TAC(ONCE_DEPTH_CONV NOT_EXISTS_CONV) THEN
   REWRITE_TAC[REAL_NOT_LT] THEN DISCH_TAC THEN
-  MP_TAC(SPEC (--`\z. ?n. z = &n |*| x`--) REAL_SUP_LE) THEN 
+  MP_TAC(SPEC (--`\z. ?n. z = &n |*| x`--) REAL_SUP_LE) THEN
   BETA_TAC THEN
   W(C SUBGOAL_THEN(fn th => REWRITE_TAC[th]) o funpow 2 (fst o dest_imp) o snd)
   THENL [CONJ_TAC THENL
@@ -2072,13 +2071,13 @@ val REAL_ARCH = prove_thm("REAL_ARCH",
   REWRITE_TAC[REAL_ADD]);
 
 val REAL_ARCH_LEAST = prove_thm("REAL_ARCH_LEAST",
-  (--`!y. &0 |<| y 
+  (--`!y. &0 |<| y
           ==> !x. &0 |<=| x
           ==> ?n. (&n |*| y) |<=| x
                   /\ x |<| (&(SUC n) |*| y)`--),
   GEN_TAC THEN DISCH_THEN(ASSUME_TAC o MATCH_MP REAL_ARCH) THEN
   GEN_TAC THEN POP_ASSUM(ASSUME_TAC o SPEC (--`x:real`--)) THEN
-  POP_ASSUM(X_CHOOSE_THEN (--`n:num`--) MP_TAC o CONV_RULE EXISTS_LEAST_CONV) 
+  POP_ASSUM(X_CHOOSE_THEN (--`n:num`--) MP_TAC o CONV_RULE EXISTS_LEAST_CONV)
   THEN
   REWRITE_TAC[REAL_NOT_LT] THEN
   DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (ASSUME_TAC o SPEC (--`PRE n`--))) THEN
@@ -2186,11 +2185,11 @@ val SUM_ZERO = prove_thm("SUM_ZERO",
   (--`!f N. (!n. n >= N ==> (f(n) = &0)) ==>
          (!m n. m >= N ==> (sum(m,n) f = &0))`--),
   REPEAT GEN_TAC THEN DISCH_TAC THEN
-  MAP_EVERY X_GEN_TAC [(--`m:num`--), (--`n:num`--)] THEN 
+  MAP_EVERY X_GEN_TAC [(--`m:num`--), (--`n:num`--)] THEN
   REWRITE_TAC[GREATER_EQ] THEN
-  DISCH_THEN(X_CHOOSE_THEN (--`d:num`--) SUBST1_TAC o MATCH_MP LESS_EQUAL_ADD) 
+  DISCH_THEN(X_CHOOSE_THEN (--`d:num`--) SUBST1_TAC o MATCH_MP LESS_EQUAL_ADD)
   THEN
-  SPEC_TAC((--`n:num`--),(--`n:num`--)) THEN INDUCT_TAC THEN REWRITE_TAC[sum] 
+  SPEC_TAC((--`n:num`--),(--`n:num`--)) THEN INDUCT_TAC THEN REWRITE_TAC[sum]
   THEN
   ASM_REWRITE_TAC[REAL_ADD_LID] THEN FIRST_ASSUM MATCH_MP_TAC THEN
   REWRITE_TAC[GREATER_EQ, GSYM ADD_ASSOC, LESS_EQ_ADD]);
@@ -2198,7 +2197,7 @@ val SUM_ZERO = prove_thm("SUM_ZERO",
 val SUM_ADD = prove_thm("SUM_ADD",
   (--`!f g m n.
       sum(m,n) (\n. f(n) |+| g(n))
-      = 
+      =
       sum(m,n) f |+| sum(m,n) g`--),
   EVERY(replicate GEN_TAC 3) THEN INDUCT_TAC THEN
   ASM_REWRITE_TAC[sum, REAL_ADD_LID] THEN BETA_TAC THEN
@@ -2217,8 +2216,8 @@ val SUM_NEG = prove_thm("SUM_NEG",
   BETA_TAC THEN REWRITE_TAC[REAL_NEG_ADD]);
 
 val SUM_SUB = prove_thm("SUM_SUB",
-  (--`!f g m n. 
-      sum(m,n)(\n. (f n) |-| (g n)) 
+  (--`!f g m n.
+      sum(m,n)(\n. (f n) |-| (g n))
     = sum(m,n) f |-| sum(m,n) g`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[real_sub, GSYM SUM_NEG, GSYM SUM_ADD] THEN
   BETA_TAC THEN REFL_TAC);
@@ -2237,7 +2236,7 @@ val SUM_SUBST = prove_thm("SUM_SUBST",
     MATCH_MP_TAC LESS_MONO_ADD THEN REWRITE_TAC[LESS_SUC_REFL]]);
 
 val SUM_NSUB = prove_thm("SUM_NSUB",
-  (--`!n f c. 
+  (--`!n f c.
       sum(0,n) f |-| (&n |*| c)
     = sum(0,n)(\p. f(p) |-| c)`--),
   INDUCT_TAC THEN REWRITE_TAC[sum, REAL_MUL_LZERO, REAL_SUB_REFL] THEN
@@ -2278,7 +2277,7 @@ val SUM_2 = prove_thm("SUM_2",
   REWRITE_TAC[sum, ADD_CLAUSES, REAL_ADD_LID]);
 
 val SUM_OFFSET = prove_thm("SUM_OFFSET",
-  (--`!f n k. 
+  (--`!f n k.
       sum(0,n)(\m. f(m + k))
     = sum(0,n + k) f |-| sum(0,k) f`--),
   REPEAT GEN_TAC THEN
@@ -2309,13 +2308,13 @@ val SUM_PERMUTE_0 = prove_thm("SUM_PERMUTE_0",
   CONV_TAC(ONCE_DEPTH_CONV EXISTS_UNIQUE_CONV) THEN
   DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
   DISCH_THEN(X_CHOOSE_THEN (--`k:num`--) STRIP_ASSUME_TAC) THEN
-  GEN_REWR_TAC RAND_CONV  [sum] THEN 
+  GEN_REWR_TAC RAND_CONV  [sum] THEN
   REWRITE_TAC[ADD_CLAUSES] THEN
-  ABBREV_TAC (--`q:num->num = \r. r < k => p(r) | p(SUC r)`--) THEN
-  SUBGOAL_THEN (--`!y. y < n ==> ?!x. x < n /\ (q x = y)`--) MP_TAC 
+  ABBREV_TAC (--`q:num->num = \r. if r < k then p(r) else p(SUC r)`--) THEN
+  SUBGOAL_THEN (--`!y. y < n ==> ?!x. x < n /\ (q x = y)`--) MP_TAC
   THENL
-   [X_GEN_TAC (--`y:num`--) THEN DISCH_TAC THEN 
-    (MP_TAC o ASSUME) (--`!y. y < (SUC n) ==> 
+   [X_GEN_TAC (--`y:num`--) THEN DISCH_TAC THEN
+    (MP_TAC o ASSUME) (--`!y. y < (SUC n) ==>
                               ?!x. x < (SUC n) /\ (p x = y)`--) THEN
     DISCH_THEN(MP_TAC o SPEC (--`y:num`--)) THEN
     W(C SUBGOAL_THEN MP_TAC o funpow 2 (fst o dest_imp) o snd) THENL
@@ -2347,7 +2346,8 @@ val SUM_PERMUTE_0 = prove_thm("SUM_PERMUTE_0",
           REWRITE_TAC[GSYM NOT_LESS, REWRITE_RULE[ADD_CLAUSES] LESS_ADD_SUC],
           SUBST_ALL_TAC(ASSUME (--`(p:num->num) x = n`--)) THEN
           UNDISCH_TAC (--`y < n`--) THEN ASM_REWRITE_TAC[LESS_REFL]]],
-      SUBGOAL_THEN (--`!z. q z :num = p(z < k => z | SUC z)`--) MP_TAC THENL
+      SUBGOAL_THEN
+       (--`!z. q z :num = p(if z < k then z else SUC z)`--) MP_TAC THENL
        [GEN_TAC THEN EXPAND_TAC "q" THEN BETA_TAC THEN COND_CASES_TAC THEN
         REWRITE_TAC[],
         DISCH_THEN(fn th => REWRITE_TAC[th])] THEN
@@ -2357,9 +2357,9 @@ val SUM_PERMUTE_0 = prove_thm("SUM_PERMUTE_0",
       DISCH_THEN(MP_TAC o SPEC (--`y:num`--)) THEN
       REWRITE_TAC[MATCH_MP LESS_SUC (ASSUME (--`y < n`--))] THEN
       CONV_TAC(ONCE_DEPTH_CONV EXISTS_UNIQUE_CONV) THEN
-      DISCH_THEN(MP_TAC 
-                 o SPECL [(--`x1 < k => x1 | SUC x1`--),
-                          (--`x2 < k => x2 | SUC x2`--)]
+      DISCH_THEN(MP_TAC
+                 o SPECL [(--`if x1 < k then x1 else SUC x1`--),
+                          (--`if x2 < k then x2 else SUC x2`--)]
                  o CONJUNCT2) THEN
       ASM_REWRITE_TAC[] THEN
       W(C SUBGOAL_THEN MP_TAC o funpow 2 (fst o dest_imp) o snd) THENL
@@ -2371,7 +2371,7 @@ val SUM_PERMUTE_0 = prove_thm("SUM_PERMUTE_0",
           CONV_TAC CONTRAPOS_CONV THEN DISCH_THEN(K ALL_TAC) THEN
           REWRITE_TAC[] THEN MATCH_MP_TAC LESS_TRANS THEN
           EXISTS_TAC (--`SUC x2`--) THEN ASM_REWRITE_TAC[LESS_SUC_REFL],
-          DISCH_THEN(SUBST_ALL_TAC o SYM) THEN 
+          DISCH_THEN(SUBST_ALL_TAC o SYM) THEN
           UNDISCH_TAC (--`~(x1 < k)`--) THEN
           CONV_TAC CONTRAPOS_CONV THEN DISCH_THEN(K ALL_TAC) THEN
           REWRITE_TAC[] THEN MATCH_MP_TAC LESS_TRANS THEN
@@ -2382,9 +2382,9 @@ val SUM_PERMUTE_0 = prove_thm("SUM_PERMUTE_0",
     REWRITE_TAC[LESS_EQ, LESS_EQ_MONO] THEN
     DISCH_THEN(X_CHOOSE_TAC (--`d:num`--) o MATCH_MP LESS_EQUAL_ADD) THEN
     GEN_REWR_TAC (RAND_CONV o RATOR_CONV o ONCE_DEPTH_CONV)
-                     [ASSUME (--`n = k + d`--)] THEN 
+                     [ASSUME (--`n = k + d`--)] THEN
     REWRITE_TAC[GSYM SUM_TWO] THEN
-    GEN_REWR_TAC (RATOR_CONV o ONCE_DEPTH_CONV) 
+    GEN_REWR_TAC (RATOR_CONV o ONCE_DEPTH_CONV)
       [ASSUME (--`n = k + d`--)] THEN
     REWRITE_TAC[ONCE_REWRITE_RULE[ADD_SYM] ADD_SUC] THEN
     REWRITE_TAC[GSYM SUM_TWO, sum, ADD_CLAUSES] THEN BETA_TAC THEN
@@ -2400,8 +2400,8 @@ val SUM_PERMUTE_0 = prove_thm("SUM_PERMUTE_0",
       EXPAND_TAC "q" THEN BETA_TAC THEN ASM_REWRITE_TAC[ADD1]]]);
 
 val SUM_CANCEL = prove_thm("SUM_CANCEL",
-  (--`!f n d. 
-      sum(n,d) (\n. f(SUC n) |-| f(n)) 
+  (--`!f n d.
+      sum(n,d) (\n. f(SUC n) |-| f(n))
     = f(n + d) |-| f(n)`--),
   GEN_TAC THEN GEN_TAC THEN INDUCT_TAC THEN
   ASM_REWRITE_TAC[sum, ADD_CLAUSES, REAL_SUB_REFL] THEN

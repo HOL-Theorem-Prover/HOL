@@ -1,8 +1,8 @@
 (* =====================================================================
- * FILE          : mk_HOL.sml                                            
- * DESCRIPTION   : Make HOL theory by combining other theories.		 
- *                                                                       
- * AUTHORS       : Donald Syme, University of Cambridge               
+ * FILE          : mk_HOL.sml
+ * DESCRIPTION   : Make HOL theory by combining other theories.
+ *
+ * AUTHORS       : Donald Syme, University of Cambridge
  * DATE          : 95.10.21
  * ID            : $Id$
  *
@@ -14,11 +14,11 @@ struct
 
 
 (*---------------------------------------------------------------------------
- * Declare parent theory structures. 
+ * Declare parent theory structures.
  *---------------------------------------------------------------------------*)
 local open oneTheory sumTheory restr_binderTheory rec_typeTheory in end;
 
-val _ = Theory.new_theory "HOL";
-val _ = Theory.export_theory ();
+val _ = Parse.new_theory "HOL";
+val _ = Parse.export_theory ();
 
 end;

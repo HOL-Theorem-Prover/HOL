@@ -3,14 +3,13 @@ signature Rsyntax =
     type hol_type = Type.hol_type
     type term  = Term.term
     type thm = Thm.thm
-    type fixity = Term.fixity
     val INST : (term,term) Lib.subst -> thm -> thm
     val INST_TYPE : (hol_type,hol_type) Lib.subst -> thm -> thm
     val INST_TY_TERM : (term,term)Lib.subst * (hol_type,hol_type) Lib.subst
                          -> thm -> thm
     val SUBST : (term,thm)Lib.subst -> term -> thm -> thm
     val SUBST_CONV : (term,thm)Lib.subst -> term -> term -> thm
-    val define_new_type_bijections 
+    val define_new_type_bijections
         : {ABS:string, REP:string, name:string, tyax:thm} -> thm
     val dest_abs : term -> {Body:term, Bvar:term}
     val dest_comb : term -> {Rand:term, Rator:term}
@@ -31,7 +30,7 @@ signature Rsyntax =
     val dest_type : hol_type -> {Args:hol_type list, Tyop:string}
     val dest_var : term -> {Name:string, Ty:hol_type}
     val inst : (hol_type,hol_type) Lib.subst -> term -> term
-    val match_term : term -> term 
+    val match_term : term -> term
                      -> (term,term) Lib.subst * (hol_type,hol_type) Lib.subst
     val match_type : hol_type -> hol_type -> (hol_type,hol_type) Lib.subst
     val mk_abs : {Body:term, Bvar:term} -> term
@@ -56,10 +55,10 @@ signature Rsyntax =
     val new_binder : {Name:string, Ty:hol_type} -> unit
     val new_constant : {Name:string, Ty:hol_type} -> unit
     val new_infix : {Name:string, Prec:int, Ty:hol_type} -> unit
-    val new_recursive_definition 
-        : {def:term, fixity:fixity, name:string, rec_axiom:thm} -> thm
-    val new_specification 
-        : {consts:{const_name:string, fixity:fixity} list, 
+    val new_recursive_definition
+        : {def:term, fixity:Parse.fixity, name:string, rec_axiom:thm} -> thm
+    val new_specification
+        : {consts:{const_name:string, fixity:Parse.fixity} list,
            name:string, sat_thm:thm} -> thm
     val new_type : {Arity:int, Name:string} -> unit
     val new_type_definition : {inhab_thm:thm, name:string, pred:term} -> thm

@@ -1,5 +1,5 @@
 (* In order to use our recursive theorem on mutually recursive types to
-   define functions on these types, we need to be able to extract from a 
+   define functions on these types, we need to be able to extract from a
    description of how the function should behave the values of the
    "return functions": the things that are universally quantified on
    the outside of the recursive theorem, which are functions and
@@ -10,7 +10,7 @@
    instantiate our recursive function with them, define the functions,
    and prove that the definitions satisfy the desired properties. *)
 
-(* 
+(*
    In any term that defines a set of mutually recursive functions,
    there must be at most one function defined for each type (there need
    not be a function defined for every type). If a function is being
@@ -72,18 +72,18 @@
 
 *)
 
-structure Recftn :> Recftn = 
+structure Recftn :> Recftn =
 struct
 
 open HolKernel Parse basicHol90Lib;
 infix THEN ORELSE;
 
 type term = Term.term
-type fixity = Term.fixity
+type fixity = Parse.fixity
 type thm = Thm.thm;
 
 
-(* define_mutual_functions takes the term def (one such as the one above) 
+(* define_mutual_functions takes the term def (one such as the one above)
    and warps it into a state where it can be combined with rec_axiom to
    produce definitions for the mutually recursive functions the user
    has given information enough to define. It returns a proof that
@@ -129,7 +129,7 @@ open Rsyntax   (* use records *)
        to some args and the list of args stripped off so far; it strips
        off the rest of the args, returning the constructor by itself
        and the complete list of args *)
-    fun decompose (tm, args_so_far) = 
+    fun decompose (tm, args_so_far) =
 	if is_comb tm then
 	    let val {Rator, Rand} = dest_comb tm in
 		decompose (Rator, Rand :: args_so_far)
@@ -140,7 +140,7 @@ open Rsyntax   (* use records *)
     (* extract_cons gets, for a conjunct in the main body of rec_axiom,
        the constructor associated with it, the arguments of the constructor,
        and the type the constructor will construct *)
-    fun extract_cons conj = 
+    fun extract_cons conj =
 	let val (cons_args, body) = strip_forall conj
 	    val applied_cons = #Rand (dest_comb (#lhs (dest_eq body)))
 	in
@@ -158,7 +158,7 @@ open Rsyntax   (* use records *)
 	   constructor = <constructor this case covers>,
 	   args = <constructor args>,
 	   def = <term defining this case for function>}  *)
-    fun get_def_info conj = 
+    fun get_def_info conj =
 	let val {lhs, rhs} = dest_eq conj
 	    val {Rator = ftn_term, Rand = applied_cons} = dest_comb lhs
 	    val ftn_dom = type_of applied_cons
@@ -269,7 +269,7 @@ open Rsyntax   (* use records *)
 	    val lookup_info = lookup_cons (false, def_data)
 	in
 	    case lookup_info
-	         (* if there was no info, there's no case for this 
+	         (* if there was no info, there's no case for this
 		    constructor for our type *)
 	      of NONE => NONE
 	         (* if it was in here, check to make sure it wasn't in there
@@ -315,29 +315,29 @@ open Rsyntax   (* use records *)
 	if result_type <> ftn_dom_ty then
             (* we have a new type to report info and check functions for *)
 	    case def_datum
-	      of NONE => 
+	      of NONE =>
 		  (* we set range type to be one because we will create
 		     a dummy function returning one. The domain of the
-		     function we're defining is the result type of the 
+		     function we're defining is the result type of the
 		     constructor it's operating on *)
 		  {ftn_op = NONE, dom_ty = result_type, rng_ty = one_ty}::
 		  get_ftn_info (cons_data, def_data, result_type, NONE)
-               | SOME {args, constructor, def, ftn, ftn_dom} => 
-		  {ftn_op = SOME ftn, dom_ty = result_type, 
+               | SOME {args, constructor, def, ftn, ftn_dom} =>
+		  {ftn_op = SOME ftn, dom_ty = result_type,
 		   rng_ty = type_of def}::
 		  get_ftn_info (cons_data, def_data, result_type, SOME ftn)
 	else
 	    (* we need to make sure the functions match *)
 	   (case def_datum
 	      of NONE =>
-		  (case ftn_being_defined 
+		  (case ftn_being_defined
 		     of NONE =>
 			 get_ftn_info (cons_data, def_data, ftn_dom_ty, NONE)
 		      | SOME ftn => check_error ftn)
-               | SOME {args, constructor, def, ftn, ftn_dom} => 
-		  (case ftn_being_defined 
+               | SOME {args, constructor, def, ftn, ftn_dom} =>
+		  (case ftn_being_defined
 		     of NONE => check_error ftn
-		      | SOME other_ftn => 
+		      | SOME other_ftn =>
 			 if ftn <> other_ftn then raise HOL_ERR
 			     {origin_structure = "define_mutual_functions",
 			      origin_function = "get_ftn_info",
@@ -345,7 +345,7 @@ open Rsyntax   (* use records *)
 					 (term_name ftn) ^
 			       " and " ^ (term_name other_ftn) ^
 			       " defined for type " ^ (type_name result_type))}
-			 else 
+			 else
 			     get_ftn_info (cons_data, def_data,
 					   ftn_dom_ty, ftn_being_defined)))
       | get_ftn_info (_, _, _, _) = []
@@ -356,7 +356,7 @@ open Rsyntax   (* use records *)
 
     (* now we need to construct the return functions from the data given *)
 
-    (* Now I want to get the definitions of the functions and constants 
+    (* Now I want to get the definitions of the functions and constants
        that compute return values for each constructor, ie, the a-nn in
        the definition of syntax_rec. To do this, we munge the def field
        in each element of term_parts. Using the example above, consider the
@@ -386,7 +386,7 @@ open Rsyntax   (* use records *)
     datatype lookup_return = not_rec_type |
 	rec_ftn_info of {dom_ty:hol_type, ftn_op:term option, rng_ty:hol_type}
 
-    fun lookup_ftn (dom, (datum as {ftn_op, dom_ty, rng_ty})::ftn_type_data) = 
+    fun lookup_ftn (dom, (datum as {ftn_op, dom_ty, rng_ty})::ftn_type_data) =
 	if dom = dom_ty then
 	    rec_ftn_info datum
 	else
@@ -416,12 +416,12 @@ open Rsyntax   (* use records *)
         end
       | get_rec_vars (all_vars, [], rev_rec_vars) = rev_rec_vars
 
-    (* sort_cons_args is used to sort the constructor args into 
+    (* sort_cons_args is used to sort the constructor args into
        recursive (one of the types defined in the recursive type def)
-       and nonrecursive (an existing type). This is done because the 
-       return functions have the non-recursive args before the 
+       and nonrecursive (an existing type). This is done because the
+       return functions have the non-recursive args before the
        recursive args, even if they were interspersed in the definition
-       of the constructor. Within those sorts, however, earlier 
+       of the constructor. Within those sorts, however, earlier
        constructor args are earlier in the lists. The list returned is
        in reverse order (i.e. rev_rec_args @ rev_nonrec_args) since
        abstract_over_vars takes them in reverse order *)
@@ -443,21 +443,21 @@ open Rsyntax   (* use records *)
        the the modified term (which will be the body of our function) and
        the variables representing the recursions (in reverse order). The arg
        all_vars initially contains the args (which are variables) of the
-       constructors; the recursive variables are added on as they 
+       constructors; the recursive variables are added on as they
        are computed *)
     fun replace_recursion (tm, all_vars, [], rev_rec_vars) =
 	(tm, rev_rec_vars)
-      | replace_recursion (tm, all_vars, arg::args, rev_rec_vars) = 
+      | replace_recursion (tm, all_vars, arg::args, rev_rec_vars) =
 	let val ftn_info = lookup_ftn (type_of arg, ftn_type_data)
 	in
 	    case ftn_info
 	      of not_rec_type =>
 		  (* this is a base type,  no need to do recursion *)
 		  replace_recursion (tm, all_vars, args, rev_rec_vars)
-	       | rec_ftn_info {ftn_op = NONE, dom_ty, rng_ty} => 
+	       | rec_ftn_info {ftn_op = NONE, dom_ty, rng_ty} =>
 	          (* this is a recursive type, but there will be no
 		     recursive calls on this arg since no recursive function
-		     is being defined on it. Still, we need to abstract 
+		     is being defined on it. Still, we need to abstract
 		     over it *)
 		  let val new_var = variant all_vars
 		      (mk_var {Name = "r", Ty = rng_ty})
@@ -465,8 +465,8 @@ open Rsyntax   (* use records *)
 		      replace_recursion (tm,  new_var::all_vars,
 					 args, new_var::rev_rec_vars)
 		  end
-	       | rec_ftn_info {ftn_op = SOME ftn, dom_ty, rng_ty} => 
-		  (* this is a recursive type and we will have to replace 
+	       | rec_ftn_info {ftn_op = SOME ftn, dom_ty, rng_ty} =>
+		  (* this is a recursive type and we will have to replace
 		     recursive calls on it *)
 		  let val term_to_replace = mk_comb {Rator = ftn, Rand = arg}
 		      val new_var = variant all_vars
@@ -482,13 +482,13 @@ open Rsyntax   (* use records *)
        we are creating and the variables we want to abstract over (in
        reverse order), and returns the body abstracted over the vars *)
     fun abstract_over_vars (tm, []) = tm
-      | abstract_over_vars (tm, arg::rev_args) = 
+      | abstract_over_vars (tm, arg::rev_args) =
 	   abstract_over_vars (mk_abs {Bvar = arg, Body = tm},
 			       rev_args)
 
-    (* create_return_fun munges the RHS of an equation given in the term 
+    (* create_return_fun munges the RHS of an equation given in the term
        into the function or constant (one of a - nn) needed by syntax_rec *)
-    fun create_return_fun (NONE, 
+    fun create_return_fun (NONE,
 			   {cons, cons_args, result_type}) =
 	(* no function defined for this type, make the function be
 	   \<rec vars> <cons args -- nonrecursive ones first>. one *)
@@ -513,19 +513,19 @@ open Rsyntax   (* use records *)
 	                       (combine (def_cases, cons_data))
 
     (* Now we can define our mutually recursive functions. If we specialize
-       rec_axiom to our return functions, we get a theorem that says that 
+       rec_axiom to our return functions, we get a theorem that says that
        the functions that we want to exist do exist. Actually the form
        of the theorem is
 	   ? fn1 ... fnN. (fn1 satisfies property1) /\ ...
-                          (fnN satisfies propertyN)  
-       where N is the number of mutually recursive types, fI is the 
+                          (fnN satisfies propertyN)
+       where N is the number of mutually recursive types, fI is the
        function defined for type I (using the order in which the types
        are given in rec_axiom), and propertyI is, if a function is
-       defined for type I, definition the user gave, otherwise 
+       defined for type I, definition the user gave, otherwise
        propertyI says that the function returns one on all inputs. *)
     val  exists_thm = BETA_RULE (ISPECL return_functions rec_axiom)
 
-    (* We will need to prove a theorem something like 
+    (* We will need to prove a theorem something like
            ? fn1 fn2 ... fnM. <user's definition with fnI in place of
                                functions user wants to define>
        (where M <= N is the number of functions the user actually defined)
@@ -544,7 +544,7 @@ open Rsyntax   (* use records *)
                   ?fn1 ... fnN. Q fn1 ... fnN
        The idea is that P will be instantiated to
               \fn1 fn2 ... fnN. (fn1 satisfies property1) /\ ...
-	                        (fnN satisfies propertyN) 
+	                        (fnN satisfies propertyN)
        mentioned above, and Q will be instantiated to
               \fn1 fn2 ... fnN. <user's definition with fnI in place of
                                  functions user wants to define>
@@ -575,7 +575,7 @@ open Rsyntax   (* use records *)
     (* Make a tactic for instantiating all our existential variables *)
     fun mk_multi_exists_tac [] = ALL_TAC
       | mk_multi_exists_tac [ftn_var] = EXISTS_TAC ftn_var
-      | mk_multi_exists_tac (ftn_var::rec_ftn_vars) = 
+      | mk_multi_exists_tac (ftn_var::rec_ftn_vars) =
 	(EXISTS_TAC ftn_var) THEN (mk_multi_exists_tac rec_ftn_vars)
     val multi_exists_tac = mk_multi_exists_tac rec_ftn_vars
     (* Prove it! *)
@@ -621,7 +621,7 @@ open Rsyntax   (* use records *)
 	      | helper (seen_data, []) = raise HOL_ERR
 		{origin_structure = "define_mutual_functions",
 		 origin_function = "get_conj_for_cons",
-		 message = ("illegal constructor " ^ (term_name constructor) ^ 
+		 message = ("illegal constructor " ^ (term_name constructor) ^
 		  " in definition")}
 	in
 	    helper ([], exists_data)
@@ -664,7 +664,7 @@ open Rsyntax   (* use records *)
 		raise HOL_ERR {origin_structure = "define_mutual_functions",
 			       origin_function = "mk_Qtm_body",
 			       message = ("illegal variable " ^
-					  (term_name constructor) ^ 
+					  (term_name constructor) ^
 					  " in definition")}
 	else
 	    let val (conj, exists_data2) =
@@ -675,7 +675,7 @@ open Rsyntax   (* use records *)
       | mk_Qtm_body ([], exists_data) = []
 
     (* Make Qtm, the term Q will be instantiated to *)
-    val Qtm = list_mk_abs (rec_ftn_vars, 
+    val Qtm = list_mk_abs (rec_ftn_vars,
 			   list_mk_conj (mk_Qtm_body (def_data, exists_data)))
     val specPQ_lemma1 = BETA_RULE(SPEC Qtm specP_lemma1)
 
@@ -687,7 +687,7 @@ open Rsyntax   (* use records *)
        This is why we are using lemma1 in the first place *)
     val lemma2 = TAC_PROOF
 	(([],goal),
-	 (REPEAT GEN_TAC) THEN STRIP_TAC THEN (REPEAT CONJ_TAC) THEN 
+	 (REPEAT GEN_TAC) THEN STRIP_TAC THEN (REPEAT CONJ_TAC) THEN
 	 (FIRST_ASSUM ACCEPT_TAC))
 
     (* now that we have both ?fn1 ... fnN. Ptm fn1 ... fnN (in exists_thm)
@@ -695,16 +695,16 @@ open Rsyntax   (* use records *)
        now conclude that ?fn1 ... fnN. Qtm fn1 ... fnN (which is existsQ) *)
     val existsQ = MP specPQ_lemma1 (CONJ exists_thm lemma2)
 
-    (* Now we need to eliminate from the f1 ... fN 
+    (* Now we need to eliminate from the f1 ... fN
        the functions the user didn't want to define (we defined them
        as functions returning one). We do this using a rewrite. *)
     val sat_thm = REWRITE_RULE [] existsQ
 
-    (* Now we want to use sat_thm in a new_specification. 
+    (* Now we want to use sat_thm in a new_specification.
        To do this we need the names of the functions we are defining,
        in the order in which the constructors for it are presented in
        rec_axiom. ftn_type_data will give us this info *)
-    val new_ftn_names = 
+    val new_ftn_names =
 	foldr (fn ({ftn_op = NONE, dom_ty, rng_ty}, namelist) =>
 	          namelist
 	        | ({ftn_op = SOME ftn, dom_ty, rng_ty}, namelist) =>
@@ -792,7 +792,7 @@ val def =
    (varcon_patrow (PATROW1 l p) = varcon_pat p) /\
    (varcon_patrow (PATROW2 l p pr) = (varcon_pat p) + (varcon_patrow pr))`--
 
-val def = 
+val def =
 --`(foo33 (ATEXPexp ae) = T) /\
    (foo33 allelse =
     eval_exp arg ^initial_state ^initial_env ^initial_state
