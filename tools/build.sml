@@ -118,7 +118,7 @@ end
 
 val SRCDIRS =
     map (fn s => fullPath [HOLDIR, s])
-        ("src/portableML" ::
+        ("src/portableML" :: "src/prekernel" ::
          (if use_expk then "src/experimental-kernel" else "src/0") ::
          SRCDIRS0)
 
