@@ -12,7 +12,7 @@ fun == q x = Type q
 open arithLib Let_conv NonRecSize;
 
 type thm    = Thm.thm;
-type conv     = Abbrev.conv
+type conv   = Abbrev.conv
 type tactic = Abbrev.tactic;
 type defn   = Defn.defn;
 
@@ -171,7 +171,7 @@ end;
       Terribly naive, but it still gets a lot.
  ---------------------------------------------------------------------------*)
 
-fun simplify_conv tm =
+fun TC_SIMP_CONV tm =
  (Rewrite.REWRITE_CONV
     [prim_recTheory.WF_measure, prim_recTheory.WF_LESS,
      prim_recTheory.measure_def, relationTheory.inv_image_def]
@@ -184,7 +184,7 @@ fun simplify_conv tm =
   THENC Rewrite.REWRITE_CONV [arithmeticTheory.ADD_CLAUSES])  tm;
 
 fun prover g =
-(CONV_TAC simplify_conv
+(CONV_TAC TC_SIMP_CONV
   THEN REPEAT STRIP_TAC
   THEN REPEAT (POP_ASSUM (fn th =>
        if arithSimps.is_arith (concl th)

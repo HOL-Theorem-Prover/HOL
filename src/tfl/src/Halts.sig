@@ -12,5 +12,5 @@ sig
    val try_proof     : defn -> tactic -> term -> defn
    val proveTotal0   : tactic -> defn -> defn 
    val proveTotal    : defn -> defn
-   val simplify_conv : conv
+   val TC_SIMP_CONV  : conv
 end

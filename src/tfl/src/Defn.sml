@@ -19,6 +19,8 @@ fun == q x = Type q
    type thm = Thm.thm
    type conv = Abbrev.conv
    type tactic = Abbrev.tactic
+   type proofs   = GoalstackPure.proofs
+
 
 fun ERR func mesg =
   HOL_ERR
@@ -87,9 +89,9 @@ fun pairf (false,f,stem,args,eqs0) = (eqs0, stem, I)
      let val argtys    = map type_of args
          val unc_argty = prod_tyl argtys
          val range_ty  = type_of (list_mk_comb (f,args))
-         val fname = #Name (dest_atom f)
-         val stem'name = "tupled_"^stem
-         val stem' = mk_var {Name=stem'name, Ty = unc_argty --> range_ty}
+         val fname     = #Name (dest_atom f)
+         val stem'name = stem^"_tupled"
+         val stem'     = mk_var {Name=stem'name, Ty = unc_argty --> range_ty}
      fun rebuild tm =
       case dest_term tm
        of COMB _ =>
@@ -133,7 +135,8 @@ fun pairf (false,f,stem,args,eqs0) = (eqs0, stem, I)
                     val ind1 = SPEC tm
                          (Rewrite.PURE_REWRITE_RULE [GSYM def] induction)
                 in
-                 SOME (CONV_RULE(DEPTH_CONV Let_conv.GEN_BETA_CONV) ind1)
+                 SOME 
+                   (GEN Q (CONV_RULE(DEPTH_CONV Let_conv.GEN_BETA_CONV) ind1))
                 end
       in
          (rules', ind')
@@ -297,7 +300,7 @@ fun define stem eqs0 =
              end
              handle HOL_ERR _ => raise ERR"define" "non-rec. TFL call failed")
        | _  => (* recursive, not prim.rec., not mutual, not nested *)
-           (case inverses(rules, SOME ind)
+           (case inverses (rules, SOME ind)
              of (rules', SOME ind') =>
                    STDREC {eqs=rules',ind=ind', R=R, SV=SV}
               | _ => raise ERR "define" "bad inverses in std. case")
@@ -552,21 +555,49 @@ fun prove_tcs (STDREC {eqs, ind, R, SV}) tac =
   | prove_tcs x _ = x;
 
 
+(*---------------------------------------------------------------------------
+        Goalstack-based interface to termination proof.
+ ---------------------------------------------------------------------------*)
 
-(*
-fun gstack_of defn =
-   case tcl_of defn
-    of NONE => raise ERR "gstack_of" "no termination conditions"
-     | SOME (WFR,tcs) =>
-        let val R = rand WFR
-            val M = mk_exists{Bvar=R, Body = list_mk_conj (WFR::tcs)}
+fun TC_TAC defn =
+ let val E = eqns_of defn
+     val I = Option.valOf (ind_of defn)
+ in MATCH_MP_TAC 
+       (REWRITE_RULE [AND_IMP_INTRO] 
+             (GEN_ALL(DISCH_ALL (CONJ E I))))
+ end;
+
+
+fun tgoal0 defn =
+   if null (tcs_of defn)
+   then raise ERR "tgoal" "no termination conditions"
+   else let val E = eqns_of defn
+            val I = Option.valOf (ind_of defn)
+            val gstack0 = GoalstackPure.set_goal
+                            ([],Psyntax.mk_conj(concl E, concl I))
+            val gstack1 = GoalstackPure.expand (TC_TAC defn) gstack0
         in
-          GoalstackPure.set_goal ([], M)
-        end;
+          goalstackLib.add gstack1;
+          goalstackLib.status()
+        end
+        handle HOL_ERR _ => raise ERR "tgoal" "";
 
-val g = goalstackLib.add  o gstack_of;
+fun tgoal defn = 
+  Lib.with_flag (goalstackLib.chatting,false) 
+       tgoal0 defn;
 
-*)
 
+fun tprove0 (defn,tactic) =
+   let val _ = tgoal defn
+       val _ = goalstackLib.expand tactic  (* should finish proof off *)
+       val th = goalstackLib.top_thm ()
+   in
+      (CONJUNCT1 th, CONJUNCT2 th)
+   end
+   handle HOL_ERR _ => raise ERR "tprove" "Termination proof failed.";
+
+fun tprove p = 
+  Lib.with_flag (goalstackLib.chatting,false) 
+       tprove0 p;
 
 end;
