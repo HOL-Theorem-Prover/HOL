@@ -298,12 +298,13 @@ fun docdir_to_htmldir docdir htmldir =
                  trans_html fulldocfile;
                  loop()
              end
- in loop(); 
-    closeDir dstrm
+ in loop()
+  ; closeDir dstrm
+  ; print "\nFinished translating docfiles to html.\n\n"
  end;
 
 val _ = 
     case CommandLine.arguments () 
      of [docdir,htmldir] => docdir_to_htmldir docdir htmldir
-      | otherwise => print "Usage: docdir_to_htmldir <docdir> <htmldir>\n"
+      | otherwise => print "Usage: Doc2Html <docdir> <htmldir>\n"
 

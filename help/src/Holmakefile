@@ -48,7 +48,7 @@ HOLPage.uo: HOLPage.sml Database.uo
 	HOLMOSMLC -c HOLPage.sml
 
 Lexer.sml: Lexer.lex
-	/home/kxs/200/bin/mosmllex Lexer.lex
+	/local/scratch/kxs/200/bin/mosmllex Lexer.lex
 
 Parser.sml: Parser.grm
-	/home/kxs/200/bin/mosmlyac Parser.grm
+	/local/scratch/kxs/200/bin/mosmlyac Parser.grm
