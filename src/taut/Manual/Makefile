@@ -1,5 +1,5 @@
 # =====================================================================
-# Makefile for the taut library documentation 
+# Makefile for the taut library documentation
 # =====================================================================
 
 # ---------------------------------------------------------------------
@@ -8,7 +8,7 @@
 Help=../help
 
 # ---------------------------------------------------------------------
-# Pathname to the doc-to-tex script and doc-to-tex.sed file 
+# Pathname to the doc-to-tex script and doc-to-tex.sed file
 # ---------------------------------------------------------------------
 DOCTOTEX=../../../Manual/Reference/bin/doc-to-tex
 DOCTOTEXSED=../../../Manual/Reference/bin/doc-to-tex.sed
@@ -16,7 +16,7 @@ DOCTOTEXSED=../../../Manual/Reference/bin/doc-to-tex.sed
 # ---------------------------------------------------------------------
 # Pathname to the makeindex script
 # ---------------------------------------------------------------------
-MAKEINDEX=../../../Manual/LaTeX/makeindex ../../../
+MAKEINDEX=makeindex
 
 default:
 	@echo "INSTRUCTIONS: Type \"make all\" to make the documentation"
@@ -38,11 +38,11 @@ ids:
 	@echo "\input{entries-intro}" >> entries.tex
 	/bin/sh ${DOCTOTEX} ${DOCTOTEXSED} ${Help}/entries entries.tex
 
-index: 
-	${MAKEINDEX} taut.idx index.tex
+index:
+	${MAKEINDEX} taut.idx
 
-taut: 
+taut:
 	latex taut.tex
 
-all: 
+all:
 	make clean; make tex; make taut; make index; make taut

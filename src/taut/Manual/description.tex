@@ -153,25 +153,16 @@ theorem.
 \section{Using the library}
 
 The \ml{taut} library can be loaded into a user's \HOL\ session using the
-function \ml{load\_library}\index{load\_library@{\ptt load\_library}} (see the
-\HOL\ manual for a general description of library loading). The first action
-in the load sequence initiated by \ml{load\_library} is to update the \HOL\
-help\index{help!updating search path} search path. The help search path is
-updated with a pathname to online help files for the \ML\ functions in the
-library. After updating the help search path, the \ML\ functions in the
-library are loaded into \HOL.
-
-The following session shows how the \ml{taut} library may be loaded using
-\ml{load\_library}:
+function \ml{load}, as in the following session example:
 
 \setcounter{sessioncount}{1}
 \begin{session}\begin{verbatim}
-#load_library `taut`;;
-Loading library `taut` ...
-Updating help search path
-........................................
-Library `taut` loaded.
-() : void
-
-#
+- load "tautLib";
+> val it = () : unit
+-
 \end{verbatim}\end{session}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: taut
+%%% End:
