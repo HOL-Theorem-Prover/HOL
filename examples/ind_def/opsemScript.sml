@@ -59,11 +59,11 @@ val bexp = Type`:^state -> bool`;
 (* We can now use the recursive types package to define the syntax of   *)
 (* commands (or "programs').  We have the following types of commands:  *)
 (*									*)
-(*    C ::=   skip                     (does nothing)			*)
+(*    C ::=   Skip                     (does nothing)			*)
 (*          | V := E                   (assignment)          		*)
 (*          | C1 ; C2                  (sequencing)           		*)
-(*          | if B then C1 else C2     (conditional)			*)
-(*          | while B do C             (repetition)			*)
+(*          | If B then C1 else C2     (conditional)			*)
+(*          | While B do C             (repetition)			*)
 (*                                                                      *)
 (* where V ranges over program variables, E ranges over natural number	*)
 (* expressions, B ranges over boolean expressions, and C, C1 and C2     *)
@@ -74,21 +74,21 @@ val bexp = Type`:^state -> bool`;
 (*						                        *)
 (*    V := E                  represented by `assign V E`		*)
 (*    C1 ; C2                 represented by `seq C1 C2`		*)
-(*    if B then C1 else C2    represented by `if B C1 C2`		*)
-(*    while B do C            represented by `while B C`		*)
+(*    if B then C1 else C2    represented by `If B C1 C2`		*)
+(*    While B do C            represented by `While B C`		*)
 (*									*)
 (* ---------------------------------------------------------------------*)
 
 val _ = Hol_datatype 
           `comm 
-             = skip 
+             = Skip 
              | :=    of string => ^nexp 
              | ;;    of  comm => comm
-             | if    of ^bexp => comm => comm
-             | while of ^bexp => comm`;
+             | If    of ^bexp => comm => comm
+             | While of ^bexp => comm`;
 
-val _ = set_fixity ":=" (Infix 400);
-val _ = set_fixity ";;" (Infix 350);
+val _ = set_fixity ":=" (Infixr 400);
+val _ = set_fixity ";;" (Infixr 350);
 val _ = set_MLname ":=_DEF" "assign_def";
 val _ = set_MLname ";;_DEF" "seq_def";
 
@@ -127,7 +127,7 @@ val {rules,induction} =
 
     ([],                                                            [])
     -------------------------------------------------------------------
-                         `^EVAL skip s s`                             ,
+                         `^EVAL Skip s s`                             ,
 
     ([],                                                            [])
     -------------------------------------------------------------------
@@ -141,22 +141,22 @@ val {rules,induction} =
 
     ([`                     ^EVAL C1 s1 s2`         ],[`(B:^Bexp) s1`])
     -------------------------------------------------------------------
-                       `^EVAL (if B C1 C2) s1 s2`                     ,
+                       `^EVAL (If B C1 C2) s1 s2`                     ,
 
 
     ([                    `^EVAL C2 s1 s2`      ], [ `~(B:^Bexp) s1` ])
     -------------------------------------------------------------------
-                      `^EVAL (if B C1 C2) s1 s2`                      ,
+                      `^EVAL (If B C1 C2) s1 s2`                      ,
 
 
     ([],[                  `~(B:^Bexp) s`                            ])
     -------------------------------------------------------------------
-                        `^EVAL (while B C) s s`                        ,
+                        `^EVAL (While B C) s s`                        ,
 
 
-    ([`^EVAL C s1 s2`,     `^EVAL (while B C) s2 s3`], [`(B:^Bexp) s1`])
+    ([`^EVAL C s1 s2`,     `^EVAL (While B C) s2 s3`], [`(B:^Bexp) s1`])
     -------------------------------------------------------------------
-                      `^EVAL (while B C) s1 s3`                        ]
+                      `^EVAL (While B C) s1 s3`                        ]
 
     Prefix (`^EVAL C s1 s2`, [])
 
@@ -198,7 +198,7 @@ val ecases = derive_cases_thm (rules,induction);
 (*									*)
 (*    1: EVAL C s1 s2 							*)
 (*									*)
-(* for a specific command C (e.g. for C = (--`skip`--)) that the        *)
+(* for a specific command C (e.g. for C = (--`Skip`--)) that the        *)
 (* corresponding instance of the premisses of the rule(s) for C must    *)
 (* also hold, since  (1) can hold only by virtue of being derivable by  *)
 (* the rule for C. This kind of reasoning occurs frequently in proofs   *)
@@ -213,13 +213,13 @@ val ecases = derive_cases_thm (rules,induction);
 (*									*)
 (*      |- !C s1 s2.							*)
 (*          EVAL C s1 s2 =						*)
-(*             (C = skip) ... \/					*)
+(*             (C = Skip) ... \/					*)
 (*             (?V E. (C = V := E) ...) \/				*)
 (*             (?C1 C2 s2'. (C = C1 ; C2) ...) \/			*)
-(*             (?C1 B C2. (C = if B C1 C2) /\ B s1 ...) \/		*)
-(*             (?C2 B C1. (C = if B C1 C2) /\ ~B s1 ...) \/		*)
-(*             (?B C'. (C = while B C') /\ ~B s1 ... ) \/		*)
-(*             (?C' B s2'. (C = while B C') /\ B s1 ...)		*)
+(*             (?C1 B C2. (C = If B C1 C2) /\ B s1 ...) \/		*)
+(*             (?C2 B C1. (C = If B C1 C2) /\ ~B s1 ...) \/		*)
+(*             (?B C'. (C = While B C') /\ ~B s1 ... ) \/		*)
+(*             (?C' B s2'. (C = While B C') /\ B s1 ...)		*)
 (*  									*)
 (* If C is specialized to some particular syntactic form, for example   *)
 (* to `C1;;C2`, then most of the disjuncts in the conclusion become     *)
@@ -267,12 +267,12 @@ val CASE_TAC = DISCH_THEN
                (STRIP_ASSUME_TAC o SIMPLIFY o ONCE_REWRITE_RULE[ecases]);
 
 (* --------------------------------------------------------------------- *)
-(* SKIP_THM : EVAL skip s1 s2 is provable only by the skip rule, which   *)
+(* SKIP_THM : EVAL Skip s1 s2 is provable only by the Skip rule, which   *)
 (* requires that s1 and s2 be the same state.				 *)
 (* --------------------------------------------------------------------- *)
 
 val SKIP_THM = store_thm("SKIP_THM",
-     (--`!s1 s2. EVAL skip s1 s2 = (s1 = s2)`--),
+     (--`!s1 s2. EVAL Skip s1 s2 = (s1 = s2)`--),
      REPEAT GEN_TAC THEN EQ_TAC THENL
      [CASE_TAC THEN ASM_REWRITE_TAC [],
       DISCH_THEN SUBST1_TAC THEN MAP_FIRST RULE_TAC rules]);
@@ -304,13 +304,13 @@ val SEQ_THM = store_thm("SEQ_THM",
 
 
 (* --------------------------------------------------------------------- *)
-(* IF_T_THM : if B(s1) is true, then EVAL (if B C2 C2) s1 s2 is provable *)
+(* IF_T_THM : if B(s1) is true, then EVAL (If B C2 C2) s1 s2 is provable *)
 (* only by the first conditional rule, which requires that C1 when	 *)
 (* evaluated in s1 terminates in s2.					 *)
 (* --------------------------------------------------------------------- *)
 
 val IF_T_THM = store_thm ("IF_T_THM",
-(--`!s1 s2 B C1 C2. B s1 ==> (EVAL (if B C1 C2) s1 s2 = EVAL C1 s1 s2)`--),
+(--`!s1 s2 B C1 C2. B s1 ==> (EVAL (If B C1 C2) s1 s2 = EVAL C1 s1 s2)`--),
      REPEAT STRIP_TAC THEN EQ_TAC THENL
      [CASE_TAC THEN EVERY_ASSUM (TRY o SUBST_ALL_TAC) THENL
       [FIRST_ASSUM ACCEPT_TAC, RES_TAC],
@@ -318,13 +318,13 @@ val IF_T_THM = store_thm ("IF_T_THM",
 
 
 (* --------------------------------------------------------------------- *)
-(* IF_F_THM : if B(s1) is false, then EVAL (if B C1 C2) s1 s2 is 	 *)
+(* IF_F_THM : if B(s1) is false, then EVAL (If B C1 C2) s1 s2 is 	 *)
 (* provable only by the second conditional rule, which requires that C2	 *)
 (* when evaluated in s1 terminates in s2.				 *)
 (* --------------------------------------------------------------------- *)
 
 val IF_F_THM = store_thm ("IF_F_THM",
-(--`!s1 s2 B C1 C2. ~B s1 ==> (EVAL (if B C1 C2) s1 s2 = EVAL C2 s1 s2)`--),
+(--`!s1 s2 B C1 C2. ~B s1 ==> (EVAL (If B C1 C2) s1 s2 = EVAL C2 s1 s2)`--),
    REPEAT STRIP_TAC THEN EQ_TAC THENL
    [CASE_TAC THEN EVERY_ASSUM (TRY o SUBST_ALL_TAC) THENL
     [RES_TAC, FIRST_ASSUM ACCEPT_TAC],
@@ -333,16 +333,16 @@ val IF_F_THM = store_thm ("IF_F_THM",
 
 
 (* ---------------------------------------------------------------------*)
-(* WHILE_T_THM : if B(s1) is true, then EVAL (while B C) s1 s2 is 	*)
-(* provable only by the corresponding while rule, which requires that 	*)
+(* WHILE_T_THM : if B(s1) is true, then EVAL (While B C) s1 s2 is 	*)
+(* provable only by the corresponding While rule, which requires that 	*)
 (* there is an intermediate state s3 such that C in state s1 terminates *)
-(* in s3, and while B do C in state s3 terminates in s2.		*)
+(* in s3, and While B do C in state s3 terminates in s2.		*)
 (* ---------------------------------------------------------------------*)
 
 val WHILE_T_THM = store_thm ("WHILE_T_THM",
      (--`!s1 s2 B C.
-      B s1 ==> (EVAL (while B C) s1 s2 =
-                (?s3. EVAL C s1 s3 /\ EVAL (while B C) s3 s2))`--),
+      B s1 ==> (EVAL (While B C) s1 s2 =
+                (?s3. EVAL C s1 s3 /\ EVAL (While B C) s3 s2))`--),
    REPEAT STRIP_TAC THEN EQ_TAC THENL
    [CASE_TAC THEN EVERY_ASSUM (TRY o SUBST_ALL_TAC) THENL
     [RES_TAC,
@@ -353,13 +353,13 @@ val WHILE_T_THM = store_thm ("WHILE_T_THM",
 
 
 (* ---------------------------------------------------------------------*)
-(* WHILE_F_THM : if B(s1) is false, then EVAL (while B C) s1 s2 is	*)
-(* provable only by the corresponding while rule, which requires that 	*)
+(* WHILE_F_THM : if B(s1) is false, then EVAL (While B C) s1 s2 is	*)
+(* provable only by the corresponding While rule, which requires that 	*)
 (* s2 equals the original state s1					*)
 (* ---------------------------------------------------------------------*)
 
 val WHILE_F_THM = store_thm ("WHILE_F_THM",
-     (--`!s1 s2 B C. ~B s1 ==> (EVAL (while B C) s1 s2 = (s1 = s2))`--),
+     (--`!s1 s2 B C. ~B s1 ==> (EVAL (While B C) s1 s2 = (s1 = s2))`--),
      REPEAT STRIP_TAC THEN EQ_TAC THENL
      [CASE_TAC THENL
       [CONV_TAC SYM_CONV THEN FIRST_ASSUM ACCEPT_TAC,
@@ -401,7 +401,7 @@ val SPEC_DEF = new_definition ("SPEC_DEF",
      (--`SPEC P C Q = !s1 s2. (P s1 /\ EVAL C s1 s2) ==> Q s2`--));
 
 (* --------------------------------------------------------------------- *)
-(* Proof of the while rule in Hoare logic.				 *)
+(* Proof of the While rule in Hoare logic.				 *)
 (* --------------------------------------------------------------------- *)
 
 (* --------------------------------------------------------------------- *)
@@ -417,11 +417,11 @@ val SPEC_DEF = new_definition ("SPEC_DEF",
 (*     |- tm[x1,...,xn/y1,...,yn]					 *)
 (*									 *)
 (* which is passed to the theorem continuation function. The tactic just *)
-(* discards theorems not of the form shown above.   For the while proof  *)
+(* discards theorems not of the form shown above.   For the While proof  *)
 (* given below, this has the effect of thinning out useless induction	 *)
 (* hypotheses of the form:						 *)
 (*									 *)
-(*     |- !B' C'. (C = while B' C') ==> tm[B',C']			 *)
+(*     |- !B' C'. (C = While B' C') ==> tm[B',C']			 *)
 (* 									 *)
 (* These are just discarded.						 *)
 (* --------------------------------------------------------------------- *)
@@ -432,11 +432,11 @@ fun REFL_MP_THEN ttac th =
    end handle HOL_ERR _ => ALL_TAC;
 
 (* --------------------------------------------------------------------- *)
-(* The following lemma states that the condition B in while B C must be  *)
-(* false upon termination of a while loop.  The proof is by a rule 	 *)
-(* induction specialized to the while rule cases.  We show that the set	 *)
+(* The following lemma states that the condition B in While B C must be  *)
+(* false upon termination of a While loop.  The proof is by a rule 	 *)
+(* induction specialized to the While rule cases.  We show that the set	 *)
 (* 									 *)
-(*    {(while B C,s1,s2) | ~(B s2)} U {(C,s1,s2) | ~(C = while B' C')}   *)
+(*    {(While B C,s1,s2) | ~(B s2)} U {(C,s1,s2) | ~(C = While B' C')}   *)
 (*									 *)
 (* is closed under the rules for the evaluation relation. Note that this *)
 (* formulation illustrates a general way of proving a property of some   *)
@@ -445,15 +445,15 @@ fun REFL_MP_THEN ttac th =
 (* all other triples whose command component is NOT an element of the    *)
 (* class of commands of interest.					 *)
 (*									 *)
-(* The proof is trivial for all but the two while rules, since this set	 *)
-(* contains all triples (C,s1,s2) for which C is not a while command.  	 *)
+(* The proof is trivial for all but the two While rules, since this set	 *)
+(* contains all triples (C,s1,s2) for which C is not a While command.  	 *)
 (* The subgoals corresponding to these cases are vacuously true, since 	 *)
-(* they are implications with antecedents of the form (C = while B' C'), *)
-(* where C is a command syntactically distinct from any while command.	 *)
+(* they are implications with antecedents of the form (C = While B' C'), *)
+(* where C is a command syntactically distinct from any While command.	 *)
 (*									 *)
-(* Showing that the above set is closed under the two while rules is     *)
-(* likewise trivial.  For the while axiom, we get ~(B s2) immediately 	 *)
-(* from the side condition. For the other while rule, the statement to	 *)
+(* Showing that the above set is closed under the two While rules is     *)
+(* likewise trivial.  For the While axiom, we get ~(B s2) immediately 	 *)
+(* from the side condition. For the other While rule, the statement to	 *)
 (* prove is just one of the induction hypotheses; since RULE_INDUCT_TAC  *)
 (* uses STRIP_ASSUME_TAC on this hypothesis, this subgoal is solved	 *)
 (* immediately.								 *)
@@ -461,39 +461,39 @@ fun REFL_MP_THEN ttac th =
 
 
 val WHILE_LEMMA1 = TAC_PROOF(([],
- (--`!C s1 s2. EVAL C s1 s2 ==> !B' C'. (C = while B' C') ==> ~(B' s2)`--)),
+ (--`!C s1 s2. EVAL C s1 s2 ==> !B' C'. (C = While B' C') ==> ~(B' s2)`--)),
      RULE_INDUCT_TAC THEN REWRITE_TAC [distinct, const11] THEN
      REPEAT GEN_TAC THEN DISCH_THEN (STRIP_THM_THEN SUBST_ALL_TAC) THEN
      FIRST_ASSUM ACCEPT_TAC);
 
 (* ---------------------------------------------------------------------*)
 (* The second lemma deals with the invariant part of the Hoare proof 	*)
-(* rule for while commands.  We show that if P is an invariant of C, 	*)
-(* then it is also an invariant of while B C.  The proof is essentially *)
+(* rule for While commands.  We show that if P is an invariant of C, 	*)
+(* then it is also an invariant of While B C.  The proof is essentially *)
 (* an induction on the number of applications of the evaluation rule for*)
-(* while commands.  This is expressed as a rule induction, which 	*)
+(* While commands.  This is expressed as a rule induction, which 	*)
 (* establishes that the set:						*)
 (*									*)
-(*    {(while B C,s1,s2) | P invariant of C ==> (P s1 ==> P s2)}	*)
+(*    {(While B C,s1,s2) | P invariant of C ==> (P s1 ==> P s2)}	*)
 (*									*)
 (* is closed under the transition rules.  As in lemma 1, the rules for  *)
 (* other kinds of commands are dealt with by taking the union of this 	*)
 (* set with 								*)
 (* 									*)
-(*    {(C,s1,s2) | ~(C = while B' C')}					*)
+(*    {(C,s1,s2) | ~(C = While B' C')}					*)
 (*									*)
-(* Closure under evaluation rules other than the two rules for while is *)
+(* Closure under evaluation rules other than the two rules for While is *)
 (* therefore trivial, as outlined in the comments to lemma 1 above. 	*)
 (*									*)
 (* The proof in fact proceeds by strong rule induction.  With ordinary  *)
 (* rule induction, one obtains hypotheses that are too weak to imply the*)
-(* desired conclusion in the step case of the while rule.  To see why, 	*)
+(* desired conclusion in the step case of the While rule.  To see why, 	*)
 (* try replacing strong by weak induction in the tactic proof below.	*)
 (*									*)
 (* Note that REFL_MP_THEN is used to simplify the induction hypotheses  *)
 (* before adding them to the assumption list.  This avoids having the 	*)
 (* assumptions in an awkward form (try using ASSUME_TAC instead). Note	*)
-(* also that in the case of the while axiom, the states s1 and s2 are	*)
+(* also that in the case of the While axiom, the states s1 and s2 are	*)
 (* identical, so the corresponding subgoal is trivial and is solved by	*)
 (* the rewriting step.							*)
 (* ---------------------------------------------------------------------*)
@@ -502,7 +502,7 @@ val WHILE_LEMMA2 =
     TAC_PROOF(([],
   --`!C s1 s2. 
      EVAL C s1 s2 ==>
-     !B' C'. (C = while B' C') ==>
+     !B' C'. (C = While B' C') ==>
              (!s1 s2. P s1 /\ B' s1 /\ EVAL C' s1 s2 ==> P s2) ==>
              (P s1 ==> P s2)`--),
      RULE_INDUCT_THEN sind (REFL_MP_THEN ASSUME_TAC) ASSUME_TAC THEN 
@@ -511,7 +511,7 @@ val WHILE_LEMMA2 =
      REPEAT STRIP_TAC THEN RES_TAC);
 
 (* ---------------------------------------------------------------------*)
-(* The proof rule for while commands in Hoare logic is:			*)
+(* The proof rule for While commands in Hoare logic is:			*)
 (*									*)
 (*         |- {P /\ B} C {P}						*)
 (*      ----------------------						*)
@@ -525,7 +525,7 @@ val WHILE_LEMMA2 =
 
 val WHILE = store_thm ("WHILE",
      (--`!P C. SPEC (\s. P s /\ B s) C P ==>
-            SPEC P (while B C) (\s. P s /\ ~B s)`--),
+            SPEC P (While B C) (\s. P s /\ ~B s)`--),
      PURE_ONCE_REWRITE_TAC [SPEC_DEF] THEN
      CONV_TAC (ONCE_DEPTH_CONV BETA_CONV) THEN
      PURE_ONCE_REWRITE_TAC [SYM(SPEC_ALL CONJ_ASSOC)] THEN

@@ -533,9 +533,9 @@ val Theorem3 =
 (* --------------------------------------------------------------------- *)
 
 val MEQUIV_DEF =
-    new_infix_definition 
+    new_infixl_definition 
     ("MEQUIV_DEF",    
-     (--`MEQUIV P Q = (!A. MTRACE P A = MTRACE Q A)`--),700);
+     (--`MEQUIV P Q = (!A. MTRACE P A = MTRACE Q A)`--),725);
 
 (* --------------------------------------------------------------------- *)
 (* Bisimulation equivalence.  A binary relation s:agent->agent->bool is  *)
@@ -553,9 +553,9 @@ val SIM_DEF =
             !a P'. TRANS P a P' ==> ?Q'. TRANS Q a Q' /\ s P' Q'`--));
 
 val BEQUIV_DEF =
-    new_infix_definition 
+    new_infixl_definition 
     ("BEQUIV_DEF",
-     (--`BEQUIV P Q = ?s. SIM s /\ s P Q /\ SIM(\x y. s y x)`--),700);
+     (--`BEQUIV P Q = ?s. SIM s /\ s P Q /\ SIM(\x y. s y x)`--),725);
 
 
 (* --------------------------------------------------------------------- *)

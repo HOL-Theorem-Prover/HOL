@@ -9,7 +9,7 @@
 (* =====================================================================*)
 
 (*
-app load ["ind_defLib", "Datatype", "clTheory"] ;
+  app load ["ind_defLib", "Datatype", "clTheory"] ;
 *)
 
 structure milScript =
@@ -34,7 +34,7 @@ val _ = new_theory"mil";
 val _ = Hol_datatype `ty = G  of 'a  
                          | -> of ty => ty`;
 
-val _ = set_fixity "->" (Infix 800);
+val _ = set_fixity "->" (Infixr 700);
 val _ = set_MLname "->_DEF" "Arrow_def";
 
 (* --------------------------------------------------------------------- *)
@@ -96,7 +96,7 @@ in
       -------------------------------------------------------
                          `^TY (U # V) t2`
 
-   ]    (Infix 400)  (`^TY c t`, [])
+   ]    (Infixr 400)  (`^TY c t`, [])
 end;
 
 (* ======================================================================== *)

@@ -61,7 +61,7 @@ val _ = Hol_datatype `cl = s
                          | k 
                          | # of cl => cl`;
 
-val _ = set_fixity "#" (Infix 800);
+val _ = set_fixity "#" (Infixl 1100);
 val _ = set_MLname "#_DEF" "HASH_DEF";
 
 (* =====================================================================*)
@@ -127,12 +127,12 @@ in
 
       ([],                                                            [])
       -------------------------------------------------------------------
-                          `^CTR ((k # x) # y) x`                        ,
+                          `^CTR (k#x#y) x`                              ,
 
 
       ([],                                                            [])
       -------------------------------------------------------------------
-                `^CTR (((s # x) # y) # z)  ((x # z) # (y # z))`         ,
+                `^CTR (s#x#y#z)  (x#z#(y#z))`                           ,
 
 
 
@@ -147,7 +147,7 @@ in
                           `^CTR (z # x) (z # y)`                       
    ]
 
-(Infix 700)  (`^CTR U V`, [])
+(Infixr 725)  (`^CTR U V`, [])
 end;
 
 
@@ -239,7 +239,7 @@ val RTCcases = derive_cases_thm (RTCrules,RTCind);
 (* ---------------------------------------------------------------------*)
 
 val reduce = 
- new_infix_definition("reduce", Term`--->* = RTC $--->`,700);
+ new_infixr_definition("reduce", Term`--->* = RTC $--->`,700);
 
 
 (* =====================================================================*)
@@ -271,7 +271,7 @@ val reduce =
 (* We first define i to be skk.						*)
 (* ---------------------------------------------------------------------*)
 
-val iDEF = new_definition ("iDEF", (--`i = (s # k) # k`--));
+val iDEF = new_definition ("iDEF", Term`i = s#k#k`);
 
 (* ---------------------------------------------------------------------*)
 (* Given the tactics defined above for each rule, it is straightforward *)
@@ -294,19 +294,12 @@ fun CONT_TAC g =
 (*    3) ki((ki)(ki)) ---> i						*)
 (* ---------------------------------------------------------------------*)
 
-val lemma1 = prove
-    ((--`((k # i) # (i # i)) ---> i`--),
-     CONT_TAC);
-
-val lemma2 =
-    prove
-    ((--`((k # i) # (i # i)) ---> (k # i) # ((k # i) # (k # i))`--),
-     SUBST1_TAC iDEF THEN CONT_TAC);
-
-val lemma3 =
-    prove
-    ((--`((k # i) # ((k # i) # (k # i))) ---> i`--),
-     SUBST1_TAC iDEF THEN CONT_TAC);
+val lemma1 = prove ((--`k#i#(i#i) ---> i`--), CONT_TAC);
+val lemma2 = prove ((--`k#i#(i#i) ---> k#i#(k#i#(k#i))`--),
+ SUBST1_TAC iDEF 
+ THEN CONT_TAC);
+val lemma3 = prove ((--`k#i#(k#i#(k#i)) ---> i`--),
+ SUBST1_TAC iDEF THEN CONT_TAC);
 
 (* ---------------------------------------------------------------------*)
 (* For the proof that ~?U. i ---> U, we construct some infrastructure 	*)
@@ -317,7 +310,7 @@ val lemma3 =
 (*   |- !U V.								*)
 (*       U ---> V =							*)
 (*       (?y. U = (k # V) # y) \/					*)
-(*       (?x y z. (U = ((s # x) # y) # z) /\ (V = (x # z) # (y # z))) \/ *)
+(*       (?x y z. (U = ((s#x) # y) # z) /\ (V = (x # z) # (y # z))) \/  *)
 (*       (?x y z. (U = x # z) /\ (V = y # z) /\ x ---> y) \/		*)
 (*       (?x y z. (U = z # x) /\ (V = z # y) /\ x ---> y)		*)
 (*									*)
@@ -453,7 +446,7 @@ in
                          `^PCTR (w # y) (x # z)`                        
    ]
 
- (Infix 700)  (`^PCTR U V`, [])
+ (Infixr 725)  (`^PCTR U V`, [])
 end;
 
 
@@ -503,13 +496,13 @@ fun PC_TAC g =
 (* transitive closure of ===>.  Transitive is defined inductively as	*)
 (* follows.  Note that the transitivity rule formulated as:		*)
 (*									*)
-(*            TRC R x z 							*)
+(*            TRC R x z 						*)
 (*   R1:   -------------- R z y						*)
 (*            TRC R x y							*)
 (*									*)
 (* and not as								*)
 (*									*)
-(*          TRC R x z   TRC R z y						*)
+(*          TRC R x z   TRC R z y					*)
 (*   R2:  ------------------------					*)
 (*              TRC R x z						*)
 (*									*)
@@ -567,7 +560,8 @@ val TRCsind = derive_strong_induction (TRCrules,TRCind);
 (* Now, define parallel reduction for terms of CL.			*)
 (* ---------------------------------------------------------------------*)
 
-val preduce = new_infix_definition("preduce", (--`===>* = TRC $===>`--),700);
+val preduce = 
+  new_infixr_definition("preduce", (--`===>* = TRC $===>`--),700);
 
 (* =====================================================================*)
 (* Theorem: ===>* and --->* are the same relation.			*)
@@ -583,19 +577,19 @@ val preduce = new_infix_definition("preduce", (--`===>* = TRC $===>`--),700);
 
 val Rk_THM =
     prove
-    ((--`!a b. ((k # a) # b) --->* a`--),
+    ((--`!a b. k#a#b --->* a`--),
      SUBST1_TAC reduce THEN
      RTC_IN_TAC THEN Ck_TAC);
 
 val Rs_THM =
     prove
-    ((--`!a b c. (((s # a) # b) # c) --->* ((a # c) # (b # c))`--),
+    ((--`!a b c. s#a#b#c --->* a#c#(b#c)`--),
      SUBST1_TAC reduce THEN
      RTC_IN_TAC THEN Cs_TAC);
 
 val LRap_THM =
     prove
-    ((--`!a b. a --->* b ==> !c. (a # c) --->* (b # c)`--),
+    ((--`!a b. a --->* b ==> !c. a#c --->* b#c`--),
      SUBST1_TAC reduce THEN
      RTC_INDUCT_TAC THEN REPEAT GEN_TAC THENL
      [RTC_IN_TAC THEN LCap_TAC THEN FIRST_ASSUM ACCEPT_TAC,
@@ -604,12 +598,12 @@ val LRap_THM =
 
 val RRap_THM =
     prove
-    ((--`!a b. a --->* b ==> !c. (c # a) --->* (c # b)`--),
+    ((--`!a b. a --->* b ==> !c. c#a --->* c#b`--),
      SUBST1_TAC reduce THEN
      RTC_INDUCT_TAC THEN REPEAT GEN_TAC THENL
      [RTC_IN_TAC THEN RCap_TAC THEN FIRST_ASSUM ACCEPT_TAC,
       RTC_REFL_TAC,
-      RTC_TRANS_TAC THEN EXISTS_TAC (--`c # z`--) THEN ASM_REWRITE_TAC[]]);
+      RTC_TRANS_TAC THEN EXISTS_TAC (--`c#z`--) THEN ASM_REWRITE_TAC[]]);
 
 (* --------------------------------------------------------------------- *)
 (* To avoid having to expand --->* into RTC --->, we also prove that the *)
@@ -683,13 +677,13 @@ val PRED_SUB_RED =
 
 val PRk_THM =
     prove
-    ((--`!a b. ((k # a) # b) ===>* a`--),
+    ((--`!a b. k#a#b ===>* a`--),
      SUBST1_TAC preduce THEN
      TRC_IN_TAC THEN PC_TAC);
 
 val PRs_THM =
     prove
-    ((--`!a b c. (((s # a) # b) # c) ===>* ((a # c) # (b # c))`--),
+    ((--`!a b c. s#a#b#c ===>* a#c#(b#c)`--),
      SUBST1_TAC preduce THEN
      TRC_IN_TAC THEN PC_TAC);
 
@@ -702,9 +696,11 @@ val PRs_THM =
 
 val PRap_THM =
     prove
-    ((--`!a b. (a ===>* b) ==> 
-               !c d. (c ===>* d) ==> 
-                     ((a # c) ===>* (b # d))`--),
+    ((--`!a b. a ===>* b 
+               ==> 
+               !c d. c ===>* d 
+                       ==> 
+                    a#c ===>* b#d`--),
      SUBST1_TAC preduce THEN
      REPEAT TRC_INDUCT_TAC THENL
      [TRC_IN_TAC,
@@ -837,10 +833,10 @@ val CR_LEMMA =
 (* -------------------------------------------------------------------- *)
 
 val TRC_PRESERVES_CR_THM = 
-    prove
-    ((--`!R:'a->'a->bool.
-        CR R ==> 
-           !a c. TRC R a c ==> !b. TRC R a b ==> ?d. TRC R b d /\ TRC R c d`--),
+  prove
+  ((--`!R:'a->'a->bool.
+      CR R ==> 
+         !a c. TRC R a c ==> !b. TRC R a b ==> ?d. TRC R b d /\ TRC R c d`--),
      GEN_TAC THEN STRIP_TAC THEN TRC_INDUCT_TAC THEN
      REPEAT STRIP_TAC THENL
      [IMP_RES_TAC CR_LEMMA THEN
@@ -930,14 +926,12 @@ val CR_THEOREM = prove (--`CR $===>`--,
       REPEAT GEN_TAC THENL
       [DISCH_TAC THEN EXISTS_TAC (--`c:cl`--) THEN STRIP_PC_TAC,
        DISCH_THEN (mkcases o CONV_RULE ecnv) THENL
-       map EXISTS_TAC [(--`x:cl`--),(--`c:cl`--),
-                       (--`x:cl`--),(--`z':cl`--)] THEN STRIP_PC_TAC,
+       map (EXISTS_TAC o Term)[`x:cl`, `c:cl`,`x:cl`,`z':cl`] 
+       THEN STRIP_PC_TAC,
        DISCH_THEN (mkcases o CONV_RULE ecnv) THENL     
-       map EXISTS_TAC [(--`((x#z)#(y#z))`--),
-                       (--`((x#z)#(y#z))`--),
-                       (--`((x#z')#(y#z'))`--),
-                       (--`((x#z')#(z''#z'))`--),
-                       (--`((z'''#z')#(z''#z'))`--)] THEN STRIP_PC_TAC,
+       map (EXISTS_TAC o Term)
+           [`x#z#(y#z)`, `x#z#(y#z)`, `x#z'#(y#z')`, 
+            `x#z'#(z''#z')`, `z'''#z'#(z''#z')`] THEN STRIP_PC_TAC,
        DISCH_THEN (mkcases o CONV_RULE ecnv) THENL
        [EXISTS_TAC (--`x#z`--) THEN STRIP_PC_TAC,
         let val cth = UNDISCH (fst(EQ_IMP_RULE (ecnv (--`(k#c) ===> x`--)))) 
@@ -946,9 +940,8 @@ val CR_THEOREM = prove (--`CR $===>`--,
         STRIP_PC_TAC,
         let val cth = UNDISCH(fst(EQ_IMP_RULE(ecnv(--`(s#x')#y' ===> x`--)))) 
         in DISJ_CASES_THEN (REPEAT_TCL STRIP_THM_THEN ttac) cth 
-        end THENL map EXISTS_TAC [(--`((x'#z)#(y'#z))`--),
-                                  (--`((x'#z)#(z'#z))`--),
-                                  (--`((z''#z)#(z'#z))`--)] THEN 
+        end THENL map (EXISTS_TAC o Term)
+                   [`x'#z#(y'#z)`, `x'#z#(z'#z)`, `z''#z#(z'#z)`] THEN 
         STRIP_PC_TAC,
         RES_TAC THEN EXISTS_TAC (--`d''#d`--) THEN STRIP_PC_TAC]]
    end);
