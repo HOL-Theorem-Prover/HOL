@@ -395,7 +395,7 @@ in
   (not (FileSys.access(f2, [])) orelse FileSys.modTime f1 > FileSys.modTime f2)
 end
 
-fun get_dependencies f = let
+fun get_dependencies (f : File) : File list = let
   val fname = fromFile f
   val arg = holdep_arg f
 in
@@ -407,8 +407,17 @@ in
       if always_rebuild_deps orelse argname forces_update_of depfile then
         runholdep arg depfile
       else ()
+    val file_dependencies = get_dependencies_from_file depfile
   in
-    get_dependencies_from_file depfile
+    case f of
+      UO x =>
+        if FileSys.access(fromFile (SIG x), []) andalso
+           List.all (fn f => f <> SIG x) file_dependencies
+        then
+           SIG x :: file_dependencies
+        else
+           file_dependencies
+    | _ => file_dependencies
   end
   else
     []
