@@ -772,6 +772,31 @@ that in Table \ref{expanded-grammar}.
  characters.
 
 
+\section{Changes from older versions}
+
+This section of the manual documents the (extensive) changes made to
+the parsing of HOL terms and types in the Taupo release and beyond
+from the point of view of a user who doesn't want to know how to use
+the new facilities, but wants to make sure that their old code
+continues to work cleanly.
+
+The changes which may cause old terms to fail to parse are:
+\begin{itemize}
+\item The precedence of type annotations has completely changed.  It
+  is now a very tight suffix (though with a precedence weaker than
+  that associated with function application), instead of a weak one.
+  This means that \mbox{\tt (x,y:bool \# bool)} should now be written
+  as \mbox{\tt (x,y):bool \# bool}. The previous form will now be
+  parsed as a type annotation applying to just the \verb+y+.  This
+  change brings the syntax of the logic closer to that of SML and
+  should make it generally easier to annotate tuples, as one can now
+  write \[ (x\,:\,\tau_1,\;y\,:\,\tau_2,\dots z\,:\,\tau_n)
+  \] instead of \[
+  (x\,:\,\tau_1, \;(y\,:\,\tau_2, \dots (z\,:\,\tau_n)))
+  \] where extra parentheses have had to be added just to allow one to
+  write a frequently occurring form of constraint.
+\end{itemize}
+
 \chapter{Proof}
 
  Hol98 provides various mechanisms for doing proof. The user can invoke
@@ -1487,7 +1512,7 @@ for their use; others do not.
 \end{figure}
 
 
-\chapter {Building Logical Developments}\label{thy-ops}
+\chapter{Building Logical Developments}\label{thy-ops}
 
 This chapter deals with theories and \verb+Holmake+. Theories are a
 simple structuring mechanism, with which formalizations can be broken
