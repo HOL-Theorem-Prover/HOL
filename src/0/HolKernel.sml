@@ -257,7 +257,7 @@ fun term_size t = let
         [] => acc
       | t::ts =>
         case dest_term t of
-          COMB(f, x) => recurse (1 + acc) (f::x::ts)
+          COMB(f, x) => recurse acc (f::x::ts)
         | LAMB(v,b) => recurse (1 + acc) (b::ts)
         | _ => recurse (1 + acc) ts
 in
