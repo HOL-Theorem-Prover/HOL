@@ -17,7 +17,7 @@ structure ExistsFuns :> ExistsFuns =
 struct
 
 open utilsLib HolKernel Parse basicHol90Lib;
-infix THEN THENL THENC;
+infix THEN THENL THENC |->;
 
 type term = Term.term;
 type thm = Thm.thm;
@@ -27,11 +27,15 @@ fun ExistsFun_ERR {function, message} =
              origin_function = function,
              origin_structure = "ExistsFuns"}
 
+val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+fun -- q x = Term q
+fun == q x = Type q;
+
 val lemma1 = TAC_PROOF
     (([],
-      --`!P Q.(?(x:'a).P x) ==> (!x. (P x ==> Q x)) ==> ?x. Q x`--),
+      --`!P Q. (?x. P x) ==> (!x. (P x ==> Q x)) ==> ?x. Q x`--),
         (REPEAT STRIP_TAC) THEN (EXISTS_TAC (--`x:'a`--)) THEN
-        (MP_TAC (ASSUME (--`(P:'a->bool) x`--))) THEN
+        (MP_TAC (ASSUME (--`P x`--))) THEN
         (ASM_REWRITE_TAC []));
 
 (*
@@ -41,7 +45,7 @@ val lemma1 = TAC_PROOF
                       A u B |- ?x1...xn. Q x1...xn
 *)
 
-val lambdaQ = (--`\x:'a.((Q  x):bool)`--)
+val lambdaQ = (--`\x. Q x`--)
 (*
 val exists_thm =
     ASSUME (--`?(x1:num)(x2:num)(x3:'a). P(((\z.z)x1),((\y.(y,x3))x2))`--)
@@ -74,7 +78,7 @@ fun EXISTS_FROM_EXISTS_RULE {exists_thm, forall_imp_thm} =
           (ISPECL [P, Q]
            (PURE_ONCE_REWRITE_RULE
             [(ALPHA_CONV (mk_var {Name = #Name (dest_var x),
-                                  Ty = mk_vartype "'a"}) lambdaQ)]
+                                  Ty = Type.alpha}) lambdaQ)]
             lemma1)))
          exists_thm)
         all_x_Pbody_imp_Qbody_thm
@@ -84,7 +88,7 @@ fun EXISTS_FROM_EXISTS_RULE {exists_thm, forall_imp_thm} =
 
 val lemma2 = TAC_PROOF
     (([],
-      --`!f P Q.(?(x:'a).P x) ==> (!x. (P x ==> Q (f x))) ==> ?y:'b. Q y`--),
+      --`!f P Q.(?x. P x) ==> (!x. (P x ==> Q (f x))) ==> ?y:'b. Q y`--),
      (REPEAT STRIP_TAC THEN EXISTS_TAC (--`(f:'a -> 'b)(x:'a)`--) THEN
       FIRST_ASSUM MATCH_MP_IMP_TAC THEN FIRST_ASSUM ACCEPT_TAC));
 
@@ -140,8 +144,7 @@ fun GEN_EXISTS_FROM_EXISTS_RULE {exists_thm,
                 (mk_var{Name = #Name (dest_var x),
                         Ty = hd(tl(#Args(dest_type(type_of f))))})
         val Q = mk_abs {Bvar = y,    (* \y.Q y *)
-                        Body = subst [{redex = fx, residue = y},
-                                      {redex = fx_red, residue = y}] Qbody}
+                        Body = subst [fx |-> y, fx_red |-> y] Qbody}
         val all_x_Pbody_imp_Qbody_thm = GEN x (DISCH Pbody Qbody_thm)
         val speced_lemma2 = ISPECL [f,P,Q] lemma2
         val conv_thm = CONV_RULE

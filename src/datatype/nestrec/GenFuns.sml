@@ -18,6 +18,10 @@ structure GenFuns :> GenFuns =
 open NestedRecMask HolKernel Parse basicHol90Lib;
 infix THEN THENL THENC;
 
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars;
+fun -- q x = Term q
+fun == q x = Type q;
+
  type hol_type = Type.hol_type
  type term = Term.term
  type thm = Thm.thm
