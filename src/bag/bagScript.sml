@@ -1045,6 +1045,8 @@ val FINITE_BAG_INSERT = prove(
 val FINITE_BAG_THM = save_thm(
   "FINITE_BAG_THM",
   CONJ FINITE_EMPTY_BAG FINITE_BAG_INSERT);
+val _ = export_rewrites ["FINITE_BAG_THM"]
+
 
 val FINITE_BAG_DIFF = Q.store_thm(
   "FINITE_BAG_DIFF",
@@ -1233,6 +1235,8 @@ val BAG_CARD_EMPTY =
   (Q.SPEC `EMPTY_BAG`  >- SIMP_RULE hol_ss [FINITE_EMPTY_BAG] >-
    ONCE_REWRITE_RULE [BCARD_rwts] >-
    SIMP_RULE hol_ss [BAG_INSERT_NOT_EMPTY]) BAG_CARD;
+val _ = save_thm("BAG_CARD_EMPTY", BAG_CARD_EMPTY)
+val _ = export_rewrites ["BAG_CARD_EMPTY"]
 
 val BCARD_0 = Q.store_thm(
   "BCARD_0",
@@ -1295,6 +1299,117 @@ val BAG_CARD_BAG_INN = Q.store_thm(
     RES_TAC THEN ASM_SIMP_TAC hol_ss []
   ]);
 
+(* ----------------------------------------------------------------------
+    FILTER for bags (alternatively, intersection with a set)
+   ---------------------------------------------------------------------- *)
+
+val BAG_FILTER_DEF = new_definition(
+  "BAG_FILTER_DEF",
+  ``BAG_FILTER P (b :'a bag) : 'a bag = \e. if P e then b e else 0``);
+
+val BAG_FILTER_EMPTY = store_thm(
+  "BAG_FILTER_EMPTY",
+  ``BAG_FILTER P {||} = {||}``,
+  SRW_TAC [][BAG_FILTER_DEF, FUN_EQ_THM] THEN
+  SRW_TAC [][EMPTY_BAG]);
+val _ = BasicProvers.export_rewrites ["BAG_FILTER_EMPTY"]
+
+val BAG_FILTER_BAG_INSERT = store_thm(
+  "BAG_FILTER_BAG_INSERT",
+  ``BAG_FILTER P (BAG_INSERT e b) = if P e then BAG_INSERT e (BAG_FILTER P b)
+                                    else BAG_FILTER P b``,
+  SRW_TAC [][BAG_FILTER_DEF, FUN_EQ_THM] THEN
+  SRW_TAC [][BAG_INSERT] THEN RES_TAC);
+val _ = BasicProvers.export_rewrites ["BAG_FILTER_BAG_INSERT"]
+
+val FINITE_BAG_FILTER = store_thm(
+  "FINITE_BAG_FILTER",
+  ``!b. FINITE_BAG b ==> FINITE_BAG (BAG_FILTER P b)``,
+  HO_MATCH_MP_TAC FINITE_BAG_INDUCT THEN SRW_TAC [][] THEN
+  SRW_TAC [][]);
+val _ = export_rewrites ["FINITE_BAG_FILTER"]
+
+val BAG_INN_BAG_FILTER = store_thm(
+  "BAG_INN_BAG_FILTER",
+  ``BAG_INN e n (BAG_FILTER P b) = (n = 0) \/ P e /\ BAG_INN e n b``,
+  SRW_TAC [numSimps.ARITH_ss][BAG_FILTER_DEF, BAG_INN]);
+val _ = export_rewrites ["BAG_INN_BAG_FILTER"]
+
+val BAG_IN_BAG_FILTER = store_thm(
+  "BAG_IN_BAG_FILTER",
+  ``BAG_IN e (BAG_FILTER P b) = P e /\ BAG_IN e b``,
+  SRW_TAC [][BAG_IN]);
+val _ = export_rewrites ["BAG_IN_BAG_FILTER"]
+
+(* ----------------------------------------------------------------------
+    IMAGE for bags.
+
+    This is complicated by the fact that a taking the image of a
+    non-injective function over an infinite bag might produce a bag that
+    wanted to have an infinite number of some element.  For example,
+       BAG_IMAGE (\e. 1) (BAG_OF_SET (UNIV : num set))
+    would want to populate a bag with an infinite number of ones.
+
+    BAG_IMAGE is "safe" if the input bag is finite, or if the function is
+    only finitely non-injective.  I don't want to have these side conditions
+    hanging around on my theorems, so I've decided to simply make BAG_IMAGE
+    take elements that want to be infinite to zero instead.
+   ---------------------------------------------------------------------- *)
+
+val BAG_IMAGE_DEF = new_definition(
+  "BAG_IMAGE_DEF",
+  ``BAG_IMAGE f b = \e. let sb = BAG_FILTER (\e0. f e0 = e) b
+                        in
+                            if FINITE_BAG sb then BAG_CARD sb
+                            else 0``);
+
+val BAG_IMAGE_EMPTY = store_thm(
+  "BAG_IMAGE_EMPTY",
+  ``BAG_IMAGE f {||} = {||}``,
+  SRW_TAC [][BAG_IMAGE_DEF] THEN SRW_TAC [][EMPTY_BAG_alt]);
+val _ = export_rewrites ["BAG_IMAGE_EMPTY"]
+
+val BAG_IMAGE_FINITE_INSERT = store_thm(
+  "BAG_IMAGE_FINITE_INSERT",
+  ``!b. FINITE_BAG b ==>
+        (BAG_IMAGE f (BAG_INSERT e b) = BAG_INSERT (f e) (BAG_IMAGE f b))``,
+  SRW_TAC [][BAG_IMAGE_DEF] THEN
+  SRW_TAC [][FUN_EQ_THM] THEN
+  Cases_on `f e = e'` THENL [
+    SRW_TAC [][BAG_CARD_THM] THEN SRW_TAC [][BAG_INSERT],
+    SRW_TAC [][] THEN SRW_TAC [][BAG_INSERT]
+  ]);
+val _ = export_rewrites ["BAG_IMAGE_FINITE_INSERT"]
+
+val BAG_IMAGE_FINITE = store_thm(
+  "BAG_IMAGE_FINITE",
+  ``!b. FINITE_BAG b ==> FINITE_BAG (BAG_IMAGE f b)``,
+  HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN SRW_TAC [][]);
+val _ = export_rewrites ["BAG_IMAGE_FINITE"]
+
+val BAG_IN_FINITE_BAG_IMAGE = store_thm(
+  "BAG_IN_FINITE_BAG_IMAGE",
+  ``FINITE_BAG b ==>
+    (BAG_IN x (BAG_IMAGE f b) = ?y. (f y = x) /\ BAG_IN y b)``,
+  SRW_TAC [][BAG_IMAGE_DEF] THEN EQ_TAC THEN STRIP_TAC THENL [
+    FULL_SIMP_TAC (srw_ss()) [BAG_IN, BAG_INN] THEN
+    Q.ABBREV_TAC `bf = BAG_FILTER (\e0. f e0 = x) b` THEN
+    `FINITE_BAG bf` by SRW_TAC [][] THEN
+    `0 < BAG_CARD bf` by SRW_TAC [numSimps.ARITH_ss][] THEN
+    `?m. BAG_CARD bf = SUC m`
+        by PROVE_TAC [arithmeticTheory.num_CASES,
+                      arithmeticTheory.NOT_ZERO_LT_ZERO] THEN
+    `?e bf0. (bf = BAG_INSERT e bf0)` by PROVE_TAC [BCARD_SUC] THEN
+    `BAG_IN e bf` by SRW_TAC [][BAG_IN_BAG_INSERT] THEN
+    `BAG_IN e (BAG_FILTER (\e0. f e0 = x) b)` by PROVE_TAC [] THEN
+    POP_ASSUM (STRIP_ASSUME_TAC o SIMP_RULE bool_ss [BAG_IN_BAG_FILTER]) THEN
+    PROVE_TAC [BAG_IN, BAG_INN],
+    `?b0. BAG_DELETE b y b0` by PROVE_TAC [BAG_IN_BAG_DELETE] THEN
+    `b = BAG_INSERT y b0` by PROVE_TAC [BAG_DELETE] THEN
+    SIMP_TAC (srw_ss()) [BAG_IN, BAG_INN] THEN SRW_TAC [][] THEN
+    FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) [BAG_CARD_THM]
+  ]);
+val _ = export_rewrites ["BAG_IN_FINITE_BAG_IMAGE"]
 
 (*---------------------------------------------------------------------------
         CHOICE and REST for bags.
