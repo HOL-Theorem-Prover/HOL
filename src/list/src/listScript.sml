@@ -710,7 +710,7 @@ val UNZIP_ZIP = store_thm("UNZIP_ZIP",
 
 open simpLib boolSimps pairTheory;
 infix ++;
-val arith_ss = bool_ss ++ arithSimps.ARITH_ss ++ arithSimps.REDUCE_ss
+val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
 
 val ZIP_MAP = store_thm(
   "ZIP_MAP",

@@ -1,16 +1,17 @@
 (* ---------------------------------------------------------------------*
  * A symbolic calculator for the HOL "num" arithmetic.  Does no proof   *
- * - it relies on some other tool to do the proof.  See arith_ss.sml.   *
+ * - it relies on some other tool to do the proof.                      *
  *                                                                      *
  * When using this with natural arithmetic, note that the fact that     *
  * m-n=0 for n>m is not taken into account.  It assumes that            *
  * subtraction is always being used in a "well behaved" way.            (
  * ---------------------------------------------------------------------*)
-structure arithSimps :> arithSimps =
+
+structure numSimps :> numSimps =
 struct
 
 open Arbint HolKernel Parse boolLib liteLib
-     arithLib reduceLib
+     Arith reduceLib
      Arith_cons Arith
      simpLib Traverse Cache Trace;
 

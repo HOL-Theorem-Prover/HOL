@@ -26,16 +26,16 @@ val _ = new_theory "integer";
 (* interactive mode
   app load ["jrhUtils", "EquivType", "liteLib", "QLib",
      "SingleStep", "BasicProvers", "boolSimps", "pairSimps", 
-     "arithSimps", "numLib"];
+     "numSimps", "numLib"];
 *)
-open jrhUtils EquivType liteLib arithLib
+open jrhUtils EquivType liteLib
      arithmeticTheory prim_recTheory numTheory
      simpLib numLib boolTheory liteLib;
 
 infix ++;
 
 
-val int_ss = boolSimps.bool_ss ++ arithSimps.ARITH_ss ++ pairSimps.PAIR_ss;
+val int_ss = boolSimps.bool_ss ++ numSimps.ARITH_ss ++ pairSimps.PAIR_ss;
 
 (*--------------------------------------------------------------------------*)
 (* Required lemmas about the natural numbers - mostly to drive CANCEL_TAC   *)
@@ -1638,11 +1638,11 @@ val INT_MUL_EQ_1 = store_thm(
   REPEAT GEN_TAC THEN
   Q.SPEC_THEN `x` STRIP_ASSUME_TAC INT_NUM_CASES THEN
   FIRST_X_ASSUM SUBST_ALL_TAC THEN
-  SIMP_TAC (bool_ss ++ arithSimps.ARITH_ss) [INT_MUL_LZERO, INT_INJ,
+  SIMP_TAC (bool_ss ++ numSimps.ARITH_ss) [INT_MUL_LZERO, INT_INJ,
                                              int_eq_calculate] THEN
   Q.SPEC_THEN `y` STRIP_ASSUME_TAC INT_NUM_CASES THEN
   FIRST_X_ASSUM SUBST_ALL_TAC THEN
-  SIMP_TAC (bool_ss ++ arithSimps.ARITH_ss) [
+  SIMP_TAC (bool_ss ++ numSimps.ARITH_ss) [
     INT_MUL_LZERO, INT_INJ, INT_MUL_RZERO, int_eq_calculate,
     GSYM INT_NEG_RMUL, INT_MUL, GSYM INT_NEG_LMUL,
     INT_NEGNEG, INT_EQ_NEG]);

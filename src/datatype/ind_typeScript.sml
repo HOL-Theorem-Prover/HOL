@@ -6,7 +6,7 @@ open HolKernel boolLib Prim_rec Parse simpLib boolSimps
 
 infix THEN THENC THENL |-> ++
 
-val hol_ss = bool_ss ++ arithSimps.ARITH_ss ++ arithSimps.REDUCE_ss
+val hol_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
 
 val lhand = rand o rator
 val AND_FORALL_THM = GSYM FORALL_AND_THM;

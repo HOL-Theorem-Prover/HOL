@@ -2063,7 +2063,7 @@ val LASTN_SEG = store_thm("LASTN_SEG",
                           (LASTN n l = SEG n (LENGTH l - n) l)`--),
     let val SUB_SUC = prove(
       (--`!k m. (m < k) ==> (k - m = SUC (k - SUC m))`--),
-      CONV_TAC arithLib.ARITH_CONV)
+      CONV_TAC numLib.ARITH_CONV)
     in
     INDUCT_TAC THEN REWRITE_TAC[LASTN,SUB_0,SEG] THEN LIST_INDUCT_TAC
     THEN REWRITE_TAC[LENGTH,LASTN,NOT_SUC_LESS_EQ_0]
@@ -2958,7 +2958,7 @@ val BUTFIRSTN_LASTN = store_thm("BUTFIRSTN_LASTN",
 
 val SUB_ADD_lem = prove(
     (--`!l n m. (n + m) <= l ==> ((l - (n + m)) + n = l - m)`--),
-    CONV_TAC arithLib.ARITH_CONV)
+    CONV_TAC numLib.ARITH_CONV)
 
 val SEG_LASTN_BUTLASTN = store_thm("SEG_LASTN_BUTLASTN",
     (--`!n m (l:'a list). ((n + m) <= (LENGTH l)) ==>

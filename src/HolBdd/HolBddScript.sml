@@ -63,11 +63,11 @@ val PGEN_TAC = pairTools.PGEN_TAC;
 
 fun DECIDE q = 
   let val tm = Parse.Term q
-  in EQT_ELIM(arithLib.ARITH_CONV tm)
+  in EQT_ELIM(numLib.ARITH_CONV tm)
      handle HOL_ERR _ => BasicProvers.PROVE [] tm
   end;
 
-val arith_ss = simpLib.++(bool_ss,arithSimps.ARITH_ss);
+val arith_ss = simpLib.++(bool_ss,numSimps.ARITH_ss);
 
 fun prove_thm(_:string,tm,tac) = prove(tm,tac);
 
@@ -76,20 +76,6 @@ val EXISTS_IMP =
   ("EXISTS_IMP",
    ``((?x. P x) ==> Q) = (!x. P x ==> Q)``,
    PROVE_TAC[]);
-
-(* In pairTheory
-val EXISTS_PROD = 
- store_thm
-  ("EXISTS_PROD",
-   ``(?p. P p) = (?p_1 p_2. P(p_1,p_2))``,
-   PROVE_TAC[pairTheory.PAIR]);
-
-val FORALL_PROD = 
- store_thm
-  ("FORALL_PROD",
-   ``(!p. P p) = (!p_1 p_2. P(p_1,p_2))``,
-   PROVE_TAC[pairTheory.PAIR]);
-*)
 
 val LENGTH_EQ_CONS_EXISTS =
  prove_thm

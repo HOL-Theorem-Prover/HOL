@@ -2499,7 +2499,7 @@ open simpLib boolSimps mesonLib SingleStep
 infix ++
 infix 8 by
 val AP = numLib.ARITH_PROVE
-val arith_ss = bool_ss ++ arithSimps.ARITH_ss
+val arith_ss = bool_ss ++ numSimps.ARITH_ss
 
 val FINITE_WEAK_ENUMERATE = store_thm(
   "FINITE_WEAK_ENUMERATE",
@@ -2521,7 +2521,7 @@ val FINITE_WEAK_ENUMERATE = store_thm(
 
     SIMP_TAC bool_ss [GSYM LEFT_FORALL_IMP_THM] THEN REPEAT GEN_TAC THEN
     MAP_EVERY Q.ID_SPEC_TAC [`f`, `s`, `b`] THEN numLib.INDUCT_TAC THENL [
-      SIMP_TAC (bool_ss ++ arithSimps.ARITH_ss) [] THEN
+      SIMP_TAC (bool_ss ++ numSimps.ARITH_ss) [] THEN
       GEN_TAC THEN
       STRIP_ASSUME_TAC (Q.SPEC `s` SET_CASES) THEN
       ASM_SIMP_TAC bool_ss [IN_INSERT, FINITE_EMPTY] THEN

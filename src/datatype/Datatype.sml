@@ -344,7 +344,7 @@ fun is_enum_type_spec astl =
 fun build_enum_tyinfo (tyname, ast) =
  let open EnumType
  in case ast 
-     of Constructors clist => (enum_type_to_tyinfo (tyname, map #1 clist), [])
+     of Constructors clist => (enum_type_to_tyinfo (tyname, map #1 clist))
       | otherwise => raise ERR "build_enum_tyinfo" "Should never happen"
  end
 

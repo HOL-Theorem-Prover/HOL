@@ -74,23 +74,23 @@ local open simpLib sumTheory
 in
 val std_ss =
      (boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ optionSimps.OPTION_ss ++
-      arithSimps.REDUCE_ss ++ sumSimps.SUM_ss)
+      numSimps.REDUCE_ss ++ sumSimps.SUM_ss)
 
-val arith_ss = std_ss ++ arithSimps.ARITH_ss
+val arith_ss = std_ss ++ numSimps.ARITH_ss
 val list_ss  = arith_ss ++ listSimps.list_ss
 
-val _ = BasicProvers.augment_srw_ss [pairSimps.PAIR_ss, optionSimps.OPTION_ss,
-                                     arithSimps.REDUCE_ss, sumSimps.SUM_ss,
-                                     listSimps.list_ss]
+val _ = BasicProvers.augment_srw_ss 
+               [pairSimps.PAIR_ss, optionSimps.OPTION_ss,
+                numSimps.REDUCE_ss, sumSimps.SUM_ss, listSimps.list_ss]
 
 end
 
 fun DECIDE tm =
- arithLib.ARITH_PROVE tm handle HOL_ERR _ => tautLib.TAUT_PROVE tm;
+ numLib.ARITH_PROVE tm handle HOL_ERR _ => tautLib.TAUT_PROVE tm;
 
 
 fun DECIDE_TAC (g as (asl,_)) =
-((MAP_EVERY UNDISCH_TAC (filter arithSimps.is_arith asl)
+((MAP_EVERY UNDISCH_TAC (filter numSimps.is_arith asl)
       THEN numLib.ARITH_TAC)
  ORELSE
  tautLib.TAUT_TAC) g;

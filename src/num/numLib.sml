@@ -173,8 +173,8 @@ val REDUCE_CONV = reduceLib.REDUCE_CONV
 val REDUCE_RULE = reduceLib.REDUCE_RULE
 val REDUCE_TAC  = reduceLib.REDUCE_TAC
 
-val ARITH_CONV  = arithLib.ARITH_CONV
-val ARITH_PROVE = arithLib.ARITH_PROVE
+val ARITH_CONV  = Arith.ARITH_CONV
+val ARITH_PROVE = Drule.EQT_ELIM o ARITH_CONV
 val ARITH_TAC   = CONV_TAC ARITH_CONV;
 
 
@@ -185,7 +185,7 @@ val ARITH_TAC   = CONV_TAC ARITH_CONV;
 local open simpLib sumTheory
       infix ++
 in
-val num_ss = boolSimps.bool_ss ++ arithSimps.ARITH_ss
+val num_ss = boolSimps.bool_ss ++ numSimps.ARITH_ss
 end;
 
 end; (* numLib *)

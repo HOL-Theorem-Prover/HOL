@@ -717,7 +717,7 @@ val gcd1_thm = store_thm(
     FULL_SIMP_TAC bool_ss [INT_DIVIDES_1, INT_EQ_CALCULATE]
   ]);
 
-val arith_ss = bool_ss ++ arithSimps.ARITH_ss
+val arith_ss = bool_ss ++ numSimps.ARITH_ss
 val gcd21_thm = store_thm(
   "gcd21_thm",
   ``!m a x b p q.

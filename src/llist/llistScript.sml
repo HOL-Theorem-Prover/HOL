@@ -3,15 +3,15 @@ struct
 
 (* interactive use:
 app load ["boolSimps","pairSimps","combinSimps",
-          "optionSimps", "arithSimps", "listSimps",
+          "optionSimps", "numSimps", "listSimps",
           "mesonLib","SingleStep", "Q", "numLib"];
 
  open SingleStep mesonLib Rsyntax Prim_rec simpLib
-      boolSimps pairSimps combinSimps optionSimps arithSimps listSimps;
+      boolSimps pairSimps combinSimps optionSimps numSimps listSimps;
 *)
 open HolKernel boolLib Parse
       SingleStep mesonLib Rsyntax Prim_rec simpLib
-      boolSimps pairSimps combinSimps optionSimps arithSimps listSimps;
+      boolSimps pairSimps combinSimps optionSimps numSimps listSimps;
 
 local open listTheory optionTheory pairTheory in end;
 
@@ -24,7 +24,7 @@ val is_pair = pairSyntax.is_pair
 val UNCURRY_THM = pairTheory.UNCURRY
 
 val hol_ss = bool_ss ++ optionSimps.OPTION_ss ++ listSimps.list_ss ++
-                        arithSimps.ARITH_ss ++ arithSimps.REDUCE_ss ++
+                        numSimps.ARITH_ss ++ numSimps.REDUCE_ss ++
                         pairSimps.PAIR_ss ++ rewrites [UNCURRY_THM] ++
                         combinSimps.COMBIN_ss
 
@@ -814,7 +814,7 @@ val LTAKE_EQ_SOME_CONS = store_thm(
 
 val LAND_CONV = RATOR_CONV o RAND_CONV
 
-open arithLib
+open numLib
 
 val LLENGTH_THM = store_thm(
   "LLENGTH_THM",

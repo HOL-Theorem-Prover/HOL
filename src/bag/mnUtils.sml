@@ -176,20 +176,20 @@ fun my_distinct thm =
     CONJ base (GSYM base)
   end;
 val ETA_RULE = CONV_RULE (DEPTH_CONV ETA_CONV);
-val ARITH_PROVE = arithLib.ARITH_CONV >- EQT_ELIM;
+val ARITH_PROVE = numLib.ARITH_CONV >- EQT_ELIM;
 val SIMP_TAC = simpLib.SIMP_TAC
 val SIMP_CONV = simpLib.SIMP_CONV
 val ASM_SIMP_TAC = simpLib.ASM_SIMP_TAC
 val FULL_SIMP_TAC = simpLib.FULL_SIMP_TAC
 val SIMP_RULE = simpLib.SIMP_RULE
-val ARITH_CONV = arithLib.ARITH_CONV
+val ARITH_CONV = numLib.ARITH_CONV
 (* val hol_ss = HOLSimps.hol_ss *)
 
 local val base_ss =
         simpLib.++(simpLib.++(boolSimps.bool_ss, pairSimps.PAIR_ss),
                    combinSimps.COMBIN_ss)
 in
-val mn_ss = simpLib.++(base_ss, arithSimps.ARITH_ss)
+val mn_ss = simpLib.++(base_ss, numSimps.ARITH_ss)
 end;
 
 

@@ -95,7 +95,7 @@ val MATCH_EQ_MP = fn eq => fn lh => EQ_MP (PART_MATCH lhs eq (concl lh)) lh;
 val REWRITE1_TAC = fn t => REWRITE_TAC[t];
 
 fun ARITH_TAC (asml,gl) =
-    let val a = filter arithLib.is_presburger asml in
+    let val a = filter Arith.is_presburger asml in
     (MAP_EVERY (MP_TAC o ASSUME) a THEN CONV_TAC ARITH_CONV)(asml,gl)
     end;
 
