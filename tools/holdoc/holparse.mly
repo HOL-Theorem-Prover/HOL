@@ -176,7 +176,7 @@ opt_mosml_interstuff_rev :
 | opt_mosml_interstuff_rev Str            { MosmlStr $2 :: $1 }
 
 mosmlwhitetok :
-  White                    { MosmlContent $1 }
+  White                    { MosmlWhite $1 }
 | Indent                   { MosmlIndent $1 }
 | ToTex tex_parse From     { MosmlTex $2 }
 | ToText text_parse From   { MosmlText $2 }

@@ -30,6 +30,7 @@ and dumpmosmldoc cs = dolist dumpmosml_content cs
 
 and dumpmosml_content = function
     MosmlContent s -> s
+  | MosmlWhite s -> s
   | MosmlStr s -> "\"" ^ s ^ "\""
   | MosmlIndent n -> make_indent n
   | MosmlHol(io,md,d) ->
