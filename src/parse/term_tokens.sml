@@ -57,7 +57,7 @@ fun quoted_string strm =
    A punctuation character is pretty much anything else except $.
 
    A non-aggregating character is one of:
-     ~ ( ) [ ] { }
+     ~ ( ) [ ] { } . ,
    All non-aggregating characters are punctuation characters.
 
    A non-aggregating string is a string including one of the above.
