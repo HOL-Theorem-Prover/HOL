@@ -298,6 +298,7 @@ local
 
   (* two functions below derived from RJB's Sub_and_cond.sml *)
   fun op_of_app tm = op_of_app (rator tm) handle _ => tm
+in
   fun COND_ABS_CONV tm = let
     open Rsyntax
     val {Bvar=v,Body=bdy} = dest_abs tm
@@ -334,7 +335,6 @@ local
       NO_CONV tm
   end
 
-in
 val dealwith_nats = let
   val phase1 =
       tacCONV (ONCE_DEPTH_CONV normalise_mult THENC

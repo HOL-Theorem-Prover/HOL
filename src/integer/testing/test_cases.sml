@@ -4,7 +4,7 @@ struct
 open Abbrev
 open HolKernel Parse;
 
-fun test_term c (n,t) = let
+fun test_term c (n,t,b) = let
   val _ = print (StringCvt.padRight #" " 25 n)
   val _ = Profile.reset_all()
   val timer = Timer.startCPUTimer ()
@@ -14,7 +14,17 @@ fun test_term c (n,t) = let
   val {usr,sys,gc} = Timer.checkCPUTimer timer
   val verdict =
     case result of
-      SOME (SOME _) => "OK"
+      SOME (SOME th) => let
+      in
+        case Lib.total boolSyntax.rhs (concl th) of
+          SOME r =>
+          if b andalso r = boolSyntax.T orelse
+             not b andalso r = boolSyntax.F
+          then
+            "OK"
+          else "Bad EQN"
+        | NONE => "Not an EQN"
+      end
     | SOME NONE => "Interrupted"
     | NONE => "Raised exception"
   val _ = print (StringCvt.padRight #" " 17 verdict)
@@ -35,23 +45,28 @@ in
   ()
 end
 
-fun A s = ("at."^s, concl (DB.fetch "arithmetic" s))
-fun L (t,s) = (s,t)
+fun A s = ("at."^s, concl (DB.fetch "arithmetic" s), true)
+fun I s = ("it."^s, concl (DB.fetch "integer" s), true)
+fun L (t,s) = (s,t,true)
+fun T (s,t) = (s,t,true)
 
 val terms_to_test =
-  [("INT_GROUP", Term`?!x:int. (!y. x + y = y) /\ (!y. ?!z. y + z = x)`),
-   ("BUG1", ``(?x. y <= x /\ x <= z /\ 2i * z + 1 <= x /\ x <= 2 * y) =
-              y <= z /\ 2 * z + 1 <= 2 * y /\ y <= 2 * y /\ 2 * z + 1 <= z``),
-   ("ILP1", Term`?z y x. 2n * x + 3 * y < 4 * z ==> 5 * x < 3 * y + z`),
-   ("ILP2", Term`?z y x v u. ~9 * u + ~12 * v + 4 * x + 5 * y + ~10 * z = 17`),
+  [T ("INT_GROUP", Term`?!x:int. (!y. x + y = y) /\ (!y. ?!z. y + z = x)`),
+   T ("BUG1",
+    ``(?x. y <= x /\ x <= z /\ 2i * z + 1 <= x /\ x <= 2 * y) =
+    y <= z /\ 2 * z + 1 <= 2 * y /\ y <= 2 * y /\ 2 * z + 1 <= z``),
+   T ("ILP1", Term`?z y x. 2n * x + 3 * y < 4 * z ==> 5 * x < 3 * y + z`),
+   T ("ILP2",
+      Term`?z y x v u. ~9 * u + ~12 * v + 4 * x + 5 * y + ~10 * z = 17`),
    ("aILP1",
     Term`!z y x v u.
             (3 * u + 6 * v + ~9 * x + ~5 * y + 6 * z = 86) ==>
-            (1 * u + 4 * v + 17 * x + ~18 * y + ~5 * z = ~24)`),
+            (1 * u + 4 * v + 17 * x + ~18 * y + ~5 * z = ~24)`, false),
    ("PUGH1", Term`?x y:int. 27 <= 11 * x + 13 * y /\ 11 * x + 13 * y <= 45 /\
-                            ~10 <= 7 * x - 9 * y /\ 7 * x - 9 * y <= 4`),
-   ("3-5", Term`!n:num. 7 < n ==> ?i j. 3 * i + 5 * j = n`),
-   ("SUNRISE1", Term`!x0:num x:num y0:num y:num.
+                            ~10 <= 7 * x - 9 * y /\ 7 * x - 9 * y <= 4`,
+    false),
+   T ("3-5", Term`!n:num. 7 < n ==> ?i j. 3 * i + 5 * j = n`),
+   T ("SUNRISE1", Term`!x0:num x:num y0:num y:num.
       (x0 = x) /\ (y0 = y) ==>
       (if 100 < y then
          (if 100 < y0 then y - 10 = y0 - 10 else y - 10 = 91)
@@ -63,22 +78,22 @@ val terms_to_test =
            !x1.
              (if 100 < x then x1 = x - 10 else x1 = 91) ==>
              (if 100 < y0 then x1 = y0 - 10 else x1 = 91))`),
-   ("DIV1", Term`!x. 0 <= x = x / 2 <= x`),
-   ("DIV2", Term`!x. (x / 2 = x) = (x = 0)`),
-   ("NDIV1", Term`!x. 0 < x ==> x DIV 2 < x`),
-   ("KXSDIV1", Term`!n. ~(n = 0) /\ EVEN n ==> (n - 2) DIV 2 < n`),
-   ("KXSDIV2", Term`!n. ~(n = 0) /\ ~EVEN n ==> (n - 1) DIV 2 < n`),
-   ("simp_divides1", ``!x. 0 < x /\ 2 int_divides x ==> 1 < x``),
-   ("simp_divides2", ``!x. 0 <= x /\ ~(2 int_divides x) ==> 1 <= x``),
-   ("sub_zero_coeff", Term`!x y:int. 0 < x ==> y - x < y`),
-   ("10000.9391",
+   ("DIV1", Term`!x. 0 <= x = x / 2 <= x`, false),
+   ("DIV2", Term`!x. (x / 2 = x) = (x = 0)`, false),
+   T ("NDIV1", Term`!x. 0 < x ==> x DIV 2 < x`),
+   T ("KXSDIV1", Term`!n. ~(n = 0) /\ EVEN n ==> (n - 2) DIV 2 < n`),
+   T ("KXSDIV2", Term`!n. ~(n = 0) /\ ~EVEN n ==> (n - 1) DIV 2 < n`),
+   T ("simp_divides1", ``!x. 0 < x /\ 2 int_divides x ==> 1 < x``),
+   T ("simp_divides2", ``!x. 0 <= x /\ ~(2 int_divides x) ==> 1 <= x``),
+   T ("sub_zero_coeff", Term`!x y:int. 0 < x ==> y - x < y`),
+   T ("10000.9391",
     Term`~(v <
         SUC
           (SUC z + (SUC (SUC (SUC (SUC v)) + (v + (SUC u + v))) + u + y) +
            v)) ==>
       SUC 0 < 0 + (v + x) + SUC (v + v) /\
       (z + z >= 0 + v \/ (z + v = 0) /\ u <= u)`),
-   ("10000.2223",
+   T ("10000.2223",
     Term`SUC 0 < (u :num) +
            (0 +
             SUC
@@ -87,20 +102,40 @@ val terms_to_test =
                   (SUC (0 + u) + SUC (v :num) + SUC u + u +
                    (0 + SUC (SUC z + (x :num)) + 0) + 0))) +
             SUC (z + u)) + x + ((y :num) + z + u) + 0`),
-   ("EX1_NOT_COMM", ``~((?!x y. (x = y) \/ (x = SUC y)) =
-                        (?!y x. (x = y) \/ (x = SUC y)))``),
-   ("NUM1", Term`!n:num m. n + m > 10 ==> n + 2 * m > 10`),
-   ("at.ADD", concl arithmeticTheory.ADD),
-   ("at.EVEN", concl arithmeticTheory.EVEN),
-   ("at.EQ_ADD_LCANCEL", concl arithmeticTheory.EQ_ADD_LCANCEL),
-   ("it.INT_DOUBLE", concl integerTheory.INT_DOUBLE),
-   ("it.INT_EQ_NEG", concl integerTheory.INT_EQ_NEG),
-   ("it.INT_ADD_RID_UNIQ", concl integerTheory.INT_ADD_RID_UNIQ),
-   ("BIGINT1", Term`!x. 100i * x > 213 ==> 100 * x > 251`),
-   ("BIGINT2", Term`!x. ~213 < 100i * x ==> ~251 < 100 * x`),
-   ("MIKE.NUM", Term`!q r:num. (7 = r + q * 3) /\ r < 3 ==> (r = 1)`),
-   ("INT_MULT_NORM", Term`(2 * m = r + k' * (2 * p)) ==> ?s. r = 2i * s`),
-   ("NUM_MULT_NORM", Term`(2 * m = r + k' * (2 * p)) ==> ?s. r = 2n * s`),
+   T ("EX1_NOT_COMM", ``~((?!x y. (x = y) \/ (x = SUC y)) =
+                         (?!y x. (x = y) \/ (x = SUC y)))``),
+   T ("NUM1", Term`!n:num m. n + m > 10 ==> n + 2 * m > 10`),
+   T ("ABS1", Term `!p. 0 <= ABS(p)`),
+   T ("ABS2", Term `!p. ABS (ABS(p)) = ABS(p)`),
+   T ("ABS3", Term `!p. (ABS(p) = 0) = (p = 0)`),
+   T ("ABS4", Term `!p. (ABS(p) = p) = 0 <= p`),
+   T ("ABS5", Term `!p. ABS ~p = ABS p`),
+   T ("ABS6", Term `!p. ABS(p) <= 0 = (p = 0)`),
+   T ("ABS7", Term `!p. ~(ABS(p) < 0)`),
+   T ("ABS8", Term `!p q.
+           (ABS(p) < q = p < q /\ ~q < p) /\
+           (q < ABS(p) = q < p \/ p < ~q) /\
+      (~1*ABS(p) < q = ~q < p \/ p < q) /\
+      (q < ~1*ABS(p) = p < ~q /\ q < p)`),
+   T ("ABS9", Term `!p q.
+            (ABS(p) <= q = p <= q /\ ~q <= p) /\
+            (q <= ABS(p) = q <= p \/ p <= ~q) /\
+         (~1*ABS(p) <= q = ~q <= p \/ p <= q) /\
+         (q <= ~1*ABS(p) = p <= ~q /\ q <= p)`),
+   T ("ABS10", Term `!p q.
+           ((ABS(p) = q) = (p = q) /\ 0 < q \/ (p = ~q) /\ 0 <= q) /\
+           ((q = ABS(p)) = (p = q) /\ 0 < q \/ (p = ~q) /\ 0 <= q)`),
+   A "ADD",
+   A "EVEN",
+   A "EQ_ADD_LCANCEL",
+   I "INT_DOUBLE",
+   I "INT_EQ_NEG",
+   I "INT_ADD_RID_UNIQ",
+   T ("BIGINT1", Term`!x. 100i * x > 213 ==> 100 * x > 251`),
+   T ("BIGINT2", Term`!x. ~213 < 100i * x ==> ~251 < 100 * x`),
+   T ("MIKE.NUM", Term`!q r:num. (7 = r + q * 3) /\ r < 3 ==> (r = 1)`),
+   T ("INT_MULT_NORM", Term`(2 * m = r + k' * (2 * p)) ==> ?s. r = 2i * s`),
+   T ("NUM_MULT_NORM", Term`(2 * m = r + k' * (2 * p)) ==> ?s. r = 2n * s`),
    A "ZERO_LESS_EQ", A "TWO", A "TIMES2", A "SUC_SUB1", A "SUC_ONE_ADD",
    A "SUC_NOT", A "SUC_ADD_SYM", A "SUB_SUB", A "SUB_RIGHT_SUB",
    A "SUB_RIGHT_LESS_EQ", A "SUB_RIGHT_LESS", A "SUB_RIGHT_GREATER_EQ",
