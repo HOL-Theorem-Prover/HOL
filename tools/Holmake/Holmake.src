@@ -599,7 +599,11 @@ in
   case (extra_deps (fromFile f)) of
     SOME l => map toFile l
   | NONE => let
-      val file_dependencies = get_direct_dependencies f
+      val file_dependencies0 = get_direct_dependencies f
+      val file_dependencies =
+        case actual_overlay of
+          NONE => file_dependencies0
+        | SOME s => [toFile (fullPath [SIGOBJ, s])] @ file_dependencies0
     in
       case f of
         SML (Theory x) => let
