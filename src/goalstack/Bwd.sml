@@ -9,8 +9,8 @@ infix 0 before;
 
 val ERR = mk_HOL_ERR "Bwd";
 
+val show_nsubgoals = ref 10;
 val chatting = ref true;
-val show_nsubgoals = ref 100;
 
 val _ = Feedback.register_trace "Subgoal number" show_nsubgoals;
 
@@ -53,7 +53,7 @@ type tac_result = {goals      : goal list,
 datatype proposition = POSED of goal
                      | PROVED of thm * goal;
 
-datatype gstk = GSTK of {prop  : proposition, 
+datatype gstk = GSTK of {prop  : proposition,
                          final : thm -> thm,
                          stack : tac_result list}
 
@@ -96,11 +96,11 @@ fun rotate(GSTK{prop=PROVED _, ...}) _ =
 
 
 local fun imp_err s = raise ERR "expandf" ("implementation error: "^s)
-      fun return(GSTK{stack={goals=[],validation}::rst, 
+      fun return(GSTK{stack={goals=[],validation}::rst,
                       prop as POSED g,final}) =
        let val th = validation []
        in case rst
-           of [] => 
+           of [] =>
               (let val thm = final th
                in GSTK{prop=PROVED (thm,g), stack=[], final=final}
                end handle e as HOL_ERR _
