@@ -132,6 +132,37 @@ New features
     the system, but its behaviour is unspecified when two or more
     constants have the same name.
 
+  * Type abbreviations are now possible, using the function
+    Parse.type_abbrev.  When a type abbreviation is made, both the
+    abbreviation and the abbreviation's RHS can be used to specify
+    types.  When printed, types do not include abbreviations.
+    Variables that occur in the RHS become parameters of the "new"
+    type operator.  Thus
+
+        type_abbrev("set", ``:'a -> bool``)
+
+    is used in pred_setTheory to establish set as an abbreviation for
+    functions of type alpha to bool.  After issuing this command, one
+    can write  ``NS:num set`` and ``:'b set``.
+
+  * Syntax for ML style case expressions is now enabled.  The same
+    patterns supported by Define are supported.  Some examples of the
+    syntax:
+
+        case n of 0 -> x || SUC n -> n + 1
+
+    and
+
+        case p of (x, []) -> x + 1
+               || (y, h::t) -> y + h
+
+  * An easier way of augmenting the built-in pretty-printer is now
+    possible.  Previously we allowed for the built-in printer to be
+    completely replaced by a new function.  Now, users can also
+    specify new functions to augment the existing code, with the new
+    functions called on terms of specified types.  For more details,
+    see the documentation for Parse.add_user_printer in the REFERENCE.
+
 
 Behaviours changed:
 -------------------
