@@ -171,10 +171,10 @@ fun cleanAlldir dir = (* clean directory d and also remove d/DEPDIR *)
 fun clean_dirs f = clean_sigobj() before List.app f SRCDIRS;
 
 fun errmsg s = TextIO.output(TextIO.stdErr, s ^ "\n");
-val help_mesg = "Usage: build_hol\n\
-                                \  or: build_hol -symlink\n\
-                                \  or: build_hol -clean\n\
-                                \  or: build_hol -cleanAll.";
+val help_mesg = "Usage: build\n\
+                                \  or: build -symlink\n\
+                                \  or: build -clean\n\
+                                \  or: build -cleanAll.";
 val _ = 
   case Mosml.argv () 
    of [_]             => build_hol false (* no symbolic linking *)

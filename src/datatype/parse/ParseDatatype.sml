@@ -190,8 +190,8 @@ parse `atexp = var_exp of var
            | var_pat of var`;
 
 val state = Type`:ind->bool`;
-val nexp = Type`:^state -> ind`;
-val bexp = Type`:^state -> bool`;
+val nexp  = Type`:^state -> ind`;
+val bexp  = Type`:^state -> bool`;
 
 parse `comm = skip 
             | :=    of bool list => ^nexp 

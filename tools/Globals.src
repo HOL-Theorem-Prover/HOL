@@ -42,18 +42,11 @@ end;
  * Bogus hack for defining strings                                         *
  *-------------------------------------------------------------------------*)
 
-local
-val defined = ref false
+local val defined = ref false
 in
 fun strings_defined() = !defined
 fun assert_strings_defined() = defined := true
 end;
-
-(*---------------------------------------------------------------------------*
- * "Temporary" hack.                                                         *
- *---------------------------------------------------------------------------*)
-
-val in_type_spec = ref NONE:string option ref;
 
 (*---------------------------------------------------------------------------*
  * Controlling the display of exceptions                                     *

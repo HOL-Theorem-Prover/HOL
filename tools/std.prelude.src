@@ -10,6 +10,7 @@ local open Path
 in
 val _ = Meta.loadPath := SIGOBJ :: !Meta.loadPath
 val _ = load "HolKernel"
+val _ = print "Loaded Hol Kernel.\n"
 end;
 
 (*---------------------------------------------------------------------------*
@@ -19,8 +20,10 @@ open HolKernel Globals;
 infix ## |->;
 infixr 3 -->;
 
-val _ = load "Parse";
-open Parse
+val _ = quotation := true
+val _ = Help.displayLines := 40;
+
+val _ = load "Parse"; open Parse
 
 local
   fun capture_errors ppfn pps x =
@@ -36,10 +39,6 @@ in
   val _ = installPP (capture_errors pp_thm)
 end
 
-val _ = quotation := true
-val _ = Help.displayLines := 40;
-
-val _ = print "Loaded Hol Kernel.\n"
 
 
 (*---------------------------------------------------------------------------*
@@ -48,7 +47,7 @@ val _ = print "Loaded Hol Kernel.\n"
  *---------------------------------------------------------------------------*)
 
 val _ = app load ["basicHol90Lib", "goalstackLib"];
-open basicHol90Lib goalstackLib Parse;
+open basicHol90Lib goalstackLib;
 
 infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
@@ -64,7 +63,7 @@ val _ = installPP TypeBase.pp_tyinfo;
 local open Path
       fun HELP s = toString(fromString(concat(HOLDIR, concat("help",s))))
       fun SRC s  = toString(fromString(concat(HOLDIR, concat("src",s))))
-      val SIGOBJ = toString(fromString(concat(HOLDIR,"sigobj")))
+      val SIGOBJ = toString(fromString(concat(HOLDIR, "sigobj")))
 in
   val () = indexfiles := HELP"HOLdbase" :: !indexfiles ;
   val () = helpdirs := HELP"Docfiles" :: SIGOBJ   ::
