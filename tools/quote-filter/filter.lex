@@ -46,7 +46,7 @@ parse `"` { ECHO lexbuf; STRING lexbuf  }
   | "`"  { print "[QUOTE \""; QUOTE lexbuf }
   | newline { print "\n"; TextIO.flushOut (!output_stream); INITIAL lexbuf }
   | _ { ECHO lexbuf; INITIAL lexbuf }
-  | eof { () }
+  | eof { TextIO.flushOut (!output_stream) }
 
 and STRING =
 parse "\\\"" { ECHO lexbuf; STRING lexbuf }
