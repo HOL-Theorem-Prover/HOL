@@ -17,6 +17,9 @@ sed "s|^val mosmldir.*\$|val mosmldir = \"$mosmldir\"|" \
 mv hol98/tools/configure.sml /tmp
 mv new-config hol98/tools/configure.sml
 
+echo Removing all .cvsignore files
+find hol98 -name .cvsignore -exec /bin/rm \{} \;
+
 echo Building filter.c
 cd hol98/src/quote-filter
 make filter.c
