@@ -1,0 +1,37 @@
+(*---------------------------------------------------------------------------
+        Defining while loops by a schematic definition. Only 
+        terminating loops may be achieved by instantiating 
+        the schema.
+ ---------------------------------------------------------------------------*)
+
+app load ["bossLib", "Q"]; open bossLib;
+
+
+val While_scheme = 
+ Define
+    `While s = if B s then While (C s) else s`;
+
+
+val Spec_def =
+ Define 
+     `Spec(P,C,Q) = !s. P s ==> Q (C s)`;
+
+
+(*---------------------------------------------------------------------------
+       The while rule from Hoare logic, total correctness version.
+ ---------------------------------------------------------------------------*)
+
+val WhileRule = Q.prove(
+   `!R B C.
+        WF R /\ (!s. B s ==> R (C s) s)
+        ==>
+         Spec ((\s. P s /\ B s), C, P) ==>
+      (*-----------------------------------*)
+         Spec (P, While B C, \s. P s /\ ~B s)`,
+REPEAT GEN_TAC THEN STRIP_TAC 
+  THEN REWRITE_TAC [Spec_def] THEN BETA_TAC THEN DISCH_TAC
+  THEN recInduct (theorem "While_ind") 
+  THEN RW_TAC base_ss [] 
+  THEN ONCE_REWRITE_TAC [While_scheme] 
+  THEN RW_TAC base_ss []);
+

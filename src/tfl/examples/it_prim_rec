@@ -1,0 +1,119 @@
+(*---------------------------------------------------------------------------
+     Various iterative primitive recursions.
+
+     We start with Ackermann's function.
+ ---------------------------------------------------------------------------*)
+
+app load ["tflLib", "QLib"];
+open tflLib arithTools RW;
+
+val ack_def = Rfunction "ack_def" `^pred LEX ^pred` 
+  `(ack (0,n) =  n+1) /\
+   (ack (SUC m,0) = ack (m, 1)) /\
+   (ack (SUC m, SUC n) = ack (m, ack (SUC m, n)))`;
+
+val ack_eqns = save_thm("ack_eqns", #rules ack_def);
+val ack_induction = save_thm("ack_induction", #induction ack_def);
+
+val ack_positive = Q.store_thm("ack_pos",  `!x y. 0 < ack(x,y)`,
+REC_INDUCT_TAC ack_induction THEN ONCE_RW_TAC[ack_eqns] 
+ THEN RW_TAC[] THEN ARITH_TAC);
+
+val ack_grows_faster_than_plus = Q.store_thm("ack_grows_faster_than_plus",  
+`!x y. x+y < ack(x,y)`,
+REC_INDUCT_TAC ack_induction 
+  THEN ONCE_RW_TAC[ack_eqns] THEN RW_TAC[] THEN ARITH_TAC);
+
+
+(*---------------------------------------------------------------------------*
+ * Sudan's function, which is similar to Ackermann's function. Apparently,   *
+ * both Sudan and Ackermann were students of Hilbert and came up with their  *
+ * functions about the same time, but Hilbert preferred Ackermann's.         *
+ *---------------------------------------------------------------------------*)
+
+val Sudan_def = Rfunction "Sudan_def" `^pred LEX (inv_image ^pred SND)`
+`(Sudan 0 (x,y)           = x+y) /\
+ (Sudan (SUC n) (x,0)     = x)   /\
+ (Sudan (SUC n) (x,SUC y) = Sudan n (Sudan (SUC n) (x,y), 
+                                     Sudan (SUC n) (x,y) + SUC y))`;
+
+val eqns = save_thm("Sudan_eqns", #rules Sudan_def);
+val induction = save_thm("Sudan_induction", #induction Sudan_def);
+
+
+(*---------------------------------------------------------------------------
+       A Harvey Friedman function (from May 1999 FOM posting).
+ ---------------------------------------------------------------------------*)
+
+val V_def = Rfunction "V_def" `^pred LEX ^pred LEX ^pred` 
+   `(V (SUC 0, n, m)                = n) 
+/\  (V (SUC(SUC k), n, SUC 0)       = V (SUC k, SUC n, SUC n))
+/\  (V (SUC(SUC k), n, SUC (SUC m)) = V (SUC k, V(SUC(SUC k),n,SUC m)+1,
+                                                V(SUC(SUC k),n,SUC m)+1))`;
+
+val V_eqns = save_thm("V_eqns", #rules V_def);
+val V_induction = save_thm("V_induction", #induction V_def);
+
+val V_induct = mk_thm([],concl V_induction);
+
+load "bossLib"; open bossLib; infix 8 by;
+
+g`V(1,n,m) = n`;
+e (RW_TAC arith_ss [Num_conv.num_CONV (Term`1`),V_eqns]);
+
+g`0<m ==> (V(2,n,m) = n+m)`;
+e (RW_TAC arith_ss [Num_conv.num_CONV (Term`1`),
+                    Num_conv.num_CONV (Term`2`),V_eqns]);
+e (Cases_on `m`);
+(*1*)
+e (PROVE_TAC [DECIDE `x<x ==> F`]);
+(*2*)
+e (Cases_on `n'`);
+(*2.1*)
+e (RW_TAC arith_ss [V_eqns]);
+(*2.2*)
+
+(* Some facts about V that are proved by Friedman in the posting.
+
+COROLLARY 5. V(1,n,m) = n. V(2,n,m) = n+m. V(3,n,m) = 2^m(n+2)-2. V(4,2,1)
+= V(3,3,3) = 8(5)-2 = 38. V(4,2,2) = V(3,V(4,2,1)+1,V(4,2,1)+1) =
+V(3,39,39) = 2^39(40)-2 = 549755813888(40)-2 = 21990232555520-2 = 21
+trillion 990 billion 232 million 555 thousand 518. V(4,3,1) = V(3,4,4) =
+16(6)-2 = 94. V(4,3,2) = V(3,V(4,3,1)+1,V(4,3,1)+1) = V(3,95,95) =
+2^95(97)-2. V(4,3,3) = V(3,V(4,3,2)+1,V(4,3,2)+1) =
+V(3,2^95(97)-1,2^95(97)-1) > 2^2^95. V(4,4,4) > 2^2^2^95. V(5,2,1) =
+V(4,3,3) > 2^2^95. V(5,2,2) = V(4,V(5,2,1)+1,V(5,2,1)+1) >
+V(4,2^2^95+1,2^2^95+1) > an exponential stack of 2^2^95 2's.
+
+Proof: We will be content to verify only the second and third claims by
+induction. V(2,n,1) = V(1,n+1,n+1) = n+1. V(2,n,m+1) =
+V(1,V(1,n,m)+1,V(1,n,m)+1)) = V(1,n,m)+1 = n+m+1.
+
+V(3,n,1) = V(2,n+1,n+1) = 2n+2. V(3,n,m+1) = V(2,V(3,n,m)+1,V(3,n,m)+1) =
+2V(3,n,m)+2 = 2(2^m(n+2)-2)+2 = 2^m+1(n+2)-4+2 = 2^m+1(n+2)-2. QED
+
+A standard presentation of the Ackerman hierarchy is as follows. A:Z+^2
+into Z+. A(1,n) = 2n. A(k+1,1) = A(k,1). A(k+1,n+1) = A(k,A(k+1,n)). A_k(n)
+= A(k,n).
+Thus A_1 is doubling, A_2 is base 2 exponentiation, A_3 is base 2 iterated
+exponentiation.
+
+THEOREM 6. For all k,n >= 1, A(k,n) <= V(k+1,n,n) <= A(k,5n).
+
+Proof: This is obviously true for k = 1,2 since V(2,n,n) = A(1,n) and
+V(3,n,n) = 2^n(n+2)-2 <= 2^2n = A(2,2n). Assume true for k >= 2. We show
+that it is true for k+1.
+
+It is useful to define the functions V_k(n) = V(k,n,n). Then V_k+1(n) is
+computed by starting with n and applying the function V_k(x+1) exactly n
+times. And A_k+1(n) is computed by starting with 1 and applying the
+function A_k(x) exactly n times.
+
+By induction hypothesis, V_k+1(x+1) <= A_k(5x+5). Hence V_k+2(n) is at most
+the result of starting with n and applying the function A_k(5x+5) exactly n
+times. This is at most the result of starting with n and applying the
+function A_k(x) exactly 4n times, since 5x+5 <= 2^2^2^x. which is at most
+the result of starting with 1 and applying the function A_k(x) exactly 5n
+times, which is A_k+1(5n) as required. We have made no attempt to optimize
+the expression 5n. QED
+*)

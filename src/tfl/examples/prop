@@ -1,0 +1,211 @@
+(*---------------------------------------------------------------------------*
+ * Propositional logic                                                       *
+ *                                                                           *
+ * A simple presentation of Wang's algorithm found in the LISP 1.5 book.     *
+ * Adapted from Cambridge University's "Foundations of Computer Science"     *
+ * lecture notes by M. Richards.                                             *
+ *                                                                           *
+ * ML                                                                        *
+
+  fun mem x [] = false 
+    | mem x (h::t) = (x=h) orelse mem x t;
+
+  fun add x l = if mem x l then l else x::l;
+
+  datatype 'a prop = VAR of 'a
+                   | NOT of 'a prop
+                   | AND of 'a prop * 'a prop
+                   | OR  of 'a prop * 'a prop;
+
+  infixr 5 AND; 
+  infixr 4 OR;
+
+  fun Prv vl (VAR v::cl) vr cr    = mem v vr orelse Prv (add v vl) cl vr cr
+    | Prv vl (NOT x::cl) vr cr    = Prv vl cl vr (x::cr)
+    | Prv vl (AND(x,y)::cl) vr cr = Prv vl (x::y::cl) vr cr
+    | Prv vl (OR(x,y)::cl) vr cr  = Prv vl (x::cl) vr cr 
+                                      andalso 
+                                    Prv vl (y::cl) vr cr
+
+    | Prv vl [] vr (VAR v::cr)    = mem v vl orelse Prv vl [] (add v vr) cr
+    | Prv vl [] vr (NOT x::cr)    = Prv vl [x] vr cr
+    | Prv vl [] vr (OR(x,y)::cr)  = Prv vl [] vr (x::y::cr)
+    | Prv vl [] vr (AND(x,y)::cr) = Prv vl [] vr (x::cr) 
+                                      andalso
+                                    Prv vl [] vr (y::cr)
+    | Prv vl [] vr [] = false;
+
+  fun prove M = Prv [] [] [] [M];
+
+  prove (NOT(NOT (VAR "A") OR NOT (VAR "B") OR (VAR "C"))
+          OR
+         NOT (VAR "A" AND VAR "B") OR VAR "C");
+ ----------------------------------------------------------------------------*)
+
+
+app load ["bossLib", "listSupplTheory", "Q", "pred_setTheory"];
+open bossLib pred_setTheory; infix &&;
+
+(*---------------------------------------------------------------------------*
+ *   Datatype of propositions                                                *
+ *---------------------------------------------------------------------------*)
+
+Hol_datatype `prop = VAR of 'a
+                   | NOT of prop
+                   | AND of prop => prop
+                   | OR  of prop => prop`;
+
+
+val Pr_def = 
+ Hol_fun "Pr"
+    `(Pr vl [] (VAR v::r)   vr = Pr vl [] r (v::vr))
+ /\  (Pr vl [] (NOT x::r)   vr = Pr vl [x] r vr)
+ /\  (Pr vl [] (OR x y::r)  vr = Pr vl [] (x::y::r) vr)
+ /\  (Pr vl [] (AND x y::r) vr = Pr vl [] (x::r) vr /\ Pr vl [] (y::r) vr)
+
+ /\  (Pr vl (VAR v::l)    r vr = Pr (v::vl) l r vr)
+ /\  (Pr vl (NOT x::l)    r vr = Pr vl l (x::r) vr)
+ /\  (Pr vl (AND x y::l)  r vr = Pr vl (x::y::l) r vr)
+ /\  (Pr vl (OR x y::l)   r vr = Pr vl (x::l) r vr /\ Pr vl (y::l) r vr)
+
+ /\  (Pr vl [] [] vr           = ?y. mem y vl /\ mem y vr)`;
+
+
+val Prove_def = Define `Prove P = Pr [] [] [P] []`;
+
+(*---------------------------------------------------------------------------
+     Termination. We need a subsidiary measure function on propositions 
+     which makes a 2-argument proposition bigger than a list of 2 
+     propositions. 
+ ---------------------------------------------------------------------------*)
+
+val Meas_def =
+ Define 
+    `(Meas (VAR v)   = 0)
+ /\  (Meas (NOT x)   = SUC (Meas x))
+ /\  (Meas (AND x y) = Meas x + Meas y + 2)
+ /\  (Meas (OR x y)  = Meas x + Meas y + 2)`;
+
+(*---------------------------------------------------------------------------*
+ *  Termination of Pr.                                                       *
+ *---------------------------------------------------------------------------*)
+
+val (Pr_eqns, Pr_ind) = 
+ Defn.tprove (Pr_def,
+   Q.EXISTS_TAC 
+       `measure \(w:'a list, x:'a prop list, y:'a prop list, z:'a list). 
+                      list_size Meas x + list_size Meas y`
+     THEN CONV_TAC Halts.TC_SIMP_CONV
+     THEN RW_TAC arith_ss [Meas_def,listTheory.list_size_def]);
+
+
+(*---------------------------------------------------------------------------
+   Now prove soundness and completeness of Prv. First define evaluations
+   and variable assignments.
+ ---------------------------------------------------------------------------*)
+
+val ITLIST_DEF = 
+ Define
+     `(ITLIST (f:'a->'b->'b) [] b = b)
+ /\   (ITLIST f (h::t) b = f h (ITLIST f t b))`;
+
+val ASSOC_def =
+ Define
+    `ASSOC x ((x1,v)::t) = if x=x1 then v else ASSOC x t`;
+
+(*---------------------------------------------------------------------------
+ * The value of an expression under an assignment A.
+ *---------------------------------------------------------------------------*)
+
+val Val_def =
+ Define
+    `(Value A (VAR x)     = ASSOC x A)
+ /\  (Value A (NOT p)     = ~Value A p)
+ /\  (Value A (AND p1 p2) = Value A p1 /\ Value A p2)
+ /\  (Value A (OR  p1 p2) = Value A p1 \/ Value A p2)`;
+
+
+(*---------------------------------------------------------------------------
+ * Map a list of variables to an assignment. First define how to add 
+ * a new variable into a variable assignment.
+ *
+  fun add_assign v [] = []
+    | add_assign v (h::t) = ((v, true)::h) :: 
+                            ((v,false)::h) :: add_assign v t;
+
+  fun assign [] = []
+    | assign [x] = [[(x,true)],[(x,false)]] 
+    | assign (h::t) = add_assign h (assign t);
+ * 
+ *---------------------------------------------------------------------------*)
+
+val add_assign_def =
+ Define
+    `(add_assign v [] = []) 
+ /\  (add_assign v (h::t) = 
+        CONS (CONS (v,T) h) 
+       (CONS (CONS (v,F) h) (add_assign v t)))`;
+
+val Assign_def =
+ Define
+    `(Assign [] = []) 
+ /\  (Assign [v] = [[(v,T)] ; [(v,F)]])
+ /\  (Assign (CONS h t) = add_assign h (Assign t))`;
+
+
+val Vars_def =
+ Define
+    `(Vars (VAR x) A     = (mem x A => A | CONS x A))
+ /\  (Vars (NOT p) A     = Vars p A)
+ /\  (Vars (AND p1 p2) A = Vars p1 (Vars p2 A))
+ /\  (Vars (OR p1 p2)  A = Vars p1 (Vars p2 A))`;
+
+
+(*---------------------------------------------------------------------------
+     A sequent (vl,l,r,vr) can be mapped to a proposition by treating 
+     it as an implication between 
+
+       * the "conjunction" of vl and l, and
+       * the "disjunction" of vr and r
+
+     There are partiality problems to be dealt with when the 
+     disjunction is empty. This can be dealt with by bringing T and F 
+     into the language of propositions, or by more devious patches.
+ ---------------------------------------------------------------------------*)
+
+val Seq2prop_def =
+ Define
+     `Seq2prop (vl,l,r,vr) = 
+         OR (NOT (ITLIST (\v p. AND (VAR v) p) vl l))
+                 (ITLIST (\v p. OR (VAR v) p) vr r)`;
+
+(*---------------------------------------------------------------------------
+ * A formula is valid if it evaluates to true in each assignment for the
+ * variables in the formula. 
+ *---------------------------------------------------------------------------*)
+
+val Valid_def =
+ Define
+    `|= (M) = !a. mem a (Assign (Vars M [])) ==> (Value a M = T)`;
+
+
+(*---------------------------------------------------------------------------
+           Soundness 
+ ---------------------------------------------------------------------------*)
+
+g`!vl l r vr. Prv vl l r vr ==> |= (Seq2prop (vl,l,r,vr))`;
+
+thus
+
+g`!M. Prove M ==> |= M`
+
+
+(*---------------------------------------------------------------------------
+           Completeness 
+ ---------------------------------------------------------------------------*)
+
+!M. |= M ==> Prv [] [] [M] []
+
+(* Final statement *)
+
+!M. Valid M iff Prove M

@@ -8,12 +8,12 @@
  * Bring in and open up required context.                                    *
  *---------------------------------------------------------------------------*)
 app load ["bossLib", "tflLib", "QLib", 
-          "permTheory", "sortingTheory", "listXTheory"];
+          "permTheory", "sortingTheory", "listSupplTheory"];
 
-open tflLib bossLib listXTheory sortingTheory permTheory;
+open tflLib bossLib listSupplTheory sortingTheory permTheory;
 infix 8 by;
 
-val mem_def        = listXTheory.mem_def;
+val mem_def        = listSupplTheory.mem_def;
 val transitive_def = TCTheory.transitive_def;
 
 

@@ -1,0 +1,189 @@
+(*---------------------------------------------------------------------------
+        Pattern matching in lists of elements ("characters")
+
+
+ ML version
+
+  fun match0 [] ss x y = true
+    | match0 pp [] x y = false
+    | match0 (p::pp) (s::ss) fixedp os = 
+        if (p=s) then match0 pp ss fixedp os
+        else case os 
+              of []   => false
+               | _::t => match0 fixedp t fixedp t;
+
+  fun match pat ob = match0 pat ob pat ob;
+
+ ---------------------------------------------------------------------------*)
+
+load "bossLib"; open bossLib;
+
+val match0_def = 
+ Hol_fun "match0"
+    `(match0 [] ss x y = T)
+ /\  (match0 pp [] x y = F)
+ /\  (match0 (p::pp) (s::ss) fixedp os = 
+        if p=s then match0 pp ss fixedp os
+        else list_case F 
+                (\h t. match0 fixedp t fixedp t) os)`;
+
+
+(*---------------------------------------------------------------------------
+      Termination relation for `match0' is a lexicographic combination
+      of size of 4th arg. with size of 2nd arg. 
+ ---------------------------------------------------------------------------*)
+
+val argty = Type`:'a list#'a list#'a list#'a list`;
+val aty = ty_antiq argty;
+
+val TR = 
+ Term `inv_image ($< LEX $<)
+         (\(x,y,w,z):^aty. (list_size (\x.0) z, list_size (\x.0) y))`;
+
+
+val termination = prove (Term 
+   `WF ^TR
+    /\
+    (!p s pp ss fixedp os.
+        (p = s) ==> ^TR (pp,ss,fixedp,os) (p::pp, s::ss,fixedp,os)) 
+    /\
+    (!p s os h t fixedp pp ss.
+        ~(p = s) /\ (os = CONS h t) 
+          ==> ^TR (fixedp,t,fixedp,t) (p::pp, s::ss,fixedp,os))`,
+CONJ_TAC THENL
+ [PROVE_TAC [pairTheory.WF_LEX,relationTheory.WF_inv_image,
+            prim_recTheory.WF_LESS],
+(*  CONV_TAC Halts.simplify_conv *)
+  RW_TAC list_ss [relationTheory.inv_image_def,
+                  pairTheory.LEX_DEF,listTheory.list_size_def]]);
+
+
+val clean = 
+  itlist PROVE_HYP (CONJUNCTS termination) 
+    (UNDISCH_ALL
+      (INST [Term`R:^(ty_antiq(type_of TR))` |-> TR] (DISCH_ALL match0_def)));
+
+val match0_eqns = CONJUNCT1 clean
+val match0_induction = CONJUNCT2 clean;
+
+
+(* The naive pattern matcher *)
+val match_def = 
+ Define
+    `match pat str = match0 pat str pat str`;
+
+val lem = prove(Term`!x y z. match0 [] x y z = T`,
+Cases THEN RW_TAC list_ss [match0_eqns]);
+
+val match0_rules = CONJ lem (CONJUNCT2 (CONJUNCT2 match0_eqns));
+
+(*---------------------------------------------------------------------------
+      Partial evaluation. This will be illustrative, but not 
+      quite what we want. What's getting in the way is the
+      pattern-match translation; instead, we want to have the
+      arguments be variables.
+ ---------------------------------------------------------------------------*)
+
+val tm = Term `match [A;B;C] (CONS P (CONS Q (CONS R rst)))`;
+
+val Conv = 
+ REWRITE_CONV[match_def,match0_rules,listTheory.list_case_def] 
+  THENC DEPTH_CONV BETA_CONV;
+
+fun Nconv c 0 = REFL
+  | Nconv c n = c THENC Nconv c (n-1);
+
+Nconv Conv 2 tm;
+
+
+(*---------------------------------------------------------------------------
+        Another attempt.
+ ---------------------------------------------------------------------------*)
+
+val match2_def = 
+ Define
+  `match2 pp ss fixedp lastss =
+    list_case T 
+      (\p pp. list_case F
+               (\s ss. p=s => match2 pp ss fixedp lastss
+                           | list_case F 
+                                (\h t. match2 fixedp t fixedp t)
+                                   lastss) ss) pp`;
+
+
+(*---------------------------------------------------------------------------
+    Termination again. The same relation is used (of course), but the
+    goal is slightly different, owing to the different presentation
+    of the function.
+ ---------------------------------------------------------------------------*)
+
+val termination_again = prove
+(Term 
+   `WF ^TR
+    /\
+    (!pp p pp' ss s ss' lastss h t fixedp.
+      (pp = CONS p pp') /\
+      (ss = CONS s ss') /\
+      ~(p = s) /\
+      (lastss = CONS h t) ==> ^TR  (fixedp,t,fixedp,t) (pp,ss,fixedp,lastss))
+    /\
+    (!pp p pp' ss s ss' fixedp lastss.
+      (pp = CONS p pp') /\ (ss = CONS s ss') /\ (p = s) ==>
+      ^TR (pp',ss',fixedp,lastss) (pp,ss,fixedp,lastss))`,
+CONJ_TAC THENL
+ [PROVE_TAC [WFTheory.WF_LEX,primWFTheory.WF_inv_image,WFTheory.WF_LESS],
+  RW_TAC list_ss [primWFTheory.inv_image_def,
+                  WFTheory.LEX_DEF,listTheory.list_size_def]]);
+
+
+val match2_def' = 
+ itlist PROVE_HYP (CONJUNCTS termination_again) 
+   (UNDISCH_ALL
+       (INST [Term`R:^(ty_antiq(type_of TR))` |-> TR] 
+            (DISCH_ALL match2_def)));
+
+val match2_rules = CONJUNCT1 match2_def'
+val match2_induction = CONJUNCT2 match2_def';
+    
+(* Sanity check: match0 = match2 *)
+
+load "tflLib";
+val match0_eq_match2 = prove
+ (Term `!pp ss x y. match0 pp ss x y = match2 pp ss x y`,
+  tflLib.PROGRAM_TAC {rules=match0_rules, induction = match0_induction}
+     THEN PURE_ONCE_REWRITE_TAC [match2_rules] 
+     THEN TRY (RW_TAC bool_ss [] THEN NO_TAC)
+     THEN Cases_on `os` THEN RW_TAC list_ss []);
+
+
+(* The naive pattern matcher again. *)
+val Match_def = 
+ Define
+    `Match pat str = match2 pat str pat str`;
+
+val lift_cond = prove(Term
+ `!b f x y. f (COND b x y) = COND b (f x) (f y)`,
+Cases_on `b` THEN RW_TAC bool_ss []);
+
+val lift_pair_case = prove(Term
+ `!f g (x:'a#'b). g (UNCURRY f x) = UNCURRY (\v1 v2. g (f v1 v2)) x`,
+Cases_on `x` THEN RW_TAC bool_ss []);
+
+val lift_list_case = prove(Term
+ `!(l:'a list) v g f. 
+     f (list_case v g l) = list_case (f v) (\h t. f (g h t)) l`,
+  Cases THEN RW_TAC list_ss []);
+
+val list_case_def = listTheory.list_case_def;
+
+val Conv = 
+ ONCE_DEPTH_CONV (REWR_CONV Match_def)
+  THENC ONCE_REWRITE_CONV [match2_rules,listTheory.list_case_def] 
+  THENC DEPTH_CONV BETA_CONV;
+
+
+val tm = Term `\l. Match [A;B;C] l`;
+val tm_eq = Conv tm;
+
+BETA_RULE (ONCE_REWRITE_RULE [list_case_def] tm_eq);
+

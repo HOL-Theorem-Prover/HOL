@@ -1,10 +1,10 @@
-app load ["bossLib", "tflLib", "QLib", "listXTheory"];
+app load ["bossLib", "tflLib", "QLib", "listSupplTheory"];
 open bossLib;
 infix 8 by;
 
-val mem_def              = listXTheory.mem_def;
-val filter_def           = listXTheory.filter_def;
-val length_filter_subset = listXTheory.length_filter_subset;
+val mem_def              = listSupplTheory.mem_def;
+val filter_def           = listSupplTheory.filter_def;
+val length_filter_subset = listSupplTheory.length_filter_subset;
 
 
 (*---------------------------------------------------------------------------*
