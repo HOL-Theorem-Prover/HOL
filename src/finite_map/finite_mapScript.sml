@@ -37,7 +37,27 @@ local open pred_setLib listTheory in end
 
 val _ = new_theory "finite_map";
 
-val _ = set_fixity "'" (Infixr 2001);
+val _ = set_fixity "'" (Infixr 1999);
+(* unfortunately, fiddly details in the concrete syntax system mean that
+   I can't make ' a right-associative infix at the same level as normal
+   function application.  Making it slightly weaker means that
+
+    * SOME (f ' x) prints that way
+    * (f x) ' y    prints as  f x ' y  which is OK.
+    * (f ' x) y    prints that way
+    * f ' (x y)    prints as  f ' x y  which is ick.
+
+   Long-term I should allow ' and function application to live at exactly
+   the same level, which would give
+
+    * SOME (f ' x)    as   SOME (f ' x)
+    * (f x) ' y       as   f x ' y
+    * (f ' x) y       as   f ' x y
+    * f ' (x y)       as   f ' (x y)
+
+   I think this is clearly best.
+*)
+
 val _ = set_fixity "|+" (Infixl 600);
 
 (*---------------------------------------------------------------------------
