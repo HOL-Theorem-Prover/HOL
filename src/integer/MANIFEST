@@ -6,6 +6,8 @@ CooperMath      : more elaborate, and generally mathematical
                   manipulations. Includes phases 1 to 3.
 CooperCore      : phases 4 and 5
 jrhCore         : alternative implementation of phases 4 and 5.
+DeepSyntax      : builds the theory of embedded syntax necessary for
+                  jrhCore.
 CooperShell     : implementation of decide_pure_presburger, putting
                   together everything preceding.
 Cooper          : top-level interface
