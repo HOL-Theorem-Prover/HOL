@@ -257,13 +257,19 @@ Wish list
 - can we have field names in roman?  (anything preceding := or following . ?)
   (imagine the reader parsing the s's in sendto_4, eg)
 
-- could autogenerate various sets used in is_foo checking.
-
 - fancy typesetting for context conditions like F_context FC
 
 - allow empty side conditions; don't force T.
 
 - compute binders in set comprehension somehow (see note below).
+
+- look at typeset version of [[ DRESTRICT fds (COMPL {fd}) ]].  The
+  parens around [[ (COMPL {fd}) ]] are required for HOL, but if we use
+  a symbol like \overline for [[COMPL]], they're not needed for the
+  typeset output.  How can we smash them away?
+
+- fix potential_vars so that it picks up all variables in a multi-line
+  existential or universal, rather than just the first line.
 
 
  --==[ THE END ]==--
