@@ -6,14 +6,14 @@
 Constructs an equation.
 
 \DESCRIBE
-{mk_eq{{lhs = t1, rhs = t2}}} returns {--`t1 = t2`--}. 
+{mk_eq{{lhs = t1, rhs = t2}}} returns {--`t1 = t2`--}.
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_eq", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_eq",
             message = "lhs and rhs have different types"}}
-
+}
 \SEEALSO
 dest_eq, is_eq.
 

@@ -10,14 +10,14 @@ Breaks apart a combination (function application) into rator and rand.
 {
    dest_comb (--`t1 t2`--)
 }
-\noindent returns {{Rator = t1, Rand = t2}}. 
+\noindent returns {{Rator = t1, Rand = t2}}.
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Term", origin_function = "dest_comb", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Term", origin_function = "dest_comb",
             message = "not a comb"}}
-
+}
 \SEEALSO
 mk_comb, is_comb, dest_var, dest_const, dest_abs, strip_comb.
 

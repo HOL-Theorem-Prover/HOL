@@ -61,7 +61,7 @@ for doing induction on lists:
    #let LIST_INDUCT_THEN = INDUCT_THEN list_INDUCT;;
    LIST_INDUCT_THEN = - : (thm_tactic -> tactic)
 }
-\noindent The resulting function, when supplied with the thm-tactic
+\noindent The resulting function, when supplied with the {thm_tactic}
 {ASSUME_TAC}, returns a tactic that decomposes a goal {?- !l.P[l]} into the
 base case {?- P[NIL]} and a step case {P[l] ?- !h. P[CONS h l]}, where the
 induction hypothesis {P[l]} in the step case has been put on the assumption

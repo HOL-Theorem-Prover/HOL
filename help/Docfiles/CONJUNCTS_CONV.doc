@@ -12,8 +12,8 @@ conversion, conjunction.
 {CONJUNCTS_CONV} takes a pair of terms {"t1"} and {"t2"}, and proves
 {|- t1 = t2} if {t1} and {t2} are equivalent up to idempotence, symmetry and
 associativity of conjunction.  That is, if {t1} and {t2} are two (different)
-arbitrarily-nested conjunctions of the same set of terms, then {CONJUNCTS_CONV
-(t1,t2)} returns {|- t1 = t2}. Otherwise, it fails.
+arbitrarily-nested conjunctions of the same set of terms, then
+{CONJUNCTS_CONV (t1,t2)} returns {|- t1 = t2}. Otherwise, it fails.
 
 \FAILURE
 Fails if {t1} and {t2} are not equivalent, as described above.
@@ -24,12 +24,14 @@ Fails if {t1} and {t2} are not equivalent, as described above.
 |- (P /\ Q) /\ R = R /\ (Q /\ R) /\ P
 }
 \USES
-Used to reorder a conjunction.  First sort the conjuncts in a term {t1} into
-the desired order (e.g. lexicographic order, for normalization) to get a new
-term {t2}, then call {CONJUNCTS_CONV(t1,t2)}.
+Used to reorder a conjunction.  First sort the conjuncts in a term
+{t1} into the desired order (e.g. lexicographic order, for
+normalization) to get a new term {t2}, then call
+{CONJUNCTS_CONV(t1,t2)}.
 
 \COMMENTS
-This is not a true conversion, so perhaps it ought to be called something else.
+This is not a true conversion, so perhaps it ought to be called
+something else.
 
 \SEEALSO
 CONJ_SET_CONV.

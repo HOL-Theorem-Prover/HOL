@@ -10,12 +10,12 @@ Breaks apart a universally quantified term into quantified variable and body.
 {dest_forall (--`!var. t`--)} returns {{Bvar = var, Body = t}}.
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_forall", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_forall",
             message = "not a forall"}}
-
-if term is not a universal quantification.
+}
+\noindent if term is not a universal quantification.
 
 \SEEALSO
 mk_forall, is_forall, strip_forall.

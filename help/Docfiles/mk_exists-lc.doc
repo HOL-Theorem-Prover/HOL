@@ -6,14 +6,14 @@
 Term constructor for existential quantification.
 
 \DESCRIBE
-{mk_exists{{Bvar = v, Body = t}}} returns {--`?v. t`--}. 
+{mk_exists{{Bvar = v, Body = t}}} returns {--`?v. t`--}.
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_exists", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_exists",
             message = ""}}
-
+}
 if {Bvar} is not a variable or if {Body} is not of type {==`:bool`==}.
 
 \SEEALSO

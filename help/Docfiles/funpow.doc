@@ -1,15 +1,14 @@
 \DOC funpow
 
-\TYPE {funpow : (int -> (* -> *) -> * -> *)}
+\TYPE {funpow : int -> ('a -> 'a) -> 'a -> 'a}
 
 \SYNOPSIS
 Iterates a function a fixed number of times.
 
 \DESCRIBE
-{funpow n f x} applies {f} to {x}, {n} times, giving the result {f (f ... (f
-x)...)} where the number of {f}'s is {n}. {funpow 0 f x} returns {x}. If {n} is
-negative, {funpow n f x} will either fail or loop indefinitely, depending on
-the values of {f} and {x}.
+{funpow n f x} applies {f} to {x}, {n} times, giving the result
+{f (f ... (f x)...)} where the number of {f}'s is {n}. {funpow 0 f x}
+returns {x}. If {n} is negative, {funpow n f x} returns {x}.
 
 \FAILURE
 {funpow n f x} fails if any of the {n} applications of f fail.
@@ -17,28 +16,18 @@ the values of {f} and {x}.
 \EXAMPLE
 Apply {tl} three times to a list:
 {
-   #funpow 3 tl [1;2;3;4;5];;
-   [4; 5] : int list
+   - funpow 3 tl [1,2,3,4,5];
+   > [4, 5] : int list
 }
 \noindent Apply {tl} zero times:
 {
-   #funpow 0 tl [1;2;3;4;5];;
-   [1; 2; 3; 4; 5] : int list
+   - funpow 0 tl [1,2,3,4,5];
+   > [1; 2; 3; 4; 5] : int list
 }
 \noindent Apply {tl} six times to a list of only five elements:
 {
-   #funpow 6 tl [1;2;3;4;5];;
-   evaluation failed     tl
-}
-\noindent Next, an application of {funpow} in which the integer argument is
-negative. Since the function cannot be applied to the argument an arbitrary
-number of times, the application of {funpow} fails.
-{
-   #funpow (-1) tl [1;2;3;4;5];;
-   evaluation failed     tl
-}
-\noindent An example that causes indefinite looping:
-{
-   #funpow (-1) I [1;2;3;4;5];;
+   - funpow 6 tl [1,2,3,4,5];
+   ! Uncaught exception:
+   ! List.Empty
 }
 \ENDDOC

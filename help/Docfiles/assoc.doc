@@ -1,6 +1,6 @@
 \DOC assoc
 
-\TYPE {Compat.assoc : ''a -> (''a * 'b) list -> ''a * 'b}
+\TYPE {Lib.assoc : ''a -> (''a * 'b) list -> ''a * 'b}
 
 \SYNOPSIS
 Searches a list of pairs for a pair whose first component equals a specified
@@ -10,30 +10,22 @@ value.
 list.
 
 \DESCRIBE
-Found in the hol88 library. {assoc x [(x1,y1),...,(xn,yn)]} returns the
-first {(xi,yi)} in the list such that {xi} equals {x}. The lookup is
-done on an eqtype, i.e., the SML implementation must be able to decide
-equality for the type of {x}.
+{assoc x [(x1,y1),...,(xn,yn)]} returns the first {(xi,yi)} in the
+list such that {xi} equals {x}. The lookup is done on an eqtype, i.e.,
+the SML implementation must be able to decide equality for the type of
+{x}.
 
 \FAILURE
-Fails if no matching pair is found. This will always be the case if the list
-is empty. Also fails if the hol88 library has not been loaded.
+Fails if no matching pair is found. This will always be the case if
+the list is empty.
 
 \EXAMPLE
 {
   - assoc 2 [(1,4),(3,2),(2,5),(2,6)];
- (2, 5) : (int * int)
+ > val it = (2, 5) : (int * int)
 }
 
-\COMMENTS
-Not found in hol90, since we use an option type instead of exceptions.
-
-    assoc1;
-    val it = fn : ''a -> (''a * 'b) list -> (''a * 'b) option
-    - assoc2;
-    val it = fn : ''a -> ('b * ''a) list -> ('b * ''a) option
-
 \SEEALSO
-rev_assoc, find, mem, tryfind, exists, forall.
+assoc1, assoc2, rev_assoc, find, mem, tryfind, exists, forall.
 
 \ENDDOC

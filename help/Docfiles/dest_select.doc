@@ -14,12 +14,12 @@ Breaks apart a choice term into selected variable and body.
 
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_select", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_select",
             message = "not a @"}}
-
-if term is not an epsilon-term.
+}
+\noindent if term is not an epsilon-term.
 
 \SEEALSO
 mk_select, is_select.

@@ -6,14 +6,15 @@
 Term constructor for universal quantification.
 
 \DESCRIBE
-{mk_forall{{Bvar = v, Body = t}}} returns {--`!v. t`--}. 
+{mk_forall{{Bvar = v, Body = t}}} returns {--`!v. t`--}.
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_forall", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_forall",
             message = ""}}
-
+}
+\noindent
 if {Bvar} is not a variable or if {Body} is not of type {==`:bool`==}.
 
 \SEEALSO

@@ -9,13 +9,13 @@ Constructs a {CONS} pair.
 {mk_cons{{hd = t, tl = --`[t1;...;tn]`--}}} returns {--`[t;t1;...;tn]`--}.
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_cons", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_cons",
             message = ""}}
-
-if {tl} is not a list or if {hd} is not of the same type as the elements of 
-the list.
+}
+\noindent if {tl} is not a list or if {hd} is not of the same type as
+the elements of the list.
 
 \SEEALSO
 dest_cons, is_cons, mk_list, dest_list, is_list.

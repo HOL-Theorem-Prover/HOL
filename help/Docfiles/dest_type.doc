@@ -6,7 +6,7 @@
 Breaks apart a type (other than a variable type).
 
 \DESCRIBE
-{dest_type(==`:(ty1,...,tyn)op`==)} returns 
+{dest_type(==`:(ty1,...,tyn)op`==)} returns
 
     {{Tyop = "op", Args = [ty1,...,tyn]}}.
 
@@ -23,12 +23,12 @@ Breaks apart a type (other than a variable type).
 }
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Type", origin_function = "dest_type", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Type", origin_function = "dest_type",
             message = ""}}
-
-if the type is a type variable.
+}
+\noindent if the type is a type variable.
 
 \SEEALSO
 mk_type, dest_vartype.

@@ -17,8 +17,8 @@ negation {~t} is treated as the implication {t ==> F}. The theorem-tactic
 stripped off. {FILTER_STRIP_THEN} also breaks conjunctions.
 
 {FILTER_STRIP_THEN} behaves like {STRIP_GOAL_THEN}, if the term being stripped
-does not contain a free instance of {u}. In particular, {FILTER_STRIP_THEN
-STRIP_ASSUME_TAC} behaves like {FILTER_STRIP_TAC}.
+does not contain a free instance of {u}. In particular,
+{FILTER_STRIP_THEN STRIP_ASSUME_TAC} behaves like {FILTER_STRIP_TAC}.
 
 \FAILURE
 {FILTER_STRIP_THEN ttac u (A,t)} fails if {t} is not a universally

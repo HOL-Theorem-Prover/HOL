@@ -8,30 +8,30 @@ Constructs a constant.
 \DESCRIBE
 {mk_const{{Name = "const", Ty = ty}}} returns the constant {{--`const:ty`--}}.
 
-
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_const", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_const",
             message}}
-
+}
+\noindent
 where {message} is prefixed with {"not in term signature"} if the string
 supplied is not the name of a known constant, or {"not a type instance"}
 if the string is known as a constant but the type supplied is not an
 instance of the declared type of that constant.
 
 \EXAMPLE
-{- mk_const {{Name = "T", Ty = ==`:bool`==}};
-(--`T`--) : term
+{
+   - mk_const {{Name = "T", Ty = ==`:bool`==}};
+   > val it = (--`T`--) : term
 
-- Dsyntax.mk_const {{Name = "T", Ty = ==`:num`==}} handle e => Raise e;
-Exception raised at Dsyntax.mk_const:
-not a type instance: T
+   - Dsyntax.mk_const {{Name = "T", Ty = ==`:num`==}} handle e => Raise e;
+   Exception raised at Dsyntax.mk_const:
+   not a type instance: T
 
-- mk_const {{Name = "test", Ty = ==`:bool`==}} handle e => Raise e;
-Exception raised at Dsyntax.mk_const:
-not in term signature: test
-
+   - mk_const {{Name = "test", Ty = ==`:bool`==}} handle e => Raise e;
+   Exception raised at Dsyntax.mk_const:
+   not in term signature: test
 }
 \SEEALSO
 dest_const, is_const, mk_var, mk_comb, mk_abs.

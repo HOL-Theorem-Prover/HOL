@@ -12,7 +12,7 @@ rule, type, instantiate.
 {INST_TYPE} is a primitive rule in the HOL logic, which allows
 instantiation of type variables.
 {
-                             
+
               A |- t                 INST_TYPE[vty1|->ty1,..., vtyn|->tyn]
   -----------------------------------
     A |- t[ty1,...,tyn/vty1,...,vtyn]
@@ -41,13 +41,14 @@ follows:
 }
 \noindent The failure occurred because {EQ_SYM_EQ} contains polymorphic types.
 The desired specialization can be obtained by using {INST_TYPE}:
+{
+   - load "numTheory";
+   > val it = () : unit
 
-{  - load "numTheory";
-
-   - SPECL [(--`a:num`--), (--`b:num`--)] 
+   - SPECL [(--`a:num`--), (--`b:num`--)]
            (INST_TYPE [``:'a`` |-> ``:num``] EQ_SYM_EQ);
 
-   val it = |- (a = b) = (b = a)
+   > val it = |- (a = b) = (b = a) : Thm.thm
 }
 \SEEALSO
 INST, INST_TY_TERM.

@@ -1,6 +1,6 @@
 \DOC assert
 
-\TYPE {assert : (('a -> bool) -> 'a -> 'a)}
+\TYPE {assert : ('a -> bool) -> 'a -> 'a}
 
 \SYNOPSIS
 Checks that a value satisfies a predicate.
@@ -16,18 +16,17 @@ Checks that a value satisfies a predicate.
 \EXAMPLE
 {
 - null [];
-true : bool
+> val it = true : bool
 
-- assert null [];
-[] : 'a list
+- assert null ([]:int list);
+> val it = [] : int list
 
 - null [1];
-false : bool
+> false : bool
 
 - assert null [1];
-
-uncaught exception HOL_ERR
-
+! Uncaught exception:
+! HOL_ERR <poly>
 }
 \SEEALSO
 can.

@@ -9,12 +9,11 @@ Constructs an abstraction.
 {mk_abs {{Bvar = v, Body = t}}} returns the abstraction {--`\v. t`--}.
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Term", origin_function = "mk_abs", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Term", origin_function = "mk_abs",
             message = "Bvar not a variable"}}
-
-
+}
 \SEEALSO
 dest_abs, is_abs, list_mk_abs, mk_var, mk_const, mk_comb.
 

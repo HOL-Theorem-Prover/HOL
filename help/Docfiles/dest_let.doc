@@ -7,7 +7,7 @@ Breaks apart a let-expression.
 
 \DESCRIBE
 {dest_let} is a term destructor for general let-expressions:
-{dest_let (--`LET f x`--)} returns {{func = f, arg = x}}. 
+{dest_let (--`LET f x`--)} returns {{func = f, arg = x}}.
 
 \EXAMPLE
 {
@@ -19,12 +19,13 @@ Breaks apart a let-expression.
 }
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_let", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_let",
             message = "not a let term"}}
-
-if term is not a {let}-expression or of the more general {--`LET f x`--} form.
+}
+\noindent if term is not a {let}-expression or of the more general
+{--`LET f x`--} form.
 
 \SEEALSO
 mk_let, is_let.

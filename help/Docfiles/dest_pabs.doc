@@ -7,18 +7,18 @@ Breaks apart a paired abstraction into abstracted varstruct and body.
 
 \DESCRIBE
 {dest_pabs} is a term destructor for paired abstractions:
-    {dest_pabs (--`\(v1..(..)..vn). t`--)} 
-returns 
-    {{varstruct = --`(v1..(..)..vn)`--, body = t}}. 
+    {dest_pabs (--`\(v1..(..)..vn). t`--)}
+returns
+    {{varstruct = --`(v1..(..)..vn)`--, body = t}}.
 
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_pabs", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_pabs",
             message = "not a paired abstraction"}}
-
-unless the term is a paired abstraction.
+}
+\noindent unless the term is a paired abstraction.
 
 \SEEALSO
 mk_pabs, is_pabs, dest_abs, dest_var, dest_const, dest_comb.

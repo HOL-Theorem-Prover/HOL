@@ -1,7 +1,9 @@
 \DOC INST_TY_TERM
 
-\TYPE {INST_TY_TERM 
-        : (term,term)subst * (hol_type,hol_type)subst -> thm -> thm}
+\BLTYPE
+INST_TY_TERM :
+(term,term)subst * (hol_type,hol_type)subst -> thm -> thm
+\ELTYPE
 
 \SYNOPSIS
 Instantiates terms and types of a theorem.

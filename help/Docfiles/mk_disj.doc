@@ -6,14 +6,14 @@
 Constructs a disjunction.
 
 \DESCRIBE
-{mk_disj{{disj1 = t1, disj2 = t2}}} returns {--`t1 \/ t2`--}. 
+{mk_disj{{disj1 = t1, disj2 = t2}}} returns {--`t1 \/ t2`--}.
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_disj", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_disj",
             message = "Non-boolean argument"}}
-
+}
 \SEEALSO
 dest_disj, is_disj, list_mk_disj.
 

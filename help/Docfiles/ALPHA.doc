@@ -1,6 +1,6 @@
 \DOC ALPHA
 
-\TYPE {ALPHA : (term -> term -> thm)}
+\TYPE {ALPHA : term -> term -> thm}
 
 \SYNOPSIS
 Proves equality of alpha-equivalent terms.
@@ -21,13 +21,13 @@ Fails unless the terms provided are alpha-equivalent.
 
 \EXAMPLE
 {
-- let val M = Parse.term_parser `!x:num. x = x`
-      val N = Parse.term_parser `!y:num. y = y`
+- let val M = Term`!x:num. x = x`
+      val N = Term`!y:num. y = y`
   in
-  ALPHA M N
+      ALPHA M N
   end;
 
-|- (!x. x = x) = (!y. y = y)
+> val it = |- (!x. x = x) = (!y. y = y) : Thm.thm
 }
 
 \SEEALSO

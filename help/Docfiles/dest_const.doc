@@ -10,14 +10,14 @@ Breaks apart a constant into name and type.
 {
    dest_const (--`const:ty`--)
 }
-\noindent returns {{Name = "const", Ty = (==`:ty`==)}}. 
+\noindent returns {{Name = "const", Ty = (==`:ty`==)}}.
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Term", origin_function = "dest_const", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Term", origin_function = "dest_const",
             message = "not a const"}}
-
+}
 \SEEALSO
 mk_const, is_const, dest_var, dest_comb, dest_abs.
 

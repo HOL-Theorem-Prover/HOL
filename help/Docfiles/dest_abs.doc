@@ -7,14 +7,14 @@ Breaks apart an abstraction into abstracted variable and body.
 
 \DESCRIBE
 {dest_abs} is a term destructor for abstractions:
-{dest_abs (--`\var. t`--)} returns {{Bvar = var, Body = t}}. 
+{dest_abs (--`\var. t`--)} returns {{Bvar = var, Body = t}}.
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Term", origin_function = "dest_abs", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Term", origin_function = "dest_abs",
             message = "not a lambda abstraction"}}
-
+}
 \SEEALSO
 mk_abs, is_abs, dest_var, dest_const, dest_comb, strip_abs.
 

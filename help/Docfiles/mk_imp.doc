@@ -6,14 +6,14 @@
 Constructs an implication.
 
 \DESCRIBE
-{mk_imp{{ant = t1, conseq = t2}}} returns {--`t1 ==> t2`--}. 
+{mk_imp{{ant = t1, conseq = t2}}} returns {--`t1 ==> t2`--}.
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_imp", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_imp",
             message = "Non-boolean argument"}}
-
+}
 \SEEALSO
 dest_imp, is_imp, list_mk_imp.
 

@@ -9,9 +9,10 @@ Passes a theorem unchanged to a theorem-tactic.
 theorem-tactic, identity.
 
 \DESCRIBE
-For any theorem-tactic {ttac} and theorem {th}, the application {ALL_THEN ttac
-th} results simply in {ttac th}, that is, the theorem is passed unchanged to
-the theorem-tactic. {ALL_THEN} is the identity theorem-tactical.
+For any theorem-tactic {ttac} and theorem {th}, the application
+{ALL_THEN ttac th} results simply in {ttac th}, that is, the theorem
+is passed unchanged to the theorem-tactic. {ALL_THEN} is the identity
+theorem-tactical.
 
 \FAILURE
 The application of {ALL_THEN} to a theorem-tactic never fails. The resulting

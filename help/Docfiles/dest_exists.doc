@@ -7,15 +7,15 @@ Breaks apart a existentially quantified term into quantified variable and body.
 
 \DESCRIBE
 {dest_exists} is a term destructor for existential quantification:
-{dest_exists (--`!var. t`--)} returns {{Bvar = var, Body = t}}. 
+{dest_exists (--`!var. t`--)} returns {{Bvar = var, Body = t}}.
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_exists", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_exists",
             message = "not an exists"}}
-
-if term is not a existential quantification.
+}
+\noindent if term is not a existential quantification.
 
 \SEEALSO
 mk_exists, is_exists, strip_exists.

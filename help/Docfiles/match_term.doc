@@ -1,7 +1,9 @@
-\DOC match
+\DOC match_term
 
-\TYPE {match_term 
-       : term -> term -> (term,term) subst * (hol_type,hol_type) subst}
+\BLTYPE
+match_term :
+term -> term -> (term,term) subst * (hol_type,hol_type) subst
+\ELTYPE
 
 \SYNOPSIS
 Finds instantiations to match one term to another.

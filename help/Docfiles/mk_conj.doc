@@ -6,14 +6,14 @@
 Constructs a conjunction.
 
 \DESCRIBE
-{mk_conj{{conj1 = t1, conj2 = t2}}} returns {--`t1 /\ t2`--}. 
+{mk_conj{{conj1 = t1, conj2 = t2}}} returns {--`t1 /\ t2`--}.
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_conj", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_conj",
             message = "Non-boolean argument"}}
-
+}
 \SEEALSO
 dest_conj, is_conj, list_mk_conj.
 

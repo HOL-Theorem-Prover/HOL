@@ -6,15 +6,15 @@
 Term destructor for disjunctions.
 
 \DESCRIBE
-{dest_disj(--`t1 /\ t2`--)} returns {{disj1 = t1, disj2 = t2}}. 
+{dest_disj(--`t1 /\ t2`--)} returns {{disj1 = t1, disj2 = t2}}.
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_disj", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_disj",
             message = "not a disj"}}
-
-if term is not a disjunction.
+}
+\noindent if term is not a disjunction.
 
 \SEEALSO
 mk_disj, is_disj.

@@ -10,15 +10,15 @@ Breaks apart a conditional into the three terms involved.
 {
    dest_cond (--`t => t1 | t2`--)
 }
-\noindent returns {{cond = t, larm = t1, rarm = t2}}. 
+\noindent returns {{cond = t, larm = t1, rarm = t2}}.
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_cond", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_cond",
             message = "not a cond"}}
-
-if term is not a conditional.
+}
+\noindent if term is not a conditional.
 
 \SEEALSO
 mk_cond, is_cond.

@@ -1,7 +1,9 @@
 \DOC define_type
 
-\TYPE {define_type :{{name :string, type_spec :term frag list, 
-                      fixities : fixity list}} -> thm}
+\BLTYPE
+define_type : {{name :string, type_spec :term frag list,
+               fixities : fixity list}} -> thm
+\ELTYPE
 
 \SYNOPSIS
 Automatically defines a user-specified concrete recursive data type.
@@ -81,7 +83,7 @@ type with exactly three distinct values:
 for the concrete type {tri}.  An example of a recursive type that can be
 defined using {define_type} is a type of binary trees:
 {
-   - define_type {{type_spec = `btree = LEAF of 'a 
+   - define_type {{type_spec = `btree = LEAF of 'a
                                       | NODE of btree => btree`,
                   name = "tree_DEF",
                   fixities = [Prefix,Prefix]}}
@@ -108,12 +110,11 @@ any of the types of the arguments of the constructors:
 type expression {(ty -> ty)}.
 
 \COMMENTS
-
-The "=>" that may be used in type specifications is merely a delimiter
-that shows a constructor to be Curried. It must occur at the "top-level"
-in the argument list to a constructor. i.e., parsing of the type
-specification will fail if the "=>" occurs underneath an existing type
-constructor.
+The "{=>}" that may be used in type specifications is merely a
+delimiter that shows a constructor to be Curried. It must occur at the
+"top-level" in the argument list to a constructor. i.e., parsing of
+the type specification will fail if the "{=>}" occurs underneath an
+existing type constructor.
 
 \SEEALSO
 INDUCT_THEN, new_recursive_definition, prove_cases_thm,

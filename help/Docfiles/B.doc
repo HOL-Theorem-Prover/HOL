@@ -5,7 +5,7 @@
 \SYNOPSIS
 Performs curried function-composition: {B f g x} = {f (g x)}.
 
-\COMMENTS 
+\COMMENTS
 Not yet in hol90
 
 \KEYWORDS
@@ -15,6 +15,6 @@ combinator, compose.
 Never fails.
 
 \SEEALSO
-\#\#, C, CB, Co, I, K, KI, o, oo, S, W.
+\#\#, C, I, K, o, S, W.
 
 \ENDDOC

@@ -9,12 +9,12 @@ Constructs a conditional term.
 {mk_cond{{cond = t, larm = t1, rarm = t2}}} returns {--`t => t1 | t2`--}.
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_cond", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_cond",
             message = ""}}
-
-if {cond} is not of type {==`:bool`==} or if {larm} and {rarm} are
+}
+\noindent if {cond} is not of type {==`:bool`==} or if {larm} and {rarm} are
 of different types.
 
 \SEEALSO

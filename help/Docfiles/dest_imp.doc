@@ -25,12 +25,12 @@ implications with consequent {F}. Thus
 }
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_imp", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_imp",
             message = "not an ==>"}}
-
-if term is neither an implication nor a negation.
+}
+\noindent if term is neither an implication nor a negation.
 
 \COMMENTS
 Destructs negations for increased functionality of HOL-style resolution.

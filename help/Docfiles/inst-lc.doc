@@ -3,17 +3,17 @@
 \TYPE {inst : hol_type subst -> term -> term}
 
 \SYNOPSIS
-Performs type instantiations in a term. NOT the same as the hol88 inst; the 
+Performs type instantiations in a term. NOT the same as the hol88 inst; the
 first argument (the "away-from" list) used in hol88 {inst} is unnecessary and
 hence dispensed with, PLUS hol90 insists that all redexes be type variables.
 
 \DESCRIBE
 The function {inst} should be used as follows:
 {
-   inst [{{redex_1, residue_1}},...;{{redex_n, residue_n}}] tm
+   inst [{{redex_1, residue_1}},...,{{redex_n, residue_n}}] tm
 }
-\noindent where the redexes are all hol_type variables, and the residues
-all hol_types and {tm} a term to be type-instantiated. This call will
+\noindent where the redexes are all {hol_type} variables, and the residues
+all {hol_types} and {tm} a term to be type-instantiated. This call will
 replace each occurrence of a {redex} in {tm} by its associated
 {residue}. Replacement is done in parallel, i.e., once a {redex} has been
 replaced by its {residue}, at some place in the term, that {residue} at that
@@ -26,12 +26,12 @@ Fails if there exists a redex in the substition that is not a type variable.
 \EXAMPLE
 {
 - show_types := true;
-() : unit
+> val it = () : unit
 
 - let val tm = --`(x:'a) = (x:'a)`--
   in inst [{{redex = ==`:'a`==, residue = ==`:num`==}}] tm
   end;
-(--`(x :num) = (x :num)`--) : term
+> val it = (--`(x :num) = (x :num)`--) : term
 
 - inst [{{redex = ==`:bool`==, residue = ==`:num`==}}] (--`x:bool`--)
   handle e => Raise e;
