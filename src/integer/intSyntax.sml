@@ -117,7 +117,15 @@ fun is_int_literal t =
   (rator t = int_injection andalso numSyntax.is_numeral (rand t)) orelse
   (rator t = negate_tm andalso is_int_literal (rand t))
   handle HOL_ERR _ => false
-fun is_negated tm = is_comb tm andalso rator tm = negate_tm
+
+fun dest_negated tm = let
+  val (l,r) = dest_comb tm
+    handle HOL_ERR _ => raise ERR "dest_negated" "term not a negation"
+in
+  if l = negate_tm then r
+  else raise ERR "dest_negated" "term not a negation"
+end
+val is_negated = can dest_negated
 fun mk_negated tm = mk_comb(negate_tm, tm)
 
 

@@ -23,8 +23,12 @@ sig
   (* discriminators, constructors, etc *)
 
   val is_int_literal : term -> bool
+
   val is_negated     : term -> bool  (* if a term is of form ~ e *)
   val mk_negated     : term -> term
+  val dest_negated   : term -> term
+
+
   val int_of_term    : term -> Arbint.int
   val term_of_int    : Arbint.int -> term
 
