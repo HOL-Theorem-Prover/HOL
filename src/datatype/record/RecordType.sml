@@ -563,8 +563,9 @@ fun prove_recordtype_thms (tyinfo, fields) = let
   (* add to the TypeBase's simpls entry for the record type *)
   val new_simpls = let
     val new_simpls0 =  [accupd_thm, accessor_thm, updfn_thm, updacc_thm,
-                        updupd_thm, accfupd_thm, literal_equality,
-                        literal_11, fupdfupd_thm, fupdfupds_comp_thm]
+                        updupd_thm, updupd_comp_thm, accfupd_thm,
+                        literal_equality, literal_11, fupdfupd_thm,
+                        fupdfupds_comp_thm]
   in
     if not (null upd_canon_thms) then
       updcanon_thm :: fupdcanon_thm ::  updcanon_comp_thm ::
@@ -608,7 +609,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
      map (concat typename)
      (["_accessors", "_updates", "_updates_eq_literal", "_updaccs",
        "_accupds", "_accfupds", "_updupds", "_fupdfupds",
-       "_literal_11", "_fupdfupds_comp"] @
+       "_literal_11", "_updupd_comp", "_fupdfupds_comp"] @
       (if not (null upd_canon_thms) then
          ["_updcanon", "_updcanon_comp", "_fupdcanon", "_fupdcanon_comp"]
        else []))
