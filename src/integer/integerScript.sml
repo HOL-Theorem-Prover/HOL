@@ -1693,15 +1693,27 @@ val INT_OF_NUM =
 
 val _ = print "Integer division\n"
 
-val int_div = new_definition(
-  "int_div",
-  Term`int_div x y =
-         if y = 0i then ARB x
-         else
-           if 0 <= x then if 0 < y then &(Num(x) DIV Num(y))
-                          else ~(& (Num(x) DIV Num(~y)))
-           else           if 0 < y then ~& (Num(~x) DIV Num(y))
-                          else & (Num(~x) DIV Num(~y))`);
+val int_div_exists0 = prove(
+  ``!i j. ?q. ~(j = 0) ==>
+               (q = if 0 < j then
+                      if 0 <= i then &(Num i DIV Num j)
+                      else ~&(Num ~i DIV Num j) +
+                           (if Num ~i MOD Num j = 0 then 0 else ~1)
+                    else
+                      if 0 <= i then ~&(Num i DIV Num ~j) +
+                                     (if Num i MOD Num ~j = 0 then 0 else ~1)
+                      else &(Num ~i DIV Num ~j))``,
+  REPEAT GEN_TAC THEN REWRITE_TAC [IMP_DISJ_THM] THEN
+  CONV_TAC EXISTS_OR_CONV THEN DISJ2_TAC THEN
+  REWRITE_TAC [EXISTS_REFL]);
+
+val int_div_exists =
+    CONV_RULE (BINDER_CONV SKOLEM_CONV THENC SKOLEM_CONV) int_div_exists0
+
+val int_div = new_specification {
+  consts = [{const_name = "int_div", fixity = Prefix}],
+  name = "int_div",
+  sat_thm = int_div_exists};
 
 val _ = add_infix("/", 600, HOLgrammars.LEFT);
 val _ = overload_on("/", Term`int_div`)
@@ -1713,52 +1725,21 @@ val INT_DIV = store_thm(
 
 val INT_DIV_NEG = store_thm(
   "INT_DIV_NEG",
-  Term`!p q. ~(q = 0) ==> ((~p / q = ~(p / q)) /\ (p/~q = ~p/q))`,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
-  Cases_on `0 <= q` THENL [
-    `?n. q = &n` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
-    POP_ASSUM SUBST_ALL_TAC THEN
-    Cases_on `0 <= p` THENL [
-      `?m. p = &m` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [INT_INJ, INT_LE]) THEN
-      ASM_SIMP_TAC int_ss [int_div, INT_INJ, INT_LE, INT_LT,
-                           INT_NEG_GE0, NUM_OF_INT, INT_NEGNEG, INT_NEG_EQ0,
-                           INT_NEG_GT0, INT_NEG_0] THEN
-      ASM_SIMP_TAC (int_ss ++ boolSimps.COND_elim_ss) [
-        GSYM IMP_DISJ_THM, ZERO_DIV, INT_NEG_EQ0,
-        INT_NEG_0, INT_NEG_EQ, INT_NEGNEG],
-      `?m. p = ~&m` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_NOT_LE,
-                                  INT_LE_LT] THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [INT_NEG_GE0, INT_NOT_LE, INT_NEG_LT0,
-                                    INT_LT, INT_LE, INT_INJ]) THEN
-      ASM_SIMP_TAC int_ss [int_div, INT_LT, INT_LE, INT_NEGNEG, INT_INJ,
-                           NUM_OF_INT, INT_NEG_GE0, INT_NEG_EQ0,
-                           INT_NEG_LE0, INT_NEG_GT0]
-   ],
-   `?n. q = ~&n` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_NOT_LE, INT_LE_LT] THEN
-   POP_ASSUM SUBST_ALL_TAC THEN
-   Cases_on `0 <= p` THENL [
-     `?m. p = &m` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [INT_LE, INT_NEG_EQ0, INT_NEG_GE0,
-                                    INT_INJ]) THEN
-      ASM_SIMP_TAC int_ss [int_div, INT_NEGNEG, INT_LT, INT_LE, INT_INJ,
-                           NUM_OF_INT, INT_NEG_EQ0, INT_NEG_GE0,
-                           INT_NEG_GT0, INT_NEG_0, INT_NEG_LT0] THEN
-      ASM_SIMP_TAC (int_ss ++ boolSimps.COND_elim_ss)
-         [GSYM IMP_DISJ_THM, ZERO_DIV, INT_NEG_0],
-      `?m. p = ~&m` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_NOT_LE,
-                                  INT_LE_LT] THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [INT_NEG_EQ0, INT_NEG_GE0, INT_INJ,
-                                    INT_LE, NOT_LESS_EQUAL]) THEN
-      ASM_SIMP_TAC int_ss [int_div, INT_LT, INT_LE, INT_NEGNEG, INT_INJ,
-                           NUM_OF_INT, INT_NEG_GE0, INT_NEG_EQ0,
-                           INT_NEG_LE0, INT_NEG_GT0, INT_NEG_LT0]
-   ]
- ]);
+  ``!p q. ~(q = 0) ==> (p / ~q = ~p / q)``,
+  REPEAT GEN_TAC THEN
+  STRUCT_CASES_TAC (Q.SPEC `q` INT_NUM_CASES) THEN
+  FULL_SIMP_TAC int_ss [INT_INJ, INT_NEG_EQ, INT_NEG_0, INT_NEGNEG] THEN
+  ASM_SIMP_TAC int_ss [int_div, INT_INJ, INT_NEG_EQ, INT_NEG_0,
+                       INT_NEG_GT0, INT_LT, INT_NEG_GE0, INT_NEGNEG,
+                       NUM_OF_INT] THEN
+  STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
+  FULL_SIMP_TAC int_ss [int_div, INT_INJ, INT_NEG_EQ, INT_NEG_0,
+                        INT_NEG_GT0, INT_LT, INT_NEG_GE0, INT_NEGNEG,
+                        NUM_OF_INT, INT_LE, INT_NEG_LE0, ZERO_DIV,
+                        ZERO_MOD, INT_ADD_RID]);
+
+
+
 
 val INT_DIV_1 = store_thm(
   "INT_DIV_1",
@@ -1771,9 +1752,18 @@ val INT_DIV_1 = store_thm(
     (* p negative *)
     `?n. p = ~&n` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_NOT_LE, INT_LE_LT] THEN
     POP_ASSUM SUBST_ALL_TAC THEN
-    SIMP_TAC int_ss [INT_INJ, INT_EQ_NEG, INT_DIV_NEG, INT_DIV, ONE,
-                     DIV_ONE]
+    SIMP_TAC (int_ss ++ COND_elim_ss) [INT_INJ, INT_EQ_NEG, int_div, ONE,
+                DIV_ONE, INT_LT, INT_NEG_GE0, INT_LE,
+                INT_NEGNEG, NUM_OF_INT, INT_NEG_0, MOD_ONE,
+                INT_ADD_RID, GSYM INT_NEG_EQ]
   ]);
+
+val INT_DIV_0 = store_thm(
+  "INT_DIV_0",
+  ``!q. ~(q = 0) ==> (0 / q = 0)``,
+  GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `q` INT_NUM_CASES) THEN
+  ASM_SIMP_TAC int_ss [INT_NEG_EQ0, INT_INJ, INT_DIV_NEG, INT_DIV,
+                       INT_NEG_0, ZERO_DIV, GSYM NOT_ZERO_LT_ZERO]);
 
 val INT_DIV_ID = store_thm(
   "INT_DIV_ID",
@@ -1784,8 +1774,9 @@ val INT_DIV_ID = store_thm(
     ASM_SIMP_TAC int_ss [INT_INJ, INT_DIV, DIVMOD_ID, NOT_ZERO_LT_ZERO],
     (* p negative *)
     `?n. p = ~&n` by PROVE_TAC [INT_NOT_LE, NUM_NEGINT_EXISTS, INT_LE_LT] THEN
-    ASM_SIMP_TAC int_ss [INT_DIV_NEG, INT_NEG_EQ0, INT_NEGNEG] THEN
-    SIMP_TAC int_ss [INT_DIV, INT_INJ, DIVMOD_ID, NOT_ZERO_LT_ZERO]
+    ASM_SIMP_TAC int_ss [INT_NEG_EQ0, INT_NEGNEG, int_div,
+                         NUM_OF_INT, INT_NEG_GT0, INT_INJ, INT_LT,
+                         DIVMOD_ID, NOT_ZERO_LT_ZERO]
   ]);
 
 (*----------------------------------------------------------------------*)
@@ -1794,19 +1785,89 @@ val INT_DIV_ID = store_thm(
 
 val _ = print "Integer modulus\n"
 
-val int_mod = new_definition(
-  "int_mod",
-  Term`int_mod p q = if q = 0i then ARB p
-                     else p - p / q * q`);
+val int_mod_exists0 = prove(
+  ``!i j. ?r. ~(j = 0) ==> (r = i - i / j * j)``,
+  REPEAT GEN_TAC THEN REWRITE_TAC [IMP_DISJ_THM] THEN
+  CONV_TAC EXISTS_OR_CONV THEN DISJ2_TAC THEN
+  REWRITE_TAC [EXISTS_REFL]);
+val int_mod_exists =
+    CONV_RULE (BINDER_CONV SKOLEM_CONV THENC SKOLEM_CONV) int_mod_exists0
+
+
+val int_mod = new_specification {
+  consts = [{const_name = "int_mod", fixity = Prefix}],
+  name = "int_mod",
+  sat_thm = int_mod_exists};
 
 val _ = add_infix("%", 650, HOLgrammars.LEFT);
 val _ = overload_on("%", Term`int_mod`);
 
+val little_lemma = prove(
+  ``!x y z. ~x < y + ~z = z < y + x``,
+  REWRITE_TAC [GSYM int_sub, INT_LT_SUB_LADD] THEN
+  REPEAT GEN_TAC THEN
+  CONV_TAC (LHS_CONV (LAND_CONV  (REWR_CONV INT_ADD_COMM))) THEN
+  REWRITE_TAC [GSYM int_sub, INT_LT_SUB_RADD]);
+
+val ll2 = prove(
+  ``!x y. (x + ~y <= 0) = (x <= y)``,
+  REWRITE_TAC [GSYM int_sub, INT_LE_SUB_RADD, INT_ADD_LID]);
+
+
+val INT_MOD_BOUNDS = store_thm(
+  "INT_MOD_BOUNDS",
+  ``!p q. ~(q = 0) ==> if q < 0 then q < p % q /\ p % q <= 0
+                       else          0 <= p % q /\ p % q < q``,
+  REPEAT STRIP_TAC THEN ASM_SIMP_TAC int_ss [int_mod] THEN
+  REPEAT_TCL STRIP_THM_THEN ASSUME_TAC (Q.SPEC `q` INT_NUM_CASES) THEN
+  FIRST_X_ASSUM SUBST_ALL_TAC THENL [
+    ASM_SIMP_TAC int_ss [INT_LT, INT_SUB_LE, INT_LT_SUB_RADD],
+    ASM_SIMP_TAC int_ss [INT_NEG_LT0, INT_LT],
+    FULL_SIMP_TAC bool_ss []
+  ] THEN FULL_SIMP_TAC bool_ss [INT_INJ, INT_NEG_EQ0] THEN
+  STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
+  ASM_SIMP_TAC int_ss [INT_ADD, INT_DIV, INT_MUL, INT_LE, INT_LT,
+                       INT_DIV_NEG, INT_SUB_LZERO, INT_LT_NEG,
+                       INT_DIV_0, INT_INJ, ZERO_DIV, GSYM NOT_ZERO_LT_ZERO,
+                       INT_NEG_0, INT_MUL_LZERO, INT_LE, INT_NEG_LT0,
+                       INT_NEGNEG] THEN
+  Q.ABBREV_TAC `p = n'` THEN POP_ASSUM (K ALL_TAC)
+  THENL [
+    ALL_TAC,
+    ASM_SIMP_TAC int_ss [int_div, INT_INJ, INT_LT, INT_NEG_GE0, INT_LE,
+                         NUM_OF_INT, INT_NEGNEG] THEN
+    COND_CASES_TAC THEN
+    ASM_SIMP_TAC int_ss [INT_RDISTRIB, INT_MUL_LZERO, INT_ADD_RID,
+                         GSYM INT_NEG_LMUL, INT_LE_NEG, INT_LE, INT_MUL,
+                         little_lemma, INT_ADD, INT_LT, GSYM INT_NEG_ADD,
+                         GSYM INT_NEG_RMUL, INT_NEGNEG, int_sub],
+    ASM_SIMP_TAC int_ss [int_div, INT_INJ, INT_LT, INT_NEG_GE0, INT_LE,
+                         NUM_OF_INT, INT_NEGNEG] THEN
+    COND_CASES_TAC THEN
+    ASM_SIMP_TAC int_ss [INT_RDISTRIB, INT_MUL_LZERO, INT_ADD_RID,
+                         GSYM INT_NEG_LMUL, INT_LE_NEG, INT_LE, INT_MUL,
+                         little_lemma, INT_ADD, INT_LT, GSYM INT_NEG_ADD,
+                         GSYM INT_NEG_RMUL, INT_NEGNEG, int_sub, ll2],
+    SIMP_TAC int_ss [GSYM INT_NEG_RMUL, INT_SUB_NEG2, INT_MUL,
+                     INT_LE_SUB_RADD, INT_ADD_LID, INT_LE_NEG, INT_LE] THEN
+    SIMP_TAC int_ss [int_sub, little_lemma, INT_ADD, INT_LT]
+  ] THEN
+  `(p = p DIV n * n + p MOD n) /\ p MOD n < n` by
+     PROVE_TAC [DIVISION, NOT_ZERO_LT_ZERO] THEN
+  Q.ABBREV_TAC `q = p DIV n` THEN POP_ASSUM (K ALL_TAC) THEN
+  Q.ABBREV_TAC `r = p MOD n` THEN POP_ASSUM (K ALL_TAC) THEN
+  ASM_SIMP_TAC int_ss []);
+
 val INT_DIVISION = store_thm(
   "INT_DIVISION",
-  Term`!p. ~(p = 0) ==> !q. q = q / p * p + q % p`,
-  REPEAT STRIP_TAC THEN ASM_SIMP_TAC int_ss [int_mod, int_sub] THEN
-  PROVE_TAC [INT_EQ_SUB_LADD, INT_ADD_COMM, INT_ADD_ASSOC, int_sub]);
+  Term`!q. ~(q = 0) ==> !p. (p = p / q * q + p % q) /\
+                            if q < 0 then q < p % q /\ p % q <= 0
+                            else          0 <= p % q /\ p % q < q`,
+  REPEAT STRIP_TAC THENL [
+    ASM_SIMP_TAC int_ss [int_mod, int_sub] THEN
+    PROVE_TAC [INT_EQ_SUB_LADD, INT_ADD_COMM, INT_ADD_ASSOC, int_sub],
+    PROVE_TAC [INT_MOD_BOUNDS]
+  ]);
 
 val INT_MOD = store_thm(
   "INT_MOD",
@@ -1817,7 +1878,18 @@ val INT_MOD = store_thm(
 
 val INT_MOD_NEG = store_thm(
   "INT_MOD_NEG",
-  Term`!p q. ~(q = 0) ==> (~p % q = ~(p % q)) /\ (p % ~q = p % q)`,
+  ``!p q. ~(q = 0) ==> (p % ~q = ~(~p % q))``,
+  REPEAT GEN_TAC THEN
+  STRUCT_CASES_TAC (Q.SPEC `q` INT_NUM_CASES) THEN
+  FULL_SIMP_TAC int_ss [INT_INJ, INT_NEGNEG, int_mod, INT_NEG_EQ,
+                        INT_NEG_0, INT_DIV_NEG, INT_NEG_SUB,
+                        GSYM INT_NEG_LMUL, GSYM INT_NEG_RMUL,
+                        INT_SUB_NEG2, INT_SUB_RNEG] THEN
+  MATCH_ACCEPT_TAC INT_ADD_COMM);
+
+(*
+val INT_MOD_NEG = store_thm(
+  "INT_MOD_NEG",
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Cases_on `0 <= p` THENL [
     `?n. p = &n` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
@@ -1855,6 +1927,7 @@ val INT_MOD_NEG = store_thm(
                            int_sub, INT_NEG_ADD]
     ]
   ]);
+*)
 
 val INT_MOD0 = store_thm(
   "INT_MOD0",
@@ -1866,7 +1939,8 @@ val INT_MOD0 = store_thm(
     SIMP_TAC int_ss [INT_MOD, INT_INJ, ZERO_MOD],
     `?n. p = ~&n` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_NOT_LE, INT_LE_LT] THEN
     POP_ASSUM SUBST_ALL_TAC THEN
-    SIMP_TAC int_ss [INT_MOD_NEG, INT_NEG_EQ0, INT_MOD, INT_INJ, ZERO_MOD]
+    SIMP_TAC int_ss [INT_MOD_NEG, INT_NEG_EQ0, INT_MOD, INT_INJ, ZERO_MOD,
+                     INT_NEG_0]
   ]);
 
 val INT_DIV_MUL_ID = store_thm(
@@ -1876,6 +1950,204 @@ val INT_DIV_MUL_ID = store_thm(
   `p = p/q * q + p % q` by PROVE_TAC [INT_DIVISION] THEN
   `p = p / q * q` by PROVE_TAC [INT_ADD_RID] THEN
   PROVE_TAC []);
+
+infix THEN1
+open dividesTheory
+val lessmult_lemma = prove(
+  ``!x y:num. x * y < y ==> (x = 0)``,
+  Induct THEN ASM_SIMP_TAC int_ss [MULT_CLAUSES]);
+
+val negcase = prove(
+  ``!q n m.
+       m < n /\ ~(q = 0) ==> ((~&q * &n + &m) / &n = ~ &q)``,
+  REPEAT STRIP_TAC THEN
+  `m < q * n` by
+     PROVE_TAC [NOT_LESS_EQUAL, lessmult_lemma, LESS_LESS_EQ_TRANS] THEN
+  CONV_TAC (LAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [INT_ADD_COMM]))) THEN
+  REWRITE_TAC [GSYM int_sub, GSYM INT_NEG_LMUL] THEN
+  ONCE_REWRITE_TAC [GSYM INT_NEG_SUB] THEN
+  ASM_SIMP_TAC int_ss [INT_SUB, INT_MUL, INT_LE,
+                       ARITH_PROVE ``x:num < y ==> x <= y``] THEN
+  ASM_SIMP_TAC int_ss [int_div, INT_INJ, INT_LT, INT_NEG_GE0, INT_LE,
+                       INT_NEGNEG, NUM_OF_INT, INT_EQ_NEG] THEN
+  COND_CASES_TAC THEN
+  ASM_SIMP_TAC int_ss [INT_INJ, INT_LT, INT_NEG_GE0, INT_LE,
+                       INT_NEGNEG, NUM_OF_INT, INT_EQ_NEG,
+                       INT_ADD_RID, GSYM INT_NEG_ADD, INT_ADD]
+  THENL [
+    MATCH_MP_TAC DIV_UNIQUE THEN Q.EXISTS_TAC `0` THEN
+    Q_TAC SUFF_TAC `m = 0` THEN1 ASM_SIMP_TAC int_ss [] THEN
+    `0 < n` by ASM_SIMP_TAC int_ss [] THEN
+    Q.SPEC_THEN `n` (IMP_RES_THEN (Q.SPEC_THEN `q * n - m` MP_TAC))
+                DIVISION THEN
+    ASM_SIMP_TAC bool_ss [ADD_CLAUSES] THEN
+    Q.ABBREV_TAC `k = (q * n - m) DIV n` THEN
+    ASM_SIMP_TAC int_ss [SUB_RIGHT_EQ] THEN STRIP_TAC THEN
+    `divides n (k * n + m)` by PROVE_TAC [divides_def, ADD_COMM] THEN
+    `divides n m` by PROVE_TAC [DIVIDES_ADD_2, divides_def] THEN
+    `?x. m = x * n` by PROVE_TAC [divides_def] THEN
+    `x = 0` by PROVE_TAC [lessmult_lemma] THEN
+    ASM_SIMP_TAC bool_ss [MULT_CLAUSES],
+    Q_TAC SUFF_TAC `(q * n - m) DIV n = q - 1` THEN1
+       ASM_SIMP_TAC int_ss [] THEN
+    MATCH_MP_TAC DIV_UNIQUE THEN Q.EXISTS_TAC `n - m` THEN
+    `n <= q * n` by PROVE_TAC [lessmult_lemma, NOT_LESS_EQUAL] THEN
+    ASM_SIMP_TAC bool_ss [RIGHT_SUB_DISTRIB, MULT_CLAUSES,
+                          ARITH_PROVE ``x:num < y ==> x <= y``,
+                          GSYM LESS_EQ_ADD_SUB, SUB_ADD] THEN
+    Q_TAC SUFF_TAC `~(m = 0)` THEN1 ASM_SIMP_TAC int_ss [] THEN
+    DISCH_THEN SUBST_ALL_TAC THEN
+    FULL_SIMP_TAC bool_ss [SUB_0] THEN PROVE_TAC [MOD_EQ_0]
+  ]);
+
+val INT_DIV_UNIQUE = store_thm(
+  "INT_DIV_UNIQUE",
+  ``!i j q. (?r. (i = q * j + r) /\
+                 if j < 0 then j < r /\ r <= 0 else 0 <= r /\ r < j) ==>
+            (i / j = q)``,
+  REPEAT GEN_TAC THEN DISCH_THEN (STRIP_THM_THEN  MP_TAC) THEN
+  STRUCT_CASES_TAC (Q.SPEC `j` INT_NUM_CASES) THEN
+  FULL_SIMP_TAC int_ss [INT_INJ, INT_MUL_RZERO, INT_LT, INT_ADD_LID,
+                        INT_NEG_LT0]
+  THENL [
+    REPEAT STRIP_TAC THEN `?m. r = &m` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
+    REPEAT (FIRST_X_ASSUM SUBST_ALL_TAC) THEN
+    FULL_SIMP_TAC int_ss [INT_LT, INT_LE] THEN
+    STRUCT_CASES_TAC (Q.SPEC `q` INT_NUM_CASES) THENL [
+      FULL_SIMP_TAC int_ss [INT_MUL, INT_ADD, INT_DIV, INT_INJ] THEN
+      PROVE_TAC [ADD_COMM, DIV_UNIQUE],
+      PROVE_TAC [negcase],
+      ASM_SIMP_TAC int_ss [INT_MUL_LZERO, INT_ADD_LID, INT_DIV, INT_INJ,
+                           LESS_DIV_EQ_ZERO]
+    ],
+    REPEAT STRIP_TAC THEN
+    `?m. r = ~&m` by PROVE_TAC [NUM_NEGINT_EXISTS] THEN
+    REPEAT (FIRST_X_ASSUM SUBST_ALL_TAC) THEN
+    FULL_SIMP_TAC int_ss [INT_DIV_NEG, INT_INJ, INT_NEG_EQ0,
+                          INT_NEG_LE0, INT_LT_NEG, INT_LE, INT_LT] THEN
+    STRUCT_CASES_TAC (Q.SPEC `q` INT_NUM_CASES) THENL [
+      ASM_SIMP_TAC int_ss [INT_NEG_RMUL, INT_NEGNEG, INT_NEG_ADD, INT_DIV,
+                           INT_INJ, INT_ADD, INT_MUL] THEN
+      PROVE_TAC [DIV_UNIQUE, ADD_COMM],
+      ASM_SIMP_TAC bool_ss [INT_NEG_MUL2, negcase, INT_NEG_ADD, INT_NEGNEG,
+                            INT_NEG_LMUL],
+      ASM_SIMP_TAC int_ss [INT_MUL_LZERO, INT_ADD_LID, INT_DIV, INT_INJ,
+                           LESS_DIV_EQ_ZERO, INT_NEGNEG]
+    ],
+    PROVE_TAC [INT_LET_TRANS, INT_LT_REFL]
+  ]);
+
+val INT_MOD_UNIQUE = store_thm(
+  "INT_MOD_UNIQUE",
+  ``!i j m.
+     (?q. (i = q * j + m) /\ if j < 0 then j < m /\ m <= 0
+                             else 0 <= m /\ m < j) ==>
+     (i % j = m)``,
+  REPEAT STRIP_TAC THEN FIRST_X_ASSUM SUBST_ALL_TAC THEN
+  `~(j = 0)` by (DISCH_THEN SUBST_ALL_TAC THEN
+                 FULL_SIMP_TAC int_ss [INT_LT_REFL] THEN
+                 PROVE_TAC [INT_LET_TRANS, INT_LT_REFL]) THEN
+  ASM_SIMP_TAC int_ss [int_mod] THEN
+  `(q * j + m) / j = q` by PROVE_TAC [INT_DIV_UNIQUE] THEN
+  ASM_SIMP_TAC bool_ss [INT_ADD_SUB]);
+
+val INT_MOD_ID = store_thm(
+  "INT_MOD_ID",
+  ``!i. ~(i = 0) ==> (i % i = 0)``,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC INT_MOD_UNIQUE THEN
+  Q.EXISTS_TAC `1` THEN
+  SIMP_TAC bool_ss [INT_MUL_LID, INT_ADD_RID, INT_LE_REFL] THEN
+  PROVE_TAC [INT_LT_NEGTOTAL, INT_NEG_GT0]);
+
+val INT_MOD_COMMON_FACTOR = store_thm(
+  "INT_MOD_COMMON_FACTOR",
+  Term`!p. ~(p = 0) ==> !q. (q * p) % p = 0`,
+  REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC INT_MOD_UNIQUE THEN
+  SIMP_TAC int_ss [INT_ADD_RID, INT_LE_REFL] THEN
+  PROVE_TAC [INT_LT_NEGTOTAL, INT_NEG_GT0]);
+
+val INT_DIV_LMUL = store_thm(
+  "INT_DIV_LMUL",
+  ``!i j. ~(i = 0) ==> ((i * j) / i = j)``,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC INT_DIV_UNIQUE THEN
+  Q.EXISTS_TAC `0` THEN
+  ASM_SIMP_TAC int_ss [INT_MUL_COMM, INT_LE_REFL, INT_ADD_RID] THEN
+  PROVE_TAC [INT_LT_NEGTOTAL, INT_NEG_GT0]);
+
+val INT_DIV_RMUL = store_thm(
+  "INT_DIV_RMUL",
+  ``!i j. ~(i = 0) ==> (j * i / i = j)``,
+  PROVE_TAC [INT_DIV_LMUL, INT_MUL_COMM]);
+
+val INT_MOD_EQ0 = store_thm(
+  "INT_MOD_EQ0",
+  Term`!q. ~(q = 0) ==> !p. (p % q = 0) = (?k. p = k * q)`,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+    Q.PAT_ASSUM `~(q = 0)` (ASSUME_TAC o Q.SPEC `p` o
+                            MATCH_MP INT_DIVISION) THEN
+    PROVE_TAC [INT_ADD_RID],
+    MATCH_MP_TAC INT_MOD_UNIQUE THEN
+    ASM_SIMP_TAC int_ss [INT_LE_REFL, INT_EQ_RMUL, INT_ADD_RID] THEN
+    PROVE_TAC [INT_LT_NEGTOTAL, INT_NEG_GT0]
+  ]);
+
+val INT_MUL_DIV = store_thm(
+  "INT_MUL_DIV",
+  Term`!p:int q k. ~(q = 0) /\ (p % q = 0) ==>
+                   ((k * p) / q = k * (p / q))`,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC INT_DIV_UNIQUE THEN
+  `?m. p = m * q` by PROVE_TAC [INT_MOD_EQ0] THEN
+  `p / q = m` by PROVE_TAC [INT_DIV_RMUL] THEN
+  POP_ASSUM SUBST_ALL_TAC THEN POP_ASSUM SUBST_ALL_TAC THEN
+  Q.EXISTS_TAC `0` THEN
+  SIMP_TAC int_ss [INT_MUL_ASSOC, INT_ADD_RID, INT_LE_REFL] THEN
+  PROVE_TAC [INT_LT_NEGTOTAL, INT_NEG_GT0]);
+
+val INT_ADD_DIV = store_thm(
+  "INT_ADD_DIV",
+  ``!i j k. ~(k = 0) /\ ((i % k = 0) \/ (j % k = 0)) ==>
+            ((i + j) / k = i / k + j / k)``,
+  REPEAT STRIP_TAC THENL [
+    `?m. i = m * k` by PROVE_TAC [INT_MOD_EQ0] THEN
+    ASM_SIMP_TAC int_ss [INT_DIV_RMUL] THEN
+    MATCH_MP_TAC INT_DIV_UNIQUE THEN
+    SIMP_TAC int_ss [INT_RDISTRIB, GSYM INT_ADD_ASSOC, INT_EQ_LADD] THEN
+    Q.EXISTS_TAC `j % k` THEN PROVE_TAC [INT_DIVISION],
+    `?m. j = m * k` by PROVE_TAC [INT_MOD_EQ0] THEN
+    ASM_SIMP_TAC int_ss [INT_DIV_RMUL] THEN
+    MATCH_MP_TAC INT_DIV_UNIQUE THEN Q.EXISTS_TAC `i % k` THEN
+    CONV_TAC (LAND_CONV (RAND_CONV (REWR_CONV INT_ADD_COMM))) THEN
+    ASM_SIMP_TAC int_ss [INT_RDISTRIB, INT_ADD_ASSOC, INT_EQ_RADD,
+                         INT_DIVISION] THEN
+    PROVE_TAC [INT_DIVISION, INT_ADD_COMM]
+  ]);
+
+val INT_DIV_P = store_thm(
+  "INT_DIV_P",
+  ``!P x c. ~(c = 0) ==>
+            (P (x / c) = ?k r. (x = k * c + r) /\
+                               (c < 0 /\ c < r /\ r <= 0 \/
+                                ~(c < 0) /\ 0 <= r /\ r < c) /\ P k)``,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+    MAP_EVERY Q.EXISTS_TAC [`x / c`, `x % c`] THEN
+    PROVE_TAC [INT_DIVISION],
+    PROVE_TAC [INT_DIV_UNIQUE],
+    PROVE_TAC [INT_DIV_UNIQUE]
+  ]);
+
+val INT_MOD_P = store_thm(
+  "INT_MOD_P",
+  ``!P x c. ~(c = 0) ==>
+            (P (x % c) = ?k r. (x = k * c + r) /\
+                               (c < 0 /\ c < r /\ r <= 0 \/
+                                ~(c < 0) /\ 0 <= r /\ r < c) /\ P r)``,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+    MAP_EVERY Q.EXISTS_TAC [`x / c`, `x % c`] THEN
+    PROVE_TAC [INT_DIVISION],
+    PROVE_TAC [INT_MOD_UNIQUE],
+    PROVE_TAC [INT_MOD_UNIQUE]
+  ]);
 
 (*----------------------------------------------------------------------*)
 (* Define absolute value                                                *)
@@ -1952,6 +2224,19 @@ val INT_ABS_EQ0 = store_thm(
   GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
   ASM_SIMP_TAC int_ss [INT_ABS_NEG, INT_ABS_NUM, INT_NEG_EQ0]);
 
+val INT_ABS_LT0 = store_thm(
+  "INT_ABS_LT0",
+  ``!p. ~(ABS p < 0)``,
+  GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
+  ASM_SIMP_TAC int_ss [INT_ABS_NEG, INT_ABS_NUM, INT_LT, INT_LT_NEG]);
+
+val INT_ABS_LE0 = store_thm(
+  "INT_ABS_LE0",
+  ``!p. (ABS p <= 0) = (p = 0)``,
+  GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
+  ASM_SIMP_TAC int_ss [INT_ABS_NEG, INT_ABS_NUM, INT_LE, INT_LE_NEG,
+                       INT_INJ, INT_NEG_EQ0]);
+
 val INT_ABS_LT = store_thm(
   "INT_ABS_LT",
   ``!p q. (ABS p < q = p < q /\ ~q < p) /\
@@ -1991,334 +2276,308 @@ val INT_ABS_EQ = store_thm(
                        int_eq_calculate, INT_EQ_NEG, INT_INJ,
                        INT_LT_CALCULATE, INT_LE_REFL, INT_LE, INT_NOT_LE]);
 
+(* ----------------------------------------------------------------------
+    Define integer rem(ainder) and quot(ient) functions.
+      These two are analogous to int_mod and int_div respectively, but
+      int_quot rounds towards zero, while int_div rounds towards negative
+      infinity.  One int_quot is fixed, the behaviour of int_rem is
+      fixed.  The choice of names follows the example of the SML Basis
+      Library.
+   ---------------------------------------------------------------------- *)
 
-val INT_ABS_DIV = store_thm(
-  "INT_ABS_DIV",
-  Term`!p q. ~(q = 0) ==> ABS ((p / q) * q) <= ABS p`,
+val _ = print "Define integer rem(ainder) and quot(ient) functions\n"
+
+val int_quot_exists0 = prove(
+  ``!i j. ?q. ~(j = 0) ==>
+              (q = if 0 < j then
+                     if 0 <= i then &(Num i DIV Num j)
+                     else ~&(Num ~i DIV Num j)
+                   else
+                     if 0 <= i then ~&(Num i DIV Num ~j)
+                     else &(Num ~i DIV Num ~j))``,
+  REPEAT GEN_TAC THEN REWRITE_TAC [IMP_DISJ_THM] THEN
+  CONV_TAC EXISTS_OR_CONV THEN REWRITE_TAC [EXISTS_REFL]);
+
+val int_quot_exists =
+    CONV_RULE (BINDER_CONV SKOLEM_CONV THENC SKOLEM_CONV) int_quot_exists0
+
+
+val int_quot = new_specification {
+  consts = [{const_name = "int_quot", fixity = Prefix}],
+  name = "int_quot",
+  sat_thm = int_quot_exists};
+
+val _ = add_infix("quot", 600, LEFT)
+val _ = overload_on("quot", ``int_quot``);
+
+val INT_QUOT = store_thm(
+  "INT_QUOT",
+  ``!p q. ~(q = 0) ==> (&p quot &q = &(p DIV q))``,
+  SIMP_TAC int_ss [int_quot, INT_INJ, INT_LT, INT_LE, NUM_OF_INT]);
+
+val INT_QUOT_0 = store_thm(
+  "INT_QUOT_0",
+  ``!q. ~(q = 0) ==> (0 quot q = 0)``,
+  GEN_TAC THEN
+  STRUCT_CASES_TAC (Q.SPEC `q` INT_NUM_CASES) THEN
+  SIMP_TAC int_ss [INT_INJ, INT_QUOT, INT_NEG_EQ0, ZERO_DIV,
+                   GSYM NOT_ZERO_LT_ZERO, int_quot, INT_NEG_GT0, INT_LE,
+                   INT_LT, INT_NEGNEG, NUM_OF_INT]);
+
+val INT_QUOT_1 = store_thm(
+  "INT_QUOT_1",
+  ``!p. p quot 1 = p``,
+  GEN_TAC THEN
+  STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
+  ASM_SIMP_TAC int_ss [INT_INJ, INT_QUOT, INT_NEG_EQ0, INT_NEG_GE0,
+                       ONE, DIV_ONE, int_quot, INT_NEG_GT0, INT_LE,
+                       INT_LT, INT_NEGNEG, NUM_OF_INT]);
+
+val INT_QUOT_NEG = store_thm(
+  "INT_QUOT_NEG",
+  Term`!p q. ~(q = 0) ==> (~p quot q = ~(p quot q)) /\
+                          (p quot ~q = ~(p quot q))`,
+  REPEAT GEN_TAC THEN
+  STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
+  STRUCT_CASES_TAC (Q.SPEC `q` INT_NUM_CASES) THEN
+  ASM_SIMP_TAC int_ss [INT_NEGNEG, INT_NEG_0, INT_NEG_EQ0, INT_INJ,
+                       INT_NEGNEG, int_quot, INT_LT, INT_LE, NUM_OF_INT,
+                       INT_NEG_GE0, INT_NEG_GT0, INT_NEG_LT0, INT_NEG_LE0,
+                       ZERO_DIV, GSYM NOT_ZERO_LT_ZERO]);
+
+val INT_ABS_QUOT = store_thm(
+  "INT_ABS_QUOT",
+  Term`!p q. ~(q = 0) ==> ABS ((p quot q) * q) <= ABS p`,
   REPEAT GEN_TAC THEN
   STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
   STRUCT_CASES_TAC (Q.SPEC `q` INT_NUM_CASES) THEN
   ASM_SIMP_TAC int_ss [INT_INJ, INT_NEG_EQ0, GSYM INT_NEG_LMUL,
                        GSYM INT_NEG_RMUL, INT_NEG_MUL2, INT_MUL, INT_LE,
-                       INT_DIV, INT_DIV_NEG, INT_ABS_NEG, INT_ABS_NUM] THEN
+                       INT_QUOT, INT_QUOT_NEG, INT_ABS_NEG, INT_ABS_NUM] THEN
   PROVE_TAC [DIVISION, LESS_EQ_EXISTS, NOT_ZERO_LT_ZERO, ZERO_DIV]);
 
 (* can now prove uniqueness of / and % *)
-(* It's a worry that this proof is so long; there may well be a better one
-   making use of INT_NUM_CASES, which I proved after proving this.
-   Let sleeping proofs lie, that's my motto *)
-val INT_DIV_UNIQUE = store_thm(
-  "INT_DIV_UNIQUE",
+fun case_tac s =
+    REPEAT_TCL STRIP_THM_THEN ASSUME_TAC (Q.SPEC [QUOTE s] INT_NUM_CASES) THEN
+    FIRST_X_ASSUM SUBST_ALL_TAC THEN Q.ABBREV_TAC [QUOTE s, QUOTE " = n"] THEN
+    POP_ASSUM (K ALL_TAC)
+
+val lem1 = prove(
+  ``!x y z. (x = y + ~z) = (x + z = y)``,
+  REWRITE_TAC [GSYM int_sub, INT_EQ_SUB_LADD]);
+val lem2 = prove(
+  ``!x y z. (x = ~y + z) = (x + y = z)``,
+  PROVE_TAC [INT_ADD_COMM, lem1]);
+val lem3 = prove(
+  ``!x y z. (~x + y = z) = (y = x + z)``,
+  PROVE_TAC [INT_ADD_COMM, lem2]);
+val lem3a = prove(
+  ``!x y z. (x + ~y = z) = (x = y + z)``,
+  PROVE_TAC [INT_ADD_COMM, lem2]);
+val lem4 = prove(
+  ``!x y:num. x * y < y = (x = 0) /\ ~(y = 0)``,
+  Induct THEN ASM_SIMP_TAC int_ss [MULT_CLAUSES]);
+
+val INT_QUOT_UNIQUE = store_thm(
+  "INT_QUOT_UNIQUE",
   Term`!p q k.
-          ABS (k * q) <= ABS p /\
-          (?r. (p = k * q + r) /\ ABS r < ABS q) ==>
-          (p / q = k)`,
-  REPEAT STRIP_TAC THEN Q.SUBGOAL_THEN `~(q = 0)` ASSUME_TAC THENL [
-    DISCH_THEN SUBST_ALL_TAC THEN
-    `?n. ABS r = &n` by PROVE_TAC [NUM_POSINT_EXISTS, INT_ABS_POS] THEN
-    POP_ASSUM SUBST_ALL_TAC THEN
-    FULL_SIMP_TAC int_ss [INT_ABS_NUM, INT_LT],
-    ALL_TAC
-  ] THEN
-  Cases_on `0 <= p` THENL [
-    `?n. p = &n` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
-    POP_ASSUM SUBST_ALL_TAC THEN
-    Cases_on `0 <= q` THENL [
-      `?m. q = &m` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [INT_INJ]) THEN
-      ASM_SIMP_TAC int_ss [INT_DIV] THEN
-      Q.SUBGOAL_THEN `0 <= k` ASSUME_TAC THENL [
-        CCONTR_TAC THEN
-        `?u. k = ~&u` by PROVE_TAC [INT_NOT_LE, NUM_NEGINT_EXISTS,
-                                    INT_LE_LT] THEN
-        POP_ASSUM SUBST_ALL_TAC THEN
-        FULL_SIMP_TAC int_ss [GSYM INT_NEG_LMUL, INT_MUL] THEN
-        `r = &n + &(u * m)` by
-             PROVE_TAC [INT_ADD_COMM, int_sub, INT_EQ_SUB_RADD] THEN
-        POP_ASSUM SUBST_ALL_TAC THEN
-        FULL_SIMP_TAC int_ss [INT_ABS_NUM, INT_ADD, INT_LT, INT_NEG_GE0,
-                              INT_LE] THEN
-        `?v. u = SUC v` by PROVE_TAC [num_CASES] THEN
-        POP_ASSUM SUBST_ALL_TAC THEN
-        FULL_SIMP_TAC int_ss [MULT_CLAUSES],
-        ALL_TAC
-      ] THEN
-      `?u. k = &u` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      SIMP_TAC int_ss [INT_INJ] THEN
-      MATCH_MP_TAC DIV_UNIQUE THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [INT_MUL, INT_ABS_NUM, INT_LE]) THEN
-      Q.SUBGOAL_THEN `0 <= r` ASSUME_TAC THENL [
-        CCONTR_TAC THEN
-        `?v. r = ~&v` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_NOT_LE,
-                                    INT_LE_LT] THEN
-        POP_ASSUM SUBST_ALL_TAC THEN
-        `n + v = u * m` by PROVE_TAC [INT_INJ, INT_ADD, int_sub,
-                                      INT_EQ_SUB_RADD] THEN
-        RULE_ASSUM_TAC
-          (REWRITE_RULE [INT_NEG_GE0, INT_LE, NOT_LESS_EQUAL]) THEN
-        ASM_SIMP_TAC int_ss [],
-        ALL_TAC
-      ] THEN
-      `?v. r = &v` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      FULL_SIMP_TAC int_ss [INT_ABS_NUM, INT_LT, INT_ADD, INT_INJ],
-      (* q negative *)
-      `?m. q = ~&m` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_NOT_LE,
-                                  INT_LE_LT] THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [INT_NEG_GE0, INT_LE, NOT_LESS_EQUAL,
-                                    INT_NEG_EQ0, INT_INJ]) THEN
-      ASM_SIMP_TAC int_ss [INT_DIV_NEG, INT_INJ] THEN
-      Q.SUBGOAL_THEN `k <= 0` ASSUME_TAC THENL [
-        SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
-        `?u. k = &u` by PROVE_TAC [NUM_POSINT_EXISTS, INT_NOT_LT,
-                                   INT_LE_LT] THEN
-        POP_ASSUM SUBST_ALL_TAC THEN
-        RULE_ASSUM_TAC (REWRITE_RULE [INT_LT, NOT_LESS,
-                                      GSYM INT_NEG_RMUL, INT_ABS_NUM,
-                                      INT_ABS_NEG, INT_MUL, INT_LE]) THEN
-        `r = &n + &(u * m)` by PROVE_TAC [INT_ADD_COMM, int_sub,
-                                          INT_EQ_SUB_RADD] THEN
-        POP_ASSUM SUBST_ALL_TAC THEN
-        RULE_ASSUM_TAC
-          (REWRITE_RULE [INT_ADD, INT_ABS_NUM, INT_LT, INT_INJ,
-                         NOT_LESS_EQUAL]) THEN
-        `?u'. u = SUC u'` by PROVE_TAC [num_CASES, NOT_ZERO_LT_ZERO] THEN
-        POP_ASSUM SUBST_ALL_TAC THEN
-        FULL_SIMP_TAC int_ss [MULT_CLAUSES],
-        (* k <= 0 *)
-        `?u. k = ~&u` by PROVE_TAC [NUM_NEGINT_EXISTS] THEN
-        POP_ASSUM SUBST_ALL_TAC THEN
-        SIMP_TAC int_ss [INT_NEG_MUL2, INT_MUL, INT_EQ_NEG] THEN
-        RULE_ASSUM_TAC (REWRITE_RULE [INT_NEG_MUL2, INT_MUL, INT_NEG_LE0,
-                                      INT_ABS_NUM, INT_LE, INT_ABS_NEG]) THEN
-        Q.SUBGOAL_THEN `0 <= r` (Q.X_CHOOSE_THEN `v` SUBST_ALL_TAC o
-                                 MATCH_MP NUM_POSINT_EXISTS)
-        THENL [
-          SPOSE_NOT_THEN (ASSUME_TAC o REWRITE_RULE [INT_NOT_LE]) THEN
-          `?v. r = ~&v` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_LE_LT] THEN
-          POP_ASSUM SUBST_ALL_TAC THEN
-          `n + v = u * m` by PROVE_TAC [INT_INJ, int_sub, INT_EQ_SUB_RADD,
-                                        INT_ADD] THEN
-          RULE_ASSUM_TAC (REWRITE_RULE [INT_NEG_LT0, INT_LT]) THEN
-          ASM_SIMP_TAC int_ss [],
-          ALL_TAC
-        ] THEN
-        ASM_SIMP_TAC int_ss [INT_DIV, INT_ADD, INT_INJ] THEN
-        MATCH_MP_TAC DIV_UNIQUE THEN
-        Q.EXISTS_TAC `v` THEN
-        FULL_SIMP_TAC int_ss [INT_ABS_NUM, INT_LT]
-      ]
-    ],
-    (* p negative *)
-    `?n. p = ~(&n)` by PROVE_TAC [INT_NOT_LE, NUM_NEGINT_EXISTS,
-                                  INT_LE_LT] THEN
-    POP_ASSUM SUBST_ALL_TAC THEN
-    Cases_on `0 <= q` THENL [
-      `?m. q = &m` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [INT_NEG_GE0, INT_LE, INT_LT, INT_ABS_NUM,
-                                    INT_ABS_NEG]) THEN
-      Q.SUBGOAL_THEN `k <= 0` STRIP_ASSUME_TAC
-      THENL [
-        SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
-        `?u. k = &u` by PROVE_TAC [NUM_POSINT_EXISTS, INT_NOT_LE,
-                                   INT_LE_LT] THEN
-        POP_ASSUM SUBST_ALL_TAC THEN
-        RULE_ASSUM_TAC (REWRITE_RULE [INT_MUL, INT_ABS_NUM, INT_LE, INT_LT,
-                                      INT_INJ, NOT_LESS_EQUAL]) THEN
-        `r = ~&n - &(u * m)` by PROVE_TAC [INT_EQ_SUB_LADD, INT_ADD_COMM] THEN
-        POP_ASSUM (fn th =>
-          `r = ~(&n + &(u * m))` by PROVE_TAC [th, int_sub, INT_NEG_ADD]) THEN
-        POP_ASSUM SUBST_ALL_TAC THEN
-        RULE_ASSUM_TAC (REWRITE_RULE [INT_ABS_NEG, INT_ADD, INT_ABS_NUM,
-                                      INT_LT]) THEN
-        `?u'. u = SUC u'` by PROVE_TAC [num_CASES, NOT_LESS_EQUAL,
-                                        NOT_ZERO_LT_ZERO] THEN
-        POP_ASSUM SUBST_ALL_TAC THEN
-        FULL_SIMP_TAC int_ss [MULT_CLAUSES],
-        ALL_TAC
-      ] THEN
-      `?u. k = ~&u` by PROVE_TAC [NUM_NEGINT_EXISTS] THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [INT_NEG_LE0, INT_LE, INT_INJ,
-                                    GSYM INT_NEG_LMUL, INT_ABS_NEG,
-                                    INT_ABS_NUM, INT_MUL]) THEN
-      ASM_SIMP_TAC int_ss [INT_DIV_NEG, INT_INJ, INT_EQ_NEG, INT_DIV] THEN
-      MATCH_MP_TAC DIV_UNIQUE THEN
-      Q.SUBGOAL_THEN `r <= 0` (Q.X_CHOOSE_THEN `v` SUBST_ALL_TAC o
-                               MATCH_MP NUM_NEGINT_EXISTS)
-      THENL [
-        SPOSE_NOT_THEN ASSUME_TAC THEN
-        `?v. r = &v` by PROVE_TAC [INT_NOT_LE, INT_LE_LT,
-                                   NUM_POSINT_EXISTS] THEN
-        POP_ASSUM SUBST_ALL_TAC THEN
-        `~&(u * m) = ~&n - &v` by
-          PROVE_TAC [INT_ADD_COMM, INT_EQ_SUB_LADD] THEN
-        POP_ASSUM (fn th =>
-          `&(u * m) = &n + &v` by PROVE_TAC [th, int_sub, INT_NEG_ADD,
-                                             INT_EQ_NEG]) THEN
-        RULE_ASSUM_TAC (REWRITE_RULE [INT_ADD, INT_INJ, INT_LE,
-                                      NOT_LESS_EQUAL]) THEN
-        ASM_SIMP_TAC int_ss [],
-        ALL_TAC
-      ] THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [INT_INJ, INT_EQ_NEG, INT_ABS_NEG,
-                                    INT_ABS_NUM, INT_LT, GSYM INT_NEG_ADD,
-                                    INT_ADD]) THEN
-      PROVE_TAC [],
-      (* q also negative *)
-      `?m. q = ~&m` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_LE_LT,
-                                  INT_NOT_LE] THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [INT_NEG_GE0, INT_NEG_EQ0, INT_ABS_NEG,
-                                    INT_ABS_NUM, INT_LE, INT_INJ,
-                                    NOT_LESS_EQUAL]) THEN
-      ASM_SIMP_TAC int_ss [INT_DIV_NEG, INT_INJ, INT_NEGNEG, INT_DIV] THEN
-      Q.SUBGOAL_THEN `0 <= k` (Q.X_CHOOSE_THEN `u` SUBST_ALL_TAC o
-                               MATCH_MP NUM_POSINT_EXISTS)
-      THENL [
-        SPOSE_NOT_THEN ASSUME_TAC THEN
-        `?u. k = ~&u` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_NOT_LE,
-                                    INT_LE_LT] THEN
-        POP_ASSUM SUBST_ALL_TAC THEN
-        RULE_ASSUM_TAC (REWRITE_RULE [INT_NEG_GE0, INT_LE, INT_NEG_MUL2,
-                                      NOT_LESS_EQUAL, INT_MUL,
-                                      INT_ABS_NUM]) THEN
-        `r = ~&n - &(u * m)` by PROVE_TAC [INT_ADD_COMM, INT_EQ_SUB_LADD] THEN
-        POP_ASSUM (fn th =>
-          `r = ~(&n + &(u * m))` by PROVE_TAC [th, int_sub, INT_NEG_ADD]) THEN
-        POP_ASSUM SUBST_ALL_TAC THEN
-        RULE_ASSUM_TAC (REWRITE_RULE [INT_ADD, INT_ABS_NUM, INT_ABS_NEG,
-                                      INT_LT]) THEN
-        `?u'. u = SUC u'` by PROVE_TAC [num_CASES, NOT_ZERO_LT_ZERO] THEN
-        POP_ASSUM SUBST_ALL_TAC THEN
-        RULE_ASSUM_TAC (REWRITE_RULE [MULT_CLAUSES]) THEN
-        ASM_SIMP_TAC int_ss [],
-        ALL_TAC
-      ] THEN SIMP_TAC int_ss [INT_INJ] THEN
-      MATCH_MP_TAC DIV_UNIQUE THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [GSYM INT_NEG_RMUL, INT_ABS_NEG,
-                                    INT_ABS_NUM, INT_LE, INT_MUL]) THEN
-      Q.SUBGOAL_THEN `r <= 0` (Q.X_CHOOSE_THEN `v` SUBST_ALL_TAC o
-                               MATCH_MP NUM_NEGINT_EXISTS)
-      THENL [
-        SPOSE_NOT_THEN ASSUME_TAC THEN
-        `?v. r = &v` by PROVE_TAC [INT_NOT_LE, INT_LE_LT,
-                                   NUM_POSINT_EXISTS] THEN
-        POP_ASSUM SUBST_ALL_TAC THEN
-        `&v + &n = &(u * m)` by PROVE_TAC [INT_SUB_NEG2, INT_EQ_SUB_LADD,
-                                           INT_ADD_COMM] THEN
-        RULE_ASSUM_TAC (REWRITE_RULE [INT_ADD, INT_INJ, INT_LE,
-                                      NOT_LESS_EQUAL]) THEN
-        ASM_SIMP_TAC int_ss [],
-        ALL_TAC
-      ] THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [GSYM INT_NEG_ADD, INT_EQ_NEG, INT_ADD,
-                                    INT_INJ, INT_ABS_NUM, INT_ABS_NEG,
-                                    INT_LT]) THEN
-      PROVE_TAC []
-    ]
+          (?r. (p = k * q + r) /\
+               (if 0 < p then 0 <= r else r <= 0) /\ ABS r < ABS q) ==>
+          (p quot q = k)`,
+  REPEAT GEN_TAC THEN CONV_TAC LEFT_IMP_EXISTS_CONV THEN GEN_TAC THEN
+  case_tac "p" THEN
+  ASM_SIMP_TAC int_ss [INT_LT, INT_NEG_GT0] THEN REPEAT STRIP_TAC THENL [
+    `?r0. r = &r0` by PROVE_TAC [NUM_POSINT_EXISTS],
+    `?r0. r = ~&r0` by PROVE_TAC [NUM_NEGINT_EXISTS],
+    `?r0. r = ~&r0` by PROVE_TAC [NUM_NEGINT_EXISTS]
+  ] THEN POP_ASSUM SUBST_ALL_TAC THEN Q.ABBREV_TAC `r = r0` THEN
+  POP_ASSUM (K ALL_TAC) THEN REPEAT (POP_ASSUM MP_TAC) THEN
+  case_tac "q" THEN case_tac "k" THEN
+  ASM_SIMP_TAC int_ss
+  [INT_LT, GSYM AND_IMP_INTRO, INT_MUL_RZERO, INT_ABS_NUM, INT_ADD_LID,
+   INT_ABS_NEG, INT_LE_REFL, INT_LT_REFL, INT_NEGNEG, GSYM INT_NEG_RMUL,
+   GSYM INT_NEG_LMUL, INT_MUL, INT_NEG_0, INT_ADD_LID, INT_ABS_LT0,
+   INT_ADD, INT_NEG_GT0, INT_LE, INT_QUOT, INT_INJ, INT_LT_CALCULATE,
+   INT_EQ_NEG, INT_QUOT_NEG, LESS_DIV_EQ_ZERO, INT_NEG_LE0, lem1,
+   lem2, INT_ADD_RINV, INT_ADD_LINV, lem3, int_eq_calculate, lem4] THEN
+  REPEAT STRIP_TAC THENL [
+    PROVE_TAC [ADD_COMM, DIV_UNIQUE],
+    PROVE_TAC [lem4, LESS_EQ_ADD, ADD_COMM, LESS_EQ_LESS_TRANS],
+    PROVE_TAC [lem4, LESS_EQ_ADD, ADD_COMM, LESS_EQ_LESS_TRANS],
+    PROVE_TAC [ADD_COMM, DIV_UNIQUE],
+    PROVE_TAC [lem4, LESS_EQ_ADD, ADD_COMM, LESS_EQ_LESS_TRANS],
+    ASM_SIMP_TAC int_ss [GSYM INT_NEG_ADD, INT_ADD, INT_QUOT_NEG, INT_QUOT,
+                         INT_INJ, INT_EQ_NEG, INT_NEGNEG] THEN
+    PROVE_TAC [ADD_COMM, DIV_UNIQUE],
+    ASM_SIMP_TAC int_ss [GSYM INT_NEG_ADD, INT_ADD, INT_QUOT_NEG, INT_QUOT,
+                         INT_INJ, INT_EQ_NEG, INT_NEGNEG] THEN
+    PROVE_TAC [ADD_COMM, DIV_UNIQUE],
+    PROVE_TAC [lem4, LESS_EQ_ADD, ADD_COMM, LESS_EQ_LESS_TRANS]
   ]);
 
-val INT_MOD_UNIQUE = store_thm(
-  "INT_MOD_UNIQUE",
-  Term`!p q r.
-          ABS r < ABS q /\ (?k. ABS (k * q) <= ABS p /\ (p = k * q + r)) ==>
-          (p % q = r)`,
-  REPEAT STRIP_TAC THEN SIMP_TAC int_ss [int_mod] THEN
-  Q.SUBGOAL_THEN `~(q = 0)` ASSUME_TAC THENL [
-    DISCH_THEN SUBST_ALL_TAC THEN
-    `?n. ABS r = &n` by PROVE_TAC [NUM_POSINT_EXISTS, INT_ABS_POS] THEN
-    FULL_SIMP_TAC int_ss [INT_ABS_NUM, INT_LT],
-    ALL_TAC
-  ] THEN POP_ASSUM (fn th => SIMP_TAC int_ss [th] THEN ASSUME_TAC th) THEN
-  `p / q = k` by PROVE_TAC [INT_DIV_UNIQUE] THEN
-  POP_ASSUM SUBST_ALL_TAC THEN
-  PROVE_TAC [INT_EQ_SUB_LADD, INT_ADD_COMM]);
+val INT_QUOT_ID = store_thm(
+  "INT_QUOT_ID",
+  ``!p. ~(p = 0) ==> (p quot p = 1)``,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC INT_QUOT_UNIQUE THEN
+  Q.EXISTS_TAC `0` THEN
+  SIMP_TAC int_ss [INT_ADD_RID, INT_MUL_LID, INT_LE_REFL, INT_ABS_NUM] THEN
+  PROVE_TAC [INT_ABS_EQ0, INT_ABS_POS, INT_LE_LT]);
 
-val INT_MOD_ID = store_thm(
-  "INT_MOD_ID",
-  Term`!p. ~(p = 0) ==> (p % p = 0)`,
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC INT_MOD_UNIQUE THEN CONJ_TAC THENL [
+(* define rem *)
+val int_rem_exists0 = prove(
+  ``!i j. ?r. ~(j = 0) ==> (r = i - i quot j * j)``,
+  REPEAT GEN_TAC THEN REWRITE_TAC [IMP_DISJ_THM] THEN
+  CONV_TAC EXISTS_OR_CONV THEN REWRITE_TAC [EXISTS_REFL]);
+val int_rem_exists =
+    CONV_RULE (BINDER_CONV SKOLEM_CONV THENC SKOLEM_CONV) int_rem_exists0
+
+val int_rem = new_specification {
+  consts = [{const_name = "int_rem", fixity = Prefix}],
+  name = "int_rem",
+  sat_thm = int_rem_exists};
+
+val _ = add_infix("rem", 650, LEFT);
+val _ = overload_on("rem", ``int_rem``);
+
+val INT_REM = store_thm(
+  "INT_REM",
+  ``!p q. ~(q = 0) ==> (&p rem &q = &(p MOD q))``,
+  SIMP_TAC int_ss [int_rem, INT_INJ, int_sub, lem1, lem2, lem3, lem3a,
+                   INT_QUOT, INT_MUL, INT_ADD] THEN
+  PROVE_TAC [DIVISION, NOT_ZERO_LT_ZERO]);
+
+val newlemma = prove(
+  ``!x y. (~x + y <= 0 = y <= x) /\ (0 <= x + ~y = y <= x)``,
+  REPEAT STRIP_TAC THENL [
+    CONV_TAC (LHS_CONV (LAND_CONV (REWR_CONV INT_ADD_COMM))),
+    ALL_TAC
+  ] THEN REWRITE_TAC [GSYM int_sub, INT_LE_SUB_RADD, INT_LE_SUB_LADD,
+                      INT_ADD_RID, INT_ADD_LID]);
+val nl2 = prove(
+  ``!p q. ~(q = 0n) ==> p DIV q * q <= p``,
+  PROVE_TAC [DIVISION, LESS_EQ_ADD, NOT_ZERO_LT_ZERO]);
+val nl2a = prove(
+  ``!p q. ~(q = 0n) ==> p < q + p DIV q * q /\ p DIV q * q < p + q``,
+  REPEAT STRIP_TAC THENL [
+    `(p = p DIV q * q + p MOD q) /\ p MOD q < q` by
+      PROVE_TAC [DIVISION, NOT_ZERO_LT_ZERO] THEN
+    FIRST_X_ASSUM (CONV_TAC o LAND_CONV o REWR_CONV o
+                   ONCE_REWRITE_RULE [ADD_COMM]) THEN
+    ASM_REWRITE_TAC [LESS_MONO_ADD_EQ],
+    MATCH_MP_TAC LESS_EQ_LESS_TRANS THEN Q.EXISTS_TAC `p` THEN
+    ASM_SIMP_TAC int_ss [nl2]
+  ]);
+
+val nl3 = prove(
+  ``!x y z.
+      (x + ~y < z = x < y + z) /\ (~x < y + ~z = z < y + x)``,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC [GSYM int_sub, INT_LT_SUB_RADD, INT_LT_SUB_LADD] THEN
+  CONV_TAC (RAND_CONV (LHS_CONV (LAND_CONV (REWR_CONV INT_ADD_COMM)))) THEN
+  REWRITE_TAC [GSYM int_sub, INT_LT_SUB_RADD, INT_LT_SUB_LADD] THEN
+  PROVE_TAC [INT_ADD_COMM]);
+val nl4 = prove(
+  ``!x y z.
+      (~x + y < z = y < x + z) /\ (~x < ~y + z = y < x + z)``,
+  PROVE_TAC [nl3, INT_ADD_COMM]);
+
+val INT_REMQUOT = store_thm(
+  "INT_REMQUOT",
+  ``!q. ~(q = 0) ==> !p. (p = p quot q * q + p rem q) /\
+                         (if 0 < p then 0 <= p rem q else p rem q <= 0) /\
+                         ABS (p rem q) < ABS q``,
+  GEN_TAC THEN STRIP_TAC THEN GEN_TAC THEN CONJ_TAC THEN
+  ASM_SIMP_TAC int_ss [int_rem, INT_INJ, int_sub, INT_ADD_ASSOC, lem1, lem2,
+                       lem3, lem3a]
+  THENL [
+    MATCH_ACCEPT_TAC INT_ADD_COMM,
+    case_tac "p" THEN case_tac "q" THEN FULL_SIMP_TAC int_ss [INT_INJ] THEN
+    ASM_SIMP_TAC int_ss [INT_INJ, INT_QUOT, INT_LE, INT_LT, INT_QUOT_NEG,
+                         INT_ADD_RID, INT_MUL, INT_NEG_GT0, INT_ADD_LID,
+                         INT_ABS_NUM, INT_ABS_NEG, INT_NEGNEG,
+                         GSYM INT_NEG_RMUL, GSYM INT_NEG_LMUL, ZERO_DIV,
+                         GSYM NOT_ZERO_LT_ZERO, INT_NEG_0, newlemma, nl2
+                         ] THEN
+    ASM_SIMP_TAC int_ss [INT_ABS_LT, nl3, INT_LT, INT_ADD, nl4, nl2a]
+  ]);
+
+val INT_REM_UNIQUE = store_thm(
+  "INT_REM_UNIQUE",
+  Term`!p q r.
+          ABS r < ABS q /\ (if 0 < p then 0 <= r else r <= 0) /\
+          (?k. p = k * q + r) ==>
+          (p rem q = r)`,
+  REPEAT STRIP_TAC THEN
+  `~(q = 0)` by (DISCH_THEN SUBST_ALL_TAC THEN
+                 FULL_SIMP_TAC int_ss [INT_ABS_NUM, INT_ABS_LT0]) THEN
+  ASM_SIMP_TAC int_ss [int_rem, INT_EQ_SUB_RADD] THEN
+  `(k * q + r) quot q = k` by PROVE_TAC [INT_QUOT_UNIQUE] THEN
+  ASM_SIMP_TAC int_ss [INT_ADD_COMM]);
+
+val INT_REM_NEG = store_thm(
+  "INT_REM_NEG",
+  Term`!p q. ~(q = 0) ==> (~p rem q = ~(p rem q)) /\ (p rem ~q = p rem q)`,
+  REPEAT GEN_TAC THEN
+  case_tac "p" THEN case_tac "q" THEN
+  ASM_SIMP_TAC int_ss [INT_INJ, int_rem, INT_NEGNEG, lem1, lem2, lem3,
+                       int_sub, INT_NEG_EQ0, GSYM INT_NEG_LMUL,
+                       GSYM INT_NEG_RMUL, INT_ADD_LID, INT_ADD_RID,
+                       INT_NEG_0, INT_NEG_ADD, INT_QUOT_0, INT_QUOT_NEG,
+                       INT_MUL_LZERO] THEN
+  SIMP_TAC int_ss [GSYM INT_ADD_ASSOC, INT_ADD_LINV, INT_ADD_RID] THEN
+  SIMP_TAC int_ss [INT_ADD_ASSOC, INT_ADD_RINV, INT_ADD_LID]);
+
+val INT_REM_ID = store_thm(
+  "INT_REM_ID",
+  Term`!p. ~(p = 0) ==> (p rem p = 0)`,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC INT_REM_UNIQUE THEN
+  SIMP_TAC int_ss [INT_LE_REFL] THEN CONJ_TAC THENL [
     PROVE_TAC [INT_LE_LT, INT_ABS_POS, INT_ABS_EQ0, INT_ABS_NUM],
     Q.EXISTS_TAC `1` THEN REWRITE_TAC [INT_MUL_LID, INT_ADD_RID, INT_LE_REFL]
   ]);
 
-val INT_ABS_MOD_LT = store_thm(
-  "INT_ABS_MOD_LT",
-  Term`!p q. ~(q = 0) ==> ABS (p % q) < ABS q`,
-  REPEAT GEN_TAC THEN
-  STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
-  STRUCT_CASES_TAC (Q.SPEC `q` INT_NUM_CASES) THEN
-  ASM_SIMP_TAC int_ss [INT_INJ, INT_NEG_EQ0, INT_MOD_NEG, INT_ABS_NUM,
-                       INT_ABS_NEG, INT_MOD, INT_LT, DIVISION]);
+val INT_REM0 = store_thm(
+  "INT_REM0",
+  ``!q. ~(q = 0) ==> (0 rem q = 0)``,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC INT_REM_UNIQUE THEN
+  ASM_SIMP_TAC int_ss [INT_LE_REFL, INT_ABS_NUM, INT_ADD_RID] THEN
+  PROVE_TAC [INT_LE_LT, INT_ABS_POS, INT_MUL_LZERO, INT_ABS_EQ0]);
 
-val INT_DIV_P = store_thm(
-  "INT_DIV_P",
-  ``!P x c. ~(c = 0) ==>
-            (P (x / c) = ?k r. (x = k * c + r) /\ ABS (k * c) <= ABS x /\
-                               ABS r < ABS c /\ P k)``,
-  REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
-    MAP_EVERY Q.EXISTS_TAC [`x / c`, `x % c`] THEN
-    ASM_SIMP_TAC bool_ss [INT_ABS_MOD_LT, INT_ABS_DIV] THEN
-    PROVE_TAC [INT_DIVISION],
-    PROVE_TAC [INT_DIV_UNIQUE]
-  ]);
-
-val INT_MOD_P = store_thm(
-  "INT_MOD_P",
-  ``!P x c. ~(c = 0) ==>
-            (P (x % c) = ?k r. (x = k * c + r) /\ ABS (k * c) <= ABS x /\
-                               ABS r < ABS c /\ P r)``,
-  REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
-    MAP_EVERY Q.EXISTS_TAC [`x / c`, `x % c`] THEN
-    ASM_SIMP_TAC bool_ss [INT_ABS_MOD_LT, INT_ABS_DIV] THEN
-    PROVE_TAC [INT_DIVISION],
-    PROVE_TAC [INT_MOD_UNIQUE]
-  ]);
-
-val INT_MOD_COMMON_FACTOR = store_thm(
-  "INT_MOD_COMMON_FACTOR",
-  Term`!p. ~(p = 0) ==> !q. (q * p) % p = 0`,
+val INT_REM_COMMON_FACTOR = store_thm(
+  "INT_REM_COMMON_FACTOR",
+  Term`!p. ~(p = 0) ==> !q. (q * p) rem p = 0`,
   REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC INT_MOD_UNIQUE THEN
+  MATCH_MP_TAC INT_REM_UNIQUE THEN
   SIMP_TAC int_ss [INT_ABS_NUM, INT_ADD_RID] THEN
   PROVE_TAC [INT_ABS_NUM, INT_LE_LT, INT_ABS_EQ0, INT_ABS_POS]);
 
-val INT_MOD_EQ0 = store_thm(
-  "INT_MOD_EQ0",
-  Term`!q. ~(q = 0) ==> !p. (p % q = 0) = (?k. p = k * q)`,
+val INT_REM_EQ0 = store_thm(
+  "INT_REM_EQ0",
+  Term`!q. ~(q = 0) ==> !p. (p rem q = 0) = (?k. p = k * q)`,
   REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
     Q.PAT_ASSUM `~(q = 0)` (ASSUME_TAC o Q.SPEC `p` o
-                            MATCH_MP INT_DIVISION) THEN
+                            MATCH_MP INT_REMQUOT) THEN
     PROVE_TAC [INT_ADD_RID],
-    MATCH_MP_TAC INT_MOD_UNIQUE THEN CONJ_TAC THENL [
+    MATCH_MP_TAC INT_REM_UNIQUE THEN CONJ_TAC THENL [
       PROVE_TAC [INT_ABS_NUM, INT_ABS_EQ0, INT_LE_LT, INT_ABS_POS],
       PROVE_TAC [INT_ADD_RID, INT_LE_REFL]
     ]
   ]);
 
-val INT_MUL_DIV = store_thm(
-  "INT_MUL_DIV",
-  Term`!p:int q k. ~(q = 0) /\ (p % q = 0) ==>
-                   ((k * p) / q = k * (p / q))`,
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC INT_DIV_UNIQUE THEN
-  `?m. p = m * q` by PROVE_TAC [INT_MOD_EQ0] THEN
-  Q.SUBGOAL_THEN `p / q = m` ASSUME_TAC THENL [
-    MATCH_MP_TAC INT_DIV_UNIQUE THEN CONJ_TAC THENL [
-      PROVE_TAC [INT_LE_REFL],
-      Q.EXISTS_TAC `0` THEN ASM_SIMP_TAC int_ss [INT_ADD_RID] THEN
-      PROVE_TAC [INT_ABS_NUM, INT_ABS_EQ0, INT_LE_LT, INT_ABS_POS]
-    ],
+val INT_MUL_QUOT = store_thm(
+  "INT_MUL_QUOT",
+  Term`!p:int q k. ~(q = 0) /\ (p rem q = 0) ==>
+                   ((k * p) quot q = k * (p quot q))`,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC INT_QUOT_UNIQUE THEN
+  `?m. p = m * q` by PROVE_TAC [INT_REM_EQ0] THEN
+  Q.SUBGOAL_THEN `p quot q = m` ASSUME_TAC THENL [
+    MATCH_MP_TAC INT_QUOT_UNIQUE THEN
+    Q.EXISTS_TAC `0` THEN ASM_SIMP_TAC int_ss [INT_ADD_RID, INT_LE_REFL] THEN
+    PROVE_TAC [INT_ABS_NUM, INT_ABS_EQ0, INT_LE_LT, INT_ABS_POS],
     POP_ASSUM SUBST_ALL_TAC THEN POP_ASSUM SUBST_ALL_TAC THEN
-    CONJ_TAC THENL [
-      PROVE_TAC [INT_MUL_ASSOC, INT_LE_REFL],
-      Q.EXISTS_TAC `0` THEN SIMP_TAC int_ss [INT_MUL_ASSOC, INT_ADD_RID] THEN
-      PROVE_TAC [INT_ABS_NUM, INT_ABS_EQ0, INT_LE_LT, INT_ABS_POS]
-    ]
+    Q.EXISTS_TAC `0` THEN
+    SIMP_TAC int_ss [INT_MUL_ASSOC, INT_ADD_RID, INT_LE_REFL] THEN
+    PROVE_TAC [INT_ABS_NUM, INT_ABS_EQ0, INT_LE_LT, INT_ABS_POS]
   ]);
 
 (*----------------------------------------------------------------------*)
@@ -2660,6 +2919,9 @@ val INT_DIV_CALCULATE = save_thm(
   "INT_DIV_CALCULATE",
   LIST_CONJ [INT_DIV, INT_DIV_NEG, INT_INJ, INT_NEG_EQ0, INT_NEGNEG]);
 
+val NB_NOT_0 = prove(
+  ``!n. ~(NUMERAL_BIT1 n = 0) /\ ~(NUMERAL_BIT2 n = 0)``,
+  SIMP_TAC int_ss [NUMERAL_BIT1, NUMERAL_BIT2]);
 val INT_DIV_REDUCE = store_thm(
   "INT_DIV_REDUCE",
   Term`!m n.
@@ -2670,18 +2932,58 @@ val INT_DIV_REDUCE = store_thm(
          (&(NUMERAL m) / &(NUMERAL (NUMERAL_BIT2 n)) =
             &(NUMERAL m DIV NUMERAL (NUMERAL_BIT2 n))) /\
          (~&(NUMERAL m) / &(NUMERAL (NUMERAL_BIT1 n)) =
-            ~&(NUMERAL m DIV NUMERAL (NUMERAL_BIT1 n))) /\
+            ~&(NUMERAL m DIV NUMERAL (NUMERAL_BIT1 n)) +
+            if NUMERAL m MOD NUMERAL (NUMERAL_BIT1 n) = 0 then 0 else ~1) /\
          (~&(NUMERAL m) / &(NUMERAL (NUMERAL_BIT2 n)) =
-            ~&(NUMERAL m DIV NUMERAL (NUMERAL_BIT2 n))) /\
+            ~&(NUMERAL m DIV NUMERAL (NUMERAL_BIT2 n)) +
+            if NUMERAL m MOD NUMERAL (NUMERAL_BIT2 n) = 0 then 0 else ~1) /\
          (&(NUMERAL m) / ~&(NUMERAL (NUMERAL_BIT1 n)) =
-            ~&(NUMERAL m DIV NUMERAL (NUMERAL_BIT1 n))) /\
+            ~&(NUMERAL m DIV NUMERAL (NUMERAL_BIT1 n)) +
+            if NUMERAL m MOD NUMERAL (NUMERAL_BIT1 n) = 0 then 0 else ~1) /\
          (&(NUMERAL m) / ~&(NUMERAL (NUMERAL_BIT2 n)) =
-            ~&(NUMERAL m DIV NUMERAL (NUMERAL_BIT2 n))) /\
+            ~&(NUMERAL m DIV NUMERAL (NUMERAL_BIT2 n)) +
+            if NUMERAL m MOD NUMERAL (NUMERAL_BIT2 n) = 0 then 0 else ~1) /\
          (~&(NUMERAL m) / ~&(NUMERAL (NUMERAL_BIT1 n)) =
             &(NUMERAL m DIV NUMERAL (NUMERAL_BIT1 n))) /\
          (~&(NUMERAL m) / ~&(NUMERAL (NUMERAL_BIT2 n)) =
             &(NUMERAL m DIV NUMERAL (NUMERAL_BIT2 n)))`,
   SIMP_TAC int_ss [INT_DIV, INT_DIV_NEG, INT_INJ, INT_NEG_EQ0, INT_NEGNEG,
+                   NUMERAL_DEF, NB_NOT_0, ZERO_DIV,
+                   GSYM NOT_ZERO_LT_ZERO] THEN
+  SIMP_TAC int_ss [INT_INJ, INT_NEG_EQ0, int_div, INT_NEGNEG, INT_NEG_GE0,
+                   NUMERAL_DEF, NB_NOT_0, ZERO_DIV,
+                   GSYM NOT_ZERO_LT_ZERO, INT_LT, INT_LE, NUM_OF_INT,
+                   INT_NEG_EQ0, INT_NEG_0] THEN
+  REPEAT GEN_TAC THEN Q.ASM_CASES_TAC `m = 0` THEN
+  ASM_SIMP_TAC int_ss [ZERO_DIV, NB_NOT_0, GSYM NOT_ZERO_LT_ZERO,
+                       ZERO_MOD, INT_NEG_0, INT_ADD, INT_INJ]);
+
+val INT_QUOT_CALCULATE = save_thm(
+  "INT_QUOT_CALCULATE",
+  LIST_CONJ [INT_QUOT, INT_QUOT_NEG, INT_INJ, INT_NEG_EQ0, INT_NEGNEG]);
+
+val INT_QUOT_REDUCE = store_thm(
+  "INT_QUOT_REDUCE",
+  Term`!m n.
+         (0i quot &(NUMERAL (NUMERAL_BIT1 n)) = 0i) /\
+         (0i quot &(NUMERAL (NUMERAL_BIT2 n)) = 0i) /\
+         (&(NUMERAL m) quot &(NUMERAL (NUMERAL_BIT1 n)) =
+            &(NUMERAL m DIV NUMERAL (NUMERAL_BIT1 n))) /\
+         (&(NUMERAL m) quot &(NUMERAL (NUMERAL_BIT2 n)) =
+            &(NUMERAL m DIV NUMERAL (NUMERAL_BIT2 n))) /\
+         (~&(NUMERAL m) quot &(NUMERAL (NUMERAL_BIT1 n)) =
+            ~&(NUMERAL m DIV NUMERAL (NUMERAL_BIT1 n))) /\
+         (~&(NUMERAL m) quot &(NUMERAL (NUMERAL_BIT2 n)) =
+            ~&(NUMERAL m DIV NUMERAL (NUMERAL_BIT2 n))) /\
+         (&(NUMERAL m) quot ~&(NUMERAL (NUMERAL_BIT1 n)) =
+            ~&(NUMERAL m DIV NUMERAL (NUMERAL_BIT1 n))) /\
+         (&(NUMERAL m) quot ~&(NUMERAL (NUMERAL_BIT2 n)) =
+            ~&(NUMERAL m DIV NUMERAL (NUMERAL_BIT2 n))) /\
+         (~&(NUMERAL m) quot ~&(NUMERAL (NUMERAL_BIT1 n)) =
+            &(NUMERAL m DIV NUMERAL (NUMERAL_BIT1 n))) /\
+         (~&(NUMERAL m) quot ~&(NUMERAL (NUMERAL_BIT2 n)) =
+            &(NUMERAL m DIV NUMERAL (NUMERAL_BIT2 n)))`,
+  SIMP_TAC int_ss [INT_QUOT, INT_QUOT_NEG, INT_INJ, INT_NEG_EQ0, INT_NEGNEG,
                    NUMERAL_DEF, NUMERAL_BIT1, NUMERAL_BIT2, ZERO_DIV]);
 
 val INT_MOD_CALCULATE = save_thm(
@@ -2696,19 +2998,42 @@ val INT_MOD_REDUCE = store_thm(
                 &(NUMERAL m MOD NUMERAL (NUMERAL_BIT1 n))) /\
              (&(NUMERAL m) % &(NUMERAL (NUMERAL_BIT2 n)) =
                 &(NUMERAL m MOD NUMERAL (NUMERAL_BIT2 n))) /\
-             (~&(NUMERAL m) % &(NUMERAL (NUMERAL_BIT1 n)) =
-                ~&(NUMERAL m MOD NUMERAL (NUMERAL_BIT1 n))) /\
-             (~&(NUMERAL m) % &(NUMERAL (NUMERAL_BIT2 n)) =
-                ~&(NUMERAL m MOD NUMERAL (NUMERAL_BIT2 n))) /\
-             (&(NUMERAL m) % ~&(NUMERAL (NUMERAL_BIT1 n)) =
-                &(NUMERAL m MOD NUMERAL (NUMERAL_BIT1 n))) /\
-             (&(NUMERAL m) % ~&(NUMERAL (NUMERAL_BIT2 n)) =
-                &(NUMERAL m MOD NUMERAL (NUMERAL_BIT2 n))) /\
-             (~&(NUMERAL m) % ~&(NUMERAL (NUMERAL_BIT1 n)) =
-                ~&(NUMERAL m MOD NUMERAL (NUMERAL_BIT1 n))) /\
-             (~&(NUMERAL m) % ~&(NUMERAL (NUMERAL_BIT2 n)) =
-                ~&(NUMERAL m MOD NUMERAL (NUMERAL_BIT2 n)))`,
+             (x % &(NUMERAL (NUMERAL_BIT1 n)) =
+                x - x / &(NUMERAL(NUMERAL_BIT1 n)) *
+                      &(NUMERAL(NUMERAL_BIT1 n))) /\
+             (x % &(NUMERAL (NUMERAL_BIT2 n)) =
+                x - x / &(NUMERAL(NUMERAL_BIT2 n)) *
+                      &(NUMERAL(NUMERAL_BIT2 n)))`,
   SIMP_TAC int_ss [INT_MOD_CALCULATE, NUMERAL_BIT1, NUMERAL_BIT2,
+                   NUMERAL_DEF, ALT_ZERO, ZERO_MOD, int_mod]);
+
+
+
+val INT_REM_CALCULATE = save_thm(
+  "INT_REM_CALCULATE",
+  LIST_CONJ [INT_REM, INT_REM_NEG, INT_NEGNEG, INT_INJ, INT_NEG_EQ0]);
+
+val INT_REM_REDUCE = store_thm(
+  "INT_REM_REDUCE",
+  Term`!m n. (0i rem &(NUMERAL (NUMERAL_BIT1 n)) = 0i) /\
+             (0i rem &(NUMERAL (NUMERAL_BIT2 n)) = 0i) /\
+             (&(NUMERAL m) rem &(NUMERAL (NUMERAL_BIT1 n)) =
+                &(NUMERAL m MOD NUMERAL (NUMERAL_BIT1 n))) /\
+             (&(NUMERAL m) rem &(NUMERAL (NUMERAL_BIT2 n)) =
+                &(NUMERAL m MOD NUMERAL (NUMERAL_BIT2 n))) /\
+             (~&(NUMERAL m) rem &(NUMERAL (NUMERAL_BIT1 n)) =
+                ~&(NUMERAL m MOD NUMERAL (NUMERAL_BIT1 n))) /\
+             (~&(NUMERAL m) rem &(NUMERAL (NUMERAL_BIT2 n)) =
+                ~&(NUMERAL m MOD NUMERAL (NUMERAL_BIT2 n))) /\
+             (&(NUMERAL m) rem ~&(NUMERAL (NUMERAL_BIT1 n)) =
+                &(NUMERAL m MOD NUMERAL (NUMERAL_BIT1 n))) /\
+             (&(NUMERAL m) rem ~&(NUMERAL (NUMERAL_BIT2 n)) =
+                &(NUMERAL m MOD NUMERAL (NUMERAL_BIT2 n))) /\
+             (~&(NUMERAL m) rem ~&(NUMERAL (NUMERAL_BIT1 n)) =
+                ~&(NUMERAL m MOD NUMERAL (NUMERAL_BIT1 n))) /\
+             (~&(NUMERAL m) rem ~&(NUMERAL (NUMERAL_BIT2 n)) =
+                ~&(NUMERAL m MOD NUMERAL (NUMERAL_BIT2 n)))`,
+  SIMP_TAC int_ss [INT_REM_CALCULATE, NUMERAL_BIT1, NUMERAL_BIT2,
                    NUMERAL_DEF, ALT_ZERO, ZERO_MOD]);
 
 val ODD_NB1 = prove(
@@ -2835,14 +3160,11 @@ val INT_DIVIDES_REDUCE = store_thm(
            (NUMERAL m MOD NUMERAL (NUMERAL_BIT1 n) = 0)) /\
           (~&(NUMERAL (NUMERAL_BIT2 n)) int_divides ~&(NUMERAL m) =
            (NUMERAL m MOD NUMERAL (NUMERAL_BIT2 n) = 0))`,
+  SIMP_TAC bool_ss [INT_DIVIDES_NEG] THEN
   SIMP_TAC bool_ss [INT_DIVIDES_MOD0, INT_EQ_CALCULATE,
                     INT_MOD_REDUCE] THEN
   SIMP_TAC int_ss [NUMERAL_DEF, NUMERAL_BIT1, NUMERAL_BIT2] THEN
   PROVE_TAC [INT_MOD0]);
-
-
-
-(* val _ = Globals.show_numeral_types := true *)
 
 (* more theorems *)
 val int_cases = prove(
@@ -2868,29 +3190,34 @@ val INT_DISCRETE = store_thm(
   ]);
 
 val _ = BasicProvers.export_rewrites
-        ["INT_ADD_LID", "INT_ADD_LID_UNIQ", "INT_ADD_LINV", "INT_ADD_RID",
-         "INT_ADD_RID_UNIQ", "INT_ADD_RINV", "INT_ADD_SUB", "INT_ADD_SUB2",
-         "INT_DIVIDES_0", "INT_DIVIDES_1", "INT_DIVIDES_LADD",
-         "INT_DIVIDES_LMUL", "INT_DIVIDES_LSUB", "INT_DIVIDES_MUL",
-         "INT_DIVIDES_NEG", "INT_DIVIDES_RADD", "INT_DIVIDES_REFL",
-         "INT_DIVIDES_RMUL", "INT_DIVIDES_RSUB", "INT_DIV_ID", "INT_DIV_NEG",
-         "INT_ENTIRE", "INT_EQ_CALCULATE", "INT_EQ_LADD", "INT_EQ_LMUL",
-         "INT_EQ_RADD", "INT_EQ_LMUL", "INT_EXP", "INT_EXP_EQ0", "INT_INJ",
-         "INT_LE", "INT_LE_ADD", "INT_LE_ADDL", "INT_LE_ADDR",
-         "INT_LE_DOUBLE", "INT_LE_LADD", "INT_LE_MUL", "INT_LE_NEG",
-         "INT_LE_NEGL", "INT_LE_NEGR", "INT_LE_RADD", "INT_LE_REFL",
-         "INT_LE_SQUARE", "INT_LT_ADD", "INT_LT_ADDL", "INT_LT_ADDR",
-         "INT_LT_CALCULATE", "INT_LT_IMP_LE", "INT_LT_IMP_NE", "INT_LT_LADD",
+        ["INT_ADD_LID", "INT_ADD_LID_UNIQ", "INT_ADD_LINV",
+         "INT_ADD_RID", "INT_ADD_RID_UNIQ", "INT_ADD_RINV",
+         "INT_ADD_SUB", "INT_ADD_SUB2", "INT_DIVIDES_0",
+         "INT_DIVIDES_1", "INT_DIVIDES_LADD", "INT_DIVIDES_LMUL",
+         "INT_DIVIDES_LSUB", "INT_DIVIDES_MUL", "INT_DIVIDES_NEG",
+         "INT_DIVIDES_RADD", "INT_DIVIDES_REFL", "INT_DIVIDES_RMUL",
+         "INT_DIVIDES_RSUB", "INT_DIV", "INT_QUOT", "INT_DIV_1",
+         "INT_QUOT_1", "INT_DIV_ID", "INT_QUOT_ID", "INT_DIV_NEG",
+         "INT_QUOT_NEG", "INT_ENTIRE", "INT_EQ_CALCULATE",
+         "INT_EQ_LADD", "INT_EQ_LMUL", "INT_EQ_RADD", "INT_EQ_LMUL",
+         "INT_EXP", "INT_EXP_EQ0", "INT_INJ", "INT_LE", "INT_LE_ADD",
+         "INT_LE_ADDL", "INT_LE_ADDR", "INT_LE_DOUBLE", "INT_LE_LADD",
+         "INT_LE_MUL", "INT_LE_NEG", "INT_LE_NEGL", "INT_LE_NEGR",
+         "INT_LE_RADD", "INT_LE_REFL", "INT_LE_SQUARE", "INT_LT_ADD",
+         "INT_LT_ADDL", "INT_LT_ADDR", "INT_LT_CALCULATE",
+         "INT_LT_IMP_LE", "INT_LT_IMP_NE", "INT_LT_LADD",
          "INT_LT_RADD", "INT_LT_REFL", "INT_MAX_NUM", "INT_MIN_NUM",
-         "INT_MOD", "INT_MOD0", "INT_MOD_COMMON_FACTOR", "INT_MOD_ID",
-         "INT_MOD_NEG", "INT_MUL", "INT_MUL_ASSOC", "INT_MUL_EQ_1",
-         "INT_MUL_LID", "INT_MUL_LZERO", "INT_MUL_RID", "INT_MUL_RZERO",
+         "INT_MOD", "INT_REM", "INT_MOD0", "INT_REM0",
+         "INT_MOD_COMMON_FACTOR", "INT_REM_COMMON_FACTOR",
+         "INT_MOD_ID", "INT_REM_ID", "INT_MOD_NEG", "INT_REM_NEG",
+         "INT_MUL", "INT_MUL_ASSOC", "INT_MUL_EQ_1", "INT_MUL_LID",
+         "INT_MUL_LZERO", "INT_MUL_RID", "INT_MUL_RZERO",
          "INT_NEGNEG", "INT_NEG_0", "INT_NEG_EQ0", "INT_NEG_GE0",
          "INT_NEG_GT0", "INT_NEG_LE0", "INT_NEG_LT0", "INT_NEG_MUL2",
          "INT_NEG_SAME_EQ", "INT_NEG_SUB", "INT_SUB_0", "INT_SUB_ADD",
-         "INT_SUB_ADD2", "INT_SUB_LZERO", "INT_SUB_NEG2", "INT_SUB_REFL",
-         "INT_SUB_RNEG", "INT_SUB_RZERO", "INT_SUB_SUB", "INT_SUB_SUB2",
-         "NUM_OF_INT"]
+         "INT_SUB_ADD2", "INT_SUB_LZERO", "INT_SUB_NEG2",
+         "INT_SUB_REFL", "INT_SUB_RNEG", "INT_SUB_RZERO",
+         "INT_SUB_SUB", "INT_SUB_SUB2", "NUM_OF_INT"]
 
 val _ = export_theory();
 

@@ -311,48 +311,24 @@ val in_subtractive_range = store_thm(
     ASM_SIMP_TAC bool_ss [int_sub, INT_LE_LADD, INT_LE_NEG]
   ]);
 
-
-
 val subtract_to_small = store_thm(
   "subtract_to_small",
   Term`!x d:int. 0 < d ==> ?k. 0 < x - k * d /\ x - k * d <= d`,
   REPEAT STRIP_TAC THEN
-  Q.SUBGOAL_THEN `ABS (x - x/d * d) < ABS d` ASSUME_TAC THENL [
-    `!x y z. (x = y + z) = (x - y = z)`
-       by PROVE_TAC [INT_EQ_SUB_LADD, INT_ADD_COMM] THEN
-    POP_ASSUM (fn th =>
-      `x - x/d*d = x % d` by PROVE_TAC [INT_DIVISION, INT_LT_REFL, th]) THEN
-    POP_ASSUM SUBST_ALL_TAC THEN
-    PROVE_TAC [INT_LT_REFL, INT_ABS_MOD_LT],
-    ALL_TAC
+  `~(d = 0)` by PROVE_TAC [INT_LT_REFL] THEN
+  `~(d < 0)` by PROVE_TAC [INT_NOT_LT, INT_LE_LT] THEN
+  `(x = x / d * d + x % d) /\ 0 <= x % d /\ x % d < d`
+     by PROVE_TAC [INT_DIVISION] THEN
+  Q.ABBREV_TAC `q = x / d` THEN POP_ASSUM (K ALL_TAC) THEN
+  Q.ABBREV_TAC `r = x % d` THEN POP_ASSUM (K ALL_TAC) THEN
+  FIRST_X_ASSUM SUBST_ALL_TAC THEN
+  FULL_SIMP_TAC int_ss [INT_LE_LT] THENL [
+    Q.EXISTS_TAC `q`,
+    Q.EXISTS_TAC `q - 1`
   ] THEN
-  POP_ASSUM (fn th =>
-    `ABS (x - x/d * d) < d` by PROVE_TAC [th, INT_ABS_EQ_ID, INT_LE_LT]) THEN
-  Q.ABBREV_TAC `p = x - x/d * d` THEN
-  STRIP_ASSUME_TAC (Q.SPEC `p` INT_LT_NEGTOTAL) THENL [
-    Q.EXISTS_TAC `x/d - 1` THEN POP_ASSUM SUBST_ALL_TAC THEN
-    FULL_SIMP_TAC bool_ss [INT_SUB_RDISTRIB, INT_SUB_0, INT_MUL_LID] THEN
-    POP_ASSUM (SUBST_ALL_TAC o SYM) THEN
-    ASM_SIMP_TAC bool_ss [INT_LE_REFL, INT_SUB_SUB2],
-    Q.EXISTS_TAC `x/d` THEN
-    `ABS p = p` by PROVE_TAC [INT_ABS_EQ_ID, INT_LE_LT] THEN
-    POP_ASSUM SUBST_ALL_TAC THEN ASM_SIMP_TAC bool_ss [INT_LE_LT],
-    FULL_SIMP_TAC bool_ss [INT_NEG_GT0] THEN
-    Q.EXISTS_TAC `x/d - 1` THEN
-    SIMP_TAC bool_ss [INT_SUB_RDISTRIB, INT_MUL_LID] THEN
-    `!x y z:int. x - (y - z) = x - y + z`
-       by PROVE_TAC [move_sub, INT_SUB_SUB3] THEN
-    POP_ASSUM (fn th => ASM_REWRITE_TAC [th]) THEN CONJ_TAC THENL [
-      STRIP_ASSUME_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
-      FIRST_X_ASSUM SUBST_ALL_TAC THEN
-      FULL_SIMP_TAC bool_ss [INT_LT, prim_recTheory.NOT_LESS_0] THEN
-      ONCE_REWRITE_TAC [INT_ADD_COMM] THEN
-      FULL_SIMP_TAC bool_ss [GSYM lt_move_all_right, INT_ABS_NEG, INT_ABS_NUM],
-      REWRITE_TAC [GSYM INT_NOT_LT] THEN
-      ONCE_REWRITE_TAC [INT_ADD_COMM] THEN
-      REWRITE_TAC [INT_LT_ADDR] THEN ASM_REWRITE_TAC [INT_NOT_LT, INT_LE_LT]
-    ]
-  ]);
+  SRW_TAC [] [INT_LT_SUB_LADD, INT_LE_SUB_RADD, INT_SUB_RDISTRIB,
+              INT_LT_SUB_RADD] THEN
+  PROVE_TAC [INT_ADD_COMM, INT_LT_LADD]);
 
 val add_to_great = store_thm(
   "add_to_great",

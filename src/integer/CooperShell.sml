@@ -1,4 +1,4 @@
-structure CooperShell :> CooperShell = 
+structure CooperShell :> CooperShell =
 struct
 
 open HolKernel boolLib integerTheory Parse
@@ -680,9 +680,7 @@ fun elim_div_mod0 t = let
                  div_nzero
   in
     UNBETA_CONV to_elim THENC REWR_CONV rwt THENC
-    REWRITE_CONV [abs_div] THENC REWRITE_CONV [INT_ABS_LT, INT_ABS_LE] THENC
-    STRIP_QUANT_CONV (RAND_CONV (RAND_CONV (RAND_CONV BETA_CONV))) THENC
-    push_in_exists
+    STRIP_QUANT_CONV (RAND_CONV (FORK_CONV (REDUCE_CONV, BETA_CONV)))
   end
 in
   EVERY_QCONV (map elim_t divmods) t
