@@ -1,4 +1,4 @@
-This is the examples directory for Hol98.
+This is the examples directory.
 
 Currently here are the following:
 
@@ -10,18 +10,31 @@ Currently here are the following:
        unrealistic subset of ML is defined, along with a simple mutually
        recursive function over the syntax.
 
+  * Rijndael
+
+       This directory holds a formalization of Rijmen and Daemen's
+       AES crypto standard, together with a proof of correctness.
+       
   * RSA
 
        This directory develops some of the mathematics underlying
        the RSA cryptography scheme. The theories have been 
        produced by Laurent Thery of INRIA Sophia-Antipolis.
 
+  * arm6
+
+       This directory contains a formal model of the ARM 
+       (Acorn Risc Machine), version 6, along with a proof of 
+       correctness. The specifications and proofs are due to Anthony Fox,
+       and arise from a collaboration between Cambridge, Leeds, and ARM.
+  
   * autopilot.sml
 
-       This example is a Hol98 rendition of a PVS example due to Ricky
+       This example is a rendition of a PVS example due to Ricky
        Butler of NASA. The example shows the use of a record-definition
        package due to Mike Norrish and Phil Windley, as well as
-       illustrating some aspects of the automation available in Hol98.
+       illustrating some aspects of the automation currently available 
+       in HOL.
 
   * bmark
 
@@ -63,7 +76,7 @@ Currently here are the following:
        This example is a verification of the Miller-Rabin
        probabilistic primality test, incorporating version 2 of
        probability theory and some cute example probabilistic
-       programs.
+       programs. Author: Joe Hurd.
 
   * root2.sml
 
