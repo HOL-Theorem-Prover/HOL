@@ -472,7 +472,11 @@ end
     called when ptree has run out of constraints that can be thrown
     away.
 
-    The continuation function kont is of type result -> 'a.
+    The continuation function kont is of type result -> 'a, and will be
+    called when the whole process eventually gets an answer.  This code
+    will not call it directly, but if it does throw anything away, it will
+    modify it so that a satisfying value can be calculated for the variables
+    that are chucked.
    ---------------------------------------------------------------------- *)
 
 fun throwaway_redundant_factoids ptree nextstage kont = let
@@ -742,50 +746,47 @@ fun zero_upto n =
           of course).
    ---------------------------------------------------------------------- *)
 
-fun one_step ptree em nextstage kont =
-    if dbsize ptree = 0 then
-      kont (SATISFIABLE (zero_upto (dbwidth ptree - 2)))
-    else let
-        val (var_to_elim, mode) =
-            case exact_var ptree of
-              SOME i => (i, em)
-            | NONE => (least_coeff_var ptree, inexactify em)
-        fun categorise (df, (notmentioned, uppers, lowers)) = let
-          open Arbint
+fun one_step ptree em nextstage kont = let
+  val (var_to_elim, mode) =
+      case exact_var ptree of
+        SOME i => (i, em)
+      | NONE => (least_coeff_var ptree, inexactify em)
+  fun categorise (df, (notmentioned, uppers, lowers)) = let
+    open Arbint
+  in
+    case compare(Vector.sub(dfactoid_key df, var_to_elim), zero) of
+      LESS => (notmentioned, df::uppers, lowers)
+    | EQUAL => (dbinsert df notmentioned, uppers, lowers)
+    | GREATER => (notmentioned, uppers, df::lowers)
+  end
+  val (newtree0, uppers, lowers) =
+      dbfold categorise (dbempty (dbwidth ptree), [], []) ptree
+  fun drop_contr (CONTR _) = NO_CONCL
+    | drop_contr x = x
+  fun extend_satisfiable r =
+      case r of
+        SATISFIABLE vmap =>
+        SATISFIABLE (extend_vmap ptree var_to_elim vmap)
+      | _ => r
+  fun newkont r =
+      case (em, mode) of
+        (EXACT, EXACT) => kont (extend_satisfiable r)
+      | (EXACT, REAL) => let
         in
-          case compare(Vector.sub(dfactoid_key df, var_to_elim), zero) of
-            LESS => (notmentioned, df::uppers, lowers)
-          | EQUAL => (dbinsert df notmentioned, uppers, lowers)
-          | GREATER => (notmentioned, uppers, df::lowers)
+          case r of
+            CONTR _ => kont r
+          | _ => one_step ptree EDARK nextstage kont
         end
-        val (newtree0, uppers, lowers) =
-            dbfold categorise (dbempty (dbwidth ptree), [], []) ptree
-        fun drop_contr (CONTR _) = NO_CONCL
-          | drop_contr x = x
-        fun extend_satisfiable r =
-            case r of
-              SATISFIABLE vmap =>
-                SATISFIABLE (extend_vmap ptree var_to_elim vmap)
-            | _ => r
-        fun newkont r =
-            case (em, mode) of
-              (EXACT, EXACT) => kont (extend_satisfiable r)
-            | (EXACT, REAL) => let
-              in
-                case r of
-                  CONTR _ => kont r
-                | _ => one_step ptree EDARK nextstage kont
-              end
-            | (REAL, REAL) => kont r
-            | (EDARK, EDARK) => kont (drop_contr (extend_satisfiable r))
-            | (EDARK, DARK) => kont (drop_contr (extend_satisfiable r))
-            | (DARK, DARK) => kont (drop_contr (extend_satisfiable r))
-            | _ => raise Fail "Can't happen - in newkont calculation"
-        fun newnextstage pt k = nextstage pt mode k
-      in
-        generate_crossproduct(newtree0, mode, var_to_elim, uppers, lowers,
-                              newnextstage, newkont)
-      end
+      | (REAL, REAL) => kont r
+      | (EDARK, EDARK) => kont (drop_contr (extend_satisfiable r))
+      | (EDARK, DARK) => kont (drop_contr (extend_satisfiable r))
+      | (DARK, DARK) => kont (drop_contr (extend_satisfiable r))
+      | _ => raise Fail "Can't happen - in newkont calculation"
+  fun newnextstage pt k = nextstage pt mode k
+in
+  generate_crossproduct(newtree0, mode, var_to_elim, uppers, lowers,
+                        newnextstage, newkont)
+end
 
 (* ----------------------------------------------------------------------
     toplevel ptree em kont
@@ -793,12 +794,14 @@ fun one_step ptree em nextstage kont =
    ---------------------------------------------------------------------- *)
 
 fun toplevel ptree em kont = let
-  fun after_throwaway pt k = one_step pt em toplevel k
+  fun after_throwaway pt k =
+      if dbsize pt = 0 then
+        k (SATISFIABLE (zero_upto (dbwidth pt - 2)))
+      else if has_one_var pt then
+        k (mode_result em (one_var_analysis ptree em))
+      else one_step pt em toplevel k
 in
-  if has_one_var ptree then
-    kont (mode_result em (one_var_analysis ptree em))
-  else
-    throwaway_redundant_factoids ptree after_throwaway kont
+  throwaway_redundant_factoids ptree after_throwaway kont
 end
 
 (* ----------------------------------------------------------------------
@@ -832,8 +835,8 @@ fun work ptree k = toplevel ptree EXACT k
      (ALT (Vector.fromList clist), ASM (mk_leq(zero_tm, t)))
    end
 
-   datatype prettyr = SAT of bool * (string * Arbint.int) list
-                    | PCONTR of derivation
+   datatype 'a prettyr = SAT of bool * (string * Arbint.int) list
+                    | PCONTR of 'a derivation
                     | PNOCONC
    fun v2list vs = #1 (List.foldr (fn(v,(acc,n)) =>
                                      (("x"^Int.toString n, v)::acc, n - 1))
@@ -857,42 +860,66 @@ fun work ptree k = toplevel ptree EXACT k
        | CONTR x => PCONTR x
        | NO_CONCL => PNOCONC;
 
-   fun gentree l =
-       List.foldl (fn (df,t) => dbinsert (fromList df) t)
-                  (dbempty (length (hd l))) l;
+fun test csts = let
+  fun add_csts normalc csts db exc =
+      case csts of
+        [] => normalc db
+      | (c::cs) => add_check_factoid db
+                                     (gcd_check_dfactoid(fromList c))
+                                     (add_csts normalc cs)
+                                     exc
+in add_csts (fn db => work db (display_result csts))
+            csts
+            (dbempty (length (hd csts)))
+            (display_result csts)
+end
 
-   val seed = Random.newgen()
-   fun gen_int() = Random.range(~15,16) seed
-   fun gen_constraint n  = List.tabulate(n, fn n => gen_int())
-   fun gen_test m n = List.tabulate(m, fn _ => gen_constraint n)
+val test = time test
 
+(* returns the contents of a patricia tree *)
+fun pt_list t = PIntMap.fold (fn (k,v,acc) => (k,v)::acc) [] t
 
-   fun test l = time (toplevel (gentree l) EXACT) (display_result l);
-
-   test [[2,3,6],[~1,~4,7]];  (* exact elimination *)
-   test [[2,3,4],[~3,~4,7]];  (* dark shadow test *)
-   test [[2,3,4],[~3,~4,7],[4,5,~10]];  (* another dark shadow *)
-   test [[2,3,4],[~3,~4,7],[4,~5,~10]];  (* also satisfiable *)
+   test [[2,3,6],[~1,~4,7]];  (* exact elimination, sat: [~9,4] *)
+   test [[2,3,4],[~3,~4,7]];  (* dark shadow test, sat: [34, ~24] *)
+   test [[2,3,4],[~3,~4,7],[4,5,~10]];  (* another dark shadow, sat: [13,~8] *)
+   test [[2,3,4],[~3,~4,7],[4,~5,~10]];  (* also satisfiable, sat: [2, ~1] *)
+   test [[1,0,~1], [0,1,~1], [~1,0,1]]; (* satisfiable, sat: [1,1] *)
    test [[~3,~1,6],[2,1,~5],[3,~1,~3]];  (* a contradiction *)
    test [[11,13,~27], [~11,~13,45],[7,~9,10],[~7,9,4]];  (* no conclusion *)
 
-   (* satisfiable after throwing away everything because of var 1 *)
+   (* satisfiable after throwing away everything because of var 1: [0,2,0] *)
    test [[1,2,3,4],[2,1,4,3],[5,6,7,~8],[~3,2,~1,6]];
 
+   (* satisfiable: [2,0,2] *)
    test [[1,2,3,4],[2,~2,3,~10],[2,3,~5,6],[~3,~2,1,7]];
 
+
+   (* satisfiable by: [0, ~1, 2, 2] *)
    test [[~9, ~11, ~8, 9, 11], [15, 0, 8, ~7, 8], [4, 3, 11, ~2, ~13],
          [~13, ~8, ~14, 15, 8], [~10, 9, 15, ~13, 9], [~15, ~14, ~3, 2, 5],
          [2, ~1, ~5, 14, ~7]];
 
 
-   (* very poor performance exhibited here: *)
+   (* very poor performance (311s on a 2GHz machine) exhibited here: *)
+   (* sat: [~19, 0, 0, 29, ~30, ~10, 22] *)
    test [[13, ~5, ~12, 11, 1, ~5, ~3, ~6], [14, ~6, ~8, ~1, 4, ~10, 15, 6],
          [9, ~5, 1, 10, 2, ~1, ~2, 0], [~1, ~13, 14, ~3, 11, ~9, 14, 9],
          [~13, 1, 5, ~14, ~6, ~3, 14, 12], [11, 8, 9, 12, 1, ~2, ~6, 8],
          [~14, ~8, ~4, ~2, ~3, 13, ~7, ~10], [~3, 3, ~14, ~3, ~7, 4, ~6, ~6]];
 
    fun print_test (l:int list list) = ignore (printVal l)
+
+
+   fun gentree l =
+       List.foldl (fn (df,t) => dbinsert (fromList df) t)
+                  (dbempty (length (hd l))) l;
+
+   (* for generation of random problems *)
+   val seed = Random.newgen()
+   fun gen_int() = Random.range(~15,16) seed
+   fun gen_constraint n  = List.tabulate(n, fn n => gen_int())
+   fun gen_test m n = List.tabulate(m, fn _ => gen_constraint n)
+
 
    val current_goal = ref ([] : int list list)
    val slow_goals = ref  ([] : int list list list)
