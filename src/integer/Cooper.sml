@@ -165,14 +165,19 @@ val simple_disj_congruence =
 val simple_conj_congruence =
   tautLib.TAUT_PROVE (Term`!p q r. (p ==> (q = r)) ==>
                                    (p /\ q = p /\ r)`)
-
+local
+  open QConv
+  val THENQC = fn (c1, c2) => THENQC c1 c2
+  val ORELSEQC = uncurry ORELSEQC
+  infix ORELSEQC THENQC
+in
 fun congruential_simplification tm = let
   val (d1, d2) = dest_disj tm
 in
   if is_disj d1 then
-    REWR_CONV (GSYM DISJ_ASSOC) THENC congruential_simplification
+    REWR_CONV (GSYM DISJ_ASSOC) THENQC congruential_simplification
   else if is_conj d1 then
-    LAND_CONV congruential_simplification THENC
+    LAND_CONV congruential_simplification THENQC
     RAND_CONV congruential_simplification
   else if d1 = true_tm then
     K (SPEC d2 T_or_l)
@@ -186,17 +191,17 @@ in
       else EQF_INTRO (notd1_thm)
     val d2_rewritten = DISCH notd1_t (REWRITE_CONV [notd1] d2)
   in
-    K (MATCH_MP simple_disj_congruence d2_rewritten) THENC
-    (REWR_CONV T_or_r ORELSEC REWR_CONV F_or_r ORELSEC
+    K (MATCH_MP simple_disj_congruence d2_rewritten) THENQC
+    (REWR_CONV T_or_r ORELSEQC REWR_CONV F_or_r ORELSEQC
      RAND_CONV congruential_simplification)
   end
 end tm handle HOL_ERR _ => let
   val (c1, c2) = dest_conj tm
 in
   if is_conj c1 then
-    REWR_CONV (GSYM CONJ_ASSOC) THENC congruential_simplification
+    REWR_CONV (GSYM CONJ_ASSOC) THENQC congruential_simplification
   else if is_disj c1 then
-    LAND_CONV congruential_simplification THENC
+    LAND_CONV congruential_simplification THENQC
     RAND_CONV congruential_simplification
   else if c1 = true_tm then
     K (SPEC c2 T_and_l)
@@ -205,13 +210,16 @@ in
   else let
     val c2_rewritten = DISCH c1 (REWRITE_CONV [EQT_INTRO (ASSUME c1)] c2)
   in
-    K (MATCH_MP simple_conj_congruence c2_rewritten) THENC
-    (REWR_CONV T_and_r ORELSEC REWR_CONV F_and_r ORELSEC
+    K (MATCH_MP simple_conj_congruence c2_rewritten) THENQC
+    (REWR_CONV T_and_r ORELSEC REWR_CONV F_and_r ORELSEQC
      RAND_CONV congruential_simplification)
   end
 end tm handle HOL_ERR _ =>
   if is_neg tm then RAND_CONV congruential_simplification tm
-  else ALL_CONV tm
+  else ALL_QCONV tm
+end
+
+val congruential_simplification = QConv.QCONV congruential_simplification
 
 
 
@@ -264,6 +272,9 @@ val elim_eq_coeffs' =
   elim_eq_coeffs
 
 local
+  open QConv
+  val THENQC = fn (c1, c2) => THENQC c1 c2
+  infix THENQC
   val myrewrite_conv = REWRITE_CONV [INT_NEG_ADD, INT_NEG_LMUL, INT_NEGNEG]
   fun normalise_eqs var tm =
     if is_eq tm andalso free_in var (rhs tm) then
@@ -280,18 +291,18 @@ in
       if is_negated coeff then
         REWR_CONV (GSYM (CONJUNCT1 INT_DIVIDES_NEG)) THENC myrewrite_conv
       else
-        ALL_CONV
+        ALL_QCONV
     end tm
     fun collect_up_other_freevars tm = let
       val fvs =
         Listsort.sort (String.compare o (#1 ## #1) o (dest_var ## dest_var))
         (free_vars tm)
     in
-      EVERY_CONV (map collect_in_sum fvs) tm
+      EVERY_QCONV (map collect_in_sum fvs) tm
     end
   in
     if is_disj tm orelse is_conj tm then
-      BINOP_CONV (phase2_CONV var) tm
+      BINOP_QCONV (phase2_CONV var) tm
     else if is_neg tm then
       RAND_CONV (phase2_CONV var) tm
     else if free_in var tm then let
@@ -303,7 +314,7 @@ in
                          else (Right, Left)
       (* dir2 is the side where x will be ending up *)
       val move_CONV =
-        move_terms_from tt dir1 (free_in var) THENC
+        move_terms_from tt dir1 (free_in var) THENQC
         move_terms_from tt dir2 (not o free_in var)
 
       fun factor_out_over_sum tm = let
@@ -322,9 +333,9 @@ in
            ~a * (b * c) into a * (~b * c) *)
         val _ = dest_mult tm
       in
-        TRY_CONV (REWR_CONV (GSYM INT_NEG_LMUL) THENC
-                  REWR_CONV INT_NEG_RMUL THENC
-                  RAND_CONV (REWR_CONV INT_NEG_LMUL)) tm
+        TRY_QCONV (REWR_CONV (GSYM INT_NEG_LMUL) THENQC
+                   REWR_CONV INT_NEG_RMUL THENQC
+                   RAND_CONV (REWR_CONV INT_NEG_LMUL)) tm
       end handle HOL_ERR _ => BINOP_CONV fiddle_negs tm
 
       fun reduce_by_gcd tm = let
@@ -358,32 +369,34 @@ in
           | (EQ, Left, _) => MATCH_MP elim_eq_coeffs gnum_nonzero
           | (EQ, Right, _) => MATCH_MP elim_eq_coeffs' gnum_nonzero
       in
-        BINOP_CONV (factor_out g g_t) THENC
-        move_terms_from tt dir1 is_mult THENC
-        conv_at dir2 fiddle_negs THENC
-        conv_at dir2 factor_out_over_sum THENC
-        REWR_CONV elim_coeffs_thm THENC
+        BINOP_QCONV (factor_out g g_t) THENQC
+        move_terms_from tt dir1 is_mult THENQC
+        conv_at dir2 fiddle_negs THENQC
+        conv_at dir2 factor_out_over_sum THENQC
+        REWR_CONV elim_coeffs_thm THENQC
         REDUCE_CONV
       end tm
     in
-      (move_CONV THENC conv_at dir2 collect_terms THENC
-       conv_at dir1 collect_up_other_freevars THENC
-       TRY_CONV (conv_at dir1 collect_additive_consts) THENC
-       conv_at dir2 (LAND_CONV REDUCE_CONV) THENC
-       REWRITE_CONV [INT_MUL_LZERO, INT_ADD_LID, INT_ADD_RID] THENC
-       TRY_CONV (reduce_by_gcd THENC TRY_CONV move_CONV) THENC
+      (move_CONV THENQC conv_at dir2 collect_terms THENQC
+       conv_at dir1 collect_up_other_freevars THENQC
+       TRY_QCONV (conv_at dir1 collect_additive_consts) THENQC
+       conv_at dir2 (LAND_CONV REDUCE_CONV) THENQC
+       REWRITE_CONV [INT_MUL_LZERO, INT_ADD_LID, INT_ADD_RID] THENQC
+       TRY_CONV (reduce_by_gcd THENQC TRY_CONV move_CONV) THENQC
        normalise_eqs var) tm
     end handle HOL_ERR _ =>
       if is_divides tm then
-        (TRY_CONV (REWR_CONV (CONJUNCT2 INT_DIVIDES_NEG)) THENC
-         RAND_CONV (collect_in_sum var) THENC
-         dealwith_negative_divides THENC
-         RAND_CONV collect_up_other_freevars THENC
-         REWRITE_CONV [INT_MUL_LZERO] THENC REDUCE_CONV) tm
-      else ALL_CONV tm
-    else ALL_CONV tm
+        (TRY_CONV (REWR_CONV (CONJUNCT2 INT_DIVIDES_NEG)) THENQC
+         RAND_CONV (collect_in_sum var) THENQC
+         dealwith_negative_divides THENQC
+         RAND_CONV collect_up_other_freevars THENQC
+         REWRITE_CONV [INT_MUL_LZERO] THENQC REDUCE_CONV) tm
+      else ALL_QCONV tm
+    else ALL_QCONV tm
   end
 end
+
+val phase2_CONV = fn t => QConv.QCONV (phase2_CONV t)
 (* phase three takes all of the coefficients of the variable we're
    eliminating, and calculates their LCM.  Every term is then altered to
    be of the form
