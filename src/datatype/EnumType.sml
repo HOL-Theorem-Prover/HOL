@@ -261,6 +261,9 @@ fun define_enum_type(name,clist,ABS,REP) =
     }
  end;
 
+(*---------------------------------------------------------------------------
+     Should upgrade this so that it can be used in Prim_rec.
+ ---------------------------------------------------------------------------*)
 
 fun define_case initiality =
  let val (V,tm) = strip_forall (concl initiality)
@@ -302,94 +305,6 @@ fun define_case initiality =
  end;
 
 
-fun strip_vars tm =
-  let fun pull_off_var tm acc =
-        let val (Rator, Rand) = dest_comb tm
-        in if is_var Rand then pull_off_var Rator (Rand::acc) else (tm, acc)
-        end handle HOL_ERR _ => (tm, acc)
-  in pull_off_var tm []
-  end;
-
-fun case_cong_term case_def =
- let val clauses = (strip_conj o concl) case_def
-     val clause1 = Lib.trye hd clauses
-     val left = (fst o dest_eq o #2 o strip_forall) clause1
-     val ty = type_of (rand left)
-     val allvars = all_varsl clauses
-     val M = variant allvars (mk_var("M", ty))
-     val M' = variant (M::allvars) (mk_var("M",ty))
-     val lhsM = mk_comb(rator left, M)
-     val c = #1(strip_comb left)
-     fun mk_clause clause =
-       let val (lhs,rhs) = (dest_eq o #2 o strip_forall) clause
-           val func = (#1 o strip_comb) rhs
-           val (Name,Ty) = dest_var func
-           val func' = variant allvars (mk_var(Name^"'", Ty))
-           val capp = rand lhs
-           val (constr,xbar) = strip_vars capp
-       in (func',
-           list_mk_forall
-           (xbar, mk_imp(mk_eq(M',capp),
-                         mk_eq(list_mk_comb(func,xbar),
-                               list_mk_comb(func',xbar)))))
-       end
-     val (funcs',clauses') = unzip (map mk_clause clauses)
- in
-    mk_imp(list_mk_conj(mk_eq(M,M')::clauses'),
-           mk_eq(lhsM, list_mk_comb(c,(funcs'@[M']))))
- end;
-
-fun EQ_EXISTS_LINTRO (thm,(vlist,theta)) =
-  let val [veq] = filter (can dest_eq) (hyp thm)
-      fun CHOOSER v (tm,thm) =
-        let val w = (case (subst_assoc (equal v) theta)
-                      of SOME w => w
-                       | NONE => v)
-            val ex_tm = mk_exists(w, tm)
-        in (ex_tm, CHOOSE(w, ASSUME ex_tm) thm)
-        end
-  in snd(itlist CHOOSER vlist (veq,thm))
-  end;
-
-fun case_cong_thm nchotomy case_def =
- let val case_def = SPEC_ALL case_def
-     val clause1 =
-       let val c = concl case_def in fst(dest_conj c) handle HOL_ERR _ => c end
-     val V = butlast (snd(strip_comb(lhs (#2 (strip_forall clause1)))))
-     val gl = case_cong_term case_def
-     val (ant,conseq) = dest_imp gl
-     val imps = CONJUNCTS (ASSUME ant)
-     val M_eq_M' = hd imps
-     val (M, M') = dest_eq (concl M_eq_M')
-     fun get_asm tm = (fst o dest_imp o #2 o strip_forall) tm handle _ => tm
-     val case_assms = map (ASSUME o get_asm o concl) imps
-     val (lconseq, rconseq) = dest_eq conseq
-     val lconseq_thm = SUBST_CONV [M |-> M_eq_M'] lconseq lconseq
-     val lconseqM' = rhs(concl lconseq_thm)
-     val nchotomy' = ISPEC M' nchotomy
-     val disjrl = map ((I##rhs) o strip_exists)	(strip_disj (concl nchotomy'))
-     val V' = butlast(snd(strip_comb rconseq))
-     val theta = map2 (fn v => fn v' => {redex=v,residue=v'}) V V'
-     fun zot (p as (icase_thm, case_def_clause)) (iimp,(vlist,disjrhs)) =
-       let val lth = TRANS (AP_TERM(rator lconseqM') icase_thm) case_def_clause
-           val rth = TRANS (AP_TERM(rator rconseq) icase_thm)
-                           (INST theta case_def_clause)
-           val theta = Term.match_term disjrhs
-                     ((rhs o fst o dest_imp o #2 o strip_forall o concl) iimp)
-           val th = MATCH_MP iimp icase_thm
-           val th1 = TRANS lth th
-       in (TRANS th1 (SYM rth), (vlist, #1 theta))
-       end
-     val thm_substs = map2 zot
-                       (zip (Lib.trye tl case_assms)
-                            (map SPEC_ALL (CONJUNCTS case_def)))
-                       (zip (Lib.trye tl imps) disjrl)
-     val aag = map (TRANS lconseq_thm o EQ_EXISTS_LINTRO) thm_substs
- in
-   GENL (M::M'::V) (DISCH_ALL (DISJ_CASESL nchotomy' aag))
- end
- handle HOL_ERR _ => raise ERR "case_cong_thm" "construction failed";
-
 fun enum_type_to_tyinfo (ty, constrs) = let
   val abs = "num2"^ty
   val rep = ty^"2num"
@@ -403,16 +318,13 @@ fun enum_type_to_tyinfo (ty, constrs) = let
       else SOME (prove_distinctness_thm simpls constrs)
   val initiality = prove_initiality_thm (#REPconst result) TYPE constrs simpls
   val case_def = define_case initiality
-  val case_defs = let val (V,_) = strip_forall(concl case_def)
-                      val thl = CONJUNCTS (SPEC_ALL case_def)
-                  in LIST_CONJ (map (GENL V) thl)
-                  end
+  val case_cong = Prim_rec.case_cong_thm nchotomy case_def
   open TypeBase TypeBase.TypeInfo
   val tyinfo0 =
       mk_tyinfo { ax = ORIG initiality,
                   induction = ORIG induction,
-                  case_def = case_defs,
-                  case_cong = case_cong_thm nchotomy case_def,
+                  case_def = case_def,
+                  case_cong = case_cong,
                   nchotomy = nchotomy,
                   size = size,
                   one_one = NONE,
