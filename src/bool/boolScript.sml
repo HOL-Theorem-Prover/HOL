@@ -114,9 +114,7 @@ val BOOL_CASES_AX =
  new_axiom
    ("BOOL_CASES_AX", Term `!t:bool. (t=T) \/ (t=F)`);
 
-val IMP_ANTISYM_AX =
- new_axiom
-   ("IMP_ANTISYM_AX", Term`!t1 t2. (t1 ==> t2) ==> (t2 ==> t1) ==> (t1 = t2)`);
+(* IMP_ANTISYM_AX is now proven. *)
 
 val ETA_AX =
  new_axiom
@@ -152,6 +150,8 @@ val --> = Type.-->
 infix ## |->;
 infixr -->;
 
+(* ETA_CONV could be built here. *)
+
 fun EXT th =
    let val {Bvar,...} = dest_forall(concl th)
        val th1 = SPEC Bvar th
@@ -163,9 +163,6 @@ fun EXT th =
          (ETA_CONV (mk_abs{Bvar=x,Body=t2x}))
    end;
 fun DISCH_ALL th = DISCH_ALL (DISCH (hd (hyp th)) th) handle _ => th;
-
-fun DISJ_CASES_UNION dth ath bth =
-    DISJ_CASES dth (DISJ1 ath (concl bth)) (DISJ2 (concl ath) bth);
 
 fun PROVE_HYP ath bth =  MP (DISCH (concl ath) bth) ath;
 
@@ -180,14 +177,75 @@ fun RATOR_CONV conv tm =
    end;
 fun RIGHT_BETA th = TRANS th (BETA_CONV(#rhs(dest_eq(concl th))));
 fun UNDISCH th = MP th (ASSUME(#ant(dest_imp(concl th))));
-fun CONJ_PAIR thm = (CONJUNCT1 thm, CONJUNCT2 thm);
-fun GENL varl thm = itlist GEN varl thm;
-fun SPECL tm_list th = rev_itlist SPEC tm_list th
+
+fun FALSITY_CONV tm =
+  DISCH (--`F`--) (SPEC tm (EQ_MP F_DEF (ASSUME (--`F`--))));
+
+fun UNFOLD_OR_CONV tm =
+  let val {disj1,disj2} = dest_disj tm in
+  RIGHT_BETA(AP_THM (RIGHT_BETA(AP_THM OR_DEF disj1)) disj2)
+  end;
+
+(*---------------------------------------------------------------------------
+ *  |- T
+ *---------------------------------------------------------------------------*)
+val TRUTH = EQ_MP (SYM T_DEF) (REFL (--`\x:bool. x`--));
+val _ = save_thm("TRUTH",TRUTH);
+
+fun EQT_ELIM th = EQ_MP (SYM th) TRUTH;
+
+(* SPEC could be built here. *)
+(* GEN could be built here. *)
+
+(* auxiliary functions to do bool case splitting *)
+(* maps thm  |- P[x\t]  to  |- y=t ==> P[x\y] *)
+fun CUT_EQUAL P x y t thm =
+  let val e = mk_eq{lhs=y,rhs=t} in
+  DISCH e (SUBST [(x|->SYM (ASSUME e))] P thm)
+  end;
+
+(* given proofs of P[x\T] and P[x\F], proves P[x\t] *)
+fun BOOL_CASE P x t pt pf =
+  let val th0 = SPEC t BOOL_CASES_AX
+      val th1 = EQ_MP (UNFOLD_OR_CONV (concl th0)) th0
+      val th2 = SPEC (subst[(x|->t)] P) th1 in
+  MP (MP th2 (CUT_EQUAL P x t (--`T`--) pt)) (CUT_EQUAL P x t (--`F`--) pf)
+  end;
+
+fun EQT_INTRO th =
+   let val t = concl th
+       val x = genvar bool
+   in
+   BOOL_CASE (--`^x=T`--) x t (REFL (--`T`--))
+     (MP (FALSITY_CONV (--`F=T`--)) (EQ_MP (ASSUME(--`^t=F`--)) th))
+   end;
+
+(*---------------------------------------------------------------------------
+ * |- !t1 t2. (t1 ==> t2) ==> (t2 ==> t1) ==> (t1 = t2)
+ *---------------------------------------------------------------------------*)
+val IMP_ANTISYM_AX =
+  let val T = --`T`--
+      val F = --`F`--
+      val t1 = --`t1:bool`--
+      val t2 = --`t2:bool`--
+      fun dsch t1 t2 th =
+            DISCH (--`^t2 ==> ^t1`--) (DISCH (--`^t1 ==> ^t2`--) th)
+      fun sch t1 t2 = --`(^t1==>^t2) ==> (^t2==>^t1) ==> (^t1=^t2)`--
+      val abs =
+            MP (FALSITY_CONV (--`F=T`--)) (MP (ASSUME (--`T==>F`--)) TRUTH)
+      val tht = 
+            BOOL_CASE (sch T t2) t2 t2 (dsch T T (REFL T)) (dsch F T (SYM abs))
+      val thf =
+            BOOL_CASE (sch F t2) t2 t2 (dsch T F abs) (dsch F F (REFL F)) in
+  GEN t1 (GEN t2 (BOOL_CASE (sch t1 t2) t1 t1 tht thf))
+  end;
+val _ = save_thm("IMP_ANTISYM_AX",IMP_ANTISYM_AX);
+
 fun IMP_ANTISYM_RULE th1 th2 =
-    let val {ant,conseq} = dest_imp(concl th1)
-    in
-      MP (MP (SPEC conseq (SPEC ant IMP_ANTISYM_AX)) th1) th2
-    end
+  let val {ant,conseq} = dest_imp(concl th1) in
+  MP (MP (SPEC conseq (SPEC ant IMP_ANTISYM_AX)) th1) th2
+  end;
+
 
 (*---------------------------------------------------------------------------
  * |- !t. F ==> t
@@ -195,8 +253,7 @@ fun IMP_ANTISYM_RULE th1 th2 =
 val FALSITY =
    let val t = --`t:bool`--
    in
-    GEN t (DISCH (--`F`--)
-                 (SPEC t (EQ_MP F_DEF (ASSUME (--`F`--)))))
+    GEN t (FALSITY_CONV t)
    end;
 
 val _ = save_thm("FALSITY", FALSITY);
@@ -223,6 +280,9 @@ fun SELECT_EQ x =
   fn th => AP_TERM choose (ABS x th)
  end
 
+fun GENL varl thm = itlist GEN varl thm;
+fun SPECL tm_list th = rev_itlist SPEC tm_list th
+
 fun GEN_ALL th = itlist GEN (set_diff (free_vars(concl th))
                                       (free_varsl (hyp th))) th;
 
@@ -236,9 +296,6 @@ fun SPEC_ALL th =
      SPECL (snd(itlist f vars (hvs@fvs,[]))) th
    end
 end;
-
-fun CONJUNCTS th =
-  (CONJUNCTS (CONJUNCT1 th) @ CONJUNCTS (CONJUNCT2 th)) handle _ => [th];
 
 fun SUBST_CONV theta template tm =
   let fun retheta {redex,residue} = (redex |-> genvar(type_of redex))
@@ -293,23 +350,6 @@ fun SELECT_RULE th =
 
 val ETA_THM = GEN_ALL(ETA_CONV (Term`\x:'a. (M x:'b)`));
 val _ = save_thm("ETA_THM",ETA_THM);
-
-(*---------------------------------------------------------------------------
- *  |- T
- *---------------------------------------------------------------------------*)
-val TRUTH = EQ_MP (SYM T_DEF) (REFL (--`\x:bool. x`--));
-val _ = save_thm("TRUTH",TRUTH);
-
-fun EQT_ELIM th = EQ_MP (SYM th) TRUTH;
-
-fun EQT_INTRO th =
-   let val t = concl th
-   in
-     MP (MP (SPEC (Term`T`) (SPEC t IMP_ANTISYM_AX))
-            (DISCH t TRUTH))
-        (DISCH (Term`T`) th)
-   end;
-
 
 (*---------------------------------------------------------------------------
  *  |- !t. t \/ ~t
@@ -445,6 +485,13 @@ val AND2_THM =
 
 val _ = save_thm("AND2_THM", AND2_THM);
 
+(* CONJ, CONJUNCT1 and CONJUNCT2 should be built here.*)
+
+fun CONJ_PAIR thm = (CONJUNCT1 thm, CONJUNCT2 thm);
+
+fun CONJUNCTS th =
+  (CONJUNCTS (CONJUNCT1 th) @ CONJUNCTS (CONJUNCT2 th)) handle _ => [th];
+
 (*---------------------------------------------------------------------------
  *   |- !t1 t2. (t1 /\ t2) = (t2 /\ t1)
  *---------------------------------------------------------------------------*)
@@ -530,7 +577,7 @@ val OR_ELIM_THM =
        and t1 = --`t1:bool`--
        and t2 = --`t2:bool`--
        val th1 = ASSUME (--`^t1 \/ ^t2`--)
-       and th2 = RIGHT_BETA(AP_THM (RIGHT_BETA(AP_THM OR_DEF t1)) t2)
+       val th2 = UNFOLD_OR_CONV (concl th1)
        val th3 = SPEC t (EQ_MP th2 th1)
        val th4 = MP (MP th3 (ASSUME (--`^t1 ==> ^t`--)))
                     (ASSUME (--`^t2 ==> ^t`--))
@@ -540,6 +587,11 @@ val OR_ELIM_THM =
    end;
 
 val _ = save_thm("OR_ELIM_THM", OR_ELIM_THM);
+
+(* DISJ1, DISJ2, DISJ_CASES should be built here. *)
+ 
+fun DISJ_CASES_UNION dth ath bth =
+    DISJ_CASES dth (DISJ1 ath (concl bth)) (DISJ2 (concl ath) bth);
 
 
 (*---------------------------------------------------------------------------
@@ -577,9 +629,9 @@ val NOT_F =
    let val t = --`t:bool`--
        val th1 = MP (SPEC t F_IMP) (ASSUME (--`~ ^t`--))
        and th2 = SPEC t FALSITY
-       and th3 = SPEC (--`F`--) (SPEC t IMP_ANTISYM_AX)
+       val th3 = IMP_ANTISYM_RULE th1 th2
    in
-   GEN t (DISCH (--`~^t`--) (MP (MP th3 th1) th2))
+   GEN t (DISCH (--`~^t`--) th3)
    end;
 
 val _ = save_thm("NOT_F", NOT_F);
@@ -768,9 +820,8 @@ val IMP_CLAUSE1 =
    let val t = --`t:bool`--
        val th1 = DISCH (--`T ==> ^t`--) (MP (ASSUME (--`T ==> ^t`--)) TRUTH)
        and th2 = DISCH t (DISCH (--`T`--) (ADD_ASSUM (--`T`--) (ASSUME t)))
-       and th3 = SPEC t (SPEC (--`T ==> ^t`--) IMP_ANTISYM_AX)
    in
-   GEN t (MP (MP th3 th1) th2)
+   GEN t (IMP_ANTISYM_RULE th1 th2)
    end;
 
 (*---------------------------------------------------------------------------
@@ -799,8 +850,7 @@ val IMP_CLAUSE4 =
        and th2 = SPEC (--`T ==> F`--) FALSITY
        and th3 = EQT_INTRO(DISCH (--`F`--) (ASSUME (--`F`--)))
    in
-   CONJ(MP (MP (SPEC (--`F`--)
-               (SPEC (--`T ==> F`--) IMP_ANTISYM_AX)) th1) th2) th3
+   CONJ(IMP_ANTISYM_RULE th1 th2) th3
    end;
 
 (*---------------------------------------------------------------------------
@@ -1039,10 +1089,7 @@ val COND_CLAUSE1 =
                      (MP (CONJUNCT1(ASSUME (--`((T=T) ==> (^x=^t1))/\
                                                ((T=F) ==> (^x=^t2))`--)))
                          (REFL (--`T`--)))
-     val th6 = MP (MP (SPEC (--`((T=T) ==> (^x=^t1))/\((T=F) ==> (^x=^t2))`--)
-                            (SPEC (--`^x=^t1`--) IMP_ANTISYM_AX))
-                      th4)
-                  th5
+     val th6 = IMP_ANTISYM_RULE th4 th5
      val th7 = TRANS th1 (SYM(SELECT_EQ x th6))
      val th8 = EQ_MP (SYM(BETA_CONV (--`(\^x.^x = ^t1) ^t1`--))) (REFL t1)
      val th9 = MP (SPEC t1 (SPEC (--`\^x.^x = ^t1`--) SELECT_AX)) th8
@@ -1077,11 +1124,7 @@ val COND_CLAUSE2 =
                        (MP (CONJUNCT2(ASSUME (--`((F=T) ==> (^x=^t1)) /\
                                                  ((F=F) ==> (^x=^t2))`--)))
                            (REFL (--`F`--)))
-       val th6 = MP (MP (SPEC (--`((F=T) ==> (^x=^t1)) /\
-                                  ((F=F) ==> (^x=^t2))`--)
-                              (SPEC (--`^x=^t2`--) IMP_ANTISYM_AX))
-                        th4)
-                    th5
+       val th6 = IMP_ANTISYM_RULE th4 th5
        val th7 = TRANS th1 (SYM(SELECT_EQ x th6))
        val th8 = EQ_MP (SYM(BETA_CONV (--`(\^x.^x = ^t2) ^t2`--)))
                        (REFL t2)
