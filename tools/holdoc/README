@@ -21,6 +21,12 @@ extractDatatypes                a helper Perl script to build .imn
                                 fields from Hol_datatype-defined
                                 datatypes.
 
+extractDefinitions              a helper Perl script to build .imn
+                                files from *Theory.sig files.  It
+                                identifies auxiliary functions from
+                                Define-defined constants.
+
+
 Source code:
 ~~~~~~~~~~~~
 
