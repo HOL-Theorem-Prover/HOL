@@ -68,12 +68,15 @@ reference:
 pdf:
 	pdflatex reference.tex
 
+ps:
+	dvips -f reference.dvi > reference.ps
+
 index:
 	${MAKEINDEX}  reference.idx
 
 all:
 	make clean; make tex; make reference; make index; make reference
-	make pdf
+	make pdf ps
 
 thmdoc:
 	(cd $(THMDIR)axioms;    make thmdoc) ;
