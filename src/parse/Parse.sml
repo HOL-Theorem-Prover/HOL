@@ -1342,7 +1342,12 @@ fun export_theorems_as_docfiles dirname thms = let
   end
 in
   app write_thm thms
-end
+end handle Io {function,name,...} =>
+           HOL_WARNING "Parse" "export_theorems_as_docfiles"
+                       ("Giving up on IO error: "^function^" : "^name)
+         | Fail s =>
+           HOL_WARNING "Parse" "export_theorems_as_docfiles"
+                       ("Giving up after error: "^s)
 
 (*---------------------------------------------------------------------------
      pp_element values that are brought across from term_grammar.

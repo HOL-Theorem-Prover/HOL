@@ -36,7 +36,7 @@
 (*                                                                           *)
 (*===========================================================================*)
 
-structure EmitML :> EmitML = 
+structure EmitML :> EmitML =
 struct
 
 open HolKernel boolSyntax Abbrev;
@@ -67,10 +67,10 @@ val dest_pair_hook = ref (fn _ => raise ERR "dest_pair" "undefined")
 val dest_pabs_hook = ref (fn _ => raise ERR "dest_pabs" "undefined")
 val dest_fail_hook = ref (fn _ => raise ERR "dest_fail" "undefined")
 val strip_let_hook = ref (fn _ => raise ERR "strip_let" "undefined")
-val list_mk_prod_hook = ref (fn [x] => x 
+val list_mk_prod_hook = ref (fn [x] => x
                               | _ => raise ERR "list_mk_prod" "undefined")
 
-fun strip_cons M = 
+fun strip_cons M =
     case total (!dest_cons_hook) M
      of SOME (h,t) => h:: strip_cons t
       | NONE => [M];
@@ -90,16 +90,16 @@ end
 
 fun partitions P [] = []
   | partitions P (h::t) =
-     case partition (P h) t 
+     case partition (P h) t
       of (L1,L2) => (h::L1) :: partitions P L2;
 
-fun triml s = 
+fun triml s =
   if String.sub(s,0) = #" "
   then String.substring(s,1,String.size(s)-1)
   else s;
 
-fun full_name openthys (s1,s2,_) = 
-    if mem s1 openthys then s2 else 
+fun full_name openthys (s1,s2,_) =
+    if mem s1 openthys then s2 else
     if s1="" then s2 else s1^"ML."^triml s2;
 
 fun const_map openthys c = full_name openthys (ConstMapML.apply c);
@@ -123,7 +123,7 @@ val maxprec = 9999;
 (* lists, and case expressions.                                              *)
 (*---------------------------------------------------------------------------*)
 
-fun term_to_ML openthys ppstrm = 
+fun term_to_ML openthys ppstrm =
  let open Portable
      val {add_break,add_newline,
           add_string,begin_block,end_block,...} = with_ppstream ppstrm
@@ -148,38 +148,38 @@ fun term_to_ML openthys ppstrm =
      if !is_one_hook tm  then pp_one tm else
      if TypeBase.is_case tm then pp_case i (TypeBase.strip_case tm) else
      if is_const tm then pp_const i tm else
-     if is_comb tm then pp_comb i tm 
-     else raise ERR "term_to_ML" 
+     if is_comb tm then pp_comb i tm
+     else raise ERR "term_to_ML"
                     ("Unknown syntax with term: "^Parse.term_to_string tm)
-  and pp_cond i tm = 
+  and pp_cond i tm =
          let val (b,a1,a2) = dest_cond tm
          in begin_block CONSISTENT 0;
             lparen i 5000;
             begin_block INCONSISTENT 2;
-            add_string"if "; 
-            begin_block CONSISTENT 0; pp minprec b; end_block(); 
+            add_string"if ";
+            begin_block CONSISTENT 0; pp minprec b; end_block();
             add_break(1,0);
-            add_string"then "; 
-            begin_block CONSISTENT 0; pp minprec a1; end_block(); 
+            add_string"then ";
+            begin_block CONSISTENT 0; pp minprec a1; end_block();
             add_break(1,0);
             add_string"else ";
-            begin_block CONSISTENT 0; pp minprec a2; end_block(); 
+            begin_block CONSISTENT 0; pp minprec a2; end_block();
             end_block();
             rparen i 5000;
             end_block()
          end
-  and pp_num_literal tm = 
+  and pp_num_literal tm =
          let val s = Arbnum.toString(Literal.dest_numeral tm)
          in begin_block CONSISTENT 0
           ; add_string"("; add_break(0,0)
-          ; add_string "numML.fromString"   
+          ; add_string "numML.fromString"
           ; add_break(0,0)
           ; add_string (mlquote s)
           ; add_break(0,0)
           ; add_string")"
           ; end_block()
          end
-  and pp_int_literal tm = 
+  and pp_int_literal tm =
          let val s = Arbint.toString(!dest_int_literal_hook tm)
          in begin_block CONSISTENT 0
           ; add_string"("; add_break(0,0)
@@ -191,19 +191,19 @@ fun term_to_ML openthys ppstrm =
           ; end_block()
          end
   and pp_string tm = add_string (mlquote (!dest_string_literal_hook tm))
-  and pp_list tm = 
+  and pp_list tm =
        let val els = !dest_list_hook tm
        in begin_block CONSISTENT 0
         ; add_string "["
         ; begin_block INCONSISTENT 0
         ; pr_list (pp minprec)
-                  (fn () => add_string",") 
+                  (fn () => add_string",")
                   (fn () => add_break(0,0)) els
         ; end_block()
         ; add_string "]"
         ; end_block()
        end
-  and pp_binop i tm = 
+  and pp_binop i tm =
       let val (c,[t1,t2]) = strip_comb tm
           val j = prec_of c
       in begin_block CONSISTENT 0
@@ -218,20 +218,20 @@ fun term_to_ML openthys ppstrm =
         ; rparen i j
         ; end_block()
       end
-  and pp_cons i tm = 
+  and pp_cons i tm =
       let val alist = strip_cons tm
           val j = CONS_PREC
       in begin_block CONSISTENT 0
         ; lparen i j
         ; begin_block INCONSISTENT 0
-        ; pr_list (pp j) 
-                  (fn () => add_string "::") 
+        ; pr_list (pp j)
+                  (fn () => add_string "::")
                   (fn () => add_break(0,0)) alist
         ; end_block()
         ; rparen i j
         ; end_block()
       end
-  and pp_pair i tm = 
+  and pp_pair i tm =
       let val (t1,t2) = !dest_pair_hook tm
           val j = COMMA_PREC
       in begin_block CONSISTENT 0
@@ -241,7 +241,7 @@ fun term_to_ML openthys ppstrm =
         ; add_string ","
         ; pp j t2
         ; end_block()
-        ; rparen maxprec i 
+        ; rparen maxprec i
         ; end_block()
       end
   and pp_lets i tm = (* a sequence of lets *)
@@ -286,7 +286,7 @@ fun term_to_ML openthys ppstrm =
         ; end_block()
         ; add_break(1,0)
         ; begin_block CONSISTENT 1
-        ; add_string"of " 
+        ; add_string"of "
         ; pp_case_clause (hd cases)
         ; add_break(1,0)
         ; pr_list (fn cl => (add_string "| "; pp_case_clause cl))
@@ -320,33 +320,33 @@ fun term_to_ML openthys ppstrm =
        ; rparen i maxprec)
 
   and pp_var tm = add_string(fst(dest_var tm))
-  and pp_const i tm = 
-      if same_const tm boolSyntax.conjunction 
+  and pp_const i tm =
+      if same_const tm boolSyntax.conjunction
          then pp_abs i andalso_tm else
        if same_const tm boolSyntax.disjunction
          then pp_abs i orelse_tm
        else add_string (const_map tm)
   and pp_one tm = add_string "()"
   and pp_nil tm = add_string "[]"
-  and pp_comb i tm = 
+  and pp_comb i tm =
        let val (f,args) = strip_comb tm
        in begin_block CONSISTENT 0
         ; lparen i maxprec
-        ; if TypeBase.is_constructor f 
-            then 
+        ; if TypeBase.is_constructor f
+            then
               (pp maxprec f; add_string "(";
-               pr_list (pp minprec) 
-                       (fn () => add_string ",") 
+               pr_list (pp minprec)
+                       (fn () => add_string ",")
                        (fn () => add_break(0,0)) args;
                add_string ")")
             else (begin_block INCONSISTENT 2;
-                  pr_list (pp maxprec) (fn () => ()) 
+                  pr_list (pp maxprec) (fn () => ())
                           (fn () => add_break(1,0)) (f::args);
                   end_block())
         ; rparen i maxprec
         ; end_block()
        end
-  and pp_abs i tm = 
+  and pp_abs i tm =
        let val (vstruct,body) = !dest_pabs_hook tm
        in lparen i 5000
         ; add_string "fn"
@@ -371,7 +371,7 @@ fun same_fn eq1 eq2 = (fst(strip_comb eq1) = fst(strip_comb eq2));
 (* Print a function definition as ML, i.e., fun f ... = ...                  *)
 (*---------------------------------------------------------------------------*)
 
-fun pp_defn_as_ML openthys ppstrm = 
+fun pp_defn_as_ML openthys ppstrm =
  let open Portable
      val {add_break,add_newline,
           add_string,begin_block,end_block,...} = with_ppstream ppstrm
@@ -395,7 +395,7 @@ fun pp_defn_as_ML openthys ppstrm =
          ; add_newline()
          ; case tl els
             of [] => ()
-             | els' => 
+             | els' =>
                  (pr_list (fn c => (add_string "| "; pp_clause c))
                     (fn () => ())
                     (fn () => add_newline()) els';
@@ -403,16 +403,16 @@ fun pp_defn_as_ML openthys ppstrm =
          ; end_block()
        end
      fun pp tm =
-       let val eqns = map (snd o strip_forall) 
+       let val eqns = map (snd o strip_forall)
                           (strip_conj (snd (strip_forall tm)))
            val clauses = partitions same_fn eqns (* term list list *)
            val clauses' = ("fun",hd clauses)::map (pair "and") (tl clauses)
        in begin_block CONSISTENT 0
-        ; pr_list pp_clauses (fn () => ()) 
+        ; pr_list pp_clauses (fn () => ())
                   (fn () => (add_newline(); add_newline())) clauses'
         ; end_block()
        end
- in 
+ in
     pp
  end;
 
@@ -427,29 +427,29 @@ local open type_grammar HOLgrammars
         | problem {opname="prod", parse_string="#"} = true
         | problem {opname="fmap", parse_string="|->"} = true
         | problem otherwise = false
-      fun elim (r as (i,INFIX(list,a))) A = 
+      fun elim (r as (i,INFIX(list,a))) A =
             let val list' = gather (not o problem) list
             in if list' = list then (r::A)
                else if null list' then A else (i,INFIX(list',a))::A
             end
         | elim (r as (i,SUFFIX list)) A = r::A
-      fun add_rule (i,SUFFIX strings) grm = itlist (C new_tyop) strings grm 
-        | add_rule (i,INFIX (list,assoc)) grm = 
-           itlist (fn {opname,parse_string} => fn grm' => 
+      fun add_rule (i,SUFFIX strings) grm = itlist (C new_tyop) strings grm
+        | add_rule (i,INFIX (list,assoc)) grm =
+           itlist (fn {opname,parse_string} => fn grm' =>
                       new_binary_tyop grm'
                         {opname=opname,precedence=i,
                          infix_form=SOME parse_string,associativity=assoc})
               list grm
 in
-fun adjust_tygram tygram = 
+fun adjust_tygram tygram =
  let val rules' = itlist elim (rules tygram) []
-     val tygram' = 
-          itlist add_rule rules' 
+     val tygram' =
+          itlist add_rule rules'
               (add_rule (70,INFIX([{opname="prod",parse_string = "*"}],NONASSOC))
                          empty_grammar)
      val abbrevs = Binarymap.listItems (abbreviations tygram)
      val tygram'' = itlist (C new_abbreviation) abbrevs tygram'
- in 
+ in
     tygram''
  end
 end;
@@ -464,7 +464,7 @@ fun pp_type_as_ML ppstrm ty =
    prim_pp_type_as_ML (Parse.type_grammar()) (Parse.term_grammar())
                       ppstrm ty ;
 
-datatype elem 
+datatype elem
     = DEFN of thm
     | DEFN_NOSIG of thm
     | DATATYPE of ParseDatatype.AST list
@@ -484,15 +484,15 @@ local open ParseDatatype
 in
 fun replace f (v as dVartype _) = v
   | replace f (aq as dAQ _)     = aq
-  | replace f (dTyop{Tyop,Thy,Args}) = 
+  | replace f (dTyop{Tyop,Thy,Args}) =
       f Tyop handle _ => dTyop{Tyop=Tyop,Thy=Thy,Args=map (replace f) Args}
 
 fun replaceForm f (Constructors alist) =
                    Constructors (map (I##map (replace f)) alist)
   | replaceForm f other = other
 
-fun pretype_of ty = 
-   dVartype(dest_vartype ty) 
+fun pretype_of ty =
+   dVartype(dest_vartype ty)
    handle _ =>
      let val (s,args) = dest_type ty
      in dTyop{Tyop=s,Thy=NONE,Args=map pretype_of args}
@@ -509,17 +509,17 @@ end;
 (* order in the first argument.                                              *)
 (*---------------------------------------------------------------------------*)
 
-fun repair_type_decls (DATATYPE decls) = 
+fun repair_type_decls (DATATYPE decls) =
      let val type_names = map fst decls
          val tyax = TypeBase.axiom_of (hd type_names)
          val newtypes = Prim_rec.doms_of_tyaxiom tyax
          val tyvars = map dest_vartype (snd (dest_type (hd newtypes)))
          val alist = map (fn x => (fst(dest_type x),pretype_of x)) newtypes
          fun alist_fn name = snd (valOf (assoc1 name alist))
-     in 
+     in
         (tyvars, map (I##replaceForm alist_fn) decls)
      end
-  | repair_type_decls (EQDATATYPE (tyvars,decls)) = 
+  | repair_type_decls (EQDATATYPE (tyvars,decls)) =
      let open ParseDatatype
          val tyvarsl = map dVartype tyvars
          val tynames = map fst decls
@@ -533,27 +533,27 @@ fun repair_type_decls (DATATYPE decls) =
   | repair_type_decls arg = raise ERR "repair_type_decls" "unexpected input";
 
 
-fun pp_datatype_as_ML ppstrm (tyvars,decls) = 
+fun pp_datatype_as_ML ppstrm (tyvars,decls) =
  let open Portable ParseDatatype
      val {add_break,add_newline,
           add_string,begin_block,end_block,...} = with_ppstream ppstrm
      val ppty = pp_type_as_ML ppstrm
      fun pp_tyvars [] = ()
        | pp_tyvars [v] = add_string v
-       | pp_tyvars vlist = 
+       | pp_tyvars vlist =
           (begin_block CONSISTENT 0;
            add_string"(";
            pr_list add_string (fn () => add_string",") (fn ()=>()) vlist;
            add_string")";
            end_block())
      fun pp_clause r clause =
-       (if !r then (add_string "= "; r:=false) else add_string "| "; 
+       (if !r then (add_string "= "; r:=false) else add_string "| ";
         case clause
          of (con,[]) => add_string con
           | (con,args) =>
-              (begin_block INCONSISTENT 0; 
+              (begin_block INCONSISTENT 0;
                  begin_block CONSISTENT 0; add_string con; add_string " of ";
-                 end_block(); 
+                 end_block();
                begin_block INCONSISTENT 0;
                ppty (!list_mk_prod_hook(map ParseDatatype.pretypeToType args));
                end_block(); end_block()))
@@ -562,7 +562,7 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
           begin_block CONSISTENT 0;
             if !r then (add_string "datatype"; r:=false) else ();
             add_break(1,0); pp_tyvars tyvars; add_break(1,0);
-            add_string name; 
+            add_string name;
           end_block();
           add_break(1,0);
           begin_block CONSISTENT 0;
@@ -570,7 +570,7 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
                   (fn () => ())
                   (fn () => add_break(1,0)) clauselist;
           end_block(); end_block())
-       | pp_decl (tyvars,_) (name,Record flist) = 
+       | pp_decl (tyvars,_) (name,Record flist) =
            let open ParseDatatype
                val fields = map (I##pretypeToType) flist
                fun pp_field (s,ty) =
@@ -589,10 +589,10 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
               add_string"}";
               end_block()
            end
- in 
+ in
     begin_block CONSISTENT 0
   ; pr_list (pp_decl (tyvars,ref true))
-            (fn () => (add_newline(); add_string "and")) 
+            (fn () => (add_newline(); add_string "and"))
             add_newline
             decls
   ; end_block()
@@ -613,18 +613,18 @@ fun ML s = s^"ML";
 
 fun pp_sig strm (s,elems) =
  let open Portable
-    val {add_break,add_newline, add_string, 
+    val {add_break,add_newline, add_string,
          begin_block,end_block,flush_ppstream,...} = with_ppstream strm
     val ppty = pp_type_as_ML strm
     val pp_datatype = pp_datatype_as_ML strm
-    fun pp_eqdatatype b (tyvars,astl) = 
+    fun pp_eqdatatype b (tyvars,astl) =
      let val tynames = map fst astl
          val tys = map (fn s => (tyvars,s)) tynames
-         fun pp_tydec (tyvars,s) = 
+         fun pp_tydec (tyvars,s) =
            (begin_block CONSISTENT 0;
              add_string (if b then "eqtype " else "type ");
              if null tyvars then add_string s else
-             if List.length tyvars = 1 
+             if List.length tyvars = 1
               then (add_string (hd tyvars); add_string(" "^s))
               else (add_string "(";
                     pr_list add_string (fn () => add_string",")
@@ -645,45 +645,45 @@ fun pp_sig strm (s,elems) =
     fun pp_el (DATATYPE astl) = pp_datatype (repair_type_decls (DATATYPE astl))
       | pp_el (EQDATATYPE (tyvarsl,astl)) = pp_eqdatatype true (tyvarsl,astl)
       | pp_el (ABSDATATYPE (tyvarsl,astl)) = pp_eqdatatype false (tyvarsl,astl)
-      | pp_el (DEFN thm) = 
+      | pp_el (DEFN thm) =
             pr_list pp_valdec (fn () => ()) add_newline (consts_of_def thm)
       | pp_el (MLSIG s) = add_string s
       | pp_el (DEFN_NOSIG thm) = ()
       | pp_el (MLSTRUCT s) = ()
       | pp_el (OPEN slist) = ()
- in 
+ in
    begin_block CONSISTENT 0;
    add_string ("signature "^ML s^" = "); add_newline();
    begin_block CONSISTENT 2;
    add_string"sig"; add_newline();
    begin_block CONSISTENT 0;
-   pr_list pp_el (fn () => ()) add_newline 
-       (filter (fn (DEFN_NOSIG _) => false 
+   pr_list pp_el (fn () => ()) add_newline
+       (filter (fn (DEFN_NOSIG _) => false
                  | (OPEN _) => false
                  | (MLSTRUCT _) => false
                  | otherwise => true) elems);
-   end_block(); end_block(); 
+   end_block(); end_block();
    add_newline();
    add_string"end"; add_newline();
    end_block();
    flush_ppstream()
- end 
+ end
  handle e => raise wrap_exn "EmitML" "pp_sig" e;
 
-val MLinfixes = 
+val MLinfixes =
   String.fields Char.isSpace "* / div mod + - ^ @ <> > < >= <= := o before";
 
 fun pp_struct strm (s,elems,cnames) =
  let open Portable
-    val {add_break,add_newline, add_string, 
+    val {add_break,add_newline, add_string,
          begin_block,end_block,flush_ppstream,...} = with_ppstream strm
     val openthys = ref []
     fun opens() = !openthys
     val pp_datatype = pp_datatype_as_ML strm
     fun pp_el (DATATYPE astl) = pp_datatype (repair_type_decls (DATATYPE astl))
-      | pp_el (EQDATATYPE (tyvarsl,astl)) = 
+      | pp_el (EQDATATYPE (tyvarsl,astl)) =
            pp_datatype (repair_type_decls (EQDATATYPE(tyvarsl,astl)))
-      | pp_el (ABSDATATYPE (tyvarsl,astl)) = 
+      | pp_el (ABSDATATYPE (tyvarsl,astl)) =
            pp_datatype (repair_type_decls (ABSDATATYPE(tyvarsl,astl)))
       | pp_el (DEFN thm) = pp_defn_as_ML (s::opens()) strm (concl thm)
       | pp_el (DEFN_NOSIG thm) = pp_el (DEFN thm)
@@ -691,13 +691,13 @@ fun pp_struct strm (s,elems,cnames) =
       | pp_el (MLSTRUCT s) = add_string s
       | pp_el (OPEN slist) = (openthys := union slist (!openthys);
                               begin_block CONSISTENT 0;
-                              add_string ("open "); 
+                              add_string ("open ");
                               begin_block INCONSISTENT 6;
-                              pr_list (add_string o ML) 
+                              pr_list (add_string o ML)
                                  (fn ()=>()) (fn () => add_break(1,0)) slist;
                               add_string ";" ;
                               end_block();end_block())
- in 
+ in
    begin_block CONSISTENT 0;
    add_string ("structure "^ML s^" :> "^ML s^" ="); add_newline();
    begin_block CONSISTENT 2;
@@ -705,19 +705,19 @@ fun pp_struct strm (s,elems,cnames) =
    begin_block CONSISTENT 0;
    begin_block INCONSISTENT 7;
       add_string"nonfix ";
-      pr_list add_string (fn()=>()) (fn()=> add_break(1,0)) 
+      pr_list add_string (fn()=>()) (fn()=> add_break(1,0))
               (union cnames MLinfixes);
       add_string ";";
-     end_block(); 
+     end_block();
    add_newline(); add_newline();
-   pr_list pp_el (fn () =>()) add_newline 
+   pr_list pp_el (fn () =>()) add_newline
           (filter (fn (MLSIG _) => false | otherwise => true) elems);
-   end_block(); end_block(); 
+   end_block(); end_block();
    add_newline();
    add_string"end"; add_newline();
    end_block();
    flush_ppstream()
- end 
+ end
  handle e => raise wrap_exn "EmitML" "pp_struct" e;
 
 
@@ -734,26 +734,26 @@ fun pp_struct strm (s,elems,cnames) =
 (* the type variables in the polymorphic type get the eqtype attribute.      *)
 (*---------------------------------------------------------------------------*)
 
-fun is_eqtyvar ty = 
+fun is_eqtyvar ty =
   (case String.explode (dest_vartype ty)
     of #"'" :: #"'" ::rst => true
      | otherwise => false)
    handle HOL_ERR _ => raise ERR "is_eqtyvar" "not a type variable";
 
-fun tyvar_to_eqtyvar ty = 
+fun tyvar_to_eqtyvar ty =
  let val tyname = dest_vartype ty
- in 
+ in
   case String.explode tyname
    of #"'" :: #"'" :: _ => raise ERR "tyvar_to_eqtyvar" "already an eqtyvar"
     | #"'" :: _ => mk_vartype ("'"^tyname)
     | otherwise => raise ERR "tyvar_to_eqtyvar" "unexpected syntax"
  end;
 
-fun const_eqtyvars genty c2 = 
+fun const_eqtyvars genty c2 =
  let val bindings = match_type genty (type_of c2)
      val bindings' = Lib.filter (is_eqtyvar o #redex) bindings
      val bindings'' = Lib.filter (polymorphic o #residue) bindings'
- in 
+ in
     Type.type_varsl (map #residue bindings'')
   end;
 
@@ -763,28 +763,28 @@ fun generic_const thy name = Term.prim_mk_const{Thy=thy,Name=name};
 (* Gets possibly eq-style type from const map.                               *)
 (*---------------------------------------------------------------------------*)
 
-fun generic_type c = 
+fun generic_type c =
    #3 (ConstMapML.apply c) handle HOL_ERR _ => type_of c;
 
-fun term_eqtyvars tm = 
+fun term_eqtyvars tm =
  case dest_term tm
   of CONST _     => const_eqtyvars (generic_type tm) tm
    | VAR _       => []
    | COMB(t1,t2) => union (term_eqtyvars t1) (term_eqtyvars t2)
    | LAMB(_,tm)  => term_eqtyvars tm;
- 
+
 (*---------------------------------------------------------------------------*)
 (* Translate the type of a defined constant to reflect any uses of equality  *)
 (* in the body of the definition.                                            *)
 (*---------------------------------------------------------------------------*)
 
-fun munge_def_type def = 
- let val (L,R) = unzip (map (dest_eq o snd o strip_forall) 
+fun munge_def_type def =
+ let val (L,R) = unzip (map (dest_eq o snd o strip_forall)
                             (strip_conj (snd (strip_forall (concl def)))))
      val clist = op_mk_set same_const (map (fst o strip_comb) L)
      val tainted = U (map term_eqtyvars R)
      val theta = map (fn tyv => tyv |-> tyvar_to_eqtyvar tyv) tainted
- in 
+ in
    map (inst theta) clist
  end
  handle e => raise wrap_exn "EmitML" "munge_def_type" e;
@@ -797,7 +797,7 @@ local open ParseDatatype
 in
 fun constructors [] = []
   | constructors ((s,Constructors clist)::rst) = clist@constructors rst
-  | constructors ((s,Record _)::rst) = raise ERR "constructors" 
+  | constructors ((s,Record _)::rst) = raise ERR "constructors"
                                                  "records not yet handled"
 end;
 
@@ -807,29 +807,29 @@ end;
 (* been defined in an ancestor theory.                                       *)
 (*---------------------------------------------------------------------------*)
 
-fun add s c = 
+fun add s c =
    let val {Name,Thy,Ty} = dest_thy_const c
    in ConstMapML.prim_insert(c,(s,Name,Ty))
    end;
 
 fun install_consts _ [] = []
   | install_consts s (DEFN_NOSIG thm::rst) = install_consts s (DEFN thm::rst)
-  | install_consts s (DEFN thm::rst) = 
-       let val clist = munge_def_type thm 
+  | install_consts s (DEFN thm::rst) =
+       let val clist = munge_def_type thm
            val _ = List.app (add s) clist
        in clist @ install_consts s rst
        end
-  | install_consts s (DATATYPE ty::rst) = 
+  | install_consts s (DATATYPE ty::rst) =
       let val consts = U (map (Term.decls o fst) (constructors ty))
           val _ = List.app (add s) consts
       in consts @ install_consts s rst
       end
-  | install_consts s (EQDATATYPE (tyvars,ty)::rst) = 
+  | install_consts s (EQDATATYPE (tyvars,ty)::rst) =
       let val consts = U (map (Term.decls o fst) (constructors ty))
           val _ = List.app (add s) consts
       in consts @ install_consts s rst
       end
-  | install_consts s (ABSDATATYPE (tyvars,ty)::rst) = 
+  | install_consts s (ABSDATATYPE (tyvars,ty)::rst) =
      install_consts s (EQDATATYPE (tyvars,ty)::rst)
   | install_consts s (other::rst) = install_consts s rst
 
@@ -840,7 +840,7 @@ fun install_consts _ [] = []
 (*---------------------------------------------------------------------------*)
 
 fun mk_file_ppstream file =
-  let open Portable 
+  let open Portable
       val ostrm = TextIO.openOut file
   in (ostrm,
       mk_ppstream{consumer = fn s => TextIO.output(ostrm,s),
@@ -860,7 +860,7 @@ fun emit_adjoin_call thy consts =
      fun listify slist = "["^String.concat (commafy slist)^"]"
      fun paren2 (a,b) = "("^a^","^b^")"
      fun paren3 (a,(b,c)) = "("^listify a^","^b^","^c^")"
- in 
+ in
   Theory.adjoin_to_theory
   {sig_ps = NONE,
    struct_ps = SOME (fn ppstrm =>
@@ -868,16 +868,16 @@ fun emit_adjoin_call thy consts =
         val S = add_string ppstrm
         fun NL() = add_newline ppstrm
         val BR = add_break ppstrm
-    in 
+    in
      S "val _ = "; NL();
      S "   let fun foo thy c = "; NL();
      S "         let val {Name,Ty,...} = Term.dest_thy_const c"; NL();
      S "         in (c,(thy,Name,Ty))"; NL();
      S "         end"; NL();
      S "       val clist = map ConstMapML.iconst"; NL();
-     S"         ["; 
+     S"         [";
      begin_block ppstrm INCONSISTENT 0;
-     Portable.pr_list S (fn () => S",") 
+     Portable.pr_list S (fn () => S",")
                         (fn () => BR(1,0))
           (map (paren3 o (map Lib.quote##Lib.mlquote##Lib.mlquote)) sclist);
      end_block ppstrm;
@@ -914,7 +914,10 @@ fun exportML (s,elems) =
    )
    handle e => (List.app TextIO.closeOut [sigStrm, structStrm];
                 raise wrap_exn "EmitML" "exportML" e)
-  end
-  handle e => Raise e;
+  end handle Io _ =>
+             HOL_WARNING "EmitML" "exportML"
+                         "I/O error prevented ML export to distribution's \
+                         \theoryML directory"
+           | e => Raise e;
 
-end
+end (* struct *)
