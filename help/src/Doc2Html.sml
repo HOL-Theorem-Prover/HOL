@@ -116,41 +116,27 @@ fun html (name,sectionl) ostrm =
      back_matter ("http://www.cl.cam.ac.uk/Research/HVG/FTP/", "Kananaskis 1")
   end;
 
-
-fun trans htmldir docfile =
- case Path.splitBaseExt docfile
-  of {base,ext=SOME "doc"} =>
-      (let val file = Path.file base
-         val outfile = Path.joinBaseExt
-                         {base=Path.concat(htmldir,file),ext=SOME"html"}
-         val ostrm = TextIO.openOut outfile
-       in
-          html (Path.file base,parse_file docfile) ostrm
-        ; TextIO.closeOut ostrm
-       end
-       handle e => print ("Failed to translate file: "
-                    ^docfile^"---"^exnMessage e^"\n"))
-   | otherwise => ()
-
-
+fun trans htmldir docdir docname = let
+  val docfile = Path.joinBaseExt{base = Path.concat(docdir, docname),
+                                 ext = SOME "doc"}
+  val outfile = Path.joinBaseExt{base = Path.concat(htmldir, docname),
+                                 ext = SOME "html"}
+  val ostrm = TextIO.openOut outfile
+in
+    html (docname, parse_file docfile) ostrm
+  ; TextIO.closeOut ostrm
+end
 
 fun docdir_to_htmldir docdir htmldir =
  let open FileSys
-     val dstrm = openDir docdir
-     val trans_html = trans htmldir
-     fun loop () =
-        case readDir dstrm
-         of NONE => ()
-          | SOME docfile =>
-             let val fulldocfile = Path.concat (docdir,docfile)
-             in
-                 (* print ("Translating "^fulldocfile^"\n"); *)
-                 trans_html fulldocfile;
-                 loop()
-             end
- in loop()
-  ; closeDir dstrm
- end;
+     val docfiles = ParseDoc.find_docfiles docdir
+     val (tick, finish) = Flash.initialise ("Directory "^docdir^": ",
+                                            Binaryset.numItems docfiles)
+ in
+   Binaryset.app (fn d => (trans htmldir docdir d; tick())) docfiles;
+   finish();
+   Process.exit Process.success
+ end
 
 val _ =
     case CommandLine.arguments ()
