@@ -207,4 +207,14 @@ the output.
 Note that ECHO / NOECHO are only respected in MNG mode.
 
 
+One for MNG source:
+
+%(*[ SHOWRULE select.4 ]*)
+
+embeds the command \showrule{\selectXD} in the source at that point.
+This is useful for including rules.  I've shown the TeX form of the
+directive, but of course the leading % may be omitted.
+
+
  --==[ THE END ]==--
+
