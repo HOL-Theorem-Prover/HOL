@@ -1,4 +1,3 @@
-(* -*-sml-*- *)
 structure qbuf :> qbuf =
 struct
 
@@ -18,10 +17,16 @@ struct
    ii)    fld1 (lexbuf) is NONE iff current \in {BT_AQ, BT_EOI}
   *)
 
-  type 'a qbuf = ((LexBuffer.lexbuf * base_lexer.extrastate) option
+  type 'a lextok = base_lexer.extrastate
+                 -> (unit, char list, int) base_lexer.lextype
+                 -> ('a base_token located,
+                     char list * locn_point,
+                     'a base_token located) base_lexer.lextype;
+
+  type 'a qbuf = (('a lextok LexBuffer.lexbuf * base_lexer.extrastate) option
                * 'a base_token located
                * int
-               * 'a frag list) ref
+               * 'a frag list) ref;
 
   fun separate_out_comments s = let
     (* take s and return a s hopefully as much like it as possible, but

@@ -4,6 +4,13 @@
 
   open LexBuffer base_tokens locn
 
+  datatype ('a,'b,'c) lextype =
+    Base_token of 'a
+  | String of 'b
+  | Comment of 'c;
+
+  fun magic x = x;
+
   type extrastate = (int * int * int * (int * int) option) ref
   (* mutable state argument to each rule is st=(nf,r,i,rcopt), where:
        - nf  is the number of the fragment being parsed
@@ -11,11 +18,6 @@
        - i   is the index of the first char on the current row
        - rcopt is the absolute line and character of the start of this fragment, if known
   *)
-
-  datatype ('a,'b,'c) lextype =
-    Base_token of 'a
-  | String of 'b
-  | Comment of 'c;
 
   fun mkLoc (st as ref (_,_,_,rcopt)) s e
     = case rcopt of
@@ -44,17 +46,23 @@
                         valOf (Int.fromString(Substring.string sc)) - 1));
            parser () st)
       end
-}
-{
-  fun base_token lexbuf st =
-    (fn Base_token x => x) (makeLex lexbuf () st (Base_token ()));
 
-  fun comment lexbuf st n =
-    (fn Comment x => x) (makeLex lexbuf () st (Comment n));
 
-  end
+(* MOVE FROM HERE TO THE END OF THE FILE! *)
+
+val base_token = fn lexbuf => fn st =>
+  (fn Base_token x => x)
+  (base_token lexbuf st (Base_token ()));
+
+val comment = fn lexbuf => fn st => fn n =>
+  (fn Comment x => x)
+  (comment lexbuf st (Comment n));
+
+end
+
+(* MOVE UP TO HERE TO THE END OF THE FILE! *)
+
 }
-{}
 
 let alpha = [ `A` - `Z` `a` - `z` `_` `'` ]
 let numeric = [ `0` - `9` ]
@@ -76,7 +84,7 @@ let locpragma = "(*#loc" space+ numeric* space+ numeric* space* "*)"
 rule base_token =
    parse
 
-   ident `$` anysymb  { fn st => fn Base_token () =>
+   ident `$` (anysymb|numeric+)  { fn st => fn Base_token () =>
      let val l = String.tokens (fn c => c = #"$") (getLexeme ())
      in Base_token (BT_QIdent (hd l, hd (tl l)),getLoc st lexbuf)
      end }
@@ -140,12 +148,6 @@ and comment =
  | newline { fn st as ref (nf,r,i,rcopt) => fn l =>
              (st := (nf,r+1,getLexemeEnd (),rcopt); comment () st l) }
  | _       { comment () }
-
-and main =
-  parse
-  _ { fn st => (fn l as Comment _ => comment () st l
-                 | l as String _ => string () st l
-                 | l as Base_token _ => base_token () st l)}
 ;
 
 (* Local variables: *)
