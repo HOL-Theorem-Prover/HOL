@@ -162,7 +162,7 @@ val EQUIV_REFL_SYM_TRANS = store_thm
     THEN REPEAT CONJ_TAC
     THEN REPEAT GEN_TAC
     THENL (* 4 subgoals *)
-      [ 
+      [
         PURE_ASM_REWRITE_TAC[]
         THEN REFL_TAC,
 
@@ -529,8 +529,6 @@ val PAIR_QUOTIENT = store_thm
 
 
 (* for SUM of ABS / REP functions, use infix ++, defined here: *)
-
-val _ = Lib.try add_infix("++", 450, HOLgrammars.RIGHT)
 
 val SUM_MAP_def = xDefine "SUM_MAP"
        `(($++ f g) (INL (a:'a)) = INL ((f a):'c)) /\
@@ -2672,7 +2670,7 @@ val OPTION_MAP_PRS = store_thm
    ("OPTION_MAP_PRS",
     (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
         !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
-         !a f. OPTION_MAP f a = 
+         !a f. OPTION_MAP f a =
                OPTION_MAP abs2
                     (OPTION_MAP ((abs1 --> rep2) f) (OPTION_MAP rep1 a))`--),
     REPEAT (REPEAT GEN_TAC THEN DISCH_TAC)
@@ -3242,11 +3240,11 @@ val DISJOINT_RSP = store_thm
     THEN AP_TERM_TAC
     THEN MP_TAC (SPEC_ALL INTER_RSP)
     THEN ASM_REWRITE_TAC[]
-    THEN 
-    THEN 
-    THEN 
+    THEN
+    THEN
+    THEN
     THEN IMP_RES_THEN MATCH_MP_TAC INTER_RSP
-    THEN 
+    THEN
     THEN REWRITE_TAC[EXTENSION,NOT_IN_EMPTY,IN_INTER]
     THEN REWRITE_TAC[DE_MORGAN_THM]
     THEN EQ_TAC
