@@ -119,13 +119,12 @@ val eqn2 = Q.prove
  ---------------------------------------------------------------------------*)
 
 val (N_eqn, N_ind) = Defn.tprove(N_defn,
-WF_REL_TAC N_defn `measure \x. 101 - x` THENL
- [(* nested TC *)
-  RW_TAC bool_ss [GSYM Nine1_def', lem]
-   THEN measureInduct_on `(\m. 101 - m) x`
-   THEN RW_TAC bool_ss [] 
-   THEN IMP_RES_THEN (fn th => RULE_ASSUM_TAC (REWRITE_RULE [th])) lem
-   THEN Cases_on `x+11 > 100` THENL
+WF_REL_TAC N_defn `measure \x. 101 - x`  (* non-nested TC proved here *)
+  THEN RW_TAC bool_ss [GSYM Nine1_def', lem]
+  THEN measureInduct_on `(\m. 101 - m) x`
+  THEN RW_TAC bool_ss [] 
+  THEN IMP_RES_THEN (fn th => RULE_ASSUM_TAC (REWRITE_RULE [th])) lem
+  THEN Cases_on `x+11 > 100` THENL
    [RW_TAC arith_ss [eqn1],
     `x+11 < Nine1((x+11)+11)`  by PROVE_TAC [ARITH `x<x+11`]            THEN
     `x < Nine1((x+11)+11) -11` by PROVE_TAC [ARITH `x+y < z = x < z-y`] THEN
@@ -137,9 +136,8 @@ WF_REL_TAC N_defn `measure \x. 101 - x` THENL
         THEN PROVE_TAC[ARITH`x>100 ==> x-11<x-10`,arithmeticTheory.LESS_TRANS],
       RES_TAC 
        THEN IMP_RES_THEN SUBST_ALL_TAC (ARITH`w+11<y ==> ((y-11)+11 = y)`)
-       THEN PROVE_TAC [eqn2,arithmeticTheory.LESS_TRANS]]],
-  (* non-nested TC *)
-  ARITH_TAC]);
+       THEN PROVE_TAC [eqn2,arithmeticTheory.LESS_TRANS]]]);
+ 
 
 
 (*---------------------------------------------------------------------------

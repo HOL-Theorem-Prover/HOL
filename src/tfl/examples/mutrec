@@ -58,7 +58,7 @@ val fringe_fns_def =
 val Fringe_def = 
  Defn.Hol_defn "Fringe"
     `(Fringe (Node v []) = [v]) /\
-     (Fringe (Node v l)  = FLAT (MAP (\lt. Fringe lt) l))`;
+     (Fringe (Node v l)  = FLAT (MAP Fringe l))`;
 
 
 (*---------------------------------------------------------------------------
@@ -135,10 +135,10 @@ val _ = Hol_datatype
                 | NOT of bexp`;
 
 
-val expty  = Type`:('a,'b)exp`;
-val bexpty = Type`:('a,'b)bexp`;
-val exp  = ty_antiq expty;
-val bexp = ty_antiq bexpty;
+val expty  = Type`:('a,'b)exp`
+val bexpty = Type`:('a,'b)bexp`
+val exp    = ty_antiq expty
+val bexp   = ty_antiq bexpty;
 
 
 (*---------------------------------------------------------------------------
@@ -185,7 +185,8 @@ val Evals_defn =
    (Defn.Hol_defn "Evals")
      `(Eval (VAR x)      = vEnv x)
  /\   (Eval (IF b e1 e2) = if Bval b then Eval e1 else Eval e2)
- /\   (Eval (APP f l)    = fEnv (MAP (\v. Eval v) l))
+ /\   (Eval (APP f l)    = fEnv (MAP Eval l))
+
  /\   (Bval (EQ e1 e2)   = (Eval e1 = Eval e2))
  /\   (Bval (LEQ e1 e2)  = Eval e1 <= Eval e2)
  /\   (Bval (NOT b)      = ~Bval (b:^bexp))
