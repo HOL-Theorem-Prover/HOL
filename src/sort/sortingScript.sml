@@ -218,6 +218,7 @@ val perm_rules = prove(
   ASM_REWRITE_TAC [] THEN METIS_TAC [])
 val perm_rules = UNDISCH perm_rules
 
+val _ = print "Proving perm symmetric, reflexive & transitive\n"
 val perm_sym = prove(
   ``^perm_t ==> (perm l1 l2 = perm l2 l1)``,
   STRIP_TAC THEN
@@ -234,8 +235,8 @@ val perm_refl = prove(
 val perm_refl = UNDISCH perm_refl
 
 val perm_trans = last (CONJUNCTS perm_rules)
-val _ = print "Proving perm symmetric, reflexive & transitive\n"
 
+val _ = print "Proving perm ==> PERM\n"
 val perm_PERM = prove(
   ``^perm_t ==> !l1 l2. perm l1 l2 ==> PERM l1 l2``,
   STRIP_TAC THEN HO_MATCH_MP_TAC perm_ind THEN SRW_TAC [][] THENL [
@@ -272,6 +273,7 @@ val perm_cons_append = prove(
 val perm_cons_append =
     SIMP_RULE (bool_ss ++ boolSimps.DNF_ss) [] (UNDISCH perm_cons_append)
 
+val _ = print "Proving PERM ==> perm\n"
 val PERM_perm = prove(
   ``^perm_t ==> !l1 l2. PERM l1 l2 ==> perm l1 l2``,
   STRIP_TAC THEN Induct THEN SRW_TAC [][perm_rules, PERM_CONS_EQ_APPEND] THEN
