@@ -28,6 +28,7 @@ val GNUMAKE = Systeml.GNUMAKE
 val SRCDIRS0 =
  ["src/portableML", "src/0", "src/parse", "src/bool", "src/goalstack",
   "src/taut", "src/compute/src", "src/q", "src/combin", "src/marker",
+  "src/labels",
   "src/lite", "src/refute", "src/simp/src", "src/meson/src","src/basicProof",
   "src/relation", "src/pair/src", "src/sum", "src/one", "src/option",
   "src/num/theories", "src/num/reduce/src", "src/num/arith/src","src/num",
