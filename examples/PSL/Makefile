@@ -8,6 +8,8 @@ all:
 	cd regexp ; Holmake
 	cd official-semantics ; Holmake
 	cd executable-semantics ; Holmake -I ../regexp -I ../official-semantics
+	cd parser.mosmlyacc ; make
+	cd parser ; Holmake -I ../regexp -I ../official-semantics  -I ../executable-semantics -I ../parser.mosmlyacc
 
 strict:
 	cd regexp ; Holmake --qof
@@ -18,5 +20,7 @@ clean:
 	cd regexp ; Holmake cleanAll
 	cd official-semantics ; Holmake cleanAll
 	cd executable-semantics ; Holmake cleanAll
+	cd parser ; Holmake cleanAll
+	cd parser.mosmlyacc ; make clean
 
 world: clean all

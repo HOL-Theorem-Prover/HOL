@@ -1,0 +1,26 @@
+(*****************************************************************************)
+(* Examples of parsing the PSL/Sugar semantics                               *)
+(* Run hol na dthen do "use examples;"                                       *)
+(*****************************************************************************)
+
+quietdec := true;
+loadPath := "../official-semantics"   ::
+            "../executable-semantics" ::
+            "../regexp"               :: 
+            "../parser.mosmlyacc"     :: 
+            !loadPath;
+load "ParserTools";
+open ParserTools;
+quietdec := false;
+
+EvalSERE "{x}{y}       |= x;y";
+EvalSERE "{p}{q}       |= p;q";
+EvalSERE "{x}{y}{p}    |= x;T;p";
+EvalSERE "{x}{y}{p}{q} |= T[*];p;T[*]";
+
+EvalFL "{x}{y,p}{q}    |= {x;y} |-> {p;q}";
+EvalFL "{x}{y,p}{q}    |= {x;y} |=> {p;q}";
+EvalFL "{x}{y}{p}{q}   |= {x;y} |-> {p;q}";
+EvalFL "{x}{y}{p}{q}   |= {x;y} |=> {p;q}";
+EvalFL "{x}{y}{p}{q}   |= {x;y;p} |-> {p;q}";
+EvalFL "{x}{y}{p}{q}   |= {x;y;T} |-> {p;q}";

@@ -6,7 +6,21 @@ structure ExecuteTools :> ExecuteTools =
 struct
 
 (*
-app load ["bossLib", "metisLib", "stringLib", "matcherTheory"];
+quietdec := true;
+loadPath := "../official-semantics"   :: 
+            "../executable-semantics" :: 
+            "../regexp"               :: 
+            !loadPath;
+map load 
+ ["bossLib", "metisLib", "matcherTheory", "KripkeTheory", "UnclockedSemanticsTheory", 
+  "SyntacticSugarTheory", "ClockedSemanticsTheory", "RewritesTheory", 
+  "rich_listTheory", "intLib", "res_quanLib", "res_quanTheory"];
+open KripkeTheory FinitePathTheory PathTheory SyntaxTheory SyntacticSugarTheory
+     UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
+     arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
+     ClockedSemanticsTheory metisLib matcherTheory;
+val _ = intLib.deprecate_int();
+quietdec := false;
 *)
 
 open HolKernel Parse boolLib;

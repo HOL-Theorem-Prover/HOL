@@ -9,8 +9,8 @@
 (*
 quietdec := true;
 loadPath := "../official-semantics" :: !loadPath;
-map load ["intLib","stringTheory","SyntaxTheory"];
-open intLib stringTheory SyntaxTheory;
+map load ["intLib","stringLib","stringTheory","SyntaxTheory"];
+open intLib stringLib stringTheory SyntaxTheory;
 val _ = intLib.deprecate_int();
 quietdec := false;
 *)
@@ -23,7 +23,7 @@ open HolKernel Parse boolLib bossLib;
 (******************************************************************************
 * Open theories
 ******************************************************************************)
-open intLib stringTheory SyntaxTheory;
+open intLib stringLib stringTheory SyntaxTheory;
 
 (******************************************************************************
 * Set default parsing to natural numbers rather than integers 
@@ -38,6 +38,12 @@ val _ = intLib.deprecate_int();
 * Start a new theory called SyntacticSugarTheory
 ******************************************************************************)
 val _ = new_theory "SyntacticSugar";
+
+(******************************************************************************
+* Ensure term_of_int has correct type
+* (i.e. not  int/1 -> term)
+******************************************************************************)
+val term_of_int = numLib.term_of_int;
 
 (******************************************************************************
 * pureDefine doesn't export definitions to theCompset (for EVAL).
@@ -972,5 +978,6 @@ val F_DESUGAR_def =
    /\
    (F_DESUGAR(EF_WEAK_WHILENOT_INC(b,r)) =
      F_WEAK_WHILENOT_INC(B_DESUGAR b, S_DESUGAR r))`;
+
 
 val _ = export_theory();
