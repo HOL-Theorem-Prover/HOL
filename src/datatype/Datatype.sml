@@ -311,7 +311,17 @@ fun to_tyspecs ASTs =
                 NONE => mk_type(s, map mk_hol_type Args)
               | SOME t => mk_thy_type {Tyop = s, Thy = t,
                                        Args = map mk_hol_type Args}
-      fun constructor (cname, ptys) = (cname, map mk_hol_type ptys)
+     val mk_hol_type0 = mk_hol_type
+     fun mk_hol_type pty = let
+       val ty = mk_hol_type0 pty
+     in
+       if Theory.uptodate_type ty then ty
+       else let val tyname = #1 (dest_type ty)
+            in raise ERR "to_tyspecs" (tyname^" not up-to-date")
+            end
+     end
+
+     fun constructor (cname, ptys) = (cname, map mk_hol_type ptys)
   in
      map (tyname_as_tyvar##map constructor) asts
   end
@@ -343,7 +353,7 @@ fun is_enum_type_spec astl =
 
 fun build_enum_tyinfo (tyname, ast) =
  let open EnumType
- in case ast 
+ in case ast
      of Constructors clist => (enum_type_to_tyinfo (tyname, map #1 clist))
       | otherwise => raise ERR "build_enum_tyinfo" "Should never happen"
  end
@@ -388,12 +398,12 @@ local fun add_record_facts (tyinfo, NONE) = (tyinfo, [])
       fun field_names_of (_,Record l) = SOME (map fst l)
         | field_names_of _ = NONE
 in
-fun primHol_datatype db q = 
+fun primHol_datatype db q =
  let val astl = ParseDatatype.parse q
- in 
-    if is_enum_type_spec astl 
+ in
+    if is_enum_type_spec astl
       then build_enum_tyinfos astl
-      else map add_record_facts 
+      else map add_record_facts
                  (zip (build_tyinfos db (new_asts_datatype astl))
                       (map field_names_of astl))
  end
@@ -520,15 +530,23 @@ fun write_tyinfo (tyinfo, record_rw_names) =
      record_rw_names
  end;
 
+
+
 fun persistent_tyinfo (x as (tyinfo,_)) =
    (TypeBase.write tyinfo;
     computeLib.write_datatype_info tyinfo;
     write_tyinfo x)
 
-fun Hol_datatype q =
-  List.app persistent_tyinfo
-           (primHol_datatype (TypeBase.theTypeBase()) q)
-  handle ? => Raise (wrap_exn "Datatype" "Hol_datatype" ?);
+fun Hol_datatype q = let
+  val tyinfos_etc = primHol_datatype (TypeBase.theTypeBase()) q
+  val tynames = map (Lib.quote o TypeBasePure.ty_name_of o #1) tyinfos_etc
+  val message = "Defined "^(if length tynames > 1 then "types" else "type")^
+                ": "^String.concat (Lib.commafy tynames)
+in
+  List.app persistent_tyinfo tyinfos_etc;
+  HOL_MESG message
+end handle ? => Raise (wrap_exn "Datatype" "Hol_datatype" ?);
+
 
 
 end (* struct *)
