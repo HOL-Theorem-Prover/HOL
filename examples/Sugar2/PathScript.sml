@@ -196,21 +196,27 @@ val _ = set_fixity "to" (Infixl 500);
 ******************************************************************************)
 val SUB_num_xnum_def =
  Define 
-  `$SUB_num_xnum (m:num) (XNUM (n:num)) = XNUM((m:num) - (n:num))	`;
+  `($SUB_num_xnum (m:num) (XNUM (n:num)) = XNUM((m:num) - (n:num)))
+   /\
+   ($SUB_num_xnum (m:num) INFINITY = INFINITY)`;
 
 val SUB_xnum_num_def =
- Define `$SUB_xnum_num (XNUM (m:num)) (n:num) = XNUM((m:num) - (n:num))`;
+ Define 
+  `($SUB_xnum_num (XNUM (m:num)) (n:num) = XNUM((m:num) - (n:num)))
+   /\
+   ($SUB_xnum_num INFINITY (n:num) = INFINITY)`;
 
 val SUB_xnum_xnum_def =
  Define 
   `($SUB_xnum_xnum (XNUM (m:num)) (XNUM (n:num)) = XNUM((m:num) - (n:num)))
    /\
+   ($SUB_xnum_xnum (XNUM (m:num)) INFINITY = XNUM 0)
+   /\
    ($SUB_xnum_xnum INFINITY (XNUM (n:num)) = INFINITY)`;
 
 val SUB = 
  save_thm
-  ("SUB",
-   LIST_CONJ(type_rws "xnum"@[SUB_num_xnum_def,SUB_xnum_num_def,SUB_xnum_xnum_def]));
+  ("SUB", LIST_CONJ[SUB_num_xnum_def,SUB_xnum_num_def,SUB_xnum_xnum_def]);
 
 val _ = overload_on("-", ``SUB_num_xnum``);
 val _ = overload_on("-", ``SUB_xnum_num``);
@@ -232,10 +238,16 @@ val LS_xnum_num_def =
    ($LS_xnum_num INFINITY (n:num) = F)`;
 
 val LS_xnum_xnum_def =
- Define `$LS_xnum_xnum (XNUM (m:num)) (XNUM (n:num)) = (m:num) < (n:num)`;
+ Define 
+  `($LS_xnum_xnum (XNUM (m:num)) (XNUM (n:num)) = (m:num) < (n:num))
+   /\
+   ($LS_xnum_xnum (XNUM (m:num)) INFINITY = T)
+   /\
+   ($LS_xnum_xnum INFINITY (XNUM (n:num)) = F)`;
 
 val LS = 
- save_thm("LS",LIST_CONJ[LS_num_xnum_def,LS_xnum_num_def,LS_xnum_xnum_def]);
+ save_thm
+  ("LS", LIST_CONJ[LS_num_xnum_def,LS_xnum_num_def,LS_xnum_xnum_def]);
 
 val _ = overload_on("<", ``LS_num_xnum``);
 val _ = overload_on("<", ``LS_xnum_num``);
@@ -257,7 +269,12 @@ val LE_xnum_num_def =
    ($LE_xnum_num INFINITY (n:num) = F)`;
 
 val LE_xnum_xnum_def =
- Define `$LE_xnum_xnum (XNUM (m:num)) (XNUM (n:num)) = (m:num) <= (n:num)`;
+ Define 
+  `($LE_xnum_xnum (XNUM (m:num)) (XNUM (n:num)) = (m:num) <= (n:num))
+   /\
+   ($LE_xnum_xnum (XNUM (m:num)) INFINITY = T)
+   /\
+   ($LE_xnum_xnum INFINITY (XNUM (n:num)) = F)`;
 
 val LE = 
  save_thm("LE",LIST_CONJ[LE_num_xnum_def,LE_xnum_num_def,LE_xnum_xnum_def]);
@@ -285,7 +302,12 @@ val GT_xnum_num_def =
    ($GT_xnum_num INFINITY (n:num) = T)`;
 
 val GT_xnum_xnum_def =
- Define `$GT_xnum_xnum (XNUM (m:num)) (XNUM (n:num)) = (m:num) > (n:num)`;
+ Define 
+  `($GT_xnum_xnum (XNUM (m:num)) (XNUM (n:num)) = (m:num) > (n:num))
+   /\
+   ($GT_xnum_xnum (XNUM (m:num)) INFINITY = F)
+   /\
+   ($GT_xnum_xnum INFINITY (XNUM (n:num)) = T)`;
 
 val GT = 
  save_thm("GT",LIST_CONJ[GT_num_xnum_def,GT_xnum_num_def,GT_xnum_xnum_def]);
@@ -313,7 +335,12 @@ val GE_xnum_num_def =
    ($GE_xnum_num INFINITY (n:num) = T)`;
 
 val GE_xnum_xnum_def =
- Define `$GE_xnum_xnum (XNUM (m:num)) (XNUM (n:num)) = (m:num) >= (n:num)`;
+ Define 
+  `($GE_xnum_xnum (XNUM (m:num)) (XNUM (n:num)) = (m:num) >= (n:num))
+   /\
+   ($GE_xnum_xnum (XNUM (m:num)) INFINITY = F)
+   /\
+   ($GE_xnum_xnum INFINITY (XNUM (n:num)) = T)`;
 
 val GE = 
  save_thm("GE",LIST_CONJ[GE_num_xnum_def,GE_xnum_num_def,GE_xnum_xnum_def]);
@@ -321,6 +348,13 @@ val GE =
 val _ = overload_on(">=", ``GE_num_xnum``);
 val _ = overload_on(">=", ``GE_xnum_num``);
 val _ = overload_on(">=", ``GE_xnum_xnum``);
+
+val GT_LS =
+ store_thm
+  ("GT_LS",
+   ``!x:xnum n:num. x > n = n < x``,
+   Cases_on `x`
+    THEN RW_TAC arith_ss [GT_xnum_num_def,LS_num_xnum_def]);
 
 (******************************************************************************
 * LENGTH(FINITE l)   = XNUM(LENGTH l)
@@ -395,7 +429,6 @@ val RESTN_REST_INFINITE_COR =
   ("RESTN_REST_INFINITE_COR",
    SIMP_RULE arith_ss 
     [DECIDE``(k+1)-1=k``](Q.SPECL[`f`,`k+1`]RESTN_REST_INFINITE));
-
 
 (******************************************************************************
 * Form needeed for computeLib
@@ -559,6 +592,15 @@ val LENGTH_RESTN_INFINITE =
    ``!p n. LENGTH (RESTN (INFINITE p) n) = INFINITY``,
    RW_TAC std_ss [RESTN_INFINITE,LENGTH_def]);
 
+val LENGTH_RESTN_THM =
+ store_thm
+  ("LENGTH_RESTN_THM",
+   ``n < LENGTH p ==> (LENGTH (RESTN p n) = LENGTH p - n)``,
+   Cases_on `p`
+    THEN RW_TAC std_ss 
+          [LS_num_xnum_def,LENGTH_RESTN,LENGTH_RESTN_INFINITE,RESTN_FINITE,
+           LENGTH_def,SUB,FinitePathTheory.LENGTH_RESTN]);
+
 (******************************************************************************
 * 0 < i  ==> (ELEM (FINITE(TL l)) (i-1) = ELEM (FINITE l) i)
 ******************************************************************************)
@@ -585,6 +627,53 @@ val CAT_def =
   `(CAT([], p) = p) 
    /\ 
    (CAT((x::w), p) = CONS(x, CAT(w,p)))`;
+
+val CAT_FINITE_APPEND =
+ store_thm
+  ("CAT_FINITE_APPEND",
+   ``!l p. CAT(l, FINITE p) = FINITE(APPEND l p)``,
+   Induct
+    THEN RW_TAC list_ss [CAT_def,CONS_def]);
+
+val LENGTH_CAT_FINITE =
+ store_thm
+  ("LENGTH_CAT_FINITE",
+   ``!l1 l2. LENGTH(CAT(l1, FINITE l2)) = XNUM(LENGTH l1 + LENGTH l2)``,
+   Induct
+    THEN RW_TAC list_ss 
+          [CAT_def,LENGTH_def,CAT_FINITE_APPEND,CONS_def]);
+
+val IS_INFINITE_EXISTS =
+ store_thm
+  ("IS_INFINITE_EXISTS",
+   ``!w. IS_INFINITE w = ?p. w = INFINITE p``,
+   Induct
+    THEN RW_TAC list_ss [IS_INFINITE_def]);
+
+val CAT_INFINITE =
+ store_thm
+  ("CAT_INFINITE",
+   ``!l p. IS_INFINITE(CAT(l, INFINITE p))``,
+   Induct
+    THEN RW_TAC list_ss [CAT_def,CONS_def,IS_INFINITE_def]
+    THEN POP_ASSUM(ASSUME_TAC o SPEC_ALL)
+    THEN IMP_RES_TAC IS_INFINITE_EXISTS
+    THEN RW_TAC std_ss [CONS_def,IS_INFINITE_def]);
+
+val LENGTH_CAT_INFINITE =
+ store_thm
+  ("LENGTH_CAT_FINITE",
+   ``!l p. LENGTH(CAT(l, INFINITE p)) = INFINITY``,
+   Induct
+    THEN RW_TAC list_ss 
+          [CAT_def,LENGTH_def,CONS_def]
+    THEN `IS_INFINITE(CAT (l,INFINITE p))` by PROVE_TAC[CAT_INFINITE]
+    THEN IMP_RES_TAC IS_INFINITE_EXISTS
+    THEN RW_TAC std_ss [CONS_def,LENGTH_def]);
+
+val LENGTH_CAT =
+ save_thm("LENGTH_CAT",CONJ LENGTH_CAT_FINITE LENGTH_CAT_INFINITE);
+
 
 (******************************************************************************
 * Append paths

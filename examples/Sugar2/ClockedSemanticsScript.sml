@@ -99,7 +99,145 @@ val S_SEM_def =
        S_SEM (RESTN w i) c1 r)`;
 
 (******************************************************************************
+* Original clocked "SEM 1" semantics of Sugar formulas, partly unfolded 
+* (see commented out stuff) to avoid need for TFL hacks to prove termination.
+******************************************************************************)
+val OLD_F_SEM_def = 
+  Define
+  `(OLD_F_SEM w c (F_BOOL b) = B_SEM (ELEM w 0) b)
+    /\
+    (OLD_F_SEM w c (F_NOT f) = 
+      ~(OLD_F_SEM w  c  f))
+    /\
+    (OLD_F_SEM w c (F_AND(f1,f2)) = 
+      OLD_F_SEM w c f1 /\ OLD_F_SEM w c f2)
+    /\
+    (OLD_F_SEM w c (F_NEXT f) = 
+      ?i :: (1 to LENGTH w). 
+        S_SEM (SEL w (1,i)) B_TRUE (S_CAT(S_REPEAT(S_BOOL(B_NOT c)),S_BOOL c))
+        /\ 
+        OLD_F_SEM (RESTN w i) c f)
+    /\
+    (OLD_F_SEM w c (F_UNTIL(f1,f2)) = 
+      ?k :: (0 to LENGTH w).
+(*      OLD_F_SEM (RESTN w k) B_TRUE (F_BOOL c) /\                            *)
+        B_SEM (ELEM w k) c      /\  
+        OLD_F_SEM (RESTN w k) c f2  /\
+        !j :: (0 to k). 
+(*        OLD_F_SEM (RESTN w j) B_TRUE (F_BOOL c) ==> OLD_F_SEM (RESTN w j) c f1) *)
+          B_SEM (ELEM w j) c ==> OLD_F_SEM (RESTN w j) c f1)
+    /\
+    (OLD_F_SEM w c (F_SUFFIX_IMP(r,f)) = 
+      !i :: (0 to LENGTH w). 
+        S_SEM (SEL w (0,i)) c r 
+        ==> 
+        ?j :: (i to LENGTH w).  
+           S_SEM (SEL w (i,j)) B_TRUE (S_CAT(S_REPEAT(S_BOOL(B_NOT c)),S_BOOL c))  
+           /\ 
+           OLD_F_SEM (RESTN w j) c f)
+    /\
+    (OLD_F_SEM w c (F_STRONG_IMP(r1,r2)) = 
+      !i :: (0 to LENGTH w).
+        S_SEM (SEL w (0,i)) c r1 
+        ==> 
+        ?j :: (i to LENGTH w). S_SEM (SEL w (i,j)) c r2)
+    /\
+    (OLD_F_SEM w c (F_WEAK_IMP(r1,r2)) = 
+      !i :: (0 to LENGTH w).
+        S_SEM (SEL w (0,i)) c r1 
+        ==> 
+        ((?j :: (i to LENGTH w). S_SEM (SEL w (i,j)) c r2)
+         \/
+         (!j :: (i to LENGTH w). ?w'. S_SEM (SEL w (i,j) <> w') c r2)))
+    /\
+    (OLD_F_SEM w c (F_ABORT (f,b)) =
+      OLD_F_SEM w c f
+      \/
+(*    OLD_F_SEM w c (F_BOOL b)                                 *)
+      B_SEM (ELEM w 0) b
+      \/    
+      ?i :: (1 to LENGTH w). 
+(*      ?w'. OLD_F_SEM (RESTN w i) B_TRUE (F_BOOL(B_AND(c,b))) *)
+        ?w'. B_SEM (ELEM w i) (B_AND(c,b)) 
+             /\ 
+             OLD_F_SEM (CAT(SEL w (0,i-1),w')) c f)
+    /\
+    (OLD_F_SEM w c (F_STRONG_CLOCK(f,c1)) =   
+      ?i :: (0 to LENGTH w). 
+        S_SEM (SEL w (0,i)) B_TRUE (S_CAT(S_REPEAT(S_BOOL(B_NOT c1)),S_BOOL c1))
+        /\
+        OLD_F_SEM (RESTN w i) c1 f)`;
+
+(******************************************************************************
+* Derivation of "golden" form of clocked "SEM 1" semantics of Sugar formulas
+******************************************************************************)
+val OLD_F_SEM = 
+  store_thm
+   ("OLD_F_SEM",
+    ``(OLD_F_SEM w c (F_BOOL b) = B_SEM (ELEM w 0) b)
+      /\
+      (OLD_F_SEM w c (F_NOT f) = 
+        ~(OLD_F_SEM w  c  f))
+      /\
+      (OLD_F_SEM w c (F_AND(f1,f2)) = 
+        OLD_F_SEM w c f1 /\ OLD_F_SEM w c f2)
+      /\
+      (OLD_F_SEM w c (F_NEXT f) = 
+        ?i :: (1 to LENGTH w). 
+          S_SEM (SEL w (1,i)) B_TRUE (S_CAT(S_REPEAT(S_BOOL(B_NOT c)),S_BOOL c))
+          /\ 
+          OLD_F_SEM (RESTN w i) c f)
+      /\
+      (OLD_F_SEM w c (F_UNTIL(f1,f2)) = 
+        ?k :: (0 to LENGTH w).
+          OLD_F_SEM (RESTN w k) B_TRUE (F_BOOL c) /\
+          OLD_F_SEM (RESTN w k) c f2              /\
+          !j :: (0 to k). 
+            OLD_F_SEM (RESTN w j) B_TRUE (F_BOOL c) ==> OLD_F_SEM (RESTN w j) c f1)
+      /\
+      (OLD_F_SEM w c (F_SUFFIX_IMP(r,f)) = 
+      !i :: (0 to LENGTH w). 
+        S_SEM (SEL w (0,i)) c r 
+        ==> 
+        ?j :: (i to LENGTH w).  
+           S_SEM (SEL w (i,j)) B_TRUE (S_CAT(S_REPEAT(S_BOOL(B_NOT c)),S_BOOL c))  
+           /\ 
+           OLD_F_SEM (RESTN w j) c f)
+      /\
+      (OLD_F_SEM w c (F_STRONG_IMP(r1,r2)) = 
+        !i :: (0 to LENGTH w).
+          S_SEM (SEL w (0,i)) c r1 
+          ==> 
+          ?j :: (i to LENGTH w). S_SEM (SEL w (i,j)) c r2)
+      /\
+      (OLD_F_SEM w c (F_WEAK_IMP(r1,r2)) = 
+        !i :: (0 to LENGTH w).
+          S_SEM (SEL w (0,i)) c r1 
+          ==> 
+          ((?j :: (i to LENGTH w). S_SEM (SEL w (i,j)) c r2)
+           \/
+           (!j :: (i to LENGTH w). ?w'. S_SEM (SEL w (i,j) <> w') c r2)))
+      /\
+      (OLD_F_SEM w c (F_ABORT (f,b)) =
+        OLD_F_SEM w c f
+        \/
+        OLD_F_SEM w c (F_BOOL b)
+        \/    
+        ?i :: (1 to LENGTH w). 
+          ?w'. OLD_F_SEM (RESTN w i) B_TRUE (F_BOOL(B_AND(c,b)))
+               /\ 
+               OLD_F_SEM (CAT(SEL w (0,i-1),w')) c f)
+      /\
+      (OLD_F_SEM w c (F_STRONG_CLOCK(f,c1)) =   
+        ?i :: (0 to LENGTH w). 
+          S_SEM (SEL w (0,i)) B_TRUE (S_CAT(S_REPEAT(S_BOOL(B_NOT c1)),S_BOOL c1))
+          /\
+          OLD_F_SEM (RESTN w i) c1 f)``,
+      RW_TAC arith_ss [OLD_F_SEM_def,ELEM_RESTN,B_SEM_def]);
+
+(******************************************************************************
 * Clocked "SEM 1" semantics of Sugar formulas, partly unfolded 
+* with additional |w|>0 for boolean formulas
 * (see commented out stuff) to avoid need for TFL hacks to prove termination.
 ******************************************************************************)
 val F_SEM_def = 

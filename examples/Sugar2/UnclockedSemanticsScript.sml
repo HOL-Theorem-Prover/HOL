@@ -101,7 +101,59 @@ val US_SEM_def =
      ?wlist. (w = CONCAT wlist) /\ EVERY (\w. US_SEM w r) wlist)`;
 
 (******************************************************************************
-* Unclocked "SEM 1" semantics of Sugar formulas
+* Original unclocked "SEM 1" semantics of Sugar formulas
+* UF_SEM w f means "w |= f"  in the unclocked semantics
+* where w is a finite or infinite word i.e. w : ('prop -> bool)path
+******************************************************************************)
+val OLD_UF_SEM_def =
+ Define
+   `(OLD_UF_SEM w (F_BOOL b) = 
+      B_SEM (ELEM w 0) b)
+    /\
+    (OLD_UF_SEM w (F_NOT f) = 
+      ~(OLD_UF_SEM w f)) 
+    /\
+    (OLD_UF_SEM w (F_AND(f1,f2)) = 
+      OLD_UF_SEM w f1 /\ OLD_UF_SEM w f2)
+    /\
+    (OLD_UF_SEM w (F_NEXT f) = 
+      LENGTH w > 1 /\ OLD_UF_SEM (RESTN w 1) f)
+    /\
+    (OLD_UF_SEM w (F_UNTIL(f1,f2)) = 
+      ?k :: (0 to LENGTH w). 
+        OLD_UF_SEM (RESTN w k) f2 /\ !j :: (0 to k). OLD_UF_SEM (RESTN w j) f1)
+    /\
+    (OLD_UF_SEM w (F_SUFFIX_IMP(r,f)) = 
+      !j :: (0 to LENGTH w). 
+        US_SEM (SEL w (0,j)) r ==> OLD_UF_SEM (RESTN w j) f) 
+    /\
+    (OLD_UF_SEM w (F_STRONG_IMP(r1,r2)) = 
+      !j :: (0 to LENGTH w). 
+        US_SEM (SEL w (0,j)) r1
+        ==>
+        ?k :: (j to LENGTH w). US_SEM (SEL w (j,k)) r2)
+    /\
+    (OLD_UF_SEM w (F_WEAK_IMP(r1,r2)) = 
+      !j :: (0 to LENGTH w).
+        US_SEM (SEL w (0,j)) r1 
+        ==>
+        ((?k :: (j to LENGTH w). US_SEM (SEL w (j,k)) r2) 
+         \/
+         (!k :: (j to LENGTH w). ?w'. US_SEM (SEL w (j,k) <> w') r2)))
+    /\
+    (OLD_UF_SEM w (F_ABORT (f,b)) =
+      OLD_UF_SEM w f 
+      \/
+      OLD_UF_SEM w (F_BOOL b)
+      \/
+      ?j :: (1 to LENGTH w). 
+        ?w'. OLD_UF_SEM (RESTN w j) (F_BOOL b)
+             /\ 
+             OLD_UF_SEM (CAT(SEL w (0,j-1),w')) f)`;
+
+(******************************************************************************
+* Unclocked "SEM 1" semantics of Sugar formulas 
+* with additional |w|>0 for boolean formulas
 * UF_SEM w f means "w |= f"  in the unclocked semantics
 * where w is a finite or infinite word i.e. w : ('prop -> bool)path
 ******************************************************************************)
