@@ -2,7 +2,7 @@
 
 \TYPE {enumerate : int -> 'a list -> (int * 'a) list}
 
-\SYNOPSIS Number each element of a list.
+\SYNOPSIS Number each element of a list, in ascending order.
 
 \KEYWORDS list.
 

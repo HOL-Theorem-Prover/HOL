@@ -5,6 +5,7 @@
 \SYNOPSIS
 Applies a function to corresponding elements of 2 lists.
 
+
 \KEYWORDS
 list.
 
@@ -16,7 +17,9 @@ list.
 \noindent It returns {z} if both lists are empty.
 
 \FAILURE
-Fails if the two lists are of different lengths.
+
+Fails if the two lists are of different lengths, or if one of the 
+applications of {f} fails.
 
 \EXAMPLE
 {

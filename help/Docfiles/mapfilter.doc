@@ -12,8 +12,8 @@ list.
 
 \FAILURE
 
-If {f x} raises {Interrupt} for some element {x} of {l}, then {mapfilter
-f l} fails.
+If {f x} raises {Interrupt} for some element {x} of {l}, then 
+{mapfilter f l} fails.
 
 \EXAMPLE
 {

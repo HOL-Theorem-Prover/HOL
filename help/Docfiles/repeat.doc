@@ -1,0 +1,30 @@
+\DOC repeat
+
+\TYPE {repeat : ('a -> 'a) -> 'a -> 'a}
+
+\SYNOPSIS Apply a function iteratively until it fails.
+
+\KEYWORDS iteration.
+
+\DESCRIBE 
+
+An invocation {repeat f x} evaluates to {repeat f (f x)}. When an invocation 
+{f y} finally fails, for some {y}, then {y} is returned.
+
+\FAILURE
+
+If an {Interrupt} exception is generated during an application of {f}, then 
+{repeat f x} raises {Interrupt}.
+
+\EXAMPLE
+On a machine with fixed width integers, the following will compute 
+the largest representable integer:
+{
+    repeat (fn x => x+1) 0
+}
+
+\SEEALSO
+
+funpow.
+
+\ENDDOC
