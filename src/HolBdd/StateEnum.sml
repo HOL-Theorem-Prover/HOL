@@ -9,7 +9,7 @@ load "TotalDefn";  (* for Define *)
 load "Ho_rewrite";
 load "Num_conv";
 load "unwindLib";
-load "PGEN";
+load "pairTools";
 load "HolBdd";
 load "HolBddTheory";
 *)
@@ -23,6 +23,8 @@ open Globals HolKernel Parse basicHol90Lib;
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 open Psyntax BasicProvers;
+
+val PGEN = pairTools.PGEN
 
 in
 
@@ -71,7 +73,7 @@ end;
 fun PGEN_EXT th =
  let val vars = rand(rand(concl th))
  in
-  EXT(PGEN.PGEN (genvar(type_of vars)) vars th)
+  EXT(pairTools.PGEN (genvar(type_of vars)) vars th)
  end
 
 val DEPTH_EXISTS_CONV = unwindLib.DEPTH_EXISTS_CONV
@@ -207,7 +209,7 @@ fun ComputeReachable (Rthm,Bthm) =
                      HolBddTheory.ReachBy_fixedpoint
                       (MATCH_MP
                         EQ_EXT
-                        (PGEN.PGEN 
+                        (pairTools.PGEN 
                           (genvar(type_of st))
                           st
                           (SYM(ReachBy_CONV Num_conv.num_CONV th1))))
@@ -269,7 +271,7 @@ fun Make_Reachable_ReachIn_Bdd (Rthm,Bthm) =
                      HolBddTheory.ReachBy_fixedpoint
                       (MATCH_MP
                         EQ_EXT
-                        (PGEN.PGEN 
+                        (pairtools.PGEN 
                           (genvar(type_of st))
                           st
                           (SYM(ReachBy_CONV Num_conv.num_CONV th1))))
@@ -370,7 +372,7 @@ fun MakeStableChecker2 (Rthm,Bthm) =
      val ntm     = intToTerm n
      val th1     = bddOracle ``ReachIn ^R ^B ^ntm ^st ==> ^stb_descr``
      val st_var  = mk_var("state",type_of st)
-     val th2     = PGEN.PGEN st_var st th1
+     val th2     = pairTools.PGEN st_var st th1
      val Live_th = Ho_rewrite.REWRITE_RULE
                      [pairTheory.EXISTS_PROD,pairTheory.FORALL_PROD]
                      (ISPEC R HolBddTheory.Live_def)
@@ -643,7 +645,7 @@ fun ComputeSimpReachable (Rthm,Bthm) =
                     HolBddTheory.ReachBy_fixedpoint
                      (MATCH_MP
                        EQ_EXT
-                       (PGEN.PGEN 
+                       (pairTools.PGEN 
                          (genvar(type_of st))
                          st
                          (SYM(ReachBy_CONV Num_conv.num_CONV th1))))

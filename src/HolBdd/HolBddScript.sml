@@ -30,7 +30,7 @@ load "Ho_rewrite";
 load "listTheory";
 load "numLib";
 load "unwindLib";
-load "PGEN";
+load "pairTools";
 load "HolBdd";
 *)
 
@@ -42,16 +42,20 @@ infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 open BasicProvers TotalDefn SingleStep;
 open arithmeticTheory;
 open listTheory;
-open pairTheory;
+open pairTheory pairTools
 open Ho_rewrite;
 open numLib;
-open PGEN;
 open HolBdd;
 
 val _ = new_theory "HolBdd";
 
 val DEPTH_EXISTS_CONV = unwindLib.DEPTH_EXISTS_CONV
 and EXPAND_AUTO_CONV  = unwindLib.EXPAND_AUTO_CONV;
+
+(*
+val PGEN = pairTools.PGEN
+val PGEN_TAC = pairTools.PGEN_TAC;
+*)
 
 (*---------------------------------------------------------------------------
        Instead of loading in all of bossLib.
