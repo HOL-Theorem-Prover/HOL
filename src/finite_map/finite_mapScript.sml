@@ -1051,8 +1051,14 @@ val DOMSUB_FAPPLY_THM = store_thm(
   ``!fm k1 k2. (fm \\ k1) ' k2 = if k1 = k2 then FEMPTY ' k2 else fm ' k2``,
   SRW_TAC [] [DOMSUB_FAPPLY, DOMSUB_FAPPLY_NEQ]);
 
+val FRANGE_FUPDATE_DOMSUB = store_thm(
+  "FRANGE_FUPDATE_DOMSUB",
+  ``!fm k v. FRANGE (fm |+ (k,v)) = v INSERT FRANGE (fm \\ k)``,
+  SRW_TAC [][FRANGE_FUPDATE, fmap_domsub]);
+
+
 val _ = export_rewrites ["DOMSUB_FEMPTY", "DOMSUB_FUPDATE", "FDOM_DOMSUB",
-                         "DOMSUB_FAPPLY"]
+                         "DOMSUB_FAPPLY", "FRANGE_FUPDATE_DOMSUB"]
 
 (* ----------------------------------------------------------------------
     Iterated updates
