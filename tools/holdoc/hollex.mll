@@ -184,9 +184,12 @@ and
   | startdir       { DirBeg }   (* recognised also, for .mni files that may
                                    be included in either HOL or TeX. *)
 
-  (* see comment above for these two rules *)
-  | [^ '[' '<' ':' '*' '(' ')' ]+  { TeXNormal (Lexing.lexeme lexbuf) }
-  | _                              { TeXNormal (Lexing.lexeme lexbuf) }
+  (* see comment above for these three rules *)
+  (* but I've added an exclusion for '%', permission for '\%',
+     and a new rule in the middle, to deal with comments *)
+  | ([^ '[' '<' ':' '*' '(' ')' '%'] | '\\' '%')+  { TeXNormal (Lexing.lexeme lexbuf) }
+  | '%' [^ '\n']* '\n'                             { TeXNormal (Lexing.lexeme lexbuf) }
+  | _                                              { TeXNormal (Lexing.lexeme lexbuf) }
 
   | eof            { raise Eof }
 
