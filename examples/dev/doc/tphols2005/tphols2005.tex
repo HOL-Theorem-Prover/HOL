@@ -3,12 +3,32 @@
 \input{notation.tex}
 
 %--------------------------------------------------------------------------
-\title{Higher-Level Hardware Synthesis in HOL\\[-4mm]}
+\title{Higher-Level Hardware Synthesis in HOL\\
+{\it (do we need a new title?)}\\[-4mm]}
 
 \author{}
 \institute{}
+
 \begin{document}
 \maketitle
+
+\vspace*{-8mm}
+
+\begin{center}
+\begin{tabular}{ccc}
+{\bf Mike Gordon, Juliano Iyoda} &\hspace*{5mm}& {\bf Scott Owens, Konrad Slind}\\
+University of Cambridge          &\hspace*{5mm}& University of Utah\\
+Computer Laboratory              &\hspace*{5mm}& School of Computing\\
+William Gates Building           &\hspace*{5mm}& 50 South Central Campus Drive\\
+JJ Thomson Avenue                &\hspace*{5mm}& Salt Lake City\\
+Cambridge CB3 0FD, UK            &\hspace*{5mm}& Utah UT84112, USA
+\end{tabular}
+
+
+\vspace*{2mm}
+
+(authors listed in alphabetical order)
+\end{center}
 
 \vspace*{-5mm}
 
@@ -16,11 +36,68 @@
 \thispagestyle{empty}
 
 \begin{abstract}
+To be written last!
 \end{abstract}
 
 %--------------------------------------------------------------------------
 \section{Introduction}
 \label{secIntroduction}
+
+We describe a correct-by-construction flow from function definitions
+in higher order logic to hardware implementations.  Each synthesised
+implementation of a function $f$ is created in the form of a theorem
+$\vdash {\it{Imp}}\Rightarrow\texttt{DEV}~f$, where {\it{Imp}} is a
+term describing a circuit that implements a four-phase handshake
+computing $f$, and the handshake is specified in higher oder logic by
+$\texttt{DEV}~f$. The synthesis process is implemented using proof
+scripts and goes through several phases, each refining the
+implementation to a more concrete form, until a representation that
+can be output as Verilog is created. We intend that future synthesis
+routes will provide the option of refining the intermediate
+representations to other formats, for example to ARM
+assembler.
+
+We have in mind two uses of the work described here: (i) generating
+implementations and (ii) generating testbench monitors.
+
+(i): Our current system can generate synthesisable Verilog, so can be
+used to make correct-by-construction implementations. However, the
+synthesis is quite naive and so the resulting hardware is not likely
+to have high performance. This may not matter for some applications,
+and we anticipate that having guaranteed-correct implementations will
+interest some clients. For example, a major case study at Utah aims to
+produce implementations of components useful for building
+cryptographic hardware.  This will result in a reference library of ``golden''
+implementations. Although the synthesis is naive, it is transparent
+and programmable. Users can tune the generated hardware by
+pre-optimising the higher order logic definitions that are used. Thus
+part of the flow from mathematical specification to hardware can
+consist in deductive optimisation of the source functions prior to
+input to the synthesis tool.
+
+(ii): The second use of our work is to automatically generate testbench
+infrastructure. The idea here is that one synthesises a
+guaranteed-correct representation of behaviour that can be run as a checker in
+parallel, say in a Verilog simulator, with a bespoke hard-crafted
+implementation. There is an analogy with
+Assertion Based Verification (ABV) in the dynamic verification of
+hardware. There, one uses a tool like FoCs [add refs to FoCs and Charme paper] 
+o turn specifications into checkers.  With ABV specifications
+are typically in temporal logic (e.g.{} PSL), but if the specification
+were in HOL than our compiler could be used to make
+testbench monitors to test (rather than to be) real implementations.
+
+
+
+%--------------------------------------------------------------------------
+\section{Related Work}
+\label{secRelatedWork}
+%--------------------------------------------------------------------------
+
+SAFL, Sheeran, LAMBDA, Hunt, Hanna, Gropius, Johnson, reflect/Forte
+
+
+
 %--------------------------------------------------------------------------
 
 
