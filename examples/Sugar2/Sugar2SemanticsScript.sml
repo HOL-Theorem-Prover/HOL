@@ -61,6 +61,53 @@ val _ = intLib.deprecate_int();
 val _ = new_theory "Sugar2Semantics";
 
 (******************************************************************************
+* Stop ``S`` parsing to the S-combinator
+******************************************************************************)
+val _ = hide "S";
+
+(******************************************************************************
+* KRIPKE_STRUCTURE M iff M is a well-formed Kripke structure
+* i.e. every initial state is a state, 
+* and L maps each state to a set of propositions.
+* For many results the structure M=(S,S0,R,P,L) does not need
+* to be a well-formed Kripke structure.
+******************************************************************************)
+val KRIPKE_STRUCTURE_def =
+ Define
+  `KRIPKE_STRUCTURE
+    (S: 'state -> bool,
+     S0:'state -> bool,
+     R: 'state # 'state -> bool,
+     P: 'prop -> bool,
+     L: 'state -> ('prop -> bool)) = 
+   (!s. S0 s ==> S s)
+   /\
+   (!s p . L s p ==> P p)`;
+
+(******************************************************************************
+* A useful special case (possibly the only one we'll need) is to
+* identify propositions with predicates on states, and then we just need
+* to specify the set of itial state B and transition relation R
+*******************************************************************************)
+val SIMPLE_KRIPKE_STRUCTURE_def =
+ Define
+  `SIMPLE_KRIPKE_STRUCTURE (B:'state -> bool) (R:'state#'state->bool) = 
+    ((\s:'state. T), 
+     B, 
+     R, 
+     (\f:'state -> bool. T), 
+     (\(s:'state) (f:'state -> bool). f s))`;
+
+(******************************************************************************
+* Sanity check that a simple Kripke structure is a Kripke structure
+******************************************************************************)
+val SIMPLE_KRIPKE_STRUCTURE =
+ store_thm
+  ("SIMPLE_KRIPKE_STRUCTURE",
+   ``KRIPKE_STRUCTURE(SIMPLE_KRIPKE_STRUCTURE B R)``,
+   RW_TAC std_ss [KRIPKE_STRUCTURE_def,SIMPLE_KRIPKE_STRUCTURE_def]);
+   
+(******************************************************************************
 * Boolean expressions (added B_TRUE for use in definition of F_SEM)
 ******************************************************************************)
 val bexp_def =
@@ -112,11 +159,6 @@ val obe_def =
        | O_EX          of obe                    (* EX f                     *)
        | O_EU          of obe # obe              (* E[f1 U f2]               *)
        | O_EG          of obe`;                  (* EG f                     *)
-
-(******************************************************************************
-* Stop ``S`` parsing to the S-combinator
-******************************************************************************)
-val _ = hide "S";
 
 (******************************************************************************
 * Selectors for components of a model M = (S,S0,R,P,L)
@@ -312,7 +354,7 @@ val F_SEM_defn =
                   ==>
                   ?j :: PL p. i < j         /\
                     NEXT_RISE M p c (i+1,j) /\
-                    F_SEM M (RESTN p j) (STRONG_CLOCK c) f)
+                    F_SEM M (RESTN p j) (WEAK_CLOCK c) f)
     /\
     (F_SEM M p (WEAK_CLOCK c) (F_UNTIL(f1,f2)) = 
       F_SEM M p (STRONG_CLOCK c) (F_UNTIL(f1,f2))  
