@@ -264,6 +264,41 @@ in
 val duplicate_names = find_dup o Listsort.sort String.compare
 end;
 
+fun check_constrs_unique_in_theory asts = let
+  fun cnames (s, Record _) = [(s,s)]
+    | cnames (s, Constructors l) = map (fn s' => (s, #1 s')) l
+  val newtypes = map #1 asts
+  val constrs = List.concat (map cnames asts)
+  val current_types = set_diff (map fst (types "-")) newtypes
+  fun current_constructors (tyname, fm) = let
+    val tys_cons = TypeBase.constructors_of tyname
+                   handle HOL_ERR _ => []
+    fun foldthis (c,fm) =
+        if uptodate_term c then
+          Binarymap.insert(fm, #Name (dest_thy_const c), tyname)
+        else fm
+  in
+    foldl foldthis fm tys_cons
+  end
+  val current_constructors =
+      List.foldl current_constructors (Binarymap.mkDict String.compare)
+                 current_types
+  fun calculate_intersection ((tyname, conname), acc) =
+      case Binarymap.peek(current_constructors, conname) of
+        NONE => acc
+      | SOME ty' => (tyname, conname, ty') :: acc
+  val common = List.rev (foldl calculate_intersection [] constrs)
+  fun warn (newty, conname, oldty) =
+      HOL_WARNING "Datatype" "Hol_datatype"
+      ("Constructor \""^conname^"\" in new type \""^newty^"\"\n\
+       \               duplicates constructor in type \""^oldty^"\", \
+       \which will be\n\
+       \               invalidated by this definition")
+in
+  app warn common
+end
+
+
 local fun tyname_as_tyvar n = mk_vartype ("'" ^ n)
       fun stage1 (s,Constructors l) = (s,l)
         | stage1 (s,Record fields)  = (s,[(s,map snd fields)])
@@ -278,11 +313,12 @@ local fun tyname_as_tyvar n = mk_vartype ("'" ^ n)
             case duplicate_names (itlist cnames asts [])
              of NONE => ()
               | SOME n => raise ERR "check_constrs"
-                       ("Duplicate constructor name: "^n)
+                                    ("Duplicate constructor name: "^n)
 in
 fun to_tyspecs ASTs =
  let val _ = List.app check_fields ASTs
      val _ = check_constrs ASTs
+     val _ = check_constrs_unique_in_theory ASTs
      val asts = map stage1 ASTs
      val new_type_names = map #1 asts
      fun mk_hol_type (dAQ ty) = ty
@@ -350,7 +386,11 @@ in
   | otherwise => raise ERR "build_enum_tyinfo" "Should never happen"
 end
 
-fun build_enum_tyinfos astl = map build_enum_tyinfo astl
+fun build_enum_tyinfos astl = let
+  val _ = check_constrs_unique_in_theory astl
+in
+  map build_enum_tyinfo astl
+end
 
 
 (*---------------------------------------------------------------------------
