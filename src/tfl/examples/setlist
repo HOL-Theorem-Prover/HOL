@@ -54,7 +54,7 @@ val list2set =
             Some consequences
  ---------------------------------------------------------------------------*)
 
-val set2list_thm = Q.prove
+val set2list_inv = Q.prove
 (`!s. FINITE s ==> (list2set(set2list s) = s)`,
  recInduct set2list_ind
    THEN RW_TAC std_ss [] 
@@ -72,7 +72,7 @@ val set2list_CARD = Q.prove
    THEN `FINITE (REST s)` by PROVE_TAC [REST_DEF,FINITE_DELETE]
    THEN PROVE_TAC[CHOICE_INSERT_REST,CARD_INSERT,CHOICE_NOT_IN_REST,REST_DEF]);
 
-val setlist_IN_MEM = Q.prove
+val set2list_IN_MEM = Q.prove
 (`!s. FINITE s ==> !x. x IN s = MEM x (set2list s)`,
  recInduct set2list_ind
    THEN RW_TAC std_ss [] 
