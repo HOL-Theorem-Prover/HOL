@@ -9,8 +9,10 @@
 (* TRANSLATOR: Paul Curzon  3 June 1993, September 1994			 *)
 (* ===================================================================== *)
 
-val _ = Parse.new_theory"word";
+open HolKernel
+
+val _ = new_theory"word";
 
 local open bword_arithTheory bword_bitopTheory in end;
 
-val _ = Parse.export_theory();
+val _ = export_theory();

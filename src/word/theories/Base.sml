@@ -4,7 +4,7 @@ struct
 local
  open numLib arithLib
  open rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory
- open HolKernel Parse basicHol90Lib Num_conv Num_induct
+ open HolKernel Parse boolLib Prim_rec Num_conv Num_induct
  infix THEN THENL |->;
 
 in

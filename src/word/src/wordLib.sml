@@ -1,10 +1,10 @@
 structure wordLib :> wordLib =
 struct
- 
+
 local open wordTheory in end;
 
 open res_quanLib listLib numLib;
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib Prim_rec Rsyntax;
 infix THEN THENL THENC ##;
 
  type term = Term.term
@@ -23,13 +23,13 @@ val word_CASES_TAC =
       fn w => CHOOSE_THEN SUBST1_TAC (ISPEC w cthm)
     end ;
 
-val word_INDUCT_TAC = 
+val word_INDUCT_TAC =
     let val ithm = word_baseTheory.word_induct
     in
     (INDUCT_THEN ithm (fn t => ALL_TAC))
     end;
 
-val RESQ_WORDLEN_TAC = 
+val RESQ_WORDLEN_TAC =
     (CONV_TAC RESQ_FORALL_CONV THEN word_INDUCT_TAC
      THEN PURE_ONCE_REWRITE_TAC[word_baseTheory.PWORDLEN_DEF]
      THEN GEN_TAC THEN DISCH_TAC);
@@ -48,7 +48,7 @@ val BIT_CONV =
   fn tm =>
     let val (_,[N,W]) = (check ## I) (strip_comb tm)
     val LST =  #Rand (dest_comb W)
-    val lst = (#els o dest_list) LST
+    val lst = (#1 o listSyntax.dest_list) LST
     val n = int_of_term N
     in
     if not(n < (length lst))
@@ -71,10 +71,10 @@ val WSEG_CONV =
   fun check tm = assert (fn t =>  #Name(dest_const t) = "WSEG") tm
   val int_of_term = string_to_int o #Name o dest_const
   in
-  fn tm => 
+  fn tm =>
     let val (_,[N,INX,W]) = (check ## I) (strip_comb tm)
     val LST =  #Rand (dest_comb W)
-    val lst = (#els o dest_list) LST
+    val lst = (#1 o listSyntax.dest_list) LST
     val n = int_of_term N and inx = int_of_term INX
     in
     if ((n+inx) > (length lst))
@@ -127,15 +127,15 @@ val LESS_CONV =
   fun less_conv t = EQT_INTRO (REWRITE_RULE[LESS_MONO_EQ,LESS_0]
     	                                   (REDEPTH_CONV num_CONV t))
   in
-  fn tm => 
+  fn tm =>
     let val (_,[M,N]) = ((check "<") ## I) (strip_comb tm)
     val m = int_of_term M and n = int_of_term N
     in
-     if (m < n) 
+     if (m < n)
      then  let val t = mk_comb{Rator=mk_comb{Rator=(--`<`--),Rand=M},Rand=N}
            in
     	       less_conv t
-           end    	
+           end
      else if (m = n)
      then EQF_INTRO (MATCH_MP NOT_LESS_EQ
                          (EQT_ELIM (reduceLib.NEQ_CONV (--`^M = ^N`--))))
@@ -161,9 +161,9 @@ val LESS_EQ_CONV =
     	GEN_ALL (SYM (el 4 (CONJ_LIST 4 (SPEC_ALL EQ_CLAUSES))))]
     	(AP_TERM (--`$~`--) (SPEC_ALL NOT_LESS)))
   in
-   fn tm => 
+   fn tm =>
     let val (_,[M,N]) = ((check "<=") ## I) (strip_comb tm)
-    val m = int_of_term M 
+    val m = int_of_term M
     val n = int_of_term N
     in
      if (m > n)
@@ -188,8 +188,8 @@ val [WAND_PWORDLEN, WOR_PWORDLEN, WXOR_PWORDLEN] =
     let val pthm =  word_bitopTheory.PBITBOP_PWORDLEN
     in
     map (RESQ_MATCH_MP pthm)
-        [bword_bitopTheory.PBITBOP_WAND, 
-         bword_bitopTheory.PBITBOP_WOR, 
+        [bword_bitopTheory.PBITBOP_WAND,
+         bword_bitopTheory.PBITBOP_WOR,
          bword_bitopTheory.PBITBOP_WXOR]
     end;
 
@@ -202,7 +202,7 @@ val pwordlen_bitop_funs =
 val pwordlen_funs =
     let val PWORDLEN_DEF = word_baseTheory.PWORDLEN_DEF
     in
-    	[("WORD",  (fn tms => fn  n => fn w => 
+    	[("WORD",  (fn tms => fn  n => fn w =>
     	    if (int_of_term n) = 0 then
               REWRITE_RULE[rich_listTheory.LENGTH]
                    (ISPECL[n,hd w] PWORDLEN_DEF)
@@ -211,7 +211,7 @@ val pwordlen_funs =
     	      (CONV_RULE ((RAND_CONV o RAND_CONV) LENGTH_CONV)
                 (ISPECL[n,(hd w)]PWORDLEN_DEF)))),
     	 ("WSEG",   fn tms => fn  n => fn w =>
-    	    let fun prove_less_eq m n = 
+    	    let fun prove_less_eq m n =
     	      let val th = LESS_EQ_CONV
     	        (mk_comb{Rator=mk_comb{Rator=(--`$<=`--),
                                        Rand=term_of_int m},
@@ -224,7 +224,7 @@ val pwordlen_funs =
     	       MP (CONV_RULE
     	          ((RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV)
                      reduceLib.ADD_CONV)
-    	          (SPECL [m,k] (word_inst_thm ((hd tms), wd) 
+    	          (SPECL [m,k] (word_inst_thm ((hd tms), wd)
     	    	   (word_baseTheory.WSEG_PWORDLEN))))
        	         (prove_less_eq ((int_of_term m) + (int_of_term k))
     	    	      (int_of_term (hd  tms)))
@@ -238,14 +238,14 @@ val pwordlen_funs =
     	 ("WXOR", (fn tms => fn  n => fn w =>
     	    (RESQ_SPECL w (SPEC n WXOR_PWORDLEN)))  ),
          ("WCAT", fn tms => fn  n => fn w =>
-    	    let val {fst = w1, snd = w2} = dest_pair (hd w)
+    	    let val (w1, w2) = pairSyntax.dest_pair (hd w)
     	    val n1 = hd tms and n2 = hd(tl tms)
     	    val N1 = int_of_term n1 and N2 = int_of_term n2
             in
      	    (if not((int_of_term n) = (N1 + N2))
      	     then raise WORD_LIB_ERR{function="pwordlen_funs",
                                       message="theorems and term do not match"}
-     	     else 
+     	     else
     	     (CONV_RULE ((RATOR_CONV o RAND_CONV) reduceLib.ADD_CONV)
     	      (itlist word_inst_thm [(n2,w2), (n1,w1)]
     	    	(word_baseTheory.WCAT_PWORDLEN))))
@@ -255,7 +255,7 @@ val pwordlen_funs =
 
 fun check s = assert (fn x => #Name(dest_const x) = s) ;
 
-fun pick_fn s l oper = 
+fun pick_fn s l oper =
     	let val ops = #Name (dest_const oper)
         in
          snd (first (fn (s,t) => (s = ops)) l)
@@ -305,7 +305,7 @@ fun PWORDLEN_bitop_CONV tm =
             raise WORD_LIB_ERR {function="PWORDLEN_bitop_CONV",
                                       message=message};
 
-    
+
 (* ---------------------------------------------------------------------*)
 (* WSEG_WSEG_CONV (--`N`--) (--`WSEG m2 k2 (WSEG m1 k1 w)`--) --->	*)
 (* PWORDLEN N w |- WSEG m2 k2 (WSEG m1 k1 w) = WSEG m2 k w		*)
@@ -313,7 +313,7 @@ fun PWORDLEN_bitop_CONV tm =
 (*   and N, k1, k2, m1,m2 are all constants				*)
 (* ---------------------------------------------------------------------*)
 
-val WSEG_WSEG_CONV = 
+val WSEG_WSEG_CONV =
    let fun check s = assert (fn x => #Name(dest_const x) = s)
    val thm' = word_baseTheory.WSEG_WSEG
    fun add_less_eq_conv k m n =
@@ -330,7 +330,7 @@ val WSEG_WSEG_CONV =
     val (_,[m1,k1,w]) = ((check "WSEG") ## I) (strip_comb s)
     val thm = GQSPECL [N, w, m1, k1, m2, k2] thm'
     in
-    (RIGHT_CONV_RULE ((RATOR_CONV o RAND_CONV) reduceLib.ADD_CONV) 
+    (RIGHT_CONV_RULE ((RATOR_CONV o RAND_CONV) reduceLib.ADD_CONV)
     (MP thm (CONJ (EQT_ELIM (add_less_eq_conv m1 k1 N))
     	    	 (EQT_ELIM (add_less_eq_conv m2 k2 m1)))))
     end
@@ -338,11 +338,11 @@ val WSEG_WSEG_CONV =
 (*
  * ---
  * Example calls:
- * 
+ *
  * WSEG_WSEG_CONV (--`10`--)
  *    (--`WSEG 2 2 (WSEG 5 3 (w:num word))`--);
  * val it = . |- WSEG 2 2 (WSEG 5 3 w) = WSEG 2 5 w : thm
- * 
+ *
  * WSEG_WSEG_CONV (--`10`--)
  *     (--`WSEG 2 2 (WSEG 5 3 (WORD[1;2;3;4;5;6;7;8;9;10]))`--);
  * val it =
@@ -371,8 +371,8 @@ fun PWORDLEN_TAC l =
     in
     if null hyps
     then (ACCEPT_TAC th) (asm,gl)
-    else 
-      let val mlist = 
+    else
+      let val mlist =
     	mapfilter (fn h => if not(mem h asm)
                            then h
                            else raise HOL_ERR {origin_function="PWORDLEN_TAC",
@@ -380,7 +380,7 @@ fun PWORDLEN_TAC l =
                                                      message=""}) hyps
       in
       if null mlist then ((ACCEPT_TAC th) (asm,gl))
-      else 
+      else
         let val sgl = list_mk_conj mlist
         in
     	  (SUBGOAL_THEN sgl STRIP_ASSUME_TAC THENL[

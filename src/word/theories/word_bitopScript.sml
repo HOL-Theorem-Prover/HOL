@@ -9,7 +9,7 @@
 (* PC 18/11/93: SEG ->WSEG *)
 
 
-open HolKernel Parse basicHol90Lib Let_conv;
+open HolKernel Parse boolLib Prim_rec;
 open Base numLib res_quanLib;
 open rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory;
 open Cond_rewrite Res_quan word_baseTheory;

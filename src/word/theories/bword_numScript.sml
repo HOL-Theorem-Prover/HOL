@@ -9,7 +9,7 @@
 (* ===================================================== *)
 
 
-open HolKernel Parse basicHol90Lib Let_conv Num_conv Num_induct;
+open HolKernel Parse boolLib Prim_rec Num_conv Num_induct;
 open arithLib numLib res_quanLib;
 open rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory;
 open Cond_rewrite Res_quan word_baseTheory word_bitopTheory word_numTheory;
@@ -427,7 +427,8 @@ val NBWORD_MOD = store_thm("NBWORD_MOD",
     		 (SPECL [(--`1`--), (--`[x:'a]`--)] PWORDLEN_DEF)))
             in
     	       map (fn t =>
-                    ISPEC (hd (#els (dest_list(#Rand(dest_comb t))))) lm) tms2
+                    ISPEC (hd (#1 (listSyntax.dest_list
+                                   (#Rand(dest_comb t))))) lm) tms2
             end
         val lems3 =
     	    map (fn t => ISPECL (snd (strip_comb t)) PWORDLEN_NBWORD) tms1
