@@ -73,7 +73,7 @@ val COMMA_DEF = new_definition (
   --`$, x y = ABS_prod(MK_PAIR x y)`--);
 
 val _ = add_rule {term_name = ",", fixity = Infixr 50,
-                  pp_elements = [TOK ","],
+                  pp_elements = [TOK ",", BreakSpace(0,0)],
                   paren_style = ParoundName,
                   block_style = (AroundSameName, (PP.INCONSISTENT, 0))};
 
