@@ -350,6 +350,22 @@ val GT_LS =
     THEN RW_TAC arith_ss [GT_xnum_num_def,LS_num_xnum_def]);
 
 (******************************************************************************
+* LESS m is predicate to test if a number is less than m
+* LESS : num -> num -> bool
+******************************************************************************)
+val LESS_def =
+ Define `LESS (m:num) (n:num) = n < m`;
+
+(******************************************************************************
+* LESSX m is predicate to test if a number is less than extended number m
+* LESSX : xnum -> num -> bool
+******************************************************************************)
+val LESSX_def =
+ Define `LESSX (m:xnum) (n:num) = n < m`;
+
+val _ = overload_on ("LESS", Term`LESSX`);   
+
+(******************************************************************************
 * LENGTH(FINITE l)   = XNUM(LENGTH l)
 * LENGTH(INFINITE l) = INFINITY
 ******************************************************************************)
