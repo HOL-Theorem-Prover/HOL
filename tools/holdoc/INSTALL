@@ -1,0 +1,62 @@
+Installing HOLDoc
+=================
+
+
+Downloading
+~~~~~~~~~~~
+
+To obtain the latest version of HOLDoc, download it from the
+SourceForge CVS repository (it's part of the HOL project,
+http://sourceforge.net/projects/hol/).
+
+The munger will be installed in a subdirectory named HOLDoc.  First
+select a directory in which you would like this subdirectory to be
+created, and cd there.
+
+Then, do the following:
+
+  cvs -d:pserver:anonymous@cvs.sourceforge.net:/cvsroot/hol login
+
+  # press Enter to the password prompt
+
+  cvs -d:pserver:anonymous@cvs.sourceforge.net:/cvsroot/hol co -d HOLDoc hol98/tools/holdoc
+
+You may need to try several times; SF seems to be fairly heavily loaded.
+
+
+Prerequisites
+~~~~~~~~~~~~~
+
+You must have OCaml version 3.06 installed.  This can be obtained from
+
+  http://caml.inria.fr/ocaml/distrib.html
+
+
+Building
+~~~~~~~~
+
+Once you have OCaml installed, set the OCAMLPATH variable in the
+HOLDoc Makefile to point to the installed location.
+
+Then type
+
+  make
+
+to build all the tools.
+
+
+Using
+~~~~~
+
+You can now use the tools!  See holdoc-guide.txt for more information,
+and see the examples/mng/ and examples/lts directories for some
+examples of its use (typing make in either of these directories should
+build the examples).
+
+
+Enjoy!
+
+
+--KW 8-)
+
+Keith Wansbrough.
