@@ -106,6 +106,7 @@ val TYPE_DEFINITION =
 
 val _ = add_const "TYPE_DEFINITION";
 
+
 (*---------------------------------------------------------------------------*
  *   Parsing directives for some of the basic operators.                     *
  *---------------------------------------------------------------------------*)
@@ -216,6 +217,22 @@ val RES_SELECT_DEF =
 val _ = (add_const "RES_SELECT"; associate_restriction ("@",  "RES_SELECT"));
 
 (* Note: RES_ABSTRACT comes later, defined by new_specification *)
+
+(*---------------------------------------------------------------------------*)
+(* Experimental rewriting directives                                         *)
+(*---------------------------------------------------------------------------*)
+
+val UNBOUNDED_DEF = 
+  Definition.new_definition
+    ("UNBOUNDED_DEF", 
+     Term `UNBOUNDED = \b:bool. b`);
+
+val BOUNDED_DEF = 
+  Definition.new_definition
+    ("BOUNDED_DEF", 
+     Term `BOUNDED = \(b:bool) (v:bool). b`);
+
+val _ = List.app add_const ["UNBOUNDED", "BOUNDED"];
 
 (*---------------------------------------------------------------------------*
  *                   THEOREMS                                                *
@@ -3703,6 +3720,26 @@ val _ = add_rule{pp_elements = [PPBlock([TOK "case", BreakSpace(1,2),
                  paren_style = OnlyIfNecessary,
                  term_name = GrammarSpecials.case_special};
 
+
+val BOUNDED_THM =
+ let val b = Term `b:bool`
+     val v = Term `v:bool`
+ in
+  GEN b (GEN v
+    (RIGHT_BETA(AP_THM (RIGHT_BETA(AP_THM BOUNDED_DEF b)) v)))
+ end;
+
+val _ = save_thm("BOUNDED_THM", BOUNDED_THM);
+
+val UNBOUNDED_THM =
+ let val b = Term `b:bool`
+ in
+  GEN b (RIGHT_BETA(AP_THM UNBOUNDED_DEF b))
+ end;
+
+val _ = save_thm("UNBOUNDED_THM", UNBOUNDED_THM);
+
+
 val _ = export_theory();
 
-end; (* boolScript *)
+end (* boolScript *)

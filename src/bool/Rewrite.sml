@@ -14,13 +14,57 @@ structure Rewrite :> Rewrite =
 struct
 
 open HolKernel boolTheory boolSyntax Drule Abbrev;
+
+val ERR = mk_HOL_ERR "Rewrite";
+
 type pred = term -> bool  
 
 infix 3 ##
 
-val ERR = mk_HOL_ERR "Rewrite";
+fun stringulate _ [] = []
+  | stringulate f [x] = [f x]
+  | stringulate f (h::t) = f h::",\n"::stringulate f t;
 
+(*---------------------------------------------------------------------------*)
+(* Datatype for controlling the application of individual rewrite rules      *)
+(*---------------------------------------------------------------------------*)
 
+datatype control 
+     = UNBOUNDED
+     | BOUNDED of int ref
+
+val unbounded_tm = prim_mk_const {Thy="bool", Name="UNBOUNDED"};
+val bounded_tm   = prim_mk_const {Thy="bool", Name="BOUNDED"};
+
+fun mk_unbounded th = EQ_MP (SYM (SPEC (concl th) UNBOUNDED_THM)) th;
+
+fun mk_bounded th n =
+  EQ_MP (SYM (SPEC (mk_var(Int.toString n, bool))
+             (SPEC (concl th) BOUNDED_THM)))
+        th;
+
+val Ntimes = mk_bounded;
+val Once = C Ntimes 1;
+
+fun dest_unbounded th = 
+ case strip_comb (concl th)
+  of (c,[a]) => if same_const unbounded_tm c
+                then EQ_MP (SPEC a UNBOUNDED_THM) th
+                else raise Fail "dest_unbounded"
+   | other => raise Fail "dest_unbounded";
+
+fun dest_bounded th = 
+ case strip_comb (concl th)
+  of (c,[a1,a2]) => 
+        if same_const bounded_tm c
+         then let val (s,_) = dest_var a2
+              in (EQ_MP (SPEC a2 (SPEC a1 BOUNDED_THM)) th,
+                  Option.valOf(Int.fromString s))
+              end
+         else raise Fail "dest_bounded"
+   | other => raise Fail "dest_bounded";
+
+  
 (*---------------------------------------------------------------------------*
  * Split a theorem into a list of theorems suitable for rewriting:           *
  *                                                                           *
@@ -35,25 +79,39 @@ val ERR = mk_HOL_ERR "Rewrite";
  *                                                                           *
  *---------------------------------------------------------------------------*)
 
-fun mk_rewrites th =
+
+fun decompose tag th =
  let val th = SPEC_ALL th
      val t = concl th
-  in
-    if is_eq t   then [th] else
-    if is_conj t then (op @ o (mk_rewrites##mk_rewrites) o CONJ_PAIR) th else
-    if is_neg t  then [EQF_INTRO th]
-                 else [EQT_INTRO th]
+ in
+   if is_eq t   then [(th,tag)] else
+   if is_conj t then (op@ o (decompose tag##decompose tag) o CONJ_PAIR) th else
+   if is_neg t  then [(EQF_INTRO th,tag)]
+                else [(EQT_INTRO th,tag)]
   end
-  handle e => raise (wrap_exn "Rewrite" "mk_rewrites" e);
+  handle e => raise wrap_exn "Rewrite" "mk_rewrites.decompose" e;
 
+fun local_mk_rewrites th =
+ case total dest_bounded th
+  of NONE => decompose UNBOUNDED th
+   | SOME(th',n) => decompose (BOUNDED (ref n)) th';
 
-(* An abstract datatype of rewrite rule sets. *)
+val mk_rewrites = map fst o local_mk_rewrites;
+
+(*---------------------------------------------------------------------------*)
+(* Support for examining some aspects of the work of the rewriter            *)
+(*---------------------------------------------------------------------------*)
 
 val monitoring = ref false;
 
 val _ = register_btrace ("Rewrite", monitoring) ;
 
-abstype rewrites = RW of {thms :thm list,  net :conv Net.net}
+(*---------------------------------------------------------------------------*)
+(* Abstract datatype of rewrite rule sets.                                   *)
+(*---------------------------------------------------------------------------*)
+
+abstype rewrites = RW of {thms : thm list,  
+                           net : conv Net.net}
 with
  fun dest_rewrites(RW{thms, ...}) = thms
  fun net_of(RW{net,...}) = net
@@ -63,56 +121,38 @@ with
  fun set_implicit_rewrites rws = (implicit := rws);
 
 fun add_rewrites (RW{thms,net}) thl =
+ let val rewrites = itlist (append o local_mk_rewrites) thl []
+     fun appconv (c,UNBOUNDED) tm     = c tm
+       | appconv (c,BOUNDED(ref 0)) _ = raise ERR "app_conv" "zero"
+       | appconv (c,BOUNDED r) tm     = c tm before Portable.dec r
+ in
    RW{thms = thms@thl,
-      net = itlist Net.insert
-              (map (fn th => (boolSyntax.lhs(concl th), Conv.REWR_CONV th))
-                   (itlist (append o mk_rewrites) thl []))
-              net}
+       net = itlist Net.insert
+                (map (fn (th,tag) => 
+                        (boolSyntax.lhs(concl th), 
+                         (appconv (Conv.REWR_CONV th,tag)))) rewrites)
+                net}
+ end
 
-fun stringulate _ [] = []
-  | stringulate f [x] = [f x]
-  | stringulate f (h::t) = f h::",\n"::stringulate f t;
+end (* abstype *)
 
 (*---------------------------------------------------------------------------
      Create a conversion from some rewrites
  ---------------------------------------------------------------------------*)
 
-fun REWRITES_CONV (RW{net,...}) tm =
- if !monitoring
- then case mapfilter (fn f => f tm) (Net.match tm net)
-       of []   => Conv.NO_CONV tm
-        | [x]  => (HOL_MESG (String.concat
-                    ["Rewrite:\n", Parse.thm_to_string x])
-                   ; x)
-        | h::t => (HOL_MESG (String.concat
-           ["Multiple rewrites possible (first taken):\n",
-            String.concat (stringulate Parse.thm_to_string (h::t))]); h)
- else Conv.FIRST_CONV (Net.match tm net) tm;
+fun REWRITES_CONV rws tm =
+ let val net = net_of rws
+ in if !monitoring
+    then case mapfilter (fn f => f tm) (Net.match tm net)
+          of []   => Conv.NO_CONV tm
+           | [x]  => (HOL_MESG (String.concat
+                       ["Rewrite:\n", Parse.thm_to_string x]) ; x)
+           | h::t => (HOL_MESG (String.concat
+                    ["Multiple rewrites possible (first taken):\n",
+                  String.concat (stringulate Parse.thm_to_string (h::t))]); h)
+    else Conv.FIRST_CONV (Net.match tm net) tm
+ end;
 
-
-fun pp_rewrites ppstrm (RW{thms,...}) =
-    let open Portable
-        val {add_string,add_break,begin_block,end_block,add_newline,...} =
-               with_ppstream ppstrm
-        val pp_thm = Parse.pp_thm ppstrm
-        val thms' = flatten (map mk_rewrites thms)
-        val how_many = length thms'
-    in
-       begin_block CONSISTENT 0;
-       if (how_many = 0)
-       then (add_string "<empty rule set>")
-       else ( begin_block INCONSISTENT 0;
-              pr_list pp_thm (fn () => add_string";")
-                             (fn () => add_break(2,0))
-                             thms';
-              end_block());
-       add_newline();
-       add_string("Number of rewrite rules = "^Lib.int_to_string how_many);
-       add_newline();
-       end_block()
-    end;
-
-end; (* abstype *)
 
 (* Derived manipulations *)
 
@@ -243,4 +283,28 @@ fun SUBST_MATCH eqth th =
   handle HOL_ERR _ => raise ERR "SUBST_MATCH" "";
 
 
-end; (* Rewrite *)
+
+fun pp_rewrites ppstrm rws =
+    let open Portable
+        val {add_string,add_break,begin_block,end_block,add_newline,...} =
+               with_ppstream ppstrm
+        val pp_thm = Parse.pp_thm ppstrm
+        val thms = dest_rewrites rws        
+        val thms' = flatten (map mk_rewrites thms)
+        val how_many = length thms'
+    in
+       begin_block CONSISTENT 0;
+       if (how_many = 0)
+       then (add_string "<empty rule set>")
+       else ( begin_block INCONSISTENT 0;
+              pr_list pp_thm (fn () => add_string";")
+                             (fn () => add_break(2,0))
+                             thms';
+              end_block());
+       add_newline();
+       add_string("Number of rewrite rules = "^Lib.int_to_string how_many);
+       add_newline();
+       end_block()
+    end;
+
+end (* Rewrite *)
