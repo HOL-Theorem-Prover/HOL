@@ -10,8 +10,6 @@ fun equal x y = (x=y)
 infix ##;
 fun (f##g) (x,y) = (f x, g y);
 
-val equal = curry (op=);
-
 fun butlast [] = raise Fail "butlast"
   | butlast [x] = []
   | butlast (h::t) = h::butlast t;
@@ -62,7 +60,9 @@ fun divide ss =
   if isEmpty ss
     then []
     else let val (ss1,ss2) = position "\n\\" ss
-         in ss1::divide (triml 2 ss2)
+         in
+           if isEmpty ss1 then divide (triml 2 ss2)
+           else ss1::divide (triml 2 ss2)
          end;
 
 local val noindent = Substring.all "noindent"
@@ -82,19 +82,35 @@ local val BLTYPE = Substring.all "BLTYPE"
       val TYPEss = Substring.all "TYPE"
       val BLTYPEsize = Substring.size ELTYPE
 in
-fun longtype_elim (l as (ss1::ss2::rst)) =
+fun longtype_elim (l as (doc::ss1::ss2::rst)) =
      let val (ssa,ssb) = position "BLTYPE" ss1
          val (ssc,ssd) = position "ELTYPE" ss2
      in if isEmpty ssa andalso isEmpty ssc
-          then all(concat[TYPEss, triml BLTYPEsize ssb]) :: rst
+          then doc :: all(concat[TYPEss, triml BLTYPEsize ssb]) :: rst
           else l
      end
   | longtype_elim l = l
 end;
 
+exception ParseError of string
+fun warn s = TextIO.output(TextIO.stdErr, s)
+
+fun find_doc ss = let
+  val (ssa, ssb) = position "\\DOC" ss
+  val _ = not (isEmpty ssb) orelse raise ParseError "No \\DOC beginning entry"
+  val _ = isEmpty ssa orelse raise ParseError "Text before \\DOC"
+  val (docpart, rest) = position "\n" ss
+  val docheader = slice(docpart, 1, NONE)
+  val _ = size docheader > 4 orelse raise ParseError "Empty \\DOC part"
+in
+  (docheader, slice(rest,1,NONE))
+end
+
 fun to_sections ss =
   let open Substring
-      val sslist = List.tl (divide ss)
+      val (docpart, rest) = find_doc ss
+      val sslist = docpart :: divide rest
+      (* butlast below drops final \enddoc *)
       val sslist1 = noindent_elim (longtype_elim (butlast sslist))
   in
    map ((string##I) o splitl (not o Char.isSpace)) sslist1
@@ -109,7 +125,7 @@ fun braces ss n =
    of SOME(#"{", ss1) => braces ss1 (n+1)
     | SOME(#"}", ss1) => if n=1 then ss1 else braces ss1 (n-1)
     | SOME(_,    ss1) => braces ss1 n
-    | NONE            => raise Fail "braces: expecting closing brace(s)"
+    | NONE            => raise ParseError "braces: expecting closing brace(s)"
 
 
 fun markup ss =
@@ -148,9 +164,9 @@ fun elim_double_braces ss = let
   in
     case size ssb of
       0 => concat (rev (ssa::acc))
-    | 1 => raise Fail "singleton brace in {}-delimited text"
+    | 1 => raise ParseError "singleton brace in {}-delimited text"
     | _ => if sub(ssb,0) <> sub(ssb,1) then
-             raise Fail "singleton brace in {}-delimited text"
+             raise ParseError "singleton brace in {}-delimited text"
            else let
                val (s,j,n) = base ssa
                val (s,k,m) = base ssb
@@ -168,7 +184,7 @@ fun parse_type ss =
        of SOME(#"{", ss1) =>
            let val ss2 = dropr Char.isSpace ss1
            in if sub(ss2,size ss2 - 1) = #"}" then trimr 1 ss2
-              else raise Fail "parse_type: closing brace not found"
+              else raise ParseError "Closing brace not found in \\TYPE"
            end
         | other => ss
   in elim_double_braces ss'
@@ -188,6 +204,6 @@ fun parse_file docfile =
          | otherwise => FIELD (tag, List.map db_out (paragraphs (markup ss)))
   in
      List.map section (to_sections (fetch_contents docfile))
-  end;
+  end handle ParseError s => raise ParseError (docfile^": "^s)
 
 end; (* struct *)

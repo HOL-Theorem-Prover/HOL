@@ -55,6 +55,7 @@ fun html (name,sectionl) ostrm =
             out "</DIV></PRE>\n")
 
      fun markout_section (FIELD ("KEYWORDS", _)) = ()
+       | markout_section (FIELD ("DOC", _)) = ()
        | markout_section (FIELD (tag, ss))
            = (out "<DT><SPAN class = \"FIELD-NAME\">";
               out tag;
@@ -104,6 +105,8 @@ fun html (name,sectionl) ostrm =
        out "<SPAN class = \"HOL\"><A HREF=\""; out www;
        out"\">HOL</A>&nbsp;&nbsp;";
        out release; out "</BODY></HTML>\n")
+
+     val sectionl = tl sectionl
 
   in
      front_matter name (hd sectionl);

@@ -13,6 +13,7 @@ sig
                    | SEEALSO of substring list
 
   val parse_file : string -> section list
+  exception ParseError of string
 
 end;
 
