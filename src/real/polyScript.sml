@@ -159,18 +159,6 @@ val poly = new_recursive_definition list_Axiom "poly_def"
 (* Arithmetic operations on polynomials. Overloaded (not sure this is wise). *)
 (* ------------------------------------------------------------------------- *)
 
-val bool_not = Term`$~ : bool -> bool`;
-val natmult  = Term`$* : num -> num -> num`;
-val natplus  = Term`$+ : num -> num -> num`;
-
-val _ = allow_for_overloading_on ("~", Type`:'a -> 'a`);
-val _ = allow_for_overloading_on ("+", Type`:'a -> 'a -> 'a`);
-val _ = allow_for_overloading_on ("*", Type`:'a -> 'a -> 'a`);
-
-val _ = overload_on ("~", bool_not);
-val _ = overload_on ("+", natplus);
-val _ = overload_on ("*", natmult);
-
 val poly_add = new_recursive_definition list_Axiom "poly_add_def"
  (Term`(poly_add [] l2 = l2) /\
        (poly_add (h::t) l2 = if (l2 = []) then h::t
@@ -498,9 +486,9 @@ val POLY_LINEAR_REM = store_thm("POLY_LINEAR_REM",
     EXISTS_TAC (Term`h:real`) THEN
     REWRITE_TAC[poly_add, poly_mul, poly_cmul, NOT_CONS_NIL] THEN
     REWRITE_TAC[HD, TL, REAL_ADD_RID],
-    X_GEN_TAC (Term`k:real`) THEN 
+    X_GEN_TAC (Term`k:real`) THEN
     POP_ASSUM(STRIP_ASSUME_TAC o SPEC (Term`h:real`)) THEN
-    EXISTS_TAC (Term`CONS (r:real) q`) THEN 
+    EXISTS_TAC (Term`CONS (r:real) q`) THEN
     EXISTS_TAC (Term`r * a + k:real`) THEN
     ASM_REWRITE_TAC[POLY_ADD_CLAUSES, POLY_MUL_CLAUSES, poly_cmul] THEN
     REWRITE_TAC[CONS_11] THEN CONJ_TAC THENL
@@ -765,12 +753,12 @@ val poly_divides = new_infixl_definition ("poly_divides",
   (Term`$poly_divides p1 p2 = ?q. poly p2 = poly (p1 * q)`), 475);
 
 val POLY_PRIMES = store_thm("POLY_PRIMES",
- (Term`!a p q. [a; &1] poly_divides (p * q) 
-                           = 
+ (Term`!a p q. [a; &1] poly_divides (p * q)
+                           =
                [a; &1] poly_divides p \/ [a; &1] poly_divides q`),
  REPEAT GEN_TAC THEN REWRITE_TAC[poly_divides, POLY_MUL, FUN_EQ_THM, poly] THEN
  REWRITE_TAC[REAL_MUL_RZERO, REAL_ADD_RID, REAL_MUL_RID] THEN EQ_TAC THENL
- [DISCH_THEN(X_CHOOSE_THEN (Term`r:real list`) 
+ [DISCH_THEN(X_CHOOSE_THEN (Term`r:real list`)
   (MP_TAC o SPEC (Term`~a:real`))) THEN
    REWRITE_TAC[REAL_ENTIRE, GSYM real_sub, REAL_SUB_REFL, REAL_MUL_LZERO] THEN
     DISCH_THEN DISJ_CASES_TAC THENL [DISJ1_TAC, DISJ2_TAC] THEN
