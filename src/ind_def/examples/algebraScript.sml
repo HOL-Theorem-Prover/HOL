@@ -8,7 +8,7 @@
 (* ===================================================================== *)
 
 (*
-  app load ["IndDefLib", "stringLib", "listTheory", "bossLib"];
+  app load ["stringLib", "listTheory", "bossLib"];
 *)
 
 structure algebraScript =
@@ -21,8 +21,8 @@ struct
 
 local open stringTheory in end;
 
-open HolKernel Parse boolLib
-     IndDefLib IndDefRules listTheory bossLib;
+open HolKernel Parse boolLib bossLib
+     IndDefRules listTheory;
 
 infix ## |-> THEN THENL ORELSE;  infixr 3 -->;
 
@@ -119,7 +119,7 @@ val trace = ty_antiq(Type`:^label list`);
 (* definition is done inductively by the rules given below.	     	 *)
 (* --------------------------------------------------------------------- *)
 
-val (trules, tind, tcases) = new_inductive_definition
+val (trules, tind, tcases) = Hol_reln
      `MTRACE Nil [] 
  /\   (!P A a. MTRACE P A ==> MTRACE (Pre a P) (a::A))
  /\   (!P Q A. MTRACE P A ==> MTRACE (Sum P Q) A)
@@ -211,7 +211,7 @@ val TERMINAL_DEF =
 (* into process Q.  The definition is done inductively, as usual.        *)
 (* --------------------------------------------------------------------- *)
 
-val (lrules, lind, lcases) = new_inductive_definition
+val (lrules, lind, lcases) = Hol_reln
     `(!Q a. TRANS (Pre a Q) a Q)
  /\  (!P P' Q a. TRANS P a P' ==> TRANS (Sum P Q) a P')
  /\  (!P Q Q' a. TRANS Q a Q' ==> TRANS (Sum P Q) a Q')
@@ -268,7 +268,7 @@ fun TRANS_TAC g =
 (* TRANS, but with the label being a list of the labels from TRANS.	 *)
 (* --------------------------------------------------------------------- *)
 
-val (Lrules, Lind, Lcases) = new_inductive_definition
+val (Lrules, Lind, Lcases) = Hol_reln
     `(!P. TRANSIT P [] P) 
  /\  (!P P' B a. 
          (?Q. TRANS P a Q /\ TRANSIT Q B P') ==> TRANSIT P (a::B) P')`;

@@ -86,7 +86,7 @@ val Gfun11 =
 
 val _ = set_fixity("IN", Infixr 700);
 
-val (TYrules,TYind,TYcases) = new_inductive_definition
+val (TYrules,TYind,TYcases) = Hol_reln
     `(!A B.   K IN (A -> B -> A))
  /\  (!A B C. S IN ((A -> B -> C) -> (A -> B) -> (A -> C)))
  /\  (!M N t2.  (?t1. M IN (t1 -> t2) /\ N IN t1) ==> (M#N) IN t2)`;
@@ -101,7 +101,8 @@ val TYrules = CONJUNCTS TYrules;
 (* inductively by the proof rules for the logic.			    *)
 (* ======================================================================== *)
 
-val (THMrules, THMind, THMcases) = new_inductive_definition
+val (THMrules, THMind, THMcases) = 
+ Hol_reln
     `(!A B.    THM (A -> B -> A))
  /\  (!A B C.  THM ((A -> B -> C) -> (A -> B) -> (A -> C)))
  /\  (!Q. (?P. THM (P -> Q) /\ THM P) ==> THM Q)`;

@@ -77,7 +77,8 @@ val (distinct,ap11) =
 
 val _ = set_fixity("--->",Infixr 700);
 
-val (Crules, Cind, Ccases) = new_inductive_definition
+val (Crules, Cind, Ccases) = 
+ Hol_reln
     `(!x y.               K#x#y ---> x)
  /\  (!x y z.             S#x#y#z ---> x#z#(y#z))
  /\  (!x y z. x ---> y ==> x#z ---> y#z)
@@ -115,7 +116,7 @@ val [Ck_TAC,Cs_TAC,LCap_TAC,RCap_TAC] = map RULE_TAC Crules;
 (* relation --->* to be RTC --->.					*)
 (* ---------------------------------------------------------------------*)
 
-val (RTCrules, RTCind, RTCcases) = new_inductive_definition
+val (RTCrules, RTCind, RTCcases) = Hol_reln
     `(!x y. R x y ==> RTC R x y)
  /\  (!x.             RTC R x x)
  /\  (!x y. (?z. RTC R x z /\ RTC R z y) ==> RTC R x y)`;
@@ -322,7 +323,7 @@ val NOT_C_CR =
 
 val _ = set_fixity("===>",Infixr 700);
 
-val (PCrules, PCind, PCcases) = new_inductive_definition
+val (PCrules, PCind, PCcases) = Hol_reln
      `(!x. x ===> x)
  /\   (!x y. K#x#y ===> x)
  /\   (!x y z. S#x#y#z ===> x#z#(y#z))
@@ -388,9 +389,7 @@ fun PC_TAC g =
 (* relation ===>* can just be defined to be TC ===>.			*)
 (* ---------------------------------------------------------------------*)
 
-val _ = hide "TC";  (* TC already defined in relationTheory *)
-
-val (TCrules, TCind, TCcases) = new_inductive_definition
+val (TCrules, TCind, TCcases) = Hol_reln
     `(!x y. R x y ==> TC R x y)
  /\  (!x y. (?z. TC R x z /\ R z y) ==> TC R x y)`;
 

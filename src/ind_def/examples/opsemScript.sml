@@ -14,7 +14,7 @@
 (* =====================================================================*)
 
 (* Interactive prelude
-  app load ["stringLib", "IndDefLib", "bossLib"];
+  app load ["stringLib", "bossLib"];
 *)
 
 
@@ -22,10 +22,9 @@ structure opsemScript =
 struct
 
 open HolKernel Parse boolLib 
-     stringLib IndDefLib IndDefRules bossLib; 
+     stringLib bossLib IndDefRules; 
 
-infixr 3 -->;
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
+infix ## |-> THEN THENL;  infixr 3 -->;
 
 
 (* ---------------------------------------------------------------------*)
@@ -115,7 +114,7 @@ val _ = (set_fixity (";;",  Infixr 350); set_MLname ";;"  "seq_def");
 (* inductively by the set of rules shown below.  			*)
 (* ---------------------------------------------------------------------*)
 
-val (rules,induction,ecases) = new_inductive_definition
+val (rules,induction,ecases) = Hol_reln
      `(!s. EVAL Skip s s) 
  /\   (!s V E. EVAL (V ::= E) s (\v. if v=V then E s else s v))
  /\   (!C1 C2 s1 s3. 
