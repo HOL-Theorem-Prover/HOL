@@ -760,10 +760,12 @@ fun extendSat varlist vm tbl =
 val traceBackPrevThm = ref TRUTH;
 
 fun traceBack vm trl pth Rth =  
- let val s = Term.rand(lhs(concl(SPEC_ALL pth)))
+ let val svars = List.map 
+                  (fn v => mk_var(fst(dest_var v),bool))
+                  (strip_pair(Term.rand(lhs(concl(SPEC_ALL pth)))))
      val PrevTh = MkPrevThm Rth
      val _ = (traceBackPrevThm := PrevTh)
-     val vl = filter (fn v => type_of v = bool) (all_vars(concl PrevTh))
+     val vl = filter (fn v => type_of v = bool) (all_vars(concl PrevTh)) @ svars
      val prime_var = mk_var o (prime ## I) o dest_var
      val vm' = extendVarmap (vl @ List.map prime_var vl) vm
      val trl' = map (BddExtendVarmap vm') trl
@@ -771,7 +773,7 @@ fun traceBack vm trl pth Rth =
      val PrevThTb = eqToTermBdd failfn vm' PrevTh
      val lasttb = BddOp(And, hd trl', ptb)
      val prime_ass = List.map (fn (tb,tb') => (BddVar true vm' (prime_var(getTerm tb)), tb'))
-     fun satfn tb = extendSat (strip_pair s) vm' (BddSatone tb)
+     fun satfn tb = extendSat svars vm' (BddSatone tb)
      fun stepback(tb, ass) =
       let val tb' = BddOp(And, tb, BddRestrict (prime_ass ass) PrevThTb)
       in
