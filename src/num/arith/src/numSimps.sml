@@ -251,7 +251,7 @@ fun CTXT_ARITH thms tm =
                                            term_to_string tm))
         val reduction = linear_reduction tm
       in
-        if (reduction = tm) then
+        if aconv reduction tm then
           (trace (5, TEXT ("No reduction possible"));
            failwith "CTXT_ARITH: no reduction possible")
         else let

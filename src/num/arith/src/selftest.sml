@@ -7,7 +7,7 @@ val th = QCONV (SIMP_CONV ss [arithmeticTheory.FUNPOW])
                ``FUNPOW (f:'a->'a) 2 x``
 
 val _ = print "Testing SUC_FILTER_ss ... "
-val _ = if rhs (concl th) <> ``(f:'a -> 'a) (f x)`` then
+val _ = if not (aconv (rhs (concl th)) ``(f:'a -> 'a) (f x)``) then
           (print "FAILED!\n" ; Process.exit Process.failure)
         else print "OK\n"
 
