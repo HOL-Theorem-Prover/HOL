@@ -1,7 +1,7 @@
 OPTIONS = NO_OVERLAY
 
 
-Sig.uo: Sig.sml KernelTypes.ui Feedback.ui
+Sig.uo: Sig.sml Lib.ui KernelTypes.ui Feedback.ui
 	HOLMOSMLC -c -toplevel Sig.sml
 
 Raw-sig.uo: Raw-sig.sml Sig.uo Lib.uo
@@ -16,7 +16,7 @@ Term.uo: Term.sml Type.uo Globals.ui HOLset.ui
 Tag.uo: Tag.sml Raw-sig.uo Globals.ui
 	HOLMOSMLC -c -toplevel Raw-sig.ui Tag.sml
 
-Thm.uo: Thm.sml Term.uo Tag.uo
+Thm.uo: Thm.sml Term.uo Tag.uo Count.ui
 	HOLMOSMLC -c -toplevel Raw-sig.ui Term.ui Type.ui Tag.ui Thm.sml
 
 TheoryPP.uo: TheoryPP.sml Thm.uo
