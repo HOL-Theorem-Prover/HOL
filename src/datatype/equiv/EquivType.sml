@@ -53,6 +53,7 @@ fun -- q x = Term q
 fun == q x = Type q
 
 val LAND_CONV = RATOR_CONV o RAND_CONV;
+val PROVE = Tactical.default_prover
 
 fun MK_COMB_TAC (asl,w) =
   let val (l,r) = dest_eq w
