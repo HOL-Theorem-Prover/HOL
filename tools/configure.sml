@@ -13,8 +13,8 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = ;
-val holdir   = ;
+val mosmldir = 
+val holdir   = 
 val OS       = "linux";          (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
 
@@ -69,7 +69,7 @@ val SRCDIRS =
   "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src", "src/BoyerMoore",
   "src/hol90", "src/finite_map", "src/real", "src/bag", "src/ring/src", 
-  "src/temporal/src"] @
+  "src/temporal"] @
  (if OS = "linux" orelse OS = "solaris" then ["src/muddy", "src/HolBdd"]
   else []);
 
@@ -343,19 +343,6 @@ val _ =
    emit_hol_unquote_script target qfilter mosml std_prelude qinit qend
  end;
 
-(*
-fun help mosmldir holdir =
- let open TextIO
-     val _ = echo "Setting up the help database Makefile."
-     val src    = Path.concat(holdir, "help/src/Makefile.dbase.src")
-     val target = Path.concat(holdir, "help/src/Makefile")
-  in
-     fill_holes (src,target)
-       ["MOSMLHOME=\n" -->  String.concat["MOSMLHOME=", mosmldir,"\n"]]
-  end;
-*)
-
-
 
 (*---------------------------------------------------------------------------
     Configure the muddy library. This is only temporary, until I know
@@ -390,5 +377,18 @@ val _ =
         "DLLIBCOMP"     -->  String.concat["\t", dllibcomp, "\n"]
         ]
   end;
+
+(*
+fun help mosmldir holdir =
+ let open TextIO
+     val _ = echo "Setting up the help database Makefile."
+     val src    = Path.concat(holdir, "help/src/Makefile.dbase.src")
+     val target = Path.concat(holdir, "help/src/Makefile")
+  in
+     fill_holes (src,target)
+       ["MOSMLHOME=\n" -->  String.concat["MOSMLHOME=", mosmldir,"\n"]]
+  end;
+*)
+
 
 val _ = print "\nFinished configuration!\n";

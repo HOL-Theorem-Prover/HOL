@@ -15,7 +15,13 @@ val DLLIBCOMP =
      | "solaris" => SOME "ld -G -B dynamic -o $@ $(COBJS) $(LIBS)"
      |    _      => NONE
 
+(*
 val ALL =
   if OS="linux" orelse OS="solaris"
   then SOME "$(SMLOBJ) $(SIGOBJ) muddy.so"
+  else NONE;
+*)
+val ALL =
+  if OS="linux" orelse OS="solaris"
+  then SOME " muddy.so"
   else NONE;

@@ -43,6 +43,7 @@ fun gnumake dir =
            e.g., the robdd libraries, need special treatment.
  ---------------------------------------------------------------------------*)
 
+(*
 fun build_dir dir =
   let val _ = FileSys.chDir dir
       val _ = print ("Working in directory "^dir^"\n")
@@ -66,7 +67,44 @@ fun build_dir dir =
     (print ("OS error: "^s^" - "^
             (case erropt of SOME s' => OS.errorMsg s' | _ => "") ^ "\n");
      Process.exit Process.failure)
+*)
 
+fun build_dir dir =
+  let val _ = FileSys.chDir dir
+      val _ = print ("Working in directory "^dir^"\n")
+  in
+   case #file(Path.splitDirFile dir)
+    of "muddy"
+          => (let val buddy_dir = Path.concat(dir,"buddy17")
+             in
+                FileSys.chDir buddy_dir;
+                print ("Working in directory "^buddy_dir^"\n");
+                gnumake buddy_dir;
+                FileSys.chDir dir;
+                print ("Returning to directory "^dir^"\n");
+                Holmake dir;
+                gnumake dir
+             end handle _ => print(String.concat["\n", "muddy",
+                 "Lib has NOT been built!! (continuing anyway).\n\n"]))
+     | "temporal"
+         => (let val src_dir = fullPath[dir,"src"]
+                val SMV_dir = fullPath[dir,"smv.2.4.3"]
+             in
+                FileSys.chDir src_dir;
+                print ("Working in directory "^src_dir^"\n");
+                Holmake dir;
+                FileSys.chDir SMV_dir;
+                print ("Working in directory "^SMV_dir^"\n");
+                gnumake SMV_dir
+             end handle _ => print(String.concat
+                ["\n", "Compilation of SMV fails!! ",
+                 "temporal Lib has NOT been built!! (continuing anyway).\n\n"]))
+     | _ => Holmake dir
+  end 
+  handle OS.SysErr(s, erropt) 
+    => (print ("OS error: "^s^" - "^
+            (case erropt of SOME s' => OS.errorMsg s' | _ => "") ^ "\n");
+        Process.exit Process.failure);
 
 (*---------------------------------------------------------------------------
       Arrange for all executables and relevant .sig files
@@ -115,18 +153,19 @@ fun transfer_file symlink targetdir (df as (dir,file)) =
                                     (fullPath [targetdir,file])
   in
    case Path.ext file
-    of SOME"ui"  => transfer mv df
-     | SOME"uo"  => transfer mv df
-     | SOME"so"  => transfer mv df   (* for robddLib *)
-     | SOME"sig" => transfer cp df
-     |    _      => ()
+    of SOME"ui"     => transfer mv df
+     | SOME"uo"     => transfer mv df
+     | SOME"so"     => transfer mv df   (* for dynlibs *)
+     | SOME"xable"  => transfer mv df   (* for executables *)
+     | SOME"sig"    => transfer cp df
+     |    _         => ()
   end;
 
 (*---------------------------------------------------------------------------
         Transport a compiled directory to another location. The
         symlink argument says whether this is via a symbolic link,
-        or by copying. The ".uo", ".ui", ".so", and ".sig" files are
-        transported.
+        or by copying. The ".uo", ".ui", ".so", ".xable" and ".sig" 
+        files are transported.
  ---------------------------------------------------------------------------*)
 
 fun upload (src,target,symlink) =
@@ -186,14 +225,20 @@ fun suffixCheck s =
   end
 end;
 
+(*---------------------------------------------------------------------------
+    "cleandir" could be extended to do a better job of cleaning up 
+    directories where external tools have been built.
+ ---------------------------------------------------------------------------*)
+
 fun cleandir dir =
   let fun efile s =
         case Path.ext s
          of SOME "ui" => true
           | SOME "uo" => true
-          | SOME "so" => true         (* for robddLib *)
-          | SOME "o"  => true         (* for robddLib *)
-          |    _      => suffixCheck s
+          | SOME "so" => true         (* for dynlibs, like muddyLib *)
+          | SOME "o"  => true         (* for C libraries *)
+          | SOME "xable"  => true     (* for executables *)
+          |    _          => suffixCheck s
       fun del (d,f) = if efile f then rem_file (fullPath [d,f]) else ()
   in
     map_dir del dir
