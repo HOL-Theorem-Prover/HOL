@@ -1,0 +1,265 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/x
+html1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="content-type"
+      content="text/html ; charset=US-ASCII" />
+<title>Release Notes for Kananaskis-3 version of HOL 4</title>
+</head>
+
+<body>
+<h1>Notes on HOL 4, Kananaskis-3 release</h1>
+
+
+<h2>Bugs fixed:</h2>
+
+<ul>
+
+  <li> <p><code>Hol_datatype</code> would fail if called on to define
+      a type with a single nullary constructor.</p></li>
+
+<li> <p><code>pred_setLib.UNION_CONV</code> (and other functions in this
+    library) failed to work as advertised.  (Thanks to Lockwood Morris
+    for the report of this bug.)</p></li>
+
+<li> <p>It was too easy to do significant parser things before a
+    <code>new_theory</code> declaration, causing these effects not to
+    persist with the export of the theory.  Now, attempting to do this
+    causes a strong warning to be issued.</p></li>
+
+<li> <p><code>let</code> terms with bodies that were abstractions didn't
+    print correctly.</p></li>
+
+<li> The type grammar didn't print stored type abbreviations
+    correctly.
+
+<li> Adding a user-supplied pretty-printer caused polymorphic terms to
+    fail to print.
+
+<li> <code>DECIDE_TAC</code> didn't pay attention to goal assumptions.
+
+<li> A bug in <code>ARITH_CONV</code>'s handling of conditional
+    expressions caused some quantified goals to fail to be proved.
+
+<li> The lexer got confused if a token made up of non-aggregating
+    characters (e.g., including ";") was used, but not as part of
+    special concrete syntax.  I.e., ;; was OK as an infix, but not as
+    a normal constant.  (Thanks to Klaus Schneider for the report of
+    this bug.)
+
+<li> <code>SPEC_VAR</code> and theory export caused bound variables
+    with the same name as constants to get changed.  (Thanks to
+    Lockwood Morris for the report of this bug.)
+
+<li> Many, many documentation typos and bugs were fixed.  (Thanks to
+    Carl Witty for the report of most of these.)
+
+<li> Two fixes for the simplifier's implementation of congruence rules.
+    With deep nesting, congruence rules could lead to an exponential
+    increase in time taken.  Also, terms that included variables used
+    in a rule's statement could cause the rule to fail to fire.
+
+<li> The simplifier's AC-rewriting could cause it to go into an
+    infinite loop.  While the new behaviour does AC-normalise
+    everywhere (we hope!), it is not necessarily the same as the old
+    behaviour on examples which used to work.
+
+<li> <code>pairLib.PAIRED_ETA_CONV</code> was broken.  Thanks to
+    Viktor Sabelfeld for the bug report.
+</ul>
+
+<h2>New features:</h2>
+
+<ul>
+<li> The term and type parsers now report errors with an indication as
+    to where in the parse they have occurred.  If the error is found
+    during a run of Holmake, the location includes the line number in
+    the file where the error is.  Pragma comments of the form
+    <code>(*#loc&nbsp;100&nbsp:5*)</code> allow the line and column
+    numbers to be overridden, a la C's <code>#line</code> directive.
+    (Many thanks to Keith Wansbrough for the implementation of this
+    feature.)  The lexer is also much faster than it used to be.
+
+<li> The system better distinguishes interactive and non-interactive
+    use (the latter occurs with building things with Holmake).
+    Diagnostic output is now rather different in non-interactive mode.
+    Holmake comes with a new <code>-i</code> or
+    <code>--interactive</code> flag to flip the underlying flag back
+    to interactive, if you want to see "interactive mode" output.
+
+<li> <p> Holmake now supports the use of user-specified variables, in a
+    manner analogous to that done by traditional make implementations.
+    For example, one can define a variable OBJS,</p>
+
+    <pre>
+    OBJS = foo bar baz
+    </pre>
+
+<p>    and then refer to this variable elsewhere by writing
+    <code>$(OBJS)</code> Holmake also provides some functions like
+    those in GNU make for manipulating text (performing pattern-based
+    substitutions, for example).  See the DESCRIPTION for more
+    details.</p> </li>
+
+<li> Performance when defining large record types (where the number of
+    fields is greater than a user-adjustable reference variable), is
+    now much improved.  Part of this change was to remove update
+    functions as separate constants (they are now encoded using
+    functional update functions), though the concrete syntax remains.
+    See the DESCRIPTION for more details.
+
+<li> In addition to the traditional $-prefix for making identifiers
+    ignore their status as special forms in the grammar, HOL now
+    supports the Caml method of enclosing identifiers in parentheses.
+    Thus, instead of
+       $/\ p
+    one can also write
+       (/\) p
+    By default, the pretty-printer continues to print using the old
+    $-syntax.  This can be changed by setting the trace variable
+    "pp_dollar_escapes".
+
+<li> Configuration of the system is easier.  Instead of having to edit
+    configure.sml yourself, just pipe tools/smart-configure into mosml
+    as the first step of installation (before build):
+<pre>
+       mosml < tools/smart-configure.sml
+</pre>
+
+<li> Pretty-printing of "list forms" (e.g., lists, sets and bags) is
+    now under more user-control.  See the REFERENCE for add_listform,
+    whose type has changed, for more detail on this.  (Thanks to
+    Lockwood Morris for this feature suggestion.)
+
+<li> There is a new simpset fragment in realSimps, REAL_REDUCE_ss,
+    which performs calculations over ground rational values.  Thus,
+<pre>
+      SIMP_CONV (std_ss ++ REAL_REDUCE_ss) [] ``1/3 - 3/7``
+    </pre>
+
+    returns
+<pre>
+      > val it = |- 1 / 3 - 3 / 7 = ~2 / 21 : thm
+    </pre>
+
+    When realSimps is loaded, REAL_REDUCE_ss is automatically added to
+    the stateful-rewriting simpset, and bossLib's EVAL is also
+    augmented with this functionality.  This code also removes common
+    factors from fractions even when there are no other arithmetic
+    operations being performed.
+
+<li> The simplifier now provides simpler interfaces for the addition of
+    AC-rewriting and congruence rules.  They can be added as if normal
+    rewrites with the functions <code>simpLib.AC</code> and
+    <code>simpLib.Cong</code>.  Thus,
+<pre>
+      - SIMP_CONV bool_ss [AC ADD_COMM ADD_ASSOC] ``3 + x + y + 1``;
+      > val it = |- 3 + x + y + 1 = x + (y + (1 + 3)) : thm
+</pre>
+    Cong is used similarly.  Both functions are further described in
+    the REFERENCE.
+</ul>
+
+<h2>New theories:</h2>
+<ul>
+<li> A theory of co-inductive (possibly infinite) labelled transition
+    paths in pathTheory.
+</ul>
+
+<h2>New tools:</h2>
+
+<ul>
+
+  <li> A new first-order proof tactic (called
+      <code>METIS_TAC</code>) that uses ordered resolution and
+      paramodulation, specifically tailored for subgoals that require
+      equality reasoning.
+
+<li> A &lsquo;boolification&rsquo; tool that automatically defines
+    functions that map datatypes to boolean vectors. These kind of
+    functions are needed for sending HOL subgoals to a model-checker
+    or SAT solver.
+</ul>
+
+<h2>New examples:</h2>
+<ul>
+<li> An extension of the existing lambda calculus example
+    (examples/lambda) to include mechanisations of chapters 2 & 3 of
+    Hankin's lambda calculus text, and the standardisation theorem
+    from Barendregt's chapter 11.
+
+<li> A formalization of the probabilistic guarded command language
+    (pGCL) in higher-order logic, including a tool for deriving
+    sufficient verification conditions for partial correctness.
+</ul>
+
+<h2>Incompatibilities:</h2>
+
+<ul>
+<li> Rewrite rules for arithmeticTheory's MIN and MAX constants have
+    been made more general; they will now match more often.  For
+    example, MIN_LE has changed from
+    <pre>
+       m <= MIN m n = m <= n
+    </pre>
+    to
+    <pre>
+       p <= MIN m n = p <= m /\ p <= n
+    </pre>
+
+<li> For reasons of efficiency, all conversions in the system may now
+    potentially raise the special exception
+    <code>Conv.UNCHANGED</code> to indicate that they haven't changed
+    the input term, and that they should be treated as if they had
+    returned the theorem |- t = t, for input t.  Conversion
+    connectives (such as <code>THENC</code>, <code>ORELSEC</code> and
+    <code>TRY_CONV</code>) all do the appropriate thing in the
+    presence of this exception.  Previously, sub-systems such as the
+    simplifier, rewriter and arithmetic decision procedures have used
+    this idea to make them work faster, but couldn't share information
+    about unchangedness.
+
+<p> For interactive use, <code>CONV_RULE</code> and
+    <code>CONV_TAC</code> handle the exception appropriately, and the
+    new function <code>QCONV</cdoe> (of type
+    <code>:&nbsp;conv&nbsp;->&nbsp;conv</code>) can make any
+    conversion handle <code>UNCHANGED</code>.  <code>QCONV</code>'s
+    implementation is
+<pre>
+       fun QCONV c t = c t handle UNCHANGED => REFL t
+    </pre>
+
+    If you have code implementing conversions of your own, you may
+    need to fix code if it uses the following idiom:
+<pre>
+       fun myconv t =
+         let val th = someconv t
+             val ..  = &lt;fiddle with th&gt;
+         in
+             &lt;resulting theorem&gt;
+         end
+    </pre>
+
+    If <code>someconv</code> raises <code>UNCHANGED</code>, then
+    <code>myconv</code> will too, causing expressions such as
+
+    <pre>
+      myconv THENC &lt;something else&gt;
+    </pre>
+
+    to treat <code>myconv</code> as if it hadn't done anything
+    (because the <code>&lt;fiddle&nbsp;with&nbsp;th&gt;</code> code
+    never got called).
+
+    This can be relatively difficult to track down, but the fix is
+    simple enough: change <code>someconv&nbsp;t</code> to
+    <code>QCONV&nbsp;someconv&nbsp;t</code>
+
+</ul>
+
+
+<hr />
+
+<p> <em><a href="http://hol.sourceforge.net">HOL 4, Kananaskis-3</a></em> </p>
+
+</body> </html>
