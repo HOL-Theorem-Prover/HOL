@@ -241,36 +241,42 @@ val top_and_lessers = store_thm(
     PROVE_TAC [INT_LT_REFL]
   ]);
 
+val bot_and_greaters = store_thm(
+  "bot_and_greaters",
+  Term`!P d:int x0. (!x. P x ==> P (x + d)) /\ P x0 ==>
+                    !c. 0 < c ==> P(x0 + c * d)`,
+  REPEAT STRIP_TAC THEN
+  Q.SPECL_THEN [`P`, `~d`, `x0`] MP_TAC top_and_lessers THEN
+  ASM_SIMP_TAC bool_ss [int_sub, INT_NEGNEG, GSYM INT_NEG_RMUL]);
+
 val in_additive_range = store_thm(
   "in_additive_range",
-  Term`!low d x.
+  Term`!low d x:int.
           low < x /\ x <= low + d =
           ?j. (x = low + j) /\ 0 < j /\ j <= d`,
   REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
-    Q.SUBGOAL_THEN `?n. d = &n` (STRIP_THM_THEN SUBST_ALL_TAC) THENL [
-      STRIP_ASSUME_TAC (Q.SPEC `d` INT_NUM_CASES) THENL [
-        PROVE_TAC [],
-        FIRST_X_ASSUM SUBST_ALL_TAC THEN
-        FULL_SIMP_TAC bool_ss [GSYM int_sub, INT_LE_SUB_LADD] THEN
-        `x + &n < x` by PROVE_TAC [INT_LET_TRANS] THEN
-        `&n < x - x` by PROVE_TAC [INT_LT_ADD_SUB, INT_ADD_COMM] THEN
-        `&n < 0` by PROVE_TAC [INT_SUB_REFL] THEN
-        FULL_SIMP_TAC bool_ss [INT_LT, prim_recTheory.NOT_LESS_0],
-        PROVE_TAC []
-      ],
-      Induct_on `n` THENL [
-        PROVE_TAC [INT_LTE_TRANS, INT_ADD_RID, INT_LT_REFL],
-        REWRITE_TAC [INT_LE_LT, INT] THEN STRIP_TAC THENL [
-          `x <= low + &n` by PROVE_TAC [not_less, INT_ADD_ASSOC,
-                                        INT_NOT_LT] THEN
-          PROVE_TAC [INT_LT_ADD1],
-          `0 < &n + 1` by PROVE_TAC [INT, prim_recTheory.LESS_0, INT_LT] THEN
-          PROVE_TAC []
-        ]
-      ]
-    ],
-    ASM_REWRITE_TAC [INT_LT_ADDR, INT_LE_LADD]
+    Q.EXISTS_TAC `x - low` THEN
+    FULL_SIMP_TAC bool_ss [INT_LE_SUB_RADD, INT_LT_SUB_LADD,
+                           INT_ADD_COMM, INT_ADD_LID, INT_SUB_ADD2],
+    FIRST_X_ASSUM SUBST_ALL_TAC THEN
+    ASM_SIMP_TAC bool_ss [INT_LT_SUB_RADD, INT_LT_ADDR, INT_LE_LADD]
   ]);
+
+val in_subtractive_range = store_thm(
+  "in_subtractive_range",
+  Term`!high d x:int.
+          high - d <= x /\ x < high =
+          ?j. (x = high - j) /\ 0 < j /\ j <= d`,
+  REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+    Q.EXISTS_TAC `high - x` THEN
+    FULL_SIMP_TAC bool_ss [INT_SUB_SUB2, INT_LT_SUB_LADD,
+                           INT_ADD_LID, INT_LE_SUB_RADD,
+                           INT_ADD_COMM],
+    FIRST_X_ASSUM SUBST_ALL_TAC THEN
+    ASM_SIMP_TAC bool_ss [INT_LT_SUB_RADD, INT_LT_ADDR] THEN
+    ASM_SIMP_TAC bool_ss [int_sub, INT_LE_LADD, INT_LE_NEG]
+  ]);
+
 
 val MEM_base = store_thm(
   "MEM_base",
@@ -322,6 +328,15 @@ val subtract_to_small = store_thm(
       REWRITE_TAC [INT_LT_ADDR] THEN ASM_REWRITE_TAC [INT_NOT_LT, INT_LE_LT]
     ]
   ]);
+
+val add_to_great = store_thm(
+  "add_to_great",
+  Term`!x d:int. 0 < d ==> ?k. 0 < x + k * d /\ x + k * d <= d`,
+  REPEAT STRIP_TAC THEN
+  Q.SPECL_THEN [`x`, `d`] MP_TAC subtract_to_small THEN
+  ASM_REWRITE_TAC [] THEN STRIP_TAC THEN
+  Q.EXISTS_TAC `~k` THEN
+  ASM_REWRITE_TAC [GSYM INT_NEG_LMUL, GSYM int_sub]);
 
 
 open arithmeticTheory
@@ -428,6 +443,11 @@ val elim_neg_ones = store_thm(
   "elim_neg_ones",
   Term`!x. x + ~1 + 1 = x`,
   REWRITE_TAC [GSYM INT_ADD_ASSOC, INT_ADD_LINV, INT_ADD_RID]);
+
+val elim_minus_ones = store_thm(
+  "elim_minus_ones",
+  Term`!x:int. (x + 1) - 1 = x`,
+  REWRITE_TAC [int_sub, GSYM INT_ADD_ASSOC, INT_ADD_RINV, INT_ADD_RID]);
 
 open gcdTheory
 
