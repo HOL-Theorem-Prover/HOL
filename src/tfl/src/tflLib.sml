@@ -280,7 +280,7 @@ fun tc_simplifier thl = Rules.simpl_conv (thl@simpls);
   * A prover for termination conditions. This gets called after the
   * simplifier has simplified the conditions. 
   *--------------------------------------------------------------------------*)
-val terminator = arithTools.ARITH_TAC;
+val terminator = numLib.ARITH_TAC;
 
 
 (* Combination of these tools. *)

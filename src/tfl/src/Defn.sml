@@ -703,6 +703,7 @@ fun tprove0 (defn,tactic) =
    let val _ = tgoal defn
        val _ = goalstackLib.expand tactic  (* should finish proof off *)
        val th = goalstackLib.top_thm ()
+       val _ = goalstackLib.drop()
    in
       (CONJUNCT1 th, CONJUNCT2 th)
    end
