@@ -1,24 +1,16 @@
-(*
-   fun mload s = (print ("Loading "^s^"\n"); load s);
-   app mload ["pred_setTheory", "mnUtils", "QLib", "numLib",
-              "BasicProvers", "SingleStep"];
-*)
-
 open HolKernel Parse boolLib boolSimps
      numLib Prim_rec mnUtils pred_setTheory  BasicProvers SingleStep;
 
-infix THEN ORELSE THENL THENC ORELSEC >- ++ |->;
-infix 8 by;
-
 val hol_ss = mn_ss;
-
-val _ = type_abbrev("bag", Type`:'a -> num`)
-val _ = type_abbrev("multiset", Type`:'a -> num`)
 
 fun ARITH q = EQT_ELIM (ARITH_CONV (Parse.Term q));
 
+infix >-
+
 val _ = new_theory "bag";
 
+val _ = type_abbrev("bag", Type`:'a -> num`)
+val _ = type_abbrev("multiset", Type`:'a -> num`)
 
 val _ = print "Defining basic bag operations\n"
 
@@ -179,7 +171,7 @@ val C_BAG_INSERT_ONE_ONE = store_thm(
   (--`!x y b. (BAG_INSERT x b = BAG_INSERT y b) = (x = y)`--),
   REPEAT STRIP_TAC THEN CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN
   EQ_TAC THENL [
-    DISCH_THEN (SPEC (--`y:'a`--) >- MP_TAC) THEN
+    DISCH_THEN (Q.SPEC_THEN `y` MP_TAC) THEN
     SIMP_TAC hol_ss [BAG_INSERT] THEN COND_CASES_TAC THEN
     ASM_SIMP_TAC hol_ss [],
     DISCH_THEN SUBST1_TAC THEN GEN_TAC THEN REFL_TAC
@@ -271,8 +263,8 @@ val BAG_DELETE_INSERT = Q.store_thm(
   Q.ASM_CASES_TAC `x = y` THEN ARWT THENL [
     FULL_SIMP_TAC hol_ss [BAG_INSERT_ONE_ONE],
     Q.SUBGOAL_THEN `BAG_IN y b1`
-      (MATCH_MP (REWRITE_RULE [BAG_DELETE] BAG_IN_BAG_DELETE) >-
-       STRIP_ASSUME_TAC)
+      (STRIP_ASSUME_TAC o
+       MATCH_MP (REWRITE_RULE [BAG_DELETE] BAG_IN_BAG_DELETE))
     THENL [
       ASM_MESON_TAC [BAG_IN_BAG_INSERT],
       ELIM_TAC THEN SIMP_TAC hol_ss [BAG_INSERT_ONE_ONE]
@@ -314,9 +306,8 @@ val BAG_DELETE_TWICE = store_thm(
          BAG_DELETE b0 e1 b1 /\ BAG_DELETE b0 e2 b2 /\ ~(b1 = b2) ==>
          ?b. BAG_DELETE b1 e2 b /\ BAG_DELETE b2 e1 b`--),
   REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN (--`~(e1 = e2)`--) ASSUME_TAC THENL [
-    IMP_RES_TAC ((SPEC_ALL >- UNDISCH_ALL >- EQ_IMP_RULE >- fst >-
-    CONTRAPOS >- DISCH_ALL >- GEN_ALL) BAG_DELETE_11),
+  Q.SUBGOAL_THEN `~(e1 = e2)` ASSUME_TAC THENL [
+    ASM_MESON_TAC [BAG_DELETE_11],
     FULL_SIMP_TAC hol_ss [BAG_DELETE_concrete]
   ] THEN FUN_EQ_TAC THEN ASM_SIMP_TAC hol_ss [] THEN
   REPEAT COND_CASES_TAC THEN RWT THEN ELIM_TAC THEN RWT);
@@ -340,20 +331,21 @@ val EL_BAG_11 = Q.store_thm(
   SIMP_TAC hol_ss [EL_BAG, BAG_INSERT, EMPTY_BAG] THEN
   REPEAT GEN_TAC THEN CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN
   SIMP_TAC hol_ss [] THEN
-  DISCH_THEN (Q.SPEC `y` >- MP_TAC) THEN SIMP_TAC hol_ss [] THEN
+  DISCH_THEN (Q.SPEC_THEN `y` MP_TAC) THEN SIMP_TAC hol_ss [] THEN
   SIMP_TAC hol_ss [aCOND_OUT_THM, fCOND_OUT_THM]);
 
 val EL_BAG_INSERT_squeeze0 = prove(
   Term`!x b y. (EL_BAG x = BAG_INSERT y b) ==> (b = EMPTY_BAG)`,
   SIMP_TAC hol_ss [EL_BAG, BAG_INSERT, EMPTY_BAG] THEN
   REPEAT GEN_TAC THEN
-  DISCH_THEN (CONV_RULE FUN_EQ_CONV >- SIMP_RULE hol_ss [] >-
-              ASSUME_TAC) THEN
+  DISCH_THEN (ASSUME_TAC o SIMP_RULE hol_ss [FUN_EQ_THM]) THEN
   FUN_EQ_TAC THEN SIMP_TAC hol_ss [] THEN
-  FIRST_ASSUM (Q.SPEC `x'` >- MP_TAC) THEN
+  FIRST_ASSUM (Q.SPEC_THEN `x'` MP_TAC) THEN
   REPEAT COND_CASES_TAC THEN ELIM_TAC THEN SIMP_TAC hol_ss [] THEN
-  FIRST_ASSUM (Q.SPEC `y` >- SIMP_RULE hol_ss [Q.ASSUME `~(x = y)`] >-
-               MP_TAC) THEN SIMP_TAC hol_ss []);
+  FIRST_ASSUM
+    (Q.SPEC_THEN `y`
+                 (MP_TAC o SIMP_RULE hol_ss [Q.ASSUME `~(x = y)`])) THEN
+  SIMP_TAC hol_ss []);
 
 val EL_BAG_INSERT_squeeze = Q.store_thm(
   "EL_BAG_INSERT_squeeze",
@@ -383,8 +375,9 @@ val BAG_INSERT_EQ_UNION = Q.store_thm(
   SIMP_TAC hol_ss [BAG_EXTENSION, BAG_INN_BAG_UNION, BAG_IN,
                    BAG_INN_BAG_INSERT] THEN
   REPEAT STRIP_TAC THEN
-  POP_ASSUM (Q.SPECL [`1`, `e`] >-
-             SIMP_RULE hol_ss [BAG_INN_0, one_equal] >- STRIP_ASSUME_TAC) THEN
+  POP_ASSUM (Q.SPECL_THEN [`1`, `e`]
+                          (STRIP_ASSUME_TAC o
+                           SIMP_RULE hol_ss [BAG_INN_0, one_equal])) THEN
   ELIM_TAC THEN ASM_SIMP_TAC hol_ss []);
 
 val BAG_DELETE_SING = store_thm(
