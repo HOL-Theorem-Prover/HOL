@@ -77,13 +77,16 @@ the parsers for \HOL\ types and terms.
 The purpose of \holmake\footnote{\holmake{} was first written by Ken
   Larsen and then extended by Michael Norrish.} is to maintain
 dependencies in a \holn{} source directory. A single invocation of
-\holmake{} will compute dependencies between files, (re-)compile plain
-ML code, (re-)compile and execute theory scripts, and (re-)compile the
+\holmake{} will compute dependencies between files, (re)compile plain
+ML code, (re)compile and execute theory scripts, and (re)compile the
 resulting theory modules. \holmake{} does not require the user to
 provide any dependency information,\eg, a Makefile. \holmake{} can be
 very convenient to use, but there are some conventions and
 restrictions on it that must be followed, which we will describe in
 the sequel.
+
+
+
 
 \holmake{} can be accessed through
 \begin{verbatim}
@@ -488,11 +491,16 @@ used to stand for the target of the rule.
 Finally there are variables that are some useful abbreviations for
 commonly used programs.  These are:
 \begin{description}
-\item[\texttt{HOLMOSMLC}] This variable is replaced by an
-invocation of the Moscow ML compiler along with the \texttt{-q} flag
-(necessary for handling quotations), and the usual \texttt{-I} include
-specifications (pre-includes, the hol-directory include, and the
-normal includes).
+\item[\texttt{CP}] This variable is replaced by an operating-system
+  appropriate program to perform a file copy.  The file to be copied
+  is the first argument, the second is the place to copy to.  The
+  second argument can be a directory.  (Under Unix, \texttt{CP}
+  expands to \texttt{cp}; under Windows, it expands to \texttt{copy}.)
+\item[\texttt{HOLMOSMLC}] This variable is replaced by an invocation
+  of the Moscow ML compiler along with the \texttt{-q} flag (necessary
+  for handling quotations), and the usual \texttt{-I} include
+  specifications (pre-includes, the hol-directory include, and the
+  normal includes).
 \item[\texttt{HOLMOSMLC-C}] This variable is the same as
   \texttt{HOLMOSMLC} except that it finishes with a closing
   \texttt{-c} option (hence the name) followed by the name of the
@@ -507,13 +515,21 @@ normal includes).
 \item[\texttt{MOSMLYAC}] This is replaced by an invocation of the
   \texttt{mosmlyac} program that comes with the Moscow ML
   distribution.
+\item[\texttt{MV}] This variable is replaced by an operating-system
+  appropriate program to perform a file movement.  The file to be
+  moved is the first argument, the second is the place to move to.
+  The second argument can be a directory.  (Under Unix, \texttt{MV}
+  expands to \texttt{mv}; under Windows, it expands to \texttt{rename}.)
+
+
 \end{description}
 The \texttt{MOSMLLEX} and \texttt{MOSMLYAC} abbreviations are really
 only useful if the originals aren't necessarily going to be on the
-user's ``path''.  For backwards compatibility, these five variables
-can also be used by simply writing their names directly (i.e., without
-the enclosing \varref{\dots}), as long as these references occur first
-on a command-line.
+user's ``path''.  For backwards compatibility, the five variables
+above including the sub-string ``\texttt{MOSML}'' in their names can
+also be used by simply writing their names directly (i.e., without the
+enclosing \varref{\dots}), as long as these references occur first on
+a command-line.
 
 Other pre-defined variables are given in
 Figure~\ref{fig:predefined-holmake-vars}.  If a reference is made to
@@ -521,6 +537,7 @@ an otherwise undefined string, then it is treated as a reference to an
 environment variable.  If there is no such variable in the
 environment, then the variable is silently given the empty string as
 its value.
+
 
 \begin{figure}[htbp]
 \begin{tabular}{ll}
