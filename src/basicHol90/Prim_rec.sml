@@ -1347,16 +1347,21 @@ end
 (*    |- !h t h' t'. (CONS h t = CONS h' t') = (h = h') /\ (t = t')	 *)
 (* ----------------------------------------------------------------------*)
 
-fun prove_constructors_one_one th =
- let val eqns =
-        strip_conj (#Body(dest_abs(rand(snd(strip_forall(concl th))))))
-     val funs = gather (fn tm => is_comb(rand(lhs(snd(strip_forall tm)))))
-                         eqns
-   in
-      LIST_CONJ (map (prove_const_one_one th) funs)
-   end
-   handle HOL_ERR _ =>
-   raise ERR{function="prove_constructors_one_one",message = ""};
+fun prove_constructors_one_one th = let
+  val eqns =
+    strip_conj (#Body(dest_abs(rand(snd(strip_forall(concl th))))))
+  val funs =
+    List.filter (fn tm => is_comb(rand(lhs(snd(strip_forall tm)))))
+    eqns
+in
+  if null funs then
+    raise ERR {function = "prove_constructors_one_one",
+               message = "No constructor takes any arguments"}
+  else
+    LIST_CONJ (map (prove_const_one_one th) funs)
+    handle HOL_ERR _ =>
+      raise ERR{function="prove_constructors_one_one",message = ""}
+end
 
 
 (* =====================================================================*)
