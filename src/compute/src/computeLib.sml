@@ -161,6 +161,7 @@ fun bool_compset() = from_list bool_redns;
 val the_compset = bool_compset();
 
 val add_funs = Lib.C add_thms the_compset;
+val add_convs = List.app (Lib.C add_conv the_compset);
 
 val EVAL = CBV_CONV the_compset;
 

@@ -207,11 +207,11 @@ fun is_num_literal str =
    (loop 1 handle _ => true)
    end;
 
-local val dquote = "\""
+local val dquote = #"\""
 in
 fun is_string_literal s = String.size s > 1
-    andalso (String.substring(s,0,1) = dquote)
-    andalso (String.substring(s,String.size s - 1,1) = dquote)
+    andalso (String.sub(s,0) = dquote)
+    andalso (String.sub(s,String.size s - 1) = dquote)
 end;
 
 

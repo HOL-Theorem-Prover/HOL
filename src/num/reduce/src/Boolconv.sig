@@ -1,10 +1,11 @@
 signature Boolconv =
 sig
+  include Abbrev
 
-  val NOT_CONV : Abbrev.conv
-  val AND_CONV : Abbrev.conv
-  val OR_CONV  : Abbrev.conv
-  val IMP_CONV : Abbrev.conv
-  val BEQ_CONV : Abbrev.conv
-  val COND_CONV : Abbrev.conv
+  val NOT_CONV  : conv
+  val AND_CONV  : conv
+  val OR_CONV   : conv
+  val IMP_CONV  : conv
+  val BEQ_CONV  : conv
+  val COND_CONV : conv
 end

@@ -150,6 +150,9 @@ REWRITE_TAC
    [NUMERAL_DEF, NUMERAL_BIT2, ONE,
     ADD, ALT_ZERO,NUMERAL_BIT1]);
 
+val NORM_0 = store_thm("NORM_0",Term `NUMERAL ALT_ZERO = 0`,
+  REWRITE_TAC [NUMERAL_DEF, ALT_ZERO]);
+
 fun INDUCT_TAC g = INDUCT_THEN INDUCTION ASSUME_TAC g;
 
 val EQ_SYM_EQ' = INST_TYPE [alpha |-> Type`:num`] EQ_SYM_EQ;
@@ -217,6 +220,7 @@ val NOT_ZERO_LT_ZERO = store_thm(
 (* --------------------------------------------------------------------- *)
 (* LESS_ADD proof rewritten: TFM 90.O9.21                               *)
 (* --------------------------------------------------------------------- *)
+
 val LESS_ADD = store_thm ("LESS_ADD",
      --`!m n. n<m ==> ?p. p+n = m`--,
      INDUCT_TAC THEN GEN_TAC THEN
@@ -272,6 +276,7 @@ val FUN_EQ_LEMMA = store_thm ("FUN_EQ_LEMMA",
 (*---------------------------------------------------------------------------
  *  |- !m n. SUC m < SUC n = m < n
  *---------------------------------------------------------------------------*)
+
 val LESS_MONO_REV = store_thm ("LESS_MONO_REV",
    --`!m n. SUC m < SUC n ==> m < n`--,
    REPEAT GEN_TAC

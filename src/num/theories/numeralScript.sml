@@ -185,7 +185,7 @@ val numeral_eq = store_thm(
   SIMP_TAC bool_ss (double_add_not_SUC::numeral_proof_rwts) THEN
   INDUCT_TAC THEN ASM_SIMP_TAC bool_ss numeral_proof_rwts);
 
-val mk_var = Psyntax.mk_var
+
 fun ncases str n0 =
   DISJ_CASES_THEN2 SUBST_ALL_TAC
                    (X_CHOOSE_THEN (mk_var(n0, (==`:num`==))) SUBST_ALL_TAC)
@@ -283,8 +283,7 @@ val our_M = Term
 
 
 fun AP_TAC (asl, g) =
-  let open Psyntax
-      val _ = is_eq g orelse raise Fail "Goal not an equality"
+  let val _ = is_eq g orelse raise Fail "Goal not an equality"
       val (lhs, rhs) = dest_eq g
       val (lf, la) = dest_comb lhs handle _ =>
                        raise Fail "lhs must be an application"
@@ -611,5 +610,15 @@ val numeral_fact = store_thm(
    THEN STRIP_ASSUME_TAC (SPEC (Term`n:num`) num_CASES)
    THENL [ALL_TAC, POP_ASSUM SUBST_ALL_TAC]
    THEN  ASM_REWRITE_TAC[FACT,PRE,NOT_SUC]);
+
+
+val numeral_funpow = store_thm(
+  "numeral_funpow",
+  Term `!n. FUNPOW f n x = 
+             if n = 0 then x else FUNPOW f (n-1) (f x)`,
+ GEN_TAC
+   THEN STRIP_ASSUME_TAC (SPEC (Term`n:num`) num_CASES)
+   THENL [ALL_TAC, POP_ASSUM SUBST_ALL_TAC]
+   THEN  ASM_REWRITE_TAC[FUNPOW,SUC_SUB1,NOT_SUC]);
 
 val _ = export_theory();

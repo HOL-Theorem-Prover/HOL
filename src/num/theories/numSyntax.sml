@@ -132,7 +132,7 @@ struct
      Numerals are treated specially 
  ---------------------------------------------------------------------------*)
 
-  val mk_numeral = Numeral.gen_mk_numeral {
+  val mk_numeral = Literal.gen_mk_numeral {
     mk_comb  = Term.mk_comb,
     ALT_ZERO = alt_zero_tm,
     ZERO     = zero_tm,
@@ -141,8 +141,8 @@ struct
     BIT2     = numeral_bit2
   };
 
-  val dest_numeral = Numeral.dest_numeral
-  val is_numeral   = Numeral.is_numeral
+  val dest_numeral = Literal.dest_numeral
+  val is_numeral   = Literal.is_numeral
 
 (*---------------------------------------------------------------------------
      Dealing with lists of things to be added or multiplied.

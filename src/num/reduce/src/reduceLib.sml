@@ -29,20 +29,18 @@ val RED_CONV =
 (* Uses computeLib.                                                      *)
 (*-----------------------------------------------------------------------*)
 
-val NORM_0 = prove(Term `NUMERAL ALT_ZERO = 0`,
-  REWRITE_TAC [arithmeticTheory.NUMERAL_DEF, arithmeticTheory.ALT_ZERO]);
-
 val numeral_redns =
  lazyfy_thm arithmeticTheory.num_case_compute
   :: [numeral_distrib, numeral_eq, numeral_suc, numeral_pre, NORM_0,
       numeral_iisuc, numeral_add, numeral_mult, iDUB_removal,
       numeral_sub, numeral_lt, numeral_lte, iSUB_THM,
-      numeral_exp, numeral_evenodd, iSQR, numeral_fact,MAX_DEF,MIN_DEF];
+      numeral_exp, numeral_evenodd, iSQR, numeral_fact,numeral_funpow,
+      MAX_DEF,MIN_DEF];
 
 val div_thm =
     prove
-      (Term ` !x y q r. x DIV y =
-              if (x = q * y + r) /\ (r < y) then q else x DIV y `,
+      (Term `!x y q r. 
+          x DIV y = if (x = q * y + r) /\ (r < y) then q else x DIV y `,
        REPEAT STRIP_TAC THEN COND_CASES_TAC THEN REWRITE_TAC [] THEN
        MATCH_MP_TAC DIV_UNIQUE THEN EXISTS_TAC (Term `r:num`) THEN
        ASM_REWRITE_TAC []);
@@ -56,31 +54,20 @@ val mod_thm =
        ASM_REWRITE_TAC []);
 
 
-fun dest_op opr =
- let val test = equal opr
- in fn tm =>
-      let val (opr',arg) = strip_comb tm 
-      in if test opr' then arg else raise Fail "dest_op"
-      end
- end;
-
 fun cbv_DIV_CONV tm =
-  case dest_op numSyntax.div_tm tm
-   of [x,y] => 
-       (let open Arbnum numSyntax
-            val (q,r) = divmod (dest_numeral x, dest_numeral y)
-        in SPECL [x, y, mk_numeral q, mk_numeral r] div_thm
-        end handle HOL_ERR _ => failwith "cbv_DIV_CONV")
-    | otherwise => raise Fail "cbv_DIV_CONV";
+ let open Arbnum numSyntax
+     val (x,y) = dest_div tm
+     val (q,r) = divmod (dest_numeral x, dest_numeral y)
+ in SPECL [x, y, mk_numeral q, mk_numeral r] div_thm
+ end 
+ handle HOL_ERR _ => failwith "cbv_DIV_CONV"
 
 fun cbv_MOD_CONV tm =
-  case dest_op numSyntax.mod_tm tm
-   of [x,y] => 
-       (let open Arbnum numSyntax
-            val (q,r) = divmod (dest_numeral x, dest_numeral y) 
-        in SPECL [x, y, mk_numeral q, mk_numeral r] mod_thm
-        end handle HOL_ERR _ => failwith "cbv_MOD_CONV")
-    | otherwise => raise Fail "cbv_MOD_CONV";
+ let open Arbnum numSyntax
+     val (x,y) = dest_mod tm
+     val (q,r) = divmod (dest_numeral x, dest_numeral y) 
+ in SPECL [x, y, mk_numeral q, mk_numeral r] mod_thm
+ end handle HOL_ERR _ => failwith "cbv_MOD_CONV";
 
 
 fun num_compset () = 
@@ -113,7 +100,7 @@ val _ = let open computeLib
 local open computeLib
       val numcomps = num_compset() 
 in 
-  val REDUCE_CONV = CBV_CONV numcomps
+val REDUCE_CONV = CBV_CONV numcomps
 end;
 
 val REDUCE_RULE = Conv.CONV_RULE REDUCE_CONV;

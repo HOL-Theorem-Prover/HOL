@@ -26,6 +26,7 @@ sig
 
   val the_compset   : compset
   val add_funs      : thm list -> unit
+  val add_convs     : (term * int * conv) list -> unit
   val EVAL          : conv
 
   val write_datatype_info : TypeBase.tyinfo -> unit

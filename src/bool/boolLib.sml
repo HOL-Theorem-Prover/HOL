@@ -15,6 +15,7 @@ val Term = Parse.Term
 val Type = Parse.Type
 val --   = Parse.--   
 val ==   = Parse.==
+val parse_from_grammars = Parse.parse_from_grammars;
 
 (*---------------------------------------------------------------------------
       Stock the rewriter in Ho_Rewrite with some rules not yet 

@@ -248,4 +248,23 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
   newthms
 end;
 
+(*
+The above needs to be made to work with higher-order representations
+like the following.
+
+val equiv_mod_k = Term `\m n. m MOD k = n MOD k`;
+
+val MOD_EQUIV_TYPE = Q.prove
+(`!k x y. ^equiv_mod_k x y = (^equiv_mod_k x = ^equiv_mod_k y)`,
+ CONV_TAC(ONCE_DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC THEN PROVE_TAC[]);
+
+ 
+EquivType.define_equivalence_type
+   {name = "MOD256",
+    equiv = SPEC (Term`256`) MOD_EQUIV_TYPE,
+    defs = [],
+    welldefs = [],
+    old_thms = []};
+*)
+
 end (* EquivType *);

@@ -24,12 +24,8 @@
 structure Arithconv :> Arithconv =
 struct
 
-fun failwith function = raise
- Feedback.HOL_ERR{origin_structure = "Arithconv",
-                   origin_function = function,
-                           message = ""};
-
-open HolKernel boolTheory boolLib Parse Rsyntax Num_conv;
+open HolKernel boolTheory boolLib Parse Rsyntax 
+     Num_conv numSyntax arithmeticTheory numeralTheory;
 
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
 fun -- q x = Term q
@@ -37,69 +33,22 @@ fun == q x = Type q
 
 infix THEN |-> THENC;
 
-val prove = Tactical.prove;
-val num_CONV = Num_conv.num_CONV;
-val MATCH_MP = Drule.MATCH_MP;
+val ERR = mk_HOL_ERR "Arithconv"
+fun failwith function = raise (ERR function "")
 
-open Rsyntax
-val num_ty   = mk_thy_type{Tyop="num", Thy="num", Args=[]};
-val bool_ty  = Type.bool
-val fun_ty   = fn (op_ty,arg_ty) => mk_type{Tyop="fun", Args=[op_ty,arg_ty]};
-val b_b_ty   = fun_ty(bool_ty,bool_ty);
-val b_b_b_ty = fun_ty(bool_ty,b_b_ty);
-val n_b_ty   = fun_ty(num_ty,bool_ty);
-val n_n_ty   = fun_ty(num_ty, num_ty);
-val n_n_b_ty = fun_ty(num_ty,n_b_ty);
-val n_n_n_ty = fun_ty(num_ty, n_n_ty);
-val xv       = mk_var {Name= "x", Ty=num_ty};
-val yv       = mk_var {Name= "y", Ty=num_ty};
-val zv       = mk_var {Name= "z", Ty=num_ty};
-val pv       = mk_var {Name= "p", Ty=num_ty};
-val qv       = mk_var {Name= "q", Ty=num_ty};
-val rv       = mk_var {Name= "r", Ty=num_ty};
-val numeral  = mk_const{Name= "NUMERAL", Ty = n_n_ty};
-val sucop    = mk_const{Name= "SUC", Ty = n_n_ty};
-val preop    = mk_const{Name= "PRE", Ty = n_n_ty};
-val plusop   = mk_const{Name = "+", Ty = n_n_n_ty};
-val multop   = mk_const{Name = "*", Ty = n_n_n_ty};
-val expop    = mk_const{Name = "EXP", Ty = n_n_n_ty};
-val minusop  = mk_const{Name = "-", Ty = n_n_n_ty};
-val beqop    = mk_const{Name= "=", Ty= b_b_b_ty};
-val neqop    = mk_const{Name= "=", Ty= n_n_b_ty};
-val ltop     = mk_const{Name= "<", Ty= n_n_b_ty};
-val gtop     = mk_const{Name= ">", Ty= n_n_b_ty};
-val leop     = mk_const{Name= "<=", Ty= n_n_b_ty};
-val geop     = mk_const{Name= ">=", Ty= n_n_b_ty};
-val evenop   = mk_const{Name= "EVEN", Ty = Type.-->(num_ty, bool_ty)}
-val oddop    = mk_const{Name= "ODD", Ty = Type.-->(num_ty, bool_ty)}
 
-val truth    = mk_const{Name = "T", Ty = bool_ty};
-val falsity  = mk_const{Name = "F", Ty = bool_ty};
+(*---------------------------------------------------------------------------
+    A "conv-al" that takes a conv and makes it fail if the 
+    result is not either true, false or a numeral.
+ ---------------------------------------------------------------------------*)
 
-open numeralTheory
-
-(*-----------------------------------------------------------------------*)
-(* dest_op - Split application down spine, checking head operator        *)
-(*-----------------------------------------------------------------------*)
-
-fun dest_op opr tm =
-    let val (opr',arg) = strip_comb tm
-    in
-	if (opr=opr') then arg else failwith "dest_op"
-    end;
-
-(* a "conv-al" that takes a conv and makes it fail if the result is
-   not either true, false or a numeral *)
-fun TFN_CONV c t = let
-  val result = c t
-  val result_t = rhs (concl result)
-in
-  if result_t = truth orelse result_t = falsity orelse
-     Numeral.is_numeral result_t
-  then
-    result
-  else
-    failwith "TFN_CONV"
+fun TFN_CONV c t = 
+ let val result = c t
+     val result_t = rhs (concl result)
+ in
+   if result_t = T orelse result_t = F orelse Literal.is_numeral result_t
+     then result
+     else failwith "TFN_CONV"
 end
 
 
@@ -110,9 +59,8 @@ end
 local val NEQ_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_eq])
 in
 fun NEQ_CONV tm =
-  case dest_op neqop tm
-   of [xn,yn] => (NEQ_RW tm handle HOL_ERR _ => failwith "NEQ_CONV")
-    |    _    => failwith "NEQ_CONV"
+ if is_eq tm then with_exn NEQ_RW tm (ERR "NEQ_CONV" "") 
+ else failwith "NEQ_CONV"
 end;
 
 (*-----------------------------------------------------------------------*)
@@ -122,9 +70,8 @@ end;
 local val LT_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_lt])
 in
 fun LT_CONV tm =
-  case dest_op ltop tm
-   of [xn,yn] => (LT_RW tm handle HOL_ERR _ => failwith "LT_CONV")
-    |   _     => failwith "LT_CONV"
+  if is_less tm then with_exn LT_RW tm (ERR "LT_CONV" "") 
+  else failwith "LT_CONV"
 end;
 
 (*-----------------------------------------------------------------------*)
@@ -134,9 +81,8 @@ end;
 local val GT_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_lt])
 in
 fun GT_CONV tm =
-  case dest_op gtop tm
-   of [_, _] => (GT_RW tm handle HOL_ERR _ => failwith "GT_CONV")
-    |   _    => failwith "GT_CONV"
+  if is_greater tm then with_exn GT_RW tm (ERR "GT_CONV" "")
+  else failwith "GT_CONV"
 end;
 
 (*-----------------------------------------------------------------------*)
@@ -146,9 +92,7 @@ end;
 local val LE_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_lte])
 in
 fun LE_CONV tm =
-  case dest_op leop tm
-   of [xn,yn] => (LE_RW tm handle HOL_ERR _ => failwith "LE_CONV")
-    |    _    => failwith "LE_CONV"
+ if is_leq tm then with_exn LE_RW tm (ERR "LE_CONV" "") else failwith "LE_CONV"
 end;
 
 (*-----------------------------------------------------------------------*)
@@ -158,35 +102,29 @@ end;
 local val GE_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_lte])
 in
 fun GE_CONV tm =
-  case dest_op geop tm
-   of [xn,yn] => (GE_RW tm handle HOL_ERR _ => failwith "GE_CONV")
-    |    _    => failwith "GE_CONV"
+ if is_geq tm then with_exn GE_RW tm (ERR "GE_CONV" "")
+ else failwith "GE_CONV"
 end;
 
 (*-----------------------------------------------------------------------*)
 (* EVEN_CONV "EVEN [x]" = |- EVEN [x] = [ x divisible by 2 -> T | F ]    *)
 (*-----------------------------------------------------------------------*)
 
-local
-  val EC = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_evenodd])
+local val EC = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_evenodd])
 in
-  fun EVEN_CONV tm =
-    case dest_op evenop tm of
-      [xn] => (EC tm handle HOL_ERR _ => failwith "EVEN_CONV")
-    | _ => failwith "EVEN_CONV"
+fun EVEN_CONV tm =
+  if is_even tm then with_exn EC tm (ERR "EVEN_CONV" "")
+  else failwith "EVEN_CONV"
 end
 
 (*-----------------------------------------------------------------------*)
 (* ODD_CONV "ODD [x]" = |- ODD [x] = [ x divisible by 2 -> F | T ]       *)
 (*-----------------------------------------------------------------------*)
 
-local
-  val OC = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_evenodd])
+local val OC = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_evenodd])
 in
-  fun ODD_CONV tm =
-    case dest_op oddop tm of
-      [xn] => (OC tm handle HOL_ERR _ => failwith "ODD_CONV")
-    | _ => failwith "ODD_CONV"
+fun ODD_CONV tm =
+ if is_odd tm then with_exn OC tm (ERR "ODD_CONV" "") else failwith "ODD_CONV"
 end
 
 (*-----------------------------------------------------------------------*)
@@ -196,25 +134,20 @@ end
 local val SUC_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_suc])
 in
 fun SUC_CONV tm =
- case dest_op sucop tm
-  of [xn] => SUC_RW tm
-   |  _   => failwith "SUC_CONV"
+ if is_suc tm then with_exn SUC_RW tm (ERR "SUC_CONV" "")
+ else failwith "SUC_CONV"
 end;
 
 (*-----------------------------------------------------------------------*)
 (* PRE_CONV "PRE [n]" = |- PRE [n] = [n-1]                               *)
 (*-----------------------------------------------------------------------*)
 
-val save_zero = prove(Term`NUMERAL ALT_ZERO = 0`,
-                      REWRITE_TAC [arithmeticTheory.NUMERAL_DEF,
-                                   arithmeticTheory.ALT_ZERO]);
-local
- val PRE_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_pre,save_zero])
+local 
+  val PRE_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_pre,NORM_0])
 in
 fun PRE_CONV tm =
-  case dest_op preop tm
-   of [xn] => (PRE_RW tm handle HOL_ERR _ => failwith "PRE_CONV")
-    |  _   => failwith "PRE_CONV"
+ if is_pre tm then with_exn PRE_RW tm (ERR "PRE_CONV" "")
+ else failwith "PRE_CONV"
 end;
 
 (*-----------------------------------------------------------------------*)
@@ -228,9 +161,8 @@ local
         iDUB_removal,numeral_pre, numeral_lt])
 in
 fun SBC_CONV tm =
-  case dest_op minusop tm
-   of [xn,yn] => (SBC_RW tm handle HOL_ERR _ => failwith "SBC_CONV")
-    |    _    => failwith "SBC_CONV"
+  if is_minus tm then with_exn SBC_RW tm (ERR "SBC_CONV" "")
+  else failwith "SBC_CONV"
 end;
 
 (*-----------------------------------------------------------------------*)
@@ -243,9 +175,8 @@ local
       [numeral_distrib, numeral_add,numeral_suc, numeral_iisuc])
 in
 fun ADD_CONV tm =
-  case dest_op plusop tm
-   of [xn, yn] => (ADD_RW tm handle HOL_ERR _ => failwith "ADD_CONV")
-    |    _     => failwith "ADD_CONV"
+ if is_plus tm then with_exn ADD_RW tm (ERR "ADD_CONV" "")
+ else failwith "ADD_CONV"
 end;
 
 (*-----------------------------------------------------------------------*)
@@ -259,9 +190,8 @@ local
        numeral_iisuc, numeral_mult, iDUB_removal, numeral_pre])
 in
 fun MUL_CONV tm =
-  case dest_op multop tm
-   of [xn,yn] => (MUL_RW tm handle HOL_ERR _ => failwith "MUL_CONV")
-    |    _    => failwith "MUL_CONV"
+  if is_mult tm then with_exn MUL_RW tm (ERR "MUL_CONV" "")
+  else failwith "MUL_CONV"
 end;
 
 (*-----------------------------------------------------------------------*)
@@ -275,99 +205,79 @@ local
  val EXP_RW = TFN_CONV (RW1 THENC RW2)
 in
 fun EXP_CONV tm =
-  case dest_op expop tm
-   of [xn,yn] => (EXP_RW tm handle HOL_ERR _ => failwith "EXP_CONV")
-    |    _    => failwith "EXP_CONV"
+  if is_exp tm then with_exn EXP_RW tm (ERR "EXP_CONV" "")
+  else failwith "EXP_CONV"
 end;
 
 (*-----------------------------------------------------------------------*)
 (* DIV_CONV "[x] DIV [y]" = |- [x] DIV [y] = [x div y]                   *)
 (*-----------------------------------------------------------------------*)
 
-val int_of_term = Numeral.dest_numeral
-val term_of_int = Numeral.gen_mk_numeral {
-  mk_comb = Term.mk_comb,
-  ALT_ZERO = mk_thy_const{Name = "ALT_ZERO", Ty = num_ty, Thy = "arithmetic"},
-  ZERO = mk_thy_const{Name = "0", Ty = num_ty, Thy = "num"},
-  NUMERAL = numeral,
-  BIT1 = mk_thy_const{Name = "NUMERAL_BIT1", Ty = n_n_ty, Thy = "arithmetic"},
-  BIT2 = mk_thy_const{Name = "NUMERAL_BIT2", Ty = n_n_ty, Thy = "arithmetic"}
-};
+fun provelt x y = EQT_ELIM (LT_CONV (mk_less(mk_numeral x, mk_numeral y)))
 
-fun provelt x y =
-  EQT_ELIM (LT_CONV (list_mk_comb(ltop, [term_of_int x, term_of_int y])))
+val xv = mk_var {Name= "x", Ty=num}
+val yv = mk_var {Name= "y", Ty=num}
+val zv = mk_var {Name= "z", Ty=num}
+val pv = mk_var {Name= "p", Ty=num}
+val qv = mk_var {Name= "q", Ty=num}
+val rv = mk_var {Name= "r", Ty=num};
 
-val DIV_CONV = let
-  val divt =
+local val divt =
     prove((--`(q * y = p) ==> (p + r = x) ==> (r < y) ==> (x DIV y = q)`--),
 	  REPEAT DISCH_TAC THEN
 	  MATCH_MP_TAC (arithmeticTheory.DIV_UNIQUE) THEN
 	  EXISTS_TAC (--`r:num`--) THEN ASM_REWRITE_TAC[])
-    and divop = (--`$DIV`--)
-    and multop = (--`$*`--)
-    and plusop = (--`$+`--)
 in
-  fn tm =>
-  case (dest_op divop tm) of
-    [xn,yn] => (let
-      open Arbnum
-      val x = int_of_term xn
-      and y = int_of_term yn
+fun DIV_CONV tm =
+  let open Arbnum
+      val (xn,yn) = dest_div tm
+      val x = dest_numeral xn
+      and y = dest_numeral yn
       val q = x div y
       val p = q * y
       val r = x - p
-      val pn = term_of_int p
-      and qn = term_of_int q
-      and rn = term_of_int r
-      val p1 = MUL_CONV
-        (mk_comb{Rator=mk_comb{Rator=multop, Rand=qn}, Rand=yn})
-      and p2 = ADD_CONV
-        (mk_comb{Rator=mk_comb{Rator=plusop, Rand=pn}, Rand=rn})
+      val pn = mk_numeral p
+      and qn = mk_numeral q
+      and rn = mk_numeral r
+      val p1 = MUL_CONV (mk_mult(qn,yn))
+      and p2 = ADD_CONV (mk_plus(pn,rn))
       and p3 = provelt r y
       and chain = INST [xv |-> xn, yv |-> yn, pv |-> pn,
                         qv |-> qn, rv |-> rn] divt
-    in
-      MP (MP (MP chain p1) p2) p3
-    end handle HOL_ERR _ => failwith "DIV_CONV")
-  | _ => failwith "DIV_CONV"
+  in
+     MP (MP (MP chain p1) p2) p3
+  end handle HOL_ERR _ => failwith "DIV_CONV"
 end;
 
 (*-----------------------------------------------------------------------*)
 (* MOD_CONV "[x] MOD [y]" = |- [x] MOD [y] = [x mod y]                   *)
 (*-----------------------------------------------------------------------*)
 
-val MOD_CONV =
-let val modt =
+local val modt =
     prove((--`(q * y = p) ==> (p + r = x) ==> (r < y) ==> (x MOD y = r)`--),
 	  REPEAT DISCH_TAC THEN
-	  MATCH_MP_TAC (arithmeticTheory.MOD_UNIQUE) THEN
+	  MATCH_MP_TAC arithmeticTheory.MOD_UNIQUE THEN
 	  EXISTS_TAC (--`q:num`--) THEN ASM_REWRITE_TAC[])
-    and modop  = (--`$MOD`--)
-    and multop = (--`$*`--)
-    and plusop = (--`$+`--)
 in
- fn tm =>
-  case (dest_op modop tm)
-   of [xn,yn] =>
-      (let val x = int_of_term xn and y = int_of_term yn
-           open Arbnum
-           val q = x div y
-           val p = q * y
-           val r = x - p
-           val pn = term_of_int p
-           and qn = term_of_int q
-           and rn = term_of_int r
-           val p1 = MUL_CONV
-                     (mk_comb{Rator=mk_comb{Rator=multop, Rand=qn}, Rand=yn})
-           and p2 = ADD_CONV
-                     (mk_comb{Rator=mk_comb{Rator=plusop, Rand=pn}, Rand=rn})
-           and p3 = provelt r y
-           and chain = INST [xv |-> xn, yv |-> yn, pv |-> pn,
-                             qv |-> qn, rv |-> rn] modt
-       in
-         MP (MP (MP chain p1) p2) p3
-      end handle HOL_ERR _ => failwith "MOD_CONV")
- | _ => failwith "MOD_CONV"
+fun MOD_CONV tm =
+ let open Arbnum
+     val (xn,yn) = dest_mod tm
+     val x = dest_numeral xn 
+     and y = dest_numeral yn
+     val q = x div y
+     val p = q * y
+     val r = x - p
+     val pn = mk_numeral p
+     and qn = mk_numeral q
+     and rn = mk_numeral r
+     val p1 = MUL_CONV (mk_mult(qn,yn))
+     and p2 = ADD_CONV (mk_plus(pn,rn))
+     and p3 = provelt r y
+     and chain = INST [xv |-> xn, yv |-> yn, pv |-> pn,
+                       qv |-> qn, rv |-> rn] modt
+   in
+      MP (MP (MP chain p1) p2) p3
+   end handle HOL_ERR _ => failwith "MOD_CONV"
 end;
 
 end
