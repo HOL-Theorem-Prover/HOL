@@ -3,6 +3,10 @@
        the set is finite. One might think to introduce this 
        function via a constant specification, but in this case, 
        TFL technology makes an easy job of it.
+
+       Also, we define a "fold" for sets. Could be used for accumulating
+       function values through a set, e.g., summing a finite set of 
+       numbers.
  ---------------------------------------------------------------------------*)
 
 app load ["bossLib", "pred_setTheory"]; 
@@ -79,3 +83,33 @@ val set2list_IN_MEM = Q.prove
    THEN ONCE_REWRITE_TAC [set2list_eqn]
    THEN RW_TAC std_ss [listTheory.MEM,NOT_IN_EMPTY]
    THEN PROVE_TAC [REST_DEF, FINITE_DELETE, IN_INSERT, CHOICE_INSERT_REST]);
+
+
+(*---------------------------------------------------------------------------
+    A "fold" operation for sets
+ ---------------------------------------------------------------------------*)
+
+val itset_defn = Hol_defn "itset"
+  `itset (s:'a->bool) (b:'b) = 
+     if FINITE s then 
+        if s={} then b
+        else itset (REST s) (f (CHOICE s) b)
+     else ARB`;
+
+(*---------------------------------------------------------------------------
+       Termination of itset.
+ ---------------------------------------------------------------------------*)
+
+val (itset_eqn0, itset_ind) =
+ Defn.tprove (itset_defn,
+   WF_REL_TAC `measure (CARD o FST)` THEN 
+   PROVE_TAC [CARD_PSUBSET, REST_PSUBSET]);
+
+(*---------------------------------------------------------------------------
+      Desired recursion equation.
+
+      FINITE s |- itset f s b = if s = {} then b 
+                                else itset f (REST s) (f (CHOICE s) b)
+ ---------------------------------------------------------------------------*)
+
+val itset_eqn = ASM_REWRITE_RULE [ASSUME (Term`FINITE s`)] itset_eqn0;
