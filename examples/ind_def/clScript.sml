@@ -61,8 +61,8 @@ val _ = Hol_datatype `cl = s
                          | k 
                          | # of cl => cl`;
 
+val _ = set_MLname "#" "HASH_DEF";
 val _ = set_fixity "#" (Infixl 1100);
-val _ = set_MLname "#_DEF" "HASH_DEF";
 
 (* =====================================================================*)
 (* Standard syntactic theory, derived by the recursive types package.	*)

@@ -87,10 +87,10 @@ val _ = Hol_datatype
              | If    of ^bexp => comm => comm
              | While of ^bexp => comm`;
 
+val _ = set_MLname ":==" "assign_def";
+val _ = set_MLname ";;" "seq_def";
 val _ = set_fixity ":==" (Infixr 400);
 val _ = set_fixity ";;" (Infixr 350);
-val _ = set_MLname ":==_DEF" "assign_def";
-val _ = set_MLname ";;_DEF" "seq_def";
 
 (* ===================================================================== *)
 (* Definition of the operational semantics.				 *)

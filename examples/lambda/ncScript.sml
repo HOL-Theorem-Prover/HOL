@@ -10,6 +10,7 @@
 (* Interactive use:
    app load ["bossLib", "Q", "ind_defLib",
              "pred_setTheory", "stringTheory", "dBTheory"];
+   open Rsyntax;
 *)
 
 structure ncScript =
@@ -322,7 +323,7 @@ val nc_CASES =
           \/  (?x. v = VAR x)
           \/  (?t u. v = t @@ u)
           \/  (?x u. v = LAM x u)`,
-PROVE_TAC [ithm ]);
+PROVE_TAC [ithm]);
 
 
 (* ===================================================================== *)

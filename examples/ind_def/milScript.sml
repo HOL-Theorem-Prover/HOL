@@ -34,8 +34,8 @@ val _ = new_theory"mil";
 val _ = Hol_datatype `ty = G  of 'a  
                          | -> of ty => ty`;
 
+val _ = set_MLname "->" "Arrow_def";
 val _ = set_fixity "->" (Infixr 700);
-val _ = set_MLname "->_DEF" "Arrow_def";
 
 (* --------------------------------------------------------------------- *)
 (* Structural induction theorem for types.				 *)
