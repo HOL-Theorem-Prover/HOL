@@ -75,12 +75,18 @@ Cases_on `n` THEN RW_TAC arith_ss [])
 
 in 
 
-val word8PrimRec = BETA_RULE prim_rec
+val word8UniquePrimRec = BETA_RULE prim_rec
+
+val word8PrimRec = 
+GENL vars
+ (BETA_RULE (hd (BODY_CONJUNCTS (REWRITE_RULE [EXISTS_UNIQUE_THM] prim_rec))))
+
+val induct = Prim_rec.prove_induction_thm word8UniquePrimRec
 
 end
 
-val induct = Prim_rec.prove_induction_thm word8PrimRec
 
+val _ = save_thm("word8UniquePrimRec",word8UniquePrimRec);
 val _ = save_thm("word8PrimRec",word8PrimRec);
 val _ = save_thm("word8Induct",induct);
 
