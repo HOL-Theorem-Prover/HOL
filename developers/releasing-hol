@@ -20,7 +20,11 @@ cd /tmp/hol98
 $mosmldir/bin/mosml < tools/configure.sml
 
 echo Now building whole system
-if bin/build -symlink 2>&1 | tee build-log | grep "^Working in directory"
+if bin/build -symlink 2>&1 | tee build-log | \
+   perl -e 'chomp; $| = 1;
+             if (m|^Working in directory /tmp/hol98/src/(.*)$|) {
+                          print $1, " ";
+             }'
 then
   :
 else
