@@ -479,11 +479,19 @@ have the given name.
 
 </dl>
 <hr>
-<h2><a name = "Misc">Miscellaneous</a></h2>
+<h2 id = "Misc">Miscellaneous</h2>
 
 <dl>
+<dt><strong>How do I quit?  (The system hangs on
+WindowsXP.)</strong></dt>
+
+<dd><p>Rather than use <code>quit()</code>, end your interactive
+process by sending an <code>EOF</code> signal.  On Windows, you can do
+this by typing <code>Control-Z</code>, followed by
+<code>RETURN</code>.</p></dd>
+
 <dt><strong>How do I create theories in more than one directory?</strong>
-<dd> Both the <code>Holmake</code> program and the various <code>hol</code>
+<dd> <p>Both the <code>Holmake</code> program and the various <code>hol</code>
 scripts take <code>-I &lt;dir&gt;</code> flags to indicate that the
 system should look in the specified directories for object files
 (whether theories or libraries).  You can rebuild theories in later
@@ -491,7 +499,7 @@ directories by calling <code>Holmake</code> with the appropriate
 <code>-I</code> flags.  Directories that should be examined for
 &ldquo;include files&rdquo; can also be specified with an
 <code>INCLUDES=</code> directive in a <code>Holmakefile</code>.
-See the DESCRIPTION manual for more on this.
+See the DESCRIPTION manual for more on this.</p>
 
 <p>
 
@@ -501,11 +509,12 @@ See the DESCRIPTION manual for more on this.
 
 <dt><strong> How do I prove strings equal or inequal?</strong>
 
-<dd> Use <code>stringLib.string_EQ_CONV</code>, which reduces
+<dd> <p> Use <code>stringLib.string_EQ_CONV</code>, which reduces
 equalities over string literals to either T or F.  For example, to
 demonstrate that <code>``(if "foo" = "bar" then 3 else 1) = 1``</code>, you
-could write:
-<pre>   - val t = ``(if "foo" = "bar" then 3 else 1)``;
+could write:</p>
+<pre>
+   - val t = ``(if "foo" = "bar" then 3 else 1)``;
    &gt; val t = ``(if "foo" = "bar" then 3 else 1)`` : Term.term
    - (DEPTH_CONV stringLib.string_EQ_CONV THENC REWRITE_CONV []) t;
    &gt; val it = |- (if "foo" = "bar" then 3 else 1) = 1 : Thm.thm
