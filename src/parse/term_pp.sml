@@ -5,6 +5,8 @@ open Portable HolKernel term_grammar
      HOLtokens HOLgrammars GrammarSpecials;
 
 
+
+
 val PP_ERR = mk_HOL_ERR "term_pp";
 infixr -->;
 
@@ -46,9 +48,11 @@ val isPrefix = String.isPrefix
 
 fun lose_constrec_ty {Name,Ty,Thy} = {Name = Name, Thy = Thy}
 
-datatype grav = Top | RealTop | Prec of (int * string)
+open term_pp_types
 fun grav_name (Prec(n, s)) = s | grav_name _ = ""
 fun grav_prec (Prec(n,s)) = n | grav_prec _ = ~1
+
+
 
 fun dest_atom tm = dest_var tm handle HOL_ERR _ => dest_const tm
 
@@ -217,6 +221,15 @@ fun rule_to_rr rule =
   | CLOSEFIX slist => slist
   | _ => []
 
+(* gives the "wrong" lexicographic order, but is more likely to
+   resolve differences with one comparison because types/terms with
+   the same name are rare, but it's quite reasonable for many
+   types/terms to share the same theory *)
+fun nthy_compare ({Name = n1, Thy = thy1}, {Name = n2, Thy = thy2}) =
+  case String.compare(n1, n2) of
+    EQUAL => String.compare(thy1, thy2)
+  | x => x
+
 fun pp_term (G : grammar) TyG = let
   val {restr_binders,lambda,endbinding,type_intro,res_quanop} = specials G
   val overload_info = overload_info G
@@ -299,8 +312,28 @@ fun pp_term (G : grammar) TyG = let
     case resquan_op_prec of
       NONE => false
     | SOME p => p < vscons_prec
+
+  val uprinters = user_printers G
+  val printers_exist = Binarymap.numItems uprinters > 0
+
   fun pr_term binderp showtypes showtypes_v vars_seen pps tm
               pgrav lgrav rgrav depth = let
+    val _ =
+      if printers_exist then let
+        val {Tyop,Thy,Args} = dest_thy_type (type_of tm)
+      in
+        case Binarymap.peek(uprinters, {Name = Tyop, Thy = Thy}) of
+          NONE => ()
+        | SOME f => let
+            fun sysprint (pg,lg,rg) depth tm =
+              pr_term false showtypes showtypes_v vars_seen pps tm
+                      pg lg rg depth
+          in
+            f sysprint (pgrav, lgrav, rgrav) depth pps tm;
+            raise SimpleExit
+          end handle UserPP_Failed => ()
+      end else ()
+
     val {fvars_seen, bvars_seen} = vars_seen
     val full_pr_term = pr_term
     val pr_term = pr_term binderp showtypes showtypes_v vars_seen pps

@@ -91,6 +91,11 @@ datatype grammar_rule =
 | LISTRULE of listspec list
 
 type overload_info = Overload.overload_info
+type parser_info = (string,unit) Binarymap.dict
+
+type printer_info =
+  ({Name:string,Thy:string},term_pp_types.userprinter) Binarymap.dict
+
 
 datatype grammar = GCONS of
   {rules : (int option * grammar_rule) list,
@@ -100,7 +105,8 @@ datatype grammar = GCONS of
                restr_binders : (binder * string) list,
                res_quanop : string},
    numeral_info : (char * string option) list,
-   overload_info : overload_info}
+   overload_info : overload_info,
+   user_additions : {parsers : parser_info, printers : printer_info}}
 
 fun specials (GCONS G) = #specials G
 fun numeral_info (GCONS G) = #numeral_info G
@@ -108,27 +114,64 @@ fun overload_info (GCONS G) = #overload_info G
 fun known_constants (GCONS G) = Overload.known_constants (#overload_info G)
 fun grammar_rules (GCONS G) = map #2 (#rules G)
 fun rules (GCONS G) = (#rules G)
+fun user_additions (GCONS G) = #user_additions G
 
-fun fupdate_rules f (GCONS{rules, specials, numeral_info, overload_info}) =
+fun fupdate_rules f (GCONS{rules, specials, numeral_info, overload_info,
+                           user_additions}) =
   GCONS{rules = f rules, specials = specials, numeral_info = numeral_info,
-        overload_info = overload_info}
-fun fupdate_specials f (GCONS{rules, specials, numeral_info, overload_info}) =
+        overload_info = overload_info, user_additions = user_additions}
+fun fupdate_specials f (GCONS{rules, specials, numeral_info, overload_info,
+                              user_additions}) =
   GCONS {rules = rules, specials = f specials, numeral_info = numeral_info,
-         overload_info = overload_info}
-fun fupdate_numinfo f (GCONS {rules, specials, numeral_info, overload_info}) =
+         overload_info = overload_info, user_additions = user_additions}
+fun fupdate_numinfo f (GCONS {rules, specials, numeral_info, overload_info,
+                              user_additions}) =
   GCONS {rules = rules, specials = specials, numeral_info = f numeral_info,
-         overload_info = overload_info}
+         overload_info = overload_info, user_additions = user_additions}
 
 fun mfupdate_overload_info f (GCONS g) = let
-  val {rules, specials, numeral_info, overload_info} = g
+  val {rules, specials, numeral_info, overload_info, user_additions} = g
   val (new_oinfo,result) = f overload_info
 in
   (GCONS{rules = rules, specials = specials, numeral_info = numeral_info,
-         overload_info = new_oinfo},
+         overload_info = new_oinfo, user_additions = user_additions},
    result)
 end
 fun fupdate_overload_info f g =
   #1 (mfupdate_overload_info (fn oi => (f oi, ())) g)
+
+fun mfupdate_user_additions f (GCONS g) = let
+  val {rules, specials, numeral_info, overload_info, user_additions} = g
+  val (new_uadds, result) = f user_additions
+in
+  (GCONS {rules = rules, specials = specials, numeral_info = numeral_info,
+          overload_info = overload_info, user_additions = new_uadds},
+   result)
+end
+fun fupdate_user_additions f g =
+  #1 (mfupdate_user_additions (fn ua => (f ua, ())) g)
+
+fun add_user_printer (k,v) g =
+  fupdate_user_additions
+  (fn {parsers,printers} => {parsers = parsers,
+                             printers = Binarymap.insert(printers,k,v)})
+  g
+fun remove_user_printer k g = let
+  open Lib infix ##
+  fun pp_update bmap =
+    (I ## SOME) (Binarymap.remove(bmap,k))
+    handle Binarymap.NotFound => (bmap, NONE)
+  fun ua_update {parsers,printers} = let
+    val (newprinters, result) = pp_update printers
+  in
+    ({parsers = parsers, printers = newprinters}, result)
+  end
+in
+  mfupdate_user_additions ua_update g
+end
+
+fun user_printers g = #printers (user_additions g)
+
 
 fun update_restr_binders rb
   {lambda, endbinding, type_intro, restr_binders, res_quanop} =
@@ -220,6 +263,16 @@ fun STtoString (G:grammar) x =
   | EndBinding => #endbinding (specials G) ^ " (end binding)"
   | ResquanOpTok => #res_quanop (specials G)^" (res quan operator)"
 
+(* gives the "wrong" lexicographic order, but is more likely to
+   resolve differences with one comparison because types/terms with
+   the same name are rare, but it's quite reasonable for many
+   types/terms to share the same theory *)
+fun nthy_compare ({Name = n1, Thy = thy1}, {Name = n2, Thy = thy2}) =
+  case String.compare(n1, n2) of
+    EQUAL => String.compare(thy1, thy2)
+  | x => x
+
+
 val stdhol : grammar =
   GCONS
   {rules = [(SOME 0, PREFIX (BINDER [LAMBDA])),
@@ -267,7 +320,9 @@ val stdhol : grammar =
    specials = {lambda = "\\", type_intro = ":", endbinding = ".",
                restr_binders = [], res_quanop = "::"},
    numeral_info = [],
-   overload_info = Overload.null_oinfo
+   overload_info = Overload.null_oinfo,
+   user_additions = {parsers = Binarymap.mkDict String.compare,
+                     printers = Binarymap.mkDict nthy_compare}
    }
 
 local
@@ -678,6 +733,27 @@ in
     raise GrammarError "Specials in two grammars don't agree"
 end
 
+fun merge_bmaps typestring keyprinter m1 m2 = let
+  (* m1 takes precedence - arbitrarily *)
+  fun foldfn (k,v,newmap) =
+    (if isSome (Binarymap.peek(newmap, k)) then
+       Feedback.HOL_WARNING "term_grammar" "merge_grammars"
+       ("Merging "^typestring^" has produced a clash on key "^keyprinter k)
+     else
+       ();
+     Binarymap.insert(newmap,k,v))
+in
+  Binarymap.foldl foldfn m2 m1
+end
+
+fun merge_user_additions u1 u2 = let
+  val {parsers = ps1, printers = pp1} = u1
+  val {parsers = ps2, printers = pp2} = u2
+  fun print_nthy {Name,Thy} = Name^"$"^Thy
+in
+  {parsers  = merge_bmaps "user parsers"  (fn x => x) ps1 ps2,
+   printers = merge_bmaps "user printers" print_nthy  pp1 pp2}
+end;
 
 
 fun merge_grammars (G1:grammar, G2:grammar) :grammar = let
@@ -689,9 +765,10 @@ fun merge_grammars (G1:grammar, G2:grammar) :grammar = let
   val new_numinfo = Lib.union (numeral_info G1) (numeral_info G2)
   val new_oload_info =
     Overload.merge_oinfos (overload_info G1) (overload_info G2)
+  val new_uadds = merge_user_additions (user_additions G1) (user_additions G2)
 in
   GCONS {rules = newrules, specials = newspecials, numeral_info = new_numinfo,
-         overload_info = new_oload_info}
+         overload_info = new_oload_info, user_additions = new_uadds}
 end
 
 (* ----------------------------------------------------------------------

@@ -83,6 +83,23 @@ sig
   val mfupdate_overload_info :
     (overload_info -> overload_info * 'a) -> grammar -> grammar * 'a
 
+
+  (* User additions *)
+  (* Users can add special-purpose printers and parsers to grammars *)
+  (* The key for printers specifies a TYPE, not a term; the user's
+     printer will be called onto print out all terms of that type *)
+  val add_user_printer :
+    ({Name:string, Thy:string} * term_pp_types.userprinter) -> grammar ->
+    grammar
+  val remove_user_printer :
+    {Name:string, Thy:string} -> grammar ->
+    (grammar * term_pp_types.userprinter option)
+  val user_printers :
+    grammar ->
+    ({Name:string, Thy:string}, term_pp_types.userprinter)Binarymap.dict
+
+
+
   val rules          : grammar -> (int option * grammar_rule) list
   val grammar_rules  : grammar -> grammar_rule list
   val specials       : grammar

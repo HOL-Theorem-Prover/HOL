@@ -1002,6 +1002,29 @@ in
   overload_on(s,c)
 end;
 
+
+(*----------------------------------------------------------------------
+  User additions to the printer and parser
+  ----------------------------------------------------------------------*)
+
+fun temp_add_user_printer ({Tyop,Thy}, pfn) = let
+in
+  the_term_grammar :=
+    term_grammar.add_user_printer ({Name = Tyop, Thy = Thy}, pfn)
+                                  (term_grammar());
+  term_grammar_changed := true
+end
+
+
+fun add_user_printer((r as {Tyop,Thy}),pfn,s) = let
+in
+  update_grms ("temp_add_user_printer",
+               String.concat ["({Tyop = ", mlquote Tyop, ", Thy = ",
+                              mlquote Thy, "}, ", s]);
+  temp_add_user_printer(r, pfn)
+end;
+
+
 (*---------------------------------------------------------------------------
      Updating the global and local grammars when a theory file is
      loaded.

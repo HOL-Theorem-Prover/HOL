@@ -112,6 +112,10 @@ signature Parse = sig
     val add_record_update : string * term -> unit
     val add_record_fupdate : string * term -> unit
 
+    (* adding user parsers and printers to the grammar *)
+    val add_user_printer :
+      ({Tyop:string, Thy:string} * term_pp_types.userprinter * string) -> unit
+
 
     (* the following functions affect the grammar, but not so that the
        grammar exported to disk will be modified *)
