@@ -115,12 +115,6 @@ New tools:
 Incompatibilities:
 ------------------
 
-  * Changes to the term lexer mean that comment tokens "(*" and "*)"
-    that appear within terms can need to be more carefully separated
-    from other symbolic and 'aggregating' characters such as other
-    brackets.  In particular, strings like "((*" and "[(*" will no
-    longer be tokenised so as to reveal comment tokens.
-
   * Rewrite rules for arithmeticTheory's MIN and MAX constants have
     been made more general; they will now match more often.  For
     example, MIN_LE has changed from
