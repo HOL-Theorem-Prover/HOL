@@ -66,12 +66,12 @@ val swap_eq_3substs = store_thm(
   ``~(z IN FV M) /\ ~(x = z) /\ ~(y = z) ==>
     (swap x y M = [VAR y/z] ([VAR x/y] ([VAR z/x] M)))``,
   SRW_TAC [][fresh_var_swap] THEN
-  `~(x IN FV (swap z x M))` by SRW_TAC [][swapstr_def] THEN
-  SRW_TAC [][fresh_var_swap] THEN
-  ONCE_REWRITE_TAC [swap_swap] THEN
-  SRW_TAC [][swapstr_def] THEN
-  `~(y IN FV (swap z y (swap x y M)))` by SRW_TAC [][swapstr_def] THEN
-  SRW_TAC [][fresh_var_swap]);
+  `swap x y (swap z x M) = swap (swapstr x y z) (swapstr x y x) (swap x y M)`
+     by SRW_TAC [][] THEN
+  POP_ASSUM SUBST_ALL_TAC THEN
+  ONCE_REWRITE_TAC [GSYM swap_swap] THEN
+  ASM_SIMP_TAC bool_ss [swapstr_def] THEN
+  SRW_TAC [][]);
 
 val substitutive_implies_permutative = store_thm(
   "substitutive_implies_permutative",

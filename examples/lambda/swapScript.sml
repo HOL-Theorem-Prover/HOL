@@ -227,17 +227,14 @@ val FV_swap = store_thm(
     SRW_TAC [][FV_SUB] THENL [
       `~(w = x)` by PROVE_TAC [] THEN
       SRW_TAC [][swapset_UNION] THEN
-      `swapstr u v w = w` by SRW_TAC [][swapstr_def] THEN
-      SRW_TAC [][dBTheory.UNION_DELETE, SING_DELETE] THEN
+      `swapstr u v w = w` by SRW_TAC [][] THEN
+      SRW_TAC [][dBTheory.UNION_DELETE] THEN
       SRW_TAC [][GSYM DELETE_NON_ELEMENT],
       `FV t DELETE x = FV t`
          by SRW_TAC [][GSYM DELETE_NON_ELEMENT] THEN
-      SRW_TAC [][GSYM DELETE_NON_ELEMENT, swapstr_def]
+      SRW_TAC [][GSYM DELETE_NON_ELEMENT]
     ],
-    SRW_TAC [][lemma14a, EXTENSION, EQ_IMP_THM] THENL [
-      SRW_TAC [][swapstr_def],
-      FULL_SIMP_TAC (srw_ss() ++ COND_elim_ss) [swapstr_def]
-    ]
+    SRW_TAC [][lemma14a, EXTENSION, EQ_IMP_THM]
   ]);
 val _ = export_rewrites ["FV_swap"]
 
@@ -403,11 +400,11 @@ val swap_11 = store_thm(
       SRW_TAC [][],
       STRIP_TAC THEN
       `~(v IN FV u) /\ ~(x' IN FV t1)` by METIS_TAC [LAM_INJ_ALPHA_FV] THEN
-      FIRST_X_ASSUM (MP_TAC o MATCH_MP INJECTIVITY_LEMMA1) THEN
-      DISCH_THEN SUBST_ALL_TAC THEN
-      SRW_TAC [][fresh_var_swap] THEN
-      ONCE_REWRITE_TAC [GSYM swap_swap] THEN
-      SRW_TAC [][GSYM fresh_var_swap, SIMPLE_ALPHA]
+      `t1 = [VAR v/x'] u` by PROVE_TAC [INJECTIVITY_LEMMA1] THEN
+      ` _ = swap v x' u` by PROVE_TAC [fresh_var_swap] THEN
+      `swap x y t1 = swap (swapstr x y v) (swapstr x y x') (swap x y u)`
+           by SRW_TAC [][] THEN
+      POP_ASSUM SUBST_ALL_TAC THEN SRW_TAC [][swap_ALPHA]
     ]
   ]);
 val _ = export_rewrites ["swap_11"]
