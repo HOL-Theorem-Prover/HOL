@@ -78,7 +78,7 @@ fun new_type_definition {name,pred,inhab_thm} =
  let val generated_name = name^"_TY_DEF"
      val bool = Type.bool
  in
-  if not(Portable_List.null(Term.free_vars pred)) 
+  if not(List.null(Term.free_vars pred)) 
   then raise TYPE_DEF_ERR "subset predicate must be a closed term"
   else 
   if not (case (Type.dest_type(Term.type_of pred))
@@ -86,7 +86,7 @@ fun new_type_definition {name,pred,inhab_thm} =
              | _ => false)
   then raise TYPE_DEF_ERR"subset predicate has the wrong type"
   else 
-  if not(Portable_List.null(hyp inhab_thm)) 
+  if not(List.null(hyp inhab_thm)) 
   then raise TYPE_DEF_ERR"existence theorem must have no assumptions"
   else 
   if not((pred = rator(#Body(dest_exists(concl inhab_thm)))) 
@@ -96,7 +96,7 @@ fun new_type_definition {name,pred,inhab_thm} =
   let val {Args = [ty,_],...} = Type.dest_type(type_of pred) 
       and evar = #Bvar(dest_exists(concl inhab_thm))
       val tyvarsl = Term.type_vars_in_term pred 
-      val _ = Theory.new_type {Name=name, Arity=Portable_List.length tyvarsl}
+      val _ = Theory.new_type {Name=name, Arity=List.length tyvarsl}
       val newty  = Type.mk_type{Tyop=name, Args=tyvarsl}
       val repty  = newty --> ty
       val rep    = Term.mk_primed_var{Name="rep", Ty=repty}

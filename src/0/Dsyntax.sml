@@ -473,8 +473,8 @@ fun splice ({redex,...}:{redex:term,residue:term}) v occs tm2 =
    let fun graft (r as {occs = [], ...}) = r
          | graft {tm, occs, count} =
           if (redex = tm)
-          then if (Portable_List.hd occs = count+1)
-               then {tm = v, occs = Portable_List.tl occs, count = count+1}
+          then if (List.hd occs = count+1)
+               then {tm = v, occs = List.tl occs, count = count+1}
                else {tm = tm, occs = occs, count = count+1}
           else if (is_comb tm)
                then let val {Rator, Rand} = dest_comb tm

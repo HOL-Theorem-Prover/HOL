@@ -43,7 +43,7 @@ open Term Type Lib Exception;
 type hol_type = Type.hol_type
 type term = Term.term;
 type thm = Thm.thm;
-type ppstream = Portable_PrettyPrint.ppstream
+type ppstream = Portable.ppstream
 
 infix ##;
 
@@ -69,7 +69,7 @@ fun THEORY_ERR function message =
  * Miscellaneous support functions.
  *---------------------------------------------------------------------------*)
 fun dollar s = "$"^s;
-fun dollared s = (Portable_String.sub(s,0) = #"$");
+fun dollared s = (String.sub(s,0) = #"$");
 
 fun st_foldl f b A = Array.foldl (fn (L, A) => List.foldl f A L) b A;
 fun st_filter P A = Array.foldl (fn (L, A) => Lib.mapfilter P L@A) [] A;
@@ -121,18 +121,18 @@ end;
  * loading from disk.                                                        *
  *---------------------------------------------------------------------------*)
 
-abstype thyid = UID of {name:string, timestamp:Portable_Time.time}
+abstype thyid = UID of {name:string, timestamp:Time.time}
 with
   fun thyid_eq x (y:thyid) = (x=y);
-  fun new_thyid s = UID{name=s, timestamp=Portable_Time.timestamp()};
+  fun new_thyid s = UID{name=s, timestamp=Portable.timestamp()};
 
   fun dest_thyid (UID{name, timestamp}) =
-    let val {sec,usec} = Portable_Time.dest_time(timestamp)
+    let val {sec,usec} = Portable.dest_time(timestamp)
     in (name,sec,usec) end;
 
   val thyid_name = #1 o dest_thyid;
 
-  local val mk_time = Portable_Time.mk_time
+  local val mk_time = Portable.mk_time
   in fun make_thyid(s,i1,i2) = UID{name=s, timestamp=mk_time{sec=i1,usec=i2}}
   end;
 end;
@@ -967,7 +967,7 @@ end;
 
 local fun check_name (fname,s) = ()
       fun empty_hyp th =
-         if (Portable_List.null (Thm.hyp th)) then ()
+         if (List.null (Thm.hyp th)) then ()
          else raise THEORY_ERR "save_thm" "non empty assumption set"
 in
 fun new_axiom (name,tm) =
@@ -1071,11 +1071,11 @@ fun ancestry s0 =
  *---------------------------------------------------------------------------*)
 
 fun theory_out f {name,style} ostrm =
- let val ppstrm = Portable_PrettyPrint.mk_ppstream
+ let val ppstrm = Portable.mk_ppstream
      {consumer = Portable.outputc ostrm,
       linewidth=78, flush = fn () => Portable.flush_out ostrm}
  in f ppstrm handle e => (Portable.close_out ostrm; raise e);
-    Portable_PrettyPrint.flush_ppstream ppstrm;
+    Portable.flush_ppstream ppstrm;
     Portable.close_out ostrm
  end;
 
@@ -1116,7 +1116,7 @@ fun gen_export_theory printers (thy as {thid,con_wrt_disk,STH,GR,
                     \consistent with disk, hence not exported.\n");
          SUCCESS ())
   else
-  let val concat = Portable_String.concat
+  let val concat = String.concat
       val thyname = thyid_name thid
       val name = CTname()^"Theory"
       val (A,D,T) = unkind facts
@@ -1233,20 +1233,20 @@ fun new_theory0 printers str =
  * Print a theory for the user.                                             *
  *--------------------------------------------------------------------------*)
 
-val CONSISTENT   = Portable_PrettyPrint.CONSISTENT
-val INCONSISTENT = Portable_PrettyPrint.INCONSISTENT;
+val CONSISTENT   = Portable.CONSISTENT
+val INCONSISTENT = Portable.INCONSISTENT;
 
 fun pp_theory (printers:TheoryPP.HOLprinters) ppstrm thy = let
   val {thid,con_wrt_disk,STH, GR,facts,overwritten,adjoin} = thy
   val {add_string,add_break,begin_block,end_block, add_newline,
-       flush_ppstream,...} = Portable_PrettyPrint.with_ppstream ppstrm
+       flush_ppstream,...} = Portable.with_ppstream ppstrm
   val pp_thm = #pp_thm printers ppstrm
   val pp_type = #pp_type printers ppstrm
   fun vblock(header, ob_pr, obs) =
     ( begin_block CONSISTENT 4;
      add_string (header^":");
      add_newline();
-     Portable_PrettyPrint.pr_list ob_pr
+     Portable.pr_list ob_pr
      (fn () => ()) add_newline obs;
      end_block(); add_newline(); add_newline())
   fun pr_thm (heading, ths) =
@@ -1290,11 +1290,11 @@ in
 
 
 fun print_theory_to_outstream printers outstream =
-  let val def_Cons = Portable_PrettyPrint.defaultConsumer()
+  let val def_Cons = Portable.defaultConsumer()
       val consumer = {consumer = Portable.outputc outstream,
                       flush = #flush def_Cons,
                       linewidth = #linewidth def_Cons}
-      val stream = Portable_PrettyPrint.mk_ppstream consumer
+      val stream = Portable.mk_ppstream consumer
       val _ = pp_theory printers stream (theCT())
       val _ = Portable.flush_out outstream
   in outstream end
@@ -1305,8 +1305,8 @@ fun print_theory_to_file printers file =
     end
 
 fun print_theory0 printers =
-   pp_theory printers (Portable_PrettyPrint.mk_ppstream
-                       (Portable_PrettyPrint.defaultConsumer()))
+   pp_theory printers (Portable.mk_ppstream
+                       (Portable.defaultConsumer()))
    (theCT())
 
 

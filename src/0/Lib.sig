@@ -84,9 +84,9 @@ sig
   val sort : ('a -> 'a -> bool) -> 'a list -> 'a list
   val int_sort : int list -> int list
 
-  val start_time : unit -> Portable_Timer.cpu_timer
-  val end_time : Portable_Timer.cpu_timer -> unit
-  val time : ('a -> 'b) -> 'a -> 'b
+  val start_time : unit -> Timer.cpu_timer
+  val end_time   : Timer.cpu_timer -> unit
+  val time       : ('a -> 'b) -> 'a -> 'b
 
   type ('a,'b) istream
   val mk_istream : ('a -> 'a) -> 'a -> ('a -> 'b) -> ('a,'b) istream
@@ -102,7 +102,6 @@ sig
   val front_last : 'a list -> 'a list * 'a
   val last : 'a list -> 'a 
   val funpow : int -> ('a -> 'a) -> 'a -> 'a
-  val ordof : string * int -> int
   val mesg : bool -> string -> unit
   val with_flag :'a ref * 'a -> ('b -> 'c) -> 'b -> 'c
   val hash : int -> string -> int*int -> int

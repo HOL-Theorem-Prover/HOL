@@ -1,5 +1,5 @@
 (*---------------------------------------------------------------------------*
- * Things like Globals, Lexis, and Hol_pp haven't been opened.               *
+ * Things like Globals, and Lexis haven't been opened.                       *
  *---------------------------------------------------------------------------*)
 structure HolKernel =
 struct

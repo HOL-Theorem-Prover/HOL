@@ -43,7 +43,7 @@ end;
  fun smerge t1 [] = t1
    | smerge [] t2 = t2 
    | smerge (l0 as s0::rst0) (l1 as s1::rst1) = 
-       case Portable_String.compare (s0,s1)
+       case String.compare (s0,s1)
          of LESS    => s0::smerge rst0 l1
           | GREATER => s1::smerge l0 rst1
           | EQUAL   => s0::smerge rst0 rst1;
@@ -52,9 +52,9 @@ end;
  fun merge (TAG(o1,ax1)) (TAG(o2,ax2)) = TAG(smerge o1 o2, Lib.union ax1 ax2);
 
 
-open Portable_PrettyPrint;
+open Portable;
 
- local fun repl ch alist = Portable_String.implode 
+ local fun repl ch alist = String.implode 
                 (itlist (fn _ => fn chs => (ch::chs)) alist [])
  in
  fun pp ppstrm (TAG (olist,axlist)) = 
@@ -94,7 +94,7 @@ open Portable_PrettyPrint;
    | spaces (x::rst) = x::" "::spaces rst;
 
  fun pp_to_disk ppstrm (TAG (olist,_)) = 
-    add_string ppstrm (Portable_String.concat ("\""::spaces olist));
+    add_string ppstrm (String.concat ("\""::spaces olist));
 
 
 fun read_disk_tag "" = TAG([],[])

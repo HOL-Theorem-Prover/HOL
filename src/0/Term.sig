@@ -29,6 +29,7 @@ sig
   val variant      : term list -> term -> term
 
   (* Constructors and destructors *)
+
   val mk_var         : {Name : string, Ty : Type.hol_type} -> term
   val mk_primed_var  : {Name : string, Ty : Type.hol_type} -> term
   val mk_const       : {Name : string, Ty : Type.hol_type} -> term
@@ -62,25 +63,29 @@ sig
                   (term,term)Lib.subst * (Type.hol_type,Type.hol_type)Lib.subst
 
   (* Miscellaneous *)
-  datatype lambda = VAR of {Name : string, Ty : Type.hol_type}
-                  | CONST of {Name : string, Ty : Type.hol_type}
-                  | COMB of {Rator : term, Rand : term}
-                  | LAMB of {Bvar : term, Body : term};
+
+  datatype lambda = VAR   of {Name  : string, Ty : Type.hol_type}
+                  | CONST of {Name  : string, Ty : Type.hol_type}
+                  | COMB  of {Rator : term, Rand : term}
+                  | LAMB  of {Bvar  : term, Body : term};
 
   val dest_term : term -> lambda
 
   val const_decl : string -> {const:term, theory:string}
 
   (* Pretty printing *)
-  (* type gravity = Portable_PrettyPrint.gravity
-  type ppstream = Portable_PrettyPrint.ppstream
-  type pparg = {boundvars:term list,depth:int,gravity:gravity}
-                 -> term -> ppstream -> unit
-  val pp_term : ppstream -> term -> unit
-  val extend_pp_term : (pparg -> pparg) -> unit
-  val reset_pp_term : unit -> unit *)
+
   val pp_raw_term :
-    (term -> int) -> Portable_PrettyPrint.ppstream -> term -> unit
+    (term -> int) -> Portable.ppstream -> term -> unit
+
+  (* Numeral treatment *)
+
+  val is_numeral      : term -> bool
+  val mk_numeral      : Arbnum.num -> term
+  val dest_numeral    : term -> Arbnum.num
+  val prim_mk_numeral : {mkCOMB       : {Rator:'a, Rand:'a} -> 'a,
+                         mkNUM_CONST  : string -> 'a,
+                         mkNUM2_CONST : string -> 'a} -> Arbnum.num -> 'a
 
   (* Functor avoidance technique, via "one-time" references. *)
   val init : (string -> bool) ->
@@ -111,11 +116,4 @@ sig
                     -> unit
   val minTheory_init: term -> unit
 
-  (* Numeral treatment *)
-  val is_numeral      : term -> bool
-  val mk_numeral      : arbnum.num -> term
-  val dest_numeral    : term -> arbnum.num
-  val prim_mk_numeral : {mkCOMB       : {Rator:'a, Rand:'a} -> 'a,
-                         mkNUM_CONST  : string -> 'a,
-                         mkNUM2_CONST : string -> 'a} -> arbnum.num -> 'a
 end;

@@ -9,7 +9,7 @@ type hol_type = Type.hol_type
 type thm      = Thm.thm;
 
 open Exception Lib;
-open Portable_PrettyPrint;
+open Portable;
 
 fun PP_THEORY_ERR f m =
        HOL_ERR{origin_structure = "TheoryPP",
@@ -26,7 +26,7 @@ in
 end;
 
 
-val concat = Portable_String.concat;
+val concat = String.concat;
 val sort = Lib.sort (fn s1:string => fn s2 => s1<=s2);
 val psort = Lib.sort (fn (s1:string,_:Thm.thm) => fn (s2,_:Thm.thm) => s1<=s2);
 val thid_sort = Lib.sort (fn (s1:string,_:int,_:int) => fn (s2,_,_) => s1<=s2);
@@ -41,7 +41,7 @@ type type_printer = ppstream -> hol_type -> unit
 type HOLprinters = {pp_thm : thm_printer, pp_type : type_printer}
 
 fun print_type_to_SML pps ty = let
-  open Portable_PrettyPrint Type
+  open Portable Type
 in
   if (is_vartype ty) then
     add_string pps ("U"^quote (dest_vartype ty))
@@ -63,7 +63,7 @@ in
 end
 
 fun with_parens pfn pp x = let
-  open Portable_PrettyPrint
+  open Portable
 in
   add_string pp "("; pfn pp x; add_string pp ")"
 end
@@ -78,7 +78,7 @@ fun pp_theory_sig thm_printer ppstrm info_record = let
     | NONE => (fn thm => add_string ppstrm "No theorem printer installed")
   val {add_string,add_break,begin_block,end_block,
           add_newline,flush_ppstream,...} =
-                 Portable_PrettyPrint.with_ppstream ppstrm
+                 Portable.with_ppstream ppstrm
      val parents' = sort parents
      val axioms' = psort axioms
      val definitions' = psort definitions
@@ -242,7 +242,7 @@ fun check V thml =
           then ()
            else (Lib.mesg true "FAILURE in sharing scheme!";
                  raise PP_THEORY_ERR"check" "failure in sharing scheme")
-  in Portable_List.app (app (trav chk) o thm_terms o snd) thml;
+  in List.app (app (trav chk) o thm_terms o snd) thml;
      Lib.mesg true "Completed successfully"
   end
 end;
@@ -250,7 +250,7 @@ end;
 
 fun share_thy check_share thms =
   let val _ = reset_share_table()
-      val _ = Portable_List.app (app (trav add) o thm_terms o snd) thms
+      val _ = List.app (app (trav add) o thm_terms o snd) thms
       val L0 = Array.foldr (op @) [] share_table
       val L1 = Lib.sort (fn (_,i0) => fn (_,i1) => i0<=i1) L0
       val slist = map fst L1
@@ -296,7 +296,7 @@ fun pp_theory_struct ppstrm info_record = let
    val {theory as (name,i1,i2), parents,
         axioms,definitions,theorems,types,constants,struct_ps} = info_record
      val {add_string,add_break,begin_block,end_block, add_newline,
-          flush_ppstream,...} = Portable_PrettyPrint.with_ppstream ppstrm
+          flush_ppstream,...} = Portable.with_ppstream ppstrm
      val pp_tm = pp_raw ppstrm
      val pp_ty = with_parens print_type_to_SML ppstrm
      val pp_tag = Tag.pp_to_disk ppstrm

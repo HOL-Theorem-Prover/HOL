@@ -100,11 +100,11 @@ fun DEF_EXISTS_RULE tm =
      val {lhs,rhs} = dest_eq body0 handle HOL_ERR _ =>
             raise DEF_EX_ERR "proposed definition is not an equation"
      val lhsvars0 = check_lhs lhs
-     val a0       = Portable_List.hd lhsvars0
+     val a0       = List.hd lhsvars0
      val v        = check1 a0 rhs
      val lhs'     = subst [a0 |-> v] lhs
      val body     = mk_eq{lhs=lhs', rhs=rhs}
-     val lhsvars  = v::Portable_List.tl lhsvars0
+     val lhsvars  = v::List.tl lhsvars0
      val name     = #Name (dest_var v)
      val ty       = get_type lhs (Term.type_of rhs)
      and rhsvars  = Term.free_vars rhs
@@ -124,7 +124,7 @@ fun DEF_EXISTS_RULE tm =
      of [] => Thm.mk_oracle_thm std_tag ([],
                  mk_exists{Bvar=v,
                    Body=list_mk_forall
-                      (union vars (Portable_List.tl lhsvars), body)})
+                      (union vars (List.tl lhsvars), body)})
       | extras => raise DEF_EX_ERR (String.concat
                    ("Unbound type variable(s) in definition: "
                     :: commafy (map (Lib.quote o Type.dest_vartype) extras)))

@@ -137,10 +137,10 @@ fun check_specification name_fixl th =
  end;
 
 (*
-if not(Portable_List.null(Thm.hyp th))
+if not(List.null(Thm.hyp th))
  then raise CONST_SPEC_ERR"no assumptions to theorem allowed in specifications"
  else
- if not(Portable_List.null(Term.free_vars(Thm.concl th)))
+ if not(List.null(Term.free_vars(Thm.concl th)))
  then raise CONST_SPEC_ERR
                (Lib.itlist (fn t => fn s => "\""^(#Name(dest_var t))^"\" "^s)
                        (Term.free_vars(Thm.concl th))
@@ -155,13 +155,13 @@ if not(Portable_List.null(Thm.hyp th))
           (flag_name_prec_list :{fixity:Term.fixity,const_name:string} list)
   ;
  let val (vars,body) =
-    n_strip_quant dest_exists (Portable_List.length flag_name_prec_list)
+    n_strip_quant dest_exists (List.length flag_name_prec_list)
                   (Thm.concl th) handle HOL_ERR _
     => raise CONST_SPEC_ERR"too few existentially quantified variables"
  in
    Lib.C map vars
     (fn var =>
-       if not(Portable_List.null
+       if not(List.null
               (Lib.set_diff (Term.type_vars_in_term body)
                             (Term.type_vars_in_term var)))
        then raise CONST_SPEC_ERR

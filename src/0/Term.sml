@@ -21,30 +21,17 @@ fun TERM_ERR function message =
                    origin_function = function,
                    message = message};
 
-fun TY_ANTIQ_ERR s = TERM_ERR s "ty_antiq in term";
-
 
 (*---------------------------------------------------------------------------*
- * deBruijn terms. ty_antiq is an annoyance, caused by having quotations     *
- * be frag lists. This requires all antiquotes in a quotation to have the    *
- * same type. Thus we use ty_antiq to cast types to terms, in order that all *
- * antiquotes be terms.                                                      *
+ * HOL terms are represented internally using deBruijn indices. Externally,  *
+ * they appear to be in name-carrying syntax.                                *
  *---------------------------------------------------------------------------*)
 
 datatype term = Fv of {Name:string, Ty:Type.hol_type}
               | Bv of int
               | Const of string ref * Type.hol_type
               | Comb of {Rator:term, Rand:term}
-              | Abs of {Bvar:term, Body:term}
-              | ty_antiq of Type.hol_type;
-
-
-(* For efficiency tests by Morten Welinder. *)
-datatype lambda = VAR   of {Name : string, Ty : Type.hol_type}
-                | CONST of {Name : string, Ty : Type.hol_type}
-                | COMB  of {Rator : term, Rand : term}
-                | LAMB  of {Bvar : term, Body : term};
-
+              | Abs of {Bvar:term, Body:term};
 
 (*---------------------------------------------------------------------------*
  * Computing the type of a term.                                             *
@@ -75,8 +62,7 @@ fun type_vars_in_term (Fv{Ty, ...}) = Type.type_vars Ty
                                                  (type_vars_in_term Rand)
   | type_vars_in_term (Abs{Bvar,Body}) = union (type_vars_in_term Bvar)
                                                (type_vars_in_term Body)
-  | type_vars_in_term (Bv _) = []
-  | type_vars_in_term (ty_antiq _) = raise TY_ANTIQ_ERR "type_vars_in_term";
+  | type_vars_in_term (Bv _) = [];
 
 
 (*---------------------------------------------------------------------------*
@@ -118,7 +104,7 @@ in
 end;
 
 fun free_varsl tm_list = itlist (union o free_vars) tm_list []
-fun all_varsl tm_list = itlist (union o all_vars) tm_list [];
+fun all_varsl tm_list  = itlist (union o all_vars) tm_list [];
 
 (*---------------------------------------------------------------------------*
  * Does tm occur free in M. This is not defined modulo aconv. Maybe it       *
@@ -137,17 +123,13 @@ fun free_in tm M =
  * A total ordering on terms.  Fv < Bv < Const < Comb < Abs                  *
  *---------------------------------------------------------------------------*)
 
-local val TYANTIQ_ERR = TERM_ERR"term_lt" "type antiquotes are not terms"
-      fun atom_lt {Name=(s1:string),Ty=ty1}
-                  {Name=s2,Ty=ty2}
+local fun atom_lt {Name=(s1:string),Ty=ty1}  {Name=s2,Ty=ty2}
            = case String.compare (s1,s2)
               of LESS => true
                | EQUAL => Type.type_lt ty1 ty2
                | GREATER => false
 in
-fun term_lt (ty_antiq _) _ = raise TYANTIQ_ERR
-  | term_lt _ (ty_antiq _) = raise TYANTIQ_ERR
-  | term_lt (Fv v1) (Fv v2) = atom_lt v1 v2
+fun term_lt (Fv v1) (Fv v2) = atom_lt v1 v2
   | term_lt (Fv _) _ = true
 
   | term_lt (Bv _)  (Fv _)  = false
@@ -317,6 +299,7 @@ end;
 (*---------------------------------------------------------------------------*
  * Making abstractions.                                                      *
  *---------------------------------------------------------------------------*)
+(*
 local
 val bv0  = Bv 0  val bv1  = Bv 1  val bv2=Bv 2 val bv3 = Bv 3 val bv4 = Bv 4
 val bv5  = Bv 5  val bv6  = Bv 6  val bv7=Bv 7 val bv8=Bv 8 val bv9 = Bv 9
@@ -337,6 +320,10 @@ fun mk_bv(1) = bv1 | mk_bv(2) = bv2 | mk_bv(3) = bv3 | mk_bv(4) = bv4
   | mk_bv(29) = bv29 | mk_bv(30) = bv30 | mk_bv(31) = bv31 | mk_bv(32) = bv32
   | mk_bv(33) = bv33 | mk_bv(34) = bv34 | mk_bv(n) = Bv(n)
 end
+*)
+
+(* Does the above make any difference? *) 
+val mk_bv = Bv;
 
 (*---------------------------------------------------------------------------
  * Make a lambda abstraction. Try for some sharing.
@@ -344,11 +331,10 @@ end
 fun mk_abs{Bvar as Fv _, Body} =
  let fun bind (v as Fv _) i = if (v=Bvar) then mk_bv(i) else v
        | bind (Comb{Rator,Rand}) i = Comb{Rator=bind Rator i,Rand=bind Rand i}
-       | bind (Abs{Bvar=bv, Body=tm}) i = Abs{Bvar = bv, Body = bind tm (i+1)}
-       | bind (ty_antiq _) _ = raise TY_ANTIQ_ERR "mk_abs"
+       | bind (Abs{Bvar, Body=tm}) i = Abs{Bvar=Bvar, Body=bind tm (i+1)}
        | bind tm _ = tm
  in
-   Abs{Bvar = Bvar, Body = bind Body 0}
+   Abs{Bvar=Bvar, Body=bind Body 0}
  end
  | mk_abs _ = raise TERM_ERR "mk_abs" "Bvar not a variable";
 
@@ -360,49 +346,23 @@ fun dest_const (Const (ref name,ty)) = {Name=name,Ty=ty}
 fun dest_comb (Comb cmb) = cmb
   | dest_comb _ = raise TERM_ERR "dest_comb" "not a comb"
 
-(*---------------------------------------------------------------------------
- * The pure way to do abstraction destruction. Problem is that you may
- * get a form of variable capture: consider
- *
- *     Abs{Bvar = v, Body = Comb{Rator = Bv 0, Rand = v}}.
- *
- * If you do a dest_abs on this, you will identify Rator and Rand unless
- * you rename. So what? Well, if you don't rename in this situation,
- *
- *   mk_abs o dest_abs <> I
- *
- *
- * fun dest_abs(Abs{Bvar,Body}) =
- *      let fun unbind i (v as (Bv j)) = if (i=j) then Bvar else v
- *            | unbind i (Comb{Rator,Rand}) =
- *                Comb{Rator = unbind i Rator, Rand = unbind i Rand}
- *            | unbind i (Abs{Bvar,Body}) =
- *                Abs{Bvar=Bvar,Body=unbind (i+1) Body}
- *            | unbind _ tm = tm
- *      in
- *      {Bvar = Bvar, Body = unbind 0 Body}
- *      end
- *  | dest_abs _ = raise TERM_ERR{function = "dest_abs",
- *                                message = "not a lambda abstraction"};
- *---------------------------------------------------------------------------*)
-local exception CLASH
-in
-fun dest_abs(Abs{Bvar as Fv{Name,Ty},Body}) =
-   let fun dest (v as (Bv j), i) = if (i=j) then Bvar else v
-         | dest (v as Fv{Name = s,...}, _) =
-               if (Name = s) then raise CLASH else v
-         | dest (Comb{Rator,Rand},i) =
-              Comb{Rator = dest(Rator,i), Rand = dest(Rand,i)}
-         | dest (Abs{Bvar,Body},i) = Abs{Bvar=Bvar,Body = dest(Body,i+1)}
-         | dest (tm,_) = tm
-   in {Bvar = Bvar, Body = dest(Body,0)}
-      handle CLASH =>
-      dest_abs(Abs{Bvar = variant (free_vars Body) Bvar, Body = Body})
-   end
-  | dest_abs _ = raise TERM_ERR "dest_abs" "not a lambda abstraction"
-end;
+fun dest_abs(Abs{Bvar,Body}) =
+  let fun dest i (v as Bv j) = if (i=j) then Bvar else v
+        | dest i (Comb{Rator,Rand}) = Comb{Rator=dest i Rator, Rand=dest i Rand}
+        | dest i (Abs{Bvar,Body}) = Abs{Bvar=Bvar,Body=dest (i+1) Body}
+        | dest _ tm = tm
+  in
+     {Bvar=Bvar, Body=dest 0 Body}
+  end
+ | dest_abs _ = raise TERM_ERR "dest_abs" "not a lambda abstraction";
 
-fun dest_ty_antiq (ty_antiq ty) = ty
+
+(*---------------------------------------------------------------------------
+      Type antiquotations (only required in term parser).
+ ---------------------------------------------------------------------------*)
+fun ty_antiq ty = Fv{Name="ty_antiq",Ty=ty}
+
+fun dest_ty_antiq (Fv{Name="ty_antiq",Ty}) = Ty
   | dest_ty_antiq _ = raise TERM_ERR "dest_ty_antiq" "not a type antiquotation"
 
 val is_ty_antiq = can dest_ty_antiq
@@ -428,13 +388,16 @@ fun rand (Comb{Rand, ...}) = Rand
 val bvar = #Bvar o dest_abs;
 val body = #Body o dest_abs;
 
+datatype lambda = VAR   of {Name  : string, Ty : Type.hol_type}
+                | CONST of {Name  : string, Ty : Type.hol_type}
+                | COMB  of {Rator : term, Rand : term}
+                | LAMB  of {Bvar  : term, Body : term};
+
 fun dest_term (Fv a) = VAR a
   | dest_term (Const(ref name,ty)) = CONST{Name=name,Ty=ty}
   | dest_term (Comb r) = COMB r
   | dest_term (a as Abs _) = LAMB(dest_abs a)
-  | dest_term _ = raise TERM_ERR "dest_term" "badly formed term"
-
-
+  | dest_term (Bv _) = raise TERM_ERR "dest_term" "mangled term"
 
 (*---------------------------------------------------------------------------*
  * fun aconv (Comb{Rator = M1, Rand = M2}) (Comb{Rator=N1,Rand=N2}) =        *
@@ -832,7 +795,6 @@ inst theta tm =
                         end
                    else raise e
             end
-       | inst1 (ty_antiq _, _,_) = raise TY_ANTIQ_ERR "inst"
        | inst1 (_, _,_) = raise TERM_ERR "inst.inst1" "badly formed term"
  in
    inst1 (tm,[],[])
@@ -930,14 +892,6 @@ fun match_term pat ob =
 end;
 
 
-
-(******************* Term Pretty Printer ************************************)
-open Portable_PrettyPrint;
-
-type gravity = gravity
-type pparg = {boundvars:term list,depth:int,gravity:gravity}
-                -> term -> ppstream -> unit
-
 (* Forward reference to Dsyntax. *)
 local val dummy = Fv{Name ="dummy",Ty = Type.mk_vartype"'x"}
       val dest_pabs_ref = ref (fn _:term => {varstruct=dummy,body=dummy})
@@ -976,18 +930,16 @@ val percent = "%";
 fun is_numeral t = let
 
   (* type is equal to ``:num`` *)
-  fun is_numtype ty = let
-    val {Tyop, Args} = Type.dest_type ty
-  in
-    Tyop = "num" andalso null Args
-  end handle HOL_ERR _ => false
+  fun is_numtype ty = 
+     case Type.dest_type ty
+      of {Tyop="num", Args=[]} => true
+       | _ => false;
 
   (* type is equal to ``:num -> num`` *)
-  fun is_num2num_type ty = let
-    val {Tyop, Args} = Type.dest_type ty
-  in
-    Tyop = "fun" andalso length Args = 2 andalso List.all is_numtype Args
-  end handle HOL_ERR _ => false
+  fun is_num2num_type ty = 
+    case Type.dest_type ty
+     of {Tyop="fun", Args=[ty1,ty2]} => is_numtype ty1 andalso is_numtype ty2 
+      | _ => false
 
   (* term is sequence of applications of NUMERAL_BIT1 and NUMERAL_BIT2 to
      ALT_ZERO *)
@@ -1020,10 +972,10 @@ end
 
 fun dest_numeral t =
   if is_numeral t then
-    if is_const t then arbnum.zero
+    if is_const t then Arbnum.zero
     else let
       val {Rand = arg, ...} = dest_comb t
-      open arbnum
+      open Arbnum
       fun recurse t =
         if is_comb t then let
           val {Rator, Rand} = dest_comb t
@@ -1041,7 +993,7 @@ fun dest_numeral t =
     raise TERM_ERR "dest_numeral" "Term is not a numeral"
 
 fun prim_mk_numeral {mkCOMB, mkNUM_CONST, mkNUM2_CONST} n = let
-  open arbnum
+  open Arbnum
   val numeral = mkNUM2_CONST "NUMERAL"
   val nb1 = mkNUM2_CONST "NUMERAL_BIT1"
   val nb2 = mkNUM2_CONST "NUMERAL_BIT2"
@@ -1072,7 +1024,7 @@ end
 
 
 (* takes a numeral term and turns it into a string *)
-val n2i = arbnum.toString o dest_numeral
+val n2i = Arbnum.toString o dest_numeral
 
 
 (*---------------------------------------------------------------------------*
@@ -1080,14 +1032,14 @@ val n2i = arbnum.toString o dest_numeral
  *---------------------------------------------------------------------------*)
 
 fun pp_raw_term index pps tm =
-let val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
+let open Portable
+    val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
     fun pr_term (Abs{Bvar,Body}) =
           ( add_string "(\\"; pr_term Bvar; add_string dot;
                               add_break(1,0);  pr_term Body; add_string ")" )
       | pr_term (Comb{Rator, Rand}) =
            ( add_string "("; pr_term Rator; add_break(1,0); pr_term Rand;
              add_string ")" )
-      | pr_term (ty_antiq _) = raise TERM_ERR"pp_raw_term" "term construction"
       | pr_term (Bv i) = add_string (dollar^Lib.int_to_string i)
       | pr_term a = add_string(percent^Lib.int_to_string (index a))
 in

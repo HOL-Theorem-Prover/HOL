@@ -508,7 +508,7 @@ fun SPEC t th =
  *      handle _ => THM_ERR{function = "GEN",message = ""};
  *---------------------------------------------------------------------------*)
 fun GEN x th =
-   (Assert (not(Portable_List.exists (free_in x) (hyp th))) "GEN" "";
+   (Assert (not(List.exists (free_in x) (hyp th))) "GEN" "";
     make_thm Count.Gen(tag th, hyp th, mk_forall{Bvar=x, Body=concl th})
      handle HOL_ERR _ => THM_ERR "GEN" "not a forall");
 

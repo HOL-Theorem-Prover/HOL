@@ -18,7 +18,7 @@
 
 structure Lexis :> Lexis =
 struct
-open Portable;
+
 fun LEXIS_ERR {func,mesg} =
    Exception.HOL_ERR{origin_structure="Lexis",
                     origin_function=func, message=mesg};
@@ -43,20 +43,19 @@ fun LEXIS_ERR {func,mesg} =
 val bzero = 0wx0 : Word8.word
 val bone  = 0wx1 : Word8.word
 
-val ordof = Portable_String.ordof;
+val ordof = Portable.ordof;
 
-val hol_symbols   = Portable_ByteArray.array(128,bzero);
-val sml_symbols   = Portable_ByteArray.array(128,bzero);
-val alphabet      = Portable_ByteArray.array(128,bzero);
-val numbers       = Portable_ByteArray.array(128,bzero);
-val tyvar_ids     = Portable_ByteArray.array(128,bzero);
-val alphanumerics = Portable_ByteArray.array(128,bzero);
-val parens        = Portable_ByteArray.array(128,bzero);
+val hol_symbols   = Word8Array.array(128,bzero);
+val sml_symbols   = Word8Array.array(128,bzero);
+val alphabet      = Word8Array.array(128,bzero);
+val numbers       = Word8Array.array(128,bzero);
+val tyvar_ids     = Word8Array.array(128,bzero);
+val alphanumerics = Word8Array.array(128,bzero);
+val parens        = Word8Array.array(128,bzero);
 
-fun setup table pred =
+fun setup table P =
    Lib.for_se 0 127
-     (fn i => if pred(Portable_String.charof i)
-               then Portable_ByteArray.update(table,i,bone) else ());
+     (fn i => if P(Char.chr i) then Word8Array.update(table,i,bone) else ());
 
 (*---------------------------------------------------------------------------
  * Utility for examining the contents of character tables
@@ -64,7 +63,7 @@ fun setup table pred =
  * fun accum table =
  *    implode
  *      (Lib.for 0 127
- *      (fn i => if (Portable_ByteArray.sub(table,i) = bone) then chr i
+ *      (fn i => if (Word8Array.sub(table,i) = bone) then chr i
                  else ""));
  *---------------------------------------------------------------------------*)
 
@@ -72,16 +71,15 @@ fun setup table pred =
  * Various familiar predicates, used only to build the tables, so we can
  * afford to write them naively.
  *---------------------------------------------------------------------------*)
-fun is_alphabetic ch =
-   (ch >= "a" andalso ch <= "z" orelse ch >= "A" andalso ch <= "Z");
+val is_alphabetic = Char.isAlpha
+val is_numeric    = Char.isDigit
 
-fun is_numeric ch = (ch >= "0" andalso ch <= "9");
-
-fun is_alphanumeric ch =
-   is_alphabetic ch orelse is_numeric ch orelse ch = "_" orelse ch = "'";
-
-fun is_paren "(" = true
-  | is_paren ")" = true
+fun is_alphanumeric #"_" = true
+  | is_alphanumeric #"'" = true
+  | is_alphanumeric ch = Char.isAlphaNum ch
+   
+fun is_paren #"(" = true
+  | is_paren #")" = true
   | is_paren _ = false;
 
 
@@ -89,11 +87,12 @@ fun is_paren "(" = true
  * Used for type variables, in which a prime is required in the first
  * position in the string, but allowed nowhere else.
  *---------------------------------------------------------------------------*)
+
 fun is_alphanumeric_no_prime ch =
-   is_alphabetic ch orelse is_numeric ch orelse ch = "_";
+   is_alphabetic ch orelse is_numeric ch orelse ch = #"_";
 
 fun in_string str =
-   let val strlist = Portable.explode str
+   let val strlist = String.explode str
        val memb = Lib.C Lib.mem strlist
    in memb
    end;
@@ -113,7 +112,7 @@ val _ = setup tyvar_ids is_alphanumeric_no_prime;
 val _ = setup parens is_paren;
 
 
-fun in_class(table,i) = (Portable_ByteArray.sub(table,i) = bone)
+fun in_class(table,i) = (Word8Array.sub(table,i) = bone)
                          handle _ => false;
 
 (*---------------------------------------------------------------------------
@@ -122,10 +121,10 @@ fun in_class(table,i) = (Portable_ByteArray.sub(table,i) = bone)
  *---------------------------------------------------------------------------*)
 
 fun ok_identifier str =
-   let fun loop i =(Portable_ByteArray.sub(alphanumerics,ordof(str,i)) = bone)
+   let fun loop i = (Word8Array.sub(alphanumerics,ordof(str,i)) = bone)
                      andalso loop(i+1)
    in
-   ((Portable_ByteArray.sub(alphabet,ordof(str,0)) = bone) handle _ => false)
+   ((Word8Array.sub(alphabet,ordof(str,0)) = bone) handle _ => false)
    andalso
    (loop 1 handle _ => true)
    end;
@@ -136,12 +135,12 @@ val allowed_type_constant = ok_identifier;
 local val prime = ordof("'",0)
 in
 fun allowed_user_type_var str =
-   let fun loop i = (Portable_ByteArray.sub(tyvar_ids,ordof(str,i)) = bone)
+   let fun loop i = (Word8Array.sub(tyvar_ids,ordof(str,i)) = bone)
                      andalso loop(i+1)
    in
    ((ordof(str,0) = prime) handle _ => false)
    andalso
-   ((Portable_ByteArray.sub(alphabet,ordof(str,1)) = bone) handle _ => false)
+   ((Word8Array.sub(alphabet,ordof(str,1)) = bone) handle _ => false)
    andalso
    (loop 2 handle _ => true)
    end
@@ -149,17 +148,17 @@ end;
 
 
 fun ok_symbolic str =
-   let fun loop i = (Portable_ByteArray.sub(hol_symbols,ordof(str,i)) = bone)
+   let fun loop i = (Word8Array.sub(hol_symbols,ordof(str,i)) = bone)
                      andalso loop(i+1)
    in
-   ((Portable_ByteArray.sub(hol_symbols,ordof(str,0)) = bone)
+   ((Word8Array.sub(hol_symbols,ordof(str,0)) = bone)
     handle _ => false)
    andalso
    (loop 1 handle _ => true)
    end;
 
 fun ok_sml_identifier str =
-  let val sub = Portable_ByteArray.sub
+  let val sub = Word8Array.sub
       fun alphaloop i =
              (sub(alphanumerics,ordof(str,i)) = bone) andalso alphaloop(i+1)
       fun symloop i =
@@ -188,10 +187,10 @@ fun allowed_term_constant "let" = false
   | allowed_term_constant "|"   = false
   | allowed_term_constant ":"   = false
   | allowed_term_constant str =
-     if (Portable_ByteArray.sub(alphabet,ordof(str,0)) = bone)
+     if (Word8Array.sub(alphabet,ordof(str,0)) = bone)
      then ok_identifier str
      else
-     if (Portable_ByteArray.sub(hol_symbols,ordof(str,0)) = bone)
+     if (Word8Array.sub(hol_symbols,ordof(str,0)) = bone)
      then ok_symbolic str
      else false;
 
@@ -201,10 +200,10 @@ fun allowed_term_constant "let" = false
  * (currently) interested in :num.
  *---------------------------------------------------------------------------*)
 fun is_num_literal str =
-   let fun loop i = (Portable_ByteArray.sub(numbers,ordof(str,i)) = bone)
+   let fun loop i = (Word8Array.sub(numbers,ordof(str,i)) = bone)
                      andalso loop(i+1)
    in
-   ((Portable_ByteArray.sub(numbers,ordof(str,0)) = bone) handle _ => false)
+   ((Word8Array.sub(numbers,ordof(str,0)) = bone) handle _ => false)
    andalso
    (loop 1 handle _ => true)
    end;
@@ -212,9 +211,9 @@ fun is_num_literal str =
 local val dquote = "\""
 in
 fun is_string_literal s =
-    (Portable_String.size s > 1)
-    andalso (Portable_String.substring(s,0,1) = dquote)
-    andalso (Portable_String.substring(s,Portable_String.size s - 1,1)
+    (String.size s > 1)
+    andalso (String.substring(s,0,1) = dquote)
+    andalso (String.substring(s,String.size s - 1,1)
 	     = dquote)
 end;
 

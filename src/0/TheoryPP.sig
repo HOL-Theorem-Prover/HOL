@@ -3,7 +3,7 @@ sig
 
  type hol_type = Type.hol_type
  type thm      = Thm.thm
- type ppstream = Portable_PrettyPrint.ppstream
+ type ppstream = Portable.ppstream
 
  type thm_printer = ppstream -> thm -> unit
  type type_printer = ppstream -> hol_type -> unit

@@ -32,6 +32,10 @@ fun K x y = x
 fun S f g x = f x (g x)
 fun W f x = f x x
 
+(*---------------------------------------------------------------------------*
+ * Curried versions of infixes.                                              *
+ *---------------------------------------------------------------------------*)
+
 fun append l1 l2 = l1@l2
 fun equal x y = (x=y);
 val concat = curry (op ^)
@@ -43,6 +47,7 @@ fun fst (x,_) = x   and   snd (_,y) = y;
 (*---------------------------------------------------------------------------*
  * Success and failure.                                                      *
  *---------------------------------------------------------------------------*)
+
 fun can f x = 
   (f x; true) handle Interrupt => raise Interrupt | _  => false;
 
@@ -59,6 +64,7 @@ fun partial e f x =
  * To be used with tacticals and the like that get driven by HOL_ERR         *
  * exceptions.                                                               *
  *---------------------------------------------------------------------------*)
+
 local open Exception
       val default_exn = HOL_ERR
              {origin_structure="Lib",
@@ -72,6 +78,7 @@ end;
 (*---------------------------------------------------------------------------*
  * For interactive use: "Raise" prints out the exception.                    *
  *---------------------------------------------------------------------------*)
+
 fun try f x = 
   f x handle Interrupt => raise Interrupt | e => Exception.Raise e;
 
@@ -82,6 +89,7 @@ fun assert P x = if P x then x else raise LIB_ERR"assert" "predicate not true"
 (*---------------------------------------------------------------------------*
  *        Common list operations                                             *
  *---------------------------------------------------------------------------*)
+
 fun tryfind f = 
  let fun F [] = raise LIB_ERR "tryfind" "all applications failed"
        | F (h::t) = f h handle Interrupt => raise Interrupt | _ => F t
@@ -119,7 +127,7 @@ fun all2 P =
    in every2
    end;
 
-val exists = Portable_List.exists;
+val exists = List.exists;
 
 fun first P =
    let fun oneth (a::rst) = if P a then a else oneth rst
@@ -182,7 +190,8 @@ fun zip [] [] = []
   | zip (a::b) (c::d) = (a,c)::zip b d
   | zip _ _ = raise LIB_ERR "zip" "different length lists"
 
-fun unzip L = itlist (fn (x,y) => fn (l1,l2) =>((x::l1),(y::l2))) L ([],[]);
+fun unzip L = 
+  itlist (fn (x,y) => fn (l1,l2) =>(x::l1, y::l2)) L ([],[]);
 
 fun combine(l1,l2) = zip l1 l2
 val split = unzip
@@ -193,7 +202,8 @@ fun mapfilter f list =
                                |         _ => L) list [];
 
 fun flatten [] = []
-  | flatten (h::t) = h@flatten t;
+  | flatten ([]::t) = flatten t
+  | flatten ((h::t)::rst) = h::flatten(t::rst);
 
 fun front_last [] = raise LIB_ERR "front_last" "empty list"
   | front_last [x] = ([],x)
@@ -222,6 +232,7 @@ fun funpow n f x =
 (*---------------------------------------------------------------------------*
  * For loops                                                                 *
  *---------------------------------------------------------------------------*)
+
 fun for base top f =
    let fun For i = if (i>top) then [] else f i::For(i+1)
    in For base
@@ -260,20 +271,19 @@ fun assoc2 item =
 
 fun words2 sep string =
     snd (itlist (fn ch => fn (chs,tokl) => 
-	           if (ch = sep) 
-                   then if (null chs)
-                        then ([],tokl)
-		        else ([], (Portable.implode chs :: tokl))
-	           else ((ch::chs), tokl))
-                (sep::Portable.explode string)
-                ([],[]));
+          if ch=sep 
+          then if (null chs) then ([],tokl)
+		else ([], (Portable.implode chs :: tokl))
+          else (ch::chs, tokl))
+        (sep::Portable.explode string)
+        ([],[]));
 
 (*---------------------------------------------------------------------------*
  * A naive merge sort.                                                       *
  *---------------------------------------------------------------------------*)
+
 fun sort P = 
-  let fun merge [] [] = []
-        | merge [] a = a
+  let fun merge [] a = a
         | merge a [] = a
         | merge (A as (a::t1)) (B as (b::t2)) = 
              if P a b then a::merge t1 B 
@@ -284,7 +294,6 @@ fun sort P =
    in
      srt o (map (fn x => [x]))
    end;
-
 
 val int_sort = sort (curry (op <= :int*int->bool))
 
@@ -346,6 +355,7 @@ fun set_eq S1 S2 = (set_diff S1 S2 = []) andalso (set_diff S2 S1 = []);
 (*---------------------------------------------------------------------------*
  * Opaque type set operations                                                *
  *---------------------------------------------------------------------------*)
+
 fun op_mem eq_func i =
    let val eqi = eq_func i
        fun mem [] = false
@@ -395,16 +405,14 @@ fun op_set_diff eq_func S1 S2 =
 (*---------------------------------------------------------------------------*
  * Strings.                                                                  *
  *---------------------------------------------------------------------------*)
-val ordof = Portable_String.ordof;
 
-val int_to_string = Portable_Int.toString;
-
+val int_to_string = Int.toString;
 val string_to_int = 
   partial (LIB_ERR "string_to_int" "not convertable")
-          Portable.string_to_int
+          Int.fromString
 
-val say = Portable.say;
-fun quote s = Portable_String.concat ["\"",s,"\""];
+val say = TextIO.print;
+fun quote s = String.concat ["\"",s,"\""];
 fun prime s = s^"'";
 
 fun commafy [] = []
@@ -415,17 +423,16 @@ fun commafy [] = []
 (*---------------------------------------------------------------------------*
  * Timing                                                                    *
  *---------------------------------------------------------------------------*)
-local open Portable_Timer
-in
-fun start_time () = startCPUTimer()
+
+fun start_time () = Timer.startCPUTimer()
 
 fun end_time timer =
-  let val {gc,sys,usr} = checkCPUTimer timer 
+  let val {gc,sys,usr} = Timer.checkCPUTimer timer 
   in
      Portable.output(Portable.std_out,
-          "runtime: " ^ Portable_Time.toString usr ^ "s,\
-      \    gctime: " ^ Portable_Time.toString gc ^ "s, \
-      \    systime: "^ Portable_Time.toString sys ^"s.\n");
+          "runtime: "^Time.toString usr ^ "s,\
+      \    gctime: "^Time.toString gc ^ "s, \
+      \    systime: "^Time.toString sys ^"s.\n");
      Portable.flush_out(Portable.std_out)
   end
 
@@ -435,11 +442,12 @@ fun time f x =
   in  
      end_time timer;  y 
   end
-end;
+
 
 (*---------------------------------------------------------------------------*
  * Invoking a function with a flag temporarily assigned to the given value.  *
  *---------------------------------------------------------------------------*)
+
 fun with_flag (flag,b) f x =
   let val fval = !flag
       val () = flag := b
@@ -455,6 +463,7 @@ fun with_flag (flag,b) f x =
 (*---------------------------------------------------------------------------*
  * An abstract type of imperative streams.                                   *
  *---------------------------------------------------------------------------*)
+
 abstype ('a,'b) istream = STRM of {mutator : 'a -> 'a,
                                    project : 'a -> 'b,
                                    state   : 'a ref,
@@ -482,12 +491,13 @@ fun mesg false _ = ()
  * the index in the string to start hashing from, and A is an accumulator.   *
  * In simple cases i=0 and A=0.                                              *
  *---------------------------------------------------------------------------*)
-local open Portable_Char Portable_String
+
+local open Char String
 in
 fun hash size = fn s =>
   let fun hsh(i,A) = 
        hsh(i+1, (A*4 + ord(sub(s,i))) mod size)
-        handle Portable_General.Subscript => A
+        handle Subscript => A
   in hsh end 
 end;
 

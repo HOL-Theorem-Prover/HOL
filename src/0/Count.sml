@@ -8,7 +8,7 @@ struct
  *---------------------------------------------------------------------------*)
 val counting = ref false;
 fun counting_thms b = (counting := b);
-val inc = Portable_Ref.inc
+val inc = Portable.inc
 
 
 datatype rule = Assume | Refl | Beta | Subst | Abs | Disch | Mp | InstType
