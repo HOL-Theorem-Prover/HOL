@@ -6,10 +6,10 @@
 Install a new axiom in the current theory.
 
 \DESCRIBE
-If {tm} is a term of type {bool}, a call {new_axiom(name,tm)} 
-creates a theorem
+If {M} is a term of type {bool}, a call {new_axiom(name,M)} creates 
+a theorem
 {
-   |- !x1..xn. tm
+   |- tm
 }
 and stores it away in the current theory segment under {name}. 
 
