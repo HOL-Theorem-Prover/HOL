@@ -238,13 +238,7 @@ fun thm_free_vars th =
        Higher order matching (from jrh via Don Syme)
  ---------------------------------------------------------------------------*)
 
-local val list_mk_fun = itlist (curry (op -->))
-      fun acc_strip_comb M rands =
-        let val (Rator,Rand) = dest_comb M 
-        in acc_strip_comb Rator (Rand::rands) 
-        end handle HOL_ERR _ => (M,rands)
-      val list_mk_abs = itlist(curry mk_abs)
-      exception NOT_FOUND
+local exception NOT_FOUND
       fun rev_assoc_nf x l = 
         Lib.rev_assoc x l handle HOL_ERR _ => raise NOT_FOUND
       fun safe_insert (n as (y,x)) l =
@@ -288,8 +282,8 @@ fun ho_match_term lconsts =
            in match_term' (insert (cv,vv) env) vbod cbod sofar' 
            end
      | COMB _ =>
-        let val (vhop,vargs) = acc_strip_comb vtm []
-            val (chop,cargs) = acc_strip_comb ctm []
+        let val (vhop,vargs) = strip_comb vtm
+            val (chop,cargs) = strip_comb ctm
         in (if not (is_var vhop) 
                 orelse mem vhop lconsts 
                 orelse can (C rev_assoc env) vhop
@@ -297,7 +291,7 @@ fun ho_match_term lconsts =
             else let val vargs' = map (C rev_assoc env) vargs
                  in if vargs' = cargs 
                     then safe_inserta (chop,vhop) sofar
-                    else safe_inserta (list_mk_abs vargs' ctm, vhop) sofar
+                    else safe_inserta (list_mk_abs(vargs',ctm), vhop) sofar
                  end
            ) handle HOL_ERR _ 
              => itlist2 (match_term' env) vargs cargs 
@@ -312,10 +306,9 @@ fun ho_match_term lconsts =
  fn vtm => fn ctm =>
    let val rawins = match_term' [] vtm ctm []
        val (cins,vins) = unzip rawins
-       val tytheta = match_type(list_mk_fun (map type_of vins) bool)
-                               (list_mk_fun (map type_of cins) bool)
-       val tmtheta0 = map2 (fn x => fn y => (x |-> y)) vins cins 
-   in (norm_subst tytheta tmtheta0, tytheta)
+       val tytheta = match_type(list_mk_fun (map type_of vins, bool))
+                               (list_mk_fun (map type_of cins, bool))
+   in (norm_subst tytheta (map2 (curry op |->) vins cins), tytheta)
    end 
  end
  handle e => raise (wrap_exn "HolKernel" "ho_match_term" e)
