@@ -1751,10 +1751,6 @@ val F_CLOCK_COMP_def =
       F_UNTIL(F_U_CLOCK c (F_CLOCK_COMP (STRONG_CLOCK c) f1),
               F_U_CLOCK c (F_CLOCK_COMP (STRONG_CLOCK c) f2)))
     /\
-    (F_CLOCK_COMP (STRONG_CLOCK c) (F_UNTIL(f1,f2)) = 
-      F_U_CLOCK c (F_UNTIL(F_CLOCK_COMP (STRONG_CLOCK c) f1,
-                           F_CLOCK_COMP (STRONG_CLOCK c) f2)))
-    /\
     (F_CLOCK_COMP (STRONG_CLOCK c) (F_SUFFIX_IMP(r,f)) = 
       F_U_CLOCK c (F_SUFFIX_IMP(S_CLOCK_COMP c r, 
                                 F_CLOCK_COMP (STRONG_CLOCK c) f)))
