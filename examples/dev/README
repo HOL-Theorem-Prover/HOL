@@ -343,6 +343,19 @@ where <size> is the appropriate width computed from the types.  The
 internal variables v0, ... ,vn are declared to be wires of appropriate
 widths (computed from their types).
 
+Types ``:num`` are converted to Verilog wires or registers of width
+[31:0], which is not in general valid. When such a conversion occurs,
+a warning like:
+
+ Warning: type of inp is ``:num``, but is compiled to [31:0].
+
+is printed. These warnings can be suppressed by evaluating:
+
+ numWarning := false;
+
+(the ML reference numWarning has a default of true).
+
+
 SIMULATE : thm -> (string * string) list -> unit
 ------------------------------------------------
 

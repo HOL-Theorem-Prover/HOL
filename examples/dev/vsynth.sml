@@ -335,12 +335,22 @@ fun string2int s =
 (* ``v : num -> num``   --> 31                                               *)
 (* ``v : num -> bool``  --> "0"                                              *)
 (*****************************************************************************)
+val numWarning = ref true;
 fun var2size tm =
  let val ("fun", [_,ty]) = dest_type(type_of tm)
      val n = if (ty = ``:bool``)
               then 1
               else if (ty = ``:num``)
-              then 32
+              then 
+               if (!numWarning)
+                then 
+                 let val _ = (print "Warning: type of ";
+                              print_term tm ;
+                              print " is ``:num``, but is compiled to [31:0].\n")
+                 in
+                  32
+                 end
+                else 32
               else
                let val chars = explode(fst(dest_type ty))
                    val num = tl(tl(tl(tl chars)))
