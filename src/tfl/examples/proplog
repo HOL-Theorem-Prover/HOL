@@ -2,8 +2,8 @@
       A type of propositions and algorithms on it.
  ---------------------------------------------------------------------------*)
 
-app load ["bossLib", "computeLib"]; 
-open computeLib bossLib;
+app load ["bossLib"]; open bossLib;
+
 
 Hol_datatype `prop = VAR of 'a
                    | NOT of prop
@@ -31,6 +31,8 @@ val Pr_def =
 
 val Wang_def = Define `Wang P = Pr [] [] [P] []`;
 
+set_fixity "OR" (Infixr 300);
+set_fixity "AND" (Infixr 400);
 
 (*---------------------------------------------------------------------------
      Termination of Pr. We need a subsidiary measure function on 
@@ -42,8 +44,8 @@ val Meas_def =
  Define 
     `(Meas (VAR v)   = 0)
  /\  (Meas (NOT x)   = SUC (Meas x))
- /\  (Meas (AND x y) = Meas x + Meas y + 2)
- /\  (Meas (OR x y)  = Meas x + Meas y + 2)`;
+ /\  (Meas (x AND y) = Meas x + Meas y + 2)
+ /\  (Meas (x OR y)  = Meas x + Meas y + 2)`;
 
 (*---------------------------------------------------------------------------*
  *  Termination of Pr.                                                       *
@@ -59,22 +61,15 @@ val (Pr_eqns, Pr_ind) =
 
 
 (*---------------------------------------------------------------------------
-    Build a computing base.
+    Build a computing base. Notice that the standard datatype rewrites
+    for prop must be added.
  ---------------------------------------------------------------------------*)
 
 local open computeLib
-      val MEM_IF = Q.prove(
-           `!x h t. MEM x (h::t) = if x=h then T else MEM x t`,
-            RW_TAC list_ss [listTheory.MEM])
-      val EXISTS_IF = Q.prove(
-           `!P h t. EXISTS P (h::t) = if P h then T else EXISTS P t`,
-            RW_TAC list_ss [listTheory.EXISTS_DEF])
-      val MEM_DEF'    = CONJ (CONJUNCT1 listTheory.MEM) MEM_IF
-      val EXISTS_DEF' = CONJ (CONJUNCT1 listTheory.EXISTS_DEF) EXISTS_IF
-      val compset = bossLib.initial_rws()
-      val _ = add_thms (false,[REFL_CLAUSE]) compset
-      val _ = add_thms (true,[Pr_eqns,Wang_def,MEM_DEF',EXISTS_DEF']) compset
 in
+val compset = bossLib.initial_rws()
+val _ = add_thms (false, REFL_CLAUSE::tl(type_rws "prop")) compset
+val _ = add_thms (true,[Pr_eqns,Wang_def]) compset
 val Eval = Count.apply (CBV_CONV compset) o Term
 end;
 
@@ -83,15 +78,8 @@ end;
       Examples.
  ---------------------------------------------------------------------------*)
 
-set_fixity "OR" (Infixr 300);
-set_fixity "AND" (Infixr 400);
-
-val x = Term`VAR x`;
-val y = Term`VAR y`;
-val z = Term`VAR z`;
-val p = Term`VAR p`;
-val q = Term`VAR q`;
-val r = Term`VAR r`;
+val x = Term`VAR x`; val y = Term`VAR y`; val z = Term`VAR z`;
+val p = Term`VAR p`; val q = Term`VAR q`; val r = Term`VAR r`;
 val s = Term`VAR s`;
 
 fun imp x y = Term`(NOT ^x) OR ^y`;
@@ -114,15 +102,9 @@ val CLASSIC    = imp (imp (Term`^p AND ^q`) r)
       in the examples directory.
  ---------------------------------------------------------------------------*)
 
-val v0 = Term`VAR v0`;
-val v1 = Term`VAR v1`;
-val v2 = Term`VAR v2`;
-val v3 = Term`VAR v3`;
-val v4 = Term`VAR v4`;
-val v5 = Term`VAR v5`;
-val v6 = Term`VAR v6`;
-val v7 = Term`VAR v7`;
-val v8 = Term`VAR v8`;
+val v0 = Term`VAR v0`; val v1 = Term`VAR v1`; val v2 = Term`VAR v2`;
+val v3 = Term`VAR v3`; val v4 = Term`VAR v4`; val v5 = Term`VAR v5`;
+val v6 = Term`VAR v6`; val v7 = Term`VAR v7`; val v8 = Term`VAR v8`;
 val v9 = Term`VAR v9`;
 
 val syn323_1 = Term
@@ -238,6 +220,7 @@ val syn321_1 =  Term
        (^v8 OR ^v7) AND
        (NOT ^v8 OR NOT ^v9))`;
 
+
 Eval `Wang ^BOOL_CASES`;
 Eval `Wang ^NOT_BCASES`;
 Eval `Wang ^IMP_REFL`;
@@ -318,16 +301,10 @@ val nnf_mutrec_eqns =
  /\   (nnfneg (p OR q)  = (nnfneg p) AND (nnfneg q))`;
 
 (*---------------------------------------------------------------------------
-      Evaluation with nnfpos.
+    Evaluation with nnfpos. First tell computeLib about nnf_mutrec_eqns.
  ---------------------------------------------------------------------------*)
 
-local open computeLib
-      val compset = bossLib.initial_rws()
-      val _ = add_thms (false,[REFL_CLAUSE]) compset
-      val _ = add_thms (true,[nnf_mutrec_eqns]) compset
-in
-val Eval = Count.apply (CBV_CONV compset) o Term
-end;
+val _ = computeLib.add_thms (true,[nnf_mutrec_eqns]) compset;
 
 Eval `nnfpos ^syn052_1`;
 Eval `nnfpos ^syn051_1`;
