@@ -68,7 +68,7 @@
 structure Unwind :> Unwind =
 struct
 
-open refuteLib HolKernel boolLib liteLib Trace AC Ho_Rewrite;
+open refuteLib HolKernel liteLib boolLib Trace AC Ho_Rewrite;
 infix THEN THENC ##;
 
 fun WRAP_ERR x = STRUCT_WRAP "Unwind" x;
