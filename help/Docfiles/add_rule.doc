@@ -263,6 +263,6 @@ be desirable as it would conceal the complexity of the above from most
 users.
 
 \SEEALSO
-add_listform, add_infix, prefer_form_with_tok
+add_listform, add_infix, prefer_form_with_tok, remove_rules_for_term.
 
 \ENDDOC
