@@ -110,18 +110,13 @@ fun mk_snd tm =
 fun mk_uncurry_tm(xt,yt,zt) = 
   inst [alpha |-> xt, beta |-> yt, gamma |-> zt] uncurry_tm;
 
-fun is_uncurry_tm c = 
- case total dest_thy_const c
-  of SOME{Name="UNCURRY",Thy="pair",...} => true
-   | otherwise => false;
-
 fun mk_curry (f,x,y) = 
   let val (pty,rty) = dom_rng (type_of f)
       val (aty,bty) = dest_prod pty
   in list_mk_comb
        (inst [alpha |-> aty, beta |-> bty, gamma |-> rty] curry_tm, [f,x,y])
   end
-  handle HOL_ERR _ => raise ERR "mk_uncurry" "";
+  handle HOL_ERR _ => raise ERR "mk_curry" "";
 
 fun mk_uncurry (f,x) = 
   case strip_fun (type_of f)
@@ -135,10 +130,9 @@ fun mk_pair_map(f,g,p) =
                       gamma |-> rf, delta |-> rg] pair_map_tm, [f,g,p])
  end;
 
+val dest_fst     = dest_monop fst_tm (ERR "dest_fst" "")
+val dest_snd     = dest_monop snd_tm (ERR "dest_snd" "")
 
-val dest_fst     = dest_monop fst_tm     (ERR "dest_fst" "")
-val dest_snd     = dest_monop snd_tm     (ERR "dest_snd" "")
-val dest_uncurry = dest_binop uncurry_tm (ERR "dest_uncurry" "");
 fun dest_curry tm = 
   let val (M,y) = with_exn dest_comb tm (ERR "dest_curry" "")
       val (f,x) = dest_binop curry_tm (ERR "dest_curry" "") M
@@ -154,7 +148,6 @@ fun dest_pair_map tm =
 val is_fst = can dest_fst
 val is_snd = can dest_snd
 val is_curry = can dest_curry
-val is_uncurry = can dest_uncurry
 val is_pair_map = can dest_pair_map;
 
 
@@ -190,7 +183,7 @@ fun dest_pabs tm =
  Term.dest_abs tm
  handle HOL_ERR _
   => let val (Rator,Rand) = with_exn dest_comb tm (ERR "dest_pabs" "")
-     in if is_uncurry_tm Rator
+     in if same_const uncurry_tm Rator
         then let val (lv, body) = dest_pabs Rand
                  val (rv, body) = dest_pabs body
              in (mk_pair(lv, rv), body)
@@ -221,6 +214,9 @@ val dest_pexists  = dest_pbinder existential EXISTS_ERR
 val dest_pexists1 = dest_pbinder exists1     EXISTS1_ERR
 val dest_pselect  = dest_pbinder select      SELECT_ERR
 end;
+
+val dest_uncurry = dest_pabs o dest_monop uncurry_tm (ERR "dest_uncurry" "");
+val is_uncurry = can dest_uncurry
 
 val is_pabs     = can dest_pabs
 val is_plet     = can dest_plet

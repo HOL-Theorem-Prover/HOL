@@ -12,12 +12,8 @@ infixr -->;
 
 val ERR = mk_HOL_ERR "PairedLambda";
 
-fun is_uncurry_tm c = 
- case total dest_thy_const c
-  of SOME{Name="UNCURRY",Thy="pair",...} => true
-   | otherwise => false;
-
-val is_uncurry = is_uncurry_tm o rator;
+fun is_uncurry_tm c = same_const uncurry_tm c;
+fun is_uncurry x = is_uncurry_tm (rator x) handle HOL_ERR _ => false;
 
 (* ---------------------------------------------------------------------*)
 (* PAIRED_BETA_CONV: Generalized beta conversions for tupled lambda	*)
@@ -115,11 +111,9 @@ val GEN_BETA_CONV =
  end
 end;
 
-local open Tactic Conv 
-in
+
 val GEN_BETA_RULE = CONV_RULE (DEPTH_CONV GEN_BETA_CONV)
 val GEN_BETA_TAC  = CONV_TAC (DEPTH_CONV GEN_BETA_CONV)
-end;
 
 
 (*---------------------------------------------------------------------------
