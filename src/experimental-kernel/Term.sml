@@ -137,31 +137,6 @@ end
 
 (* val type_of = Profile.profile "type_of" type_of *)
 
-(*---------------------------------------------------------------------------*
- *     Instantiate type variables in a term                                  *
- *---------------------------------------------------------------------------*)
-
-fun inst [] tm = tm
-  | inst theta tm = let
-      fun inst1 t =
-          case t of
-            (c as Const(r, ty)) => let
-            in
-              case ty_sub theta ty of
-                SAME => raise Unchanged
-              | DIFF ty => Const(r,ty)
-            end
-          | (v as Var(Name,Ty)) =>
-            (case Type.ty_sub theta Ty of
-               SAME => raise Unchanged
-             | DIFF ty => Var(Name, ty))
-          | App p => qcomb App inst1 p
-          | Abs p  => qcomb Abs inst1 p
-    in
-      inst1 tm handle Unchanged => tm
-    end
-
-val inst : (hol_type, hol_type) Lib.subst -> term -> term = inst
 
 
 (* discriminators *)
@@ -257,31 +232,6 @@ fun mk_abs(v, body) =
     if is_var v then Abs(v, body)
     else raise ERR "mk_abs" "Arg 1 not a variable"
 
-local
-  val FORMAT = ERR "list_mk_binder"
-   "expected first arg to be a constant of type :(<ty>_1 -> <ty>_2) -> <ty>_3"
-  fun check_opt NONE = Lib.I
-    | check_opt (SOME c) =
-      if not(is_const c) then raise FORMAT
-      else case total (fst o Type.dom_rng o fst o Type.dom_rng o type_of) c of
-             NONE => raise FORMAT
-           | SOME ty => (fn abs =>
-                            let val dom = fst(Type.dom_rng(type_of abs))
-                            in mk_comb (inst[ty |-> dom] c, abs)
-                            end)
-in
-fun list_mk_binder binder = let
-  val f = check_opt binder
-  (* As of Mosml2.00, List.foldr is clearly not tail recursive, and you can
-     blow the stack with big lists here.  Thus, the reversing of the list and
-     the use of foldl instead, relying on the fact that it's hard to imagine
-     not writing foldl tail-recursively *)
-in
-  fn (vlist, tm) => List.foldl (f o mk_abs) tm (List.rev vlist)
-end
-end (* local *)
-
-val list_mk_abs = list_mk_binder NONE
 
 (* destructors *)
 
@@ -750,6 +700,94 @@ fun subst theta = Profile.profile "subst" (subst0 theta)
 
 
 end (* local *)
+
+
+(*---------------------------------------------------------------------------*
+ *     Instantiate type variables in a term                                  *
+ *---------------------------------------------------------------------------*)
+
+local
+  exception NeedToRename of term
+  structure Map = Redblackmap
+  fun inst1 theta ctxt t =
+      case t of
+        (c as Const(r, ty)) => (case ty_sub theta ty of
+                                  SAME => raise Unchanged
+                                | DIFF ty => Const(r, ty))
+      | (v as Var(name,ty0)) => let
+        in
+          case ty_sub theta ty0 of
+            SAME => raise Unchanged
+          | DIFF ty => let
+              val nv = Var(name, ty)
+            in
+              case Map.peek (ctxt, nv) of
+                SOME oldtype => if oldtype = ty0 then nv
+                                else raise NeedToRename nv
+              | NONE => nv
+            end
+        end
+      | App p => qcomb App (inst1 theta ctxt) p
+      | Abs (v as Var(n, ty), body) => let
+        in
+          let
+            val (changed, v') = case ty_sub theta ty of
+                                  SAME => (false, v)
+                                | DIFF ty' => (true, Var(n, ty'))
+            val body' = SOME (inst1 theta (Map.insert(ctxt,v',ty)) body)
+                handle Unchanged => NONE
+          in
+            case (body', changed) of
+              (SOME t, _) => Abs(v', t)
+            | (NONE, true) => Abs(v', body)
+            | (NONE, false) => raise Unchanged
+          end handle e as NeedToRename v' =>
+                     if v' = v then let
+                         val free_names = free_names t
+                         val new_name = set_name_variant free_names n
+                         val newv = Var(new_name, ty)
+                       in
+                         inst1 theta ctxt (Abs(newv, subst [v |-> newv] body))
+                       end
+                     else raise e
+        end
+      | Abs _ => raise Fail "inst1: catastrophic invariant failure!"
+in
+
+fun inst [] tm = tm
+  | inst theta tm = inst1 theta (Map.mkDict compare) tm handle Unchanged => tm
+end
+
+val inst : (hol_type, hol_type) Lib.subst -> term -> term = inst
+
+
+local
+  val FORMAT = ERR "list_mk_binder"
+   "expected first arg to be a constant of type :(<ty>_1 -> <ty>_2) -> <ty>_3"
+  fun check_opt NONE = Lib.I
+    | check_opt (SOME c) =
+      if not(is_const c) then raise FORMAT
+      else case total (fst o Type.dom_rng o fst o Type.dom_rng o type_of) c of
+             NONE => raise FORMAT
+           | SOME ty => (fn abs =>
+                            let val dom = fst(Type.dom_rng(type_of abs))
+                            in mk_comb (inst[ty |-> dom] c, abs)
+                            end)
+in
+fun list_mk_binder binder = let
+  val f = check_opt binder
+  (* As of Mosml2.00, List.foldr is clearly not tail recursive, and you can
+     blow the stack with big lists here.  Thus, the reversing of the list and
+     the use of foldl instead, relying on the fact that it's hard to imagine
+     not writing foldl tail-recursively *)
+in
+  fn (vlist, tm) => List.foldl (f o mk_abs) tm (List.rev vlist)
+end
+end (* local *)
+
+val list_mk_abs = list_mk_binder NONE
+
+
 
 fun beta_conv t =
     case t of

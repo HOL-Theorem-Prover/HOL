@@ -1,7 +1,4 @@
-(* tests that substitutions work, deferred until this point so that we get
-   access to the parser (which is implicitly a test of the parser too) *)
-
-open HolKernel Parse
+open HolKernel Parse boolTheory boolLib
 
 fun substtest (M, x, N, result) = let
 in
@@ -17,6 +14,9 @@ val y = mk_var("y", Type.alpha)
 val Id = mk_abs(x,x)
 val Idy = mk_abs(y,y)
 
+(* tests that substitutions work, deferred until this point so that we get
+   access to the parser (which is implicitly a test of the parser too) *)
+
 val tests = [(x,x,y,y),
              (x,y,y,x),
              (x,x,x,x),
@@ -24,6 +24,57 @@ val tests = [(x,x,y,y),
              (Id,xfun,xfun,Id),
              (x,y,Id,Idy),
              (y,x,``\y. y ^x : 'b``, ``\z. z ^y :'b``)]
+
+(* test for the INST_TYPE bug that allows instantiation to cause a
+   free variable to become captured.  *)
+val inst_type_test = let
+  val _ = print "Testing HOL Light INST_TYPE bug ... "
+  val ximpnx = prove(
+    ``(x ==> ~x) = ~x``,
+    ASM_CASES_TAC ``x:bool`` THEN ASM_REWRITE_TAC [])
+  val nximpx = prove(
+    ``(~x ==> x) = x``,
+    ASM_CASES_TAC ``x:bool`` THEN ASM_REWRITE_TAC [])
+  val xandnx = prove(
+    ``~(x /\ ~x) /\ ~(~x /\ x)``,
+    ASM_CASES_TAC ``x:bool`` THEN ASM_REWRITE_TAC [])
+  val x_b = mk_var("x", bool)
+  val x_a = mk_var("x", alpha)
+  val P = mk_var("P", alpha --> bool --> bool)
+  val Pxaxb = list_mk_comb(P, [x_a, x_b])
+  val exxPxaxb = mk_exists(x_b, Pxaxb)
+  val nonempty_t = mk_var("nonempty", (bool --> bool) --> bool)
+  val f = mk_var("f", bool --> bool)
+  val nonempty_rhs = mk_abs(f, mk_exists(x_b, mk_comb(f, x_b)))
+  val nonempty_eqn = mk_eq(nonempty_t, nonempty_rhs)
+  val nonempty_exists =
+      EQT_ELIM (REWRITE_CONV [EXISTS_REFL]
+                             (mk_exists(nonempty_t, nonempty_eqn)))
+  val nonempty_th = ASSUME nonempty_eqn
+  val nonempty_Px = ASSUME (mk_comb(nonempty_t, mk_comb(P, x_a)))
+  val exxPxaxb_th = ASSUME exxPxaxb
+  val nonempty_Px_th = RIGHT_BETA (AP_THM nonempty_th (mk_comb(P, x_a)))
+  val Pxx' = rhs (concl nonempty_Px_th)
+  val Pxx'_eq_Pxx = ALPHA Pxx' exxPxaxb
+  val th0 = EQ_MP Pxx'_eq_Pxx (EQ_MP nonempty_Px_th nonempty_Px)
+  val th1 = INST_TYPE [alpha |-> bool] th0
+  val uvneg = ``\u v. v = ~u``
+  val th2 = INST [inst [alpha |-> bool] P |-> uvneg] th1
+  val uvneg_x = mk_comb(uvneg, x_b)
+  val uvneg_nonempty =
+      EQT_ELIM
+        (CONV_RULE
+           (RAND_CONV (REWRITE_CONV [nonempty_th] THENC BETA_CONV THENC
+                       QUANT_CONV BETA_CONV THENC REWRITE_CONV [EXISTS_REFL]))
+           (AP_TERM nonempty_t (BETA_CONV uvneg_x)))
+  val th3 = BETA_RULE (PROVE_HYP uvneg_nonempty th2)
+  val th4 = REWRITE_RULE [EQ_IMP_THM, ximpnx, nximpx, xandnx] th3
+  val final_th = CHOOSE (nonempty_t, nonempty_exists) th4
+in
+  if same_const (concl final_th) (mk_const("F", bool)) then
+    (print "FAILED!\n"; Process.exit Process.failure)
+  else print "OK\n"
+end
 
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)
