@@ -2562,12 +2562,13 @@ val FINITE_WEAK_ENUMERATE = store_thm(
 
 val BIGUNION = new_definition(
   "BIGUNION",
-  Term`BIGUNION P = \x. ?p. p IN P /\ x IN p`);
+  Term`BIGUNION P = { x | ?p. p IN P /\ x IN p}`);
 
 val IN_BIGUNION = store_thm(
   "IN_BIGUNION",
   ``!x sos. x IN (BIGUNION sos) = ?s. x IN s /\ s IN sos``,
-  SIMP_TAC bool_ss [SPECIFICATION, BIGUNION] THEN MESON_TAC []);
+  SIMP_TAC bool_ss [GSPECIFICATION, BIGUNION, pairTheory.PAIR_EQ] THEN
+  MESON_TAC []);
 
 val BIGUNION_EMPTY = store_thm(
   "BIGUNION_EMPTY",
