@@ -40,7 +40,6 @@ fun FSET_CONV_ERR{function,message} =
 (* The conversion fails on sets of the wrong form.                      *)
 (* ---------------------------------------------------------------------*)
 
-val alpha_ty = ==`:'a`==
 
 local
 val finE = setTheory.FINITE_EMPTY
@@ -68,7 +67,7 @@ fun FINITE_CONV tm =
        val _ = check "FINITE" Rator
        val els = strip_set Rand
        val {Args=[ty],...} = dest_type (type_of(rand tm))
-       val theta = [{redex=alpha_ty, residue = ty}]
+       val theta = [{redex=Type.alpha, residue = ty}]
        val eth = INST_TYPE theta finE
        val ith = INST_TYPE theta finI
    in
@@ -97,14 +96,13 @@ end;
 (* if conv proves |- (x=xi)=F for all 1<=i<=n.                          *)
 (* =====================================================================*)
 
-local
-fun check st = assert (fn c => #Name(dest_const c) = st)
-val inI = setTheory.IN_INSERT
-val inE = GEN (--`x:'a`--) (EQF_INTRO (SPEC (--`x:'a`--)
-                                            (setTheory.NOT_IN_EMPTY)))
+local fun check st = assert (fn c => #Name(dest_const c) = st)
+      val inI = setTheory.IN_INSERT
+      val inE = GEN (--`x:'a`--) (EQF_INTRO (SPEC (--`x:'a`--)
+                                          setTheory.NOT_IN_EMPTY))
 val T = --`T`--
 and F = --`F`--
-and gv = genvar (==`:bool`==)
+and gv = genvar Type.bool
 val DISJ = AP_TERM (--`$\/`--)
 val F_OR = el 3 (CONJUNCTS (SPEC gv OR_CLAUSES))
 val OR_T = el 2 (CONJUNCTS (SPEC gv OR_CLAUSES))
@@ -171,12 +169,11 @@ end;
 (* {xi,...,xj}, conv proves |- (xj=x)=F.                                *)
 (* =====================================================================*)
 
-local
-fun check st = assert (fn c => #Name(dest_const c) = st)
-val bv = genvar (==`:bool`==)
-val Edel = setTheory.EMPTY_DELETE
-val Dins = GENL [--`y:'a`--, --`x:'a`--]
-                (SPECL [--`x:'a`--,--`y:'a`--]
+local fun check st = assert (fn c => #Name(dest_const c) = st)
+      val bv = genvar Type.bool
+      val Edel = setTheory.EMPTY_DELETE
+      val Dins = GENL [--`y:'a`--, --`x:'a`--]
+               (SPECL [--`x:'a`--,--`y:'a`--]
                        (setTheory.DELETE_INSERT))
 fun del_conv conv (eth,ith) x S =
    let val (_,[y,S']) = (check "INSERT" ## I) (strip_comb S)
@@ -236,13 +233,12 @@ fun strip_set tm =
    handle _ => if (#Name(dest_const tm) = "EMPTY") then []
                else raise FSET_CONV_ERR{function="UNION_CONV.strip_set",
                                         message = ""}
-val boolty = ==`:bool`==
-val starty = ==`:'a`==
-val bv = genvar boolty
+
+val bv = genvar Type.bool
 fun mkIN x s =
    let val ty = type_of x
        val sty = mk_type{Tyop="set",Args=[ty]}
-       val INty = curried_ty2(ty,sty,boolty)
+       val INty = curried_ty2(ty,sty,Type.bool)
    in
    mk_comb3 (mk_const{Name="IN",Ty=INty},x,s)
    end
@@ -271,7 +267,7 @@ fun UNION_CONV conv tm =
    let val (_,[S1,S2]) = (check "UNION" ## I) (strip_comb tm)
        val els = strip_set S1
        val ty = hd(#Args(dest_type(type_of S1)))
-       val theta = [{redex=starty,residue=ty}]
+       val theta = [{redex=Type.alpha,residue=ty}]
        val ith = INST_TYPE theta InU
        val iith = INST_TYPE theta InUE
    in
@@ -309,11 +305,10 @@ val th1 = fst(EQ_IMP_RULE (SPECL [--`x:'a`--, --`s:'a set`--]
                                  (setTheory.ABSORPTION)))
 val absth = GENL [--`x:'a`--, --`s: 'a set`--] th1
 val check = assert (fn c => #Name(dest_const c) = "INSERT")
-val boolty = ==`:bool`==
 fun mkIN x s =
    let val ty = type_of x
        val sty = mk_type{Tyop="set",Args=[ty]}
-       val INty = curried_ty2(ty,sty,boolty)
+       val INty = curried_ty2(ty,sty,Type.bool)
    in
    mk_comb3(mk_const{Name="IN",Ty=INty},x,s)
    end
