@@ -111,8 +111,7 @@ fun constructed constr_set tm =
   handle HOL_ERR _ => false;
 
 fun LIFT_SIMP ss tm =
-   UNDISCH_THEN tm 
-     (fn th => STRIP_ASSUME_TAC (simpLib.SIMP_RULE ss [] th));
+   UNDISCH_THEN tm (STRIP_ASSUME_TAC o simpLib.SIMP_RULE ss []);
 
 
 local fun DTHEN ttac = fn (asl,w) =>
