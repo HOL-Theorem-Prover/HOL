@@ -22,5 +22,8 @@ description:
 ps:
 	dvips -f description.dvi > description.ps
 
+pdf:
+	pdflatex description.tex
+
 all:
-	make clean; make description; make index; make description; make ps
+	make clean; make description; make index; make description; make pdf
