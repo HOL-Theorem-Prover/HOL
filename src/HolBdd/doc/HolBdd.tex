@@ -7,7 +7,7 @@
 %\usepackage{makeidx}
 \usepackage{index}
 %\usepackage{multind}
-
+\usepackage{fancyvrb}
 \makeindex
 
 \newindex{MLbn}{bnx}{bnd}{Index of ML bindings\\[-1mm]
@@ -339,7 +339,22 @@ proving. Such a combination could be a Voss-like verification
 platform.
 
 \newpage
-{\baselineskip6pt \tableofcontents}
+
+
+\makeatletter
+\let\My@@tableofcontents\tableofcontents
+\renewcommand\tableofcontents{{%
+    \let\My@@addvspace\addvspace
+    \def\addvspace##1{%
+      \@tempskipa##1\relax
+      \My@@addvspace{0.1\@tempskipa}%
+    }%
+    \My@@tableofcontents
+}}
+\makeatother
+
+\tableofcontents
+
 
 \pagenumbering{arabic}
 \newpage
@@ -2096,32 +2111,35 @@ are preserved, but most of the ML source code has been eliminated
 (some is left, if it is thought to be of
 pedagogical or documentation value).
 
-{\footnotesize\begin{verbatim}
+\begin{footnotesize}
+\begin{Verbatim}[commandchars=\$\&\%]
+
 
 (*****************************************************************************)
 (* Test equality of BDD component of two term_bdds and return true or false  *)
 (*****************************************************************************)
-
+$bnind&\texttt{BddEqualTest}%
 fun BddEqualTest tb1 tb2 = bdd.equal (getBdd tb1) (getBdd tb2);
 
 (*****************************************************************************)
 (* Test if the BDD part is TRUE or FALSE                                     *)
 (*****************************************************************************)
-
+$bnind&\texttt{isTRUE}%
+$bnind&\texttt{isFALSE}%
 fun isTRUE  tb = bdd.equal (getBdd tb) bdd.TRUE
 and isFALSE tb = bdd.equal (getBdd tb) bdd.FALSE;
 
 (*****************************************************************************)
 (* Count number of states (code from Ken Larsen)                             *)
 (*****************************************************************************)
-
+$bnind&\texttt{statecount}%
 statecount : bdd -> real
 
 (*****************************************************************************)
 (* Destruct a term corresponding to a BuDDY BDD binary operation (bddop).    *)
 (* Fail if not such a term.                                                  *)
 (*****************************************************************************)
-
+$bnind&\texttt{dest\_BddOp}%
 exception dest_BddOpError;
 
 dest_BddOp : term -> bddop * term * term
@@ -2130,14 +2148,14 @@ dest_BddOp : term -> bddop * term * term
 (* Scan a term and construct a term_bdd using the primitive operations       *)
 (* when applicable, and a supplied function on leaves when all else fails    *)
 (*****************************************************************************)
-
+$bnind&\texttt{GenTermToTermBdd}%
 GenTermToTermBdd : (term -> term_bdd) -> varmap -> term -> term_bdd
 
 (*****************************************************************************)
 (* Extend a varmap with a list of variables                                  *)
 (* (allocating new BDD variables, if necessary)                              *)
 (*****************************************************************************)
-
+$bnind&\texttt{extendVarmap}%
 extendVarmap : term list -> varmap -> varmap
 
 
@@ -2149,7 +2167,7 @@ extendVarmap : term list -> varmap -> varmap
 (*****************************************************************************)
 
 exception bddToTermError;
-
+$bnind&\texttt{bddToTerm}%
 bddToTerm : varmap -> bdd -> term
 
 (*****************************************************************************)
@@ -2157,7 +2175,7 @@ bddToTerm : varmap -> bdd -> term
 (*  -----------------------------------------------                          *)
 (*  [oracles: HolBdd] ass |- tm = ^(bddToTerm vm b)                          *)
 (*****************************************************************************)
-
+$bnind&\texttt{TermBddToEqThm}%
 TermBddToEqThm : term_bdd -> thm
 
 (*****************************************************************************)
@@ -2205,7 +2223,7 @@ fun termToTermBdd tm =
 (*                            /\                                             *)
 (*                            R ((v1',...,vn'),(v1,...,vn))]                 *)
 (*****************************************************************************)
-
+$bnind&\texttt{MkIterThms}%
 MkIterThms : thm -> term -> term -> thm * thm
 
 (*****************************************************************************)
@@ -2260,7 +2278,7 @@ fun BddApThm th tb =
 (*****************************************************************************)
 
 exception BddApReplaceError;
-
+$bnind&\texttt{BddApReplace}%
 BddApReplace : term_bdd -> term -> term_bdd
 
 (*****************************************************************************)
@@ -2321,7 +2339,7 @@ fun BddSubst tbl tb =
 (*****************************************************************************)
 
 exception BddApSubstError;
-
+$bnind&\texttt{BddApSubst}%
 BddApSubst = fn : term_bdd -> term -> term_bdd
 
 (*****************************************************************************)
@@ -2348,7 +2366,7 @@ fun intToTerm n = numSyntax.mk_numeral(Arbnum.fromInt n);
 (*  ----------------------------------------------                           *)
 (*         (addList ass asl) vm tm' |--> b                                   *)
 (*****************************************************************************)
-
+$bnind&\texttt{BddApConv}%
 fun BddApConv conv tb = BddEqMp (conv(getTerm tb)) tb;
 
 (*****************************************************************************)
@@ -2359,7 +2377,7 @@ fun BddApConv conv tb = BddEqMp (conv(getTerm tb)) tb;
 (*                                                                           *)
 (* is true (at least one iteration is always performed)                      *)
 (*****************************************************************************)
-
+$bnind&\texttt{iterate}%
 fun iterate p f =
  let fun iter n x =
       let val x'  = f n x
@@ -2383,7 +2401,7 @@ fun iterate p f =
 (*****************************************************************************)
 
 exception computeFixedpointError;
-
+$bnind&\texttt{computeFixedpoint}%
 computeFixedpoint : (int -> term_bdd -> 'a) -> varmap -> thm * thm -> term_bdd
 
 (*****************************************************************************)
@@ -2411,7 +2429,7 @@ computeFixedpoint : (int -> term_bdd -> 'a) -> varmap -> thm * thm -> term_bdd
 (*****************************************************************************)
 
 exception BddSatoneError;
-
+$bnind&\texttt{BddSatone}%
 BddSatone : term_bdd -> (term_bdd * term_bdd) list
 
 (*****************************************************************************)
@@ -2425,7 +2443,7 @@ BddSatone : term_bdd -> (term_bdd * term_bdd) list
 (*****************************************************************************)
 
 exception computeTraceError;
-
+$bnind&\texttt{computeTrace}%
 computeTrace : (int -> term_bdd -> 'a) 
                 -> varmap -> thm -> thm * thm -> term_bdd list
 
@@ -2458,11 +2476,12 @@ computeTrace : (int -> term_bdd -> 'a)
 (* If [s0,...,si] is the sequence of states, then                            *)
 (* R(s0,s1), R(s1,s2),...,R(s(i-1),sj) and sj satisfies bj and p si          *)
 (*****************************************************************************)
-
+$bnind&\texttt{TraceBack}%
 TraceBack : varmap 
              -> term_bdd list 
              -> thm -> thm -> (term_bdd * (term_bdd * term_bdd) list) list
-\end{verbatim}}
+\end{Verbatim}
+\end{footnotesize}
 
 \section{The structure \t{DerivedBddRulesTheory}}\label{DerivedBddRulesTheory}
 
@@ -2470,64 +2489,64 @@ The theory \t{DerivedBddRulesTheory} contained the HOL theoremes used
 by the derived rules in \t{DerivedBddRules}. The signature file
 (slightly edited) is given below.
 
-{\footnotesize
-\begin{verbatim}
+\begin{footnotesize}
+\begin{Verbatim}[commandchars=\$\&\%]
   (*  Definitions  *)
-    val Eq_def : thm
-    val Next_def : thm
-    val Prev_def : thm
-    val ReachBy_def : thm
-    val ReachIn_def : thm
-    val Reachable_def : thm
+    val Eq_def : thm$bnind&\texttt{Eq\_def}%
+    val Next_def : thm$bnind&\texttt{Next\_def}%
+    val Prev_def : thm$bnind&\texttt{Prev\_def}%
+    val ReachBy_def : thm$bnind&\texttt{ReachBy\_def}%
+    val ReachIn_def : thm$bnind&\texttt{ReachIn\_def}%
+    val Reachable_def : thm$bnind&\texttt{Reachable\_def}%
   
   (*  Theorems  *)
-    val ReachBy_ReachIn : thm
-    val ReachBy_fixedpoint : thm
-    val ReachBy_rec : thm
-    val ReachIn_rec : thm
-    val Reachable_ReachBy : thm
+    val ReachBy_ReachIn : thm$bnind&\texttt{ReachBy\_ReachIn}%
+    val ReachBy_fixedpoint : thm$bnind&\texttt{ReachBy\_fixedpoint}%
+    val ReachBy_rec : thm$bnind&\texttt{ReachBy\_rec}%
+    val ReachIn_rec : thm$bnind&\texttt{ReachIn\_rec}%
+    val Reachable_ReachBy : thm$bnind&\texttt{Reachable\_ReachBy}%
 
    [list] Parent theory of "DerivedBddRules"
    
-   [Eq_def]
+   [Eq_def]$bnind&\texttt{Eq\_def}%
    Definition
    |- !state0 state. Eq state0 state = (state0 = state)
    
-   [Next_def]
+   [Next_def]$bnind&\texttt{Next\_def}%
    Definition
    |- !R B state. Next R B state = ?state_. B state_ /\ R (state_,state)
    
-   [Prev_def]
+   [Prev_def]$bnind&\texttt{Prev\_def}%
    Definition
    |- !R Q state. Prev R Q state = ?state'. R (state,state') /\ Q state'
    
-   [ReachBy_def]
+   [ReachBy_def]$bnind&\texttt{ReachBy\_def}%
    Definition
    |- !R B n state. ReachBy R B n state = ?m. m <= n /\ ReachIn R B m state
    
-   [ReachIn_def]
+   [ReachIn_def]$bnind&\texttt{ReachIn\_def}%
    Definition
    |- (!R B. ReachIn R B 0 = B) /\
       !R B n. ReachIn R B (SUC n) = Next R (ReachIn R B n)
    
-   [Reachable_def]
+   [Reachable_def]$bnind&\texttt{Reachable\_def}%
    Definition
    |- !R B state. Reachable R B state = ?n. ReachIn R B n state
    
-   [ReachBy_ReachIn]
+   [ReachBy_ReachIn]$bnind&\texttt{ReachBy\_ReachIn}%
    Theorem
    |- (!R B state. ReachBy R B 0 state = B state) /\
       !R B n state.
         ReachBy R B (SUC n) state =
         ReachBy R B n state \/ ReachIn R B (SUC n) state
    
-   [ReachBy_fixedpoint]
+   [ReachBy_fixedpoint]$bnind&\texttt{ReachBy\_fixedpoint}%
    Theorem
    |- !R B n.
         (ReachBy R B n = ReachBy R B (SUC n)) ==>
         (Reachable R B = ReachBy R B n)
    
-   [ReachBy_rec]
+   [ReachBy_rec]$bnind&\texttt{ReachBy\_rec}%
    Theorem
    |- (!R B state. ReachBy R B 0 state = B state) /\
       !R B n state.
@@ -2535,17 +2554,18 @@ by the derived rules in \t{DerivedBddRules}. The signature file
         ReachBy R B n state \/
         ?state_. ReachBy R B n state_ /\ R (state_,state)
    
-   [ReachIn_rec]
+   [ReachIn_rec]$bnind&\texttt{ReachIn\_rec}%
    Theorem
    |- (!R B state. ReachIn R B 0 state = B state) /\
       !R B n state.
         ReachIn R B (SUC n) state =
         ?state_. ReachIn R B n state_ /\ R (state_,state)
    
-   [Reachable_ReachBy]
+   [Reachable_ReachBy]$bnind&\texttt{Reachable\_ReachBy}%
    Theorem
    |- Reachable R B state = ?n. ReachBy R B n state
-\end{verbatim}}
+\end{Verbatim}
+\end{footnotesize}
 
 \section*{Acknowledgements}\addcontentsline{toc}{section}{Acknowledgements}
 
