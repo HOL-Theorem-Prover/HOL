@@ -27,7 +27,16 @@ fun locpragma lb off
     (* NB: the initial space is critical, or else the comment might not be recognised
        when prepended by a paren or symbol char.  --KW
        See cvs log comment at rev 1.2 of src/parse/base_tokens.lex *)
-
+fun dolocpragma parser lb
+  = let val s = Substring.all (getLexeme lb)
+        val sr = Substring.dropl (not o Char.isDigit) s
+        val sc = Substring.dropl (Char.isDigit) sr
+    in
+        (ECHO lb;
+         row := valOf (Int.fromString(Substring.string sr)) - 1;
+         rowstart := getLexemeEnd lb - (valOf (Int.fromString(Substring.string sc)) - 1);
+         parser lb)
+    end
 }
 
 let letter = [ `A` - `Z` `a` - `z` ]
@@ -37,9 +46,11 @@ let symbol = [ `!` `%` `&` `$` `+` `/` `:` `<` `=` `>` `?` `@` `~` `|` `-`
 let MLid = letter (letter | digit | `_` | `'`)* | symbol +
 let ws = [ ` ` `\t` ]
 let newline = "\r\n" | `\n` | `\r`  (* DOS, UNIX, Mac respectively *)
+let locpragma = "(*#loc" ws+ digit* ws+ digit* ws* "*)"
 
 rule INITIAL =
 parse `"` { ECHO lexbuf; STRING lexbuf  }
+  | locpragma { dolocpragma INITIAL lexbuf } (* must come before paren-star *)
   | "(*" { ECHO lexbuf; inc comdepth; COMMENT lexbuf }
   | "("  { ECHO lexbuf; inc pardepth; INITIAL lexbuf }
   | ")"  { ECHO lexbuf; dec pardepth;
@@ -63,12 +74,14 @@ and STRING =
 parse "\\\"" { ECHO lexbuf; STRING lexbuf }
     | "\\\\" { ECHO lexbuf; STRING lexbuf }
     | "\""   { ECHO lexbuf; INITIAL lexbuf }
+    | locpragma { dolocpragma STRING lexbuf } (* must come before paren-star *)
     | newline { print "\n"; TextIO.flushOut (!output_stream); nextline lexbuf; STRING lexbuf }
     | _      { ECHO lexbuf; STRING lexbuf }
     | eof    { () }
 
 and COMMENT =
-parse "(*"   { ECHO lexbuf; inc comdepth; COMMENT lexbuf }
+parse locpragma { dolocpragma COMMENT lexbuf } (* must come before paren-star *)
+    | "(*"   { ECHO lexbuf; inc comdepth; COMMENT lexbuf }
     | "*)"   { ECHO lexbuf; dec comdepth;
                if !comdepth < 1 then INITIAL lexbuf
                else COMMENT lexbuf }
@@ -82,6 +95,7 @@ parse "`"    { print "\"]"; INITIAL lexbuf }
     | `\\`   { print "\\\\"; QUOTE lexbuf }
     | `"`   { print "\\\""; QUOTE lexbuf }
     | `\t`   { print "\\t"; QUOTE lexbuf }
+    | locpragma { dolocpragma QUOTE lexbuf } (* must come before paren-star *)
     | newline{ nextline lexbuf; print (" \",\nQUOTE \""^locpragma lexbuf 0);
                TextIO.flushOut (!output_stream); QUOTE lexbuf }
     | _      { ECHO lexbuf; QUOTE lexbuf }
@@ -93,6 +107,7 @@ parse "``"   { print "\"])"; INITIAL lexbuf }
     | `\\`   { print "\\\\"; TMQUOTE lexbuf }
     | `"`   { print "\\\""; TMQUOTE lexbuf }
     | `\t`   { print "\\t"; TMQUOTE lexbuf }
+    | locpragma { dolocpragma TMQUOTE lexbuf } (* must come before paren-star *)
     | newline{ nextline lexbuf; print (" \",\nQUOTE \""^locpragma lexbuf 0);
                TextIO.flushOut(!output_stream); TMQUOTE lexbuf }
     | _      { ECHO lexbuf; TMQUOTE lexbuf }
@@ -104,6 +119,7 @@ parse "``"   { print "\"])"; INITIAL lexbuf }
     | `\\`   { print "\\\\"; TYQUOTE lexbuf }
     | `"`   { print "\\\""; TYQUOTE lexbuf }
     | `\t`   { print "\\t"; TYQUOTE lexbuf }
+    | locpragma { dolocpragma TYQUOTE lexbuf } (* must come before paren-star *)
     | newline{ nextline lexbuf; print (" \",\nQUOTE \""^locpragma lexbuf 0);
                TextIO.flushOut (!output_stream); TYQUOTE lexbuf }
     | _      { ECHO lexbuf; TYQUOTE lexbuf }
@@ -117,6 +133,7 @@ parse "`" ws * "--"  { print "\"])"; INITIAL lexbuf }
     | `\\`   { print "\\\\"; OLDTMQUOTE lexbuf }
     | `"`   { print "\\\""; OLDTMQUOTE lexbuf }
     | `\t`   { print "\\t"; OLDTMQUOTE lexbuf }
+    | locpragma { dolocpragma OLDTMQUOTE lexbuf } (* must come before paren-star *)
     | newline{ nextline lexbuf; print (" \",\nQUOTE \""^locpragma lexbuf 0);
                TextIO.flushOut (!output_stream); OLDTMQUOTE lexbuf }
     | _      { ECHO lexbuf; OLDTMQUOTE lexbuf }
@@ -130,6 +147,7 @@ parse "`" ws * "=="  { print "\"])"; INITIAL lexbuf }
     | `\\`   { print "\\\\"; OLDTYQUOTE lexbuf }
     | `"`   { print "\\\""; OLDTYQUOTE lexbuf }
     | `\t`   { print "\\t"; OLDTYQUOTE lexbuf }
+    | locpragma { dolocpragma OLDTYQUOTE lexbuf } (* must come before paren-star *)
     | newline{ nextline lexbuf; print (" \",\nQUOTE \""^locpragma lexbuf 0);
                TextIO.flushOut (!output_stream); OLDTYQUOTE lexbuf }
     | _      { ECHO lexbuf; OLDTYQUOTE lexbuf }
@@ -142,6 +160,7 @@ parse MLid { ECHO lexbuf; print ("),QUOTE \""^locpragma lexbuf 0) }
               print ("),QUOTE \""^locpragma lexbuf 0); antiquote := oldanti
             end }
     | ws + { ANTIQUOTE lexbuf }
+    | locpragma { dolocpragma ANTIQUOTE lexbuf } (* must come before paren-star *)
     | newline{ECHO lexbuf; TextIO.flushOut(!output_stream); nextline lexbuf; ANTIQUOTE lexbuf}
     | _    { ECHO lexbuf }
     | eof  { () }
