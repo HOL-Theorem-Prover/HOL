@@ -17,6 +17,9 @@ Bugs fixed:
     invocation of the parser as it loaded, causing buggy behaviour in
     some circumstances.  Thanks to Dan Zhou for finding those obscure
     circumstances.
+  * Similarly, temporalLib was not using a fixed grammar, causing it
+    to load badly in circumstances when integers were around.  Thanks
+    to Kong Woei Susanto for finding this one.
 
 New features:
 -------------
@@ -48,6 +51,10 @@ New features:
     Tactical.default_prover can be used instead; this provides the
     default implementation for prove, and can't be changed by other
     tools.
+  * The emacs mode now has a configurable variable
+    (hol-echo-commands-p), which controls whether or not the text sent
+    to the HOL buffer is echoed or not.  The default is for it not to
+    be echoed.
 
 New theories:
 -------------
