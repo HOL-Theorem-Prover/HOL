@@ -58,40 +58,17 @@ val iota_length = Q.prove
       Some computations with iota.
  ---------------------------------------------------------------------------*)
 
-load "computeLib"; open computeLib;
-
-(*---------------------------------------------------------------------------
-      Build a standard computing base, one that knows basic 
-      facts about booleans and numbers (and numerals).
- ---------------------------------------------------------------------------*)
-
-val rws = from_list (false,[COND_CLAUSES,NOT_CLAUSES]);
-
-fun norm q = Count.apply (CBV_CONV rws) (--q--);
-
-val num_rws = 
-  let open numeralTheory Rsyntax
-      val REFL_EQ_0 = INST_TYPE [Type.alpha |-> Type`:num`] REFL_CLAUSE
-      val NORM_0 = prove(--`NUMERAL ALT_ZERO = 0`--,
-                         REWRITE_TAC [arithmeticTheory.NUMERAL_DEF, 
-                        arithmeticTheory.ALT_ZERO])
-      val distrib_rws as (th1::th2::rst) = rev (CONJUNCTS numeral_distrib)
-      val drws' = LIST_CONJ (rev (EQT_INTRO th1::EQT_INTRO th2::rst))
- in 
-  [ drws', REFL_EQ_0, numeral_eq, numeral_suc, numeral_pre, NORM_0,
-    numeral_iisuc, numeral_add, numeral_mult, iDUB_removal,
-    numeral_sub, numeral_lt, numeral_lte, iSUB_THM,
-    numeral_exp, iSQR, 
-    GEN_ALL (EQF_INTRO (SPEC_ALL prim_recTheory.LESS_REFL))
-  ]
+local open computeLib
+      val compset = reduceLib.reduce_rws()
+      val _ = add_thms (true,[iota_eqn]) compset
+      val eval_iota = CBV_CONV compset
+in
+fun Eval q = Count.apply eval_iota (Term q)
 end;
 
-val _ = add_thms (true,num_rws) rws;
-val _ = add_thms (true,[iota_eqn]) rws;
-
-norm `iota 0 0`;
-norm `iota 0 12`;
-norm `iota 12 10`;
-norm `iota 12 100`;
-norm `iota 250 351`;
-norm `iota 0 1000`;
+Eval `iota 0 0`;
+Eval `iota 0 12`;
+Eval `iota 12 10`;
+Eval `iota 12 100`;
+Eval `iota 250 351`;
+Eval `iota 0 1000`;

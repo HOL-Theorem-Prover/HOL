@@ -23,8 +23,7 @@ val exp_def =
 
 val (exp_eqns, exp_ind) = Defn.tprove 
 (exp_def,
- WF_REL_TAC exp_def `measure SND` 
-   THEN CONJ_TAC THENL 
+ WF_REL_TAC exp_def `measure SND` THENL
    [RW_TAC arith_ss [], 
     RW_TAC std_ss []
       THEN MP_TAC (Q.SPEC `SUC(SUC v4)` 
@@ -76,86 +75,23 @@ RW_TAC std_ss []
   THEN RW_TAC std_ss [exp_eqns]);
 
 
-open computeLib;
-
-(*---------------------------------------------------------------------------
-      Build a computing base that knows basic 
-      facts about booleans and numbers (and numerals).
- ---------------------------------------------------------------------------*)
-
-val bool_rewrites =
-  [ Rsyntax.INST_TYPE [Type.alpha |-> Type.bool] REFL_CLAUSE,
-    COND_CLAUSES, COND_ID, NOT_CLAUSES, AND_CLAUSES, OR_CLAUSES,
-    IMP_CLAUSES, EQ_CLAUSES,boolTheory.LET_DEF
-  ];
-
-val rws = from_list (false,bool_rewrites);
-
-local open numeralTheory
-      val REFL_EQ_0 = Rsyntax.INST_TYPE [Type.alpha |-> Type`:num`] REFL_CLAUSE
-      val NORM_0 = prove(--`NUMERAL ALT_ZERO = 0`--,
-                         REWRITE_TAC [arithmeticTheory.NUMERAL_DEF, 
-                        arithmeticTheory.ALT_ZERO])
-      val distrib_rws as (th1::th2::rst) = rev (CONJUNCTS numeral_distrib)
-      val drws' = LIST_CONJ (rev (EQT_INTRO th1::EQT_INTRO th2::rst))
-      val num_rws = [ drws', 
-        REFL_EQ_0, numeral_eq, numeral_suc, numeral_pre, NORM_0,
-        numeral_iisuc, numeral_add, numeral_mult, iDUB_removal,
-         numeral_sub, numeral_lt, numeral_lte, iSUB_THM, numeral_exp, iSQR, 
-         GEN_ALL (EQF_INTRO (SPEC_ALL prim_recTheory.LESS_REFL)) ]
-
-      val div_thm =
-        prove (--` !x y q r. x DIV y =
-                    if (x = r + q * y) /\ (r < y) then q else x DIV y `--,
-           ZAP_TAC std_ss [DIV_UNIQUE] THEN
-           MATCH_MP_TAC (DIV_UNIQUE) THEN
-           EXISTS_TAC (--`r:num`--) THEN ZAP_TAC arith_ss []);
-
-      val mod_thm =
-         prove (--` !x y q r. x MOD y = 
-                       if (x = r + q * y) /\ (r < y) then r else x MOD y `--,
-          ZAP_TAC std_ss [] THEN
-          MATCH_MP_TAC (arithmeticTheory.MOD_UNIQUE) THEN
-          EXISTS_TAC (--`q:num`--) THEN ZAP_TAC arith_ss []);
-
-      fun dest_op opr tm =
-        let val (opr',arg) = Dsyntax.strip_comb tm in
-        if (opr=opr') then arg else raise Fail "dest_op"
-        end;
-
-      val divop = (--`$DIV`--) val modop = (--`$MOD`--)
-
-      fun DIV_CONV tm =
-        case dest_op divop tm
-         of [x,y] => 
-              let open Arbnum
-                  val (q,r) = divmod (dest_numeral x, dest_numeral y) 
-              in SPECL [x, y, mk_numeral q, mk_numeral r] div_thm
-              end handle HOL_ERR _ => raise Fail "DIV_CONV"
-          | _ => raise Fail "DIV_CONV"
-
-      fun MOD_CONV tm =
-        case dest_op modop tm
-         of [x,y] => 
-              let open Arbnum
-                  val (q,r) = divmod (dest_numeral x, dest_numeral y) 
-              in SPECL [x, y, mk_numeral q, mk_numeral r] mod_thm
-              end handle HOL_ERR _ => raise Fail "MOD_CONV"
-          | _ => raise Fail "MOD_CONV"
+local open arithmeticTheory computeLib
+      val compset = reduceLib.reduce_rws()
+      val _ = add_thms (true,[alt_exp_eqns,boolTheory.LET_THM]) compset
+      val eval_exp = CBV_CONV compset
 in
-val _ = add_thms (true,num_rws) rws;
-val _ = add_conv (--`$DIV`--, 2, DIV_CONV) rws;
-val _ = add_conv (--`$MOD`--, 2, MOD_CONV) rws;
+fun Eval q = Count.apply eval_exp (Term q)
 end;
 
-val _ = add_thms (true,[alt_exp_eqns]) rws;
+Eval `exp 2 1`;
+Eval `exp 2 4 * exp 4 2`;
+Eval `exp 2 10`;
+Eval `exp 2 16`;
+Eval `exp 2 100`;
 
-fun norm q = Count.apply (CBV_CONV rws) (--q--);
+(*---------------------------------------------------------------------------
+   REDUCE_CONV is faster than Eval for exp because of 
+   numeral representation. 
+ ---------------------------------------------------------------------------*)
 
-norm `exp 2 1`;
-norm `exp 2 4`;
-norm `exp 2 10`;
-norm `exp 2 16`;
-norm `exp 2 100`;
-(* faster because of numeral representation. *)
 Count.apply REDUCE_CONV (Term `2 EXP 100`);

@@ -27,8 +27,8 @@ val lem = ARITH `~(x > 100) ==> (101-y < 101-x = x<y)`;
        obtained. The termination proof of the desired function
        is reduced to that of the auxiliary function.
 
-       We use Hol_fun to make the definition, since we are going
-       to tackle the termination proof ourselves.
+       We use Hol_defn to make the definition, since we tackle
+       the termination proof ourselves.
  ---------------------------------------------------------------------------*)
 
 val N_defn = 
@@ -119,7 +119,7 @@ val eqn2 = Q.prove
  ---------------------------------------------------------------------------*)
 
 val (N_eqn, N_ind) = Defn.tprove(N_defn,
-WF_REL_TAC N_defn `measure \x. 101 - x` THEN CONJ_TAC THENL
+WF_REL_TAC N_defn `measure \x. 101 - x` THENL
  [(* nested TC *)
   RW_TAC bool_ss [GSYM Nine1_def', lem]
    THEN measureInduct_on `(\m. 101 - m) x`
@@ -151,50 +151,24 @@ WF_REL_TAC N_defn `measure \x. 101 - x` THEN CONJ_TAC THENL
       Now try some computations with N.
  ---------------------------------------------------------------------------*)
 
-load "computeLib"; open computeLib;
-
-(*---------------------------------------------------------------------------
-      First, build a standard computing base, one that knows basic 
-      facts about booleans and numbers (and numerals).
-
-      Note that ">" and ">=" are not defined for numerals, so 
-      we convert to "<" and "<=" via 
-      narithmeticTheory.{GREATER_EQ, GREATER_DEF}.
- ---------------------------------------------------------------------------*)
-
-val rws = from_list (false,[COND_CLAUSES,NOT_CLAUSES]);
-
-fun norm q = Count.apply (CBV_CONV rws) (--q--);
-
-val num_rws = 
-  let open numeralTheory Rsyntax
-      val REFL_EQ_0 = INST_TYPE [Type.alpha |-> Type`:num`] REFL_CLAUSE
-      val NORM_0 = prove(--`NUMERAL ALT_ZERO = 0`--,
-                         REWRITE_TAC [arithmeticTheory.NUMERAL_DEF, 
-                        arithmeticTheory.ALT_ZERO])
-      val distrib_rws as (th1::th2::rst) = rev (CONJUNCTS numeral_distrib)
-      val drws' = LIST_CONJ (rev (EQT_INTRO th1::EQT_INTRO th2::rst))
- in 
-  [ drws', REFL_EQ_0, numeral_eq, numeral_suc, numeral_pre, NORM_0,
-    numeral_iisuc, numeral_add, numeral_mult, iDUB_removal,
-    numeral_sub, numeral_lt, numeral_lte, iSUB_THM,
-    numeral_exp, iSQR, 
-    arithmeticTheory.GREATER_EQ, arithmeticTheory.GREATER_DEF
-  ]
+local open arithmeticTheory computeLib
+      val compset = reduceLib.reduce_rws()
+      val _ = add_thms(true,[GREATER_EQ, GREATER_DEF]) compset
+      val _ = add_thms (true,[N_eqn]) compset
+      val evalN = CBV_CONV compset
+in
+fun Eval q = Count.apply evalN (Term q)
 end;
 
-val _ = add_thms (true,num_rws) rws;
-val _ = add_thms (true,[N_eqn]) rws;
-
-norm `N 0`;
-norm `N 10`;
-norm `N 11`;
-norm `N 12`;
-norm `N 40`;
-norm `N 89`;
-norm `N 90`;
-norm `N 99`;
-norm `N 100`;
-norm `N 101`;
-norm `N 102`;
-norm `N 127`;
+Eval `N 0`;
+Eval `N 10`;
+Eval `N 11`;
+Eval `N 12`;
+Eval `N 40`;
+Eval `N 89`;
+Eval `N 90`;
+Eval `N 99`;
+Eval `N 100`;
+Eval `N 101`;
+Eval `N 102`;
+Eval `N 127`;

@@ -17,11 +17,11 @@ val Pr_def =
  /\  (Pr vl (NOT x::l)    r vr = Pr vl l (x::r) vr)
  /\  (Pr vl (AND x y::l)  r vr = Pr vl (x::y::l) r vr)
  /\  (Pr vl (OR x y::l)   r vr = Pr vl (x::l) r vr /\ Pr vl (y::l) r vr)
-
  /\  (Pr vl [] [] vr           = EXISTS (\y. MEM y vl) vr)`;
 
 
 val Prove_def = Define `Prove P = Pr [] [] [P] []`;
+
 
 (*---------------------------------------------------------------------------
      Termination of Pr. We need a subsidiary measure function on 
@@ -54,13 +54,8 @@ val (Pr_eqns, Pr_ind) =
     booleans, plus whatever list operations are used in Pr.
  ---------------------------------------------------------------------------*)
 
-val rws = from_list (false,[COND_CLAUSES,NOT_CLAUSES,AND_CLAUSES]);
-
-(*---------------------------------------------------------------------------
-       Recast MEM and EXISTS definitions in terms of if-then-else
- ---------------------------------------------------------------------------*)
-
-local val MEM_IF = Q.prove(
+local open computeLib
+      val MEM_IF = Q.prove(
            `!x h t. MEM x (h::t) = if x=h then T else MEM x t`,
             RW_TAC list_ss [listTheory.MEM])
       val EXISTS_IF = Q.prove(
@@ -68,12 +63,13 @@ local val MEM_IF = Q.prove(
             RW_TAC list_ss [listTheory.EXISTS_DEF])
       val MEM_DEF'    = CONJ (CONJUNCT1 listTheory.MEM) MEM_IF
       val EXISTS_DEF' = CONJ (CONJUNCT1 listTheory.EXISTS_DEF) EXISTS_IF
+      val compset = reduceLib.reduce_rws()
+      val _ = add_thms (false,[REFL_CLAUSE]) compset
+      val _ = add_thms (true,[Pr_eqns,Prove_def,MEM_DEF',EXISTS_DEF']) compset
+      val eval_iota = CBV_CONV compset
 in
-val _ = add_thms (true,
-           [Pr_eqns,Prove_def,MEM_DEF',EXISTS_DEF',REFL_CLAUSE, COND_ID]) rws
+fun Eval q = Count.apply eval_iota (Term q)
 end;
-
-fun Hol_eval q = Count.apply (CBV_CONV rws) (--q--);
 
 (*---------------------------------------------------------------------------
       Examples.
@@ -90,15 +86,15 @@ val s = Term`VAR s`;
 fun imp x y = Term`OR (NOT ^x) ^y`;
 fun iff x y = Term`AND ^(imp x y) ^(imp y x)`;
 
-val BOOL_CASES = Hol_eval `Prove (OR ^x (NOT ^x))`;
-val NOT_BCASES = Hol_eval `Prove (OR ^x (NOT ^y))`;
-val IMP_REFL   = Hol_eval `Prove (OR (NOT ^x) ^x)`;
-val DISTRIB    = Hol_eval `Prove ^(iff (Term`AND ^x (OR ^y ^z)`)
+val BOOL_CASES = Eval `Prove (OR ^x (NOT ^x))`;
+val NOT_BCASES = Eval `Prove (OR ^x (NOT ^y))`;
+val IMP_REFL   = Eval `Prove (OR (NOT ^x) ^x)`;
+val DISTRIB    = Eval `Prove ^(iff (Term`AND ^x (OR ^y ^z)`)
                                        (Term`OR (AND ^x ^y) (AND ^x ^z)`))`;
 
-val PEIRCE = Hol_eval `Prove ^(imp (imp (imp p q) p) p)`;
+val PEIRCE = Eval `Prove ^(imp (imp (imp p q) p) p)`;
 
-val ANDREWS = Hol_eval `Prove
+val ANDREWS = Eval `Prove
  ^(imp (Term`AND ^(imp p (Term`AND ^q (OR ^r ^s)`))
                 (OR (NOT ^q) (NOT ^r))`)
      (imp p s))`;
@@ -123,14 +119,14 @@ val v9 = Term`VAR v9`;
 set_fixity "OR" (Infixr 300);
 set_fixity "AND" (Infixr 400);
 
-val syn323_1 = Hol_eval 
+val syn323_1 = Eval 
 `Prove (NOT((^v0 OR ^v1) AND 
             (NOT ^v0 OR ^v1) AND 
             (NOT ^v1 OR ^v0) AND 
             (NOT ^v0 OR NOT ^v1)))`;
 
 
-val syn029_1 = Hol_eval
+val syn029_1 = Eval
 `Prove
    (NOT((NOT ^v2 OR NOT ^v1) AND
         ^v0 AND 
@@ -138,7 +134,7 @@ val syn029_1 = Hol_eval
         (NOT ^v2 OR ^v1) AND (^v1 OR ^v2)))`;
 
 
-val syn052_1 = Hol_eval
+val syn052_1 = Eval
 `Prove
    (NOT((NOT ^v1 OR ^v0) AND 
         (NOT ^v0 OR ^v1) AND 
@@ -146,7 +142,7 @@ val syn052_1 = Hol_eval
         (NOT ^v1 OR ^v1) AND 
         (NOT ^v0 OR NOT ^v1)))`;
 
-val syn051_1 = Hol_eval
+val syn051_1 = Eval
 `Prove
   (NOT(( ^v1 OR ^v0) AND
        (^v1 OR ^v2) AND
@@ -155,7 +151,7 @@ val syn051_1 = Hol_eval
        (NOT ^v0 OR ^v1) AND
        (NOT ^v1 OR ^v2)))`;
 
-val syn044_1 = Hol_eval
+val syn044_1 = Eval
 `Prove
   (NOT((^v0 OR ^v1) AND
        (NOT ^v0 OR NOT ^v1) AND
@@ -164,7 +160,7 @@ val syn044_1 = Hol_eval
        (NOT ^v2 OR ^v0) AND
        (NOT ^v1 OR ^v2)))`;
 
-val syn011_1 = Hol_eval
+val syn011_1 = Eval
 `Prove
   (NOT(^v6 AND
        (NOT ^v0 OR NOT ^v2) AND
@@ -175,7 +171,7 @@ val syn011_1 = Hol_eval
        (^v3 OR ^v4 OR ^v5) AND
        (NOT ^v5 OR NOT ^v6)))`;
 
-val syn032_1 = Hol_eval
+val syn032_1 = Eval
 `Prove
   (NOT((NOT ^v5 OR NOT ^v1) AND
        (NOT ^v4 OR NOT ^v0) AND
@@ -185,7 +181,7 @@ val syn032_1 = Hol_eval
        (^v4 OR ^v2 OR ^v3) AND
        (NOT ^v3 OR ^v4 OR ^v5)))`;
 
-val syn030_1 = Hol_eval
+val syn030_1 = Eval
 `Prove
    (NOT((NOT ^v4 OR NOT ^v0 OR NOT ^v1) AND
         (NOT ^v3 OR NOT ^v4 OR ^v0) AND
@@ -197,7 +193,7 @@ val syn030_1 = Hol_eval
         (NOT ^v1 OR ^v3) AND
         (NOT ^v2 OR NOT ^v3 OR ^v4)))`;
 
-val syn054_1 = Hol_eval
+val syn054_1 = Eval
 `Prove
   (NOT((NOT ^v1 OR NOT ^v7) AND
        (NOT ^v2 OR NOT ^v0) AND
@@ -212,7 +208,7 @@ val syn054_1 = Hol_eval
        (^v6 OR ^v7)))`;
 
 (* Takes a long time, but it gets there in the end. *)
-val gra001_1 = Hol_eval
+val gra001_1 = Eval
 `Prove
   (NOT((NOT ^v1 OR ^v0) AND
        (NOT ^v0 OR ^v1) AND
@@ -228,7 +224,7 @@ val gra001_1 = Hol_eval
        (^v3 OR ^v4)))`;
 
 
-val syn321_1 =  Hol_eval
+val syn321_1 =  Eval
 `Prove
   (NOT((NOT ^v0 OR ^v9) AND
        (NOT ^v0 OR ^v6) AND

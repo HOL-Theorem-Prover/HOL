@@ -83,52 +83,19 @@ recInduct variant_ind
 (*---------------------------------------------------------------------------
          Evaluation of variant with computeLib
  ---------------------------------------------------------------------------*)
-load "computeLib";  open computeLib;
 
-(*---------------------------------------------------------------------------
-    First, build a standard computing base, one that knows basic 
-    facts about booleans and numbers (and numerals).
-
-    Note that ">" and ">=" are not defined for numerals, so 
-    we convert to "<" and "<=" via arithmeticTheory.{GREATER_EQ, GREATER_DEF}.
- ---------------------------------------------------------------------------*)
-
-val rws = from_list (false,[COND_CLAUSES,NOT_CLAUSES]);
-
-fun norm q = Count.apply (CBV_CONV rws) (--q--);
-
-val num_rws = 
-  let open numeralTheory Rsyntax
-      val REFL_EQ_0 = INST_TYPE [Type.alpha |-> Type`:num`] REFL_CLAUSE
-      val NORM_0 = prove(--`NUMERAL ALT_ZERO = 0`--,
-                         REWRITE_TAC [arithmeticTheory.NUMERAL_DEF, 
-                        arithmeticTheory.ALT_ZERO])
-      val distrib_rws as (th1::th2::rst) = rev (CONJUNCTS numeral_distrib)
-      val drws' = LIST_CONJ (rev (EQT_INTRO th1::EQT_INTRO th2::rst))
- in 
-  [ drws', REFL_EQ_0, numeral_eq, numeral_suc, numeral_pre, NORM_0,
-    numeral_iisuc, numeral_add, numeral_mult, iDUB_removal,
-    numeral_sub, numeral_lt, numeral_lte, iSUB_THM,
-    numeral_exp, iSQR, 
-    arithmeticTheory.GREATER_EQ, arithmeticTheory.GREATER_DEF
-  ]
-end;
-
-val _ = add_thms (true,num_rws) rws;
-
-(*---------------------------------------------------------------------------
-        recast MEM definition as if-then-else
- ---------------------------------------------------------------------------*)
-
-local val MEM_IF = Q.prove(
-           `!x h t. MEM x (h::t) = if x=h then T else MEM x t`,
-            RW_TAC list_ss [listTheory.MEM]);
-      val MEM_DEF' = CONJ (CONJUNCT1 listTheory.MEM) MEM_IF
+local open listTheory computeLib
+  val MEM_IF = Q.prove(`!x h t. MEM x (h::t) = if x=h then T else MEM x t`,
+                       RW_TAC list_ss [MEM])
+  val MEM_DEF' = CONJ (CONJUNCT1 MEM) MEM_IF
+  val compset = reduceLib.reduce_rws()
+  val _ = add_thms (true,[variant_eqn,MEM_DEF']) compset
+  val eval_variant = CBV_CONV compset
 in
-val _ = add_thms (true,[variant_eqn,MEM_DEF']) rws
+fun Eval q = Count.apply eval_variant (Term q)
 end;
 
-norm `variant 1 [1;2;3;4;5;6;7;8;9;10;11;13;14;15;16;16;16;16;165]`;
-norm `variant 1 [1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;16;16;16;165]`;
-norm `variant (SUC 0) []`;
-norm `variant (SUC 0) [SUC(SUC 0)]`;
+Eval `variant 1 [1;2;3;4;5;6;7;8;9;10;11;13;14;15;16;16;16;16;165]`;
+Eval `variant 1 [1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;16;16;16;165]`;
+Eval `variant (SUC 0) []`;
+Eval `variant (SUC 0) [SUC(SUC 0)]`;
