@@ -75,8 +75,10 @@ the user.  After entering the \HOL\ system (see below), the user is
 prompted with {\small\verb|-|} for an expression or command of the
 \HOL\ meta-language \ML; lines beginning with this are thus \ML\
 expressions or declarations.  Lines not beginning with \texttt{\small
-  \$} or {\small\verb|-|} are system output.  The meta-language \ML\
-is introduced in Chapter~\ref{ML}.
+  \$} or {\small\verb|-|} are system output.  Occasionally, system
+output will be replaced with a line containing {\small\verb|...|} when
+it is of minimal interest. The meta-language \ML\ is introduced in
+Chapter~\ref{ML}.
 
 \setcounter{sessioncount}{1}
 \begin{session}
@@ -96,7 +98,7 @@ Now you will need to rebuild \HOL\ from the sources.\footnote{It is
 Before beginning you must have a current version of MoscowML.  In
 particular, you must have version 1.44 or later.  MoscowML is
 available on the web from \linebreak
-\texttt{http://www.dina.kvl.dk/\~sestoft/mosml.html}.
+\texttt{http://www.dina.kvl.dk/\~{}sestoft/mosml.html}.
 
 The first step of the installation process is to edit the file
 \texttt{tools/configure.sml}.  At the top of the file are the
@@ -157,9 +159,7 @@ something like:
 \begin{session}
 \begin{verbatim}
 $ more configure.sml
-
-  .... < some output elided > ....
-
+  ...
 val mosmldir = "/usr/groups/hol/mosml.144";
 val holdir   = "/local/scratch/mn200/hol98";
 val OS       = "linux"       (* Operating system; choices are:
@@ -167,10 +167,7 @@ val OS       = "linux"       (* Operating system; choices are:
 
 val CC       = "gcc";     (* C compiler (for building quote filter)        *)
 val GNUMAKE  = "gnumake"; (* for robdd library                             *)
-
-
-  .... < some output elided > ....
-
+  ...
 $
 \end{verbatim}
 \end{session}
@@ -191,9 +188,7 @@ Enter `quit();' to quit.
 - > val holdir = "/local/scratch/mn200/hol98" : string
 - > val OS = "linux" : string
   val CC = "gcc" : string
-
-  .... < some output elided > ....
-
+  ...
 Beginning configuration.
 - Making bin/Holmake.
 - Making bin/build.
@@ -213,17 +208,19 @@ $
 \end{session}
 
 \noindent The next step is to run the \textsf{build} program.  This should
-result in a great deal of output, and the eventual construction of a
-\HOL{} system in the \texttt{bin/} directory.  The \textsf{build}
+result in a great deal of output as all of the system code is compiled
+and the theories built.  Eventually, a \HOL{} system\footnote{Two
+  executables are produced \textsf{hol} and \textsf{hol.unquote}.  The
+  latter will be used for most examples in the \TUTORIAL{}.} is
+produced in the \texttt{bin/} directory.  The \textsf{build}
 executable is in the \texttt{bin/} directory already, so should be run
 as follows:
 
 \begin{session}
 \begin{verbatim}
 $ ../bin/build
-
-  .... < a great deal of output elided > ....
-
+  ...
+  ...
 Uploading files to /local/scratch/mn200/Work/hol98/sigobj
 
 Hol built successfully.
