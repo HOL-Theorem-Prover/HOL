@@ -39,11 +39,9 @@ appropriate fixities:
        : Thm.thm
    - set_fixity "f" (Infixl 500);
    > val it = () : unit
-
    - thm;
    > val it =
-       |- (!n. 0 f n = n) /\ !n m. SUC n f m = SUC (SUC (n f m))
-       : Thm.thm
+       |- (!n. 0 f n = n) /\ !n m. SUC n f m = SUC (SUC (n f m)) : Thm.thm
 }
 \noindent The same function can be used to alter the fixities of existing
 constants:

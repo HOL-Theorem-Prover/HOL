@@ -11,10 +11,10 @@ hol88 have different types in hol90. For those longing for the good old
 days, Psyntax provides hol88-style types. The functions provided by
 Psyntax return exactly the same results as their hol90 counterparts.
 
-Each function in the Psyntax structure has a corresponding function
-in the Rsyntax structure, and {\em vice versa}. One can flip-flop
-between the two structures by opening one and then the other. One can
-also use long identifiers in order to use both syntaxes at once.
+Each function in the Psyntax structure has a corresponding function in
+the Rsyntax structure, and vice versa. One can flip-flop between the
+two structures by opening one and then the other. One can also use
+long identifiers in order to use both syntaxes at once.
 
 \FAILURE
 Never fails.
