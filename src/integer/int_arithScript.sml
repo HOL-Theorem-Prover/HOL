@@ -120,13 +120,7 @@ val eq_justify_multiplication = store_thm(
 val justify_divides = store_thm(
   "justify_divides",
   --`!n x y:int. 0 < n ==> (x int_divides y = n * x int_divides n * y)`--,
-  REWRITE_TAC [INT_DIVIDES] THEN REPEAT STRIP_TAC THEN EQ_TAC THEN
-  STRIP_TAC THENL [
-    PROVE_TAC [INT_MUL_ASSOC, INT_MUL_SYM],
-    Q.EXISTS_TAC `m` THEN MATCH_MP_TAC INT_EQ_LMUL_IMP THEN
-    Q.EXISTS_TAC `n` THEN
-    PROVE_TAC [INT_LT_REFL, INT_MUL_ASSOC, INT_MUL_SYM]
-  ]);
+  PROVE_TAC [INT_DIVIDES_MUL_BOTH, INT_LT_REFL]);
 
 val justify_divides2 = store_thm(
   "justify_divides2",

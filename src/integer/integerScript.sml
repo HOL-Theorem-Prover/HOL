@@ -2643,6 +2643,16 @@ val INT_DIVIDES_RMUL = store_thm(
   Term`!p q r. p int_divides q ==> (p int_divides (r * q))`,
   PROVE_TAC [INT_MUL_ASSOC, INT_MUL_SYM, INT_DIVIDES]);
 
+val INT_DIVIDES_MUL_BOTH = store_thm(
+  "INT_DIVIDES_MUL_BOTH",
+  ``!p q r. ~(p = 0) ==> (p * q int_divides p * r = q int_divides r)``,
+  SIMP_TAC bool_ss [INT_DIVIDES] THEN
+  REPEAT GEN_TAC THEN
+  `!m p q. m * (p * q) = p * (m * q)` by
+     PROVE_TAC [INT_MUL_ASSOC, INT_MUL_COMM] THEN
+  POP_ASSUM (fn th => ONCE_REWRITE_TAC [th]) THEN
+  PROVE_TAC [INT_EQ_LMUL]);
+
 val INT_DIVIDES_LADD = store_thm(
   "INT_DIVIDES_LADD",
   Term`!p q r. p int_divides q ==>
