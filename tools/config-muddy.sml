@@ -26,12 +26,5 @@ val ALL =
   then SOME " muddy.so"
   else NONE;
 
-val _ =
-  if not (FileSys.access(mosmldir ^ "mosml.spec", [])) then let
-  in
-    print "** You appear to be using Mosml version < 2.00 **\n";
-    FileSys.rename {
-      old = fullPath [holdir, "src", "muddy", "muddyC", "muddyC.old"],
-      new = fullPath [holdir, "src", "muddy", "muddyC", "muddy.c"]}
-  end else ()
+
 
