@@ -1,0 +1,47 @@
+\DOC 
+
+\TYPE {strip_binder : (term -> term option) -> term -> term list * term}
+
+\SYNOPSIS
+Break apart consecutive binders.
+
+\KEYWORDS
+variable, binding. 
+
+\DESCRIBE
+An application {strip_binder f M} iteratively uses {f} to break 
+apart a consecutive sequence of applications of a particular 
+binder. The function {f} expects a binder term as an argument. If it doesn't 
+get a binder, it returns {NONE}. Otherwise, it breaks the binder apart 
+(if necessary) in order get its lambda abstraction (N), and returns {SOME N}. 
+
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{strip_abs} could be defined as follows.
+{
+   - val strip_abs = strip_binder 
+                        (fn tm => if is_abs tm then SOME tm else NONE)
+   > val strip_abs = fn : term -> term list * term
+
+   - strip_abs (Term `\x y z. x /\ y ==> z`);
+   > val it = ([`x`, `y`, `z`], `x /\ y ==> z`) : term list * term
+}
+\noindent Defining {strip_forall} is similar.
+{
+   strip_binder (fn t => if is_forall t then SOME (rand t) else NONE)
+}
+
+\COMMENTS
+Terms with many consecutive binders should be taken apart using 
+{strip_binder} and its instantiations {strip_abs}, {strip_forall},
+and {strip_exists}. In the current implementation of HOL, iterating 
+{dest_abs}, {dest_forall}, or {dest_exists} is far slower for terms
+with many consecutive binders.
+
+\SEEALSO
+Term.list_mk_binder, Term.strip_abs, 
+boolSyntax.strip_forall, boolSyntax.strip_exists. 
+\ENDDOC

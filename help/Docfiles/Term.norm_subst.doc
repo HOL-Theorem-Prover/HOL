@@ -1,0 +1,51 @@
+\DOC 
+
+\BLTYPE norm_subst : (hol_type,hol_type) subst 
+        -> (term,term) subst -> (term,term)subst
+\ELTYPE
+
+\SYNOPSIS
+Instantiate term substitution by a type substitution.
+
+\KEYWORDS
+substitution, term, type.
+
+\DESCRIBE
+The substitutions coming from {raw_match} need to be normalized before
+they can be applied by inference rules like {INST_TY_TERM}. An invocation
+{raw_match avoid_tys avoid_tms pat ob A} returns a pair of substitutions
+{(S,(T,Id))}. The {Id} component can be ignored. The {S} component is 
+a substitution for term variables, but it has to be instantiated by {T}
+in order to be suitable for use by {INST_TY_TERM}. In this case, one uses
+{norm_subst T S}. Thus a suitable input for {INST_TY_TERM} would be
+{(norm_subst T S, T)}.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{
+- val (S,(T,_)) = raw_match [] empty_varset 
+                    (Term `\x:'a. x = f (y:'b)`)
+                    (Term `\a.    a = ~p`) ([],([],[]));
+> val S = [{redex = `(f :'b -> 'a)`, residue = `$~`},
+           {redex = `(y :'b)`,       residue = `(p :bool)`}] : ...
+
+  val T = [{redex = `:'b`, residue = `:bool`}, 
+            {redex = `:'a`, residue = `:bool`}] : ...
+
+- norm_subst T S;
+> val it =
+    [{redex = `(y :bool)`, residue = `(p :bool)`},
+     {redex = `(f :bool -> bool)`, residue = `$~`}] 
+  : {redex : term, residue : term} list
+}
+
+\COMMENTS
+Higher level matching routines, like {match_term} and {match_terml}
+already return normalized substitutions.
+
+\SEEALSO
+Term.raw_match, Term.match_term, Term.match_terml.
+
+\ENDDOC
