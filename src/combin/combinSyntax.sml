@@ -1,0 +1,63 @@
+structure combinSyntax :> combinSyntax =
+struct
+
+open HolKernel Parse boolLib;  local open combinTheory in end;
+
+infix |->;
+
+val K_tm = prim_mk_const{Name="K", Thy="combin"}
+val S_tm = prim_mk_const{Name="S", Thy="combin"}
+val I_tm = prim_mk_const{Name="I", Thy="combin"}
+val C_tm = prim_mk_const{Name="C", Thy="combin"}
+val W_tm = prim_mk_const{Name="W", Thy="combin"}
+val o_tm = prim_mk_const{Name="o", Thy="combin"};
+
+fun mk_K(x,y) = 
+   list_mk_comb(inst[alpha |-> type_of x, 
+                     beta |-> type_of y]K_tm, [x,y]);
+
+fun mk_S(f,g,x) = 
+ let val (fdom,frng) = dom_rng(type_of f)
+     val (ty1,ty2) = dom_rng frng
+ in list_mk_comb(inst[alpha |-> fdom, 
+                      beta |-> ty1, gamma |-> ty2]S_tm, [f,g,x])
+ end
+
+fun mk_I x = mk_comb(inst[alpha |-> type_of x]I_tm, x)
+
+fun mk_C(f,x,y) = 
+ let val (fdom,frng) = dom_rng(type_of f)
+     val (ty1,ty2) = dom_rng frng
+ in list_mk_comb(inst[alpha |-> fdom, 
+                      beta  |-> ty1, 
+                      gamma |-> ty2]C_tm, [f,x,y])
+ end
+
+fun mk_W(f,x) = 
+  let val (ty1,rng) = dom_rng (type_of f)
+      val (_,ty2) = dom_rng rng
+  in list_mk_comb(inst[alpha |-> ty1, beta |-> ty2]W_tm, [f,x])
+ end 
+
+fun mk_o(f,g) = 
+ let val (fdom,frng) = dom_rng(type_of f)
+     val (gdom,_)    = dom_rng(type_of g)
+ in list_mk_comb
+      (inst [alpha |-> gdom, beta |-> frng, gamma |-> fdom] o_tm, [f,g])
+ end;
+
+val dest_K = dest_binop K_tm (ERR "dest_K"   "not K")
+val dest_S = dest_triop S_tm (ERR "dest_S"   "not S")
+val dest_I = dest_monop I_tm (ERR "dest_I"   "not I")
+val dest_C = dest_triop C_tm (ERR "dest_C"   "not C")
+val dest_W = dest_binop W_tm (ERR "dest_W"   "not W")
+val dest_o = dest_binop o_tm (ERR "dest_o"   "not o")
+
+val is_K = can dest_K
+val is_S = can dest_S
+val is_I = can dest_I
+val is_C = can dest_C
+val is_W = can dest_W
+val is_o = can dest_o
+
+end
