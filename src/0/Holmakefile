@@ -43,7 +43,7 @@ Term-sig.uo: Term-sig.sml Lib.ui HOLset.ui
 Tag-sig.uo: Tag-sig.sml
 	HOLMOSMLC -c -toplevel Tag-sig.sml
 
-Thm-sig.uo: Thm-sig.sml
+Thm-sig.uo: Thm-sig.sml Lib.ui HOLset.ui
 	HOLMOSMLC -c -toplevel Thm-sig.sml
 
 TheoryPP-sig.uo: TheoryPP-sig.sml
