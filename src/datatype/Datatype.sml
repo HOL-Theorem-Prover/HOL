@@ -252,24 +252,22 @@ fun primHol_datatype db q =
       val axname = name "_Axiom"
       val ax = dtype{clauses=map prefix clauses,
                      save_name=axname,ty_name=ty_name}
-      val one_one  = SOME(prove_constructors_one_one ax)
-                     handle HOL_ERR _ => NONE
-      val distinct = SOME(prove_constructors_distinct ax)
-                     handle HOL_ERR _ => NONE
-      val tyinfo = TypeBase.gen_tyinfo
-            {ax=ax, case_def = define_case ax,
-             one_one=one_one, distinct=distinct}
+      val tyinfo = TypeBase.gen_tyinfo {ax=ax, case_def = define_case ax}
+      val one_one = TypeBase.one_one_of tyinfo
+      val distinct = TypeBase.distinct_of tyinfo
       val size_def = define_size (TypeBase.axiom_of tyinfo) (tysize_env db)
       val tyinfo'  = TypeBase.put_size (defn_const size_def,size_def) tyinfo
       val _ = save_thm (name"_case_cong",TypeBase.case_cong_of tyinfo')
       val _ = save_thm (name"_induction",TypeBase.induction_of tyinfo')
       val _ = save_thm (name"_nchotomy",TypeBase.nchotomy_of tyinfo')
-      val _ = case one_one
-               of NONE => ()
-                | SOME th => (save_thm(name "_11", th); ())
-      val _ = case distinct
-               of NONE => ()
-                | SOME th => (save_thm(name "_distinct", th); ())
+      val _ =
+        case one_one of
+          NONE => ()
+        | SOME th => (save_thm(name "_11", th); ())
+      val _ =
+        case distinct of
+          NONE => ()
+        | SOME th => (save_thm(name "_distinct", th); ())
   in
      adjoin{ax=axname,case_def=name"_case_def",
             case_cong=name "_case_cong",
