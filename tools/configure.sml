@@ -297,19 +297,21 @@ val _ =
      val target_boss = fullPath [holdir, "bin/hol"]
      val qend_boss   = fullPath [holdir, "tools/end-init-boss.sml"]
  in
-   emit_hol_script target qend;
-   emit_hol_script target_boss qend_boss
+   (* "unquote" scripts use the unquote executable to provide nice
+      handling of double-backquote characters *)
+   emit_hol_unquote_script target qend;
+   emit_hol_unquote_script target_boss qend_boss
  end;
 
 val _ =
- let val _ = echo "Generating bin/hol.unquote."
-     val target      = fullPath [holdir,   "bin/hol.bare.unquote"]
-     val target_boss = fullPath [holdir,   "bin/hol.unquote"]
+ let val _ = echo "Generating bin/hol.noquote."
+     val target      = fullPath [holdir,   "bin/hol.bare.noquote"]
+     val target_boss = fullPath [holdir,   "bin/hol.noquote"]
      val qend        = fullPath [holdir,   "tools/end-init.sml"]
      val qend_boss   = fullPath [holdir,   "tools/end-init-boss.sml"]
  in
-  emit_hol_unquote_script target qend;
-  emit_hol_unquote_script target_boss qend_boss
+  emit_hol_script target qend;
+  emit_hol_script target_boss qend_boss
  end;
 
 (*---------------------------------------------------------------------------
