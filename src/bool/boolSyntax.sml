@@ -78,6 +78,10 @@ fun mk_let (func,arg) =
  in list_mk_comb(inst[alpha |-> dom, beta |-> rng] let_tm, [func,arg])
  end handle HOL_ERR _ => raise ERR "mk_let" "";
 
+fun mk_bool_case(a0,a1,b) =
+ list_mk_comb(inst[alpha |-> type_of a0] bool_case, [a0,a1,b])
+ handle HOL_ERR _ => raise ERR "mk_bool_case" "";
+
 fun mk_arb ty = inst [alpha |-> ty] arb;
 
 
@@ -85,11 +89,12 @@ fun mk_arb ty = inst [alpha |-> ty] arb;
  *     Destructors                                                           *
  *---------------------------------------------------------------------------*)
 
-local val dest_eq_ty_err = ERR "dest_eq(_ty)" "not an \"=\""
-      val lhs_err        = ERR "lhs"          "not an \"=\""
-      val rhs_err        = ERR "rhs"          "not an \"=\""
-      val dest_imp_err   = ERR "dest_imp"     "not an \"==>\""
-      val dest_cond_err  = ERR "dest_cond"    "not a conditional"
+local val dest_eq_ty_err = ERR "dest_eq(_ty)"   "not an \"=\""
+      val lhs_err        = ERR "lhs"            "not an \"=\""
+      val rhs_err        = ERR "rhs"            "not an \"=\""
+      val dest_imp_err   = ERR "dest_imp"       "not an \"==>\""
+      val dest_cond_err  = ERR "dest_cond"      "not a conditional"
+      val bool_case_err  = ERR "dest_bool_case" "not a \"bool_case\""
 in
 val dest_eq = dest_binop ("=","min")      dest_eq_ty_err
 fun dest_eq_ty M = let val (l,r) = dest_eq M in (l, r, type_of l) end
@@ -110,12 +115,18 @@ val dest_exists1 = dest_binder("?!","bool") (ERR"dest_exists1" "not a \"?!\"")
 
 val dest_conj = dest_binop ("/\\","bool")  (ERR"dest_conj"    "not a \"/\\\"")
 val dest_disj = dest_binop ("\\/","bool")  (ERR"dest_disj"    "not a \"\\/\"")
-val dest_let  = dest_binop ("LET","bool")  (ERR "dest_let"    "not a let term")
+val dest_let  = dest_binop ("LET","bool")  (ERR"dest_let"     "not a let term")
 
 fun dest_cond M =
  let val (Rator,t2) = with_exn dest_comb M dest_cond_err
      val (b,t1) = dest_binop ("COND","bool") dest_cond_err Rator
  in (b, t1, t2)
+ end 
+
+fun dest_bool_case M =
+ let val (Rator,b) = with_exn dest_comb M bool_case_err
+     val (a0,a1) = dest_binop ("bool_case","bool") bool_case_err Rator
+ in (a0, a1, b)
  end 
 
 fun dest_arb M = 
@@ -128,19 +139,20 @@ end;
              Selectors
  ---------------------------------------------------------------------------*)
 
-val is_eq       = can dest_eq
-val is_imp      = can dest_imp
-val is_imp_only = can dest_imp_only
-val is_select   = can dest_select
-val is_forall   = can dest_forall
-val is_exists   = can dest_exists
-val is_exists1  = can dest_exists1
-val is_conj     = can dest_conj
-val is_disj     = can dest_disj
-val is_neg      = can dest_neg
-val is_cond     = can dest_cond
-val is_let      = can dest_let
-val is_arb      = can dest_arb;
+val is_eq        = can dest_eq
+val is_imp       = can dest_imp
+val is_imp_only  = can dest_imp_only
+val is_select    = can dest_select
+val is_forall    = can dest_forall
+val is_exists    = can dest_exists
+val is_exists1   = can dest_exists1
+val is_conj      = can dest_conj
+val is_disj      = can dest_disj
+val is_neg       = can dest_neg
+val is_cond      = can dest_cond
+val is_let       = can dest_let
+val is_bool_case = can dest_bool_case
+val is_arb       = can dest_arb;
 
 
 (*---------------------------------------------------------------------------*

@@ -13,9 +13,9 @@
 
 signature boolSyntax =
 sig
-  type thm          = Thm.thm
-  type term         = Term.term
-  type hol_type     = Type.hol_type
+  type thm      = Thm.thm
+  type term     = Term.term
+  type hol_type = Type.hol_type
 
 
   (* Constants *)
@@ -32,6 +32,7 @@ sig
   val disjunction    : term
   val negation       : term
   val conditional    : term
+  val bool_case      : term
   val let_tm         : term
   val arb            : term
 
@@ -46,8 +47,9 @@ sig
   val mk_conj        : term * term -> term
   val mk_disj        : term * term -> term
   val mk_neg         : term -> term
-  val mk_cond        : term * term * term -> term
   val mk_let         : term * term -> term
+  val mk_cond        : term * term * term -> term
+  val mk_bool_case   : term * term * term -> term
   val mk_arb         : hol_type -> term
 
   (* Destruction routines *)
@@ -65,8 +67,9 @@ sig
   val dest_conj      : term -> term * term
   val dest_disj      : term -> term * term
   val dest_neg       : term -> term
-  val dest_cond      : term -> term * term * term
   val dest_let       : term -> term * term
+  val dest_cond      : term -> term * term * term
+  val dest_bool_case : term -> term * term * term
   val dest_arb       : term -> hol_type
 
   (* Query routines *)
@@ -82,6 +85,7 @@ sig
   val is_disj        : term -> bool
   val is_neg         : term -> bool
   val is_cond        : term -> bool
+  val is_bool_case   : term -> bool
   val is_let         : term -> bool
   val is_arb         : term -> bool
 

@@ -2,15 +2,21 @@
 (* FILE          : boolScript.sml                                        *)
 (* DESCRIPTION   : Definition of the logical constants and assertion of  *)
 (*                 the axioms.                                           *)
-(* AUTHOR        : (c) Mike Gordon, University of Cambridge              *)
+(* AUTHORS       : (c) Mike Gordon, University of Cambridge              *)
+(*                 Tom Melham, Richard Boulton, John Harrison,           *)
+(*                 Konrad Slind, Michael Norrish, Jim Grundy, Joe Hurd   *)
+(*                 and probably others that don't immediately come to    *)
+(*                 mind.                                                 *)
 (* ===================================================================== *)
 
 structure boolScript =
 struct
 
-val _ = HolKernel.new_theory "bool";
-
 open HolKernel Parse;
+
+
+val _ = new_theory "bool";
+
 
 (*---------------------------------------------------------------------------*
  *             BASIC DEFINITIONS                                             *
@@ -3227,6 +3233,22 @@ val bool_case_thm = save_thm("bool_case_thm",
      val th7 = TRANS th4 (CONJUNCT2 th5)
  in
    CONJ (GEN x (GEN y th6)) (GEN x (GEN y th7))
+ end);
+
+
+(* ------------------------------------------------------------------------- *)
+(*    bool_case_ID = |- !x b. bool_case x x b = x                            *)
+(* ------------------------------------------------------------------------- *)
+
+val bool_case_ID = save_thm("bool_case_ID",
+ let val x = mk_var("x",alpha);
+     val b = mk_var("b",bool);
+     val th0 = RIGHT_BETA(AP_THM
+                 (RIGHT_BETA(AP_THM
+                   (RIGHT_BETA(AP_THM bool_case_DEF x)) x)) b)
+     val th1 = TRANS th0 (SPEC x (SPEC b COND_ID))
+ in 
+   GEN x (GEN b th1)
  end);
 
 
