@@ -9,7 +9,7 @@ struct
 open boolTheory boolSyntax Hol_pp
      Drule Tactical Tactic Thm_cont Conv Rewrite Prim_rec Abbrev DB;
 
-local open DefnBase TypeBase Ho_Rewrite Psyntax Rsyntax in end
+local open DefnBase TypeBase Ho_Rewrite Psyntax Rsyntax Drop in end
 
 val Term = Parse.Term
 val Type = Parse.Type

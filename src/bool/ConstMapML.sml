@@ -1,7 +1,9 @@
 structure ConstMapML :> ConstMapML = 
 struct 
 
-open HolKernel ;
+local open boolTheory in end;
+
+open HolKernel Redblackmap;
 
 val ERR = mk_HOL_ERR "ConstMapML";
 
@@ -10,31 +12,61 @@ fun LEX c1 c2 ((x1,x2),(y1,y2)) =
    of EQUAL => c2 (x2,y2)
     | other => other;
 
-local open Redblackmap 
+val alph = Lib.with_flag (Feedback.emit_WARNING,false)
+             mk_vartype "''a";
+
+(*---------------------------------------------------------------------------*)
+(* The initial constant map has equality, conjunction, disjunction,          *)
+(* negation, true, and false in it. The range is triples of the form         *)
+(* (structure name,value name, type).                                        *)
+(*---------------------------------------------------------------------------*)
+
+type constmap = (term, string*string*hol_type)dict
+
+(*---------------------------------------------------------------------------*)
+(* Need to call same_const in order to get the notion of equality desired,   *)
+(* otherwise could just use Term.compare.                                    *)
+(*---------------------------------------------------------------------------*)
+
+fun compare (c1,c2) = 
+   if Term.same_const c1 c2 then EQUAL else Term.compare (c1,c2);
+
+val initConstMap : constmap = mkDict compare
+
+local val equality = prim_mk_const{Name="=",Thy="min"}
+      val negation = prim_mk_const{Name="~",Thy="bool"}
+      val T        = prim_mk_const{Name="T",Thy="bool"}
+      val F        = prim_mk_const{Name="F",Thy="bool"}
+      val conj     = prim_mk_const{Name="/\\",Thy="bool"}
+      val disj     = prim_mk_const{Name="\\/",Thy="bool"}
 in
-type constmap = (string*string, string*string)dict
-val initConstMap : constmap = mkDict (LEX String.compare String.compare)
+val ConstMapRef = ref
+  (insert(insert(insert(insert(insert(insert
+    (initConstMap,
+     equality, ("","=",    alph-->alph-->bool)),
+     negation, ("","not",  bool-->bool)),
+     T,        ("","true", bool)),
+     F,        ("","false",bool)),
+     conj,     ("","andalso",bool-->bool-->bool)),
+     disj,     ("","orelse", bool-->bool-->bool)))
 end;
 
-(*---------------------------------------------------------------------------*)
-(* The initial constant map has only equality in it                          *)
-(*---------------------------------------------------------------------------*)
-
-val ConstMapRef = ref(Redblackmap.insert(initConstMap,("min","="),("","=")));
 fun theConstMap () = !ConstMapRef;
 
-fun insert (c,p) = 
- let val {Name,Thy,...} = dest_thy_const c
- in ConstMapRef := Redblackmap.insert(theConstMap(),(Thy,Name),p)
+fun prim_insert (c,t) = (ConstMapRef := insert(theConstMap(),c,t));
+
+fun insert c = 
+ let val {Name,Thy,Ty} = dest_thy_const c
+ in prim_insert(c,(Thy,Name,Ty))
  end;
 
 fun apply c =
- let val {Name,Thy,...} = dest_thy_const c
- in case Redblackmap.peek(theConstMap(),(Thy,Name))
-   of SOME (str,name) => (str,name)
-    | NONE => if Thy=current_theory() then ("",Name) 
+ case peek(theConstMap(),c)
+   of SOME triple => triple
+    | NONE => let val {Name,Thy,Ty} = dest_thy_const c
+              in if Thy=current_theory() then ("",Name,Ty) 
                  else raise ERR "apply" 
                        ("no binding found for "^Lib.quote(Thy^"$"^Name))
- end
+              end
 
 end
