@@ -312,11 +312,18 @@ in
                                         in_vstruct = false})
     in
       case pstack p of
-        [(NonTerminal pt, _), (Terminal BOS, _)] =>
-          if List.all (fn ANTIQUOTE _ => false | QUOTE s => size s = 0) cs then
-            remove_specials pt
-          else
-            raise ERROR "Term" ("Parse failed with \""^ftoString cs^"\" remaining")
+        [(NonTerminal pt, _), (Terminal BOS, _)] => let
+          infix ++ >>
+          val (_, res) =
+            (many (fragstr.comment ++ fragstr.grab_whitespace) >>
+             fragstr.eof) cs
+        in
+          case res of
+            SOME _ => remove_specials pt
+          | NONE =>
+              raise ERROR "Term"
+                ("Can't make sense of remaining: \""^ftoString cs)
+        end
       | _ =>
           raise ERROR "Term" ("Parse failed with \""^ftoString cs^"\" remaining")
     end

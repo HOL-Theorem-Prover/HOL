@@ -119,11 +119,11 @@ in
 end
 
 fun nonempty P = P >- (fn s => if s = "" then fail else return s)
-fun grab_whitespace strm = nonempty (many_charP Char.isSpace) strm
+fun grab_whitespace strm = (nonempty (many_charP Char.isSpace) >> ok) strm
 fun comment strm = let
   fun comment_internals strm' =
     ((drop_upto ["(*", "*)"] ++
-      (fn x => (print "WARNING: Unterminated comment\n";
+      (fn x => (print "WARNING: Unterminated comment.\n";
                 ([], SOME "*)")))) >-
      (fn s =>
       if s = "(*" then
@@ -135,10 +135,18 @@ in
 end
 
 
-fun token Prser = many ((grab_whitespace >> ok) ++ (comment >> ok)) >> Prser
+fun token Prser = many (grab_whitespace ++ comment) >> Prser
 
 fun parse P =
-  P >-> (many ((grab_whitespace >> ok) ++ (comment >> ok)) >> eof)
+  P >-> (many (grab_whitespace ++ comment) >> eof)
 
 fun symbol s = token (string s)
 
+fun eof cs =
+  case cs of
+    [] => ([], SOME ())
+  | x =>
+      if List.all (fn QUOTE s => size s = 0 | ANTIQUOTE _ => false) x then
+        ([], SOME ())
+      else
+        (x, NONE)
