@@ -161,7 +161,7 @@ val icon_section = "\
 \[Icons]\n\
 \Name : \"{group}\\HOL\" ; FileName : \"{app}\\bin\\hol.bat\" ; WorkingDir: \"{app}\"\n\
 \Name : \"{group}\\``HOL``\" ; FileName : \"{app}\\bin\\hol.unquote.bat\" ; WorkingDir: \"{app}\"\n\
-\Name : \"{userdesktop}\\HOL\" ; FileName : \"{app}\\bin\\hol.bat\" ; WorkingDir: \"{app}\"\n"
+\Name : \"{userdesktop}\\HOL\" ; FileName : \"{app}\\bin\\hol.unquote.bat\" ; WorkingDir: \"{app}\"\n"
 
 val run_section = "\
 \[Run]\n\
