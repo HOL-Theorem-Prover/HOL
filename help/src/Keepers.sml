@@ -30,7 +30,7 @@ val keepers =
      (* HolBdd *)
      "MachineTransitionTheory.sig",
      "PrimitiveBddRules.sig", "DerivedBddRules.sig",
-     "PrintBdd.sig", "Varmap.sig", 
+     "PrintBdd.sig", "Varmap.sig",
 
      (* multisets *)
      "bagTheory.sig", "bagLib.sig", "bagSimps.sig", "bagSyntax.sig",
@@ -125,7 +125,7 @@ val keepers =
      "AC.sig","Canon.sig",
 
      (* relation *)
-     "relationTheory.sig", "TermRewritingTheory.sig",
+     "relationTheory.sig",
 
      (* res_quan *)
      "res_quanLib.sig", "res_quanTheory.sig",
@@ -190,7 +190,7 @@ val keepers =
      (* Fixed point and floating point arithmetic *)
      "floatTheory.sig", "ieeeTheory.sig",
      "fxpTheory.sig",
- 
+
      (* HolCheck model checker *)
      "holCheck.sig","holCheckLib.sig"
   ];
