@@ -268,6 +268,13 @@ fun FIRST [] g = NO_TAC g
 fun MAP_EVERY tacf lst = EVERY (map tacf lst);
 fun MAP_FIRST tacf lst = FIRST (map tacf lst);
 
+(*---------------------------------------------------------------------------
+ * Uses first tactic that proves the goal.
+ *    FIRST [TAC1;...;TACn] =  (TAC1 THEN NO_TAC)  ORELSE  ...  ORELSE  (TACn THEN NO_TAC)
+ * Fails if no tactic proves the goal.
+ *---------------------------------------------------------------------------*)
+
+fun FIRST_PROVE tacl = itlist (fn a => fn b => (a THEN NO_TAC) ORELSE b) tacl NO_TAC;
 
 (*---------------------------------------------------------------------------
  * Call a thm-tactic for every assumption.

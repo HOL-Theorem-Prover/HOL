@@ -20,6 +20,7 @@ sig
   val FIRST          : tactic list -> tactic
   val MAP_EVERY      : ('a -> tactic) -> 'a list -> tactic
   val MAP_FIRST      : ('a -> tactic) -> 'a list -> tactic
+  val FIRST_PROVE    : tactic list -> tactic
   val EVERY_ASSUM    : thm_tactic -> tactic
   val FIRST_ASSUM    : thm_tactic -> tactic
   val FIRST_X_ASSUM  : thm_tactic -> tactic
