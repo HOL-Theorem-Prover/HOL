@@ -338,4 +338,44 @@ val INT_NUM_COND = store_thm(
                if b then &n else &m`,
   SIMP_TAC (bool_ss ++ COND_elim_ss) [] THEN PROVE_TAC []);
 
+val INT_NUM_ODD = store_thm(
+  "INT_NUM_ODD",
+  Term`!n:num. ODD n = ~(2 int_divides &n)`,
+  SIMP_TAC bool_ss [ODD_EVEN, EVEN_EXISTS, INT_DIVIDES, GSYM INT_INJ,
+                    GSYM INT_MUL] THEN GEN_TAC THEN EQ_TAC THEN
+  REPEAT STRIP_TAC THENL [
+    Cases_on `&n = 0` THENL [
+      POP_ASSUM SUBST_ALL_TAC THEN POP_ASSUM MP_TAC THEN
+      RULE_ASSUM_TAC GSYM THEN FULL_SIMP_TAC int_ss [INT_ENTIRE] THEN
+      POP_ASSUM (MP_TAC o Q.SPEC `0`) THEN REWRITE_TAC [],
+      `0 < &n` by PROVE_TAC [INT_LE_LT, INT_POS] THEN
+      `0 < 2i` by SIMP_TAC int_ss [] THEN
+      `0 < m` by PROVE_TAC [INT_MUL_SIGN_CASES, INT_LT_ANTISYM] THEN
+      `?k. m = &k` by PROVE_TAC [NUM_POSINT_EXISTS, INT_LE_LT] THEN
+      POP_ASSUM SUBST_ALL_TAC THEN
+      FIRST_X_ASSUM (MP_TAC o ONCE_REWRITE_RULE [INT_MUL_COMM] o
+                     Q.SPEC `k`) THEN
+      ASM_REWRITE_TAC []
+    ],
+    FIRST_X_ASSUM (MP_TAC o Q.SPEC `int_of_num m`) THEN
+    ASM_REWRITE_TAC [] THEN MATCH_ACCEPT_TAC INT_MUL_COMM
+  ]);
+
+val INT_NUM_EVEN = store_thm(
+  "INT_NUM_EVEN",
+  Term`!n:num. EVEN n = 2 int_divides &n`,
+  SIMP_TAC bool_ss [EVEN_ODD, INT_NUM_ODD]);
+
+val HO_SUB_ELIM = store_thm(
+  "HO_SUB_ELIM",
+  Term`!(P:int -> bool) a b.
+           P(&(a - b)) =
+            (int_of_num b <= &a /\ P(&a + ~&b)) \/
+            (int_of_num a < &b /\ P 0i)`,
+  REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THEN
+  FULL_SIMP_TAC (bool_ss ++ COND_elim_ss) [INT_NUM_SUB, LEFT_AND_OVER_OR,
+                                           RIGHT_AND_OVER_OR, INT_NOT_LT,
+                                           int_sub] THEN
+  PROVE_TAC [INT_LE_LT, INT_LT_TOTAL, INT_LET_TRANS, INT_LT_REFL])
+
 val _ = export_theory();
