@@ -86,7 +86,7 @@ open Systeml;
      Now compile Systeml.sml; if necessary
  ---------------------------------------------------------------------------*)
 
-if not (FileSys.access("Holmake/Systeml.uo", [FileSys.A_READ]))
+if not (FileSys.access(fullPath [holmakedir, "Systeml.uo"], [FileSys.A_READ]))
  then let val dir_0 = FileSys.getDir()
       in FileSys.chDir holmakedir;
          systeml [compiler, "-c", "Systeml.sml"];
