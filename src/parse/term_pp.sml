@@ -1,40 +1,5 @@
 open Term HolKernel Portable term_grammar HOLtokens HOLgrammars
 
-(* Some comments on what this code should achieve:
-     prefix commands
-     ---------------
-
-     This is something of a thorny issue.  We want to have the
-     following terms printed as given here:
-       ~p                            (not p)
-       ~~p                           (not (not p))
-       P (\x. x + 1)
-       P (if x then y else z)
-       p /\ !x. Q x \/ R y
-
-     It seems that prefixes that are atomic and symbolic should not be
-     followed by a space.  This would correctly print the first two
-     lines.  This form of printing could lead to ambiguity in the
-     presence of other functions, in this case, think of ~~ being
-     defined as a separate identifier.  Thus, we must have the
-     space-consuming under the control of some sort of global flag.
-
-     The rules for bracketting would seem to be:
-       - always bracket lambda abstractions
-
-       - always bracket non-atomic prefixes, except at the very top
-         level of a term.
-
-       - never bracket non-lambda binders except to resolve ambiguity
-         (the three cases above with parentheses all have unnecessary
-         parens) *)
-
-
-(* need to :
-    app (fn s => (print ("Loading "^s^"\n"); load s))
-        ["Polyhash", "Psyntax", "term_grammar", "type_pp"]
-*)
-
 fun PP_ERR f mesg = HOL_ERR {origin_structure = "term_pp",
                              origin_function = f,
                              message = mesg}
@@ -238,6 +203,7 @@ fun pp_term (G : grammar) TyG = let
   val comb_prec = #1 (hd (valOf (lookup_term fnapp_special)))
     handle Option =>
       raise PP_ERR "pp_term" "Grammar has no function application"
+  val recsel_info = lookup_term recsel_special
   val resquan_op_prec =
     case (lookup_term resquan_special) of
       SOME [] => raise Fail "term_pp : This really shouldn't happen"
@@ -420,7 +386,7 @@ fun pp_term (G : grammar) TyG = let
       val _ =
         if my_is_abs tm then (pr_abs tm; raise SimpleExit)
         else ()
-      val _ =
+      val _ = (* check for set comprehensions *)
         if
           is_const t1 andalso #Name (dest_const t1) = "GSPEC" andalso
           my_is_abs t2 then let
@@ -435,6 +401,54 @@ fun pp_term (G : grammar) TyG = let
             end_block(); add_string "}"; end_block(); raise SimpleExit
           end handle HOL_ERR _ => ()
         else ()
+
+      val _ = (* check for record *)
+        if is_const t1 then let
+          val rname_opt = Overload.overloading_of_term overload_info t1
+        in
+          case rname_opt of
+            SOME s =>
+              if String.isPrefix term_grammar.recsel_special s andalso
+                 isSome recsel_info
+              then let
+                val (prec0, fldtok) = let
+                  open term_grammar
+                in
+                  case valOf recsel_info of
+                    [(n, INFIX (STD_infix([{elements = [RE(TOK s)],...}], _)))]
+                    => (n,s)
+                  | _ => raise PP_ERR "print_record"
+                      "Invalid form of rule for record selection \"operator\""
+                end
+                val add_l =
+                  case lgrav of
+                    Prec(n, _) => n > prec0
+                  | _ => false
+                val add_r =
+                  case rgrav of
+                    Prec(n, _) => n >= prec0
+                  | _ => false
+                val prec = Prec(prec0, term_grammar.recsel_special)
+                val add_parens = add_l orelse add_r
+                val lprec = if add_parens then Top else lgrav
+                val rprev = if add_parens then Top else rgrav
+                val fldname =
+                  String.extract(s, size term_grammar.recsel_special, NONE)
+              in
+                begin_block INCONSISTENT 0;
+                pbegin addparens;
+                pr_term t2 prec lprec prec (depth - 1);
+                add_string fldtok;
+                add_break(0,0);
+                add_string fldname;
+                pend addparens;
+                end_block (); raise SimpleExit
+              end
+              else ()
+          | NONE => ()
+        end
+        else ()
+
       val prec = Prec(comb_prec, fnapp_special)
       val lprec = if addparens then Top else lgrav
       val rprec = if addparens then Top else rgrav

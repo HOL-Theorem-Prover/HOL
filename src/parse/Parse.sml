@@ -288,6 +288,7 @@ in
           ("Grammar introduces precedence conflict between tokens "^
            term_grammar.STtoString G st1^" and "^
            term_grammar.STtoString G st2)
+           | ParseTermError s => raise ERROR "Term" s
   in
     fn q => let
       val ((cs, p), _) = pt (q, PStack {lookahead = [], stack = [],

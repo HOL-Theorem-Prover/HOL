@@ -51,7 +51,7 @@ open HOLgrammars
 
 val fnapp_special = "_ fnapp"
 val bracket_special = "_ bracket"
-val rec_special = "_ record select"
+val recsel_special = "_ record select"
 val vs_cons_special = " _ vs cons"
 val resquan_special = " _ res quan special"
 val nat_elim_term = " _ elim_nat"
@@ -211,7 +211,7 @@ fun STtoString (G:grammar) x =
   | Id => "<identifier>"
   | TypeColon => #type_intro (#specials G)
   | TypeTok => "<type>"
-  | EndBinding => #endbinding (#specials G)
+  | EndBinding => #endbinding (#specials G) ^ " (end binding)"
   | ResquanOpTok => #res_quanop (#specials G)^" (res quan operator)"
 
 val std_binder_precedence = 0

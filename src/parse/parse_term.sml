@@ -1,6 +1,7 @@
 open monadic_parse optmonad term_tokens term_grammar HOLgrammars
 infix >> >- ++ >->
 
+exception ParseTermError of string
 type 'a token = 'a term_tokens.term_token
 
 fun member x [] = false
@@ -974,7 +975,14 @@ fun remove_specials t =
         in
           if s = fnapp_special then COMB(remove_specials f, remove_specials t2)
           else
-            COMB(remove_specials t1, remove_specials t2)
+            if s = recsel_special then
+              case t2 of
+                VAR fldname => COMB(VAR (recsel_special ^ fldname),
+                                    remove_specials f)
+              | _ => raise ParseTermError
+                  "Record selection must have single id to right"
+            else
+              COMB(remove_specials t1, remove_specials t2)
         end
       | _ => COMB(remove_specials t1, remove_specials t2)
     end

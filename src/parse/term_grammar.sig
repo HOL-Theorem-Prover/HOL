@@ -23,7 +23,7 @@ in
   val bracket_special : string
   val vs_cons_special : string
   val resquan_special : string
-  val rec_special : string
+  val recsel_special : string
   val std_binder_precedence : int
 
   val nat_elim_term : string

@@ -29,6 +29,7 @@ signature parse_term = sig
     val pstack : 'a PStack -> ('a stack_item * 'a lookahead_item) list
 
     exception PrecConflict of stack_terminal * stack_terminal
+    exception ParseTermError of string
 
     val parse_term :
       grammar -> (TCPretype.pretype, ''a frag) Parser ->
