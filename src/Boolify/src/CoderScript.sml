@@ -45,7 +45,7 @@ val wf_coder_def =
        bool list -> 'a
  ---------------------------------------------------------------------------*)
 
-val decode_def = Define `decode f = FST o THE o f`;
+val decode_def = Define `decode f x = FST (THE (f x))`;
 
 (*---------------------------------------------------------------------------
      Well-formed coders have nice properties for boolification.
@@ -61,7 +61,7 @@ val decode_encode = store_thm
     PROVE_TAC [APPEND_NIL]) ++
    POP_ASSUM MP_TAC ++
    Cases_on `x'` ++
-   SIMP_TAC std_ss [decode_def, o_THM] ++
+   SIMP_TAC std_ss [decode_def] ++
    RW_TAC std_ss [enc2dec_some] ++
    MP_TAC (Q.SPECL [`p`, `e`] wf_encoder_def) ++
    RW_TAC std_ss [] ++
@@ -178,6 +178,15 @@ val wf_coder_list = store_thm
    ++ FULL_SIMP_TAC std_ss [wf_coder_def, wf_encode_list]
    ++ Induct
    ++ RW_TAC std_ss [encode_list_def, EVERY_DEF, dec2enc_enc2dec]);
+
+(*---------------------------------------------------------------------------
+     Num coders (Norrish numerals)
+ ---------------------------------------------------------------------------*)
+
+val wf_coder_num = store_thm
+  ("wf_coder_num",
+   ``!p. wf_coder p encode_num (decode_num p)``,
+   RW_TAC std_ss [wf_encode_num, decode_num_def, wf_coder_def]);
 
 (*---------------------------------------------------------------------------
      Tree coders

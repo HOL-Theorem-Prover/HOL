@@ -722,7 +722,43 @@ val dec2enc_decode_num = store_thm
    ``!p x. p x ==> (dec2enc (decode_num p) x = encode_num x)``,
    RW_TAC std_ss [decode_num_def, dec2enc_enc2dec, wf_encode_num]);
 
-(*
+val decode_num_total = store_thm
+  ("decode_num_total",
+   ``decode_num (K T) l =
+     case l of
+        (T :: T :: t) -> SOME (0, t)
+     || (T :: F :: t) ->
+        (case decode_num (K T) t of NONE -> NONE
+         || SOME (v, t') -> SOME (2 * v + 1, t'))
+     || (F :: t) ->
+        (case decode_num (K T) t of NONE -> NONE
+         || SOME (v, t') -> SOME (2 * v + 2, t'))
+     || _ -> NONE``,
+   (REPEAT CASE_TAC
+    ++ REPEAT (POP_ASSUM MP_TAC)
+    ++ RW_TAC std_ss
+       [decode_num_def, enc2dec_none, K_THM, enc2dec_some, wf_encode_num]) <<
+   [ONCE_REWRITE_TAC [encode_num_def]
+    ++ RW_TAC std_ss [APPEND],
+    ONCE_REWRITE_TAC [encode_num_def]
+    ++ RW_TAC std_ss [APPEND],
+    ONCE_REWRITE_TAC [encode_num_def]
+    ++ RW_TAC std_ss [APPEND],
+    ONCE_REWRITE_TAC [encode_num_def]
+    ++ RW_TAC std_ss [APPEND],
+    CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [encode_num_def]))
+    ++ RW_TAC arith_ss [APPEND, MULT_DIV, Q.SPECL [`2`, `q`] MULT_COMM]
+    ++ POP_ASSUM MP_TAC
+    ++ RW_TAC std_ss [GSYM ADD1, EVEN]
+    ++ PROVE_TAC [EVEN_DOUBLE, MULT_COMM],
+    ONCE_REWRITE_TAC [encode_num_def]
+    ++ RW_TAC std_ss [APPEND],
+    CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [encode_num_def]))
+    ++ RW_TAC arith_ss [APPEND, MULT_DIV, Q.SPECL [`2`, `q`] MULT_COMM]
+    ++ POP_ASSUM MP_TAC
+    ++ RW_TAC arith_ss [APPEND, GSYM MULT, Q.SPECL [`q`, `2`] MULT_COMM]
+    ++ PROVE_TAC [EVEN_DOUBLE]]);
+
 val decode_num = store_thm
   ("decode_num",
    ``decode_num p l =
@@ -737,96 +773,63 @@ val decode_num = store_thm
          || SOME (v, t') ->
             if p (2 * v + 2) then SOME (2 * v + 2, t') else NONE)
      || _ -> NONE``,
-   (REPEAT CASE_TAC ++
-    RW_TAC std_ss [decode_num_def, enc2dec_none]) <<
-   [ONCE_REWRITE_TAC [encode_num_def]
-    ++ RW_TAC std_ss [APPEND],
-    ONCE_REWRITE_TAC [encode_num_def]
-    ++ RW_TAC std_ss [APPEND],
-    RW_TAC std_ss [enc2dec_some, wf_encode_num]
+   (MP_TAC decode_num_total
+    ++ STRIP_TAC
+    ++ REPEAT CASE_TAC
+    ++ RW_TAC std_ss [decode_num_def, enc2dec_none]
+    ++ ASSUM_LIST (UNDISCH_TAC o concl o last)
+    ++ RW_TAC std_ss
+       [K_THM, decode_num_def, enc2dec_none, enc2dec_some, wf_encode_num]
+    ++ POP_ASSUM (fn th => REWRITE_TAC [SYM th])
     ++ ONCE_REWRITE_TAC [encode_num_def]
-    ++ RW_TAC std_ss [APPEND],
-    ONCE_REWRITE_TAC [encode_num_def]
-    ++ RW_TAC std_ss [APPEND]
-    ++ METIS_TAC [],
-    ONCE_REWRITE_TAC [encode_num_def]
     ++ RW_TAC std_ss [APPEND]
     ++ STRIP_TAC
+    ++ RW_TAC std_ss []) <<
+   [PROVE_TAC [],
+    Q.PAT_ASSUM `X = Y` MP_TAC
+    ++ Know `encode_num = dec2enc (decode_num (K T))`
+    >> (RW_TAC std_ss [decode_num_def]
+        ++ MATCH_MP_TAC EQ_EXT
+        ++ RW_TAC std_ss [dec2enc_enc2dec, K_THM, wf_encode_num])
     ++ RW_TAC std_ss []
-    ++ Suff `encode_num = dec2enc (decode_num (K T))`
-    >> (STRIP_TAC
-        ++ Q.PAT_ASSUM `X = NONE` MP_TAC
-        ++ RW_TAC std_ss []
-        ++ MP_TAC (Q.SPEC `K T` wf_decode_num)
-        ++ Q.SPEC_TAC (`decode_num (K T)`, `d`)
-        ++ Q.SPEC_TAC (`(x - 1) DIV 2`, `x`)
-        ++ POP_ASSUM_LIST (K ALL_TAC)
-        ++ REPEAT STRIP_TAC
-        ++ MP_TAC
-           (Q.SPECL [`K T`, `d`, `x`, `t`]
-            (INST_TYPE [alpha |-> ``:num``] decode_dec2enc_append))
-        ++ RW_TAC std_ss [K_THM])
-    ++ RW_TAC std_ss [decode_num_def]
-    ++ MATCH_MP_TAC EQ_EXT
-    ++ RW_TAC std_ss [dec2enc_enc2dec, K_THM, wf_encode_num],
-    ASM_SIMP_TAC std_ss [enc2dec_some, wf_encode_num, APPEND]
-    ++ ONCE_REWRITE_TAC [encode_num_def]
-    ++ RW_TAC arith_ss [APPEND, GSYM ADD1, EVEN_ODD, ODD_DOUBLE]
-    ++ ONCE_REWRITE_TAC [MULT_COMM]
-    ++ RW_TAC std_ss [MULT_DIV]
+    ++ MP_TAC (Q.SPEC `K T` wf_decode_num)
+    ++ Q.SPEC_TAC (`decode_num (K T)`, `d`)
+    ++ REPEAT STRIP_TAC
     ++ MP_TAC
-       (Q.SPECL [`K T`, `decode_num (K T)`]
-        (INST_TYPE [alpha |-> ``:num``] wf_decoder_def))
-    ++ ASM_SIMP_TAC std_ss [wf_decode_num]
-    ++ DISCH_THEN (MP_TAC o Q.SPEC `q`)
+       (Q.SPECL [`K T`, `d`, `(x - 1) DIV 2`, `t`]
+        (INST_TYPE [alpha |-> ``:num``] decode_dec2enc_append))
     ++ RW_TAC std_ss [K_THM]
-    ++ RES_TAC
-    ++ RW_TAC std_ss [APPEND_11]
-    ++ POP_ASSUM (MP_TAC o Q.SPECL [`a`, `[]`])
-    ++ RW_TAC std_ss [APPEND_NIL, decode_num_def, enc2dec_some, wf_encode_num],
-    ONCE_REWRITE_TAC [encode_num_def]
-    ++ RW_TAC std_ss [APPEND]
+    ++ REWRITE_TAC [GSYM DE_MORGAN_THM]
     ++ STRIP_TAC
     ++ RW_TAC std_ss []
-    ++ Q.PAT_ASSUM `X = SOME Y` MP_TAC
-    ++ MP_TAC
-       (Q.SPECL [`K T`, `decode_num (K T)`]
-        (INST_TYPE [alpha |-> ``:num``] wf_decoder_def))
-    ++ ASM_SIMP_TAC std_ss [wf_decode_num]
-    ++ DISCH_THEN (MP_TAC o Q.SPEC `q`)
-    ++ RW_TAC std_ss [K_THM]
+    ++ FULL_SIMP_TAC std_ss [EVEN_ODD, ODD_EXISTS]
+    ++ Q.PAT_ASSUM `~p X` MP_TAC
+    ++ RW_TAC arith_ss []
+    ++ RW_TAC arith_ss [MULT_DIV, Q.SPECL [`2`, `m`] MULT_COMM, GSYM ADD1]
+    ++ PROVE_TAC [MULT_COMM],
+    Q.PAT_ASSUM `X = Y` MP_TAC
+    ++ Know `encode_num = dec2enc (decode_num (K T))`
+    >> (RW_TAC std_ss [decode_num_def]
+        ++ MATCH_MP_TAC EQ_EXT
+        ++ RW_TAC std_ss [dec2enc_enc2dec, K_THM, wf_encode_num])
     ++ RW_TAC std_ss []
-    ++ 
-    ++ POP_ASSUM (MP_TAC o Q.SPECL [`a`, `[]`])
-    ++ RW_TAC std_ss [APPEND_NIL, decode_num_def, enc2dec_some, wf_encode_num],
-
-
-
-    ++ Know `decode_num (K T) q = a`
-    >> PROVE_TAC [APPEND_NIL, dec2enc_some, wf_decode_num] ++
-    RW_TAC std_ss [APPEND_11] ++
-    Q.PAT_ASSUM `!x. P x` (K ALL_TAC) ++
-    MP_TAC
-    (Q.ISPECL [`EVERY (p : 'a -> bool)`, `decode_num (EVERY p) d`]
-     wf_decoder_def) ++
-    ASM_SIMP_TAC std_ss [] ++
-    DISCH_THEN (MP_TAC o Q.SPEC `q'`) ++
-    RW_TAC std_ss [] ++
-    RES_TAC ++
-    RW_TAC std_ss [] ++
-    Q.PAT_ASSUM `!x. P x` (K ALL_TAC) ++
-    Q.PAT_ASSUM `X = Y` MP_TAC ++
-    ASM_SIMP_TAC std_ss [decode_num_def, enc2dec_some],
-    Know `wf_decoder (EVERY p) (decode_num (EVERY p) d)` >>
-    PROVE_TAC [wf_decode_num] ++
-    STRIP_TAC ++
-    Know `wf_encoder p (dec2enc d)` >> PROVE_TAC [wf_dec2enc] ++
-    STRIP_TAC ++
-    Know `wf_encoder (EVERY p) (encode_num (dec2enc d))` >>
-    PROVE_TAC [wf_encode_num] ++
-    STRIP_TAC ++
-    ASM_SIMP_TAC std_ss [enc2dec_some, encode_num_def, APPEND, EVERY_DEF]]);
-*)
+    ++ MP_TAC (Q.SPEC `K T` wf_decode_num)
+    ++ Q.SPEC_TAC (`decode_num (K T)`, `d`)
+    ++ GEN_TAC
+    ++ STRIP_TAC
+    ++ MP_TAC
+       (Q.SPECL [`K T`, `d`, `(x - 2) DIV 2`, `t'`]
+        (INST_TYPE [alpha |-> ``:num``] decode_dec2enc_append))
+    ++ RW_TAC std_ss [K_THM]
+    ++ REWRITE_TAC [GSYM DE_MORGAN_THM]
+    ++ STRIP_TAC
+    ++ RW_TAC std_ss []
+    ++ Cases_on `x` >> RW_TAC std_ss []
+    ++ FULL_SIMP_TAC std_ss [EVEN, EVEN_ODD, ODD_EXISTS]
+    ++ Q.PAT_ASSUM `~p X` MP_TAC
+    ++ RW_TAC arith_ss [ADD1]
+    ++ Q.PAT_ASSUM `p X` MP_TAC
+    ++ RW_TAC arith_ss [MULT_DIV, Q.SPECL [`2`, `m`] MULT_COMM, ADD1]]);
 
 (*---------------------------------------------------------------------------
      Trees
