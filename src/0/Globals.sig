@@ -2,7 +2,7 @@
 (* FILE          : Globals.sig                                           *)
 (* DESCRIPTION   : Signature for global flags.                           *)
 (*                                                                       *)
-(* AUTHOR        : Ken Larsen, University of Cambridge                   *) 
+(* AUTHOR        : Ken Larsen, University of Cambridge                   *)
 (*                 Based on globals.sig by                               *)
 (*                 (c) Konrad Slind, University of Calgary               *)
 (* DATE          : September 22, 1997                                    *)
@@ -57,13 +57,11 @@ sig
                   stack_infixes :bool ref,
                   in_at_end : bool ref}
 
-  val reserved_identifiers : {symbolic : string list, 
+  val reserved_identifiers : {symbolic : string list,
                               alphanumeric : string list}
 
-  val neg_defined            : unit -> bool
   val nums_defined           : unit -> bool
   val strings_defined        : unit -> bool
-  val assert_neg_defined     : unit -> unit
   val assert_nums_defined    : unit -> unit
   val assert_strings_defined : unit -> unit
 
