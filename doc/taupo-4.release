@@ -28,6 +28,11 @@ New features:
     with treatments of BIGUNION (union of a set of sets) and set
     cross-product.  A variety of new theorems about these and
     treatments of finiteness have been added as well.
+  * Holmake can now be run in "fast mode".  This mode of operation
+    causes the prove and store_thm functions to call mk_thm rather
+    than evaluate tactics.  This can dramatically speed up the
+    rebuilding of theories.  Of course, this is unsound, and marked as
+    such with the "fast_proof" oracle tag.
 
 New theories:
 -------------
