@@ -1827,6 +1827,13 @@ val INT_MOD_NEG = store_thm(
     ]
   ]);
 
+val INT_DIV_MUL_ID = store_thm(
+  "INT_DIV_MUL_ID",
+  Term`!p q. ~(q = 0) /\ (p % q = 0) ==> (p / q * q = p)`,
+  REPEAT STRIP_TAC THEN
+  `p = p/q * q + p % q` by PROVE_TAC [INT_DIVISION] THEN
+  `p = p / q * q` by PROVE_TAC [INT_ADD_RID] THEN
+  PROVE_TAC []);
 
 (*----------------------------------------------------------------------*)
 (* Define absolute value                                                *)
@@ -1880,6 +1887,13 @@ val INT_ABS_ABS = store_thm(
     FULL_SIMP_TAC bool_ss [INT_NOT_LE, INT_ABS, INT_NEGNEG, INT_NEG_LT0,
                            INT_LT_GT]
   ]);
+
+val INT_ABS_EQ_ID = store_thm(
+  "INT_ABS_EQ_ID",
+  Term`!p. (ABS p = p) = (0 <= p)`,
+  GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
+  SIMP_TAC int_ss [INT_ABS_NUM, INT_ABS_NEG, INT_LE, INT_NEG_SAME_EQ,
+                   INT_NEG_GE0, INT_INJ]);
 
 val INT_ABS_MUL = store_thm(
   "INT_ABS_MUL",
@@ -2141,6 +2155,14 @@ val INT_MOD_UNIQUE = store_thm(
   `p / q = k` by PROVE_TAC [INT_DIV_UNIQUE] THEN
   POP_ASSUM SUBST_ALL_TAC THEN
   PROVE_TAC [INT_EQ_SUB_LADD, INT_ADD_SYM]);
+
+val INT_MOD_ID = store_thm(
+  "INT_MOD_ID",
+  Term`!p. ~(p = 0) ==> (p % p = 0)`,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC INT_MOD_UNIQUE THEN CONJ_TAC THENL [
+    PROVE_TAC [INT_LE_LT, INT_ABS_POS, INT_ABS_EQ0, INT_ABS_NUM],
+    Q.EXISTS_TAC `1` THEN REWRITE_TAC [INT_MUL_LID, INT_ADD_RID, INT_LE_REFL]
+  ]);
 
 val INT_ABS_MOD_LT = store_thm(
   "INT_ABS_MOD_LT",
