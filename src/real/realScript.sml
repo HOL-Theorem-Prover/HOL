@@ -3287,9 +3287,11 @@ val REAL_ADD_SUB_ALT = store_thm
    Joe Hurd's development of the positive reals with an infinity
   ---------------------------------------------------------------------- *)
 
-local open markerTheory in end; (* for unint *)
+(* local open markerTheory in end; (* for unint *) *)
 
-val ui = markerTheory.unint_def
+val ui = Define `unint x = x`;
+
+(* val ui = markerTheory.unint_def *)
 
 val add_rat = store_thm(
   "add_rat",
