@@ -624,9 +624,9 @@ end;
  *---------------------------------------------------------------------------*)
 
 infixr 3 ==;
-infixr 3 ==>;
-infixr 3 /\;
-infixr 3 \/;
+infixr 4 ==>;
+infixr 5 \/;
+infixr 6 /\;
 infixr 3 -->;
 infixr 3 THENC;
 infixr 3 ORELSEC;
@@ -1501,7 +1501,7 @@ fun nBETA_CONV dpth n =
 val notT_and = prove(gen_all ((mk_neg T /\ bn 1) == mk_neg T),
                               REWRITE_TAC []);
 (* !x. ~~T /\ x = x *)
-val notnotT_and = prove(gen_all ((mk_neg (mk_neg T)) /\ bn 1 == bn 1),
+val notnotT_and = prove(gen_all (((mk_neg (mk_neg T)) /\ bn 1) == bn 1),
                         REWRITE_TAC []);
 (* !x. T /\ x = x *)
 val T_and = prove(gen_all (T /\ bn 1 == bn 1), REWRITE_TAC []);
