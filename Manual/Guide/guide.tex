@@ -1,0 +1,1623 @@
+% =====================================================================
+% HOL Manual LaTeX Source: notes for authors of reference manual
+% =====================================================================
+
+\documentclass[12pt]{article}
+
+\usepackage{fleqn}
+\usepackage{alltt}
+\usepackage{,../LaTeX/layout}
+
+% ---------------------------------------------------------------------
+% Read in defined macros and commands
+% ---------------------------------------------------------------------
+\input{../LaTeX/commands}
+\input{../LaTeX/ref-macros}
+
+% ---------------------------------------------------------------------
+% Define a few local macros
+% ---------------------------------------------------------------------
+
+\def\id{{$\langle${\it id\/}$\rangle$}}
+\def\th{{$\langle${\it th\/}$\rangle$}}
+\def\file{{$\langle${\it file}$\rangle$}}
+\def\filen#1{{$\langle${\it file} #1$\rangle$}}
+\def\doc{{\tt .doc}}
+\def\jac{{\tt .jac}}
+\def\bnum#1{{\raise0.6pt\hbox{(}#1\raise0.6pt\hbox{)}}}
+\def\latex{{\LaTeX}}
+\def\sp{\hspace*{3.5mm}}
+
+\def\vsp{{\tt\char`\ }}
+\def\bk{{\tt\char`\\ }}
+\def\lb{{\tt\char`\{}}
+\def\rb{{\tt\char`\}}}
+\def\meta#1{\(\langle\){\it #1}\(\rangle\)}
+
+\begin{document}
+
+   \setlength{\unitlength}{1mm}           % unit of length = 1mm
+   \setlength{\baselineskip}{16pt}        % line spacing   = 16pt
+   \pagestyle{plain}                      % foot = page number
+
+% ---------------------------------------------------------------------
+% Title
+% ---------------------------------------------------------------------
+
+\vskip20mm
+
+\begin{center}
+\LARGE \bf Authors' Guide\\
+to writing\\
+HOL Documentation
+\end{center}
+
+\vskip20mm
+
+\section*{Introduction}
+
+This note describes the organization of the \HOL\ documentation and the
+conventions used in it.  It also explains how to write entries for the
+reference manual and how to write documentation for libraries.  All authors of
+reference manual entries and library documentation should read this document
+carefully before starting to write.  General users of the system may find the
+beginning sections of this note useful when they wish to typeset the \HOL\
+documentation at their site.
+
+\section{Structure of the HOL documentation}
+
+The \HOL\ system documentation consists of three volumes:
+
+\begin{itemize}
+
+\item \TUTORIAL, which contains a brief tutorial introduction to the \HOL\
+system. This is intended to be the first item read by new users of \HOL\ and
+provides a self-study introduction to the structure and use of the system.
+
+\item \DESCRIPTION, which is intended to serve both as a systematic definition
+and description of the \HOL\ system, and as an advanced guide for users with
+some prior experience of the system.
+
+\item \REFERENCE, which provides full reference documentation in the form of
+individual descriptions for all the predefined \ML\ variable bindings in the
+\HOL\ system.
+
+\end{itemize}
+
+\noindent In addition, there is a separate volume which is not, strictly
+speaking, part of the \HOL\ manual set, but which is also described in this
+note:
+
+\begin{itemize}
+
+\item \LIBRARIES. This consists of stand-alone documentation for each of the
+libraries distributed in the \HOL\ system library.
+
+\end{itemize}
+
+\noindent The documentation in this \LIBRARIES\ volume is written by the
+contributors of the coresponding \HOL\ system libraries.
+
+\section{Structure of the documentation directories}
+
+Most of the \LaTeX\ sources for \HOL\ system documentation reside in the
+subdirectory {\tt Manual} of the main \HOL\ distribution directory.  Certain
+source files for the \REFERENCE\ volume reside in the directory {\tt help}. The
+reason for this and for the organization of these files is described later in
+this document.  For similar reasons, also explained later, much of the
+\LIBRARIES\ volume resides in the {\tt Library} directory.
+
+The {\tt Manual} directory contains the following subdirectories:
+
+\begin{itemize}
+
+\item {\tt Description}: \LaTeX\ sources for the \DESCRIPTION\ volume
+of the documentation.
+
+\item {\tt Tutorial}: \LaTeX\ sources for the \TUTORIAL\ volume
+of the documentation.
+
+\item {\tt Reference}: \LaTeX\ sources for the \REFERENCE\ volume
+of the documentation.
+
+\item {\tt Libraries}: {\tt Makefile} for the \LIBRARIES\ volume
+of the documentation.
+
+\item {\tt Covers}: \LaTeX\ and PostScript sources for cover pages
+for all volumes of the manual.
+
+\item {\tt LaTeX}: \LaTeX\ style and macro files for the \HOL\ documentation.
+
+\item {\tt Reference/bin}: various sed and shell scripts needed to build the
+reference manual.
+
+\item {\tt Guide}: the \LaTeX\ source for the present document.
+
+\end{itemize}
+
+\noindent Each of these subdirectories contains a {\tt READ-ME} file explaining
+its contents.  Authors working on parts of the \HOL\ documentation in these
+directories are advised to first read the appropriate {\tt READ-ME} files.
+
+\section{Typesetting the HOL documentation}
+
+Each volume of the \HOL\ documentation is typeset using \LaTeX.  More
+specifically, the documentation is designed to be typeset with \LaTeX\ version
+2.09 of 7 Dec 1989, based on \TeX, the C version 3.0. Building the
+documentation also requires the `{\tt makeindex}' program (portable version
+2.4). The script {\tt Manual/LaTeX/makeindex} will run the appropriate binary
+from {\tt Manual/LaTeX/makeindex.bin} if it is present. If not, then an
+appropriate warning will result: in this case the user should build a binary
+from the sources in {\tt Manual/LaTeX/makeindex.src} (instructions are
+included) and place it in the directory {\tt Manual/LaTeX/makeindex.bin}.
+The \TeX\ psfig macros are required for the fancy cover pages.  See
+Section~\ref{PS} below for further information on this.
+
+The following sections describe how to obtain typeset versions of each of the
+four volumes of the \HOL\ system documentation.
+
+\subsection{Choice of paper size}
+
+The \HOL\ documentation is designed to be printed either on ISO A4 sized
+paper (297mm high by 210mm wide) or on American 8.5 by 11 inch paper. The
+pagination and text size is designed to be identical in both formats.
+
+Before typesetting any part of the documentation, the choice of paper size must
+be set by editing the style file {\tt Manual/LaTeX/layout.sty}.  Near the top
+of this file there is the declaration of a \LaTeX\ boolean flag `{\tt Afour}'
+followed by a command to set the flag. One may select the paper size by editing
+this command.  For A4 size paper, the appropriate command is `{\tt \bk
+Afourtrue}' (the distribution default).  For American paper, the command should
+be `{\tt \bk Afourfalse}'.
+
+\subsection{Makefile for typesetting the HOL documentation}
+
+The {\tt Makefile} in the {\tt Manual} directory allows one to typeset all four
+volumes of the \HOL\ documentation with a single command. When working in the
+{\tt Manual} directory, one can type `{\tt make all}' to create typeset
+versions of the documentation from scratch.  Note that the desired paper size
+should be set before doing this (see above).  After \LaTeX\ has typeset the
+documentation, the following {\tt dvi} files will have been created:
+
+\begin{itemize}
+
+\item {\tt Tutorial/tutorial.dvi}: the typeset \TUTORIAL\ volume.
+
+\item {\tt Description/description.dvi}: the typeset \DESCRIPTION\ volume.
+
+\item {\tt Reference/reference.dvi}: the typeset \REFERENCE\ volume.
+
+\item {\tt Libraries/libraries.dvi}: a typeset titlepage and preface for the
+\LIBRARIES\ volume.
+
+\end{itemize}
+
+\noindent Additionally, the files {\tt Covers/endpages.ps} and
+{\tt Covers/titlepages.ps} should also be present.  These are the PostScript
+versions of the cover pages for the manual volumes.  All these documents are
+then ready to be printed on a laser-printer. Note
+that some of them are rather long, and therefore not lightly to be printed.
+
+\subsection{Typesetting the tutorial volume}
+
+The {\tt Makefile} in the {\tt Tutorial} directory is used to typeset the
+\TUTORIAL\ volume of the \HOL\ documentation.  Working in the {\tt Tutorial}
+directory, the {\tt make} commands that are implemented are the following:
+
+\begin{enumerate}
+
+\item Type `{\tt make clean}' to remove all traces of previous executions of
+\LaTeX\ in this directory.  This removes all files with suffixes {\tt .dvi},
+{\tt .aux}, {\tt .toc} and {\tt .log}.
+
+\item Type `{\tt make tutorial}' to typeset the \TUTORIAL\ volume using \latex.
+
+\item Type `{\tt make all}' to typeset the \TUTORIAL\ volume completely from
+scratch, running it through \latex\ twice to ensure consistency of the
+references.
+
+\end{enumerate}
+
+\noindent Note that, as usual, {\tt latex} must be run at least twice to
+guarantee that various forms of reference (i.e.\ citataions, page references,
+entries in the table of contents and so on) are consistent.  The command `{\tt
+make tutorial}' (number \bnum{2} above) runs the tutorial volume through
+\LaTeX\ only once.  One may therefore have to type {\tt make tutorial} more
+than once to guarantee a correct result (twice should be sufficient).  Typing
+`{\tt make all}' is guaranteed to typeset the \TUTORIAL\ volume correctly and
+completely from scratch.
+
+\subsection{Typesetting the description volume}
+
+The {\tt Makefile} in the {\tt Description} directory is used to typeset the
+\DESCRIPTION\ volume of the \HOL\ documentation.  Working in the {\tt
+Description} directory, the {\tt make} commands that are implemented are the
+following:
+
+\begin{enumerate}
+
+\item Type `{\tt make clean}' to remove all traces of previous executions of
+\LaTeX\ in the {\tt Description} directory.  This removes all files with
+suffixes {\tt .dvi}, {\tt .aux}, {\tt .toc}, {\tt .log}, {\tt .idx} and {\tt
+.ilg}.
+
+\item Type `{\tt make description}' to typeset the \DESCRIPTION\ volume using
+\latex.
+
+\item Type `{\tt make index}' to create the \DESCRIPTION\ index.  This creates
+the \LaTeX\ source file {\tt index.tex} using the program {\tt makeindex}.
+
+\item Type `{\tt make all}' to typeset the \DESCRIPTION\ volume completely from
+scratch, running it through \latex\ twice to ensure consistency of the
+references and the index.
+
+\end{enumerate}
+
+\noindent As usual, {\tt latex} must be run at least twice to guarantee that
+various forms of reference are consistent.  The command `{\tt make
+description}' runs the \DESCRIPTION\ through \LaTeX\ only once and does not
+create the index file.  One may therefore have to type {\tt make description}
+then {\tt make index} and then {\tt make description} again in order to
+guarantee a correct result (running \DESCRIPTION\ through \LaTeX\ twice should
+be sufficient).  Typing `{\tt make all}' is guaranteed to typeset the
+\DESCRIPTION\ volume correctly (including index) and completely from scratch.
+
+
+\subsection{Typesetting the reference manual}\label{ref-make-all}
+
+The {\tt Makefile} in the {\tt Reference} directory contains entries to typeset
+the entire \REFERENCE\ manual from scratch, as well as entries for the
+individual steps required in this process.  For a full description of the {\tt
+make} facilities for \REFERENCE, see section~\ref{ref-make} below; only the
+{\tt make} facility for building the entire manual is described here.  Working
+in the {\tt Reference} directory, the {\tt make} command for typesetting
+\REFERENCE\ is:
+
+\begin{itemize}
+
+\item Type `{\tt make all}' to create the \LaTeX\ sources for the \REFERENCE\
+volume and typeset it completely from scratch, running it through \latex\ twice
+to ensure consistency of the references and the index.
+
+\end{itemize}
+
+\noindent Typing `{\tt make all}' is guaranteed to typeset \REFERENCE\
+correctly, with all index and page entries resolved, and to rebuild it
+completely from scratch.
+
+\subsection{Typesetting the library documentation}
+
+Library documentation for a particular library may be typeset by entering the
+{\tt Manual} subdirectory {\it of the relevant library directory} and typing
+{\tt make all}. The procedure is essentially the same as that for typesetting
+one of the main \HOL\ manuals.
+
+To make all the library manuals, go into the directory {\tt Manual/Libraries}
+and type {\tt make all}. This will build manuals for all libraries which have
+them. Currently, many libraries do not have proper manuals. It is intended that
+all new libraries should eventually have a proper manual. One or two older
+libraries (such as {\tt unwind}) have had a manual written for them.
+
+More details on {\tt writing} library documentation are given in a later
+section. Again, the intention is that the format should correspond closely to
+that for the main documentation.
+
+\subsection{Typesetting the cover pages}\label{PS}
+
+The {\tt Makefile} in the {\tt Covers} directory is used to typeset the
+fancy cover pages for all the volumes in the \HOL\ documentation.  Working in
+the {\tt Covers} directory, the {\tt make} variables used are:
+
+\begin{enumerate}
+
+\item {\small LATEX}:  the \LaTeX\ command.
+
+\item {\small DVI2PS}: name of the {\small DVI} to PostScript converter.
+
+\item {\small DVI2PSOPTS}: options given to {\small DVI2PS}.
+
+\end{enumerate}
+
+\noindent and the commands that are implemented are the following:
+
+\begin{enumerate}
+
+\item Type `{\tt make clean}' to remove all traces of previous executions of
+\LaTeX\ in the {\tt Covers} directory.  This removes all files with
+suffixes {\tt .dvi}, {\tt .aux}, {\tt .toc}, {\tt .log}, {\tt .idx} and {\tt
+.ilg}.
+
+\item Type `{\tt make all}' to typeset the fancy cover pages using
+\latex and {\small DVI2PS}.
+
+\end{enumerate}
+
+\noindent {\tt latex} needs to be run only once, and {\small DVI2PS} must
+be able to understand the \TeX\ psfig macros.  We supply a version of
+the macros, and information on obtaining conversion programs in the
+directory {\tt Covers/psfig}.
+
+\section{Structure of the reference manual}
+
+The manual is organized into three chapters.  Chapter 1 provides manual entries
+for all the pre-defined \ML\ identifiers in the \HOL\ system, except the
+identifiers that are bound to pre-proved theorems. These include:
+general-purpose functions, such as \ML\ functions list processing, arithmetic,
+input/output, and interface configuration; functions for processing the types
+and terms of the \HOL\ logic, for setting up theories, and for using the
+subgoal package; primitive and derived forward inference rules; and tactics and
+tacticals.  The arrangement of this chapter is strictly alphabetical.
+
+Chapter 2 lists all pre-proved theorems built into the system, \mbox{together}
+with the \ML\ identifiers to which they are bound. These are grouped into
+sections, based on the `subject matter' of the theorems.  The sections
+describing groups of theorems more or less mirror the \HOL\ theories that
+contain these theorems.
+
+Chapter 3 is the index, which is automatically generated.
+
+\section{Structure of the reference manual directory}
+
+The reference manual for the system is distributed along with the \HOL\ sources
+in the directories {\tt hol/Manual/Reference} and {\tt hol/help}.  Each
+predefined \ML\ identifier \id\ should have, somewhere within the directory
+{\tt hol/help}, a corresponding file \id\doc\ that documents it. This file is
+used to generate the \latex\ source for the manual entry on the identifier \id.
+A specification of the format of \id\doc\ files and an explanation of how they
+are converted into \latex\ sources are given in the sections that follow.
+
+Note that a few characters cannot conveniently be used in filenames, so
+the filename does not follow the \id\doc\ scheme. This will certainly not
+affect alphanumeric identifiers, and library documenters will not generally
+have much to worry about.
+
+Note that entries do not exist for ML keywords such as {\tt let} and {\tt or}.
+These are not strictly identifiers. However there is an entry for {\tt do},
+because although it is an ML keyword, it is also an identifier.
+
+The source files for the manual are in the following subdirectories of the
+directory {\tt hol/help}:
+
+\vspace*{4mm plus2mm minus2mm}
+
+\noindent\begin{tabular}{@{\qquad}l@{\hskip4mm ---\hskip4mm}l@{}}
+
+   {\tt ENTRIES}   & all non-theorem identifiers (chapter 1)\\
+   {\tt THEOREMS}  & pre-proved theorems (chapter 2)
+
+\end{tabular}
+
+\vspace*{4mm plus2mm minus2mm}
+
+\noindent The directory {\tt ENTRIES}, simply contains a \doc\ file for each
+relevant \ML\ identifier in the system.  The directory {\tt THEOREMS} contains
+further subdirectories.  These correspond to a classification of built-in
+theorems by subject matter:
+
+\vspace*{4mm plus2mm minus2mm}
+
+\noindent\begin{tabular}{@{\qquad}l@{\hskip4mm ---\hskip4mm}l@{}}
+
+   {\tt arith}          & theorems about arithmetic\\
+   {\tt axioms}         & axioms of the \HOL\ logic \\
+   {\tt basic-logic}    & definitions basic logical constants \\
+   {\tt combin}         & theorems about combinators \\
+   {\tt functions}      & basic theorems about functions \\
+   {\tt list}           & theorems about lists \\
+   {\tt logic}          & logical tautologies  \\
+   {\tt one}            & theorems about the type \ml{one} \\
+   {\tt pairs}          & theorems about pairs \\
+   {\tt sum}            & theorems about disjoint sums \\
+   {\tt tree}           & theorems about trees \\
+   {\tt tydefs}         & theorems used for type definitions
+
+\end{tabular}
+
+\vspace*{4mm plus2mm minus2mm}
+
+\noindent The manual entries for built-in theorems are in pretty much their
+final form, and these subdirectories contain a \doc\ file for every built-in
+theorem.
+
+The directory {\tt Reference/bin} contains various shell and {\tt sed} scripts
+that are used to generate the \LaTeX\ source for \REFERENCE\ from the \doc\
+files.  These programs are explained in more detail below.
+
+\section{Generation of the LaTeX source}
+
+Each \id\doc\ file is in a special format (described below), from which the
+\latex\ source for a manual entry on the \ML\ identifier \id\ can be generated.
+The file {\tt bin/doc-to-tex.sed} is the {\tt sed} script used generate \latex\
+source text from \doc\ files. Executing:
+
+\begin{itemize}
+\item {\tt sed -f bin/doc-to-tex.sed}\sp  \id\doc\sp {\tt >}\sp \file
+\end{itemize}
+
+\noindent will create a file called \file, containing a translation into
+\latex\ source text of the documentation on the identifier \id\ in the file
+\id\doc.  The shell script {\tt bin/doc-to-tex} finds, sorts and translates all
+\doc\ files in a given directory into LaTeX sources. This shell script is used
+to generate chapter 1 of the \REFERENCE\ manual.
+
+\subsection{Typesetting the entire manual}\label{ref-make}
+
+The {\tt Makefile} in the {\tt Reference} directory can be used to create the
+\latex\ source for the entire reference manual.  The command sequence for
+doing this, and then typesetting the reference manual, is as follows:
+
+\begin{enumerate}
+
+\item Type `{\tt make tex}' to create the \latex\ source for the finished
+manual entries.  This translates all \doc\ files into \latex\ and builds a
+source text for the entire manual from the results.
+
+\item Type `{\tt make reference}' to run the file {\tt reference.tex} through
+\latex\ to typeset the manual.
+
+\item Type `{\tt make index}' to create the \latex\ source for the index.
+
+\end{enumerate}
+
+\noindent Note that steps \bnum{1} and \bnum{2} must be done in that order.
+Note further that {\tt latex} must be run again after step \bnum{3} to
+guarantee that the index is consistent with the body of the text. Step \bnum{3}
+may, of course, be omitted until a final typeset version, complete with index,
+is required for printing.
+
+The \REFERENCE\ makefile also supports the command {\tt make all}, which is
+described above in section~\ref{ref-make-all}.
+
+\subsection{Typesetting individual manual entries}
+
+To facilitate the debugging of individual manual entries (\ie\ individual \doc\
+files), the shell script {\tt bin/mktex} is provided to generate a stand-alone
+\latex\ source file from individual \doc\ files.  Executing:
+
+\begin{itemize}
+\item {\tt mktex}\sp
+\filen{1}\sp \filen{2}\sp $\cdots$ \sp \filen{{\it n}}\sp {\tt >}\sp
+\file{\tt .tex}
+\end{itemize}
+
+\noindent Will translate the \doc\ files:
+
+\medskip
+
+\noindent \qquad \filen{1}\doc\sp\sp \filen{2}\doc\sp\sp $\cdots$ \sp\sp
+\filen{{\it n}}\doc
+
+\medskip
+
+\noindent into a stand-alone \latex\ source file called \file{\tt .tex}, which
+can then be run through \latex\ in order to inspect the typeset manual entries
+generated from these files.
+
+Note that the shell script {\tt mktex} assumes it is being run in the {\tt
+Reference} directory, and generates a \latex\ source which makes reference (via
+relative pathnames) to the directories {\tt ../LaTeX}.  To run \latex\ on the
+resulting {\tt .tex} file in any {\it other\/} directory, one must therefore
+edit the either the pathnames in this file or the pathnames in the script {\tt
+mktex} itself.  Furthermore, {\tt mktex} makes use of the {\tt sed} script {\tt
+bin/doc-to-tex.sed} (see above), which therefore must be present in a
+subdirectory {\tt bin} of the directory in which {\tt mktex} is run.
+
+Because of these pathname dependencies, it is intended that individual authors
+working on the reference manual entries will create their own versions of {\tt
+mktex} in their own file space.  The {\tt mktex} file in {\tt Reference/bin}
+should not itself be edited.
+
+\section{The format of {\tt .doc} files}
+
+Documentation for individual \ML\ bindings is written in a very rigid form.
+This is to enable both \latex\ source for the manual and a plain file for
+online documentation to be easily generated from a single source. The following
+sections describe this standard format for \doc\ files and explain the
+conventions adopted for the form and content of reference manual entries in
+general.
+
+In fact, there are really two distinct formats for \doc\ files:
+
+\begin{itemize}
+\item the format used to document pre-proved {\it theorems\/}, and
+\item the format used to document other \ML\ bindings (i.e.\ general-purpose
+\ML\ functions, logic functions, inference rules, tactics, and so on).
+\end{itemize}
+
+\noindent These are explained below in sections~\ref{thsec} and~\ref{othsec}
+respectively.  The format of \doc\ files for theorems is the simpler (and more
+rigid) of the two, so it is explained first.
+
+\subsection{The format of {\tt .doc} files for theorems}\label{thsec}
+
+The format of \doc\ files for theorems is simple.  For each theorem, there is
+a corresponding file called \meta{thmname}\doc, where \meta{thmname} is either
+the \ML\ identifier to which the theorem is bound (or will be bound by
+autoloading), or the name under which the theorem is stored in a theory file.
+The format of this \doc\ file is as shown below:
+
+\smallskip
+
+\begin{boxed}\begin{alltt}
+\bk{THEOREM}\vsp\meta{thmname}\vsp\meta{thyname}
+\(\vdots\)
+\bk{ENDTHEOREM}
+\end{alltt}\end{boxed}
+
+\smallskip
+
+\noindent where
+
+\begin{itemize}
+
+\item the two occurrences of \vsp\ are {\it required\/} single spaces,
+
+\item \meta{thmname} is the name of the theorem (as discussed above),
+
+\item \meta{thyname} is the name of the theory in which the theorem is stored,
+
+\item and the lines between {\small\verb!\THEOREM!} and
+{\small\verb!\ENDTHEOREM!} are the ascii representation of the theorem in
+question, as printed by the standard \HOL\ theorem pretty-printer.
+
+\end{itemize}
+
+\noindent No indentation should be added to the text of the theorem as printed
+by \HOL.  The theorem itself should be no more than 75 characters wide on any
+line (use \ml{set\_margin} if necessary).  Theorems should almost always be
+printed without type annotations (i.e.\ with the \ml{show\_types} flag off).
+An exception is made for theorems whose content is likely to be obscure unless
+type information is shown.  An example is the built-in theorem:
+
+\begin{hol}\begin{verbatim}
+   one_axiom   |- !(f:* -> one) (g:* -> one). f = g
+\end{verbatim}\end{hol}
+
+\noindent The meaning of this theorem is clear only when it is known that
+\ml{f} and \ml{g} are functions that yield values of type \ml{one}.  For
+theorems of this kind, the documentation should contain the result of
+pretty-printing the theorem with the \ML\ \ml{show\_types} flag turned on.
+
+There are certain theorems which  are bound to \ML\ identifiers when the
+system is built, but which are not stored in any theory file.  For these
+theorems, the \doc\ format is:
+
+\smallskip
+
+\begin{boxed}\begin{alltt}
+\bk{THEOREM}\vsp\meta{thmname}\vsp\bk{none}
+\(\vdots\)
+\bk{ENDTHEOREM}
+\end{alltt}\end{boxed}
+
+\smallskip
+
+\noindent That is, the string `{\small\verb!\none!}' takes the place of the
+theory name. This format should also be used in library documentation for
+theorems which are bound to \ML\ identifiers when a library is loaded, but
+which are not stored in the library in a theory file (this situation is
+expected to be rare).
+
+\subsubsection{Examples}
+
+Shown below is the \doc\ file for the built-in theorem \ml{PRIM\_REC\_THM}:
+
+\smallskip
+
+\begin{boxed}\begin{verbatim}
+\THEOREM PRIM_REC_THM prim_rec
+|- !x f.
+    (PRIM_REC x f 0 = x) /\
+    (!m. PRIM_REC x f(SUC m) = f(PRIM_REC x f m)m)
+\ENDTHEOREM
+\end{verbatim}\end{boxed}
+
+\smallskip
+
+\noindent The \meta{thmname} field in this file is  `\ml{PRIM\_REC\_THM}',
+and the \meta{thyname} field is the theory name `\ml{prim\_rec}'. When
+typeset in \latex, the reference manual entry generated from this \doc\ file
+looks like this:
+
+{\def\filbreak{\relax}
+\THEOREM PRIM\_REC\_THM prim\_rec
+|- !x f.
+    (PRIM_REC x f 0 = x) /\
+    (!m. PRIM_REC x f(SUC m) = f(PRIM_REC x f m)m)
+\ENDTHEOREM
+}\vspace{4mm plus2mm minus1mm}
+
+
+Here is an example showing the \doc\ file for a built-in theorem in which  the
+keyword `{\small\verb!\none!}' is used in the \meta{thyname} field:
+
+\smallskip
+
+\begin{boxed}\begin{verbatim}
+\THEOREM NOT_CLAUSES \none
+|- (!t. ~~t = t) /\ (~T = F) /\ (~F = T)
+\ENDTHEOREM
+\end{verbatim}\end{boxed}
+
+\smallskip
+
+\noindent When typeset, this entry looks like:
+
+{\def\filbreak{\relax}
+\THEOREM NOT\_CLAUSES {\none}
+|- (!t. ~~t = t) /\ (~T = F) /\ (~F = T)
+\ENDTHEOREM
+}\vspace{4mm plus2mm minus1mm}
+
+\noindent  The theory name `{\it none}' indicates that the theorem is not
+stored in any built-in theory.
+
+\subsubsection{Automatically-generated {\tt .doc} files for theorems}
+
+To make it easy to create documentation for theorems, there are two
+functions in the \texttt{Parse} structure to produce directories full
+of them.  The two functions are
+
+\begin{itemize}
+\item \ml{export\_theorems\_as\_docfiles}\sp\meta{directory}\sp
+  \meta{theorem list}
+
+\item \ml{export\_theory\_as\_docfiles}\sp\meta{directory}
+\end{itemize}
+
+\noindent The first takes a list of string-theorem pairs and writes
+them out to \texttt{.doc} files in the given directory.  The second
+does this for all of the axioms, theorems and definitions of the
+current theory.
+
+\subsection{The format of {\tt .doc} files for other identifiers}
+\label{othsec}
+
+In this section, the format and content of \doc\ files for \ML\ identifiers
+other than those bound to theorems is explained.  These identifiers are mostly
+the names of built-in \ML\ functions.  For each identifier \meta{name}, there
+will (eventually) be a corresponding file called \meta{name}\doc\footnote
+{Actually for some non-alphanumeric identifiers like {\tt /}, it is necessary
+to call the file something else.}.
+
+The general format of a \doc\ file is shown in Figure~\ref{doc-fig}.  The file
+has several fields, which must appear in the order shown below (though some of
+the fields are optional). The fields are identified by the keywords:
+
+\begin{itemize}
+\item {\small\verb!\DOC!}
+\item {\small\verb!\TYPE!} (or {\small\verb!\BLTYPE!} and {\small\verb!\ELTYPE!})
+\item {\small\verb!\SYNOPSIS!}
+\item {\small\verb!\KEYWORDS!}
+\item {\small\verb!\LIBRARY!} (present only in library documentation)
+\item {\small\verb!\DESCRIBE!}
+\item {\small\verb!\FAILURE!}
+\item {\small\verb!\EXAMPLE!}
+\item {\small\verb!\USES!}
+\item {\small\verb!\COMMENTS!}
+\item {\small\verb!\SEEALSO!}
+\item {\small\verb!\ENDDOC!}
+\end{itemize}
+
+The format and content of each of these fields is explained in detail in the
+sections that follow.
+
+\subsubsection{The {\tt {\char'134}DOC} line ({\it required})}
+
+The first line in each \doc\ file must have the form
+
+\medskip
+\noindent\qquad{\small\verb!\DOC!\vsp\meta{name}}
+\medskip
+
+\noindent where
+
+\begin{itemize}
+
+\item \vsp\ is a {\it required\/} single space, and
+
+\item \meta{name} is the \ML\ identifier being documented.
+
+\end{itemize}
+
+\noindent If the \ML\ identifier in the \meta{name} field stands for an infix
+\ML\ function, it should {\it not\/} be preceded by the dollar sign
+`{\small\verb!$!}'.  For example, the \meta{name} field for the tactical
+{\small\verb!THEN!} should simply be `{\small\verb!THEN!}' and not
+`{\small\verb!$THEN!}'.  The {\small\verb!\DOC!} line is a required field in
+every \doc\ file.  There must be exactly one blank line between it and the
+{\small\verb!\TYPE!} line.
+
+An example {\small\verb!\DOC!} line is shown below:
+
+\begin{boxed}\begin{verbatim}
+\DOC ACCEPT_TAC
+\end{verbatim}\end{boxed}
+
+\subsubsection{The {\tt {\char'134}TYPE} line ({\it required})}
+
+The third line in each \doc\ file must have the form
+
+\medskip
+\noindent\qquad{\small\verb!\TYPE!\vsp\verb!{!\meta{name}\vsp\ml{:}\vsp\meta{type}\verb!}!}
+\medskip
+
+\noindent where
+
+\begin{itemize}
+
+\item the three occurrences of \vsp\ are {\it required\/} single spaces,
+\item \meta{name} is the \ML\ identifier being documented, and
+\item \meta{type} is the type of the identifier being documented, usually
+precisely as printed by the system with \ML\ type abbreviations in force (see
+below).
+
+\end{itemize}
+
+\noindent If the \ML\ identifier in the \meta{name} field stands for an infix
+\ML\ function, it must be preceded by the dollar sign `{\small\verb!$!}'.  For
+example, the \meta{name} field for the tactical {\small\verb!THEN!} should be
+`{\small\verb!$THEN!}', not `{\small\verb!THEN!}'.  The {\small\verb!\TYPE!}
+line is  a required field in every \doc\ file.  There must be exactly one
+blank line between it and the line beginning `{\small\verb!\SYNOPSIS!}'.
+
+Occasionally the type may be too long to fit on one line. In such circumstances
+the name and type should be placed on one or more lines, sandwiched between
+{\small\verb!\BLTYPE!} and {\small\verb!\ELTYPE!} (`begin-long-type' and
+`end-long-type'), as follows:
+
+\medskip
+\noindent\qquad{\small\verb!\BLTYPE!}
+\par\noindent\qquad{\small\meta{name}\vsp\ml{:}\vsp\meta{type$_1$}}
+\par\noindent\qquad{\small\meta{type$_2$}}
+\par\noindent\qquad\vdots
+\par\noindent\qquad{\small\meta{type$_n$}}
+\par\noindent\qquad{\small\verb!\ELTYPE!}
+\medskip
+
+\noindent
+where \meta{type$_1$}, \ldots, \meta{type$_n$} represent the type broken onto
+$n$ lines. The type may begin on the second line if that is more appropriate;
+that is the \meta{name} field and the colon can appear on their own in the
+first line. When necessary, {\small\verb!\BLTYPE!} and {\small\verb!\ELTYPE!}
+should be used in place of {\small\verb!\TYPE!}, and all other conventions
+associated with {\small\verb!\TYPE!} should be adhered to when using them.
+
+An example {\small\verb!\TYPE!} line is shown below:
+
+\smallskip
+
+\begin{boxed}\begin{verbatim}
+\TYPE {ACCEPT_TAC : thm_tactic}
+\end{verbatim}\end{boxed}
+
+\smallskip
+
+The type quoted in the {\small\verb!\TYPE!} should almost always be precisely
+the type shown by the system.  An exception is made for types which if
+abbreviated by the built-in type abbreviations (e.g.\ {\small\verb!conv!}) may
+be misleading as to the nature of the \ML\ function in question.  For example,
+the type of {\small\verb!AP_THM!} is shown by the system as
+{\small\verb!thm -> conv!}, but in this case it is clearer to write
+{\small\verb!(thm -> term -> thm)!} since {\small\verb!AP_THM!} is not really a
+conversion-generating function.
+
+If the {\small\verb!\TYPE!} field differs from the type printed by the system,
+then the fact should be noted in the {\small\verb!\COMMENTS!} field.  Unless
+there is a very good reason, changing the types quoted by the system should be
+done in the following circumstances only:
+
+\begin{itemize}
+  \item Appearance of {\small\verb!goal!} when a
+        {\small\verb!term list # term!} has no real
+        correspondence with a goal, or anything to do with backwards
+        proof. A good example is {\small\verb!list_mk_forall!}.
+  \item Appearance of {\small\verb!conv!} when a {\small\verb!term -> thm!} is
+        not most
+        naturally thought of as a conversion. {\small\verb!ASSUME!} at
+        least fits uncontroversially into this category.
+\end{itemize}
+
+Most {\small\verb!\TYPE!} fields should agree precisely with the system
+(even up to bracketing and spacing). The shell script
+{\small\verb!bin/typecheck!} may therefore be used
+to check exact correspondence with system types automatically. It is not as
+robust as it could be, but at least it pinpoints mistakes and deliberate typing
+changes.  The script should be given as an argument the doc-files to be
+typechecked, for example `{\tt *.doc}'. The following example shows the form of
+the output, which is from {\tt diff(1)}.
+
+{\small \begin{verbatim}
+   /homes/jrh$ cd doc
+   /homes/jrh/doc$ typecheck *.doc
+   2c2
+   < ALPHA : (term -> term -> thm)
+   ---
+   > ALPHA : (term -> conv)
+   5,6c5,6
+   < AP_THM : (thm -> term -> thm)
+   < ASSUME : (term -> thm)
+   ---
+   > AP_THM : (thm -> conv)
+   > ASSUME : conv
+\end{verbatim}}
+
+\subsubsection{The {\tt {\char'134}SYNOPSIS} field ({\it required})}
+
+The {\small\verb!\SYNOPSIS!} field follows the blank line after the
+previous field, and must be present in every \doc\ file.  It
+consists of a line containing only the keyword `{\small\verb!\SYNOPSIS!}',
+followed by a {\it brief\/} description of the \ML\ identifier being
+documented. The text of this description should start on the line immediately
+following the line beginning `{\small\verb!\SYNOPSIS!}'.  There must be
+exactly one blank line between the text of the synopsis (which is indicated by
+three dots in Figure~\ref{doc-fig}) and the keyword of the field that
+follows.
+
+The synopsis should consist of at most one or two short sentences (or phrases)
+which provide a concise but accurate indication of the purpose or function of
+the \ML\ identifier being documented.  The aim of the synopsis is not to give
+a full specification or description, but merely to allow the reader to decide
+at a glance whether this item may provide the functionality that he or she is
+looking for. If at all possible, this should fit on one line on an 80-column
+display. Unless clearly inappropriate, the synopsis should use the the third
+person singular present tense, for example ``Solves any goal of the form
+\ldots'', ``Introduces an assumption \ldots'' or ``Performs the action
+corresponding to \ldots''. Consistency in this regard makes reading a lot of
+synopsis lines displayed by a help tool less tiresome for the user.
+
+An example {\small\verb!\SYNOPSIS!} field for the tactic
+{\small\verb!ACCEPT_TAC!} is shown below:
+
+\smallskip
+
+\begin{boxed}\begin{verbatim}
+\SYNOPSIS
+Solves a goal if supplied with the desired theorem (up to alpha-conversion).
+\end{verbatim}\end{boxed}
+
+\smallskip
+
+\subsubsection{The {\tt {\char'134}KEYWORDS} field ({\it optional})}
+
+This field is optional. It is intended simply to provide a list of relevant
+words which can be used by (existing or future) help tools to find an entry
+when you cannot remember the name, but do know the kind of thing you are
+looking for. The words should be written on the line(s) below, separated by
+commas and terminated by a period.
+
+Here is an example:
+
+\smallskip
+
+\begin{boxed}\begin{verbatim}
+\KEYWORDS
+assumptions, rewriting.
+\end{verbatim}\end{boxed}
+
+\smallskip
+
+\subsubsection{The {\tt {\char'134}LIBRARY} field ({\it optional})}
+
+This section is present {\it only} in library documentation, and should be
+followed by a single space and the name of the library. For example:
+
+\begin{boxed}\begin{verbatim}
+\LIBRARY reduce
+\end{verbatim}\end{boxed}
+
+\subsubsection{The {\tt {\char'134}DESCRIBE} field ({\it optional})}
+
+The {\small\verb!\DESCRIBE!} field consists of a line containing only the
+keyword `{\small\verb!\DESCRIBE!}', followed by a full description of the
+\ML\ identifier being documented. The {\small\verb!\DESCRIBE!} field is
+almost always a required field; it is omitted only when the item being
+documented is so simple that a complete description is already given by the
+{\small\verb!\SYNOPSIS!} field.  The text of the description should start on
+the line immediately following the line beginning
+`{\small\verb!\DESCRIBE!}'.  There must be exactly one blank line between
+the text of the description (which is indicated by three dots in
+Figure~\ref{doc-fig}) and the keyword of the field that follows.
+
+The aim of the {\small\verb!\DESCRIBE!} field is to give a complete and
+accurate specification of what the \ML\ function\footnote{\dots or other \ML\
+data object, but the vast majority of manual entries are for functions.} being
+documented does.  The description should not make reference to the \ML\ source
+code, and it should not depend on specific examples in which the function is
+used (these belong under {\small\verb!\EXAMPLES!}). Neither should the
+description discuss specific situations in which one might use the function in
+question (this belongs under {\small\verb!\USES!}).  Comments of a general
+nature (e.g.\ `this function really should be reimplemented to do so-and-so')
+belong under {\small\verb!\COMMENTS!}.  Failure may be mentioned when it plays
+a role in the function's behaviour when applied to arguments for which it is
+intended (e.g.\ when failure is used for backtracking, as in
+{\small\verb!REPEAT!} and {\small\verb!ORELSE!}).  But a description of
+failure due to incorrect use of the function (e.g.\ applying
+{\small\verb!dest_comb!} to a variable) does not belong here; this information
+should instead be given in the {\small\verb!\FAILURE!} field.
+
+As an example, here is the {\small\verb!\DESCRIBE!} field for
+{\small\verb!ACCEPT_TAC!}:
+
+\smallskip
+
+\begin{boxed}\begin{verbatim}
+\DESCRIBE
+{ACCEPT_TAC} maps a given theorem {th} to a tactic that solves any goal whose
+conclusion is alpha-convertible to the conclusion of {th}.
+\end{verbatim}\end{boxed}
+
+\smallskip
+
+\noindent The use of the braces `{\small\verb!{!}' and  `{\small\verb!}!}' in
+this example is explained below in Section~\ref{typesetting}.
+
+\subsubsection{The {\tt {\char'134}FAILURE} field ({\it required})}
+
+The {\small\verb!\FAILURE!} field consists of a line containing only the
+keyword `{\small\verb!\FAILURE!}', followed by a full (English language)
+specification of the conditions under which evaluation can fail when the \ML\
+identifier being documented is used.  The {\small\verb!\FAILURE!} field is
+required, even when the function being described cannot fail.  The text of the
+failure specification should start on the line immediately following the line
+beginning `{\small\verb!\FAILURE!}'.  There must be exactly one blank line
+between the text of this specification (which is indicated by three dots in
+Figure~\ref{doc-fig}) and the keyword of the field that follows.
+
+The {\small\verb!\FAILURE!} field should describe the conditions under which
+both failure and looping can occur.  For some functions, it may be difficult to
+give both necessary and sufficient conditions for failure.  For example, the
+first argument to the function {\small\verb!INDUCT_THEN!} should be a theorem
+of the form returned by the built-in function
+{\small\verb!prove_induction_thm!}.  If the supplied theorem does {\it not\/}
+have this form, {\small\verb!INDUCT_THEN!} will almost certainly fail.  It is,
+however, a feature of the way {\small\verb!INDUCT_THEN!} is implemented that
+this function may succeed, and even do the intended thing, when supplied with
+theorems whose form is not precisely that of a theorem proved by
+{\small\verb!prove_induction_thm!} (users should not depend on this).  The
+{\small\verb!\FAILURE!} field for {\small\verb!INDUCT_THEN!} should make this
+clear, perhaps by stating that this function succeeds when applied to theorems
+of the correct form, but `may' fail on other theorems. When the function being
+documented cannot fail, the formula `Never fails.' should be used.
+
+Here is an example {\small\verb!\FAILURE!} field for
+{\small\verb!ACCEPT_TAC!}:
+
+\smallskip
+
+\begin{boxed}\begin{verbatim}
+\FAILURE
+{ACCEPT_TAC th (A,g)} fails if the term {g} is not alpha-convertible to the
+conclusion of the supplied theorem {th}.
+\end{verbatim}\end{boxed}
+
+\smallskip
+
+\noindent The use of the braces `{\small\verb!{!}' and  `{\small\verb!}!}' in
+this example is explained below in Section~\ref{typesetting}.
+
+\subsubsection{The {\tt {\char'134}EXAMPLE} field ({\it optional})}
+
+The {\small\verb!\EXAMPLE!} field consists of a line containing only the
+keyword `{\small\verb!\EXAMPLE!}', followed by an illustrative example or
+examples of the use of the \ML\ identifier being documented.  The text of the
+example should start on the line immediately following the line beginning
+`{\small\verb!\EXAMPLE!}'.  There must be exactly one blank line between the
+text of this specification (which is indicated by three dots in
+Figure~\ref{doc-fig}) and the keyword of the field that follows.
+
+The {\small\verb!\EXAMPLE!} field is optional, and should be present only when
+an example will genuinely add to the reader's understanding.  In most cases,
+examples should be accompanied by a running commentary, with the actual \ML\
+code displayed (see section~\ref{typesetting}) when necessary. Examples should
+be constructed such that the reader can run them in a standard virgin \HOL\
+session.
+
+Examples should avoid using the subgoals package if possible (an exception is
+documenting the package itself). It is still preferable to give complete \ML\
+sessions, but if that is impractical, then give a slightly higher-level
+description of what is going on. An example is given below:
+
+\begin{boxed}\begin{verbatim}
+\EXAMPLE
+The goal:
+{
+   ?- ?x. x=T
+}
+\noindent can be solved by:
+{
+   EXISTS_TAC "T" THEN REFL_TAC
+}
+\end{verbatim}\end{boxed}
+
+\noindent Please remember the {\tt noindent} directive on intermediate
+non-verbatim lines, if there are any, and that all verbatim displays should be
+indented by 3 spaces.
+
+\subsubsection{The {\tt {\char'134}USES} field ({\it optional})}
+
+The {\small\verb!\USES!} field consists of a line containing only the keyword
+`{\small\verb!\USES!}', followed by a statement of common or typical uses of
+the \ML\ identifier being documented.  The text of the example should start on
+the line immediately following the line beginning `{\small\verb!\USES!}'.
+There must be exactly one blank line between the text of this specification
+(which is indicated by three dots in Figure~\ref{doc-fig}) and the keyword of
+the field that follows.
+
+The {\small\verb!\USES!} field is optional, and is likely to be present only
+for complex functions such as certain tactics and inference rules. In many
+cases, the {\small\verb!\SYNOPSIS!} will already have said everything that
+needs to be said about the uses of a function.  A {\small\verb!\USES!} field
+will not be needed in these cases.  The {\small\verb!\USES!} field should not
+simply state what the function in question does, but should describe general
+contexts in which it might be used.  For example, suppose that the
+{\small\verb!\SYNOPSIS!} for {\small\verb!SPEC!} is:
+
+\smallskip
+
+\begin{boxed}\begin{verbatim}
+\SYNOPSIS
+Specializes the leading universally-quantified variable of a theorem to a
+supplied value.
+\end{verbatim}\end{boxed}
+
+\smallskip
+
+\noindent In this case, the {\small\verb!\USES!} field should {\it not\/} be
+something like:
+
+\smallskip
+
+\begin{boxed}\begin{verbatim}
+\USES
+Used for specializing universally-quantified theorems.
+\end{verbatim}\end{boxed}
+
+\smallskip
+
+\noindent since this adds no information at all.  If anything, the
+{\small\verb!\USES!} field for {\small\verb!SPEC!} should be something like:
+
+\smallskip
+
+\begin{boxed}\begin{verbatim}
+\USES
+Obtaining specific instances of already proved theorems; implementing
+efficient derived inference rules by appeal to pre-proved general theorems.
+\end{verbatim}\end{boxed}
+
+\smallskip
+
+\noindent But, in the case of {\small\verb!SPEC!}, no {\small\verb!\USES!}
+field at all is probably more appropriate (in the above, the first `use' is
+still a paraphrase of the function of {\small\verb!SPEC!}; the second
+`use' is rather specific, and using {\small\verb!SPEC!} is only a very small
+part of this kind of activity).
+
+\subsubsection{The {\tt {\char'134}COMMENTS} field ({\it optional})}
+
+The {\small\verb!\COMMENTS!} field consists of a line containing only the
+keyword `{\small\verb!\COMMENTS!}', followed by any general remarks about the
+\ML\ identifier being documented that need to be made but do not belong
+elsewhere.  The text of the example should start on the line immediately
+following the line beginning `{\small\verb!\COMMENTS!}'.  There must be
+exactly one blank line between the text of this specification (which is
+indicated by three dots in Figure~\ref{doc-fig}) and the keyword of the field
+that follows.
+
+The {\small\verb!\COMMENTS!} field is optional, and should be used for general
+remarks about implementation matters, promises of future reimplementation,
+style (e.g.\ `don't use it' in the entry on {\small\verb!POP_ASSUM!}), and so
+on.
+
+Validity checking should not be mentioned in the comments section.  The
+composition of validity checking steps simply follows the composition of the
+justification functions created by tactics, so need not be mentioned
+separately.
+
+\subsubsection{The {\tt {\char'134}SEEALSO} field ({\it optional})}
+
+The {\small\verb!\SEEALSO!} field consists of a line containing only the
+keyword `{\small\verb!\SEEALSO!}', followed by list of manual entries
+relevant to the \ML\ identifier being documented.  The list of related entries
+should start on the line immediately following the line beginning
+`{\small\verb!\EXAMPLE!}'.  The list itself should consist of a sequence of
+\ML\ identifiers in alphabetical order, separated by commas and (always)
+terminated by a full stop.  There must be exactly one blank line between this
+list (which is indicated by three dots in Figure~\ref{doc-fig}) and the
+keyword of the field that follows.
+
+When deciding whether to add a cross-reference to the {\verb!SEEALSO!} field,
+follow the rule: {\em if in doubt, add it}. Note that cross-references must
+always be ordered alphabetically.
+
+Here is a sample {\small\verb!\SEEALSO!} field for
+{\small\verb!REWRITE_TAC!}:
+
+\smallskip
+
+\begin{boxed}\begin{verbatim}
+\SEEALSO
+FILTER_ASM_REWRITE_TAC, FILTER_ONCE_ASM_REWRITE_TAC, ONCE_ASM_REWRITE_TAC,
+ONCE_REWRITE_TAC, PURE_ASM_REWRITE_TAC, PURE_ONCE_ASM_REWRITE_TAC,
+PURE_ONCE_REWRITE_TAC, PURE_REWRITE_TAC, REWRITE_TAC, SUBST_TAC.
+\end{verbatim}\end{boxed}
+
+\smallskip
+
+\subsubsection{The {\tt {\char'134}ENDDOC} line ({\it required})}
+
+The {\small\verb!\ENDDOC!} line, which consists of a single line containing
+only the keyword `{\small\verb!\ENDDOC!}', signals the end of a manual entry.
+It must be present in every \doc\ file.
+
+\subsection{Using typesetting commands}\label{typesetting}
+
+The {\small\verb!\SYNOPSIS!}, {\small\verb!\DESCRIBE!},
+{\small\verb!\FAILURE!}, {\small\verb!\EXAMPLE!}, {\small\verb!\USES!}, and
+{\small\verb!\COMMENTS!} fields of a \doc\ file all consist of a keyword line
+followed by general text.  Within this text, only two kinds of typesetting
+command are allowed: `{\small\verb%\noindent%}\vsp' at the beginning of a line,
+and {\small\verb%{%}\meta{text}{\small\verb%}%}. These are interpreted as
+follows:
+
+\begin{enumerate}
+\item  `{\small\verb%\noindent%}\vsp' at the beginning of a line prevents
+indentation of that line.
+
+\item  An inline {\small\verb%{%}\meta{text}{\small\verb%}%} results in
+\meta{text} being typeset in small verbatim font.  In particular,
+`{\small\verb%{%}\meta{text}{\small\verb%}%}' is converted to
+`{\small\verb!{\small\verb%!}\meta{text}{\small\verb!%}!}'. This means that
+\meta{text} should not contain the character `{\small\verb!%!}'.
+
+\item A sequence of lines of the following form, where `{\small\verb|{|}' and
+`{\small\verb|}|}' occur at the beginning of otherwise empty lines:
+
+\begin{alltt}
+  \verb!{!
+  \vsp\vsp\vsp\(\vdots\)
+  \verb!}!
+\end{alltt}
+
+\noindent gets typeset to displayed verbatim text.
+
+\end{enumerate}
+
+\noindent When using displayed verbatim text, the lines between
+`{\small\verb|{|}' and `{\small\verb|}|}' should be manually indented by three
+spaces.  Furthermore, there should be no blank line between the preceding line
+of text and the open bracket `{\small\verb|{|}' and no blank line between the
+closing bracket `{\small\verb|}|}' and the following line of text (even if
+otherwise required by virtue of being the last line in a field).  Here is an
+example of the correct use of the displayed verbatim format:
+
+\smallskip
+
+\begin{boxed}\begin{verbatim}
+from this, we can see that the tactic:
+{
+   FIRST_ASSUM (\th g. ACCEPT_TAC (SYM th) g ? NO_TAC g)
+}
+will search the assumption list for an equation whose symmetric form will
+solve the current goal.  This kind of tactic is very useful when dealing with
+\end{verbatim}\end{boxed}
+
+\smallskip
+
+\noindent Here, there are three spaces manually inserted at the beginning of
+the displayed line in order to give the finished product the appropriate
+appearance.
+
+The following exception may made to the general rule of indenting displayed
+text by three spaces: when an example is presented without accompanying
+commentary, the `displayed' text is not indented.  For example, in:
+
+\smallskip
+
+\begin{boxed}\begin{verbatim}
+\EXAMPLE
+{
+#length [];;
+0 : int
+
+#length [1;2;7;1;1];;
+5 : int
+}
+\end{verbatim}\end{boxed}
+
+\smallskip
+
+\noindent no indentation is used, since the `displayed' text is not surrounded
+by a commentary of ordinary text.
+
+\subsection{General conventions}\label{conventions}
+
+In addition to the specific conventions laid down in the preceding sections for
+the text of the various fields in a reference manual entry, the following
+general conventions should also be observed.
+
+\subsubsection{Spelling and terminology.}
+
+The `-ize' spelling for words like `generalize', `specialize' is preferred.
+Use `analyze' rather than `analyse'.  The following preferred spellings and
+hyphenations should also be noted: left-hand side, right-hand side, premise
+(not premiss), and theorem-tactic.
+
+The preferred terms for the parts of theorems, goals, implications
+and rules are as follows:
+
+\begin{itemize}
+  \item An implicative term has an {\em antecedent} and a {\em consequent}
+  \item A theorem or goal has {\em assumptions} and a {\em conclusion}
+  \item A rule has {\em premises} and {\em conclusions}
+\end{itemize}
+
+\noindent It is permissible to use {\em hypotheses} instead of {\em
+assumptions} if preferred: the two should be regarded as strictly synonymous.
+The overloading of the word {\em conclusion} is unfortunate, but no viable
+alternative has been proposed.
+
+\subsubsection{Substitution}
+
+Substitution of term {\tt u} for a variable {\tt x} in term {\tt t} should be
+shown as a transition from {\tt t} to {\tt t[u/x]}, rather than from {\tt t[x]}
+to {\tt t[u]}. Although perhaps slightly less intuitive, it is both more formal
+and more flexible. Multiple sequential substitutions should be shown as {\tt
+t[u1/t1]...[un/tn]}, and multiple parallel substitutions as {\tt
+t[u1,...,un/t1,...,tn]}. The use of {\tt t[u1/t1,...,un/tn]} should be avoided
+because of the scope for ambiguity.
+
+\subsubsection{Goals}
+
+Goals with assumptions should be represented by using {\tt ?-} by exact analogy
+with {\tt |-} for theorems. Thus the goal corresponding to the theorem:
+
+\begin{verbatim}
+   x = 0 |- SUC x = 1
+\end{verbatim}
+
+\noindent would be:
+
+\begin{verbatim}
+   x = 0 ?- SUC x = 1
+\end{verbatim}
+
+\noindent Assumption lists of goals should be shown, even when they do not play
+a major role. Braces are now free to be used for set-notation without
+confusion. To get braces into a verbatim section, just double them up: {\tt
+\{\{A\}\}} etc.
+
+\subsubsection{Alpha-equivalence}
+
+Alpha-convertibility of terms should not, except in obvious special cases like
+{\tt ALPHA}, be shown by using different variable names. It is usually
+sufficient to assume by default that we are dealing with alpha equivalence
+classes of terms. If important, these issues can be mentioned in the
+description or comments field.
+
+The union (of assumption lists) should be written as an infix lowercase {\tt
+u}, for example `{\tt A1 u A2}', whether or not alpha-equivalent terms are
+deemed to be the same when taking the union.  If this is an important
+consideration, it can be discussed separately.  The addition or subtraction of
+an assumption should be written as {\tt A u \{t\}} and {\tt A - \{t\}}
+respectively, rather than {\tt A} becoming {\tt A,t} or vice versa.
+
+\subsubsection{Typesetting inference rules and tactics}
+
+The following formats should be followed for rule-style specifications of
+inference rules and tactics:
+
+\medskip
+\begin{verbatim}
+     <premises>                         <goal>
+   --------------  <name & args>     ============  <name & args>
+    <conclusion>                      <subgoals>
+\end{verbatim}
+\medskip
+
+\noindent More precisely, displayed inference rules and tactics in this
+`rule-notation' should be typeset as follows:
+
+\begin{itemize}
+
+\item Everything in verbatim mode should be manually indented by 3 spaces.
+
+\item Use a line consisting of minus-signs for inference rules, and a line
+consisting of equal-signs for tactics.
+
+\item The line should overlap by exactly one space on either side of the wider
+of the lines of text above and below.
+
+\item The other line of text should be centred within the rule bar as closely
+as possible.
+
+\item Above the line put the theorem(s) or goal prior to application of the
+rule or tactic (may be empty in the case of theorems).
+
+\item Below the line put the theorem(s) or subgoal(s) resulting from
+application of the rule or theorem. In the case of a tactic which completely
+solves a goal, this should be a single {\tt -} placed centrally on the bottom
+line, rather than a completely empty field.
+
+\item To the right of the line, after 2 spaces, write the name of the rule or
+tactic.
+
+\item After the name, give any arguments (e.g.\ terms) that it is applied to in
+order to produce the illustrated effect, except for those which actually appear
+in the top line of the rule. Sometimes this convention does not make manifest
+the required order of the arguments; in this case the arguments which appear in
+the rule line should be restated (see the example of {\small\verb!AP_THM!}
+given below). When they are written as arguments (only), terms should be
+put in quotation marks and theorems in parentheses, since this corresponds more
+closely to an ML expression.
+
+\end{itemize}
+
+Some examples of rule notation as described above are:
+
+\begin{verbatim}
+
+     A |- x = y
+  ----------------  AP_TERM "f"
+   A |- f x = f y
+
+
+     A |- f = g
+  ----------------  AP_THM (A |- f = g) "x"
+   A |- f x = g x
+
+
+   A ?- f x = f y
+  ================  AP_TERM_TAC
+     A ?- x = y
+
+
+   A ?- ?x. t
+  =============  EXISTS_TAC "u"
+   A ?- t[u/x]
+
+\end{verbatim}
+
+\newpage
+
+\subsection{Format of a {\tt .doc} file}
+
+\begin{figure}[h]
+\begin{boxed}\begin{alltt}
+\bk{DOC}\vsp\meta{name}                            ({\it required} )
+
+\bk{TYPE}\vsp\lb\meta{name}\vsp:\vsp\meta{type}\rb                 ({\it required} )
+
+\bk{SYNOPSIS}                              ({\it required} )
+\(\vdots\)
+
+\bk{KEYWORDS}                              ({\it optional})
+
+\bk{LIBRARY}                               ({\it optional})
+
+\bk{DESCRIBE}                              ({\it optional, but usually present} )
+\(\vdots \)
+
+\bk{FAILURE}                               ({\it required} )
+\(\vdots \)
+
+\bk{EXAMPLE}                               ({\it optional} )
+\(\vdots \)
+
+\bk{USES}                                  ({\it optional} )
+\(\vdots \)
+
+\bk{COMMENTS}                              ({\it optional} )
+\(\vdots \)
+
+\bk{SEEALSO}                               ({\it optional} )
+\(\vdots \)
+
+\bk{ENDDOC}                                ({\it required} )
+\end{alltt}\end{boxed}
+\caption{Format of a \doc\ file.\label{doc-fig}}
+\end{figure}
+
+\newpage
+
+\subsection{Example of a {\tt .doc} file}
+
+Here is a sample \doc\ file for {\small\verb!ACCEPT_TAC!}:
+
+\begin{boxed}\begin{verbatim}
+\DOC ACCEPT_TAC
+
+\TYPE {ACCEPT_TAC : thm_tactic}
+
+\SYNOPSIS
+Solves a goal if supplied with the desired theorem (up to alpha-conversion).
+
+\KEYWORDS
+tactic.
+
+\DESCRIBE
+{ACCEPT_TAC} maps a given theorem {th} to a tactic that solves any goal whose
+conclusion is alpha-convertible to the conclusion of {th}.
+
+\FAILURE
+{ACCEPT_TAC th (A,g)} fails if the term {g} is not alpha-convertible to the
+conclusion of the supplied theorem {th}.
+
+\EXAMPLE
+{ACCEPT_TAC} applied to the axiom
+{
+   BOOL_CASES_AX = |- !t. (t = T) \/ (t = F)
+}
+\noindent will solve the goal
+{
+   ?- !x. (x = T) \/ (x = F)
+}
+\noindent but will fail on the goal
+{
+   ?- !x. (x = F) \/ (x = T)
+}
+\USES
+Used for completing proofs by supplying an existing theorem, such as an axiom,
+or a lemma already proved.
+
+\SEEALSO
+MATCH_ACCEPT_TAC.
+
+\ENDDOC
+\end{verbatim}\end{boxed}
+
+\newpage
+\subsection{Example of a typeset {\tt .doc} file}
+
+Here is the typeset documentation for the {\small\verb!ACCEPT_TAC!} \doc\ file
+shown above:
+
+\DOC{ACCEPT\_TAC}
+
+\TYPE {\small\verb%ACCEPT_TAC : thm_tactic%}\egroup
+
+\SYNOPSIS
+Solves a goal if supplied with the desired theorem (up to alpha-conversion).
+
+\DESCRIBE
+{\small\verb%ACCEPT_TAC%} maps a given theorem {\small\verb%th%} to a tactic that solves any goal whose
+conclusion is alpha-convertible to the conclusion of {\small\verb%th%}.
+
+\FAILURE
+{\small\verb%ACCEPT_TAC th (A,g)%} fails if the term {\small\verb%g%} is not alpha-convertible to the
+conclusion of the supplied theorem {\small\verb%th%}.
+
+\EXAMPLE
+{\small\verb%ACCEPT_TAC%} applied to the axiom
+{\par\samepage\setseps\small\begin{verbatim}
+   BOOL_CASES_AX = |- !t. (t = T) \/ (t = F)
+\end{verbatim}}
+\noindent will solve the goal
+{\par\samepage\setseps\small\begin{verbatim}
+   ?- !x. (x = T) \/ (x = F)
+\end{verbatim}}
+\noindent but will fail on the goal
+{\par\samepage\setseps\small\begin{verbatim}
+   ?- !x. (x = F) \/ (x = T)
+\end{verbatim}}
+\USES
+Used for completing proofs by supplying an existing theorem, such as an axiom,
+or a lemma already proved.
+
+\SEEALSO
+MATCH_ACCEPT_TAC.
+
+\ENDDOC
+
+\newpage
+\section{Writing library documentation}
+
+Libraries should conform to a rigid format, to allow easy interaction with the
+standard building, typesetting and help tools. The intention is that each
+library should be organized in the same way as the main \HOL\ directory, with a
+special {\tt Manual} directory for documentation and a {\tt help} directory for
+reference entries.
+
+\subsection{Directory organization}
+
+The standard \HOL\ distribution has a toplevel directory called `Library',
+which contains one subdirectory for each library, whose name corresponds to the
+relevant library name. Within this, the following files should exist:
+
+\begin{enumerate}
+
+\item{\tt Makefile}: this should be a standard Unix Makefile, with at least the
+following targets.
+
+\begin{itemize}
+
+\item{\tt all}: this should make object code and theory files (if any) for the
+entire library
+
+\item{\tt clean}: this should remove all object code, but not theory files, if
+any.
+
+\item{\tt clobber}: this should remove object code and theory files.
+
+\end{itemize}
+
+\item{\tt READ-ME}: this should be a simple text file giving at least:
+
+\begin{itemize}
+\item The name of the library
+\item A brief description of what the library does (not more than a few lines)
+\item The author, preferably including an email address
+\item The date at which the library was written
+\end{itemize}
+
+Other items may be included, but the {\tt READ-ME} file should be kept brief.
+
+\item{\tt help} A help directory, containing one or both of the following
+subdirectories
+\begin{itemize}
+\item{\tt ENTRIES}: standard {\tt `.doc'} files for all the \ML\ functions
+provided by the library, if any
+\item{\tt THEOREMS}: standard {\tt `.doc'} files for the theorems provided by
+the library, if any.
+\end{itemize}
+
+These help files should be in the respective standard formats specified above.
+Note that help files for \ML\ functions should have a {\tt `LIBRARY'} field
+giving the name of the relevant library.
+
+\item{\tt Manual}: a subdirectory for the library documentation. This is
+described in more detail in the next section.
+
+\item Other files, such as \ML\ source, compiled object code, theory files, and
+any other files the library may need for some reason. Everything connected with
+documentation should go in the Manual directory.
+
+\end{enumerate}
+
+\subsection{The Manual directory}
+
+The {\tt `Manual'} directory should contain the following files.
+
+\begin{enumerate}
+
+\item{\tt Makefile}: this should be a standard Unix Makefile to build a dvi
+version of the library documentation. It should include at least the following
+targets.
+
+\begin{itemize}
+\item{\tt all}: make the dvi for the entire library documentation
+\item{\tt clean}: remove dvi files and unnecessary intermediate or auxiliary
+files produced by a run of \latex.
+\end{itemize}
+
+The reference section for \ML\ functions and theorems will be created
+automatically from the help directory. Examining a Makefile from an existing
+library (such as {\tt `string'} or {\tt `reduce'}) will show the general format
+to make this procedure work.
+
+\item{\tt title.tex}: this is a standard file containing a title page for
+library documentation. The simplest way to make such a file is to copy one from
+an existing library (such as {\tt `string'} or {\tt `reduce'}) and edit it with
+the new library name and author's name and address.
+
+\item{\tt description.tex}: this is the main documentation file written by the
+user. As its name suggests, it corresponds to a miniature \DESCRIPTION\
+document for the library, explaining in reasonable detail its purpose and
+usage, probably mentioning some of the \ML\ functions and/or theorems provided,
+but not embarking on an exhaustive list.
+
+\item{\tt entries-intro.tex}: a brief paragraph to act as an introduction to
+the reference section of \ML\ functions. Apart from the library name, this can
+again be copied from an existing library.
+
+\item{\tt theorems-intro.tex}: a brief paragraph to act as an introduction to
+the reference section of theorems. Apart from the library name, this can again
+be copied from an existing library.
+
+\item{\tt references.tex}: a standard \latex\ list of any references made in the
+description section.
+
+\end{enumerate}
+
+\end{document}

@@ -1,0 +1,13 @@
++ ===================================================================== +
+| HOL DISTRIBUTION DIRECTORY: Guide					|
++ ===================================================================== +
+
+
+The latex document "guide.tex" contains a guide or style manual for
+writing HOL documentation.  Authors of library documentation and
+manual entries should read this carefully before writing.
+
+People wishing to typeset the HOL manuals at their site should also
+read this document.
+
+
