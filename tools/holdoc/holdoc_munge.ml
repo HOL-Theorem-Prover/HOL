@@ -390,30 +390,33 @@ let rec readarg cf ml ts tss = (* read a single arg: spaces then (id.id.id or ma
 
 
 let rec mtok v t =
-  match t with
-    Ident(s,true)  -> mident v s
-  | Ident(s,false) -> msym v s
-  | Indent(n)      -> if !iNDENT then mindent n else "\n" (* only render if desired *)
-  | White(s)       -> s
-  | Comment(s)     -> (if String.contains s '\n' then  (* anything split over a line must be long *)
-                         "\\tslongcomm{"
-                       else
-                         "\\tscomm{")
-                      ^texify_text s^"}"
-  | Str(s)         -> "\\text{``"^texify_text s^"''}"
-  | DirBlk(n,ts)   -> mdir v n ts
-  | DirBeg         -> raise BadDirective
-  | DirEnd         -> raise BadDirective
-  | Sep(s)         -> texify s
-  | Backtick       -> "\\texttt{`}"
-  | DBacktick      -> "\\texttt{``}"
-  | TeXStartHol    -> !hOLDELIMOPEN   (* "$" *)
-  | TeXStartHol0   -> ""
-  | TeXEndHol      -> !hOLDELIMCLOSE  (* "$" *)
-  | TeXEndHol0     -> ""
-  | TeXNormal(s)   -> s
-  | HolStartTeX    -> "\\tsholcomm{"
-  | HolEndTeX      -> "}"
+  if !eCHO then
+    match t with
+      Ident(s,true)  -> mident v s
+    | Ident(s,false) -> msym v s
+    | Indent(n)      -> if !iNDENT then mindent n else "\n" (* only render if desired *)
+    | White(s)       -> s
+    | Comment(s)     -> (if String.contains s '\n' then  (* anything split over a line must be long *)
+                           "\\tslongcomm{"
+                         else
+                           "\\tscomm{")
+                        ^texify_text s^"}"
+    | Str(s)         -> "\\text{``"^texify_text s^"''}"
+    | DirBlk(n,ts)   -> mdir v n ts
+    | DirBeg         -> raise BadDirective
+    | DirEnd         -> raise BadDirective
+    | Sep(s)         -> texify s
+    | Backtick       -> "\\texttt{`}"
+    | DBacktick      -> "\\texttt{``}"
+    | TeXStartHol    -> !hOLDELIMOPEN   (* "$" *)
+    | TeXStartHol0   -> ""
+    | TeXEndHol      -> !hOLDELIMCLOSE  (* "$" *)
+    | TeXEndHol0     -> ""
+    | TeXNormal(s)   -> s
+    | HolStartTeX    -> "\\tsholcomm{"
+    | HolEndTeX      -> "}"
+  else
+    ""
 
 
 and mcurry x c n cf ml v xs xss = (* munge n arguments of curried function c;
