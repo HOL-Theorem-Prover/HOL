@@ -22,7 +22,7 @@ fun itlist f L base =
 fun itstrings f [] = raise Fail "itstrings: empty list"
   | itstrings f [x] = x
   | itstrings f (h::t) = f h (itstrings f t);
-fun fullPath slist = normPath 
+fun fullPath slist = normPath
    (itstrings (fn chunk => fn path => Path.concat (chunk,path)) slist);
 
 val SIGOBJ    = normPath(Path.concat(HOLDIR, "sigobj"));
@@ -53,7 +53,7 @@ in
   implode (trans charlist)
 end
 
-local val expand_backslash = 
+local val expand_backslash =
         String.translate (fn #"\\" => "\\\\" | ch => Char.toString ch)
 in
 fun quote s = String.concat["\"", expand_backslash s, "\""]
@@ -122,7 +122,7 @@ in
    always_rebuild_deps=rebuild_deps,
    additional_includes=List.foldr(fn (s,L) => "-I"::s::L) [] includes,
    dontmakes=dontmakes,
-   actual_HOLDIR = 
+   actual_HOLDIR =
      case actual_HOLDIRs
       of []  => HOLDIR
        | [x] => x
@@ -198,15 +198,15 @@ end else ()
 
 (** Definition of structured file type *)
 
-datatype CodeType 
-    = Theory of string 
-    | Script of string 
+datatype CodeType
+    = Theory of string
+    | Script of string
     | Other of string
 
-datatype File 
-    = SML of CodeType 
-    | SIG of CodeType 
-    | UO of CodeType 
+datatype File
+    = SML of CodeType
+    | SIG of CodeType
+    | UO of CodeType
     | UI of CodeType
     | Unhandled of string
 
@@ -306,7 +306,7 @@ fun runholdep arg destination_file = let
       if FileSys.isDir DEPDIR then TextIO.openOut s
       else raise Fail ("Want to put dependency information in directory "^
                        DEPDIR^", but it already exists as a file\n")
-    else 
+    else
      (print ("Trying to create directory "^DEPDIR^" for dependency files\n");
       FileSys.mkDir DEPDIR;
       TextIO.openOut s
@@ -416,7 +416,7 @@ end
 
 (** Build graph *)
 
-datatype buildcmds = MOSMLC 
+datatype buildcmds = MOSMLC
                    | BuildScript of string
 
 (*** Pre-processing of files that use `` *)
@@ -466,7 +466,7 @@ in
         then let val clone = variant (file^".orig")
                  val _ = FileSys.rename {old=file, new=clone}
              in if unquote_to clone file = Process.success
-                then let 
+                then let
                    val res = compile debug ("-q"::(include_flags@["-c",file]))
                    val _ = FileSys.remove file
                    val _ = FileSys.rename{old=clone, new=file}
@@ -491,7 +491,7 @@ in
       val _ = print ("Linking "^scriptuo^
                      " to produce theory building executable\n")
     in
-      if compile debug (include_flags@["-o", script, scriptuo]) = success 
+      if compile debug (include_flags@["-o", script, scriptuo]) = success
       then let val script' = MK_XABLE script
                val res2    = system (fullPath [".", script'])
                val _       = app FileSys.remove [script', scriptuo, scriptui]
@@ -594,8 +594,23 @@ fun do_target x = let
       | SML (Theory _) => true
       | _ => false
   in
-    read_files cdstream to_delete FileSys.remove
+    read_files cdstream to_delete FileSys.remove;
+    true
   end
+  fun clean_deps() = let
+    val depds = FileSys.openDir DEPDIR handle
+      OS.SysErr _ => raise DirNotFound
+  in
+    read_files depds (fn _ => true)
+    (fn s => FileSys.remove (fullPath [DEPDIR, s]));
+    FileSys.rmDir DEPDIR;
+    true
+  end handle OS.SysErr (mesg, _) => let
+             in
+                print ("make cleanAll failed with message: "^mesg^"\n");
+                false
+             end
+           | DirNotFound => true
 in
   case x of
     "clean" => (let
@@ -604,19 +619,8 @@ in
       clean_action();
       true
     end handle _ => false)
-  | "cleanAll" => (let
-      val _ = clean_action()
-      val depds = FileSys.openDir DEPDIR handle
-                     OS.SysErr _ => raise DirNotFound
-    in
-      read_files depds (fn _ => true)
-          (fn s => FileSys.remove (fullPath [DEPDIR, s]));
-      FileSys.rmDir DEPDIR;
-      true
-    end handle OS.SysErr (mesg, _) =>
-                     (print ("make cleanAll failed with message: "^mesg^"\n");
-                      false)
-             | DirNotFound => true)
+  | "cleanDeps" => clean_deps()
+  | "cleanAll" => clean_action() andalso clean_deps()
   | _ => if (not (member x dontmakes))
          then make_up_to_date [] (toFile x)
          else true
@@ -662,18 +666,22 @@ val _ =
   if show_usage then
     List.app print
     ["Holmake [targets]\n",
-     "  additional options are\n",
+     "  special targets are:\n",
+     "    clean               : remove all object code in directory\n",
+     "    cleanDeps           : remove dependency information\n",
+     "    cleanAll            : do all of above\n",
+     "  additional command-line options are:\n",
      "    -I file             : include directory (can be repeated)\n",
      "    -d file             : ignore file (can be repeated)\n",
      "    --debug             : print debugging information\n",
      "    --help | -h         : show this message\n",
      "    --holdir directory  : use specified directory as HOL root\n",
      "    --rebuild_deps | -r : always rebuild dependency info files \n",
-     "    --use_sigobj | -u   : use sigobj directory in HOL tree\n",
+(*     "    --use_sigobj | -u   : use sigobj directory in HOL tree\n", *)
      "    --version | -v      : show version information\n"]
   else
     if show_version then
-      print "Holmake version 2.03\n"
+      print "Holmake version 2.04\n"
     else let
       open Process
       val result = deal_with_targets targets
