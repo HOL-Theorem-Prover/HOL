@@ -63,7 +63,7 @@ val LET_DEF =
 (* the magic in Parse, will turn the "let" term produced into one that
    actually uses "LET", similarly for and *)
 
-val _ = add_rule {term_name = "let", fixity = TruePrefix 10,
+val _ = add_rule {term_name = "let", fixity = TruePrefix 2,
                   pp_elements = [TOK "let", BreakSpace(1,0), TM,
                                  BreakSpace(1, 0), TOK "in",
                                  BreakSpace(1, 0)],
