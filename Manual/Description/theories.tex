@@ -32,9 +32,9 @@ res\_quanTheory & restricted quantifier support \\
 asciiTheory & ascii \\
 stringTheory & strings \\
 wordTheory & ({\it plus several others}) theory of bitstrings \\
-realTheory & ({\it plus several others}) real numbers and analysis \\
+realTheory & ({\it plus several others}) real numbers and analysis \\ \hline
 \end{tabular}
-\caption{Native Theories}\label{nativeTheories}
+\caption{Commonly-used Theories}\label{CommonTheories}
 \end{center}
 \end{table}
 
@@ -89,28 +89,30 @@ logic@\ml{o} (function composition operator, in \HOL\ logic)|(}
 
    I_THM |- !x. I x = x
 
-   I_o_ID |- !f. (I o f = f) /\ (f o I = f) \end{verbatim}\end{hol}
+   I_o_ID |- !f. (I o f = f) /\ (f o I = f)
+\end{verbatim}\end{hol}
 
 Having the symbols \ml{o}, \ml{S}, \ml{K} and \ml{I} as built-in
-constants\index{variables, in HOL logic@variables, in \HOL\ logic!with constant
-names} is sometimes inconvenient because they are often wanted as mnemonic
-names for variables (\eg\ \ml{S} to range over sets and \ml{o} to range over
-outputs).  Variables
-(though not constants) with these names can be used in the current system if
-\ml{o}, \ml{S}, \ml{K} and \ml{I} are first hidden (see Section~\ref{hidden}).
-\index{ function composition operator, in HOL logic@\ml{o} (function
-composition operator, in \HOL\ logic)|)} \index{function composition, in HOL
-logic@function composition, in \HOL\ logic|)}
+constants\index{variables, in HOL logic@variables, in \HOL\ logic!with
+constant names} is sometimes inconvenient because they are often wanted
+as mnemonic names for variables (\eg\ \ml{S} to range over sets and
+\ml{o} to range over outputs).  Variables (though not constants) with
+these names can be used in the current system if \ml{o}, \ml{S}, \ml{K}
+and \ml{I} are first hidden (see Section~\ref{hidden}).  \index{
+function composition operator, in HOL logic@\ml{o} (function composition
+operator, in \HOL\ logic)|)} \index{function composition, in HOL
+logic@function composition, in \HOL\ logic|)}  
 
 \section{The theory {\tt relation}}\label{relation}
 
-Mathematical relations can be directly represented in \HOL\ by the type
-{\small\verb+:'a -> 'a -> bool+}. The theory {\small\verb+relation+}
-does not as yet provide a well-rounded collection of definitions about
-relations; indeed, relations are often treated informally in the
-system. For example, $R_1 \subset R_2$ can be directly represented as 
-{\small\verb+!x y. R1 x y ==> R2 x y+}. The theory {\tt relation}
-currently provides support for transitive closure and wellfoundedness.
+Mathematical relations can be represented in \HOL\ by the type
+{\small\verb+:'a -> 'b -> bool+}. The theory {\small\verb+relation+}
+is intended to suppport this view of relations, but does not as yet
+provide a well-rounded collection of definitions; indeed, it is common
+to treat relations directly. For example, $R_1 \subseteq R_2$ can be
+phrased as {\small\verb+!x y. R1 x y ==> R2 x y+}. The theory {\tt
+relation} currently provides definitions and theorems about
+the transitive closure of a relation and for wellfounded relations.
 
 \begin{hol} \begin{verbatim}
    TC_DEF |- !R a b.
@@ -551,7 +553,7 @@ do with the discriminator functions \ml{ISL} and \ml{ISR}:
 \index{one, the HOL theory@\ml{one}, the \HOL\ theory}%
 \index{one, the HOL type@\ml{one}, the \HOL\ type}%
 
-The theory \ml{one} defines  the type  \ml{:one} which  contains one element.
+The theory \ml{one} defines  the type  \ml{one} which  contains one element.
 The constant  \ml{one}  is specified  to denote  this element.   The pre-proved
 theorems in the theory \ml{one} are:
 
@@ -722,9 +724,9 @@ functions and then makes a constant specification to introduce the constant
 that denotes such a function:
 
 \begin{boxed}
-\index{new_recursive_definition@\ml{new\_prim\_rec\_definition}|pin}
+\index{new_recursive_definition@\ml{new\_recursive\_definition}|pin}
 \begin{verbatim}
-   new_recursive_definition : fixity -> Thm.thm -> string -> term -> thm
+   new_recursive_definition : thm -> string -> term -> thm
 \end{verbatim}\end{boxed}
 
 \noindent In fact, {\small\verb+new_recursive_definition+} handles 
@@ -773,11 +775,11 @@ Choice, which is a theorem in \HOL\ because it follows from
 
 The theorem {\small\verb+DC+} is useful when one wishes to build a
 function having a certain property from a relational
-characterization. An alternate characterization of wellfoundedness is
-the absence of infinite decreasing $R$ chains. By use of {\small\verb+DC+},
-this can be proved to be equal to the the notion of wellfoundedness
-(namely, that every set has an $R$-minimal element) defined in the
-theory {\small\verb+relation+}.
+characterization. For example, an alternate characterization of
+wellfoundedness is the absence of infinite decreasing $R$ chains. By use
+of {\small\verb+DC+}, this can be proved to be equal to the the notion
+of wellfoundedness (namely, that every set has an $R$-minimal element)
+defined in the theory {\small\verb+relation+}.
 
 \begin{hol}
 \index{Wellfounded@\ml{Wellfounded}}
@@ -856,28 +858,50 @@ definitions of following standard arithmetic operators.
                                         (k MOD n) < n)
 \end{verbatim}\end{hol}
 
+
 An \adhoc\ but useful collection of over a hundred elementary theorems of
 arithmetic are pre-proved when \HOL\ is built and stored in the theory
 {\small\verb%arithmetic%}.  Each theorem will be autoloaded when its name is
 first mentioned during any \HOL\ session. For a complete list of available
 theorems, see \REFERENCE.
 
+
+The following table gives the parsing status of the arithmetic
+constants.
+
+\begin{center}
+{\small
+\begin{tabular}{@{}ccc}
+Operator & Strength & Associativity \\ \hline
+{\small\verb+>=+} & 450 & right \\
+{\small\verb+<=+} & 450 & right \\
+{\small\verb+>+} & 450 & right \\
+{\small\verb+<+} & 450 & right \\
+{\small\verb%+%} & 500 & left \\
+{\small\verb%-%} & 500 & left \\
+{\small\verb%*%} & 600& left \\
+{\small\verb%DIV%} & 600 & left \\
+{\small\verb%MOD%} & 650 & left \\
+{\small\verb%EXP%} & 700 & right \\
+\end{tabular}}
+\end{center}
+
 \subsection{The theory {\tt numeral}}\label{numeral}\index{numeral,
 the construction of in HOL logic@\ml{numeral}, the construction of in \HOL\ logic}
 
-The type \ml{:num}\index{num, the type in \HOL\
-  logic@\ml{num}, the type in \HOL\ logic}, is typically thought of as
+The type \ml{num}\index{num, the type in \HOL\
+  logic@\ml{num}, the type in \HOL\ logic}, is usually thought of as
   being supplied with an infinite collection of numerals: \ml{1},
   \ml{2}, \ml{3}, \etc.  However, the \HOL\ logic has no way to define
-  such infinite families of constants, thus all numerals other than $0$ 
-  are actually built up from the constants introduced by the following 
-  definitions:
-\begin{itemize}
-\item $\vdash \forall x.\, \ml{NUMERAL}(x) = x$
-\item $\vdash \forall x.\, \ml{NUMERAL\_BIT1}(x) = 2x + 1$
-\item $\vdash \forall x.\, \ml{NUMERAL\_BIT2}(x) = 2x + 2$
-\item $\vdash \ml{ALT\_ZERO} = 0$
-\end{itemize}
+  such infinite families of constants; instead all numerals other 
+  than $0$ are actually built up from the constants introduced by
+  the following definitions:
+\begin{verbatim}
+   NUMERAL_DEF    !x. NUMERAL x = x
+   NUMERAL_BIT1   !x. NUMERAL_BIT1 n = n + (n + SUC 0)
+   NUMERAL_BIT2   !x. NUMERAL_BIT2 n = n + (n + SUC(SUC 0))
+   ALT_ZERO       ALT_ZERO = 0
+\end{verbatim}
 
 \noindent For example, the numeral $5$ is represented by the term
 \[
@@ -886,8 +910,29 @@ The type \ml{:num}\index{num, the type in \HOL\
 but the \HOL\ parser and pretty-printer make such terms
 appear as numerals. This binary representation for numerals allows for
 asymptotically efficient calculation. Theorems supporting arithmetic 
-calculations involving numerals can be found in the \ml{numeral} theory;
-these are mechanized by the \ml{reduce} library.
+calculations on numerals can be found in the \ml{numeral} theory;
+these are mechanized by the \ml{reduce} library. Numerals may of course
+be built using {\small\verb+mk_comb+}, and taken apart with
+{\small\verb+dest_comb+}. A more convenient interface to this
+functionality is provided by {\small\verb+mk_numeral+},
+{\small\verb+dest_numeral+}, and  {\small\verb+is_numeral+}. These
+functions make use of an \ML\ structure {\small\verb+Arbnum+} (written by
+Michael Norrish) which implements arbitrary precision numbers.
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+- mk_numeral (Arbnum.fromString "3432432423423423234");
+> val it = `3432432423423423234` : term
+
+- dest_numeral it;
+> val it = <num> : Arbnum.num
+
+- Arbnum.+(it,it);
+> val it = <num> : num
+
+- mk_numeral it;  
+> val it = `6864864846846846468` : term
+\end{verbatim}\end{session}
 
 Numerals are related to numbers via the derived inference rule
 \ml{num\_CONV}, found in the \ml{numLib} library.
@@ -951,16 +996,62 @@ the integers):
 > val it = `:int` : hol_type
 \end{verbatim}\end{session}
 
-Question: what does $42i$ mean? There's a different map for the
-integers. Need to discuss it in the theory of integers.
+A numeric literal such as $42i$ is represented by the application of an
+\emph{injection} function of type {\small\verb+num -> ty+} to a
+numeral. The injection function is different for each type
+{\small\verb+ty+}. See Section \ref{integers} for further discussion.
 
-Question: are the character suffixes recognized by the direct
-construction routines?
+The functions {\small\verb+mk_numeral+},
+{\small\verb+dest_numeral+}, and {\small\verb+is_numeral+} only work for
+numerals, and not for numeric literals with character suffixes other
+than {\small\verb+n+}. For information on how to install new character
+suffixes, consult the {\small\verb+add_numeral_info+} entry in
+\REFERENCE. 
 
-Question: how are new character suffixes created?
+\section{Integers}\label{integers}
 
-\section{Integers}
+There is an extensive theory of integers in \HOL. The type of integers
+is constructed as a quotient on pairs of natural numbers. A standard 
+collection of operators are defined. These are overloaded with
+similar operations on the natural numbers, and on the real numbers.
+The constants defined in the integer theory include those found in the
+following table. 
+
+\begin{center}
+{\small
+\begin{tabular}{@{}cccc}
+Constant & Overloaded symbol & Strength & Associativity \\ \hline
+{\small\verb+int_ge+} &{\small\verb+>=+} & 450 & right \\
+{\small\verb+int_le+} &{\small\verb+<=+} & 450 & right \\
+{\small\verb+int_gt+} &{\small\verb+>+} & 450  & right \\
+{\small\verb+int_lt+} &{\small\verb+<+} & 450  & right \\
+{\small\verb+int_add+} &{\small\verb%+%} & 500 & left \\
+{\small\verb+int_sub+} &{\small\verb%-%} & 500 & left \\
+{\small\verb+int_neg+} &{\small\verb%~%} & 900 & prefix \\
+{\small\verb+int_mul+} &{\small\verb%*%} & 600 & left \\
+{\small\verb%/%} & & 600 & left \\
+{\small\verb+%+} & & 650 & left \\
+{\small\verb+int_exp+} &{\small\verb%**%} & 700 & right \\
+\end{tabular}}
+\end{center}
+
+The constant {\small\verb+& : num -> int+} denotes the injection
+function from natural numbers to integers. For some reason it can 
+be printed out as {\small\verb+fromNum : num -> int+}, although 
+{\small\verb+fromNum+} is not a constant. What is going on here?
+
+
+% Term `1i = &(1n + 0n)`;
+%> val it = `1 = fromNum (1 + 0)` : Term.term
+%- show_numeral_types := true;
+%> val it = () : unit
+%- Term `&1 = &(1n + 0n)`;
+%> val it = `1i = fromNum (1n + 0n)` : Term.term
+
 \section{Real numbers and analysis}
+
+There is an extensive theory of real numbers and analysis in HOL, 
+due to John Harrison \cite{jrh:thesis}.
 
 \section{Lists}
 
@@ -990,14 +1081,15 @@ are then defined on this type:
    NULL : 'a list -> bool
 \end{verbatim}\end{hol}
 
-The \HOL\ parser\index{parsing, of HOL logic@parsing, of \HOL\ logic!of list expressions} has been specially  modified to  parse the expression
- {\small\verb%[]%} into
-{\small\verb%NIL%} and to parse the expression
+The \HOL\ parser\index{parsing, of HOL logic@parsing, of \HOL\ logic!of
+list expressions} has been specially  modified to  parse the expression
+{\small\verb%[]%} into {\small\verb%NIL%}, to parse the expression
+{\small\verb%h :: t%} into {\small\verb%CONS h t%}, and to parse the expression
 {\small\verb%[%}$t_1${\small\verb%;%}$t_2${\small\verb%;%}$\ldots${\small\verb%;%}$t_n${\small\verb%]%}
 into {\small\verb%CONS %}$t_1${\small\verb% (CONS %}$t_2 \cdots\
 ${\small\verb%(CONS %}$t_n${\small\verb%  NIL)%}$\  \cdots\ ${\small\verb%)%}.
 The \HOL\ printer\index{printing, in HOL logic@printing, in \HOL\ logic!of list expressions}
- reverses these transformations.
+reverses these transformations.
 
 The functions \ml{NIL} and \ml{CONS} are defined in terms of the representing
 type of lists. From their definitions, the following fundamental theorems about
@@ -1015,17 +1107,17 @@ are proved and stored in the theory \ml{list}.
 \index{NOT_CONS_NIL@\ml{NOT\_CONS\_NIL}}
 \index{characterizing theorem!for lists}
 \begin{verbatim}
-   list_Axiom    |- !x f. ?!fn.(fn[] = x) /\ (!h t. fn(CONS h t) = f(fn t)h t)
+   list_Axiom    |- !x f. ?!fn.(fn[] = x) /\ (!h t. fn(h::t) = f(fn t)h t)
 
-   list_INDUCT   |- !P. P[] /\ (!t. P t ==> (!h. P(CONS h t))) ==> (!l. P l)
+   list_INDUCT   |- !P. P[] /\ (!t. P t ==> (!h. P(h::t))) ==> (!l. P l)
 
-   list_CASES    |- !l. (l = []) \/ (?t h. l = CONS h t)
+   list_CASES    |- !l. (l = []) \/ (?t h. l = h::t)
 
-   CONS_11       |- !h t h' t'. (CONS h t = CONS h' t') = (h = h') /\ (t = t')
+   CONS_11       |- !h t h' t'. (h::t = h'::t') = (h = h') /\ (t = t')
 
-   NOT_NIL_CONS  |- !h t. ~([] = CONS h t)
+   NOT_NIL_CONS  |- !h t. ~([] = h::t)
 
-   NOT_CONS_NIL  |- !h t. ~(CONS h t = [])
+   NOT_CONS_NIL  |- !h t. ~(h::t = [])
 \end{verbatim}\end{hol}
 
 The theorem  \ml{list\_Axiom}  shown  above  is  analogous   to  the  primitive
@@ -1055,7 +1147,7 @@ introduces a constant to name this function using a constant specification, and
 stores the resulting theorem:
 
 \begin{hol}\begin{verbatim}
-    LENGTH   |- (LENGTH[] = 0) /\ (!h t. LENGTH(h::t) = SUC(LENGTH t))
+    LENGTH   |- (LENGTH [] = 0) /\ (!h t. LENGTH(h::t) = SUC(LENGTH t))
 \end{verbatim}\end{hol}
 
 \noindent in the current theory (in this case, the theory \ml{list}).
@@ -1065,17 +1157,16 @@ selectors \ml{HD} and  \ml{TL} are  defined\index{list definitions, in HOL logic
  in  the theory  \ml{list} by the
 specifications:
 
-
 \begin{hol}
 \index{NULL, the definition in HOL logic@\ml{NULL}, the definition in \HOL\ logic}
 \index{HD, the definition in HOL logic@\ml{HD}, the definition in \HOL\ logic}
 \index{TL, the definition in HOL logic@\ml{TL}, the definition in \HOL\ logic}
 \begin{verbatim}
-   NULL |- NULL[] /\ (!h t. ~NULL(CONS h t))
+   NULL |- NULL[] /\ (!h t. ~NULL(h::t))
 
-   HD   |- !h t. HD(CONS h t) = h
+   HD   |- !h t. HD(h::t) = h
 
-   TL   |- !h t. TL(CONS h t) = t
+   TL   |- !h t. TL(h::t) = t
 \end{verbatim}\end{hol}
 
 \noindent The following primitive recursive definitions of functions on lists
@@ -1190,7 +1281,8 @@ the \HOL\ type} is defined to denote the set of all ordered trees whose nodes
 can branch any (finite) number of times.  A constructor function
 
 \index{node@\ml{node}} \begin{hol}\begin{verbatim}
-   node : (tree)list -> tree \end{verbatim}\end{hol}
+   node : tree list -> tree
+\end{verbatim}\end{hol}
 
 \noindent is then defined in the theory \ml{tree}.  This function can be used
 to construct any tree-structured value of type \ml{tree}.  The expression
@@ -1291,6 +1383,7 @@ labelled trees.
 
 
 \section{Partial functions and the {\tt option} type}
+
 \section{Finite maps}
 \section{Strings}
 \subsection{The theory {\tt ascii}}

@@ -1715,114 +1715,114 @@ system|)}\index{theories, in HOL logic@theories, in \HOL\
 logic!functions for accessing|)} 
 
 
-\subsection{Type abbreviations}\label{typeabbrev}\index{types, in HOL logic@types, in \HOL\ logic!abbreviation of}\index{type abbreviations!in HOL logic@in \HOL\ logic}\index{abbreviation of types, in HOL logic@abbreviation of types, in \HOL\ logic|(}
-It is possible to introduce an abbreviation for a monomorphic type using the
-function:
-
-\begin{boxed}\index{new_type_abbrev@\ml{new\_type\_abbrev}|pin}
-\begin{verbatim}
-   new_type_abbrev : (string * type) -> unit
-\end{verbatim}\end{boxed}
-
-\noindent Evaluating \ml{new\_type\_abbrev(`}$name$\ml{`,":}$\sigma$\ml{")}
-enables $name$ to be used in quotations instead of $\sigma$. The evaluation
-fails
-if $\sigma$ is polymorphic. Type abbreviations
-are recorded in theory files, so that
-when a theory is loaded, any type abbreviations made are
-activated. The list of currently active abbreviations in a theory
-is given by the function:
-
-\begin{boxed}\index{type_abbrevs@\ml{type\_abbrevs}|pin}
-\begin{verbatim}
-   type_abbrevs : string -> (string * type) list
-\end{verbatim}\end{boxed}
-
-
-Note that abbreviation can also be made using antiquotation\index{antiquotation, in HOL logic terms@antiquotation, in \HOL\ logic terms}, without the
-restriction to monomorphic types. Such \ML\ abbreviations are not, of course,
-stored in theory files and so do not persist beyond a single session.
-The following session illustrates various ways of
-abbreviating types:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-*new_theory `numpair`;;
-() : unit
-
-#new_type_abbrev(`numpair`, ":num*num");;
-() : unit
-
-#let t1 = "x:numpair";;
-t1 = "x" : term
-
-#type_of t1;;
-":num * num" : type
-
-#":numpair" = ":num*num";;
-true : bool
-\end{verbatim}\end{session}
-
-\noindent The alternative to introducing a type abbreviation is
-to give an \ML\ name to the type, and then to use this name via antiquotation.
-Continuing the session:\index{abbreviation of types, in HOL logic@abbreviation of types, in \HOL\ logic|)}
-
-\begin{session}\begin{verbatim}
-#let ty = ":num*num";;
-ty = ":num * num" : type
-
-#let t2 = "x:^ty";;
-t2 = "x" : term
-
-#t1 = t2;;
-true : bool
-\end{verbatim}\end{session}
-
-\pagebreak[2]
-
-\noindent The type abbreviation is stored in the theory file and so
-persists across sessions. This can be seen by the result of printing
-the theory \ml{numpair}:
-
-\begin{session}\begin{verbatim}
-#print_theory`numpair`;;
-The Theory numpair
-Parents --  HOL
-Type Abbreviations --  numpair ":num * num"
-******************** numpair ********************
-
-() : unit
-\end{verbatim}\end{session}
-
-\noindent If the session is then ended:
-
-\begin{session}\begin{verbatim}
-#close_theory();;
-() : unit
-
-#quit();;
-\end{verbatim}\end{session}
-
-\noindent and a new session is started in which the theory \ml{numpair} is
-loaded:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#load_theory`numpair`;;
-Theory numpair loaded
-() : unit
-
-#"x:numpair";;
-"x" : term
-
-#type_abbrevs `-`;;
-[(`numpair`, ":num * num")] : (string * type) list
-\end{verbatim}\end{session}
-
-\noindent then the type abbreviation persists.
-
-Type abbreviations tend to be little used in practice; the antiquotation
-method is usually sufficient.
+%\subsection{Type abbreviations}\label{typeabbrev}\index{types, in HOL logic@types, in \HOL\ logic!abbreviation of}\index{type abbreviations!in HOL logic@in \HOL\ logic}\index{abbreviation of types, in HOL logic@abbreviation of types, in \HOL\ logic|(}
+%It is possible to introduce an abbreviation for a monomorphic type using the
+%function:
+%
+%\begin{boxed}\index{new_type_abbrev@\ml{new\_type\_abbrev}|pin}
+%\begin{verbatim}
+%   new_type_abbrev : (string * type) -> unit
+%\end{verbatim}\end{boxed}
+%
+%\noindent Evaluating \ml{new\_type\_abbrev(`}$name$\ml{`,":}$\sigma$\ml{")}
+%enables $name$ to be used in quotations instead of $\sigma$. The evaluation
+%fails
+%if $\sigma$ is polymorphic. Type abbreviations
+%are recorded in theory files, so that
+%when a theory is loaded, any type abbreviations made are
+%activated. The list of currently active abbreviations in a theory
+%is given by the function:
+%
+%\begin{boxed}\index{type_abbrevs@\ml{type\_abbrevs}|pin}
+%\begin{verbatim}
+%   type_abbrevs : string -> (string * type) list
+%\end{verbatim}\end{boxed}
+%
+%
+%Note that abbreviation can also be made using antiquotation\index{antiquotation, in HOL logic terms@antiquotation, in \HOL\ logic terms}, without the
+%restriction to monomorphic types. Such \ML\ abbreviations are not, of course,
+%stored in theory files and so do not persist beyond a single session.
+%The following session illustrates various ways of
+%abbreviating types:
+%
+%\setcounter{sessioncount}{1}
+%\begin{session}\begin{verbatim}
+%*new_theory `numpair`;;
+%() : unit
+%
+%#new_type_abbrev(`numpair`, ":num*num");;
+%() : unit
+%
+%#let t1 = "x:numpair";;
+%t1 = "x" : term
+%
+%#type_of t1;;
+%":num * num" : type
+%
+%#":numpair" = ":num*num";;
+%true : bool
+%\end{verbatim}\end{session}
+%
+%\noindent The alternative to introducing a type abbreviation is
+%to give an \ML\ name to the type, and then to use this name via antiquotation.
+%Continuing the session:\index{abbreviation of types, in HOL logic@abbreviation of types, in \HOL\ logic|)}
+%
+%\begin{session}\begin{verbatim}
+%#let ty = ":num*num";;
+%ty = ":num * num" : type
+%
+%#let t2 = "x:^ty";;
+%t2 = "x" : term
+%
+%#t1 = t2;;
+%true : bool
+%\end{verbatim}\end{session}
+%
+%\pagebreak[2]
+%
+%\noindent The type abbreviation is stored in the theory file and so
+%persists across sessions. This can be seen by the result of printing
+%the theory \ml{numpair}:
+%
+%\begin{session}\begin{verbatim}
+%#print_theory`numpair`;;
+%The Theory numpair
+%Parents --  HOL
+%Type Abbreviations --  numpair ":num * num"
+%******************** numpair ********************
+%
+%() : unit
+%\end{verbatim}\end{session}
+%
+%\noindent If the session is then ended:
+%
+%\begin{session}\begin{verbatim}
+%#close_theory();;
+%() : unit
+%
+%#quit();;
+%\end{verbatim}\end{session}
+%
+%\noindent and a new session is started in which the theory \ml{numpair} is
+%loaded:
+%
+%\setcounter{sessioncount}{1}
+%\begin{session}\begin{verbatim}
+%#load_theory`numpair`;;
+%Theory numpair loaded
+%() : unit
+%
+%#"x:numpair";;
+%"x" : term
+%
+%#type_abbrevs `-`;;
+%[(`numpair`, ":num * num")] : (string * type) list
+%\end{verbatim}\end{session}
+%
+%\noindent then the type abbreviation persists.
+%
+%Type abbreviations tend to be little used in practice; the antiquotation
+%method is usually sufficient.
 
 
 \section{The theory {\tt min}}\label{minTheory}
@@ -1841,9 +1841,8 @@ are declared in the theory {\small\verb%min%}: equality, implication, and a choi
 Equality ({\small\verb+$= : 'a -> 'a -> bool+}) parses as an infix with
 low binding precedence (100).  
 
-Implication ({\small\verb+$==> : bool -> bool -> bool+}) parses as an
+Implication ({\small\verb+$==> : bool -> bool -> bool+}) parses as a
 right-associative infix with binding precedence 200. 
-
 
  Equality\index{equality, in HOL logic@equality, in \HOL\
  logic}\index{implication, in HOL logic@implication, in \HOL\ logic} 
@@ -2359,14 +2358,7 @@ deriving them from definitions can be tedious---proving that `axioms'
 follow from definitions amounts to proving their consistency.
 
 The theory {\small\verb%bool%} also supplies the definitions of a number of
-useful constants. The constant {\small\verb%LET%}\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL\ logic!constant for} is used in representing terms
-containing local variable bindings (\ie\
-{\small\verb%let%}-terms\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL\ logic!definitional axiom for}, as discussed in Section~\ref{let}), and the
-constant {\small\verb%COND%} is used in representing conditionals.  The
-polymorphic constant {\small\verb+ARB+} is used to denote a fixed but
-arbitrary element in a type, which is occasionally useful when
-attempting to deal with the issue of partiality.
-
+useful constants. 
 \begin{hol}
 \index{LET_DEF@\ml{LET\_DEF}}
 \index{COND_DEF@\ml{COND\_DEF}}
@@ -2382,57 +2374,74 @@ attempting to deal with the issue of partiality.
    ARB_DEF      |- ARB    = @x. T
 \end{verbatim}\end{hol}
 
-\subsection{Conditionals}\label{conditionals}
+The constant {\small\verb%LET%}\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL\ logic!constant for} is used in representing terms
+containing local variable bindings (\ie\
+{\small\verb%let%}-terms\index{let-terms, in HOL logic@\ml{let}-terms,
+in \HOL\ logic!definitional axiom for}. For example, the concrete syntax
+{\small\verb+let v = M in N+} is translated by the parser to the term
+{\small\verb+LET (\v.N) M+}. For the full description of how
+{\small\verb+let+} expressions are translated, see Section \ref{prod}.
 
-A conditional\index{terms, in HOL logic@terms, in \HOL\ logic!conditional}\index{conditional predicate, in HOL logic@conditional predicate, in \HOL\ logic}\index{conditionals, in HOL logic@conditionals, in \HOL\ logic}
- term \ml{`if $t_1\ $then$\ t_2\ $else$\ t_3$`} abbreviates the application
-\ml{COND\ $t_1\ t_2\ t_3$}, where \ml{COND}\index{COND@\ml{COND}}\index{conditionals, in HOL logic@conditionals, in \HOL\ logic}
-is a constant defined in the theory \ml{bool} (see Section~\ref{boolthy}).
-The syntax \ml{$t_1\ $=>$\ t_2\ $|$\ t_3$} is also permitted. An
-iterated conditional 
+The constant {\small\verb%COND%} is used in representing conditional
+expressions. The concrete syntax \index{terms, in HOL logic@terms,
+in \HOL\ logic!conditional}\index{conditional
+predicate, in HOL logic@conditional predicate,
+in \HOL\ logic}\index{conditionals, in HOL
+logic@conditionals, in \HOL\ logic} 
+\ml{`if $t_1\ $then$\ t_2\ $else$\ t_3$`} abbreviates the application
+\ml{COND\ $t_1\ t_2\ t_3$}. The syntax \ml{$t_1\;
+$=>$\;t_2\;$|$\;t_3$} is also permitted. The system alway prints out
+conditionals in the "if $t_1$ then $t_2$ else $t_3$" form. 
 
-\[
-t_{11}\ \ml{=>}\ t_{12}\ \ml{|}\
-t_{21}\ \ml{=>}\ t_{22}\ \ml{|}\
-\ \ldots\ \ml{|}\
-t_{n1}\ \ml{=>}\ t_{n2}\ \ml{|}\ t_{n3}
-\]
+The polymorphic constant {\small\verb+ARB+} is used to denote a fixed
+but arbitrary element in a type, which is occasionally useful when
+attempting to deal with the issue of partiality.
 
-\noindent translates\index{parsing, of HOL logic@parsing, of \HOL\ logic!of conditionals} to:
-
-\[
-t_{11}\ \ml{=>}\ t_{12}\ \ml{|}\
-(t_{21}\ \ml{=>}\ t_{22}\ \ml{|}\
-\ \ldots\ \ml{|}\
-(t_{n1}\ \ml{=>}\ t_{n2}\ \ml{|}\ t_{n3})\ \ldots\ )
-\]
-
-\noindent which, in turn, abbreviates:
-
-\[\ml{COND}\ t_{11}\ t_{12}\ \ml{(COND}\ t_{21}\ t_{22}\ \ldots\
-\ml{(COND}\ t_{n1}\ t_{n2}\ t_{n3}\ml{)}\ \ldots\ \ml{)}\]
-
-\noindent For example, 
-
-\begin{session}\begin{verbatim}
-- Term `if b then if c then if d then e else f else g else h`;
-<<HOL message: inventing new type variable names: 'a.>>
-
-> val it =
-    `(if b then (if c then (if d then e else f) else g) else h)`
-    : term
-
-- Term `b => c => d => e | f | g | h`;
-<<HOL message: inventing new type variable names: 'a.>>
-
-> val it =
-    `(if b then (if c then (if d then e else f) else g) else h)`
-    : term
-
-\end{verbatim}\end{session}
-
-\noindent Note that the system alway prints out conditionals in the "if $t_1$ then
-$t_2$ else $t_3$" form. 
+%\subsection{Conditionals}\label{conditionals}
+%
+%An iterated conditional 
+%
+%\[
+%t_{11}\ \ml{=>}\ t_{12}\ \ml{|}\
+%t_{21}\ \ml{=>}\ t_{22}\ \ml{|}\
+%\ \ldots\ \ml{|}\
+%t_{n1}\ \ml{=>}\ t_{n2}\ \ml{|}\ t_{n3}
+%\]
+%
+%\noindent translates\index{parsing, of HOL logic@parsing, of \HOL\ logic!of conditionals} to:
+%
+%\[
+%t_{11}\ \ml{=>}\ t_{12}\ \ml{|}\
+%(t_{21}\ \ml{=>}\ t_{22}\ \ml{|}\
+%\ \ldots\ \ml{|}\
+%(t_{n1}\ \ml{=>}\ t_{n2}\ \ml{|}\ t_{n3})\ \ldots\ )
+%\]
+%
+%\noindent which, in turn, abbreviates:
+%
+%\[\ml{COND}\ t_{11}\ t_{12}\ \ml{(COND}\ t_{21}\ t_{22}\ \ldots\
+%\ml{(COND}\ t_{n1}\ t_{n2}\ t_{n3}\ml{)}\ \ldots\ \ml{)}\]
+%
+%\noindent For example, 
+%
+%\begin{session}\begin{verbatim}
+%- Term `if b then if c then if d then e else f else g else h`;
+%<<HOL message: inventing new type variable names: 'a.>>
+%
+%> val it =
+%    `(if b then (if c then (if d then e else f) else g) else h)`
+%    : term
+%
+%- Term `b => c => d => e | f | g | h`;
+%<<HOL message: inventing new type variable names: 'a.>>
+%
+%> val it =
+%    `(if b then (if c then (if d then e else f) else g) else h)`
+%    : term
+%
+%\end{verbatim}\end{session}
+%
+%
 
 A large number of theorems involving the logical constants are
 pre-proved in the theory {\small\verb+bool+}. The following are only a
