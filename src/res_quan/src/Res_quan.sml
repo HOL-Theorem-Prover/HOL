@@ -6,7 +6,7 @@
 (* =====================================================================*)
 
 
-structure Res_quan :> Res_quan = 
+structure Res_quan :> Res_quan =
 struct
 
 
@@ -54,13 +54,13 @@ val (mk_resq_forall,mk_resq_exists,mk_resq_select,mk_resq_abstract) =
     end;
 
 fun list_mk_resq_forall (ress,body) =
-   (itlist (fn (v,p) => fn  b => mk_resq_forall(v,p,b)) ress body) 
+   (itlist (fn (v,p) => fn  b => mk_resq_forall(v,p,b)) ress body)
            handle _ => raise RES_QUAN_ERR {function="list_mk_resq_forall",
                                            message = ""};
 
 
 fun list_mk_resq_exists (ress,body) =
-   (itlist (fn (v,p) => fn  b => mk_resq_exists(v,p,b)) ress body) 
+   (itlist (fn (v,p) => fn  b => mk_resq_exists(v,p,b)) ress body)
            handle _ => raise RES_QUAN_ERR {function="list_mk_resq_exists",
                                            message = ""};
 
@@ -156,7 +156,7 @@ fun RESQ_SPEC_ALL th =
 (* Instantiate a universal quantifier which may be either an ordinary	*)
 (* or restricted.							*)
 (* ---------------------------------------------------------------------*)
-fun GQSPEC tm th = 
+fun GQSPEC tm th =
     if (is_resq_forall (concl th))
     then RESQ_SPEC tm th
     else ISPEC tm th;
@@ -253,7 +253,7 @@ fun RESQ_GEN (v,P) th =
 fun RESQ_GENL vps th = itlist RESQ_GEN vps th;
 
 fun RESQ_GEN_ALL th =
-    let fun dest_p tm = 
+    let fun dest_p tm =
         let val {Rator=p,Rand=v} = dest_comb tm
         in
     	   if not(is_var v)
@@ -327,7 +327,7 @@ fun GGEN_TAC (asl,gl) =
 
 fun RESQ_EXISTS_TAC tm =
    (fn (asl, w) =>
-    let val RESQ_EXISTS = restr_binderTheory.RES_EXISTS 
+    let val RESQ_EXISTS = restr_binderTheory.RES_EXISTS
     val (var,cond,body) = dest_resq_exists w
     val thm = RIGHT_CONV_RULE (GEN_ALPHA_CONV var)
         (ISPECL [cond, mk_abs{Bvar=var,Body=body}] RESQ_EXISTS)
@@ -373,7 +373,7 @@ fun LEFT_THENC_RIGHT c1 c2 = (LHS_CONV c1 THENC RHS_CONV c2);
 val RF_BODY_CONV = RAND_CONV;
 val RF_PRED_CONV = (RATOR_CONV o RAND_CONV);
 val RF_CONV = (RAND_CONV o ABS_CONV);
-fun PRED_THENC_BODY c1 c2 = 
+fun PRED_THENC_BODY c1 c2 =
    (((RATOR_CONV o RAND_CONV) c1) THENC ((RAND_CONV o ABS_CONV) c2));
 
 (* --------------------------------------------------------------------- *)
@@ -416,8 +416,8 @@ val IMP_RESQ_FORALL_CONV  = (fn tm =>
      if not(var = v)
      then raise RES_QUAN_ERR {function="IMP_RESQ_FORALL_CONV",
                               message = "term not in the correct form"}
-     else 
-       SYM (RIGHT_CONV_RULE ((GEN_ALPHA_CONV var) THENC 
+     else
+       SYM (RIGHT_CONV_RULE ((GEN_ALPHA_CONV var) THENC
                              (ONCE_DEPTH_CONV BETA_CONV))
                             (ISPECL [pred,mk_abs{Bvar=var,Body=t}] dthm))
     end
@@ -452,7 +452,7 @@ val RESQ_FORALL_AND_CONV = (fn tm =>
 (*     |- (!i :: P. t1) /\ (!i :: P. t2) = (!i :: P. t1 /\ t2)           *)
 (* --------------------------------------------------------------------- *)
 
-val AND_RESQ_FORALL_CONV = (fn tm => 
+val AND_RESQ_FORALL_CONV = (fn tm =>
     let val rthm = res_quanTheory.RESQ_FORALL_CONJ_DIST
     val conj1 = rand(rator tm) and conj2 = rand tm
     val (var1,pred1,body1) = dest_resq_forall conj1
@@ -520,7 +520,7 @@ val RESQ_EXISTS_CONV = (fn tm' =>
 (* convert a theorem into a canonical form for COND_REWR_TAC		 *)
 (* --------------------------------------------------------------------- *)
 
-val RESQ_REWR_CANON = 
+val RESQ_REWR_CANON =
     COND_REWR_CANON o (CONV_RULE ((TOP_DEPTH_CONV RESQ_FORALL_CONV)));
 
 
@@ -647,7 +647,7 @@ fun RESQ_DEF_EXISTS_RULE tm =
     val pConst = hd leftvars
     val cname = #Name(dest_var pConst)
     in
-    if not(Lexis.allowed_term_constant cname) then 
+    if not(Lexis.allowed_term_constant cname) then
     	raise RES_QUAN_ERR {function="RESQ_DEF_EXISTS_RULE",
                         message = (cname^" is not allowed as a constant name")}
     else if (mem pConst resvars) then
@@ -671,7 +671,7 @@ fun RESQ_DEF_EXISTS_RULE tm =
                                          (type_vars_in_term pConst)))^
                                      "an unbound type variable in definition")}
     else
-      let val gl = 
+      let val gl =
          list_mk_forall
            (finpred,
             mk_exists
@@ -683,7 +683,7 @@ fun RESQ_DEF_EXISTS_RULE tm =
                             mk_eq{lhs=lh,rhs=rh}))})
       val ex = list_mk_abs((tl leftvars), rh)
       val defthm = prove(gl,
-    	REPEAT GEN_TAC THEN EXISTS_TAC ex THEN BETA_TAC 
+    	REPEAT GEN_TAC THEN EXISTS_TAC ex THEN BETA_TAC
     	THEN REPEAT RESQ_GEN_TAC THEN REPEAT GEN_TAC THEN REFL_TAC)
       in
        if is_forall(concl defthm)
@@ -703,19 +703,24 @@ fun RESQ_DEF_EXISTS_RULE tm =
 (*    be either "constant", or "infix" or "binder".			 *)
 (* --------------------------------------------------------------------- *)
 
-fun new_gen_resq_definition flag (name, tm) =
- let val def_thm = RESQ_DEF_EXISTS_RULE tm
- val cname = (#Name o dest_var o #Bvar o dest_exists o concl) def_thm
- in
+open Parse
+
+fun new_gen_resq_definition flag (name, tm) = let
+  val def_thm = RESQ_DEF_EXISTS_RULE tm
+  val cname = (#Name o dest_var o #Bvar o dest_exists o concl) def_thm
+in
+
   new_specification {name=name,
-                     consts= [{fixity=flag,const_name=cname}],
+                     consts= [{fixity = flag, const_name = cname}],
                      sat_thm = def_thm}
- end;
+end;
 
 val new_resq_definition =  new_gen_resq_definition Prefix;
 
-fun new_infix_resq_definition (name,tm,fix) =  
-    new_gen_resq_definition (Infix fix) (name,tm);
+fun new_infixl_resq_definition (name,tm,fix) =
+    new_gen_resq_definition (Infixl fix) (name,tm);
+fun new_infixr_resq_definition (name,tm,fix) =
+    new_gen_resq_definition (Infixr fix) (name,tm);
 
 val new_binder_resq_definition =  new_gen_resq_definition Binder;
 
@@ -738,10 +743,10 @@ local fun check st l =
 (* !x0 ... xn y. P ==> t.    	    					*)
 (* --------------------------------------------------------------------- *)
 
-and  check_res th = 
-    if is_forall (concl th) then 
+and  check_res th =
+    if is_forall (concl th) then
 (*        CONV_RULE (ONCE_DEPTH_CONV RESQ_FORALL_CONV) th *)
-    	GEN_ALL(RESQ_HALF_SPEC(SPEC_ALL th)) 
+    	GEN_ALL(RESQ_HALF_SPEC(SPEC_ALL th))
     else (RESQ_HALF_SPEC th)
       handle _ => raise RES_QUAN_ERR {function="check_res",
                           message = "not restricted forall"};

@@ -66,6 +66,7 @@ val RESQ_REWR_CANON: thm -> thm
 val RESQ_REWRITE1_TAC:  thm_tactic
 val RESQ_REWRITE1_CONV:  thm list -> thm -> conv
 val new_resq_definition: string * term -> thm
-val new_infix_resq_definition: string * term * int -> thm
+val new_infixl_resq_definition: string * term * int -> thm
+val new_infixr_resq_definition: string * term * int -> thm
 val new_binder_resq_definition: string * term -> thm
 end;

@@ -19,6 +19,12 @@ val RESQ_EXISTS = restr_binderTheory.RES_EXISTS;
 val RESQ_SELECT = restr_binderTheory.RES_SELECT;
 val RESQ_ABSTRACT = restr_binderTheory.RES_ABSTRACT;
 
+val _ = associate_restriction ("\\", "RES_ABSTRACT");
+val _ = associate_restriction ("!",  "RES_FORALL");
+val _ = associate_restriction ("?",  "RES_EXISTS");
+val _ = associate_restriction ("@",  "RES_SELECT");
+val _ = add_resquan_operator  ("::", 2)
+
 (* ===================================================================== *)
 (* Properties of restricted quantification.                              *)
 (* --------------------------------------------------------------------- *)
@@ -27,10 +33,12 @@ val RESQ_ABSTRACT = restr_binderTheory.RES_ABSTRACT;
 (* RESQ_FORALL	    	    	    					*)
 (* --------------------------------------------------------------------- *)
 
+
+
 val RESQ_FORALL_CONJ_DIST = store_thm("RESQ_FORALL_CONJ_DIST",
     (--`!P Q R.
      (!(i:'a) :: P. (Q i /\ R i)) = (!i :: P. Q i) /\ (!i :: P. R i)`--),
-    REPEAT STRIP_TAC THEN REWRITE_TAC [RESQ_FORALL] 
+    REPEAT STRIP_TAC THEN REWRITE_TAC [RESQ_FORALL]
     THEN BETA_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN RES_TAC);
 
 val RESQ_FORALL_DISJ_DIST = store_thm("RESQ_FORALL_DISJ_DIST",
@@ -68,7 +76,7 @@ val RESQ_FORALL_REORDER = store_thm("RESQ_FORALL_REORDER",
 val RESQ_EXISTS_DISJ_DIST = store_thm("RESQ_EXISTS_DISJ_DIST",
     (--`!P Q R.
      (?(i:'a) :: P. (Q i \/ R i)) = (?i :: P. Q i) \/ (?i :: P. R i)`--),
-    REPEAT STRIP_TAC THEN REWRITE_TAC [RESQ_EXISTS] 
+    REPEAT STRIP_TAC THEN REWRITE_TAC [RESQ_EXISTS]
     THEN BETA_TAC THEN PURE_ONCE_REWRITE_TAC[CONJ_SYM]
     THEN PURE_ONCE_REWRITE_TAC[RIGHT_AND_OVER_OR]
     THEN CONV_TAC (ONCE_DEPTH_CONV EXISTS_OR_CONV) THEN REFL_TAC);
