@@ -94,10 +94,11 @@ val SRCDIRS =
   "src/IndDef",
   "src/datatype/parse", "src/datatype/equiv",  "src/datatype/record",
   "src/datatype",  "src/list/src", "src/tfl/src", "src/unwind", "src/boss",
-  "src/string", "src/llist",   "src/pred_set/src", "src/integer",
+  "src/string", "src/llist",   "src/pred_set/src", "src/ring/src",
+  "src/integer",
   "src/res_quan/src",
   "src/word/theories", "src/word/src",
-  "src/finite_map", "src/hol88", "src/real", "src/bag", "src/ring/src",
+  "src/finite_map", "src/hol88", "src/real", "src/bag",
   "src/temporal/src", "src/temporal/smv.2.4.3", "src/prob", "src/HolSat",
   "src/muddy/muddyC", "src/muddy", "src/HolBdd"];
 
