@@ -1,4 +1,4 @@
-OCAMLPATH=/home/kw217/bin
+OCAMLPATH=/home/pes20/bin
 
 OCAMLC=$(OCAMLPATH)/ocamlc
 OCAMLLEX=$(OCAMLPATH)/ocamllex
