@@ -179,5 +179,24 @@ val RES_ABSTRACT = new_definition
  ("RES_ABSTRACT", (--`RES_ABSTRACT P B = \x:'a. (P x => B x | ARB:'b)`--));
 
 val _ = export_theory();
+fun export_doc_theorems() = let
+  open Theory Parse
+  val thydir = Path.concat(Path.parentArc, Path.concat("help", "thms"))
+  val _ = if FileSys.access(thydir, []) then () else FileSys.mkDir thydir
+  val thms = theorems() @ axioms() @ definitions()
+  fun write_thm (thname, thm) = let
+    open TextIO
+    val outstream = openOut (Path.concat(thydir, thname^".doc"))
+  in
+    output(outstream, "\\THEOREM "^thname^" "^current_theory()^"\n");
+    output(outstream, thm_to_string thm);
+    output(outstream, "\n\\ENDTHEOREM\n");
+    closeOut outstream
+  end
+in
+  app write_thm thms
+end
+
+val _ = export_doc_theorems()
 
 end;
