@@ -1,11 +1,12 @@
-(* Copyright (C) 1997-2000 by Ken Friis Larsen and Jakob Lichtenberg. *)
+(* Copyright (C) 1997-2001 by Ken Friis Larsen and Jakob Lichtenberg. *)
 structure bdd :> bdd =
 struct
 	
     prim_type bdd;
-    type varSet = bdd; (* just to help people *)
-    type restriction = bdd;	
+    type varSet = bdd;
+    type assignment = bdd;	
     prim_type pairSet;
+    type composeSet = pairSet (* not the entire truth *)
     
     type varnum = int
     
@@ -57,6 +58,10 @@ struct
     val makepairset_ : varnum vector -> varnum vector -> pairSet
 	                                  = app2 (symb "mlbdd_makepairset")
 
+    val makebddpairset_ : varnum vector -> bdd vector -> pairSet
+	                                  = app2 (symb "mlbdd_makebddpairset")
+
+
     val setVarnum : int -> unit = app1 (symb "mlbdd_bdd_setvarnum")
     val getVarnum : unit -> int = app1 (symb "mlbdd_getvarnum")
 
@@ -96,8 +101,6 @@ struct
 
     val satcount : bdd -> real = app1 (symb "mlbdd_bdd_satcount")
 
-    val satone : bdd -> varSet = app1 (symb "mlbdd_bdd_satone")
-
     val nodecount : bdd -> int = app1 (symb "mlbdd_bdd_nodecount")
 	
     fun stats unit =
@@ -130,10 +133,6 @@ struct
 	end 
 
     val scanset : varSet -> varnum vector = app1 (symb "mlbdd_bdd_scanset")
-(*    fun scanset vs =
-	if equal vs FALSE then #[]
-	else scanset_ vs
-*)
 
     val support : bdd -> varSet = app1 (symb "mlbdd_bdd_support") 
 
@@ -163,23 +162,45 @@ struct
 
     val replace : bdd -> pairSet -> bdd = app2 (symb "mlbdd_bdd_replace")
 
-    fun makepairSet (pl : (varnum * varnum) list) = 
-        makepairset_ (Vector.fromList(map #1 pl)) (Vector.fromList(map #2 pl))
+    fun makepairSet pl = 
+        let val (old,new) = ListPair.unzip pl
+        in makepairset_ (vector old) (vector new) end
 
-    val compose : bdd -> bdd -> varnum -> bdd 
+    val compose_ : bdd -> bdd -> varnum -> bdd 
 	= app3 (symb "mlbdd_bdd_compose")
 
+    fun compose (v,r2) r1 = compose_ r1 r2 v
 
+    val veccompose : pairSet -> bdd -> bdd = app2 (symb "mlbdd_bdd_veccompose")
+
+    fun composeSet pl =
+        let val (old, new) = ListPair.unzip pl
+        in  makebddpairset_ (vector old) (vector new) end
+
+
+    fun assign((v,b), res) = apply res (if b then ithvar v else nithvar v) And 	
+    val assignment = List.foldl assign TRUE
+    val fromAssignment = fn x => x
+    val toAssignment_ = fn x => x
+
+    fun isBool bdd = (toBool bdd; true) handle Domain => false
+
+    fun getAssignment bdd =
+        let fun loop bdd acc =
+                if isBool bdd then acc
+                else let val var = var bdd
+                         val low = low bdd
+			 val high = high bdd
+                     in  if equal low FALSE then loop high ((var,true) :: acc)
+                         else loop low ((var,false) :: acc)
+                     end
+        in  loop bdd [] end
 
     val restrict : bdd -> bdd -> bdd = app2 (symb "mlbdd_bdd_restrict")
     
-    fun mkRestr((v,b), res) = 
-	apply res (if b then ithvar v else nithvar v) And 	
-    val makeRestriction = foldl mkRestr TRUE
+    val satone : bdd -> assignment = app1 (symb "mlbdd_bdd_satone")
 
 
-	
-(*    type elem = var * low * high *)
     type nodetable = int * (varnum * int * int) Vector.vector
 
 
@@ -234,12 +255,11 @@ struct
     val setMaxincrease : int -> int = app1 (symb "mlbdd_bdd_setmaxincrease")
     val setCacheratio  : int -> int = app1 (symb "mlbdd_bdd_setcacheratio")
 
-    val joingc : bool -> unit = app1 (symb "mlbdd_joingc")
-    val setprintgc : bool -> string -> string -> string -> unit =
-	app4 (symb "mlbdd_setprintgc")
+    val setprintgc : bool -> string -> string -> unit =
+	app3 (symb "mlbdd_setprintgc")
 
-    fun verbosegc NONE               = setprintgc false "" "" ""
-      | verbosegc (SOME(s1, s2, s3)) = setprintgc true s1 s2 s3
+    fun verbosegc NONE           = setprintgc false "" ""
+      | verbosegc (SOME(s1, s2)) = setprintgc true s1 s2
 
 
     (* Variable reordering stuff *)

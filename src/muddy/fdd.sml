@@ -1,4 +1,4 @@
-(* Copyright (C) 1997-2000 by Ken Friis Larsen and Jakob Lichtenberg. *)
+(* Copyright (C) 1997-2001 by Ken Friis Larsen and Jakob Lichtenberg. *)
 structure fdd :> fdd =
 struct
 	

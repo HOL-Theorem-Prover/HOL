@@ -1,4 +1,4 @@
-(* Copyright (C) 1997-2000 by Ken Friis Larsen and Jakob Lichtenberg. *)
+(* Copyright (C) 1997-2001 by Ken Friis Larsen and Jakob Lichtenberg. *)
 signature bdd =
 sig
     type bdd
@@ -64,11 +64,23 @@ sig
     val makepairSet : (varnum * varnum) list -> pairSet
     val replace : bdd -> pairSet -> bdd
 
-    val compose : bdd -> bdd -> varnum -> bdd
 
-    type restriction 
-    val makeRestriction : (varnum * bool) list -> restriction
-    val restrict : bdd -> restriction -> bdd
+    type composeSet
+    val composeSet : (varnum * bdd) list -> composeSet
+    val compose    : (varnum * bdd) -> bdd -> bdd
+    val veccompose : composeSet -> bdd -> bdd
+
+    type assignment
+    val assignment : (varnum * bool) list -> assignment
+    val fromAssignment : assignment -> bdd
+    val toAssignment_ : bdd -> assignment
+    val getAssignment : assignment -> (varnum * bool) list 
+
+
+    val restrict : bdd -> assignment -> bdd
+
+    val satone : bdd -> assignment
+
 
     val simplify  : bdd -> bdd -> bdd
 
@@ -118,8 +130,7 @@ sig
 
     val setMaxincrease : int -> int
     val setCacheratio  : int -> int
-    val joingc         : bool -> unit
-    val verbosegc      : (string * string * string) option -> unit
+    val verbosegc      : (string * string) option -> unit
 
     val stats    : unit -> {produced     : int,
 			    nodenum      : int,
@@ -271,10 +282,16 @@ end
 
    [replace r pairset] perfoms the substitution pairset on r.
 
-   [compose r1 r2 var] substitute r2 for var in r1.
+   [compose (var, r2) r1] substitute r2 for var in r1.
 
-   [restrict r vars] ... restrict the variables in vars to T or F in
-   r.  [documentation not complete here].
+   Type [assignment] represents an assignment of variables. The
+   assignment [(x1,true), (x3,false), (x2, true)] corresponds to the
+   bdd 'AND(x1,AND(NOT x3, x2))'.
+
+   [restrict r assign] ... restrict the variables in assign to TRUE or
+   FALSE in r.  [documentation not complete here].
+
+   [satone r] finds a satisfying variable assignment.
 
    [simplify r dom] tries to simplify r by restricting it to domain d,
    ie. 'r AND dom  =  dom AND (simplify r dom)'.
@@ -305,6 +322,10 @@ end
    [fnprintset fname r] prints all the truth assignments for r that would
    satisfy r, in the file fname.
 
+   [bddSave name r] saves r in the file name.
+
+   [bddLoad name] returns the bdd saved in the file name.
+
    [nodetable r] returns the nodetable for r.
 
    [setMaxincrease n] tells BuDDy that the maximum of new nodes added
@@ -315,14 +336,8 @@ end
    four then the internal caches will be 1/4th the size of the
    nodetable.
 
-   [joingc joined] decides whether Moscow ML GC and BuDDy GC should be
-   joined.  That is, if joined is true then whenever BuDDy starts a GC
-   then Moscow ML will perform a major GC; otherwise the two GC works
-   asynchronous.
-
-   [verbosegc(SOME(start,postmos,postgc))] instructs BuDDy to print
-   start when a BuDDy GC is initiated; print postmos when the Moscow
-   ML GC is completed (if joingc is true); and print postgc when the
+   [verbosegc(SOME(pregc,postgc))] instructs BuDDy to print
+   pregc when a BuDDy GC is initiated and print postgc when the
    BuDDy GC is completed.
 
    [stats()] gives various statstistical information from the

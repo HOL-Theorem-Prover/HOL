@@ -1,0 +1,46 @@
+# ==============================================================
+# Makefile for the BuDDy package
+# - Edit the lines below to configure
+# ==============================================================
+
+# --- Your compiler flags
+CFLAGS = -g -ansi -Wmissing-prototypes -Wall
+
+# --- Where to install the library (directory, no trailing slash)
+LIBDIR = /usr/local/lib
+
+# --- Where to install the include file (directory, no trailing slash)
+INCDIR = /usr/local/include
+
+# --- Your C compiler
+CC = gcc
+
+# --- Your C++ compiler
+CPP = g++
+
+# Some machines are missing "CLOCKS_PER_SEC". Please define a default value
+# If you do not know this, then leave it as it is.
+CLOCK=60
+
+CLOCKFLAG = -DDEFAULT_CLOCK=$(CLOCK)
+
+# Debugging and statistical flags. Possible values are:
+# -DSWAPCOUNT  :  Count number of fundamental variable swaps
+# -DCACHESTATS :  Gather statistical information about operator and
+#                 unique node caching
+DEBUGFLAGS =
+
+# Some of the BuDDy library needs 64 bit arithmetics.
+# With gnu C++, Microsoft C++ and KAI C++ this is part of the
+# language and used by BuDDy. With other compilers BuDDy need
+# to implement the math it self -- which is a bit slower. If
+# you now of a 64 bit unsigned integer type on your platform
+# then define that in the BUDDYUINT64 variable. Example:
+# BUDDYUINT64 = -DBUDDYUINT64="long long"
+
+
+# --------------------------------------------------------------
+# Do not touch 
+# --------------------------------------------------------------
+DFLAGS = $(CLOCKFLAG) $(DEBUGFLAGS) $(BUDDYUINT64)
+

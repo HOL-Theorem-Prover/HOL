@@ -1,4 +1,4 @@
-(* Copyright (C) 1997-2000 by Ken Friis Larsen and Jakob Lichtenberg. *)
+(* Copyright (C) 1997-2001 by Ken Friis Larsen and Jakob Lichtenberg. *)
 structure bvec :> bvec =
 struct
 	
@@ -26,11 +26,26 @@ struct
 	    
     val add: bvec * bvec -> bvec = cur2 (symb "mlbvec_add")
     val sub: bvec * bvec -> bvec = cur2 (symb "mlbvec_sub")
-    val mul: bvec * const -> bvec = cur2 (symb "mlbvec_mul")
-    val divi: bvec * const -> bvec = cur2 (symb "mlbvec_divi")
-    val modu: bvec * const -> bvec = cur2 (symb "mlbvec_modu")
-    val shl: bvec -> int -> bdd -> bvec = app3 (symb "mlbvec_shl")
-    val shr: bvec -> int -> bdd -> bvec = app3 (symb "mlbvec_shr")
+
+    val mul     : bvec * bvec -> bvec = cur2 (symb "mlbvec_mul")
+    val mulfixed: bvec * const -> bvec = cur2 (symb "mlbvec_mulfixed")
+
+    val op div : bvec * bvec -> bvec * bvec = cur2 (symb "mlbvec_div")
+    val divfixed: bvec * const -> bvec * bvec = cur2 (symb "mlbvec_divfixed")
+    val divi      = #1 o op div
+    val divifixed = #1 o divfixed
+    val modu      = #2 o op div
+    val modufixed = #2 o divfixed
+
+(*    val divifixed: bvec * const -> bvec = cur2 (symb "mlbvec_divi")
+    val modufixed: bvec * const -> bvec = cur2 (symb "mlbvec_modu")
+*)
+    val shl     : bvec -> bvec -> bdd -> bvec = app3 (symb "mlbvec_shl")
+    val shlfixed: bvec -> int -> bdd -> bvec = app3 (symb "mlbvec_shlfixed")
+
+    val shr     : bvec -> bvec -> bdd -> bvec = app3 (symb "mlbvec_shr")
+    val shrfixed: bvec -> int  -> bdd -> bvec = app3 (symb "mlbvec_shrfixed")
+
     val lth: bvec * bvec -> bdd = cur2 (symb "mlbvec_lth")
     val lte: bvec * bvec -> bdd = cur2 (symb "mlbvec_lte")
     val gth: bvec * bvec -> bdd = cur2 (symb "mlbvec_gth")

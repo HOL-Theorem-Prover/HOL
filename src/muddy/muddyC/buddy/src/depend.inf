@@ -1,0 +1,12 @@
+bddio.o: bddio.c kernel.h bdd.h
+bddop.o: bddop.c kernel.h bdd.h cache.h
+bvec.o: bvec.c kernel.h bdd.h bvec.h fdd.h
+cache.o: cache.c kernel.h bdd.h cache.h prime.h
+fdd.o: fdd.c kernel.h bdd.h fdd.h
+imatrix.o: imatrix.c kernel.h bdd.h imatrix.h
+kernel.o: kernel.c kernel.h bdd.h cache.h prime.h
+pairs.o: pairs.c kernel.h bdd.h
+prime.o: prime.c prime.h
+reorder.o: reorder.c kernel.h bdd.h bddtree.h imatrix.h prime.h
+tree.o: tree.c kernel.h bdd.h bddtree.h
+cppext.o: cppext.cxx kernel.h bdd.h bvec.h fdd.h

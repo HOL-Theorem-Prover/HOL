@@ -1,4 +1,4 @@
-(* Copyright (C) 1997-2000 by Ken Friis Larsen and Jakob Lichtenberg. *)
+(* Copyright (C) 1997-2001 by Ken Friis Larsen and Jakob Lichtenberg. *)
 signature bvec =
 sig
     type bvec
@@ -18,11 +18,24 @@ sig
 	
     val add: bvec * bvec -> bvec
     val sub: bvec * bvec -> bvec
-    val mul: bvec * const -> bvec
-    val divi: bvec * const -> bvec
-    val modu: bvec * const -> bvec
-    val shl: bvec -> int -> bdd.bdd -> bvec
-    val shr: bvec -> int -> bdd.bdd -> bvec
+
+    val mul     : bvec * bvec -> bvec
+    val mulfixed: bvec * const -> bvec
+
+    val div     : bvec * bvec -> bvec * bvec
+    val divfixed: bvec * const -> bvec * bvec
+
+    val divi     : bvec * bvec -> bvec
+    val divifixed: bvec * const -> bvec
+ 
+    val modu     : bvec * bvec -> bvec
+    val modufixed: bvec * const -> bvec
+
+    val shl     : bvec -> bvec -> bdd.bdd -> bvec
+    val shlfixed: bvec -> int -> bdd.bdd -> bvec
+
+    val shr     : bvec -> bvec -> bdd.bdd -> bvec
+    val shrfixed: bvec -> int -> bdd.bdd -> bvec
 	
     val lth: bvec * bvec -> bdd.bdd
     val lte: bvec * bvec -> bdd.bdd
@@ -48,35 +61,36 @@ end
   const       int
   
   Values:
-  ?	    bvec_copy
+  ?	      bvec_copy
   bvectrue    bvec_true
   bvecfalse   bvec_false
-  con	    bvec_con
-  var	    bvec_var
-  varfdd	    bvec_varfdd
-  ?	    bvec_varvec
-  coerce	    bvec_coerce
-  isConst	    bvec_isconst
+  con	      bvec_con
+  var	      bvec_var
+  varfdd      bvec_varfdd
+  ?	      bvec_varvec
+  coerce      bvec_coerce
+  isConst     bvec_isconst
   getConst    bvec_val
   lookupConst ?                       Uses isConst and getConst
-  ?	    bvec_free
-  ?	    bvec_addref
-  ?	    bvec_delref
-  ?	    bvec_map1
-  ?	    bvec_map2
-  ?	    bvec_map3
-  add	    bvec_add
-  sub	    bvec_sub
-  mul	    bvec_mul
-  divi	    bvec_div               (See also modu)
-  modu	    bvec_div               (See also divi)
-  shl	    bvec_shl
-  shr	    bvec_shr
-  lth	    bvec_lth
-  lte	    bvec_lte
-  gth	    bvec_gth
-  gte	    bvec_gte
-  equ	    bvec_equ
-  neq	    bvec_neq
+  ?	      bvec_free
+  ?	      bvec_addref
+  ?	      bvec_delref
+  ?	      bvec_map1
+  ?	      bvec_map2
+  ?	      bvec_map3
+  add	      bvec_add
+  sub	      bvec_sub
+  mul	      bvec_mul
+  div         bvec_div
+  divi	      bvec_div                (See also modu)
+  modu	      bvec_div                (See also divi)
+  shl	      bvec_shl
+  shr	      bvec_shr
+  lth	      bvec_lth
+  lte	      bvec_lte
+  gth	      bvec_gth
+  gte	      bvec_gte
+  equ	      bvec_equ
+  neq	      bvec_neq
   
 *)
