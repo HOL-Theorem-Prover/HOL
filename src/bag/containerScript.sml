@@ -61,6 +61,7 @@ val LIST_TO_SET_THM = store_thm(
   ``(LIST_TO_SET []     = {}) /\
     (LIST_TO_SET (h::t) = h INSERT (LIST_TO_SET t))``,
   SRW_TAC [][EXTENSION]);
+val _ = export_rewrites ["LIST_TO_SET_THM"]
 
 
 (*---------------------------------------------------------------------------
@@ -108,6 +109,12 @@ val UNION_APPEND = Q.store_thm
   Induct
    THEN RW_TAC bool_ss [LIST_TO_SET_THM,UNION_EMPTY,listTheory.APPEND]
    THEN PROVE_TAC [INSERT_UNION_EQ]);
+
+val FINITE_LIST_TO_SET = store_thm(
+  "FINITE_LIST_TO_SET",
+  ``!l. FINITE (LIST_TO_SET l)``,
+  Induct THEN SRW_TAC [][]);
+val _ = export_rewrites ["FINITE_LIST_TO_SET"]
 
 (*---------------------------------------------------------------------------
     Lists and bags. Note that we also have SET_OF_BAG and BAG_OF_SET
