@@ -2,7 +2,7 @@
 MOSMLHOME=
 
 MOSMLBIN=$(MOSMLHOME)/bin
-MOSMLRUNTIME=$(MOSMLHOME)/src/runtime
+MOSMLRUNTIME=$(MOSMLHOME)/include
 MOSMLC=$(MOSMLBIN)/mosmlc -c
 
 # Your C compiler
@@ -33,6 +33,6 @@ $(BUDDYLIB):
 
 clean:
 	cd buddy17; make clean; rm src/libbdd.a
-	rm -f *.u? 
+	rm -f *.u?
 	rm -f *.o *.so
 	rm -f Makefile.bak
