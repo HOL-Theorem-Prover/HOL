@@ -14,6 +14,7 @@ prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
 val _ = catch_interrupt true;
 
 
+(* path manipulation functions *)
 fun normPath s = Path.toString(Path.fromString s)
 fun itstrings f [] = raise Fail "itstrings: empty list"
   | itstrings f [x] = x
@@ -23,6 +24,7 @@ fun fullPath slist = normPath
 
 fun quote s = String.concat["\"", s, "\""];
 
+(* message emission *)
 fun die s =
     let open TextIO
     in
@@ -32,10 +34,9 @@ fun die s =
     end
 fun warn s = let open TextIO in output(stdErr, s); flushOut stdErr end;
 
-(*---------------------------------------------------------------------------
-     The following lines are written at configuration time.
- ---------------------------------------------------------------------------*)
 
+(* values from the Systeml structure, which is created at HOL configuration
+   time *)
 val OS = Systeml.OS;
 val HOLDIR = Systeml.HOLDIR
 val EXECUTABLE = Systeml.xable_string (fullPath [HOLDIR, "bin", "build"])
@@ -154,23 +155,7 @@ fun Gnumake dir =
    Some useful file-system utility functions
    ---------------------------------------------------------------------- *)
 
-(*
-fun map_dir f dir =  (* map a function over the files in a directory *)
-  let val dstrm = FileSys.openDir dir
-      fun loop() =
-        case FileSys.readDir dstrm
-         of NONE => FileSys.closeDir dstrm
-          | SOME file => (f (dir,file) ; loop())
-  in loop()
-     handle OS.SysErr(s, erropt)
-       => (FileSys.closeDir dstrm;
-           die ("OS error: "^s^" - "^
-              (case erropt of SOME s' => OS.errorMsg s' | _ => "")^"\n"))
-       | otherexn => (FileSys.closeDir dstrm;
-                      die "map_dir: unknown exception")
-  end
-*)
-
+(* map a function over the files in a directory *)
 fun map_dir f dir =
   let val dstrm = FileSys.openDir dir
       fun loop () =
@@ -186,7 +171,9 @@ fun map_dir f dir =
        | otherexn => die ("map_dir: "^General.exnMessage otherexn)
   end;
 
-
+fun rem_file f =
+  FileSys.remove f
+   handle _ => (warn ("Couldn't remove file "^f^"\n"); ());
 
 fun copy file path =  (* Dead simple file copy *)
  let open TextIO
@@ -208,7 +195,7 @@ fun bincopy file path =  (* Dead simple file copy - binary version *)
   in loop()
   end;
 
-
+(* create a symbolic link - Unix only *)
 fun link b s1 s2 =
   let open Process
   in if SYSTEML ["ln", "-s", s1, s2] = success then ()
@@ -335,10 +322,6 @@ fun upload (src,target,symlink) =
 fun buildDir symlink s = (build_dir s; upload(s,SIGOBJ,symlink));
 
 fun build_src symlink = List.app (buildDir symlink) SRCDIRS
-
-fun rem_file f =
-  FileSys.remove f
-   handle _ => (print ("Trouble with removing file "^f^"?\n"); ());
 
 (*---------------------------------------------------------------------------*)
 (* In clean_sigobj, we need to avoid removing the systeml stuff that will    *)
@@ -559,7 +542,7 @@ in
   else ()
 end;
 
-val _ = check_against  "tools/smart-configure.sml"
+val _ = check_against "tools/smart-configure.sml"
 val _ = check_against "tools/configure.sml"
 val _ = check_against "tools/build.sml"
 val _ = check_against "tools/Holmake/Systeml.sig"
