@@ -52,7 +52,7 @@ fun pp_defn ppstrm =
                             add_string (Lib.int_to_string n^". ");
                             pp_term tm; end_block()))
                          (fn () => ())
-                         (fn () => add_break(1,0)) 
+                         add_newline 
                       (Lib.enumerate 0 tcs);
                end_block());
          end_block())
@@ -76,8 +76,8 @@ fun pp_defn ppstrm =
            add_string "Case analysis:"; 
            add_break(1,0); pp_thm ind;
            end_block())
-     | pp (STDREC {eqs, ind, R, SV, stem}) = pp_rec(eqs,ind, hyp ind)
-     | pp (NESTREC{eqs, ind, R, SV, aux, stem}) = pp_rec(eqs,ind, hyp ind)
+     | pp (STDREC {eqs, ind, R, SV, stem})        = pp_rec(eqs,ind, hyp ind)
+     | pp (NESTREC{eqs, ind, R, SV, aux, stem})   = pp_rec(eqs,ind, hyp ind)
      | pp (MUTREC {eqs, ind, R, SV, union, stem}) = pp_rec(eqs,ind, hyp ind)
  in
    fn d =>
