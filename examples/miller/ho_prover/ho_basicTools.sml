@@ -41,11 +41,6 @@ val !! = REPEAT;
 (* ------------------------------------------------------------------------- *)
 
 val trace_level = ref 0;
-(* home
-val _ = Feedback.register_trace "ho_basicTools" trace_level;
-*)
-(* work
-*)
 val _ = Feedback.register_trace ("ho_basicTools", trace_level, 10);
 fun trace l s = if l > !trace_level then () else say (s ^ "\n");
 fun trace_x l s f x =
@@ -58,16 +53,18 @@ fun trace_CONV l s tm = (trace_x l s term_to_string tm; ALL_CONV tm);
 
 val empty_raw_subst : raw_substitution = (([], empty_tmset), ([], []));
 
+fun raw_match' tm1 tm2 ((tmS, tmIds), (tyS, tyIds)) =
+  raw_match tyIds tmIds tm1 tm2 (tmS, tyS);
+
 fun type_raw_match ty1 ty2 (sub : raw_substitution) =
   let
     val tm1 = mk_const ("NIL", mk_type ("list", [ty1]))
     val tm2 = mk_const ("NIL", mk_type ("list", [ty2]))
   in
-    raw_match [] empty_tmset tm1 tm2 sub
+    raw_match' tm1 tm2 sub
   end;
 
-val finalize_subst : raw_substitution -> substitution =
-  fn (tm_sub, (ty_sub, _)) => (norm_subst ty_sub tm_sub, ty_sub);
+val finalize_subst : raw_substitution -> substitution = norm_subst;
 
 (* ------------------------------------------------------------------------- *)
 (* Higher-order matching.                                                    *)
@@ -123,7 +120,7 @@ in
     let
       val var_bvs = map (mk_bv bvs) bs
     in
-      (C (raw_match [] empty_tmset var) sub ## I) (ho_pat_match bvs var_bvs tm)
+      (C (raw_match' var) sub ## I) (ho_pat_match bvs var_bvs tm)
     end
 end;
 
@@ -143,7 +140,7 @@ in
       val _ = assert (null_intersection bvs (free_vars body))
         (ERR "fo_pat_match" "term to be matched contains bound vars")
     in
-      raw_match [] empty_tmset var body sub
+      raw_match' var body sub
     end;
 end;
 
@@ -175,7 +172,7 @@ local
            (sub'', fn () => MK_ABS (GEN Bvar' (thk ())))
          end
        | (CONST _, CONST _)
-         => (raw_match [] empty_tmset tm tm' sub, fn () => REFL tm')
+         => (raw_match' tm tm' sub, fn () => REFL tm')
        | (VAR _, _)
          => raise BUG "ho_match" "var in pattern shouldn't be possible"
        | _ => raise ERR "ho_match" "fundamentally different terms")

@@ -41,16 +41,18 @@ val !! = REPEAT;
 
 val empty_raw_subst : raw_substitution = (([], empty_tmset), ([], []));
 
+fun raw_match' tm1 tm2 ((tmS, tmIds), (tyS, tyIds)) =
+  raw_match tyIds tmIds tm1 tm2 (tmS, tyS);
+
 fun type_raw_match ty1 ty2 (sub : raw_substitution) =
   let
     val tm1 = mk_const ("NIL", mk_type ("list", [ty1]))
     val tm2 = mk_const ("NIL", mk_type ("list", [ty2]))
   in
-    raw_match [] empty_tmset tm1 tm2 sub
+    raw_match' tm1 tm2 sub
   end;
 
-val finalize_subst : raw_substitution -> substitution =
-  fn (tm_sub, (ty_sub, _)) => (norm_subst ty_sub tm_sub, ty_sub);
+val finalize_subst : raw_substitution -> substitution = norm_subst;
 
 (* ------------------------------------------------------------------------- *)
 (* A term discriminator.                                                     *)
@@ -165,7 +167,7 @@ fun pat_ho_match _ (FVAR _) _ =
   if n = n' then (sub, (fn () => REFL (mk_bv bvs n)) :: thks)
   else raise ERR "pat_ho_match" "different bound vars"
   | pat_ho_match (sub, thks) (CONSTANT c) (_, CONSTANT c') =
-  (raw_match [] empty_tmset c c' sub, (fn () => REFL c') :: thks)
+  (raw_match' c c' sub, (fn () => REFL c') :: thks)
   | pat_ho_match _ _ _ =
   raise ERR "pat_ho_match" "pats fundamentally different";
 
@@ -210,8 +212,7 @@ fun pat_fo_match _ (FVAR _) _ =
   | pat_fo_match sub ABS_END ABS_END = sub
   | pat_fo_match sub (BVAR n) (BVAR n') =
   if n = n' then sub else raise ERR "pat_fo_match" "different bound vars"
-  | pat_fo_match sub (CONSTANT c) (CONSTANT c') =
-  raw_match [] empty_tmset c c' sub
+  | pat_fo_match sub (CONSTANT c) (CONSTANT c') = raw_match' c c' sub
   | pat_fo_match _ _ _ =
   raise ERR "pat_fo_match" "pats fundamentally different";
 

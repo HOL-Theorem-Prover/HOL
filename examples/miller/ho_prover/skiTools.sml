@@ -36,16 +36,18 @@ fun printVal _ = ();
 
 val empty_raw_subst : raw_substitution = (([], empty_tmset), ([], []));
 
+fun raw_match' tm1 tm2 ((tmS, tmIds), (tyS, tyIds)) =
+  raw_match tyIds tmIds tm1 tm2 (tmS, tyS);
+
 fun type_raw_match ty1 ty2 (sub : raw_substitution) =
   let
     val tm1 = mk_const ("NIL", mk_type ("list", [ty1]))
     val tm2 = mk_const ("NIL", mk_type ("list", [ty2]))
   in
-    raw_match [] empty_tmset tm1 tm2 sub
+    raw_match' tm1 tm2 sub
   end;
 
-val finalize_subst : raw_substitution -> substitution =
-  fn (tm_sub, (ty_sub, _)) => (norm_subst ty_sub tm_sub, ty_sub);
+val finalize_subst : raw_substitution -> substitution = norm_subst;
 
 (* ------------------------------------------------------------------------- *)
 (* Conversion to combinators {S,K,I}.                                        *)
@@ -217,13 +219,12 @@ fun ski_pattern_reduce (SKI_VAR _) _ _ =
   | ski_pattern_reduce SKI_COMB_BEGIN SKI_COMB_BEGIN sub = sub
   | ski_pattern_reduce SKI_COMB_END SKI_COMB_END sub = sub
   | ski_pattern_reduce (SKI_CONST c) (SKI_CONST c') sub =
-  raw_match [] empty_tmset c c' sub
+  raw_match' c c' sub
   | ski_pattern_reduce _ _ _ =
   raise ERR "ski_pattern_reduce" "patterns fundamentally different";
 
 local
-  fun advance (SKI_VAR v) (RIGHT tm :: rest, sub) =
-    (rest, raw_match [] empty_tmset v tm sub)
+  fun advance (SKI_VAR v) (RIGHT tm :: rest, sub) = (rest, raw_match' v tm sub)
     | advance pat (state as RIGHT _ :: _, sub) =
     advance pat (ski_pattern_term_break empty_vars state, sub)
     | advance pat (LEFT pat' :: rest, sub) =
