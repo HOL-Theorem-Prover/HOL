@@ -2,12 +2,12 @@
    HTML-files.  Peter Sestoft 1997-05-08, 1997-07-31, 2000-01-10, 2000-06-01 
 *)
 
-fun indexbar out =
-    out "<HR><TABLE WIDTH=100%>\
-     \<TR ALIGN = CENTER>\n\
-     \<TH><A HREF=\"idIndex.html\">Identifier index</A>\n\
-     \<TH><A HREF=\"index.html\">Structure index</A>\n\
-     \</TABLE><HR>\n";
+fun indexbar out srcpath = out (String.concat
+   ["<HR><TABLE WIDTH=100%>",
+    "<TR ALIGN = CENTER>\n",
+    "<TH><A HREF=\"idIndex.html\">Identifier index</A>\n",
+    "<TH><A HREF=\"", srcpath, "\">Source File</A>\n",
+    "</TABLE><HR>\n"]);
 
 val smlIdCharSym = Char.contains "'_!%&$#+-/:<=>?@\\~`^|*"
 fun smlIdChar c = Char.isAlphaNum c orelse smlIdCharSym c
@@ -25,36 +25,18 @@ fun destProperSuffix s1 s2 =
 
 val destTheorysig = destProperSuffix "Theory.sig";
 
-(*---------------------------------------------------------------------------
-   Locating the source of a ".sig" file. This uses the path held in a
-   symbolic link, so this won't work on a file system without symbolic
-   links. We will have to think of a better way, in order to get this
-   to work on Windows. We will also have to tell people to do a
-
-       bin/build -symlink
-
-   for this scheme to work.
- ---------------------------------------------------------------------------*)
-
-fun srcfile sigfile = 
-  if FileSys.isLink sigfile
-  then let val linkpath = FileSys.readLink sigfile
-       in case destTheorysig linkpath
-           of SOME path => SOME (path^"Script.sml")
-            | NONE => let val {dir,file} = Path.splitDirFile linkpath
-                          val {base,ext} = Path.splitBaseExt file
-                      in SOME (Path.concat(dir, 
-                               Path.joinBaseExt{base=base,ext=SOME"sml"}))
-                      end
-       end
-  else NONE;
+fun assoc item =
+  let fun assc ((key,ob)::rst) = if item=key then ob else assc rst
+        | assc [] = raise Fail ("assoc: "^item^" not found")
+  in assc
+  end
 
 fun find_most_appealing HOLpath docfile =
   let open Path FileSys
       val {dir,file} = splitDirFile docfile
       val {base,ext} = splitBaseExt file
       val docfile_dir = concat(HOLpath,dir)
-      val htmldir  = concat(docfile_dir,"html")
+      val htmldir  = concat(docfile_dir,"HTML")
       val htmlfile = joinBaseExt{base=base,ext=SOME "html"}
       val adocfile = joinBaseExt{base=base,ext=SOME "adoc"}
       val htmlpath = concat(htmldir,htmlfile)
@@ -67,7 +49,7 @@ fun find_most_appealing HOLpath docfile =
      else NONE
   end;
 
-fun processSig db version bgcolor HOLpath sigfile htmlfile =
+fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
     let val strName = Path.base (Path.file sigfile)
 	val is = TextIO.openIn sigfile
 	val lines = Substring.fields (fn c => c = #"\n") 
@@ -179,10 +161,12 @@ fun processSig db version bgcolor HOLpath sigfile htmlfile =
 
         fun locate_docfile id =
            let open FileSys Path Database
+               val qualid = strName^"."^id
                fun trav [] = NONE
                  | trav({comp=Database.Term(x,SOME "HOL"),file,line}::rst)
-                   = if x=id then find_most_appealing HOLpath file
-                             else trav rst
+                   = if x=qualid 
+                        then find_most_appealing HOLpath file
+                        else trav rst
                  | trav (_::rst) = trav rst
            in 
              trav (lookup(db,id))
@@ -263,6 +247,20 @@ fun processSig db version bgcolor HOLpath sigfile htmlfile =
 		  | loop (ln::lnr) lineno = 
 		    (process ln lineno; loop lnr (lineno+1))
 	    in loop lines 1 end
+
+        val mungedSRCFILES =
+          let fun munge path = 
+             let val {dir,file} = Path.splitDirFile path
+             in case destProperSuffix "Theory" file
+                of SOME thy => (file, Path.concat(dir,thy^"Script.sml"))
+                 | NONE     => (file,path^".sml")
+             end
+          in map munge SRCFILES
+          end
+
+        fun srcfile_of sigfile = 
+            assoc (Path.base(Path.file sigfile)) mungedSRCFILES
+
     in
 	print "Creating "; print htmlfile; print " from ";
 	print sigfile; print "\n"
@@ -272,35 +270,32 @@ fun processSig db version bgcolor HOLpath sigfile htmlfile =
         out strName; out "</TITLE></HEAD>\n";
         out "<BODY BGCOLOR=\""; out bgcolor; out "\">\n";
         out "<H1>Structure "; out strName; out "</H1>\n";
-        indexbar out;
+        indexbar out (srcfile_of sigfile);
         out "<PRE>\n";
         traverse (pass2 (Option.isSome (destTheorysig sigfile)));
-        out "</PRE>"
-       ;
-        case srcfile sigfile
-          of SOME file => out (String.concat
-                 ["\n<A HREF=\"", file,"\">Source File</A>\n"])
-           | NONE => ();
-        indexbar out;
+        out "</PRE>";
+        indexbar out (srcfile_of sigfile);
         out "<BR><EM>"; out version; out "</EM>";
         out "</BODY></HTML>\n";
         TextIO.closeOut os
     end
 
-fun processSigfile db version bgcolor stoplist sigdir htmldir HOLpath sigfile =
+fun processSigfile db version bgcolor stoplist
+                   sigdir htmldir HOLpath SRCFILES sigfile =
     let val {base, ext} = Path.splitBaseExt sigfile
 	val htmlfile = Path.joinBaseExt{base=base, ext=SOME "html"}
     in 
 	case ext of
 	    SOME "sig" => 
 		if List.exists (fn name => base = name) stoplist then ()
-		else processSig db version bgcolor HOLpath
+		else processSig db version bgcolor HOLpath SRCFILES
 		                (Path.concat(sigdir, sigfile))
 		                (Path.concat(htmldir, htmlfile))
 	  | _          => ()
     end
 
-fun sigsToHtml version bgcolor stoplist helpfile HOLpath (sigdir, htmldir) =
+fun sigsToHtml version bgcolor stoplist 
+               helpfile HOLpath SRCFILES (sigdir, htmldir) =
     let open FileSys Database
 	val db = readbase helpfile
 	fun mkdir htmldir =
@@ -311,7 +306,8 @@ fun sigsToHtml version bgcolor stoplist helpfile HOLpath (sigdir, htmldir) =
 		 print "Created directory "; print htmldir; print "\n");
     in 
      mkdir htmldir;
-     app (processSigfile db version bgcolor stoplist sigdir htmldir HOLpath) 
+     app (processSigfile db version bgcolor 
+                         stoplist sigdir htmldir HOLpath SRCFILES) 
 	 (Mosml.listDir sigdir)
     end
     handle exn as OS.SysErr (str, _) => (print(str ^ "\n\n"); raise exn)
@@ -392,10 +388,9 @@ fun printHTMLBase version bgcolor HOLpath (sigfile, outfile) =
 	     prtree t2)
     in 
 	out "<HTML>\
-	 \<HEAD><TITLE>HOL identifiers</TITLE></HEAD>\n";
+	 \<HEAD><TITLE>HOL INDEX</TITLE></HEAD>\n";
 	out "<BODY BGCOLOR=\""; out bgcolor; out "\">\n";
-	out "<H1>HOL identifiers</H1>\n";
-	indexbar out;
+	out "<H1>HOL INDEX</H1>\n";
 	mkalphaindex();
 	subheader "Symbolic identifiers";
 	out "<UL>";

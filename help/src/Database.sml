@@ -43,14 +43,24 @@ fun readbase filename =
 	val db = input_value is : database
     in close_in is; db end
 
-(* Make sure tilde gets collated as a symbol, before "A": *)
+(* Make sure tilde and | and \ are collated as symbols, before "A": *)
 
-fun caseless(#"~", #"~") = EQUAL
-  | caseless(#"~", c2) = 
-    if Char.toLower c2 < #"a" then GREATER else LESS
-  | caseless(c1, #"~") = 
-    if Char.toLower c1 < #"a" then LESS else GREATER
-  | caseless(c1, c2) = Char.compare(Char.toLower c1, Char.toLower c2)
+fun caseless(#"~", #"~")  = EQUAL
+  | caseless(#"|", #"|")  = EQUAL
+  | caseless(#"\\", #"\\") = EQUAL
+  | caseless(#"\\", #"~") = LESS
+  | caseless(#"\\", #"|") = LESS
+  | caseless(#"|", #"~")  = LESS
+  | caseless(#"~", #"|")  = GREATER
+  | caseless(#"~", #"\\")  = GREATER
+  | caseless(#"|", #"\\")  = GREATER
+  | caseless(#"~", c2) = if Char.toLower c2 < #"a" then GREATER else LESS
+  | caseless(c1, #"~") = if Char.toLower c1 < #"a" then LESS else GREATER
+  | caseless(#"|", c2) = if Char.toLower c2 < #"a" then GREATER else LESS
+  | caseless(c1, #"|") = if Char.toLower c1 < #"a" then LESS else GREATER
+  | caseless(#"\\", c2) = if Char.toLower c2 < #"a" then GREATER else LESS
+  | caseless(c1, #"\\") = if Char.toLower c1 < #"a" then LESS else GREATER
+  | caseless(c1, c2) = Char.compare(Char.toLower c1, Char.toLower c2);
 
 val keycompare = String.collate caseless
 
@@ -72,5 +82,7 @@ fun getname ({comp, file, ...} : entry) =
       | Typ id => id
       | Val id => id
       | Con id => id
-      | Term (id, _) => id
+      | Term (id, _) => case String.tokens (fn c => c = #".") id
+                         of [strName,vName] => vName
+                          | other => id;
 

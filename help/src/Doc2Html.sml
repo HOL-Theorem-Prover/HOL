@@ -19,6 +19,8 @@ fun equal x y = (x=y)
 infix ##;
 fun (f##g) (x,y) = (f x, g y);
 
+val equal = curry (op=);
+
 fun butlast [] = raise Fail "butlast"
   | butlast [x] = []
   | butlast (h::t) = h::butlast t;
@@ -215,16 +217,23 @@ fun html (name,sectionl) ostrm =
               out "<DD>"; List.app markout ss;
               out "<P>\n")
        | markout_section (SEEALSO sslist)
-           = let fun link s = 
-                    (out "<A HREF = \""; out s; out ".html\">"; 
-                     out s; out "</A>")
+           = let fun drop_qual ss =
+                   case Substring.tokens (equal #".") ss
+                    of [strName,fnName] => fnName
+                     | [Name] => Name
+                     | other => raise Fail (string ss)
+                 fun link s = 
+                    (out "<A HREF = \""; 
+                     out (Symbolic.unsymb(string s)); out ".html\">"; 
+                     out (string (drop_qual s)); out "</A>")
                  fun outlinks [] = ()
                    | outlinks [s] = link s
-                   | outlinks (h::t) = 
-                           (link h; out","; out "&nbsp;&nbsp;\n"; outlinks t)
+                   | outlinks (h::t) = (link h; 
+                                        out","; out "&nbsp;&nbsp;\n"; 
+                                        outlinks t)
              in
                 out "<DT><STRONG>SEEALSO</STRONG>&nbsp;&nbsp;";
-                outlinks (map string sslist)
+                outlinks sslist
              end
        | markout_section (TYPE _) = raise Fail "markout_section: TYPE"
 
@@ -252,20 +261,6 @@ fun html (name,sectionl) ostrm =
   end;
  
 
-(*
-fun trans docfile htmlfile =
- let val ostrm = TextIO.openOut htmlfile
- in case Path.splitBaseExt docfile
-     of {base,ext=SOME "doc"} =>
-        (let 
-         in html (Path.file base,parse docfile) ostrm
-          ; TextIO.closeOut ostrm
-         end
-       handle e => print ("Failed to translate file: "
-                    ^docfile^"---"^exnMessage e^"\n"))
-   | otherwise => print ("Failed to parse file name: "^docfile^"\n");
-*)
-
 fun trans htmldir docfile =
  case Path.splitBaseExt docfile
   of {base,ext=SOME "doc"} =>
@@ -275,8 +270,7 @@ fun trans htmldir docfile =
          val ostrm = TextIO.openOut outfile
        in 
           html (Path.file base,parse docfile) ostrm
-         ;
-          TextIO.closeOut ostrm
+        ; TextIO.closeOut ostrm
        end
        handle e => print ("Failed to translate file: "
                     ^docfile^"---"^exnMessage e^"\n"))

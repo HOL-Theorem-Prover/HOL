@@ -1,5 +1,7 @@
 open Database;
 
+fun equal x y = (x=y);
+
 fun destProperSuffix s1 s2 = 
   let val sz1 = String.size s1
       val sz2 = String.size s2
@@ -42,23 +44,9 @@ fun printHOLPage version bgcolor HOLpath (dbfile, outfile) =
 	    app out ["<A HREF=\"", target, "\">", anchor, "</A>"]
 	fun idhref file line anchor = 
 	    href anchor (concat [file, ".html#line", Int.toString line])
-	fun strhref file anchor = 
-	    href anchor (file ^ ".html")
-	fun mkalphaindex () =
-	    let fun letterlink c = 
-		if c > #"Z" then ()
-		else (href (str c) ("#" ^ str c); out "&nbsp;&nbsp;"; 
-		      letterlink (Char.succ c))
-	    in 
-		out "<HR>\n<CENTER><B>"; letterlink #"A"; 
-		out "</B></CENTER><HR>\n" 
-	    end
-	fun subheader txt = app out ["\n<H2>", txt, "</H2>\n"]
+	fun strhref file anchor = href anchor (file ^ ".html")
 	fun mkref line file = idhref file line file 
-
-
         val sigspath = Path.concat(HOLpath,"help/src/htmlsigs")
-        val docpath = Path.concat(HOLpath,"help/Docfiles/html")
         fun path front file = Path.concat(front, file^".html")
 
         fun class_of drop {comp=Str, file, line} = 
@@ -81,49 +69,81 @@ fun printHOLPage version bgcolor HOLpath (dbfile, outfile) =
               else SOME(file, path sigspath file)
           | misc_struct_of otherwise = NONE
 
-        fun docfile_of {comp=Term(id,SOME "HOL"),file,line} =
-              (case find_most_appealing HOLpath file
-                of SOME path => SOME (id, path)
-                 | NONE => NONE)
-          | docfile_of otherwise = NONE
-
-	fun prentries []            = ()
+	fun prentries [] = ()
 	  | prentries ((anchor,path)::rst) = 
               let 
               in href anchor path
                ; out "&nbsp;&nbsp;&nbsp;&nbsp;\n"
                ; prentries rst
               end
-
 	fun prtree f Empty = ()
 	  | prtree f (Node(key, entries, t1, t2)) = 
 	    (prtree f t1;
 	     prentries (List.mapPartial f entries);
 	     prtree f t2)
 
+        (*------------------------------------------------------*
+         * Generate index for Docfiles                          *
+         *------------------------------------------------------*)
+
         val _ = let val docfileIndex = Path.concat(HOLpath, 
-                            "help/Docfiles/html/docfileIndex.html")
+                            "help/Docfiles/HTML/docfileIndex.html")
                   val ostrm = TextIO.openOut docfileIndex
                   fun out s = TextIO.output(ostrm, s)
                   fun href anchor target = 
                       app out ["<A HREF=\"", target, "\">", anchor, "</A>"]
-                  fun prentries []            = ()
+                  fun subheader txt = app out ["\n<H2>", txt, "</H2>\n"]
+                  val lastc1 = ref #" "
+                  fun separator k1 = 
+                   let val c1 = Char.toUpper k1
+                   in if Char.isAlpha c1 andalso c1 <> !lastc1 then 
+		         (lastc1 := c1;
+                          app out ["\n</UL>\n\n<A NAME=\"", str c1, "\">"];
+                          subheader (str c1);
+                          out "</A>\n<UL>")
+                      else ()
+                   end
+                 fun mkalphaindex () =
+	           let fun letterlink c = 
+                        if c > #"Z" then ()
+                         else (href (str c) ("#" ^ str c); 
+                               out "&nbsp;&nbsp;"; 
+                               letterlink (Char.succ c))
+                   in 
+                      out "<HR>\n<CENTER><B>"; letterlink #"A"; 
+                      out "</B></CENTER><HR>\n" 
+                   end
+
+                  fun dest_id s = 
+                   case String.tokens (equal #".") s
+                    of [strName,vName] => vName
+                     | other => s
+
+                  fun docfile_of {comp=Term(id,SOME "HOL"),file,line} =
+                       (case find_most_appealing HOLpath file
+                         of SOME path => SOME (dest_id id, path)
+                          | NONE => NONE)
+                    | docfile_of otherwise = NONE
+
+                  fun prentries [] = ()
 	            | prentries ((anchor,path)::rst) = 
-                       let in href anchor path
-                         ; out "&nbsp;&nbsp;&nbsp;&nbsp;\n"
-                         ; prentries rst
-                       end
-                  fun prtree f Empty = ()
-	            | prtree f (Node(key, entries, t1, t2)) = 
-	               (prtree f t1;
-	                prentries (List.mapPartial f entries);
-	                prtree f t2)
+                        (separator (String.sub(anchor, 0));
+                         out "<LI>"; href anchor path; out "\n";
+                         prentries rst)
+                  fun prtree Empty = ()
+	            | prtree (Node(key, entries, t1, t2)) = 
+	               (prtree t1;
+	                prentries (List.mapPartial docfile_of entries);
+	                prtree t2)
                 in
-                  out "<HTML>\
-	              \<HEAD><TITLE>HOL Proof Support</TITLE></HEAD>\n";
+                  out "<HTML><HEAD><TITLE>\
+                      \Documented Functions and Values</TITLE></HEAD>\n";
 	          out "<BODY BGCOLOR=\""; out bgcolor; out "\">\n";
-	          out "<H1>HOL Proof Support</H1>\n";
-                  prtree docfile_of db;
+	          out "<H1>Documented Functions and Values</H1>\n";
+                  mkalphaindex();
+                  subheader "Symbolic identifiers";
+                  out "<UL>"; prtree db; out "</UL>";
+                  mkalphaindex();
                   out "<BR><EM>"; out version; out "</EM>";
 	          out "</BODY></HTML>\n";
 	          TextIO.closeOut ostrm
@@ -144,6 +164,16 @@ fun printHOLPage version bgcolor HOLpath (dbfile, outfile) =
         out"<DD>"; prtree theory_of db;
         out "<P>";
 
+        out "<DT><STRONG>STRUCTURES</STRONG>";
+        out "<DD>"; prtree misc_struct_of db;
+        out "<P>";
+
+        out"<DT><STRONG>";
+        href "DOCUMENTED FUNCTIONS AND VALUES" 
+            (Path.concat(HOLpath,"help/Docfiles/HTML/docfileIndex.html"));
+        out "</STRONG>";
+        out "<P>";
+
         out"<DT><STRONG>SYNTAX</STRONG>";
         out"<DD>"; prtree syntax_of db;
         out "<P>";
@@ -152,18 +182,8 @@ fun printHOLPage version bgcolor HOLpath (dbfile, outfile) =
         out"<DD>"; prtree simps_of db;
         out "<P>";
 
-        out "<DT><STRONG>STRUCTURES</STRONG>";
-        out "<DD>"; prtree misc_struct_of db;
-        out "<P>";
-
         out"<DT><STRONG>";
-        href "PROOF SUPPORT" 
-            (Path.concat(HOLpath,"help/Docfiles/html/docfileIndex.html"));
-        out "</STRONG>";
-        out "<P>";
-
-        out"<DT><STRONG>";
-        href "ALL IDENTIFIERS" 
+        href "INDEX" 
             (Path.concat(HOLpath,"help/src/htmlsigs/idIndex.html"));
         out "</STRONG>";
         out "<P>";
@@ -173,7 +193,3 @@ fun printHOLPage version bgcolor HOLpath (dbfile, outfile) =
 	out "</BODY></HTML>\n";
 	TextIO.closeOut os 
     end
-
-
-
-

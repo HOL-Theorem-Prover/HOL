@@ -1,3 +1,4 @@
+
 (*---------------------------------------------------------------------------*)
 (* A list of the signatures that we think users will be interested in.       *)
 (*---------------------------------------------------------------------------*)
@@ -25,7 +26,9 @@ val keepers =
      "IndDefLib.sig", "InductiveDefinition.sig", "IndDefRules.sig",
 
      (* HolBdd *)
-     "HolBdd.sig", "HolBddTheory.sig", "StateEnum.sig",
+     "HolBddLib.sig", "MachineTransitionTheory.sig", 
+     "PrimitiveBddRules.sig", "DerivedBddRules.sig",
+     "PrintBdd.sig", "Varmap.sig",
 
      (* multisets *)
      "bagTheory.sig", "bagLib.sig", "bagSimps.sig", "bagSyntax.sig",
@@ -41,7 +44,7 @@ val keepers =
      "combinTheory.sig",
 
      (* computeLib *)
-     "computeLib.sig", "compute_rules.sig",
+     "computeLib.sig",
 
      (* datatype *)
      "Datatype.sig", "ind_typeTheory.sig", "ind_types.sig",
@@ -73,14 +76,12 @@ val keepers =
      (* meson *)
      "Canon_Port.sig","jrhTactics.sig","mesonLib.sig",
 
-     (* muddy *)
-     "bdd.sig","bvec.sig","fdd.sig", "muddyLib.sig",
 
      (* num *)
      "numSyntax.sig", 
      "numTheory.sig", "prim_recTheory.sig", "arithmeticTheory.sig",
      "numeralTheory.sig", "numLib.sig", "arithSimps.sig",
-     "reduceLib.sig",  "Arithconv.sig","Boolconv.sig", "arithLib.sig",
+     "reduceLib.sig",  "arithLib.sig",
 
      (* one *)
      "oneTheory.sig",
@@ -93,24 +94,24 @@ val keepers =
      "PairedLambda.sig", "pairSimps.sig", "pairTools.sig",
 
      (* pred_set *)
-     "PFset_conv.sig", "PSet_ind.sig", "PGspec.sig","pred_setLib.sig",
+     "pred_setLib.sig",
      "pred_setTheory.sig", "pred_setSimps.sig",
 
      (* probability *)
      "probLib.sig", "probTheory.sig",
-     "boolean_sequenceTheory.sig", "boolean_sequenceTools.sig",
+     "boolean_sequenceTheory.sig", 
      "prob_algebraTheory.sig",     "prob_indepTheory.sig", 
-     "prob_canonTheory.sig",       "prob_canonTools.sig", 
-     "prob_extraTheory.sig",       "prob_extraTools.sig", 
-     "prob_pseudoTheory.sig",      "prob_pseudoTools.sig", 
-     "prob_uniformTheory.sig",     "prob_uniformTools.sig", 
+     "prob_canonTheory.sig",       
+     "prob_extraTheory.sig",       
+     "prob_pseudoTheory.sig",      
+     "prob_uniformTheory.sig",     
      "state_transformerTheory.sig",
 
      (* Quotations *)
      "Q.sig",
 
      (* real numbers *)
-     "Diff.sig", "limTheory.sig", "realTheory.sig",
+     "limTheory.sig", "realTheory.sig",
      "RealArith.sig", "netsTheory.sig", "realaxTheory.sig",
      "realSimps.sig", "polyTheory.sig", "seqTheory.sig",
      "hratTheory.sig", "powserTheory.sig", "topologyTheory.sig",
@@ -127,7 +128,7 @@ val keepers =
 
      (* Rings *)
 
-     "abstraction.sig",        "prelimTheory.sig",
+     "prelimTheory.sig",
      "canonicalTheory.sig",    "quoteTheory.sig",
      "integerRingLib.sig",     "ringLib.sig",
      "integerRingTheory.sig",  "ringNormTheory.sig",
@@ -135,9 +136,7 @@ val keepers =
      "numRingTheory.sig",      "semi_ringTheory.sig",
 
      (* simpLib *)
-     "Cache.sig", "SatisfySimps.sig","Unify.sig",
-     "Cond_rewr.sig", "Unwind.sig", "pureSimps.sig",
-     "simpLib.sig", "boolSimps.sig", "Satisfy.sig", "combinSimps.sig",
+     "simpLib.sig", 
 
      (* string *)
      "stringLib.sig", "stringTheory.sig", "stringSyntax.sig", 
