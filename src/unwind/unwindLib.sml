@@ -33,6 +33,8 @@ fun UNWIND_ERR function message =
            origin_function = function,
                    message = message};
 
+val AND = #const(const_decl "/\\");
+
 (*===========================================================================*)
 (* Tools for manipulating device implementations `by hand'                   *)
 (*===========================================================================*)
@@ -97,8 +99,7 @@ fun FLATTEN_CONJ_CONV t = CONJUNCTS_CONV (t,list_mk_conj (strip_conj t));
 (* cases.                                                                    *)
 (*---------------------------------------------------------------------------*)
 
-local
-exception NOT_ALL_SAME_VAR
+local exception NOT_ALL_SAME_VAR
 in
 fun CONJ_FORALL_ONCE_CONV t =
    let fun conj_tree_map f t th =
@@ -367,7 +368,6 @@ fun line_name tm = (#Name o dest_var o line_var) tm
 (*---------------------------------------------------------------------------*)
 
 local
-val AND = --`/\`--
 fun trav p tm rl =
    let val {conj1,conj2} = dest_conj tm
        val (pf2,fn2,tmp) = trav p conj2 rl
@@ -693,11 +693,10 @@ fun EXISTS_DEL1_CONV tm =
 (* will not return |- ?x1 ... xn. t = ?x3 ... xn. t.                         *)
 (*---------------------------------------------------------------------------*)
 
-local
-fun terms_and_vars tm =
-   let val {Bvar,Body} = dest_exists tm
-   in   (tm,Bvar)::terms_and_vars Body
-   end handle HOL_ERR _ => []
+local fun terms_and_vars tm =
+       let val {Bvar,Body} = dest_exists tm
+       in (tm,Bvar)::terms_and_vars Body
+       end handle HOL_ERR _ => []
 in
 fun EXISTS_DEL_CONV tm =
   let val txs = terms_and_vars tm
@@ -748,7 +747,7 @@ fun EXISTS_EQN_CONV t =
 (* zero.                                                                     *)
 (*---------------------------------------------------------------------------*)
 
-local val AP_AND = AP_TERM (--`/\`--)
+local val AP_AND = AP_TERM AND
 in
 fun PRUNE_ONCE_CONV tm =
  let val {Bvar,Body} = dest_exists tm
