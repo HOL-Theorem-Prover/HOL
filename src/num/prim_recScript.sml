@@ -554,12 +554,12 @@ Q.new_definition
  * First half of showing that the two definitions of wellfoundedness agree.
  *---------------------------------------------------------------------------*)
 
-val WF_IMP_WELLFOUNDED = Q.prove
-`!R. WF R ==> wellfounded R`
-(GEN_TAC THEN CONV_TAC CONTRAPOS_CONV
+val WF_IMP_WELLFOUNDED = Q.prove(
+`!R. WF R ==> wellfounded R`,
+ GEN_TAC THEN CONV_TAC CONTRAPOS_CONV
  THEN REWRITE_TAC[wellfounded_def,relationTheory.WF_DEF]
- THEN STRIP_TAC 
- THEN Ho_rewrite.REWRITE_TAC 
+ THEN STRIP_TAC
+ THEN Ho_rewrite.REWRITE_TAC
         [NOT_FORALL_THM,NOT_EXISTS_THM,boolTheory.NOT_IMP,DE_MORGAN_THM]
  THEN Q.EXISTS_TAC`\p:'a. ?n:num. p = f n`
  THEN BETA_TAC THEN CONJ_TAC THENL
@@ -573,11 +573,11 @@ val WF_IMP_WELLFOUNDED = Q.prove
  * Second half.
  *---------------------------------------------------------------------------*)
 
-val WELLFOUNDED_IMP_WF = Q.prove
-`!R. wellfounded R ==> WF R`
-(REWRITE_TAC[wellfounded_def,relationTheory.WF_DEF]
-  THEN GEN_TAC THEN CONV_TAC CONTRAPOS_CONV 
-  THEN Ho_rewrite.REWRITE_TAC 
+val WELLFOUNDED_IMP_WF = Q.prove(
+`!R. wellfounded R ==> WF R`,
+ REWRITE_TAC[wellfounded_def,relationTheory.WF_DEF]
+  THEN GEN_TAC THEN CONV_TAC CONTRAPOS_CONV
+  THEN Ho_rewrite.REWRITE_TAC
         [NOT_FORALL_THM,NOT_EXISTS_THM,NOT_IMP,DE_MORGAN_THM]
   THEN REWRITE_TAC [GSYM IMP_DISJ_THM]
   THEN REPEAT STRIP_TAC
@@ -585,7 +585,7 @@ val WELLFOUNDED_IMP_WF = Q.prove
   THEN Q.SUBGOAL_THEN `!n. B(SIMP_REC w (\x. @q. R q x /\ B q) n)`
                       (ASSUME_TAC o SPEC_ALL)
   THENL [INDUCT_TAC,ALL_TAC]
-  THEN ASM_REWRITE_TAC[SIMP_REC_THM] THEN BETA_TAC 
+  THEN ASM_REWRITE_TAC[SIMP_REC_THM] THEN BETA_TAC
   THEN RES_TAC
   THEN IMP_RES_TAC(BETA_RULE
      (Q.SPEC `\q. R q (SIMP_REC w (\x. @q. R q x /\ B q) n) /\ B q`
@@ -604,8 +604,8 @@ Q.store_thm
 ("WF_PRED",
   `WF \x y. y = SUC x`,
  REWRITE_TAC[relationTheory.WF_DEF] THEN BETA_TAC THEN GEN_TAC
-  THEN CONV_TAC CONTRAPOS_CONV 
-  THEN Ho_rewrite.REWRITE_TAC 
+  THEN CONV_TAC CONTRAPOS_CONV
+  THEN Ho_rewrite.REWRITE_TAC
         [NOT_FORALL_THM,NOT_EXISTS_THM,NOT_IMP,DE_MORGAN_THM]
   THEN REWRITE_TAC [GSYM IMP_DISJ_THM]
   THEN DISCH_TAC
