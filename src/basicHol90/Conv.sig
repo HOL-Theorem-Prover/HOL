@@ -98,4 +98,12 @@ sig
    val EXISTENCE : thm -> thm
    val AC_CONV : thm * thm -> conv
    val GSYM : thm -> thm
+
+   (* Conversions for messing with bound variables *)
+   (* renames variables under \ ! ? ?! or @ *)
+   val RENAME_VARS_CONV : string list -> conv
+
+   (* swaps variables under ! and ?, e.g, given !x y. ...
+      gives   !y x. ... *)
+   val SWAP_VARS_CONV : conv
 end;

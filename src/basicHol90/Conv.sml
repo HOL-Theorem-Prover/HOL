@@ -1984,4 +1984,71 @@ fun AC_CONV(associative,commutative) tm =
 
 val GSYM = CONV_RULE(ONCE_DEPTH_CONV SYM_CONV);
 
+(* RENAME_VARS_CONV *)
+local
+  fun rename vname t = let
+    val (dest, mk) = if is_exists t then (dest_exists, mk_exists)
+                     else if is_forall t then (dest_forall, mk_forall)
+                     else if is_abs t then (dest_abs, mk_abs)
+                     else if is_select t then (dest_select, mk_select)
+                     else if is_uexists t then (dest_uexists, mk_uexists)
+                     else raise CONV_ERR "rename_vars" "Term not a binder"
+    val {Bvar = oldv, Body = body} = dest t
+    val newv = mk_var{Name = vname, Ty = type_of oldv}
+  in
+    ALPHA t (mk{Bvar = newv, Body = subst [oldv |-> newv] body})
+  end
+
+  open Tactic Tactical
+  infix THEN THENL ORELSE
+
+  val SWAP_FORALL_THM = prove (
+    --`!P:'a->'b->bool. (!x y. P x y) = (!y x. P x y)`--,
+    REPEAT(STRIP_TAC ORELSE EQ_TAC) THENL [
+      POP_ASSUM (ACCEPT_TAC o SPECL [--`x:'a`--, --`y:'b`--]),
+      POP_ASSUM (ACCEPT_TAC o SPECL [--`y:'b`--, --`x:'a`--])
+    ])
+
+
+  val SWAP_EXISTS_THM = prove (
+    --`!P:'a->'b->bool. (?x y. P x y) = (?y x. P x y)`--,
+    REPEAT(STRIP_TAC ORELSE EQ_TAC) THENL [
+      MAP_EVERY EXISTS_TAC [(--`y:'b`--), (--`x:'a`--)],
+      MAP_EVERY EXISTS_TAC [(--`x:'a`--), (--`y:'b`--)]
+    ] THEN FIRST_ASSUM ACCEPT_TAC)
+
+in
+
+  fun RENAME_VARS_CONV varlist  =
+    case varlist of
+      [] => REFL
+    | (v::vs) => BINDER_CONV (RENAME_VARS_CONV vs) THENC rename v
+
+
+  fun SWAP_VARS_CONV term = let
+    val (dest, list_mk, qvar_thm) =
+      if (is_exists term) then
+        (dest_exists, LIST_MK_EXISTS, SWAP_EXISTS_THM)
+      else
+        (dest_forall, C (foldr (uncurry FORALL_EQ)), SWAP_FORALL_THM)
+    val {Bvar = fst_var, Body = fst_body} = dest term
+    val {Bvar = snd_var, Body = snd_body} = dest fst_body
+    val fnc = list_mk_abs ([fst_var,snd_var], snd_body)
+    val fn_rewrite =
+      SYM (LIST_BETA_CONV (list_mk_comb (fnc, [fst_var,snd_var])))
+    val ex_rewrite = list_mk [fst_var,snd_var] fn_rewrite
+    val inst_thm = ISPEC fnc qvar_thm
+    val final_thm =
+      TRANS inst_thm
+      (RENAME_VARS_CONV (map (#Name o dest_var) [snd_var,fst_var])
+       (rhs (concl inst_thm)))
+  in
+    BETA_RULE (SUBS [final_thm] ex_rewrite)
+  end
+
+
+
+end
+
+
 end; (* Conv *)
