@@ -1216,14 +1216,15 @@ $\{t_1, \ldots , t_m\}t'$
   to the list of theorems used for rewriting.
 \item {\small\verb|PURE_REWRITE_TAC|} uses neither the assumptions nor
   the built-in rewrites.
-\item {\small\verb|simpLib.SIMP_TAC|} of type \ml{simpLib.simpset ->
-    thm list -> tactic}.  A \ml{simpset} is a special collection of
-    rewriting theorems and other theorem-proving functionality.
-    Values defined by \HOL\ include \ml{boolSimps.bool\_ss}, which has
-    basic knowledge of the boolean connectives, and
-    \ml{HOLSimps.hol\_ss}, which includes theorems appropriate for
-    lists, pairs, and arithmetic.  Additional theorems for rewriting
-    can be added using the second argument of \ml{SIMP\_TAC}.
+\item {\small\verb|bossLib.RW_TAC|} of type \ml{simpLib.simpset -> thm
+    list -> tactic}.  A \ml{simpset} is a special collection of
+  rewriting theorems and other theorem-proving functionality.  Values
+  defined by \HOL\ include \ml{bossLib.bool\_ss}, which has basic
+  knowledge of the boolean connectives, \ml{bossLib.arith\_ss} which
+  ``knows'' all about arithmetic, and \ml{HOLSimps.hol\_ss}, which
+  includes theorems appropriate for lists, pairs, and arithmetic.
+  Additional theorems for rewriting can be added using the second
+  argument of \ml{RW\_TAC}.
 \end{enumerate}
 \end{itemize}
 

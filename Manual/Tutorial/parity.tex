@@ -111,11 +111,11 @@ $f${\small\tt (}$n${\small\tt)} is even.
 \begin{verbatim}
 - val PARITY_def = Define`
     (PARITY 0 f = T) /\
-    (PARITY(SUC n)f = (f(SUC n) => ~(PARITY n f) | PARITY n f))`;
+    (PARITY(SUC n)f = if f(SUC n) then ~(PARITY n f) else PARITY n f)`;
 Definition stored under "PARITY_def".
 > val PARITY_DEF =
     |- (!f. PARITY 0 f = T) /\
-       !n f. PARITY (SUC n) f = if f (SUC n) then ~PARITY n f else PARITY n f
+       !n f. PARITY (SUC n) f = (if f (SUC n) then ~PARITY n f else PARITY n f)
     : thm
 \end{verbatim}
 \end{session}
@@ -147,8 +147,10 @@ The specification of the parity checking device can now be given as:
 \noindent
 It is {\it intuitively\/} clear that this specification will be
 satisfied if the signal\footnote{Signals are modelled as functions
-  from numbers, representing times, to booleans.} functions
-{\small\verb|inp|} and {\small\verb|out|} satisfy:
+  from numbers, representing times, to booleans.}  functions
+{\small\verb|inp|} and {\small\verb|out|} satisfy\footnote{We'd like
+  to use \ml{in} as one of our variable names, but this is a reserved
+  word for \ml{let}-expressions.}:
 
 {\small\baselineskip\HOLSpacing\begin{verbatim}
    out(0) = T
@@ -188,7 +190,7 @@ function {\small\verb|g|} which takes a goal as argument.
          Initial goal:
          !inp out.
            (out 0 = T) /\
-           (!t. out (SUC t) = if inp (SUC t) then ~out t else out t) ==>
+           (!t. out (SUC t) = (if inp (SUC t) then ~out t else out t)) ==>
            !t. out t = PARITY t inp
 \end{verbatim}
 \end{session}
@@ -213,7 +215,7 @@ OK..
     !t. out t = PARITY t inp
     ------------------------------------
       0.  out 0 = T
-      1.  !t. out (SUC t) = if inp (SUC t) then ~out t else out t
+      1.  !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
 \end{verbatim}
 \end{session}
 
@@ -230,13 +232,13 @@ OK..
     out (SUC t) = PARITY (SUC t) inp
     ------------------------------------
       0.  out 0 = T
-      1.  !t. out (SUC t) = if inp (SUC t) then ~out t else out t
+      1.  !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
       2.  out t = PARITY t inp
 
     out 0 = PARITY 0 inp
     ------------------------------------
       0.  out 0 = T
-      1.  !t. out (SUC t) = if inp (SUC t) then ~out t else out t
+      1.  !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
 \end{verbatim}
 \end{session}
 
@@ -260,7 +262,7 @@ Remaining subgoals:
     out (SUC t) = PARITY (SUC t) inp
     ------------------------------------
       0.  out 0 = T
-      1.  !t. out (SUC t) = if inp (SUC t) then ~out t else out t
+      1.  !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
       2.  out t = PARITY t inp
 \end{verbatim}
 \end{session}
@@ -283,7 +285,7 @@ Goal proved.
     Initial goal proved.
     |- !inp out.
          (out 0 = T) /\
-         (!t. out (SUC t) = if inp (SUC t) then ~out t else out t) ==>
+         (!t. out (SUC t) = (if inp (SUC t) then ~out t else out t)) ==>
          !t. out t = PARITY t inp
 \end{verbatim}
 \end{session}
@@ -312,7 +314,7 @@ in the current theory, and we bind this to the \ML\ name
 > val UNIQUENESS_LEMMA =
     |- !inp out.
          (out 0 = T) /\
-         (!t. out (SUC t) = if inp (SUC t) then ~out t else out t) ==>
+         (!t. out (SUC t) = (if inp (SUC t) then ~out t else out t)) ==>
          !t. out t = PARITY t inp
     : thm
 \end{verbatim}
@@ -446,7 +448,7 @@ two inputs are to be connected to the output {\small\verb|out|}.
 Definition stored under "MUX_def".
 > val MUX_def =
     |- !sw in1 in2 out.
-         MUX (sw,in1,in2,out) = !t. out t = if sw t then in1 t else in2 t
+         MUX (sw,in1,in2,out) = !t. out t = (if sw t then in1 t else in2 t)
     : thm
 \end{verbatim}
 \end{session}
@@ -465,7 +467,7 @@ time {\small\verb|0|} when the register outputs
               !t. out t = if (t=0) then F else inp(t-1)`;
 Definition stored under "REG_def".
 > val REG_def =
-    |- !inp out. REG (inp,out) = !t. out t = if t = 0 then F else inp (t - 1)
+    |- !inp out. REG (inp,out) = !t. out t = (if t = 0 then F else inp (t - 1))
     : thm
 \end{verbatim}
 \end{session}
@@ -515,7 +517,7 @@ transitivity of {\small{\tt\verb+==>+}}.
 - g `!inp out.
         PARITY_IMP(inp,out) ==>
         (out 0 = T) /\
-        !t. out(SUC t) = (if inp(SUC t) then ~(out t) else out t)`;
+        !t. out(SUC t) = if inp(SUC t) then ~(out t) else out t`;
 > val it =
     Proof manager status: 2 proofs.
     2. Completed: ...
@@ -524,7 +526,7 @@ transitivity of {\small{\tt\verb+==>+}}.
          !inp out.
            PARITY_IMP (inp,out) ==>
            (out 0 = T) /\
-           !t. out (SUC t) = if inp (SUC t) then ~out t else out t
+           !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
 \end{verbatim}
 \end{session}
 
@@ -545,32 +547,32 @@ being done.
 OK..
 2 subgoals:
 > val it =
-    out (SUC t) = if inp (SUC t) then ~out t else out t
+    out (SUC t) = (if inp (SUC t) then ~out t else out t)
     ------------------------------------
       0.  !t. l1 t = ~l2 t
-      1.  !t. l3 t = if inp t then l1 t else l2 t
-      2.  !t. l2 t = if t = 0 then F else out (t - 1)
+      1.  !t. l3 t = (if inp t then l1 t else l2 t)
+      2.  !t. l2 t = (if t = 0 then F else out (t - 1))
       3.  !t. l4 t = T
-      4.  !t. l5 t = if t = 0 then F else l4 (t - 1)
-      5.  !t. out t = if l5 t then l3 t else l4 t
+      4.  !t. l5 t = (if t = 0 then F else l4 (t - 1))
+      5.  !t. out t = (if l5 t then l3 t else l4 t)
 
     out 0 = T
     ------------------------------------
       0.  !t. l1 t = ~l2 t
-      1.  !t. l3 t = if inp t then l1 t else l2 t
-      2.  !t. l2 t = if t = 0 then F else out (t - 1)
+      1.  !t. l3 t = (if inp t then l1 t else l2 t)
+      2.  !t. l2 t = (if t = 0 then F else out (t - 1))
       3.  !t. l4 t = T
-      4.  !t. l5 t = if t = 0 then F else l4 (t - 1)
-      5.  !t. out t = if l5 t then l3 t else l4 t
+      4.  !t. l5 t = (if t = 0 then F else l4 (t - 1))
+      5.  !t. out t = (if l5 t then l3 t else l4 t)
 \end{verbatim}
 \end{session}
 
 The top goal is the one printed last; its conclusion is
 {\small\verb|out 0 = T|} and its assumptions are equations relating
-the values on the lines in the circuit.  The natural next step is to
-expand the top goal by rewriting with the assumptions.  However, if
-this is done the system will go into an infinite loop because the
-equations for {\small\verb|out|}, {\small\verb|l2|} and
+the values on the lines in the circuit.  The natural next step would
+be to expand the top goal by rewriting with the assumptions.  However,
+if this were done the system would go into an infinite loop because
+the equations for {\small\verb|out|}, {\small\verb|l2|} and
 {\small\verb|l3|} are mutually recursive.  Instead we use the
 first-order reasoner {\small\verb|PROVE_TAC|} to do the work:
 
@@ -585,150 +587,82 @@ Goal proved.
 
 Remaining subgoals:
 > val it =
-    out (SUC t) = if inp (SUC t) then ~out t else out t
+    out (SUC t) = (if inp (SUC t) then ~out t else out t)
     ------------------------------------
       0.  !t. l1 t = ~l2 t
-      1.  !t. l3 t = if inp t then l1 t else l2 t
-      2.  !t. l2 t = if t = 0 then F else out (t - 1)
+      1.  !t. l3 t = (if inp t then l1 t else l2 t)
+      2.  !t. l2 t = (if t = 0 then F else out (t - 1))
       3.  !t. l4 t = T
-      4.  !t. l5 t = if t = 0 then F else l4 (t - 1)
-      5.  !t. out t = if l5 t then l3 t else l4 t
+      4.  !t. l5 t = (if t = 0 then F else l4 (t - 1))
+      5.  !t. out t = (if l5 t then l3 t else l4 t)
 \end{verbatim}
 \end{session}
 The first of the two subgoals is proved.  Inspecting the remaining
 goal it can be seen that it will be solved if its left hand side,
 {\small\verb|out(SUC t)|}, is expanded using the assumption: \medskip
 
-{\small\verb%!t. out t = (l5 t => l3 t | l4 t)%}
+{\small\verb|!t. out t = if l5 t then l3 t else l4 t|}
 
-\medskip
-However, if this assumption is used for rewriting,
-then all the subterms of the form {\small\verb|out t|} will also
-be expanded. To prevent this, the messy and \adhoc\ tactic shown
-below will be used.
-
-{\small\baselineskip\HOLSpacing\begin{verbatim}
-   FIRST_ASSUM
-    (\th. if lines`out`(concl th)
-           then SUBST_TAC[SPEC "SUC t" th]
-           else NO_TAC)
-\end{verbatim}}
-
-{\small\verb|FIRST_ASSUM|}~$f$ is a built-in tactical
-that applies $f$ in succession to the assumed assumptions of the goal;
-the tactic resulting from the first successful application is applied.
-The argument to {\small\verb|FIRST_ASSUM|} used here is:
-
-{\small\baselineskip\HOLSpacing\begin{verbatim}
-   (\th. if lines`out`(concl th)
-          then SUBST_TAC[SPEC "SUC t" th]
-          else NO_TAC)
-\end{verbatim}}
-
-\noindent which converts a theorem of the form:
-
-\medskip
-
-{\small\verb%  |- !t. out t = %}$tm${\small\verb|[t]|}
-
-\medskip
-
-\noindent
-to a tactic that replaces occurrences of
-{\small\verb|out(SUC t)|} by $tm${\small\verb|[SUC t]|}.
-All other theorems are mapped to {\small\verb|NO_TAC|},
-a tactic that always fails.
+\medskip However, if this assumption is used for rewriting, then all
+the subterms of the form {\small\verb|out t|} will also be expanded.
+To prevent this, we really want to rewrite with a formula that is
+specifically about {\small\verb|out (SUC t)|}.  We want to somehow
+pull the assumption that we do have off the stack and rewrite with a
+specialised version of it.  We can do just this using
+{\small\verb|PAT_ASSUM|}.  This tactic is of type \ml{term -> (thm ->
+    tactic)}.  It selects an assumption that is of the form given by
+  its term argument, and passes it to the second argument, a function
+  which expects a theorem and returns a tactic.  Here it is in action:
 
 \begin{session}
 \begin{verbatim}
-#expand
-# (FIRST_ASSUM
-#   (\th. if lines`out`(concl th)
-#          then SUBST_TAC[SPEC "SUC t" th]
-#          else NO_TAC));;
+- e (PAT_ASSUM ``!t. out t = X t``
+       (fn th => REWRITE_TAC [SPEC ``SUC t`` th]))
 OK..
-"(l5(SUC t) => l3(SUC t) | l4(SUC t)) = (in(SUC t) => ~out t | out t)"
-    [ "!t. l1 t = ~l2 t" ]
-    [ "!t. l3 t = (in t => l1 t | l2 t)" ]
-    [ "!t. l2 t = ((t = 0) => F | out(t - 1))" ]
-    [ "!t. l4 t = T" ]
-    [ "!t. l5 t = ((t = 0) => F | l4(t - 1))" ]
-    [ "!t. out t = (l5 t => l3 t | l4 t)" ]
+1 subgoal:
+> val it =
+    (if l5 (SUC t) then l3 (SUC t) else l4 (SUC t)) =
+    (if inp (SUC t) then ~out t else out t)
+    ------------------------------------
+      0.  !t. l1 t = ~l2 t
+      1.  !t. l3 t = (if inp t then l1 t else l2 t)
+      2.  !t. l2 t = (if t = 0 then F else out (t - 1))
+      3.  !t. l4 t = T
+      4.  !t. l5 t = (if t = 0 then F else l4 (t - 1))
 \end{verbatim}
 \end{session}
+The pattern used here exploited something called \emph{higher order
+  matching}. The actual assumption that was taken off the assumption
+stack did not have a RHS that looked like the application of a
+function (\ml{X} in the pattern) to the \ml{t} parameter, but the RHS
+could nonetheless be seen as equal to the application of \emph{some}
+function to the \ml{t} parameter.  In fact, the value that matched
+  \ml{X} was {\small\verb|``\x. if l5 x then l3 x else l4 x``|}.
 
-The fact that this messy use
-of {\small\verb|FIRST_ASSUM|} was resorted to in the proof shown above
-illustrates both the strengths and weaknesses of \HOL.
-Trivial deductions sometimes require elaborate tactics, but on the
-other hand one never reaches an impasse. \HOL\ experts can prove
-arbitrarily complicated theorems if
-they are willing to use sufficient ingenuity. Furthermore,
-the type discipline ensures
-that no matter how complicated and \adhoc\ are the tactics, it is impossible
-to prove an invalid theorem.
-
-Inspecting the goal above, it can be seen that the next step is to unwind
-the equations for lines {\small\verb|l1|},
-{\small\verb|l3|}, {\small\verb|l4|} and {\small\verb|l5|}
-and then, when this is done, unwind with the equation for line
-{\small\verb|l2|}.
-\vfill
-\newpage
+  Inspecting the goal above, it can be seen that the next step is to
+  unwind the equations for the remaining lines of the circuit.  We do
+  this using the \ml{arith\_ss} simpset that comes with \ml{bossLib}
+  to help with the arithmetic embodied by the subtractions and
+  \ml{SUC} terms.
 
 \begin{session}
 \begin{verbatim}
-#expand(FILTER_ASM_REWRITE_TAC(lines`l1 l3 l4 l5`)[]
-#        THEN FILTER_ASM_REWRITE_TAC(lines`l2`)[]);;
+- e (RW_TAC arith_ss []);
 OK..
-"(((SUC t = 0) => F | T) =>
-  (in(SUC t) =>
-   ~((SUC t = 0) => F | out((SUC t) - 1)) |
-   ((SUC t = 0) => F | out((SUC t) - 1))) |
-  T) =
- (in(SUC t) => ~out t | out t)"
-    [ "!t. l1 t = ~l2 t" ]
-    [ "!t. l3 t = (in t => l1 t | l2 t)" ]
-    [ "!t. l2 t = ((t = 0) => F | out(t - 1))" ]
-    [ "!t. l4 t = T" ]
-    [ "!t. l5 t = ((t = 0) => F | l4(t - 1))" ]
-    [ "!t. out t = (l5 t => l3 t | l4 t)" ]
-\end{verbatim}
-\end{session}
 
-This goal can now be solved by rewriting with two
-standard built-in theorems:
+Goal proved.
+ [.....]
+|- (if l5 (SUC t) then l3 (SUC t) else l4 (SUC t)) =
+   (if inp (SUC t) then ~out t else out t)
 
-{\small\baselineskip\HOLSpacing\begin{verbatim}
-   NOT_SUC   =     |- !n. ~(SUC n = 0)
-
-   SUC_SUB1  =     |- !m. (SUC m) - 1 = m
-\end{verbatim}}
-
-\begin{session}
-\begin{verbatim}
-#expand(REWRITE_TAC[NOT_SUC;SUC_SUB1]);;
-OK..
-Theorem SUC_SUB1 autoloaded from theory `arithmetic`.
-SUC_SUB1 = |- !m. (SUC m) - 1 = m
-
-OK..
-goal proved
-|- (((SUC t = 0) => F | T) =>
-    (in(SUC t) =>
-     ~((SUC t = 0) => F | out((SUC t) - 1)) |
-     ((SUC t = 0) => F | out((SUC t) - 1))) |
-    T) =
-   (in(SUC t) => ~out t | out t)
-..... |- (l5(SUC t) => l3(SUC t) | l4(SUC t)) =
-         (in(SUC t) => ~out t | out t)
-...... |- out(SUC t) = (in(SUC t) => ~out t | out t)
-|- !in out.
-    PARITY_IMP(in,out) ==>
-    (out 0 = T) /\ (!t. out(SUC t) = (in(SUC t) => ~out t | out t))
-
-Previous subproof:
-goal proved
+Goal proved.
+ [......] |- out (SUC t) = (if inp (SUC t) then ~out t else out t)
+> val it =
+    Initial goal proved.
+    |- !inp out.
+         PARITY_IMP (inp,out) ==>
+         (out 0 = T) /\
+         !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
 \end{verbatim}
 \end{session}
 
@@ -737,11 +671,12 @@ goal proved
 
 \begin{session}
 \begin{verbatim}
-#let PARITY_LEMMA = save_top_thm `PARITY_LEMMA`;;
-PARITY_LEMMA =
-|- !in out.
-    PARITY_IMP(in,out) ==>
-    (out 0 = T) /\ (!t. out(SUC t) = (in(SUC t) => ~out t | out t))
+- val PARITY_LEMMA = top_thm ();
+> val PARITY_LEMMA =
+    |- !inp out.
+         PARITY_IMP (inp,out) ==>
+         (out 0 = T) /\
+         !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
 \end{verbatim}
 \end{session}
 
@@ -750,14 +685,20 @@ compound tactic. This is illustrated below:
 
 \begin{session}
 \begin{verbatim}
-#set_goal
-# ([], "!in out.
-#         PARITY_IMP(in,out) ==>
-#         (out 0 = T) /\
-#         !t. out(SUC t) = (in(SUC t) => ~(out t) | out t)");;
-"!in out.
-  PARITY_IMP(in,out) ==>
-  (out 0 = T) /\ (!t. out(SUC t) = (in(SUC t) => ~out t | out t))"
+- g `!inp out.
+        PARITY_IMP(inp,out) ==>
+        (out 0 = T) /\
+        !t. out(SUC t) = if inp(SUC t) then ~(out t) else out t`;
+> val it =
+    Proof manager status: 3 proofs.
+    3. Completed: ...
+    2. Completed: ...
+    1. Incomplete:
+         Initial goal:
+         !inp out.
+           PARITY_IMP (inp,out) ==>
+           (out 0 = T) /\
+           !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
 \end{verbatim}
 \end{session}
 
@@ -766,51 +707,38 @@ sequence of tactics that were used interactively.
 
 \begin{session}
 \begin{verbatim}
-#expand
-# (PURE_REWRITE_TAC[PARITY_IMP_DEF;ONE_DEF;NOT_DEF;MUX_DEF;REG_DEF]
-#  THEN REPEAT STRIP_TAC
-#  THENL
-#   [FILTER_ASM_REWRITE_TAC(lines`out l4 l5`)[];ALL_TAC]
-#  THEN FIRST_ASSUM
-#        (\th. if lines`out`(concl th)
-#               then SUBST_TAC[SPEC "SUC t" th]
-#               else NO_TAC)
-#  THEN FILTER_ASM_REWRITE_TAC(lines`l1 l3 l4 l5`)[]
-#  THEN FILTER_ASM_REWRITE_TAC(lines`l2`)[]
-#  THEN REWRITE_TAC[NOT_SUC;SUC_SUB1]);;
+- e (PURE_REWRITE_TAC [PARITY_IMP_def, ONE_def, NOT_def,
+                       MUX_def, REG_def] THEN
+     REPEAT STRIP_TAC THENL [
+       PROVE_TAC [],
+       PAT_ASSUM ``!t. out t = X t``
+                 (fn th => REWRITE_TAC [SPEC ``SUC t`` th]) THEN
+       RW_TAC arith_ss []
+     ]);
+<<HOL message: inventing new type variable names: 'a, 'b.>>
 OK..
-goal proved
-|- !in out.
-    PARITY_IMP(in,out) ==>
-    (out 0 = T) /\ (!t. out(SUC t) = (in(SUC t) => ~out t | out t))
-
-Previous subproof:
-goal proved
+Meson search level: .....
+> val it =
+    Initial goal proved.
+    |- !inp out.
+         PARITY_IMP (inp,out) ==>
+         (out 0 = T) /\
+         !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
 \end{verbatim}
 \end{session}
 
-Armed with {\small\verb|PARITY_LEMMA|},
-the final theorem is easily proved.
-This will be done in one step using the \ML\ function
-{\small\verb|prove_thm|}.
-\vfill
-\newpage
+Armed with {\small\verb|PARITY_LEMMA|}, the final theorem is easily
+proved.  This will be done in one step using the \ML\ function
+{\small\verb|prove|}.
 
 \begin{session}
 \begin{verbatim}
-#let PARITY_CORRECT =
-# prove_thm
-#  (`PARITY_CORRECT`,
-#   "!in out. PARITY_IMP(in,out) ==> (!t. out t = PARITY t in)",
-#   REPEAT GEN_TAC
-#    THEN DISCH_TAC
-#    THEN IMP_RES_TAC PARITY_LEMMA
-#    THEN IMP_RES_TAC UNIQUENESS_LEMMA);;
-PARITY_CORRECT =
-|- !in out. PARITY_IMP(in,out) ==> (!t. out t = PARITY t in)
-
-#close_theory();;
-() : void
+- val PARITY_CORRECT = prove(
+    ``!inp out. PARITY_IMP(inp,out) ==> (!t. out t = PARITY t inp)``,
+    REPEAT STRIP_TAC THEN MATCH_MP_TAC UNIQUENESS_LEMMA THEN
+    MATCH_MP_TAC PARITY_LEMMA THEN ASM_REWRITE_TAC []);
+> val PARITY_CORRECT =
+    |- !inp out. PARITY_IMP (inp,out) ==> !t. out t = PARITY t inp
 \end{verbatim}
 \end{session}
 
@@ -820,14 +748,14 @@ parity checking device.
 \section{Exercises}
 \label{exercises}
 
-Two exercises are given in this section:
-Exercise~1 is straightforward, but Exercise~2 is quite tricky and
-might take a beginner several days to solve. The solutions to these exercises are
-in the files:
+Two exercises are given in this section: Exercise~1 is
+straightforward, but Exercise~2 is quite tricky and might take a
+beginner several days to solve. The solutions to these exercises
+should be in the files:
 
 \begin{hol}\begin{verbatim}
-   hol/Training/parity/RESET_REG.ml
-   hol/Training/parity/RESET_PARITY.ml
+   hol/examples/parity/RESET_REG.ml
+   hol/examples/parity/RESET_PARITY.ml
 \end{verbatim}\end{hol}
 
 
@@ -846,14 +774,14 @@ then the value at {\small\verb|out|} at time {\small\verb|t|} is also
 {\small\verb|t+1|},
 then the value output at {\small\verb|out|} at time {\small\verb|t+1|} is
 {\small\verb|T|}, otherwise it is equal to
-the value input at time {\small\verb|t|} on {\small\verb|in|}.
+the value input at time {\small\verb|t|} on {\small\verb|inp|}.
 \end{itemize}
 This is formalized in \HOL\ by the definition:
 
 {\small\baselineskip\HOLSpacing\begin{verbatim}
-   RESET_REG(reset,in,out) =
+   RESET_REG(reset,inp,out) =
     (!t. reset t ==> (out t = T)) /\
-    (!t. out(t+1) = ((reset t  \/ reset(t+1)) => T | in t))
+    (!t. out(t+1) = ((reset t  \/ reset(t+1)) => T | inp t))
 \end{verbatim}}
 
 \noindent Note that this specification is only partial; it doesn't specify the
@@ -867,7 +795,7 @@ the same form as that of {\small\tt PARITY\_IMP} on page~\pageref{parity-imp}.}
 together with a proof of:
 
 {\small\baselineskip\HOLSpacing\begin{verbatim}
-   RESET_REG_IMP(reset,in,out) ==> RESET_REG(reset,in,out)
+   RESET_REG_IMP(reset,inp,out) ==> RESET_REG(reset,inp,out)
 \end{verbatim}}
 
 
@@ -875,11 +803,11 @@ together with a proof of:
 
 \begin{enumerate}
 \item Formally specify a resetable parity checker that has two boolean
-  inputs {\small\tt reset} and {\small\tt in}, and one boolean output
+  inputs {\small\tt reset} and {\small\tt inp}, and one boolean output
   {\small\tt out} with the following behaviour:
   \begin{quote}
     The value at {\small\tt out} is {\small\tt T} if and only if there
-    have been an even number of {\small\tt T}s input at {\small\tt in}
+    have been an even number of {\small\tt T}s input at {\small\tt inp}
     since the last time that {\small\tt T} was input at {\small\tt
       reset}.
   \end{quote}
