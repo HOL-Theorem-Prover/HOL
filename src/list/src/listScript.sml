@@ -950,7 +950,8 @@ val _ = BasicProvers.export_rewrites
            "CONS_ACYCLIC", "list_case_def", "APPEND_eq_NIL", "ZIP",
            "UNZIP", "EVERY_APPEND", "EXISTS_APPEND", "EVERY_SIMP",
            "EXISTS_SIMP", "NOT_EVERY", "NOT_EXISTS", "MEM_APPEND",
-           "LAST_CONS", "FRONT_CONS", "FOLDL", "FOLDR", "FILTER"];
+           "LAST_CONS", "FRONT_CONS", "FOLDL", "FOLDR", "FILTER",
+           "ALL_DISTINCT"];
 
 
 val _ = export_theory();
