@@ -561,7 +561,7 @@ val [REAL_10, REAL_ADD_SYM, REAL_MUL_SYM, REAL_ADD_ASSOC,
                    TREAL_MUL_LINV, TREAL_LT_TOTAL, TREAL_LT_REFL,
                    TREAL_LT_TRANS, TREAL_LT_ADD, TREAL_LT_MUL, TREAL_BIJ,
                    TREAL_ISO,TREAL_INV_0])}
- end handle e => Raise e;
+ end;
 
 (*---------------------------------------------------------------------------
        Overload arithmetic operations.
