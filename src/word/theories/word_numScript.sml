@@ -1,11 +1,12 @@
 (* ===================================================== *)
-(* FILE: mk_word_num.ml	    DATE: 14 Aug 1992		 *)
-(* AUTHOR: Wai WONG  	    	    			 *)
-(* TRANSLATOR: Paul Curzon  2 June 1993, Sept 1994	 *)
-(* Writes: word_base.th	    	    			 *)
-(* Uses: Libraries: list res_quan			 *)
-(* Description: Creates a theory for mapping between 	 *)
-(* natural numbers and generic words	    	    	 *)
+(* FILE: mk_word_num.ml     DATE: 14 Aug 1992            *)
+(* AUTHOR: Wai WONG                                      *)
+(* TRANSLATOR: Paul Curzon  2 June 1993, Sept 1994       *)
+(* UPDATED for new res_quan theories by Joe Hurd, 2001   *)
+(* Writes: word_base.th                                  *)
+(* Uses: Libraries: list res_quan                        *)
+(* Description: Creates a theory for mapping between     *)
+(* natural numbers and generic words                     *)
 (* ===================================================== *)
 (* PC 18/11/93: SEG ->WSEG *)
 
@@ -14,8 +15,10 @@
 open HolKernel Parse boolLib Prim_rec numLib res_quanLib;
 open Base;
 open rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory;
+open word_baseTheory;
+open res_quanTheory bossLib pred_setTheory;
+
 infix THEN THENL THENC ORELSE ORELSEC;
-open Res_quan word_baseTheory;
 
 val _ = new_theory "word_num";
 
@@ -32,13 +35,14 @@ val word_INDUCT_TAC =
     end;
 
 val RESQ_WORDLEN_TAC =
-    (CONV_TAC RESQ_FORALL_CONV THEN word_INDUCT_TAC
-     THEN PURE_ONCE_REWRITE_TAC[word_baseTheory.PWORDLEN_DEF]
+    (CONV_TAC RES_FORALL_CONV THEN word_INDUCT_TAC
+     THEN PURE_ONCE_REWRITE_TAC[word_baseTheory.IN_PWORDLEN]
      THEN GEN_TAC THEN DISCH_TAC);
 
+val GGEN_TAC = RESQ_GEN_TAC ORELSE GEN_TAC;
 
 (*---------------------------------------------------------------*)
-(* Mapping between word and num 	    			 *)
+(* Mapping between word and num                                  *)
 (*---------------------------------------------------------------*)
 
 (* LVAL f b [bn-1,...,b0] returns the value represnted by a list of digits. *)
@@ -74,7 +78,7 @@ val LVAL_SNOC = store_thm("LVAL_SNOC",
     (--`!l:'a list. !h f b.
      LVAL f b (SNOC h l) = (((LVAL f b l) * b) + (f h))`--),
     LIST_INDUCT_TAC THEN REWRITE_TAC[SNOC,LVAL,
-    	MULT,ADD_CLAUSES,LENGTH,LENGTH_SNOC,EXP,MULT_CLAUSES]
+        MULT,ADD_CLAUSES,LENGTH,LENGTH_SNOC,EXP,MULT_CLAUSES]
     THEN REPEAT GEN_TAC THEN PURE_ONCE_ASM_REWRITE_TAC[]
     THEN PURE_ONCE_REWRITE_TAC[RIGHT_ADD_DISTRIB]
     THEN CONV_TAC ((RAND_CONV o ONCE_DEPTH_CONV) (REWR_CONV (GSYM MULT_ASSOC)))
@@ -89,7 +93,7 @@ val LVAL_MAX_lem = prove(
     (--`!a b c y. ((a+b)<SUC c) /\ (y < b) ==> ((a+y) < c)`--),
     REPEAT GEN_TAC THEN PURE_ONCE_REWRITE_TAC[LESS_SUC_IMP_LESS_EQ]
     THEN STRIP_TAC THEN IMP_RES_THEN (ASSUME_TAC o
-    	(SPEC (--`a:num`--)) o (PURE_ONCE_REWRITE_RULE[ADD_SYM])) LESS_MONO_ADD
+        (SPEC (--`a:num`--)) o (PURE_ONCE_REWRITE_RULE[ADD_SYM])) LESS_MONO_ADD
     THEN IMP_RES_TAC LESS_LESS_EQ_TRANS);
 
 val LESS_MULT_PLUS_DIFF = prove(
@@ -112,8 +116,8 @@ val LVAL_MAX = store_thm("LVAL_MAX",
       CONV_TAC (RAND_CONV num_CONV) THEN MATCH_ACCEPT_TAC LESS_0,
       let val lem1 = GEN (--`a:num`--)
            (SPECL[(--`a:num`--),(--`b EXP (LENGTH (l:'a list))`--),
-    	(--`b * (b EXP (LENGTH (l:'a list)))`--),(--`LVAL f b (l:'a list)`--)]
-    	LVAL_MAX_lem)
+        (--`b * (b EXP (LENGTH (l:'a list)))`--),(--`LVAL f b (l:'a list)`--)]
+        LVAL_MAX_lem)
       in
        RES_THEN MP_TAC THEN POP_ASSUM (ASSUME_TAC o (SPEC(--`x:'a`--)))
        THEN DISCH_TAC THEN MATCH_MP_TAC lem1 THEN CONJ_TAC
@@ -128,7 +132,7 @@ val NVAL_MAX = store_thm("NVAL_MAX",
      !n. !w:'a word ::PWORDLEN n. NVAL f b w < (b EXP n)`--),
     REPEAT STRIP_TAC THEN RESQ_WORDLEN_TAC
     THEN PURE_REWRITE_TAC[NVAL_DEF]
-    THEN FIRST_ASSUM SUBST1_TAC
+    THEN FIRST_ASSUM (SUBST1_TAC o SYM)
     THEN MATCH_MP_TAC LVAL_MAX THEN FIRST_ASSUM ACCEPT_TAC);
 
 val NVAL0 = store_thm("NVAL0",
@@ -157,17 +161,18 @@ val NVAL_WCAT2 = store_thm("NVAL_WCAT2",
      NVAL f b (WCAT (WORD[x],w)) = ((f x) * (b EXP n)) + (NVAL f b w)`--),
     GEN_TAC THEN RESQ_WORDLEN_TAC THEN REPEAT GEN_TAC
     THEN ASM_REWRITE_TAC[NVAL_DEF,WCAT_DEF]
+    THEN RW_TAC arith_ss []
     THEN PURE_ONCE_REWRITE_TAC[GSYM CONS_APPEND]
     THEN MATCH_ACCEPT_TAC (CONJUNCT2 LVAL));
 
 val NVAL_WCAT = store_thm("NVAL_WCAT",
     (--`!n m. !w1:('a)word::PWORDLEN n. !w2:('a)word::PWORDLEN m. !f b.
      NVAL f b (WCAT (w1,w2)) = ((NVAL f b w1) * (b EXP m)) + (NVAL f b w2)`--),
-    let val deres = (GEN_ALL o RESQ_HALF_SPEC o SPEC_ALL)
+    let val deres = (GEN_ALL o CONV_RULE RES_FORALL_CONV o SPEC_ALL)
     val lem1 = deres NVAL_WCAT2
     val lem2 = (REWRITE_RULE[ADD_0,LESS_EQ_SUC_REFL]
                      (SPECL[(--`n:num`--),(--`0`--)]
-    	 (RESQ_SPEC (--`w1:('a)word`--)(SPEC (--`SUC n`--) WSEG_PWORDLEN))))
+         (RESQ_SPEC (--`w1:('a)word`--)(SPEC (--`SUC n`--) WSEG_PWORDLEN))))
     in
     INDUCT_TAC THEN GEN_TAC THEN REPEAT GGEN_TAC THENL[
      IMP_RES_THEN SUBST1_TAC PWORDLEN0
@@ -176,11 +181,11 @@ val NVAL_WCAT = store_thm("NVAL_WCAT",
      THEN PURE_ONCE_REWRITE_TAC[GSYM WCAT_ASSOC]
      THEN PURE_ONCE_REWRITE_TAC[MATCH_MP lem1 lem2]
      THEN FIRST_ASSUM (ASSUME_TAC o
-    	 (MATCH_MP (deres(MATCH_MP (deres WCAT_PWORDLEN) lem2))))
+         (MATCH_MP (deres(MATCH_MP (deres WCAT_PWORDLEN) lem2))))
      THEN POP_ASSUM (fn t => PURE_ONCE_REWRITE_TAC[MATCH_MP lem1 t])
      THEN FIRST_ASSUM (fn t => ASSUME_TAC(MATCH_MP (deres t)lem2))
      THEN POP_ASSUM (fn t1 => POP_ASSUM (fn t2 =>
-    	PURE_ONCE_REWRITE_TAC[MATCH_MP (deres t1) t2]))
+        PURE_ONCE_REWRITE_TAC[MATCH_MP (deres t1) t2]))
      THEN CONV_TAC (LHS_CONV (REWR_CONV ADD_ASSOC))
      THEN CONV_TAC (REWR_CONV EQ_MONO_ADD_EQ)
      THEN PURE_ONCE_REWRITE_TAC[RIGHT_ADD_DISTRIB]
@@ -191,7 +196,7 @@ val NVAL_WCAT = store_thm("NVAL_WCAT",
 
 (* NLIST n fmod b m returns a list of length n which represents the value m *)
 (* where b is the base and fmod is the remainder function converting a value*)
-(* to fit in a digit.	    	    					   *)
+(* to fit in a digit.                                                      *)
 
 val NLIST_DEF = new_recursive_definition {
  name = "NLIST_DEF",
@@ -217,8 +222,8 @@ val NWORD_LENGTH = store_thm("NWORD_LENGTH",
     REWRITE_TAC[NWORD_DEF,WORDLEN_DEF,NLIST_LENGTH]);
 
 val NWORD_PWORDLEN = store_thm("NWORD_PWORDLEN",
-    (--`!n (f:num->'a) b m. PWORDLEN n (NWORD n f b m)`--),
-    REWRITE_TAC[PWORDLEN_DEF,NWORD_DEF,NLIST_LENGTH]);
+    (--`!n (f:num->'a) b m. (NWORD n f b m) IN PWORDLEN n`--),
+    REWRITE_TAC[IN_PWORDLEN,NWORD_DEF,NLIST_LENGTH]);
 
 val _ = export_theory();
 val _ = export_doc_theorems();

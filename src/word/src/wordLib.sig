@@ -3,6 +3,7 @@
 (* DESCRIPTION   : Signature for word conversions and tactics           *)
 (* AUTHOR	 : P Curzon 					        *)
 (* DATE		 : June 1993						*)
+(* UPDATED       : Joe Hurd, November 2001, for new res_quan library    *)
 (*                                                                      *)
 (* =====================================================================*)
 

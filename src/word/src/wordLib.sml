@@ -20,8 +20,8 @@ val word_CASES_TAC =
 val word_INDUCT_TAC = INDUCT_THEN word_baseTheory.word_induct (K ALL_TAC);
 
 val RESQ_WORDLEN_TAC =
-    (CONV_TAC RESQ_FORALL_CONV THEN word_INDUCT_TAC
-     THEN PURE_ONCE_REWRITE_TAC[word_baseTheory.PWORDLEN_DEF]
+    (CONV_TAC RES_FORALL_CONV THEN word_INDUCT_TAC
+     THEN PURE_ONCE_REWRITE_TAC[word_baseTheory.IN_PWORDLEN]
      THEN GEN_TAC THEN DISCH_TAC);
 
 
@@ -159,10 +159,10 @@ val pwordlen_funs =
       (fn tms => fn  n => fn w =>
     	if (int_of_term n) = 0 
           then REWRITE_RULE[rich_listTheory.LENGTH]
-                          (ISPECL[n,hd w] PWORDLEN_DEF)
+                          (ISPECL[n,hd w] IN_PWORDLEN)
           else REWRITE_RULE[]
                    (CONV_RULE ((RAND_CONV o RAND_CONV) LENGTH_CONV)
-                         (ISPECL[n,(hd w)]PWORDLEN_DEF)))),
+                         (ISPECL[n,(hd w)]IN_PWORDLEN)))),
     ("WSEG",   
         fn tms => fn n => fn w =>
          let fun prove_less_eq m n =
@@ -227,7 +227,7 @@ fun PWORDLEN_bitop_CONV tm =
  let val (n,w') = dest_binop("PWORDLEN","word_base") (ERR"PWORDLEN_CONV" "") tm
  in if is_var w' then ASSUME tm else 
     let val (wc,w) = strip_comb w'
-       val thm1 = GQSPECL(n::w) (pick_fn"unknown bitop" pwordlen_bitop_funs wc)
+       val thm1 = RESQ_SPECL(n::w) (pick_fn"unknown bitop" pwordlen_bitop_funs wc)
     in EQT_INTRO(itlist PROVE_HYP (map PWORDLEN_bitop_CONV (hyp thm1)) thm1)
     end
  end handle e => raise (wrap_exn "wordLib" "PWORDLEN_bitop_CONV" e);
@@ -247,7 +247,7 @@ val WSEG_WSEG_CONV =
  in fn N => fn tm =>
    let val (m2,k2,s) = dest_wseg tm
        val (m1,k1,w) = dest_wseg tm
-       val thm = GQSPECL [N, w, m1, k1, m2, k2] word_baseTheory.WSEG_WSEG
+       val thm = RESQ_SPECL [N, w, m1, k1, m2, k2] word_baseTheory.WSEG_WSEG
    in RIGHT_CONV_RULE ((RATOR_CONV o RAND_CONV) reduceLib.ADD_CONV)
          (MP thm (CONJ (EQT_ELIM (add_less_eq_conv m1 k1 N))
     	    	 (EQT_ELIM (add_less_eq_conv m2 k2 m1))))

@@ -1,18 +1,21 @@
 (* ===================================================================== *)
-(* FILE: mk_bword_bitop.ml	    DATE: 14 Aug 1992			*)
-(* AUTHOR: Wai WONG  	    	    					*)
-(* TRANSLATOR: Paul Curzon  1 June 1993, September 1994			*)
-(* Writes: bword_bitop.th	    	    				*)
-(* Uses: Libraries: more_lists res_quan					*)
-(* Description: Creates a theorey for boolean word bitwise operations	*)
+(* FILE: mk_bword_bitop.ml          DATE: 14 Aug 1992                    *)
+(* AUTHOR: Wai WONG                                                      *)
+(* TRANSLATOR: Paul Curzon  1 June 1993, September 1994                  *)
+(* UPDATED for new res_quan theories by Joe Hurd, November 2001          *)
+(* Writes: bword_bitop.th                                                *)
+(* Uses: Libraries: more_lists res_quan                                  *)
+(* Description: Creates a theorey for boolean word bitwise operations    *)
 (* ===================================================================== *)
 (* PC 18/11/93: SEG ->WSEG *)
 
 open HolKernel Parse boolLib Prim_rec numLib res_quanLib;
 open Base;
 open rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory;
+open Cond_rewrite word_baseTheory word_bitopTheory;
+open res_quanTheory bossLib pred_setTheory;
+
 infix THEN THENL THENC ORELSE ORELSEC;
-open Cond_rewrite Res_quan word_baseTheory word_bitopTheory;
 
 val _ = new_theory "bword_bitop";
 
@@ -29,13 +32,13 @@ val word_INDUCT_TAC =
     end;
 
 val RESQ_WORDLEN_TAC =
-    (CONV_TAC RESQ_FORALL_CONV THEN word_INDUCT_TAC
-     THEN PURE_ONCE_REWRITE_TAC[word_baseTheory.PWORDLEN_DEF]
+    (CONV_TAC RES_FORALL_CONV THEN word_INDUCT_TAC
+     THEN PURE_ONCE_REWRITE_TAC[word_baseTheory.IN_PWORDLEN]
      THEN GEN_TAC THEN DISCH_TAC);
 
 
 (* --------------------------------------------------------------------- *)
-(* We begin with some lemmas about lists. They are used in the proofs.	*)
+(* We begin with some lemmas about lists. They are used in the proofs.  *)
 (* --------------------------------------------------------------------- *)
 
 val MAP2_SNOC = prove(
@@ -72,16 +75,16 @@ val LASTN_MAP2 = prove(
       THEN REWRITE_TAC[LASTN,MAP2],
       INDUCT_TAC THEN REWRITE_TAC[LASTN,MAP2,LESS_EQ_MONO]
       THEN REPEAT STRIP_TAC THEN COND_REWRITE1_TAC MAP2_SNOC THENL[
-    	COND_REWRITE1_TAC LENGTH_LASTN THEN TRY REFL_TAC
-    	THEN FIRST_ASSUM (SUBST1_TAC o SYM)
-    	THEN FIRST_ASSUM ACCEPT_TAC,
-    	REWRITE_TAC[LASTN,SNOC_11] THEN RES_TAC
-    	THEN FIRST_ASSUM MATCH_ACCEPT_TAC]]
+        COND_REWRITE1_TAC LENGTH_LASTN THEN TRY REFL_TAC
+        THEN FIRST_ASSUM (SUBST1_TAC o SYM)
+        THEN FIRST_ASSUM ACCEPT_TAC,
+        REWRITE_TAC[LASTN,SNOC_11] THEN RES_TAC
+        THEN FIRST_ASSUM MATCH_ACCEPT_TAC]]
     end);
 
 
 (* --------------------------------------------------------------------- *)
-(* WNOT	    	    	    	    					*)
+(* WNOT                                                                 *)
 (* --------------------------------------------------------------------- *)
 
 
@@ -95,27 +98,24 @@ val WNOT_DEF = new_recursive_definition {
  };
 
 val BIT_WNOT_SYM_lemma = TAC_PROOF(([],
-     (--`!n. !w:(bool)word ::PWORDLEN n. PWORDLEN n (WNOT w) /\
+     (--`!n. !w:(bool)word ::PWORDLEN n. (WNOT w) IN PWORDLEN n /\
       !m k. ((m + k) <= n) ==> (WNOT(WSEG m k w) = WSEG m k (WNOT w))`--)),
     GEN_TAC THEN RESQ_WORDLEN_TAC THEN PURE_ASM_REWRITE_TAC
-    	[PWORDLEN_DEF,WNOT_DEF,WSEG_DEF,LENGTH_MAP,WORD_11]
+        [IN_PWORDLEN,WNOT_DEF,WSEG_DEF,LENGTH_MAP,WORD_11]
     THEN CONJ_TAC THENL[
       REFL_TAC,
-      REPEAT GEN_TAC THEN DISCH_TAC
+      RW_TAC arith_ss []
       THEN FIRST_ASSUM (ASSUME_TAC o CONJUNCT2 o (MATCH_MP LESS_EQ_SPLIT))
-      THEN COND_REWRITE1_TAC BUTLASTN_MAP THENL[
-    	IMP_RES_TAC LESS_EQ_SPLIT,
-        COND_REWRITE1_TAC LASTN_MAP THENL[
+      THEN COND_REWRITE1_TAC BUTLASTN_MAP
+      THEN COND_REWRITE1_TAC LASTN_MAP THENL[
           COND_REWRITE1_TAC LENGTH_BUTLASTN
-          THEN COND_REWRITE1_TAC (GSYM ADD_LESS_EQ_SUB)
-          THEN FIRST_ASSUM ACCEPT_TAC,
-    	  REFL_TAC]]]);
+          THEN DECIDE_TAC,
+          REFL_TAC]]);
 
 
-(* PBITOP_WNOT = |- PBITOP WNOT *)
-
+(* PBITOP_WNOT = |-  WNOT IN PBITOP *)
 val PBITOP_WNOT = save_thm("PBITOP_WNOT",
-    EQT_ELIM (TRANS (ISPEC (--`WNOT`--) PBITOP_DEF)
+    EQT_ELIM (TRANS (ISPEC (--`WNOT`--) IN_PBITOP)
      (EQT_INTRO BIT_WNOT_SYM_lemma)));
 
 val WNOT_WNOT = store_thm("WNOT_WNOT",
@@ -135,7 +135,7 @@ val LENGTH_MAP22 = GEN_ALL (DISCH_ALL (CONJUNCT2 (SPEC_ALL (UNDISCH_ALL
     (SPEC_ALL LENGTH_MAP2)))));
 
 (* --------------------------------------------------------------------- *)
-(* WAND	    	    	    	    					*)
+(* WAND                                                                 *)
 (* --------------------------------------------------------------------- *)
 (* WAND_DEF = |- !l1 l2. WAND(WORD l1)(WORD l2) = WORD(MAP2 $/\ l1 l2) *)
 
@@ -147,33 +147,22 @@ val WAND_DEF = new_specification
 
 val PBITBOP_WAND_lemma = prove(
     (--`!n. !w1:(bool)word ::PWORDLEN n. !w2:(bool)word ::PWORDLEN n.
-     (PWORDLEN n (w1 WAND w2)) /\
+     ( (w1 WAND w2) IN PWORDLEN n) /\
      !m k. ((m + k) <= n) ==>
      ((WSEG m k w1) WAND (WSEG m k w2) = WSEG m k (w1 WAND w2))`--),
     GEN_TAC THEN REPEAT RESQ_WORDLEN_TAC
-    THEN PURE_ASM_REWRITE_TAC[PWORDLEN_DEF,WAND_DEF,WORD_11,WSEG_DEF]
-    THEN CONJ_TAC THENL[
-     POP_ASSUM SUBST_ALL_TAC THEN MATCH_MP_TAC (GSYM LENGTH_MAP22)
-     THEN FIRST_ASSUM ACCEPT_TAC,
-     POP_ASSUM (fn t => RULE_ASSUM_TAC (TRANS (SYM t)))
-     THEN REPEAT STRIP_TAC THEN COND_REWRITE1_TAC BUTLASTN_MAP2 THENL[
-      FIRST_ASSUM (ACCEPT_TAC o SYM),
-      FIRST_ASSUM (SUBST1_TAC o SYM) THEN IMP_RES_TAC LESS_EQ_SPLIT,
-      COND_REWRITE1_TAC LASTN_MAP2 THENL[
-       COND_REWRITE1_TAC LENGTH_BUTLASTN THENL[
-        FIRST_ASSUM (SUBST1_TAC o SYM) THEN FIRST_ASSUM ACCEPT_TAC,
-        FIRST_ASSUM SUBST1_TAC THEN REFL_TAC],
-       COND_REWRITE1_TAC LENGTH_BUTLASTN
-       THEN COND_REWRITE1_TAC (GSYM ADD_LESS_EQ_SUB)
-       THEN FIRST_ASSUM SUBST1_TAC THEN FIRST_ASSUM ACCEPT_TAC,
-       REFL_TAC]]]);
+    THEN PURE_ASM_REWRITE_TAC[IN_PWORDLEN,WAND_DEF,WORD_11,WSEG_DEF]
+    THEN RW_TAC arith_ss [] THENL[
+     PROVE_TAC [LENGTH_MAP2],
+     RW_TAC arith_ss [LASTN_BUTLASTN, GSYM BUTLASTN_MAP2, LENGTH_LASTN,
+                      LENGTH_MAP2, LASTN_MAP2]]);
 
 val PBITBOP_WAND = save_thm("PBITBOP_WAND",
-    EQT_ELIM (TRANS (ISPEC (--`$WAND`--) PBITBOP_DEF)
+    EQT_ELIM (TRANS (ISPEC (--`$WAND`--) IN_PBITBOP)
      (EQT_INTRO PBITBOP_WAND_lemma)));
 
 (* --------------------------------------------------------------------- *)
-(* WOR	    	    	    	    					*)
+(* WOR                                                                  *)
 (* --------------------------------------------------------------------- *)
 (* WOR_DEF = |- !l1 l2. WOR(WORD l1)(WORD l2) = WORD(MAP2 $\/ l1 l2)   *)
 
@@ -185,33 +174,22 @@ val WOR_DEF = new_specification
 
 val PBITBOP_WOR_lemma = prove(
     (--`!n. !w1:(bool)word ::PWORDLEN n. !w2:(bool)word ::PWORDLEN n.
-     (PWORDLEN n (w1 WOR w2)) /\
+     ( (w1 WOR w2) IN PWORDLEN n) /\
      !m k. ((m + k) <= n) ==>
-     ((WSEG m k w1) WOR  (WSEG m k w2) = WSEG m k (w1 WOR w2))`--),
+     ((WSEG m k w1) WOR (WSEG m k w2) = WSEG m k (w1 WOR w2))`--),
     GEN_TAC THEN REPEAT RESQ_WORDLEN_TAC
-    THEN PURE_ASM_REWRITE_TAC[PWORDLEN_DEF,WOR_DEF,WORD_11,WSEG_DEF]
-    THEN CONJ_TAC THENL[
-     POP_ASSUM SUBST_ALL_TAC THEN MATCH_MP_TAC (GSYM LENGTH_MAP22)
-     THEN FIRST_ASSUM ACCEPT_TAC,
-     POP_ASSUM (fn t => RULE_ASSUM_TAC (TRANS (SYM t)))
-     THEN REPEAT STRIP_TAC THEN COND_REWRITE1_TAC BUTLASTN_MAP2 THENL[
-      FIRST_ASSUM (ACCEPT_TAC o SYM),
-      FIRST_ASSUM (SUBST1_TAC o SYM) THEN IMP_RES_TAC LESS_EQ_SPLIT,
-      COND_REWRITE1_TAC LASTN_MAP2 THENL[
-       COND_REWRITE1_TAC LENGTH_BUTLASTN THENL[
-        FIRST_ASSUM (SUBST1_TAC o SYM) THEN FIRST_ASSUM ACCEPT_TAC,
-        FIRST_ASSUM SUBST1_TAC THEN REFL_TAC],
-       COND_REWRITE1_TAC LENGTH_BUTLASTN
-       THEN COND_REWRITE1_TAC (GSYM ADD_LESS_EQ_SUB)
-       THEN FIRST_ASSUM SUBST1_TAC THEN FIRST_ASSUM ACCEPT_TAC,
-       REFL_TAC]]]);
+    THEN PURE_ASM_REWRITE_TAC[IN_PWORDLEN,WOR_DEF,WORD_11,WSEG_DEF]
+    THEN RW_TAC arith_ss [] THENL[
+     PROVE_TAC [LENGTH_MAP2],
+     RW_TAC arith_ss [LASTN_BUTLASTN, GSYM BUTLASTN_MAP2, LENGTH_LASTN,
+                      LENGTH_MAP2, LASTN_MAP2]]);
 
 val PBITBOP_WOR = save_thm("PBITBOP_WOR",
-    EQT_ELIM (TRANS (ISPEC (--`$WOR`--) PBITBOP_DEF)
+    EQT_ELIM (TRANS (ISPEC (--`$WOR`--) IN_PBITBOP)
      (EQT_INTRO PBITBOP_WOR_lemma)));
 
 (* --------------------------------------------------------------------- *)
-(* WXOR	    	    	    	    					*)
+(* WXOR                                                                 *)
 (* --------------------------------------------------------------------- *)
 (* |- !l1 l2. WXOR(WORD l1)(WORD l2) = WORD(MAP2(\x y. ~(x = y))l1 l2) *)
 
@@ -223,27 +201,19 @@ val WXOR_DEF = new_specification
 
 val PBITBOP_WXOR_lemma = prove(
     (--`!n. !w1:(bool)word ::PWORDLEN n. !w2:(bool)word ::PWORDLEN n.
-     (PWORDLEN n (w1 WXOR w2)) /\
+     ( (w1 WXOR w2) IN PWORDLEN n) /\
      !m k. ((m + k) <= n) ==>
      ((WSEG m k w1) WXOR (WSEG m k w2) = WSEG m k (w1 WXOR w2))`--),
     GEN_TAC THEN REPEAT RESQ_WORDLEN_TAC
-    THEN PURE_ASM_REWRITE_TAC[PWORDLEN_DEF,WXOR_DEF,WORD_11,WSEG_DEF]
-    THEN CONJ_TAC THEN POP_ASSUM SUBST_ALL_TAC THENL[
-     MATCH_MP_TAC (GSYM LENGTH_MAP22) THEN FIRST_ASSUM ACCEPT_TAC,
-     REPEAT STRIP_TAC THEN COND_REWRITE1_TAC BUTLASTN_MAP2 THENL[
-      FIRST_ASSUM (ACCEPT_TAC o SYM),
-      FIRST_ASSUM (SUBST1_TAC o SYM) THEN IMP_RES_TAC LESS_EQ_SPLIT,
-      COND_REWRITE1_TAC LASTN_MAP2 THENL[
-       COND_REWRITE1_TAC LENGTH_BUTLASTN THENL[
-        FIRST_ASSUM (SUBST1_TAC o SYM) THEN FIRST_ASSUM ACCEPT_TAC,
-        FIRST_ASSUM SUBST1_TAC THEN REFL_TAC],
-       COND_REWRITE1_TAC LENGTH_BUTLASTN THENL[
-        COND_REWRITE1_TAC (GSYM ADD_LESS_EQ_SUB)
-        THEN FIRST_ASSUM SUBST1_TAC THEN FIRST_ASSUM ACCEPT_TAC],
-       REFL_TAC]]]);
+    THEN PURE_ASM_REWRITE_TAC[IN_PWORDLEN,WORD_11,WXOR_DEF,WSEG_DEF]
+    THEN Q.SPEC_TAC (`\x y : bool. ~(x = y)`, `f`)
+    THEN RW_TAC arith_ss [] THENL[
+     PROVE_TAC [LENGTH_MAP2],
+     RW_TAC arith_ss [LASTN_BUTLASTN, GSYM BUTLASTN_MAP2, LENGTH_LASTN,
+                      LENGTH_MAP2, LASTN_MAP2]]);
 
 val PBITBOP_WXOR = save_thm("PBITBOP_WXOR",
-    EQT_ELIM (TRANS (ISPEC (--`$WXOR`--) PBITBOP_DEF)
+    EQT_ELIM (TRANS (ISPEC (--`$WXOR`--) IN_PBITBOP)
      (EQT_INTRO PBITBOP_WXOR_lemma)));
 
 val _ = export_theory();

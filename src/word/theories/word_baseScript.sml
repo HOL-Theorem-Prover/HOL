@@ -1,55 +1,56 @@
 (* =====================================================*)
-(* FILE: mk_word_base.ml	    DATE: 31 July 1992	*)
-(* AUTHOR: Wai WONG  	    	    			*)
+(* FILE: mk_word_base.ml            DATE: 31 July 1992  *)
+(* AUTHOR: Wai WONG                                     *)
 (* TRANSLATOR: Paul Curzon  1 June 1993, 1 Sep 1994     *)
-(* Writes: word_base.th	    	    			*)
+(* UPDATED for new res_quan theories by Joe Hurd, 2001  *)
+(* Writes: word_base.th                                 *)
 (* Uses: Libraries:  arith res_quan list                *)
-(* Description: Creates a theory for generic words	*)
+(* Description: Creates a theory for generic words      *)
 (* =====================================================*)
-(* PC 18/11/93: SEG ->WSEG *)
-
 
 open HolKernel Parse boolLib Prim_rec numLib res_quanLib pairLib;
 open Base Datatype;
 open rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory;
+open Cond_rewrite;
+open res_quanTheory bossLib pred_setTheory;
+
 infix THEN THENL THENC ORELSE ORELSEC;
-open Cond_rewrite Res_quan;
 
 val _ = new_theory"word_base";
 
 (* --------------------------------------------------------------------- *)
-(* We begin with some lemmas about lists. They are used in the proofs.	 *)
+(* We begin with some lemmas about lists. They are used in the proofs.   *)
 (* --------------------------------------------------------------------- *)
 
 val ELL_LASTN = prove(
     (--`!(l:('a)list) m j. (m <= LENGTH l) ==> (j < m) ==>
      (ELL j (LASTN m l) = ELL j l)`--),
     let val tac1 = (PURE_ONCE_REWRITE_TAC[ADD_SYM]
-    	THEN IMP_RES_THEN SUBST1_TAC SUB_ADD
-    	THEN MATCH_ACCEPT_TAC LESS_EQ_REFL)
+        THEN IMP_RES_THEN SUBST1_TAC SUB_ADD
+        THEN MATCH_ACCEPT_TAC LESS_EQ_REFL)
     val ADD_PRE = prove((--`!m n. 0 < n ==> (m + (PRE n) = PRE (m + n))`--),
-    	REPEAT INDUCT_TAC THEN REWRITE_TAC[ADD_CLAUSES,PRE,NOT_LESS_0])
+        REPEAT INDUCT_TAC THEN REWRITE_TAC[ADD_CLAUSES,PRE,NOT_LESS_0])
     in
     REPEAT STRIP_TAC THEN COND_REWRITE1_TAC LASTN_SEG
     THEN COND_REWRITE1_TAC ELL_SEG THENL[
       COND_REWRITE1_TAC LENGTH_SEG
       THEN TRY (FIRST_ASSUM ACCEPT_TAC) THEN tac1,
       FIRST_ASSUM  (fn t => DISJ_CASES_THEN2 ASSUME_TAC SUBST_ALL_TAC
-    	    	    (REWRITE_RULE[LESS_OR_EQ]t)) THENL[
-    	IMP_RES_TAC LESS_TRANS,
-    	FIRST_ASSUM ACCEPT_TAC],
+                    (REWRITE_RULE[LESS_OR_EQ]t)) THENL[
+        IMP_RES_TAC LESS_TRANS,
+        FIRST_ASSUM ACCEPT_TAC],
       AP_TERM_TAC THEN COND_REWRITE1_TAC SEG_SEG THEN TRY tac1
       THEN COND_REWRITE1_TAC LENGTH_SEG THEN TRY tac1 THENL[
-    	PURE_ONCE_REWRITE_TAC[ADD_SYM] THEN PURE_ONCE_REWRITE_TAC[PRE_SUB1]
-    	THEN COND_REWRITE1_TAC SUB_ADD THENL[
-    	  CONV_TAC (ONCE_DEPTH_CONV num_CONV) THEN MATCH_MP_TAC LESS_OR
-    	  THEN IMP_RES_TAC SUB_LESS_0,
-    	  MATCH_ACCEPT_TAC SUB_LESS_EQ],
-    	IMP_RES_TAC SUB_LESS_0 THEN COND_REWRITE1_TAC ADD_PRE
-    	THEN SUBST_OCCS_TAC [([2],
-    	    (SYM(UNDISCH_ALL(SPECL[(--`LENGTH(l:'a list)`--),
+        PURE_ONCE_REWRITE_TAC[ADD_SYM] THEN PURE_ONCE_REWRITE_TAC[PRE_SUB1]
+        THEN COND_REWRITE1_TAC SUB_ADD THENL[
+          CONV_TAC (ONCE_DEPTH_CONV num_CONV) THEN MATCH_MP_TAC LESS_OR
+          THEN IMP_RES_TAC SUB_LESS_0,
+          MATCH_ACCEPT_TAC SUB_LESS_EQ],
+        IMP_RES_TAC SUB_LESS_0 THEN COND_REWRITE1_TAC ADD_PRE
+        THEN SUBST_OCCS_TAC [([2],
+            (SYM(UNDISCH_ALL(SPECL[(--`LENGTH(l:'a list)`--),
                                    (--`m:num`--)]SUB_ADD))))]
-    	THEN COND_REWRITE1_TAC ADD_SUB_LEM THEN REFL_TAC]]
+        THEN COND_REWRITE1_TAC ADD_SUB_LEM THEN REFL_TAC]]
        end);
 
 (*wa *)
@@ -86,7 +87,7 @@ val LASTN_BUTLASTN_APPEND = prove(
       k < (LENGTH l2) /\ (LENGTH l2) <= (m + k) ==>
      (LASTN m(BUTLASTN k(APPEND l1 l2)) =
       (APPEND (LASTN((m + k) - (LENGTH l2)) l1)
-    	      (LASTN((LENGTH l2) - k)(BUTLASTN k l2))))`--),
+              (LASTN((LENGTH l2) - k)(BUTLASTN k l2))))`--),
 
     LIST_INDUCT_TAC THENL[
       REPEAT GEN_TAC THEN PURE_REWRITE_TAC[LENGTH,ADD,APPEND,APPEND_NIL]
@@ -95,65 +96,65 @@ val LASTN_BUTLASTN_APPEND = prove(
       THEN REWRITE_TAC[SUB_EQUAL_0,ADD_SUB,LASTN,APPEND,APPEND_NIL],
 
       GEN_TAC THEN SNOC_INDUCT_TAC THENL[
-    	REWRITE_TAC[LENGTH,NOT_LESS_0],
+        REWRITE_TAC[LENGTH,NOT_LESS_0],
 
-    	GEN_TAC THEN GEN_TAC THEN INDUCT_TAC THENL[
-    	  PURE_REWRITE_TAC[SUB_0,ADD_0,BUTLASTN,LASTN_LENGTH_ID]
-    	  THEN STRIP_TAC
-    	  THEN FIRST_ASSUM (fn t => REWRITE_TAC[MATCH_MP LASTN_APPEND1 t]),
-    	  PURE_ONCE_REWRITE_TAC[APPEND_SNOC]
-    	  THEN PURE_ONCE_REWRITE_TAC[BUTLASTN]
-    	  THEN PURE_ONCE_REWRITE_TAC[LENGTH,LENGTH_SNOC]
-    	  THEN PURE_REWRITE_TAC[ADD_CLAUSES,SUB_MONO_EQ,
-    	    LESS_MONO_EQ,LESS_EQ_MONO]
-    	  THEN STRIP_TAC THEN COND_REWRITE1_TAC BUTLASTN_APPEND2 THENL[
-    	    IMP_RES_TAC LESS_IMP_LESS_OR_EQ,
-    	    COND_REWRITE1_TAC LASTN_APPEND1
-    	    THEN COND_REWRITE1_TAC LENGTH_BUTLASTN THENL[
-    	      COND_REWRITE1_TAC SUB_LESS_EQ_ADD
-    	      THEN PURE_ONCE_REWRITE_TAC[ADD_SYM]
-    	      THEN FIRST_ASSUM ACCEPT_TAC,
-     	      COND_REWRITE1_TAC SUB_SUB
-    	      THEN COND_REWRITE1_TAC LASTN_BUTLASTN THENL[
-    	    	COND_REWRITE1_TAC SUB_ADD
-    	    	THEN MATCH_ACCEPT_TAC LESS_EQ_REFL,
-    	    	COND_REWRITE1_TAC SUB_ADD
-    	    	THEN REWRITE_TAC[LASTN_LENGTH_ID]]]]]]]);
+        GEN_TAC THEN GEN_TAC THEN INDUCT_TAC THENL[
+          PURE_REWRITE_TAC[SUB_0,ADD_0,BUTLASTN,LASTN_LENGTH_ID]
+          THEN STRIP_TAC
+          THEN FIRST_ASSUM (fn t => REWRITE_TAC[MATCH_MP LASTN_APPEND1 t]),
+          PURE_ONCE_REWRITE_TAC[APPEND_SNOC]
+          THEN PURE_ONCE_REWRITE_TAC[BUTLASTN]
+          THEN PURE_ONCE_REWRITE_TAC[LENGTH,LENGTH_SNOC]
+          THEN PURE_REWRITE_TAC[ADD_CLAUSES,SUB_MONO_EQ,
+            LESS_MONO_EQ,LESS_EQ_MONO]
+          THEN STRIP_TAC THEN COND_REWRITE1_TAC BUTLASTN_APPEND2 THENL[
+            IMP_RES_TAC LESS_IMP_LESS_OR_EQ,
+            COND_REWRITE1_TAC LASTN_APPEND1
+            THEN COND_REWRITE1_TAC LENGTH_BUTLASTN THENL[
+              COND_REWRITE1_TAC SUB_LESS_EQ_ADD
+              THEN PURE_ONCE_REWRITE_TAC[ADD_SYM]
+              THEN FIRST_ASSUM ACCEPT_TAC,
+              COND_REWRITE1_TAC SUB_SUB
+              THEN COND_REWRITE1_TAC LASTN_BUTLASTN THENL[
+                COND_REWRITE1_TAC SUB_ADD
+                THEN MATCH_ACCEPT_TAC LESS_EQ_REFL,
+                COND_REWRITE1_TAC SUB_ADD
+                THEN REWRITE_TAC[LASTN_LENGTH_ID]]]]]]]);
 
 
 
 (* ---------------------------------------------------------------------*)
-(* Define a polymorphic type of ('a)word. It is represented by a list	*)
-(* word_Ax |- !f. ?! fn. !l. fn(WORD l) = f l				*)
+(* Define a polymorphic type of ('a)word. It is represented by a list   *)
+(* word_Ax |- !f. ?! fn. !l. fn(WORD l) = f l                           *)
 (* ---------------------------------------------------------------------*)
 
 val _ = Hol_datatype `word = WORD of 'a list`;
 val word_Ax = save_thm("word_Ax", TypeBase.axiom_of "word");
 
 (* ---------------------------------------------------------------------*)
-(* Some basic theorems about the type ('a)word				*)
+(* Some basic theorems about the type ('a)word                          *)
 (* ---------------------------------------------------------------------*)
 
-(* WORD_11 |- !l l'. (WORD l = WORD l') = (l = l')			*)
+(* WORD_11 |- !l l'. (WORD l = WORD l') = (l = l')                      *)
 val WORD_11 = store_thm(
   "WORD_11",
   --`!l l'. (WORD l = WORD l') = (l = l')`--,
   REWRITE_TAC [TypeBase.one_one_of "word"]);
 
-(* word_induct |- !P. (!l. P(WORD l)) ==> (!w. P w)			*)
+(* word_induct |- !P. (!l. P(WORD l)) ==> (!w. P w)                     *)
 val word_induct = store_thm(
   "word_induct",
   --`!P. (!l. P (WORD l)) ==> !w. P w`--,
   REWRITE_TAC [TypeBase.induction_of "word"]);
 
-(* word_cases |- !w. ?l. w = WORD l  					*)
+(* word_cases |- !w. ?l. w = WORD l                                     *)
 val word_cases = store_thm(
   "word_cases",
   --`!w. ?l. w = WORD l`--,
   REWRITE_TAC [TypeBase.nchotomy_of "word"]);
 
 (* ---------------------------------------------------------------------*)
-(* Define some bit accessing functions					*)
+(* Define some bit accessing functions                                  *)
 (* ---------------------------------------------------------------------*)
 (*
 val BITS_DEF =  new_recursive_definition false word_Ax "BITS_DEF"
@@ -164,7 +165,7 @@ val WORD_BITS = store_thm("WORD_BITS",
     GEN_TAC THEN word_CASES_TAC (--`w:('a)word`--) THEN REWRITE_TAC[BITS_DEF]);
 *)
 
-(* word length is the number of bits 					*)
+(* word length is the number of bits                                    *)
 
 val WORDLEN_DEF = new_recursive_definition {
  name = "WORDLEN_DEF",
@@ -175,16 +176,9 @@ val WORDLEN_DEF = new_recursive_definition {
  `--
  };
 
-(* This is true if the argument word is of length n.			*)
+(* This is true if the argument word is of length n.                    *)
 
-val PWORDLEN_DEF = new_recursive_definition {
- name = "PWORDLEN_DEF",
- rec_axiom = word_Ax,
- def =
- --`
-   !n l. PWORDLEN n ((WORD l):'a word) = (n = LENGTH l)
- `--
- };
+val PWORDLEN_def = Define `PWORDLEN n = {w | WORDLEN w = n}`;
 
 val word_CASES_TAC =
     let val cthm = word_cases
@@ -198,39 +192,41 @@ val word_INDUCT_TAC =
      (INDUCT_THEN ithm (fn t => ALL_TAC))
     end;
 
+val IN_PWORDLEN = store_thm
+  ("IN_PWORDLEN",
+   ``!n l. WORD l IN PWORDLEN n = (LENGTH l = n)``,
+   RW_TAC std_ss [PWORDLEN_def, GSPECIFICATION, WORDLEN_DEF]);
+
 val RESQ_WORDLEN_TAC =
-    (CONV_TAC RESQ_FORALL_CONV THEN word_INDUCT_TAC
-     THEN PURE_ONCE_REWRITE_TAC[PWORDLEN_DEF]
+    (CONV_TAC RES_FORALL_CONV THEN word_INDUCT_TAC
+     THEN PURE_ONCE_REWRITE_TAC[IN_PWORDLEN]
      THEN GEN_TAC THEN DISCH_TAC);
 
-
-
 val PWORDLEN = store_thm("PWORDLEN",
-    (--`!n. !w:('a)word. PWORDLEN n w = (WORDLEN w = n)`--),
+    (--`!n. !w:('a)word. w IN PWORDLEN n = (WORDLEN w = n)`--),
     GEN_TAC THEN word_INDUCT_TAC
-    THEN PURE_REWRITE_TAC[WORDLEN_DEF,PWORDLEN_DEF] THEN GEN_TAC
+    THEN PURE_REWRITE_TAC[WORDLEN_DEF,IN_PWORDLEN] THEN GEN_TAC
     THEN EQ_TAC THEN DISCH_THEN SUBST1_TAC THEN REFL_TAC);
 
 val PWORDLEN0 = store_thm("PWORDLEN0",
-    (--`!w:('a)word. PWORDLEN 0 w ==> (w = WORD[])`--),
-    word_INDUCT_TAC THEN PURE_REWRITE_TAC[PWORDLEN_DEF,WORD_11]
-    THEN CONV_TAC (ONCE_DEPTH_CONV SYM_CONV)
+    (--`!w:('a)word. w IN PWORDLEN 0 ==> (w = WORD[])`--),
+    word_INDUCT_TAC THEN PURE_REWRITE_TAC[IN_PWORDLEN,WORD_11]
     THEN LIST_INDUCT_TAC THEN REWRITE_TAC[NOT_SUC,LENGTH]);
 
-(* PWORDLEN1 = |- !x. PWORDLEN 1(WORD[x]) *)
+(* PWORDLEN1 = |- !x. WORD [x] IN PWORDLEN 1 *)
 val PWORDLEN1 = save_thm("PWORDLEN1",
      GEN_ALL(REWRITE_RULE[rich_listTheory.LENGTH]
-    (RIGHT_CONV_RULE ((RATOR_CONV o RAND_CONV) num_CONV)
-    (SPECL[ (--`1`--), (--`[x:'a]`--)] PWORDLEN_DEF))));
+    (RIGHT_CONV_RULE (RAND_CONV num_CONV)
+    (SPECL[ (--`1`--), (--`[x:'a]`--)] IN_PWORDLEN))));
 
 (* ---------------------------------------------------------------------*)
-(* The convention on index of bits is:					*)
-(*  a) numbered from right to left, b) starting with 0			*)
-(* eg. (bn-1, ..., b1, b0) is a n-bit word				*)
-(*   	    	    	    	    					*)
-(* The main function for fetching bits from a word is WSEG:		*)
-(* WSEG :num -> num -> ('a)word -> ('a)word				*)
-(* WSEG m k (bn-1, ..., bm+k, bm+k-1,...,bk,...,b0) = (bm+k-1,...,bk)	*)
+(* The convention on index of bits is:                                  *)
+(*  a) numbered from right to left, b) starting with 0                  *)
+(* eg. (bn-1, ..., b1, b0) is a n-bit word                              *)
+(*                                                                      *)
+(* The main function for fetching bits from a word is WSEG:             *)
+(* WSEG :num -> num -> ('a)word -> ('a)word                             *)
+(* WSEG m k (bn-1, ..., bm+k, bm+k-1,...,bk,...,b0) = (bm+k-1,...,bk)   *)
 (* ---------------------------------------------------------------------*)
 
 val WSEG_DEF = new_recursive_definition {
@@ -249,10 +245,11 @@ val WSEG0 = store_thm("WSEG0",
 
 val WSEG_PWORDLEN = store_thm("WSEG_PWORDLEN",
     (--`!n. !w:('a)word::PWORDLEN n.
-     !m k. ((m + k) <= n) ==> PWORDLEN m (WSEG m k w)`--),
-    GEN_TAC THEN RESQ_HALF_GEN_TAC THEN word_INDUCT_TAC THEN GEN_TAC
-    THEN PURE_REWRITE_TAC[PWORDLEN_DEF,WSEG_DEF]
-    THEN DISCH_THEN SUBST1_TAC THEN REPEAT STRIP_TAC THEN CONV_TAC SYM_CONV
+     !m k. ((m + k) <= n) ==> WSEG m k w IN PWORDLEN m`--),
+    GEN_TAC THEN CONV_TAC RES_FORALL_CONV
+    THEN word_INDUCT_TAC THEN GEN_TAC
+    THEN PURE_REWRITE_TAC[IN_PWORDLEN,WSEG_DEF]
+    THEN DISCH_THEN (SUBST1_TAC o SYM) THEN REPEAT STRIP_TAC
     THEN MATCH_MP_TAC LENGTH_LASTN
     THEN IMP_RES_TAC LESS_EQ_SPLIT
     THEN COND_REWRITE1_TAC LENGTH_BUTLASTN
@@ -260,20 +257,20 @@ val WSEG_PWORDLEN = store_thm("WSEG_PWORDLEN",
     THEN FIRST_ASSUM ACCEPT_TAC);
 
 (* WSEG_WORDLEN =
-|- !n. !w :: PWORDLEN n. !m k. (k + m) <= n ==> (WORDLEN(WSEG m k w) = m) *)
+|- !n. !w :: PWORDLEN n. !m k. m + k <= n ==> (WORDLEN (WSEG m k w) = m) *)
 val WSEG_WORDLEN = save_thm("WSEG_WORDLEN",
     PURE_ONCE_REWRITE_RULE[PWORDLEN]WSEG_PWORDLEN);
 
 val WSEG_WORD_LENGTH = store_thm("WSEG_WORD_LENGTH",
     (--`!n. !w:('a)word::PWORDLEN n. (WSEG n 0 w = w)`--),
-    GEN_TAC THEN RESQ_HALF_GEN_TAC THEN word_INDUCT_TAC THEN GEN_TAC
-    THEN PURE_ONCE_REWRITE_TAC[PWORDLEN_DEF,WSEG_DEF]
-    THEN DISCH_THEN SUBST1_TAC
+    GEN_TAC THEN CONV_TAC RES_FORALL_CONV THEN word_INDUCT_TAC THEN GEN_TAC
+    THEN PURE_ONCE_REWRITE_TAC[IN_PWORDLEN,WSEG_DEF]
+    THEN DISCH_THEN (SUBST1_TAC o SYM)
     THEN REWRITE_TAC[BUTLASTN,LASTN_LENGTH_ID]);
 
 (* ---------------------------------------------------------------------*)
-(* BIT :num -> ('a)word -> 'a  	    					*)
-(* BIT k (bn-1,...bk, ...,b0) = bk   					*)
+(* BIT :num -> ('a)word -> 'a                                           *)
+(* BIT k (bn-1,...bk, ...,b0) = bk                                      *)
 (* ---------------------------------------------------------------------*)
 
 val BIT_DEF = new_recursive_definition {
@@ -292,24 +289,24 @@ val BIT0 = store_thm("BIT0",
 val WSEG_BIT = store_thm("WSEG_BIT",
     (--`!n . !w:('a)word::(PWORDLEN n). !k.(k < n) ==>
      (WSEG 1 k w = WORD[BIT k w])`--),
-    GEN_TAC THEN RESQ_HALF_GEN_TAC THEN word_INDUCT_TAC THEN GEN_TAC
-    THEN PURE_REWRITE_TAC[PWORDLEN_DEF,WSEG_DEF,BIT_DEF,WORD_11]
-    THEN DISCH_THEN SUBST1_TAC
+    GEN_TAC THEN CONV_TAC RES_FORALL_CONV THEN word_INDUCT_TAC THEN GEN_TAC
+    THEN PURE_REWRITE_TAC[IN_PWORDLEN,WSEG_DEF,BIT_DEF,WORD_11]
+    THEN DISCH_THEN (SUBST1_TAC o SYM)
     THEN SPEC_TAC((--`l:'a list`--),(--`l:'a list`--))
     THEN SNOC_INDUCT_TAC THEN REWRITE_TAC[LENGTH,LENGTH_SNOC,NOT_LESS_0]
     THEN GEN_TAC THEN INDUCT_TAC
     THEN REWRITE_TAC[LESS_MONO_EQ,BUTLASTN,ELL,LAST,BUTLAST]
     THENL[
-    	CONV_TAC (ONCE_DEPTH_CONV  num_CONV)
-    	THEN REWRITE_TAC[LAST,LASTN,SNOC],
-    	FIRST_ASSUM MATCH_ACCEPT_TAC]);
+        CONV_TAC (ONCE_DEPTH_CONV  num_CONV)
+        THEN REWRITE_TAC[LAST,LASTN,SNOC],
+        FIRST_ASSUM MATCH_ACCEPT_TAC]);
 
 val BIT_WSEG = store_thm("BIT_WSEG",
     (--`!n. !w:('a)word::(PWORDLEN n). !m k j. ((m + k) <= n) ==> (j < m) ==>
      (BIT j(WSEG m k w) = BIT (j + k) w)`--),
-    GEN_TAC THEN RESQ_HALF_GEN_TAC THEN word_INDUCT_TAC THEN GEN_TAC
-    THEN PURE_REWRITE_TAC[PWORDLEN_DEF,WSEG_DEF,BIT_DEF,WORD_11]
-    THEN DISCH_THEN SUBST1_TAC THEN REPEAT GEN_TAC THEN DISCH_TAC
+    GEN_TAC THEN CONV_TAC RES_FORALL_CONV THEN word_INDUCT_TAC THEN GEN_TAC
+    THEN PURE_REWRITE_TAC[IN_PWORDLEN,WSEG_DEF,BIT_DEF,WORD_11]
+    THEN DISCH_THEN (SUBST1_TAC o SYM) THEN REPEAT GEN_TAC THEN DISCH_TAC
     THEN FIRST_ASSUM
      (STRIP_ASSUME_TAC o SPEC_ALL o (MATCH_MP LESS_EQ_SPLIT))
     THEN DISCH_TAC THEN  COND_REWRITE1_TAC ELL_LASTN THENL[
@@ -318,11 +315,11 @@ val BIT_WSEG = store_thm("BIT_WSEG",
       THEN FIRST_ASSUM ACCEPT_TAC,
       MATCH_MP_TAC ELL_BUTLASTN
     THEN FIRST_ASSUM (ASSUME_TAC o (MP
-    	 (snd(EQ_IMP_RULE(SPECL[(--`j:num`--),(--`m:num`--),(--`k:num`--)]LESS_MONO_ADD_EQ)))))
+         (snd(EQ_IMP_RULE(SPECL[(--`j:num`--),(--`m:num`--),(--`k:num`--)]LESS_MONO_ADD_EQ)))))
       THEN IMP_RES_TAC LESS_IMP_LESS_OR_EQ THEN IMP_RES_TAC LESS_EQ_TRANS]);
 
 (* ---------------------------------------------------------------------*)
-(* MSB (bn-1,...,b0) = bn-1  	    					*)
+(* MSB (bn-1,...,b0) = bn-1                                             *)
 (* ---------------------------------------------------------------------*)
 
 val MSB_DEF = new_recursive_definition {
@@ -336,16 +333,16 @@ val MSB_DEF = new_recursive_definition {
 
 val MSB = store_thm("MSB",
     (--`!n. !w:('a)word::PWORDLEN n. (0 < n) ==> (MSB w = BIT (PRE n) w)`--),
-    GEN_TAC THEN RESQ_HALF_GEN_TAC THEN word_INDUCT_TAC THEN GEN_TAC
-    THEN PURE_ONCE_REWRITE_TAC[PWORDLEN_DEF,MSB_DEF,BIT_DEF]
-    THEN DISCH_THEN SUBST1_TAC
+    GEN_TAC THEN CONV_TAC RES_FORALL_CONV THEN word_INDUCT_TAC THEN GEN_TAC
+    THEN PURE_ONCE_REWRITE_TAC[IN_PWORDLEN,MSB_DEF,BIT_DEF]
+    THEN DISCH_THEN (SUBST1_TAC o SYM)
     THEN PURE_ONCE_REWRITE_TAC[LENGTH_NOT_NULL]
     THEN PURE_ONCE_REWRITE_TAC[NULL_EQ_NIL]
     THEN CONV_TAC (RAND_CONV SYM_CONV)
     THEN MATCH_ACCEPT_TAC ELL_PRE_LENGTH);
 
 (* ---------------------------------------------------------------------*)
-(* LSB (bn-1,...,b0) = b0  	    					*)
+(* LSB (bn-1,...,b0) = b0                                               *)
 (* ---------------------------------------------------------------------*)
 
 val LSB_DEF = new_recursive_definition {
@@ -359,15 +356,15 @@ val LSB_DEF = new_recursive_definition {
 
 val LSB = store_thm("LSB",
     (--`!n. !w:('a)word::PWORDLEN n. (0 < n) ==> (LSB w = BIT 0 w)`--),
-    GEN_TAC THEN RESQ_HALF_GEN_TAC THEN word_INDUCT_TAC THEN GEN_TAC
-    THEN PURE_ONCE_REWRITE_TAC[PWORDLEN_DEF,LSB_DEF,BIT_DEF]
-    THEN DISCH_THEN SUBST1_TAC THEN PURE_ONCE_REWRITE_TAC[LENGTH_NOT_NULL]
+    GEN_TAC THEN CONV_TAC RES_FORALL_CONV THEN word_INDUCT_TAC THEN GEN_TAC
+    THEN PURE_ONCE_REWRITE_TAC[IN_PWORDLEN,LSB_DEF,BIT_DEF]
+    THEN DISCH_THEN (SUBST1_TAC o SYM) THEN PURE_ONCE_REWRITE_TAC[LENGTH_NOT_NULL]
     THEN DISCH_TAC THEN CONV_TAC SYM_CONV
     THEN IMP_RES_TAC ELL_LAST);
 
 (* ---------------------------------------------------------------------*)
-(* WSPLIT : num -> ('a)word -> (('a)word # ('a)word)			*)
-(* WSPLIT k (bn-1, ...,bk, ..., b0) = (bn-1,...,bk),(bk-1,...,b0)	*)
+(* WSPLIT : num -> ('a)word -> (('a)word # ('a)word)                    *)
+(* WSPLIT k (bn-1, ...,bk, ..., b0) = (bn-1,...,bk),(bk-1,...,b0)       *)
 (* ---------------------------------------------------------------------*)
 
 val WSPLIT_DEF = new_recursive_definition {
@@ -381,8 +378,8 @@ val WSPLIT_DEF = new_recursive_definition {
  };
 
 (* ---------------------------------------------------------------------*)
-(* WCAT : (('a)word # ('a)word) ->  ('a)word 				*)
-(* WCAT (an-1,...,a0),(bk-1,...,b0) = (an-1,...,a0,bk-1,...,b0) 	*)
+(* WCAT : (('a)word # ('a)word) ->  ('a)word                            *)
+(* WCAT (an-1,...,a0),(bk-1,...,b0) = (an-1,...,a0,bk-1,...,b0)         *)
 (* ---------------------------------------------------------------------*)
 
 val th = prove_rec_fn_exists word_Ax (--`bt (WORD l) = (l:'a list)`--);
@@ -414,12 +411,12 @@ val WCAT_DEF = new_specification
 
 val WCAT_WSPLIT = TAC_PROOF(([],
   (--`!n. !w:('a)word::(PWORDLEN n). !m. (m <= n) ==> (WCAT(WSPLIT m w) = w)`--)),
-    INDUCT_TAC THEN RESQ_HALF_GEN_TAC THEN word_INDUCT_TAC THEN GEN_TAC
-    THEN PURE_REWRITE_TAC[PWORDLEN_DEF,WSPLIT_DEF,WCAT_DEF] THENL[
+    INDUCT_TAC THEN CONV_TAC RES_FORALL_CONV THEN word_INDUCT_TAC THEN GEN_TAC
+    THEN PURE_REWRITE_TAC[IN_PWORDLEN,WSPLIT_DEF,WCAT_DEF] THENL[
       REWRITE_TAC[LESS_OR_EQ,NOT_LESS_0]
       THEN DISCH_TAC THEN GEN_TAC THEN DISCH_THEN SUBST1_TAC
       THEN REWRITE_TAC[LASTN,BUTLASTN,APPEND_NIL],
-      DISCH_THEN SUBST1_TAC THEN GEN_TAC THEN DISCH_TAC
+      DISCH_THEN (SUBST1_TAC o SYM) THEN GEN_TAC THEN DISCH_TAC
       THEN PURE_ONCE_REWRITE_TAC[WORD_11]
       THEN MATCH_MP_TAC APPEND_BUTLASTN_LASTN THEN FIRST_ASSUM ACCEPT_TAC]);
 
@@ -429,7 +426,7 @@ val WSPLIT_WCAT = TAC_PROOF(([],
     REPEAT GEN_TAC THEN REPEAT RESQ_WORDLEN_TAC
     THEN PURE_ONCE_REWRITE_TAC[WCAT_DEF]
     THEN PURE_REWRITE_TAC[WSPLIT_DEF,PAIR_EQ,WORD_11]
-    THEN FIRST_ASSUM SUBST1_TAC THEN CONJ_TAC THENL[
+    THEN FIRST_ASSUM (SUBST1_TAC o SYM) THEN CONJ_TAC THENL[
       REWRITE_TAC[BUTLASTN_LENGTH_APPEND,APPEND_NIL],
       MATCH_ACCEPT_TAC LASTN_LENGTH_APPEND]);
 
@@ -454,28 +451,29 @@ val WCAT_11 = store_thm("WCAT_11",
     THEN PURE_ONCE_REWRITE_TAC[WCAT_DEF]
     THEN PURE_ONCE_REWRITE_TAC[WORD_11]
     THEN COND_REWRITE1_TAC APPEND_LENGTH_EQ
-    THEN ASSUM_LIST (SUBST_TAC o (map SYM)) THEN REFL_TAC);
+    THEN ASSUM_LIST SUBST_TAC THEN REFL_TAC);
 
 val WSPLIT_PWORDLEN = store_thm("WSPLIT_PWORDLEN",
     (--`!n. !w:('a)word::PWORDLEN n. !m. (m <= n) ==>
-     (PWORDLEN (n - m) (FST(WSPLIT m w)) /\ PWORDLEN m (SND(WSPLIT m w)))`--),
+     ((FST(WSPLIT m w)) IN PWORDLEN (n - m) /\
+      (SND(WSPLIT m w)) IN  PWORDLEN m)`--),
     GEN_TAC THEN RESQ_WORDLEN_TAC
-    THEN PURE_REWRITE_TAC[WSPLIT_DEF,FST,SND,PWORDLEN_DEF]
+    THEN PURE_REWRITE_TAC[WSPLIT_DEF,FST,SND,IN_PWORDLEN]
     THEN REPEAT STRIP_TAC THENL
      map (fn th => COND_REWRITE1_TAC th THENL[
-       FIRST_ASSUM (SUBST1_TAC o SYM) THEN FIRST_ASSUM ACCEPT_TAC,
+       FIRST_ASSUM SUBST1_TAC THEN FIRST_ASSUM ACCEPT_TAC,
        ASM_REWRITE_TAC[]]) [LENGTH_BUTLASTN, LENGTH_LASTN]);
 
 val WCAT_PWORDLEN = store_thm("WCAT_PWORDLEN",
     (--`!n1. !w1:('a)word::PWORDLEN n1. !n2. !w2:('a)word::PWORDLEN n2.
-     PWORDLEN (n1 + n2) (WCAT (w1,w2))`--),
+      (WCAT (w1,w2)) IN PWORDLEN (n1 + n2)`--),
     REPEAT (GEN_TAC THEN RESQ_WORDLEN_TAC)
-    THEN PURE_REWRITE_TAC[PWORDLEN_DEF,WCAT_DEF]
-    THEN ASSUM_LIST SUBST_TAC
-    THEN MATCH_ACCEPT_TAC (GSYM LENGTH_APPEND));
+    THEN PURE_REWRITE_TAC[IN_PWORDLEN,WCAT_DEF]
+    THEN ASSUM_LIST (SUBST_TAC o map SYM)
+    THEN MATCH_ACCEPT_TAC LENGTH_APPEND);
 
 val WORDLEN_SUC_WCAT = store_thm("WORDLEN_SUC_WCAT",
-    (--`!n (w:('a)word). PWORDLEN (SUC n) w ==>
+    (--`!n (w:('a)word). w IN PWORDLEN (SUC n) ==>
     (?b:('a)word::PWORDLEN 1. ?w':('a)word::PWORDLEN n. w = WCAT(b,w'))`--),
     let val lem1 =
       SYM(REWRITE_RULE[LESS_REFL,SUB_EQUAL_0,SYM(num_CONV (--`1`--))]
@@ -487,12 +485,12 @@ val WORDLEN_SUC_WCAT = store_thm("WORDLEN_SUC_WCAT",
       SUBST1_TAC lem1 THEN FIRST_ASSUM MATCH_MP_TAC
       THEN MATCH_ACCEPT_TAC LESS_EQ_SUC_REFL,
       RESQ_EXISTS_TAC (--`SND(WSPLIT n (w:('a)word))`--) THEN CONJ_TAC THENL[
-    	FIRST_ASSUM MATCH_MP_TAC
-    	THEN MATCH_ACCEPT_TAC LESS_EQ_SUC_REFL,
-    	PURE_ONCE_REWRITE_TAC[PAIR]
-    	THEN RESQ_IMP_RES_THEN (fn t => SUBST1_TAC (MATCH_MP t
-    	  (SPEC (--`n:num`--) LESS_EQ_SUC_REFL))) (CONJUNCT1 WORD_PARTITION)
-    	THEN REFL_TAC]]
+        FIRST_ASSUM MATCH_MP_TAC
+        THEN MATCH_ACCEPT_TAC LESS_EQ_SUC_REFL,
+        PURE_ONCE_REWRITE_TAC[PAIR]
+        THEN RESQ_IMP_RES_THEN (fn t => SUBST1_TAC (MATCH_MP t
+          (SPEC (--`n:num`--) LESS_EQ_SUC_REFL))) (CONJUNCT1 WORD_PARTITION)
+        THEN REFL_TAC]]
      end);
 
 val WSEG_WSEG = store_thm("WSEG_WSEG",
@@ -500,27 +498,27 @@ val WSEG_WSEG = store_thm("WSEG_WSEG",
      ((m1 + k1) <= n) /\ ((m2 + k2) <= m1) ==>
      (WSEG m2 k2 (WSEG m1 k1 w) = WSEG m2 (k1 + k2) w)`--),
     GEN_TAC THEN RESQ_WORDLEN_TAC
-    THEN PURE_REWRITE_TAC[PWORDLEN_DEF,WSEG_DEF,WORD_11]
+    THEN PURE_REWRITE_TAC[IN_PWORDLEN,WSEG_DEF,WORD_11]
     THEN REPEAT STRIP_TAC THEN IMP_RES_TAC LESS_EQ_SPLIT
     THEN COND_REWRITE1_TAC BUTLASTN_LASTN THENL[
       COND_REWRITE1_TAC LENGTH_BUTLASTN
-      THEN FIRST_ASSUM (SUBST1_TAC o SYM) THENL[
+      THEN FIRST_ASSUM SUBST1_TAC THENL[
         IMP_RES_TAC LESS_EQ_SPLIT,
         COND_REWRITE1_TAC (GSYM ADD_LESS_EQ_SUB)
         THEN FIRST_ASSUM ACCEPT_TAC],
       COND_REWRITE1_TAC BUTLASTN_BUTLASTN THENL[
-    	FIRST_ASSUM (SUBST1_TAC o SYM)
+        FIRST_ASSUM SUBST1_TAC
         THEN PURE_ONCE_REWRITE_TAC[ADD_SYM] THEN MATCH_MP_TAC ADD_LESS_EQ_TRANS
         THEN EXISTS_TAC (--`m1:num`--) THEN PURE_ONCE_REWRITE_TAC[ADD_SYM]
         THEN CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC,
         COND_REWRITE1_TAC LASTN_LASTN THENL[
-    	  COND_REWRITE1_TAC LENGTH_BUTLASTN
-    	  THEN COND_REWRITE1_TAC (GSYM ADD_LESS_EQ_SUB)
-    	  THEN FIRST_ASSUM (SUBST_ALL_TAC o SYM)
-    	  THEN PURE_ONCE_REWRITE_TAC[ADD_ASSOC]
-    	  THEN COND_REWRITE1_TAC SUB_ADD
-    	  THEN FIRST_ASSUM (SUBST1_TAC o SYM) THEN FIRST_ASSUM ACCEPT_TAC,
-    	  COND_REWRITE1_TAC (GSYM ADD_LESS_EQ_SUB) THEN FIRST_ASSUM ACCEPT_TAC,
+          COND_REWRITE1_TAC LENGTH_BUTLASTN
+          THEN COND_REWRITE1_TAC (GSYM ADD_LESS_EQ_SUB)
+          THEN FIRST_ASSUM (SUBST_ALL_TAC o SYM)
+          THEN PURE_ONCE_REWRITE_TAC[ADD_ASSOC]
+          THEN COND_REWRITE1_TAC SUB_ADD
+          THEN FIRST_ASSUM (SUBST1_TAC o SYM) THEN FIRST_ASSUM ACCEPT_TAC,
+          COND_REWRITE1_TAC (GSYM ADD_LESS_EQ_SUB) THEN FIRST_ASSUM ACCEPT_TAC,
           CONV_TAC ((RAND_CONV o ONCE_DEPTH_CONV) (REWR_CONV ADD_SYM))
           THEN REFL_TAC]]]);
 
@@ -530,7 +528,7 @@ val WSPLIT_WSEG = store_thm("WSPLIT_WSEG",
               (WSPLIT k w = (WSEG (n - k) k w, WSEG k 0 w))`--),
     GEN_TAC THEN RESQ_WORDLEN_TAC
     THEN PURE_ONCE_REWRITE_TAC[WSPLIT_DEF,WSEG_DEF]
-    THEN FIRST_ASSUM SUBST1_TAC
+    THEN FIRST_ASSUM (SUBST1_TAC o SYM)
     THEN GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[PAIR_EQ,WORD_11]
     THEN IMP_RES_THEN (SUBST1_TAC o SYM) LENGTH_BUTLASTN
     THEN PURE_REWRITE_TAC[BUTLASTN,LASTN_LENGTH_ID]
@@ -566,15 +564,16 @@ val WCAT_WSEG_WSEG = store_thm("WCAT_WSEG_WSEG",
        THEN PURE_ONCE_REWRITE_TAC[GSYM ADD_ASSOC]
        THEN FIRST_ASSUM ACCEPT_TAC]]);
 
-val WORD_SPLIT = save_thm("WORD_SPLIT",
-    (*(--`!n1 n2. !w:'a word::PWORDLEN (n1 + n2).
-      (w = WCAT ((WSEG n1 n2 w), (WSEG n2 0 w)))`--) *)
-    GENL[(--`n1:num`--), (--`n2:num`--)] (PURE_ONCE_REWRITE_RULE[ADD_SYM](RESQ_GEN_ALL (SYM (TRANS
-    (REWRITE_RULE[ADD_0,LESS_EQ_REFL]
-    (SPECL [(--`n2:num`--), (--`n1:num`--),(--`0`--)]
-      (RESQ_SPEC_ALL (SPEC (--`n2 + n1`--) WCAT_WSEG_WSEG))))
-    (RESQ_SPEC_ALL (SPEC (--`n2 + n1`--) WSEG_WORD_LENGTH)) )))) );
+val WORD_SPLIT = store_thm
+  ("WORD_SPLIT",
+   ``!n1 n2. !w :: PWORDLEN (n1 + n2).
+      (w = WCAT ((WSEG n1 n2 w), (WSEG n2 0 w)))``,
+   PURE_ONCE_REWRITE_TAC [ADD_SYM]
+   THEN REPEAT RESQ_STRIP_TAC
+   THEN MP_TAC (RESQ_SPECL [``n2 + n1``, ``w : 'a word``, ``n2 : num``, ``n1 : num``, ``0 : num``] WCAT_WSEG_WSEG)
 
+   THEN MP_TAC (RESQ_SPECL [``n2 + n1 : num``, ``w : 'a word``] WSEG_WORD_LENGTH)
+   THEN RW_TAC arith_ss []);
 
 val WORDLEN_SUC_WCAT_WSEG_WSEG = save_thm("WORDLEN_SUC_WCAT_WSEG_WSEG",
     (*(--`!n. !w:('a)word::PWORDLEN (SUC n).
@@ -608,41 +607,36 @@ val WSEG_WCAT1 = store_thm("WSEG_WCAT1",
     (--`!n1 n2. !w1:'a word::PWORDLEN n1. !w2:'a word::PWORDLEN n2.
      WSEG n1 n2 (WCAT(w1,w2)) = w1`--),
     REPEAT GEN_TAC THEN MAP_EVERY
-      (fn w => RESQ_HALF_GEN_TAC THEN GEN_TAC THEN
+      (fn w => CONV_TAC RES_FORALL_CONV THEN GEN_TAC THEN
                word_CASES_TAC w THEN DISCH_TAC)
-    	    [(--`w1:'a word`--), (--`w2:'a word`--)]
+            [(--`w1:'a word`--), (--`w2:'a word`--)]
     THEN PURE_REWRITE_TAC[WCAT_DEF,WSEG_DEF,WORD_11]
-    THEN SUBST_TAC (map ((MATCH_EQ_MP PWORDLEN_DEF) o ASSUME )
-    	[(--`PWORDLEN n1 (WORD (l:'a list))`--),
-         (--`PWORDLEN n2 (WORD (l':'a list))`--)])
+    THEN SUBST_TAC (map (SYM o (MATCH_EQ_MP IN_PWORDLEN) o ASSUME )
+        [(--`WORD (l:'a list) IN PWORDLEN n1`--),
+         (--`WORD (l':'a list) IN PWORDLEN n2`--)])
     THEN REWRITE_TAC[BUTLASTN_LENGTH_APPEND,APPEND_NIL,LASTN_LENGTH_ID]);
 
 val WSEG_WCAT2 = store_thm("WSEG_WCAT2",
     (--`!n1 n2. !w1:'a word::PWORDLEN n1. !w2:'a word::PWORDLEN n2.
      WSEG n2 0 (WCAT(w1,w2)) = w2`--),
     REPEAT GEN_TAC THEN MAP_EVERY
-     (fn w => RESQ_HALF_GEN_TAC THEN GEN_TAC THEN
+     (fn w => CONV_TAC RES_FORALL_CONV THEN GEN_TAC THEN
               word_CASES_TAC w THEN DISCH_TAC)
-    	    [(--`w1:'a word`--), (--`w2:'a word`--)]
+            [(--`w1:'a word`--), (--`w2:'a word`--)]
     THEN PURE_REWRITE_TAC[WCAT_DEF,WSEG_DEF,WORD_11]
-    THEN SUBST1_TAC (MATCH_EQ_MP PWORDLEN_DEF
-    	    (ASSUME (--`PWORDLEN n2 (WORD (l':'a list))`--)))
+    THEN SUBST1_TAC (SYM (MATCH_EQ_MP IN_PWORDLEN
+            (ASSUME (--`WORD (l':'a list) IN PWORDLEN n2`--))))
     THEN REWRITE_TAC[LASTN_LENGTH_APPEND,BUTLASTN]);
 
 
-(* |- !n.
-    !w :: PWORDLEN n.
-     !k m1.
-      (k + (SUC m1)) < n ==>
-      (WSEG(SUC m1)k w = WCAT(WSEG 1(k + m1)w,WSEG m1 k w)) *)
-
-val WSEG_SUC =  GEN_ALL
-    (RESQ_GEN ((--`w:('a)word`--),
-               (--`PWORDLEN n:('a)word->bool`--))
-                    (GENL[(--`k:num`--),(--`m1:num`--)]
-    (CONV_RULE (RAND_CONV SYM_CONV) (SUBS[SYM(SPEC(--`m1:num`--)ADD1)]
-    (SPECL[(--`k:num`--),(--`m1:num`--),(--`1`--)](RESQ_SPEC(--`w:('a)word`--)
-    (SPEC_ALL WCAT_WSEG_WSEG)))))));
+val WSEG_SUC = store_thm
+  ("WSEG_SUC",
+   ``!n. !w :: PWORDLEN n. !k m1.
+       (k + (SUC m1)) < n ==>
+       (WSEG(SUC m1)k w = WCAT(WSEG 1(k + m1)w,WSEG m1 k w))``,
+   REPEAT RESQ_STRIP_TAC
+   THEN MP_TAC (RESQ_SPECL [``n : num``, ``w : 'a word``, ``m1 : num``, ``1 : num``, ``k : num``] WCAT_WSEG_WSEG)
+   THEN RW_TAC arith_ss [ADD1]);
 
 (* |- !k l. WSEG 0 k(WORD l) = WORD[] *)
 val WSEG0 = PURE_REWRITE_RULE[LASTN](SPEC(--`0`--)WSEG_DEF);
@@ -667,7 +661,7 @@ val BIT_WCAT_FST = store_thm("BIT_WCAT_FST",
     THEN REPEAT STRIP_TAC THEN PURE_ONCE_REWRITE_TAC[WCAT_DEF]
     THEN PURE_ONCE_REWRITE_TAC[BIT_DEF]
     THEN COND_REWRITE1_TAC ELL_APPEND1
-    THEN FIRST_ASSUM (SUBST1_TAC o SYM) THENL[
+    THEN FIRST_ASSUM (SUBST1_TAC) THENL[
       FIRST_ASSUM ACCEPT_TAC,
       REFL_TAC]);
 
@@ -678,18 +672,18 @@ val BIT_WCAT_SND = store_thm("BIT_WCAT_SND",
     THEN REPEAT STRIP_TAC THEN PURE_ONCE_REWRITE_TAC[WCAT_DEF]
     THEN PURE_ONCE_REWRITE_TAC[BIT_DEF]
     THEN COND_REWRITE1_TAC ELL_APPEND2
-    THEN FIRST_ASSUM (SUBST1_TAC o SYM) THENL[
+    THEN FIRST_ASSUM (SUBST1_TAC) THENL[
       FIRST_ASSUM ACCEPT_TAC, REFL_TAC]);
 
 val BIT_WCAT1 = store_thm("BIT_WCAT1",
     (--`!n. !w:('a)word::PWORDLEN n. !b. BIT n (WCAT (WORD[b], w)) = b`--),
     INDUCT_TAC THENL[
-      RESQ_HALF_GEN_TAC THEN GEN_TAC
+      CONV_TAC RES_FORALL_CONV THEN GEN_TAC
       THEN DISCH_THEN (SUBST1_TAC o (MATCH_MP PWORDLEN0))
       THEN REWRITE_TAC[WCAT0,BIT0],
-      RESQ_HALF_GEN_TAC THEN GEN_TAC THEN word_CASES_TAC (--`w:('a)word`--)
-      THEN PURE_REWRITE_TAC[WCAT_DEF,BIT_DEF,APPEND,PWORDLEN_DEF]
-      THEN DISCH_THEN SUBST1_TAC
+      CONV_TAC RES_FORALL_CONV THEN GEN_TAC THEN word_CASES_TAC ``w:('a)word``
+      THEN PURE_REWRITE_TAC[WCAT_DEF,BIT_DEF,APPEND,IN_PWORDLEN]
+      THEN DISCH_THEN (SUBST1_TAC o SYM)
       THEN MATCH_ACCEPT_TAC ELL_LENGTH_CONS]);
 
 val WSEG_WCAT_WSEG1 = store_thm("WSEG_WCAT_WSEG1",
@@ -699,7 +693,7 @@ val WSEG_WCAT_WSEG1 = store_thm("WSEG_WCAT_WSEG1",
     REPEAT GEN_TAC THEN REPEAT RESQ_WORDLEN_TAC THEN REPEAT STRIP_TAC
     THEN PURE_REWRITE_TAC[WCAT_DEF,WSEG_DEF,WORD_11]
     THEN COND_REWRITE1_TAC BUTLASTN_APPEND1 THENL[
-      FIRST_ASSUM (SUBST1_TAC o SYM) THEN FIRST_ASSUM ACCEPT_TAC,
+      FIRST_ASSUM (SUBST1_TAC) THEN FIRST_ASSUM ACCEPT_TAC,
       ASM_REWRITE_TAC[]]);
 
 val WSEG_WCAT_WSEG2 = store_thm("WSEG_WCAT_WSEG2",
@@ -708,10 +702,10 @@ val WSEG_WCAT_WSEG2 = store_thm("WSEG_WCAT_WSEG2",
     REPEAT GEN_TAC THEN REPEAT RESQ_WORDLEN_TAC THEN REPEAT STRIP_TAC
     THEN PURE_REWRITE_TAC[WCAT_DEF,WSEG_DEF,WORD_11]
     THEN COND_REWRITE1_TAC BUTLASTN_APPEND2 THENL[
-      FIRST_ASSUM (SUBST1_TAC o SYM) THEN IMP_RES_TAC LESS_EQ_SPLIT,
+      FIRST_ASSUM (SUBST1_TAC) THEN IMP_RES_TAC LESS_EQ_SPLIT,
       COND_REWRITE1_TAC LASTN_APPEND2 THEN TRY REFL_TAC
       THEN COND_REWRITE1_TAC LENGTH_BUTLASTN
-      THEN FIRST_ASSUM (SUBST1_TAC o SYM)
+      THEN FIRST_ASSUM (SUBST1_TAC)
       THEN COND_REWRITE1_TAC (GSYM ADD_LESS_EQ_SUB) THENL[
         IMP_RES_TAC LESS_EQ_SPLIT,
         FIRST_ASSUM ACCEPT_TAC]]);
@@ -725,12 +719,11 @@ val WSEG_WCAT_WSEG = store_thm("WSEG_WCAT_WSEG",
     THEN PURE_ONCE_ASM_REWRITE_TAC[BUTLASTN]
     THEN PURE_ONCE_ASM_REWRITE_TAC[WORD_11]
     THEN COND_REWRITE1_TAC LASTN_BUTLASTN_APPEND
-    THEN (REFL_TAC ORELSE
-      RULE_ASSUM_TAC (fn t => SYM t handle _ => t) THEN ASM_REWRITE_TAC[]));
+    THEN RW_TAC arith_ss []);
 
 val PWORDLEN_BIT1 =
     GEN_ALL (REWRITE_RULE[LENGTH,SYM(num_CONV (--`1`--))]
-    (SPECL [(--`1`--), (--`[x:'a]`--)] PWORDLEN_DEF));
+    (SPECL [(--`1`--), (--`[x:'a]`--)] IN_PWORDLEN));
 
 val BIT_EQ_IMP_WORD_EQ = store_thm("BIT_EQ_IMP_WORD_EQ",
     (--`!n. !w1 w2:('a)word::PWORDLEN n.
@@ -738,11 +731,11 @@ val BIT_EQ_IMP_WORD_EQ = store_thm("BIT_EQ_IMP_WORD_EQ",
 
     let val lm = SPEC (--`n:num`--) WORDLEN_SUC_WCAT_BIT_WSEG
     val seg_lm = ((GEN (--`w:'a word`--)) o DISCH_ALL)
-    	(REWRITE_RULE[ADD_0,LESS_EQ_SUC_REFL]
-    	  (SPECL [(--`n:num`--), (--`0`--)]
-            (RESQ_SPEC_ALL (SPEC (--`SUC n`--) WSEG_PWORDLEN))))
+        (REWRITE_RULE[ADD_0,LESS_EQ_SUC_REFL]
+          (RESQ_SPECL [``SUC n``, ``w : 'a word``, ``n : num``, ``0 : num``]
+           WSEG_PWORDLEN))
     val lms1 = map (fn t => UNDISCH_ALL(SPEC t seg_lm))
-    	           [(--`w2:'a word`--),(--`w1:'a word`--)]
+                   [(--`w2:'a word`--),(--`w1:'a word`--)]
     val asm1 =
        ASSUME (--`!w1 w2 :'a word :: PWORDLEN n.
                      (!k. k < n ==> (BIT k w1 = BIT k w2)) ==> (w1 = w2)`--)
@@ -750,15 +743,14 @@ val BIT_EQ_IMP_WORD_EQ = store_thm("BIT_EQ_IMP_WORD_EQ",
     val wcat_lem = GENL [(--`n'':num`--), (--`w1':'a word`--),
                          (--`n':num`--), (--`w2':'a word`--)]
             (itlist (fn t1 => fn t2 => RESQ_MATCH_MP t2 t1)
-    	 (lms1 @ (map (fn t => SPEC t PWORDLEN_BIT1)
-    	    [(--`BIT n (w2:'a word)`--),(--`BIT n (w1:'a word)`--)]))
-    	 (SPECL [(--`1`--), (--`n:num`--)] WCAT_11))
+         (lms1 @ (map (fn t => SPEC t PWORDLEN_BIT1)
+            [(--`BIT n (w2:'a word)`--),(--`BIT n (w1:'a word)`--)]))
+         (SPECL [(--`1`--), (--`n:num`--)] WCAT_11))
     val bit_seg =
-    	let val lm = RESQ_GEN_ALL (REWRITE_RULE[ADD_CLAUSES,LESS_EQ_SUC_REFL]
-    	     (SPECL [(--`n:num`--), (--`0`--), (--`k:num`--)]
-    	      (RESQ_SPEC_ALL (SPEC (--`SUC n`--) BIT_WSEG))))
+        let val lm = GEN ``w : 'a word`` (REWRITE_RULE[ADD_CLAUSES,LESS_EQ_SUC_REFL]
+              (RESQ_HALF_SPECL [``SUC n``, ``w : 'a word``, ``n : num``, ``0 : num``, ``k : num``] BIT_WSEG))
         in
-    	    map (fn t => UNDISCH_ALL(RESQ_SPEC t lm))
+            map (fn t => UNDISCH_ALL(RESQ_SPEC t lm))
                              [(--`w1:'a word`--),(--`w2:'a word`--)]
         end
    in
