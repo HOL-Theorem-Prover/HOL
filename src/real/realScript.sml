@@ -26,7 +26,7 @@ app load ["numLib",
 
 
 open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
-     arithmeticTheory numTheory prim_recTheory
+     arithmeticTheory numTheory prim_recTheory whileTheory
      mesonLib tautLib simpLib Ho_Rewrite Arithconv
      jrhUtils Canon_Port AC hratTheory hrealTheory realaxTheory
      BasicProvers SingleStep TotalDefn metisLib;

@@ -110,8 +110,10 @@ sig
  val PGEN_TAC         : term -> tactic
  val PFUN_EQ_RULE     : thm -> thm
  val LET_INTRO        : thm -> thm
- val LET_INTRO_TAC    : tactic
+(* val LET_INTRO_TAC    : tactic *)
  val LET_EQ_TAC       : thm list -> tactic
  val TUPLE            : term -> thm -> thm
  val TUPLE_TAC        : term -> tactic
+
+ val LET_INTRO_TAC    : tactic
 end

@@ -15,8 +15,7 @@
    commands before trying to evaluate the ML that follows.
 
    fun mload s = (print ("Loading "^s^"\n"); load s);
-   app mload ["simpLib", "boolSimps", "arithmeticTheory", "QLib",
-              "Rsyntax", "mesonLib"];
+   app mload ["simpLib", "boolSimps", "arithmeticTheory", "Q", "mesonLib"];
 *)
 
 open HolKernel boolLib arithmeticTheory simpLib Parse Prim_rec;
@@ -131,7 +130,8 @@ val numeral_add = store_thm(
   "numeral_add",
   Term
   `!n m.
-   (iZ (ALT_ZERO + n) = n) /\ (iZ (n + ALT_ZERO) = n) /\
+   (iZ (ALT_ZERO + n) = n) /\ 
+   (iZ (n + ALT_ZERO) = n) /\
    (iZ (NUMERAL_BIT1 n + NUMERAL_BIT1 m) = NUMERAL_BIT2 (iZ (n + m))) /\
    (iZ (NUMERAL_BIT1 n + NUMERAL_BIT2 m) = NUMERAL_BIT1 (SUC (n + m))) /\
    (iZ (NUMERAL_BIT2 n + NUMERAL_BIT1 m) = NUMERAL_BIT1 (SUC (n + m))) /\
@@ -250,8 +250,8 @@ val numeral_lte = store_thm(
                     numeral_proof_rwts) THEN
   SIMP_TAC bool_ss [GSYM NOT_LESS]);
 
-val _ = print "Developing numeral rewrites for subtraction\n"
-val _ = print "   (includes initiality theorem for bit functions)\n"
+val _ = print "Developing numeral rewrites for subtraction\n";
+val _ = print "   (includes initiality theorem for bit functions)\n";
 
 val numeral_pre = store_thm(
   "numeral_pre",
@@ -423,7 +423,8 @@ val bit_induction = save_thm
   ("bit_induction", Prim_rec.prove_induction_thm old_style_bit_initiality);
 
 val iSUB_ZERO = prove(
-  Term`(!n b. iSUB b ALT_ZERO n = ALT_ZERO) /\ (!n. iSUB T n ALT_ZERO = n)`,
+  Term`(!n b. iSUB b ALT_ZERO n = ALT_ZERO) /\ 
+         (!n. iSUB T n ALT_ZERO = n)`,
   SIMP_TAC bool_ss [iSUB_DEF] THEN GEN_TAC THEN
   STRUCT_CASES_TAC (Q.SPEC `n` bit_cases) THEN
   SIMP_TAC bool_ss [iSUB_DEF, iBIT_cases]);
@@ -438,7 +439,8 @@ val iSUB_ZERO = prove(
 val iSUB_THM = store_thm(
   "iSUB_THM",
   Term
-  `!b n m. (iSUB b ALT_ZERO x = ALT_ZERO) /\ (iSUB T n ALT_ZERO = n) /\
+  `!b n m. (iSUB b ALT_ZERO x = ALT_ZERO) /\ 
+           (iSUB T n ALT_ZERO = n) /\
            (iSUB F (NUMERAL_BIT1 n) ALT_ZERO = iDUB n) /\
            (iSUB T (NUMERAL_BIT1 n) (NUMERAL_BIT1 m) =
               iDUB (iSUB T n m)) /\
@@ -546,7 +548,7 @@ val iSUB_correct = prove(
 val numeral_sub = store_thm(
   "numeral_sub",
   Term
-  `!n m. NUMERAL (n - m) = (m < n => NUMERAL (iSUB T n m) | 0)`,
+  `!n m. NUMERAL (n - m) = if m < n then NUMERAL (iSUB T n m) else 0`,
   SIMP_TAC bool_ss [iSUB_correct, COND_OUT_THMS,
                     REWRITE_RULE [NUMERAL_DEF] SUB_EQ_0, LESS_EQ_CASES,
                     NUMERAL_DEF, LESS_IMP_LESS_OR_EQ, GSYM NOT_LESS]);
@@ -568,7 +570,8 @@ val _ = print "Developing numeral rewrites for multiplication\n"
 val numeral_mult = store_thm(
   "numeral_mult", Term
   `!n m.
-     (ALT_ZERO * n = ALT_ZERO) /\ (n * ALT_ZERO = ALT_ZERO) /\
+     (ALT_ZERO * n = ALT_ZERO) /\ 
+     (n * ALT_ZERO = ALT_ZERO) /\
      (NUMERAL_BIT1 n * m = iZ (iDUB (n * m) + m)) /\
      (NUMERAL_BIT2 n * m = iDUB (iZ (n * m + m)))`,
   SIMP_TAC bool_ss [NUMERAL_BIT1, NUMERAL_BIT2, iDUB, RIGHT_ADD_DISTRIB, iZ,
@@ -652,4 +655,55 @@ val numeral_MAX = store_thm(
   REWRITE_TAC [MAX_0] THEN
   REWRITE_TAC [MAX_DEF, NUMERAL_DEF]);
 
+(*---------------------------------------------------------------------------*)
+(* Filter out the definitions and theorems needed to generate ML.            *)
+(*---------------------------------------------------------------------------*)
+
+val addition_thms = 
+ let val (a::b::c::d::e::f::rst) = CONJUNCTS(SPEC_ALL numeral_add)
+ in REWRITE_RULE [iZ] (LIST_CONJ [a,b,c,d,e,f])
+ end;
+
+val T_INTRO = Q.prove(`!x. x = (x = T)`, REWRITE_TAC []);
+val F_INTRO = Q.prove(`!x. ~x = (x = F)`, REWRITE_TAC []);
+
+val (even,odd) = 
+  let val [a,b,c,d,e,f] = CONJUNCTS (SPEC_ALL numeral_evenodd)
+      val [a',b',f'] = map (PURE_ONCE_REWRITE_RULE [T_INTRO]) [a,b,f]
+      val [c',d',e'] = map (PURE_REWRITE_RULE [F_INTRO]) [c,d,e]
+  in 
+     (LIST_CONJ [a',b',c'], LIST_CONJ [d',e',f'])
+  end;
+
+val _ = ConstMapML.prim_insert(Term`0n`,("num","ALT_ZERO",Type`:num`));
+
+val _ = 
+  let open Drop arithmeticTheory whileTheory
+  in 
+    exportML("num",
+     DATATYPE (ParseDatatype.parse `num = ALT_ZERO 
+                                        | NUMERAL_BIT1 of num 
+                                        | NUMERAL_BIT2 of num`)
+      ::
+     DEFN NUMERAL_DEF ::
+      map (DEFN o PURE_REWRITE_RULE [NUMERAL_DEF])
+         [numeral_suc,iZ,iiSUC,addition_thms,
+          numeral_lt, numeral_lte,GREATER_DEF,GREATER_OR_EQ,
+          numeral_pre,iDUB_removal,iSUB_THM, numeral_sub,
+          numeral_mult,iSQR,numeral_exp,even,odd,
+          numeral_fact,numeral_funpow,numeral_MIN,numeral_MAX,
+          WHILE,LEAST_DEF])
+  end;
+     
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME (fn ppstrm =>
+  let val S = PP.add_string ppstrm
+      fun NL() = PP.add_newline ppstrm
+  in S "val _ = ConstMapML.prim_insert "; NL();
+     S "         (Term.prim_mk_const{Name=\"0\",Thy=\"num\"},"; NL();
+     S "          (\"num\",\"ALT_ZERO\",Type.mk_type(\"num\",[])));";
+     NL(); NL()
+  end)};
+         
 val _ = export_theory();

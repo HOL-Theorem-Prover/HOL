@@ -79,11 +79,10 @@ fun partitions P [] = []
      case partition (P h) t 
       of (L1,L2) => (h::L1) :: partitions P L2;
 
-fun full_name("",s2,_) = s2
-  | full_name(s1,s2,_) = if s1=Theory.current_theory() 
-                           then s2 else s1^"ML."^s2;
 
-fun const_map c = full_name (ConstMapML.apply c);
+fun full_name ct (s1,s2,_) = if s1=ct then s2 else 
+                             if s1="" then s2 else s1^"ML."^s2;
+fun const_map thy c = full_name thy (ConstMapML.apply c);
 
 val COMMA_PREC = 50;
 val CONS_PREC  = 450;
@@ -104,13 +103,14 @@ val maxprec = 9999;
 (* lists, and case expressions.                                              *)
 (*---------------------------------------------------------------------------*)
 
-fun term_to_ML ppstrm = 
+fun term_to_ML thy ppstrm = 
  let open Portable
      val {add_break,add_newline,
           add_string,begin_block,end_block,...} = with_ppstream ppstrm
      fun prec_paren p i j = if i >= j then add_string p else ()
      val lparen = prec_paren "("
      val rparen = prec_paren ")"
+     val const_map = const_map thy
   fun pp i tm =
      if is_var tm then pp_var tm else
      if is_const tm then pp_const tm else
@@ -312,7 +312,7 @@ fun term_to_ML ppstrm =
     (begin_block INCONSISTENT 0 ; pp i M ; end_block ())
  end
 
-fun pp_term_as_ML ppstrm M = term_to_ML ppstrm minprec M;
+fun pp_term_as_ML thy ppstrm M = term_to_ML thy ppstrm minprec M;
 
 fun same_fn eq1 eq2 = (fst(strip_comb eq1) = fst(strip_comb eq2));
 
@@ -320,12 +320,12 @@ fun same_fn eq1 eq2 = (fst(strip_comb eq1) = fst(strip_comb eq2));
 (* Print a function definition as ML, i.e., fun f ... = ...                  *)
 (*---------------------------------------------------------------------------*)
 
-fun pp_defn_as_ML ppstrm = 
+fun pp_defn_as_ML thy ppstrm = 
  let open Portable
      val {add_break,add_newline,
           add_string,begin_block,end_block,...} = with_ppstream ppstrm
-     val toMLprim = term_to_ML ppstrm
-     val toML = pp_term_as_ML ppstrm
+     val toMLprim = term_to_ML thy ppstrm
+     val toML = pp_term_as_ML thy ppstrm
      fun pp_clause eq =
          let val (L,R) = dest_eq eq
          in begin_block INCONSISTENT 2
@@ -348,7 +348,8 @@ fun pp_defn_as_ML ppstrm =
          ; end_block()
        end
      fun pp tm =
-       let val eqns = map (snd o strip_forall) (strip_conj tm)
+       let val eqns = map (snd o strip_forall) 
+                          (strip_conj (snd (strip_forall tm)))
            val clauses = partitions same_fn eqns (* term list list *)
            val clauses' = ("fun",hd clauses)::map (pair "and") (tl clauses)
        in begin_block CONSISTENT 0
@@ -509,7 +510,7 @@ datatype elem
 (*---------------------------------------------------------------------------*)
 
 fun consts_of_def thm =
-  let val eqns = strip_conj (concl thm)
+  let val eqns = strip_conj (snd (strip_forall (concl thm)))
       val allCs = map (fst o strip_comb o lhs o snd o strip_forall) eqns
   in op_mk_set same_const allCs
   end;
@@ -547,12 +548,12 @@ fun pp_sig strm (s,elems) =
    flush_ppstream()
  end handle e => raise wrap_exn "Drop" "pp_sig" e;
 
-fun pp_struct strm (s,elems) =
+fun pp_struct strm (s,elems,cnames) =
  let open Portable
     val {add_break,add_newline, add_string, 
          begin_block,end_block,flush_ppstream,...} = with_ppstream strm
     val pp_datatype = pp_datatype_as_ML strm
-    val pp_defn = pp_defn_as_ML strm
+    val pp_defn = pp_defn_as_ML s strm
     fun pp_el (DATATYPE astl) = pp_datatype astl
       | pp_el (DEFN thm) =  pp_defn (concl thm)
  in 
@@ -561,6 +562,12 @@ fun pp_struct strm (s,elems) =
    begin_block CONSISTENT 2;
    add_string"struct"; add_newline();
    begin_block CONSISTENT 0;
+   begin_block INCONSISTENT 8;
+      add_string"nonfix ";
+      pr_list add_string (fn () => ()) (fn () => add_break(1,0)) cnames;
+      add_string ";";
+     end_block(); 
+   add_newline(); add_newline();
    pr_list pp_el (fn () =>()) add_newline elems;
    end_block(); end_block(); 
    add_newline();
@@ -628,13 +635,14 @@ fun term_eqtyvars tm =
 
 fun munge_def_type def = 
  let val (L,R) = unzip (map (dest_eq o snd o strip_forall) 
-                            (strip_conj (concl def)))
+                            (strip_conj (snd (strip_forall (concl def)))))
      val clist = op_mk_set same_const (map (fst o strip_comb) L)
      val tainted = U (map term_eqtyvars R)
      val theta = map (fn tyv => tyv |-> tyvar_to_eqtyvar tyv) tainted
  in 
    map (inst theta) clist
- end;
+ end
+ handle e => raise wrap_exn "Drop" "munge_def_type" e;
 
 (*---------------------------------------------------------------------------*)
 (* Fetch the constructors out of a datatype declaration                      *)
@@ -643,28 +651,33 @@ fun munge_def_type def =
 local open ParseDatatype
 in
 fun constructors [] = []
-  | constructors ((s,Constructors clist)::rst) = map fst clist@constructors rst
+  | constructors ((s,Constructors clist)::rst) = clist@constructors rst
   | constructors ((s,Record _)::rst) = raise ERR "constructors" 
                                                  "records not yet handled"
 end;
 
-
 (*---------------------------------------------------------------------------*)
-(* Get the constants defined out of a list of function definitions and       *)
-(* datatype definitions.                                                     *)
+(* Get the newly introduced constants out of a list of function definitions  *)
+(* and datatype definitions. We have to be aware that a constant may have    *)
+(* been defined in an ancestor theory.                                       *)
 (*---------------------------------------------------------------------------*)
 
-fun install_consts [] = []
-  | install_consts (DEFN thm::rst) = 
+fun add s c = 
+   let val {Name,Thy,Ty} = dest_thy_const c
+   in ConstMapML.prim_insert(c,(s,Name,Ty))
+   end;
+
+fun install_consts _ [] = []
+  | install_consts s (DEFN thm::rst) = 
        let val clist = munge_def_type thm 
-           val _ = List.app ConstMapML.insert clist
-       in clist @ install_consts rst
+           val _ = List.app (add s) clist
+       in clist @ install_consts s rst
        end
-  | install_consts (DATATYPE ty::rst) = 
-      let val clist = map (generic_const (Theory.current_theory())) 
-                          (constructors ty)
-          val _ = List.app ConstMapML.insert clist
-      in clist @ install_consts rst
+  | install_consts s (DATATYPE ty::rst) = 
+      let open ParseDatatype
+          val consts = U (map (Term.decls o fst) (constructors ty))
+          val _ = List.app (add s) consts
+      in consts @ install_consts s rst
       end;
 
 
@@ -687,18 +700,35 @@ fun mk_file_ppstream file =
 (* definitions and datatype constructors exported as ML.                     *)
 (*---------------------------------------------------------------------------*)
 
-fun emit_adjoin_call thy cnames =
+fun emit_adjoin_call thy consts =
+ let fun dest c = let val {Name,Thy,...} = dest_thy_const c in (Name,Thy) end
+     val clist = map dest consts
+     fun paren2 (a,b) = "("^a^","^b^")"
+     fun paren3 (a,b,c) = "("^a^","^b^","^c^")"
+ in 
   Theory.adjoin_to_theory
-    {sig_ps = NONE,
-     struct_ps = SOME (fn ppstrm =>
-        let val S = PP.add_string ppstrm
-            fun NL() = PP.add_newline ppstrm
-        in S "val _ = List.app ConstMapML.insert"; NL();
-           S "(map (fn s => prim_mk_const{Name=s,Thy="; S (Lib.quote thy); S"})";
-           NL();
-           S (String.concat ("     [" :: (commafy (map Lib.quote cnames) @ ["]) handle e => Feedback.Raise e;"])));
-           NL(); NL()
-        end)};
+  {sig_ps = NONE,
+   struct_ps = SOME (fn ppstrm =>
+    let val S = PP.add_string ppstrm
+        fun NL() = PP.add_newline ppstrm
+    in 
+     S "val _ = let fun foo thy c = "; NL();
+     S "              let val {Name,Ty,...} = Term.dest_thy_const c"; NL();
+     S "              in (c,(thy,Name,Ty))"; NL();
+     S "              end"; NL();
+     S"             val clist = map (fn (n,thy) => prim_mk_const{Name=n,Thy=thy})"; 
+     NL();
+     S  (String.concat ("    [" :: 
+              (commafy (map (paren2 o (Lib.quote##Lib.quote)) clist)
+              @ ["]"]))); 
+     NL();
+     S "    in "; NL();
+     S ("List.app ConstMapML.prim_insert (map (foo "^Lib.quote thy^") clist)"); NL();
+     S "end"; NL();
+     NL(); NL()
+        end)}
+   handle e => raise ERR "emit_adjoin_call" ""
+ end;
 
 (*---------------------------------------------------------------------------*)
 (* Write the ML out to a signature and structure file. We first run over the *)
@@ -712,17 +742,19 @@ fun exportML (s,elems) =
   let val path = Path.concat(Globals.HOLDIR,"src/theoryML/")
       val (sigStrm,sigPPstrm) = mk_file_ppstream (path^s^"ML.sig")
       val (structStrm,structPPstrm) = mk_file_ppstream (path^s^"ML.sml")
-      val consts = install_consts elems
-      val cnames = map (fst o dest_const) consts
+      val consts = install_consts s elems
   in
-    List.app ConstMapML.insert consts;  (* update const map *)
-    pp_sig sigPPstrm (s,elems);
-    pp_struct structPPstrm (s,elems);
+   (pp_sig sigPPstrm (s,elems);
+    pp_struct structPPstrm (s,elems,map (fst o dest_const) consts);
     TextIO.closeOut sigStrm;
     TextIO.closeOut structStrm;
-    HOL_MESG ("exportML: wrote files "^s^"ML.sig and "^s^"ML.sml \n\
+    HOL_MESG ("exportML: wrote files "^s^"ML.sig and \n\
+     \                                     "^s^"ML.sml \n\
               \ in directory "^path);
-    emit_adjoin_call s cnames
+    emit_adjoin_call s consts
+   )
+   handle e => (List.app TextIO.closeOut [sigStrm, structStrm];
+                raise wrap_exn "Drop" "exportML" e)
   end
   handle e => Raise e;
 

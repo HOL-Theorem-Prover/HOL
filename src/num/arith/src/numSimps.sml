@@ -2,7 +2,7 @@
  * A symbolic calculator for the HOL "num" arithmetic.  Does no proof   *
  * - it relies on some other tool to do the proof.                      *
  *                                                                      *
- * When using this with natural arithmetic, note that the fact that     *
+ * hen using this with natural arithmetic, note that the fact that     *
  * m-n=0 for n>m is not taken into account.  It assumes that            *
  * subtraction is always being used in a "well behaved" way.            (
  * ---------------------------------------------------------------------*)

@@ -18,7 +18,7 @@ app load ["pairLib", "numLib", "PGspec", "PSet_ind", "SingleStep", "Q",
           "Defn", "TotalDefn", "metisLib"];
 *)
 open HolKernel Parse boolLib Prim_rec pairLib numLib
-     pairTheory numTheory prim_recTheory arithmeticTheory
+     pairTheory numTheory prim_recTheory arithmeticTheory whileTheory
     BasicProvers SingleStep metisLib mesonLib simpLib boolSimps;
 
 val AP = numLib.ARITH_PROVE
@@ -46,9 +46,9 @@ val SPECIFICATION = store_thm(
   --`!P x. $IN (x:'a) (P:'a set) = P x`--,
   REWRITE_TAC [IN_DEF] THEN BETA_TAC THEN REWRITE_TAC []);
 
-(* --------------------------------------------------------------------- *)
+(* ---------------------------------------------------------------------*)
 (* Axiom of extension: (s = t) iff !x. x IN s = x in t			*)
-(* --------------------------------------------------------------------- *)
+(* ---------------------------------------------------------------------*)
 
 val EXTENSION = store_thm
    ("EXTENSION",

@@ -2,7 +2,7 @@ structure numSyntax :> numSyntax =
 struct
   open HolKernel Abbrev;
 
-  local open arithmeticTheory in end;
+  local open arithmeticTheory whileTheory in end;
 
   infix |->
   infixr -->
@@ -37,8 +37,8 @@ struct
   val num_case_tm  = prim_mk_const {Name="num_case",     Thy="arithmetic"}
   val fact_tm      = prim_mk_const {Name="FACT",         Thy="arithmetic"}
   val funpow_tm    = prim_mk_const {Name="FUNPOW",       Thy="arithmetic"}
-  val while_tm     = prim_mk_const {Name="WHILE",        Thy="arithmetic"}
-  val least_tm     = prim_mk_const {Name="LEAST",        Thy="arithmetic"};
+  val while_tm     = prim_mk_const {Name="WHILE",        Thy="while"}
+  val least_tm     = prim_mk_const {Name="LEAST",        Thy="while"};
 
 
 (*---------------------------------------------------------------------------

@@ -1011,12 +1011,37 @@ val _ = Drop.dest_cons_hook := dest_cons;
 val _ = Drop.dest_list_hook := dest_list;
 val _ = Drop.is_list_hook   := can dest_list;
 
-(* Missing some that deal with numbers, like LENGTH *)
+(*---------------------------------------------------------------------------*)
+(* Need to install the constructors for lists into the const map.          *)
+(*---------------------------------------------------------------------------*)
+
+val _ = ConstMapML.insert(Term.prim_mk_const{Name="CONS",Thy="list"});
+val _ = ConstMapML.insert(Term.prim_mk_const{Name="NIL",Thy="list"});
+
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME (fn ppstrm =>
+  let val S = PP.add_string ppstrm
+      fun NL() = PP.add_newline ppstrm
+  in S "val _ = ConstMapML.insert (Term.prim_mk_const{Name=\"CONS\",Thy=\"list\"});";
+     NL(); 
+     S "val _ = ConstMapML.insert (Term.prim_mk_const{Name=\"NIL\",Thy=\"list\"});";
+     NL(); NL()
+  end)};
+
+
+(*---------------------------------------------------------------------------*)
+(* Export ML versions of list functions                                      *)
+(*---------------------------------------------------------------------------*)
+
+val LENGTH_THM = REWRITE_RULE [arithmeticTheory.ADD1] LENGTH;
+
 val _ = Drop.exportML("list",
          map Drop.DEFN [NULL_DEF, HD, TL, APPEND, FLAT, MAP,
                         MEM, FILTER, FOLDR, FOLDL, EVERY_DEF,
                         EXISTS_DEF, MAP2, ZIP, UNZIP, REVERSE_DEF,
-                        LAST_CONS, FRONT_CONS, ALL_DISTINCT]);
+                        LAST_CONS, FRONT_CONS, ALL_DISTINCT, 
+                        EL_compute, LENGTH_THM]);
 
 val _ = export_theory();
 

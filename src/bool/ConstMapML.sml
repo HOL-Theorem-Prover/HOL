@@ -64,9 +64,19 @@ fun apply c =
  case peek(theConstMap(),c)
    of SOME triple => triple
     | NONE => let val {Name,Thy,Ty} = dest_thy_const c
+              in raise ERR "apply" 
+                       ("no binding found for "^Lib.quote(Thy^"$"^Name))
+              end
+
+(*
+fun apply c =
+ case peek(theConstMap(),c)
+   of SOME triple => triple
+    | NONE => let val {Name,Thy,Ty} = dest_thy_const c
               in if Thy=current_theory() then ("",Name,Ty) 
                  else raise ERR "apply" 
                        ("no binding found for "^Lib.quote(Thy^"$"^Name))
               end
+*)
 
 end

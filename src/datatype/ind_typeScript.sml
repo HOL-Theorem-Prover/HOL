@@ -4,8 +4,6 @@ struct
 open HolKernel boolLib Prim_rec Parse simpLib boolSimps
      numTheory prim_recTheory arithmeticTheory InductiveDefinition;
 
-infix THEN THENC THENL |-> ++
-
 val hol_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
 
 val lhand = rand o rator

@@ -781,6 +781,7 @@ val _ = Drop.dest_pair_hook := dest_pair
 
 val _ = Drop.exportML ("pair", 
           map Drop.DEFN [CURRY_DEF,UNCURRY_DEF,FST,SND,PAIR_MAP_THM,LEX_DEF_THM]);
+
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME (fn ppstrm =>

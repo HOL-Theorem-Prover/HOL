@@ -21,8 +21,8 @@ sig
   val dest_plet_hook           : (term -> term * term * term) ref
 
   val pp_type_as_ML     : ppstream -> hol_type -> unit
-  val pp_term_as_ML     : ppstream -> term -> unit
-  val pp_defn_as_ML     : ppstream -> term -> unit
+  val pp_term_as_ML     : string -> ppstream -> term -> unit
+  val pp_defn_as_ML     : string -> ppstream -> term -> unit
   val pp_datatype_as_ML : ppstream -> ParseDatatype.AST list -> unit
 
   datatype elem = DEFN of Thm.thm
