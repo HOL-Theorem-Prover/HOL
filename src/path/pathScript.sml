@@ -264,6 +264,25 @@ val length_never_zero = store_thm(
   Q.SPEC_THEN `p` STRUCT_CASES_TAC path_cases THEN
   SRW_TAC [][alt_length_thm]);
 
+val finite_length_lemma = prove(
+  ``!p. finite p = ?n. length p = SOME n``,
+  SIMP_TAC (srw_ss()) [EQ_IMP_THM, FORALL_AND_THM] THEN CONJ_TAC THENL [
+    HO_MATCH_MP_TAC finite_path_ind THEN
+    SRW_TAC [][length_thm],
+    SIMP_TAC (srw_ss()) [GSYM LEFT_FORALL_IMP_THM] THEN
+    Induct_on `n` THEN GEN_TAC THEN
+    Q.SPEC_THEN `p` STRUCT_CASES_TAC path_cases THEN
+    SRW_TAC [][length_thm]
+  ]);
+
+
+val finite_length = store_thm(
+  "finite_length",
+  ``!p. (finite p = (?n. length p = SOME n)) /\
+        (~finite p = (length p = NONE))``,
+  PROVE_TAC [finite_length_lemma, optionTheory.option_CASES,
+             optionTheory.NOT_NONE_SOME]);
+
 val el_def = Define`(el 0 p = first p) /\ (el (SUC n) p = el n (tail p))`;
 
 val path_Axiom = store_thm(
@@ -521,6 +540,67 @@ val drop_def = Define`(drop 0 p = p) /\
                       (drop (SUC n) p = drop n (tail p))`;
 
 val _ = BasicProvers.export_rewrites ["mem_thm", "drop_def"]
+
+
+val finite_drop = store_thm(
+  "finite_drop",
+  ``!p n. n IN PL p ==> (finite (drop n p) = finite p)``,
+  Induct_on `n` THENL [
+    SRW_TAC [][drop_def],
+    CONV_TAC (HO_REWR_CONV FORALL_path) THEN
+    SRW_TAC [][PL_thm, drop_def]
+  ]);
+val _ = BasicProvers.export_rewrites ["finite_drop"]
+
+val length_drop = store_thm(
+  "length_drop",
+  ``!p n. n IN PL p ==>
+          (length (drop n p) = case (length p) of
+                                  NONE -> NONE
+                               || SOME m -> SOME (m - n))``,
+  Induct_on `n` THENL [
+    REPEAT STRIP_TAC THEN
+    Cases_on `length p` THEN SRW_TAC [][drop_def],
+    CONV_TAC (HO_REWR_CONV FORALL_path) THEN
+    SRW_TAC [][drop_def, PL_thm, length_thm] THEN
+    Cases_on `length p` THEN SRW_TAC [numSimps.ARITH_ss][] THEN
+    PROVE_TAC [finite_length]
+  ]);
+
+
+(* ``take n p`` takes n _labels_ from p *)
+val take_def = Define`
+  (take 0 p = stopped_at (first p)) /\
+  (take (SUC n) p = pcons (first p) (first_label p) (take n (tail p)))
+`;
+
+val _ = BasicProvers.export_rewrites ["take_def"]
+
+val finite_take = store_thm(
+  "finite_take",
+  ``!p i. i IN PL p ==> finite (take i p)``,
+  Induct_on `i` THENL [
+    SRW_TAC [][finite_thm, take_def],
+    CONV_TAC (HO_REWR_CONV FORALL_path) THEN
+    SRW_TAC [][PL_thm, take_def]
+  ]);
+
+val _ = BasicProvers.export_rewrites ["finite_take"]
+
+val length_take = store_thm(
+  "length_take",
+  ``!p i. i IN PL p ==> (length (take i p) = SOME (i + 1))``,
+  Induct_on `i`  THENL [
+    SRW_TAC [][length_thm, take_def],
+    CONV_TAC (HO_REWR_CONV FORALL_path) THEN
+    SRW_TAC [][PL_thm, take_def, length_thm, arithmeticTheory.ADD1,
+               finite_take]
+  ]);
+
+
+val seg_def = Define`
+  seg i j p = take (j - i) (drop i p)
+`;
 
 val chop_narrows_def =
     Define`chop_narrows n p =
@@ -909,6 +989,28 @@ val finite_plink = store_thm(
   SRW_TAC [][] THEN PROVE_TAC []);
 
 val _ = BasicProvers.export_rewrites ["finite_plink"]
+
+
+val first_plink = store_thm(
+  "first_plink",
+  ``!p1 p2. (last p1 = first p2) ==> (first (plink p1 p2) = first p1)``,
+  CONV_TAC (HO_REWR_CONV FORALL_path) THEN SRW_TAC [][]);
+
+val _ = BasicProvers.export_rewrites ["first_plink"]
+
+
+val last_plink = store_thm(
+  "last_plink",
+  ``!p1 p2. finite p1 /\ finite p2 /\ (first p2 = last p1) ==>
+            (last (plink p1 p2) = last p2)``,
+  Q_TAC SUFF_TAC `!p1. finite p1 ==>
+                       !p2. finite p2 /\ (first p2 = last p1) ==>
+                            (last (plink p1 p2) = last p2)`
+        THEN1 PROVE_TAC [] THEN
+  HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][]);
+
+val _ = BasicProvers.export_rewrites ["last_plink"]
+
 
 
 (* "strongly normalising" for labelled transition relations *)
