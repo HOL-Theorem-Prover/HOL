@@ -33,18 +33,15 @@
 (* DATE          : 24th September 1991                                       *)
 (* TRANSLATOR    : Konrad Slind, University of Calgary                       *)
 (*****************************************************************************)
+
 structure tautLib :> tautLib =
 struct
 
-open HolKernel Parse basicHol90Lib;
-infix THEN THENC ## |->;
+open HolKernel Parse boolTheory boolSyntax Rsyntax 
+     Drule Tactic Conv QConv Abbrev;
+infix THEN THENL THENC ## |->;
 
-type conv = Abbrev.conv;
-type tactic = Abbrev.tactic;
-
-fun TAUT_ERR{function,message} = HOL_ERR{origin_structure = "Taut",
-                                         origin_function = function,
-                                         message = message};
+val ERR = mk_HOL_ERR "tautLib"
 
 val BOOL_CASES_AX = boolTheory.BOOL_CASES_AX;
 
@@ -52,9 +49,6 @@ val BOOL_CASES_AX = boolTheory.BOOL_CASES_AX;
 (*===========================================================================*)
 (* Discriminator functions for T (true) and F (false)                        *)
 (*===========================================================================*)
-
-val T = --`T`--
-and F = --`F`--;
 
 fun is_T tm = (tm = T)
 and is_F tm = (tm = F);
@@ -64,29 +58,25 @@ and is_F tm = (tm = F);
 (* Theorems used for Boolean case analysis                                   *)
 (*===========================================================================*)
 
+local open Tactical Rewrite
+in 
+val CASES_THM = prove
+(Term`!(b:bool) f. (f b = F) ==> ((!x. f x) = F)`,
+ GEN_TAC THEN BOOL_CASES_TAC (Term`b:bool`)
+   THEN REPEAT STRIP_TAC
+   THEN REWRITE_TAC [] 
+   THEN CONV_TAC NOT_FORALL_CONV
+   THENL [EXISTS_TAC T, EXISTS_TAC F]
+   THEN ASM_REWRITE_TAC[])
+end;
+
 (*---------------------------------------------------------------------------*)
 (* BOOL_CASES_T_F = |- !f. (f T = F) ==> ((!x. f x) = F)                     *)
-(*---------------------------------------------------------------------------*)
-
-val BOOL_CASES_T_F = prove
-  (--`!f. (f T = F) ==> ((!x. f x) = F)`--,
-   REPEAT STRIP_TAC THEN
-   REWRITE_TAC [] THEN
-   CONV_TAC NOT_FORALL_CONV THEN
-   EXISTS_TAC T THEN
-   ASM_REWRITE_TAC []);
-
-(*---------------------------------------------------------------------------*)
 (* BOOL_CASES_F_F = |- !f. (f F = F) ==> ((!x. f x) = F)                     *)
 (*---------------------------------------------------------------------------*)
 
-val BOOL_CASES_F_F = prove
-  (--`!f. (f F = F) ==> ((!x. f x) = F)`--,
-   REPEAT STRIP_TAC THEN
-   REWRITE_TAC [] THEN
-   CONV_TAC NOT_FORALL_CONV THEN
-   EXISTS_TAC F THEN
-   ASM_REWRITE_TAC []);
+val BOOL_CASES_T_F = SPEC T CASES_THM
+val BOOL_CASES_F_F = SPEC F CASES_THM
 
 (*===========================================================================*)
 (* Conversions for doing Boolean case analysis                               *)
@@ -102,13 +92,14 @@ val BOOL_CASES_F_F = prove
 fun BOOL_CASES_BOTH_T_RULE (thT,thF) tm =
   let val {Bvar,Body} = dest_forall tm
       val cases_thm = SPEC Bvar BOOL_CASES_AX
-      val thT' = TRANS(SUBST_CONV[Bvar |-> ASSUME(mk_eq{lhs=Bvar,rhs=T})]
-                                 Body Body) thT
-      and thF' = TRANS(SUBST_CONV[Bvar |-> ASSUME(mk_eq{lhs=Bvar,rhs=F})]
-                                 Body Body) thF
+      val thT' = TRANS(SUBST_CONV
+                        [Bvar |-> ASSUME(mk_eq{lhs=Bvar,rhs=T})] Body Body) thT
+      and thF' = TRANS(SUBST_CONV
+                        [Bvar |-> ASSUME(mk_eq{lhs=Bvar,rhs=F})] Body Body) thF
       val th = DISJ_CASES cases_thm thT' thF'
-   in (EQT_INTRO o (GEN Bvar) o EQT_ELIM) th
-  end handle _ => raise TAUT_ERR{function="BOOL_CASES_BOTH_T_RULE",message=""};
+  in (EQT_INTRO o GEN Bvar o EQT_ELIM) th
+  end 
+  handle HOL_ERR _ => raise ERR "BOOL_CASES_BOTH_T_RULE" "";
 
 (*---------------------------------------------------------------------------*)
 (* BOOL_CASES_T_F_RULE : thm -> conv                                         *)
@@ -117,18 +108,18 @@ fun BOOL_CASES_BOTH_T_RULE (thT,thF) tm =
 (* |- (!x. f[x]) = F.                                                        *)
 (*---------------------------------------------------------------------------*)
 
-local val frawl = --`$! :(bool -> bool) -> bool`--
-in
+val ball = inst [alpha |-> bool] universal;
+
 fun BOOL_CASES_T_F_RULE thT tm =
-   let val (t as {Bvar,Body}) = dest_forall tm
-       val f = mk_abs t
-       val thT' = TRANS (BETA_CONV (mk_comb{Rator=f,Rand=T})) thT
-       and th = AP_TERM frawl(ABS Bvar(BETA_CONV(mk_comb{Rator=f,Rand=Bvar})))
-       val th1 = SPEC f BOOL_CASES_T_F
-       val th2 = MP th1 thT'
-   in TRANS (SYM th) th2
-   end handle _ => raise TAUT_ERR{function="BOOL_CASES_T_F_RULE",message = ""}
-end;
+  let val (t as {Bvar,Body}) = dest_forall tm
+      val f = mk_abs t
+      val thT' = TRANS (BETA_CONV (mk_comb{Rator=f,Rand=T})) thT
+      and th = AP_TERM ball (ABS Bvar(BETA_CONV(mk_comb{Rator=f,Rand=Bvar})))
+      val th1 = SPEC f BOOL_CASES_T_F
+      val th2 = MP th1 thT'
+  in TRANS (SYM th) th2
+  end 
+  handle HOL_ERR _ => raise ERR "BOOL_CASES_T_F_RULE" "";
 
 (*---------------------------------------------------------------------------*)
 (* BOOL_CASES_F_F_RULE : thm -> conv                                         *)
@@ -137,128 +128,34 @@ end;
 (* |- (!x. f[x]) = F.                                                        *)
 (*---------------------------------------------------------------------------*)
 
-local val frawl =  (--`$! :(bool -> bool) -> bool`--)
-in
 fun BOOL_CASES_F_F_RULE thF tm =
    let val (t as {Bvar,Body}) = dest_forall tm
        val f = mk_abs t
        val thF' = TRANS (BETA_CONV (mk_comb{Rator=f,Rand=F})) thF
-       and th = AP_TERM frawl(ABS Bvar(BETA_CONV(mk_comb{Rator=f,Rand=Bvar})))
+       and th = AP_TERM ball (ABS Bvar(BETA_CONV(mk_comb{Rator=f,Rand=Bvar})))
        and th1 = SPEC f BOOL_CASES_F_F
        val th2 = MP th1 thF'
    in TRANS (SYM th) th2
-   end handle _ => raise TAUT_ERR{function="BOOL_CASES_F_F_RULE",message = ""}
-end;
+   end 
+   handle HOL_ERR _ => raise ERR "BOOL_CASES_F_F_RULE" ""
 
-(*===========================================================================*)
-(* Conversions that use failure to indicate that they have not changed their *)
-(* input term, and hence save the term from being rebuilt unnecessarily.     *)
-(*===========================================================================*)
-
-(*---------------------------------------------------------------------------*)
-(* Failure string indicating that a term has not been changed by the         *)
-(* conversion applied to it.                                                 *)
-(*---------------------------------------------------------------------------*)
-
-exception UNCHANGED;
-
-(*---------------------------------------------------------------------------*)
-(* QCONV : conv -> conv                                                      *)
-(*                                                                           *)
-(* Takes a conversion that uses failure to indicate that it has not changed  *)
-(* its argument term, and produces an ordinary conversion.                   *)
-(*---------------------------------------------------------------------------*)
-
-fun QCONV conv tm = conv tm
-                    handle UNCHANGED => REFL tm
-
-(*---------------------------------------------------------------------------*)
-(* ALL_QCONV : conv                                                          *)
-(*                                                                           *)
-(* Identity conversion for conversions using failure.                        *)
-(*---------------------------------------------------------------------------*)
-
-val ALL_QCONV:conv = fn _ => raise UNCHANGED
-
-
-(*---------------------------------------------------------------------------*)
-(* THENQC : conv -> conv -> conv                                             *)
-(*                                                                           *)
-(* Takes two conversions that use failure and produces a conversion that     *)
-(* applies them in succession. The new conversion also uses failure. It fails*)
-(* if neither of the two argument conversions cause a change.                *)
-(*---------------------------------------------------------------------------*)
-
-fun THENQC conv1 conv2 tm =
-   let val th1 = conv1 tm
-   in  TRANS th1 (conv2 (rhs (concl th1))) handle UNCHANGED => th1
-   end handle UNCHANGED => conv2 tm;
-
-(*---------------------------------------------------------------------------*)
-(* ORELSEQC : conv -> conv -> conv                                           *)
-(*                                                                           *)
-(* Takes two conversions that use failure and produces a conversion that     *)
-(* tries the first one, and if this fails for a reason other than that the   *)
-(* term is unchanged, it tries the second one.                               *)
-(*---------------------------------------------------------------------------*)
-
-fun ORELSEQC (conv1:conv) conv2 tm =
-   conv1 tm
-   handle UNCHANGED => raise UNCHANGED
-        | _ => conv2 tm;
-
-(*---------------------------------------------------------------------------*)
-(* TRY_QCONV : conv -> conv                                                  *)
-(*                                                                           *)
-(* Applies a conversion, and if it fails, raises an UNCHANGED exception.     *)
-(*---------------------------------------------------------------------------*)
-
-fun TRY_QCONV conv = ORELSEQC conv ALL_QCONV;
 
 (*---------------------------------------------------------------------------*)
 (* RAND_QCONV : conv -> conv                                                 *)
+(* RATOR_QCONV : conv -> conv                                                *)
+(* ABS_QCONV : conv -> conv                                                  *)
 (*                                                                           *)
-(* Applies a conversion to the rand of a term, propagating any failure that  *)
-(* indicates that the subterm is unchanged.                                  *)
+(* Sleeker versions of Conv.{RAND,RATOR,ABS}_CONV. All failures propagate.   *)
 (*---------------------------------------------------------------------------*)
 
 fun RAND_QCONV conv tm =
-   let val {Rator,Rand} = 
-         dest_comb tm handle _ => raise TAUT_ERR{function = "RAND_QCONV",
-                                                 message = ""}
-   in AP_TERM Rator (conv Rand)
-   end;
-
-(*---------------------------------------------------------------------------*)
-(* RATOR_QCONV : conv -> conv                                                *)
-(*                                                                           *)
-(* Applies a conversion to the rator of a term, propagating any failure that *)
-(* indicates that the subterm is unchanged.                                  *)
-(*---------------------------------------------------------------------------*)
+ let val {Rator,Rand} = dest_comb tm in AP_TERM Rator (conv Rand) end;
 
 fun RATOR_QCONV conv tm =
-   let val {Rator,Rand} = 
-         dest_comb tm handle _ => raise TAUT_ERR{function = "RATOR_QCONV",
-                                                 message = ""}
-   in AP_THM (conv Rator) Rand
-   end;
-
-(*---------------------------------------------------------------------------*)
-(* ABS_QCONV : conv -> conv                                                  *)
-(*                                                                           *)
-(* Applies a conversion to the body of an abstraction, propagating any       *)
-(* failure that indicates that the subterm is unchanged.                     *)
-(*---------------------------------------------------------------------------*)
+ let val {Rator,Rand} = dest_comb tm in AP_THM (conv Rator) Rand end;
 
 fun ABS_QCONV conv tm =
-   let val {Bvar,Body} = 
-          dest_abs tm handle _ => raise TAUT_ERR{function = "ABS_QCONV",
-                                                 message = "in dest_abs"}
-       val bodyth = conv Body
-   in ABS Bvar bodyth 
-   handle (e as HOL_ERR _) => raise e
-        | _ => raise TAUT_ERR{function = "ABS_QCONV",message = ""}
-   end;
+ let val {Bvar,Body} = dest_abs tm in ABS Bvar (conv Body) end;
 
 (*===========================================================================*)
 (* Theorems used for simplifying Boolean terms                               *)
@@ -284,17 +181,14 @@ and F_REFL = REFL F;
 (*    |- ~F = T                                                              *)
 (*---------------------------------------------------------------------------*)
 
-local
-val [th1,th2,th3] = CONJUNCTS NOT_CLAUSES
+local val [th1,th2,th3] = CONJUNCTS NOT_CLAUSES
 in
 fun NOT_CONV tm =
    let val arg = dest_neg tm
-   in if (is_T arg) 
-      then th2
-      else if (is_F arg) 
-           then th3
-           else SPEC (dest_neg arg) th1
-   end handle _ => raise TAUT_ERR{function = "NOT_CONV",message = ""}
+   in if is_T arg then th2 else 
+      if is_F arg then th3
+      else SPEC (dest_neg arg) th1
+   end handle HOL_ERR _ => raise ERR "NOT_CONV" ""
 end;
 
 (*---------------------------------------------------------------------------*)
@@ -307,25 +201,18 @@ end;
 (*    |- (t = F) = ~t                                                        *)
 (*---------------------------------------------------------------------------*)
 
-local val th1 = INST_TYPE [Type.alpha |-> Type.bool] REFL_CLAUSE
-      and [th2,th3,th4,th5] = map GEN_ALL (CONJUNCTS (SPEC_ALL EQ_CLAUSES))
+local val th1 = INST_TYPE [alpha |-> bool] REFL_CLAUSE
+      val [th2,th3,th4,th5] = map GEN_ALL (CONJUNCTS (SPEC_ALL EQ_CLAUSES))
 in
 fun EQ_CONV tm =
-   let val {lhs,rhs} = dest_eq tm
-   in
-   if (is_T lhs) 
-   then SPEC rhs th2
-   else if (is_T rhs) 
-        then SPEC lhs th3
-        else if (is_F lhs) 
-             then SPEC rhs th4
-             else if (is_F rhs) 
-                  then SPEC lhs th5
-                  else if (lhs = rhs) 
-                       then SPEC lhs th1
-                       else raise TAUT_ERR{function = "EQ_CONV",message = ""}
-   end handle (e as HOL_ERR _) => raise e
-            | _ => raise TAUT_ERR{function = "EQ_CONV",message = ""}
+  let val {lhs,rhs} = dest_eq tm
+  in if is_T lhs then SPEC rhs th2 else 
+     if is_T rhs then SPEC lhs th3 else 
+     if is_F lhs then SPEC rhs th4 else 
+     if is_F rhs then SPEC lhs th5 else 
+     if lhs=rhs then SPEC lhs th1 
+     else raise ERR "EQ_CONV" ""
+  end 
 end;
 
 (*---------------------------------------------------------------------------*)
@@ -336,7 +223,7 @@ end;
 (*---------------------------------------------------------------------------*)
 
 fun EQ_THEN_NOT_CONV tm =
-   if ((is_F (rand (rator tm))) orelse (is_F (rand tm)))
+   if is_F (rand (rator tm)) orelse is_F (rand tm)
    then (EQ_CONV THENC (TRY_CONV NOT_CONV)) tm
    else EQ_CONV tm;
 
@@ -350,26 +237,17 @@ fun EQ_THEN_NOT_CONV tm =
 (*    |- t /\ t = t                                                          *)
 (*---------------------------------------------------------------------------*)
 
-local
-val [th1,th2,th3,th4,th5] = map GEN_ALL (CONJUNCTS (SPEC_ALL AND_CLAUSES))
+local val [th1,th2,th3,th4,th5] = map GEN_ALL (CONJUNCTS (SPEC_ALL AND_CLAUSES))
 in
 fun AND_CONV tm =
-   let val {conj1,conj2} = dest_conj tm
-   in
-   if (is_T conj1) 
-   then SPEC conj2 th1
-   else if (is_T conj2) 
-        then SPEC conj1 th2
-        else if (is_F conj1) 
-             then SPEC conj2 th3
-             else if (is_F conj2) 
-                  then SPEC conj1 th4
-                  else if (conj1 = conj2) 
-                       then SPEC conj1 th5
-                       else raise TAUT_ERR{function = "AND_CONV",message = ""}
-   end
-   handle (e as HOL_ERR _) => raise e
-        | _ => raise TAUT_ERR{function = "AND_CONV",message = ""}
+  let val {conj1,conj2} = dest_conj tm
+  in if is_T conj1 then SPEC conj2 th1 else 
+     if is_T conj2 then SPEC conj1 th2 else 
+     if is_F conj1 then SPEC conj2 th3 else 
+     if is_F conj2 then SPEC conj1 th4 else 
+     if conj1=conj2 then SPEC conj1 th5
+     else raise ERR "AND_CONV" ""
+  end
 end;
 
 (*---------------------------------------------------------------------------*)
@@ -382,26 +260,17 @@ end;
 (*    |- t \/ t = t                                                          *)
 (*---------------------------------------------------------------------------*)
 
-local
-val [th1,th2,th3,th4,th5] = map GEN_ALL (CONJUNCTS (SPEC_ALL OR_CLAUSES))
+local val [th1,th2,th3,th4,th5] = map GEN_ALL (CONJUNCTS (SPEC_ALL OR_CLAUSES))
 in 
 fun OR_CONV tm =
-   let val {disj1,disj2} = dest_disj tm
-   in
-   if (is_T disj1) 
-   then SPEC disj2 th1
-   else if (is_T disj2) 
-        then SPEC disj1 th2
-        else if (is_F disj1) 
-             then SPEC disj2 th3
-             else if (is_F disj2) 
-                  then SPEC disj1 th4
-                  else if (disj1 = disj2) 
-                       then SPEC disj1 th5
-                       else raise TAUT_ERR{function = "OR_CONV",message = ""}
-   end
-   handle (e as HOL_ERR _) => raise e
-        | _ => raise TAUT_ERR{function = "OR_CONV",message = ""}
+  let val {disj1,disj2} = dest_disj tm
+  in if is_T disj1 then SPEC disj2 th1 else 
+     if is_T disj2 then SPEC disj1 th2 else 
+     if is_F disj1 then SPEC disj2 th3 else 
+     if is_F disj2 then SPEC disj1 th4 else 
+     if disj1=disj2 then SPEC disj1 th5
+     else raise ERR "OR_CONV" ""
+  end
 end;
 
 (*---------------------------------------------------------------------------*)
@@ -414,29 +283,18 @@ end;
 (*    |- t ==> F = ~t                                                        *)
 (*---------------------------------------------------------------------------*)
 
-local
-val [th1,th2,th3,th4,th5] = map GEN_ALL (CONJUNCTS (SPEC_ALL IMP_CLAUSES))
+local val [th1,th2,th3,th4,th5] = map GEN_ALL(CONJUNCTS(SPEC_ALL IMP_CLAUSES))
 in 
 fun IMP_CONV tm =
-   let val {ant,conseq} = dest_imp tm
-   in  
-   if (is_neg tm) 
-   then raise TAUT_ERR{function = "IMP_CONV",message = ""}
-   else if (is_T ant) 
-        then SPEC conseq th1
-        else if (is_T conseq) 
-             then SPEC ant th2
-             else if (is_F ant) 
-                  then SPEC conseq th3
-                  else if (is_F conseq) 
-                       then SPEC ant th5
-                       else if (ant = conseq) 
-                            then SPEC ant th4
-                            else raise TAUT_ERR{function = "IMP_CONV",
-                                                message = ""}
+  let val {ant,conseq} = dest_imp tm
+  in if is_neg tm   then raise ERR "IMP_CONV" "" else 
+     if is_T ant    then SPEC conseq th1 else 
+     if is_T conseq then SPEC ant th2 else 
+     if is_F ant    then SPEC conseq th3 else 
+     if is_F conseq then SPEC ant th5 else 
+     if ant=conseq  then SPEC ant th4 else 
+     raise ERR "IMP_CONV" ""
    end
-   handle (e as HOL_ERR _) => raise e 
-        | _ => raise TAUT_ERR{function = "IMP_CONV",message = ""}
 end;
 
 (*---------------------------------------------------------------------------*)
@@ -447,7 +305,7 @@ end;
 (*---------------------------------------------------------------------------*)
 
 fun IMP_THEN_NOT_CONV tm =
-   if (is_F (rand tm))
+   if is_F (rand tm)
    then (IMP_CONV THENC (TRY_CONV NOT_CONV)) tm
    else IMP_CONV tm;
 
@@ -458,19 +316,18 @@ fun IMP_THEN_NOT_CONV tm =
 (*    |- (F => t1 | t2) = t2                                                 *)
 (*---------------------------------------------------------------------------*)
 
-local val theta = [Type.alpha |-> Type.bool]
-      val [th1,th2] = map (GENL [--`t1:bool`--, --`t2:bool`--])
-                    (CONJUNCTS (SPEC_ALL (INST_TYPE theta COND_CLAUSES)))
+local val theta = [alpha |-> bool]
+      val t1 = mk_var{Name="t1",Ty=bool}
+      val t2 = mk_var{Name="t2",Ty=bool}
+      val [th1,th2] = map (GENL [t1, t2])
+                          (CONJUNCTS (SPEC_ALL (INST_TYPE theta COND_CLAUSES)))
 in
 fun IF_CONV tm =
-   let val {cond,larm,rarm} = dest_cond tm
-   in if (is_T cond) 
-      then SPECL [larm,rarm] th1
-      else if (is_F cond) 
-           then SPECL [larm,rarm] th2
-           else raise TAUT_ERR{function = "IF_CONV",message = ""}
-   end handle (e as HOL_ERR _) => raise e
-            | _ => raise TAUT_ERR{function = "IF_CONV",message = ""}
+  let val {cond,larm,rarm} = dest_cond tm
+  in if is_T cond then SPECL [larm,rarm] th1 else 
+     if is_F cond then SPECL [larm,rarm] th2 else 
+     raise ERR "IF_CONV" ""
+  end
 end;
 
 (*---------------------------------------------------------------------------*)
@@ -482,49 +339,32 @@ end;
 (*---------------------------------------------------------------------------*)
 
 fun SIMP_PROP_QCONV tm =
-   let fun ARGS_QCONV tm =
-          let val (opp,[arg1,arg2]) = strip_comb tm
-          in
-          let val th1 = SIMP_PROP_QCONV arg1
-              val th = AP_TERM opp th1
-          in
-          MK_COMB (th,SIMP_PROP_QCONV arg2)
-          handle UNCHANGED => AP_THM th arg2
-          end handle UNCHANGED => let val th2 = SIMP_PROP_QCONV arg2
-                                  in AP_TERM (rator tm) th2
-                                  end
-          end
-   in
-   if ((is_const tm) orelse (is_var tm)) 
-   then ALL_QCONV tm
-   else if (is_neg tm) 
-        then THENQC (RAND_QCONV SIMP_PROP_QCONV) 
-                    (TRY_QCONV NOT_CONV) 
-                    tm
-        else if (is_eq tm)
-             then THENQC ARGS_QCONV (TRY_QCONV EQ_THEN_NOT_CONV) tm
-             else if (is_conj tm)
-                  then THENQC ARGS_QCONV (TRY_QCONV AND_CONV) tm
-                  else if (is_disj tm)
-                       then THENQC ARGS_QCONV (TRY_QCONV OR_CONV) tm
-                       else if (is_imp tm)
-                            then THENQC ARGS_QCONV 
-                                        (TRY_QCONV IMP_THEN_NOT_CONV)
-                                        tm
-                            else if (is_cond tm) 
-                                 then THENQC
-                                       (THENQC
-                                         (RATOR_QCONV
-                                            (THENQC 
-                                              (RATOR_QCONV 
-                                                  (RAND_QCONV SIMP_PROP_QCONV))
-                                              (RAND_QCONV SIMP_PROP_QCONV)))
-                                         (RAND_QCONV SIMP_PROP_QCONV))
-                                       (TRY_QCONV IF_CONV)
-                                       tm
-                                else raise TAUT_ERR{function="SIMP_PROP_QCONV",
-                                                    message = ""}
-   end;
+ let fun ARGS_QCONV tm =
+      let val (opp,[arg1,arg2]) = strip_comb tm
+      in let val th1 = SIMP_PROP_QCONV arg1
+             val th = AP_TERM opp th1
+         in MK_COMB (th,SIMP_PROP_QCONV arg2)
+            handle UNCHANGED => AP_THM th arg2
+         end handle UNCHANGED 
+         => let val th2 = SIMP_PROP_QCONV arg2
+            in AP_TERM (rator tm) th2
+            end
+      end
+ in
+ if is_const tm orelse is_var tm then ALL_QCONV tm else 
+ if is_neg tm  then THENQC (RAND_QCONV SIMP_PROP_QCONV) 
+                           (TRY_QCONV NOT_CONV) tm else 
+ if is_eq tm   then THENQC ARGS_QCONV (TRY_QCONV EQ_THEN_NOT_CONV) tm else 
+ if is_conj tm then THENQC ARGS_QCONV (TRY_QCONV AND_CONV) tm else 
+ if is_disj tm then THENQC ARGS_QCONV (TRY_QCONV OR_CONV) tm else 
+ if is_imp tm  then THENQC ARGS_QCONV (TRY_QCONV IMP_THEN_NOT_CONV) tm else
+ if is_cond tm
+    then THENQC (THENQC (RATOR_QCONV (THENQC 
+            (RATOR_QCONV (RAND_QCONV SIMP_PROP_QCONV))
+            (RAND_QCONV SIMP_PROP_QCONV))) (RAND_QCONV SIMP_PROP_QCONV))
+          (TRY_QCONV IF_CONV) tm 
+ else raise ERR "SIMP_PROP_QCONV" ""
+ end;
 
 (*===========================================================================*)
 (* Tautology checking                                                        *)
@@ -539,7 +379,7 @@ fun SIMP_PROP_QCONV tm =
 (*---------------------------------------------------------------------------*)
 
 fun DEPTH_FORALL_QCONV conv tm =
-   if (is_forall tm)
+  if is_forall tm
    then RAND_QCONV (ABS_QCONV (DEPTH_FORALL_QCONV conv)) tm
    else conv tm;
 
@@ -551,9 +391,8 @@ fun DEPTH_FORALL_QCONV conv tm =
 (*---------------------------------------------------------------------------*)
 
 fun FORALL_T [] = T_REFL
-  | FORALL_T vars = EQT_INTRO (GENL vars TRUTH)
-                    handle _ => raise TAUT_ERR{function = "FORALL_T",
-                                               message = ""}
+  | FORALL_T vars = 
+     EQT_INTRO (GENL vars TRUTH) handle HOL_ERR _ => raise ERR "FORALL_T" ""
 
 (*---------------------------------------------------------------------------*)
 (* FORALL_F : term list -> thm                                               *)
@@ -562,12 +401,12 @@ fun FORALL_T [] = T_REFL
 (* function returns the theorem |- (!x1 ... xn. F) = F.                      *)
 (*---------------------------------------------------------------------------*)
 
-local
-val forall_simp = SPEC F (INST_TYPE [Type.alpha |-> Type.bool] FORALL_SIMP)
+local val forall_simp = SPEC F (INST_TYPE [alpha |-> bool] FORALL_SIMP)
 in
 fun FORALL_F [] = F_REFL
-  | FORALL_F (h::t) = TRANS (FORALL_EQ h (FORALL_F t)) forall_simp
-      handle _ => raise TAUT_ERR{function = "FORALL_F", message = ""}
+  | FORALL_F (h::t) = 
+     TRANS (FORALL_EQ h (FORALL_F t)) forall_simp 
+     handle HOL_ERR _ => raise ERR "FORALL_F" ""
 end;
 
 (*---------------------------------------------------------------------------*)
@@ -582,34 +421,30 @@ end;
 (*---------------------------------------------------------------------------*)
 
 fun TAUT_CHECK_CONV tm =
-   let val (vars,tm') = strip_forall tm
-   in
-   if (is_T tm') 
-   then FORALL_T vars
-   else if (is_F tm') 
-        then FORALL_F vars
-        else let val {Bvar,Body} = dest_forall tm
-                 val tmT = subst [{redex = Bvar, residue = T}] Body
-                 val thT1 = QCONV (DEPTH_FORALL_QCONV SIMP_PROP_QCONV) tmT
-                 val tmT' = rhs (concl thT1)
-                 val thT2 = TAUT_CHECK_CONV tmT'
-                 val thT3 = TRANS thT1 thT2
-             in
-             if (is_F (rhs (concl thT3)))
-             then BOOL_CASES_T_F_RULE thT3 tm
-             else let val tmF = subst [{redex=Bvar,residue=F}] Body
-                      val thF1 = QCONV (DEPTH_FORALL_QCONV SIMP_PROP_QCONV) tmF
-                      val tmF' = rhs (concl thF1)
-                      val thF2 = if (tmF' = tmT')
-                                 then thT2
-                                 else TAUT_CHECK_CONV tmF'
-                      val thF3 = TRANS thF1 thF2
-                  in if (is_F (rhs (concl thF3)))
-                     then BOOL_CASES_F_F_RULE thF3 tm
-                     else BOOL_CASES_BOTH_T_RULE (thT3,thF3) tm
-                  end
-             end
-   end handle _ => raise TAUT_ERR{function = "TAUT_CHECK_CONV",message = ""};
+ let val (vars,tm') = strip_forall tm
+ in if (is_T tm') then FORALL_T vars else 
+    if (is_F tm') then FORALL_F vars 
+    else 
+    let val {Bvar,Body} = dest_forall tm
+        val tmT = subst [Bvar |-> T] Body
+        val thT1 = QCONV (DEPTH_FORALL_QCONV SIMP_PROP_QCONV) tmT
+        val tmT' = rhs (concl thT1)
+        val thT2 = TAUT_CHECK_CONV tmT'
+        val thT3 = TRANS thT1 thT2
+    in if is_F (rhs (concl thT3))
+       then BOOL_CASES_T_F_RULE thT3 tm
+       else let val tmF = subst [Bvar |-> F] Body
+                val thF1 = QCONV (DEPTH_FORALL_QCONV SIMP_PROP_QCONV) tmF
+                val tmF' = rhs (concl thF1)
+                val thF2 = if tmF' = tmT' then thT2 else TAUT_CHECK_CONV tmF'
+                val thF3 = TRANS thF1 thF2
+            in if is_F (rhs (concl thF3))
+               then BOOL_CASES_F_F_RULE thF3 tm
+               else BOOL_CASES_BOTH_T_RULE (thT3,thF3) tm
+            end
+    end
+ end 
+ handle HOL_ERR _ => raise ERR "TAUT_CHECK_CONV" "";
 
 (*---------------------------------------------------------------------------*)
 (* PTAUT_CONV :conv                                                          *)
@@ -657,21 +492,15 @@ fun TAUT_CHECK_CONV tm =
 (*---------------------------------------------------------------------------*)
 
 fun PTAUT_CONV tm =
-   let val vars = free_vars tm
-       val tm' = list_mk_forall (vars,tm)
-       val th = ((QCONV (DEPTH_FORALL_QCONV SIMP_PROP_QCONV)) THENC
-                 TAUT_CHECK_CONV) tm'
-   in
-   if (null vars)
-   then th
-   else if (is_F (rhs (concl th)))
-        then raise TAUT_ERR{function = "PTAUT_CONV",
-                            message = "false for at least one interpretation"}
-        else (EQT_INTRO o (SPECL vars) o EQT_ELIM) th
-   end
-   handle (e as HOL_ERR{origin_structure = "Taut",
-                        origin_function = "PTAUT_CONV",...}) => raise e
-        | _ => raise TAUT_ERR{function = "PTAUT_CONV",message = ""};
+ let val vars = free_vars tm
+     val th = 
+       (QCONV (DEPTH_FORALL_QCONV SIMP_PROP_QCONV) THENC TAUT_CHECK_CONV) 
+       (list_mk_forall (vars,tm))
+ in if null vars then th else 
+    if is_F (rhs (concl th))
+    then raise ERR "PTAUT_CONV" "false for at least one interpretation"
+    else (EQT_INTRO o (SPECL vars) o EQT_ELIM) th
+ end
 
 (*---------------------------------------------------------------------------*)
 (* PTAUT_TAC : tactic                                                        *)
@@ -689,11 +518,8 @@ val PTAUT_TAC = CONV_TAC PTAUT_CONV;
 (*---------------------------------------------------------------------------*)
 
 fun PTAUT_PROVE tm = 
-   EQT_ELIM (PTAUT_CONV tm)
-   handle (HOL_ERR{origin_structure,origin_function,message})
-          => raise TAUT_ERR{function = "PTAUT_PROVE",
-                   message = origin_structure^"."^origin_function^": "^message}
-        | e => raise TAUT_ERR{function = "PTAUT_PROVE",message = ""};
+   EQT_ELIM (PTAUT_CONV tm) 
+   handle e => raise (wrap_exn "tautLib" "PTAUT_PROVE" e);
 
 (*===========================================================================*)
 (* Tautology checking including instances of propositional tautologies       *)
@@ -707,17 +533,16 @@ fun PTAUT_PROVE tm =
 (*---------------------------------------------------------------------------*)
 
 fun non_prop_terms tm =
-   let fun non_prop_args tm =
-          let val (opp,args) = ((#Name o dest_const) ## I) (strip_comb tm)
-          in if (mem opp ["T","F","~","=","/\\","\\/","==>","COND"])
-             then flatten (map non_prop_terms args)
-             else raise TAUT_ERR{function = "",message = ""}
-          end
-   in  non_prop_args tm
-       handle _ => case (dest_type (type_of tm))
-                   of {Tyop="bool",...} => [tm]
-                    | _ => raise TAUT_ERR{function="non_prop_terms",message=""}
-   end;
+ let fun non_prop_args tm =
+      let val (opp,args) = ((#Name o dest_const) ## I) (strip_comb tm)
+      in if (mem opp ["T","F","~","=","/\\","\\/","==>","COND"])
+         then flatten (map non_prop_terms args)
+         else raise ERR "" ""
+      end
+ in non_prop_args tm handle HOL_ERR _ 
+     => if type_of tm = bool then [tm]
+        else raise ERR "non_prop_terms" ""
+ end;
 
 (*---------------------------------------------------------------------------*)
 (* TAUT_CONV : conv                                                          *)
@@ -731,19 +556,16 @@ fun non_prop_terms tm =
 (*    TAUT_CONV `!x n y z. x \/ ~(n < 0) \/ y \/ z \/ (n < 0)`  --->         *)
 (*    |- (!x n y z. x \/ ~n < 0 \/ y \/ z \/ n < 0) = T                      *)
 (*---------------------------------------------------------------------------*)
-fun mk_subst tm1 tm2 = {redex=tm1, residue = tm2}
 
 fun TAUT_CONV tm =
-   let val (univs,tm') = strip_forall tm
-       val insts = mk_set (non_prop_terms tm')
-       val vars = map (genvar o type_of) insts
-       val theta = map2 mk_subst insts vars
-       val tm'' = list_mk_forall (vars,subst theta tm')
-   in EQT_INTRO (GENL univs (SPECL insts (PTAUT_PROVE tm'')))
-   end handle HOL_ERR{origin_structure,origin_function,message}
-              => raise TAUT_ERR{function = "TAUT_CONV", 
-                   message = origin_structure^"."^origin_function^": "^message}
-            | e => raise TAUT_ERR{function = "TAUT_CONV",message = ""};
+  let val (univs,tm') = strip_forall tm
+      val insts = mk_set (non_prop_terms tm')
+      val vars = map (genvar o type_of) insts
+      val theta = map2 (curry (op |->)) insts vars
+      val tm'' = list_mk_forall (vars,subst theta tm')
+  in EQT_INTRO (GENL univs (SPECL insts (PTAUT_PROVE tm'')))
+  end
+  handle e => raise (wrap_exn "tautLib" "TAUT_CONV" e);
 
 (*---------------------------------------------------------------------------*)
 (* TAUT_TAC : tactic                                                         *)
@@ -770,9 +592,9 @@ val ASM_TAUT_TAC = REPEAT (POP_ASSUM MP_TAC) THEN TAUT_TAC
 (* propositional formula, `t`, this conversion returns the theorem |- t.     *)
 (*---------------------------------------------------------------------------*)
 
-fun TAUT_PROVE tm = EQT_ELIM (TAUT_CONV tm) 
-                    handle _ => raise TAUT_ERR{function = "TAUT_PROVE",
-                                               message = ""};
+fun TAUT_PROVE tm = 
+ EQT_ELIM (TAUT_CONV tm) handle HOL_ERR _ => raise ERR "TAUT_PROVE" "";
 
+fun TAUT q = TAUT_PROVE (Parse.Term q);
 
 end; (* tautLib *)
