@@ -15,13 +15,16 @@ MAKEDOC=$(HOLdir)/Manual/Reference/bin/create-doc-files2
 
 default:
 	@echo "INSTRUCTIONS: Type \"make all\" to make REFERENCE"
-	@echo "   Type \"make thmdoc\" to make doc files for theorems"
+
+#	@echo "   Type \"make thmdoc\" to make doc files for theorems"
 
 clean:
 	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind *.toc \
          entries.tex theorems.tex
 
-tex: ids theorems
+# Until we know how to generate the theorems that used to be part of the
+# reference, we leave off the theorems entry that used to follow ids below
+tex: ids
 	@echo "TeX files made"
 
 ids:
