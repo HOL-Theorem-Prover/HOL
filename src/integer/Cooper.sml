@@ -4,6 +4,8 @@ struct
 open HolKernel boolLib integerTheory Parse
      arithmeticTheory intSyntax int_arithTheory intSimps;
 
+open CooperSyntax CooperThms
+
 local open listTheory in end;
 
 infix THEN THENC THENL |-> ## ORELSEC
@@ -16,19 +18,9 @@ fun == q x = Type q
 
 val ERR = mk_HOL_ERR "Cooper";
 
-val not_tm = boolSyntax.negation;
-val num_ty = numSyntax.num
-val true_tm = boolSyntax.T
-val false_tm = boolSyntax.F
 
 val REWRITE_CONV = GEN_REWRITE_CONV Conv.TOP_DEPTH_CONV bool_rewrites
 
-fun mk_abs_CONV var term = let
-  val rhs = Rsyntax.mk_abs {Body = term, Bvar = var}
-  val newrhs = Rsyntax.mk_comb {Rator = rhs, Rand = var}
-in
-  GSYM (BETA_CONV newrhs)
-end
 
 fun EXIN_CONJ_CONV t = let
   val (var,bdy) = dest_exists t
@@ -46,87 +38,7 @@ in
     end t
 end
 
-val elim_le = GSYM INT_NOT_LT
-val elim_gt = int_gt
-val elim_ge = int_ge
 
-(* ---------------------------------------------------------------------- *)
-(* functions for dealing with "conjunctions" and "disjunctions"; logical  *)
-(* operators that might have their meaning concealed under negations      *)
-(* ---------------------------------------------------------------------- *)
-
-val mystrip_conj  = let
-  (* treats negations over disjunctions as conjunctions *)
-  fun doit posp acc tm = let
-    val (l,r) = (if posp then dest_conj else dest_disj) tm
-  in
-    doit posp (doit posp acc r) l
-  end handle HOL_ERR _ => let
-    val t0 = dest_neg tm
-  in
-    doit (not posp) acc t0
-  end handle HOL_ERR _ => if posp then tm::acc else mk_neg tm :: acc
-in
-  doit true []
-end
-
-val mystrip_disj = let
-  (* treats negations over conjunctions as disjunctions *)
-  fun doit posp acc tm = let
-    val (l,r) = (if posp then dest_disj else dest_conj) tm
-  in
-    doit posp (doit posp acc r) l
-  end handle HOL_ERR _ => let
-    val t0 = dest_neg tm
-  in
-    doit (not posp) acc t0
-  end handle HOL_ERR _ => if posp then tm::acc else mk_neg tm :: acc
-in
-  doit true []
-end
-
-datatype term_op = CONJN | DISJN | NEGN
-fun characterise t =
-  (case #1 (dest_const (#1 (strip_comb t))) of
-     "/\\" => SOME CONJN
-   | "\\/" => SOME DISJN
-   | "~" => SOME NEGN
-   | _ => NONE) handle HOL_ERR _ => NONE
-
-fun myEVERY_CONJ_CONV c tm = let
-  fun findconjunct posp tm =
-    case (characterise tm, posp) of
-      (SOME CONJN, true) => BINOP_CONV (findconjunct posp) tm
-    | (SOME DISJN, false) => BINOP_CONV (findconjunct posp) tm
-    | (SOME NEGN, _) => RAND_CONV (findconjunct (not posp)) tm
-    | _ => c tm
-in
-  findconjunct true tm
-end
-
-fun myEVERY_DISJ_CONV c tm = let
-  fun finddisj posp tm =
-    case (characterise tm, posp) of
-      (SOME DISJN, true) => BINOP_CONV (finddisj posp) tm
-    | (SOME CONJN, false) => BINOP_CONV (finddisj posp) tm
-    | (SOME NEGN, _) => RAND_CONV (finddisj (not posp)) tm
-    | _ => c tm
-in
-  finddisj true tm
-end
-
-fun myis_disj tm =
-  is_disj tm orelse let
-    val tm0 = dest_neg tm
-  in
-    myis_conj tm0
-  end handle HOL_ERR _ => false
-and myis_conj tm =
-  is_conj tm orelse let
-    val tm0 = dest_neg tm
-  in
-    myis_disj tm0
-  end handle HOL_ERR _ => false
 
 
 
@@ -154,22 +66,6 @@ fun ADDITIVE_TERMS_CONV c tm =
     BINOP_CONV c tm
   else ALL_CONV tm
 
-val T_not = List.nth(CONJUNCTS NOT_CLAUSES,1)
-val F_not = List.nth(CONJUNCTS NOT_CLAUSES,2)
-
-val AND_CLAUSES0 = CONJUNCTS (Q.ID_SPEC AND_CLAUSES)
-val OR_CLAUSES0 = CONJUNCTS (Q.ID_SPEC OR_CLAUSES)
-val T_and_l = GEN_ALL (List.nth(AND_CLAUSES0, 0))
-val T_and_r = GEN_ALL (List.nth(AND_CLAUSES0, 1))
-val F_and_l = GEN_ALL (List.nth(AND_CLAUSES0, 2))
-val F_and_r = GEN_ALL (List.nth(AND_CLAUSES0, 3))
-val T_or_l = GEN_ALL (List.nth(OR_CLAUSES0, 0))
-val T_or_r = GEN_ALL (List.nth(OR_CLAUSES0, 1))
-val F_or_l = GEN_ALL (List.nth(OR_CLAUSES0, 2))
-val F_or_r = GEN_ALL (List.nth(OR_CLAUSES0, 3))
-val NOT_NOT_P = List.nth(CONJUNCTS NOT_CLAUSES, 0)
-val NOT_OR = GEN_ALL (#2 (CONJ_PAIR (SPEC_ALL DE_MORGAN_THM)))
-val NOT_AND = GEN_ALL (#1 (CONJ_PAIR (SPEC_ALL DE_MORGAN_THM)))
 
 val cooper_compset = intSimps.int_compset()
 val _ = computeLib.add_thms [gcdTheory.GCD_EFFICIENTLY] cooper_compset
@@ -271,7 +167,6 @@ val simple_disj_congruence =
 val simple_conj_congruence =
   tautLib.TAUT_PROVE (Term`!p q r. (p ==> (q = r)) ==>
                                    (p /\ q = p /\ r)`)
-val notnot_P = CONJUNCT1 NOT_CLAUSES
 
 fun congruential_simplification tm = let
 in
@@ -291,7 +186,7 @@ in
       val notd1_t = mk_neg d1
       val notd1_thm = ASSUME notd1_t
       val notd1 =
-        if is_neg d1 then EQT_INTRO (CONV_RULE (REWR_CONV notnot_P) notd1_thm)
+        if is_neg d1 then EQT_INTRO (CONV_RULE (REWR_CONV NOT_NOT_P) notd1_thm)
         else EQF_INTRO (notd1_thm)
       val d2_rewritten = DISCH notd1_t (REWRITE_CONV [notd1] d2)
     in
@@ -760,9 +655,6 @@ fun resquan_remove tm =
    REWRITE_CONV []) tm
 
 (* Phase 4 *)
-
-val simple_bool_formula =
-  tautLib.TAUT_PROVE (Term`!p q. ~(p /\ q) = (p ==> ~q)`)
 
 fun prove_membership t1 t2 = let
   val (tmlist, elty) = listSyntax.dest_list t2
@@ -1889,7 +1781,7 @@ fun phase5_CONV defer_dexpansion = let
     val neginf_applied = rand lhs_body
     val neginf = rator neginf_applied
     val (neginf_absvar, neginf_body) = dest_abs neginf
-    val body_conjuncts = mystrip_conj neginf_body
+    val body_conjuncts = cpstrip_conj neginf_body
     fun simple_divides tm = let
       val (l,r) = dest_divides tm
     in
@@ -1898,7 +1790,7 @@ fun phase5_CONV defer_dexpansion = let
     fun find_sdivides c tm = let
       val (l,r) = dest_conj tm
     in
-      if List.exists simple_divides (mystrip_conj l) then
+      if List.exists simple_divides (cpstrip_conj l) then
         LAND_CONV (find_sdivides c) tm
       else
         RAND_CONV (find_sdivides c) tm
@@ -1975,9 +1867,6 @@ fun phase5_CONV defer_dexpansion = let
     in
       TRANS normalised_thm (replaced tm)
     end
-    val has_exists =
-      free_in (mk_thy_const{Name = "?", Thy = "bool",
-                            Ty = (int_ty --> bool) --> bool})
     fun pull_out_exists tm = let
       val (c1, c2) = dest_conj tm
       val (cvl, thm) =
@@ -2151,20 +2040,15 @@ in
   ADDITIVE_TERMS_CONV (TRY_CONV collect_additive_consts)
 end
 
-val obvious_improvements =
-  simpLib.SIMP_CONV int_ss [INT_LT_REFL, INT_NEG_0, INT_DIVIDES_MUL,
+val obvious_improvements = ALL_CONV
+  (* simpLib.SIMP_CONV int_ss [INT_LT_REFL, INT_NEG_0, INT_DIVIDES_MUL,
                             INT_ADD_LID, INT_ADD_RID, INT_LT_ADD_NUMERAL,
                             INT_LT_LADD, INT_DIVIDES_1,
                             INT_DIVIDES_RADD, INT_DIVIDES_LMUL,
                             INT_DIVIDES_LADD, INT_DIVIDES_LSUB,
-                            INT_DIVIDES_RSUB]
+                            INT_DIVIDES_RSUB] *)
 
 
-val DISJ_NEQ_ELIM = prove(
-  ``!P x v:'a. ~(x = v) \/ P x = ~(x = v) \/ P v``,
-  REWRITE_TAC [GSYM IMP_DISJ_THM] THEN REPEAT GEN_TAC THEN EQ_TAC THEN
-  REPEAT STRIP_TAC THEN POP_ASSUM SUBST_ALL_TAC THEN
-  POP_ASSUM MP_TAC THEN REWRITE_TAC []);
 
 fun optpluck P l = SOME (Lib.pluck P l) handle HOL_ERR _ => NONE
 
@@ -2191,7 +2075,7 @@ fun do_equality_simplifications tm = let
     val (c1,c2) = dest_conj tm
     (* easy case because the top level operator is already correct *)
     val subconv =
-      if List.exists eq_term (mystrip_conj c1) then LAND_CONV
+      if List.exists eq_term (cpstrip_conj c1) then LAND_CONV
       else RAND_CONV
   in
     subconv reveal_eq tm
@@ -2207,7 +2091,7 @@ fun do_equality_simplifications tm = let
   fun reveal_neq tm = let
     (* tm is a "disjunctive" term in which there is a negated equality *)
     val (d1,d2) = dest_disj tm
-    val subconv = if List.exists neq_term (mystrip_disj d1) then LAND_CONV
+    val subconv = if List.exists neq_term (cpstrip_disj d1) then LAND_CONV
                   else RAND_CONV
   in
     subconv reveal_neq tm
@@ -2223,7 +2107,7 @@ fun do_equality_simplifications tm = let
 
   fun descend_and_eliminate tm =
     if is_conj tm then
-      if List.exists eq_term (mystrip_conj tm) then let
+      if List.exists eq_term (cpstrip_conj tm) then let
         val revealed = reveal_eq tm
         val revealed_t = rhs (concl revealed)
         val (eqt, rest) = valOf (optpluck eq_term (strip_conj revealed_t))
@@ -2238,9 +2122,9 @@ fun do_equality_simplifications tm = let
         TRANS (TRANS revealed rearranged) eliminated
       end
       else
-        myEVERY_CONJ_CONV descend_and_eliminate tm
+        cpEVERY_CONJ_CONV descend_and_eliminate tm
     else if is_disj tm then
-      if List.exists neq_term (mystrip_disj tm) then let
+      if List.exists neq_term (cpstrip_disj tm) then let
         val revealed = reveal_neq tm
         val revealed_t = rhs (concl revealed)
         val (eqt, rest) = valOf (optpluck neq_term (strip_disj revealed_t))
@@ -2255,12 +2139,12 @@ fun do_equality_simplifications tm = let
         TRANS (TRANS revealed rearranged) eliminated
       end
       else
-        myEVERY_DISJ_CONV descend_and_eliminate tm
+        cpEVERY_DISJ_CONV descend_and_eliminate tm
     else if is_neg tm then
       RAND_CONV descend_and_eliminate tm
     else ALL_CONV tm
 in
-  if List.exists eq_term (mystrip_conj body) then
+  if List.exists eq_term (cpstrip_conj body) then
     BINDER_CONV reveal_eq THENC Unwind.UNWIND_EXISTS_CONV
   else
     BINDER_CONV descend_and_eliminate
@@ -2292,41 +2176,26 @@ in
        (phase3_CONV THENC do_equality_simplifications THENC
         (stop_if_exelim ORELSEC (phase4_CONV THENC phase5_CONV false))))
   in
-    if myis_disj body then
+    if cpis_disj body then
       BINDER_CONV reveal_a_disj THENC EXISTS_OR_CONV THENC
       (RAND_CONV eliminate_existential) THENC
       (LAND_CONV eliminate_existential)
     else
-      (EXIN_CONJ_CONV THENC
-       (* if EXIN_CONJ_CONV pushes the existential out entirely, then
-          we're done, and can finish directly (eliminate_existential will
-          fail directly if there isn't an exists on the right).
-          EXIN_CONJ_CONV will fail if all conjuncts below the exists
-          have the free variable *)
-       (LAND_CONV eliminate_existential ORELSEC ALL_CONV)) ORELSEC
-      (base_case THENC obvious_improvements)
+      base_case (* THENC obvious_improvements *)
   end tm
 end
 
-val NOT_EXISTS_THM =
-  GEN_ALL (SYM (PURE_REWRITE_RULE [NOT_CLAUSES]
-                (BETA_RULE (Q.SPEC `\x. ~ P x` boolTheory.NOT_EXISTS_THM))))
 
-val myEU_THM = prove(
-  ``!P. (?!x:int. P x) =
-        (?x. P x) /\ (!y y'. (~P y \/ ~P y') \/ (1*y = 1*y'))``,
-  REWRITE_TAC [INT_MUL_LID, EXISTS_UNIQUE_THM, GSYM DE_MORGAN_THM,
-               GSYM IMP_DISJ_THM]);
 
 fun eliminate_quantifier tm = let
 (* assume that there are no quantifiers below the one we're eliminating *)
 in
   if is_forall tm then
-    HO_REWR_CONV NOT_EXISTS_THM THENC RAND_CONV eliminate_existential
+    flip_forall THENC RAND_CONV eliminate_existential
   else if is_exists tm then
     eliminate_existential
   else if is_exists1 tm then
-    HO_REWR_CONV myEU_THM THENC
+    HO_REWR_CONV cpEU_THM THENC
     RAND_CONV (BINDER_CONV eliminate_quantifier THENC
                eliminate_quantifier) THENC
     RATOR_CONV (RAND_CONV eliminate_quantifier)
@@ -2353,37 +2222,99 @@ in
     NONE
 end
 
-val decide_pure_presburger_term = let
-  (* no free variables allowed *)
-  datatype status = EITHER | NEITHER | UNIV | EXISTS
-  fun negstatus s = case s of UNIV => EXISTS | EXISTS => UNIV | x => x
-  fun pure_goal tm = let
-    fun recurse acc tm = let
-      val (l, r) = dest_conj tm handle HOL_ERR _ => dest_disj tm
-    in
-      case (acc, recurse acc l) of
-        (_, EITHER) => recurse acc r
-      | (_, NEITHER) => NEITHER
-      | (EITHER, x) => recurse x r
-      | _ => recurse acc r
-    end handle HOL_ERR _ => let
-      val (f, args) = strip_comb tm
-    in
-      case (#Name (dest_thy_const f), acc) of
-        ("~", _) => negstatus (recurse (negstatus acc) (hd args))
-      | ("!", EXISTS) => NEITHER
-      | ("!", _) => recurse UNIV (body (hd args))
-      | ("?", UNIV) => NEITHER
-      | ("?", _) => recurse EXISTS (body (hd args))
-      | _ => acc
-    end handle HOL_ERR _ => acc
-  in
-    recurse EITHER tm
-  end
+fun myfind f [] = NONE
+  | myfind f (h::t) = case f h of NONE => myfind f t | x => x
 
+fun find_equality tm = let
+  (* if there is an equality term as a conjunct underneath any number of
+     disjuncts, then return one of the free variables of that equality *)
+  fun check_conj tm =
+    if is_eq tm then let
+      val fvs = free_vars tm
+    in
+      if not (null fvs) then SOME (hd fvs) else NONE
+    end else NONE
+in
+  myfind check_conj (cpstrip_conj tm)
+end
+
+fun LAST_EXISTS_CONV c tm = let
+  val (bv, body) = dest_exists tm
+in
+  if is_exists body then BINDER_CONV (LAST_EXISTS_CONV c) tm
+  else c tm
+end
+
+fun pure_goal tm = let
+  (* pure_goal is called on those goals that have all existential
+     quantifiers; these are assumed to be at the head of the term  *)
+  val (vars, body) = strip_exists tm
+  fun push_in_exists tm =
+    if is_exists tm then
+      (BINDER_CONV push_in_exists THENC
+       EXISTS_OR_CONV) tm
+    else
+      ALL_CONV tm
+  fun push_var_to_bot v tm = let
+    val (bv, body) = dest_exists tm
+  in
+    if bv = v then (SWAP_VARS_CONV THENC
+                    BINDER_CONV (push_var_to_bot v) ORELSEC
+                    ALL_CONV)
+    else (BINDER_CONV (push_var_to_bot v))
+  end tm
+  fun smallest_var () = let
+    val var_counts = count_vars body
+    fun recurse (m as (v0,c0)) l =
+      case l of
+        [] => v0
+      | ((e as (v,c))::t) => if c <= c0 then recurse e t
+                             else recurse m t
+  in
+    SOME (mk_var(recurse (hd var_counts) (tl var_counts), int_ty))
+  end handle Empty => NONE  (* Empty can happen if there are
+                               no variables left in the term *)
+in
+  if null vars then REDUCE_CONV
+  else if cpis_disj body then
+    STRIP_QUANT_CONV reveal_a_disj THENC
+    push_in_exists THENC BINOP_CONV pure_goal THENC
+    REDUCE_CONV
+  else let
+    val next_var =
+      case find_equality body of
+        NONE => let
+        in
+          case smallest_var() of
+            NONE => NONE
+          | x => x
+        end
+      | x => x
+  in
+    case next_var of
+      NONE => REWRITE_CONV [EXISTS_SIMP] THENC REDUCE_CONV
+    | SOME v =>
+          push_var_to_bot v THENC
+          LAST_EXISTS_CONV eliminate_existential THENC
+          pure_goal
+  end
+end tm
+
+fun decide_pure_presburger_term tm0 = let
+  (* no free variables allowed *)
   val phase0_CONV =
     (* rewrites out conditional expression and absolute value terms *)
     REWRITE_CONV [INT_ABS] THENC Sub_and_cond.COND_ELIM_CONV
+  val initial_thm = (phase0_CONV THENC phase1_CONV) tm0
+  val tm = rhs (concl initial_thm)
+  val qtype = goal_qtype tm
+  val prelims =
+    case qtype of
+      NEITHER => ALL_CONV
+    | EITHER => ALL_CONV
+    | qsUNIV => (move_quants_up THENC flip_foralls)
+    | qsEXISTS => move_quants_up
+
   fun mainwork tm = let
   in
     case find_low_quantifier tm of
@@ -2392,8 +2323,16 @@ val decide_pure_presburger_term = let
         f eliminate_quantifier THENC
         REWRITE_CONV [] THENC mainwork
   end tm
+  val strategy =
+    case qtype of
+      NEITHER => mainwork
+    | EITHER => REDUCE_CONV
+    | qsUNIV =>
+        move_quants_up THENC flip_foralls THENC
+        RAND_CONV pure_goal THENC REDUCE_CONV
+    | qsEXISTS => move_quants_up THENC pure_goal
 in
-  phase0_CONV THENC phase1_CONV THENC mainwork
+  TRANS initial_thm (strategy tm)
 end
 
 (* the following is useful in debugging the above; given an f, the
