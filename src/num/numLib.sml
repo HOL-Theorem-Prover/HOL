@@ -47,9 +47,6 @@ val dec = Portable_Ref.dec;
 (* NOTE: binary numerals allow this to be done with rewriting            *)
 (* --------------------------------------------------------------------- *)
 
-fun is_numeral t =
-  #Name(dest_const (#1 (strip_comb t))) = "NUMERAL" handle HOL_ERR _ => false
-
 fun ADD_CONV tm = let
   val (f, args) = strip_comb tm
   val _ = assert (fn t => #Name(dest_const t) = "+") f
