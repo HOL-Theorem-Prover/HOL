@@ -4,8 +4,8 @@ open HolBdd;
 
 (*
 (* load "bossLib";  overkill *)
-load "BasicProvers";
-load "TotalDefn";
+load "BasicProvers"; (* for PROVE_TAC *)
+load "TotalDefn";  (* for Define *)
 load "Ho_rewrite";
 load "Num_conv";
 load "unwindLib";
@@ -446,7 +446,8 @@ fun LIST_MK_CONJ [th] = th
 (*****************************************************************************)
 
 val IMP_DISCH_EQN = 
- PROVE [] ``!w u v. (w ==> (u = v)) ==> (w /\ u = w /\ v)``;
+ Lib.with_flag (mesonLib.chatting,0)
+   (PROVE []) ``!w u v. (w ==> (u = v)) ==> (w /\ u = w /\ v)``;
 
 fun ELIM_LHS_CONV l =
  if length l <= 1 orelse not(is_eq(hd l))
@@ -501,8 +502,11 @@ fun LIST_ELIM_LHS_CONV tm =
   TRANS th2 th1
  end;
 
-val AND_OR = PROVE [] ``A /\ (B \/ C) = (A /\ B) \/ (A /\ C)``;
-val OR_AND = PROVE [] ``(A \/ B) /\ C = (A /\ C) \/ (B /\ C)``;
+
+val AND_OR = Lib.with_flag (mesonLib.chatting,0)
+   (PROVE []) ``A /\ (B \/ C) = (A /\ B) \/ (A /\ C)``;
+val OR_AND = Lib.with_flag (mesonLib.chatting,0)
+   (PROVE []) ``(A \/ B) /\ C = (A /\ C) \/ (B /\ C)``;
 
 (*****************************************************************************)
 (* Generate a simplified instantion of ReachBy_rec:                          *)
