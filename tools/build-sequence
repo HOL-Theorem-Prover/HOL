@@ -39,7 +39,7 @@ src/num/reduce/src
 src/num/arith/src
 src/num
 src/IndDef
-src/datatype/parse
+#src/datatype/parse
 src/datatype/equiv
 src/datatype/record
 src/datatype
