@@ -777,6 +777,10 @@ val _ = save_thm("ONE_COMPw",ONE_COMPw);
 val _ = save_thm("RIGHT_AND_OVER_ORw",RIGHT_AND_OVER_ORw);
 val _ = save_thm("RIGHT_OR_OVER_ANDw",RIGHT_OR_OVER_ANDw);
 val _ = save_thm("DE_MORGAN_THMw",DE_MORGAN_THMw);
+val _ = save_thm("LEFT_AND_OVER_ORw",GEN_ALL (ONCE_REWRITE_RULE [AND_COMMw]
+                                             (SPECL [`b`,`c`,`a`] RIGHT_AND_OVER_ORw)));
+val _ = save_thm("LEFT_OR_OVER_ANDw",GEN_ALL (ONCE_REWRITE_RULE [OR_COMMw]
+                                             (SPECL [`b`,`c`,`a`] RIGHT_OR_OVER_ANDw)));
 
 val THE_WL = SIMP_RULE arithr_ss [HB_def,ADD1] WL_def;
  
