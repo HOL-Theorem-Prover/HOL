@@ -234,24 +234,137 @@ fun CONJ_TO_FRONT_CONV conj term =
  * IMP_CONJ_CANON (mk_thm([],(--`P ==> (Q /\ R) ==> Q`--)));
 
  *------------------------------------------------------------------------*)
-(* new version of strip_imp which breaks apart conjuncts in antecedents *)
-fun strip_imp' tm =
-    let val (l,r) = Psyntax.dest_imp tm
-        val lants = strip_conj l
-        val (rants,rest) = strip_imp' r
-    in (lants@rants,rest)
-    end
-    handle HOL_ERR _ => ([],tm);
 
-fun IMP_TO_FRONT_CONV ante tm = let
-  val (antes,concl) = strip_imp' tm;
-  val (front,e,back) = split_at (fn x => ante = x) antes
-    handle HOL_ERR _ => failwith "IMP_TO_FRONT_CONV"
-  val rhs = list_mk_imp (e::(front @ back),concl)
-in
-  tautLib.TAUT_PROVE (mk_eq(tm, rhs))
-end
-handle e as HOL_ERR _ => WRAP_ERR("IMP_TO_FRONT_CONV",e);
+(* return a list of terms such that they would be
+   negated disjuncts in a strip_disj of the term, but allowing for the
+   possibility of implications as "encoded" forms of disjunctions. *)
+fun strip_univ_neg acc tm =
+  if is_conj tm then let
+    val (c1, c2) = Psyntax.dest_conj tm
+  in
+    strip_univ_neg (strip_univ_neg acc c2) c1
+  end else tm :: acc
+
+fun strip_univ_pos acc tm =
+  if is_disj tm then let
+    val (d1, d2) = Psyntax.dest_disj tm
+  in
+    strip_univ_pos (strip_univ_pos acc d2) d1
+  end
+  else if is_neg tm then strip_univ_neg acc (dest_neg tm)
+  else if is_imp tm then let
+    val (h,c) = Psyntax.dest_imp tm
+  in
+    strip_univ_neg (strip_univ_pos acc c) h
+  end
+  else acc
+
+val strip_univ = strip_univ_pos []
+
+(* elim_term returns a term option option with the following semantics:
+     NONE          indicates that the et term wasn't found within tm at all
+     SOME NONE     indicates that the et term was exactly ~tm
+     SOME (SOME t) indicates that after removing et from tm, t was left
+   If elim_term returns SOME (SOME t) then et ==> t is equivalent to tm;
+   it eliminates et from negative positions with tm.
+
+   If elim_term_neg returns SOME (SOME t) then et /\ t is equivalent to tm.
+*)
+fun elim_term_neg et tm =
+  if is_conj tm then let
+    val (c1, c2) = dest_conj tm
+  in
+    case elim_term_neg et c1 of
+      NONE => let
+      in
+        case elim_term_neg et c2 of
+          NONE => NONE
+        | SOME NONE => SOME (SOME c1)
+        | SOME (SOME t) => SOME (SOME (Psyntax.mk_conj(c1, t)))
+      end
+    | SOME NONE => SOME (SOME c2)
+    | SOME (SOME t) => SOME (SOME (Psyntax.mk_conj(t, c2)))
+  end
+  else if et = tm then
+    SOME NONE
+  else NONE
+
+fun elim_term et tm =
+  if Dsyntax.is_imp tm then let (* want ~P to be considered an implication *)
+    val (h,c) = Psyntax.dest_imp tm
+    val (mk_imp, new_c) =
+      if is_neg tm then ((fn (t1, c) => mk_neg t1), NONE)
+      else (Psyntax.mk_imp, SOME c)
+  in
+    case elim_term_neg et h of
+      NONE => let
+      in
+        case elim_term et c of
+          NONE => NONE
+        | SOME NONE => SOME (SOME (mk_neg h))
+        | SOME (SOME t) => SOME (SOME (Psyntax.mk_imp(h,t)))
+      end
+    | SOME NONE => SOME new_c
+    | SOME (SOME t) => SOME (SOME (mk_imp(t, c)))
+  end
+  else if is_disj tm then let
+    val (d1, d2) = Psyntax.dest_disj tm
+  in
+    case elim_term et d1 of
+      NONE => let
+      in
+        case elim_term et d2 of
+          NONE => NONE
+        | SOME NONE => SOME (SOME d1)
+        | SOME (SOME t) => SOME (SOME (Psyntax.mk_disj(d1,t)))
+      end
+    | SOME NONE => SOME (SOME d2)
+    | SOME (SOME t) => SOME (SOME (Psyntax.mk_disj(t,d2)))
+  end
+  else NONE
+
+val CONJ_IMP_THM = GSYM AND_IMP_INTRO
+val NOT_CONJ_THM = tautLib.TAUT_PROVE ``!A B. ~(A /\ B) = ~A \/ ~B``
+val NOT_IMP_THM = tautLib.TAUT_PROVE ``!A. ~A = A ==> F``
+(* turns top level of term into series of disjunctions *)
+fun disjunctify tm =
+  if is_disj tm then
+    Conv.BINOP_CONV disjunctify tm
+  else if is_neg tm then let
+    val h = dest_neg tm
+  in
+    if is_conj h then (REWR_CONV NOT_CONJ_THM THENC disjunctify) tm
+    else ALL_CONV tm
+  end
+  else if is_imp tm then let
+    val (h,c) = Psyntax.dest_imp tm
+  in
+    if is_conj h then (REWR_CONV CONJ_IMP_THM THENC disjunctify) tm
+    else (REWR_CONV IMP_DISJ_THM THENC RAND_CONV disjunctify) tm
+  end
+  else ALL_CONV tm
+
+
+fun IMP_TO_FRONT_CONV ante tm =
+  case elim_term ante tm of
+    SOME tt => let
+      val newtm =
+        case tt of
+          SOME t => Psyntax.mk_imp (ante, t)
+        | NONE => mk_neg ante
+      val dtm = disjunctify tm
+      val dnewtm = SYM (disjunctify newtm)
+      val eq3 =
+        AC_CONV(DISJ_ASSOC, DISJ_COMM) (mk_eq(rhs (concl dtm),
+                                              lhs (concl dnewtm)))
+      val eq4 = TRANS dtm (TRANS (EQT_ELIM eq3) dnewtm)
+    in
+      if is_neg newtm then
+        TRANS eq4 (SPEC (dest_neg newtm) NOT_IMP_THM)
+      else
+        eq4
+    end
+  | _ => failwith "IMP_TO_FRONT_CONV"
 
 (*-------------------------------------------------------------------
  * ENSURE_CONJ_CONV
@@ -416,7 +529,7 @@ val UNWIND_EXISTS_RULE = CONV_RULE UNWIND_EXISTS_CONV
 fun UNWIND_FORALL_CONV tm =
   let val (vars, body) = strip_forall tm
   in if length vars = 0 then failwith "UNWIND_FORALL_CONV: not applicable" else
-  let val (ant,value) = find_var_value (hd vars) (fst(strip_imp' body))
+  let val (ant,value) = find_var_value (hd vars) (strip_univ body)
       handle HOL_ERR _ => failwith "UNWIND_FORALL_CONV: no value to eliminate"
   in (MOVE_FORALL_RIGHT_CONV
       THENC LAST_FORALL_CONV (ELIM_FORALL_CONV (hd vars,ant))) tm
