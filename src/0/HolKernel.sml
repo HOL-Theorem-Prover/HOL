@@ -343,6 +343,26 @@ local
           end
       end
 
+(*
+fun get_type_insts avoids L =
+ let val avtys = itlist (fn ty => fn (p,o) => (ty-->p, ty-->o))
+                        avoids (bool,bool)
+     val (pat,ob) = itlist (fn {redex,residue} => fn (pat,ob) =>
+                               (type_of redex-->pat, type_of residue-->ob))
+                         L avtys
+
+ in match_type pat ob
+ end
+
+fun get_type_insts avoids L =
+ let val tytheta = itlist (fn {redex,residue} =>
+          match_type_in_context (snd(dest_var redex)) (type_of residue))
+                     L []
+ in if null(intersect avoids (map #residue tytheta))
+    then tytheta
+    else raise ERR "get_type_insts" "attempt to bind fixed type variable"
+ end
+*)
 fun get_type_insts avoids L (tyS,Id) =
  itlist (fn {redex,residue} => fn Theta =>
           raw_match_type (snd(dest_var redex)) (type_of residue) Theta)

@@ -803,8 +803,8 @@ fun RM [] theta = theta
   | RM ((Bv i,Bv j,_)::rst) S  = if i=j then RM rst S 
                                  else MERR "Bound var. depth"
   | RM (((pat as Clos _),ob,s)::t) S = RM ((push_clos pat,ob,s)::t) S
-  | RM ((pat,(ob as Clos _),s)::t) S  = RM ((pat,push_clos ob,s)::t) S
-  | RM all others               = MERR "different constructors"
+  | RM ((pat,(ob as Clos _),s)::t) S = RM ((pat,push_clos ob,s)::t) S
+  | RM all others                    = MERR "different constructors"
 end
 
 fun raw_match tyfixed tmfixed pat ob (tmS,tyS) 
