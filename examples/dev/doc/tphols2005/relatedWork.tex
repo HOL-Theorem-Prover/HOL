@@ -1,30 +1,31 @@
-% Gropius, SAFL, Sheeran, LAMBDA, Hunt, Hanna, Johnson, reflect/Forte
+% Gropius, SAFL, Sheeran, Johnson, Fourman, 
+% Hunt, Hanna, O'Donnel, reflect/Forte
 
-%------ LAMBDA: Forman
+%------ LAMBDA: Fourman
+LAMBDA (Logic And Mathematics Behind Design Automation)
+is a tool-set to support interactive synthesis which
+integrates proof and design \cite{Fou89,Fou96}.
+The LAMBDA theorem prover sets a goal (correctness theorem)
+to be proved through synthesis. 
+The user builds the circuit incrementally by 
+connecting primitive hardware components using
+the schematic interface DIALOG.
+Each refinement step automatically simplifies the goal.
+The process continues until a circuit that implements the
+specification is constructed.
 
 %------ DDD: Johnson
+The Digital Design Derivation (DDD) is 
+an interactive transformation system that synthesises
+high-level specifications into hierarchical
+boolean systems~\cite{Johnson90}.
+The specifications are essentially tail-recursive lambda 
+abstractions that describe finite-state machines.
+DDD guarantees the correct application of
+the transformations, but requires substantial user
+guidance to conduct the synthesis and to
+explore the design space.
 
-%------ SAFL: Sharp
-Our compilation method is partly inspired by SAFL 
-(Statically Allocated Functional Language) \cite{MS01b},
-especially the ideas in Richard Sharp's PhD \cite{Sha02}. 
-SAFL is a first-order functional language.
-A user program consists of a sequence of function 
-definitions in which all recursive calls are tail-recursive.
-The compiler translates each function into
-a single hardware block.
-Its high-level of abstraction allows
-the exploitation of powerful program analyses
-and optimisations not available in traditional
-synthesis systems. 
-For instance, the functional properties of SAFL 
-allow equational reasoning and therefore the
-application of semantic-preserving 
-source-to-source manipulations.
-However, the synthesis is not based on
-correct-by-construction transformations
-and the circuit generated and the compiler
-have not been verified.
 
 %------ Lava: Bjesse and Sheeran 
 Lava \cite{BCSS99} is a hardware description language embedded
@@ -36,13 +37,31 @@ restricts the values of the inputs and outputs.
 This equation is transformed into a logical formula that
 is exported to external theorem provers like 
 Otter~\cite{MW97} and Gandalf~\cite{Tam97}.
-The gate-level synthesis is performed by generating
-structural VHDL code from Lava programs.
+As the programs are already at the gate level,
+no synthesis is performed, although it is possible
+to translate them into structural VHDL.
 
-%------ mFP: Sheeran
+%------ muFP & Ruby: Sheeran
+The functional language $\mu$FP is an extension 
+of Backus' FP for specifying circuits at the 
+structural level \cite{Bac78,She84}. 
+The circuits are defined in terms of primitive
+functions over booleans, numbers and lists and
+higher-order functions, the {\em combining forms\/},
+which compose hardware blocks in different
+structures (sequence, parallel, conditional etc).
+The algebraic laws allow the designer to
+transform an abstract specification into
+a concrete circuit. Following similar principles
+adopted in $\mu$FP, Ruby offers a wide
+range of compositions which, together with
+their mathematical properties, provide
+a calculational style for design exploration \cite{JS90}.
+
+%------ HYDRA: O'Donnell
 
 
-%--- Gropius: Blumenrohr
+%------ Gropius: Blumenrohr
 Gropius is a hardware description language
 defined as a subset of HOL~\mbox{\cite{Blu01,Gropius1,BS99,Gropius2}}.
 It~comprises four languages ranging
@@ -82,3 +101,25 @@ the correctness of the top-level system is not generated.
 The reason for that is mainly because
 the top-level interface of a network of processes and 
 k-processes does not match the handshaking interface pattern.
+
+%------ SAFL: Sharp
+Our compilation method is partly inspired by SAFL 
+(Statically Allocated Functional Language) \cite{MS01b},
+especially the ideas in Richard Sharp's PhD \cite{Sha02}. 
+SAFL is a first-order functional language.
+A user program consists of a sequence of function 
+definitions in which all recursive calls are tail-recursive.
+The compiler translates each function into
+a single hardware block.
+Its high-level of abstraction allows
+the exploitation of powerful program analyses
+and optimisations not available in traditional
+synthesis systems. 
+For instance, the functional properties of SAFL 
+allow equational reasoning and therefore the
+application of semantic-preserving 
+source-to-source manipulations.
+However, the synthesis is not based on
+correct-by-construction transformations
+and the circuit generated and the compiler
+have not been verified.
