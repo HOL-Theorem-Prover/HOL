@@ -335,22 +335,26 @@ val exports = ref ([] : string list)
 fun setup_exports (oldname, thyname) = let
   val rwts_name = thyname ^ "_rwts"
   fun print_sig pps =
-      Portable.add_string pps ("val "^rwts_name^" : simpLib.ssdata")
-  fun print_export pps = let
-    open Portable
-    val {add_string, add_break, begin_block, end_block,add_newline,...} =
-        with_ppstream pps
-  in
-    add_string ("val "^rwts_name^" = simpLib.rewrites [");
-    add_break(0,10);
-    begin_block INCONSISTENT 0;
-    pr_list add_string (fn () => add_string ",")
-            (fn () => add_break(1,0)) (!exports);
-    end_block();
-    add_string "];";
-    add_newline();
-    add_string ("val _ = BasicProvers.augment_srw_ss ["^rwts_name^"]\n")
-  end
+      if not (null (!exports)) then
+        Portable.add_string pps ("val "^rwts_name^" : simpLib.ssdata")
+      else ()
+  fun print_export pps =
+      if not (null (!exports)) then let
+          open Portable
+          val {add_string, add_break, begin_block, end_block,add_newline,...} =
+              with_ppstream pps
+        in
+          add_string ("val "^rwts_name^" = simpLib.rewrites [");
+          add_break(0,10);
+          begin_block INCONSISTENT 0;
+          pr_list add_string (fn () => add_string ",")
+                  (fn () => add_break(1,0)) (!exports);
+          end_block();
+          add_string "];";
+          add_newline();
+          add_string ("val _ = BasicProvers.augment_srw_ss ["^rwts_name^"]\n")
+        end
+      else ()
 in
   if not (null (!exports)) andalso thyname <> oldname then
     HOL_WARNING "BasicProvers" "setup_exports"
