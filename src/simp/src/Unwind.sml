@@ -70,7 +70,7 @@ struct
 
 open refuteLib HolKernel Parse basicHol90Lib Psyntax liteLib;
 open Ho_resolve Ho_boolTheory Trace AC Ho_rewrite;
-infix THEN THENC;
+infix THEN THENC ##;
 
 val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
 fun -- q x = Term q
@@ -243,19 +243,46 @@ fun strip_imp' tm =
     end
     handle HOL_ERR _ => ([],tm);
 
-fun IMP_TO_FRONT_CONV ante tm =
-    let val (antes,concl) = strip_imp' tm;
-        val (front,e,back) = split_at (fn x => ante = x) antes
-	    handle HOL_ERR _ => failwith "IMP_TO_FRONT_CONV"
-        val rhs = list_mk_imp (e::(front @ back),concl)
+fun prove_imps_imply imp1 imp2 = let
+  (* given imp1 and imp2, both implications, prove that imp1 implies imp2
+  *)
+  val imp1_th = ASSUME imp1
+  fun get_ants tm =
+    if is_imp tm then let
+      val (ant,con) = Psyntax.dest_imp tm
     in
-        prove(mk_eq(tm,rhs),
-	      EQ_TAC THEN
-	      DISCH_THEN (fn thm => REPEAT
-                            (DISCH_THEN (fn th =>
-                  MAP_EVERY ASSUME_TAC (CONJUNCTS th))) THEN MP_TAC thm) THEN
-	      REPEAT (POP_ASSUM (SUBST1_TAC o EQT_INTRO)) THEN REWRITE_TAC [])
+      (CONJUNCTS (ASSUME ant)) @ get_ants con
     end
+    else []
+  val hypset = get_ants imp2
+  fun find_th tm =
+    if is_conj tm then uncurry CONJ ((find_th ## find_th)(dest_conj tm))
+    else valOf (List.find (fn th => concl th = tm) hypset)
+      handle Option.Option =>
+        raise HOL_ERR {origin_structure = "Unwind",
+                       origin_function = "prove_imps_imply",
+                       message = "Implications not equivalent"}
+  fun transform th =
+    if is_imp (concl th) then let
+      val (a,_) = dest_imp (concl th)
+      val a_th = find_th a
+    in
+      transform (MP th a_th)
+    end
+    else th
+in
+  List.foldr (uncurry DISCH) (transform imp1_th) (imp1::(#1 (strip_imp imp2)))
+end
+
+
+fun IMP_TO_FRONT_CONV ante tm = let
+  val (antes,concl) = strip_imp' tm;
+  val (front,e,back) = split_at (fn x => ante = x) antes
+    handle HOL_ERR _ => failwith "IMP_TO_FRONT_CONV"
+  val rhs = list_mk_imp (e::(front @ back),concl)
+in
+  IMP_ANTISYM_RULE (prove_imps_imply tm rhs) (prove_imps_imply rhs tm)
+end
 handle e as HOL_ERR _ => WRAP_ERR("IMP_TO_FRONT_CONV",e);
 
 (*-------------------------------------------------------------------
