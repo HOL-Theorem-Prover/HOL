@@ -1004,7 +1004,7 @@ end;
 
 
 (*----------------------------------------------------------------------
-  User additions to the printer and parser
+  User changes to the printer and parser
   ----------------------------------------------------------------------*)
 
 fun temp_add_user_printer ({Tyop,Thy}, pfn) = let
@@ -1015,13 +1015,31 @@ in
   term_grammar_changed := true
 end
 
+fun temp_remove_user_printer {Tyop,Thy} = let
+  val (newg, printfnopt) =
+      term_grammar.remove_user_printer {Name = Tyop, Thy = Thy}
+                                       (term_grammar())
+in
+  the_term_grammar := newg;
+  term_grammar_changed := true;
+  printfnopt
+end;
+
 
 fun add_user_printer((r as {Tyop,Thy}),pfn,s) = let
 in
   update_grms ("temp_add_user_printer",
                String.concat ["({Tyop = ", mlquote Tyop, ", Thy = ",
-                              mlquote Thy, "}, ", s]);
+                              mlquote Thy, "}, ", s, ")"]);
   temp_add_user_printer(r, pfn)
+end;
+
+fun remove_user_printer (r as {Tyop, Thy}) = let
+in
+  update_grms ("(ignore o temp_remove_user_printer)",
+                String.concat ["{Tyop = ", mlquote Tyop, ", Thy = ",
+                               mlquote Thy, "}"]);
+  temp_remove_user_printer r
 end;
 
 
