@@ -26,8 +26,8 @@ However, it is sometimes more appropriate to actually include
 the support code directly in {thyTheory}. The function {adjoin_to_theory}
 performs this operation.
 
-A call {adjoin_to_theory {sig_pp, struct_pp}} adds a signature
-prettyprinter {sig_pp} and a structure prettyprinter {struct_pp} to
+A call {adjoin_to_theory {sig_ps, struct_ps}} adds a signature
+prettyprinter {sig_ps} and a structure prettyprinter {struct_ps} to
 an internal queue of prettyprinters. When {export_theory ()} is
 eventually called two things happen: (a) the signature file
 {thyTheory.sig} is written, and (b) the structure file
@@ -39,8 +39,8 @@ in the theory) has been written. Similarly, when {thyTheory.sml}
 is written, the structure prettyprinters are invoked in queue
 order, after the bindings of the theory have been written.
 
-If {sig_pp} is {NONE}, then no signature additions are made.
-Likewise, if {struct_pp} is {NONE}, then no structure additions
+If {sig_ps} is {NONE}, then no signature additions are made.
+Likewise, if {struct_ps} is {NONE}, then no structure additions
 are made. (This latter possibility doesn't seem to be useful.)
 
 \FAILURE
@@ -56,10 +56,10 @@ of an ML variable {pair_rws} to the structure {pairTheory}.
 {
    val _ = adjoin_to_theory
    {sig_ps =
-      SOME(fn ppstrm => PP.add_string ppstrm "val pair_rws : thm list"),
+      SOME(fn ppstrm => PP.add_string ppstrm "val pair_rws:thm list"),
     struct_ps =
       SOME(fn ppstrm => PP.add_string ppstrm
-                                      "val pair_rws = [PAIR, FST, SND];")
+                             "val pair_rws = [PAIR, FST, SND];")
    }
 }
 
@@ -68,5 +68,5 @@ of an ML variable {pair_rws} to the structure {pairTheory}.
 The {PP} structure is documented in the MoscowML library documentation.
 
 \SEEALSO
-Theory.after_new_theory, BasicProvers.export_rewrites.
+Theory.after_new_theory, Theory.thy_addon, BasicProvers.export_rewrites.
 \ENDDOC

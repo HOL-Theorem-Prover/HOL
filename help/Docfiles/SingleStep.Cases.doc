@@ -1,6 +1,6 @@
 \DOC Cases
 
-\TYPE {bossLib.Cases : tactic}
+\TYPE {Cases : tactic}
 
 \SYNOPSIS
 Performs case analysis on the variable of a universally quantified
@@ -10,7 +10,7 @@ goal.
 tactic
 
 \LIBRARY
-bossLib
+SingleStep
 
 \DESCRIBE
 When applied to a universally quantified goal, {Cases} performs a
@@ -33,7 +33,7 @@ Case-splitting consists of specialising the cases theorem with the
 variable from the goal and then generating as many sub-goals as there
 are disjuncts in the cases theorem, where in each sub-goal (including
 the assumptions) the variable has been replaced by an expression
-involving the given ``constructor'' (the {Ci}'s above) applied to as
+involving the given `constructor' (the {Ci}'s above) applied to as
 many fresh variables as appropriate.
 
 \FAILURE
@@ -52,7 +52,8 @@ and the following function:
    - val foofn_def = Define `(foofn (Bar n) = n + 10) /\
                              (foofn (Baz x) = 10)`;
    > val foofn_def =
-       |- (!n. foofn (Bar n) = n + 10) /\ !x. foofn (Baz x) = 10 : thm
+       |- (!n. foofn (Bar n) = n + 10) /\ 
+           !x. foofn (Baz x) = 10 : thm
 }
 then it is possible to make progress with the goal
 {!x. foofn x >= 10} by applying the tactic {Cases}, thus:
@@ -65,5 +66,5 @@ producing two new goals, one for each constructor of the
 type.
 
 \SEEALSO
-Cases_on, SingleStep.Induct, Tactic.STRUCT_CASES_TAC.
+SingleStep.Cases_on, SingleStep.Induct, Tactic.STRUCT_CASES_TAC.
 \ENDDOC

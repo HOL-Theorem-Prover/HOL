@@ -36,12 +36,12 @@ The notation used to declare datatypes is, unfortunately, not the same
 as that of ML. For example, an ML declaration
 {
    datatype ('a,'b) btree = Leaf of 'a 
-                          | Node of 'b * ('a,'b) btree * ('a,'b) btree
+                          | Node of ('a,'b) btree * 'b * ('a,'b) btree
 }
 would most likely be declared in HOL as
 {
    Hol_datatype `btree = Leaf of 'a 
-                       | Node of 'b => btree => btree`
+                       | Node of btree => 'b => btree`
 }
 The {=>} notation in a HOL datatype description is intended to replace 
 {*} in an ML datatype description, and highlights the fact that, in HOL, 
@@ -74,11 +74,11 @@ where the leaves are numbers.
     - Hol_datatype `tree = Leaf of num 
                          | Node of tree => tree`;
 }
-Next, we have already seen a type of binary trees having polymorphic 
+We have already seen a type of binary trees having polymorphic 
 values at internal nodes. This time, we will declare it in "paired" format.
 {
-    - Hol_datatype `tree = Leaf
-                         | Node of tree # 'a # tree`;
+    - Hol_datatype `tree = Leaf of 'a
+                         | Node of tree # 'b # tree`;
 }
 This specification seems closer to the declaration that one might make
 in ML, but is more difficult to deal with in proof than the curried format
@@ -237,6 +237,7 @@ are also stored in the current theory.
             (!t t0. P t /\ P t0 ==> P (Node t t0)) 
             ==>
             !t. P t
+
    tree_nchotomy  |- !t. (?n. t = Leaf n) \/ ?t' t0. t = Node t' t0
 
    tree_11
