@@ -322,7 +322,7 @@ fun mk_bv(1) = bv1 | mk_bv(2) = bv2 | mk_bv(3) = bv3 | mk_bv(4) = bv4
 end
 *)
 
-(* Does the above make any difference? *) 
+(* Does the above make any difference? *)
 val mk_bv = Bv;
 
 (*---------------------------------------------------------------------------
@@ -930,15 +930,15 @@ val percent = "%";
 fun is_numeral t = let
 
   (* type is equal to ``:num`` *)
-  fun is_numtype ty = 
+  fun is_numtype ty =
      case Type.dest_type ty
       of {Tyop="num", Args=[]} => true
        | _ => false;
 
   (* type is equal to ``:num -> num`` *)
-  fun is_num2num_type ty = 
+  fun is_num2num_type ty =
     case Type.dest_type ty
-     of {Tyop="fun", Args=[ty1,ty2]} => is_numtype ty1 andalso is_numtype ty2 
+     of {Tyop="fun", Args=[ty1,ty2]} => is_numtype ty1 andalso is_numtype ty2
       | _ => false
 
   (* term is sequence of applications of NUMERAL_BIT1 and NUMERAL_BIT2 to
@@ -960,7 +960,7 @@ in
   if is_const t then let
     val {Name, Ty} = dest_const t
   in
-    is_numtype Ty andalso Name = "ZERO"
+    is_numtype Ty andalso Name = "0"
   end
   else let
     val {Rator, Rand} = dest_comb t
@@ -1007,7 +1007,7 @@ fun prim_mk_numeral {mkCOMB, mkNUM_CONST, mkNUM2_CONST} n = let
         mkCOMB{Rator = nb2, Rand = recurse ((x - two) div two)}
 in
   if n = zero then
-    mkNUM_CONST "ZERO"
+    mkNUM_CONST "0"
   else
     mkCOMB{Rator = numeral, Rand = recurse n}
 end

@@ -77,7 +77,7 @@ val is_numeric    = Char.isDigit
 fun is_alphanumeric #"_" = true
   | is_alphanumeric #"'" = true
   | is_alphanumeric ch = Char.isAlphaNum ch
-   
+
 fun is_paren #"(" = true
   | is_paren #")" = true
   | is_paren _ = false;
@@ -186,6 +186,7 @@ fun allowed_term_constant "let" = false
   | allowed_term_constant "=>"  = false
   | allowed_term_constant "|"   = false
   | allowed_term_constant ":"   = false
+  | allowed_term_constant "0"   = true  (* only this numeral is OK *)
   | allowed_term_constant str =
      if (Word8Array.sub(alphabet,ordof(str,0)) = bone)
      then ok_identifier str
