@@ -118,7 +118,7 @@ in
     val clear_prefs_for_term : string -> unit
     val set_fixity : string -> fixity -> unit
 
-    val remove_term : string -> unit
+    val remove_rules_for_term : string -> unit
     val remove_termtok : {term_name : string, tok : string} -> unit
     (* overloading and records *)
     val allow_for_overloading_on : string * Type.hol_type -> unit
@@ -151,7 +151,7 @@ in
     val temp_clear_prefs_for_term : string -> unit
     val temp_set_fixity : string -> fixity -> unit
 
-    val temp_remove_term : string -> unit
+    val temp_remove_rules_for_term : string -> unit
     val temp_remove_termtok : {term_name : string, tok : string} -> unit
     val temp_set_associativity : (int * associativity) -> unit
 

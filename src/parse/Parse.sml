@@ -614,15 +614,15 @@ in
   end
 
 
-  fun temp_remove_term s = let
+  fun temp_remove_rules_for_term s = let
   in
     the_term_grammar := term_grammar.remove_standard_form (term_grammar()) s;
     term_grammar_changed := true
   end
-  fun remove_term s = let
+  fun remove_rules_for_term s = let
     val cmdstring = "val _ = Parse.temp_remove_term "^quote s^";"
   in
-    temp_remove_term s;
+    temp_remove_rules_for_term s;
     adjoin_to_theory (toThyaddon cmdstring)
   end
 
