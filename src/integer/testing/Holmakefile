@@ -1,4 +1,4 @@
-all: test_coopers tcooper genproblem testdp
+all: test_coopers tcooper genproblem testdp gen_bc_problem
 
 test_coopers: test_coopers.uo ../Cooper.uo
 	HOLMOSMLC -o test_coopers test_coopers.uo
@@ -8,6 +8,9 @@ tcooper: tcooper.c
 
 genproblem: genproblem.uo
 	HOLMOSMLC -o genproblem genproblem.uo
+
+gen_bc_problem: gen_bc_problem.uo
+	HOLMOSMLC -o gen_bc_problem gen_bc_problem.uo
 
 testdp: testdp.uo ../Cooper.uo
 	HOLMOSMLC -o testdp testdp.uo

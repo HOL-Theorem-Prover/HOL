@@ -31,6 +31,11 @@ fun L (t,s) = (s,t)
 val terms_to_test =
   [("INT_GROUP", Term`?!x:int. (!y. x + y = y) /\ (!y. ?!z. y + z = x)`),
    ("ILP1", Term`?z y x. 2n * x + 3 * y < 4 * z ==> 5 * x < 3 * y + z`),
+   ("ILP2", Term`?z y x v u. ~9 * u + ~12 * v + 4 * x + 5 * y + ~10 * z = 17`),
+   ("aILP1",
+    Term`!z y x v u.
+            (3 * u + 6 * v + ~9 * x + ~5 * y + 6 * z = 86) ==>
+            (1 * u + 4 * v + 17 * x + ~18 * y + ~5 * z = ~24)`),
    ("SUNRISE1", Term`!x0:num x:num y0:num y:num.
       (x0 = x) /\ (y0 = y) ==>
       (if 100 < y then
