@@ -29,7 +29,8 @@ A. First, install Moscow ML. This is usually straightforward. The
 
      The upshot: if you are working on a Unix system, you should build
      MoscowML from source, making the necessary tweaks that enable
-     dynamic linking.
+     dynamic linking.  It's possible that the Moscow ML .rpm file will
+     work; the "binary distribution" is known not to.
 
    * If you are running on Windows, you must set the PATH and MOSMLLIB
      environment variables as described in the installation instructions
@@ -40,7 +41,7 @@ A. First, install Moscow ML. This is usually straightforward. The
 
 B. Unpack Hol98 with the commands
 
-       gunzip working.tar.gz; tar xf working.tar
+       gunzip release.tar.gz; tar xf release.tar
 
    in Unix, or the appropriate clicking activity in Windows NT. The
    resulting directory will be called <hol-dir> in the following.  When
@@ -120,17 +121,24 @@ D. Perform the following 2 shell commands:
    in MoscowML. This can be somewhat time-consuming, but will help
    pinpoint any problems.
 
+   The build program ends up creating two copies of every ML object
+   file.  To save space on Unix, use the -symlink option.  This option
+   is not available on Windows, unfortunately.  To save space there,
+   you can use the -small option, but this has the disadvantage of
+   forcing any subsequent builds to rebuild everything, regardless of
+   where changes might have occurred.
 
 E. If bin/build completes, successfully, you are done. From <hol-dir>
    you can now access
 
-      bin/hol           * The standard Hol98 interactive system;
-      bin/hol.unquote   * The interactive system with quote preprocessing;
-      bin/Holmake       * A batch compiler for HOL directories;
-      src/              * System sources;
-      Manual/           * User manuals for the system;
-      examples/         * Examples of the use of the system.
-
+      bin/hol              * The standard Hol98 interactive system;
+      bin/hol.unquote      * The interactive system with quote preprocessing;
+      bin/hol.bare         * A "stripped down" version of hol
+      bin/hol.bare.unquote * A "stripped down" version of hol.unquote
+      bin/Holmake          * A batch compiler for HOL directories;
+      src/                 * System sources;
+      Manual/              * User manuals for the system;
+      examples/            * Examples of the use of the system.
 
 
 External tools.
@@ -146,11 +154,6 @@ MoscowML has been built with dynamic linking enabled.
 
 Dealing with failure.
 ---------------------
-
-   * If you are engaged in a large formalization, you may find a
-     mysterious `exception 13' being raised. Please contact us if that
-     occurs; it is a MoscowML bug and we have been supplied with a fix
-     by Peter Sestoft.
 
    * Send a message to hol-support@cl.cam.ac.uk giving a full transcript of
      the failed installation. Also make sure that you include the
