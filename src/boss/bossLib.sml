@@ -172,6 +172,9 @@ fun Induct_on qtm g =
                  (Globals.notify_on_tyvar_guess,false) Parse.Term qtm
      val st = find_subterm tm g
      val {Tyop, ...} = Type.dest_type(cat_tyof st)
+       handle HOL_ERR _ =>
+         raise BOSS_ERR "Induct_on"
+           "No induction theorems available for variable types"
  in case TypeBase.read Tyop
      of SOME facts =>
         let val thm = TypeBase.induction_of facts
