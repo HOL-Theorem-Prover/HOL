@@ -437,6 +437,7 @@ val CONJ_SYM =
   end;
 
 val _ = save_thm("CONJ_SYM", CONJ_SYM);
+val _ = save_thm("CONJ_COMM", CONJ_SYM);
 
 (*---------------------------------------------------------------------------
  * |- !t1 t2 t3. t1 /\ (t2 /\ t3) = (t1 /\ t2) /\ t3
@@ -1740,6 +1741,7 @@ let val t1   = (--`A:bool`--) and t2 = (--`B:bool`--)
  end;
 
 val _ = save_thm("DISJ_SYM", DISJ_SYM);
+val _ = save_thm("DISJ_COMM", DISJ_SYM);
 
 (* --------------------------------------------------------------------- *)
 (* DE_MORGAN_THM: 							 *)
