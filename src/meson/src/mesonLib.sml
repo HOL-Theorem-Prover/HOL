@@ -26,6 +26,12 @@ fun assoc1 item =
          | assc [] = NONE
     in assc
     end;
+fun assoc1_eq cmp item = let
+  fun assc ((k,ob)::rst) = if cmp(item,k) = EQUAL then SOME ob else assc rst
+    | assc [] = NONE
+in
+  assc
+end
 fun assoc2 item =
    let fun assc ((ob,key)::rst) = if (item=key) then SOME ob else assc rst
          | assc [] = NONE
@@ -169,15 +175,18 @@ local
 in
   fun reset_consts () = (cstore := [(the_false, 1)]; ccounter := 2)
   fun fol_of_const c =
-    let val currentconsts = !cstore
-    in case assoc1 c currentconsts
-        of SOME x => x
-         | NONE =>
-            let val n = !ccounter
-            in ccounter := n + 1;
-               cstore := (c,n)::currentconsts;
-               n
-            end
+    let
+      val currentconsts = !cstore
+    in
+      case assoc1_eq Term.compare c currentconsts of
+        SOME x => x
+      | NONE =>
+        let val n = !ccounter
+        in
+          ccounter := n + 1;
+          cstore := (c,n)::currentconsts;
+          n
+        end
     end
   fun hol_of_const c =
      case assoc2 c (!cstore)
