@@ -22,7 +22,7 @@ in
 
   fun register_update_fn f = (update_fns := f :: !update_fns)
   fun write facts = (dBase := add (theTypeBase()) facts;
-                     Parse.overload_on("case", case_const_of facts);
+                     Parse.temp_overload_on("case", case_const_of facts);
                      app (fn f => f facts) (!update_fns));
 end;
 
@@ -46,14 +46,14 @@ fun case_const_of s   = TypeBasePure.case_const_of (valOf s (read s))
 fun case_cong_of s    = TypeBasePure.case_cong_of (valOf s (read s))
 fun case_def_of s     = TypeBasePure.case_def_of (valOf s (read s))
 fun nchotomy_of s     = TypeBasePure.nchotomy_of (valOf s (read s))
-fun distinct_of s     = valOf2 s "distinct_of" 
+fun distinct_of s     = valOf2 s "distinct_of"
                             (TypeBasePure.distinct_of (valOf s (read s)))
-fun one_one_of s      = valOf2 s "one_one_of" 
+fun one_one_of s      = valOf2 s "one_one_of"
                             (TypeBasePure.one_one_of (valOf s (read s)))
 fun simpls_of s       = TypeBasePure.simpls_of (valOf s (read s))
-fun size_of s         = valOf2 s "size_of" 
+fun size_of s         = valOf2 s "size_of"
                             (TypeBasePure.size_of (valOf s (read s)))
-fun boolify_of s      = valOf2 s "boolify_of" 
+fun boolify_of s      = valOf2 s "boolify_of"
                             (TypeBasePure.boolify_of (valOf s (read s)))
 fun axiom_of0 s       = TypeBasePure.axiom_of0 (valOf s (read s))
 fun induction_of0 s   = TypeBasePure.induction_of0 (valOf s (read s))
@@ -76,7 +76,7 @@ val _ = write bool_info;
  * Install case transformation function for parser                        *
  * ---------------------------------------------------------------------- *)
 
-val _ = 
+val _ =
   let fun lookup s =
         case read s
          of SOME tyi => SOME {constructors = TypeBasePure.constructors_of tyi,

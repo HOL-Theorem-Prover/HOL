@@ -573,7 +573,13 @@ end
 
 val grm_updates = ref [] : (string * string) list ref;
 
-fun update_grms p = grm_updates := (p :: !grm_updates);
+fun update_grms fname p =
+    (if current_theory() = "scratch" then
+       HOL_WARNING "Parse" fname
+                   ("Shouldn't update grammar in theory \"scratch\""^
+                    " try \"new_theory\" first, or use temporary change.")
+     else ();
+     grm_updates := (p :: !grm_updates));
 
 
 fun temp_add_type s = let open parse_type in
@@ -584,7 +590,7 @@ fun temp_add_type s = let open parse_type in
 
 fun add_type s = let in
    temp_add_type s;
-   update_grms ("temp_add_type", Lib.quote s)
+   update_grms "add_type" ("temp_add_type", Lib.quote s)
  end
 
 fun temp_add_infix_type {Name, ParseName, Assoc, Prec} =
@@ -599,13 +605,15 @@ fun temp_add_infix_type {Name, ParseName, Assoc, Prec} =
 
 fun add_infix_type (x as {Name, ParseName, Assoc, Prec}) = let in
   temp_add_infix_type x;
-  update_grms ("temp_add_infix_type", String.concat
-                  ["{Name = ", quote Name,
-                   ", ParseName = ",
-                   case ParseName of NONE => "NONE"
-                                   | SOME s => "SOME "^quote s,
-                   ", Assoc = ", assocToString Assoc,
-                   ", Prec = ", Int.toString Prec, "}"])
+  update_grms "add_infix_type"
+              ("temp_add_infix_type",
+               String.concat
+                 ["{Name = ", quote Name,
+                  ", ParseName = ",
+                  case ParseName of NONE => "NONE"
+                                  | SOME s => "SOME "^quote s,
+                  ", Assoc = ", assocToString Assoc,
+                  ", Prec = ", Int.toString Prec, "}"])
  end
 
 fun temp_type_abbrev (s, ty) = let
@@ -631,7 +639,8 @@ end;
 fun type_abbrev (s, ty) = let
 in
   temp_type_abbrev (s, ty);
-  update_grms ("temp_type_abbrev",
+  update_grms "type_abbrev"
+              ("temp_type_abbrev",
                String.concat ["(", mlquote s, ", ",
                               PP.pp_to_string (!Globals.linewidth)
                                               (TheoryPP.pp_type "U" "T")
@@ -665,7 +674,8 @@ fun temp_add_infix(s, prec, associativity) =
 
 fun add_infix (s, prec, associativity) = let in
   temp_add_infix(s,prec,associativity);
-  update_grms ("temp_add_infix", String.concat
+  update_grms "add_infix"
+              ("temp_add_infix", String.concat
                   ["(", quote s, ", ", Int.toString prec, ", ",
                         assocToString associativity,")"])
  end;
@@ -753,8 +763,9 @@ fun temp_add_binder(name, prec) = let in
 
 fun add_binder (name, prec) = let in
     temp_add_binder(name, prec);
-    update_grms ("temp_add_binder", String.concat
-        ["(", quote name, ", std_binder_precedence)"])
+    update_grms "add_binder" ("temp_add_binder",
+                              String.concat
+                                ["(", quote name, ", std_binder_precedence)"])
   end
 
 fun temp_add_rule {term_name,fixity,pp_elements,paren_style,block_style} =
@@ -775,13 +786,15 @@ fun temp_add_rule {term_name,fixity,pp_elements,paren_style,block_style} =
 fun add_rule (r as {term_name, fixity, pp_elements,
                     paren_style, block_style = (bs,bi)}) = let in
   temp_add_rule r;
-  update_grms ("temp_add_rule", String.concat
-       ["{term_name = ", quote term_name,
-        ", fixity = ", fixityToString fixity, ",\n",
-        "pp_elements = [", pplistToString pp_elements, "],\n",
-        "paren_style = ", ParenStyleToString paren_style,",\n",
-        "block_style = (", BlockStyleToString bs, ", ",
-                           block_infoToString bi,")}"])
+  update_grms "add_rule"
+              ("temp_add_rule",
+               String.concat
+                 ["{term_name = ", quote term_name,
+                  ", fixity = ", fixityToString fixity, ",\n",
+                  "pp_elements = [", pplistToString pp_elements, "],\n",
+                  "paren_style = ", ParenStyleToString paren_style,",\n",
+                  "block_style = (", BlockStyleToString bs, ", ",
+                  block_infoToString bi,")}"])
  end
 
 fun temp_add_listform x = let open term_grammar in
@@ -791,13 +804,15 @@ fun temp_add_listform x = let open term_grammar in
 
 fun add_listform (x as {separator,leftdelim,rightdelim,cons,nilstr}) = let in
     temp_add_listform x;
-    update_grms ("temp_add_listform", String.concat
-                    ["{separator = ",   quote separator,
-                     ", leftdelim = ",  quote leftdelim,
-                     ", rightdelim = ", quote rightdelim,
-                     ", cons = ",       quote cons,
-                     ", nilstr = ",     quote nilstr,
-                     "}"])
+    update_grms "add_listform"
+                ("temp_add_listform",
+                 String.concat
+                   ["{separator = ",   quote separator,
+                    ", leftdelim = ",  quote leftdelim,
+                    ", rightdelim = ", quote rightdelim,
+                    ", cons = ",       quote cons,
+                    ", nilstr = ",     quote nilstr,
+                    "}"])
  end
 
 fun temp_add_bare_numeral_form x =
@@ -809,12 +824,15 @@ fun temp_add_bare_numeral_form x =
     term_grammar_changed := true
  end
 
-fun add_bare_numeral_form (c, stropt) = let in
-  temp_add_bare_numeral_form (c, stropt);
-  update_grms ("temp_add_bare_numeral_form", String.concat
-     ["(#", quote(str c), ", ",
-      case stropt of NONE => "NONE" | SOME s => "SOME "^quote s,")"])
- end
+fun add_bare_numeral_form (c, stropt) =
+    (temp_add_bare_numeral_form (c, stropt);
+     update_grms "add_bare_numeral_form"
+                 ("temp_add_bare_numeral_form",
+                  String.concat
+                    ["(#", quote(str c), ", ",
+                     case stropt of
+                       NONE => "NONE"
+                     | SOME s => "SOME "^quote s,")"]));
 
 fun temp_give_num_priority c = let open term_grammar in
     the_term_grammar := give_num_priority (term_grammar()) c;
@@ -823,8 +841,8 @@ fun temp_give_num_priority c = let open term_grammar in
 
 fun give_num_priority c = let in
   temp_give_num_priority c;
-  update_grms ("temp_give_num_priority",
-                  String.concat ["#", Lib.quote(str c)])
+  update_grms "give_num_priority" ("temp_give_num_priority",
+                                   String.concat ["#", Lib.quote(str c)])
  end
 
 fun temp_remove_numeral_form c = let in
@@ -834,8 +852,8 @@ fun temp_remove_numeral_form c = let in
 
 fun remove_numeral_form c = let in
   temp_remove_numeral_form c;
-  update_grms ("temp_remove_numeral_form",
-                  String.concat ["#", Lib.quote(str c)])
+  update_grms "remove_numeral_form" ("temp_remove_numeral_form",
+                                     String.concat ["#", Lib.quote(str c)])
   end
 
 fun temp_associate_restriction (bs, s) =
@@ -849,8 +867,9 @@ fun temp_associate_restriction (bs, s) =
 
 fun associate_restriction (bs, s) = let in
    temp_associate_restriction (bs, s);
-   update_grms ("temp_associate_restriction",
-       String.concat["(", quote bs, ", ", quote s, ")"])
+   update_grms "associate_restriction"
+               ("temp_associate_restriction",
+                String.concat["(", quote bs, ", ", quote s, ")"])
  end
 
 fun temp_remove_rules_for_term s = let open term_grammar in
@@ -860,7 +879,7 @@ fun temp_remove_rules_for_term s = let open term_grammar in
 
 fun remove_rules_for_term s = let in
    temp_remove_rules_for_term s;
-   update_grms ("temp_remove_rules_for_term", quote s)
+   update_grms "remove_rules_for_term" ("temp_remove_rules_for_term", quote s)
  end
 
 fun temp_remove_termtok r = let open term_grammar in
@@ -870,8 +889,10 @@ fun temp_remove_termtok r = let open term_grammar in
 
 fun remove_termtok (r as {term_name, tok}) = let in
    temp_remove_termtok r;
-   update_grms ("temp_remove_termtok", String.concat
-        ["{term_name = ", quote term_name, ", tok = ", quote tok, "}"])
+   update_grms "remove_termtok" ("temp_remove_termtok",
+                                 String.concat
+                                   ["{term_name = ", quote term_name,
+                                    ", tok = ", quote tok, "}"])
  end
 
 fun temp_set_fixity s f = let in
@@ -881,7 +902,8 @@ fun temp_set_fixity s f = let in
 
 fun set_fixity s f = let in
     temp_set_fixity s f;
-    update_grms ("(temp_set_fixity "^quote s^")", "("^fixityToString f^")")
+    update_grms "set_fixity"
+                ("(temp_set_fixity "^quote s^")", "("^fixityToString f^")")
  end
 
 fun temp_prefer_form_with_tok r = let open term_grammar in
@@ -891,8 +913,10 @@ fun temp_prefer_form_with_tok r = let open term_grammar in
 
 fun prefer_form_with_tok (r as {term_name,tok}) = let in
     temp_prefer_form_with_tok r;
-    update_grms ("temp_prefer_form_with_tok", String.concat
-       ["{term_name = ", quote term_name, ", tok = ", quote tok, "}"])
+    update_grms "prefer_form_with_tok"
+                ("temp_prefer_form_with_tok",
+                 String.concat ["{term_name = ", quote term_name,
+                                ", tok = ", quote tok, "}"])
  end
 
 fun temp_clear_prefs_for_term s = let open term_grammar in
@@ -902,7 +926,7 @@ fun temp_clear_prefs_for_term s = let open term_grammar in
 
 fun clear_prefs_for_term s = let in
     temp_clear_prefs_for_term s;
-    update_grms ("temp_clear_prefs_for_term", quote s)
+    update_grms "clear_prefs_for_term" ("temp_clear_prefs_for_term", quote s)
  end
 
 (*-------------------------------------------------------------------------
@@ -921,9 +945,10 @@ end
 
 fun overload_on_by_nametype s (r as {Name, Thy}) = let in
    temp_overload_on_by_nametype s r;
-   update_grms ("(temp_overload_on_by_nametype "^quote s^")",
+   update_grms "overload_on_by_nametype"
+               ("(temp_overload_on_by_nametype "^quote s^")",
                 String.concat
-                [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"])
+                  [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"])
  end
 
 fun temp_overload_on (s, t) =
@@ -950,7 +975,7 @@ end
 
 fun clear_overloads_on s = let in
   temp_clear_overloads_on s;
-  update_grms ("temp_clear_overloads_on", quote s)
+  update_grms "clear_overloads_on" ("temp_clear_overloads_on", quote s)
 end
 
 fun temp_remove_ovl_mapping s crec = let open term_grammar in
@@ -962,9 +987,10 @@ end
 fun remove_ovl_mapping s (crec as {Name,Thy}) = let
 in
   temp_remove_ovl_mapping s crec;
-  update_grms ("(temp_remove_ovl_mapping "^quote s^")",
+  update_grms "remove_ovl_mapping"
+              ("(temp_remove_ovl_mapping "^quote s^")",
                String.concat
-               [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"])
+                 [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"])
 end
 
 
@@ -1029,7 +1055,8 @@ end
 
 fun add_numeral_form (c, stropt) = let in
   temp_add_numeral_form (c, stropt);
-  update_grms ("temp_add_numeral_form",
+  update_grms "add_numeral_form"
+              ("temp_add_numeral_form",
                String.concat
                ["(#", quote (str c), ", ",
                 case stropt of NONE => "NONE" | SOME s => "SOME "^quote s, ")"
@@ -1119,7 +1146,8 @@ end;
 
 fun add_user_printer((r as {Tyop,Thy}),pfn,s) = let
 in
-  update_grms ("temp_add_user_printer",
+  update_grms "add_user_printer"
+              ("temp_add_user_printer",
                String.concat ["({Tyop = ", mlquote Tyop, ", Thy = ",
                               mlquote Thy, "}, ", s, ")"]);
   temp_add_user_printer(r, pfn)
@@ -1127,9 +1155,10 @@ end;
 
 fun remove_user_printer (r as {Tyop, Thy}) = let
 in
-  update_grms ("(ignore o temp_remove_user_printer)",
-                String.concat ["{Tyop = ", mlquote Tyop, ", Thy = ",
-                               mlquote Thy, "}"]);
+  update_grms "remove_user_printer"
+              ("(ignore o temp_remove_user_printer)",
+               String.concat ["{Tyop = ", mlquote Tyop, ", Thy = ",
+                              mlquote Thy, "}"]);
   temp_remove_user_printer r
 end;
 
