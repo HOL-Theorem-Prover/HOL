@@ -632,6 +632,7 @@ val DRESTRICT_FEMPTY = Q.store_thm
 ("DRESTRICT_FEMPTY",
  `!r. DRESTRICT FEMPTY r = FEMPTY`,
  SRW_TAC [][GSYM fmap_EQ_THM, DRESTRICT_DEF, FDOM_FEMPTY]);
+val _ = export_rewrites ["DRESTRICT_FEMPTY"]
 
 val DRESTRICT_FUPDATE = Q.store_thm
 ("DRESTRICT_FUPDATE",
@@ -640,6 +641,8 @@ val DRESTRICT_FUPDATE = Q.store_thm
         if x IN r then FUPDATE (DRESTRICT f r) (x,y) else DRESTRICT f r`,
  SRW_TAC [][GSYM fmap_EQ_THM, FDOM_FUPDATE, DRESTRICT_DEF, FAPPLY_FUPDATE_THM,
             EXTENSION] THEN PROVE_TAC []);
+val _ = export_rewrites ["DRESTRICT_FUPDATE"]
+
 
 val STRONG_DRESTRICT_FUPDATE = Q.store_thm
 ("STRONG_DRESTRICT_FUPDATE",
@@ -1337,11 +1340,6 @@ val FMEQ_SINGLE_SIMPLE_DISJ_ELIM = store_thm(
 (* ----------------------------------------------------------------------
     to close...
    ---------------------------------------------------------------------- *)
-
-val _ = export_rewrites ["DRESTRICT_FEMPTY"]
-
-
-
 
 val _ = export_theory();
 
