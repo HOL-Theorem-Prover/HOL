@@ -2,7 +2,7 @@ structure reduceLib :> reduceLib =
 struct
 
   open HolKernel Parse basicHol90Lib Boolconv Arithconv
-       arithmeticTheory numeralTheory computeLib;
+       pairTheory arithmeticTheory numeralTheory computeLib;
   infix THEN |-> ;
 
 type conv   = Abbrev.conv
@@ -36,9 +36,10 @@ val RED_CONV =
 (*-----------------------------------------------------------------------*)
 
 val bool_rewrites =
-  [ INST_TYPE [alpha |-> bool] REFL_CLAUSE,
-    COND_CLAUSES, COND_ID, NOT_CLAUSES, AND_CLAUSES, OR_CLAUSES,
-    IMP_CLAUSES, EQ_CLAUSES ];
+  (false,
+   [ INST_TYPE [alpha |-> bool] REFL_CLAUSE,
+     COND_CLAUSES, COND_ID, NOT_CLAUSES, AND_CLAUSES, OR_CLAUSES,
+     IMP_CLAUSES, EQ_CLAUSES ]);
 
 val REFL_EQ_0 =
   INST_TYPE [alpha |-> Type `:num`] REFL_CLAUSE;
@@ -83,8 +84,8 @@ fun cbv_DIV_CONV tm =
       open Arbnum
       val (q,r) = divmod (dest_numeral x, dest_numeral y) in
       SPECL [x, y, mk_numeral q, mk_numeral r] div_thm
-    end handle HOL_ERR _ => failwith "DIV_CONV")
-  | _ => raise Fail "DIV_CONV";
+    end handle HOL_ERR _ => failwith "cbv_DIV_CONV")
+  | _ => raise Fail "cbv_DIV_CONV";
 
 fun cbv_MOD_CONV tm =
   case (dest_op modop tm) of
@@ -92,15 +93,31 @@ fun cbv_MOD_CONV tm =
       open Arbnum
       val (q,r) = divmod (dest_numeral x, dest_numeral y) in
       SPECL [x, y, mk_numeral q, mk_numeral r] mod_thm
-    end handle HOL_ERR _ => failwith "MOD_CONV")
-  | _ => raise Fail "MOD_CONV";
+    end handle HOL_ERR _ => failwith "cbv_MOD_CONV")
+  | _ => raise Fail "cbv_MOD_CONV";
 
-val rws = from_list (false,bool_rewrites);
-val _ = add_thms (true,numeral_rewrites) rws;
-val _ = add_conv (divop, 2, cbv_DIV_CONV) rws;
-val _ = add_conv (modop, 2, cbv_MOD_CONV) rws;
 
-val REDUCE_CONV = CBV_CONV rws;
+fun reduce_rws () =
+  let val rws = from_list bool_rewrites
+      val _ = add_thms (true,numeral_rewrites) rws
+      val _ = add_conv (divop, 2, cbv_DIV_CONV) rws
+      val _ = add_conv (modop, 2, cbv_MOD_CONV) rws
+  in rws end;
+
+
+local val rws = reduce_rws() in
+val REDUCE_CONV = CBV_CONV rws
+end;
+
+(* Define a basic computeLib.comp_rws extending reduce_rws with
+ * simplifications about LET, pairs, curryfication, ...
+ *)
+fun basic_rws () =
+  let val rws = reduce_rws ()
+      val _ = add_thms (true, [strictify_thm LET_DEF, FST, SND])
+      val _ = add_thms (false, [CURRY_DEF, UNCURRY_DEF])
+  in rws end;
+
 
 (*-----------------------------------------------------------------------*)
 (* REDUCE_RULE and REDUCE_TAC - Inference rule and tactic versions.      *)
