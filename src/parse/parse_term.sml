@@ -749,7 +749,7 @@ fun parse_term (G : grammar) typeparser = let
                   if null num_info then
                     if dp = "0" then
                       (WARN "term_parser"
-                       ("0 treated specially and allowed - "^
+                       ("\n   0 treated specially and allowed - "^
                         "no other numerals permitted");
                       NonTerminal (inject_np NONE))
                     else
