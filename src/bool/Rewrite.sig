@@ -32,7 +32,7 @@ val add_implicit_rewrites : thm list -> unit
 
 val pp_rewrites   : Portable.ppstream -> rewrites -> unit
 val bool_rewrites : rewrites
-val monitoring    : int ref
+val monitoring    : bool ref
 
 val REWRITES_CONV    : rewrites -> conv
 val GEN_REWRITE_CONV : (conv -> conv) -> rewrites -> thm list -> conv

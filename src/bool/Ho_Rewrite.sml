@@ -36,20 +36,20 @@ fun mk_rewrites th =
   let val th = SPEC_ALL th
       val t = concl th
   in
-  if is_eq t   then [th] else 
-  if is_conj t then (op @ o (mk_rewrites##mk_rewrites) o CONJ_PAIR) th else 
+  if is_eq t   then [th] else
+  if is_conj t then (op @ o (mk_rewrites##mk_rewrites) o CONJ_PAIR) th else
   if is_neg t  then [EQF_INTRO th]
                else [EQT_INTRO th]
   end
   handle e => raise (wrap_exn "Ho_Rewrite" "mk_rewrites" e);
 
 
-val monitoring = ref 0;
+val monitoring = ref false;
 
-val _ = register_trace "Ho_Rewrite" monitoring;
+val _ = register_btrace ("Ho_Rewrite", monitoring);
 
 (*---------------------------------------------------------------------------
-    A datatype of rewrite rule sets. 
+    A datatype of rewrite rule sets.
  ---------------------------------------------------------------------------*)
 
 datatype rewrites = RW of {thms :thm list,  net :conv Ho_Net.net}
@@ -76,11 +76,11 @@ fun stringulate _ [] = []
 
 
 (*---------------------------------------------------------------------------
-      Create a conversion from some rewrite rules 
+      Create a conversion from some rewrite rules
  ---------------------------------------------------------------------------*)
 
 fun REWRITES_CONV (RW{net,...}) tm =
- if !monitoring > 0
+ if !monitoring
  then case mapfilter (fn f => f tm) (Ho_Net.lookup tm net)
        of []   => Conv.NO_CONV tm
         | [x]  => (HOL_MESG (String.concat
@@ -93,8 +93,8 @@ fun REWRITES_CONV (RW{net,...}) tm =
 local open boolTheory
 in
 val _ = add_implicit_rewrites
-   [REFL_CLAUSE, EQ_CLAUSES, NOT_CLAUSES, AND_CLAUSES, 
-    OR_CLAUSES, IMP_CLAUSES, FORALL_SIMP, EXISTS_SIMP, 
+   [REFL_CLAUSE, EQ_CLAUSES, NOT_CLAUSES, AND_CLAUSES,
+    OR_CLAUSES, IMP_CLAUSES, FORALL_SIMP, EXISTS_SIMP,
     ABS_SIMP, SELECT_REFL, SELECT_REFL_2, COND_CLAUSES];
 end;
 
@@ -120,7 +120,7 @@ fun REWRITE_RULE thl       = GEN_REWRITE_RULE TOP_DEPTH_CONV (!implicit) thl
 fun ONCE_REWRITE_RULE thl  = GEN_REWRITE_RULE ONCE_DEPTH_CONV (!implicit) thl;
 
 fun PURE_ASM_REWRITE_RULE L th = PURE_REWRITE_RULE((map ASSUME(hyp th))@L) th
-fun PURE_ONCE_ASM_REWRITE_RULE L th = 
+fun PURE_ONCE_ASM_REWRITE_RULE L th =
     PURE_ONCE_REWRITE_RULE((map ASSUME(hyp th)) @ L) th
 fun ASM_REWRITE_RULE thl th = REWRITE_RULE ((map ASSUME (hyp th)) @ thl) th
 fun ONCE_ASM_REWRITE_RULE L th = ONCE_REWRITE_RULE((map ASSUME(hyp th))@ L) th
@@ -185,14 +185,14 @@ fun SUBST_MATCH eqth th =
 end;
 
 
-(* ------------------------------------------------------------------------- 
- * Useful instance of more general higher order matching.                    
+(* -------------------------------------------------------------------------
+ * Useful instance of more general higher order matching.
  * Taken directly from the GTT source code (Don Syme).
  *
  * val LOCAL_COND_ELIM_THM1 = prove
  *     ((--`!P:'a->bool. P(a => b | c) = (~a \/ P(b)) /\ (a \/ P(c))`--),
  *      GEN_TAC THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[]);
- *      
+ *
  * val conv = HIGHER_REWRITE_CONV[LOCAL_COND_ELIM_THM1];
  * val x = conv (--`(P:'a -> bool) (a => b | c)`--);
  * val x = conv (--`(a + (f x => 0 | n) + m) = 0`--) handle e => Raise e;
@@ -214,11 +214,11 @@ val HIGHER_REWRITE_CONV =
           val ass_list = zip pats (zip preds (zip thl beta_fns))
           fun insert p = Ho_Net.enter ([],p,p)
           val mnet = itlist insert pats Ho_Net.empty_net
-          fun look_fn t = mapfilter 
+          fun look_fn t = mapfilter
                     (fn p => if can (ho_match_term [] p) t then p else fail())
                     (lookup t mnet)
       in fn tm =>
-          let val ts = find_terms 
+          let val ts = find_terms
                         (fn t => not (look_fn t = []) andalso free_in t tm) tm
               val stm = Lib.trye hd (sort free_in ts)
               val pat = Lib.trye hd (look_fn stm)

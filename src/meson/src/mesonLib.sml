@@ -87,7 +87,7 @@ val chatting = ref 1;           (* Gives intermediate info as proof runs.
                                    is given. When the number is 0, no output
                                    is given. Otherwise, jrh's original output
                                    is given.                                 *)
-val _ = register_trace "meson" chatting;
+val _ = register_trace("meson", chatting, 2);
 
 
 
@@ -150,7 +150,7 @@ in
         of SOME x => x
          | NONE =>
             let val n = inc_vcounter()
-            in vstore := (v,n)::currentvars; n 
+            in vstore := (v,n)::currentvars; n
             end
     end
   val hol_of_var = hol_of_bumped_var
@@ -313,7 +313,7 @@ fun fol_inst_bump offset theta (at as (p,args)) =
 val raw_augment_insts =
  let fun augment1 theta (s,x) =
       let val s' = raw_fol_subst theta s
-      in if fol_free_in x s andalso not(s = Var(x)) 
+      in if fol_free_in x s andalso not(s = Var(x))
             then failwith "augment1: Occurs check"
             else (s',x)
       end
@@ -407,12 +407,12 @@ fun fol_atom_eq insts (p1,args1) (p2,args2) =
 (* ------------------------------------------------------------------------- *)
 
 fun cacheconts f =
- if !cache 
+ if !cache
  then let val memory = ref []
       in fn input as (gg, (insts,offset,(size:int))) =>
            if exists (fn (_,(insts',_,size')) =>
                        insts=insts' andalso (size <= size' orelse !depth))
-                     (!memory) 
+                     (!memory)
            then failwith "cachecont"
            else (memory := input::(!memory); f input)
       end
@@ -730,7 +730,7 @@ local
   fun bump_hol_thm offset th =
     let val fvs = subtract (free_vars (concl th)) (freesl(hyp th))
     in INST (map(fn v => {redex=v,residue=hol_of_var(fol_of_var v + offset)})
-                 fvs) th 
+                 fvs) th
     end
   fun hol_negate tm = dest_neg tm handle HOL_ERR _ => mk_neg tm
   fun merge_inst (t,x) current = (fol_subst current t,x)::current
@@ -742,10 +742,10 @@ in
         val g'     = fol_inst newins g
         val hol_g  = hol_of_literal g'
         val ths    = map (meson_to_hol newins) gs
-        val hth = 
+        val hth =
            if concl th = the_true then ASSUME hol_g
            else let val cth = make_hol_contrapos(n,th)
-                in if null ths then cth 
+                in if null ths then cth
                    else Drule.MATCH_MP cth (Lib.end_itlist Thm.CONJ ths)
               handle e as HOL_ERR _ =>
                 (say ("Attempting to match "^
@@ -895,7 +895,7 @@ val (POLY_ASSUME_TAC:thm list -> jrhTactics.Tactic) =
           and {Name=s2,Thy=thy2,Ty=ty2} = dest_thy_const tm2
       in
         if (s1=s2) andalso (thy1=thy2)
-        then type_match ty1 ty2 [] 
+        then type_match ty1 ty2 []
         else failwith "match_consts"
       end
     fun polymorph mconsts th =

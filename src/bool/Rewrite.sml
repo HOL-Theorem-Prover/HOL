@@ -48,9 +48,9 @@ fun mk_rewrites th =
 
 (* An abstract datatype of rewrite rule sets. *)
 
-val monitoring = ref 0;
+val monitoring = ref false;
 
-val _ = register_trace "Rewrite" monitoring;
+val _ = register_btrace ("Rewrite", monitoring) ;
 
 abstype rewrites = RW of {thms :thm list,  net :conv Net.net}
 with
@@ -77,7 +77,7 @@ fun stringulate _ [] = []
  ---------------------------------------------------------------------------*)
 
 fun REWRITES_CONV (RW{net,...}) tm =
- if !monitoring > 0
+ if !monitoring
  then case mapfilter (fn f => f tm) (Net.match tm net)
        of []   => Conv.NO_CONV tm
         | [x]  => (HOL_MESG (String.concat

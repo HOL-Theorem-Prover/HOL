@@ -12,7 +12,8 @@ val ERR = mk_HOL_ERR "Bwd";
 val show_nsubgoals = ref 10;
 val chatting = ref true;
 
-val _ = Feedback.register_trace "Subgoal number" show_nsubgoals;
+val _ = Feedback.register_trace ("Subgoal number", show_nsubgoals, 10000);
+val _ = Feedback.register_btrace("goalstack chatting", chatting);
 
 fun say s = if !chatting then Lib.say s else ();
 
