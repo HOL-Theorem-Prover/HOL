@@ -10,7 +10,7 @@
 (*                                                                           *)
 (*---------------------------------------------------------------------------*)
 
-open HolKernel Parse boolLib bossLib (* listSyntax *) pairTools;
+open HolKernel Parse boolLib bossLib pairTools;
 
 (*---------------------------------------------------------------------------*)
 (* Make bindings to pre-existing stuff                                       *)

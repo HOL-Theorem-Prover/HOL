@@ -184,17 +184,6 @@ val thm = Count.apply EVAL tm;
 (* Now let's show that it works for all inputs                               *)
 (*---------------------------------------------------------------------------*)
 
-fun upto b t = if b > t then [] else b::upto (b+1) t;
-fun gen_word8vars s n = map (fn i => mk_var(s^Int.toString i, Type`:word8`)) 
-                            (upto 0 (n-1));
-fun grab16 [] = []
-  | grab16 (h1::h2::h3::h4::h5::h6::h7::h8::
-            h9::h10::h11::h12::h13::h14::h15::h16::rst) 
-     = pairSyntax.list_mk_pair
-         [h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13,h14,h15,h16]::grab16 rst
-  | grab16 other = raise Fail "grab16: length not a multiple of 16";
-
-val [plaintext] = grab16(gen_word8vars "s" 16);
 
 (*---------------------------------------------------------------------------*)
 (* expand is tail recursive and adds a new element to its accumulator at     *)
@@ -202,18 +191,17 @@ val [plaintext] = grab16(gen_word8vars "s" 16);
 (*---------------------------------------------------------------------------*)
 
 val lemma = Q.prove
-(`!n l a1 a2 a3 a4 t. 
-    3 < n /\ n < 44 /\ (l = a1::a2::a3::a4::t)
+(`!n t. 
+    3 < n /\ n < 44 
       ==> 
-    ?h. expand (n+1) (h::l) = expand n l`,
- recInduct expand_ind
-   THEN RW_TAC list_ss []
+    ?h. expand (n+1) (h::t) = expand n t`,
+ RW_TAC std_ss []
    THEN GEN_REWRITE_TAC (BINDER_CONV o RHS_CONV) empty_rewrites [expand_def]
-   THEN BasicProvers.NORM_TAC list_ss [] 
-   THEN PROVE_TAC []);
+   THEN ZAP_TAC arith_ss []);
+
 
 (*---------------------------------------------------------------------------*)
-(* Need special purpose proof support for next lemma.                        *)
+(* Build special purpose proof support for next lemma.                       *)
 (*---------------------------------------------------------------------------*)
 
 fun inst_lemma_tac i (asl,w) =
@@ -350,7 +338,7 @@ val lemma = Q.prove
        o Round 9 (TL sched) 
        o AddRoundKey (HD sched) 
        o to_state) plaintext = plaintext)`,
- PGEN_TAC plaintext 
+ PGEN_TAC(Term`(s0,s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12,s13,s14,s15):state`)
    THEN RW_TAC std_ss [length_11]
    THEN RESTR_EVAL_TAC [MultCol,InvMultCol,genMixColumns]
    THEN RW_TAC std_ss [ShiftRows_Inversion,SubBytes_Inversion,

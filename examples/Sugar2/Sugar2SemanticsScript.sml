@@ -349,6 +349,7 @@ val F_SEM_defn =
     (F_SEM M p (WEAK_CLOCK c) (F_STRONG_CLOCK(f,c1)) =   
       F_SEM M p (STRONG_CLOCK c1) f)`;
 
+
 val new_fl_size_def = 
  Define `(new_fl_size (F_BOOL _) = 0) /\
          (new_fl_size other      = fl_size (\a.0) other)`;
@@ -357,7 +358,8 @@ val new_context_size_def =
   Define `(new_context_size (STRONG_CLOCK _) = 0) /\
           (new_context_size (WEAK_CLOCK _) = 1)`;
 
-val (F_SEM_def, F_SEM_ind) = Count.apply Defn.tprove
+val (F_SEM_def, F_SEM_ind) = Count.apply 
+Defn.tprove
  (F_SEM_defn,
   WF_REL_TAC `inv_image ($< LEX $<) 
                 (\(u,v,w,x). 

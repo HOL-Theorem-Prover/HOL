@@ -6,20 +6,25 @@ Currently here are the following:
 
        This example shows the use of a facility for defining 
        recursive types, implemented by John Harrison. In the example,
-       the type of abstract syntax for a small but not totally
-       unrealistic subset of ML is defined, along with a simple mutually
-       recursive function over the syntax.
+       due to Elsa Gunter, the abstract syntax for a small but not 
+       totally unrealistic subset of ML is defined, along with a simple
+       mutually recursive function over the syntax.
+
+  * RSA
+
+       This directory develops some of the mathematics underlying
+       the RSA cryptography scheme. The theories have been 
+       produced by Laurent Thery of INRIA Sophia-Antipolis.
 
   * Rijndael
 
        This directory holds a formalization of Rijmen and Daemen's
        AES crypto standard, together with a proof of correctness.
        
-  * RSA
+  * Sugar2
 
-       This directory develops some of the mathematics underlying
-       the RSA cryptography scheme. The theories have been 
-       produced by Laurent Thery of INRIA Sophia-Antipolis.
+       This directory contains a deep embedding of the Accellera 
+       standard property language Sugar 2.0. Author: Mike Gordon.
 
   * arm6
 
@@ -78,10 +83,15 @@ Currently here are the following:
        probability theory and some cute example probabilistic
        programs. Author: Joe Hurd.
 
+  * ring.sml
+
+       Application of normalization and decision procedures for rings.
+       Author: Bruno Barras.
+
   * root2.sml
 
-       An adaptation of a proof by John Harrison that the square 
-       root of two is not rational.
+       A proof that the square root of two is not rational. Adapted
+       from a proof by John Harrison.
 
   * sunrise 
 
