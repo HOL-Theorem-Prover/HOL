@@ -95,7 +95,15 @@ fun TC printers = let
   fun default_tmprinter x = "<term>"
   val (ptm, pty) =
     case printers of
-      SOME (x,y) => (Lib.say o x, Lib.say o y o TCPretype.toType)
+      SOME (x,y) => let
+        val typrint = Lib.say o y o TCPretype.toType
+        fun tmprint tm =
+          if Term.is_const tm then
+            (Lib.say (x tm ^ " " ^ y (Term.type_of tm)))
+          else Lib.say (x tm)
+      in
+        (tmprint, typrint)
+      end
     | NONE => (Lib.say o default_tmprinter, Lib.say o default_typrinter)
   fun check(Comb{Rator, Rand}) =
         (check Rator;
