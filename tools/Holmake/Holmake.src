@@ -20,9 +20,9 @@ open Systeml;
 val HOLDIR0 = _;
 val MOSMLDIR0 = _;
 val DEPDIR = ".HOLMK";
-fun MK_XABLE file = _;
-val SYSTEML = _;
 val DEFAULT_OVERLAY = _;
+
+val SYSTEML = Systeml.systeml
 
 fun normPath s = Path.toString(Path.fromString s)
 fun itlist f L base =
@@ -796,13 +796,13 @@ in
     in
       if compile debug (include_flags @ ["-o", script] @ objectfiles) = success
       then let
-        val script' = MK_XABLE script
+        val script' = Systeml.mk_xable script
         val thysmlfile = s^"Theory.sml"
         val thysigfile = s^"Theory.sig"
         val _ =
           app (fn s => FileSys.remove s handle OS.SysErr _ => ())
           [thysmlfile, thysigfile]
-        val res2    = SYSTEML [fullPath [FileSys.getDir(), script']]
+        val res2    = Systeml.systeml [fullPath [FileSys.getDir(), script']]
         val _       = app FileSys.remove [script', scriptuo, scriptui]
       in
         (res2 = success) andalso

@@ -29,7 +29,7 @@ val LN_S     = "ln -s";    (* only change if you are a HOL developer.      *)
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-
+val _ = Meta.quietdec := true;
 app load ["FileSys", "Process", "Path",
           "Substring", "BinIO", "Lexing", "Nonstdio"];
 
@@ -41,36 +41,46 @@ fun itstrings f [] = raise Fail "itstrings: empty list"
 fun fullPath slist = normPath
    (itstrings (fn chunk => fn path => Path.concat (chunk,path)) slist);
 
-(*---------------------------------------------------------------------------
-     Load in OS-dependent stuff.
- ---------------------------------------------------------------------------*)
-
-
 val holmakedir = fullPath [holdir, "tools", "Holmake"];
 val compiler = fullPath [mosmldir, "bin", "mosmlc"];
 
+fun copy src dest =  (* Dead simple file copy *)
+ let open TextIO
+     val (istrm,ostrm) = (openIn src, openOut dest)
+     fun loop() =
+       case input1 istrm
+        of SOME ch => (output1(ostrm,ch) ; loop())
+         | NONE    => (closeIn istrm; flushOut ostrm; closeOut ostrm)
+  in loop()
+  end;
+
 (*---------------------------------------------------------------------------
-         First load in systeml functions
+     Load in systeml structure (with OS-specific stuff available)
  ---------------------------------------------------------------------------*)
 
+val OSkind = if OS="linux" orelse OS="solaris" then "unix" else OS
 val _ =
-  if FileSys.access(fullPath [holmakedir, "Systeml.uo"],[FileSys.A_READ])
+  if FileSys.access(fullPath [holmakedir, "Systeml.uo"], [FileSys.A_READ])
      andalso
      FileSys.access(fullPath [holmakedir, "Systeml.ui"], [FileSys.A_READ])
   then let val oldloadpath = !loadPath
            val _ = loadPath := !loadPath @ [holmakedir]
        in
+         print "\nSystem specific functions already compiled - good!\n";
          load (fullPath [holmakedir, "Systeml"]);
          loadPath := oldloadpath
        end
-  else use (fullPath [holmakedir, "Systeml.sml"]);
+  else let
+      (* copy system-specific implementation of Systeml into place *)
+      val srcfile = fullPath [holmakedir, OSkind ^"-systeml.sml"]
+      val destfile = fullPath [holmakedir, "Systeml.sml"]
+    in
+      print "\nCompiling system specific functions\n";
+      copy srcfile destfile;
+      use destfile
+    end;
 
 open Systeml;
-
-local val OSkind = if OS="linux" orelse OS="solaris" then "unix" else OS
-in
-val _ = use (fullPath [holdir,"tools/config-"^OSkind^".sml"])
-end;
 
 (*---------------------------------------------------------------------------
      Now compile Systeml.sml; if necessary
@@ -183,9 +193,6 @@ val _ =
           --> String.concat["val HOLDIR0 = ", quote holdir,";\n"],
         "val MOSMLDIR0 ="
           -->  String.concat["val MOSMLDIR0 = ", quote mosmldir, ";\n"],
-        "fun MK_XABLE"
-          -->  String.concat["fun MK_XABLE file = ", MK_XABLE_RHS, ";\n"],
-        "val SYSTEML" --> String.concat["val SYSTEML = ", SYSTEML_NAME, ";\n"],
         "val DEFAULT_OVERLAY = _;\n"
           --> "val DEFAULT_OVERLAY = SOME \"Overlay.ui\"\n"];
     systeml [yaccer, "Parser.grm"];
