@@ -63,7 +63,7 @@ local val pthm = GEN_ALL (SYM (SPEC_ALL pairTheory.PAIR))
         handle HOL_ERR _ => REFL tm
 in
 fun PAIRED_ETA_CONV tm =
-   let val (varstruct,body) = dest_abs tm
+   let val (varstruct,body) = dest_pabs tm
        val (f,Rand) = dest_comb body
        val _ = assert (equal varstruct) Rand
        val xv = mk_var("x", type_of varstruct)
@@ -73,7 +73,7 @@ fun PAIRED_ETA_CONV tm =
    in
      EXT (GEN xv (SUBS [SYM peq] bth))
    end
-   handle HOL_ERR _ => raise ERR "PAIRED_ETA_CONV" ""
+   handle HOL_ERR {message, ...} => raise ERR "PAIRED_ETA_CONV" message
 end;
 
 (*--------------------------------------------------------------------*)
@@ -89,11 +89,11 @@ end;
 local val pair = CONV_RULE (ONCE_DEPTH_CONV SYM_CONV) pairTheory.PAIR
       val uncth = SPEC_ALL pairTheory.UNCURRY_DEF
 in
-val GEN_BETA_CONV = 
+val GEN_BETA_CONV =
  let fun gbc tm =
    let val (abst,arg) = dest_comb tm
-   in if Term.is_abs abst 
-      then BETA_CONV tm 
+   in if Term.is_abs abst
+      then BETA_CONV tm
       else let val _ = assert is_uncurry abst
                val eqv = if can dest_pair arg then REFL arg else ISPEC arg pair
                val _ = dest_pair (rhs (concl eqv))
@@ -103,10 +103,10 @@ val GEN_BETA_CONV =
                val rt1 = AP_THM (gbc tm1a) tm1b
                val rt2 = gbc (rhs (concl rt1))
            in
-              TRANS rt0 (TRANS rt1 rt2) 
+              TRANS rt0 (TRANS rt1 rt2)
            end
    end
- in 
+ in
    fn tm => gbc tm handle HOL_ERR _ => raise ERR "GEN_BETA_CONV" ""
  end
 end;
@@ -131,8 +131,8 @@ val GEN_BETA_TAC  = CONV_TAC (DEPTH_CONV GEN_BETA_CONV)
 (* LIST_BETA_CONV, but this function also does paired abstractions.	*)
 (* ---------------------------------------------------------------------*)
 
-fun ITER_BETA_CONV tm = 
-  let val (Rator,Rand) = dest_comb tm 
+fun ITER_BETA_CONV tm =
+  let val (Rator,Rand) = dest_comb tm
       val thm = AP_THM (ITER_BETA_CONV Rator) Rand
       val redex = rand(concl thm)
       val red = TRY_CONV(BETA_CONV ORELSEC PAIRED_BETA_CONV) redex
@@ -155,7 +155,7 @@ local fun appl [] [] = []
 in
 fun ARGS_CONV cs tm =
   let val (f,ths) = (I ## appl cs) (strip_comb tm)
-  in rev_itlist (C (curry MK_COMB)) ths (REFL f) 
+  in rev_itlist (C (curry MK_COMB)) ths (REFL f)
   end
 end;
 
@@ -167,18 +167,18 @@ end;
 (* subterms that correspond to occurrences of f (bottom-up).		*)
 (* ---------------------------------------------------------------------*)
 
-fun RED_WHERE fnn body = 
- if is_var body orelse is_const body then REFL 
- else let val (_,Body) = Term.dest_abs body 
+fun RED_WHERE fnn body =
+ if is_var body orelse is_const body then REFL
+ else let val (_,Body) = Term.dest_abs body
       in ABS_CONV (RED_WHERE fnn Body)
       end
-   handle HOL_ERR _ => 
-    let val (f,args) = strip_comb body 
+   handle HOL_ERR _ =>
+    let val (f,args) = strip_comb body
     in if f=fnn
        then ARGS_CONV (map (RED_WHERE fnn) args) THENC ITER_BETA_CONV
-       else let val (Rator,Rand) = dest_comb body 
+       else let val (Rator,Rand) = dest_comb body
             in RAND_CONV(RED_WHERE fnn Rand)
-                  THENC 
+                  THENC
                RATOR_CONV (RED_WHERE fnn Rator)
             end
     end;
@@ -207,8 +207,8 @@ fun RED_WHERE fnn body =
 (* ---------------------------------------------------------------------*)
 
 fun REDUCE f x th =
-  if not(is_abs x orelse is_uncurry x) then th 
-  else let val (Bvar,Body) = Term.dest_abs f 
+  if not(is_abs x orelse is_uncurry x) then th
+  else let val (Bvar,Body) = Term.dest_abs f
        in CONV_RULE (RAND_CONV (RED_WHERE Bvar Body)) th
        end;
 
@@ -240,21 +240,21 @@ fun REDUCE f x th =
 (* ---------------------------------------------------------------------*)
 
 local
-fun conv tm = 
+fun conv tm =
    let val (func,arg) = dest_let tm
        val (ty1,ty2) = dom_rng (type_of func)
        val defn = INST_TYPE [alpha |-> ty1, beta |-> ty2] LET_DEF
        val thm = RIGHT_BETA(AP_THM(RIGHT_BETA(AP_THM defn func))arg)
-   in 
+   in
    if Term.is_abs func
-   then REDUCE func arg (RIGHT_BETA thm) 
+   then REDUCE func arg (RIGHT_BETA thm)
    else if is_uncurry func
-        then CONV_RULE (RAND_CONV PAIRED_BETA_CONV) thm 
-        else CONV_RULE (RAND_CONV conv) 
+        then CONV_RULE (RAND_CONV PAIRED_BETA_CONV) thm
+        else CONV_RULE (RAND_CONV conv)
                        (AP_THM(AP_TERM (rator(rator tm)) (conv func)) arg)
    end
 in
-fun let_CONV tm = conv tm 
+fun let_CONV tm = conv tm
  handle HOL_ERR _ => raise ERR "let_CONV" "cannot reduce the let"
 end;
 
