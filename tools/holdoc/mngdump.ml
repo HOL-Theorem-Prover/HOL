@@ -349,7 +349,7 @@ let rec readarg cf ml ts0 = (* read a single arg: spaces then (id.id.id or match
   let rec sp ts =  (* skip spaces (and newlines if allowed) *)
     match ts with
       ((HolWhite(_),_)::ts)          -> sp ts
-    | ((HolIndent(_),_)::ts) when ml -> sp ts
+    | ((HolIndent(_),_)::ts) when (ml || true) -> sp ts  (* hack: allow to always skip newlines - NB: this means that newlines /between/ arguments are _ignored_ *)
     | _                          -> ts
   in
   let rec dotted ds ts =  (* read a dotted arg *)
@@ -506,7 +506,10 @@ and munge_curried : pvars -> hol_content -> curried_info -> hol_content list -> 
         (dss,ts) -> go (n-1) (List.rev_append dss args) ts
   in
   try
-    go info.cy_arity [] ts0
+    if info.cy_arity = 99 then  (* hack: turn off curried operator by setting arity to 99 *)
+      (munge_hol_content pvs x; ts0)
+    else
+      go info.cy_arity [] ts0
   with
     BadArg(s,l) -> (* abort curry parse; do it uncurried *)
               let w = "curry parse failed: "^dumphol_content x^" ==> "^info.cy_cmd^" "^s

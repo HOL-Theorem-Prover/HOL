@@ -188,6 +188,10 @@ permitted; if it is false, they are not.  The TeX command must be able
 to handle linebreaks in its argument.  The second flag is *optional*
 and defaults to false.
 
+If the arity is set to 99, the curried identifier is effectively
+disabled.  This can be useful when you want to turn off a curried
+identifier in a particular mode.
+
 
 In the above, you will sometimes want to define symbols that include
 nonaggregating characters (i.e., characters in the string
