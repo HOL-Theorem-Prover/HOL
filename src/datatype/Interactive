@@ -1,0 +1,111 @@
+numLib.prefer_num();
+
+(*---------------------------------------------------------------------------*)
+(* Evaluate a string in the current environment. This function is only       *)
+(* usable in interactive mode!                                               *) 
+(*---------------------------------------------------------------------------*)
+
+fun noisy_eval s = 
+  let val tmp = FileSys.tmpName()
+      val ostrm = TextIO.openOut tmp
+      val _ = TextIO.output(ostrm,s)
+      val _ = TextIO.closeOut ostrm
+      val _ = Meta.use tmp
+      val _ = FileSys.remove tmp
+  in !EvalRef.r
+  end;
+
+val stringDecl = Lib.with_flag(Meta.quietdec,true) noisy_eval;
+fun stringEval s = stringDecl ("val _ = EvalRef.r := "^s^"\n");
+
+
+val checkingML = ref true;
+
+(*===========================================================================*)
+(* Declare a function in HOL, and make a parallel definition in ML.          *)
+(*===========================================================================*)
+
+fun Declare q =
+ let val def = bossLib.Define q
+     val asMLstring = PP.pp_to_string 70 Drop.pp_defn_as_ML (concl def)
+     val _ = if !checkingML then 
+               HOL_MESG ("Attempting ML definition:\n  "^asMLstring)
+             else ()
+     val _ = stringDecl asMLstring
+ in def
+ end;
+
+(*---------------------------------------------------------------------------*)
+(* A version that doesn't try to prove termination in HOL                    *)
+(*---------------------------------------------------------------------------*)
+
+fun Weak_Declare s q =
+ let val def = bossLIb.Hol_defn s q
+     val clauses = list_mk_conj(map concl (Defn.eqns_of def))
+     val asMLstring = PP.pp_to_string 70 Drop.pp_defn_as_ML clauses
+     val _ = if !checkingML then 
+               HOL_MESG ("Attempting ML definition:\n  "^asMLstring)
+             else ()
+     val _ = stringDecl asMLstring
+ in def
+ end;
+
+
+(*===========================================================================*)
+(* Declare a datatype in HOL, and make a parallel definition in ML.          *)
+(*===========================================================================*)
+
+fun Datatype q = 
+ let val _ = bossLib.Hol_datatype q
+     val decls = ParseDatatype.parse q
+     val asMLstring = PP.pp_to_string 70 Drop.pp_datatype_as_ML decls
+     val _ = if !checkingML then 
+               HOL_MESG ("Attempting ML datatype declaration:\n  "^asMLstring)
+             else ()
+ in 
+     stringDecl asMLstring; ()
+ end;
+
+
+(*---------------------------------------------------------------------------*)
+(* Examples
+
+    Datatype `foo = One | Two`;
+    Datatype `bar = Alpha | Beta of 'a | Delta of ('a # 'b)list
+                  | Elephant of bool list | Zebra of 'a -> 'b -> bool`;
+    Datatype `tree = Node of 'a => tree list`;
+    Datatype `enum = One | Two | Three | Four of blef list
+               ;
+              blef = E | G`;
+    Datatype `Enum = A1 | A2 | A3 | A4 | A5 | A6 | A7 | A8 | A9 | A10 
+                   | A11 | A12 | A13 | A14 | A15 | A16 of 'a list list 
+                   | A17 | A18 of 'b -> num -> bool | A19 | A20`;
+    Datatype `prods = P of 'a # 'b # bool # bool # bool # bool # bool
+                              # bool # bool # bool # bool # bool # bool`;
+    Datatype `funs = Q of 'a => 'b => bool => bool => bool => bool => bool
+                             => bool => bool => bool => bool => bool => bool`;
+*)
+(*---------------------------------------------------------------------------*)
+
+
+(*===========================================================================*)
+(* Evaluate a HOL term by dropping it to ML and lifting the result of the    *)
+(* ensuing ML evaluation.                                                    *)
+(*===========================================================================*)
+
+fun termEval tm =
+ let val asMLstring = PP.pp_to_string 70 Drop.pp_term_as_ML tm
+     val asMLstring' = Lift.lift_ML_as_string (type_of tm) asMLstring
+ in 
+     if !checkingML then 
+        HOL_MESG ("Attempting ML evaluation of:\n  "^asMLstring')
+     else ()
+  ; stringEval asMLstring'
+  ; !EvalRef.r
+ end;
+
+local val ML_tag = Tag.read "ML"
+      val ML_eval_thm = Thm.mk_oracle_thm ML_tag
+in
+fun ML_EVAL_CONV tm = ML_eval_thm ([],mk_eq(tm,termEval tm))
+end;
