@@ -38,7 +38,7 @@ Opening the Metis library makes available the automatic provers
 
 <p>
 
-which both take a list of theorems that are used to prove the goal.
+which both take a list of theorems that are used to prove the subgoal.
 
 
 <h2>Examples</h2>
@@ -58,12 +58,12 @@ which both take a list of theorems that are used to prove the goal.
 
 <h2>How It Works</h2>
 
-This is how <kbd>METIS_TAC</kbd> proves a HOL goal:
+This is how <kbd>METIS_TAC</kbd> proves a HOL subgoal:
 
 <p>
 
 <ol>
-<li>First some HOL conversions and tactics simplify the goal and
+<li>First some HOL conversions and tactics simplify the subgoal and
 convert it to conjunctive normal form.</li>
 
 <li>The normalized problem is converted to first-order syntax.</li>
@@ -72,15 +72,19 @@ convert it to conjunctive normal form.</li>
 problem, hopefully deriving a refutation.</li>
 
 <li>The first-order refutation is lifted to a HOL proof of the
-original goal.</li>
+original subgoal.</li>
 </ol>
 
+<p>
+
+For more details please refer to the
+<a href="http://www.cl.cam.ac.uk/~jeh1004/research/papers/hol2fol.html">System Description</a>.
 
 <h2>Comparison with <kbd>MESON_TAC</kbd></h2>
 
 <kbd>METIS_TAC</kbd> is generally slower than <kbd>MESON_TAC</kbd> on
 simple problems, but has better coverage. For example,
-<kbd>MESON_TAC</kbd> cannot prove the following goals:
+<kbd>MESON_TAC</kbd> cannot prove the following theorems:
 
 <p>
 
@@ -90,12 +94,12 @@ simple problems, but has better coverage. For example,
 <p>
 
 The combination of model elimination and resolution calculi in
-<kbd>METIS_TAC</kbd> allows some hard goals to be proved that are too
-deep for the HOL version of <kbd>MESON_TAC</kbd>, such as the
+<kbd>METIS_TAC</kbd> allows some hard theorems to be proved that are
+too deep for the HOL version of <kbd>MESON_TAC</kbd>, such as the
 <kbd>GILMORE_9</kbd> and <kbd>STEAM_ROLLER</kbd> problems. Also, the
 ordered paramodulation used by the resolution component of
 <kbd>METIS_TAC</kbd> allows it to prove harder equality problems. An
-example to illustrate this is the goal
+example to illustrate this is the following theorem:
 
 <p>
 
@@ -108,7 +112,7 @@ example to illustrate this is the goal
 
 <kbd>METIS_TAC</kbd> combines resolution and model elimination calculi
 by time-slicing between them, so in principle it could successfully
-prove a goal on one occasion but diverge on another. However, this
+prove a subgoal on one occasion but diverge on another. However, this
 situation isn't likely to arise in practice.
 
 <p>
@@ -171,8 +175,7 @@ of Canada are
 
 <h3>Version 1.3: 18 June 2002</h3>
 
-<kbd>Goals submitted to MESON_TAC when HOL is built .......... 1976</kbd><br>
-<kbd>Proved by MESON_TAC ..................................... 1976</kbd><br>
+<kbd>Subgoals proved by MESON_TAC when HOL is built .......... 1976</kbd><br>
 <kbd>Proved by METIS_TAC within 10s .......................... 1971</kbd><br>
 
 <h3>Between Versions 1.2 and 1.3</h3>
@@ -191,8 +194,7 @@ clauses (usually caused by nested boolean equivalences).</li>
 
 <h3>Version 1.2: 19 November 2002</h3>
 
-<kbd>Goals submitted to MESON_TAC when HOL is built .......... 1779</kbd><br>
-<kbd>Proved by MESON_TAC ..................................... 1779</kbd><br>
+<kbd>Subgoals proved by MESON_TAC when HOL is built .......... 1779</kbd><br>
 <kbd>Proved by METIS_TAC within 10s .......................... 1774</kbd><br>
 
 <h3>Between Versions 1.1 and 1.2</h3>
@@ -219,8 +221,7 @@ default.</li>
 
 <h3>Version 1.1: 21 September 2002</h3>
 
-<kbd>Goals submitted to MESON_TAC when HOL is built .......... 1745</kbd><br>
-<kbd>Proved by MESON_TAC ..................................... 1745</kbd><br>
+<kbd>Subgoals proved by MESON_TAC when HOL is built .......... 1745</kbd><br>
 <kbd>Proved by FO_METIS_TAC within 10s ....................... 1485</kbd><br>
 <kbd>Proved by HO_METIS_TAC within 10s ....................... 1698</kbd><br>
 <kbd>Proved by one of {FO|HO}_METIS_TAC within 10s ........... 1717</kbd>
@@ -250,8 +251,7 @@ optimizations to keep proofs as small as possible.</li>
 
 <h3>Version 1.0: 18 July 2002</h3>
 
-<kbd>Goals submitted to MESON_TAC when HOL is built .......... 1435</kbd><br>
-<kbd>Proved by MESON_TAC ..................................... 1435</kbd><br>
+<kbd>Subgoals proved by MESON_TAC when HOL is built .......... 1435</kbd><br>
 <kbd>Proved by FO_METIS_TAC within 10s ....................... 1240</kbd><br>
 <kbd>Proved by HO_METIS_TAC within 10s ....................... 1346</kbd><br>
 <kbd>Proved by one of {FO|HO}_METIS_TAC within 10s ........... 1389</kbd>

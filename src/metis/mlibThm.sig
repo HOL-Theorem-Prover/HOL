@@ -55,18 +55,8 @@ val FUN_CONGRUENCE : string * int -> thm
 val REL_CONGRUENCE : string * int -> thm
 val SYM            : formula -> thm -> thm
 val EQ_FACTOR      : thm -> thm
-val SUBST          : thm * bool * term -> thm * formula * int list -> thm
-val REWR           : thm * bool -> term -> thm * bool * term
-val DEPTH          : (term -> (thm * bool * term)) -> thm -> thm
-
-(* Rewriting *)
-type rewrs
-val empty_rewrs : (term * term -> order option) -> rewrs
-val reset_rewrs : rewrs -> rewrs
-val add_rewr    : int * thm -> rewrs -> rewrs
-val rewrite     : rewrs -> (term * term -> order option) -> int * thm -> thm
-val ORD_REWRITE : (term * term -> order option) -> thm list -> thm -> thm
-val REWRITE     : thm list -> thm -> thm
+val REWR           : thm * bool -> thm * formula * int list -> thm
+val DEPTH          : (term -> thm * bool) -> thm -> thm
 
 (* Pretty-printing of theorems and inferences *)
 val pp_thm               : thm pp

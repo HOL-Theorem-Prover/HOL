@@ -18,6 +18,7 @@ open mlibUseful mlibTerm mlibMatch mlibClause;
 
 structure T = mlibTermnet; local open mlibTermnet in end;
 structure N = mlibLiteralnet; local open mlibLiteralnet in end;
+structure R = mlibRewrite; local open mlibRewrite in end;
 structure S = mlibSubsume; local open mlibSubsume in end;
 structure U = mlibUnits; local open mlibUnits in end;
 
@@ -78,6 +79,8 @@ fun add_unit c u = case total clause_thm c of NONE => u | SOME t => U.add t u;
 
 fun add_subsum (icl as (_,cl)) = S.add (clause_lits cl |-> icl);
 
+fun lift_thm (cparm,_) (i,th) = (i, mk_clause cparm th);
+
 fun dest_rewr cl =
   let
     val () = assert (#term_order (clause_parm cl)) (ERR "dest_rewr" "no rewrs")
@@ -91,15 +94,9 @@ fun dest_rewr cl =
 val is_rewr = can dest_rewr;
 
 fun empty_rewrs ({termorder_parm = p, ...} : mlibClause.parameters) =
-  mlibThm.empty_rewrs (mlibTermorder.compare (mlibTermorder.empty p));
+  R.empty (mlibTermorder.compare (mlibTermorder.empty p));
 
-fun reset_rewrs rws = mlibThm.reset_rewrs rws;
-
-fun add_rewr (i,cl) rws = mlibThm.add_rewr (i, dest_rewr cl) rws;
-
-fun rewrites_to_string w =
-  PP.pp_to_string (!LINE_LENGTH)
-  (pp_list (pp_map (dest_rewr o snd) mlibThm.pp_thm)) w;
+fun add_rewr (i,cl) rw = R.add (i, dest_rewr cl) rw;
 
 fun literals_to_string l =
   PP.pp_to_string (!LINE_LENGTH)
@@ -130,9 +127,9 @@ fun id_clauses_to_string cls =
 (* ------------------------------------------------------------------------- *)
 
 datatype clauseset = SET of
-  {parm       : parameters,
+  {parm       : mlibClause.parameters * parameters,
    profile    : {age : int, size : int},
-   rewrites   : (int * clause) list * mlibThm.rewrs,
+   rewrites   : R.rewrs,
    clauses    : (int * clause) list,
    subsumers  : (int * clause) subsume,
    literals   : (int * (clause * int)) literalnet,
@@ -142,7 +139,7 @@ datatype clauseset = SET of
 fun profile (SET {profile = p, ...}) = p;
 fun subsumers (SET {subsumers = s, ...}) = s;
 fun size set = #size (profile set);
-fun rewrites (SET {rewrites = (w,_), ...}) = map (dest_rewr o snd) w;
+fun rewrites (SET {rewrites, ...}) = rewrites;
 
 fun clauses (SET {clauses = c, ...}) =
   List.mapPartial (total clause_thm o snd) c;
@@ -215,28 +212,26 @@ fun update_subterms p set =
 (* ------------------------------------------------------------------------- *)
 
 fun empty (cparm,parm) =
-  SET {parm = parm, profile = {age = 0, size = 0},
-       rewrites = ([], empty_rewrs cparm), clauses = [], subsumers = S.empty (),
-       literals = N.empty (), equalities = T.empty (), subterms = T.empty ()};
+  SET {parm = (cparm,parm), profile = {age = 0, size = 0},
+       rewrites = empty_rewrs cparm, clauses = [],
+       subsumers = S.empty (), literals = N.empty (),
+       equalities = T.empty (), subterms = T.empty ()};
 
 fun reset (SET {parm = z, profile = {age = a,...}, rewrites = w, ...}) =
-  (fst w,
-   SET {parm = z, profile = {age = a, size = 0}, rewrites = w, clauses = [],
-        subsumers = S.empty (), literals = N.empty (), equalities = T.empty (),
-        subterms = T.empty ()});
-
+  (map (lift_thm z) (R.eqns w),
+   SET {parm = z, profile = {age = a, size = 0}, rewrites = w,
+        clauses = [], subsumers = S.empty (), literals = N.empty (),
+        equalities = T.empty (), subterms = T.empty ()});
+    
 (* ------------------------------------------------------------------------- *)
 (* Simplify clauses                                                          *)
 (* ------------------------------------------------------------------------- *)
 
-fun simp set = let val SET {rewrites = (_,r), ...} = set in REWRITE r end;
+fun simp set = let val SET {rewrites = w, ...} = set in REWRITE w end;
 
 fun simplify set (icl as (i,_)) =
-  let
-    val SET {rewrites = (r,_), ...} = set
-  in
-    case List.find (equal i o fst) r of SOME icl => icl
-    | NONE => (i, simp set icl)
+  let val SET {parm = z, rewrites = w, ...} = set
+  in case R.peek w i of SOME th => lift_thm z (i,th) | NONE => (i, simp set icl)
   end;
 
 (* ------------------------------------------------------------------------- *)
@@ -271,28 +266,6 @@ fun subsum subs cl =
 fun subsumed set (_,cl) = subsum (subsumers set) cl;
 
 (* ------------------------------------------------------------------------- *)
-(* Inter-reducing the simplifying rewrites                                   *)
-(* ------------------------------------------------------------------------- *)
-
-local
-  fun reduce (icl as (i,cl), (b,w,rw)) =
-    let
-      val cl' = REWRITE rw icl
-    in
-      if clause_lits cl' = clause_lits cl then (b, icl::w, rw)
-      else if not (is_rewr cl') then (true,w,rw)
-      else (true, (i,cl') :: w, add_rewr (i,cl') rw)
-    end;
-
-  val refresh = foldl (uncurry add_rewr) o reset_rewrs;
-in
-  fun inter_reduce (w,rw) =
-    let val (b,w,rw) = foldl reduce (false,[],rw) w
-    in if b then inter_reduce (w,rw) else (w, refresh rw w)
-    end;
-end;
-
-(* ------------------------------------------------------------------------- *)
 (* Creating id_clauses                                                       *)
 (* ------------------------------------------------------------------------- *)
 
@@ -300,13 +273,12 @@ local
   fun add icl set NONE = (icl,set)
     | add (i,cl) set (SOME th) =
     let
-      val SET {rewrites = (w,rw), ...} = set
+      val SET {rewrites = w, ...} = set
       val cl = mk_clause (clause_parm cl) th
       val icl = (i,cl)
-      val w = icl :: w
+      val set = update_rewrites (add_rewr icl w) set
       val _ = chatting 2 andalso
-              chat ("\nrewrite set now:\n" ^ rewrites_to_string w ^ "\n")
-      val set = update_rewrites (w, add_rewr icl rw) set
+              chat ("\nrewrite set now:\n" ^ R.rewrs_to_string w ^ "\n")
     in
       (icl,set)
     end;
@@ -349,9 +321,9 @@ in
   fun reducibles set units =
     let
       val SET {rewrites = w, clauses = c, ...} = set
-      val w as (_,rw) = inter_reduce w
+      val w = R.reduce w
       val set = update_rewrites w set
-      val icls = List.mapPartial (reduce rw) c
+      val icls = List.mapPartial (reduce w) c
       val set = purge (map fst icls) set
       val icls = List.mapPartial (strengthen set units) icls
     in
@@ -398,9 +370,9 @@ local
 in
   fun initialize (cls,set,units) =
     let
-      val SET {parm, subsumers = subs, ...} = set
+      val SET {parm = (_,z), subsumers = subs, ...} = set
       val cls = sort_map utility utilitywise cls
-      val (icls,set,units,_) = foldl (factor parm) ([],set,units,subs) cls
+      val (icls,set,units,_) = foldl (factor z) ([],set,units,subs) cls
       val (icls',set) =
         if List.exists (is_rewr o snd) icls then reducibles set units
         else ([],set)

@@ -230,4 +230,71 @@ val eq_axioms =
 fun eq_axiomatize fm =
   (if eq_occurs fm then append (eq_axioms fm) else I) (axiomatize fm);
 
+(* ------------------------------------------------------------------------- *)
+(* Categorizing sets of clauses.                                             *)
+(* ------------------------------------------------------------------------- *)
+
+datatype prop = Propositional | Effectively_propositional | Non_propositional;
+datatype equal = Non_equality | Equality | Pure_equality;
+datatype horn = Trivial | Unit | Both_horn | Horn | Negative_horn | Non_horn;
+type category = {prop : prop, equal : equal, horn : horn};
+
+fun categorize_cnf fms =
+  let
+    val cls = map (strip_disj o snd o strip_forall) fms
+    val fm = list_mk_conj fms
+    val rels = relations fm
+    val funs = functions fm
+
+    val prop =
+      if List.all (fn (_,n) => n = 0) rels then Propositional
+      else if List.all (fn (_,n) => n = 0) funs then Effectively_propositional
+      else Non_propositional
+
+    val eq =
+      if not (mem eq_rel rels) then Non_equality
+      else if rels = [eq_rel] then Pure_equality
+      else Equality
+
+    val horn =
+      if List.exists null cls then Trivial
+      else if List.all (fn cl => length cl = 1) cls then Unit
+      else 
+        let
+          val posl = map (length o List.filter positive) cls
+          val negl = map (length o List.filter negative) cls
+          val pos = List.all (fn n => n <= 1) posl
+          val neg = List.all (fn n => n <= 1) negl
+        in
+          case (pos,neg) of (true,true) => Both_horn
+          | (true,false) => Horn
+          | (false,true) => Negative_horn
+          | (false,false) => Non_horn
+        end
+  in
+    {prop = prop, equal = eq, horn = horn}
+  end;
+
+val categorize_goal = categorize_cnf o strip_conj o cnf o generalize o Not;
+
+local
+  fun prop Propositional = "propositional"
+    | prop Effectively_propositional = "effectively propositional"
+    | prop Non_propositional = "non-propositional";
+
+  fun eq Non_equality = "non-equality"
+    | eq Equality = "equality"
+    | eq Pure_equality = "pure equality";
+
+  fun horn Trivial = "trivial"
+    | horn Unit = "unit"
+    | horn Both_horn = "horn (and negative horn)"
+    | horn Horn = "horn"
+    | horn Negative_horn = "negative horn"
+    | horn Non_horn = "non-horn";
+in
+  fun category_to_string {prop = p, equal = e, horn = h} =
+    prop p ^ ", " ^ eq e ^ ", " ^ horn h;
+end;
+
 end

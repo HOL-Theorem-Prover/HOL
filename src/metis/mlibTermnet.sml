@@ -54,7 +54,22 @@ local
     | qm ((FN ((f,n),a), Fn (g,b)) :: rest) =
     f = g andalso n = length b andalso qm (zip a b @ rest);
 in
-  fun matchq qtm tm = qm [(qtm,tm)];
+  fun qmatch qtm tm = qm [(qtm,tm)];
+end;
+
+local
+  fun update sub v qtm =
+    (case M.peek (sub,v) of NONE => M.insert (sub,v,qtm)
+     | SOME qtm' => if qtm = qtm' then sub else raise ERR "matchq" "vars");
+
+  fun qn sub [] = sub
+    | qn sub ((Var v, qtm) :: rest) = qn (update sub v qtm) rest
+    | qn _ ((Fn _, VAR) :: _) = raise ERR "matchq" "match fn var"
+    | qn sub ((Fn (f,a), FN ((g,n),b)) :: rest) =
+    if f = g andalso length a = n then qn sub (zip a b @ rest)
+    else raise ERR "matchq" "match fn fn";
+in
+  fun matchq sub tm qtm = qn sub [(tm,qtm)];
 end;
 
 local
@@ -120,7 +135,7 @@ local
   fun mat acc [] = acc
     | mat acc ((RESULT l, []) :: rest) = mat (l @ acc) rest
     | mat acc ((SINGLE (tm',n), tm :: tms) :: rest) =
-    mat acc (if matchq tm' tm then (n,tms) :: rest else rest)
+    mat acc (if qmatch tm' tm then (n,tms) :: rest else rest)
     | mat acc ((MULTIPLE (vs,fs), tm :: tms) :: rest) =
     let
       val rest = case vs of NONE => rest | SOME n => (n,tms) :: rest
@@ -178,9 +193,9 @@ local
     | mat acc ((sub, SINGLE (tm', n), tm :: tms) :: rest) =
     (case unifyq sub tm' tm of NONE => mat acc rest
      | SOME sub => mat acc ((sub,n,tms) :: rest))
-    | mat acc ((sub, net as MULTIPLE (vs,fs), Var v :: tms) :: rest) =
+    | mat acc ((sub, net as MULTIPLE _, Var v :: tms) :: rest) =
     mat acc (harvest (inc sub v tms) (pat sub v) net rest)
-    | mat acc ((sub, net as MULTIPLE (vs,fs), Fn (f,l) :: tms) :: rest) =
+    | mat acc ((sub, MULTIPLE (vs,fs), Fn (f,l) :: tms) :: rest) =
     let
       val rest =
         (case M.peek (fs, (f, length l)) of NONE => rest
@@ -195,7 +210,32 @@ in
     handle ERR_EXN _ => raise BUG "mlibTermnet.unify" "should never fail";
 end;
 
-fun matched _ _ = raise BUG "mlibTermnet.matched" "not implemented";
+local
+  fun pat NONE = VAR | pat (SOME qtm) = qtm;
+
+  fun oeq qtm NONE = true | oeq qtm (SOME qtm') = qtm = qtm';
+
+  fun inc sub v seen tms tm net rest =
+    if oeq tm seen then (M.insert (sub,v,tm), net, tms) :: rest else rest;
+
+  fun mat acc [] = acc
+    | mat acc ((_, RESULT l, []) :: rest) = mat (l @ acc) rest
+    | mat acc ((sub, SINGLE (tm', n), tm :: tms) :: rest) =
+    (case total (matchq sub tm) tm' of NONE => mat acc rest
+     | SOME sub => mat acc ((sub,n,tms) :: rest))
+    | mat acc ((sub, net as MULTIPLE _, Var v :: tms) :: rest) =
+    let val seen = M.peek (sub,v)
+    in mat acc (harvest (inc sub v seen tms) (pat seen) net rest)
+    end
+    | mat acc ((sub, MULTIPLE (_,fs), Fn (f,l) :: tms) :: rest) =
+    mat acc (case M.peek (fs, (f, length l)) of NONE => rest
+             | SOME n => (sub, n, l @ tms) :: rest)
+    | mat _ _ = raise BUG "mlibTermnet.matched" "mlibMatch";
+in
+  fun matched (NET (_,NONE)) _ = []
+    | matched (NET (_,SOME(_,n))) tm = fifoize (mat [] [(empty_vmap(),n,[tm])])
+    handle ERR_EXN _ => raise BUG "mlibTermnet.matched" "should never fail";
+end;
 
 fun filter pred =
   let

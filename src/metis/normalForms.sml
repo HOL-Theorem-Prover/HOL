@@ -1196,7 +1196,9 @@ local
   and lift_bool tm =
     (chatting 3 andalso chat ("lift_bool: tm = " ^ term_to_string tm ^ "\n");
      (if is_cond tm then ALL_CONV
+(* Can't do this without more proof support for booleans
       else if is_a_bool tm then condify_bool
+*)
       else lift_cond) tm);
 in
   val lift_bool_conv = ATOM_CONV (CHANGED_CONV lift_cond);

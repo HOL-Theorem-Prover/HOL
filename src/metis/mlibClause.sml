@@ -641,7 +641,7 @@ in
 end;
 
 local
-  fun rewr r ord th = mlibThm.EQ_FACTOR (mlibThm.rewrite r ord th)
+  fun rewr r ord th = mlibThm.EQ_FACTOR (mlibRewrite.rewrite r ord th)
 
   fun rewrite0 r i (CL (p,th,c)) =
     CL (p, rewr r (T.compare (#ordering c)) (i,th), c);

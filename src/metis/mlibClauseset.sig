@@ -31,7 +31,7 @@ type clauseset
 val empty    : mlibClause.parameters * parameters -> clauseset
 val reset    : clauseset -> id_clause list * clauseset
 val size     : clauseset -> int
-val rewrites : clauseset -> mlibThm.thm list
+val rewrites : clauseset -> mlibRewrite.rewrs
 val clauses  : clauseset -> mlibThm.thm list
 
 (* Simplify and strengthen clauses *)

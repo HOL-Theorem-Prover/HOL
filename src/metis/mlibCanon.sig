@@ -39,4 +39,14 @@ val axiomatize    : formula -> thm list
 val eq_axioms     : formula -> thm list
 val eq_axiomatize : formula -> thm list    (* Adds equality axioms if needed *)
 
+(* Categorizing sets of clauses *)
+datatype prop = Propositional | Effectively_propositional | Non_propositional
+datatype equal = Non_equality | Equality | Pure_equality
+datatype horn = Trivial | Unit | Both_horn | Horn | Negative_horn | Non_horn
+type category = {prop : prop, equal : equal, horn : horn}
+
+val categorize_cnf     : formula list -> category
+val categorize_goal    : formula -> category
+val category_to_string : category -> string
+
 end

@@ -76,7 +76,13 @@ fun update_set_parm f (parm : parameters) : parameters =
 (* ------------------------------------------------------------------------- *)
 
 fun state_info (sos,used) =
-  "(" ^ int_to_string (A.size sos) ^ "," ^ int_to_string (B.size used) ^ ")";
+  let
+    val a = int_to_string (A.size sos)
+    val b = int_to_string (B.size used)
+    val r = int_to_string (mlibRewrite.size (B.rewrites used))
+  in
+    "(" ^ a ^ "->" ^ b ^ (if r = "0" then "" else "=" ^ r) ^ ")"
+  end;
 
 fun ofilt _ NONE = NONE | ofilt p (s as SOME x) = if p x then s else NONE;
 

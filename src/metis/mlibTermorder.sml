@@ -432,13 +432,13 @@ in
       if inconsistent (check (omega_eqns vars eqns)) then NONE
       else SOME (TO (parm,vars,eqns,true))
     end;
-(***
+(* This bug has now been fixed, but others may appear in the future :-)
     handle Option =>
       (print ("BUG in mlibOmega library: uncaught Option exception" ^
               "\ntermorder was:\n" ^ termorder_to_string to ^
               "\nsent to mlibOmega:\n" ^ raw_equations_to_string (omega_eqns to) ^
               "\n\n"); true)
-***)
+*)
 end;
 
 (* ------------------------------------------------------------------------- *)

@@ -52,7 +52,7 @@ val NEQ_SIMP     : clause -> clause
 val FACTOR       : clause -> clause list
 val RESOLVE      : clause * int -> clause * int -> clause
 val PARAMODULATE : clause * int * bool -> clause * int * int list -> clause
-val REWRITE      : mlibThm.rewrs -> int * clause -> clause
+val REWRITE      : mlibRewrite.rewrs -> int * clause -> clause
 
 (* Pretty printing *)
 val show_constraints  : bool ref

@@ -34,6 +34,10 @@ val () = traces := {module = module, alignment = I} :: !traces;
 fun chatting l = tracing {module = module, level = l};
 fun chat s = (trace s; true)
 
+fun chattrans n s a b pp =
+  if not (chatting n) then ()
+  else (chat (s ^ ": " ^ pp a ^ " --> " ^ pp b ^ "\n"); ());
+
 (* ------------------------------------------------------------------------- *)
 (* Annotated primitive inferences.                                           *)
 (* ------------------------------------------------------------------------- *)
@@ -47,12 +51,12 @@ datatype inference' =
 | Resolve'  of formula * thm * thm
 | Equality' of formula * int list * term * bool * thm
 
-fun primitive_inference (Axiom'    cl              ) = AXIOM cl
-  | primitive_inference (Refl'     tm              ) = REFL tm
-  | primitive_inference (Assume'   l               ) = ASSUME l
-  | primitive_inference (Inst'     (s,th)         ) = INST s th
-  | primitive_inference (Factor'   th              ) = FACTOR th
-  | primitive_inference (Resolve'  (l,th1,th2)   ) = RESOLVE l th1 th2
+fun primitive_inference (Axiom' cl) = AXIOM cl
+  | primitive_inference (Refl' tm) = REFL tm
+  | primitive_inference (Assume' l) = ASSUME l
+  | primitive_inference (Inst' (s,th)) = INST s th
+  | primitive_inference (Factor' th) = FACTOR th
+  | primitive_inference (Resolve' (l,th1,th2)) = RESOLVE l th1 th2
   | primitive_inference (Equality' (l,p,t,s,th)) = EQUALITY l p t s th;
 
 val clause = fst o dest_thm;
@@ -454,119 +458,65 @@ in
   val EQ_FACTOR = FACTOR o (W (syms o clause)) o FACTOR;
 end;
 
-fun SUBST (rw,lr,r) (th,lit,p) =
-  RESOLVE (dest_unit rw) rw (EQUALITY lit p r lr th);
+local
+  fun rewr (rw,lr) (eq,r) (th,lit,p) = RESOLVE eq rw (EQUALITY lit p r lr th);
 
-fun REWR (rw,lr) tm =
-  let
-    val (l,r) = (if lr then I else swap) (dest_unit_eq rw)
-    val env = match l tm
-  in
-    (INST env rw, lr, term_subst env r)
-  end;
+  fun exp (rw,lr) =
+    let val eq = dest_unit rw
+    in (eq, let val (l,r) = dest_eq eq in if lr then r else l end)
+    end;
+in
+  fun REWR rw_lr th_lit_p = rewr rw_lr (exp rw_lr) th_lit_p;
+
+  fun REWR' rw_lr ((th,lit),tm) p =
+    let val eq_r as (eq,r) = exp rw_lr
+    in ((rewr rw_lr eq_r (th,lit,p), literal_rewrite (p |-> r) lit), r)
+    end;  
+end;
 
 fun DEPTH conv =
   let
-    fun rewr1 (th,lit) (x as (_,_,r)) p =
-      (SUBST x (th,lit,p), literal_rewrite (p |-> r) lit)
+    fun rewr_top (thl_tm as (_,tm)) p =
+      (case total conv tm of NONE => thl_tm
+       | SOME rw_lr => rewr_top (REWR' rw_lr thl_tm (rev p)) p)
 
-    fun rewr_top thl tm p =
-      (case total conv tm of NONE => (thl,tm)
-       | SOME (x as (_,_,r)) => rewr_top (rewr1 thl x (rev p)) r p)
-
-    fun rewr thl tm_orig p =
+    fun rewr new thl tm_orig p =
       let
-        val _ = chatting 3 andalso
-                chat ("rewr input: " ^ term_to_string tm_orig ^ "\n")
-        val (thl,tm) = rewr_top thl tm_orig p
-        val (thl,tm) = rewr_sub thl tm p
-        val _ = chatting 2 andalso
-                chat ("rewr: " ^ term_to_string tm_orig ^
-                      " --> " ^ term_to_string tm ^ "\n")
+        val (thl,tm) = rewr_top (thl,tm_orig) p
+        val () = chattrans 2 "rewr" tm_orig tm term_to_string
       in
-        if tm = tm_orig then (thl,tm) else rewr thl tm p
+        if new orelse tm <> tm_orig then rewr_sub thl tm p else (thl,tm)
       end
-    and rewr_sub thl (tm as Var _) _ = (thl,tm)
-      | rewr_sub thl (tm as Fn (name,xs)) p =
+    and rewr_sub thl tm_orig p =
       let
-        val _ = chatting 3 andalso
-                chat ("rewr_sub input: " ^ term_to_string tm ^ "\n")
+        val (thl,tm) = rewr_below thl tm_orig p
+        val () = chattrans 3 "rewr_sub" tm_orig tm term_to_string
+      in
+        if tm <> tm_orig then rewr false thl tm p else (thl,tm)
+      end
+    and rewr_below thl (tm as Var _) _ = (thl,tm)
+      | rewr_below thl (tm as Fn (name,xs)) p =
+      let
         fun f ((n,x),(tl,ys)) =
-          let val (tl,y) = rewr tl x (n :: p) in (tl, y :: ys) end
+          let val (tl,y) = rewr true tl x (n :: p) in (tl, y :: ys) end
         val (thl,ys) = (I ## rev) (foldl f (thl,[]) (enumerate 0 xs))
       in
-        (thl, if ys = xs then tm else Fn (name,ys))
+        (thl, if xs = ys then tm else Fn (name,ys))
       end
 
     fun rewr_lits (lit,th) =
       if not (mem lit (clause th)) then
         (assert (is_eq (negate lit)) (BUG "DEPTH" "weird"); th)
-      else fst (fst (rewr_sub (th,lit) (dest_atom (literal_atom lit)) []))
+      else fst (fst (rewr_below (th,lit) (dest_atom (literal_atom lit)) []))
   in
     fn th =>
     let
       val th' = foldl rewr_lits th (clause th)
-      val _ = chatting 1 andalso
-              chat ("DEPTH: " ^ thm_to_string th ^
-                    " --> " ^ thm_to_string th' ^ "\n")
+      val () = chattrans 1 "DEPTH" th th' thm_to_string
     in
       th'
     end
     handle ERR_EXN _ => raise BUG "DEPTH" "shouldn't fail"
   end;
- 
-(* ------------------------------------------------------------------------- *)
-(* Rewriting                                                                 *)
-(* ------------------------------------------------------------------------- *)
-
-type rewrs =
-  (term * term -> order option) *
-  (bool * int * thm * bool * term * term) T.termnet;
-
-fun empty_rewrs ord : rewrs = (ord, T.empty ());
-
-fun reset_rewrs ((ord,_) : rewrs) : rewrs = (ord, T.empty ());
-
-fun add_rewr (i,rw) (ord,net) =
-  let
-    val lr as (l,r) = dest_unit_eq rw
-    val f =
-      case ord lr of SOME EQUAL => I
-      | SOME GREATER => T.insert (l |-> (true,i,rw,true,l,r))
-      | SOME LESS => T.insert (r |-> (true,i,rw,false,r,l))
-      | NONE => T.insert (l |-> (false,i,rw,true,l,r)) o
-                T.insert (r |-> (false,i,rw,false,r,l))
-  in
-    (ord, f net)
-  end
-  handle ERR_EXN _ => raise BUG "add_rewr" "shouldn't fail";
-
-fun rewrite (_,net) ord (i,th) =
-  if T.size net = 0 then th else
-    let
-      fun f tm (x,j,rw,lr,l,r) =
-        let
-          val () = assert (i <> j) (ERR "rewrite" "same theorem")
-          val sub = match l tm
-          val r = term_subst sub r
-          val () = assert (x orelse ord (tm,r) = SOME GREATER)
-            (ERR "rewrite" "order violation")
-        in
-          (INST sub rw, lr, r)
-        end
-      fun mat tm = first (total (f tm)) (rev (T.match net tm))
-    in
-      DEPTH (partial (ERR "rewrite" "no matching rewrites") mat) th
-    end;
-
-fun ORD_REWRITE ord ths =
-  let
-    val rws = empty_rewrs ord
-    val rws = foldl (fn (th,n) => add_rewr (0, FRESH_VARS th) n) rws ths
-  in
-    rewrite rws ord o pair 1
-  end;
-
-val REWRITE = ORD_REWRITE (K (SOME GREATER));
 
 end
