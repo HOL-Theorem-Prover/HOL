@@ -7,8 +7,11 @@
 (* Copyright University of Cambridge, Michael Norrish, 1999-2001 *)
 (* Author: Michael Norrish *)
 
-(* magic to ensure that interruptions (SIGINTs) are actually seen by the
-   linked executable as Interrupt exceptions *)
+(*---------------------------------------------------------------------------*)
+(* Magic to ensure that interruptions (SIGINTs) are actually seen by the     *)
+(* linked executable as Interrupt exceptions                                 *)
+(*---------------------------------------------------------------------------*)
+
 prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
 val _ = catch_interrupt true;
 
@@ -197,28 +200,18 @@ val {targets, debug, dontmakes, show_usage, allfast, fastfiles,
      user_overlay} =
   parse_command_line (CommandLine.arguments())
 
-(* find HOLDIR by first looking at command-line, then looking for a
-   value compiled into the code.
+(* find HOLDIR and MOSMLDIR by first looking at command-line, then looking 
+   for a value compiled into the code.
 *)
-val HOLDIR =
-  case cmdl_HOLDIR of
-    NONE => HOLDIR0
-  | SOME s => s
-
-
+val HOLDIR    = case cmdl_HOLDIR of NONE => HOLDIR0 | SOME s => s
+val MOSMLDIR =  case cmdl_MOSMLDIR of NONE => MOSMLDIR0 | SOME s => s
+val MOSMLCOMP = fullPath [MOSMLDIR, "bin/mosmlc"]
 val SIGOBJ    = normPath(Path.concat(HOLDIR, "sigobj"));
-val UNQUOTER  = fullPath [HOLDIR, "bin/unquote"]
-val has_unquoter = FileSys.access(UNQUOTER, [FileSys.A_EXEC])
+
+val UNQUOTER  = xable_string(fullPath [HOLDIR, "bin/unquote"])
+fun has_unquoter() = FileSys.access(UNQUOTER, [FileSys.A_EXEC])
 fun unquote_to file1 file2 = SYSTEML [UNQUOTER, file1, file2]
 
-(* find MOSMLDIR by first looking at command-line, then looking at the
-   value compiled into the code. *)
-val MOSMLDIR =
-  case cmdl_MOSMLDIR of
-    NONE => MOSMLDIR0
-  | SOME s => s
-
-val MOSMLCOMP = fullPath [MOSMLDIR, "bin/mosmlc"]
 fun compile debug args = let
   val _ = if debug then print ("  with command "^
                                spacify(MOSMLCOMP::args)^"\n")
@@ -754,11 +747,8 @@ fun variant str =  (* get an unused file name in the current directory *)
 fun build_command c arg = let
   val include_flags = hmake_preincludes @ std_include_flags @
                       additional_includes
-  val overlay_stringl =
-    case actual_overlay of
-      NONE => []
-    | SOME s => [s]
-(*  val include_flags = ["-I",SIGOBJ] @ additional_includes *)
+ (*  val include_flags = ["-I",SIGOBJ] @ additional_includes *)
+  val overlay_stringl = case actual_overlay of NONE => [] | SOME s => [s]
   exception CompileFailed
   exception FileNotFound
 in
@@ -771,10 +761,10 @@ in
          val _ = print ("Compiling "^file^"\n")
          open Process
          val res =
-          if has_unquoter
-                  (* force to always use unquoter if present, so as to generate location pragmas *)
-                  (* must test for existence, for bootstrapping *)
-                  (* was: has_dq (normPath file) (* handle double-backquotes *) *)
+          if has_unquoter()
+            (* force to always use unquoter if present, so as to generate 
+               location pragmas. Must test for existence, for bootstrapping.
+               Was: has_dq (normPath file) (* handle double-backquotes *) *)
           then let val clone = variant file
                    val _ = FileSys.rename {old=file, new=clone}
                    fun revert() = (FileSys.remove file handle _ => ();

@@ -17,6 +17,4 @@ sig
   val DEPDIR : string
   val GNUMAKE : string
 
-
-
 end;

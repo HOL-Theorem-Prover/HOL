@@ -13,8 +13,8 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir =
-val holdir   =
+val mosmldir = 
+val holdir   = 
 
 (* note, if you are specifying directories under Windows, we recommend you
    use forward slashes (the "/" character) as a directory separator,
@@ -24,12 +24,10 @@ val holdir   =
    SML.  For example, write "c:/dir1/dir2/mosml", rather than
    "c:\\dir1\\dir2\\mosml", and certainly DON'T write "c:\dir1\dir2\mosml". *)
 
-val OS       = "linux";    (* Operating system; choices are:
+val OS       = "winNT";    (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT"        *)
-
 val CC       = "gcc";      (* C compiler                                   *)
 val GNUMAKE  = "make";     (* for bdd library and SMV                      *)
-
 val DEPDIR   = ".HOLMK";   (* local dir. where Holmake dependencies kept   *)
 
 (*---------------------------------------------------------------------------
@@ -93,6 +91,7 @@ infix -->
 fun (x --> y) = (x,y);
 
 fun text_copy src dest = fill_holes(src, dest) [];
+
 fun bincopy src dest = let
   val instr = BinIO.openIn src
   val outstr = BinIO.openOut dest
@@ -110,7 +109,9 @@ end;
 
 
 (*---------------------------------------------------------------------------
-     Load in systeml structure (with OS-specific stuff available)
+     Generate "Systeml" file in tools/Holmake and then load in that file,
+     thus defining the Systeml structure for the rest of the configuration
+     (with OS-specific stuff available).
  ---------------------------------------------------------------------------*)
 
 (* default values ensure that later things fail if Systeml doesn't compile *)
@@ -129,18 +130,18 @@ in
   print "\nLoading system specific functions\n";
   use sigfile;
   fill_holes (srcfile, destfile)
-  ["val HOLDIR =" --> ("val HOLDIR = "^quote holdir^"\n"),
+  ["val HOLDIR ="   --> ("val HOLDIR = "^quote holdir^"\n"),
    "val MOSMLDIR =" --> ("val MOSMLDIR = "^quote mosmldir^"\n"),
-   "val OS =" --> ("val OS = "^quote OS^"\n"),
-   "val DEPDIR =" --> ("val DEPDIR = "^quote DEPDIR^"\n"),
-   "val GNUMAKE =" --> ("val GNUMAKE = "^quote GNUMAKE^"\n")];
+   "val OS ="       --> ("val OS = "^quote OS^"\n"),
+   "val DEPDIR ="   --> ("val DEPDIR = "^quote DEPDIR^"\n"),
+   "val GNUMAKE ="  --> ("val GNUMAKE = "^quote GNUMAKE^"\n")];
   use destfile
 end;
 
 open Systeml;
 
 (*---------------------------------------------------------------------------
-     Now compile Systeml.sml
+     Now compile Systeml.sml in tools/Holmake/
  ---------------------------------------------------------------------------*)
 
 let
@@ -175,12 +176,11 @@ end;
 fun echo s = (TextIO.output(TextIO.stdOut, s^"\n");
               TextIO.flushOut TextIO.stdOut);
 
-val _ = echo "\nBeginning configuration.";
+val _ = echo "Beginning configuration.";
 
 (*---------------------------------------------------------------------------
-    Install the given paths etc in Holmake/Holmake.src, then compile
-    Holmake (bypassing the makefile in directory Holmake), then put it
-    in bin/Holmake.
+    Compile Holmake (bypassing the makefile in directory Holmake), then 
+    put the executable bin/Holmake.
  ---------------------------------------------------------------------------*)
 
 val _ =
@@ -297,27 +297,26 @@ val _ =
  ---------------------------------------------------------------------------*)
 
 val _ = let
-  val _ = print "Attempting to compile quote filter... \n"
-  val cwd = FileSys.getDir()
+  val _ = print "Attempting to compile quote filter ... "
   val tgt0 = fullPath [holdir, "tools/quote-filter/quote-filter"]
   val tgt = fullPath [holdir, "bin/unquote"]
+  val cwd = FileSys.getDir()
   val _ = FileSys.chDir (fullPath [holdir, "tools/quote-filter"])
 in
-  if systeml [fullPath [holdir, "bin/Holmake"]] = Process.success andalso let
-       val instrm = BinIO.openIn tgt0
-       val ostrm = BinIO.openOut tgt
-       val v = BinIO.inputAll instrm
-     in
-       BinIO.output(ostrm, v);
-       BinIO.closeIn instrm;
-       BinIO.closeOut ostrm;
-       mk_xable tgt;
-       true
-     end handle e => false
-  then
-    print "Quote-filter done\n"
-  else
-    print "Quote-filter failed (continuing anyway)\n";
+  if systeml [fullPath [holdir, "bin/Holmake"]] = Process.success 
+  then let val instrm = BinIO.openIn tgt0
+           val ostrm = BinIO.openOut tgt
+           val v = BinIO.inputAll instrm
+       in
+         BinIO.output(ostrm, v);
+         BinIO.closeIn instrm;
+         BinIO.closeOut ostrm;
+         mk_xable tgt;
+         print "Quote-filter built\n"
+       end 
+       handle e => print "0.Quote-filter build failed (continuing anyway)\n"
+  else             print "1.Quote-filter build failed (continuing anyway)\n"
+  ;
   FileSys.chDir cwd
 end
 
