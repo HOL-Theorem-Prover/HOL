@@ -236,15 +236,16 @@ local
   val r5 = HO_REWR_CONV FORALL_AND_THM;
   val r6 = HO_REWR_CONV (GSYM LEFT_FORALL_OR_THM);
   val r7 = HO_REWR_CONV (GSYM RIGHT_FORALL_OR_THM);
-  val rs = TRY_CONV TSIMP_CONV;
+  val p1 = r1 ORELSEC r2 ORELSEC r3 ORELSEC r4 ORELSEC r5
+  val p2 = r6 ORELSEC r7
+  val p3 = TAUTOLOGY_CONV ORELSEC CONTRACT_CONV
+  val ps = TRY_CONV TSIMP_CONV;
 in
   fun PUSH_ORS_CONV tm =
     (TSIMP_CONV ORELSEC
-     ((r1 ORELSEC r2 ORELSEC r3 ORELSEC r4 ORELSEC r5) THENC
-      BINOP_CONV (TRY_CONV PUSH_ORS_CONV) THENC rs) ORELSEC
-     ((r6 ORELSEC r7) THENC QUANT_CONV (TRY_CONV PUSH_ORS_CONV)) ORELSEC
-     (if !tautology_checking then (TAUTOLOGY_CONV ORELSEC CONTRACT_CONV)
-      else NO_CONV)) tm;
+     (p1 THENC BINOP_CONV (TRY_CONV PUSH_ORS_CONV) THENC ps) ORELSEC
+     (p2 THENC QUANT_CONV (TRY_CONV PUSH_ORS_CONV) THENC ps) ORELSEC
+     (if !tautology_checking then p3 else NO_CONV)) tm;
 end;
 
 val CLEAN_CNF_CONV =
@@ -444,7 +445,6 @@ CNF_CONV ``~(((p = q) = r) = (p = (q = r)))``;
 CNF_CONV ``?y. x < y ==> (!u. ?v. x * u < y * v)``;
 CNF_CONV ``!x. P(x) ==> (?y z. Q(y) \/ ~(?z. P(z) /\ Q(z)))``;
 CNF_CONV ``?x y. x + y = 2``;
-
 val p28 =
   ``(!x. P(x) ==> (!x. Q(x))) /\
     ((!x. Q(x) \/ R(x)) ==> (?x. Q(x) /\ R(x))) /\
@@ -452,6 +452,17 @@ val p28 =
     (!x. P(x) /\ L(x) ==> M(x))``;
 
 time CNF_CONV (mk_neg p28);
+
+val gilmore9 = Term
+  `!x. ?y. !z.
+     ((!u. ?v. F'(y, u, v) /\ G(y, u) /\ ~H(y, x)) ==>
+      (!u. ?v. F'(x, u, v) /\ G(z, u) /\ ~H(x, z)) ==>
+      (!u. ?v. F'(x, u, v) /\ G(y, u) /\ ~H(x, y))) /\
+     ((!u. ?v. F'(x, u, v) /\ G(y, u) /\ ~H(x, y)) ==>
+      ~(!u. ?v. F'(x, u, v) /\ G(z, u) /\ ~H(x, z)) ==>
+      (!u. ?v. F'(y, u, v) /\ G(y, u) /\ ~H(y, x)) /\
+      (!u. ?v. F'(z, u, v) /\ G(y, u) /\ ~H(z, y)))`;
+time CNF_CONV (mk_neg gilmore9);
 
 val p34 =
   ``((?x. !y. P(x) = P(y)) =
