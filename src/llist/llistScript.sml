@@ -525,20 +525,28 @@ val LMAP = new_specification {
    of finite-ness defined. *)
 
 val LTAKE = new_recursive_definition {
-  def = ``(LTAKE ll 0 = SOME []) /\
-          (LTAKE ll (SUC n) =
+  def = ``(LTAKE 0 ll = SOME []) /\
+          (LTAKE (SUC n) ll =
              option_case
                 NONE
                 (\hd. option_case NONE (\tl. SOME (hd::tl))
-                         (LTAKE (THE (LTL ll)) n))
+                         (LTAKE n (THE (LTL ll))))
                 (LHD ll))``,
   name = "LTAKE",
   rec_axiom = prim_recTheory.num_Axiom};
 
+val LTAKE_THM = store_thm(
+  "LTAKE_THM",
+  ``(!l. LTAKE 0 l = SOME []) /\
+    (!n. LTAKE (SUC n) LNIL = NONE) /\
+    (!n h t. LTAKE (SUC n) (LCONS h t) = option_APPLY (CONS h) (LTAKE n t))``,
+  SIMP_TAC hol_ss [LTAKE, LHD_THM, LTL_THM] THEN REPEAT GEN_TAC THEN
+  Cases_on `LTAKE n t` THEN SIMP_TAC hol_ss []);
+
 val LTAKE_ltake = prove(
-  ``!n ll. LTAKE ll n = lrep_take (llist_rep ll) n``,
+  ``!n ll. LTAKE n ll = lrep_take (llist_rep ll) n``,
   Induct THENL [
-     SIMP_TAC hol_ss [LTAKE, lrep_take],
+     SIMP_TAC hol_ss [LTAKE_THM, lrep_take],
      POP_ASSUM (fn th => SIMP_TAC hol_ss [LTAKE, lrep_take_tl, LHD, LTL,
                                           ldest_rep, th]) THEN
      Cases_on `llist_rep ll []` THEN SIMP_TAC hol_ss [] THEN
@@ -587,7 +595,7 @@ val lrep_ok' = prove(
 
 val LTAKE_EQ = store_thm(
   "LTAKE_EQ",
-  ``!ll1 ll2. (ll1 = ll2) = (!n. LTAKE ll1 n = LTAKE ll2 n)``,
+  ``!ll1 ll2. (ll1 = ll2) = (!n. LTAKE n ll1 = LTAKE n ll2)``,
   REPEAT GEN_TAC THEN EQ_TAC THENL [SIMP_TAC hol_ss [], ALL_TAC] THEN
   SIMP_TAC hol_ss [LTAKE_ltake] THEN REPEAT STRIP_TAC THEN
   SPOSE_NOT_THEN ASSUME_TAC THEN
@@ -627,7 +635,7 @@ val LLIST_BISIMULATION = store_thm(
     THENL [
       ELIM_TAC THEN SIMP_TAC hol_ss [LHD_THM],
       Cases_on `LHD ll2` THEN ASM_SIMP_TAC hol_ss [] THEN
-      `LTAKE (THE (LTL ll1)) n = LTAKE (THE (LTL ll2)) n` by
+      `LTAKE n (THE (LTL ll1)) = LTAKE n (THE (LTL ll2))` by
         ASM_MESON_TAC [] THEN
       ASM_SIMP_TAC hol_ss []
     ]
@@ -707,7 +715,7 @@ val LAPPEND_NIL_2ND = store_thm(
 
 val LFINITE = new_definition(
   "LFINITE",
-  ``LFINITE ll = ?n. LTAKE ll n = NONE``);
+  ``LFINITE ll = ?n. LTAKE n ll = NONE``);
 
 val LFINITE_THM = store_thm(
   "LFINITE_THM",
@@ -717,35 +725,35 @@ val LFINITE_THM = store_thm(
     Q.EXISTS_TAC `SUC 0` THEN SIMP_TAC hol_ss [LTAKE, LHD_THM],
     EQ_TAC THENL [
       STRIP_TAC THEN Cases_on `n` THEN
-      FULL_SIMP_TAC hol_ss [LTAKE, LTL_THM, LHD_THM] THEN
-      Cases_on `LTAKE t n'` THEN FULL_SIMP_TAC hol_ss [] THEN ASM_MESON_TAC [],
+      FULL_SIMP_TAC hol_ss [LTAKE_THM] THEN
+      Cases_on `LTAKE n' t` THEN FULL_SIMP_TAC hol_ss [] THEN ASM_MESON_TAC [],
       STRIP_TAC THEN Q.EXISTS_TAC `SUC n` THEN
-      ASM_SIMP_TAC hol_ss [LTAKE, LHD_THM, LTL_THM]
+      ASM_SIMP_TAC hol_ss [LTAKE_THM]
     ]
   ]);
 
 val LLENGTH = new_definition(
   "LLENGTH",
   ``LLENGTH ll = if LFINITE ll then
-                   SOME ((@n. (LTAKE ll n = NONE) /\
-                              !m. m < n ==> ?ll'. LTAKE ll m = SOME ll') - 1)
+                   SOME ((@n. (LTAKE n ll = NONE) /\
+                              !m. m < n ==> ?ll'. LTAKE m ll = SOME ll') - 1)
                  else NONE``);
 
 val LTAKE_NIL_EQ_SOME = store_thm(
   "LTAKE_NIL_EQ_SOME",
-  ``!l m. (LTAKE LNIL m = SOME l) = (m = 0) /\ (l = [])``,
+  ``!l m. (LTAKE m LNIL = SOME l) = (m = 0) /\ (l = [])``,
   REPEAT GEN_TAC THEN Cases_on `m` THEN SIMP_TAC hol_ss [LTAKE, LHD_THM] THEN
   MESON_TAC []);
 
 val LTAKE_NIL_EQ_NONE = store_thm(
   "LTAKE_NIL_EQ_NONE",
-  ``!m. (LTAKE LNIL m = NONE) = (0 < m)``,
+  ``!m. (LTAKE m LNIL = NONE) = (0 < m)``,
   GEN_TAC THEN Cases_on `m` THEN SIMP_TAC hol_ss [LTAKE, LHD_THM]);
 
 val LTAKE_CONS_EQ_NONE = store_thm(
   "LTAKE_CONS_EQ_NONE",
-  ``!m h t. (LTAKE (LCONS h t) m = NONE) =
-            (?n. (m = SUC n) /\ (LTAKE t n = NONE))``,
+  ``!m h t. (LTAKE m (LCONS h t) = NONE) =
+            (?n. (m = SUC n) /\ (LTAKE n t = NONE))``,
   GEN_TAC THEN Cases_on `m` THEN SIMP_TAC hol_ss [LTAKE, LHD_THM, LTL_THM] THEN
   SIMP_TAC (hol_ss ++ COND_elim_ss) [optionTheory.option_case_compute,
                                      optionTheory.option_CLAUSES]);
@@ -753,36 +761,29 @@ val LTAKE_CONS_EQ_NONE = store_thm(
 val LTAKE_CONS_EQ_SOME = store_thm(
   "LTAKE_CONS_EQ_SOME",
   ``!m h t l.
-       (LTAKE (LCONS h t) m = SOME l) =
+       (LTAKE m (LCONS h t) = SOME l) =
        (m = 0) /\ (l = []) \/
-       ?n l'. (m = SUC n) /\ (LTAKE t n = SOME l') /\  (l = h::l')``,
+       ?n l'. (m = SUC n) /\ (LTAKE n t = SOME l') /\  (l = h::l')``,
   GEN_TAC THEN Cases_on `m` THEN
   SIMP_TAC hol_ss [LTAKE, LHD_THM, LTL_THM] THENL [
     MESON_TAC [],
-    REPEAT GEN_TAC THEN Cases_on `LTAKE t n` THEN SIMP_TAC hol_ss [] THEN
+    REPEAT GEN_TAC THEN Cases_on `LTAKE n t` THEN SIMP_TAC hol_ss [] THEN
     MESON_TAC []
-  ]);
-
-val SUC_EXISTS_lemma = prove(
-  ``!P n. (?m. (n = SUC m) /\ P m n) = 0 < n /\ P (n - 1) n``,
-  REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
-    ELIM_TAC THEN ASM_SIMP_TAC hol_ss [],
-    Q.EXISTS_TAC `n - 1` THEN ASM_SIMP_TAC hol_ss []
   ]);
 
 val LTAKE_EQ_NONE = store_thm(
   "LTAKE_EQ_NONE",
-  ``!ll n. (LTAKE ll n = NONE) ==> 0 < n``,
+  ``!ll n. (LTAKE n ll = NONE) ==> 0 < n``,
   REPEAT GEN_TAC THEN Cases_on `n` THEN SIMP_TAC hol_ss [LTAKE]);
 
 
 val LTAKE_EQ_SOME_CONS = store_thm(
   "LTAKE_EQ_SOME_CONS",
-  ``!n l x. (LTAKE l n = SOME x) ==> !h. ?y. LTAKE (LCONS h l) n = SOME y``,
+  ``!n l x. (LTAKE n l = SOME x) ==> !h. ?y. LTAKE n (LCONS h l) = SOME y``,
   Induct THEN SIMP_TAC hol_ss [LTAKE, LHD_THM, LTL_THM] THEN
   REPEAT GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `l` llist_CASES) THEN
   SIMP_TAC hol_ss [LHD_THM, LTL_THM] THEN
-  Cases_on `LTAKE t n` THEN SIMP_TAC hol_ss [] THEN RES_TAC THEN
+  Cases_on `LTAKE n t` THEN SIMP_TAC hol_ss [] THEN RES_TAC THEN
   REPEAT STRIP_TAC THEN FIRST_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `h`) THEN
   ASM_SIMP_TAC hol_ss []);
 
@@ -807,8 +808,8 @@ val LLENGTH_THM = store_thm(
       SIMP_TAC hol_ss [ARITH_PROVE ``0 < n /\ n <= 1 = (n = 1)``]
     ],
     COND_CASES_TAC THEN SIMP_TAC hol_ss [] THEN
-    Q.SUBGOAL_THEN `?!n. (LTAKE (LCONS h t) n = NONE) /\
-                         !m. m < n ==> ?ll'. LTAKE (LCONS h t) m = SOME ll'`
+    Q.SUBGOAL_THEN `?!n. (LTAKE n (LCONS h t) = NONE) /\
+                         !m. m < n ==> ?ll'. LTAKE m (LCONS h t) = SOME ll'`
     ASSUME_TAC THENL [
       SIMP_TAC hol_ss [Ho_theorems.EXISTS_UNIQUE_THM] THEN CONJ_TAC THENL [
         POP_ASSUM (STRIP_ASSUME_TAC o
@@ -816,8 +817,8 @@ val LLENGTH_THM = store_thm(
                    SIMP_RULE hol_ss [LFINITE]) THEN Q.EXISTS_TAC `SUC n` THEN
         ASM_SIMP_TAC hol_ss [LTAKE, LTL_THM, LHD_THM] THEN
         GEN_TAC THEN Cases_on `m` THEN
-        SIMP_TAC hol_ss [LTAKE, LHD_THM, LTL_THM] THEN REPEAT STRIP_TAC THEN
-        Cases_on `LTAKE t n'` THEN SIMP_TAC hol_ss [] THEN ASM_MESON_TAC [],
+        SIMP_TAC hol_ss [LTAKE_THM] THEN REPEAT STRIP_TAC THEN
+        Cases_on `LTAKE n' t` THEN SIMP_TAC hol_ss [] THEN ASM_MESON_TAC [],
         REPEAT STRIP_TAC THEN ASM_MESON_TAC [arithmeticTheory.LESS_LESS_CASES,
                                              optionTheory.NOT_NONE_SOME]
       ],
@@ -830,14 +831,14 @@ val LLENGTH_THM = store_thm(
         ASSUME_TAC o
       SIMP_RULE hol_ss [Ho_theorems.EXISTS_UNIQUE_THM]) THEN
     Q.SUBGOAL_THEN
-       `(@n. (LTAKE (LCONS h t) n = NONE) /\
-             !m. m < n ==> ?ll'. LTAKE (LCONS h t) m = SOME ll') = LEN_ht`
+       `(@n. (LTAKE n (LCONS h t) = NONE) /\
+             !m. m < n ==> ?ll'. LTAKE m (LCONS h t) = SOME ll') = LEN_ht`
     SUBST_ALL_TAC THENL [
       POP_ASSUM MATCH_MP_TAC THEN ASM_SIMP_TAC hol_ss [],
       POP_ASSUM (K ALL_TAC) THEN FULL_SIMP_TAC hol_ss [] THEN ELIM_TAC
     ] THEN
     Q.SUBGOAL_THEN
-       `?!n. (LTAKE t n = NONE) /\ !m. m < n ==> ?ll'. LTAKE t m = SOME ll'`
+       `?!n. (LTAKE n t = NONE) /\ !m. m < n ==> ?ll'. LTAKE m t = SOME ll'`
     ASSUME_TAC THENL [
       SIMP_TAC hol_ss [Ho_theorems.EXISTS_UNIQUE_THM] THEN CONJ_TAC THENL [
         FIRST_X_ASSUM (STRIP_ASSUME_TAC o
@@ -856,8 +857,8 @@ val LLENGTH_THM = store_thm(
                   Q.X_CHOOSE_THEN `LEN_t` STRIP_ASSUME_TAC th)
         ASSUME_TAC o
       SIMP_RULE hol_ss [Ho_theorems.EXISTS_UNIQUE_THM]) THEN
-    Q.SUBGOAL_THEN `(@n. (LTAKE t n = NONE) /\
-                         !m. m < n ==> ?ll'. LTAKE t m = SOME ll') = LEN_t`
+    Q.SUBGOAL_THEN `(@n. (LTAKE n t = NONE) /\
+                         !m. m < n ==> ?ll'. LTAKE m t = SOME ll') = LEN_t`
     SUBST_ALL_TAC THENL [
       POP_ASSUM MATCH_MP_TAC THEN ASM_SIMP_TAC hol_ss [],
       FULL_SIMP_TAC hol_ss [] THEN ELIM_TAC THEN POP_ASSUM (K ALL_TAC)
@@ -873,17 +874,17 @@ val LLENGTH_THM = store_thm(
     `LEN_ht < SUC LEN_t \/ SUC LEN_t < LEN_ht` by ASM_SIMP_TAC hol_ss []
     THENL [
       `LEN_ht < LEN_t \/ (LEN_ht = LEN_t)` by ASM_SIMP_TAC hol_ss [] THENL [
-        `?ll1. LTAKE t LEN_ht = SOME ll1` by ASM_MESON_TAC [] THEN
+        `?ll1. LTAKE LEN_ht t = SOME ll1` by ASM_MESON_TAC [] THEN
         ASM_MESON_TAC [optionTheory.NOT_NONE_SOME, LTAKE_EQ_SOME_CONS],
         ELIM_TAC THEN
         `?lt_less_1. (LEN_t = SUC lt_less_1) /\
-                     (LTAKE t lt_less_1 = NONE)` by
+                     (LTAKE lt_less_1 t = NONE)` by
            ASM_MESON_TAC [LTAKE_CONS_EQ_NONE] THEN
-        `?ll. LTAKE t lt_less_1 = SOME ll` by
+        `?ll. LTAKE lt_less_1 t = SOME ll` by
            ASM_MESON_TAC [ARITH_PROVE ``!n. n < SUC n``] THEN
         FULL_SIMP_TAC hol_ss []
       ],
-      `?ll. LTAKE (LCONS h t) (SUC LEN_t) = SOME ll` by ASM_MESON_TAC [] THEN
+      `?ll. LTAKE (SUC LEN_t) (LCONS h t) = SOME ll` by ASM_MESON_TAC [] THEN
       POP_ASSUM (STRIP_ASSUME_TAC o SIMP_RULE hol_ss [LTAKE_CONS_EQ_SOME]) THEN
       FULL_SIMP_TAC hol_ss []
     ]
@@ -989,7 +990,54 @@ val LLENGTH_APPEND = store_thm(
 
 val toList = new_definition(
   "toList",
-  ``toList ll = if LFINITE ll then LTAKE ll (THE (LLENGTH ll)) else NONE``);
+  ``toList ll = if LFINITE ll then LTAKE (THE (LLENGTH ll)) ll else NONE``);
+
+val toList_THM = store_thm(
+  "toList_THM",
+  ``(toList LNIL = SOME []) /\
+    (!h t. toList (LCONS h t) = option_APPLY (CONS h) (toList t))``,
+  SIMP_TAC hol_ss [toList, LFINITE_THM, LLENGTH_THM, LTAKE_THM] THEN
+  REPEAT GEN_TAC THEN COND_CASES_TAC THEN SIMP_TAC hol_ss [] THEN
+  IMP_RES_TAC LFINITE_HAS_LENGTH THEN
+  ASM_SIMP_TAC hol_ss [LTAKE_THM, LHD_THM, LTL_THM]);
+
+val fromList = new_recursive_definition{
+  name = "fromList",
+  def = ``(fromList [] = LNIL) /\ (fromList (h::t) = LCONS h (fromList t))``,
+  rec_axiom = listTheory.list_Axiom};
+
+val LFINITE_fromList = store_thm(
+  "LFINITE_fromList",
+  ``!l. LFINITE (fromList l)``,
+  Induct THEN ASM_SIMP_TAC hol_ss [LFINITE_THM, fromList]);
+
+val LLENGTH_fromList = store_thm(
+  "LLENGTH_fromList",
+  ``!l. LLENGTH (fromList l) = SOME (LENGTH l)``,
+  Induct THEN ASM_SIMP_TAC hol_ss [LLENGTH_THM, fromList]);
+
+val LTAKE_fromList = store_thm(
+  "LTAKE_fromList",
+  ``!l. LTAKE (LENGTH l) (fromList l) = SOME l``,
+  Induct THEN ASM_SIMP_TAC hol_ss [LTAKE_THM, fromList]);
+
+val from_toList = store_thm(
+  "from_toList",
+  ``!l. toList (fromList l) = SOME l``,
+  Induct THEN ASM_SIMP_TAC hol_ss [fromList, toList_THM]);
+
+val LFINITE_toList = store_thm(
+  "LFINITE_toList",
+  ``!ll. LFINITE ll ==> ?l. toList ll = SOME l``,
+  Ho_resolve.MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
+  REPEAT STRIP_TAC THEN ASM_SIMP_TAC hol_ss [toList_THM]);
+
+val to_fromList = store_thm(
+  "to_fromList",
+  ``!ll. LFINITE ll ==> (fromList (THE (toList ll)) = ll)``,
+  Ho_resolve.MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
+  SIMP_TAC hol_ss [fromList, toList_THM] THEN REPEAT STRIP_TAC THEN
+  IMP_RES_TAC LFINITE_toList THEN FULL_SIMP_TAC hol_ss [fromList]);
 
 
 val LDROP = new_recursive_definition {
@@ -998,7 +1046,114 @@ val LDROP = new_recursive_definition {
   rec_axiom = prim_recTheory.num_Axiom,
   name = "LDROP"};
 
-(*
+val LDROP_THM = store_thm(
+  "LDROP_THM",
+  ``(!ll. LDROP 0 ll = SOME ll) /\
+    (!n. LDROP (SUC n) LNIL = NONE) /\
+    (!n h t. LDROP (SUC n) (LCONS h t) = LDROP n t)``,
+  SIMP_TAC hol_ss [LDROP, LTL_THM]);
+
+val LDROP1_THM = store_thm(
+  "LDROP1_THM",
+  ``LDROP 1 = LTL``,
+  CONV_TAC (Q.X_FUN_EQ_CONV `ll`) THEN
+  SIMP_TAC hol_ss [ARITH_PROVE ``1 = SUC 0``, LDROP] THEN
+  GEN_TAC THEN Cases_on `LTL ll` THEN
+  SIMP_TAC hol_ss [LDROP]);
+
+
+val NOT_LFINITE_TAKE = store_thm(
+  "NOT_LFINITE_TAKE",
+  ``!ll. ~LFINITE ll ==> !n. ?y. LTAKE n ll = SOME y``,
+  SIMP_TAC hol_ss [LFINITE] THEN REPEAT STRIP_TAC THEN
+  POP_ASSUM (ASSUME_TAC o Q.SPEC `n`) THEN
+  Cases_on `LTAKE n ll` THEN FULL_SIMP_TAC hol_ss []);
+
+val LFINITE_TAKE = store_thm(
+  "LFINITE_TAKE",
+  ``!n ll. LFINITE ll /\ n <= THE (LLENGTH ll) ==>
+           ?y. LTAKE n ll = SOME y``,
+  Induct THEN SIMP_TAC hol_ss [LTAKE_THM] THEN GEN_TAC THEN
+  STRUCT_CASES_TAC (Q.SPEC `ll` llist_CASES) THEN
+  SIMP_TAC hol_ss [LFINITE_THM, LTAKE_THM, LLENGTH_THM] THEN
+  REPEAT STRIP_TAC THEN IMP_RES_TAC LFINITE_HAS_LENGTH THEN
+  FULL_SIMP_TAC hol_ss [] THEN
+  `?z. LTAKE n t = SOME z` by ASM_SIMP_TAC hol_ss [] THEN
+  ASM_SIMP_TAC hol_ss []);
+
+val NOT_LFINITE_DROP = store_thm(
+  "NOT_LFINITE_DROP",
+  ``!ll. ~LFINITE ll ==> !n. ?y. LDROP n ll = SOME y``,
+  CONV_TAC (BINDER_CONV RIGHT_IMP_FORALL_CONV THENC
+            SWAP_VARS_CONV) THEN
+  Induct THEN SIMP_TAC hol_ss [LDROP] THEN GEN_TAC THEN
+  STRUCT_CASES_TAC (Q.SPEC `ll` llist_CASES) THEN
+  ASM_SIMP_TAC hol_ss [LFINITE_THM, LTL_THM]);
+
+val LFINITE_DROP = store_thm(
+  "LFINITE_DROP",
+  ``!n ll. LFINITE ll /\ n <= THE (LLENGTH ll) ==>
+           ?y. LDROP n ll = SOME y``,
+  Induct THEN SIMP_TAC hol_ss [LDROP_THM] THEN GEN_TAC THEN
+  STRUCT_CASES_TAC (Q.SPEC `ll` llist_CASES) THEN
+  SIMP_TAC hol_ss [LLENGTH_THM, LFINITE_THM, LDROP_THM] THEN
+  REPEAT STRIP_TAC THEN IMP_RES_TAC LFINITE_HAS_LENGTH THEN
+  FULL_SIMP_TAC hol_ss []);
+
+val option_case_NONE = prove(
+  ``!f x y. (option_case NONE f x = SOME y) =
+            (?z. (x = SOME z) /\ (f z = SOME y))``,
+  REPEAT GEN_TAC THEN Cases_on `x` THEN SIMP_TAC hol_ss []);
+
+val LTAKE_DROP = store_thm(
+  "LTAKE_DROP",
+  ``(!n ll:'a llist.
+        ~LFINITE ll ==>
+        (LAPPEND (fromList (THE (LTAKE n ll))) (THE (LDROP n ll)) = ll)) /\
+    (!n ll:'a llist.
+        LFINITE ll /\ n <= THE (LLENGTH ll) ==>
+        (LAPPEND (fromList (THE (LTAKE n ll))) (THE (LDROP n ll)) = ll))``,
+  CONJ_TAC THEN Induct THEN SIMP_TAC hol_ss [LTAKE_THM, LDROP_THM,
+                                             fromList, LAPPEND]
+  THENL [
+    REPEAT STRIP_TAC THEN
+    REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC (Q.SPEC `ll` llist_CASES) THEN
+    FULL_SIMP_TAC hol_ss [LFINITE_THM] THEN
+    SIMP_TAC hol_ss [LTAKE_THM, LDROP_THM] THEN
+    IMP_RES_TAC NOT_LFINITE_TAKE THEN
+    POP_ASSUM (Q.X_CHOOSE_THEN `y` ASSUME_TAC o Q.SPEC `n`) THEN
+    ASM_SIMP_TAC hol_ss [fromList, LAPPEND, LCONS_11] THEN
+    `y = THE (LTAKE n t)` by ASM_SIMP_TAC hol_ss [] THEN
+    ELIM_TAC THEN ASM_SIMP_TAC hol_ss [],
+    REPEAT STRIP_TAC THEN
+    REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC (Q.SPEC `ll` llist_CASES) THEN
+    FULL_SIMP_TAC hol_ss [LLENGTH_THM, LTAKE_THM, LDROP_THM, LFINITE_THM] THEN
+    IMP_RES_TAC LFINITE_HAS_LENGTH THEN
+    FULL_SIMP_TAC hol_ss [] THEN
+    `?z. LTAKE n t = SOME z` by ASM_SIMP_TAC hol_ss [LFINITE_TAKE] THEN
+    FULL_SIMP_TAC hol_ss [LAPPEND, fromList, LCONS_11] THEN
+    `z = THE (LTAKE n t)` by ASM_SIMP_TAC hol_ss [] THEN ELIM_TAC THEN
+    `n' = THE (LLENGTH t)` by ASM_SIMP_TAC hol_ss [] THEN ELIM_TAC THEN
+    ASM_SIMP_TAC hol_ss []
+  ]);
+
+val LNTH = new_recursive_definition{
+  name = "LNTH",
+  rec_axiom = prim_recTheory.num_Axiom,
+  def = ``(LNTH 0 ll = LHD ll) /\
+          (LNTH (SUC n) ll = option_JOIN (option_APPLY (LNTH n) (LTL ll)))``};
+
+val LNTH_THM = store_thm(
+  "LNTH_THM",
+  ``(!n. LNTH n LNIL = NONE) /\
+    (!h t. LNTH 0 (LCONS h t) = SOME h) /\
+    (!n h t. LNTH (SUC n) (LCONS h t) = LNTH n t)``,
+  SIMP_TAC hol_ss [LNTH, LTL_THM, LHD_THM] THEN Induct THEN
+  SIMP_TAC hol_ss [LNTH, LTL_THM, LHD_THM]);
+
+val minP = ``(option_APPLY P  (LNTH n ll) = SOME T) /\
+             !m. m < n ==> (option_APPLY P (LNTH m ll) = SOME F)``
+
 val LFILTER = new_specification {
   consts = [{const_name = "LFILTER", fixity = Prefix}], name = "LFILTER",
   sat_thm = prove(
@@ -1007,11 +1162,160 @@ val LFILTER = new_specification {
                       LFILTER P (LCONS h t) = if P h then LCONS h (LFILTER P t)
                                               else LFILTER P t)``,
     ASSUME_TAC (GEN_ALL
-       (Q.ISPEC `\l. if l = LNIL then NONE
-                     else SOME (THE (LTL l), f (THE (LHD l)))`
-                llist_Axiom)) THEN
+       (Q.ISPEC `\ll. if (?n. ^minP) then
+                        let n = @n. ^minP in
+                          SOME (THE (LDROP (SUC n) ll),
+                                THE (LNTH n ll))
+                      else NONE` llist_Axiom)) THEN
+    POP_ASSUM (STRIP_ASSUME_TAC o CONV_RULE SKOLEM_CONV) THEN
+    Q.EXISTS_TAC `g` THEN REPEAT STRIP_TAC THEN
+    POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `P`) THENL [
+      POP_ASSUM (K ALL_TAC) THEN
+      POP_ASSUM (ASSUME_TAC o SIMP_RULE hol_ss [LNTH_THM] o Q.SPEC `LNIL`) THEN
+      FULL_SIMP_TAC hol_ss [LHD_EQ_NONE],
+      Cases_on `P h` THENL [
+        POP_ASSUM (fn th =>
+           POP_ASSUM_LIST (MAP_EVERY (ASSUME_TAC o SIMP_RULE hol_ss [] o
+                                      Q.SPEC `LCONS h t`)) THEN
+           ASSUME_TAC th) THEN
+        Q.SUBGOAL_THEN `option_APPLY P (LNTH 0 (LCONS h t)) = SOME T`
+        ASSUME_TAC THENL [ASM_SIMP_TAC hol_ss [LNTH, LHD_THM], ALL_TAC] THEN
+        Q.SUBGOAL_THEN
+          `?n. (option_APPLY P (LNTH n (LCONS h t)) = SOME T) /\
+               !m. m < n ==> (option_APPLY P (LNTH m (LCONS h t)) = SOME F)`
+        (SUBST_ALL_TAC o EQT_INTRO) THENL [
+          Q.EXISTS_TAC `0` THEN ASM_SIMP_TAC hol_ss [],
+          ALL_TAC
+        ] THEN FULL_SIMP_TAC hol_ss [] THEN
+        Q.SUBGOAL_THEN `(@n. (\ll. ^minP) (LCONS h t)) = 0`
+        (SUBST_ALL_TAC o SIMP_RULE hol_ss []) THENL [
+          SIMP_TAC hol_ss [] THEN
+          Q.SUBGOAL_THEN
+            `!x.
+               (option_APPLY P (LNTH x (LCONS h t)) = SOME T) /\
+               (!m. m < x ==> (option_APPLY P (LNTH m (LCONS h t)) = SOME F)) =
+               (x = 0)`
+          (fn th => SIMP_TAC hol_ss [th]) THEN
+          GEN_TAC THEN EQ_TAC THENL [ALL_TAC, ASM_SIMP_TAC hol_ss []] THEN
+          STRIP_TAC THEN SPOSE_NOT_THEN ASSUME_TAC THEN
+          `?m. x = SUC m` by ASM_MESON_TAC [arithmeticTheory.num_CASES] THEN
+          ELIM_TAC THEN
+          FIRST_X_ASSUM (ASSUME_TAC o SIMP_RULE hol_ss [] o Q.SPEC `0`) THEN
+          FULL_SIMP_TAC hol_ss [],
+          ALL_TAC
+        ] THEN FULL_SIMP_TAC hol_ss [LDROP_THM, LNTH_THM] THEN
+        ASM_SIMP_TAC hol_ss [LHDTL_EQ_SOME],
 
+        (* ~ P h case *)
+        ASM_SIMP_TAC hol_ss [] THEN RULE_ASSUM_TAC (SIMP_RULE hol_ss []) THEN
+        POP_ASSUM_LIST (MAP_EVERY
+                        (fn th =>
+                         if (is_forall (concl th)) then
+                           MP_TAC (Q.SPEC `LCONS h t` th) THEN
+                           ASSUME_TAC th
+                         else
+                           ASSUME_TAC th) o List.rev) THEN
+        COND_CASES_TAC THENL [
+          POP_ASSUM STRIP_ASSUME_TAC THEN REPEAT STRIP_TAC THEN
+          Q.SUBGOAL_THEN `(@n. (\ll. ^minP) (LCONS h t)) = n`
+          (SUBST_ALL_TAC o SIMP_RULE hol_ss []) THENL [
+            SIMP_TAC hol_ss [] THEN
+            Q.SUBGOAL_THEN
+             `!x.
+               (option_APPLY P (LNTH x (LCONS h t)) = SOME T) /\
+               (!m. m < x ==> (option_APPLY P (LNTH m (LCONS h t)) = SOME F)) =
+               (x = n)`
+            (fn th => SIMP_TAC hol_ss [th]) THEN
+            GEN_TAC THEN EQ_TAC THENL [ALL_TAC, ASM_SIMP_TAC hol_ss []] THEN
+            REPEAT STRIP_TAC THEN SPOSE_NOT_THEN ASSUME_TAC THEN
+            STRIP_ASSUME_TAC (Q.SPECL [`x`, `n`]
+                              arithmeticTheory.LESS_LESS_CASES) THEN
+            RES_TAC THEN FULL_SIMP_TAC hol_ss [],
+            ALL_TAC
+          ] THEN
+          FULL_SIMP_TAC hol_ss [LDROP_THM, LTAKE_THM] THEN
+          `~(n = 0)` by (STRIP_TAC THEN ELIM_TAC THEN
+                         FULL_SIMP_TAC hol_ss [LNTH_THM]) THEN
+          POP_ASSUM (fn th =>
+            `?m. n = SUC m` by
+               ASM_MESON_TAC [arithmeticTheory.num_CASES, th]) THEN
+          ELIM_TAC THEN FULL_SIMP_TAC hol_ss [LNTH_THM] THEN
+          FIRST_X_ASSUM (ASSUME_TAC o GEN_ALL o
+                         SIMP_RULE hol_ss [LNTH_THM] o Q.SPEC `SUC q`) THEN
+          REPEAT (FIRST_X_ASSUM (ASSUME_TAC o SPEC ``t:'a llist``)) THEN
+          Q.SUBGOAL_THEN `?n. (\ll. ^minP) t`
+            (SUBST_ALL_TAC o EQT_INTRO o SIMP_RULE hol_ss [])
+          THENL [Q.EXISTS_TAC `m` THEN ASM_SIMP_TAC hol_ss [], ALL_TAC] THEN
+          FULL_SIMP_TAC hol_ss [] THEN
+          Q.SUBGOAL_THEN `(@n. (\ll. ^minP) t) = m`
+            (SUBST_ALL_TAC o SIMP_RULE hol_ss [])
+          THENL [
+            SIMP_TAC hol_ss [] THEN
+            Q.SUBGOAL_THEN
+             `!x.
+                (option_APPLY P (LNTH x t) = SOME T) /\
+                (!m. m < x ==> (option_APPLY P (LNTH m t) = SOME F)) =
+                (x = m)`
+            (fn th => SIMP_TAC hol_ss [th]) THEN
+            GEN_TAC THEN EQ_TAC THEN ASM_SIMP_TAC hol_ss [] THEN
+            REPEAT STRIP_TAC THEN SPOSE_NOT_THEN ASSUME_TAC THEN
+            `x < m \/ m < x`
+              by ASM_MESON_TAC [arithmeticTheory.LESS_LESS_CASES] THEN
+            RES_TAC THEN FULL_SIMP_TAC hol_ss [],
+            ALL_TAC
+          ] THEN
+          ASM_MESON_TAC [LHDTL_EQ_SOME],
+
+          (* case where there is no element satisfying P *)
+          SIMP_TAC hol_ss [] THEN DISCH_THEN (K ALL_TAC) THEN
+          DISCH_THEN (fn th =>
+                      `g P (LCONS h t) = LNIL`
+                           by ASM_MESON_TAC [LHD_EQ_NONE, th]) THEN
+          POP_ASSUM SUBST_ALL_TAC THEN
+          REPEAT (FIRST_X_ASSUM (ASSUME_TAC o Q.SPEC `t`)) THEN
+          Q.SUBGOAL_THEN `~(?n. (\ll. ^minP) t)`
+          (SUBST_ALL_TAC o EQF_INTRO o BETA_RULE)
+          THENL [
+            FULL_SIMP_TAC hol_ss [] THEN
+            REPEAT STRIP_TAC THEN
+            FIRST_ASSUM (STRIP_ASSUME_TAC o SIMP_RULE hol_ss [LNTH_THM] o
+                         Q.SPEC `SUC n`)
+            THENL [
+              ASM_SIMP_TAC hol_ss [],
+              Cases_on `m` THEN FULL_SIMP_TAC hol_ss [LNTH_THM] THEN
+              ASM_MESON_TAC []
+            ],
+            ALL_TAC
+          ] THEN FULL_SIMP_TAC hol_ss [] THEN
+          ASM_MESON_TAC [LHD_EQ_NONE]
+        ]
+      ]
+    ])};
+
+(*
+val LFILTER_APPEND = store_thm(
+  "LFILTER_APPEND",
+  ``!ll1 ll2 P.
+       LFILTER P (LAPPEND ll1 ll2) = LAPPEND (LFILTER P ll1) (LFILTER P ll2)``,
+  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC [LLIST_BISIMULATION] THEN
+  Q.EXISTS_TAC
+    `\ll1 ll2. ?ll3 ll4. (ll1 = LFILTER P (LAPPEND ll3 ll4)) /\
+                         (ll2 = LAPPEND (LFILTER P ll3) (LFILTER P ll4))` THEN
+  SIMP_TAC hol_ss [] THEN REPEAT STRIP_TAC THENL [
+    ASM_MESON_TAC [],
+    ALL_TAC
+  ] THEN
+  ELIM_TAC THEN STRUCT_CASES_TAC (Q.SPEC `ll3'` llist_CASES) THEN
+  STRUCT_CASES_TAC (Q.SPEC `ll4'` llist_CASES) THEN
+  SIMP_TAC hol_ss [LFILTER, LAPPEND] THENL [
+    COND_CASES_TAC THENL [
+      SIMP_TAC hol_ss [LTL_THM, LCONS_11, LCONS_NOT_NIL] THEN
+      MAP_EVERY Q.EXISTS_TAC [`LNIL`, `t`] THEN
+      SIMP_TAC hol_ss [LFILTER, LAPPEND],
+      STRUCT_CASES_TAC (Q.SPEC `LFILTER P t` llist_CASES) THEN
+      SIMP_TAC hol_ss [LCONS_NOT_NIL, LTL_THM] THEN
+      MAP_EVERY Q.EXISTS_TAC [`LNIL`, `t'`] THEN
+      SIMP_TAC hol_ss [LFILTER, LAPPEND],
 *)
-
 val _ = export_theory();
 
