@@ -1,5 +1,5 @@
 # =====================================================================
-# Makefile for the string library documentation 
+# Makefile for the string library documentation
 # =====================================================================
 
 # ---------------------------------------------------------------------
@@ -8,7 +8,7 @@
 Help=../help
 
 # ---------------------------------------------------------------------
-# Pathname to the doc-to-tex script and doc-to-tex.sed file 
+# Pathname to the doc-to-tex script and doc-to-tex.sed file
 # ---------------------------------------------------------------------
 DOCTOTEX=../../../Manual/Reference/bin/doc-to-tex
 DOCTOTEXSED=../../../Manual/Reference/bin/doc-to-tex.sed
@@ -16,7 +16,7 @@ DOCTOTEXSED=../../../Manual/Reference/bin/doc-to-tex.sed
 # ---------------------------------------------------------------------
 # Pathname to the makeindex script
 # ---------------------------------------------------------------------
-MAKEINDEX=../../../Manual/LaTeX/makeindex ../../../
+MAKEINDEX=makeindex
 
 default:
 	@echo "INSTRUCTIONS: Type \"make all\" to make the documentation"
@@ -25,10 +25,8 @@ default:
 # Remove all trace of previous LaTeX jobs
 # ---------------------------------------------------------------------
 clean:
-	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg
-	@echo "\begin{theindex}" > index.tex
-	@echo "\mbox{}" >> index.tex
-	@echo "\end{theindex}" >> index.tex
+	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind \
+              entries.tex theorems.tex
 
 tex: ids theorems
 	@echo "TeX files made"
@@ -46,11 +44,11 @@ theorems:
 	@echo "\section{Theorems}">>theorems.tex
 	/bin/sh ${DOCTOTEX} ${DOCTOTEXSED} ${Help}/thms theorems.tex
 
-index: 
-	${MAKEINDEX} string.idx index.tex
+index:
+	${MAKEINDEX} string.idx
 
-string: 
-	latex string.tex 
+string:
+	latex string.tex
 
-all: 
+all:
 	make clean; make tex; make string; make index; make string

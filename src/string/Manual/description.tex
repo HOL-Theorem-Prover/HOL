@@ -1,5 +1,7 @@
 \chapter{The string Library}
 
+\newcommand\ptt{\tt}
+
 This document describes the facilities provided by the \ml{string} library and
 explains its logical basis. This library makes ascii character strings
 available in the \HOL\ logic via two formally-defined logical types, \ml{ascii}
@@ -49,10 +51,10 @@ abstract characterization of the type \ml{ascii}:
 
 \noindent This simply says that functions on values of type \ml{ascii} may be
 uniquely specified by defining them in terms of the eight boolean values from
-which these values are constructed. 
+which these values are constructed.
 
 \subsection{Function definitions on type {\tt ascii}}%
-\index{function definitions!on type {\tt ascii}|(} 
+\index{function definitions!on type {\tt ascii}|(}
 
 The theorem \ml{ascii\_Axiom}, having been proved using the recursive types
 package, is in the right form for use with the derived rule of definition
@@ -62,10 +64,10 @@ selects the high-order bit of an ascii character code:
 
 \setcounter{sessioncount}{1}
 \begin{session}\begin{verbatim}
-#let BIT1 = 
-     new_recursive_definition false ascii_Axiom `BIT1` 
+#let BIT1 =
+     new_recursive_definition false ascii_Axiom `BIT1`
      "BIT1(ASCII b1 b2 b3 b4 b5 b6 b7 b8) = b1";;
-BIT1 = 
+BIT1 =
 |- !b1 b2 b3 b4 b5 b6 b7 b8. BIT1(ASCII b1 b2 b3 b4 b5 b6 b7 b8) = b1
 \end{verbatim}\end{session}
 
@@ -75,7 +77,7 @@ using the theorem \ml{ascii\_Axiom} and the rule
 \index{function definitions!on type {\tt ascii}|)}
 
 \subsection{Theorems about the type {\tt ascii}}%
-\index{theorems!about the type {\tt ascii}|(} 
+\index{theorems!about the type {\tt ascii}|(}
 
 In addition to \ml{ascii\_Axiom}, several standard theorems about the defined
 type \ml{ascii} proved using the recursive types package are available as
@@ -103,7 +105,7 @@ in the library:
 
 \begin{hol}
 \begin{verbatim}
-   |- !P. (!b0 b1 b2 b3 b4 b5 b6 b7. P(ASCII b0 b1 b2 b3 b4 b5 b6 b7)) 
+   |- !P. (!b0 b1 b2 b3 b4 b5 b6 b7. P(ASCII b0 b1 b2 b3 b4 b5 b6 b7))
             ==>
           (!a. P a)
 \end{verbatim}\end{hol}
@@ -194,7 +196,7 @@ theorem \ml{string\_Axiom}\index{string\_Axiom@{\ptt string\_Axiom}|(}:
 states the validity of primitive recursive definitions on the type \ml{string}.
 
 \subsection{Function definitions on type {\tt string}}%
-\index{function definitions!on type {\tt string}|(} 
+\index{function definitions!on type {\tt string}|(}
 
 The theorem \ml{string\_Axiom} is in the standard form accepted by
 \ml{new\_recursive\_definition} and can therefore be used to define functions
@@ -203,8 +205,8 @@ length of a string as follows.
 
 \setcounter{sessioncount}{1}
 \begin{session}\begin{verbatim}
-#let LEN = 
-     new_recursive_definition false string_Axiom `LEN` 
+#let LEN =
+     new_recursive_definition false string_Axiom `LEN`
      "(LEN `` = 0) /\ (LEN (STRING a s) = (LEN s) + 1)";;
 LEN = |- (LEN `` = 0) /\ (!a s. LEN(STRING a s) = (LEN s) + 1)
 \end{verbatim}\end{session}
@@ -215,7 +217,7 @@ documentation for details.\index{string\_Axiom@{\ptt string\_Axiom}|)}%
 \index{function definitions!on type {\tt string}|)}
 
 \subsection{Theorems about the type {\tt string}}%
-\index{theorems!about the type {\tt string}|(} 
+\index{theorems!about the type {\tt string}|(}
 
 For the recursive type \ml{string}, the library provides as built-in all the
 standard theorems provable using the recursive types package.  These theorems,
@@ -263,10 +265,10 @@ manual for details of these two functions.
 
 \index{structural induction|)}
 \index{case analysis!on type {\tt string}|)}
-\index{theorems!about the type {\tt string}|)} 
+\index{theorems!about the type {\tt string}|)}
 
 \subsection{String constants}
-\index{string constants|(} 
+\index{string constants|(}
 \index{\\\@\verb+""`+$\dots$\verb+`""+ (string constants)|(}
 
 To provide a concise notation for strings in the \HOL\ logic, the system parser
@@ -297,7 +299,7 @@ skipping: <string> " ;; parse failed
 \end{verbatim}\end{session}
 
 \noindent Here, character string constants like \ml{"`abc`"} do not parse,
-since the logical type \ml{string} is not present in the current theory. But 
+since the logical type \ml{string} is not present in the current theory. But
 the string notation becomes available when the library is loaded:
 
 \begin{session}\begin{alltt}
@@ -347,7 +349,7 @@ by an example:
 definition of the string constant \ml{"`abc`"}.  Note that \ml{string\_CONV}
 fails on the empty string \ml{"``"}.
 
-\index{string constants|)} 
+\index{string constants|)}
 \index{\\\@\verb+""`+$\dots$\verb+`""+ (string constants)|)}
 \index{string\_CONV@{\ptt string\_CONV}|)}
 
@@ -469,7 +471,7 @@ Theory foo loaded
 
 \noindent This sequence of actions ensures that the system can find the parent
 theory \ml{string} when it comes to load \ml{foo}, since loading the library
-updates the search path. 
+updates the search path.
 
 \subsection{The {\tt load\_string} function}%
 \index{load\_string@{\ptt load\_string}|(}
