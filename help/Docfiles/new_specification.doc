@@ -1,8 +1,11 @@
 \DOC new_specification
 
-\TYPE {new_specification : {{name:string, sat_thm:thm,
-                         consts:{{const_name:string, fixity:fixity}} list}}
-                         -> thm}
+\BLTYPE
+new_specification :
+{{name:string, sat_thm:thm,
+ consts:{{const_name:string, fixity:fixity}} list}} -> thm
+\ELTYPE
+
 \SYNOPSIS
 Introduces a constant or constants satisfying a given property.
 
@@ -34,7 +37,7 @@ fails if there is already an axiom, definition or specification of the given
 name in the current theory segment; if the theorem argument has assumptions or
 free variables; if the supplied constant names {`c1`}, ..., {`cn`} are not
 distinct; if any one of {`c1`}, ..., {`cn`} is already a constant in the
-current theory or is not an allowed name for a constant.  Failure also occurs 
+current theory or is not an allowed name for a constant.  Failure also occurs
 if the type of {ci} is not suitable for a constant with the syntactic status
 specified by the fixity {fi}.  Finally, failure occurs if some {ci} does not
 contain all the type variables that occur in the term {?x1...xn. t}.

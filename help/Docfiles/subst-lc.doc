@@ -21,31 +21,28 @@ substitution such that the types of the {redex} and {residue} are not
 equal.
 
 \EXAMPLE
-{  - load "arithmeticTheory";
+{
+   - load "arithmeticTheory";
 
    - subst [``SUC 0`` |-> ``1``]   ``SUC(SUC 0)``;
-
-   val it = ``SUC 1`` : term
+   > val it = ``SUC 1`` : term
 
 
    - subst [``SUC 0`` |-> ``1``, ``SUC 1`` |-> ``2``]   ``SUC(SUC 0)``;
+   > val it = ``SUC 1`` : term
 
-   val it = ``SUC 1`` : term
 
-
-   - subst [``SUC 0`` |-> ``1``, ``SUC 1`` |-> ``2``] 
+   - subst [``SUC 0`` |-> ``1``, ``SUC 1`` |-> ``2``]
            ``SUC(SUC 0) = SUC 1``;
-
-   val it = ``SUC 1 = 2`` : term
+   > val it = ``SUC 1 = 2`` : term
 
 
    - subst [``b:num`` |-> ``a:num``]  ``\a:num. (b:num)``;
-
-   val it = ``\a'. a`` : term
+   > val it = ``\a'. a`` : term
 
 
    - subst[``flip:'a`` |-> ``foo:'a``]  ``waddle:'a``
-   val it = ``waddle`` : term
+   > val it = ``waddle`` : term
 }
 
 \ENDDOC

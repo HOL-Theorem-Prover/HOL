@@ -1,0 +1,28 @@
+\DOC \#\#
+
+\TYPE {Lib.## : ('a -> 'b) * ('c -> 'd) -> 'a * 'c -> 'b * 'd}
+
+\SYNOPSIS
+Maps a pair of functions through a pair.
+
+\KEYWORDS
+
+\LIBRARY Lib
+
+\DESCRIBE
+{##} is an infix operator such that the call {(f ## g) (x, y)} returns
+the value {(f x, g y)}.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{
+- ((fn x => x + 1) ## not) (3, false);
+> val it = (4, true) : int * bool
+}
+
+\SEEALSO
+B, C, I, K, S, W.
+
+\ENDDOC

@@ -6,17 +6,19 @@
 Instantiates types in a type.
 
 \DESCRIBE
-If {theta = [{{redex1,residue1}},...,{{redexn,residuen}}]} is a hol_type subst,
-where the redexi are the types to be substituted for, and the residuei the 
-replacements, and {ty} is a type to instantiate, the call
+If {theta = [{{redex1,residue1}},...,{{redexn,residuen}}]} is a
+{hol_type subst}, where the {redexi} are the types to be substituted
+for, and the {residuei} the replacements, and {ty} is a type to
+instantiate, the call
 {
    type_subst theta ty
 }
-\noindent will appropriately instantiate the type {ty}. The instantiations 
+\noindent will appropriately instantiate the type {ty}. The instantiations
 will be performed in parallel. If several of the type instantiations are
 applicable, the choice is undefined. Each {redexi} ought to be a type
-variable, but if it isn't, it will never be replaced. Also, it is not 
-necessary that any or all of the types {t1...tn} should in fact appear in {ty}.
+variable, but if it isn't, it will never be replaced. Also, it is not
+necessary that any or all of the types {t1...tn} should in fact appear
+in {ty}.
 
 \FAILURE
 Never fails.
@@ -25,12 +27,12 @@ Never fails.
 {
   - type_subst [{{redex = (==`:'a`==), residue = (==`:bool`==)}}]
                (==`:'a # 'b`==);
-  (==`:bool # 'b`==) : hol_type
+  > val it = (==`:bool # 'b`==) : hol_type
 
   - type_subst [{{redex = (==`:'a # 'b`==), residue = (==`:num`==)}},
-                {{redex = (==`:'a`==), residue = (==`:bool`==)}}] 
+                {{redex = (==`:'a`==), residue = (==`:bool`==)}}]
               (==`:'a # 'b`==);
-  (==`:bool # 'b`==) : hol_type
+  > val it = (==`:bool # 'b`==) : hol_type
 }
 
 \SEEALSO

@@ -11,9 +11,9 @@ conversional.
 \DESCRIBE
 If the conversion {c1} returns {|- t = t'} when applied to a term {"t"}, and
 {c2} returns {|- t' = t''} when applied to {"t'"}, then the composite
-conversion {(c1 THENC c2) "t"} returns {|- t = t''}.  That is, {(c1 THENC c2)
-"t"} has the effect of transforming the term {"t"} first with the conversion
-{c1} and then with the conversion {c2}.
+conversion {(c1 THENC c2) "t"} returns {|- t = t''}.  That is,
+{(c1 THENC c2) "t"} has the effect of transforming the term {"t"}
+first with the conversion {c1} and then with the conversion {c2}.
 
 \FAILURE
 {(c1 THENC c2) "t"} fails if either the conversion {c1} fails when applied to

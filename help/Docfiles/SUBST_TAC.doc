@@ -15,19 +15,19 @@ Given a list of theorems {A1|-u1=v1,...,An|-un=vn} and a goal {(A,t)},
 simultaneously substituting {vi} for each occurrence of {ui} in {t} with {vi}:
 {
               A ?- t
-   =============================  SUBST_TAC [A1|-u1=v1;...;An|-un=vn]
+   =============================  SUBST_TAC [A1|-u1=v1,...,An|-un=vn]
     A ?- t[v1,...,vn/u1,...,un]
 }
 \noindent The assumptions of the theorems used to substitute with are not added
 to the assumptions {A} of the goal, while they are recorded in the proof.  If
-any {Ai} is not a subset of {A} (up to alpha-conversion), then {SUBST_TAC
-[A1|-u1=v1;...;An|-un=vn]} results in an invalid tactic.
+any {Ai} is not a subset of {A} (up to alpha-conversion), then
+{SUBST_TAC [A1|-u1=v1,...,An|-un=vn]} results in an invalid tactic.
 
 {SUBST_TAC} automatically renames bound variables to prevent free variables in
 {vi} becoming bound after substitution.
 
 \FAILURE
-{SUBST_TAC [th1;...;thn] (A,t)} fails if the conclusion of any theorem in the
+{SUBST_TAC [th1,...,thn] (A,t)} fails if the conclusion of any theorem in the
 list is not an equation.  No change is made to the goal if no occurrence of the
 left-hand side of the conclusion of {thi} appears in {t}.
 

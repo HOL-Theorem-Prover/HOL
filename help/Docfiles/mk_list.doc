@@ -7,14 +7,15 @@ Constructs an object-level (HOL) list from an ML list of terms.
 
 \DESCRIBE
 {mk_list{{els = [t1, ..., tn], ty = ty}}} returns {--`[t1;...;tn]:ty list`--}.
-The type argument is required so that empty lists can be constructed. 
+The type argument is required so that empty lists can be constructed.
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_list", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_list",
             message = ""}}
-
+}
+\noindent
 if any term in the list is not of the type specified as the second argument.
 
 \SEEALSO

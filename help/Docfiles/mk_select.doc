@@ -6,14 +6,15 @@
 Constructs a choice-term.
 
 \DESCRIBE
-{mk_select{{Bvar = v, Body = t}}} returns {--`@var. t`--}. 
+{mk_select{{Bvar = v, Body = t}}} returns {--`@var. t`--}.
 
 \FAILURE
-Fails with 
-
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_select", 
+Fails with
+{
+    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_select",
             message = ""}}
-
+}
+\noindent
 if {Bvar} is not a variable or if {Body} is not of type {==`:bool`==}.
 
 \SEEALSO

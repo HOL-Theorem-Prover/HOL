@@ -30,10 +30,10 @@ possible with simplification ({FORALL_AND_THM} states
 }
 
 \COMMENTS
-{SIMP_RULE ss thmlist} is equivalent to {CONV_RULE
-(SIMP_CONV ss thmlist)}.
+{SIMP_RULE ss thmlist} is equivalent to {CONV_RULE (SIMP_CONV ss thmlist)}.
 
 
-\SEEALSO ASM_SIMP_RULE, SIMP_CONV, SIMP_TAC.
+\SEEALSO
+ASM_SIMP_RULE, SIMP_CONV, SIMP_TAC.
 
 \ENDDOC

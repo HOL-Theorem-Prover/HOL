@@ -6,16 +6,21 @@
 Declares a new infix constant in the current theory.
 
 \DESCRIBE
-A call {new_infix{{Name = "i",Ty = ty, Prec = n}}} makes {i} an infix
-constant in the current theory. It has binding strength of {n}, which must be
-positive. Note that the call to {new_infix} does not specify the value of the constant. The constant may have a polymorphic type, which may be arbitrarily
-instantiated. Like any other infix or binder, its special parse status may be
-suppressed by preceding it with a dollar sign.
+
+A call {new_infix{{Name = "i",Ty = ty, Prec = n}}} makes {i} a right
+associative infix constant in the current theory. It has binding
+strength of {n}, the larger this number, the more tightly the infix
+will attempt to ``grab'' arguments to its left and right. Note that
+the call to {new_infix} does not specify the value of the
+constant. The constant may have a polymorphic type, which may be
+arbitrarily instantiated. Like any other infix or binder, its special
+parse status may be suppressed by preceding it with a dollar sign.
 
 \COMMENTS
-Infixes all associate to the right, i.e., {A <op> B <op> C} is
-equivalent to {A op (B <op> C)}. The initial infixes (and their precedences)
-in the system are:
+
+Infixes defined with {new_infix} associate to the right,
+i.e., {A <op> B <op> C} is equivalent to {A op (B <op> C)}. The
+initial infixes (and their precedences) in the system are:
 {
           $,  ---> 50
           $=  ---> 100
@@ -30,36 +35,36 @@ in the system are:
         $EXP  ---> 700
         $o    ---> 800
 }
+Note that the arithmetic operators {+}, {-}, {*}, {DIV} and {MOD} are
+left associative in hol98 releases from Taupo onwards.
 
 \FAILURE
-Fails if HOL is not in draft mode, or if the name is not a valid
-constant name, or there is already a constant of that name in the
-current theory, or the precedence is negative, or the given type is not
-an instance of  {==`:'a -> 'b -> 'c`==}.
+Fails if the name is not a valid constant name.
 
 \EXAMPLE
-The following shows the use of the infix and the prefix form of an infix 
-constant. It also shows binding resolution between infixes of different 
+The following shows the use of the infix and the prefix form of an infix
+constant. It also shows binding resolution between infixes of different
 precedence.
 {
    - new_theory "groke";
-   () : unit
+    <<HOL message: Created theory "groke".>>
+  > val it = () : unit
 
    - new_infix{{Name = "orelse", Ty = ==`:bool->bool->bool`==, Prec = 50}};
-   () : unit
+   val it = () : unit
 
    - --`T orelse F`--;
-   (--`T \/ T orelse F`--) : term
+   val it = (--`T \/ T orelse F`--) : term
 
    - --`$orelse T F`--;
-   (--`T orelse F`--) : term
+   val it = (--`T orelse F`--) : term
 
    - dest_comb (--`T \/ T orelse F`--);
-   {{Rator = (--`$orelse (T \/ T)`--),  Rand = (--`F`--)}}
+   > val it = {{Rator = (--`$orelse (T \/ T)`--),  Rand = (--`F`--)}} : ...
 }
 \SEEALSO
 precedence, constants, infixes, binders, is_constant, is_infix, is_binder,
-new_constant, new_binder, new_definition, new_infix_definition, 
+new_constant, new_binder, new_definition, new_infix_definition,
 new_binder_definition.
 
 \ENDDOC

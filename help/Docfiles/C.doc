@@ -1,6 +1,6 @@
 \DOC C
 
-\TYPE {C : ((* -> ** -> ***) -> ** -> * -> ***)}
+\TYPE {C : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c}
 
 \SYNOPSIS
 Permutes first two arguments to curried function: {C f x y} = {f y x}.
@@ -12,6 +12,6 @@ combinator, permute.
 Never fails.
 
 \SEEALSO
-\#, B, CB, Co, I, K, KI, o, oo, S, W.
+\#\#, B, I, K, o, S, W.
 
 \ENDDOC

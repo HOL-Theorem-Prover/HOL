@@ -1,13 +1,13 @@
 \DOC types
 
-\TYPE {types : (string -> (int # string) list)}
+\TYPE {types : string -> {{Arity : int, Name : string}} list}
 
 \SYNOPSIS
 Lists the types in the named theory.
 
 \DESCRIBE
 The function {types} should be applied to a string which is the name of an
-ancestor theory (including the current theory; the special string {`-`} is
+ancestor theory (including the current theory; the special string {"-"} is
 always interpreted as the current theory). It returns a list of all the
 type constructors declared in the named theory, in the form of arity-name
 pairs.
@@ -18,24 +18,20 @@ Fails unless the named theory is an ancestor.
 \EXAMPLE
 The theory {HOL} has no types declared:
 {
-  #types `HOL`;;
-  [] : (int # string) list
+  - types "HOL";
+  > val it = [] : (int # string) list
 }
 \noindent but its ancestors have the following types declared:
 {
-   #itlist union (map types (ancestors `HOL`)) [];;
-   [(2, `fun`);
-    (2, `prod`);
-    (0, `bool`);
-    (0, `ind`);
-    (0, `num`);
-    (1, `list`);
-    (0, `tree`);
-    (1, `ltree`);
-    (2, `sum`);
-    (0, `one`)]
-   : (int # string) list
-}
+   - itlist union (map types (ancestry "HOL")) [];
+   > val it =
+       [{{Arity = 2, Name = "sum"}}, {{Arity = 2, Name = "prod"}},
+        {{Arity = 0, Name = "num"}}, {{Arity = 1, Name = "list"}},
+        {{Arity = 0, Name = "tree"}}, {{Arity = 1, Name = "ltree"}},
+        {{Arity = 0, Name = "bool"}}, {{Arity = 0, Name = "ind"}},
+        {{Arity = 2, Name = "fun"}}, {{Arity = 0, Name = "one"}}]
+       : {{Arity : int, Name : string}} list
+}}
 \SEEALSO
 ancestors, axioms, constants, definitions, infixes, new_type, new_type_abbrev,
 new_type_definition, parents.

@@ -1,7 +1,10 @@
 \DOC new_recursive_definition
 
-\TYPE {new_recursive_definition:{{name:string,def:term,fixity:fixity,rec_axiom:thm}}
-                              -> thm}
+\BLTYPE
+new_recursive_definition :
+{{name:string,def:term,fixity:fixity,rec_axiom:thm}} -> thm
+\ELTYPE
+
 \SYNOPSIS
 Defines a primitive recursive function over a concrete recursive type.
 
@@ -82,8 +85,8 @@ a recursive function {Leaves}, which computes the number of leaves in a
 binary tree, can be defined recursively as shown below:
 {
    - val Leaves = new_recursive_definition
-   =        {{name = "Leaves", 
-   =         fixity = Prefix, 
+   =        {{name = "Leaves",
+   =         fixity = Prefix,
    =         rec_axiom = th,
    =         def= --`(Leaves (LEAF (x:'a)) = 1) /\
    =                 (Leaves (NODE t1 t2) = (Leaves t1) + (Leaves t2))`--}};
@@ -103,7 +106,7 @@ tree:
    =        {{name = "IsLeaf",
    =         fixity = Prefix,
    =         rec_axiom = th,
-   =         def = --`(IsLeaf (NODE t1 t2) = F) /\ 
+   =         def = --`(IsLeaf (NODE t1 t2) = F) /\
    =                  (IsLeaf (LEAF (x:'a)) = T)`--}};
    IsLeaf = |- (!t1 t2. IsLeaf(NODE t1 t2) = F) /\ (!x. IsLeaf(LEAF x) = T)
 }
@@ -119,24 +122,24 @@ of a function {Label} which extracts the label from a leaf node.  The value of
 {Label} applied to an internal node is left unspecified:
 {
    - val Label = new_recursive_definition
-   =       {{name = "Label", 
-   =        fixity = Prefix, 
+   =       {{name = "Label",
+   =        fixity = Prefix,
    =        rec_axiom = th,
    =        def = --`Label (LEAF (x:'a)) = x`--}};
    Label = |- !x. Label(LEAF x) = x
 }
 \noindent Curried functions can also be defined, and the recursion can be on
-any argument.  The next definition defines an infix function {<<} which 
+any argument.  The next definition defines an infix function {<<} which
 expresses the idea that one tree is a proper subtree of another.
 {
    - val Subtree = new_recursive_definition
-   =        {{name = "Subtree", 
+   =        {{name = "Subtree",
    =         fixity = Infix 120,
    =         rec_axiom = th,
    =         def = --`(<< (t:'a bintree) (LEAF (x:'a)) = F) /\
-   =                  (<< t (NODE t1 t2) = (t = t1) \/ 
-   =                                       (t = t2) \/ 
-   =                                       (<< t t1) \/ 
+   =                  (<< t (NODE t1 t2) = (t = t1) \/
+   =                                       (t = t2) \/
+   =                                       (<< t t1) \/
    =                                       (<< t t2))`--}};
    Subtree =
    |- (!t x. t << (LEAF x) = F) /\
