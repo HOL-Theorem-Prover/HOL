@@ -4,5 +4,8 @@ For running interactively:
 
 For compilation:
  
- Holmake -I word32 -I .. -I ../dff
+ Holmake 
+
+(uses Holmakefile)
+
 

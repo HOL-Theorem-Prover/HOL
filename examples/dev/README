@@ -10,8 +10,7 @@ compileScript.sml ......... definitions and theorems to support compiler
 compile.sml ............... convert to combinators and compile to circuits
 FactScript.sml ............ an example
 dff ....................... Melham's temporal abstraction theory
-
-Compile using: Holmake -I dff
+Holmakefile ............... instructions for Holmake
 
 *******************************************************************************
 There are six levels of abstraction:
@@ -488,4 +487,5 @@ ML reference "if_print_flag" to false.
 == [06.02.05: MJCG added refinement to clocked dtype registers               ==
 == [08.02.05: MJCG added ?-quantification of internal wires to MAKE_CIRCUIT  ==
 == [10.02.05: MJCG split input and output busses                             ==
+== [11.02.05: MJCG added Holmakefile (thanks to advice from MN)              ==
 ===============================================================================
