@@ -1,16 +1,6 @@
 signature pairTools =
 sig
- type term = Term.term
- type thm  = Thm.thm
- type conv = Abbrev.conv
- type tactic = Abbrev.tactic
-
- val mk_aabs          : term * term -> term
- val dest_aabs        : term -> term * term
- val strip_aabs       : term -> term list * term
- val list_mk_aabs     : term list * term -> term
- val mk_fst           : term -> term
- val mk_snd           : term -> term
+ include Abbrev
 
  val let_CONV         : conv   (* from Let_conv *)
  val PAIRED_BETA_CONV : conv   (* from Let_conv *)

@@ -38,8 +38,7 @@
 
 signature Pair_both1 =
 sig
-   type term = Term.term
-   type thm  = Thm.thm
+  include Abbrev
 
 	val CURRY_FORALL_CONV : term -> thm
 	val CURRY_EXISTS_CONV : term -> thm

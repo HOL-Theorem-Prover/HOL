@@ -1,39 +1,24 @@
 (* ---------------------------------------------------------------------*)
-(* 		Copyright (c) Jim Grundy 1992				*)
-(*									*)
-(* Jim Grundy, hereafter referred to as `the Author', retains the	*)
-(* copyright and all other legal rights to the Software contained in	*)
-(* this file, hereafter referred to as "the Software'.			*)
-(* 									*)
-(* The Software is made available free of charge on an "as is' basis.	*)
-(* No guarantee, either express or implied, of maintenance, reliability	*)
-(* or suitability for any purpose is made by the Author.		*)
-(* 									*)
-(* The user is granted the right to make personal or internal use	*)
-(* of the Software provided that both:					*)
-(* 1. The Software is not used for commercial gain.			*)
-(* 2. The user shall not hold the Author liable for any consequences	*)
-(*    arising from use of the Software.					*)
-(* 									*)
-(* The user is granted the right to further distribute the Software	*)
-(* provided that both:							*)
-(* 1. The Software and this statement of rights is not modified.	*)
-(* 2. The Software does not form part or the whole of a system 		*)
-(*    distributed for commercial gain.					*)
-(* 									*)
-(* The user is granted the right to modify the Software for personal or	*)
-(* internal use provided that all of the following conditions are	*)
-(* observed:								*)
-(* 1. The user does not distribute the modified software. 		*)
-(* 2. The modified software is not used for commercial gain.		*)
-(* 3. The Author retains all rights to the modified software.		*)
-(*									*)
-(* Anyone seeking a licence to use this software for commercial purposes*)
-(* is invited to contact the Author.					*)
-(* ---------------------------------------------------------------------*)
 (* CONTENTS: basic functions for dealing with paired abstractions.	*)
 (* ---------------------------------------------------------------------*)
 (*$Id$*)
+
+structure Pair_basic :> Pair_basic =
+struct
+
+open HolKernel Parse boolTheory Drule Conv Pair_syn Abbrev;
+
+infix THENC |->;
+infixr -->;
+
+val ERR = mk_HOL_ERR "pair library";
+
+val UNCURRY_DEF = pairTheory.UNCURRY_DEF;
+val CURRY_DEF = pairTheory.CURRY_DEF;
+val PAIR =  pairTheory.PAIR;
+
+fun comma(y1,y2) = inst [alpha |-> y1, beta |-> y2] pairSyntax.comma;
+
 
 (* ------------------------------------------------------------------------- *)
 (*  |- a = a'   |- b = b'                                                    *)
@@ -41,36 +26,12 @@
 (*   |- (a,b) = (a',b')                                                      *)
 (* ------------------------------------------------------------------------- *)
 
-structure Pair_basic :> Pair_basic =
-struct
-
-open HolKernel Parse boolTheory Drule Conv Pair_syn;
-
-infix THENC;
-
-   type term  = Term.term
-   type thm   = Thm.thm
-   type conv  = Abbrev.conv
-   type tactic = Abbrev.tactic
-
-fun PAIR_ERR{function=fnm,message=msg}
-    = raise HOL_ERR{message=msg,origin_function=fnm,
-                    origin_structure="pair lib"};
-
-fun failwith msg = PAIR_ERR{function=msg,message=""};
-
-fun mk_fun(y1,y2) = mk_type{Tyop="fun",Args=[y1,y2]};
-fun comma(y1,y2) = mk_const{Name=",",
-			    Ty=mk_fun(y1,mk_fun(y2,mk_prod(y1,y2)))};
-
-
-val MK_PAIR =
-    fn (t1,t2) =>
-    let val y1 = type_of (rand (concl t1))
-	and y2 = type_of (rand (concl t2))
-    in
-	MK_COMB ((AP_TERM (comma(y1,y2)) t1),t2)
-    end;
+fun MK_PAIR (t1,t2) =
+  let val y1 = type_of (rand (concl t1))
+      and y2 = type_of (rand (concl t2))
+  in
+    MK_COMB ((AP_TERM (comma(y1,y2)) t1),t2)
+  end;
 
 (* ------------------------------------------------------------------------- *)
 (* Paired abstraction                                                        *)
@@ -83,18 +44,16 @@ val MK_PAIR =
 fun PABS p th =
     if is_var p then ABS p th
     else (* is_pair *)
-	let val {fst=p1, snd=p2} = dest_pair p
-	    val t1 = PABS p2 th
-	    val t2 = PABS p1 t1
-	    val pty = type_of p
+	let val (p1,p2) = pairSyntax.dest_pair p
+	    val t1   = PABS p2 th
+	    val t2   = PABS p1 t1
+	    val pty  = type_of p
 	    val p1ty = type_of p1
 	    val p2ty = type_of p2
-	    val cty = type_of (rand (concl th))
+	    val cty  = type_of (rand (concl th))
 	in
-	    AP_TERM
-	    (mk_const{Name="UNCURRY",
-                     Ty=mk_fun(mk_fun(p1ty,mk_fun(p2ty,cty)),mk_fun(pty,cty))})
-	    t2
+	    AP_TERM (inst [alpha |-> p1ty, beta |-> p2ty, gamma |-> cty]
+                          pairSyntax.Uncurry) t2
 	end
     handle HOL_ERR _ => failwith "PABS";;
 
@@ -103,55 +62,48 @@ fun PABS p th =
 (* ----------------------------------------------------------------------- *)
 
 fun PABS_CONV conv tm =
-    let val {Bvar,Body} =
-           (dest_pabs tm handle HOL_ERR _ => failwith "PABS_CONV")
-	val bodyth = conv Body
-    in
-      PABS Bvar bodyth handle HOL_ERR _ => failwith "PABS_CONV"
-    end;
+  let val (vstruct,body) = pairSyntax.dest_abs tm
+  in PABS vstruct (conv body) 
+  end
+  handle HOL_ERR _ => failwith "PABS_CONV";
 
 (* ----------------------------------------------------------------------- *)
 (* PSUB_CONV conv tm: applies conv to the subterms of tm.                  *)
 (* ----------------------------------------------------------------------- *)
 
 fun PSUB_CONV conv tm =
-    if is_pabs tm then
-	PABS_CONV conv tm
-    else if is_comb tm then
-	let val {Rator,Rand} = dest_comb tm
-	in
-	    MK_COMB (conv Rator, conv Rand)
-	end
-    else (ALL_CONV tm);
+  if pairSyntax.is_abs tm 
+     then PABS_CONV conv tm
+     else if is_comb tm 
+          then let val {Rator,Rand} = dest_comb tm
+               in MK_COMB (conv Rator, conv Rand)
+               end
+          else ALL_CONV tm;
 
 (* ------------------------------------------------------------------------- *)
 (* CURRY_CONV "(\(x,y).f)(a,b)" = (|- ((\(x,y).f)(a,b)) = ((\x y. f) a b))   *)
 (* ------------------------------------------------------------------------- *)
 
-val UNCURRY_DEF = pairTheory.UNCURRY_DEF;
-val CURRY_DEF = pairTheory.CURRY_DEF;
-val PAIR =  pairTheory.PAIR;
-
 val CURRY_CONV =
-    let val gfty = (==`:'a -> 'b -> 'c`==)
-	and gxty = (==`:'a`==)
-	and gyty = (==`:'b`==)
-	and gpty = (==`:'a#'b`==)
-	and grange = (==`:'c`==)
+    let val gfty = alpha --> beta --> gamma
+	and gxty = alpha
+	and gyty = beta
+	and gpty = mk_prod(alpha,beta)
+	and grange = gamma
 	val gf = genvar gfty
 	and gx = genvar gxty
 	and gy = genvar gyty
 	and gp = genvar gpty
-	val uncurry_thm = SPECL [gf,gx,gy]UNCURRY_DEF
+	val uncurry_thm = SPECL [gf,gx,gy] UNCURRY_DEF
 	and pair_thm = SYM (SPEC gp PAIR)
-	val {fst=fgp,snd=sgp} = dest_pair (rand (concl pair_thm))
+	val (fgp,sgp) = dest_pair (rand (concl pair_thm))
 	val pair_uncurry_thm =
 	(CONV_RULE
 	    ((RATOR_CONV o RAND_CONV o RAND_CONV) (K (SYM pair_thm))))
 	    (SPECL [gf,fgp,sgp]UNCURRY_DEF)
     in
 	fn tm =>
-	let val {Rator,Rand=p} = (dest_comb tm)
+	let val {Rator,Rand=p} = dest_comb tm
 	    val f = rand Rator
 	    val fty = type_of f
 	    val rnge = hd(tl(#Args(dest_type(hd(tl(#Args(dest_type fty)))))))
@@ -462,16 +414,17 @@ fun PALPHA_CONV np tm =
 		end
     end
 handle HOL_ERR _ => failwith "PALPHA_CONV" ;
+
 (* ------------------------------------------------------------------------- *)
 (* For any binder B:                                                         *)
 (* GEN_PALPHA_CONV p2 "B p1. t" = (|- (B p1. t) = (B p2. t[p2/p1]))          *)
 (* ------------------------------------------------------------------------- *)
+
 fun GEN_PALPHA_CONV p tm =
-    if is_pabs tm then
-	PALPHA_CONV p tm
-    else
-	AP_TERM (rator tm) (PALPHA_CONV p (rand tm))
+ if is_pabs tm then PALPHA_CONV p tm
+ else AP_TERM (rator tm) (PALPHA_CONV p (rand tm))
 	handle HOL_ERR _ => failwith "GEN_PALPHA_CONV";
+
 (* ------------------------------------------------------------------------- *)
 (* Iff t1 and t2 are alpha convertable then                                  *)
 (* PALPHA t1 t2 = (|- t1 = t2)                                               *)
@@ -479,9 +432,9 @@ fun GEN_PALPHA_CONV p tm =
 (* Note the PALPHA considers "(\x.x)" and "\(a,b).(a,b)" to be               *)
 (*   alpha convertable where ALPHA does not.                                 *)
 (* ------------------------------------------------------------------------- *)
+
 fun PALPHA t1 t2 =
-   if t1 = t2 then
-       REFL t1
+   if t1 = t2 then REFL t1
    else if (is_pabs t1) andalso (is_pabs t2) then
             let val {Bvar=p1,Body=b1} = dest_pabs t1
 		and {Bvar=p2,Body=b2} = dest_pabs t2
@@ -509,7 +462,9 @@ fun PALPHA t1 t2 =
 	    end
 	     else
 		 failwith "" handle HOL_ERR _ => failwith "PALPHA";
+
 val paconv = curry (can (uncurry PALPHA));
+
 (* ------------------------------------------------------------------------- *)
 (* PAIR_CONV : conv -> conv                                                  *)
 (*                                                                           *)
@@ -517,13 +472,12 @@ val paconv = curry (can (uncurry PALPHA));
 (* recusively applies itself to both sides of the pair.                      *)
 (* Otherwise the basic conversion is applied to the argument.                *)
 (* ------------------------------------------------------------------------- *)
+
 fun PAIR_CONV c t =
-   if (is_pair t) then
-       let val {fst,snd} = dest_pair t
-       in
-	   MK_PAIR(PAIR_CONV c fst,PAIR_CONV c snd)
+  if is_pair t 
+  then let val {fst,snd} = dest_pair t
+       in MK_PAIR(PAIR_CONV c fst,PAIR_CONV c snd)
        end
-    else
-       c t;
+  else c t;
 
 end;

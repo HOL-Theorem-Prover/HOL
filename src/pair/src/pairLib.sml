@@ -11,6 +11,8 @@ struct
 
   val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
     
+
+
 (*    val _ = Lib.cons_path (!Globals.HOLdir^"library/pair/help/defs/") 
                            Globals.help_path;
     val _ = Lib.cons_path (!Globals.HOLdir^"library/pair/help/entries/") 

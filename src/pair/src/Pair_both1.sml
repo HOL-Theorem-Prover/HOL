@@ -39,24 +39,23 @@
 structure Pair_both1 :> Pair_both1 =
 struct
 
-open HolKernel Parse boolTheory Drule Conv Pair_syn Pair_basic;
+open HolKernel Parse boolTheory Drule Conv Pair_syn Pair_basic Abbrev;
 
-   type term = Term.term
-   type thm  = Thm.thm
+infixr -->;
+infix |->;
 
-fun PAIR_ERR{function=fnm,message=msg} = 
-     raise HOL_ERR{message=msg,origin_function=fnm, 
-                   origin_structure="pair lib"};
+val PAIR_ERR = mk_HOL_ERR "pair library";
     
-fun failwith msg = PAIR_ERR{function=msg,message=""};
 
-fun mk_fun(y1,y2) = mk_type{Tyop="fun",Args=[y1,y2]};
-fun comma(y1,y2) = mk_const{Name=",",
-			    Ty=mk_fun(y1,mk_fun(y2,mk_prod(y1,y2)))};
-
+fun mk_fun(y1,y2) = y1 --> y2;
+fun comma(ty1,ty2) = Term.inst [alpha |-> ty1, beta |-> ty2] pairSyntax.comma;
 
 val PFORALL_THM = pairTheory.PFORALL_THM;
 val PEXISTS_THM = pairTheory.PEXISTS_THM;
+
+val mk_pforall = pairSyntax.mk_forall;
+val dest_pforall = pairSyntax.dest_forall;
+val list_mk_pforall = pairSyntax.list_mk_forall;
 
 (* ------------------------------------------------------------------------- *)
 (* CURRY_FORALL_CONV "!(x,y).t" = (|- (!(x,y).t) = (!x y.t))                 *)
@@ -64,8 +63,8 @@ val PEXISTS_THM = pairTheory.PEXISTS_THM;
 
     
 fun CURRY_FORALL_CONV tm = 
-    let val {Bvar=xy,Body=bod} = dest_pforall tm
-	val {fst=x,snd=y} = dest_pair xy
+    let val (xy,bod) = dest_pforall tm
+	val (x,y) = pairSyntax.dest_pair xy
 	val result = list_mk_pforall ([x,y],bod) 
 	val f = rand (rand tm)
 	val th1 = RAND_CONV (PABS_CONV (UNPBETA_CONV xy)) tm 
@@ -83,7 +82,7 @@ fun CURRY_FORALL_CONV tm =
     in
         TRANS th8 (REFL result)
     end    
-handle HOL_ERR _ => failwith "CURRY_FORALL_CONV" ;
+    handle HOL_ERR _ => failwith "CURRY_FORALL_CONV" ;
 
 (* ------------------------------------------------------------------------- *)
 (* CURRY_EXISTS_CONV "?(x,y).t" = (|- (?(x,y).t) = (?x y.t))                 *)

@@ -15,7 +15,7 @@ structure pairScript =
 struct
 
 (*  interactive use:
- app load ["Q", "relationTheory", "mesonLib"];
+ app load ["Q", "relationTheory", "mesonLib"]; 
  open Parse relationTheory mesonLib;
 *)
 open HolKernel Parse boolLib QLib relationTheory mesonLib Rsyntax;
@@ -55,14 +55,12 @@ val ABS_REP_prod =
  define_new_type_bijections
   {ABS="ABS_prod",REP="REP_prod", name="ABS_REP_prod", tyax=prod_TY_DEF};
 
-
-val IS_PAIR_MK_PAIR = Q.prove
+val IS_PAIR_MK_PAIR = Q.prove 
 (`!x y. IS_PAIR (MK_PAIR x y)`,
 REWRITE_TAC[IS_PAIR_DEF, MK_PAIR_DEF]
  THEN GEN_TAC THEN GEN_TAC
  THEN Q.EXISTS_TAC `x` THEN Q.EXISTS_TAC `y`
  THEN REFL_TAC);
-
 
 val REP_ABS_PAIR = Q.prove
 (`!x y. REP_prod (ABS_prod (MK_PAIR x y)) = MK_PAIR x y`,
@@ -71,7 +69,7 @@ val REP_ABS_PAIR = Q.prove
   THEN REWRITE_TAC[IS_PAIR_MK_PAIR]);
 
 
-val COMMA_DEF =
+val COMMA_DEF = 
  Q.new_definition("COMMA_DEF", `$, x y = ABS_prod(MK_PAIR x y)`);
 
 val _ = add_rule {term_name = ",", fixity = Infixr 50,
@@ -161,7 +159,7 @@ GEN_TAC
  * UNCURRY is needed for terms of the form `\(x,y).t`
  *---------------------------------------------------------------------------*)
 
-val UNCURRY =
+val UNCURRY = 
  Q.new_definition
   ("UNCURRY",
    `UNCURRY f (v:'a#'b) = f (FST v) (SND v)`);
@@ -315,6 +313,7 @@ SUBST1_TAC (SYM (ETA_CONV
   mesonLib.ASM_MESON_TAC []
 ]);
 
+
 val _ = save_thm("PEXISTS_THM",PEXISTS_THM);
 
 
@@ -326,14 +325,13 @@ val pair_Axiom = Q.store_thm("pair_Axiom",
 val UNCURRY_CONG =
   save_thm("UNCURRY_CONG", Prim_rec.case_cong_thm ABS_PAIR_THM UNCURRY_DEF);
 
-
 (*---------------------------------------------------------------------------
      Standard helpful combinator
  ---------------------------------------------------------------------------*)
 
-val PROD_FUN = Q.new_infixl_definition
+val PROD_FUN = Q.new_infixr_definition
  ("PROD_FUN",
-  `## (f:'a->'c) (g:'b->'d) p = (f (FST p), g (SND p))`, 500);
+  `## (f:'a->'c) (g:'b->'d) p = (f (FST p), g (SND p))`, 50);
 
 val PROD_FUN_THM = Q.store_thm
 ("PROD_FUN_THM",

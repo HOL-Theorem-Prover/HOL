@@ -1,7 +1,7 @@
 structure pairSimps :> pairSimps =
 struct
 
-open Lib Parse simpLib Let_conv pairTheory;
+open Lib Parse simpLib pairTheory pairSyntax;
 
 
 (*------------------------------------------------------------------------

@@ -37,21 +37,13 @@
 
 structure Pair_exists :> Pair_exists =
 struct
-open HolKernel Parse Drule Tactical Tactic Conv Thm_cont;
-open Let_conv; (* PAIRED_BETA_CONV is in here, not in 0/1. *)
-
-    open Rsyntax;
+open HolKernel boolLib pairSyntax Abbrev Rsyntax;
     open Pair_syn;
     open Pair_basic;
     open Pair_both1;
     open Pair_forall;
-infix ##  |->;
 
-   type term  = Term.term
-   type thm   = Thm.thm
-   type goal  = Abbrev.goal
-   type conv  = Abbrev.conv
-   type tactic = Abbrev.tactic
+infix ##  |->;
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
 val EXISTS_UNIQUE_DEF = boolTheory.EXISTS_UNIQUE_DEF;
