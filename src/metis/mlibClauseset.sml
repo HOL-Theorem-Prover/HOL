@@ -192,11 +192,6 @@ fun empty (cparm,parm) =
        rewrites = mlibClause.empty cparm, clauses = [], subsumers = S.empty (),
        literals = N.empty (), equalities = T.empty (), subterms = T.empty ()};
 
-fun clear (SET {parm = z, units = u, rewrites = r, ...}) =
-  SET {parm = z, size = 0, units = u, rewrites = r, clauses = [],
-       subsumers = S.empty (), literals = N.empty (),
-       equalities = T.empty (), subterms = T.empty ()};
-    
 fun size (SET {size, ...}) = size;
 
 fun units (SET {units, ...}) = units;

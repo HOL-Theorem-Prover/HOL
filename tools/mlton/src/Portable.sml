@@ -75,7 +75,7 @@ val end_of_stream  = TextIO.endOfStream
     Efficiency hack.
  ---------------------------------------------------------------------------*)
 
-fun pointer_eq (x:'a, y:'a) = Milton.pointer_eq x y;
+val pointer_eq = MLton.eq;
 
 (*---------------------------------------------------------------------------
     Time

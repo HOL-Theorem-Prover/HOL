@@ -236,12 +236,11 @@ fun insert x s = if mem x s then s else x :: s;
 fun delete x s = List.filter (not o equal x) s;
 
 (* Removes duplicates *)
-fun setify s = foldl (fn (v, x) => if mem v x then x else v :: x) [] s;
+fun setify s = foldl (fn (v,x) => if mem v x then x else v :: x) [] s;
 
-(* For all three set operations: if s has duplicates, so may the result. *)
-fun union s t = foldl (fn (v, x) => if mem v x then x else v :: x) s t;
-fun intersect s t = foldl (fn (v, x) => if mem v t then v :: x else x) [] s;
-fun subtract s t = foldl (fn (v, x) => if mem v t then x else v :: x) [] s;
+fun union s t = foldl (fn (v,x) => if mem v t then x else v::x) t (rev s);
+fun intersect s t = foldl (fn (v,x) => if mem v t then v::x else x) [] (rev s);
+fun subtract s t = foldl (fn (v,x) => if mem v t then x else v::x) [] (rev s);
 
 fun subset s t = List.all (fn x => mem x t) s;
 
@@ -331,6 +330,22 @@ fun int_to_bits 0 = []
 
 fun bits_to_int [] = 0
   | bits_to_int (h :: t) = (if h then curry op+ 1 else I) (2 * bits_to_int t);
+
+local
+  val enc = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+  val (max, rev_enc) =
+    foldl (fn (c,(i,m)) => (i + 1, Binarymap.insert (m,c,i)))
+    (0, Binarymap.mkDict Char.compare) (String.explode enc);
+in
+  fun int_to_base64 n =
+    if 0 <= n andalso n < max then String.sub (enc,n)
+    else raise ERR "int_to_base64" "out of range";
+
+  fun base64_to_int c =
+    case Binarymap.peek (rev_enc, c) of SOME n => n
+    | NONE => raise ERR "base64_to_int" "out of range";
+end;
 
 fun interval m 0 = []
   | interval m len = m :: interval (m + 1) (len - 1);
@@ -472,7 +487,10 @@ fun pp_binop s pp_a pp_b pp (a,b) =
 
 (* Pretty-printers for common types *)
 
-val pp_string = PP.add_string;
+fun pp_string pp s =
+  (PP.begin_block pp PP.INCONSISTENT 0;
+   PP.add_string pp s;
+   PP.end_block pp);
 
 fun pp_unit pp = pp_map (K "()") pp_string pp;
 

@@ -1,5 +1,5 @@
 (* ------------------------------------------------------------------------- *)
-(* An MLton patch.                                                           *)
+(* A patch for mlton-20030716.                                               *)
 (* ------------------------------------------------------------------------- *)
 
 structure OS =
@@ -28,6 +28,7 @@ structure Process = OS.Process;
 type ppstream = PP.ppstream;
 
 exception Interrupt = SML90.Interrupt;
+exception Io = IO.Io;
 
 (* ------------------------------------------------------------------------- *)
 (* Sort out infixities.                                                      *)
@@ -50,3 +51,4 @@ val quietdec  = ref false;
 val loadPath  = ref ([] : string list);
 val load      = fn (_ : string) => ();
 val installPP = fn (_ : ppstream -> 'a -> unit) => ();
+val printVal  = fn x => x;

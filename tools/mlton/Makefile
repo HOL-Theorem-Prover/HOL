@@ -3,16 +3,12 @@
 # Created by Joe Hurd, October 2003
 ###############################################################################
 
-.PHONY: all build clean reallyclean world depend
+.PHONY: all clean reallyclean world depend
 
-all: build test
-
-build: bin/psl1
-
-test: bin/psl1.out
+all: metis psl
 
 clean:
-	rm -f bin/psl*
+	rm -f bin/metis* bin/psl*
 
 reallyclean: clean
 	rm -f Makefile.*
@@ -30,7 +26,7 @@ UNQUOTE = ../../bin/unquote
 
 MOSML2MLTON = scripts/mosml2mlton.pl
 
-MLC = mlton -basis 1997 -verbose 2 -exn-history true
+MLC = mlton -basis 1997 -verbose 3
 
 PRE = \
   pre/mosmllex/LexBuffer.sig pre/mosmllex/LexBuffer.sml \
@@ -51,7 +47,24 @@ include Makefile.src
 
 POST = src/std.prelude
 
+# Metis test problems
+
+metis: bin/metis1.out
+
+METIS1 = test/mlibProblem.sig test/mlibProblem.sml test/test.sml
+
+bin/metis1: bin/metis1.sml
+	$(MLC) $+
+
+bin/metis1.sml: $(PRE) $(SRC) $(POST) $(METIS1)
+	@$(MLPREP) $+ | $(UNQUOTE) | $(MOSML2MLTON) >$@
+
+bin/metis1.out: bin/metis1
+	$+ | tee $@
+
 # Evaluation of PSL formulas in the logic
+
+psl: bin/psl1.out
 
 Makefile.psl:
 	scripts/deps.pl PSL ../../examples/PSL/regexp ../../examples/PSL/official-semantics ../../examples/PSL/executable-semantics >Makefile.psl

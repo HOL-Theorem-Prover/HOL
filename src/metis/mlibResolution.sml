@@ -104,13 +104,13 @@ val mk_res = RES;
 
 fun dest_res (RES r) = r;
 
-fun new (parm : parameters) cls =
+fun new (parm : parameters) axioms thms =
   let
     val {clause_parm,sos_parm,set_parm,...} = parm
     val set = mlibClauseset.empty (clause_parm,set_parm)
-    val (cls,set) = mlibClauseset.initialize cls set
-    val set = foldl (fn (c,s) => mlibClauseset.add c s) set cls
-    val sos = mlibSupport.empty sos_parm
+    val (thms,set) = mlibClauseset.initialize thms set
+    val set = foldl (fn (c,s) => mlibClauseset.add c s) set thms
+    val sos = mlibSupport.empty sos_parm axioms
   in
     RES {set = set, sos = sos}
   end;
@@ -164,11 +164,11 @@ fun deduce0 record ((d,cl),res) =
     fun dist infs = (record infs; d + log2 (Real.fromInt (1 + infs)))
     val _ = chatting 4 andalso
             chat ("\ngiven clause:\n" ^ clause_to_string cl ^ "\n")
-    val RES {set,...} = res
+    val RES {set,sos,...} = res
     val {order_stickiness, ...} = #parm (mlibClause.dest_clause cl)
     val cl = if order_stickiness <= 2 then mlibClause.drop_order cl else cl
     val set = mlibClauseset.add cl set
-    val res = update_set set res
+    val res = update_set set (update_sos (mlibSupport.register [cl] sos) res)
     val cl = mlibClause.FRESH_VARS cl
     val cls = mlibClauseset.deduce set cl
   in
@@ -235,7 +235,8 @@ fun resolution_stream slice_ref units_ref =
         else (swipe res; S.CONS (NONE, stat (f o shove) res))
       end;
   in
-    fn (parm,thms,hyps) => stat f (sq (add hyps) (shove (new parm thms))) ()
+    fn (parm,axioms,thms,hyps) =>
+    stat f (sq (add hyps) (shove (new parm axioms thms))) ()
   end;
 
 fun mk_thms_hyps cl_parm thms hyps =
@@ -258,12 +259,13 @@ fun resolution' (name, parm : parameters) =
      val solution_stream =
        S.map (Option.map (wrap o #thm o mlibClause.dest_clause)) o
        resolution_stream slice_ref units_ref
+     val axioms = map (list_mk_disj o mlibThm.clause) thms
      val (thms,hyps) = mk_thms_hyps (#clause_parm parm) thms hyps
      val _ = chatting 3 andalso chat
        (name ^ "--initializing--#thms=" ^ int_to_string (length thms) ^
         "--#hyps=" ^ int_to_string (length hyps) ^ ".\n")
    in
-     fn [False] => solution_stream (parm,thms,hyps)
+     fn [False] => solution_stream (parm,axioms,thms,hyps)
       | _ => S.NIL
    end};
 

@@ -6,8 +6,9 @@
 signature mlibResolution =
 sig
 
-type 'a pp  = 'a mlibUseful.pp
-type clause = mlibClause.clause
+type 'a pp   = 'a mlibUseful.pp
+type formula = mlibTerm.formula
+type clause  = mlibClause.clause
 
 type parameters =
   {clause_parm : mlibClause.parameters,
@@ -23,7 +24,7 @@ val update_sos_parm    : mlibSupport.parameters parmupdate
 (* mlibResolution *)
 type resolution
 type components = {set : mlibClauseset.clauseset, sos : mlibSupport.sos}
-val new       : parameters -> clause list -> resolution
+val new       : parameters -> formula list -> clause list -> resolution
 val size      : resolution -> {used : int, waiting : int, rewrites : int}
 val add       : clause list -> resolution -> resolution
 val select    : resolution -> ((real * clause) * resolution) option

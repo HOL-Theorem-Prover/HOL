@@ -42,7 +42,7 @@ fun drop_after f =
   S.foldr (fn (x, xs) => S.CONS (x, if f x then K S.NIL else xs)) S.NIL;
 
 fun time_to_string t =
-  let val dp = if t < 10.0 then 1 else 0
+  let val dp = if t < 9.95 then 1 else 0
   in Real.fmt (StringCvt.FIX (SOME dp)) t
   end;
 
@@ -166,7 +166,7 @@ fun infs_power n : cost_fn =
   ("infs power " ^ Real.toString n,
    fn {infs, ...} => Real.abs (Math.pow (Real.fromInt infs, n)));
 
-val pp_cost_fn = pp_map fst pp_string;
+val pp_cost_fn : cost_fn pp = pp_map fst pp_string;
 
 (* ------------------------------------------------------------------------- *)
 (* This allows us to hierarchically arrange solver nodes.                    *)

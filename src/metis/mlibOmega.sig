@@ -18,7 +18,7 @@ sig
   val false_factoid      : factoid -> bool
   val true_factoid       : factoid -> bool
   val fromList           : int list -> factoid
-  val fromBigList        : arbint list -> factoid
+  val fromArbList        : arbint list -> factoid
   val toList             : factoid -> arbint list
 
   exception no_gcd

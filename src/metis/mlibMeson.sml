@@ -209,7 +209,9 @@ fun thms_to_rules chosen thms hyps =
 
 val meson_rules = thms_to_rules I;
 
-val prolog_rules = thms_to_rules (wrap o hd);
+local fun only_one (l as [_]) = l | only_one _ = [];
+in val prolog_rules = thms_to_rules (only_one o List.filter positive);
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* Creating the delta goals.                                                 *)
@@ -314,14 +316,15 @@ fun unit_cut false _ = I
 (* The core of meson: ancestor unification or Prolog-style extension.        *)
 (* ------------------------------------------------------------------------- *)
 
-fun freshen_rule ({thm, asms, c, ...} : rule) i =
+fun freshen_rule ({thm, asms, c, asmn} : rule) i =
   let
     val fvs = FVL [] (c :: asms)
     val fvn = length fvs
     val mvs = mk_mvars i fvn
     val sub = mlibSubst.from_maplets (zipwith (curry op|->) fvs mvs)
   in
-    ((INST sub thm, map (formula_subst sub) asms, formula_subst sub c), i + fvn)
+    ({thm = INST sub thm, asms = map (formula_subst sub) asms,
+      c = formula_subst sub c, asmn = asmn}, i + fvn)
   end;
 
 fun reward r = update_depth (fn n => n + r);
@@ -337,11 +340,12 @@ fun spend m f c (s as {depth = n, ...} : state) =
   end;
 
 local
-  fun unify env (th,asms,c) g = (th, asms, unify_literals env c g)
+  fun unify env ({thm,asms,c,...} : rule) g =
+    (thm, asms, unify_literals env c g);
 
-  fun match env (th,asms,c) g =
+  fun match env ({thm,asms,c,...} : rule) g =
     let val sub = match_literals c g
-    in (INST sub th, map (formula_subst sub) asms, env)
+    in (INST sub thm, map (formula_subst sub) asms, env)
     end;
 in
   fun next_state false env r g = unify env r g
@@ -363,14 +367,16 @@ fun swivelp m n = update_proof (swivel m n);
 
 fun meson_expand {parm : parameters, rules, cut, meter, saturated} =
   let
+    val {ancestor_pruning, ancestor_cutting, state_simplify,
+         divide_conquer, ...} = parm
     fun expand ancestors g cont (state as {env, ...}) =
       (chatting 4 andalso
        chat ("meson: "^formula_to_string (formula_subst env g)^".\n");
        if not (check_meter (!meter)) then
          (NONE, CHOICE (fn () => expand ancestors g cont state))
-       else if ancestor_prune (#ancestor_pruning parm) env g ancestors then
+       else if ancestor_prune ancestor_pruning env g ancestors then
          raise ERR "meson" "ancestor pruning"
-       else if ancestor_cut (#ancestor_cutting parm) env g ancestors then
+       else if ancestor_cut ancestor_cutting env g ancestors then
          (record_infs (!meter) 1; cont (update_proof (cons (ASSUME g)) state))
        else
          let
@@ -393,8 +399,8 @@ fun meson_expand {parm : parameters, rules, cut, meter, saturated} =
         val () =
           if 0 <= depth then ()
           else (saturated := false; raise ERR "meson" "too deep")
-        val (r', offset) = freshen_rule r offset
-        val (th, asms, env) = next_state (#state_simplify parm) env r' g
+        val (r',offset) = freshen_rule r offset
+        val (th,asms,env) = next_state state_simplify env r' g
         val () = record_infs (!meter) 1
         val _ = chatting 5 andalso chat ("meson rule: "^rule_to_string r^"\n")
       in
@@ -402,7 +408,7 @@ fun meson_expand {parm : parameters, rules, cut, meter, saturated} =
         {env = env, depth = depth, proof = proof, offset = offset}
       end
     and expands ancestors g c (s as {depth = n, ...}) =
-      if #divide_conquer parm andalso splittable g then
+      if divide_conquer andalso splittable g then
         let
           val (l1, l2) = halves (length g)
           val (g1, g2) = split g l1

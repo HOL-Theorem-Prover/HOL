@@ -36,10 +36,12 @@ structure R = mlibResolution; local open mlibResolution in end;
 val aligned_traces =
   [{module = "mlibRewrite",    alignment = fn n => n + 3},
    {module = "mlibTermorder",  alignment = fn n => n + 4},
+   {module = "mlibModel",      alignment = fn n => n + 4},
    {module = "mlibSolver",     alignment = I},
    {module = "mlibMeson",      alignment = I},
    {module = "mlibClause",     alignment = fn n => n + 3},
    {module = "mlibClauseset",  alignment = fn 1 => 1 | n => n + 2},
+   {module = "mlibSupport",    alignment = fn n => n + 3},
    {module = "mlibResolution", alignment = fn n => if n <= 2 then n else n - 1}];
 
 val () = trace_level := 1;
@@ -60,21 +62,30 @@ datatype prover =
 
 type parameters = (prover * sos_filter option * cost_fn) list;
 
-local val rl = R.update_clause_parm o mlibClause.update_literal_order o K;
-in val alt_mlibResolution = mlibResolution o rl true;
+val default_model = mlibModel.update_perts (K (100,1)) mlibModel.defaults;
+
+local
+  val rl = R.update_clause_parm o mlibClause.update_literal_order o K;
+  fun rm ns =
+    (R.update_sos_parm o mlibSupport.update_model_parms)
+    (fn l => l @ map (fn n => mlibModel.update_size (K n) default_model) ns);
+in
+  val ord_mlibResolution = mlibResolution o rm [4,5,6] o rl true;
 end;
 
 val default_meson = (mlibMeson M.defaults, NONE, time_power 2.0);
 val default_resolution = (mlibResolution R.defaults,SOME everything,time_power 1.3);
 val default_delta = (Delta M.defaults, NONE, once_only);
-val alt_resolution = (alt_mlibResolution R.defaults, NONE, time_power 1.0);
-val defaults = [default_meson,default_resolution,default_delta,alt_resolution];
+val ord_resolution = (ord_mlibResolution R.defaults, NONE, time_power 1.0);
+val defaults = [default_meson,default_resolution,default_delta,ord_resolution];
 
 local
   fun b2s true = "on" | b2s false = "off";
   val i2s = mlibUseful.int_to_string;
   fun io2s NONE = "NONE" | io2s (SOME i) = "SOME " ^ i2s i;
   val r2s = mlibUseful.real_to_string;
+  fun mp2s {size, perts = (p,q)} = i2s size ^ "(" ^ i2s p ^ "+" ^ i2s q ^ ")";
+  fun mpl2s l = PP.pp_to_string (!LINE_LENGTH) (pp_list pp_string) (map mp2s l);
 
   fun rp2s name (parm : R.parameters) =
     let
@@ -91,6 +102,9 @@ local
       "  sos_parm:\n" ^
       "    size_power ......... " ^ r2s (#size_power a) ^ "\n" ^
       "    literal_power ...... " ^ r2s (#literal_power a) ^ "\n" ^
+      "    model_power ........ " ^ r2s (#model_power a) ^ "\n" ^
+      "    model_checks ....... " ^ i2s (#model_checks a) ^ "\n" ^
+      "    model_parms ........ " ^ mpl2s (#model_parms a) ^ "\n" ^
       "  set_parm:\n" ^
       "    subsumption ........ " ^ i2s (#subsumption b) ^ "\n" ^
       "    simplification ..... " ^ i2s (#simplification b) ^ "\n" ^
@@ -158,6 +172,8 @@ local
   fun lift2 f (s,[x,y]) = f (s,x,y) | lift2 _ _ = raise BUG "lift2" "";
 
   fun lift_toggle f = lift0 (fn s => f s not);
+
+  fun lift_nat f = int_option (SOME 0, NONE) (fn (s,i) => f s (K i));
 
   fun lift_int m f = int_option (SOME 0, SOME m) (fn (s,i) => f s (K i));
 
@@ -296,6 +312,23 @@ in
        o update_resolution p
        o R.update_sos_parm
        o mlibSupport.update_literal_power)},
+     {switches = ["","-rd","--model-power"], arguments = ["N"],
+      description = "effect of model checking on clause weight",
+      processor = lift_real
+      (fn p =>
+       change
+       o update_resolution p
+       o R.update_sos_parm
+       o mlibSupport.update_model_power)},
+     {switches = ["","-rm","--add-model"], arguments = ["n"],
+      description = "add a finite model with domain {0..n-1}",
+      processor = lift_nat
+      (fn p =>
+       change
+       o update_resolution p
+       o R.update_sos_parm
+       o mlibSupport.update_model_parms
+       o (fn n => fn l => l @ [mlibModel.update_size n default_model]))},
      {switches = ["-m","--meson"], arguments = [],
       description = "create model elimination prover",
       processor = lift0 (fn _ => change (cons default_meson))},

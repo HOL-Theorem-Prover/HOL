@@ -75,31 +75,11 @@ History and Credit
    replacement  to  John  Harrison's  MESON_TAC that is commonly used for
    first-order proof in HOL.
 
-   The  model  elimination and resolution calculi were based on MESON_TAC
-   and John Harrison's forthcoming book about theorem proving.
+   The  model  elimination and resolution calculi were initially based on
+   MESON_TAC and John Harrison's forthcoming book about theorem proving.
 
    A  large  collection  of  HOL subgoals are [3]available in first-order
    format.
-
-Etymology
-
-   Metis  is  the  innermost  moon of Jupiter, lying within the planetary
-   ring. The picture above is of the moon Metis, and comes from [4]NASA.
-
-   Metis is a consort of Zeus in [5]Greek mythology:
-
-     "Zeus  has a fling with Metis, cunning wisdom, technical craft, and
-     then eats her so that she can't produce a rival child. The child is
-     instead born from Zeus's head as Athena."
-
-   The [6]Metis [7]people of Canada are
-
-     "mixed-blood  offspring  of  French fur traders from the North West
-     Company  or  Scottish and English fur traders from the Hudson's Bay
-     Company and Cree, Ojibway or Saulteaux women ... As people of mixed
-     ancestry  increased  in number and married amongst themselves, they
-     developed  a new culture, neither European nor Indian, but a fusion
-     of the two and a new identity as Metis."
 
 Change Log
 
@@ -173,7 +153,3 @@ References
    1. http://hol.sf.net/
    2. http://www.cl.cam.ac.uk/~jeh1004/research/papers/hol2fol.html
    3. http://www.cl.cam.ac.uk/~jeh1004/research/problems
-   4. http://www.seds.org/nineplanets/nineplanets/amalthea.html#metisx
-   5. http://www.stir.ac.uk/Departments/Arts/ReligiousStudies/rlists/7212/7212-11.html
-   6. http://www.turtle-island.com/metis.html
-   7. http://www.metisnation.org/

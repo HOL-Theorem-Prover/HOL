@@ -1,6 +1,6 @@
 structure mlibOmegaint :> mlibOmegaint =
 struct
-   open mlibBigint
+   open mlibArbint
    val eq = op=
    val == = eq
    infix ==

@@ -3,7 +3,7 @@
 (* very simple-minded implementation of arbitrary precision natural
    numbers *)
 
-structure mlibBignum :> mlibBignum =
+structure mlibArbnum :> mlibArbnum =
 struct
 
 (* app load ["Substring", "Random", "Int", "Process"] *)

@@ -28,18 +28,18 @@ val nothing    : 'a -> unit * 'a
 val optional   : ('a -> 'b * 'a) -> 'a -> 'b option * 'a
 
 (* mlibStream-based *)
-type ('a, 'b) parser = 'a stream -> 'b * 'a stream
-val maybe    : ('a -> 'b option) -> ('a, 'b) parser
-val finished : ('a, unit) parser
-val some     : ('a -> bool) -> ('a, 'a) parser
-val any      : ('a, 'a) parser
-val exact    : ''a -> (''a, ''a) parser
+type ('a,'b) parser = 'a stream -> 'b * 'a stream
+val maybe    : ('a -> 'b option) -> ('a,'b) parser
+val finished : ('a,unit) parser
+val some     : ('a -> bool) -> ('a,'a) parser
+val any      : ('a,'a) parser
+val exact    : ''a -> (''a,''a) parser
 
 (* Parsing and pretty-printing for infix operators *)
 type infixities  = {tok : string, prec : int, left_assoc : bool} list
 type 'a con      = string * 'a * 'a -> 'a
 type 'a des      = 'a -> (string * 'a * 'a) option
-type 'a iparser  = (string, 'a) parser
+type 'a iparser  = (string,'a) parser
 type 'a iprinter = ('a * bool) pp
 val optoks            : infixities -> string list
 val parse_left_infix  : string list -> 'a con -> 'a iparser -> 'a iparser

@@ -47,6 +47,6 @@ val partial_maps : ('a -> 's -> 'b option * 's) -> 's -> 'a stream -> 'b stream
 (* Maps to other data structures *)
 val to_list       : 'a stream -> 'a list
 val from_list     : 'a list -> 'a stream
-val from_textfile : string -> string stream            (* lines of the file *)
+val from_textfile : string -> string stream  (* lines of the file, raises Io *)
 
 end

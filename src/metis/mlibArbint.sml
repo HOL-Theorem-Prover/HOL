@@ -1,27 +1,27 @@
 (* Author: Michael Norrish *)
 
-structure mlibBigint :> mlibBigint =
+structure mlibArbint :> mlibArbint =
 struct
 
-type num = mlibBignum.num
+type num = mlibArbnum.num
 type int = bool * num
 
 (* representation has first component true if the integer is >= 0 *)
 
+val op++ = mlibArbnum.+
+val op-- = mlibArbnum.-
+val op** = mlibArbnum.*
+val op<< = mlibArbnum.<
+val ddiv = mlibArbnum.div
+val mmod = mlibArbnum.mod
+val AZ = mlibArbnum.zero
+
+val zero = (true, mlibArbnum.zero)
+val one = (true, mlibArbnum.one)
+val two = (true, mlibArbnum.two)
+
 infix ++ -- ** <<
 infix 7 ddiv mmod
-
-val op ++ = mlibBignum.+
-val op -- = mlibBignum.-
-val op ** = mlibBignum.*
-val op << = mlibBignum.<
-val op ddiv = mlibBignum.div
-val op mmod = mlibBignum.mod
-val AZ = mlibBignum.zero
-
-val zero = (true, mlibBignum.zero)
-val one = (true, mlibBignum.one)
-val two = (true, mlibBignum.two)
 
 fun norm_zeros (i as (b,n)) = if not b andalso n = AZ then (true, AZ) else i
 
@@ -42,14 +42,14 @@ fun ((true, n1) * (true, n2)) = (true, n1 ** n2)
   | ((false, n1) * (false, n2)) = (true, n1 ** n2)
 
 fun ((true, n1) div (true, n2)) = (true, n1 ddiv n2)
-  | ((true, n1) div (false, n2)) = let val (q,r) = mlibBignum.divmod(n1, n2)
-                                   in if r <> mlibBignum.zero then
-                                        (false, q ++ mlibBignum.one)
+  | ((true, n1) div (false, n2)) = let val (q,r) = mlibArbnum.divmod(n1, n2)
+                                   in if r <> mlibArbnum.zero then
+                                        (false, q ++ mlibArbnum.one)
                                       else norm_zeros (false, q)
                                    end
-  | ((false, n1) div (true, n2)) = let val (q,r) = mlibBignum.divmod(n1, n2)
-                                   in if r <> mlibBignum.zero then
-                                        (false, q ++ mlibBignum.one)
+  | ((false, n1) div (true, n2)) = let val (q,r) = mlibArbnum.divmod(n1, n2)
+                                   in if r <> mlibArbnum.zero then
+                                        (false, q ++ mlibArbnum.one)
                                       else norm_zeros (false, q)
                                    end
   | ((false, n1) div (false, n2)) = (true, n1 ddiv n2)
@@ -93,24 +93,24 @@ fun compare(i,j) = if i < j then LESS
 
 fun divmod (i, j) = (i div j, i mod j)
 
-fun toString (true, n) = mlibBignum.toString n ^ "i"
-  | toString (false, n) = "-" ^ mlibBignum.toString n ^ "i"
+fun toString (true, n) = mlibArbnum.toString n ^ "i"
+  | toString (false, n) = "-" ^ mlibArbnum.toString n ^ "i"
 
 fun fromString s = let
   open Substring
   val (pfx, rest) = splitl (fn c => c = #"-" orelse c = #"~") (all s)
   val is_positive = Int.mod(size pfx, 2) = 0
 in
-  (is_positive, mlibBignum.fromString (string rest))
+  (is_positive, mlibArbnum.fromString (string rest))
 end
 
-fun toInt (true, n) = mlibBignum.toInt n
-  | toInt (false, n) = Int.-(0, mlibBignum.toInt n)
+fun toInt (true, n) = mlibArbnum.toInt n
+  | toInt (false, n) = Int.-(0, mlibArbnum.toInt n)
 fun toNat (true, n) = n
   | toNat (false, _) = raise Fail "Attempt to make negative integer a nat"
 fun fromInt n =
-  if (Int.<(n,0)) then (false, mlibBignum.fromInt(Int.-(0, n)))
-  else (true, mlibBignum.fromInt n)
+  if (Int.<(n,0)) then (false, mlibArbnum.fromInt(Int.-(0, n)))
+  else (true, mlibArbnum.fromInt n)
 
 
 fun min (i,j) = if i < j then i else j

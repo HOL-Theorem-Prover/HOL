@@ -101,6 +101,8 @@ val int_to_string : int -> string
 val string_to_int : string -> int                 (* Overflow, Option *)
 val int_to_bits   : int -> bool list
 val bits_to_int   : bool list -> int              (* Overflow *)
+val int_to_base64 : int -> char
+val base64_to_int : char -> int
 val interval      : int -> int -> int list
 val divides       : int -> int -> bool
 val primes        : int -> int list

@@ -1,4 +1,4 @@
-signature mlibBignum =
+signature mlibArbnum =
 sig
 
   eqtype num

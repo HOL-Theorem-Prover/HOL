@@ -39,7 +39,7 @@ fun op ++ (parser1, parser2) input =
     ((result1, result2), rest2)
   end;
 
-fun op >> (parser, treatment) input =
+fun op >> (parser : 'a -> 'b * 'a, treatment) input =
   let
     val (result, rest) = parser input
   in

@@ -1,9 +1,9 @@
-signature mlibBigint =
+signature mlibArbint =
 sig
 
   eqtype int
 
-  type num = mlibBignum.num
+  type num = mlibArbnum.num
 
   val zero : int
   val one  : int

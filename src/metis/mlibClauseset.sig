@@ -22,7 +22,6 @@ val update_splitting      : (int -> int) -> parameters -> parameters
 (* mlibClause sets *)
 type clauseset
 val empty     : mlibClause.parameters * parameters -> clauseset
-val clear     : clauseset -> clauseset       (* preserves units and rewrites *)
 val size      : clauseset -> int
 val units     : clauseset -> mlibUnits.units
 val rewrites  : clauseset -> mlibClause.rewrs

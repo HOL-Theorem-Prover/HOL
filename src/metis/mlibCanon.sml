@@ -76,24 +76,24 @@ fun simplify (Not    p)      = simplify1 (Not (simplify p))
 (* Negation normal form.                                                     *)
 (* ------------------------------------------------------------------------- *)
 
-fun nnf (And (p, q))     = And (nnf p, nnf q)
-  | nnf (Or (p, q))      = Or (nnf p, nnf q)
-  | nnf (Imp (p, q))     = Or (nnf' p, nnf q)
-  | nnf (Iff (p, q))     = Or (And (nnf p, nnf q), And (nnf' p, nnf' q))
-  | nnf (Forall (x, p))  = Forall (x, nnf p)
-  | nnf (Exists (x, p))  = Exists (x, nnf p)
-  | nnf (Not x)          = nnf' x
-  | nnf fm               = fm
-and nnf' True            = False
-  | nnf' False           = True
-  | nnf' (And (p, q))    = Or (nnf' p, nnf' q)
-  | nnf' (Or (p, q))     = And (nnf' p, nnf' q)
-  | nnf' (Imp (p, q))    = And (nnf p, nnf' q)
-  | nnf' (Iff (p, q))    = Or (And (nnf p, nnf' q), And (nnf' p, nnf q))
-  | nnf' (Forall (x, p)) = Exists (x, nnf' p)
-  | nnf' (Exists (x, p)) = Forall (x, nnf' p)
-  | nnf' (Not x)         = nnf x
-  | nnf' fm              = Not fm;
+fun nnf (And (p,q))     = And (nnf p, nnf q)
+  | nnf (Or (p,q))      = Or (nnf p, nnf q)
+  | nnf (Imp (p,q))     = Or (nnf' p, nnf q)
+  | nnf (Iff (p,q))     = Or (And (nnf p, nnf q), And (nnf' p, nnf' q))
+  | nnf (Forall (x,p))  = Forall (x, nnf p)
+  | nnf (Exists (x,p))  = Exists (x, nnf p)
+  | nnf (Not x)         = nnf' x
+  | nnf fm              = fm
+and nnf' True           = False
+  | nnf' False          = True
+  | nnf' (And (p,q))    = Or (nnf' p, nnf' q)
+  | nnf' (Or (p,q))     = And (nnf' p, nnf' q)
+  | nnf' (Imp (p,q))    = And (nnf p, nnf' q)
+  | nnf' (Iff (p,q))    = Or (And (nnf p, nnf' q), And (nnf' p, nnf q))
+  | nnf' (Forall (x,p)) = Exists (x, nnf' p)
+  | nnf' (Exists (x,p)) = Forall (x, nnf' p)
+  | nnf' (Not x)        = nnf x
+  | nnf' fm             = Not fm;
 
 (* ------------------------------------------------------------------------- *)
 (* Prenex normal form.                                                       *)
@@ -101,16 +101,16 @@ and nnf' True            = False
 
 fun pullquants fm =
   (case fm of
-     And (Forall (x, p), Forall (y, q)) => pullquant_2 fm Forall And x y p q
-   | Or (Exists (x, p), Exists (y, q)) => pullquant_2 fm Exists Or x y p q
-   | And (Forall (x, p), q) => pullquant_l fm Forall And x p q
-   | And (p, Forall (x, q)) => pullquant_r fm Forall And x p q
-   | Or (Forall (x, p), q) => pullquant_l fm Forall Or x p q
-   | Or (p, Forall (x, q)) => pullquant_r fm Forall Or x p q
-   | And (Exists (x, p), q) => pullquant_l fm Exists And x p q
-   | And (p, Exists (x, q)) => pullquant_r fm Exists And x p q
-   | Or (Exists (x, p), q) => pullquant_l fm Exists Or x p q
-   | Or (p, Exists (x, q)) => pullquant_r fm Exists Or x p q
+     And (Forall (x,p), Forall (y,q)) => pullquant_2 fm Forall And x y p q
+   | Or (Exists (x,p), Exists (y,q)) => pullquant_2 fm Exists Or x y p q
+   | And (Forall (x,p), q) => pullquant_l fm Forall And x p q
+   | And (p, Forall (x,q)) => pullquant_r fm Forall And x p q
+   | Or (Forall (x,p), q) => pullquant_l fm Forall Or x p q
+   | Or (p, Forall (x,q)) => pullquant_r fm Forall Or x p q
+   | And (Exists (x,p), q) => pullquant_l fm Exists And x p q
+   | And (p, Exists (x,q)) => pullquant_r fm Exists And x p q
+   | Or (Exists (x,p), q) => pullquant_l fm Exists Or x p q
+   | Or (p, Exists (x,q)) => pullquant_r fm Exists Or x p q
    | _ => fm)
 and pullquant_l fm Q C x p q =
   let
@@ -132,10 +132,10 @@ and pullquant_2 fm Q C x y p q =
                          formula_subst ((x |-> Var x') ::> |<>|) q)))
   end;
 
-fun prenex (Forall (x, p)) = Forall (x, prenex p)
-  | prenex (Exists (x, p)) = Exists (x, prenex p)
-  | prenex (And (p, q)) = pullquants (And (prenex p, prenex q))
-  | prenex (Or (p, q)) = pullquants (Or (prenex p, prenex q))
+fun prenex (Forall (x,p)) = Forall (x, prenex p)
+  | prenex (Exists (x,p)) = Exists (x, prenex p)
+  | prenex (And (p,q)) = pullquants (And (prenex p, prenex q))
+  | prenex (Or (p,q)) = pullquants (Or (prenex p, prenex q))
   | prenex fm = fm;
 
 val pnf = prenex o nnf o simplify;
@@ -144,23 +144,23 @@ val pnf = prenex o nnf o simplify;
 (* Skolemization function.                                                   *)
 (* ------------------------------------------------------------------------- *)
 
-fun skolem avoid (Exists (y, p)) =
+fun skolem avoid (Exists (y,p)) =
   let
     val xs = subtract (FV p) [y]
     val f = variant (if xs = [] then "c_" ^ y else "f_" ^ y) avoid
   in
     skolem avoid (formula_subst ((y |-> Fn (f, map Var xs)) ::> |<>|) p)
   end
-  | skolem avoid (Forall (x, p)) = Forall (x, skolem avoid p)
-  | skolem avoid (And (p, q)) = skolem2 avoid And p q
-  | skolem avoid (Or (p, q)) = skolem2 avoid Or p q
+  | skolem avoid (Forall (x,p)) = Forall (x, skolem avoid p)
+  | skolem avoid (And (p,q)) = skolem2 avoid And p q
+  | skolem avoid (Or (p,q)) = skolem2 avoid Or p q
   | skolem _ fm = fm
 and skolem2 avoid C p q =
   let
     val p' = skolem avoid p
-    val q' = skolem (union avoid (function_names p')) q
+    val q' = skolem (union (function_names p') avoid) q
   in
-    C (p', q')
+    C (p',q')
   end;
 
 fun skolemize fm = skolem (function_names fm) fm;

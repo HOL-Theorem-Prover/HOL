@@ -72,8 +72,8 @@ end
 
 fun factoid v = ALT v
 
-val fromBigList = factoid o V.fromList
-val fromList = fromBigList o map mlibOmegaint.fromInt
+val fromArbList = factoid o V.fromList
+val fromList = fromArbList o map mlibOmegaint.fromInt
 fun toList (ALT av) = V.foldr op:: [] av
 
 
@@ -356,7 +356,7 @@ fun veceq eq ( v1) ( v2) =
                   (v1, 0, NONE)
 end
 
-val aveceq = veceq op==
+fun aveceq x = veceq op== x;
 
 
 fun fkassoc k alist =

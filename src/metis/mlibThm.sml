@@ -77,94 +77,109 @@ fun pp_thm pp th =
    pp_formula pp (list_mk_disj (clause th));
    PP.end_block pp);
 
-local
-  fun inf_to_string Axiom    = "Axiom"
-    | inf_to_string Refl     = "Refl"
-    | inf_to_string Assume   = "Assume"
-    | inf_to_string Inst     = "Inst"
-    | inf_to_string Factor   = "Factor"
-    | inf_to_string Resolve  = "Resolve"
-    | inf_to_string Equality = "Equality";
-in
-  val pp_inference = pp_map inf_to_string pp_string;
-end;
+fun inference_to_string Axiom = "Axiom"
+  | inference_to_string Refl = "Refl"
+  | inference_to_string Assume = "Assume"
+  | inference_to_string Inst = "Inst"
+  | inference_to_string Factor = "Factor"
+  | inference_to_string Resolve = "Resolve"
+  | inference_to_string Equality = "Equality";
+
+val pp_inference = pp_map inference_to_string pp_string;
+
+fun dest_inference' (Axiom' _) = Axiom
+  | dest_inference' (Refl' _) = Refl
+  | dest_inference' (Assume' _) = Assume
+  | dest_inference' (Factor' _) = Factor
+  | dest_inference' (Inst' _) = Inst
+  | dest_inference' (Resolve' _) = Resolve
+  | dest_inference' (Equality' _) = Equality;
 
 local
   open PP;
 
-  fun pp_inf (Axiom' a) = (Axiom, C (pp_list pp_formula) a)
-    | pp_inf (Refl' a) = (Refl, C pp_term a)
-    | pp_inf (Assume' a) = (Assume, C pp_formula a)
-    | pp_inf (Factor' a) = (Factor, C pp_thm a)
-    | pp_inf (Inst' (sub,thm)) =
-    (Inst,
-     fn pp =>
-     (begin_block pp INCONSISTENT 1;
-      add_string pp "{";
-      pp_binop " =" pp_string pp_subst pp ("sub",sub);
-      add_string pp ","; add_break pp (1,0);
-      pp_binop " =" pp_string pp_thm pp ("thm",thm);
-      add_string pp "}";
-      end_block pp))
-    | pp_inf (Resolve' (res,pos,neg)) =
-    (Resolve,
-     fn pp =>
-     (begin_block pp INCONSISTENT 1;
-      add_string pp "{";
-      pp_binop " =" pp_string pp_formula pp ("res",res);
-      add_string pp ","; add_break pp (1,0);
-      pp_binop " =" pp_string pp_thm pp ("pos",pos);
-      add_string pp ","; add_break pp (1,0);
-      pp_binop " =" pp_string pp_thm pp ("neg",neg);
-      add_string pp "}";
-      end_block pp))
-    | pp_inf (Equality' (lit,path,res,lr,thm)) =
-    (Equality,
-     fn pp =>
-     (begin_block pp INCONSISTENT 1;
-      add_string pp "{";
-      pp_binop " =" pp_string pp_formula pp ("lit",lit);
-      add_string pp ","; add_break pp (1,0);
-      pp_binop " =" pp_string (pp_list pp_int) pp ("path",path);
-      add_string pp ","; add_break pp (1,0);
-      pp_binop " =" pp_string pp_term pp ("res",res);
-      add_string pp ","; add_break pp (1,0);
-      pp_binop " =" pp_string pp_bool pp ("lr",lr);
-      add_string pp ","; add_break pp (1,0);
-      pp_binop " =" pp_string pp_thm pp ("thm",thm);
-      add_string pp "}";
-      end_block pp));
-in
-  fun pp_inference' pp inf =
+  fun pp_inf pp_ax pp_th pp inf =
     let
-      val (i,ppf) = pp_inf inf
+      fun pp_i (Axiom' a) = pp_ax pp a
+        | pp_i (Refl' a) = (add_break pp (1,0); pp_term pp a)
+        | pp_i (Assume' a) = (add_break pp (1,0); pp_formula pp a)
+        | pp_i (Factor' a) = (add_break pp (1,0); pp_th pp a)
+        | pp_i (Inst' (sub,thm)) =
+        (add_break pp (1,0);
+         begin_block pp INCONSISTENT 1;
+         add_string pp "{";
+         pp_binop " =" pp_string pp_subst pp ("sub",sub);
+         add_string pp ","; add_break pp (1,0);
+         pp_binop " =" pp_string pp_th pp ("thm",thm);
+         add_string pp "}";
+         end_block pp)
+        | pp_i (Resolve' (res,pos,neg)) =
+        (add_break pp (1,0);
+         begin_block pp INCONSISTENT 1;
+         add_string pp "{";
+         pp_binop " =" pp_string pp_formula pp ("res",res);
+         add_string pp ","; add_break pp (1,0);
+         pp_binop " =" pp_string pp_th pp ("pos",pos);
+         add_string pp ","; add_break pp (1,0);
+         pp_binop " =" pp_string pp_th pp ("neg",neg);
+         add_string pp "}";
+         end_block pp)
+        | pp_i (Equality' (lit,path,res,lr,thm)) =
+        (add_break pp (1,0);
+         begin_block pp INCONSISTENT 1;
+         add_string pp "{";
+         pp_binop " =" pp_string pp_formula pp ("lit",lit);
+         add_string pp ","; add_break pp (1,0);
+         pp_binop " =" pp_string (pp_list pp_int) pp ("path",path);
+         add_string pp ","; add_break pp (1,0);
+         pp_binop " =" pp_string pp_term pp ("res",res);
+         add_string pp ","; add_break pp (1,0);
+         pp_binop " =" pp_string pp_bool pp ("lr",lr);
+         add_string pp ","; add_break pp (1,0);
+         pp_binop " =" pp_string pp_th pp ("thm",thm);
+         add_string pp "}";
+         end_block pp)
     in
-      (begin_block pp INCONSISTENT 0;
-       pp_inference pp i;
-       (if i = Axiom then () else (add_break pp (1,0); ppf pp));
-       end_block pp)
+      begin_block pp INCONSISTENT 0;
+      pp_inference pp (dest_inference' inf);
+      pp_i inf;
+      end_block pp
+    end;
+
+  fun pp_axiom pp fms = (add_break pp (1,0); pp_list pp_formula pp fms);
+in
+  val pp_inference' = pp_inf pp_axiom pp_thm;
+
+  fun pp_proof pp prf =
+    let
+      fun thm_string n = "(" ^ int_to_string n ^ ")"
+      val prf = enumerate 0 prf
+      fun pp_th pp th =
+        case List.find (fn (_,(t,_)) => t = th) prf of
+          NONE => add_string pp "(???)"
+        | SOME (n,_) => add_string pp (thm_string n)
+      fun pp_step (n,(th,i)) =
+        let
+          val s = thm_string n
+        in
+          begin_block pp CONSISTENT (1 + size s);
+          add_string pp (s ^ " ");
+          pp_thm pp th;
+          add_break pp (2,0);
+          pp_bracket "[" "]" (pp_inf (fn _ => fn _ => ()) pp_th) pp i;
+          end_block pp;
+          add_newline pp
+        end
+    in
+      begin_block pp CONSISTENT 0;
+      add_string pp "START OF PROOF";
+      add_newline pp;
+      app pp_step prf;
+      add_string pp "END OF PROOF";
+      add_newline pp;
+      end_block pp
     end;
 end;
-
-fun pp_proof pp =
-  let
-    open PP
-    fun pp_a (th,i) = (pp_thm pp th; add_newline pp; pp_inference' pp i)
-    fun pp_x x = (add_newline pp; add_newline pp; pp_a x)
-    fun pp_p [] = raise ERR "pp_proof" "empty"
-      | pp_p (h :: t) = (pp_a h; app pp_x t)
-  in
-    fn p =>
-    (begin_block pp CONSISTENT 0;
-     begin_block pp CONSISTENT 1;
-     add_string pp "[[[";
-     add_newline pp;
-     pp_p p;
-     end_block pp;
-     add_newline pp;
-     add_string pp "]]]";
-     end_block pp)
-  end;
 
 (* Purely functional pretty-printing *)
 
@@ -220,7 +235,7 @@ end;
 
 local
   val deps = snd o snd o dest_thm;
-  val empty = Binarymap.mkDict thm_compare;
+  fun empty () = Binarymap.mkDict thm_compare;
   fun peek th m = Binarymap.peek (m,th);
   fun ins (th,a) m = Binarymap.insert (m,th,a);
 in
@@ -236,7 +251,7 @@ in
             (a, ins (th,a) m)
           end
     in
-      fn th => fst (g th empty)
+      fn th => fst (g th (empty ()))
     end;
 end;
 
