@@ -13,6 +13,7 @@ val _ = overload_on("w32",``n2w``);
 (* -------------------------------------------------------- *)
 
 val _ = Hol_datatype `word30 = w30 of num`;
+val _ = Hol_datatype `exception = reset | undefined | software | pabort | dabort | interrupt | fast`;
 val _ = Hol_datatype `mode = usr | fiq | irq | svc | abt | und | safe`;
 val _ = Hol_datatype `spsr = spsr_fiq | spsr_irq | spsr_svc | spsr_abt | spsr_und`;
 val _ = Hol_datatype `reg_usr = w4 of num`;
@@ -203,19 +204,19 @@ val FETCH_PC_def = Define`
 (* -------------------------------------------------------- *)
 
 val EXCEPTION_def = Define`
-  EXCEPTION (ARM mem reg psr) n =
+  EXCEPTION (ARM mem reg psr) type =
     let cpsr = CPSR_READ psr in
-    let fiq' = if (n = 1) \/ (n = 7) then T else BITw 6 cpsr
-    and (mode',pc') =
-          if n = 1 then (* RESET *)  (svc,w32 0)  else
-          if n = 2 then (* UNDEF *)  (und,w32 4)  else
-          if n = 3 then (* SWI *)    (svc,w32 8)  else
-          if n = 4 then (* PABORT *) (abt,w32 12) else
-          if n = 5 then (* DABORT *) (abt,w32 16) else
-          if n = 6 then (* IRQ *)    (irq,w32 24) else
-          (* n = 7 *)   (* FIQ *)    (fiq,w32 28) in
+    let fiq' = if (type = reset) \/ (type = fast) then T else BITw 6 cpsr
+    and (mode',pc') = case type of
+                         reset     -> (svc,0)
+                      || undefined -> (und,4)
+                      || software  -> (svc,8)
+                      || pabort    -> (abt,12)
+                      || dabort    -> (abt,16)
+                      || interrupt -> (irq,24)
+                      || fast      -> (fiq,28) in
    let reg' = REG_WRITE reg mode' 14 (FETCH_PC reg + w32 4) in
-     ARM mem (REG_WRITE reg' usr 15 pc')
+     ARM mem (REG_WRITE reg' usr 15 (w32 pc'))
          (CPSR_WRITE (SPSR_WRITE psr mode' cpsr) (SET_IFMODE T fiq' mode' cpsr))`;
 
 (* Note that PC+4 is stored in r14. This is memory address of next instruction,
@@ -505,7 +506,7 @@ val SWP_def = Define`
 (* -------------------------------------------------------- *)
 
 val SWI_def = Define`
-  SWI (ARM mem reg psr) = EXCEPTION (ARM mem reg psr) 3`;
+  SWI (ARM mem reg psr) = EXCEPTION (ARM mem reg psr) software`;
 
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
@@ -583,7 +584,7 @@ val NEXT_ARM_def = Define`
       else if ic = swi_ex then
         SWI (ARM mem reg psr)
       else
-        EXCEPTION (ARM mem reg psr) 2`;
+        EXCEPTION (ARM mem reg psr) undefined`;
 
 val STATE_ARM_def = Define`
   (STATE_ARM 0 a = a) /\
