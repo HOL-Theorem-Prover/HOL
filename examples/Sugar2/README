@@ -1,0 +1,13 @@
+This directory contains a deep embedding of the Accellera standard
+property language Sugar 2.0 in HOL. The official documentation is at
+
+ http://www.haifa.il.ibm.com/projects/verification/sugar/literature.html
+
+The contents of this directory are
+
+Manual ..................... Directory containing a paper on the semantics
+PathScript.sml ............. Theory of finite and infinite paths
+README ..................... This file
+Sugar2Script.sml ........... Start at proving some results about the semantics
+Sugar2SemanticsScript.sml .. The semantics in HOL
+
