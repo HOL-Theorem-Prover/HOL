@@ -20,16 +20,13 @@ Thm.uo: Thm.sml Term.uo Tag.uo Count.ui
 	HOLMOSMLC -c -toplevel Raw-sig.ui Term.ui Type.ui Tag.ui Thm.sml
 
 TheoryPP.uo: TheoryPP.sml Thm.uo
-	HOLMOSMLC -c -toplevel Raw-sig.ui Type.ui Term.ui Tag.ui Thm.ui \
-          TheoryPP.sml
+	HOLMOSMLC -c -toplevel Raw-sig.ui Type.ui Term.ui Tag.ui Thm.ui TheoryPP.sml
 
 Theory.uo: Theory.sml TheoryPP.uo
-	HOLMOSMLC -c -toplevel Raw-sig.ui Type.ui Term.ui Tag.ui Thm.ui \
-          TheoryPP.ui Theory.sml
+	HOLMOSMLC -c -toplevel Raw-sig.ui Type.ui Term.ui Tag.ui Thm.ui TheoryPP.ui Theory.sml
 
 Definition.uo: Definition.sml Theory.uo
-	HOLMOSMLC -c -toplevel Raw-sig.ui Type.ui Term.ui Tag.ui Thm.ui \
-	 Theory.ui Definition.sml
+	HOLMOSMLC -c -toplevel Raw-sig.ui Type.ui Term.ui Tag.ui Thm.ui Theory.ui Definition.sml
 
 Net.uo: Net.sml Term.uo
 	HOLMOSMLC -c -toplevel Raw-sig.ui Type.ui Term.ui Net.sml
@@ -55,22 +52,14 @@ Theory-sig.uo: Theory-sig.sml
 Definition-sig.uo: Definition-sig.sml
 	HOLMOSMLC -c -toplevel Definition-sig.sml
 
-CoreKernel-sig.uo: CoreKernel-sig.sml Net-sig.uo Type-sig.uo Term-sig.uo \
-                   Thm-sig.uo Tag-sig.uo Theory-sig.uo TheoryPP-sig.uo \
-                   Definition-sig.uo
-	HOLMOSMLC -c -toplevel Type-sig.ui Term-sig.ui Tag-sig.ui Thm-sig.ui \
-                               Theory-sig.ui TheoryPP-sig.ui Net-sig.ui \
-                               Definition-sig.ui CoreKernel-sig.sml
+CoreKernel-sig.uo: CoreKernel-sig.sml Net-sig.uo Type-sig.uo Term-sig.uo Thm-sig.uo Tag-sig.uo Theory-sig.uo TheoryPP-sig.uo Definition-sig.uo
+	HOLMOSMLC -c -toplevel Type-sig.ui Term-sig.ui Tag-sig.ui Thm-sig.ui Theory-sig.ui TheoryPP-sig.ui Net-sig.ui Definition-sig.ui CoreKernel-sig.sml
 
 Net-sig.uo: Net-sig.sml
 	HOLMOSMLC -c -toplevel Net-sig.sml
 
-Overlay.uo: Overlay.sml CoreKernel-sig.uo \
-            Type.uo Term.uo Tag.uo Thm.uo TheoryPP.uo Theory.uo \
-            Definition.uo Net.uo
-	HOLMOSMLC -c -toplevel \
-          CoreKernel-sig.ui Type.ui Term.ui Thm.ui TheoryPP.ui Definition.ui \
-          Tag.ui Theory.ui Net.ui  Overlay.sml
+Overlay.uo: Overlay.sml CoreKernel-sig.uo Type.uo Term.uo Tag.uo Thm.uo TheoryPP.uo Theory.uo Definition.uo Net.uo
+	HOLMOSMLC -c -toplevel CoreKernel-sig.ui Type.ui Term.ui Thm.ui TheoryPP.ui Definition.ui Tag.ui Theory.ui Net.ui  Overlay.sml
 
 HolKernel.uo: Overlay.uo HolKernel.sml
 	HOLMOSMLC -c -structure Overlay.ui HolKernel.sml

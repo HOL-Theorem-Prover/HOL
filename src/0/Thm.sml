@@ -1003,7 +1003,7 @@ fun INST [] th = th
 fun Beta th =
    let val (lhs, rhs, ty) = Term.dest_eq_ty (concl th)
    in make_thm Count.Beta
-        (empty_tag, hypset th, mk_eq_nocheck ty lhs (Term.lazy_beta_conv rhs))
+        (tag th, hypset th, mk_eq_nocheck ty lhs (Term.lazy_beta_conv rhs))
    end
    handle HOL_ERR _ => ERR "Beta" "";
 
@@ -1019,7 +1019,7 @@ fun Beta th =
 fun Eta th =
   let val (lhs, rhs, ty) = Term.dest_eq_ty (concl th)
   in make_thm Count.EtaConv
-       (empty_tag, hypset th, mk_eq_nocheck ty lhs (eta_conv rhs))
+       (tag th, hypset th, mk_eq_nocheck ty lhs (eta_conv rhs))
   end
   handle HOL_ERR _ => ERR "Eta" "";
 
@@ -1117,6 +1117,7 @@ fun Specialize t th =
 
 fun mk_oracle_thm tg (asl,c) =
   (Assert (Lib.all is_bool (c::asl)) "mk_oracle_thm"  "not a proposition"
+   ; Assert ((not o Tag.isEmpty) tg) "mk_oracle_thm"  "invalid user tag"
    ; make_thm Count.Oracle (tg,list_hyp asl,c));
 
 
@@ -1161,15 +1162,15 @@ fun take_numb ss0 =
   end
 end;
 
-(* we don't allow numbers to be split across fragments; think this is reasonable *)
+(* don't allow numbers to be split across fragments *)
 
 fun lexer (ss1,qs1) =
   case Substring.getc (Lib.deinitcommentss ss1)
                       (* was: (Substring.dropl Char.isSpace ss1) *)
-   of NONE         => (case qs1 of
-                           (QUOTE s::qs2) => lexer (Substring.all s,qs2)
-                         | []             => NONE
-                         | _              => ERR "raw lexer" "expected a quotation")
+   of NONE => (case qs1 
+                of (QUOTE s::qs2) => lexer (Substring.all s,qs2)
+                 | []             => NONE
+                 | _              => ERR "raw lexer" "expected a quotation")
     | SOME (c,ss2) =>
        case c
         of #"."  => SOME(dot,   (ss2,qs1))
