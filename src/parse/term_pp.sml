@@ -211,88 +211,6 @@ fun bv2term (Simple t) = t
   | bv2term (Restricted {Bvar,...}) = Bvar
 
 
-fun my_dest_abs tm =
-  case dest_term tm of
-    LAMB p => p
-  | COMB(Rator,Rand) => let
-      val _ =
-        fst (dest_const Rator)= "UNCURRY" orelse
-        raise PP_ERR "my_dest_abs" "term not an abstraction"
-      val (v1, body0) = my_dest_abs Rand
-      val (v2, body) = my_dest_abs body0
-    in
-      (mk_pair(v1, v2), body)
-    end
-  | _ => raise PP_ERR "my_dest_abs" "term not an abstraction"
-
-fun my_is_abs tm = can my_dest_abs tm
-
-fun strip_vstructs bnder res tm =
-  case bnder of
-    NONE => let
-      fun strip vs t =
-        if my_is_abs t then let
-          val (bv, body) = my_dest_abs t
-        in
-          strip ((Simple bv)::vs) body
-        end
-        else
-          case res of
-            NONE => (List.rev vs, t)
-          | SOME s => let
-            in
-              case dest_term t of
-                COMB(Rator, Rand) => let
-                in
-                  case dest_term Rator of
-                    COMB(rator1, rand1) =>
-                      if has_name s rator1 andalso my_is_abs Rand then let
-                        val (bv, body) = my_dest_abs Rand
-                      in
-                        strip
-                        (Restricted{Bvar = bv, Restrictor = rand1}::vs)
-                        body
-                      end
-                      else (List.rev vs, t)
-                  | _ => (List.rev vs, t)
-                end
-              | _ => (List.rev vs, t)
-            end
-    in
-      strip [] tm
-    end
-  | SOME s => let
-      fun strip vs t =
-        case (dest_term t) of
-          COMB(Rator,Rand) => let
-          in
-            if has_name s Rator andalso my_is_abs Rand then let
-              val (bv, body) = my_dest_abs Rand
-            in
-              strip ((Simple bv)::vs) body
-            end
-            else
-              case res of
-                NONE => (List.rev vs, t)
-              | SOME s => let
-                in
-                  case (dest_term Rator) of
-                    COMB(rator1, rand1) =>
-                      if has_name s rator1 andalso my_is_abs Rand then let
-                        val (bv, body) = my_dest_abs Rand
-                      in
-                        strip
-                        (Restricted{Bvar = bv, Restrictor = rand1}::vs)
-                        body
-                      end
-                      else (List.rev vs, t)
-                  | _ => (List.rev vs, t)
-                end
-          end
-        | _ => (List.rev vs, t)
-    in
-      strip [] tm
-    end
 
 fun rule_to_rr rule =
   case rule of
@@ -396,6 +314,103 @@ fun pp_term (G : grammar) TyG = let
 
   val uprinters = user_printers G
   val printers_exist = Binarymap.numItems uprinters > 0
+
+  (* This code will print paired abstractions "properly" only if
+        1. the term has an UNCURRY constant in the right place, and
+        2. the term has a preferred printing form in the overloading map.
+     Both conditions above might be varied.  In 1., we could check for just
+     the constant pair$UNCURRY, and not any constant called UNCURRY.  In 2.,
+     we could check to see if the string "UNCURRY" mapped to a term instead.
+
+     Another option again might be to look to see if the term is a constant
+     and prints as "UNCURRY"...  The possibilities are endless.  The
+     particular choice made above means that the printer does the right
+     thing if given a paired abstraction to print wrt an "earlier" grammar,
+     such as that used in boolTheory. *)
+  fun my_dest_abs tm =
+      case dest_term tm of
+        LAMB p => p
+      | COMB(Rator,Rand) => let
+          val _ =
+              fst (dest_const Rator)= "UNCURRY" andalso
+              isSome (Overload.overloading_of_term overload_info Rator) orelse
+              raise PP_ERR "my_dest_abs" "term not an abstraction"
+          val (v1, body0) = my_dest_abs Rand
+          val (v2, body) = my_dest_abs body0
+        in
+          (mk_pair(v1, v2), body)
+        end
+      | _ => raise PP_ERR "my_dest_abs" "term not an abstraction"
+
+  fun my_is_abs tm = can my_dest_abs tm
+
+  fun strip_vstructs bnder res tm =
+      case bnder of
+        NONE => let
+          fun strip vs t =
+              if my_is_abs t then let
+                  val (bv, body) = my_dest_abs t
+                in
+                  strip ((Simple bv)::vs) body
+                end
+              else
+                case res of
+                  NONE => (List.rev vs, t)
+                | SOME s => let
+                  in
+                    case dest_term t of
+                      COMB(Rator, Rand) => let
+                      in
+                        case dest_term Rator of
+                          COMB(rator1, rand1) =>
+                          if has_name s rator1 andalso my_is_abs Rand then let
+                              val (bv, body) = my_dest_abs Rand
+                            in
+                              strip
+                                (Restricted{Bvar = bv, Restrictor = rand1}::vs)
+                                body
+                            end
+                          else (List.rev vs, t)
+                        | _ => (List.rev vs, t)
+                      end
+                    | _ => (List.rev vs, t)
+                  end
+        in
+          strip [] tm
+        end
+      | SOME s => let
+          fun strip vs t =
+              case (dest_term t) of
+                COMB(Rator,Rand) => let
+                in
+                  if has_name s Rator andalso my_is_abs Rand then let
+                      val (bv, body) = my_dest_abs Rand
+                    in
+                      strip ((Simple bv)::vs) body
+                    end
+                  else
+                    case res of
+                      NONE => (List.rev vs, t)
+                    | SOME s => let
+                      in
+                        case (dest_term Rator) of
+                          COMB(rator1, rand1) =>
+                          if has_name s rator1 andalso my_is_abs Rand then let
+                              val (bv, body) = my_dest_abs Rand
+                            in
+                              strip
+                                (Restricted{Bvar = bv, Restrictor = rand1}::vs)
+                                body
+                            end
+                          else (List.rev vs, t)
+                        | _ => (List.rev vs, t)
+                      end
+                end
+              | _ => (List.rev vs, t)
+        in
+          strip [] tm
+        end
+
 
   fun pr_term binderp showtypes showtypes_v vars_seen pps tm
               pgrav lgrav rgrav depth = let
