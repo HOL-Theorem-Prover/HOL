@@ -7,8 +7,10 @@ sig
   type hol_type = KernelTypes.hol_type
   structure TypeSig : Sig where type ty = KernelTypes.tyconst
   val mk_vartype    : string -> hol_type
+  val gen_tyvar     : unit -> hol_type
   val dest_vartype  : hol_type -> string
   val is_vartype    : hol_type -> bool
+  val is_gen_tyvar  : hol_type -> bool
   val mk_thy_type   : {Thy:string, Tyop:string, Args:hol_type list} -> hol_type
   val dest_thy_type : hol_type -> {Thy:string, Tyop:string, Args:hol_type list}
   val mk_type       : string * hol_type list -> hol_type

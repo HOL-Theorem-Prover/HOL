@@ -17,8 +17,10 @@ sig
  eqtype hol_type
 
  val mk_vartype    : string -> hol_type
+ val gen_tyvar     : unit -> hol_type
  val dest_vartype  : hol_type -> string
  val is_vartype    : hol_type -> bool
+ val is_gen_tyvar  : hol_type -> bool
 
  val mk_type       : string * hol_type list -> hol_type
  val dest_type     : hol_type -> string * hol_type list
@@ -44,4 +46,5 @@ sig
 
  val type_subst    : (hol_type,hol_type) Lib.subst -> hol_type -> hol_type
  val match_type    : hol_type -> hol_type -> (hol_type,hol_type) Lib.subst
+
 end;
