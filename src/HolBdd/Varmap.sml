@@ -9,7 +9,7 @@
 (* Revision history:                                                         *)
 (*                                                                           *)
 (*   Thu Oct  4 15:45:52 BST 2001 -- created file                            *)
-(*   Thu Nov 15 17:07:37 GMT 2001 -- added unifyVarmap                       *)
+(*   Thu Nov 15 17:07:37 GMT 2001 -- added unify                             *)
 (*                                                                           *)
 (*****************************************************************************)
 
