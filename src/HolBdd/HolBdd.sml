@@ -238,17 +238,15 @@ fun lookup_var var_map name =
 (* return a list of [(oldname1,newname1),...,(oldnamen,newnamen)]            *)
 (*****************************************************************************)
 
-fun check_var tm =
- is_var tm orelse 
- hol_err ("``"^Parse.term_to_string tm^"`` is not a variable") "check_var";
-
 exception match_to_pairs_Failure;
 
 fun match_to_pairs []             = []
  |  match_to_pairs ({redex=old,residue=new}::l) =
      if not(exists (fn {residue=new',...} => new=new') l) 
-         andalso (type_of new = bool) andalso check_var new
-         andalso (type_of old = bool) andalso check_var old
+         andalso (type_of new = bool) 
+         andalso is_var new
+         andalso (type_of old = bool) 
+         andalso is_var old
       then (fst(dest_var old),fst(dest_var new))::match_to_pairs l
       else raise match_to_pairs_Failure;
 

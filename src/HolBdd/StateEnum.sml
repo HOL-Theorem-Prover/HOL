@@ -699,6 +699,7 @@ fun Find_Refutation_ReachBy_Trace(Rthm,Bthm,Qthm) =
      val prev_thm1  = Ho_Rewrite.REWRITE_RULE 
                        [pairTheory.EXISTS_PROD,Rthm] 
                        (ISPECL[R,``Q:^(type_of st)->bool``,st]Prev_def)
+
      val prev_thm2  = RIGHT_CONV_RULE
                        (DEPTH_EXISTS_CONV (REWRITE_CONV[OR_AND])
                          THENC TOP_DEPTH_CONV EX_OR_CONV
@@ -713,7 +714,7 @@ fun Find_Refutation_ReachBy_Trace(Rthm,Bthm,Qthm) =
      fun get_st tm = 
       let val s = rhs(concl(REWRITE_CONV[ASSUME tm]st))
       in
-       subst (map (fn v => (F,v)) (free_vars s)) s
+       subst (map (fn v => (F|->v)) (free_vars s)) s
       end
      val s_0        = get_st(findModel ``^refute_descr /\ ~(^Qdescr)``)
      val s_0_thm    = bddOracle(mk_neg(mk_comb(Q,s_0)))
@@ -768,7 +769,7 @@ fun FindRefutationTrace(Rthm,Bthm,Qthm) =
      val _          = print "Simplifying Prev instance..."
      val prev_thm1  = Ho_Rewrite.REWRITE_RULE 
                        [pairTheory.EXISTS_PROD,Rthm] 
-                       (ISPECL[R,mk_var("Q",``:(type_of st)->bool``),st]Prev_def)
+                       (ISPECL[R,mk_var("Q",``:^(type_of st)->bool``),st]Prev_def)
      val prev_thm2  = RIGHT_CONV_RULE
                        (DEPTH_EXISTS_CONV (REWRITE_CONV[OR_AND])
                          THENC TOP_DEPTH_CONV EX_OR_CONV
