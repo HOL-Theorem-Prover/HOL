@@ -5,8 +5,8 @@
 (*****************************************************************************)
 
 loadPath := "../official-semantics" :: "../regexp" :: !loadPath;
-app 
- load 
+app
+ load
  ["bossLib","metisLib","intLib","stringLib","pred_setLib",
   "regexpLib","ExecuteSemanticsTheory","PropertiesTheory"];
 
@@ -16,7 +16,7 @@ open regexpLib FinitePathTheory UnclockedSemanticsTheory ExecuteSemanticsTheory;
 quietdec := false;
 
 (******************************************************************************
-* Set the trace level of the regular expression library:      
+* Set the trace level of the regular expression library:
 * 0: silent
 * 1: 1 character (either - or +) for each list element processed
 * 2: matches as they are discovered
@@ -26,7 +26,7 @@ quietdec := false;
 set_trace "regexpTools" 2;
 
 (******************************************************************************
-* Set default parsing to natural numbers rather than integers 
+* Set default parsing to natural numbers rather than integers
 ******************************************************************************)
 val _ = intLib.deprecate_int();
 
@@ -41,7 +41,7 @@ val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
 
 (* For the current set of Sugar2 example properties, the following INSERT
    theorems seem to work better than this general conversion.
-val _ = 
+val _ =
  computeLib.add_convs
   [(``$IN``,
     2,
@@ -111,23 +111,23 @@ EVAL ``UF_SEM (FINITE[s0;s1;s2]) (F_UNTIL(F_BOOL b1, F_BOOL b2))``;
 (******************************************************************************
 * [{s0};{s1};{s2}]  |=  [p1 U p2]   (p1, p2 arbitrary atomic propositions)
 ******************************************************************************)
-EVAL 
+EVAL
  ``UF_SEM (FINITE[s0;s1;s2]) (F_UNTIL(F_BOOL(B_PROP p1), F_BOOL(B_PROP p2)))``;
 
 (******************************************************************************
-* [{s0};{s1};{s2}]  |=  {1}(2) 
+* [{s0};{s1};{s2}]  |=  {1}(2)
 ******************************************************************************)
 EVAL
  ``UF_SEM (FINITE[s0;s1;s2]) (F_UNTIL(F_BOOL(B_PROP 1), F_BOOL(B_PROP 2)))``;
 
 (******************************************************************************
-* [{1};{1};{2}]  |=  {1}(2) 
+* [{1};{1};{2}]  |=  {1}(2)
 ******************************************************************************)
 EVAL
  ``UF_SEM (FINITE[{1};{1};{2}]) (F_UNTIL(F_BOOL(B_PROP 1), F_BOOL(B_PROP 2)))``;
 
 (******************************************************************************
-* [{1};{3};{2}]  |=  {1}(2) 
+* [{1};{3};{2}]  |=  {1}(2)
 ******************************************************************************)
 EVAL
  ``UF_SEM (FINITE[{1};{3};{2}]) (F_UNTIL(F_BOOL(B_PROP 1), F_BOOL(B_PROP 2)))``;
@@ -138,80 +138,80 @@ EVAL ``UF_SEM (FINITE[{1};{3};{2}]) (F_SUFFIX_IMP(r,f))``;
 *)
 
 (******************************************************************************
-* [{1};{2};{3}]  |=  {n}(f) 
+* [{1};{2};{3}]  |=  {n}(f)
 ******************************************************************************)
 EVAL
 ``UF_SEM (FINITE[{1};{2};{3}])
    (F_SUFFIX_IMP (S_BOOL (B_PROP n), f))``;
 
 (******************************************************************************
-* [{1};{2};{3}]  |=  {n}(p) 
+* [{1};{2};{3}]  |=  {n}(p)
 ******************************************************************************)
 EVAL
 ``UF_SEM (FINITE[{1};{2};{3}])
    (F_SUFFIX_IMP (S_BOOL (B_PROP n), F_BOOL(B_PROP p)))``;
 
 (******************************************************************************
-* [{1};{2};{3}]  |=  {[*]}(f) 
+* [{1};{2};{3}]  |=  {[*]}(f)
 ******************************************************************************)
 EVAL
 ``UF_SEM (FINITE[{1};{2};{3}])
    (F_SUFFIX_IMP (S_REPEAT S_TRUE, f))``;
 
 (******************************************************************************
-* [{1};{2};{3}]  |=  {[*]}(p) 
+* [{1};{2};{3}]  |=  {[*]}(p)
 ******************************************************************************)
 EVAL
 ``UF_SEM (FINITE[{1};{2};{3}])
    (F_SUFFIX_IMP (S_REPEAT S_TRUE, F_BOOL(B_PROP p)))``;
 
 (******************************************************************************
-* [{p};{p};{p}]  |=  {[*]}(p) 
+* [{p};{p};{p}]  |=  {[*]}(p)
 ******************************************************************************)
 EVAL
 ``UF_SEM (FINITE[{p};{p};{p}])
    (F_SUFFIX_IMP (S_REPEAT S_TRUE, F_BOOL(B_PROP p)))``;
 
 (******************************************************************************
-* [{p1};{p2};{p3}]  |=  {[*]}(p) 
+* [{p1};{p2};{p3}]  |=  {[*]}(p)
 ******************************************************************************)
 EVAL
 ``UF_SEM (FINITE[{p1};{p2};{p3}])
    (F_SUFFIX_IMP (S_REPEAT S_TRUE, F_BOOL(B_PROP p)))``;
 
 (******************************************************************************
-* [{1};{2};{3};{4};{5};{6};{7};{8};{9}]  |=  {3}(f) 
+* [{1};{2};{3};{4};{5};{6};{7};{8};{9}]  |=  {3}(f)
 ******************************************************************************)
 EVAL
 ``UF_SEM (FINITE[{1};{2};{3};{4};{5};{6};{7};{8};{9}])
    (F_SUFFIX_IMP(S_BOOL(B_PROP 3), f))``;
 
 (******************************************************************************
-* [{1};{2};{3};{4};{5};{6};{7};{8};{9}]  |=  {[*];2;3}(f) 
+* [{1};{2};{3};{4};{5};{6};{7};{8};{9}]  |=  {[*];2;3}(f)
 ******************************************************************************)
 EVAL
 ``UF_SEM (FINITE[{1};{2};{3};{4};{5};{6};{7};{8};{9}])
-   (F_SUFFIX_IMP 
+   (F_SUFFIX_IMP
     (S_CAT(S_REPEAT S_TRUE, S_CAT(S_BOOL (B_PROP 2),S_BOOL (B_PROP 3))),
      f))``;
 
 (******************************************************************************
-* [{1};{2};{3};{4};{5};{6};{7};{8};{9}]  |=  {[*];2:3}(f) 
+* [{1};{2};{3};{4};{5};{6};{7};{8};{9}]  |=  {[*];2:3}(f)
 ******************************************************************************)
 EVAL
 ``UF_SEM (FINITE[{1};{2};{3};{4};{5};{6};{7};{8};{9}])
-   (F_SUFFIX_IMP 
+   (F_SUFFIX_IMP
     (S_CAT(S_REPEAT S_TRUE, S_FUSION(S_BOOL (B_PROP 2),S_BOOL (B_PROP 3))),
      f))``;
 
 (******************************************************************************
-* [{1};{2};{3};{4};{5};{6};{7};{8};{9}]  |=  {[*];2;3;[*]}(f) 
+* [{1};{2};{3};{4};{5};{6};{7};{8};{9}]  |=  {[*];2;3;[*]}(f)
 ******************************************************************************)
 EVAL
 ``UF_SEM (FINITE[{1};{2};{3};{4};{5};{6};{7};{8};{9}])
-   (F_SUFFIX_IMP 
-    (S_CAT(S_REPEAT S_TRUE, 
-           S_CAT(S_CAT(S_BOOL (B_PROP 2),S_BOOL (B_PROP 3)), 
+   (F_SUFFIX_IMP
+    (S_CAT(S_REPEAT S_TRUE,
+           S_CAT(S_CAT(S_BOOL (B_PROP 2),S_BOOL (B_PROP 3)),
                  S_REPEAT S_TRUE)),
      f))``;
 
@@ -226,10 +226,10 @@ EVAL ``US_SEM [{1};{2};{3}] (S_CAT(S_REPEAT S_TRUE, S_BOOL(B_PROP 3)))``;
 EVAL ``US_SEM [{1};{2};{3}] (S_CAT(S_REPEAT S_TRUE, S_BOOL(B_PROP 2)))``;
 
 (******************************************************************************
-* [{1};{2};{3}]  |=  {[*];2;[*]} 
+* [{1};{2};{3}]  |=  {[*];2;[*]}
 ******************************************************************************)
-EVAL ``US_SEM 
-        [{1};{2};{3};{4};{5}] 
+EVAL ``US_SEM
+        [{1};{2};{3};{4};{5}]
         (S_CAT(S_REPEAT S_TRUE, S_CAT(S_BOOL(B_PROP 2), S_REPEAT S_TRUE)))``;
 
 (******************************************************************************
@@ -281,7 +281,7 @@ quietdec:=true;;
 loadPath := "../official-semantics" :: "../regexp" :: !loadPath;
 app load ["res_quanTools","PropertiesTheory"];
 open PathTheory;
-val resq_SS = 
+val resq_SS =
  simpLib.merge_ss
   [res_quanTools.resq_SS,
    rewrites
@@ -296,13 +296,13 @@ val UF_SEM_SUFFIX_IMP_FALSE =
    RW_TAC (std_ss++resq_SS) [UF_SEM_def,B_SEM]);
 ******************************************************************************)
 
-(****************************************************************************** 
+(******************************************************************************
 * Generated this from a Verilog model of the BUF example in
 * Chapter 4 of FoCs User's Manual (see test.v)
 * (www.haifa.il.ibm.com/projects/verification/focs/)
 ******************************************************************************)
 
-(****************************************************************************** 
+(******************************************************************************
 * String version
 * val StoB_REQ = ``"StoB_REQ"``;
 * val BtoS_ACK = ``"BtoS_ACK"``;
@@ -310,7 +310,7 @@ val UF_SEM_SUFFIX_IMP_FALSE =
 * val RtoB_ACK = ``"RtoB_ACK"``;
 ******************************************************************************)
 
-(****************************************************************************** 
+(******************************************************************************
 * Num version
 ******************************************************************************)
 val StoB_REQ_def = Define `StoB_REQ = 0`;
@@ -318,717 +318,717 @@ val BtoS_ACK_def = Define `BtoS_ACK = 1`;
 val BtoR_REQ_def = Define `BtoR_REQ = 2`;
 val RtoB_ACK_def = Define `RtoB_ACK = 3`;
 
-quietdec := true; 
+quietdec := true;
 val SimRun_def =
  Define
   `SimRun =
-      [{}; 
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+      [{};
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {};
-       {StoB_REQ}; 
-       {StoB_REQ; BtoS_ACK}; 
-       {BtoS_ACK};
-       {BtoS_ACK; BtoR_REQ}; 
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
-       {BtoS_ACK; RtoB_ACK}; 
-       {}; 
-       {StoB_REQ}; 
+       {StoB_REQ};
        {StoB_REQ; BtoS_ACK};
-       {BtoS_ACK}; 
+       {BtoS_ACK};
        {BtoS_ACK; BtoR_REQ};
-       {BtoS_ACK; BtoR_REQ; RtoB_ACK}; 
-       {BtoS_ACK; RtoB_ACK}; 
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
+       {};
+       {StoB_REQ};
+       {StoB_REQ; BtoS_ACK};
+       {BtoS_ACK};
+       {BtoS_ACK; BtoR_REQ};
+       {BtoS_ACK; BtoR_REQ; RtoB_ACK};
+       {BtoS_ACK; RtoB_ACK};
        {}]`;
 
 quietdec := false;
 
 (* A pure computeLib version *)
 
-(******************************************************************************  
+(******************************************************************************
 * SimRun |= {[*]; StoB_REQ; [*]}
 ******************************************************************************)
 time
@@ -1036,29 +1036,29 @@ time
  ``US_SEM
     SimRun
     (S_CAT(S_REPEAT S_TRUE,
-           S_CAT(S_BOOL(B_PROP StoB_REQ), 
+           S_CAT(S_BOOL(B_PROP StoB_REQ),
                  S_REPEAT S_TRUE)))``;
 
-(******************************************************************************  
+(******************************************************************************
 * SimRun |= {[*]; StoB_REQ; StoB_REQ; [*]}
 ******************************************************************************)
 time
- EVAL 
- ``US_SEM 
+ EVAL
+ ``US_SEM
     SimRun
-    (S_CAT(S_REPEAT S_TRUE, 
+    (S_CAT(S_REPEAT S_TRUE,
            S_CAT(S_CAT(S_BOOL(B_PROP StoB_REQ),S_BOOL(B_PROP StoB_REQ)),
                  S_REPEAT S_TRUE)))``;
 
 
-(******************************************************************************  
+(******************************************************************************
 * SimRun |= {[*]; StoB_REQ; BtoR_REQ; [*]}
 ******************************************************************************)
 time
- EVAL 
- ``US_SEM 
+ EVAL
+ ``US_SEM
     SimRun
-    (S_CAT(S_REPEAT S_TRUE, 
+    (S_CAT(S_REPEAT S_TRUE,
            S_CAT(S_CAT(S_BOOL(B_PROP StoB_REQ),S_BOOL(B_PROP BtoR_REQ)),
                  S_REPEAT S_TRUE)))``;
 
@@ -1068,54 +1068,55 @@ time
 * with "never r" replaced by "{r}(F)"
 ******************************************************************************)
 
-(******************************************************************************  
-* {[*]; !StoB_REQ & BtoS_ACK; StoB_REQ}(F)  
+(******************************************************************************
+* {[*]; !StoB_REQ & BtoS_ACK; StoB_REQ}(F)
 ******************************************************************************)
 time
  EVAL
  ``UF_SEM
     (FINITE SimRun)
     (F_SUFFIX_IMP
-      (S_CAT(S_REPEAT S_TRUE, 
+      (S_CAT(S_REPEAT S_TRUE,
              S_CAT(S_BOOL(B_AND(B_NOT(B_PROP StoB_REQ), B_PROP BtoS_ACK)),
                    S_BOOL(B_PROP StoB_REQ))),
        F_BOOL B_FALSE))``;
 
-(******************************************************************************  
-* FINITE SimRun |= {[*]; StoB_REG & !BtoS_ACK; !StoB_REQ}(F)  
+(******************************************************************************
+* FINITE SimRun |= {[*]; StoB_REG & !BtoS_ACK; !StoB_REQ}(F)
 ******************************************************************************)
 time
  EVAL
  ``UF_SEM
     (FINITE SimRun)
     (F_SUFFIX_IMP
-      (S_CAT(S_REPEAT S_TRUE, 
+      (S_CAT(S_REPEAT S_TRUE,
              S_CAT(S_BOOL(B_AND(B_PROP StoB_REQ, B_NOT(B_PROP BtoS_ACK))),
                    S_BOOL(B_NOT(B_PROP StoB_REQ)))),
        F_BOOL B_FALSE))``;
 
-(******************************************************************************  
-* FINITE SimRun |= {[*]; !BtoS_ACK & !StoB_REQ; BtoS_ACK}(F)  
+(******************************************************************************
+* FINITE SimRun |= {[*]; !BtoS_ACK & !StoB_REQ; BtoS_ACK}(F)
 ******************************************************************************)
 time
  EVAL
  ``UF_SEM
     (FINITE SimRun)
     (F_SUFFIX_IMP
-      (S_CAT(S_REPEAT S_TRUE, 
-             S_CAT(S_BOOL(B_AND(B_NOT(B_PROP BtoS_ACK), B_NOT(B_PROP StoB_REQ))),
+      (S_CAT(S_REPEAT S_TRUE,
+             S_CAT(S_BOOL(B_AND(B_NOT(B_PROP BtoS_ACK),
+                                B_NOT(B_PROP StoB_REQ))),
                    S_BOOL(B_PROP BtoS_ACK))),
        F_BOOL B_FALSE))``;
 
-(******************************************************************************  
-* {[*]; BtoS_ACK & StoB_REQ; !BtoS_ACK}(F)  
+(******************************************************************************
+* {[*]; BtoS_ACK & StoB_REQ; !BtoS_ACK}(F)
 ******************************************************************************)
 time
  EVAL
  ``UF_SEM
     (FINITE SimRun)
     (F_SUFFIX_IMP
-      (S_CAT(S_REPEAT S_TRUE, 
+      (S_CAT(S_REPEAT S_TRUE,
              S_CAT(S_BOOL(B_AND(B_PROP BtoS_ACK, B_PROP StoB_REQ)),
                    S_BOOL(B_NOT(B_PROP BtoS_ACK)))),
        F_BOOL B_FALSE))``;
@@ -1128,37 +1129,37 @@ val _ = set_fixity "&" (Infixl 500);
 val F_AND_IX_def = xDefine "F_AND_IX" `$& f1 f2 = F_AND(f1,f2)`;
 
 (******************************************************************************
-* A single property characterising a four-phasse handshake
+* A single property characterising a four-phase handshake
 ******************************************************************************)
 
 val FOUR_PHASE_def =
  Define
   `FOUR_PHASE req ack =
     F_SUFFIX_IMP
-     (S_CAT(S_REPEAT S_TRUE, 
+     (S_CAT(S_REPEAT S_TRUE,
             S_CAT(S_BOOL(B_AND(B_NOT(B_PROP req), B_PROP ack)),
                   S_BOOL(B_PROP req))),
       F_BOOL B_FALSE)
     &
     F_SUFFIX_IMP
-     (S_CAT(S_REPEAT S_TRUE, 
+     (S_CAT(S_REPEAT S_TRUE,
             S_CAT(S_BOOL(B_AND(B_PROP req, B_NOT(B_PROP ack))),
                   S_BOOL(B_NOT(B_PROP req)))),
       F_BOOL B_FALSE)
-    &  
+    &
     F_SUFFIX_IMP
-     (S_CAT(S_REPEAT S_TRUE, 
+     (S_CAT(S_REPEAT S_TRUE,
             S_CAT(S_BOOL(B_AND(B_NOT(B_PROP ack), B_NOT(B_PROP req))),
                   S_BOOL(B_PROP ack))),
       F_BOOL B_FALSE)
     &
     F_SUFFIX_IMP
-     (S_CAT(S_REPEAT S_TRUE, 
+     (S_CAT(S_REPEAT S_TRUE,
             S_CAT(S_BOOL(B_AND(B_PROP ack, B_PROP req)),
                   S_BOOL(B_NOT(B_PROP ack)))),
       F_BOOL B_FALSE)`;
 
-(******************************************************************************  
+(******************************************************************************
 * vunit four_phase_handskake_left (page 19, FoCs User's Manual)
 * FOUR_PHASE StoB_REQ BtoS_ACK
 ******************************************************************************)
@@ -1166,7 +1167,7 @@ val FOUR_PHASE_def =
 time EVAL ``UF_SEM (FINITE SimRun) (FOUR_PHASE StoB_REQ BtoS_ACK)``;
 
 
-(******************************************************************************  
+(******************************************************************************
 * vunit four_phase_handskake_right (page 20, FoCs User's Manual)
 * FOUR_PHASE BtoR_REQ RtoB_ACK
 ******************************************************************************)
@@ -1180,7 +1181,7 @@ val F_BEFORE_def =
  Define
   `F_BEFORE(f1,f2) = F_W(F_NOT f2, F_AND(f1, F_NOT f2))`;
 
-(******************************************************************************  
+(******************************************************************************
 * FINITE SimRun |= StoB_REQ before BtoS_ACK
 ******************************************************************************)
 time
@@ -1189,7 +1190,7 @@ time
     (FINITE SimRun)
     (F_BEFORE(F_BOOL(B_PROP StoB_REQ), F_BOOL(B_PROP BtoS_ACK)))``;
 
-(******************************************************************************  
+(******************************************************************************
 * FINITE SimRun |= BtoS_ACK before StoB_REQ
 ******************************************************************************)
 time
@@ -1198,7 +1199,7 @@ time
     (FINITE SimRun)
     (F_BEFORE(F_BOOL(B_PROP BtoS_ACK), F_BOOL(B_PROP StoB_REQ)))``;
 
-(******************************************************************************  
+(******************************************************************************
 * FINITE SimRun |= {[*]}(StoB_REQ before BtoS_ACK)
 ******************************************************************************)
 time
@@ -1206,10 +1207,10 @@ time
  ``UF_SEM
     (FINITE SimRun)
     (F_SUFFIX_IMP
-     (S_REPEAT S_TRUE, 
+     (S_REPEAT S_TRUE,
       F_BEFORE(F_BOOL(B_PROP StoB_REQ), F_BOOL(B_PROP BtoS_ACK))))``;
 
-(******************************************************************************  
+(******************************************************************************
 * FINITE SimRun |= {[*]}(BtoS_ACK before StoB_REQ)
 ******************************************************************************)
 time
@@ -1217,7 +1218,7 @@ time
  ``UF_SEM
     (FINITE SimRun)
     (F_SUFFIX_IMP
-     (S_REPEAT S_TRUE, 
+     (S_REPEAT S_TRUE,
       F_BEFORE(F_BOOL(B_PROP BtoS_ACK), F_BOOL(B_PROP StoB_REQ))))``;
 
 
@@ -1236,7 +1237,7 @@ time
     (FINITE SimRun)
     (F_SUFFIX_IMP
      ((S_REPEAT(S_BOOL B_TRUE) ;;
-       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;;
        S_BOOL(B_PROP BtoS_ACK)),
       F_BOOL B_FALSE))``;
 
@@ -1249,10 +1250,10 @@ time
     (FINITE SimRun)
     (F_SUFFIX_IMP
      ((S_REPEAT(S_BOOL B_TRUE) ;;
-       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;;
        S_BOOL(B_PROP BtoS_ACK) ;;
        S_REPEAT(S_BOOL B_TRUE) ;;
-       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;;
        S_BOOL(B_PROP BtoS_ACK)),
       F_BOOL B_FALSE))``;
 
@@ -1279,10 +1280,10 @@ time
     (FINITE SimRun)
     (F_SUFFIX_IMP
      ((S_REPEAT(S_BOOL B_TRUE) ;;
-       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;;
        S_BOOL(B_PROP BtoS_ACK) ;;
        S_REPEAT(S_BOOL(B_PROP RtoB_ACK)) ;;
-       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;;
        S_BOOL(B_PROP BtoS_ACK)),
       F_BOOL B_FALSE))``;
 
@@ -1309,15 +1310,15 @@ time
     (FINITE SimRun)
     (F_SUFFIX_IMP
      ((S_REPEAT(S_BOOL B_TRUE) ;;
-       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;;
        S_BOOL(B_PROP BtoS_ACK) ;;
        S_REPEAT(S_BOOL(B_NOT(B_PROP RtoB_ACK))) ;;
-       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;;
        S_BOOL(B_PROP BtoS_ACK)),
       F_BOOL B_FALSE))``;
 
 (******************************************************************************
-* FINITE SimRun 
+* FINITE SimRun
 *  |= {[*];!BtoS_ACK;BtoS_ACK;[*];!RtoB_ACK;RtoB_ACK;[*];!BtoS_ACK;BtoS_ACK}(F)
 ******************************************************************************)
 time
@@ -1326,18 +1327,18 @@ time
     (FINITE SimRun)
     (F_SUFFIX_IMP
      ((S_REPEAT(S_BOOL B_TRUE) ;;
-       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;;
        S_BOOL(B_PROP BtoS_ACK) ;;
        S_REPEAT(S_BOOL(B_TRUE)) ;;
        S_BOOL(B_NOT(B_PROP RtoB_ACK)) ;;
        S_BOOL(B_PROP RtoB_ACK) ;;
        S_REPEAT(S_BOOL(B_TRUE)) ;;
-       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;;
        S_BOOL(B_PROP BtoS_ACK)),
       F_BOOL B_FALSE))``;
 
 (******************************************************************************
-* SimRun 
+* SimRun
 *  |= {[*];!BtoS_ACK;BtoS_ACK;
 *          [BtoS_ACK];[!BtoS_ACK];
 *          ((!RtoB_ACK;RtoB_ACK;)&&(!BtoS_ACK;!BtoS_ACK));
@@ -1348,7 +1349,7 @@ time
  ``US_SEM
     SimRun
       ((S_REPEAT(S_BOOL B_TRUE) ;;
-        S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+        S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;;
         S_BOOL(B_PROP BtoS_ACK) ;;
         S_REPEAT(S_BOOL(B_PROP BtoS_ACK));;
         S_REPEAT(S_BOOL(B_NOT(B_PROP BtoS_ACK)));;
@@ -1356,9 +1357,9 @@ time
               (S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; S_BOOL(B_NOT(B_PROP BtoS_ACK)))) ;;
         S_REPEAT(S_BOOL(B_NOT(B_PROP BtoS_ACK)));;
         S_BOOL(B_PROP BtoS_ACK)))``;
- 
+
 (******************************************************************************
-* FINITE SimRun 
+* FINITE SimRun
 *  |= {[*];!BtoS_ACK;BtoS_ACK;
 *          [BtoS_ACK];[!BtoS_ACK];
 *          ((!RtoB_ACK;RtoB_ACK;)&&(!BtoS_ACK;!BtoS_ACK));
@@ -1371,7 +1372,7 @@ time
     (FINITE SimRun)
     (F_SUFFIX_IMP
      ((S_REPEAT(S_BOOL B_TRUE) ;;
-       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;;
        S_BOOL(B_PROP BtoS_ACK) ;;
        S_REPEAT(S_BOOL(B_PROP BtoS_ACK));;
        S_REPEAT(S_BOOL(B_NOT(B_PROP BtoS_ACK)));;
@@ -1382,7 +1383,7 @@ time
       F_BOOL B_FALSE))``;
 
 (******************************************************************************
-* FINITE SimRun 
+* FINITE SimRun
 *  |= {[*];!BtoS_ACK;BtoS_ACK;
 *          [BtoS_ACK];[!BtoS_ACK];
 *          ((!RtoB_ACK;RtoB_ACK;)&&(!BtoS_ACK;!BtoS_ACK));
@@ -1395,7 +1396,7 @@ time
     (FINITE SimRun)
     (F_SUFFIX_IMP
      ((S_REPEAT(S_BOOL B_TRUE) ;;
-       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;;
        S_BOOL(B_PROP BtoS_ACK) ;;
        S_REPEAT(S_BOOL(B_PROP BtoS_ACK));;
        S_REPEAT(S_BOOL(B_NOT(B_PROP BtoS_ACK)));;
@@ -1405,7 +1406,7 @@ time
        S_BOOL(B_PROP BtoS_ACK)),
       F_BOOL B_TRUE))``;
 (******************************************************************************
-* FINITE SimRun 
+* FINITE SimRun
 *  |= {[*];!BtoS_ACK;
 *          BtoS_ACK;
 *          [BtoS_ACK&!RtoB_ACK];
@@ -1419,7 +1420,7 @@ time
     (FINITE SimRun)
     (F_SUFFIX_IMP
      ((S_REPEAT(S_BOOL B_TRUE) ;;
-       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;;
        S_BOOL(B_PROP BtoS_ACK) ;;
        S_REPEAT(S_BOOL(B_AND(B_PROP BtoS_ACK,
                              B_NOT(B_PROP RtoB_ACK)))) ;;
@@ -1437,13 +1438,13 @@ time
  ``UF_SEM
     (FINITE SimRun)
     (F_BEFORE
-       (F_AND(F_NOT(F_BOOL(B_PROP RtoB_ACK)), 
+       (F_AND(F_NOT(F_BOOL(B_PROP RtoB_ACK)),
               F_NEXT(F_BOOL(B_PROP RtoB_ACK))),
-        F_AND(F_NOT(F_BOOL(B_PROP BtoS_ACK)), 
+        F_AND(F_NOT(F_BOOL(B_PROP BtoS_ACK)),
               F_NEXT(F_BOOL(B_PROP BtoS_ACK)))))``;
 
 (******************************************************************************
-* FINITE SimRun 
+* FINITE SimRun
 *  |= {[*]; !BtoS_ACK; BtoS_ACK; true}
 *     ((!RtoB_ACK & X RtoB_ACK) before (!BtoS_ACK & X BtoS_ACK))
 ******************************************************************************)
@@ -1453,17 +1454,17 @@ time
     (FINITE SimRun)
     (F_SUFFIX_IMP
      ((S_REPEAT(S_BOOL B_TRUE) ;;
-       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;;
        S_BOOL(B_PROP BtoS_ACK) ;;
        S_BOOL B_TRUE),
       F_BEFORE
-       (F_AND(F_NOT(F_BOOL(B_PROP RtoB_ACK)), 
+       (F_AND(F_NOT(F_BOOL(B_PROP RtoB_ACK)),
               F_NEXT(F_BOOL(B_PROP RtoB_ACK))),
-        F_AND(F_NOT(F_BOOL(B_PROP BtoS_ACK)), 
+        F_AND(F_NOT(F_BOOL(B_PROP BtoS_ACK)),
               F_NEXT(F_BOOL(B_PROP BtoS_ACK))))))``;
 
 (******************************************************************************
-* FINITE SimRun 
+* FINITE SimRun
 *  |= {[*]; !RtoB_ACK; RtoB_ACK; true}
 *     ((!BtoS_ACK & X BtoS_ACK) before (!RtoB_ACK & X RtoB_ACK))
 ******************************************************************************)
@@ -1473,18 +1474,18 @@ time
     (FINITE SimRun)
     (F_SUFFIX_IMP
      ((S_REPEAT(S_BOOL B_TRUE) ;;
-       S_BOOL(B_NOT(B_PROP RtoB_ACK)) ;; 
+       S_BOOL(B_NOT(B_PROP RtoB_ACK)) ;;
        S_BOOL(B_PROP RtoB_ACK) ;;
        S_BOOL B_TRUE),
       F_BEFORE
-       (F_AND(F_NOT(F_BOOL(B_PROP BtoS_ACK)), 
+       (F_AND(F_NOT(F_BOOL(B_PROP BtoS_ACK)),
               F_NEXT(F_BOOL(B_PROP BtoS_ACK))),
-        F_AND(F_NOT(F_BOOL(B_PROP RtoB_ACK)), 
+        F_AND(F_NOT(F_BOOL(B_PROP RtoB_ACK)),
               F_NEXT(F_BOOL(B_PROP RtoB_ACK))))))``;
 
 
 (******************************************************************************
-* FINITE SimRun 
+* FINITE SimRun
 *  |= {[*]; !BtoS_ACK; BtoS_ACK}
 *     ((!RtoB_ACK & X RtoB_ACK) before (!BtoS_ACK & X BtoS_ACK))
 ******************************************************************************)
@@ -1494,16 +1495,16 @@ time
     (FINITE SimRun)
     (F_SUFFIX_IMP
      ((S_REPEAT(S_BOOL B_TRUE) ;;
-       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;;
        S_BOOL(B_PROP BtoS_ACK)),
       F_BEFORE
-       (F_AND(F_NOT(F_BOOL(B_PROP RtoB_ACK)), 
+       (F_AND(F_NOT(F_BOOL(B_PROP RtoB_ACK)),
               F_NEXT(F_BOOL(B_PROP RtoB_ACK))),
-        F_AND(F_NOT(F_BOOL(B_PROP BtoS_ACK)), 
+        F_AND(F_NOT(F_BOOL(B_PROP BtoS_ACK)),
               F_NEXT(F_BOOL(B_PROP BtoS_ACK))))))``;
 
 (******************************************************************************
-* FINITE SimRun 
+* FINITE SimRun
 *  |= {[*]; !RtoB_ACK; RtoB_ACK}
 *     ((!BtoS_ACK & X BtoS_ACK) before (!RtoB_ACK & X RtoB_ACK))
 ******************************************************************************)
@@ -1513,11 +1514,11 @@ time
     (FINITE SimRun)
     (F_SUFFIX_IMP
      ((S_REPEAT(S_BOOL B_TRUE) ;;
-       S_BOOL(B_NOT(B_PROP RtoB_ACK)) ;; 
+       S_BOOL(B_NOT(B_PROP RtoB_ACK)) ;;
        S_BOOL(B_PROP RtoB_ACK)),
       F_BEFORE
-       (F_AND(F_NOT(F_BOOL(B_PROP BtoS_ACK)), 
+       (F_AND(F_NOT(F_BOOL(B_PROP BtoS_ACK)),
               F_NEXT(F_BOOL(B_PROP BtoS_ACK))),
-        F_AND(F_NOT(F_BOOL(B_PROP RtoB_ACK)), 
+        F_AND(F_NOT(F_BOOL(B_PROP RtoB_ACK)),
               F_NEXT(F_BOOL(B_PROP RtoB_ACK))))))``;
 

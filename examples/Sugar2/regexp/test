@@ -41,6 +41,8 @@ fun QCHECK q r s =
 val TCHECK = QCHECK T;
 val FCHECK = QCHECK F;
 
+val Alph_123 = fst(listSyntax.dest_list(rhs(concl(EVAL(Term`EXPLODE"123"`)))));
+val Alph_ab = fst(listSyntax.dest_list(rhs(concl(EVAL(Term`EXPLODE"ab"`)))));
 val Any = ``Dot : char regexp``;
 val Epsilon = ``One : char regexp``;
 val One = rhs(concl(EVAL(Term`Atom((=) (HD(EXPLODE "1")))`)));
@@ -132,5 +134,8 @@ val PrefixExactlyTwo_a =
 TCHECK Prefix12 "1";
 FCHECK Prefix12 "11";
 TCHECK PrefixExactlyTwo_a "";
+
+(* Some tests of the export functions *)
+val Prefix12_dfa = try (regexpLib.export_dfa Alph_123) Prefix12;
 
 (*---------------------------------------------------------------------------*)

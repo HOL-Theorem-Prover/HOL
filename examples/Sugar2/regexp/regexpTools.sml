@@ -35,6 +35,21 @@ fun chatting n = n <= !trace_level;
 fun chat n s = if chatting n then Lib.say s else ();
 
 (*---------------------------------------------------------------------------*)
+(* Terms.                                                                    *)
+(*---------------------------------------------------------------------------*)
+
+val initial_regexp2na_tm = ``initial_regexp2na : 'a regexp -> num``;
+val accept_regexp2na_tm = ``accept_regexp2na : 'a regexp -> num -> bool``;
+val transition_regexp2na_tm =
+  ``transition_regexp2na : 'a regexp -> num -> 'a -> num -> bool``;
+val eval_accepts_tm = ``eval_accepts : 'a regexp -> num list -> bool``;
+val eval_transitions_tm =
+  ``eval_transitions : 'a regexp -> num list -> 'a -> num list``;
+val exists_transition_regexp2na_tm =
+  ``exists_transition_regexp2na : 'a regexp -> num -> num -> bool``;
+val areport_tm = ``areport : 'a -> 'b -> 'b``;
+
+(*---------------------------------------------------------------------------*)
 (* Function caches.                                                          *)
 (*---------------------------------------------------------------------------*)
 
@@ -145,6 +160,9 @@ val accept_regexp2na_conv =
 val transition_regexp2na_conv =
   cache_conv 3 4 (ONCE_REWRITE_CONV [transition_regexp2na] THENC EVAL);
 
+val eval_accepts_conv =
+  cache_conv 2 3 (ONCE_REWRITE_CONV [eval_accepts_def] THENC EVAL);
+
 val eval_transitions_conv =
   cache_conv 1 3 (ONCE_REWRITE_CONV [eval_transitions_def] THENC EVAL);
 
@@ -166,20 +184,19 @@ end;
 
 val () = computeLib.add_funs
   [(* Prefer the cached conversions of
-      initial_regexp2na, accept_regexp2na, transition_regexp2na, *)
+      initial_regexp2na, accept_regexp2na, transition_regexp2na,
+      eval_accepts, eval_transitions *)
    matcherTheory.astep_def,
    matcherTheory.dijkstra_def];
 
 val () = computeLib.add_convs
-  [(``initial_regexp2na : 'a regexp -> num``, 1, initial_regexp2na_conv),
-   (``accept_regexp2na : 'a regexp -> num -> bool``, 2, accept_regexp2na_conv),
-   (``transition_regexp2na : 'a regexp -> num -> 'a -> num -> bool``, 4,
-    transition_regexp2na_conv),
-   (``eval_transitions : 'a regexp -> num list -> 'a -> num list``, 3,
-    eval_transitions_conv),
-   (``exists_transition_regexp2na : 'a regexp -> num -> num -> bool``, 3,
-    exists_transition_regexp2na_conv),
-   (``areport : 'a -> 'b -> 'b``, 2, areport_conv)];
+  [(initial_regexp2na_tm,           1, initial_regexp2na_conv),
+   (accept_regexp2na_tm,            2, accept_regexp2na_conv),
+   (transition_regexp2na_tm,        4, transition_regexp2na_conv),
+   (eval_accepts_tm,                2, eval_accepts_conv),
+   (eval_transitions_tm,            3, eval_transitions_conv),
+   (exists_transition_regexp2na_tm, 3, exists_transition_regexp2na_conv),
+   (areport_tm,                     2, areport_conv)];
 
 (*---------------------------------------------------------------------------*)
 (* Speed up the evaluation of very long lists.                               *)
@@ -212,5 +229,107 @@ local
 in
   fun EVAL_BIGLIST def = let val def = dropize def in loop [def] def end;
 end;
+
+(*---------------------------------------------------------------------------*)
+(* Export a regular expression as a Verilog state machine.                   *)
+(*---------------------------------------------------------------------------*)
+
+local
+  val empty : (term, int * bool * term list) Binarymap.dict =
+    Binarymap.mkDict compare;
+
+  fun finalize acc =
+    let
+      fun h ((i,_,_), (j,_,_)) = Int.compare (i,j)
+      fun g t = let val (i,_,_) = Binarymap.find (acc,t) in i end
+      fun f (_,(i,a,ts),l) = (i, a, map g ts) :: l
+    in
+      mlibUseful.sort h (Binarymap.foldl f [] acc)
+    end;
+
+  fun initial r =
+    let
+      val ty = (hd o snd o dest_type o type_of) r
+      val e = inst [alpha |-> ty] initial_regexp2na_tm
+      val t = mk_comb (e, r)
+      val res = rhs (concl (EVAL t))
+    in
+      listSyntax.mk_list ([res], numSyntax.num)
+    end;
+
+  fun accepting r s =
+    let
+      val ty = (hd o snd o dest_type o type_of) r
+      val e = inst [alpha |-> ty] eval_accepts_tm
+      val t =
+        list_mk_comb (e, [r, s])
+        handle HOL_ERR _ => raise Fail "export_dfa.transition.list_mk_comb"
+      val res = rhs (concl (EVAL t))
+      val _ =
+        res = T orelse res = F orelse
+        raise ERR "export_regexp" "couldn't reduce eval_accepts"        
+    in 
+      res = T
+    end;
+
+  fun transition r s x =
+    let
+      val ty = (hd o snd o dest_type o type_of) r
+      val e = inst [alpha |-> ty] eval_transitions_tm
+      val t =
+        list_mk_comb (e, [r, s, x])
+        handle HOL_ERR _ =>
+          raise Fail
+            ("export_dfa.transition.list_mk_comb:" ^
+             " e = " ^ type_to_string (type_of e) ^
+             ", r = " ^ type_to_string (type_of r) ^
+             ", s = " ^ type_to_string (type_of s) ^
+             ", x = " ^ type_to_string (type_of x))
+      val res = rhs (concl (EVAL t))
+    in
+      res
+    end;
+
+  fun export _ _ acc [] = finalize acc
+    | export alph r acc (s :: rest) =
+    if Option.isSome (Binarymap.peek (acc,s)) then export alph r acc rest else
+      let
+        val i = Binarymap.numItems acc
+        val a = accepting r s
+        val ts = map (transition r s) alph
+        val acc = Binarymap.insert (acc, s, (i,a,ts))
+      in
+        export alph r acc (ts @ rest)
+      end;
+in
+  fun export_dfa alphabet r = export alphabet r empty [initial r];
+end;
+
+fun all_subsets [] = [[]]
+  | all_subsets (x :: xs) =
+  let val y = all_subsets xs
+  in map (cons (x,true)) y @ map (cons (x,false)) y
+  end;
+
+fun hol_subset l =
+  let
+    val ty = type_of (fst (hd l))
+    val emp = inst [alpha |-> ty] pred_setSyntax.empty_tm
+    val ins = inst [alpha |-> ty] pred_setSyntax.insert_tm
+    fun f ((_,false),s) = s
+      | f ((x,true),s) =
+      list_mk_comb (ins, [x,s])
+      handle HOL_ERR _ => raise Fail "export_set_dfa.hol_subset.f"
+  in
+    foldr f emp l
+  end;
+
+fun export_set_dfa props r =
+  let
+    val x = all_subsets props
+    val y = map hol_subset x
+  in
+    (x, export_dfa y r)
+  end;
 
 end

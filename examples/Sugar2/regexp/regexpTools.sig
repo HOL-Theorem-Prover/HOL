@@ -18,13 +18,20 @@ sig
 
 val EVAL_BIGLIST : Thm.thm -> Thm.thm list
 
-(* For evaluating the Prefix operator on set regexps *)
+(* Evaluating the Prefix operator on set regexps (like in Sugar) *)
 val set_sat_conv : Abbrev.conv
 
-(* For evaluating the Prefix operator on character regexps *)
+(* Evaluating the Prefix operator on character regexps *)
 val chr_sat_conv : Abbrev.conv
 
 (* Set this to a SAT solver for evaluating the Prefix operator *)
 val prefix_sat_conv : Abbrev.conv ref        (* by default = set_sat_conv *)
+
+(* Exporting state machines *)
+val export_dfa : Term.term list -> Term.term -> (int * bool * int list) list
+
+val export_set_dfa :
+  Term.term list -> Term.term ->
+  (Term.term * bool) list list * (int * bool * int list) list
 
 end

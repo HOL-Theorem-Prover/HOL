@@ -1392,6 +1392,40 @@ val transition_regexp2na = store_thm
        Know `!n. ~(n + 1 <= n)` >> DECIDE_TAC
        ++ METIS_TAC [regexp2na_trans, regexp2na_acc]]);
 
+val eval_accepts_def = pureDefine
+  `(eval_accepts (Prefix r) l =
+    EXISTS (accept_regexp2na r) l \/
+    let i = initial_regexp2na r in
+    dijkstra (exists_transition_regexp2na r) (accept_regexp2na r)
+    l (FILTER (\x. ~MEM x l) (interval 0 (SUC (initial_regexp2na r))))) /\
+   (eval_accepts r l = EXISTS (accept_regexp2na r) l)`;
+
+val eval_accepts = prove
+  (``!r l. eval_accepts r l = EXISTS (accept_regexp2na r) l``,
+   Cases
+   ++ RW_TAC std_ss [eval_accepts_def]
+   ++ Introduce `r' = r`
+   ++ Introduce `regexp2na r = (i,t,a)`
+   ++ RW_TAC std_ss [dijkstra]
+   ++ RW_TAC std_ss [MEM_APPEND, EXISTS_MEM, accept_regexp2na_def,
+                     accept_def, regexp2na_def]
+   ++ Know `exists_transition_regexp2na r = \s s'. ?x. t s x s'`
+   >> RW_TAC std_ss
+      [exists_transition_regexp2na_def, FUN_EQ_THM,
+       transition_regexp2na_def, transition_def]
+   ++ DISCH_THEN (fn th => RW_TAC std_ss [th])
+   ++ RW_TAC arith_ss [MEM_FILTER, MEM_interval]
+   ++ HO_MATCH_MP_TAC
+      (METIS_PROVE []
+       ``(!l k. C k l ==> B k l) ==>
+         ((?k l'. A k /\ B k l' /\ C k l') = (?e. A e /\ ?l. C e l))``)
+   ++ Know `!x y. x < SUC y = x <= y` >> DECIDE_TAC
+   ++ DISCH_THEN
+      (fn th => ASM_SIMP_TAC std_ss [th, initial_regexp2na_def, initial_def])
+   ++ Induct
+   ++ RW_TAC std_ss [EVERY_DEF, accepting_path_def]
+   ++ METIS_TAC [regexp2na_trans]);
+
 val calc_transitions_def = Define
   `(calc_transitions r l c 0 a = a) /\
    (calc_transitions r l c (SUC s') a =
@@ -1405,7 +1439,7 @@ val eval_transitions_def = pureDefine
 val areport_def = pureDefine `areport h b = b`;
 
 val astep_def = Define
-  `(astep r l [] = EXISTS (accept_regexp2na r) l) /\
+  `(astep r l [] = eval_accepts r l) /\
    (astep r l (c :: cs) = astep r (eval_transitions r l c) cs)`;
 
 val amatch_def = Define
@@ -1416,8 +1450,7 @@ val acheckpt_def = Define
    (acheckpt r f h l (c :: cs) =
     let l' = eval_transitions r l c in
     let h = c :: h in
-    (EXISTS (accept_regexp2na r) l' ==> areport h (f (c :: cs))) /\
-    acheckpt r f h l' cs)`;
+    (eval_accepts r l' ==> areport h (f (c :: cs))) /\ acheckpt r f h l' cs)`;
 
 val acheck_def = Define
   `acheck r f l = let i = initial_regexp2na r in acheckpt r f [] [i] l`;
