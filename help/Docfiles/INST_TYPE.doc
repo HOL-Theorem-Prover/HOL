@@ -13,9 +13,9 @@ rule, type, instantiate.
 instantiation of type variables.
 {
 
-              A |- t                 INST_TYPE[vty1|->ty1,..., vtyn|->tyn]
-  -----------------------------------
-    A |- t[ty1,...,tyn/vty1,...,vtyn]
+              A |- t
+  ----------------------------------- INST_TYPE[vty1|->ty1,..., vtyn|->tyn]
+   A |- t[ty1,...,tyn/vty1,...,vtyn]
 }
 \noindent where none of the types {vtyi} are free in the assumption list.
 Variables will be renamed if necessary to prevent distinct variables becoming
