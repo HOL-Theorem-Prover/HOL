@@ -34,6 +34,17 @@ val _ = new_theory "RoundOp";
 
 
 (*---------------------------------------------------------------------------*)
+(*  Name some constants used in the code and specification.                  *)
+(*---------------------------------------------------------------------------*)
+
+val NINE_def   = Define   `NINE = (F,F,F,F,T,F,F,T)`;
+val ONE_B_def  = Define  `ONE_B = (F,F,F,T,T,F,T,T)`;
+val EIGHTY_def = Define `EIGHTY = (T,F,F,F,F,F,F,F)`;
+val B_HEX_def  = Define  `B_HEX = (F,F,F,F,T,F,T,T)`;
+val D_HEX_def  = Define  `D_HEX = (F,F,F,F,T,T,F,T)`;
+val E_HEX_def  = Define  `E_HEX = (F,F,F,F,T,T,T,F)`;
+
+(*---------------------------------------------------------------------------*)
 (* A block is 16 bytes. A state also has that type, although states have     *)
 (* a special format.                                                         *)
 (*---------------------------------------------------------------------------*)
@@ -49,26 +60,20 @@ val _ = type_abbrev("key",   Type`:state`);
 val _ = type_abbrev("w8x4",  Type`:word8 # word8 # word8 # word8`);
 
 
+val ZERO_BLOCK_def = Define
+ `ZERO_BLOCK = (ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,
+                ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO) : block`;
+
 (*---------------------------------------------------------------------------*)
 (* Case analysis on a block.                                                 *)
 (*---------------------------------------------------------------------------*)
 
-val FORALL_BLOCK = Q.prove
-(`(!b:block. P b) = 
+val FORALL_BLOCK = Q.store_thm
+("FORALL_BLOCK",
+ `(!b:block. P b) = 
    !w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16.
     P (w1,w2,w3,w4,w5,w6,w7,w8,w9,w10,w11,w12,w13,w14,w15,w16)`,
  SIMP_TAC std_ss [FORALL_PROD]);
-
-(*---------------------------------------------------------------------------*)
-(*  Name some constants used in the code and specification.                  *)
-(*---------------------------------------------------------------------------*)
-
-val NINE_def   = Define   `NINE = (F,F,F,F,T,F,F,T)`;
-val ONE_B_def  = Define  `ONE_B = (F,F,F,T,T,F,T,T)`;
-val EIGHTY_def = Define `EIGHTY = (T,F,F,F,F,F,F,F)`;
-val B_HEX_def  = Define  `B_HEX = (F,F,F,F,T,F,T,T)`;
-val D_HEX_def  = Define  `D_HEX = (F,F,F,F,T,T,F,T)`;
-val E_HEX_def  = Define  `E_HEX = (F,F,F,F,T,T,T,F)`;
 
 (*---------------------------------------------------------------------------*)
 (* XOR on blocks. Definition and algebraic properties.                       *)
@@ -82,10 +87,6 @@ val XOR_BLOCK_def = Define
        a4 # b4,   a5 # b5,   a6 # b6,   a7 # b7,
        a8 # b8,   a9 # b9,   a10 # b10, a11 # b11,
        a12 # b12, a13 # b13, a14 # b14, a15 # b15)`;
-
-val ZERO_BLOCK_def = Define
- `ZERO_BLOCK = (ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,
-                ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO) : block`;
 
 val XOR_BLOCK_ZERO = Q.store_thm
 ("XOR_BLOCK_ZERO",

@@ -1,3 +1,5 @@
+open HolKernel bossLib;
+
 val _ = new_theory "tables";
 
 val Sbox = Count.apply Define
