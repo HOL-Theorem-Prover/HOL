@@ -342,9 +342,11 @@ fun is_enum_type_spec astl =
    ---------------------------------------------------------------------- *)
 
 fun build_enum_tyinfo (tyname, ast) =
-    case ast of
-      Constructors clist => EnumType.enum_type_to_tyinfo (tyname, map #1 clist)
-    | _ => raise ERR "build_enum_tyinfo" "Should never happen"
+ let open EnumType
+ in case ast 
+     of Constructors clist => (enum_type_to_tyinfo (tyname, map #1 clist), [])
+      | otherwise => raise ERR "build_enum_tyinfo" "Should never happen"
+ end
 
 fun build_enum_tyinfos astl = map build_enum_tyinfo astl
 
@@ -386,18 +388,15 @@ local fun add_record_facts (tyinfo, NONE) = (tyinfo, [])
       fun field_names_of (_,Record l) = SOME (map fst l)
         | field_names_of _ = NONE
 in
-fun primHol_datatype db q = let
-  val astl = ParseDatatype.parse q
-in
-  if is_enum_type_spec astl then
-    build_enum_tyinfos astl
-  else let
-      val field_names_list = map field_names_of astl
-      val tyinfos = build_tyinfos db (new_asts_datatype astl)
-    in
-      map add_record_facts (zip tyinfos field_names_list)
-    end
-end
+fun primHol_datatype db q = 
+ let val astl = ParseDatatype.parse q
+ in 
+    if is_enum_type_spec astl 
+      then build_enum_tyinfos astl
+      else map add_record_facts 
+                 (zip (build_tyinfos db (new_asts_datatype astl))
+                      (map field_names_of astl))
+ end
 end (* local *)
 
 

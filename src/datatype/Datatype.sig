@@ -1,11 +1,9 @@
 signature Datatype =
 sig
 
- type hol_type     = Type.hol_type
- type thm          = Thm.thm
+ include Abbrev
  type tyinfo       = TypeBase.TypeInfo.tyinfo
  type typeBase     = TypeBase.TypeInfo.typeBase;
- type 'a quotation = 'a Portable.frag list
  type AST          = ParseDatatype.AST
 
  type field_name   = string
@@ -40,29 +38,8 @@ sig
    the arguments of that constructor. Recursive occurrences of the types
    are marked by occurrences of the corresponding type variables.
 
- [xlate_parse] Translates the parsed datatype into a type specification,
-   and also produces an accompanying list of "record information" for each
-   type within the tyspecs.  Record information is NONE for types that
-   aren't records, and for those types that are, it is SOME of the list of
-   field names.
-
- [raw_define_type]  Defines type(s) given a tyspecs and returns a pair
-   of the types' induction and recursion theorems, the latter is the
-   type "Axiom".
-
- [AST_datatype] Defines type(s), returns the tyinfo for each
-   type, as well as the names of the extra theorems that have been added
-   to the tyinfo as simplification theorems.
-
  [primHol_datatype] A "pure" operation that defines the type but doesn't
    write the underlying database of facts.
-
- [make_tyinfo_persist] Arrange for a tyinfo to be written out to
-    the theory file such that it will be read back into the TypeBase
-    when the theory is loaded.  The list of strings is the list of names
-    of any extra theorems in the simpls component of the tyinfo.  This
-    means that the theorems to be added as extra simpls must have already
-    been saved.
 
  [Hol_datatype] Define the type and write TypeBase.theTypeBase, and
     arrange for the information about the type to be persistent.
