@@ -47,50 +47,6 @@ fun ERR f msg = HOL_ERR { origin_structure = "OmegaSymbolic",
 
    ---------------------------------------------------------------------- *)
 
-val evaluppers = ``Omega$evalupper``;
-val evallowers = ``Omega$evallower``;
-
-val eval_base = prove(
-  ``p = ((evalupper x [] /\ evallower x []) /\ T) /\ p``,
-  REWRITE_TAC [evalupper_def, evallower_def]);
-
-val eval_step_upper1 = prove(
-  ``((evalupper x ups /\ evallower x lows) /\ ex) /\ &c * x <= r =
-    (evalupper x ((c,r)::ups) /\ evallower x lows) /\ ex``,
-  REWRITE_TAC [evalupper_def, evallower_def] THEN
-  CONV_TAC (AC_CONV (CONJ_ASSOC, CONJ_COMM)));
-val eval_step_upper2 = prove(
-  ``((evalupper x ups /\ evallower x lows) /\ ex) /\ (&c * x <= r /\ p) =
-    ((evalupper x ((c,r)::ups) /\ evallower x lows) /\ ex) /\ p``,
-  REWRITE_TAC [evalupper_def, evallower_def] THEN
-  CONV_TAC (AC_CONV (CONJ_ASSOC, CONJ_COMM)));
-val eval_step_lower1 = prove(
-  ``((evalupper x ups /\ evallower x lows) /\ ex) /\ r <= &c * x =
-    (evalupper x ups /\ evallower x ((c,r)::lows)) /\ ex``,
-  REWRITE_TAC [evalupper_def, evallower_def] THEN
-  CONV_TAC (AC_CONV (CONJ_ASSOC, CONJ_COMM)));
-val eval_step_lower2 = prove(
-  ``((evalupper x ups /\ evallower x lows) /\ ex) /\ (r <= &c * x /\ p) =
-    ((evalupper x ups /\ evallower x ((c,r)::lows)) /\ ex) /\ p``,
-  REWRITE_TAC [evalupper_def, evallower_def] THEN
-  CONV_TAC (AC_CONV (CONJ_ASSOC, CONJ_COMM)));
-val eval_step_extra1 = prove(
-  ``((evalupper x ups /\ evallower x lows) /\ T) /\ ex' =
-    (evalupper x ups /\ evallower x lows) /\ ex'``,
-  REWRITE_TAC [CONJ_ASSOC]);
-val eval_step_extra2 = prove(
-  ``((evalupper x ups /\ evallower x lows) /\ ex) /\ ex' =
-    (evalupper x ups /\ evallower x lows) /\ (ex /\ ex')``,
-  REWRITE_TAC [CONJ_ASSOC]);
-val eval_step_extra3 = prove(
-  ``((evalupper x ups /\ evallower x lows) /\ T) /\ (ex' /\ p) =
-    ((evalupper x ups /\ evallower x lows) /\ ex') /\ p``,
-  REWRITE_TAC [CONJ_ASSOC]);
-val eval_step_extra4 = prove(
-  ``((evalupper x ups /\ evallower x lows) /\ ex) /\ (ex' /\ p) =
-    ((evalupper x ups /\ evallower x lows) /\ (ex /\ ex')) /\ p``,
-  REWRITE_TAC [CONJ_ASSOC]);
-
 val pvar = mk_var("p", bool)
 val xvar = mk_var("x", int_ty)
 fun clause_to_evals v tm = let
@@ -149,10 +105,15 @@ end tm
     This function attempts to prove |- EVERY fst_nzero ^t
    ---------------------------------------------------------------------- *)
 
-val every_t =
-    ``list$EVERY : (num # int -> bool) -> (num # int) list -> bool``
+val c_ty = pairSyntax.mk_prod(numSyntax.num, int_ty)
+val clist_ty = listSyntax.mk_list_type c_ty
+val nil_t = listSyntax.mk_nil c_ty
+val every_t = mk_thy_const {Thy = "list", Name = "EVERY",
+                            Ty = (c_ty --> bool) --> clist_ty --> bool};
 val (every_nil, every_cons) = CONJ_PAIR listTheory.EVERY_DEF
-val fst_nzero_t = ``Omega$fst_nzero : num # int -> bool``
+
+val fst_nzero_t = mk_thy_const {Thy = "Omega", Name = "fst_nzero",
+                                Ty = c_ty --> bool};
 val every_fst_nzero_nil = EQT_ELIM (ISPEC fst_nzero_t every_nil)
 val every_fst_nzero_cons = ISPEC fst_nzero_t every_cons
 fun prove_fstnzero t =
@@ -205,7 +166,7 @@ fun prove_every_fst1 list_t =
    ---------------------------------------------------------------------- *)
 
 fun abs_t m = let
-  val p = mk_var("p", pairSyntax.mk_prod(numSyntax.num, int_ty))
+  val p = mk_var("p", c_ty)
   val body = numSyntax.mk_leq(pairSyntax.mk_fst p, m)
 in
   mk_abs(p, body)
@@ -283,7 +244,8 @@ fun apply_fmve ctype = let
         val uppers_lt_m = prove_every_fst_lt_m m ups
       in
         K (MATCH_MP alternative_equivalence
-                    (LIST_CONJ [ups_nzero, lows_nzero, uppers_lt_m]))
+                    (LIST_CONJ [ups_nzero, lows_nzero, uppers_lt_m])) THENC
+        RAND_CONV (RAND_CONV (ALPHA_CONV v))
       end
   end t
 in
@@ -300,9 +262,6 @@ end
     rshadow_row_def or dark_shadow_row_def)
    ---------------------------------------------------------------------- *)
 
-val c_ty = pairSyntax.mk_prod(numSyntax.num, int_ty)
-val clist_ty = listSyntax.mk_list_type c_ty
-val nil_t = listSyntax.mk_nil c_ty
 
 fun munge_to_altform varname th = let
   val (nilth, consth0) = CONJ_PAIR th
@@ -329,6 +288,29 @@ fun calculate_shadow (sdef, rowdef) = let
        (REWR_CONV scons THENC FORK_CONV (calculate_row, main))) t
 in
   main
+end
+
+(* ----------------------------------------------------------------------
+    calculate_nightmare t
+
+    t is a term of the form nightmare m ups lows tlist.
+    This function expands it into an equation of the form
+       |- t = (?x. ...) \/ (?x. ...) \/ ... \/ (?x. ...)
+
+   ---------------------------------------------------------------------- *)
+
+val (nightmare1, nightmare_cons) = munge_to_altform "rs" nightmare_def
+
+val calculate_nightmare = let
+  val reducer =
+      STRIP_QUANT_CONV (LAND_CONV (RAND_CONV
+                                     (RAND_CONV CooperMath.REDUCE_CONV)))
+  fun recurse t =
+      ((REWR_CONV nightmare1 THENC reducer) ORELSEC
+       (REWR_CONV nightmare_cons THENC LAND_CONV reducer THENC
+        RAND_CONV recurse)) t
+in
+  recurse
 end
 
 
