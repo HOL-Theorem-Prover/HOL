@@ -877,6 +877,7 @@ in
 fun findModel tb = 
  let val (ass,vm,t,b) = dest_term_bdd tb
      val assl         = bdd.getAssignment(bdd.satone b)
+     val vml          = Varmap.dest vm
      val setl         = List.map 
                          (fn (n,tv) => 
                            ((case assoc2 n vml of 
