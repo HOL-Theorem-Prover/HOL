@@ -204,7 +204,7 @@ fun STtoString (G:grammar) x =
   case x of
     STD_HOL_TOK s => s
   | BOS => "<beginning of input>"
-  | EOS => "<end of string>"
+  | EOS => "<end of input>"
   | VS_cons => "<gap between varstructs>"
   | Id => "<identifier>"
   | TypeColon => #type_intro (specials G)
