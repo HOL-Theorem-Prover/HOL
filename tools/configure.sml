@@ -389,17 +389,9 @@ val _ =
 
 val _ =
  let val _ = echo "Setting up the help Makefile."
-     val src1    = fullPath [holdir, "tools", "Holmakefile.help.src"]
-     val target1 = fullPath [holdir, "help", "src", "Holmakefile"]
-     val lexer  = fullPath [mosmldir, "bin/mosmllex"]
-     val yaker  = fullPath [mosmldir, "bin/mosmlyac"]
      val src2    = fullPath [holdir, "tools", "makebase.src"]
      val target2 = fullPath [holdir, "help", "src", "makebase.sml"]
  in
-  fill_holes (src1,target1)
-   ["\tHOLMOSMLLEX Lexer.lex\n"  --> String.concat["\t",lexer," Lexer.lex\n"],
-    "\tHOLMOSMLYAC Parser.grm\n" --> String.concat["\t",yaker," Parser.grm\n"]]
- ;
   fill_holes (src2,target2)
    ["val HOLpath = __;\n"
       --> String.concat["val HOLpath = ", quote holdir, ";\n"]]

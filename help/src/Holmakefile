@@ -45,7 +45,7 @@ Database.uo: Database.sml Database.ui
 	HOLMOSMLC -c Database.sml
 
 Lexer.sml: Lexer.lex
-	HOLMOSMLLEX Lexer.lex
+	MOSMLLEX Lexer.lex
 
 Parser.sml: Parser.grm
-	HOLMOSMLYAC Parser.grm
+	MOSMLYAC Parser.grm
