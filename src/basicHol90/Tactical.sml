@@ -210,8 +210,8 @@ fun POP_ASSUM_LIST asltac (asl,w) = asltac (map ASSUME asl) ([],w);
  * and give it to a function (tactic).
  *---------------------------------------------------------------------------*)
 
-local fun match_with_constants constants pat_tm actual_tm = 
-       let val (tm_inst, ty_inst) = Ho_match.match_term [] pat_tm actual_tm
+local fun match_with_constants constants pat ob = 
+       let val (tm_inst, ty_inst) = Ho_match.match_term [] pat ob
            val bound_vars = map #2 tm_inst
        in
           null (intersect constants bound_vars)
@@ -221,13 +221,11 @@ fun PAT_ASSUM pat thfun (asl, w) =
   case List.filter (can (Ho_match.match_term [] pat)) asl
    of [] => raise TACTICAL_ERR "PAT_ASSUM" "No assumptions match pattern"
     | [x] => let val (ob, asl') = Lib.pluck (fn t => t = x) asl
-             in
-               thfun (ASSUME ob) (asl', w)
+             in thfun (ASSUME ob) (asl', w)
              end
     | _ => let val fvars = free_varsl (w::asl)
                val (ob,asl') = Lib.pluck (match_with_constants fvars pat) asl
-           in
-             thfun (ASSUME ob) (asl',w)
+           in thfun (ASSUME ob) (asl',w)
            end
 end
 

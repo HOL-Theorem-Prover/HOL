@@ -10,6 +10,7 @@ sig
  * exceptions
  *--------------------------------------------------------------------*)
 (*  exception Interrupt  (* USE THIS WITH NJSML ONLY!!! *) *)
+
   val STRUCT_ERR  : string -> (string * string) -> 'a
   val STRUCT_WRAP : string -> (string * exn) -> 'a
   val fail     : unit -> 'a

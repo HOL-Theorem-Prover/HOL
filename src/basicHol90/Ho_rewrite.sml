@@ -13,7 +13,8 @@
 structure Ho_rewrite :> Ho_rewrite =
 struct
 
-open HolKernel Drule Tactic Tactical Conv liteLib Psyntax Ho_match Ho_net;
+open HolKernel boolTheory Drule Tactic Tactical Conv Resolve Parse
+     liteLib Ho_match Ho_net;
 
 type term = Term.term
 type thm = Thm.thm
@@ -22,7 +23,10 @@ type tactic = Abbrev.tactic;
 
 
 infixr 3 ##
-infix THEN  ORELSE
+infix THEN THENL ORELSE
+
+fun ERR f s = HOL_ERR{origin_structure = "Ho_rewrite",
+                      origin_function=f,message=s};
 
 fun WRAP_ERR p = STRUCT_WRAP "Ho_rewrite" p;
 
@@ -38,6 +42,7 @@ fun WRAP_ERR p = STRUCT_WRAP "Ho_rewrite" p;
  *   3. Then |- t --> |- t = T and |- ~t --> |- t = F
  *
  *---------------------------------------------------------------------------*)
+
 fun mk_rewrites th =
   let val th = SPEC_ALL th
       val t = concl th
@@ -49,7 +54,7 @@ fun mk_rewrites th =
             then [EQF_INTRO th]
             else [EQT_INTRO th]
   end
-  handle e as (HOL_ERR _) => WRAP_ERR("mk_rewrites",e);
+  handle e as HOL_ERR _ => WRAP_ERR("mk_rewrites",e);
 
 
 (* An abstract datatype of rewrite rule sets. *)
@@ -86,6 +91,30 @@ fun set_implicit_rewrites thl =
     implicit := add_rewrites empty_rewrites thl;
 fun add_implicit_rewrites thl =
     implicit := add_rewrites (!implicit) thl;
+
+
+val COND_BOOL_CLAUSES = 
+  prove(Term`(!b e. (if b then T else e) = (b \/ e)) /\
+             (!b t. (if b then t else T) = (b ==> t)) /\
+             (!b e. (if b then F else e) = (~b /\ e)) /\
+             (!b t. (if b then t else F) = (b /\ t))`,
+REPEAT (STRIP_TAC ORELSE COND_CASES_TAC ORELSE EQ_TAC)
+ THEN TRY (ACCEPT_TAC TRUTH ORELSE FIRST_ASSUM ACCEPT_TAC)
+ THENL [DISJ1_TAC THEN ACCEPT_TAC TRUTH,
+        DISJ2_TAC THEN FIRST_ASSUM ACCEPT_TAC,
+        FIRST_ASSUM MATCH_MP_TAC THEN ACCEPT_TAC TRUTH,
+        POP_ASSUM (K ALL_TAC) THEN 
+        POP_ASSUM (MP_TAC o EQ_MP (el 2 (CONJUNCTS (SPEC_ALL NOT_CLAUSES))))
+        THEN ACCEPT_TAC
+             (EQT_ELIM (el 4 (CONJUNCTS (SPEC(Term`F`) IMP_CLAUSES))))]);
+
+val _ = 
+  let open boolTheory
+  in add_implicit_rewrites
+       [REFL_CLAUSE, EQ_CLAUSES, NOT_CLAUSES, AND_CLAUSES, OR_CLAUSES,
+        IMP_CLAUSES, FORALL_SIMP, EXISTS_SIMP, ABS_SIMP,
+        SELECT_REFL, SELECT_REFL_2, COND_CLAUSES, COND_BOOL_CLAUSES]
+  end;
 
 (* =====================================================================*)
 (* Main rewriting conversion                         			*)
@@ -188,29 +217,26 @@ and FILTER_ONCE_ASM_REWRITE_TAC f thl =
  * (the conclusion of) th and then substitutes the corresponding
  * instance of v. Much faster than rewriting.
  ****************************************************************************)
-local
-(* Search a sub-term of t matching u *)
-exception FIND_MATCH_ERR;
-fun find_match u =
-   let fun find_mt t =
-          match_term [] u t
-          handle HOL_ERR _ =>
-          find_mt(rator t)
-          handle HOL_ERR _ =>
-          find_mt(rand t)
-          handle HOL_ERR _ =>
-          find_mt(body t)
-          handle HOL_ERR _ =>
-          raise FIND_MATCH_ERR
-   in
-   find_mt
-   end
+
+local exception FIND_MATCH_ERR
+      fun find_match u =
+           let fun find_mt t =
+                 match_term [] u t handle HOL_ERR _ =>
+                 find_mt(rator t)  handle HOL_ERR _ =>
+                 find_mt(rand t)   handle HOL_ERR _ =>
+                 find_mt(body t)   handle HOL_ERR _ => 
+                 raise ERR "SUBST_MATCH" "no match"
+           in
+             find_mt
+           end
+      fun mk_subst L = map (fn (y,x) => {redex=x,residue=y}) L
+      val INST = Thm.INST o mk_subst
+      val INST_TYPE = Thm.INST_TYPE o mk_subst
 in
 fun SUBST_MATCH eqth th =
    let val (tm_inst,ty_inst) = find_match (lhs(concl eqth)) (concl th)
    in SUBS [INST tm_inst (INST_TYPE ty_inst eqth)] th
    end
-   handle FIND_MATCH_ERR => failwith "SUBST_MATCH"
 end;
 
 fun GEN_REWRITE_CONV rw_func thl =
@@ -236,8 +262,7 @@ val TAUT =
   in fn tm => prove(tm,TAUT_TAC)
   end;
 
-fun TAUT_TAC (asms,gl) =
-    let val th = TAUT gl in ([],fn _ => th) end;
+fun TAUT_TAC (asms,gl) = let val th = TAUT gl in ([],fn _ => th) end;
 
 val TAUT_CONV = EQT_INTRO o TAUT;
 

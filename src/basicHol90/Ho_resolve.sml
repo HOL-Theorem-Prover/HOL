@@ -6,7 +6,7 @@
 structure Ho_resolve :> Ho_resolve =
 struct
 
-open HolKernel liteLib Drule Tactical Tactic Conv Ho_net Psyntax;
+open HolKernel liteLib Drule Tactical Tactic Conv;
 
 infix 5 |->
 infix THEN
@@ -28,7 +28,7 @@ fun MATCH_MP ith =
   let val sth =
       let val tm = concl ith
           val (avs,bod) = strip_forall tm
-          val (ant,con) = dest_imp bod
+          val (ant,_) = liteLib.dest_imp bod
           val (svs,pvs) = partition (C free_in ant) avs
       in if pvs = [] then ith else
           let val th1 = SPECL avs (ASSUME tm)
@@ -37,7 +37,7 @@ fun MATCH_MP ith =
           end
       end
       handle HOL_ERR _ => ERR("MATCH_MP","Not an implication")
-      val match_fun = Ho_match.PART_MATCH (fst o dest_imp) sth
+      val match_fun = Ho_match.PART_MATCH (fst o liteLib.dest_imp) sth
   in fn th => 
       MP (match_fun (concl th)) th
       handle HOL_ERR _ => ERR("MATCH_MP","No match")
@@ -59,10 +59,10 @@ fun MATCH_ACCEPT_TAC thm =
 (* ------------------------------------------------------------------------- *)
 
 fun BACKCHAIN_TAC th =
-    let val match_fn = Ho_match.PART_MATCH (snd o dest_imp) th
+    let val match_fn = Ho_match.PART_MATCH (snd o liteLib.dest_imp) th
     in fn (asl,w) =>
 	let val th1 = match_fn w
-	    val (ant,con) = dest_imp(concl th1)
+	    val (ant,_) = liteLib.dest_imp(concl th1)
 	in ([(asl,ant)],fn [t] => MATCH_MP th1 t)
 	end
     end;;
@@ -72,7 +72,7 @@ fun MATCH_MP_TAC th =
  let val sth =
      let val tm = concl th
          val (avs,bod) = strip_forall tm
-         val (ant,con) = dest_imp bod
+         val (ant,con) = liteLib.dest_imp bod
          val th1 = SPECL avs (ASSUME tm)
          val th2 = UNDISCH th1
          val evs = filter(fn v => free_in v ant andalso not(free_in v con)) avs
@@ -80,10 +80,10 @@ fun MATCH_MP_TAC th =
          val tm3 = hd(hyp th3)
      in MP (DISCH tm (GEN_ALL (DISCH tm3 (UNDISCH th3)))) th
      end handle HOL_ERR _ => ERR("MATCH_MP_TAC","Bad theorem")
-     val match_fun = Ho_match.PART_MATCH (snd o dest_imp) sth
+     val match_fun = Ho_match.PART_MATCH (snd o liteLib.dest_imp) sth
   in fn (asl,w) => 
         let val xth = match_fun w
-            val lant = fst(dest_imp(concl xth))
+            val lant = fst(liteLib.dest_imp(concl xth))
         in ([(asl,lant)],MP xth o hd)
         end handle HOL_ERR _ => ERR("MATCH_MP_TAC","No match")
   end;;
@@ -102,6 +102,14 @@ fun MATCH_MP_TAC th =
  * ------------------------------------------------------------------------- *)
 
 
+local fun mk_subst L = map (fn (y,x) => {redex=x,residue=y}) L
+      fun subst s = Term.subst (mk_subst s);
+      val INST = Thm.INST o mk_subst
+      val INST_TYPE = Thm.INST_TYPE o mk_subst
+      fun dest_comb M = 
+          let val {Rator,Rand} = Term.dest_comb M in (Rator,Rand) end
+      open Ho_net
+in
 val HIGHER_REWRITE_CONV =
   let fun GINST th =
       let val fvs = subtract (free_vars(concl th)) (free_varsl (hyp th))
@@ -128,12 +136,13 @@ val HIGHER_REWRITE_CONV =
               val (tmin,tyin) = Ho_match.match_term [] pat stm
               val (pred,(th,beta_fn)) = assoc pat ass_list
               val gv = genvar(type_of stm)
-              val abs = mk_abs(gv,subst[stm |-> gv] tm)
+              val abs = mk_abs{Bvar=gv,Body=subst[stm |-> gv] tm}
               val (tmin0,tyin0) = Ho_match.match_term [] pred abs
           in CONV_RULE beta_fn (INST tmin (INST tmin0 (INST_TYPE tyin0 th)))
           end
       end
   handle e as (HOL_ERR _) => WRAP_ERR("HIGHER_REWRITE_CONV",e)
-  end;;
+  end
+end;;
 
 end (* struct *)

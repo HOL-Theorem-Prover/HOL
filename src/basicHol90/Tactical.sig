@@ -14,6 +14,7 @@
 signature Tactical =
 sig
 
+  type term = Term.term
   type goal = Abbrev.goal
   type tactic = Abbrev.tactic
   type thm_tactic = Abbrev.thm_tactic

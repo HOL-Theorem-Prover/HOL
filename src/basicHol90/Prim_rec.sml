@@ -25,7 +25,7 @@
 structure Prim_rec :> Prim_rec =
 struct
 open HolKernel Parse boolTheory Drule Tactical Tactic
-     Rewrite Conv Resolve Thm_cont;
+     Rewrite Conv Resolve Thm_cont Type_def_support;
 
 infix THEN THENL ORELSE ## |-> --> THENC;
 
@@ -39,25 +39,39 @@ fun ERR function message =
           message = message}
 
 
-fun REPEATNC n c = if n < 1 then REFL
-                   else c THENC REPEATNC (n - 1) c
-fun HEAD_BETA_CONV tm = let
-  fun gotoheadpair c tm =
-    if is_comb tm andalso is_comb (rator tm) then
-      RATOR_CONV (gotoheadpair c) tm
-    else
-      c tm
-in
-  REPEATC (gotoheadpair BETA_CONV) tm
-end;
+(* stuff from various jrh HOL-Light code *)
+val lhand = rand o rator
+val conjuncts = strip_conj
+
+fun strip_vars tm = 
+   let fun pull_off_var tm acc = 
+         let val {Rator, Rand} = dest_comb tm
+         in if is_var Rand then pull_off_var Rator (Rand::acc) else (tm, acc)
+         end handle HOL_ERR _ => (tm, acc)
+   in
+     pull_off_var tm []
+   end;
+
+fun REPEATNC n c = if n < 1 then REFL else c THENC REPEATNC (n - 1) c
+
+fun HEAD_BETA_CONV tm = 
+  let fun gotoheadpair c tm =
+         if is_comb tm andalso is_comb (rator tm) 
+            then RATOR_CONV (gotoheadpair c) tm
+            else c tm
+  in
+    REPEATC (gotoheadpair BETA_CONV) tm
+  end;
 
 fun CONJS_CONV c tm =
-  if is_conj tm then
-    BINOP_CONV (CONJS_CONV c) tm
-  else
-    c tm
+  if is_conj tm then BINOP_CONV (CONJS_CONV c) tm else c tm;
 
-local open jrh_simplelib
+
+local fun SIMPLE_EXISTS v th = EXISTS (mk_exists{Bvar=v, Body=concl th},v) th
+      fun SIMPLE_CHOOSE v th = 
+            CHOOSE(v,ASSUME (mk_exists{Bvar=v, Body=hd(hyp th)})) th
+      val RIGHT_BETAS = rev_itlist 
+                        (fn a => CONV_RULE (RAND_CONV BETA_CONV) o C AP_THM a)
 in
 fun mymatch_and_instantiate axth pattern instance = let
   val (patvars, patbody) = strip_exists pattern
@@ -150,34 +164,6 @@ in
   PROVE_HYP ixth (itlist SIMPLE_CHOOSE urfns rixth)
 end
 
-(*
-fun prove_raw_recursive_functions_exist ax tm = let
-  val rawcls = conjuncts tm
-  val spcls = map (snd o strip_forall) rawcls
-  val lpats = map (strip_comb o lhand) spcls
-  val ufns = itlist (insert o fst) lpats []
-  val axth = SPEC_ALL ax
-  val (exvs,axbody) = strip_exists (concl axth)
-  val axcls = conjuncts axbody
-  val f = #Name o dest_const o repeat rator o rand o
-          lhand o snd o strip_forall
-  val findax = C assoc (map (fn t => (f t,t)) axcls)
-  val raxs = map (findax o #Name o dest_const o repeat rator o hd o snd) lpats
-  val axfns = map (repeat rator o lhand o snd o strip_forall) raxs
-  val urfns = map (fn v => assoc v (mk_set (zip axfns (map fst lpats)))
-                           handle HOL_ERR _ => v) exvs
-  val axtm = list_mk_exists(exvs,list_mk_conj raxs)
-  and urtm = list_mk_exists(urfns,tm)
-  val ixth = mymatch_and_instantiate axth axtm urtm
-  val (ixvs,ixbody) = strip_exists (concl ixth)
-  val ixtm = Term.subst (map2 (curry op|->) ixvs urfns) ixbody
-  val ixths = CONJUNCTS (ASSUME ixtm)
-  val rixths = map (fn t => valOf (List.find (aconv t o concl) ixths)) rawcls
-  val rixth = itlist SIMPLE_EXISTS ufns (end_itlist CONJ rixths)
-in
-  PROVE_HYP ixth (itlist SIMPLE_CHOOSE urfns rixth)
-end
-*)
 (* ------------------------------------------------------------------------- *)
 (* Prove existence when PR argument always comes first in argument lists.    *)
 (* ------------------------------------------------------------------------- *)
@@ -231,7 +217,7 @@ val prove_recursive_functions_exist =
          else 
           let val gvs = map (genvar o type_of) args
               val gvs' = map (C assoc (zip args gvs)) args'
-              val lty = itlist (mk_fun_ty o type_of) gvs'
+              val lty = itlist (curry (op -->) o type_of) gvs'
                          (funpow (length gvs) 
                                  (hd o tl o #Args o dest_type) (type_of fnn))
               val fn' = genvar lty
@@ -280,7 +266,7 @@ fun new_recursive_definition0 ax name tm =
     {consts = map (#Name o dest_var) evs, sat_thm=eth, name=name}
  end
 
-end (* local that opens jrh_simplelib *)
+end
 
 (* test with:
      load "listTheory";
@@ -357,25 +343,31 @@ end (* local that opens jrh_simplelib *)
 
 *)
 
-(* Make a new recursive function definition.				*)
+(*---------------------------------------------------------------------------
+     Make a new recursive function definition.
+ ---------------------------------------------------------------------------*)
+
 fun new_recursive_definition {name,rec_axiom,def} =
   new_recursive_definition0 rec_axiom name def;
 
-(* given axiom and the name of the type, return a list of terms
-   corresponding to that type's constructors with their arguments *)
-fun type_constructors_with_args ax name = let
-  val (_, body) = strip_exists (#2 (strip_forall (concl ax)))
-  fun extract_constructor tm = let
-    val (_, eqn) = strip_forall tm
-    val {lhs,...} = dest_eq eqn
-    val arg = rand lhs
+(*---------------------------------------------------------------------------
+   Given axiom and the name of the type, return a list of terms
+   corresponding to that type's constructors with their arguments.
+ ---------------------------------------------------------------------------*)
+
+fun type_constructors_with_args ax name = 
+  let val (_, body) = strip_exists (#2 (strip_forall (concl ax)))
+      fun extract_constructor tm = 
+         let val (_, eqn) = strip_forall tm
+             val {lhs,...} = dest_eq eqn
+             val arg = rand lhs
+         in
+            if #Tyop (dest_type (type_of arg)) = name then SOME arg
+            else NONE
+         end
   in
-    if #Tyop (dest_type (type_of arg)) = name then SOME arg
-    else NONE
+    List.mapPartial extract_constructor (strip_conj body)
   end
-in
-  List.mapPartial extract_constructor (strip_conj body)
-end
 
 (* as above but without arguments *)
 fun type_constructors ax name =
@@ -384,35 +376,38 @@ fun type_constructors ax name =
 
 (* return all of the types defined by an axiom, formerly "new_types". *)
 fun doms_of_tyaxiom ax =
- let
-  val (evs, _) = strip_exists (#2 (strip_forall (concl ax)))
-  val candidate_types = map (#1 o dom_rng o type_of) evs
-  fun isop_applied_to_other ty =
-    List.exists (fn ty' => Lib.mem ty' candidate_types) (#Args (dest_type ty))
-in
-  List.filter (not o isop_applied_to_other) candidate_types
-end
+ let val (evs, _) = strip_exists (#2 (strip_forall (concl ax)))
+     val candidate_types = map (#1 o dom_rng o type_of) evs
+     fun isop_applied_to_other ty = List.exists 
+           (fn ty' => Lib.mem ty' candidate_types) (#Args (dest_type ty))
+ in
+    List.filter (not o isop_applied_to_other) candidate_types
+ end
 
-(* similarly for an induction theorem, which will be of the form
+(*---------------------------------------------------------------------------
+    similarly for an induction theorem, which will be of the form
+
       !P1 .. PN.
          c1 /\ ... /\ cn ==> (!x. P1 x) /\ (!x. P2 x) ... /\ (!x. PN x)
 
    Formerly "new_types_from_ind"
-*)
-fun doms_of_ind_thm ind = let
-  val conclusions = strip_conj (#2 (strip_imp (#2 (strip_forall (concl ind)))))
-  val candidate_types = map (type_of o #Bvar o dest_forall) conclusions
-  fun isop_applied_to_other ty =
-    List.exists (fn ty' => Lib.mem ty' candidate_types) (#Args (dest_type ty))
-in
-  List.filter (not o isop_applied_to_other) candidate_types
-end
+ ---------------------------------------------------------------------------*)
+
+fun doms_of_ind_thm ind = 
+ let val conclusions = strip_conj(#2(strip_imp(#2(strip_forall(concl ind)))))
+     val candidate_types = map (type_of o #Bvar o dest_forall) conclusions
+     fun isop_applied_to_other ty = List.exists 
+            (fn ty' => Lib.mem ty' candidate_types) (#Args (dest_type ty))
+ in
+   List.filter (not o isop_applied_to_other) candidate_types
+ end
 
 (*---------------------------------------------------------------------------*
  * Define a case constant for a datatype. This is used by TFL's              *
  * pattern-matching translation and are generally useful as replacements     *
  * for "destructor" operations.                                              *
  *---------------------------------------------------------------------------*)
+
 fun num_variant vlist v =
   let val counter = ref 0
       val {Name,Ty} = dest_var v
@@ -1198,30 +1193,29 @@ fun DISJS_CHAIN rule th =
 (*    |- !l. (l = []) \/ (?t h. l = CONS h t)				 *)
 (* 									 *)
 (* --------------------------------------------------------------------- *)
-local
-  open jrh_simplelib
-  fun dest_eq tm = let
-    val {lhs,rhs} = Dsyntax.dest_eq tm
-  in
-    (lhs,rhs)
-  end
-  fun mk_eq (t1, t2) = Dsyntax.mk_eq {lhs = t1, rhs = t2}
-  fun dest_disj tm = let
-    val {disj1, disj2} = Dsyntax.dest_disj tm
-  in
-    (disj1, disj2)
-  end
-  fun dest_comb tm = let
-    val {Rator,Rand} = Term.dest_comb tm
-  in
-    (Rator,Rand)
-  end
-  fun dest_imp tm = let
-    val {ant, conseq} = Dsyntax.dest_imp tm
-  in
-    (ant,conseq)
-  end
-in
+
+local fun dest_eq tm = let val {lhs,rhs} = Dsyntax.dest_eq tm in (lhs,rhs) end
+      fun mk_eq (t1, t2) = Dsyntax.mk_eq {lhs = t1, rhs = t2}
+      fun dest_disj tm = 
+         let val {disj1, disj2} = Dsyntax.dest_disj tm in (disj1, disj2) end
+      fun dest_comb tm = 
+         let val {Rator,Rand} = Term.dest_comb tm in (Rator,Rand) end
+      fun dest_imp tm = 
+         let val {ant, conseq} = Dsyntax.dest_imp tm in (ant,conseq) end
+
+      val make_args = 
+          let fun margs n s avoid [] = []
+                | margs n s avoid (h::t) =
+                    let val v = variant avoid 
+                                 (mk_var{Name = s^(Int.toString n), Ty=h})
+                    in v::margs (n + 1) s (v::avoid) t
+                    end
+          in fn s => fn avoid => fn tys =>
+              if length tys = 1 
+              then [variant avoid (mk_var{Name = s, Ty = hd tys})]
+              else margs 0 s avoid tys
+          end handle _ => raise ERR "make_args" ""
+
   val EXISTS_EQUATION =
     let val pth = prove
      (--`!P t. (!x:'a. (x = t) ==> P x) ==> $? P`--,
@@ -1230,8 +1224,8 @@ in
       EXISTS_TAC (--`t:'a`--) THEN FIRST_ASSUM MATCH_MP_TAC THEN REFL_TAC)
     in fn tm => fn th =>
         let val (l,r) = dest_eq tm
-            val P = mk_abs{Bvar = l, Body = concl th}
-            val th1 = BETA_CONV(mk_comb{Rator = P, Rand = l})
+            val P = mk_abs{Bvar=l, Body=concl th}
+            val th1 = BETA_CONV(mk_comb{Rator=P, Rand=l})
             val th2 = ISPECL [P, r] pth
             val th3 = EQ_MP (SYM th1) th
             val th4 = GEN l (DISCH tm th3)
@@ -1239,112 +1233,74 @@ in
         end
     end;
 
-
-
-val prove_cases_thm0 = let
-  fun mk_exclauses x rpats = let
-    val xts =
-      map (fn t => list_mk_exists(List.rev (free_vars t), mk_eq(x, t))) rpats
-  in
-    mk_abs{Bvar = x, Body = list_mk_disj xts}
-  end
-  fun prove_triv tm = let
-    val (evs,bod) = strip_exists tm
-    val (l,r) = dest_eq bod
-    val (lf,largs) = strip_comb l
-    and (rf,rargs) = strip_comb r
-    val _ = lf = rf orelse
-      raise HOL_ERR {origin_function = "prove_triv",
-                     origin_structure = "ind_types",
-                     message = ""}
-    val ths = map (ASSUME o mk_eq) (zip rargs largs)
-    val th1 = rev_itlist (C (curry MK_COMB)) ths (REFL lf)
-  in
-    itlist EXISTS_EQUATION (map concl ths) (SYM th1)
-  end
-  fun prove_disj tm =
-    if is_disj tm then let
-      val (l,r) = dest_disj tm
-    in
-      DISJ1 (prove_triv l) r
-      handle HOL_ERR _ => DISJ2 l (prove_disj r)
-    end
-    else
-      prove_triv tm
-  fun prove_eclause tm = let
-    val (avs,bod) = strip_forall tm
-    val ctm = if is_imp bod then rand bod else bod
-    val cth = prove_disj ctm
-    val dth = if is_imp bod then DISCH (lhand bod) cth else cth
-  in
-    GENL avs dth
-  end
+ val prove_cases_thm0 = 
+ let fun mk_exclauses x rpats = 
+       let val xts = map 
+           (fn t => list_mk_exists(List.rev (free_vars t), mk_eq(x, t))) rpats
+       in
+         mk_abs{Bvar=x, Body=list_mk_disj xts}
+       end
+     fun prove_triv tm = 
+       let val (evs,bod) = strip_exists tm
+           val (l,r) = dest_eq bod
+           val (lf,largs) = strip_comb l
+           and (rf,rargs) = strip_comb r
+           val _ = (lf=rf) orelse raise ERR "prove_triv" ""
+           val ths = map (ASSUME o mk_eq) (zip rargs largs)
+           val th1 = rev_itlist (C (curry MK_COMB)) ths (REFL lf)
+       in
+         itlist EXISTS_EQUATION (map concl ths) (SYM th1)
+       end
+     fun prove_disj tm =
+        if is_disj tm 
+         then let val (l,r) = dest_disj tm
+              in DISJ1 (prove_triv l) r handle HOL_ERR _ => 
+                 DISJ2 l (prove_disj r)
+              end
+         else prove_triv tm
+     fun prove_eclause tm = 
+       let val (avs,bod) = strip_forall tm
+           val ctm = if is_imp bod then rand bod else bod
+           val cth = prove_disj ctm
+           val dth = if is_imp bod then DISCH (lhand bod) cth else cth
+       in
+         GENL avs dth
+       end
+ in
+  fn th => 
+   let val (avs,bod) = strip_forall(concl th)
+       val cls = map (snd o strip_forall) (conjuncts(lhand bod))
+       val pats = map (fn t => if is_imp t then rand t else t) cls
+       val spats = map dest_comb pats
+       val preds = itlist (insert o fst) spats []
+       val rpatlist = map
+            (fn pr => map snd (filter (fn (p,x) => p = pr) spats)) preds
+       val xs = make_args "x" (free_varsl pats) (map (type_of o hd) rpatlist)
+       val xpreds = map2 mk_exclauses xs rpatlist
+       val ith = BETA_RULE 
+                 (Thm.INST (ListPair.map (fn (x,p) => p |-> x) (xpreds, preds))
+                          (SPEC_ALL th))
+       val eclauses = conjuncts(fst(dest_imp(concl ith)))
+   in
+     MP ith (end_itlist CONJ (map prove_eclause eclauses))
+   end
+ end (* prove_cases_thm0 *)
 in
-  fn th => let
-    val (avs,bod) = strip_forall(concl th)
-    val cls = map (snd o strip_forall) (conjuncts(lhand bod))
-    val pats = map (fn t => if is_imp t then rand t else t) cls
-    val spats = map dest_comb pats
-    val preds = itlist (insert o fst) spats []
-    val rpatlist =
-      map
-      (fn pr => map snd (filter (fn (p,x) => p = pr) spats)) preds
-    val xs = make_args "x" (free_varsl pats) (map (type_of o hd) rpatlist)
-    val xpreds = map2 mk_exclauses xs rpatlist
-    val ith =
-      BETA_RULE (Thm.INST (ListPair.map (fn (x,p) => p |-> x) (xpreds, preds))
-                 (SPEC_ALL th))
-    val eclauses = conjuncts(fst(dest_imp(concl ith)))
-  in
-    MP ith (end_itlist CONJ (map prove_eclause eclauses))
-  end
-end
+fun prove_cases_thm ind0 = 
+ let fun CONJUNCTS_CONV c tm =
+        if is_conj tm then BINOP_CONV (CONJUNCTS_CONV c) tm else c tm
+      val ind = CONV_RULE 
+         (STRIP_QUANT_CONV (RATOR_CONV (RAND_CONV
+            (CONJUNCTS_CONV (REDEPTH_CONV RIGHT_IMP_FORALL_CONV))))) ind0
+      val basic_thm = prove_cases_thm0 ind
+      val oktypes = doms_of_ind_thm ind
+ in
+    List.filter
+      (fn th => Lib.mem (type_of (#Bvar (dest_forall (concl th)))) oktypes)
+      (CONJUNCTS basic_thm)
+ end
 
-fun prove_cases_thm ind0 = let
-  fun CONJUNCTS_CONV c tm =
-    if is_conj tm then BINOP_CONV (CONJUNCTS_CONV c) tm
-    else c tm
-  val ind =
-    CONV_RULE (STRIP_QUANT_CONV
-               (RATOR_CONV (RAND_CONV
-                            (CONJUNCTS_CONV
-                             (REDEPTH_CONV RIGHT_IMP_FORALL_CONV))))) ind0
-  val basic_thm = prove_cases_thm0 ind
-  val oktypes = doms_of_ind_thm ind
-in
-  List.filter
-  (fn th => Lib.mem (type_of (#Bvar (dest_forall (concl th)))) oktypes)
-  (CONJUNCTS basic_thm)
-end
-
-end
-
-(*---------------------------------------------------------------------------
-      Need to special-case on whether the current pattern is
-      actually a numeric literal.
- ---------------------------------------------------------------------------*)
-
-(*
-fun dest_constr_app tm =
- let val (r as (c,args)) = strip_comb tm
- in case dest_const c
-     of {Name = "NUMERAL", ...} => (tm, [])
-      | _ => r
- end;
-*)
-
-fun strip_vars tm = let
-  fun pull_off_var tm acc = let
-    val {Rator, Rand} = dest_comb tm
-  in
-    if is_var Rand then
-      pull_off_var Rator (Rand::acc)
-    else
-      (tm, acc)
-  end handle HOL_ERR _ => (tm, acc)
-in
-  pull_off_var tm []
-end
+end; (* prove_cases_thm *)
 
 (*---------------------------------------------------------------------------
     Proving case congruence:

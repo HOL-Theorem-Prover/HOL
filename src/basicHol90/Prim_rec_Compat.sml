@@ -1,5 +1,7 @@
-open HolKernel Drule Conv
-open Exception
+structure Prim_rec_Compat :> Prim_rec_Compat =
+struct
+
+open HolKernel Drule Conv Exception;
 
 fun ERR f msg = HOL_ERR {origin_structure = "Prim_rec_Compat",
                          origin_function = f, message = msg};
@@ -43,11 +45,9 @@ fun old2new thm = let
     val (_, rngty) = strip_fun_ty (type_of f)
     val newftype = list_mk_fun_ty (new_domtys, rngty)
     val abs = list_mk_abs (recgvars @ nonrecgvars,
-                           list_mk_comb(mk_var{Name = #Name (dest_var f),
-                                               Ty = newftype},
-                                        nonrecgvars @ recgvars))
-  in
-    (f, abs)
+                 list_mk_comb(mk_var{Name = #Name (dest_var f), Ty=newftype},
+                              nonrecgvars @ recgvars))
+  in (f, abs)
   end
   val fabs_alist = map process eqns
   fun specfn thm =
@@ -79,3 +79,5 @@ in
 end
 
 fun prove_cases_thm thm = hd (Prim_rec.prove_cases_thm thm)
+
+end;

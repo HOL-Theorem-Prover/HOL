@@ -1,42 +1,14 @@
+structure Ho_boolScript =
+struct
 
-open HolKernel Parse basicHol90Lib liteLib Ho_rewrite Ho_resolve;
-
-infix 5 |->
-infix THEN ORELSE THENL;
+open HolKernel Parse boolTheory Tactic Tactical Thm_cont Conv 
+     Ho_rewrite Ho_resolve;
 
 type thm = Thm.thm
 
-val ETA_AX            = boolTheory.ETA_AX;
-val EXISTS_DEF        = boolTheory.EXISTS_DEF;
-val EXISTS_UNIQUE_DEF = boolTheory.EXISTS_UNIQUE_DEF;
-
-val BETA_THM          = boolTheory.BETA_THM
-val ABS_SIMP          = boolTheory.ABS_SIMP;
-
-(* ------------------------------------------------------------------------- *)
-(* Start building up the basic rewrites; we add a few more later.            *)
-(* ------------------------------------------------------------------------- *)
-
-val _ = add_implicit_rewrites
-  [REFL_CLAUSE,
-   EQ_CLAUSES,
-   NOT_CLAUSES,
-   AND_CLAUSES,
-   OR_CLAUSES,
-   IMP_CLAUSES,
-   FORALL_SIMP,
-   EXISTS_SIMP,
-   ABS_SIMP];;
+infix THEN ORELSE THENL |->;
 
 val _ = new_theory "Ho_bool"
-
-(* ------------------------------------------------------------------------- *)
-(* Rewrite rule for unique existence.                                        *)
-(* ------------------------------------------------------------------------- *)
-val EXISTS_UNIQUE_THM = store_thm(
-  "EXISTS_UNIQUE_THM",
-  (--`!P. (?!x:'a. P x) = (?x. P x) /\ (!x x'. P x /\ P x' ==> (x = x'))`--),
-  GEN_TAC THEN REWRITE_TAC[EXISTS_UNIQUE_DEF, BETA_THM]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Trivial instances of existence.                                           *)
@@ -87,8 +59,9 @@ val UNWIND_THM1 = store_thm(
 val UNWIND_THM2 = store_thm(
   "UNWIND_THM2",
   (--`!P (a:'a). (?x. (x = a) /\ P x) = P a`--),
-  REPEAT GEN_TAC THEN CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV SYM_CONV)) THEN
-  MATCH_ACCEPT_TAC UNWIND_THM1);;
+  REPEAT GEN_TAC 
+   THEN CONV_TAC((RATOR_CONV o RAND_CONV)(ONCE_DEPTH_CONV SYM_CONV))
+   THEN MATCH_ACCEPT_TAC UNWIND_THM1);;
 
 val UNWIND_FORALL_THM1 = store_thm(
   "UNWIND_FORALL_THM1",
@@ -106,27 +79,6 @@ val UNWIND_FORALL_THM2 = store_thm(
     FIRST_ASSUM MATCH_MP_TAC THEN REWRITE_TAC [],
     ASM_REWRITE_TAC []
   ]);
-
-(* ------------------------------------------------------------------------- *)
-(* Permuting quantifiers.                                                    *)
-(* ------------------------------------------------------------------------- *)
-
-val SWAP_FORALL_THM = store_thm(
-  "SWAP_FORALL_THM",
-  (--`!P:'a->'b->bool. (!x y. P x y) = (!y x. P x y)`--),
-  REPEAT(STRIP_TAC ORELSE EQ_TAC) THEN
-  FIRST_ASSUM MATCH_ACCEPT_TAC);;
-
-val SWAP_EXISTS_THM = store_thm(
-  "SWAP_EXISTS_THM",
-  (--`!P:'a->'b->bool. (?x y. P x y) = (?y x. P x y)`--),
-  REPEAT(STRIP_TAC ORELSE EQ_TAC) THENL
-   [MAP_EVERY EXISTS_TAC [(--`y:'b`--), (--`x:'a`--)],
-    MAP_EVERY EXISTS_TAC [(--`x:'a`--), (--`y:'b`--)]] THEN
-  FIRST_ASSUM MATCH_ACCEPT_TAC);;
-
-
-
 
 
 (* ------------------------------------------------------------------------- *)
@@ -162,57 +114,12 @@ val MONO_EXISTS = store_thm(
   EXISTS_TAC (--`x:'a`--) THEN FIRST_ASSUM MATCH_MP_TAC THEN
   ASM_REWRITE_TAC[]);;
 
-(* ------------------------------------------------------------------------- *)
-(* Classical.                                                                *)
-(* ------------------------------------------------------------------------- *)
-
-val SELECT_REFL   = boolTheory.SELECT_REFL;
-val SELECT_UNIQUE = boolTheory.SELECT_UNIQUE;
-
-val SELECT_REFL_2 = store_thm(
-  "SELECT_REFL_2",
-  (--`!x:'a. (@y. x = y) = x`--),
-  GEN_TAC THEN CONV_TAC (ONCE_DEPTH_CONV SYM_CONV)
-  THEN CONV_TAC SELECT_CONV
-  THEN EXISTS_TAC (--`x:'a`--) THEN REFL_TAC);
-
-val SELECT_THM = store_thm(
-  "SELECT_THM",
-  (--`!P. P (@x. P x) = (?(x:'a). P x)`--),
- REWRITE_TAC [BETA_THM,EXISTS_DEF]);
-
-val _ = add_implicit_rewrites [SELECT_REFL, SELECT_REFL_2];
-
-
-val _ = add_implicit_rewrites [COND_CLAUSES];
-
-val COND_BOOL_CLAUSES = save_thm(
-  "COND_BOOL_CLAUSES",
-  TAUT (--`(!b e. (if b then T else e) = (b \/ e)) /\
-           (!b t. (if b then t else T) = (b ==> t)) /\
-           (!b e. (if b then F else e) = (~b /\ e)) /\
-           (!b t. (if b then t else F) = (b /\ t))`--));
-
-val _ = add_implicit_rewrites [COND_BOOL_CLAUSES];
-
-
-(* ------------------------------------------------------------------------- *)
-(* Throw monotonicity in.                                                    *)
-(* ------------------------------------------------------------------------- *)
-
 val MONO_COND = store_thm(
   "MONO_COND",
   (--`(x ==> y) /\ (z ==> w) ==> (if b then x else z) ==>
       (if b then y else w)`--),
   STRIP_TAC THEN BOOL_CASES_TAC (--`b:bool`--) THEN
   ASM_REWRITE_TAC[]);
-
-val FUN_EQ_THM = store_thm(
-  "FUN_EQ_THM",
-  (--`!(f:'a->'b) g.  (f = g) = (!x. f x = g x)`--),
-  REPEAT GEN_TAC THEN EQ_TAC THENL
-   [DISCH_THEN SUBST1_TAC THEN GEN_TAC THEN REFL_TAC,
-    MATCH_ACCEPT_TAC EQ_EXT]);
 
 
 (* -------------------------------------------------------------------------
@@ -287,3 +194,5 @@ val UNIQUE_SKOLEM_THM = store_thm(
 
 
 val _ = export_theory();
+
+end;

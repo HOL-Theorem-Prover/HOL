@@ -9,7 +9,7 @@
 structure Ho_match :> Ho_match = 
 struct 
 
-open HolKernel Drule Conv liteLib Psyntax;
+open HolKernel Drule Conv liteLib;
 
 infixr 3 ##;
 infix 5 |-> 
@@ -25,9 +25,42 @@ type conv = Abbrev.conv;
 (* -- Pipefitting -- *)
 
 exception NOT_FOUND
-fun rev_assoc_nf x l = 
-    liteLib.rev_assoc x l handle HOL_ERR _ => raise NOT_FOUND 
+fun rev_assoc_nf x l = Lib.rev_assoc x l handle HOL_ERR _ => raise NOT_FOUND;
 
+
+exception Itlist2;
+fun itlist2 f L1 L2 base_value =
+   let fun it ([],[]) = base_value
+         | it ((a::rst1),(b::rst2)) = f a b (it (rst1,rst2))
+         | it _ = raise Itlist2
+   in  it (L1,L2)
+   end;
+
+(*---------------------------------------------------------------------------
+     Paired syntax operations: not allowed to use Psyntax
+     at this point (sigh) 
+ ---------------------------------------------------------------------------*)
+
+fun mk_var(s,ty)   = Term.mk_var{Name = s, Ty = ty};
+fun mk_const(s,ty) = Term.mk_const{Name = s, Ty = ty};
+fun mk_comb(t1,t2) = Term.mk_comb {Rator = t1, Rand = t2};
+fun mk_abs(v,body) = Term.mk_abs{Bvar = v, Body = body};
+fun pair_atom{Name,Ty} = (Name,Ty);
+fun pair_comb{Rator,Rand} = (Rator,Rand);
+fun pair_binder{Bvar,Body} = (Bvar,Body);
+val dest_var = pair_atom o Term.dest_var;
+val dest_const = pair_atom o Term.dest_const;
+val dest_comb = pair_comb o Term.dest_comb;
+val dest_abs = pair_binder o Term.dest_abs;
+fun mk_type(s,ty) = Type.mk_type{Tyop = s, Args = ty};
+fun dest_type ty = let val {Tyop,Args} = Type.dest_type ty in (Tyop,Args) end;
+fun mk_subst L = map (fn (residue,redex) => {redex=redex,residue=residue}) L;
+fun type_subst x = Type.type_subst (mk_subst x);
+fun subst s = Term.subst (mk_subst s);
+val inst = Term.inst o mk_subst
+val INST = Thm.INST o mk_subst
+val INST_TYPE = Thm.INST_TYPE o mk_subst;
+val INST_TY_TERM = Conv.INST_TY_TERM o (mk_subst##mk_subst);
 
 (*-------------------------------------------------------------------------- 
  * match_term [] (--`x:'a`--) (--`x:'a`--);
@@ -95,7 +128,7 @@ fun match_term lconsts = let
        end;
 
   val mk_dummy =
-    let val name = fst(dest_var(genvar(mk_vartype "'a")))
+    let val name = fst(dest_var(genvar Type.alpha))
     in fn tm => mk_var(name,type_of tm)
     end;
 
@@ -270,14 +303,6 @@ fun match_term lconsts = let
 
 (* This is version 1 *)
 
-  exception Itlist2;
-  fun itlist2 f L1 L2 base_value =
-   let fun it ([],[]) = base_value
-         | it ((a::rst1),(b::rst2)) = f a b (it (rst1,rst2))
-         | it _ = raise Itlist2
-   in  it (L1,L2)
-   end;
-
   fun match_term' env vtm ctm sofar =
    if is_var vtm 
    then let val ctm' = rev_assoc_nf vtm env
@@ -289,7 +314,7 @@ fun match_term lconsts = let
            then if ctm = vtm then sofar
 	        else failwith "match_term': can't instantiate local constant"
            else if exists (can (fn x => assoc x env)) (free_vars ctm)
-               then failwith"match: free vars don't match terms with bound vars"
+              then failwith"match: free vars don't match terms with bound vars"
            else if (vtm = ctm) then sofar 
            else safe_inserta (ctm,vtm) sofar 
    else 

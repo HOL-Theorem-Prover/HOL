@@ -1549,16 +1549,14 @@ end;
 (*									*)
 (* e.g. SYM_CONV "x=y"   ---->   (x=y) = (y=x).				*)
 (*----------------------------------------------------------------------*)
-local val alpha = Type`:'a`
-in
 fun SYM_CONV tm =
    let val {lhs,rhs} = dest_eq tm
-       val th = INST_TYPE [alpha |-> type_of lhs] EQ_SYM_EQ
+       val th = INST_TYPE [Type.alpha |-> type_of lhs] EQ_SYM_EQ
    in
      SPECL [lhs,rhs] th
    end
-   handle HOL_ERR _ => raise CONV_ERR "SYM_CONV" ""
-end;
+   handle HOL_ERR _ => raise CONV_ERR "SYM_CONV" "";
+
 
 (*---------------------------------------------------------------------------
  *
@@ -1611,7 +1609,7 @@ fun X_FUN_EQ_CONV x tm =
  else
  let val ty = case Type.dest_type(type_of(lhs tm))
                of {Tyop="fun", Args = [ty1,_]} => ty1
-                | _ => raise CONV_ERR"X_FUN_EQ_CONV" "lhs and rhs not functions"
+               | _ => raise CONV_ERR"X_FUN_EQ_CONV" "lhs and rhs not functions"
  in
   if (ty = type_of x)
   then let val imp1 = DISCH_ALL (GEN x (AP_THM (ASSUME tm) x))
@@ -1984,7 +1982,13 @@ fun AC_CONV(associative,commutative) tm =
 
 val GSYM = CONV_RULE(ONCE_DEPTH_CONV SYM_CONV);
 
-(* RENAME_VARS_CONV *)
+(*---------------------------------------------------------------------------
+   Conversions for messing with bound variables.
+
+   RENAME_VARS_CONV  renames variables under \ ! ? ?! or @ .
+   SWAP_VARS_CONV    swaps variables under ! and ?,
+                      e.g, given !x y. ... gives   !y x. ...
+ ---------------------------------------------------------------------------*)
 local
   fun rename vname t = let
     val (dest, mk) = if is_exists t then (dest_exists, mk_exists)
@@ -1996,29 +2000,9 @@ local
     val {Bvar = oldv, Body = body} = dest t
     val newv = mk_var{Name = vname, Ty = type_of oldv}
   in
-    ALPHA t (mk{Bvar = newv, Body = subst [oldv |-> newv] body})
+    ALPHA t (mk{Bvar=newv, Body=subst [oldv |-> newv] body})
   end
-
-  open Tactic Tactical
-  infix THEN THENL ORELSE
-
-  val SWAP_FORALL_THM = prove (
-    --`!P:'a->'b->bool. (!x y. P x y) = (!y x. P x y)`--,
-    REPEAT(STRIP_TAC ORELSE EQ_TAC) THENL [
-      POP_ASSUM (ACCEPT_TAC o SPECL [--`x:'a`--, --`y:'b`--]),
-      POP_ASSUM (ACCEPT_TAC o SPECL [--`y:'b`--, --`x:'a`--])
-    ])
-
-
-  val SWAP_EXISTS_THM = prove (
-    --`!P:'a->'b->bool. (?x y. P x y) = (?y x. P x y)`--,
-    REPEAT(STRIP_TAC ORELSE EQ_TAC) THENL [
-      MAP_EVERY EXISTS_TAC [(--`y:'b`--), (--`x:'a`--)],
-      MAP_EVERY EXISTS_TAC [(--`x:'a`--), (--`y:'b`--)]
-    ] THEN FIRST_ASSUM ACCEPT_TAC)
-
 in
-
   fun RENAME_VARS_CONV varlist  =
     case varlist of
       [] => REFL
@@ -2028,9 +2012,9 @@ in
   fun SWAP_VARS_CONV term = let
     val (dest, list_mk, qvar_thm) =
       if (is_exists term) then
-        (dest_exists, LIST_MK_EXISTS, SWAP_EXISTS_THM)
+        (dest_exists, LIST_MK_EXISTS, boolTheory.SWAP_EXISTS_THM)
       else
-        (dest_forall, C (foldr (uncurry FORALL_EQ)), SWAP_FORALL_THM)
+        (dest_forall, C (foldr(uncurry FORALL_EQ)), boolTheory.SWAP_FORALL_THM)
     val {Bvar = fst_var, Body = fst_body} = dest term
     val {Bvar = snd_var, Body = snd_body} = dest fst_body
     val fnc = list_mk_abs ([fst_var,snd_var], snd_body)
@@ -2048,8 +2032,6 @@ in
     CONV_RULE (RAND_CONV (BINDER_CONV (BINDER_CONV LIST_BETA_CONV)))
               (SUBS [final_thm] ex_rewrite)
   end
-
-
 
 end
 

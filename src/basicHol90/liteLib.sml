@@ -1,6 +1,8 @@
 structure liteLib :> liteLib =
 struct
-open Exception Thm Conv Psyntax;
+
+open Exception Thm Conv;
+
 infix THENC ORELSEC --> |->;
 
 val (op -->) = Type.-->;
@@ -21,9 +23,7 @@ type conv  = Abbrev.conv;
  *               Exceptions
  *--------------------------------------------------------------------*)
 
-fun ERR f s 
-  = HOL_ERR{message=s, origin_function=f,
-            origin_structure="liteLib"};
+fun ERR f s = HOL_ERR{message=s, origin_function=f,origin_structure="liteLib"};
 
 fun fail() = raise Exception.HOL_ERR{message="fail", 
 			   origin_function="??",
@@ -77,10 +77,7 @@ fun (f orelsef g) x =
   f x handle Interrupt => raise Interrupt 
            |         _ => g x;
 
-fun repeat f pty = 
-   repeat f (f pty)
-   handle Interrupt => raise Interrupt 
-	|         _ => pty;
+val repeat = Lib.repeat
 
 fun foldr f e L =
    let fun it [] = e
@@ -162,13 +159,7 @@ fun striplist dest =
  * Associative list functions                                         *
  *--------------------------------------------------------------------*)
 
-fun rev_assoc item =
-   let fun assc [] = raise ERR "rev_assoc" "not found"
-         | assc ((ob,key)::rst) = if (item=key) then ob else assc rst
-   in 
-     assc
-   end
-
+val rev_assoc = Lib.rev_assoc;
 
 fun remove_assoc x =
     let fun remove [] = raise ERR "" ""
@@ -243,10 +234,10 @@ fun mk_binop opr (l,r) =
 fun list_mk_binop opr = Lib.end_itlist (Lib.curry (mk_binop opr));
 
 fun dest_binop opr tm =
-    let val (Rator,rhs) = dest_comb tm
-	val (opr',lhs) = dest_comb Rator
+    let val {Rator,Rand=rhs} = Term.dest_comb tm
+	val {Rator=opr',Rand=lhs} = Term.dest_comb Rator
     in
-	if opr = opr' then (lhs,rhs) else fail()
+	if opr=opr' then (lhs,rhs) else fail()
     end
     handle HOL_ERR _ => failwith "dest_binop";
 
@@ -292,7 +283,7 @@ fun mk_icomb(tm1,tm2) =
   let val ty = Lib.fst(Type.dom_rng(Term.type_of tm1))
       val tyins = Type.match_type ty (Term.type_of tm2) 
   in 
-    mk_comb(Term.inst tyins tm1,tm2)
+    Term.mk_comb{Rator=Term.inst tyins tm1, Rand=tm2}
   end;;
 
 (* ------------------------------------------------------------------------- *)
@@ -306,6 +297,11 @@ fun list_mk_icomb tm1 args =
 (* Rule allowing easy instantiation of polymorphic proformas.                *)
 (* ------------------------------------------------------------------------- *)
 
+local fun mk_subst L = map (fn (y,x) => {redex=x,residue=y}) L
+      val inst = Term.inst o mk_subst
+      val INST = Thm.INST o mk_subst
+      val INST_TYPE = Thm.INST_TYPE o mk_subst
+in
 fun PINST tyin tmin =
     let val inst_fn = inst tyin 
 (* 	val tmin' = map (fn p => (inst_fn (redex p) |-> (residue p))) tmin *)
@@ -314,7 +310,8 @@ fun PINST tyin tmin =
 	and itype_fn = INST_TYPE tyin
     in 
       fn th => iterm_fn (itype_fn th) handle HOL_ERR _ => failwith "PINST"
-    end;;
+    end
+end;;
 
 (* ------------------------------------------------------------------------- *)
 (* Really basic stuff for equality.                                          *)
@@ -325,30 +322,31 @@ fun MK_BINOP oper (lth,rth) = MK_COMB(AP_TERM oper lth,rth);;
 (* ------------------------------------------------------------------------- *)
 (* Subterm conversions.                                                      *)
 (* ------------------------------------------------------------------------- *)
+
 val LAND_CONV = RATOR_CONV o RAND_CONV;;
 
 fun COMB2_CONV lconv rconv tm = 
-   let val (l,r) = dest_comb tm 
+   let val {Rator,Rand} = Term.dest_comb tm 
    in 
-     MK_COMB(lconv l, rconv r) 
+     MK_COMB(lconv Rator, rconv Rand) 
    end;
 
 val COMB_CONV = Lib.W COMB2_CONV;;
 
 
 fun alpha v tm =
-  let val (v0,bod) = dest_abs tm
+  let val {Bvar=v0,Body=bod} = Term.dest_abs tm
                handle HOL_ERR _ => failwith "alpha: Not an abstraction"
   in if (v = v0) then tm else
       if (* Term.is_var v andalso (Term.type_of v = Term.type_of v0) andalso *)
       not (Lib.mem v (Term.free_vars bod))
-	  then mk_abs(v, Term.subst[{redex=v0, residue=v}] bod)
+	  then Term.mk_abs{Bvar=v, Body=Term.subst[({redex=v0,residue=v})] bod}
       else failwith "alpha: Invalid new variable"
   end;
 
 
 fun ABS_CONV conv tm =
-   let val (v,bod) = dest_abs tm
+   let val {Bvar=v,Body=bod} = Term.dest_abs tm
    in 
      ABS v (conv bod)
        handle HOL_ERR _ => 
@@ -357,9 +355,9 @@ fun ABS_CONV conv tm =
 	       val th1 = ABS gv (conv gbod) 
 	       val tm1 = concl th1 
 	       val v' = Term.variant (Term.free_vars tm1) v 
-	       val (l,r) = dest_eq tm1 
+	       val {lhs=l,rhs=r} = Dsyntax.dest_eq tm1 
 	       val l' = alpha v' l and r' = alpha v' r 
-	       val th2 = ALPHA tm1 (mk_eq(l',r')) 
+	       val th2 = ALPHA tm1 (Dsyntax.mk_eq{lhs=l',rhs=r'}) 
 	   in EQ_MP th2 th1
 	   end
    end;;
@@ -378,8 +376,8 @@ fun BINOP_CONV oper conv tm =
 
 val BODY_CONV =
     let fun dest_quant tm =
-	let val (q,atm) = dest_comb tm 
-	    val (v,bod) = dest_abs atm 
+	let val {Rator=q,Rand=atm} = Term.dest_comb tm 
+	    val {Bvar=v,Body=bod} = Term.dest_abs atm 
 	in ((q,v),bod) 
 	end
 	val strip_quant = splitlist dest_quant 
@@ -399,12 +397,9 @@ val rhs = Dsyntax.rhs;
 infix THENQC;
 fun op THENQC (conv1,conv2) tm =
   let val th1 = conv1 tm 
-  in
-      let val th2 = conv2(rhs(concl th1)) 
-      in 
-        TRANS th1 th2 
-      end
-      handle HOL_ERR _ => th1
+  in let val th2 = conv2(rhs(concl th1)) 
+     in TRANS th1 th2 
+     end handle HOL_ERR _ => th1
   end
   handle HOL_ERR _ => conv2 tm;;  (* Seems ORELSE like *)
 
@@ -421,7 +416,7 @@ fun op THENCQC (conv1,conv2) tm =
 fun REPEATQC conv tm = (conv THENCQC (REPEATQC conv)) tm;;
 
 fun COMB2_QCONV conv1 conv2 tm =
-  let val (l,r) = dest_comb tm 
+  let val {Rator=l,Rand=r} = Term.dest_comb tm 
   in let val th1 = conv1 l 
      in let val th2 = conv2 r 
 	in MK_COMB(th1,th2) 
@@ -461,7 +456,7 @@ fun TOP_SWEEP_QCONV conv tm =
 (* Standard conversions.                                                     *)
 (* ------------------------------------------------------------------------- *)
 
-fun TOP_SWEEP_CONV c  = TRY_CONV (TOP_SWEEP_QCONV c);;
+fun TOP_SWEEP_CONV c = TRY_CONV (TOP_SWEEP_QCONV c);;
 
 (* ------------------------------------------------------------------------- *)
 (* Apply at leaves of op-tree; NB any failures at leaves cause failure.      *)
@@ -500,8 +495,8 @@ fun MK_ABS_CONV var tm =
         andalso not (Term.free_in var (Term.rator tm)))
 	then REFL tm
     else 
-	let val rhs = mk_abs(var,tm)
-	    val newrhs = mk_comb(rhs,var)
+	let val rhs = Term.mk_abs{Bvar=var,Body=tm}
+	    val newrhs = Term.mk_comb{Rator=rhs,Rand=var}
 	in SYM (BETA_CONV newrhs)
 	end;
 	
@@ -516,7 +511,7 @@ fun MK_ABSL_CONV vars tm =
 val RIGHT_BETAS =
   Lib.rev_itlist (fn a => CONV_RULE (RAND_CONV BETA_CONV) o Lib.C AP_THM a);;
 
-fun name_of_const tm = Lib.fst (dest_const tm);
+fun name_of_const tm = #Name (Term.dest_const tm);
 
 val MK_CONJ =
   let val andtm = Parse.Term`$/\` in
@@ -528,26 +523,29 @@ val MK_DISJ =
   fn eq1 => fn eq2 => MK_COMB(AP_TERM ortm eq1,eq2)
   end;;
 
-fun MK_FORALL v th =
-     AP_TERM (mk_const("!", (Term.type_of v --> Type.bool) --> Type.bool))
-             (ABS v th);
 
+fun MK_FORALL v th =
+ AP_TERM (Term.mk_const{Name="!", 
+                        Ty=(Term.type_of v --> Type.bool) --> Type.bool})
+         (ABS v th);
 
 fun MK_EXISTS v th =
-     AP_TERM (mk_const("?", (Term.type_of v --> Type.bool) --> Type.bool))
-             (ABS v th);
+AP_TERM (Term.mk_const{Name="?", 
+                       Ty=(Term.type_of v --> Type.bool) --> Type.bool})
+        (ABS v th);
 
 
 fun SIMPLE_DISJ_CASES th1 th2 =
   case (hyp th1, hyp th2)
-   of (h1::_, h2::_) => DISJ_CASES (ASSUME(mk_disj(h1,h2))) th1 th2
+   of (h1::_, h2::_) => DISJ_CASES 
+                          (ASSUME(Dsyntax.mk_disj{disj1=h1,disj2=h2})) th1 th2
     |  _ => raise ERR "SIMPLE_DISJ_CASES" "";
 
 
 
 fun SIMPLE_CHOOSE v th =
-  case (hyp th)
-   of h::_ => CHOOSE(v, ASSUME (mk_exists(v,h))) th
+  case Thm.hyp th
+   of h::_ => CHOOSE(v, ASSUME (Dsyntax.mk_exists{Bvar=v,Body=h})) th
     |  []  => raise ERR "SIMPLE_CHOOSE" "";
 
 end;

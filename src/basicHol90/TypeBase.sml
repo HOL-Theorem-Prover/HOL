@@ -18,19 +18,24 @@ fun ERR f s =
   HOL_ERR{origin_structure = "TypeBase",
           origin_function=f,message = s};
 
+datatype shared_thm = ORIG of thm 
+                | COPY of string * thm;
+
+fun thm_of (ORIG x)     = x
+  | thm_of (COPY (s,x)) = x;
 
 datatype tyinfo =
-  FACTS of string * {axiom : thm,
-                     case_const : term,
-                     case_def : thm,
-                     case_cong : thm,
+  FACTS of string * {axiom        : shared_thm,
+                     induction    : shared_thm,
+                     case_def     : thm,
+                     case_cong    : thm,
+                     nchotomy     : thm,
+                     case_const   : term,
                      constructors : term list,
-                     induction : thm,
-                     nchotomy : thm,
-                     size : (term * thm) option,
-                     distinct : thm option,
-                     one_one : thm option,
-                     simpls : thm list};
+                     size         : (term * shared_thm) option,
+                     distinct     : thm option,
+                     one_one      : thm option,
+                     simpls       : thm list};
 
 (*---------------------------------------------------------------------------
                   Projections
@@ -40,14 +45,19 @@ fun constructors_of (FACTS(_, {constructors,...})) = constructors
 fun case_const_of (FACTS(_,{case_const,...})) = case_const
 fun case_cong_of (FACTS(_,{case_cong,...})) = case_cong
 fun case_def_of (FACTS(_,{case_def,...})) = case_def
-fun induction_of (FACTS(_,{induction,...})) = induction
+fun induction_of0 (FACTS(_,{induction,...})) = induction
+fun induction_of (FACTS(_,{induction,...})) = thm_of induction
 fun nchotomy_of (FACTS(_,{nchotomy,...})) = nchotomy
 fun distinct_of (FACTS(_,{distinct,...})) = distinct
 fun one_one_of (FACTS(_,{one_one,...})) = one_one
 fun simpls_of (FACTS(_,{simpls,...})) = simpls
-fun axiom_of (FACTS(_,{axiom,...})) = axiom
-fun size_of (FACTS(_,{size,...})) = size
+fun axiom_of0 (FACTS(_,{axiom,...})) = axiom
+fun axiom_of (FACTS(_,{axiom,...})) = thm_of axiom
 fun ty_name_of (FACTS(s,_)) = s
+
+fun size_of0 (FACTS(_,{size,...})) = size;
+fun size_of (FACTS(_,{size=NONE,...})) = NONE
+  | size_of (FACTS(_,{size=SOME(tm,def),...})) = SOME(tm,thm_of def);
 
 
 (*---------------------------------------------------------------------------
@@ -63,15 +73,6 @@ fun put_nchotomy th (FACTS(s,
             induction=induction, nchotomy=th, distinct=distinct,
             one_one=one_one, simpls=simpls, size=size})
 
-fun put_induction th (FACTS(s,
- {axiom, case_const,case_cong,case_def,constructors,
-  induction, nchotomy, distinct, one_one, simpls, size}))
-  =
-  FACTS(s, {axiom=axiom, case_const=case_const,
-            case_cong=case_cong,case_def=case_def, constructors=constructors,
-            induction=th, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, simpls=simpls, size=size})
-
 fun put_simpls thl (FACTS(s,
  {axiom, case_const, case_cong, case_def, constructors,
   induction, nchotomy, distinct, one_one, simpls, size}))
@@ -81,6 +82,14 @@ fun put_simpls thl (FACTS(s,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
             one_one=one_one, simpls=thl, size=size});
 
+fun put_induction th (FACTS(s,
+ {axiom, case_const,case_cong,case_def,constructors,
+  induction, nchotomy, distinct, one_one, simpls, size}))
+  =
+  FACTS(s, {axiom=axiom, case_const=case_const,
+            case_cong=case_cong,case_def=case_def, constructors=constructors,
+            induction=th, nchotomy=nchotomy, distinct=distinct,
+            one_one=one_one, simpls=simpls, size=size})
 
 fun put_size (size_tm,size_rw) (FACTS(s,
  {axiom, case_const,case_cong,case_def,constructors,
@@ -122,7 +131,7 @@ fun mk_tyinfo {ax,case_def,case_cong,induction,
                nchotomy,size,one_one,distinct} =
   let val (ty_name,constructors) = basic_info case_def
       val inj = case one_one of NONE => [] | SOME x => [x]
-      val D = case distinct of NONE => [] | SOME x => CONJUNCTS x
+      val D  = case distinct of NONE => [] | SOME x => CONJUNCTS x
   in
    FACTS(ty_name,
      {constructors = constructors,
@@ -139,37 +148,39 @@ fun mk_tyinfo {ax,case_def,case_cong,induction,
   end;
 
 
-fun gen_tyinfo {ax, ind, case_defs} = let
-  val induct_thm = ind
-  val nchotomies = prove_cases_thm induct_thm
-  val case_congs  = map2 case_cong_thm nchotomies case_defs
-  val one_ones = prove_constructors_one_one ax
-  val distincts = prove_constructors_distinct ax
-  val _ =
-    (length nchotomies = length case_congs andalso
-     length case_congs = length one_ones andalso
-     length one_ones =   length distincts) orelse
-    raise ERR "gen_tyinfo"
-      "Number of theorems automatically proved doesn't match up"
-  fun mk_ti cases ccs ones dcts ncs =
-    case cases of
-      [] =>
-        if null ccs andalso null ones andalso null dcts andalso null ncs then
-          []
-        else
-          raise ERR "gen_tyinfo" "Too few case definitions"
-    | (c::cs) => let
-        val ti1 =
-          mk_tyinfo {ax = ax, case_def = c, case_cong = hd ccs,
-                     induction = ind, nchotomy = hd ncs, size = NONE,
-                     one_one = hd ones, distinct = hd dcts}
-      in
-        ti1 :: mk_ti cs (tl ccs) (tl ones) (tl dcts) (tl ncs)
-      end handle List.Empty =>
-        raise ERR "gen_tyinfo" "Too many case definitions"
-
+local fun mk_ti (n,ax,ind) 
+                (cdef::cds) (ccong::cgs) (oo::oos) (d::ds) (nch::nchs) =
+            mk_tyinfo{ax=COPY(n,ax), induction=COPY(n,ind), case_def=cdef, 
+                      case_cong=ccong, nchotomy=nch, size=NONE, 
+                      one_one=oo, distinct=d}
+            :: mk_ti (n,ax,ind) cds cgs oos ds nchs
+        | mk_ti _ [] [] [] [] [] = []
+        | mk_ti _ [] _ _ _ _ = raise ERR "gen_tyinfo" "Too few case defns"
+        | mk_ti _ _ _ _ _ _  = raise ERR "gen_tyinfo" "Too many case defns"
 in
-  mk_ti case_defs case_congs one_ones distincts nchotomies
+fun gen_tyinfo {ax, ind, case_defs} = 
+ let val nchotomyl  = prove_cases_thm ind
+     val case_congs = map2 case_cong_thm nchotomyl case_defs
+     val one_ones   = prove_constructors_one_one ax
+     val distincts  = prove_constructors_distinct ax
+     val _ = (length nchotomyl  = length case_congs andalso
+              length case_congs = length one_ones   andalso
+              length one_ones   = length distincts) 
+        orelse raise ERR "gen_tyinfo"
+                 "Number of theorems automatically proved doesn't match up"
+     val tyinfo_1 = mk_tyinfo
+           {ax=ORIG ax, induction=ORIG ind, 
+            case_def=hd case_defs, case_cong=hd case_congs, 
+            nchotomy=hd nchotomyl, size=NONE, 
+            one_one=hd one_ones, distinct=hd distincts}
+ in
+   if length nchotomyl = 1 then [tyinfo_1]
+   else let val tyname = ty_name_of tyinfo_1
+        in tyinfo_1 :: mk_ti (tyname,ax,ind)
+                          (tl case_defs) (tl case_congs) 
+                          (tl one_ones) (tl distincts) (tl nchotomyl)
+        end
+ end
 end;
 
 
@@ -190,7 +201,10 @@ fun pp_tyinfo ppstrm (FACTS(ty_name,recd)) =
         add_string (Lib.quote ty_name); end_block();
    add_break(1,0);
    begin_block CONSISTENT 1;
-   add_string "Characterization:"; add_break (1,0); pp_thm axiom; end_block();
+   add_string "Primitive recursion:"; add_break (1,0); 
+       (case axiom 
+         of ORIG thm  => pp_thm thm
+          | COPY(s,_) => add_string ("see "^Lib.quote s)); end_block();
    add_break(1,0);
    begin_block CONSISTENT 1; add_string "Case analysis:";
                              add_break (1,0); pp_thm case_def; end_block();
@@ -200,11 +214,17 @@ fun pp_tyinfo ppstrm (FACTS(ty_name,recd)) =
      | SOME (tm,size_def) =>
         (begin_block CONSISTENT 1;
          add_string "Size:"; add_break (1,0);
-         if is_const tm then pp_thm size_def else pp_term tm; end_block();
+         (case size_def
+           of COPY(s,th) => add_string ("see "^Lib.quote s)
+            | ORIG th    => if is_const tm 
+                            then pp_thm th else pp_term tm); end_block();
          add_break(1,0));
 
    begin_block CONSISTENT 1;
-   add_string "Induction:"; add_break (1,0); pp_thm induction; end_block();
+   add_string "Induction:"; add_break (1,0); 
+       (case induction 
+         of ORIG thm  => pp_thm thm
+          | COPY(s,_) => add_string ("see "^Lib.quote s)); end_block();
    add_break(1,0);
    begin_block CONSISTENT 1; add_string "Case completeness:";
    add_break (1,0); pp_thm nchotomy; end_block();
@@ -330,8 +350,8 @@ val bool_case_def =
    CONJ (gen thmT') (gen thmF')
   end;
 
-val bool_info = hd (gen_tyinfo {ax = boolAxiom, ind = boolInd,
-                                case_defs = [bool_case_def]});
+val [bool_info] = gen_tyinfo {ax=boolAxiom, ind=boolInd,
+                              case_defs = [bool_case_def]};
 
 val _ = write bool_info;
 

@@ -28,7 +28,7 @@ structure Ho_net :> Ho_net =
 struct
 
 
-open HolKernel liteLib Psyntax;
+open HolKernel liteLib;
 infixr 3 ##;
 
 fun ERR p = STRUCT_ERR "Ho_net" p;
@@ -53,7 +53,7 @@ fun remove p [] = ERR("remove","")
 fun stored_label (fvars,tm) =
     let val (oper,args) = strip_comb tm 
         val args' = map (fn x => (fvars,x)) args
-    in case dest_term oper 
+    in case Term.dest_term oper 
          of CONST {Name,...} => (Cnet(Name,length args),args')
           | LAMB {Body,Bvar} => (Lnet(length args),
                                 (subtract fvars [Bvar],Body)::args')
@@ -66,7 +66,7 @@ fun stored_label (fvars,tm) =
 
 fun label_for_lookup tm =
     let val (oper,args) = strip_comb tm 
-    in case dest_term oper 
+    in case Term.dest_term oper 
          of CONST {Name,...} => (Cnet(Name,length args),args)
           | LAMB {Body,Bvar} => (Lnet(length args),Body::args)
           | VAR {Name,...} => (FVnet(Name,length args),args)
@@ -120,9 +120,3 @@ fun merge_nets (NODE (l1,thms1),NODE (l2,thms2)) =
     end;
 
 end (* struct *)
-
-
-
-
-
-
