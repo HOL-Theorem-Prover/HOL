@@ -120,6 +120,7 @@ end
 
 fun nonempty P = P >- (fn s => if s = "" then fail else return s)
 fun grab_whitespace strm = (nonempty (many_charP Char.isSpace) >> ok) strm
+
 fun comment strm = let
   fun comment_internals strm' =
     ((drop_upto ["(*", "*)"] ++

@@ -5,27 +5,15 @@ type hol_type = Type.hol_type;
 
 open Exception Lib;
 
-fun PARSE_SUPPORT_ERR function message =
+fun ERROR function message =
  Exception.HOL_ERR{origin_structure = "Parse_support",
                    origin_function = function,
                    message = message};
 
-(*---------------------------------------------------------------------------
- * For defining recursive concrete types.
- *---------------------------------------------------------------------------*)
-datatype arg = Rec_occ | Hty of hol_type;
 
 (*---------------------------------------------------------------------------
- * The three kinds of objects parsable by the hol.yak file: preterms, types,
- * and datatype declarations.
- *---------------------------------------------------------------------------*)
-datatype parse =
-     PTM of Preterm.preterm
-   | TY of hol_type
-   | TY_SPEC of {ty_name: string,
-                 clauses: {constructor:string, args:arg list} list}
-
-
+       Parsing environments
+ ---------------------------------------------------------------------------*)
 
 type env = {scope : (string * hol_type) list,
             free  : (string * hol_type) list};
@@ -35,35 +23,65 @@ fun lookup_bvar(s,({scope,...}:env)) = assoc s scope;
 fun add_free(b,{scope,free}) = {scope=scope, free=b::free}
 fun add_scope(b,{scope,free}) = {scope=b::scope, free=free};
 
-val empty_env = {scope = [], free = []};
+val empty_env = {scope=[], free=[]};
 
 type preterm_in_env = env -> Preterm.preterm * env
 
-(*---------------------------------------------------------------------------
- * Denotes a lambda-bound variable. These are treated as functions from
- * preterm (the body) to preterm (the abstraction).
+(*---------------------------------------------------------------------------*
+ * Denotes a binding occurrence of a variable. These are treated as          *
+ * functions from preterm (the body) to preterm (the abstraction).           *
  *---------------------------------------------------------------------------*)
+
 type bvar_in_env = env -> (Preterm.preterm -> Preterm.preterm) * env
 
-(*---------------------------------------------------------------------------
- * Denotes a variable bound by a binder ("\\" or a constant, e.g.,
- * "!", "?", "@"). Hence, it takes a binder and returns a function from
- * the body to a preterm (plus of course, any changes to the env).
+(*---------------------------------------------------------------------------*
+ * Denotes a variable bound by a binder ("\\" or a constant, e.g.,           *
+ * "!", "?", "@"). Hence, it takes a binder and returns a function from      *
+ * the body to a preterm (plus of course, any changes to the env).           *
  *---------------------------------------------------------------------------*)
+
 type binder_in_env = string -> bvar_in_env
 
 
-
-(*---------------------------------------------------------------------------
- * Top level parse terms
+(*---------------------------------------------------------------------------*
+ * Top level parse terms                                                     *
  *---------------------------------------------------------------------------*)
+
 fun make_preterm tm_in_e = fst(tm_in_e empty_env)
 
-
-(*---------------------------------------------------------------------------
- * Antiquotes
+(*---------------------------------------------------------------------------*
+ *       Antiquotes                                                          *
  *---------------------------------------------------------------------------*)
-fun make_aq tm E = (Preterm.Antiq tm, E)
+
+fun make_aq tm {scope,free} = 
+ let open Term Preterm
+     fun from (VAR (v as {Name,Ty})) (E as (lscope,scope,free)) = 
+          if mem v lscope then (Var v, E)
+          else (case assoc1 Name scope
+                 of SOME(_,ntv) => (Constrained(Var{Name=Name,Ty=ntv},Ty), E)
+                  | NONE => 
+                     (case assoc1 Name free
+                       of NONE => (Var v, (lscope,scope, (Name,Ty)::free))
+                        | SOME(_,ntv) => 
+                            (Constrained(Var{Name=Name,Ty=ntv},Ty), E)))
+       | from (CONST c) E = (Const c,E)
+       | from (COMB{Rator,Rand}) E = 
+            let val (ptm1,E1) = from (dest_term Rator) E
+                val (ptm2,E2) = from (dest_term Rand) E1
+            in 
+              (Comb{Rator=ptm1, Rand=ptm2}, E2)
+            end
+       | from (LAMB{Bvar,Body}) (lscope,scope,free) = 
+           let val v = dest_var Bvar
+               val (Body',(_,_,free')) = from (dest_term Body) 
+                                           (v::lscope, scope, free)
+           in 
+              (Abs{Bvar=Var v, Body=Body'}, (lscope,scope,free'))
+            end
+     val (ptm, (_,_,free)) = from (dest_term tm) ([],scope,free)
+ in 
+   (ptm, {scope=scope,free=free})
+ end;
 
 
 (*---------------------------------------------------------------------------
@@ -77,7 +95,7 @@ in
 fun gen_const tyvars s =
    let val {Name,Ty} = Term.dest_const(#const(Term.const_decl s))
    in Preterm.Const
-        (case (rename_tv tyvars Ty)
+        (case rename_tv tyvars Ty
            of Type.SAME     => {Name=Name, Ty=Ty}
             | Type.DIFF ty' => {Name=Name, Ty=ty'})
    end
@@ -88,63 +106,74 @@ end;
 (*---------------------------------------------------------------------------
  * Binding occurrences of variables
  *---------------------------------------------------------------------------*)
-fun make_binding_occ tyvars s binder E = let
-  val _ = Lexis.ok_identifier s orelse
-    raise PARSE_SUPPORT_ERR "make_binding_occ"
-      (s ^ " is not lexically permissible as a binding variable")
-  val ntv = Lib.state(Lib.next tyvars)
-in
-  case binder of
-    "\\" => ((fn b => Preterm.Abs{Bvar = Preterm.Var{Name = s, Ty = ntv},
-                                  Body = b}),
-             add_scope((s,ntv),E))
-  | _ => ((fn b => Preterm.Comb{Rator=gen_const tyvars binder,
-                                Rand=Preterm.Abs{Bvar=Preterm.Var{Name=s,
-                                                                  Ty=ntv},
-                                                 Body = b}}),
-          add_scope((s,ntv),E))
-end
 
-fun make_aq_binding_occ _ aq "\\" E =
-     ((fn b => Preterm.Abs{Bvar=Preterm.Antiq aq,Body=b}), E)
-  | make_aq_binding_occ tyvars aq binder E =
-        ((fn b => Preterm.Comb{Rator = gen_const tyvars binder,
-                               Rand = Preterm.Abs{Bvar = Preterm.Antiq aq,
-                                                  Body = b}}),  E);
+fun make_binding_occ tyvars s binder E = 
+ let open Preterm
+     val _ = Lexis.ok_identifier s orelse raise ERROR "make_binding_occ"
+                  (s ^ " is not lexically permissible as a binding variable")
+     val ntv = Lib.state(Lib.next tyvars)
+     val E' = add_scope((s,ntv),E)
+ in
+  case binder 
+   of "\\" => ((fn b => Abs{Bvar=Var{Name=s, Ty=ntv},Body=b}), E')
+    |  _   => ((fn b => Comb{Rator=gen_const tyvars binder,
+                          Rand=Abs{Bvar=Var{Name=s,Ty=ntv}, Body=b}}), E')
+ end;
+
+
+fun make_aq_binding_occ tyvars aq binder E =
+  let val (v as {Name,Ty}) = Term.dest_var aq
+      val E' = add_scope ((Name,Ty),E)
+      open Preterm 
+  in
+    case binder
+      of "\\"   => ((fn b => Abs{Bvar=Var v, Body=b}), E')
+       | binder => ((fn b => Comb{Rator=gen_const tyvars binder,
+                                  Rand=Abs{Bvar=Var v, Body=b}}),  E')
+  end;
+
 
 (*---------------------------------------------------------------------------
- * Free occurrences of variables in the body
+ * Free occurrences of variables.
  *---------------------------------------------------------------------------*)
+
 fun make_free_var tyvars (s,E) =
-   (Preterm.Var{Name = s, Ty = lookup_fvar(s,E)}, E)
-   handle HOL_ERR _
-   => let val tyv = Lib.state(Lib.next tyvars)
-      in (Preterm.Var{Name = s, Ty = tyv}, add_free((s,tyv),E))
-      end;
+  let open Preterm
+  in
+     (Var{Name=s, Ty=lookup_fvar(s,E)}, E)
+     handle HOL_ERR _
+      => let val tyv = Lib.state(Lib.next tyvars)
+         in (Var{Name=s, Ty = tyv}, add_free((s,tyv), E))
+         end
+  end;
 
 (*---------------------------------------------------------------------------
- * Bound occurrences in the body
+ * Bound occurrences of variables.
  *---------------------------------------------------------------------------*)
-fun make_bvar (s,E) = (Preterm.Var{Name = s, Ty = lookup_bvar(s,E)},E);
 
+fun make_bvar (s,E) = (Preterm.Var{Name=s, Ty=lookup_bvar(s,E)}, E);
 
 (*---------------------------------------------------------------------------
+ * "constants" not in the symbol table: string literals.
+ *
  * Makes the assumption that s is already quoted (except for emptystring).
  *---------------------------------------------------------------------------*)
 fun make_string s E =
    let val atom = {Name=s, Ty=Type.mk_type{Tyop="string",Args=[]}}
-       val tag = if Globals.strings_defined()
-                 then Preterm.Const else Preterm.Var
-   in (tag atom, E)
+       val constr = if Globals.strings_defined()
+                    then Preterm.Const else Preterm.Var
+   in (constr atom, E)
    end;
 
 
-(* Atoms *)
+(*---------------------------------------------------------------------------
+   Setting the visibility of identifiers.
+ ---------------------------------------------------------------------------*)
 local val the_hidden = ref [] : string list ref
 in
- fun hidden s = mem s (!the_hidden)
- fun hide s = (the_hidden := insert s (!the_hidden))
+ fun hide s   = (the_hidden := insert s (!the_hidden))
  fun reveal s = (the_hidden := set_diff (!the_hidden) [s])
+ fun hidden s = mem s (!the_hidden)
 end;
 
 (*---------------------------------------------------------------------------
@@ -163,8 +192,9 @@ end;
  * "free"s include new ones found in the body of the Abs.
  *
  * Note: this code should maybe check whether the prospective identifier is a
- * reserved word  or not.
+ * reserved word or not.
  *---------------------------------------------------------------------------*)
+
 fun make_atom tyvars s E =
    make_bvar(s,E)
    handle HOL_ERR _
@@ -173,69 +203,44 @@ fun make_atom tyvars s E =
       else (gen_const tyvars s, E)
            handle HOL_ERR _ =>
              if (Lexis.is_string_literal s) then
-               raise PARSE_SUPPORT_ERR "make_atom"
-                 "strings not lexically OK until stringTheory loaded"
+               raise ERROR "make_atom"
+                  "string literals not lexically OK until stringTheory loaded"
              else make_free_var tyvars (s,E);
-
 
 (*---------------------------------------------------------------------------
  * Combs
  *---------------------------------------------------------------------------*)
+
 fun list_make_comb (tm1::(rst as (_::_))) E =
-   rev_itlist (fn tm => fn (trm,e) =>
-      let val (tm',e') = tm e
-      in (Preterm.Comb{Rator = trm, Rand = tm'}, e') end)     rst (tm1 E) ;
+     rev_itlist (fn tm => fn (trm,e) =>
+        let val (tm',e') = tm e
+        in (Preterm.Comb{Rator = trm, Rand = tm'}, e') end)     rst (tm1 E)
+  | list_make_comb _ _ = raise ERROR "list_make_comb" "insufficient args";
 
 (*---------------------------------------------------------------------------
  * Constraints
  *---------------------------------------------------------------------------*)
+
 fun make_constrained tm ty E =
-   let val (tm',E') = tm E
-   in (Preterm.Constrained(tm', ty), E')
-   end;
+   let val (tm',E') = tm E in (Preterm.Constrained(tm', ty), E') end;
 
 
 (*---------------------------------------------------------------------------
- * Abstractions, qualified abstractions, and vstructs.
- * The thing to know about parsing abstractions is that an abstraction is
- * a function from the string identifying the binder to an env to a
- * pair. The first member of the pair is a function that will take the body
- * of the abstraction and produce a lambda term, essentially by clapping
- * on whatever variables, or applying whatever constants necessary. The second
- * member of the pair is the environment previous to entering the abstraction
- * plus whatever new free variables were found in the body of the abstraction.
- *
- * We could just return (F tm', E), except that we may add free variables
- * found in tm to E.
- *---------------------------------------------------------------------------*)
 
-(*---------------------------------------------------------------------------
- * For restricted binders. Adding a pair "(B,R)" to this list, if "B" is the
- * name of a binder and "R" is the name of a constant, will enable parsing
- * of terms with the form
- *
- *     B <varstruct list>::<restr>. M
- *---------------------------------------------------------------------------*)
-local val restricted_binders = ref ([] : (string * string) list)
-in
-fun binder_restrictions() = !restricted_binders
-fun associate_restriction(p as (binder_str,const_name)) =
-  case (Lib.assoc1 binder_str (!restricted_binders)) of
-    NONE => restricted_binders := p :: !restricted_binders
-  | SOME _ =>
-      raise PARSE_SUPPORT_ERR "restrict_binder"
-        ("Binder "^Lib.quote binder_str^" is already restricted")
+  Abstractions, qualified abstractions, and vstructs. 
 
-fun delete_restriction binder =
-  restricted_binders :=
-  Lib.set_diff (!restricted_binders)
-  [(binder,Lib.assoc binder(!restricted_binders))]
-  handle HOL_ERR _ =>
-    raise
-      PARSE_SUPPORT_ERR"delete_restriction"
-      (Lib.quote binder^" is not restricted")
-end;
+  The thing to know about parsing abstractions is that an abstraction is 
+  a function from the string identifying the binder to an env to a
+  pair. The first member of the pair is a function that will take the
+  body of the abstraction and produce a lambda term, essentially by
+  clapping on whatever variables, or applying whatever constants
+  necessary. The second member of the pair is the environment previous
+  to entering the abstraction plus whatever new free variables were
+  found in the body of the abstraction.  
 
+  We could just return (F tm', E), except that we may add free variables
+  found in tm to E.
+ ----------------------------------------------------------------------------*)
 
 fun bind_term binder alist tm (E as {scope=scope0,...}:env) =
    let val (E',F) = rev_itlist (fn a => fn (e,f) =>
@@ -245,15 +250,41 @@ fun bind_term binder alist tm (E as {scope=scope0,...}:env) =
    end;
 
 
+(*---------------------------------------------------------------------------
+ * For restricted binders. Adding a pair "(B,R)" to this list, if "B" is the
+ * name of a binder and "R" is the name of a constant, will enable parsing
+ * of terms with the form
+ *
+ *     B <varstruct list>::<restr>. M
+ *---------------------------------------------------------------------------*)
+
+local val restricted_binders = ref ([] : (string * string) list)
+in
+fun binder_restrictions() = !restricted_binders
+fun associate_restriction(p as (binder_str,const_name)) =
+  case (Lib.assoc1 binder_str (!restricted_binders)) of
+    NONE => restricted_binders := p :: !restricted_binders
+  | SOME _ =>
+      raise ERROR "restrict_binder"
+        ("Binder "^Lib.quote binder_str^" is already restricted")
+
+fun delete_restriction binder =
+ restricted_binders :=
+  Lib.set_diff (!restricted_binders)
+         [(binder,Lib.assoc binder(!restricted_binders))]
+  handle HOL_ERR _ 
+   => raise ERROR"delete_restriction" (Lib.quote binder^" is not restricted")
+end;
+
 fun restr_binder s =
    assoc s (binder_restrictions()) handle HOL_ERR _
-   => raise PARSE_SUPPORT_ERR "restr_binder"
+   => raise ERROR "restr_binder"
                       ("no restriction associated with "^Lib.quote s)
 
 fun bind_restr_term tyvars binder vlist restr tm (E as {scope=scope0,...}:env)=
    let fun replicate_rbinder e =
             (gen_const tyvars (restr_binder binder),e)
-             handle HOL_ERR _ => raise PARSE_SUPPORT_ERR "bind_restr_term"
+             handle HOL_ERR _ => raise ERROR "bind_restr_term"
               ("Can't find constant associated with "^Lib.quote binder)
        val (E',F) =
           rev_itlist (fn v => fn (e,f)
@@ -269,38 +300,38 @@ fun bind_restr_term tyvars binder vlist restr tm (E as {scope=scope0,...}:env)=
 fun split ty =
   case (Type.dest_type ty)
    of {Tyop="prod",Args} => Args
-    | _ => raise PARSE_SUPPORT_ERR "split" "not a product";
+    | _ => raise ERROR "split" "not a product";
 
 
-
+local open Preterm 
+in
 fun cdom M [] = M
-  | cdom (Preterm.Abs{Bvar,Body}) (ty::rst) =
-       Preterm.Abs{Bvar = Preterm.Constrained(Bvar,ty),
-                   Body = cdom Body rst}
-  | cdom (Preterm.Comb{Rator as Preterm.Const{Name="UNCURRY",...},Rand})
-         (ty::rst) =
-       Preterm.Comb{Rator=Rator, Rand=cdom Rand (split ty@rst)}
-  | cdom x y = raise PARSE_SUPPORT_ERR"cdom" "missing case"
-
+  | cdom (Abs{Bvar,Body}) (ty::rst) =
+       Abs{Bvar = Constrained(Bvar,ty), Body = cdom Body rst}
+  | cdom (Comb{Rator as Const{Name="UNCURRY",...},Rand}) (ty::rst) =
+       Comb{Rator=Rator, Rand=cdom Rand (split ty@rst)}
+  | cdom x y = raise ERROR"cdom" "missing case"
+end;
 
 fun cdomf (f,e) ty = ((fn tm => cdom (f tm) [ty]), e)
 
 fun make_vstruct tyvars bvl tyo binder E =
- let fun loop ([v],E) = v "\\" E
+ let open Preterm
+     fun loop ([v],E) = v "\\" E
        | loop ((v::rst),E) =
-           let val (f,e) = v "\\" E
-               val (F,E') = loop(rst,e)
-           in ((fn b => Preterm.Comb{Rator = gen_const tyvars "UNCURRY",
-                                     Rand = f(F b)}), E') end
-       | loop _ = raise PARSE_SUPPORT_ERR"make_vstruct"
-                                         "impl. error, empty vstruct"
+          let val (f,e) = v "\\" E
+              val (F,E') = loop(rst,e)
+          in 
+            ((fn b => Comb{Rator=gen_const tyvars "UNCURRY",Rand=f(F b)}), E')
+          end
+       | loop _ = raise ERROR"make_vstruct" "impl. error, empty vstruct"
      val (F,E') = case tyo
-                  of NONE    => loop(bvl,E)
-                   | SOME ty => cdomf (hd bvl "\\" E) ty
+                   of NONE    => loop(bvl,E)
+                    | SOME ty => cdomf (hd bvl "\\" E) ty
    in
-   case binder
-   of "\\" => (F,E')
-    | _ => ((fn b => Preterm.Comb{Rator=gen_const tyvars binder,Rand=F b}), E')
+     case binder
+      of "\\" => (F,E')
+       | _ => ((fn b => Comb{Rator=gen_const tyvars binder,Rand=F b}), E')
    end;
 
 
@@ -308,7 +339,8 @@ fun make_vstruct tyvars bvl tyo binder E =
  * Let bindings
  *---------------------------------------------------------------------------*)
 fun make_let tyvars bindings tm env =
-   let val {body_bvars, args, E} =
+   let open Preterm
+       val {body_bvars, args, E} =
           itlist (fn (bvs,arg) => fn {body_bvars,args,E} =>
                     let val (b::rst) = bvs
                         val (arg',E') =
@@ -317,11 +349,11 @@ fun make_let tyvars bindings tm env =
                     end) bindings {body_bvars = [], args = [], E = env}
        val (core,E') = bind_term "\\" body_bvars tm E
    in
-   ( rev_itlist (fn arg => fn core =>
-       Preterm.Comb{Rator=Preterm.Comb{Rator=gen_const tyvars"LET",Rand=core},
-                    Rand = arg}) args core,
-     E')  end
-   handle HOL_ERR _ => raise PARSE_SUPPORT_ERR "make_let" "bad let structure";
+     ( rev_itlist (fn arg => fn core =>
+            Comb{Rator=Comb{Rator=gen_const tyvars"LET",Rand=core},Rand=arg})
+           args core, E')  
+   end
+   handle HOL_ERR _ => raise ERROR "make_let" "bad let structure";
 
 
 (*---------------------------------------------------------------------------
@@ -334,32 +366,39 @@ fun make_let tyvars bindings tm env =
  * environment, it goes right-to-left in the list, so maybe error messages
  * will be puzzling.
  *---------------------------------------------------------------------------*)
+
 fun make_list tyvars alist E =
- let val (cons,E') = make_atom tyvars "CONS" E
+ let open Preterm
+     val (cons,E') = make_atom tyvars "CONS" E
  in itlist (fn h => fn (L,E) =>
-     let val (h',E') = h E
-     in (Preterm.Comb{Rator=Preterm.Comb{Rator=cons,Rand=h'}, Rand=L}, E') end)
+       let val (h',E') = h E
+       in 
+         (Comb{Rator=Comb{Rator=cons,Rand=h'}, Rand=L}, E') 
+       end)
    alist (make_atom tyvars "NIL" E')
  end;
 
 fun make_set_const tyvars fname s E =
- (gen_const tyvars s, E) handle HOL_ERR _
-  => raise PARSE_SUPPORT_ERR fname
-       ("The theory "^Lib.quote "set"^" is not loaded");
+ (gen_const tyvars s, E)
+  handle HOL_ERR _
+    => raise ERROR fname ("The theory "^Lib.quote "set"^" is not loaded");
 
 (*---------------------------------------------------------------------------
  * You can't make a set unless the theory of sets is an ancestor.
  *  The calls to make_set_const ensure this.
  *---------------------------------------------------------------------------*)
+
 fun make_set tyvars [] E = make_set_const tyvars "make_set" "EMPTY" E
   | make_set tyvars alist E =
-      let val (insert,_) = make_set_const tyvars "make_set" "INSERT" []
-          val empty_in_env = make_set_const tyvars "make_set" "EMPTY" E
-      in itlist(fn h => fn (L,E) =>
-           let val (h',E') = h E
-           in (Preterm.Comb{Rator = Preterm.Comb{Rator = insert,Rand = h'},
-                            Rand = L}, E') end)        alist empty_in_env
-      end;
+     let open Preterm
+         val (insert,_) = make_set_const tyvars "make_set" "INSERT" []
+         val empty_in_env = make_set_const tyvars "make_set" "EMPTY" E
+     in 
+        itlist(fn h => fn (L,E) =>
+                let val (h',E') = h E
+                in (Comb{Rator=Comb{Rator = insert,Rand = h'}, Rand = L}, E')
+                end)   alist empty_in_env
+     end;
 
 
 (*---------------------------------------------------------------------------
@@ -370,6 +409,7 @@ fun make_set tyvars [] E = make_set_const tyvars "make_set" "EMPTY" E
  * Warning: apt not to work if you want to "antiquote in" free variables that
  * will subsequently get bound in the set abstraction.
  *---------------------------------------------------------------------------*)
+
 fun make_set_abs tyvars (tm1,tm2) (E as {scope=scope0,...}:env) =
    let val (_,(e1:env)) = tm1 empty_env
        val (_,(e2:env)) = tm2 empty_env
@@ -380,7 +420,7 @@ fun make_set_abs tyvars (tm1,tm2) (E as {scope=scope0,...}:env) =
        val init_fv = #free e3
    in
    case (gather (fn (name,_) => mem name fv_names) init_fv)
-     of [] => raise PARSE_SUPPORT_ERR"make_set_abs"
+     of [] => raise ERROR"make_set_abs"
                                 "no free variables in set abstraction"
       | quants =>
          let val quants' = map
@@ -397,47 +437,4 @@ fun make_set_abs tyvars (tm1,tm2) (E as {scope=scope0,...}:env) =
          end
    end;
 
-
-(*---------------------------------------------------------------------------*
- * Types                                                                     *
- *---------------------------------------------------------------------------*)
-val rec_occ = Type.dummy
-
-fun make_atomic_type (ident,NONE) = Type.mk_type{Tyop=ident, Args=[]}
-  | make_atomic_type (ident,SOME s) =
-     if (ident = s) then rec_occ
-     else make_atomic_type(ident,NONE);
-
-
-fun make_type_app (s,tylist) = Type.mk_type{Tyop=s, Args=tylist}
-
-(*---------------------------------------------------------------------------
- * Clauses in type specifications
- *
- * Recursive occurrences of the defined type are marked with Type.dummy, a
- * nonsense type variable, in order to stay within the the type of
- * hol_types (this saves on creating a new type built from Rec_occs and
- * normal hol_types).
- *---------------------------------------------------------------------------*)
-fun make_type_clause {constructor, args} =
- let fun check ty =
-       if (ty=rec_occ)
-       then raise PARSE_SUPPORT_ERR"make_type_clause.check"
-                                "recursive occurrence of defined type \
-                                        \is deeper than the first level"
-       else if (Type.is_vartype ty) then ()
-            else case Type.dest_type ty
-                  of {Args=[],Tyop}   => ()
-                   | {Args,Tyop} => (map check Args; ())
-
-     fun munge ty =
-       if (ty = rec_occ) then Rec_occ else
-       if (Type.is_vartype ty) then Hty ty
-       else case Type.dest_type ty
-            of {Args=[],Tyop} => Hty ty
-             | {Args,Tyop}    => (map check Args; Hty ty)
- in
-    {constructor=constructor, args = map munge args}
- end;
-
-end; (* parse_support *)
+end; (* Parse_support *)

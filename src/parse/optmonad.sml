@@ -2,6 +2,7 @@
 (* Copyright University of Cambridge 1999 *)
 (* Author: Michael Norrish *)
 (* $Id$ *)
+
 type ('a, 'b) optmonad = 'a -> ('a * 'b option)
 
 fun fail env = (env, NONE)

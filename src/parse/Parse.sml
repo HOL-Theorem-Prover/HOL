@@ -338,7 +338,7 @@ in
   end
 
 
-  val (the_term_parser: (term frag list -> term parse_term.preterm) ref) =
+  val the_term_parser: (term frag list -> term parse_term.preterm) ref =
     ref (do_parse (!the_term_grammar) (!type_parser1))
 
   fun update_term_fns() = let

@@ -2,6 +2,7 @@
 (* Copyright University of Cambridge 1999 *)
 (* Author: Michael Norrish *)
 (* $Id$ *)
+
 structure monadic_parse :> monadic_parse = struct
 open optmonad
 infix >-
@@ -31,8 +32,6 @@ fun item c =
 fun itemP P =
   (get +++ fail "") >- (fn x => if P x then return x
                                 else pushback x >> fail "")
-
-
 
 
 fun eof [] = ([], SOME ())
@@ -99,7 +98,6 @@ fun file_to_cseq fname = let
 in
   explode (TextIO.inputAll i) before TextIO.closeIn i
 end
-
 
 
 val string_to_cseq = String.explode

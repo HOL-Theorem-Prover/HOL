@@ -12,4 +12,6 @@ sig
     ((Term.term -> string) * (Type.hol_type -> string)) option ->
     (int,Type.hol_type)Lib.istream ->
     preterm -> Term.term
+
 end;
+

@@ -5,17 +5,6 @@ sig
   type bvar_in_env    = env -> (Preterm.preterm -> Preterm.preterm) * env
   type binder_in_env  = string -> bvar_in_env
 
-
-datatype arg = Rec_occ
-             | Hty of Type.hol_type
-
-datatype parse =
-   PTM of Preterm.preterm
- | TY of Type.hol_type
- | TY_SPEC of {ty_name: string,
-               clauses: {constructor:string,
-                         args:arg list} list}
-
 val make_preterm : preterm_in_env -> Preterm.preterm
 val make_aq : Term.term -> preterm_in_env
 val make_binding_occ :(int,Type.hol_type) Lib.istream
@@ -45,12 +34,6 @@ val make_set : (int,Type.hol_type) Lib.istream
 val make_set_abs : (int,Type.hol_type) Lib.istream
                     -> preterm_in_env * preterm_in_env -> preterm_in_env
 
-val make_atomic_type : string * string option -> Type.hol_type
-val make_type_app : string * Type.hol_type list -> Type.hol_type
-val make_type_clause: {constructor:string,
-                       args:Type.hol_type list}
-                      -> {constructor:string, args : arg list}
-
 val hidden : string -> bool
 val hide : string -> unit
 val reveal : string -> unit
@@ -58,6 +41,5 @@ val reveal : string -> unit
 val binder_restrictions :unit -> (string * string) list
 val associate_restriction :(string*string) -> unit
 val delete_restriction :string -> unit
-
 
 end;

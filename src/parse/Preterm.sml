@@ -46,12 +46,14 @@ end;
  * Translation to terms so that the term prettyprinter can be used when
  * type inference fails.
  *---------------------------------------------------------------------------*)
+
 fun to_term (Var n) = Term.mk_var n
   | to_term (Const r) = constify r
   | to_term (Comb{Rator,Rand}) = Combify{Rator=to_term Rator,Rand=to_term Rand}
   | to_term (Abs{Bvar,Body}) = Term.mk_abs{Bvar=to_term Bvar,Body=to_term Body}
   | to_term (Antiq tm) = tm
   | to_term (Constrained(tm,_)) = to_term tm;
+
 
 fun is_atom (Var _) = true
   | is_atom (Const _) = true
@@ -131,7 +133,7 @@ end end;
  * variables for the remaining unconstrained type variables.
  *---------------------------------------------------------------------------*)
 
-local fun string_tl str = Portable_String.substring(str,1, size str - 1)
+local fun string_tl str = String.substring(str,1, size str - 1)
       val ascii_dollar = ordof("$",0)
 in
 fun zap_dollar s =
@@ -153,13 +155,14 @@ val tyVars =
  in rev o C tyV []
  end;
 
-local fun askii n = Portable_Char.toString(Char.chr (n + 97));
+local fun askii n = Char.toString(Char.chr (n + 97));
       fun nonzero 0 = "" | nonzero n = Int.toString n;
       nonfix div mod
-      val div = Portable_Int.div and mod = Portable_Int.mod
+      val div = Int.div and mod = Int.mod
 in
-fun num2tyv m = Type.mk_vartype
-  (Portable_String.concat(["'",askii(mod(m,26)), nonzero(div(m,26))]))
+fun num2tyv m = 
+ Type.mk_vartype
+    (String.concat(["'",askii(mod(m,26)), nonzero(div(m,26))]))
 end;
 
 
