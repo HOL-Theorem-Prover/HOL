@@ -12,7 +12,10 @@ Parsing, pretty-printing, overloading.
 
 \DESCRIBE
 This function removes all overloading associated with the given
-string.
+string, except those "overloads" that map the string to constants of
+the same name.  These additional overloads (there may be more than one
+constant of the same name, as long as each such is part of a different
+theory) may be removed with {remove_ovl_mapping}.
 
 \FAILURE
 Never fails.  If a string is not overloaded, this function simply has
@@ -38,7 +41,12 @@ no effect.
 If overloading gets too confusing, this function should help to clear
 away one layer of supposedly helpful obfuscation.
 
+\COMMENTS
+As with other parsing functions, there is a sister function,
+{temp_clear_overloads_on} that does the same thing, but whose effect
+is not saved to a theory file.
+
 \SEEALSO
-overload_on.
+overload_on, remove_ovl_mapping.
 
 \ENDDOC
