@@ -56,9 +56,7 @@ val _ = computeLib.add_funs
            B_SEM,
            EVAL_US_SEM,
            EVAL_UF_SEM_F_SUFFIX_IMP,
-           UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP,
-           EVAL_UF_SEM_F_ALWAYS,
-           EVAL_UF_SEM_F_NEVER]);
+           UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP]);
 
 (******************************************************************************
 * For simplification during symbolic evaluation of Sugar2 formulas
@@ -231,6 +229,12 @@ EVAL
    (F_STRONG_IMP ((S_OR (S_BOOL (B_PROP 1), S_BOOL (B_PROP 3))),
                   (S_CAT (S_REPEAT S_TRUE, S_BOOL (B_PROP 3)))))``;
 
+(******************************************************************************
+* [{1};{1};{1};{1};{1};{1};{1};{1};{1}]  |=  always{1}
+******************************************************************************)
+EVAL
+``UF_SEM (FINITE[{1};{1};{1};{1};{1};{1};{1};{1};{1}])
+   (F_ALWAYS(S_BOOL(B_PROP 1)))``;
 
 (******************************************************************************
 * [{1};{1};{1};{1};{1};{1};{1};{1};{1}]  |=  always{1;1}

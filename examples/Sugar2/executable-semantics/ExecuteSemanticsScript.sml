@@ -409,39 +409,16 @@ val UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP = store_thm
            INFINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP]);
 
 (******************************************************************************
-* always{r} = {T[*]} |-> {r}!
-* (N.B. in the LRM weak implication is used)
+* always{r} = {T[*]} |-> {r}
 ******************************************************************************)
 val F_ALWAYS_def =
- pureDefine `F_ALWAYS r = F_STRONG_IMP(S_REPEAT S_TRUE, r)`;
-
-val EVAL_UF_SEM_F_ALWAYS =
- store_thm
-  ("EVAL_UF_SEM_F_ALWAYS",
-   ``!w r.
-      UF_SEM w (F_ALWAYS r) =
-       UF_SEM w
-         (F_SUFFIX_IMP
-            (S_REPEAT S_TRUE,F_NOT (F_SUFFIX_IMP (r,F_BOOL B_FALSE))))``,
-   RW_TAC std_ss [F_ALWAYS_def,UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP]);
+ pureDefine `F_ALWAYS r = F_WEAK_IMP(S_REPEAT S_TRUE, r)`;
 
 (******************************************************************************
-* never{r} = {T[*];r} |-> {F}!
-* (N.B. in the LRM weak implication is used)
+* never{r} = {T[*];r} |-> {F}
 ******************************************************************************)
 val F_NEVER_def =
- pureDefine `F_NEVER r = F_STRONG_IMP(S_CAT(S_REPEAT S_TRUE, r), S_FALSE)`;
-
-val EVAL_UF_SEM_F_NEVER =
- store_thm
-  ("EVAL_UF_SEM_F_NEVER",
-   ``!w r.
-      UF_SEM w (F_NEVER r) =
-       UF_SEM w
-         (F_SUFFIX_IMP
-            (S_CAT (S_REPEAT S_TRUE,r),
-             F_NOT (F_SUFFIX_IMP (S_FALSE,F_BOOL B_FALSE))))``,
-   RW_TAC std_ss [F_NEVER_def,UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP]);
+ pureDefine `F_NEVER r = F_WEAK_IMP(S_CAT(S_REPEAT S_TRUE, r), S_FALSE)`;
 
 val _ = export_theory();
 
