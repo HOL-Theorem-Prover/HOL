@@ -20,6 +20,9 @@
 (defvar hol98-executable HOL98-EXECUTABLE
   "*Path-name for the HOL98 executable.")
 
+(defvar hol-echo-commands-p nil
+  "*Whether or not to echo the text of commands originating elsewhere.")
+
 (put 'hol-term 'end-op
      (function (lambda () (skip-chars-forward "^`"))))
 (put 'hol-term 'beginning-op
@@ -69,7 +72,7 @@ process in it."
   (skip-syntax-forward " ")
   (or (eobp)
       (char-equal (following-char) ?,)
-      (char-equal (following-char) ?=)
+      ;; (char-equal (following-char) ?=)
       (char-equal (following-char) ?\;)
       (is-a-then (word-at-point))
       (string= (word-at-point) "val")))
@@ -114,7 +117,7 @@ process in it."
 (defun skip-hol-tactic-punctuation-backward ()
   (let ((last-point (point)))
     (while (progn (if (is-a-then (word-before-point)) (forward-word -1))
-                  (skip-chars-backward ", \n\t\t")
+                  (skip-chars-backward ", \n\t")
                   (not (= last-point (point))))
       (setq last-point (point)))))
 
@@ -150,15 +153,40 @@ process in it."
   (interactive "p")
   (forward-hol-tactic (if n (- n) -1)))
 
-(defun mark-hol-tactic ()
-  (interactive)
+(defun prim-mark-hol-tactic ()
   (let ((bounds (bounds-of-thing-at-point 'hol-tactic)))
     (if bounds
         (progn
           (goto-char (cdr bounds))
-          (push-mark (car bounds) t t))
-      (ding)
-      (message "No tactic at point"))))
+          (push-mark (car bounds) t t)
+          (setq mark-active t))
+      (error "No tactic at point"))))
+
+(defun mark-hol-tactic ()
+  (interactive)
+  (let ((initial-point (point)))
+    (condition-case nil
+        (prim-mark-hol-tactic)
+      (error
+       ;; otherwise, skip white-space forward to see if this would move us
+       ;; onto a tactic.  If so, great, otherwise, go backwards and look for
+       ;; one there.  Only if all this fails signal an error.
+       (condition-case nil
+           (progn
+             (skip-chars-forward " \n\t\r")
+             (prim-mark-hol-tactic))
+         (error
+          (condition-case e
+              (progn
+                (if (skip-chars-backward " \n\t\r")
+                    (progn
+                      (backward-char 1)
+                      (prim-mark-hol-tactic))
+                  (prim-mark-hol-tactic)))
+            (error
+             (goto-char initial-point)
+             (signal (car e) (cdr e))))))))))
+
 
 (defun copy-region-as-hol-tactic (start end arg)
   "Send selected region to HOL process as tactic."
@@ -167,12 +195,12 @@ process in it."
          (e-string (concat "goalstackLib." (if arg "expandf" "e")))
          (tactic-string
           (format "%s (%s) handle e => Raise e" e-string region-string)))
-    (send-string-to-hol tactic-string)))
+    (send-string-to-hol tactic-string hol-echo-commands-p)))
 
 (defun send-string-as-hol-goal (s)
   (let ((goal-string
          (format  "goalstackLib.g `%s` handle e => Raise e" s)))
-    (send-raw-string-to-hol goal-string)
+    (send-raw-string-to-hol goal-string hol-echo-commands-p)
     (send-raw-string-to-hol "goalstackLib.set_backup 100;")))
 
 (defun hol-do-goal (arg)
@@ -196,15 +224,17 @@ the region contains no backquotes, then send region instead."
          (send-string (if arg
                          (concat "(" buffer-string ") handle e => Raise e")
                        buffer-string)))
-    (send-string-to-hol send-string)))
+    (send-string-to-hol send-string hol-echo-commands-p)))
 
 (defun hol-name-top-theorem (string arg)
   "Name the top theorem of the goalstackLib.
 With prefix argument, drop the goal afterwards."
   (interactive "sName for top theorem: \nP")
   (if (not (string= string ""))
-      (send-raw-string-to-hol (format "val %s = top_thm()" string)))
-  (if arg (send-raw-string-to-hol "goalstackLib.drop()")))
+      (send-raw-string-to-hol
+       (format "val %s = top_thm()" string)
+       hol-echo-commands-p))
+  (if arg (send-raw-string-to-hol "goalstackLib.drop()" hol-echo-commands-p)))
 
 (defun remove-sml-comments (end)
   (let (done (start (point)))
@@ -282,9 +312,9 @@ that the buffer has already had HOL terms, comments and strings removed."
 
 (setq sml-struct-id-regexp "[A-Za-z][A-Za-z0-9_]*")
 
-(defun send-string-to-hol (string)
+(defun send-string-to-hol (string &optional echoit)
   "Send a string to HOL process."
-  (interactive "sString to send to HOL process: ")
+  (interactive "sString to send to HOL process: \nP")
   (let ((buf (ensure-hol-buffer-ok))
         (tmpbuf (generate-new-buffer "*HOL temporary*"))
         (old-mark-active mark-active))
@@ -319,27 +349,35 @@ that the buffer has already had HOL terms, comments and strings removed."
                    (point-max)))))
           (hol-load-modules-in-region start end))))
     ;; then finally send the string
-    (send-raw-string-to-hol string)
+    (send-raw-string-to-hol string echoit)
     (kill-buffer tmpbuf)
     ;; deactivate-mark will have likely been set by all the editting actions
     ;; in the temporary buffer.  We fix this here, thereby keeping the mark
     ;; active, if it is active.
     (if deactivate-mark (setq deactivate-mark nil))))
 
-(defun send-raw-string-to-hol (string)
+(defun send-raw-string-to-hol (string &optional echoit)
   "Sends a string in the raw to HOL.  Not for interactive use."
   (let ((buf (ensure-hol-buffer-ok)))
-    (comint-send-string buf (concat string ";\n"))))
+    (if echoit
+        (save-excursion
+          (set-buffer buf)
+          (goto-char (point-max))
+          (princ (concat string ";") (get-buffer buf))
+          (goto-char (point-max))
+          (comint-send-input)
+          (hol-recentre))
+      (comint-send-string buf (concat string ";\n")))))
 
 (defun hol-backup ()
   "Perform a HOL backup."
   (interactive)
-  (send-raw-string-to-hol "goalstackLib.b()"))
+  (send-raw-string-to-hol "goalstackLib.b()" hol-echo-commands-p))
 
 (defun hol-print ()
   "Print the current HOL goal."
   (interactive)
-  (send-raw-string-to-hol "goalstackLib.p()"))
+  (send-raw-string-to-hol "goalstackLib.p()" hol-echo-commands-p))
 
 (defun hol-interrupt ()
   "Perform a HOL interrupt."
@@ -361,7 +399,8 @@ that the buffer has already had HOL terms, comments and strings removed."
 (defun hol-rotate (arg)
   "Rotate the goal stack N times.  Once by default."
   (interactive "p")
-  (send-raw-string-to-hol (format "goalstackLib.r %d" arg)))
+  (send-raw-string-to-hol (format "goalstackLib.r %d" arg)
+                          hol-echo-commands-p))
 
 (defun hol-scroll-up (arg)
   "Scrolls the HOL window."
@@ -382,7 +421,8 @@ that the buffer has already had HOL terms, comments and strings removed."
 (defun hol-use-file (filename)
   "Gets HOL session to \"use\" a file."
   (interactive "fFile to use: ")
-  (send-raw-string-to-hol (concat "use \"" filename "\";")))
+  (send-raw-string-to-hol (concat "use \"" filename "\";")
+                          hol-echo-commands-p))
 
 (defun hol-load-string (s)
   "Loads the ML object file NAME.uo; checking that it isn't already loaded."
@@ -496,24 +536,25 @@ or at level 10 with a bare prefix. "
 (defun hol-restart-goal ()
   "Restarts the current goal."
   (interactive)
-  (send-raw-string-to-hol "goalstackLib.restart()"))
+  (send-raw-string-to-hol "goalstackLib.restart()" hol-echo-commands-p))
 
 (defun hol-drop-goal ()
   "Drops the current goal."
   (interactive)
-  (send-raw-string-to-hol "goalstackLib.drop()"))
+  (send-raw-string-to-hol "goalstackLib.drop()" hol-echo-commands-p))
 
 (defun hol-open-string (module-name)
   "Opens HOL modules, prompting for the name of the module to load."
   (interactive "sName of module to (load and) open: ")
   (progn
     (hol-load-string module-name)
-    (send-raw-string-to-hol (concat "open " module-name))))
+    (send-raw-string-to-hol (concat "open " module-name) hol-echo-commands-p)))
 
 (defun hol-db-match (tm)
   "Does a DB.match [] on the given TERM (given as a string, without quotes)."
   (interactive "sTerm to match on: ")
-  (send-raw-string-to-hol (format "DB.match [] (Term`%s`)" tm)))
+  (send-raw-string-to-hol (format "DB.match [] (Term`%s`)" tm)
+                          hol-echo-commands-p))
 
 (define-key global-map "\M-h" 'hol-map)
 
