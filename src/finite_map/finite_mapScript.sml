@@ -37,19 +37,23 @@ local open pred_setLib listTheory in end
 
 val _ = new_theory "finite_map";
 
-val _ = set_fixity "'" (Infixl 2000);
+(*---------------------------------------------------------------------------*)
+(* Special notation. fmap application is set at the same level as function   *)
+(* application, meaning that                                                 *)
+(*                                                                           *)
+(*    * SOME (f ' x)    prints as   SOME (f ' x)                             *)
+(*    * (f x) ' y       prints as   f x ' y                                  *)
+(*    * (f ' x) y       prints as   f ' x y                                  *)
+(*    * f ' (x y)       prints as   f ' (x y)                                *)
+(*                                                                           *)
+(*   I think this is clearly best.                                           *)
+(*---------------------------------------------------------------------------*)
 
-(* same level as function application, meaning that
+val _ = set_fixity "'" (Infixl 2000);    (* fmap application *)
+val _ = set_fixity "|+"  (Infixl 600);   (* fmap update *)
+val _ = set_fixity "|++" (Infixl 500);   (* iterated update *)
+val _ = set_fixity "\\\\" (Infixl 600)   (* domain subtraction *)
 
-    * SOME (f ' x)    prints as   SOME (f ' x)
-    * (f x) ' y       prints as   f x ' y
-    * (f ' x) y       prints as   f ' x y
-    * f ' (x y)       prints as   f ' (x y)
-
-   I think this is clearly best.
-*)
-
-val _ = set_fixity "|+" (Infixl 600);
 
 (*---------------------------------------------------------------------------
         Definition of a finite map
@@ -734,7 +738,6 @@ val FUNION_DEF = new_specification
   ("FUNION_DEF", ["FUNION"],
    CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) union_lemma);
 
-
 val FUNION_FEMPTY_1 = Q.store_thm
 ("FUNION_FEMPTY_1",
  `!g. FUNION FEMPTY g = g`,
@@ -1061,8 +1064,6 @@ val fmap_domsub = new_definition(
   "fmap_domsub",
   ``(\\) fm k = DRESTRICT fm (COMPL {k})``);
 
-val _ = set_fixity "\\\\" (Infixl 600)
-
 val DOMSUB_FEMPTY = store_thm(
   "DOMSUB_FEMPTY",
   ``!k. FEMPTY \\ k = FEMPTY``,
@@ -1189,18 +1190,22 @@ val SUBMAP_FUPDATE = Q.store_thm
     Iterated updates
    ---------------------------------------------------------------------- *)
 
-val FUPDATE_LIST = new_infixl_definition
- ("FUPDATE_LIST", ``$FUPDATE_LIST = FOLDL FUPDATE``,500);
+val FUPDATE_LIST = 
+ new_definition
+  ("FUPDATE_LIST", 
+   ``FUPDATE_LIST = FOLDL FUPDATE``);
+
+val _ = overload_on ("|++", ``FUPDATE_LIST``);
 
 val FUPDATE_LIST_THM = store_thm(
   "FUPDATE_LIST_THM",
-  ``!f. (f FUPDATE_LIST [] = f) /\
-        (!h t. f FUPDATE_LIST (h::t) = (FUPDATE f h) FUPDATE_LIST t)``,
+  ``!f. (f |++ [] = f) /\
+        (!h t. f |++ (h::t) = (FUPDATE f h) |++ t)``,
   SRW_TAC [][FUPDATE_LIST]);
 
 val FUPDATE_LIST_APPLY_NOT_MEM = store_thm(
   "FUPDATE_LIST_APPLY_NOT_MEM",
-  ``!kvl f k. ~MEM k (MAP FST kvl) ==> ((f FUPDATE_LIST kvl) ' k = f ' k)``,
+  ``!kvl f k. ~MEM k (MAP FST kvl) ==> ((f |++ kvl) ' k = f ' k)``,
   Induct THEN SRW_TAC [][FUPDATE_LIST_THM] THEN
   Cases_on `h` THEN FULL_SIMP_TAC (srw_ss()) [FAPPLY_FUPDATE_THM]);
 
@@ -1274,7 +1279,7 @@ val _ = augment_srw_ss [rewrites [LMEM_THM]]
 
 val FDOM_FUPDATE_LIST = store_thm(
   "FDOM_FUPDATE_LIST",
-  ``!kvl fm. FDOM (fm FUPDATE_LIST kvl) =
+  ``!kvl fm. FDOM (fm |++ kvl) =
              FDOM fm UNION LMEM (MAP FST kvl)``,
   Induct THEN
   ASM_SIMP_TAC (srw_ss()) [FUPDATE_LIST_THM,
@@ -1283,7 +1288,7 @@ val FDOM_FUPDATE_LIST = store_thm(
 
 val FUPDATE_LIST_SAME_UPDATE = store_thm(
   "FUPDATE_LIST_SAME_UPDATE",
-  ``!kvl f1 f2. (f1 FUPDATE_LIST kvl = f2 FUPDATE_LIST kvl) =
+  ``!kvl f1 f2. (f1 |++ kvl = f2 |++ kvl) =
                 (DRESTRICT f1 (COMPL (LMEM (MAP FST kvl))) =
                  DRESTRICT f2 (COMPL (LMEM (MAP FST kvl))))``,
   Induct THENL [
@@ -1301,11 +1306,11 @@ val FUPDATE_LIST_SAME_UPDATE = store_thm(
 val FUPDATE_LIST_SAME_KEYS_UNWIND = store_thm(
   "FUPDATE_LIST_SAME_KEYS_UNWIND",
   ``!f1 f2 kvl1 kvl2.
-       (f1 FUPDATE_LIST kvl1 = f2 FUPDATE_LIST kvl2) /\
+       (f1 |++ kvl1 = f2 |++ kvl2) /\
        (MAP FST kvl1 = MAP FST kvl2) /\ ALL_DISTINCT (MAP FST kvl1) ==>
        (kvl1 = kvl2) /\
        !kvl. (MAP FST kvl = MAP FST kvl1) ==>
-             (f1 FUPDATE_LIST kvl = f2 FUPDATE_LIST kvl)``,
+             (f1 |++ kvl = f2 |++ kvl)``,
   CONV_TAC (BINDER_CONV SWAP_VARS_CONV THENC SWAP_VARS_CONV) THEN
   Induct THEN ASM_SIMP_TAC (srw_ss()) [FUPDATE_LIST_THM] THEN
   REPEAT GEN_TAC THEN
@@ -1328,7 +1333,7 @@ val FUPDATE_LIST_SAME_KEYS_UNWIND = store_thm(
 
 val lemma = prove(
   ``!kvl k fm. MEM k (MAP FST kvl) ==>
-               MEM (k, (fm FUPDATE_LIST kvl) ' k) kvl``,
+               MEM (k, (fm |++ kvl) ' k) kvl``,
   Induct THEN
   ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, FUPDATE_LIST_THM,
                            DISJ_IMP_THM, FORALL_AND_THM] THEN
@@ -1338,7 +1343,7 @@ val lemma = prove(
 
 val FM_CONCRETE_EQ_ENUMERATE_CASES = store_thm(
   "FMEQ_ENUMERATE_CASES",
-  ``!f1 kvl p. (f1 |+ p = FEMPTY FUPDATE_LIST kvl) ==> MEM p kvl``,
+  ``!f1 kvl p. (f1 |+ p = FEMPTY |++ kvl) ==> MEM p kvl``,
   SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, GSYM fmap_EQ_THM,
                        FDOM_FUPDATE, FDOM_FUPDATE_LIST, DISJ_IMP_THM,
                        FORALL_AND_THM, FDOM_FEMPTY] THEN
@@ -1352,7 +1357,7 @@ val FMEQ_SINGLE_SIMPLE_ELIM = store_thm(
                            P (fm |+ (k, nv))) =
                      (k = ck) /\ (v = cv) /\ P (FEMPTY |+ (ck, nv))``,
   REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
-    `FEMPTY |+ (ck, cv) = FEMPTY FUPDATE_LIST [(ck,cv)]`
+    `FEMPTY |+ (ck, cv) = FEMPTY |++ [(ck,cv)]`
        by SRW_TAC [][FUPDATE_LIST_THM] THEN
     `MEM (k,v) [(ck, cv)]` by PROVE_TAC [FM_CONCRETE_EQ_ENUMERATE_CASES] THEN
     FULL_SIMP_TAC (srw_ss()) [FUPDATE_LIST_THM] THEN

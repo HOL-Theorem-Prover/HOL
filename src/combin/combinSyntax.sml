@@ -15,7 +15,7 @@ fun mk_K(x,y) =
                      beta |-> type_of y]K_tm, [x,y]);
 
 fun mk_K_1 (tm,ty) = mk_comb(inst [alpha |-> type_of tm,
-                                  beta  |-> ty] K_tm,tm)
+                                   beta  |-> ty] K_tm,tm)
 
 fun mk_S(f,g,x) = 
  let val (fdom,frng) = dom_rng(type_of f)
@@ -47,19 +47,21 @@ fun mk_o(f,g) =
       (inst [alpha |-> gdom, beta |-> frng, gamma |-> fdom] o_tm, [f,g])
  end;
 
-val dest_K = dest_binop K_tm (ERR "dest_K"   "not K")
-val dest_S = dest_triop S_tm (ERR "dest_S"   "not S")
-val dest_I = dest_monop I_tm (ERR "dest_I"   "not I")
-val dest_C = dest_triop C_tm (ERR "dest_C"   "not C")
-val dest_W = dest_binop W_tm (ERR "dest_W"   "not W")
-val dest_o = dest_binop o_tm (ERR "dest_o"   "not o")
+val dest_K   = dest_binop K_tm (ERR "dest_K"   "not K")
+val dest_K_1 = dest_monop K_tm (ERR "dest_K_1" "not K")
+val dest_S   = dest_triop S_tm (ERR "dest_S"   "not S")
+val dest_I   = dest_monop I_tm (ERR "dest_I"   "not I")
+val dest_C   = dest_triop C_tm (ERR "dest_C"   "not C")
+val dest_W   = dest_binop W_tm (ERR "dest_W"   "not W")
+val dest_o   = dest_binop o_tm (ERR "dest_o"   "not o")
 
-val is_K = can dest_K
-val is_S = can dest_S
-val is_I = can dest_I
-val is_C = can dest_C
-val is_W = can dest_W
-val is_o = can dest_o
+val is_K   = can dest_K
+val is_K_1 = can dest_K_1
+val is_S   = can dest_S
+val is_I   = can dest_I
+val is_C   = can dest_C
+val is_W   = can dest_W
+val is_o   = can dest_o
 
 val fail_tm = prim_mk_const{Name="FAIL", Thy="combin"};
 

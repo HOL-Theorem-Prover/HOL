@@ -16,35 +16,9 @@ local open combinTheory in end;
 val _ = new_theory "relation";
 
 (*---------------------------------------------------------------------------*)
-(* Closures                                                                  *)
+(* Basic properties of relations.                                            *)
 (*---------------------------------------------------------------------------*)
 
-val TC_DEF = Q.new_definition
-  ("TC_DEF",
-   `TC (R:'a->'a->bool) a b =
-     !P.(!x y. R x y ==> P x y) /\
-        (!x y z. P x y /\ P y z ==> P x z)  ==> P a b`);
-
-val RTC_DEF = new_definition(
-  "RTC_DEF",
-  ``RTC (R : 'a -> 'a -> bool) a b =
-      !P.  (!x. P x x) /\
-           (!x y z. R x y /\ P y z ==> P x z) ==>
-           P a b``);
-
-val RC_DEF = new_definition(
-  "RC_DEF",
-  ``RC (R:'a->'a->bool) x y = (x = y) \/ R x y``);
-
-val SC_DEF = new_definition(
-  "SC_DEF",
-  ``SC (R:'a->'a->bool) x y = R x y \/ R y x``);
-
-val EQC_DEF = new_definition(
-  "EQC_DEF",
-  ``EQC (R:'a->'a->bool) = RC (TC (SC R))``);
-
-(* corresponding properties of relations *)
 val transitive_def =
 Q.new_definition
 ("transitive_def",
@@ -68,11 +42,38 @@ val antisymmetric_def = new_definition(
 
 val equivalence_def = new_definition(
   "equivalence_def",
-  ``equivalence (R:'a->'a->bool) = reflexive R /\ symmetric R /\
-                                   transitive R``);
+  ``equivalence (R:'a->'a->bool) = reflexive R /\ symmetric R /\ transitive R``);
 
 val total_def = new_definition 
 ("total_def", Term`total (R:'a->'a->bool) = !x y. R x y \/ R y x`);
+
+(*---------------------------------------------------------------------------*)
+(* Closures                                                                  *)
+(*---------------------------------------------------------------------------*)
+
+val TC_DEF = Q.new_definition
+  ("TC_DEF",
+   `TC (R:'a->'a->bool) a b =
+     !P.(!x y. R x y ==> P x y) /\
+        (!x y z. P x y /\ P y z ==> P x z)  ==> P a b`);
+
+val RTC_DEF = new_definition(
+  "RTC_DEF",
+  ``RTC (R : 'a -> 'a -> bool) a b =
+      !P.  (!x. P x x) /\
+           (!x y z. R x y /\ P y z ==> P x z) ==> P a b``);
+
+val RC_DEF = new_definition(
+  "RC_DEF",
+  ``RC (R:'a->'a->bool) x y = (x = y) \/ R x y``);
+
+val SC_DEF = new_definition(
+  "SC_DEF",
+  ``SC (R:'a->'a->bool) x y = R x y \/ R y x``);
+
+val EQC_DEF = new_definition(
+  "EQC_DEF",
+  ``EQC (R:'a->'a->bool) = RC (TC (SC R))``);
 
 val SC_SYMMETRIC = store_thm(
   "SC_SYMMETRIC",
