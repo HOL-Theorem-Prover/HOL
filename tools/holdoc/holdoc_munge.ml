@@ -1,4 +1,4 @@
-(* holdoc_munge.ml -- process HOL LTS or TeX or HOL into LaTeX code (library) *)
+ (* holdoc_munge.ml -- process HOL LTS or TeX or HOL into LaTeX code (library) *)
 (* Keith Wansbrough 2001 *)
 
 (* TO DO list now moved to holdoc-guide.txt, wish list section. *)
@@ -112,7 +112,7 @@ and parse_hol = parser
   | [< 'HolStartTeX; ts = parse_tex; ts' = parse_hol >] -> HolStartTeX :: ts @ ts'
   | [< 't;                           ts' = parse_hol >] -> t :: ts'
 
-and sp = parser
+and sp = parser (* zero or more white space on one line *)
     [< 'White(s)                  ; s1 = sp >] -> White(s)     :: s1
   | [< 'Comment(c)                ; s1 = sp >] -> Comment(c)   :: s1
   | [<>]                                   -> []
@@ -126,7 +126,7 @@ and ids_nocomm = parser
   | [< 'White(_)      ; ss = ids_nocomm >] -> ss
   | [<>]                                   -> []
 
-and sp' = parser (* zero or more white space *)
+and sp' = parser (* zero or more white space, may be multiline *)
     [< 'White(s)                  ; s1 = sp' >] -> White(s)     :: s1
   | [< 'Indent(n)                 ; s1 = sp' >] -> Indent(n)    :: s1
   | [< 'Comment(c)                ; s1 = sp' >] -> Comment(c)   :: s1
@@ -188,9 +188,9 @@ let texify_command s =
                                 (Str.matched_string s)
                                 + int_of_char 'A' - 1))
   in
-  "\\" ^ Str.global_replace    (Str.regexp "[^A-Za-z0-9]") "X"
-        (Str.global_substitute (Str.regexp "[0-9]+"      )  f
-                               s)
+   Str.global_replace    (Str.regexp "[^A-Za-z0-9]") "X"
+  (Str.global_substitute (Str.regexp "[0-9]+"      )  f
+                         s)
 
 
 let sepBy sep ss =
@@ -374,7 +374,7 @@ let mdir v n ts = (* munge a directive *)
                           raise BadDirective
   in
   match n with
-    "SHOWRULE" -> "\\showrule{"^texify_command (go ts)^"}%"  (* NB: don't put TeX after a showrule! *)
+    "SHOWRULE" -> "\\showrule{\\"^texify_command (go ts)^"}%"  (* NB: don't put TeX after a showrule! *)
   | _          -> ""
 
 let balanced = [ ("(",")"); ("[","]"); ("{","}")]
@@ -552,7 +552,8 @@ double square brackets like this: [[Flags(T,F)]].
 (* the rule type *)
 
 type rule_body =
-    { v : string list;
+    { seccomment : token list option;  (* at top of set of rules *)
+      v : string list;
       n : string;
       rp : string list;
       cat : string list;
@@ -582,7 +583,7 @@ let print_tokenline toks =
 
 let print_rule ruleordefn =
   match ruleordefn with
-    Rule{v=v;n=n;rp=rp;cat=cat;desc=desc;lhs=lhs;lab=lab;rhs=rhs;side=side;comm=comm} ->
+    Rule{seccomment=seccomment;v=v;n=n;rp=rp;cat=cat;desc=desc;lhs=lhs;lab=lab;rhs=rhs;side=side;comm=comm} ->
       print_string ("Rule "^n^" (");
       ignore (List.map (function s -> print_string (s^" ")) rp);
       print_string ", ";
@@ -616,10 +617,7 @@ let print_rule ruleordefn =
 
 (* parsing a rule *)
 
-let rec parse_rule = parser
-    [< 'Sep("("); _ = sp; r1 = parse_rule1 >] -> r1
-  | [<>] -> raise (Stream.Error("rule begin: `('"));
-and parse_rule1 = parser
+let rec parse_rule1 seccomment = parser
     [< 'Ident("!",_); v = rule_vars; _ = sp; 'Sep(".") ?? "expected: .";
        _ = sp';
        (n,rp,cat,desc) = rule_name;
@@ -648,7 +646,7 @@ and parse_rule1 = parser
          in
          let (lhs,lab,rhs) = go l_lab_r []
          in
-         Rule{v=v;n=n;rp=rp;cat=cat;desc=desc;lhs=lhs;lab=lab;rhs=rhs;side=side;comm=comm}
+         Rule{seccomment=seccomment;v=v;n=n;rp=rp;cat=cat;desc=desc;lhs=lhs;lab=lab;rhs=rhs;side=side;comm=comm}
   | [<>] -> raise (Stream.Error("!"));
 
 and parse_definition no = parser
@@ -682,15 +680,18 @@ and parse_rules_and_process p = parser
   | [< '_                      ; rs = parse_rules_and_process p  >] -> rs
   | [<>] -> []
 and parse_rules_ap0 p = parser
-    [< 'Backtick; _ = sp'; rs = parse_rules_ap1 p >] -> rs
+    [< 'Backtick; _ = sp'; 
+       seccomment = optcomm; _ = sp';
+       rs = parse_rules_ap1 seccomment p >] -> rs
   | [< rs = parse_rules_and_process p             >] -> rs
-and parse_rules_ap1 p = parser
-    [< 'Sep("("); _ = sp; r = (function ts -> p (parse_rule1 ts)); _ = sp';
+and parse_rules_ap1 seccomment p = parser
+    [< 'Sep("("); _ = sp; r = (function ts -> p (parse_rule1 seccomment ts)); _ = sp';
        rs = parse_rules_ap2 p >] -> r :: rs
   | [<>]                         -> []
 and parse_rules_ap2 p = parser
     [< 'Ident("/\\",_); _ = sp';
-       rs = parse_rules_ap1 p >] -> rs
+       seccomment = optcomm; _ = sp';
+       rs = parse_rules_ap1 seccomment p >] -> rs
   | [< 'Backtick >]              -> []
   | [<>]                         -> raise (Stream.Error("expected /\\ or `"))
 and parse_definition_ap0 no p = parser
@@ -758,7 +759,7 @@ and pot_l ts = potential_vars_line ts;;
 
 let potential_vars ruleordefn =
   match ruleordefn with
-    Rule{v=v;n=n;rp=rp;cat=cat;desc=desc;lhs=lhs;lab=lab;rhs=rhs;side=side;comm=comm} ->
+    Rule{v=v;desc=desc;lhs=lhs;lab=lab;rhs=rhs;side=side;comm=comm} ->
       v              (* bound at top *)
                      (* bound in each bit... *)
       @ (match desc with Some c -> pot_l c | None -> [])
@@ -798,7 +799,7 @@ let rec roman n =
   | None      -> if n = 0 then "" else raise Not_found;;
 
 let defctr = ref (1:int);;
-let gendefname () = let n = !defctr in defctr := n+1; "\\defn" ^ roman n;;
+let gendefname () = let n = !defctr in defctr := n+1; "defn" ^ roman n;;
 
 let getname ls =
   let rec go ts =
@@ -815,13 +816,17 @@ let getname ls =
 
 let latex_rule ruleordefn =
   match ruleordefn with
-    Rule{v=v;n=n;rp=rp;cat=cat;desc=desc;lhs=lhs;lab=lab;rhs=rhs;side=side;comm=comm} as r->
+    Rule{seccomment=seccomment;v=v;n=n;rp=rp;cat=cat;desc=desc;lhs=lhs;lab=lab;rhs=rhs;side=side;comm=comm} as r->
       (* DEBUG:  let _ = print_rule r in *)
       let pvs      = potential_vars r
       in
       let texname  = texify_command n
       in
-      print_string ("\\newcommand{"^texname^"}{\\rrule"^(if side = [] then "n" else "c")
+      (match seccomment with
+        Some c -> print_string ("\\newcommand{\\seccomm"^texname^"}{\\seccomm{"^munge pvs c []^"}}\n")
+      | None   -> ()
+      );
+      print_string ("\\newcommand{\\"^texname^"}{\\rrule"^(if side = [] then "n" else "c")
                              ^(match comm with Some _ -> "c" | None -> "n"));
       print_string ("{"^texify n^"}{"^texifys " " rp^": "^texifys " " cat^"}");
       print_string ("{"^(match desc with Some d -> munge pvs d [] | None -> "")^"}\n");
@@ -834,7 +839,7 @@ let latex_rule ruleordefn =
          Some c -> print_string (munge pvs c [])
        | None   -> ());
       print_string "}}\n\n";
-      texname
+      (match seccomment with Some _ -> ["seccomm"^texname] | None -> []) @ [texname]
   | Definition{e=e;no=no} ->
       let pvs      = pot_s e
       in
@@ -847,8 +852,8 @@ let latex_rule ruleordefn =
       in
       let texname = gendefname()
       in
-      print_string ("\\newcommand{"^texname^"}{\\ddefn{"^namepart^"}{"^munges pvs e^"}\n}\n\n");
-      texname
+      print_string ("\\newcommand{\\"^texname^"}{\\ddefn{"^namepart^"}{"^munges pvs e^"}\n}\n\n");
+      [texname]
 
 (* ------------------------------------------------------------ *)
 (* renderer entry points                                        *)
@@ -866,8 +871,9 @@ let get_inchan () =
 let lts_latex_render () =
   let tokstream = holtokstream (get_inchan ()) in
   let _        = print_string "%%%% AUTOGENERATED FILE (from LTS source) -- DO NOT EDIT! %%%%\n" in
-  let rulecmds = parse_rules_and_process latex_rule tokstream in
-  let go rn    = print_string ("\\showrule{"^rn^"}\n")
+  let rulecmdss = parse_rules_and_process latex_rule tokstream in
+  let rulecmds = List.concat rulecmdss in
+  let go rn    = print_string ("\\showrule{\\"^rn^"}\n")
   in
   print_string "\\newcommand{\\dumpallrules}{\n";
   ignore (List.map go rulecmds);
