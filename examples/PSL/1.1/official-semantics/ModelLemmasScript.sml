@@ -20,13 +20,13 @@ map load
   "FinitePathTheory", "PathTheory", "UnclockedSemanticsTheory",
   "SyntacticSugarTheory", "ClockedSemanticsTheory", "RewritesTheory", 
   "RewritesPropertiesTheory","ProjectionTheory",
-  "rich_listTheory", "res_quanLib", "res_quanTheory"];
+  "rich_listTheory", "res_quanLib", "res_quanTheory", "metisLib"];
 open SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
      RewritesPropertiesTheory ProjectionTheory pred_setLib res_quanTools
      arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
-     ClockedSemanticsTheory pairLib pred_setTheory ModelTheory
-     FinitePathTheory PathTheory;    (* Open after list theores for CONS_def *)
+     ClockedSemanticsTheory pairLib pred_setTheory ModelTheory metisLib
+     FinitePathTheory PathTheory;    (* Open after list theory for CONS_def *)
 val _ = intLib.deprecate_int();
 quietdec := false;
 *)
@@ -44,7 +44,7 @@ open SyntaxTheory SyntacticSugarTheory
      pred_setLib pred_setTheory arithmeticTheory listTheory rich_listTheory 
      res_quanLib pairLib res_quanTheory ModelTheory ClockedSemanticsTheory 
      res_quanTools RewritesPropertiesTheory ProjectionTheory ModelTheory
-     FinitePathTheory PathTheory;    (* Open after list theores for CONS_def *)
+     metisLib FinitePathTheory PathTheory; (* Open after list theory for CONS_def *)
 
 (******************************************************************************
 * Set default parsing to natural numbers rather than integers 
@@ -911,6 +911,13 @@ val UF_INFINITE_VALID_def =
         ==> 
         UF_SEM (MAP_PATH (\s. STATE (M.L s)) (INFINITE pi)) f`;
 
+val UF_FINITE_VALID_def =
+ Define
+  `UF_FINITE_VALID M f =
+   !pi. COMPUTATION M (FINITE pi) 
+        ==> 
+        UF_SEM (MAP_PATH (\s. STATE (M.L s)) (FINITE pi)) f`;
+
 val IN_COMPUTATION =
  store_thm
   ("IN_COMPUTATION",
@@ -1013,5 +1020,103 @@ val OPEN_MODEL_PROD_INFINITE =
                (INFINITE (\n. (pi (FST (pi' n)),t''' n)))) f`
            by PROVE_TAC[]
      THEN FULL_SIMP_TAC (srw_ss()++resq_SS) [PATH_def,MAP_PATH_def]);
+
+(*
+val FST_SND_LEMMA =
+ prove
+  (``!p x y. (p = (x,y)) = (x = FST p) /\ (y = SND p)``,
+   Cases_on `p`
+    THEN ZAP_TAC std_ss []);
+
+val OPEN_MODEL_PROD_FINITE =
+ store_thm
+  ("OPEN_MODEL_PROD_FINITE",
+   ``AUTOMATON A /\ UF_VALID (MODEL_AUTOMATON_PROD (OPEN_MODEL P) A) f
+     ==>
+     !pi. COMPUTATION (OPEN_MODEL P) (FINITE pi)
+          ==>
+          UF_FINITE_VALID 
+           (MODEL_AUTOMATON_PROD (COMPUTATION_TO_MODEL(FINITE pi)) A)
+           f``,
+    RW_TAC (srw_ss()++resq_SS)
+     [AUTOMATON_def,UF_VALID_def,UF_FINITE_VALID_def,MODEL_AUTOMATON_PROD_def,
+      OPEN_MODEL_def,COMPUTATION_def,IN_COMPUTATION,COMPUTATION_TO_MODEL_def,PATH_def]
+     THEN FULL_SIMP_TAC list_ss 
+           [FST_LEMMA,PROVE[]``(!v. (?s. P s v) ==> Q v) = !v s. P s v ==> Q v``,
+            MAP_PATH_def]
+     THEN RW_TAC list_ss []
+     THEN `~(pi' = [])` by PROVE_TAC[LENGTH_NIL, DECIDE``m:num > 0 ==> ~(m=0)``]
+     THEN ASSUM_LIST
+           (fn thl => ASSUME_TAC
+                       (SPECL 
+                         [``FINITE
+                             (MAP 
+                               (\s. ({p | FST s < LENGTH pi /\ p IN EL (FST s) pi}, SND s:'b))
+                               (pi':(num # 'b) list))``,
+                          ``(HD(pi:('a -> bool) list), t:'b)``] 
+                         (el 12 thl)))
+     THEN FULL_SIMP_TAC list_ss [MAP_PATH_def,MAP_MAP_o,LemmasTheory.LAMBDA_COMP,FST_SND_LEMMA]
+     THEN POP_ASSUM
+           (fn th => 
+            ASSUM_LIST(fn thl => ASSUME_TAC
+                                  (SIMP_RULE (srw_ss()++resq_SS++ARITH_ss) 
+                                  ([PATH_def,HD_MAP,TL_MAP,EL_MAP,LENGTH_TL,SUBSET_DEF]@thl)th)))
+     THEN `(HD pi = EL (FST (HD pi')) pi)` by PROVE_TAC[EL]
+     THEN POP_ASSUM(fn th => FULL_SIMP_TAC list_ss [th])
+     THEN `SND (HD pi') IN A.Q` by PROVE_TAC[SUBSET_DEF]
+     THEN POP_ASSUM(fn th => FULL_SIMP_TAC list_ss [th])
+     THEN `(!x. x IN EL (FST (HD pi')) pi ==> x IN P)` by PROVE_TAC[SUBSET_DEF]
+     THEN POP_ASSUM(fn th => FULL_SIMP_TAC list_ss [th])
+     THEN FULL_SIMP_TAC list_ss [GSYM SUBSET_DEF]
+     THEN FULL_SIMP_TAC list_ss [PROVE[]``A ==> B /\ C /\ B /\ C /\ D = A ==> B /\ C /\ D``]
+     THEN `!n. n < LENGTH pi' - 1 ==> FST (EL n pi') + 1 < LENGTH pi` by PROVE_TAC[]
+     THEN FULL_SIMP_TAC arith_ss [DECIDE  ``(m:num) + (1:num) < (n:num) = (m < n - 1)``]
+     THEN `!n. n < LENGTH pi' - 1 ==> EL (FST (EL n pi')) pi SUBSET P` by PROVE_TAC[]
+     THEN `!n. n < LENGTH pi' - 1 
+               ==> (SND (EL n pi'),
+                    {p | FST (EL n pi') < LENGTH pi /\ p IN EL (FST (EL n pi')) pi},
+                    SND (EL n (TL pi'))) IN A.Delta` 
+          by METIS_TAC[]
+     THEN `!n. n < LENGTH pi' - 1 ==> FST (EL n pi') < LENGTH pi` by PROVE_TAC[]
+     THEN POP_ASSUM(fn th => FULL_SIMP_TAC list_ss [th,GSPEC_ID]);
+     THEN FULL_SIMP_TAC list_ss [DECIDE``~A \/ ~B \/ ~C = A ==> B ==> ~C``]
+     THEN FULL_SIMP_TAC list_ss [DECIDE``A \/ B \/ ~C = ~A ==> ~B ==> ~C``]
+     THEN FULL_SIMP_TAC list_ss [DECIDE``(~A \/ ~B) \/ C = A /\ B ==> C``]
+     THEN FULL_SIMP_TAC list_ss [DECIDE``~A \/ B = A ==> B``]
+     THEN FULL_SIMP_TAC list_ss [PROVE [] ``(!x. P /\ Q x ==> R x) = P ==> !x. Q x ==> R x``]
+     THEN FULL_SIMP_TAC list_ss [GSYM SUBSET_DEF]
+     THEN FULL_SIMP_TAC list_ss [PROVE [] ``A ==> ~B = B ==> ~A``]
+
+     THEN FULL_SIMP_TAC list_ss [PROVE[]``(?x. P x) ==>
+
+     THEN `n < LENGTH pi' - 1 ==> EL (FST (EL n (TL pi'))) pi SUBSET P` by PROVE_TAC[]
+
+EL (FST (EL n pi')) pi = {p | FST (EL n pi') < LENGTH pi /\ p IN EL (FST (EL n pi')) pi}
+     
+
+(\s. STATE {p | FST s < LENGTH pi /\ p IN EL (FST s) pi}) = ((\s''. STATE (FST s'')) o foo)
+
+{p | FST s < LENGTH pi /\ p IN EL (FST s) pi} = FST(foo s)
+
+foo s = ({p | FST s < LENGTH pi /\ p IN EL (FST s) pi},
+
+:num # 'b -> ('a -> bool) # 'b) (pi':(num # 'b) list)):((('a -> bool) # 'b)) path``,
+     THEN ASSUM_LIST(fn thl => FULL_SIMP_TAC list_ss [MAP_PATH_def,el 8 thl, el 11 thl])
+
+     THEN `PATH
+            <|S := {(s,t) | s SUBSET P /\ t IN A.Q};
+              S0 := {(s,t) | s SUBSET P /\ t IN A.Q0};
+              R :=
+                {((s,t),s',t') |
+                 (s SUBSET P /\ s' SUBSET P) /\ (t,s,t') IN A.Delta};
+              P := P; L := (\(s,t). s)|> (pi 0,t)
+            (FINITE (\n. (pi:num -> 'a -> bool (FST (pi':num -> num # 'b n)),t''' n))) 
+            ==>
+            UF_SEM
+              (MAP_PATH (\s'. STATE (FST s'))
+               (FINITE (\n. (pi (FST (pi' n)),t''' n)))) f`
+           by PROVE_TAC[]
+     THEN FULL_SIMP_TAC (srw_ss()++resq_SS) [PATH_def,MAP_PATH_def]);
+*)
 
 val _ = export_theory();
