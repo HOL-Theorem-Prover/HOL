@@ -16,30 +16,30 @@ fun normPath s = Path.toString(Path.fromString s)
 fun itstrings f [] = raise Fail "itstrings: empty list"
   | itstrings f [x] = x
   | itstrings f (h::t) = f h (itstrings f t);
-fun fullPath slist = normPath 
+fun fullPath slist = normPath
    (itstrings (fn chunk => fn path => Path.concat (chunk,path)) slist);
 
 fun quote s = String.concat["\"", s, "\""];
 
 local val Holmake_path = fullPath [HOLDIR, "bin/Holmake"]
 in
-fun Holmake dir = 
-  if Process.system Holmake_path = Process.success 
+fun Holmake dir =
+  if Process.system Holmake_path = Process.success
   then ()
   else (print ("Build failed in directory "^dir^"\n");
         raise Fail "Couldn't make directory")
 end;
 
 
-fun gnumake dir = 
-  if Process.system GNUMAKE = Process.success 
+fun gnumake dir =
+  if Process.system GNUMAKE = Process.success
   then ()
   else (print ("Build failed in directory "^dir
                 ^" ("^GNUMAKE^" failed).\n");
         raise Fail "Couldn't make directory");
 
 (*---------------------------------------------------------------------------
-           Compile a HOL directory in place. Some libraries, 
+           Compile a HOL directory in place. Some libraries,
            e.g., the robdd libraries, need special treatment.
  ---------------------------------------------------------------------------*)
 
@@ -51,7 +51,7 @@ fun build_dir dir =
    if (d = "robdd" orelse d = "muddy")
    then let val buddy_dir = Path.concat(dir,
                   if d="robdd" then "buddy16" else "buddy17")
-        in  
+        in
              FileSys.chDir buddy_dir;
              print ("Working in directory "^buddy_dir^"\n");
              gnumake buddy_dir;
@@ -62,14 +62,17 @@ fun build_dir dir =
         end handle _ => print(String.concat["\n", d,
                  "Lib has NOT been built!! (continuing anyway).\n\n"])
    else Holmake dir
-  end
+  end handle OS.SysErr(s, erropt) =>
+    (print ("OS error: "^s^" - "^
+            (case erropt of SOME s' => OS.errorMsg s' | _ => "") ^ "\n");
+     Process.exit Process.failure)
 
 (*
 fun build_dir dir =
   let val _ = FileSys.chDir dir
       val _ = print ("Working in directory "^dir^"\n")
   in
-    case Path.splitDirFile dir 
+    case Path.splitDirFile dir
      of {file="robdd",...} =>
           (let val buddy_dir = Path.concat(dir,"buddy16")
            in
@@ -80,14 +83,14 @@ fun build_dir dir =
              print ("Working in directory "^dir^"\n");
              Holmake dir;
              gnumake dir
-           end handle _ => 
+           end handle _ =>
              print"\nrobddLib has NOT been built!! (continuing anyway).\n\n")
       | otherwise => Holmake dir
   end
 *)
 
 (*---------------------------------------------------------------------------
-      Arrange for all executables and relevant .sig files 
+      Arrange for all executables and relevant .sig files
       to reside in a common directory.
  ---------------------------------------------------------------------------*)
 
@@ -98,7 +101,11 @@ fun map_dir f dir =  (* map a function over the files in a directory *)
          of NONE => FileSys.closeDir dstrm
           | SOME file => (f (dir,file) ; loop())
   in loop()
-  end;
+  end handle OS.SysErr(s, erropt) =>
+    (print ("OS error: "^s^" - "^
+            (case erropt of SOME s' => OS.errorMsg s' | _ => "") ^ "\n");
+     Process.exit Process.failure);
+
 
 fun copy file path =  (* Dead simple file copy *)
  let open TextIO
@@ -110,16 +117,16 @@ fun copy file path =  (* Dead simple file copy *)
   in loop()
   end;
 
-fun link s1 s2 = 
+fun link s1 s2 =
   let open Process
-  in if system (String.concat[LN_S," ",s1," ",s2]) = success then () 
-     else (print ("Unable to link file "^quote s1^" to file "^quote s2^".\n"); 
+  in if system (String.concat[LN_S," ",s1," ",s2]) = success then ()
+     else (print ("Unable to link file "^quote s1^" to file "^quote s2^".\n");
            raise Fail "link")
   end;
 
 fun transfer_file symlink targetdir (df as (dir,file)) =
   let val cp = if symlink then link else copy
-      fun mv s1 s2 = 
+      fun mv s1 s2 =
         let val s1' = normPath s1
             val s2' = normPath s2
         in
@@ -137,32 +144,36 @@ fun transfer_file symlink targetdir (df as (dir,file)) =
   end;
 
 (*---------------------------------------------------------------------------
-        Transport a compiled directory to another location. The 
+        Transport a compiled directory to another location. The
         symlink argument says whether this is via a symbolic link,
-        or by copying. The ".uo", ".ui", ".so", and ".sig" files are 
+        or by copying. The ".uo", ".ui", ".so", and ".sig" files are
         transported.
  ---------------------------------------------------------------------------*)
 
-fun upload (src,target,symlink) = 
+fun upload (src,target,symlink) =
   (print ("Uploading files to "^target^"\n");
-   map_dir (transfer_file symlink target) src);
+   map_dir (transfer_file symlink target) src)
+        handle OS.SysErr(s, erropt) =>
+          (print ("OS error: "^s^" - "^
+                  (case erropt of SOME s' => OS.errorMsg s' | _ => "") ^ "\n");
+           Process.exit Process.failure)
 
 
 (*---------------------------------------------------------------------------
     For each element in SRCDIRS, build it, then upload it to SIGOBJ.
-    This allows us to have the build process only occur w.r.t. SIGOBJ 
+    This allows us to have the build process only occur w.r.t. SIGOBJ
     (thus requiring only a single place to look for things).
  ---------------------------------------------------------------------------*)
-fun build_src symlink = 
-   List.app (fn s => (build_dir s; upload(s,SIGOBJ,symlink))) 
+fun build_src symlink =
+   List.app (fn s => (build_dir s; upload(s,SIGOBJ,symlink)))
             SRCDIRS;
 
-fun rem_file f = 
- FileSys.remove f 
+fun rem_file f =
+ FileSys.remove f
    handle _ => (print ("Trouble with removing file "^f^"?\n"); ());
 
 
-fun clean_sigobj() = 
+fun clean_sigobj() =
   let val _ = print ("Cleaning out "^SIGOBJ^"\n")
   in
     map_dir (rem_file o normPath o Path.concat) SIGOBJ
@@ -171,7 +182,7 @@ fun clean_sigobj() =
 fun build_hol symlink =
   let val _ = clean_sigobj()
       val _ = build_src symlink
-  in 
+  in
     print "\nHol built successfully.\n"
   end;
 
@@ -188,16 +199,16 @@ fun suffixCheck s =
  in (("Script" = String.extract(s,len-lenScript,NONE)) orelse raise Subscript)
     handle Subscript
     =>  let val suffix = String.extract(s,len - lenTheory_ext, NONE)
-        in (len > 10 
+        in (len > 10
             andalso ((suffix = "Theory.sig") orelse (suffix = "Theory.sml")))
            orelse raise Subscript
          end
         handle Subscript => false
   end
 end;
-  
-fun cleandir dir = 
-  let fun efile s = 
+
+fun cleandir dir =
+  let fun efile s =
         case Path.ext s
          of SOME "ui" => true
           | SOME "uo" => true
@@ -205,17 +216,17 @@ fun cleandir dir =
           | SOME "o"  => true         (* for robddLib *)
           |    _      => suffixCheck s
       fun del (d,f) = if efile f then rem_file (fullPath [d,f]) else ()
-  in 
+  in
     map_dir del dir
   end;
 
 fun cleanAlldir dir = (* clean directory d and also remove d/DEPDIR *)
   let val _ = cleandir dir
       val depdir = Path.concat(dir,DEPDIR)
-  in 
+  in
     if (FileSys.isDir depdir handle _ => false)
     then (map_dir (rem_file o normPath o Path.concat) depdir;
-          FileSys.rmDir depdir handle e 
+          FileSys.rmDir depdir handle e
            => (print ("Unable to remove directory "^depdir^".\n"); ()))
     else ()
   end;
@@ -227,8 +238,8 @@ val help_mesg = "Usage: build\n\
                                 \  or: build -symlink\n\
                                 \  or: build -clean\n\
                                 \  or: build -cleanAll.";
-val _ = 
-  case Mosml.argv () 
+val _ =
+  case Mosml.argv ()
    of [_]             => build_hol false (* no symbolic linking *)
     | [_,"-symlink"]  => build_hol true  (*    symbolic linking *)
     | [_,"-clean"]    => clean_dirs cleandir
