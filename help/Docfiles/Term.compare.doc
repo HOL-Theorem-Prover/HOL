@@ -1,6 +1,6 @@
-\DOC compare 
+\DOC compare
 
-\TYPE {compare : term * term -> order}
+\TYPE {Term.compare : term * term -> order}
 
 \SYNOPSIS
 Ordering on terms.
@@ -26,7 +26,7 @@ Never fails.
 }
 
 \COMMENTS
-Used to build high performance datastructures for dealing with sets 
+Used to build high performance datastructures for dealing with sets
 having many terms.
 
 \SEEALSO

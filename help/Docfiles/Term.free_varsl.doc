@@ -1,5 +1,5 @@
-\DOC free_varsl 
-`
+\DOC free_varsl
+
 \TYPE {free_varsl : term list -> term list}
 
 \SYNOPSIS
@@ -9,7 +9,7 @@ Returns the set of free variables in a list of terms.
 variable, term.
 
 \DESCRIBE
-An invocation {free_varsl [t1,...,tn]} returns a list representing 
+An invocation {free_varsl [t1,...,tn]} returns a list representing
 the set of free term variables occurring in {t1,...,tn}.
 
 \FAILURE
@@ -17,7 +17,7 @@ Never fails.
 
 \EXAMPLE
 {
-- free_varsl [Term `x /\ y /\ y ==> x`, 
+- free_varsl [Term `x /\ y /\ y ==> x`,
               Term `!x. x ==> p ==> y`];
 > val it = [`x`, `y`, `p`] : term list
 }
@@ -31,7 +31,7 @@ Demanding applications should be coded with {FVL}.
 
 
 \SEEALSO
-Term.FVL, Term.free_vars_lr, Term.free_vars, 
+Term.FVL, Term.free_vars_lr, Term.free_vars,
 Term.empty_varset, Type.type_vars.
 
 \ENDDOC

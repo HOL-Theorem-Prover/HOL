@@ -1,5 +1,5 @@
-\DOC all_vars 
-`
+\DOC all_vars
+
 \TYPE {all_vars : term -> term list}
 
 \SYNOPSIS

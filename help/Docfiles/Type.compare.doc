@@ -1,6 +1,6 @@
-\DOC compare 
+\DOC compare
 
-\TYPE {compare : hol_type * hol_type -> order}
+\TYPE {Type.compare : hol_type * hol_type -> order}
 
 \SYNOPSIS
 An ordering on HOL types.
@@ -23,9 +23,9 @@ Never fails.
 
 \COMMENTS
 One use of {compare} is to build efficient set or dictionary
-datastructures involving HOL types in the keys. 
+datastructures involving HOL types in the keys.
 
-There is also a {Term.compare}. 
+There is also a {Term.compare}.
 
 \SEEALSO
 Term.compare.

@@ -5,12 +5,12 @@
 \SYNOPSIS Tests whether a predicate holds throughout a list.
 
 \DESCRIBE
-{all P [x1,...,xn]} equals {P x1 andalso .... andalso P xn}. 
+{all P [x1,...,xn]} equals {P x1 andalso .... andalso P xn}.
 {all P []} yields {true}.
 
 \FAILURE
-If {P x0,...,P x(j-1}} all evaluate to {true} and {P xj} raises an
-exception {e}, then {all P [x0,...,x(j-1),xj,...,xn]} raises {e}. 
+If {P x0,...,P x(j-1)} all evaluate to {true} and {P xj} raises an
+exception {e}, then {all P [x0,...,x(j-1),xj,...,xn]} raises {e}.
 
 \EXAMPLE
 {
@@ -24,7 +24,7 @@ exception {e}, then {all P [x0,...,x(j-1),xj,...,xn]} raises {e}.
 > val it = true : bool
 
 - all (fn _ => raise Fail "") [1];
-! Uncaught exception: 
+! Uncaught exception:
 ! Fail  ""
 }
 

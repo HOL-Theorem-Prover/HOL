@@ -1,5 +1,5 @@
-\DOC free_vars_lr 
-`
+\DOC free_vars_lr
+
 \TYPE {free_vars_lr : term -> term list}
 
 \SYNOPSIS
@@ -10,8 +10,8 @@ variable, term.
 
 \DESCRIBE
 An invocation {free_vars_lr ty} returns a list representing the set of
-type variables occurring in {ty}. The list will be in order of 
-variable occurrence when scanning the parse tree of the term from 
+type variables occurring in {ty}. The list will be in order of
+variable occurrence when scanning the parse tree of the term from
 left to right. This is usually, but need not be, the textual order when
 the term is printed.
 

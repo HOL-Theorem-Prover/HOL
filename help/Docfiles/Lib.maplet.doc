@@ -1,4 +1,4 @@
-\DOC maplet 
+\DOC |->
 
 \TYPE {op |-> : 'a * 'b -> {{redex : 'a, residue : 'b}}}
 
@@ -9,8 +9,8 @@ Infix operator for building a component of a substitution.
 substitution, instantiation.
 
 \DESCRIBE
-An application {x |-> y} is equal to {{{redex = x, residue = y}}}. 
-Since HOL substitutions are lists of {{{redex,residue}}} records, 
+An application {x |-> y} is equal to {{{redex = x, residue = y}}}.
+Since HOL substitutions are lists of {{{redex,residue}}} records,
 the {|->} operator is merely sugar used to create substitutions.
 
 \FAILURE
@@ -18,7 +18,7 @@ Never fails.
 
 \EXAMPLE
 {
-- type_subst [alpha |-> beta, beta |-> gamma] 
+- type_subst [alpha |-> beta, beta |-> gamma]
              (alpha --> beta);
 > val it = `:'b -> 'c` : hol_type
 }

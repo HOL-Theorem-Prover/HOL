@@ -1,5 +1,5 @@
-\DOC free_vars 
-`
+\DOC free_vars
+
 \TYPE {free_vars : term -> term list}
 
 \SYNOPSIS
@@ -30,7 +30,7 @@ Demanding applications should be coded with {FVL}.
 
 
 \SEEALSO
-Term.FVL, Term.free_vars_lr, Term.free_varsl, 
+Term.FVL, Term.free_vars_lr, Term.free_varsl,
 Term.empty_varset, Type.type_vars.
 
 \ENDDOC
