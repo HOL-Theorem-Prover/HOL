@@ -25,7 +25,7 @@ infixr 3 -->;
  * rewriting, etc. That's what the next few lines achieve.                   *
  *---------------------------------------------------------------------------*)
 
-val _ = app load ["Parse, "basicHol90Lib", 
+val _ = app load ["Parse", "basicHol90Lib",
                   "goalstackLib", "Psyntax", "Rsyntax"];
 
 open Parse basicHol90Lib goalstackLib Psyntax;
@@ -39,8 +39,8 @@ infix 8 via;
  *---------------------------------------------------------------------------*)
 
 local fun capture_errors ppfn pps x =
-             ppfn pps x 
-             handle (e as HOL_ERR _) => (print "Pretty-printer error:\n"; 
+             ppfn pps x
+             handle (e as HOL_ERR _) => (print "Pretty-printer error:\n";
                                          print_HOL_ERR e)
                   | e => (print "Pretty-printer error:\n";
                           print (exnMessage e);
