@@ -385,7 +385,7 @@ that the buffer has already had HOL terms, comments and strings removed."
       (concat ";\\|"
               (word-list-to-regexp
                '("val" "fun" "in" "infix[lr]?" "open" "local" "type"
-                 "datatype" "nonfix"))))
+                 "datatype" "nonfix" "exception"))))
 
 (setq sml-struct-id-regexp "[A-Za-z][A-Za-z0-9_]*")
 
@@ -669,6 +669,29 @@ already loaded.)"
   (send-string-to-hol
    (format "goalstackLib.e (Q.SUBGOAL_THEN `%s` STRIP_ASSUME_TAC)"
            (hol-term-at-point))))
+
+;; (defun hol-return-key ()
+;;   "Run comint-send-input, but only if both: the user is editting the
+;; last command in the buffer, and that command ends with a semicolon.
+;; Otherwise, insert a newline at point."
+;;   (interactive)
+;;   (let ((comand-finished
+;;          (let ((process (get-buffer-process (current-buffer))))
+;;            (and (not (null process))
+;;                 (let ((pmarkpos (marker-position
+;;                                  (process-mark process))))
+;;                   (and (< (point) pmarkpos)
+;;                        (string-match ";[ \t\n\r]*$"
+;;                                      (buffer-substring pmarkpos
+;;                                                        (point-max)))))))))
+;;     (if command-finished
+;;         (progn
+;;           (goto-char (point-max))
+;;           (comint-send-input))
+;;       (insert "\n"))))
+
+;; (define-key comint-mode-map "\r" 'hol-return-key)
+
 
 (define-key global-map "\M-h" 'hol-map)
 
