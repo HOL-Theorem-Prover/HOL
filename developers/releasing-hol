@@ -1,0 +1,38 @@
+# this shell script can be used to create a hol98 tar ball.
+
+mosmldir=/local/scratch/kxs/144
+name=for-konrad
+cd /tmp
+# use -r release-name for known release
+CVSROOT=/usr/groups/hol/repository cvs export -D today hol98
+sed "s|^val mosmldir.*\$|val mosmldir = \"$mosmldir\"|" \
+   < hol98/tools/configure.sml | \
+   sed 's|^val holdir.*$|val holdir = "/tmp/hol98"|' > new-config
+mv hol98/tools/configure.sml /tmp
+mv new-config hol98/tools/configure.sml
+
+echo Building filter.c
+cd hol98/src/quote-filter
+make filter.c
+
+echo "Running configure script (original in /tmp)"
+cd /tmp/hol98
+$mosmldir/bin/mosml < tools/configure.sml
+
+echo Now building whole system
+bin/build -symlink
+
+echo Now building help index
+cd developers/help
+make
+
+echo Now starting to clean up and make tar ball
+cd /tmp/hol98
+bin/build -cleanAll
+/bin/rm -rf developers
+mv /tmp/configure.sml tools
+/bin/rm bin/*
+/bin/rm tools/build.sml tools/Holmake/*.{uo,ui} tools/hol98-mode.el
+
+cd /tmp
+tar czf hol98-$name.tar.gz hol98
