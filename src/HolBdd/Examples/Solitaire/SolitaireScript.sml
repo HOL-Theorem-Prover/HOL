@@ -178,6 +178,35 @@ val (initth,transthl,finalth) =
   (findTrace solitaire_varmap SolitaireTrans_def SolitaireInit_def)
   SolitaireFinal_def;
 
+(*
+val trace_list = ref[];
+
+fun report n tb =
+ (trace_list := append (!trace_list) [tb]; print "Iteration: "; print (Int.toString n); 
+  print " Node size: "; print(Int.toString(bdd.nodecount(getBdd tb))); print "\n");
+
+val (in_th0,in_thsuc) = 
+ time
+  (REWRITE_RULE[SolitaireInit_def] ## REWRITE_RULE[SolitaireTrans_def])
+  (MkIterThms 
+    MachineTransitionTheory.ReachBy_rec 
+    (lhs(concl(SPEC_ALL SolitaireTrans_def)))
+    (lhs(concl(SPEC_ALL SolitaireInit_def))));
+  
+val (tb,tb') = time (computeFixedpoint report solitaire_varmap) (in_th0,in_thsuc);
+
+val (in_th0,in_thsuc) = 
+ time
+  (REWRITE_RULE[SolitaireInit_def] ## 
+   simpLib.SIMP_RULE boolSimps.bool_ss [SolitaireTrans_def,LEFT_AND_OVER_OR,EXISTS_OR_THM]) 
+  (MkIterThms 
+    MachineTransitionTheory.ReachBy_rec 
+    (lhs(concl(SPEC_ALL SolitaireTrans_def)))
+    (lhs(concl(SPEC_ALL SolitaireInit_def))));
+
+val (tb1,tb1') = time (computeFixedpoint report solitaire_varmap) (in_th0,in_thsuc);
+*)
+
 (*****************************************************************************)
 (* Print out a picture of a Solitaire board from a tuple                     *)
 (*                                                                           *)

@@ -262,7 +262,7 @@ fun termToTermBdd tm =
 fun MkPrevThm Rth =
  let val (Rcon, s_s') = Term.dest_comb(lhs(concl(SPEC_ALL Rth)))
      val (s,s') = pairSyntax.dest_pair s_s'
-     val _ = print "Proving simplified backward image theorem ...\n"
+     val _ = print "\nProving simplified backward image theorem ...\n"
      val PrevTh =
        (simpLib.SIMP_RULE
         boolSimps.bool_ss
