@@ -1,7 +1,7 @@
 structure listML :> listML =
 struct
 
-  fun cons h t = h::t
+  fun cons (h,t) = h::t
   val null = List.null
   val hd = List.hd
   val tl = List.tl
