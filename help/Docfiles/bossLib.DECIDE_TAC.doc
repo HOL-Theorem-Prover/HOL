@@ -1,0 +1,20 @@
+\DOC DECIDE_TAC
+
+\TYPE {DECIDE_TAC : tactic}
+
+\SYNOPSIS
+Invoke decision procedure(s).
+
+\KEYWORDS
+arithmetic, decision procedure.
+
+\DESCRIBE
+{DECIDE_TAC} is the tactical version of {DECIDE}.
+
+\FAILURE
+As for {DECIDE}
+
+\SEEALSO
+bossLib.DECIDE.
+
+\ENDDOC
