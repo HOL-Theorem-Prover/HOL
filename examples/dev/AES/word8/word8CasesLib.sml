@@ -46,8 +46,8 @@ fun fill_results_helper next i j r default warn =
     if first_pad_amt > 0 orelse second_pad_amt > 0 then
       warn ()
     else ();
-    (List.tabulate (first_pad_amt, default) @ [r] @
-      List.tabulate (second_pad_amt, default),
+    (List.tabulate (first_pad_amt, default next) @ [(i, r)] @
+      List.tabulate (second_pad_amt, default (i + first_pad_amt)),
      next + 1 + first_pad_amt + second_pad_amt)
   end
 
@@ -56,7 +56,7 @@ fun fill_results [] default warn next =
         []
       else
        (warn ();
-        List.tabulate (256 - next, default))
+        List.tabulate (256 - next, default next))
   | fill_results [(i, r)] default warn next =
       #1 (fill_results_helper next i 256 r default warn)
   | fill_results ((i, r1) :: (j, r2) :: t) default warn next = 
@@ -70,6 +70,12 @@ fun fill_results [] default warn next =
           rs @ fill_results ((j, r2) :: t) default warn next_next
         end
 
+fun default (SOME var) res start i = 
+      (start + i, 
+       subst [var |-> ``n2w ^(numSyntax.term_of_int (start + i))``] res)
+  | default NONE res start i = 
+      (start + i, res)
+
 fun word8Define def_term = 
   let val clauses = strip_conj def_term
       val name = #1 (strip_comb (#1 (dest_eq (hd clauses))))
@@ -82,9 +88,8 @@ fun word8Define def_term =
       val results_no_gaps = 
         fill_results s_num_params
                      (case var_param of
-                        SOME (var, res) => (fn _ => res)
-                      | NONE => 
-                         (fn _ => mk_arb result_type))
+                        SOME (var, res) => default (SOME var) res
+                      | NONE => default NONE (mk_arb result_type))
                      (case var_param of
                         SOME (var, res) => (fn _ => ())
                       | NONE => (fn _ =>
@@ -93,22 +98,23 @@ fun word8Define def_term =
                      0
       val def = Define 
       `^name = ^(list_mk_comb (inst [alpha |-> result_type] ``word8_cases``, 
-                               results_no_gaps))`
+                               (map snd results_no_gaps)))`
       val simp_def = WORD_RULE (PURE_ONCE_REWRITE_RULE [word8_cases_def] def)
+      val for_eqns =
+        case var_param of
+          SOME _ => results_no_gaps
+        | NONE => s_num_params
       val eqns =
-        (map (fn (num, res) =>
-                ``^(#1 (dest_eq (concl def)))
-                  (n2w ^(numSyntax.term_of_int num)) =
-                  ^res``)
-              s_num_params) @
-        (case var_param of
-           SOME (var, res) => [``!^var. ^name ^var = ^res``]
-         | NONE => [])
+        map (fn (num, res) =>
+               ``^(#1 (dest_eq (concl def)))
+                 (n2w ^(numSyntax.term_of_int num)) =
+                 ^res``)
+             for_eqns
       val thms =
         map (fn e => prove (e, PURE_ONCE_REWRITE_TAC [simp_def] THEN WORD_TAC))
             eqns
   in
-    (def, simp_def, LIST_CONJ thms)
+    (def, simp_def, WORD_RULE (LIST_CONJ thms))
   end
 
 
