@@ -1,0 +1,117 @@
+(*---------------------------------------------------------------------------*
+ *                                                                           *
+ *               SMOOTH APPLICATIVE MERGE SORT                               *
+ *                                                                           *
+ * from Richard O'Keefe, as found in Paulson's ML book                       *
+ *---------------------------------------------------------------------------*)
+
+app load ["bossLib", "QLib", "permTheory", "sortingTheory" ];
+
+open bossLib sortingTheory permTheory combinTheory;
+infix 8 by;
+
+(*---------------------------------------------------------------------------*
+ *     Merge two lists using R.                                              *
+ *---------------------------------------------------------------------------*)
+
+val merge_def = 
+ Define
+    `(merge R [] x = x)
+ /\  (merge R (h::t) [] = h::t) 
+ /\  (merge R (h1::t1) (h2::t2) = 
+        if R h1 h2 then h1::merge R t1 (h2::t2)
+                   else h2::merge R (h1::t1) t2)`;
+
+
+(*---------------------------------------------------------------------------*
+ *     Reverse a list.                                                       *
+ *---------------------------------------------------------------------------*)
+val rev_def = 
+ Define
+    `(rev []     rl = rl)
+  /\ (rev (h::t) rl = rev t (h::rl))`;
+
+val reverse_def = Define `reverse L = rev L []`;
+
+
+(*---------------------------------------------------------------------------*
+ *     Merge adjacent lists.                                                 *
+ *---------------------------------------------------------------------------*)
+
+val mergepairs_def =
+ Hol_defn "mergepairs"
+    `(mergepairs R [] k = [])
+ /\  (mergepairs R [l] k = [l]) 
+ /\  (mergepairs R (l1::l2::rst) k =
+       if k MOD 2 = 1
+         then l1::l2::rst
+         else mergepairs R (merge R l1 l2::rst) (k DIV 2))`;
+
+
+val (mergepairs_eqns,mergepairs_ind) = 
+ Defn.tprove
+ (mergepairs_def,
+  WF_REL_TAC mergepairs_def `measure (LENGTH o FST o SND)`
+     THEN RW_TAC list_ss [o_DEF]);
+
+
+(*---------------------------------------------------------------------------*
+ *     Unbundled bottom-up merge sort                                        *
+ *---------------------------------------------------------------------------*)
+
+val msort_def = 
+ Define
+    `(msort R [] ll k     = HD(mergepairs R ll 0))
+  /\ (msort R (h::t) ll k = msort R t (mergepairs R ([h]::ll) (k+1)) (k+1))`;
+
+
+(*---------------------------------------------------------------------------*
+ *     Break the next run off the front of the list.                         *
+ *---------------------------------------------------------------------------*)
+
+val nextrun_def =
+ Define
+    `(nextrun R run [] = (reverse run, []))
+  /\ (nextrun R run (h::t) 
+       = if R h (HD run)
+           then (reverse run, h::t)
+           else nextrun R (h::run) t)`;
+
+
+val nextrun_argb = Q.prove
+(`!R l t run rst.
+   ((run,rst) = nextrun R l t) ==> LENGTH rst < SUC(LENGTH t)`,
+Induct_on `t` 
+  THEN RW_TAC list_ss [nextrun_def]
+  THEN RES_TAC THEN DECIDE_TAC);
+
+
+(*---------------------------------------------------------------------------*
+ *     Unbundled "smooth" bottom-up merge sort.                              *
+ *---------------------------------------------------------------------------*)
+
+val samsortl_def = 
+ Hol_defn "samsortl"
+    `(samsortl R [] ll k = HD(mergepairs R ll 0)) 
+ /\  (samsortl R (h::t) ll k 
+       = let (run,rst) = nextrun R [h] t
+         in
+           samsortl R rst (mergepairs R (run::ll) (k+1)) (k+1))`;
+
+
+val (samsortl_eqns, samsortl_ind) = 
+Defn.tprove
+ (samsortl_def,
+  WF_REL_TAC samsortl_def `measure (LENGTH o FST o SND)`
+    THEN RW_TAC list_ss [o_DEF]
+    THEN PROVE_TAC [nextrun_argb]);
+
+(*---------------------------------------------------------------------------*
+ *     Bundled bottom-up smooth merge sort.                                  *
+ *---------------------------------------------------------------------------*)
+
+val samsort_def = Define `samsort R alist = samsortl R alist [] 0`;
+
+
+
+(* Now all we have to do is prove is properties! *)
