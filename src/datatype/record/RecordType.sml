@@ -9,8 +9,6 @@ structure RecordType :> RecordType =
 struct
 
 local open HolKernel Parse boolLib
-      infix THEN
-      infixr 3 -->
 
 val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
 fun -- q x = Term q
@@ -402,14 +400,26 @@ in
         save_thm(thmname, GENL [var1, var2] thm0)
     end
 
-    (* prove that a complete chain of updates over any value is
-       equivalent to a chain of updates over ARB.  This particular
-       formulation is chosen to help the pretty-printer, which will
-       print such updates over ARB as record literals.
-         e.g.
-            r1 with <| fld1 := v1 ; fld2 := v2 |> =
-            <| fld1 := v1; fld2 := v2 |>
-         (In the form that it will be printed in.)
+    (* prove
+
+       1.  that a complete chain of updates over any value is
+           equivalent to a chain of updates over ARB.  This particular
+           formulation is chosen to help the pretty-printer, which
+           will print such updates over ARB as record literals.
+           e.g.
+               r1 with <| fld1 := v1 ; fld2 := v2 |> =
+               <| fld1 := v1; fld2 := v2 |>
+       2.  prove a version of the nchotomy theorem that uses literal
+           notation rather than the underlying notation involving the
+           constructor
+           e.g.,
+             !r. ?v1 v2 v3. r = <| fld1 := v1; fld2 := v2; fld3 := v3 |>
+
+       3.  a FORALL_RECD theorem of the form
+              (!r. P r) =
+              (!v1 v2 v3. P <| fld1 := v1; fld2 := v2; fld3 := v3 |>)
+
+       4.  likewise, an EXISTS_RECD
     *)
     local
       fun mk_var_avds (nm, ty, avoids) = let
@@ -419,23 +429,60 @@ in
       end
 
       val value_vars =
-        List.foldr(fn (ty, sofar) =>
-                   mk_var_avds(app_letter ty, ty, var::sofar)::sofar)
-        [] types
+        List.take(List.foldr
+                    (fn (ty, sofar) =>
+                        mk_var_avds(app_letter ty, ty, var::sofar)::sofar)
+                    [var] types,
+                  length fields)
       val arb = mk_const("ARB", typ)
       val updfns =
         map2 (fn upd => fn v => mk_comb(upd, v)) updfn_terms value_vars
       val lhs = List.foldr mk_comb var updfns
       val rhs = List.foldr mk_comb arb updfns
-      val goal = mk_eq(lhs, rhs)
 
-      val tactic =
-        MAP_EVERY (STRUCT_CASES_TAC o C SPEC cases_thm) [arb, var] THEN
-        REWRITE_TAC [updfn_thm]
-      val thmname = typename ^ "_updates_eq_literal"
-      val thm = GEN_ALL (prove(goal, tactic))
+      val literal_equality =
+          GENL (var::value_vars)
+               (prove(mk_eq(lhs, rhs),
+                      MAP_EVERY (STRUCT_CASES_TAC o C SPEC cases_thm)
+                                [arb, var] THEN REWRITE_TAC [updfn_thm]))
+
+      val literal_nchotomy =
+          prove(mk_forall(var, list_mk_exists(value_vars, mk_eq(var, rhs))),
+                GEN_TAC THEN
+                MAP_EVERY (STRUCT_CASES_TAC o C SPEC cases_thm) [arb, var] THEN
+                REWRITE_TAC [updfn_thm, accessor_thm, oneone_thm] THEN
+                REPEAT Unwind.UNWIND_EXISTS_TAC)
+
+      val pred_r = mk_var_avds("P", typ --> bool, var::value_vars)
+      val P_r = mk_comb(pred_r, var)
+      val P_literal = mk_comb(pred_r, rhs)
+      val forall_goal = mk_eq(mk_forall(var, P_r),
+                              list_mk_forall(value_vars, P_literal))
+      val exists_goal = mk_eq(mk_exists(var, P_r),
+                              list_mk_exists(value_vars, P_literal))
+      val forall_thm =
+          GEN_ALL
+            (prove(forall_goal,
+                   EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC [] THEN
+                   GEN_TAC THEN
+                   STRUCT_CASES_TAC (SPEC var literal_nchotomy) THEN
+                   ASM_REWRITE_TAC []))
+      val exists_thm =
+          GEN_ALL
+          (prove(exists_goal,
+                 EQ_TAC THEN STRIP_TAC THENL [
+                   EVERY_TCL (map X_CHOOSE_THEN value_vars)
+                             SUBST_ALL_TAC (SPEC var literal_nchotomy) THEN
+                   MAP_EVERY EXISTS_TAC value_vars THEN ASM_REWRITE_TAC [],
+                   EXISTS_TAC rhs THEN ASM_REWRITE_TAC []
+                 ]))
     in
-      val literal_equality = save_thm(thmname, thm)
+      val literal_equality =
+          save_thm(typename ^ "_updates_eq_literal", literal_equality)
+      val literal_nchotomy =
+          save_thm(typename ^ "_literal_nchotomy", literal_nchotomy)
+      val forall_thm = save_thm("FORALL_" ^ typename, forall_thm)
+      val exists_thm = save_thm("EXISTS_"^ typename, exists_thm)
     end
 
     (* add to the TypeBase's simpls entry for the record type *)
