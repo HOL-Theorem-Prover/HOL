@@ -7,33 +7,29 @@ structure EnumType :> EnumType =
 struct
 
 open HolKernel boolLib Parse numLib;
-type tyinfo = TypeBasePure.tyinfo;
 
-infix THEN THENC |-> ##;  infixr -->
+type tyinfo = TypeBasePure.tyinfo;
 
 val ERR = mk_HOL_ERR "EnumType";
 val NUM = num;
 
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
 
-fun mk_int_numeral i = mk_numeral (Arbnum.fromInt i);
-
 fun enum_pred k =
  let val n = mk_var("n",num)
-     val topnum = mk_int_numeral k
+     val topnum = term_of_int k
  in mk_abs(n,mk_less(n,topnum))
  end;
 
-fun type_exists k = let
-  val n = mk_var("n",num)
-in
-  prove (mk_exists(n, mk_comb(enum_pred k, n)),
-         EXISTS_TAC zero_tm THEN REDUCE_TAC)
-end
+fun type_exists k = 
+ let val n = mk_var("n",num)
+ in prove (mk_exists(n, mk_comb(enum_pred k, n)),
+           EXISTS_TAC zero_tm THEN REDUCE_TAC)
+ end
 
 fun num_values REP_ABS defs =
  let val len = length defs
-     val top_numeral = mk_int_numeral len
+     val top_numeral = term_of_int len
      fun rep_of def =
       let val n = rand(rhs(concl def))
           val less_thm = EQT_ELIM (REDUCE_CONV (mk_less(n,top_numeral)))
@@ -134,15 +130,16 @@ end
     Make a size definition for an enumerated type (everywhere zero)
    ---------------------------------------------------------------------- *)
 
-fun mk_size_definition ty = let
-  val tyname = #1 (dest_type ty)
-  val cname = tyname^"_size"
-  val var_t = mk_var(cname, ty --> NUM)
-  val avar = mk_var("x", ty)
-  val def = new_definition(cname^"_def", mk_eq(mk_comb(var_t, avar), zero_tm))
-in
-  SOME (rator (lhs (#2 (strip_forall (concl def)))), TypeBasePure.ORIG def)
-end
+fun mk_size_definition ty = 
+ let val tyname = #1 (dest_type ty)
+     val cname = tyname^"_size"
+     val var_t = mk_var(cname, ty --> NUM)
+     val avar = mk_var("x", ty)
+     val def = new_definition(cname^"_def", 
+                              mk_eq(mk_comb(var_t, avar), zero_tm))
+ in
+   SOME (rator (lhs (#2 (strip_forall (concl def)))), TypeBasePure.ORIG def)
+ end
 
 (* ----------------------------------------------------------------------
     Prove distinctness theorem for an enumerated type
@@ -161,13 +158,14 @@ in
   List.rev (doitall l [])
 end
 
-fun prove_distinctness_thm simpls constrs = let
-  val upper_triangle = gen_triangle constrs
-  fun prove_inequality (c1, c2) =
-      (REWRITE_CONV simpls THENC numLib.REDUCE_CONV) (mk_eq(c1,c2))
-in
-  LIST_CONJ (map (EQF_ELIM o prove_inequality) upper_triangle)
-end
+fun prove_distinctness_thm simpls constrs = 
+ let val upper_triangle = gen_triangle constrs
+     fun prove_inequality (c1, c2) =
+        (REWRITE_CONV simpls THENC numLib.REDUCE_CONV) (mk_eq(c1,c2))
+ in
+   if null upper_triangle then NONE else 
+   SOME (LIST_CONJ (map (EQF_ELIM o prove_inequality) upper_triangle))
+ end
 
 (* ----------------------------------------------------------------------
     Prove initiality theorem for type
@@ -189,7 +187,7 @@ fun prove_initiality_thm rep ty constrs simpls = let
           val ltree = generate_ntree lo midpoint
           val rtree = generate_ntree (midpoint + 1) hi
         in
-          mk_cond (mk_leq(n, mk_int_numeral midpoint), ltree, rtree)
+          mk_cond (mk_leq(n, term_of_int midpoint), ltree, rtree)
         end
 
   val witness = let
@@ -242,7 +240,7 @@ fun define_enum_type(name,clist,ABS,REP) =
      val REPconst = mk_const(REP, TYPE --> NUM)
      val nclist   = enumerate 0 clist
      fun def(n,s) = (s,mk_eq(mk_var(s,TYPE),
-                             mk_comb(ABSconst,mk_int_numeral n)))
+                             mk_comb(ABSconst,term_of_int n)))
      val defs     = map (new_definition o def) nclist
      val constrs  = map (lhs o concl) defs
  in
@@ -307,8 +305,7 @@ fun define_case initiality =
 fun enum_type_to_tyinfo (ty, constrs) = let
   val abs = "num2"^ty
   val rep = ty^"2num"
-  val (result as {constrs,TYPE,...}) =
-      define_enum_type(ty,constrs,abs,rep)
+  val (result as {constrs,TYPE,...}) = define_enum_type(ty,constrs,abs,rep)
   val (simpl_names, simpls) = let
     val nvs      = num_values (#REP_ABS result) (#defs result)
     val symrep11 = let val nm = ty^"_EQ_"^ty in
@@ -329,7 +326,7 @@ fun enum_type_to_tyinfo (ty, constrs) = let
   val size = mk_size_definition TYPE
   val distinct =
       if length constrs > 30 then NONE
-      else SOME (prove_distinctness_thm simpls constrs)
+      else prove_distinctness_thm simpls constrs
   val initiality = prove_initiality_thm (#REPconst result) TYPE constrs simpls
   val case_def = define_case initiality
   val case_cong = Prim_rec.case_cong_thm nchotomy case_def
@@ -419,7 +416,7 @@ val nchotomy = Count.apply (prove_cases_thm ABS_ONTO) (rev defs);
 val case_cong = Count.apply (case_cong_thm nchotomy) case_def;
 
 val {TYPE,constrs,defs, ABSconst, REPconst,
-     ABS_REP, REP_ABS, ABS_11, REP_11, ABS_ONTO, REP_ONTO, simpls}
+     ABS_REP, REP_ABS, ABS_11, REP_11, ABS_ONTO, REP_ONTO}
   = Count.apply define_enum_type
        ("thing", ["a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8",
                   "a9", "a10", "a11", "a12", "a13", "a14", "a15", "a16",
