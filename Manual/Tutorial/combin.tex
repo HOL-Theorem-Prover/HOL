@@ -1453,7 +1453,10 @@ argument specifies how we are going to transform the theorem.  Reading
 the compositions from right to left, first we will simplify with the
 \verb!x_ap_y_predn! theorem and then we will assume the result back
 into the assumptions, stripping disjunctions and existentials as we
-go.
+go.\footnote{An alternative to using \texttt{PAT\_ASSUM} is to use
+  \texttt{by} instead: you would have to state the four-way
+  disjunction yourself, but the proof would be more ``declarative'' in
+  style, and though wordier, might be more maintainable.}
 
 We already know that doing this is going to produce four new sub-goals
 (there were four disjuncts in the \verb!x_ap_y_predn! theorem).  At
