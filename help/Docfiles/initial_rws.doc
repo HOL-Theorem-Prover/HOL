@@ -1,0 +1,37 @@
+\DOC initial_rws
+
+\TYPE {initial_rws : unit -> computeLib.comp_rws}
+
+\SYNOPSIS
+Creates a new simplification set to use with computeLib.CBV_CONV for basic
+computations.
+
+\LIBRARY boss
+
+\DESCRIPTION
+This function creates a new simplification set to use with the compute
+library performing computations about operations on primitive booleans
+and numerals (in binary representation) such as LET, conditional,
+implication, conjunction, disjunction, negation, FST, SND, addition,
+subtraction, multiplication, division, modulo, exponentiation, etc.
+
+We assume here that the canonical representation of the naturals is the
+binary one. Therefore, defining function by pattern matching using SUC
+will not be recognized. For instance, defining the exponentaition
+function as
+
+    (n EXP 0 = 1) /\ (n EXP (SUC p) = n * n EXP p)
+
+It is possible to make this definition work by using the following lemma:
+    (exp n p = if n = 0 then 1 else n * (exp n (p-1)))
+
+\EXAMPLE{
+- CBV_CONV (initial_rws()) (--`EVERY (\n. EVEN n) [4;6;8;10;12;14;16]`--);
+> val it = |- EVERY (\n. EVEN n) [4; 6; 8; 10; 12; 14; 16] = T : Thm.thm
+}
+
+\SEEALSO
+
+CBV_CONV, REDUCE_CONV
+
+\ENDDOC
