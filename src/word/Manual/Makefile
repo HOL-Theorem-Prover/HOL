@@ -1,5 +1,5 @@
 # =====================================================================
-# Makefile for the word library documentation 
+# Makefile for the word library documentation
 # =====================================================================
 
 # ---------------------------------------------------------------------
@@ -7,12 +7,12 @@
 # ---------------------------------------------------------------------
 
 
-HOLMANDIR=/usr/groups/hol/hol90/Manual
+HOLMANDIR=/usr/groups/hol/hol90/
 
 Help=../help
 LATEX=latex
 # ---------------------------------------------------------------------
-# Pathname to the doc-to-tex script and doc-to-tex.sed file 
+# Pathname to the doc-to-tex script and doc-to-tex.sed file
 # ---------------------------------------------------------------------
 DOCTOTEX=$(HOLMANDIR)/Manual/Reference/bin/doc-to-tex
 DOCTOTEXSED=$(HOLMANDIR)/Manual/Reference/bin/doc-to-tex.sed
@@ -23,7 +23,7 @@ DOCTOTEXSED=$(HOLMANDIR)/Manual/Reference/bin/doc-to-tex.sed
 MAKEINDEX=$(HOLMANDIR)/Manual/LaTeX/makeindex $(HOLMANDIR)
 #MAKEINDEX=makeindex
 
-default:	
+default:
 	@echo "INSTRUCTIONS: Type \"make all\" to make the documentation"
 
 # ---------------------------------------------------------------------
@@ -60,12 +60,12 @@ theorems:
 	@echo "\section{The theory {\tt bword\_arith}}">>theorems.tex
 	/bin/sh ${DOCTOTEX} ${DOCTOTEXSED} ${Help}/thms/bword_arith theorems.tex
 
-index: 
+index:
 	${MAKEINDEX} word.idx index.tex
 
-word: 
-	$(LATEX) word.tex 
+word:
+	$(LATEX) word.tex
 
-all: 
+all:
 	make clean; make tex; make word; make index; make word
 

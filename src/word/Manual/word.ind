@@ -1,5 +1,5 @@
 \begin{theindex}
-
+\newcommand\ptt{\tt}
   \item \idxname{\sfc }{ACARRY}, 11
   \item {\ptt ACARRY\_ACARRY\_SEG}, 33
   \item {\ptt ACARRY\_DEF}, 34
