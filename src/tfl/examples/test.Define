@@ -587,8 +587,7 @@ val ltree_occurs_def =
 
 val collect_defn =
  Hol_defn "collect"
-    `collect f (LNODE v tl) 
-       = FOLDR (\h a. APPEND (collect f h) a) [f v] tl`;
+    `collect f (LNODE v tl) = FOLDR (\h a. APPEND (collect f h) a) [f v] tl`;
 
 val (collect_eqn, collect_ind) =
  Defn.tprove

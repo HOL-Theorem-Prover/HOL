@@ -3,6 +3,10 @@ sig
   include Abbrev
   type simpset = simpLib.simpset
 
+  (* Eliminate v = M or M = v from hypotheses *)
+
+  val VAR_EQ_TAC      : tactic
+
   (* First order automatic proof *)
 
   val PROVE           : thm list -> term -> thm

@@ -95,6 +95,7 @@ fun CONCL_TAC f P = W (fn (_,c) => if P c then f else NO_TAC);
 fun LIFT_SIMP ss tm = 
   UNDISCH_THEN tm (STRIP_ASSUME_TAC o simpLib.SIMP_RULE ss []);
 
+val VAR_EQ_TAC = ASSUM_TAC VSUBST_TAC var_eq;
 
 local 
   fun DTHEN ttac = fn (asl,w) =>
@@ -192,12 +193,12 @@ fun PRIM_STP_TAC ss finisher =
      val ASM_SIMP = simpLib.ASM_SIMP_TAC ss []
   in
     REPEAT (GEN_TAC ORELSE CONJ_TAC)
-     THEN REPEAT (ASSUM_TAC VSUBST_TAC var_eq)
+     THEN REPEAT VAR_EQ_TAC
      THEN ASM_SIMP
      THEN TRY (IF_CASES_TAC THEN REPEAT IF_CASES_TAC THEN ASM_SIMP)
      THEN REPEAT BOSS_STRIP_TAC
      THEN REPEAT (CHANGED_TAC
-            (ASSUM_TAC VSUBST_TAC var_eq
+            (VAR_EQ_TAC
                ORELSE ASSUMS_TAC (LIFT_SIMP ss) has_constr_eqn
                ORELSE ASSUM_TAC (LIFT_SIMP ss) breakable
                ORELSE CONCL_TAC ASM_SIMP has_constr_eqn))
@@ -235,12 +236,12 @@ fun PRIM_NORM_TAC ss =
      val ASM_SIMP = simpLib.ASM_SIMP_TAC ss []
   in
     REPEAT (GEN_TAC ORELSE CONJ_TAC)
-     THEN REPEAT (ASSUM_TAC VSUBST_TAC var_eq)
+     THEN REPEAT VAR_EQ_TAC
      THEN ASM_SIMP
      THEN TRY (IF_CASES_TAC THEN REPEAT IF_CASES_TAC THEN ASM_SIMP)
      THEN REPEAT BOSS_STRIP_TAC
      THEN REPEAT (CHANGED_TAC
-            (ASSUM_TAC VSUBST_TAC var_eq
+            (VAR_EQ_TAC
                ORELSE ASSUMS_TAC (LIFT_SIMP ss) has_constr_eqn
                ORELSE ASSUM_TAC (LIFT_SIMP ss) breakable
                ORELSE CONCL_TAC ASM_SIMP has_constr_eqn

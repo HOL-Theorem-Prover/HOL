@@ -84,7 +84,6 @@ val ARITH_ss = numSimps.ARITH_ss
 val _ = BasicProvers.augment_srw_ss
                [pairSimps.PAIR_ss, optionSimps.OPTION_ss,
                 numSimps.REDUCE_ss, sumSimps.SUM_ss, listSimps.LIST_ss]
-
 end
 
 fun DECIDE tm =
@@ -124,4 +123,4 @@ val SPOSE_NOT_THEN    = SingleStep.SPOSE_NOT_THEN
 
 val by                = SingleStep.by; (* infix 8 by *)
 
-end;
+end
