@@ -47,7 +47,8 @@ end;
       Prove termination for N. Unlike normal recursive functions, this
       is a multi-step process.
 
-      1. One termination relation that works is "measure \x. 101 - x".
+      1. Figure out what the termination relation should be. For 91,
+         one termination relation that works is "measure \x. 101 - x".
          (Determined by introspection).
 
       2. Instantiate the defn with the relation, via Defn.set_reln.
@@ -66,48 +67,63 @@ end;
 
       8. The result of (7) is a list of equations, constrained by the 
          nested termination condition. Simplify the nested t.c.
-         with TotalDefn.TC_SIMP_CONV.
+         if possible: this will make the termination proof easier. 
+         TotalDefn.TC_SIMP_CONV can be useful here.
 
-      9. Do the termination proof, using Defn.tgoal on (5)
+      9. Do the termination proof, using Defn.tgoal on (5).
+
+     10. Successful completion on (9) yields a tactic "t". Wrap
+         everything up with an invocation of Defn.tprove on (5) and t.
          
  ---------------------------------------------------------------------------*)
 
+(*1,2*)
 val N_defn_1 = Defn.set_reln N_defn (Term `measure \x. 101 - x`);
 
+(*3*)
 val tcs as [nested, tc1,tc2] = Defn.tcs_of N_defn_1;
 
+(*4*)
 val non_nested_tcs = prove
 (mk_conj(tc1,tc2),
  TotalDefn.TC_SIMP_TAC [] []);
 
+(*5*)
 val N_defn_2 = Defn.elim_tcs N_defn_1 (CONJUNCTS non_nested_tcs);
 
+(*6*)
 val SOME aux_defn_2 = Defn.aux_defn N_defn_2;
+(*7*)
 val E0  = DISCH_ALL (hd (Defn.eqns_of aux_defn_2));
 val lem = ARITH `~(x > 100) ==> (101-y < 101-x = x<y)`;
 val lem1 = Q.prove(`measure f x y = f x < f y`, 
             RW_TAC std_ss [prim_recTheory.measure_def, 
                            relationTheory.inv_image_def]);
+(*8*)
 val E1  = GEN_ALL (simpLib.SIMP_RULE std_ss [lem,lem1] E0);
 
 (*---------------------------------------------------------------------------
 
         Termination of the nested t.c. We'll use NA to abbreviate 
-        the instantiated auxiliary function. The proof goes as follows:
+        the instantiated auxiliary function, i.e.,
+
+          `N_aux(measure($- 101))`.
+
+        The proof goes as follows:
 
         Induct on the termination relation, then tidy up the goal 
         with [lem,lem1]. The goal is now to show
 
           `x < NA (x+11)`
 
-        - Unroll the function at x+11. Doing this first requires 
-          manually instantiating the fn with `x+11`. In order to unroll
-          the function, the nested t.c.
+        - Unroll the function at x+11. The first step requires manually 
+          instantiating the rec. eqn. with `x+11`. As this is constrained
+          by the the nested t.c.
 
-           `x+11 < NA (x+22)` 
+           `x+11 < NA (x+22)`,
 
-          needs to be proved. This is accomplished by applying the 
-          ind. hyp. After being proved, the nested t.c. is also added 
+          we need to prove the nested t.c. This is accomplished by applying
+          the ind. hyp. After being proved, the nested t.c. is also added 
           to the hypotheses, since it is used again later. Now  
           conditional rewriting will unroll the function at `x+11`, 
           exposing the nested call of the function. The goal is now to 
@@ -115,20 +131,21 @@ val E1  = GEN_ALL (simpLib.SIMP_RULE std_ss [lem,lem1] E0);
 
            `x < NA(NA(x+22))
 
-        - At this point, we know by simple arithmetic
+        - At this point we know, by simple arithmetic,
 
            `x < NA (x+22) -11`
 
-        - Now a case split is made, on 
+        - A case split is now made, on 
 
             `NA (x+22) -11 > 100`
 
           The motivation for this is rather mysterious. Consider the 
           two branches coming from the case split. 
 
-          A. NA (x+22) -11 > 100, so NA (x+22) > 100, so in the goal, 
-             NA(NA(x+22)) reduces to NA(x+22) -10. Our task is now to
-             show that x < NA(x+22) -10, and this is easy.
+          A. NA (x+22) -11 > 100, so NA (x+22) > 100 so, by using
+             the rec. eqn. at NA(x+22) the goal NA(NA(x+22)) reduces
+             to NA(x+22) -10. Our task is now to show that 
+             x < NA(x+22) -10, and this is easy.
 
           B. ~(NA (x+22) -11 > 100), so the i.h. may be used to 
              deliver NA(x+22) -11 < NA(NA(x+22) -11+11)
