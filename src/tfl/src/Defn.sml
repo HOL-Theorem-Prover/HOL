@@ -1126,8 +1126,8 @@ fun exp (AQ tm) S = let val (tm',S') = tm_exp tm S in (AQ tm',S') end
           val (N', S'') = exp N S'
       in (APP (M',N'), S'')
       end
-  | exp(TYPED(M,pty)) S = let val (M',S') = exp M S in (TYPED(M',pty),S') end
-  | exp(LAM _) _ = raise ERR "exp" "abstraction in pattern"
+  | exp (TYPED(M,pty)) S = let val (M',S') = exp M S in (TYPED(M',pty),S') end
+  | exp (LAM _) _ = raise ERR "exp" "abstraction in pattern"
 
 fun expand_wildcards asy (asyl,S) =
    let val (asy',S') = exp asy S
@@ -1166,9 +1166,9 @@ fun parse_defn q =
  let val absyn0 = Parse.Absyn q
      val (absyn,fn_names) = elim_wildcards absyn0
      val kcs = Parse.known_constants()
-     val  _   = List.app Parse.hide fn_names
-     val tm = Parse.absyn_to_term (Parse.term_grammar()) absyn
-              handle e => (Parse.set_known_constants kcs; raise e)
+     val  _  = List.app Parse.hide fn_names
+     val tm  = Parse.absyn_to_term (Parse.term_grammar()) absyn
+               handle e => (Parse.set_known_constants kcs; raise e)
  in
     (tm, fn_names)
  end;
@@ -1179,7 +1179,7 @@ fun Hol_defn bindstem q =
       val is_constant = not o null o decls
       val def_thm = mk_defn bindstem def
         handle e => (Parse.set_known_constants
-                       (Lib.union kcs (filter (not o null o decls) fn_names));
+                       (Lib.union kcs (filter is_constant fn_names));
                      raise e)
           (* if an exception is raised after a constant is defined, then
              the union-ing above will ensure that the new constants are

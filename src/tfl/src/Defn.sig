@@ -7,11 +7,11 @@ sig
   type tactic       = Abbrev.tactic
   type thry         = TypeBase.typeBase
   type proofs       = GoalstackPure.proofs
-  type defn         = DefnBase.defn
   type absyn        = Absyn.absyn
   type ppstream     = Portable.ppstream
   type 'a quotation = 'a Portable.frag list
 
+  type defn         = DefnBase.defn
 
   val monitoring : bool ref    (* currently useless *)
 
