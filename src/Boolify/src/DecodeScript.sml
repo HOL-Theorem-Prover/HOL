@@ -832,6 +832,153 @@ val decode_num = store_thm
     ++ RW_TAC arith_ss [MULT_DIV, Q.SPECL [`2`, `m`] MULT_COMM, ADD1]]);
 
 (*---------------------------------------------------------------------------
+     Bounded number decoders
+ ---------------------------------------------------------------------------*)
+
+val decode_bnum_def = Define `decode_bnum m p = enc2dec p (encode_bnum m)`;
+
+val dec_bnum_def = Define
+  `(dec_bnum 0 l = SOME (0, l)) /\
+   (dec_bnum (SUC m) l =
+    case l of [] -> NONE
+    || (h :: t) ->
+       (case dec_bnum m t of NONE -> NONE
+        || SOME (n, t') -> SOME (2 * n + (if h then 1 else 0), t')))`;
+
+val dec_bnum_lt = store_thm
+  ("dec_bnum_lt",
+   ``!m l n t. (dec_bnum m l = SOME (n, t)) ==> n < 2 ** m``,
+   Induct
+   ++ REPEAT GEN_TAC
+   ++ SIMP_TAC arith_ss [dec_bnum_def]
+   ++ REPEAT CASE_TAC
+   ++ RW_TAC std_ss [GSYM EXP2_LT]
+   ++ ONCE_REWRITE_TAC [MULT_COMM]
+   ++ SIMP_TAC arith_ss [DIV_MULT]
+   ++ PROVE_TAC []);
+
+val dec_bnum_inj = store_thm
+  ("dec_bnum_inj",
+   ``!m l n t.
+       (dec_bnum m l = SOME (n, t)) ==> (l = APPEND (encode_bnum m n) t)``,
+   Induct
+   ++ RW_TAC std_ss [dec_bnum_def, encode_bnum_def, APPEND]
+   ++ POP_ASSUM MP_TAC
+   ++ REPEAT CASE_TAC
+   ++ RES_TAC
+   ++ POP_ASSUM SUBST1_TAC
+   ++ POP_ASSUM_LIST (K ALL_TAC)
+   ++ MP_TAC (Q.SPEC `2` DIVISION)
+   ++ SIMP_TAC arith_ss []
+   ++ DISCH_THEN (MP_TAC o ONCE_REWRITE_RULE [MULT_COMM] o Q.SPEC `n`)
+   ++ DISCH_THEN (fn th => CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [th])))
+   ++ RW_TAC arith_ss [MOD_2, GSYM ADD1, APPEND_11]
+   ++ Know `!m n. (2 * m = 2 * n) = (m = n)`
+   >> RW_TAC arith_ss [EQ_MULT_LCANCEL]
+   ++ DISCH_THEN (fn th => FULL_SIMP_TAC std_ss [th])
+   ++ RW_TAC std_ss []
+   ++ PROVE_TAC [ODD_DOUBLE, EVEN_DOUBLE, ODD_EVEN]);
+
+val wf_decode_bnum = store_thm
+  ("wf_decode_bnum",
+   ``!m p. wf_pred_bnum m p ==> wf_decoder p (decode_bnum m p)``,
+   RW_TAC std_ss [decode_bnum_def, wf_enc2dec, wf_encode_bnum]);
+
+val dec2enc_decode_bnum = store_thm
+  ("dec2enc_decode_bnum",
+   ``!m p x.
+       wf_pred_bnum m p /\ p x ==> (dec2enc (decode_bnum m p) x = encode_bnum m x)``,
+   RW_TAC std_ss [decode_bnum_def, dec2enc_enc2dec, wf_encode_bnum]);
+
+val decode_bnum = store_thm
+  ("decode_bnum",
+   ``wf_pred_bnum m p ==>
+     (decode_bnum m p l =
+      case dec_bnum m l of NONE -> NONE
+      || SOME (n, t) -> if p n then SOME (n, t) else NONE)``,
+   Q.SPEC_TAC (`l`, `l`)
+   ++ Q.SPEC_TAC (`p`, `p`)
+   ++ Induct_on `m`
+   >> (RW_TAC std_ss [dec_bnum_def]
+       ++ REPEAT CASE_TAC
+       ++ RW_TAC std_ss
+          [decode_bnum_def, enc2dec_none, enc2dec_some, wf_encode_bnum,
+           encode_bnum_def, APPEND]
+       ++ FULL_SIMP_TAC std_ss [wf_pred_bnum_def]
+       ++ STRIP_TAC
+       ++ RES_TAC
+       ++ PROVE_TAC [DECIDE ``x < 1 ==> (x = 0)``])
+   ++ RW_TAC std_ss [decode_bnum_def]
+   ++ (REPEAT CASE_TAC
+       ++ RW_TAC std_ss
+          [decode_bnum_def, enc2dec_none, enc2dec_some, wf_encode_bnum,
+           encode_bnum_def, APPEND])
+   << [STRIP_TAC
+       ++ RW_TAC std_ss []
+       ++ Q.PAT_ASSUM `X = Y` MP_TAC
+       ++ SIMP_TAC std_ss [dec_bnum_def, list_case_def]
+       ++ REPEAT CASE_TAC
+       ++ Q.PAT_ASSUM `!x. P x`
+          (MP_TAC o
+           Q.SPECL [`\x. x < 2 ** m`, `APPEND (encode_bnum m (x DIV 2)) t`])
+       ++ RW_TAC std_ss [wf_pred_bnum_def, decode_bnum_def, enc2dec_none]
+       ++ Q.EXISTS_TAC `x DIV 2`
+       ++ Q.EXISTS_TAC `t`
+       ++ RW_TAC std_ss [EXP2_LT]
+       ++ FULL_SIMP_TAC std_ss [wf_pred_bnum_def],
+       Q.PAT_ASSUM `!x. P x`
+          (MP_TAC o
+           Q.SPECL [`\x. x < 2 ** m`, `APPEND (encode_bnum m (q DIV 2)) r`])
+       ++ RW_TAC std_ss [wf_pred_bnum_def, decode_bnum_def, enc2dec_none]
+       ++ POP_ASSUM MP_TAC
+       ++ REPEAT CASE_TAC
+       >> (DISCH_THEN (fn th => CCONTR_TAC ++ MP_TAC th)
+           ++ RW_TAC std_ss [enc2dec_none]
+           ++ Q.EXISTS_TAC `q DIV 2`
+           ++ Q.EXISTS_TAC `r`
+           ++ FULL_SIMP_TAC arith_ss [EXP2_LT, wf_pred_bnum_def])
+       ++ IMP_RES_TAC dec_bnum_lt
+       ++ ASM_SIMP_TAC std_ss []
+       ++ RW_TAC std_ss [enc2dec_some, wf_encode_bnum, wf_pred_bnum_def]
+       ++ Know `q' = q DIV 2`
+       >> (MP_TAC (Q.INST [`p` |-> `\x. x < 2 ** m`, `e` |-> `encode_bnum m`]
+                   (INST_TYPE [alpha |-> ``:num``] wf_encoder_alt))
+           ++ SIMP_TAC arith_ss [wf_encode_bnum, wf_pred_bnum_def]
+           ++ DISCH_THEN MATCH_MP_TAC
+           ++ RW_TAC std_ss [EXP2_LT]
+           ++ PROVE_TAC [biprefix_append, biprefix_refl])
+       ++ RW_TAC std_ss []
+       ++ FULL_SIMP_TAC std_ss [APPEND_11]
+       ++ RW_TAC std_ss []
+       ++ Q.PAT_ASSUM `dec_bnum (SUC m) l = X` (MP_TAC o MATCH_MP dec_bnum_inj)
+       ++ RW_TAC std_ss [encode_bnum_def, APPEND],
+       STRIP_TAC
+       ++ RW_TAC std_ss []
+       ++ Q.PAT_ASSUM `X = Y` MP_TAC
+       ++ SIMP_TAC std_ss [dec_bnum_def]
+       ++ REPEAT CASE_TAC
+       ++ REWRITE_TAC [GSYM DE_MORGAN_THM]
+       ++ STRIP_TAC
+       ++ RW_TAC std_ss []
+       ++ Know `x < 2 ** SUC m` >> PROVE_TAC [wf_pred_bnum_def]
+       ++ STRIP_TAC
+       ++ Q.PAT_ASSUM `p x` MP_TAC
+       ++ MP_TAC (Q.SPEC `2` DIVISION)
+       ++ SIMP_TAC arith_ss []
+       ++ DISCH_THEN (MP_TAC o ONCE_REWRITE_RULE [MULT_COMM] o Q.SPEC `x`)
+       ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
+       ++ SIMP_TAC std_ss [MOD_2]
+       ++ Suff `q' = x DIV 2` >> PROVE_TAC []
+       ++ MP_TAC (Q.SPECL [`m`, `\x. x < 2 ** m`] wf_encode_bnum)
+       ++ RW_TAC std_ss [wf_pred_bnum_def, wf_encoder_alt]
+       ++ POP_ASSUM MATCH_MP_TAC
+       ++ FULL_SIMP_TAC std_ss [GSYM EXP2_LT]
+       ++ Know `q' < 2 ** m` >> PROVE_TAC [dec_bnum_lt]
+       ++ RW_TAC std_ss []
+       ++ Q.PAT_ASSUM `X = Y` (MP_TAC o MATCH_MP dec_bnum_inj)
+       ++ PROVE_TAC [biprefix_append, biprefix_refl]]);
+
+(*---------------------------------------------------------------------------
      Trees
  ---------------------------------------------------------------------------*)
 

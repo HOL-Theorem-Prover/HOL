@@ -33,20 +33,20 @@ val MOD_1 = store_thm
    ++ Q.EXISTS_TAC `n`
    ++ RW_TAC arith_ss []);
 
+val MOD_2 = store_thm
+  ("MOD_2",
+   ``!n. n MOD 2 = if EVEN n then 0 else 1``,
+   GEN_TAC
+   ++ MATCH_MP_TAC MOD_UNIQUE
+   ++ Cases_on `EVEN n`
+   ++ POP_ASSUM MP_TAC
+   ++ RW_TAC arith_ss [EVEN_EXISTS, GSYM ODD_EVEN, ODD_EXISTS, ADD1]
+   ++ PROVE_TAC [MULT_COMM]);
+
 val EVEN_MOD2 = store_thm
   ("EVEN_MOD2",
    ``!x. EVEN x = (x MOD 2 = 0)``,
-   RW_TAC std_ss [EVEN_EXISTS]
-   ++ EQ_TAC <<
-   [RW_TAC std_ss []
-    ++ ONCE_REWRITE_TAC [MULT_COMM]
-    ++ RW_TAC arith_ss [MOD_EQ_0],
-    RW_TAC std_ss []
-    ++ Q.EXISTS_TAC `x DIV 2`
-    ++ MP_TAC (Q.SPEC `2` DIVISION)
-    ++ SIMP_TAC arith_ss []
-    ++ DISCH_THEN (fn th => CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [th])))
-    ++ RW_TAC arith_ss []]);
+   PROVE_TAC [MOD_2, SUC_NOT, ONE]);
 
 val SUC_MOD = store_thm
   ("SUC_MOD",
@@ -102,6 +102,17 @@ val DOUBLE_LT = store_thm
    ++ MATCH_MP_TAC LESS_NOT_SUC
    ++ RW_TAC arith_ss []
    ++ PROVE_TAC [EVEN_ODD, EVEN_DOUBLE, ODD_DOUBLE]);
+
+val EXP2_LT = store_thm
+  ("EXP2_LT",
+   ``!m n. n DIV 2 < 2 ** m = n < 2 ** SUC m``,
+   RW_TAC std_ss []
+   ++ MP_TAC (Q.SPEC `2` DIVISION)
+   ++ SIMP_TAC arith_ss []
+   ++ DISCH_THEN (MP_TAC o Q.SPEC `n`)
+   ++ DISCH_THEN (fn th => CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [th])))
+   ++ ONCE_REWRITE_TAC [MULT_COMM]
+   ++ RW_TAC arith_ss [EXP, MOD_2]);
 
 val IS_PREFIX_NIL = store_thm
   ("IS_PREFIX_NIL",
@@ -565,17 +576,19 @@ val wf_encode_num = store_thm
 val encode_bnum_def =
   Define
   `(encode_bnum 0 (n : num) = []) /\
-   (encode_bnum (SUC m) n = (EVEN n) :: encode_bnum m (n DIV 2))`;
+   (encode_bnum (SUC m) n = ~(EVEN n) :: encode_bnum m (n DIV 2))`;
 
-val wf_bnum_def =
+val collision_free_def =
   Define
-  `wf_bnum m p =
+  `collision_free m p =
    !x y. p x /\ p y /\ (x MOD (2 EXP m) = y MOD (2 EXP m)) ==> (x = y)`;
 
-val wf_bnum = store_thm
-  ("wf_bnum",
-   ``!m n. n < 2 EXP m ==> wf_bnum m (\x. x < n)``,
-   RW_TAC std_ss [wf_bnum_def]
+val wf_pred_bnum_def = Define `wf_pred_bnum m p = !x. p x ==> x < 2 ** m`;
+
+val wf_pred_bnum_collision_free = store_thm
+  ("wf_pred_bnum",
+   ``!m p. wf_pred_bnum m p ==> collision_free m p``,
+   RW_TAC std_ss [wf_pred_bnum_def, collision_free_def]
    ++ POP_ASSUM MP_TAC
    ++ RW_TAC arith_ss [LESS_MOD]);
 
@@ -585,10 +598,27 @@ val encode_bnum_length = store_thm
    Induct
    ++ RW_TAC std_ss [LENGTH, encode_bnum_def]);
 
-val wf_encode_bnum = store_thm
-  ("wf_encode_bnum",
-   ``!p m. wf_encoder p (encode_bnum m) = wf_bnum m p``,
-   RW_TAC std_ss [wf_bnum_def, wf_encoder_def]
+val encode_bnum_inj = store_thm
+  ("encode_bnum_inj",
+   ``!m x y.
+       x < 2 ** m /\ y < 2 ** m /\ (encode_bnum m x = encode_bnum m y) ==>
+       (x = y)``,
+   Induct
+   ++ RW_TAC std_ss
+      [encode_bnum_def, DECIDE ``!n. n < 1 = (n = 0)``, GSYM EXP2_LT]
+   ++ RES_TAC
+   ++ Know `x DIV 2 = y DIV 2` >> RES_TAC
+   ++ Q.PAT_ASSUM `EVEN x = Y` MP_TAC
+   ++ POP_ASSUM_LIST (K ALL_TAC)
+   ++ RW_TAC std_ss []
+   ++ MP_TAC (MP (Q.SPEC `2` DIVISION) (DECIDE ``0 < 2``))
+   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
+   ++ RW_TAC std_ss [MOD_2]);
+
+val wf_encode_bnum_collision_free = store_thm
+  ("wf_encode_bnum_collision_free",
+   ``!m p. wf_encoder p (encode_bnum m) = collision_free m p``,
+   RW_TAC std_ss [collision_free_def, wf_encoder_def]
    ++ HO_MATCH_MP_TAC
       (PROVE []
        ``(!x y. p x /\ p y ==> (Q x y = R x y)) ==>
@@ -650,6 +680,11 @@ val wf_encode_bnum = store_thm
    ++ ONCE_REWRITE_TAC [MULT_COMM]
    ++ REWRITE_TAC [EXP, TWO]
    ++ RW_TAC arith_ss [GSYM MOD_COMMON_FACTOR, ZERO_LESS_EXP]);
+
+val wf_encode_bnum = store_thm
+  ("wf_encode_bnum",
+   ``!m p. wf_pred_bnum m p ==> wf_encoder p (encode_bnum m)``,
+   PROVE_TAC [wf_encode_bnum_collision_free, wf_pred_bnum_collision_free]);
 
 (*---------------------------------------------------------------------------
         Polymorphic n-ary trees.

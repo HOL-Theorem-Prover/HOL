@@ -189,6 +189,15 @@ val wf_coder_num = store_thm
    RW_TAC std_ss [wf_encode_num, decode_num_def, wf_coder_def]);
 
 (*---------------------------------------------------------------------------
+     Bounded number coders
+ ---------------------------------------------------------------------------*)
+
+val wf_coder_bnum = store_thm
+  ("wf_coder_bnum",
+   ``!m p. wf_pred_bnum m p ==> wf_coder p (encode_bnum m) (decode_bnum m p)``,
+   RW_TAC std_ss [wf_encode_bnum, decode_bnum_def, wf_coder_def]);
+
+(*---------------------------------------------------------------------------
      Tree coders
  ---------------------------------------------------------------------------*)
 
