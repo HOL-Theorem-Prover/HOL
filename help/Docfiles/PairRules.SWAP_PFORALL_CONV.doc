@@ -15,7 +15,7 @@ Interchanges the order of two universally quantified pairs.
 When applied to a term argument of the form {!p q. t}, the conversion
 {SWAP_PFORALL_CONV} returns the theorem:
 {
-   |- (!p q. t) = (!q t. t)
+   |- (!p q. t) = (!q p. t)
 }
 
 
