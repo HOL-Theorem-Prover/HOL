@@ -119,4 +119,19 @@ sig
   val hash : int -> string -> int*int -> int
   datatype ('a,'b) sum = LEFT of 'a
                        | RIGHT of 'b
+
+  (* two functions that given a string produce another one that is
+     different, but which is in some sense the "next" string in a sequence.
+     tyvar_vary can be used to generate "'a", "'b", "'c" ... "'z", "'a0" ..
+     tmvar_vary can be used to generate f, f0, f1, f2, f3 ...
+
+     A call to
+       gen_variant f avoids s
+     uses a varying function such as the two given here to produce a variant
+     of s that doesn't appear in the list avoids
+  *)
+  val tyvar_vary : string -> string
+  val tmvar_vary : string -> string
+  val gen_variant : (string -> string) -> string list -> string -> string
+
 end
