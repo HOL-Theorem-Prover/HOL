@@ -136,7 +136,7 @@ satisfied if the signal\footnote{Signals are modelled as functions
 following lemma:
 
 {\small\begin{verbatim}
-   !in out.
+   !inp out.
     (out 0 = T) /\ (!t. out(SUC t) = (if inp(SUC t) then ~(out t) else out t))
     ==>
     (!t. out t = PARITY t inp)
