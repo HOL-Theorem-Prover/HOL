@@ -478,7 +478,11 @@ in
         | (f::fs) => let
             val deps =
               if Path.dir (string_part f) <> "" then []
-              else get_direct_dependencies f
+              else
+                case f of
+                  UI x => (get_direct_dependencies f @
+                           get_direct_dependencies (UO x))
+                | _ => get_direct_dependencies f
             val newdeps = set_diff deps sofar
           in
             collect_all_dependencies (sofar @ newdeps) (set_union newdeps fs)
