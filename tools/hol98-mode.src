@@ -342,39 +342,40 @@ that the buffer has already had HOL terms, comments and strings removed."
   (let ((buf (ensure-hol-buffer-ok))
         (tmpbuf (generate-new-buffer "*HOL temporary*"))
         (old-mark-active mark-active))
-    (save-excursion
-      (set-buffer tmpbuf)
-      (setq hol-buffer-name buf) ; version of this variable in tmpbuf
-      (insert string)
-      (goto-char (point-min))
-      (remove-sml-junk (point-min) (point-max))
-      (goto-char (point-min))
-      ;; first thing to do is to search through buffer looking for
-      ;; identifiers of form id.id.  When spotted such identifiers need
-      ;; to have the first component of the name loaded.
-      (while (re-search-forward (concat "\\(" sml-struct-id-regexp
-                                        "\\)\\.\\w+")
-                                (point-max) t)
-        (hol-load-string (match-string 1)))
-      ;; next thing to do is to look for open declarations
-      (goto-char (point-min))
-      ;; search through buffer for open declarations
-      (while (re-search-forward "\\bopen\\b" (point-max) t)
-        ;; point now after an open, now search forward to end of
-        ;; buffer or a semi-colon, or an infix declaration or a
-        ;; val or a fun or another open  (as per the regexp defined just
-        ;; before this function definition
-        (let ((start (point))
-              (end
-               (save-excursion
-                 (if (re-search-forward hol-open-terminator-regexp
-                                        (point-max) t)
-                     (- (point) (length (match-string 0)))
-                   (point-max)))))
-          (hol-load-modules-in-region start end))))
+    (unwind-protect
+        (save-excursion
+          (set-buffer tmpbuf)
+          (setq hol-buffer-name buf) ; version of this variable in tmpbuf
+          (insert string)
+          (goto-char (point-min))
+          (remove-sml-junk (point-min) (point-max))
+          (goto-char (point-min))
+          ;; first thing to do is to search through buffer looking for
+          ;; identifiers of form id.id.  When spotted such identifiers need
+          ;; to have the first component of the name loaded.
+          (while (re-search-forward (concat "\\(" sml-struct-id-regexp
+                                            "\\)\\.\\w+")
+                                    (point-max) t)
+            (hol-load-string (match-string 1)))
+          ;; next thing to do is to look for open declarations
+          (goto-char (point-min))
+          ;; search through buffer for open declarations
+          (while (re-search-forward "\\bopen\\b" (point-max) t)
+            ;; point now after an open, now search forward to end of
+            ;; buffer or a semi-colon, or an infix declaration or a
+            ;; val or a fun or another open  (as per the regexp defined just
+            ;; before this function definition
+            (let ((start (point))
+                  (end
+                   (save-excursion
+                     (if (re-search-forward hol-open-terminator-regexp
+                                            (point-max) t)
+                         (- (point) (length (match-string 0)))
+                       (point-max)))))
+              (hol-load-modules-in-region start end))))
+      (kill-buffer tmpbuf)) ; kill buffer always
     ;; then finally send the string
     (send-raw-string-to-hol string echoit)
-    (kill-buffer tmpbuf)
     ;; deactivate-mark will have likely been set by all the editting actions
     ;; in the temporary buffer.  We fix this here, thereby keeping the mark
     ;; active, if it is active.
