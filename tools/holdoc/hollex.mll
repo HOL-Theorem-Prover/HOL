@@ -107,6 +107,19 @@ let tnormal    = [^ '[' '<' ':' '(']
                | ':' [^ '*']
                | ':' '*' [^ ')']
   (* INCORRECT negation of tstarthol | tstarthol0 | endtex | tstartdir | startdir *)
+  (* We want tnormal to accept the following language:
+
+         State   [  <  :  *  )  (  X     where X is "anything else"
+           1     2  2  4  9  9  3  9
+           2     1  2  4  9  9  3  9
+           3     2  2  4  2  9  3  9
+           4     2  2  4  5  9  3  9
+           5     2  2  4  9  1  3  9
+           9(ACCEPT)
+
+     I tried to work this out on paper but got stuck.
+  *)
+
 
 let tstarthol  = "[["
 let tstarthol0 = "<["
