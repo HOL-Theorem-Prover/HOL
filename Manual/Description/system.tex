@@ -1660,40 +1660,22 @@ There are various functions for loading the contents of theory files:
 \index{parents@\ml{parents}|pin}
 \index{types@\ml{types}|pin}
 \index{constants@\ml{constants}|pin}
-\index{infixes@\ml{infixes}|pin}
-\index{binders@\ml{binders}|pin}
-\index{axioms@\ml{axioms}|pin}
-\index{definitions@\ml{definitions}|pin}
-\index{theorems@\ml{theorems}|pin}
 \begin{verbatim}
    parents     : string -> string list
    types       : string -> (int * string) list
    constants   : string -> term list
-   infixes     : string -> term list
-   binders     : string -> term list
-   axioms      : string -> (string * thm) list
-   definitions : string -> (string * thm) list
-   theorems    : string -> (string * thm) list
 \end{verbatim}\end{boxed}
 
 \noindent The first argument is the name of a theory (which must be in the
 ancestry of the current theory segment); the result is a list of the
-components of the theory. The name of the current theory can be abbreviated by
-\ml{`-`}.\index{ abbreviation, of HOL theory part names@\ml{-}
-(abbreviation, of \HOL\ theory part names)} For example, \ml{parents `-`} returns the parents of the current
-theory.
+components of the theory. The name of the current theory can be
+abbreviated by \ml{"-"}.\index{ abbreviation, of HOL theory part
+  names@\ml{-} (abbreviation, of \HOL\ theory part names)} For
+example, \ml{parents "-"} returns the parents of the current theory.
 
-In the case of \ml{types} a list of arity-name pairs is returned; in the
-case of  \ml{axioms}, \ml{definitions} or \ml{theorems} a list
-of string-theorem
-pairs is returned, where the string is the name of the theorem representing the
-axiom, definition or theorem that was supplied by the user. Note that constant
-specifications and type definitions are both retrieved using the function
-\ml{definitions}.
-
-
-Individual axioms, definitions and theorems can be read from the current theory
-using the following \ML\ functions:
+In the case of \ml{types} a list of arity-name pairs is returned.
+Individual axioms, definitions and theorems can be read from the
+current theory using the following \ML\ functions:
 
 \begin{boxed}
 \index{axiom@\ml{axiom}|pin}
@@ -1706,7 +1688,22 @@ using the following \ML\ functions:
 \end{verbatim}\end{boxed}
 
 \noindent The  first  argument  is the user  supplied name  of the axiom,
-definition or theorem in the current theory.
+definition or theorem in the current theory.  Further, a list of all
+the current theories axioms, definitions and theorems can be retreived
+with the \ML{} functions:
+
+\begin{boxed}
+\index{axioms@\ml{axioms}|pin}
+\index{theorems@\ml{theorems}|pin}
+\index{definitions@\ml{definitions}|pin}
+\begin{verbatim}
+   axioms      : unit -> thm list
+   definitions : unit -> thm list
+   theorems    : unit -> thm list
+\end{verbatim}\end{boxed}
+
+\noindent (To examine theorems in other, ancestral theories, the
+functions in the \ml{DB} module must be used.)
 
 The contents of the current theory can be printed in a readable format using the function
 {\small\verb%print_theory%}\index{printing, in HOL logic@printing, in \HOL\ logic!of theories}\index{print_theory@\ml{print\_theory}}.

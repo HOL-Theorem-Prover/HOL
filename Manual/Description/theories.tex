@@ -3,7 +3,7 @@
 \index{theories, in HOL logic@theories, in \HOL\ logic!hierarchies of}
 A useful subset of the collection of theories distributed with the \HOL\
 system \index{ancestry, of HOL system theories@ancestry, of \HOL\ system
-theories} is listed in Table \ref{nativeTheories}. 
+theories} is listed in Table \ref{nativeTheories}.
 
 \begin{table}
 \begin{center}
@@ -101,7 +101,7 @@ these names can be used in the current system if \ml{o}, \ml{S}, \ml{K}
 and \ml{I} are first hidden (see Section~\ref{hidden}).  \index{
 function composition operator, in HOL logic@\ml{o} (function composition
 operator, in \HOL\ logic)|)} \index{function composition, in HOL
-logic@function composition, in \HOL\ logic|)}  
+logic@function composition, in \HOL\ logic|)}
 
 \section{The theory {\tt relation}}\label{relation}
 
@@ -118,11 +118,11 @@ the transitive closure of a relation and for wellfounded relations.
    TC_DEF |- !R a b.
                TC R a b =
                  !P.
-                   (!x y. R x y ==> P x y) /\ 
-                   (!x y z. P x y /\ P y z ==> P x z) 
+                   (!x y. R x y ==> P x y) /\
+                   (!x y z. P x y /\ P y z ==> P x z)
                    ==>
                      P a b
-   
+
    WF_DEF |- !R. WF R = !B. (?w. B w) ==> ?min. B min /\ !b. R b min ==> ~B b
 \end{verbatim}\end{hol}
 
@@ -133,16 +133,16 @@ defined as well.
 
 \begin{hol} \begin{verbatim}
    WF_INDUCTION_THM
-   |- !R:'a->'a->bool. 
-          WF R 
-            ==> !P. (!x. (!y. R y x ==> P y) ==> P x) 
+   |- !R:'a->'a->bool.
+          WF R
+            ==> !P. (!x. (!y. R y x ==> P y) ==> P x)
             ==> !x. P x
-   
+
    RESTRICT_DEF |- !f R x. RESTRICT f R x = \y. if R y x then f y else ARB
 
    WFREC_COROLLARY
    |- !M R f. (f = WFREC R M) ==> WF R ==> !x. f x = M (RESTRICT f R x) x
-   
+
    WF_RECURSION_THM |- !R. WF R ==> !M. ?!f. !x. f x = M (RESTRICT f R x) x
 \end{verbatim}\end{hol}
 
@@ -282,7 +282,7 @@ defined by the equations shown below.
 \end{verbatim}\end{hol}
 
 The following standard theorems about pairs follow easily from these
-definitions and the axiom \ml{prod\_TY\_DEF}.  
+definitions and the axiom \ml{prod\_TY\_DEF}.
 
 \begin{hol}
 \index{PAIR@\ml{PAIR}}
@@ -337,10 +337,10 @@ is defined by:
 \end{alltt}\end{hol}
 
 \noindent More generally, the quotation parser repeatedly applies the
-transformation: 
+transformation:
 
 \begin{hol}\begin{alltt}
-   \verb%\%(\m{v\sb{1}},\m{v\sb{2}}).\m{t}\m{\quad \leadsto\quad}UNCURRY(\verb%\%\m{v\sb{1}}.\verb%\%\m{v\sb{2}}.\m{t}) 
+   \verb%\%(\m{v\sb{1}},\m{v\sb{2}}).\m{t}\m{\quad \leadsto\quad}UNCURRY(\verb%\%\m{v\sb{1}}.\verb%\%\m{v\sb{2}}.\m{t})
 \end{alltt}\end{hol}
 
 \noindent until no more variable structures remain. For example:
@@ -375,7 +375,7 @@ For example:
 
 Exception raised at Term.dest_var:
 not a var
-! Uncaught exception: 
+! Uncaught exception:
 ! HOL_ERR <poly>
 \end{verbatim}\end{session}
 
@@ -462,7 +462,7 @@ the surface syntax.\index{quotation, in HOL logic@quotation, in \HOL\ logic|)}\i
 \section{Disjoint sums}\label{sum}
 
 The theory \ml{sum}\index{sum@\ml{sum}} defines the binary  disjoint
-union\index{disjoint union theory, in HOL 
+union\index{disjoint union theory, in HOL
 logic@disjoint union theory, in \HOL\ logic|(}  type operator \ml{sum}.
 A type  {\small\verb%(%}$\sigma_1${\small\verb%,%}$\sigma_2${\small\verb%)sum%}
 denotes the  disjoint  union  of  types  $\sigma_1$  and $\sigma_2$.   The type
@@ -606,7 +606,7 @@ logic these must be taken as primitive.  Note also that
 first order logic because predicates (\eg\ {\small\verb%P%}) cannot be
 quantified.
 
-Uses of the theorem \ml{INDUCTION} are supported by the 
+Uses of the theorem \ml{INDUCTION} are supported by the
 tactic \ml{numLib.INDUCT\_TAC}\index{INDUCT_TAC@\ml{INDUCT\_TAC}}
 (see the documentation in \REFERENCE\ for details).
 
@@ -683,7 +683,7 @@ The existence  of  a  recursive  function  \ml{fun} which  satisfies these two
 equations follows directly from the primitive recursion theorem
 \ml{num\_Axiom} shown above.   Specializing the  quantified variables \verb!x!
 and \verb!f!  in  a suitably  type-instantiated version  of \ml{num\_Axiom} so
-that 
+that
 
 \begin{hol}\begin{alltt}
    x\m{=}\verb!\!x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{1}[}x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\)  {\rm and}  f\(=\)\verb!\!f n x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{2}[}f \m{t\sb{1} \dots t\sb{i},} n\(,\) x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\))
@@ -729,9 +729,9 @@ that denotes such a function:
    new_recursive_definition : thm -> string -> term -> thm
 \end{verbatim}\end{boxed}
 
-\noindent In fact, {\small\verb+new_recursive_definition+} handles 
+\noindent In fact, {\small\verb+new_recursive_definition+} handles
 primitive recursive definitions over a range of types, not just the
-natural numbers. For details, see 
+natural numbers. For details, see
 Section~\ref{prim-rec-defs}, or the \REFERENCE\ documentation.
 
 \subsubsection{The less-than relation}
@@ -784,8 +784,8 @@ defined in the theory {\small\verb+relation+}.
 \begin{hol}
 \index{Wellfounded@\ml{Wellfounded}}
 \begin{verbatim}
-   wellfounded_def    |- wellfounded (R:'a->'a->bool) 
-                            = 
+   wellfounded_def    |- wellfounded (R:'a->'a->bool)
+                            =
                          ~?f. !n. R (f (SUC n)) (f n)
 
    WF_IFF_WELLFOUNDED |- !R. WF R = wellfounded R
@@ -893,7 +893,7 @@ The type \ml{num}\index{num, the type in \HOL\
   logic@\ml{num}, the type in \HOL\ logic}, is usually thought of as
   being supplied with an infinite collection of numerals: \ml{1},
   \ml{2}, \ml{3}, \etc.  However, the \HOL\ logic has no way to define
-  such infinite families of constants; instead all numerals other 
+  such infinite families of constants; instead all numerals other
   than $0$ are actually built up from the constants introduced by
   the following definitions:
 \begin{verbatim}
@@ -912,7 +912,7 @@ The type \ml{num}\index{num, the type in \HOL\
 \]
 but the \HOL\ parser and pretty-printer make such terms
 appear as numerals. This binary representation for numerals allows for
-asymptotically efficient calculation. Theorems supporting arithmetic 
+asymptotically efficient calculation. Theorems supporting arithmetic
 calculations on numerals can be found in the \ml{numeral} theory;
 these are mechanized by the \ml{reduce} library. Numerals may of course
 be built using {\small\verb+mk_comb+}, and taken apart with
@@ -933,7 +933,7 @@ Michael Norrish) which implements arbitrary precision numbers.
 - Arbnum.+(it,it);
 > val it = <num> : num
 
-- mk_numeral it;  
+- mk_numeral it;
 > val it = `6864864846846846468` : term
 \end{verbatim}\end{session}
 
@@ -975,7 +975,7 @@ integers), numerals are overloaded so that the numeral {\small\verb+1+} can
 actually stand for a natural number, an integer or a real value.  In
 order to precisely specify the desired type, the user can use single
 character suffixes (`\ml{n}' for the natural numbers, and `\ml{i}' for
-the integers): 
+the integers):
 
 \begin{session}
 \begin{verbatim}
@@ -1009,16 +1009,16 @@ The functions {\small\verb+mk_numeral+},
 numerals, and not for numeric literals with character suffixes other
 than {\small\verb+n+}. For information on how to install new character
 suffixes, consult the {\small\verb+add_numeral_info+} entry in
-\REFERENCE. 
+\REFERENCE.
 
 \section{Integers}\label{integers}
 
 There is an extensive theory of integers in \HOL. The type of integers
-is constructed as a quotient on pairs of natural numbers. A standard 
+is constructed as a quotient on pairs of natural numbers. A standard
 collection of operators are defined. These are overloaded with
 similar operations on the natural numbers, and on the real numbers.
 The constants defined in the integer theory include those found in the
-following table. 
+following table.
 
 \begin{center}
 {\small
@@ -1061,7 +1061,7 @@ Term `1i = &(1n + 0n)`;
 \section{Real numbers and analysis}
 
 There is an extensive collection of theories that make up the
-development of real numbers and analysis in HOL, 
+development of real numbers and analysis in HOL,
 due to John Harrison \cite{jrh:thesis}. We will only give an overview of
 the development; the interested reader should consult \REFERENCE\ and
 Harrison's thesis.
@@ -1108,14 +1108,14 @@ sequences.
 \item [transcTheory] Transcendental functions, \emph{e.g.}, exp, sin,
 cos, ln, root, sqrt, pi, tan, asn, acs, atn. Also the Kurzweil-Henstock
 gauge integral and the fundamental theorem of calculus, McLaurin's
-theorem. 
+theorem.
 
 \end{description}
 
 A separate development that depends only on {\small\verb+realTheory+} is
 a theory of polynomials, found in {\small\verb+polyTheory+}. A standard
 collection of operations on polynomials, and theorems about them, are
-also derived. 
+also derived.
 
 \section{The theory {\tt list}}\label{avra_list}\index{list, the type operator in HOL logic@\ml{list}, the type operator in \HOL\ logic}
 
@@ -1186,7 +1186,7 @@ The theorem  \ml{list\_Axiom}  shown  above  is  analogous   to  the  primitive
 recursion theorem\index{primitive recursion theorem!for lists} on the
 natural numbers discussed above in Section~\ref{num-prim-rec}.  It
 states  the  validity  of  primitive recursive definitions on lists, and
-can be used to justify any such definition.  The \ML\ 
+can be used to justify any such definition.  The \ML\
 function {\small\verb+new_recursive_definition+}
 uses this theorem to do automatic\index{primitive recursion
 theorem!automated use of, in HOL system@automated use of, in \HOL\
@@ -1280,27 +1280,27 @@ are also made in the theory \ml{list}:
 
    EVERY_DEF  |- (!P. EVERY P [] = T) /\
                  (!P h t. EVERY P (h::t) = P h /\ EVERY P t)
-    
-   EXISTS_DEF |- (!P. EXISTS P [] = F) /\ 
+
+   EXISTS_DEF |- (!P. EXISTS P [] = F) /\
                  (!P h t. EXISTS P (h::t) = P h \/ EXISTS P t)
 
    FILTER     |- (!P. FILTER P [] = []) /\
-                 (!P h t. FILTER P (h::t) 
+                 (!P h t. FILTER P (h::t)
                            = if P h then h::FILTER P t else FILTER P t)
 
    FOLDL      |- (!f e. FOLDL f e [] = e) /\
                  (!f e x l. FOLDL f e (x::l) = FOLDL f (f e x) l)
-    
+
    FOLDR      |- (!f e. FOLDR f e [] = e) /\
                  (!f e x l. FOLDR f e (x::l) = f x (FOLDR f e l))
-    
-   MEM        |- (!x. MEM x [] = F) /\ 
+
+   MEM        |- (!x. MEM x [] = F) /\
                  (!x h t. MEM x (h::t) = (x = h) \/ MEM x t)
 \end{verbatim}\end{hol}
 
 \noindent For a complete list of available theorems in
 {\small\verb+listTheory+}, see \REFERENCE.  The theory
-{\small\verb+list+} is relatively compact, largely because of 
+{\small\verb+list+} is relatively compact, largely because of
 how the \HOL\ system has evolved. A more extensive theory of lists can
 be found in {\small\verb+rich_listTheory+}.
 
@@ -1323,109 +1323,109 @@ lists|)}
 %  [ALL_EL]
 %  |- (!P. ALL_EL P [] = T) /\
 %     !P x l. ALL_EL P (x::l) = P x /\ ALL_EL P l
-%  
+%
 %  [BUTFIRSTN]
 %  |- (!l. BUTFIRSTN 0 l = l) /\
 %     !n x l. BUTFIRSTN (SUC n) (x::l) = BUTFIRSTN n l
-%  
+%
 %  [BUTLASTN]
 %  |- (!l. BUTLASTN 0 l = l) /\
 %     !n x l. BUTLASTN (SUC n) (SNOC x l) = BUTLASTN n l
-%  
+%
 %  [BUTLAST_DEF] |- !l. BUTLAST l = SEG (PRE (LENGTH l)) 0 l
-%  
+%
 %  [ELL]
-%  |- (!l. ELL 0 l = LAST l) /\ 
+%  |- (!l. ELL 0 l = LAST l) /\
 %     !n l. ELL (SUC n) l = ELL n (BUTLAST l)
-%  
+%
 %  [FIRSTN]
-%  |- (!l. FIRSTN 0 l = []) /\ 
+%  |- (!l. FIRSTN 0 l = []) /\
 %     !n x l. FIRSTN (SUC n) (x::l) = x::FIRSTN n l
-%  
+%
 %  [GENLIST]
 %  |- (!f. GENLIST f 0 = []) /\
 %     !f n. GENLIST f (SUC n) = SNOC (f n) (GENLIST f n)
-%  
-%  [IS_EL_DEF] 
+%
+%  [IS_EL_DEF]
 %  |- !x l. IS_EL x l = SOME_EL ($= x) l
-%  
+%
 %  [IS_PREFIX]
-%  |- (!l. IS_PREFIX l [] = T) /\ 
+%  |- (!l. IS_PREFIX l [] = T) /\
 %     (!x l. IS_PREFIX [] (x::l) = F) /\
 %     !x1 l1 x2 l2. IS_PREFIX (x1::l1) (x2::l2) = (x1 = x2) /\ IS_PREFIX l1 l2
-%  
+%
 %  [IS_SUBLIST]
 %  |- (!l. IS_SUBLIST l [] = T) /\
 %     (!x l. IS_SUBLIST [] (x::l) = F) /\
 %     !x1 l1 x2 l2.
 %       IS_SUBLIST (x1::l1) (x2::l2) =
 %       (x1 = x2) /\ IS_PREFIX l1 l2 \/ IS_SUBLIST l1 (x2::l2)
-%  
+%
 %  [IS_SUFFIX]
 %  |- (!l. IS_SUFFIX l [] = T) /\
 %     (!x l. IS_SUFFIX [] (SNOC x l) = F) /\
 %     !x1 l1 x2 l2.
 %       IS_SUFFIX (SNOC x1 l1) (SNOC x2 l2) = (x1 = x2) /\ IS_SUFFIX l1 l2
-%  
+%
 %  [LASTN]
 %  |- (!l. LASTN 0 l = []) /\
 %     !n x l. LASTN (SUC n) (SNOC x l) = SNOC x (LASTN n l)
-%  
+%
 %  [LAST_DEF]
 %  |- !l. LAST l = HD (SEG 1 (PRE (LENGTH l)) l)
-%  
+%
 %  [OR_EL_DEF] |- OR_EL = SOME_EL I
-%  
+%
 %  [PREFIX_DEF] |- !P l. PREFIX P l = FST (SPLITP ($~ o P) l)
-%  
+%
 %  [REPLICATE]
-%  |- (!x. REPLICATE 0 x = []) /\ 
+%  |- (!x. REPLICATE 0 x = []) /\
 %     !n x. REPLICATE (SUC n) x = x::REPLICATE n x
-%  
+%
 %  [REVERSE]
-%  |- (REVERSE [] = []) /\ 
+%  |- (REVERSE [] = []) /\
 %     !x l. REVERSE (x::l) = SNOC x (REVERSE l)
-%  
+%
 %  [SCANL]
 %  |- (!f e. SCANL f e [] = [e]) /\
 %     !f e x l. SCANL f e (x::l) = e::SCANL f (f e x) l
-%  
+%
 %  [SCANR]
 %  |- (!f e. SCANR f e [] = [e]) /\
 %     !f e x l. SCANR f e (x::l) = f x (HD (SCANR f e l))::SCANR f e l
-%  
+%
 %  [SEG]
 %  |- (!k l. SEG 0 k l = []) /\
 %     (!m x l. SEG (SUC m) 0 (x::l) = x::SEG m 0 l) /\
 %     !m k x l. SEG (SUC m) (SUC k) (x::l) = SEG (SUC m) k l
-%  
+%
 %  [SNOC]
-%  |- (!x. SNOC x [] = [x]) /\ 
+%  |- (!x. SNOC x [] = [x]) /\
 %     !x x' l. SNOC x (x'::l) = x'::SNOC x l
-%  
+%
 %  [SOME_EL]
-%  |- (!P. SOME_EL P [] = F) /\ 
+%  |- (!P. SOME_EL P [] = F) /\
 %     !P x l. SOME_EL P (x::l) = P x \/ SOME_EL P l
-%  
+%
 %  [SPLITP]
 %  |- (!P. SPLITP P [] = ([],[])) /\
 %     !P x l.
 %       SPLITP P (x::l) =
 %       (if P x then ([],x::l) else (x::FST (SPLITP P l),SND (SPLITP P l)))
-%  
+%
 %  [SUFFIX_DEF]
 %  |- !P l. SUFFIX P l = FOLDL (\l' x. (if P x then SNOC x l' else [])) [] l
-%  
+%
 %  [UNZIP]
 %  |- (UNZIP [] = ([],[])) /\
 %     !x l. UNZIP (x::l) = (FST x::FST (UNZIP l),SND x::SND (UNZIP l))
-%  
+%
 %  [ZIP]
 %   |- (ZIP ([],[]) = []) /\
 %       !x1 l1 x2 l2. ZIP (x1::l1,x2::l2) = (x1,x2)::ZIP (l1,l2)
 %\end{verbatim}\end{hol}
 %
-%A large number of theorems about these constants can be found in 
+%A large number of theorems about these constants can be found in
 %{\small\verb+rich_listTheory+}.
 
 \section{Trees}
@@ -1816,3 +1816,8 @@ labelled trees.
 %#"DURING x::(m,n). p x";;
 %"RES_DURING(m,n)(\x. p x)" : term
 %\end{verbatim}\end{session}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:
