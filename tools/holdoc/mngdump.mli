@@ -2,7 +2,6 @@ exception BadArg of string
 val write_warning : string -> unit
 val wrap : string -> string -> ('a -> unit) -> 'a -> unit
 val replicate : int -> 'a -> 'a list
-val texify_command : string -> string -> string
 val texify_math : string -> string
 val texify_text : string -> string
 type pvars = string list
