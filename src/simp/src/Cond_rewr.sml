@@ -241,11 +241,10 @@ fun QUANTIFY_CONDITIONS thm =
  else [thm]
  handle e => WRAP_ERR("QUANTIFY_CONDITIONS",e);
 
-
 fun IMP_CANON th =
  let val w = concl th
- in if is_conj w 
-      then IMP_CANON (CONJUNCT1 th) @ IMP_CANON (CONJUNCT2 th) 
+ in if is_conj w
+      then IMP_CANON (CONJUNCT1 th) @ IMP_CANON (CONJUNCT2 th)
     else
     if is_imp w
     then
@@ -277,7 +276,11 @@ fun IMP_CANON th =
             to prove P.  Instead, convert to |- ~P *)
        else map (DISCH ant) (IMP_CANON (UNDISCH th))
     end
-    else if is_forall w then IMP_CANON (SPEC_ALL th) else [th]
+    else if is_forall w then IMP_CANON (SPEC_ALL th)
+    else if is_res_forall w then
+      IMP_CANON (CONV_RULE (REWR_CONV RES_FORALL_THM THENC
+                            QUANT_CONV (RAND_CONV BETA_CONV)) th)
+    else [th]
  end;
 
 infix oo;

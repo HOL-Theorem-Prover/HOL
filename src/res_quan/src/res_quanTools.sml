@@ -14,8 +14,7 @@ struct
 open HolKernel Drule Conv Tactic Tactical Thm_cont Rewrite boolSyntax
   res_quanTheory boolTheory simpLib Cond_rewrite;
 
-infix ## THEN THENL THENC THENR ORELSER THEN_TCL ORELSE_TCL ++ ||;
-infixr -->;
+infix THENR ORELSER ++ ||;
 
 val (Type,Term) = Parse.parse_from_grammars boolTheory.bool_grammars;
 fun -- q x = Term q
@@ -35,83 +34,10 @@ fun ERR function message =
 (* Syntactic operations on restricted quantifications.                   *)
 (* These ought to be generalised to all kinds of restrictions,           *)
 (* but one thing at a time.                                              *)
+(*  (These now all come from boolSyntax.)                                *)
 (* --------------------------------------------------------------------- *)
 
-val (mk_res_forall, mk_res_exists, mk_res_exists_unique,
-     mk_res_select, mk_res_abstract) =
- let fun mk_res_quan cons s (x,t1,t2) =
-      let val xty = type_of x
-          val t2_ty = type_of t2
-          val ty = (xty --> bool) --> (xty --> t2_ty)
-                    -->
-                   (if cons="RES_ABSTRACT" then (xty --> t2_ty) else
-                    if cons="RES_SELECT"   then xty else Type.bool)
-        in
-          mk_comb(mk_comb(mk_thy_const{Name=cons,Thy="bool",Ty=ty},t1),
-                  mk_abs(x,t2))
-        end
-        handle _ => raise ERR "mk_res_quan" s
-    in
-    (mk_res_quan "RES_FORALL"         "mk_res_forall",
-     mk_res_quan "RES_EXISTS"         "mk_res_exists",
-     mk_res_quan "RES_EXISTS_UNIQUE"  "mk_res_exists_unique",
-     mk_res_quan "RES_SELECT"         "mk_res_select",
-     mk_res_quan "RES_ABSTRACT"       "mk_res_abstract")
-    end;
 
-fun list_mk_res_forall (ress,body) =
-   (itlist (fn (v,p) => fn  b => mk_res_forall(v,p,b)) ress body)
-           handle _ => raise ERR "list_mk_res_forall" "";
-
-fun list_mk_res_exists (ress,body) =
-   (itlist (fn (v,p) => fn  b => mk_res_exists(v,p,b)) ress body)
-           handle _ => raise ERR "list_mk_res_exists" "";
-
-val (dest_res_forall, dest_res_exists, dest_res_exists_unique,
-     dest_res_select, dest_res_abstract) =
-    let fun dest_res_quan cons s =
-         let val check = assert (fn c =>
-                          let val {Name,Thy,...} = dest_thy_const c
-                          in Name=cons andalso Thy="bool"
-                          end)
-         in
-           fn tm => (let val (op1, rand1) = dest_comb tm
-                     val (op2, c1) = dest_comb op1
-                     val _ = check op2
-                     val (c2,c3) = dest_abs rand1
-                     in
-                       (c2,c1,c3)
-                     end)
-        end
-           handle _ => raise ERR "dest_res_quan" s
-    in
-    (dest_res_quan "RES_FORALL"         "dest_res_forall",
-     dest_res_quan "RES_EXISTS"         "dest_res_exists",
-     dest_res_quan "RES_EXISTS_UNIQUE"  "dest_res_exists_unique",
-     dest_res_quan "RES_SELECT"         "dest_res_select",
-     dest_res_quan "RES_ABSTRACT"       "dest_res_abstract")
-    end ;
-
-fun strip_res_forall fm =
-  let val (bv,pred,body) = dest_res_forall fm
-      val (prs, core) = strip_res_forall body
-  in ((bv, pred)::prs, core)
-  end
-  handle _ => ([],fm);
-
-fun strip_res_exists fm =
-  let val (bv,pred,body) = dest_res_exists fm
-      val (prs, core) = strip_res_exists body
-  in ((bv, pred)::prs, core)
-  end
-  handle _ => ([],fm);
-
-
-val is_res_forall        = can dest_res_forall;
-val is_res_exists        = can dest_res_exists;
-val is_res_exists_unique = can dest_res_exists_unique;
-val is_res_select        = can dest_res_select;
-val is_res_abstract      = can dest_res_abstract;
 
 (* ===================================================================== *)
 (* Conversions		    	    					 *)

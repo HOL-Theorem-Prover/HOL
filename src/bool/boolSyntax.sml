@@ -48,7 +48,7 @@ val unbounded_tm = prim_mk_const {Name="UNBOUNDED", Thy="bool"};
           Derived syntax operations
  ---------------------------------------------------------------------------*)
 
-fun mk_eq (lhs,rhs) = 
+fun mk_eq (lhs,rhs) =
  list_mk_comb(inst[alpha |-> type_of lhs] equality, [lhs,rhs])
  handle HOL_ERR _ => raise ERR "mk_eq" "lhs and rhs have different types";
 
@@ -69,7 +69,7 @@ fun mk_disj(disj1,disj2) =
  list_mk_comb(disjunction,[disj1,disj2])
  handle HOL_ERR _ => raise ERR "mk_disj" "Non-boolean argument"
 
-fun mk_neg M = 
+fun mk_neg M =
   with_exn mk_comb(negation, M) (ERR "mk_neg" "Non-boolean argument");
 
 fun mk_cond (cond,larm,rarm) =
@@ -105,8 +105,8 @@ fun lhs M         = with_exn (fst o dest_eq) M lhs_err
 fun rhs M         = with_exn (snd o dest_eq) M rhs_err
 val dest_neg      = dest_monop negation (ERR "dest_neg" "not a negation")
 val dest_imp_only = dest_binop implication dest_imp_err;
-fun dest_imp M    = dest_imp_only M 
-                      handle HOL_ERR _ => (dest_neg M, F) 
+fun dest_imp M    = dest_imp_only M
+                      handle HOL_ERR _ => (dest_neg M, F)
                       handle HOL_ERR _ => raise dest_imp_err
 val dest_select  = dest_binder select      (ERR"dest_select" "not a \"@\"")
 val dest_forall  = dest_binder universal   (ERR"dest_forall" "not a \"!\"")
@@ -120,15 +120,15 @@ fun dest_cond M =
  let val (Rator,t2) = with_exn dest_comb M dest_cond_err
      val (b,t1) = dest_binop conditional dest_cond_err Rator
  in (b, t1, t2)
- end 
+ end
 
 fun dest_bool_case M =
  let val (Rator,b) = with_exn dest_comb M bool_case_err
      val (a0,a1) = dest_binop bool_case bool_case_err Rator
  in (a0, a1, b)
- end 
+ end
 
-fun dest_arb M = 
+fun dest_arb M =
   if same_const M arb then type_of M else raise ERR "dest_arb" ""
 
 end (* local *);
@@ -192,7 +192,7 @@ val strip_imp_only =
 
 val strip_neg =
  let val destn = total dest_neg
-     fun strip A M = 
+     fun strip A M =
        case destn M
         of NONE => (M,A)
          | SOME N => strip (A+1) N
@@ -213,11 +213,11 @@ val strip_fun   = HolKernel.strip_fun
 
 
 (*---------------------------------------------------------------------------
-     Linking definitional principles and signature operations 
+     Linking definitional principles and signature operations
      with grammars.
  ---------------------------------------------------------------------------*)
 
-fun dest t = 
+fun dest t =
   let val (lhs,rhs) = dest_eq (snd(strip_forall t))
       val (f,args) = strip_comb lhs
   in if all is_var args
@@ -233,57 +233,57 @@ fun post (V,th) =
   in Parse.add_const cname;
      itlist GEN V (rev_itlist add_var V th)
   end;
-  
+
 val _ = Definition.new_definition_hook := (dest, post)
 
-fun defname t = 
+fun defname t =
   let val head = #1 (strip_comb (lhs (#2 (strip_forall t))))
   in fst (dest_var head handle HOL_ERR _ => dest_const head)
   end;
-  
-fun new_infixr_definition (s, t, p) = 
+
+fun new_infixr_definition (s, t, p) =
   Definition.new_definition(s, t)
-    before 
+    before
   Parse.add_infix(defname t, p, Parse.RIGHT);
 
-fun new_infixl_definition (s, t, p) = 
+fun new_infixl_definition (s, t, p) =
   Definition.new_definition(s, t)
     before
    Parse.add_infix(defname t, p, Parse.LEFT);
 
-fun new_binder_definition (s, t) = 
+fun new_binder_definition (s, t) =
   Definition.new_definition(s, t)
     before
   Parse.add_binder (defname t, Parse.std_binder_precedence);
 
-fun new_type_definition (name, inhab_thm) = 
+fun new_type_definition (name, inhab_thm) =
   Definition.new_type_definition (name,inhab_thm)
      before
   Parse.add_type name;
 
-fun new_constant (p as (Name,_)) = 
+fun new_constant (p as (Name,_)) =
   Theory.new_constant p
-     before 
+     before
   Parse.add_const Name;
 
-fun new_infix(Name, Ty, Prec) = 
+fun new_infix(Name, Ty, Prec) =
   Theory.new_constant(Name, Ty)
      before
-  (Parse.add_const Name; Parse.add_infix(Name, Prec, Parse.RIGHT)); 
+  (Parse.add_const Name; Parse.add_infix(Name, Prec, Parse.RIGHT));
 
-fun new_binder (p as (Name,_)) = 
+fun new_binder (p as (Name,_)) =
   Theory.new_constant p
      before
-  (Parse.add_const Name; 
-   Parse.add_binder (Name, Parse.std_binder_precedence)); 
+  (Parse.add_const Name;
+   Parse.add_binder (Name, Parse.std_binder_precedence));
 
-fun new_type (p as (Name,_)) = 
+fun new_type (p as (Name,_)) =
   Theory.new_type p
-     before 
+     before
   Parse.add_type Name;
 
-fun new_infix_type (x as {Name,Arity,ParseName,Prec,Assoc}) = 
- let val _ = Arity = 2 orelse 
+fun new_infix_type (x as {Name,Arity,ParseName,Prec,Assoc}) =
+ let val _ = Arity = 2 orelse
              raise ERR "new_infix_type" "Infix types must have arity 2"
  in
    Theory.new_type(Name,Arity)
@@ -297,9 +297,9 @@ fun new_infix_type (x as {Name,Arity,ParseName,Prec,Assoc}) =
       current grammar.
  ---------------------------------------------------------------------------*)
 
-fun delete_const s = 
+fun delete_const s =
    Theory.delete_const s
-     before 
+     before
    Parse.hide s;
 
 
@@ -330,5 +330,94 @@ val (comm_tm,assoc_tm,idem_tm,ldistrib_tm,rdistrib_tm) =
        mk_eq(list_mk_comb(f,[list_mk_comb(g,[y,z]),x]),
              list_mk_comb(g,[list_mk_comb(f,[y,x]),list_mk_comb(f,[z,x])])))
    end;
+
+(* ===================================================================== *)
+(* Syntactic operations on restricted quantifications.                   *)
+(* These ought to be generalised to all kinds of restrictions,           *)
+(* but one thing at a time.                                              *)
+(* --------------------------------------------------------------------- *)
+
+val (mk_res_forall, mk_res_exists, mk_res_exists_unique,
+     mk_res_select, mk_res_abstract) =
+ let fun mk_res_quan cons s (x,t1,t2) =
+      let val xty = type_of x
+          val t2_ty = type_of t2
+          val ty = (xty --> bool) --> (xty --> t2_ty)
+                    -->
+                   (if cons="RES_ABSTRACT" then (xty --> t2_ty) else
+                    if cons="RES_SELECT"   then xty else Type.bool)
+        in
+          mk_comb(mk_comb(mk_thy_const{Name=cons,Thy="bool",Ty=ty},t1),
+                  mk_abs(x,t2))
+        end
+        handle _ => raise ERR "mk_res_quan" s
+    in
+    (mk_res_quan "RES_FORALL"         "mk_res_forall",
+     mk_res_quan "RES_EXISTS"         "mk_res_exists",
+     mk_res_quan "RES_EXISTS_UNIQUE"  "mk_res_exists_unique",
+     mk_res_quan "RES_SELECT"         "mk_res_select",
+     mk_res_quan "RES_ABSTRACT"       "mk_res_abstract")
+    end;
+
+fun list_mk_res_forall (ress,body) =
+   (itlist (fn (v,p) => fn  b => mk_res_forall(v,p,b)) ress body)
+           handle _ => raise ERR "list_mk_res_forall" "";
+
+fun list_mk_res_exists (ress,body) =
+   (itlist (fn (v,p) => fn  b => mk_res_exists(v,p,b)) ress body)
+           handle _ => raise ERR "list_mk_res_exists" "";
+
+val (dest_res_forall, dest_res_exists, dest_res_exists_unique,
+     dest_res_select, dest_res_abstract) =
+    let fun dest_res_quan cons s =
+         let val check = assert (fn c =>
+                          let val {Name,Thy,...} = dest_thy_const c
+                          in Name=cons andalso Thy="bool"
+                          end)
+         in
+           fn tm => (let val (op1, rand1) = dest_comb tm
+                     val (op2, c1) = dest_comb op1
+                     val _ = check op2
+                     val (c2,c3) = dest_abs rand1
+                     in
+                       (c2,c1,c3)
+                     end)
+        end
+           handle _ => raise ERR "dest_res_quan" s
+    in
+    (dest_res_quan "RES_FORALL"         "dest_res_forall",
+     dest_res_quan "RES_EXISTS"         "dest_res_exists",
+     dest_res_quan "RES_EXISTS_UNIQUE"  "dest_res_exists_unique",
+     dest_res_quan "RES_SELECT"         "dest_res_select",
+     dest_res_quan "RES_ABSTRACT"       "dest_res_abstract")
+    end ;
+
+fun strip_res_forall fm =
+  let val (bv,pred,body) = dest_res_forall fm
+      val (prs, core) = strip_res_forall body
+  in ((bv, pred)::prs, core)
+  end
+  handle _ => ([],fm);
+
+fun strip_res_exists fm =
+  let val (bv,pred,body) = dest_res_exists fm
+      val (prs, core) = strip_res_exists body
+  in ((bv, pred)::prs, core)
+  end
+  handle _ => ([],fm);
+
+
+val is_res_forall        = can dest_res_forall;
+val is_res_exists        = can dest_res_exists;
+val is_res_exists_unique = can dest_res_exists_unique;
+val is_res_select        = can dest_res_select;
+val is_res_abstract      = can dest_res_abstract;
+
+fun mk n = prim_mk_const{Name = n, Thy = "bool"}
+val res_forall_tm = mk "RES_FORALL"
+val res_exists_tm = mk "RES_EXISTS"
+val res_exists1_tm = mk "RES_EXISTS_UNIQUE"
+val res_select_tm = mk "RES_SELECT"
+val res_abstract_tm = mk "RES_ABSTRACT"
 
 end
