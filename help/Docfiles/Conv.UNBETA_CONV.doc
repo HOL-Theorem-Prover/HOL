@@ -28,6 +28,6 @@ eliminated through the application of the function term to some other
 argument.
 
 \SEEALSO
-Conv.BETA_CONV
+Thm.BETA_CONV
 
 \ENDDOC
