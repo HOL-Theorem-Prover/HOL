@@ -1,6 +1,6 @@
 \DOC concat
 
-\TYPE {concat : (string -> string -> string)}
+\TYPE {concat : string -> string -> string}
 
 \SYNOPSIS
 Concatenates two ML strings.
@@ -13,16 +13,18 @@ Never fails.
 
 \EXAMPLE
 {
-#concat `1` ``;;
-`1` : string
+    - concat "1" "";
+    > val it = "1" : string
 
-#concat `hello` `world`;;
-`helloworld` : string
+    - concat "hello" "world";
+    > val it = "helloworld" : string
 
-#concat `hello` (concat ` ` `world`);;
-`hello world` : string
+    - concat "hello" (concat " " "world");
+    > val it = "hello world" : string
 }
-\SEEALSO
-concatl, \char'136.
+\COMMENTS
+This function is open at the top level and is not the same as the
+Basis function {String.concat}.  The latter concatenates a list of
+strings, replacing {concatl} in the HOL distribution.
 
 \ENDDOC
