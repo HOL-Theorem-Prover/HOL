@@ -64,4 +64,5 @@ sig
   val BETA_TAC            : tactic
   val KNOW_TAC            : term -> tactic
   val SUFF_TAC            : term -> tactic
+  val SELECT_ELIM_TAC     : tactic
 end;

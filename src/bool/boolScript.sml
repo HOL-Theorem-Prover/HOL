@@ -222,14 +222,14 @@ val _ = (add_const "RES_SELECT"; associate_restriction ("@",  "RES_SELECT"));
 (* Experimental rewriting directives                                         *)
 (*---------------------------------------------------------------------------*)
 
-val UNBOUNDED_DEF = 
+val UNBOUNDED_DEF =
   Definition.new_definition
-    ("UNBOUNDED_DEF", 
+    ("UNBOUNDED_DEF",
      Term `UNBOUNDED = \b:bool. b`);
 
-val BOUNDED_DEF = 
+val BOUNDED_DEF =
   Definition.new_definition
-    ("BOUNDED_DEF", 
+    ("BOUNDED_DEF",
      Term `BOUNDED = \(b:bool) (v:bool). b`);
 
 val _ = List.app add_const ["UNBOUNDED", "BOUNDED"];
@@ -1482,6 +1482,31 @@ val SELECT_UNIQUE =
   end;
 
 val _ = save_thm("SELECT_UNIQUE", SELECT_UNIQUE);
+
+(* ----------------------------------------------------------------------
+    SELECT_ELIM_THM = |- !P Q. (?x. P x) /\ (!x. P x ==> Q x) ==> Q ($@ P)
+   ---------------------------------------------------------------------- *)
+
+val SELECT_ELIM_THM = let
+  val P = mk_var("P", alpha --> bool)
+  val Q = mk_var("Q", alpha --> bool)
+  val x = mk_var("x", alpha)
+  val Px = mk_comb(P, x)
+  val Qx = mk_comb(Q, x)
+  val PimpQ = mk_imp(Px, Qx)
+  val allPimpQ = mk_forall(x, PimpQ)
+  val exPx = mk_exists (x, Px)
+  val selP = mk_comb(prim_mk_const{Thy = "min", Name = "@"}, P)
+  val asm_t = mk_conj(exPx, allPimpQ)
+  val asm = ASSUME asm_t
+  val (ex_th, forall_th) = CONJ_PAIR asm
+  val imp_th = SPEC selP forall_th
+  val Px_th = ASSUME Px
+  val PselP_th0 = UNDISCH (SPEC_ALL SELECT_AX)
+  val PselP_th = CHOOSE(x, ex_th) PselP_th0
+in
+  save_thm("SELECT_ELIM_THM", GENL [P, Q] (DISCH_ALL (MP imp_th PselP_th)))
+end
 
 (* -------------------------------------------------------------------------*)
 (* NOT_FORALL_THM = |- !P. ~(!x. P x) = ?x. ~P x                   	    *)

@@ -835,4 +835,17 @@ fun SUFF_TAC tm (al, c) =
 
 fun KNOW_TAC tm = REVERSE (SUFF_TAC tm);
 
+(* ----------------------------------------------------------------------
+    SELECT_ELIM_TAC
+      eliminates a select term from the goal.
+   ---------------------------------------------------------------------- *)
+
+fun SELECT_ELIM_TAC (g as (asl, w)) = let
+  val t = find_term is_select w
+in
+  CONV_TAC (UNBETA_CONV t) THEN
+  MATCH_MP_TAC SELECT_ELIM_THM THEN BETA_TAC
+end g
+
+
 end; (* Tactic *)
