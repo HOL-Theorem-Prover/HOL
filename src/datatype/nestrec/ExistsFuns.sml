@@ -33,9 +33,9 @@ fun == q x = Type q;
 
 val lemma1 = TAC_PROOF
     (([],
-      --`!P Q. (?x. P x) ==> (!x. (P x ==> Q x)) ==> ?x. Q x`--),
+      --`!P:'a -> bool Q. (?x. P x) ==> (!x. (P x ==> Q x)) ==> ?x. Q x`--),
         (REPEAT STRIP_TAC) THEN (EXISTS_TAC (--`x:'a`--)) THEN
-        (MP_TAC (ASSUME (--`P x`--))) THEN
+        (MP_TAC (Q.ASSUME `P (x:'a)`)) THEN
         (ASM_REWRITE_TAC []));
 
 (*
@@ -45,7 +45,7 @@ val lemma1 = TAC_PROOF
                       A u B |- ?x1...xn. Q x1...xn
 *)
 
-val lambdaQ = (--`\x. Q x`--)
+val lambdaQ = (--`\x:'a. Q x:bool`--)
 (*
 val exists_thm =
     ASSUME (--`?(x1:num)(x2:num)(x3:'a). P(((\z.z)x1),((\y.(y,x3))x2))`--)
@@ -88,7 +88,7 @@ fun EXISTS_FROM_EXISTS_RULE {exists_thm, forall_imp_thm} =
 
 val lemma2 = TAC_PROOF
     (([],
-      --`!f P Q.(?x. P x) ==> (!x. (P x ==> Q (f x))) ==> ?y:'b. Q y`--),
+      --`!f P Q.(?x:'a. P x) ==> (!x. (P x ==> Q (f x))) ==> ?y:'b. Q y`--),
      (REPEAT STRIP_TAC THEN EXISTS_TAC (--`(f:'a -> 'b)(x:'a)`--) THEN
       FIRST_ASSUM MATCH_MP_IMP_TAC THEN FIRST_ASSUM ACCEPT_TAC));
 
@@ -155,14 +155,14 @@ fun GEN_EXISTS_FROM_EXISTS_RULE {exists_thm,
                ((RATOR_CONV (RAND_CONV BETA_CONV)) THENC
                 (RAND_CONV (DEPTH_CONV BETA_CONV))))))) THENC
                (RAND_CONV (RAND_CONV (ABS_CONV BETA_CONV)))))) speced_lemma2
-        val imp_exists_y_Qy = 
+        val imp_exists_y_Qy =
             CONV_RULE (RATOR_CONV (RAND_CONV (RAND_CONV (ABS_CONV
             (RAND_CONV (DEPTH_CONV BETA_CONV))))))
             (MP conv_thm exists_thm)
         val red_all_x_Pbody_imp_Qbody_thm = CONV_RULE
             (RAND_CONV(ABS_CONV(RAND_CONV (DEPTH_CONV BETA_CONV))))
             all_x_Pbody_imp_Qbody_thm
-                        
+
     in
         MP imp_exists_y_Qy red_all_x_Pbody_imp_Qbody_thm
     end  handle e as HOL_ERR {message=message,
@@ -171,5 +171,5 @@ fun GEN_EXISTS_FROM_EXISTS_RULE {exists_thm,
         case funt of "GEN_EXISTS_FROM_EXISTS_RULE" => raise e
                    | _ =>
         raise ExistsFun_ERR {function = "GEN_EXISTS_FROM_EXISTS_RULE",
-                             message = str^"."^funt^": "^message} 
+                             message = str^"."^funt^": "^message}
 end;
