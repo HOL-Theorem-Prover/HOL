@@ -236,10 +236,10 @@ fun clean_sigobj() = let
   val lowcase = String.map Char.toLower
   fun sigobj_rem_file s = let
     val f = Path.file s
+    val n = lowcase (hd (String.fields (fn c => c = #".") f))
   in
-    if lowcase (hd (String.tokens (fn c => c = #".") f)) <> "systeml" then
-      rem_file s
-    else ()
+    if List.exists (fn x => x = n) ["systeml", "cvs", "", "readme"] then ()
+    else rem_file s
   end
   fun write_initial_srcfiles () = let
     val outstr = TextIO.openOut (fullPath [HOLDIR, "sigobj", "SRCFILES"])
