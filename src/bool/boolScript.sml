@@ -170,6 +170,13 @@ val bool_case_DEF =
 
 val _ = List.app add_const ["ARB", "bool_case"];
 
+val IN_DEF =
+ Definition.new_definition
+   ("IN_DEF",  Term`IN = \x (f:'a->bool). f x`);
+
+val _ = (add_infix ("IN", 451, Parse.NONASSOC); add_const "IN");
+
+
 
 (*---------------------------------------------------------------------------*
  *                   THEOREMS                                                *
@@ -3579,7 +3586,7 @@ val _ = add_rule{pp_elements = [PPBlock([TOK "case", BreakSpace(1,2),
                  fixity = TruePrefix 7,
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  paren_style = OnlyIfNecessary,
-                 term_name = GrammarSpecials.case_special}
+                 term_name = GrammarSpecials.case_special};
 
 val _ = export_theory();
 

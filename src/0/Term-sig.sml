@@ -62,7 +62,6 @@ sig
   val rand          : term -> term
   val bvar          : term -> term
   val body          : term -> term
-  val is_bvar       : term -> bool
 
   val aconv         : term -> term -> bool
   val beta_conv     : term -> term
