@@ -54,7 +54,9 @@ signature arithSimps =
 sig
  type conv = Abbrev.conv
      type ctxt (* = thm list *) (* this may become more sophisticted *)
+
      val ARITH_ss : simpLib.ssdata
+     val REDUCE_ss : simpLib.ssdata
      val CTXT_ARITH : ctxt -> conv
      val CACHED_ARITH : ctxt -> conv
      val clear_arith_caches : unit -> unit

@@ -292,27 +292,34 @@ end;
 val a_v = --`NUMERAL a`--
 val b_v = --`NUMERAL b`--
 val zero = --`0`--
-fun mk_redconv0 pat = {name = "REDUCE_CONV (arithmetic reduction)",
-                       trace = 2,
-                       key = SOME([], pat),
-                       conv = K (K (CHANGED_CONV reduceLib.REDUCE_CONV))}
-fun mk_redconv op_t =
-  map mk_redconv0
-  [list_mk_comb(op_t, [a_v, b_v]), list_mk_comb(op_t, [a_v, zero]),
-   list_mk_comb(op_t, [zero, b_v]), list_mk_comb(op_t, [zero, zero])]
+val SUC = --`SUC`--
+val x = Psyntax.mk_var("x", ==`:num`==)
+val y = Psyntax.mk_var("y", ==`:num`==)
+
+fun reducer t = let
+  open Psyntax
+  val (_, args) = strip_comb t
+  fun is_suc t = is_comb t andalso fst (dest_comb t) = SUC
+  fun reducible t =
+    Term.is_numeral t orelse (is_suc t andalso reducible (snd (dest_comb t)))
+in
+  if List.all reducible args then reduceLib.REDUCE_CONV t else NO_CONV t
+end
+
+fun mk_redconv0 pat = {name = "REDUCE_CONV (arithmetic reduction)", trace = 2,
+                       key = SOME([], pat), conv = K (K reducer)}
+fun mk_redconv op_t = mk_redconv0 (list_mk_comb(op_t, [x, y]))
 
 val ARITH_ss = simpLib.SIMPSET
-    {convs = mk_redconv0 (--`SUC 0`--) :: mk_redconv0 (--`SUC ^a_v`--) ::
-             flatten (map mk_redconv [--`$*`--, --`$+`--, --`$-`--,
-                                      --`$DIV`--, --`$MOD`--, --`$EXP`--,
-                                      --`$<`--, --`$<=`--, --`$>`--,
-                                      --`$>=`--,
-                                      --`$= : num -> num -> bool`--]),
-     rewrs = arithmetic_rewrites,
-     congs = [],
-     filter = NONE,
-     ac = [],
-     dprocs = [ARITH_REDUCER]};
+    {convs = [], rewrs = arithmetic_rewrites, congs = [],
+     filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
+
+val REDUCE_ss = simpLib.SIMPSET
+  {convs = map mk_redconv [--`$*`--, --`$+`--, --`$-`--,
+                           --`$DIV`--, --`$MOD`--, --`$EXP`--,
+                           --`$<`--, --`$<=`--, --`$>`--,
+                           --`$>=`--, --`$= : num -> num -> bool`--],
+   rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
 
 fun clear_arith_caches() = clear_cache arith_cache;
 
