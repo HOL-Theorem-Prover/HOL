@@ -1,1 +1,1 @@
-signature HOLset = Binaryset;
+signature HOLset = Splayset;

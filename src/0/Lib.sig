@@ -15,6 +15,7 @@ sig
   val append        : 'a list -> 'a list -> 'a list
   val concat        : string -> string -> string
   val equal         : ''a -> ''a -> bool
+  val pair          : 'a -> 'b -> 'a * 'b
   val cons          : 'a -> 'a list -> 'a list
   val ##            : ('a -> 'b) * ('c -> 'd) -> 'a * 'c -> 'b * 'd
   val A             : ('a -> 'b) -> 'a -> 'b

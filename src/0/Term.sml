@@ -571,7 +571,7 @@ fun is_abs(Abs _) = true | is_abs(Clos(_,Abs _)) = true | is_abs _ = false;
 fun rename_bvar s t =
     case t of
       Abs(Fv(_, Ty), Body) => Abs(Fv(s,Ty), Body)
-    | Clos(Env, Abs(Fv(_, Ty), Body)) => Clos(Env, Abs(Fv(s, Ty), Body))
+    | Clos(_, Abs _) => rename_bvar s (push_clos t)
     | _ => raise ERR "rename_bvar" "not an abstraction"
 
 local val EQ = Portable.pointer_eq
