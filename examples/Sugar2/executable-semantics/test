@@ -8,7 +8,7 @@ loadPath := "../official-semantics" :: "../regexp" :: !loadPath;
 app 
  load 
  ["bossLib","metisLib","intLib","stringLib","pred_setLib",
-  "regexpLib","ExecuteSemanticsTheory"];
+  "regexpLib","ExecuteSemanticsTheory","PropertiesTheory"];
 
 quietdec := true;
 open bossLib metisLib intLib stringLib rich_listTheory
@@ -263,6 +263,27 @@ EVAL
 EVAL
 ``UF_SEM (FINITE[{1};{2};{3};{4};{4};{6};{7};{8};{9}])
    (F_NEVER(S_CAT(S_BOOL(B_PROP 3), S_BOOL(B_PROP 4))))``;
+
+
+(******************************************************************************
+quietdec:=true;;
+loadPath := "../official-semantics" :: "../regexp" :: !loadPath;
+app load ["res_quanTools","PropertiesTheory"];
+open PathTheory;
+val resq_SS = 
+ simpLib.merge_ss
+  [res_quanTools.resq_SS,
+   rewrites
+    [num_to_def,xnum_to_def,IN_DEF,num_to_def,xnum_to_def,LENGTH_def]];
+quietdec:=false;
+
+val UF_SEM_SUFFIX_IMP_FALSE =
+ store_thm
+  ("UF_SEM_SUFFIX_IMP_FALSE",
+   ``UF_SEM w (F_SUFFIX_IMP(r, F_BOOL B_FALSE)) =
+      !j::(0 to LENGTH w). ~(US_SEM (SEL w (0,j)) r)``,
+   RW_TAC (std_ss++resq_SS) [UF_SEM_def,B_SEM]);
+******************************************************************************)
 
 (* 
 ** Generated this from a Verilog model of the BUF example in
@@ -1140,3 +1161,314 @@ time EVAL ``UF_SEM (FINITE SimRun) (FOUR_PHASE StoB_REQ BtoS_ACK)``;
 *)
 
 time EVAL ``UF_SEM (FINITE SimRun) (FOUR_PHASE BtoR_REQ RtoB_ACK)``;
+
+(******************************************************************************
+* f1 before f2 = [not f2 W (f1 & not f2)]
+******************************************************************************)
+val F_BEFORE_def =
+ Define
+  `F_BEFORE(f1,f2) = F_W(F_NOT f2, F_AND(f1, F_NOT f2))`;
+
+(*  
+** SimRun |= StoB_REQ before BtoS_ACK
+*)
+time
+ EVAL
+ ``UF_SEM
+    (FINITE SimRun)
+    (F_BEFORE(F_BOOL(B_PROP StoB_REQ), F_BOOL(B_PROP BtoS_ACK)))``;
+
+(*  
+** SimRun |= BtoS_ACK before StoB_REQ
+*)
+time
+ EVAL
+ ``UF_SEM
+    (FINITE SimRun)
+    (F_BEFORE(F_BOOL(B_PROP BtoS_ACK), F_BOOL(B_PROP StoB_REQ)))``;
+
+(*  
+** SimRun |= {[*]}(StoB_REQ before BtoS_ACK)
+*)
+time
+ EVAL
+ ``UF_SEM
+    (FINITE SimRun)
+    (F_SUFFIX_IMP
+     (S_REPEAT S_TRUE, 
+      F_BEFORE(F_BOOL(B_PROP StoB_REQ), F_BOOL(B_PROP BtoS_ACK))))``;
+
+(*  
+** SimRun |= {[*]}(BtoS_ACK before StoB_REQ)
+*)
+time
+ EVAL
+ ``UF_SEM
+    (FINITE SimRun)
+    (F_SUFFIX_IMP
+     (S_REPEAT S_TRUE, 
+      F_BEFORE(F_BOOL(B_PROP BtoS_ACK), F_BOOL(B_PROP StoB_REQ))))``;
+
+
+(******************************************************************************
+* Make ";;" into an infix for S_CAT
+******************************************************************************)
+val _ = set_fixity ";;" (Infixl 500);
+val S_CAT_IX_def = xDefine "S_CAT_IX" `$;; r1 r2 = S_CAT(r1,r2)`;
+
+(******************************************************************************
+* SimRun |= {[*];!BtoS_ACK;BtoS_ACK}(F)
+******************************************************************************)
+time
+ EVAL
+ ``UF_SEM
+    (FINITE SimRun)
+    (F_SUFFIX_IMP
+     ((S_REPEAT(S_BOOL B_TRUE) ;;
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_PROP BtoS_ACK)),
+      F_BOOL B_FALSE))``;
+
+(******************************************************************************
+* SimRun |= {[*];!BtoS_ACK;BtoS_ACK;[*];!BtoS_ACK;BtoS_ACK}(F)
+******************************************************************************)
+time
+ EVAL
+ ``UF_SEM
+    (FINITE SimRun)
+    (F_SUFFIX_IMP
+     ((S_REPEAT(S_BOOL B_TRUE) ;;
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_PROP BtoS_ACK) ;;
+       S_REPEAT(S_BOOL B_TRUE) ;;
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_PROP BtoS_ACK)),
+      F_BOOL B_FALSE))``;
+
+(******************************************************************************
+* SimRun |= {[*];BtoS_ACK;[RtoB_ACK];BtoS_ACK}(F)
+******************************************************************************)
+time
+ EVAL
+ ``UF_SEM
+    (FINITE SimRun)
+    (F_SUFFIX_IMP
+     ((S_REPEAT(S_BOOL B_TRUE) ;;
+       S_BOOL(B_PROP BtoS_ACK) ;;
+       S_REPEAT(S_BOOL(B_PROP RtoB_ACK)) ;;
+       S_BOOL(B_PROP BtoS_ACK)),
+      F_BOOL B_FALSE))``;
+
+(******************************************************************************
+* SimRun |= {[*];!BtoS_ACK;BtoS_ACK;[RtoB_ACK];!BtoS_ACK;BtoS_ACK}(F)
+******************************************************************************)
+time
+ EVAL
+ ``UF_SEM
+    (FINITE SimRun)
+    (F_SUFFIX_IMP
+     ((S_REPEAT(S_BOOL B_TRUE) ;;
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_PROP BtoS_ACK) ;;
+       S_REPEAT(S_BOOL(B_PROP RtoB_ACK)) ;;
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_PROP BtoS_ACK)),
+      F_BOOL B_FALSE))``;
+
+(******************************************************************************
+* SimRun |= {[*];BtoS_ACK;[!RtoB_ACK];BtoS_ACK}(F)
+******************************************************************************)
+time
+ EVAL
+ ``UF_SEM
+    (FINITE SimRun)
+    (F_SUFFIX_IMP
+     ((S_REPEAT(S_BOOL B_TRUE) ;;
+       S_BOOL(B_PROP BtoS_ACK) ;;
+       S_REPEAT(S_BOOL(B_NOT(B_PROP RtoB_ACK))) ;;
+       S_BOOL(B_PROP BtoS_ACK)),
+      F_BOOL B_FALSE))``;
+
+(******************************************************************************
+* SimRun |= {[*];!BtoS_ACK;BtoS_ACK;[!RtoB_ACK];!BtoS_ACK;BtoS_ACK}(F)
+******************************************************************************)
+time
+ EVAL
+ ``UF_SEM
+    (FINITE SimRun)
+    (F_SUFFIX_IMP
+     ((S_REPEAT(S_BOOL B_TRUE) ;;
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_PROP BtoS_ACK) ;;
+       S_REPEAT(S_BOOL(B_NOT(B_PROP RtoB_ACK))) ;;
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_PROP BtoS_ACK)),
+      F_BOOL B_FALSE))``;
+
+(******************************************************************************
+* SimRun 
+*  |= {[*];!BtoS_ACK;BtoS_ACK;[*];!RtoB_ACK;RtoB_ACK;[*];!BtoS_ACK;BtoS_ACK}(F)
+******************************************************************************)
+time
+ EVAL
+ ``UF_SEM
+    (FINITE SimRun)
+    (F_SUFFIX_IMP
+     ((S_REPEAT(S_BOOL B_TRUE) ;;
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_PROP BtoS_ACK) ;;
+       S_REPEAT(S_BOOL(B_TRUE)) ;;
+       S_BOOL(B_NOT(B_PROP RtoB_ACK)) ;;
+       S_BOOL(B_PROP RtoB_ACK) ;;
+       S_REPEAT(S_BOOL(B_TRUE)) ;;
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_PROP BtoS_ACK)),
+      F_BOOL B_FALSE))``;
+
+(******************************************************************************
+* SimRun 
+*  |= {[*];!BtoS_ACK;BtoS_ACK;
+*          [BtoS_ACK];[!BtoS_ACK];
+*          ((!RtoB_ACK;RtoB_ACK;)&&(!BtoS_ACK;!BtoS_ACK));
+*          [!BtoS_ACK];BtoS_ACK}
+******************************************************************************)
+time
+ EVAL
+ ``US_SEM
+    SimRun
+      ((S_REPEAT(S_BOOL B_TRUE) ;;
+        S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+        S_BOOL(B_PROP BtoS_ACK) ;;
+        S_REPEAT(S_BOOL(B_PROP BtoS_ACK));;
+        S_REPEAT(S_BOOL(B_NOT(B_PROP BtoS_ACK)));;
+        S_AND((S_BOOL(B_NOT(B_PROP RtoB_ACK)) ;; S_BOOL(B_PROP RtoB_ACK)),
+              (S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; S_BOOL(B_NOT(B_PROP BtoS_ACK)))) ;;
+        S_REPEAT(S_BOOL(B_NOT(B_PROP BtoS_ACK)));;
+        S_BOOL(B_PROP BtoS_ACK)))``;
+ 
+(******************************************************************************
+* SimRun 
+*  |= {[*];!BtoS_ACK;BtoS_ACK;
+*          [BtoS_ACK];[!BtoS_ACK];
+*          ((!RtoB_ACK;RtoB_ACK;)&&(!BtoS_ACK;!BtoS_ACK));
+*          [!BtoS_ACK];BtoS_ACK}
+*     (F)
+******************************************************************************)
+time
+ EVAL
+ ``UF_SEM
+    (FINITE SimRun)
+    (F_SUFFIX_IMP
+     ((S_REPEAT(S_BOOL B_TRUE) ;;
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_PROP BtoS_ACK) ;;
+       S_REPEAT(S_BOOL(B_PROP BtoS_ACK));;
+       S_REPEAT(S_BOOL(B_NOT(B_PROP BtoS_ACK)));;
+       S_AND((S_BOOL(B_NOT(B_PROP RtoB_ACK)) ;; S_BOOL(B_PROP RtoB_ACK)),
+             (S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; S_BOOL(B_NOT(B_PROP BtoS_ACK)))) ;;
+       S_REPEAT(S_BOOL(B_NOT(B_PROP BtoS_ACK)));;
+       S_BOOL(B_PROP BtoS_ACK)),
+      F_BOOL B_FALSE))``;
+
+(******************************************************************************
+* SimRun 
+*  |= {[*];!BtoS_ACK;BtoS_ACK;
+*          [BtoS_ACK];[!BtoS_ACK];
+*          ((!RtoB_ACK;RtoB_ACK;)&&(!BtoS_ACK;!BtoS_ACK));
+*          [!BtoS_ACK];BtoS_ACK}
+*     (T)
+******************************************************************************)
+time
+ EVAL
+ ``UF_SEM
+    (FINITE SimRun)
+    (F_SUFFIX_IMP
+     ((S_REPEAT(S_BOOL B_TRUE) ;;
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_PROP BtoS_ACK) ;;
+       S_REPEAT(S_BOOL(B_PROP BtoS_ACK));;
+       S_REPEAT(S_BOOL(B_NOT(B_PROP BtoS_ACK)));;
+       S_AND((S_BOOL(B_NOT(B_PROP RtoB_ACK)) ;; S_BOOL(B_PROP RtoB_ACK)),
+             (S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; S_BOOL(B_NOT(B_PROP BtoS_ACK)))) ;;
+       S_REPEAT(S_BOOL(B_NOT(B_PROP BtoS_ACK)));;
+       S_BOOL(B_PROP BtoS_ACK)),
+      F_BOOL B_TRUE))``;
+(******************************************************************************
+* SimRun 
+*  |= {[*];!BtoS_ACK;
+*          BtoS_ACK;
+*          [BtoS_ACK&!RtoB_ACK];
+*          [!BtoS_ACK&!RoB_ACK];
+*          BtoS_ACK}
+*     (F)
+******************************************************************************)
+time
+ EVAL
+ ``UF_SEM
+    (FINITE SimRun)
+    (F_SUFFIX_IMP
+     ((S_REPEAT(S_BOOL B_TRUE) ;;
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_PROP BtoS_ACK) ;;
+       S_REPEAT(S_BOOL(B_AND(B_PROP BtoS_ACK,
+                             B_NOT(B_PROP RtoB_ACK)))) ;;
+       S_REPEAT(S_BOOL(B_AND(B_NOT(B_PROP BtoS_ACK),
+                             B_NOT(B_PROP RtoB_ACK)))) ;;
+       S_BOOL(B_PROP BtoS_ACK)),
+      F_BOOL B_FALSE))``;
+
+
+(******************************************************************************
+* SimRun |= (!BtoS_ACK & X BtoS_ACK) before (!RtoB_ACK & X RtoB_ACK)
+******************************************************************************)
+time
+ EVAL
+ ``UF_SEM
+    (FINITE SimRun)
+    (F_BEFORE
+       (F_AND(F_NOT(F_BOOL(B_PROP RtoB_ACK)), 
+              F_NEXT(F_BOOL(B_PROP RtoB_ACK))),
+        F_AND(F_NOT(F_BOOL(B_PROP BtoS_ACK)), 
+              F_NEXT(F_BOOL(B_PROP BtoS_ACK)))))``;
+
+(******************************************************************************
+* SimRun 
+*  |= {[*]; !BtoS_ACK; BtoS_ACK; true}
+*     ((!RtoB_ACK & X RtoB_ACK) before (!BtoS_ACK & X BtoS_ACK))
+******************************************************************************)
+time
+ EVAL
+ ``UF_SEM
+    (FINITE SimRun)
+    (F_SUFFIX_IMP
+     ((S_REPEAT(S_BOOL B_TRUE) ;;
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_PROP BtoS_ACK) ;;
+       S_BOOL B_TRUE),
+      F_BEFORE
+       (F_AND(F_NOT(F_BOOL(B_PROP RtoB_ACK)), 
+              F_NEXT(F_BOOL(B_PROP RtoB_ACK))),
+        F_AND(F_NOT(F_BOOL(B_PROP BtoS_ACK)), 
+              F_NEXT(F_BOOL(B_PROP BtoS_ACK))))))``;
+
+(******************************************************************************
+* SimRun 
+*  |= {[*]; !RtoB_ACK; RtoB_ACK; true}
+*     ((!BtoS_ACK & X BtoS_ACK) before (!RtoB_ACK & X RtoB_ACK))
+******************************************************************************)
+time
+ EVAL
+ ``UF_SEM
+    (FINITE SimRun)
+    (F_SUFFIX_IMP
+     ((S_REPEAT(S_BOOL B_TRUE) ;;
+       S_BOOL(B_NOT(B_PROP BtoS_ACK)) ;; 
+       S_BOOL(B_PROP BtoS_ACK) ;;
+       S_BOOL B_TRUE),
+      F_BEFORE
+       (F_AND(F_NOT(F_BOOL(B_PROP RtoB_ACK)), 
+              F_NEXT(F_BOOL(B_PROP RtoB_ACK))),
+        F_AND(F_NOT(F_BOOL(B_PROP BtoS_ACK)), 
+              F_NEXT(F_BOOL(B_PROP BtoS_ACK))))))``;
+
+
