@@ -1,0 +1,14 @@
+\DOC Define
+
+\TYPE {Define : term quotation -> thm}
+
+\SYNOPSIS
+General purpose function definition facility.
+
+\DESCRIBE
+{bossLib.Define} is identical to {TotalDefn.Define}.
+
+\SEEALSO
+TotalDefn.Define.
+
+\ENDDOC

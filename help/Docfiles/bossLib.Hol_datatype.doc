@@ -17,50 +17,105 @@ inductive, or, alternatively, have a model in an initial algebra) may be
 specified using the invocation {Hol_datatype `<spec>`}, where
 {<spec>} should conform with the following grammar:
 {
-   spec ::= [ <binding> ;]* <binding>
+   spec    ::= [ <binding> ; ]* <binding>
 
-   binding ::= <ident> = <constr>
-            |  <ident> = <record>
+   binding ::= <ident> = [ <clause> | ]* <clause>
+            |  <ident> = <| [ <ident> : <type> ; ]* <ident> : <type> |>
 
-   constr ::= [<clause> | ]* <clause>
-
-   clause ::= <ident>
-           | <ident> of [<type> => ]* <type>
-
-   record ::= <| [<ident> : <type> ;]* <ident> : <type> |>
+   clause  ::= <ident>
+            |  <ident> of [<type> => ]* <type>
 }
 When a datatype is successfully defined, a number of standard theorems
 are automatically proved about the new type: the constructors of the type
 are proved to be injective and disjoint, induction and case analysis
 theorems are proved, and each type also has a `size' function defined
-for it. All these theorems are added to a database accessed via the
-functions in {TypeBase}.
+for it. All these theorems are stored in the current theory and added to
+a database accessed via the functions in {TypeBase}.
 
-\FAILURE
-If a model meeting the description of {spec} cannot be constructed.
+The notation used to declare datatypes is, unfortunately, not the same
+as that of ML. For example, an ML declaration
+{
+   datatype ('a,'b) btree = Leaf of 'a 
+                          | Node of 'b * ('a,'b) btree * ('a,'b) btree
+}
+would most likely be declared in HOL as
+{
+   Hol_datatype `btree = Leaf of 'a 
+                       | Node of 'b => btree => btree`
+}
+The {=>} notation in a HOL datatype description is intended to replace 
+{*} in an ML datatype description, and highlights the fact that, in HOL, 
+constructors are by default curried.
 
 \EXAMPLE
-In the following, we shall show how some important types may be defined.
-To begin, we can define a type of binary trees where the leaves
-are numbers.
+In the following, we shall give an overview of the kinds of types that 
+may be defined by {Hol_datatype}.
+
+To start, enumerated types can be defined as in the following example:
 {
-    - Hol_datatype `tree = Leaf of num
+   - Hol_datatype `enum = A1  | A2  | A3  | A4  | A5 
+                        | A6  | A7  | A8  | A9  | A10
+                        | A11 | A12 | A13 | A14 | A15
+                        | A16 | A17 | A18 | A19 | A20
+                        | A21 | A22 | A23 | A24 | A25
+                        | A26 | A27 | A28 | A29 | A30`
+
+}
+Other non-recursive types may be defined as well:
+{
+   - Hol_datatype `foo = N of num 
+                       | B of bool 
+                       | Fn of 'a -> 'b 
+                       | Pr of 'a # 'b`
+}
+Turning to recursive types, we can define a type of binary trees 
+where the leaves are numbers.
+{
+    - Hol_datatype `tree = Leaf of num 
                          | Node of tree => tree`;
 }
-Next, we change the tree to one that has polymorphic values at internal
-nodes.
+Next, we have already seen a type of binary trees having polymorphic 
+values at internal nodes. This time, we will declare it in "paired" format.
 {
     - Hol_datatype `tree = Leaf
-                         | Node of tree => 'a => tree`;
+                         | Node of tree # 'a # tree`;
+}
+This specification seems closer to the declaration that one might make
+in ML, but is more difficult to deal with in proof than the curried format
+used above. 
+
+The basic syntax of the named lambda calculus is easy to describe:
+{
+    - load "stringTheory";
+    > val it = () : unit
+
+    - Hol_datatype `lambda = Var of string 
+                           | Const of 'a
+                           | Comb of lambda => lambda
+                           | Abs of lambda => lambda`
+}
+The syntax for `de Bruijn' terms is roughly similar:
+{
+   - Hol_datatype `dB = Var of string
+                      | Const of 'a
+                      | Bound of num
+                      | Comb  of dB => dB
+                      | Abs   of dB`
 }
 Arbitrarily branching trees may be defined by allowing a node to hold
 the list of its subtrees. In such a case, leaf nodes do not need to be
 explicitly declared.
 {
-    - Hol_datatype `tree = Node of 'a => tree list`;
+    - Hol_datatype `ntree = Node of 'a => ntree list`
 }
-Mutally recursive types may also be defined. The following, due to
-Elsa Gunter, captures a subset of Core ML.
+A type of `first order terms' can be declared as follows:
+{
+   - Hol_datatype `term = Var of string 
+                        | Fnapp of string # term list`
+}
+Mutally recursive types may also be defined. The following, extracted by 
+Elsa Gunter from the Definition of Standard ML, captures a subset of 
+Core ML.
 {
    - Hol_datatype
         `atexp = var_exp of string
@@ -86,35 +141,126 @@ Elsa Gunter, captures a subset of Core ML.
            pat = wild_pat
                | var_pat of string`
 }
-Datatype specifications allow the use of record types, which may be
-recursive. For example, the following datatype declarations could be
-used to formalize a simple file system.
+Simple record types may be introduced using the {<| ... |>} notation.
 {
-   Hol_datatype
-          `file = Text of string
-                | Dir of directory
-              ;
-           directory = <| owner : string ;
-                          files : (string # file) list |>`
+    - Hol_datatype `state = <| Reg1 : num; Reg2 : num; Waiting : bool |>`
 }
+The use of record types may be recursive. For example, the following 
+declaration could be used to formalize a simple file system.
+{
+   - Hol_datatype 
+        `file = Text of string 
+              | Dir of directory 
+          ;
+    directory = <| owner : string ; 
+                   files : (string * file) list |>`
+}
+
+\FAILURE
+Now we address some types that cannot be declared with {Hol_datatype}. 
+In some cases they cannot exist in HOL at all; in others, the type 
+can be built in the HOL logic, but {Hol_datatype} is not able to make 
+the definition. 
+
+First, an empty type is not allowed in HOL, so the following attempt 
+is doomed to fail.
+{
+   - Hol_datatype `foo = A of foo`;
+}
+So called `nested types', which are occasionally quite useful, cannot 
+at present be built with {Hol_datatype}:
+{
+   - Hol_datatype `btree = Leaf of 'a
+                         | Node of (btree, btree)btree`
+}
+Co-inductive types may not currently be built with {Hol_datatype}:
+{
+   - Hol_datatype `lazylist = Nil
+                            | Cons of 'a # (one -> lazylist)`
+}
+This type can however be built in HOL: see {llistTheory}.
+
+Finally, for cardinality reasons, HOL does not allow the following attempt 
+to model the untyped lambda calculus as a set (note the {->} in the clause
+for the {Abs} constructor):
+{
+    - Hol_datatype `lambda = Var of string 
+                           | Const of 'a
+                           | Comb of lambda => lambda
+                           | Abs of lambda -> lambda`;
+}
+Instead, one would have to build a theory of complete partial orders 
+(or something similar) with which to model the untyped lambda calculus. 
 
 \COMMENTS
-The notation used to declare datatypes is, unfortunately, not the same
-as that of ML. An ML declaration
+The consequences of an invocation of {Hol_datatype} are stored in the 
+current theory segment and in {TypeBase}. The principal consequences 
+of a datatype definition are the primitive recursion and induction theorems.
+These provide the ability to define simple functions over the type, and
+an induction principle for the type. For a type named {ty}, 
+the primitive recursion theorem is stored under {ty_Axiom} and 
+the induction theorem is put under {ty_induction}. Other 
+consequences include the distinctness of constructors ({ty_distinct}), 
+and the injectivity of constructors ({ty_11}). A `degenerate' version of 
+{ty_induction} is also stored under {ty_nchotomy}: it provides for reasoning
+by cases on the construction of elements of {ty}. Finally, some 
+special-purpose theorems are stored : {ty_case_cong} gives a congruence
+theorem for "case" statements on elements of {ty}. These case statements
+are introduced by {ty_case_def}. Also, a definition of the "size" of the type
+is added to the current theory, under the name {ty_size_def}.
+
+For example, invoking
 {
-   datatype ('a,'b) btree = Leaf of 'a
-                          | Node of 'b * ('a,'b) btree * ('a,'b) btree
+   Hol_datatype `tree = Leaf of num 
+                      | Node of tree => tree`;
 }
-would be declared in HOL as
+results in the definitions
 {
-   Hol_datatype btree = Leaf of 'a
-                      | Node of 'b => btree => btree
+   tree_case_def = 
+     |- (!f f1 a. case f f1 (Leaf a) = f a) /\
+         !f f1 a0 a1. case f f1 (Node a0 a1) = f1 a0 a1
+
+   tree_size_def
+     |- (!a. tree_size (Leaf a) = 1 + a) /\
+         !a0 a1. tree_size (Node a0 a1) = 1 + (tree_size a0 + tree_size a1)
 }
-The {=>} notation is intended to replace {*} in an ML description, and
-highlights the fact that, in HOL, constructors are by default curried.
+being added to the current theory. The following theorems about the datatype 
+are also stored in the current theory.
+{
+   tree_Axiom
+     |- !f0 f1.
+          ?fn. (!a. fn (Leaf a) = f0 a) /\
+               !a0 a1. fn (Node a0 a1) = f1 a0 a1 (fn a0) (fn a1)
+
+   tree_induction
+     |- !P. (!n. P (Leaf n)) /\ 
+            (!t t0. P t /\ P t0 ==> P (Node t t0)) 
+            ==>
+            !t. P t
+   tree_nchotomy  |- !t. (?n. t = Leaf n) \/ ?t' t0. t = Node t' t0
+
+   tree_11
+     |- (!a a'. (Leaf a = Leaf a') = (a = a')) /\
+         !a0 a1 a0' a1'. (Node a0 a1 = Node a0' a1') = (a0=a0') /\ (a1=a1')
+
+   tree_distinct  |- !a1 a0 a. ~(Leaf a = Node a0 a1)
+
+   tree_case_cong
+     |- !M M' f f1.
+          (M = M') /\ 
+          (!a. (M' = Leaf a) ==> (f a = f' a)) /\
+          (!a0 a1. (M' = Node a0 a1) ==> (f1 a0 a1 = f1' a0 a1)) 
+          ==>
+          (case f f1 M = case f' f1' M')
+}
+When a type involving records is defined, many more definitions are
+made and added to the current theory.
+
+A definition of mutually recursives types results in the above theorems and
+definitions being added for each of the defined types.
 
 \SEEALSO
-Definition.new_type_definition, TotalDefn.Define, IndDefLib.Hol_reln.
+Definition.new_type_definition, TotalDefn.Define, IndDefLib.Hol_reln,
+TypeBase.
 
 \ENDDOC
-

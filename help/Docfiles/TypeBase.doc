@@ -1,0 +1,60 @@
+\DOC TypeBase
+
+\TYPE {structure TypeBase}
+
+\SYNOPSIS
+A database of facts stemming from datatype declarations
+
+\KEYWORDS
+type, datatype, constructor, induction, primitive recursion.
+
+\DESCRIBE
+The structure {TypeBase} provides an interface to a database that 
+is updated when a new datatype is introduced with {Hol_datatype}.
+When a new datatype is declared, a collection of theorems "about" the
+type can be automatically derived. These are indeed proved, and are
+stored in the current theory segment. They are also automatically stored
+in {TypeBase}.
+
+The interface to {TypeBase} is intended to provide support for writers
+of high-level tools for reasoning about datatypes.
+
+\EXAMPLE
+{
+   - Hol_datatype `tree = Leaf 
+                         | Node of 'a => tree => tree`;
+   <<HOL message: Defined type: "tree">>
+   > val it = () : unit
+   
+   - TypeBase.read "tree";
+   > val it =
+    SOME-----------------------
+        -----------------------
+        HOL datatype: "tree"
+        Primitive recursion:
+         |- !f0 f1.
+              ?fn.
+                (!a. fn (Leaf a) = f0 a) /\
+                !a0 a1. fn (Node a0 a1) = f1 a0 a1 (fn a0) (fn a1)
+        Case analysis:
+         |- (!f f1 a. case f f1 (Leaf a) = f a) /\
+            !f f1 a0 a1. case f f1 (Node a0 a1) = f1 a0 a1
+        Size:
+         |- (!a. tree_size (Leaf a) = 1 + a) /\
+            !a0 a1. tree_size (Node a0 a1) = 1 + (tree_size a0 + tree_size a1)
+        Induction:
+         |- !P.
+              (!n. P (Leaf n)) /\ (!t t0. P t /\ P t0 ==> P (Node t t0)) ==>
+              !t. P t
+        Case completeness: |- !t. (?n. t = Leaf n) \/ ?t' t0. t = Node t' t0
+        One-to-one:
+         |- (!a a'. (Leaf a = Leaf a') = (a = a')) /\
+            !a0 a1 a0' a1'.
+              (Node a0 a1 = Node a0' a1') = (a0 = a0') /\ (a1 = a1')
+        Distinctness: |- !a1 a0 a. ~(Leaf a = Node a0 a1) : tyinfo option
+}
+
+\SEEALSO
+bossLib.Hol_datatype.
+
+\ENDDOC

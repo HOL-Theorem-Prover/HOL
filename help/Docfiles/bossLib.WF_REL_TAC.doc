@@ -1,0 +1,14 @@
+\DOC WF_REL_TAC
+
+\TYPE {WF_REL_TAC : term quotation -> tactic}
+
+\SYNOPSIS
+Initiate a termination proof.
+
+\DESCRIBE
+{bossLib.WF_REL_TAC} is identical to {TotalDefn.WF_REL_TAC}.
+
+\SEEALSO
+TotalDefn.WF_REL_TAC.
+
+\ENDDOC

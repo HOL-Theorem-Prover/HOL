@@ -218,8 +218,19 @@ the string being searched.  The third argument holds the original
 pattern to be matched. The fourth argument is the string being
 searched. If the pattern (first argument) becomes exhausted, then a
 match has been found and the function returns {T}. Otherwise, if the
-string being searched becomes exhuasted, the function returns {F}.
+string being searched becomes exhausted, the function returns {F}.
+{
+   val match0_defn =
+     Hol_defn "match0"
+          `(match0 [] __ __ __ = T)
+      /\   (match0 __ [] __ __ = F)
+      /\   (match0 (p::pp) (s::ss) p0 rs =
+             if p=s then match0 pp ss p0 rs else
+             if NULL rs then F
+                else match0 p0 (TL rs) p0 (TL rs))`;
 
+   - val match = Define `match pat str = match0 pat str pat str`;
+}
 The remaining case is when there's more searching to do; the function
 checks if the head of the pattern is the same as the head of the
 string being searched. If yes, then we recursively search, using the
@@ -233,18 +244,7 @@ string being searched; we recurse into it as long as there are matches
 with the pattern. However, if the search eventually fails, then the
 fourth argument, which `remembers` where the search started from, is
 used to restart the search.
-{
-   val match0_defn =
-     Hol_defn "match0"
-          `(match0 [] __ __ __ = T)
-      /\   (match0 __ [] __ __ = F)
-      /\   (match0 (p::pp) (s::ss) p0 rs =
-             if p=s then match0 pp ss p0 rs else
-             if NULL rs then F
-                else match0 p0 (TL rs) p0 (TL rs))`;
 
-   - val match = Define `match pat str = match0 pat str pat str`;
-}
 So much for the behaviour of the function. Why does it terminate? There
 are two recursive calls. The first call reduces the size of the first
 and second arguments, and leaves the other arguments unchanged. The
@@ -283,20 +283,21 @@ compared lexicographically with respect to less-than ({<}).
    OK..
    2 subgoals:
    > val it =
-      !ss rs s p.
-        ~(p = s) /\ ~NULL rs ==>
-        LENGTH (TL rs) < LENGTH rs \/
-        (LENGTH (TL rs) = LENGTH rs) /\ LENGTH (TL rs) < LENGTH (s::ss)
-
-       !rs ss s p. (p = s) ==> LENGTH rs < LENGTH rs \/
-                               LENGTH ss < LENGTH (s::ss)
+    !rs ss s p. 
+      (p=s) ==> LENGTH rs < LENGTH rs \/ LENGTH ss < LENGTH (s::ss)
+    
+    
+    !ss rs s p.
+      ~(p = s) /\ ~NULL rs ==>
+      LENGTH (TL rs) < LENGTH rs \/
+      (LENGTH (TL rs) = LENGTH rs) /\ LENGTH (TL rs) < LENGTH (s::ss)
 }
-The first subgoal is easy to prove by rewriting, and the second just
-needs a case-split on {rs} before it too gets polished off by rewriting.
+The first subgoal needs a case-split on {rs} before it is proved by
+rewriting, and the seconds is also easy to prove by rewriting.
 
-Occasionally, one needs to recurse over non-concrete data, such as
-finite sets or multisets.  As an example of how this is done, we can
-define a `fold` function for finite sets as follows:
+As a final example, one occasionally needs to recurse over 
+non-concrete data, such as finite sets or multisets. We can define a 
+`fold` function for finite sets as follows:
 {
    load "pred_setTheory"; open pred_setTheory;
 
@@ -309,7 +310,8 @@ define a `fold` function for finite sets as follows:
         else ARB`;
 }
 Typically, such functions terminate because the cardinality of the set
-(or multiset) is reduced in the recursive call.
+(or multiset) is reduced in the recursive call, and this is another
+application of {measure}:
 {
    val (FOLD_SET_0, FOLD_SET_IND) =
     Defn.tprove (FOLD_SET_defn,

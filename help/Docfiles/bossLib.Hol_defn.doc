@@ -1,0 +1,14 @@
+\DOC Hol_defn
+
+\TYPE {Hol_defn : string -> term quotation -> thm}
+
+\SYNOPSIS
+Function definition facility.
+
+\DESCRIBE
+{bossLib.Hol_defn} is identical to {Defn.Hol_defn}.
+
+\SEEALSO
+Defn.Hol_defn.
+
+\ENDDOC
