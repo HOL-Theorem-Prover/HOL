@@ -156,6 +156,14 @@ fun INDUCT_TAC g = INDUCT_THEN INDUCTION ASSUME_TAC g;
 val EQ_SYM_EQ' = INST_TYPE [alpha |-> Type`:num`] EQ_SYM_EQ;
 
 
+(*---------------------------------------------------------------------------*)
+(* Definition of num_case more suitable to call-by-value computations        *)
+(*---------------------------------------------------------------------------*)
+
+val num_case_compute = store_thm("num_case_compute",
+  Term `!n. num_case (f:'a) g n = if n=0 then f else g (PRE n)`,
+INDUCT_TAC THEN REWRITE_TAC [num_case_def,NOT_SUC,PRE]);
+
 (* --------------------------------------------------------------------- *)
 (* SUC_NOT = |- !n. ~(0 = SUC n)                                         *)
 (* --------------------------------------------------------------------- *)
