@@ -13,13 +13,13 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = "/local/scratch/kxs/144";
-val holdir   = "/local/scratch/kxs/working";;
-val OS       = "linux";          (* Operating system; choices are:
+val mosmldir = 
+val holdir   = 
+val OS       = "linux";   (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
 
-val CC       = "gcc";     (* C compiler (for building quote filter)        *)
-val GNUMAKE  = "gnumake"; (* for robdd library                             *)
+val CC       = "gcc";     (* C compiler                                    *)
+val GNUMAKE  = "gnumake"; (* for bdd library and SMV                       *)
 
 val DEPDIR   = ".HOLMK";  (* local dir. where Holmake dependencies kept    *)
 val LN_S     = "ln -s";   (* only change if you are a HOL developer.       *)
@@ -29,7 +29,7 @@ val LN_S     = "ln -s";   (* only change if you are a HOL developer.       *)
  ---------------------------------------------------------------------------*)
 
 
-app load ["FileSys", "Process", "Path", "Substring"];
+app load ["FileSys", "Process", "Path", "Substring", "BinIO"];
 
 fun normPath s = Path.toString(Path.fromString s)
 fun itstrings f [] = raise Fail "itstrings: empty list"
@@ -311,23 +311,33 @@ val _ =
  ---------------------------------------------------------------------------*)
 
 val _ =
-  let val _ = print "Attempting to compile quote filter ... "
-      val src    = fullPath [holdir, "src/quote-filter/filter.c"]
-      val target = fullPath [holdir, "bin/unquote"]
-      open Process
-  in
-    if OS <> "winNT" then
-      if system (String.concat [CC," ", src," -o ", target]) = success then
-        (mk_xable target; print "successful.\n")
-        handle _ =>
-          print(String.concat["\n>>>>>Failed to move quote filter!",
+  if OS <> "winNT" 
+  then let val _ = print "Attempting to compile quote filter ... "
+           val src    = fullPath [holdir, "src/quote-filter/filter.c"]
+           val target = fullPath [holdir, "bin/unquote"]
+           open Process
+       in
+         if system (String.concat [CC," ", src," -o ", target]) = success 
+           then (mk_xable target; print "successful.\n") handle _ 
+                => print(String.concat["\n>>>>>Failed to move quote filter!",
                               "(continuing anyway)\n\n"])
-      else
-        print "\n>>>>>>Couldn't compile quote filter! (continuing anyway)\n\n"
-    else
-      FileSys.rename {old = fullPath[holdir, "src/quote-filter/hol_filt.exe"],
-                      new = fullPath[holdir, "bin/unquote.exe"]}
- end
+           else print 
+             "\n>>>>>>Couldn't compile quote filter! (continuing anyway)\n\n"
+       end
+  else
+   (let val src = fullPath[holdir, "src/quote-filter/hol_filt.exe"]
+        val target = fullPath[holdir, "bin/unquote.exe"]
+        val instrm = BinIO.openIn src
+        val ostrm = BinIO.openOut target
+        val v = BinIO.inputAll instrm
+        val _ = BinIO.output(ostrm,v)
+    in 
+       BinIO.closeIn instrm;
+       BinIO.closeOut ostrm 
+    end
+    handle e => 
+       print"\n>>>>>>Couldn't install quote filter! (continuing anyway)\n\n");
+
 
 (*---------------------------------------------------------------------------
     Generate a shell script for running HOL through a preprocessor.
