@@ -30,7 +30,7 @@ val _ = new_theory "integer";
 *)
 open jrhUtils EquivType liteLib
      arithmeticTheory prim_recTheory numTheory
-     simpLib numLib boolTheory liteLib;
+     simpLib numLib boolTheory liteLib metisLib;
 
 infix ++;
 
@@ -1685,6 +1685,10 @@ val INT_OF_NUM =
 	       BETA_TAC THEN DISCH_THEN MATCH_MP_TAC THEN
 	       POP_ASSUM ACCEPT_TAC]);
 
+val LE_NUM_OF_INT = store_thm
+  ("LE_NUM_OF_INT",
+   ``!n i. & n <= i ==> n <= Num i``,
+   METIS_TAC [NUM_OF_INT, INT_OF_NUM, INT_LE_TRANS, INT_POS, INT_LE]);
 
 (*----------------------------------------------------------------------*)
 (* Define division                                                      *)
