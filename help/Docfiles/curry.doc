@@ -1,6 +1,6 @@
 \DOC curry
 
-\TYPE {curry : (((* # **) -> ***) -> * -> ** -> ***)}
+\TYPE {curry : (('a * 'b) -> 'c) -> 'a -> 'b -> 'c}
 
 \SYNOPSIS
 Converts a function on a pair to a corresponding curried function.
@@ -15,11 +15,11 @@ Never fails.
 
 \EXAMPLE
 {
-#let increment = curry $+ 1;;
-increment = - : (int -> int)
+- val increment = curry op+ 1;
+> val it = increment = fn : int -> int
 
-#increment 6;;
-7 : int
+- increment 6;
+> val it = 7 : int
 }
 \SEEALSO
 uncurry.

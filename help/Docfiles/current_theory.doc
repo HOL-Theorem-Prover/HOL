@@ -6,15 +6,15 @@
 Returns the name of the current theory.
 
 \DESCRIBE
-Within a HOL session there is always a current theory. It is the theory
-represented by the current theory segment together with its ancestry. A call
-of {current_theory()} returns the name of the current theory. Initially HOL
-has current theory {HOL}.
+Within a HOL session there is always a current theory. It is the
+theory represented by the current theory segment together with its
+ancestry. A call of {current_theory()} returns the name of the current
+theory. Initially HOL has current theory {scratch}.
 
 \FAILURE
 Never fails.
 
 \SEEALSO
-close_theory, extend_theory, load_theory, new_theory, print_theory.
+export_theory, new_theory, print_theory.
 
 \ENDDOC
