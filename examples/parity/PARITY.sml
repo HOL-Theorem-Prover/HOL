@@ -1,9 +1,14 @@
+(*---------------------------------------------------------------------------
+     This file needs to be processed with hol.unquote.
+ ---------------------------------------------------------------------------*)
+
 load "bossLib"; open bossLib;
 
 
-val PARITY_def = Define`
-    (PARITY 0 f      = T) 
- /\ (PARITY(SUC n) f = if f (SUC n) then ~PARITY n f else PARITY n f)`;
+val PARITY_def = 
+ Define
+     `(PARITY 0 f      = T) 
+   /\ (PARITY(SUC n) f = if f (SUC n) then ~PARITY n f else PARITY n f)`;
 
 
 val UNIQUENESS_LEMMA = prove(
