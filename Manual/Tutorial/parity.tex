@@ -45,21 +45,18 @@ to the exercises described in Section~\ref{exercises}.
 The goal of the case study is to illustrate detailed `proof hacking'
 on a small and fairly simple example.
 
-The boxes below contain a little session with the \HOL\ system.  The
-interactions in these boxes should be understood as occurring in
-sequence.  For example, variable bindings made in earlier boxes are
-assumed to persist to later ones.  These interactions comprise the
-specification and verification of a device that computes the parity of
-a sequence of bits.  More specifically, a detailed verification is
-given of a device with an input {\small\verb|in|}, an output
-{\small\verb|out|} and the specification that the $n$th output on
-{\small\verb|out|} is {\small\verb|T|} if and only if there have been
-an even number of {\small\verb|T|}'s input on {\small\verb|in|}. A
-theory named {\small\verb|PARITY|} is constructed; this contains the
-specification and verification of the device. All the \ML\ input in
-the boxes below can be found in the file
-{\small\verb|parity/PARITY.ml|}. It is suggested that the reader
-interactively input this to get a `hands on' feel for the example.
+The sessions of this example comprise the specification and
+verification of a device that computes the parity of a sequence of
+bits.  More specifically, a detailed verification is given of a device
+with an input {\small\verb|in|}, an output {\small\verb|out|} and the
+specification that the $n$th output on {\small\verb|out|} is
+{\small\verb|T|} if and only if there have been an even number of
+{\small\verb|T|}'s input on {\small\verb|in|}. A theory named
+{\small\verb|PARITY|} is constructed; this contains the specification
+and verification of the device. All the \ML\ input in the boxes below
+can be found in the file {\small\verb|parity/PARITY.sml|}. It is
+suggested that the reader interactively input this to get a `hands on'
+feel for the example.
 
 
 \section{Specification}
@@ -74,26 +71,7 @@ system's response.
 \begin{session}\begin{verbatim}
 % hol.unquote
 Moscow ML version 1.44 (August 1999)
-Enter `quit();' to quit.
-For HOL help, type: help "hol";
-Loaded Hol Kernel.
-
-        HHH                 LL
-        HHH                  LL
-        HHH                   LL
-        HHH                    LL
-        HHH          OOOO       LL
-        HHHHHHH     OO  OO       LL
-        HHHHHHH     OO  OO       LLL
-        HHH          OOOO        LLLL
-        HHH                     LL  LL
-        HHH                    LL    LL
-        HHH                   LL      LL
-        HHH                  LL        LL98 [Taupo 1]
-
-[closing file "/local/scratch/mn200/Work/hol98/std.prelude"]
-[opening file "/local/scratch/mn200/Work/hol98/tools/unquote-init.sml"]
-Rebinding "use" for quotation pre-processing.
+  ...
 [closing file "/local/scratch/mn200/Work/hol98/tools/unquote-init.sml"]
 - load "bossLib";
 > val it = () : unit
@@ -115,7 +93,8 @@ $f${\small\tt (}$n${\small\tt)} is even.
 Definition stored under "PARITY_def".
 > val PARITY_DEF =
     |- (!f. PARITY 0 f = T) /\
-       !n f. PARITY (SUC n) f = (if f (SUC n) then ~PARITY n f else PARITY n f)
+       !n f. PARITY (SUC n) f =
+             (if f (SUC n) then ~PARITY n f else PARITY n f)
     : thm
 \end{verbatim}
 \end{session}
@@ -467,7 +446,8 @@ time {\small\verb|0|} when the register outputs
               !t. out t = if (t=0) then F else inp(t-1)`;
 Definition stored under "REG_def".
 > val REG_def =
-    |- !inp out. REG (inp,out) = !t. out t = (if t = 0 then F else inp (t - 1))
+    |- !inp out. REG (inp,out) = !t. out t =
+                 (if t = 0 then F else inp (t - 1))
     : thm
 \end{verbatim}
 \end{session}
@@ -607,12 +587,12 @@ goal it can be seen that it will be solved if its left hand side,
 the subterms of the form {\small\verb|out t|} will also be expanded.
 To prevent this, we really want to rewrite with a formula that is
 specifically about {\small\verb|out (SUC t)|}.  We want to somehow
-pull the assumption that we do have off the stack and rewrite with a
+pull the assumption that we do have out of the list and rewrite with a
 specialised version of it.  We can do just this using
-{\small\verb|PAT_ASSUM|}.  This tactic is of type \ml{term -> (thm ->
-    tactic)}.  It selects an assumption that is of the form given by
-  its term argument, and passes it to the second argument, a function
-  which expects a theorem and returns a tactic.  Here it is in action:
+{\small\verb|PAT_ASSUM|}.  This tactic is of type \ml{term -> thm ->
+  tactic}.  It selects an assumption that is of the form given by its
+term argument, and passes it to the second argument, a function which
+expects a theorem and returns a tactic.  Here it is in action:
 
 \begin{session}
 \begin{verbatim}
@@ -680,33 +660,15 @@ Goal proved.
 \end{verbatim}
 \end{session}
 
-{\small\verb|PARITY_LEMMA|} could have been proved in one step with a single
-compound tactic. This is illustrated below:
+{\small\verb|PARITY_LEMMA|} could have been proved in one step with a
+single compound tactic.  Our initial goal can be expanded with a
+single tactic corresponding to the sequence of tactics that were used
+interactively:
 
 \begin{session}
 \begin{verbatim}
-- g `!inp out.
-        PARITY_IMP(inp,out) ==>
-        (out 0 = T) /\
-        !t. out(SUC t) = if inp(SUC t) then ~(out t) else out t`;
-> val it =
-    Proof manager status: 3 proofs.
-    3. Completed: ...
-    2. Completed: ...
-    1. Incomplete:
-         Initial goal:
-         !inp out.
-           PARITY_IMP (inp,out) ==>
-           (out 0 = T) /\
-           !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
-\end{verbatim}
-\end{session}
-
-\noindent This goal can be expanded with a single tactic corresponding to the
-sequence of tactics that were used interactively.
-
-\begin{session}
-\begin{verbatim}
+- restart()
+> ...
 - e (PURE_REWRITE_TAC [PARITY_IMP_def, ONE_def, NOT_def,
                        MUX_def, REG_def] THEN
      REPEAT STRIP_TAC THENL [
@@ -754,8 +716,8 @@ beginner several days to solve. The solutions to these exercises
 should be in the files:
 
 \begin{hol}\begin{verbatim}
-   hol/examples/parity/RESET_REG.ml
-   hol/examples/parity/RESET_PARITY.ml
+   hol/examples/parity/RESET_REG.sml
+   hol/examples/parity/RESET_PARITY.sml
 \end{verbatim}\end{hol}
 
 

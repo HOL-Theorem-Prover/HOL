@@ -9,7 +9,7 @@ are using \textsf{hol.unquote} and we require the following commands
 to be entered as a first step: \setcounter{sessioncount}{0}
 \begin{session}
 \begin{verbatim}
-- app load ["arithmeticTheory", "pairTheory", "Psyntax"];
+- app load ["arithmeticTheory", "pairTheory"];
 > val it = () : unit
 - open Psyntax;
 \end{verbatim}
@@ -955,7 +955,7 @@ Goal proved.
 
 
     The order in which goals are attacked can be adjusted using
-    \ml{rotate\ }$n$ (alternatively, \ml{r}) which rotates the goal
+    \ml{rotate\ }$n$ (alternatively,~\ml{r}) which rotates the goal
     stack by $n$. For example:
 
 \begin{session}\begin{verbatim}

@@ -1372,7 +1372,7 @@ Goal proved.
     because the proof is completely hidden in the invocation of the
     automated reasoner. Well then, let's try another proof, this time
     employing the so-called `assertional' style. When used uniformly,
-    this allows a readable linear presentation that mirrors the
+    this can allow a readable linear presentation that mirrors the
     informal proof. The following proves Euclid's theorem in the
     assertional style. We think it is fairly readable, certainly much
     more so than the standard tactic proof just given.\footnote{Note
@@ -1488,7 +1488,7 @@ The next line that poses a difficulty is
 While it is legitimate to type expressions directly into the
 interactive system, the compiler requires that every top-level phrase
 be a declaration.  We satisfy this requirement by altering this line
-to use a ``do nothing'' declaration that does not record the result of
+into a ``do nothing'' declaration that does not record the result of
 the expression:
 \[
 \mbox{\ml{val \_{} = set\_fixity "divides" (Infixr 450)}}
@@ -1638,14 +1638,14 @@ tactical has thus served as an adequate replacement. In the future,
 these entrypoints should become more powerful.
 
 \item It is almost always necessary to have an idea of the {\it
-informal\/} proof in order to be successful when doing a formal
-proof. However, all too often the following strategy is adopted:
-(1) rewrite the goal with a few relevant definitions, and then (2)
-rely on the syntax of the resulting goal to guide subsequent tactic
-selection. Such an approach constitutes a clear case of the tail wagging
-the dog, and is a poor strategy to adopt. Insight into the high-level
-structure of the proof is one of the most important factors in
-successful verification exercises.
+    informal\/} proof in order to be successful when doing a formal
+  proof. However, all too often the following strategy is adopted by
+  novices: (1) rewrite the goal with a few relevant definitions, and
+  then (2) rely on the syntax of the resulting goal to guide
+  subsequent tactic selection. Such an approach constitutes a clear
+  case of the tail wagging the dog, and is a poor strategy to adopt.
+  Insight into the high-level structure of the proof is one of the
+  most important factors in successful verification exercises.
 
 The author has noticed that many of the most successful verification
 experts work using a sheet of paper to keep track of the main steps that
