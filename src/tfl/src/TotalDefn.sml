@@ -273,10 +273,18 @@ fun primDefine defn =
          else defn
      val _ = save_defn defn'
      val eqns = eqns_of defn'
-     val _ = if null (params_of defn')
-           then computeLib.add_funs eqns
-         else WARN "primDefine"
-     "\n    Extra free vars in right-hand side!! Making schematic definition!!"
+     val _ =
+         if null (params_of defn') then computeLib.add_funs eqns
+         else let
+             val fvs_s =
+                 String.concat
+                   (Lib.commafy
+                      (map (Lib.quote o #1 o dest_var) (params_of defn')))
+           in
+             WARN "primDefine"
+                  ("\n    Extra free vars ("^fvs_s^
+                   ") in right-hand side!! Making schematic definition!!")
+           end
  in
     LIST_CONJ eqns
  end
