@@ -38,20 +38,27 @@ open arithmeticTheory pairLib pairTheory PairRules combinTheory
 val _ = new_theory "Fact";
 
 (*****************************************************************************)
-(* First build a naive iterative multiplier function (repeated addition)     *)
+(* Implement iterative function as a step to implementing factorial          *)
 (*****************************************************************************)
+val (FactIter,FactIter_ind,FactIter_dev) =
+ hwDefine
+  `(FactIter (n,acc) =
+      if n = 0 then (n,acc) else FactIter (n - 1,n * acc))
+   measuring FST`;
 
+(*****************************************************************************)
+(* To implement `$*`` we build a naive iterative multiplier function         *)
+(* (works by repeated addition)                                              *)
+(*****************************************************************************)
 val (MultIter,MultIter_ind,MultIter_dev) =
- hwDefine []
+ hwDefine
   `(MultIter (m,n,acc) =
       if m = 0 then (0,n,acc) else MultIter(m-1,n,n + acc))
    measuring FST`;
 
-
 (*****************************************************************************)
 (* Verify that MultIter does compute multiplication                          *)
 (*****************************************************************************)
-
 val MultIterRecThm =  (* proof adapted from similar one from KXS *)
  save_thm
   ("MultIterRecThm",
@@ -65,47 +72,34 @@ val MultIterRecThm =  (* proof adapted from similar one from KXS *)
 (*****************************************************************************)
 (* Create an implementation of a multiplier from MultIter                    *)
 (*****************************************************************************)
-
 val (Mult,_,Mult_dev) =
- hwDefine [MultIter_dev]
+ hwDefine
   `Mult(m,n) = SND(SND(MultIter(m,n,0)))`;
 
 (*****************************************************************************)
 (* Verify Mult is actually multiplication                                    *)
 (*****************************************************************************)
-
 val MultThm =
  store_thm
   ("MultThm",
    Term`Mult = UNCURRY $*`,
-   RW_TAC arith_ss [FUN_EQ_THM,FORALL_PROD,Mult,MultIterRecThm])
+   RW_TAC arith_ss [FUN_EQ_THM,FORALL_PROD,Mult,MultIterRecThm]);
 
 (*****************************************************************************)
-(* Implement iterative function as a step to implementing factorial          *)
-(* (use Mult to implement multiplication)                                    *)
+(* Use Mult_dev to refine ``DEV (UNCURRY $* )`` in FactIter_dev              *)
 (*****************************************************************************)
-
-val (FactIter,FactIter_ind,FactIter_dev) =
- hwDefine
-  [SUBS [MultThm] Mult_dev]
-  `(FactIter (n,acc) =
-      if n = 0 then (n,acc) else FactIter (n - 1,n * acc))
-   measuring FST`;
+val FactIter1_dev =
+ Refine (Lib[SUBS [MultThm] Mult_dev]) FactIter_dev;
 
 (*****************************************************************************)
-(* Alternative implementation with multiplication as atomic                  *)
+(* Use MultIter_dev to refine ``DEV MultIter`` in FactIter1_dev              *)
 (*****************************************************************************)
-
-val (AltFactIter,AltFactIter_ind,AltFactIter_dev) =
- hwDefine []
-  `AltFactIter (n,acc) =
-     (if n = 0 then (n,acc) else AltFactIter (n - 1,n * acc))
-    measuring FST`;
+val FactIter2_dev =
+ Refine (Lib[MultIter_dev]) FactIter1_dev;
 
 (*****************************************************************************)
 (* Lemma showing how FactIter computes factorial                             *)
 (*****************************************************************************)
-
 val FactIterRecThm =  (* proof from KXS *)
  save_thm
   ("FactIterRecThm",
@@ -116,19 +110,16 @@ val FactIterRecThm =  (* proof from KXS *)
       THEN Cases_on `n` 
       THEN FULL_SIMP_TAC arith_ss [FACT, AC MULT_ASSOC MULT_SYM]));
 
-
 (*****************************************************************************)
 (* Implement a function Fact to compute SND(FactIter (n,1))                  *)
 (*****************************************************************************)
-
 val (Fact,_,Fact_dev) =
- hwDefine [FactIter_dev]
+ hwDefine
   `Fact n = SND(FactIter (n,1))`;
 
 (*****************************************************************************)
 (* Verify Fact is indeed the factorial function                              *)
 (*****************************************************************************)
-
 val FactThm =
  Q.store_thm
   ("FactThm",
@@ -136,15 +127,18 @@ val FactThm =
    RW_TAC arith_ss [FUN_EQ_THM,Fact,FactIterRecThm]);
 
 (*****************************************************************************)
+(* Use FactIter2_dev to refine ``DEV FactIter`` in Fact_dev                  *)
+(*****************************************************************************)
+val Fact1_dev =
+ Refine (Lib[FactIter2_dev]) Fact_dev;
+
+(*****************************************************************************)
 (* Create implementation of factorial (HOL's built-in FACT)                  *)
 (*****************************************************************************)
-
-val FACT_def =
+val FACT_dev =
  save_thm
   ("FACT_dev",
-   REWRITE_RULE [FactThm] Fact_dev);
-
-
+   REWRITE_RULE [FactThm] Fact1_dev);
 
 (*****************************************************************************)
 (* Temporary hack to work around a system prettyprinter bug                  *)

@@ -6,7 +6,8 @@
 == [04.01.05: improved proofs from KXS in composeScript.sml & devScript.sml] ==
 == [09.01.05: MJCG added converter to combinators Seq, Par, Ite, Rec]        ==
 == [13.01.05: major tidy and update by MJCG]                                 ==
-== [17.01.05: MJCG installed dwDefine and improved examples from KXS]        ==
+== [17.01.05: MJCG installed hwDefine and improved examples from KXS]        ==
+== [18.01.05: MJCG added Refine and revised FactScript.sml]                  ==
 ===============================================================================
 
 composeScript.sml ......... definition of devices and their composition
@@ -15,13 +16,81 @@ compileScript.sml ......... definitions and theorems to support compiler
 compile.sml ............... convert to combinators and compile to devices
 FactScript.sml ............ an example
 
-To make generated hardware a bit more readable, the following
-(experimental) infixes are now defined in composeScript.sml
+N.B. To make generated hardware a bit more readable, the following
+     (experimental) infixes are now defined in composeScript.sml
 
- set_fixity ";;" (Infixl 750); overload_on (";;", ``SEQ``)
- set_fixity "||" (Infixl 650); overload_on ("||", ``PAR``)
+        set_fixity ";;" (Infixl 750); overload_on (";;", ``SEQ``)
+        set_fixity "||" (Infixl 650); overload_on ("||", ``PAR``)
 
-The main functions provided in compile.sml are
+The main user-level functions are hwDefine and Refine,
+for creating hardware and refinement.
+
+hwDefine : term frag list -> thm * thm * thm
+--------------------------------------------
+
+Single entrypoint for definitions where proof of termination will
+succeed. Allows measure function to be indicated in same quotation as
+definition, or not.
+                                                                         
+    hwDefine lib `(eqns) measuring f`                                    
+                                                                         
+will use f as the measure function and attempt automatic termination
+proof. If successful, returns (|- eqns, |- ind, |- dev) 
+
+NB. the recursion equations must be parenthesized; otherwise, strange
+    parse errors result. Also, the name of the defined function must be
+    alphanumeric.
+                                                                         
+One can also not mention the measure function, as in Define:             
+                                                                         
+    hwDefine `eqns`                                                  
+                                                                         
+which will accept either non-recursive or recursive specifications. It
+returns a triple (|- eqns, |- ind, |- dev) where the ind theorem
+should be ignored (it will be numTheory.INDUCTION.
+
+See FactScript.sml for examples.
+
+Refine: (term -> thm) -> thm -> thm
+-----------------------------------
+ 
+The first argument of Refine is a "refine function", refinefn say,
+which maps a term ``DEV g`` to a theorem |- DEV h ===> DEV g,
+where |= P ===> Q = !x. P x ==> Q x. 
+
+"Refine refinefn (|- <circuit> ===> Dev f)" recursively scans
+<circuit> replacing ``DEV g`` by ``DEV h`` (where refinefn applied to
+``DEV g`` yields |- DEV h ===> DEV h) and returns a theorem
+
+   |- <circuit'> ===> Dev f
+
+where <circuit'> is the result of the scan.
+
+See FactScript.sml for examples.
+
+Two useful refine functions are ATMfn and Lib
+
+ATMfn : term -> thm
+------------------
+
+This maps ``DEV f`` to |- ATM f ===> DEV f
+
+Lib : thm list -> term -> thm
+-----------------------------
+
+Lib                                                                       *)
+ [|- <circuit> ===> DEV f1,
+  |- <circuit> ===> DEV f2
+  ...
+  |- <circuit> ===> DEV fn]
+ ``DEV fi``
+
+returns the first theorem <circuit> ===> DEV fi that it finds in the
+supplied list (i.e. library)
+
+*******************************************************************************
+
+Auxiliary functions of interest include the following.
 
 Convert : thm -> thm
 --------------------
@@ -42,50 +111,42 @@ where p1, p2 and p3 are combinatory expressions built from the
 combinators Seq, Par and Ite.
 
 
-Compile : thm list -> thm list -> term -> thm
+Compile : thm list -> term -> thm
 ---------------------------------------------
 
-Compile takes a library of verified components and a program and a
-constant defined in the program
+Compile takes a program and a constant defined in the program
 
- Compile : thm list -> thm list -> term -> thm
-           -------     --------    ----
-           library     program   constant
+ Compile : thm list -> term -> thm
+           --------    ----
+           program   constant
 
-where |= P ===> Q = !x. P x ==> Q x
+When the compiler encounters a function f that isn't an application of
+Seq, Par or Ite, then DEV f is generated. It is assumed this
+will subsequently be refined to hardware (see Refine).
 
-When the compiler encounters a function that isn't an application of
-Seq, Par or Ite, the library is searched for a theorem of the form
+N.B. Not sure that the program argument is really useful. 
+     It may get eliminated.
 
- |- C ===> DEV f
-
-The first one found is used (``P ===> Q`` means ``!x. P x ==> Q x``). 
-If no library implementation is found, then the compiler generates:
-
- |- ATM f ===> DEV f
-
-
-ConvertCompile : thm list -> thm -> thm
----------------------------------------
+ConvertCompile : thm -> thm
+---------------------------
 
 Converts a non-recursive equation to combinators and then compiles to
-a device implementation (first argument is a library of component
-implementations).
+a device implementation.
 
 Example: 
 
  Fact;
  > val it = |- !n. Fact n = SND (FactIter (n,1)) : thm
 
- - ConvertCompile [] Fact;
+ - ConvertCompile Fact;
  > val it =
      |- SEQ (SEQ (PAR (ATM (\n. n)) (ATM (\n. 1))) (ATM FactIter)) (ATM SND) 
         ===> 
         DEV Fact : thm
 
 
-RecConvertCompile : thm list -> thm -> thm -> thm
--------------------------------------------------
+RecConvertCompile : thm -> thm -> thm
+-------------------------------------
 
 Converts a recursive equation to combinators and then compiles to a
 device implementation Needs a totality theorem (user-supplied as third
@@ -101,7 +162,7 @@ Example:
     |- TOTAL
          ((\(n,acc). n = 0),(\(n,acc). (n,acc)),(\(n,acc). (n - 1,n * acc)))
 
- - RecConvertCompile [] FactIter FactIter_TOTAL;
+ - RecConvertCompile FactIter FactIter_TOTAL;
  > val it =
     |- REC
          (SEQ (PAR (ATM (\(n,acc). n)) (ATM (\(n,acc). 0)))
@@ -115,31 +176,5 @@ Example:
        ===> 
        DEV FactIter
 
-
-hwDefine : thm list -> term frag list -> thm * thm * thm
---------------------------------------------------------
-
-Single entrypoint for definitions where proof of termination will
-succeed. Allows measure function to be indicated in same quotation as
-definition, or not.
-                                                                         
-    hwDefine lib `(eqns) measuring f`                                    
-                                                                         
-will use f as the measure function and attempt automatic termination
-proof. If successful, returns (|- eqns, |- ind, |- dev) 
-
-NB. the recursion equations must be parenthesized; otherwise, strange
-    parse errors result. Also, the name of the defined function must be
-    alphanumeric.
-                                                                         
-One can also not mention the measure function, as in Define:             
-                                                                         
-    hwDefine lib `eqns`                                                  
-                                                                         
-which will accept either non-recursive or recursive specifications. It
-returns a triple (|- eqns, |- ind, |- dev) where the ind theorem
-should be ignored (it will be numTheory.INDUCTION.
-
-See FactScript.sml for examples.
 
 =============================================================================== 

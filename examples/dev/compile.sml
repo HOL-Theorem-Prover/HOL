@@ -323,30 +323,11 @@ fun RecConvert defth totalth =
  end;
 
 (*****************************************************************************)
-(* find_in_library                                                           *)
-(*  f                                                                        *)
-(*  [|- <circuit> ===> DEV f1,                                               *)
-(*   |- <circuit> ===> DEV f2                                                *)
-(*   ...                                                                     *)
-(*   |- <circuit> ===> DEV fn]                                               *)
-(*                                                                           *)
-(* returns the first theorem <circuit> ===> DEV f                            *)
-(* if one exists in the Library                                              *)
-(*****************************************************************************)
-fun LibraryLookup lib tm =
- case
-   List.find 
-    (aconv tm o rand o rand o concl o SPEC_ALL)
-    lib
- of NONE    => ISPEC tm ATM_INTRO
-  | SOME th => SIMP_RULE std_ss [DEV_QUANT_NORM] th;
-
-(*****************************************************************************)
-(* CompileExp lib exp                                                        *)
+(* CompileExp exp                                                            *)
 (* -->                                                                       *)
 (* [REC assumption] |- <circuit> ===> DEV exp                                *)
 (*****************************************************************************)
-fun CompileExp lib tm =
+fun CompileExp tm =
  if not(fst(dest_type(type_of tm)) = "fun")
   then (print_term tm;print "\n";
         print "is not a function -- can only compile functions";
@@ -358,10 +339,10 @@ fun CompileExp lib tm =
    let val (opr,args) = strip_comb tm
    in
    case fst(dest_const opr) of
-      "Seq" => MATCH_MP SEQ_INTRO (LIST_CONJ(map (CompileExp lib) args))
-    | "Par" => MATCH_MP PAR_INTRO (LIST_CONJ(map (CompileExp lib) args))
-    | "Ite" => MATCH_MP ITE_INTRO (LIST_CONJ(map (CompileExp lib) args))
-    | "Rec" => let val thl = map (CompileExp lib) args
+      "Seq" => MATCH_MP SEQ_INTRO (LIST_CONJ(map CompileExp args))
+    | "Par" => MATCH_MP PAR_INTRO (LIST_CONJ(map CompileExp args))
+    | "Ite" => MATCH_MP ITE_INTRO (LIST_CONJ(map CompileExp args))
+    | "Rec" => let val thl = map (CompileExp) args
                    val var_list = map (rand o rand o concl o SPEC_ALL) thl
                in
                 MATCH_MP
@@ -370,16 +351,16 @@ fun CompileExp lib tm =
                end
     | _     => raise ERR "CompileExp" "this shouldn't happen"
    end
-  else LibraryLookup lib tm;
+  else ISPEC ``DEV ^tm`` DEV_IMP_REFL;
 
 (*****************************************************************************)
 (* Compile prog tm --> rewrite tm with prog, then compile result             *)
 (*****************************************************************************)
-fun Compile lib prog tm =
+fun Compile prog tm =
  let val expand_th = REWRITE_CONV prog tm
-     val compile_th = CompileExp lib (rhs(concl expand_th))
+     val compile_th = CompileExp (rhs(concl expand_th))
  in
-  REWRITE_RULE[GSYM expand_th] compile_th
+  REWRITE_RULE [GSYM expand_th] compile_th
  end;
 
 (*****************************************************************************)
@@ -427,7 +408,7 @@ val UNPAIR_TOTAL =
 (*****************************************************************************)
 (* Convert a non-recursive definition to an expression and then compile it.  *)
 (*****************************************************************************)
-fun ConvertCompile lib defth =
+fun ConvertCompile defth =
  let val (l,r) = 
       dest_eq(concl(SPEC_ALL defth))
       handle HOL_ERR _
@@ -443,20 +424,20 @@ fun ConvertCompile lib defth =
                     raise ERR "ConvertCompile" "rator of lhs not a constant")
               else ()
  in
-  Compile lib [Convert defth] func
+  Compile [Convert defth] func
  end;
 
 (*****************************************************************************)
 (* Convert a recursive definition to an expression and then compile it.      *)
 (*****************************************************************************)
-fun RecConvertCompile lib defth totalth =
+fun RecConvertCompile defth totalth =
  let val (l,r) = dest_eq(concl(SPEC_ALL defth))
      val (func,args) = dest_comb l 
  in
   (SIMP_RULE std_ss [UNPAIR_TOTAL totalth] o
   GEN_BETA_RULE o
   SIMP_RULE std_ss [Seq_def,Par_def,Ite_def])
-  (DISCH_ALL(Compile lib [RecConvert defth totalth] func))
+  (DISCH_ALL(Compile [RecConvert defth totalth] func))
  end;
 
 
@@ -483,7 +464,7 @@ val default_simps =
 (* Allows measure function to be indicated in same quotation as definition,  *)
 (* or not.                                                                   *)
 (*                                                                           *)
-(*     hwDefine lib `(eqns) measuring f`                                     *)
+(*     hwDefine `(eqns) measuring f`                                         *)
 (*                                                                           *)
 (* will use f as the measure function and attempt automatic termination      *)
 (* proof. If successful, returns (|- eqns, |- ind, |- dev)                   *)
@@ -493,14 +474,14 @@ val default_simps =
 (*                                                                           *)
 (* One can also not mention the measure function, as in Define:              *)
 (*                                                                           *)
-(*     hwDefine lib `eqns`                                                   *)
+(*     hwDefine `eqns`                                                       *)
 (*                                                                           *)
 (* which will accept either non-recursive or recursive specifications. It    *)
 (* returns a triple (|- eqns, |- ind, |- dev) where the ind theorem should   *)
 (* be ignored (it will be numTheory.INDUCTION.                               *)
 (*---------------------------------------------------------------------------*)
 
-fun hwDefine lib defq =
+fun hwDefine defq =
  let val absyn0 = Parse.Absyn defq
      open Absyn pairSyntax
  in 
@@ -531,14 +512,225 @@ fun hwDefine lib defq =
                       THEN EXISTS_TAC typedf
                       THEN TotalDefn.TC_SIMP_TAC [] default_simps)
             val devth = PURE_REWRITE_RULE [GSYM DEV_IMP_def]
-                          (RecConvertCompile lib defth totalth)
+                          (RecConvertCompile defth totalth)
         in
          (defth,ind,devth)
         end
      | otherwise => 
         let val defth = Define defq
             val devth = PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
-                          (ConvertCompile lib defth)
+                          (ConvertCompile defth)
         in (defth,numTheory.INDUCTION,devth)
         end
  end;
+
+(*****************************************************************************)
+(* Recognisers, destructors and constructors for harware combinatory         *)
+(* expressions.                                                              *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* ATM                                                                       *)
+(*****************************************************************************)
+fun is_ATM tm =
+ is_comb tm 
+  andalso is_const(rator tm) 
+  andalso (fst(dest_const(rator tm)) = "ATM");
+
+fun dest_ATM tm = rand tm;
+
+fun mk_ATM tm = ``ATM ^tm``;
+
+(*****************************************************************************)
+(* SEQ                                                                       *)
+(*****************************************************************************)
+fun is_SEQ tm =
+ is_comb tm 
+  andalso is_comb(rator tm)
+  andalso is_const(rator(rator tm))
+  andalso (fst(dest_const(rator(rator tm))) = "SEQ");
+
+fun dest_SEQ tm = (rand(rator tm), rand tm);
+
+fun mk_SEQ(tm1,tm2) = ``SEQ ^tm1 ^tm2``;
+
+(*****************************************************************************)
+(* PAR                                                                       *)
+(*****************************************************************************)
+fun is_PAR tm =
+ is_comb tm 
+  andalso is_comb(rator tm)
+  andalso is_const(rator(rator tm))
+  andalso (fst(dest_const(rator(rator tm))) = "PAR");
+
+fun dest_PAR tm = (rand(rator tm), rand tm);
+
+fun mk_PAR(tm1,tm2) = ``PAR ^tm1 ^tm2``;
+
+(*****************************************************************************)
+(* ITE                                                                       *)
+(*****************************************************************************)
+fun is_ITE tm =
+ is_comb tm 
+  andalso is_comb(rator tm)
+  andalso is_comb(rator(rator tm))
+  andalso is_const(rator(rator(rator tm)))
+  andalso (fst(dest_const(rator(rator(rator tm)))) = "ITE");
+
+fun dest_ITE tm = (rand(rator(rator tm)), rand(rator tm), rand tm);
+
+fun mk_ITE(tm1,tm2,tm3) = ``ITE ^tm1 ^tm2 ^tm3``;
+
+(*****************************************************************************)
+(* REC                                                                       *)
+(*****************************************************************************)
+fun is_REC tm =
+ is_comb tm 
+  andalso is_comb(rator tm)
+  andalso is_comb(rator(rator tm))
+  andalso is_const(rator(rator(rator tm)))
+  andalso (fst(dest_const(rator(rator(rator tm)))) = "REC");
+
+fun dest_REC tm = (rand(rator(rator tm)), rand(rator tm), rand tm);
+
+fun mk_REC(tm1,tm2,tm3) = ``REC ^tm1 ^tm2 ^tm3``;
+
+(*****************************************************************************)
+(* DEV                                                                       *)
+(*****************************************************************************)
+fun is_DEV tm =
+ is_comb tm 
+  andalso is_const(rator tm) 
+  andalso (fst(dest_const(rator tm)) = "DEV");
+
+fun dest_DEV tm = rand tm;
+
+fun mk_DEV tm = ``DEV ^tm``;
+
+(*****************************************************************************)
+(* A refinement function is an ML function that maps a term ``DEV f`` to     *)
+(* a theorem                                                                 *)
+(*                                                                           *)
+(*  |- DEV g ===> DEV f                                                      *)
+(*                                                                           *)
+(* it is a bit like a conversion, but for device implication (===>)          *)
+(* instead of for equality (=)                                               *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Refine a device to a combinational circuit (i.e. an ATM):                 *)
+(*                                                                           *)
+(* ATMfn ``DEV f``  =  |- ATM f ===> DEV f : thm                             *)
+(*                                                                           *)
+(*****************************************************************************)
+fun ATMfn tm =
+ if not(is_comb tm 
+         andalso is_const(rator tm)
+         andalso (fst(dest_const(rator tm)) = "DEV"))
+  then raise ERR "ATMfn" "argument not a DEV"
+  else ISPEC (rand tm) ATM_INTRO;
+
+(*****************************************************************************)
+(* Lib                                                                       *)
+(*  [|- <circuit> ===> DEV f1,                                               *)
+(*   |- <circuit> ===> DEV f2                                                *)
+(*   ...                                                                     *)
+(*   |- <circuit> ===> DEV fn]                                               *)
+(*  ``DEV fi``                                                               *)
+(*                                                                           *)
+(* returns the first theorem <circuit> ===> DEV fi                           *)
+(* that it finds in the supplied list (i.e. library)                         *)
+(*****************************************************************************)
+fun Lib lib tm =
+ if is_DEV tm
+  then
+   case
+     List.find 
+      (aconv tm o rand o concl o SPEC_ALL)
+      lib
+   of SOME th => th
+    | NONE    => ISPEC tm DEV_IMP_REFL
+  else raise ERR "Lib" "attempt to lookup a non-DEV";
+
+(*****************************************************************************)
+(* RefineExp refinefn tm scans through a combinatory expression tm built     *)
+(* from ATM, SEQ, PAR, ITE, REC and DEV and applies the refinefn to all      *)
+(* arguments of DEV using                                                    *)
+(*                                                                           *)
+(*  |- !P1 P2 Q1 Q2. P1 ===> Q1 /\ P2 ===> Q2 ==> P1 ;; P2 ===> Q1 ;; Q2     *)
+(*                                                                           *)
+(*  |- !P1 P2 Q1 Q2. P1 ===> Q1 /\ P2 ===> Q2 ==> P1 || P2 ===> Q1 || Q2     *)
+(*                                                                           *)
+(*  |- !P1 P2 Q1 Q2.                                                         *)
+(*       P1 ===> Q1 /\ P2 ===> Q2 /\ P3 ===> Q3 ==>                          *)
+(*       ITE P1 P2 P3 ===> ITE Q1 Q2 Q3                                      *)
+(*                                                                           *)
+(*  |- !P1 P2 Q1 Q2.                                                         *)
+(*       P1 ===> Q1 /\ P2 ===> Q2 /\ P3 ===> Q3 ==>                          *)
+(*       REC P1 P2 P3 ===> REC Q1 Q2 Q3                                      *)
+(*                                                                           *)
+(* to generate a theorem                                                     *)
+(*                                                                           *)
+(*  |- tm' ===> tm                                                           *)
+(*                                                                           *)
+(* (if refinefn fails, then no action is taken, i.e. |- tm ===> tm used)     *)
+(*****************************************************************************)
+fun RefineExp refinefn tm =
+ if is_DEV tm
+  then (refinefn tm
+        handle _ => ISPEC tm DEV_IMP_REFL)
+ else if is_ATM tm
+  then ISPEC tm DEV_IMP_REFL
+ else if is_SEQ tm
+  then
+   let val (tm1,tm2) = dest_SEQ tm
+       val th1 = RefineExp refinefn tm1
+       val th2 = RefineExp refinefn tm2 
+   in
+    MATCH_MP SEQ_DEV_IMP (CONJ th1 th2)
+   end
+ else if is_PAR tm
+  then
+   let val (tm1,tm2) = dest_PAR tm
+       val th1 = RefineExp refinefn tm1
+       val th2 = RefineExp refinefn tm2 
+   in
+    MATCH_MP PAR_DEV_IMP (CONJ th1 th2)
+   end
+ else if is_ITE tm
+  then
+   let val (tm1,tm2,tm3) = dest_ITE tm
+       val th1 = RefineExp refinefn tm1
+       val th2 = RefineExp refinefn tm2 
+       val th3 = RefineExp refinefn tm3 
+   in
+    MATCH_MP ITE_DEV_IMP (LIST_CONJ[th1,th2,th3])
+   end
+ else if is_REC tm
+  then
+   let val (tm1,tm2,tm3) = dest_REC tm
+       val th1 = RefineExp refinefn tm1
+       val th2 = RefineExp refinefn tm2 
+       val th3 = RefineExp refinefn tm3 
+   in
+    MATCH_MP REC_DEV_IMP (LIST_CONJ[th1,th2,th3])
+   end
+ else (print_term tm; print"\n";
+       raise ERR "RefineExp" "bad argument");
+
+(*****************************************************************************)
+(* Refine refinefn (|- <circuit> ===> Dev f) uses RefineExp to generate      *)
+(*                                                                           *)
+(*  |- <circuit'> ===> <circuit>                                             *)
+(*                                                                           *)
+(* and then uses transitivity of ===> to deduce                              *)
+(*                                                                           *)
+(*  |- <circuit'> ===> Dev f                                                 *)
+(*****************************************************************************)
+fun Refine refinefn th =
+ MATCH_MP 
+  DEV_IMP_TRANS 
+  (CONJ (RefineExp refinefn (rand(rator(concl th)))) th)
+ handle _ => raise ERR "Refine" "bad argument";
+
+ 

@@ -32,7 +32,7 @@ open metisLib arithmeticTheory pairLib pairTheory PairRules combinTheory
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
 
-(*****************************************************************************)
+(*****************p************************************************************)
 (* Start new theory "compile"                                                *)
 (*****************************************************************************)
 val _ = new_theory "compile";
@@ -43,6 +43,18 @@ val _ = new_theory "compile";
 val _ = set_fixity "===>" (Infixr 550);
 val DEV_IMP_def =
  xDefine "DEV_IMP" `$===> f g = !x. f x ==> g x`;
+
+val DEV_IMP_REFL =
+ store_thm
+  ("DEV_IMP_REFL",
+   ``!f. f ===> f``,
+   RW_TAC std_ss [DEV_IMP_def]);
+
+val DEV_IMP_TRANS =
+ store_thm
+  ("DEV_IMP_TRANS",
+   ``!f g. (f ===> g) /\ (g ===> h) ==> (f ===> h)``,
+   RW_TAC std_ss [DEV_IMP_def]);
 
 (*****************************************************************************)
 (* Rename device signals to standard names                                   *)
@@ -234,6 +246,53 @@ val TOTAL_THM =
     THEN IMP_RES_TAC TOTAL_def
     THEN measureInduct_on `variant x`
     THEN Cases_on `f1 x`
+    THEN PROVE_TAC[]);
+
+(*****************************************************************************)
+(* Monotonicity of ===> lemmas for device refinement                         *)
+(*****************************************************************************)
+val SEQ_DEV_IMP =
+ store_thm
+  ("SEQ_DEV_IMP",
+   ``!P1 P2 Q1 Q2. 
+       P1 ===> Q1 /\ P2 ===> Q2
+       ==>
+       (SEQ P1 P2 ===> SEQ Q1 Q2)``,   
+   RW_TAC std_ss [DEV_IMP_def,FORALL_PROD]
+    THEN FULL_SIMP_TAC std_ss [SEQ_def]   (* Not needed, but speeds up proof *)
+    THEN PROVE_TAC[]);
+
+val PAR_DEV_IMP =
+ store_thm
+  ("PAR_DEV_IMP",
+   ``!P1 P2 Q1 Q2. 
+       P1 ===> Q1 /\ P2 ===> Q2
+       ==>
+       (PAR P1 P2 ===> PAR Q1 Q2)``,   
+   RW_TAC std_ss [DEV_IMP_def,FORALL_PROD]
+    THEN FULL_SIMP_TAC std_ss [PAR_def]
+    THEN PROVE_TAC[]);
+
+val ITE_DEV_IMP =
+ store_thm
+  ("ITE_DEV_IMP",
+   ``!P1 P2 Q1 Q2. 
+       P1 ===> Q1 /\ P2 ===> Q2 /\ P3 ===> Q3
+       ==>
+       (ITE P1 P2 P3 ===> ITE Q1 Q2 Q3)``,   
+   RW_TAC std_ss [DEV_IMP_def,FORALL_PROD]
+    THEN FULL_SIMP_TAC std_ss [ITE_def]
+    THEN PROVE_TAC[]);
+
+val REC_DEV_IMP =
+ store_thm
+  ("REC_DEV_IMP",
+   ``!P1 P2 Q1 Q2. 
+       P1 ===> Q1 /\ P2 ===> Q2 /\ P3 ===> Q3
+       ==>
+       (REC P1 P2 P3 ===> REC Q1 Q2 Q3)``,   
+   RW_TAC std_ss [DEV_IMP_def,FORALL_PROD]
+    THEN FULL_SIMP_TAC std_ss [REC_def]
     THEN PROVE_TAC[]);
 
 (*---------------------------------------------------------------------------*)
