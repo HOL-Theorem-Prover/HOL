@@ -47,10 +47,10 @@ val SDROP_def = Define `(SDROP 0 = I) /\ (SDROP (SUC n) = SDROP n o STL)`;
 
 val SCONS_SURJ = store_thm
   ("SCONS_SURJ",
-   ``!x. ?h t. (x = SCONS h t)``,
+   Term`!x. ?h t. (x = SCONS h t)`,
    STRIP_TAC
-   ++ EXISTS_TAC ``SHD x``
-   ++ EXISTS_TAC ``STL x``
+   ++ Q.EXISTS_TAC `SHD x`
+   ++ Q.EXISTS_TAC `STL x`
    ++ ONCE_REWRITE_TAC [GSYM EQ_EXT_EQ]
    ++ Cases >> RW_TAC std_ss [SCONS_def, SHD_def]
    ++ RW_TAC std_ss [SCONS_def, STL_def]);

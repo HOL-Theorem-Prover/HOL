@@ -8,10 +8,10 @@ structure transcScript =
 struct
 
 (*
-app load ["numLib",
+app load ["hol88Lib",
+          "numLib",
           "reduceLib",
           "pairTheory",
-          "PairedLamdba",
           "jrhUtils",
           "powserTheory",
           "Diff",

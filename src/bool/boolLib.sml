@@ -14,7 +14,6 @@ struct
 val Term = Parse.Term
 val Type = Parse.Type
 val --   = Parse.--   
-val ==   = Parse.==
 val parse_from_grammars = Parse.parse_from_grammars;
 
 (*---------------------------------------------------------------------------
@@ -24,13 +23,13 @@ val parse_from_grammars = Parse.parse_from_grammars;
 
 infix THEN THENL ORELSE
 
+local open HolKernel Ho_Rewrite  (* signature control *)
+in
 val COND_BOOL_CLAUSES = 
   prove(Term`(!b e. (if b then T else e) = (b \/ e)) /\
              (!b t. (if b then t else T) = (b ==> t)) /\
              (!b e. (if b then F else e) = (~b /\ e)) /\
              (!b t. (if b then t else F) = (b /\ t))`,
-let open HolKernel
-in
 REPEAT (STRIP_TAC ORELSE COND_CASES_TAC ORELSE EQ_TAC)
  THEN TRY (ACCEPT_TAC TRUTH ORELSE FIRST_ASSUM ACCEPT_TAC) THENL 
  [DISJ1_TAC THEN ACCEPT_TAC TRUTH,
@@ -38,8 +37,8 @@ REPEAT (STRIP_TAC ORELSE COND_CASES_TAC ORELSE EQ_TAC)
   FIRST_ASSUM MATCH_MP_TAC THEN ACCEPT_TAC TRUTH,
   POP_ASSUM (K ALL_TAC) THEN 
   POP_ASSUM (MP_TAC o EQ_MP (el 2 (CONJUNCTS (SPEC_ALL NOT_CLAUSES)))) THEN 
-  ACCEPT_TAC (EQT_ELIM (el 4 (CONJUNCTS (SPEC F IMP_CLAUSES))))]
-end);
+  ACCEPT_TAC (EQT_ELIM (el 4 (CONJUNCTS (SPEC F IMP_CLAUSES))))]);
+
 
 val _ = Ho_Rewrite.add_implicit_rewrites [COND_BOOL_CLAUSES];
 
@@ -47,8 +46,6 @@ val _ = Ho_Rewrite.add_implicit_rewrites [COND_BOOL_CLAUSES];
 (* Alternative version of unique existence, slated for boolTheory.           *)
 (* ------------------------------------------------------------------------- *)
 
-local open HolKernel Ho_Rewrite
-in
 val EXISTS_UNIQUE_ALT = prove(
 (* store_thm( "EXISTS_UNIQUE_ALT", *)
  Term`!P:'a->bool. (?!x. P x) = ?x. !y. P y = (x = y)`,
@@ -94,7 +91,8 @@ val UNIQUE_SKOLEM_THM = prove
      [FIRST_ASSUM MATCH_MP_TAC THEN
       REPEAT STRIP_TAC THEN BETA_TAC THEN COND_CASES_TAC THEN
       ASM_REWRITE_TAC[],
-      DISCH_THEN(MP_TAC o C AP_THM (--`x:'a`--)) THEN REWRITE_TAC[BETA_THM]]]);
+      DISCH_THEN(MP_TAC o C AP_THM (--`x:'a`--)) THEN REWRITE_TAC[BETA_THM]]])
+
 end (* local open *)
 
 end;

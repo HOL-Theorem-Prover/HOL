@@ -53,26 +53,10 @@ val Meas_def =
 
 val (Pr_eqns, Pr_ind) = 
  Defn.tprove (Pr_def,
-   WF_REL_TAC Pr_def
-       `measure \(w:'a list, x:'a prop list, y:'a prop list, z:'a list). 
-                      list_size Meas x + list_size Meas y`
+   WF_REL_TAC 
+      `measure \(w:'a list, x:'a prop list, y:'a prop list, z:'a list). 
+          list_size Meas x + list_size Meas y`
      THEN RW_TAC arith_ss [Meas_def,listTheory.list_size_def]);
-
-
-
-(*---------------------------------------------------------------------------
-    Build a computing base. Notice that the standard datatype rewrites
-    for prop must be added.
- ---------------------------------------------------------------------------*)
-
-local open computeLib
-in
-val compset = bossLib.initial_rws()
-val _ = add_thms (REFL_CLAUSE::tl(type_rws "prop")) compset
-val _ = add_thms [Pr_eqns,Wang_def] compset
-val Eval = Count.apply (CBV_CONV compset) o Term
-end;
-
 
 (*---------------------------------------------------------------------------
       Examples.
@@ -220,6 +204,8 @@ val syn321_1 =  Term
        (^v8 OR ^v7) AND
        (NOT ^v8 OR NOT ^v9))`;
 
+
+val Eval = Count.apply (EVAL o Term);
 
 Eval `Wang ^BOOL_CASES`;
 Eval `Wang ^NOT_BCASES`;

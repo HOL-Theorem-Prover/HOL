@@ -173,13 +173,14 @@ val list_mk_exists = list_mk_binder
 
 val list_mk_conj     = list_mk_rbinop (curry mk_conj)
 val list_mk_disj     = list_mk_rbinop (curry mk_disj)
-fun list_mk_imp(A,c) = itlist(curry mk_imp) A c;
-
+fun list_mk_imp(A,c) = list_mk_rbinop (curry mk_imp) (A@[c]);
 
 val strip_comb   = HolKernel.strip_comb
 val strip_abs    = HolKernel.strip_abs
-val strip_forall = strip_binder (total dest_forall)
-val strip_exists = strip_binder (total dest_exists)
+val strip_forall = HolKernel.strip_binder 
+                     (fn t => if is_forall t then SOME (rand t) else NONE)
+val strip_exists = HolKernel.strip_binder 
+                     (fn t => if is_exists t then SOME (rand t) else NONE)
 val strip_conj   = strip_binop  (total dest_conj)
 val strip_disj   = strip_binop  (total dest_disj)
 

@@ -1220,8 +1220,9 @@ fun RIGHT_IMP_EXISTS_CONV tm =
 (*									*)
 (* The first argument is the function f.				*)
 (* ---------------------------------------------------------------------*)
+
 fun X_SKOLEM_CONV v =
-   if (not(is_var v))
+   if not(is_var v)
    then raise ERR "X_SKOLEM_CONV"  "first argument not a variable"
   else
  fn tm =>
@@ -1231,7 +1232,7 @@ fun X_SKOLEM_CONV v =
       val fx = Term.list_mk_comb(v,xs) handle HOL_ERR _
         => raise ERR "X_SKOLEM_CONV" "function variable has wrong type"
   in
-  if (free_in v tm) then raise ERR"X_SKOLEM_CONV"
+  if free_in v tm then raise ERR"X_SKOLEM_CONV"
                      ("`"^(#Name(dest_var v))^"` free in the input term")
   else let val pat_bod = list_mk_forall(xs,subst[Bvar |-> fx]Body)
            val pat = mk_exists{Bvar = v, Body = pat_bod}
@@ -1260,6 +1261,7 @@ fun X_SKOLEM_CONV v =
 (*									*)
 (* Where y' is a primed variant of y not free in the input term.	*)
 (* ---------------------------------------------------------------------*)
+
 local fun mkfty tm ty = type_of tm --> ty
 in
 fun SKOLEM_CONV tm =
@@ -1279,6 +1281,7 @@ end;
 (*									*)
 (* e.g. SYM_CONV "x=y"   ---->   (x=y) = (y=x).				*)
 (*----------------------------------------------------------------------*)
+
 fun SYM_CONV tm =
    let val {lhs,rhs} = dest_eq tm
        val th = INST_TYPE [Type.alpha |-> type_of lhs] EQ_SYM_EQ
