@@ -1,52 +1,56 @@
 signature Q =
 sig
- include Abbrev
+  include Abbrev
+  type tmquote = term quotation
+  type tyquote = hol_type quotation
 
-  val REFL              : term quotation -> thm
-  val ABS               : term quotation -> thm -> thm
-  val AC_CONV           : thm * thm -> term quotation -> thm
-  val AP_TERM           : term quotation -> thm -> thm
-  val AP_THM            : thm -> term quotation -> thm
-  val ASM_CASES_TAC     : term quotation -> tactic
-  val ASSUME            : term quotation -> thm
-  val BETA_CONV         : term quotation -> thm
-  val DISJ1             : thm -> term quotation -> thm
-  val DISJ2             : term quotation -> thm -> thm
-  val EXISTS            : term quotation * term quotation -> thm -> thm
-  val EXISTS_TAC        : term quotation -> tactic
-  val ID_EX_TAC         : tactic
-  val REFINE_EXISTS_TAC : term quotation -> tactic
-  val GEN               : term quotation -> thm -> thm
-  val SPEC              : term quotation -> thm -> thm
-  val ID_SPEC           : thm -> thm
-  val SPECL             : term quotation list -> thm -> thm
-  val ISPEC             : term quotation -> thm -> thm
-  val ISPECL            : term quotation list -> thm -> thm
-  val SPEC_TAC          : term quotation * term quotation -> tactic
-  val SPEC_THEN         : term quotation -> thm_tactic -> thm -> tactic
-  val SPECL_THEN        : term quotation list -> thm_tactic -> thm -> tactic
-  val ISPEC_THEN        : term quotation -> thm_tactic -> thm -> tactic
-  val ISPECL_THEN       : term quotation list -> thm_tactic -> thm ->tactic
-  val ID_SPEC_TAC       : term quotation -> tactic
-  val SUBGOAL_THEN      : term quotation -> thm_tactic -> tactic
-  val DISCH             : term quotation -> thm -> thm
-  val PAT_UNDISCH_TAC   : term quotation -> tactic
-  val UNDISCH_THEN      : term quotation -> thm_tactic -> tactic
-  val PAT_ASSUM         : term quotation -> thm_tactic -> tactic
-  val UNDISCH_TAC       : term quotation -> tactic
-  val X_CHOOSE_TAC      : term quotation -> thm_tactic
-  val X_CHOOSE_THEN     : term quotation -> thm_tactic -> thm_tactic
-  val X_GEN_TAC         : term quotation -> tactic
-  val X_FUN_EQ_CONV     : term quotation -> conv
-  val X_SKOLEM_CONV     : term quotation -> conv
-  val store_thm         : string * term quotation * tactic -> thm
-  val prove             : term quotation * tactic -> thm
-  val ABBREV_TAC        : term quotation -> tactic
-  val UNABBREV_TAC      : term quotation -> tactic
-  val PAT_ABBREV_TAC    : term quotation -> tactic
-  val INST              : (term quotation,term quotation) subst -> thm -> thm
-  val new_definition    : string * term quotation -> thm
-  val new_infixl_definition : string * term quotation * int -> thm
-  val new_infixr_definition : string * term quotation * int -> thm
-  val INST_TYPE : (hol_type quotation, hol_type quotation) subst -> thm -> thm
+  val REFL                  : tmquote -> thm
+  val ABS                   : tmquote -> thm -> thm
+  val AC_CONV               : thm * thm -> tmquote -> thm
+  val AP_TERM               : tmquote -> thm -> thm
+  val AP_THM                : thm -> tmquote -> thm
+  val ASM_CASES_TAC         : tmquote -> tactic
+  val ASSUME                : tmquote -> thm
+  val BETA_CONV             : tmquote -> thm
+  val DISJ1                 : thm -> tmquote -> thm
+  val DISJ2                 : tmquote -> thm -> thm
+  val EXISTS                : tmquote * tmquote -> thm -> thm
+  val EXISTS_TAC            : tmquote -> tactic
+  val ID_EX_TAC             : tactic
+  val REFINE_EXISTS_TAC     : tmquote -> tactic
+  val GEN                   : tmquote -> thm -> thm
+  val SPEC                  : tmquote -> thm -> thm
+  val ID_SPEC               : thm -> thm
+  val SPECL                 : tmquote list -> thm -> thm
+  val ISPEC                 : tmquote -> thm -> thm
+  val ISPECL                : tmquote list -> thm -> thm
+  val SPEC_TAC              : tmquote * tmquote -> tactic
+  val SPEC_THEN             : tmquote -> thm_tactic -> thm -> tactic
+  val SPECL_THEN            : tmquote list -> thm_tactic -> thm -> tactic
+  val ISPEC_THEN            : tmquote -> thm_tactic -> thm -> tactic
+  val ISPECL_THEN           : tmquote list -> thm_tactic -> thm ->tactic
+  val ID_SPEC_TAC           : tmquote -> tactic
+  val SUBGOAL_THEN          : tmquote -> thm_tactic -> tactic
+  val DISCH                 : tmquote -> thm -> thm
+  val PAT_UNDISCH_TAC       : tmquote -> tactic
+  val UNDISCH_THEN          : tmquote -> thm_tactic -> tactic
+  val PAT_ASSUM             : tmquote -> thm_tactic -> tactic
+  val UNDISCH_TAC           : tmquote -> tactic
+  val X_CHOOSE_TAC          : tmquote -> thm_tactic
+  val X_CHOOSE_THEN         : tmquote -> thm_tactic -> thm_tactic
+  val X_GEN_TAC             : tmquote -> tactic
+  val X_FUN_EQ_CONV         : tmquote -> conv
+  val X_SKOLEM_CONV         : tmquote -> conv
+  val store_thm             : string * tmquote * tactic -> thm
+  val prove                 : tmquote * tactic -> thm
+  val ABBREV_TAC            : tmquote -> tactic
+  val UNABBREV_TAC          : tmquote -> tactic
+  val PAT_ABBREV_TAC        : tmquote -> tactic
+  val MATCH_ABBREV_TAC      : tmquote -> tactic
+  val HO_MATCH_ABBREV_TAC   : tmquote -> tactic
+  val INST                  : (tmquote, tmquote) subst -> thm -> thm
+  val new_definition        : string * tmquote -> thm
+  val new_infixl_definition : string * tmquote * int -> thm
+  val new_infixr_definition : string * tmquote * int -> thm
+  val INST_TYPE             : (tyquote, tyquote) subst -> thm -> thm
 end

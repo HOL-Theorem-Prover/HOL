@@ -6,7 +6,9 @@ structure Q :> Q =
 struct
 
 open HolKernel boolLib;
-infix THEN |-> ## -->;
+
+type tmquote = term quotation
+type tyquote = hol_type quotation
 
 val Q_ERR = mk_HOL_ERR "Q";
 
