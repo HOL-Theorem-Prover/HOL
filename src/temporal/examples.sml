@@ -11,7 +11,7 @@ load "temporalLib"; open temporalLib;
 LTL_CONV (--`(a SUNTIL b) 0  
 		= (EVENTUAL(\t. b t /\ PNEXT(PALWAYS a) t)) 0`--);
 LTL_CONV (--`(a SWHEN b) 0   
-		= (EVENTUAL(\t. a t /\ b t /\ PNEXT(PALWAYS (\t.~b t)) t) ) 0`--);
+		= (EVENTUAL(\t. a t /\ b t /\ PNEXT(PALWAYS (\t.~b t)) t)) 0`--);
 LTL_CONV (--`(a SBEFORE b) 0 
 		= (EVENTUAL(\t. a t /\ ~b t /\ PNEXT(PALWAYS (\t.~b t)) t)) 0`--);
 
@@ -111,12 +111,6 @@ LTL_CONV (--` EVENTUAL b 0
 
 LTL_CONV (--`(a UNTIL b) 0  
 		= (EVENTUAL(\t. b t /\ PNEXT(PALWAYS a) t)) 0 \/ ALWAYS a 0`--);
-
-
-
-
-
-
 
 
 

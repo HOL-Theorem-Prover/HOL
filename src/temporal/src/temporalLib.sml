@@ -7,9 +7,14 @@
 structure temporalLib :> temporalLib =
 struct
 
+(*---------------------------------------------------------------------------
+   Note (kxs): the pathname and file handling in this file should be 
+               made portable. 
+ ---------------------------------------------------------------------------*)
+
 val smv_tmp_dir = ref "/tmp/";
-val smv_path    = ref (Globals.HOLDIR^"/src/temporal/smv.2.4.3/");
-val smv_call    = ref "smv -r -v -f ";
+val smv_path    = ref (Path.concat(Globals.HOLDIR,"sigobj/"));
+val smv_call    = ref "smv.xable -r -v -f ";
 
 
     type term = Term.term

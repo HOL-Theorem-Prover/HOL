@@ -1,3 +1,5 @@
+# Hacked by kxs to fit with idiosyncratic HOL build process.
+
 CC = gcc
 CFLAGS = -I. -O4
 
@@ -11,6 +13,8 @@ EXEC = smv
 $(EXEC): $(OBJ) $(DEBUG)
 	rm -f $(EXEC)
 	$(CC) $(CFLAGS) $(OBJ) $(LIB) $(DEBUG) -o $(EXEC)
+	mv $(EXEC) $(EXEC).xable
+
 grammar.c grammar.tab.h: grammar.y
 	bison -d grammar.y; mv grammar.tab.c grammar.c
 input.c: input.lex

@@ -238,27 +238,22 @@ fun tysize_env db = join TypeBase.size_of (TypeBase.get db);
    datatypeAST returned from parsing a quotation
    ---------------------------------------------------------------------- *)
 
-local
-  open ParseDatatype
-
+local open ParseDatatype
 in
+fun raw_define_type tyspec = 
+ let val (ind, recth) = ind_types.define_type tyspec
+ in {induction=ind, recursion=recth}
+ end
 
-  fun raw_define_type tyspec = let
-    val (ind, recth) = ind_types.define_type tyspec
-  in
-    {induction = ind, recursion = recth}
-  end
+fun translate_out_record dast =
+  case dast 
+   of (tyname, WithConstructors cs) => ((tyname, cs), NONE)
+    | (rtyname, RecordType fldtypes) => 
+        let val (flds, types) = ListPair.unzip fldtypes
+        in ((rtyname, [(rtyname, types)]), SOME flds)
+        end
 
-  fun translate_out_record dast =
-    case dast of
-      (tyname, WithConstructors cs) => ((tyname, cs), NONE)
-    | (rtyname, RecordType fldtypes) => let
-        val (flds, types) = ListPair.unzip fldtypes
-      in
-        ((rtyname, [(rtyname, types)]), SOME flds)
-      end
-
-  fun translate_parse dastl = let
+fun translate_parse dastl = let
     val dasts_with_record_info = map translate_out_record dastl
     val (dasts, record_infos) = ListPair.unzip dasts_with_record_info
     val new_type_names = map #1 dasts
@@ -285,7 +280,7 @@ in
     (map translate_1_typedef dasts, record_infos)
   end
 
-  fun deftype_from_parse dtastl =
+fun deftype_from_parse dtastl =
     case dtastl of
       [] => raise ERR "deftype_from_parse" "No type forms specificed"
     | _ => let
@@ -304,7 +299,7 @@ in
         ListPair.map recordise (tyinfos, record_infos)
       end
 
-  val define_type_from_parse = deftype_from_parse
+val define_type_from_parse = deftype_from_parse
 
 end (* local *)
 
@@ -400,27 +395,23 @@ in
   (tyinfo_extras, conjed_up)
 end
 
-fun primHol_datatype db q = let
-  val parse_result = ParseDatatype.parse q
-  val tyinfo_extras = deftype_from_parse parse_result
-  val ax = TypeBase.axiom_of (#1 (hd tyinfo_extras))
-  val size_defn_thm_opt = define_size ax (tysize_env db)
-in
-  case size_defn_thm_opt of
-    SOME thm => munge_size_thm ax tyinfo_extras thm
-  | NONE => (Lib.mesg true "Couldn't prove size function for this type";
-             tyinfo_extras)
+fun primHol_datatype db q = 
+ let val parse_result = ParseDatatype.parse q
+     val tyinfo_extras = deftype_from_parse parse_result
+     val ax = TypeBase.axiom_of (#1 (hd tyinfo_extras))
+ in
+   case define_size ax (tysize_env db)
+    of SOME thm => munge_size_thm ax tyinfo_extras thm
+     | NONE     => (Lib.mesg true "Couldn't prove size function for this type";
+                    tyinfo_extras)
 end
 
-fun Hol_datatype q = let
-  val tyinfos_extras = primHol_datatype (TypeBase.theTypeBase()) q
-  fun do_side_effects (x as (tyinfo, _)) = let
-  in
-    TypeBase.write tyinfo;
-    make_tyinfo_persist x
-  end
-in
-  app do_side_effects tyinfos_extras
-end
+local fun do_side_effects (x as (tyinfo, _)) = 
+          (TypeBase.write tyinfo; 
+           make_tyinfo_persist x)
+in 
+fun Hol_datatype q =
+      List.app do_side_effects (primHol_datatype (TypeBase.theTypeBase()) q)
+end;
 
 end (* struct *)
