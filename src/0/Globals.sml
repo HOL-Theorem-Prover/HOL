@@ -149,4 +149,14 @@ val priming = ref (NONE:string option);
 
 val allow_schema_definition = ref false;
 
+(* ----------------------------------------------------------------------
+    Flag telling us whether or not we're interactive.
+    If this is set, this allows for certain pieces of code to be a bit more
+    verbose.  It's set by std.prelude, so theory scripts and the like that
+    Holmake runs won't cause the printing of messages.
+   ---------------------------------------------------------------------- *)
+
+val interactive = ref false;
+
+
 end; (* Globals *)

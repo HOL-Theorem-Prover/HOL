@@ -123,6 +123,11 @@ in
      print "No theory files on disk; perhaps export_theory() required.\n"
 end
 
+(* ----------------------------------------------------------------------
+    Set interactive flag to true
+   ---------------------------------------------------------------------- *)
+
+val _ = Globals.interactive := true;
 
 (*---------------------------------------------------------------------------*
  * Print a banner.                                                           *

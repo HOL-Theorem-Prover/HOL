@@ -28,4 +28,6 @@ sig
   val guessing_overloads      : bool ref
   val notify_on_tyvar_guess   : bool ref
   val allow_schema_definition : bool ref
+
+  val interactive             : bool ref
 end
