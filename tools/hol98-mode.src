@@ -425,10 +425,12 @@ that the buffer has already had HOL terms, comments and strings removed."
                                             (point-max) t)
                          (- (point) (length (match-string 0)))
                        (point-max)))))
-              (hol-load-modules-in-region start end))))
+              (hol-load-modules-in-region start end)))
+          ;; send the string
+          (delete-region (point-min) (point-max))
+          (insert string)
+          (send-buffer-to-hol-maybe-via-file echoit))
       (kill-buffer tmpbuf)) ; kill buffer always
-    ;; then finally send the string
-    (send-raw-string-to-hol string echoit)
     ;; deactivate-mark will have likely been set by all the editting actions
     ;; in the temporary buffer.  We fix this here, thereby keeping the mark
     ;; active, if it is active.
@@ -440,6 +442,15 @@ that the buffer has already had HOL terms, comments and strings removed."
    (if hol-emit-time-elapsed-p
        (send-timed-string-to-hol string echoit)
      (send-string-to-hol string echoit)))
+
+(defun send-buffer-to-hol-maybe-via-file (&optional echoit)
+  "Send the contents of current buffer to HOL, possibly putting it into a
+file to \"use\" first."
+  (if (< 500 (buffer-size))
+          (let ((fname (make-temp-file "hol")))
+            (write-file fname nil)
+            (send-raw-string-to-hol (format "use \"%s\"" fname)))
+    (send-raw-string-to-hol (buffer-string) echoit)))
 
 (defun send-raw-string-to-hol (string &optional echoit)
   "Sends a string in the raw to HOL.  Not for interactive use."
