@@ -248,7 +248,7 @@ val ARITH_TAC   = CONV_TAC ARITH_CONV;
     Simplification set for numbers (and booleans).
  ---------------------------------------------------------------------------*)
 
-local open simpLib sumTheory
+local open simpLib sumTheory arithmeticTheory
       infix ++
 in
 val num_ss = boolSimps.bool_ss ++ numSimps.ARITH_ss

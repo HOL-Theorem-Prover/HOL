@@ -8,6 +8,7 @@ sig
      val SUC_FILTER_ss      : simpLib.ssdata
      val ARITH_DP_ss        : simpLib.ssdata
      val ARITH_RWTS_ss      : simpLib.ssdata
+     val ARITH_AC_ss        : simpLib.ssdata
      val CTXT_ARITH         : ctxt -> conv
      val CACHED_ARITH       : ctxt -> conv
      val clear_arith_caches : unit -> unit
@@ -28,6 +29,9 @@ end
    (collecting up like terms etc).
 
    [ARITH_RWTS_ss] is a collection of "obvious" arithmetic identities.
+
+   [ARITH_AC_ss] is an "AC" simpset fragment comprising the assoc-comm
+   rules for addition and multiplication.
 
    [REDUCE_ss] is a "simpset fragment" that reduces ground arithmetic
    expressions.  I.e., ``2 EXP 100``, but not ``x * 3``.

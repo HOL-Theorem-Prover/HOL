@@ -11,8 +11,7 @@ structure numSimps :> numSimps =
 struct
 
 open Arbint HolKernel Parse boolLib liteLib
-     Arith reduceLib
-     Arith_cons Arith
+     Arith reduceLib Arith_cons
      simpLib Traverse Cache Trace;
 
 val num_ty = Arith_cons.num_ty
@@ -462,5 +461,10 @@ val SUC_FILTER_ss = simpLib.SIMPSET
 val _ = BasicProvers.augment_srw_ss [REDUCE_ss, ARITH_RWTS_ss]
 
 fun clear_arith_caches() = clear_cache arith_cache;
+
+local open arithmeticTheory 
+in
+val ARITH_AC_ss = ac_ss [(ADD_SYM,ADD_ASSOC), (MULT_SYM,MULT_ASSOC)]
+end
 
 end (* struct *)
