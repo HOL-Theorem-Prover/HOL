@@ -1765,6 +1765,93 @@ val INT_ABS_DIV = store_thm(
     ]
   ]);
 
+(*----------------------------------------------------------------------*)
+(* Define exponentiation                                                *)
+(*----------------------------------------------------------------------*)
+
+val int_exp = Rsyntax.new_recursive_definition{
+  def = Term`(int_exp (p:int) 0 = 1) /\
+             (int_exp p (SUC n) = p * int_exp p n)`,
+  fixity = Infixr 700,
+  name = "int_exp_def",
+  rec_axiom = prim_recTheory.num_Axiom};
+
+val _ = add_infix("**", 700, HOLgrammars.RIGHT);
+val _ = allow_for_overloading_on("**", Type`:'a -> 'b -> 'a`);
+val _ = overload_on ("**", Term`$EXP`);
+val _ = overload_on ("**", Term`$int_exp`);
+
+val INT_EXP = store_thm(
+  "INT_EXP",
+  Term`!n m. &n ** m = &(n ** m)`,
+  REPEAT GEN_TAC THEN Induct_on `m` THENL [
+    REWRITE_TAC [int_exp, EXP],
+    ASM_REWRITE_TAC [int_exp, EXP, INT_MUL]
+  ]);
+
+val INT_EXP_EQ_0 = store_thm(
+  "INT_EXP_EQ_0",
+  Term`!(p:int) n. (p ** n = 0) = (p = 0) /\ ~(n = 0)`,
+  REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+    Induct_on `n` THENL [
+      SIMP_TAC int_ss [int_exp, INT_INJ],
+      SIMP_TAC int_ss [int_exp, INT_ENTIRE] THEN PROVE_TAC []
+    ],
+    `?m. n = SUC m` by PROVE_TAC [num_CASES] THEN
+    REPEAT (FIRST_X_ASSUM SUBST_ALL_TAC) THEN
+    SIMP_TAC int_ss [int_exp, INT_MUL_LZERO]
+  ]);
+
+val INT_MUL_SIGN_CASES = store_thm(
+  "INT_MUL_SIGN_CASES",
+  Term`!p:int q. ((0 < p * q) = (0 < p /\ 0 < q \/ p < 0 /\ q < 0)) /\
+                 ((p * q < 0) = (0 < p /\ q < 0 \/ p < 0 /\ 0 < q))`,
+  REPEAT GEN_TAC THEN
+  Cases_on `0 <= p` THEN Cases_on `0 <= q` THENL [
+    (* both non-negative *)
+    `?n. p = &n` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
+    POP_ASSUM SUBST_ALL_TAC THEN
+    `?m. q = &m` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
+    POP_ASSUM SUBST_ALL_TAC THEN
+    FULL_SIMP_TAC int_ss [INT_LE, INT_LT, INT_MUL] THEN
+    REWRITE_TAC [GSYM NOT_ZERO_LT_ZERO, MULT_EQ_0, DE_MORGAN_THM],
+    (* p positive, q negative *)
+    `?n. p = &n` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
+    POP_ASSUM SUBST_ALL_TAC THEN
+    `?m. q = ~&m` by PROVE_TAC [INT_NOT_LE, NUM_NEGINT_EXISTS] THEN
+    POP_ASSUM SUBST_ALL_TAC THEN
+    FULL_SIMP_TAC bool_ss [INT_NEG_GE0, GSYM INT_NEG_RMUL,
+                           INT_NEG_GT0, INT_NEG_LT0, INT_MUL, INT_LT,
+                           INT_LE, NOT_LESS_EQUAL, NOT_LESS_0] THEN
+    ASM_SIMP_TAC int_ss [GSYM NOT_ZERO_LT_ZERO, MULT_EQ_0],
+    (* q positive, p negative *)
+    `?n. q = &n` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
+    POP_ASSUM SUBST_ALL_TAC THEN
+    `?m. p = ~&m` by PROVE_TAC [INT_NOT_LE, NUM_NEGINT_EXISTS] THEN
+    POP_ASSUM SUBST_ALL_TAC THEN
+    FULL_SIMP_TAC bool_ss [INT_NEG_GE0, GSYM INT_NEG_LMUL,
+                           INT_NEG_GT0, INT_NEG_LT0, INT_MUL, INT_LT,
+                           INT_LE, NOT_LESS_EQUAL, NOT_LESS_0] THEN
+    ASM_SIMP_TAC int_ss [GSYM NOT_ZERO_LT_ZERO, MULT_EQ_0],
+    (* both negative *)
+    `?n. p = ~&n` by PROVE_TAC [INT_NOT_LE, NUM_NEGINT_EXISTS] THEN
+    POP_ASSUM SUBST_ALL_TAC THEN
+    `?m. q = ~&m` by PROVE_TAC [INT_NOT_LE, NUM_NEGINT_EXISTS] THEN
+    POP_ASSUM SUBST_ALL_TAC THEN
+    FULL_SIMP_TAC bool_ss [INT_NEG_GE0, INT_NEG_MUL2, INT_MUL, INT_LT,
+                           INT_LE, NOT_LESS_0, INT_NEG_GT0, INT_NEG_LT0] THEN
+    SIMP_TAC int_ss [MULT_EQ_0, GSYM NOT_ZERO_LT_ZERO]
+  ]);
+
+(*
+val INT_NEG_EXP = store_thm(
+  "INT_NEG_EXP",
+  Term`!n p. p < 0 ==>
+         (EVEN n ==> 0 <= p ** n) /\ (ODD n ==> p ** n < 0)`,
+  Induct THENL [
+    SIMP_TAC int_ss [EVEN, ODD, int_exp, INT_LE],
+    SIMP_TAC int_ss [EVEN, ODD, GSYM EVEN_ODD, GSYM ODD_EVEN, int_exp] THEN
+*)
 
 
 
