@@ -285,11 +285,46 @@ fun SPOSE_NOT_THEN ttac =
  ---------------------------------------------------------------------------*)
 
 infix 8 by;
+infix on
 
 fun (q by tac) (g as (asl,w)) =
   let val tm = parse_in_context (free_varsl (w::asl)) q
   in Tactic.via(tm,tac) g
   end
   handle e => raise (wrap_exn "SingleStep" "by" e);
+
+fun chop_at n frontacc l =
+  if n <= 0 then (List.rev frontacc, l)
+  else
+    case l of
+      [] => raise Fail "chop_at"
+    | (h::t) => chop_at (n - 1) (h::frontacc) t
+
+infix THEN1
+fun ((tac1:tactic) THEN1 (tac2:tactic)) (asl:term list,w:term) = let
+  val (subgoals, vf) = tac1 (asl,w)
+in
+  case subgoals of
+    [] => ([], vf)
+  | (h::hs) => let
+      val (sgoals2, vf2) = tac2 h
+    in
+      (sgoals2 @ hs,
+       (fn thmlist => let
+          val (firstn, back) = chop_at (length sgoals2) [] thmlist
+        in
+          vf (vf2 firstn :: back)
+       end))
+    end
+end
+
+infix on
+fun ((ttac:thm->tactic) on (q:term frag list, tac:tactic)) : tactic =
+  (fn (g as (asl:term list, w:term)) => let
+    val tm = parse_in_context (free_varsl (w::asl)) q
+  in
+    (SUBGOAL_THEN tm ttac THEN1 tac) g
+  end)
+
 
 end;

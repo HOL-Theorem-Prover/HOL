@@ -71,26 +71,26 @@ local open simpLib sumTheory
       infix ++
 in
 val std_ss =
-     (boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ optionSimps.OPTION_ss) 
+     (boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ optionSimps.OPTION_ss)
        && (type_rws "sum" @ [ISL,ISR,OUTL,OUTR,INL,INR])
 
-val arith_ss = std_ss ++ arithSimps.ARITH_ss
+val arith_ss = std_ss ++ arithSimps.ARITH_ss ++ arithSimps.REDUCE_ss
 val list_ss  = arith_ss ++ listSimps.list_ss
 end
 
 val EVAL = computeLib.EVAL o Parse.Term;
 
 
-fun DECIDE q = 
+fun DECIDE q =
  let val tm = Parse.Term q
- in arithLib.ARITH_PROVE tm handle HOL_ERR _ => 
+ in arithLib.ARITH_PROVE tm handle HOL_ERR _ =>
     tautLib.TAUT_PROVE tm
  end;
 
-fun DECIDE_TAC (g as (asl,_)) = 
-((MAP_EVERY UNDISCH_TAC (filter arithSimps.is_arith asl) 
-      THEN numLib.ARITH_TAC) 
- ORELSE 
+fun DECIDE_TAC (g as (asl,_)) =
+((MAP_EVERY UNDISCH_TAC (filter arithSimps.is_arith asl)
+      THEN numLib.ARITH_TAC)
+ ORELSE
  tautLib.TAUT_TAC) g;
 
 fun ZAP_TAC ss thl =
