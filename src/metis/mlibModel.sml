@@ -16,6 +16,8 @@ infix ## |->;
 
 open mlibUseful mlibTerm;
 
+structure W = Word; local open Word in end;
+
 (* ------------------------------------------------------------------------- *)
 (* Chatting.                                                                 *)
 (* ------------------------------------------------------------------------- *)
@@ -24,17 +26,6 @@ val module = "mlibModel";
 val () = traces := {module = module, alignment = I} :: !traces;
 fun chatting l = tracing {module = module, level = l};
 fun chat s = (trace s; true)
-
-(* ------------------------------------------------------------------------- *)
-(* Parameters                                                                *)
-(* ------------------------------------------------------------------------- *)
-
-type parameters = {size : int};
-
-val defaults = {size = 5};
-
-fun update_size f (parm : parameters) : parameters =
-  let val {size = n} = parm in {size = f n} end;
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions.                                                         *)
@@ -52,6 +43,167 @@ val pp_fp = pp_map
 fun cached c f k =
   case Binarymap.peek (!c,k) of SOME v => v
   | NONE => let val v = f k val () = c := Binarymap.insert (!c,k,v) in v end;
+
+fun log2_int 1 = 0 | log2_int n = 1 + log2_int (n div 2);
+
+(* ------------------------------------------------------------------------- *)
+(* The parts of the model that are fixed and cannot be perturbed             *)
+(* Note: a model of size N has integer elements 0...N-1                      *)
+(* ------------------------------------------------------------------------- *)
+
+type fix = int -> {func : (string * int list) -> int option,
+                   pred : (string * int list) -> bool option};
+
+fun fix_merge fix1 fix2 N =
+  let
+    val {func = func1, pred = pred1} = fix1 N
+    val {func = func2, pred = pred2} = fix2 N
+    fun func x = case func1 x of NONE => func2 x | sn => sn
+    fun pred x = case pred1 x of NONE => pred2 x | sb => sb
+  in
+    {func = func, pred = pred}
+  end;
+
+fun fix_mergel fixl = foldl (fn (h,t) => fix_merge h t) (hd fixl) (tl fixl);
+
+fun map_fix map_fn fix N =
+  let
+    val {func,pred} = fix N
+    fun func' (f,a) = case map_fn f of NONE => NONE | SOME f' => func (f',a)
+    fun pred' (p,a) = case map_fn p of NONE => NONE | SOME p' => pred (p',a)
+  in
+    {func = func', pred = pred'}
+  end;
+
+val pure_fix : fix =
+  fn _ => {func = K NONE, pred = fn ("=",[m,n]) => SOME (m = n) | _ => NONE};
+
+val basic_fix : fix =
+  let
+    fun func ("id",[n]) = SOME n
+      | func ("fst",[n,_]) = SOME n
+      | func ("snd",[_,n]) = SOME n
+      | func ("#1",n::_) = SOME n
+      | func ("#2",_::n::_) = SOME n
+      | func ("#3",_::_::n::_) = SOME n
+      | func _ = NONE
+    fun pred ("<>",[m,n]) = SOME (m = n)
+      | pred _ = NONE
+  in
+    K {func = func, pred = pred}
+  end;
+
+local
+  type div_set = (int * int) Binaryset.set
+  val empty : div_set = Binaryset.empty (lex_combine Int.compare Int.compare);
+  fun member i (s : div_set) = Binaryset.member (s,i);
+  fun add i (s : div_set) = Binaryset.add (s,i);
+
+  fun mk_div _ i 0 s = add (i,0) s
+    | mk_div N i j s = mk_div N i ((j + i) mod N) (add (i,j) s);
+in
+  fun modulo_fix N =
+    let
+      fun f x = x mod N
+      val divides = foldl (fn (i,s) => mk_div N i i s) empty (interval 0 N)
+      val zero = f 0 and one = f 1 and two = f 2
+      fun func ("0",[]) = SOME zero
+        | func ("1",[]) = SOME one
+        | func ("2",[]) = SOME two
+        | func ("suc",[n]) = SOME (f (n + one))
+        | func ("pre",[n]) = SOME (f (n - one))
+        | func ("~",[n]) = SOME (f (~n))
+        | func ("+",[m,n]) = SOME (f (m + n))
+        | func ("-",[m,n]) = SOME (f (m - n))
+        | func ("*",[m,n]) = SOME (f (m * n))
+        | func ("exp",[m,n]) = SOME (funpow n (fn x => f (x * m)) one)
+        | func ("mod",[m,n]) = SOME (if n = zero then m else m mod n)
+        | func _ = NONE
+      fun pred ("<=",[m,n]) = SOME (m <= n)
+        | pred ("<",[m,n]) = SOME (m < n)
+        | pred (">",[m,n]) = SOME (m > n)
+        | pred (">=",[m,n]) = SOME (m >= n)
+        | pred ("is_0",[n]) = SOME (n = zero)
+        | pred ("divides",[m,n]) = SOME (member (m,n) divides)
+        | pred ("odd",[n]) = Option.map not (pred ("even",[n]))
+        | pred ("even",[n]) = pred ("divides",[two,n])
+        | pred _ = NONE
+    in
+      {func = func, pred = pred}
+    end;
+end;
+
+fun heap_fix N =
+  let
+    val M = N - 1
+    fun f x = if x <= 0 then 0 else if M <= x then M else x
+    val zero = f 0 and one = f 1 and two = f 2
+    fun func ("0",[]) = SOME zero
+      | func ("1",[]) = SOME one
+      | func ("2",[]) = SOME two
+      | func ("suc",[m]) = SOME (f (m + one))
+      | func ("pre",[m]) = SOME (f (m - one))
+      | func ("+",[m,n]) = SOME (f (m + n))
+      | func ("-",[m,n]) = SOME (f (m - n))
+      | func ("*",[m,n]) = SOME (f (m * n))
+      | func ("exp",[m,n]) = SOME (funpow n (fn x => f (x * m)) one)
+      | func _ = NONE
+    fun pred ("<=",[m,n]) = SOME (m <= n)
+      | pred ("<",[m,n]) = SOME (m < n)
+      | pred (">",[m,n]) = SOME (m > n)
+      | pred (">=",[m,n]) = SOME (m >= n)
+      | pred ("is_0",[m]) = SOME (m = zero)
+      | pred _ = NONE
+  in
+    {func = func, pred = pred}
+  end;
+
+fun set_fix N =
+  let
+    val empty = 0w0
+    and univ = W.- (W.<< (0w1, W.fromInt (log2_int N)), 0w1)
+    fun to_set n = W.max (W.fromInt n, univ)
+    val from_set = W.toInt
+    fun union s t = W.orb (s,t)
+    fun inter s t = W.andb (s,t)
+    fun compl s = W.andb (W.notb s, univ)
+    fun subset s t = inter s (compl t) = empty
+    fun count_bits w =
+        if w = 0w0 then 0 else
+          (if W.andb (w,0w1) = 0w1 then 1 else 0) + count_bits (W.>> (w,0w1))
+    fun func ("empty",[]) = SOME (from_set empty)
+      | func ("univ",[]) = SOME (from_set univ)
+      | func ("union",[m,n]) = SOME (from_set (union (to_set m) (to_set n)))
+      | func ("inter",[m,n]) = SOME (from_set (inter (to_set m) (to_set n)))
+      | func ("compl",[n]) = SOME (from_set (compl (to_set n)))
+      | func ("card",[n]) = SOME (count_bits (to_set n))
+      | func _ = NONE
+    fun pred ("in",[_,n]) =
+        let
+          val s = to_set n
+        in
+          if s = empty then SOME false
+          else if s = univ then SOME true else NONE
+        end
+      | pred ("subset",[m,n]) = SOME (subset (to_set m) (to_set n))
+      | pred _ = NONE
+  in
+    {func = func, pred = pred}
+  end;
+
+(* ------------------------------------------------------------------------- *)
+(* Parameters                                                                *)
+(* ------------------------------------------------------------------------- *)
+
+type parameters = {size : int, fix : fix};
+
+val defaults = {size = 5, fix = pure_fix};
+
+fun update_size f (parm : parameters) : parameters =
+  let val {size = n, fix = r} = parm in {size = f n, fix = r} end;
+
+fun update_fix f (parm : parameters) : parameters =
+  let val {size = n, fix = r} = parm in {size = n, fix = f r} end;
 
 (* ------------------------------------------------------------------------- *)
 (* Valuations.                                                               *)
@@ -133,19 +285,23 @@ fun cached_random_pred cache id p_args = cached cache (random_pred id) p_args;
 (* ------------------------------------------------------------------------- *)
 
 datatype model = MODEL of
-  {parm   : parameters,
-   id     : int,
+  {parm : parameters,
+   id : int,
    cachef : (fp,int) Binarymap.dict ref,
    cachep : (fp,bool) Binarymap.dict ref,
-   overf  : (fp,int) Binarymap.dict,
-   overp  : (fp,bool) Binarymap.dict};
+   overf : (fp,int) Binarymap.dict,
+   overp : (fp,bool) Binarymap.dict,
+   fixf : (string * int list) -> int option,
+   fixp : (string * int list) -> bool option};
 
 local
   val new_id = let val n = ref ~1 in fn () => (n := !n + 1; !n) end;
 in
   fun new (parm : parameters) =
     let
-      val () = assert (1 <= #size parm) (BUG "mlibModel.new" "nonpositive size")
+      val {size = n, fix = r} = parm
+      val {func = fixf, pred = fixp} = r n
+      val () = assert (1 <= n) (BUG "mlibModel.new" "nonpositive size")
       val id = new_id ()
       val cachef = ref (Binarymap.mkDict fp_compare)
       val cachep = ref (Binarymap.mkDict fp_compare)
@@ -154,20 +310,22 @@ in
     in
       MODEL
       {parm = parm, id = id, cachef = cachef, cachep = cachep,
-       overf = overf, overp = overp}
+       overf = overf, overp = overp, fixf = fixf, fixp = fixp}
     end;
 end;
 
 fun msize (MODEL {parm = {size = N, ...}, ...}) = N;
 
-fun update_overf f m =
-  let val MODEL {parm, id, cachef=cf, cachep=cp, overp=p, ...} = m
-  in MODEL {parm=parm, id=id, cachef=cf, cachep=cp, overf=f, overp=p}
+fun update_overf overf m =
+  let val MODEL {parm, id, cachef, cachep, overp, fixf, fixp, ...} = m
+  in MODEL {parm = parm, id = id, cachef = cachef, cachep = cachep,
+            overf = overf, overp = overp, fixf = fixf, fixp = fixp}
   end;
 
-fun update_overp p m =
-  let val MODEL {parm, id, cachef=cf, cachep=cp, overf=f, ...} = m
-  in MODEL {parm=parm, id=id, cachef=cf, cachep=cp, overf=f, overp=p}
+fun update_overp overp m =
+  let val MODEL {parm, id, cachef, cachep, overf, fixf, fixp, ...} = m
+  in MODEL {parm = parm, id = id, cachef = cachef, cachep = cachep,
+            overf = overf, overp = overp, fixf = fixf, fixp = fixp}
   end;
 
 fun pp_model pp (MODEL {parm = {size = N, ...}, id, ...}) =
@@ -179,19 +337,22 @@ fun pp_model pp (MODEL {parm = {size = N, ...}, id, ...}) =
 
 fun eval_fn m f_args =
   let
-    val MODEL {parm = {size = N, ...}, id, cachef, overf, ...} = m
+    val MODEL {parm = {size = N, ...}, id, cachef, overf, fixf, ...} = m
   in
-    case Binarymap.peek (overf,f_args) of SOME n => n
-    | NONE => cached_random_fn cachef N id f_args
+    case fixf f_args of SOME b => b
+    | NONE =>
+      (case Binarymap.peek (overf,f_args) of SOME n => n
+       | NONE => cached_random_fn cachef N id f_args)
   end;
 
-fun eval_pred _ ("=",[x,y]) = x = y
-  | eval_pred m p_args =
+fun eval_pred m p_args =
   let
-    val MODEL {id,cachep,overp,...} = m
+    val MODEL {id,cachep,overp,fixp,...} = m
   in
-    case Binarymap.peek (overp,p_args) of SOME b => b
-    | NONE => cached_random_pred cachep id p_args
+    case fixp p_args of SOME b => b
+    | NONE =>
+      (case Binarymap.peek (overp,p_args) of SOME b => b
+       | NONE => cached_random_pred cachep id p_args)
   end;
 
 fun eval_term m v =
@@ -201,6 +362,8 @@ fun eval_term m v =
   in
     e
   end;
+
+fun evaluate_term m tm = eval_term m emptyv tm;
 
 fun eval_formula m =
   let
@@ -219,6 +382,8 @@ fun eval_formula m =
   in
     fn v => fn fm => e fm v
   end;
+
+fun evaluate_formula m fm = eval_formula m emptyv fm;
 
 (* ------------------------------------------------------------------------- *)
 (* Check whether a random grounding of a formula is satisfied by the model   *)
@@ -312,31 +477,39 @@ fun perturb_targets N p =
     f [] []
   end;
 
-fun perturb_fn _ _ [] _ set = set
-  | perturb_fn _ _ _ (Var _) set = set
-  | perturb_fn m v targ (Fn (f,tms)) set =
+fun perturb_fnl m v =
   let
-    val testf =
-      let val targset = Intset.addList (Intset.empty, targ)
-      in fn args => Intset.member (targset, eval_fn m (f,args))
+    val MODEL {fixf,...} = m
+    fun pert_fnl tms targs set = foldl pert_fn set (zip tms targs)
+    and pert_fn ((_,[]),set) = set
+      | pert_fn ((Var _,_),set) = set
+      | pert_fn ((Fn (f,tms), targ), set) =
+      let
+        val targset = Intset.addList (Intset.empty,targ)
+        fun testf args = Intset.member (targset, eval_fn m (f,args))
+        val args = map (eval_term m v) tms
+        val targs = perturb_targets (msize m) testf args
+        val set =
+          case fixf (f,args) of (SOME _) => set
+          | NONE => foldl (fn (x,s) => addp (FnP ((f,args) |-> x)) s) set targ
+      in
+        pert_fnl tms targs set
       end
-    val args = map (eval_term m v) tms
-    val set = foldl (fn (x,s) => addp (FnP ((f,args) |-> x)) s) set targ
-    val targs = perturb_targets (msize m) testf args
   in
-    foldl (fn ((tm,t),z) => perturb_fn m v t tm z) set (zip tms targs)
+    pert_fnl
   end;
 
 fun perturb_atom m v s (p,tms) =
   let
+    val MODEL {fixp,...} = m
     fun testp args = eval_pred m (p,args) = s
     val args = map (eval_term m v) tms
     val targs = perturb_targets (msize m) testp args
     val set =
-      case (p,tms) of ("=",[_,_]) => emptyp
-      | _ => addp (PredP ((p,args) |-> s)) emptyp
+      case fixp (p,args) of (SOME _) => emptyp
+      | NONE => addp (PredP ((p,args) |-> s)) emptyp
   in
-    foldl (fn ((tm,targ),z) => perturb_fn m v targ tm z) set (zip tms targs)
+    perturb_fnl m v tms targs set
   end;
 
 fun perturb_formula m =
@@ -347,9 +520,9 @@ fun perturb_formula m =
       | f s v (Not p) = f (not s) v p
       | f _ _ (Atom (Var _)) = raise BUG "perturb_formula" "boolean var"
       | f s v (Atom (Fn p)) = perturb_atom m v s p
-      | f true v (Or (p,q)) = fl unionp [(v,p), (v,q)]
+      | f true v (Or (p,q)) = fl unionp [(v,p),(v,q)]
       | f false v (Or (p,q)) = f true v (And (Not p, Not q))
-      | f true v (And (p,q)) = flc interp [(v,p), (v,q)]
+      | f true v (And (p,q)) = flc interp [(v,p),(v,q)]
       | f false v (And (p,q)) = f true v (Or (Not p, Not q))
       | f s v (Imp (p,q)) = f s v (Or (Not p, q))
       | f s v (Iff (p,q)) = f s v (And (Imp (p,q), Imp (q,p)))
@@ -368,10 +541,16 @@ fun perturb_formula m =
 
 fun override m =
   let
-    val MODEL {overf,overp,...} = m
+    val MODEL {overf,overp,fixf,fixp,...} = m
   in
-    fn PredP (p |-> b) => update_overp (Binarymap.insert (overp, p, b)) m
-     | FnP (f |-> n) => update_overf (Binarymap.insert (overf, f, n)) m
+    fn PredP (p |-> b) =>
+       (if chatting 2 andalso chat "checking pred override\n" andalso
+           Option.isSome (fixp p) then raise BUG "override" "fixp" else ();
+        update_overp (Binarymap.insert (overp,p,b)) m)
+     | FnP (f |-> n) =>
+       (if chatting 2 andalso chat "checking fn override\n" andalso
+           Option.isSome (fixf f) then raise BUG "override" "fixf" else ();
+        update_overf (Binarymap.insert (overf,f,n)) m)
   end;
 
 fun perturb m v fm =
@@ -422,7 +601,53 @@ in
 end;
 
 (* ------------------------------------------------------------------------- *)
-(* Signature functions                                                       *)
+(* Pretty-printing terms with free vars                                      *)
+(* ------------------------------------------------------------------------- *)
+
+local
+  exception Toomany;
+
+  val i2s = int_to_string;
+
+  fun b2s true = "T" | b2s false = "F";
+
+  val mkv = foldl (fn (x,v) => insertv x v) emptyv;
+
+  fun tablify tab =
+    align_table {pad = #" ", left = false}
+    (map (fn l => ("  " ^ hd l) :: map (fn x => " " ^ x) (tl l)) tab);
+
+  fun to_string eval x2s m tm [] = x2s (eval m (mkv []) tm)
+    | to_string eval x2s m tm [v] =
+      let
+        val l = interval 0 (msize m)
+        val head = v :: map i2s l
+        val line = "" :: map (fn x => x2s (eval m (mkv [v |-> x]) tm)) l
+      in
+        tablify [head,line]
+      end
+    | to_string eval x2s m tm [v,w] =
+      let
+        val l = interval 0 (msize m)
+        val head = ["" :: v :: map i2s l, w :: "" :: map (K "") l]
+        fun f y x = x2s (eval m (mkv [v |-> x, w |-> y]) tm)
+        val tab = head @ map (fn y => i2s y :: "" :: map (f y) l) l
+      in
+        tablify tab
+      end
+    | to_string _ _ _ _ _ = raise Toomany;
+in
+  fun term_to_string m tm =
+    to_string eval_term i2s m tm (FVT tm)
+    handle Toomany => raise ERR "mlibModel.term_to_string" "too many free vars";
+
+  fun formula_to_string m fm =
+    to_string eval_formula b2s m fm (FV fm)
+    handle Toomany => raise ERR "mlibModel.formula_to_string" "too many free vars";
+end;
+
+(* ------------------------------------------------------------------------- *)
+(* Rebinding for signature                                                   *)
 (* ------------------------------------------------------------------------- *)
 
 val size = msize;

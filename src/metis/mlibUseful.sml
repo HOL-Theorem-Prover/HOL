@@ -266,6 +266,8 @@ fun distinct [] = true
 (* Comparisons.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
+type 'a ordering = 'a * 'a -> order;
+
 fun rev_order f xy =
   case f xy of LESS => GREATER | EQUAL => EQUAL | GREATER => LESS;
 
@@ -468,6 +470,8 @@ fun align_table {left,pad} =
 (* ------------------------------------------------------------------------- *)
 
 val real_to_string = Real.toString;
+
+fun percent_to_string x = int_to_string (Real.round (100.0 * x)) ^ "%";
 
 fun pos r = Real.max (r,0.0);
 

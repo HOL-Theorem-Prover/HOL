@@ -558,28 +558,28 @@ local
       sp o olist o sb o strengthen s o rw
     end;
 
-  fun fac parm (cl,acc) =
+  fun fac1 parm (cl,acc) =
     foldl (fn (cl,acc) => ins parm cl acc) acc (quality parm true acc cl);
 
-  fun factor parm (cl,acc) =
-    foldl (fn (cl,acc) => foldl (fac parm) (ins parm cl acc) (FACTOR cl)) acc
+  fun facl parm (cl,acc) =
+    foldl (fn (cl,acc) => foldl (fac1 parm) (ins parm cl acc) (FACTOR cl)) acc
     (quality parm false acc cl);
 
-  fun init acc set [] = (rev acc, set)
-    | init acc set cls =
+  fun factor' acc set [] = (rev acc, set)
+    | factor' acc set cls =
     let
       val SET {parm = (_,z), subsumers = subs, ...} = set
       val cls = sort_map utility utilitywise cls
-      val (cls,set,_) = foldl (factor z) ([],set,subs) cls
+      val (cls,set,_) = foldl (facl z) ([],set,subs) cls
       val (cls',set) = purge_reducibles set
     in
-      init (cls @ acc) set cls'
+      factor' (cls @ acc) set cls'
     end;
 in
-  fun initialize cls set =
+  fun factor cls set =
     let
       val _ = chatting 2 andalso chat ("-" ^ int_to_string (length cls))
-      val res as (cls,_) = init [] set cls
+      val res as (cls,_) = factor' [] set cls
       val _ = chatting 1 andalso chat ("+" ^ int_to_string (length cls))
     in
       res

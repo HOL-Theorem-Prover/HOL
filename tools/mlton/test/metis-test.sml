@@ -102,12 +102,9 @@ val NO_TYPES = MAPPING (folMapping.update_with_types (K false));
 val COMBINATOR = INTERFACE (update_combinator (K true));
 val BOOLEAN = INTERFACE (update_boolean (K true));
 val NO_PROVERS = (SOLVER o K) [];
-val RESOLUTION = (SOLVER o K)
-  [(mlibMetis.mlibResolution mlibResolution.defaults,
-    NONE, mlibSolver.Infs 300.0)];
-val MESON = (SOLVER o K)
-  [(mlibMetis.mlibMeson mlibMeson.defaults,
-    NONE, mlibSolver.Infs 2000.0)];
+val RESOLUTION = (SOLVER o K) [mlibMetis.default_resolution];
+val MESON = (SOLVER o K) [mlibMetis.default_meson];
+val ORESOLUTION = (SOLVER o K) (#solver metisTools.defaults);
 
 val settings = ref DEFAULTS;
 
@@ -134,7 +131,7 @@ in
   fun MSOLVE n db q =
     (profile o try o mlibUseful.try)
     (map f o mlibStream.to_list o mlibStream.take n o
-     metisTools.GEN_METIS_SOLVE (!settings metisTools.defaults)
+     metisTools.GEN_METIS_SOLVE (MESON (!settings metisTools.defaults))
      (map ASSUME db)) q;
 
   fun PROLOG n db =
@@ -204,12 +201,12 @@ val lcl9 = try tptp "LCL009-1";
 (* ------------------------------------------------------------------------- *)
 
 (*
-val DEFAULTS = (LIMIT {time = SOME 60.0, infs = NONE} o RESOLUTION o DEFAULTS);
+val DEFAULTS = (LIMIT {time = SOME 60.0, infs = NONE} o DEFAULTS);
 val () = show_types := true;
 val () = show_assums := true;
 val () = show_tags := true;
 val () = set_trace "Metis" 3;
-val () = PARM (RESOLUTION o DEFAULTS);
+val () = PARM (ORESOLUTION o DEFAULTS);
 val () = folMapping.prettify_fol := false;
 val () = folTools.recent_fol_problems := SOME [];
 
@@ -217,8 +214,20 @@ MPROVE [arithmeticTheory.MULT_COMM, arithmeticTheory.MULT_ASSOC]
   ``(!x y. divides x y = ?z. y = z * x) ==>
     (!x y z. divides x y ==> divides x (z * y))``;
 
+MPROVE [arithmeticTheory.MULT_COMM, arithmeticTheory.MULT_ASSOC]
+  ``a * b * c * d * e * f * g * h * i = i * h * g * f * e * d * c * b * a``;
+
 folTools.recent_fol_problems;
 stop;
+
+val () = folMapping.prettify_fol := false;
+val () = folTools.recent_fol_problems := SOME [];
+MPROVE [] ``P ODD EVEN (MOD) divides
+(SUBSET) {} UNIV (IN) (UNION) (INTER) COMPL CARD
+PRE NULL I [] TL CONS APPEND LENGTH (=) (&) 0 SUC (+) (-)
+( * ) ( ** ) (<=) (<) (>) (>=) (NUMERAL) (NUMERAL_BIT1) (NUMERAL_BIT2)
+(ALT_ZERO) (,) FST SND : bool``;
+folTools.recent_fol_problems;
 
 METIS_PROVE
 [ASSUME ``!x y. (f:num->bool#bool) ((g:bool#bool->num) (x,y)) = (x,y)``,
@@ -505,7 +514,7 @@ val t =
   WITH_PARM (COMBINATOR o TYPES o HIGHER_ORDER)
   (MSOLVE 2 []) (([``f : 'a -> 'a``], []), [``f x = x``, ``f y = y``]); *)
 
-(* too expensive: ordered resolution is rubbish at combinator goals ***
+(* too expensive; why is ordered resolution so rubbish at combinator goals? ***
 val t =
   WITH_PARM (COMBINATOR o TYPES o HIGHER_ORDER)
   (MPROVE []) ``!x. S K x = I``; *)
@@ -593,9 +602,11 @@ val () = METIS_TEST "higher-order goals requiring boolean theorems";
 val t =
   WITH_PARM (BOOLEAN o COMBINATOR o TYPES o HIGHER_ORDER)
   (MPROVE []) ``?x. $! x``;
+(* too expensive
 val t =
   WITH_PARM (BOOLEAN o COMBINATOR o TYPES o HIGHER_ORDER)
   (MSOLVE 2 []) (([``x : 'a -> bool``], []), [``$! x``]);
+*)
 
 (* With theorems about booleans, proving the following goal may result
    in a proof that cannot be lifted to HOL.
@@ -665,9 +676,8 @@ val t =
 
 (* Meson uses equality axioms *)
 val t =
-  METIS_PROVE []
-  ``(!x y. x * y = y * x) /\ (!x y z. x * y * z = x * (y * z)) ==>
-    a * b * c * d * e * f = f * e * d * c * b * a``;
+  METIS_PROVE [arithmeticTheory.MULT_COMM, arithmeticTheory.MULT_ASSOC]
+  ``a * b * c * d * e * f * g * h * i = i * h * g * f * e * d * c * b * a``;
 
 (* Random equality example from Konrad Slind *)
 val t =
@@ -687,10 +697,13 @@ val t =
     ?a b c d e f g h i j k l m n p q r s t u v w x y z.
       P (a,b,c,d,e,f,g,h,i,j,k,l,m,n,p,q,r,s,t,u,v,w,x,y,z)``;
 
+(* This one became possible when the HOL specific model was added. *)
+(* Sadly, it's just too expensive for this test suite :-(
 val t =
-  METIS_PROVE []
-  ``(!x y. x * y = y * x) /\ (!x y z. x * y * z = x * (y * z)) ==>
-    a * b * c * d * e * f * g * h * i = i * h * g * f * e * d * c * b * a``;
+  METIS_PROVE [arithmeticTheory.MULT_COMM, arithmeticTheory.MULT_ASSOC]
+  ``a*b*c*d*e*f*g*h*i*j*k*l*m*n*p*q*r*s*t*u*v*w*x*y*z=
+    z*y*x*w*v*u*t*s*r*q*p*n*m*l*k*j*i*h*g*f*e*d*c*b*a``;
+*)
 
 (* ------------------------------------------------------------------------- *)
 val () = SAY "Results presented in talks and papers";

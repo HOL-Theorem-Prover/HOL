@@ -112,13 +112,15 @@ fun sub_meter ({rdt, rdi, log, lim = _} : meter) lim =
     {rdt = sbt o rdt, rdi = sbi o rdi, log = log, lim = lim}
   end;
 
+fun record_infs ({log,...} : meter) = log;
+
+fun read_infs ({rdi,...} : meter) = rdi ();
+
 fun read_meter ({rdt,rdi,...} : meter) = {time = rdt (), infs = rdi ()};
 
 fun check_meter ({rdt, rdi, lim = {time, infs}, ...} : meter) =
   (case time of NONE => true | SOME time => rdt () < time) andalso
   (case infs of NONE => true | SOME infs => rdi () < infs);
-
-fun record_infs ({log,...} : meter) = log;
 
 val pp_meter = pp_map read_meter pp_meter_reading;
 

@@ -87,9 +87,10 @@ val subset    : ''a list -> ''a list -> bool
 val distinct  : ''a list -> bool
 
 (* Comparisons *)
-val rev_order   : ('a * 'b -> order) -> 'a * 'b -> order
-val lex_combine : ('a*'b->order) -> ('c*'d->order) -> (('a*'c)*('b*'d)->order)
-val lex_compare : ('a * 'b -> order) -> 'a list * 'b list -> order
+type 'a ordering = 'a * 'a -> order
+val rev_order    : 'a ordering -> 'a ordering
+val lex_combine  : 'a ordering -> 'b ordering -> ('a * 'b) ordering
+val lex_compare  : 'a ordering -> 'a list ordering
 
 (* Sorting and searching *)
 val min      : ('a * 'a -> order) -> 'a list -> 'a * 'a list
@@ -121,9 +122,10 @@ val mk_prefix   : string -> string -> string
 val align_table : {left : bool, pad : char} -> string list list -> string
 
 (* Reals *)
-val real_to_string : real -> string
-val pos            : real -> real
-val log2           : real -> real                 (* Domain *)
+val real_to_string    : real -> string
+val percent_to_string : real -> string
+val pos               : real -> real
+val log2              : real -> real              (* Domain *)
 
 (* Pretty-printing *)
 type 'a pp = ppstream -> 'a -> unit

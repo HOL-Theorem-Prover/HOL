@@ -5,7 +5,7 @@
 
 .PHONY: all clean reallyclean world depend
 
-all: metis psl
+all: basic metis psl
 
 clean:
 	rm -f bin/basic* bin/metis* bin/psl*

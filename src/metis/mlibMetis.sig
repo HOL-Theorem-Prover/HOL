@@ -30,6 +30,7 @@ type prover_parameters = prover * mlibSolver.sos_filter option * mlibSolver.cost
 type parameters = prover_parameters list
 
 val default_resolution   : prover_parameters
+val ordered_resolution   : prover_parameters
 val default_meson        : prover_parameters
 val default_delta        : prover_parameters
 val defaults             : parameters

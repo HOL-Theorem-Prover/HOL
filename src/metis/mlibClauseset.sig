@@ -39,11 +39,11 @@ val subsumed : clauseset -> clause -> bool
 (* Add a clause into the set *)
 val add : clause -> clauseset -> clauseset
 
-(* Derive consequences of a clause *)
+(* Derive (unfactored) consequences of a clause *)
 val deduce : clauseset -> clause -> clause list
 
-(* Initialize derived clauses *)
-val initialize : clause list -> clauseset -> clause list * clauseset
+(* Factor clauses *)
+val factor : clause list -> clauseset -> clause list * clauseset
 
 (* Pretty-printing *)
 val pp_clauseset : clauseset pp

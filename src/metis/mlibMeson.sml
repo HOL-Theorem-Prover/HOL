@@ -400,6 +400,14 @@ fun unit_cut false _ = I
 (* The core of meson: ancestor unification or Prolog-style extension.        *)
 (* ------------------------------------------------------------------------- *)
 
+local
+  (* Only check the meter every CHECK_PERIOD inferences to save time *)
+  val CHECK_PERIOD = 100;
+in
+  fun meter_expired m =
+    read_infs m mod CHECK_PERIOD = 0 andalso not (check_meter m);
+end;
+
 fun freshen_rule ({thm, asms, c, asmn} : rule) i =
   let
     val fvs = FVL [] (c :: asms)
@@ -456,7 +464,7 @@ fun meson_expand {parm : parameters, rules, cut, meter, saturated} =
     fun expand ancestors g cont (state as {env, ...}) =
       (chatting 5 andalso
        chat ("meson: "^formula_to_string (formula_subst env g)^".\n");
-       if not (check_meter (!meter)) then
+       if meter_expired (!meter) then
          (NONE, CHOICE (fn () => expand ancestors g cont state))
        else if ancestor_prune ancestor_pruning env g ancestors then
          raise ERR "meson" "ancestor pruning"
@@ -466,7 +474,7 @@ fun meson_expand {parm : parameters, rules, cut, meter, saturated} =
          let
            fun reduction a () =
              let
-               val state = update_env (K(unify_literals env g (negate a))) state
+               val state = update_env (K(unify_literals env g (negate a)))state
                val state = update_proof (cons (ASSUME g)) state
              in
                cont state

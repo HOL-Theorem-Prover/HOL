@@ -28,6 +28,7 @@ val new_meter   : limit -> meter
 val sub_meter   : meter -> limit -> meter
 val record_infs : meter -> int -> unit
 val read_meter  : meter -> meter_reading
+val read_infs   : meter -> int
 val check_meter : meter -> bool
 val pp_meter    : meter pp
 

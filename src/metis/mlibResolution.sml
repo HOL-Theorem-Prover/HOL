@@ -137,9 +137,9 @@ fun new (parm : parameters, units, thms, hyps) =
     val (thms,hyps) = mk_thms_hyps clause_parm thms hyps
     val set = mlibClauseset.empty (clause_parm,set_parm)
     val set = mlibClauseset.new_units units set
-    val (thms,set) = mlibClauseset.initialize thms set
+    val (thms,set) = mlibClauseset.factor thms set
     val set = foldl (fn (c,s) => mlibClauseset.add c s) set thms
-    val (hyps,set) = mlibClauseset.initialize hyps set
+    val (hyps,set) = mlibClauseset.factor hyps set
     val sos = mlibSupport.new sos_parm axioms hyps
   in
     RES {set = set, sos = sos}
@@ -190,7 +190,7 @@ fun deduce cl res =
 fun factor cls res =
   let
     val RES {set,...} = res
-    val (cls,set) = mlibClauseset.initialize cls set
+    val (cls,set) = mlibClauseset.factor cls set
     val res = update_set set res
     val _ = chatting 4 andalso
             chat ("\nnew clauses:\n" ^ clauses_to_string cls ^ "\n")
@@ -262,7 +262,7 @@ fun resolution_stream slice_ref units_ref =
       let
         val cls = deduce cl res
         val (cls,res) = factor cls res
-        val () = record (length cls)
+        val () = record (length cls + #rewrites (size res))
         val res = add (d,cls) res
       in
         if check_meter (!slice_ref) then f res

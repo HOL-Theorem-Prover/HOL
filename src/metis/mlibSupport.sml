@@ -12,7 +12,7 @@ app load ["mlibHeap", "UNLINK", "mlibThm", "mlibSubsumers1"];
 structure mlibSupport :> mlibSupport =
 struct
 
-infix |->;
+infix |-> ##;
 
 open mlibUseful mlibTerm;
 
@@ -101,8 +101,6 @@ fun update_model_parms f (parm : parameters) : parameters =
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-fun percent_to_string x = int_to_string (Real.round (100.0 * x)) ^ "%";
-
 fun clause_to_formula cl = list_mk_disj (C.literals cl);
 
 val clause_id = #id o C.dest_clause;
@@ -129,14 +127,6 @@ end;
 (* Calculate average satisfiability in the models                            *)
 (* ------------------------------------------------------------------------- *)
 
-fun sat_mod_fm m fm n = Real.fromInt (M.checkn m fm n) / Real.fromInt n;
-
-fun sat_mod_fms _ [] _ = raise BUG "sat_mod_fms" "no formulas"
-  | sat_mod_fms m fms n =
-  let val sum = foldl (fn (fm,x) => sat_mod_fm m fm n + x) 0.0 fms
-  in sum / Real.fromInt (length fms)
-  end;
-
 local
   fun small_space _ _ 0 _ = true
     | small_space N n i k =
@@ -145,14 +135,20 @@ local
   fun sat_clause m n fm =
     if small_space (M.size m) n (length (FV fm)) 1 then M.count m fm
     else (M.checkn m fm n, n);
-
-  fun weight w x = w * x + (1.0 - w);
 in
-  fun sat_wmod_fm (w,m) fm n =
+  fun sat_mod_fm m fm n =
     let val (i,k) = sat_clause m n fm
-    in weight w (Real.fromInt i / Real.fromInt k)
+    in Real.fromInt i / Real.fromInt k
     end;
 end;
+
+fun sat_mod_fms _ [] _ = raise BUG "sat_mod_fms" "no formulas"
+  | sat_mod_fms m fms n =
+  let val sum = foldl (fn (fm,x) => sat_mod_fm m fm n + x) 0.0 fms
+  in sum / Real.fromInt (length fms)
+  end;
+
+fun sat_wmod_fm (w,m) fm n = w * (sat_mod_fm m fm n) + (1.0 - w);
 
 fun clause_sat [] _ _ = 0.0
   | clause_sat wmods cl n =
@@ -221,21 +217,28 @@ val empty_heap : (real * (real * clause)) heap =
   H.empty (fn ((m,_),(n,_)) => Real.compare (m,n));
 
 local
-  fun pert_models [] _ _ _ = []
+  val TEST_MODEL_SIZES = [10,11];
+  fun test_model n = M.new {size = n, fix = M.pure_fix};
+  val test_models = map test_model TEST_MODEL_SIZES;
+in
+  fun is_prob_taut n fm = List.all (fn m => M.checkn m fm n = n) test_models;
+end;
+
+local
+  fun pert_models [] _ _ mods = []
     | pert_models fms p n mods =
     let val mods = map (M.perturb fms p) mods
     in map (fn m => (sat_mod_fms m fms n, m)) mods
     end;
 
   fun chatmods wmods =
-    chat ("{" ^ join "," (map (percent_to_string o #1) wmods) ^ "}");
+    chat ("{" ^ join "," (map (percent_to_string o fst) wmods) ^ "}");
 in
   fun new_models _ _ _ [] = []
     | new_models fms p n mps =
     let
       val mods = map M.new mps
-      fun filt fm = List.exists (fn m => M.checkn m fm n < n) mods
-      val fms = List.filter filt fms
+      val fms = List.filter (not o is_prob_taut n) fms
       val wmods = pert_models fms p n mods
       val _ = chatting 2 andalso chatmods wmods
     in
@@ -252,7 +255,7 @@ fun empty parm fms =
          models = models}
   end;
 
-fun ssize (SOS {clauses, ...}) = H.size clauses;
+fun ssize (SOS {clauses,...}) = H.size clauses;
 
 val pp_sos = pp_map (fn s => "S<" ^ int_to_string (ssize s) ^ ">") pp_string;
 
@@ -262,9 +265,9 @@ val pp_sos = pp_map (fn s => "S<" ^ int_to_string (ssize s) ^ ">") pp_string;
 
 fun add1 dist (cl,sos) =
   let
-    val SOS {parm, clauses, distance, models, ...} = sos
-    val {model_checks, ...} = parm
-    val {id, ...} = C.dest_clause cl
+    val SOS {parm,clauses,distance,models,...} = sos
+    val {model_checks,...} = parm
+    val {id,...} = C.dest_clause cl
     val dist =
       case I.peek (distance, id) of NONE => dist | SOME d => Real.min (dist,d)
     val distance = I.insert (distance,id,dist)
@@ -291,7 +294,7 @@ fun new parm fms cls = foldl (add1 0.0) (empty parm fms) cls;
 
 fun remove sos =
   let
-    val SOS {clauses, ...} = sos
+    val SOS {clauses,...} = sos
   in
     if H.is_empty clauses then NONE else
       let

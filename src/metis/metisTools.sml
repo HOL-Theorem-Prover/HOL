@@ -53,6 +53,114 @@ in
 end;
 
 (* ------------------------------------------------------------------------- *)
+(* Making the Metis prover HOL specific.                                     *)
+(* ------------------------------------------------------------------------- *)
+
+fun bool_map ":" = SOME "fst"      (* Force types to be ignored in the model *)
+  | bool_map "combin.I" = SOME "id"
+  | bool_map "pair.FST" = SOME "id"
+  | bool_map "pair.," = SOME "fst"
+  | bool_map _ = NONE;
+
+fun num_map "num.0" = SOME "0"
+  | num_map "num.SUC" = SOME "suc"
+  | num_map "prim_rec.PRE" = SOME "pre"
+  | num_map "arithmetic.+" = SOME "+"
+  | num_map "arithmetic.-" = SOME "-"
+  | num_map "arithmetic.*" = SOME "*"
+  | num_map "arithmetic.EXP" = SOME "exp"
+  | num_map "arithmetic.MOD" = SOME "mod"
+  | num_map "arithmetic.<=" = SOME "<="
+  | num_map "prim_rec.<" = SOME "<"
+  | num_map "arithmetic.>" = SOME ">"
+  | num_map "arithmetic.>=" = SOME ">="
+  | num_map "divides.divides" = SOME "divides"
+  | num_map "arithmetic.ODD" = SOME "odd"
+  | num_map "arithmetic.EVEN" = SOME "even"
+  | num_map "arithmetic.NUMERAL" = SOME "id"
+  | num_map "arithmetic.ALT_ZERO" = SOME "0"
+  | num_map "arithmetic.NUMERAL_BIT1" = SOME "BIT1"
+  | num_map "arithmetic.NUMERAL_BIT2" = SOME "BIT2"
+  | num_map _ = NONE;
+
+fun holify_num fix N =
+  let
+    val {func,pred} = fix N
+    val funk = partial (BUG "holify_num" "missing function alert!") func
+    val one = funk ("1",[]) and two = funk ("2",[])
+    fun func' ("BIT1",[m]) = SOME (funk ("+", [funk ("*",[two,m]), one]))
+      | func' ("BIT2",[m]) = SOME (funk ("+", [funk ("*",[two,m]), two]))
+      | func' x = func x
+  in
+    {func = func', pred = pred}
+  end;
+
+fun int_map "integer.int_neg" = SOME "~"
+  | int_map "integer.int_add" = SOME "+"
+  | int_map "integer.int_sub" = SOME "-"
+  | int_map "integer.int_mul" = SOME "*"
+  | int_map "integer.int_exp" = SOME "exp"
+  | int_map "integer.int_le" = SOME "<="
+  | int_map "integer.int_lt" = SOME "<"
+  | int_map "integer.int_gt" = SOME ">"
+  | int_map "integer.int_ge" = SOME ">="
+  | int_map "integer.int_of_num" = SOME "id"
+  | int_map _ = NONE;
+
+fun list_map "list.NIL" = SOME "0"
+  | list_map "list.CONS" = SOME "suc"
+  | list_map "list.TL" = SOME "pre"
+  | list_map "list.APPEND" = SOME "+"
+  | list_map "list.NULL" = SOME "is_0"
+  | list_map "list.LENGTH" = SOME "id"
+  | list_map _ = NONE;
+
+fun set_map "pred_set.EMPTY" = SOME "empty"
+  | set_map "pred_set.UNIV" = SOME "univ"
+  | set_map "pred_set.UNION" = SOME "union"
+  | set_map "pred_set.INTER" = SOME "inter"
+  | set_map "pred_set.COMPL" = SOME "compl"
+  | set_map "pred_set.CARD" = SOME "card"
+  | set_map "bool.IN" = SOME "in"
+  | set_map "pred_set.SUBSET" = SOME "subset"
+  | set_map _ = NONE;
+
+val modulo_basic_fix =
+  mlibModel.fix_merge mlibModel.modulo_fix mlibModel.basic_fix;
+
+val hol_fix = mlibModel.fix_mergel
+  [mlibModel.pure_fix,
+   mlibModel.map_fix bool_map mlibModel.basic_fix,
+   mlibModel.map_fix num_map (holify_num modulo_basic_fix),
+   mlibModel.map_fix int_map modulo_basic_fix,
+   mlibModel.map_fix list_map modulo_basic_fix,
+   mlibModel.map_fix set_map mlibModel.set_fix];
+
+local
+  val METIS_PROVER = [mlibMetis.ordered_resolution];
+  val MODEL_SIZE = 8;
+  val MODEL_PERTS = 5;
+
+  fun hol_parm n =
+    (mlibModel.update_fix (K hol_fix) o
+     mlibModel.update_size (K n)) mlibModel.defaults;
+
+  fun holify_res ms =
+    mlibResolution.update_sos_parm 
+    (mlibSupport.update_model_perts (K MODEL_PERTS) o
+     mlibSupport.update_model_parms (K ms));
+
+  fun holify ms (mlibMetis.mlibResolution r, f, c) =
+    (mlibMetis.mlibResolution (holify_res ms r), f, c)
+    | holify _ x = x;
+
+  fun update_models ms = map (holify ms) METIS_PROVER;
+in
+  val fo_solver = update_models [hol_parm MODEL_SIZE];
+  val ho_solver = update_models [];
+end;
+
+(* ------------------------------------------------------------------------- *)
 (* Parameters.                                                               *)
 (* ------------------------------------------------------------------------- *)
 
@@ -63,7 +171,7 @@ type parameters = {interface : Fparm, solver : Mparm, limit : limit};
 val defaults =
   {interface = folTools.defaults,
    limit = mlibMeter.unlimited,
-   solver = mlibMetis.defaults};
+   solver = fo_solver};
 
 fun update_interface f {interface, solver, limit} =
   {interface = f interface, solver = solver, limit = limit};
@@ -179,8 +287,8 @@ fun set_limit f p t g = f (inc_limit p) t g;
 (* First-order *)
 
 val fo_parm =
-  update_interface
-  (update_mapping (K {higher_order = false, with_types = false})) defaults;
+  update_interface (update_mapping (K {higher_order=false, with_types=false}))
+  (update_solver (K fo_solver) defaults);
 
 val fot_parm =
   update_interface (update_mapping (update_with_types (K true))) fo_parm;
@@ -193,8 +301,8 @@ fun FO_METIS_TTAC ths =
 (* Higher-order *)
 
 val ho_parm =
-  update_interface
-  (update_mapping (K {higher_order = true, with_types = false})) defaults;
+  update_interface (update_mapping (K {higher_order=true, with_types=false}))
+  (update_solver (K ho_solver) defaults);
 
 val hot_parm =
   update_interface (update_mapping (update_with_types (K true))) ho_parm;

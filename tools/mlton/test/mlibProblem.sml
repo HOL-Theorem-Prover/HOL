@@ -1222,22 +1222,54 @@ F`},
 
 (* ========================================================================= *)
 (* Some problems from HOL.                                                   *)
-(* The timings come from METIS_TAC version 1.2 running on longbottom.        *)
 (* ========================================================================= *)
 
 fun hol () =
 
 mk_set "hol" "HOL subgoals sent to MESON_TAC" [
 
-(* ------------------------------------------------------------------------- *)
-(* MESON subgoals unprovable within 10 thalamus seconds by the current       *)
-(* version of METIS, in the build sequence order.                            *)
-(* ------------------------------------------------------------------------- *)
+{name = "Coder_4_0",
+ comment = "",
+ goal = `
+(!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
+(!x y.
+   x = y \/ ~$ (x % (EXT_POINT % x % y)) \/
+   ~$ (y % (EXT_POINT % x % y))) /\
+(!x y.
+   x = y \/ $ (x % (EXT_POINT % x % y)) \/ $ (y % (EXT_POINT % x % y))) /\
+(!x y. x = y \/ ~(x % (EXT_POINT % x % y) = y % (EXT_POINT % x % y))) /\
+(!x y. ~$ x \/ ~(x = y) \/ $ y) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ x % z = y % v) /\
+~$ (existential % (K % falsity)) /\ $ (existential % (K % truth)) /\
+~$ (universal % (K % falsity)) /\ $ (universal % (K % truth)) /\
+~$ falsity /\ $ truth /\
+(!x y z. ~(APPEND % x % y = APPEND % z % y) \/ x = z) /\
+(!x y z. APPEND % x % y = APPEND % z % y \/ ~(x = z)) /\
+(!x y z. APPEND % x % y = APPEND % x % z \/ ~(y = z)) /\
+(!x y z. ~(APPEND % x % y = APPEND % x % z) \/ y = z) ==>
+$ ((wf_encoder) % p % e) /\ (!x. e % x = f % x \/ ~$ (p % x)) /\
+$ ((wf_encoder) % p % f) /\ $ (p % q) /\ $ (p % q') /\
+APPEND % (f % q) % r = APPEND % (f % q') % r' /\ q = q' /\ ~(r' = r) ==> F`},
+
+{name = "DeepSyntax_47",
+ comment = "",
+ goal = `
+(!x y z v. ~(x = y) \/ ~(z = v) \/ int_add x z = int_add y v) /\
+(!x y. ~(x = y) \/ int_neg x = int_neg y) /\
+(!x y. ~(x = y) \/ int_of_num x = int_of_num y) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ int_lt y v \/ ~int_lt x z) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ eval_form y v \/ ~eval_form x z) /\
+(!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
+(!x y z v.
+   int_lt (int_add x y) (int_add z v) \/ ~int_lt x z \/ ~int_lt y v) /\
+(!x. int_add x (int_of_num 0) = x) /\
+(!x. int_add x (int_neg x) = int_of_num 0) /\
+(!x y z. int_add x (int_add y z) = int_add (int_add x y) z) ==>
+int_lt (int_neg d) (int_of_num 0) /\ eval_form g (x) /\
+int_lt (int_add (x) d) i /\ ~int_lt (x) i ==> F`},
 
 {name = "divides_9",
- comment =
-"MESON_TAC: successfully proved,       time taken = 0.07s\n" ^
-"METIS_TAC: failed: no solution found, time taken = 14.53s",
+ comment = "",
  goal = `
 (!x y z v. ~(x = y) \/ ~(z = v) \/ x * z = y * v) /\
 (!x y z v. ~(x = y) \/ ~(z = v) \/ divides y v \/ ~divides x z) /\
@@ -1247,10 +1279,109 @@ mk_set "hol" "HOL subgoals sent to MESON_TAC" [
 (!x y z. divides x y \/ ~(y = z * x)) ==>
 divides gv1546 gv1547 /\ ~divides gv1546 (gv1547 * gv1548) ==> F`},
 
+{name = "Encode_28",
+ comment = "",
+ goal = `
+(!x y z v. ~(x = y) \/ ~(z = v) \/ MOD x z = MOD y v) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ x * z = y * v) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ x + z = y + v) /\
+(!x y. ~(x = y) \/ NUMERAL x = NUMERAL y) /\
+(!x y. ~(x = y) \/ BIT2 x = BIT2 y) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ EXP x z = EXP y v) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ DIV x z = DIV y v) /\
+(!x y. ~(x = y) \/ BIT1 x = BIT1 y) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ y < v \/ ~(x < z)) /\
+(!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
+(!x y. x * y = y * x) /\
+(!x y z. MOD (MOD x (y * z)) y = MOD x y \/ ~(0 < y) \/ ~(0 < z)) ==>
+(!x.
+   MOD x (NUMERAL (BIT2 (ZERO))) = 0 \/
+   MOD x (NUMERAL (BIT2 (ZERO))) = NUMERAL (BIT1 (ZERO))) /\
+MOD
+(DIV (x) (NUMERAL (BIT2 (ZERO))) * NUMERAL (BIT2 (ZERO)) +
+ MOD (x) (NUMERAL (BIT2 (ZERO))))
+(NUMERAL (BIT2 (ZERO)) * EXP (NUMERAL (BIT2 (ZERO))) m) =
+MOD
+(DIV (y) (NUMERAL (BIT2 (ZERO))) * NUMERAL (BIT2 (ZERO)) +
+ MOD (y) (NUMERAL (BIT2 (ZERO))))
+(NUMERAL (BIT2 (ZERO)) * EXP (NUMERAL (BIT2 (ZERO))) m) /\
+0 < EXP (NUMERAL (BIT2 (ZERO))) m /\ 0 < NUMERAL (BIT2 (ZERO)) /\
+(!x y.
+   ~(MOD (x * NUMERAL (BIT2 (ZERO)) + MOD (x) (NUMERAL (BIT2 (ZERO))))
+     (NUMERAL (BIT2 (ZERO))) =
+     MOD (y * NUMERAL (BIT2 (ZERO)) + MOD (y) (NUMERAL (BIT2 (ZERO))))
+     (NUMERAL (BIT2 (ZERO))))) ==> F`},
+
+{name = "euclid_4",
+ comment = "",
+ goal = `
+(!x y z v. ~(x = y) \/ ~(z = v) \/ x * z = y * v) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ divides y v \/ ~divides x z) /\
+(!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
+(!x y z. x * (y * z) = x * y * z) /\
+(!x y. ~divides x y \/ y = x * gv5371 x y) /\
+(!x y z. divides x y \/ ~(y = x * z)) ==>
+divides gv5316 gv5317 /\ divides gv5315 gv5316 /\
+~divides gv5315 gv5317 ==> F`},
+
+{name = "euclid_8",
+ comment = "",
+ goal = `
+(!x y z v. ~(x = y) \/ ~(z = v) \/ x * z = y * v) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ divides y v \/ ~divides x z) /\
+(!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
+(!x y. x * y = y * x) /\ (!x y z. x * (y * z) = x * y * z) /\
+(!x y. ~divides x y \/ y = x * gv7050 x y) /\
+(!x y z. divides x y \/ ~(y = x * z)) ==>
+divides gv7000 gv7001 /\ ~divides gv7000 (gv7002 * gv7001) ==> F`},
+
+{name = "extra_arith_6",
+ comment = "",
+ goal = `
+(!x y z v. ~(x = y) \/ ~(z = v) \/ x * z = y * v) /\
+(!x y. ~(x = y) \/ SUC x = SUC y) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ y < v \/ ~(x < z)) /\
+(!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
+(!x y z. ~(SUC x * y = SUC x * z) \/ y = z) /\
+(!x y z. SUC x * y = SUC x * z \/ ~(y = z)) /\
+(!x y z. x * (y * z) = x * y * z) /\ (!x y. x * y = y * x) ==>
+SUC n * b = q * (SUC n * a) /\ 0 < SUC n /\ ~(b = q * a) ==> F`},
+
+{name = "extra_real_5",
+ comment = "",
+ goal = `
+~$ (existential % (K % falsity)) /\ $ (existential % (K % truth)) /\
+~$ (universal % (K % falsity)) /\ $ (universal % (K % truth)) /\
+~$ falsity /\ $ truth ==>
+(!x y z v.
+   $ (real_lt % x % (sup % P)) \/ ~$ (P % y) \/ ~$ (real_lt % x % y) \/
+   ~$ (P % z) \/ ~$ (real_lte % (gv6327 % v) % v)) /\
+(!x y z.
+   ~$ (real_lt % x % (sup % P)) \/ $ (P % (gv6327 % x)) \/ ~$ (P % y) \/
+   ~$ (real_lte % (gv6327 % z) % z)) /\
+(!x y z.
+   ~$ (real_lt % x % (sup % P)) \/ $ (real_lt % x % (gv6327 % x)) \/
+   ~$ (P % y) \/ ~$ (real_lte % (gv6327 % z) % z)) /\
+(!x y z.
+   ~$ (real_lt % x % (sup % P)) \/ $ (real_lt % x % (gv6327 % x)) \/
+   ~$ (P % y) \/ $ (P % (gv6327 % z))) /\
+(!x y z.
+   ~$ (real_lt % x % (sup % P)) \/ $ (P % (gv6327 % x)) \/ ~$ (P % y) \/
+   $ (P % (gv6327 % z))) /\
+(!x y z v.
+   $ (real_lt % x % (sup % P)) \/ ~$ (P % y) \/ ~$ (real_lt % x % y) \/
+   ~$ (P % z) \/ $ (P % (gv6327 % v))) /\ $ (P % (x)) /\
+(!x. $ (real_lte % x % (z)) \/ ~$ (P % x)) /\
+(!x.
+   $ (real_lt % (gv6328 % x) % (gv6329 % x)) \/
+   $ (real_lt % (gv6328 % x) % x)) /\
+(!x. $ (P % (gv6329 % x)) \/ $ (real_lt % (gv6328 % x) % x)) /\
+(!x y.
+   ~$ (real_lt % (gv6328 % x) % y) \/ ~$ (P % y) \/
+   ~$ (real_lt % (gv6328 % x) % x)) ==> F`},
+
 {name = "gcd_19",
- comment =
-"MESON_TAC: successfully proved,       time taken = 3.11s\n" ^
-"METIS_TAC: failed: no solution found, time taken = 10.32s",
+ comment = "",
  goal = `
 (!x y z v. ~(x = y) \/ ~(z = v) \/ x + z = y + v) /\
 (!x y z v. ~(x = y) \/ ~(z = v) \/ x * z = y * v) /\
@@ -1270,9 +1401,7 @@ divides gv1546 gv1547 /\ ~divides gv1546 (gv1547 * gv1548) ==> F`},
 divides c (d * SUC ((x) + (z))) /\ ~divides c (d * (z)) ==> F`},
  
 {name = "gcd_20",
- comment =
-"MESON_TAC: successfully proved,       time taken = 0.69s\n" ^
-"METIS_TAC: failed: no solution found, time taken = 10.58s",
+ comment = "",
  goal = `
 (!x y z v. ~(x = y) \/ ~(z = v) \/ x + z = y + v) /\
 (!x y z v. ~(x = y) \/ ~(z = v) \/ x * z = y * v) /\
@@ -1291,68 +1420,81 @@ divides c (d * SUC ((x) + (z))) /\ ~divides c (d * (z)) ==> F`},
 (y) <= (y) + (z) /\ divides c (d * SUC ((y) + (z))) /\
 divides c (d * SUC (y)) /\ ~divides c (d * (z)) ==> F`},
 
-{name = "mlibOmega_71",
- comment =
-"MESON_TAC: successfully proved,       time taken = 1.64s\n" ^
-"METIS_TAC: failed: no solution found, time taken = 12.57s",
+{name = "gcd_21",
+ comment = "",
+ goal = `
+(!x y z v. ~(x = y) \/ ~(z = v) \/ x + z = y + v) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ x * z = y * v) /\
+(!x y. ~(x = y) \/ NUMERAL x = NUMERAL y) /\
+(!x y. ~(x = y) \/ BIT1 x = BIT1 y) /\ (!x y. ~(x = y) \/ SUC x = SUC y) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ divides y v \/ ~divides x z) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ y <= v \/ ~(x <= z)) /\
+(!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
+(!x y z. x * (y + z) = x * y + x * z) /\ (!x y. x + SUC y = SUC (x + y)) /\
+(!x y. SUC x + y = SUC (x + y)) /\ (!x. x + 0 = x) /\ (!x. 0 + x = x) /\
+(!x y. x * SUC y = x + x * y) /\ (!x y. SUC x * y = x * y + y) /\
+(!x. x * NUMERAL (BIT1 (ZERO)) = x) /\
+(!x. NUMERAL (BIT1 (ZERO)) * x = x) /\ (!x. x * 0 = 0) /\
+(!x. 0 * x = 0) /\ (!x y z. x + (y + z) = x + y + z) /\
+(!x y z. divides x y \/ ~divides x z \/ ~divides x (z + y)) ==>
+divides c (d * SUC (y)) /\ (y) <= (y) + (z) /\
+divides c (d * SUC ((y) + (z))) /\ ~divides c (d * (z)) ==> F`},
+
+{name = "int_arith_6",
+ comment = "",
  goal = `
 (!x y z v. ~(x = y) \/ ~(z = v) \/ int_mul x z = int_mul y v) /\
 (!x y. ~(x = y) \/ int_of_num x = int_of_num y) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ x * z = y * v) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ int_add x z = int_add y v) /\
-(!x y. ~(x = y) \/ NUMERAL x = NUMERAL y) /\
-(!x y. ~(x = y) \/ BIT1 x = BIT1 y) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ (x, z) = (y, v)) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ evallower y v \/ ~evallower x z) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ y < v \/ ~(x < z)) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ rshadow_row v y \/ ~rshadow_row z x) /\
-(!x y z v.
-   ~(x = y) \/ ~(z = v) \/ dark_shadow_cond_row v y \/
-   ~dark_shadow_cond_row z x) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ int_le y v \/ ~int_le x z) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ EVERY y v \/ ~EVERY x z) /\
 (!x y z v. ~(x = y) \/ ~(z = v) \/ int_lt y v \/ ~int_lt x z) /\
 (!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
-(!x y. int_mul x y = int_mul y x) /\
-(!x y z. int_mul x (int_mul y z) = int_mul (int_mul x y) z) /\
-(!x y z.
-   int_le x y \/
-   ~int_le (int_mul (int_of_num z) x) (int_mul (int_of_num z) y) \/
-   ~(0 < z)) /\
-(!x y z.
-   ~int_le x y \/
-   int_le (int_mul (int_of_num z) x) (int_mul (int_of_num z) y) \/
-   ~(0 < z)) ==>
-(!x y z.
-   evallower (gv6249 x y z) lowers \/ ~(0 < y) \/ ~evallower x lowers \/
-   ~rshadow_row (y, z) lowers \/ ~dark_shadow_cond_row (y, z) lowers) /\
-(!x y z.
-   int_le (int_mul (int_of_num x) (gv6249 y x z)) z \/ ~(0 < x) \/
-   ~evallower y lowers \/ ~rshadow_row (x, z) lowers \/
-   ~dark_shadow_cond_row (x, z) lowers) /\ 0 < c /\
-int_le R (int_mul (int_of_num d) (x)) /\ evallower (x) lowers /\ 0 < d /\
-EVERY fst_nzero lowers /\
-int_le (int_mul (int_of_num c) R) (int_mul (int_of_num d) L) /\
-rshadow_row (c, L) lowers /\ dark_shadow_cond_row (c, L) lowers /\
-(!x.
-   ~int_lt (int_mul (int_of_num d) L)
-    (int_mul (int_of_num (c * d))
-     (int_add x (int_of_num (NUMERAL (BIT1 (ZERO)))))) \/
-   ~int_lt (int_mul (int_of_num (c * d)) x) (int_mul (int_of_num c) R)) /\
-int_le (int_mul (int_of_num c) (y)) L /\ evallower (y) lowers /\
-int_le (int_mul (int_of_num (c * d)) (y)) (int_mul (int_of_num d) L) /\
-int_le (int_mul (int_of_num c) R) (int_mul (int_of_num (c * d)) (x)) /\
-int_lt (int_mul (int_of_num (c * d)) (y)) (int_mul (int_of_num c) R) /\
-0 < c * d /\
-int_le (int_mul (int_of_num c) R) (int_mul (int_of_num (c * d)) j) /\
-int_le (int_mul (int_of_num (c * d)) j) (int_mul (int_of_num d) L) /\
-int_le (int_mul (int_mul (int_of_num c) (int_of_num d)) j)
-(int_mul (int_of_num d) L) /\ ~int_le (int_mul (int_of_num c) j) L ==> F`},
+(!x y. int_mul x y = int_mul y x) /\ (!x. ~int_lt x x) /\
+(!x y z. ~(int_mul x y = int_mul z y) \/ y = int_of_num 0 \/ x = z) /\
+(!x y z. int_mul x y = int_mul z y \/ ~(y = int_of_num 0)) /\
+(!x y z. int_mul x y = int_mul z y \/ ~(x = z)) ==>
+int_lt (int_of_num 0) gv1085 /\
+int_mul gv1085 gv1086 = int_mul gv1085 gv1087 /\ ~(gv1086 = gv1087) ==> F`},
+
+{name = "int_arith_139",
+ comment = "",
+ goal = `
+(!x y z v. ~(x = y) \/ ~(z = v) \/ int_add x z = int_add y v) /\
+(!x y. ~(x = y) \/ int_of_num x = int_of_num y) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ int_le y v \/ ~int_le x z) /\
+(!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
+(!x. int_add (int_of_num 0) x = x) /\
+(!x y z v.
+   int_le (int_add x y) (int_add z v) \/ ~int_le x z \/ ~int_le y v) /\
+(!x y z. int_add x (int_add y z) = int_add (int_add x y) z) /\
+(!x y. int_add x y = int_add y x) /\
+(!x y z. ~int_le (int_add x y) (int_add x z) \/ int_le y z) /\
+(!x y z. int_le (int_add x y) (int_add x z) \/ ~int_le y z) ==>
+int_le (x) (y) /\ int_le (int_of_num 0) (int_add c (x)) /\
+~int_le (int_of_num 0) (int_add c (y)) ==> F`},
+
+{name = "llist_69",
+ comment = "",
+ goal = `
+(!x y. ~(x = y) \/ LTL x = LTL y) /\ (!x y. ~(x = y) \/ SOME x = SOME y) /\
+(!x y. ~(x = y) \/ LHD x = LHD y) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ LCONS x z = LCONS y v) /\
+(!x y. ~(x = y) \/ g x = g y) /\ (!x y. ~(x = y) \/ THE x = THE y) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ LNTH z x = LNTH v y) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ LDROP z x = LDROP v y) /\
+(!x y. ~(x = y) \/ SUC x = SUC y) /\
+(!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
+(!x y z. ~(x = LCONS y z) \/ LTL x = SOME z) /\
+(!x y z. ~(x = LCONS y z) \/ LHD x = SOME y) /\
+(!x y z. x = LCONS y z \/ ~(LHD x = SOME y) \/ ~(LTL x = SOME z)) ==>
+LTL (g (LCONS LNIL t)) =
+SOME (g (LCONS (THE (LTL (THE (LNTH n t)))) (THE (LDROP (SUC n) t)))) /\
+LHD (g (LCONS LNIL t)) = SOME (THE (LHD (THE (LNTH n t)))) /\
+LHD (g t) = SOME (THE (LHD (THE (LNTH n t)))) /\
+LTL (g t) =
+SOME (g (LCONS (THE (LTL (THE (LNTH n t)))) (THE (LDROP (SUC n) t)))) /\
+~(g (LCONS LNIL t) = g t) ==> F`},
 
 {name = "MachineTransition_0",
- comment =
-"MESON_TAC: successfully proved,       time taken = 0.29s\n" ^
-"METIS_TAC: failed: no solution found, time taken = 17.67s",
+ comment = "",
  goal = `
 (!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
 (!x y.
@@ -1378,10 +1520,33 @@ int_le (int_mul (int_mul (int_of_num c) (int_of_num d)) j)
 $ (Next % gv914 % (Eq % gv915) % gv916) /\
 ~$ (Prev % gv914 % (Eq % gv916) % gv915) ==> F`},
 
+{name = "MachineTransition_2_1",
+ comment = "",
+ goal = `
+(!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
+(!x y.
+   x = y \/ ~$ (x % (EXT_POINT % x % y)) \/
+   ~$ (y % (EXT_POINT % x % y))) /\
+(!x y.
+   x = y \/ $ (x % (EXT_POINT % x % y)) \/ $ (y % (EXT_POINT % x % y))) /\
+(!x y. x = y \/ ~(x % (EXT_POINT % x % y) = y % (EXT_POINT % x % y))) /\
+(!x y. ~$ x \/ ~(x = y) \/ $ y) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ x % z = y % v) /\
+~$ (existential % (K % falsity)) /\ $ (existential % (K % truth)) /\
+~$ (universal % (K % falsity)) /\ $ (universal % (K % truth)) /\
+~$ falsity /\ $ truth /\
+(!x y z. ReachIn % x % (Next % x % y) % z = ReachIn % x % y % (SUC % z)) /\
+(!x y z.
+   ~$ (Next % x % y % z) \/ $ (x % ((,) % (gv5488 % x % y % z) % z))) /\
+(!x y z. ~$ (Next % x % y % z) \/ $ (y % (gv5488 % x % y % z))) /\
+(!x y z v. $ (Next % x % y % z) \/ ~$ (y % v) \/ ~$ (x % ((,) % v % z))) /\
+(!x y z. ReachIn % x % y % (SUC % z) = Next % x % (ReachIn % x % y % z)) /\
+(!x y. ReachIn % x % y % 0 = y) ==>
+$ (ReachIn % R % (Next % R % B) % gv5278 % state) /\
+(!x. ~$ (ReachIn % R % B % gv5278 % x) \/ ~$ (R % ((,) % x % state))) ==> F`},
+
 {name = "MachineTransition_52",
- comment =
-"MESON_TAC: successfully proved,       time taken = 0.84s\n" ^
-"METIS_TAC: failed: no solution found, time taken = 11.66s",
+ comment = "",
  goal = `
 (!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
 (!x y.
@@ -1440,252 +1605,9 @@ $
 (R % ((,) % (f2 % n) % (f2 % ((+) % n % (NUMERAL % (BIT1 % (ZERO))))))) /\
 ~$ (FinPath % ((,) % R % s) % f1 % n) ==> F`},
 
-(* ------------------------------------------------------------------------- *)
-(* Miscellaneous HOL subgoals, in alphabetical order.                        *)
-(* ------------------------------------------------------------------------- *)
-
-{name = "Coder_4_0",
+{name = "measure_138",
  comment = "",
  goal = `
-(!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
-(!x y.
-   x = y \/ ~$ (x % (EXT_POINT % x % y)) \/
-   ~$ (y % (EXT_POINT % x % y))) /\
-(!x y.
-   x = y \/ $ (x % (EXT_POINT % x % y)) \/ $ (y % (EXT_POINT % x % y))) /\
-(!x y. x = y \/ ~(x % (EXT_POINT % x % y) = y % (EXT_POINT % x % y))) /\
-(!x y. ~$ x \/ ~(x = y) \/ $ y) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ x % z = y % v) /\
-~$ (existential % (K % falsity)) /\ $ (existential % (K % truth)) /\
-~$ (universal % (K % falsity)) /\ $ (universal % (K % truth)) /\
-~$ falsity /\ $ truth /\
-(!x y z. ~(APPEND % x % y = APPEND % z % y) \/ x = z) /\
-(!x y z. APPEND % x % y = APPEND % z % y \/ ~(x = z)) /\
-(!x y z. APPEND % x % y = APPEND % x % z \/ ~(y = z)) /\
-(!x y z. ~(APPEND % x % y = APPEND % x % z) \/ y = z) ==>
-$ ((wf_encoder) % p % e) /\ (!x. e % x = f % x \/ ~$ (p % x)) /\
-$ ((wf_encoder) % p % f) /\ $ (p % q) /\ $ (p % q') /\
-APPEND % (f % q) % r = APPEND % (f % q') % r' /\ q = q' /\ ~(r' = r) ==> F`},
-
-{name = "DeepSyntax_47",
- comment = "",
- goal = `
-(!x y z v. ~(x = y) \/ ~(z = v) \/ int_add x z = int_add y v) /\
-(!x y. ~(x = y) \/ int_neg x = int_neg y) /\
-(!x y. ~(x = y) \/ int_of_num x = int_of_num y) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ int_lt y v \/ ~int_lt x z) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ eval_form y v \/ ~eval_form x z) /\
-(!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
-(!x y z v.
-   int_lt (int_add x y) (int_add z v) \/ ~int_lt x z \/ ~int_lt y v) /\
-(!x. int_add x (int_of_num 0) = x) /\
-(!x. int_add x (int_neg x) = int_of_num 0) /\
-(!x y z. int_add x (int_add y z) = int_add (int_add x y) z) ==>
-int_lt (int_neg d) (int_of_num 0) /\ eval_form g (x) /\
-int_lt (int_add (x) d) i /\ ~int_lt (x) i ==> F`},
-
-{name    = "Encode_28",
- comment = "",
- goal    = `
-(!x y z v. ~(x = y) \/ ~(z = v) \/ MOD x z = MOD y v) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ x * z = y * v) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ x + z = y + v) /\
-(!x y. ~(x = y) \/ NUMERAL x = NUMERAL y) /\
-(!x y. ~(x = y) \/ BIT2 x = BIT2 y) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ EXP x z = EXP y v) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ DIV x z = DIV y v) /\
-(!x y. ~(x = y) \/ BIT1 x = BIT1 y) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ y < v \/ ~(x < z)) /\
-(!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
-(!x y. x * y = y * x) /\
-(!x y z. MOD (MOD x (y * z)) y = MOD x y \/ ~(0 < y) \/ ~(0 < z)) ==>
-(!x.
-   MOD x (NUMERAL (BIT2 (ZERO))) = 0 \/
-   MOD x (NUMERAL (BIT2 (ZERO))) = NUMERAL (BIT1 (ZERO))) /\
-MOD
-(DIV (x) (NUMERAL (BIT2 (ZERO))) * NUMERAL (BIT2 (ZERO)) +
- MOD (x) (NUMERAL (BIT2 (ZERO))))
-(NUMERAL (BIT2 (ZERO)) * EXP (NUMERAL (BIT2 (ZERO))) m) =
-MOD
-(DIV (y) (NUMERAL (BIT2 (ZERO))) * NUMERAL (BIT2 (ZERO)) +
- MOD (y) (NUMERAL (BIT2 (ZERO))))
-(NUMERAL (BIT2 (ZERO)) * EXP (NUMERAL (BIT2 (ZERO))) m) /\
-0 < EXP (NUMERAL (BIT2 (ZERO))) m /\ 0 < NUMERAL (BIT2 (ZERO)) /\
-(!x y.
-   ~(MOD (x * NUMERAL (BIT2 (ZERO)) + MOD (x) (NUMERAL (BIT2 (ZERO))))
-     (NUMERAL (BIT2 (ZERO))) =
-     MOD (y * NUMERAL (BIT2 (ZERO)) + MOD (y) (NUMERAL (BIT2 (ZERO))))
-     (NUMERAL (BIT2 (ZERO))))) ==> F`},
-
-{name    = "euclid_4",
- comment = "",
- goal    = `
-(!x y z v. ~(x = y) \/ ~(z = v) \/ x * z = y * v) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ divides y v \/ ~divides x z) /\
-(!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
-(!x y z. x * (y * z) = x * y * z) /\
-(!x y. ~divides x y \/ y = x * gv5371 x y) /\
-(!x y z. divides x y \/ ~(y = x * z)) ==>
-divides gv5316 gv5317 /\ divides gv5315 gv5316 /\
-~divides gv5315 gv5317 ==> F`},
-
-{name    = "euclid_8",
- comment = "",
- goal    = `
-(!x y z v. ~(x = y) \/ ~(z = v) \/ x * z = y * v) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ divides y v \/ ~divides x z) /\
-(!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
-(!x y. x * y = y * x) /\ (!x y z. x * (y * z) = x * y * z) /\
-(!x y. ~divides x y \/ y = x * gv7050 x y) /\
-(!x y z. divides x y \/ ~(y = x * z)) ==>
-divides gv7000 gv7001 /\ ~divides gv7000 (gv7002 * gv7001) ==> F`},
-
-{name    = "extra_arith_6",
- comment = "",
- goal    = `
-(!x y z v. ~(x = y) \/ ~(z = v) \/ x * z = y * v) /\
-(!x y. ~(x = y) \/ SUC x = SUC y) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ y < v \/ ~(x < z)) /\
-(!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
-(!x y z. ~(SUC x * y = SUC x * z) \/ y = z) /\
-(!x y z. SUC x * y = SUC x * z \/ ~(y = z)) /\
-(!x y z. x * (y * z) = x * y * z) /\ (!x y. x * y = y * x) ==>
-SUC n * b = q * (SUC n * a) /\ 0 < SUC n /\ ~(b = q * a) ==> F`},
-
-{name    = "extra_real_5",
- comment = "",
- goal    = `
-~$ (existential % (K % falsity)) /\ $ (existential % (K % truth)) /\
-~$ (universal % (K % falsity)) /\ $ (universal % (K % truth)) /\
-~$ falsity /\ $ truth ==>
-(!x y z v.
-   $ (real_lt % x % (sup % P)) \/ ~$ (P % y) \/ ~$ (real_lt % x % y) \/
-   ~$ (P % z) \/ ~$ (real_lte % (gv6327 % v) % v)) /\
-(!x y z.
-   ~$ (real_lt % x % (sup % P)) \/ $ (P % (gv6327 % x)) \/ ~$ (P % y) \/
-   ~$ (real_lte % (gv6327 % z) % z)) /\
-(!x y z.
-   ~$ (real_lt % x % (sup % P)) \/ $ (real_lt % x % (gv6327 % x)) \/
-   ~$ (P % y) \/ ~$ (real_lte % (gv6327 % z) % z)) /\
-(!x y z.
-   ~$ (real_lt % x % (sup % P)) \/ $ (real_lt % x % (gv6327 % x)) \/
-   ~$ (P % y) \/ $ (P % (gv6327 % z))) /\
-(!x y z.
-   ~$ (real_lt % x % (sup % P)) \/ $ (P % (gv6327 % x)) \/ ~$ (P % y) \/
-   $ (P % (gv6327 % z))) /\
-(!x y z v.
-   $ (real_lt % x % (sup % P)) \/ ~$ (P % y) \/ ~$ (real_lt % x % y) \/
-   ~$ (P % z) \/ $ (P % (gv6327 % v))) /\ $ (P % (x)) /\
-(!x. $ (real_lte % x % (z)) \/ ~$ (P % x)) /\
-(!x.
-   $ (real_lt % (gv6328 % x) % (gv6329 % x)) \/
-   $ (real_lt % (gv6328 % x) % x)) /\
-(!x. $ (P % (gv6329 % x)) \/ $ (real_lt % (gv6328 % x) % x)) /\
-(!x y.
-   ~$ (real_lt % (gv6328 % x) % y) \/ ~$ (P % y) \/
-   ~$ (real_lt % (gv6328 % x) % x)) ==> F`},
-
-{name    = "gcd_21",
- comment = "",
- goal    = `
-(!x y z v. ~(x = y) \/ ~(z = v) \/ x + z = y + v) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ x * z = y * v) /\
-(!x y. ~(x = y) \/ NUMERAL x = NUMERAL y) /\
-(!x y. ~(x = y) \/ BIT1 x = BIT1 y) /\ (!x y. ~(x = y) \/ SUC x = SUC y) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ divides y v \/ ~divides x z) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ y <= v \/ ~(x <= z)) /\
-(!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
-(!x y z. x * (y + z) = x * y + x * z) /\ (!x y. x + SUC y = SUC (x + y)) /\
-(!x y. SUC x + y = SUC (x + y)) /\ (!x. x + 0 = x) /\ (!x. 0 + x = x) /\
-(!x y. x * SUC y = x + x * y) /\ (!x y. SUC x * y = x * y + y) /\
-(!x. x * NUMERAL (BIT1 (ZERO)) = x) /\
-(!x. NUMERAL (BIT1 (ZERO)) * x = x) /\ (!x. x * 0 = 0) /\
-(!x. 0 * x = 0) /\ (!x y z. x + (y + z) = x + y + z) /\
-(!x y z. divides x y \/ ~divides x z \/ ~divides x (z + y)) ==>
-divides c (d * SUC (y)) /\ (y) <= (y) + (z) /\
-divides c (d * SUC ((y) + (z))) /\ ~divides c (d * (z)) ==> F`},
-
-{name = "int_arith_6",
- comment = "",
- goal = `
-(!x y z v. ~(x = y) \/ ~(z = v) \/ int_mul x z = int_mul y v) /\
-(!x y. ~(x = y) \/ int_of_num x = int_of_num y) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ int_lt y v \/ ~int_lt x z) /\
-(!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
-(!x y. int_mul x y = int_mul y x) /\ (!x. ~int_lt x x) /\
-(!x y z. ~(int_mul x y = int_mul z y) \/ y = int_of_num 0 \/ x = z) /\
-(!x y z. int_mul x y = int_mul z y \/ ~(y = int_of_num 0)) /\
-(!x y z. int_mul x y = int_mul z y \/ ~(x = z)) ==>
-int_lt (int_of_num 0) gv1085 /\
-int_mul gv1085 gv1086 = int_mul gv1085 gv1087 /\ ~(gv1086 = gv1087) ==> F`},
-
-{name    = "int_arith_139",
- comment = "",
- goal    = `
-(!x y z v. ~(x = y) \/ ~(z = v) \/ int_add x z = int_add y v) /\
-(!x y. ~(x = y) \/ int_of_num x = int_of_num y) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ int_le y v \/ ~int_le x z) /\
-(!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
-(!x. int_add (int_of_num 0) x = x) /\
-(!x y z v.
-   int_le (int_add x y) (int_add z v) \/ ~int_le x z \/ ~int_le y v) /\
-(!x y z. int_add x (int_add y z) = int_add (int_add x y) z) /\
-(!x y. int_add x y = int_add y x) /\
-(!x y z. ~int_le (int_add x y) (int_add x z) \/ int_le y z) /\
-(!x y z. int_le (int_add x y) (int_add x z) \/ ~int_le y z) ==>
-int_le (x) (y) /\ int_le (int_of_num 0) (int_add c (x)) /\
-~int_le (int_of_num 0) (int_add c (y)) ==> F`},
-
-{name    = "llist_69",
- comment = "",
- goal    = `
-(!x y. ~(x = y) \/ LTL x = LTL y) /\ (!x y. ~(x = y) \/ SOME x = SOME y) /\
-(!x y. ~(x = y) \/ LHD x = LHD y) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ LCONS x z = LCONS y v) /\
-(!x y. ~(x = y) \/ g x = g y) /\ (!x y. ~(x = y) \/ THE x = THE y) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ LNTH z x = LNTH v y) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ LDROP z x = LDROP v y) /\
-(!x y. ~(x = y) \/ SUC x = SUC y) /\
-(!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
-(!x y z. ~(x = LCONS y z) \/ LTL x = SOME z) /\
-(!x y z. ~(x = LCONS y z) \/ LHD x = SOME y) /\
-(!x y z. x = LCONS y z \/ ~(LHD x = SOME y) \/ ~(LTL x = SOME z)) ==>
-LTL (g (LCONS LNIL t)) =
-SOME (g (LCONS (THE (LTL (THE (LNTH n t)))) (THE (LDROP (SUC n) t)))) /\
-LHD (g (LCONS LNIL t)) = SOME (THE (LHD (THE (LNTH n t)))) /\
-LHD (g t) = SOME (THE (LHD (THE (LNTH n t)))) /\
-LTL (g t) =
-SOME (g (LCONS (THE (LTL (THE (LNTH n t)))) (THE (LDROP (SUC n) t)))) /\
-~(g (LCONS LNIL t) = g t) ==> F`},
-
-{name    = "MachineTransition_2_1",
- comment = "",
- goal    = `
-(!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
-(!x y.
-   x = y \/ ~$ (x % (EXT_POINT % x % y)) \/
-   ~$ (y % (EXT_POINT % x % y))) /\
-(!x y.
-   x = y \/ $ (x % (EXT_POINT % x % y)) \/ $ (y % (EXT_POINT % x % y))) /\
-(!x y. x = y \/ ~(x % (EXT_POINT % x % y) = y % (EXT_POINT % x % y))) /\
-(!x y. ~$ x \/ ~(x = y) \/ $ y) /\
-(!x y z v. ~(x = y) \/ ~(z = v) \/ x % z = y % v) /\
-~$ (existential % (K % falsity)) /\ $ (existential % (K % truth)) /\
-~$ (universal % (K % falsity)) /\ $ (universal % (K % truth)) /\
-~$ falsity /\ $ truth /\
-(!x y z. ReachIn % x % (Next % x % y) % z = ReachIn % x % y % (SUC % z)) /\
-(!x y z.
-   ~$ (Next % x % y % z) \/ $ (x % ((,) % (gv5488 % x % y % z) % z))) /\
-(!x y z. ~$ (Next % x % y % z) \/ $ (y % (gv5488 % x % y % z))) /\
-(!x y z v. $ (Next % x % y % z) \/ ~$ (y % v) \/ ~$ (x % ((,) % v % z))) /\
-(!x y z. ReachIn % x % y % (SUC % z) = Next % x % (ReachIn % x % y % z)) /\
-(!x y. ReachIn % x % y % 0 = y) ==>
-$ (ReachIn % R % (Next % R % B) % gv5278 % state) /\
-(!x. ~$ (ReachIn % R % B % gv5278 % x) \/ ~$ (R % ((,) % x % state))) ==> F`},
-
-{name    = "measure_138",
- comment = "",
- goal    = `
 (!x y z. ~SUBSET x y \/ IN z y \/ ~IN z x) /\
 (!x y. SUBSET x y \/ IN (gv122874 x y) x) /\
 (!x y. SUBSET x y \/ ~IN (gv122874 x y) y) /\
@@ -1720,9 +1642,9 @@ SUBSET a p /\ IN EMPTY p /\
 (!x. IN (COMPL x) p \/ ~IN x (INTER p (sigma a))) /\ countable c /\
 ~IN (BIGUNION c) (sigma a) ==> F`},
 
-{name    = "mlibOmega_13",
+{name = "mlibOmega_13",
  comment = "",
- goal    = `
+ goal = `
 (!x y z v. ~(x = y) \/ ~(z = v) \/ int_mul x z = int_mul y v) /\
 (!x y. ~(x = y) \/ int_of_num x = int_of_num y) /\
 (!x y z v. ~(x = y) \/ ~(z = v) \/ evalupper y v \/ ~evalupper x z) /\
@@ -1744,6 +1666,71 @@ SUBSET a p /\ IN EMPTY p /\
 int_le (int_mul (int_of_num p_1) (x)) p_2 /\ evalupper (x) uppers /\
 int_lt (y) (x) /\ 0 < p_1 /\ ~int_le (int_mul (int_of_num p_1) (y)) p_2 ==>
 F`},
+
+{name = "mlibOmega_71",
+ comment = "",
+ goal = `
+(!x y z v. ~(x = y) \/ ~(z = v) \/ int_mul x z = int_mul y v) /\
+(!x y. ~(x = y) \/ int_of_num x = int_of_num y) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ x * z = y * v) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ int_add x z = int_add y v) /\
+(!x y. ~(x = y) \/ NUMERAL x = NUMERAL y) /\
+(!x y. ~(x = y) \/ BIT1 x = BIT1 y) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ (x, z) = (y, v)) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ evallower y v \/ ~evallower x z) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ y < v \/ ~(x < z)) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ rshadow_row v y \/ ~rshadow_row z x) /\
+(!x y z v.
+   ~(x = y) \/ ~(z = v) \/ dark_shadow_cond_row v y \/
+   ~dark_shadow_cond_row z x) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ int_le y v \/ ~int_le x z) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ EVERY y v \/ ~EVERY x z) /\
+(!x y z v. ~(x = y) \/ ~(z = v) \/ int_lt y v \/ ~int_lt x z) /\
+(!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
+(!x y. int_mul x y = int_mul y x) /\
+(!x y z. int_mul x (int_mul y z) = int_mul (int_mul x y) z) /\
+(!x y z.
+   int_le x y \/
+   ~int_le (int_mul (int_of_num z) x) (int_mul (int_of_num z) y) \/
+   ~(0 < z)) /\
+(!x y z.
+   ~int_le x y \/
+   int_le (int_mul (int_of_num z) x) (int_mul (int_of_num z) y) \/
+   ~(0 < z)) ==>
+(!x y z.
+   evallower (gv6249 x y z) lowers \/ ~(0 < y) \/ ~evallower x lowers \/
+   ~rshadow_row (y, z) lowers \/ ~dark_shadow_cond_row (y, z) lowers) /\
+(!x y z.
+   int_le (int_mul (int_of_num x) (gv6249 y x z)) z \/ ~(0 < x) \/
+   ~evallower y lowers \/ ~rshadow_row (x, z) lowers \/
+   ~dark_shadow_cond_row (x, z) lowers) /\ 0 < c /\
+int_le R (int_mul (int_of_num d) (x)) /\ evallower (x) lowers /\ 0 < d /\
+EVERY fst_nzero lowers /\
+int_le (int_mul (int_of_num c) R) (int_mul (int_of_num d) L) /\
+rshadow_row (c, L) lowers /\ dark_shadow_cond_row (c, L) lowers /\
+(!x.
+   ~int_lt (int_mul (int_of_num d) L)
+    (int_mul (int_of_num (c * d))
+     (int_add x (int_of_num (NUMERAL (BIT1 (ZERO)))))) \/
+   ~int_lt (int_mul (int_of_num (c * d)) x) (int_mul (int_of_num c) R)) /\
+int_le (int_mul (int_of_num c) (y)) L /\ evallower (y) lowers /\
+int_le (int_mul (int_of_num (c * d)) (y)) (int_mul (int_of_num d) L) /\
+int_le (int_mul (int_of_num c) R) (int_mul (int_of_num (c * d)) (x)) /\
+int_lt (int_mul (int_of_num (c * d)) (y)) (int_mul (int_of_num c) R) /\
+0 < c * d /\
+int_le (int_mul (int_of_num c) R) (int_mul (int_of_num (c * d)) j) /\
+int_le (int_mul (int_of_num (c * d)) j) (int_mul (int_of_num d) L) /\
+int_le (int_mul (int_mul (int_of_num c) (int_of_num d)) j)
+(int_mul (int_of_num d) L) /\ ~int_le (int_mul (int_of_num c) j) L ==> F`},
+
+{name = "pred_set_1",
+ comment = "Small problem that's hard for ordered resolution",
+ goal = `
+(!x y z. ~(x <= y) \/ z :: y \/ ~(z :: x)) /\
+(!x y. x <= y \/ ~(a x y :: y)) /\ (!x y. x <= y \/ a x y :: x) /\
+(!x y z. ~(x :: y * z) \/ x :: z) /\ (!x y z. ~(x :: y * z) \/ x :: y) /\
+(!x y z. x :: y * z \/ ~(x :: y) \/ ~(x :: z)) ==>
+b <= c /\ b <= d /\ ~(b <= c * d) ==> F`},
 
 {name = "pred_set_54_1",
  comment = "",
@@ -1773,9 +1760,9 @@ CHOICE % (INSERT % (x) % s) = (y) /\ ~$ (IN % (y) % t) /\
 ~$ (IN % (x) % s) /\ INSERT % (x) % s = INSERT % (y) % t /\ ~((x) = (y)) /\
 ~$ (IN % (x) % t) ==> F`},
 
-{name    = "prob_44",
+{name = "prob_44",
  comment = "",
- goal    = `
+ goal = `
 (!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
 (!x y.
    x = y \/ ~$ (x % (EXT_POINT % x % y)) \/
@@ -1831,9 +1818,9 @@ $ (prefix_cover % c) /\ $ (IN % s % (events % bern)) /\ $ (IN % (x) % c) /\
 $ (IN % (x''') % (prefix_set % (x))) /\
 $ (IN % (x''') % (prefix_set % (x'))) ==> F`},
 
-{name    = "prob_53",
+{name = "prob_53",
  comment = "",
- goal    = `
+ goal = `
 (!x y z. ~(x = y) \/ ~(x = z) \/ y = z) /\ (!x. x = x) /\
 (!x y.
    x = y \/ ~$ (x % (EXT_POINT % x % y)) \/
@@ -1895,9 +1882,9 @@ $ (IN % (x'') % c) /\
 $ (IN % (x''''') % (prefix_set % (x''))) /\
 $ (IN % (x''''') % (prefix_set % (x'''))) ==> F`},
 
-{name    = "prob_extra_22",
+{name = "prob_extra_22",
  comment = "",
- goal    = `
+ goal = `
 ~$ (existential % (K % falsity)) /\ $ (existential % (K % truth)) /\
 ~$ (universal % (K % falsity)) /\ $ (universal % (K % truth)) /\
 ~$ falsity /\ $ truth ==>
@@ -1928,9 +1915,9 @@ $ (P % (x)) /\ (!x. $ (real_lte % x % (z)) \/ ~$ (P % x)) /\
    ~$ (real_lt % (gv13925 % x) % y) \/ ~$ (P % y) \/
    ~$ (real_lt % (gv13925 % x) % x)) ==> F`},
 
-{name    = "root2_2",
+{name = "root2_2",
  comment = "",
- goal    = `
+ goal = `
 (!x y z v. ~(x = y) \/ ~(z = v) \/ x * z = y * v) /\
 (!x y. ~(x = y) \/ NUMERAL x = NUMERAL y) /\
 (!x y. ~(x = y) \/ BIT2 x = BIT2 y) /\

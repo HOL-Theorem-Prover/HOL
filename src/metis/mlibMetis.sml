@@ -75,26 +75,18 @@ in
 end;
 
 val default_meson : prover_parameters =
-  (mlibMeson M.defaults, SOME (only_if_everything all_negative), Infs 2000.0);
-                                 (*                               ^^^^^^   *)
-                                 (* natural speed in inferences per second *)
+  (mlibMeson M.defaults, SOME (only_if_everything all_negative), Time 1.0);
 
 val default_delta : prover_parameters =
-  (Delta M.defaults, NONE, Infs (0.25 * 2000.0));
-                           (*    ^^^^          *)
-                           (* slow-down factor *)
+  (Delta M.defaults, NONE, Time 0.25);
 
 val default_resolution : prover_parameters =
-  (mlibResolution R.defaults, SOME everything, Infs (2.0 * 300.0));
-                                           (*    ^^^          *)
-                                           (* speed-up factor *)
+  (mlibResolution R.defaults, SOME everything, Time 2.0);
 
-val ord_resolution : prover_parameters =
-  (mlibResolution (R_ordered [3,4,5]), NONE, Infs (4.0 * 70.0));
-                                         (*    ^^^          *)
-                                         (* speed-up factor *)
+val ordered_resolution : prover_parameters =
+  (mlibResolution (R_ordered [3,4,5]), NONE, Time 4.0);
 
-val defaults = [default_resolution, default_meson, ord_resolution];
+val defaults = [default_resolution, default_meson, ordered_resolution];
 
 local
   fun b2s true = "on" | b2s false = "off";
@@ -102,7 +94,7 @@ local
   fun io2s NONE = "NONE" | io2s (SOME i) = "SOME " ^ i2s i;
   val r2s = mlibUseful.real_to_string;
   fun mp2s {size, perts = (p,q)} = i2s size ^ "(" ^ i2s p ^ "+" ^ i2s q ^ ")";
-  fun mpl2s l = "[" ^ join ", " (map (int_to_string o #size) l) ^ "]";
+  fun mpl2s l = "[" ^ join "," (map (int_to_string o #size) l) ^ "]";
 
   fun f2s (f : mlibClauseset.filter) =
     "      subsumption ...... " ^ b2s (#subsumption f) ^ "\n" ^
