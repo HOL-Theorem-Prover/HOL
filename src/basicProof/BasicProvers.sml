@@ -7,7 +7,7 @@
 structure BasicProvers :> BasicProvers =
 struct
 
-open HolKernel boolLib Rsyntax;
+open HolKernel boolLib;
 type simpset = simpLib.simpset;
 
 
@@ -43,22 +43,31 @@ end;
  * is a variable.                                                            *
  *---------------------------------------------------------------------------*)
 
-fun orient th =
-  let val c = concl th
-      val {lhs,rhs} = dest_eq c
-  in if is_var lhs
-     then if is_var rhs
-          then case Term.compare (lhs, rhs) 
-                of LESS  => SYM th
-                 | other => th
-          else th
-     else SYM th
-  end;
+fun is_bool_atom tm = 
+  is_var tm andalso (type_of tm = bool)
+  orelse is_neg tm andalso is_var (dest_neg tm);
 
-fun VSUBST_TAC tm = UNDISCH_TAC tm THEN DISCH_THEN (SUBST_ALL_TAC o orient);
+
+fun orient th =
+ let val c = concl th
+ in if is_bool_atom c
+    then (if is_neg c then EQF_INTRO th else EQT_INTRO th)
+    else let val (lhs,rhs) = dest_eq c
+         in if is_var lhs
+            then if is_var rhs
+                 then case Term.compare (lhs, rhs) 
+                       of LESS  => SYM th
+                        | other => th
+                 else th
+            else SYM th
+         end
+ end;
+
+
+fun VSUBST_TAC tm = UNDISCH_THEN tm (SUBST_ALL_TAC o orient);
 
 fun var_eq tm =
-   let val {lhs,rhs} = dest_eq tm
+   let val (lhs,rhs) = dest_eq tm
    in
        aconv lhs rhs
      orelse
@@ -66,7 +75,7 @@ fun var_eq tm =
      orelse
        (is_var rhs andalso not (mem rhs (free_vars lhs)))
    end
-   handle _ => false;
+   handle _ => is_bool_atom tm
 
 
 fun grab P f v =
@@ -88,7 +97,7 @@ fun const_coords c =
   let val {Name,Thy,...} = dest_thy_const c in (Name,Thy) end;
 
 fun constructed constr_set tm =
-  let val {lhs,rhs} = dest_eq tm
+  let val (lhs,rhs) = dest_eq tm
   in
   (aconv lhs rhs)
      orelse
@@ -102,12 +111,12 @@ fun constructed constr_set tm =
   handle HOL_ERR _ => false;
 
 fun LIFT_SIMP ss tm =
-   UNDISCH_TAC tm THEN
-   DISCH_THEN (STRIP_ASSUME_TAC o simpLib.SIMP_RULE ss []);
+   UNDISCH_THEN tm 
+     (fn th => STRIP_ASSUME_TAC (simpLib.SIMP_RULE ss [] th));
 
 
-local fun DTHEN (ttac:Abbrev.thm_tactic) :tactic = fn (asl,w) =>
-        let val {ant,conseq} = dest_imp_only w
+local fun DTHEN ttac = fn (asl,w) =>
+        let val (ant,conseq) = dest_imp_only w
             val (gl,prf) = ttac (Thm.ASSUME ant) (asl,conseq)
         in (gl, Thm.DISCH ant o prf)
         end
@@ -127,7 +136,15 @@ fun (ss && thl) = simpLib.++(ss,simpLib.rewrites thl);
 
 fun add_simpls tyinfo ss = ss && TypeBase.simpls_of tyinfo;
 
-fun breakable tm = (is_exists tm orelse is_conj tm orelse is_disj tm);
+fun is_dneg tm = 1 < snd(strip_neg tm);
+
+fun breakable tm = 
+    is_exists tm orelse 
+    is_conj tm   orelse 
+    is_disj tm   orelse
+    is_dneg tm   orelse
+    T=tm         orelse
+    F=tm;
 
 
 (*---------------------------------------------------------------------------
@@ -183,7 +200,7 @@ fun PRIM_STP_TAC ss finisher =
     REPEAT (GEN_TAC ORELSE CONJ_TAC)
      THEN REPEAT (ASSUM_TAC VSUBST_TAC var_eq)
      THEN ASM_SIMP
-     THEN TRY (COND_CASES_TAC THEN REPEAT COND_CASES_TAC THEN ASM_SIMP)
+     THEN TRY (IF_CASES_TAC THEN REPEAT IF_CASES_TAC THEN ASM_SIMP)
      THEN REPEAT BOSS_STRIP_TAC
      THEN REPEAT (CHANGED_TAC
             (ASSUM_TAC VSUBST_TAC var_eq
