@@ -18,7 +18,7 @@
 structure RW :> RW =
 struct
 
-open HolKernel Parse Drule Tactical Tactic Conv;
+open HolKernel Parse Drule Tactical Tactic Conv boolSyntax
 
 val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
 fun -- q x = Term q
@@ -129,11 +129,11 @@ fun strip_imp tm =
   let val istrue = mk_const{Name="T",Ty=bool}
       fun mk_rewrs th =
       let val tm = Thm.concl th
-      in  if (Dsyntax.is_eq tm) then [th] else
-          if (Dsyntax.is_neg tm) then [EQF_INTRO th] else
-          if (Dsyntax.is_conj tm)
+      in  if (boolSyntax.is_eq tm) then [th] else
+          if (boolSyntax.is_neg tm) then [EQF_INTRO th] else
+          if (boolSyntax.is_conj tm)
           then (op @ o (mk_rewrs ## mk_rewrs) o Drule.CONJ_PAIR) th else
-          if (Dsyntax.is_imp tm)
+          if (boolSyntax.is_imp tm)
           then let val ant = list_mk_conj (fst(strip_imp tm))
                    fun step imp cnj =
                        step (MP imp (CONJUNCT1 cnj)) (CONJUNCT2 cnj)
@@ -177,8 +177,8 @@ fun dest_choice (COND th)   = th
  * instantiated rule. Handles conditional rules.
  *---------------------------------------------------------------------------*)
 fun PRIM_RW_CONV th =
- let val (has_condition,eq) = ((not o null)##I)(Dsyntax.strip_imp (concl th))
-     val pat = Dsyntax.lhs eq
+ let val (has_condition,eq) = ((not o null)##I)(boolSyntax.strip_imp (concl th))
+     val pat = boolSyntax.lhs eq
      val matcher = Term.match_term pat
      fun match_then_inst tm =
         let val (tm_theta, ty_theta) = matcher tm
@@ -201,9 +201,9 @@ fun PRIM_RW_CONV th =
  * certainly exist.
  *---------------------------------------------------------------------------*)
 fun CONGR th =
-   let val (ants,eq) = Dsyntax.strip_imp (concl th)
+   let val (ants,eq) = boolSyntax.strip_imp (concl th)
        (* TODO: Check that it is a congruence rule *)
-       val pat = Dsyntax.lhs eq
+       val pat = boolSyntax.lhs eq
        val matcher = Term.match_term pat
        fun match_then_inst tm =
           let val (tm_theta, ty_theta) = matcher tm
@@ -230,7 +230,7 @@ fun add_rws (RW{thms,rw_net,congs, cong_net}) thl =
  RW{thms   = thl::thms,
     congs  = congs, cong_net = cong_net,
     rw_net = itlist Net.insert
-             (map (fn th => let val left = Dsyntax.lhs(#2(strip_imp(concl th)))
+             (map (fn th => let val left = boolSyntax.lhs(#2(strip_imp(concl th)))
                             in  (left,  PRIM_RW_CONV th)
                             end)
                   (flatten (map MK_RULES_APART thl)))        rw_net}
@@ -246,7 +246,7 @@ fun add_congs (RW{cong_net, congs, thms, rw_net}) thl =
                 let val c = concl th
                     val eq = #conseq(dest_imp c) handle _ => c
                 in
-                   (Dsyntax.lhs eq,  CONGR th)
+                   (boolSyntax.lhs eq,  CONGR th)
                 end)
               (map (GSPEC_ALL o GEN_ALL) thl))         cong_net}
   handle HOL_ERR _ =>
@@ -299,9 +299,9 @@ fun RW_STEP {context=(cntxt,_),prover,simpls as RW{rw_net,...}} tm =
            | SOME th =>
              if !monitoring
              then case drop_opt (map match rst)
-                  of [] => (Lib.mesg true (String.concat
+                  of [] => (HOL_MESG (String.concat
                               ["RW_STEP:\n", Parse.thm_to_string th]); th)
-                  | L => (Lib.mesg true (String.concat
+                  | L => (HOL_MESG (String.concat
                       ["RW_STEP: multiple rewrites possible (first taken):\n",
                             String.concat
                               (stringulate Parse.thm_to_string(th::L))]); th)
@@ -491,7 +491,7 @@ fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
                                        | UNCAHNGED => NO_CHANGE (L,lhs)
           end
   in case outcome
-       of (CHANGE th) => let val Mnew = Dsyntax.rhs(concl th)
+       of (CHANGE th) => let val Mnew = boolSyntax.rhs(concl th)
                          in (CHANGE (itlist DISCH L th),
                              map (subst [rhs |-> Mnew]) rst)
                          end
@@ -513,9 +513,9 @@ let val ant_frees = free_vars ant
     val (L,{lhs,rhs}) = (I##dest_eq) (strip_imp ceqn')
     val outcome =
      if (aconv lhs rhs) then NO_CHANGE (L,lhs)
-     else let val lhs_beta_maybe = Conv.DEPTH_CONV Let_conv.GEN_BETA_CONV lhs
+     else let val lhs_beta_maybe = Conv.DEPTH_CONV pairSyntax.GEN_BETA_CONV lhs
                                    handle HOL_ERR _ => REFL lhs
-              val lhs' = Dsyntax.rhs(concl lhs_beta_maybe)
+              val lhs' = boolSyntax.rhs(concl lhs_beta_maybe)
               val cps' =
                case L of []  => cps
                       |  _   => {context = (map ASSUME L @ cntxt,b),
@@ -527,10 +527,10 @@ let val ant_frees = free_vars ant
                   | UNCHANGED => if (aconv lhs lhs') then NO_CHANGE (L,lhs)
                                  else CHANGE lhs_beta_maybe
          end
-in 
+in
  case outcome
   of CHANGE th =>
-      let val Mnew = Dsyntax.rhs(concl th)
+      let val Mnew = boolSyntax.rhs(concl th)
           val g = pairTools.list_mk_aabs(vstrl1,Mnew)
           val gvstrl1 = list_mk_comb(g,vstrl1)
           val eq = SYM(DEPTH_CONV pairTools.GEN_BETA_CONV gvstrl1
@@ -600,7 +600,7 @@ fun SUB_QCONV cnv (cps as {context,prover,simpls}) tm =
          handle HOL_ERR _ =>
           let val v = genvar (type_of Bvar)
               val th1 = ALPHA_CONV v tm
-              val eq_thm' = ABS v(cnv cps (body(Dsyntax.rhs(Thm.concl th1))))
+              val eq_thm' = ABS v(cnv cps (body(boolSyntax.rhs(Thm.concl th1))))
               val at = #rhs(dest_eq(concl eq_thm'))
               val v' = variant (free_vars at) Bvar
               val th2 = ALPHA_CONV v' at
@@ -831,7 +831,7 @@ fun rw_solver simpls context tm =
                      else Lib.say("Solver: unable to prove.\n\n")
                   end
              else ()
-     val tm' = Dsyntax.rhs(concl th)
+     val tm' = boolSyntax.rhs(concl th)
      fun loop [] = solver_err()
        | loop (x::rst) =
            let val c = concl x

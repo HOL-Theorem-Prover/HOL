@@ -5,7 +5,7 @@
 structure TotalDefn :> TotalDefn =
 struct
 
-open HolKernel Parse basicHol90Lib arithLib Let_conv NonRecSize DefnBase;
+open HolKernel Parse boolLib arithLib NonRecSize DefnBase Rsyntax;
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
@@ -21,7 +21,9 @@ val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
 fun ERR f m =
   HOL_ERR{origin_structure="TotalDefn", origin_function=f, message=m};
 
-
+fun mk_pabs{varstruct,body} = pairSyntax.mk_abs(varstruct,body)
+fun mk_pair{fst,snd} = pairSyntax.mk_pair(fst,snd)
+val GEN_BETA_CONV = pairSyntax.GEN_BETA_CONV
 
 fun proper_subterm tm1 tm2 =
   not(aconv tm1 tm2) andalso Lib.can (find_term (aconv tm1)) tm2;
@@ -32,14 +34,15 @@ fun isWFR tm =
 
 fun foo [] _  = raise ERR "foo" "empty arg."
   | foo _ []  = raise ERR "foo" "empty arg."
-  | foo [x] Y = [(x,list_mk_pair Y)]
-  | foo X [y] = [(list_mk_pair X, y)]
+  | foo [x] Y = [(x,pairSyntax.list_mk_pair Y)]
+  | foo X [y] = [(pairSyntax.list_mk_pair X, y)]
   | foo (x::rst) (y::rst1) = (x,y)::foo rst rst1;
 
 fun dest tm =
   let val Ryx = (snd o strip_imp o snd o strip_forall) tm
       val {Rator=Ry, Rand=x} = dest_comb Ryx
       val y = rand Ry
+      open pairSyntax
   in
      foo (strip_pair y) (strip_pair x)
   end;
@@ -153,11 +156,11 @@ fun guessR defn =
 end;
 
 
-fun proveTotal tac defn = 
+fun proveTotal tac defn =
   Defn.elim_tcs defn (CONJUNCTS (prove(list_mk_conj (Defn.tcs_of defn), tac)))
 
 (*---------------------------------------------------------------------------
-      Default TC simplifier and prover. Terribly terribly naive, but 
+      Default TC simplifier and prover. Terribly terribly naive, but
       still useful. It knows all about the sizes of types.
  ---------------------------------------------------------------------------*)
 
@@ -167,10 +170,10 @@ fun get_orig (TypeBase.ORIG th) = th
 fun TC_SIMP_CONV simps tm =
  (REPEATC
    (CHANGED_CONV
-     (Rewrite.REWRITE_CONV 
+     (Rewrite.REWRITE_CONV
         (simps @ mapfilter TypeBase.case_def_of
                (TypeBase.listItems (TypeBase.theTypeBase())))
-       THENC REDEPTH_CONV Let_conv.GEN_BETA_CONV))
+       THENC REDEPTH_CONV GEN_BETA_CONV))
   THENC Rewrite.REWRITE_CONV
           (pairTheory.pair_rws @
            mapfilter (get_orig o #2 o valOf o TypeBase.size_of0)
@@ -183,8 +186,8 @@ fun TC_SIMP_CONV simps tm =
  * Trivial wellfoundedness prover for combinations of wellfounded relations.
  *--------------------------------------------------------------------------*)
 
-local fun BC_TAC th = 
-        if (is_imp (#2 (Dsyntax.strip_forall (concl th))))
+local fun BC_TAC th =
+        if (is_imp (#2 (boolSyntax.strip_forall (concl th))))
         then MATCH_ACCEPT_TAC th ORELSE MATCH_MP_TAC th
         else MATCH_ACCEPT_TAC th;
       open relationTheory prim_recTheory pairTheory
@@ -197,25 +200,25 @@ end;
 val default_simps =
          [combinTheory.o_DEF,
           combinTheory.I_THM,
-          prim_recTheory.measure_def, 
-          relationTheory.inv_image_def, 
+          prim_recTheory.measure_def,
+          relationTheory.inv_image_def,
           pairTheory.LEX_DEF];
 
-val ASM_ARITH_TAC = 
+val ASM_ARITH_TAC =
       REPEAT STRIP_TAC
-        THEN REPEAT (POP_ASSUM 
-               (fn th => if arithSimps.is_arith (concl th) 
+        THEN REPEAT (POP_ASSUM
+               (fn th => if arithSimps.is_arith (concl th)
                          then MP_TAC th else ALL_TAC))
         THEN numLib.ARITH_TAC;
 
-fun TC_SIMP_TAC WFthl thl = 
-   WF_TAC WFthl THEN 
-   CONV_TAC (TC_SIMP_CONV (thl@default_simps)) THEN 
+fun TC_SIMP_TAC WFthl thl =
+   WF_TAC WFthl THEN
+   CONV_TAC (TC_SIMP_CONV (thl@default_simps)) THEN
    TRY ASM_ARITH_TAC;
 
 
 (*---------------------------------------------------------------------------
-    Rquote is a quotation denoting the termination relation. 
+    Rquote is a quotation denoting the termination relation.
  ---------------------------------------------------------------------------*)
 
 fun PRIM_WF_REL_TAC Rquote WFthms simps g =
@@ -232,9 +235,9 @@ fun WF_REL_TAC Rquote = PRIM_WF_REL_TAC Rquote [] default_simps;
  ---------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------
-      The default prover is invoked on goals involving measure 
+      The default prover is invoked on goals involving measure
       functions, so the wellfoundedness proofs for the guessed
-      termination relations (which are measure functions) are 
+      termination relations (which are measure functions) are
       trivial and can be blown away with rewriting.
  ---------------------------------------------------------------------------*)
 
@@ -249,12 +252,12 @@ end;
 local val term_prover = proveTotal default_prover
       open Defn
       fun try_proof defn Rcand = term_prover (set_reln defn Rcand)
-      fun should_try_to_prove_termination defn = 
+      fun should_try_to_prove_termination defn =
             not(null(tcs_of defn)) andalso null(params_of defn)
 in
 fun primDefine defn =
- let val defn' = 
-       if should_try_to_prove_termination defn 
+ let val defn' =
+       if should_try_to_prove_termination defn
          then Lib.tryfind (try_proof defn) (guessR defn)
                handle HOL_ERR _ => (Lib.say (String.concat
                ["Unable to prove totality!\nUse \"Defn.Hol_defn\" to make ",
@@ -262,8 +265,8 @@ fun primDefine defn =
                "termination proof.\n"]);
              raise ERR "primDefine" "Unable to prove termination")
          else defn
- in 
-    save_defn defn'; 
+ in
+    save_defn defn';
     eqns_of defn'
  end
 end;
@@ -277,21 +280,21 @@ fun xDefine stem q = primDefine (Defn.Hol_defn stem q);
  ---------------------------------------------------------------------------*)
 
 local fun msg alist invoc = String.concat
-          ["Definition failed! Can't make name for storing definition\n", 
+          ["Definition failed! Can't make name for storing definition\n",
            "because there is no alphanumeric identifier in: \n\n   ",
            wfrecUtils.list_to_string Lib.quote "," alist,
            ".\n\nTry \"",invoc, "\" instead.\n\n"]
-       fun mk_bindstem exn invoc alist = 
+       fun mk_bindstem exn invoc alist =
             Lib.first Lexis.ok_identifier alist
             handle HOL_ERR _ => (Lib.say (msg alist invoc); raise exn)
 in
 fun Define q =
    let val (tm,names) = Defn.parse_defn q
-       val bindstem = mk_bindstem (ERR "Define" "") 
-            "xDefine <alphanumeric-stem> <eqns-quotation>" names 
-   in 
+       val bindstem = mk_bindstem (ERR "Define" "")
+            "xDefine <alphanumeric-stem> <eqns-quotation>" names
+   in
        primDefine (Defn.mk_defn bindstem tm)
-   end               
+   end
 end;
 
 end;

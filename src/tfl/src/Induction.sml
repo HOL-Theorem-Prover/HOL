@@ -1,7 +1,7 @@
 structure Induction :> Induction =
 struct
 
-open HolKernel Drule Rules wfrecUtils;
+open HolKernel Drule Rules wfrecUtils boolSyntax;
 
 type term = Term.term
 type thm  = Thm.thm
@@ -9,13 +9,13 @@ type thry = TypeBase.typeBase
 
 infixr 3 -->;
 infix 3 |->;
-infix 4 ##; 
+infix 4 ##;
 
-fun ERR func mesg = HOL_ERR{origin_structure = "Induction", 
+fun ERR func mesg = HOL_ERR{origin_structure = "Induction",
                                 origin_function = func, message = mesg};
 
 
-fun induct_info db s = 
+fun induct_info db s =
 case TypeBase.get db s
  of SOME facts => SOME{nchotomy = TypeBase.nchotomy_of facts,
                        constructors = TypeBase.constructors_of facts}
@@ -26,7 +26,7 @@ case TypeBase.get db s
  *           [x_1,...,x_n]     ?v_1...v_n. M[v_1,...,v_n]
  *     -----------------------------------------------------------
  *     ( M[x_1,...,x_n], [(x_i,?v_1...v_n. M[v_1,...,v_n]),
- *                        ... 
+ *                        ...
  *                        (x_j,?v_n. M[x_1,...,x_(n-1),v_n])] )
  *
  * This function is totally ad hoc. It's used in the production of the
@@ -48,7 +48,7 @@ local fun assoc1 eq item =
         in assc
         end
       fun foo NONE = raise ERR "alpha_ex_unroll" "no correspondence"
-        | foo (SOME(_,v)) = v 
+        | foo (SOME(_,v)) = v
 in
 fun alpha_ex_unroll xlist tm =
   let val (qvars,body) = strip_exists tm
@@ -61,7 +61,7 @@ fun alpha_ex_unroll xlist tm =
            let val ex1 = beta_conv(mk_comb{Rator=rand ex, Rand=v})
            in ex1::build ex1 rst
            end
-  in 
+  in
     case rev (tm::build tm args')
      of nex::exl => (nex, zip args' (rev exl))
       | []       => raise ERR "alpha_ex_unroll" "empty"
@@ -92,28 +92,28 @@ fun ipartition gv (constructors,rows) =
                         end
                 | func _ _ = pfail "func" ""
               val (in_group, not_in_group) = itlist func rows ([],[])
-              val col_types = #1(wfrecUtils.gtake type_of 
+              val col_types = #1(wfrecUtils.gtake type_of
                                    (length L, #1(Lib.trye hd in_group)))
-          in 
-          part{constrs = crst, rows = not_in_group, 
-               A = {constructor = c, 
+          in
+          part{constrs = crst, rows = not_in_group,
+               A = {constructor = c,
                     new_formals = map gv col_types,
                     group = in_group}::A}
           end
-  in 
+  in
      part {constrs=constructors, rows=rows, A=[]}
   end;
 
 
-type divide_ty 
- = term list 
-    * (term list * (thm * (term, term) subst)) list 
-   -> {constructor : term, 
+type divide_ty
+ = term list
+    * (term list * (thm * (term, term) subst)) list
+   -> {constructor : term,
        group       : (term list * (thm * (term, term) subst)) list,
        new_formals : term list} list;
 
 fun mk_case ty_info FV thy =
- let 
+ let
  val divide:divide_ty = ipartition (wfrecUtils.vary FV)  (* do not eta-expand!! *)
  fun fail s = raise ERR"mk_case" s
  fun mk{rows=[],...} = fail"no rows"
@@ -122,7 +122,7 @@ fun mk_case ty_info FV thy =
      let val (pat_rectangle,rights) = unzip rows
          val col0 = map (Lib.trye hd) pat_rectangle
          val pat_rectangle' = map (Lib.trye tl) pat_rectangle
-     in 
+     in
      if all is_var col0 (* column 0 is all variables *)
      then let val rights' = map (fn ((thm,theta),v) => (thm,theta@[u|->v]))
                                 (zip rights col0)
@@ -133,9 +133,9 @@ fun mk_case ty_info FV thy =
      in
      case ty_info ty_name
       of NONE => fail("Not a known datatype: "^ty_name)
-         (* tyinfo rqt: `constructors' must line up exactly with constrs 
-            in disjuncts of `nchotomy'. *) 
-       | SOME{constructors,nchotomy} => 
+         (* tyinfo rqt: `constructors' must line up exactly with constrs
+            in disjuncts of `nchotomy'. *)
+       | SOME{constructors,nchotomy} =>
          let val thm'         = ISPEC u nchotomy
              val disjuncts    = strip_disj (concl thm')
              val subproblems  = divide(constructors, rows)
@@ -145,16 +145,16 @@ fun mk_case ty_info FV thy =
              val constraints  = map #1 existentials
              val vexl         = map #2 existentials
              fun expnd tm (pats,(th,b)) = (pats,(SUBS[ASSUME tm]th, b))
-             val news = map (fn (nf,rows,c) => {path = nf@rstp, 
+             val news = map (fn (nf,rows,c) => {path = nf@rstp,
                                                 rows = map (expnd c) rows})
                             (zip3 new_formals groups constraints)
              val recursive_thms = map mk news
              val build_exists = itlist(CHOOSE o (I##ASSUME))
              val thms' = map2 build_exists vexl recursive_thms
              val same_concls = EVEN_ORS thms'
-         in 
+         in
            DISJ_CASESL thm' same_concls
-         end 
+         end
      end end
    | mk _ = fail"blunder"
  in mk
@@ -191,17 +191,17 @@ local nonfix ^ ;   infix 9 ^  ;     infix 5 ==>
       fun (tm1 ==> tm2) = mk_imp{ant=tm1, conseq=tm2}
       val /\ = list_mk_conj
 in
-fun build_ih f (P,R,SV) (pat,TCs) = 
+fun build_ih f (P,R,SV) (pat,TCs) =
  let val pat_vars = free_vars_lr pat
      val globals = (if is_var R then [R] else [])@pat_vars@SV
      fun nested tm = can(find_term (aconv f)) tm handle _ => false
-     fun dest_TC tm = 
+     fun dest_TC tm =
          let val (cntxt,R_y_pat) = wfrecUtils.strip_imp(#2(strip_forall tm))
              val (R,y,_) = wfrecUtils.dest_relation R_y_pat
              val P_y     = if nested tm then R_y_pat ==> P^y else P^y
-         in case cntxt 
+         in case cntxt
              of [] => (P_y, (tm,[]))
-              | _  => let 
+              | _  => let
                     val imp = /\cntxt ==> P_y
                     val lvs = op_set_diff aconv (free_vars_lr imp) globals
                     val locals = #2(pluck (aconv P) lvs) handle _ => lvs
@@ -211,7 +211,7 @@ fun build_ih f (P,R,SV) (pat,TCs) =
      of [] => (list_mk_forall(pat_vars, P^pat), [])
       |  _ => let val (ihs, TCs_locals) = unzip(map dest_TC TCs)
                   val ind_clause = /\ihs ==> P^pat
-              in 
+              in
                  (list_mk_forall(pat_vars,ind_clause), TCs_locals)
               end
  end
@@ -224,24 +224,24 @@ local nonfix ^ ;   infix 9 ^  ;     infix 5 ==>
       val /\ = list_mk_conj
       val diff = op_set_diff aconv
 in
-fun build_ih f (P,R,SV) (pat,TCs) = 
+fun build_ih f (P,R,SV) (pat,TCs) =
  let val pat_vars = free_vars_lr pat
      val globals = (if is_var R then [R] else [])@pat_vars@SV
      fun nested tm = can(find_term (aconv f)) tm handle _ => false
-     fun dest_TC tm = 
+     fun dest_TC tm =
          let val (cntxt,R_y_pat) = wfrecUtils.strip_imp(#2(strip_forall tm))
              val (R,y,_) = wfrecUtils.dest_relation R_y_pat
              val P_y     = if nested tm then R_y_pat ==> P^y else P^y
              val ihyp    = case cntxt of [] => P_y | _ => /\cntxt ==> P_y
              val locals  = diff (free_vars_lr ihyp) (P::globals)
-         in 
+         in
            (list_mk_forall(locals,ihyp), (tm,locals))
          end
  in case TCs
      of [] => (list_mk_forall(pat_vars, P^pat), [])
       |  _ => let val (ihs, TCs_locals) = unzip(map dest_TC TCs)
                   val ind_clause = /\ihs ==> P^pat
-              in 
+              in
                  (list_mk_forall(pat_vars,ind_clause), TCs_locals)
               end
  end
@@ -264,17 +264,17 @@ fun prove_case f thy (tm,TCs_locals,thm) =
      fun get_cntxt TC = #ant(dest_imp(#2(strip_forall(concl TC))))
      fun mk_ih ((TC,locals),th2,nested) =
          GENL locals
-            (if nested 
+            (if nested
               then DISCH (get_cntxt TC) th2 handle HOL_ERR _ => th2
-               else if is_imp(concl TC) 
-                     then IMP_TRANS TC th2 
+               else if is_imp(concl TC)
+                     then IMP_TRANS TC th2
                       else MP th2 TC)
- in 
+ in
  DISCH antc
    (if is_imp(concl thm') (* recursive calls in this clause *)
     then let val th1     = ASSUME antc
              val TCs     = map #1 TCs_locals
-             val ylist   = map (#2 o dest_relation o #2 o 
+             val ylist   = map (#2 o dest_relation o #2 o
                                 wfrecUtils.strip_imp o #2 o strip_forall) TCs
              val TClist  = map (fn(TC,lvs) => (SPEC_ALL(ASSUME TC),lvs))
                                 TCs_locals
@@ -282,7 +282,7 @@ fun prove_case f thy (tm,TCs_locals,thm) =
              val nlist   = map nested TCs
              val triples = zip3 TClist th2list nlist
              val Pylist  = map mk_ih triples
-         in 
+         in
             MP thm' (LIST_CONJ Pylist)
          end
     else thm')
@@ -326,9 +326,9 @@ let val Sinduction = UNDISCH (ISPEC R relationTheory.WF_INDUCTION_THM)
     val Parg_ty = type_of(#Bvar(dest_forall(concl dc)))
     val vars = map (wfrecUtils.vary[P]) (strip_prod_type Parg_ty)
     val dc' = itlist GEN vars (SPEC (fst(mk_vstruct Parg_ty vars)) dc)
-in 
+in
    GEN P (DISCH (concl Rinduct_assum) dc')
-end 
+end
 handle HOL_ERR _ => raise ERR "mk_induction" "failed derivation";
 
 end;

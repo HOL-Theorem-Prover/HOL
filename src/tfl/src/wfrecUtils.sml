@@ -1,10 +1,10 @@
 structure wfrecUtils :> wfrecUtils =
 struct
 
-open HolKernel
+open HolKernel boolSyntax Rsyntax
 
 fun ERR func mesg =
-   Exception.HOL_ERR{origin_structure = "wfrecUtils",
+   Feedback.HOL_ERR{origin_structure = "wfrecUtils",
            origin_function = func,message=mesg};
 
 
@@ -14,14 +14,14 @@ fun zip3 [][][] = []
 
 
 fun unzip3 [] = ([],[],[])
-  | unzip3 ((x,y,z)::rst) = 
+  | unzip3 ((x,y,z)::rst) =
       let val (l1,l2,l3) = unzip3 rst
       in (x::l1, y::l2, z::l3)
       end;
 
 fun gtake f =
   let fun grab(0,rst) = ([],rst)
-        | grab(n, x::rst) = 
+        | grab(n, x::rst) =
              let val (taken,left) = grab(n-1,rst)
              in (f x::taken, left) end
         | grab _ = raise ERR "gtake" "grab.empty list"
@@ -33,7 +33,7 @@ fun list_to_string f delim =
   let fun stringulate [] = []
         | stringulate [x] = [f x]
         | stringulate (h::t) = f h::delim::stringulate t
-  in 
+  in
     fn l => String.concat (stringulate l)
   end;
 
@@ -62,10 +62,10 @@ fun strip_prod_type ty =
 
 fun atom_name tm = #Name(dest_var tm handle HOL_ERR _ => dest_const tm);
 
-fun strip_imp tm = 
-   if is_neg tm then ([],tm) else 
-   if is_imp tm then 
-        let val {ant,conseq} = Dsyntax.dest_imp tm
+fun strip_imp tm =
+   if is_neg tm then ([],tm) else
+   if is_imp tm then
+        let val {ant,conseq} = Rsyntax.dest_imp tm
             val (imps,rst) = strip_imp conseq
         in (ant::imps, rst)
         end
@@ -84,7 +84,7 @@ fun mk_vstruct ty V =
             let val (ltm,vs1) = mk_vstruct ty1 V
                 val (rtm,vs2) = mk_vstruct ty2 vs1
             in
-               (Dsyntax.mk_pair{fst=ltm, snd=rtm}, vs2)
+               (pairSyntax.mk_pair(ltm, rtm), vs2)
             end
         | _ => break V
 end;
@@ -104,7 +104,7 @@ fun dest_relation tm =
 
 
 fun is_WFR tm = (#Name(Term.dest_const(rator tm))="WF")
-                 handle Exception.HOL_ERR _ => false;
+                 handle Feedback.HOL_ERR _ => false;
 
 fun mk_arb ty = Term.mk_const{Name="ARB", Ty=ty};
 
@@ -119,11 +119,11 @@ in
 fun vary vlist =
   let val slist = ref (map (#Name o dest_var) vlist)
       val _ = counter := 0
-      fun pass str = 
-         if Lib.mem str (!slist) 
+      fun pass str =
+         if Lib.mem str (!slist)
          then (counter := !counter + 1; pass ("v"^int_to_string(!counter)))
          else (slist := str :: !slist; str)
-  in 
+  in
     fn ty => mk_var{Name=pass "v",  Ty=ty}
   end
 end;
