@@ -7,8 +7,6 @@ app load ["bossLib", "Q", "sortingTheory", "partitionTheory", "pairTools"];
 open combinTheory relationTheory pairTheory listTheory 
      sortingTheory permTheory partitionTheory bossLib pairTools;
 
-infix 8 by;
-
 (*---------------------------------------------------------------------------
      Misc. lemmas ... should perhaps already be part of the system.
  ---------------------------------------------------------------------------*)
@@ -51,7 +49,7 @@ val fqsort_def =
 
 val (fqsort_eqns,fqsort_ind) = Defn.tprove
  (fqsort_def,
-  WF_REL_TAC fqsort_def `measure (LENGTH o SND)`
+  WF_REL_TAC `measure (LENGTH o SND)`
      THEN RW_TAC list_ss [o_DEF,partition_def]
      THEN IMP_RES_THEN MP_TAC part_length_lem
      THEN RW_TAC list_ss []);
@@ -123,7 +121,7 @@ Q.store_thm
   THEN RW_TAC list_ss [MEM_FILTER,MEM,fqsort_MEM_stable] 
   THEN ((RES_TAC THEN NO_TAC) ORELSE ALL_TAC)
   THEN Q.PAT_ASSUM `x = y` (MP_TAC o MATCH_MP 
-        (REWRITE_RULE[PROVE []`x/\y/\z ==> w = x ==> y/\z ==> w`]
+        (REWRITE_RULE[PROVE [] (Term `x/\y/\z ==> w = x ==> y/\z ==> w`)]
             parts_have_prop))
   THEN RW_TAC std_ss [MEM]
   THEN PROVE_TAC [transitive_def,total_def]);

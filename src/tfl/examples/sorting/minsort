@@ -1,17 +1,17 @@
 (*---------------------------------------------------------------------------*
  * "minsort" - a naive sort, but a good test for formal development.         *
- * Minsort is not a sorting algorithm, since it eliminates duplicates in     *
- * the input.                                                                *
+ * Minsort is not really a sorting algorithm, since it eliminates duplicates *
+ * in the input.                                                             *
  *---------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------*
  * Bring in and open up required context.                                    *
  *---------------------------------------------------------------------------*)
+
 app load ["bossLib", "Q", "permTheory", "sortingTheory"];
 
 open bossLib sortingTheory permTheory listTheory 
      relationTheory arithmeticTheory;
-infix 8 by;
 
 
 (*---------------------------------------------------------------------------*
@@ -43,50 +43,43 @@ val minsort_def =
  * Lemmas about min.                                                         *
  *---------------------------------------------------------------------------*)
 
-val MEM_min = Q.prove(`!h t. MEM (min t h) (h::t)`,
-Induct_on `t` 
+val MEM_min = Q.prove
+(`!h t. MEM (min t h) (h::t)`,
+ Induct_on `t` 
   THEN RW_TAC list_ss [min_def]
-  THEN PROVE_TAC [MEM, DECIDE `~(x<=y) ==> ~(x=y)`]);
+  THEN PROVE_TAC [MEM, DECIDE (Term `~(x<=y) ==> ~(x=y)`)]);
 
 
-val min_leq_start = Q.prove(`!h t. min t h <= h`,
-Induct_on `t` 
+val min_leq_start = Q.prove
+(`!h t. min t h <= h`,
+ Induct_on `t` 
   THEN RW_TAC list_ss [min_def]
   THEN Q.PAT_ASSUM `$! M` (MP_TAC o SPEC_ALL)
   THEN DECIDE_TAC);
 
-
-val min_leq_cong = Q.prove(`!x y t. x<=y ==> min t x <= min t y`,
-Induct_on `t` 
-  THEN RW_TAC list_ss [min_def]);
-
-
-val min_leq = Q.prove(`!h t x. MEM x (h::t) ==> min t h <= x`,
-Induct_on `t` 
- THENL
-  [RW_TAC list_ss [min_def,MEM],
-   ONCE_REWRITE_TAC [MEM]
-     THEN RW_TAC list_ss [min_def] 
-      THENL
-        [PROVE_TAC[MEM],
-         PROVE_TAC [min_leq_cong, LESS_EQ_TRANS],
-         PROVE_TAC [min_leq_start,DECIDE `!x y. x<=y /\ ~(z<=y) ==> x<=z`],
-         PROVE_TAC[]]]);
-
+val min_leq = Q.prove
+(`!h t x. MEM x (h::t) ==> min t h <= x`,
+Induct_on `t` THENL
+ [RW_TAC list_ss [min_def,MEM],
+  ONCE_REWRITE_TAC [MEM]
+   THEN RW_TAC list_ss [min_def] THEN
+   PROVE_TAC [min_leq_start,LESS_EQ_TRANS,MEM,
+              DECIDE(Term`!x y. x<=y /\ ~(z<=y) ==> x<=z`)]]);
 
 (*---------------------------------------------------------------------------*
  * Lemmas about expunge.                                                     *
  *---------------------------------------------------------------------------*)
 
-val not_MEM_expunge = Q.prove(`!x l. ~MEM x (expunge x l)`,
-Induct_on `l` 
+val not_MEM_expunge = Q.prove
+(`!x l. ~MEM x (expunge x l)`,
+ Induct_on `l` 
   THEN RW_TAC list_ss [expunge_def,MEM]);
 
 val MEM_expunge = Q.prove
 (`!x y l. ~(y=x) ==> MEM x l ==> MEM x (expunge y l)`,
-Induct_on `l` 
- THEN RW_TAC list_ss [expunge_def,MEM]
- THEN PROVE_TAC []);
+ Induct_on `l` 
+  THEN RW_TAC list_ss [expunge_def,MEM]
+  THEN PROVE_TAC []);
 
 val MEM_expunge_MEM = Q.prove
 (`!x y l. MEM x (expunge y l) ==> MEM x l`,
@@ -103,7 +96,7 @@ val expunge_argb = Q.prove
 (`!x l. LENGTH (expunge x l) <= LENGTH l`,
  Induct_on `l` 
    THEN RW_TAC list_ss [expunge_def] 
-   THEN PROVE_TAC [DECIDE`x<=y  ==> x <= SUC y`]);
+   THEN PROVE_TAC [DECIDE (Term `x<=y  ==> x <= SUC y`)]);
 
 
 (*---------------------------------------------------------------------------*
@@ -114,7 +107,7 @@ val expunge_strict = Q.prove
 (`!x l. MEM x l ==> LENGTH (expunge x l) < LENGTH l`,
  Induct_on `l` 
     THEN RW_TAC list_ss [MEM,expunge_def]
-    THEN PROVE_TAC [expunge_argb, DECIDE`x <= y ==> x < SUC y`]);
+    THEN PROVE_TAC [expunge_argb, DECIDE (Term `x <= y ==> x < SUC y`)]);
 
 
 (*---------------------------------------------------------------------------*
@@ -126,10 +119,8 @@ val expunge_strict = Q.prove
 val (minsort_eqns, minsort_ind) = 
 Defn.tprove
  (minsort_def,
-  WF_REL_TAC minsort_def `measure LENGTH`
+  WF_REL_TAC `measure LENGTH`
    THEN PROVE_TAC [expunge_strict,MEM_min]);
-
-
 
 (*---------------------------------------------------------------------------*
  * Correctness:                                                              *
@@ -146,11 +137,12 @@ recInduct minsort_ind
  THEN PROVE_TAC [MEM_expunge, MEM_min, MEM, MEM_expunge_MEM]);
 
 
-val sorted_minsort = Q.store_thm("sorted_minsort",
-`!l. SORTED $<= (minsort l)`,
-recInduct minsort_ind
- THEN RW_TAC std_ss [minsort_eqns]
- THENL [RW_TAC std_ss [SORTED_def],
-        `transitive $<=` by (ONCE_REWRITE_TAC[transitive_def] THEN DECIDE_TAC)
-          THEN PROVE_TAC [SORTED_eq,MEM_minsort, MEM_expunge_MEM, min_leq]]);
+val SORTED_minsort = Q.store_thm
+("SORTED_minsort",
+ `!l. SORTED $<= (minsort l)`,
+ recInduct minsort_ind
+  THEN RW_TAC std_ss [minsort_eqns] THENL 
+  [RW_TAC std_ss [SORTED_def],
+   `transitive $<=` by (ONCE_REWRITE_TAC[transitive_def] THEN DECIDE_TAC) 
+     THEN PROVE_TAC [SORTED_eq,MEM_minsort, MEM_expunge_MEM, min_leq]]);
 

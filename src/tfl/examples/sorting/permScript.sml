@@ -5,22 +5,15 @@ structure permScript =
 struct
 
 (* interactive use:
-app load ["listTheory", "BasicProvers", "TotalDefn", "SingleStep",
-          "listSimps", "arithSimps"];
-open listTheory BasicProvers TotalDefn SingleStep;
+app load ["bossLib"];
 *)
 
-open HolKernel Parse boolLib listTheory 
-     BasicProvers TotalDefn SingleStep;
+open HolKernel Parse boolLib bossLib listTheory;
 
 infix THEN THENL |-> ;
 infix 8 by;
 
-val list_ss = 
-  simpLib.++(simpLib.++(bool_ss,listSimps.list_ss), arithSimps.ARITH_ss);
-
-val _ = new_theory"perm";
-
+val _ = new_theory "perm";
 
 (*---------------------------------------------------------------------------*
  * What's a permutation? This definition uses universal quantification to    *

@@ -6,29 +6,20 @@ structure sortingScript =
 struct
 
 (* interactive use:
-app load ["permTheory", "BasicProvers", "TotalDefn", "SingleStep", 
-          "listSimps", "arithSimps", "pairSimps", "Q"];
-open permTheory listTheory BasicProvers TotalDefn SingleStep;
+app load ["permTheory","bossLib"];
 *)
 
-open HolKernel Parse boolLib
-     permTheory listTheory BasicProvers TotalDefn SingleStep;
+open HolKernel Parse boolLib bossLib listTheory permTheory;
 
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-infixr 3 -->;
+infix THEN THENL 
 infix 8 by;
-
-val list_ss = 
- let val ++ = simpLib.++ infix ++
- in bool_ss ++ listSimps.list_ss ++ arithSimps.ARITH_ss ++ pairSimps.PAIR_ss
- end;
 
 val MEM_APPEND_DISJ = Q.prove
 (`!x l1 l2. MEM x (APPEND l1 l2) = MEM x l1 \/ MEM x l2`,
 Induct_on `l1` THEN RW_TAC list_ss [APPEND,MEM] THEN PROVE_TAC[]);
 
 
-val _ = new_theory"sorting";
+val _ = new_theory "sorting";
 
 
 (*---------------------------------------------------------------------------*

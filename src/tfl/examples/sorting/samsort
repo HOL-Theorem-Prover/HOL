@@ -8,7 +8,6 @@
 app load ["bossLib", "QLib", "permTheory", "sortingTheory" ];
 
 open bossLib sortingTheory permTheory combinTheory;
-infix 8 by;
 
 (*---------------------------------------------------------------------------*
  *     Merge two lists using R.                                              *
@@ -26,6 +25,7 @@ val merge_def =
 (*---------------------------------------------------------------------------*
  *     Reverse a list.                                                       *
  *---------------------------------------------------------------------------*)
+
 val rev_def = 
  Define
     `(rev []     rl = rl)
@@ -51,7 +51,7 @@ val mergepairs_def =
 val (mergepairs_eqns,mergepairs_ind) = 
  Defn.tprove
  (mergepairs_def,
-  WF_REL_TAC mergepairs_def `measure (LENGTH o FST o SND)`
+  WF_REL_TAC `measure (LENGTH o FST o SND)`
      THEN RW_TAC list_ss [o_DEF]);
 
 
@@ -102,7 +102,7 @@ val samsortl_def =
 val (samsortl_eqns, samsortl_ind) = 
 Defn.tprove
  (samsortl_def,
-  WF_REL_TAC samsortl_def `measure (LENGTH o FST o SND)`
+  WF_REL_TAC `measure (LENGTH o FST o SND)`
     THEN RW_TAC list_ss [o_DEF]
     THEN PROVE_TAC [nextrun_argb]);
 
@@ -114,4 +114,4 @@ val samsort_def = Define `samsort R alist = samsortl R alist [] 0`;
 
 
 
-(* Now all we have to do is prove is properties! *)
+(* Still to do: prove that it's a sorting function. *)

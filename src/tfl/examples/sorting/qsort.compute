@@ -3,7 +3,7 @@
  ---------------------------------------------------------------------------*)
 
 app load ["bossLib", "Q", "numLib"];
-open bossLib computeLib numLib;
+open bossLib numLib listTheory combinTheory;
 infix &&;
 
 (*---------------------------------------------------------------------------
@@ -23,32 +23,27 @@ val Qsort_def =
  ---------------------------------------------------------------------------*)
 
 val FILTER_KT = Q.prove(`!l. FILTER (K T) l = l`,
-Induct THEN RW_TAC list_ss [listTheory.FILTER,combinTheory.K_DEF]);
+Induct THEN RW_TAC list_ss [FILTER,K_DEF]);
 
 val LENGTH_FILTER_SUBSET = Q.prove(
 `(!y. P y ==> Q y) ==> !L. LENGTH(FILTER P L) <= LENGTH (FILTER Q L)`,
-DISCH_TAC THEN Induct THEN ZAP_TAC (list_ss && [listTheory.FILTER]) []);
+DISCH_TAC THEN Induct THEN ZAP_TAC (list_ss && [FILTER]) []);
 
 val lem = REWRITE_RULE [FILTER_KT]
               (Q.INST [`Q` |-> `K T`] LENGTH_FILTER_SUBSET);
 
-val (Qsort_eqns,Qsort_ind) = Defn.tprove
-(Qsort_def,
-  WF_REL_TAC Qsort_def `measure LENGTH`
-    THEN RW_TAC list_ss [DECIDE `x<SUC y = x <= y`,combinTheory.K_DEF,lem]);
+val (Qsort_eqns,Qsort_ind) = 
+ Defn.tprove
+  (Qsort_def,
+   WF_REL_TAC `measure LENGTH`
+     THEN RW_TAC list_ss [DECIDE (Term`x<SUC y = x <= y`),K_DEF,lem]);
 
 
 (*---------------------------------------------------------------------------
      Build an evaluator. 
  ---------------------------------------------------------------------------*)
 
-local open computeLib arithmeticTheory listTheory
-in
-  val compset = bossLib.initial_rws()
-  val _ = add_thms [Qsort_eqns,GREATER_DEF,GREATER_EQ] compset
-  val Eval = Count.apply (CBV_CONV compset) o Term
-end;
-
+val Eval = EVAL o Term;
 
 Eval `Qsort [1;2;3;6;5;4]`;
 Eval `Qsort [1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;0]`;
@@ -107,7 +102,7 @@ RW_TAC std_ss []
 
 val (fqsort_eqns,fqsort_ind) = Defn.tprove
 (fqsort_def,
- WF_REL_TAC fqsort_def `measure LENGTH` 
+ WF_REL_TAC `measure LENGTH` 
   THEN RW_TAC std_ss [] 
   THEN IMP_RES_THEN MP_TAC part_length_lem
   THEN RW_TAC list_ss []);
@@ -116,15 +111,12 @@ val (fqsort_eqns,fqsort_ind) = Defn.tprove
        Computing with fqsort.
  ---------------------------------------------------------------------------*)
 
-val _ = add_thms [fqsort_eqns,part_def] compset;
-
 
 Eval `fqsort [1;2;3;6;5;4]`;
 Eval `fqsort [1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;0]`;
 Eval `fqsort [1]`;
 Eval `fqsort [x]`;
 Eval `fqsort [x;y;z]`;
-
 
 
 (*---------------------------------------------------------------------------
@@ -145,15 +137,13 @@ val pqsort_def =
 
 val (pqsort_eqns,pqsort_ind) = Defn.tprove
 (pqsort_def,
-  WF_REL_TAC pqsort_def `measure (LENGTH o SND)`
+  WF_REL_TAC `measure (LENGTH o SND)`
     THEN RW_TAC list_ss 
-          [DECIDE `x<SUC y = x <= y`,lem,
-           combinTheory.o_DEF,combinTheory.K_DEF]);
+          [DECIDE (Term `x<SUC y = x <= y`),lem, o_DEF,K_DEF]);
 
 (*---------------------------------------------------------------------------
        Computing with pqsort.
  ---------------------------------------------------------------------------*)
-val _ = add_thms [pqsort_eqns] compset;
 
 Eval `pqsort $<= [1;2;3;6;5;4]`;
 Eval `pqsort $<= [1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;0]`;
@@ -187,15 +177,13 @@ val tpqsort_def =
 
 val (tpqsort_eqns,tpqsort_ind) = Defn.tprove
 (tpqsort_def,
-  WF_REL_TAC tpqsort_def `measure (LENGTH o SND)` 
+  WF_REL_TAC `measure (LENGTH o SND)` 
     THEN RW_TAC list_ss 
-          [DECIDE `x<SUC y = x <= y`,lem,
-           combinTheory.o_DEF,combinTheory.K_DEF]);
+          [DECIDE (Term `x<SUC y = x <= y`), lem, o_DEF,K_DEF]);
 
 (*---------------------------------------------------------------------------
        Computing with tpqsort.
  ---------------------------------------------------------------------------*)
-val _ = add_thms [tpqsort_eqns] compset;
 
 Eval`tpqsort($<=, [1;2;3;6;5;4])`;
 Eval`tpqsort($<=,[1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;0])`;
@@ -208,8 +196,6 @@ Eval`tpqsort($>=,[1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;0])`;
 Eval`tpqsort($>=, [1])`;
 Eval`tpqsort($>=, [x])`;
 Eval`tpqsort($>=, [x;y;z])`;
-
-
 
 (*---------------------------------------------------------------------------
        Even more boring: tupled faster quicksort with a parameter.
@@ -229,15 +215,14 @@ val tfqsort_def =
 
 val (tfqsort_eqns,tfqsort_ind) = Defn.tprove
 (tfqsort_def,
- WF_REL_TAC tfqsort_def `measure (LENGTH o SND)`
+ WF_REL_TAC `measure (LENGTH o SND)`
   THEN RW_TAC std_ss [] 
   THEN IMP_RES_THEN MP_TAC part_length_lem
-  THEN RW_TAC list_ss [combinTheory.o_DEF]);
+  THEN RW_TAC list_ss [o_DEF]);
 
 (*---------------------------------------------------------------------------
        Computing with tfqsort.
  ---------------------------------------------------------------------------*)
-val _ = add_thms [tfqsort_eqns] compset;
 
 Eval`tfqsort($<=, [1;2;3;6;5;4])`;
 Eval`tfqsort($<=,[1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;0])`;

@@ -6,8 +6,8 @@
 
 app load ["bossLib", "Q", "sortingTheory"];
 
-open bossLib sortingTheory permTheory listTheory combinTheory relationTheory;
-infix 8 by;
+open bossLib sortingTheory permTheory 
+             listTheory combinTheory relationTheory;
 
 (*---------------------------------------------------------------------------
      Misc. lemmas, should perhaps be part of listTheory.
@@ -59,9 +59,9 @@ val qsort_def =
 val (qsort_eqns,qsort_ind) = 
 Defn.tprove
   (qsort_def,
-   WF_REL_TAC qsort_def `measure (LENGTH o SND)`
+   WF_REL_TAC `measure (LENGTH o SND)`
      THEN RW_TAC list_ss 
-         [DECIDE `x<SUC y = x <= y`, o_DEF,K_DEF,
+         [DECIDE (Term `x<SUC y = x <= y`), o_DEF,K_DEF,
           REWRITE_RULE [FILTER_KT]
               (Q.INST [`Q` |-> `K T`] LENGTH_FILTER_SUBSET)]);
 

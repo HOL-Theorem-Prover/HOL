@@ -5,26 +5,16 @@ structure partitionScript =
 struct
 
 (* interactive use:
-app load ["listTheory", "BasicProvers", "TotalDefn", "SingleStep", 
-          "listSimps", "arithSimps", "pairSimps", "numLib", "Q"];
-open listTheory BasicProvers TotalDefn SingleStep numLib;
+app load ["bossLib", "numLib"];
 *)
 
-open HolKernel Parse boolLib
-     listTheory BasicProvers TotalDefn SingleStep numLib;
+open HolKernel Parse boolLib numLib bossLib listTheory;
 
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 infixr 3 -->;
 infix 8 by;
 
-
-val list_ss = 
- let val ++ = simpLib.++ infix ++
- in bool_ss ++ listSimps.list_ss ++ arithSimps.ARITH_ss ++ pairSimps.PAIR_ss
- end;
-
-
-val _ = new_theory"partition";
+val _ = new_theory "partition";
 
 (*---------------------------------------------------------------------------
                  Partition a list by a predicate.
@@ -88,12 +78,12 @@ val part_MEM = Q.store_thm
      ((a1,a2) = part P L l1 l2) 
        ==> 
       !x. MEM x (APPEND L (APPEND l1 l2)) = MEM x (APPEND a1 a2)`,
-Induct_on `L` 
-  THEN RW_TAC list_ss [part_def]
+ Induct_on `L` 
+  THEN RW_TAC bool_ss [part_def]
+  THENL [RW_TAC list_ss [], ALL_TAC, ALL_TAC]
   THEN RES_THEN MP_TAC THEN NTAC 2 (DISCH_THEN (K ALL_TAC))
   THEN DISCH_THEN (fn th => REWRITE_TAC [GSYM th])
   THEN RW_TAC list_ss [MEM,MEM_APPEND_DISJ] THEN PROVE_TAC[]);
-
 
 (*---------------------------------------------------------------------------
        Each element in the positive and negative partitions has 
@@ -116,8 +106,6 @@ Induct_on `L`
    THENL [MAP_EVERY Q.EXISTS_TAC [`h::l1`, `l2`],
           MAP_EVERY Q.EXISTS_TAC [`l1`, `h::l2`]]
   THEN RW_TAC list_ss [MEM] THEN RW_TAC bool_ss []]);
-
-
 
 val _ = export_theory();
 

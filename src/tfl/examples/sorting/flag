@@ -23,11 +23,8 @@
 
 app load ["bossLib", "permTheory"]; open bossLib listTheory permTheory;
 
-infix 8 by;
-
-
 (*---------------------------------------------------------------------------*
- * Define Red, White, and Blue to be the colours.                            *
+ * Define the colours.                                                       *
  *---------------------------------------------------------------------------*)
 
 Hol_datatype `colour = R | W | B`;
@@ -43,42 +40,42 @@ val Swap_def =
  /\ (Swap (W::R::rst) = SOME(R::W::rst))
  /\ (Swap (B::R::rst) = SOME(R::B::rst))
  /\ (Swap (B::W::rst) = SOME(W::B::rst))
- /\ (Swap (x::rst)    = option_APPLY (CONS x) (Swap rst))`;
+ /\ (Swap (x::rst)    = OPTION_MAP (CONS x) (Swap rst))`;
+
 
 val Swap_eqns = 
   let val Swap_NIL = CONJUNCT1 Swap_def
   in 
     CONJ Swap_NIL 
-     (REWRITE_RULE [Swap_NIL,optionTheory.option_APPLY_DEF] 
+     (REWRITE_RULE [Swap_NIL,optionTheory.OPTION_MAP_DEF] 
              (CONJUNCT2 Swap_def))
   end;
 
 val Swap_ind_thm = Q.prove
 (`!P. P [] /\ P [B] /\ P [W] /\
-      (!rst. P (W::R::rst))   /\ 
-      (!rst. P (B::R::rst))   /\
-      (!rst. P (B::W::rst)) /\ (!v7. P (B::v7) ==> P (B::B::v7)) /\
-      (!v3. P (B::v3) ==> P (W::B::v3)) /\
-      (!v3. P (W::v3) ==> P (W::W::v3)) /\ 
+      (!rst. P (W::R::rst))  /\ 
+      (!rst. P (B::R::rst))  /\
+      (!rst. P (B::W::rst))  /\ 
+      (!v7.  P (B::v7) ==> P (B::B::v7)) /\
+      (!v3.  P (B::v3) ==> P (W::B::v3)) /\
+      (!v3.  P (W::v3) ==> P (W::W::v3)) /\ 
       (!rst. P rst ==> P (R::rst)) 
     ==>
         !v. P v`,
 GEN_TAC THEN DISCH_TAC 
- THEN MATCH_MP_TAC (theorem "Swap_ind")
+ THEN MATCH_MP_TAC (fetch "-" "Swap_ind")
  THEN RW_TAC std_ss []);
 
 
 (*---------------------------------------------------------------------------*
- * Define the Flag function. Note that eta-expansion "\l. Flag l" needed.    *
- *                                                                           *
- * ML equivalent: fun Flag l = case Swap list                                *
- *                              of NONE    => l                              *
- *                               | SOME l' => Flag l'                        *
+ * Define the Flag function.                                                 *
  *---------------------------------------------------------------------------*)
 
 val Flag_defn = 
  Defn.Hol_defn "Flag" 
-               `Flag list = option_case list Flag (Swap list)`;
+               `Flag list = case (Swap list)
+                             of NONE -> list 
+                             || SOME slist -> Flag slist`;
 
 
 (*---------------------------------------------------------------------------*
@@ -93,19 +90,9 @@ val Weight_def =
   /\  (Weight []       = 0)`;
 
 
-val option_APPLY_lem1 = Q.prove
-(`!f opt x. (option_APPLY f opt = SOME x) ==> ?y. opt = SOME y`,
-Cases_on `opt` THEN RW_TAC std_ss []);
-
-val option_APPLY_lem2 = Q.prove
-(`!f opt x. (option_APPLY f opt = NONE) ==> (opt = NONE)`,
-Cases_on `opt` THEN RW_TAC std_ss []);
-
-val option_APPLY_eq_SOME_TAC =
-     IMP_RES_THEN (CHOOSE_THEN SUBST_ALL_TAC) option_APPLY_lem1
-        THEN Q.PAT_ASSUM `M = N` MP_TAC 
-        THEN RW_TAC std_ss [];
-
+(*---------------------------------------------------------------------------*)
+(* Termination proof for Flag                                                *)
+(*---------------------------------------------------------------------------*)
 
 val (Flag_eqns,Flag_ind) = 
 Defn.tprove
@@ -113,16 +100,12 @@ Defn.tprove
  WF_REL_TAC `measure Weight`
   THEN recInduct Swap_ind_thm
   THEN RW_TAC std_ss [Swap_eqns,Weight_def] 
-  THENL [ALL_TAC,ALL_TAC,ALL_TAC,
-         option_APPLY_eq_SOME_TAC,option_APPLY_eq_SOME_TAC,
-         option_APPLY_eq_SOME_TAC,option_APPLY_eq_SOME_TAC]
-   THEN RW_TAC arith_ss [Weight_def]);
-
-val _ = save_thm("Flag_eqns", Flag_eqns);
-val _ = save_thm("Flag_ind", Flag_ind);
+  THEN RW_TAC arith_ss [Weight_def]
+  THEN RES_THEN MP_TAC 
+  THEN DECIDE_TAC);
 
 (*---------------------------------------------------------------------------*
- * Some miscellaneous stuff used in later proofs.	                     *
+ * Miscellaneous lemmas                                                      *
  *---------------------------------------------------------------------------*)
 
 val MEM_FILTER = Q.prove
@@ -145,19 +128,16 @@ REPEAT GEN_TAC
   THEN RW_TAC list_ss [FILTER]
   THEN PROVE_TAC [FILTER_lem]);
 
-
 (*---------------------------------------------------------------------------*
  * Swap permutes its input when it returns a SOME'd item.                    *
  *---------------------------------------------------------------------------*)
 
 val Swap_SOME = Q.prove
 (`!l1 l2. (Swap l1 = SOME l2) ==> PERM l1 l2`,
- recInduct Swap_ind_thm
-  THEN RW_TAC std_ss [Swap_eqns]
-  THEN ((RW_TAC list_ss [PERM_def,FILTER] THEN RW_TAC list_ss [] THEN NO_TAC)
-       ORELSE
-       (option_APPLY_eq_SOME_TAC THEN PROVE_TAC [PERM_mono])));
-
+recInduct Swap_ind_thm
+  THEN BasicProvers.NORM_TAC list_ss [Swap_eqns,PERM_def,FILTER]
+  THEN RES_THEN (fn th => REWRITE_TAC [GSYM th])
+  THEN RW_TAC std_ss []);
 
 (*---------------------------------------------------------------------------*
  * When no Swaps get made, the arrangement of the list is correct.           *
@@ -169,26 +149,16 @@ val Swap_NONE = Q.prove
       (L = APPEND (FILTER ($= R) L) 
              (APPEND (FILTER ($= W) L) 
                        (FILTER ($= B) L)))`,
-recInduct Swap_ind_thm THEN RW_TAC std_ss [Swap_eqns]
- THEN ((RW_TAC list_ss [FILTER,APPEND] THEN NO_TAC)
-       ORELSE IMP_RES_TAC option_APPLY_lem2 THEN RES_THEN MP_TAC)
- THEN IMP_RES_TAC option_APPLY_lem2 THEN RES_THEN MP_TAC THENL 
-  [REWRITE_TAC (APPEND_ASSOC::FILTER::type_rws"colour")
-     THEN Cases_on `APPEND (FILTER ($= R) v7) (FILTER ($= W) v7)`
-     THEN RW_TAC std_ss [APPEND]
-     THEN IMP_RES_THEN MP_TAC APPEND_FILTER_lem,
-   REWRITE_TAC (FILTER::type_rws"colour")
-     THEN Cases_on `FILTER ($= R) v3` THEN RW_TAC std_ss [APPEND]
-     THEN IMP_RES_THEN MP_TAC FILTER_lem,
-   REWRITE_TAC (FILTER::type_rws"colour")
-     THEN Cases_on `FILTER ($= R) v3` THEN RW_TAC std_ss [APPEND]
-     THEN IMP_RES_THEN MP_TAC FILTER_lem,
-   REWRITE_TAC (FILTER::type_rws"colour")
-     THEN Cases_on `FILTER ($= R) rst` THEN RW_TAC std_ss [APPEND]
-     THEN IMP_RES_THEN MP_TAC FILTER_lem]
- THEN RW_TAC std_ss []);
-
-
+recInduct Swap_ind_thm 
+  THEN BasicProvers.NORM_TAC list_ss [Swap_eqns,FILTER]
+  THEN RES_THEN MP_TAC THEN REPEAT (WEAKEN_TAC (K true)) THENL 
+  [Cases_on `APPEND (FILTER ($= R) v7) (FILTER ($= W) v7)` 
+     THENL [ALL_TAC, IMP_RES_THEN MP_TAC APPEND_FILTER_lem],
+   Cases_on `FILTER ($= R) v3` 
+     THENL [ALL_TAC, IMP_RES_THEN MP_TAC FILTER_lem],
+   Cases_on `FILTER ($= R) v3` 
+     THENL [ALL_TAC, IMP_RES_THEN MP_TAC FILTER_lem]]
+  THEN RW_TAC list_ss []);
 
 (*---------------------------------------------------------------------------*
  * Correctness: All occurrences of R in "Flag L" are before all              *
@@ -228,4 +198,3 @@ recInduct Flag_ind THEN RW_TAC std_ss []
  THEN ONCE_REWRITE_TAC [Flag_eqns]
  THEN Cases_on `Swap list` THEN RW_TAC std_ss [PERM_refl]
  THEN PROVE_TAC [Swap_SOME,PERM_trans1]);;
-
