@@ -24,6 +24,7 @@ sig
     val EXISTS : (term quotation * term quotation) -> thm -> thm
     val EXISTS_TAC : term quotation -> tactic
     val ID_EX_TAC : tactic
+    val REFINE_EXISTS_TAC : term quotation -> tactic
     val GEN : term quotation -> thm -> thm
     val SPEC : term quotation -> thm -> thm
     val ID_SPEC : thm -> thm

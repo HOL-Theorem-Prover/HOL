@@ -133,6 +133,18 @@ fun ID_EX_TAC(g as (_,w)) =
                      handle HOL_ERR _ =>
                        raise Q_ERR "ID_EX_TAC" "goal not an exists") g;
 
+fun REFINE_EXISTS_TAC q (asl, w) = let
+  val (qvar, body) = Psyntax.dest_exists w
+  val ctxt = free_varsl (w::asl)
+  val t = ptm_with_ctxtty ctxt (type_of qvar) q
+  val qvars = set_diff (free_vars t) ctxt
+  val newgoal = Rsyntax.subst [qvar |-> t] body
+in
+  SUBGOAL_THEN (list_mk_exists(rev qvars, newgoal))
+  (REPEAT_TCL CHOOSE_THEN (fn th => Tactic.EXISTS_TAC t THEN ACCEPT_TAC th))
+  (asl, w)
+end
+
 fun X_CHOOSE_THEN q ttac thm (g as (asl,w))= let
   val ty = type_of (#Bvar (dest_exists (concl thm)))
     handle HOL_ERR _ =>
