@@ -439,15 +439,17 @@ val ARITH_DP_ss =
 
 val ARITH_ss = merge_ss [ARITH_RWTS_ss, ARITH_DP_ss];
 
+open numSyntax
 val REDUCE_ss = simpLib.SIMPSET
   {convs = mk_unary_rconv (--`EVEN`--) ::
            mk_unary_rconv (--`ODD`--)  ::
            mk_unary_rconv (--`PRE`--)  ::
            mk_unary_rconv (--`SUC`--) ::
-           map mk_redconv [--`$*`--, --`$+`--, --`$-`--,
-                           --`$DIV`--, --`$MOD`--, --`$EXP`--,
-                           --`$<`--, --`$<=`--, --`$>`--,
-                           --`$>=`--, --`$= : num -> num -> bool`--],
+           map mk_redconv [mult_tm, plus_tm, minus_tm,
+                           div_tm, mod_tm, exp_tm,
+                           less_tm, leq_tm, greater_tm, geq_tm,
+                           ``MIN``, ``MAX``,
+                           ``$= : num -> num -> bool``],
    rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
 
 val SUC_FILTER_ss = simpLib.SIMPSET
