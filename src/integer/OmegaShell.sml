@@ -26,9 +26,6 @@ fun ERR f msg = HOL_ERR { origin_structure = "OmegaShell",
                           origin_function = f,
                           message = msg}
 
-val constant_removal =
-  REWRITE_CONV [EQ_EXPAND, IMP_DISJ_THM, DE_MORGAN_THM]
-
 fun EVERY_SUMMAND c tm =
   if is_plus tm then BINOP_CONV (EVERY_SUMMAND c) tm
   else c tm
@@ -126,7 +123,7 @@ end tm
 
 
 
-val decide_closed_presburger = constant_removal THENC decide_strategy
+val decide_closed_presburger = decide_strategy
 
 
 end (* struct *)
