@@ -1222,4 +1222,414 @@ fun case_cong_thm nchotomy case_def =
  handle HOL_ERR _ => raise ERR "case_cong_thm" "construction failed";
 
 
+fun ERR{function,message} =
+      HOL_ERR{origin_structure = "Prim_rec",
+	      origin_function = function,
+	      message = message}
+infixr 3 ==;
+infixr 3 ==>;
+infixr 3 /\;
+infixr 3 \/;
+
+fun (x == y)  = mk_eq{lhs=x,    rhs=y};
+fun (x ==> y) = mk_imp{ant=x, conseq=y}
+fun (x /\ y)  = mk_conj{conj1=x, conj2=y};
+fun (x \/ y)  = mk_disj{disj1=x, disj2=y};
+
+val T = mk_const{Name = "T", Ty = Type.bool};
+val F = mk_const{Name = "F", Ty = Type.bool};
+
+(* The standard versions of these (in Conv) check that the term being
+   manipulated is actually an equality.  I want a slightly more efficient
+   version *)
+val LHS_CONV = RATOR_CONV o RAND_CONV
+val RHS_CONV = RAND_CONV
+
+
+(* =====================================================================*)
+(* PROOF THAT CONSTRUCTORS OF RECURSIVE TYPES ARE ONE-TO-ONE		*)
+(* =====================================================================*)
+
+(* ---------------------------------------------------------------------*)
+(* Internal function: list_variant					*)
+(*									*)
+(* makes variants of the variables in l2 such that they are all not in	*)
+(* l1 and are all different.						*)
+(* ---------------------------------------------------------------------*)
+fun list_variant l1 [] = []
+  | list_variant l1 (h::t) =
+       let val v = variant l1 h
+       in v::(list_variant (v::l1) t)
+       end;
+
+fun mk_subst2 [] [] = []
+  | mk_subst2 (a::L1) (b::L2) = (b |-> a)::mk_subst2 L1 L2;
+
+
+(* ----------------------------------------------------------------------*)
+(* Internal function: prove_const_one_one.				 *)
+(*									 *)
+(* This function proves that a single constructor of a recursive type is *)
+(* one-to-one (it is called once for each appropriate constructor). The  *)
+(* theorem input, th, is the characterizing theorem for the recursive 	 *)
+(* type in question.  The term, tm, is the defining equation for the 	 *)
+(* constructor in question, taken from the body of the theorem th.	 *)
+(*									 *)
+(* For example, if:							 *)
+(*									 *)
+(*  th = |- !x f. ?! fn. (fn[] = x) /\ (!h t. fn(CONS h t) = f(fn t)h t) *)
+(*									 *)
+(* and									 *)
+(*									 *)
+(*  tm = "!h t. fn(CONS h t) = f(fn t)h t"				 *)
+(*									 *)
+(* then prove_const_one_one th tm yields:				 *)
+(*								 	 *)
+(*  |- !h t h' t'. (CONS h t = CONS h' t') = (h = h') /\ (t = t')	 *)
+(*									 *)
+(* ----------------------------------------------------------------------*)
+
+(* Basic strategy is to use a function
+      f h' t' (C h t) = (h = h') /\ (t = t')
+   Then, if we assume
+               C h t = C h' t'
+       f h t (C h t) = f h t (C h' t')
+  (h = h) /\ (t = t) = (h = h') /\ (t = t')
+                   T = (h = h') /\ (t = t')
+  so
+        (C h t = C h' t') ==> (h = h') /\ (t = t')
+  in the other direction, we just rewrite (C h t) with the equalities and
+  get the desired equation.
+*)
+
+fun prove_const_one_one th tm = let
+  val (vs,{lhs,...}) = (I ## dest_eq)(strip_forall tm)
+  val C = rand lhs
+  val funtype =
+    List.foldr (fn (tm, ty) => Type.-->(type_of tm, ty))
+    (Type.-->(type_of C, Type.bool)) vs
+  val f = genvar funtype
+  val vvs = list_variant vs vs
+  val fn_body = list_mk_conj(ListPair.map op== (vs, vvs))
+  val f_ap_vs = list_mk_comb(f, vs)
+  val C' = subst (mk_subst2 vvs vs) C
+  val eqn = mk_comb{Rator = f_ap_vs, Rand = C'} == fn_body
+  val fn_exists_thm = prove_rec_fn_exists th eqn
+  val eqn_thm = ASSUME (#Body (dest_exists (concl fn_exists_thm)))
+  val C_eq_C'_t = C == C'
+  val C_eq_C' = ASSUME C_eq_C'_t
+  val fC_eq_fC' = AP_TERM f_ap_vs C_eq_C'
+  val expandedfs = CONV_RULE (LHS_CONV (REWR_CONV eqn_thm) THENC
+                              RHS_CONV (REWR_CONV eqn_thm)) fC_eq_fC'
+  val imp1 =
+    CHOOSE(f, fn_exists_thm) (DISCH C_eq_C'_t (REWRITE_RULE [] expandedfs))
+
+  val eqns = CONJUNCTS (ASSUME fn_body)
+  val rewritten = REWRITE_CONV eqns C
+  val imp2 = DISCH fn_body rewritten
+in
+  GENL vs (GENL vvs (IMP_ANTISYM_RULE imp1 imp2))
+end
+
+(* ----------------------------------------------------------------------*)
+(* prove_constructors_one_one : prove that the constructors of a given	 *)
+(* concrete recursive type are one-to-one. The input is a theorem of the *)
+(* form returned by define_type.					 *)
+(*									 *)
+(* EXAMPLE: 								 *)
+(*									 *)
+(* Input: 								 *)
+(* 									 *)
+(*    |- !x f. ?! fn. (fn[] = x) /\ (!h t. fn(CONS h t) = f(fn t)h t) 	 *)
+(*									 *)
+(* Output:								 *)
+(*									 *)
+(*    |- !h t h' t'. (CONS h t = CONS h' t') = (h = h') /\ (t = t')	 *)
+(* ----------------------------------------------------------------------*)
+
+fun prove_constructors_one_one th =
+ let val eqns =
+        strip_conj (#Body(dest_abs(rand(snd(strip_forall(concl th))))))
+     val funs = gather (fn tm => is_comb(rand(lhs(snd(strip_forall tm)))))
+                         eqns
+   in
+      LIST_CONJ (map (prove_const_one_one th) funs)
+   end
+   handle HOL_ERR _ =>
+   raise ERR{function="prove_constructors_one_one",message = ""};
+
+
+(* =====================================================================*)
+(* DISTINCTNESS OF VALUES FOR EACH CONSTRUCTOR				*)
+(* =====================================================================*)
+
+(* ---------------------------------------------------------------------*)
+(* prove_constructors_distinct : prove that the constructors of a given	*)
+(* recursive type yield distinct (non-equal) values.			*)
+(*									*)
+(* EXAMPLE: 								*)
+(*									*)
+(* Input: 								*)
+(* 									*)
+(*    |- !x f. ?! fn. (fn[] = x) /\ (!h t. fn(CONS h t) = f(fn t)h t) 	*)
+(* 									*)
+(* Output:								*)
+(* 									*)
+(*    |- !h t. ~([] = CONS h t)						*)
+(* ---------------------------------------------------------------------*)
+
+(* Basic strategy is to define a function over the type such that
+      f (C1 ...) = 0
+      f (C2 ...) = 1
+      f (C3 ...) = 2
+      ...
+      f (Cn ...) = n
+   However, we want to do this by avoiding the use of numbers.  So, we
+   encode the numbers on the RHS above as functions over booleans.  In
+   particular, the type of the function will be
+      bool ^ log n -> bool
+   The encoding of the function will be such that it is true iff the
+   arguments form the encoding of the number it is supposed to represent.
+   If we have 10 constructors, log n will be 4, and the encoding of 5 will
+   be
+       \b4 b3 b2 b1. b4 /\ ~b3 /\ b2 /\ ~b1
+   The encoding is MSB to the left.
+
+   When function f is defined, it is then easy to distinguish any
+   two constructors Ci and Cj.
+       Assume           (Ci xn) = (Cj = yn)
+       then           f (Ci xn) = f (Cj yn)            (Liebnitz)
+       so     f (Ci xn) [| i |] = f (Cj yn) [| i |]      (ditto)
+   But f is constructed in such a way that the term on the left will be
+   true, while that on the right will be false.  We derive a contradiction
+   and conclude that the original assumption was false.
+*)
+
+local
+  val bn0 = mk_var{Name = "b0", Ty = Type.bool}
+  val bn1 = mk_var{Name = "b1", Ty = Type.bool}
+  val bn2 = mk_var{Name = "b2", Ty = Type.bool}
+  val bn3 = mk_var{Name = "b3", Ty = Type.bool}
+  val bn4 = mk_var{Name = "b4", Ty = Type.bool}
+  val bn5 = mk_var{Name = "b5", Ty = Type.bool}
+  val bn6 = mk_var{Name = "b6", Ty = Type.bool}
+  val bn7 = mk_var{Name = "b7", Ty = Type.bool}
+  val bn8 = mk_var{Name = "b8", Ty = Type.bool}
+  val bn9 = mk_var{Name = "b9", Ty = Type.bool}
+in
+  fun bn n =
+    case n of
+      0 => bn0
+    | 1 => bn1
+    | 2 => bn2
+    | 3 => bn3
+    | 4 => bn4
+    | 5 => bn5
+    | 6 => bn6
+    | 7 => bn7
+    | 8 => bn8
+    | 9 => bn9
+    | x => mk_var{Name = "b"^Int.toString x, Ty = Type.bool}
+end
+
+
+(* encode bv nb n
+     returns a list of terms encoding the number n in nb bits.  If bv is
+     true, then the terms are successive boolean variables.  If bv is false
+     then the terms are all either T or ~T.
+   encode true nb n
+     is used to produce the body of the functions encoding for n
+   encode false nb n
+     is used to produce the arguments that the functions are applied to.
+*)
+fun encode bv numbits n =
+  if numbits <= 0 then []
+  else let
+    val bn0 = if bv then bn numbits else T
+    val bn = if n mod 2 = 0 then mk_neg bn0 else bn0
+  in
+    bn::encode bv (numbits - 1) (n div 2)
+  end
+
+(*
+  mk_num generates the function corresponding to number n.  The abstraction
+  will have numbits bound variables.
+*)
+fun mk_num numbits n = let
+  val vars = List.tabulate(numbits, (fn n => bn (n + 1)))
+in
+  list_mk_abs(List.rev vars, list_mk_conj(encode true numbits n))
+end
+
+(* calculates how many bits are required to represent a number *)
+fun rounded_log n = if n <= 1 then 0 else 1 + rounded_log ((n + 1) div 2)
+
+fun RATORn_CONV n c t = if n <= 0 then c t
+                        else RATOR_CONV (RATORn_CONV (n - 1) c) t
+
+fun nBETA_CONV dpth n =
+  if n <= 0 then REFL
+  else
+    RATORn_CONV (dpth - 1) BETA_CONV THENC nBETA_CONV (dpth - 1) (n - 1)
+
+(* !x. ~T /\ x = ~T *)
+val notT_and = prove(gen_all ((mk_neg T /\ bn 1) == mk_neg T),
+                              REWRITE_TAC []);
+(* !x. ~~T /\ x = x *)
+val notnotT_and = prove(gen_all ((mk_neg (mk_neg T)) /\ bn 1 == bn 1),
+                        REWRITE_TAC []);
+(* !x. T /\ x = x *)
+val T_and = prove(gen_all (T /\ bn 1 == bn 1), REWRITE_TAC []);
+(* (T = ~T) = F *)
+val T_eqF = prove((T == mk_neg T) == F, REWRITE_TAC []);
+(* ~~T = T *)
+val notnotT = prove(mk_neg (mk_neg T) == T, REWRITE_TAC []);
+(* ~T = F *)
+val notT = prove(mk_neg T == F, REWRITE_TAC []);
+
+(* A special purpose conv to move along a conjunction of T's, ~T's and ~~T's,
+   simplifying it to a single atom as quickly as possible.
+   Might be possible to improve it by looking for an instance of ~T, and
+   then doing the two rewrites required to push this to the top. *)
+fun simp_conjs t =
+  if is_conj t then let
+    val {conj1, conj2} = dest_conj t
+  in
+    if is_neg conj1 then
+      if is_neg (dest_neg conj1) then
+        (REWR_CONV notnotT_and THENC simp_conjs) t
+      else
+        REWR_CONV notT_and t
+    else
+      (REWR_CONV T_and THENC simp_conjs) t
+  end
+  else REFL t
+
+fun to_true t = if is_neg t then REWR_CONV notnotT t else REFL t
+
+fun prove_ineq nb f fc1 fc2 c1 c20 c1n = let
+  val c1_vars = #2 (strip_comb c1)
+  val (c2_t, c20_vars) = strip_comb c20
+  val c2_vars = list_variant c1_vars c20_vars
+  val c2 = list_mk_comb (c2_t, c2_vars)
+  val c1c2_eqt = c1 == c2
+  val c1_eq_c2 = ASSUME c1c2_eqt
+  val fc1_eq_fc2 = AP_TERM f c1_eq_c2
+  fun fold (arg, thm) = AP_THM thm arg
+  val fc1_args_eq_fc2_args = List.foldl fold fc1_eq_fc2 c1n
+  val expand_left =
+    CONV_RULE (LHS_CONV (RATORn_CONV nb (REWR_CONV fc1))) fc1_args_eq_fc2_args
+  val expand_right =
+    CONV_RULE (RHS_CONV (RATORn_CONV nb (REWR_CONV fc2))) expand_left
+  val beta_left = CONV_RULE (LHS_CONV (nBETA_CONV nb nb)) expand_right
+  val beta_right = CONV_RULE (RHS_CONV (nBETA_CONV nb nb)) beta_left
+  val result0 =
+    CONV_RULE (LHS_CONV (simp_conjs THENC to_true) THENC RHS_CONV simp_conjs)
+    beta_right
+  val result1 = DISCH c1c2_eqt (EQ_MP T_eqF result0)
+  val result = GEN_ALL (MATCH_MP IMP_F result1)
+in
+  result
+end
+
+(* The type of numbers represented using nb many bits *)
+fun numtype nb = if nb <= 1 then Type.-->(Type.bool, Type.bool)
+                 else Type.-->(Type.bool, numtype (nb - 1))
+
+fun generate_ctrs thm = let
+  val (vars, body) = strip_forall (concl thm)
+  val clauses = strip_conj (#Body (dest_abs (rand body)))
+  fun get_ctr tm = rand (lhs (#2 (strip_forall tm)))
+in
+  map get_ctr clauses
+end
+
+fun generate_fn_term nb thm = let
+  val (_, body) = strip_forall (concl thm)
+  val dom_type = #1 (dom_rng (type_of (#Bvar (dest_abs (rand body)))))
+in
+  genvar (Type.-->(dom_type, numtype nb))
+end
+
+fun generate_eqns nb ctrs f = let
+  fun recurse n lst =
+    case lst of
+      [] => []
+    | (x::xs) =>
+        (mk_comb{Rator = f, Rand = x} == mk_num nb n)::
+        recurse (n + 1) xs
+in
+  recurse 0 ctrs
+end
+
+fun number nb lst = let
+  fun number0 _ [] = []
+    | number0 n (x::xs) = (encode false nb n,x)::number0 (n+1) xs
+in
+  number0 0 lst
+end
+
+fun app_triangle f [] = []
+  | app_triangle f [x] = []
+  | app_triangle f (x::xs) = map (fn y => f (x, y)) xs @ app_triangle f xs
+
+
+fun prove_constructors_distinct thm = let
+  val ctrs = generate_ctrs thm
+  val nb = rounded_log (length ctrs)
+in
+  if nb = 0 then
+    raise ERR {function = "prove_constructors_distinct",
+               message = "Type must have more than one constructor"}
+  else let
+    val f = generate_fn_term nb thm
+    val eqns = generate_eqns nb ctrs f
+    val fn_defn = list_mk_conj eqns
+    val fn_exists = prove_rec_fn_exists thm fn_defn
+    val fn_thm = ASSUME (#Body (dest_exists (concl fn_exists)))
+    val eqn_thms = CONJUNCTS fn_thm
+    val ctrs_with_eqns_and_numbers = number nb (ListPair.zip (ctrs, eqn_thms))
+    fun prove_result ((c1n, (c1, fc1)), (c2n, (c2, fc2))) =
+      prove_ineq nb f fc1 fc2 c1 c2 c1n
+    val thms = app_triangle prove_result ctrs_with_eqns_and_numbers
+    val thm = LIST_CONJ thms
+  in
+    CHOOSE (f, fn_exists) thm
+  end
+end
+
+(*
+  load "Define_type";
+  fun gen_type n = let
+    val name = "foo"^Int.toString n
+    val fixities = List.tabulate(n, fn _ => Prefix)
+    fun clause n = let
+      val C = "C"^Int.toString n
+    in
+      if n = 0 then  "C0 of bool => 'a"
+      else C ^ " of bool => 'a => " ^name
+    end
+    fun sepby sep [] = []
+      | sepby sep [x]= [x]
+      | sepby sep (x::xs) = x::sep::sepby sep xs
+    val clauses = sepby " | " (List.tabulate(n, clause))
+    val spec = String.concat (name::" = "::clauses)
+  in
+    Define_type.define_type { fixities = fixities,
+                              type_spec = [QUOTE spec],
+                              name = name }
+  end;
+  val foo5 = gen_type 5;
+  val foo10 = gen_type 10;
+  val foo20 = gen_type 20;
+  Lib.time prove_constructors_distinct foo5;
+  Lib.time prove_constructors_distinct foo10;
+  Lib.time prove_constructors_distinct foo20;
+  (* tests seem to indicate that the code above is roughly 1.5 times
+     slower than the original code by Tom Melham.  This is probably
+     acceptable given that it is now independent of the theory of
+     numbers *)
+*)
+
+
 end; (* Prim_rec *)

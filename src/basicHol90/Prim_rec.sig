@@ -19,10 +19,12 @@ sig
    val new_recursive_definition
      : {name:string, fixity: Parse.fixity, rec_axiom:thm, def:term} -> thm
 
-   val INDUCT_THEN         : thm -> (thm -> tactic) -> tactic
-   val prove_rec_fn_exists : thm -> term -> thm
-   val prove_induction_thm : thm -> thm
-   val prove_cases_thm     : thm -> thm
-   val case_cong_thm       : thm -> thm -> thm
+   val INDUCT_THEN                 : thm -> (thm -> tactic) -> tactic
+   val prove_rec_fn_exists         : thm -> term -> thm
+   val prove_induction_thm         : thm -> thm
+   val prove_cases_thm             : thm -> thm
+   val case_cong_thm               : thm -> thm -> thm
+   val prove_constructors_distinct : thm -> thm
+   val prove_constructors_one_one  : thm -> thm
 
 end;
