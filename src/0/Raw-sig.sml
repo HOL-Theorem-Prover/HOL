@@ -13,6 +13,7 @@ sig
   val is_gen_tyvar  : hol_type -> bool
   val mk_thy_type   : {Thy:string, Tyop:string, Args:hol_type list} -> hol_type
   val dest_thy_type : hol_type -> {Thy:string, Tyop:string, Args:hol_type list}
+  val op_arity      : {Thy:string,Tyop:string} -> int option
   val mk_type       : string * hol_type list -> hol_type
   val dest_type     : hol_type -> string * hol_type list
   val break_type    : hol_type -> KernelTypes.tyconst * hol_type list
@@ -20,7 +21,7 @@ sig
   val is_type       : hol_type -> bool
   val polymorphic   : hol_type -> bool
   val compare       : hol_type * hol_type -> order
-  val ty_sub        : (hol_type,hol_type)Lib.subst 
+  val ty_sub        : (hol_type,hol_type)Lib.subst
                         -> hol_type -> hol_type Lib.delta
   val type_subst    : (hol_type,hol_type)Lib.subst -> hol_type -> hol_type
   val type_vars     : hol_type -> hol_type list
@@ -31,11 +32,11 @@ sig
   val dom_rng       : hol_type -> hol_type * hol_type  (* inverts -->  *)
   val ind           : hol_type
   val bool          : hol_type
-  val alpha         : hol_type 
+  val alpha         : hol_type
   val beta          : hol_type
   val gamma         : hol_type
   val delta         : hol_type
-  val tymatch       : hol_type -> hol_type 
+  val tymatch       : hol_type -> hol_type
                         -> (hol_type,hol_type) Lib.subst * hol_type list
                          -> (hol_type,hol_type) Lib.subst * hol_type list
   val match_type    : hol_type -> hol_type -> (hol_type,hol_type)Lib.subst
@@ -98,13 +99,13 @@ sig
   val subst         : (term,term) Lib.subst -> term -> term
   val inst          : (hol_type,hol_type) Lib.subst -> term -> term
   val raw_match     : term -> term
-                       -> (term,term)Lib.subst 
+                       -> (term,term)Lib.subst
                            * ((hol_type,hol_type)Lib.subst * hol_type list)
-                        -> (term,term)Lib.subst 
+                        -> (term,term)Lib.subst
                             * ((hol_type,hol_type)Lib.subst * hol_type list)
-  val match_term     : term -> term 
+  val match_term     : term -> term
                        -> (term,term)Lib.subst * (hol_type,hol_type)Lib.subst
-  val norm_subst    : (hol_type,hol_type)subst 
+  val norm_subst    : (hol_type,hol_type)subst
                         -> (term,term)subst -> (term,term)subst
   val thy_consts     : string -> term list
   val compare        : term * term -> order
@@ -117,7 +118,7 @@ sig
   val prim_mk_eq     : hol_type -> term -> term -> term
   val prim_mk_imp    : term -> term -> term
   val break_const    : term -> KernelTypes.id * hol_type
-  val break_abs      : term -> term 
+  val break_abs      : term -> term
   val trav           : (term -> unit) -> term -> unit
   val pp_raw_term    : (term -> int) -> Portable.ppstream -> term -> unit
 end;
@@ -134,7 +135,7 @@ sig
   val axioms_of     : tag -> string ref list
   val pp_tag        : Portable.ppstream -> tag -> unit
   val pp_to_disk    : Portable.ppstream -> tag -> unit
-end 
+end
 
 
 signature RawThm =
@@ -189,7 +190,7 @@ sig
   val mk_thm        : term list * term -> thm
   val mk_axiom_thm  : string ref * term -> thm
   val mk_defn_thm   : tag * term -> thm
-  val disk_thm      : term vector 
+  val disk_thm      : term vector
                        -> string * 'a frag list list * 'a frag list -> thm
 end;
 
@@ -207,8 +208,8 @@ sig
         axioms      : (string * thm) list,
         definitions : (string * thm) list,
         theorems    : (string * thm) list,
-        sig_ps      : (ppstream -> unit) option list} 
-    -> ppstream 
+        sig_ps      : (ppstream -> unit) option list}
+    -> ppstream
     -> unit
 
  val pp_struct :
@@ -219,7 +220,7 @@ sig
     axioms      : (string * thm) list,
     definitions : (string * thm) list,
     theorems    : (string * thm) list,
-    struct_ps   : (ppstream -> unit) option list} 
+    struct_ps   : (ppstream -> unit) option list}
   -> ppstream
   -> unit
 end
@@ -234,7 +235,7 @@ sig
   type ppstream = Portable.ppstream
   type thy_addon = {sig_ps    : (ppstream -> unit) option,
                     struct_ps : (ppstream -> unit) option}
- 
+
   val new_type       : string * int -> unit
   val new_constant   : string * hol_type -> unit
   val new_axiom      : string * term -> thm

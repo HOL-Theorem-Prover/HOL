@@ -26,11 +26,11 @@ val WARN = HOL_WARNING "Type";
               Create the signature for HOL types
  ---------------------------------------------------------------------------*)
 
-structure TypeSig = 
+structure TypeSig =
   SIG(type ty = KernelTypes.tyconst
       fun key (r,_) = r
       val ERR = ERR
-      val table_size = 311) 
+      val table_size = 311)
 
 
 (*---------------------------------------------------------------------------*
@@ -55,23 +55,23 @@ val ind       = Tyapp (ind_tyc,  []);
  * Create a compound type, in a specific segment, and in the current theory. *
  *---------------------------------------------------------------------------*)
 
-fun make_type (tyc as (_,arity)) Args (fnstr,name) = 
-  if arity = length Args then Tyapp(tyc,Args) else 
-  raise ERR fnstr (String.concat 
-      [name," needs ", int_to_string arity, 
+fun make_type (tyc as (_,arity)) Args (fnstr,name) =
+  if arity = length Args then Tyapp(tyc,Args) else
+  raise ERR fnstr (String.concat
+      [name," needs ", int_to_string arity,
        " arguments, but was given ", int_to_string(length Args)]);
 
-fun mk_thy_type {Thy,Tyop,Args} = 
- case TypeSig.lookup (Tyop,Thy) 
+fun mk_thy_type {Thy,Tyop,Args} =
+ case TypeSig.lookup (Tyop,Thy)
   of SOME{const,...} => make_type const Args ("mk_thy_type",fullname(Tyop,Thy))
    | NONE => raise ERR "mk_thy_type"
                  (Tyop^" has not been declared in theory "^quote Thy^".")
 
-local fun dest e = 
+local fun dest e =
         let val (c,_) = #const e
         in {Tyop=KernelTypes.name_of c, Thy=KernelTypes.seg_of c}
         end
-in 
+in
 val decls = map dest o TypeSig.resolve
 end;
 
@@ -85,8 +85,8 @@ fun mk_type (Tyop,Args) =
   make_type (first_decl "mk_type" Tyop) Args ("mk_type",Tyop);
 
 (* currently unused *)
-fun current_tyops s = 
-  map (fn {const as (id,i),...} => (KernelTypes.dest_id id,i)) 
+fun current_tyops s =
+  map (fn {const as (id,i),...} => (KernelTypes.dest_id id,i))
       (TypeSig.resolve s);
 
 (*---------------------------------------------------------------------------*
@@ -105,6 +105,15 @@ fun dest_type (Tyapp((tyc,_),A)) = (name_of tyc, A)
 end;
 
 (*---------------------------------------------------------------------------*
+ * Return arity of putative type operator                                    *
+ *---------------------------------------------------------------------------*)
+
+fun op_arity {Thy,Tyop} =
+    case TypeSig.lookup (Tyop,Thy) of
+      SOME {const = (id, a), ...} => SOME a
+    | NONE => NONE
+
+(*---------------------------------------------------------------------------*
  *          Invert -->                                                       *
  *---------------------------------------------------------------------------*)
 
@@ -118,7 +127,7 @@ fun dom_rng ty =
        Declared types in a theory segment
  ---------------------------------------------------------------------------*)
 
-fun thy_types s = 
+fun thy_types s =
   let fun xlate {const=(id,arity), ...} = (KernelTypes.name_of id, arity)
   in map xlate (TypeSig.slice s)
   end;
@@ -173,7 +182,7 @@ fun type_var_in v =
 
 (*---------------------------------------------------------------------------
     Does there exist a type variable v in a type such that P(v) holds.
-    Returns false if there are no type variables in the type. 
+    Returns false if there are no type variables in the type.
  ---------------------------------------------------------------------------*)
 
 fun exists_tyvar P =
@@ -186,7 +195,7 @@ fun exists_tyvar P =
  *---------------------------------------------------------------------------*)
 
 fun ty_sub [] _ = SAME
-  | ty_sub theta (Tyapp(tyc,Args)) 
+  | ty_sub theta (Tyapp(tyc,Args))
       = (case delta_map (ty_sub theta) Args
           of SAME => SAME
            | DIFF Args' => DIFF (Tyapp(tyc, Args')))
@@ -207,13 +216,13 @@ fun polymorphic (Tyv _) = true
 
 
 (*---------------------------------------------------------------------------
-         This matching algorithm keeps track of identity bindings 
+         This matching algorithm keeps track of identity bindings
          v |-> v in a separate area. This eliminates the need for
          post-match normalization of substitutions coming from the
          matching algorithm, as was done in earlier implementations.
  ---------------------------------------------------------------------------*)
 
-local 
+local
   fun lookup x ids =
    let fun look [] = if Lib.mem x ids then SOME x else NONE
          | look ({redex,residue}::t) = if x=redex then SOME residue else look t
@@ -238,7 +247,7 @@ end;
 fun compare (Tyv s1, Tyv s2) = String.compare (s1,s2)
   | compare (Tyv _, _) = LESS
   | compare (Tyapp _, Tyv _) = GREATER
-  | compare (Tyapp((c1,_),A1), Tyapp((c2,_),A2)) = 
+  | compare (Tyapp((c1,_),A1), Tyapp((c2,_),A2)) =
       case KernelTypes.compare (c1, c2)
        of EQUAL => Lib.list_compare compare (A1,A2)
         |   x   => x;
