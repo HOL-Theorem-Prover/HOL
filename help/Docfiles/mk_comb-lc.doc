@@ -1,28 +1,24 @@
 \DOC mk_comb
 
-\TYPE {mk_comb : {{Rator : term, Rand : term}} -> term}
+\TYPE {mk_comb : term * term -> term}
 
 \SYNOPSIS
 Constructs a combination (function application).
 
 \DESCRIBE
-{mk_comb {{Rator = t1, Rand = t2}}} returns the combination {--`t1 t2`--}.
+{mk_comb (t1, t2)} returns the combination {t1 t2}.
 
 \FAILURE
-Fails with
-{
-    HOL_ERR{{origin_structure = "Term", origin_function = "mk_comb",
-            message = "incompatible types"}}
-}
-\noindent where {t1} does not have a function type, orif {t1} has a
+Fails if {t1} does not have a function type, or if {t1} has a
 function type, but its domain does not equal the type of {t2}.
 
 \EXAMPLE
 {
-   - mk_comb{{Rator = --`$~`--, Rand = --`T`--}};
-   > val (--`~T`--) : term
+   - mk_comb (boolSyntax.neg_tm, boolSyntax.T);
 
-   - mk_comb{{Rator = --`T`--, Rand = --`T`--}} handle e => Raise e;
+   > val it = `~T` : term
+
+   - mk_comb(boolSyntax.T, boolSyntax.T) handle e => Raise e;
 
    Exception raised at Term.mk_comb:
    incompatible types
