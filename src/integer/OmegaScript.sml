@@ -97,7 +97,7 @@ val MAP_MAP2 = prove(
 
 val MAP_ID = prove(``!l. MAP (\x.x) l = l``, Induct THEN SRW_TAC [][]);
 
-val _ = print "Proving eliminability of equalities\n"
+val _ = print "Proving eliminability of equalities\n";
 
 val equality_removal0 = prove(
   ``!c x cs vs.
@@ -314,7 +314,9 @@ val onlyuppers_satisfiable = store_thm(
 val rshadow_row_def = Define
   `(rshadow_row (upperc, (uppery:int)) [] = T) /\
    (rshadow_row (upperc, uppery) ((lowerc, lowery) :: rs) =
-      (&upperc * lowery <= &lowerc * uppery) /\ rshadow_row (upperc, uppery) rs)`;
+      (&upperc * lowery <= &lowerc * uppery) /\ 
+      rshadow_row (upperc, uppery) rs)`;
+
 val real_shadow_def = Define
   `(real_shadow [] lowers = T) /\
    (real_shadow (upper::ls) lowers =

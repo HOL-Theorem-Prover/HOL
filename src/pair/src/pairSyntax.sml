@@ -23,6 +23,7 @@ fun dest_prod ty =
    of SOME{Tyop="prod", Thy="pair", Args=[ty1,ty2]} => (ty1,ty2)
     | other => raise ERR "dest_prod" "not a product type";
 
+val spine_prod = spine_binop (total dest_prod);
 val strip_prod = strip_binop (total dest_prod);
 val list_mk_prod = end_itlist (curry mk_prod);
 
@@ -58,11 +59,7 @@ val list_mk_pair = end_itlist (curry mk_pair);
 
 val dest_pair = pairTheory.dest_pair
 val strip_pair = pairTheory.strip_pair
-
-fun spine_pair M = 
-  case total dest_pair M
-   of NONE => [M]
-    | SOME (fst,snd) => fst :: spine_pair snd;
+val spine_pair = pairTheory.spine_pair
 
 (*---------------------------------------------------------------------------
     Inverse of strip_pair ... returns unconsumed elements in input list.
@@ -130,8 +127,8 @@ fun mk_pair_map(f,g,p) =
                       gamma |-> rf, delta |-> rg] pair_map_tm, [f,g,p])
  end;
 
-val dest_fst     = dest_monop fst_tm (ERR "dest_fst" "")
-val dest_snd     = dest_monop snd_tm (ERR "dest_snd" "")
+val dest_fst = dest_monop fst_tm (ERR "dest_fst" "")
+val dest_snd = dest_monop snd_tm (ERR "dest_snd" "")
 
 fun dest_curry tm = 
   let val (M,y) = with_exn dest_comb tm (ERR "dest_curry" "")

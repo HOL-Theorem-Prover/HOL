@@ -11,11 +11,6 @@
 structure simpLib :> simpLib =
 struct
 
-type term = Term.term
-type thm = Thm.thm;
-type conv = Abbrev.conv;
-type tactic = Abbrev.tactic;
-
 open HolKernel boolLib liteLib Trace Cond_rewr Travrules Traverse Ho_Net;
 
 infix |>;
@@ -58,17 +53,19 @@ fun WRAP_ERR x = STRUCT_WRAP "simpLib" x;
     * ---------------------------------------------------------------------*)
 
    type net = ((term list -> term -> thm) -> term list -> conv) net;
+
    abstype simpset =
      SS of {mk_rewrs: (thm -> thm list),
             initial_net : net,
             dprocs: reducer list,
-            travrules: travrules} with
+            travrules: travrules}
+   with
 
    fun USER_CONV {name,key,trace=trace_level,conv} =
-   let val trace_string1 = "trying "^name^" on"
-       val trace_string2 = name^" ineffectual"
-   in fn solver => fn stack => fn tm =>
-	   let val _ = trace(trace_level+2,REDUCE(trace_string1,tm))
+     let val trace_string1 = "trying "^name^" on"
+         val trace_string2 = name^" ineffectual"
+     in fn solver => fn stack => fn tm =>
+ 	   let val _ = trace(trace_level+2,REDUCE(trace_string1,tm))
                val thm = conv solver stack tm
 	   in
               trace(trace_level,PRODUCE(tm,name,thm));
@@ -76,9 +73,10 @@ fun WRAP_ERR x = STRUCT_WRAP "simpLib" x;
 	   end
            handle e as HOL_ERR _
            => (trace (trace_level+2,TEXT trace_string2); raise e)
-   end;
+     end;
 
-   val any = (--`x:'a`--);
+   val any = mk_var("x",Type.alpha);
+
    fun option_cases f e (SOME x) = f x
      | option_cases f e NONE = e;
 
@@ -87,8 +85,7 @@ fun WRAP_ERR x = STRUCT_WRAP "simpLib" x;
 		option_cases #2 any key,
 		USER_CONV data);
 
-   fun net_add_convs net convs =
-       itlist net_add_conv convs net;
+   fun net_add_convs net convs = itlist net_add_conv convs net;
 
    fun mk_rewr_convdata thm =
       let val th = SPEC_ALL thm
@@ -117,6 +114,7 @@ fun PROVE_LCOMM (assoc,sym) =
 val empty_ss = SS {mk_rewrs=fn x => [x],
 		   initial_net=empty_net,
 		   dprocs=[],travrules=mk_travrules []};
+
 fun add_to_ss
     (SIMPSET {convs,rewrs,filter,ac,dprocs,congs},
      SS {mk_rewrs=mk_rewrs',travrules,initial_net,dprocs=dprocs'}) =
@@ -138,12 +136,14 @@ fun add_to_ss
 
 val mk_simpset = foldl add_to_ss empty_ss;
 
-
 fun rewrites rewrs =
   SIMPSET {convs=[],rewrs=rewrs,filter=NONE,ac=[],dprocs=[],congs=[]};
+
 fun dproc_ss dproc =
   SIMPSET {convs=[],rewrs=[],filter=NONE,ac=[],dprocs=[dproc],congs=[]};
+
 fun D (SIMPSET s) = s;
+
 fun merge_ss s =
   SIMPSET {convs=flatten (map (#convs o D) s),
 	   rewrs=flatten (map (#rewrs o D) s),

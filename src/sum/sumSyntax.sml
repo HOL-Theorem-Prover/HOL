@@ -15,6 +15,7 @@ fun dest_sum ty =
     | other => raise ERR "dest_sum" "not a sum type";
 
 val strip_sum = strip_binop (total dest_sum);
+val spine_sum = spine_binop (total dest_sum);
 val list_mk_sum = end_itlist (curry mk_sum);
 
 

@@ -21,8 +21,6 @@ struct
 *)
 open HolKernel Parse boolLib relationTheory mesonLib Rsyntax;
 
-infix THEN THENL |->;
-
 val _ = new_theory "pair";
 
 (*---------------------------------------------------------------------------
@@ -547,6 +545,7 @@ val _ = adjoin_to_theory
       S "val comma_tm         : term"; NL();
       S "val dest_pair        : term -> term * term"; NL();
       S "val strip_pair       : term -> term list"; NL();
+      S "val spine_pair       : term -> term list"; NL();
       S "val is_vstruct       : term -> bool"; NL();
       S "val mk_pabs          : term * term -> term"; NL();
       S "val PAIRED_BETA_CONV : conv"; NL()
@@ -571,6 +570,7 @@ S "val uncurry_tm = prim_mk_const {Name=\"UNCURRY\", Thy=\"pair\"};"; NL();
 NL();
 S "val dest_pair = dest_binop comma_tm (ERR1 \"dest_pair\" \"not a pair\")"; NL();
 S "val strip_pair = strip_binop (total dest_pair);"; NL();
+S "val spine_pair = spine_binop (total dest_pair);"; NL();
 NL();
 S "local fun check [] = true"; NL();
 S "        | check (h::t) = is_var h andalso not(mem h t) andalso check t"; NL();

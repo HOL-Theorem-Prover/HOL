@@ -18,11 +18,7 @@
 
 signature simpLib =
 sig
-
-type term = Term.term
-type thm = Thm.thm;
-type conv = Abbrev.conv;
-type tactic = Abbrev.tactic;
+ include Abbrev
 
    (* ---------------------------------------------------------------------
     * type simpset
@@ -54,20 +50,21 @@ type tactic = Abbrev.tactic;
     * (in the termnet sense of matching) its key.
     * ---------------------------------------------------------------------*)
     
-  type convdata = {name: string,
-                   key: (term list * term) option,
+  type convdata = { name: string,
+                     key: (term list * term) option,
                    trace: int,
-                   conv: (term list -> term -> thm) -> term list -> conv};
+                    conv: (term list -> term -> thm) -> term list -> conv};
 
   datatype ssdata = SIMPSET of
-    {convs: convdata list,
-     rewrs: thm list,
-     ac: (thm * thm) list,
+    { convs: convdata list,
+      rewrs: thm list,
+         ac: (thm * thm) list,
      filter: (thm -> thm list) option,
      dprocs: Traverse.reducer list,
-     congs: thm list};
+      congs: thm list};
 
-  (* quicky for making simple simpset fragments *)
+  (* for making simple simpset fragments *)
+
   val rewrites : thm list -> ssdata
   val dproc_ss : Traverse.reducer -> ssdata
   val merge_ss : ssdata list -> ssdata
@@ -85,9 +82,10 @@ type tactic = Abbrev.tactic;
     * ---------------------------------------------------------------------*)
 
   type simpset
-  val empty_ss : simpset
+
+  val empty_ss   : simpset
   val mk_simpset : ssdata list -> simpset
-  val ++ : simpset * ssdata -> simpset
+  val ++         : simpset * ssdata -> simpset  (* infix *)
 
    (* ---------------------------------------------------------------------
     * SIMP_CONV : simpset -> conv
@@ -106,7 +104,7 @@ type tactic = Abbrev.tactic;
     * ---------------------------------------------------------------------*)
    
    val SIMP_PROVE : simpset -> thm list -> term -> thm
-   val SIMP_CONV : simpset -> thm list -> conv
+   val SIMP_CONV  : simpset -> thm list -> conv
    
    (* ---------------------------------------------------------------------
     * SIMP_TAC : simpset -> tactic
@@ -115,7 +113,7 @@ type tactic = Abbrev.tactic;
     * 
     * SIMP_TAC makes a simplification tactic from the given simpset.  The 
     * tactic uses a top-depth strategy for rewriting, and will be recursively
-    * reapplied when a simplification step makes a change to a 
+    * reapplied when a simplification step makes a change to a term.
     * This is done in the same way as similar to TOP_DEPTH_CONV.
     *
     * ASM_SIMP_TAC draws extra rewrites (conditional and unconditional)
@@ -132,27 +130,27 @@ type tactic = Abbrev.tactic;
     * These tactics never fail, though they may diverge.
     * ---------------------------------------------------------------------*)
    
-   val SIMP_TAC : simpset -> thm list -> tactic
-   val ASM_SIMP_TAC : simpset -> thm list -> tactic
+   val SIMP_TAC      : simpset -> thm list -> tactic
+   val ASM_SIMP_TAC  : simpset -> thm list -> tactic
    val FULL_SIMP_TAC : simpset -> thm list -> tactic
    
    (* ---------------------------------------------------------------------
     * SIMP_RULE : simpset -> tactic
     * ASM_SIMP_RULE : simpset -> tactic
     * 
-    * Make a simplification tactic from the given simpset.  The 
-    * tactic uses a top-depth strategy for rewriting.
+    * Make a simplification rule from the given simpset.  The 
+    * rule uses a top-depth strategy for rewriting.
     *
     * FAILURE CONDITIONS
     *
-    * These tactics never fail, though they may diverge.
+    * These rules never fail, though they may diverge.
     * ---------------------------------------------------------------------*)
 
-   val SIMP_RULE : simpset -> thm list -> thm -> thm
+   val SIMP_RULE     : simpset -> thm list -> thm -> thm
    val ASM_SIMP_RULE : simpset -> thm list -> thm -> thm
 
    (* ---------------------------------------------------------------------
     * Simpset pretty printing
     * ---------------------------------------------------------------------*)
 
-end (* sig *)
+end

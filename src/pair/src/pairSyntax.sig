@@ -6,6 +6,7 @@ sig
  val dest_prod       : hol_type -> hol_type * hol_type
  val list_mk_prod    : hol_type list -> hol_type
  val strip_prod      : hol_type -> hol_type list
+ val spine_prod      : hol_type -> hol_type list
 
  val comma_tm        : term
  val fst_tm          : term

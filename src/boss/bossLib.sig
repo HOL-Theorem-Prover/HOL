@@ -70,6 +70,7 @@ sig
   val augment_srw_ss : ssdata list -> unit
 
   val EVAL           : term -> thm
+  val EVAL_RULE      : thm -> thm
   val EVAL_TAC       : tactic
 
   (* A compound automated reasoner. *)
@@ -77,4 +78,4 @@ sig
   val ZAP_TAC        : simpset -> thm list -> tactic
 
 
-end;
+end

@@ -31,7 +31,7 @@ fun away gfrees0 bvlist =
        end) bvlist ([], gfrees0)));
 
 (*---------------------------------------------------------------------------*)
-(* Make free whatever bound variables would prohibiting the case split       *)
+(* Make free whatever bound variables would prohibit the case split          *)
 (* or induction. This is not trivial, since the act of freeing up a variable *)
 (* can change its name (if another with same name already occurs free in     *)
 (* hypotheses). Then the term being split (or inducted) on needs to be       *)
@@ -265,7 +265,8 @@ fun recInduct thm =
           end
       fun tac (asl,w) =
        let val (V,body) = ndest_forall w
-           val P = list_mk_pabs(mk_vstrl parg_tyl V [],body)
+(*           val P = list_mk_pabs(mk_vstrl parg_tyl V [],body) *)
+           val P = list_mk_abs(V,body)
            val thm' = GEN_BETA_RULE (ISPEC P thm)
        in MATCH_MP_TAC thm' (asl,w)
        end

@@ -76,7 +76,7 @@ fun size_of_term tm =
           val isperm = is_var_perm (dest_eq eqn)
           val instth = HO_PART_MATCH (lhs o snd o strip_imp) th
                        handle HOL_ERR _ => ERR("COND_REWR_CONV",
-                         "bad theorem argument (not an conditional equation)")
+                         "bad theorem argument (not a conditional equation)")
       in
       fn solver => fn stack => fn tm =>
        (let val conditional_eqn = instth tm

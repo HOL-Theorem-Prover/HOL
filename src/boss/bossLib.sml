@@ -51,8 +51,10 @@ val RW_TAC         = BasicProvers.RW_TAC
 val SRW_TAC        = BasicProvers.SRW_TAC
 val srw_ss         = BasicProvers.srw_ss
 val augment_srw_ss = BasicProvers.augment_srw_ss
+
 val EVAL           = computeLib.EVAL_CONV;
-val EVAL_TAC       = CONV_TAC EVAL;
+val EVAL_RULE      = computeLib.EVAL_RULE
+val EVAL_TAC       = computeLib.EVAL_TAC
 
 val op && = BasicProvers.&&;
 
@@ -86,7 +88,8 @@ val _ = BasicProvers.augment_srw_ss
 end
 
 fun DECIDE tm =
- numLib.ARITH_PROVE tm handle HOL_ERR _ => tautLib.TAUT_PROVE tm;
+ numLib.ARITH_PROVE tm handle HOL_ERR _ => tautLib.TAUT_PROVE tm
+                       handle HOL_ERR _ => raise BOSS_ERR "DECIDE" "";
 
 
 fun DECIDE_TAC (g as (asl,_)) =
