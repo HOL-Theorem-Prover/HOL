@@ -53,7 +53,8 @@ val _ = add_infix_type
 
 val ABS_REP_prod =
  define_new_type_bijections
-  {ABS="ABS_prod",REP="REP_prod", name="ABS_REP_prod", tyax=prod_TY_DEF};
+  {ABS="ABS_prod", REP="REP_prod", 
+   name="ABS_REP_prod", tyax=prod_TY_DEF};
 
 val IS_PAIR_MK_PAIR = Q.prove 
 (`!x y. IS_PAIR (MK_PAIR x y)`,
