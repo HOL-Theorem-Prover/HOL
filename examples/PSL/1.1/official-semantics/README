@@ -10,7 +10,7 @@ UnclockedSemanticsScript.sml ... Unclocked semantics
 ClockedSemanticsScript.sml ..... Clocked Semantics
 ExtendedSyntaxScript.sml ....... Abstract syntax of full PSL 
 SyntacticSugarScript.sml ....... Semantics of full PSL 
-RewritesScript.sml ............. Rewrites semantics of Sugar
+RewritesScript.sml ............. Rewrites semantics of PSL
 LemmasScript.sml   ............. Some lemmas from Eisner, Fisman, Havlicek
 ProjectionScript.sml............ Validation of the projection view (incomplete)
 
