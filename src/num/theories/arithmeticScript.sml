@@ -2342,6 +2342,110 @@ val EXP_INJECTIVE = store_thm(
   ]);
 
 
+(* ********************************************************************** *)
+(* Maximum and minimum                                                    *)
+(* ********************************************************************** *)
+
+val _ = print "Minimums and maximums\n"
+
+val MAX = new_definition("MAX_DEF", ``MAX m n = if m < n then n else m``);
+val MIN = new_definition("MIN_DEF", ``MIN m n = if m < n then m else n``);
+
+open BasicProvers
+val ARW = RW_TAC bool_ss
+
+val MAX_COMM = store_thm(
+  "MAX_COMM",
+  ``!m n. MAX m n = MAX n m``,
+  ARW [MAX] THEN FULL_SIMP_TAC bool_ss [NOT_LESS] THEN
+  IMP_RES_TAC LESS_ANTISYM THEN IMP_RES_TAC LESS_EQUAL_ANTISYM);
+
+val MIN_COMM = store_thm(
+  "MIN_COMM",
+  ``!m n. MIN m n = MIN n m``,
+  ARW [MIN] THEN FULL_SIMP_TAC bool_ss [NOT_LESS] THEN
+  IMP_RES_TAC LESS_ANTISYM THEN IMP_RES_TAC LESS_EQUAL_ANTISYM);
+
+val MAX_ASSOC = store_thm(
+  "MAX_ASSOC",
+  ``!m n p. MAX m (MAX n p) = MAX (MAX m n) p``,
+  SIMP_TAC bool_ss [MAX] THEN
+  PROVE_TAC [NOT_LESS, LESS_EQ_TRANS, LESS_TRANS]);
+
+val MIN_ASSOC = store_thm(
+  "MIN_ASSOC",
+  ``!m n p. MIN m (MIN n p) = MIN (MIN m n) p``,
+  SIMP_TAC bool_ss [MIN] THEN
+  PROVE_TAC [NOT_LESS, LESS_EQ_TRANS, LESS_TRANS]);
+
+val MIN_MAX_EQ = store_thm(
+  "MIN_MAX_EQ",
+  ``!m n. (MIN m n = MAX m n) = (m = n)``,
+  SIMP_TAC bool_ss [MAX, MIN] THEN
+  PROVE_TAC [NOT_LESS, LESS_EQUAL_ANTISYM, LESS_ANTISYM]);
+
+val MIN_MAX_LT = store_thm(
+  "MIN_MAX_LT",
+  ``!m n. (MIN m n < MAX m n) = ~(m = n)``,
+  SIMP_TAC bool_ss [MAX, MIN] THEN
+  PROVE_TAC [LESS_REFL, NOT_LESS, LESS_OR_EQ]);
+
+val MIN_MAX_PRED = store_thm(
+  "MIN_MAX_PRED",
+  ``!P m n. P m /\ P n ==> P (MIN m n) /\ P (MAX m n)``,
+  PROVE_TAC [MIN, MAX]);
+
+val MIN_LT = store_thm(
+  "MIN_LT",
+  ``!n m. (MIN m n < m = ~(m = n) /\ (MIN m n = n)) /\
+          (MIN m n < n = ~(m = n) /\ (MIN m n = m)) /\
+          (m < MIN m n = F) /\ (n < MIN m n = F)``,
+  SIMP_TAC bool_ss [MIN] THEN
+  PROVE_TAC [LESS_REFL, NOT_LESS, LESS_OR_EQ, LESS_ANTISYM]);
+
+val MAX_LT = store_thm(
+  "MAX_LT",
+  ``!n m. (m < MAX m n = ~(m = n) /\ (MAX m n = n)) /\
+          (n < MAX m n = ~(m = n) /\ (MAX m n = m)) /\
+          (MAX m n < m = F) /\ (MAX m n < n = F)``,
+  SIMP_TAC bool_ss [MAX] THEN
+  PROVE_TAC [LESS_REFL, NOT_LESS, LESS_OR_EQ, LESS_ANTISYM]);
+
+val MIN_LE = store_thm(
+  "MIN_LE",
+  ``!n m. MIN m n <= m /\ MIN m n <= n``,
+  SIMP_TAC bool_ss [MIN] THEN
+  PROVE_TAC [LESS_OR_EQ, NOT_LESS]);
+
+val MAX_LE = store_thm(
+  "MAX_LE",
+  ``!n m. m <= MAX m n /\ n <= MAX m n``,
+  SIMP_TAC bool_ss [MAX] THEN
+  PROVE_TAC [LESS_OR_EQ, NOT_LESS]);
+
+val MIN_0 = store_thm(
+  "MIN_0",
+  ``!n. (MIN n 0 = 0) /\ (MIN 0 n = 0)``,
+  REWRITE_TAC [MIN] THEN
+  PROVE_TAC [NOT_LESS_0, NOT_LESS, LESS_OR_EQ]);
+
+val MAX_0 = store_thm(
+  "MAX_0",
+  ``!n. (MAX n 0 = n) /\ (MAX 0 n = n)``,
+  REWRITE_TAC [MAX] THEN
+  PROVE_TAC [NOT_LESS_0, NOT_LESS, LESS_OR_EQ]);
+
+val MIN_IDEM = store_thm(
+  "MIN_IDEM",
+  ``!n. MIN n n = n``,
+  PROVE_TAC [MIN]);
+
+val MAX_IDEM = store_thm(
+  "MAX_IDEM",
+  ``!n. MAX n n = n``,
+  PROVE_TAC [MAX]);
+
+
 val EXISTS_GREATEST = store_thm("EXISTS_GREATEST",
 --`!P. (?x. P x) /\ (?x:num. !y. y > x ==> ~P y)
                  =
