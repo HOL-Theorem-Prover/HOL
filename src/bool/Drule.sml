@@ -833,12 +833,14 @@ local fun varyAcc v (V,l) =
        let val v' = prim_variant V v in (v'::V, v'::l) end
 in
 fun SPEC_ALL th =
-   let val (hvs,con) = (HOLset.listItems ## I) (hyp_frees th, concl th)
-       val fvs = free_vars con
-       val vars = fst(strip_forall con)
-   in
-     SPECL (snd(itlist varyAcc vars (hvs@fvs,[]))) th
-   end
+    if is_forall (concl th) then let
+        val (hvs,con) = (HOLset.listItems ## I) (hyp_frees th, concl th)
+        val fvs = free_vars con
+        val vars = fst(strip_forall con)
+      in
+        SPECL (snd(itlist varyAcc vars (hvs@fvs,[]))) th
+      end
+    else th
 end;
 
 
