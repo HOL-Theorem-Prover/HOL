@@ -115,8 +115,19 @@ val ANDvDef =
 \module AND (in1,in2,out);\n\
 \ input in1,in2;\n\
 \ output out;\n\
+\ reg out;\n\
+\ wire w;\n\
 \\n\
-\ assign out = in1 && in2;\n\
+\ assign w = in1 && in2;\n\
+\\n\
+\ initial out = 0;\n\
+\\n\
+\ always @(w)\n\
+\    casex (w)\n\
+\       0:       out <= 0;\n\
+\       1:       out <= 1;\n\
+\       default: out <= 0;\n\
+\    endcase\n\
 \\n\
 \endmodule\n\
 \\n";
@@ -139,14 +150,14 @@ val ORvDef =
 (* Abstract delay element                                                    *)
 (*****************************************************************************)
 val DELvDef =
-"// Abstract delay, initialises outputting 0\n\
+"// Abstract delay, transparent on intialisation\n\
 \module DEL (inp,out);\n\
 \ parameter size = 31;\n\
 \ input  [size:0] inp;\n\
 \ output [size:0] out;\n\
 \ reg    [size:0] out;\n\
 \\n\
-\ initial out = 0;\n\
+\ initial out = inp;\n\
 \\n\
 \ always  out = #1 inp;\n\
 \\n\
@@ -157,15 +168,13 @@ val DELvDef =
 (* Abstract edge-triggered clocked flipflop                                  *)
 (*****************************************************************************)
 val DFFvDef =
-"// Abstract edge triggered flipflop, initialises with 0\n\
+"// Abstract edge triggered flipflop\n\
 \module DFF (d,clk,q);\n\
 \ parameter size = 31;\n\
 \ input clk;\n\
 \ input  [size:0] d;\n\
 \ output [size:0] q;\n\
 \ reg    [size:0] q;\n\
-\\n\
-\ initial q = 0;\n\
 \\n\
 \ always @(posedge clk) q <= d;\n\
 \\n\
@@ -183,8 +192,6 @@ val DtypevDef =
 \ input  [size:0] d;\n\
 \ output [size:0] q;\n\
 \ reg    [size:0] q;\n\
-\\n\
-\ initial q = 0;\n\
 \\n\
 \ always @(posedge clk) q <= d;\n\
 \\n\
@@ -1315,10 +1322,10 @@ and inputs = [("inp", "5")];
 (* Default values for simulation                                             *)
 (*****************************************************************************)
 
-val maxtime_default  = ref 1000
-and period_default   = ref 10
+val maxtime_default  = ref 10000
+and period_default   = ref 5
 and stimulus_default = ref(fn (inputs:(string * string) list)
-                           => [(0, 13, inputs, 13)]);
+                           => [(10, 10, inputs, 13)]);
 
 fun SIMULATE thm inputs =
  let val name = fst(dest_const(#1(dest_cir thm)))
