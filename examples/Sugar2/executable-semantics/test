@@ -28,20 +28,19 @@ val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
 (******************************************************************************
 * Evaluating expressions of the form x IN {y1; y2; ...; yn}
 ******************************************************************************)
+
+(* For the current set of Sugar2 example properties, the following INSERT
+   theorems seem to work better than this general conversion.
 val _ = 
  computeLib.add_convs
   [(``$IN``,
     2,
     (pred_setLib.SET_SPEC_CONV ORELSEC pred_setLib.IN_CONV EVAL))];
+*)
 
-(******************************************************************************
-* Rejected by computeLib.add_funs, but used for simplification.
-******************************************************************************)
-val SOME_EL_F =
- prove
-  (``SOME_EL (\x. F) l = F``,
-   Induct_on `l`
-    THEN RW_TAC std_ss [SOME_EL]);
+val () = computeLib.add_funs
+  [pred_setTheory.IN_INSERT,
+   pred_setTheory.NOT_IN_EMPTY];
 
 (******************************************************************************
 * Evaluating Sugar2 formulas
@@ -54,6 +53,31 @@ val _ = computeLib.add_funs
            UF_SEM_F_SUFFIX_IMP_REC,
            B_SEM,
            EVAL_US_SEM]);
+
+(******************************************************************************
+* For simplification during symbolic evaluation of Sugar2 formulas
+******************************************************************************)
+
+(* Rejected by computeLib.add_funs, but (used to be) useful for simplification.
+val SOME_EL_F =
+ prove
+  (``SOME_EL (\x. F) l = F``,
+   Induct_on `l`
+    THEN RW_TAC std_ss [SOME_EL]);
+*)
+
+val EXISTS_COND = prove
+  (``!p c a b.
+       EXISTS p (if c then a else b) = if c then EXISTS p a else EXISTS p b``,
+   RW_TAC std_ss []);
+
+val COND_SIMP = prove
+  (``!c a b.
+       (COND c a F = c /\ a) /\ (COND c a T = ~c \/ a) /\
+       (COND c T b = c \/ b) /\ (COND c F b = ~c /\ b)``,
+   RW_TAC std_ss [IMP_DISJ_THM]);
+
+val () = computeLib.add_funs [EXISTS_COND, COND_SIMP];
 
 (******************************************************************************
 * Examples
@@ -93,7 +117,7 @@ EVAL
 EVAL
  ``UF_SEM (FINITE[{1};{3};{2}]) (F_UNTIL(F_BOOL(B_PROP 1), F_BOOL(B_PROP 2)))``;
 
-(* Can't evaluate a variable regular expression
+(* Can't evaluate a variable regular expression using automata!
 EVAL ``UF_SEM (FINITE[s0;s1;s2]) (F_SUFFIX_IMP(r,f))``;
 EVAL ``UF_SEM (FINITE[{1};{3};{2}]) (F_SUFFIX_IMP(r,f))``;
 *)
@@ -101,64 +125,56 @@ EVAL ``UF_SEM (FINITE[{1};{3};{2}]) (F_SUFFIX_IMP(r,f))``;
 (******************************************************************************
 * [{1};{2};{3}]  |=  {n}(f) 
 ******************************************************************************)
-(SIMP_RULE list_ss [COND_RAND,SOME_EL,pred_setTheory.IN_SING] o
- EVAL)
+EVAL
 ``UF_SEM (FINITE[{1};{2};{3}])
    (F_SUFFIX_IMP (S_BOOL (B_PROP n), f))``;
 
 (******************************************************************************
 * [{1};{2};{3}]  |=  {n}(p) 
 ******************************************************************************)
-(SIMP_RULE list_ss [COND_RAND,SOME_EL,pred_setTheory.IN_SING] o
- EVAL)
+EVAL
 ``UF_SEM (FINITE[{1};{2};{3}])
    (F_SUFFIX_IMP (S_BOOL (B_PROP n), F_BOOL(B_PROP p)))``;
 
 (******************************************************************************
 * [{1};{2};{3}]  |=  {[*]}(f) 
 ******************************************************************************)
-(SIMP_RULE list_ss [COND_RAND,SOME_EL,pred_setTheory.IN_SING] o
- EVAL)
+EVAL
 ``UF_SEM (FINITE[{1};{2};{3}])
    (F_SUFFIX_IMP (S_REPEAT S_TRUE, f))``;
 
 (******************************************************************************
 * [{1};{2};{3}]  |=  {[*]}(p) 
 ******************************************************************************)
-(SIMP_RULE list_ss [COND_RAND,SOME_EL,pred_setTheory.IN_SING] o
- EVAL)
+EVAL
 ``UF_SEM (FINITE[{1};{2};{3}])
    (F_SUFFIX_IMP (S_REPEAT S_TRUE, F_BOOL(B_PROP p)))``;
 
 (******************************************************************************
 * [{p};{p};{p}]  |=  {[*]}(p) 
 ******************************************************************************)
-(SIMP_RULE list_ss [COND_RAND,SOME_EL,pred_setTheory.IN_SING] o
- EVAL)
+EVAL
 ``UF_SEM (FINITE[{p};{p};{p}])
    (F_SUFFIX_IMP (S_REPEAT S_TRUE, F_BOOL(B_PROP p)))``;
 
 (******************************************************************************
 * [{p1};{p2};{p3}]  |=  {[*]}(p) 
 ******************************************************************************)
-(SIMP_RULE list_ss [COND_RAND,SOME_EL,pred_setTheory.IN_SING] o
- EVAL)
+EVAL
 ``UF_SEM (FINITE[{p1};{p2};{p3}])
    (F_SUFFIX_IMP (S_REPEAT S_TRUE, F_BOOL(B_PROP p)))``;
 
 (******************************************************************************
 * [{1};{2};{3};{4};{5};{6};{7};{8};{9}]  |=  {3}(f) 
 ******************************************************************************)
-(SIMP_RULE list_ss [COND_RAND,SOME_EL,pred_setTheory.IN_SING] o
- EVAL)
+EVAL
 ``UF_SEM (FINITE[{1};{2};{3};{4};{5};{6};{7};{8};{9}])
    (F_SUFFIX_IMP(S_BOOL(B_PROP 3), f))``;
 
 (******************************************************************************
 * [{1};{2};{3};{4};{5};{6};{7};{8};{9}]  |=  {[*];2;3}(f) 
 ******************************************************************************)
-(SIMP_RULE list_ss [COND_RAND,SOME_EL,pred_setTheory.IN_SING] o
- EVAL)
+EVAL
 ``UF_SEM (FINITE[{1};{2};{3};{4};{5};{6};{7};{8};{9}])
    (F_SUFFIX_IMP 
     (S_CAT(S_REPEAT S_TRUE, S_CAT(S_BOOL (B_PROP 2),S_BOOL (B_PROP 3))),
@@ -167,8 +183,7 @@ EVAL ``UF_SEM (FINITE[{1};{3};{2}]) (F_SUFFIX_IMP(r,f))``;
 (******************************************************************************
 * [{1};{2};{3};{4};{5};{6};{7};{8};{9}]  |=  {[*];2:3}(f) 
 ******************************************************************************)
-(SIMP_RULE list_ss [COND_RAND,SOME_EL,pred_setTheory.IN_SING] o
- EVAL)
+EVAL
 ``UF_SEM (FINITE[{1};{2};{3};{4};{5};{6};{7};{8};{9}])
    (F_SUFFIX_IMP 
     (S_CAT(S_REPEAT S_TRUE, S_FUSION(S_BOOL (B_PROP 2),S_BOOL (B_PROP 3))),
@@ -177,8 +192,7 @@ EVAL ``UF_SEM (FINITE[{1};{3};{2}]) (F_SUFFIX_IMP(r,f))``;
 (******************************************************************************
 * [{1};{2};{3};{4};{5};{6};{7};{8};{9}]  |=  {[*];2;3;[*]}(f) 
 ******************************************************************************)
-(SIMP_RULE list_ss [COND_RAND,SOME_EL,pred_setTheory.IN_SING] o
- EVAL)
+EVAL
 ``UF_SEM (FINITE[{1};{2};{3};{4};{5};{6};{7};{8};{9}])
    (F_SUFFIX_IMP 
     (S_CAT(S_REPEAT S_TRUE, 
