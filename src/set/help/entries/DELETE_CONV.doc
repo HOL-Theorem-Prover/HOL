@@ -7,7 +7,7 @@ Reduce {{{x1,...,xn}} DELETE x} by deleting {x} from  {{{x1,...,xn}}}.
 
 \LIBRARY sets
 
-\DESCRIBE 
+\DESCRIBE
 The function {DELETE_CONV} is a parameterized conversion for reducing finite
 sets of the form {"{{t1,...,tn}} DELETE t"}, where {{{t1,...,tn}}} is a set of
 type {(ty)set} and {t} is a term of type {ty}.  The first argument to
@@ -18,7 +18,7 @@ values of the base type {ty}.  Given an equation {"e1 = e2"}, where {e1} and
 
 Given such a conversion {conv}, the function {DELETE_CONV} returns a
 conversion that maps a term of the form {"{{t1,...,tn}} DELETE t"} to the
-theorem 
+theorem
 {
    |- {{t1,...,tn}} DELETE t = {{ti,...,tj}}
 }
@@ -42,11 +42,12 @@ elements of the set.
    |- {{2,1,SUC 1,3}} DELETE 2 = {{1,3}}
 }
 
-\FAILURE 
-{DELETE_CONV conv} fails if applied to a term not of the form {"{{t1,...,tn}}
-DELETE t"}.  A call {DELETE_CONV conv "{{t1,...,tn}} DELETE t"} fails unless
+\FAILURE
+{DELETE_CONV conv} fails if applied to a term not of the form
+{"{{t1,...,tn}} DELETE t"}.  A call
+{DELETE_CONV conv "{{t1,...,tn}} DELETE t"} fails unless
 for each element {ti} of the set {{{t1,...,tn}}}, the term {t} is either
-alpha-equivalent to {ti} or {conv "ti = t"} returns {|- (ti = t) = T} or 
+alpha-equivalent to {ti} or {conv "ti = t"} returns {|- (ti = t) = T} or
 {|- (ti = t) = F}.
 
 \SEEALSO

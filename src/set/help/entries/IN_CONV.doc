@@ -7,7 +7,7 @@ Decision procedure for membership in finite sets.
 
 \LIBRARY sets
 
-\DESCRIBE 
+\DESCRIBE
 The function {IN_CONV} is a parameterized conversion for proving or disproving
 membership assertions of the general form:
 {
@@ -30,8 +30,8 @@ maps a term of the form {"t IN {{t1,...,tn}}"} to the theorem
 proves {|- (t = ti) = T} for any {ti}. If the supplied conversion proves
 {|- (t = ti) = F} for every {ti}, then the result is the theorem
 {
-   |- t IN {{t1,...,tn}} = F 
-} 
+   |- t IN {{t1,...,tn}} = F
+}
 \noindent In all other cases, {IN_CONV} will fail.
 
 \EXAMPLE
@@ -58,11 +58,11 @@ the value to be tested for membership is alpha-equivalent to an actual element:
 able in this case to prove the required result.
 
 \FAILURE
-{IN_CONV conv} fails if applied to a term that is not of the form {"t IN
-{{t1,...,tn}}"}.  A call {IN_CONV conv "t IN {{t1,...,tn}}"} fails unless the
-term {t} is alpha-equivalent to some {ti}, or {conv "t = ti"} returns
-{|- (t = ti) = T} for some {ti}, or {conv "t = ti"} returns
-{|- (t = ti) = F} for every {ti}.
+{IN_CONV conv} fails if applied to a term that is not of the form
+{"t IN {{t1,...,tn}}"}.  A call {IN_CONV conv "t IN {{t1,...,tn}}"}
+fails unless the term {t} is alpha-equivalent to some {ti}, or
+{conv "t = ti"} returns {|- (t = ti) = T} for some {ti}, or {conv "t = ti"}
+returns {|- (t = ti) = F} for every {ti}.
 
 \ENDDOC
 
