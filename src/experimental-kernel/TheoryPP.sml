@@ -15,6 +15,8 @@ open Feedback Lib Portable;
 
 val ERR = mk_HOL_ERR "TheoryPP";
 
+val pp_sig_hook = ref (fn () => ());  (* XXX minimal change to make HOL build *)
+
 val concat = String.concat;
 val sort = Lib.sort (fn s1:string => fn s2 => s1<=s2);
 val psort = Lib.sort (fn (s1:string,_:Thm.thm) => fn (s2,_:Thm.thm) => s1<=s2);
