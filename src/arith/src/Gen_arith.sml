@@ -125,7 +125,9 @@ fun non_presburger_subterms tm =
 (* number arithmetic.                                                        *)
 (*---------------------------------------------------------------------------*)
 
-val is_presburger = (all is_var) o non_presburger_subterms;
+val num_ty = Parse.Type`:num`
+fun is_num_var tm = is_var tm andalso type_of tm = num_ty
+val is_presburger = (all is_num_var) o non_presburger_subterms;
 
 (*---------------------------------------------------------------------------*)
 (* ARITH_CONV : conv                                                         *)

@@ -155,12 +155,26 @@ val linear_reduction = term_of_lin o lin_of_term;
  * is_arith (--`~(x:'a = y)`--);                   (* false *)
  * is_arith (--`!z:num. ~(x:'a = y)`--);           (* false *)
  * is_arith (--`!z:num. ~(z = y)`--);              (* true *)
- * is_arith (--`!P. !z:num. ~(z = y) /\ P`--);     (* true *)
- * is_arith (--`(!i. i < 1 + n' ==> (f i = f' i)) ==> 1 + n > 0`+-);
+ * is_arith (--`!P. !z:num. ~(z = y) /\ P`--);     (* false *)
+ * is_arith (--`(!i. i < 1 + n' ==> (f i = f' i)) ==> 1 + n > 0`--);
+                                                   (* false *)
  * --------------------------------------------------------------------*)
 (* there might still be bugs in this.... DRS 5 Aug 96 *)
 
-fun is_arith tm =
+fun cond_has_arith_components tm =
+  if is_cond tm then let
+    val {cond,rarm,larm} = Dsyntax.dest_cond tm
+  in
+    List.all is_arith [cond, rarm, larm]
+  end
+  else true
+and
+  is_arith tm =
+  is_presburger tm orelse
+  List.all (fn t => type_of t = num_ty andalso cond_has_arith_components t)
+  (non_presburger_subterms tm)
+
+(*
    if (is_forall tm) then
        (type_of (bvar (rand tm)) = num_ty andalso is_presburger(body(rand tm)))
    else if is_exists tm then
@@ -172,14 +186,16 @@ fun is_arith tm =
      orelse (is_eq tm andalso type_of (rhs tm) = Type.bool) then
      is_arith (lhand tm) andalso is_arith (rand tm)
    else if (is_neg tm) then is_arith (dest_neg tm)
-   else if (is_eq tm) then (type_of (rhs tm) = num_ty)
+   else if (is_eq tm) then (type_of (rhs tm) = num_ty andalso
+                            no_bool_vars_in (lhs tm) andalso
+                            no_bool_vars_in (rhs tm))
    else false;
+*)
 
 
 fun is_arith_thm thm = (not (null (hyp thm)) andalso is_arith (concl thm));
 
 type ctxt = thm list;
-val facts = [`1 < 2`,`1 + x = x + 1`,`x < x + 1`];
 
 val ARITH = EQT_ELIM o ARITH_CONV;
 
@@ -252,26 +268,38 @@ MULT_EQ_0, sym_lhs MULT_EQ_0, ADD_EQ_0, sym_lhs ADD_EQ_0,
 end;
 
 
-val ARITH_REDUCER =
-  let exception CTXT of thm list;
-      fun get_ctxt e = (raise e) handle CTXT c => c;
-  in REDUCER {addcontext= fn (ctxt, newthms) =>
-              CTXT ((filter is_arith_thm
-                     (flatten (map CONJUNCTS newthms)))@get_ctxt ctxt),
-              apply=fn args => CACHED_ARITH (get_ctxt (#context args)),
-              initial=CTXT []}
-  end;
+val ARITH_REDUCER = let
+  exception CTXT of thm list;
+  fun get_ctxt e = (raise e) handle CTXT c => c
+  fun add_ctxt(ctxt, newthms) = let
+    val addthese = filter is_arith_thm (flatten (map CONJUNCTS newthms))
+  in
+    CTXT (addthese @ get_ctxt ctxt)
+  end
+in
+  REDUCER {addcontext = add_ctxt,
+           apply = fn args => CACHED_ARITH (get_ctxt (#context args)),
+           initial = CTXT []}
+end;
 
-fun mk_redconv pat = {name = "REDUCE_CONV (arithmetic reduction)",
-                      trace = 2,
-                      key = SOME([], pat),
-                      conv = K (K (CHANGED_CONV reduceLib.REDUCE_CONV))}
+val a_v = --`NUMERAL a`--
+val b_v = --`NUMERAL b`--
+val zero = --`0`--
+fun mk_redconv0 pat = {name = "REDUCE_CONV (arithmetic reduction)",
+                       trace = 2,
+                       key = SOME([], pat),
+                       conv = K (K (CHANGED_CONV reduceLib.REDUCE_CONV))}
+fun mk_redconv op_t =
+  map mk_redconv0
+  [list_mk_comb(op_t, [a_v, b_v]), list_mk_comb(op_t, [a_v, zero]),
+   list_mk_comb(op_t, [zero, b_v]), list_mk_comb(op_t, [zero, zero])]
 
 val ARITH_ss = simpLib.SIMPSET
-    {convs = [mk_redconv (--`a * b`--),
-              mk_redconv (--`a EXP b`--),
-	      mk_redconv (--`a DIV b`--),
-	      mk_redconv (--`a MOD b`--)],
+    {convs = flatten (map mk_redconv [--`$*`--, --`$+`--, --`$-`--,
+                                      --`$DIV`--, --`$MOD`--, --`$EXP`--,
+                                      --`$<`--, --`$<=`--, --`$>`--,
+                                      --`$>=`--,
+                                      --`$= : num -> num -> bool`--]),
      rewrs = arithmetic_rewrites,
      congs = [],
      filter = NONE,
