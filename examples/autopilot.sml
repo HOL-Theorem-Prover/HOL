@@ -357,7 +357,7 @@ Induct
 
 val reachable_induct = prove
 (Term`!P. (!st. is_initial st ==> P st) /\ 
-          (!st st' e. is_reachable st /\ (st' = nextstate st e) ==> P st')
+          (!st st' e. is_reachable st ==> P (nextstate st e))
           ==>
           !st. is_reachable st ==> P st`,
  RW_TAC bool_ss [is_reachable_def]
