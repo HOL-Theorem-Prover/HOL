@@ -68,6 +68,23 @@ let local_set r v f x =
   r := old_v;
   y
 
+(* last element of a list *)
+let rec last = function
+  | []  -> raise Not_found
+  | [x] -> x
+  | (x::xs) -> last xs
+
+(* last location in list, or zero otherwise *)
+let last_loc_or_zero ts =
+  try
+    let (_,l) = last ts in l
+  with
+    Not_found -> zero_loc
+
+(* first location (if defined), else second *)
+let orloc l1 l2 =
+  if l1 = zero_loc then l2 else l1
+    
 
 (* -------------------------------------------------------------------- *)
 (*  HOL helpers                                                         *)
@@ -282,7 +299,7 @@ let readbal : hol_content list        (* input stream *)
            -> bool                    (* allow multi-line *)
            -> (hol_content list list *   (* the arg (may be multiple args if cf) *)
                hol_content list)         (* the remainder *)
-  = fun ts cf ml ->
+  = fun ts0 cf ml ->
   let rec bal ps(*stack of closing delimiters*) ds(*tokens so far*) dss(*full args so far*) ts =
     let n = List.length ps
     in
@@ -317,16 +334,16 @@ let readbal : hol_content list        (* input stream *)
         else
           raise (BadArg ("7: line break not allowed in non-multiline curried op",l))
     | (t::ts)        -> bal ps (t::ds) dss ts
-    | []             -> raise (BadArg ("1: unexpected end of input",zero_loc))
+    | []             -> raise (BadArg ("1: unexpected end of input",last_loc_or_zero ts0))
   in
-  bal [] [] [] ts
+  bal [] [] [] ts0
 
 let safedumphol_content =
   function
       (HolIndent n,_) -> "<indent>"
     | t -> dumphol_content t
 
-let rec readarg cf ml ts = (* read a single arg: spaces then (id.id.id or matched-paren string) *)
+let rec readarg cf ml ts0 = (* read a single arg: spaces then (id.id.id or matched-paren string) *)
   (* returns a list of lists of tokens because a single arg arity-wise may be
      multiple TeX arguments if cy_commas is in force *)
   let rec sp ts =  (* skip spaces (and newlines if allowed) *)
@@ -343,13 +360,13 @@ let rec readarg cf ml ts = (* read a single arg: spaces then (id.id.id or matche
     | ((HolIdent(_,_),l)::_)        -> raise (BadArg ("3: expected dot between idents",l))
     | _                             -> ([List.rev ds],ts)
   in
-  match sp ts with
+  match sp ts0 with
     (((HolIdent(true ,s),_) as t)::ts)  -> dotted [t] ts
   | (((HolIdent(false,s),_) as t)::ts)  -> ([[t]],ts)  (* no fields in a symbolic ident *)
   | (((HolSep(s)        ,_) as t)::ts) when List.mem_assoc s balanced
                           -> readbal (t::ts) cf ml
   | ((t,l)::ts)               -> raise (BadArg ("4: bad token "^safedumphol_content (t,l)^" follows curried op",l))
-  | []                    -> raise (BadArg ("5: unexpected end of input",zero_loc))
+  | []                    -> raise (BadArg ("5: unexpected end of input",last_loc_or_zero ts0))
 
 
 (* -------------------------------------------------------------------- *)
@@ -478,7 +495,7 @@ and munge_hol_content : pvars -> hol_content -> unit
 
 (* output a curried op, returning the remainder of the stream *)
 and munge_curried : pvars -> hol_content -> curried_info -> hol_content list -> hol_content list
-  = fun pvs x info ts ->
+  = fun pvs ((_,loc0) as x) info ts0 ->
   let rec go n args ts =
     if n <= 0 then
       (print_string info.cy_cmd;
@@ -489,14 +506,14 @@ and munge_curried : pvars -> hol_content -> curried_info -> hol_content list -> 
         (dss,ts) -> go (n-1) (List.rev_append dss args) ts
   in
   try
-    go info.cy_arity [] ts
+    go info.cy_arity [] ts0
   with
     BadArg(s,l) -> (* abort curry parse; do it uncurried *)
               let w = "curry parse failed: "^dumphol_content x^" ==> "^info.cy_cmd^" "^s
               in
-              write_warning (w,l);
+              write_warning (w,orloc l loc0);
               munge_hol_content pvs x;
-              ts
+              ts0
 
 
 (* output an entire HOL document *)
