@@ -6,13 +6,13 @@ the interface to the logic (up to and including
 Section~\ref{avra_terms}); the quotation, printing and parsing of
 logical terms (Section~\ref{quotation}); the representation of
 theorems (Section~\ref{avra_theorems}); the representation of theories
-(Section~\ref{theoryfns}); some useful \HOL\ theories
-(Sections~\ref{HOL-theory} and \ref{rules}); the methods for extending
-theories (throughout Section~\ref{HOL-ancestry} and in
-Section~\ref{types-package}); and the \ML\ system functions
-concerning the logic (Section~\ref{HOLflags}).  It is assumed that the
-reader is familiar with \ML.  If not, the introduction to \ML\ in
-{\sl Getting Started with HOL\/} in \TUTORIAL\ should be read first.
+(Section~\ref{theoryfns}); the fundamental \HOL\ theory \texttt{bool}
+(Section~\ref{boolfull}); the primitive rules of inference
+(Section~\ref{rules}); and the methods for extending theories
+(throughout Section~\ref{theoryfns} and also later in
+Section~\ref{sec:bossLib}).  It is assumed that the reader is familiar
+with \ML.  If not, the introduction to \ML\ in {\sl Getting Started
+with HOL\/} in \TUTORIAL\ should be read first.
 
 The \HOL\ system provides \ML\ types \ml{hol\_type} and \ml{term} to represent
 types and terms of the \HOL\ logic, as defined in Sections~\ref{types} and
@@ -785,7 +785,7 @@ $\exists$-quantification & {\small\verb%?%}$x${\small\verb%.%}$t$ &
 {\small\verb%$?(\%}$x${\small\verb%.%}$t${\small\verb%)%} & {\small\verb%mk_exists(%}$x${\small\verb%,%}$t${\small\verb%)%} \\ \hline
 $\hilbert$-term & {\small\verb%@%}$x${\small\verb%.%}$t$ &
 {\small\verb%$@(\%}$x${\small\verb%.%}$t${\small\verb%)%} & {\small\verb%mk_select(%}$x${\small\verb%,%}$t${\small\verb%)%} \\ \hline
-Conditional\index{COND@\ml{COND}} & {\small\verb%(%}$t${\small\verb%=>%}$t_1${\small\verb%|%}$t_2${\small\verb%)%} &
+Conditional\index{COND@\ml{COND}} & {\small\verb%if %}$t\ ${\small\verb%then %}$t_1${\small\verb% else %}$t_2$ &
 {\small\verb%COND %}$t\ t_1\ t_2$ & {\small\verb%mk_cond(%}$t${\small\verb%,%}$t_1${\small\verb%,%}$t_2${\small\verb%)%}
  \\ \hline
 {\small\verb%let%}-expression & {\small\verb%let %}$x${\small\verb%=%}$t_1${\small\verb% in %}$t_2$ &

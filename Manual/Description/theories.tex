@@ -1,38 +1,36 @@
 \chapter{Commonly-used Theories}\label{HOLtheories}
 
 \index{theories, in HOL logic@theories, in \HOL\ logic!hierarchies of}
-A useful subset of the collection of theories distributed with the \HOL\
-system \index{ancestry, of HOL system theories@ancestry, of \HOL\ system
-theories} is listed in Table \ref{nativeTheories}.
+A useful subset of the collection of theories distributed with the
+\HOL\ system \index{ancestry, of HOL system theories@ancestry, of
+\HOL\ system theories} is listed in Table~\ref{CommonTheories}.  In
+the rest of this section, each of these theories is briefly described.
+A complete list of all the definitions and theorems in each theory is
+not given here; the sections that follow provide only an overview of
+the contents of each theory.  For a complete list of all the built-in
+axioms, definitions and theorems in \HOL, see \REFERENCE.
+
 
 \begin{table}
 \begin{center}
 \begin{tabular}{|l|l|} \hline
-minTheory & the origin theory \\
-boolTheory & definitions of logical operators and basic axioms \\
-combinTheory & combinators \\
-pairTheory & theory of pairs \\
-sumTheory & disjoint sums \\
-relationTheory & transitive closure and wellfoundedness \\
-numTheory & Peano's axioms derived from the axiom of infinity \\
-prim\_recTheory, & the primitive recursion theorem \\
-arithmeticTheory & Peano arithmetic development \\
-numeralTheory & numerals \\
-integerTheory & integers \\
-setTheory & sets as a separate type (includes finite sets) \\
-pred\_setTheory & sets as predicates (includes finite sets) \\
-bagTheory & bags (also known as \emph{multisets})\\
-listTheory & lists  \\
-rich\_listTheory & extended theory of lists \\
-optionTheory & the {\tt option} type \\
-finite\_mapTheory & finite functions \\
-ltreeTheory & polymorphic finitely branching trees \\
-restr\_binderTheory & definitions of binder restrictions \\
-res\_quanTheory & restricted quantifier support \\
-asciiTheory & ascii \\
-stringTheory & strings \\
-wordTheory & ({\it plus several others}) theory of bitstrings \\
-realTheory & ({\it plus several others}) real numbers and analysis \\ \hline
+minTheory & the origin theory \\ boolTheory & definitions of logical
+operators and basic axioms \\ combinTheory & combinators \\ pairTheory
+& theory of pairs \\ sumTheory & disjoint sums \\ relationTheory &
+transitive closure and wellfoundedness \\ numTheory & Peano's axioms
+derived from the axiom of infinity \\ prim\_recTheory, & the primitive
+recursion theorem \\ arithmeticTheory & Peano arithmetic development
+\\ numeralTheory & numerals \\ integerTheory & integers \\ setTheory &
+sets as a separate type (includes finite sets) \\ pred\_setTheory &
+sets as predicates (includes finite sets) \\ bagTheory & bags (also
+known as \emph{multisets})\\ listTheory & lists \\ rich\_listTheory &
+extended theory of lists \\ optionTheory & the {\tt option} type \\
+finite\_mapTheory & finite functions \\ ltreeTheory & polymorphic
+finitely branching trees \\ restr\_binderTheory & definitions of
+binder restrictions \\ res\_quanTheory & restricted quantifier support
+\\ asciiTheory & ascii \\ stringTheory & strings \\ wordTheory & ({\it
+plus several others}) theory of bitstrings \\ realTheory & ({\it plus
+several others}) real numbers and analysis \\ \hline
 \end{tabular}
 \caption{Commonly-used Theories}\label{CommonTheories}
 \end{center}
@@ -42,11 +40,6 @@ realTheory & ({\it plus several others}) real numbers and analysis \\ \hline
 % theory@\ml{bool}, the \HOL\ theory}\index{ind, the theory@\ml{ind},
 % the theory}
 
-\noindent In the rest of this section, each of these theories is briefly
-described.  A complete list of all the definitions and theorems in each
-theory is not given here; the sections that follow provide only an
-overview of the contents of each theory.  For a complete list of all the
-built-in axioms, definitions and theorems in \HOL, see \REFERENCE.
 
 \section{Combinators and the theory {\tt combin}}
 
@@ -569,7 +562,10 @@ theorems in the theory \ml{one} are:
 
 \noindent These three theorems are equivalent characterizations of the type
 with only one value. The theory \ml{one} is typically used in
-constructing more elaborate types.
+constructing more elaborate types.  The one value of the type
+\ml{one}, can also be written as \ml{()} by analogy with the unit
+value in \ML.  This is also the default way in which this value is
+printed by the system pretty-printer.
 
 \section{Natural numbers}
 
