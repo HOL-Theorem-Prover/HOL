@@ -119,7 +119,7 @@ local
      THEN CONV_TAC (REDEPTH_CONV NOT_FORALL_CONV)
      THEN REWRITE_TAC [NOT_IMP, CONJ_ASSOC])
   val common_tauts =
-    [TAUT `~(~p) = p`,
+    [TAUT `~~p:bool = p`,
      TAUT `~(p /\ q) = ~p \/ ~q`,
      TAUT `~(p \/ q) = ~p /\ ~q`,
      TAUT `~(p ==> q) = p /\ ~q`,
