@@ -8,6 +8,8 @@
 ;;; your elisp variable load-path includes the directory where it
 ;;; lives.
 
+(require 'thingatpt)
+
 (define-prefix-command 'hol-map)
 (make-variable-buffer-local 'hol-buffer-name)
 (make-variable-buffer-local 'hol-buffer-ready)
@@ -42,6 +44,8 @@ process in it."
 
 (defun ensure-hol-buffer-ok ()
   "Ensures by prompting that a HOL buffer name is OK, and returns it."
+  (if (not hol-buffer-ready)
+      (progn (make-buffer-hol-ready) (setq hol-buffer-ready t)))
   (if (hol-buffer-ok hol-buffer-name) hol-buffer-name
     (message
      (cond (hol-buffer-name (concat hol-buffer-name " not valid anymore."))
@@ -54,9 +58,7 @@ process in it."
       (sleep-for 1)
       (setq hol-buffer-name
             (read-buffer "HOL buffer: " nil t)))
-    hol-buffer-name)
-  (if (not hol-buffer-ready)
-      (progn (make-buffer-hol-ready) (setq hol-buffer-ready t))))
+    hol-buffer-name))
 
 
 (defun is-a-then (s)
@@ -64,16 +66,21 @@ process in it."
 
 (defun next-hol-lexeme-terminates-tactic ()
   (skip-syntax-forward " ")
-  (or (char-equal (following-char) ?,) (is-a-then (word-at-point))))
+  (or (char-equal (following-char) ?,)
+      (char-equal (following-char) ?=)
+      (char-equal (following-char) ?;)
+      (is-a-then (word-at-point)))))
 
 (defun previous-hol-lexeme-terminates-tactic ()
   (save-excursion
-    (skip-syntax-backward " ")
+    (skip-chars-backward " \n\t\r")
     (or (char-equal (preceding-char) ?,)
+        (char-equal (preceding-char) ?=)
+        (char-equal (preceding-char) ?;)
         (and (condition-case nil
                  (progn (backward-char 1) t)
                  (error nil))
-             (is-a-then (word-at-point))))))
+             (is-a-then (word-at-point)))))))
 
 ;;; returns true and moves forward a sexp if this is possible, returns nil
 ;;; and stays where it is otherwise
@@ -86,23 +93,67 @@ process in it."
       (progn (backward-sexp 1) t)
     (error nil)))
 
-(defun find-tactic-extent ()
-  (interactive)
-  (let* (;; first search forward
-         (endpt
-          (save-excursion
-            (while (and (not (next-hol-lexeme-terminates-tactic))
-                        (my-forward-sexp)) nil)
-            (skip-syntax-backward " ")
-            (point)))
-         (startpt
-          (save-excursion
-            (while (and (not (previous-hol-lexeme-terminates-tactic))
-                        (my-backward-sexp)) nil)
-            (point))))
-    (goto-char endpt)
-    (push-mark startpt nil t)))
+(defun skip-hol-tactic-punctuation-forward ()
+  (let ((last-point (point)))
+    (while (progn (if (is-a-then (word-at-point)) (forward-word 1))
+                  (skip-chars-forward ", \n\t\r")
+                  (not (= last-point (point))))
+      (setq last-point (point)))))
 
+(defun word-before-point ()
+  (save-excursion
+    (condition-case nil
+        (progn (backward-char 1) (word-at-point))
+      (error nil))))
+
+(defun skip-hol-tactic-punctuation-backward ()
+  (let ((last-point (point)))
+    (while (progn (if (is-a-then (word-before-point)) (forward-word -1))
+                  (skip-chars-backward ", \n\t\t")
+                  (not (= last-point (point))))
+      (setq last-point (point)))))
+
+(defun forward-hol-tactic (n)
+  (interactive "p")
+  ;; to start you have to get off "tactic" punctuation, i.e. whitespace,
+  ;; commas and the words THEN and THENL.
+  (let ((count (or n 1)))
+    (cond ((> count 0)
+           (while (> count 0)
+             (let (moved)
+               (skip-hol-tactic-punctuation-forward)
+               (while (and (not (next-hol-lexeme-terminates-tactic))
+                           (my-forward-sexp))
+                 (setq moved t))
+               (skip-chars-backward " \n\t\r")
+               (setq count (- count 1))
+               (if (not moved)
+                   (error "No more HOL tactics at this level")))))
+          ((< count 0)
+           (while (< count 0)
+             (let (moved)
+               (skip-hol-tactic-punctuation-backward)
+               (while (and (not (previous-hol-lexeme-terminates-tactic))
+                           (my-backward-sexp))
+                 (setq moved t))
+               (skip-chars-forward " \n\t\r")
+               (setq count (+ count 1))
+               (if (not moved)
+                   (error "No more HOL tactics at this level"))))))))
+
+(defun backward-hol-tactic (n)
+  (interactive "p")
+  (forward-hol-tactic (if n (- n) -1)))
+
+(defun mark-hol-tactic ()
+  (interactive)
+  (let ((bounds (bounds-of-thing-at-point 'hol-tactic)))
+    (if bounds
+        (progn
+          (goto-char (cdr bounds))
+          (push-mark (car bounds) t t))
+      (ding)
+      (message "No tactic at point"))))
 
 (defun copy-region-as-hol-tactic (start end arg)
   "Send selected region to HOL process as tactic."
@@ -296,7 +347,10 @@ or at level 10 with a bare prefix. "
 
 (define-key hol-map "\C-c" 'hol-interrupt)
 (define-key hol-map "\C-l" 'hol-recentre)
+(define-key hol-map "\C-t" 'hol-toggle-show-types)
 (define-key hol-map "\C-v" 'hol-scroll-up)
+(define-key hol-map "\M-f" 'forward-hol-tactic)
+(define-key hol-map "\M-b" 'backward-hol-tactic)
 (define-key hol-map "\M-v" 'hol-scroll-down)
 (define-key hol-map "b"    'hol-backup)
 (define-key hol-map "d"    'hol-drop-goal)
@@ -309,7 +363,7 @@ or at level 10 with a bare prefix. "
 (define-key hol-map "p"    'hol-print)
 (define-key hol-map "\M-r" 'copy-region-as-hol-definition)
 (define-key hol-map "r"    'hol-rotate)
+(define-key hol-map "t"    'mark-hol-tactic)
 (define-key hol-map "R"    'hol-restart-goal)
 (define-key hol-map "s"    'send-string-to-hol)
-(define-key hol-map "t"    'hol-toggle-show-types)
 (define-key hol-map "u"    'hol-use-file)
