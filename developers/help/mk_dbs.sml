@@ -18,7 +18,7 @@ in
   {comp=Database.Term(content, SOME"HOL"), file=s, line=0}
 end
 
-local fun is_adocfile s = 
+local fun is_adocfile s =
          size s>5 andalso String.extract(s, size s - 5, NONE) = ".adoc"
 in
 fun docdir_to_entries path (endpath, entries) =
@@ -55,14 +55,15 @@ fun buildDb holpath = let
   val all_indices =
     List.foldr foldfn doc_indices
     ["Const_def.sig", "Parse.sig", "Theory.sig", "Const_spec.sig",
-     "Parse_support.sig", "Count.sig", "Hol_pp.sig", 
+     "Parse_support.sig", "Count.sig", "Hol_pp.sig",
+     "HOLgrammars.sig",
      "Thm.sig", "Dsyntax.sig", "Preterm.sig", "Absyn.sig", "Exception.sig",
      "Type.sig", "Lexis.sig", "Type_def.sig", "Lib.sig",
      "Globals.sig", "Net.sig", "Term.sig", "AncestorDB.sig", "DB.sig",
 
      (* basicHol90Lib *)
      "Prim_rec.sig", "Tactical.sig", "Conv.sig", "Tactic.sig",
-     "Drule.sig", "Resolve.sig", "Thm_cont.sig", "Rewrite.sig", 
+     "Drule.sig", "Resolve.sig", "Thm_cont.sig", "Rewrite.sig",
      "Type_def_support.sig", "Rsyntax.sig", "Psyntax.sig",
      "TypeBase.sig", "DefnBase.sig",
 
@@ -191,7 +192,7 @@ fun buildDb holpath = let
 
      (* TFL *)
      "RW.sig", "Defn.sig", "TotalDefn.sig",
-     "relationTheory.sig", 
+     "relationTheory.sig",
 
      (* tree theories *)
      "treeTheory.sig", "ltreeTheory.sig",
