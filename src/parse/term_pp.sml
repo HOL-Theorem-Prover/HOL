@@ -1076,7 +1076,8 @@ fun pp_term (G : grammar) TyG = let
       val genconst = prim_mk_const r
     in
       Type.polymorphic (type_of genconst)
-    end
+    end handle HOL_ERR _ => false
+    (* the exception is possible if the constant is out of date *)
 
     fun const_has_multi_ovl (r as {Name,Thy}) =
       case Overload.overloading_of_nametype overload_info r of
