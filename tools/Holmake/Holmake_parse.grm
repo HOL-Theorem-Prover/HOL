@@ -20,10 +20,12 @@ open Holmake_types
 %%
 
 MakefileDoc:
-  Rules  { {rules = $1, pre_includes = [], includes = [], options = []} }
-| Preliminaries Whitespace Rules {
-    {rules = $3, pre_includes = #pre_includes $1, includes = #includes $1,
-     options = #options $1}
+  Whitespace Rules  {
+    {rules = $2, pre_includes = [], includes = [], options = []}
+  }
+| Whitespace Preliminaries Whitespace Rules {
+    {rules = $4, pre_includes = #pre_includes $2, includes = #includes $2,
+     options = #options $2}
   }
 
 Preliminaries:

@@ -326,7 +326,8 @@ make-files must conform to the following grammar:
 \newcommand\hmtab{\texttt{<TAB>}}
 \[
 \begin{array}{lcl}
-\textsl{make-file}& ::= & \prelim^* \;\; (\hmtab|\hmnewline)^*\;\;\hmrule^*\\
+\textsl{make-file}& ::= & (\hmtab|\hmnewline)^*\;\;\prelim^* \;\;
+                          (\hmtab|\hmnewline)^*\;\;\hmrule^*\\
 \prelim           & ::= & \texttt{OPTIONS}\;\; \texttt{=}\;\; \idlist\\
                   &  |  & \texttt{INCLUDES} \;\;\texttt{=}\;\; \idlist\\
                   &  |  & \texttt{PRE\_INCLUDES} \;\; \texttt{=}\;\;\idlist\\
@@ -378,13 +379,26 @@ are provided for a file-type that \holmake{} knows how to build
 itself, then the make-file's commands take precedence, and only they
 will be executed.
 
-Finally, the commands can use two useful abbreviations for the
-programs executed.  The string \texttt{HOLMOSMLC} is replaced by an
+Finally, the commands can use some useful abbreviations for the
+programs executed.  The valid abbreviations are:
+\begin{description}
+\item[\texttt{HOLMOSMLC}] This string is replaced by an
 invocation of the Moscow ML compiler along with the \texttt{-q} flag
 (necessary for handling quotations), and the usual \texttt{-I} include
 specifications (pre-includes, the hol-directory include, and the
-normal includes).  The string \texttt{MOSMLC} is replaced by an
-invocation of the compiler along with just the normal includes.
+normal includes).
+\item[\texttt{MOSMLC}] This is replaced by an invocation of the
+  compiler along with just the normal includes.
+\item[\texttt{MOSMLLEX}] This is replaced by an invocation of the
+  \texttt{mosmllex} program that comes with the Moscow ML
+  distribution.
+\item[\texttt{MOSMLYAC}] This is replaced by an invocation of the
+  \texttt{mosmlyac} program that comes with the Moscow ML
+  distribution.
+\end{description}
+The \texttt{MOSMLLEX} and \texttt{MOSMLYAC} abbreviations are really
+only useful if the originals aren't necessarily going to be on the
+user's ``path''.
 
 \section{Flags for the HOL logic}
 \label{HOLflags}
