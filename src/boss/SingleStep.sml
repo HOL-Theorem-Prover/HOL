@@ -171,7 +171,7 @@ fun Induct_on qtm g =
 
 fun completeInduct_on qtm g =
  let val st = find_subterm qtm g
-     val ind_tac = Prim_rec.INDUCT_THEN 
+     val ind_tac = Prim_rec.INDUCT_THEN
                      arithmeticTheory.COMPLETE_INDUCTION ASSUME_TAC
  in
      primInduct st ind_tac g
@@ -226,7 +226,7 @@ fun Cases (g as (_,w)) =
      un-necessarily.
  ---------------------------------------------------------------------------*)
 
-fun grab_var M = 
+fun grab_var M =
   if is_forall M then fst(dest_forall M) else
   if is_conj M then fst(dest_forall(fst(dest_conj M)))
   else raise ERR "Induct" "expected a forall or a conjunction of foralls";
@@ -245,7 +245,7 @@ fun Induct (g as (_,w)) =
 
 
 fun mk_vstrl [] V A = rev A
-  | mk_vstrl (ty::rst) V A = 
+  | mk_vstrl (ty::rst) V A =
       let val (vstr,V1) = unstrip_pair ty V
       in mk_vstrl rst V1 (vstr::A)
       end;
@@ -254,9 +254,9 @@ fun recInduct thm =
   let val (prop,Body) = dest_forall(concl thm)
       val parg_tyl = #1(strip_fun (type_of prop))
       val n = (length o #1 o strip_forall o #2 o strip_imp) Body
-      fun ndest_forall trm = 
+      fun ndest_forall trm =
           let fun dest (0,tm,V) = (rev V,tm)
-                | dest (n,tm,V) = 
+                | dest (n,tm,V) =
                     let val (Bvar,Body) = dest_forall tm
                     in dest(n-1,Body, Bvar::V) end
           in dest(n,trm,[])
@@ -276,12 +276,9 @@ fun recInduct thm =
  * A simple aid to reasoning by contradiction.                               *
  *---------------------------------------------------------------------------*)
 
-local val ss = simpLib.++(boolSimps.bool_ss,boolSimps.NOT_ss)
-in
 fun SPOSE_NOT_THEN ttac =
   CCONTR_TAC THEN
-  POP_ASSUM (fn th => ttac (simpLib.SIMP_RULE ss [] th))
-end;
+  POP_ASSUM (fn th => ttac (simpLib.SIMP_RULE bool_ss [] th))
 
 (*---------------------------------------------------------------------------
      Assertional style reasoning
