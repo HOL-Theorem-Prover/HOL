@@ -602,11 +602,14 @@ fun SPEC t th =
  let val (Rator,Rand) = dest_comb(concl th)
      val {Thy,Name,...} = dest_thy_const Rator
  in
-   Assert (Name="!" andalso Thy="bool") "" "";
+   Assert (Name="!" andalso Thy="bool")
+          "SPEC" "Theorem not universally quantified";
    make_thm Count.Spec
        (tag th, hypset th, beta_conv(mk_comb(Rand, t)))
- end
- handle HOL_ERR _ => ERR "SPEC" "";
+       handle HOL_ERR _ =>
+              raise thm_err "SPEC"
+                    "Term argument's type not equal to bound variable's"
+ end;
 
 
 (*---------------------------------------------------------------------------
