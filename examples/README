@@ -44,10 +44,19 @@ Currently on offer are the following:
       definition package in action. Featured are an operational
       semantics for a small imperative programming language, a small
       process algebra, and combinatory logic with its type system. The
-      files are extensively commented.  NB. most of the proofs in these
-      theories can now be done much more easily by using some of the
-      recently developed tools, namely the simplifier and the first
-      order prover.
+      files are extensively commented.  
+
+      NB. Most of the proofs in these theories can now be done much more
+      easily by using some of the recently developed tools, namely the
+      simplifier and the first order prover.  
+
+  * lambda
+
+      This directory develops a "de Bruijn" style lambda calculus, and
+      also a name-carrying version. Both are untyped. The development is
+      a revision of the proofs underlying the "5 Axioms of Alpha
+      Conversion" paper of Andy Gordon and Tom Melham (Proceedings of
+      TPHOLs'96, Springer LNCS 1125).
 
   * taut.sml
 
