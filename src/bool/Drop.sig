@@ -21,13 +21,14 @@ sig
   val strip_let_hook           : (term -> (term * term) list list * term) ref
 
   val pp_type_as_ML     : ppstream -> hol_type -> unit
-  val pp_term_as_ML     : string -> ppstream -> term -> unit
-  val pp_defn_as_ML     : string -> ppstream -> term -> unit
+  val pp_term_as_ML     : string list -> ppstream -> term -> unit
+  val pp_defn_as_ML     : string list -> ppstream -> term -> unit
   val pp_datatype_as_ML : ppstream -> string list * ParseDatatype.AST list -> unit
 
   datatype elem = DEFN of Thm.thm
                 | DATATYPE of ParseDatatype.AST list
-                | ABSDATATYPE of string list * ParseDatatype.AST list
+                | EQDATATYPE of string list * ParseDatatype.AST list
+                | OPEN of string list
                 | MLSIG of string
                 | MLSTRUCT of string
 
