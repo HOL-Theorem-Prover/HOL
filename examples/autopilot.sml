@@ -60,18 +60,18 @@ Hol_datatype `altitude_vals
 
 
 (*---------------------------------------------------------------------------*
- * State-type projection and update functions.                               *
+ * Define state-type projection and update functions.                        *
  *---------------------------------------------------------------------------*)
 
-RecordType.create_record "states"
-     [ ("att_cws",  Type`:off_eng`),
-       ("cas_eng",  Type`:off_eng`),
-       ("fpa_sel",  Type`:off_eng`),
-       ("alt_eng",  Type`:mode_status`),
-       ("alt_disp", Type`:disp_status`),
-       ("fpa_disp", Type`:disp_status`),
-       ("cas_disp", Type`:disp_status`),
-       ("altitude", Type`:altitude_vals`) ];
+val _ = RecordType.create_record "states"
+           [ ("att_cws",  Type`:off_eng`),
+             ("cas_eng",  Type`:off_eng`),
+             ("fpa_sel",  Type`:off_eng`),
+             ("alt_eng",  Type`:mode_status`),
+             ("alt_disp", Type`:disp_status`),
+             ("fpa_disp", Type`:disp_status`),
+             ("cas_disp", Type`:disp_status`),
+             ("altitude", Type`:altitude_vals`) ];
 
 
 (*---------------------------------------------------------------------------*
