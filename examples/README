@@ -4,41 +4,41 @@ Currently here are the following:
 
   * MLSyntax
 
-       This example shows the use of a facility for defining 
+       This example shows the use of a facility for defining
        recursive types, implemented by John Harrison. In the example,
-       due to Elsa Gunter, the abstract syntax for a small but not 
+       due to Elsa Gunter, the abstract syntax for a small but not
        totally unrealistic subset of ML is defined, along with a simple
        mutually recursive function over the syntax.
+
+  * PSL
+
+       This directory contains a deep embedding of the Accellera
+       standard property language Sugar 2.0. Author: Mike Gordon.
 
   * RSA
 
        This directory develops some of the mathematics underlying
-       the RSA cryptography scheme. The theories have been 
+       the RSA cryptography scheme. The theories have been
        produced by Laurent Thery of INRIA Sophia-Antipolis.
 
   * Rijndael
 
        This directory holds a formalization of Rijmen and Daemen's
        AES crypto standard, together with a proof of correctness.
-       
-  * Sugar2
-
-       This directory contains a deep embedding of the Accellera 
-       standard property language Sugar 2.0. Author: Mike Gordon.
 
   * arm6
 
-       This directory contains a formal model of the ARM 
-       (Acorn Risc Machine), version 6, along with a proof of 
+       This directory contains a formal model of the ARM
+       (Acorn Risc Machine), version 6, along with a proof of
        correctness. The specifications and proofs are due to Anthony Fox,
        and arise from a collaboration between Cambridge, Leeds, and ARM.
-  
+
   * autopilot.sml
 
        This example is a rendition of a PVS example due to Ricky
        Butler of NASA. The example shows the use of a record-definition
        package due to Mike Norrish and Phil Windley, as well as
-       illustrating some aspects of the automation currently available 
+       illustrating some aspects of the automation currently available
        in HOL.
 
   * bmark
@@ -50,13 +50,13 @@ Currently here are the following:
 
        This example is a proof of Euclid's theorem on the infinitude of
        the prime numbers. It has been extracted and modified by Konrad
-       Slind from a much larger development originally due to John 
+       Slind from a much larger development originally due to John
        Harrison.
 
   * fol.sml
 
        This file exercises John Harrison's implementation of a
-       model-elimination style first order prover. 
+       model-elimination style first order prover.
 
   * ind_def
 
@@ -64,17 +64,15 @@ Currently here are the following:
        definition package in action. Featured are an operational
        semantics for a small imperative programming language, a small
        process algebra, and combinatory logic with its type system. The
-       files are extensively commented.  
+       files are extensively commented.
 
   * lambda
 
-       This directory develops a "de Bruijn" style lambda calculus, and
-       also a name-carrying version. (Both are untyped.) The development
-       is a revision of the proofs underlying the paper
-
-           "5 Axioms of Alpha Conversion",
-            Andy Gordon and Tom Melham,
-            Proceedings of TPHOLs'96, Springer LNCS 1125.
+       This directory develops a "de Bruijn" style lambda calculus,
+       uses this as a model of a name-carrying implementation of
+       lambda calculus terms (where alpha-equivalent terms are
+       identified), and proves a number of lambda calculus theory
+       results.
 
   * miller
 
@@ -93,18 +91,18 @@ Currently here are the following:
        A proof that the square root of two is not rational. Adapted
        from a proof by John Harrison.
 
-  * sunrise 
+  * sunrise
 
-       This directory provides a very thorough implementation of 
-       Hoare logic for a simple imperative language with mutually 
-       recursive procedures. Verification condition generators are 
-       supplied (and proved correct in HOL). The development includes 
+       This directory provides a very thorough implementation of
+       Hoare logic for a simple imperative language with mutually
+       recursive procedures. Verification condition generators are
+       supplied (and proved correct in HOL). The development includes
        illustrative examples and documentation. Author: Peter Homeier.
 
   * taut.sml
 
-       This file presents some tautologies, and uses an ML binding of 
-       J"orn Lind's ROBDD (Reduced Ordered Binary Decision Diagram) package 
+       This file presents some tautologies, and uses an ML binding of
+       J"orn Lind's ROBDD (Reduced Ordered Binary Decision Diagram) package
        to attempt to prove them.
 
   * tempScript.sml
@@ -115,13 +113,13 @@ Currently here are the following:
   * Thery
 
        This file is a very simple introductory example of proof in HOL,
-       extracted from 
+       extracted from
 
          "A quick overview of PVS and HOL"
 
-       by Laurent Thery of INRIA, Sophia-Antipolis, which was presented 
+       by Laurent Thery of INRIA, Sophia-Antipolis, which was presented
        at
-     
+
          "Types summer school'99: Theory and practice of formal proofs",
          Giens, France, August 30 - September 10, 1999.
 
