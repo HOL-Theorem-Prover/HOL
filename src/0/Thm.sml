@@ -884,6 +884,9 @@ fun INST [] th = th
 (*    A |- t = (\x.m) n
  *  ---------------------
  *     A |- t = m{x\n}
+ *
+ * Other implementation (less efficient, explicit subst.):
+ *   val Beta = Drule.RIGHT_BETA
  *)
 fun Beta th =
    let val {lhs, rhs, ty} = dest_eq_ty (concl th)
@@ -895,6 +898,9 @@ fun Beta th =
 (*    A |- t = (\x.f x)
  *  --------------------- x not free in f
  *     A |- t = f
+ *
+ * Other implementation
+ *   fun Eta thm = TRANS thm (ETA_CONV (rhs (concl thm)))
  *)
 fun Eta th =
    let val {lhs, rhs, ty} = dest_eq_ty (concl th)
@@ -972,7 +978,9 @@ fun Mk_abs thm =
    end
    handle HOL_ERR _ => THM_ERR "Mk_abs" "";
 
-(* Same as SPEC, but without propagating the substitution. *)
+(* Same as SPEC, but without propagating the substitution.
+ *   val Spec = SPEC
+ *)
 fun Spec t th =
    let val {Rator,Rand} = dest_comb(concl th)
        val _ = Assert ("!" = #Name(dest_const Rator)) "" ""
