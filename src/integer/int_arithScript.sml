@@ -145,6 +145,13 @@ val justify_divides2 = store_thm(
   REWRITE_TAC [GSYM INT_LDISTRIB] THEN
   PROVE_TAC [INT_MUL_COMM]);
 
+val justify_divides3 = store_thm(
+  "justify_divides3",
+  ``!n x c. n int_divides n * x + c = n int_divides c``,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC INT_DIVIDES_LADD THEN
+  MATCH_MP_TAC INT_DIVIDES_LMUL THEN MATCH_ACCEPT_TAC INT_DIVIDES_REFL);
+
+
 val INT_SUB_SUB3 = store_thm(
   "INT_SUB_SUB3",
   Term`!x y z:int. x - (y - z) = x + z - y`,
