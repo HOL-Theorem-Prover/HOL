@@ -12,43 +12,38 @@
 (* Reimplemented : July 17, 1999, Konrad Slind                           *)
 (* ===================================================================== *)
 
-structure Net :> Net =
+structure Net : RawNet =
 struct
 
-open Lib;
+open Lib Feedback KernelTypes
 
-fun ERR function message = 
-Exception.HOL_ERR{origin_structure = "Nut",
-                  origin_function = function,
-                  message = message};
+val ERR = mk_HOL_ERR "Net";
 
-local val dummy = Term.mk_var{Name ="dummy",Ty = Type.mk_vartype"'x"}
-      val break_abs_ref = ref (fn _:Term.term => dummy)
-in
-  val _ = Term.Net_init break_abs_ref
-  val break_abs = !break_abs_ref
-end;
-
-type term = Term.term;
+val break_abs = Term.break_abs;
 
 (*---------------------------------------------------------------------------*
  *   Tags corresponding to the underlying term constructors.                 *
  *---------------------------------------------------------------------------*)
 
-datatype label = V | Cnst of string | Cmb | Lam;
+datatype label 
+    = V 
+    | Cmb 
+    | Lam
+    | Cnst of string * string ;  (* name * segment *)
 
 (*---------------------------------------------------------------------------*
  *    Term nets.                                                             *
  *---------------------------------------------------------------------------*)
 
-datatype 'a net = LEAF of (term * 'a) list
-                | NODE of (label * 'a net) list;
+datatype 'a net 
+    = LEAF of (term * 'a) list
+    | NODE of (label * 'a net) list;
 
 
 val empty = NODE [];
 
-fun is_empty (NODE []) = true 
-  | is_empty    _      = false;
+fun is_empty (NODE[]) = true
+  | is_empty    _     = false;
 
 (*---------------------------------------------------------------------------*
  * Determining the top constructor of a term. The following is a bit         *
@@ -61,12 +56,11 @@ local open Term
 in
 fun label_of tm =
    if is_abs tm then Lam else 
-   if Term.is_bvar tm then V 
-   else case Term.dest_term tm
-         of CONST{Name,...} => Cnst Name
-          | COMB _ => Cmb
-          | VAR  _ => V
-          | LAMB _ => raise ERR "label_of" "supposedly inaccessible pattern"
+   if is_bvar tm orelse is_var tm then V else
+   if is_comb tm then Cmb 
+   else let val {Name,Thy,...} = dest_thy_const tm
+        in Cnst (Name,Thy)
+        end
 end
 
 fun net_assoc label =
@@ -75,8 +69,7 @@ fun net_assoc label =
             case assoc1 label subnets 
              of NONE => empty 
               | SOME (_,net) => net
- in 
-     get
+ in get
  end;
 
 
@@ -89,13 +82,13 @@ local
             case label
              of V => []
               | Cnst _ => [net_assoc label net] 
-              | Lam => mtch (break_abs tm) (net_assoc Lam net)
-              | Cmb => let val {Rator,Rand} = Term.dest_comb tm
-                       in itlist(append o mtch Rand)
-                                (mtch Rator (net_assoc Cmb net)) [] 
-                       end
+              | Lam    => mtch (break_abs tm) (net_assoc Lam net)
+              | Cmb    => let val {Rator,Rand} = Term.dest_comb tm
+                          in itlist(append o mtch Rand)
+                                   (mtch Rator (net_assoc Cmb net)) [] 
+                           end
        in 
-         itlist (fn NODE [] => I | net => cons net) nets [Vnet]
+          itlist (fn NODE [] => I | net => cons net) nets [Vnet]
        end
 in 
 fun match tm net =
@@ -109,29 +102,28 @@ end;
         Finding the elements mapped by a term in a term net.
  ---------------------------------------------------------------------------*)
 
-fun index x net =
-let
- fun appl  _   _  (LEAF L) = SOME L
-   | appl defd tm (NODE L) =
-     let val label = label_of tm
-     in case assoc1 label L
-         of NONE => NONE
-          | SOME (_,net) => 
-             case label
-              of Lam => appl defd (break_abs tm) net
-               | Cmb => let val {Rator,Rand} = Term.dest_comb tm
-                        in appl (Rand::defd) Rator net end
-               |  _  => let fun exec_defd [] (NODE _) = raise ERR "appl" 
-                                 "NODE: should be at a LEAF instead"
-                              | exec_defd [] (LEAF L) = SOME L
-                              | exec_defd (h::rst) net =  appl rst h net
-                        in 
-                          exec_defd defd net
-                        end 
-     end
+fun index x net = let 
+  fun appl  _   _  (LEAF L) = SOME L
+    | appl defd tm (NODE L) =
+      let val label = label_of tm
+      in case assoc1 label L
+          of NONE => NONE
+           | SOME (_,net) => 
+              case label
+               of Lam => appl defd (break_abs tm) net
+                | Cmb => let val {Rator,Rand} = Term.dest_comb tm
+                         in appl (Rand::defd) Rator net end
+                |  _  => let fun exec_defd [] (NODE _) = raise ERR "appl" 
+                                  "NODE: should be at a LEAF instead"
+                               | exec_defd [] (LEAF L) = SOME L
+                               | exec_defd (h::rst) net =  appl rst h net
+                         in 
+                           exec_defd defd net
+                         end 
+      end
 in
   case appl [] x net
-   of SOME L => (map #2 L)
+   of SOME L => map #2 L
     | NONE   => []
 end;
 
@@ -211,7 +203,7 @@ let fun del [] = []
        NODE (List.concat [left,childnetl,right])
      end
 in
-  remv [] tm N handle Exception.HOL_ERR _ => N
+  remv [] tm N handle Feedback.HOL_ERR _ => N
 end;
 
 fun filter P = 
@@ -251,7 +243,7 @@ fun get_tip_list (LEAF L) = L
 
 fun get_edge label =
    let fun get (NODE edges) = 
-              (case (Lib.assoc1 label edges)
+              (case Lib.assoc1 label edges
                  of SOME (_,net) => net
                   | NONE => empty)
          | get (LEAF _) = raise ERR "get_edge" "tips have no edges"

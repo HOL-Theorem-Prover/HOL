@@ -11,10 +11,9 @@
 structure Lib :> Lib =
 struct
 
-fun LIB_ERR func mesg =
-  Exception.HOL_ERR{origin_structure="Lib",
-                    origin_function=func,
-                    message=mesg};
+open Feedback;
+
+val ERR = mk_HOL_ERR "Lib";
 
 (*---------------------------------------------------------------------------*
  * Combinators                                                               *
@@ -45,7 +44,7 @@ fun fst (x,_) = x   and   snd (_,y) = y;
 
 
 (*---------------------------------------------------------------------------*
- * Success and failure.                                                      *
+ * Success and failure. Interrupt has a special status.                      *
  *---------------------------------------------------------------------------*)
 
 fun can f x =
@@ -65,25 +64,25 @@ fun partial e f x =
  * exceptions.                                                               *
  *---------------------------------------------------------------------------*)
 
-local open Exception
-      val default_exn = HOL_ERR
-             {origin_structure="Lib",
-              origin_function="trye", message="original exn. not a HOL_ERR"}
+local val default_exn = ERR "trye" "original exn. not a HOL_ERR"
 in
-fun trye f x = f x handle e as HOL_ERR _ => raise e
-                        | Interrupt      => raise Interrupt
-                        |         _      => raise default_exn
+fun trye f x = 
+  f x handle e as HOL_ERR _ => raise e
+           | Interrupt      => raise Interrupt
+           | otherwise      => raise default_exn
 end;
 
 (*---------------------------------------------------------------------------*
  * For interactive use: "Raise" prints out the exception.                    *
  *---------------------------------------------------------------------------*)
 
-fun try f x =
-  f x handle Interrupt => raise Interrupt | e => Exception.Raise e;
+fun try f x = 
+  f x handle Interrupt => raise Interrupt 
+           | a_n_other => Feedback.Raise a_n_other;
 
-
-fun assert P x = if P x then x else raise LIB_ERR"assert" "predicate not true"
+fun assert_exn P x e = if P x then x else raise e
+fun assert P x       = assert_exn P x (ERR"assert" "predicate not true")
+fun with_exn f x e   = f x handle Interrupt => raise Interrupt | _ => raise e
 
 
 (*---------------------------------------------------------------------------*
@@ -91,32 +90,29 @@ fun assert P x = if P x then x else raise LIB_ERR"assert" "predicate not true"
  *---------------------------------------------------------------------------*)
 
 fun tryfind f =
- let fun F [] = raise LIB_ERR "tryfind" "all applications failed"
+ let fun F [] = raise ERR "tryfind" "all applications failed"
        | F (h::t) = f h handle Interrupt => raise Interrupt | _ => F t
  in F
  end;
 
 (* Counting starts from 1 *)
-local fun elem (_, [])     = raise LIB_ERR "el" "index too large"
+local fun elem (_, [])     = raise ERR "el" "index too large"
         | elem (1, h::_)   = h
         | elem (n, _::rst) = elem (n-1, rst)
 in
-fun el n l =
-  if n<1 then raise LIB_ERR "el" "index too small"
-  else elem(n,l)
+fun el n l = if n<1 then raise ERR "el" "index too small" else elem(n,l)
 end;
 
 fun index x l =
-  let fun idx (i, [])   = raise LIB_ERR "index" "no such element"
+  let fun idx (i, [])   = raise ERR "index" "no such element"
         | idx (i, y::l) = if x=y then i else idx (i+1, l)
   in idx(0,l)
   end;
 
-
 fun map2 f L1 L2 =
  let fun mp2 [] [] L = rev L
        | mp2 (a1::rst1) (a2::rst2) L = mp2 rst1 rst2 (f a1 a2::L)
-       | mp2 _ _ _ = raise LIB_ERR "map2" "different length lists"
+       | mp2 _ _ _ = raise ERR "map2" "different length lists"
    in mp2 L1 L2 []
    end;
 
@@ -129,7 +125,7 @@ fun all P =
 fun all2 P =
    let fun every2 [] [] = true
          | every2 (a1::rst1) (a2::rst2) = P a1 a2 andalso every2 rst1 rst2
-         | every2  _ _ = raise LIB_ERR "all2" "different length lists"
+         | every2  _ _ = raise ERR "all2" "different length lists"
    in every2
    end;
 
@@ -137,18 +133,18 @@ val exists = List.exists;
 
 fun first P =
    let fun oneth (a::rst) = if P a then a else oneth rst
-         | oneth [] = raise LIB_ERR "first" "unsatisfied predicate"
+         | oneth [] = raise ERR "first" "unsatisfied predicate"
    in oneth
    end;
 
 fun split_after n alist =
-   if (n >= 0)
+   if n >= 0
    then let fun spa 0 (L,R) = (rev L,R)
               | spa n (L,a::rst) = spa (n-1) (a::L, rst)
-              | spa _ _ = raise LIB_ERR "split_after" "index too big"
+              | spa _ _ = raise ERR "split_after" "index too big"
         in spa n ([],alist)
         end
-   else raise LIB_ERR "split_after" "negative index";
+   else raise ERR "split_after" "negative index";
 
 
 fun itlist f L base_value =
@@ -160,7 +156,7 @@ fun itlist f L base_value =
 fun itlist2 f L1 L2 base_value =
   let fun it ([],[]) = base_value
         | it (a::rst1, b::rst2) = f a b (it (rst1,rst2))
-        | it _ = raise LIB_ERR "itlist2" "lists of different length"
+        | it _ = raise ERR "itlist2" "lists of different length"
    in  it (L1,L2)
    end;
 
@@ -173,91 +169,88 @@ fun rev_itlist f =
 fun rev_itlist2 f L1 L2 =
   let fun rev_it2 ([],[]) base = base
         | rev_it2 (a::rst1, b::rst2) base = rev_it2 (rst1,rst2) (f a b base)
-        | rev_it2 _ _ = raise LIB_ERR"rev_itlist2" "lists of different length"
+        | rev_it2 _ _ = raise ERR"rev_itlist2" "lists of different length"
   in rev_it2 (L1,L2)
   end;
 
 fun end_itlist f =
-   let fun endit [] = raise LIB_ERR "end_itlist" "list too short"
+   let fun endit [] = raise ERR "end_itlist" "list too short"
          | endit [x] = x
-         | endit (x::rst) = f x (endit rst)
+         | endit (h::t) = f h (endit t)
    in endit
    end;
 
-fun gather p L = itlist (fn x => fn y => if (p x) then x::y else y) L []
+fun gather P L = itlist (fn x => fn y => if P x then x::y else y) L []
 
-val filter = gather;
+val filter = gather;  
 
-fun partition p alist =
-   itlist (fn x => fn (L,R) => if (p x) then (x::L, R) else (L, x::R))
+fun partition P alist =
+   itlist (fn x => fn (L,R) => if P x then (x::L, R) else (L, x::R))
           alist ([],[]);
 
 fun zip [] [] = []
   | zip (a::b) (c::d) = (a,c)::zip b d
-  | zip _ _ = raise LIB_ERR "zip" "different length lists"
+  | zip _ _ = raise ERR "zip" "different length lists"
 
-fun unzip L =
-  itlist (fn (x,y) => fn (l1,l2) =>(x::l1, y::l2)) L ([],[]);
+fun unzip L = itlist (fn (x,y) => fn (l1,l2) => (x::l1, y::l2)) L ([],[]);
 
 fun combine(l1,l2) = zip l1 l2
 val split = unzip
 
 fun mapfilter f list =
-   itlist(fn i => fn L => (f i::L)
-                          handle Interrupt => raise Interrupt
-                               |         _ => L) list [];
+  itlist(fn i => fn L => 
+          (f i::L) handle Interrupt => raise Interrupt | _ => L) list [];
 
 fun flatten [] = []
   | flatten ([]::t) = flatten t
   | flatten ((h::t)::rst) = h::flatten(t::rst);
 
-fun front_last [] = raise LIB_ERR "front_last" "empty list"
-  | front_last [x] = ([],x)
+fun front_last []     = raise ERR "front_last" "empty list"
+  | front_last [x]    = ([],x)
   | front_last (h::t) = let val (L,b) = front_last t in (h::L,b) end;
 
-fun last [] = raise LIB_ERR "last" "empty list"
-  | last [x] = x
+fun last []     = raise ERR "last" "empty list"
+  | last [x]    = x
   | last (_::t) = last t
 
 fun pluck P =
-  let fun pl _ [] = raise LIB_ERR "pluck" "predicate not satisfied"
-        | pl A (h::t) =
-           if P h then (h, rev_itlist cons A t)
-                  else pl (h::A) t
-  in
-     pl []
-  end;
+ let fun pl _ [] = raise ERR "pluck" "predicate not satisfied"
+       | pl A (h::t) = if P h then (h, rev_itlist cons A t) else pl (h::A) t
+ in pl []
+ end;
 
 fun funpow n f x =
-   let fun iter (0,res) = res
-         | iter (n,res) = iter (n-1, f res)
-   in
-     if (n<0) then x else iter(n,x)
-   end;
+ let fun iter (0,res) = res
+       | iter (n,res) = iter (n-1, f res)
+ in if n<0 then x else iter(n,x)
+ end;
 
 fun repeat f =
-  let fun loop x = loop (f x)
-                  handle Interrupt => raise Interrupt
-                      |  Exception.HOL_ERR _ => x
+  let fun loop x = 
+        loop (f x) handle Interrupt => raise Interrupt | HOL_ERR _ => x
   in loop
   end;
 
 fun enumerate i [] = []
   | enumerate i (h::t) = (i,h)::enumerate (i+1) t
 
+fun list_compare cfn =
+ let fun comp ([],[]) = EQUAL
+       | comp ([], _) = LESS
+       | comp (_, []) = GREATER
+       | comp (h1::t1, h2::t2) = 
+          case cfn (h1,h2) of EQUAL => comp (t1,t2) | x => x
+  in comp end;
+
 (*---------------------------------------------------------------------------*
  * For loops                                                                 *
  *---------------------------------------------------------------------------*)
 
 fun for base top f =
-   let fun For i = if (i>top) then [] else f i::For(i+1)
-   in For base
-   end;
+ let fun For i = if i>top then [] else f i::For(i+1) in For base end;
 
 fun for_se base top f =
-   let fun For i = if (i>top) then () else (f i; For(i+1))
-   in For base
-   end;
+ let fun For i = if i>top then () else (f i; For(i+1)) in For base end;
 
 fun list_of_array A = for 0 (Array.length A - 1) (fn i => Array.sub(A,i));
 
@@ -266,39 +259,28 @@ fun list_of_array A = for 0 (Array.length A - 1) (fn i => Array.sub(A,i));
  *---------------------------------------------------------------------------*)
 
 fun assoc item =
-   let fun assc ((key,ob)::rst) = if (item = key) then ob else assc rst
-         | assc [] = raise LIB_ERR "assoc" "not found"
-   in assc
-   end
+  let fun assc ((key,ob)::rst) = if item=key then ob else assc rst
+        | assc [] = raise ERR "assoc" "not found"
+  in assc
+  end
 
 fun rev_assoc item =
-   let fun assc ((ob,key)::rst) = if (item = key) then ob else assc rst
-         | assc [] = raise LIB_ERR "assoc" "not found"
-   in assc
-   end
+  let fun assc ((ob,key)::rst) = if item=key then ob else assc rst
+        | assc [] = raise ERR "assoc" "not found"
+  in assc
+  end
 
 fun assoc1 item =
-   let fun assc ((entry as (key,_))::rst) =
-             if (item = key) then SOME entry else assc rst
-         | assc [] = NONE
-    in assc
-    end;
+  let fun assc ((e as (key,_))::rst) = if item=key then SOME e else assc rst
+        | assc [] = NONE
+  in assc
+  end;
 
 fun assoc2 item =
-   let fun assc((entry as (_,key))::rst) =
-            if (item = key) then SOME entry else assc rst
-         | assc [] = NONE
-   in assc
-   end;
-
-fun words2 sep string =
-    snd (itlist (fn ch => fn (chs,tokl) =>
-          if ch=sep
-          then if (null chs) then ([],tokl)
-		else ([], (Portable.implode chs :: tokl))
-          else (ch::chs, tokl))
-        (sep::Portable.explode string)
-        ([],[]));
+  let fun assc((e as (_,key))::rst) = if item=key then SOME e else assc rst
+        | assc [] = NONE
+  in assc
+  end;
 
 (*---------------------------------------------------------------------------*
  * A naive merge sort.                                                       *
@@ -323,6 +305,7 @@ val int_sort = sort (curry (op <= :int*int->bool))
 (*---------------------------------------------------------------------------*
  * Substitutions.                                                            *
  *---------------------------------------------------------------------------*)
+
 type ('a,'b) subst = {redex:'a, residue:'b} list
 
 fun subst_assoc test =
@@ -340,13 +323,12 @@ fun (r1 |-> r2) = {redex=r1, residue=r2};
  * Sets as lists                                                             *
  *---------------------------------------------------------------------------*)
 
-fun mem i =
-   let fun itr (a::rst) = (i=a) orelse itr rst
-         | itr [] = false
-   in itr
-   end;
+fun mem i = 
+ let fun itr [] = false 
+       | itr (a::rst) = i=a orelse itr rst 
+ in itr end;
 
-fun insert i L = if (mem i L) then L else i::L
+fun insert i L = if mem i L then L else i::L
 
 fun mk_set [] = []
   | mk_set (a::rst) = insert a (mk_set rst)
@@ -359,7 +341,7 @@ fun union [] S = S
 fun U set_o_sets = itlist union set_o_sets []
 
 (* All the elements in the first set that are not also in the second set. *)
-fun set_diff a b = gather (fn x => not (mem x b)) a
+fun set_diff a b = gather (not o C mem b) a
 val subtract = set_diff
 
 fun intersect [] _ = []
@@ -368,9 +350,8 @@ fun intersect [] _ = []
 
 fun null_intersection _  [] = true
   | null_intersection [] _ = true
-  | null_intersection (a::rst) S =
-        if (mem a S) then false
-        else null_intersection rst S
+  | null_intersection (a::rst) S = 
+      if mem a S then false else null_intersection rst S
 
 fun set_eq S1 S2 = (set_diff S1 S2 = []) andalso (set_diff S2 S1 = []);
 
@@ -407,7 +388,6 @@ fun op_union eq_func =
    in un
    end;
 
-
 (* Union of a family of sets *)
 fun op_U eq_func set_o_sets = itlist (op_union eq_func) set_o_sets [];
 
@@ -430,7 +410,7 @@ fun op_set_diff eq_func S1 S2 =
 
 val int_to_string = Int.toString;
 val string_to_int =
-  partial (LIB_ERR "string_to_int" "not convertable")
+  partial (ERR "string_to_int" "not convertable")
           Int.fromString
 
 val say = TextIO.print;
@@ -443,6 +423,33 @@ fun commafy [] = []
   | commafy [x] = [x]
   | commafy (x::rst) = (x::", "::commafy rst);
 
+fun words2 sep string =
+    snd (itlist (fn ch => fn (chs,tokl) =>
+          if ch=sep
+          then if (null chs) then ([],tokl)
+		else ([], (Portable.implode chs :: tokl))
+          else (ch::chs, tokl))
+        (sep::Portable.explode string)
+        ([],[]));
+
+
+(*---------------------------------------------------------------------------*
+ * A hash function used for various tasks in the system. It works fairly     *
+ * well for our applications, but is not industrial strength. The size       *
+ * argument should be a prime. The function then takes a string and          *
+ * a pair (i,A) and returns a number < size. "i" is the index in the         *
+ * string to start hashing from, and A is an accumulator.  In simple         *
+ * cases i=0 and A=0.                                                        *
+ *---------------------------------------------------------------------------*)
+
+local open Char String
+in
+fun hash size = 
+ fn s =>
+  let fun hsh(i,A) = hsh(i+1, (A*4 + ord(sub(s,i))) mod size) 
+                     handle Subscript => A
+  in hsh end
+end;
 
 (*---------------------------------------------------------------------------*
  * Timing                                                                    *
@@ -477,10 +484,8 @@ fun with_flag (flag,b) f x =
       val () = flag := b
       val res = f x handle e => (flag := fval;
                                  case e of Interrupt => raise e
-                                         | _ => Exception.Raise e)
-   in
-     flag := fval;
-     res
+                                         | _ => Feedback.Raise e)
+   in flag := fval; res
    end;
 
 
@@ -503,122 +508,35 @@ with
       in strm end;
 end;
 
-(* Should be generalized to an arbitrary outstream. *)
-fun mesg false _ = ()
-  | mesg true s = say(String.concat["<<HOL message: ", s, ".>>\n"]);
 
-(*---------------------------------------------------------------------------*
- * A hash function used for various tasks in the system. It works fairly     *
- * well for our applications, but is not industrial strength. The size       *
- * argument should be a prime. The function then takes a string and          *
- * a pair (i,A) and returns a number < size. In the pair (i,A), "i" is       *
- * the index in the string to start hashing from, and A is an accumulator.   *
- * In simple cases i=0 and A=0.                                              *
- *---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------
+    A type that can be used for sharing, and some functions for lifting
+    to various type operators (just lists and pairs currently).
+ ---------------------------------------------------------------------------*)
 
-local open Char String
-in
-fun hash size = fn s =>
-  let fun hsh(i,A) =
-       hsh(i+1, (A*4 + ord(sub(s,i))) mod size)
-        handle Subscript => A
-  in hsh end
-end;
+datatype 'a delta = SAME | DIFF of 'a;
 
+fun delta_apply f x = 
+  case f x 
+   of SAME => x
+    | DIFF y => y;
 
-datatype ('a,'b)sum = LEFT of 'a | RIGHT of 'b;
+fun delta_map f =
+ let fun map [] = SAME
+       | map (h::t) = 
+          case (f h, map t)
+           of (SAME, SAME)       => SAME
+            | (SAME, DIFF t')    => DIFF(h  :: t')
+            | (DIFF h', SAME)    => DIFF(h' :: t)
+            | (DIFF h', DIFF t') => DIFF(h' :: t')
+ in map end;
 
-fun tyvar_vary s = let
-  open Substring
-  val ss = all s
-  val (nonletters, letters) = splitr Char.isAlpha ss
-  val szletters = size letters
-in
-  if szletters > 0 then
-    case sub(letters, szletters - 1) of
-      #"z" => concat [nonletters,
-                      slice(letters, 0, SOME (szletters - 1)),
-                      all "a0"]
-    | #"Z" => concat [nonletters,
-                      slice(letters, 0, SOME (szletters - 1)),
-                      all "a0"]
-    | c => concat [nonletters,
-                   slice(letters, 0, SOME (szletters - 1)),
-                   all (str (chr (ord c + 1)))]
-  else let
-    val (nondigits, digits) = splitr Char.isDigit ss
-    val szdigits = size digits
-  in
-    if szdigits > 0 then let
-      val n = valOf (Int.fromString (string digits))
-    in
-      concat [nondigits, all (Int.toString (n + 1))]
-    end
-    else
-      concat [nondigits, all "0"]
-  end
-end
-
-fun tmvar_vary s = let
-  open Substring
-  val ss = all s
-  val (nondigits, digits) = splitr Char.isDigit ss
-in
-  if size digits > 0 then let
-    val n = valOf (Int.fromString (string digits))
-  in
-    concat [nondigits, all (Int.toString (n + 1))]
-  end
-  else
-    concat [nondigits, all "0"]
-end
-
-fun gen_variant vfn avoids s =
-  if mem s avoids then gen_variant vfn avoids (vfn s)
-  else s
-
-(*---------------------------------------------------------------------------*
- * Traces, numeric flags; the higher the more verbose the thing being traced *
- *---------------------------------------------------------------------------*)
-
-open Exception
-val trace_list = ref ([]:(string * (int ref * int)) list)
-fun traces() = map (fn (n,(r,dflt)) => {name = n, current_value = !r,
-                                        default_value = dflt})
-               (!trace_list)
-
-fun current_trace nm =
-  ! (#1 (assoc nm (!trace_list)))
-  handle HOL_ERR _ => raise HOL_ERR {origin_structure = "Globals",
-                                     origin_function = "current_trace",
-                                     message = ("No trace called "^nm^
-                                                " registered.")};
-
-fun trace nm newvalue =
-  #1 (assoc nm (!trace_list)) := newvalue
-  handle HOL_ERR _ => raise HOL_ERR {origin_structure = "Globals",
-                                     origin_function = "trace",
-                                     message = ("No trace called "^nm^
-                                                " registered.")};
-fun reset_trace nm = let
-  val (r, default) = assoc nm (!trace_list)
-in
-  r := default
-end
-  handle HOL_ERR _ => raise HOL_ERR {origin_structure = "Globals",
-                                     origin_function = "reset_trace",
-                                     message = ("No trace called "^nm^
-                                                " registered.")};
-
-fun reset_traces () = app (fn (_, (r, d)) => r := d) (!trace_list)
-
-fun register_trace nm r =
-  case List.find (fn (s, _) => s = nm) (!trace_list) of
-    NONE => trace_list := (nm, (r, !r))::(!trace_list)
-  | SOME _ => raise HOL_ERR {origin_structure = "Globals",
-                             origin_function = "register_trace",
-                             message = ("Already a trace called "^nm^
-                                        " registered.")};
+fun delta_pair f g (x,y) =
+  case (f x, g y)
+   of (SAME, SAME)       => SAME
+    | (SAME, DIFF y')    => DIFF (x, y')
+    | (DIFF x', SAME)    => DIFF (x', y)
+    | (DIFF x', DIFF y') => DIFF (x', y');
 
 
 end (* Lib *)

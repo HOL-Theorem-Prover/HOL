@@ -1,26 +1,22 @@
 (* ===================================================================== *)
-(* FILE          : lexis.sml                                             *)
-(* DESCRIPTION   : predicates defining various lexical classes for       *)
-(*                 hol90:                                                *)
+(* FILE          : Lexis.sml                                             *)
+(* DESCRIPTION   : predicates defining various lexical classes for HOL:  *)
 (*                                                                       *)
 (*                     1. type variables                                 *)
 (*                     2. type constants                                 *)
 (*                     3. term constants                                 *)
 (*                                                                       *)
-(*                 The lexer (generated from the file "hol_lex")         *)
-(*                 should duplicate this.                                *)
-(*                                                                       *)
 (* AUTHOR        : Konrad Slind, University of Calgary                   *)
 (* DATE          : August 26, 1991                                       *)
 (* REVISED       : October,   1994, to improve efficiency.               *)
-(* Modified      : September 22, 1997, Ken Larsen                        *)
+(* MODIFIED      : September 22, 1997, Ken Larsen                        *)
 (* ===================================================================== *)
 
 structure Lexis :> Lexis =
 struct
 
-fun LEXIS_ERR {func,mesg} =
-   Exception.HOL_ERR{origin_structure="Lexis",
+fun ERR func mesg =
+   Feedback.HOL_ERR{origin_structure="Lexis",
                     origin_function=func, message=mesg};
 
 (*---------------------------------------------------------------------------
@@ -28,18 +24,18 @@ fun LEXIS_ERR {func,mesg} =
  * finding out whether a string belongs in a particular syntax class is done
  * by checking that the ordinal of each character in the string is the
  * index (in a particular bytearray) of a box containing a 1.
- *---------------------------------------------------------------------------*)
-
-(*---------------------------------------------------------------------------
+ *
  * We work only with ascii characters, so we allocate bytearrays of size 128.
  * A bytearray is compact - each element of the array occupies only 1 byte.
  * Since we are using only 0 and 1, we could probably use "bit"arrays, but
  * sheer laziness prevents us.
+ *
+ * Portability hack by Ken Larsen, bzero is the representation of a byte/bit
+ * zero, bone is the representation of one.
+ *
  *---------------------------------------------------------------------------*)
 
 
-(* Portability hack by Ken Larsen, bzero is the representation of a byte/bit
-   zero, bone is the representation of one *)
 val bzero = 0wx0 : Word8.word
 val bone  = 0wx1 : Word8.word
 
@@ -177,35 +173,33 @@ fun ok_sml_identifier str =
  * acceptable name. Note that this function does not recognize members of
  * constant families (just those that serve to define such families).
  *---------------------------------------------------------------------------*)
-fun allowed_term_constant "let"         = false
-  | allowed_term_constant "in"          = false
-  | allowed_term_constant "and"         = false
-  | allowed_term_constant "of"          = false
-  | allowed_term_constant "\\"          = false
-  | allowed_term_constant ";"           = false
-  | allowed_term_constant "=>"          = false
-  | allowed_term_constant "|"           = false
-  | allowed_term_constant ":"           = false
-  | allowed_term_constant ":="          = false
-  | allowed_term_constant "with"        = false
-  | allowed_term_constant "updated_by"  = false
-  | allowed_term_constant "0"           = true  (* only this numeral is OK *)
+fun allowed_term_constant "let"        = false
+  | allowed_term_constant "in"         = false
+  | allowed_term_constant "and"        = false
+  | allowed_term_constant "of"         = false
+  | allowed_term_constant "\\"         = false
+  | allowed_term_constant ";"          = false
+  | allowed_term_constant "=>"         = false
+  | allowed_term_constant "|"          = false
+  | allowed_term_constant ":"          = false
+  | allowed_term_constant ":="         = false
+  | allowed_term_constant "with"       = false
+  | allowed_term_constant "updated_by" = false
+  | allowed_term_constant "0"          = true  (* only this numeral is OK *)
   | allowed_term_constant str =
-     if (Word8Array.sub(alphabet,ordof(str,0)) = bone)
-     then ok_identifier str
-     else
-     if (Word8Array.sub(hol_symbols,ordof(str,0)) = bone)
-     then ok_symbolic str
-     else false;
+    if Word8Array.sub(alphabet,ordof(str,0)) = bone then ok_identifier str else
+    if (Word8Array.sub(hol_symbols,ordof(str,0)) = bone) then ok_symbolic str
+    else false;
 
 
 (*---------------------------------------------------------------------------
  * Strings representing negative integers return false, since we are only
  * (currently) interested in :num.
  *---------------------------------------------------------------------------*)
+
 fun is_num_literal str =
-   let fun loop i = (Word8Array.sub(numbers,ordof(str,i)) = bone)
-                     andalso loop(i+1)
+   let fun loop i = 
+         (Word8Array.sub(numbers,ordof(str,i)) = bone) andalso loop(i+1)
    in
    ((Word8Array.sub(numbers,ordof(str,0)) = bone) handle _ => false)
    andalso
@@ -214,11 +208,70 @@ fun is_num_literal str =
 
 local val dquote = "\""
 in
-fun is_string_literal s =
-    (String.size s > 1)
+fun is_string_literal s = String.size s > 1
     andalso (String.substring(s,0,1) = dquote)
-    andalso (String.substring(s,String.size s - 1,1)
-	     = dquote)
+    andalso (String.substring(s,String.size s - 1,1) = dquote)
 end;
 
-end; (* LEXIS *)
+
+(*---------------------------------------------------------------------------
+   String variants, on type variables and term variables. Each,
+   given a string produce another one that is different, but which is in
+   some sense the "next" string in a sequence.  
+
+    `tyvar_vary' can be used to generate  'a, 'b, 'c ... 'z, 'a0 ...
+
+    `tmvar_vary' can be used to generate f, f0, f1, f2, f3 ...
+
+     A call to
+
+       gen_variant f avoids s
+
+     uses a varying function such as the two given here to produce a variant
+     of s that doesn't appear in the list avoids.
+ ---------------------------------------------------------------------------*)
+
+fun tyvar_vary s = 
+ let open Substring
+     val ss = all s
+     val (nonletters, letters) = splitr Char.isAlpha ss
+     val szletters = size letters
+ in
+  if szletters > 0 
+  then case sub(letters, szletters - 1) 
+        of #"z" => concat [nonletters,
+                           slice(letters, 0, SOME (szletters - 1)),
+                           all "a0"]
+         | #"Z" => concat [nonletters,
+                           slice(letters, 0, SOME (szletters - 1)),
+                           all "a0"]
+         | c => concat [nonletters,
+                        slice(letters, 0, SOME (szletters - 1)),
+                        all (str (chr (ord c + 1)))]
+  else let val (nondigits, digits) = splitr Char.isDigit ss
+           val szdigits = size digits
+       in
+        if szdigits > 0 
+        then let val n = valOf (Int.fromString (string digits))
+             in concat [nondigits, all (Int.toString (n + 1))]
+             end
+        else concat [nondigits, all "0"]
+       end
+ end
+
+fun tmvar_vary s = 
+ let open Substring
+     val ss = all s
+     val (nondigits, digits) = splitr Char.isDigit ss
+ in
+   if size digits > 0 
+   then let val n = valOf (Int.fromString (string digits))
+        in concat [nondigits, all (Int.toString (n + 1))]
+        end
+  else concat [nondigits, all "0"]
+end
+
+fun gen_variant vfn avoids s =
+  if Lib.mem s avoids then gen_variant vfn avoids (vfn s) else s
+
+end; (* Lexis *)

@@ -1,230 +1,238 @@
 (* ===================================================================== *)
-(* FILE          : type.sml                                              *)
+(* FILE          : Type.sml                                              *)
 (* DESCRIPTION   : HOL types.                                            *)
 (*                                                                       *)
 (* AUTHOR        : (c) Konrad Slind, University of Calgary               *)
 (* DATE          : August 26, 1991                                       *)
 (* UPDATE        : October 94. Type signature implementation moved from  *)
 (*                 symtab.sml, which is now gone.                        *)
-(* Modified      : September 22, 1997, Ken Larsen                        *)
+(* Modified      : September 22, 1997, Ken Larsen  (functor removal)     *)
 (*                 April 12, 1998, Konrad Slind                          *)
+(*                 July, 2000 Konrad Slind        (functor restoration)  *)
 (* ===================================================================== *)
 
-structure Type :> Type =
+structure Type : RawType =
 struct
 
-open Exception Lib;
+open Feedback Lib KernelTypes;   infix |->;
 
-fun TYPE_ERR function message =
-     HOL_ERR{origin_structure = "Type",
-             origin_function = function,
-             message = message}
+type hol_type = KernelTypes.hol_type;
+
+val ERR = mk_HOL_ERR "Type";
+val WARN = HOL_WARNING "Type";
 
 
-type tyc = {name:string, revision:int};
+(*---------------------------------------------------------------------------
+              Create the signature for HOL types
+ ---------------------------------------------------------------------------*)
 
-datatype hol_type = Utv of string              (* User-given type variables *)
-                  | Tyapp of tyc * hol_type list;
+structure TypeSig = 
+  SIG(type ty = KernelTypes.tyconst
+      fun key (r,_) = r
+      val ERR = ERR
+      val table_size = 311) 
 
 
 (*---------------------------------------------------------------------------*
- * Make a type variable. Simple sharing scheme. A bonafide hash table        *
- * would be better.                                                          *
+ * Builtin type operators (fun, bool, ind). These are in every HOL           *
+ * signature, and it is convenient to nail them down here.                   *
  *---------------------------------------------------------------------------*)
-local val a = Utv "'a"      val b  = Utv "'b"
-      val c = Utv "'c"      val d  = Utv "'d"
-      val e = Utv "'e"      val f  = Utv "'f"
+
+local open TypeSig
+in
+val INITIAL{const=fun_tyc,...}  = insert (mk_id("fun",  "min"), 2);
+val INITIAL{const=bool_tyc,...} = insert (mk_id("bool", "min"), 0);
+val INITIAL{const=ind_tyc,...}  = insert (mk_id("ind",  "min"), 0);
+end
+
+infixr 3 -->;
+fun (X --> Y) = Tyapp (fun_tyc,  [X,Y]);
+val bool      = Tyapp (bool_tyc, []);
+val ind       = Tyapp (ind_tyc,  []);
+
+
+(*---------------------------------------------------------------------------*
+ * Create a compound type, in a specific segment, and in the current theory. *
+ *---------------------------------------------------------------------------*)
+
+fun make_type (tyc as (_,arity)) Args (fnstr,name) = 
+  if arity = length Args then Tyapp(tyc,Args) else 
+  raise ERR fnstr (String.concat 
+      [name," needs ", int_to_string arity, 
+       " arguments, but was given ", int_to_string(length Args)]);
+
+fun mk_thy_type {Thy,Tyop,Args} = 
+ case TypeSig.lookup (Tyop,Thy) 
+  of NONE => raise ERR "mk_thy_type" (fullname(Tyop,Thy)^" not found")
+   | SOME{const,...} => make_type const Args ("mk_thy_type",fullname(Tyop,Thy))
+ 
+fun first_decl fname Tyop =
+ case TypeSig.resolve Tyop
+  of []             => raise ERR fname (Lib.quote Tyop^" not found")
+   | [{const,...}]  => const
+   | {const,...}::_ => (WARN fname "more than one possibility"; const)
+
+fun mk_type {Tyop,Args} =
+  make_type (first_decl "mk_type" Tyop) Args ("mk_type",Tyop);
+
+(* currently unused *)
+fun current_tyops s = 
+  map (fn {const as (id,i),...} => (KernelTypes.dest_id id,i)) 
+      (TypeSig.resolve s);
+
+(*---------------------------------------------------------------------------*
+ * Take a type apart.                                                        *
+ *---------------------------------------------------------------------------*)
+
+local open KernelTypes
+in
+fun break_type (Tyapp p) = p | break_type _ = raise ERR "break_type" "";
+
+fun dest_thy_type (Tyapp((tyc,_),A)) = {Thy=seg_of tyc,Tyop=name_of tyc,Args=A}
+  | dest_thy_type _ = raise ERR "dest_thy_type" "";
+
+fun dest_type (Tyapp((tyc,_),A)) = {Tyop=name_of tyc, Args=A} 
+  | dest_type _ = raise ERR "dest_type" ""
+end;
+
+(*---------------------------------------------------------------------------*
+ *          Invert -->                                                       *
+ *---------------------------------------------------------------------------*)
+
+fun dom_rng ty =
+    case dest_thy_type ty
+     of {Thy="min", Tyop="fun", Args=[x,y]} => (x,y)
+      | _ => raise ERR "dom_rng" "not a function type";
+
+
+(*---------------------------------------------------------------------------
+       Declared types in a theory segment
+ ---------------------------------------------------------------------------*)
+
+fun thy_types s = 
+  let fun xlate {const=(id,arity), ...} = (KernelTypes.name_of id, arity)
+  in map xlate (TypeSig.slice s)
+  end;
+
+
+(*---------------------------------------------------------------------------*
+ *         Type variables                                                    *
+ *---------------------------------------------------------------------------*)
+
+local val a = Tyv "'a"  val b = Tyv "'b"  val c = Tyv "'c" 
+      val d = Tyv "'d"  val e = Tyv "'e"  val f = Tyv "'f"
 in
 fun mk_vartype "'a" = a  | mk_vartype "'b" = b
   | mk_vartype "'c" = c  | mk_vartype "'d" = d
   | mk_vartype "'e" = e  | mk_vartype "'f" = f
-  | mk_vartype s = if Lexis.allowed_user_type_var s then Utv s
-      else raise TYPE_ERR "mk_vartype" "incorrect syntax"
+  | mk_vartype s = if Lexis.allowed_user_type_var s then Tyv s
+                   else raise ERR "mk_vartype" "incorrect syntax"
 end;
 
 val alpha = mk_vartype "'a"
 val beta  = mk_vartype "'b";
 
+fun dest_vartype (Tyv s) = s
+  | dest_vartype _ = raise ERR "dest_vartype" "not a type variable";
 
-(*---------------------------------------------------------------------------*
- * It makes sense to declare the type construction primitives in the place   *
- * where the type signature is declared and manipulated, ie. it makes sense  *
- * to declare and manipulate the type sig. in the structure Theory. However, *
- * Theory is defined after theorems have been defined. It is also necessary  *
- * to have type construction be a part of Type. Hence, I need a "backward"   *
- * reference from Theory to Type.                                            *
- *---------------------------------------------------------------------------*)
-local val mk_type_ref  = ref (fn _:{Tyop:string,Args:hol_type list} => alpha)
-      val current_revision_ref  = ref (fn _:string => ~1)
-      val started = ref false
-in
-  fun init f g =
-   if !started then ()
-   else (mk_type_ref := f; current_revision_ref := g; started := true)
-
-  fun mk_type x = !mk_type_ref x
-  fun current_revision s = !current_revision_ref s
-end;
-
-(*---------------------------------------------------------------------------*
- * Builtins. These are in every HOL signature, and it is convenient to nail  *
- * them down here, so that, e.g., some functions in Dsyntax are relatively   *
- * efficient.                                                                *
- *---------------------------------------------------------------------------*)
-infixr 3 -->
-fun (X --> Y) = Tyapp({name ="fun", revision=0}, [X,Y]);
-val bool = Tyapp({name="bool",revision=0},[]);
-
-
-(*---------------------------------------------------------------------------*
- * Take a type apart.                                                        *
- *---------------------------------------------------------------------------*)
-fun dest_type (Tyapp({name,...},args)) = {Tyop=name,Args=args}
-  | dest_type _ = raise TYPE_ERR "dest_type" "";
-
-
-(*---------------------------------------------------------------------------*
- * Invert -->.                                                               *
- *---------------------------------------------------------------------------*)
-fun dom_rng ty =
-    case dest_type ty
-     of {Tyop="fun", Args=[x,y]} => (x,y)
-      | _ => raise TYPE_ERR "dom_rng" "not a function type";
-
-
-(*---------------------------------------------------------------------------*
- * Take a type variable apart.                                               *
- *---------------------------------------------------------------------------*)
-fun dest_vartype (Utv s) = s
-  | dest_vartype _ = raise TYPE_ERR "dest_vartype" "not a type variable";
-
-val is_vartype = can dest_vartype;
-
+fun is_vartype (Tyv _) = true | is_vartype _ = false;
+val is_type = not o is_vartype;
 
 (*---------------------------------------------------------------------------*
  * The variables in a type.                                                  *
  *---------------------------------------------------------------------------*)
-local
-fun tyvars (v as Utv _) vlist = if (mem v vlist) then vlist else v::vlist
-  | tyvars (Tyapp(_,Args)) vlist = tyvarsl Args vlist
-and
-    tyvarsl L vlist = rev_itlist tyvars L vlist
+
+local fun tyvars (Tyapp(_,Args)) vlist = tyvarsl Args vlist
+        | tyvars v vlist = Lib.insert v vlist
+      and tyvarsl L vlist = rev_itlist tyvars L vlist
 in
 fun type_vars ty = rev(tyvars ty [])
 fun type_varsl L = rev(tyvarsl L [])
 end;
 
 
-(*---------------------------------------------------------------------------*
- * Extends an ordering on elements of a type to an ordering on lists of      *
- * elements of that type.                                                    *
- *---------------------------------------------------------------------------*)
-fun lex_order order =
-   let fun ordered (t1::rst1) (t2::rst2) =
-           if (order t1 t2) then true else
-           if (order t2 t1) then false
-           else ordered rst1 rst2
-         | ordered [] [] = false
-         | ordered [] _  = true
-         | ordered _  _  = false
-   in ordered
-   end;
+(*---------------------------------------------------------------------------
+     Does a type variable occur in a type
+ ---------------------------------------------------------------------------*)
+
+fun type_var_in v =
+ if is_vartype v
+ then let fun occ (Tyapp(_,Args)) = Lib.exists occ Args
+            | occ w = (v=w)
+      in occ end
+ else raise ERR "type_var_occurs" "not a type variable";
+
+(*---------------------------------------------------------------------------
+    Does there exist a type variable v in a type such that P(v) holds.
+    Returns false if there are no type variables in the type. 
+ ---------------------------------------------------------------------------*)
+
+fun exists_tyvar P =
+ let fun occ (w as Tyv _) = P w
+       | occ (Tyapp(_,Args)) = Lib.exists occ Args
+ in occ end;
 
 (*---------------------------------------------------------------------------*
- * A total ordering on types. Utv < Tyapp                                    *
- *---------------------------------------------------------------------------*)
-fun type_lt (Utv s1) (Utv s2) = (s1<s2)
-  | type_lt (Utv _) _ = true
-
-  | type_lt (Tyapp({name=s1,...},L1)) (Tyapp({name=s2,...},L2)) =
-       (case String.compare(s1,s2)
-         of LESS => true
-          | EQUAL => lex_order type_lt L1 L2
-          | GREATER => false)
-  | type_lt (Tyapp _) _ = false;
-
-
-fun type_compare ty1 ty2 =
-    if (ty1=ty2) then EQUAL
-    else if type_lt ty1 ty2 then LESS else GREATER;
-
-(*---------------------------------------------------------------------------*
- * Support datatypes and functions.                                          *
- *---------------------------------------------------------------------------*)
-datatype 'a delta = SAME | DIFF of 'a;
-datatype 'a args_changed = YUP of 'a list | NOPE of 'a list;
-
-fun apply f ty =
- let val v = f ty
-     fun appl(YUP L) = YUP((case v of SAME => ty | DIFF x => x)::L)
-       | appl(NOPE L) = case v
-                        of SAME     => NOPE(ty::L)
-                         | DIFF ty' => YUP(ty'::L)
-   in appl end   ;
-
-(*---------------------------------------------------------------------------*
- * Substitute in a type.                                                     *
+ * Substitute in a type, trying to preserve existing structure.              *
  *---------------------------------------------------------------------------*)
 
-fun ty_sub []  ty    = SAME
-  | ty_sub theta (v as Utv _) =
-      (case (Lib.subst_assoc (fn x => (x = v)) theta)
-         of NONE    => SAME
-          | SOME ty => DIFF ty)
-  | ty_sub theta (Tyapp(tyrec,Args)) =
-      (case (itlist (apply (ty_sub theta)) Args (NOPE[]))
-         of YUP l' => DIFF (Tyapp(tyrec,l'))
-          | NOPE _ => SAME)
+fun ty_sub [] _ = SAME
+  | ty_sub theta (Tyapp(tyc,Args)) 
+      = (case delta_map (ty_sub theta) Args
+          of SAME => SAME
+           | DIFF Args' => DIFF (Tyapp(tyc, Args')))
+  | ty_sub theta v =
+      case Lib.subst_assoc (equal v) theta
+       of NONE    => SAME
+        | SOME ty => DIFF ty
 
-fun type_subst theta ty =
-    case (ty_sub theta ty)
-      of SAME     => ty
-       | DIFF ty' => ty';
+fun type_subst theta = delta_apply (ty_sub theta);
 
 
 (*---------------------------------------------------------------------------*
  * Is a type polymorphic?                                                    *
  *---------------------------------------------------------------------------*)
-fun polymorphic (Utv _) = true
+
+fun polymorphic (Tyv _) = true
   | polymorphic (Tyapp(_,Args)) = exists polymorphic Args
 
 
-(*---------------------------------------------------------------------------*
- * Matching for types.                                                       *
- *---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------
+         This matching algorithm keeps track of identity bindings 
+         v |-> v in a separate area. This eliminates the need for
+         post-match normalization of substitutions coming from the
+         matching algorithm, as was done in earlier implementations.
+ ---------------------------------------------------------------------------*)
 
-fun lookup i = Lib.subst_assoc (fn x => x = i);
-val MTY_ERR = TYPE_ERR "type_reduce" "";
-infix |->;
-
-fun type_reduce (v as Utv _) ty S =
-     (case (lookup v S)
-       of NONE => (v |-> ty)::S
-        | SOME residue => if (residue=ty) then S else raise MTY_ERR)
-  | type_reduce (pat as Tyapp(frec1, args1))
-                (ob as  Tyapp(frec2, args2)) S =
-      if (frec1=frec2) then Lib.rev_itlist2 type_reduce args1 args2 S
-      else raise MTY_ERR
-  | type_reduce _  _  _ = raise MTY_ERR;
-
-
-local fun del [] A = A
-        | del ((rr as {redex,residue})::rst) A =
-           if (redex=residue) then del rst A else del rst (rr::A)
+local 
+  fun lookup x ids =
+   let fun look [] = if Lib.mem x ids then SOME x else NONE
+         | look ({redex,residue}::t) = if x=redex then SOME residue else look t
+   in look end
 in
-  fun match_type pat ob = del (type_reduce pat ob []) []
+fun tymatch (v as Tyv _) ty (p as (S,ids)) =
+      (case lookup v ids S
+        of NONE     => if v=ty then (S,v::ids) else ((v |-> ty)::S,ids)
+         | SOME ty1 => if ty1=ty then p else raise ERR "tymatch" "")
+  | tymatch (Tyapp(c1,A1)) (Tyapp(c2,A2)) B =
+      if c1=c2 then rev_itlist2 tymatch A1 A2 B else raise ERR "tymatch" ""
+  | tymatch _  _  _ = raise ERR "tymatch" ""
+
+fun match_type pat ob = fst(tymatch pat ob ([],[]))
 end;
 
-(*---------------------------------------------------------------------------*
- * Information hiding with Theory.                                           *
- *---------------------------------------------------------------------------*)
-local val used = ref false
-      fun break_type (Tyapp x) = x
-        | break_type _ = raise TYPE_ERR"break_type" ""
-in
- fun Theory_init r1 r2 =
-     if !used then ()
-      else (r1 := Tyapp; r2 := break_type; used := true)
-end;
+
+(*---------------------------------------------------------------------------
+        An order on types
+ ---------------------------------------------------------------------------*)
+
+fun compare (Tyv s1, Tyv s2) = String.compare (s1,s2)
+  | compare (Tyv _, _) = LESS
+  | compare (Tyapp((c1,_),A1), Tyapp((c2,_),A2))
+     = (case KernelTypes.compare (c1, c2)
+         of EQUAL => Lib.list_compare compare (A1,A2)
+          |   x   => x)
+  | compare (Tyapp _, _) = GREATER;
+
 
 end; (* Type *)

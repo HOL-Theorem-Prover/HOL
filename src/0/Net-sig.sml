@@ -11,9 +11,8 @@
 
 signature Net =
 sig
-  type term = Term.term
-
   type 'a net
+  type term = Term.term
 
   val empty     : 'a net
   val insert    : term * 'a -> 'a net -> 'a net

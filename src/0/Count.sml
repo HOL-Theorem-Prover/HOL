@@ -6,6 +6,7 @@ struct
  * in a session. The numbers returned are not "secure", since the counter    *
  * manipulation routines are visible to all.                                 *
  *---------------------------------------------------------------------------*)
+
 val counting = ref false;
 fun counting_thms b = (counting := b);
 val inc = Portable.inc
@@ -147,24 +148,24 @@ fun total() =
   prims() + defns() + axioms() + from_disk() + oracles();
 
 fun thm_count() = 
-   {ASSUME     = !(#ASSUME count),    REFL       = !(#REFL count),
-    BETA_CONV  = !(#BETA_CONV count), SUBST      = !(#SUBST count),
-    ABS        = !(#ABS count),       DISCH      = !(#DISCH count),
-    MP         = !(#MP count),        INST_TYPE  = !(#INST_TYPE count),
-    MK_COMB = !(#MK_COMB count),      AP_TERM = !(#AP_TERM count),
-    AP_THM = !(#AP_THM count),        ALPHA = !(#ALPHA count),
-    ETA_CONV = !(#ETA_CONV count), SYM = !(#SYM count), TRANS = !(#TRANS count),
-    EQ_MP = !(#EQ_MP count),          EQ_IMP_RULE = !(#EQ_IMP_RULE count),
-    INST = !(#INST count),            SPEC = !(#SPEC count),
-    GEN = !(#GEN count),  EXISTS = !(#EXISTS count), CHOOSE = !(#CHOOSE count),
-    CONJ = !(#CONJ count),  CONJUNCT1 = !(#CONJUNCT1 count),
-    CONJUNCT2 = !(#CONJUNCT2 count),  DISJ1 = !(#DISJ1 count),
-    DISJ2 = !(#DISJ2 count),  DISJ_CASES = !(#DISJ_CASES count),
-    NOT_INTRO = !(#NOT_INTRO count),  NOT_ELIM = !(#NOT_ELIM count),
-    CCONTR = !(#CCONTR count),
-    definition = !(#DEFINITION count),  axiom = !(#AXIOM count),
-    from_disk = !(#FROM_DISK count),    oracle = !(#ORACLE count),
-    total  = total() }
+ {ASSUME     = !(#ASSUME count),    REFL       = !(#REFL count),
+  BETA_CONV  = !(#BETA_CONV count), SUBST      = !(#SUBST count),
+  ABS        = !(#ABS count),       DISCH      = !(#DISCH count),
+  MP         = !(#MP count),        INST_TYPE  = !(#INST_TYPE count),
+  MK_COMB = !(#MK_COMB count),      AP_TERM = !(#AP_TERM count),
+  AP_THM = !(#AP_THM count),        ALPHA = !(#ALPHA count),
+  ETA_CONV = !(#ETA_CONV count), SYM = !(#SYM count), TRANS = !(#TRANS count),
+  EQ_MP = !(#EQ_MP count),          EQ_IMP_RULE = !(#EQ_IMP_RULE count),
+  INST = !(#INST count),            SPEC = !(#SPEC count),
+  GEN = !(#GEN count),  EXISTS = !(#EXISTS count), CHOOSE = !(#CHOOSE count),
+  CONJ = !(#CONJ count),  CONJUNCT1 = !(#CONJUNCT1 count),
+  CONJUNCT2 = !(#CONJUNCT2 count),  DISJ1 = !(#DISJ1 count),
+  DISJ2 = !(#DISJ2 count),  DISJ_CASES = !(#DISJ_CASES count),
+  NOT_INTRO = !(#NOT_INTRO count),  NOT_ELIM = !(#NOT_ELIM count),
+  CCONTR = !(#CCONTR count),
+  definition = !(#DEFINITION count),  axiom = !(#AXIOM count),
+  from_disk = !(#FROM_DISK count),    oracle = !(#ORACLE count),
+  total  = total() }
 
 
 type meter = {axioms:int, defns:int, oracles:int, disk:int, prims:int}

@@ -1,119 +1,72 @@
-(* ===================================================================== *)
-(* FILE          : Theory.sml                                            *)
-(* DESCRIPTION   : Provides management of logical theories.              *)
-(*                                                                       *)
-(* AUTHOR        : Konrad Slind, University of Calgary                   *)
-(*                 (also T.U. Munich and Cambridge)                      *)
-(* DATE          : September 11, 1991                                    *)
-(* REVISION      : August 7, 1997                                        *)
-(*               : March 9, 1998                                         *)
-(* ===================================================================== *)
+(* ========================================================================= *)
+(* FILE          : Theory.sml                                                *)
+(* DESCRIPTION   : Management of logical theories.                           *)
+(*                                                                           *)
+(* AUTHOR        : Konrad Slind, University of Calgary                       *)
+(*                 (also T.U. Munich and Cambridge)                          *)
+(* DATE          : September 11, 1991                                        *)
+(* REVISION      : August 7, 1997                                            *)
+(*               : March 9, 1998                                             *)
+(*               : August 2000                                               *)
+(*
+
+   ************************************************************************
+
+     Notes on the design. 
+
+  We provide a single current theory segment, which can be thought of as 
+  a scratchpad for building the segment that eventually gets exported. 
+  The following are the important components of a segment:
+
+      - mini-signatures for the types and terms declared in the current
+        segment 
+
+      - the unique id for the theory, along with its parents, which 
+        should be already-loaded theory segments.
+
+      - the theory graph, used to enforce a prohibition on circular 
+        dependencies among segments.
+
+      - the axioms, definitions, and theorems stored in the segment so far.
+
+      - the status of the segment: is it consistent with disk (obscure),
+        have items been deleted from the segment?
+
+  The mini-signatures are held in Type.TypeSig and Term.TermSig, 
+  along with all the types and terms declared in ancestor theories.
+  
+  The parents of the segment are held in the theory graph.
+
+  When a segment is exported, we dump everything in it to a text file
+  representing an ML structure. 
+
+  Elements in the current segment can be deleted or overwritten, which
+  makes consistency maintenance an issue.
+
+ ---------------------------------------------------------------------------*)
 
 
-(*---------------------------------------------------------------------------*
- * A theory is intended to hold the state of a HOL development. The theory   *
- * structure can be thought of as the backbone of a HOL formalization. (Like *
- * a backbone, it is usually invisible, but of crucial importance.) The      *
- * information held in the current theory provides for several important     *
- * services and helps maintain some critical system invariants. The current  *
- * theory                                                                    *
- *                                                                           *
- *  - stores definitions, axioms, and theorems.                              *
- *                                                                           *
- *  - maintains the dependency relation on theories.                         *
- *                                                                           *
- *  - stores information that aids the parser, e.g., fixity information      *
- *                                                                           *
- *  - stores the arity of type operators, for the construction of            *
- *    well-formed types.                                                     *
- *                                                                           *
- *  - stores the type schemes of constants, thus supporting both the         *
- *    explicit construction of well-typed terms and the implicit             *
- *    construction of them, the latter via type inference.                   *
- *                                                                           *
- *  - can be exported to disk, thus providing for persistence.               *
- *                                                                           *
- *---------------------------------------------------------------------------*)
-
-structure Theory :> Theory =
+structure Theory : RawTheory =
 struct
 
-open Term Type Lib Exception;
+open Feedback Lib KernelTypes ;
 
-type hol_type = Type.hol_type
-type term = Term.term;
-type thm = Thm.thm;
 type ppstream = Portable.ppstream
-type ThyPP_info = TheoryPP.thm_printer * string
+type pp_type  = ppstream -> hol_type -> unit
+type pp_thm   = ppstream -> thm -> unit
 
 infix ##;
 
-
-datatype ('a,'b) result = SUCCESS of 'a
-                        | FAILURE of 'b
-
-datatype 'a failed = SYSTEM   of exn     (* OS/network not right *)
-                   | INTERNAL of exn     (* my mistake *)
-                   | CLIENT   of 'a      (* caller problem *)
+val ERR  = mk_HOL_ERR "Theory";
+val WARN = HOL_WARNING "Theory";
 
 type thy_addon = {sig_ps    : (ppstream -> unit) option,
                   struct_ps : (ppstream -> unit) option}
 
 
-fun THEORY_ERR function message =
-    HOL_ERR{origin_structure = "Theory",
-            origin_function = function,
-            message = message}
+(* This reference is set in course of loading parsing library *)
 
-
-(*---------------------------------------------------------------------------
- * Miscellaneous support functions.
- *---------------------------------------------------------------------------*)
-
-fun st_foldl f b A = Array.foldl (fn (L, A) => List.foldl f A L) b A;
-fun st_filter P A = Array.foldl (fn (L, A) => Lib.mapfilter P L@A) [] A;
-
-fun pluck1 x L =
-  let fun get [] A = NONE
-        | get ((p as (x',_))::rst) A =
-           if (x=x') then SOME (p,rst@A)
-           else get rst (p::A)
-  in get L []
-  end;
-
-
-(*---------------------------------------------------------------------------*
- * Get information from Thm structure (the functions are hidden from the     *
- * rest of the system).                                                      *
- *---------------------------------------------------------------------------*)
-local val r1 = ref(fn (_:string ref,tm) => Thm.REFL tm)
-      val r2 = ref (fn _:Tag.tag => Thm.REFL)
-in
-   val _ = Thm.Theory_init r1 r2
-   val mk_axiom_thm  = !r1
-   val mk_defn_thm   = !r2
-end;
-
-
-(*---------------------------------------------------------------------------*
- * Get constructors and destructors from Type and Term structures (the       *
- * constructors and destructors are hidden from the rest of the system).     *
- *---------------------------------------------------------------------------*)
-local val Tyapp_ref = ref(fn _:{name:string,revision:int} * Type.hol_type list
-                            => mk_vartype"'x")
-      val break_type_ref = ref(fn _:Type.hol_type =>
-                              ({name="",revision=0},([]:Type.hol_type list)))
-      val _ = Type.Theory_init Tyapp_ref break_type_ref
-      val Const_ref = ref(fn _:string ref * Type.hol_type =>
-                             mk_var{Name="dummy", Ty=mk_vartype"'x"})
-      val break_const_ref = ref(fn _:Term.term => (ref"",mk_vartype"'x"))
-      val _ = Term.Theory_init Const_ref break_const_ref
-in
-   val Const      = !Const_ref
-   val Tyapp      = !Tyapp_ref
-   val break_type = !break_type_ref
-   val break_const = !break_const_ref
-end;
+val pp_thm = ref (fn _:ppstream => fn _:thm => ())
 
 (*---------------------------------------------------------------------------*
  * Unique identifiers, for securely linking a theory to its parents when     *
@@ -136,444 +89,176 @@ with
   end;
 end;
 
+val min_thyid = new_thyid "min";    (* Ur-theory *)
+
+fun thyid_assoc x [] = raise ERR "thyid_assoc" "not found"
+  | thyid_assoc x ((a,b)::t) = if thyid_eq x a then b else thyid_assoc x t;
+
+
+(*---------------------------------------------------------------------------
+    The theory graph is quite basic: just a list of pairs (thyid,parents).
+    The "min" theory is already installed; it has no parents.
+ ---------------------------------------------------------------------------*)
+
+structure Graph = struct type graph = (thyid * thyid list) list
+local val theGraph = ref [(min_thyid,[])]
+in
+   fun add p = theGraph := (p :: !theGraph)
+   fun add_parent (n,newp) = 
+     let fun same (node,_) = thyid_eq node n
+         fun addp(node,parents) = (node, op_union thyid_eq [newp] parents)
+         fun ins (a::rst) = if same a then addp a::rst else a::ins rst
+           | ins [] = raise ERR "Graph.add_parent.ins" "not found"
+     in theGraph := ins (!theGraph)
+     end
+   fun isin n = Lib.can (thyid_assoc n) (!theGraph);
+   fun parents_of n = thyid_assoc n (!theGraph);
+   fun ancestryl L =
+    let fun Anc P Q = rev_itlist 
+           (fn nde => fn A => if op_mem thyid_eq nde A then A
+             else Anc (parents_of nde handle HOL_ERR _ => []) (nde::A)) P Q
+    in Anc L []
+    end;
+   fun fringe () =
+     let val all_parents = List.map #2 (!theGraph)
+         fun is_parent y = Lib.exists (Lib.op_mem thyid_eq y) all_parents
+     in List.filter (not o is_parent) (List.map #1 (!theGraph))
+     end;
+   fun first P = Lib.first P (!theGraph)
+end
+end; (* structure Graph *)
+
+
 (*---------------------------------------------------------------------------*
- * A type for identifying the different kinds of theorems that may be        *
+ * A type for distinguishing the different kinds of theorems that may be     *
  * stored in a theory.                                                       *
  *---------------------------------------------------------------------------*)
 
 datatype thmkind = Thm of thm | Axiom of string ref * thm | Defn of thm
 
-fun is_axiom (Axiom _) = true  | is_axiom _ = false;
+fun is_axiom (Axiom _) = true  | is_axiom _   = false;
 fun is_theorem (Thm _) = true  | is_theorem _ = false;
-fun is_defn (Defn _) = true    | is_defn _ = false;
+fun is_defn (Defn _)   = true  | is_defn _    = false;
 
-fun drop_thmkind(Axiom(_,th)) = th
-  | drop_thmkind(Thm th)    = th
-  | drop_thmkind(Defn th)   = th;
+fun drop_thmkind (Axiom(_,th)) = th
+  | drop_thmkind (Thm th)      = th
+  | drop_thmkind (Defn th)     = th;
 
 fun drop_pthmkind (s,th) = (s,drop_thmkind th);
 
-fun drop_Axkind(Axiom rth) = rth
-  | drop_Axkind _ = raise THEORY_ERR"drop_Axkind" "";
-
-(*---------------------------------------------------------------------------*
- *                         HOL SIGNATURES                                    *
- *---------------------------------------------------------------------------*)
-
-datatype stEntry = TYPE of {occ:{name:string,revision:int},
-                            arity:int,theory:string,
-                            witness:Thm.thm option, utd:bool ref}
-                 | TERM of {name:string ref, theory:string,
-                            htype:Type.hol_type,
-                            witness:Thm.thm option, utd:bool ref}
+fun drop_Axkind (Axiom rth) = rth
+  | drop_Axkind    _        = raise ERR "drop_Axkind" "";
 
 
 (*---------------------------------------------------------------------------*
- * The type of HOL theories.                                                 *
+ * The type of HOL theory segments. Lacks fields for the type and term       *
+ * signatures, which are held locally in the Type and Term structures.       *
+ * Also lacks a field for the theory graph, which is held in Graph.          *
  *---------------------------------------------------------------------------*)
 
-type theory = {thid : thyid,                                   (* unique id  *)
-               STH  : stEntry list array * (string -> int),  (* symbol table *)
-               GR   : thyid Graph.graph,              (* parenthood relation *)
-               facts: (string * thmkind) list,      (* stored ax,def,and thm *)
-               con_wrt_disk : bool,                 (* consistency with disk *)
-               overwritten : bool,                     (* parts overwritten? *)
-               adjoin : thy_addon list}                (* extras for export  *)
-
+type segment = {thid : thyid,                                  (* unique id  *)
+                facts: (string * thmkind) list,     (* stored ax,def,and thm *)
+                con_wrt_disk : bool,                (* consistency with disk *)
+                overwritten  : bool,                   (* parts overwritten? *)
+                adjoin       : thy_addon list}         (*  extras for export *)
 
 
 (*---------------------------------------------------------------------------*
- * Make a fresh theory segment. The timestamp for a theory is its creation   *
- * date. "con_wrt_disk" is set to false because when a theory is created no  *
- * corresponding file gets created (the file is only created on export).     *
+ *                 CREATE THE INITIAL THEORY SEGMENT.                        *
+ *                                                                           *
+ * The timestamp for a segment is its creation date. "con_wrt_disk" is       *
+ * set to false because when a segment is created no corresponding file      *
+ * gets created (the file is only created on export).                        *
  *---------------------------------------------------------------------------*)
 
-fun fresh_theory s STH GR :theory =
-   {thid=new_thyid s,  STH=STH, GR=GR, facts=[],
+fun fresh_segment s :segment =
+   {thid=new_thyid s,  facts=[],
     con_wrt_disk=false, overwritten=false, adjoin=[]};
 
 
-(*---------------------------------------------------------------------------*
- * Copy a theory.                                                            *
- *---------------------------------------------------------------------------*)
-fun theoryClone {thid,con_wrt_disk, STH=(ST,h), GR, facts,overwritten,adjoin} =
-   let val table_size = Array.length ST
-       val STclone = Array.array (table_size,([]:stEntry list))
-       val _ = for_se 0 (table_size-1)
-                   (fn i => Array.update(STclone,i,Array.sub(ST,i)))
-   in
-      {thid=thid, con_wrt_disk=con_wrt_disk,
-       STH = (STclone,h), GR=GR, facts=facts,
-       overwritten=overwritten, adjoin=adjoin}
-   end;
-
-(*---------------------------------------------------------------------------*
- * Filter the ST by a predicate.                                             *
- *---------------------------------------------------------------------------*)
-
-fun filterST P ST =
-  for_se 0 (Array.length ST - 1)
-      (fn i => Array.update(ST,i,Lib.gather P (Array.sub(ST,i))));
-
-fun mapST f ST =
-  for_se 0 (Array.length ST - 1)
-      (fn i => Array.update(ST,i,List.map f (Array.sub(ST,i))))
-
-fun zapST str ST =
- let fun chk (TERM{theory,...}) = not(theory=str)
-       | chk (TYPE{theory,...}) = not(theory=str)
- in
-   filterST chk ST; ST
- end
-
-(*---------------------------------------------------------------------------*
- * Extraction from a theory.                                                 *
- *---------------------------------------------------------------------------*)
-
-fun slice n ({STH=(ST,_),...}:theory) =
-   st_foldl (fn (e as TERM{theory,...},D) => if (theory=n) then e::D else D
-              | (e as TYPE{theory,...},D) => if (theory=n) then e::D else D)
-      [] ST;
-
-fun types_of s thy =
-     List.foldl (fn (TYPE r,D) => r::D | (_,D) => D) [] (slice s thy);
-
-fun consts_of s thy =
-     List.foldl (fn (TERM r,D) => r::D | (_,D) => D) [] (slice s thy);
-
-fun theory_id (th:theory)       = #thid th
-fun thy_types n (th:theory)     = types_of n th;
-fun thy_constants n (th:theory) = consts_of n th;
-fun thy_axioms (th:theory)      = Lib.filter (is_axiom o #2)   (#facts th);
-fun thy_theorems (th:theory)    = Lib.filter (is_theorem o #2) (#facts th);
-fun thy_defns (th:theory)       = Lib.filter (is_defn o #2)    (#facts th);
-fun thy_addons (th:theory)      = #adjoin th;
-fun thy_con_wrt_disk n (th:theory) = #con_wrt_disk th;
-
-
-(*---------------------------------------------------------------------------*
- * Is a theory empty?                                                        *
- *---------------------------------------------------------------------------*)
-fun empty_theory(thy as {thid,facts, ...}:theory) =
-      null (slice (thyid_name thid) thy) andalso null facts;
-
-
-(*---------------------------------------------------------------------------*
- * Adding a symbol table entry. This can be done when a constant is          *
- * (re-)defined, or when a theory is loaded. You are only allowed to         *
- * redeclare a constant in the current theory. The code is subtle. We        *
- * look through the ST for a record with the same name and theory. If we     *
- * find one, it must belong to the current theory (CT) because theories all  *
- * have different names (in a session) and we can only load a theory once.   *
- * If we found a record with the same name but a different theory, that      *
- * is an error. Otherwise, we have the same name, same theory, and so we     *
- * are re-declaring a type in the current theory. In which case we bump up   *
- * its version number.                                                       *
- *                                                                           *
- * When a constant gets added to the ST, it is uninterpreted. If a defn.     *
- * is attached, the interpreting term gets stuck into the record.            *
- *---------------------------------------------------------------------------*)
-
-local val changed = ref false
+local val CT = ref (fresh_segment "scratch")
 in
-fun add_type_entry {name, theory, arity}
-                   {thid,STH,GR,facts,con_wrt_disk,overwritten,adjoin} =
- let val _ = (changed := false)
-     val (ST,hasher) = STH
-     val i = hasher name
-     val L = Array.sub(ST, i)
-     val entry = TYPE{occ={name=name, revision=0},
-                      theory=theory, arity=arity, witness=NONE, utd=ref true}
-   fun del [] = [entry]
-     | del ((e as TERM _)::rst) = e::del rst
-     | del ((e as TYPE{occ={name=n1,revision},
-                       theory=thy1, arity=a1,witness,utd})::rst) =
-       if (name=n1) andalso (theory=thy1)  (* implies theory=CT *)
-       then (changed := true;
-             TYPE{occ={name=n1,revision=revision+1},
-                 theory=thy1, arity=a1,witness=NONE,utd=utd}::rst)
-       else if (name=n1) andalso (theory<>thy1)
-            then let val err = String.concat ["attempt to redeclare type ",
-                              Lib.quote name," from theory ", Lib.quote thy1]
-                 in print (err^"\n");
-                    raise THEORY_ERR"add_type_entry" err
-                 end
-            else e::del rst  (* name <> name1 *)
- in
-    Array.update(ST, i, del L);
-    {thid=thid,STH=STH,GR=GR,facts=facts,
-     con_wrt_disk=con_wrt_disk, adjoin=adjoin,
-     overwritten = overwritten orelse !changed}
- end;
-
-
-fun add_term_entry {name,theory,htype}
-                   {thid,STH,GR,facts,con_wrt_disk,overwritten,adjoin} =
- let val _ = (changed := false)
-     val (ST,hasher) = STH
-     val i = hasher name
-     val L = Array.sub(ST, i)
-     val entry = TERM{name=ref name, utd=ref true,
-                theory=theory,htype=htype,witness=NONE}
-    fun del [] = [entry]  (* new addition *)
-      | del ((e as TYPE _)::rst) = e::del rst
-      | del ((e as TERM{name = n1, theory=thy1,
-                        htype=ty1,witness,utd})::rst) =
-          if name = !n1 andalso (theory=thy1) (* repl. an existing resident *)
-          then (changed := true;
-                n1 := !Globals.old (!n1);
-                entry::rst)
-          else if (name = !n1) andalso (theory<>thy1)
-               then let val err = String.concat
-                                   ["attempt to redeclare constant ",
-                                    Lib.quote name," from theory ",
-                                    Lib.quote thy1]
-                    in print (err^"\n");
-                      raise THEORY_ERR"add_term_entry" err
-                    end
-               else e::del rst
- in
-   Array.update(ST, i, del L);
-    {thid=thid,STH=STH,GR=GR,facts=facts,
-     con_wrt_disk=con_wrt_disk, adjoin=adjoin,
-     overwritten = overwritten orelse !changed}
- end;
+  fun theCT() = !CT
+(*  fun makeCT seg = (CT := seg; theCT()) *)
+  fun makeCT seg = CT := seg
 end;
 
-(*
-fun add_term_entry {name,theory,htype}
-                   {thid,STH,GR,facts,con_wrt_disk,overwritten,adjoin} =
- let val _ = (changed := false)
-     val (ST,hasher) = STH
-     val i = hasher name
-     val L = Array.sub(ST, i)
-     val entry = TERM{name=ref name, utd=ref true,
-                theory=theory,htype=htype,witness=NONE}
-    fun del [] = [entry]  (* new addition *)
-      | del ((e as TYPE _)::rst) = e::del rst
-      | del ((e as TERM{name = ref n1, theory=thy1,
-                        htype=ty1,witness,utd})::rst) =
-          if (name=n1) andalso (theory=thy1)
-          then (changed := true; entry::rst) (* repl. an existing resident *)
-          else if (name=n1) andalso (theory<>thy1)
-               then raise THEORY_ERR"add_entry"
-                          ("attempt to redeclare constant "
-                                ^Lib.quote name^" from theory "
-                                ^Lib.quote thy1)
-               else e::del rst
- in
-   Array.update(ST, i, del L);
-    {thid=thid,STH=STH,GR=GR,facts=facts,
-     con_wrt_disk=con_wrt_disk, adjoin=adjoin,
-     overwritten = overwritten orelse !changed}
- end;
-end;
-*)
-
-(*---------------------------------------------------------------------------*
- * We've made a definition and should now note that the constant has a       *
- * witness that it depends on: if the witness goes out of date, then the     *
- * constant goes out of date.                                                *
- *---------------------------------------------------------------------------*)
-
-fun add_ty_witness (thy as {STH, ...}:theory) s th =
- let val (ST,hasher) = STH
-     val i = hasher s
-     val L = Array.sub(ST, i)
-     fun get [] = raise THEORY_ERR"add_ty_witness" "no such type"
-       | get ((e as TERM _)::rst) = e::get rst
-       | get ((e as TYPE{occ, theory, arity, witness, utd})::rst) =
-         if #name occ = s
-         then TYPE{occ=occ, theory=theory, arity=arity, utd=utd,
-                   witness=SOME th}::rst
-         else e::get rst
- in
-    Array.update(ST, i, get L); thy
- end;
-
-
-fun add_tm_witness (thy as {STH, ...}:theory) s th  =
- let val (ST,hasher) = STH
-     val i = hasher s
-     val L = Array.sub(ST, i)
-     fun get [] = raise THEORY_ERR"add_tm_witness" "no such constant"
-       | get ((e as TYPE _)::rst) = e::get rst
-       | get ((e as TERM{name, theory, htype, witness,utd})::rst) =
-           if !name = s
-           then TERM{name=name, theory=theory, utd=utd,
-                     htype=htype, witness=SOME th}::rst
-           else e::get rst
- in
-    Array.update(ST, i, get L); thy
- end;
-
-
-fun set_place (s,pl,thyname) (thy as {STH, ...}:theory) =
- let val (ST,hasher) = STH
-     val i = hasher s
-     val L = Array.sub(ST, i)
-     fun get ((e as TYPE _)::rst) = e::get rst
-       | get ((e as TERM{name, theory, htype, witness,utd})::rst) =
-           if (!name=s) andalso (theory=thyname)
-           then TERM{name=name, theory=theory, utd=utd,
-                     htype=htype, witness=witness}::rst
-           else e::get rst
-       |  get [] = raise THEORY_ERR "set_place"
-                      "no such constant declared in current theory"
- in
-    Array.update(ST, i, get L); thy
- end;
-
-
-fun del_type (name,thyname)
-     {thid,STH,GR,facts,con_wrt_disk,overwritten,adjoin} =
- let val (ST,hasher) = STH
-     val i = hasher name
-     val L = Array.sub(ST, i)
-     fun del ((e as TYPE{occ={name=n1,...}, theory=thy1,...})::rst) =
-          if (name=n1) andalso (thyname=thy1) then rst else e::del rst
-       | del ((e as TERM _)::rst) = e::del rst
-       | del [] = raise THEORY_ERR "del_type"
-                    (Lib.quote name^" not found in current theory")
- in
-    Array.update(ST, i, del L);
-    {thid=thid,STH=STH,GR=GR,facts=facts,
-     con_wrt_disk=con_wrt_disk,adjoin=adjoin,
-     overwritten = true}
- end;
-
-
-fun del_const (name,thyname)
-              {thid,STH,GR,facts,con_wrt_disk,overwritten,adjoin} =
- let val (ST,hasher) = STH
-     val i = hasher name
-     val L = Array.sub(ST, i)
-     fun del ((e as TERM{name = n1, theory=thy1,...})::rst) =
-          if (name = !n1) andalso (thyname=thy1)
-            then (n1 := !Globals.old (!n1); rst)
-            else e::del rst
-       | del ((e as TYPE _)::rst) = e::del rst
-       | del [] = raise THEORY_ERR "del_const"
-                      (Lib.quote name^" not found in current theory")
- in
-   Array.update(ST, i, del L);
-   {thid=thid,STH=STH,GR=GR,facts=facts,
-    con_wrt_disk=con_wrt_disk,adjoin=adjoin,
-    overwritten = true}
-
- end;
-
-fun del_axiom name {thid,STH,GR,facts,con_wrt_disk,overwritten,adjoin} =
-  let val facts' = filter (fn (s, Axiom _) => (s=name) | _ => false) facts
-  in
-     {thid=thid, STH=STH, GR=GR, facts=facts', adjoin=adjoin,
-      con_wrt_disk=con_wrt_disk, overwritten = true}
-  end;
-
-(*---------------------------------------------------------------------------*
- * Deleting a definition does not delete the constant(s) introduced by       *
- * the definition!                                                           *
- *---------------------------------------------------------------------------*)
-
-fun del_defn name {thid,STH,GR,facts,con_wrt_disk,overwritten,adjoin} =
-  let val facts' = filter (fn (s, Defn _) => (s=name) | _ => false) facts
-  in {thid=thid, STH=STH, GR=GR, facts=facts',
-      con_wrt_disk=con_wrt_disk, adjoin=adjoin, overwritten=true}
-  end;
-
-fun del_theorem name {thid,STH,GR,facts,con_wrt_disk,overwritten,adjoin} =
-  let val facts' = filter (fn (s, Thm _) => (s=name) | _ => false) facts
-  in {thid=thid, STH=STH, GR=GR, facts=facts',
-      con_wrt_disk=con_wrt_disk, overwritten=overwritten,adjoin=adjoin}
-  end;
-
-(*---------------------------------------------------------------------------*
- * Get the current type record attached to the given name.                   *
- *---------------------------------------------------------------------------*)
-fun lookup_type ({STH, ...}:theory) s e =
- let val (ST,hasher) = STH
-     fun get [] = raise e
-       | get (TERM _::rst) = get rst
-       | get (TYPE(tr as {occ,...})::rst) =
-            if (s = #name occ) then tr else get rst
- in
-    get (Array.sub(ST, hasher s))
- end;
+val CTname = thyid_name o #thid o theCT;
+val current_theory = CTname;
 
 
 (*---------------------------------------------------------------------------*
- * Get the current term constant attached to the given name.                 *
- *---------------------------------------------------------------------------*)
-(*---------------------------------------------------------------------------
- * This constant family stuff is completely horrible. The number treatment
- * has been removed with  Mike Norrish numbers.  However, until something
- * analogous is done for strings, these will still use the code given.
- *
- * The code takes advantage of the fact that the types of strings and
- * numbers won't get re-defined. The witness for a family literal should be
- * an equation involving its predecessor, e.g., `1 = SUC 0` for
- * "mk_const 1"  but I'll just make it be the base element of the family
- * (0 for nums and "" for strings).
+ *                  READING FROM THE SEGMENT                                 *
  *---------------------------------------------------------------------------*)
 
-fun lookup_tmc ({STH,...}:theory) s e =
- let val (ST,hasher) = STH
-     fun get [] = raise e
-       | get (TYPE _::rst) = get rst
-       | get (TERM(tr as {name,...})::rst) =
-           if s = !name then tr else get rst
- in
-     get (Array.sub(ST, hasher s))
- end
+fun thy_types thyname               = Type.thy_types thyname
+fun thy_constants thyname           = Term.thy_consts thyname
+fun thy_parents thyname             = snd (Graph.first 
+                                           (equal thyname o thyid_name o fst))
+fun thy_axioms (th:segment)         = filter (is_axiom o #2)   (#facts th)
+fun thy_theorems (th:segment)       = filter (is_theorem o #2) (#facts th)
+fun thy_defns (th:segment)          = filter (is_defn o #2)    (#facts th)
+fun thy_addons (th:segment)         = #adjoin th
+fun thy_con_wrt_disk n (th:segment) = #con_wrt_disk th;
 
-type term_recd = {name:string ref, theory:string,
-                  htype:Type.hol_type, witness:Thm.thm option,utd:bool ref};
 
-local fun mkString thy e n =
-          {name=ref n, theory="string", utd=ref true,
-           htype=mk_type{Tyop="string",Args=[]},
-           witness = #witness(lookup_tmc thy "emptystring" e)}
-      val table_size = 11;
-      val table = Array.array (table_size,([]:term_recd list))
-      fun hasher s = Lib.hash table_size s (0,0)
-      fun mkX f s =
-        let val i = hasher s
-            val L = Array.sub(table,i)
-            fun look [] A = let val c = f s in (c, c::A) end
-              | look ((c as {name,...})::rst) A =
-                 if (!name=s) then (c,c::(A@rst)) else look rst (c::A)
-            val (c,L') = look L []
-        in
-          Array.update(table,i,L'); c
-        end
+local fun norm_name "-" = CTname() 
+        | norm_name s = s
+      fun grab_item style name alist =
+        case Lib.assoc1 name alist
+         of SOME (_,th) => th
+          | NONE => raise ERR style 
+                      ("couldn't find "^style^" named "^Lib.quote name)
 in
-fun lookup_const thy s e = lookup_tmc thy s e
-  handle HOL_ERR _ =>  (* handle the family cases, if necessary *)
-    if Globals.strings_defined() andalso Lexis.is_string_literal s then
-      if (s="\"\"") then lookup_const thy "emptystring" e
-      else mkX (mkString thy e) s
-    else raise e
+ val types         = thy_types o norm_name
+ val constants     = thy_constants o norm_name
+ fun axioms()      = map drop_pthmkind (thy_axioms (theCT()))
+ fun definitions() = map drop_pthmkind (thy_defns (theCT()))
+ fun theorems()    = map drop_pthmkind (thy_theorems (theCT()))
+ fun axiom s       = grab_item "axiom" s (axioms())
+ fun definition s  = grab_item "definition" s (definitions())
+ fun theorem s     = grab_item "theorem" s (theorems())
+ fun get_parents s = if norm_name s = CTname() 
+                       then Graph.fringe() else thy_parents s
+ val parents       = map thyid_name o get_parents
+ val ancestry      = map thyid_name o Graph.ancestryl o get_parents
 end;
 
-(*---------------------------------------------------------------------------
- * Alteration routines
+   
+(*---------------------------------------------------------------------------*
+ * Is a segment empty?                                                       *
  *---------------------------------------------------------------------------*)
 
-fun set_consistency b {thid, con_wrt_disk, STH,
-                       GR, facts,overwritten,adjoin} =
-   {con_wrt_disk=b, thid=thid, STH=STH, GR=GR, facts=facts,
-   overwritten=overwritten,adjoin=adjoin};
+fun empty_segment ({thid,facts, ...}:segment) =
+  let val thyname = thyid_name thid
+  in null (thy_types thyname) andalso
+     null (thy_constants thyname) andalso
+     null facts
+  end;
 
-fun set_overwritten b {thid, con_wrt_disk, STH,
-                       GR, facts,overwritten,adjoin} =
-   {overwritten=b, con_wrt_disk=con_wrt_disk,adjoin=adjoin,
-    thid=thid, STH=STH, GR=GR, facts=facts};
+(*---------------------------------------------------------------------------*
+ *              ADDING TO THE SEGMENT                                        *
+ *---------------------------------------------------------------------------*)
 
-fun zap s {thid, con_wrt_disk, STH=(ST,h), GR, facts,overwritten,adjoin} =
-   {overwritten=false, con_wrt_disk=con_wrt_disk, adjoin=[],
-    thid=thid, STH=(zapST s ST, h), GR=GR, facts=[]};
+fun add_type {name,theory,arity}
+             {thid,facts,con_wrt_disk,overwritten,adjoin} =
+   {thid=thid, facts=facts, con_wrt_disk=con_wrt_disk, adjoin=adjoin,
+    overwritten = let open Type
+                  in case TypeSig.insert (mk_id(name,theory),arity)
+                      of TypeSig.INITIAL _ => overwritten
+                       | TypeSig.CLOBBER _ => true
+                  end};
 
-
+fun add_term {name,theory,htype} 
+             {thid,facts,con_wrt_disk,overwritten,adjoin}
+  = {thid=thid,facts=facts, con_wrt_disk=con_wrt_disk, adjoin=adjoin,
+     overwritten = 
+      let open Term 
+          val tykind = (if Type.polymorphic htype then POLY else GRND) htype
+      in case TermSig.insert (Const(mk_id(name,theory),tykind))
+          of TermSig.INITIAL _ => overwritten
+           | TermSig.CLOBBER _ => true
+      end};
 
 (*---------------------------------------------------------------------------
  * We allow axioms to overwrite "themselves", and definitions to overwrite
@@ -587,137 +272,159 @@ fun zap s {thid, con_wrt_disk, STH=(ST,h), GR, facts,overwritten,adjoin} =
  * has the one axiom and we can't find out where to assign blame. This is
  * handled by having axioms be tracked in inference.
  *---------------------------------------------------------------------------*)
+
+local fun pluck1 x L =
+       let fun get [] A = NONE
+             | get ((p as (x',_))::rst) A =
+               if x=x' then SOME (p,rst@A) else get rst (p::A)
+       in get L []
+       end
 fun overwrite (p as (s,f)) l =
- case (pluck1 s l)
+ case pluck1 s l
   of NONE => (p::l, false)
    | SOME ((_,f'),l') =>
        (case (f,f')
-         of (Defn _, Defn _)    => (p::l', true)
-          | (Axiom _ , Axiom _) =>  (p::l', true)
-          | (_ , Defn _)        => raise THEORY_ERR"overwrite_fact"
+         of (Defn _, Defn _)   => (p::l', true)
+          | (Axiom _, Axiom _) => (p::l', true)
+          | (_ , Defn _)       => raise ERR"overwrite_fact"
                    "overwriting a defn with an axiom or a theorem not allowed"
-          | (_, Thm _)          => (p::l', false)
-          | (_ , Axiom _)       => raise THEORY_ERR"overwrite_fact"
-                  "overwriting an axiom with a defn or a theorem not allowed");
-
-fun add_fact (th as (s,_)) {thid, con_wrt_disk,
-                            STH, GR, facts,overwritten,adjoin} =
-  let val (X,b) = overwrite th facts
-  in
-    {facts=X, overwritten = overwritten orelse b,
-     thid=thid, con_wrt_disk=con_wrt_disk, STH=STH, GR=GR, adjoin=adjoin}
-  end;
-
-fun new_addon a {thid, con_wrt_disk, STH, GR, facts,overwritten,adjoin} =
-    {adjoin = a::adjoin, facts=facts, overwritten=overwritten,
-     thid=thid, con_wrt_disk=con_wrt_disk, STH=STH, GR=GR};
-
-
-fun plucky x L =
-  let fun get [] A = NONE
-        | get ((p as (x',_))::rst) A =
-           if (x=x') then SOME (rev A, p, rst)
-           else get rst (p::A)
-  in get L []
-  end;
-
-fun set_MLbind (s1,s2) (rcd as {thid, con_wrt_disk, STH,
-                        GR, facts, overwritten,adjoin}) =
-  case (plucky s1 facts)
-   of SOME (X,(_,b),Y) =>
-         {facts=X@((s2,b)::Y),
-          overwritten=overwritten, adjoin=adjoin,
-          thid=thid, con_wrt_disk=con_wrt_disk, STH=STH, GR=GR}
-    | NONE =>
-        (Lib.mesg true (Lib.quote s1^" not found in current theory"); rcd)
-
-
-(*---------------------------------------------------------------------------*
- * Link a theory to its parents in a theory graph.                           *
- *---------------------------------------------------------------------------*)
-
-fun set_diff a b = gather (fn x => not (Lib.op_mem thyid_eq x b)) a;
-fun node_set_eq S1 S2 = null(set_diff S1 S2) andalso null(set_diff S2 S1);
-
-fun graph_link thy p graph =
- let val node = make_thyid thy
-     val parents = map make_thyid p
- in
- if (Lib.all (Lib.C Graph.isin graph) parents)
- then if (Graph.isin node graph)
-     then if (node_set_eq parents (#2(Graph.assoc node graph))) then graph
-          else (Lib.mesg true
-                 "link_parents: the theory has two unequal sets of parents";
-                raise THEORY_ERR "link_parents" "")
-     else Graph.add (node,parents) graph
- else let val baddies = Lib.filter (fn p => not(Graph.isin p graph)) parents
-          val names = map thyid_name baddies
-    in Lib.mesg true
-        ("link_parents: the following parents are not in the graph: "^
-          String.concat (commafy names));
-       raise THEORY_ERR"link_parents" ""
+          | (_, Thm _)         => (p::l', false)
+          | (_, Axiom _)       => raise ERR"overwrite_fact"
+                  "overwriting an axiom with a defn or a theorem not allowed")
+in
+fun add_fact (th as (s,_)) {thid, con_wrt_disk,facts,overwritten,adjoin}
+  = let val (X,b) = overwrite th facts
+    in {facts=X, overwritten = overwritten orelse b,
+        thid=thid, con_wrt_disk=con_wrt_disk, adjoin=adjoin}
     end
-  end;
-
-fun gen_link_parents thy p {thid,con_wrt_disk,STH,GR,
-                            facts,overwritten,adjoin} =
-    {GR=graph_link thy p GR,
-     thid=thid,con_wrt_disk=con_wrt_disk,STH=STH,adjoin=adjoin,
-     facts=facts,overwritten=overwritten};
-
-
-local fun sfirst s GR = Graph.first (fn n => (thyid_name n = s)) GR
-in
-  fun parents_of s ({GR,...}:theory) = #2(sfirst s GR)
-  fun graph_ancestry s (thy as {GR,...}) = Graph.ancestryl GR(parents_of s thy)
-  fun graph_ancestryl nlist ({GR,...}:theory) = Graph.ancestryl GR nlist
-  fun graph_fringe ({GR,...}:theory) = Graph.fringe GR
 end;
 
+fun new_addon a {thid, con_wrt_disk, facts, overwritten, adjoin} =
+    {adjoin = a::adjoin, facts=facts, overwritten=overwritten,
+     thid=thid, con_wrt_disk=con_wrt_disk};
 
-(*---------------------------------------------------------------------------*
- *                 CREATE THE INITIAL THEORY.                                *
- *                                                                           *
- * To build this, we have to create the symbol table. Some day the impl. of  *
- * the ST should be traded in for a professional hashtable. We also create   *
- * an empty theory graph.                                                    *
- *---------------------------------------------------------------------------*)
-
-local val table_size = 1999  (* some prime *)
-      fun hasher s = Lib.hash table_size s (0,0);
-      val ST = Array.array(table_size, ([]:stEntry list))
-      val GR = Graph.empty thyid_eq
-      val CT = ref (fresh_theory "scratch" (ST,hasher) GR)
+local fun plucky x L =
+       let fun get [] A = NONE
+             | get ((p as (x',_))::rst) A =
+                if x=x' then SOME (rev A, p, rst) else get rst (p::A)
+       in get L []
+       end
 in
-  fun theCT() = !CT
-  fun makeCT thry = (CT := thry);
+fun set_MLbind (s1,s2) (rcd as {thid, con_wrt_disk,facts, overwritten,adjoin}) 
+ = case plucky s1 facts
+   of NONE => (WARN "set_MLbind" 
+               (Lib.quote s1^" not found in current theory"); rcd)
+    | SOME (X,(_,b),Y) =>
+        {facts=X@((s2,b)::Y), overwritten=overwritten, 
+         adjoin=adjoin,thid=thid, con_wrt_disk=con_wrt_disk}
 end;
-
-val CTid = theory_id o theCT;
-val CTname = thyid_name o CTid;
-val current_theory = CTname;
-
-
-(*---------------------------------------------------------------------------*
- *   USING INFORMATION ON SPECIFIED ITEMS IN THE CURRENT THEORY              *
- *---------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------
- * Return type constant just as it was declared.
+            Deleting from the segment
+ ---------------------------------------------------------------------------*)
+
+fun del_type (name,thyname) {thid,facts,con_wrt_disk,overwritten,adjoin} 
+  = {thid=thid,facts=facts, con_wrt_disk=con_wrt_disk,adjoin=adjoin,
+     overwritten = Type.TypeSig.delete (name,thyname) 
+         orelse 
+         (WARN "del_type" (fullname(name,thyname)^" not found");
+          overwritten)}
+
+fun del_const (name,thyname) {thid,facts,con_wrt_disk,overwritten,adjoin}
+  = {thid=thid,facts=facts, con_wrt_disk=con_wrt_disk,adjoin=adjoin,
+     overwritten = Term.TermSig.delete (name,thyname) 
+         orelse 
+         (WARN "del_const" (fullname(name,thyname)^" not found");
+          overwritten)}
+
+
+fun del_axiom name {thid,facts,con_wrt_disk,overwritten,adjoin} =
+  {facts = filter (fn (s, Axiom _) => (s=name) | _ => false) facts, 
+   thid=thid, adjoin=adjoin, con_wrt_disk=con_wrt_disk, overwritten=true};
+
+
+(*---------------------------------------------------------------------------*
+ * Note: deleting a definition does not delete the constant(s) introduced    *
+ * by the definition from the signature; that has to be dealt with           *
+ * separately.                                                               *
  *---------------------------------------------------------------------------*)
 
-fun type_decl x =
-   lookup_type (theCT()) x
-     (THEORY_ERR "type_decl" (Lib.quote x^" not found in signature"));
+fun del_defn name {thid,facts,con_wrt_disk,overwritten,adjoin} =
+  {facts = filter (fn (s, Defn _) => (s=name) | _ => false) facts,
+   thid=thid, con_wrt_disk=con_wrt_disk, adjoin=adjoin, overwritten=true}
 
-fun arity x =
-   #arity(lookup_type (theCT()) x
-           (THEORY_ERR"arity_of_type"
-                 (Lib.quote x^" not found in type signature")))
+fun del_theorem name {thid,facts,con_wrt_disk,overwritten,adjoin} =
+  {facts = filter (fn (s, Thm _) => (s=name) | _ => false) facts, thid=thid,
+   con_wrt_disk=con_wrt_disk, overwritten=overwritten,adjoin=adjoin};
 
-fun is_type x = Lib.can type_decl x;
+(*---------------------------------------------------------------------------
+   Clean out the segment. Note: this clears out the segment, and the
+   signatures, but does not alter the theory graph. The segment will 
+   still be there, with its parents.
+ ---------------------------------------------------------------------------*)
 
-fun current_revision s = #revision(#occ(type_decl s));
+fun zap_segment s {thid, con_wrt_disk, facts, overwritten, adjoin} =
+ let val _ = Type.TypeSig.del_segment s
+     val _ = Term.TermSig.del_segment s
+ in {overwritten=false, adjoin=[], facts=[], 
+     con_wrt_disk=con_wrt_disk, thid=thid}
+ end;
+
+fun set_consistency b {thid, con_wrt_disk, facts, overwritten, adjoin} = 
+{con_wrt_disk=b, thid=thid,facts=facts, overwritten=overwritten,adjoin=adjoin}
+;
+fun set_overwritten b {thid, con_wrt_disk, facts, overwritten, adjoin} = 
+{overwritten=b,con_wrt_disk=con_wrt_disk, thid=thid,facts=facts, adjoin=adjoin}
+;
+
+(*---------------------------------------------------------------------------
+       Wrappers for functions that alter the segment. Each time the
+       segment is altered, the con_wrt_disk flag is set. This is a 
+       bit stewpid and I'd like to get rid of it.
+ ---------------------------------------------------------------------------*)
+
+local fun inCT f arg = makeCT(set_consistency false (f arg (theCT())))
+in
+  val add_typeCT        = inCT add_type
+  val add_termCT        = inCT add_term
+  fun add_axiomCT(r,ax) = inCT add_fact (!r, Axiom(r,ax))
+  fun add_defnCT(s,def) = inCT add_fact (s,  Defn def)
+  fun add_thmCT(s,th)   = inCT add_fact (s,  Thm th)
+
+  fun delete_type n     = inCT del_type  (n,CTname())
+  fun delete_const n    = inCT del_const (n,CTname())
+  val delete_axiom      = inCT del_axiom
+  val delete_theorem    = inCT del_theorem
+  val delete_definition = inCT del_defn
+
+  fun set_MLname s1 s2  = inCT set_MLbind (s1,s2)
+  val adjoin_to_theory  = inCT new_addon
+
+  fun set_ct_consistency b = makeCT(set_consistency b (theCT()))
+end;
+
+
+(*---------------------------------------------------------------------------*
+ *            INSTALLING CONSTANTS IN THE CURRENT SEGMENT                    *
+ *---------------------------------------------------------------------------*)
+
+fun new_type {Name,Arity} =
+ (if Lexis.allowed_type_constant Name then ()
+  else WARN "new_type" (Lib.quote Name^" is not a standard type name")
+  ; add_typeCT {name=Name, arity=Arity, theory = CTname()};());
+
+fun new_constant {Name,Ty} =
+  (if Lexis.allowed_term_constant Name then ()
+   else WARN "new_constant" (Lib.quote Name^" is not a standard constant name")
+   ; add_termCT {name=Name, theory=CTname(), htype=Ty}; ())
+
+(*---------------------------------------------------------------------------
+     Install constants in the current theory, as part of loading a
+     previously built theory from disk.
+ ---------------------------------------------------------------------------*)
+
+fun install_type(s,a,thy)   = add_typeCT {name=s, arity=a, theory=thy};
+fun install_const(s,ty,thy) = add_termCT {name=s, htype=ty, theory=thy}
 
 
 (*---------------------------------------------------------------------------
@@ -727,399 +434,258 @@ fun current_revision s = #revision(#occ(type_decl s));
  * it was declared in an ancestor theory and is thus frozen); or 2) it was
  * declared in the current theory and its witness is up-to-date.
  *
+ * When a new entry is made in the theory, it is checked to see if it is
+ * uptodate (or if its witnesses are). The "overwritten" bit of a segment
+ * tells whether any element of the theory has been overwritten. If 
+ * overwritten is false, then the theory is uptodate. If we want to add
+ * something to an uptodate theory, then no processing need be done.
+ * Otherwise, we have to examine the item, and recursively any item it
+ * depends on, to see if any constant or type constant occurring in it,
+ * or any theorem it depends on, is outofdate. If so, then the item 
+ * will not be added to the theory.
+ *
+ * To clean up a theory with outofdate elements, use "scrub".
+ * 
+ * To tell if an object is uptodate, we can't just look at it; we have
+ * to recursively examine its witness(es). We can't just accept a witness
+ * that seems to be uptodate, since its constants may be flagged as uptodate,
+ * but some may depend on outofdate witnesses. The solution taken
+ * here is to first set all constants in the segment signature to be 
+ * outofdate. Then a bottom-up pass is made. The "utd" flag in each 
+ * signature entry is used to cut off repeated recursive traversal, as in
+ * dynamic programming. It holds the value "true" when the witness is 
+ * uptodate. 
  *---------------------------------------------------------------------------*)
 
-local fun dirty (thy as {STH=(ST,_),...}:theory) =
-           (mapST (fn (e as TERM{utd,...}) => (utd := false; e)
-                    | (e as TYPE{utd,...}) => (utd := false; e)) ST; thy)
+local datatype constkind = TY | TM 
 
-fun up2date_tyc thy (r as {name,...}) =
-   let val {occ,theory,arity,witness,utd} =
-        lookup_type thy name (THEORY_ERR"" "")
-   in if (theory = thyid_name(theory_id thy))
-      then (occ=r) andalso
-           (!utd orelse
-             (if (up2date_thm_opt thy witness)
-              then (utd := true; true) else false))
-      else true
-   end handle HOL_ERR _ => false
+      fun dest_tm_entry NONE = NONE
+        | dest_tm_entry (SOME{const,utd,witness}) = SOME(utd,witness)
+      fun dest_ty_entry NONE = NONE
+        | dest_ty_entry (SOME{const,utd,witness}) = SOME(utd,witness)
 
-and up2date_type thy ty =
-   is_vartype ty
-    orelse
-   let val (c,args) = break_type ty
-   in up2date_tyc thy c andalso Lib.all (up2date_type thy) args
+   fun init () = 
+     let val thy = CTname()
+     in Type.TypeSig.anachronize thy; 
+        Term.TermSig.anachronize thy
+     end
+
+   fun up2date_entry CTname (utd,witness) =
+     if !utd then true 
+     else if up2date_witness CTname witness
+          then (utd := true; true)
+          else false
+
+   and up2date_id CTname id constkind =
+     if seg_of id <> CTname then true  (* not current theory *)
+     else let open Type Term 
+              val entryinfo = case constkind
+                     of TY => dest_ty_entry(TypeSig.lookup (dest_id id))
+                      | TM => dest_tm_entry(TermSig.lookup (dest_id id))
+           in case entryinfo
+               of NONE => false  (* entry has been deleted *)
+                | SOME uw => up2date_entry CTname uw
+           end
+
+   and up2date_type CTname ty = 
+     if Type.is_vartype ty then true
+     else let val ((id,_),args) = Type.break_type ty
+          in up2date_id CTname id TY
+             andalso Lib.all (up2date_type CTname) args
+          end
+
+   and up2date_term CTname tm =
+     let open Term
+     in if is_const tm 
+        then let val (id,ty) = break_const tm
+             in up2date_id CTname id TM
+                andalso up2date_type CTname ty
+             end
+        else case (is_var tm, is_comb tm, is_abs tm)
+             of (true,_,_) => up2date_type CTname (type_of tm)
+              | (_,true,_) => up2date_term CTname (rator tm) andalso 
+                              up2date_term CTname (rand tm)
+              | (_,_,true) => up2date_term CTname (bvar tm) andalso 
+                              up2date_term CTname (body tm)
+              | otherwise  => raise ERR "up2date_term" "unexpected case"
+     end
+
+   and up2date_thm CTname thm =
+     Lib.all (up2date_term CTname) (Thm.concl thm::Thm.hyp thm)
+       andalso
+     up2date_axioms CTname (Tag.axioms_of (Thm.tag thm))
+
+   and up2date_witness _ NONE = true
+     | up2date_witness CTname (SOME(TERM tm)) = up2date_term CTname tm
+     | up2date_witness CTname (SOME(THEOREM th)) = up2date_thm CTname th
+
+   and up2date_axioms _ [] = true
+     | up2date_axioms CTname rlist =
+        let val axs = map (drop_Axkind o snd) (thy_axioms(theCT()))
+        in Lib.all (up2date_term CTname 
+                     o Thm.concl o Lib.C Lib.assoc axs) rlist
+        end handle HOL_ERR _ => false
+in
+fun uptodate_type ty =
+   if #overwritten (theCT())
+   then (init(); up2date_type (CTname()) ty) else true
+
+fun uptodate_term tm =
+   if #overwritten (theCT())
+   then (init (); up2date_term (CTname()) tm) else true
+
+fun uptodate_thm thm =
+   if #overwritten (theCT()) 
+   then (init (); up2date_thm (CTname()) thm) else true
+
+fun scrub_sig CT =
+  let open Type Term
+  in
+    TypeSig.filter (fn {witness,utd,...} => up2date_entry CT (utd,witness));
+    TermSig.filter (fn {witness,utd,...} => up2date_entry CT (utd,witness))
+  end
+
+fun scrub_ax CTname {thid,con_wrt_disk,facts,overwritten,adjoin} =
+   let fun check (_, Thm _ ) = true
+         | check (_, Defn _) = true
+         | check (_, Axiom(_,th)) = up2date_term CTname (Thm.concl th)
+   in
+      {thid=thid, con_wrt_disk=con_wrt_disk, adjoin=adjoin,
+       facts=Lib.gather check facts,overwritten=overwritten}
    end
 
-and up2date_const thy tm =
-  let val (r as ref str,ty) = break_const tm
-      val {name,theory,htype,witness,utd} =
-       lookup_const thy str (THEORY_ERR"" "")
-  in
-    if (theory = thyid_name(theory_id thy))
-    then (name=r) andalso
-          (!utd orelse
-           (if (up2date_thm_opt thy witness)
-            then (utd := true; true) else false))
-    else true
-  end handle HOL_ERR _ => false
+fun scrub_thms CTname {thid,con_wrt_disk,facts,overwritten,adjoin} =
+   let fun check (_, Axiom _) = true
+         | check (_, Thm th ) = up2date_thm CTname th
+         | check (_, Defn th) = up2date_thm CTname th
+   in {thid=thid, con_wrt_disk=con_wrt_disk,adjoin=adjoin,
+        facts=Lib.gather check facts, overwritten=overwritten}
+   end
 
-and up2date_term thy tm =  (* could use destructor for Abs, for more speed. *)
-  case (Term.dest_term tm)
-  of VAR{Ty,...}      => up2date_type  thy Ty
-   | CONST _          => up2date_const thy tm
-   | COMB{Rator,Rand} => up2date_term thy Rator andalso up2date_term thy Rand
-   | LAMB{Bvar,Body}  => up2date_term thy Bvar  andalso up2date_term thy Body
-
-and up2date_thm thy thm =
-     Lib.all (up2date_term thy) (Thm.concl thm::Thm.hyp thm)
-     andalso
-     up2date_axioms thy (Tag.axioms_of (Thm.tag thm))
-
-and up2date_thm_opt thy NONE = true
-  | up2date_thm_opt thy (SOME thm) = up2date_thm thy thm
-
-and up2date_axioms thy []    = true
-  | up2date_axioms thy rlist =
-     let val axs = map (drop_Axkind o snd) (thy_axioms thy)
-     in Lib.all (up2date_term thy o Thm.concl o Lib.C Lib.assoc axs) rlist
-     end handle HOL_ERR _ => false
-in
-  fun uptodate_type ty =
-      if (#overwritten (theCT()))
-      then (dirty (theCT()); up2date_type (theCT()) ty) else true
-  fun uptodate_term tm =
-      if (#overwritten (theCT()))
-      then (dirty (theCT()); up2date_term (theCT()) tm) else true
-  fun uptodate_thm thm =
-      if (#overwritten (theCT()))
-      then (dirty (theCT()); up2date_thm (theCT()) thm) else true
-
-  fun scrub_sig s thy =
-    let fun chk (TERM{name, theory, htype,witness,utd}) =
-             if (theory=s)
-             then (!utd orelse
-                   (if (up2date_thm_opt thy witness) then (utd := true; true)
-                    else false))
-               else true
-          | chk (TYPE{occ,arity,theory,witness,utd}) =
-             if (theory=s)
-             then (!utd orelse
-                   (if (up2date_thm_opt thy witness) then (utd := true; true)
-                    else false))
-              else true
-    in
-      filterST chk (#1(#STH thy)); thy
-    end
-
-  fun scrub_ax s (thy as {thid,con_wrt_disk,STH,GR,
-                          facts,overwritten,adjoin}) =
-    let fun chk (_, Thm _ ) = true
-          | chk (_, Defn _) = true
-          | chk (_, Axiom(_,th)) = up2date_term thy (Thm.concl th)
-    in
-      {thid=thid, con_wrt_disk=con_wrt_disk, STH=STH,adjoin=adjoin,
-       GR=GR, facts=Lib.gather chk facts,overwritten=overwritten}
-    end
-
-  fun scrub_thms s (thy as {thid,con_wrt_disk,STH,GR,
-                            facts,overwritten,adjoin}) =
-    let fun chk (_, Axiom _) = true
-          | chk (_, Thm th ) = up2date_thm thy th
-          | chk (_, Defn th) = up2date_thm thy th
-    in
-      {thid=thid, con_wrt_disk=con_wrt_disk, STH=STH,adjoin=adjoin,
-       GR=GR, facts=Lib.gather chk facts, overwritten=overwritten}
-    end
-
-  fun scrub_thy s thy =
-    let val thy' = dirty thy
-        val {thid,con_wrt_disk,STH,GR,facts,overwritten,adjoin}
-             = scrub_thms s
-                  (scrub_ax s
-                     (scrub_sig s thy'))
-         in
-           {overwritten=false,
-            thid=thid,con_wrt_disk=con_wrt_disk,
-            STH=STH,GR=GR,facts=facts,adjoin=adjoin}
-         end
+fun scrub () =
+   let val  _  = init()
+       val thy = CTname()
+       val  _  = scrub_sig thy
+       val {thid,con_wrt_disk,facts,overwritten,adjoin}
+             = scrub_thms thy (scrub_ax thy (theCT()))
+   in makeCT {overwritten=false, thid=thid,
+              con_wrt_disk=con_wrt_disk, facts=facts, adjoin=adjoin}
+   end
 end;
 
-
-fun scrub() = makeCT(scrub_thy (CTname()) (theCT()));
-
+(*
 fun scrubCT() =
  (if !Globals.show_scrub
   then (Lib.say("Scrubbing "^CTname()^": "); Lib.time scrub()) else scrub()
   ;
   theCT());
+*)
 
 fun scrubCT() = (scrub(); theCT());
 
 
-
-(*---------------------------------------------------------------------------
- * Return term constant just as it was declared.
- *---------------------------------------------------------------------------*)
-
-fun const_decl x =
-  let val {name,htype,theory,...} = lookup_const (theCT()) x
-          (THEORY_ERR "const_decl" (Lib.quote x^" not found in signature"))
-  in
-    {const=Const(name,htype),theory=theory}
-  end;
-
-
 (*---------------------------------------------------------------------------*
- * Is a string the name of a defined constant.                               *
- *---------------------------------------------------------------------------*)
-
-fun is_constant x = Lib.can const_decl x;
-
-(*---------------------------------------------------------------------------*
- * Is a string the name of a polymorphic constant.                           *
- *---------------------------------------------------------------------------*)
-
-fun is_polymorphic x =
-  Type.polymorphic
-    (#Ty(dest_const(#const(const_decl x)))) handle HOL_ERR _ => false;
-
-
-(*---------------------------------------------------------------------------*
- * Making type constants.                                                    *
- *---------------------------------------------------------------------------*)
-
-fun mk_type{Tyop, Args} =
-  let val {occ,arity,...} = lookup_type (theCT()) Tyop
-            (THEORY_ERR "mk_type" (Lib.quote Tyop^" is not a known HOL type"))
-      val l = length Args
-  in if arity = l
-      then Tyapp (occ,Args)
-       else raise THEORY_ERR "mk_type"
-         (String.concat [Lib.quote Tyop, " (arity ", Lib.int_to_string arity,
-                ") is being applied to ", Lib.int_to_string l, " argument(s)"])
-  end;
-
-(*---------------------------------------------------------------------------*
- * Making constants without matching. Fails when tried on family members.    *
- *---------------------------------------------------------------------------*)
-
-fun prim_mk_const name =
-   let val {name,htype,...} = lookup_const (theCT()) name
-               (THEORY_ERR "mk_const" (Lib.quote name^" has not been defined"))
-       val c = Const(name,htype)
-   in
-    if Type.polymorphic htype
-    then (fn theta => Const(name, Type.type_subst theta htype))
-    else (fn _ => c)
-   end;
-
-
-fun get_const_from_theory thy {Name,Ty} =
- let val {name,htype,...} = lookup_const thy Name
-                (THEORY_ERR"get_const_from_symtab"
-                        (Lib.quote Name^" is not a known HOL constant"))
- in (case Type.match_type htype Ty
-      of [] => Const (name,htype)
-       | _  => Const (name,Ty))
-    handle HOL_ERR _ => raise THEORY_ERR"get_const_from_symtab"
-                       ("not a type instance: "^Lib.quote Name)
- end;
-
-fun mk_const r = get_const_from_theory (theCT()) r;
-
-
-
-(*---------------------------------------------------------------------------*
- *              WRITING INTO THE CURRENT THEORY                              *
- *---------------------------------------------------------------------------*)
-
-local fun augmentCT f arg = makeCT(set_consistency false (f arg (theCT())))
-in
-  val add_typeCT        = augmentCT add_type_entry
-  val add_termCT        = augmentCT add_term_entry
-  fun add_axiomCT(r,ax) = augmentCT add_fact (!r, Axiom(r,ax))
-  fun add_defnCT(s,def) = augmentCT add_fact (s,Defn def)
-  fun add_thmCT(s,th)   = augmentCT add_fact (s,Thm th)
-
-  fun delete_type n     = augmentCT del_type  (n,CTname())
-  fun delete_const n    = (augmentCT del_const (n,CTname());
-                           augmentCT del_const ("$"^n,CTname()))
-  val delete_axiom      = augmentCT del_axiom
-  val delete_theorem    = augmentCT del_theorem
-  val delete_definition = augmentCT del_defn
-
-  fun set_fixity s f    = augmentCT set_place (s,f,CTname())
-  fun set_MLname s1 s2  = augmentCT set_MLbind (s1,s2)
-  val adjoin_to_theory  = augmentCT new_addon
-end;
-
-fun set_ct_consistency b = makeCT(set_consistency b (theCT()))
-
-(*---------------------------------------------------------------------------*
- *            INSTALLING CONSTANTS IN THE CURRENT THEORY                     *
- *---------------------------------------------------------------------------*)
-
-fun new_type {Name,Arity} =
-  if Lexis.allowed_type_constant Name
-  then add_typeCT {name=Name, arity=Arity, theory = CTname()}
-  else Lib.mesg true
-        ("new_type: "^Lib.quote Name
-          ^" is not a standard type name (continuing anyway)");
-
-fun install_type(s,a,thy) = add_typeCT {name=s, arity=a, theory=thy};
-
-
-(*---------------------------------------------------------------------------*
- * Installing term constants.                                                *
- *---------------------------------------------------------------------------*)
-
-fun prim_new_constant (c as {Name,Ty}) =
-  (if (Lexis.allowed_term_constant Name) then ()
-    else Lib.mesg true
-          ("new_constant: "^Lib.quote Name
-           ^ " is not a standard constant name (continuing anyway)");
-   let val trec = {name=Name, htype=Ty, theory=CTname()}
-   in
-      add_termCT trec
-   end)
-
-(*-------------------------------------------------------------------------*
- * Add a constant to the signature. This entrypoint is for adding          *
- * constants from parent theories as they are loaded.                      *
- *-------------------------------------------------------------------------*)
-fun install_const(s,ty,thy) =
-   let val entry = {name=s, htype=ty, theory=thy}
-   in
-     add_termCT entry
-   end;
-
-
-(*---------------------------------------------------------------------------*
- *   WRITING AXIOMS, DEFINITIONS, AND THEOREMS INTO THE CURRENT THEORY       *
+ *   WRITING AXIOMS, DEFINITIONS, AND THEOREMS INTO THE CURRENT SEGMENT      *
  *---------------------------------------------------------------------------*)
 
 local fun check_name (fname,s) = ()
-      fun empty_hyp th =
-         if (List.null (Thm.hyp th)) then ()
-         else raise THEORY_ERR "save_thm" "non empty assumption set"
-      fun DATED_ERR fname bindname =
-         THEORY_ERR fname (Lib.quote bindname^"is out-of-date!");
+      fun DATED_ERR f bindname = ERR f (Lib.quote bindname^" is out-of-date!")
 in
+fun save_thm (name,th) =
+      (check_name ("save_thm",name)
+       ; if uptodate_thm th then add_thmCT(name,th)
+         else raise DATED_ERR "save_thm" name
+       ; th)
+
 fun new_axiom (name,tm) =
    let val rname = ref name
-       val ax = mk_axiom_thm (rname,tm)
+       val axiom = Thm.mk_axiom_thm (rname,tm)
        val  _ = check_name ("new_axiom",name)
-   in
-     if (uptodate_term tm) then add_axiomCT(rname,ax)
-     else raise DATED_ERR "new_axiom" name;
-     ax
+   in if uptodate_term tm then add_axiomCT(rname,axiom)
+      else raise DATED_ERR "new_axiom" name
+      ; axiom
    end
 
-fun add_tm_witnessCT s wthm =
-   let val thy = theCT()
-   in
-      add_tm_witness thy s wthm
-   end;
-
-fun store_definition(name, consts, wthm, tm) =
-  let val () = check_name ("store_definition",name)
-      val tag = Thm.tag wthm
-      val def = mk_defn_thm tag tm
-      val _ = if (uptodate_thm def) then ()
-              else raise DATED_ERR "store_definition" name
+fun store_type_definition(name, s, witness, def) =
+  let val ()  = check_name ("store_type_definition",name)
   in
-    case consts
-      of LEFT s => (add_ty_witness (theCT()) s wthm; ())
-       | RIGHT slist => (map (fn s => add_tm_witnessCT s wthm) slist; ());
-    add_defnCT(name,def);
-    def
-  end;
+    if uptodate_thm def then () 
+    else raise DATED_ERR "store_type_definition" name
+    ; Type.TypeSig.add_witness (s,CTname(),witness)
+    ; add_defnCT(name,def)
+    ; def
+  end
 
+fun store_definition (name, slist, witness, def) =
+  let val ()  = check_name ("store_definition",name)
+  in
+    if uptodate_thm def then () else raise DATED_ERR "store_definition" name
+    ; map (fn s => Term.TermSig.add_witness (s,CTname(),witness)) slist
+    ; add_defnCT(name,def)
+    ; def
+  end
+  
 
-fun save_thm (name,th) =
-   ( check_name ("save_thm",name);
-     if (uptodate_thm th) then add_thmCT(name,th)
-     else raise DATED_ERR "save_thm" name;
-     th )
 end;
 
-(*---------------------------------------------------------------------------
- * Adding a new theory into the current theory graph.
+(*---------------------------------------------------------------------------*
+ * Adding a new theory into the current theory graph.                        *
  *---------------------------------------------------------------------------*)
-fun link_parents thy p = makeCT(gen_link_parents thy p (theCT()));
+
+fun set_diff a b = gather (fn x => not (Lib.op_mem thyid_eq x b)) a;
+fun node_set_eq S1 S2 = null(set_diff S1 S2) andalso null(set_diff S2 S1);
+
+fun link_parents thy p =
+ let val node = make_thyid thy
+     val parents = map make_thyid p
+ in
+ if Lib.all Graph.isin parents
+ then if Graph.isin node
+     then if node_set_eq parents (Graph.parents_of node) then ()
+          else (HOL_MESG
+                 "link_parents: the theory has two unequal sets of parents";
+                raise ERR "link_parents" "")
+     else Graph.add (node,parents)
+ else let val baddies = Lib.filter (not o Graph.isin) parents
+          val names = map thyid_name baddies
+    in HOL_MESG (String.concat
+        ["link_parents: the following parents of ", 
+         Lib.quote (thyid_name node), 
+         "are not in the graph: ", String.concat (commafy names)]);
+       raise ERR"link_parents" ""
+    end
+  end;
 
 fun incorporate_types thy tys =
-  let fun itype (s,i) = install_type(s,i,thy)
-  in app itype tys
+  let fun itype (s,a) = (install_type(s,a,thy);()) 
+  in List.app itype tys 
   end;
 
 fun incorporate_consts thy consts =
-  let fun iconst(s,ty) = install_const(s,ty,thy)
-  in app iconst consts
+  let fun iconst(s,ty) = (install_const(s,ty,thy);()) 
+  in List.app iconst consts 
   end;
 
 
 (*---------------------------------------------------------------------------*
- *              GENERAL INFORMATION ON THE CURRENT THEORY                    *
- *---------------------------------------------------------------------------*)
-
-local
-      fun convert_type_recd{occ={name,...},arity,...} = {Name=name,Arity=arity}
-      fun convert_term_recd{name,htype,...} = mk_const{Name = !name,Ty=htype}
-      fun grab_item style name alist =
-         case (Lib.assoc1 name alist)
-         of SOME (_,th) => th
-          | NONE => raise THEORY_ERR style
-                     ("couldn't find "^style^" named "^Lib.quote name)
-in
- fun types s       = map convert_type_recd(thy_types s (theCT()))
- fun constants s   = mapfilter convert_term_recd (thy_constants s (theCT()))
- fun axioms()      = map drop_pthmkind (thy_axioms (theCT()))
- fun definitions() = map drop_pthmkind (thy_defns (theCT()))
- fun theorems()    = map drop_pthmkind (thy_theorems (theCT()))
- fun axiom s       = grab_item "axiom" s (axioms())
- fun definition s  = grab_item "definition" s (definitions())
- fun theorem s     = grab_item "theorem" s (theorems())
-
- fun parents "-" = map thyid_name (graph_fringe(theCT()))
-   | parents str = if (str=CTname()) then parents"-"
-      else map thyid_name (parents_of str (theCT()))
-         handle HOL_ERR _
-           => raise THEORY_ERR"parents" (Lib.quote str^" not in theory graph.")
-end;
-
-fun ancestry s0 =
- let val ct = theCT()
-     fun anc "-" = map thyid_name (graph_ancestryl (graph_fringe ct) ct)
-       | anc s = if (s=CTname()) then anc "-"
-                  else map thyid_name (graph_ancestry s ct)
- in anc s0
- end
-
-
-(*---------------------------------------------------------------------------*
- *          PRINTING THEORIES OUT AS ML STRUCTURES AND SIGNATURES.           *
+ *         PRINTING THEORIES OUT AS ML STRUCTURES AND SIGNATURES.            *
  *---------------------------------------------------------------------------*)
 
 fun theory_out f {name,style} ostrm =
  let val ppstrm = Portable.mk_ppstream
-     {consumer = Portable.outputc ostrm,
-      linewidth=78, flush = fn () => Portable.flush_out ostrm}
+                    {consumer = Portable.outputc ostrm,
+                     linewidth=75, flush = fn () => Portable.flush_out ostrm}
  in f ppstrm handle e => (Portable.close_out ostrm; raise e);
     Portable.flush_ppstream ppstrm;
     Portable.close_out ostrm
  end;
 
-
-fun dconst {name,htype,theory,witness,utd} = (!name,htype)
-
-fun dty{occ={name,revision},arity,theory,witness,utd} = (name,arity);
+fun dconst tm = let val {Name,Ty} = Term.dest_const tm in (Name,Ty) end;
 
 fun unkind facts =
   List.foldl (fn ((s,Axiom (_,th)),(A,D,T)) => ((s,th)::A,D,T)
-               | ((s,Defn th),(A,D,T)) => (A,(s,th)::D,T)
-               | ((s,Thm th),(A,D,T)) => (A,D,(s,th)::T)) ([],[],[]) facts;
+               | ((s,Defn th),(A,D,T))     => (A,(s,th)::D,T)
+               | ((s,Thm th),(A,D,T))     => (A,D,(s,th)::T)) ([],[],[]) facts;
 
 val utd_types  = Lib.gather uptodate_type;
 val utd_consts = Lib.gather uptodate_term;
@@ -1130,234 +696,120 @@ fun unadjzip [] A = A
   | unadjzip ({sig_ps,struct_ps}::t) (l1,l2) =
        unadjzip t (sig_ps::l1, struct_ps::l2)
 
+
 (*---------------------------------------------------------------------------
     We always export the theory, except if it is the initial theory (named
     "scratch") and the initial theory is empty. If the initial theory is
     *not* empty, i.e., the user made some definitions, or stored some
     theorems or whatnot, then the initial theory will be exported.
  ----------------------------------------------------------------------------*)
-
-
-fun gen_export_theory thyPPopt (thy:theory) = let
-  val {thid,con_wrt_disk,STH,GR, facts,adjoin,...} = thy
+local val mesg = Lib.with_flag(Feedback.MESG_to_string, Lib.I) HOL_MESG
 in
-  if con_wrt_disk then
-    (Lib.say ("\nTheory "^Lib.quote(thyid_name thid)^" already \
-              \consistent with disk, hence not exported.\n");
-     SUCCESS ())
-  else let
-    val concat = String.concat
-    val thyname = thyid_name thid
-    val name = CTname()^"Theory"
-    val (A,D,T) = unkind facts
-    val (sig_ps, struct_ps) = unadjzip adjoin ([],[])
-    val sigthry = {name = thyname,
-                   parents = map thyid_name (Graph.fringe GR),
-                   axioms = A,
-                   definitions = D,
-                   theorems = T,
-                   sig_ps = sig_ps}
-    val structthry
-      = {theory = dest_thyid thid,
-         parents = map dest_thyid (Graph.fringe GR),
-         types = map dty (thy_types thyname thy),
-         constants = Lib.mapfilter dconst (thy_constants thyname thy),
-         axioms = A,
-         definitions = D,
-         theorems = T,
-         struct_ps = struct_ps}
-  in
-     case filter (not o Lexis.ok_sml_identifier) (map fst (A@D@T)) of
-       [] => (let
-         val ostrm1 = Portable.open_out(concat["./",name,".sig"])
-         val ostrm2 = Portable.open_out(concat["./",name,".sml"])
-         val (printers, smlprelude) =
-           case thyPPopt of
-             NONE => (NONE, "")
-           | SOME (pp, s) => (SOME pp, s)
-       in
-         Lib.say "Exporting theory ... ";
-         theory_out (fn ppstrm =>
-                      TheoryPP.pp_theory_sig printers ppstrm sigthry)
-                     {name = name, style = "signature"} ostrm1;
-         theory_out (fn ppstrm =>
-                      TheoryPP.pp_theory_struct ppstrm smlprelude structthry)
-                     {name = name, style = "structure"} ostrm2;
-         set_ct_consistency true;
-         Lib.say "done.\n";
-         SUCCESS ()
-       end
-       handle e => (Lib.say "\nFailure while writing theory!\n";
-                    FAILURE (SYSTEM e)))
-     | badnames =>
-         (Lib.say
+fun export_theory () = 
+ let val {thid,con_wrt_disk,facts,adjoin,overwritten} = scrubCT()
+ in
+ if con_wrt_disk 
+ then HOL_MESG ("\nTheory "^Lib.quote(thyid_name thid)^" already \
+                 \consistent with disk, hence not exported.\n")
+ else 
+ let val concat = String.concat
+     val thyname = thyid_name thid
+     val name = CTname()^"Theory"
+     val (A,D,T) = unkind facts
+     val (sig_ps, struct_ps) = unadjzip adjoin ([],[])
+     val sigthry = {name = thyname,
+                    parents = map thyid_name (Graph.fringe()),
+                    axioms = A,
+                    definitions = D,
+                    theorems = T,
+                    sig_ps = sig_ps}
+     val structthry
+     = {theory = dest_thyid thid,
+        parents = map dest_thyid (Graph.fringe()),
+        types = thy_types thyname,
+        constants = Lib.mapfilter dconst (thy_constants thyname),
+        axioms = A,
+        definitions = D,
+        theorems = T,
+        struct_ps = struct_ps}
+ in
+   case filter (not o Lexis.ok_sml_identifier) (map fst (A@D@T))
+    of [] => 
+       (let val ostrm1 = Portable.open_out(concat["./",name,".sig"])
+            val ostrm2 = Portable.open_out(concat["./",name,".sml"])
+        in
+          mesg ("Exporting theory "^Lib.quote thyname^" ... ");
+          theory_out (TheoryPP.pp_sig (!pp_thm) sigthry)
+                     {name=name, style="signature"} ostrm1;
+          theory_out (TheoryPP.pp_struct structthry)
+                     {name=name, style="structure"} ostrm2;
+          set_ct_consistency true;
+          mesg "done.\n"
+        end
+        handle e => (Lib.say "\nFailure while writing theory!\n"; raise e))
+
+     | badnames => (HOL_MESG
           (String.concat
            ["\nThe following ML binding names in the theory to be exported:\n",
             String.concat (Lib.commafy (map Lib.quote badnames)),
             "\n are not acceptable ML identifiers.\n",
-            "   Use `set_MLname' to change each name."]);
-          FAILURE (CLIENT badnames))
-  end handle e => FAILURE (INTERNAL e)
-end
-
-
-
-fun prim_export_theory printers = gen_export_theory printers (scrubCT());
-
-fun export_theory0 printers =
-  case prim_export_theory printers
-   of SUCCESS _ => ()
-    | FAILURE (CLIENT nl) => ()
-    | FAILURE (INTERNAL x) => raise x
-    | FAILURE (SYSTEM x)   => raise x;
-
-
-
-datatype clientfixable = BADNAMES of string list
-                       | EXN of exn
+            "   Use `set_MLname <bad> <good>' to change each name."]);
+          raise ERR "export_theory" "bad binding names")
+ end
+end end;
 
 (*---------------------------------------------------------------------------*
- *    Allocate a new theory segment over an existing one.                    *
+ *    Allocate a new theory segment over an existing one. After              *
+ *    that, initialize any registered packages. A package registers          *
+ *    with a call to "after_new_theory".                                     *
  *---------------------------------------------------------------------------*)
 
-fun gen_new_theory printers str
-            (thy as {thid,con_wrt_disk,STH, GR,facts,...}:theory) =
-  if not(Lexis.ok_identifier str)
-  then FAILURE (CLIENT(EXN (THEORY_ERR"new_theory"
-       ("proposed theory name "^Lib.quote str^" is not an identifier"))))
-  else
-  let val thyname = thyid_name thid
-      fun gen_thy g = (Lib.mesg true ("Created theory "^Lib.quote str);
-                      SUCCESS(fresh_theory str STH g))
-  in
-     if (str=thyname)
-     then (Lib.mesg true ("Restarting theory "^Lib.quote str);
-           SUCCESS (zap str thy) handle e => FAILURE (INTERNAL e))
-     else
-     if (mem str (map thyid_name (graph_ancestry thyname thy)
-        handle HOL_ERR _ => []))
-     then FAILURE(CLIENT(EXN(THEORY_ERR "new_theory"
-               ("theory: "^Lib.quote str^" already exists."))))
-     else
-     if (thyname = "scratch" andalso empty_theory thy) then gen_thy GR
-     else
-     if con_wrt_disk then gen_thy (Graph.add (thid, graph_fringe thy) GR)
-     else (scrub_thy thyname thy;
-           case gen_export_theory printers thy
-            of SUCCESS () => gen_thy (Graph.add (thid, graph_fringe thy) GR)
-             | FAILURE (CLIENT nl) => FAILURE (CLIENT (BADNAMES nl))
-             | FAILURE (INTERNAL x) => FAILURE(INTERNAL x)
-             | FAILURE (SYSTEM x)   => FAILURE (SYSTEM x))
-   end handle e => FAILURE (INTERNAL e);
-
-fun prim_new_theory printers str =
-  case gen_new_theory printers str (theCT())
-   of SUCCESS x => (SUCCESS (makeCT x) handle e => FAILURE (INTERNAL e))
-    | FAILURE x  => FAILURE x;
-
-fun new_theory0 printers str =
-  case prim_new_theory printers str
-   of FAILURE (CLIENT (EXN e)) => raise e
-    | FAILURE (CLIENT (BADNAMES _)) => ()
-    | FAILURE (INTERNAL e) => raise e
-    | FAILURE (SYSTEM e) => raise e
-    | SUCCESS _ => ();
-
-
-(*--------------------------------------------------------------------------*
- * Print a theory for the user.                                             *
- *--------------------------------------------------------------------------*)
-
-val CONSISTENT   = Portable.CONSISTENT
-val INCONSISTENT = Portable.INCONSISTENT;
-
-fun pp_theory (printers:TheoryPP.HOLprinters) ppstrm thy = let
-  val {thid,con_wrt_disk,STH, GR,facts,overwritten,adjoin} = thy
-  val {add_string,add_break,begin_block,end_block, add_newline,
-       flush_ppstream,...} = Portable.with_ppstream ppstrm
-  val pp_thm = #pp_thm printers ppstrm
-  val pp_type = #pp_type printers ppstrm
-  fun vblock(header, ob_pr, obs) =
-    ( begin_block CONSISTENT 4;
-     add_string (header^":");
-     add_newline();
-     Portable.pr_list ob_pr
-     (fn () => ()) add_newline obs;
-     end_block(); add_newline(); add_newline())
-  fun pr_thm (heading, ths) =
-    vblock(heading, (fn (s,th) =>
-                     (begin_block CONSISTENT 0; add_string s; add_break(1,0);
-                      pp_thm th; end_block())),  ths)
-  val thyname = thyid_name thid
-  fun pp_consistency b =
-    add_string ("Theory "^(Lib.quote thyname)^" is "^
-                (if b then "consistent" else "inconsistent")^" with disk.\n")
-  val (A,D,T) = unkind facts
-  val types = map dty (thy_types thyname thy)
-  val constants = Lib.mapfilter dconst (thy_constants thyname thy)
+local val initializers = ref [] : (string -> unit) list ref
 in
-    begin_block CONSISTENT 0;
-    add_string ("Theory: "^thyname);
-    add_newline();   add_newline() ;
-    vblock ("Parents", add_string, map thyid_name (Graph.fringe GR))
-      ;
-    vblock ("Type constants",
-            (fn (name,arity) =>
-                (add_string name; add_string (" "^Lib.int_to_string arity))),
-            rev types)
-      ;
-    vblock ("Term constants",
-             (fn (name,htype)
-              => (begin_block CONSISTENT 0;
-                  add_string (name^" ");
-                  add_break(3,0);
-                  pp_type htype;
-                  end_block())),
-                 rev constants)
-      ;
-    pr_thm ("Axioms", A);
-    pr_thm ("Definitions", D);
-    pr_thm ("Theorems", T);
-    pp_consistency con_wrt_disk;
-    end_block();
-    flush_ppstream()
- end;
-
-
-fun print_theory_to_outstream printers outstream =
-  let val def_Cons = Portable.defaultConsumer()
-      val consumer = {consumer = Portable.outputc outstream,
-                      flush = #flush def_Cons,
-                      linewidth = #linewidth def_Cons}
-      val stream = Portable.mk_ppstream consumer
-      val _ = pp_theory printers stream (theCT())
-      val _ = Portable.flush_out outstream
-  in outstream end
-
-fun print_theory_to_file printers file =
-    let val outfile = Portable.open_out file
-    in Portable.close_out (print_theory_to_outstream printers outfile)
-    end
-
-fun print_theory0 printers =
-   pp_theory printers (Portable.mk_ppstream
-                       (Portable.defaultConsumer()))
-   (theCT())
-
-
-(* Backpatching forward references. *)
-val _ = Type.init mk_type current_revision;
-val _ = Term.init is_constant mk_const const_decl;
-
-(*---------------------------------------------------------------------------*
- * Provide hidden function "store_definition" to the definition principles.  *
- * Why 3? Because it gets used in Const_spec, Const_def, and Type_def.       *
- *---------------------------------------------------------------------------*)
-local val used = ref 0
-in
-  fun expose_store_definition r =
-     if (!used = 3) then ()
-     else (r := store_definition; used := !used + 1)
+fun after_new_theory f = (initializers := f :: !initializers)
+fun initialize() =
+  let val ct = current_theory()
+      fun rev_app [] = ()
+        | rev_app (f::rst) = 
+            (rev_app rst; 
+             f ct handle e =>
+                let val errstr = 
+                   case e 
+                    of HOL_ERR r => !ERR_to_string r
+                     | otherwise => General.exnMessage e
+                in
+                  WARN "new_theory.initialize" 
+                        ("an initializer failed with message: "
+                         ^errstr^"\n ... continuing anyway. \n")
+                end)
+  in rev_app (!initializers)
+  end
 end;
 
-end; (* THEORY *)
+
+fun new_theory str =
+  if not(Lexis.ok_identifier str)
+  then raise ERR "new_theory"
+         ("proposed theory name "^Lib.quote str^" is not an identifier")
+  else
+  let val thy as {thid, facts, con_wrt_disk,overwritten,adjoin} = theCT()
+      val thyname = thyid_name thid
+      fun mk_thy () = (HOL_MESG ("Created theory "^Lib.quote str);
+                        makeCT(fresh_segment str); initialize())
+  in
+   if str=thyname
+      then (HOL_MESG("Restarting theory "^Lib.quote str); 
+            zap_segment str thy; initialize())
+   else
+   if mem str (ancestry thyname)
+      then raise ERR"new_theory" ("theory: "^Lib.quote str^" already exists.")
+   else
+   if thyname="scratch" andalso empty_segment thy
+      then mk_thy()
+   else
+    (if con_wrt_disk then () else export_theory ();
+     Graph.add (thid, Graph.fringe()); mk_thy ()
+    )
+  end;
+
+end; (* Theory *)

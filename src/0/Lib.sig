@@ -27,9 +27,13 @@ sig
   val fst : 'a * 'b -> 'a
   val snd : 'a * 'b -> 'b
   val can : ('a -> 'b) -> 'a -> bool
+  val partial : exn -> ('a -> 'b option) -> 'a -> 'b
+  val total : ('a -> 'b) -> 'a -> 'b option
   val try : ('a -> 'b) -> 'a -> 'b
   val trye : ('a -> 'b) -> 'a -> 'b
   val assert : ('a -> bool) -> 'a -> 'a
+  val assert_exn : ('a -> bool) -> 'a -> exn -> 'a
+  val with_exn : ('a -> 'b) -> 'a -> exn -> 'b
   val tryfind : ('a -> 'b) -> 'a list -> 'b
   val el : int -> 'a list -> 'a
   val index : ''a -> ''a list -> int
@@ -116,33 +120,16 @@ sig
   val front_last : 'a list -> 'a list * 'a
   val last : 'a list -> 'a
   val funpow : int -> ('a -> 'a) -> 'a -> 'a
-  val mesg : bool -> string -> unit
   val with_flag :'a ref * 'a -> ('b -> 'c) -> 'b -> 'c
   val hash : int -> string -> int*int -> int
-  datatype ('a,'b) sum = LEFT of 'a
-                       | RIGHT of 'b
+  val list_compare : ('a * 'a -> order) -> 'a list * 'a list -> order
 
-  (* two functions that given a string produce another one that is
-     different, but which is in some sense the "next" string in a sequence.
-     tyvar_vary can be used to generate "'a", "'b", "'c" ... "'z", "'a0" ..
-     tmvar_vary can be used to generate f, f0, f1, f2, f3 ...
+  datatype 'a delta 
+       = SAME 
+       | DIFF of 'a
 
-     A call to
-       gen_variant f avoids s
-     uses a varying function such as the two given here to produce a variant
-     of s that doesn't appear in the list avoids
-  *)
-  val tyvar_vary : string -> string
-  val tmvar_vary : string -> string
-  val gen_variant : (string -> string) -> string list -> string -> string
-
-  val traces :
-    unit -> {name : string, current_value : int, default_value: int} list
-  val trace : string -> int -> unit
-  val reset_trace : string -> unit
-  val reset_traces : unit -> unit
-  val register_trace : string -> int ref -> unit
-  val current_trace : string -> int
-
-
+  val delta_apply : ('a -> 'a delta) -> 'a -> 'a
+  val delta_map   : ('a -> 'a delta) -> 'a list -> 'a list delta
+  val delta_pair  : ('a -> 'a delta) -> ('b -> 'b delta) 
+                    -> 'a * 'b -> ('a * 'b) delta
 end
