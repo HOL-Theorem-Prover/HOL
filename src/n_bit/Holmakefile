@@ -3,13 +3,14 @@ EXTRA_CLEANS = mkword.exe
 all: mkword.exe
 
 wordFunctor.uo: wordFunctor.sml selectUtil.uo bitsTheory.uo
-	HOLMOSMLC -c -toplevel Overlay.ui wordFunctor.sml
+	$(HOLMOSMLC) -c -toplevel Overlay.ui wordFunctor.sml
 
 wordFunctorLib.uo: wordFunctorLib.sml bitsTheory.uo numeral_bitsTheory.uo
-	HOLMOSMLC -c -toplevel Overlay.ui wordFunctorLib.sml
+	$(HOLMOSMLC) -c -toplevel Overlay.ui wordFunctorLib.sml
 
 mkword.uo: wordFunctor.uo mkword.sml
-	HOLMOSMLC -c -toplevel wordFunctor.ui mkword.sml
+	$(HOLMOSMLC) -c -toplevel wordFunctor.ui mkword.sml
 
 mkword.exe: mkword.uo wordFunctorLib.uo
-	HOLMOSMLC -o mkword.exe mkword.uo
+	$(HOLMOSMLC) -o $@ mkword.uo
+	$(CP) $@ $(protect $(HOLDIR)/bin)
