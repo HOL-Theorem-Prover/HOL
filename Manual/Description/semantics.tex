@@ -238,8 +238,7 @@ bound after substitution.
 \end{itemize}
 
 \subsubsection*{Type instantiation [{\small\tt INST\_TYPE}]}
-\index{type instantiation, in HOL logic@type instantiation, in \HOL\
-  logic!abstract form of}
+\index{type instantiation, in HOL logic@type instantiation, in \HOL{} logic!abstract form of}
 \newcommand{\insttysub}{[\sigma_1,\ldots,\sigma_n/\alpha_1,\ldots,\alpha_n]}
 \[
 \Gamma\turn t
@@ -353,7 +352,11 @@ called the  axioms\index{axioms, in a HOL theory@axioms, in a \HOL{} theory}
  of  ${\cal T}$;
 
 \item ${\sf Theorems}_{\cal T}$ is a set of sequents over
-${\sf Sig}_{\cal T}$ called the theorems\index{theorems, in a HOL theory@theorems, in \HOL{} logic!abstract form of} of ${\cal T}$, with
+${\sf Sig}_{\cal T}$ called the theorems
+%
+\index{theorems, in HOL logic@theorems, in \HOL{} logic!abstract form of}
+%
+of ${\cal T}$, with
 the property that every member follows from ${\sf Axioms}_{\cal T}$ by
 the \HOL{} deductive system.
 
@@ -409,7 +412,8 @@ structure as \theory{MIN}. Its signature contains the constants in
 \theory{MIN} and the following constants:
 \[
 \T_\ty{bool}
-\index{T@\ml{T}!abstract form of}\index{truth values, in HOL logic@truth values, in \HOL{} logic!abstract form of}
+\index{T@\holtxt{T}!abstract form of}
+\index{truth values, in HOL logic@truth values, in \HOL{} logic!abstract form of}
 \]
 \[
 \forall_{(\alpha\fun\ty{bool})\fun\ty{bool}}
@@ -421,7 +425,7 @@ structure as \theory{MIN}. Its signature contains the constants in
 \]
 \[
 \F_\ty{bool}
-\index{F@\ml{F}!abstract form of}
+\index{F@\holtxt{F}!abstract form of}
 \]
 \[
 \neg_{\ty{bool}\fun\ty{bool}}
@@ -520,7 +524,7 @@ is forced to interpret the new constants in the following way:
 \index{axioms!formal semantics of HOL logic's@formal semantics of \HOL{} logic's|(}
 \begin{itemize}
 
-\item $\den{\T_{\bool}}\index{T@\ml{T}!formal semantics of} = 1 \in \two$
+\item $\den{\T_{\bool}}\index{T@\holtxt{T}!formal semantics of} = 1 \in \two$
 
 \item \index{universal quantifier, in HOL logic@universal quantifier, in \HOL{} logic!formal semantics of}
 $\den{\forall_{(\alpha\fun\bool)\fun\bool}}\in\prod_{X\in{\cal
@@ -541,7 +545,7 @@ $\den{\exists_{(\alpha\fun\bool)\fun\bool}}\in\prod_{X\in{\cal
                                   \end{array}
                           \right. \]
 
-\item $\den{\F_{\bool}} = 0 \in \two$\index{F@\ml{F}!formal semantics of}
+\item $\den{\F_{\bool}} = 0 \in \two$\index{F@\holtxt{F}!formal semantics of}
 
 \item $\den{\neg_{\bool\fun\bool}}\in\two\fun\two$ sends $b\in\two$ to
  \[ \den{\neg}(b) = \left\{ \begin{array}{ll}
@@ -805,13 +809,13 @@ the theory \theory{MIN} in Section~\ref{LOG}. Thus with the notation
 of this section one has
 \[
 \theory{LOG}\; =\; \theory{MIN}\;\begin{array}[t]{@{}l}
-   {+_{\it def}} \langle \T\index{T@\ml{T}!abstract form of}\index{truth values, in HOL logic@truth values, in \HOL{} logic!abstract form of} \ =\
+   {+_{\it def}} \langle \T\index{T@\holtxt{T}!abstract form of}\index{truth values, in HOL logic@truth values, in \HOL{} logic!abstract form of} \ =\
      ((\lquant{x_{\ty{bool}}}x) = (\lquant{x_{\ty{bool}}}x))\rangle\\
    {+_{\it def}}\langle {\forall}\index{universal quantifier, in HOL logic@universal quantifier, in \HOL{} logic!abstract form of}\ =\ \lquant{P_{\alpha\fun\ty{bool}}}\ P =
      (\lquant{x}\T )\rangle\\
    {+_{\it def}}\langle {\exists}\index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!abstract form of}\ =\
      \lquant{P_{\alpha\fun\ty{bool}}}\ P({\hilbert}\ P)\rangle\\
-   {+_{\it def}}\langle \F\index{F@\ml{F}!abstract form of}
+   {+_{\it def}}\langle \F\index{F@\holtxt{F}!abstract form of}
  \ =\ \uquant{b_{\ty{bool}}}\ b\rangle\\
    {+_{\it def}}\langle \neg\ =\ \lquant{b}\ b \imp \F \rangle\index{negation, in HOL logic@negation, in \HOL{} logic!abstract form of}\\
    {+_{\it def}}\langle {\wedge}\index{conjunction, in HOL logic@conjunction, in \HOL{} logic!abstract form of}\ =\ \lquant{b_1\ b_2}\uquant{b}

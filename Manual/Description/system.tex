@@ -84,7 +84,7 @@ Alphanumerics are letters or digits or underscores (\ml{\_}) or primes
 {\small\verb+0+}, {\small\verb+1+}, {\small\verb+2+}, {\small\verb+3+},
 {\small\verb+4+}, {\small\verb+5+}, {\small\verb+6+}, {\small\verb+7+},
 {\small\verb+8+}, or {\small\verb+9+}.
-A {\it number\/} is a string of one or more digits. In order to
+A \emph{number} is a string of one or more digits. In order to
 distinguish different kinds of numbers a single character suffix may
 be used: for example \verb+3n+ is a natural number while \verb+3i+ is
 an integer.
@@ -212,9 +212,12 @@ is the type variable \ml{'a} and \ml{beta} is the type variable
 
 %\paragraph{Taking types apart}
 
-\noindent There are two primitive destructor\index
-{types, in HOL logic@types, in \HOL{} logic!destructors for}
+\noindent
+There are two primitive destructor
+%
+\index{types, in HOL logic@types, in \HOL{} logic!destructors for}
 \index{type destructors, in HOL logic@type destructors, in \HOL{} logic}
+%
 functions for values of type \ml{hol\_type}:
 \begin{boxed}
 \index{function types, in HOL logic@function types, in \HOL{} logic!destructors for}
@@ -223,19 +226,20 @@ functions for values of type \ml{hol\_type}:
 \begin{verbatim}
   dest_vartype : hol_type -> string
   dest_thy_type : hol_type -> {Tyop:string, Thy:string, Args:hol_type list}
-\end{verbatim}\end{boxed}
+\end{verbatim}
+\end{boxed}
 
 \noindent The function \ml{dest\_vartype}
+%
 \index{type variables, in HOL logic@type variables, in \HOL{} logic!destructors for}
 \index{compound types, in HOL logic@compound types, in \HOL{} logic!destructors for}
-extracts the name of a type variable.
-A compound type is destructed by the function \ml{dest\_thy\_type} into the  name
- of the type operator, the name of the theory it was declared in, and
- a  list  of  the  argument  types;
- \ml{dest\_vartype}  and \ml{dest\_thy\_type} are  thus the  inverses of
- \ml{mk\_vartype} and \ml{mk\_thy\_type}, respectively.  The destructors fail
- on arguments of the wrong form.
-
+%
+extracts the name of a type variable.  A compound type is destructed
+by the function \ml{dest\_thy\_type} into the name of the type
+operator, the name of the theory it was declared in, and a list of the
+argument types; \ml{dest\_vartype} and \ml{dest\_thy\_type} are thus
+the inverses of \ml{mk\_vartype} and \ml{mk\_thy\_type}, respectively.
+The destructors fail on arguments of the wrong form.
 
 \section{Terms}\label{avra_terms}
 
@@ -261,7 +265,7 @@ functions for values of type \ml{term}:
 \end{verbatim}
 \end{boxed}
 
-\noindent\ml{mk\_var(}$x$\ml{,}$\sigma$\ml{)} evaluates to a variable
+\noindent\ml{mk\_var($x$,$\sigma$)} evaluates to a variable
 with name $x$ and type $\sigma$; it always succeeds.
 
 \begin{boxed}
@@ -290,8 +294,14 @@ see Section~\ref{theoryfns}).
 \end{verbatim}
 \end{boxed}
 
-\noindent\ml{mk\_comb(}$t_1$\ml{,}$t_2$\ml{)}\index{function application, in HOL logic@function application, in \HOL{} logic!constructor for} evaluates to a term
-representing the combination\index{combinations, in HOL logic@combinations, in \HOL{} logic!constructor for}
+\noindent\ml{mk\_comb($t_1$,$t_2$)}
+%
+\index{function application, in HOL logic@function application, in \HOL{} logic!constructor for}
+%
+evaluates to a term representing the combination
+%
+\index{combinations, in HOL logic@combinations, in \HOL{} logic!constructor for}
+%
 $t_1\ t_2$. It fails if:
 \begin{myenumerate}
 \item the type of $t_1$ does not have the form \ml{$\sigma'$->$\sigma$};
@@ -306,8 +316,12 @@ type of $t_2$ is not equal to $\sigma'$.
 \end{verbatim}
 \end{boxed}
 
-\noindent\ml{mk\_abs(}$x$\ml{,}$t$\ml{)} evaluates to a term representing
-the abstraction\index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!constructor for} $\lquant{x}t$; it fails if $x$ is not a variable.
+\noindent\ml{mk\_abs($x$,$t$)} evaluates to a term representing
+the abstraction
+%
+\index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!constructor for}
+%
+$\lquant{x}t$; it fails if $x$ is not a variable.
 
 
 There are four primitive destructor
@@ -351,7 +365,8 @@ The function
 \begin{boxed}\index{type_of@\ml{type\_of}|pin}
 \begin{verbatim}
    type_of : term -> hol_type
-\end{verbatim}\end{boxed}
+\end{verbatim}
+\end{boxed}
 
 \noindent returns the type
 \index{types, in HOL logic@types, in \HOL{} logic!determination of}
@@ -360,17 +375,20 @@ of a term. The function
 \begin{boxed}\index{aconv@\ml{aconv}|pin}
 \begin{verbatim}
    aconv : term -> term -> bool
-\end{verbatim}\end{boxed}
+\end{verbatim}
+\end{boxed}
 
 \noindent implements the $\alpha$-convertibility test for
 $\lambda$-calculus terms.
+%
 \index{$\alpha$-convertibility, in HOL logic@$\alpha$-convertibility, in \HOL{} logic!determination of}
+%
 From the point of view of the \HOL{} logic, $\alpha$-convertible terms
 are identical. A variety of other functions are available for
-performing substitution (\verb+subst+), type instantiation
-(\verb+inst+), $\beta$-reduction (\verb+beta_conv+), $\eta$-reduction
-(\verb+eta_conv+), computation of free variables (\verb+free_vars+)
-and other common term operations.  See \REFERENCE{} for more details.
+performing substitution (\ml{subst}), type instantiation (\ml{inst}),
+$\beta$-reduction (\ml{beta\_conv}), $\eta$-reduction
+(\ml{eta\_conv}), computation of free variables (\ml{free\_vars}) and
+other common term operations.  See \REFERENCE{} for more details.
 
 
 \section{Quotation}
@@ -394,9 +412,9 @@ value (of \ML\ type \ml{hol\_type}) as
 \begin{hol}
 \index{bool, the type in HOL logic@\ml{bool}, the type in \HOL{} logic}
 \begin{verbatim}
-  mk_thy_type{Tyop = "fun",Thy = "min",
-              Args = [mk_thy_type{Tyop = "bool", Thy = "bool", Args = []},
-                      mk_thy_type{Tyop = "bool", Thy = "bool", Args = []}]}
+   mk_thy_type{Tyop = "fun",Thy = "min",
+               Args = [mk_thy_type{Tyop = "bool", Thy = "bool", Args = []},
+                       mk_thy_type{Tyop = "bool", Thy = "bool", Args = []}]}
 \end{verbatim}
 \end{hol}
 
@@ -406,22 +424,22 @@ value (of \ML\ type \ml{hol\_type}) as
 %
 can be used instead of\footnote{In order to be processed successfully, this
 quotation requires the theory of arithmetic to have already been loaded, which
-can be accomplished by {\tt load "arithmeticTheory"}.}
+can be accomplished by \ml{load "arithmeticTheory"}.}
 
 {\small\baselineskip\HOLSpacing
 \begin{verbatim}
- let val numty = mk_thy_type{Tyop="num",Thy="num",Args=[]}
- in
-  mk_abs
-   (mk_var("x",numty),
-    mk_comb(mk_comb
-     (mk_thy_const
-       {Name="+",Thy="arithmetic",Ty=numty --> numty --> numty},
-        mk_var("x", numty)),
-      mk_comb(mk_thy_const{Name="NUMERAL",Thy="arithmetic",Ty=numty-->numty},
-       mk_comb(mk_thy_const{Name="BIT1",Thy="arithmetic",Ty=numty-->numty},
-               mk_thy_const{Name="ZERO",Thy="arithmetic",Ty=numty}))))
- end
+   let val numty = mk_thy_type{Tyop="num",Thy="num",Args=[]}
+   in
+    mk_abs
+     (mk_var("x",numty),
+      mk_comb(mk_comb
+       (mk_thy_const
+         {Name="+",Thy="arithmetic",Ty=numty --> numty --> numty},
+          mk_var("x", numty)),
+        mk_comb(mk_thy_const{Name="NUMERAL",Thy="arithmetic",Ty=numty-->numty},
+         mk_comb(mk_thy_const{Name="BIT1",Thy="arithmetic",Ty=numty-->numty},
+                 mk_thy_const{Name="ZERO",Thy="arithmetic",Ty=numty}))))
+   end
 \end{verbatim}
 }
 
@@ -530,8 +548,8 @@ Within a quotation, expressions of the form {\small\verb+^(+}$t${\small\verb+)+}
 %
 \index{terms, in HOL logic@terms, in \HOL{} logic!antiquotation}\index{antiquotation, in HOL logic terms@antiquotation, in \HOL{} logic terms}.
 %
-An antiquotation {\small\verb+^(+}$t${\small\verb+)+} evaluates to the
-\ML\ value of $t$. For example,{\small\verb+``x \/ ^(mk_conj(``y:bool``, ``z:bool``))``+}
+An antiquotation \holtxt{\^{}($t$)} evaluates to the
+\ML{} value of $t$. For example,{\small\verb+``x \/ ^(mk_conj(``y:bool``, ``z:bool``))``+}
 evaluates to the same term as {\small\verb+``x \/ (y /\ z)``+}. The
 most common use of antiquotation is when the term $t$ is bound to an \ML\
 variable $x$. In this case {\small\verb+^(+}$x${\small\verb+)+} can be
@@ -542,14 +560,14 @@ The following session illustrates antiquotation.
 \setcounter{sessioncount}{1}
 \begin{session}
 \begin{verbatim}
-- val y = ``x+1``;
-> val y = ``x + 1`` : term
+   - val y = ``x+1``;
+   > val y = ``x + 1`` : term
 
-val z = ``y = ^y``;
-> val z = ``y = x + 1`` : term
+   val z = ``y = ^y``;
+   > val z = ``y = x + 1`` : term
 
-- ``!x:num.?y:num.^z``;
-> val it = ``!x. ?y. y = x + 1`` : term
+   - ``!x:num.?y:num.^z``;
+   > val it = ``!x. ?y. y = x + 1`` : term
 \end{verbatim}
 \end{session}
 
@@ -884,12 +902,18 @@ its mention could be omitted.)
 
 A sequent that follows from the empty set of sequents via a deductive
 system is called a \textit{theorem} of that deductive system.  That
-is, a theorem\index{theorems, in natural deduction} is the last
-element of a \textit{proof}\index{proof!in natural deduction} (in the
-sense of Chapter~\ref{logic}) from the empty set of sequents. When a
-pair $(L,(\Gamma,t))$ belongs to a deductive system, and the list $L$
-is empty, then the sequent $(\Gamma,t)$ is called an
-\textit{axiom}\index{axioms!in natural deduction}.  Any pair
+is, a theorem
+%
+\index{theorems, in natural deduction}
+%
+is the last element of a \textit{proof}
+%
+\index{proof!in natural deduction}
+%
+(in the sense of Chapter~\ref{logic}) from the empty set
+of sequents. When a pair $(L,(\Gamma,t))$ belongs to a deductive
+system, and the list $L$ is empty, then the sequent $(\Gamma,t)$ is
+called an \textit{axiom}\index{axioms!in natural deduction}.  Any pair
 $(L,(\Gamma,t))$ belonging to a deductive system is called a
 \textit{primitive inference}\index{inference, in natural
   deduction}\index{primitive inference, in natural deduction} of the
@@ -977,7 +1001,7 @@ Section~\ref{theoryprims} below).  For example, the axiom
 constants representing truth and falsity, respectively):
 
 \begin{hol}
-\index{F@\ml{F}!axiom for}
+\index{F@\holtxt{F}!axiom for}
 \begin{verbatim}
    |- !t. (t = T) \/ (t = F) : thm
 \end{verbatim}
@@ -995,7 +1019,7 @@ to the abstract $\vdash$ notation,
 \ml{|-}, used to indicate \ML{} type \ml{thm} status; as well as the
 absence of \HOL{} quotation marks
 %
-\index{theorem marker, in HOL logic@\ml{"|-} (theorem marker, in \HOL{} logic)}
+\index{ theorem marker, in HOL logic@\ml{"|-} (theorem marker, in \HOL{} logic)}
 %
 in the \ml{|-} context.  The session below illustrates the use of the
 destructor functions:
@@ -1056,28 +1080,32 @@ particular inference `pattern'. These can be produced, in
 abstract form, by instantiating the meta-variables in Section~\ref{HOLrules}
 to concrete terms.
 
-In \HOL, primitive inference schemes are represented
-by \ML\ functions that return theorems as values.
-That is, for particular \HOL{} terms, the \ML\ functions return
-the instance of the theorem at those terms. The \ML\ functions
-are part of the \ML\ abstract type
- \ml{thm}\index{thm@\ml{thm}}:
-although \ml{thm} has no primitive constructors, it has (eight)
-operations which return theorems as values: \ml{ASSUME}, \ml{REFL},
-\ml{BETA\_CONV}, \ml{SUBST}, \ml{ABS}, \ml{INST\_TYPE},
-\ml{DISCH} and \ml{MP}.\index{inference schemes, in HOL logic@inference schemes, in \HOL{} logic}
+In \HOL, primitive inference schemes are represented by \ML{} functions
+that return theorems as values.  That is, for particular \HOL{} terms,
+the \ML{} functions return the instance of the theorem at those terms.
+The \ML{} functions are part of the \ML{} abstract type
+\ml{thm}\index{thm@\ml{thm}}: although \ml{thm} has no primitive
+constructors, it has (eight) operations which return theorems as
+values: \ml{ASSUME}, \ml{REFL}, \ml{BETA\_CONV}, \ml{SUBST}, \ml{ABS},
+\ml{INST\_TYPE}, \ml{DISCH} and \ml{MP}.
+%
+\index{inference schemes, in HOL logic@inference schemes, in \HOL{} logic}
 
-The \ML\ functions that implement the primitive inference schemes in the
-\HOL{} system are described below.  The same notation\index{notation!for
-specification of rules}\index{inferences, in HOL logic@inferences, in
-\HOL{} logic!notation for} is used here as in Section~\ref{HOLrules}:
-hypotheses above a horizontal line and conclusion\index{conclusions!of
-inference rules} beneath. The machine-readable {\small ASCII} notation
-is used for the logical constants.
+The \ML{} functions that implement the primitive inference schemes in the
+\HOL{} system are described below.  The same notation
+%
+\index{notation!for specification of rules}
+\index{inferences, in HOL logic@inferences, in \HOL{} logic!notation for}
+%
+is used here as in Section~\ref{HOLrules}: hypotheses above a
+horizontal line and conclusion
+%
+\index{conclusions!of inference rules} beneath. The machine-readable
+{\small ASCII} notation is used for the logical constants.
 
-\subsection{Assumption introduction}\index{assumption introduction,
-in HOL logic@assumption introduction, in \HOL{} logic!ML function
-for@\ML\ function for}
+\subsection{Assumption introduction}
+%
+\index{assumption introduction, in HOL logic@assumption introduction, in \HOL{} logic!ML function for@\ML{} function for}
 
 \begin{boxed}
 \index{ASSUME@\ml{ASSUME}|pin}
@@ -1103,7 +1131,8 @@ Failure if $t$ is not of type \ml{bool}.
 \begin{boxed}\index{REFL@\ml{REFL}|pin}
 \begin{verbatim}
    REFL : term -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}
+\end{boxed}
 
 \begin{center}
 \begin{tabular}{c}
@@ -1122,12 +1151,13 @@ Failure if $t$ is not of type \ml{bool}.
 \begin{boxed}\index{BETA_CONV@\ml{BETA\_CONV}|pin}
 \begin{verbatim}
    BETA_CONV : term -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}
+\end{boxed}
 
 \begin{center}
 \begin{tabular}{c}
   \\ \hline
-{\small\verb+ |- (\+}$x${\small\verb+.+}$t_1${\small\verb+)+}$t_2${\small\verb+ = +}$t_1[t_2/x]$
+\holtxt{ |- (\bs$x$.$t_1$)$t_2$ = $t_1[t_2/x]$}
 \end{tabular}
 \end{center}
 
@@ -1139,10 +1169,10 @@ in $t_2$ becoming bound after substitution. The substitution
 \end{itemize}
 
 
-\noindent {\small\verb+BETA_CONV (\+}$x${\small\verb+.+}$t_1${\small\verb+)+}$t_2${\small\verb++} evaluates to the
-theorem {\small\verb+|- (\+}$x${\small\verb+.+}$t_1${\small\verb+)+}$t_2${\small\verb+ = +}$t_1[t_2/x]$.
+\noindent \ml{BETA\_CONV ``(\bs$x$.$t_1$)$t_2$``} evaluates to the
+theorem \ml{|- (\bs$x$.$t_1$)$t_2$ = $t_1[t_2/x]$}.
 Failure if the argument to \ml{BETA\_CONV} is not a $\beta$-redex (\ie\ is not
-of the form {\small\verb+(\+}$x${\small\verb+.+}$t_1${\small\verb+)+}$t_2${\small\verb++}).
+of the form \holtxt{(\bs$x$.$t_1$)$t_2$}.
 
 \bigskip
 
@@ -1229,11 +1259,13 @@ Failure if $x$ is not a variable, or $x$
 
 \bigskip
 
-\subsection{Type instantiation}\index{type instantiation, in HOL logic@type instantiation, in \HOL{} logic!ML function for@\ML\ function for}\index{types, in HOL logic@types, in \HOL{} logic!instantiation of}
+\subsection{Type instantiation}
+\index{type instantiation, in HOL logic@type instantiation, in \HOL{} logic!ML function for@\ML\ function for}
+\index{types, in HOL logic@types, in \HOL{} logic!instantiation of}
 
 \begin{boxed}\index{INST_TYPE@\ml{INST\_TYPE}|pin}
 \begin{verbatim}
-   INST_TYPE : (type*type) list -> thm -> thm
+   INST_TYPE : (hol_type*hol_type) list -> thm -> thm
 \end{verbatim}\end{boxed}
 
 \begin{center}
@@ -1343,7 +1375,8 @@ A tagged theorem can be created via
 \index{mk_oracle_thm@\ml{mk\_oracle\_thm}!type of}
 \begin{verbatim}
    mk_oracle_thm : tag -> term list * term -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}
+\end{boxed}
 
 which directly creates the requested theorem and attaches the given tag to
 it. Tags may be created with
@@ -1366,13 +1399,15 @@ The tags in a theorem can be viewed by setting \verb+Globals.show_tags+ to
 true.
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-- Globals.show_tags := true;
-> val it = () : unit
+\begin{session}
+\begin{verbatim}
+   - Globals.show_tags := true;
+   > val it = () : unit
 
-- mk_thm([], Term `F`);;
-> val it = [oracles: MK_THM] [axioms: ] [] |- F : thm
-\end{verbatim}\end{session}\index{mk_thm@\ml{mk\_thm}}
+   - mk_thm([], Term `F`);;
+   > val it = [oracles: MK_THM] [axioms: ] [] |- F : thm
+\end{verbatim}
+\end{session}\index{mk_thm@\ml{mk\_thm}}
 
 There are three elements to the left of the turnstile in the fully printed
 representation of a theorem: the first two\footnote{Tags are also used for
@@ -1380,15 +1415,19 @@ tracking the use of axioms in proofs.} comprise the tags component and the
 third is the standard assumption list. The tag component of a theorem
 can be extracted by
 
-\begin{boxed} \begin{verbatim}
-     Thm.tag : thm -> tag
-\end{verbatim}\end{boxed}
+\begin{boxed}
+\begin{verbatim}
+   Thm.tag : thm -> tag
+\end{verbatim}
+\end{boxed}
 
 \noindent and prettyprinted by
 
-\begin{boxed} \begin{verbatim}
-     Tag.pp : ppstream -> tag -> unit.
-\end{verbatim}\end{boxed}
+\begin{boxed}
+\begin{verbatim}
+   Tag.pp : ppstream -> tag -> unit.
+\end{verbatim}
+\end{boxed}
 
 
 \section{Theories}
@@ -1476,7 +1515,8 @@ function:
 \begin{boxed}\index{current_theory@\ml{current\_theory}|pin}
 \begin{verbatim}
    current_theory : unit -> string
-\end{verbatim}\end{boxed}
+\end{verbatim}
+\end{boxed}
 
   When an interactive \HOL{} session begins, some theories will
   already be in the logical context. The exact set of theories in
@@ -1491,7 +1531,8 @@ The exact set of theories loaded can be determined with the
 \index{ancestry@\ml{ancestry}|pin}
 \begin{verbatim}
   ancestry : string -> string list
-\end{verbatim}\end{boxed}
+\end{verbatim}
+\end{boxed}
 
 This function provides a general mechanism for examining the structure
 of the theory hierarchy.  The argument is the name of a theory (or
@@ -1502,12 +1543,13 @@ in the theory hierarchy.
 \begin{boxed}
 {\small
 \begin{verbatim}
- ancestry "-";
- > val it =
-    ["num", "prim_rec", "normalForms", "relation", "pair",
-      "arithmetic", "while", "numeral", "label", "combin", "sum", "min",
-      "bool", "marker", "one", "option", "ind_type", "list"] : string list
-\end{verbatim}}
+   - ancestry "-";
+   > val it =
+      ["num", "prim_rec", "normalForms", "relation", "pair",
+        "arithmetic", "while", "numeral", "label", "combin", "sum", "min",
+        "bool", "marker", "one", "option", "ind_type", "list"] : string list
+\end{verbatim}
+}
 \end{boxed}
 
 
@@ -1521,7 +1563,8 @@ One creates a new theory segment by a call to \verb+new_theory+.
 \index{new_theory@\ml{new\_theory}|pin}
 \begin{verbatim}
    new_theory : string -> unit
-\end{verbatim}\end{boxed}
+\end{verbatim}
+\end{boxed}
 %
 This allocates a new `area' where subsequent theory
 operations take effect. If the current theory ($thy_1$ say) at the time
@@ -1533,9 +1576,8 @@ the current theory segment is already named $thy$, then that is
 interpreted as a request merely to clear the current theory segment
 (nothing will be exported).
 
-A call to {\small\verb+new_theory "+}$name${\small\verb+"+} fails if:
+A call to \ml{new\_theory "$\mathit{name}$"} fails if:
 \begin{itemize}
-
 \item $name$ is not an alphanumeric starting with a letter.
 
 \item there is a theory already named $name$ in the ancestry of the
@@ -1593,7 +1635,8 @@ proof tools and derived definition principles.
 \index{new_type@\ml{new\_type}|pin}
 \begin{verbatim}
    new_type : int -> string -> unit
-\end{verbatim}\end{boxed}
+\end{verbatim}
+\end{boxed}
 
 
 \noindent Executing \ml{new\_type}$\ n\ \ml{"\ty{op}"}$ makes \ty{op}
@@ -1606,7 +1649,8 @@ operators, in \HOL{} logic!declaration} in the current theory. If
 \index{new_constant@\ml{new\_constant}|pin}
 \begin{verbatim}
    new_constant : (string * type) -> unit
-\end{verbatim}\end{boxed}
+\end{verbatim}
+\end{boxed}
 
 \noindent Executing {\small\verb+new_constant("+}$c${\small\verb+",+}$\sigma${\small\verb+)+} makes
 $c_{\sigma'}$ a new constant\index{constants, in HOL logic@constants, in \HOL{} logic!declaration of} of the current theory,
@@ -1620,7 +1664,8 @@ If $c$ is not an allowed name for a constant, a warning will be issued.
 \index{new_axiom@\ml{new\_axiom}|pin}
 \begin{verbatim}
    new_axiom : (string * term) -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}
+\end{boxed}
 
 \noindent Executing \ml{new\_axiom("}$name$\ml{",}$t$\ml{)} declares the
 sequent
@@ -1639,11 +1684,17 @@ Once a theorem has been proved, it can be saved with the function
 \index{save_thm@\ml{save\_thm}|pin}
 \begin{verbatim}
    save_thm : (string * thm) -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}
+\end{boxed}
 
-\noindent Evaluating \ml{save\_thm("}$name$\ml{",}$th$\ml{)} will save
-the theorem\index{theorems, in HOL logic@theorems, in \HOL{} logic!saving
-of}\index{saving theorems} $th$ with name $name$ in the current theory
+\noindent
+Evaluating \ml{save\_thm("}$\mathit{name}$\ml{",}$\mathit{th}$\ml{)}
+will save the theorem
+%
+\index{theorems, in HOL logic@theorems, in \HOL{} logic!saving of}
+\index{saving theorems}
+%
+$\mathit{th}$ with name $\mathit{name}$ in the current theory
 segment.
 
 \paragraph{Exporting a theory}
@@ -1655,7 +1706,8 @@ file, which, after compilation, can be imported into future sessions.
 \index{export_theory@\ml{export\_theory}|pin}
 \begin{verbatim}
     export_theory : unit -> unit
-\end{verbatim}\end{boxed}
+\end{verbatim}
+\end{boxed}
 
 When {\small\verb+export_theory+} is called, all out-of-date entities
 are removed from the current segment. Also, the parenthood of the
@@ -1670,19 +1722,22 @@ dependencies among collections of \HOL{} theory segments.
 
 \subsection{ML functions for accessing theories}
 
-\index{theories, in HOL logic@theories, in \HOL{} logic!functions for
-  accessing|(} \index{axioms!retrieval of, in HOL system@retrieval of,
-  in \HOL{} system|(} The arguments of \ML{} type \ml{string} to
-\ml{new\_axiom}, \ml{new\_definition} \etc\ are the names of the
-corresponding axioms and definitions. These names are used when
-accessing theories with the functions \ml{axiom}, \ml{definition},
-\etc, described below.
+\index{theories, in HOL logic@theories, in \HOL{} logic!functions for accessing|(}
+\index{axioms!retrieval of, in HOL system@retrieval of, in \HOL{} system|(}
+%
+The arguments of \ML{} type \ml{string} to \ml{new\_axiom},
+\ml{new\_definition} \etc\ are the names of the corresponding axioms
+and definitions. These names are used when accessing theories with the
+functions \ml{axiom}, \ml{definition}, \etc, described below.
 
-The current theory\index{theories, in HOL logic@theories, in \HOL\
-  logic!hierarchies of} can be extended by adding new parents, types,
-constants, axioms and definitions. Theories that are in the ancestry
-of the current theory cannot be extended in this way; they can be
-thought of as \emph{frozen}.
+The current theory
+%
+\index{theories, in HOL logic@theories, in \HOL{} logic!hierarchies of}
+%
+can be extended by adding new parents, types, constants, axioms and
+definitions. Theories that are in the ancestry of the current theory
+cannot be extended in this way; they can be thought of as
+\emph{frozen}.
 
 There are various functions for loading the contents of theory files:
 
@@ -1694,14 +1749,18 @@ There are various functions for loading the contents of theory files:
    parents     : string -> string list
    types       : string -> (int * string) list
    constants   : string -> term list
-\end{verbatim}\end{boxed}
+\end{verbatim}
+\end{boxed}
 
 \noindent The first argument is the name of a theory (which must be in the
 ancestry of the current theory segment); the result is a list of the
 components of the theory. The name of the current theory can be
-abbreviated by \ml{"-"}.\index{ abbreviation, of HOL theory part
-  names@\ml{-} (abbreviation, of \HOL{} theory part names)} For
-example, \ml{parents "-"} returns the parents of the current theory.
+abbreviated by \ml{"-"}.
+%
+\index{ abbreviation, of HOL theory part names@\ml{-} (abbreviation, of \HOL{} theory part names)}
+%
+For example, \ml{parents "-"} returns the parents of the current
+theory.
 
 In the case of \ml{types} a list of arity-name pairs is returned.
 Individual axioms, definitions and theorems can be read from the
@@ -1715,7 +1774,8 @@ current theory using the following \ML\ functions:
    axiom      : string -> thm
    definition : string -> thm
    theorem    : string -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}
+\end{boxed}
 
 \noindent The first argument is the user supplied name of the axiom,
 definition or theorem in the current theory.  Further, a list of all
@@ -1730,15 +1790,21 @@ the \ML{} functions:
    axioms      : string -> (string * thm) list
    definitions : string -> (string * thm) list
    theorems    : string -> (string * thm) list
-\end{verbatim}\end{boxed}
+\end{verbatim}
+\end{boxed}
 
-The contents of the current theory can be printed in a readable format using the function
-{\small\verb+print_theory+}\index{printing, in HOL logic@printing, in \HOL{} logic!of theories}\index{print_theory@\ml{print\_theory}}.
-\index{axioms!retrieval of, in HOL system@retrieval of, in \HOL\
-system|)}\index{theories, in HOL logic@theories, in \HOL\
-logic!functions for accessing|)}
+The contents of the current theory can be printed in a readable format
+using the function \ml{print\_theory}.
+%
+\index{printing, in HOL logic@printing, in \HOL{} logic!of theories}
+\index{print_theory@\ml{print\_theory}}
+\index{axioms!retrieval of, in HOL system@retrieval of, in \HOL{} system|)}
+\index{theories, in HOL logic@theories, in \HOL{} logic!functions for accessing|)}
 
-\subsection{Functions for creating definitional extensions}\index{extension, of HOL logic@extension, of \HOL{} logic!definitional}\index{definitional extension, of HOL logic@definitional extension, of \HOL{} logic}\index{theories, in HOL logic@theories, in \HOL{} logic!extension of|(}
+\subsection{Functions for creating definitional extensions}
+\index{extension, of HOL logic@extension, of \HOL{} logic!definitional}
+\index{definitional extension, of HOL logic@definitional extension, of \HOL{} logic}
+\index{theories, in HOL logic@theories, in \HOL{} logic!extension of|(}
 \label{avra_definitional}
 
 There are three kinds of definitional extensions:
@@ -1747,10 +1813,13 @@ constant definitions, constant specifications and type definitions.
 \subsubsection{Constant definitions}
 \label{sec:constant-definitions}
 
-In Section~\ref{defs} a constant definition\index{extension, of HOL logic@extension, of \HOL{} logic!by constant definition}\index{constant definition extension, of HOL logic@constant definition extension, of \HOL{} logic!ML function for@\ML\ function for|(}
-over a signature $\Sigma_{\Omega}$ is defined to be
-an equation, \ie\ a formula of the form $c_{\sigma}=t_{\sigma}$,
-such that:
+In Section~\ref{defs} a constant definition
+%
+\index{extension, of HOL logic@extension, of \HOL{} logic!by constant definition}
+\index{constant definition extension, of HOL logic@constant definition extension, of \HOL{} logic!ML function for@\ML\ function for|(}
+%
+over a signature $\Sigma_{\Omega}$ is defined to be an equation, \ie\
+a formula of the form $c_{\sigma}=t_{\sigma}$, such that:
 \begin{myenumerate}
 \item $c$ is not the name of any constant in $\Sigma_{\Omega}$;
 \item $t_{\sigma}$ is a closed term in ${\sf Terms}_{\Sigma_{\Omega}}$;
@@ -1805,46 +1874,44 @@ that does not occur in the type of $c$.
 In Section~\ref{specs} a constant specification\index{constant specification extension, of HOL logic@constant specification extension, of \HOL{} logic!ML function for@\ML\ function for} for a theory ${\cal T}$
 is defined to be a pair:
 
-\[ \langle(c_1,\ldots,c_n),\ \lquant{{x_1}_{\sigma_1}
-\cdots {x_n}_{\sigma_n}}t_{\ty{bool}}\rangle \]
-
-\noindent such that:
+\[
+\langle(c_1,\ldots,c_n),\ \lquant{{x_1}_{\sigma_1}
+\cdots {x_n}_{\sigma_n}}t_{\small\ty{bool}}\rangle
+\]
+such that:
 
 \begin{myenumerate}
 \item $c_1$, $\dots$, $c_n$ are distinct names.
 \item $\lquant{{x_1}_{\sigma_1}
-\cdots {x_n}_{\sigma_n}}t_{\ty{bool}}\ \in\ {\sf Terms}_{\cal T}$.
+\cdots {x_n}_{\sigma_n}}t_{\small\ty{bool}}\ \in\ {\sf Terms}_{\cal T}$.
 \item $tyvars(\lquant{{x_1}_{\sigma_1}
-\cdots {x_n}_{\sigma_n}}t_{\ty{bool}})\ \subseteq\ tyvars(\sigma_i)$ for
+\cdots {x_n}_{\sigma_n}}t_{\small\ty{bool}})\ \subseteq\ tyvars(\sigma_i)$ for
 $1\leq i\leq n$.
 \item $\equant{{x_1}_{\sigma_1}\ \cdots\ {x_n}_{\sigma_n}}t
 \ \in\ {\sf Theorems}_{\cal T}$.
 \end{myenumerate}
-
 The following \ML\ function is used to make constant specifications in
 the \HOL{} system.
 
 \begin{boxed}
 \index{new_specification@\ml{new\_specification}|pin}
 \begin{verbatim}
-   new_specification : string -> string list -> thm -> thm
-\end{verbatim}\end{boxed}
-
+   new_specification : string * string list * thm -> thm
+\end{verbatim}
+\end{boxed}
+%
 Evaluating:
-
-\medskip
-
-\begin{tabular}{l}
-   \ml{new\_specification}\\
-\ \ml{"}$name$\ml{"}\\
-\ \ml{[}\ml{"}$c_1$\ml{"\ }$\ldots$\ml{\ ,}\ml{"}$c_n$\ml{"]}\\
-\ \ml{|-\ ?}$x_1\ \cdots\ x_n$\ml{.}\  $t$\ml{[}$x_1$\ml{,}$\ \ldots\
-$\ml{,}$x_n$\ml{]}\\
-\end{tabular}
-
-\medskip
-
-\noindent simultaneously  introduces  new constants  named $c_1$, $\dots$,
+{
+\newcommand{\cone}{\ensuremath{c_1}}
+\newcommand{\cn}{\ensuremath{c_n}}
+\newcommand{\xone}{\ensuremath{x_1}}
+\newcommand{\xn}{\ensuremath{x_n}}
+\begin{alltt}
+   new_specification("\(\mathit{name}\)", ["\cone", ..., "\cn"],
+                     |- ?\xone ... \xn. \(t\)[\xone, ..., \xn])
+\end{alltt}
+}
+simultaneously  introduces  new constants  named $c_1$, $\dots$,
 $c_n$ satisfying the property:
 
 \[ \ml{|- }t\ml{[}c_1\ml{,}\ \ldots\ \ml{,}c_n\ml{]} \]
@@ -1859,8 +1926,7 @@ with name $name$, as a definition in the current theory segment. A call to
 \item $c_1$, $\dots$, $c_n$ are not distinct variables;
 \item the type of some $c_i$ does not contain all the type
 variables which occur in the term
-{\small\verb+\+}$x_1\ \cdots\ x_n$\ml{.}\  $t$\ml{[}$x_1$\ml{,}$\ \ldots\
-$\ml{,}$x_n$\ml{]}.
+\holtxt{\bs$x_1\ \cdots\ x_n$. $t$[$x_1$, $\ldots$, $x_n$]}.
 \end{myenumerate}
 
 \subsubsection{Type definitions}\index{extension, of HOL logic@extension, of \HOL{} logic!by type definition|(}
@@ -1924,11 +1990,13 @@ generated name
 \ml{TYPE\_DEFINITION}\index{TYPE_DEFINITION@\ml{TYPE\_DEFINITION}}
 is defined in the theory \ml{bool} by:
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    |- TYPE_DEFINITION (P:'a->bool) (rep:'b->'a) =
        (!x' x''. (rep x' = rep x'') ==> (x' = x'')) /\
        (!x. P x = (?x'. x = rep x'))
-\end{verbatim}\end{hol}
+\end{verbatim}
+\end{hol}
 
 \noindent Executing \ml{new\_type\_definition("\ty{op}",\ }$t$\ml{,\
 |- ?}$x$\ml{.}\ $t\ x$\ml{)} fails if:
@@ -1936,7 +2004,9 @@ is defined in the theory \ml{bool} by:
 \item $t$ does not have a type of the form $\sigma$\ml{->bool}.
 \end{myenumerate}
 \index{extension, of HOL logic@extension, of \HOL{} logic!by type definition|)}
-\index{theories, in HOL logic@theories, in \HOL{} logic!extension of|)}\index{type definition extension, in HOL logic@type definition extension, in \HOL{} logic!ML function for@\ML\ function for|)}\index{type definitions, in HOL logic@type definitions, in \HOL{} logic|)}
+\index{theories, in HOL logic@theories, in \HOL{} logic!extension of|)}
+\index{type definition extension, in HOL logic@type definition extension, in \HOL{} logic!ML function for@\ML\ function for|)}
+\index{type definitions, in HOL logic@type definitions, in \HOL{} logic|)}
 
 \paragraph{Defining bijections}
 \index{type definitions, in HOL logic@type definitions, in \HOL{} logic!defining bijections for|(}
