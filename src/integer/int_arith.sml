@@ -28,10 +28,10 @@ val elim_le = GSYM INT_NOT_LT
 val elim_gt = int_gt
 val elim_ge = int_ge
 
-fun remove_negated_vars var = let
+val remove_negated_vars = let
   fun remove_negated tm =
     (* turn ~ var into ~1 * var *)
-    if is_int_negated tm andalso rand tm = var then
+    if is_negated tm andalso is_var (rand tm) then
       REWR_CONV INT_NEG_MINUS1 tm
     else
       NO_CONV tm
@@ -39,28 +39,24 @@ in
   DEPTH_CONV remove_negated
 end
 
-fun remove_bare_vars var tm =
+fun remove_bare_vars tm =
   if is_conj tm orelse is_disj tm orelse is_less tm orelse is_plus tm orelse
      is_divides tm
   then
-    BINOP_CONV (remove_bare_vars var) tm
-  else if is_neg tm then RAND_CONV (remove_bare_vars var) tm
-  else if tm = var then REWR_CONV (GSYM INT_MUL_LID) tm
+    BINOP_CONV remove_bare_vars tm
+  else if is_neg tm then RAND_CONV remove_bare_vars tm
+  else if is_var tm then REWR_CONV (GSYM INT_MUL_LID) tm
   else ALL_CONV tm
 
-fun phase1_CONV var = let
+val phase1_CONV = let
   fun flip_muls tm =
-    if is_mult tm then let
+    if is_mult tm andalso not (is_var (rand tm)) then let
       val mcands = strip_mult tm
+      val (var, rest) = Lib.pluck is_var mcands
     in
-      if Lib.mem var mcands then let
-        val (_, rest) = Lib.pluck (fn t => t = var) mcands
-      in
-        EQT_ELIM (AC_CONV (INT_MUL_ASSOC, INT_MUL_SYM)
-                  (mk_eq(tm, mk_mult(list_mk_mult rest, var))))
-      end
-      else ALL_CONV tm
-    end
+      EQT_ELIM (AC_CONV (INT_MUL_ASSOC, INT_MUL_SYM)
+                (mk_eq(tm, mk_mult(list_mk_mult rest, var))))
+    end handle HOL_ERR {origin_structure = "Lib", ...} => ALL_CONV tm
     else if is_comb tm then
       (RATOR_CONV flip_muls THENC RAND_CONV flip_muls) tm
     else
@@ -73,8 +69,7 @@ in
                 boolTheory.IMP_DISJ_THM, elim_eq, elim_le, elim_ge, elim_gt,
                 INT_SUB_CALCULATE, INT_RDISTRIB, INT_LDISTRIB,
                 INT_NEG_LMUL] THENC
-  remove_negated_vars var THENC remove_bare_vars var THENC
-  flip_muls THENC REDUCE_CONV
+  remove_negated_vars THENC remove_bare_vars THENC flip_muls THENC REDUCE_CONV
 end
 
 fun sum_var_coeffs var tm = let
@@ -174,12 +169,17 @@ fun phase2_CONV var tm = let
     val coeff = if is_plus (rand tm) then land (land (rand tm))
                 else land (rand tm)
   in
-    if is_int_negated coeff then
+    if is_negated coeff then
       REWR_CONV (GSYM (CONJUNCT1 INT_DIVIDES_NEG)) THENC
       REWRITE_CONV [INT_NEG_ADD, INT_NEG_LMUL, INT_NEGNEG]
     else
       ALL_CONV
   end tm
+  fun collect_up_other_freevars tm = let
+    val fvs = free_vars tm
+  in
+    EVERY_CONV (map collect_in_sum fvs) tm
+  end
 in
   if is_disj tm orelse is_conj tm then
     BINOP_CONV (phase2_CONV var) tm
@@ -193,8 +193,10 @@ in
       move_terms_from dir1 (free_in var) THENC
       move_terms_from dir2 (not o free_in var)
   in
-    (move_CONV THENC conv_at dir2 collect_terms THENC REDUCE_CONV THENC
-     REWRITE_CONV [INT_MUL_LZERO] THENC REDUCE_CONV) tm
+    (move_CONV THENC conv_at dir2 collect_terms THENC
+     conv_at dir1 collect_up_other_freevars THENC
+     TRY_CONV (conv_at dir1 collect_additive_consts) THENC
+     simpLib.SIMP_CONV int_ss [INT_MUL_LZERO, INT_ADD_LID, INT_ADD_RID]) tm
   end else if is_neg tm then RAND_CONV (phase2_CONV var) tm
   else if is_divides tm then
     (TRY_CONV (REWR_CONV (CONJUNCT2 INT_DIVIDES_NEG)) THENC
@@ -544,7 +546,7 @@ fun phase4_CONV tm = let
       BETA_CONV THENC REWRITE_CONV [move_sub] THENC recurse THENC
       mk_abs_CONV Bvar
   in
-    GEN_ALL (c tm0)
+    GENL [y, Bvar] (c tm0)
   end
 
   val disj1 = let
@@ -837,8 +839,8 @@ fun phase4_CONV tm = let
           val thmconcl = concl thm
         in
           if
-            is_divides thmconcl orelse
-            (is_neg thmconcl andalso is_divides (rand thmconcl))
+            is_vardivides thmconcl orelse
+            (is_neg thmconcl andalso is_vardivides (rand thmconcl))
           then let
             (* have f int_divides e in thm, possibly under negation *)
             val (f, e, munger) =
@@ -977,20 +979,25 @@ val phase5_CONV = let
   *)
   val LAND_CONV = RATOR_CONV o RAND_CONV
   open simpLib boolSimps
+  fun expand tm =
+    ((REWR_CONV RIGHT_AND_OVER_OR THENC BINOP_CONV expand) ORELSEC
+     ALL_CONV) tm
   val do_lhs =
-    LAND_CONV (BINDER_CONV (LAND_CONV resquan_remove) THENC
-               SIMP_CONV bool_ss [RIGHT_AND_OVER_OR, EXISTS_OR_THM] THENC
-               REDUCE_CONV) THENC
+    LAND_CONV (BINDER_CONV (LAND_CONV resquan_remove THENC expand) THENC
+               SIMP_CONV int_ss [EXISTS_OR_THM]) THENC
     TRY_CONV (REWR_CONV simple_bool_2 ORELSEC REWR_CONV simple_bool_3)
   fun do_rhs tm = let
     val f = if is_disj tm then RAND_CONV
             else if is_exists tm then I
             else K ALL_CONV
     val c =
-      STRIP_QUANT_CONV (LAND_CONV (RAND_CONV resquan_remove)) THENC
-      SIMP_CONV bool_ss [listTheory.MEM, RIGHT_AND_OVER_OR, LEFT_AND_OVER_OR,
-                         EXISTS_OR_THM] THENC
-      REDUCE_CONV
+      STRIP_QUANT_CONV
+      (LAND_CONV (RAND_CONV resquan_remove THENC
+                  PURE_REWRITE_CONV [RIGHT_AND_OVER_OR, LEFT_AND_OVER_OR,
+                                     listTheory.MEM, OR_CLAUSES, AND_CLAUSES,
+                                     NOT_CLAUSES]) THENC
+       expand) THENC
+      SIMP_CONV int_ss [EXISTS_OR_THM]
   in
     f c tm
   end
@@ -1006,7 +1013,7 @@ fun eliminate_existential tm = let
     handle HOL_ERR _ =>
       raise ERR "eliminate_existential" "term not an exists"
   val base_case =
-    BINDER_CONV (phase1_CONV bvar THENC phase2_CONV bvar) THENC
+    BINDER_CONV (phase1_CONV THENC phase2_CONV bvar) THENC
     PURE_REWRITE_CONV [AND_CLAUSES, OR_CLAUSES] THENC
     ((REWR_CONV EXISTS_SIMP THENC REWRITE_CONV []) ORELSEC
      (phase3_CONV THENC phase4_CONV THENC phase5_CONV))
@@ -1059,12 +1066,19 @@ in
     NONE
 end
 
+val obvious_improvements =
+  simpLib.SIMP_CONV int_ss [INT_LT_REFL, INT_NEG_0, INT_DIVIDES_MUL,
+                            INT_ADD_LID, INT_ADD_RID, INT_LT_ADD_NUMERAL,
+                            INT_LT_LADD]
+
 fun decide_pure_presburger_term tm = let
   (* no free variables allowed *)
 in
   case find_low_quantifier tm of
     NONE => REDUCE_CONV
-  | SOME f => f eliminate_quantifier THENC decide_pure_presburger_term
+  | SOME f =>
+      f eliminate_quantifier THENC obvious_improvements THENC
+      decide_pure_presburger_term
 end tm
 
 
@@ -1072,7 +1086,7 @@ end tm
 
    val var = ``x:int``
    fun gen_tm tm0 = let
-     val thm1 = (BINDER_CONV (phase1_CONV var THENC phase2_CONV var) THENC
+     val thm1 = (BINDER_CONV (phase1_CONV THENC phase2_CONV var) THENC
                  phase3_CONV) tm0
    in
      rhs (concl thm1)
@@ -1080,6 +1094,7 @@ end tm
 
    val tm = gen_tm ``?x. 2 int_divides x + 1 \/ 3*x < 9 ==> ~(x = 10)``
 
+   open int_arith
    val it0 = ``?x. 2 int_divides x + 1 \/ 3*x < 9 ==> ~(x = 10)``
    val it1 = ``?x:int. x < y``
    val it2 = ``?x:int. 2 * x < 2 * y``
@@ -1091,10 +1106,12 @@ end tm
    val it8 = ``?x:int. x + x = 2 * x``
    val it9 = ``?x:int. y + z = 0n``
    val it10 = ``?y:int. 4 * x + 3 * y = 10``
+   val it11 = ``?x:int. x < 3i /\ y:int < z``;
 
+   (* true statements *)
    val pt1 = ``!x:int y z. x < y /\ y < z ==> x < z``
    val pt2 = ``?x y:int. 4 * x + 3 * y = 10``;
-   val pt3 = ``?x y:int. 3 * x + 3 * y = 10``;
+   val pt3 = ``!x. 3i * x < 4 * x ==> x > 0``
    val pt4 = ``?y. !x:int. x + y = x``
    val pt5 = ``?y. (!x:int. x + y = x) /\
                    !y'. (!x. x + y' = x) ==> (y = y')``
@@ -1108,10 +1125,12 @@ end tm
                                 x <= w /\ w < z``;
 
 
+   (* false statements *)
    val fpt1 = ``?x. x * 4 = 6i``
    val fpt2 = ``!x y:int. x < y \/ y < x``
    val fpt3 = ``!x y z:int. 2 * x < y /\ y < 2 * z ==>
                             (y = x + 1) \/ (x < y /\ y < z)``
+   val fpt4 = ``?x y:int. 3 * x + 3 * y = 10``;
 
    fun p15 tm = let
      val (var, _) = dest_exists tm
@@ -1131,21 +1150,25 @@ end tm
    eliminate_existential it8;
    eliminate_existential it9;
    eliminate_existential it10;
+   eliminate_existential it11;
 
-   decide_pure_presburger_term pt1
-   decide_pure_presburger_term pt2
-   decide_pure_presburger_term pt3
-   decide_pure_presburger_term pt4
-   decide_pure_presburger_term pt5
-   decide_pure_presburger_term pt6
-   decide_pure_presburger_term pt7
-   decide_pure_presburger_term pt8
-   decide_pure_presburger_term pt9
-   decide_pure_presburger_term pt10
-   decide_pure_presburger_term pt11
+   decide_pure_presburger_term pt1;
+   decide_pure_presburger_term pt2;
+   decide_pure_presburger_term pt3;
+   decide_pure_presburger_term pt4;
+   decide_pure_presburger_term pt5;
+   decide_pure_presburger_term pt6;
+   decide_pure_presburger_term pt7;
+   decide_pure_presburger_term pt8;
+   decide_pure_presburger_term pt9;
+   decide_pure_presburger_term pt10;
+   decide_pure_presburger_term pt11;
 
-   decide_pure_presburger_term fpt1
-   decide_pure_presburger_term fpt2
+   decide_pure_presburger_term fpt1;
+   decide_pure_presburger_term fpt2;
+   decide_pure_presburger_term fpt3;
+   decide_pure_presburger_term fpt4;
+
 *)
 
 
