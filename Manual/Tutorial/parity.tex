@@ -592,7 +592,7 @@ goal it can be seen that it will be solved if its left hand side,
 \begin{session}
 \begin{verbatim}
 - e (PAT_ASSUM ``!t. out t = X t``
-       (fn th => REWRITE_TAC [SPEC ``SUC t`` th]))
+       (fn th => REWRITE_TAC [SPEC ``SUC t`` th]));
 <<HOL message: inventing new type variable names: 'a, 'b.>>
 OK..
 1 subgoal:
