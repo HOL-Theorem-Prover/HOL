@@ -624,7 +624,7 @@ exception computeFixedpointError;
 fun computeFixedpoint report vm (th0,thsuc) =
  let val tb0 = eqToTermBdd (fn tm => raise computeFixedpointError) vm th0
      fun f n (tb,tb') =  
-      let val tb'simp = BddApConv computeLib.EVAL_CONV tb'
+      let val tb'simp = BddApConv reduceLib.REDUCE_CONV tb'
           val _ = report n tb'simp
           val tb'' = 
            eqToTermBdd (BddApSubst tb'simp) vm (SPEC (intToTerm n) thsuc)
@@ -697,7 +697,7 @@ fun computeTrace report vm pth (th0,thsuc) =
       (report n (hd tbl);
        let val tb =
         BddApConv
-         computeLib.EVAL_CONV
+         reduceLib.REDUCE_CONV
          (eqToTermBdd (BddApSubst(hd tbl)) vm (SPEC (intToTerm n) thsuc))
        in
         tb :: tbl
