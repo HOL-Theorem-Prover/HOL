@@ -57,3 +57,9 @@ New theories:
 
 New tools:
 ----------
+
+  * Another complete decision procedure for Presburger arithmetic over
+    the integers and natural numbers, the Omega Test, has been
+    implemented.  It is usually faster than Cooper's algorithm, but
+    problems that require significant work in converting the input
+    problem to DNF can cause it to take much longer.
