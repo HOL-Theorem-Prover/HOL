@@ -11,6 +11,10 @@
 (*		  eliminated.  Optimized for speed.  Simplified. 	*)
 (* =====================================================================*)
 
+structure PSet_ind :> PSet_ind =
+struct
+
+
 (* ---------------------------------------------------------------------*)
 (*                                                                      *)
 (*    `!s. FINITE s ==>  P s`                          		        *)
@@ -21,9 +25,6 @@
 (*                [ `~x IN t`]                           	        *)
 (*									*)
 (* ---------------------------------------------------------------------*)
-
-structure PSet_ind :> PSet_ind =
-struct
 
 open HolKernel Parse boolLib;
 

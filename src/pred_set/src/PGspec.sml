@@ -179,6 +179,7 @@ fun list_variant l1 l2 =
 (*									*)
 (*   GSPEC (\(x1,...,xn). (t[x1,...,xn], p[x1,...,xn]))		        *)
 (* ---------------------------------------------------------------------*)
+
 fun check_const (s,thy) =
   assert (fn c =>
            let val {Name, Thy, ...} = dest_thy_const c

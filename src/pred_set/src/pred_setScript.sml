@@ -2856,7 +2856,7 @@ val CARD_COUNT = store_thm
     THEN CONV_TAC Arith.ARITH_CONV]);
 
 (*---------------------------------------------------------------------------
-    A "fold" operation for sets
+    A "fold"-like operation for sets.
  ---------------------------------------------------------------------------*)
 
 val ITSET_defn = Defn.Hol_defn "ITSET"
