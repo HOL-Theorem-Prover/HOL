@@ -163,6 +163,10 @@ specified TeX, literally.  Since HOL strings have no escapes, you
 don't need to escape the backslash, but you can't write a double
 quote.
 
+(*[ HOL_SYM_BOL_ALIST ++ "\TeXery" ==> "\more\texery" ]*) is the same
+as the above, but applies only to the first non-space token on the
+line (Beginning Of Line), overriding HOL_SYM_ALIST in that case.
+
 (*[ HOL_ID_ALIST id "\TeXery" id "\more\texery" ]*) adds the named
 identifiers to the list of "HOL identifiers", which are typeset with
 the specified TeX, literally.  Since HOL strings have no escapes, you

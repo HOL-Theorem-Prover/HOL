@@ -84,7 +84,7 @@ let last_loc_or_zero ts =
 (* first location (if defined), else second *)
 let orloc l1 l2 =
   if l1 = zero_loc then l2 else l1
-    
+
 
 (* -------------------------------------------------------------------- *)
 (*  HOL helpers                                                         *)
@@ -373,6 +373,18 @@ let rec readarg cf ml ts0 = (* read a single arg: spaces then (id.id.id or match
 (*  Munging of each token class                                         *)
 (* -------------------------------------------------------------------- *)
 
+(* Some tokens are rendered differently in different contexts *)
+
+type token_cxt = {
+    adjid : bool;  (* previous non-space token was alphanumeric identifier *)
+    bol   : bool;  (* first token on line *)
+  }
+
+let tcx0 : token_cxt = {
+  adjid = false;
+  bol = true
+}
+
 
 (* Do the munging *)
 
@@ -418,11 +430,19 @@ let munge_ident : pvars -> string -> unit
       (* would be good to check is_* for overlaps *)
 
 (* output a single symbolic identifier *)
-let munge_symbol : pvars -> string -> unit
-    = fun pvs s ->
+(* boolean: is this ident at the beginning of a line? *)
+let munge_symbol : pvars -> bool -> string -> unit
+    = fun pvs bol s ->
       let s_out =
-        try List.assoc s !(!curmodals.hOL_SYM_ALIST)
-        with Not_found -> texify_math s
+        try
+          if bol then
+            List.assoc s !(!curmodals.hOL_SYM_BOL_ALIST)
+          else
+            raise Not_found
+        with Not_found -> 
+          try List.assoc s !(!curmodals.hOL_SYM_ALIST)
+          with Not_found ->
+            texify_math s
       in
       print_string s_out
 
@@ -457,14 +477,14 @@ let rec render_HolTex_hook : (pvars -> texdoc -> unit) ref
 
 (* output a single HOL token *)
 (* boolean flag: was previous token an alphanumeric ident? *)
-and munge_hol_content0 : pvars -> bool -> hol_content -> bool
-    = fun pvs adjid (t,_) ->
+and munge_hol_content0 : pvars -> token_cxt -> hol_content -> token_cxt
+    = fun pvs tcx (t,_) ->
       let render_it =
         match t with
           HolIdent(true ,s) -> (fun () ->
-            if adjid then print_string "\;";
+            if tcx.adjid then print_string "\;";
             munge_ident pvs s)
-        | HolIdent(false,s) -> (fun () -> munge_symbol pvs s)
+        | HolIdent(false,s) -> (fun () -> munge_symbol pvs tcx.bol s)
         | HolStr s          -> (fun () -> wrap "\\text{``" "''}" munge_texify_text s)
         | HolWhite s        -> (fun () -> print_string s)
         | HolIndent n       -> (fun () -> munge_indent n)
@@ -483,14 +503,15 @@ and munge_hol_content0 : pvars -> bool -> hol_content -> bool
       in
       if !eCHO then begin
         render_it ();
-        let adjid' = match t with HolIdent(true,_) -> true | HolWhite _ -> adjid | _ -> false in
-        adjid'
+        let adjid' = match t with HolIdent(true,_) -> true | HolWhite _ -> tcx.adjid | _ -> false in
+        let bol' = match t with HolIndent(_) -> true | HolWhite _ -> tcx.bol | _ -> false in
+        { tcx with adjid = adjid'; bol = bol' }
       end else
-        adjid  (* don't display anything if echoing turned off *)
+        tcx  (* don't display anything if echoing turned off *)
 
 and munge_hol_content : pvars -> hol_content -> unit
     = fun pvs tt ->
-      let (_:bool) = munge_hol_content0 pvs false tt in ()
+      let (_:token_cxt) = munge_hol_content0 pvs tcx0 tt in ()
 
 
 (* output a curried op, returning the remainder of the stream *)
@@ -520,25 +541,25 @@ and munge_curried : pvars -> hol_content -> curried_info -> hol_content list -> 
 
 
 (* output an entire HOL document *)
-and munge_holdoc0 : pvars -> bool -> holdoc -> bool
-    = fun pvs adjid ts ->
+and munge_holdoc0 : pvars -> token_cxt -> holdoc -> token_cxt
+    = fun pvs tcx ts ->
       match ts with
         []
-          -> adjid
+          -> tcx
 
       | (((HolIdent(b,s),_) as t)::ts) when (match is_curried s with Some _ -> true | None -> false)
           -> (match is_curried s with
                 Some info
                   -> let ts' = munge_curried pvs t info ts in
-                     munge_holdoc0 pvs false ts'
+                     munge_holdoc0 pvs {tcx with adjid = false} ts'
               | _ -> raise (NeverHappen "munge_holdoc"))
 
       | (t::ts)
-          -> let adjid' = munge_hol_content0 pvs adjid t in
-             munge_holdoc0 pvs adjid' ts
+          -> let tcx' = munge_hol_content0 pvs tcx t in
+             munge_holdoc0 pvs tcx' ts
 
 and munge_holdoc : pvars -> holdoc -> unit
-    = fun pvs ts -> let (_:bool) = munge_holdoc0 pvs false ts in ()
+    = fun pvs ts -> let (_:token_cxt) = munge_holdoc0 pvs tcx0 ts in ()
 
 
 

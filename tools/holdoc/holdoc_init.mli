@@ -25,6 +25,7 @@ type modalsettings = {
   vAR_PREFIX_ALIST : (string * string) list ref;
   aUTO_BINDERS : bool ref;
   hOL_SYM_ALIST : (string * string) list ref;
+  hOL_SYM_BOL_ALIST : (string * string) list ref;
   hOL_ID_ALIST : (string * string) list ref;
   hOL_CURRIED_ALIST : (string * curried_info) list ref;
   sMART_PREFIX : bool ref;
