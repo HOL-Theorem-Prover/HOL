@@ -150,13 +150,15 @@ in
                if Lib.mem idstr (afn()) then
                  return (Ident(idstr^"$"^partname))
                else
-                 raise LEX_ERR ("Invalid theory name: "^idstr))) ++
+                 raise LEX_ERR ("invalid theory name: "^idstr))) ++
              (return (Ident ((if dollared then "$" else "")^idstr)))))))) ++
   (token (many1_charP Char.isDigit >-       (fn dp =>
           optional (itemP Char.isAlpha) >-  (fn csuffix =>
           return (Numeral(dp, Option.map Char.toLower csuffix)))))) ++
   (token ((optional (item #"$")) >- return o isSome >-   (fn b =>
-          many1_charP (HOLsym OR HOLspecials) >- doit b)))
+          many1_charP (HOLsym OR HOLspecials) >- doit b))) ++
+  (token (many1_charP (not o Char.isSpace) >-
+   (fn s => raise LEX_ERR ("can't make lexical sense of "^s))))
 end
 
 
