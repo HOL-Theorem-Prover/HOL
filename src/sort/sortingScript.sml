@@ -41,7 +41,7 @@ val PERM_INTRO = Q.store_thm
 
 
 val PERM_TRANS = Q.store_thm
-("PERM_trans",
+("PERM_TRANS",
   `transitive PERM`,
  RW_TAC list_ss [relationTheory.transitive_def] 
   THEN PROVE_TAC[PERM_DEF]);

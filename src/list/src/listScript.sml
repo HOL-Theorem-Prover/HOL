@@ -1068,7 +1068,6 @@ val _ =
  in exportML("list",
          MLSIG "type num = numML.num"
          :: OPEN ["num"]
-         :: MLSTRUCT "nonfix +;" 
          ::
          map (DEFN o PURE_REWRITE_RULE[arithmeticTheory.NUMERAL_DEF])
              [NULL_DEF, HD, TL, APPEND, FLAT, MAP,

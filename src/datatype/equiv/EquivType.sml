@@ -45,9 +45,8 @@ struct
 (* The Standard Header *)
 open HolKernel Parse boolLib liteLib;
 
-infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
-
 val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+
 fun -- q x = Term q
 fun == q x = Type q
 

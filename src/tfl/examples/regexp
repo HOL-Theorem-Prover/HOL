@@ -38,8 +38,8 @@ fun match (res : re list)
 (* 2.  HOL Preliminaries                                                      *)
 (* -------------------------------------------------------------------------- *)
 
-app load ["stringLib","metisLib"]; 
-open pairTheory arithmeticTheory listTheory optionTheory metisLib;
+   app load ["stringLib","metisLib"]; 
+   open pairTheory arithmeticTheory listTheory optionTheory metisLib;
 
 val thm_counter = Count.mk_meter();
 
@@ -67,6 +67,8 @@ val MEM_EXISTS_LEM = Q.prove
 (`!x l. MEM x l = EXISTS (\y. y = x) l`,
  Induct_on `l` THEN EVAL_TAC THEN METIS_TAC []);
 
+
+val _ = new_theory "regexp";
 
 (*--------------------------------------------------------------------------*)
 (* 3. Datatype of Regular Expressions                                       *)
@@ -884,3 +886,18 @@ val nS_defn = Hol_defn "nS"
             || SOME (x1, (rl, w1, s1), y) ->
                 nS (x1 <> [(rl, w1, s1)] <> change_stop_on_prefix z s1))`;
 *)
+
+val _ = 
+ let open Drop
+ in exportML("regexp",
+   DATATYPE (ParseDatatype.parse
+      `regexp =  Epsilon
+              | Atom of 'a -> bool
+              | Or of regexp => regexp
+              | Then of regexp => regexp
+              | Repeat of regexp`) 
+   ::
+   [DEFN match_def])
+ end;
+
+val _ = export_theory();
