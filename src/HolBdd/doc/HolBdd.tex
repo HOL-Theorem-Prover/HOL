@@ -2388,7 +2388,7 @@ fun iterate p f =
 (*****************************************************************************)
 (*   |- f 0 s = ... s ...     |- !n. f (SUC n) s = ... f n ... s ...         *)
 (*   ---------------------------------------------------------------         *)
-(*                     vm ``f i s`` |--> bi                                  *)
+(*       (vm ``f i s`` |--> bi, vm ``f (SUC i) s`` |--> bsuci)               *)
 (*                                                                           *)
 (* where i is the first number such that |- f (SUC i) s = f i s              *)
 (* and the function report is applied to the iteration level and current     *)
