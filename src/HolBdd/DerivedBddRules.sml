@@ -636,9 +636,10 @@ val trl = computeTrace report vm pth (th0,thsuc);
 (*  TraceBack                                                                *)
 (*   vm                                                                      *)
 (*   [vm ``f i s`` |--> bi,  ... , vm ``f 0 s`` |--> b0]                     *)
+(*   (|- p s = ... s ...)                                                    *)
 (*   (|- R((v1,...,vn),(v1',...,vn')) = ...)                                 *)
 (*                                                                           *)
-(* computes a sequence of pairs (with j = 0,1,...,i) of the form             *)
+(* computes a list of pairs of the form (with j = 0,1,...,i-1)               *)
 (*                                                                           *)
 (* ((vm ``ReachIn R B j s_vec /\ Prev R (Eq c_vec) (v1,...,vn)`` |--> bdd),  *)
 (*  [((vm v1 |--> b1),(vm c1 |--> b1')),                                     *)
@@ -652,14 +653,24 @@ val trl = computeTrace report vm pth (th0,thsuc);
 (* where the second element specifies a state satisfying the first element   *)
 (* and in which state variable vj has value cj (0 <= j <= n).                *)
 (*                                                                           *)
+(* The last element of the list has the form                                 *)
+(* ((vm ``ReachIn R B j s_vec /\ p(v1,...,vn)`` |--> bdd),                   *)
+(*  [((vm v1 |--> b1),(vm c1 |--> b1')),                                     *)
+(*                   .                                                       *)
+(*                   .                                                       *)
+(*                   .                 ,                                     *)
+(*   ((vm vn |--> bn),(vm cn |--> bn'))])                                    *)
+(*                                                                           *)
 (* If [s0,...,si] is the sequence of states, then                            *)
-(* R(s0,s1), R(s1,S2),...,R(s(i-1),si) and si satisfies bi and               *)
+(* R(s0,s1), R(s1,s2),...,R(s(i-1),sj) and sj satisfies bj (1 <= j <= i)     *)
+(* and p si                                                                  *)
 (*****************************************************************************)
 
 val TraceBackPrevThm = ref TRUTH;
 
-fun TraceBack vm trl Rth =
- let val (Rcon, s_s') = Term.dest_comb(lhs(concl(SPEC_ALL Rth)))
+fun TraceBack vm trl pth Rth =
+ let val ptb = eqToTermBdd (fn tm => raise computeFixedpointError) vm pth
+     val (Rcon, s_s') = Term.dest_comb(lhs(concl(SPEC_ALL Rth)))
      val (s,s') = pairSyntax.dest_pair s_s'
      val _ = print "Computing simplified backward image theorem ...\n"
      val PrevTh =
@@ -671,6 +682,7 @@ fun TraceBack vm trl Rth =
      val _ = (TraceBackPrevThm := PrevTh)
      val PrevThTb = eqToTermBdd failfn vm PrevTh
      val _ = print "done.\nSimplified theorem is !TraceBackPrevThm\n";
+     val lasttb = BddOp(And, hd trl, ptb)
      val prime_ass =
       map 
        (fn (tb,tb')=>
@@ -684,7 +696,7 @@ fun TraceBack vm trl Rth =
      val assl =
       List.foldl
        (fn (tb,assl) => (print "."; stepback(tb, snd(hd assl)) :: assl))
-       [(hd trl, BddSatone(hd trl))]
+       [(lasttb, BddSatone lasttb)]
        (tl trl)
      val _ = print " done.\n"
 in
