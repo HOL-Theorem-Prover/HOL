@@ -293,7 +293,7 @@ let mdir v n ts = (* munge a directive *)
                           raise BadDirective
   in
   match n with
-    "SHOWRULE" -> "\\showrule{"^texify_command (go ts)^"}"
+    "SHOWRULE" -> "\\showrule{"^texify_command (go ts)^"}%"
   | _          -> ""
 
 let rec mtok v t =
