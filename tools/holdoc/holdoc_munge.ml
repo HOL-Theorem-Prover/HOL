@@ -528,7 +528,7 @@ The standard format for a rule is:
 
   (! universally-quantified variables.
 
-  rule_name /* rule_category (* optional rule description *) */
+  rule_name /* rule_proto, rule_category (* optional rule description *) */
     rule_lhs
   -- rule_label -->
     rule_rhs
@@ -551,11 +551,25 @@ double square brackets like this: [[Flags(T,F)]].
 
 (* the rule type *)
 
+type rule_body =
+    { v : string list;
+      n : string;
+      rp : string list;
+      cat : string list;
+      desc : token list option;
+      lhs : token list list;
+      lab : token list;
+      rhs : token list list;
+      side : token list list;
+      comm : token list option
+    };;
+type definition_body =
+    { e : token list list;
+      no : string option
+    };;
 type rule =
-    Rule of string list * string * string list * token list option (* v, n, cat, desc, *)
-        * token list list * token list * token list list (* lhs, lab, rhs, *)
-        * token list list * token list option (* side, comm *)
-  | Definition of token list list * string option
+    Rule       of rule_body
+  | Definition of definition_body
 
 (* debugging rule printer *)
 
@@ -568,8 +582,10 @@ let print_tokenline toks =
 
 let print_rule ruleordefn =
   match ruleordefn with
-    Rule(v,n,cat,desc,lhs,lab,rhs,side,comm) ->
+    Rule{v=v;n=n;rp=rp;cat=cat;desc=desc;lhs=lhs;lab=lab;rhs=rhs;side=side;comm=comm} ->
       print_string ("Rule "^n^" (");
+      ignore (List.map (function s -> print_string (s^" ")) rp);
+      print_string ", ";
       ignore (List.map (function s -> print_string (s^" ")) cat);
       (match desc with
          Some d -> print_string " ";
@@ -593,7 +609,7 @@ let print_rule ruleordefn =
                    print_newline()
       |  None   -> ());
       print_newline()
-  | Definition(e,no) ->
+  | Definition{e=e;no=no} ->
       print_string ("Definition"^(match no with None -> "" | Some(s)-> "("^s^")")^":\n");
       ignore (List.map print_tokenline e);
       print_newline()
@@ -604,18 +620,18 @@ let rec parse_rule = parser
     [< 'Sep("("); _ = sp; r1 = parse_rule1 >] -> r1
   | [<>] -> raise (Stream.Error("rule begin: `('"));
 and parse_rule1 = parser
-    [< 'Ident("!",_); v = rule_vars; _ = sp; 'Sep(".") ?? ".";
+    [< 'Ident("!",_); v = rule_vars; _ = sp; 'Sep(".") ?? "expected: .";
        _ = sp';
-       (n,cat,desc) = rule_name;
+       (n,rp,cat,desc) = rule_name;
        l_lab_r = parse_chunk;
        'Indent(_);
-       _ = sp'; 'Ident("<==",_) ?? n^": <=="; _ = sp;
+       _ = sp'; 'Ident("<==",_) ?? n^": expected <=="; _ = sp;
        'Indent(_);
        side = parse_longchunk;
        'Indent(_); _ = optind;
        comm = optcomm;
        _ = optind;
-       _ = sp; 'Sep(")") ?? n^": rule end: `)'"; _ = sp >]
+       _ = sp; 'Sep(")") ?? n^": expected rule end: `)'"; _ = sp >]
       -> let rec isLab ts =
             match ts with
               (Indent(_)     :: ts) -> isLab ts
@@ -632,11 +648,11 @@ and parse_rule1 = parser
          in
          let (lhs,lab,rhs) = go l_lab_r []
          in
-         Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)
+         Rule{v=v;n=n;rp=rp;cat=cat;desc=desc;lhs=lhs;lab=lab;rhs=rhs;side=side;comm=comm}
   | [<>] -> raise (Stream.Error("!"));
 
 and parse_definition no = parser
-    [< e = parse_wholechunk >] -> Definition(e,no)
+    [< e = parse_wholechunk >] -> Definition{e=e;no=no}
   | [<>] -> raise (Stream.Error("Couldn't parse definition!"));
 
 and rule_vars = parser
@@ -650,9 +666,9 @@ and rule_vars = parser
   | [<>]                                         -> []
 
 and rule_name = parser
-    [< 'Ident(n,_); _ = sp; 'Ident("/*",_) ?? "/*"; _ = sp; cat = ids_nocomm ?? "category"; _ = wopt;
-       desc = optcomm; _ = sp; 'Ident("*/",_) ?? "*/"; _ = sp >]
-      -> debug_print ("GOT "^n^"\n"); (n,cat,desc)
+    [< 'Ident(n,_); _ = sp; 'Ident("/*",_) ?? "expected: /*"; _ = sp; rp = ids_nocomm ?? "expected: protocol"; 'Sep(",") ?? "expected: ,"; _ = sp; cat = ids_nocomm ?? "expected: category"; _ = wopt;
+       desc = optcomm; _ = sp; 'Ident("*/",_) ?? "expected: */"; _ = sp >]
+      -> debug_print ("GOT "^n^"\n"); (n,rp,cat,desc)
   | [<>] -> raise (Stream.Error("can't find rule name"));
 
 
@@ -742,7 +758,7 @@ and pot_l ts = potential_vars_line ts;;
 
 let potential_vars ruleordefn =
   match ruleordefn with
-    Rule(v,n,cat,desc,lhs,lab,rhs,side,comm) ->
+    Rule{v=v;n=n;rp=rp;cat=cat;desc=desc;lhs=lhs;lab=lab;rhs=rhs;side=side;comm=comm} ->
       v              (* bound at top *)
                      (* bound in each bit... *)
       @ (match desc with Some c -> pot_l c | None -> [])
@@ -751,7 +767,7 @@ let potential_vars ruleordefn =
       @ pot_s rhs
       @ pot_s side
       @ (match comm with Some c -> pot_l c | None -> [])
-  | Definition(e,no) ->
+  | Definition{e=e;no=no} ->
       pot_s e
 
 (* choose names for definitions *)
@@ -799,7 +815,7 @@ let getname ls =
 
 let latex_rule ruleordefn =
   match ruleordefn with
-    Rule(v,n,cat,desc,lhs,lab,rhs,side,comm) as r ->
+    Rule{v=v;n=n;rp=rp;cat=cat;desc=desc;lhs=lhs;lab=lab;rhs=rhs;side=side;comm=comm} as r->
       (* DEBUG:  let _ = print_rule r in *)
       let pvs      = potential_vars r
       in
@@ -807,7 +823,7 @@ let latex_rule ruleordefn =
       in
       print_string ("\\newcommand{"^texname^"}{\\rrule"^(if side = [] then "n" else "c")
                              ^(match comm with Some _ -> "c" | None -> "n"));
-      print_string ("{"^texify n^"}{"^texifys " " cat^"}");
+      print_string ("{"^texify n^"}{"^texifys " " rp^": "^texifys " " cat^"}");
       print_string ("{"^(match desc with Some d -> munge pvs d [] | None -> "")^"}\n");
       print_string ("{"^munges pvs lhs^"}\n");
       print_string ("{"^mungelab pvs lab^"}\n");
@@ -819,7 +835,7 @@ let latex_rule ruleordefn =
        | None   -> ());
       print_string "}}\n\n";
       texname
-  | Definition(e,no) ->
+  | Definition{e=e;no=no} ->
       let pvs      = pot_s e
       in
       let namepart = match no with
