@@ -302,4 +302,216 @@ val REC_DEV_IMP =
 val _ = new_constant ("measuring", bool --> alpha --> bool);
 val _ = add_infix ("measuring", 90, NONASSOC);
 
+(*****************************************************************************)
+(* f <> g = \t. (f t, g t)                                                   *)
+(*****************************************************************************)
+val BUS_CONCAT_def =
+ Define
+  `BUS_CONCAT f g = \t. (f t, g t)`;
+
+val _ = set_fixity "<>" (Infixl 500);
+val _ = overload_on ("<>", ``BUS_CONCAT``);
+
+val COMB_FST =
+ store_thm
+  ("COMB_FST",
+   ``COMB FST (f <> g, h) = (h = f)``,
+   RW_TAC std_ss [COMB_def,BUS_CONCAT_def,FUN_EQ_THM]
+    THEN PROVE_TAC[]);
+
+val COMB_SND =
+ store_thm
+  ("COMB_SND",
+   ``COMB SND (f <> g, h) = (h = g)``,
+   RW_TAC std_ss [COMB_def,BUS_CONCAT_def,FUN_EQ_THM]
+    THEN PROVE_TAC[]);
+
+(*****************************************************************************)
+(* Bus selector operators                                                    *)
+(*****************************************************************************)
+
+val SEL_2_1_def =
+ Define
+  `SEL_2_1 (inp,out) = !t. out t = FST(inp t)`;
+
+val SEL_2_2_def =
+ Define
+  `SEL_2_2 (inp,out) = !t. out t = SND(inp t)`;
+
+val SEL_3_1_def =
+ Define
+  `SEL_3_1 (inp,out) = !t. out t = FST(inp t)`;
+
+val SEL_3_2_def =
+ Define
+  `SEL_3_2 (inp,out) = !t. out t = FST(SND(inp t))`;
+
+val SEL_3_3_def =
+ Define
+  `SEL_3_3 (inp,out) = !t. out t = SND(SND(inp t))`;
+
+val COMP_SEL_2_1 =
+ store_thm
+  ("COMP_SEL_2_1",
+   ``COMB (\(x,y). x) = SEL_2_1``,
+   RW_TAC std_ss [FUN_EQ_THM]
+    THEN Q.SPEC_TAC(`x`,`x`)
+    THEN SIMP_TAC std_ss [COMB_def,SEL_2_1_def,FORALL_PROD]
+    THEN GEN_BETA_TAC
+    THEN PROVE_TAC[]);
+
+val COMP_SEL_2_2 =
+ store_thm
+  ("COMP_SEL_2_2",
+   ``COMB (\(x,y). y) = SEL_2_2``,
+   RW_TAC std_ss [FUN_EQ_THM]
+    THEN Q.SPEC_TAC(`x`,`x`)
+    THEN SIMP_TAC std_ss [COMB_def,SEL_2_2_def,FORALL_PROD]
+    THEN GEN_BETA_TAC
+    THEN PROVE_TAC[]);
+
+val COMP_SEL_3_1 =
+ store_thm
+  ("COMP_SEL_3_1",
+   ``COMB (\(x,y,z). x) = SEL_3_1``,
+   RW_TAC std_ss [FUN_EQ_THM]
+    THEN Q.SPEC_TAC(`x`,`x`)
+    THEN SIMP_TAC std_ss [COMB_def,SEL_3_1_def,FORALL_PROD]
+    THEN GEN_BETA_TAC
+    THEN PROVE_TAC[]);
+
+val COMP_SEL_3_2 =
+ store_thm
+  ("COMP_SEL_3_2",
+   ``COMB (\(x,y,z). y) = SEL_3_2``,
+   RW_TAC std_ss [FUN_EQ_THM]
+    THEN Q.SPEC_TAC(`x`,`x`)
+    THEN SIMP_TAC std_ss [COMB_def,SEL_3_2_def,FORALL_PROD]
+    THEN GEN_BETA_TAC
+    THEN PROVE_TAC[]);
+
+val COMP_SEL_3_3 =
+ store_thm
+  ("COMP_SEL_3_3",
+   ``COMB (\(x,y,z). z) = SEL_3_3``,
+   RW_TAC std_ss [FUN_EQ_THM]
+    THEN Q.SPEC_TAC(`x`,`x`)
+    THEN SIMP_TAC std_ss [COMB_def,SEL_3_3_def,FORALL_PROD]
+    THEN GEN_BETA_TAC
+    THEN PROVE_TAC[]);
+
+val COMP_SEL_CLAUSES =
+ save_thm
+  ("COMP_SEL_CLAUSES",
+   LIST_CONJ
+    [COMP_SEL_2_1,COMP_SEL_2_2,
+     COMP_SEL_3_1,COMP_SEL_3_2,COMP_SEL_3_3]);
+
+(*****************************************************************************)
+(* Versions of POSEDGE_IMP, CALL, SELECT, FINISH, ATM, SEQ, PAR, ITE and REC *)
+(* suitable for rewriting hardware combinatory expressions.                  *)
+(*****************************************************************************)
+
+val POSEDGE_IMP =
+ store_thm
+  ("POSEDGE_IMP",
+   ``POSEDGE_IMP = 
+      \(inp,out).
+         ?c0 c1. DEL (inp,c0) /\ NOT (c0,c1) /\ AND (c1,inp,out)``,
+   RW_TAC std_ss [FUN_EQ_THM,FORALL_PROD,POSEDGE_IMP_def]);
+
+val CALL =
+ store_thm
+  ("CALL",
+   ``CALL = 
+      \(load,inp,done,done_g,data_g,start_e,inp_e).
+         ?c0 c1 start sel.
+           POSEDGE_IMP (load,c0) /\ DEL (done,c1) /\ AND (c0,c1,start) /\
+           OR (start,sel,start_e) /\ POSEDGE_IMP (done_g,sel) /\
+           MUX (sel,data_g,inp,inp_e)``,
+   RW_TAC std_ss [FUN_EQ_THM,FORALL_PROD,CALL_def]);
+
+val SELECT =
+ store_thm
+  ("SELECT",
+   ``SELECT = 
+      \(done_e,data_e,start_f,start_g).
+         ?start' not_e.
+           POSEDGE_IMP (done_e,start') /\ AND (start',data_e,start_f) /\
+           NOT (data_e,not_e) /\ AND (not_e,start',start_g)``,
+   RW_TAC std_ss [FUN_EQ_THM,FORALL_PROD,SELECT_def]);
+
+val FINISH =
+ store_thm
+  ("FINISH",
+   ``FINISH = 
+      \(done_e,done_f,done_g,done).
+         ?c2 c3 c4.
+           DEL (done_g,c3) /\ AND (done_g,c3,c4) /\
+           AND (done_f,done_e,c2) /\ AND (c2,c4,done)``,
+   RW_TAC std_ss [FUN_EQ_THM,FORALL_PROD,FINISH_def]);
+
+val ATM =
+ store_thm
+  ("ATM",
+   ``ATM f = 
+      \(load,inp,done,out).
+       ?c0 c1.
+         POSEDGE_IMP (load,c0) /\ NOT (c0,done) /\ COMB f (inp,c1) /\
+         DEL (c1,out)``,
+   RW_TAC std_ss [FUN_EQ_THM,FORALL_PROD,ATM_def]);
+
+val SEQ =
+ store_thm
+  ("SEQ",
+   ``SEQ f g = 
+      \(load,inp,done,out).
+      ?not_c2 c0 c1 c2 data.
+        NOT (c2,not_c2) /\ OR (not_c2,load,c0) /\ f (c0,inp,c1,data) /\
+        g (c1,data,c2,out) /\ AND (c1,c2,done)``,
+   RW_TAC std_ss [FUN_EQ_THM,FORALL_PROD,SEQ_def]);
+
+val PAR =
+ store_thm
+  ("PAR",
+   ``PAR f g = 
+      \(load,inp,done,out).
+         ?c0 c1 start done' done'' data' data'' out' out''.
+           POSEDGE_IMP (load,c0) /\ DEL (done,c1) /\ AND (c0,c1,start) /\
+           f (start,inp,done',data') /\ g (start,inp,done'',data'') /\
+           DFF (data',done',out') /\ DFF (data'',done'',out'') /\
+           AND (done',done'',done) /\ (out = (\t. (out' t,out'' t)))``,
+   RW_TAC std_ss [FUN_EQ_THM,FORALL_PROD,PAR_def]);
+
+val ITE =
+ store_thm
+  ("ITE",
+   ``ITE e f g = 
+      \(load,inp,done,out).
+         ?c0 c1 c2 start start' done_e data_e q not_e data_f data_g sel
+            done_f done_g start_f start_g.
+           POSEDGE_IMP (load,c0) /\ DEL (done,c1) /\ AND (c0,c1,start) /\
+           e (start,inp,done_e,data_e) /\ POSEDGE_IMP (done_e,start') /\
+           DFF (data_e,done_e,sel) /\ DFF (inp,start,q) /\
+           AND (start',data_e,start_f) /\ NOT (data_e,not_e) /\
+           AND (start',not_e,start_g) /\ f (start_f,q,done_f,data_f) /\
+           g (start_g,q,done_g,data_g) /\ MUX (sel,data_f,data_g,out) /\
+           AND (done_e,done_f,c2) /\ AND (c2,done_g,done)``,
+   RW_TAC std_ss [FUN_EQ_THM,FORALL_PROD,ITE_def]);
+
+val REC =
+ store_thm
+  ("REC",
+   ``REC e f g = 
+      \(load,inp,done,out).
+         ?done_g data_g start_e q done_e data_e start_f start_g inp_e
+            done_f.
+           CALL (load,inp,done,done_g,data_g,start_e,inp_e) /\
+           DFF (inp_e,start_e,q) /\ e (start_e,inp_e,done_e,data_e) /\
+           SELECT (done_e,data_e,start_f,start_g) /\
+           f (start_f,q,done_f,out) /\ g (start_g,q,done_g,data_g) /\
+           FINISH (done_e,done_f,done_g,done)``,
+   RW_TAC std_ss [FUN_EQ_THM,FORALL_PROD,REC_def]);
+
+
 val _ = export_theory();

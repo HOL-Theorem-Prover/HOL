@@ -12,7 +12,7 @@
 ******************************************************************************)
 (*
 quietdec := true;
-map load  ["composeTheory","compileTheory"];
+map load  ["composeTheory","compileTheory", "hol88Lib" (*for subst*)];
 open arithmeticTheory pairLib pairTheory PairRules combinTheory 
      composeTheory compileTheory;
 quietdec := false;
@@ -806,4 +806,128 @@ fun REPEATR refine tm =
  
 *)
 
+(*****************************************************************************)
+(* Some ancient code for normalising circuits (will need to be updated!)     *)
+(*****************************************************************************)
 
+(*****************************************************************************)
+(* LIST_EXISTS_ALPHA_CONV s n ``?a b c ...`` =                               *)
+(*  |- (?a b c ...) = ?sn sn+1 sn+2 ...                                      *)
+(*****************************************************************************)
+fun LIST_EXISTS_ALPHA_CONV s n t =
+ if is_exists t
+  then
+   let val (v,_)  = dest_exists t
+       val (_,ty) = dest_var v
+   in
+    (GEN_ALPHA_CONV (mk_var((s^Int.toString n),ty))
+      THENC QUANT_CONV(LIST_EXISTS_ALPHA_CONV s (n+1))) t
+   end
+  else REFL t;
+
+(*****************************************************************************)
+(* Standardise apart all quantified variables to ``v0``, ``v1``, ...         *)
+(* where "v" is given as an argument                                         *)
+(*****************************************************************************)
+fun STANDARDIZE_EXISTS_CONV s =
+ let val count_ref = ref 0
+     fun mkv ty = let val newv = mk_var((s^Int.toString(!count_ref)),ty)
+                  in
+                   (count_ref := (!count_ref)+1; newv)
+                  end
+     fun LOCAL_RENAME_CONV t =
+      if is_exists t orelse is_forall t
+       then 
+        let val (v,_)  = if is_exists t then dest_exists t else dest_forall t
+            val (_,ty) = dest_var v
+        in
+         (GEN_ALPHA_CONV(mkv ty) THENC QUANT_CONV LOCAL_RENAME_CONV) t 
+        end
+       else SUB_CONV LOCAL_RENAME_CONV t
+ in
+  LOCAL_RENAME_CONV
+ end;
+
+(*****************************************************************************)
+(* Hoist all existential quantifiers to the outside                          *)
+(*                                                                           *)
+(*   (?x. A) /\ B --> ?x. A /\ B  (check x not free in B)                    *)
+(*   A /\ (?x. B) --> ?x. A /\ B  (check x not free in A)                    *)
+(*                                                                           *)
+(* returns a pair consisting of a list of existentially quantified vars      *)
+(* and a list of conjuncts                                                   *)
+(*****************************************************************************)
+fun EXISTS_OUT t =
+ let val vars_ref = ref([]:term list) (* collect existentially quantified variables *)
+     fun LOCAL_EXISTS_OUT t =
+      if is_exists t
+       then
+        let val (l,t1) = strip_exists t
+            val _ = (vars_ref := l @ (!vars_ref))
+        in
+         LOCAL_EXISTS_OUT t1
+        end else
+      if is_conj t 
+       then
+        let val (t1,t2) = dest_conj t
+        in
+         LOCAL_EXISTS_OUT t1 @ LOCAL_EXISTS_OUT t2
+        end 
+      else [t]
+     val tml = LOCAL_EXISTS_OUT t
+ in
+  (!vars_ref, tml)
+ end;
+
+(*****************************************************************************)
+(* PRUNE1_FUN(v,[t1,...,tp,v=u,tq,...,tn]) or                                *)
+(* PRUNE1_FUN(v,[t1,...,tp,u=v,tq,...,tn])                                   *)
+(* returns [t1[u/v],...,tp[u/v],tq[u/v],...,tn[u/v]]                         *)
+(* has no effect if there is no equation ``v=u`` of ``u=v`` in the list      *)
+(*****************************************************************************)
+fun PRUNE1_FUN(v,tml) =
+ let val l = filter (fn t => is_eq t andalso ((lhs t = v) orelse (rhs t = v))) tml
+ in
+  if null l
+   then tml 
+   else
+    let val (t1,t2) = dest_eq(hd l)
+        val u = if t1=v then t2 else t1
+    in 
+     filter
+      (fn t => not(is_eq t andalso (lhs t = rhs t))) 
+      (map (hol88Lib.subst[(u,v)]) tml)
+    end
+ end;     
+
+fun EXISTS_OUT_CONV t =
+ let val th        = (*time*) (STANDARDIZE_EXISTS_CONV "v") t
+     val (vl,tml)  = (*time*) EXISTS_OUT (rhs(concl th))
+     val tml1      = (*time*) (foldl PRUNE1_FUN tml) vl 
+     val t1        = (*time*) list_mk_conj tml1
+     val vl1       = (*time*) rev (intersect vl (free_vars t1))
+     val count_ref = ref 0
+     fun mkv ty     = let val newv = mk_var(("v"^Int.toString(!count_ref)),ty)
+                      in
+                       (count_ref := (!count_ref)+1; newv)
+                      end
+     val subsl     = map (fn v => (mkv(snd(dest_var v)),v)) vl1
+     val vl2       = map fst subsl
+     val t2        = (*time*) (hol88Lib.subst subsl) t1 
+     val t3        = (*time*) list_mk_exists (vl2, t2)
+     val th        = (*time*) 
+                      mk_oracle_thm (* YIKES! -- what's this!!! *)
+                      (Tag.read "EXISTS_OUT_CONV")([],mk_eq(t,t3))
+ in
+  th
+ end;
+
+(*****************************************************************************)
+(* Compile a device implementation into a netlist represented in HOL         *)
+(*****************************************************************************)
+
+val MAKE_NETLIST =
+ SIMP_RULE std_ss [COMB_FST,COMB_SND,GSYM BUS_CONCAT_def,COMP_SEL_CLAUSES] o
+ CONV_RULE(RATOR_CONV(RAND_CONV(PABS_CONV EXISTS_OUT_CONV)))               o
+ GEN_BETA_RULE                                                             o
+ REWRITE_RULE [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC];

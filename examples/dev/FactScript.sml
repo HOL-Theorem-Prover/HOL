@@ -161,6 +161,11 @@ val FACT_dev =
   ("FACT_dev",
    REWRITE_RULE [FactThm] Fact3_dev);
 
+val FACT_cir =
+ save_thm
+  ("Fact_cir",
+   time MAKE_NETLIST FACT_dev);
+
 
 (*****************************************************************************)
 (* Temporary hack to work around a system prettyprinter bug                  *)
