@@ -1,3 +1,32 @@
+Q. HOL is failing to complete the build process.  It stops when trying
+   to create the HolBdd theory.  Why is this, and what should I do? (5)
+
+  -- The problem is almost certainly that your copy of MoscowML hasn't
+     been built with dynamic linking correctly enabled.  This in turns
+     means that the Muddy BDD package that HolBdd uses can't load.
+     You can test that this is the problem by running hol, and then
+     trying
+
+     - load "HolBdd";
+
+     This should fail with an error message about not being able to
+     load muddy.so.
+
+     If you decide you do want HolBdd (there is nothing else in HOL
+     that depends on dynamic linking) you will probably need to build
+     Moscow ML yourself.  Binaries from the central site in Denmark
+     don't seem to work.  However the install.txt file in the
+     distribution does talk about things you need to do to binaries in
+     order to get dynamic linking to work for them, and it would be
+     interesting to hear that someone had got this to work.  In any
+     case, to build from sources, you must make sure that you alter
+     the src/Makefile.inc in the MoscowML distribution in line with
+     the instructions in the comments there.
+
+     This advice seems to solve this problem for 90% of the people
+     reporting it.  If it doesn't in your case, please get back to us.
+
+
 Q. Are error messages during the build like the following a source for
    concern? (2)
 
@@ -99,7 +128,7 @@ Q. How can I find out more information about a HOL_ERR <poly>
    exception? (0)
 
   -- If expression e is causing the grief, then write
-        (e) handle E => raise E
+        (e) handle E => Raise E
      (Often the parentheses around e will not be required.)
 
 
