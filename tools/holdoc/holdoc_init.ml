@@ -17,6 +17,8 @@ type modalsettings = {
   hOL_SYM_ALIST : (string * string) list ref;
   hOL_ID_ALIST : (string * string) list ref;
   hOL_CURRIED_ALIST : (string * (string * int * bool * bool)) list ref;
+  sMART_PREFIX : bool ref;
+  iNDENT : bool ref;
 }
 
 (* current modal settings *)
@@ -32,6 +34,8 @@ let curmodals = ref {
   hOL_SYM_ALIST = ref [];
   hOL_ID_ALIST = ref [];
   hOL_CURRIED_ALIST = ref [];
+  sMART_PREFIX = ref true;
+  iNDENT = ref true;
 }
 
 (* list of all modes and corresponding settings *)
@@ -56,6 +60,8 @@ let new_mode name = (if List.mem_assoc name !modes then
                                        hOL_SYM_ALIST = ref !(!curmodals.hOL_SYM_ALIST);
                                        hOL_ID_ALIST = ref !(!curmodals.hOL_ID_ALIST);
                                        hOL_CURRIED_ALIST = ref !(!curmodals.hOL_CURRIED_ALIST);
+                                       sMART_PREFIX = ref !(!curmodals.sMART_PREFIX);
+                                       iNDENT = ref !(!curmodals.iNDENT);
                                      };
                        modes := (name,!curmodals)::!modes)
                     )
@@ -66,7 +72,6 @@ let change_mode name = (curmodals := List.assoc name !modes)
 (* other settings *)
 let eCHO = ref true
 let rCSID = ref None
-let iNDENT = ref true
 let hOLDELIMOPEN  = ref "$" (* [[ *)
 let hOLDELIMCLOSE = ref "$" (* ]] *)
 
@@ -153,12 +158,15 @@ let dir_proc n ts =
   | "HOL_SYM_ALIST"   -> !curmodals.hOL_SYM_ALIST   := (go2 ts) @ !(!curmodals.hOL_SYM_ALIST)
   | "HOL_ID_ALIST"    -> !curmodals.hOL_ID_ALIST    := (go2 ts) @ !(!curmodals.hOL_ID_ALIST)
   | "HOL_CURRIED_ALIST" -> !curmodals.hOL_CURRIED_ALIST := (go2nb ts) @ !(!curmodals.hOL_CURRIED_ALIST)
+  (* other modal *)
+  | "SMART_PREFIX"    -> !curmodals.sMART_PREFIX := true
+  | "NO_SMART_PREFIX" -> !curmodals.sMART_PREFIX := false
+  | "INDENT"          -> !curmodals.iNDENT := true
+  | "NOINDENT"        -> !curmodals.iNDENT := false
   (* other *)
   | "ECHO"            -> eCHO := true
   | "NOECHO"          -> eCHO := false
   | "RCSID"           -> rCSID           := Some(goId ts)
-  | "INDENT"          -> iNDENT := true
-  | "NOINDENT"        -> iNDENT := false
   | "HOLDELIM"        -> let (s1,ts1) = gostr ts in let (s2,_) = gostr ts1 in
                          hOLDELIMOPEN := s1; hOLDELIMCLOSE := s2
   | "NEWMODE"         -> new_mode (goident ts)

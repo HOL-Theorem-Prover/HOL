@@ -13,6 +13,8 @@ type modalsettings = {
   hOL_SYM_ALIST : (string * string) list ref;
   hOL_ID_ALIST : (string * string) list ref;
   hOL_CURRIED_ALIST : (string * (string * int * bool * bool)) list ref;
+  sMART_PREFIX : bool ref;
+  iNDENT : bool ref;
 }
 
 val curmodals : modalsettings ref
@@ -27,7 +29,6 @@ val change_mode : string -> unit
 
 val eCHO : bool ref
 val rCSID : string option ref
-val iNDENT : bool ref
 val hOLDELIMOPEN : string ref
 val hOLDELIMCLOSE : string ref
 

@@ -249,9 +249,14 @@ let var_prefix s =
              0 ) in
   Str.string_before s (Str.match_beginning ())
 
-let is_var v s = (* v is a list of universally-quantified rule variables *)
-  List.mem s v ||
+(* is prefixed variable *)
+let is_pref_var s =
   is_var_prefix (var_prefix s)
+
+(* is known or prefixed variable *)
+let is_var v s = (* v is a list of universally-quantified rule variables *)
+  List.mem s v
+    || is_pref_var s
 
 let is_num s =
   Str.string_match (Str.regexp "[0-9]+") s 0
@@ -292,7 +297,10 @@ let mident v s = (* munge alphanumeric identifier *)
                    if (is_aux_infix s)   then ("tsauxinfix",false) else
                    if (is_lib s)         then ("tslib"     ,true ) else
                    if (is_field s)     (* treat as var, because name often shared *)
-                      || (is_var v s)    then ("tsvar"     ,true ) else
+                      || (is_var v s)    then ("tsvar"     ,!(!curmodals.sMART_PREFIX)
+                                                            || is_pref_var s) else
+                                              (* if smart, always do foo1 -> foo_1;
+                                                 otherwise, only if foo is specified as a prefix *)
                      if (is_holop s)     then ("tsholop"   ,false) else
                    if (is_type s)        then ("tstype"    ,false) else
                    (write_unseen_string s;    ("tsunknown" ,false)) in
@@ -394,7 +402,7 @@ let rec mtok v t =
     match t with
       Ident(s,true)  -> mident v s
     | Ident(s,false) -> msym v s
-    | Indent(n)      -> if !iNDENT then mindent n else "\n" (* only render if desired *)
+    | Indent(n)      -> if !(!curmodals.iNDENT) then mindent n else "\n" (* only render if desired *)
     | White(s)       -> s
     | Comment(s)     -> (if String.contains s '\n' then  (* anything split over a line must be long *)
                            "\\tslongcomm{"

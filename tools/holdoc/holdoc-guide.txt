@@ -238,16 +238,27 @@ immediately.
 the beginning of a line) is ignored.  This takes effect immediately.
 
 
+(*[ SMART_PREFIX ]*) turns on smart_prefix mode (this is on by
+default).  This means that any variable consisting of alpha followed
+by digits and/or apostrophes will be appropriately TeXified, with the
+digits in a subscript and the apostrophes rendered as primes.
+
+(*[ NO_SMART_PREFIX ]*) turns off smart_prefix mode.  This means that
+only variables specified in VAR_PREFIX_LIST are so treated (and
+library identifiers).
+
+
 (*[ HOLDELIM "$" "$" ]*) redefines the strings substituted for the
 enter-HOL-mode and exit-HOL-mode directives, [[ and ]].  These are
 normally just "$" and "$", but can be changed, e.g., to colourise the
 output of HOL strings.
 
 
-HOLDoc support "modes".  All the various lists defined above are not
-global; they apply to the current mode.  The default mode is called
-"0".  New modes can be created, and the mode can be changed, by means
-of the following directives.
+HOLDoc supports "modes".  All the various lists defined above, and
+also [NO]INDENT and [NO_]SMART_PREFIX are not global; they apply to
+the current mode.  The default mode is called "0".  New modes can be
+created, and the mode can be changed, by means of the following
+directives.
 
 (*[ NEWMODE source ]*) creates a new mode called "source", which
 contains all the definitions of the current mode so far, but to which
