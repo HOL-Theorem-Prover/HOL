@@ -11,15 +11,14 @@
 
 signature Lexis =
 sig
-  val alphanumerics : Portable_ByteArray.bytearray
-  val hol_symbols   : Portable_ByteArray.bytearray
-  val sml_symbols   : Portable_ByteArray.bytearray
-  val alphabet      : Portable_ByteArray.bytearray
-  val numbers       : Portable_ByteArray.bytearray
-  val tyvar_ids     : Portable_ByteArray.bytearray
-  val parens        : Portable_ByteArray.bytearray
-
-  val in_class      : Portable_ByteArray.bytearray * int -> bool
+  val alphanumerics : Word8Array.array
+  val hol_symbols   : Word8Array.array
+  val sml_symbols   : Word8Array.array
+  val alphabet      : Word8Array.array
+  val numbers       : Word8Array.array
+  val tyvar_ids     : Word8Array.array
+  val parens        : Word8Array.array
+  val in_class      : Word8Array.array * int -> bool
 
   val allowed_user_type_var : string -> bool
   val allowed_type_constant : string -> bool
