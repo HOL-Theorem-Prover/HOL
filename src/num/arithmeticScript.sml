@@ -18,7 +18,9 @@ struct
 open HolKernel basicHol90Lib Parse;
 infix THEN THENC THENL |-> ORELSE;
 
-(* load "prim_recTheory"; load "primWFTheory"; load "QLib"; *)
+(* interactive use:
+   app load ["prim_recTheory","primWFTheory", "QLib"];
+ *)
 
 val _ = new_theory "arithmetic";
 
@@ -143,6 +145,7 @@ val EQ_SYM_EQ' = INST_TYPE [alpha |-> Type`:num`] EQ_SYM_EQ;
 (* --------------------------------------------------------------------- *)
 (* SUC_NOT = |- !n. ~(0 = SUC n)                                         *)
 (* --------------------------------------------------------------------- *)
+
 val SUC_NOT = save_thm("SUC_NOT",
     GEN (--`n:num`--) (NOT_EQ_SYM (SPEC (--`n:num`--) NOT_SUC)));
 
@@ -310,7 +313,7 @@ val LESS_NOT_SUC = store_thm("LESS_NOT_SUC",
     THEN RES_TAC); (* RES_TAC doesn't solve --`F`-- in assumptions *)
 
 val LESS_0_CASES = store_thm("LESS_0_CASES",
-   --`!m. (0 = m) \/ (0 < m)`--,
+   --`!m. (0 = m) \/ 0<m`--,
    INDUCT_TAC
     THEN REWRITE_TAC[LESS_0]);
 
@@ -562,13 +565,13 @@ val ADD_INV_0_EQ = store_thm ("ADD_INV_0_EQ",
     THEN ASM_REWRITE_TAC[ADD_CLAUSES]);
 
 val PRE_SUC_EQ = store_thm ("PRE_SUC_EQ",
-   --`!m n. (0 < n) ==> ((m = PRE n) = (SUC m = n))`--,
+   --`!m n. 0<n ==> ((m = PRE n) = (SUC m = n))`--,
    INDUCT_TAC
     THEN INDUCT_TAC
     THEN REWRITE_TAC[PRE,LESS_REFL,INV_SUC_EQ]);
 
 val INV_PRE_EQ = store_thm ("INV_PRE_EQ",
-   --`!m n. (0 < m) /\ (0 < n) ==> ((PRE m = (PRE n)) = (m = n))`--,
+   --`!m n. 0<m /\ 0<n ==> ((PRE m = (PRE n)) = (m = n))`--,
    INDUCT_TAC
     THEN INDUCT_TAC
     THEN REWRITE_TAC[PRE,LESS_REFL,INV_SUC_EQ]);
@@ -821,6 +824,7 @@ val LESS_OR_EQ_ADD = store_thm ("LESS_OR_EQ_ADD",
        IMP_RES_THEN MATCH_ACCEPT_TAC LESS_ADD,
        EXISTS_TAC (--`0`--) THEN ASM_REWRITE_TAC [ADD]]]);
 
+(*----------------------------------------------------------------------*)
 (* Added TFM 88.03.31                                                   *)
 (*                                                                      *)
 (* Prove the well ordering property:                                    *)
@@ -829,10 +833,12 @@ val LESS_OR_EQ_ADD = store_thm ("LESS_OR_EQ_ADD",
 (*                                                                      *)
 (* I.e. considering P to be a set, that is the set of numbers, x , such *)
 (* that P(x), then every non-empty P has a smallest element.            *)
-
+(*                                                                      *)
 (* We first prove that, if there does NOT exist a smallest n such that  *)
 (* P(n) is true, then for all n P is false of all numbers smaller than n.*)
 (* The main step is an induction on n.                                  *)
+(*----------------------------------------------------------------------*)
+
 val lemma = TAC_PROOF(([],
     --`(~?n. P n /\ !m. (m<n) ==> ~P m) ==>
        (!n m. (m<n) ==> ~P m)`--),
@@ -868,323 +874,6 @@ val COMPLETE_INDUCTION = store_thm("COMPLETE_INDUCTION",
   EXISTS_TAC (Term`n:num`) THEN ASM_REWRITE_TAC[]
   end);
 
-val _ = print "Proving division\n"
-
-(* =====================================================================*)
-(* Added TFM 90.05.24                                                   *)
-(*                                                                      *)
-(* Prove the division algorithm:                                        *)
-(*                                                                      *)
-(*                    |- !k n. (n>0) ==> ?q r. k=qn+r /\ 0<=r<n         *)
-(*                                                                      *)
-(* The proof follows MacLane & Birkhoff, p29.                           *)
-(* =====================================================================*)
-
-(* ---------------------------------------------------------------------*)
-(* We first show that ?r q. k=qn+r.  This is easy, with r=k and q=0.    *)
-(* ---------------------------------------------------------------------*)
-
-val exists_lemma = prove
-  (--`?r q. (k=(q*n)+r)`--,
-   MAP_EVERY EXISTS_TAC [--`k:num`--,--`0`--] THEN
-   REWRITE_TAC [MULT_CLAUSES,ADD_CLAUSES]);
-
-(* ---------------------------------------------------------------------*)
-(* We now show, using the well ordering property, that there is a       *)
-(* SMALLEST n' such that ?q. k=qn+n'.  This is the correct remainder.   *)
-(*                                                                      *)
-(* The theorem is: |- ?n'. (?q. k = q*n+n') /\                          *)
-(*                        (!y. y<n' ==> (!q. ~(k=q*n+y)))               *)
-(* ---------------------------------------------------------------------*)
-val smallest_lemma =
-    CONV_RULE (DEPTH_CONV NOT_EXISTS_CONV)
-              (MATCH_MP (CONV_RULE (DEPTH_CONV BETA_CONV)
-                                   (SPEC (--`\r.?q.k=(q*n)+r`--) WOP))
-                        exists_lemma);
-
-(* We will need the lemma  |- !m n. n <= m ==> (?p. m = n + p)          *)
-val leq_add_lemma = prove
-   (--`!m n. (n<=m) ==> ?p.m=n+p`--,
-    REWRITE_TAC [LESS_OR_EQ] THEN
-    REPEAT STRIP_TAC THENL
-    [FIRST_ASSUM (STRIP_ASSUME_TAC o MATCH_MP LESS_ADD_1) THEN
-     EXISTS_TAC (--`p+1`--) THEN
-     FIRST_ASSUM ACCEPT_TAC,
-     EXISTS_TAC (--`0`--) THEN
-     ASM_REWRITE_TAC [ADD_CLAUSES]]);
-
-(* We will also need the lemma:  |- k=qn+n+p ==> k=(q+1)*n+p            *)
-val k_expr_lemma = prove
-  (--`(k=(q*n)+(n+p)) ==> (k=((q+1)*n)+p)`--,
-   REWRITE_TAC [RIGHT_ADD_DISTRIB,MULT_CLAUSES,ADD_ASSOC]);
-
-(* We will also need the lemma: [0<n] |- p < (n + p)                    *)
-val less_add = TAC_PROOF(([--`0<n`--], --`p < (n + p)`--),
-   PURE_ONCE_REWRITE_TAC [ADD_SYM] THEN
-   MATCH_MP_TAC LESS_ADD_NONZERO THEN
-   IMP_RES_THEN (STRIP_THM_THEN SUBST1_TAC) LESS_ADD_1 THEN
-   REWRITE_TAC [ADD_CLAUSES, ONE, NOT_SUC]);
-
-(* Now prove the desired theorem.                                       *)
-val DA = store_thm ("DA",
---`!k n. (0 < n) ==> ?r q. (k=(q*n)+r) /\ r<n`--,
-   REPEAT STRIP_TAC THEN
-   STRIP_ASSUME_TAC smallest_lemma THEN
-   MAP_EVERY EXISTS_TAC [--`n':num`--,--`q:num`--] THEN
-   ASM_REWRITE_TAC [] THEN
-   DISJ_CASES_THEN CHECK_ASSUME_TAC
-                   (SPECL [--`n':num`--,--`n:num`--] LESS_CASES) THEN
-   IMP_RES_THEN (STRIP_THM_THEN SUBST_ALL_TAC) leq_add_lemma THEN
-   IMP_RES_TAC k_expr_lemma THEN
-   ANTE_RES_THEN IMP_RES_TAC less_add);
-
-(* ---------------------------------------------------------------------*)
-(* We can now define MOD and DIV to have the property given by DA.      *)
-(* We must first reopen the theory arithmetic.th to make the definition.*)
-(* Then prove the existence of the required functions, and then define  *)
-(* MOD and DIV using a constant specification.                          *)
-(* ---------------------------------------------------------------------*)
-
-(* First prove the existence of MOD.                                    *)
-val MOD_exists = prove
-   (--`?MOD. !n. (0<n) ==>
-                 !k.?q.(k=((q * n)+(MOD k n))) /\ ((MOD k n) < n)`--,
-     EXISTS_TAC (--`\k n. @r. ?q. (k = (q * n) + r) /\ r < n`--) THEN
-     REPEAT STRIP_TAC THEN
-     IMP_RES_THEN (STRIP_ASSUME_TAC o SPEC (--`k:num`--)) DA THEN
-     CONV_TAC (TOP_DEPTH_CONV BETA_CONV) THEN
-     CONV_TAC SELECT_CONV THEN
-     MAP_EVERY EXISTS_TAC [--`r:num`--,--`q:num`--] THEN
-     CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC);
-
-(* Now, prove the existence of MOD and DIV.                             *)
-val MOD_DIV_exist = prove
-  (--`?MOD DIV.
-      !n. (0 < n) ==>
-          !k. (k = ((DIV k n * n) + MOD k n)) /\ (MOD k n < n)`--,
-     STRIP_ASSUME_TAC MOD_exists THEN
-     EXISTS_TAC (--`MOD:num->num->num`--) THEN
-     EXISTS_TAC (--`\k n.  @q. (k = (q * n) + (MOD k n))`--) THEN
-     REPEAT STRIP_TAC THENL
-     [CONV_TAC (TOP_DEPTH_CONV BETA_CONV) THEN
-      CONV_TAC SELECT_CONV THEN
-      RES_THEN (STRIP_ASSUME_TAC o SPEC (--`k:num`--)) THEN
-      EXISTS_TAC (--`q:num`--) THEN
-      FIRST_ASSUM ACCEPT_TAC,
-      RES_THEN (STRIP_ASSUME_TAC o SPEC (--`k:num`--))]);
-
-(* Now define MOD and DIV by a constant specification.                  *)
-val DIVISION = new_specification
-   {name = "DIVISION",
-    consts = [{fixity = Infixl 650, const_name = "MOD"},
-              {fixity = Infixl 600, const_name = "DIV"}],
-    sat_thm = MOD_DIV_exist};
-
-
-(* ---------------------------------------------------------------------*)
-(* Properties of MOD and DIV that don't depend on uniqueness.           *)
-(* ---------------------------------------------------------------------*)
-
-val MOD_ONE = store_thm("MOD_ONE",
---`!k. (k MOD (SUC 0)) = 0`--,
-   STRIP_TAC THEN
-   let val th = REWRITE_RULE [LESS_SUC_REFL]
-                             (SPEC (--`SUC 0`--) DIVISION)
-   in
-   MP_TAC (CONJUNCT2 (SPEC (--`k:num`--) th)) THEN
-   REWRITE_TAC [LESS_THM,NOT_LESS_0]
-   end);
-
-val DIV_LESS_EQ = store_thm("DIV_LESS_EQ",
- --`!n. (0 < n) ==> !k. (k DIV n) <= k`--,
-   REPEAT STRIP_TAC THEN
-   IMP_RES_THEN (STRIP_ASSUME_TAC o SPEC (--`k:num`--)) DIVISION THEN
-   FIRST_ASSUM (fn th => fn g => SUBST_OCCS_TAC [([2],th)] g) THEN
-   REPEAT_TCL STRIP_THM_THEN MP_TAC (SPEC (--`n:num`--) num_CASES) THENL
-   [IMP_RES_TAC LESS_NOT_EQ THEN
-    DISCH_THEN (ASSUME_TAC o SYM) THEN
-    RES_TAC,
-    DISCH_THEN (fn th => SUBST_OCCS_TAC [([3],th)]) THEN
-    REWRITE_TAC [MULT_CLAUSES] THEN
-    REWRITE_TAC [SYM(SPEC_ALL ADD_ASSOC)] THEN
-    MATCH_ACCEPT_TAC LESS_EQ_ADD]);
-
-(* ---------------------------------------------------------------------*)
-(* Now, show that the quotient and remainder are unique.                *)
-(*                                                                      *)
-(* NB: the beastly proof given below of DIV_UNIQUE is definitely NOT    *)
-(*     good HOL style.                                                  *)
-(* ---------------------------------------------------------------------*)
-
-val DIV_UNIQUE = store_thm(
- "DIV_UNIQUE",
- --`!n k q. (?r. (k = (q * n) + r) /\ (r < n)) ==> ((k DIV n) = q)`--,
-   REPEAT GEN_TAC THEN
-   DISCH_THEN
-    (CHOOSE_THEN
-      (CONJUNCTS_THEN2
-        MP_TAC (STRIP_THM_THEN SUBST_ALL_TAC o MATCH_MP LESS_ADD_1))) THEN
-   REWRITE_TAC [MULT_CLAUSES,ADD_CLAUSES,ONE] THEN
-   let val (eq,ls) = CONJ_PAIR (SPEC (--`k:num`--)
-                                     (REWRITE_RULE [LESS_0]
-                                        (SPEC (--`SUC(r + p)`-- )
-                                              DIVISION)))
-   in
-   DISCH_THEN
-     (fn th1 =>
-        MATCH_MP_TAC LESS_EQUAL_ANTISYM THEN
-        PURE_ONCE_REWRITE_TAC [SYM (SPEC_ALL NOT_LESS)] THEN
-        CONJ_TAC THEN
-        DISCH_THEN (fn th2 =>
-                      MP_TAC (TRANS (SYM eq) th1) THEN
-                      STRIP_THM_THEN SUBST_ALL_TAC
-                                     (MATCH_MP LESS_ADD_1 th2))) THEN
-   REWRITE_TAC [LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB,MULT_CLAUSES] THEN
-   REWRITE_TAC [SYM (SPEC_ALL ADD_ASSOC)] THEN
-   REWRITE_TAC [PURE_ONCE_REWRITE_RULE [ADD_SYM] EQ_MONO_ADD_EQ] THENL
-   [PURE_ONCE_REWRITE_TAC [SPEC (--`SUC(r+p)`--) ADD_SYM] THEN
-    SUBST1_TAC (SPECL [--`r:num`--,--`p:num`--] ADD_SYM) THEN
-    REWRITE_TAC [SYM(el 3 (CONJUNCTS (ADD_CLAUSES))),ADD_ASSOC] THEN
-    PURE_ONCE_REWRITE_TAC [ADD_SYM] THEN
-    DISCH_THEN (MP_TAC o MATCH_MP ADD_INV_0) THEN
-    REWRITE_TAC [ADD_CLAUSES,NOT_SUC]
-    ,
-    let val conv = (REWR_CONV ADD_SYM) THENC
-                   RATOR_CONV(RAND_CONV(REWR_CONV ADD_SYM))
-    in
-    CONV_TAC (ONCE_DEPTH_CONV (RAND_CONV conv))
-    end THEN
-    REWRITE_TAC [SYM(SPEC_ALL ADD_ASSOC)] THEN
-    REWRITE_TAC [PURE_ONCE_REWRITE_RULE [ADD_SYM] EQ_MONO_ADD_EQ] THEN
-    REWRITE_TAC [ADD_ASSOC] THEN
-    CONV_TAC (ONCE_DEPTH_CONV (RAND_CONV (REWR_CONV ADD_SYM))) THEN
-    REWRITE_TAC [SYM(SPEC_ALL (ADD_ASSOC)), ONE] THEN
-    PURE_ONCE_REWRITE_TAC [ADD_CLAUSES] THEN
-    PURE_ONCE_REWRITE_TAC [el 2 (CONJUNCTS ADD_CLAUSES)] THEN
-    PURE_ONCE_REWRITE_TAC [ADD_CLAUSES] THEN
-    SUBST1_TAC (SPECL [--`p:num`--,--`r:num`--] ADD_SYM) THEN
-    let val th1 = MATCH_MP LESS_ADD_1 ls
-        val th2 = ONCE_REWRITE_RULE [SPEC (--`n MOD m`--) ADD_SYM] th1
-    in
-    STRIP_THM_THEN (fn th => SUBST_OCCS_TAC [([2],th)]) th2
-    end THEN
-    REWRITE_TAC [ADD_ASSOC] THEN
-    let val th3 = PURE_ONCE_REWRITE_RULE [ADD_SYM] ADD_INV_0
-    in
-    DISCH_THEN (MP_TAC o MATCH_MP th3 o SYM)
-    end THEN
-    REWRITE_TAC [ONE, ADD_CLAUSES, NOT_SUC] ]
-   end);
-
-(* NB: this lemma is strictly local to this file.                       *)
-val lemma = prove
-(--`!n k q r. ((k = (q * n) + r) /\ r < n) ==> (k DIV n = q)`--,
-   REPEAT STRIP_TAC THEN
-   MATCH_MP_TAC DIV_UNIQUE THEN
-   EXISTS_TAC (--`r:num`--) THEN
-   ASM_REWRITE_TAC []);
-
-val MOD_UNIQUE = store_thm("MOD_UNIQUE",
- --`!n k r. (?q. (k = (q * n) + r) /\ r < n) ==> (k MOD n = r)`--,
-   REPEAT STRIP_TAC THEN
-   MP_TAC (DISCH_ALL (SPEC (--`k:num`--)
-                     (UNDISCH (SPEC (--`n:num`--) DIVISION)))) THEN
-   FIRST_ASSUM (fn th => fn g =>
-                  let val thm = MATCH_MP LESS_ADD_1 th
-                      fun tcl t = (SUBST_OCCS_TAC [([1],t)])
-                  in
-                  STRIP_THM_THEN tcl thm g
-                  end
-               ) THEN
-   REWRITE_TAC [LESS_0, ONE, ADD_CLAUSES] THEN
-   IMP_RES_THEN (IMP_RES_THEN SUBST1_TAC) lemma THEN
-   FIRST_ASSUM (fn th => fn g => SUBST_OCCS_TAC [([1],th)] g) THEN
-   let val th = PURE_ONCE_REWRITE_RULE [ADD_SYM] EQ_MONO_ADD_EQ
-   in
-   PURE_ONCE_REWRITE_TAC [th] THEN
-   DISCH_THEN (STRIP_THM_THEN (fn th => fn g => ACCEPT_TAC (SYM th) g))
-   end);
-
-(* ---------------------------------------------------------------------*)
-(* Properties of MOD and DIV proved using uniqueness.                   *)
-(* ---------------------------------------------------------------------*)
-
-val DIV_MULT = store_thm("DIV_MULT",
- --`!n r. r < n ==> !q. (((q * n) + r) DIV n = q)`--,
-   REPEAT GEN_TAC THEN
-   REPEAT_TCL STRIP_THM_THEN SUBST1_TAC (SPEC (--`n:num`--) num_CASES) THENL
-   [REWRITE_TAC [NOT_LESS_0],
-    REPEAT STRIP_TAC THEN
-    MATCH_MP_TAC DIV_UNIQUE THEN
-    EXISTS_TAC (--`r:num`--) THEN
-    ASM_REWRITE_TAC []]);
-
-val LESS_MOD = store_thm("LESS_MOD",
- --`!n k. k < n ==> ((k MOD n) = k)`--,
-   REPEAT STRIP_TAC THEN
-   MATCH_MP_TAC MOD_UNIQUE THEN
-   EXISTS_TAC (--`0`--) THEN
-   ASM_REWRITE_TAC [MULT_CLAUSES,ADD_CLAUSES]);
-
-val MOD_EQ_0 = store_thm("MOD_EQ_0",
- --`!n. (0 < n) ==> !k. ((k * n) MOD n) = 0`--,
-   REPEAT STRIP_TAC THEN
-   IMP_RES_THEN (STRIP_ASSUME_TAC o SPEC (--`k * n`--)) DIVISION THEN
-   MATCH_MP_TAC MOD_UNIQUE THEN
-   EXISTS_TAC (--`k:num`--) THEN
-   CONJ_TAC THENL
-   [REWRITE_TAC [ADD_CLAUSES], FIRST_ASSUM ACCEPT_TAC]);
-
-val ZERO_MOD = store_thm("ZERO_MOD",
- --`!n. (0 < n) ==> (0 MOD n = 0)`--,
-   REPEAT STRIP_TAC THEN
-   IMP_RES_THEN (MP_TAC o SPEC (--`0`--)) MOD_EQ_0 THEN
-   REWRITE_TAC [MULT_CLAUSES]);
-
-val ZERO_DIV = store_thm("ZERO_DIV",
-   --`!n. 0 < n ==> (0 DIV n = 0)`--,
-     REPEAT STRIP_TAC THEN
-     MATCH_MP_TAC DIV_UNIQUE THEN
-     EXISTS_TAC (--`0`--) THEN
-     ASM_REWRITE_TAC [MULT_CLAUSES,ADD_CLAUSES]);
-
-val MOD_MULT = store_thm("MOD_MULT",
- --`!n r. r < n ==> !q. (((q * n) + r) MOD n) = r`--,
-   REPEAT STRIP_TAC THEN
-   MATCH_MP_TAC MOD_UNIQUE THEN
-   EXISTS_TAC (--`q:num`--) THEN
-   ASM_REWRITE_TAC [ADD_CLAUSES,MULT_CLAUSES]);
-
-val MOD_TIMES = store_thm("MOD_TIMES",
- --`!n. (0 < n) ==> !q r. (((q * n) + r) MOD n) = (r MOD n)`--,
-   let fun SUBS th = SUBST_OCCS_TAC [([1],th)]
-   in
-   REPEAT STRIP_TAC THEN
-   IMP_RES_THEN (TRY o SUBS o SPEC (--`r:num`--)) DIVISION THEN
-   REWRITE_TAC [ADD_ASSOC,SYM(SPEC_ALL RIGHT_ADD_DISTRIB)] THEN
-   IMP_RES_THEN (ASSUME_TAC o SPEC (--`r:num`--)) DIVISION THEN
-   IMP_RES_TAC MOD_MULT THEN
-   FIRST_ASSUM MATCH_ACCEPT_TAC
-   end);
-
-val MOD_PLUS = store_thm("MOD_PLUS",
- --`!n. (0 < n) ==> !j k. (((j MOD n) + (k MOD n)) MOD n) = ((j+k) MOD n)`--,
-   let fun SUBS th = SUBST_OCCS_TAC [([2],th)]
-   in
-   REPEAT STRIP_TAC THEN
-   IMP_RES_TAC MOD_TIMES THEN
-   IMP_RES_THEN (TRY o SUBS o SPEC (--`j:num`--)) DIVISION THEN
-   ASM_REWRITE_TAC [SYM(SPEC_ALL ADD_ASSOC)] THEN
-   PURE_ONCE_REWRITE_TAC [ADD_SYM] THEN
-   IMP_RES_THEN (TRY o SUBS o SPEC (--`k:num`--)) DIVISION THEN
-   ASM_REWRITE_TAC [SYM(SPEC_ALL ADD_ASSOC)]
-   end);
-
-val MOD_MOD = store_thm("MOD_MOD",
- --`!n. (0 < n) ==> (!k. (k MOD n) MOD n = (k MOD n))`--,
-   REPEAT STRIP_TAC THEN
-   MATCH_MP_TAC LESS_MOD THEN
-   IMP_RES_THEN (STRIP_ASSUME_TAC o SPEC (--`k:num`--)) DIVISION);
 
 (* ---------------------------------------------------------------------*)
 (* Some more theorems, mostly about subtraction.                        *)
@@ -1980,6 +1669,439 @@ val LE = save_thm("LE",
                    DISJ1_TAC
                      THEN IMP_RES_TAC LESS_EQ_IMP_LESS_SUC])));
 
+val _ = print "Proving division\n"
+
+(* =====================================================================*)
+(* Added TFM 90.05.24                                                   *)
+(*                                                                      *)
+(* Prove the division algorithm:                                        *)
+(*                                                                      *)
+(*                    |- !k n. (n>0) ==> ?q r. k=qn+r /\ 0<=r<n         *)
+(*                                                                      *)
+(* The proof follows MacLane & Birkhoff, p29.                           *)
+(* =====================================================================*)
+
+(* ---------------------------------------------------------------------*)
+(* We first show that ?r q. k=qn+r.  This is easy, with r=k and q=0.    *)
+(* ---------------------------------------------------------------------*)
+
+val exists_lemma = prove
+  (--`?r q. (k=(q*n)+r)`--,
+   MAP_EVERY EXISTS_TAC [--`k:num`--,--`0`--] THEN
+   REWRITE_TAC [MULT_CLAUSES,ADD_CLAUSES]);
+
+(* ---------------------------------------------------------------------*)
+(* We now show, using the well ordering property, that there is a       *)
+(* SMALLEST n' such that ?q. k=qn+n'.  This is the correct remainder.   *)
+(*                                                                      *)
+(* The theorem is: |- ?n'. (?q. k = q*n+n') /\                          *)
+(*                        (!y. y<n' ==> (!q. ~(k=q*n+y)))               *)
+(* ---------------------------------------------------------------------*)
+val smallest_lemma =
+    CONV_RULE (DEPTH_CONV NOT_EXISTS_CONV)
+              (MATCH_MP (CONV_RULE (DEPTH_CONV BETA_CONV)
+                                   (SPEC (--`\r.?q.k=(q*n)+r`--) WOP))
+                        exists_lemma);
+
+(* We will need the lemma  |- !m n. n <= m ==> (?p. m = n + p)          *)
+val leq_add_lemma = prove
+   (--`!m n. (n<=m) ==> ?p.m=n+p`--,
+    REWRITE_TAC [LESS_OR_EQ] THEN
+    REPEAT STRIP_TAC THENL
+    [FIRST_ASSUM (STRIP_ASSUME_TAC o MATCH_MP LESS_ADD_1) THEN
+     EXISTS_TAC (--`p+1`--) THEN
+     FIRST_ASSUM ACCEPT_TAC,
+     EXISTS_TAC (--`0`--) THEN
+     ASM_REWRITE_TAC [ADD_CLAUSES]]);
+
+(* We will also need the lemma:  |- k=qn+n+p ==> k=(q+1)*n+p            *)
+val k_expr_lemma = prove
+  (--`(k=(q*n)+(n+p)) ==> (k=((q+1)*n)+p)`--,
+   REWRITE_TAC [RIGHT_ADD_DISTRIB,MULT_CLAUSES,ADD_ASSOC]);
+
+(* We will also need the lemma: [0<n] |- p < (n + p)                    *)
+val less_add = TAC_PROOF(([--`0<n`--], --`p < (n + p)`--),
+   PURE_ONCE_REWRITE_TAC [ADD_SYM] THEN
+   MATCH_MP_TAC LESS_ADD_NONZERO THEN
+   IMP_RES_THEN (STRIP_THM_THEN SUBST1_TAC) LESS_ADD_1 THEN
+   REWRITE_TAC [ADD_CLAUSES, ONE, NOT_SUC]);
+
+(* Now prove the desired theorem.                                       *)
+val DA = store_thm ("DA",
+--`!k n. 0<n ==> ?r q. (k=(q*n)+r) /\ r<n`--,
+   REPEAT STRIP_TAC THEN
+   STRIP_ASSUME_TAC smallest_lemma THEN
+   MAP_EVERY EXISTS_TAC [--`n':num`--,--`q:num`--] THEN
+   ASM_REWRITE_TAC [] THEN
+   DISJ_CASES_THEN CHECK_ASSUME_TAC
+                   (SPECL [--`n':num`--,--`n:num`--] LESS_CASES) THEN
+   IMP_RES_THEN (STRIP_THM_THEN SUBST_ALL_TAC) leq_add_lemma THEN
+   IMP_RES_TAC k_expr_lemma THEN
+   ANTE_RES_THEN IMP_RES_TAC less_add);
+
+(* ---------------------------------------------------------------------*)
+(* We can now define MOD and DIV to have the property given by DA.      *)
+(* We must first reopen the theory arithmetic.th to make the definition.*)
+(* Then prove the existence of the required functions, and then define  *)
+(* MOD and DIV using a constant specification.                          *)
+(* ---------------------------------------------------------------------*)
+
+(* First prove the existence of MOD.                                    *)
+val MOD_exists = prove
+   (--`?MOD. !n. (0<n) ==>
+                 !k.?q.(k=((q * n)+(MOD k n))) /\ ((MOD k n) < n)`--,
+     EXISTS_TAC (--`\k n. @r. ?q. (k = (q * n) + r) /\ r < n`--) THEN
+     REPEAT STRIP_TAC THEN
+     IMP_RES_THEN (STRIP_ASSUME_TAC o SPEC (--`k:num`--)) DA THEN
+     CONV_TAC (TOP_DEPTH_CONV BETA_CONV) THEN
+     CONV_TAC SELECT_CONV THEN
+     MAP_EVERY EXISTS_TAC [--`r:num`--,--`q:num`--] THEN
+     CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC);
+
+(* Now, prove the existence of MOD and DIV.                             *)
+val MOD_DIV_exist = prove
+  (--`?MOD DIV.
+      !n. 0<n ==>
+          !k. (k = ((DIV k n * n) + MOD k n)) /\ (MOD k n < n)`--,
+     STRIP_ASSUME_TAC MOD_exists THEN
+     EXISTS_TAC (--`MOD:num->num->num`--) THEN
+     EXISTS_TAC (--`\k n.  @q. (k = (q * n) + (MOD k n))`--) THEN
+     REPEAT STRIP_TAC THENL
+     [CONV_TAC (TOP_DEPTH_CONV BETA_CONV) THEN
+      CONV_TAC SELECT_CONV THEN
+      RES_THEN (STRIP_ASSUME_TAC o SPEC (--`k:num`--)) THEN
+      EXISTS_TAC (--`q:num`--) THEN
+      FIRST_ASSUM ACCEPT_TAC,
+      RES_THEN (STRIP_ASSUME_TAC o SPEC (--`k:num`--))]);
+
+(* Now define MOD and DIV by a constant specification.                  *)
+val DIVISION = new_specification
+   {name = "DIVISION",
+    consts = [{fixity = Infixl 650, const_name = "MOD"},
+              {fixity = Infixl 600, const_name = "DIV"}],
+    sat_thm = MOD_DIV_exist};
+
+
+(* ---------------------------------------------------------------------*)
+(* Properties of MOD and DIV that don't depend on uniqueness.           *)
+(* ---------------------------------------------------------------------*)
+
+val MOD_ONE = store_thm("MOD_ONE",
+--`!k. (k MOD (SUC 0)) = 0`--,
+   STRIP_TAC THEN
+   let val th = REWRITE_RULE [LESS_SUC_REFL]
+                             (SPEC (--`SUC 0`--) DIVISION)
+   in
+   MP_TAC (CONJUNCT2 (SPEC (--`k:num`--) th)) THEN
+   REWRITE_TAC [LESS_THM,NOT_LESS_0]
+   end);
+
+val DIV_LESS_EQ = store_thm("DIV_LESS_EQ",
+ --`!n. 0<n ==> !k. (k DIV n) <= k`--,
+   REPEAT STRIP_TAC THEN
+   IMP_RES_THEN (STRIP_ASSUME_TAC o SPEC (--`k:num`--)) DIVISION THEN
+   FIRST_ASSUM (fn th => fn g => SUBST_OCCS_TAC [([2],th)] g) THEN
+   REPEAT_TCL STRIP_THM_THEN MP_TAC (SPEC (--`n:num`--) num_CASES) THENL
+   [IMP_RES_TAC LESS_NOT_EQ THEN
+    DISCH_THEN (ASSUME_TAC o SYM) THEN
+    RES_TAC,
+    DISCH_THEN (fn th => SUBST_OCCS_TAC [([3],th)]) THEN
+    REWRITE_TAC [MULT_CLAUSES] THEN
+    REWRITE_TAC [SYM(SPEC_ALL ADD_ASSOC)] THEN
+    MATCH_ACCEPT_TAC LESS_EQ_ADD]);
+
+(* ---------------------------------------------------------------------*)
+(* Now, show that the quotient and remainder are unique.                *)
+(*                                                                      *)
+(* NB: the beastly proof given below of DIV_UNIQUE is definitely NOT    *)
+(*     good HOL style.                                                  *)
+(* ---------------------------------------------------------------------*)
+
+val lemma = prove
+(Term`!x y z. x<y ==> ~(y + z = x)`,
+REPEAT STRIP_TAC THEN POP_ASSUM (SUBST_ALL_TAC o SYM)
+  THEN POP_ASSUM MP_TAC THEN REWRITE_TAC[]
+  THEN SPEC_TAC (Term`y:num`,Term`y:num`)
+  THEN INDUCT_TAC THEN ASM_REWRITE_TAC [ADD_CLAUSES,NOT_LESS_0,LESS_MONO_EQ]);
+
+local val (eq,ls) = 
+   CONJ_PAIR (SPEC (--`k:num`--) 
+       (REWRITE_RULE [LESS_0] (SPEC (--`SUC(r+p)`--) DIVISION)))
+in
+val DIV_UNIQUE = store_thm("DIV_UNIQUE",
+ --`!n k q. (?r. (k = q*n + r) /\ r<n) ==> (k DIV n = q)`--,
+REPEAT GEN_TAC THEN
+ DISCH_THEN (CHOOSE_THEN (CONJUNCTS_THEN2 
+   MP_TAC (STRIP_THM_THEN SUBST_ALL_TAC o MATCH_MP LESS_ADD_1))) THEN
+ REWRITE_TAC [ONE,MULT_CLAUSES,ADD_CLAUSES] THEN 
+ DISCH_THEN 
+     (fn th1 =>
+        MATCH_MP_TAC LESS_EQUAL_ANTISYM THEN
+        PURE_ONCE_REWRITE_TAC [SYM (SPEC_ALL NOT_LESS)] THEN CONJ_TAC THEN
+        DISCH_THEN (fn th2 =>
+         MP_TAC (TRANS (SYM eq) th1) THEN STRIP_THM_THEN SUBST_ALL_TAC 
+          (MATCH_MP LESS_ADD_1 th2))) THEN REWRITE_TAC[] THENL
+[MATCH_MP_TAC lemma, MATCH_MP_TAC (ONCE_REWRITE_RULE [EQ_SYM_EQ] lemma)] 
+ THEN REWRITE_TAC [MULT_CLAUSES,GSYM ADD_ASSOC, 
+           ONCE_REWRITE_RULE [ADD_SYM]LESS_MONO_ADD_EQ]
+ THEN GEN_REWRITE_TAC (RAND_CONV o RAND_CONV o RAND_CONV)
+            empty_rewrites [RIGHT_ADD_DISTRIB]
+ THEN GEN_REWRITE_TAC (RAND_CONV o RAND_CONV) empty_rewrites [ADD_SYM]
+ THEN REWRITE_TAC [GSYM ADD_ASSOC] 
+ THEN GEN_REWRITE_TAC (RAND_CONV) empty_rewrites [ADD_SYM] THEN
+ REWRITE_TAC [GSYM ADD_ASSOC, ONCE_REWRITE_RULE [ADD_SYM]LESS_MONO_ADD_EQ]
+ THENL
+  [REWRITE_TAC[LEFT_ADD_DISTRIB] THEN REWRITE_TAC[RIGHT_ADD_DISTRIB]
+    THEN REWRITE_TAC [MULT_CLAUSES,GSYM ADD_ASSOC]
+     THEN GEN_REWRITE_TAC (RAND_CONV) empty_rewrites [ADD_SYM]
+     THEN REWRITE_TAC [GSYM ADD_ASSOC,ONE,
+            REWRITE_RULE[ADD_CLAUSES]
+              (ONCE_REWRITE_RULE [ADD_SYM]
+                 (SPECL [Term`0`,Term`n:num`,Term`r:num`]LESS_MONO_ADD_EQ))]
+     THEN REWRITE_TAC [ADD_CLAUSES, LESS_0],
+
+   MATCH_MP_TAC LESS_LESS_EQ_TRANS THEN EXISTS_TAC (Term`SUC (r+p)`) 
+     THEN REWRITE_TAC
+           [CONJUNCT2(SPEC_ALL(MATCH_MP DIVISION (SPEC(Term`r+p`) LESS_0)))]
+     THEN REWRITE_TAC[LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB,
+           MULT_CLAUSES,GSYM ADD_ASSOC,ADD1] 
+     THEN GEN_REWRITE_TAC (RAND_CONV) empty_rewrites [ADD_SYM]
+     THEN REWRITE_TAC [GSYM ADD_ASSOC, 
+              ONCE_REWRITE_RULE [ADD_SYM]LESS_EQ_MONO_ADD_EQ]
+     THEN GEN_REWRITE_TAC (RAND_CONV) empty_rewrites [ADD_SYM]
+     THEN REWRITE_TAC [GSYM ADD_ASSOC, 
+             ONCE_REWRITE_RULE [ADD_SYM]LESS_EQ_MONO_ADD_EQ]
+     THEN REWRITE_TAC[ZERO_LESS_EQ,
+               REWRITE_RULE[ADD_CLAUSES]
+                 (SPECL [Term`1`,Term`0`,Term`p:num`]ADD_MONO_LESS_EQ)]])
+end;
+
+(* NB: this lemma is strictly local to this file.                       *)
+val lemma = prove
+(--`!n k q r. ((k = (q * n) + r) /\ r < n) ==> (k DIV n = q)`--,
+   REPEAT STRIP_TAC THEN
+   MATCH_MP_TAC DIV_UNIQUE THEN
+   EXISTS_TAC (--`r:num`--) THEN
+   ASM_REWRITE_TAC []);
+
+val MOD_UNIQUE = store_thm("MOD_UNIQUE",
+ --`!n k r. (?q. (k = (q * n) + r) /\ r < n) ==> (k MOD n = r)`--,
+   REPEAT STRIP_TAC THEN
+   MP_TAC (DISCH_ALL (SPEC (--`k:num`--)
+                     (UNDISCH (SPEC (--`n:num`--) DIVISION)))) THEN
+   FIRST_ASSUM (fn th => fn g =>
+                  let val thm = MATCH_MP LESS_ADD_1 th
+                      fun tcl t = (SUBST_OCCS_TAC [([1],t)])
+                  in
+                  STRIP_THM_THEN tcl thm g
+                  end
+               ) THEN
+   REWRITE_TAC [LESS_0, ONE, ADD_CLAUSES] THEN
+   IMP_RES_THEN (IMP_RES_THEN SUBST1_TAC) lemma THEN
+   FIRST_ASSUM (fn th => fn g => SUBST_OCCS_TAC [([1],th)] g) THEN
+   let val th = PURE_ONCE_REWRITE_RULE [ADD_SYM] EQ_MONO_ADD_EQ
+   in
+   PURE_ONCE_REWRITE_TAC [th] THEN
+   DISCH_THEN (STRIP_THM_THEN (fn th => fn g => ACCEPT_TAC (SYM th) g))
+   end);
+
+(* ---------------------------------------------------------------------*)
+(* Properties of MOD and DIV proved using uniqueness.                   *)
+(* ---------------------------------------------------------------------*)
+
+val DIV_MULT = store_thm("DIV_MULT",
+ --`!n r. r < n ==> !q. (q*n + r) DIV n = q`--,
+   REPEAT GEN_TAC THEN
+   REPEAT_TCL STRIP_THM_THEN SUBST1_TAC (SPEC (--`n:num`--) num_CASES) THENL
+   [REWRITE_TAC [NOT_LESS_0],
+    REPEAT STRIP_TAC THEN
+    MATCH_MP_TAC DIV_UNIQUE THEN
+    EXISTS_TAC (--`r:num`--) THEN
+    ASM_REWRITE_TAC []]);
+
+val LESS_MOD = store_thm("LESS_MOD",
+ --`!n k. k < n ==> ((k MOD n) = k)`--,
+   REPEAT STRIP_TAC THEN
+   MATCH_MP_TAC MOD_UNIQUE THEN
+   EXISTS_TAC (--`0`--) THEN
+   ASM_REWRITE_TAC [MULT_CLAUSES,ADD_CLAUSES]);
+
+val MOD_EQ_0 = store_thm("MOD_EQ_0",
+ --`!n. 0<n ==> !k. ((k * n) MOD n) = 0`--,
+   REPEAT STRIP_TAC THEN
+   IMP_RES_THEN (STRIP_ASSUME_TAC o SPEC (--`k * n`--)) DIVISION THEN
+   MATCH_MP_TAC MOD_UNIQUE THEN
+   EXISTS_TAC (--`k:num`--) THEN
+   CONJ_TAC THENL
+   [REWRITE_TAC [ADD_CLAUSES], FIRST_ASSUM ACCEPT_TAC]);
+
+val ZERO_MOD = store_thm("ZERO_MOD",
+ --`!n. 0<n ==> (0 MOD n = 0)`--,
+   REPEAT STRIP_TAC THEN
+   IMP_RES_THEN (MP_TAC o SPEC (--`0`--)) MOD_EQ_0 THEN
+   REWRITE_TAC [MULT_CLAUSES]);
+
+val ZERO_DIV = store_thm("ZERO_DIV",
+   --`!n. 0<n ==> (0 DIV n = 0)`--,
+     REPEAT STRIP_TAC THEN
+     MATCH_MP_TAC DIV_UNIQUE THEN
+     EXISTS_TAC (--`0`--) THEN
+     ASM_REWRITE_TAC [MULT_CLAUSES,ADD_CLAUSES]);
+
+val MOD_MULT = store_thm("MOD_MULT",
+ --`!n r. r < n ==> !q. (q * n + r) MOD n = r`--,
+   REPEAT STRIP_TAC THEN
+   MATCH_MP_TAC MOD_UNIQUE THEN
+   EXISTS_TAC (--`q:num`--) THEN
+   ASM_REWRITE_TAC [ADD_CLAUSES,MULT_CLAUSES]);
+
+val MOD_TIMES = store_thm("MOD_TIMES",
+ --`!n. 0<n ==> !q r. (((q * n) + r) MOD n) = (r MOD n)`--,
+   let fun SUBS th = SUBST_OCCS_TAC [([1],th)]
+   in
+   REPEAT STRIP_TAC THEN
+   IMP_RES_THEN (TRY o SUBS o SPEC (--`r:num`--)) DIVISION THEN
+   REWRITE_TAC [ADD_ASSOC,SYM(SPEC_ALL RIGHT_ADD_DISTRIB)] THEN
+   IMP_RES_THEN (ASSUME_TAC o SPEC (--`r:num`--)) DIVISION THEN
+   IMP_RES_TAC MOD_MULT THEN
+   FIRST_ASSUM MATCH_ACCEPT_TAC
+   end);
+
+val MOD_PLUS = store_thm("MOD_PLUS",
+ --`!n. 0<n ==> !j k. (((j MOD n) + (k MOD n)) MOD n) = ((j+k) MOD n)`--,
+   let fun SUBS th = SUBST_OCCS_TAC [([2],th)]
+   in
+   REPEAT STRIP_TAC THEN
+   IMP_RES_TAC MOD_TIMES THEN
+   IMP_RES_THEN (TRY o SUBS o SPEC (--`j:num`--)) DIVISION THEN
+   ASM_REWRITE_TAC [SYM(SPEC_ALL ADD_ASSOC)] THEN
+   PURE_ONCE_REWRITE_TAC [ADD_SYM] THEN
+   IMP_RES_THEN (TRY o SUBS o SPEC (--`k:num`--)) DIVISION THEN
+   ASM_REWRITE_TAC [SYM(SPEC_ALL ADD_ASSOC)]
+   end);
+
+val MOD_MOD = store_thm("MOD_MOD",
+ --`!n. 0<n ==> (!k. (k MOD n) MOD n = (k MOD n))`--,
+   REPEAT STRIP_TAC THEN
+   MATCH_MP_TAC LESS_MOD THEN
+   IMP_RES_THEN (STRIP_ASSUME_TAC o SPEC (--`k:num`--)) DIVISION);
+
+
+(* LESS_DIV_EQ_ZERO = |- !r n. r < n ==> (r DIV n = 0) *)
+
+val LESS_DIV_EQ_ZERO = save_thm("LESS_DIV_EQ_ZERO",
+    GENL [(--`r:num`--),(--`n:num`--)] (DISCH_ALL (PURE_REWRITE_RULE[MULT,ADD]
+    (SPEC (--`0`--)(UNDISCH_ALL (SPEC_ALL  DIV_MULT))))));
+
+
+(* MULT_DIV = |- !n q. 0 < n ==> ((q * n) DIV n = q) *)
+
+val MULT_DIV = save_thm("MULT_DIV",
+    GEN_ALL (PURE_REWRITE_RULE[ADD_0]
+    (CONV_RULE RIGHT_IMP_FORALL_CONV
+               (SPECL[(--`n:num`--),(--`0`--)] DIV_MULT))));
+
+val ADD_DIV_ADD_DIV = store_thm("ADD_DIV_ADD_DIV",
+--`!n. 0 < n ==> !x r. ((((x * n) + r) DIV n) = x + (r DIV n))`--,
+    CONV_TAC (REDEPTH_CONV RIGHT_IMP_FORALL_CONV)
+    THEN REPEAT GEN_TAC THEN ASM_CASES_TAC (--`r < n`--) THENL[
+      IMP_RES_THEN SUBST1_TAC LESS_DIV_EQ_ZERO THEN DISCH_TAC
+      THEN PURE_ONCE_REWRITE_TAC[ADD_0]
+      THEN MATCH_MP_TAC DIV_MULT THEN FIRST_ASSUM ACCEPT_TAC,
+      DISCH_THEN (CHOOSE_TAC o (MATCH_MP (SPEC (--`r:num`--) DA)))
+      THEN POP_ASSUM (CHOOSE_THEN STRIP_ASSUME_TAC)
+      THEN SUBST1_TAC (ASSUME (--`r = (q * n) + r'`--))
+      THEN PURE_ONCE_REWRITE_TAC[ADD_ASSOC]
+      THEN PURE_ONCE_REWRITE_TAC[GSYM RIGHT_ADD_DISTRIB]
+      THEN IMP_RES_THEN (fn t => REWRITE_TAC[t]) DIV_MULT]);
+
+val NOT_MULT_LESS_0 = prove(
+    (--`!m n. 0<m /\ 0<n ==> 0 < m*n`--),
+    REPEAT INDUCT_TAC THEN REWRITE_TAC[NOT_LESS_0]
+    THEN STRIP_TAC THEN REWRITE_TAC[MULT_CLAUSES,ADD_CLAUSES,LESS_0]);
+
+val MOD_MULT_MOD = store_thm("MOD_MULT_MOD",
+--`!m n. 0<n /\ 0<m  ==> !x. ((x MOD (n * m)) MOD n = x MOD n)`--,
+REPEAT GEN_TAC THEN DISCH_TAC
+ THEN FIRST_ASSUM (ASSUME_TAC o (MATCH_MP NOT_MULT_LESS_0)) THEN GEN_TAC
+ THEN POP_ASSUM(CHOOSE_TAC o (MATCH_MP(SPECL[Term`x:num`,Term`m * n`] DA)))
+ THEN POP_ASSUM (CHOOSE_THEN STRIP_ASSUME_TAC)
+ THEN SUBST1_TAC (ASSUME(--`x = (q * (n * m)) + r`--))
+ THEN POP_ASSUM (SUBST1_TAC o (SPEC (--`q:num`--)) o MATCH_MP MOD_MULT)
+ THEN PURE_ONCE_REWRITE_TAC [MULT_SYM]
+ THEN PURE_ONCE_REWRITE_TAC [GSYM MULT_ASSOC]
+ THEN PURE_ONCE_REWRITE_TAC [MULT_SYM]
+ THEN STRIP_ASSUME_TAC (ASSUME  (--`0 < n /\ 0 < m`--))
+ THEN PURE_ONCE_REWRITE_TAC[UNDISCH_ALL(SPEC_ALL MOD_TIMES)]
+ THEN REFL_TAC);
+
+
+(* |- !q. q DIV (SUC 0) = q *)
+val DIV_ONE = save_thm("DIV_ONE",
+    GEN_ALL (REWRITE_RULE[REWRITE_RULE[ONE] MULT_RIGHT_1]
+    (MP (SPECL [(--`SUC 0`--), (--`q:num`--)] MULT_DIV)
+        (SPEC (--`0`--) LESS_0))));
+
+val Less_lemma = prove(
+Term`!m n. m<n ==> ?p. (n = m + p) /\ 0<p`,
+ GEN_TAC THEN INDUCT_TAC THENL[
+  REWRITE_TAC[NOT_LESS_0],
+  REWRITE_TAC[LESS_THM]
+    THEN DISCH_THEN (DISJ_CASES_THEN2 SUBST1_TAC ASSUME_TAC) THENL[
+      EXISTS_TAC (--`SUC 0`--) 
+    	THEN REWRITE_TAC[LESS_0,ADD_CLAUSES],
+    	RES_TAC THEN EXISTS_TAC (--`SUC p`--)
+    	THEN ASM_REWRITE_TAC[ADD_CLAUSES,LESS_0]]]);
+
+val Less_MULT_lemma = prove(
+    (--`!r m p. 0<p ==> r<m ==> r < p*m`--),
+    let val lem1 = MATCH_MP LESS_LESS_EQ_TRANS
+    	(CONJ (SPEC (--`m:num`--) LESS_SUC_REFL)
+    	      (SPECL[(--`SUC m`--), (--`p * (SUC m)`--)] LESS_EQ_ADD))
+   in
+    GEN_TAC THEN REPEAT INDUCT_TAC THEN REWRITE_TAC[NOT_LESS_0]
+    THEN DISCH_TAC THEN REWRITE_TAC[LESS_THM]
+    THEN DISCH_THEN (DISJ_CASES_THEN2 SUBST1_TAC ASSUME_TAC)
+    THEN PURE_ONCE_REWRITE_TAC[MULT]
+    THEN PURE_ONCE_REWRITE_TAC[ADD_SYM] THENL[
+      ACCEPT_TAC lem1,
+      ACCEPT_TAC (MATCH_MP LESS_TRANS (CONJ (ASSUME (--`r < m`--)) lem1))]
+   end);
+
+val Less_MULT_ADD_lemma = prove(
+Term`!m n r r'. 0<m /\ 0<n /\ r<m /\ r'<n ==> r'*m + r < n*m`,
+ REPEAT STRIP_TAC
+  THEN CHOOSE_THEN STRIP_ASSUME_TAC (MATCH_MP Less_lemma (ASSUME (--`r<m`--)))
+  THEN CHOOSE_THEN STRIP_ASSUME_TAC (MATCH_MP Less_lemma (ASSUME (--`r'<n`--)))
+  THEN ASM_REWRITE_TAC[]
+  THEN PURE_ONCE_REWRITE_TAC[RIGHT_ADD_DISTRIB]
+  THEN PURE_ONCE_REWRITE_TAC[ADD_SYM]
+  THEN PURE_ONCE_REWRITE_TAC[LESS_MONO_ADD_EQ]
+  THEN SUBST1_TAC (SYM (ASSUME(--`m = r + p`--)))
+  THEN IMP_RES_TAC Less_MULT_lemma);
+
+val DIV_DIV_DIV_MULT = store_thm("DIV_DIV_DIV_MULT",
+--`!m n. 0<m /\ 0<n ==> !x. ((x DIV m) DIV n = x  DIV (m * n))`--,
+    CONV_TAC (ONCE_DEPTH_CONV RIGHT_IMP_FORALL_CONV) THEN REPEAT STRIP_TAC
+    THEN REPEAT_TCL CHOOSE_THEN (CONJUNCTS_THEN2 SUBST1_TAC ASSUME_TAC)
+    	(SPEC (--`x:num`--) (MATCH_MP DA (ASSUME (--`0 < m`--))))
+    THEN REPEAT_TCL CHOOSE_THEN (CONJUNCTS_THEN2 SUBST1_TAC ASSUME_TAC)
+    	(SPEC (--`q:num`--) (MATCH_MP DA (ASSUME (--`0 < n`--))))
+    THEN IMP_RES_THEN (fn t => REWRITE_TAC[t]) DIV_MULT
+    THEN IMP_RES_THEN (fn t => REWRITE_TAC[t]) DIV_MULT
+    THEN PURE_ONCE_REWRITE_TAC[RIGHT_ADD_DISTRIB]
+    THEN PURE_ONCE_REWRITE_TAC[GSYM MULT_ASSOC]
+    THEN PURE_ONCE_REWRITE_TAC[GSYM ADD_ASSOC]
+    THEN ASSUME_TAC (MATCH_MP NOT_MULT_LESS_0
+    	(CONJ (ASSUME (--`0 < n`--)) (ASSUME (--`0 < m`--))))
+    THEN CONV_TAC ((RAND_CONV o RAND_CONV) (REWR_CONV MULT_SYM))
+    THEN CONV_TAC SYM_CONV THEN PURE_ONCE_REWRITE_TAC[ADD_INV_0_EQ]
+    THEN FIRST_ASSUM (fn t => REWRITE_TAC[MATCH_MP ADD_DIV_ADD_DIV t])
+    THEN PURE_ONCE_REWRITE_TAC[ADD_INV_0_EQ]
+    THEN MATCH_MP_TAC LESS_DIV_EQ_ZERO
+    THEN IMP_RES_TAC Less_MULT_ADD_lemma);
+
+
 val num_case_cong =
   save_thm("num_case_cong", Prim_rec.case_cong_thm num_CASES num_case_def);
 
@@ -2006,6 +2128,34 @@ val SUC_ELIM_THM = store_thm(
       SIMP_TAC bool_ss [GSYM ADD1, SUC_SUB1, LESS_0]
     ]);
 
+val ADD_SUBR2 = prove
+ (Term `!m n. m - (m + n) = 0`,
+  REWRITE_TAC [SUB_EQ_0, LESS_EQ_ADD]);
+
+val SUB_ELIM_THM = store_thm("SUB_ELIM_THM",
+ Term`P (a - b) = !d. ((b = a + d) ==> P 0) /\ ((a = b + d) ==> P d)`,
+ DISJ_CASES_TAC(SPECL [Term`a:num`, Term`b:num`] LESS_EQ_CASES) THEN
+  FIRST_ASSUM(X_CHOOSE_TAC (Term`e:num`) o REWRITE_RULE[LESS_EQ_EXISTS]) THEN
+  ASM_REWRITE_TAC[ADD_SUB, ONCE_REWRITE_RULE [ADD_SYM] ADD_SUB, ADD_SUBR2] THEN
+  REWRITE_TAC [ONCE_REWRITE_RULE [ADD_SYM] EQ_MONO_ADD_EQ] THEN
+  CONV_TAC (DEPTH_CONV FORALL_AND_CONV) THEN
+  GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites [EQ_SYM_EQ] THEN
+  REWRITE_TAC[GSYM ADD_ASSOC, ADD_INV_0_EQ, ADD_EQ_0] THENL
+   [EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
+    FIRST_ASSUM(fn th => MATCH_MP_TAC th THEN EXISTS_TAC (Term`e:num`)),
+    EQ_TAC THENL
+     [DISCH_TAC THEN CONJ_TAC THEN GEN_TAC THEN
+      DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN SUBST_ALL_TAC),
+      DISCH_THEN(MATCH_MP_TAC o CONJUNCT2)]] THEN
+  ASM_REWRITE_TAC[]);
+
+val PRE_ELIM_THM = store_thm("PRE_ELIM_THM",
+ Term`P (PRE n) = !m. ((n = 0) ==> P 0) /\ ((n = SUC m) ==> P m)`,
+  SPEC_TAC(Term`n:num`,Term`n:num`) THEN INDUCT_TAC THEN
+  REWRITE_TAC[NOT_SUC, INV_SUC_EQ, GSYM NOT_SUC, PRE] THEN
+  EQ_TAC THEN REPEAT STRIP_TAC THENL
+   [FIRST_ASSUM(SUBST1_TAC o SYM) THEN FIRST_ASSUM ACCEPT_TAC,
+    FIRST_ASSUM MATCH_MP_TAC THEN REFL_TAC]);
 
 val _ = adjoin_to_theory
 {sig_ps = SOME (fn ppstrm =>

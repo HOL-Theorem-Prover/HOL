@@ -27,10 +27,6 @@ fun NUM_ERR{function,message} =
 infix 5 |->
 infix ##;
 
-val inc = Portable_Ref.inc;
-val dec = Portable_Ref.dec;
-
-
 (* --------------------------------------------------------------------- *)
 (* ADD_CONV: addition of natural number constants (numerals).            *)
 (*                                                                       *)
@@ -108,7 +104,7 @@ end handle HOL_ERR _ => raise NUM_ERR{function = "num_EQ_CONV",
 local
 val wop = arithmeticTheory.WOP
 val wth = CONV_RULE (ONCE_DEPTH_CONV ETA_CONV) wop
-val N = ==`:num`==
+val N = Type`:num`
 val check = assert (fn tm => type_of tm = N)
 val acnv = RAND_CONV o ABS_CONV
 in
