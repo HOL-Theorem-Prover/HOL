@@ -76,7 +76,8 @@ val SRCDIRS =
  ---------------------------------------------------------------------------*)
 
 val space  = " ";
-fun echo s = TextIO.output(TextIO.stdOut, s^"\n");
+fun echo s = (TextIO.output(TextIO.stdOut, s^"\n");
+              TextIO.flushOut TextIO.stdOut);
 
 local val expand_backslash =
             String.translate
@@ -145,13 +146,24 @@ val _ = echo "\nBeginning configuration.";
 
 val _ =
  let val _ = echo "Making bin/Holmake."
+     val current_dir = FileSys.getDir()
      val hmakedir  = normPath(Path.concat(holdir, "tools/Holmake"))
-     val src       = fullPath [holdir, "tools/Holmake/Holmake.src"]
-     val target    = fullPath [holdir, "tools/Holmake/Holmake.sml"]
+     val _ = FileSys.chDir hmakedir
+     val src       = "Holmake.src"
+     val target    = "Holmake.sml"
      val bin       = fullPath [holdir, "bin/Holmake"]
-     val compiler  = fullPath [mosmldir, "bin/mosmlc"]^" -I "^hmakedir
-     fun atDir s   = fullPath [hmakedir,s]
-     fun systeml l = Process.system (String.concat l)
+     val compiler  = fullPath [mosmldir, "bin/mosmlc"]
+     val lexer     = fullPath [mosmldir, "bin/mosmllex"]
+     val yaccer    = fullPath [mosmldir, "bin/mosmlyac"]
+     fun systeml l = let
+       val command = String.concat l
+     in
+       if Process.system command = Process.success then
+         ()
+       else
+         (print ("Executing\n  "^command^"\nfailed.\n");
+          raise Fail "")
+     end
   in
     fill_holes (src,target)
        ["val HOLDIR = _;\n"
@@ -162,13 +174,17 @@ val _ =
           -->  String.concat["val DEPDIR = ",   quote DEPDIR, ";\n"],
         "fun MK_XABLE file = _;\n"
           -->  String.concat["fun MK_XABLE file = ", MK_XABLE_RHS, ";\n"]];
-    systeml [compiler, " -c ", atDir "Parser.sig"];
-    systeml [compiler, " -c ", atDir "Parser.sml"];
-    systeml [compiler, " -c ", atDir "Lexer.sml" ];
-    systeml [compiler, " -c ", atDir "Holdep.sml"];
-    systeml [compiler, " -o ", bin, space, target];
-    mk_xable bin
-  end;
+    systeml [yaccer, space, "Parser.grm"];
+    systeml [lexer, space, "Lexer.lex"];
+    systeml [compiler, " -c ", "Parser.sig"];
+    systeml [compiler, " -c ", "Parser.sml"];
+    systeml [compiler, " -c ", "Lexer.sml" ];
+    systeml [compiler, " -c ", "Holdep.sml"];
+    systeml [compiler, " -standalone -o ", bin, space, target];
+    mk_xable bin;
+    FileSys.chDir current_dir
+  end
+handle _ => (print "Couldn't build Holmake\n"; Process.exit Process.failure)
 
 
 (*---------------------------------------------------------------------------
