@@ -121,3 +121,16 @@ val eight_three_five = prove(Term `!i. ?j k. i+8 = 3*j + 5*k`,
       MAP_EVERY Q.EXISTS_TAC [`j+2`, `n`] THEN DECIDE_TAC
      ]
   ]);
+
+(*---------------------------------------------------------------------------
+     The semantics of THEN allow a more compact version.
+ ---------------------------------------------------------------------------*)
+
+val eight_three_five = prove(Term `!i. ?j k. i+8 = 3*j + 5*k`,
+ Induct THEN ARW_TAC[] 
+ THENL [MAP_EVERY Q.EXISTS_TAC [`1`, `1`],
+        Cases_on `k` THEN ARW_TAC [] 
+        THENL [`2<j` by DECIDE_TAC THEN 
+               MAP_EVERY Q.EXISTS_TAC [`j-3`, `2`],
+               MAP_EVERY Q.EXISTS_TAC [`j+2`, `n`]]]
+ THEN DECIDE_TAC);

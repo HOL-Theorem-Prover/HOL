@@ -201,31 +201,21 @@ val tran_defs =
 
 val nextstate_def = 
   Define
-     `(nextstate st press_att_cws = tran_att_cws st)     /\
-      (nextstate st press_alt_eng = tran_alt_eng st)     /\
-      (nextstate st press_fpa_sel = tran_fpa_sel st)     /\
-      (nextstate st press_cas_eng = tran_cas_eng st)     /\
-      (nextstate st input_alt     = tran_input_alt st)   /\
-      (nextstate st input_fpa     = tran_input_fpa st)   /\
-      (nextstate st input_cas     = tran_input_cas st)   /\
-      (nextstate st alt_reached   = tran_alt_reached st) /\
-      (nextstate st fpa_reached   = tran_fpa_reached st) /\
-      (nextstate st alt_gets_near = tran_alt_gets_near st)`;
+     `(nextstate st press_att_cws = tran_att_cws st)     
+  /\  (nextstate st press_alt_eng = tran_alt_eng st)
+  /\  (nextstate st press_fpa_sel = tran_fpa_sel st)
+  /\  (nextstate st press_cas_eng = tran_cas_eng st)
+  /\  (nextstate st input_alt     = tran_input_alt st)
+  /\  (nextstate st input_fpa     = tran_input_fpa st)
+  /\  (nextstate st input_cas     = tran_input_cas st)
+  /\  (nextstate st alt_reached   = tran_alt_reached st)
+  /\  (nextstate st fpa_reached   = tran_fpa_reached st)
+  /\  (nextstate st alt_gets_near = tran_alt_gets_near st)`;
 
 
-(* Old 
-val st0_def = 
- Define 
-    `st0 = states
-        (* "att_cws"  *) engaged
-        (* "cas_eng"  *) off
-        (* "fpa_sel"  *) off
-        (* "alt_eng"  *) (Mode off)
-        (* "alt_disp" *) current
-        (* "fpa_disp" *) current
-        (* "cas_disp" *) current
-        (* "altitude" *) away`;
-*)
+(*---------------------------------------------------------------------------*
+ * Initial state.                                                            *
+ *---------------------------------------------------------------------------*)
 
 val st0_def = 
  Define 
@@ -289,8 +279,7 @@ val st0_valid_state = prove (Term`valid_state st0`,
 
 (*---------------------------------------------------------------------------*
  * nextstate preserves valid_stateness.                                      *
- * It takes approx. 18 seconds of runtime on 80Meg Pentium 133Mhz.           *
- * Memory consumption is steady at about 10 Mbyte.                           *
+ * It takes approx. 17 seconds of runtime on 80Meg Pentium 133Mhz.           *
  *---------------------------------------------------------------------------*)
 
 val nextstate_valid_state = 
