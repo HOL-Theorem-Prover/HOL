@@ -94,6 +94,11 @@ fun contains s =
     f o explode
   end;
 
+fun const_scheme c =
+  let val {Thy, Name, ...} = dest_thy_const c
+  in prim_mk_const {Name = Name, Thy = Thy}
+  end;
+
 fun trap f g x =
   f x
   handle e as HOL_ERR {message, ...} =>
@@ -255,6 +260,7 @@ local
     | ord top (tm :: tms) (c,g,l,t,v) =
     let
       val (f,xs) = strip_comb tm
+      val f = if is_const f then const_scheme f else f
       val n = length xs
       val tn = (top,n)
       val tms = xs @ tms
