@@ -29,8 +29,8 @@ entirely disappears during the first phase of parsing, leaving only
 instances of {CONS}.
 
 Attempts to allow for overloading on a string that has already been so
-allowed can cause the range of allowed types to become broader if the
-new type can be instantiated to the new type.
+allowed will cause the range of allowed types to become broader if the
+new type can be instantiated to the old type.
 
 \FAILURE
 Fails if a string is already overloaded with a type that is either
