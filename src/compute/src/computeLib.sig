@@ -11,9 +11,6 @@ sig
   val add_thms      : thm list -> compset -> unit
   val add_conv      : term * int * conv -> compset -> unit
   val set_skip      : compset -> string*string -> int option -> unit
-  val CBV_CONV      : comp_rws -> Abbrev.conv
-  val WEAK_CBV_CONV : comp_rws -> Abbrev.conv
-
 
   val lazyfy_thm    : thm -> thm
   val strictify_thm : thm -> thm
