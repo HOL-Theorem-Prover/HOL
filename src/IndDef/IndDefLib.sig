@@ -29,6 +29,7 @@ sig
   val derive_nonschematic_inductive_relations : term -> thm
   val prove_monotonicity_hyps : monoset -> thm -> thm
   val prove_inductive_relations_exist : monoset -> term -> thm
+  val derive_strong_induction : thm list * thm -> thm
 
   val MONO_TAC : monoset -> tactic
   val BACKCHAIN_TAC : thm -> tactic

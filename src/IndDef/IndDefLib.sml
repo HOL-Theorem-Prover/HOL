@@ -3,18 +3,23 @@ struct
 
 open HolKernel Parse boolLib liteLib refuteLib AC Ho_Rewrite;
 
-infix |-> THEN THENC;
+infix ## |-> THEN THENC;
 infixr -->
-
-fun WRAP_ERR x = STRUCT_WRAP "Ind_defs" x;
 
 val (Type,Term) = parse_from_grammars combinTheory.combin_grammars
 fun -- q x = Term q
 fun == q x = Type q
 
 
-val conj_tm = boolSyntax.conjunction;
-val imp_tm = boolSyntax.implication;
+(* ------------------------------------------------------------------------- *)
+(* Produces a sequence of variants, considering previous inventions.         *)
+(* ------------------------------------------------------------------------- *)
+
+fun variants av [] = []
+  | variants av (h::t) =
+      let val vh = variant av h 
+      in vh::variants (vh::av) t
+      end;
 
 (* ------------------------------------------------------------------------- *)
 (* Apply a destructor as many times as elements in list.                     *)
@@ -179,7 +184,6 @@ val EXISTS_EQUATION =
 (*  [JRH] Removed "Fail" constructor from handle trap.                       *)
 (* ------------------------------------------------------------------------- *)
 
-
 local fun getequs(avs,[]) = []
         | getequs(avs,(h as {redex=r,residue})::t) = 
             if mem r avs 
@@ -237,7 +241,7 @@ fun canonicalize_clause clause carg =
      val ftm = funpow (length carg) (body o rand) (rand(concl eth))
  in TRANS eth (itlist MK_FORALL carg (FORALL_IMPS_CONV ftm))
  end
- handle e => WRAP_ERR("canonicalize_clause",e)
+ handle e => raise (wrap_exn "IndDefLib" "canonicalize_clause" e)
 end;;
 
 (* ------------------------------------------------------------------------- *)
@@ -270,30 +274,21 @@ fun canonicalize_clauses clauses =
           (CONJ_ACI(mk_eq(oclauses,cclauses)))
   in TRANS pth (end_itlist MK_CONJ (map AND_IMPS_CONV cclausel))
   end
-  handle e => WRAP_ERR("canonicalize_clauses",e)
+  handle e => raise (wrap_exn "IndDefLib" "canonicalize_clauses" e)
 end;;
 
-(* ------------------------------------------------------------------------- *)
-(* Produces a sequence of variants, considering previous inventions.         *)
-(* ------------------------------------------------------------------------- *)
-
-fun variants av vs =
-  if null vs then [] else
-  let val vh = variant av (hd vs) in vh::(variants (vh::av) (tl vs)) end;;
 
 (* ------------------------------------------------------------------------- *)
 (* Prove definitions work for non-schematic relations with canonical rules.  *)
 (* ------------------------------------------------------------------------- *)
 
-
 fun mySPEC_ALL thm =
   (* version of SPEC_ALL that does not vary variables chosen to avoid
      constant names - this was causing grief when attempting to define
      inductive relations with constant names that already existed. *)
-  if is_forall (concl thm) then
-    mySPEC_ALL (SPEC (fst (dest_forall (concl thm))) thm)
-  else
-    thm
+  if is_forall (concl thm) 
+    then mySPEC_ALL (SPEC (fst (dest_forall (concl thm))) thm)
+    else thm
 
 
 fun derive_canon_inductive_relations pclauses =
@@ -366,26 +361,28 @@ fun derive_canon_inductive_relations pclauses =
                (map2 mk_case (CONJUNCTS fthm) (CONJUNCTS ruvalhm))
     in CONJ ruvalhm (CONJ indthm casethm)
     end
-handle e => WRAP_ERR("derive_canon_inductive_relations",e);
+handle e => raise (wrap_exn "IndDefLib" "derive_canon_inductive_relations"e);
 
 (* ------------------------------------------------------------------------- *)
 (* General case for nonschematic relations; monotonicity & defn hyps.        *)
 (* ------------------------------------------------------------------------- *)
 
 fun derive_nonschematic_inductive_relations tm =
-  let val clauses = strip_conj tm
-      val canonthm = canonicalize_clauses clauses
+  let val clauses   = strip_conj tm
+      val canonthm  = canonicalize_clauses clauses
       val canonthm' = SYM canonthm
-      val pclosed = rand(concl canonthm)
-      val pclauses = strip_conj pclosed
-      val rawthm = derive_canon_inductive_relations pclauses
+      val pclosed   = rand(concl canonthm)
+      val pclauses  = strip_conj pclosed
+      val rawthm    = derive_canon_inductive_relations pclauses
       val (ruvalhm,otherthms) = CONJ_PAIR rawthm
-      val (indthm,casethm) = CONJ_PAIR otherthms
+      val (indthm,casethm)    = CONJ_PAIR otherthms
       val ruvalhm' = EQ_MP canonthm' ruvalhm
-      and indthm' = CONV_RULE (ONCE_DEPTH_CONV (REWR_CONV canonthm')) indthm
+      and indthm'  = CONV_RULE (ONCE_DEPTH_CONV (REWR_CONV canonthm')) indthm
   in CONJ ruvalhm' (CONJ indthm' casethm)
   end
-handle e => WRAP_ERR("derive_nonschematic_inductive_relations",e);;
+  handle e => 
+  raise (wrap_exn "IndDefLib" "derive_nonschematic_inductive_relations" e);
+
 
 (* ========================================================================= *)
 (* Part 2: Tactic-integrated tools for proving monotonicity automatically.   *)
@@ -406,7 +403,7 @@ fun MONO_ABS_TAC (asl,w) =
         and (hd2,args2) = strip_ncomb rnum con
         val th1 = rev_itlist (C AP_THM) args1 (BETA_CONV hd1)
         and th2 = rev_itlist (C AP_THM) args1 (BETA_CONV hd2)
-        val th3 = MK_COMB(AP_TERM imp_tm th1,th2)
+        val th3 = MK_COMB(AP_TERM boolSyntax.implication th1,th2)
     in CONV_TAC(REWR_CONV th3) (asl,w)
     end;;
 
@@ -477,16 +474,15 @@ val bool_monoset =
 val APPLY_MONOTAC =
  let val IMP_REFL = tautLib.TAUT_PROVE (--`!p. p ==> p`--)
  in fn monoset => fn (asl,w) =>
-     let val (a,c) = dest_imp w
-     in if aconv a c 
-        then ACCEPT_TAC (SPEC a IMP_REFL) (asl,w) 
-        else let val cn = fst (dest_const(repeat rator c)) 
-                          handle HOL_ERR _ => ""
-             in tryfind (fn (k,t) => if k = cn then t (asl,w) else fail())
+    let val (a,c) = dest_imp w
+    in if aconv a c 
+       then ACCEPT_TAC (SPEC a IMP_REFL) (asl,w) 
+       else let val cn = fst(dest_const(repeat rator c)) handle HOL_ERR _ => ""
+            in tryfind (fn (k,t) => if k = cn then t (asl,w) else fail())
                        monoset
-             end
-     end
- end;;
+            end
+    end
+ end;
 
 (* ------------------------------------------------------------------------- *)
 (* Tactics to prove monotonicity automatically.                              *)
@@ -517,16 +513,16 @@ fun MONO_TAC monoset = REPEAT (MONO_STEP_TAC monoset) THEN ASM_REWRITE_TAC[];;
 (* ------------------------------------------------------------------------- *)
 
 fun prove_monotonicity_hyps monoset =
-    let val tac = REPEAT GEN_TAC THEN
+  let val tac = REPEAT GEN_TAC THEN
         DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
         REPEAT CONJ_TAC THEN (MONO_TAC monoset)
         fun prove_mth t = TAC_PROOF(([],t),tac)
-    in fn th =>
-        let val mths = mapfilter prove_mth (filter (not o is_eq) (hyp th))
-        in itlist PROVE_HYP mths th
-        end
-    end
-handle e => WRAP_ERR("prove_monotonicity_hyps",e);;
+  in fn th =>
+      let val mths = mapfilter prove_mth (filter (not o is_eq) (hyp th))
+      in itlist PROVE_HYP mths th
+      end
+  end
+  handle e => raise (wrap_exn "IndDefLib" "prove_monotonicity_hyps" e);
 
 (* ------------------------------------------------------------------------- *)
 (* Generalize definitions and theorem over given variables (all the same!)   *)
@@ -559,10 +555,7 @@ fun generalize_schematic_variables vs =
 (* Derive existence.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-fun derive_existence th =
-    let val defs = filter is_eq (hyp th)
-    in itlist EXISTS_EQUATION defs th
-    end;;
+fun derive_existence th = itlist EXISTS_EQUATION (filter is_eq (hyp th)) th
 
 (* ------------------------------------------------------------------------- *)
 (* Make definitions.                                                         *)
@@ -612,11 +605,12 @@ val unschematize_clauses =
 (* ========================================================================= *)
 
 fun prove_nonschematic_inductive_relations_exist monoset tm =
-    let val th0 = derive_nonschematic_inductive_relations tm
-        val th1 = prove_monotonicity_hyps monoset th0
-    in derive_existence th1
-    end
-handle e => WRAP_ERR("prove_nonschematic_inductive_relations_exist",e);;
+ let val th0 = derive_nonschematic_inductive_relations tm
+     val th1 = prove_monotonicity_hyps monoset th0
+ in derive_existence th1
+ end
+ handle e => 
+ raise (wrap_exn "IndDefLib" "prove_nonschematic_inductive_relations_exist" e);
 
 (* ------------------------------------------------------------------------- *)
 (* The schematic case.                                                       *)
@@ -635,22 +629,23 @@ fun prove_inductive_relations_exist monoset tm =
         val th2 = generalize_schematic_variables fvs th1
     in derive_existence th2
     end
-handle e => WRAP_ERR("prove_inductive_relations_exist",e);;
+ handle e => raise (wrap_exn "IndDefLib" "prove_inductive_relations_exist" e);
+
 
 fun gen_new_inductive_definition monoset tm =
-    let val clauses = strip_conj tm
-        val (clauses',fvs) = unschematize_clauses clauses
-        val th0 = derive_nonschematic_inductive_relations
-                    (list_mk_conj clauses')
-        val th1 = prove_monotonicity_hyps monoset th0
-        val th2 = generalize_schematic_variables fvs th1
-        val th3 = make_definitions th2
-        val avs = fst(strip_forall(concl th3))
-        val (r,ic) = CONJ_PAIR(SPECL avs th3)
-        val (i,c) = CONJ_PAIR ic
-    in (GENL avs r,GENL avs i,GENL avs c)
-    end
-handle e => WRAP_ERR("gen_new_inductive_definition",e);;
+ let val clauses = strip_conj tm
+     val (clauses',fvs) = unschematize_clauses clauses
+     val th0 = derive_nonschematic_inductive_relations (list_mk_conj clauses')
+     val th1 = prove_monotonicity_hyps monoset th0
+     val th2 = generalize_schematic_variables fvs th1
+     val th3 = make_definitions th2
+     val avs = fst(strip_forall(concl th3))
+     val (r,ic) = CONJ_PAIR(SPECL avs th3)
+     val (i,c) = CONJ_PAIR ic
+ in (GENL avs r,GENL avs i,GENL avs c)
+ end
+ handle e => raise (wrap_exn "IndDefLib" "gen_new_inductive_definition" e);
+
 
 (* ------------------------------------------------------------------------- *)
 (* A rule induction tactic.                                                  *)
@@ -673,8 +668,8 @@ fun new_simple_inductive_definition specs =
         let val R = fst(strip_comb(snd(strip_imp spec)))
         in list_mk_forall (subtract (free_vars spec) [R], spec)
         end
- in gen_new_inductive_definition bool_monoset 
-            (list_mk_conj (map mk_spec specs))
+ in 
+  gen_new_inductive_definition bool_monoset(list_mk_conj (map mk_spec specs))
  end;
 
 (* ------------------------------------------------------------------------- *)
@@ -725,5 +720,134 @@ end;
 fun RULE_INDUCT_TAC ith = gen_RULE_INDUCT_THEN ith ASSUME_TAC ASSUME_TAC;
 *)
 
+(* ===================================================================== *)
+(* STRONGER FORM OF INDUCTION. From Tom Melham's library.                *)
+(* ===================================================================== *)
+
+(* ---------------------------------------------------------------------*)
+(* INTERNAL FUNCTION : simp_axiom                                       *)
+(*                                                                      *)
+(* This function takes an axiom of the form                             *)
+(*                                                                      *)
+(*    |- !xs. REL ps <args>                                             *)
+(*                                                                      *)
+(* and a term of the form                                               *)
+(*                                                                      *)
+(*    !xs. (\vs. REL ps vs /\ P vs) <args>                              *)
+(*                                                                      *)
+(* and proves that                                                      *)
+(*                                                                      *)
+(*    |- (!xs. P <args>) ==> !xs. (\vs. REL ps vs /\ P vs) <args>       *)
+(*                                                                      *)
+(* That is, simp_axiom essentially beta-reduces the input term, and     *)
+(* drops the redundant conjunct "REL ps xs", this holding merely by     *)
+(* virtue of the axiom being true.                                      *)
+(* ---------------------------------------------------------------------*)
+
+fun simp_axiom (ax,tm) =
+   let val (vs,red) = strip_forall tm
+       val bth = LIST_BETA_CONV red
+       val asm = list_mk_forall(vs,rand(rand(concl bth)))
+       val th1 = SPECL vs (ASSUME asm)
+       val th2 = EQ_MP (SYM bth) (CONJ (SPECL vs ax) th1)
+   in DISCH asm (GENL vs th2)
+   end
+
+
+(* ---------------------------------------------------------------------*)
+(* INTERNAL FUNCION : reduce_asm                                        *)
+(*                                                                      *)
+(* The term asm is expected to be the antecedent of a rule in the form: *)
+(*                                                                      *)
+(*   "?zs. ... /\ (\vs. REL ps vs /\ P vs) <args> /\ ..."               *)
+(*                                                                      *)
+(* in which applications of the supplied parameter fn:                  *)
+(*                                                                      *)
+(*   "(\vs . REL ps vs /\ P vs)"                                        *)
+(*                                                                      *)
+(* appear as conjuncts (possibly among some side conditions).  The      *)
+(* function reduce_asm beta-reduces these conjuncts and flattens the    *)
+(* resulting conjunction of terms.  The result is the theorem:          *)
+(*                                                                      *)
+(*   |- asm ==> ?zs. ... /\ REL ps <args> /\ P <args> /\ ...            *)
+(*                                                                      *)
+(* ---------------------------------------------------------------------*)
+
+local fun reduce Fn tm =
+  let val (conj1,conj2) = dest_conj tm
+      val imp = reduce Fn conj2
+  in if fst(strip_comb conj1) = Fn then 
+     let val (t1,t2) = CONJ_PAIR(EQ_MP (LIST_BETA_CONV conj1) (ASSUME conj1))
+         val thm1 = CONJ t1 (CONJ t2 (UNDISCH imp))
+         val asm = mk_conj(conj1,rand(rator(concl imp)))
+         val (h1,h2) = CONJ_PAIR (ASSUME asm)
+     in DISCH asm (PROVE_HYP h1 (PROVE_HYP h2 thm1))
+     end
+     else IMP_CONJ (DISCH conj1 (ASSUME conj1)) imp
+  end
+  handle HOL_ERR _ => 
+     if fst(strip_comb tm) = Fn
+        then fst(EQ_IMP_RULE(LIST_BETA_CONV tm))
+        else DISCH tm (ASSUME tm)
+in
+fun reduce_asm Fn asm =
+   let val (vs,body) = strip_exists asm
+   in itlist EXISTS_IMP vs (reduce Fn body)
+   end
+end;
+
+
+fun prove_asm P tm =
+   let fun test t = not(fst(strip_comb(concl t)) = P)
+       val (vs,body) = strip_exists tm
+       val newc = LIST_CONJ(filter test (CONJUNCTS(ASSUME body)))
+   in
+   itlist EXISTS_IMP vs (DISCH body newc)
+   end;
+
+
+fun simp_concl rul tm =
+   let val (vs,(ant,conseq)) = (I ## dest_imp) (strip_forall tm)
+       val srul = SPECL vs rul
+       val (cvs,(_,conj2)) = (I ## dest_conj) (strip_forall conseq)
+       val simpl = prove_asm (fst(strip_comb conj2)) ant
+       val thm1 = SPECL cvs (UNDISCH (IMP_TRANS simpl srul))
+       val newasm = list_mk_forall(vs,mk_imp(ant,list_mk_forall(cvs,conj2)))
+       val thm2 = CONJ thm1 (SPECL cvs (UNDISCH (SPECL vs (ASSUME newasm))))
+   in DISCH newasm (GENL vs (DISCH ant (GENL cvs thm2)))
+   end;
+
+
+fun simp_rule (rul,tm) =
+   let val (vs,(ant,conseq)) = (I ## dest_imp) (strip_forall tm)
+       val (cvs,red) = strip_forall conseq
+       val bth = itlist FORALL_EQ cvs (LIST_BETA_CONV red)
+       val basm = reduce_asm (fst(strip_comb red)) ant
+       val asm = list_mk_forall(vs,mk_imp(rand(concl basm),rand(concl bth)))
+       val thm1 = UNDISCH (IMP_TRANS basm (SPECL vs (ASSUME asm)))
+       val thm2 = DISCH asm (GENL vs (DISCH ant (EQ_MP (SYM bth) thm1)))
+       val thm3 = simp_concl rul (rand(rator(concl thm2)))
+   in IMP_TRANS thm3 thm2
+   end;
+
+
+fun simp p = simp_rule p handle HOL_ERR _ => simp_axiom p;
+
+fun derive_strong_induction (rules,ind) =
+   let val (vs,(_,conseq)) = (I ## dest_imp) (strip_forall (concl ind))
+       val srules = map (SPECL (butlast vs)) rules
+       val (cvs,(rel,pred)) = (I ## dest_imp) (strip_forall conseq)
+       val newp = list_mk_abs(cvs,mk_conj(rel,pred))
+       val (pvar,args) = strip_comb pred
+       val ith = INST [pvar |-> newp] (SPECL vs ind)
+       val (ant,co) = dest_imp (concl ith)
+       val bth = LIST_BETA_CONV (list_mk_comb(newp,args))
+       val sth = CONJUNCT2 (EQ_MP bth (UNDISCH (SPECL args (ASSUME co))))
+       val thm1 = IMP_TRANS ith (DISCH co (GENL args (DISCH rel sth)))
+       val ths = map simp (combine (srules,strip_conj ant))
+   in
+   GENL vs (IMP_TRANS (end_itlist IMP_CONJ ths) thm1)
+   end
+   handle e => raise (wrap_exn "IndDefLib" "derive_strong_induction_thm" e)
 
 end (* struct *)
