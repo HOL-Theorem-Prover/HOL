@@ -69,7 +69,6 @@ below to advance a goal:
    > val it = |- (SUC n) > 0 : thm
 }
 \USES
-
 Rewriting is a powerful and general mechanism in HOL, and an important
 part of many proofs.  It relieves the user of the burden of directing
 and justifying a large number of minor proof steps.  {REWRITE_TAC}
