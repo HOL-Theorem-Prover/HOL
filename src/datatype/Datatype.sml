@@ -196,12 +196,12 @@ fun is_enum_type_spec astl =
 (*  Build a tyinfo list for an enumerated type.                              *)
 (*---------------------------------------------------------------------------*)
 
-fun build_enum_tyinfo (tyname, ast) = 
+fun build_enum_tyinfo (tyname, ast) =
  let open EnumType
- in case ast 
-    of Constructors clist => 
+ in case ast
+    of Constructors clist =>
        let val constructors = map #1 clist
-       in case duplicate_names constructors 
+       in case duplicate_names constructors
           of NONE => (enum_type_to_tyinfo (tyname, constructors))
            | SOME s => raise ERR "build_enum"("Duplicate constructor name: "^s)
        end
@@ -219,22 +219,22 @@ end
     Returns a list of tyinfo thingies
  ---------------------------------------------------------------------------*)
 
-local 
+local
   fun insert_size {def, const_tyopl} tyinfol =
-   case tyinfol 
+   case tyinfol
     of [] => raise ERR "build_tyinfos" "empty tyinfo list"
      | tyinfo::rst =>
        let val first_tyname = TypeBasePure.ty_name_of tyinfo
            fun insert_size info size_eqs =
             let val tyname = TypeBasePure.ty_name_of info
-            in case assoc2 tyname const_tyopl 
+            in case assoc2 tyname const_tyopl
                 of SOME(c,tyop) => TypeBasePure.put_size(c,size_eqs) info
                  | NONE => (HOL_MESG
                               ("Can't find size constant for"^tyname)
                              ; raise ERR "build_tyinfos" "")
             end
        in
-         insert_size tyinfo (TypeBasePure.ORIG def) 
+         insert_size tyinfo (TypeBasePure.ORIG def)
          :: map (C insert_size (TypeBasePure.COPY (first_tyname,def))) rst
        end
        handle HOL_ERR _ => tyinfol
@@ -401,7 +401,7 @@ end
 
 val bigrec_subdivider_string = GrammarSpecials.bigrec_subdivider_string
 
-val big_record_size = 8 (* arbitrary choice *)
+val big_record_size = ref 20 (* arbitrary choice *)
 
 (* these functions generate the "magic" names used to represent big records
    as two level trees of smaller records.  There is a coupling between the
@@ -423,10 +423,10 @@ fun leaf_fldname tyn fld = fld
    original field.  Needs to know the total number of fields too. *)
 fun subfld_num max = let
   fun builddexlist base m =
-      if m <= 2 * big_record_size then
+      if m <= 2 * !big_record_size then
         [base, base + m div 2]
       else
-        base :: builddexlist (base + big_record_size) (m - big_record_size)
+        base :: builddexlist (base + !big_record_size) (m - !big_record_size)
   val dexlist = builddexlist 0 max
   fun finddex n i dexlist =
       case dexlist of
@@ -449,13 +449,13 @@ fun really_handle_big_record (tyname, fields) = let
   fun split_fields fldlist = let
     val len = length fldlist
   in
-    if len <= 2 * big_record_size then let
+    if len <= 2 * !big_record_size then let
         val (l1, l2) = split_after (len div 2) fldlist
       in
         [l1, l2]
       end
     else let
-        val (pfx, sfx) = split_after big_record_size fldlist
+        val (pfx, sfx) = split_after (!big_record_size) fldlist
       in
         pfx :: split_fields sfx
       end
@@ -484,7 +484,7 @@ fun handle_big_record ast =
     case ast of
       (tyname, Constructors _) => ([ast], [])
     | (tyname, Record fields) =>
-      if length fields >= big_record_size then
+      if length fields >= !big_record_size then
         (really_handle_big_record (tyname, fields), [(tyname, fields)])
       else ([ast], [])
 
@@ -503,7 +503,7 @@ val includes_big_record = let
   fun is_big_record (_, Constructors _) = false
     | is_big_record (tyn, Record fldl) =
         not (is_substring bigrec_subdivider_string tyn) andalso
-        length fldl >= big_record_size
+        length fldl >= !big_record_size
 in
   fn astl => List.exists is_big_record astl
 end
@@ -857,7 +857,7 @@ end (* let *)
 end (* local *)
 
 
-fun find_vartypes (pty, acc) = 
+fun find_vartypes (pty, acc) =
  let open ParseDatatype
  in
   case pty of
@@ -1067,7 +1067,7 @@ fun persistent_tyinfo tyinfos_etc =
     write_tyinfos (zip tyinfos etc)
   end;
 
-fun Hol_datatype q = 
+fun Hol_datatype q =
  let
   val tyinfos_etc = primHol_datatype (TypeBase.theTypeBase()) q
   val tynames = map (TypeBasePure.ty_name_of o #1) tyinfos_etc

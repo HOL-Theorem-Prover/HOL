@@ -9,6 +9,8 @@ sig
  type constructor  = string * hol_type list
  type tyspec       = hol_type * constructor list
 
+ val big_record_size : int ref
+
  val define_type      : tyspec list -> {induction:thm, recursion:thm}
  val new_datatype     : hol_type quotation -> {induction:thm, recursion:thm}
  val build_tyinfos    : typeBase
