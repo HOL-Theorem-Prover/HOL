@@ -598,7 +598,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
   val thm_str_list =
      map (concat typename)
      (["_accessors", "_updates", "_updates_eq_literal", "_updaccs",
-       "_accupds", "_accfupds", "_updupds", "_fn_updates", "_fupdfupds",
+       "_accupds", "_accfupds", "_updupds", "_fupdfupds",
        "_literal_11"] @
       (if not (null upd_canon_thms) then
          ["_updcanon", "_updcanon_comp", "_fupdcanon"]
