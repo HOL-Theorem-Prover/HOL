@@ -25,6 +25,7 @@ sig
   val +          : num * num -> num
   val -          : num * num -> num
   val *          : num * num -> num
+  val pow        : num * num -> num
   val div        : num * num -> num
   val mod        : num * num -> num
   val divmod     : num * num -> num * num

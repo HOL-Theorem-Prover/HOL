@@ -327,7 +327,7 @@ val LESS_EQ_EXP_MULT = store_thm("LESS_EQ_EXP_MULT",
     THEN FULL_SIMP_TAC arith_ss [EXP_ADD,MULT_COMM]
 );
 
-val LESS_EXP_MULT = (EQT_ELIM o SIMP_CONV bool_ss [LESS_IMP_LESS_OR_EQ,LESS_EQ_EXP_MULT])
+val LESS_EXP_MULT = SIMP_PROVE bool_ss [LESS_IMP_LESS_OR_EQ,LESS_EQ_EXP_MULT]
                       ``!a b. a < b ==> ?p. 2 EXP b = p * 2 EXP a``;
 
 (* -------------------------------------------------------- *)
@@ -447,8 +447,8 @@ val lem3 = prove(
 );
 
 (* |- !a m n. n < m ==> (a * 2 EXP m DIV 2 EXP n = a * 2 EXP (m - n)) *)
-val lem4 = EQT_ELIM (SIMP_CONV std_ss [LESS_IMP_LESS_OR_EQ,lem3]
-             ``!a m n. n < m ==> (a * 2 EXP m DIV 2 EXP n = a * 2 EXP (m - n))``);
+val lem4 = SIMP_PROVE std_ss [LESS_IMP_LESS_OR_EQ,lem3]
+             ``!a m n. n < m ==> (a * 2 EXP m DIV 2 EXP n = a * 2 EXP (m - n))``;
 
 val BIT_COMP_THM3 = store_thm("BIT_COMP_THM3",
   `!h m l n.  SUC m <= h /\ l <= m ==>
@@ -728,6 +728,11 @@ val BIT_DIV2 = prove(
   A_RW_TAC [BIT_def,BITS_THM,EXP,ZERO_LT_TWOEXP,DIV_DIV_DIV_MULT]
 );
  
+val SBIT_MULT = store_thm("SBIT_MULT",
+  `!b m n. (SBIT b n) * 2 ** m = SBIT b (n + m)`,
+  RW_TAC arith_ss [SBIT_def,EXP_ADD]
+);
+
 val lemma1 = prove(
   `!a b n. 0 < n ==> ((a + SBIT b n) DIV 2 = a DIV 2 + SBIT b (n - 1))`,
   A_RW_TAC [SBIT_def]
@@ -735,11 +740,9 @@ val lemma1 = prove(
     THEN A_FULL_SIMP_TAC [GSYM ADD1,ADD_DIV_ADD_DIV2,EXP]
 );
 
-val lemma2 = prove(
-  `!b n. 2 * (SBIT b n) = SBIT b (n + 1)`,
-  B_RW_TAC [MULT_CLAUSES,SBIT_def,GSYM ADD1,EXP]
-);
- 
+val lemma2 = (ONCE_REWRITE_RULE [MULT_COMM] o REWRITE_RULE [EXP_1] o
+              INST [`m` |-> `1`] o SPEC_ALL) SBIT_MULT;
+
 val lemma3 = prove(
   `!n op a b. 0 < n ==> (BITWISE n op a b MOD 2 = SBIT (op (LSBn a) (LSBn b)) 0)`,
   B_RW_TAC [LSBn_def]

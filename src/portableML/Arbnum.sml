@@ -169,6 +169,15 @@ fun (xn * yn) =
   | (_, []) => zero
   | (x::xs, _) => normalise(single_digit(x, yn) + (0::(xs * yn)))
 
+fun pow (xn, yn) =
+  if mod2 yn = one then
+    (xn * pow(xn, less1 yn))
+  else
+    if yn = zero then
+      one
+    else
+      pow((xn * xn), div2 yn);
+
 fun replicate n el = List.tabulate(n, fn _ => el)
 (* returns result in wrong order *)
 fun comp_sub acc carry (xn, yn) =

@@ -86,43 +86,19 @@ val WORD_CONV = WEAK_CBV_CONV (word_compset());
 val WORD_RULE = CONV_RULE WORD_CONV;
 val WORD_TAC = CONV_TAC WORD_CONV;
 
-fun odd n = Arbnum.mod2 n = Arbnum.one;
-
-fun pow(a,b) = if odd b then Arbnum.*(a,pow(a,Arbnum.less1 b))
-               else if b = Arbnum.zero then Arbnum.one
-               else pow(Arbnum.*(a,a),Arbnum.div2 b);
-
-val max = pow(Arbnum.fromInt 2,wl);
-
-local
-  val base = Arbnum.fromInt 16
-  fun to_hex_char n = let
-      val p = Arbnum.toInt (Arbnum.mod(n,base))
-    in
-      str (if p < 10 then chr (ord #"0" + p) else chr (ord #"A" + p - 10))
-    end
-  fun to_hex_string n = let
-      val s = to_hex_char n
-    in
-      if Arbnum.<(n,base) then s else to_hex_string (Arbnum.div(n,base))^s
-    end
-in
-  fun num_to_hex n = "0x"^to_hex_string n
-end;
-
-fun word_n_print sys gravs d pps t = let
+fun word_n_print ln sys gravs d pps t = let
    open Portable term_pp_types
    val (l,r) = dest_comb t
    val n = numSyntax.dest_numeral r
-   val m = Arbnum.mod(n,max)
+   val m = Arbnum.mod(n,Arbnum.pow(Arbnum.fromInt 2,ln))
 in
   if l = Term `n2w` then
-    add_string pps (num_to_hex m)
+    add_string pps ("0x"^(Arbnum_ext.toHexString m))
   else
     raise UserPP_Failed
 end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
-val _ = Parse.temp_add_user_printer ({Tyop = "word"^sn, Thy = "word"^sn}, word_n_print);
+val _ = Parse.temp_add_user_printer ({Tyop = "word"^sn, Thy = "word"^sn}, word_n_print wl);
 
 (* -------------------------------------------------------- *)
 
