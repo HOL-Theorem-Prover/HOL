@@ -381,7 +381,7 @@ val POLY_DIFF_AUX_CMUL = store_thm("POLY_DIFF_AUX_CMUL",
  (Term`!p c n. poly (poly_diff_aux n (c ## p)) =
            poly (c ## poly_diff_aux n p)`),
   LIST_INDUCT_TAC THEN
-  ASM_SIMP_TAC real_ss [FUN_EQ_THM, poly, poly_diff_aux, poly_cmul]);
+  ASM_SIMP_TAC real_ac_ss [FUN_EQ_THM, poly, poly_diff_aux, poly_cmul]);
 
 val POLY_DIFF_AUX_NEG = store_thm("POLY_DIFF_AUX_NEG",
  (Term`!p n.  poly (poly_diff_aux n (poly_neg p)) =
@@ -454,10 +454,10 @@ val POLY_DIFF_EXP = store_thm("POLY_DIFF_EXP",
 val POLY_DIFF_EXP_PRIME = store_thm("POLY_DIFF_EXP_PRIME",
  (Term`!n a. poly (diff ([~a; &1] poly_exp (SUC n))) =
          poly (&(SUC n) ## ([~a; &1] poly_exp n))`),
-  REPEAT GEN_TAC THEN SIMP_TAC real_ss [POLY_DIFF_EXP] THEN
-  SIMP_TAC real_ss [FUN_EQ_THM, POLY_CMUL, POLY_MUL] THEN
-  SIMP_TAC real_ss [poly_diff, poly_diff_aux, TL, NOT_CONS_NIL] THEN
-  SIMP_TAC real_ss [poly] THEN REAL_ARITH_TAC);
+  REPEAT GEN_TAC THEN SIMP_TAC real_ac_ss [POLY_DIFF_EXP] THEN
+  SIMP_TAC real_ac_ss [FUN_EQ_THM, POLY_CMUL, POLY_MUL] THEN
+  SIMP_TAC real_ac_ss [poly_diff, poly_diff_aux, TL, NOT_CONS_NIL] THEN
+  SIMP_TAC real_ac_ss [poly] THEN REAL_ARITH_TAC);
 
 (* ------------------------------------------------------------------------- *)
 (* Key property that f(a) = 0 ==> (x - a) divides p(x). Very delicate!       *)
@@ -481,7 +481,7 @@ val POLY_LINEAR_REM = store_thm("POLY_LINEAR_REM",
     LIST_INDUCT_TAC THEN
     REWRITE_TAC[POLY_ADD_CLAUSES, POLY_MUL_CLAUSES, poly_cmul] THEN
     REWRITE_TAC[REAL_ADD_RID, REAL_MUL_LID] THEN
-    SIMP_TAC real_ss []]);
+    SIMP_TAC real_ac_ss []]);
 
 val POLY_LINEAR_DIVIDES = store_thm("POLY_LINEAR_DIVIDES",
  (Term`!a p. (poly p a = &0) = (p = []) \/ ?q. p = [~a; &1] * q`),
@@ -528,7 +528,7 @@ val POLY_ROOTS_INDEX_LEMMA = store_thm("POLY_ROOTS_INDEX_LEMMA",
  (Term`!n. !p. ~(poly p = poly []) /\ (LENGTH p = n)
            ==> ?i. !x. (poly p (x) = &0) ==> ?m. m <= n /\ (x = i m)`),
   INDUCT_TAC THENL
-   [SIMP_TAC real_ss [LENGTH_NIL],
+   [SIMP_TAC real_ac_ss [LENGTH_NIL],
     REPEAT STRIP_TAC THEN ASM_CASES_TAC (Term`?a. poly p a = &0`) THENL
      [UNDISCH_TAC (Term`?a. poly p a = &0`) THEN DISCH_THEN(CHOOSE_THEN MP_TAC) THEN
       GEN_REWRITE_TAC LAND_CONV [POLY_LINEAR_DIVIDES] THEN
@@ -546,12 +546,12 @@ val POLY_ROOTS_INDEX_LEMMA = store_thm("POLY_ROOTS_INDEX_LEMMA",
       REWRITE_TAC[POLY_MUL, LE, REAL_ENTIRE] THEN
       X_GEN_TAC (Term`x:real`) THEN DISCH_THEN(DISJ_CASES_THEN MP_TAC) THENL
        [DISCH_THEN(fn th => EXISTS_TAC (Term`SUC n`) THEN MP_TAC th) THEN
-        SIMP_TAC real_ss [] THEN REWRITE_TAC[poly] THEN REAL_ARITH_TAC,
+        SIMP_TAC real_ac_ss [] THEN REWRITE_TAC[poly] THEN REAL_ARITH_TAC,
         DISCH_THEN(ANTE_RES_THEN MP_TAC) THEN
         DISCH_THEN(X_CHOOSE_THEN (Term`m:num`) STRIP_ASSUME_TAC) THEN
-        EXISTS_TAC (Term`m:num`) THEN ASM_SIMP_TAC real_ss [] THEN
+        EXISTS_TAC (Term`m:num`) THEN ASM_SIMP_TAC real_ac_ss [] THEN
         COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
-        UNDISCH_TAC (Term`m:num <= n`) THEN ASM_SIMP_TAC real_ss []],
+        UNDISCH_TAC (Term`m:num <= n`) THEN ASM_SIMP_TAC real_ac_ss []],
       UNDISCH_TAC (Term`~(?a. poly p a = &0)`) THEN
       REWRITE_TAC[NOT_EXISTS_THM] THEN DISCH_TAC
       THEN ASM_SIMP_TAC bool_ss []]]);
@@ -604,8 +604,8 @@ val POLY_ENTIRE_LEMMA = store_thm("POLY_ENTIRE_LEMMA",
   EXISTS_TAC (Term`\n:num. if n < N1 then i1(n):real else i2(n - N1)`) THEN
   X_GEN_TAC (Term`x:real`) THEN REWRITE_TAC[REAL_ENTIRE, POLY_MUL] THEN
   DISCH_THEN(DISJ_CASES_THEN (ANTE_RES_THEN (X_CHOOSE_TAC (Term`n:num`)))) THENL
-   [EXISTS_TAC (Term`n:num`) THEN ASM_SIMP_TAC real_ss [],
-    EXISTS_TAC (Term`N1 + n:num`) THEN ASM_SIMP_TAC real_ss [LT_ADD_LCANCEL]]);
+   [EXISTS_TAC (Term`n:num`) THEN ASM_SIMP_TAC real_ac_ss [],
+    EXISTS_TAC (Term`N1 + n:num`) THEN ASM_SIMP_TAC real_ac_ss [LT_ADD_LCANCEL]]);
 
 val POLY_ENTIRE = store_thm("POLY_ENTIRE",
  (Term`!p q. (poly (p * q) = poly []) = (poly p = poly []) \/ (poly q = poly [])`),
@@ -637,7 +637,7 @@ val POLY_EXP_EQ_0 = store_thm("POLY_EXP_EQ_0",
   REPEAT GEN_TAC THEN REWRITE_TAC[FUN_EQ_THM, poly] THEN
   REWRITE_TAC [LEFT_AND_FORALL_THM] THEN AP_TERM_TAC THEN ABS_TAC THEN
   SPEC_TAC((Term`n:num`),(Term`n:num`)) THEN INDUCT_TAC THEN
-  SIMP_TAC real_ss [poly_exp, poly, REAL_MUL_RZERO, REAL_ADD_RID,
+  SIMP_TAC real_ac_ss [poly_exp, poly, REAL_MUL_RZERO, REAL_ADD_RID,
     REAL_OF_NUM_EQ, NOT_SUC] THEN
   ASM_REWRITE_TAC[POLY_MUL, poly, REAL_ENTIRE] THEN
   MESON_TAC []);
@@ -662,24 +662,24 @@ val POLY_ZERO_LEMMA = store_thm("POLY_ZERO_LEMMA",
     val lemma = REWRITE_RULE[FUN_EQ_THM, poly] POLY_ROOTS_FINITE
   in
     REPEAT GEN_TAC
-    THEN SIMP_TAC real_ss [FUN_EQ_THM, poly]
+    THEN SIMP_TAC real_ac_ss [FUN_EQ_THM, poly]
     THEN ASM_CASES_TAC (Term`h = &0`)
-    THEN ASM_SIMP_TAC real_ss []
+    THEN ASM_SIMP_TAC real_ac_ss []
     THENL [
-      SIMP_TAC real_ss [REAL_ADD_LID]
+      SIMP_TAC real_ac_ss [REAL_ADD_LID]
       THEN CONV_TAC CONTRAPOS_CONV
       THEN DISCH_THEN(MP_TAC o REWRITE_RULE[lemma])
       THEN DISCH_THEN(X_CHOOSE_THEN (Term`N:num`) (X_CHOOSE_TAC (Term`i:num->real`)))
       THEN MP_TAC
         (SPECL [(Term`i:num->real`), (Term`N:num`), (Term`\x. poly t x = &0`)] FINITE_LEMMA)
-      THEN ASM_SIMP_TAC real_ss []
+      THEN ASM_SIMP_TAC real_ac_ss []
       THEN DISCH_THEN(X_CHOOSE_TAC (Term`a:real`))
       THEN EXISTS_TAC (Term`abs(a) + &1`)
       THEN POP_ASSUM (MP_TAC o SPEC (Term`abs(a) + &1`))
       THEN REWRITE_TAC [REAL_ENTIRE]
       THEN REAL_ARITH_TAC,
       EXISTS_TAC (Term`&0`)
-      THEN ASM_SIMP_TAC real_ss []
+      THEN ASM_SIMP_TAC real_ac_ss []
     ]
   end);
 
@@ -845,7 +845,7 @@ val POLY_ORDER_EXISTS = store_thm("POLY_ORDER_EXISTS",
     (Term`!d. !p. (LENGTH p = d) /\ ~(poly p = poly [])
            ==> ?n q. (p = mulexp (n:num) [~a; &1] q) /\
                      ~(poly q a = &0)`) MP_TAC
-  THENL [ INDUCT_TAC THENL [SIMP_TAC real_ss [LENGTH_NIL], ALL_TAC]
+  THENL [ INDUCT_TAC THENL [SIMP_TAC real_ac_ss [LENGTH_NIL], ALL_TAC]
     THEN X_GEN_TAC (Term`p:real list`)
     THEN ASM_CASES_TAC (Term`poly p a = &0`)
     THENL [
@@ -1074,7 +1074,7 @@ val ORDER_MUL = store_thm("ORDER_MUL",
     ]
     THEN REWRITE_TAC[FUN_EQ_THM, POLY_MUL, POLY_ADD]
     THEN FIRST_ASSUM(UNDISCH_TAC o assert is_forall o concl)
-    THEN SIMP_TAC real_ss []
+    THEN SIMP_TAC real_ac_ss []
   ]);
 
 val ORDER_DIFF = store_thm("ORDER_DIFF",
@@ -1188,7 +1188,7 @@ val POLY_SQUAREFREE_DECOMP_ORDER = store_thm("POLY_SQUAREFREE_DECOMP_ORDER",
       DISCH_THEN(X_CHOOSE_THEN (Term`g:real list`) ASSUME_TAC) THEN
       EXISTS_TAC (Term`r * g + s * f`)
       THEN GEN_TAC
-      THEN SIMP_TAC real_ss [POLY_MUL, POLY_ADD, REAL_LDISTRIB]
+      THEN SIMP_TAC real_ac_ss [POLY_MUL, POLY_ADD, REAL_LDISTRIB]
       THEN ASM_REWRITE_TAC [] THEN REAL_ARITH_TAC],
     ARITH_TAC]);
 
@@ -1233,7 +1233,7 @@ val RSQUAREFREE_DECOMP = store_thm("RSQUAREFREE_DECOMP",
   DISCH_THEN(X_CHOOSE_THEN (Term`q:real list`) MP_TAC o SPEC (Term`a:real`)) THEN
   FIRST_ASSUM(MP_TAC o GEN_REWRITE_RULE I [ORDER_ROOT]) THEN
   FIRST_ASSUM(DISJ_CASES_TAC o SPEC (Term`a:real`)) THEN
-  ASM_SIMP_TAC real_ss [] THEN
+  ASM_SIMP_TAC real_ac_ss [] THEN
   DISCH_THEN(CONJUNCTS_THEN2 SUBST_ALL_TAC ASSUME_TAC) THEN
   EXISTS_TAC (Term`q:real list`) THEN CONJ_TAC THENL
    [REWRITE_TAC[FUN_EQ_THM, POLY_MUL] THEN GEN_TAC THEN
@@ -1271,7 +1271,7 @@ val POLY_SQUAREFREE_DECOMP = store_thm("POLY_SQUAREFREE_DECOMP",
   UNDISCH_TAC (Term`poly p = poly (q * d)`) THEN
   DISCH_THEN(SUBST_ALL_TAC o SYM) THEN
   ASM_REWRITE_TAC[rsquarefree, ORDER_ROOT] THEN
-  CONJ_TAC THEN GEN_TAC THEN COND_CASES_TAC THEN ASM_SIMP_TAC real_ss []);
+  CONJ_TAC THEN GEN_TAC THEN COND_CASES_TAC THEN ASM_SIMP_TAC real_ac_ss []);
 
 (* ------------------------------------------------------------------------- *)
 (* Normalization of a polynomial.                                            *)

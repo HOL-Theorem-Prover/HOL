@@ -3,7 +3,7 @@ open HolKernel Parse boolLib bossLib arithmeticTheory realTheory
      rich_listTheory pairTheory combinTheory realLib probTools
      boolean_sequenceTheory boolean_sequenceTools prob_extraTheory
      prob_extraTools prob_canonTheory prob_canonTools
-     prob_algebraTheory probTheory state_transformerTheory;
+     prob_algebraTheory probTheory state_transformerTheory realSimps;
 
 val _ = new_theory "prob_indep";
 
@@ -47,7 +47,7 @@ val INDEP_SET_BASIC = store_thm
   ("INDEP_SET_BASIC",
    ``!p. measurable p ==> indep_set {} p /\ indep_set UNIV p``,
    PSET_TAC [indep_set_def, PROB_BASIC, MEASURABLE_BASIC]
-   ++ RW_TAC real_ss []);
+   ++ RW_TAC real_ac_ss []);
 
 val INDEP_SET_SYM = store_thm
   ("INDEP_SET_SYM",

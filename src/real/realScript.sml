@@ -31,7 +31,7 @@ open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
      arithmeticTheory numTheory prim_recTheory
      mesonLib tautLib simpLib Ho_Rewrite Arithconv
      jrhUtils Canon_Port AC hratTheory hrealTheory realaxTheory
-     BasicProvers SingleStep;
+     BasicProvers SingleStep TotalDefn;
 
 val _ = new_theory "real";
 
@@ -2525,6 +2525,222 @@ val REAL_ABS_TRIANGLE = save_thm ("REAL_ABS_TRIANGLE", ABS_TRIANGLE);
 val REAL_ABS_MUL = save_thm ("REAL_ABS_MUL", ABS_MUL);
 
 val REAL_ABS_POS = save_thm ("REAL_ABS_POS", ABS_POS);
+
+(* ------------------------------------------------------------------------- *)
+(* Define a constant for extracting "the positive part" of real numbers.     *)
+(* ------------------------------------------------------------------------- *)
+
+val pos_def = Define `pos (x : real) = if 0 <= x then x else 0`;
+
+val REAL_POS_POS = store_thm
+  ("REAL_POS_POS",
+   ``!x. 0 <= pos x``,
+   RW_TAC boolSimps.bool_ss [pos_def, REAL_LE_REFL]);
+
+val REAL_POS_ID = store_thm
+  ("REAL_POS_ID",
+   ``!x. 0 <= x ==> (pos x = x)``,
+   RW_TAC boolSimps.bool_ss [pos_def]);
+
+val REAL_POS_INFLATE = store_thm
+  ("REAL_POS_INFLATE",
+   ``!x. x <= pos x``,
+   RW_TAC boolSimps.bool_ss [pos_def, REAL_LE_REFL]
+   THEN PROVE_TAC [REAL_LE_TOTAL]);
+
+val REAL_POS_MONO = store_thm
+  ("REAL_POS_MONO",
+   ``!x y. x <= y ==> pos x <= pos y``,
+   RW_TAC boolSimps.bool_ss [pos_def, REAL_LE_REFL]
+   THEN PROVE_TAC [REAL_LE_TOTAL, REAL_LE_TRANS]);
+
+(* ------------------------------------------------------------------------- *)
+(* Define the minimum of two real numbers                                    *)
+(* ------------------------------------------------------------------------- *)
+
+val min_def = Define `min (x : real) y = if x <= y then x else y`;
+
+val REAL_MIN_REFL = store_thm
+  ("REAL_MIN_REFL",
+   ``!x. min x x = x``,
+   RW_TAC boolSimps.bool_ss [min_def]);
+
+val REAL_LE_MIN = store_thm
+  ("REAL_LE_MIN",
+   ``!x y z. z <= x /\ z <= y ==> z <= min x y``,
+   RW_TAC boolSimps.bool_ss [min_def]);
+
+val REAL_MIN_LE = store_thm
+  ("REAL_MIN_LE",
+   ``!x y. min x y <= x /\ min x y <= y``,
+   RW_TAC boolSimps.bool_ss [min_def, REAL_LE_REFL]
+   THEN PROVE_TAC [REAL_LE_TOTAL]);
+
+val REAL_MIN_ALT = store_thm
+  ("REAL_MIN_ALT",
+   ``!x y. (x <= y ==> (min x y = x)) /\ (y <= x ==> (min x y = y))``,
+   RW_TAC boolSimps.bool_ss [min_def]
+   THEN PROVE_TAC [REAL_LE_ANTISYM]);
+
+val REAL_MIN_LE_LIN = store_thm
+  ("REAL_MIN_LE_LIN",
+   ``!x y z. 0 <= z /\ z <= 1 ==> min x y <= z * x + (1 - z) * y``,
+   RW_TAC boolSimps.bool_ss []
+   THEN MP_TAC (Q.SPECL [`x`, `y`] REAL_LE_TOTAL)
+   THEN (STRIP_TAC THEN RW_TAC boolSimps.bool_ss [REAL_MIN_ALT])
+   THENL [MATCH_MP_TAC REAL_LE_TRANS
+          THEN Q.EXISTS_TAC `z * x + (1 - z) * x`
+          THEN (CONJ_TAC THEN1
+                RW_TAC boolSimps.bool_ss
+                [GSYM REAL_RDISTRIB, REAL_SUB_ADD2, REAL_LE_REFL, REAL_MUL_LID])
+          THEN MATCH_MP_TAC REAL_LE_ADD2
+          THEN (CONJ_TAC THEN1 PROVE_TAC [REAL_LE_REFL])
+          THEN MATCH_MP_TAC REAL_LE_LMUL_IMP
+          THEN ASM_REWRITE_TAC [REAL_SUB_LE],
+          MATCH_MP_TAC REAL_LE_TRANS
+          THEN Q.EXISTS_TAC `z * y + (1 - z) * y`
+          THEN (CONJ_TAC THEN1
+                RW_TAC boolSimps.bool_ss
+                [GSYM REAL_RDISTRIB, REAL_SUB_ADD2, REAL_LE_REFL, REAL_MUL_LID])
+          THEN MATCH_MP_TAC REAL_LE_ADD2
+          THEN (REVERSE CONJ_TAC THEN1 PROVE_TAC [REAL_LE_REFL])
+          THEN MATCH_MP_TAC REAL_LE_LMUL_IMP
+          THEN ASM_REWRITE_TAC []]);
+
+(* ------------------------------------------------------------------------- *)
+(* Theorems to put in the real simpset                                       *)
+(* ------------------------------------------------------------------------- *)
+
+val REAL_MUL_SUB2_CANCEL = store_thm
+  ("REAL_MUL_SUB2_CANCEL",
+   ``!z x y : real. x * y + (z - x) * y = z * y``,
+   RW_TAC boolSimps.bool_ss [GSYM REAL_RDISTRIB, REAL_SUB_ADD2]);
+
+val REAL_MUL_SUB1_CANCEL = store_thm
+  ("REAL_MUL_SUB1_CANCEL",
+   ``!z x y : real. y * x + y * (z - x) = y * z``,
+   RW_TAC boolSimps.bool_ss [GSYM REAL_LDISTRIB, REAL_SUB_ADD2]);
+
+val REAL_NEG_HALF = store_thm
+  ("REAL_NEG_HALF",
+   ``!x : real. x - x / 2 = x / 2``,
+   STRIP_TAC
+   THEN (SUFF_TAC ``((x:real) - x / 2) + x / 2 = x / 2 + x / 2``
+         THEN1 RW_TAC boolSimps.bool_ss [REAL_EQ_RADD])
+   THEN RW_TAC boolSimps.bool_ss [REAL_SUB_ADD, REAL_HALF_DOUBLE]);
+
+val REAL_NEG_THIRD = store_thm
+  ("REAL_NEG_THIRD",
+   ``!x : real. x - x / 3 = (2 * x) / 3``,
+   STRIP_TAC
+   THEN MATCH_MP_TAC REAL_EQ_LMUL_IMP
+   THEN Q.EXISTS_TAC `3`
+   THEN (KNOW_TAC ``~(3r = 0)``
+         THEN1 (REWRITE_TAC [REAL_INJ] THEN numLib.ARITH_TAC))
+   THEN RW_TAC boolSimps.bool_ss [REAL_SUB_LDISTRIB, REAL_DIV_LMUL]
+   THEN (KNOW_TAC ``!x y z : real. (y = 1 * x + z) ==> (y - x = z)``
+         THEN1 RW_TAC boolSimps.bool_ss [REAL_MUL_LID, REAL_ADD_SUB])
+   THEN DISCH_THEN MATCH_MP_TAC
+   THEN RW_TAC boolSimps.bool_ss [GSYM REAL_ADD_RDISTRIB, REAL_ADD,
+                                  REAL_EQ_RMUL, REAL_INJ]
+   THEN DISJ2_TAC
+   THEN numLib.ARITH_TAC);
+
+val REAL_DIV_CANCEL2 = store_thm
+  ("REAL_DIV_CANCEL2",
+   ``!x y z : real. ~(x = 0) ==> ((y / x) / (z / x) = y / z)``,
+   RW_TAC boolSimps.bool_ss [real_div]
+   THEN (Cases_on `y = 0` THEN1 RW_TAC boolSimps.bool_ss [REAL_MUL_LZERO])
+   THEN (Cases_on `z = 0`
+         THEN1 RW_TAC boolSimps.bool_ss
+               [REAL_INV_0, REAL_MUL_RZERO, REAL_MUL_LZERO])
+   THEN RW_TAC boolSimps.bool_ss [REAL_INV_MUL, REAL_INV_EQ_0, REAL_INVINV]
+   THEN (KNOW_TAC ``!a b c d : real. a * b * (c * d) = (a * c) * (b * d)``
+         THEN1 metisLib.METIS_TAC [REAL_MUL_SYM, REAL_MUL_ASSOC])
+   THEN DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
+   THEN RW_TAC boolSimps.bool_ss [REAL_MUL_LINV, REAL_MUL_RID]);
+
+val REAL_DIV2_CANCEL2 = save_thm
+  ("REAL_DIV2_CANCEL2",
+   SIMP_RULE boolSimps.bool_ss [numLib.ARITH_PROVE ``~(2n = 0)``, REAL_INJ]
+   (Q.SPEC `2` REAL_DIV_CANCEL2));
+
+val REAL_DIV3_CANCEL2 = save_thm
+  ("REAL_DIV3_CANCEL2",
+   SIMP_RULE boolSimps.bool_ss [numLib.ARITH_PROVE ``~(3n = 0)``, REAL_INJ]
+   (Q.SPEC `3` REAL_DIV_CANCEL2));
+
+val REAL_DIV_MUL_CANCEL = store_thm
+  ("REAL_DIV_MUL_CANCEL",
+   ``!x y z : real. ~(x = 0) ==> ((y / x) * (x / z) = y / z)``,
+   RW_TAC boolSimps.bool_ss [real_div]
+   THEN (KNOW_TAC ``!a b c d : real. a * b * (c * d) = (a * d) * (b * c)``
+         THEN1 metisLib.METIS_TAC [REAL_MUL_SYM, REAL_MUL_ASSOC])
+   THEN DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
+   THEN RW_TAC boolSimps.bool_ss [REAL_MUL_LINV, REAL_MUL_RID]);
+
+val REAL_DIV2_MUL_CANCEL = save_thm
+  ("REAL_DIV2_MUL_CANCEL",
+   SIMP_RULE boolSimps.bool_ss [numLib.ARITH_PROVE ``~(2n = 0)``, REAL_INJ]
+   (Q.SPEC `2` REAL_DIV_MUL_CANCEL));
+
+val REAL_DIV3_MUL_CANCEL = save_thm
+  ("REAL_DIV3_MUL_CANCEL",
+   SIMP_RULE boolSimps.bool_ss [numLib.ARITH_PROVE ``~(3n = 0)``, REAL_INJ]
+   (Q.SPEC `3` REAL_DIV_MUL_CANCEL));
+
+val REAL_HALF_BETWEEN = store_thm
+  ("REAL_HALF_BETWEEN",
+   ``((0:real) <  1 / 2 /\ 1 / 2 <  (1:real)) /\
+     ((0:real) <= 1 / 2 /\ 1 / 2 <= (1:real))``,
+   MATCH_MP_TAC (PROVE [] ``(x ==> y) /\ x ==> x /\ y``)
+   THEN (CONJ_TAC THEN1 PROVE_TAC [REAL_LE_TOTAL, real_lt])
+   THEN RW_TAC boolSimps.bool_ss [real_lt]
+   THEN MP_TAC (Q.SPEC `2` REAL_LE_LMUL)
+   THEN (KNOW_TAC ``0r < 2 /\ ~(2r = 0)``
+         THEN1 (REWRITE_TAC [REAL_LT, REAL_INJ] THEN numLib.ARITH_TAC))
+   THEN STRIP_TAC
+   THEN ASM_REWRITE_TAC []
+   THEN DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
+   THEN ONCE_REWRITE_TAC [REAL_MUL_SYM]
+   THEN RW_TAC boolSimps.bool_ss [real_div, GSYM REAL_MUL_ASSOC]
+   THEN RW_TAC boolSimps.bool_ss [REAL_MUL_LINV, REAL_INJ]
+   THEN RW_TAC boolSimps.bool_ss [REAL_MUL, REAL_LE]
+   THEN numLib.ARITH_TAC);
+
+val REAL_THIRDS_BETWEEN = store_thm
+  ("REAL_THIRDS_BETWEEN",
+   ``((0:real) <  1 / 3 /\ 1 / 3 <  (1:real) /\
+      (0:real) <  2 / 3 /\ 2 / 3 <  (1:real)) /\
+     ((0:real) <= 1 / 3 /\ 1 / 3 <= (1:real) /\
+      (0:real) <= 2 / 3 /\ 2 / 3 <= (1:real))``,
+   MATCH_MP_TAC (PROVE [] ``(x ==> y) /\ x ==> x /\ y``)
+   THEN (CONJ_TAC THEN1 PROVE_TAC [REAL_LE_TOTAL, real_lt])
+   THEN RW_TAC boolSimps.bool_ss [real_lt]
+   THEN MP_TAC (Q.SPEC `3` REAL_LE_LMUL)
+   THEN (KNOW_TAC ``0r < 3 /\ ~(3r = 0)``
+         THEN1 (REWRITE_TAC [REAL_LT, REAL_INJ] THEN numLib.ARITH_TAC))
+   THEN STRIP_TAC
+   THEN ASM_REWRITE_TAC []
+   THEN DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
+   THEN ONCE_REWRITE_TAC [REAL_MUL_SYM]
+   THEN RW_TAC boolSimps.bool_ss [real_div, GSYM REAL_MUL_ASSOC]
+   THEN RW_TAC boolSimps.bool_ss [REAL_MUL_LINV, REAL_INJ]
+   THEN RW_TAC boolSimps.bool_ss [REAL_MUL, REAL_LE]
+   THEN numLib.ARITH_TAC);
+
+val REAL_DIV_ADD = store_thm
+  ("REAL_DIV_ADD",
+   ``!x y z : real. y / x + z / x = (y + z) / x``,
+   RW_TAC boolSimps.bool_ss [real_div, REAL_ADD_RDISTRIB]);
+
+val REAL_LE_SUB_CANCEL2 = store_thm
+  ("REAL_LE_SUB_CANCEL2",
+   ``!x y z : real. x - z <= y - z = x <= y``,
+   REPEAT GEN_TAC
+   THEN (SUFF_TAC ``((x:real) - z) + z <= (y - z) + z = x <= y``
+         THEN1 RW_TAC boolSimps.bool_ss [REAL_LE_RADD])
+   THEN RW_TAC boolSimps.bool_ss [REAL_SUB_ADD]);
 
 val _ = export_theory();
 

@@ -33,7 +33,7 @@ open bossLib arithmeticTheory numTheory realTheory seqTheory pred_setTheory
      listTheory rich_listTheory pairTheory combinTheory realLib
      probTools boolean_sequenceTheory boolean_sequenceTools prob_extraTheory
      prob_extraTools prob_canonTheory prob_canonTools prob_algebraTheory
-     probTheory state_transformerTheory prob_indepTheory;
+     probTheory state_transformerTheory prob_indepTheory realSimps;
 
 infixr 0 ++ << || ORELSEC ##;
 infix 1 >> |->;
@@ -215,7 +215,7 @@ val PROB_UNIF = store_thm
        ++ ASM_REWRITE_TAC []
        ++ KILL_ALL_TAC
        ++ RW_TAC std_ss [unif_bound_def, pow, DIV_TWO_EXP]
-       ++ RW_TAC real_ss [])
+       ++ RW_TAC real_ac_ss [])
    ++ KILL_ALL_TAC
    ++ RW_TAC std_ss [unif_def]
    ++ KNOW_TAC `!s. unif (SUC v DIV 2) s
@@ -253,7 +253,7 @@ val PROB_UNIF = store_thm
     ++ RW_TAC std_ss [INDEP_UNIF, MEASURABLE_BASIC]
     ++ KILL_ALL_TAC
     ++ MP_TAC (Q.SPEC `F` (CONJUNCT2 (CONJUNCT2 PROB_BASIC)))
-    ++ RW_TAC real_ss [o_DEF]
+    ++ RW_TAC real_ac_ss [o_DEF]
     ++ (CONV_TAC o RAND_CONV o ONCE_REWRITE_CONV) [EQ_SYM_EQ]
     ++ RW_TAC std_ss [],
     KNOW_TAC `!k. ~(2 * k = SUC (2 * m))`
@@ -275,7 +275,7 @@ val PROB_UNIF = store_thm
     ++ RW_TAC std_ss [INDEP_UNIF, MEASURABLE_BASIC]
     ++ KILL_ALL_TAC
     ++ MP_TAC (Q.SPEC `T` (CONJUNCT2 (CONJUNCT2 PROB_BASIC)))
-    ++ RW_TAC real_ss [o_DEF]
+    ++ RW_TAC real_ac_ss [o_DEF]
     ++ (CONV_TAC o RAND_CONV o ONCE_REWRITE_CONV) [EQ_SYM_EQ]
     ++ RW_TAC std_ss []]);
 
@@ -303,7 +303,7 @@ val PROB_UNIF_BOUND = store_thm
    STRIP_TAC
    ++ Induct
    >> (RW_TAC arith_ss [GSYM EMPTY_DEF, PROB_BASIC]
-       ++ RW_TAC real_ss [])
+       ++ RW_TAC real_ac_ss [])
    ++ RW_TAC std_ss []
    ++ Q.PAT_ASSUM `X ==> Y` MP_TAC
    ++ KNOW_TAC `k <= 2 EXP unif_bound n` >> RW_TAC arith_ss []
@@ -324,8 +324,8 @@ val PROB_UNIF_BOUND = store_thm
    ++ KNOW_TAC `k < 2 EXP unif_bound n` >> DECIDE_TAC
    ++ POP_ASSUM (fn th => RW_TAC std_ss [th, o_DEF, PROB_UNIF])
    ++ KNOW_TAC `&(SUC k) = &k + 1`
-   >> (RW_TAC real_ss [REAL_ADD,REAL_INJ])
-   ++ POP_ASSUM (fn th => RW_TAC real_ss [th, REAL_ADD_RDISTRIB]));
+   >> (RW_TAC real_ac_ss [REAL_ADD,REAL_INJ])
+   ++ POP_ASSUM (fn th => RW_TAC std_ss [th, REAL_ADD_RDISTRIB, REAL_MUL_LID]));
 
 val PROB_UNIF_GOOD = store_thm
   ("PROB_UNIF_GOOD",
@@ -369,7 +369,7 @@ val PROB_UNIFORM_LOWER_BOUND = store_thm
    >> (RW_TAC arith_ss []
        ++ POP_ASSUM (MP_TAC o Q.SPEC `0`)
        ++ RW_TAC arith_ss [DECIDE ``!m. m < 1n = (m = 0)``]
-       ++ RW_TAC real_ss [])
+       ++ RW_TAC real_ac_ss [])
    ++ RW_TAC arith_ss []
    ++ KNOW_TAC `indep (uniform t (SUC n))` >> RW_TAC std_ss [INDEP_UNIFORM]
    ++ Q.PAT_ASSUM `X ==> Y` MP_TAC
@@ -381,7 +381,7 @@ val PROB_UNIFORM_LOWER_BOUND = store_thm
    >> (RW_TAC arith_ss [REAL_ADD,REAL_INJ] ++ DECIDE_TAC)
    ++ RW_TAC std_ss [REAL_ADD_RDISTRIB]
    ++ MATCH_MP_TAC REAL_LT_ADD2
-   ++ RW_TAC real_ss []);
+   ++ RW_TAC real_ac_ss []);
 
 val PROB_UNIFORM_UPPER_BOUND = store_thm
   ("PROB_UNIFORM_UPPER_BOUND",
@@ -393,7 +393,7 @@ val PROB_UNIFORM_UPPER_BOUND = store_thm
    >> (RW_TAC arith_ss []
        ++ POP_ASSUM (MP_TAC o Q.SPEC `0`)
        ++ RW_TAC arith_ss [DECIDE ``!m. m < 1n = (m = 0)``]
-       ++ RW_TAC real_ss [])
+       ++ RW_TAC real_ac_ss [])
    ++ RW_TAC arith_ss []
    ++ KNOW_TAC `indep (uniform t (SUC n))` >> RW_TAC std_ss [INDEP_UNIFORM]
    ++ Q.PAT_ASSUM `X ==> Y` MP_TAC
@@ -405,7 +405,7 @@ val PROB_UNIFORM_UPPER_BOUND = store_thm
    >> (RW_TAC arith_ss [REAL_ADD,REAL_INJ] ++ DECIDE_TAC)
    ++ RW_TAC std_ss [REAL_ADD_RDISTRIB]
    ++ MATCH_MP_TAC REAL_LT_ADD2
-   ++ RW_TAC real_ss []);
+   ++ RW_TAC real_ac_ss []);
 
 val PROB_UNIFORM_PAIR_SUC = store_thm
   ("PROB_UNIFORM_PAIR_SUC",
@@ -547,7 +547,7 @@ val PROB_UNIFORM_PAIR_SUC = store_thm
               (INST_TYPE [alpha |-> numSyntax.num] INDEP_MEASURABLE1))
    ++ RW_TAC std_ss [INDEP_UNIF, o_ASSOC]
    ++ KILL_ALL_TAC
-   ++ RW_TAC real_ss [o_DEF]
+   ++ RW_TAC real_ac_ss [o_DEF]
    ++ MP_TAC (Q.SPEC `n` PROB_UNIF_GOOD)
    ++ RW_TAC std_ss [ONE_MINUS_HALF]);
 

@@ -17,7 +17,7 @@ if !show_assums then () else (
 *)
 
 open bossLib arithmeticTheory realTheory seqTheory pred_setTheory pairLib
-     listTheory rich_listTheory pairTheory realLib probTools;
+     listTheory rich_listTheory pairTheory realLib probTools realSimps;
 
 infixr 0 ++ << || ORELSEC ##;
 infix 1 >>;
@@ -332,22 +332,22 @@ val X_HALF_HALF = store_thm
 val REAL_SUP_LE_X = store_thm
   ("REAL_SUP_LE_X",
    ``!P x. (?r. P r) /\ (!r. P r ==> r <= x) ==> sup P <= x``,
-   RW_TAC real_ss []
+   RW_TAC real_ac_ss []
    ++ SUFF_TAC `~(x < sup P)` >> REAL_ARITH_TAC
    ++ STRIP_TAC
    ++ MP_TAC (SPEC ``P:real->bool`` REAL_SUP_LE)
-   ++ RW_TAC real_ss [] <<
+   ++ RW_TAC real_ac_ss [] <<
    [PROVE_TAC [],
     PROVE_TAC [],
     EXISTS_TAC ``x:real``
-    ++ RW_TAC real_ss []
+    ++ RW_TAC real_ac_ss []
     ++ PROVE_TAC [real_lte]]);
 
 val REAL_X_LE_SUP = store_thm
   ("REAL_X_LE_SUP",
    ``!P x. (?r. P r) /\ (?z. !r. P r ==> r <= z) /\ (?r. P r /\ x <= r)
            ==> x <= sup P``,
-   RW_TAC real_ss []
+   RW_TAC real_ac_ss []
    ++ SUFF_TAC `!y. P y ==> y <= sup P` >> PROVE_TAC [REAL_LE_TRANS]
    ++ MATCH_MP_TAC REAL_SUP_UBOUND_LE
    ++ PROVE_TAC []);
@@ -397,7 +397,7 @@ val ONE_MINUS_HALF = store_thm
   ("ONE_MINUS_HALF",
    ``1 - 1 / 2 = 1 / 2``,
    MP_TAC (Q.SPEC `1` X_HALF_HALF)
-   ++ RW_TAC real_ss []
+   ++ RW_TAC real_ac_ss []
    ++ MATCH_MP_TAC (REAL_ARITH ``(x + 1 / 2 = y + 1 / 2) ==> (x = y)``)
    ++ RW_TAC std_ss [REAL_SUB_ADD]);
 
@@ -412,8 +412,8 @@ val REAL_POW = store_thm
   ("REAL_POW",
    ``!m n. &m pow n = &(m EXP n)``,
    STRIP_TAC
-   ++ Induct >> RW_TAC real_ss [pow, EXP]
-   ++ RW_TAC real_ss [pow, EXP, REAL_MUL]);
+   ++ Induct >> RW_TAC real_ac_ss [pow, EXP]
+   ++ RW_TAC real_ac_ss [pow, EXP, REAL_MUL]);
 
 val POW_HALF_EXP = store_thm
   ("POW_HALF_EXP",
@@ -437,7 +437,7 @@ val REAL_LE_INV_LE = store_thm
 val INV_SUC_POS = store_thm
   ("INV_SUC_POS",
    ``!n. 0 < 1 / & (SUC n)``,
-   RW_TAC real_ss [GSYM REAL_INV_1OVER, REAL_LT_INV_EQ, REAL_LT]);
+   RW_TAC real_ac_ss [GSYM REAL_INV_1OVER, REAL_LT_INV_EQ, REAL_LT]);
 
 val INV_SUC_MAX = store_thm
   ("INV_SUC_MAX",

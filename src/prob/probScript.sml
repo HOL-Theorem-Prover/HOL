@@ -3,7 +3,7 @@ open HolKernel Parse boolLib bossLib arithmeticTheory realTheory
      rich_listTheory pairTheory combinTheory realLib probTools
      boolean_sequenceTheory boolean_sequenceTools prob_extraTheory
      prob_extraTools prob_canonTheory prob_canonTools
-     prob_algebraTheory;
+     prob_algebraTheory realSimps;
 
 val _ = new_theory "prob";
 
@@ -51,7 +51,7 @@ val ALG_MEASURE_BASIC = store_thm
   ("ALG_MEASURE_BASIC",
    ``(alg_measure [] = 0) /\ (alg_measure [[]] = 1)
      /\ (!b. alg_measure [[b]] = 1 / 2)``,
-   RW_TAC real_ss [alg_measure_def, LENGTH, pow]);
+   RW_TAC real_ac_ss [alg_measure_def, LENGTH, pow]);
 
 val ALG_MEASURE_POS = store_thm
   ("ALG_MEASURE_POS",
@@ -123,9 +123,8 @@ val ALG_CANON1_MONO = store_thm
 val ALG_CANON_MERGE_MONO = store_thm
   ("ALG_CANON_MERGE_MONO",
    ``!l b. alg_measure (alg_canon_merge l b) <= alg_measure (l::b)``,
-   Induct_on `b` >> RW_TAC real_ss [alg_canon_merge_def, REAL_LE_REFL]
-   ++ REVERSE (RW_TAC real_ss [alg_canon_merge_def, alg_twin_def])
-   >> RW_TAC real_ss [REAL_LE_REFL, alg_measure_def]
+   Induct_on `b` >> RW_TAC real_ac_ss [alg_canon_merge_def, REAL_LE_REFL]
+   ++ RW_TAC real_ac_ss [alg_canon_merge_def, alg_twin_def]
    ++ RW_TAC std_ss [BUTLAST]
    ++ SUFF_TAC `alg_measure (l'::b) <= alg_measure (SNOC T l'::SNOC F l'::b)`
    >> PROVE_TAC [REAL_LE_TRANS]
@@ -286,7 +285,7 @@ val ALG_MEASURE_ADDITIVE = store_thm
    ++ PSET_TAC [ALG_MEASURE_BASIC, ALGEBRA_EMBED_BASIC] <<
    [KNOW_TAC `c = []` >> PROVE_TAC [ALGEBRA_CANON_EMBED_EMPTY]
     ++ KNOW_TAC `d = []` >> PROVE_TAC [ALGEBRA_CANON_EMBED_EMPTY]
-    ++ RW_TAC real_ss [ALG_MEASURE_BASIC],
+    ++ RW_TAC real_ac_ss [ALG_MEASURE_BASIC],
     MP_TAC (Q.SPEC `c` ALG_MEASURE_COMPL)
     ++ ASM_REWRITE_TAC []
     ++ DISCH_THEN (MP_TAC o Q.SPEC `d`)
@@ -297,7 +296,7 @@ val ALG_MEASURE_ADDITIVE = store_thm
     ++ HO_MATCH_MP_TAC ALGEBRA_CANON_CASES
     ++ PSET_TAC [ALG_MEASURE_BASIC, ALGEBRA_EMBED_BASIC] <<
     [SUFF_TAC `d = APPEND (MAP (CONS T) l1) (MAP (CONS F) l2)`
-     >> RW_TAC real_ss []
+     >> RW_TAC real_ac_ss []
      ++ SUFF_TAC `alg_canon d
                   = alg_canon (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))`
      >> PROVE_TAC [algebra_canon_def]
@@ -311,7 +310,7 @@ val ALG_MEASURE_ADDITIVE = store_thm
      ++ PSET_TAC [ALG_MEASURE_BASIC, ALGEBRA_EMBED_BASIC] <<
      [SUFF_TAC `APPEND (MAP (CONS T) l1) (MAP (CONS F) l2) =
                 APPEND (MAP (CONS T) l1') (MAP (CONS F) l2')`
-      >> RW_TAC real_ss []
+      >> RW_TAC real_ac_ss []
       ++ SUFF_TAC `alg_canon (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2)) =
                    alg_canon (APPEND (MAP (CONS T) l1') (MAP (CONS F) l2'))`
       >> PSET_TAC [algebra_canon_def]
@@ -324,7 +323,7 @@ val ALG_MEASURE_ADDITIVE = store_thm
                    ALGEBRA_EMBED_APPEND]
       ++ SUFF_TAC `(alg_measure l1 = alg_measure l1' + alg_measure l1'') /\
                    (alg_measure l2 = alg_measure l2' + alg_measure l2'')`
-      >> RW_TAC real_ss []
+      >> RW_TAC real_ac_ss []
       ++ CONJ_TAC <<
       [SUFF_TAC `(!v. ~algebra_embed l1' v \/ ~algebra_embed l1'' v) /\
          (!v. algebra_embed l1 v = algebra_embed l1' v \/ algebra_embed l1'' v)`
@@ -422,10 +421,10 @@ val PROB_LE_X = store_thm
    REPEAT STRIP_TAC
    ++ RW_TAC std_ss [prob_def]
    ++ MATCH_MP_TAC REAL_SUP_LE_X
-   ++ CONJ_TAC >> RW_TAC real_ss [PROB_SUP_EXISTS1]
-   ++ RW_TAC real_ss []
+   ++ CONJ_TAC >> RW_TAC real_ac_ss [PROB_SUP_EXISTS1]
+   ++ RW_TAC real_ac_ss []
    ++ SUFF_TAC `prob (algebra_embed b) <= x`
-     >> RW_TAC real_ss [PROB_ALGEBRA]
+     >> RW_TAC real_ac_ss [PROB_ALGEBRA]
    ++ SUFF_TAC `measurable (algebra_embed b)` >> PROVE_TAC []
    ++ PROVE_TAC [measurable_def]);    
 
@@ -438,9 +437,9 @@ val X_LE_PROB = store_thm
    ++ RW_TAC std_ss [PROB_ALGEBRA]
    ++ RW_TAC std_ss [prob_def]
    ++ MATCH_MP_TAC REAL_X_LE_SUP
-   ++ CONJ_TAC >> RW_TAC real_ss [PROB_SUP_EXISTS1]
-   ++ CONJ_TAC >> RW_TAC real_ss [PROB_SUP_EXISTS2]
-   ++ RW_TAC real_ss []
+   ++ CONJ_TAC >> RW_TAC real_ac_ss [PROB_SUP_EXISTS1]
+   ++ CONJ_TAC >> RW_TAC real_ac_ss [PROB_SUP_EXISTS2]
+   ++ RW_TAC real_ac_ss []
    ++ EXISTS_TAC ``algebra_measure b``
    ++ PROVE_TAC []);
 
@@ -466,7 +465,7 @@ val PROB_ALG = store_thm
    >> PSET_TAC [algebra_embed_def]
    ++ RW_TAC std_ss [PROB_ALGEBRA, ALGEBRA_MEASURE_DEF_ALT]
    ++ RW_TAC prob_canon_ss []
-   ++ RW_TAC real_ss [alg_measure_def]);
+   ++ RW_TAC real_ac_ss [alg_measure_def]);
 
 val PROB_STL = store_thm
   ("PROB_STL",
