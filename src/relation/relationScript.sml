@@ -149,31 +149,51 @@ val RC_RTC = store_thm(
   ``!R (x:'a) y. RC R x y ==> RTC R x y``,
   MESON_TAC [RC_DEF, RTC_RULES]);
 
-val nice_tc_asm =
+val tc = ``tc : ('a -> 'a -> bool) -> ('a -> 'a -> bool)``
+val tc_left_asm =
   ``tc = \R a b. !P. (!x y. R x y ==> P x y) /\
                      (!x y z. R x y /\ P y z ==> P x z) ==>
                      P a b``;
+val tc_right_asm =
+  ``tc = \R a b. !P. (!x y. R x y ==> P x y) /\
+                     (!x y z. P x y /\ R y z ==> P x z) ==>
+                     P a b``;
 
-val tc_rules0 = prove(
-  ``^nice_tc_asm ==> (!x y. R x y ==> tc R x y) /\
+val tc_left_rules0 = prove(
+  ``^tc_left_asm ==> (!x y. R x y ==> tc R x y) /\
                      (!x y z. R x y /\ tc R y z ==> tc R x z)``,
   STRIP_TAC THEN ASM_REWRITE_TAC [] THEN BETA_TAC THEN MESON_TAC []);
-val tc_rules = UNDISCH tc_rules0
+val tc_left_rules = UNDISCH tc_left_rules0
 
-val tc_ind0 = prove(
-  ``^nice_tc_asm ==>
-    !R P. (!x y. R x y ==> P x y) /\
-          (!x y z. R x y /\ P y z ==> P x z) ==>
-          (!x y. tc R x y ==> P x y)``,
-  STRIP_TAC THEN ASM_REWRITE_TAC [] THEN BETA_TAC THEN MESON_TAC []);
-val tc_ind = UNDISCH tc_ind0
+val tc_right_rules = UNDISCH (prove(
+  ``^tc_right_asm ==> (!x y. R x y ==> tc R x y) /\
+                      (!x y z. tc R x y /\ R y z ==> tc R x z)``,
+  STRIP_TAC THEN ASM_REWRITE_TAC [] THEN BETA_TAC THEN MESON_TAC []));
 
-val tc_twice0 = prove(
-  ``^nice_tc_asm ==>
-    !R x y. tc R x y ==> !z. tc R y z ==> tc R x z``,
-  STRIP_TAC THEN GEN_TAC THEN HO_MATCH_MP_TAC tc_ind THEN
-  MESON_TAC [tc_rules]);
-val tc_twice = UNDISCH tc_twice0
+val tc_left_ind = TAC_PROOF(
+  ([tc_left_asm],
+   ``!R P. (!x y. R x y ==> P x y) /\
+           (!x y z. R x y /\ P y z ==> P x z) ==>
+           (!x y. tc R x y ==> P x y)``),
+  ASM_REWRITE_TAC [] THEN BETA_TAC THEN MESON_TAC []);
+
+val tc_right_ind = TAC_PROOF(
+  ([tc_right_asm],
+   ``!R P. (!x y. R x y ==> P x y) /\
+           (!x y z. P x y /\ R y z ==> P x z) ==>
+           (!x y. tc R x y ==> P x y)``),
+  ASM_REWRITE_TAC [] THEN BETA_TAC THEN MESON_TAC []);
+
+val tc_left_twice = TAC_PROOF(
+  ([tc_left_asm],
+   ``!R x y. ^tc R x y ==> !z. tc R y z ==> tc R x z``),
+  GEN_TAC THEN
+  HO_MATCH_MP_TAC tc_left_ind THEN MESON_TAC [tc_left_rules]);
+val tc_right_twice = TAC_PROOF(
+  ([tc_right_asm],
+   ``!R x y. ^tc R x y ==> !z. tc R z x ==> tc R z y``),
+  GEN_TAC THEN HO_MATCH_MP_TAC tc_right_ind THEN MESON_TAC [tc_right_rules]);
+
 
 val TC_INDUCT = Q.store_thm("TC_INDUCT",
 `!(R:'a->'a->bool) P.
@@ -182,23 +202,32 @@ val TC_INDUCT = Q.store_thm("TC_INDUCT",
    ==> !u v. (TC R) u v ==> P u v`,
 REWRITE_TAC[TC_DEF] THEN MESON_TAC[]);
 
-val tc_TC0 = prove(
-  ``^nice_tc_asm ==> !R x y. tc R x y = TC R x y``,
-  STRIP_TAC THEN GEN_TAC THEN
+val tc_left_TC = TAC_PROOF(
+  ([tc_left_asm],
+   ``!R x y. tc R x y = TC R x y``),
+  GEN_TAC THEN
   SIMP_TAC bool_ss [FORALL_AND_THM, EQ_IMP_THM] THEN CONJ_TAC THENL [
-    HO_MATCH_MP_TAC tc_ind THEN MESON_TAC [TC_RULES],
-    HO_MATCH_MP_TAC TC_INDUCT THEN MESON_TAC [tc_twice, tc_rules]
+    HO_MATCH_MP_TAC tc_left_ind THEN MESON_TAC [TC_RULES],
+    HO_MATCH_MP_TAC TC_INDUCT THEN MESON_TAC [tc_left_twice, tc_left_rules]
   ]);
-val tc_TC = UNDISCH tc_TC0
+val tc_right_TC = TAC_PROOF(
+  ([tc_right_asm],
+   ``!R x y. tc R x y = TC R x y``),
+  GEN_TAC THEN
+  SIMP_TAC bool_ss [FORALL_AND_THM, EQ_IMP_THM] THEN CONJ_TAC THENL [
+    HO_MATCH_MP_TAC tc_right_ind THEN MESON_TAC [TC_RULES],
+    HO_MATCH_MP_TAC TC_INDUCT THEN MESON_TAC [tc_right_twice, tc_right_rules]
+  ]);
 
-val tc_exists = SIMP_PROVE bool_ss [] ``?tc. ^nice_tc_asm``;
-
-val TC_INDUCT_LEFT1_0 = REWRITE_RULE [tc_TC] tc_ind
+val tc_left_exists = SIMP_PROVE bool_ss [] ``?tc. ^tc_left_asm``;
+val tc_right_exists = SIMP_PROVE bool_ss [] ``?tc. ^tc_right_asm``;
 
 val TC_INDUCT_LEFT1 = save_thm(
   "TC_INDUCT_LEFT1",
-  CHOOSE(``tc:('a -> 'a -> bool) -> 'a -> 'a -> bool``, tc_exists)
-        TC_INDUCT_LEFT1_0);
+  CHOOSE(tc, tc_left_exists) (REWRITE_RULE [tc_left_TC] tc_left_ind));
+val TC_INDUCT_RIGHT1 = save_thm(
+  "TC_INDUCT_RIGHT1",
+  CHOOSE(tc, tc_right_exists) (REWRITE_RULE [tc_right_TC] tc_right_ind));
 
 val TC_INDUCT_TAC =
  let val tc_thm = TC_INDUCT
@@ -240,6 +269,12 @@ val TC_STRONG_INDUCT_LEFT1_0 = prove(
           (!u v. TC R u v ==> P u v /\ TC R u v)``,
   REPEAT GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC TC_INDUCT_LEFT1 THEN
   ASM_MESON_TAC [TC_RULES]);
+val TC_STRONG_INDUCT_RIGHT1_0 = prove(
+  ``!R P. (!x y. R x y ==> P x y) /\
+          (!x y z. P x y /\ TC R x y /\ R y z ==> P x z) ==>
+          (!u v. TC R u v ==> P u v /\ TC R u v)``,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC TC_INDUCT_RIGHT1 THEN
+  ASM_MESON_TAC [TC_RULES]);
 
 val TC_STRONG_INDUCT_LEFT1 = store_thm(
   "TC_STRONG_INDUCT_LEFT1",
@@ -247,6 +282,12 @@ val TC_STRONG_INDUCT_LEFT1 = store_thm(
           (!x y z. R x y /\ P y z /\ TC R y z ==> P x z) ==>
           (!u v. TC R u v ==> P u v)``,
   REPEAT STRIP_TAC THEN IMP_RES_TAC TC_STRONG_INDUCT_LEFT1_0);
+val TC_STRONG_INDUCT_RIGHT1 = store_thm(
+  "TC_STRONG_INDUCT_RIGHT1",
+  ``!R P. (!x y. R x y ==> P x y) /\
+          (!x y z. P x y /\ TC R x y /\ R y z ==> P x z) ==>
+          (!u v. TC R u v ==> P u v)``,
+  REPEAT STRIP_TAC THEN IMP_RES_TAC TC_STRONG_INDUCT_RIGHT1_0);
 
 val TC_RTC = store_thm(
   "TC_RTC",
@@ -279,6 +320,42 @@ val TC_RC_EQNS = store_thm(
     Q.ID_SPEC_TAC `v` THEN Q.ID_SPEC_TAC `u` THEN
     HO_MATCH_MP_TAC RTC_INDUCT THEN MESON_TAC [TC_RULES, RC_DEF]
   ]);
+
+val RTC_INDUCT_RIGHT1 = store_thm(
+  "RTC_INDUCT_RIGHT1",
+  ``!R P. (!x. P x x) /\
+          (!x y z. P x y /\ R y z ==> P x z) ==>
+          (!x y. RTC R x y ==> P x y)``,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  Q.SUBGOAL_THEN `!x y. RTC R x y = RC (TC R) x y`
+    (fn th => ASM_REWRITE_TAC [th])
+  THENL[
+    REWRITE_TAC [TC_RC_EQNS],
+    ALL_TAC
+  ] THEN ASM_SIMP_TAC bool_ss [RC_DEF, DISJ_IMP_THM, FORALL_AND_THM] THEN
+  HO_MATCH_MP_TAC TC_INDUCT_RIGHT1 THEN ASM_MESON_TAC []);
+
+val RTC_RULES_RIGHT1 = store_thm(
+  "RTC_RULES_RIGHT1",
+  ``!R. (!x. RTC R x x) /\ (!x y z. RTC R x y /\ R y z ==> RTC R x z)``,
+  SIMP_TAC bool_ss [RTC_RULES] THEN GEN_TAC THEN
+  Q_TAC SUFF_TAC
+        `!x y. RTC R x y ==> !z. R y z ==> RTC R x z`
+        THEN1 MESON_TAC [] THEN
+  HO_MATCH_MP_TAC RTC_INDUCT THEN MESON_TAC [RTC_RULES]);
+
+val RTC_STRONG_INDUCT_RIGHT1 = store_thm(
+  "RTC_STRONG_INDUCT_RIGHT1",
+  ``!R P. (!x. P x x) /\
+          (!x y z. P x y /\ RTC R x y /\ R y z ==> P x z) ==>
+          (!x y. RTC R x y ==> P x y)``,
+  REPEAT STRIP_TAC THEN
+  Q_TAC SUFF_TAC `P x y /\ RTC R x y` THEN1 MESON_TAC [] THEN
+  Q.UNDISCH_THEN `RTC R x y` MP_TAC THEN
+  MAP_EVERY Q.ID_SPEC_TAC [`y`, `x`] THEN
+  HO_MATCH_MP_TAC RTC_INDUCT_RIGHT1 THEN
+  ASM_MESON_TAC [RTC_RULES_RIGHT1]);
+
 
 val EXTEND_RTC_TC = store_thm(
   "EXTEND_RTC_TC",
