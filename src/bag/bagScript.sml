@@ -255,7 +255,8 @@ val BAG_DELETE_BAG_IN_down = store_thm(
   (--`!b0 b e1 e2:'a.
          BAG_DELETE b0 e1 b /\ ~(e1 = e2) /\ BAG_IN e2 b0 ==>
          BAG_IN e2 b`--),
-  SIMP_TAC hol_ss [BAG_DELETE, BAG_IN_BAG_INSERT]);
+  SIMP_TAC hol_ss [BAG_DELETE, BAG_IN_BAG_INSERT, LEFT_AND_OVER_OR,
+                   DISJ_IMP_THM]);
 
 val BAG_DELETE_BAG_IN = store_thm(
   "BAG_DELETE_BAG_IN",
