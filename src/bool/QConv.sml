@@ -259,4 +259,25 @@ fun TOP_SWEEP_QCONV conv tm =
   (THENQC (REPEATQC conv)
           (SUB_QCONV (TOP_SWEEP_QCONV conv))) tm;
 
+(* ----------------------------------------------------------------------
+    From Richard Boulton's private implementation for ARITH_CONV, where
+    it is called ARGS_CONV.
+   ---------------------------------------------------------------------- *)
+
+fun BINOP_QCONV conv tm =
+ let val (fx,y) = with_exn dest_comb tm (ERR "BINOP_CONV" "term not a comb")
+     val (f,x)  = with_exn dest_comb fx (ERR "BINOP_CONV" "term not f x y")
+ in let val th = AP_TERM f (conv x)
+    in MK_COMB (th,conv y) handle UNCHANGED => AP_THM th y
+    end
+    handle UNCHANGED => AP_TERM fx (conv y)
+ end;
+
+(* ----------------------------------------------------------------------
+    Random extra conversions
+   ---------------------------------------------------------------------- *)
+
+fun EVERY_QCONV [] = ALL_QCONV
+  | EVERY_QCONV (c::cs) = THENQC c (EVERY_QCONV cs)
+
 end;

@@ -24,4 +24,6 @@ sig
    val TOP_DEPTH_QCONV  : conv -> conv
    val ONCE_DEPTH_QCONV : conv -> conv
    val TOP_SWEEP_QCONV  : conv -> conv
+   val BINOP_QCONV      : conv -> conv
+   val EVERY_QCONV      : conv list -> conv
 end
