@@ -17,6 +17,7 @@ type modalsettings = {
   sMART_PREFIX : bool ref;
   iNDENT : bool ref;
   rULES : bool ref;
+  cOMMENTS : bool ref;
 }
 
 val curmodals : modalsettings ref

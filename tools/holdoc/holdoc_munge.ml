@@ -30,6 +30,12 @@ let isTeXNormal t =
     TeXNormal(_) -> true
   | _            -> false
 
+let isComment t =
+  match t with
+    Comment(_) -> true
+  | _          -> false
+
+
 let gensymcnt = ref 0
 
 let debug_print s =
@@ -812,6 +818,21 @@ let getname ls =
     (l::_) -> go l
   | []     -> None
 
+(* possibly strip non-TeX comments from a block *)
+
+let strip xss =
+  if !(!curmodals.cOMMENTS) then
+    xss
+  else
+    let interesting = function
+        Indent(_) -> false
+      | White(_)  -> false
+      | _         -> true
+    in
+    let ($) f g x = f (g x)
+    in
+    List.filter (List.exists interesting) (List.map (List.filter (not $ isComment)) xss)
+
 (* output (munge) a whole rule *)
 
 let latex_rule ruleordefn =
@@ -830,10 +851,10 @@ let latex_rule ruleordefn =
                              ^(match comm with Some _ -> "c" | None -> "n"));
       print_string ("{"^texify n^"}{"^texifys " " rp^": "^texifys " " cat^"}");
       print_string ("{"^(match desc with Some d -> munge pvs d [] | None -> "")^"}\n");
-      print_string ("{"^munges pvs lhs^"}\n");
+      print_string ("{"^munges pvs (strip lhs)^"}\n");
       print_string ("{"^mungelab pvs lab^"}\n");
-      print_string ("{"^munges pvs rhs^"}\n");
-      print_string ("{"^munges pvs side^"}\n");
+      print_string ("{"^munges pvs (strip rhs)^"}\n");
+      print_string ("{"^munges pvs (strip side)^"}\n");
       print_string "{";
       (match comm with
          Some c -> print_string (munge pvs c [])
@@ -852,7 +873,7 @@ let latex_rule ruleordefn =
       in
       let texname = gendefname()
       in
-      print_string ("\\newcommand{\\"^texname^"}{\\ddefn{"^namepart^"}{"^munges pvs e^"}\n}\n\n");
+      print_string ("\\newcommand{\\"^texname^"}{\\ddefn{"^namepart^"}{"^munges pvs (strip e)^"}\n}\n\n");
       [texname]
 
 (* ------------------------------------------------------------ *)

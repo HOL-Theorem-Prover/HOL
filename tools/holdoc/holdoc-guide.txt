@@ -230,6 +230,13 @@ identifiers ending in numbers will be treated as \tsrule{} rather than
 (*[ NORULES ]*) turns off rules mode.
 
 
+(*[ COMMENTS ]*) turns on comments mode (this is on by default).  This
+means that, within an lts_to_latex rule, non-TeX comments (* foo *)
+will be displayed.  (TeX comments (*: foo :*) are unaffected).
+
+(*[ NOCOMMENTS ]*) turns off comments mode.
+
+
 HOLDoc supports "modes".  All the various lists defined above, and
 also [NO]INDENT, [NO_]SMART_PREFIX, and [NO]RULES are not global; they
 apply to the current mode.  The default mode is called "0".  New modes

@@ -21,6 +21,7 @@ type modalsettings = {
   sMART_PREFIX : bool ref;
   iNDENT : bool ref;
   rULES : bool ref;
+  cOMMENTS : bool ref;
 }
 
 (* current modal settings *)
@@ -40,6 +41,7 @@ let curmodals = ref {
   sMART_PREFIX = ref true;
   iNDENT = ref true;
   rULES = ref false;
+  cOMMENTS = ref true;
 }
 
 (* list of all modes and corresponding settings *)
@@ -68,6 +70,7 @@ let new_mode name = (if List.mem_assoc name !modes then
                                        sMART_PREFIX = ref !(!curmodals.sMART_PREFIX);
                                        iNDENT = ref !(!curmodals.iNDENT);
                                        rULES = ref !(!curmodals.rULES);
+                                       cOMMENTS = ref !(!curmodals.cOMMENTS);
                                      };
                        modes := (name,!curmodals)::!modes)
                     )
@@ -182,6 +185,8 @@ let dir_proc n ts =
   | "NOINDENT"        -> !curmodals.iNDENT := false
   | "RULES"           -> !curmodals.rULES := true
   | "NORULES"         -> !curmodals.rULES := false
+  | "COMMENTS"        -> !curmodals.cOMMENTS := true
+  | "NOCOMMENTS"      -> !curmodals.cOMMENTS := false
   (* other *)
   | "ECHO"            -> eCHO := true
   | "NOECHO"          -> eCHO := false
