@@ -111,13 +111,6 @@ is better for emacs.
 </pre></div>*)
 displayLines := 10000;
 (*<div class="comment"><pre>
-The following declaration of <font color="blue">by</font> to be an ML infix
-with precedence 9 is needed for legacy reasons. The operator
-<font color="blue">by</font> is used for declarative proof (see later).
-</pre></div>*)
-infix 9 by;
-
-(*<div class="comment"><pre>
 The ML function <font color="blue">prove_thm</font>, defined below, has the same ML type as the
 built in function <font color="blue">store_thm</font>, but it doesn't actually save the
 theorem in the current theory. It also prints out the time taken to
