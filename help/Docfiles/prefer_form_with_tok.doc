@@ -1,0 +1,48 @@
+\DOC prefer_form_with_tok
+
+\TYPE {Parse.prefer_form_with_tok : {{term_name : string, tok : string}} -> unit}
+
+\SYNOPSIS
+Sets a grammar rule's preferred flag, causing it to be preferentially printed.
+
+\KEYWORDS
+Pretty-printing
+
+\LIBRARY Parse
+
+\DESCRIBE
+A call to {prefer_form_with_tok} causes the parsing/pretty-printing
+rule specified by the {term_name}-{tok} combination to be the
+preferred rule for pretty-printing purposes.  This change affects
+the global grammar.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+The initially preferred rule for conditional expressions causes them
+to print using the {if-then-else} syntax.  If the user prefers the
+``traditional'' syntax with {=>}-{|}, this change can be brought about
+as follows:
+{
+   - prefer_form_with_tok {{term_name = "COND", tok = "=>"}};
+   > val it = () : unit
+   - Term`if p then q else r`;
+   <<HOL message: inventing new type variable names: 'a.>>
+   > val it = `p => q | r` : Term.term
+}
+
+
+\COMMENTS
+As the example above demonstrates, using this function does not affect the
+parser at all.
+
+There is a companion {temp_prefer_form_with_tok} function, which has
+the same effect on the global grammar, but which does not cause this
+effect to persist when the current theory is exported.
+
+
+\SEEALSO
+clear_prefs_for_term
+
+\ENDDOC
