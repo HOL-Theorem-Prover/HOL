@@ -1,0 +1,8 @@
+For running interactively:
+
+ loadPath := "../" :: "word32" :: !loadPath;
+
+For compilation:
+ 
+ Holmake -I word32 -I .. -I ../dff
+
