@@ -640,7 +640,7 @@ val ABS_ONE_ONE =
  store_thm
   ("ABS_ONE_ONE",
    ``!abs rep.
-      ((!a. abs(rep a) = a) /\ (!r. range r = rep(abs r) = r))
+      ((!a. abs(rep a) = a) /\ (!r. range r = (rep(abs r) = r)))
       ==>
       !r. range r /\ range r' ==> ((abs r = abs r') = (r = r'))``,
    PROVE_TAC[]);
