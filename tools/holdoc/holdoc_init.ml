@@ -1,5 +1,5 @@
 (* holdoc_init.ml -- initial settings of various category lists *)
-(* Keith Wansbrough 2001 *)
+(* Keith Wansbrough 2001,2002 *)
 
 (* these are now always initialised from a file; there are no defaults *)
 let tYPE_LIST = ref []
@@ -17,6 +17,7 @@ let hOL_CURRIED_ALIST = ref []
 (* other settings *)
 let eCHO = ref true
 let rCSID = ref None
+let iNDENT = ref true
 
 open Hollex
 exception BadDirective
@@ -84,5 +85,7 @@ let dir_proc n ts =
   | "ECHO"            -> eCHO := true
   | "NOECHO"          -> eCHO := false
   | "RCSID"           -> rCSID           := Some(goId ts)
+  | "INDENT"          -> iNDENT := true
+  | "NOINDENT"        -> iNDENT := false
   | _                 -> ()
 

@@ -393,7 +393,7 @@ let rec mtok v t =
   match t with
     Ident(s,true)  -> mident v s
   | Ident(s,false) -> msym v s
-  | Indent(n)      -> mindent n
+  | Indent(n)      -> if !iNDENT then mindent n else "" (* only render if desired *)
   | White(s)       -> s
   | Comment(s)     -> (if String.contains s '\n' then  (* anything split over a line must be long *)
                          "\\tslongcomm{"

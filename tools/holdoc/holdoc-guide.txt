@@ -207,7 +207,7 @@ to handle linebreaks in its argument.  The second flag is *optional*
 and defaults to false.
 
 
-The last two are a bit different.
+The last few are a bit different.
 
 (*[ ECHO ]*) turns on echo mode *after the next token* (including
 white space).
@@ -225,6 +225,15 @@ Note that ECHO / NOECHO are only respected in MNG mode.
 (*[ RCSID "$Id$" ]*) records the given string as the RCS ID for the
 file.  lts_to_latex uses this to define the command \rulesrcsid, which
 can be useful to identify the version of munged rules.
+
+
+(*[ INDENT ]*) turns on indent mode (this is on by default).  This
+means that indentation (white space) at the beginning of a line will
+be turned into some number of \quads, according to an appropriate
+formula.  This takes effect immediately.
+
+(*[ NOINDENT ]*) turns indent mode off.  Indentation (white space at
+the beginning of a line) is ignored.  This takes effect immediately.
 
 
 One for MNG source:
