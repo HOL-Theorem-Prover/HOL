@@ -11,6 +11,25 @@ fun ERR f msg = HOL_ERR {origin_structure = "Term",
                          message = msg}
 val WARN = HOL_WARNING "Term"
 
+(* used internally to avoid term rebuilding during substitution and
+   type instantiation *)
+exception Unchanged
+
+(* apply a function f under "constructor" con, handling Unchanged *)
+fun qcomb con f (x,y) = let
+  val fx = f x
+in
+  let val fy = f y
+  in
+    con(fx, fy)
+  end handle Unchanged => con(fx, y)
+end handle Unchanged => let val fy = f y
+                        in
+                          con(x, fy)
+                        end
+
+
+
 type const_key = {Thy : string, Name : string}
 type const_info = {Thy : string, Name : string, base_type : hol_type,
                    uptodate : bool ref}
@@ -21,10 +40,12 @@ fun compare_key ({Thy = thy1, Name = op1}, {Thy = thy2, Name = op2}) =
       EQUAL => String.compare(thy1, thy2)
     | x => x
 
-fun compare_cinfo (c1 : const_info, c2 : const_info) =
-    case String.compare(#Name c1, #Name c2) of
-      EQUAL => String.compare(#Thy c1, #Thy c2)
-    | x => x
+fun compare_cinfo (p as (c1 : const_info, c2 : const_info)) =
+    if Portable.pointer_eq p then EQUAL
+    else
+      case String.compare(#Name c1, #Name c2) of
+        EQUAL => String.compare(#Thy c1, #Thy c2)
+      | x => x
 
 fun c2string ({Thy, Name,...} : const_info) = String.concat [Thy, "$", Name]
 fun id2string {Thy,Name} = String.concat [Thy, "$", Name]
@@ -114,7 +135,7 @@ in
   ty_of t Lib.I
 end
 
-val type_of = Profile.profile "type_of" type_of
+(* val type_of = Profile.profile "type_of" type_of *)
 
 (*---------------------------------------------------------------------------*
  *     Instantiate type variables in a term                                  *
@@ -127,15 +148,17 @@ fun inst [] tm = tm
             (c as Const(r, ty)) => let
             in
               case ty_sub theta ty of
-                SAME => c
+                SAME => raise Unchanged
               | DIFF ty => Const(r,ty)
             end
           | (v as Var(Name,Ty)) =>
-            (case Type.ty_sub theta Ty of SAME => v | DIFF ty => Var(Name, ty))
-          | App(Rator,Rand) => App(inst1 Rator, inst1 Rand)
-          | Abs(Bvar,Body)  => Abs(inst1 Bvar, inst1 Body)
+            (case Type.ty_sub theta Ty of
+               SAME => raise Unchanged
+             | DIFF ty => Var(Name, ty))
+          | App p => qcomb App inst1 p
+          | Abs p  => qcomb Abs inst1 p
     in
-      inst1 tm
+      inst1 tm handle Unchanged => tm
     end
 
 val inst : (hol_type, hol_type) Lib.subst -> term -> term = inst
@@ -217,7 +240,7 @@ local val INCOMPAT_TYPES  = Lib.C ERR "incompatible types"
                  end
         in fn (f,L) => loop(f, type_of f) L
         end
-      val lmk_comb = (fn err => Profile.profile "lmk_comb" (lmk_comb err))
+      val lmk_comb = (fn err => (* Profile.profile "lmk_comb" *)(lmk_comb err))
       val mk_comb0 = lmk_comb (INCOMPAT_TYPES "mk_comb")
 in
 
@@ -333,7 +356,7 @@ in
 fun free_vars tm = FV tm [] Lib.I
 end
 
-val free_vars = Profile.profile "free_vars" free_vars
+(* val free_vars = Profile.profile "free_vars" free_vars *)
 
 fun free_vars_lr tm = let
   fun FV (v as Var _) A = Lib.insert v A
@@ -365,8 +388,10 @@ fun FVL0 tlist acc =
 
 fun FVL tlist = FVL0 (map FVTM tlist)
 
+(*
 val FVL0 = FVL
 fun FVL tlist = Profile.profile "FVL" (FVL0 tlist)
+*)
 
 
 local
@@ -381,53 +406,56 @@ end
 fun free_varsl tm_list = itlist (union o free_vars) tm_list []
 fun all_varsl tm_list = itlist (union o all_vars) tm_list []
 
-fun flip GREATER = LESS
-  | flip EQUAL = EQUAL
-  | flip LESS = GREATER
-
 (* term comparison *)
 
 val empty_env = Map.mkDict var_compare
 fun compare p = let
   open Map
-  fun cmp (n, E as (env1, env2), p) =
-      case p of
-        (v1 as Var _, v2 as Var _) => let
-        in
-          case (peek(env1, v1), peek(env2, v2)) of
-            (NONE, NONE) => var_compare(v1, v2)
-          | (SOME _, NONE) => GREATER
-          | (NONE, SOME _) => LESS
-          | (SOME i, SOME j) => flip (Int.compare(i, j))
-        end
-      | (Var _, _) => LESS
-      | (_, Var _) => GREATER
-      | (Const(cid1, ty1), Const(cid2, ty2)) =>
-        if cid1 = cid2 then Type.compare(ty1, ty2)
-        else compare_cinfo (cid1, cid2)
-      | (Const _, _) => LESS
-      | (_, Const _) => GREATER
-      | (App(M, N), App(P, Q)) => let
-        in
-          case cmp (n, E, (M, P)) of
-            EQUAL => cmp (n, E, (N, Q))
-          | x => x
-        end
-      | (App _, Abs _) => LESS
-      | (Abs _, App _) => GREATER
-      | (Abs(v1, bdy1), Abs(v2, bdy2)) => let
-        in
-          case Type.compare(type_of v1, type_of v2) of
-            EQUAL => cmp (n + 1, (insert(env1, v1, n), insert(env2, v2, n)),
-                          (bdy1, bdy2))
-          | x => x
-        end
+  fun cmp n (E as (env1, env2)) p =
+      if n = 0 andalso Portable.pointer_eq p then EQUAL
+      else
+        case p of
+          (v1 as Var _, v2 as Var _) => let
+          in
+            case (peek(env1, v1), peek(env2, v2)) of
+              (NONE, NONE) => var_compare(v1, v2)
+            | (SOME _, NONE) => GREATER
+            | (NONE, SOME _) => LESS
+            | (SOME i, SOME j) => Int.compare(j, i)
+              (* flipping i & j deliberate; mimics deBruijn implementation's
+                 behaviour, which would number variables in reverse order
+                 from that done here *)
+          end
+        | (Var _, _) => LESS
+        | (_, Var _) => GREATER
+        | (Const(cid1, ty1), Const(cid2, ty2)) => let
+          in
+            case compare_cinfo(cid1, cid2) of
+              EQUAL => Type.compare(ty1, ty2)
+            | x => x
+          end
+        | (Const _, _) => LESS
+        | (_, Const _) => GREATER
+        | (App(M, N), App(P, Q)) => let
+          in
+            case cmp n E (M, P) of
+              EQUAL => cmp n E (N, Q)
+            | x => x
+          end
+        | (App _, Abs _) => LESS
+        | (Abs _, App _) => GREATER
+        | (Abs(v1, bdy1), Abs(v2, bdy2)) => let
+          in
+            case Type.compare(type_of v1, type_of v2) of
+              EQUAL => cmp (n + 1) (insert(env1, v1, n), insert(env2, v2, n))
+                           (bdy1, bdy2)
+            | x => x
+          end
 in
-  if Portable.pointer_eq p then EQUAL
-  else cmp (0, (empty_env, empty_env), p)
+  cmp 0 (empty_env, empty_env) p
 end
 
-val compare = Profile.profile "tm_compare" compare
+(* val compare = Profile.profile "tm_compare" compare *)
 
 val empty_tmset = HOLset.empty compare
 
@@ -485,18 +513,6 @@ fun free_names0 t A k =
 fun free_names A t = free_names0 t A I
 val empty_stringset = HOLset.empty String.compare
 
-(* only call when n is in set *)
-fun variant_name n set = let
-  val next = Lexis.nameStrm n
-  fun loop () = let
-    val new = next()
-  in
-    if HOLset.member(set, new) then loop () else new
-  end
-in
-  loop ()
-end
-
 (* jrh's caml light HOL Light code
 let vsubst =
   let mk_qcomb = qcomb(fun (x,y) -> Comb(x,y)) in
@@ -550,20 +566,7 @@ end
 
 
 local
-  exception Unchanged
   open Map Susp
-
-  fun qcomb con f (x,y) = let
-    val fx = f x
-  in
-    let val fy = f y
-    in
-      con(fx, fy)
-    end handle Unchanged => con(fx, y)
-  end handle Unchanged => let val fy = f y
-                          in
-                            con(x, fy)
-                          end
 
   fun vasubst theta tm =
       case tm of
@@ -625,7 +628,7 @@ local
                                         | SOME (_, t) => t)
       | Const _ => raise Unchanged
       | App p  => qcomb App (vsubst theta) p
-      | Abs _ => #1 (Profile.profile "vasubst" (vasubst theta) tm)
+      | Abs _ => #1 ((* Profile.profile "vasubst" *) (vasubst theta) tm)
 
   fun ssubst theta t =
       (* only used to substitute in fresh variables (genvars), so no
@@ -682,8 +685,10 @@ fun subst theta =
                   handle Unchanged => tm)
       end
 
+(*
 val subst0 = subst
 fun subst theta = Profile.profile "subst" (subst0 theta)
+*)
 
 
 end (* local *)
@@ -711,44 +716,6 @@ fun eta_conv t =
         | _ => raise ERR "eta_conv" "Term not an eta-redex"
       end
     | _ => raise ERR "eta_conv" "Term not an eta-redex"
-
-
-
-(*open Map
-  fun addb [] A = A
-    | addb ({redex,residue}::t) (fm,b,fvs) =
-      addb t (if type_of redex = type_of residue then
-                (insert(A,redex,residue), is_var redex andalso b,
-                 free_names fvs residue)
-              else raise ERR "subst" "redex has different type than residue")
-in
-  fun subst [] = I
-    | subst theta = let
-        val (fmap, b, rhs_fvs) = addb theta (emptysubst, true, empty_tmset)
-        fun rename_away avoids t  = let
-          val (v, body) = dest_abs t
-          val (nm, ty) = dest_var v
-        in
-          if HOLset.member(avoids, v) then let
-              val newname = variant_name nm avoids
-              val newv = mk_var(newname, ty)
-            in
-              Abs(newv, subst [v |-> newv] body)
-            end
-          else t
-        end
-
-        fun vsubs fm av t =
-            case t of
-              (v as Var _) => (case peek(fm,v) of NONE => v | SOME y => y)
-            | App(f,x) = App(vsubs f, vsubs x)
-            | (c as Const _) => c
-            | Abs(v,body) => let
-                val fvs = FVL [t] empty_tmset
-            (case peek(fmap, v) of
-               NONE =>
-*)
-
 
 
 (*---------------------------------------------------------------------------*
@@ -908,9 +875,9 @@ fun raw_match tyfixed tmfixed pat ob (tmS, tyS) =
                                  obbvars = empty_intsubst},
                                 (tyS, tyfixed)))
 
-val raw_match0 = raw_match
+(* val raw_match0 = raw_match
 fun raw_match tyf tmf pat ob =
-    Profile.profile "raw_match" (raw_match0 tyf tmf pat ob)
+    Profile.profile "raw_match" (raw_match0 tyf tmf pat ob) *)
 
 fun norm_subst ((tmS,_),(tyS,_)) =
  let val Theta = inst tyS
@@ -956,12 +923,12 @@ end
 fun prim_mk_eq ty t1 t2 =
     App(App(inst [alpha |-> ty] equality, t1), t2)
 
-val prim_mk_eq =
-    (fn ty => fn t1 => Profile.profile "prim_mk_eq" (prim_mk_eq ty t1))
+(*val prim_mk_eq =
+    (fn ty => fn t1 => Profile.profile "prim_mk_eq" (prim_mk_eq ty t1)) *)
 
 fun prim_mk_imp t1 t2 = App(App(imp, t1), t2)
 
-val prim_mk_imp = (fn t1 => Profile.profile "prim_mk_imp" (prim_mk_imp t1))
+(* val prim_mk_imp = (fn t1 => Profile.profile "prim_mk_imp" (prim_mk_imp t1))*)
 
 
 end (* struct *)

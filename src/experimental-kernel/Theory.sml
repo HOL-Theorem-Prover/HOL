@@ -527,6 +527,8 @@ fun unadjzip [] A = A
     theorems or whatnot, then the initial theory will be exported.
  ----------------------------------------------------------------------------*)
 
+val new_theory_time = ref (Timer.checkCPUTimer Globals.hol_clock)
+
 local val mesg = Lib.with_flag(Feedback.MESG_to_string, Lib.I) HOL_MESG
 in
 fun export_theory () = let
@@ -558,14 +560,14 @@ fun export_theory () = let
           val ostrm2 = Portable.open_out(concat["./",name,".sml"])
           val logfile = TextIO.openAppend (Path.concat(Globals.HOLDIR,
                                                        "time-logging"))
-          val timetaken = Timer.checkCPUTimer Globals.hol_clock
-          val tstr = Time.toString (#usr timetaken)
+          val time_now = #usr (Timer.checkCPUTimer Globals.hol_clock)
+          val time_since = Time.-(time_now, #usr (!new_theory_time))
+          val tstr = Time.toString time_since
       in
         mesg ("Exporting theory "^Lib.quote thyname^" ... ");
-        TextIO.output(logfile,
-                      StringCvt.padRight #"-" 50 ("- "^thyname ^ " "));
-        TextIO.output(logfile, StringCvt.padLeft #" " 7 tstr ^ "\n");
-        Profile.output_profile_results logfile (Profile.results());
+        TextIO.output(logfile, StringCvt.padRight #" " 30 thyname);
+        TextIO.output(logfile, StringCvt.padLeft #" " 10 tstr ^ "\n");
+        (* Profile.output_profile_results logfile (Profile.results()); *)
         TextIO.closeOut logfile;
         theory_out (TheoryPP.pp_sig (!pp_thm) sigthry) ostrm1;
         theory_out (TheoryPP.pp_struct structthry) ostrm2;
@@ -622,6 +624,7 @@ fun new_theory str =
       val thyname = thyid_name thid
       fun mk_thy () = (HOL_MESG ("Created theory "^Lib.quote str);
                         makeCT(fresh_segment str); initialize thyname)
+      val _ = new_theory_time := Timer.checkCPUTimer Globals.hol_clock
   in
    if str=thyname
       then (HOL_MESG("Restarting theory "^Lib.quote str);

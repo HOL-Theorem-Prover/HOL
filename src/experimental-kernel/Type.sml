@@ -155,15 +155,18 @@ fun type_vars_set acc [] = acc
   | type_vars_set acc (Tyapp(_, args) :: rest) =
       type_vars_set acc (args @ rest)
 
-fun compare (Tyv s1, Tyv s2) = String.compare(s1, s2)
-  | compare (Tyv _, _) = LESS
-  | compare (Tyapp _, Tyv _) = GREATER
-  | compare (Tyapp(iref, iargs), Tyapp(jref, jargs)) = let
+fun compare0 (Tyv s1, Tyv s2) = String.compare(s1, s2)
+  | compare0 (Tyv _, _) = LESS
+  | compare0 (Tyapp _, Tyv _) = GREATER
+  | compare0 (Tyapp(iref, iargs), Tyapp(jref, jargs)) = let
     in
       if #uptodate iref = #uptodate jref then
-        Lib.list_compare compare (iargs, jargs)
+        Lib.list_compare compare0 (iargs, jargs)
       else compare_key(#key iref, #key jref)
     end
+
+fun compare p = if Portable.pointer_eq p then EQUAL
+                else compare0 p
 
 val empty_tyset = HOLset.empty compare
 
@@ -216,8 +219,8 @@ fun ty_sub [] _ = SAME
 
 fun type_subst theta = delta_apply (ty_sub theta)
 
-val type_subst0 = type_subst
-fun type_subst theta = Profile.profile "type_subst" (type_subst0 theta)
+(* val type_subst0 = type_subst
+fun type_subst theta = Profile.profile "type_subst" (type_subst0 theta) *)
 
 
 local

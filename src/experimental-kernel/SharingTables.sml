@@ -42,17 +42,21 @@ fun output_idtable pps name (idtable : idtable) = let
   fun nl() = PP.add_newline pps
   val idlist = List.rev (#idlist idtable)
   fun print_id {Thy, Other} =
-      out ("{Thy = "^Lib.mlquote Thy^ ", Other = "^Lib.mlquote Other^"}")
+      out ("ID(" ^ Lib.mlquote Thy^ ", "^Lib.mlquote Other^")")
   fun print_ids [] = ()
     | print_ids [id] = print_id id
     | print_ids (id::ids) = (print_id id; out ","; PP.add_break pps (1,0);
                              print_ids ids)
 in
-  out ("val "^name^" = Vector.fromList [");
+  out ("val "^name^" = "); nl();
+  out ("  let fun ID(thy,oth) = {Thy = thy, Other = oth}"); nl();
+  out ("  in Vector.fromList"); nl();
+  out ("[");
   PP.begin_block pps PP.INCONSISTENT 0;
   print_ids idlist;
   PP.end_block pps;
-  out "]"; nl()
+  out "]"; nl();
+  out "end;"; nl()
 end
 
 (* ----------------------------------------------------------------------
@@ -259,7 +263,7 @@ fun output_termtable pps names (tmtable: termtable) = let
   fun output_shtms [] = ()
     | output_shtms [t] = output_shtm t
     | output_shtms (t::ts) = (output_shtm t; out (",");
-                              PP.add_break pps (1, 0);
+                              PP.add_newline pps;
                               output_shtms ts)
 in
   out ("local open SharingTables"); nl();
@@ -267,9 +271,7 @@ in
   out ("val "^termtable_nm^" = build_term_vector "^idtable_nm^" "^
        tytable_nm); nl();
   out ("[");
-  PP.begin_block pps PP.INCONSISTENT 0;
   output_shtms (List.rev (#termlist tmtable));
-  PP.end_block pps;
   out ("]"); nl();
   out "end"; nl()
 end;
