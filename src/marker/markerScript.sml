@@ -57,5 +57,19 @@ val move_right_disj = store_thm(
      (t1 /\ t2) /\ ...
 *)
 
+(* unint stands for "uninterpreted", and can be used to mark and/or
+   breakup terms that represent "bad" situations.  One can be sure
+   that unint terms will never be written away, so that they will
+   persist and act as a signal to the user that something has gone wrong.
+
+   Just make sure that unint never appears on the LHS of a rewrite rule.
+   (Idea and name taken from Joe Hurd's development of the positive reals
+   with an infinity.)
+*)
+
+val unint_def = new_definition(
+  "unint_def",
+  ``unint (x:'a) = x``);
+
 val _ = export_theory();
 
