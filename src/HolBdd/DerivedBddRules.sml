@@ -35,7 +35,7 @@ open PrimitiveBddRules;
 open bdd;
 open Varmap;
 
-open Globals HolKernel Parse boolLib bdd;
+open HolKernel Parse boolLib;
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
@@ -45,6 +45,21 @@ fun hol_err msg func =
   raise mk_HOL_ERR "HolBdd" func msg);
 
 in
+
+(*****************************************************************************)
+(* Count number of states (code from Ken Larsen)                             *)
+(*****************************************************************************)
+
+fun statecount b =
+ let val sat    = bdd.satcount b
+     val total  = Real.fromInt(bdd.getVarnum())
+     val sup    = bdd.scanset(bdd.support b)
+     val numsup = Real.fromInt(Vector.length sup)
+     val free   = total - numsup
+ in  if bdd.equal b bdd.TRUE
+      then 0.0
+      else sat / Math.pow(2.0, free)
+ end;
 
 (*****************************************************************************)
 (* Test if a term is constructed using a BuDDY BDD binary operation (bddop)  *)
@@ -192,22 +207,18 @@ fun termToTermBdd tm =
 (* term_bdd and applied successively to 0,1,2,... until a fixed point is     *)
 (* reached. The fixedpoint is returned.                                      *)
 (*                                                                           *)
-(* The reference                                                             *)
+(* The argument function                                                     *)
 (*                                                                           *)
-(*  iterateReport : (int -> term_bdd -> unit) ref                            *)
+(*  report : (int -> term_bdd -> unit) ref                                   *)
 (*                                                                           *)
-(* contains a function that is applied to the current iteration level        *)
-(* and term_bdd, and can be used to trace the iteration. The default         *)
-(* just prints out the iteration num.                                        *)
+(* is applied to the current iteration level and term_bdd, and can be used   *)
+(* to trace the iteration.                                                   *)
 (*                                                                           *)
 (*****************************************************************************)
 
-val iterateReport = 
- ref(fn n => fn (tb) => (print(Int.toString n); print " "));
-
-fun iterateToFixedpoint f =
+fun iterateToFixedpoint report f =
  let fun iter n tb =
-      let val _    = (!iterateReport) n tb
+      let val _    = report n tb
           val tb'  = f n tb
       in
        if BddEqualTest tb tb' then tb else iter (n+1) tb'
@@ -215,6 +226,13 @@ fun iterateToFixedpoint f =
  in
   iter 0
  end;
+
+(*****************************************************************************)
+(* A default report function that justs prints out the current iteration     *)
+(* level                                                                     *)
+(*****************************************************************************)
+
+fun defaultReport n tb =  (print(Int.toString n); print " ");
 
 (*****************************************************************************)
 (* Flatten a varstruct term into a list of variables (also in StateEnum).    *)
@@ -347,14 +365,14 @@ fun BddApConv conv tb = BddEqMp (conv(getTerm tb)) tb;
 
 exception computeFixedpointError;
 
-fun computeFixedpoint vm (thsuc, th0) =
+fun computeFixedpoint report vm (th0,thsuc) =
  let val tb0 =  eqToTermBdd (fn tm => raise computeFixedpointError) vm th0
      fun f n tb =  
       BddApConv
        computeLib.EVAL_CONV
        (eqToTermBdd (BddApReplace tb) vm (SPEC (intToTerm n) thsuc))
  in
-  iterateToFixedpoint f tb0
+  iterateToFixedpoint report f tb0
  end;
 
 end;

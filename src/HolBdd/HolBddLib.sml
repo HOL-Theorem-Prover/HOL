@@ -1,10 +1,11 @@
 (*
 load "Varmap";
+load "HolBddTheory";
 load "PrimitiveBddRules";
 load "DerivedBddRules";
 *)
 
-open Varmap PrimitiveBddRules DerivedBddRules;
+open HolBddTheory Varmap PrimitiveBddRules DerivedBddRules;
 
 
 (*****************************************************************************)

@@ -44,7 +44,7 @@ load "Num_conv";
 load "unwindLib";
 *)
 
-open Globals HolKernel Parse boolLib;
+open HolKernel Parse boolLib;
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 infix 8 by;
