@@ -66,9 +66,9 @@ val SRCDIRS =
   "src/datatype/basicrec", "src/datatype/mutrec/utils", "src/datatype/mutrec",
   "src/datatype/nestrec", "src/datatype/mutual",
   "src/decision/src", "src/tfl/src", "src/unwind", "src/boss",
-  "src/res_quan/theories", "src/res_quan/src", "src/set/src",
-  "src/pred_set/src", "src/string/theories", "src/string/src",
-  "src/word/theories", "src/word/src", "src/integer", "src/BoyerMoore",
+  "src/integer", "src/res_quan/src", "src/set/src", "src/pred_set/src", 
+  "src/string/theories", "src/string/src",
+  "src/word/theories", "src/word/src", "src/BoyerMoore",
   "src/hol90", "src/finite_map", "src/real", "src/bag", "src/ring/src",
   "src/robdd","src/muddy", "src/HolBdd"];
 
