@@ -658,7 +658,8 @@ val DFF_SUC = Q.store_thm("DFF_SUC",
                 (!t. t > 0 ==> (q t = (POSEDGE clk t => d t | q (t-1))))`,
               RW_TAC arith_ss [] 
               THEN Cases_on `t`
-              THENL [`~(0 > 0)` by RW_TAC arith_ss [],
+              THENL [(* `~(0 > 0)` by RW_TAC arith_ss [],*)
+                     FULL_SIMP_TAC arith_ss [],
                      `SUC n = n+1` by RW_TAC arith_ss []
                      THEN `SUC n - 1 = n` by RW_TAC arith_ss []
                      THEN PROVE_TAC [DFF_def]]);
