@@ -480,6 +480,7 @@ end;
 (*									*)
 (* ADDED TFM 88.04.02							*)
 (*----------------------------------------------------------------------*)
+
 val num_Axiom_old = store_thm(
   "num_Axiom_old",
    --`!e:'a. !f. ?! fn1. (fn1 0 = e) /\
@@ -614,6 +615,13 @@ Q.store_thm("WF_measure", `!m. WF (measure m)`,
 REWRITE_TAC[measure_def]
  THEN MATCH_MP_TAC relationTheory.WF_inv_image
  THEN ACCEPT_TAC WF_LESS);
+
+val measure_thm = Q.store_thm
+("measure_thm",
+ `!f x y. measure f x y = f x < f y`,
+ REWRITE_TAC [measure_def,relationTheory.inv_image_def] 
+   THEN BETA_TAC
+   THEN REWRITE_TAC []);
 
 val _ = export_theory() ;
 

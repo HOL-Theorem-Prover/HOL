@@ -26,26 +26,27 @@ val is_list_type = can dest_list_type;
     Constants ... SUM really belongs elsewhere.
  ---------------------------------------------------------------------------*)
 
-val nil_tm    = prim_mk_const {Name = "NIL",     Thy = "list"}
-val cons_tm   = prim_mk_const {Name = "CONS",    Thy = "list"}
-val null_tm   = prim_mk_const {Name = "NULL",    Thy = "list"}
-val hd_tm     = prim_mk_const {Name = "HD",      Thy = "list"}
-val tl_tm     = prim_mk_const {Name = "TL",      Thy = "list"}
-val append_tm = prim_mk_const {Name = "APPEND",  Thy = "list"}
-val flat_tm   = prim_mk_const {Name = "FLAT",    Thy = "list"}
-val length_tm = prim_mk_const {Name = "LENGTH",  Thy = "list"}
-val map_tm    = prim_mk_const {Name = "MAP",     Thy = "list"}
-val map2_tm   = prim_mk_const {Name = "MAP2",    Thy = "list"}
-val mem_tm    = prim_mk_const {Name = "MEM",     Thy = "list"}
-val filter_tm = prim_mk_const {Name = "FILTER",  Thy = "list"}
-val foldr_tm  = prim_mk_const {Name = "FOLDR",   Thy = "list"}
-val foldl_tm  = prim_mk_const {Name = "FOLDL",   Thy = "list"}
-val every_tm  = prim_mk_const {Name = "EVERY",   Thy = "list"}
-val exists_tm = prim_mk_const {Name = "EXISTS",  Thy = "list"}
-val el_tm     = prim_mk_const {Name = "EL",      Thy = "list"}
-val zip_tm    = prim_mk_const {Name = "ZIP",     Thy = "list"}
-val unzip_tm  = prim_mk_const {Name = "UNZIP",   Thy = "list"}
-val sum_tm    = prim_mk_const {Name = "SUM",     Thy = "list"}
+val nil_tm       = prim_mk_const {Name = "NIL",     Thy = "list"}
+val cons_tm      = prim_mk_const {Name = "CONS",    Thy = "list"}
+val null_tm      = prim_mk_const {Name = "NULL",    Thy = "list"}
+val hd_tm        = prim_mk_const {Name = "HD",      Thy = "list"}
+val tl_tm        = prim_mk_const {Name = "TL",      Thy = "list"}
+val append_tm    = prim_mk_const {Name = "APPEND",  Thy = "list"}
+val flat_tm      = prim_mk_const {Name = "FLAT",    Thy = "list"}
+val length_tm    = prim_mk_const {Name = "LENGTH",  Thy = "list"}
+val map_tm       = prim_mk_const {Name = "MAP",     Thy = "list"}
+val map2_tm      = prim_mk_const {Name = "MAP2",    Thy = "list"}
+val mem_tm       = prim_mk_const {Name = "MEM",     Thy = "list"}
+val filter_tm    = prim_mk_const {Name = "FILTER",  Thy = "list"}
+val foldr_tm     = prim_mk_const {Name = "FOLDR",   Thy = "list"}
+val foldl_tm     = prim_mk_const {Name = "FOLDL",   Thy = "list"}
+val every_tm     = prim_mk_const {Name = "EVERY",   Thy = "list"}
+val exists_tm    = prim_mk_const {Name = "EXISTS",  Thy = "list"}
+val el_tm        = prim_mk_const {Name = "EL",      Thy = "list"}
+val zip_tm       = prim_mk_const {Name = "ZIP",     Thy = "list"}
+val unzip_tm     = prim_mk_const {Name = "UNZIP",   Thy = "list"}
+val sum_tm       = prim_mk_const {Name = "SUM",     Thy = "list"}
+val list_case_tm = prim_mk_const {Name = "list_case", Thy = "list"}
 
 fun eltype l = dest_list_type (type_of l);
 
@@ -89,20 +90,22 @@ fun mk_unzip l =
 
 fun mk_sum l = mk_comb(inst[alpha |-> numSyntax.num] sum_tm,l);
 
+fun mk_list_case (n,c,l) = 
+ case total dest_list_type (type_of l)
+  of SOME ty => 
+       list_mk_comb
+          (inst [alpha |-> ty, beta |-> type_of n]list_case_tm, [n,c,l])
+   | NONE => raise ERR "mk_list_case" "";
+
 
 (*---------------------------------------------------------------------------
          Destructors
  ---------------------------------------------------------------------------*)
 
-fun dest_triop p e M =
-  let val (f,z) = with_exn dest_comb M e
-      val (x,y) = dest_binop p e f
-  in (x,y,z)
-  end;
-
 fun dest_nil tm = 
- if same_const nil_tm tm then dest_list_type (type_of tm)
-  else raise ERR "dest_nil" "";
+ if same_const nil_tm tm 
+   then dest_list_type (type_of tm)
+   else raise ERR "dest_nil" "";
 
 val dest_cons   = dest_binop cons_tm   (ERR "dest_cons"   "not CONS")
 val dest_null   = dest_monop null_tm   (ERR "dest_null"   "not NULL")
@@ -119,11 +122,13 @@ val dest_foldr  = dest_triop foldr_tm  (ERR "dest_foldr"  "not FOLDR")
 val dest_foldl  = dest_triop foldl_tm  (ERR "dest_foldl"  "not FOLDL")
 val dest_every  = dest_binop every_tm  (ERR "dest_every"  "not EVERY")
 val dest_exists = dest_binop exists_tm (ERR "dest_exists" "not EXISTS")
-val dest_el     = dest_binop el_tm     (ERR "dest_el"     "not EL");
+val dest_el     = dest_binop el_tm     (ERR "dest_el"     "not EL")
 val dest_zip    = pairSyntax.dest_pair 
                    o dest_monop zip_tm (ERR "dest_zip"    "not ZIP")
 val dest_unzip  = dest_monop unzip_tm  (ERR "dest_unzip"  "not UNZIP")
-val dest_sum    = dest_monop sum_tm    (ERR "dest_sum"    "not SUM");
+val dest_sum    = dest_monop sum_tm    (ERR "dest_sum"    "not SUM")
+
+val dest_list_case = dest_triop list_case_tm (ERR "dest_sum" "not list_case");
 
 (*---------------------------------------------------------------------------
          Queries
@@ -149,6 +154,7 @@ val is_el     = can dest_el
 val is_zip    = can dest_zip
 val is_unzip  = can dest_unzip
 val is_sum    = can dest_sum
+val is_list_case = can dest_list_case
 
 
 fun mk_list (l,ty) = itlist (curry mk_cons) l (mk_nil ty);
@@ -156,7 +162,7 @@ fun mk_list (l,ty) = itlist (curry mk_cons) l (mk_nil ty);
 fun dest_list tm = 
   let val (f,b) = front_last(strip_binop (total dest_cons) tm)
   in if is_nil b then (f,eltype b)
-     else raise ERR "dest_list" "unexpected format"
+     else raise ERR "dest_list" "expected nil at end of list"
   end;
 
 val is_list = can dest_list;

@@ -230,10 +230,10 @@ fun pp_tyinfo ppstrm (FACTS(ty_name,recd)) =
          (case size_def
            of COPY(s,th) => add_string ("see "^Lib.quote s)
             | ORIG th    => if is_const tm
-                            then pp_thm th else pp_term tm); end_block();
-         add_break(1,0));
+                            then pp_thm th else pp_term tm)
+         ; end_block(); add_break(1,0));
 
-   add_break(1,0);
+(*   add_break(1,0); *)
    case boolify
     of NONE => ()
      | SOME (tm,boolify_def) =>
@@ -242,8 +242,9 @@ fun pp_tyinfo ppstrm (FACTS(ty_name,recd)) =
          (case boolify_def
            of COPY(s,th) => add_string ("see "^Lib.quote s)
             | ORIG th    => if is_const tm
-                            then pp_thm th else pp_term tm); end_block();
-         add_break(1,0));
+                            then pp_thm th else pp_term tm); 
+          end_block();
+          add_break(1,0));
 
    begin_block CONSISTENT 1;
    add_string "Induction:"; add_break (1,0);
@@ -335,11 +336,13 @@ fun type_size db ty =
 end
 
 (*
+(*---------------------------------------------------------------------------
+    Map a HOL type (ty) into a term having type :ty -> bool list.
+ ---------------------------------------------------------------------------*)
+
 local fun tyboolify_env db = Option.map fst o 
                              Option.composePartial (boolify_of,get db)
       fun list ty  = mk_thy_type{Tyop="num",Thy="num",Args=[]}
-      fun Zero() = mk_thy_const{Name="0",Thy="num", Ty=num()}
-        handle HOL_ERR _ => raise ERR "type_size.Zero()" "Numbers not declared"
       fun K0 ty = mk_abs{Bvar=mk_var{Name="v",Ty=ty}, Body=Zero()};
 in
 fun type_boolify db ty =

@@ -94,8 +94,8 @@ Induct_on `L`
 
 val fqsort_PERM = Q.store_thm
 ("fqsort_PERM",
-`!R L. PERM L (fqsort R L)`,
-recInduct fqsort_ind
+ `!R L. PERM L (fqsort R L)`,
+ recInduct fqsort_ind
   THEN RW_TAC list_ss [fqsort_eqns,PERM_refl,partition_def]
   THEN LET_EQ_TAC [LET2_RATOR,LET2_RAND]
   THEN MATCH_MP_TAC CONS_PERM

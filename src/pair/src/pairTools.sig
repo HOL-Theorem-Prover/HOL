@@ -11,5 +11,5 @@ sig
  val LET_EQ_TAC       : thm list -> tactic
  val TUPLE            : term -> thm -> thm
  val TUPLE_TAC        : term -> tactic
-
+ val ELIM_TUPLED_QUANT_CONV : conv
 end;

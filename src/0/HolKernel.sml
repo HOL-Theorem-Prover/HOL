@@ -50,6 +50,12 @@ fun dest_binop c e tm =
    in if same_const c c1 then pair else raise e end
 end
 
+fun dest_triop p e M =
+  let val (f,z) = with_exn dest_comb M e
+      val (x,y) = dest_binop p e f
+  in (x,y,z)
+  end;
+
 local fun dest M = let val (c,Rand) = dest_comb M in (c,dest_abs Rand) end
 in
 fun dest_binder c e M =

@@ -28,6 +28,7 @@ sig
   val zip_tm         : term
   val unzip_tm       : term
   val sum_tm         : term
+  val list_case_tm   : term
 
   val mk_nil         : hol_type -> term
   val mk_cons        : term * term -> term
@@ -49,6 +50,7 @@ sig
   val mk_zip         : term * term -> term
   val mk_unzip       : term -> term
   val mk_sum         : term -> term
+  val mk_list_case   : term * term * term -> term
   val mk_list        : term list * hol_type -> term
 
   val dest_nil       : term -> hol_type
@@ -71,6 +73,7 @@ sig
   val dest_zip       : term -> term * term
   val dest_unzip     : term -> term
   val dest_sum       : term -> term
+  val dest_list_case : term -> term * term * term
   val dest_list      : term -> term list * hol_type
 
   val is_nil         : term -> bool
@@ -93,6 +96,7 @@ sig
   val is_zip         : term -> bool
   val is_unzip       : term -> bool
   val is_sum         : term -> bool
+  val is_list_case   : term -> bool
   val is_list        : term -> bool
 
 end
