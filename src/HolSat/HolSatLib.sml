@@ -38,7 +38,7 @@ open Psyntax;
 open Conv;
 in
 
-infix|->;
+infix |->;
 
 (* 
 ** Compare values of type string*int by first comparing second components
