@@ -30,6 +30,14 @@ let isTeXNormal t =
     TeXNormal(_) -> true
   | _            -> false
 
+let gensymcnt = ref 0
+
+let debug_print s =
+  let n = !gensymcnt
+  in
+  gensymcnt := n + 1;
+  prerr_endline (" DEBUG "^string_of_int (n+100000)^" "^s)
+
 (* ------------------------------------------------------------ *)
 (* Parsers                                                      *)
 (* ------------------------------------------------------------ *)
@@ -70,6 +78,18 @@ and parse_chunk1 n = parser
        c = parse_chunk >] -> (Indent(n) :: t :: e) :: c
   | [<>]                  -> []
 
+and parse_longchunk = parser (* parse a chunk delimited by two blank lines *)
+    [< 'Indent(n1); c = parse_longchunk0 n1 >] -> c
+
+and parse_longchunk0 n1 = parser
+    [< 'Indent(n2); c = parse_longchunk1 [Indent(n1);Indent(n2)] >] -> c
+  | [<              c = parse_longchunk1 [Indent(n1)]            >] -> c
+
+and parse_longchunk1 n = parser
+    [< 't when not (isIndent t) ; e = parse_line1 ;
+       c = parse_longchunk >] -> (n @ (t :: e)) :: c
+  | [<>]                  -> []
+
 and optcomm = parser
     [< 'Comment(c) >]                  -> Some [Comment(c)]
   | [< 'HolStartTeX; ts = parse_tex >] -> Some (HolStartTeX :: ts)
@@ -95,6 +115,11 @@ and sp = parser
 and wopt = parser
     [< 'White(s)  ; s1 = wopt >] -> White(s)   :: s1
   | [<>]                         -> []
+
+and ids_nocomm = parser
+    [< 'Ident(s,_) ; ss = ids_nocomm >] -> s :: ss
+  | [< 'White(_)   ; ss = ids_nocomm >] -> ss
+  | [<>]                               -> []
 
 and sp' = parser
     [< 'White(s)                  ; s1 = sp' >] -> White(s)     :: s1
@@ -176,7 +201,19 @@ let dotexify tlist s =
 
 let texify s = dotexify texify_list s
 
-let texify_text s = dotexify texify_text_list s
+let texify_text s = if String.length s > 1024 then
+                       "SORRY, COMMENT TOO BIG FOR BROKEN HOLDOC TO PROCESS"
+                    else
+                       dotexify texify_text_list s
+
+let texifys sep ss =
+  let rec go ss =
+    match ss with
+      []      -> []
+    | [s]     -> [texify s]
+    | (s::ss) -> texify s :: sep :: go ss
+  in
+  String.concat "" (go ss)
 
 
 (* recognisers for various syntactic categories *)
@@ -467,7 +504,7 @@ double square brackets like this: [[Flags(T,F)]].
 (* the rule type *)
 
 type rule =
-    Rule of string list * string * string * token list option (* v, n, cat, desc, *)
+    Rule of string list * string * string list * token list option (* v, n, cat, desc, *)
         * token list list * token list * token list list (* lhs, lab, rhs, *)
         * token list list * token list option (* side, comm *)
 
@@ -480,7 +517,8 @@ let print_tokenline toks =
     print_newline()
 
 let print_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)) =
-  print_string ("Rule "^n^" ("^cat);
+  print_string ("Rule "^n^" (");
+  ignore (List.map (function s -> print_string (s^" ")) cat);
   (match desc with
      Some d -> print_string " ";
                print_tokenline d
@@ -510,14 +548,14 @@ let rec parse_rule = parser
     [< 'Sep("("); _ = sp; r1 = parse_rule1 >] -> r1
   | [<>] -> raise (Stream.Error("rule begin: `('"));
 and parse_rule1 = parser
-    [< 'Ident("!",_); v = rule_vars; _ = sp; 'Sep(".") ?? "."; _ = sp;
-       'Indent(_);
+    [< 'Ident("!",_); v = rule_vars; _ = sp; 'Sep(".") ?? ".";
+       _ = sp';
        (n,cat,desc) = rule_name;
        l_lab_r = parse_chunk;
        'Indent(_);
        _ = sp'; 'Ident("<==",_) ?? n^": <=="; _ = sp;
        'Indent(_);
-       side = parse_chunk;
+       side = parse_longchunk;
        'Indent(_); _ = optind;
        comm = optcomm;
        _ = optind;
@@ -552,10 +590,10 @@ and rule_vars = parser
   | [<>]                                         -> []
 
 and rule_name = parser
-    [< 'Indent(_); 'Ident(n,_) ?? "rule name"; _ = sp; 'Ident("/*",_) ?? "/*"; _ = sp; 'Ident(cat,_) ?? "category"; _ = wopt;
+    [< 'Ident(n,_); _ = sp; 'Ident("/*",_) ?? "/*"; _ = sp; cat = ids_nocomm ?? "category"; _ = wopt;
        desc = optcomm; _ = sp; 'Ident("*/",_) ?? "*/"; _ = sp >]
-      -> (n,cat,desc)
-  | [<>] -> raise (Stream.Error("rule name on new line"));
+      -> (* debug_print ("GOT "^n^"\n"); *) (n,cat,desc)
+  | [<>] -> raise (Stream.Error("can't find rule name"));
 
 
 and parse_rules_and_process p = parser
@@ -653,7 +691,7 @@ let latex_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm) as r) =
   in
   print_string ("\\newcommand{"^texname^"}{\\rrule"^(if side = [] then "n" else "c")
                          ^(match comm with Some _ -> "c" | None -> "n"));
-  print_string ("{"^texify n^"}{"^texify cat^"}");
+  print_string ("{"^texify n^"}{"^texifys " " cat^"}");
   print_string ("{"^(match desc with Some d -> munge pvs d [] | None -> "")^"}\n");
   print_string ("{"^munges pvs lhs^"}\n");
   print_string ("{"^mungelab pvs lab^"}\n");
