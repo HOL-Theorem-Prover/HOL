@@ -7,7 +7,6 @@ let numeric = [ `0` - `9` ]
    comments *)
 let symbol = [ `|` `!` `#` `%` `&` `)` `-` `=` `+` `[` `]` `{`
                `}` `;` `:` `@` `~` `\\` `,` `.` `<` `>` `?` `/` ]
-let fullsymbol = symbol | `(` | `*`
 let nonparen = symbol | `*`
 let nonstar = symbol | `(`
 let ident = alpha (alpha | numeric)*
