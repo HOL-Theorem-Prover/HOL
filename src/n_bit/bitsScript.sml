@@ -59,6 +59,10 @@ val ZERO_LT_TWOEXP = save_thm("ZERO_LT_TWOEXP",
   GEN_ALL (REDUCE_RULE (SPECL [`n`,`1`] ZERO_LESS_EXP))
 );
 
+val TWOEXP_NOT_ZERO = save_thm("TWOEXP_NOT_ZERO",
+  REWRITE_RULE [GSYM NOT_ZERO_LT_ZERO] ZERO_LT_TWOEXP
+);
+
 val th = (SPEC_ALL o REWRITE_RULE [ZERO_LT_TWOEXP] o SPEC `2 EXP n`) DIVISION;
 
 (* |- !n k. k MOD 2 EXP n < 2 EXP n *)
@@ -506,13 +510,13 @@ val BIT_SLICE_THM = save_thm("BIT_SLICE_THM",
 );
 
 val BIT_SLICE_THM2 = store_thm("BIT_SLICE_THM2",
-  `!b n. BIT b n ==> (SLICE b b n = 2 EXP b)`,
-  RW_TAC bool_ss [SBIT_def,GSYM BIT_SLICE_THM]
+  `!b n. BIT b n = (SLICE b b n = 2 EXP b)`,
+  RW_TAC bool_ss [SBIT_def,GSYM BIT_SLICE_THM,TWOEXP_NOT_ZERO]
 );
 
 val BIT_SLICE_THM3 = store_thm("BIT_SLICE_THM3",
-  `!b n. ~BIT b n ==> (SLICE b b n = 0)`,
-  RW_TAC bool_ss [SBIT_def,GSYM BIT_SLICE_THM]
+  `!b n. ~BIT b n = (SLICE b b n = 0)`,
+  RW_TAC bool_ss [SBIT_def,GSYM BIT_SLICE_THM,TWOEXP_NOT_ZERO]
 );
 
 val SUB_BITS = prove(
