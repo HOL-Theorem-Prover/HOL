@@ -24,6 +24,8 @@ infix ++;
 val int_ss = boolSimps.bool_ss ++ arithSimps.ARITH_ss ++ pairSimps.PAIR_ss;
 val DECIDE_TAC = CONV_TAC ARITH_CONV;
 
+val prove_thm = store_thm
+val _ = Globals.guessing_overloads := false
 (*--------------------------------------------------------------------------*)
 (* Required lemmas about the natural numbers - mostly to drive CANCEL_TAC   *)
 (*--------------------------------------------------------------------------*)
@@ -835,9 +837,9 @@ val INT_LT_NEGTOTAL =
     prove_thm("INT_LT_NEGTOTAL",
 	      Term `!x. (x = 0) \/ (0 <_ x) \/ (0 <_ --x)`,
 	      GEN_TAC THEN REPEAT_TCL DISJ_CASES_THEN ASSUME_TAC
-	      (SPECL [Term `x:int`, Term `0`] INT_LT_TOTAL) THEN
+	      (Q.SPECL [`x`, `0`] INT_LT_TOTAL) THEN
 	      ASM_REWRITE_TAC
-	      [SYM(REWRITE_RULE[INT_NEGNEG] (SPEC (Term `--x`) INT_NEG_LT0))]);
+	      [SYM(REWRITE_RULE[INT_NEGNEG] (Q.SPEC `~x` INT_NEG_LT0))]);
 
 val INT_LE_NEGTOTAL =
     prove_thm
@@ -1626,4 +1628,5 @@ val INT_OF_NUM =
 	       BETA_TAC THEN DISCH_THEN MATCH_MP_TAC THEN
 	       POP_ASSUM ACCEPT_TAC]);
 
+val _ = Globals.show_numeral_types := true
 val _ = export_theory();
