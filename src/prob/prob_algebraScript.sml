@@ -210,13 +210,13 @@ val ALG_CANON_FIND_EMBED = store_thm
    STRIP_TAC
    ++ Induct >> RW_TAC list_ss [alg_canon_find_def]
    ++ POP_ASSUM MP_TAC
-   ++ RW_TAC list_ss [alg_canon_find_def, algebra_embed_def] <<
+   ++ BasicProvers.NORM_TAC list_ss [alg_canon_find_def, algebra_embed_def] <<
    [MP_TAC (Q.SPECL [`l`, `h`] ALG_EMBED_PREFIX_SUBSET)
     ++ PSET_TAC []
     ++ PROVE_TAC [],
     PSET_TAC [] ++ PROVE_TAC [],
     MP_TAC (Q.SPECL [`l`, `h::b`] ALG_CANON_PREFS_EMBED)
-    ++ RW_TAC std_ss [algebra_embed_def]]);
+    ++ BasicProvers.NORM_TAC std_ss [algebra_embed_def]]);
 
 val ALG_CANON1_EMBED = store_thm
   ("ALG_CANON1_EMBED",

@@ -541,11 +541,12 @@ val _ = adjoin_to_theory
        fun NL() = PP.add_newline ppstrm
    in
       S "type term = Abbrev.term"; NL();
-      S "type conv = Abbrev.conv"; NL();
+      S "type conv = Abbrev.conv"; NL();NL();
+      S "val uncurry_tm       : term"; NL();
+      S "val comma_tm         : term"; NL();
       S "val dest_pair        : term -> term * term"; NL();
       S "val strip_pair       : term -> term list"; NL();
       S "val is_vstruct       : term -> bool"; NL();
-      S "val uncurry_tm       : term"; NL();
       S "val mk_pabs          : term * term -> term"; NL();
       S "val PAIRED_BETA_CONV : conv"; NL()
   end),
@@ -564,7 +565,10 @@ S "val ERR1 = mk_HOL_ERR \"pairSyntax\""; NL();
 S "val ERR2 = mk_HOL_ERR \"PairedLambda\""; NL();
 S "val ERR3 = mk_HOL_ERR \"pairTheory.dest\";"; NL();
 NL();
-S "val dest_pair = dest_binop(\",\",\"pair\") (ERR1 \"dest_pair\" \"not a pair\")"; NL();
+S "val comma_tm = prim_mk_const {Name=\",\", Thy=\"pair\"};"; NL();
+S "val uncurry_tm = prim_mk_const {Name=\"UNCURRY\", Thy=\"pair\"};"; NL();
+NL();
+S "val dest_pair = dest_binop comma_tm (ERR1 \"dest_pair\" \"not a pair\")"; NL();
 S "val strip_pair = strip_binop (total dest_pair);"; NL();
 NL();
 S "local fun check [] = true"; NL();
@@ -573,18 +577,9 @@ S "in"; NL();
 S "fun is_vstruct M = check (strip_pair M)";
 S "end;"; NL();
 NL();
-S "val uncurry_tm = prim_mk_const {Name=\"UNCURRY\", Thy=\"pair\"};"; NL();
-NL();
-NL();
 S "fun mk_uncurry_tm(xt,yt,zt) = "; NL();
 S "  inst [alpha |-> xt, beta |-> yt, gamma |-> zt] uncurry_tm;"; NL();
 NL();
-S "fun is_uncurry_tm c = "; NL();
-S " case total dest_thy_const c"; NL();
-S "  of SOME{Name=\"UNCURRY\",Thy=\"pair\",...} => true"; NL();
-S "   | otherwise => false;"; NL();
-NL();
-S "val is_uncurry = is_uncurry_tm o rator;"; NL();
 NL();
 S "fun mk_pabs(vstruct,body) ="; NL();
 S "  if is_var vstruct then Term.mk_abs(vstruct, body)"; NL();
@@ -601,7 +596,7 @@ S "      fun conv tm = "; NL();
 S "       let val (Rator,Rand) = dest_comb tm"; NL();
 S "           val (fst,snd) = dest_pair Rand"; NL();
 S "           val (Rator,f) = dest_comb Rator"; NL();
-S "           val _ = assert is_uncurry_tm Rator"; NL();
+S "           val _ = assert (same_const uncurry_tm) Rator"; NL();
 S "           val (t1,ty') = dom_rng (type_of f)"; NL();
 S "           val (t2,t3) = dom_rng ty'"; NL();
 S "           val iDEF = INST_TYPE [alpha |-> t1, beta |-> t2, gamma |-> t3] DEF"; NL();

@@ -35,7 +35,7 @@ val term_of_int = mk_numeral o Arbnum.fromInt ;
 (* ---------------------------------------------------------------------*)
 
 fun BIT_CONV tm =
-  let val (N,W) = dest_binop ("BIT","word_base") (ERR "BIT_CONV" "") tm
+  let val (N,W) = sdest_binop ("BIT","word_base") (ERR "BIT_CONV" "") tm
       val LST =  rand W
       val lst = (#1 o listSyntax.dest_list) LST
       val n = int_of_term N
@@ -56,7 +56,7 @@ local val err = ERR "dest_wseg" "not a WSEG"
 in
 fun dest_wseg M =
  let val (Rator,r) = with_exn dest_comb M err
-     val (p,q) = dest_binop ("WSEG","word_base") err Rator
+     val (p,q) = sdest_binop ("WSEG","word_base") err Rator
  in (p,q,r)
  end 
 end
@@ -203,12 +203,12 @@ fun pick_fn s l oper =
  handle HOL_ERR _ => raise ERR "pick_fn" s;
 
 fun PWORDLEN_CONV tms tm =
- let val (n,w') = dest_binop("PWORDLEN","word_base") (ERR"PWORDLEN_CONV" "") tm
-     val (wc,w) = strip_comb w'
-     val f = pick_fn "unknown constant" pwordlen_funs wc
- in EQT_INTRO(f tms n w)
- end
- handle e => raise (wrap_exn "wordLib" "PWORDLEN_CONV" e);
+let val (n,w') = sdest_binop("PWORDLEN","word_base") (ERR"PWORDLEN_CONV" "") tm
+    val (wc,w) = strip_comb w'
+    val f = pick_fn "unknown constant" pwordlen_funs wc
+in EQT_INTRO(f tms n w)
+end
+handle e => raise (wrap_exn "wordLib" "PWORDLEN_CONV" e);
 
 
 (* --------------------------------------------------------------------- *)
@@ -224,13 +224,14 @@ fun PWORDLEN_CONV tms tm =
 (* --------------------------------------------------------------------- *)
 
 fun PWORDLEN_bitop_CONV tm =
- let val (n,w') = dest_binop("PWORDLEN","word_base") (ERR"PWORDLEN_CONV" "") tm
- in if is_var w' then ASSUME tm else 
-    let val (wc,w) = strip_comb w'
-       val thm1 = RESQ_SPECL(n::w) (pick_fn"unknown bitop" pwordlen_bitop_funs wc)
-    in EQT_INTRO(itlist PROVE_HYP (map PWORDLEN_bitop_CONV (hyp thm1)) thm1)
-    end
- end handle e => raise (wrap_exn "wordLib" "PWORDLEN_bitop_CONV" e);
+let val (n,w') = sdest_binop("PWORDLEN","word_base") (ERR"PWORDLEN_CONV" "") tm
+in if is_var w' then ASSUME tm else 
+   let val (wc,w) = strip_comb w'
+      val thm1 = RESQ_SPECL (n::w) 
+                    (pick_fn"unknown bitop" pwordlen_bitop_funs wc)
+   in EQT_INTRO(itlist PROVE_HYP (map PWORDLEN_bitop_CONV (hyp thm1)) thm1)
+   end
+end handle e => raise wrap_exn "wordLib" "PWORDLEN_bitop_CONV" e;
 
 
 (* ---------------------------------------------------------------------*)

@@ -86,7 +86,7 @@ fun mk_arb ty = inst [alpha |-> ty] arb;
 
 
 (*--------------------------------------------------------------------------*
- *     Destructors                                                          *
+ *                Destructors                                               *
  *--------------------------------------------------------------------------*)
 
 local val dest_eq_ty_err = ERR "dest_eq(_ty)"   "not an \"=\""
@@ -96,46 +96,39 @@ local val dest_eq_ty_err = ERR "dest_eq(_ty)"   "not an \"=\""
       val dest_cond_err  = ERR "dest_cond"      "not a conditional"
       val bool_case_err  = ERR "dest_bool_case" "not a \"bool_case\""
 in
-val dest_eq = dest_binop ("=","min")      dest_eq_ty_err
-
-fun dest_eq_ty M = let val (l,r) = dest_eq M in (l, r, type_of l) end
-
-fun lhs M = fst(dest_eq M) handle HOL_ERR _ => raise lhs_err
-fun rhs M = snd(dest_eq M) handle HOL_ERR _ => raise rhs_err
-
-val dest_neg = dest_monop ("~","bool") (ERR"dest_neg" "not a negation");
-
-val dest_imp_only = dest_binop ("==>", "min")   dest_imp_err;
-
-fun dest_imp M = 
-  dest_imp_only M handle HOL_ERR _ => (dest_neg M, F) 
-                  handle HOL_ERR _ => raise dest_imp_err
-
-val dest_select  = dest_binder("@", "min")  (ERR"dest_select"  "not a \"@\"")
-val dest_forall  = dest_binder("!", "bool") (ERR"dest_forall"  "not a \"!\"")
-val dest_exists  = dest_binder("?", "bool") (ERR"dest_exists"  "not a \"?\"")
-val dest_exists1 = dest_binder("?!","bool") (ERR"dest_exists1" "not a \"?!\"")
-val dest_conj   = dest_binop("/\\","bool") (ERR"dest_conj"    "not a \"/\\\"")
-val dest_disj   = dest_binop("\\/","bool") (ERR"dest_disj"    "not a \"\\/\"")
-val dest_let    = dest_binop("LET","bool") (ERR"dest_let"    "not a let term")
+val dest_eq       = dest_binop equality dest_eq_ty_err
+fun dest_eq_ty M  = let val (l,r) = dest_eq M in (l, r, type_of l) end
+fun lhs M         = with_exn (fst o dest_eq) M lhs_err
+fun rhs M         = with_exn (snd o dest_eq) M rhs_err
+val dest_neg      = dest_monop negation (ERR "dest_neg" "not a negation")
+val dest_imp_only = dest_binop implication dest_imp_err;
+fun dest_imp M    = dest_imp_only M 
+                      handle HOL_ERR _ => (dest_neg M, F) 
+                      handle HOL_ERR _ => raise dest_imp_err
+val dest_select  = dest_binder select      (ERR"dest_select" "not a \"@\"")
+val dest_forall  = dest_binder universal   (ERR"dest_forall" "not a \"!\"")
+val dest_exists  = dest_binder existential (ERR"dest_exists" "not a \"?\"")
+val dest_exists1 = dest_binder exists1     (ERR"dest_exists1" "not a \"?!\"")
+val dest_conj    = dest_binop conjunction  (ERR"dest_conj"   "not a \"/\\\"")
+val dest_disj    = dest_binop disjunction  (ERR"dest_disj"   "not a \"\\/\"")
+val dest_let     = dest_binop let_tm       (ERR"dest_let"    "not a let term")
 
 fun dest_cond M =
  let val (Rator,t2) = with_exn dest_comb M dest_cond_err
-     val (b,t1) = dest_binop ("COND","bool") dest_cond_err Rator
+     val (b,t1) = dest_binop conditional dest_cond_err Rator
  in (b, t1, t2)
  end 
 
 fun dest_bool_case M =
  let val (Rator,b) = with_exn dest_comb M bool_case_err
-     val (a0,a1) = dest_binop ("bool_case","bool") bool_case_err Rator
+     val (a0,a1) = dest_binop bool_case bool_case_err Rator
  in (a0, a1, b)
  end 
 
 fun dest_arb M = 
-  case dest_thy_const M 
-   of {Name="ARB", Thy="bool", Ty} => Ty
-    | otherwise => raise ERR "dest_arb" "";
-end;
+  if same_const M arb then type_of M else raise ERR "dest_arb" ""
+
+end (* local *);
 
 (*---------------------------------------------------------------------------
              Selectors
@@ -154,7 +147,7 @@ val is_neg       = can dest_neg
 val is_cond      = can dest_cond
 val is_let       = can dest_let
 val is_bool_case = can dest_bool_case
-val is_arb       = can dest_arb;
+val is_arb       = same_const arb
 
 
 (*---------------------------------------------------------------------------*

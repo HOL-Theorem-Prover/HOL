@@ -70,16 +70,16 @@ fun var_eq tm =
    in
        aconv lhs rhs
      orelse
-       (is_var lhs andalso not (mem lhs (free_vars rhs)))
+       (is_var lhs andalso not (free_in lhs rhs))
      orelse
-       (is_var rhs andalso not (mem rhs (free_vars lhs)))
+       (is_var rhs andalso not (free_in rhs lhs))
    end
-   handle _ => is_bool_atom tm
+   handle HOL_ERR _ => is_bool_atom tm
 
 
 fun grab P f v =
   let fun grb [] = v
-        | grb (h::t) = if (P h) then f h else grb t
+        | grb (h::t) = if P h then f h else grb t
   in grb
   end;
 
@@ -87,46 +87,24 @@ fun ASSUM_TAC f P = W (fn (asl,_) => grab P f NO_TAC asl)
 
 fun ASSUMS_TAC f P = W (fn (asl,_) =>
   case filter P asl
-    of []     => NO_TAC
-     | assums => MAP_EVERY f assums);
+   of []     => NO_TAC
+    | assums => MAP_EVERY f assums);
 
-fun CONCL_TAC f P = W (fn (_,c) => if (P c) then f else NO_TAC);
+fun CONCL_TAC f P = W (fn (_,c) => if P c then f else NO_TAC);
 
-fun const_coords c =
-  let val {Name,Thy,...} = dest_thy_const c in (Name,Thy) end;
+fun LIFT_SIMP ss tm = 
+  UNDISCH_THEN tm (STRIP_ASSUME_TAC o simpLib.SIMP_RULE ss []);
 
-fun constructed constr_set tm =
-  let val (lhs,rhs) = dest_eq tm
-  in
-  (aconv lhs rhs)
-     orelse
-   let val maybe1 = const_coords(fst(strip_comb lhs))
-       val maybe2 = const_coords(fst(strip_comb rhs))
-   in Binaryset.member(constr_set,maybe1)
-         andalso
-      Binaryset.member(constr_set,maybe2)
+
+local 
+  fun DTHEN ttac = fn (asl,w) =>
+   let val (ant,conseq) = dest_imp_only w
+       val (gl,prf) = ttac (ASSUME ant) (asl,conseq)
+   in (gl, Thm.DISCH ant o prf)
    end
-  end
-  handle HOL_ERR _ => false;
-
-fun LIFT_SIMP ss tm =
-   UNDISCH_THEN tm (STRIP_ASSUME_TAC o simpLib.SIMP_RULE ss []);
-
-
-local fun DTHEN ttac = fn (asl,w) =>
-        let val (ant,conseq) = dest_imp_only w
-            val (gl,prf) = ttac (Thm.ASSUME ant) (asl,conseq)
-        in (gl, Thm.DISCH ant o prf)
-        end
 in
 val BOSS_STRIP_TAC = Tactical.FIRST [GEN_TAC,CONJ_TAC, DTHEN STRIP_ASSUME_TAC]
 end;
-
-fun add_constr tyinfo set =
-   let open TypeBasePure
-       val C = constructors_of tyinfo
-   in Binaryset.addList (set, map const_coords C)
-   end;
 
 infix &&;
 
@@ -143,22 +121,6 @@ fun breakable tm =
     is_dneg tm   orelse
     T=tm         orelse
     F=tm;
-
-(* This is an expensive test ....  *)
-
-fun splittable w =
-   Lib.can (find_term (fn tm => is_cond tm andalso free_in tm w)) w;
-
-
-fun LIFT_SPLIT_SIMP ss simp tm =
-   UNDISCH_THEN tm
-     (fn th => MP_TAC (simpLib.SIMP_RULE ss [] th)
-                 THEN IF_CASES_TAC
-                 THEN simp
-                 THEN REPEAT BOSS_STRIP_TAC);
-
-fun SPLIT_SIMP simp = TRY IF_CASES_TAC THEN simp ;
-
 
 (*---------------------------------------------------------------------------
       STP_TAC (Simplify then Prove)
@@ -196,24 +158,89 @@ fun SPLIT_SIMP simp = TRY IF_CASES_TAC THEN simp ;
          * eliminate occurrences of T (toss it away) and F (prove the goal)
            in the assumptions.
 
-         * elimininate free occurrences of if-then-else in the
-           assumptions, simplifying the goal afterwards.
-
     7. Apply the finishing tactic.
 
  ---------------------------------------------------------------------------*)
 
-local fun compare ((s1,s2),(t1,t2)) =
-        case String.compare(s1,t1)
-         of EQUAL => String.compare (s2,t2)
-          | other => other
-      val empty_constr_set = Binaryset.empty compare
-in
+(* Just hash the name, but could also toss in the theory name. *)
+
+fun hash_const c = Polyhash.hash (#Name(dest_thy_const c));
+
+fun mkCSET CSET tyl = 
+ let fun inCSET tm = 
+       case PolyHash.peek CSET tm
+        of NONE => false
+         | SOME _ => true
+     fun addCSET c = PolyHash.insert CSET (c,c)
+     fun add_constr tyinfo = 
+         List.app addCSET (TypeBasePure.constructors_of tyinfo)
+     val _ = List.app add_constr tyl
+     fun constructed tm =
+      let val (lhs,rhs) = dest_eq tm
+      in aconv lhs rhs orelse
+         let val maybe1 = fst(strip_comb lhs)
+             val maybe2 = fst(strip_comb rhs)
+         in is_const maybe1 andalso is_const maybe2 
+            andalso
+            inCSET maybe1 andalso inCSET maybe2
+         end
+      end handle HOL_ERR _ => false
+  in 
+    Lib.can (find_term constructed)
+ end;
+
 fun PRIM_STP_TAC ss finisher =
-  let val tyl = TypeBasePure.listItems (TypeBase.theTypeBase())
-      val constr_set = rev_itlist add_constr tyl empty_constr_set
-      val has_constr_eqn = Lib.can (find_term (constructed constr_set))
-      val ASM_SIMP = simpLib.ASM_SIMP_TAC ss []
+ let val has_constr_eqn = 
+       mkCSET (PolyHash.mkTable (hash_const, uncurry same_const)
+                                (31, ERR "CSET" "not found"))
+              (TypeBasePure.listItems (TypeBase.theTypeBase()))
+     val ASM_SIMP = simpLib.ASM_SIMP_TAC ss []
+  in
+    REPEAT (GEN_TAC ORELSE CONJ_TAC)
+     THEN REPEAT (ASSUM_TAC VSUBST_TAC var_eq)
+     THEN ASM_SIMP
+     THEN TRY (IF_CASES_TAC THEN REPEAT IF_CASES_TAC THEN ASM_SIMP)
+     THEN REPEAT BOSS_STRIP_TAC
+     THEN REPEAT (CHANGED_TAC
+            (ASSUM_TAC VSUBST_TAC var_eq
+               ORELSE ASSUMS_TAC (LIFT_SIMP ss) has_constr_eqn
+               ORELSE ASSUM_TAC (LIFT_SIMP ss) breakable
+               ORELSE CONCL_TAC ASM_SIMP has_constr_eqn))
+     THEN TRY finisher
+  end
+
+(*---------------------------------------------------------------------------
+    PRIM_NORM_TAC: preliminary attempt at keeping the goal in a
+    fully constructor-reduced format. The idea is that there should
+    be no equations between constructor terms anywhere in the goal.
+    (This is what PRIM_STP_TAC does.)
+
+    Also, no conditionals should occur in the resulting goal.
+    This seems to be an expensive test, especially since the work
+    in detecting the conditional is replicated in IF_CASES_TAC.
+ 
+    Continuing in this light, it seems possible to eliminate all
+    case expressions in the goal, but that hasn't been implemented yet.
+ ---------------------------------------------------------------------------*)
+
+fun splittable w =
+ Lib.can (find_term (fn tm => is_cond tm andalso free_in tm w)) w;
+
+fun LIFT_SPLIT_SIMP ss simp tm =
+   UNDISCH_THEN tm
+     (fn th => MP_TAC (simpLib.SIMP_RULE ss [] th)
+                 THEN IF_CASES_TAC
+                 THEN simp
+                 THEN REPEAT BOSS_STRIP_TAC);
+
+fun SPLIT_SIMP simp = TRY IF_CASES_TAC THEN simp ;
+
+fun PRIM_NORM_TAC ss =
+ let val has_constr_eqn = 
+       mkCSET (PolyHash.mkTable (hash_const, uncurry same_const)
+                                (31, ERR "CSET" "not found"))
+              (TypeBasePure.listItems (TypeBase.theTypeBase()))
+     val ASM_SIMP = simpLib.ASM_SIMP_TAC ss []
   in
     REPEAT (GEN_TAC ORELSE CONJ_TAC)
      THEN REPEAT (ASSUM_TAC VSUBST_TAC var_eq)
@@ -227,9 +254,8 @@ fun PRIM_STP_TAC ss finisher =
                ORELSE CONCL_TAC ASM_SIMP has_constr_eqn
                ORELSE ASSUM_TAC (LIFT_SPLIT_SIMP ss ASM_SIMP) splittable
                ORELSE CONCL_TAC (SPLIT_SIMP ASM_SIMP) splittable))
-     THEN TRY finisher
   end
-end;
+
 
 (*---------------------------------------------------------------------------
     Adding simplification sets in for all datatypes each time
@@ -244,12 +270,25 @@ fun STP_TAC ss finisher =
     PRIM_STP_TAC ss' finisher
   end;
 
-
 fun RW_TAC ss thl = STP_TAC (ss && thl) NO_TAC
 
-val bool_ss = boolSimps.bool_ss; (* needed for signature *)
+fun NORM_TAC ss thl = 
+ PRIM_NORM_TAC (rev_itlist add_simpls 
+                   (TypeBasePure.listItems (TypeBase.theTypeBase()))
+               (ss && thl))
+
+val bool_ss = boolSimps.bool_ss; 
+
+(*---------------------------------------------------------------------------
+       Stateful version of RW_TAC: doesn't load the constructor
+       simplifications into the simpset at each invocation, but
+       just when a datatype is declared.
+ ---------------------------------------------------------------------------*)
+
 val (srw_ss : simpset ref) = ref bool_ss
+
 val srw_ss_initialised = ref false
+
 val pending_updates = ref ([]: simpLib.ssdata list)
 
 fun initialise_srw_ss() =
@@ -264,7 +303,6 @@ fun initialise_srw_ss() =
         srw_ss_initialised := true;
         !srw_ss
       end
-
 
 fun augment_srw_ss ssdl =
     if !srw_ss_initialised then
@@ -284,6 +322,10 @@ fun SRW_TAC ssdl thl = let
 in
   PRIM_STP_TAC (ss && thl) NO_TAC
 end;
+
+(*---------------------------------------------------------------------------
+       Make some additions to the srw_ss persistent
+ ---------------------------------------------------------------------------*)
 
 fun export_rewrites slist = let
   open Portable
@@ -309,4 +351,4 @@ in
   adjoin_to_theory{sig_ps = SOME print_sig, struct_ps = SOME print_export}
 end
 
-end;
+end

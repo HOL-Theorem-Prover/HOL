@@ -25,7 +25,7 @@ fun acc_strip_comb M rands =
 
 fun strip_comb tm = acc_strip_comb tm [];
 
-val dest_forall = dest_binder ("!","bool") (ERROR"dest_forall" "");
+val dest_forall = sdest_binder ("!","bool") (ERROR "dest_forall" "");
 
 fun strip_forall fm =
  let val (Bvar,Body) = dest_forall fm
@@ -33,7 +33,7 @@ fun strip_forall fm =
  in (Bvar::bvs, core)
  end handle HOL_ERR _ => ([],fm);
 
-fun lhs tm = #2(dest_binop("=","min") (ERROR"lhs" "") tm);
+fun lhs tm = #2(sdest_binop("=","min") (ERROR"lhs" "") tm);
 
 fun ftoString [] = ""
   | ftoString (QUOTE s :: rest) = s ^ ftoString rest

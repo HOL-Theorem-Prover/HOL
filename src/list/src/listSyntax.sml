@@ -101,30 +101,29 @@ fun dest_triop p e M =
   end;
 
 fun dest_nil tm = 
-  case total dest_thy_const tm
-   of SOME{Name="NIL",Thy="list",Ty} => dest_list_type Ty
-    | other => raise ERR "dest_nil" "";
+ if same_const nil_tm tm then dest_list_type (type_of tm)
+  else raise ERR "dest_nil" "";
 
-val dest_cons   = dest_binop("CONS",  "list") (ERR "dest_cons"   "not CONS")
-val dest_null   = dest_monop("NULL",  "list") (ERR "dest_null"   "not NULL")
-val dest_hd     = dest_monop("HD",    "list") (ERR "dest_hd"     "not HD")
-val dest_tl     = dest_monop("TL",    "list") (ERR "dest_tl"     "not TL")
-val dest_append = dest_binop("APPEND","list") (ERR "dest_append" "not APPEND")
-val dest_flat   = dest_monop("FLAT",  "list") (ERR "dest_flat"   "not FLAT")
-val dest_length = dest_monop("LENGTH","list") (ERR "dest_length" "not LENGTH")
-val dest_map    = dest_binop("MAP",   "list") (ERR "dest_map"    "not MAP")
-val dest_map2   = dest_triop("MAP2",  "list") (ERR "dest_map2"   "not MAP2")
-val dest_mem    = dest_binop("MEM",   "list") (ERR "dest_mem"    "not MEM")
-val dest_filter = dest_binop("FILTER","list") (ERR "dest_filter" "not FILTER")
-val dest_foldr  = dest_triop("FOLDR", "list") (ERR "dest_foldr"  "not FOLDR")
-val dest_foldl  = dest_triop("FOLDL", "list") (ERR "dest_foldl"  "not FOLDL")
-val dest_every  = dest_binop("EVERY", "list") (ERR "dest_every"  "not EVERY")
-val dest_exists = dest_binop("EXISTS","list") (ERR "dest_exists" "not EXISTS")
-val dest_el     = dest_binop("EL",    "list") (ERR "dest_el"     "not EL");
-val dest_zip    = pairSyntax.dest_pair o 
-                  dest_monop ("ZIP",  "list") (ERR "dest_zip"    "not ZIP")
-val dest_unzip  = dest_monop("UNZIP", "list") (ERR "dest_unzip"  "not UNZIP")
-val dest_sum    = dest_monop("SUM",   "list") (ERR "dest_sum"    "not SUM");
+val dest_cons   = dest_binop cons_tm   (ERR "dest_cons"   "not CONS")
+val dest_null   = dest_monop null_tm   (ERR "dest_null"   "not NULL")
+val dest_hd     = dest_monop hd_tm     (ERR "dest_hd"     "not HD")
+val dest_tl     = dest_monop tl_tm     (ERR "dest_tl"     "not TL")
+val dest_append = dest_binop append_tm (ERR "dest_append" "not APPEND")
+val dest_flat   = dest_monop flat_tm   (ERR "dest_flat"   "not FLAT")
+val dest_length = dest_monop length_tm (ERR "dest_length" "not LENGTH")
+val dest_map    = dest_binop map_tm    (ERR "dest_map"    "not MAP")
+val dest_map2   = dest_triop map2_tm   (ERR "dest_map2"   "not MAP2")
+val dest_mem    = dest_binop mem_tm    (ERR "dest_mem"    "not MEM")
+val dest_filter = dest_binop filter_tm (ERR "dest_filter" "not FILTER")
+val dest_foldr  = dest_triop foldr_tm  (ERR "dest_foldr"  "not FOLDR")
+val dest_foldl  = dest_triop foldl_tm  (ERR "dest_foldl"  "not FOLDL")
+val dest_every  = dest_binop every_tm  (ERR "dest_every"  "not EVERY")
+val dest_exists = dest_binop exists_tm (ERR "dest_exists" "not EXISTS")
+val dest_el     = dest_binop el_tm     (ERR "dest_el"     "not EL");
+val dest_zip    = pairSyntax.dest_pair 
+                   o dest_monop zip_tm (ERR "dest_zip"    "not ZIP")
+val dest_unzip  = dest_monop unzip_tm  (ERR "dest_unzip"  "not UNZIP")
+val dest_sum    = dest_monop sum_tm    (ERR "dest_sum"    "not SUM");
 
 (*---------------------------------------------------------------------------
          Queries

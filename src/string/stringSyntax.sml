@@ -17,8 +17,8 @@ val ord_tm  = prim_mk_const{Name="ORD", Thy="string"}
 val mk_chr = C (with_exn (curry mk_comb chr_tm)) (ERR "mk_chr" "")
 val mk_ord = C (with_exn (curry mk_comb ord_tm)) (ERR "mk_ord" "")
 
-val dest_chr = dest_monop ("CHR","string") (ERR "dest_chr" "")
-val dest_ord = dest_monop ("ORD","string") (ERR "dest_ord" "")
+val dest_chr = dest_monop chr_tm (ERR "dest_chr" "")
+val dest_ord = dest_monop ord_tm (ERR "dest_ord" "")
 
 val is_chr = Lib.can dest_chr 
 val is_ord = Lib.can dest_ord
@@ -48,9 +48,9 @@ fun mk_string (c,s) =
 val mk_implode = C (with_exn (curry mk_comb implode_tm)) (ERR "mk_implode" "")
 val mk_explode = C (with_exn (curry mk_comb explode_tm)) (ERR "mk_explode" "")
 
-val dest_string  = dest_binop ("STRING","string")  (ERR "dest_string" "")
-val dest_implode = dest_monop ("IMPLODE","string") (ERR "dest_implode" "")
-val dest_explode = dest_monop ("EXPLODE","string") (ERR "dest_explode" "")
+val dest_string  = dest_binop string_tm  (ERR "dest_string" "")
+val dest_implode = dest_monop implode_tm (ERR "dest_implode" "")
+val dest_explode = dest_monop explode_tm (ERR "dest_explode" "")
 
 val is_string  = can dest_string
 val is_implode = can dest_implode

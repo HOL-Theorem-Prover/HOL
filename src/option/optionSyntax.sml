@@ -77,22 +77,19 @@ fun mk_option_case (n,s,p) =
  ---------------------------------------------------------------------------*)
 
 fun dest_none tm = 
-   case total dest_thy_const tm 
-    of SOME{Name="NONE", Thy="option", Ty} => Ty
-     | otherwise => raise ERR "dest_none" "";
+ if same_const none_tm tm then type_of tm else raise ERR "dest_none" "";
 
-val dest_some    = dest_monop("SOME","option") (ERR "dest_some" "")
-val dest_the     = dest_monop("THE","option") (ERR "dest_the" "")
-val dest_is_none = dest_monop("IS_NONE","option") (ERR "dest_is_none" "")
-val dest_is_some = dest_monop("IS_SOME","option") (ERR "dest_is_some" "")
-val dest_option_map = 
-      dest_binop("OPTION_MAP","option") (ERR "dest_option_map" "")
-val dest_option_join =
-      dest_monop("OPTION_JOIN","option") (ERR "dest_option_join" "")
+val dest_some    = dest_monop some_tm    (ERR "dest_some" "")
+val dest_the     = dest_monop the_tm     (ERR "dest_the" "")
+val dest_is_none = dest_monop is_none_tm (ERR "dest_is_none" "")
+val dest_is_some = dest_monop is_some_tm (ERR "dest_is_some" "")
+
+val dest_option_map = dest_binop option_map_tm   (ERR "dest_option_map" "")
+val dest_option_join = dest_monop option_join_tm (ERR "dest_option_join" "")
+
 fun dest_option_case tm =
  let val (f,z) = with_exn dest_comb tm (ERR "dest_option_case" "")
-     val (x,y) = dest_binop("option_case","option") 
-                       (ERR "dest_option_case" "") f
+     val (x,y) = dest_binop option_case_tm (ERR "dest_option_case" "") f
  in (x,y,z)
  end
 

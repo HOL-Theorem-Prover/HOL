@@ -15,26 +15,11 @@ signature Parse = sig
      | Binder
 
   (* Parsing Types *)
+
   val type_grammar : unit -> type_grammar.grammar
   val Type         : hol_type frag list -> hol_type
   val ==           : hol_type frag list -> 'a -> hol_type
 
-
-  (* the parsing algorithm for types admits the possibility that type
-     suffixes might be of looser binding than infixes, but the
-     following interface always puts suffixes into the grammar at the
-     same precedence level (equivalent to 100).  Infix operators can
-     have precedences that are more or less than this. *)
-
-  (* The new_type call below can always be used, but if the type is
-     actually a unary or binary operator, then the given call should be
-     used.  If an operator is claimed to be binary when it isn't, attempts
-     to parse strings of the form   ty1 op ty2 will fail when mk_type is
-     called with a list that is of the wrong length.
-
-     The converse is not so dangerous: i.e., just using new_type for
-     a binary operator as this will just remove the possibility of using
-     an infix form. *)
   val add_type : string -> unit
   val temp_add_type : string -> unit
   val add_infix_type : {Prec : int,
@@ -45,134 +30,122 @@ signature Parse = sig
                              ParseName : string option,
                              Name : string,
                              Assoc : associativity} -> unit
-  (* Examples for add_infix_type:
-     - add_infix_type {precedence = 10, infix_form = SOME "#",
-                       opname = "prod", associativity = RIGHT};
-     - add_infix_type {precedence = 5, infix_form = SOME "+",
-                       opname = "sum", associativity = RIGHT};
-  *)
+
   val temp_type_abbrev : string * hol_type -> unit
   val type_abbrev : string * hol_type -> unit
 
-
-
-  (* completely removes a type from the grammar *)
-(*  val remove_type : string -> unit
-  (* removes a particular infix, allowing infixes to be gotten rid of, if
-     desired, without removing the possibility of writing the type in
-     suffix form *)
-  val remove_type_infix : string -> unit *)
-
   (* Parsing terms *)
-    val absyn_to_term    : term_grammar.grammar -> Absyn.absyn -> term
-    val absyn_to_preterm : Absyn.absyn -> Preterm.preterm
-    val Absyn            : term frag list -> Absyn.absyn
-    val Preterm          : term frag list -> Preterm.preterm
-    val Term             : term frag list -> term
-    val --               : term frag list -> 'a -> term
-    val typedTerm        : term frag list -> hol_type -> term
-    val parse_in_context : term list -> term frag list -> term
-    val parse_from_grammars :
+
+  val absyn_to_term    : term_grammar.grammar -> Absyn.absyn -> term
+  val absyn_to_preterm : Absyn.absyn -> Preterm.preterm
+  val Absyn            : term frag list -> Absyn.absyn
+  val Preterm          : term frag list -> Preterm.preterm
+  val Term             : term frag list -> term
+  val --               : term frag list -> 'a -> term
+  val typedTerm        : term frag list -> hol_type -> term
+  val parse_in_context : term list -> term frag list -> term
+  val parse_from_grammars :
       (type_grammar.grammar * term_grammar.grammar) ->
       ((hol_type frag list -> hol_type) * (term frag list -> term))
-    val print_from_grammars :
+  val print_from_grammars :
       (type_grammar.grammar * term_grammar.grammar) ->
       ((Portable.ppstream -> hol_type -> unit) *
        (Portable.ppstream -> term -> unit))
-    val print_term_by_grammar :
+  val print_term_by_grammar :
         (type_grammar.grammar * term_grammar.grammar) -> term -> unit
 
-    val term_grammar : unit -> term_grammar.grammar
+  val term_grammar : unit -> term_grammar.grammar
 
-    (* the following functions modify the grammar, and do so in such a
-       way that the exported theory will have the same grammar
-    *)
-    val add_const  : string -> unit
-    val add_infix  : string * int * associativity -> unit
-    val std_binder_precedence : int
-    val add_binder : string * int -> unit
-    val add_rule   : {term_name : string, fixity :fixity,
-                      pp_elements: pp_element list, paren_style : ParenStyle,
-                      block_style : PhraseBlockStyle * block_info} -> unit
-    val add_listform : {separator : string, leftdelim : string,
-                        rightdelim : string, cons : string,
-                        nilstr : string} -> unit
-    val add_numeral_form : (char * string option) -> unit
-    val add_bare_numeral_form : (char * string option) -> unit
-    val give_num_priority : char -> unit
-    val remove_numeral_form : char -> unit
-    val associate_restriction : (string * string) -> unit
-    val prefer_form_with_tok : {term_name : string, tok : string} -> unit
-    val clear_prefs_for_term : string -> unit
-    val set_fixity : string -> fixity -> unit
+  (* the following functions modify the grammar, and do so in such a
+     way that the exported theory will have the same grammar  *)
 
-    val remove_rules_for_term : string -> unit
-    val remove_termtok : {term_name : string, tok : string} -> unit
+  val add_const  : string -> unit
+  val add_infix  : string * int * associativity -> unit
+  val std_binder_precedence : int
+  val add_binder : string * int -> unit
+  val add_rule   : {term_name : string, fixity :fixity,
+                    pp_elements: pp_element list, paren_style : ParenStyle,
+                    block_style : PhraseBlockStyle * block_info} -> unit
+  val add_listform : {separator : string, leftdelim : string,
+                      rightdelim : string, cons : string,
+                      nilstr : string} -> unit
+  val add_numeral_form : (char * string option) -> unit
+  val add_bare_numeral_form : (char * string option) -> unit
+  val give_num_priority : char -> unit
+  val remove_numeral_form : char -> unit
+  val associate_restriction : (string * string) -> unit
+  val prefer_form_with_tok : {term_name : string, tok : string} -> unit
+  val clear_prefs_for_term : string -> unit
+  val set_fixity : string -> fixity -> unit
 
-    (* overloading and records *)
-    val overload_on : string * term -> unit
-    val overload_on_by_nametype : string -> {Name: string, Thy: string} -> unit
-    val clear_overloads_on : string -> unit
-    val remove_ovl_mapping : string -> {Name:string, Thy:string} -> unit
-    val add_record_field : string * term -> unit
-    val add_record_update : string * term -> unit
-    val add_record_fupdate : string * term -> unit
+  val remove_rules_for_term : string -> unit
+  val remove_termtok : {term_name : string, tok : string} -> unit
 
-    (* adding and removing user parsers and printers to the grammar *)
-    val add_user_printer :
-      ({Tyop:string, Thy:string} * term_pp_types.userprinter * string) -> unit
-    val remove_user_printer : {Tyop:string, Thy:string} ->
-                              term_pp_types.userprinter option
+  (* overloading and records *)
 
+  val overload_on : string * term -> unit
+  val overload_on_by_nametype : string -> {Name: string, Thy: string} -> unit
+  val clear_overloads_on : string -> unit
+  val remove_ovl_mapping : string -> {Name:string, Thy:string} -> unit
+  val add_record_field : string * term -> unit
+  val add_record_update : string * term -> unit
+  val add_record_fupdate : string * term -> unit
 
-    (* the following functions affect the grammar, but not so that the
-       grammar exported to disk will be modified *)
-    val temp_set_grammars : (type_grammar.grammar * term_grammar.grammar) ->
-                            unit
-    val temp_add_binder : (string * int) -> unit
-    val temp_add_rule :
-      {term_name : string, fixity : fixity,
-       pp_elements: pp_element list, paren_style : ParenStyle,
-       block_style : PhraseBlockStyle * block_info}  -> unit
-    val temp_add_infix : (string * int * associativity) -> unit
-    val temp_add_listform : {separator : string, leftdelim : string,
-                             rightdelim : string, cons : string,
-                             nilstr : string} -> unit
-    val temp_add_numeral_form : (char * string option) -> unit
-    val temp_add_bare_numeral_form : (char * string option) -> unit
-    val temp_give_num_priority : char -> unit
-    val temp_remove_numeral_form : char -> unit
-    val temp_associate_restriction : (string * string) -> unit
-    val temp_prefer_form_with_tok : {term_name : string, tok : string} -> unit
-    val temp_clear_prefs_for_term : string -> unit
-    val temp_set_fixity : string -> fixity -> unit
+  (* adding and removing user parsers and printers to the grammar *)
 
-    val temp_remove_rules_for_term : string -> unit
-    val temp_remove_termtok : {term_name : string, tok : string} -> unit
-    val temp_set_associativity : (int * associativity) -> unit
+  val add_user_printer :
+    ({Tyop:string, Thy:string} * term_pp_types.userprinter * string) -> unit
+  val remove_user_printer : {Tyop:string, Thy:string} ->
+                             term_pp_types.userprinter option
 
-    val temp_overload_on : string * term -> unit
-    val temp_overload_on_by_nametype :
-      string -> {Name: string, Thy: string} -> unit
-    val temp_clear_overloads_on : string -> unit
-    val temp_remove_ovl_mapping : string -> {Name:string, Thy:string} -> unit
+ (* the following functions affect the grammar, but not so that the
+    grammar exported to disk will be modified *)
 
-    val temp_add_record_field : string * term -> unit
-    val temp_add_record_update : string * term -> unit
-    val temp_add_record_fupdate : string * term -> unit
+  val temp_set_grammars : (type_grammar.grammar * term_grammar.grammar) -> unit
+  val temp_add_binder : (string * int) -> unit
+  val temp_add_rule :
+    {term_name : string, fixity : fixity,
+     pp_elements: pp_element list, paren_style : ParenStyle,
+     block_style : PhraseBlockStyle * block_info}  -> unit
+  val temp_add_infix : (string * int * associativity) -> unit
+  val temp_add_listform : {separator : string, leftdelim : string,
+                           rightdelim : string, cons : string,
+                           nilstr : string} -> unit
+  val temp_add_numeral_form : (char * string option) -> unit
+  val temp_add_bare_numeral_form : (char * string option) -> unit
+  val temp_give_num_priority : char -> unit
+  val temp_remove_numeral_form : char -> unit
+  val temp_associate_restriction : (string * string) -> unit
+  val temp_prefer_form_with_tok : {term_name : string, tok : string} -> unit
+  val temp_clear_prefs_for_term : string -> unit
+  val temp_set_fixity : string -> fixity -> unit
 
-    val temp_add_user_printer :
-        ({Tyop:string, Thy:string} * term_pp_types.userprinter) -> unit
-    val temp_remove_user_printer :
-        {Tyop:string, Thy:string} -> term_pp_types.userprinter option
+  val temp_remove_rules_for_term : string -> unit
+  val temp_remove_termtok : {term_name : string, tok : string} -> unit
+  val temp_set_associativity : (int * associativity) -> unit
 
-    val standard_spacing : string -> fixity
-                           -> {term_name   : string, fixity:fixity,
-                               pp_elements : pp_element list,
-                               paren_style : ParenStyle,
-                               block_style : PhraseBlockStyle * block_info}
+  val temp_overload_on : string * term -> unit
+  val temp_overload_on_by_nametype : string -> {Name:string,Thy:string} -> unit
+  val temp_clear_overloads_on : string -> unit
+  val temp_remove_ovl_mapping : string -> {Name:string, Thy:string} -> unit
+
+  val temp_add_record_field : string * term -> unit
+  val temp_add_record_update : string * term -> unit
+  val temp_add_record_fupdate : string * term -> unit
+
+  val temp_add_user_printer :
+      ({Tyop:string, Thy:string} * term_pp_types.userprinter) -> unit
+  val temp_remove_user_printer :
+      {Tyop:string, Thy:string} -> term_pp_types.userprinter option
+
+  val standard_spacing : string -> fixity
+                         -> {term_name   : string, fixity:fixity,
+                             pp_elements : pp_element list,
+                             paren_style : ParenStyle,
+                             block_style : PhraseBlockStyle * block_info}
 
   (* Pretty printing *)
+
   val pp_term : General.ppstream -> term -> unit
   val pp_type : General.ppstream -> hol_type -> unit
   val pp_thm : General.ppstream -> thm -> unit
@@ -247,6 +220,5 @@ signature Parse = sig
 
   val min_grammars : type_grammar.grammar * term_grammar.grammar
   val current_lgrms : unit -> type_grammar.grammar * term_grammar.grammar
-
 
 end

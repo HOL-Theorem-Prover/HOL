@@ -21,7 +21,7 @@ fun is_let tm =
       | otherwise => false
  end handle HOL_ERR _ => false;
 
-val dest_pair = dest_binop (",", "pair") (PP_ERR "dest_pair" "")
+val dest_pair = sdest_binop (",", "pair") (PP_ERR "dest_pair" "");
 val is_pair = Lib.can dest_pair;
 
 fun mk_pair (fst,snd) = let

@@ -4,8 +4,8 @@
               "BasicProvers", "SingleStep"];
 *)
 
-open HolKernel Parse boolLib numLib Prim_rec mnUtils pred_setTheory
-     BasicProvers SingleStep;
+open HolKernel Parse boolLib 
+     numLib Prim_rec mnUtils pred_setTheory  BasicProvers SingleStep;
 
 infix THEN ORELSE THENL THENC ORELSEC >- ++ |->;
 infix 8 by;
@@ -1122,6 +1122,7 @@ val BAG_CARD_RELn = Q.new_definition(
       !P. P EMPTY_BAG 0 /\
           (!b n. P b n ==> (!e. P (BAG_INSERT e b) (SUC n))) ==>
           P b n`);
+
 val BCARD_imps = prove(
   Term`(BAG_CARD_RELn EMPTY_BAG 0) /\
        (!b n. BAG_CARD_RELn b n ==>
@@ -1328,24 +1329,22 @@ val BAG_INSERT_CHOICE_REST = Q.store_thm
  `!b:^bag. ~(b = {||}) ==> (b = BAG_INSERT (BAG_CHOICE b) (BAG_REST b))`,
  REPEAT STRIP_TAC
    THEN IMP_RES_THEN MP_TAC BAG_CHOICE_DEF
-   THEN RW_TAC num_ss
+   THEN NORM_TAC num_ss
         [BAG_INSERT,BAG_REST_DEF,BAG_DIFF,EL_BAG,BAG_IN,BAG_INN,
          EMPTY_BAG,combinTheory.K_DEF,FUN_EQ_THM]);
-
 
 val SUB_BAG_REST = Q.store_thm
 ("SUB_BAG_REST",
  `!b:^bag. SUB_BAG (BAG_REST b) b`,
- RW_TAC bool_ss [BAG_REST_DEF,SUB_BAG,BAG_INN,BAG_DIFF,EL_BAG,BAG_INSERT] THEN
- RW_TAC num_ss []);
-
+ NORM_TAC num_ss [BAG_REST_DEF,SUB_BAG,BAG_INN,BAG_DIFF,EL_BAG,BAG_INSERT,
+                  arithmeticTheory.GREATER_EQ]);
 
 val PSUB_BAG_REST = Q.store_thm
 ("PSUB_BAG_REST",
  `!b:^bag. ~(b = {||}) ==> PSUB_BAG (BAG_REST b) b`,
  REPEAT STRIP_TAC
    THEN IMP_RES_THEN MP_TAC BAG_CHOICE_DEF
-   THEN RW_TAC num_ss [BAG_REST_DEF,PSUB_BAG, SUB_BAG,BAG_IN, BAG_INN,
+   THEN NORM_TAC num_ss [BAG_REST_DEF,PSUB_BAG, SUB_BAG,BAG_IN, BAG_INN,
        BAG_DIFF,EL_BAG,BAG_INSERT,EMPTY_BAG,combinTheory.K_DEF,FUN_EQ_THM]
    THENL [ALL_TAC, Q.EXISTS_TAC `BAG_CHOICE b`]
    THEN RW_TAC num_ss []);

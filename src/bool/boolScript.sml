@@ -233,12 +233,12 @@ val conjunction = prim_mk_const{Name="/\\", Thy="bool"}
 val disjunction = prim_mk_const{Name="\\/", Thy="bool"}
 val negation    = prim_mk_const{Name="~",   Thy="bool"};
 
-val dest_neg    = dest_monop ("~","bool") (ERR"dest_neg" "");
-val dest_eq     = dest_binop("=","min") (ERR"dest_eq" "");
-val dest_disj   = dest_binop("\\/","bool") (ERR"dest_disj" "");
-val dest_conj   = dest_binop("/\\","bool") (ERR"dest_conj" "");
-val dest_forall = dest_binder("!","bool") (ERR"dest_forall" "");
-val dest_exists = dest_binder("?","bool") (ERR"dest_exists" "");
+val dest_neg    = sdest_monop ("~","bool") (ERR"dest_neg" "");
+val dest_eq     = sdest_binop("=","min") (ERR"dest_eq" "");
+val dest_disj   = sdest_binop("\\/","bool") (ERR"dest_disj" "");
+val dest_conj   = sdest_binop("/\\","bool") (ERR"dest_conj" "");
+val dest_forall = sdest_binder("!","bool") (ERR"dest_forall" "");
+val dest_exists = sdest_binder("?","bool") (ERR"dest_exists" "");
 fun strip_forall fm =
    if can dest_forall fm
    then let val (Bvar,Body) = dest_forall fm

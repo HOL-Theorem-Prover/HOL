@@ -77,8 +77,8 @@ EVAL (Term `exp 2 16`);
 EVAL (Term `exp 2 100`);
 
 (*---------------------------------------------------------------------------
-   REDUCE_CONV is faster than Eval for exp because of 
-   numeral representation. 
+   REDUCE_CONV is faster than Eval for exp because of how numerals
+   are represented.
  ---------------------------------------------------------------------------*)
 
 Count.apply REDUCE_CONV (Term `2 EXP 100`);

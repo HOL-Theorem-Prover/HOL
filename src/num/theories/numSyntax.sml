@@ -72,26 +72,26 @@ struct
           Destructors
  ---------------------------------------------------------------------------*)
 
-  val dest_suc     = dest_monop ("SUC","num")         (ERR "dest_suc" "")
-  val dest_pre     = dest_monop ("PRE","prim_rec")    (ERR "dest_pre" "")
-  val dest_plus    = dest_binop ("+","arithmetic")    (ERR "dest_plus" "")
-  val dest_minus   = dest_binop ("-","arithmetic")    (ERR "dest_minus" "")
-  val dest_mult    = dest_binop ("*","arithmetic")    (ERR "dest_mult" "")
-  val dest_exp     = dest_binop ("EXP","arithmetic")  (ERR "dest_exp" "")
-  val dest_div     = dest_binop ("DIV","arithmetic")  (ERR "dest_div" "")
-  val dest_mod     = dest_binop ("MOD","arithmetic")  (ERR "dest_mod" "")
-  val dest_less    = dest_binop ("<","prim_rec")      (ERR "dest_less" "")
-  val dest_greater = dest_binop (">","arithmetic")    (ERR "dest_greater" "")
-  val dest_geq     = dest_binop (">=","arithmetic")   (ERR "dest_geq" "")
-  val dest_leq     = dest_binop ("<=","arithmetic")   (ERR "dest_leq" "")
-  val dest_even    = dest_monop ("EVEN","arithmetic") (ERR "dest_even" "")
-  val dest_odd     = dest_monop ("ODD","arithmetic")  (ERR "dest_odd" "");
-  val dest_fact    = dest_monop ("FACT","arithmetic") (ERR "dest_fact" "");
+  val dest_suc     = dest_monop suc_tm     (ERR "dest_suc" "")
+  val dest_pre     = dest_monop pre_tm     (ERR "dest_pre" "")
+  val dest_plus    = dest_binop plus_tm    (ERR "dest_plus" "")
+  val dest_minus   = dest_binop minus_tm   (ERR "dest_minus" "")
+  val dest_mult    = dest_binop mult_tm    (ERR "dest_mult" "")
+  val dest_exp     = dest_binop exp_tm     (ERR "dest_exp" "")
+  val dest_div     = dest_binop div_tm     (ERR "dest_div" "")
+  val dest_mod     = dest_binop mod_tm     (ERR "dest_mod" "")
+  val dest_less    = dest_binop less_tm    (ERR "dest_less" "")
+  val dest_greater = dest_binop greater_tm (ERR "dest_greater" "")
+  val dest_geq     = dest_binop geq_tm     (ERR "dest_geq" "")
+  val dest_leq     = dest_binop leq_tm     (ERR "dest_leq" "")
+  val dest_even    = dest_monop even_tm    (ERR "dest_even" "")
+  val dest_odd     = dest_monop odd_tm     (ERR "dest_odd" "");
+  val dest_fact    = dest_monop fact_tm    (ERR "dest_fact" "");
 
   fun dest_num_case tm = 
     case strip_comb tm
      of (ncase,[b,f,n]) => 
-         if can (match_term num_case_tm) ncase
+         if same_const num_case_tm ncase
          then (b,f,n) 
          else raise ERR "dest_num_case" "not an application of \"num_case\""
       | _ => raise ERR "dest_num_case" "not an application of \"num_case\""
@@ -99,7 +99,7 @@ struct
   fun dest_funpow tm =
     case strip_comb tm
      of (funpow,[f,n,x]) =>
-         if can (match_term funpow_tm) funpow
+         if same_const funpow_tm funpow
          then (f,n,x) 
          else raise ERR "dest_funpow" "not an application of \"funpow\""
       | _ => raise ERR "dest_funpow" "not an application of \"funpow\"";
@@ -157,4 +157,4 @@ struct
   val strip_plus = strip_binop (total dest_plus)
   val strip_mult = strip_binop (total dest_mult)
 
-end;
+end

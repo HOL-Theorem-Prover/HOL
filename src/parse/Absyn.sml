@@ -31,7 +31,7 @@ val ERR = mk_HOL_ERR "Absyn";
 
 fun atom_name tm = fst(dest_var tm handle HOL_ERR _ => dest_const tm);
 
-val dest_pair = dest_binop (",", "pair") (ERR "dest_pair" "")
+val dest_pair = sdest_binop (",", "pair") (ERR "dest_pair" "");
 val is_pair = Lib.can dest_pair;
 
 fun mk_pair (fst,snd) =

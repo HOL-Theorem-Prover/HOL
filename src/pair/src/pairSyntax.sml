@@ -31,10 +31,10 @@ val list_mk_prod = end_itlist (curry mk_prod);
          Useful constants in the theory of pairs
  ---------------------------------------------------------------------------*)
 
-val comma_tm    = prim_mk_const {Name=",",       Thy="pair"};
+val uncurry_tm  = pairTheory.uncurry_tm;
+val comma_tm    = pairTheory.comma_tm;
 val fst_tm      = prim_mk_const {Name="FST",     Thy="pair"};
 val snd_tm      = prim_mk_const {Name="SND",     Thy="pair"};
-val uncurry_tm  = pairTheory.uncurry_tm;
 val curry_tm    = prim_mk_const {Name="CURRY",   Thy="pair"};
 val pair_map_tm = prim_mk_const {Name="##",      Thy="pair"};
 
@@ -136,18 +136,18 @@ fun mk_pair_map(f,g,p) =
  end;
 
 
-val dest_fst     = dest_monop ("FST","pair")     (ERR "dest_fst" "")
-val dest_snd     = dest_monop ("SND","pair")     (ERR "dest_snd" "")
-val dest_uncurry = dest_binop ("UNCURRY","pair") (ERR "dest_uncurry" "");
+val dest_fst     = dest_monop fst_tm     (ERR "dest_fst" "")
+val dest_snd     = dest_monop snd_tm     (ERR "dest_snd" "")
+val dest_uncurry = dest_binop uncurry_tm (ERR "dest_uncurry" "");
 fun dest_curry tm = 
   let val (M,y) = with_exn dest_comb tm (ERR "dest_curry" "")
-      val (f,x) = dest_binop ("CURRY","pair") (ERR "dest_curry" "") M
+      val (f,x) = dest_binop curry_tm (ERR "dest_curry" "") M
   in (f,x,y)
   end;
 
 fun dest_pair_map tm = 
   let val (M,p) = with_exn dest_comb tm (ERR "dest_pair_map" "")
-      val (f,g) = dest_binop ("##","pair") (ERR "dest_pair_map" "") M
+      val (f,g) = dest_binop pair_map_tm (ERR "dest_pair_map" "") M
   in (f,g,p)
   end;
 
@@ -210,7 +210,7 @@ local val LET_ERR     = ERR "dest_plet"     "not a (possibly paired) \"let\""
 in 
 fun dest_pbinder c e M =
   let val (Rator,Rand) = with_exn dest_comb M e
-  in if can (match_term c) Rator 
+  in if same_const c Rator 
      then with_exn dest_pabs Rand e
      else raise e
   end

@@ -29,8 +29,11 @@ open Num_conv;
 
 val _ = new_theory "MachineTransition";
 
+(* These two don't seem to be used ...
+
 val DEPTH_EXISTS_CONV = unwindLib.DEPTH_EXISTS_CONV
 and EXPAND_AUTO_CONV  = unwindLib.EXPAND_AUTO_CONV;
+*)
 
 fun prove_thm(_:string,tm,tac) = prove(tm,tac);
 
@@ -810,7 +813,7 @@ val ChoosePath_def =
 
 val TotalPathExists =
  store_thm
-  ("TotalpathExists",
+  ("TotalPathExists",
    ``Total R ==> !s. Path (R,s) (ChoosePath R s)``,
    REWRITE_TAC[Path_def,ChoosePath_def,GSYM ADD1]
     THEN REPEAT STRIP_TAC
@@ -826,68 +829,43 @@ val TotalPathExists =
 
 val FinPathChoosePath =
  REWRITE_RULE
-  [prove(``!m. m <= n ==>
-            (f m = (if m <= n then f m else ChoosePath R (f n) m))``,
+  [Q.prove(`!m. m <= n ==>
+            (f m = (if m <= n then f m else ChoosePath R (f n) m))`,
          RW_TAC std_ss [])]
-  (BETA_RULE(SPECL[``f:num->'a``,
-                   ``\m. if m <= n then (f:num->'a) m else ChoosePath R (f n) m``,
-                   ``n:num``]FinPathLemma));
-
-(* Next proof got messy when ported to Kananaskis. Should be cleaned up. *)
+  (BETA_RULE(Q.SPECL[`f:num->'a`,
+                `\m. if m <= n then (f:num->'a) m else ChoosePath R (f n) m`,
+                `n:num`] FinPathLemma));
 
 val FinPathPathExists =
- store_thm
+ Q.store_thm
   ("FinPathPathExists",
-   ``!R B f s n. 
+   `!R B f s n. 
       Total R /\ FinPath(R,s) f n 
       ==> 
-      ?g. (!m. (m <= n) ==> (f m = g m)) /\ Path(R,s)g``,
+      ?g. (!m. m <= n ==> (f m = g m)) /\ Path(R,s)g`,
    REPEAT STRIP_TAC
-    THEN IMP_RES_TAC TotalPathExists
-    THEN POP_ASSUM(ASSUME_TAC o SPEC ``(f:num->'a)n``)
-    THEN EXISTS_TAC ``\m. if m <= n then f m else ChoosePath R (f n) (m - n)``
-    THEN RW_TAC std_ss [Path_def,ARITH_PROVE``0 <= n``]
+    THEN `Path (R, f n) (ChoosePath R (f n))` by PROVE_TAC [TotalPathExists]
+    THEN Q.EXISTS_TAC `\m. if m <= n then f m else ChoosePath R (f n) (m-n)`
+    THEN RW_TAC std_ss [Path_def,ZERO_LESS_EQ] 
     THENL
-     [IMP_RES_TAC FinPathThm,
+     [PROVE_TAC [FinPathThm],
       IMP_RES_TAC FinPathChoosePath
-       THEN ASM_CASES_TAC ``n' <= n``
-       THEN ASM_REWRITE_TAC[]
+       THEN BasicProvers.NORM_TAC std_ss [] 
        THENL
-        [ASM_CASES_TAC ``n'+1 <= n``
-          THEN ASM_REWRITE_TAC[]
-          THENL
-           [IMP_RES_TAC(ARITH_PROVE``(n'+1 <= n) ==> (n' < n)``)
-             THEN IMP_RES_TAC FinPathThm,
-            IMP_RES_TAC(ARITH_PROVE(``(n' <= n) /\ ~(n'+1 <= n) ==> (n' = n)``))
-             THEN ASM_REWRITE_TAC[ARITH_PROVE``(n + 1 - n) = 1``]
-             THEN IMP_RES_TAC TotalPathExists
-             THEN POP_ASSUM(ASSUME_TAC o SPEC ``(f:num->'a)n``)
-             THEN IMP_RES_TAC Path_def
-             THEN POP_ASSUM(ASSUME_TAC o REWRITE_RULE[ADD_CLAUSES] o SPEC ``0``)
-             THEN PROVE_TAC[]],
-         IMP_RES_TAC(ARITH_PROVE``~(n' <= n) ==> ~(n'+1 <= n)``)
-          THEN ASM_REWRITE_TAC[]
-          THEN IMP_RES_TAC(ARITH_PROVE``~(n' <= n) ==> ((n' + 1 - n) = (n' - n) + 1)``)
-          THEN ASM_REWRITE_TAC[]
-          THEN IMP_RES_TAC Path_def
-          THEN POP_ASSUM(ACCEPT_TAC o REWRITE_RULE[ADD_CLAUSES] o SPEC ``n' - n``)],
-      IMP_RES_TAC(ARITH_PROVE(``(n' <= n) /\ ~(n'+1 <= n) ==> (n' = n)``))
-       THEN ASM_REWRITE_TAC[ARITH_PROVE``(n + 1 - n) = 1``]
-       THEN IMP_RES_TAC TotalPathExists
-       THEN POP_ASSUM(ASSUME_TAC o SPEC ``(f:num->'a)n``)
-       THEN IMP_RES_TAC Path_def
-       THEN POP_ASSUM(ASSUME_TAC o REWRITE_RULE[ADD_CLAUSES] o SPEC ``0``)
-       THEN PROVE_TAC[],
-      IMP_RES_TAC(ARITH_PROVE``~(n' <= n) ==> ~(n'+1 <= n)``),
-      IMP_RES_TAC(ARITH_PROVE``~(n' <= n) ==> ((n' + 1 - n) = (n' - n) + 1)``)
-        THEN ASM_REWRITE_TAC[]
-        THEN IMP_RES_TAC Path_def
-        THEN POP_ASSUM(ACCEPT_TAC o REWRITE_RULE[ADD_CLAUSES] o SPEC ``n' - n``)]);
+        [`n' < n` by DECIDE_TAC THEN PROVE_TAC [FinPathThm],
+         `n' = n` by DECIDE_TAC THEN RW_TAC arith_ss []
+                                THEN PROVE_TAC [Path_def,ADD_CLAUSES],
+         PROVE_TAC [DECIDE (Term`x+1 <=y /\ ~(x <= y) ==> F`)],
+         `n < n'` by DECIDE_TAC 
+           THEN `n' + 1 - n = (n' - n) + 1` by DECIDE_TAC
+           THEN PROVE_TAC [Path_def, ADD_CLAUSES]]]);
 
 val ReachInPath =
  store_thm
   ("ReachInPath",
-   ``!R B n s. Total R ==> (ReachIn R B n s = ?f s0. B s0 /\ Path(R,s0)f /\ (s = f n))``,
+   ``!R B n s. Total R 
+                ==> 
+               (ReachIn R B n s = ?f s0. B s0 /\ Path(R,s0)f /\ (s = f n))``,
    REWRITE_TAC[ReachInFinPath]
     THEN REPEAT STRIP_TAC
     THEN EQ_TAC
@@ -904,7 +882,9 @@ val ReachInPath =
 val ReachablePath =
  store_thm
   ("ReachablePath",
-   ``!R B s. Total R ==> (Reachable R B s = ?f s0. B s0 /\ Path(R,s0)f /\ ?n. (s = f n))``,
+   ``!R B s. Total R 
+              ==> 
+             (Reachable R B s = ?f s0. B s0 /\ Path(R,s0)f /\ ?n. (s = f n))``,
    PROVE_TAC[ReachInPath,Reachable_def]);
 
 val Totalise_def =
@@ -966,7 +946,8 @@ val ReachablePathThm =
   ("ReachablePathThm",
    GEN 
     ``R :'a # 'a -> bool`` 
-    (REWRITE_RULE[ReachableTotalise,TotalTotalise](SPEC ``Totalise R`` ReachablePath)));
+    (REWRITE_RULE[ReachableTotalise,TotalTotalise]
+                 (SPEC ``Totalise R`` ReachablePath)));
 
 val Moore_def =
  Define
@@ -1035,71 +1016,26 @@ val ReachableMooreTrans =
   ("ReachableMooreTrans",
    MATCH_MP ReachablePath TotalMooreTrans);
 
-val PAIR_Lemma1 =
- prove_thm
-  ("PAIR_Lemma1",
-   ``(\t. ((if t = 0 then FST s0 else FST (f t)),
-          (if t = 0 then SND s0 else SND (f t))))
-     =
-     (\t. if t = 0 then s0 else f t)``,
-   CONV_TAC FUN_EQ_CONV
-    THEN RW_TAC std_ss []);
-
-val PAIR_Lemma2 =
- prove_thm
-  ("PAIR_Lemma21",
-   ``((if t = 0 then FST s0 else FST (f t)),
-      (if t = 0 then SND s0 else SND (f t)))
-     =
-     (if t = 0 then s0 else f t)``,
-   RW_TAC std_ss []);
- 
-val COND_Lemma1 =
- prove_thm
-  ("COND_Lemma1",
-   ``(\t. (if t = 0 then f 0 else f t)) = f``,
-   CONV_TAC FUN_EQ_CONV
-    THEN RW_TAC std_ss []);
-
-val COND_Lemma2 =
- prove_thm
-  ("COND_Lemma2",
-   ``(if t = 0 then f 0 else f t) = f t``,
-   RW_TAC std_ss []);
+(* Problem with Q.SPECL? Too many type annotations needed. *)
 
 val MooreReachable1 =
- store_thm
+ Q.store_thm
   ("MooreReachable1",
-   ``(!inputs states. 
+   `(!inputs states. 
        B(inputs 0, states 0) /\ Moore nextfn (inputs,states) 
        ==> !t. P(inputs t, states t))
      ==>
-     (!s. Reachable (MooreTrans nextfn) B s ==> P s)``,
-   REWRITE_TAC[ReachableMooreTrans,MoorePath]
-    THEN REPEAT STRIP_TAC
-    THEN ASM_REWRITE_TAC[]
-    THEN ASSUM_LIST(fn thl => (ASSUME_TAC                                          o
-                               REWRITE_RULE[el 3 thl,PAIR,PAIR_Lemma1,PAIR_Lemma2] o
-                               BETA_RULE                                           o
-                               SPECL
-                                [``\t. if t=0 then FST(s0:'a#'b) else FST((f :num -> 'a # 'b) t)``,
-                                 ``\t. if t=0 then SND(s0:'a#'b) else SND((f :num -> 'a # 'b) t)``])
-                              (el 4 thl))
-    THEN IMP_RES_TAC Path_def
-    THEN ASSUM_LIST(fn thl => ASSUME_TAC
-                               (REWRITE_RULE
-                                 [SYM(el 2 thl),COND_Lemma1,COND_Lemma2]
-                                 (el 3 thl)))
-    THEN ASSUM_LIST(fn thl => ASSUME_TAC(PURE_REWRITE_RULE[el 3 thl](el 1 thl)))
-    THEN ASSUM_LIST(fn thl => ASSUME_TAC(ONCE_REWRITE_RULE[ETA_AX](el 1 thl)))
-    THEN RES_TAC
-    THEN ASM_REWRITE_TAC[]);
-
-val IMP_EXISTS_Lemma =
- prove_thm
-  ("IMP_EXISTS_Lemma",
-   ``((?x y. P x y) ==> Q) = !x y. P x y ==> Q``,
-   PROVE_TAC[]);
+     (!s. Reachable (MooreTrans nextfn) B s ==> P s)`,
+   RW_TAC std_ss [ReachableMooreTrans,MoorePath]
+    THEN Q.PAT_ASSUM `$! M` 
+         (MP_TAC o REWRITE_RULE [PAIR] o BETA_RULE o Q.SPECL 
+           [`\t. if t=0 then FST (s0:'a#'b) else FST(f t:'a#'b)`,
+            `\t. if t=0 then SND (s0:'a#'b) else SND(f t:'a#'b)`])
+   THEN RW_TAC std_ss [COND_RAND,COND_RATOR]
+   THEN `f:num->'a#'b = \t. if t=0 then s0 else f t` 
+        by (RW_TAC std_ss [FUN_EQ_THM] THEN PROVE_TAC [Path_def])
+   THEN Q.PAT_ASSUM `Path x y` MP_TAC THEN ONCE_ASM_REWRITE_TAC[]
+   THEN BETA_TAC THEN PROVE_TAC []);
 
 val MooreReachable2 =
  store_thm
@@ -1109,21 +1045,14 @@ val MooreReachable2 =
      (!inputs states. 
         B(inputs 0, states 0) /\ Moore nextfn (inputs,states) 
         ==> !t. P(inputs t, states t))``,
-   REWRITE_TAC[ReachableMooreTrans,MoorePath]
-    THEN REPEAT STRIP_TAC
-    THEN ASM_REWRITE_TAC[]
-    THEN ASSUM_LIST(fn thl => (ASSUME_TAC                                       o
-                               REWRITE_RULE
-                                [PROVE []``?(n :num). (inputs (t :num),states t) 
-                                                       = (inputs n,states n)``] o
-                               BETA_RULE                                        o
-                               SPECL[``\(t :num). (inputs t,states t)``,
-                                     ``((inputs:num->'a)0,(states:num->'b)0)``] o
-                               Ho_Rewrite.REWRITE_RULE[IMP_EXISTS_Lemma]        o
-                               SPECL
-                                [``((inputs:num->'a) t, (states:num->'b) t)``])
-                              (el 3 thl))
-    THEN RES_TAC);
+   RW_TAC std_ss [ReachableMooreTrans,MoorePath]
+    THEN Q.PAT_ASSUM `$! M` 
+         (MP_TAC o BETA_RULE 
+                 o Q.SPECL [`\t. (inputs t,states t)`, `(inputs 0,states 0)`]
+                 o Ho_Rewrite.REWRITE_RULE [GSYM LEFT_FORALL_IMP_THM] 
+                 o Q.SPEC `(inputs (t:num), states t)`)
+    THEN RW_TAC std_ss []
+    THEN PROVE_TAC []);
 
 val MooreReachable =
  store_thm

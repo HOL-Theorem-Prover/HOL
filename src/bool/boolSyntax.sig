@@ -1,16 +1,3 @@
-(* ===================================================================== *)
-(* FILE          : boolSyntax.sig                                        *)
-(* DESCRIPTION   : Derived syntax operations for elements in boolTheory  *)
-(*                 (and earlier). Mostly translated from the original    *)
-(*                 hol88 source.                                         *)
-(*                                                                       *)
-(* AUTHORS       : (c) Mike Gordon, University of Cambridge              *)
-(*                     Konrad Slind, University of Calgary               *)
-(* Modified      : September 1997, Ken Larsen (functor removal)          *)
-(* Modified      : July 2000, Konrad Slind                               *)
-(* ===================================================================== *)
-
-
 signature boolSyntax =
 sig
   type thm      = Thm.thm

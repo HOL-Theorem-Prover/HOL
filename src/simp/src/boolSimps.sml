@@ -177,13 +177,11 @@ val COND_COND_SAME = prove(
         COND P (f x) (g y)`,
   REPEAT GEN_TAC THEN COND_CASES_TAC THEN REWRITE_TAC []);
 
-fun celim_rand_CONV tm = let
-  val (Rator, Rand) = Term.dest_comb tm
-  val (f, _) = strip_comb Rator
-  val proceed = let val {Name,Thy,...} = Term.dest_thy_const f
-                in not (Name="COND" andalso Thy="bool")
-                end handle HOL_ERR _ => true
-in
+fun celim_rand_CONV tm = 
+ let val (Rator, Rand) = Term.dest_comb tm
+     val (f, _) = strip_comb Rator
+     val proceed = not (same_const conditional f) handle HOL_ERR _ => true
+ in
   (if proceed then REWR_CONV boolTheory.COND_RAND else NO_CONV) tm
 end
 

@@ -108,8 +108,8 @@ fun gen_mk_numeral {mk_comb, ZERO, ALT_ZERO, NUMERAL, BIT1, BIT2} n =
                   STRINGS
  ---------------------------------------------------------------------------*)
 
-val dest_chr    = dest_monop ("CHR","string")    (ERR "dest_chr" "")
-val dest_string = dest_binop ("STRING","string") (ERR "dest_string" "")
+val dest_chr    = sdest_monop ("CHR","string")    (ERR "dest_chr" "")
+val dest_string = sdest_binop ("STRING","string") (ERR "dest_string" "")
 val fromHOLchar = Char.chr o Arbnum.toInt o dest_numeral o dest_chr
 
 fun is_emptystring tm =
