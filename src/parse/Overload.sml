@@ -307,8 +307,8 @@ fun merge_oinfos (O1:overload_info) (O2:overload_info) = let
           | EQUAL => let
             in
               if #2 r1 <> #2 r2 then
-                HOL_MESG ("Multiple names for same constant: "^
-                     #Thy (#1 r1)^"$"^ #Name (#1 r1)^" will print as "^ #2 r2)
+                HOL_MESG ("Symbol "^quote(#2 r2)^
+                          " denotes "^ #Thy (#1 r1)^"$"^ #Name (#1 r1))
               else ();
               merge_cops (r1::acc) r1s r2s
             end
