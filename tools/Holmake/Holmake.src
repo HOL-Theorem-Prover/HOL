@@ -34,9 +34,6 @@ fun fullPath slist = normPath
    (itstrings (fn chunk => fn path => Path.concat (chunk,path)) slist);
 
 
-val MOSMLCOMP = fullPath [MOSMLDIR, "bin/mosmlc"]
-val UNQUOTER  = fullPath [HOLDIR, "bin/unquote"]
-
 val spacify =
    let fun enspace (x::(rst as _::_)) = x::" "::enspace rst
          | enspace l = l

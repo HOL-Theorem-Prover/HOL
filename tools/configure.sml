@@ -13,8 +13,8 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir =
-val holdir   =
+val mosmldir = "/local/scratch/kxs/200"
+val holdir   = "/local/scratch/mn200/Work/hol98"
 
 val OS       = "linux";    (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT"        *)
@@ -164,17 +164,6 @@ fun full_paths (ind,holdir) =
    String.concat o plist
   end;
 
-fun concat_with_spaces [] acc = String.concat (List.rev acc)
-  | concat_with_spaces [x] acc = String.concat (List.rev (x::acc))
-  | concat_with_spaces (h::t) acc = concat_with_spaces t (" " :: h :: acc)
-
-fun systeml l =
- let val command = concat_with_spaces l []
- in if Process.system command = Process.success then ()
-     else (print ("Executing\n  "^command^"\nfailed.\n"); raise Fail "")
- end;
-
-
 val _ = echo "\nBeginning configuration.";
 
 (*---------------------------------------------------------------------------
@@ -201,7 +190,7 @@ val _ =
           -->  String.concat["val MOSMLDIR0 = ", quote mosmldir, ";\n"],
         "fun MK_XABLE"
           -->  String.concat["fun MK_XABLE file = ", MK_XABLE_RHS, ";\n"],
-        "val SYSTEML" --> String.concat["val SYSTEML = ", SYSTEML_NAME]];
+        "val SYSTEML" --> String.concat["val SYSTEML = ", SYSTEML_NAME, ";\n"],
         "val DEFAULT_OVERLAY = _;\n"
           --> "val DEFAULT_OVERLAY = SOME \"Overlay.ui\"\n"];
     systeml [yaccer, "Parser.grm"];
@@ -220,7 +209,7 @@ val _ =
     systeml [compiler, "-c", "Holmake_rules.sig"];
     systeml [compiler, "-c", "Holmake_rules.sml"];
     if OS <> "winNT" then
-      systeml [compiler, "-standalone -o", bin, target]
+      systeml [compiler, "-standalone", "-o", bin, target]
     else
       systeml [compiler, "-o", bin, target];
     mk_xable bin;
@@ -365,7 +354,7 @@ val _ =
                 else (print "failed!) "; false))
        in
          if check_src() andalso
-            systeml [CC," ", src," -o ", target] = success
+            systeml [CC,src,"-o",target] = success
          then (mk_xable target; print "successful.\n") handle _
                 => print(String.concat["\n>>>>>Failed to move quote filter!",
                               "(continuing anyway)\n\n"])
