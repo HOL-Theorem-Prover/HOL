@@ -2969,8 +2969,8 @@ val ITSET_INSERT = store_thm(
 val absorption = #1 (EQ_IMP_RULE (SPEC_ALL ABSORPTION))
 val delete_non_element = #1 (EQ_IMP_RULE (SPEC_ALL DELETE_NON_ELEMENT))
 
-val AC_ITSET_INSERT = store_thm(
-  "AC_ITSET_INSERT",
+val COMMUTING_ITSET_INSERT = store_thm(
+  "COMMUTING_ITSET_INSERT",
   ``!f s. (!x y z. f x (f y z) = f y (f x z)) /\
           FINITE s ==>
           !x b. ITSET f (x INSERT s) b = ITSET f (s DELETE x) (f x b)``,
@@ -3026,11 +3026,26 @@ val AC_ITSET_INSERT = store_thm(
      (FULL_SIMP_TAC bool_ss [EXTENSION, IN_INSERT] THEN PROVE_TAC []) THEN
   ASM_SIMP_TAC arith_ss [delete_non_element]);
 
+val COMMUTING_ITSET_RECURSES = store_thm(
+  "COMMUTING_ITSET_RECURSES",
+  ``!f e s b. (!x y z. f x (f y z) = f y (f x z)) /\ FINITE s ==>
+              (ITSET f (e INSERT s) b = f e (ITSET f (s DELETE e) b))``,
+  Q_TAC SUFF_TAC
+    `!f. (!x y z. f x (f y z) = f y (f x z)) ==>
+         !s. FINITE s ==>
+             !e b. ITSET f (e INSERT s) b = f e (ITSET f (s DELETE e) b)` THEN1
+    PROVE_TAC [] THEN
+  GEN_TAC THEN STRIP_TAC THEN
+  ASM_SIMP_TAC (srw_ss()) [COMMUTING_ITSET_INSERT] THEN
+  Q_TAC SUFF_TAC
+    `!s. FINITE s ==> !e b. ITSET f s (f e b) = f e (ITSET f s b)` THEN1
+    PROVE_TAC [FINITE_DELETE] THEN
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN CONJ_TAC THENL [
+    SIMP_TAC bool_ss [ITSET_THM, FINITE_EMPTY],
+    ASM_SIMP_TAC bool_ss [COMMUTING_ITSET_INSERT, delete_non_element]
+  ]);
 
-
-val SUM_SET_def = new_definition(
-  "SUM_SET_def",
-  ``SUM_SET s = ITSET (+) s 0``);
+val SUM_SET_def = new_definition("SUM_SET_def", ``SUM_SET s = ITSET (+) s 0``);
 
 val SUM_SET_THM = store_thm(
   "SUM_SET_THM",
@@ -3038,18 +3053,7 @@ val SUM_SET_THM = store_thm(
     (!x s. FINITE s ==> (SUM_SET (x INSERT s) = x + SUM_SET (s DELETE x)))``,
   CONJ_TAC THEN REWRITE_TAC [SUM_SET_def] THENL [
     SIMP_TAC bool_ss [FINITE_EMPTY, ITSET_THM],
-    ASSUME_TAC (SIMP_RULE arith_ss [] (Q.ISPEC `(+)` AC_ITSET_INSERT)) THEN
-    ASM_SIMP_TAC arith_ss [] THEN
-    Q_TAC SUFF_TAC
-      `!s. FINITE s ==>
-           !x n. ITSET (+) s (x + n) = x + ITSET (+) s n` THEN1
-      PROVE_TAC [ADD_CLAUSES, FINITE_DELETE] THEN
-    HO_MATCH_MP_TAC FINITE_INDUCT THEN CONJ_TAC THENL [
-      SIMP_TAC bool_ss [ITSET_THM, FINITE_EMPTY],
-      REPEAT STRIP_TAC THEN
-      ASM_SIMP_TAC bool_ss [delete_non_element] THEN
-      REWRITE_TAC [ADD_ASSOC]
-    ]
+    PROVE_TAC [SIMP_RULE arith_ss [] (Q.ISPEC `(+)` COMMUTING_ITSET_RECURSES)]
   ]);
 
 val SUM_SET_SING = store_thm(
@@ -3146,9 +3150,92 @@ val SUM_SET_UNION = store_thm(
   ]);
 
 
+val max_lemma = prove(
+  ``!s. FINITE s ==> ~(s = {}) ==> ?x. x IN s /\ !y. y IN s ==> y <= x``,
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN
+  SIMP_TAC bool_ss [NOT_INSERT_EMPTY, IN_INSERT] THEN
+  REPEAT STRIP_TAC THEN
+  Q.ISPEC_THEN `s` STRIP_ASSUME_TAC SET_CASES THENL [
+    ASM_SIMP_TAC arith_ss [NOT_IN_EMPTY],
+    `~(s = {})` by PROVE_TAC [NOT_INSERT_EMPTY] THEN
+    `?m. m IN s /\ !y. y IN s ==> y <= m` by PROVE_TAC [] THEN
+    Cases_on `e <= m` THENL [
+      PROVE_TAC [],
+      `m <= e` by RW_TAC arith_ss [] THEN
+      PROVE_TAC [LESS_EQ_REFL, LESS_EQ_TRANS]
+    ]
+  ])
 
+val MAX_SET_DEF = new_specification (
+  "MAX_SET_DEF", ["MAX_SET"],
+  SIMP_RULE bool_ss [AND_IMP_INTRO, GSYM RIGHT_EXISTS_IMP_THM,
+                     SKOLEM_THM] max_lemma);
 
+val MAX_SET_THM = store_thm(
+  "MAX_SET_THM",
+  ``(!e. MAX_SET {e} = e) /\
+    (!s. FINITE s ==> !e1 e2. MAX_SET (e1 INSERT e2 INSERT s) =
+                              MAX e1 (MAX_SET (e2 INSERT s)))``,
+  CONJ_TAC THENL [
+    GEN_TAC THEN
+    STRIP_ASSUME_TAC (SIMP_RULE bool_ss [FINITE_SING, NOT_INSERT_EMPTY,
+                                         IN_SING]
+                                (Q.SPEC `{e}` MAX_SET_DEF)),
+    REPEAT STRIP_TAC THEN
+    Q.ISPEC_THEN `e1 INSERT e2 INSERT s` MP_TAC MAX_SET_DEF THEN
+    ASM_SIMP_TAC bool_ss [FINITE_INSERT, NOT_INSERT_EMPTY,
+                          IN_INSERT, FORALL_AND_THM, DISJ_IMP_THM] THEN
+    STRIP_TAC THEN
+    Q.ISPEC_THEN `e2 INSERT s` MP_TAC MAX_SET_DEF THEN
+    ASM_SIMP_TAC bool_ss [FINITE_INSERT, NOT_INSERT_EMPTY,
+                          IN_INSERT, FORALL_AND_THM, DISJ_IMP_THM] THEN
+    STRIP_TAC THEN
+    Q.ABBREV_TAC `m1 = MAX_SET (e1 INSERT e2 INSERT s)` THEN
+    Q.ABBREV_TAC `m2 = MAX_SET (e2 INSERT s)` THEN
+    NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN RES_TAC THEN
+    ASM_SIMP_TAC arith_ss [MAX_DEF]
+  ]);
 
+val MIN_SET_DEF = new_definition("MIN_SET_DEF", ``MIN_SET = $LEAST``);
+
+val MIN_SET_ELIM = store_thm(
+  "MIN_SET_ELIM",
+  ``!P Q. ~(P = {}) /\ (!x. (!y. y IN P ==> x <= y) /\ x IN P ==> Q x) ==>
+          Q (MIN_SET P)``,
+  REWRITE_TAC [MIN_SET_DEF] THEN REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC LEAST_ELIM THEN CONJ_TAC THENL [
+    `?x. P x` by PROVE_TAC [SET_CASES, IN_INSERT, SPECIFICATION] THEN
+    PROVE_TAC [],
+    FULL_SIMP_TAC arith_ss [SPECIFICATION] THEN
+    PROVE_TAC [NOT_LESS]
+  ]);
+
+val MIN_SET_THM = store_thm(
+  "MIN_SET_THM",
+  ``(!e. MIN_SET {e} = e) /\
+    (!s e1 e2. MIN_SET (e1 INSERT e2 INSERT s) =
+               MIN e1 (MIN_SET (e2 INSERT s)))``,
+  CONJ_TAC THENL [
+    GEN_TAC THEN
+    Q.SPECL_THEN [`{e}`, `\x. x = e`] (MATCH_MP_TAC o BETA_RULE)
+                 MIN_SET_ELIM THEN
+    SIMP_TAC bool_ss [IN_INSERT, NOT_INSERT_EMPTY, DISJ_IMP_THM,
+                      NOT_IN_EMPTY],
+    REPEAT GEN_TAC THEN
+    Q.SPECL_THEN [`e1 INSERT e2 INSERT s`,
+                   `\x. x = MIN e1 (MIN_SET (e2 INSERT s))`]
+                 (MATCH_MP_TAC o BETA_RULE)
+                 MIN_SET_ELIM THEN
+    SIMP_TAC bool_ss [IN_INSERT, NOT_INSERT_EMPTY, DISJ_IMP_THM,
+                      FORALL_AND_THM] THEN
+    REPEAT STRIP_TAC THEN
+    Q.SPECL_THEN [`e2 INSERT s`, `\y. x = MIN e1 y`]
+                 (MATCH_MP_TAC o BETA_RULE)
+                 MIN_SET_ELIM THEN
+    SIMP_TAC bool_ss [IN_INSERT, NOT_INSERT_EMPTY, DISJ_IMP_THM,
+                      FORALL_AND_THM] THEN
+    REPEAT STRIP_TAC THEN RES_TAC THEN ASM_SIMP_TAC arith_ss [MIN_DEF]
+  ]);
 
 val _ = export_rewrites
     [
