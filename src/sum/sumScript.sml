@@ -53,6 +53,7 @@ and o_THM = combinTheory.o_THM;
 (* of value `q:'b` will be represented by:  `\b x y. x=q /\ ~b`.        *)
 (* The predicate IS_SUM_REP is true of just those objects of the type	*)
 (* `:bool->'a->'b->bool` which are representations of some injection.	*)
+
 val IS_SUM_REP =
     new_definition
      ("IS_SUM_REP",
@@ -62,6 +63,7 @@ val IS_SUM_REP =
 
 (* Prove that there exists some object in the representing type that 	*)
 (* lies in the subset of legal representations.				*)
+
 val EXISTS_SUM_REP =
     TAC_PROOF(([], --`?f:bool -> 'a -> 'b -> bool. IS_SUM_REP f`--),
 	      EXISTS_TAC (--`\b x (y:'b). (x = @(x:'a).T) /\ b`--) THEN
@@ -74,8 +76,7 @@ val EXISTS_SUM_REP =
 (* The theorem returned is:  |- ?rep. TYPE_DEFINITION IS_SUM_REP rep 	*)
 (* ---------------------------------------------------------------------*)
 
-val sum_TY_DEF = Rsyntax.new_type_definition
-  {name = "sum", inhab_thm = EXISTS_SUM_REP};
+val sum_TY_DEF = new_type_definition ("sum", EXISTS_SUM_REP);
 val _ = add_infix_type {Prec = 60, ParseName = SOME "+", Name = "sum",
                         Assoc = HOLgrammars.RIGHT}
 
@@ -83,6 +84,7 @@ val _ = add_infix_type {Prec = 60, ParseName = SOME "+", Name = "sum",
 (* Define a representation function, REP_sum, from the type ( 'a,'b )sum to *)
 (* the representing type bool->'a->'b->bool, and the inverse abstraction    *)
 (* function ABS_sum, and prove some trivial lemmas about them.              *)
+
 val sum_ISO_DEF = define_new_type_bijections
                   {name = "sum_ISO_DEF",
                    ABS = "ABS_sum",
@@ -234,7 +236,7 @@ val sum_distinct = store_thm("sum_distinct",
 (* Derive the defining property for ISL.				*)
 val ISL_DEF = TAC_PROOF(
   ([], --`?ISL. (!x:'a. ISL(INL x)) /\ (!y:'b. ~ISL(INR y))`--),
-  let val inst = Rsyntax.INST_TYPE [Type.gamma |-> Type.bool] sum_axiom
+  let val inst = INST_TYPE [Type.gamma |-> Type.bool] sum_axiom
       val spec = SPECL [--`\x:'a.T`--, --`\y:'b.F`--] inst
       val exth = CONJUNCT1 (CONV_RULE EXISTS_UNIQUE_CONV spec)
       val conv = CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) exth
@@ -244,7 +246,7 @@ val ISL_DEF = TAC_PROOF(
   end);
 
 (* Then define ISL with a constant specification.			*)
-val ISL = Rsyntax.new_specification
+val ISL = new_specification
   {name = "ISL",
    consts = [{fixity = Prefix,const_name="ISL"}],
    sat_thm = ISL_DEF};
@@ -252,7 +254,7 @@ val ISL = Rsyntax.new_specification
 (* Derive the defining property for ISR.				*)
 val ISR_DEF = TAC_PROOF(
   ([], --`?ISR. (!x:'b. ISR(INR x)) /\ (!y:'a. ~ISR(INL y))`--),
-  let val inst = Rsyntax.INST_TYPE [Type.gamma |-> Type.bool] sum_axiom
+  let val inst = INST_TYPE [Type.gamma |-> Type.bool] sum_axiom
       val spec = SPECL [--`\x:'a.F`--,  --`\y:'b.T`--] inst
       val exth = CONJUNCT1 (CONV_RULE EXISTS_UNIQUE_CONV spec)
       val conv = CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) exth
@@ -262,7 +264,7 @@ val ISR_DEF = TAC_PROOF(
   end);
 
 (* Then define ISR with a constant specification.			*)
-val ISR = Rsyntax.new_specification
+val ISR = new_specification
   {name = "ISR",
    consts = [{fixity=Prefix,const_name="ISR"}],
    sat_thm = ISR_DEF};
@@ -270,7 +272,7 @@ val ISR = Rsyntax.new_specification
 (* Derive the defining property of OUTL.				*)
 val OUTL_DEF = TAC_PROOF(([],
 --`?OUTL. !x. OUTL(INL x:('a,'b)sum) = x`--),
-   let val inst = Rsyntax.INST_TYPE [Type.gamma |-> Type.alpha] sum_axiom
+   let val inst = INST_TYPE [Type.gamma |-> Type.alpha] sum_axiom
        val spec = SPECL [--`\x:'a.x`--, --`\y:'b.@x:'a.F`--] inst
        val exth = CONJUNCT1 (CONV_RULE EXISTS_UNIQUE_CONV spec)
        val conv = CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) exth
@@ -280,7 +282,7 @@ val OUTL_DEF = TAC_PROOF(([],
    end);
 
 (* Then define OUTL with a constant specification.			*)
-val OUTL = Rsyntax.new_specification
+val OUTL = new_specification
   {name = "OUTL",
    consts = [{fixity = Prefix,const_name = "OUTL"}],
    sat_thm = OUTL_DEF};
@@ -288,7 +290,7 @@ val OUTL = Rsyntax.new_specification
 (* Derive the defining property of OUTR.				*)
 val OUTR_DEF = TAC_PROOF(
   ([], --`?OUTR. !x. OUTR(INR x:'a+'b) = x`--),
-   let val inst = Rsyntax.INST_TYPE [Type.gamma |-> Type.beta] sum_axiom
+   let val inst = INST_TYPE [Type.gamma |-> Type.beta] sum_axiom
        val spec = SPECL [--`\x:'a.@y:'b.F`--,  --`\y:'b.y`--] inst
        val exth = CONJUNCT1 (CONV_RULE EXISTS_UNIQUE_CONV spec)
        val conv = CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) exth
@@ -298,7 +300,7 @@ val OUTR_DEF = TAC_PROOF(
    end);
 
 (* Then define OUTR with a constant specification.			*)
-val OUTR = Rsyntax.new_specification
+val OUTR = new_specification
   {name = "OUTR",
    consts = [{fixity = Prefix,const_name = "OUTR"}],
    sat_thm = OUTR_DEF};
