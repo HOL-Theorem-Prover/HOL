@@ -161,21 +161,21 @@ The logical constants\index{logical constants, in HOL logic@logical
 \index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic!definitional axiom for}
 \index{exists unique, in HOL logic@exists unique, in \HOL\ logic!definitional axiom for}
 \begin{verbatim}
-   T_DEF              |- T   = ((\x:bool. x) = (\x. x))
+   T_DEF              |- T  = ((\x:bool. x) = (\x. x))
 
-   FORALL_DEF         |- $!  = \P:'a->bool. P = (\x. T)
+   FORALL_DEF         |- !  = \P:'a->bool. P = (\x. T)
 
-   EXISTS_DEF         |- $?  = \P:'a->bool. P($@ P)
+   EXISTS_DEF         |- ?  = \P:'a->bool. P($@ P)
 
-   AND_DEF            |- $/\ = \t1 t2. !t. (t1 ==> t2 ==> t) ==> t
+   AND_DEF            |- /\ = \t1 t2. !t. (t1 ==> t2 ==> t) ==> t
 
-   OR_DEF             |- $\/ = \t1 t2. !t. (t1 ==> t) ==> (t2 ==> t) ==> t
+   OR_DEF             |- \/ = \t1 t2. !t. (t1 ==> t) ==> (t2 ==> t) ==> t
 
-   F_DEF              |- F   = !t. t
+   F_DEF              |- F  = !t. t
 
-   NOT_DEF            |- $~  = \t. t ==> F
+   NOT_DEF            |- ~  = (\t. t ==> F)
 
-   EXISTS_UNIQUE_DEF  |- $?! = (\P. $? P /\ (!x y. P x /\ P y ==> (x = y)))
+   EXISTS_UNIQUE_DEF  |- ?! = (\P. $? P /\ (!x y. P x /\ P y ==> (x = y)))
 \end{verbatim}
 \end{hol}
 
@@ -2073,8 +2073,8 @@ $\konst{list\_case}\ e_2\ (\lambda h\; t.\ e_3)\ e_1$ where the constant
 {\small
 \begin{verbatim}
   list_case_def
-    |- (!v f. case v f [] = v) /\
-       (!v f a0 a1. case v f (a0::a1) = f a0 a1)
+    |- (!v f. list_case v f [] = v) /\
+       (!v f a0 a1. list_case v f (a0::a1) = f a0 a1)
 \end{verbatim}}
 
 \paragraph{List membership}
@@ -2525,9 +2525,161 @@ finite $R$-paths:
 \index{reduction sequences!\HOL{} theory of|)}
 
 
-\subsection{Character strings}
+\subsection{Character strings (\theoryimp{string})}
 
-ASCII characters and character strings.
+The theory \theoryimp{string} defines a type of characters and a type
+of finite strings built from those characters, along with a useful suite of 
+definitions for operating on strings. 
+
+\paragraph {Characters}
+
+The type \verb+char+ is represented by the numbers less than 256. Two
+constants are defined: {\small\verb+CHR +}$: \konst{num}\to\konst{char}$ and
+{\small\verb+ORD +}$: \konst{char}\to\konst{num}$. The following theorems
+hold:
+{\small
+\begin{verbatim}
+  CHR_ORD  |- !a. CHR (ORD a) = a
+  ORD_CHR  |- !r. r < 256 = (ORD (CHR r) = r)
+\end{verbatim}
+}
+
+\paragraph {Strings}
+
+The type \verb+string+ is inductively characterized by the
+constructors 
+%
+{\small
+\begin{verbatim}
+  EMPTYSTRING : string
+  STRING      : char -> string -> string
+\end{verbatim}
+}
+%
+The \HOL{} parser maps the syntax \verb+""+ to 
+{\small\verb+EMPTYSTRING+}, and the \HOL{} printer inverts this.
+The parser expands string literals of the form \verb+"+$c_1 c_2
+\ldots c_n$\verb+"+ to the compound term
+
+\smallskip
+
+\qquad {\small\verb+STRING+} $c_1$ ({\small\verb+STRING+} $c_2$ \
+$\ldots$ ({\small\verb+STRING+} $c_{n-1}$ \ ({\small\verb+STRING+}
+$c_n$ \ {\small\verb+EMPTYSTRING+})) $\ldots$ )
+
+\smallskip
+
+\noindent As a result of the characterization, the following basic theorems
+hold:
+%
+{\small
+\begin{verbatim}
+  STRING_11
+    |- !c1 c2 s1 s2. (STRING c1 s1 = STRING c2 s2) = (c1=c2) /\ (s1=s2)
+  STRING_DISTINCT
+    |- !c s. ~("" = STRING c s)) /\ (!c s. ~(STRING c s = ""))
+  string_Axiom
+    |- !b g. ?f.  (f "" = b) /\
+                  (!c t. f (STRING c t) = g c t (f t))
+  STRING_INDUCT_THM
+    |- !P. P "" /\ (!s. P s ==> !c. P (STRING c s)) ==> !s. P s
+  STRING_CASES
+    |- !s. (s = "") \/ (?c str. s = STRING c str)
+\end{verbatim}
+}
+%
+There is also a destructor function {\small\verb+DEST_STRING+} for
+strings which returns an option type.
+{\small
+\begin{verbatim}
+  DEST_STRING
+    |- (DEST_STRING "" = NONE) /\
+       (DEST_STRING (STRING c rst) = SOME(c,rst))
+\end{verbatim}
+}
+
+
+\paragraph{Case expressions}
+
+Compound \HOL{} expressions that branch based on
+whether a term is an empty or non-empty string have the
+surface syntax
+%
+{\small
+\begin{verbatim}
+   case s 
+    of "" -> e1
+    || STRING c rst -> e2
+\end{verbatim}}
+%
+Such an expression is translated to
+$\konst{string\_case}\ e_1 \ (\lambda c\; rst.\ e_2)\ s$ where the constant
+{\small\verb+string_case+} is defined as follows:
+%
+{\small
+\begin{verbatim}
+  STRING_CASE_DEF
+    |- (string_case b f ""  = b) /\
+       (string_case b f (STRING c s) = f c s)
+\end{verbatim}}
+
+\paragraph {Length and concatenation}
+
+The length of a string ({\small\verb+STRLEN+}) is defined by primitive
+recursion. The concatenation of strings ({\small\verb+STRCAT+}) may be
+expressed recursively ({\small\verb+STRCAT_EQNS+})or as a fold 
+({\small\verb+STRCAT_EXPLODE+}):
+%
+{\small
+\begin{verbatim}
+  STRLEN_DEF
+    |- (STRLEN "" = 0) /\ 
+       (STRLEN (STRING c s) = 1 + STRLEN s)
+
+  STRCAT_EQNS = Q.store_thm
+    |- (STRCAT "" s = s) /\
+       (STRCAT s "" = s) /\
+       (STRCAT (STRING c s1) s2 = STRING c (STRCAT s1 s2))
+  STRCAT_EXPLODE
+    |- !s1 s2. STRCAT s1 s2 = FOLDR STRING s2 (EXPLODE s1)
+\end{verbatim}}
+
+
+\paragraph {Strings and lists}
+
+Strings are converted to lists of characters by
+{\small\verb+EXPLODE+}. This is inverted by {\small\verb+IMPLODE+}.
+%
+{\small
+\begin{verbatim}
+  EXPLODE_EQNS
+    |- (EXPLODE "" = []) /\
+       (!c s. EXPLODE (STRING c s) = c::EXPLODE s)
+
+  IMPLODE_EQNS
+    |- (IMPLODE [] = "") /\
+       (!c s. IMPLODE (c::t) = STRING c (IMPLODE t))
+\end{verbatim}}
+
+\paragraph {Prefix checking}
+
+That string $s_1$ is a prefix of $s_2$ ({\small\verb+isPREFIX+}) can be
+defined by recursion ({\small\verb+isPREFIX_DEF+}). From this, the 
+statement {\small\verb+isPREFIX_STRCAT+} can be easily derived.
+%
+{\small
+\begin{verbatim}
+  isPREFIX_DEF 
+    |- isPREFIX s1 s2 = 
+         case (DEST_STRING s1, DEST_STRING s2)
+          of (NONE, _) -> T
+          || (SOME __, NONE) -> F
+          || (SOME(c1,t1),SOME(c2,t2)) -> (c1=c2) /\ isPREFIX t1 t2
+
+  isPREFIX_STRCAT
+    |- !s1 s2. isPREFIX s1 s2 = ?s3. s2 = STRCAT s1 s3
+\end{verbatim}
+}
 
 \subsection{Theories of $n$-bit words}
 
@@ -2759,7 +2911,7 @@ in a tail-recursive fashion.
 %
 For the full derivation, see the sources of {\small\verb+pred_set+}.
 The definition of {\small\verb+ITSET+} allows, for example, the
-definition of summing the results of a function on a finite set of numbers,
+definition of summing the results of a function on a finite set of elements,
 from which a recursive characterization and other useful theorems are derived.
 %
 {\small
@@ -2884,43 +3036,109 @@ multiplicity of each element in the multiset.
 \subsection{Relations (\theoryimp{relation})}\label{relation}
 
 Mathematical relations can be represented in \HOL{} by the type
-{\small\verb+:'a -> 'b -> bool+}. The theory \theoryimp{relation}
-currently provides definitions and theorems about the reflexive,
-transitive and symmetric closures of a relation, develops wellfounded
-relations including the wellfounded recursion theorem, provides a
-collection of common operations on relations, and develops some
-abstract results used in Term Rewriting.
+$\alpha \to\beta\to\konst{bool}$. (In most applications, the type of a
+relation is an instance of $\alpha \to\alpha\to\konst{bool}$, but the
+extra generality doesn't hurt.) The theory \theoryimp{relation}
+provides definitions of basic properties and operations on relations,
+defines various kinds of orders and closures, defines wellfoundedness
+and proves the wellfounded recursion theorem, and develops some
+basic results used in Term Rewriting.
 
-\paragraph{Predicates on relations}
+\paragraph {Basic properties}
 
-The following basic properties of relations are defined:
+The following basic properties of relations are defined.
 %
 \begin{hol}
 {\small
 \begin{verbatim}
   transitive_def
     |- transitive R = !x y z. R x y /\ R y z ==> R x z
-
   reflexive_def
     |- reflexive R = (!x. R x x)
-
   irreflexive_def
     |- irreflexive R = (!x. ~R x x)
-
   symmetric_def
     |- symmetric R = (!x y. R x y = R y x)
-
   antisymmetric_def
     |- antisymmetric R = (!x y. R x y /\ R y x ==> (x = y))
-
   equivalence_def
     |- equivalence R = reflexive R /\ symmetric R /\ transitive R
-
+  trichotomous
+    |- trichotomous R = !a b. R a b \/ R b a \/ (a = b)
   total_def
     |- total R = (!x y. R x y \/ R y x)
 \end{verbatim}}
 \end{hol}
 
+\paragraph{Basic operations}
+
+The following basic operations on relations are defined: the empty
+relation ({\small\verb+EMPTY_REL+}), relation composition
+({\small\verb+O+, infix}), inversion ({\small\verb+inv+}), 
+domain ({\small\verb+RDOM+}), and range ({\small\verb+RRANGE+}).
+%
+\begin{hol}
+{\small
+\begin{verbatim}
+  EMPTY_REL_DEF  
+    |- !x y. EMPTY_REL x y = F
+  O_DEF
+    |- $O R1 R2 x z = ?y. R1 x y /\ R2 y z
+  inv_DEF
+    |- inv R x y = R y x
+  RDOM_DEF
+    |- RDOM R x = ?y. R x y
+  RRANGE
+    |- RRANGE R y = ?x. R x y
+\end{verbatim}}
+\end{hol}
+
+Set  operations lifted to work on relations include subset
+({\small\verb+RSUBSET+}, infix), 
+union ({\small\verb+RUNION+}, infix),
+intersection ({\small\verb+RINTER+}, infix), 
+complement ({\small\verb+RCOMPL+}), and universe ({\small\verb+RUNIV+}).
+%
+\begin{hol}
+{\small
+\begin{verbatim}
+  RSUBSET
+    |- $RSUBSET R1 R2 = !x y. R1 x y ==> R2 x y
+  RUNION
+    |- $RUNION R1 R2 x y = R1 x y \/ R2 x y
+  RINTER
+    |- $RINTER R1 R2 x y = R1 x y /\ R2 x y
+  RCOMPL
+    |- RCOMPL R x y = ~R x y
+  RUNIV
+    |- RUNIV x y = T
+\end{verbatim}}
+\end{hol}
+
+\paragraph {Orders}
+
+A sequence of definitions capturing various notions of order are made
+in \theoryimp{relation}.
+%
+\begin{hol}
+{\small
+\begin{verbatim}
+  PreOrder
+    |- PreOrder R = reflexive R /\ transitive R
+  Order
+    |- Order Z = antisymmetric Z /\ transitive Z
+  WeakOrder
+    |- WeakOrder Z = reflexive Z /\ antisymmetric Z /\ transitive Z
+  StrongOrder
+    |- StrongOrder Z = irreflexive Z /\ antisymmetric Z /\ transitive Z
+  LinearOrder
+    |- LinearOrder R = Order R /\ trichotomous R
+  WeakLinearOrder
+    |- WeakLinearOrder R = WeakOrder R /\ trichotomous R
+  StrongLinearOrder
+    |- StrongLinearOrder R = StrongOrder R /\ trichotomous R
+\end{verbatim}}
+\end{hol}
 
 \paragraph {Closures}
 
@@ -2945,6 +3163,86 @@ relation closed under transitivity and reflexivity.
 \end{verbatim}}
 \end{hol}
 
+From these definitions, one can recover the initial rules.
+%
+\begin{hol}
+{\small
+\begin{verbatim}
+  TC_RULES
+    |- !R. (!x y. R x y ==> TC R x y) /\
+           (!x y z. TC R x y /\ TC R y z ==> TC R x z)
+  RTC_RULES
+    |- !R. (!x. RTC R x x) /\ 
+           (!x y z. R x y /\ RTC R y z ==> RTC R x z)
+  RTC_RULES_RIGHT1
+    |- !R. (!x. RTC R x x) /\ 
+           (!x y z. RTC R x y /\ R y z ==> RTC R x z)
+\end{verbatim}}
+\end{hol}
+%
+Notice that {\small\verb+RTC_RULES+}, in keeping with the definition
+of {\small\verb+RTC+}, extends a sequence of \verb+R+-steps leading
+from \verb+y+ to \verb+z+ on the left with a single \verb+R+-step from
+\verb+x+ to \verb+y+ to construct \verb+RTC x z+. The theorem
+{\small\verb+RTC_RULES_RIGHT1+} makes the extension on the right.
+Similar alternative theorems are proved for case analysis and induction.
+
+For example, {\small\verb+TC_CASES1+} and {\small\verb+TC_CASES2+} in the
+following decompose {\small\verb+RTC R x z+} to either 
+{\small\verb+R x y+} followed by {\small\verb+RTC R y z+}
+({\small\verb+TC_CASES1+})
+or 
+{\small\verb+RTC R x y+} followed by {\small\verb+R y z+}
+({\small\verb+TC_CASES2+}).
+
+%
+\begin{hol}
+{\small
+\begin{verbatim}
+  TC_CASES1
+    |- !R x z. TC R x z ==> R x z \/ ?y. R x y /\ TC R y z
+  TC_CASES2
+    |- !R x z. TC R x z ==> R x z \/ ?y. TC R x y /\ R y z
+
+  RTC_CASES1
+    |- !R x y. RTC R x y = (x = y) \/ ?u. R x u /\ RTC R u y
+  RTC_CASES2
+    |- !R x y. RTC R x y = (x = y) \/ ?u. RTC R x u /\ R u y
+  RTC_CASES_RTC_TWICE
+    |- !R x y. RTC R x y = ?u. RTC R x u /\ RTC R u y
+\end{verbatim}}
+\end{hol}
+
+As well as the basic induction theorems for {\small\verb+TC+} and 
+{\small\verb+RTC+}, there are so-called \emph{strong} induction
+theorems, which have stronger induction hypotheses.
+%
+\begin{hol}
+{\small
+\begin{verbatim}
+  TC_INDUCT
+    |- !R P. (!x y. R x y ==> P x y) /\
+             (!x y z. P x y /\ P y z ==> P x z) 
+             ==> !u v. TC R u v ==> P u v
+  RTC_INDUCT
+    |- ! R P. (!x. P x x) /\ 
+              (!x y z. R x y /\ P y z ==> P x z) ==>
+              (!x y. RTC R x y ==> P x y)
+  TC_STRONG_INDUCT
+    |- !R P. (!x y. R x y ==> P x y) /\
+             (!x y z. P x y /\ P y z /\ TC R x y /\ TC R y z ==> P x z) ==>
+             (!u v. TC R u v ==> P u v)
+  RTC_STRONG_INDUCT
+    |- !R P. (!x. P x x) /\ 
+             (!x y z. R x y /\ RTC R y z /\ P y z ==> P x z) ==>
+             (!x y. RTC R x y ==> P x y)
+\end{verbatim}}
+\end{hol}
+Variants of these induction theorems are also available which break
+apart the closure from the left or right, as for the case analysis theorems.
+
+\medskip
+
 The reflexive ({\small\verb+RC+}) and symmetric closures
 ({\small\verb+RC+}) are straightforward to define. The equivalence
 closure ({\small\verb+EQC+}) is the symmetric then transitive then
@@ -2963,46 +3261,119 @@ reflexive closure of $R$.
 
 A relation $R$ is wellfounded ({\small\verb+WF+}) if every non-empty set
 has an $R$-minimal element. Wellfoundedness is used to justify the
-principle of wellfounded induction and also a general recursion
-theorem. The statement of the recursion theorem requires that the
-notion of a function restriction be defined as well.
-
+principle of wellfounded induction ({\small\verb+WF_INDUCTION_THM+}).
+%
 \begin{hol}
+{\small
 \begin{verbatim}
-  WF_DEF |- !R. WF R = !B. (?w. B w) ==> ?min. B min /\ !b. R b min ==> ~B b
-
+  WF_DEF 
+    |- !R. WF R = !B. (?w. B w) ==> ?min. B min /\ !b. R b min ==> ~B b
   WF_INDUCTION_THM
     |- !R WF R ==> !P. (!x. (!y. R y x ==> P y) ==> P x) ==> !x. P x
+\end{verbatim}}
+\end{hol}
 
-  RESTRICT_DEF |- !f R x. RESTRICT f R x = \y. if R y x then f y else ARB
+The \emph{wellfounded part} ({\small\verb+WFP+}) of a relation can be
+inductively defined, from which its rules, case-analysis theorem and
+induction theorems may be derived.
+%
+\begin{hol}
+{\small
+\begin{verbatim}
+  WFP_DEF
+    |- WFP R a = !P. (!x. (!y. R y x ==> P y) ==> P x) ==> P a
+  WFP_RULES
+    |- !R x. (!y. R y x ==> WFP R y) ==> WFP R x
+  WFP_CASES
+    |- !R x. WFP R x = !y. R y x ==> WFP R y
+  WFP_INDUCT
+    |- !R P. (!x. (!y. R y x ==> P y) ==> P x) 
+             ==> !x. WFP R x ==> P x
+  WFP_STRONG_INDUCT
+    |- !R. (!x. WFP R x /\ (!y. R y x ==> P y) ==> P x) 
+           ==> !x. WFP R x ==> P x
+\end{verbatim}}
+\end{hol}
+
+Wellfoundedness can also be used to justify a general recursion
+theorem. Intuitively, a collection of recursion equations can be
+admitted into the \HOL{} logic with no loss of consistency provided
+that every possible sequence of recursive calls is finite. Wellfounded
+relations are used to capture this notion: if there is a wellfounded
+relation $R$ on the domain of the desired function such that every
+sequence of recursive calls is $R$-decreasing, then the recursion
+equations specify a unique total function and the equations can be
+admitted into the logic.
+
+The recursion theorems {\small\verb+WFREC_COROLLARY+} and
+{\small\verb+WF_RECURSION_THM+} use the notion of a function
+restriction ({\small\verb+RESTRICT+}) in order to force the recursive
+function to be applied to $R$-smaller arguments in recursive calls..
+%
+\begin{hol}
+{\small
+\begin{verbatim}
+  RESTRICT_DEF 
+    |- !f R x. RESTRICT f R x = \y. if R y x then f y else ARB
 
   WFREC_COROLLARY
     |- !M R f. (f = WFREC R M) ==> WF R ==> !x. f x = M (RESTRICT f R x) x
 
-  WF_RECURSION_THM |- !R. WF R ==> !M. ?!f. !x. f x = M (RESTRICT f R x) x
-\end{verbatim}
+  WF_RECURSION_THM 
+    |- !R. WF R ==> !M. ?!f. !x. f x = M (RESTRICT f R x) x
+\end{verbatim}}
 \end{hol}
 
-\noindent The theorems \ml{WF\_INDUCTION\_THM} and
-\ml{WFREC\_COROLLARY} are used to automate recursive definitions. A
-few basic combinators for wellfounded relations are also provided in
-this theory.
+\noindent The theorems {\small\verb+WF_INDUCTION_THM+} and
+{\small\verb+WFREC_COROLLARY+} are used to automate recursive
+definitions; see Section \ref{TFL}. A few basic operators for
+wellfounded relations are also defined, along with theorems stating
+that they propagate wellfoundedness.
 
 \begin{hol}
 \begin{verbatim}
-   EMPTY_REL_DEF  |- !x y. EMPTY_REL x y = F
-   WF_Empty       |- WF EMPTY_REL
-
    inv_image_def  |- !R f. inv_image R f = \x y. R (f x) (f y)
-   WF_inv_image   |- !R f. WF R ==> WF (inv_image R f)
 
+   WF_inv_image   |- !R f. WF R ==> WF (inv_image R f)
    WF_SUBSET      |- !R P. WF R /\ (!x y. P x y ==> R x y) ==> WF P
    WF_TC          |- !R. WF R ==> WF (TC R)
+   WF_Empty       |- WF EMPTY_REL
 \end{verbatim}
 \end{hol}
 
-\paragraph {Common operations}
+\paragraph {Term Rewriting}
 
+A few basic definitions from Term Rewriting theory 
+(the diamond property (\verb+diamond+), the (Weak) Church-Rosser
+property ({\small\verb+CR+}), and Strong
+Normalization ({\small\verb+SN+})) appear
+in \theoryimp{relation}. 
+%
+\begin{hol}
+{\small
+\begin{verbatim}
+  diamond_def
+    |- diamond R = !x y z. R x y /\ R x z ==> ?u. R y u /\ R z u
+
+  CR_def
+    |- CR R = diamond (RTC R)
+
+  WCR_def
+    |- WCR R = !x y z. R x y /\ R x z ==> ?u. RTC R y u /\ RTC R z u
+
+  SN_def
+    |- SN R = WF (inv R)
+\end{verbatim}}
+\end{hol}
+
+\noindent From those, Newman's Lemma is proved.
+%
+\begin{hol}
+{\small
+\begin{verbatim}
+  Newmans_lemma  |- !R. WCR R /\ SN R ==> CR R
+\end{verbatim}}
+\end{hol}
 
 \subsection{Finite maps (\theoryimp{finite\_map})}\label{finite_map}
 
