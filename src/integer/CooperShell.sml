@@ -146,7 +146,7 @@ fun phase6_CONV tm = let
   *)
   val (v, _) = dest_exists tm
 in
-  BINDER_CONV (RAND_CONV (mk_abs_CONV v)) THENC
+  BINDER_CONV (RAND_CONV (UNBETA_CONV v)) THENC
   p6_recurse THENC PURE_REWRITE_CONV [F_or_r]
 end tm
 
@@ -242,7 +242,7 @@ fun do_equality_simplifications tm = let
         val rearranged = EQT_ELIM (AC_CONV (CONJ_ASSOC, CONJ_COMM)
                                    (mk_eq(revealed_t, rearranged_t)))
         val eliminated =
-          (RAND_CONV (mk_abs_CONV bvar) THENC
+          (RAND_CONV (UNBETA_CONV bvar) THENC
            REWR_CONV CONJ_EQ_ELIM THENC
            RAND_CONV BETA_CONV) rearranged_t
       in
@@ -259,7 +259,7 @@ fun do_equality_simplifications tm = let
         val rearranged = EQT_ELIM (AC_CONV (DISJ_ASSOC, DISJ_COMM)
                                    (mk_eq(revealed_t, rearranged_t)))
         val eliminated =
-          (RAND_CONV (mk_abs_CONV bvar) THENC
+          (RAND_CONV (UNBETA_CONV bvar) THENC
            REWR_CONV DISJ_NEQ_ELIM THENC
            RAND_CONV BETA_CONV) rearranged_t
       in

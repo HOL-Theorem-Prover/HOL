@@ -183,7 +183,7 @@ fun elim_bterms tm = let
 in
   BINDER_CONV (initially THENC
                profile "eb.eval" eval_f_CONV THENC
-               profile "eb.abs" (RAND_CONV (mk_abs_CONV var))) THENC
+               profile "eb.abs" (RAND_CONV (UNBETA_CONV var))) THENC
   profile "eb.in_set" in_set_CONV THENC
   profile "eb.beta" (EVERY_DISJ_CONV (TRY_CONV BETA_CONV))
 end tm

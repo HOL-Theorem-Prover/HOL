@@ -193,7 +193,7 @@ fun phase4_CONV tm = let
       val rewrites =
         gen_rewrites [] (ASSUME (MK_LESS (Bvar, witness)))
       val thm0 =
-        (BETA_CONV THENC REWRITE_CONV rewrites THENC mk_abs_CONV Bvar) Fx
+        (BETA_CONV THENC REWRITE_CONV rewrites THENC UNBETA_CONV Bvar) Fx
       val thm1 = GEN Bvar (DISCH_ALL thm0)
       val exform = let
         val (x, body) = dest_forall (concl thm1)
@@ -283,7 +283,7 @@ fun phase4_CONV tm = let
         end
       end handle HOL_ERR _ => ALL_CONV tm
     val c =
-      BETA_CONV THENC recurse THENC mk_abs_CONV Bvar
+      BETA_CONV THENC recurse THENC UNBETA_CONV Bvar
   in
     GENL [y, Bvar] (c tm0)
   end
@@ -1162,7 +1162,7 @@ fun elim_bterms tm = let
                   else ALL_CONV
 in
   BINDER_CONV (RAND_CONV BETA_CONV THENC initially THENC
-               profile "eb.abs" (RAND_CONV (mk_abs_CONV var))) THENC
+               profile "eb.abs" (RAND_CONV (UNBETA_CONV var))) THENC
   profile "eb.in_list" in_list_CONV THENC
   profile "eb.beta" (EVERY_DISJ_CONV (TRY_CONV BETA_CONV))
 end tm

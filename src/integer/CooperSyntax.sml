@@ -31,24 +31,6 @@ in
   recurse [] tm
 end
 
-
-(* ---------------------------------------------------------------------- *)
-(* Generally applicable conversions                                       *)
-(* ---------------------------------------------------------------------- *)
-
-fun mk_abs_CONV var term =
-  SYM (BETA_CONV (mk_comb(mk_abs(var,term), var)))
-
-fun UNBETA_CONV to_elim t = let
-  (* find all instances of to_elim in t, and convert t
-     to (\v. t[v/to_elim]) to_elim
-     v can be a genvar because we expect to get rid of it later. *)
-  val gv = genvar (type_of to_elim)
-  val newbody = Term.subst [to_elim |-> gv] t
-in
-  SYM (BETA_CONV (mk_comb(mk_abs(gv,newbody), to_elim)))
-end
-
 (* ---------------------------------------------------------------------- *)
 (* functions for dealing with "conjunctions" and "disjunctions"; logical  *)
 (* operators that might have their meaning concealed under negations      *)
@@ -274,7 +256,7 @@ in
   fun flip_forall tm = let
     val (bvar, _) = dest_forall tm
   in
-    BINDER_CONV (mk_abs_CONV bvar) THENC
+    BINDER_CONV (UNBETA_CONV bvar) THENC
     REWR_CONV NOT_EXISTS_THM THENC
     RAND_CONV (BINDER_CONV (RAND_CONV BETA_CONV)) THENC
     RAND_CONV (RENAME_VARS_CONV [#1 (dest_var bvar)])
@@ -479,7 +461,7 @@ fun myEXISTS_OR_CONV tm = let
      the same on the RHS of the theorem returned *)
   val (v,body) = dest_exists tm
 in
-  BINDER_CONV (BINOP_CONV (mk_abs_CONV v)) THENC
+  BINDER_CONV (BINOP_CONV (UNBETA_CONV v)) THENC
   REWR_CONV EXISTS_OR_THM THENC
   BINOP_CONV (BINDER_CONV BETA_CONV (* THENC RAND_CONV (ALPHA_CONV v) *))
 end tm

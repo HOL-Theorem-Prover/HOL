@@ -8,16 +8,6 @@ signature CooperSyntax = sig
 
   val strip_exists : term -> (term list * term)
 
-  (* these are both basically the same function; given argument t0 they turn
-       t
-     into
-       (\v. t[v/t0]) t0
-     mk_abs_CONV only works if t0 is a var, and is more efficient because
-     it doesn't need to do a substitution (the "v" above can just be t0) *)
-  val mk_abs_CONV : term -> conv
-  val UNBETA_CONV : term -> conv
-
-
   val cpis_conj : term -> bool
   val cpis_disj : term -> bool
 

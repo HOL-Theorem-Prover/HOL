@@ -654,7 +654,7 @@ end
 fun UNBETA_LIST tlist =
     case tlist of
       [] => ALL_CONV
-    | (t::ts) => CooperSyntax.UNBETA_CONV t THENC RATOR_CONV (UNBETA_LIST ts)
+    | (t::ts) => UNBETA_CONV t THENC RATOR_CONV (UNBETA_LIST ts)
 
 
 
@@ -814,7 +814,7 @@ fun calculate_range_disjunct tm = let
                                    (LAND_CONV CooperMath.REDUCE_CONV)) THENC
                     recurse))))) tm
 in
-  BINDER_CONV (RAND_CONV (CooperSyntax.mk_abs_CONV i)) THENC recurse
+  BINDER_CONV (RAND_CONV (UNBETA_CONV i)) THENC recurse
 end tm
 
 (* ----------------------------------------------------------------------
@@ -1052,7 +1052,7 @@ fun OmegaEq t = let
   val (absify, unwinder) =
       if null rest andalso elimc = Arbint.one then
         (ALL_CONV, REWR_CONV EX_REFL)
-      else (STRIP_QUANT_CONV (RAND_CONV (CooperSyntax.mk_abs_CONV to_elim)),
+      else (STRIP_QUANT_CONV (RAND_CONV (UNBETA_CONV to_elim)),
             REWR_CONV UNWIND_THM2 THENC BETA_CONV)
 in
   STRIP_QUANT_CONV (K reordered_thm THENC bring_veq_to_top THENC absify) THENC
