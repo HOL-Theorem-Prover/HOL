@@ -475,6 +475,8 @@ fun html_theory s = print_theory_as_html s (s^"Theory.html");
  ---------------------------------------------------------------------------*)
 
 fun export_theory_as_docfiles dirname =
-    Parse.export_theorems_as_docfiles dirname (theorems "-");
+    Parse.export_theorems_as_docfiles dirname
+                                      (axioms "-" @ definitions "-" @
+                                       theorems "-");
 
 end
