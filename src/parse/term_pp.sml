@@ -686,11 +686,13 @@ fun pp_term (G : grammar) TyG = let
           end
         in
           if isSome crules then pr_sole_name cname (map #2 (valOf crules))
-          else if cname = "ZERO" then pr_numeral NONE tm
-               else
-                 if Lexis.is_string_literal cname then
-                   print_string_literal cname
-                 else add_string cname
+          else
+            if cname = "ZERO" andalso can_pr_numeral NONE then
+              pr_numeral NONE tm
+            else
+              if Lexis.is_string_literal cname then
+                print_string_literal cname
+              else add_string cname
         end
       | COMB{Rator, Rand} => let
           val (f, args) = strip_comb Rator
