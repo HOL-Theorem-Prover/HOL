@@ -63,6 +63,14 @@ fun unify t1 t2 =
     (bindings, SOME ()) => ()
   | (_, NONE) => raise TCERR "unify" "unify failed"
 
+fun can_unify t1 t2 = let
+  val (bindings, result) = unify0 t1 t2 []
+  val _ = app (fn (r, oldvalue) => r := oldvalue) bindings
+in
+  isSome result
+end
+
+
 (* passes over a type, turning all of the type variables into fresh
    UVars, but doing so consistently by using an env, which is an alist
    from variable names to type variable refs *)
