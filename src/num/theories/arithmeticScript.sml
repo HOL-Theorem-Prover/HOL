@@ -1547,6 +1547,20 @@ val LE_MULT_RCANCEL = store_thm(
   ``!m n p. m * n <= p * n = (n = 0) \/ m <= p``,
   ONCE_REWRITE_TAC [MULT_COMM] THEN REWRITE_TAC [LE_MULT_LCANCEL]);
 
+val LT_MULT_LCANCEL = store_thm(
+  "LT_MULT_LCANCEL",
+  ``!m n p. m * n < m * p = 0 < m /\ n < p``,
+  REPEAT GEN_TAC THEN
+  Q.SPEC_THEN `m` STRUCT_CASES_TAC num_CASES THENL [
+    REWRITE_TAC [MULT_CLAUSES, LESS_REFL],
+    REWRITE_TAC [LESS_MULT_MONO, LESS_0]
+  ]);
+
+val LT_MULT_RCANCEL = store_thm(
+  "LT_MULT_RCANCEL",
+  ``!m n p. m * n < p * n = 0 < n /\ m < p``,
+  ONCE_REWRITE_TAC [MULT_COMM] THEN REWRITE_TAC [LT_MULT_LCANCEL]);
+
 val SUB_LEFT_ADD = store_thm ("SUB_LEFT_ADD",
    --`!m n p. m + (n - p) = ((n <= p) => m | (m + n) - p)`--,
    REPEAT GEN_TAC THEN
