@@ -3014,19 +3014,19 @@ example. The syntax
 %
 {\small
 \begin{verbatim}
-   3 IN {p+q | p < q /\ q < r}
+   a IN {p+q | p < q /\ q < r}
 \end{verbatim}}
 %
 is mapped by the \HOL{} parser to
 {\small
 \begin{verbatim}
-   3 IN GSPEC(\(p,q). ((p+q), (p < q /\ q < r)))
+   a IN GSPEC(\(p,q). ((p+q), (p < q /\ q < r)))
 \end{verbatim}}
 %
 which, by {\small\verb+GSPECIFICATION+}, is equal to
 {\small
 \begin{verbatim}
-   ?x. (3,T) = (\(p,q). ((p+q), (p < q /\ q < r))) x
+   ?x. (a,T) = (\(p,q). ((p+q), (p < q /\ q < r))) x
 \end{verbatim}}
 %
 The existentially quantified variable \verb+x+ has a pair type,
@@ -3035,7 +3035,7 @@ paired-$\beta$-reduction can be performed, yielding
 %
 {\small
 \begin{verbatim}
-   ?(p,q). (3,T) = ((p+q), (p < q /\ q < r))
+   ?(p,q). (a,T) = ((p+q), (p < q /\ q < r))
 \end{verbatim}}
 %
 which is equal to the intended meaning of the original
@@ -3043,7 +3043,7 @@ syntax:
 %
 {\small
 \begin{verbatim}
-   ?(p,q). (p+q = 3) /\ (p < q /\ q < r)
+   ?(p,q). (a = p+q) /\ (p < q /\ q < r)
 \end{verbatim}}
 
 \subsection{Multisets (\theoryimp{bag})}\label{multiset}
@@ -3615,7 +3615,8 @@ in \theoryimp{relation}.
 The theory \theoryimp{finite\_map} formalizes a type
 $(\alpha,\beta)$\verb+fmap+ of finite functions. These notionally have
 type $\alpha\to\beta$, but additionally have only finitely many
-elements in their domain. The representing type is $\alpha\to\beta +
+elements in their domain. Finite maps are useful for formalizing
+substitutions and arrays. The representing type is $\alpha\to\beta +
 \konst{one}$, where only a finite number of the $\alpha$ map to a
 $\beta$ and the rest map to \verb+one+. The syntax
 $\alpha$\verb+ |-> +$\beta$ is recognized by the parser as an
@@ -3623,174 +3624,169 @@ alternative to $(\alpha,\beta)$\verb+fmap+.
 
 \paragraph {Basic notions}
 
-The empty map ({\small\verb+FEMPTY+}), the domain of a map
-({\small\verb+FDOM+}), the updating of a map
-({\small\verb+FUPDATE+}), and the application of a map to an argument
-({\small\verb+FAPPLY+}) are the main notions in the theory.
+The empty map ({\small\verb+FEMPTY+}), the updating of a map
+({\small\verb+FUPDATE+}), the application of a map to an argument
+({\small\verb+FAPPLY+}), and the domain of a map
+({\small\verb+FDOM+}) are the main notions in the theory. 
 %
 {\small
 \begin{verbatim}
   FEMPTY  : 'a |-> 'b
-  FDOM    : ('a |-> 'b) -> 'a set
   FUPDATE : ('a |-> 'b) -> 'a # 'b -> ('a |-> 'b)
   FAPPLY  : ('a |-> 'b) -> 'a -> 'b
+  FDOM    : ('a |-> 'b) -> 'a set
 \end{verbatim}}
 
 The \HOL{} parser and printer will treat the syntax \verb+f ' x+ as
 the application of finite map \verb+f+ to argument \verb+x+, ie, as
-\verb+FAPPLY f x+. Note that there must be whitespace between the
-apostrophe character and the arguments to its left and right: a string
-of characters \texttt{f'x} will be interpreted as one lexical token,
-not three. Also, the notation \verb#f |+ (x,y)#
-represents the updating of finite map \verb+f+ by the pair
-\verb+(x,y)+, \ie, as \verb+FUPDATE f (x,y)+.
+{\small\verb+FAPPLY f x+}. The notation \verb#f |+ (x,y)# represents
+{\small\verb+FUPDATE f (x,y)+}, \ie, the updating of finite map
+\verb+f+ by the pair \verb+(x,y)+.
 
-The basic constants have obscure definitions from which the following
-are a few of the more perspicuous properties that are derived:
+The basic constants have obscure definitions, from which more useful
+properties are then derived. {\small\verb+FAPPLY_FUPDATE_THM+} relates
+map update with map application.  {\small\verb+fmap_EXT+} is an
+extensionality result: two maps are equal if they have the same domain
+and agree when applied to arguments in that domain. One can prove
+properties of finite maps by induction on the construction of the map
+({\small\verb+fmap_INDUCT+}).  The cardinality of a finite map is 
+just the cardinality of its domain ({\small\verb+FCARD_DEF+}); from
+this a recursive characterization ({\small\verb+FCARD_FUPDATE+}) is
+derived.
 %
 {\small
 \begin{verbatim}
-  FDOM_FUPDATE
-    |- !f a b. FDOM (f |+ (a,b)) = (a INSERT (FDOM f))
-  FDOM_FINITE
-    |- !fm. FINITE (FDOM fm)
-
   FAPPLY_FUPDATE_THM
-    |- !f a b x. (f |+ (a,b)) ' x = if x=a then b else f ' x
-
-  lookup_DEF
-    |- FLOOKUP f x = (if x IN FDOM f then SOME (f ' x) else NONE)
-  FRANGE_DEF
-    |- FRANGE f = {y | ?x. x IN FDOM f /\ (f ' x = y)}
-\end{verbatim}
-}
-
-\noindent There is support for iterated updates ({\small\verb+FUPDATE_LIST+},
-infix) to a map:
-%
-{\small
-\begin{verbatim}
-  FUPDATE_LIST  |- $FUPDATE_LIST = FOLDL FUPDATE
-  FUPDATE_LIST_THM
-    |- !f. (f FUPDATE_LIST [] = f) /\
-           (!h t. f FUPDATE_LIST (h::t) = (FUPDATE f h) FUPDATE_LIST t)
-\end{verbatim}}
-%
-\noindent Thus {\small\verb+fm FUPDATE_LIST (k1,v1) (k2,v2)+} is equal
-to {\small\verb+(fm |- (k1,v1)) |- (k2,v2)+}.
-
-\paragraph {Induction}
-
-There is an induction theorem for finite maps.
-%
-{\small
-\begin{verbatim}
+    |- !f a b x. (f |+ (a,b)) ' x = (if x = a then b else f'x)
+  fmap_EQ_THM
+    |- !f g. (f = g) = 
+             (FDOM f = FDOM g) /\ (!x. x IN FDOM f ==> (f'x = g'x))
   fmap_INDUCT
     |- !P. P FEMPTY /\
-           (!f. P f ==> !x y. ~(x IN FDOM f) ==> P (FUPDATE f (x,y)))
-          ==> !f. P f
-\end{verbatim}
-}
-
-\paragraph{Extensionality}
-Two finite maps are equal if they share the same domain and produce
-equal values on that domain:
-{\small
-\begin{verbatim}
-  fmap_EXT
-    |- !f g. (f = g) =
-             (FDOM f = FDOM g) /\ (!x. x IN FDOM f ==> (f ' x = g ' x))
-\end{verbatim}}
-
-\paragraph{Cardinality}
-
-The cardinality of a finite map is the cardinality of its domain.
-%
-{\small
-\begin{verbatim}
+           (!f. P f ==> !x y. ~(x IN FDOM f) ==> P (f |+ (x,y))) ==> !f. P f
   FCARD_DEF  |- FCARD fm = CARD (FDOM fm)
   FCARD_FUPDATE
-    |- !fm a b. FCARD (FUPDATE fm (a, b)) =
+    |- !fm a b. FCARD(fm |+ (a,b)) = 
                   if a IN FDOM fm then FCARD fm else 1 + FCARD fm
 \end{verbatim}}
 
-\paragraph {Sub-maps}
-
-The notion of a finite map being a submap of another
-({\small\verb+SUBMAP+}, infix) is defined.
+Iterated updates ({\small\verb+FUPDATE_LIST+}) to a map are
+useful. The infix notation \verb#|++# may also be used.
+For example, {\small\verb#fm |++ [(k1,v1) ; (k2,v2)]#} is equal
+to {\small\verb#(fm |+ (k1,v1)) |+ (k2,v2)#}.
+%
 {\small
 \begin{verbatim}
-  SUBMAP_DEF
-    |- !f g. (f SUBMAP g) =
-               !x. x IN FDOM f ==> x IN FDOM g /\ (FAPPLY f x = FAPPLY g x)
+  FUPDATE_LIST  |- FUPDATE_LIST = FOLDL FUPDATE
+  FUPDATE_LIST_THM
+    |- !f. (f |++ [] = f) /\
+           (!h t. f |++ (h::t) = (f |+ h) |++ t)
 \end{verbatim}}
 
-\paragraph {Domain and range restriction}
 
-A finite map may have its domain restricted ({\small\verb+DRESTRICT+})
-by intersecting with by a set. There is also the notion of domain
-subtraction (\verb+\\+, infix).
+\paragraph {Domain and range}
+
+The domain of a finite map is the set of elements that it applies to; 
+this can be characterized recursively
+({\small\verb+FDOM_FUPDATE+}). The range of a map is defined in the
+usual way. 
+{\small
+\begin{verbatim}
+  FDOM_FUPDATE
+    |- !f a b. FDOM (f |+ (a,b)) = a INSERT (FDOM f)
+  FRANGE_DEF
+    |- FRANGE f = {y | ?x. x IN FDOM f /\ (f'x = y)}
+\end{verbatim}}
+%
+A finite map may have its domain ({\small\verb+DRESTRICT+})
+or range ({\small\verb+RRESTRICT+}) restricted by intersection with a
+set. These notions have recursive versions as well
+({\small\verb+DRESTRICT_FUPDATE+} and {\small\verb+RRESTRICT_FUPDATE+}).
+%
 {\small
 \begin{verbatim}
   DRESTRICT_DEF
-    |- !f r. (FDOM (DRESTRICT f r) = FDOM f INTER r) /\
-             (!x. DRESTRICT f r ' x =
-                    (if x IN FDOM f INTER r then f ' x else FEMPTY ' x)
+    |- !f r. (FDOM (DRESTRICT f r) = (FDOM f) INTER r) /\
+             (!x. DRESTRICT f r ' x = 
+                    (if x IN ((FDOM f) INTER r) then f'x else FEMPTY'x))
+  RRESTRICT_DEF
+    |- !f r. (FDOM (RRESTRICT f r) = {x | x IN FDOM f /\ f ' x IN r}) /\
+             (!x. RRESTRICT f r ' x =
+                    (if x IN (FDOM f) /\ f'x IN r then f'x else FEMPTY'x))
   DRESTRICT_FUPDATE
     |- !f r x y.
-          DRESTRICT (FUPDATE f (x,y)) r =
-            if x IN r then FUPDATE (DRESTRICT f r) (x,y) else DRESTRICT f r
-
-  fmap_domsub
-    |- fm \\ k = DRESTRICT fm (COMPL {k})
-   DOMSUB_FUPDATE_THM
-    |- !fm k1 k2 v. (fm |+ (k1,v)) \\ k2 =
-                     if (k1 = k2) then (fm \\ k2) else (fm \\ k2) |+ (k1, v)
-\end{verbatim}
-}
-\noindent A finite map may also be made smaller by limiting its range
-with the constant \texttt{RRESTRICT}:
-{\small
-\begin{verbatim}
-  RRESTRICT_DEF
-    |- !f r.
-         (FDOM (RRESTRICT f r) = {x | x IN FDOM f /\ f ' x IN r}) /\
-         !x.
-           RRESTRICT f r ' x =
-           (if x IN FDOM f /\ f ' x IN r then f ' x else FEMPTY ' x)
-  RRESTRICT_FEMPTY
-    |- !r. RRESTRICT FEMPTY r = FEMPTY : thm
+          DRESTRICT (f |+ (x,y)) r =
+            if x IN r then (DRESTRICT f r) |+ (x,y) else DRESTRICT f r
   RRESTRICT_FUPDATE
     |- !f r x y.
-         RRESTRICT (f |+ (x,y)) r =
-         (if y IN r then RRESTRICT f r |+ (x,y)
-                    else RRESTRICT (DRESTRICT f (COMPL {x})) r)
-\end{verbatim}
-}
+          RRESTRICT (f |+ (x,y)) r =
+            if y IN r then (RRESTRICT f r) |+ (x,y)
+                      else RRESTRICT (DRESTRICT f (COMPL {x})) r)
+\end{verbatim}}
+\noindent The removal of a single element from the domain of a map
+(\verb+\\+, infix) is a simple application of
+({\small\verb+DRESTRICT+}), but sufficiently useful to deserve its own
+definition. Again, this concept has a alternate recursive presentation
+({\small\verb+DOMSUB_FUPDATE_THM+}).
+%
+{\small
+\begin{verbatim}
+  fmap_domsub
+    |- (fm \\ k) = DRESTRICT fm (COMPL {k})
+  DOMSUB_FUPDATE_THM
+    |- !fm k1 k2 v. (fm |+ (k1,v)) \\ k2 = 
+                     if (k1 = k2) then (fm \\ k2) else (fm \\ k2) |+ (k1, v)
+\end{verbatim}}
 
-\paragraph {Union}
+\paragraph {Union and sub-maps}
 
+Unlike the union of sets, the union of two finite maps 
+({\small\verb+FUNION_DEF+}) is not symmetric: the domain of the first
+map takes precedence. The notion of a finite map being a submap of another
+({\small\verb+SUBMAP+}, infix) is an extension of how subsets are formalized.
 {\small
 \begin{verbatim}
   FUNION_DEF
     |- !f g.
          (FDOM (FUNION f g) = FDOM f UNION FDOM g) /\
          !x. FUNION f g ' x = (if x IN FDOM f then f'x else g'x)
-
-  FUNION_FEMPTY_1  |- !g. FUNION FEMPTY g = g
-  FUNION_FEMPTY_2  |- !f. FUNION f FEMPTY = f
-  FUNION_FUPDATE_1
-    |- !f g x y. FUNION (f |+ (x,y)) g = (FUNION f g) |+ (x,y)
-  FUNION_FUPDATE_2
-    |- !f g x y.
-        FUNION f (FUPDATE g (x,y)) =
-          if x IN FDOM f then FUNION f g else (FUNION f g) |+ (x,y)
+  SUBMAP_DEF
+    |- !f g. (f SUBMAP g) = (!x. x IN FDOM f ==> x IN FDOM g /\ (f'x = g'x))
 \end{verbatim}}
 
-\paragraph {Composition and lifting}
-Composition of two finite maps (\verb+f_o_f+, infix). Composition of a
-finite map with an ordinary function (\verb+o_f+, infix).
+\paragraph {Finite maps and functions}
 
+As much as possible, finite maps should be like ordinary functions.
+Thus, if \verb+f+ is a finite map, then {\small\verb+FAPPLY f+} is an
+ordinary function. Similarly, there is an operation for
+\emph{totalizing} a finite map ({\small\verb+lookup_DEF+}) so that an
+application of it returns an ordinary function, the range of which is
+the option type.  An ordinary function can be turned into a finite map
+by restricting the function to a finite set of arguments
+({\small\verb+FUN_FMAP_DEF+}).
+%
+{\small
+\begin{verbatim}
+  lookup_DEF
+    |- FLOOKUP f x = (if x IN FDOM f then SOME (f'x) else NONE)
+  FUN_FMAP_DEF
+    |- !f P. FINITE P ==>
+            (FDOM (FUN_FMAP f P) = P) /\
+            (!x. x IN P ==> (FUN_FMAP f P ' x = f x))
+\end{verbatim}}
+
+\paragraph {Composition of maps}
+
+There are three new definitions of composition, determined by whether
+the composed functions are finite maps or not. The composition of two
+finite maps (\verb+f_o_f+, infix) has domain constraints
+attached. Composition of a finite map with an ordinary function
+(\verb+o_f+, infix) applies the finite map first, then the ordinary
+function.  Composition of an ordinary function with a finite map
+(\verb+f_o+, infix) applies the ordinary function and then the finite
+map; the application of the ordinary function is achieved by turning
+it into a finite map.
+%
 {\small
 \begin{verbatim}
   f_o_f_DEF
@@ -3802,35 +3798,40 @@ finite map with an ordinary function (\verb+o_f+, infix).
          (FDOM (f o_f g) = FDOM g) /\
          !x. x IN FDOM (f o_f g) ==> ((f o_f g) ' x = f (g ' x))
   f_o_DEF
-    |- ((f:('b,'c)fmap) f_o (g:'a->'b)) = f f_o_f (FUN_FMAP g { x | g x IN FDOM f})
-  FUN_FMAP_DEF
-    |- !f P.
-         FINITE P ==>
-         (FDOM (FUN_FMAP f P) = P) /\
-         !x. x IN P ==> (FUN_FMAP f P ' x = f x)
+    |- (f f_o g) = f f_o_f (FUN_FMAP g {x | g x IN FDOM f})
 \end{verbatim}}
 
-\section{Further Mathematics}
+\section{Further theories}
 
-\subsection{Divisibility and Greatest Common Divisor}
+\subsection{Divisibility and Greatest Common Divisor (\theoryimp{divides, gcd})}
 
-\subsection{Polynomials}
+\subsection{The State-transformer monad (\theoryimp{state\_transformer})}
 
-A separate development that depends only on {\small\verb+realTheory+} is
-a theory of polynomials, found in {\small\verb+polyTheory+}. A standard
-collection of operations on polynomials, and theorems about them, are
-also derived.
+\subsection{While-loops (\theoryimp{while})}
+
+Unrestricted while loops and associated Hoare rules.
+
+\subsection{List permutations and sorting (\theoryimp{sorting})}
+Correctness of quicksort.
+
+\subsection{Partial orders (\theoryimp{poset})}
+Development of partial orders, leading to the Knaster-Tarski theorem.
+
+\subsection{Polynomials (\theoryimp{poly})}
+
+A theory of polynomials may be found in \theoryimp{poly}.
+It provides a collection of operations on polynomials, and theorems about them.
 
 \subsection{Probability}
-\subsection{Temporal Logic}
-\subsection{$\mu$-Calculus}
-\subsection{Computation Tree Logic (CTL)}
-\subsection{The State-transformer monad}
-\subsection{While-loops}
-\subsection{List permutations and sorting}
-\subsection{Partial orders}
 
-%%% Local Variables:
-%%% mode: latex
-%%% TeX-master: "description"
-%%% End:
+A foundational construction of probability theory due to Joe Hurd. See his thesis.
+
+\subsection{Temporal Logic}
+
+Three large developments: Klaus Schneider's development of temporal logic and $\omega$-automata.
+
+\subsubsection{$\mu$-Calculus}
+
+The $\mu$-calculus. See Hasan Amjad's thesis.
+\subsubsection{Computation Tree Logic (CTL)}
+The $\mu$-calculus. See Hasan Amjad's thesis.

@@ -1853,7 +1853,8 @@ evaluating:
 \end{alltt}\end{hol}}
 
 \noindent results in \ty{op} being declared as a new $n$-ary type operator
-characterized by the definitional\index{definitional axioms}\index{type operators, in HOL logic@type operators, in \HOL\ logic!definitional axioms for} axiom:
+characterized by the definitional
+\index{definitional axioms}\index{type operators, in HOL logic@type operators, in \HOL\ logic!definitional axioms for} axiom:
 
 \begin{hol}\begin{alltt}
    |- ?rep. TYPE\_DEFINITION \m{t} rep
@@ -1866,7 +1867,7 @@ generated name
 is defined in the theory \ml{bool} by:
 
 \begin{hol}\begin{verbatim}
-   |- TYPE_DEFINITION (P:*->bool) (rep:**->*) =
+   |- TYPE_DEFINITION (P:'a->bool) (rep:'b->'a) =
        (!x' x''. (rep x' = rep x'') ==> (x' = x'')) /\
        (!x. P x = (?x'. x = rep x'))
 \end{verbatim}\end{hol}
