@@ -1,10 +1,7 @@
 signature SingleStep =
 sig
 
-  type thm      = Thm.thm
-  type term     = Term.term
-  type tactic   = Abbrev.tactic
-  type 'a quotation = 'a Portable.frag list
+  include Abbrev
 
   val Cases             : tactic
   val Induct            : tactic

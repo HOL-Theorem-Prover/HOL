@@ -14,23 +14,15 @@
 structure bossLib :> bossLib =
 struct
 
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib pairLib;
 
-  type term = Term.term
-  type fixity = Parse.fixity
-  type thm = Thm.thm
-  type tactic = Abbrev.tactic
   type simpset = simpLib.simpset
-  type defn = Defn.defn
-  type 'a quotation = 'a Portable.frag list
+  type compset = computeLib.compset
 
 
 infix ORELSE;
 
-fun BOSS_ERR func mesg =
-     HOL_ERR{origin_structure = "bossLib",
-             origin_function = func,
-             message = mesg};
+val BOSS_ERR = mk_HOL_ERR "bossLib";
 
 (*---------------------------------------------------------------------------*
             Datatype definition
@@ -88,8 +80,12 @@ val list_ss  = arith_ss ++ listSimps.list_ss
 end
 
 
+(* 
 val DECIDE     = decisionLib.DECIDE o Parse.Term
 val DECIDE_TAC = decisionLib.DECIDE_TAC
+*)
+val DECIDE     = arithLib.ARITH_PROVE o Parse.Term
+val DECIDE_TAC = CONV_TAC arithLib.ARITH_CONV
 
 fun ZAP_TAC ss thl =
    BasicProvers.STP_TAC ss

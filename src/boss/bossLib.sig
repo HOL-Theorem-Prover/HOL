@@ -1,14 +1,10 @@
 signature bossLib =
 sig
 
-  type thm      = Thm.thm
-  type term     = Term.term
-  type hol_type = Type.hol_type
+  include Abbrev
   type fixity   = Parse.fixity
-  type tactic   = Abbrev.tactic
   type simpset  = simpLib.simpset
-  type defn     = Defn.defn
-  type 'a quotation = 'a Portable.frag list
+  type compset  = computeLib.compset
 
   (* Make definitions *)
 
@@ -33,17 +29,21 @@ sig
   val completeInduct_on : term quotation -> tactic
 
   (* Support for proof by contradiction *)
+
   val SPOSE_NOT_THEN : (thm -> tactic) -> tactic
 
   (* Support for assertional-style proofs *)
+
   val by  : term quotation * tactic -> tactic   (* infix *)
 
 
   (* First order proof automation *)
+
   val PROVE     : thm list -> term quotation -> thm
   val PROVE_TAC : thm list -> tactic
 
   (* Cooperating decision procedures *)
+
   val DECIDE     : term quotation -> thm
   val DECIDE_TAC : tactic
 
@@ -56,9 +56,11 @@ sig
   val RW_TAC   : simpset -> thm list -> tactic
 
   (* to be used with computeLib: simplifies pair, sum, option, arith, list. *)
-  val initial_rws  : unit -> computeLib.comp_rws
+
+  val initial_rws  : unit -> computeLib.compset
 
   (* A compound automated reasoner. *)
+
   val ZAP_TAC  : simpset -> thm list -> tactic
 
 
