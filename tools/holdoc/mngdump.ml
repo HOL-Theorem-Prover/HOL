@@ -336,7 +336,7 @@ let readbal : hol_content list        (* input stream *)
              bal ps (t::ds) dss ts
     | ((HolIndent(_),l) as t::ts) ->
         if ml then
-          bal ps (if n=1 then ds else t::ds) dss ts  (* strip first-level indentation of multiline *)
+          bal ps (t::ds) dss ts
         else
           raise (BadArg ("7: line break not allowed in non-multiline curried op",l))
     | (t::ts)        -> bal ps (t::ds) dss ts
