@@ -5,9 +5,10 @@ sig
 
   val simple_CONV : conv
 
-  val verify_result : term -> term list -> OmegaMLShadow.result -> thm
+  val verify_result : term -> term list -> term OmegaMLShadow.result -> thm
   val verify_satisfaction : term -> term list -> Arbint.int PIntMap.t -> thm
-  val verify_derivation : term -> term list -> OmegaMLShadow.derivation -> thm
+  val verify_derivation :
+      term -> term list -> term OmegaMLShadow.derivation -> thm
   val verify_contr : (thm * thm) -> thm
   val verify_gcd_check : thm -> thm
   val verify_combination : term -> thm -> thm -> thm

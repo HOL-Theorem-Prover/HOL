@@ -3,30 +3,32 @@ sig
 
   include Abbrev
   type factoid
-  datatype derivation =
-         ASM of term
-       | REAL_COMBIN of int * derivation * derivation
-       | GCD_CHECK of derivation
-       | DIRECT_CONTR of derivation * derivation
-  type dfactoid = factoid * derivation
-  datatype result = CONTR of derivation
-                  | SATISFIABLE of Arbint.int PIntMap.t
-                  | NO_CONCL
-  type cstdb
+  datatype 'a derivation =
+         ASM of 'a
+       | REAL_COMBIN of int * 'a derivation * 'a derivation
+       | GCD_CHECK of 'a derivation
+       | DIRECT_CONTR of 'a derivation * 'a derivation
+  type 'a dfactoid = factoid * 'a derivation
+  datatype 'a result = CONTR of 'a derivation
+                     | SATISFIABLE of Arbint.int PIntMap.t
+                     | NO_CONCL
+  type 'a cstdb
 
   val false_factoid      : factoid -> bool
   val true_factoid       : factoid -> bool
+  val fromList           : int list -> factoid
+  val fromArbList        : Arbint.int list -> factoid
 
-  val term_to_dfactoid   : term list -> term -> dfactoid
-  val gcd_check_dfactoid : dfactoid -> dfactoid
+  val term_to_dfactoid   : term list -> term -> term dfactoid
+  val gcd_check_dfactoid : 'a dfactoid -> 'a dfactoid
 
-  val add_check_factoid  : cstdb -> dfactoid ->
-                           (cstdb -> (result -> 'a) -> 'a) ->
-                           (result -> 'a) ->
+  val add_check_factoid  : 'b cstdb -> 'b dfactoid ->
+                           ('b cstdb -> ('b result -> 'a) -> 'a) ->
+                           ('b result -> 'a) ->
                            'a
 
-  val dbempty            : int -> cstdb
+  val dbempty            : int -> 'a cstdb
 
-  val work               : cstdb -> (result -> 'a) -> 'a
+  val work               : 'b cstdb -> ('b result -> 'a) -> 'a
 
 end;

@@ -28,6 +28,10 @@ open intSyntax
 datatype factoid =
          ALT of Arbint.int Vector.vector
 
+val fromArbList = ALT o Vector.fromList
+val fromList = fromArbList o map Arbint.fromInt
+
+
 type factoid_key = Arbint.int Vector.vector
 
 fun factoid_key f =
@@ -227,16 +231,16 @@ fun factoid_to_term vars f =
    ---------------------------------------------------------------------- *)
 
 (* a derivation represents a proof of a factoid *)
-datatype derivation =
-         ASM of term
-       | REAL_COMBIN of int * derivation * derivation
-       | GCD_CHECK of derivation
-       | DIRECT_CONTR of derivation * derivation
-type dfactoid = (factoid * derivation)
+datatype 'a derivation =
+         ASM of 'a
+       | REAL_COMBIN of int * 'a derivation * 'a derivation
+       | GCD_CHECK of 'a derivation
+       | DIRECT_CONTR of 'a derivation * 'a derivation
+type 'a dfactoid = (factoid * 'a derivation)
 
-datatype result = CONTR of derivation
-                | SATISFIABLE of Arbint.int PIntMap.t
-                | NO_CONCL
+datatype 'a result = CONTR of 'a derivation
+                   | SATISFIABLE of Arbint.int PIntMap.t
+                   | NO_CONCL
 
 fun direct_contradiction(d1, d2) = CONTR (DIRECT_CONTR(d1, d2))
 
@@ -300,14 +304,14 @@ fun fkassoc k alist =
 fun lookup_fkey (ptree,w) fk =
   fkassoc fk (PIntMap.find (keyhash fk) ptree)
 
-type cstdb = ((factoid * derivation) list) PIntMap.t * int
+type 'a cstdb = ((factoid * 'a derivation) list) PIntMap.t * int
 
 fun dbempty i = (PIntMap.empty, i)
 
-fun dbfold (f : ((factoid * derivation) * 'a) -> 'a) (acc:'a) (ptree,w) =
+fun dbfold (f : ((factoid * 'b derivation) * 'a) -> 'a) (acc:'a) (ptree,w) =
     PIntMap.fold (fn (i,b,acc) => List.foldl f acc b) acc ptree
 
-fun dbapp (f : factoid * derivation -> unit) (ptree,w) =
+fun dbapp (f : factoid * 'a derivation -> unit) (ptree,w) =
     PIntMap.app (fn (i,b) => List.app f b) ptree
 
 (* does a raw insert, with no checking; the dfactoid really should have
