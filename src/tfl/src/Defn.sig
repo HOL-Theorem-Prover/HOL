@@ -39,7 +39,7 @@ sig
 
   val tgoal      : defn -> proofs
   val tprove     : defn * tactic -> thm * thm
-  val tstore_defn : string * defn * tactic -> thm * thm
+  val tstore_defn : defn * tactic -> thm * thm
 
 
    (* Historical relics *)
