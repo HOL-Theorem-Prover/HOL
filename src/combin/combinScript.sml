@@ -95,6 +95,13 @@ val I_o_ID = store_thm("I_o_ID",
    THEN CONV_TAC (REDEPTH_CONV BETA_CONV)
    THEN REWRITE_TAC [ I_THM ]);
 
+
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME (fn ppstrm => 
+   (PP.add_string ppstrm "val _ = Parse.hide \"C\";"; 
+    PP.add_newline ppstrm))};
+
 val _ = export_theory();
 
 end;
