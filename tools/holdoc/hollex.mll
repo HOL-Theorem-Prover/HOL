@@ -29,11 +29,11 @@ type token =
   | HolStartTeX   (* ( * : *)
   | HolEndTeX     (* : * ) *)
 
-let indent_width s = 
+let indent_width s =
   let l = String.length s in
   let rec go n w =
     if n>=l then w else
-    go (n+1) 
+    go (n+1)
       (match String.get s n with
         '\n'   -> 0
       | ' '    -> w+1
@@ -79,8 +79,9 @@ let startpat = "Net_Hol_reln" (white | newline)* backtick
 (* the character classes of HOL *)
 let idchar = ['A'-'Z' 'a'-'z' '0'-'9' '_' '\'']
 let nonagg = ['~' '(' ')' '[' ']' '{' '}' '.' ',']
-let specnonagg = "()" | "[]"  (* built of nonagg, but aggregating for tokenisation purposes;
-                                 this is not HOL but our extension (I think) *)
+let specnonagg = "()" | "[]" | '.' '.'+
+                 (* built of nonagg, but aggregating for tokenisation purposes;
+                                    this is not HOL but our extension (I think) *)
 let dollar = '$'
 let punctchar = ['!' '"' '#' '%' '&' '*' '+' '-' '/' ':' ';' '<' '=' '>' '?' '@' '\\' '^' '|']
   (* everything else except '`' ; I'm not sure about '\\' and '"' but hey... *)
@@ -99,10 +100,13 @@ let tendhol0 = "]>"
 
 (* tokens for TeX *)
 
-let tnormal    = [^ '[' '<' ':' '%' '('] |
-                 '[' [^ '['] | '<' [^ '['] | ':' [^ '*'] | '%' [^ '('] | '(' [^ '*'] |
-                 ':' '*' [^ ')'] | '%' '(' [^ '*'] | '(' '*' [^ '['] |
-                 '%' '(' '*' [^ '[']
+let tnormal    = [^ '[' '<' ':' '(']
+               | ['[' '<'] '<'* [^ '[' '<' ':' '(']
+               | ('[' | '<'  '(' '*') [^ '[']
+               | '(' [^ '*']
+               | ':' [^ '*']
+               | ':' '*' [^ ')']
+  (* INCORRECT negation of tstarthol | tstarthol0 | endtex | tstartdir | startdir *)
 
 let tstarthol  = "[["
 let tstarthol0 = "<["
@@ -201,5 +205,5 @@ let holtokstream = tokstream holtoken
 
 let textokstream = tokstream textoken
 
-} 
+}
 

@@ -1,10 +1,10 @@
 OCAMLPATH=/usr/groups/netsem/ocaml/bin
 
-OCAMLC=$(OCAMLPATH)/ocamlc -pp camlp4o
+OCAMLC=$(OCAMLPATH)/ocamlc -pp $(OCAMLPATH)/camlp4o
 # add -pp camlp4o for ocaml version 3.03a and above, apparently
 
 OCAMLLEX=$(OCAMLPATH)/ocamllex
-OCAMLDEP=$(OCAMLPATH)/ocamldep
+OCAMLDEP=$(OCAMLPATH)/ocamldep -pp $(OCAMLPATH)/camlp4o
 
 LATEX=latex
 DVIPS=dvips
@@ -86,8 +86,9 @@ depend:	.depend
 
 # extra dependencies:
 
-.depend: *.mli *.ml *.mll
-	$(OCAMLDEP) *.mli *.ml *.mll > $@
+# weirdly, OCaml-3.06 ocamldep can't handle .mll files!
+.depend: *.mli *.ml
+	$(OCAMLDEP) *.mli *.ml > $@
 
 -include .depend
 
