@@ -17,6 +17,7 @@ s/^{\\small\\verb%[ ]*$/{\\par\\samepage\\setseps\\small\
 s/^%}[ ]*$/\\end{verbatim}\
 }/g;
 /\\DOC.*/s/_/\\_/g;
+/\\DOC.*/s/#/\\#/g;
 /\\DOC.*/s/.DOC[ ]*/\\DOC{/g;
 /\\DOC.*/s/$/}/g;
 /\\TYPE.*/s/$/\\egroup/g;
