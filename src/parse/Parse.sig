@@ -184,6 +184,8 @@ in
   (* Theory manipulation functions that also have an impact *)
   val new_theory : string -> unit
   val export_theory : unit -> unit
+  val export_theory_as_docfiles : string -> unit
+  val export_theorems_as_docfiles : string -> (string * thm) list -> unit
   val print_theory : unit -> unit
 
   (* stuff inserted rather after the fact that used to be in old Parse,

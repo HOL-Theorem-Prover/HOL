@@ -873,6 +873,50 @@ fun new_theory s = Theory.new_theory0 (SOME pp_thm) s
 fun export_theory () = Theory.export_theory0 (SOME pp_thm)
 fun print_theory () = Theory.print_theory0 {pp_thm = pp_thm, pp_type = pp_type}
 
+fun export_theorems_as_docfiles dirname thms = let
+  val {arcs,...} = Path.fromString dirname
+  fun check_arcs checked arcs =
+    case arcs of
+      [] => checked
+    | x::xs => let
+        val nextlevel = Path.concat (checked, x)
+      in
+        if FileSys.access(nextlevel, []) then
+          if FileSys.isDir nextlevel then check_arcs nextlevel xs
+          else raise Fail (nextlevel ^ " exists but is not a directory")
+        else let
+        in
+          FileSys.mkDir nextlevel
+          handle (OS.SysErr(s, erropt)) => let
+            val part2 = case erropt of SOME err => OS.errorMsg err | NONE => ""
+          in
+            raise Fail ("Couldn't create directory "^nextlevel^": "^s^" - "^
+                        part2)
+          end;
+          check_arcs nextlevel xs
+        end
+      end
+  val dirname = check_arcs "" arcs
+  fun write_thm (thname, thm) = let
+    open Theory TextIO
+    val outstream = openOut (Path.concat (dirname, thname^".doc"))
+  in
+    output(outstream, "\\THEOREM "^thname^" "^current_theory()^"\n");
+    output(outstream, thm_to_string thm);
+    output(outstream, "\n\\ENDTHEOREM\n");
+    closeOut outstream
+  end
+in
+  app write_thm thms
+end
+
+fun export_theory_as_docfiles dirname = let
+  val thms = axioms() @ definitions() @ theorems()
+in
+  export_theorems_as_docfiles dirname thms
+end
+
+
 (* constrain parsed term to have a given type *)
 fun typedTerm qtm ty =
    let fun trail s = [QUOTE (s^"):"), ANTIQUOTE(Term.ty_antiq ty), QUOTE""]
