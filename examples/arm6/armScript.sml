@@ -11,6 +11,10 @@ val _ = new_theory "arm";
 
 (* -------------------------------------------------------- *)
 
+val _ = overload_on("w32",``n2w``);
+
+(* -------------------------------------------------------- *)
+
 val _ = Hol_datatype `word30 = w30 of num`;
 val _ = Hol_datatype `mode = usr | fiq | irq | svc | abt | und | safe`;
 val _ = Hol_datatype `spsr = spsr_fiq | spsr_irq | spsr_svc | spsr_abt | spsr_und`;
@@ -38,11 +42,11 @@ val SUBST_def = Define`SUBST m (a,w) b = if (a = b) then w else m b`;
 
 val SET_NZC_def = Define`
   SET_NZC N Z C n =
-    wn (SET N 31 + SET Z 30 + SET C 29 + BITSw 28 0 n)`;
+    w32 (SET N 31 + SET Z 30 + SET C 29 + BITSw 28 0 n)`;
     
 val SET_NZCV_def = Define`
   SET_NZCV N Z C V n =
-    wn (SET N 31 + SET Z 30 + SET C 29 + SET V 28 + BITSw 27 0 n)`;
+    w32 (SET N 31 + SET Z 30 + SET C 29 + SET V 28 + BITSw 27 0 n)`;
     
 val SET_MODE_def = Define`
   SET_MODE mode cpsr =
@@ -53,11 +57,11 @@ val SET_MODE_def = Define`
             if mode = abt then 23 else
             if mode = und then 27 else
             (* mode = safe *)   0 in
-  wn (SLICEw 31 5 cpsr + m)`;
+  w32 (SLICEw 31 5 cpsr + m)`;
 
 val SET_IFMODE_def = Define`
   SET_IFMODE irq' fiq' mode n =
-    SET_MODE mode (wn (SLICEw 31 8 n + SET irq' 7 + SET fiq' 6 + SLICEw 5 5 n))`;
+    SET_MODE mode (w32 (SLICEw 31 8 n + SET irq' 7 + SET fiq' 6 + SLICEw 5 5 n))`;
 
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
@@ -143,7 +147,7 @@ val NUM_REG_und_def = Define`
 val REG_READ_def = Define`
   REG_READ (REG reg_usr reg_fiq reg_irq reg_svc reg_abt reg_und) mode n =
     if n = 15 then
-      reg_usr (w4 15) + wn 8
+      reg_usr (w4 15) + w32 8
     else if USER mode \/ (mode = fiq) /\ n < 8 \/ ~(mode = fiq) /\ n < 13 then
       reg_usr (w4 n)
     else if mode = fiq then
@@ -177,7 +181,7 @@ val REG_WRITE_def = Define`
 
 val TO_W30_def = Define`TO_W30 n = w30 (BITSw 31 2 n)`;
 
-val WORD_ALIGN_def = Define`WORD_ALIGN n = wn (SLICEw 31 2 n)`;
+val WORD_ALIGN_def = Define`WORD_ALIGN n = w32 (SLICEw 31 2 n)`;
 
 val MEM_READ_WORD_def = Define`
   MEM_READ_WORD mem addr = mem (TO_W30 addr) ROR (8 * BITSw 1 0 addr)`;
@@ -185,14 +189,14 @@ val MEM_READ_WORD_def = Define`
 val MEM_READ_BYTE_def = Define`
   MEM_READ_BYTE mem addr =
     let align = 8 * BITSw 1 0 addr in
-      wn (BITSw (align+7) align (mem (TO_W30 addr)))`;
+      w32 (BITSw (align+7) align (mem (TO_W30 addr)))`;
 
 val SET_BYTE_def = Define`
   SET_BYTE align byte word =
     if align = 0 then
-       wn (SLICEw 31 8 word + byte)
+       w32 (SLICEw 31 8 word + byte)
     else
-       wn (SLICEw 31 (align+8) word + TIMES_2EXP align byte + BITSw (align-1) 0 word)`;
+       w32 (SLICEw 31 (align+8) word + TIMES_2EXP align byte + BITSw (align-1) 0 word)`;
 
 val MEM_WRITE_BYTE_def = Define`
   MEM_WRITE_BYTE mem word addr =
@@ -210,7 +214,7 @@ val MEM_WRITE_WORD_def = Define`
 
 val INC_PC_def = Define`
   INC_PC (REG reg_usr reg_fiq reg_irq reg_svc reg_abt reg_und) =
-    REG (SUBST reg_usr (w4 15,reg_usr (w4 15) + wn 4))
+    REG (SUBST reg_usr (w4 15,reg_usr (w4 15) + w32 4))
          reg_fiq reg_irq reg_svc reg_abt reg_und`;
 
 val FETCH_PC_def = Define`
@@ -226,14 +230,14 @@ val EXCEPTION_def = Define`
     let cpsr = CPSR_READ psr in
     let fiq' = if (n = 1) \/ (n = 7) then T else BITw 6 cpsr
     and (mode',pc') =
-          if n = 1 then (* RESET *)  (svc,wn 0)  else
-          if n = 2 then (* UNDEF *)  (und,wn 4)  else
-          if n = 3 then (* SWI *)    (svc,wn 8)  else
-          if n = 4 then (* PABORT *) (abt,wn 12) else
-          if n = 5 then (* DABORT *) (abt,wn 16) else
-          if n = 6 then (* IRQ *)    (irq,wn 24) else
-          (* n = 7 *)   (* FIQ *)    (fiq,wn 28) in
-   let reg' = REG_WRITE reg mode' 14 (FETCH_PC reg + wn 4) in
+          if n = 1 then (* RESET *)  (svc,w32 0)  else
+          if n = 2 then (* UNDEF *)  (und,w32 4)  else
+          if n = 3 then (* SWI *)    (svc,w32 8)  else
+          if n = 4 then (* PABORT *) (abt,w32 12) else
+          if n = 5 then (* DABORT *) (abt,w32 16) else
+          if n = 6 then (* IRQ *)    (irq,w32 24) else
+          (* n = 7 *)   (* FIQ *)    (fiq,w32 28) in
+   let reg' = REG_WRITE reg mode' 14 (FETCH_PC reg + w32 4) in
      ARM mem (REG_WRITE reg' usr 15 pc')
          (CPSR_WRITE (SPSR_WRITE psr mode' cpsr) (SET_IFMODE T fiq' mode' cpsr))`;
 
@@ -246,9 +250,9 @@ val EXCEPTION_def = Define`
 val SIGN_EX_OFFSET_def = Define`
   SIGN_EX_OFFSET n =
     if BIT 23 n then
-      wn (2 EXP 32 - 2 EXP 24 + n)
+      w32 (2 EXP 32 - 2 EXP 24 + n)
     else
-      wn n`;
+      w32 n`;
 
 val DECODE_BRANCH_def = Define`
   DECODE_BRANCH n = (BIT 24 n,BITS 23 0 n)`;
@@ -260,7 +264,7 @@ val BRANCH_def = Define`
     let pc' = pc + SIGN_EX_OFFSET offset << 2 in
     let reg' = REG_WRITE reg usr 15 pc' in
       if L then
-        ARM mem (REG_WRITE reg' mode 14 (FETCH_PC reg + wn 4)) psr
+        ARM mem (REG_WRITE reg' mode 14 (FETCH_PC reg + w32 4)) psr
       else
         ARM mem reg' psr`;
 
@@ -274,7 +278,7 @@ val LSL_def = Define`
               else if n <= 32 then
                 (BITw (32 - n) m,m << n)
               else
-                (F,wn 0)`;
+                (F,w32 0)`;
 
 val LSR_def = Define`
   LSR m n c = if n = 0 then
@@ -282,7 +286,7 @@ val LSR_def = Define`
               else if n <= 32 then
                 (BITw (n - 1) m,m >>> n)
               else
-                (F,wn 0)`;
+                (F,w32 0)`;
 
 val ASR_def = Define`
   ASR m n c = if n = 0 then
@@ -305,7 +309,7 @@ val RRX2_def = Define `RRX2 m c = (LSB m,RRX c m)`;
 val IMMEDIATE_def = Define`
   IMMEDIATE C opnd2 =
     let (rot,imm) = DIVMOD_2EXP 8 opnd2 in
-       ROR2 (wn imm) (2 * rot) C`;
+       ROR2 (w32 imm) (2 * rot) C`;
 
 val SHIFT_IMMEDIATE2_def = Define`
   SHIFT_IMMEDIATE2 shift sh rm c =
@@ -353,13 +357,13 @@ val ADDR_MODE1_def = Define`
 val ALU_arith_def = Define`
   ALU_arith op rn op2 =
     let  sign = MSB rn
-    and (q,r) = DIVMOD_2EXP 32 (op (NUMw rn) (NUMw op2)) in
-    let   res = wn r in
+    and (q,r) = DIVMOD_2EXP 32 (op (w2n rn) (w2n op2)) in
+    let   res = w32 r in
       (MSB res,r = 0,ODD q,
         (MSB op2 = sign) /\ ~(MSB res = sign),res)`;
 
 val ALU_logic_def = Define`
-  ALU_logic res = (MSB res,NUMw res = 0,F,F,res)`;
+  ALU_logic res = (MSB res,w2n res = 0,F,F,res)`;
 
 val SUB_def = Define`
   SUB a b c = let c' = SET c 0 in ALU_arith (\x y.x+y+c'-1) a ~b`;
@@ -434,7 +438,7 @@ val SPLIT_WORD_def = Define`
   SPLIT_WORD a = (BITSw 31 28 a,BITSw 27 8 a,BITSw 7 0 a)`;
 
 val CONCAT_BYTES_def = Define`
-  CONCAT_BYTES a b c = wn (TIMES_2EXP 28 a + TIMES_2EXP 8 b + c)`;
+  CONCAT_BYTES a b c = w32 (TIMES_2EXP 28 a + TIMES_2EXP 8 b + c)`;
 
 val DECODE_MSR_def = Define`
   DECODE_MSR n = (BIT 25 n,BIT 22 n,BIT 19 n,BIT 16 n,BITS 3 0 n,BITS 11 0 n)`;
@@ -465,7 +469,7 @@ val ADDR_MODE2_def = Define`
   ADDR_MODE2 reg mode C Im P U Rn offset =
     let addr  = REG_READ reg mode Rn in
     let addr' = UP_DOWN U addr (if Im then SND (SHIFT_IMMEDIATE reg mode C offset)
-                                      else wn offset) in
+                                      else w32 offset) in
       (if P then addr' else addr,addr')`;
 
 val DECODE_LDR_STR_def = Define`
@@ -476,8 +480,8 @@ val DECODE_LDR_STR_def = Define`
 val PIPE_OKAY_def = Define`
   PIPE_OKAY addr pc =
      let aaddr = WORD_ALIGN addr in
-       ~((aaddr = WORD_ALIGN (pc + wn 4)) \/
-         (aaddr = WORD_ALIGN (pc + wn 8)))`;
+       ~((aaddr = WORD_ALIGN (pc + w32 4)) \/
+         (aaddr = WORD_ALIGN (pc + w32 8)))`;
 
 val LDR_STR_def = Define`
   LDR_STR (ARM mem reg psr) C mode n =
@@ -581,9 +585,9 @@ val DECODE_INST_def = Define`
   
 val NEXT_ARM_def = Define`
   NEXT_ARM (ARM mem reg psr) =
-    let n = NUMw (MEM_READ_WORD mem (WORD_ALIGN (FETCH_PC reg))) in
+    let n = w2n (MEM_READ_WORD mem (WORD_ALIGN (FETCH_PC reg))) in
     let ic = DECODE_INST n
-    and (N,Z,C,V,mode) = DECODE_PSR (NUMw (CPSR_READ psr)) in
+    and (N,Z,C,V,mode) = DECODE_PSR (w2n (CPSR_READ psr)) in
       if ~(CONDITION_PASSED N Z C V (BITS 31 28 n)) then
         ARM mem (INC_PC reg) psr
       else if ic = mrs_msr then

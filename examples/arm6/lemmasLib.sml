@@ -86,7 +86,7 @@ val SWP_ALU5 = ABBREV_TAC `alu5 = ALU6 swp t5 i ARB
                       (SHIFTER swp t5 i (BITSw 1 0 (ALUOUT alu3)) sctrl
                          (REG_READ6
                             (REG_WRITE reg (DECODE_MODE cpsr) 15
-                               (REG_READ6 reg usr 15 + wn 4))
+                               (REG_READ6 reg usr 15 + w32 4))
                             (DECODE_MODE cpsr) (RBA swp t5 i)) (BIT 29 cpsr)))
                    (BIT 29 cpsr)`;
 
@@ -155,7 +155,7 @@ val DP_PSR3 = ABBREV_TAC `psr3 = if FST (if BITw 20 i then (T,T) else (F,F)) the
 val RS_ALU4 = ABBREV_TAC `alu4 = ALU6 reg_shift t4 i
                                   (REG_READ6
                                      (REG_WRITE reg (DECODE_MODE cpsr) 15
-                                        (REG_READ6 reg usr 15 + wn 4))
+                                        (REG_READ6 reg usr 15 + w32 4))
                                      (DECODE_MODE cpsr) (RAA reg_shift t4 i))
                                   (SND
                                      (SHIFTER reg_shift t4 i
@@ -164,7 +164,7 @@ val RS_ALU4 = ABBREV_TAC `alu4 = ALU6 reg_shift t4 i
                                            (RAA reg_shift t3 i))
                                         (REG_READ6
                                            (REG_WRITE reg (DECODE_MODE cpsr) 15
-                                              (REG_READ6 reg usr 15 + wn 4))
+                                              (REG_READ6 reg usr 15 + w32 4))
                                            (DECODE_MODE cpsr) (RBA reg_shift t4 i))
                                         (BIT 29 cpsr))) (BIT 29 cpsr)`;
 
@@ -184,7 +184,7 @@ val RS_PSR4 = ABBREV_TAC `psr4 = if FST (if BITw 20 i then (T,T) else (F,F)) the
                                  (RAA reg_shift t3 i))
                               (REG_READ6
                                  (REG_WRITE reg (DECODE_MODE cpsr) 15
-                                    (REG_READ6 reg usr 15 + wn 4))
+                                    (REG_READ6 reg usr 15 + w32 4))
                                  (DECODE_MODE cpsr) (RBA reg_shift t4 i))
                               (BIT 29 cpsr))))
                  else
@@ -202,7 +202,7 @@ val RS_PSR4 = ABBREV_TAC `psr4 = if FST (if BITw 20 i then (T,T) else (F,F)) the
                                  (RAA reg_shift t3 i))
                               (REG_READ6
                                  (REG_WRITE reg (DECODE_MODE cpsr) 15
-                                    (REG_READ6 reg usr 15 + wn 4))
+                                    (REG_READ6 reg usr 15 + w32 4))
                                  (DECODE_MODE cpsr) (RBA reg_shift t4 i))
                               (BIT 29 cpsr)))))
               else
@@ -243,16 +243,16 @@ val ALU_BR3 = ABBREV_TAC `alu3 = ALU6 br t3 i
 val ALU_BR4 = ABBREV_TAC `alu4 = ALU6 br t4 i
                (REG_READ6 reg (DECODE_MODE cpsr) (RAA br t3 i))
               (SND (SHIFTER br t4 i (BITSw 1 0 (REG_READ6 reg usr 15)) sctrl
-               (REG_READ6 (REG_WRITE reg (DECODE_MODE cpsr) 15 (REG_READ6 reg usr 15 + wn 4))
+               (REG_READ6 (REG_WRITE reg (DECODE_MODE cpsr) 15 (REG_READ6 reg usr 15 + w32 4))
                                (DECODE_MODE cpsr) (RBA br t4 i)) (BIT 29 cpsr))) (BIT 29 cpsr)`;
 
-val ALU_BR5 = ABBREV_TAC `alu5 = ALU6 br t5 i (wn 3)
+val ALU_BR5 = ABBREV_TAC `alu5 = ALU6 br t5 i (w32 3)
                 (SND
                    (SHIFTER br t5 i (BITSw 1 0 (ALUOUT alu3)) sctrl
                       (REG_READ6
                          (REG_WRITE
                             (REG_WRITE reg (DECODE_MODE cpsr) 15
-                               (ALUOUT alu3 + wn 4)) (DECODE_MODE cpsr) 14
+                               (ALUOUT alu3 + w32 4)) (DECODE_MODE cpsr) 14
                             (ALUOUT alu4)) (DECODE_MODE cpsr) (RBA br t5 i))
                       (BIT 29 cpsr))) (BIT 29 cpsr)`;
 
@@ -283,14 +283,14 @@ val ALU_SWI4 = ABBREV_TAC `alu4 = ALU6 swi_ex t4 i
                               (BITSw 1 0 (REG_READ6 reg usr 15)) sctrl
                               (REG_READ6
                                  (REG_WRITE reg (DECODE_MODE cpsr) 15
-                                    (REG_READ6 reg usr 15 + wn 4))
-                                 (DECODE_MODE (NUMw (CPSR_READ psr3)))
+                                    (REG_READ6 reg usr 15 + w32 4))
+                                 (DECODE_MODE (w2n (CPSR_READ psr3)))
                                  (RBA swi_ex t4 i))
-                              (BIT 29 (NUMw (CPSR_READ psr3)))))
-                        (BIT 29 (NUMw (CPSR_READ psr3)))`;
+                              (BIT 29 (w2n (CPSR_READ psr3)))))
+                        (BIT 29 (w2n (CPSR_READ psr3)))`;
 
-val PSR_SWI4 = ABBREV_TAC `psr4 = SPSR_WRITE psr3 (DECODE_MODE (NUMw (CPSR_READ psr3)))
-         (PSRDAT swi_ex t4 i (DECODE_MODE (NUMw (CPSR_READ psr3)))
+val PSR_SWI4 = ABBREV_TAC `psr4 = SPSR_WRITE psr3 (DECODE_MODE (w2n (CPSR_READ psr3)))
+         (PSRDAT swi_ex t4 i (DECODE_MODE (w2n (CPSR_READ psr3)))
             (AREGN1 F) (CPSR_READ psr3)
             (if PSRA swi_ex t3 i then
                CPSR_READ psr
@@ -300,78 +300,78 @@ val PSR_SWI4 = ABBREV_TAC `psr4 = SPSR_WRITE psr3 (DECODE_MODE (NUMw (CPSR_READ 
                (SHIFTER swi_ex t4 i (BITSw 1 0 (REG_READ6 reg usr 15)) sctrl
                   (REG_READ6
                      (REG_WRITE reg (DECODE_MODE cpsr) 15
-                        (REG_READ6 reg usr 15 + wn 4))
-                     (DECODE_MODE (NUMw (CPSR_READ psr3)))
-                     (RBA swi_ex t4 i)) (BIT 29 (NUMw (CPSR_READ psr3))))))`;
+                        (REG_READ6 reg usr 15 + w32 4))
+                     (DECODE_MODE (w2n (CPSR_READ psr3)))
+                     (RBA swi_ex t4 i)) (BIT 29 (w2n (CPSR_READ psr3))))))`;
 
 val ALU_UNDEF3 = ABBREV_TAC `alu3 = ALU6 swi_ex t3
-                             (MEMREAD mem (REG_READ6 reg usr 15 - wn 4))
+                             (MEMREAD mem (REG_READ6 reg usr 15 - w32 4))
                              (REG_READ6 reg (DECODE_MODE cpsr)
                                 (RAA swi_ex t3
                                    (MEMREAD mem
-                                      (REG_READ6 reg usr 15 - wn 4))))
+                                      (REG_READ6 reg usr 15 - w32 4))))
                              (SND
                                 (SHIFTER swi_ex t3
                                    (MEMREAD mem
-                                      (REG_READ6 reg usr 15 - wn 4))
+                                      (REG_READ6 reg usr 15 - w32 4))
                                    (BITSw 1 0 (REG_READ6 reg usr 15)) sctrl
                                    (REG_READ6 reg (DECODE_MODE cpsr)
                                       (RBA swi_ex t3
                                          (MEMREAD mem
                                             (REG_READ6 reg usr 15 -
-                                             wn 4)))) (BIT 29 cpsr)))
+                                             w32 4)))) (BIT 29 cpsr)))
                              (BIT 29 cpsr)`;
 
 val PSR_UNDEF3 = ABBREV_TAC `psr3 = CPSR_WRITE psr
                 (PSRDAT swi_ex t3
-                   (MEMREAD mem (REG_READ6 reg usr 15 - wn 4))
+                   (MEMREAD mem (REG_READ6 reg usr 15 - w32 4))
                    (DECODE_MODE cpsr) (AREGN1 T) (CPSR_READ psr)
                    (if
                       PSRA swi_ex t3
-                        (MEMREAD mem (REG_READ6 reg usr 15 - wn 4))
+                        (MEMREAD mem (REG_READ6 reg usr 15 - w32 4))
                     then
                       CPSR_READ psr
                     else
                       SPSR_READ psr (DECODE_MODE cpsr)) alu3
                    (FST
                       (SHIFTER swi_ex t3
-                         (MEMREAD mem (REG_READ6 reg usr 15 - wn 4))
+                         (MEMREAD mem (REG_READ6 reg usr 15 - w32 4))
                          (BITSw 1 0 (REG_READ6 reg usr 15)) sctrl
                          (REG_READ6 reg (DECODE_MODE cpsr)
                             (RBA swi_ex t3
-                               (MEMREAD mem (REG_READ6 reg usr 15 - wn 4))))
+                               (MEMREAD mem (REG_READ6 reg usr 15 - w32 4))))
                          (BIT 29 cpsr))))`;
 
 val ALU_UNDEF4 = ABBREV_TAC `alu4 = ALU6 swi_ex t4
-                        (MEMREAD mem (REG_READ6 reg usr 15 - wn 4))
+                        (MEMREAD mem (REG_READ6 reg usr 15 - w32 4))
                         (REG_READ6 reg (DECODE_MODE cpsr)
                            (RAA swi_ex t3
                               (MEMREAD mem
-                                 (REG_READ6 reg usr 15 - wn 4))))
+                                 (REG_READ6 reg usr 15 - w32 4))))
                         (SND
                            (SHIFTER swi_ex t4
-                              (MEMREAD mem (REG_READ6 reg usr 15 - wn 4))
-                              (BITSw 1 0 (REG_READ6 reg usr 15 + wn 4))
+                              (MEMREAD mem (REG_READ6 reg usr 15 - w32 4))
+                              (BITSw 1 0 (REG_READ6 reg usr 15 + w32 4))
                               sctrl
                               (REG_READ6
                                  (REG_WRITE reg (DECODE_MODE cpsr) 15
-                                    (REG_READ6 reg usr 15 + wn 4 +
-                                     wn 4))
-                                 (DECODE_MODE (NUMw (CPSR_READ psr3)))
+                                    (REG_READ6 reg usr 15 + w32 4 +
+                                     w32 4))
+                                 (DECODE_MODE (w2n (CPSR_READ psr3)))
                                  (RBA swi_ex t4
                                     (MEMREAD mem
-                                       (REG_READ6 reg usr 15 - wn 4))))
-                              (BIT 29 (NUMw (CPSR_READ psr3)))))
-                        (BIT 29 (NUMw (CPSR_READ psr3)))`;
+                                       (REG_READ6 reg usr 15 - w32 4))))
+                              (BIT 29 (w2n (CPSR_READ psr3)))))
+                        (BIT 29 (w2n (CPSR_READ psr3)))`;
 
 val PSR_UNDEF4 = ABBREV_TAC `psr4 = PSRDAT swi_ex t4
-                           (MEMREAD mem (REG_READ6 reg usr 15 - wn 4))
-                           (DECODE_MODE (NUMw (CPSR_READ psr3))) (AREGN1 F)
+                           (MEMREAD mem (REG_READ6 reg usr 15 - w32 4))
+                           (DECODE_MODE (w2n (CPSR_READ psr3))) (AREGN1 F)
                            (CPSR_READ psr3)
                            (if
                               PSRA swi_ex t3
                                 (MEMREAD mem
-                                   (REG_READ6 reg usr 15 - wn 4))
+                                   (REG_READ6 reg usr 15 - w32 4))
                             then
                               CPSR_READ psr
                             else
@@ -379,18 +379,18 @@ val PSR_UNDEF4 = ABBREV_TAC `psr4 = PSRDAT swi_ex t4
                            (FST
                               (SHIFTER swi_ex t4
                                  (MEMREAD mem
-                                    (REG_READ6 reg usr 15 - wn 4))
+                                    (REG_READ6 reg usr 15 - w32 4))
                                  (BITSw 1 0
-                                    (REG_READ6 reg usr 15 + wn 4)) sctrl
+                                    (REG_READ6 reg usr 15 + w32 4)) sctrl
                                  (REG_READ6
                                     (REG_WRITE reg (DECODE_MODE cpsr) 15
-                                       (REG_READ6 reg usr 15 + wn 4 +
-                                        wn 4))
-                                    (DECODE_MODE (NUMw (CPSR_READ psr3)))
+                                       (REG_READ6 reg usr 15 + w32 4 +
+                                        w32 4))
+                                    (DECODE_MODE (w2n (CPSR_READ psr3)))
                                     (RBA swi_ex t4
                                        (MEMREAD mem
-                                          (REG_READ6 reg usr 15 - wn 4))))
-                                 (BIT 29 (NUMw (CPSR_READ psr3)))))`;
+                                          (REG_READ6 reg usr 15 - w32 4))))
+                                 (BIT 29 (w2n (CPSR_READ psr3)))))`;
 
 val UNFOLD_STATE = ONCE_REWRITE_TAC [STATE_ARM6_COR]
                        THEN ASM_SIMP_TAC std_ss [INIT_ARM6_def,NXTIC_def,

@@ -47,7 +47,7 @@ val NXTIC_def = Define`
       if ~newinst then
          ic
       else
-         DECODE_INST (NUMw ireg)`;
+         DECODE_INST (w2n ireg)`;
 
 val NXTIS_def = Define`
   NXTIS ic is newinst =
@@ -178,22 +178,22 @@ val FIELD_def = Define`
       if ic = br then
          SIGN_EX_OFFSET (BITSw 23 0 din)
       else if (ic = ldr) \/ (ic = str) then
-         wn (BITSw 11 0 din)
+         w32 (BITSw 11 0 din)
       else if (ic = mrs_msr) \/ (ic = data_proc) then
-         wn (BITSw 7 0 din)
+         w32 (BITSw 7 0 din)
       else
          ARB
     else if (is = t5) /\ (ic = ldr) \/ (is = t6) /\ (ic = swp) then
       if ~BITw 22 ireg then
          din
       else if oareg = 0 then
-         wn (BITSw 7 0 din)
+         w32 (BITSw 7 0 din)
       else if oareg = 1 then
-         wn (SLICEw 15 8 din)
+         w32 (SLICEw 15 8 din)
       else if oareg = 2 then
-         wn (SLICEw 23 16 din)
+         w32 (SLICEw 23 16 din)
       else
-         wn (SLICEw 31 24 din)
+         w32 (SLICEw 31 24 din)
     else
        ARB`;
        
@@ -357,18 +357,18 @@ val PSRDAT_def = Define`
         let aluout = ALUOUT alu in
          if USER nbs then
             if ~bit22 /\ bit19 then
-               wn (SLICEw 31 28 aluout + BITSw 27 0 psrfb)
+               w32 (SLICEw 31 28 aluout + BITSw 27 0 psrfb)
             else
                ARB
          else
             if bit19 then
                if bit16 then
-                  wn (SLICEw 31 28 aluout + SLICEw 27 8 psrfb + BITSw 7 0 aluout)
+                  w32 (SLICEw 31 28 aluout + SLICEw 27 8 psrfb + BITSw 7 0 aluout)
                else
-                  wn (SLICEw 31 28 aluout + BITSw 27 0 psrfb)
+                  w32 (SLICEw 31 28 aluout + BITSw 27 0 psrfb)
             else
                if bit16 then
-                  wn (SLICEw 31 8 psrfb + BITSw 7 0 aluout)
+                  w32 (SLICEw 31 8 psrfb + BITSw 7 0 aluout)
                else
                   ARB
       else if (is = t3) /\ (ic = swi_ex) then
@@ -398,7 +398,7 @@ val BUSA_def = Define`
     else if (is = t4) /\ (ic = reg_shift) then
        ra
     else if (is = t5) /\ ((ic = br) \/ (ic = swi_ex)) then
-       wn 3
+       w32 3
     else
        ARB`;
 
@@ -446,7 +446,7 @@ val AREG_def = Define`
                           (ic = ldr) \/ (ic = str) \/ (ic = br)) \/ (ic = swp) then
         aluout
     else if (is = t3) /\ (ic = swi_ex) then
-      wn (aregn * 4)
+      w32 (aregn * 4)
     else
       inc`;
 
@@ -510,7 +510,7 @@ val NEXT_ARM6_def = Define`
                 ointstart onewinst opipebll nxtic nxtis aregn nbw nrw sctrlreg psrfb oareg)) =
      let cpsr = CPSR_READ psr
      in
-     let (n,z,c,v,nbs) = DECODE_PSR (NUMw cpsr)
+     let (n,z,c,v,nbs) = DECODE_PSR (w2n cpsr)
      in
      let abortinst = ABORTINST iregval onewinst ointstart ireg n z c v
      in
@@ -556,7 +556,7 @@ val NEXT_ARM6_def = Define`
      let alu = ALU6 ic is ireg alua' alub' c
      in
      let aluout = ALUOUT alu
-     and inc = areg + wn 4
+     and inc = areg + w32 4
      and pcbus = REG_READ6 reg usr 15
      and psrwa = PSRWA ic is ireg nbs
      in
@@ -605,10 +605,10 @@ val INIT_ARM6_def = Define`
                  ointstart onewinst opipebll nxtic nxtis aregn nbw nrw sctrlreg psrfb oareg)) =
     let pc = REG_READ6 reg usr 15
     in
-    let apipeb' = pc - wn 4
+    let apipeb' = pc - w32 4
     in
     let pipeb' = MEMREAD mem apipeb'
-    and ireg'  = MEMREAD mem (pc - wn 8)
+    and ireg'  = MEMREAD mem (pc - w32 8)
     in
   ARM6 mem reg psr (DP pc ireg' alua alub)
        (CTRL pipeb' T pipeb' T ireg' T apipeb' apipeb' F T T
@@ -625,12 +625,12 @@ val STATE_ARM6_def = Define`
 val SUB8_PC_def = Define`
   SUB8_PC (REG reg_usr reg_fiq reg_irq reg_svc reg_abt reg_und) =
     let pc = reg_usr (w4 15) in
-      REG (SUBST reg_usr (w4 15,pc - wn 8)) reg_fiq reg_irq reg_svc reg_abt reg_und`;
+      REG (SUBST reg_usr (w4 15,pc - w32 8)) reg_fiq reg_irq reg_svc reg_abt reg_und`;
 
 val ADD8_PC_def = Define`
   ADD8_PC (REG reg_usr reg_fiq reg_irq reg_svc reg_abt reg_und) =
     let pc = reg_usr (w4 15) in
-      REG (SUBST reg_usr (w4 15,pc + wn 8)) reg_fiq reg_irq reg_svc reg_abt reg_und`;
+      REG (SUBST reg_usr (w4 15,pc + w32 8)) reg_fiq reg_irq reg_svc reg_abt reg_und`;
 
 val ABS_ARM6_def = Define`
    ABS_ARM6 (ARM6 mem reg psr dp ctrl) = ARM mem (SUB8_PC reg) psr`;
@@ -640,7 +640,7 @@ val DUR_ARM6_def = Define`
              (CTRL pipea pipeaval pipeb pipebval ireg iregval apipea apipeb
                ointstart onewinst opipebll nxtic nxtis aregn nbw nrw sctrlreg psrfb oareg)) =
      let cpsr = CPSR_READ psr in
-     let (n,z,c,v,nbs) = DECODE_PSR (NUMw cpsr) in
+     let (n,z,c,v,nbs) = DECODE_PSR (w2n cpsr) in
      let abortinst = ABORTINST iregval onewinst ointstart ireg n z c v in
      let ic = IC abortinst nxtic in
      let rwa = RWA ic t3 ireg in
