@@ -134,7 +134,6 @@ val poly = new_recursive_definition list_Axiom "poly_def"
   (Term`(poly [] x = 0r) /\
         (poly (h::t) x = h + x * poly t x)`);
 
-val _ = HOL_MESG "after poly_def";
 
 (* ------------------------------------------------------------------------- *)
 (* Arithmetic operations on polynomials. Overloaded (not sure this is wise). *)
@@ -184,7 +183,6 @@ val poly_diff_aux = new_recursive_definition list_Axiom
 val poly_diff = new_definition ("poly_diff_def",
   Term`diff l = if l = [] then [] else poly_diff_aux 1 (TL l)`);
 
-val _ = HOL_MESG "after poly_diff";
 
 (* ------------------------------------------------------------------------- *)
 (* Useful clausifications.                                                   *)
