@@ -107,7 +107,7 @@ val ACARRY_DEF = new_recursive_definition {
  name = "ACARRY_DEF",
  fixity = Prefix,
  rec_axiom = num_Axiom,
- def = 
+ def =
  --`
    (ACARRY 0 w1 w2 cin = (cin:bool)) /\
    (ACARRY (SUC n) w1 w2 cin =
@@ -125,7 +125,7 @@ val ICARRY_DEF = new_recursive_definition {
  name = "ICARRY_DEF",
  fixity = Prefix,
  rec_axiom = num_Axiom,
- def = 
+ def =
  --`
    (ICARRY 0 w1 w2 cin = (cin:bool)) /\
    (ICARRY (SUC n) w1 w2 cin =
@@ -148,12 +148,12 @@ val div_mod_lemmas =
         (SPEC (--`SUC 0`--) LESS_SUC_REFL)
     val div22 = GEN_ALL(SUBS[lm]
     	(SPEC (--`x:num`--)(MP (SPEC (--`2`--) ADD_DIV_SUC_DIV) less2)))
-    val div21 = 
+    val div21 =
           MP (SPECL[(--`SUC 0`--), (--`2`--)] LESS_DIV_EQ_ZERO) less21
-    val div20 = MP (SPEC (--`2`--) ZERO_DIV) less2 
-    val	mod20 = MP (SPEC (--`2`--) ZERO_MOD) less2 
+    val div20 = MP (SPEC (--`2`--) ZERO_DIV) less2
+    val	mod20 = MP (SPEC (--`2`--) ZERO_MOD) less2
     val	mod21 = REWRITE_RULE[MULT,ADD]
-    	    (SPEC (--`0`--) 
+    	    (SPEC (--`0`--)
                  (MP (SPECL [(--`2`--), (--`SUC 0`--)] MOD_MULT) less21))
    in
     [div22,div21,div20,mod21,mod20]
@@ -162,7 +162,7 @@ val div_mod_lemmas =
 val ACARRY_EQ_ICARRY = store_thm("ACARRY_EQ_ICARRY",
     (--`!n. !w1 w2::PWORDLEN n. !cin k. k <= n ==>
      (ACARRY k w1 w2 cin = ICARRY k w1 w2 cin)`--),
-    let val lem1 = GEN_ALL (IMP_TRANS 
+    let val lem1 = GEN_ALL (IMP_TRANS
     	(snd(EQ_IMP_RULE(SPEC_ALL LESS_EQ)))
     	(SPEC_ALL LESS_IMP_LESS_OR_EQ))
     in
@@ -225,7 +225,7 @@ val BNVAL_LESS_EQ =
     (EQ_MP
       (SPEC (--`BNVAL w`--)
 (*       (GEN  (--`m:num`--)*)
-       (MATCH_MP LESS_IMP_LESS_EQ_PRE 
+       (MATCH_MP LESS_IMP_LESS_EQ_PRE
      	(SUBS[SYM (num_CONV (--`2`--))]
              (SPECL [(--`n:num`--), (--`1`--)] ZERO_LESS_EXP) )))
       (GQSPEC_ALL BNVAL_MAX))));
@@ -319,7 +319,7 @@ val ADD_BV_BNVAL_DIV_LESS_EQ1 =
      (((BV x1) + (BV x2)) + ((BNVAL w1) + ((BNVAL w2) + (BV cin)))) <=
      (SUC(2 EXP (SUC n))) *)
 
-val ADD_BV_BNVAL_LESS_EQ = 
+val ADD_BV_BNVAL_LESS_EQ =
     let val lm = MATCH_MP SUC_PRE (MATCH_MP SUC_LESS
     	(CONV_RULE (LHS_CONV num_CONV) (SPEC_ALL ONE_LESS_TWO_EXP_SUC)))
     in
@@ -333,7 +333,7 @@ val ADD_BV_BNVAL_LESS_EQ =
 
 (* ADD_BV_BNVAL_LESS_EQ1 =
 |- !n x1 x2 cin. !w1 w2 :: PWORDLEN n.
- ((((BV x1) + (BV x2)) + ((BNVAL w1) + ((BNVAL w2) + (BV cin)))) DIV 
+ ((((BV x1) + (BV x2)) + ((BNVAL w1) + ((BNVAL w2) + (BV cin)))) DIV
   (2 EXP (SUC n))) <= 1 *)
 
 val ADD_BV_BNVAL_LESS_EQ1 =
@@ -348,14 +348,14 @@ val ADD_BV_BNVAL_LESS_EQ1 =
     	 (GEN_ALL(UNDISCH (SPEC_ALL(SPEC (--`2 EXP (SUC n)`--) LESS_EQ_MONO_DIV))))
     	  (GQSPEC_ALL ADD_BV_BNVAL_LESS_EQ))))));
 
-(* seg_pw = 
+(* seg_pw =
     |- !w. PWORDLEN n w ==> (SUC k) <= n ==> PWORDLEN(SUC k)(WSEG(SUC k)0 w) *)
 
 val seg_pw = GEN (--`w:'a word`--) (DISCH_ALL
-    (REWRITE_RULE[ADD_0] (SPECL[(--`SUC k`--),(--`0`--)] 
+    (REWRITE_RULE[ADD_0] (SPECL[(--`SUC k`--),(--`0`--)]
      (RESQ_SPEC_ALL (SPEC (--`n:num`--) WSEG_PWORDLEN))))) ;
 
-(* bit_thm = 
+(* bit_thm =
 |- !w.
     PWORDLEN n w ==> (SUC k) <= n ==> (BIT k(WSEG(SUC k)0 w) = BIT k w) *)
 
@@ -363,7 +363,7 @@ val bit_thm = GEN (--`w:'a word`--) (DISCH_ALL
     (REWRITE_RULE[ADD_CLAUSES,LESS_SUC_REFL]
     (SPECL [(--`SUC k`--), (--`0`--),(--`k:num`--)](RESQ_SPEC_ALL(SPEC (--`n:num`--) BIT_WSEG)))));
 
-(* seg_thm = 
+(* seg_thm =
 |- !w. PWORDLEN n w ==> (SUC k) <= n ==>
     (WSEG k 0(WSEG(SUC k)0 w) = WSEG k 0 w) *)
 
@@ -376,11 +376,11 @@ val seg_thm = GEN (--`w:'a word`--) (DISCH_ALL
 val seg_pw_thm' = GEN (--`w:bool word`--) (DISCH_ALL (REWRITE_RULE[ADD_CLAUSES]
     (GQSPECL [(--`n:num`--), (--`w:bool word`--), (--`k:num`--), (--`0`--)] WSEG_PWORDLEN)));
 
-fun spec_thm th = 
+fun spec_thm th =
      (map (fn t => UNDISCH_ALL(ISPEC t th)) [(--`w2:bool word`--), (--`w1:bool word`--)]);
 
-(* add_left = 
-PWORDLEN n w1, (SUC k) <= n, PWORDLEN n w2 
+(* add_left =
+PWORDLEN n w1, (SUC k) <= n, PWORDLEN n w2
 |- (BNVAL(WSEG(SUC k)0 w1)) + (BNVAL(WSEG(SUC k)0 w2)) =
    (((BV(BIT k w1)) + (BV(BIT k w2))) 'a (2 EXP k)) +
    ((BNVAL(WSEG k 0 w1)) + (BNVAL(WSEG k 0 w2))) *)
@@ -390,8 +390,8 @@ val add_left =
       (itlist (fn t1 => fn  t2 => RESQ_MATCH_MP t2 t1)
            (spec_thm seg_pw) (SPEC (--`k:num`--) ADD_BNVAL_LEFT));
 
-(* less1_lem = 
-PWORDLEN n w1, k <= n, PWORDLEN n w2 
+(* less1_lem =
+PWORDLEN n w1, k <= n, PWORDLEN n w2
 |- ((((BV(BIT k w1)) + (BV(BIT k w2))) +
      (((BNVAL(WSEG k 0 w1)) + ((BNVAL(WSEG k 0 w2)) + (BV cin))) DIV
       (2 EXP k))) DIV 2) <= 1 *)
@@ -411,7 +411,7 @@ val less1_lem = itlist PROVE_HYP (spec_thm seg_pw_thm')
 
 val ACARRY_EQ_ADD_DIV = store_thm("ACARRY_EQ_ADD_DIV",
     (--`!n. !w1 w2::PWORDLEN n. !k. k < n ==>
-     (BV(ACARRY k w1 w2 cin) = 
+     (BV(ACARRY k w1 w2 cin) =
       (((BNVAL(WSEG k 0 w1)) + (BNVAL(WSEG k 0 w2)) + (BV cin)) DIV (2 EXP k)))`--),
     GEN_TAC THEN REPEAT RESQ_GEN_TAC
     THEN INDUCT_TAC THENL[
@@ -446,13 +446,13 @@ val ADD_WORD_SPLIT = store_thm("ADD_WORD_SPLIT",
     	    	       (BV (ACARRY n2 w1 w2 cin)))),
     	   (NBWORD n2 ((BNVAL (WSEG n2 0 w1)) + (BNVAL (WSEG n2 0 w2)) +
     	    	       (BV cin))))`--),
-     let val lem1 = itlist (fn t1 => fn t2 => RESQ_MATCH_MP t2 t1) 
+     let val lem1 = itlist (fn t1 => fn t2 => RESQ_MATCH_MP t2 t1)
     	(map ASSUME [(--`PWORDLEN(n1 + (SUC n2))(w2:bool word)`--),
     	    (--`PWORDLEN(n1 + (SUC n2))(w1:bool word)`--)])
     	(SPECL[(--`n1:num`--), (--`SUC n2`--)] ADD_BNVAL_SPLIT)
      val wcat_11 =
          let val lm = (SPECL [(--`n1:num`--), (--`SUC n2`--)] WCAT_11)
-    	 val lms = map (fn t => SPECL t PWORDLEN_NBWORD) 
+    	 val lms = map (fn t => SPECL t PWORDLEN_NBWORD)
     	    [[(--`n1:num`--), (--`m11:num`--)],
              [(--`n1:num`--), (--`m12:num`--)],
     	     [(--`SUC n2`--), (--`m21:num`--)],
@@ -462,7 +462,7 @@ val ADD_WORD_SPLIT = store_thm("ADD_WORD_SPLIT",
                (--`m21:num`--), (--`m22:num`--)]
       	    (rev_itlist (fn t1 => fn t2 => RESQ_MATCH_MP t2 t1) lms lm)
         end
-     val acarry_lem = SPEC (--`SUC n2`--)(RESQ_SPEC_ALL 
+     val acarry_lem = SPEC (--`SUC n2`--)(RESQ_SPEC_ALL
     	  (SPEC (--`n1 + (SUC n2)`--) ACARRY_EQ_ADD_DIV))
    in
     GEN_TAC THEN INDUCT_TAC THENL[
@@ -500,13 +500,13 @@ val WSEG_NBWORD_ADD = store_thm("WSEG_NBWORD_ADD",
     (WSEG m k(NBWORD n ((BNVAL w1) + (BNVAL w2) + (BV cin))) =
      NBWORD m ((BNVAL (WSEG m k w1)) + (BNVAL (WSEG m k w2)) +
     	       (BV(ACARRY k w1 w2 cin))))`--),
-    let val lem1 = RESQ_SPEC_ALL (CONV_RULE (COND_REWRITE1_CONV [] SUB_ADD) 
+    let val lem1 = RESQ_SPEC_ALL (CONV_RULE (COND_REWRITE1_CONV [] SUB_ADD)
     	(SPECL[(--`n - k`--), (--`k:num`--)] ADD_WORD_SPLIT))
     val lem2 = REWRITE_RULE[SUB_EQUAL_0,LESS_EQ_REFL]
                 (ISPECL[(--`n-k`--),(--`k:num`--),
                       (--`w1:bool word`--),(--`w2:bool word`--),
     	(--`m:num`--),(--`k:num`--)](RESQ_REWR_CANON WSEG_WCAT_WSEG1))
-    val lem3 = (CONV_RULE (COND_REWRITE1_CONV [] SUB_ADD) 
+    val lem3 = (CONV_RULE (COND_REWRITE1_CONV [] SUB_ADD)
     	(SPECL[(--`(n-k)-m`--), (--`m:num`--)] ADD_WORD_SPLIT))
     val PW_WSEG_TAC =
     	RESQ_IMP_RES_TAC WSEG_PWORDLEN THEN FIRST_ASSUM MATCH_MP_TAC
@@ -634,7 +634,7 @@ val ICARRY_WSEG = store_thm("ICARRY_WSEG",
      (SYM(UNDISCH_ALL(GQSPECL [(--`m:num`--),(--`WSEG m 0 (w1:bool word)`--),
      (--`WSEG m 0 (w2:bool word)`--), (--`cin:bool`--),(--`k:num`--)]  ACARRY_EQ_ICARRY)))
     in
-    GEN_TAC THEN REPEAT RESQ_GEN_TAC THEN REPEAT GEN_TAC THEN STRIP_TAC 
+    GEN_TAC THEN REPEAT RESQ_GEN_TAC THEN REPEAT GEN_TAC THEN STRIP_TAC
     THEN COND_REWRITE1_TAC i_eq_a THENL[
       IMP_RES_TAC LESS_IMP_LESS_OR_EQ,
       RESQ_IMP_RES_TAC WSEG_PWORDLEN THEN FIRST_ASSUM MATCH_MP_TAC
@@ -683,3 +683,4 @@ val ACARRY_ACARRY_WSEG = store_thm("ACARRY_ACARRY_WSEG",
     end);
 
 val _ = export_theory();
+val _ = export_doc_theorems();

@@ -22,16 +22,8 @@ val LESS_EQ_SPLIT =
     end;
 
 
-val SUB_GREATER_EQ_ADD = prove(
-    (--`!p n m. (p >= n) ==> (((p - n) >= m) = (p >= (m + n)))`--),
-    REWRITE_TAC[
-      SYM (SPEC (--`n:num`--) (SPEC (--`p-n`--) (SPEC (--`m:num`--)
-           (REWRITE_RULE[GSYM GREATER_EQ] LESS_EQ_MONO_ADD_EQ))))]
-    THEN REPEAT STRIP_TAC
-    THEN POP_ASSUM ( fn th  => ASSUME_TAC
-      (MP (SPEC (--`n:num`--) (SPEC (--`p:num`--) SUB_ADD))
-        (REWRITE_RULE[SPEC (--`n:num`--) (SPEC (--`p:num`--) GREATER_EQ)] th)))
-    THEN SUBST_TAC[(SPEC_ALL ADD_SYM)] THEN ASM_REWRITE_TAC[]);
+val SUB_GREATER_EQ_ADD =
+  ARITH_PROVE (--`!p n m. (p >= n) ==> (((p - n) >= m) = (p >= (m + n)))`--);
 
 (*ba bb wa wb *)
 (* ADD_LESS_EQ_SUB = |- !p n m. n <= p ==> ((n + m) <= p = m <= (p - n)) *)
@@ -39,30 +31,12 @@ val ADD_LESS_EQ_SUB =
    GSYM (REWRITE_RULE[GREATER_EQ] SUB_GREATER_EQ_ADD);
 
 (*wa *)
-val ADD_LESS_EQ_TRANS = prove(
-    (--`!m n p q. ((m + n) <= p) /\ (q <= n) ==> ((m + q) <= p)`--),
-    INDUCT_TAC THEN PURE_ONCE_REWRITE_TAC[ADD]
-      THENL[
-      REPEAT GEN_TAC THEN PURE_ONCE_REWRITE_TAC[CONJ_SYM]
-      THEN MATCH_ACCEPT_TAC LESS_EQ_TRANS,
-      GEN_TAC THEN INDUCT_TAC THENL[
-        REWRITE_TAC[NOT_SUC_LESS_EQ_0],
-        PURE_ONCE_REWRITE_TAC[LESS_EQ_MONO] THEN REPEAT STRIP_TAC
-        THEN RES_TAC]]);
+val ADD_LESS_EQ_TRANS =
+  ARITH_PROVE (--`!m n p q. ((m + n) <= p) /\ (q <= n) ==> ((m + q) <= p)`--);
+
 (**)
-val ADD_SUB_LEM = prove(
-    (--`!m n p. p < n ==> ((m + n) - p = m + (n - p))`--),
-    REPEAT INDUCT_TAC
-    THEN ASM_REWRITE_TAC[NOT_LESS_0,ADD_CLAUSES,LESS_MONO_EQ,SUB_0]
-   THEN DISCH_TAC THEN REWRITE_TAC[SUB_MONO_EQ]
-   THEN REWRITE_TAC[SUB,LESS_MONO_EQ]
-    THEN IMP_RES_THEN (ASSUME_TAC o (PURE_ONCE_REWRITE_RULE[ADD_SYM])
-        o (SPEC(--`m:num`--))) LESS_IMP_LESS_ADD
-    THEN DISJ_CASES_THEN2 (fn t => ASSUME_TAC t THEN RES_TAC)
-                          (fn t => REWRITE_TAC[t])
-        (REWRITE_RULE[DE_MORGAN_THM]
-                     (SPECL[(--`p:num`--),(--`m + n`--)] LESS_ANTISYM))
-    THEN RES_TAC THEN ASM_REWRITE_TAC[]);
+val ADD_SUB_LEM =
+  ARITH_PROVE (--`!m n p. p < n ==> ((m + n) - p = m + (n - p))`--)
 
 (*ba wa wb *)
 val LESS_EQ_0_EQ = prove(
@@ -160,7 +134,8 @@ val Less_MULT_lemma = prove(
    end);
 
 val Less_MULT_ADD_lemma = prove(
-  (--`!m n r r'. 0 < m /\ 0 < n /\ r < m /\ r' < n ==> ((r' * m) + r) < (n * m)`--),
+  (--`!m n r r'. 0 < m /\ 0 < n /\ r < m /\ r' < n ==>
+                 ((r' * m) + r) < (n * m)`--),
     REPEAT STRIP_TAC
     THEN CHOOSE_THEN STRIP_ASSUME_TAC (MATCH_MP Less_lemma (ASSUME (--`r < m`--)))
     THEN CHOOSE_THEN STRIP_ASSUME_TAC (MATCH_MP Less_lemma (ASSUME (--`r' < n`--)))
@@ -173,7 +148,8 @@ val Less_MULT_ADD_lemma = prove(
 
 (*ba bn *)
 val DIV_DIV_DIV_MULT = prove(
-    (--`!m n. (0 < m) /\ (0 < n)  ==> !x. ((x DIV m) DIV n = x  DIV (m * n))`--),
+    (--`!m n. (0 < m) /\ (0 < n)  ==>
+              !x. ((x DIV m) DIV n = x  DIV (m * n))`--),
     CONV_TAC (ONCE_DEPTH_CONV RIGHT_IMP_FORALL_CONV) THEN REPEAT STRIP_TAC
     THEN REPEAT_TCL CHOOSE_THEN (CONJUNCTS_THEN2 SUBST1_TAC ASSUME_TAC)
     	(SPEC (--`x:num`--) (MATCH_MP DA (ASSUME (--`0 < m`--))))
@@ -205,9 +181,6 @@ fun ARITH_TAC (asml,gl) =
     let val a = filter is_presburger asml in
     (MAP_EVERY (MP_TAC o ASSUME) a THEN CONV_TAC ARITH_CONV)(asml,gl)
     end;
-
-val ARITH_PROVE = EQT_ELIM o ARITH_CONV;
-
 
 (* ----------------------------------------------------------------------
  * Some simple list reasoning functions, in order to avoid loading in the
@@ -342,5 +315,27 @@ val EQ_LENGTH_SNOC_INDUCT_TAC =
 end (* local *)
 
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
+
+fun export_doc_theorems() = let
+  open Theory Parse
+  val thydir0 = Path.concat(Path.parentArc, Path.concat("help", "thms"))
+  val _ = if FileSys.access(thydir0, []) then () else FileSys.mkDir thydir0
+  val thydir = Path.concat(thydir0, current_theory())
+  val _ = if FileSys.access(thydir, []) then () else FileSys.mkDir thydir
+  val thms = theorems() @ axioms() @ definitions()
+  fun write_thm (thname, thm) = let
+    open TextIO
+    val outstream = openOut (Path.concat(thydir, thname^".doc"))
+  in
+    output(outstream, "\\THEOREM "^thname^" "^current_theory()^"\n");
+    output(outstream, thm_to_string thm);
+    output(outstream, "\n\\ENDTHEOREM\n");
+    closeOut outstream
+  end
+in
+  app write_thm thms
+end
+
+
 
 end;

@@ -24,13 +24,13 @@ val word_CASES_TAC =
        (fn w => CHOOSE_THEN SUBST1_TAC (ISPEC w cthm))
     end;
 
-val word_INDUCT_TAC = 
+val word_INDUCT_TAC =
     let val ithm = word_baseTheory.word_induct
     in
      (INDUCT_THEN ithm (fn t => ALL_TAC))
     end;
 
-val RESQ_WORDLEN_TAC = 
+val RESQ_WORDLEN_TAC =
     (CONV_TAC RESQ_FORALL_CONV THEN word_INDUCT_TAC
      THEN PURE_ONCE_REWRITE_TAC[word_baseTheory.PWORDLEN_DEF]
      THEN GEN_TAC THEN DISCH_TAC);
@@ -50,7 +50,7 @@ val BNVAL_DEF = new_recursive_definition {
  name = "BNVAL_DEF",
  fixity = Prefix,
  rec_axiom = word_Ax,
- def = 
+ def =
  --`
    BNVAL (WORD l) = LVAL BV 2 l
  `--
@@ -139,10 +139,10 @@ val BNVAL_WCAT1 = store_thm("BNVAL_WCAT1",
 
 val BNVAL_WCAT2 = save_thm("BNVAL_WCAT2",
    (* (--`!n. !w:(bool)word::PWORDLEN n.
-          !x:bool. BNVAL (WCAT (WORD[x],w)) 
+          !x:bool. BNVAL (WCAT (WORD[x],w))
                    = ((BV x) 'a (2 EXP n)) + (BNVAL w)`--) *)
     GEN_ALL (RESQ_GEN_ALL (GEN (--`x:bool`--)
-    (PURE_REWRITE_RULE[GSYM BNVAL_NVAL] 
+    (PURE_REWRITE_RULE[GSYM BNVAL_NVAL]
         (ISPECL [(--`BV`--), (--`2`--), (--`x:bool`--)]
                 (RESQ_SPEC (--`w:bool word`--) (SPEC_ALL NVAL_WCAT2)))))));
 
@@ -150,7 +150,7 @@ val BNVAL_WCAT = save_thm("BNVAL_WCAT",
    GENL[(--`n:num`--),(--`m:num`--)]
        (RESQ_GEN_ALL
     (PURE_REWRITE_RULE[GSYM BNVAL_NVAL] (ISPECL [(--`BV`--), (--`2`--)]
-     (RESQ_SPECL [(--`w1:bool word`--), 
+     (RESQ_SPECL [(--`w1:bool word`--),
                   (--`w2:bool word`--)] (SPEC_ALL NVAL_WCAT))))));
 
 val VB_DEF = new_definition("VB_DEF",
@@ -273,14 +273,14 @@ val ZERO_WORD_VAL = save_thm("ZERO_WORD_VAL",
      (DISCH (--`0 = BNVAL w`--) (RIGHT_CONV_RULE
        (RESQ_REWRITE1_CONV [] NBWORD_BNVAL)
 	 (AP_TERM (--`NBWORD n`--) (ASSUME (--`0 = BNVAL w`--)))))
-     (DISCH_ALL (SUBS[(MP (SPECL [(--`n:num`--),(--`0`--)] BNVAL_NBWORD) 
+     (DISCH_ALL (SUBS[(MP (SPECL [(--`n:num`--),(--`0`--)] BNVAL_NBWORD)
 	 (SUBS[SYM(num_CONV (--`2`--))]
           (SPECL [(--`n:num`--), (--`1`--)] ZERO_LESS_EXP)))]
 	  (AP_TERM (--`BNVAL`--) (ASSUME (--`NBWORD n 0 = w`--)))))) )))));
 
 val WCAT_NBWORD_0 = store_thm("WCAT_NBWORD_0",
     (--`!n1 n2. WCAT((NBWORD n1 0), (NBWORD n2 0)) = (NBWORD (n1 + n2) 0)`--),
-    let val lemma1 = 
+    let val lemma1 =
       let val lem1 = SUBS[SYM (num_CONV (--`2`--))] (SPEC (--`1`--) LESS_0)
       val lems = map (fn th => MP(REWRITE_RULE[LESS_0] (SPEC (--`2`--) th)) lem1)
     	[ZERO_DIV,ZERO_MOD]
@@ -304,16 +304,16 @@ val WSPLIT_NBWORD_0 = save_thm("WSPLIT_NBWORD_0",
        [ [(--`n-m`--), (--`0`--)], [(--`m:num`--), (--`0`--)]]
     in
     GEN_ALL(DISCH_ALL
-    (CONV_RULE (ONCE_DEPTH_CONV (COND_REWRITE1_CONV [] SUB_ADD)) 
-     (itlist PROVE_HYP ths 
-      (PURE_ONCE_REWRITE_RULE[WCAT_NBWORD_0] 
+    (CONV_RULE (ONCE_DEPTH_CONV (COND_REWRITE1_CONV [] SUB_ADD))
+     (itlist PROVE_HYP ths
+      (PURE_ONCE_REWRITE_RULE[WCAT_NBWORD_0]
        (RESQ_SPECL tms (SPECL [(--`n - m`--), (--`m:num`--)]
         (CONJUNCT2(word_baseTheory.WORD_PARTITION))))))))
     end);
 
 val EQ_NBWORD0_SPLIT = store_thm("EQ_NBWORD0_SPLIT",
     (--`!n. !w:(bool)word::PWORDLEN n. !m. m <= n ==>
-     ((w = NBWORD n 0) = 
+     ((w = NBWORD n 0) =
       ((WSEG (n-m) m w = NBWORD (n-m) 0) /\
        (WSEG m 0 w = NBWORD m 0)))`--),
     let val lem0 = SPEC_ALL
@@ -329,7 +329,7 @@ val EQ_NBWORD0_SPLIT = store_thm("EQ_NBWORD0_SPLIT",
     val lem6 = (RESQ_SPEC (--`w:(bool)word`--)(SPEC (--`n:num`--) WSEG_PWORDLEN))
     val lem7 = UNDISCH_ALL
     	(PURE_ONCE_REWRITE_RULE[ADD_0] (SPECL[(--`m:num`--),(--`0`--)]lem6))
-    val lem8 = 
+    val lem8 =
          let val lem = PURE_ONCE_REWRITE_RULE[ADD_SYM]
     	    	(UNDISCH_ALL (SPECL[(--`n:num`--),(--`m:num`--)]SUB_ADD))
          in
@@ -408,7 +408,7 @@ val MOD_DIV_lemma = prove(
 
 val NBWORD_MOD = store_thm("NBWORD_MOD",
     (--`!n m. NBWORD n (m MOD (2 EXP n)) = NBWORD n m`--),
-    let val lemma1 = 
+    let val lemma1 =
     (* |- (WCAT
     (NBWORD n((m MOD (2 EXP (SUC n))) DIV 2),
      WORD[VB((m MOD (2 EXP (SUC n))) MOD 2)]) =
@@ -416,7 +416,7 @@ val NBWORD_MOD = store_thm("NBWORD_MOD",
    (NBWORD n((m MOD (2 EXP (SUC n))) DIV 2) = NBWORD n(m DIV 2)) /\
    (WORD[VB((m MOD (2 EXP (SUC n))) MOD 2)] = WORD[VB(m MOD 2)]) *)
         let val tms1 = [(--`NBWORD n((m MOD (2 EXP (SUC n))) DIV 2)`--),
-    	    (--`NBWORD n(m DIV 2)`--)] 
+    	    (--`NBWORD n(m DIV 2)`--)]
         val tms2 = [(--`WORD[VB((m MOD (2 EXP (SUC n))) MOD 2)]`--),
     	    (--`WORD[VB(m MOD 2)]`--)]
         val lem1 = RESQ_SPECL (tms1 @ tms2)
@@ -538,7 +538,7 @@ val MSB_NBWORD = store_thm("MSB_NBWORD",
 val NBWORD_SPLIT = store_thm("NBWORD_SPLIT",
     (--`!n1 n2 m. NBWORD (n1 + n2) m =
      WCAT ((NBWORD n1 (m DIV (2 EXP n2))), (NBWORD n2 m))`--),
-    let val  exp_lems = 
+    let val  exp_lems =
     	let val lm = CONJUNCT2 EXP in
     	(map GSYM [lm, PURE_ONCE_REWRITE_RULE[MULT_SYM]lm])
         end
@@ -561,11 +561,11 @@ val NBWORD_SPLIT = store_thm("NBWORD_SPLIT",
     end);
 
 val WSEG_NBWORD = store_thm("WSEG_NBWORD",
-    (--`!m k n.  (m + k) <= n ==> 
+    (--`!m k n.  (m + k) <= n ==>
      (!l. WSEG m k(NBWORD n l) = NBWORD m (l DIV (2 EXP k)))`--),
-    let val lem1 = CONV_RULE (COND_REWRITE1_CONV [] SUB_ADD) 
+    let val lem1 = CONV_RULE (COND_REWRITE1_CONV [] SUB_ADD)
     	(SPECL[(--`n-k`--), (--`k:num`--), (--`l:num`--)]NBWORD_SPLIT)
-    val lem2 = CONV_RULE (COND_REWRITE1_CONV [] SUB_ADD) 
+    val lem2 = CONV_RULE (COND_REWRITE1_CONV [] SUB_ADD)
     	(SPECL[(--`(n-k)-m`--), (--`m:num`--)]NBWORD_SPLIT)
     in
     REPEAT STRIP_TAC THEN IMP_RES_TAC LESS_EQ_SPLIT
@@ -583,7 +583,7 @@ val WSEG_NBWORD = store_thm("WSEG_NBWORD",
       THEN REFL_TAC]
    end);
 
-(* NBWORD_SUC_FST = 
+(* NBWORD_SUC_FST =
 |- !n m.
     NBWORD(SUC n)m = WCAT(WORD[VB((m DIV (2 EXP n)) MOD 2)],NBWORD n m) *)
 
@@ -595,7 +595,7 @@ val BIT_NBWORD0 = store_thm("BIT_NBWORD0",
     (--`!k n. k < n ==> (BIT k (NBWORD n 0) = F)`--),
     let val les1 = SUBS[SYM (num_CONV (--`1`--))](SPEC(--`0`--)LESS_SUC_REFL)
        val lem1 = REWRITE_RULE[ADD,les1]
-                (PROVE_HYP (SPECL [(--`n:num`--),(--`0`--)]PWORDLEN_NBWORD) 
+                (PROVE_HYP (SPECL [(--`n:num`--),(--`0`--)]PWORDLEN_NBWORD)
      (GQSPECL[(--`n:num`--),(--`NBWORD n 0`--),(--`1`--),
                (--`k:num`--),(--`0`--)]BIT_WSEG))
     in
@@ -623,8 +623,8 @@ val ADD_BNVAL_LEFT = store_thm("ADD_BNVAL_LEFT",
      ((BNVAL w1) + (BNVAL w2)) =
       (((BV (BIT n w1)) + (BV (BIT n w2))) * (2 EXP n)) +
        ((BNVAL (WSEG n 0 w1)) + (BNVAL (WSEG n 0 w2)))`--),
-    let val mk_lem = 
-    	let val lem = SPEC_ALL WSEG_PWORDLEN 
+    let val mk_lem =
+    	let val lem = SPEC_ALL WSEG_PWORDLEN
     	val lem2 = SPEC_ALL BNVAL_WCAT2
         in
     	(fn t => RESQ_MATCH_MP lem2
@@ -646,7 +646,7 @@ val ADD_BNVAL_RIGHT = store_thm("ADD_BNVAL_RIGHT",
      ((BNVAL w1) + (BNVAL w2)) =
       (((BNVAL (WSEG n 1 w1)) + (BNVAL (WSEG n 1 w2))) * 2) +
        ((BV (BIT 0 w1)) + (BV (BIT 0 w2))) `--),
-    let val mk_lem = 
+    let val mk_lem =
     	let val lem = SPEC_ALL WSEG_PWORDLEN
     	val lem2 = SPEC_ALL BNVAL_WCAT1
         in
@@ -669,9 +669,9 @@ val ADD_BNVAL_SPLIT = store_thm("ADD_BNVAL_SPLIT",
      ((BNVAL w1) + (BNVAL w2)) =
       (((BNVAL (WSEG n1 n2 w1)) + (BNVAL (WSEG n1 n2 w2))) * (2 EXP n2)) +
        ((BNVAL (WSEG n2 0 w1)) + (BNVAL (WSEG n2 0 w2)))`--),
-    let val seg_lem = PURE_ONCE_REWRITE_RULE[ADD_SYM](RESQ_GEN_ALL (SYM (TRANS    
+    let val seg_lem = PURE_ONCE_REWRITE_RULE[ADD_SYM](RESQ_GEN_ALL (SYM (TRANS
     	(REWRITE_RULE[LESS_EQ_REFL] (PURE_ONCE_REWRITE_RULE[ADD_0]
-               (SPECL [(--`n2:num`--), (--`n1:num`--), (--`0`--)] 
+               (SPECL [(--`n2:num`--), (--`n1:num`--), (--`0`--)]
     	 (RESQ_SPEC_ALL (SPEC (--`n2 + n1`--) WCAT_WSEG_WSEG)))))
         (RESQ_SPEC_ALL (SPEC (--`n2 + n1`--) WSEG_WORD_LENGTH)))))
     val lem = SPEC_ALL WSEG_PWORDLEN
@@ -690,3 +690,4 @@ val ADD_BNVAL_SPLIT = store_thm("ADD_BNVAL_SPLIT",
    end);
 
 val _ = export_theory();
+val _ = export_doc_theorems();

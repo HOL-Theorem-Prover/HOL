@@ -26,13 +26,13 @@ val word_CASES_TAC =
        (fn w => CHOOSE_THEN SUBST1_TAC (ISPEC w cthm))
     end;
 
-val word_INDUCT_TAC = 
+val word_INDUCT_TAC =
     let val ithm = word_baseTheory.word_induct
     in
      (INDUCT_THEN ithm (fn t => ALL_TAC))
     end;
 
-val RESQ_WORDLEN_TAC = 
+val RESQ_WORDLEN_TAC =
     (CONV_TAC RESQ_FORALL_CONV THEN word_INDUCT_TAC
      THEN PURE_ONCE_REWRITE_TAC[word_baseTheory.PWORDLEN_DEF]
      THEN GEN_TAC THEN DISCH_TAC);
@@ -61,7 +61,7 @@ val LVAL = store_thm("LVAL",
      (!l. !f:'a->num. !b x. LVAL f b (CONS (x:'a) l) =
       ((f x) * (b EXP (LENGTH l))) + (LVAL f b l))`--),
     REWRITE_TAC [LVAL_DEF,FOLDL,MULT_CLAUSES,ADD_CLAUSES]
-    THEN BETA_TAC THEN REWRITE_TAC[LENGTH,MULT_CLAUSES,ADD_CLAUSES] 
+    THEN BETA_TAC THEN REWRITE_TAC[LENGTH,MULT_CLAUSES,ADD_CLAUSES]
     THEN SNOC_INDUCT_TAC THEN REPEAT GEN_TAC THENL[
       REWRITE_TAC[FOLDL,LENGTH,MULT_CLAUSES,EXP,ADD_CLAUSES],
       REWRITE_TAC[FOLDL_SNOC,LENGTH_SNOC,MULT_CLAUSES,EXP,ADD_CLAUSES]
@@ -90,7 +90,7 @@ val LESS_SUC_IMP_LESS_EQ = GENL [(--`m:num`--),(--`n:num`--)]
 val LVAL_MAX_lem = prove(
     (--`!a b c y. ((a+b)<SUC c) /\ (y < b) ==> ((a+y) < c)`--),
     REPEAT GEN_TAC THEN PURE_ONCE_REWRITE_TAC[LESS_SUC_IMP_LESS_EQ]
-    THEN STRIP_TAC THEN IMP_RES_THEN (ASSUME_TAC o 
+    THEN STRIP_TAC THEN IMP_RES_THEN (ASSUME_TAC o
     	(SPEC (--`a:num`--)) o (PURE_ONCE_REWRITE_RULE[ADD_SYM])) LESS_MONO_ADD
     THEN IMP_RES_TAC LESS_LESS_EQ_TRANS);
 
@@ -98,10 +98,10 @@ val LESS_MULT_PLUS_DIFF = prove(
    (--`!n k l . (k < l) ==> (((k * n) + n) <= (l * n))`--),
   INDUCT_THEN INDUCTION MP_TAC THEN
   REWRITE_TAC [MULT_CLAUSES,ADD_CLAUSES,LESS_EQ_REFL] THEN
-  DISCH_THEN (fn t => 
+  DISCH_THEN (fn t =>
     REPEAT GEN_TAC THEN
-    DISCH_THEN (fn t' => 
-         ACCEPT_TAC 
+    DISCH_THEN (fn t' =>
+         ACCEPT_TAC
          (REWRITE_RULE [ADD_CLAUSES,ADD_ASSOC]
            (MATCH_MP LESS_EQ_LESS_EQ_MONO
              (CONJ (MATCH_MP LESS_OR t') (MATCH_MP t t')))) )));
@@ -109,7 +109,7 @@ val LESS_MULT_PLUS_DIFF = prove(
 val LVAL_MAX = store_thm("LVAL_MAX",
     (--`!(l:'a list) f b. (!x. f x < b) ==>
               ((LVAL f b l) < (b EXP (LENGTH l)))`--),
-    LIST_INDUCT_TAC THEN REPEAT STRIP_TAC 
+    LIST_INDUCT_TAC THEN REPEAT STRIP_TAC
     THEN PURE_REWRITE_TAC[LVAL,LENGTH,EXP] THENL[
       CONV_TAC (RAND_CONV num_CONV) THEN MATCH_ACCEPT_TAC LESS_0,
       let val lem1 = GEN (--`a:num`--)
@@ -155,7 +155,7 @@ val NVAL_WCAT1 = store_thm("NVAL_WCAT1",
     THEN MATCH_ACCEPT_TAC LVAL_SNOC);
 
 val NVAL_WCAT2 = store_thm("NVAL_WCAT2",
-    (--`!n. !w:('a)word::PWORDLEN n. !f b x. 
+    (--`!n. !w:('a)word::PWORDLEN n. !f b x.
      NVAL f b (WCAT (WORD[x],w)) = ((f x) * (b EXP n)) + (NVAL f b w)`--),
     GEN_TAC THEN RESQ_WORDLEN_TAC THEN REPEAT GEN_TAC
     THEN ASM_REWRITE_TAC[NVAL_DEF,WCAT_DEF]
@@ -199,7 +199,7 @@ val NLIST_DEF = new_recursive_definition {
  name = "NLIST_DEF",
  fixity = Prefix,
  rec_axiom = num_Axiom,
- def = 
+ def =
  --`
    (NLIST 0 (frep:num->'a) b m = []) /\
    (NLIST (SUC n) frep b m =
@@ -224,3 +224,4 @@ val NWORD_PWORDLEN = store_thm("NWORD_PWORDLEN",
     REWRITE_TAC[PWORDLEN_DEF,NWORD_DEF,NLIST_LENGTH]);
 
 val _ = export_theory();
+val _ = export_doc_theorems();

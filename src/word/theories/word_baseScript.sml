@@ -778,3 +778,6 @@ val BIT_EQ_IMP_WORD_EQ = store_thm("BIT_EQ_IMP_WORD_EQ",
     end);
 
 val _ = export_theory();
+
+val _ = export_doc_theorems();
+

@@ -557,3 +557,5 @@ REPEAT GGEN_TAC THEN STRIP_TAC THEN REWRITE_TAC[SHL_DEF]
        THEN MATCH_ACCEPT_TAC PWORDLEN1]]]);
 
 val _ = export_theory();
+
+val _ = export_doc_theorems();

@@ -250,3 +250,4 @@ val PBITBOP_WXOR = save_thm("PBITBOP_WXOR",
 
 val _ = export_theory();
 
+val _ = export_doc_theorems();
