@@ -6,13 +6,13 @@ all: makebase Doc2Html Doc2Tex Doc2Txt
 makebase : Database.uo Htmlsigs.uo Lexer.uo Parser.uo Parsspec.uo Printbase.uo Texsigs.uo makebase.uo
 (1)
 
-Doc2Html : Doc2Html.uo ParseDoc.uo
+Doc2Html : Doc2Html.uo ParseDoc.uo Symbolic.uo
 (2)
 
-Doc2Tex : Doc2Tex.uo ParseDoc.uo
+Doc2Tex : Doc2Tex.uo ParseDoc.uo Symbolic.uo
 (3)
 
-Doc2Txt: Doc2Txt.uo ParseDoc.uo
+Doc2Txt: Doc2Txt.uo ParseDoc.uo Symbolic.uo
 (4)
 
 Lexer.sml: Lexer.lex
