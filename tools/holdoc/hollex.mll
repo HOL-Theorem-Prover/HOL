@@ -65,6 +65,9 @@ let rec render_token t =
   | HolStartTeX  -> "c:(*:"
   | HolEndTeX    -> ":*):c"
 
+(* symbolic identifiers that contain nonaggregating characters; user-extensible *)
+let nonagg_specials = ref ["()"; "[]"; ".."; "..."]
+
 }
 
 (* some classes *)
@@ -78,14 +81,13 @@ let startpat = "Net_Hol_reln" (white | newline)* backtick
 
 (* the character classes of HOL *)
 let idchar = ['A'-'Z' 'a'-'z' '0'-'9' '_' '\'']
-let nonagg = ['~' '(' ')' '[' ']' '{' '}' '.' ',' ';']
-let specnonagg = "()" | "[]" | '.' '.'+
-                 (* built of nonagg, but aggregating for tokenisation purposes;
-                                    this is not HOL but our extension (I think) *)
+let symbol = ['|' '!' '#' '%' '&' ')' '-' '=' '+' '[' ']' '{'
+                 '}' ';' ':' '@' '~' '\\' ',' '.' '<' '>' '?' '/']
+let nonparen = symbol | '*'
+let nonstar = symbol | '('
+let anysymb = idchar* | nonparen* '(' |  ( nonparen | '(' nonstar )+
+
 let dollar = '$'
-let punctchar = ['!' '"' '#' '%' '&' '*' '+' '-' '/' ':' '<' '=' '>' '?' '@' '\\' '^' '|']
-  (* everything else except '`' ; I'm not sure about '\\' and '"' but hey... *)
-let idorpunctchar = idchar | punctchar
 
 let startcom = "(*"
 let incomm   = [^ '(' '*'] | '(' [^ '*'] | '*' [^ ')']
@@ -134,25 +136,25 @@ rule
 
 (* holtoken returns the next token, or raises Finished|BadChar *)
 
+(* qualified identifiers are not supported *)
+
   holtoken = parse
-    '"' [^ '"']* '"'       { let s = Lexing.lexeme lexbuf in
+    '"' ([^ '"'] | '\\' [ 'n' '"' '\\' 'r' ])* '"'
+                           { let s = Lexing.lexeme lexbuf in
                              Str (String.sub s 1 (String.length s - 2)) }
-  | dollar? idchar+        { Ident (Lexing.lexeme lexbuf,true) }
-  | dollar? (punctchar+
-             | specnonagg) { Ident (Lexing.lexeme lexbuf,false) }
-  | newline white*         { Indent (indent_width (Lexing.lexeme lexbuf)) }
-  | white+                 { White (Lexing.lexeme lexbuf) }
   | startdir               { DirBeg }
   | enddir                 { DirEnd }
-  | startcom               { comments := [];
-                             comment lexbuf;
-                             Comment (String.concat "" (List.rev !comments))}
-  | nonagg                 { Sep (Lexing.lexeme lexbuf) }
-  | backtick               { Backtick }
-  | backtick backtick      { DBacktick }
   | tendhol                { TeXEndHol }
   | tendhol0               { TeXEndHol0 }
   | starttex               { HolStartTeX }
+  | startcom               { comments := [];
+                             comment lexbuf;
+                             Comment (String.concat "" (List.rev !comments))}
+  | dollar? anysymb        { Ident (Lexing.lexeme lexbuf,true) }
+  | newline white*         { Indent (indent_width (Lexing.lexeme lexbuf)) }
+  | white+                 { White (Lexing.lexeme lexbuf) }
+  | backtick               { Backtick }
+  | backtick backtick      { DBacktick }
   | eof                    { raise Eof }
   | _                      { raise BadChar }
 
@@ -196,25 +198,106 @@ and
 
 {
 
-(* build a fast stream of tokens from lexed stdin *)
+(* not very efficient prefix testing *)
+let isPrefix str s = Str.string_match (Str.regexp_string str) s 0
+
+let nonagg_re = Str.regexp "[]()[{}~.,;]"
+
+let isAlphaNum c = c >= 'A' && c <= 'Z'
+                || c >= 'a' && c <= 'z'
+                || c >= '0' && c <= '9'
+                || c = '_'
+
+(* build a fast stream of tokens from lexed stdin, doing the
+   second-pass of lexing on the way *)
 let tokstream p chan =
   let lexbuf = Lexing.from_channel chan in
   let lex = ref p in
+  let pending = (ref None : string option ref) in
+  let next () = match !pending with
+                  Some(s) -> pending := None;
+                             (* Ugly hack: we *really* want to push
+                                this back and re-lex it as
+                                appropriate, but we can't do that.  So
+                                we simply return something.  If we're
+                                parsing HOL, we're fine: this Ident
+                                will be resplit as we intend.  But if
+                                we're parsing TeX, simply returning a
+                                separate TeX fragment isn't right - if
+                                the string includes something else,
+                                say [[ <[ colon-star-rparen
+                                paren-star-[ or similar, it will *not*
+                                be processed.  Ah well. *)
+                             if !lex = holtoken then
+                               Ident(s,true)
+                             else
+                               TeXNormal(s)
+                | None    -> !lex lexbuf in
+  let push s  = match !pending with
+                  (* failure here would be an internal error *)
+                  None    -> if s = "" then
+                               ()
+                             else
+                               pending := Some(s) in
+
+  (* split identifier, respecting nonagg chars but modulo known
+     nonagg_specs (operators containing nonagg chars *)
+  (* cf HOL98 src/parse/term_tokens.sml *)
+  let rec split_ident nonagg_specs s
+    = match String.get s 0 with
+        '"'  -> (Ident(s,true),"")
+      | '_'  -> (Ident(s,true),"")
+      | '\'' -> (Ident(s,true),"")  (* be liberal in what you accept *)
+      | '$'  -> let rest = Str.string_after s 1 in
+                (match split_ident nonagg_specs rest with
+                   (Ident(s',b),r) -> (Ident("$"^s',b),r)
+                 | _               -> raise BadChar)
+      | c    -> let possible_nonaggs = List.filter (function spec -> isPrefix spec s)
+                                                   nonagg_specs in
+                if possible_nonaggs = [] then
+                  try
+                    let i = Str.search_forward nonagg_re s 0 in
+                    if i = 0 then
+                      if isPrefix "]]" s then  (* tendhol *)
+                        (TeXEndHol,Str.string_after s 2)
+                      else if isPrefix "]>" s then (* tendhol0 *)
+                        (TeXEndHol0,Str.string_after s 2)
+                      else if isPrefix "]*)" s then (* enddir *)
+                        (DirEnd,Str.string_after s 3)
+                      else
+                        (Sep(String.make 1 c),Str.string_after s 1)
+                    else
+                       (Ident(Str.string_before s i,isAlphaNum c),Str.string_after s i)
+                  with
+                    Not_found -> (Ident(s,isAlphaNum c),"")
+                else
+                  (let compare s1 s2 = String.length s2 - String.length s1 in
+                   let best = List.hd (List.stable_sort compare possible_nonaggs) in
+                   let sz = String.length best in
+                   (Ident(best,isAlphaNum c),Str.string_after s sz)) in
+
   let f _ = (* I hope it is valid to assume that *all*
                tokens are requested, in ascending order! *)
     try
-      Some (let t = !lex lexbuf in
+      Some (let t = next () in
             match t with
-              DirBeg       -> let n =
-                                let rec go () = match holtoken lexbuf with
-                                                  Ident(s,_) -> s
+              DirBeg       -> let oldlex = !lex in
+                              lex := holtoken;
+                              let n =
+                                let rec go () = match next () with
+                                                  Ident(s,_) -> (match split_ident !nonagg_specials s with
+                                                                   (Ident(s,_),r) -> push r; s
+                                                                 | _              -> raise BadDir)
                                                 | White(_)   -> go ()
                                                 | _          -> raise BadDir
                                 in go ()
                               in
                               let rec go ts =
-                                match holtoken lexbuf with
-                                  DirEnd -> DirBlk (n,List.rev ts)
+                                match next () with
+                                  Ident(s,_) -> (match split_ident !nonagg_specials s with
+                                                   (DirEnd,r) -> lex := oldlex; push r; DirBlk (n,List.rev ts)
+                                                 | (t,r)      -> push r; go (t::ts))
+                                | DirEnd -> lex := oldlex; DirBlk (n,List.rev ts)
                                 | t      -> go (t::ts)
                               in
                               go []
@@ -225,6 +308,12 @@ let tokstream p chan =
             | TeXEndHol0   -> lex := textoken; t
             | HolStartTeX  -> lex := textoken; t
             | HolEndTeX    -> lex := holtoken; t
+            | Ident(s,_)   -> (let (t,r) = split_ident !nonagg_specials s in
+                               match t with
+                                 TeXEndHol  -> lex := textoken; push r; t
+                               | TeXEndHol0 -> lex := textoken; push r; t
+                               | DirEnd     -> raise BadDir
+                               | _          -> push r; t)
             | t            -> t)
     with
       Eof -> None

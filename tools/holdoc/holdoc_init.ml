@@ -134,6 +134,16 @@ let dir_proc n ts =
     | []               -> prerr_endline ("Missing string in string sequence");
                           raise BadDirective
   in
+  let rec gostrs ts =
+    match ts with
+      (White(_)::ts)   -> gostrs ts
+    | (Indent(_)::ts)  -> gostrs ts
+    | (Comment(_)::ts) -> gostrs ts
+    | (Str(s)::ts)     -> s :: gostrs ts
+    | (t::ts)          -> prerr_endline ("Unexpected token in strings sequence: "^render_token t);
+                          raise BadDirective
+    | []               -> []
+  in
   let rec goident ts =
     match ts with
       (White(_)::ts)   -> goident ts
@@ -171,5 +181,6 @@ let dir_proc n ts =
                          hOLDELIMOPEN := s1; hOLDELIMCLOSE := s2
   | "NEWMODE"         -> new_mode (goident ts)
   | "MODE"            -> change_mode (goident ts)
+  | "SPECIAL"         -> Hollex.nonagg_specials := gostrs ts @ !Hollex.nonagg_specials
   | _                 -> ()
 

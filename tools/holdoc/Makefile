@@ -22,12 +22,12 @@ all: simpledump simpletexdump lts_to_latex mng_to_latex hol_to_latex
 SIMPLEDUMP_OBJS=hollex.cmx simpledump.cmx
 
 simpledump : $(SIMPLEDUMP_OBJS)
-	$(OCAMLOPT) $(SIMPLEDUMP_OBJS) -o simpledump
+	$(OCAMLOPT) str.cmxa $(SIMPLEDUMP_OBJS) -o simpledump
 
 SIMPLETEXDUMP_OBJS=hollex.cmx simpletexdump.cmx
 
 simpletexdump : $(SIMPLETEXDUMP_OBJS)
-	$(OCAMLOPT) $(SIMPLETEXDUMP_OBJS) -o simpletexdump
+	$(OCAMLOPT) str.cmxa $(SIMPLETEXDUMP_OBJS) -o simpletexdump
 
 LTS_TO_LATEX_OBJS=hollex.cmx holdoc_init.cmx holdoc_munge.cmx lts_to_latex.cmx
 

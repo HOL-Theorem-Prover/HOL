@@ -35,8 +35,7 @@ let gensymcnt = ref 0
 let debug_print s =
   let n = !gensymcnt
   in
-  gensymcnt := n + 1;
-  prerr_endline (" DEBUG "^string_of_int (n+100000)^" "^s)
+  gensymcnt := n + 1
 
 (* ------------------------------------------------------------ *)
 (* Parsers                                                      *)

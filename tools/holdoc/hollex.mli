@@ -30,4 +30,5 @@ val holtokstream : in_channel -> token Stream.t
 
 val textokstream : in_channel -> token Stream.t
 
+val nonagg_specials : string list ref
 
