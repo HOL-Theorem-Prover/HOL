@@ -204,39 +204,54 @@ fun is_arith_thm thm =
 
 type ctxt = thm list;
 
+val False = Term.mk_const{Name = "F", Ty = Type.bool}
 val ARITH = EQT_ELIM o ARITH_CONV;
 
 fun CTXT_ARITH thms tm =
-  if (type_of tm = Type.bool) andalso (is_arith tm) then
-     let val context = map concl thms
-         fun try gl =
-           let val gl' = list_mk_imp(context,gl)
-	   in rev_itlist (C MP) thms (ARITH gl')
-           end
-	 val thm = EQT_INTRO (try tm)
-	     handle HOL_ERR _ => EQF_INTRO (try(mk_neg tm))
-     in trace(1,PRODUCE(tm,"ARITH",thm)); thm
-     end
-   else if (type_of tm = num_ty) then
-     let val reduction = linear_reduction tm
-     in if (reduction = tm)
-        then failwith "CTXT_ARITH: no reduction possible"
-        else
-          let val context = map concl thms
-              val gl = list_mk_imp(context,mk_eq(tm,reduction))
-	      val thm = rev_itlist (C MP) thms (ARITH gl)
-          in trace(1,PRODUCE(tm,"ARITH",thm)); thm
-          end
-     end
-   else failwith "CTXT_ARITH: not applicable";
+  if
+    (type_of tm = Type.bool) andalso
+    (is_arith tm orelse (tm = False andalso not (null thms)))
+  then let
+    val context = map concl thms
+    fun try gl = let
+      val gl' = list_mk_imp(context,gl)
+    in
+      rev_itlist (C MP) thms (ARITH gl')
+    end
+    val thm = EQT_INTRO (try tm)
+      handle (e as HOL_ERR _) =>
+        if tm <> False then EQF_INTRO (try(mk_neg tm)) else raise e
+  in
+    trace(1,PRODUCE(tm,"ARITH",thm)); thm
+  end
+  else
+    if (type_of tm = num_ty) then let
+      val reduction = linear_reduction tm
+    in
+      if (reduction = tm) then
+        failwith "CTXT_ARITH: no reduction possible"
+      else let
+        val context = map concl thms
+        val gl = list_mk_imp(context,mk_eq(tm,reduction))
+        val thm = rev_itlist (C MP) thms (ARITH gl)
+      in
+        trace(1,PRODUCE(tm,"ARITH",thm)); thm
+      end
+    end
+    else failwith "CTXT_ARITH: not applicable";
 
-val (CACHED_ARITH,arith_cache) =
-  let fun check tm =
-      let val ty = type_of tm
-      in (ty = num_ty orelse (ty=Type.bool andalso is_arith tm))
-      end;
-  in  CACHE (check,CTXT_ARITH)
+val (CACHED_ARITH,arith_cache) = let
+  fun check tm = let
+    val ty = type_of tm
+  in
+    ty = num_ty orelse (ty=Type.bool andalso (is_arith tm orelse tm = False))
   end;
+in
+  CACHE (check,CTXT_ARITH)
+  (* the check function determines whether or not a term might be handled
+     by the decision procedure -- we want to handle F, because it's possible
+     that we have accumulated a contradictory context. *)
+end;
 
 (* This needs to be done more systematically! *)
 local open arithmeticTheory
@@ -291,7 +306,6 @@ end;
 
 val a_v = --`NUMERAL a`--
 val b_v = --`NUMERAL b`--
-val zero = --`0`--
 val SUC = --`SUC`--
 val x = Psyntax.mk_var("x", ==`:num`==)
 val y = Psyntax.mk_var("y", ==`:num`==)
@@ -313,6 +327,7 @@ fun mk_redconv op_t = mk_redconv0 (list_mk_comb(op_t, [x, y]))
 val ARITH_ss = simpLib.SIMPSET
     {convs = [], rewrs = arithmetic_rewrites, congs = [],
      filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
+
 
 val REDUCE_ss = simpLib.SIMPSET
   {convs = map mk_redconv [--`$*`--, --`$+`--, --`$-`--,
