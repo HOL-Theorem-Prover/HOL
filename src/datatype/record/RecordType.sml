@@ -338,7 +338,7 @@ in
        will both be empty.  In this case, we don't want to apply LIST_CONJ
        to them *)
       val updcanon_thm =
-        if (List.length thms > 0) then
+        if (List.length upd_canon_thms > 0) then
           save_thm(typename^"_updcanon",
                    (LIST_CONJ (map GEN_ALL upd_canon_thms)))
         else
