@@ -9,11 +9,9 @@ in
  *)
 exception No_match;
 
-fun match_const (bds,tbds) cst cty c =
-  let val {Name,Ty} = dest_const c in
-  if cst=Name then (bds, Type.type_reduce cty Ty tbds)
-  else raise No_match
-  end
+(* p and pc are both constants *)
+fun match_const (bds,tbds) pc c =
+  (bds, snd (term_reduce pc c ([],tbds)))
   handle HOL_ERR _ => raise No_match
 ;
 
@@ -34,15 +32,15 @@ fun match_var (bds,tbds) var arg =
  * argument (bds), or a No_match exception.
  *)
 
-fun match_list bds (pat::pats) (arg::args) =
+fun match_list bds (pat :: pats) (arg :: args) =
       match_list (match_solve bds pat arg) pats args
   | match_list bds []          []          = bds
   | match_list _   _           _           = raise DEAD_CODE "match_list"
 
 and match_solve bds (Pvar var)           arg = match_var bds var arg
-  | match_solve bds (Papp{Name,Ty,Args=pargs}) (_,CST{Head,Args,...}) =
+  | match_solve bds (Papp{Head=phead,Args=pargs}) (_,CST{Head,Args,...}) =
       if (length pargs) = (length Args)
-      then match_list (match_const bds Name Ty Head) pargs Args
+      then match_list (match_const bds phead Head) pargs Args
       else raise No_match
   | match_solve _ _ _ = raise No_match
 ;
@@ -89,11 +87,10 @@ fun del_ty_sub theta = del theta []
 end;
 
 
-(* TODO: reverse order of quantified vars to avoid rev *)
 fun inst_rw {Rule=RW{thm,rhs,...}, Inst=(bds,tbds)} =
-  let fun inst_one_var ((tm,v),(thm,lv)) = (Spec tm thm, v::lv)
+  let fun inst_one_var ((tm,v),(thm,lv)) = (Spec tm thm, v :: lv)
       val tysub = del_ty_sub tbds
-      val tirhs = inst_dt tysub rhs
+      val tirhs = inst_dterm tysub rhs
       val tithm = INST_TYPE tysub thm
       val (spec_thm,venv) = Array.foldl inst_one_var (tithm,[]) bds in
   {Thm=spec_thm, Residue=mk_clos(venv,tirhs)}
@@ -102,10 +99,9 @@ fun inst_rw {Rule=RW{thm,rhs,...}, Inst=(bds,tbds)} =
 
 
 (* TODO: match type in from_term? *)
-fun reduce_cst {Head, Args, Rws=Try{Ty,Rws,Tail}} =
-      (let val inst =
- 	     Type.match_type Ty (type_of Head)
- 	     handle HOL_ERR _ => raise No_match
+fun reduce_cst {Head, Args, Rws=Try{Hcst,Rws,Tail}} =
+      (let val (_,inst) = match_term Hcst Head
+                          handle HOL_ERR _ => raise No_match
  	   val rule_inst = (try_rwn inst Args) Rws in
        LEFT (inst_rw rule_inst)
        end

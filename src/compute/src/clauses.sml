@@ -4,9 +4,9 @@ load "rules";
 local open HolKernel rules
 in
 
-(* The functions in this module (except [from_term]) are called only to
- * build the database of rewrite rules. Therefore, optimisation is not
- * so important.
+(* The functions in this module (except [from_term] and [inst_dterm]) are
+ * called only to build the database of rewrite rules. Therefore,
+ * optimisation is not so important.
  * 
  * [from_term] is the first step of normalisation, and it is not called
  * later on.
@@ -25,7 +25,7 @@ fun CL_ERR function message =
  *)
 datatype pattern =
     Pvar of int
-  | Papp of {Name:string, Ty:Type.hol_type, Args:pattern list}
+  | Papp of { Head : term, Args : pattern list}
 ;
 
 fun check_arg_form trm =
@@ -38,12 +38,10 @@ fun check_arg_form trm =
     else if (is_var t) andalso (stk=[]) then
       if mem t free then raise CL_ERR "check_arg_form" "non linear pattern"
       else (t::free, Pvar (length free))
-    else if is_const t then
-      let val {Name,Ty} = dest_const t in
-      (free, Papp{Name=Name, Ty=Ty, Args=rev stk}) end
+    else if is_const t then (free, Papp{Head=t, Args=rev stk})
     else raise CL_ERR "check_arg_form" "ill-formed pattern"
   in case chk trm [] [] of
-       (fv,Papp{Name,Ty,Args}) => (rev fv,Name,Ty,Args)
+       (fv,Papp{Head,Args}) => (rev fv,Head,Args)
      | _ => raise CL_ERR "check_arg_form" "ill-formed pattern"
   end
 ;
@@ -89,24 +87,23 @@ fun appl(App(a,l1),arg) = App(a,arg::l1)
 ;
 
 (* Type variable instantiation in dterm *)
-fun tyi_dt tysub (Cst(c,db)) = Cst(Term.inst tysub c, db)
-  | tyi_dt tysub (App(h,l)) = App(tyi_dt tysub h, map (tyi_dt tysub) l)
-  | tyi_dt tysub (Abs v) = Abs(tyi_dt tysub v)
-  | tyi_dt _ v = v
-;
-
-fun inst_dt tysub v = if null tysub then v else tyi_dt tysub v;
-
+local fun tyi_dt tysub (Cst(c,db)) = Cst(Term.inst tysub c, db)
+        | tyi_dt tysub (App(h,l)) = App(tyi_dt tysub h, map (tyi_dt tysub) l)
+  	| tyi_dt tysub (Abs v) = Abs(tyi_dt tysub v)
+  	| tyi_dt _ v = v
+in
+fun inst_dterm [] v = v
+  | inst_dterm tysub v = tyi_dt tysub v
+end;
 
 
 datatype db =
     EndDb
-  | Try of { Ty : hol_type, Rws : rewrite list, Tail : db }
+  | Try of { Hcst : term, Rws : rewrite list, Tail : db }
   | NeedArg of db
 
 and rewrite =
-    RW of { cst: string,        (* constant which the rule applies to *)
-	    cty: Type.hol_type, (* type of the constant *)
+    RW of { cst: term,          (* constant which the rule applies to *)
             lhs: pattern list,  (* patterns = constant args in lhs of thm *)
 	    rhs: db dterm,
 	    env: (term * db fterm) array,
@@ -114,18 +111,21 @@ and rewrite =
             thm: thm }          (* thm we use for rewriting *)
 ;
 
-fun add_in_db (n,ty,rw,EndDb) =
-      funpow n NeedArg (Try{Ty=ty, Rws=[rw], Tail=EndDb})
-  | add_in_db (n,ty,rw,Try{Ty,Rws,Tail}) =
-      if n=0 andalso ty=Ty then Try{ Ty=Ty, Rws=rw::Rws, Tail=Tail }
-      else Try { Ty=Ty, Rws=Rws, Tail=add_in_db(n,ty,rw,Tail) }
-  | add_in_db (0,ty,rw,db as (NeedArg _)) =
-      Try{ Ty=ty, Rws=[rw], Tail=db }
-  | add_in_db (n,ty,rw,NeedArg tail) =
-      NeedArg(add_in_db(n-1,ty,rw,tail))
+fun add_in_db (n,cst,rw,EndDb) =
+      funpow n NeedArg (Try{Hcst=cst, Rws=[rw], Tail=EndDb})
+  | add_in_db (n,cst,rw,Try{Hcst,Rws,Tail}) =
+      if n=0 andalso cst=Hcst then Try{ Hcst=Hcst, Rws=rw::Rws, Tail=Tail }
+      else Try { Hcst=Hcst, Rws=Rws, Tail=add_in_db(n,cst,rw,Tail) }
+  | add_in_db (0,cst,rw,db as (NeedArg _)) =
+      Try{ Hcst=cst, Rws=[rw], Tail=db }
+  | add_in_db (n,cst,rw,NeedArg tail) =
+      NeedArg(add_in_db(n-1,cst,rw,tail))
 ;
 
-fun key_of (RW{cst, lhs, cty,...}) = (cst, length lhs, cty)
+fun key_of (RW{cst, lhs, ...}) =
+  let val {Name,...} = dest_const cst in
+  (Name, length lhs, cst)
+  end
 ;
 
 
@@ -164,11 +164,10 @@ fun from_term rws env t =
  *)
 fun mk_rewrite rws eq_thm =
   let val {lhs,rhs} = dest_eq (concl eq_thm)
-      val (fv,cst,ty,pats) = check_arg_form lhs 
+      val (fv,cst,pats) = check_arg_form lhs 
       val gen_thm = foldr (uncurry GEN) eq_thm fv
       val rhsc = from_term rws (rev fv) rhs
   in RW{ cst=cst,
-	 cty=ty,
 	 lhs=pats,
 	 rhs=rhsc,
 	 env=Array.array(length fv,(lhs,NEUTR)),
