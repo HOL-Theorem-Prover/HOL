@@ -39,7 +39,7 @@ symbol, we will use the hash (\#) to represent this in the logic:
 We also want the \# to be an infix, so we set its fixity to be a tight
 left-associative infix:
 \begin{session}\begin{verbatim}
-- set_fixity ("#", Infixl 1100);
+- set_fixity "#" (Infixl 1100);
 > val it = () : unit
 \end{verbatim}\end{session}
     Finally, there's one last piece of book-keeping to be done for our
@@ -86,7 +86,7 @@ In HOL, we can capture this relation with an inductive definition.
 First we set our arrow symbol up as an infix to make everything that
 bit prettier:
 \begin{session}\begin{verbatim}
-- set_fixity ("-->", Infix(NONASSOC, 510));
+- set_fixity "-->" (Infix(NONASSOC, 510));
 > val it = () : unit
 \end{verbatim}\end{session}
     (By choosing to make our arrow symbol non-associative, we make it
@@ -777,7 +777,7 @@ Our new relation allows for any number of reductions to occur in
 parallel.  We use the \texttt{-||->} symbol to indicate parallel
 reduction because of its own parallel lines:
 \begin{session}\begin{verbatim}
-- set_fixity("-||->", Infix(NONASSOC, 510))
+- set_fixity "-||->"  (Infix(NONASSOC, 510));
 > val it = () : unit
 \end{verbatim}\end{session}
     Then we can define parallel reduction itself.  The rules look very
@@ -859,7 +859,7 @@ definitions that it stores to disk.  With symbolic names it doesn't
 know how to do this.  The first parameter to \texttt{xDefine} is an
 alpha-numeric ``stem'' which provides the name to use.
 \begin{session}\begin{verbatim}
-- set_fixity("-->*", Infix(NONASSOC, 510));
+- set_fixity "-->*" (Infix(NONASSOC, 510));
 > val it = () : unit
 
 - val RTCredn_def = xDefine "RTCredn" `$-->* = RTC $-->`;
@@ -869,7 +869,7 @@ Definition has been stored under "RTCredn_def".
 We do exactly the same thing for the reflexive and transitive closure
 of our parallel reduction.
 \begin{session}\begin{verbatim}
-- set_fixity("-||->*", Infix(NONASSOC, 510));
+- set_fixity "-||->*" (Infix(NONASSOC, 510));
 > val it = () : unit
 
 - val RTCpredn_def = xDefine "RTCpredn" `$-||->* = RTC $-||->`;
