@@ -187,21 +187,22 @@ end
 
 (*---------------------------------------------------------------------------
  * Identifiers work as follows: look for the string in the scope;
- * if it's there, put the var. Otherwise, the string might be a constant that
- * we intend to parse as a free var. Otherwise, the string might be a constant;
- * look in the symbol table. If it's there, rename any type variables in
- * its binding and make a Const out of it. Otherwise, it's not in the scope
- * and not in the symtab, hence is a free variable. Generate a new type
- * variable and bind the term variable to it in E; also we return a var
- * that has the new type variable as its type.
+ * if it's there, put the bound var.
+ * Failing that, check to see if the string might be overloaded.
+ *
+ * If the string isn't overloaded, but wants to be a (necessarily
+ * overloaded) record function, then raise an error.
+ *
+ * If the string might be a string constant, try to make it as such, and
+ * if this fails, say that string literals are not OK
+ *
+ * If the string is a known constant, make it as such, otherwise it's a
+ * free variable.
  *
  * Free vars are placed in the "free" part of the environment; this is a
  * set. Bound vars are placed at the front of the "scope". When we come out
  * of an Abs, we return the scope in effect when entering the Abs, but the
  * "free"s include new ones found in the body of the Abs.
- *
- * Note: this code should maybe check whether the prospective identifier is a
- * reserved word or not.
  *---------------------------------------------------------------------------*)
 
 fun make_const s E = (gen_const s, E)
@@ -211,20 +212,25 @@ fun make_atom (oinfo, kcs) s E = make_bvar(s,E)
     if Overload.is_overloaded oinfo s then
       (gen_overloaded_const oinfo s, E)
     else
-      if not (Lib.mem s kcs) then
-        make_free_var  (s, E)
-      else
-        if String.isPrefix recsel_special s then
+      case
+        List.find (fn rfn => String.isPrefix rfn s)
+        [recsel_special, recupd_special, recfupd_special]
+      of
+        SOME rfn =>
           raise ERROR "make_atom"
-            ("Record field "^String.extract(s, size recsel_special, NONE)^
+            ("Record field "^String.extract(s, size rfn, NONE)^
              " not registered")
-        else
-          (gen_const s, E)
-          handle HOL_ERR _ =>
-            if (Lexis.is_string_literal s) then
+      | NONE =>
+          if (Lexis.is_string_literal s) then
+            (gen_const s, E)
+            handle HOL_ERR _ =>
               raise ERROR "make_atom"
                 "string literals not lexically OK until stringTheory loaded"
-            else make_free_var (s,E);
+          else
+            if Lib.mem s kcs then
+              (gen_const s, E)
+            else
+              make_free_var  (s, E)
 
 (*---------------------------------------------------------------------------
  * Combs
