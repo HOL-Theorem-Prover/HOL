@@ -13,8 +13,8 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = "/local/scratch/kxs/143";
-val holdir   = "/local/scratch/kxs/working";
+val mosmldir = "/homes/kl216/lang/ml/mosml"
+val holdir   = "/local/scratch/mn200/Work/hol98"
 val OS       = "unix";    (* Operating system; alternatives are: winNT      *)
 val CC       = "gcc";     (* C compiler (for building quote filter)         *)
 
@@ -57,7 +57,7 @@ val SRCDIRS =
   "src/taut", "src/hol88", "src/ind_def/src", "src/IndDef",
   "src/datatype/parse", "src/datatype/equiv", "src/datatype/basicrec",
   "src/utils", "src/datatype/mutrec", "src/datatype/nestrec",
-  "src/datatype/mutual", "src/datatype/record", "src/datatype",
+  "src/datatype/mutual", "src/datatype", "src/datatype/record",
   "src/decision/src", "src/tfl/src", "src/unwind",
   "src/res_quan/theories", "src/res_quan/src", "src/set/src",
   "src/pred_set/src", "src/string/theories", "src/string/src",
