@@ -22,8 +22,8 @@ exception HOL_ERR of error_record;
      Curried version of HOL_ERR; can be more comfortable to use.
  ---------------------------------------------------------------------------*)
 
-fun mk_HOL_ERR s1 s2 s3 = 
-  HOL_ERR{origin_structure = s1, 
+fun mk_HOL_ERR s1 s2 s3 =
+  HOL_ERR{origin_structure = s1,
           origin_function = s2,
           message = s3};
 
@@ -31,7 +31,7 @@ val ERR = mk_HOL_ERR "Feedback";  (* local to this file *)
 
 
 (*---------------------------------------------------------------------------
-     Misc. utilities 
+     Misc. utilities
  ---------------------------------------------------------------------------*)
 
 val output = Portable.output
@@ -63,14 +63,14 @@ val WARNING_outstream = ref TextIO.stdOut;
  *---------------------------------------------------------------------------*)
 
 fun format_ERR {message,origin_function,origin_structure} =
-     String.concat["\nException raised at ", 
+     String.concat["\nException raised at ",
                    origin_structure,".", origin_function,
                    ":\n",message,"\n"];
 
 fun format_MESG s = String.concat["<<HOL message: ", s, ">>\n"];
 
 fun format_WARNING structName fnName mesg =
-  String.concat["<<HOL warning: ", 
+  String.concat["<<HOL warning: ",
                 structName, ".", fnName, ": ", mesg, ">>\n"];
 
 val ERR_to_string     = ref format_ERR
@@ -83,7 +83,7 @@ fun output_ERR s =
   else ()
 
 (*---------------------------------------------------------------------------
-    Makes an informative message from an exception. Subtlety: if we see 
+    Makes an informative message from an exception. Subtlety: if we see
     that the exception is an Interrupt, we raise it.
  ---------------------------------------------------------------------------*)
 
@@ -94,15 +94,15 @@ fun exn_to_string (HOL_ERR sss)     = !ERR_to_string sss
 fun Raise e = (output_ERR (exn_to_string e); raise e)
 
 local val err1 = mk_HOL_ERR "??" "??" "fail"
-      val err2 = mk_HOL_ERR "??" "failwith" 
+      val err2 = mk_HOL_ERR "??" "failwith"
 in
 fun fail() = raise err1
 fun failwith s = raise (err2 s);
 end;
 
 (*---------------------------------------------------------------------------
-    Takes an exception, grabs its message as best as possible, then 
-    make a HOL exception out of it. Subtlety: if we see that the 
+    Takes an exception, grabs its message as best as possible, then
+    make a HOL exception out of it. Subtlety: if we see that the
     exception is an Interrupt, we raise it.
  ---------------------------------------------------------------------------*)
 
@@ -128,40 +128,107 @@ fun HOL_WARNING s1 s2 s3 =
  * Traces, numeric flags; the higher setting, the more verbose the output.   *
  *---------------------------------------------------------------------------*)
 
-val trace_list = ref ([]:(string * (int ref * int)) list)
+datatype tracefns = TRFP of {get : unit -> int, set : int -> unit}
+fun trfp_set (TRFP{set,...}) = set
+fun trfp_get (TRFP{get,...}) = get()
 
-fun register_trace nm r =
-  case List.find (fn (s, _) => s = nm) (!trace_list) 
-   of NONE   => trace_list := (nm, (r, !r))::(!trace_list)
+fun ref2trfp r = TRFP {get = (fn () => !r), set = (fn i => r := i)}
+
+type trace_record =
+  {name : string, value : tracefns, default : int, maximum : int}
+
+val trace_list = ref ([]: trace_record list);
+
+fun find_record n = List.find (fn r => #name r = n) (!trace_list)
+
+fun register_trace (nm, r, max) =
+  if !r < 0 orelse max < 0 then
+    raise ERR "register_trace" "Can't have trace values less than zero."
+  else
+    case find_record nm of
+      NONE   => trace_list := {name = nm, value = ref2trfp r,
+                               default =  !r, maximum = max}::(!trace_list)
     | SOME _ => raise ERR "register_trace"
-                 ("Already a trace "^quote nm^" registered.");
+        ("Already a trace "^quote nm^" registered.");
 
-fun traces() = 
-   map (fn (n,(r,d)) => {name=n, trace_level = !r, default=d})
-       (!trace_list);
+fun register_ftrace (nm, (get,set), max) = let
+  val default = get()
+in
+  if default < 0 orelse max < 0 then
+    raise ERR "register_ftrace" "Can't have trace values less than zero."
+  else
+    case find_record nm of
+      NONE => trace_list := {name = nm, value = TRFP{get = get, set = set},
+                             default = default, maximum = max}::(!trace_list)
+    | SOME _ =>
+        raise ERR "register_ftrace"
+          ("Already a trace "^quote nm^" registered.")
+end
+
+fun register_btrace (nm, bref) =
+  case find_record nm of
+    NONE => trace_list := {name = nm,
+                           value = TRFP{get= (fn () => if !bref then 1 else 0),
+                                        set= (fn i => bref := (i > 0))},
+                           default = if !bref then 1 else 0,
+                           maximum = 1}::(!trace_list)
+  | SOME _ =>
+      raise ERR "register_btrace" ("Already a trace "^quote nm^" registered.");
+
+fun traces() =
+  Listsort.sort (fn (r1, r2) => String.compare (#name r1, #name r2))
+  (map (fn {name = n, value, default = d,maximum} =>
+        {name=n, trace_level = trfp_get value, default=d, max = maximum})
+   (!trace_list));
 
 fun set_trace nm newvalue =
- case assoc1 nm (!trace_list)
-  of SOME(_,(r,_)) => r := newvalue
-   | NONE => raise ERR "set_trace" ("No trace "^quote nm^" is registered");
+ case find_record nm of
+   SOME{value, maximum,...} =>
+     if newvalue > maximum then
+       raise ERR "set_trace" ("Trace "^quote nm^" can't be set that high.")
+     else if newvalue < 0 then
+       raise ERR "set_trace" ("Trace "^quote nm^" can't be set less than 0.")
+     else
+       trfp_set value newvalue
+ | NONE => raise ERR "set_trace" ("No trace "^quote nm^" is registered");
 
-fun reset_trace nm = 
-  case assoc1 nm (!trace_list)
-   of SOME(_,(r,d)) => r := d
-    | NONE => raise ERR "reset_trace" 
+fun reset_trace nm =
+  case find_record nm
+   of SOME{value, default,...} => trfp_set value default
+    | NONE => raise ERR "reset_trace"
                 ("No trace "^quote nm^" is registered");
 
-fun reset_traces () = List.app (fn (_, (r, d)) => r := d) (!trace_list)
+fun reset_traces () =
+  List.app (fn {value,default,...} => trfp_set value default) (!trace_list)
+
+fun current_trace s =
+  case find_record s of
+    SOME {value,...} => trfp_get value
+  | NONE => raise ERR "current_trace" ("No trace "^quote s^" is registered");
 
 fun trace (nm,i) f x =
-  case assoc1 nm (!trace_list)
-   of NONE => raise ERR "trace" ("No trace "^quote nm^" is registered")
-    | SOME(_,(r,_)) => 
-        let val init = !r
-            val _ = r := i
-            val y = f x handle e => (r := init; raise e)
-            val _ = r := init
-        in y
-        end;
+  case find_record nm of
+    NONE => raise ERR "trace" ("No trace "^quote nm^" is registered")
+  | SOME{value,maximum,...} =>
+      if i > maximum then
+        raise ERR "trace" ("Trace "^quote nm^" can't be set that high.")
+      else if i < 0 then
+        raise ERR "set_trace" ("Trace "^quote nm^" can't be set less than 0.")
+      else let
+        val init = trfp_get value
+        val _ = trfp_set value i
+        val y = f x handle e => (trfp_set value init; raise e)
+        val _ = trfp_set value init
+      in
+        y
+      end;
+
+fun get_tracefn nm =
+  case find_record nm of
+    NONE => raise ERR "get_tracefn" ("No trace "^quote nm^" is registered")
+  | SOME {value = TRFP{get,...},...} => get
+
+val _ = register_btrace ("assumptions", Globals.show_assums);
+val _ = register_btrace ("numeral types", Globals.show_numeral_types);
 
 end  (* Feedback *)

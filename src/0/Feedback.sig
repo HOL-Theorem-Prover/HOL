@@ -30,7 +30,7 @@ sig
     val format_ERR        : error_record -> string
     val format_MESG       : string -> string
     val format_WARNING    : string -> string -> string -> string
-   
+
     val ERR_to_string     : (error_record -> string) ref
     val MESG_to_string    : (string -> string) ref
     val WARNING_to_string : (string -> string -> string -> string) ref
@@ -42,9 +42,15 @@ sig
     val HOL_MESG          : string -> unit
     val HOL_WARNING       : string -> string -> string -> unit
 
-    val traces            : unit -> {name:string, 
+    val traces            : unit -> {name:string, max : int,
                                      trace_level:int, default:int} list
-    val register_trace    : string -> int ref -> unit
+    val register_trace    : (string * int ref * int) -> unit
+    val register_ftrace   :
+      (string * ((unit -> int) * (int -> unit)) * int) -> unit
+    val register_btrace   : (string * bool ref) -> unit
+
+    val current_trace     : string -> int
+    val get_tracefn       : string -> unit -> int
     val set_trace         : string -> int -> unit
     val reset_trace       : string -> unit
     val reset_traces      : unit -> unit
