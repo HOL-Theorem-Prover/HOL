@@ -114,7 +114,10 @@ new_definition("CONS_DEF",
 
 val _ = add_listform {separator = ";", leftdelim = "[", rightdelim = "]",
                       cons = "CONS", nilstr = "NIL"};
-val _ = add_rule ("CONS", Infixr 300, [term_grammar.TOK "::"])
+val _ = add_rule {term_name = "CONS", fixity = Infixr 300,
+                  pp_elements = [TOK "::"],
+                  paren_style = OnlyIfNecessary,
+                  block_style = (AroundSameName, (PP.INCONSISTENT, 2))};
 
 (* ---------------------------------------------------------------------*)
 (* Now, prove the axiomatization of lists.				*)
