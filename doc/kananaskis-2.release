@@ -40,6 +40,10 @@ Bugs fixed:
   * Many, many documentation typos and bugs were fixed.  (Thanks to
     Carl Witty for the report of most of these.)
 
+  * Two fixes for the simplifier's implementation of congruence rules.
+    With deep nesting, congruence rules could lead to an exponential
+    increase in time taken.  Also, terms that included variables used
+    in a rule's statement could cause the rule to fail to fire.
 
 New features:
 -------------
@@ -57,6 +61,18 @@ New features:
     the underlying flag back to interactive, if you want to see
     "interactive mode" output.
 
+  * Holmake now supports the use of user-specified variables, in a
+    manner analogous to that done by traditional make implementations.
+    For example, one can define a variable OBJS,
+      OBJS = foo bar baz
+    and then refer to this variable elsewhere by writing
+      $(OBJS)
+    Holmake also provides some functions like those in GNU make for
+    manipulating text (performing pattern-based substitutions, for
+    example).
+
+  * Performance when defining large record types (where the number of
+    fields is greater than 10), is now much improved.
 
 New theories:
 -------------
@@ -71,7 +87,24 @@ New tools:
   * A new first-order proof tactic (called METIS_TAC) that uses
     ordered resolution and paramodulation, specifically tailored for
     subgoals that require equality reasoning.
- 
+
   * A 'boolification' tool that automatically defines functions that map
     datatypes to boolean vectors. These kind of functions are needed
     for sending HOL subgoals to a model-checker or SAT solver.
+
+Incompatibilities:
+------------------
+
+  * Changes to the term lexer mean that comment tokens "(*" and "*)"
+    that appear within terms can need to be more carefully separated
+    from other symbolic and 'aggregating' characters such as other
+    brackets.  In particular, strings like "((*" and "[(*" will no
+    longer be tokenised so as to reveal comment tokens.
+
+  * Rewrite rules for arithmeticTheory's MIN and MAX constants have
+    been made more general; they will now match more often.  For
+    example, MIN_LE has changed from
+       m <= MIN m n = m <= n
+    to
+       p <= MIN m n = p <= m /\ p <= n
+
