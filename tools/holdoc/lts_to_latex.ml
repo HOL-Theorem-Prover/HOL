@@ -576,9 +576,10 @@ let msym v s = (* munge symbolic identifier *)
 
 let mindent n = (* munge an indentation of level n *)
   let rec ntimes n x =
-    match n with
-      0 -> []
-    | n -> x :: ntimes (n-1) x in
+    if n <= 0 then
+      []
+    else
+      x :: ntimes (n-1) x in
   let m = (n-5) / 2 in
   String.concat "" (ntimes m "\\quad") ^ " "
 
