@@ -102,6 +102,9 @@ fun ERR func mesg =
      origin_function = func,
      message = mesg};
 
+val OR  = --`$\/`--;
+val AND = --`$/\`--;
+
 
 (* ---------------------------------------------------------------------*)
 (* mkvars : generate sensible variable names for the arguments to the   *)
@@ -237,14 +240,11 @@ fun QUANTS_ALPHA_CONV [] = ALL_CONV
 (*                                                                      *)
 (* ---------------------------------------------------------------------*)
 
-local val AND = --`/\`--
-in
 fun CONJS_CONV conv tm =
    let val {conj1,conj2} = dest_conj tm
    in MK_COMB(AP_TERM AND (conv conj1), CONJS_CONV conv conj2)
    end
    handle _ => conv tm
-end;
 
 (* ---------------------------------------------------------------------*)
 (* DISJS_CONV : apply a given conversion to a sequence of conjuncts     *)
@@ -255,15 +255,13 @@ end;
 (*                                                                      *)
 (* ---------------------------------------------------------------------*)
 
-local
-val OR = --`\/`--
-in
+
 fun DISJS_CONV conv tm =
    let val {disj1,disj2} = dest_disj tm
    in MK_COMB(AP_TERM OR (conv disj1), DISJS_CONV conv disj2)
    end
    handle _ => conv tm
-end;
+
 
 (* ---------------------------------------------------------------------*)
 (* RENAME_FORALL_VARS_CONV : rename the variables used in a sequence of *)

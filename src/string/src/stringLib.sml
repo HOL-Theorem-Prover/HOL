@@ -53,7 +53,7 @@ local val Estr = Term`""`
                  in fn t1 => fn t2 => MK_COMB(AP_TERM c t1,t2) end
       fun check c = #Tyop (dest_type(type_of c)) = "string"
       val Tand = CONJUNCT1 (SPEC b AND_CLAUSES)
-      val mkC =  AP_THM o (AP_TERM (--`/\`--)) 
+      val mkC =  AP_THM o (AP_TERM (--`$/\`--)) 
 fun conv l r = 
      if (l=Estr) 
      then let 

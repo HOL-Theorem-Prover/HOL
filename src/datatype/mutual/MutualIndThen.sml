@@ -22,6 +22,7 @@ fun MUTUAL_INDUCT_THEN_ERR{function,message} =
     Exception.HOL_ERR{origin_structure = "Mutual_induct_then",
 		      origin_function = function,
 		      message = message}
+val AND = --`$/\`--;
 
 (* ---------------------------------------------------------------------*)
 (* Internal function: 							*)
@@ -35,10 +36,6 @@ fun MUTUAL_INDUCT_THEN_ERR{function,message} =
 
 fun MOVEQS tys tm = 
    if not (is_forall tm) then
-(*
-         raise HOL_ERR{origin_function = "MOVEQS",origin_structure = "MUTUAL",
-					         message = "not a forall"}
-*)
          raise MUTUAL_INDUCT_THEN_ERR{function = "MOVEQS",
 					         message = "not a forall"}
    else
@@ -292,17 +289,15 @@ end;
 (* Applies the conversion GALPH to each conjunct in a sequence.          *)
 (* --------------------------------------------------------------------- *)
 
-local 
-val AND = --`$/\`--
-in
+
 fun f {conj1,conj2} = (GALPH conj1, GALPHA conj2)
 and GALPHA tm = 
    let val (c,cs) = f(dest_conj tm) 
    in
    MK_COMB(AP_TERM AND c, cs)
    end
-   handle _ => GALPH tm
-end;
+   handle _ => GALPH tm;
+
 
 (* --------------------------------------------------------------------- *)
 (* Internal function: mapshape                                           *)
@@ -323,8 +318,7 @@ fun mapshape [] _ _ =  [] |
 (* MUTUAL_INDUCT_THEN : general induction tactic for mutuallly recursive *)
 (*                      datatypes.                                       *)
 (* --------------------------------------------------------------------- *)
-local
-val bool = genvar (==`:bool`==)
+local val bool = genvar (Type`:bool`)
 
 fun MUTUAL_INDUCT_THEN1 th = 
    let val th' = REPAIR th

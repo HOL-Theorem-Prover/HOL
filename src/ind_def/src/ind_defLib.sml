@@ -31,6 +31,10 @@ fun IND_DEF_ERR{function,message} =
                 origin_function = function,
                 message = message};
 
+val OR  = --`$\/`--;
+val AND = --`$/\`--;
+val IMP = --`$==>`--;
+
 (* ===================================================================== *)
 (* INDUCTIVE DEFINITIONS.						 *)
 (* ===================================================================== *)
@@ -832,24 +836,17 @@ fun TACS Fn tm =
 (*									 *)
 (* --------------------------------------------------------------------- *)
 
-local
-val AND = --`$/\`--
-val IMP = --`$==>`--
-fun mkred Fn (c::cs) =
-   let val cfn = if (fst(strip_comb c) = Fn)
-                 then LIST_BETA_CONV
-                 else REFL
-   in
-   if (null cs)
-   then cfn
-   else let val rest = mkred Fn cs
+local fun mkred Fn (c::cs) =
+        let val cfn = if (fst(strip_comb c) = Fn) then LIST_BETA_CONV else REFL
         in
-        fn tm => let val {conj1,conj2} = dest_conj tm
-                 in
-                 MK_COMB(AP_TERM AND (cfn conj1),rest conj2)
-                 end
+          if (null cs) then cfn
+          else let val rest = mkred Fn cs
+               in
+                 fn tm => let val {conj1,conj2} = dest_conj tm
+                          in MK_COMB(AP_TERM AND (cfn conj1),rest conj2)
+                          end
+               end
         end
-   end
 in
 fun RED_CASE Fn pat =
    let val bdy = snd(strip_forall pat)
@@ -876,7 +873,7 @@ end;
 
 
 local
-val AND = --`$/\`--
+
 in
 fun APPLY_CASE [f] tm = f tm
   | APPLY_CASE (f::fs) tm =
@@ -885,19 +882,15 @@ fun APPLY_CASE [f] tm = f tm
      end
 end;
 
-local
-val IMP = --`$==>`--
-in
 fun RED_WHERE Fn body =
-   let val rfns = map (RED_CASE Fn) (strip_conj (#ant(dest_imp body)))
-   in fn stm =>
+  let val rfns = map (RED_CASE Fn) (strip_conj (#ant(dest_imp body)))
+  in fn stm =>
         let val {ant,conseq} = dest_imp stm
             val hthm = APPLY_CASE rfns ant
             val cthm = RAND_CONV LIST_BETA_CONV conseq
         in MK_COMB(AP_TERM IMP hthm,cthm)
         end
-   end
-end;
+  end;
 
 fun residue_assoc itm =
    let fun assc ([]:(term,term) subst) = NONE
@@ -1412,7 +1405,7 @@ fun derive_cases_thm (rules,ind) =
        val th = IMP_ANTISYM_RULE (DISCH HY a) b
        val ds = map (TRY_CONV REDUCE) (strip_disj(rand(concl th)))
        val red = end_itlist (fn t1 => fn t2 =>
-                               MK_COMB (AP_TERM (--`\/`--) t1, t2)) ds
+                               MK_COMB (AP_TERM OR t1, t2)) ds
    in GENL ps (GENL cvs (TRANS th red))
    end;
 

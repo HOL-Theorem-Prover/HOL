@@ -214,7 +214,7 @@ open Rsyntax   (* use records *)
     (* we pass ==:`num`== as ty_last_seen as it for sure will not be the
        return type of any of the constructors for our mutually
        recursive types *)
-    val types = get_types (cons_data, ==`:num`==, [])
+    val types = get_types (cons_data, Type`:num`, [])
 
     (* now we need to looks thru' def_data and figure out exactly
        what is there and what isn't *)
@@ -305,8 +305,8 @@ open Rsyntax   (* use records *)
 		       origin_function = "check_def",
 		       message = ("only some cases provided for function " ^
 			(term_name ftn))}
-    val one_ty = ==`:one`==
-    val one_tm = --`one`--
+    val one_ty = Type`:one`
+    val one_tm = Term`one`
 
     fun get_ftn_info ({cons, cons_args, result_type}::cons_data,
 		      def_datum::def_data,
@@ -352,7 +352,7 @@ open Rsyntax   (* use records *)
 
     (* again, pass ==`:num`== as a type that shouldn't be among the
        recursive types *)
-    val ftn_type_data = get_ftn_info (cons_data, def_cases, ==`:num`==, NONE)
+    val ftn_type_data = get_ftn_info (cons_data, def_cases, Type`:num`, NONE)
 
     (* now we need to construct the return functions from the data given *)
 

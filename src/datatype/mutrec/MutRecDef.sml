@@ -1276,7 +1276,7 @@ val New_Ty_Existence_Thm =
 
 
 val IfThenElse_Imp =
-    prove ((--`!A B. (B = (A => T | B)) = (A ==> B)`--),
+    prove ((--`!A B. (B = (if A then T else B)) = (A ==> B)`--),
 	   ((REPEAT STRIP_TAC )THEN
 	    (ASM_CASES_TAC (--`A:bool`--)) THEN
 	    (ASM_REWRITE_TAC [])))
@@ -1306,7 +1306,7 @@ end
 
 
 val lemma =
-    prove((--`!b f s:'a. ((b => f | s) = f) = ((f = s) \/ b)`--),
+    prove((--`!b f s:'a. ((if b then f else s) = f) = ((f = s) \/ b)`--),
 	  ((REPEAT GEN_TAC) THEN EQ_TAC THEN COND_CASES_TAC THEN
 	   (REWRITE_TAC []) THEN STRIP_TAC THEN (ASM_REWRITE_TAC[])))
 

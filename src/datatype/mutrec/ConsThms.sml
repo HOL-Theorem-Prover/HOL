@@ -81,7 +81,7 @@ val temp = map strip_forall
 val applied_cons_list = map (fn x => rand (lhs (snd x))) temp
 
 
-val divided_list = divide_list true applied_cons_list (==`:bool`==) [] []
+val divided_list = divide_list true applied_cons_list Type.bool [] []
 
     val temp = map (map (fn x => decompose (x, []))) divided_list
 
@@ -110,7 +110,7 @@ val cons_var_newvar_list = map add_differently_named_vars cons_var_list
 fun make_ineq cons1 x_args cons2 y_args =
     let val eq_term = mk_eq {lhs = list_mk_comb (cons1, x_args),
 			     rhs = list_mk_comb (cons2, y_args)}
-	val not_eq_term = mk_comb {Rator = --`~`--, Rand = eq_term}
+	val not_eq_term = mk_comb {Rator = --`$~`--, Rand = eq_term}
 	val temp_result = list_mk_forall (y_args, not_eq_term)
     in
 	list_mk_forall (x_args, temp_result)
@@ -163,7 +163,7 @@ val goals = map list_mk_conj filtered_list
    that return a different (natural) number
    when applied to items constructed with each constructor *)
 
-val num_ty = ==`:num`==
+val num_ty = Type`:num`
 fun mk_function_variable the_type =
     mk_var {Name = "dist_aux_ftn_"^(#Tyop (dest_type the_type)),
 	    Ty = mk_type {Tyop = "fun", Args = [the_type, num_ty]}}
@@ -280,7 +280,7 @@ val temp = map strip_forall
 
 val applied_cons_list = map (fn x => rand (lhs (snd x))) temp
 
-val divided_list = divide_list true applied_cons_list (==`:bool`==) [] []
+val divided_list = divide_list true applied_cons_list Type.bool [] []
 
 (* At this stage, I will eliminate from the list the constructors 
    that have no arguments, since they won't be needed in the theorem *)
@@ -327,7 +327,7 @@ fun mk_1_1_statement con x_vars y_vars =
     in
 	list_mk_forall (x_vars, forall_term)
     end
-val T_term = --`T`--
+val T_term = Term`T`
 
 fun mk_goal_for_one_type ([],[],[]) = T_term
   | mk_goal_for_one_type (con::[],x_vars::[],y_vars::[]) =
@@ -350,9 +350,7 @@ val goals = map mk_goal_for_one_type cons_var_newvar_list
    CON_argN. (But, if the constructor has only one argument, the argument
    extraction function will be called CON_arg.) *)
 
-val bool_ty = ==`:bool`==
-fun mk_fun_ty ty1 ty2 = 
-    mk_type {Tyop = "fun", Args = [ty1, ty2]}
+fun mk_fun_ty ty1 ty2 = mk_type {Tyop = "fun", Args = [ty1, ty2]}
 
 fun mk_ftn_var con suffix type_of_ftn =
     let val name = (#Name (dest_const con))^suffix
@@ -362,7 +360,7 @@ fun mk_ftn_var con suffix type_of_ftn =
 fun mk_hilbert the_type = 
     let val the_ftn = mk_abs {Bvar = mk_var {Name = "x", Ty = the_type},
 			      Body = T_term}
-	val hilbert_type = mk_fun_ty (mk_fun_ty the_type bool_ty) the_type
+	val hilbert_type = mk_fun_ty (mk_fun_ty the_type Type.bool) the_type
 	val hilbert_op = mk_const {Name = "@", Ty = hilbert_type}
     in
 	mk_comb {Rator = hilbert_op, Rand = the_ftn}
