@@ -171,7 +171,7 @@ process in it."
 
 (defun send-string-as-hol-goal (s)
   (let ((goal-string
-         (format  "goalstackLib.g `%s`" s)))
+         (format  "goalstackLib.g `%s` handle e => Raise e" s)))
     (send-raw-string-to-hol goal-string)
     (send-raw-string-to-hol "goalstackLib.set_backup 100;")))
 
