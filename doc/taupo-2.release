@@ -1,9 +1,10 @@
 Bugs fixed:
 -----------
   * Automatic dependency analysis in Holmake could get confused (in
-    the presence of unbalanced `` "tokens") and bail out without much
-    in the way of an error message.  Fixed at least one instance of
-    this problem.
+    the presence of unbalanced `` "tokens" or other lexical problems)
+    and bail out without much in the way of an error message.  Fixed
+    this so that the error is reported to the user and so that Holmake
+    can proceed to try to build other files.
 
   * HOLSimps.hol_ss had lost its pointwise elimination conversions
     (these simplified terms like ?x. .. /\ (x = f) /\ ... ).
@@ -15,8 +16,9 @@ Bugs fixed:
     the name of constants (e.g., S, K, I, T and F) failed.  (Don't
     ask.)
 
-  * Hol_datatype failed in bizarre ways when constructor names were
-    duplicated.  This error is now caught earlier and reported.
+  * Hol_datatype failed in bizarre ways when constructor or field
+    names (the latter in record types) were duplicated.  This error is
+    now caught earlier and reported.
 
   * Hol_datatype failed on nested recursive definitions when a type
     variable in the attempted definition was the same as the variable
@@ -28,6 +30,14 @@ Bugs fixed:
 
   * Type inference failed if it was required to guess more than 26
     type variables.
+
+  * The definitions of a new record type's functional update functions
+    (those that allow terms such as ``r with fld1 updated_by SUC``)
+    are now added to the set of simplification theorems in the
+    TypeBase.  These theorems are used by tools such as RW_TAC.
+
+  * Definitions of type size functions are made for nested recursive
+    types.
 
 New theories:
 -------------
