@@ -2,27 +2,26 @@ signature bossLib =
 sig
 
 local
-  type thm = Thm.thm
-  type term = Term.term
+  type thm      = Thm.thm
+  type term     = Term.term
   type hol_type = Type.hol_type
-  type fixity = Parse.fixity
-  type tactic = Abbrev.tactic
-  type simpset = simpLib.simpset
+  type fixity   = Parse.fixity
+  type tactic   = Abbrev.tactic
+  type simpset  = simpLib.simpset
+  type defn     = Defn.defn
   type 'a quotation = 'a Portable.frag list
 in
 
-  (* Define a datatype *)
+  (* Make definitions *)
   val Hol_datatype : hol_type quotation -> unit
-
-  (* Make a definition  *)
-  val Define  : term quotation -> thm
-  val primDefine : term -> fixity -> string -> thm
-  val Define_suffix : (string -> string) ref
+  val Hol_fun      : string -> term quotation -> defn
+  val Define       : term quotation -> thm
 
   (* Fetch the rewrite rules for a type. *)
   val type_rws : string -> thm list
 
   (* Case-splitting and induction operations *)
+
   val Cases     : tactic
   val Induct    : tactic
   val Cases_on  : term quotation -> tactic
@@ -31,11 +30,12 @@ in
   val measureInduct_on : term quotation -> tactic
 
   (* Various basic automated reasoners *)
+
   (* First order *)
   val PROVE     : thm list -> term quotation -> thm
   val PROVE_TAC : thm list -> tactic
 
-  (* cooperating decision procedures *)
+  (* Cooperating decision procedures *)
   val DECIDE     : term quotation -> thm
   val DECIDE_TAC : tactic
 
@@ -55,7 +55,7 @@ in
   val SPOSE_NOT_THEN : (thm -> tactic) -> tactic
 
   (* Support for assertional-style proofs *)
-  val by : term quotation * tactic -> tactic
+  val by  : term quotation * tactic -> tactic   (* infix *)
 end
 
 end;

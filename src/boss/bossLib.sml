@@ -21,6 +21,7 @@ open HolKernel Parse basicHol90Lib;
   type thm = Thm.thm
   type tactic = Abbrev.tactic
   type simpset = simpLib.simpset
+  type defn = Defn.defn
   type 'a quotation = 'a Portable.frag list
 
 infix THEN THENL ORELSE |->;
@@ -40,19 +41,180 @@ fun type_rws tyn = TypeBase.simpls_of (valOf (TypeBase.read tyn));
 val Hol_datatype = Datatype.Hol_datatype;
 
 
+(*---------------------------------------------------------------------------
+      Function definitions.
+ ---------------------------------------------------------------------------*)
+
+         
 (*---------------------------------------------------------------------------*
- * Non-datatype congruence rules need to be installed by hand. Congruence    *
- * rules derived from datatype definitions get handled automatically.        *
+ * Try to find the names of to-be-defined constants from a quotation.        *
+ * First, parse into type "parse_term", then look for names on the lhs       *
+ * of the definition.                                                        *
  *---------------------------------------------------------------------------*)
 
-val _ = Context.write_context [Thms.LET_CONG, Thms.COND_CONG];
+local open parse_term
+in
+fun dest_binop str =
+  let fun dest (COMB(COMB(VAR s, l),r)) 
+           = if s=str then (l,r) 
+             else raise BOSS_ERR "dest_binop" ("Expected a "^Lib.quote str)
+        | dest  _ = raise BOSS_ERR "dest_binop"  ""
+  in dest end
+fun dest_binder str =
+  let fun dest (COMB(VAR s, ABS p)) 
+           = if s=str then p
+             else raise BOSS_ERR "dest_binder" ("Expected a "^Lib.quote str)
+        | dest  _ = raise BOSS_ERR "dest_binder"  ""
+  in dest end
+fun ptm_dest_conj ptm   = dest_binop  "/\\" ptm
+fun ptm_dest_eq ptm     = dest_binop  "=" ptm
+fun ptm_dest_forall ptm = dest_binder "!" ptm
 
+fun ptm_dest_var(VAR s) = s
+  | ptm_dest_var _ =  raise BOSS_ERR "ptm_dest_comb" "Expected a VAR"
+
+fun ptm_dest_comb (COMB(l,r)) = (l,r)
+  | ptm_dest_comb   _ = raise BOSS_ERR "ptm_dest_comb" "Expected a COMB"
+end;
+
+fun ptm_is_eq tm = Lib.can ptm_dest_eq tm;
+
+
+fun ptm_strip dest =
+  let fun strip ptm =
+       let val (l,r) = dest ptm 
+       in l::strip r
+       end handle HOL_ERR _ => [ptm];
+  in strip
+  end;
+
+fun ptm_strip_conj ptm = ptm_strip ptm_dest_conj ptm;
+
+fun ptm_strip_comb ptm =
+   let fun strip ptm A =
+         let val (l,r) = ptm_dest_comb ptm 
+         in strip l (r::A)
+         end handle HOL_ERR _ => (ptm,A)
+  in strip ptm []
+  end;
+
+
+fun ptm_strip_binder dest =
+  let fun strip ptm =
+       let val (l,r) = dest ptm 
+           val (L,M) = strip r
+       in (l::L,M)
+       end handle HOL_ERR _ => ([],ptm)
+  in strip
+  end;
+fun ptm_strip_forall ptm = ptm_strip_binder ptm_dest_forall ptm;
+
+
+fun dollar s = "$"^s;
+fun drop_dollar s =
+   (if String.sub(s,0) = #"$"
+    then String.substring(s,1,String.size s)
+    else s)
+  handle _ => raise BOSS_ERR "drop_dollar" "unexpected string"
+
+fun dest_atom tm =
+  #Name(dest_var tm handle HOL_ERR _ => dest_const tm);
+
+fun preview qthing =
+ let fun preev (q as [QUOTE _]) =
+         let val ptm = Parse.parse_preTerm q
+             val eqs = ptm_strip_conj ptm
+             val L = map (fst o ptm_dest_eq o snd o ptm_strip_forall) eqs
+         in
+           map (ptm_dest_var o fst o ptm_strip_comb) L
+         end
+       | preev qtm =
+          let val tm = Parse.Term qtm
+              val eqs = strip_conj tm
+              open Psyntax
+              val L = map (fst o dest_eq o snd o strip_forall) eqs
+          in
+            map (dest_atom o fst o strip_comb) L
+          end
+ in 
+    mk_set (map drop_dollar (preev qthing))
+     handle HOL_ERR _ 
+     => raise BOSS_ERR "preview" 
+             "unable to find name of function(s) to be defined"
+end;
+
+
+fun Hol_fun bindstem (qtm as [QUOTE _]) =
+     let val names = preview qtm
+         val allnames = map dollar names @ names
+         val _ = List.app Parse.hide allnames
+         val eqs = Parse.Term qtm 
+                    handle e => (List.app Parse.reveal allnames; raise e)
+         val _ = List.app Parse.reveal allnames
+         val defn = Defn.define bindstem eqs
+     in 
+        Halts.proveTotal defn
+     end 
+  | Hol_fun bindstem qtm = 
+      Halts.proveTotal (Defn.define bindstem (Parse.Term qtm));
+
+
+(*---------------------------------------------------------------------------
+    Define ` ... ` operates as follows:
+
+        1. It creates a bindstem for the definition to be made.
+        2. It makes the definition, using Hol_fun.
+        3. It attempts to prove termination. If this fails, then
+           Define fails.
+        4. Otherwise, if the definition is not recursive or is
+           primitive recursive, the defining equations alone are returned.
+        5. Else, the definition is not a trivial recursion, and the
+           following steps are made:
+
+                 5a. The induction theorem is stored under bindname_ind
+                 5b. The recursion equations are stored under bindname
+
+           Then the recursion equations are returned to the user.
+ ---------------------------------------------------------------------------*)
+
+fun Define qtm = 
+ let val bindstem =
+       case preview qtm
+        of []    => raise BOSS_ERR "Define" "Can't find name of function"
+         | [x]   => if Lexis.ok_identifier x then x 
+                    else #Name(dest_var
+                            (Lib.with_flag(Globals.priming,SOME"")
+                                mk_primed_var{Name=x,Ty=bool}))
+         | names => #Name(dest_var
+                      (Lib.with_flag(Globals.priming,SOME"")
+                                mk_primed_var{Name="mutual",Ty=bool}))
+     val defn = Hol_fun bindstem qtm
+ in
+   case Defn.tcs_of defn
+    of [] => if (Defn.nonrec defn orelse Defn.primrec defn)
+             then Defn.eqns_of defn
+             else let val ind = Option.valOf (Defn.ind_of defn)
+                  in 
+                     save_thm(bindstem^"_ind", ind); 
+                     save_thm(bindstem^"_eqns", Defn.eqns_of defn)
+                  end
+     | _  => raise BOSS_ERR "Define" "Unable to prove termination"
+ end;
+
+
+
+
+(*---------------------------------------------------------------------------
+         High level interactive operations
+ ---------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------*
  * Mildly altered STRUCT_CASES_TAC, so that it does a SUBST_ALL_TAC instead  *
  * of a SUBST1_TAC.                                                          *
  *---------------------------------------------------------------------------*)
+
 val VAR_INTRO_TAC = REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC;
+
 val TERM_INTRO_TAC =
  REPEAT_TCL STRIP_THM_THEN
      (fn th => TRY (SUBST_ALL_TAC th) THEN ASSUME_TAC th);
@@ -199,7 +361,7 @@ fun completeInduct_on qtm g =
                  measureInduct_on `(\(x,w). x+w) (M,N)`
  ---------------------------------------------------------------------------*)
 
-local open WFTheory primWFTheory
+local open relationTheory prim_recTheory
       val mvar = mk_var{Name="m", Ty=Type`:'a -> num`}
       val measure_m = mk_comb{Rator= #const(const_decl"measure"),Rand=mvar}
       val ind_thm0 = GEN mvar
@@ -226,7 +388,6 @@ fun measureInduct_on q g =
 end;
 
 
-
 fun Cases (g as (_,w)) =
   let val {Bvar,...} = dest_forall w handle HOL_ERR _
                        => raise BOSS_ERR "Cases" "not a forall"
@@ -244,313 +405,15 @@ fun Induct (g as (_,w)) =
    Induct_on [QUOTE Name] g
  end;
 
-(*---------------------------------------------------------------------------*
- * Defining functions.                                                       *
- *---------------------------------------------------------------------------*)
 
-fun func_of_cond_eqn tm =
-    #1(strip_comb(#lhs(dest_eq(#2 (strip_forall(#2(strip_imp tm)))))));
-
-val prod_tyl =
-  end_itlist(fn ty1 => fn ty2 => mk_type{Tyop="prod",Args=[ty1,ty2]});
-
-fun variants FV vlist = rev(fst
-  (rev_itlist (fn v => fn (V,W) => let val v' = variant W v
-                                   in (v'::V, v'::W)
-                                   end) vlist ([],FV)));
-
-fun drop [] x = x
-  | drop (_::t) (_::rst) = drop t rst
-  | drop _ _ = raise BOSS_ERR "drop" "";
-
-(*---------------------------------------------------------------------------
- * On entry to this, we know that f is curried, i.e., of type
- *
- *    f : ty1 -> ... -> tyn -> rangety
- *
- *---------------------------------------------------------------------------*)
-
-fun pairf (f,argtys,range_ty,eqs0) =
- let val unc_argty = prod_tyl argtys
-     val fname = #Name (dest_var f handle HOL_ERR _ => dest_const f)
-     val f' = Lib.with_flag (Globals.priming, SOME"")
-              mk_primed_var
-                {Name=if Lexis.ok_identifier fname
-                      then "tupled_"^fname else "tupled",
-                 Ty = unc_argty --> range_ty}
-     fun rebuild tm =
-      case (dest_term tm)
-      of COMB _ =>
-         let val (g,args) = strip_comb tm
-             val args' = map rebuild args
-         in if (g=f)
-            then if (length args < length argtys)  (* partial application *)
-                 then let val newvars = map (fn ty => mk_var{Name="a", Ty=ty})
-                                            (drop args argtys)
-                          val newvars' = variants (free_varsl args') newvars
-                      in list_mk_abs(newvars',
-                          mk_comb{Rator=f',Rand=list_mk_pair(args' @newvars')})
-                      end
-                 else mk_comb{Rator=f', Rand=list_mk_pair args'}
-            else list_mk_comb(g,args')
-         end
-       | LAMB{Bvar,Body} => mk_abs{Bvar=Bvar, Body=rebuild Body}
-       | _ => tm
-   in
-     rebuild eqs0
-   end;
-
-fun function name eqs0 =
- let val eqslist      = strip_conj eqs0
-     val lhs1         = #lhs(dest_eq(hd eqslist))
-     val (forig,args) = strip_comb lhs1
-     val argtys       = map type_of args
-     val unc_argty    = prod_tyl argtys
-     val range_ty     = type_of lhs1
-     val curried      = not(length args = 1)
-     val unc_eqs      = if not curried then eqs0
-                        else pairf(forig,argtys,range_ty,eqs0)
-     val unc_name     = if not curried then name else ("tupled_"^name)
-     val R            = map (#rhs o dest_eq) eqslist
-     val recursive    = exists (can (find_term (aconv forig))) R
-     val facts        = TypeBase.theTypeBase()
-     val {rules,R,full_pats_TCs,...} = Tfl.lazyR_def facts unc_name unc_eqs
-     val f = func_of_cond_eqn
-                (concl(CONJUNCT1 rules handle HOL_ERR _ => rules))
-     val newvars' = variants [forig]
-                     (map (fn ty => mk_var{Name="x", Ty=ty}) argtys)
-     (* Pass back the definition and the new rules. If the original wasn't
-        curried, do nothing -- just pass back a pair of unchanged rules. *)
-     fun def () =
-        if curried then
-           let val def = new_definition
-                   (name,
-                    mk_eq{lhs=list_mk_comb (forig, newvars'),
-                          rhs=list_mk_comb(f, [list_mk_pair newvars'])})
-           in
-             (def,Rewrite.PURE_REWRITE_RULE[GSYM def] rules)
-           end
-        else (rules,rules)
-in
-  if recursive  (* then add induction scheme *)
-  then let val induction = Tfl.mk_induction facts f R full_pats_TCs
-       in if not curried
-          then CONJ (snd (def())) induction
-         else let val (def,rules') = def()
-                  val P = #Bvar(dest_forall(concl induction))
-                  val Qty = itlist (curry Type.-->) argtys Type.bool
-                  val Q = mk_primed_var{Name = "P", Ty = Qty}
-                  val tm = mk_pabs{varstruct=list_mk_pair newvars',
-                                   body=list_mk_comb(Q,newvars')}
-                  val ind1 = SPEC tm
-                      (Rewrite.PURE_REWRITE_RULE [GSYM def] induction)
-                 val ind2 = CONV_RULE(DEPTH_CONV Let_conv.GEN_BETA_CONV) ind1
-              in
-               CONJ rules' (GEN Q ind2)
-              end
-       end
-   else snd(def())
- end
-
-
-(*---------------------------------------------------------------------------*
- * A preliminary attempt to have a single entrypoint for definitions. It     *
- * tries to make a basic definition or a prim. rec. definition. If those     *
- * fail, it tries a TFL definition. It will try to solve trivial termination *
- * conditions, but non-trivial ones get put on the assumptions for the user  *
- * to solve. Nested recursions are not yet handled.                          *
- *---------------------------------------------------------------------------*)
-
-fun string_variant slist =
-   let fun pass str = if (mem str slist) then pass (str^"'") else str
-   in pass
-   end;
-
-fun is_constructor tm = not (is_var tm orelse is_pair tm);
-
-local fun basic_defn (fname,tm) =
-        let fun D fix = new_gen_definition(fname, tm, fix)
-        in D end
-      fun dest_atom ac = dest_const ac handle _ => dest_var ac
-in
-fun primDefine eqs0 fixity name =
- let val eqs = strip_conj eqs0
-     val (f,args) = strip_comb(#lhs(dest_eq(#2 (strip_forall(hd eqs)))))
-     val nm = #Name(dest_atom f)
- in
-   (if Lib.exists is_constructor args
-    then case (TypeBase.read (#Tyop(Type.dest_type
-                  (type_of(first is_constructor args)))))
-          of NONE => raise BOSS_ERR "define"
-                      "unexpected lhs in proposed definition"
-           | SOME facts => new_recursive_definition
-                                {name=name,def=eqs0,fixity=fixity,
-                                 rec_axiom = TypeBase.axiom_of facts}
-    else basic_defn (name,eqs0) fixity)
-    handle HOL_ERR _
-    =>  (* resort to TFL *)
-      let val thm = function name eqs0
-                    handle e as HOL_ERR _
-                    => (Lib.say"Definition failed.\n"; raise e)
-          val thm' = case (hyp thm)
-               of [WF_R] =>   (* non-recursive defn *)
-                  (case (strip_comb WF_R)
-                    of (WF,[R]) =>
-                      let val Rty = type_of R
-                          val theta = [Type.alpha |-> hd(#Args(dest_type Rty))]
-                          val Empty_thm = INST_TYPE theta primWFTheory.WF_Empty
-                      in MATCH_MP (DISCH_ALL thm) Empty_thm
-                      end
-                    | _ => raise BOSS_ERR"primDefine" "Unexpected hyp. term")
-               | [] => raise BOSS_ERR"primDefine" "Empty hyp. after use of TFL"
-               | _  => Halts.halts Halts.prover thm
-                        handle HOL_ERR _ => (Lib.mesg true (Lib.quote nm
-                         ^" defined: side-conditions remain in hypotheses");
-                         thm)
-          val _ = set_fixity nm fixity
-             (* val away = map fst (theorems()@definitions()@axioms())
-             val save_name = string_variant away (name^"_thm") *)
-          val save_name = name^"_thm"
-      in
-         save_thm(save_name,thm')
-      end
- end
-end;
-
-
-(*---------------------------------------------------------------------------*
- * Find the name of a to-be-defined constant from a quotation. Or at         *
- * least try to.                                                             *
- *---------------------------------------------------------------------------*)
-
-fun alphabetic c   = Lexis.in_class(Lexis.alphabet,      Char.ord c);
-fun alphanumeric c = Lexis.in_class(Lexis.alphanumerics, Char.ord c);
-fun symbolic c     = Lexis.in_class(Lexis.hol_symbols,   Char.ord c);
-fun starts_ident c = alphanumeric c orelse symbolic c ;
-
-fun grab_first_ident s =
- let val ss0 = Substring.dropl (not o starts_ident) (Substring.all s)
-     val ident_ss =
-       case Substring.getc ss0
-        of NONE => raise BOSS_ERR "grab_first_ident" "can't find an ident"
-         | SOME(c,_) =>
-             if (symbolic c)
-             then Substring.takel symbolic ss0
-             else if (alphabetic c)
-                  then Substring.takel alphanumeric ss0
-                  else raise BOSS_ERR "grab_first_ident"
-                                      "can't find an ident.1"
- in
-   Substring.string ident_ss
- end;
-
-fun head tm =
-  let val a = fst(strip_comb(lhs
-                 (snd(strip_forall(Lib.trye hd (strip_conj tm))))))
-  in
-    #Name(dest_var a handle HOL_ERR _ => dest_const a)
-  end;
-
-
-(*---------------------------------------------------------------------------*
- * What to use when making defn.                                             *
- *---------------------------------------------------------------------------*)
-val Define_suffix = ref (fn s => s^"_def");
-
-(*---------------------------------------------------------------------------*
- * Attempt to find and hide the constant being defined before calling        *
- * primDefine.                                                               *
- *---------------------------------------------------------------------------*)
-fun Define qtm =
- let fun def (qtm as [QUOTE s]) =
-           let val nm = grab_first_ident s
-               val dnm = "$"^nm
-               val _ = List.app Parse.hide [nm,dnm]
-               val eqs0 = Parse.Term qtm
-               val _ = List.app Parse.reveal [nm,dnm]
-           in
-             primDefine eqs0 Prefix (!Define_suffix nm)
-           end
-       | def qtm =
-           let val tm = Parse.Term qtm
-           in
-             primDefine tm Prefix (!Define_suffix (head tm))
-           end
- in
-   Lib.try def qtm
- end
 
 
 (*---------------------------------------------------------------------------
- * Naughty! I am overwriting the record for pairs, so that the TFL rewriter
- * will use "pair_case" as a case construct, rather than UNCURRY_DEF. This
- * (apparently) solves a deeply buried problem in TC extraction involving
- * paired beta-reduction. I don't recall the details, but there must be
- * some sort of critical pair. In the end, it was easier to invent a
- * new constant.
- *
- * Here we also finally fill in the "size" entries in theTypeBase for
- * some types that get built before numbers.
- *---------------------------------------------------------------------------*)
-
-local
-  val prod_info =
-         TypeBase.gen_tyinfo
-             {ax = pairTheory.pair_Axiom,
-              case_def = pairTheory.pair_case_thm,
-              distinct = NONE,
-              one_one = SOME pairTheory.CLOSED_PAIR_EQ}
-  val prod_size_info =
-       (Parse.Term`\f g. UNCURRY(\(x:'a) (y:'b). f x + g y)`,
-        pairTheory.UNCURRY_DEF)
-  val prod_info' = TypeBase.put_size prod_size_info prod_info
-
-  val bool_info = Option.valOf(TypeBase.read "bool")
-  val bool_case_rw = prove(Term`!x y. bool_case x x y = (x:'a)`,
-    REPEAT GEN_TAC
-      THEN BOOL_CASES_TAC (Term`y:bool`)
-     THEN Rewrite.ASM_REWRITE_TAC[boolTheory.bool_case_DEF]);
-  val bool_size_info = (Term`bool_case 0 0`, bool_case_rw)
-  val bool_info' = TypeBase.put_size bool_size_info bool_info
-
-  val option_info = Option.valOf(TypeBase.read "option")
-  val option_size_info =
-       (Parse.Term`\f. option_case 0 (\x:'a. SUC (f x))`,
-        optionTheory.option_case_def)
-  val option_info' = TypeBase.put_size option_size_info option_info
-
-  val sum_info = Option.valOf(TypeBase.read "sum")
-  val sum_case = #const(Term.const_decl "sum_case")
-  val num = Type`:num`
-  val sum_case_into_num = inst [alpha |-> num] sum_case
-  val f = mk_var{Name="f",Ty=beta-->num}
-  val g = mk_var{Name="g",Ty=mk_vartype"'c" --> num}
-  val s = mk_var{Name="s",Ty=mk_type{Tyop="sum",Args=[beta, mk_vartype "'c"]}}
-  val tm = list_mk_abs ([f,g,s], list_mk_comb(sum_case_into_num,[f,g,s]))
-  val sum_size_info = (tm,sumTheory.sum_case_def)
-  val sum_info' = TypeBase.put_size sum_size_info sum_info
-
-in
-   val _ = TypeBase.write bool_info'
-   val _ = TypeBase.write prod_info'
-   val _ = TypeBase.write option_info'
-   val _ = TypeBase.write sum_info'
-end
-
-
-(*---------------------------------------------------------------------------
-                               Proof
+                          Proof Automation
  ---------------------------------------------------------------------------*)
 
 fun PROVE thl tm = Tactical.prove (Parse.Term tm, mesonLib.MESON_TAC thl);
-val PROVE_TAC    = let
-  open restr_binderTheory
-  val rwts = [RES_FORALL, RES_EXISTS]
-in
-  (fn thl =>
-   REWRITE_TAC rwts THEN RULE_ASSUM_TAC (REWRITE_RULE rwts) THEN
-   mesonLib.ASM_MESON_TAC (map (REWRITE_RULE rwts) thl))
-end
+val PROVE_TAC    = mesonLib.ASM_MESON_TAC;
 
 val DECIDE     = decisionLib.DECIDE o Parse.Term
 val DECIDE_TAC = decisionLib.DECIDE_TAC
@@ -575,11 +438,12 @@ val list_ss  = simpLib.++(arith_ss, listSimps.list_ss)
  * When invoked, we know that th is an equality, at least one side of which  *
  * is a variable.                                                            *
  *---------------------------------------------------------------------------*)
+
 fun orient th =
   let val c = concl th
       val {lhs,rhs} = dest_eq c
-  in if (is_var lhs)
-     then if (is_var rhs)
+  in if is_var lhs
+     then if is_var rhs
           then if term_lt lhs rhs (* both vars, rewrite to textually smaller *)
                then SYM th
                else th
@@ -635,15 +499,15 @@ fun LIFT_SIMP ss tm =
    DISCH_THEN (STRIP_ASSUME_TAC o simpLib.SIMP_RULE ss []);
 
 
-local
-fun DTHEN (ttac:Abbrev.thm_tactic) :tactic = fn (asl,w) =>
-     if (is_neg w) then raise BOSS_ERR "DTHEN" "negation"
-     else let val {ant,conseq} = Dsyntax.dest_imp w
-              val (gl,prf) = ttac (Thm.ASSUME ant) (asl,conseq)
-          in (gl, Thm.DISCH ant o prf)
-          end
+local fun DTHEN (ttac:Abbrev.thm_tactic) :tactic = fn (asl,w) =>
+        if (is_neg w) then raise BOSS_ERR "DTHEN" "negation"
+        else let val {ant,conseq} = Dsyntax.dest_imp w
+                 val (gl,prf) = ttac (Thm.ASSUME ant) (asl,conseq)
+             in (gl, Thm.DISCH ant o prf)
+             end
 in
- val BOSS_STRIP_TAC = Tactical.FIRST [GEN_TAC,CONJ_TAC, DTHEN STRIP_ASSUME_TAC]
+val BOSS_STRIP_TAC = 
+      Tactical.FIRST [GEN_TAC,CONJ_TAC, DTHEN STRIP_ASSUME_TAC]
 end;
 
 fun add_constr tyinfo set =
@@ -693,30 +557,10 @@ fun SPOSE_NOT_THEN ttac =
      Assertional style reasoning
  ---------------------------------------------------------------------------*)
 
-(* First we need a variant on THEN. *)
-fun mapshape [] _ _ =  []
-  | mapshape (n::nums) (f::funcs) all_args =
-     let val (fargs,rst) = split_after n all_args
-     in
-      f fargs :: mapshape nums funcs rst
-     end
-  | mapshape _ _ _ = raise BOSS_ERR "mapshape" "irregular lists";
-
-fun THENF (tac1:tactic,tac2:tactic,tac3:tactic) g =
- case (tac1 g)
-  of (h::rst, p) =>
-      let val (gl0,p0) = tac2 h
-          val (gln,pn) = unzip (map tac3 rst)
-          val gll = gl0 @ flatten gln
-      in
-        (gll, p o mapshape (length gl0::map length gln) (p0::pn))
-      end
-   | x => x;
-
 infix 8 by;
 
-fun (q by tac) =
-  THENF (SUBGOAL_THEN (Term q) STRIP_ASSUME_TAC, tac, ALL_TAC)
+fun (q by tac) = 
+  Tactic.via(Term q,tac)
   handle e as HOL_ERR _ => raise BOSS_ERR "by" "";
 
 end;
