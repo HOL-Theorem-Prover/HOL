@@ -243,8 +243,9 @@ val IMP_ANTISYM_AX =
 val _ = save_thm("IMP_ANTISYM_AX",IMP_ANTISYM_AX);
 
 fun IMP_ANTISYM_RULE th1 th2 =
-  let val {ant,conseq} = dest_imp(concl th1) in
-  MP (MP (SPEC conseq (SPEC ant IMP_ANTISYM_AX)) th1) th2
+  let val {ant,conseq} = dest_imp(concl th1) 
+  in
+     MP (MP (SPEC conseq (SPEC ant IMP_ANTISYM_AX)) th1) th2
   end;
 
 
@@ -307,6 +308,19 @@ fun SUBST_CONV theta template tm =
    SUBST theta1 (mk_eq{lhs=tm,rhs=subst theta0 template}) (REFL tm)
   end;
 
+local fun combine [] [] = []
+        | combine (v::rst1) (t::rst2) = (v |-> t) :: combine rst1 rst2
+        | combine _ _ = raise Fail "SUBS"
+in
+fun SUBS ths th =
+   let val ls = map (lhs o concl) ths
+       val vars = map (genvar o type_of) ls
+       val w = subst (combine ls vars) (concl th)
+   in
+     SUBST (combine vars ths) w th
+   end
+end;
+
 fun IMP_TRANS th1 th2 =
    let val {ant,conseq} = dest_imp(concl th1)
    in DISCH ant (MP th2 (MP th1 (ASSUME ant))) end;
@@ -349,6 +363,10 @@ fun SELECT_RULE th =
   end;
 
 
+(*---------------------------------------------------------------------------
+     ETA_THM = |- !M. (\x. M x) = M
+ ---------------------------------------------------------------------------*)
+
 val ETA_THM = GEN_ALL(ETA_CONV (Term`\x:'a. (M x:'b)`));
 val _ = save_thm("ETA_THM",ETA_THM);
 
@@ -385,6 +403,10 @@ val BETA_THM =
         (BETA_CONV (Term`(\x. (f:'a->'b) x) y`));
 
 val _ = save_thm("BETA_THM", BETA_THM);
+
+(*---------------------------------------------------------------------------
+     LET_THM = |- !f x. LET f x = f x
+ ---------------------------------------------------------------------------*)
 
 val LET_THM = 
  let val f = Term `f:'a->'b`
@@ -1129,7 +1151,7 @@ val COND_CLAUSE1 =
  *---------------------------------------------------------------------------*)
 val COND_CLAUSE2 =
    let val (x,t1,t2,v) = (--`x:'a`--,  --`tm1:'a`--, --`tm2:'a`--,
-                          genvar (==`:bool`==))
+                          genvar Type.bool)
        val th1 = RIGHT_BETA(AP_THM
                    (RIGHT_BETA(AP_THM
                      (RIGHT_BETA(AP_THM COND_DEF (--`F`--))) t1))t2)
@@ -2381,6 +2403,10 @@ val ABS_REP_THM =
 val _ = save_thm("ABS_REP_THM", ABS_REP_THM);
 
 
+(*---------------------------------------------------------------------------
+    LET_RAND =  P (let x = M in N x) = (let x = M in P (N x))
+ ---------------------------------------------------------------------------*)
+
 val LET_RAND = save_thm("LET_RAND",
  let val tm1 = Term`\x:'a. P (N x:'b):bool`
      val tm2 = Term`M:'a`
@@ -2392,6 +2418,10 @@ val LET_RAND = save_thm("LET_RAND",
  in TRANS LET_THM2 (SYM LET_THM1)
  end);
 
+
+(*---------------------------------------------------------------------------
+    LET_RATOR =  (let x = M in N x) b = (let x = M in N x b)
+ ---------------------------------------------------------------------------*)
 
 val LET_RATOR = save_thm("LET_RATOR",
  let val M = Term`M:'a`
@@ -2459,6 +2489,7 @@ val _ = save_thm("SWAP_EXISTS_THM", SWAP_EXISTS_THM);
 
      !P. (?!x:'a. P x) = (?x. P x) /\ (!x y. P x /\ P y ==> (x = y))
  ---------------------------------------------------------------------------*)
+
 val EXISTS_UNIQUE_THM =
  let val th1 = RIGHT_BETA (AP_THM EXISTS_UNIQUE_DEF (Term`\x:'a. P x:bool`))
      val th2 = CONV_RULE (RAND_CONV (RAND_CONV 
@@ -2472,55 +2503,218 @@ val EXISTS_UNIQUE_THM =
 val _ = save_thm("EXISTS_UNIQUE_THM", EXISTS_UNIQUE_THM);
 
 
-(* TO BE ADDED.
-val P = mk_var("P",bool)
-val P
-val COND_CONG = prove(
---`!P P' (x:'a) x' y y'.
-      (P = P') /\
-      (P'  ==> (x = x')) /\
-      (~P' ==> (y = y'))
-         ==>
-      ((if P then x else y) = (if P' then x' else y'))`--,
- REPEAT STRIP_TAC THEN
- REPEAT COND_CASES_TAC THEN
- REPEAT RES_TAC);
+(*---------------------------------------------------------------------------
+  LET_CONG =
+    |- !f g M N.  (M = N) /\ (!x. (x = N) ==> (f x = g x)) 
+                            ==> 
+                   (LET f M = LET g N)
+ ---------------------------------------------------------------------------*)
+
+val LET_CONG =
+  let val f = mk_var{Name="f",Ty=alpha-->beta}
+      val g = mk_var{Name="g",Ty=alpha-->beta}
+      val M = mk_var{Name="M",Ty=alpha}
+      val N = mk_var{Name="N",Ty=alpha}
+      val x = mk_var {Name="x",Ty=alpha}
+      val MeqN = mk_eq{lhs=M,rhs=N}
+      val x_eq_N = mk_eq{lhs=x,rhs=N}
+      val fx_eq_gx = mk_eq{lhs=mk_comb{Rator=f,Rand=x},
+                           rhs=mk_comb{Rator=g,Rand=x}}
+      val ctm = mk_forall{Bvar=x, Body=mk_imp{ant=x_eq_N,conseq=fx_eq_gx}}
+      val th  = RIGHT_BETA(AP_THM(RIGHT_BETA(AP_THM LET_DEF f)) M)
+      val th1 = ASSUME MeqN
+      val th2 = MP (SPEC N (ASSUME ctm)) (REFL N)
+      val th3 = SUBS [SYM th1] th2
+      val th4 = TRANS (TRANS th th3) (MK_COMB (REFL g,th1))
+      val th5 = RIGHT_BETA(AP_THM(RIGHT_BETA(AP_THM LET_DEF g)) N)
+      val th6 = TRANS th4 (SYM th5)
+      val th7 = SUBS [SPECL [MeqN, ctm, concl th6] AND_IMP_INTRO]
+                     (DISCH MeqN (DISCH ctm th6))
+  in
+    GENL [f,g,M,N] th7
+  end;
+
+val _ = save_thm("LET_CONG", LET_CONG);
 
 
-val LET_CONG = prove(
---`!f (g:'a->'b) M M'.
-   (M = M') /\
-   (!x:'a. (x = M') ==> (f x = g x))
-   ==>
-  (LET f M = LET g M')`--,
-REPEAT STRIP_TAC
- THEN REWRITE_TAC[boolTheory.LET_DEF]
- THEN BETA_TAC
- THEN RES_TAC
- THEN ASM_REWRITE_TAC[]);
+(*---------------------------------------------------------------------------
+  IMP_CONG =
+    |- !x x' y y'. (x = x') /\ (x' ==> (y = y')) 
+                            ==> 
+                   (x ==> y = x' ==> y')
+ ---------------------------------------------------------------------------*)
+
+val IMP_CONG = 
+ let val x = mk_var{Name="x",Ty=Type.bool}
+     val x' = mk_var{Name="x'",Ty=Type.bool}
+     val y = mk_var{Name="y",Ty=Type.bool}
+     val y' = mk_var{Name="y'",Ty=Type.bool}
+     val x_eq_x' = mk_eq{lhs=x,rhs=x'}
+     val ctm = mk_imp{ant=x', conseq=mk_eq{lhs=y,rhs=y'}}
+     val x_imp_y = mk_imp{ant=x,conseq=y}
+     val x'_imp_y' = mk_imp{ant=x',conseq=y'}
+     val th = ASSUME x_eq_x'
+     val th1 = UNDISCH(ASSUME ctm)
+     val th2 = ASSUME x_imp_y
+     val th3 = DISCH x_imp_y (DISCH x' (UNDISCH(SUBS [th,th1] th2)))
+     val th4 = ASSUME x'_imp_y'
+     val th5 = UNDISCH (SUBS [SYM th] (DISCH x' th1))
+     val th6 = DISCH x'_imp_y' (DISCH x (UNDISCH(SUBS [SYM th,SYM th5] th4)))
+     val th7 = IMP_ANTISYM_RULE th3 th6
+     val th8 = DISCH x_eq_x' (DISCH ctm th7)
+     val th9 = SUBS [SPECL [x_eq_x', ctm, concl th7] AND_IMP_INTRO] th8
+ in 
+   GENL [x,x',y,y'] th9
+ end;
+
+val _ = save_thm("IMP_CONG", IMP_CONG);
 
 
-val WIMP_CONG = prove(
---`!x y y'. (x=x) /\
-            (x ==> (y = y'))
-            ==>
-            (x ==> y = x ==> y')`--,
-REPEAT GEN_TAC
- THEN ASM_CASES_TAC(--`x:bool`--)
- THEN ASM_REWRITE_TAC[]);
+(*---------------------------------------------------------------------------
+  AND_CONG = |- !P P' Q Q'.
+                  (Q ==> (P = P')) /\ (P' ==> (Q = Q')) 
+                                   ==> 
+                            (P /\ Q = P' /\ Q')
+ ---------------------------------------------------------------------------*)
+
+val AND_CONG = 
+ let val P = mk_var{Name="P",Ty=Type.bool}
+     val P' = mk_var{Name="P'",Ty=Type.bool}
+     val Q = mk_var{Name="Q",Ty=Type.bool}
+     val Q' = mk_var{Name="Q'",Ty=Type.bool}
+     val PandQ = mk_conj(P,Q)
+     val P'andQ' = mk_conj(P',Q')
+     val ctm1 = mk_imp{ant=Q,conseq=mk_eq{lhs=P,rhs=P'}}
+     val ctm2 = mk_imp{ant=P',conseq=mk_eq{lhs=Q,rhs=Q'}}
+     val th1 = ASSUME PandQ
+     val th2 = MP (ASSUME ctm1) (CONJUNCT2 th1) 
+     val th3 = MP (ASSUME ctm2) (SUBS [th2] (CONJUNCT1 th1))
+     val th4 = DISCH PandQ (SUBS[th2,th3] th1)
+     val th5 = ASSUME P'andQ'
+     val th6 = MP (ASSUME ctm2) (CONJUNCT1 th5) 
+     val th7 = MP (ASSUME ctm1) (SUBS [SYM th6] (CONJUNCT2 th5))
+     val th8 = DISCH P'andQ' (SUBS[SYM th6,SYM th7] th5)
+     val th9 = IMP_ANTISYM_RULE th4 th8
+     val th10 = SUBS [SPECL [ctm1,ctm2,concl th9] AND_IMP_INTRO] 
+                     (DISCH ctm1 (DISCH ctm2 th9))
+ in 
+   GENL [P,P',Q,Q'] th10
+ end;
+
+val _ = save_thm("AND_CONG", AND_CONG);
 
 
-val IMP_CONG = prove(
---`!x x' y y'. (x=x') /\
-               (x' ==> (y = y'))
-               ==>
-               (x ==> y = x' ==> y')`--,
-REPEAT GEN_TAC
- THEN BOOL_CASES_TAC(--`x':bool`--)
- THEN BOOL_CASES_TAC(--`x:bool`--)
- THEN REWRITE_TAC[]);
+(*---------------------------------------------------------------------------
+   val OR_CONG =
+       |- !P P' Q Q'.
+         (~Q ==> (P = P')) /\ (~P' ==> (Q = Q')) 
+                           ==> 
+                   (P \/ Q = P' \/ Q')
+ ---------------------------------------------------------------------------*)
 
-*)
+val OR_CONG = 
+ let val P = mk_var{Name="P",Ty=Type.bool}
+     val P' = mk_var{Name="P'",Ty=Type.bool}
+     val Q = mk_var{Name="Q",Ty=Type.bool}
+     val Q' = mk_var{Name="Q'",Ty=Type.bool}
+     val notQ = mk_neg Q
+     val notP' = mk_neg P'
+     val PorQ = mk_disj(P,Q)
+     val P'orQ' = mk_disj(P',Q')
+     val PeqP'= mk_eq{lhs=P,rhs=P'}
+     val QeqQ'= mk_eq{lhs=Q,rhs=Q'}
+     val ctm1 = mk_imp{ant=notQ,conseq=PeqP'}
+     val ctm2 = mk_imp{ant=notP',conseq=QeqQ'}
+     val th1 = ASSUME PorQ
+     val th2 = ASSUME P
+     val th3 = ASSUME Q
+     val th4 = ASSUME ctm1
+     val th5 = ASSUME ctm2
+     val th6 = SUBS [SPEC Q (CONJUNCT1 NOT_CLAUSES)] 
+                    (SUBS [SPECL[notQ, PeqP'] IMP_DISJ_THM] th4)
+     val th7 = SUBS [SPEC P' (CONJUNCT1 NOT_CLAUSES)] 
+                    (SUBS [SPECL[notP', QeqQ'] IMP_DISJ_THM] th5)
+     val th8 = ASSUME P'
+     val th9 = DISJ1 th8 Q'
+     val th10 = ASSUME QeqQ'
+     val th11 = SUBS [th10] th3
+     val th12 = DISJ2 P' th11
+     val th13 = ASSUME PeqP'
+     val th14 = MK_COMB(REFL(mk_const{Name="\\/",Ty=bool-->bool-->bool}),th13)
+     val th15 = EQ_MP (MK_COMB (th14,th10)) th1
+     val th16 = DISJ_CASES th6 th12 th15
+     val th17 = DISCH PorQ (DISJ_CASES th7 th9 th16)
+
+     val th18 = ASSUME P'orQ'
+     val th19 = DISJ2 P th3
+     val th20 = DISJ1 (SUBS [SYM th13] th8) Q
+     val th21 = EQ_MP (SYM (MK_COMB(th14,th10))) th18
+     val th22 = DISJ_CASES th7 th20 th21
+     val th23 = DISCH P'orQ' (DISJ_CASES th6 th19 th22)
+     val th24 = IMP_ANTISYM_RULE th17 th23
+     val th25 = SUBS [SPECL [ctm1,ctm2,concl th24] AND_IMP_INTRO] 
+                     (DISCH ctm1 (DISCH ctm2 th24))
+ in 
+   GENL [P,P',Q,Q'] th25
+ end;
+
+val _ = save_thm("OR_CONG", OR_CONG);
+
+
+(*---------------------------------------------------------------------------
+   val COND_CONG =
+    |- !P Q x x' y y'.
+         (P = Q) /\ (Q ==> (x = x')) /\ (~Q ==> (y = y')) 
+                 ==>
+         ((if P then x else y) = (if Q then x' else y'))
+ ---------------------------------------------------------------------------*)
+
+val COND_CONG = 
+ let val P = mk_var{Name="P",Ty=Type.bool}
+     val Q = mk_var{Name="Q",Ty=Type.bool}
+     val x = mk_var{Name="x",Ty=alpha}
+     val x' = mk_var{Name="x'",Ty=alpha}
+     val y  = mk_var{Name="y",Ty=alpha}
+     val y' = mk_var{Name="y'",Ty=alpha}
+     val PeqQ = mk_eq{lhs=P,rhs=Q}
+     val ctm1 = mk_imp{ant=Q, conseq=mk_eq{lhs=x,rhs=x'}}
+     val ctm2 = mk_imp{ant=mk_neg Q, conseq=mk_eq{lhs=y,rhs=y'}}
+     val target = mk_eq{lhs=mk_cond{cond=P,larm=x,rarm=y},
+                        rhs=mk_cond{cond=Q,larm=x',rarm=y'}}
+     val OR_ELIM = MP (SPECL[target,P,mk_neg P] OR_ELIM_THM)
+                      (SPEC P EXCLUDED_MIDDLE)
+     val th1 = ASSUME P
+     val th2 = EQT_INTRO th1
+     val th3 = CONJUNCT1 (SPECL [x,y] COND_CLAUSES)
+     val th3a = CONJUNCT1 (SPECL [x',y'] COND_CLAUSES)
+     val th4 = SUBS [SYM th2] th3
+     val th4a = SUBS [SYM th2] th3a
+     val th5 = ASSUME PeqQ
+     val th6 = ASSUME ctm1
+     val th7 = ASSUME ctm2
+     val th8 = UNDISCH (SUBS [SYM th5] th6)
+     val th9 = TRANS th4 th8
+     val th10 = TRANS th9 (SYM (SUBS [th5] th4a))
+
+     val th11 = EQF_INTRO (ASSUME (mk_neg P))
+     val th12 = CONJUNCT2 (SPECL [x,y] COND_CLAUSES)
+     val th13 = CONJUNCT2 (SPECL [x',y'] COND_CLAUSES)
+     val th14 = SUBS [SYM th11] th12
+     val th15 = SUBS [SYM th11] th13
+     val th16 = UNDISCH (SUBS [SYM th5] th7)
+     val th17 = TRANS th14 th16
+     val th18 = TRANS th17 (SYM (SUBS [th5] th15))
+     val th19 = MP (MP OR_ELIM (DISCH P th10)) (DISCH (mk_neg P) th18)
+     val th20 = DISCH PeqQ (DISCH ctm1 (DISCH ctm2 th19))
+     val th21 = SUBS [SPECL [ctm1, ctm2,concl th19] AND_IMP_INTRO] th20
+     val cnj  = mk_conj(ctm1,ctm2)
+     val th22 = SUBS [SPECL [PeqQ,cnj,concl th19] AND_IMP_INTRO] th21
+ in 
+   GENL [P,Q,x,x',y,y'] th22
+ end;
+
+val _ = save_thm("COND_CONG", COND_CONG);
+
 
 val _ = export_theory();
 
