@@ -26,15 +26,15 @@ below come pre-built in the system.
     | arithmeticTheory   | Peano arithmetic development                |
     | intTheory          | integers, by John Harrison                  |
     |------------------------------------------------------------------|
-    | TCTheory           | transitive closure of a relation            |
-    | primWFTheory       | wellfoundedness, induction, and recursion   |
-    | WFTheory           | wellfoundedness at useful types             |
+    |                    | transitive closure of a relation            |
+    | relationTheory     | wellfoundedness, induction, and recursion   |
+    |                    | wellfoundedness at useful types             |
     |----------------------------------------------------------------  |
     | setTheory          | sets as a type (includes finite sets)       |
     | pred_setTheory     | sets as predicates (includes finite sets)   |
     |------------------------------------------------------------------|
     | listTheory         | basic theory of lists                       |
-    | ListTheory         | extended theory of lists                    |
+    | rich_listTheory    | extended theory of lists                    |
     |------------------------------------------------------------------|
     | combinTheory       | combinators                                 |
     | optionTheory       | the "option" type                           |
@@ -54,15 +54,15 @@ below come pre-built in the system.
 
 The only theory that is initially loaded by an invocation of Hol98 is
 boolTheory. To gain access to any other theory when working
-interactively, simply invoke  
+interactively, simply invoke
 
     load "xTheory";
 
 where "x" is the name of the theory. Once the theory has been
 loaded by the system, access to its contents is through the `dot'
-notation of ML, e.g., 
+notation of ML, e.g.,
 
-    xTheory.FOO_DEF, 
+    xTheory.FOO_DEF,
 
 or if you prefer, by `open'ing the structure and then directly
 accessing its contents.
@@ -77,12 +77,12 @@ thus be brought into an interactive session by invoking `load', e.g.
     load "xLib";
 
 One difference between libraries and theories is that a library can in
-general consist of a collection of theories and support ML
-structures. Thus sometimes, but not always, the functionality of a
-library is distributed through a collection of ML structures, all of
-which have been brought into the interactive session by the call to
-`load'. It currently (unhappily) falls to the user to know about the
-functionality of a library. Some libraries provide `help' and manuals
+general consist of a collection of theories and support ML structures.
+Thus sometimes, but not always, the functionality of a library is
+distributed through a collection of ML structures, all of which have
+been brought into the interactive session by the call to `load'.  It
+currently (unhappily) falls to the user to know about the
+functionality of a library.  Some libraries provide `help' and manuals
 for their use; others do not.
 
 Hol98 currently offers the following libraries.
@@ -118,4 +118,3 @@ Hol98 currently offers the following libraries.
     | arithLib        | linear arith. decision procedures           |
     | BoyerMooreLib   | Nqthm-inspired automatic proof procedure    |
     ----------------------------------------------------------------
- 
