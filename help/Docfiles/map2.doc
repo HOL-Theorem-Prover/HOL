@@ -1,22 +1,26 @@
 \DOC map2
 
-\TYPE {map2 : (((* # **) -> ***) -> (* list # ** list) -> *** list)}
+\TYPE {map2 : ('a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list}
 
 \SYNOPSIS
-Maps a binary function over two lists to create one new list.
+
+Maps a function over two lists to create one new list.
 
 \DESCRIBE
-{map2 f ([x1;...;xn],[y1;...;yn])} returns {[f(x1,y1);...;f(xn,yn)]}.
+{map2 f [x1,...,xn] [y1,...,yn]} returns {[f x1 y1,...,f xn yn]}.
 
 \FAILURE
-Fails with {map2} if the two lists are of different lengths.
+
+Fails if the two lists are of different lengths. Also fails if any 
+{f xi yi} fails. 
 
 \EXAMPLE
 {
-#map2 $+ ([1;2;3],[3;2;1]);;
-[4; 4; 4] : int list
+    - map2 (curry op+) [1,2,3] [3,2,1];
+    > val it = [4, 4, 4] : int list
 }
 \SEEALSO
-map, uncurry.
+
+Lib, map, itlist, rev_itlist, itlist2, rev_itlist2.
 
 \ENDDOC
