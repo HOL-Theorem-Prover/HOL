@@ -65,11 +65,6 @@ val numeral_suc = store_thm(
 val iZ = new_definition("iZ", --`iZ (x:num) = x`--);
 val iiSUC = new_definition("iiSUC", --`iiSUC n = SUC (SUC n)`--);
 
-val DISJ_IMP_THM = prove(
-  Term`!P Q R. P \/ Q ==> R = (P ==> R) /\ (Q ==> R)`,
-  REPEAT GEN_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN
-  ASM_SIMP_TAC bool_ss []);
-
 val numeral_distrib = store_thm(
   "numeral_distrib", Term
   `(!n. 0 + n = n) /\ (!n. n + 0 = n) /\
