@@ -3887,15 +3887,6 @@ val _ = adjoin_to_theory {sig_ps = SOME sigps,
                           SOME (fn pps => PP.add_string pps sspec_conv_str)}
 
 
-val _ = export_theory();
-
-
-(*
-  BIGINTER not defined at empty set, since no obvious UNIV exists.
-  COMPL a problem: no universe
-  REST and CHOICE are problems, but used only in ITSET?
-*)
-
 (*---------------------------------------------------------------------------*)
 (* Takes a curried constructor and maps it to a tupled version.              *)
 (*---------------------------------------------------------------------------*)
@@ -3961,6 +3952,8 @@ val _ =
     ABSDATATYPE (["'a"], setdecl)
     :: OPEN ["num"]
     :: MLSIG "type num = numML.num"
+    :: MLSIG "val EMPTY    : 'a set"
+    :: MLSIG "val INSERT   : 'a * 'a set -> 'a set"
     :: MLSIG "val IN       : ''a -> ''a set -> bool"
     :: MLSIG "val UNION    : ''a set -> ''a set -> ''a set"
     :: MLSIG "val INTER    : ''a set -> ''a set -> ''a set"
@@ -4009,4 +4002,7 @@ val _ =
                \    | toList (INSERT(a,s)) = a::toList s"]))
 end;
 
-end;
+val _ = export_theory();
+
+end
+
