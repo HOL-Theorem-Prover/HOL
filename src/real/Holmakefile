@@ -1,0 +1,2 @@
+selftest.exe: selftest.uo realSimps.uo
+	$(HOLMOSMLC) -o $@ $<
