@@ -473,4 +473,10 @@ val MULTd_net = time MAKE_NETLIST MULTd_dev;
 val MULTd_cir = time MAKE_CIRCUIT MULTd_dev;
 *)
 
+(*****************************************************************************)
+(* Temporary hack to work around a system prettyprinter bug                  *)
+(*****************************************************************************)
+val _ = temp_overload_on(" * ", numSyntax.mult_tm);
+
+
 val _ = export_theory();
