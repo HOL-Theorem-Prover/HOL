@@ -194,33 +194,41 @@ Web: \texttt{http://www.cl.cam.ac.uk/\homedir mjcg}
 
 \maketitle                            % typeset the title of the contribution
 
+\vspace*{-3mm}
+
 \begin{abstract}
 The Accellera standards-promoting organisation has selected \Sugar,
 IBM's formal specification language, as a standard that it says will
 drive assertion-based verification.
 
-\Sugar combines aspects of  Interval
-Temporal Logic (ITL), Linear Temporal Logic (LTL) and Computation Tree Logic (CTL) 
-into a property
-language suitable for both formal verification and simulation test
-bench uses. As industrial strength languages go it is remarkably
+\Sugar combines aspects of Interval Temporal Logic (ITL), Linear
+Temporal Logic (LTL) and Computation Tree Logic (CTL) into a property
+language suitable for both formal verification and use with simulation
+test benchs. As industrial strength languages go it is remarkably
 elegant, consisting of a small kernel conservatively extended by
 numerous definitions.
 
 We have constructed a semantic embedding of \Sugar in the version of
-higher order logic supported by the \Hol system and are contemplating
-a variety of applications. For example, we want to `sanity check' our
-embedding by subjecting it to `formal challenges', and we hope to
-exploit existing work to build a Sugar model checker inside \Hol. In
-the longer term we want to investigate the use of theorem proving to
-reason about models with infinite state spaces, which might involve
-developing extensions of \Sugar.
+higher order logic supported by the \Hol system. To `sanity check' the
+semantics we subjected it to some `formal challenges' and bugs in the
+semantics were discovered and fixed. Further formal challenges may
+well reveal more bugs.
+
+We are contemplating a variety of applications of the mechanised
+semantics, including the exploitation of existing work to build a
+Sugar model checker inside \Hol. In the longer term we want to
+investigate the use of theorem proving to reason about models with
+infinite state spaces, which might involve developing extensions of
+\Sugar.
 \end{abstract}
 
+\vspace*{-3mm}
 
 \section{Background on Accellera and Sugar}
 
 The Accellera organisation's website has their mission statement:
+
+\vspace*{-1mm}
 
 {\sl\begin{quote}
 
@@ -239,6 +247,7 @@ activities of the organisation and is comprised of representatives
 from ASIC manufacturers, systems companies and design tool vendors.
 \end{quote}}
 
+\vspace*{-1mm}
 
 Faced with a plethora of syntactically and semantically incompatible
 formal property languages, Accellera initiated a process of selecting
@@ -247,6 +256,8 @@ a standard property language to ``drive assertion-based verification''.
 \newpage
 
 Four contributions were initially considered
+
+\vspace*{-3mm}
 
 \begin{itemize}
 
@@ -259,6 +270,8 @@ Four contributions were initially considered
 \item Verisity's {\it e} language (the language of the Specman Elite testbench).
 
 \end{itemize}
+
+\vspace*{-3mm}
 
 After a combination of discussion and voting, some details of which
 can be viewed on the web\footnote{\url{http://www.eda.org/vfv/hm/}},
@@ -287,19 +300,26 @@ and semantics of the whole language in \Hol \cite{GordonMelham}.
 
 In the rest of this paper we start by discussing the point of
 embedding Sugar in \Hol. Next we briefly review semantic embedding,
-illustrate the
-ideas on a simplified semantics of a fragment of \Sugar.  We then
+illustrating the
+ideas on simplified semantics of fragments of \Sugar.  We then
 give the complete semantics of \Sugar, and finally we discuss our
-small achievements so far in analysing the \Sugar semantics using the
-\Hol system.
+small achievements so far in analysing the semantics using the
+\Hol system, including a discussion of the bugs found.
+
+\vspace*{-3mm}
 
 \section{Why embed Sugar in \Hol?}
+
+\vspace*{-3mm}
 
 There are several justifications for the work described here. This project
 has only just started and its goals are still being defined. Current motivations include
 the following.
 
+\vspace*{-3mm}
+
 \subsection{Sanity checking and proving meta-theorems}
+
 
 By formalising the semantics and passing it through a parser and
 type-checker one achieves a first level of sanity checking of the
@@ -316,8 +336,17 @@ there is no non-trivial clocking, that different semantics of clocking
 are equivalent and that if finite paths are ignored then the standard
 `text-book semantics' results. Such meta-theorems are generally mathematically
 shallow, but full of tedious details -- i.e.~ideal for automated
-theorem proving. See Section~\ref{progress} for what we have proved so far. It's not much!
+theorem proving. See Section~\ref{progress} for what we have proved so far. 
+It's not much, but we have already found minor bugs in the semantics!
 
+A key feature of the Sugar approach is to have a small kernel and a large
+number of definitions. Using a theorem prover,
+the definitions can be validated by proving that they achieve the
+correct semantics.  See, for example, the analysis of \t{FirstRise}
+and \t{NextRise} in Section~\ref{progress} (these are not official
+Sugar definitions, but the analysis here illustrates the idea of
+validating definitions).
+\vspace*{-3mm}
 
 \subsection{Develop a machine readable semantics}
 
@@ -333,37 +362,47 @@ Isabelle/HOL, PVS, NuPrl and Coq) and once one has a representation
 in it then representations in other formats should be straightforward
 to derive.
 
+\vspace*{-3mm}
+
 \subsection{Research using our local tools}
 
 
-We are contemplating developing semantically-based reasoning and checking infrastructure in \HOL to
-support \Sugar, and a prerequisite for this is to have a `golden semantics' to which application
-specific semantics can be proved equivalent.
+We are contemplating developing semantically-based reasoning and
+checking infrastructure in \HOL to support \Sugar, and a prerequisite
+for this is to have a `golden semantics' to which application specific
+semantics can be proved equivalent.
 
-One area of research we are interested in is developing property
-languages that have support for data operations and can have variables
-ranging over (possibly infinite valued) data-types like numbers
+One area of research that we have an interest in is the development of property
+languages that support data operations and can have variables
+ranging over infinite data-types like numbers
 (e.g.~including reals and complex numbers for DSP applications). Some
 sort of mixture of Hoare Logic and \Sugar is being contemplated
-(rather vaguely, it must be admitted).  Developing the language by extending
-an existing semantics is a way to ensure some `backward compatibility'.
-Also, we might wish to prove sanity
-checking meta-theorem about our extended language, e.g.~that it
-collapses to \Sugar when the are no infinite types. 
+(rather vaguely, it must be admitted).  Developing the language by
+extending an existing semantics is a way to ensure some `backward
+compatibility'.  Also, we might wish to prove sanity checking
+meta-theorem about our extended language, e.g.~that it collapses to
+\Sugar when there are no infinite types.
+
+\vspace*{-3mm}
 
 \subsection{Education}
 
-I teach both semantic embedding and property specification as part of
-an undergraduate course at
-Cambridge\footnote{\url{http://www.cl.cam.ac.uk/users/mjcg/Teaching/SpecVer2/SpecVer2.html}},
+Both semantic embedding and property specification are taught as part
+of the Computer Science undergraduate course at
+Cambridge%
+\footnote{\url{http://www.cl.cam.ac.uk/users/mjcg/Teaching/SpecVer2/SpecVer2.html}},
 and being able to illustrate the ideas on a real example like \Sugar
 is pedagogically valuable.
 
-Also, the definition of \Sugar in the \Hol system is an interesting
-case study. It nicely illustrates some issues in making total
-functional definitions. Thus \Sugar has educational potential for
-training \Hol users. In fact, the semantics described in this paper
-will be an example distributed with the next release of \Hol.
+The semantic embadding of \Sugar in the \Hol system is an interesting case
+study. It nicely illustrates some issues in making total functional
+definitions, and the formal challenges attempted so far provide
+insight into how to perform structural induction using the built-in
+tools.  Thus \Sugar has educational potential for training \Hol
+users. In fact, the semantics described in this paper is an
+example distributed with \Hol.%
+\footnote%
+{\url{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/hol/hol98/examples/Sugar2/}}
 
 \section{Review of semantic embedding in higher order logic}\label{review}
 
@@ -740,22 +779,24 @@ In the remaining four sub-sections
 we give manually
 typeset versions of the HOL definitions of the semantic functions. The
 typesetting was done as algorithmically as I could by editing the HOL
-sources (using emacs and latex macros etc.). I hope to have avoided
-transcription errors, but this cannot be guaranteed!
+sources. I hope to have avoided
+transcription errors, but this cannot be guaranteed. Following
+some proof activity, changes to the original HOL semantics have been
+made, as discussed in Section~\ref{progress}.
 
 \subsection{Clocking}
 
-If $b$ is a boolean expression, then the SERE \texttt{$b$@clk} recognises
-a sequence of states in which $b$ is true on the next rising edge of \texttt{clk}.
-Thus \texttt{$b$@clk} behaves like \texttt{\{$\neg$clk[*]; clk ${\wedge}$ $b$\}}.
+If \t{b} is a boolean expression, then the SERE \texttt{b@clk} recognises
+a sequence of states in which \t{b} is true on the next rising edge of \texttt{clk}.
+Thus \texttt{b@clk} behaves like \texttt{\{$\neg$clk[*]; clk ${\wedge}$ b\}}.
 
-One can also clock formulas (\texttt{$f$@clk}), and there may be
+One can also clock formulas (\texttt{f@clk}), and there may be
 several clocks. Consider:\footnote{The discussion of clocking here is based on email communication
 with Cindy Eisner.}
 
 \medskip
 
-~~\texttt{G(req\_in -> X(req\_out@clkb)) @clka}
+~~\texttt{G(req\_in -> X(req\_out@clkb))@clka}
 
 \medskip
 
@@ -835,7 +876,56 @@ paths for which \t{finite} is not true).
 
 ~~``there exists $j$ s.t. (\t{finite}~$\pi$ implies $j < \t{length}(\pi)$) and $~\cdots~j~\cdots$''
 
-%\medskip
+Here is a version of the unclocked FL semantics that allows
+paths to be finite.
+
+
+
+
+{\begin{alltt}
+    ({\FSem{M}{{\pi}}{{\c}}{\FBool{b}}} = 
+     {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{0})}{b}}
+    {\And}
+    ({\FSem{M}{{\pi}}{{\c}}{\fNot{f}}} =
+     {\Not}({\FSem{M}{{\pi}}{\c}{f}})) 
+    {\And}
+    ({\FSem{M}{{\pi}}{{\c}}{\fAnd{f1}{f2}}} =
+     {\FSem{M}{\pi}{{\c}}{f1}} {\And} {\FSem{M}{\pi}{{\c}}{f2}})
+    {\And}
+    ({\FSem{M}{{\pi}}{{\c}}{\fNext{f}}} =
+     ({\IsFinitePath} {\Pi} {\Imp} \PathLength {\Pi} \Ge 1) \And {\FSem{M}{\restN{{\pi}}{1}}{{\c}}{f)}}
+    {\And}
+    ({\FSem{M}{{\pi}}{{\c}}{\fUntil{f1}{f2}}} = 
+      {\Exists}k. {\FSem{M}{\restN{{\pi}}{k}}{\c}{f2}} 
+          \And ({\IsFinitePath} {\Pi} {\Imp} k {\Le} \PathLength {\Pi}) \And {\Forall}j. j \Le k \Imp {\FSem{M}{\restN{{\pi}}{j}}{{\c}}{f1}})
+    {\And}
+    ({\FSem{M}{{\pi}}{{\c}}{\fSuffixImp{r}{f}}} = 
+      {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(0,j)}))}{\c}{r} {\Imp} {\FSem{M}{\restN{{\pi}}{j}}{{\c}}{f}})
+    {\And}
+    ({\FSem{M}{{\pi}}{{\c}}{\fStrongImp{r1}{r2}}} = 
+      {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(0,j)}))}{\c}{r1} {\Imp} {\Exists}k. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))}{\c}{r2})
+    {\And}
+    ({\FSem{M}{{\pi}}{{\c}}{\fWeakImp{r1}{r2}}} = 
+     {\FSem{M}{{\pi}}{{\c}}{\fStrongImp{r1}{r2}}}
+      \Or
+      {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(0,j)}))}{\c}{r1} 
+          \Imp ({\Exists}k. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))}{\c}{r2})
+             \Or
+             {\Forall}k. ({\IsFinitePath} {\Pi} {\Imp} k {\Le} \PathLength {\Pi}) 
+                  \Imp {\Exists}w. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))w}{\c}{r2})
+    {\And}
+    ({\FSem{M}{{\pi}}{{\c}}{\fAbort{f}{b}}} =
+      ({\FSem{M}{\pi}{{\c}}{f }}
+       {\Or}
+       {\Exists}j {\Pi}'. {\FSem{M}{\restN{{\pi}}{j}}{\c}{{\FBool{b}}}} {\And} {\FSem{M}{\pathCat{\pathSeg{\pi}{(0,j-1)}}{{\pi}'}}{{\c}}{f}}))
+\end{alltt}}
+
+This semantics is similar to an existing unpublished semantics of unclocked 
+FL formulas\footnote{Personal communication from Cindy Eisner.},
+except that the restriction $\tt{finite~\pi~\Rightarrow~k < length~\pi}$
+and disjunct $\tt{({\exists}k.~\sSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))}{\c}{r2})}$
+were added to the semantics of $\fWeakImp{r1}{r2}$ to ensure equivalence with the clocked semantics
+in Section~\ref{FL}.
 
 The following four sub-sections are the manually typeset HOL semantics of \Sugar.
 
@@ -874,7 +964,7 @@ holds for every \texttt{w} in \texttt{wlist}.
 {\begin{alltt}
    ({\SSem{M}{w}{c}{\sBool{b}}} = 
      {\Exists}n. n {\Geq} 1                                 {\And} 
-         ({\Length} w = n)                         {\And} 
+         ({\PathLength} w = n)                         {\And} 
          ({\Forall}i. 1 {\Leq} i {\And} i {\Le} n {\Imp} {\BSem{M}{\el{i-1}{w}}{\bNot{c}}} {\And}
          {\BSem{M}{\el{n-1}{w}}{\bAnd{c}{b}}})
    {\And}
@@ -906,7 +996,7 @@ holds for every \texttt{w} in \texttt{wlist}.
 
 \vspace*{-8mm}
 
-\subsection{Foundation Language}
+\subsection{Foundation Language}\label{FL}
 
 \vspace*{-2mm}
 
@@ -948,14 +1038,15 @@ and use the following two definitions:
           {\FSem{M}{\restN{{\pi}}{i+1}}{{\strongClock{c}}}{f)}}
     {\And}
     ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fUntil{f1}{f2}}} = 
-      {\Exists}i k. k {\Geq} i             {\And}
-            FirstRise M {\Pi} c i  {\And}
-            {\FSem{M}{\restN{{\pi}}{k}}{\weakClock{\T}}{{\FBool{c}}}}      {\And}  
-            {\FSem{M}{\restN{{\pi}}{k}}{{\strongClock{c}}}{f2}}     {\And}
+      {\Exists}i k. k {\Geq} i  \(\hspace*{0.8mm}\)                 {\And}
+            ({\IsFinitePath} {\Pi} {\Imp} k {\Le} \PathLength {\Pi}) \And
+            FirstRise M {\Pi} c i    \(\hspace*{0.4mm}\)    {\And}
+            {\FSem{M}{\restN{{\pi}}{k}}{\weakClock{\T}}{{\FBool{c}}}} \(\hspace*{0.8mm}\)           {\And}  
+            {\FSem{M}{\restN{{\pi}}{k}}{{\strongClock{c}}}{f2}}           {\And}
             {\Forall}j. i {\Leq} j {\And} j {\Le} k {\And} 
-              {\FSem{M}{\restN{{\pi}}{j}}{\weakClock{\T}}{{\FBool{c}}}} 
-              {\Imp}
-              {\FSem{M}{\restN{{\pi}}{j}}{{\strongClock{c}}}{f1}})
+                {\FSem{M}{\restN{{\pi}}{j}}{\weakClock{\T}}{{\FBool{c}}}} 
+                {\Imp}
+                {\FSem{M}{\restN{{\pi}}{j}}{{\strongClock{c}}}{f1}})
     {\And}
     ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fSuffixImp{r}{f}}} = 
       {\Exists}i. FirstRise M {\Pi} c i {\And} 
@@ -971,7 +1062,7 @@ and use the following two definitions:
     {\And}
     ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fWeakImp{r1}{r2}}} = 
      {\FSem{M}{{\pi}}{{\strongClock{c}}}{\fStrongImp{r1}{r2}}}
-      {\Or}
+     {\Or}
      ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fWeakImp{r1}{r2}}}
       {\And}
       {\Forall}j. ({\IsFinitePath} {\Pi} {\Imp} j {\Le} \PathLength {\Pi})
@@ -993,22 +1084,22 @@ and use the following two definitions:
       {\FSem{M}{{\pi}}{{\strongClock{c1}}}{f}})
     {\And}
     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{{\FBool{b}}}} = 
-      {\Exists}i. FirstRise M {\Pi} c i {\Imp} {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{i})}{b}})
+      {\Forall}i. FirstRise M {\Pi} c i {\Imp} {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{i})}{b}})
     {\And}
     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fNot{f}}} = 
       {\Not}({\FSem{M}{{\pi}}{{\strongClock{c}}}{f}})) 
     {\And}
     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fAnd{f1}{f2}}} = 
-      {\Exists}i. FirstRise M {\Pi} c i
+      {\Forall}i. FirstRise M {\Pi} c i
           {\Imp}
           ({\FSem{M}{\restN{{\pi}}{i}}{{\weakClock{c}}}{f1}} {\And}
            {\FSem{M}{\restN{{\pi}}{i}}{{\weakClock{c}}}{f2}}))
     {\And}
     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fNext{f}}} = 
-      {\Exists}i. (FirstRise M {\Pi} c i {\And}
-           ({\IsFinitePath} {\Pi} {\Imp} i {\Le} \PathLength {\Pi} - 1))
-          {\Imp}
-          {\FSem{M}{\restN{{\pi}}{i+1}}{{\weakClock{c}}}{f}})
+      {\Forall}i. (FirstRise M {\Pi} c i {\And}
+          ({\IsFinitePath} {\Pi} {\Imp} i {\Le} \PathLength {\Pi} - 1))
+           {\Imp}
+           {\FSem{M}{\restN{{\pi}}{i+1}}{{\weakClock{c}}}{f}})
     {\And}
     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fUntil{f1}{f2}}} = 
       {\FSem{M}{{\pi}}{{\strongClock{c}}}{\fUntil{f1}{f2}}}  
@@ -1021,12 +1112,11 @@ and use the following two definitions:
                    {\FSem{M}{\restN{{\pi}}{j}}{\weakClock{\T}}{{\FBool{c}}}} {\Imp} {\FSem{M}{\restN{{\pi}}{j}}{{\weakClock{c}}}{f1}}))
     {\And}
     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fSuffixImp{r}{f}}} = 
-      {\Exists}i. FirstRise M {\Pi} c i {\Imp}
+      {\Forall}i. FirstRise M {\Pi} c i {\Imp}
           {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(i,j)}))}{c}{r}
               {\Imp}
               {\FSem{M}{\restN{{\pi}}{j}}{{\weakClock{c}}}{f}})
     {\And}
-
     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fStrongImp{r1}{r2}}} = 
       {\FSem{M}{{\pi}}{{\strongClock{c}}}{\fStrongImp{r1}{r2}}}  
       {\Or}
@@ -1037,18 +1127,18 @@ and use the following two definitions:
                {\FSem{M}{\restN{{\pi}}{l}}{\weakClock{\T}}{{\FBool{\bNot{c}}}}}))
     {\And}
     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fWeakImp{r1}{r2}}} = 
-      {\Exists}i.  FirstRise M {\Pi} c i
+      {\Forall}i.  FirstRise M {\Pi} c i
            {\Imp}
            {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(i,j)}))}{c}{r1}
                {\Imp}
                (({\Exists}k. \SSem{M}{ (\lHat{M} (\pathSeg{\pi}{(j,k)}))}{c}{r2})
                 {\Or}
                 {\Forall}k. ({\IsFinitePath} {\Pi} {\Imp} k {\Le} \PathLength {\Pi})
-                    {\Imp}
-                    {\Exists}w. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}){\cat}w)}{c}{r2}))
+                     {\Imp}
+                     {\Exists}w. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}){\cat}w)}{c}{r2}))
     {\And}
     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fAbort{f}{b}}} =
-      {\Exists}i. FirstRise M {\Pi} c i 
+      {\Forall}i. FirstRise M {\Pi} c i 
           {\Imp}
           ({\FSem{M}{\restN{{\pi}}{i}}{{\weakClock{c}}}{f}} 
            {\Or}   
@@ -1063,6 +1153,14 @@ and use the following two definitions:
     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fStrongClock{f}{c1}}} =   
       {\FSem{M}{{\pi}}{{\strongClock{c1}}}{f}})
 \end{alltt}}
+
+
+This semantics of FL formulas differs from the one we originally transcribed from the \Sugar document
+as a result of some mismatches found when trying to prove the equivalence of
+the clocked and unclocked semantics when the clock is \t{T}. See Section~\ref{progress}
+for a discussion of the differences.
+
+
 
 \subsection{Optional Branching Extension}\label{OBE}
 
@@ -1103,31 +1201,60 @@ Write $\oSem{M}{s}{f}$ for \texttt{\Osem~M~s~f}, and then the semantics of the O
 
 \section{Progress on analysing the semantics}\label{progress}
 
-So far we have done rather little work. Two sanity checking lemmas have been proved.
+We have established a number of properties of the semantics using the \HOL system.
+Some of these went through first time without any problems,
+but others revealed bugs in the original HOL semantics.
 
-Recall the definition:
+
+Recall the definitions:
 
 
 {\begin{alltt}
    FirstRise M {\Pi} c i    = \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(0,i)}))}{\bTrue}{\sCat{\sRepeat{\sBool{\bNot{c}}}}{\sBool{c}}}
+   NextRise M {\Pi} c (i,j) = \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(i,j)}))}{\bTrue}{\sCat{\sRepeat{\sBool{\bNot{c}}}}{\sBool{c}}}
 \end{alltt}}
 
-We have proved that the definition of \t{FirstRise} gives it the correct meaning,
+We have proved that the definitions of \t{FirstRise} and \t{NextRise} give them the correct meaning,
 namely $\t{FirstRise~M}~{\pi}~\t{c~i}$ is true iff \t{i} is the time of the first
-rising edge of \t{c}.
+rising edge of \t{c},
+and $\t{NextRise~M}~{\pi}~\t{c~(i,j)}$ is true iff \t{j} is the time of the first
+rising edge of \t{c} after \t{i}.
 
 \medskip
 
-$\vdash~ \t{FirstRise~M}~{\pi}~\t{c~i}~\Rightarrow~\forall \t{j}.~\t{j} < \t{i} ~\Rightarrow~
-\neg\bSem{M}{L_{M}(\pi_j)}{\t{c}}~\wedge~\bSem{M}{L_{M}(\pi_i)}{\t{c}}$
+$\begin{array}{l}
+\vdash~ \t{FirstRise~M}~{\pi}~\t{c~i}~=\\
+\phantom{\vdash~}
+~(\forall \t{j}.~\t{j} < \t{i} ~\Rightarrow~\neg\bSem{M}{L_{M}(\pi_j)}{\t{c}})~\wedge~\bSem{M}{L_{M}(\pi_i)}{\t{c}}\\
+ \\
+\vdash~ \t{i}\leq \t{j}\\
+\phantom{\vdash~}
+\Rightarrow\\
+\phantom{\vdash~}
+(\t{NextRise~M}~{\pi}~\t{c~(i,j)}~=\\
+\phantom{\vdash~(}
+~(\forall \t{k}.~\t{i} \leq \t{k} \wedge \t{k} < \t{j} ~\Rightarrow~\neg\bSem{M}{L_{M}(\pi_k)}{\t{c}})~\wedge~\bSem{M}{L_{M}(\pi_j)}{\t{c}})
+\end{array}$
 
 \medskip
 
-The proof of this was a bit more tricky than expected, but was essentially routine.
+The proof of these were essentially routine, though quite a bit more tricky than expected. Immediate corollaries are
 
-The second thing we have proved is that if we define \t{ClockFree~r} to mean
+
+\medskip
+
+$\begin{array}{l}
+\vdash~ \t{FirstRise~M}~{\pi}~\t{\T~i}~=~(\t{i}=0)
+ \\
+\vdash~ \t{i}\leq \t{j}~\Rightarrow~(\t{NextRise~M}~{\pi}~\t{\T~(i,j)}~=~(\t{i} = \t{j}))
+\end{array}$
+
+\medskip
+
+
+The next thing we have proved is that if we define \t{ClockFree~r} to mean
 that \t{r} contains no clocking constructs (a simple recursion over the syntax of SEREs),
-then clocking with \T{} is equivalent to the unclocked semantics.
+then clocking with \T{} is equivalent to the unclocked SERE semantics.
 
 \medskip
 
@@ -1138,13 +1265,102 @@ $\vdash~\forall{\t{r}}.~\t{ClockFree~r}~\Rightarrow~(\sSem{M}{w}{\T}{r}~=~\sSem{
 The proof of this is an easy structural induction, and shows that the semantics in Section~\ref{FullSERE}
 collapses to that in Section~\ref{SimpleSERE} when the clock is \T.
 
+We next tried to prove a similar result for FL formulas, but this turned out to be impossible.
+The reason is that the proof required first showing
+
+
+\medskip
+
+$~~\forall{\t{f}}~\pi.~\fSem{M}{\pi}{\T}{f}~=~\sSem{M}{\pi}{\T\texttt{!}}{f})$
+
+\medskip
+
+However, the original semantics had the following:
+
+{\begin{alltt}
+  {\FSem{M}{{\pi}}{{\strongClock{c}}}{\FBool{b}}} = {\Exists}i. FirstRise M {\Pi} c i {\And} {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{i})}{b}}
+
+  {\FSem{M}{{\pi}}{{\weakClock{c}}}{{\FBool{b}}}}  = {\Exists}i. FirstRise M {\Pi} c i {\Imp} {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{i})}{b}}
+\end{alltt}}
+
+
+Instantiating \t{c} to \T{} and using the corollary about \t{FirstRise} yields
+
+
+{\begin{alltt}
+  {\FSem{M}{{\pi}}{{\strongClock{\T}}}{\FBool{b}}} = {\Exists}i. (i=0) {\And} {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{i})}{b}}
+
+  {\FSem{M}{{\pi}}{{\weakClock{\T}}}{{\FBool{b}}}}  = {\Exists}i. (i=0) {\Imp} {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{i})}{b}}
+\end{alltt}}
+
+With this, clearly $\fSem{M}{\pi}{\T}{\FBool{b}}$ is not equal to $\sSem{M}{\pi}{\T\texttt{!}}{\FBool{b}})$.
+The solution, suggested by Cindy Eisner, is to replace the weak semantics by
+
+
+{\begin{alltt}
+  {\FSem{M}{{\pi}}{{\weakClock{c}}}{{\FBool{b}}}}  = {\Forall}i. FirstRise M {\Pi} c i {\Imp} {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{i})}{b}}
+\end{alltt}}
+
+so that we get 
+
+
+{\begin{alltt}
+  {\FSem{M}{{\pi}}{{\strongClock{\T}}}{\FBool{b}}} = {\Exists}i. (i=0) {\And} {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{i})}{b}}
+
+  {\FSem{M}{{\pi}}{{\weakClock{\T}}}{{\FBool{b}}}}  = {\Forall}i. (i=0) {\Imp} {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{i})}{b}}
+\end{alltt}}
+
+which makes $\fSem{M}{\pi}{\T}{\FBool{b}}$ equal to $\sSem{M}{\pi}{\T\texttt{!}}{\FBool{b}})$.
+The same change of $\exists$ to $\forall$ is also needed for the semantics of weak clocking for
+$\tt{\fAnd{f1}{f2}}$,  $\tt{\fNext{f}}$, $\tt{\fSuffixImp{r}{f}}$, $\tt{\fWeakImp{r1}{r2}}$ and $\tt{\fAbort{f}{b}}$.
+With these changes, a structural induction proves:
+
+\medskip
+
+$~~\vdash~\forall{\t{f}}~\pi.~\fSem{M}{\pi}{\T}{f}~=~\sSem{M}{\pi}{\T\texttt{!}}{f})$
+
+\medskip
+
+However, we were still unable to prove
+
+\medskip
+
+$\vdash~\forall{\t{f}}.~\t{ClockFree~f}~\Rightarrow~(\sSem{M}{w}{\T}{f}~=~\sSem{M}{w}{\c}{f})$
+
+\medskip
+where here \t{ClockFree~f} means that \t{f} contains no clocked FL formulas or SEREs.
+The proof attempt failed because the unclocked semantics for $\tt{\fUntil{f1}{f2}}$ 
+had a path length check, but the strongly clocked semantics didn't. By adding the conjunct
+$\t{finite}~\pi~\Rightarrow~\t{k}<\t{length}~\pi$ to the strongly clocked semantics
+the proof could be completed.
+
+\section{Conclusions}
+
+It was quite straightforward to use the informal semantics in the
+\Sugar documentation to create a deep
+embedding of the whole \Sugar kernel.  Proving some simple `sanity
+checking' lemmas with a proof assistant revealed minor bugs in the
+translated semantics (and possibly in the original). We cannot claim
+that the current semantics is `golden', since other errors may have
+crept in and not yet been detected, but the process of analying it
+using machine assisted proof has increased our confidence in its
+correctness.
+
 \section{Acknowledgements}
 
-Cindy Eisner patiently answered several email questions
+Cindy Eisner patiently answered numerous email questions
 in great detail. She also supplied valuable comments and corrections
-to an earlier version of this paper.
+to an earlier version of this paper, and suggested
+ways of modifying the HOL semantics to get the proofs described in Section~\ref{progress} to go through.
 
 \bibliographystyle{plain}{\bibliography{CatBPaper}}
 
 \end{document}
+
+
+
+
+
+
+
 

@@ -277,7 +277,7 @@ val F_SEM_defn =
 * Start of weak clock clauses
 ******************************************************************************)
    (F_SEM M p (WEAK_CLOCK c) (F_BOOL b) =
-     (!i. FIRST_RISE M p c i ==> B_SEM M (L M (PATH_EL p i)) b))
+     !i. FIRST_RISE M p c i ==> B_SEM M (L M (PATH_EL p i)) b)
     /\
     (F_SEM M p (WEAK_CLOCK c) (F_NOT f) = 
       ~(F_SEM M p (STRONG_CLOCK c) f)) 
