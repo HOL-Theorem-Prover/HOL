@@ -16,7 +16,7 @@
       booktitle={Higher Order Logic Theorem Proving and its Applications}
       publisher = {Springer-Verlag},
       series = {Lecture Notes in Computer Science},
-      title = {A {T}heory of {F}inite {M}aps},
+      title = {A Theory of Finite Maps},
       volume = {971},
       year = {1995},
       pages = {122--137}
@@ -459,6 +459,20 @@ val fmap_INDUCT = Q.store_thm(
     PROVE_TAC []
   ]);
 
+(* splitting a finite map on a key *)
+val FM_PULL_APART = store_thm(
+  "FM_PULL_APART",
+  ``!fm k. k IN FDOM fm ==> ?fm0 v. (fm = fm0 |+ (k, v)) /\
+                                    ~(k IN FDOM fm0)``,
+  HO_MATCH_MP_TAC fmap_INDUCT THEN SRW_TAC [][] THENL [
+    PROVE_TAC [],
+    RES_TAC THEN
+    MAP_EVERY Q.EXISTS_TAC [`fm0 |+ (x,y)`, `v`] THEN
+    `~(k = x)` by PROVE_TAC [] THEN
+    SRW_TAC [][FUPDATE_COMMUTES]
+  ]);
+
+
 (*---------------------------------------------------------------------------
      Equality of finite maps
  ---------------------------------------------------------------------------*)
@@ -858,6 +872,13 @@ val o_f_FEMPTY = store_thm(
   SRW_TAC [][GSYM fmap_EQ_THM, FDOM_o_f])
 val _ = BasicProvers.export_rewrites ["o_f_FEMPTY"]
 
+val o_f_o_f = store_thm(
+  "o_f_o_f",
+  ``(f o_f (g o_f h)) = (f o g) o_f h``,
+  SRW_TAC [][GSYM fmap_EQ_THM, o_f_FAPPLY]);
+val _ = export_rewrites ["o_f_o_f"]
+
+
 (*---------------------------------------------------------------------------
           Range of a finite map
  ---------------------------------------------------------------------------*)
@@ -870,6 +891,7 @@ val FRANGE_FEMPTY = Q.store_thm
 ("FRANGE_FEMPTY",
  `FRANGE FEMPTY = {}`,
  SRW_TAC [][FRANGE_DEF, FDOM_FEMPTY, EXTENSION]);
+val _ = export_rewrites ["FRANGE_FEMPTY"]
 
 val FRANGE_FUPDATE = Q.store_thm
 ("FRANGE_FUPDATE",
@@ -884,6 +906,16 @@ val SUBMAP_FRANGE = Q.store_thm
 ("SUBMAP_FRANGE",
  `!^fmap g. f SUBMAP g ==> FRANGE f SUBSET FRANGE g`,
  SRW_TAC [][SUBMAP_DEF,FRANGE_DEF, SUBSET_DEF] THEN PROVE_TAC []);
+
+val FINITE_FRANGE = store_thm(
+  "FINITE_FRANGE",
+  ``!fm. FINITE (FRANGE fm)``,
+  HO_MATCH_MP_TAC fmap_INDUCT THEN
+  SRW_TAC [][FRANGE_FUPDATE] THEN
+  Q_TAC SUFF_TAC `DRESTRICT fm (COMPL {x}) = fm` THEN1 SRW_TAC [][] THEN
+  SRW_TAC [][GSYM fmap_EQ_THM, DRESTRICT_DEF, EXTENSION] THEN
+  PROVE_TAC []);
+val _ = export_rewrites ["FINITE_FRANGE"]
 
 (*---------------------------------------------------------------------------
         Range restriction
@@ -955,6 +987,20 @@ val FUN_FMAP_DEF = new_specification
    CONV_RULE (ONCE_DEPTH_CONV RIGHT_IMP_EXISTS_CONV THENC
               ONCE_DEPTH_CONV SKOLEM_CONV) ffmap_lemma);
 
+val FUN_FMAP_EMPTY = store_thm(
+  "FUN_FMAP_EMPTY",
+  ``FUN_FMAP f {} = FEMPTY``,
+  SRW_TAC [][GSYM fmap_EQ_THM, FUN_FMAP_DEF]);
+val _ = export_rewrites ["FUN_FMAP_EMPTY"]
+
+val FRANGE_FMAP = store_thm(
+  "FRANGE_FMAP",
+  ``FINITE P ==> (FRANGE (FUN_FMAP f P) = IMAGE f P)``,
+  SRW_TAC [boolSimps.CONJ_ss][EXTENSION, FRANGE_DEF, FUN_FMAP_DEF] THEN
+  PROVE_TAC []);
+val _ = export_rewrites ["FRANGE_FMAP"]
+
+
 
 (*---------------------------------------------------------------------------
          Composition of finite map and function
@@ -982,10 +1028,6 @@ val FAPPLY_f_o = Q.store_thm
  SRW_TAC [][FDOM_f_o, FUN_FMAP_DEF, f_o_DEF, f_o_f_DEF]);
 
 
-val GSPEC_F = prove(``{ x | F } = {}``, SRW_TAC [][EXTENSION])
-val GSPEC_OR = prove (``{x | P x \/ Q x } = { x | P x } UNION { x | Q x}``,
-                      SRW_TAC [][EXTENSION])
-val GSPEC_EQ = prove(``{x | x = y} = {y}``, SRW_TAC [][EXTENSION]);
 val FINITE_PRED_11 = Q.store_thm
 ("FINITE_PRED_11",
  `!(g:'a -> 'b).
@@ -1065,9 +1107,20 @@ val FRANGE_FUPDATE_DOMSUB = store_thm(
   ``!fm k v. FRANGE (fm |+ (k,v)) = v INSERT FRANGE (fm \\ k)``,
   SRW_TAC [][FRANGE_FUPDATE, fmap_domsub]);
 
-
 val _ = export_rewrites ["DOMSUB_FEMPTY", "DOMSUB_FUPDATE", "FDOM_DOMSUB",
                          "DOMSUB_FAPPLY", "FRANGE_FUPDATE_DOMSUB"]
+
+val o_f_DOMSUB = store_thm(
+  "o_f_DOMSUB",
+  ``(g o_f fm) \\ k = g o_f (fm \\ k)``,
+  SRW_TAC [][GSYM fmap_EQ_THM, DOMSUB_FAPPLY_THM, o_f_FAPPLY]);
+val _ = export_rewrites ["o_f_DOMSUB"]
+
+val DOMSUB_IDEM = store_thm(
+  "DOMSUB_IDEM",
+  ``(fm \\ k) \\ k = fm \\ k``,
+  SRW_TAC [][GSYM fmap_EQ_THM, DOMSUB_FAPPLY_THM]);
+val _ = export_rewrites ["DOMSUB_IDEM"]
 
 val o_f_FUPDATE = store_thm(
   "o_f_FUPDATE",
@@ -1081,6 +1134,13 @@ val o_f_FUPDATE = store_thm(
                DOMSUB_FAPPLY_NEQ]
   ]);
 val _ = BasicProvers.export_rewrites ["o_f_FUPDATE"]
+
+val DOMSUB_NOT_IN_DOM = store_thm(
+  "DOMSUB_NOT_IN_DOM",
+  ``~(k IN FDOM fm) ==> (fm \\ k = fm)``,
+  SRW_TAC [][GSYM fmap_EQ_THM, DOMSUB_FAPPLY_THM,
+             EXTENSION] THEN PROVE_TAC []);
+
 
 (* ----------------------------------------------------------------------
     Iterated updates
@@ -1164,24 +1224,19 @@ val FUPD11_SAME_UPDATE = store_thm(
   SRW_TAC [][GSYM fmap_EQ_THM, EXTENSION, DRESTRICT_DEF, FDOM_FUPDATE,
              FAPPLY_FUPDATE_THM] THEN PROVE_TAC []);
 
-val LMEM_DEF = new_definition("LMEM_DEF", ``LMEM l x = MEM x l``);
+val _ = temp_overload_on ("LMEM", ``LIST_TO_SET``)
 
-val LMEM_THM = store_thm(
-  "LMEM_THM",
-  ``(LMEM [] = {}) /\ (!h t. LMEM (h::t) = h INSERT LMEM t)``,
-  SRW_TAC [][EXTENSION, SPECIFICATION, LMEM_DEF]);
-
-val IN_LMEM = store_thm(
-  "IN_LMEM",
-  ``!x l. x IN LMEM l = MEM x l``,
-  SRW_TAC [][SPECIFICATION, LMEM_DEF]);
+val LMEM_THM = prove(
+  ``(LMEM [] = {}) /\ (LMEM (h::t) = h INSERT LMEM t)``,
+  SRW_TAC [][EXTENSION]);
+val _ = augment_srw_ss [rewrites [LMEM_THM]]
 
 val FDOM_FUPDATE_LIST = store_thm(
   "FDOM_FUPDATE_LIST",
   ``!kvl fm. FDOM (fm FUPDATE_LIST kvl) =
              FDOM fm UNION LMEM (MAP FST kvl)``,
   Induct THEN
-  ASM_SIMP_TAC (srw_ss()) [FUPDATE_LIST_THM, LMEM_THM,
+  ASM_SIMP_TAC (srw_ss()) [FUPDATE_LIST_THM,
                            FDOM_FUPDATE, pairTheory.FORALL_PROD,
                            EXTENSION] THEN PROVE_TAC []);
 
@@ -1191,14 +1246,13 @@ val FUPDATE_LIST_SAME_UPDATE = store_thm(
                 (DRESTRICT f1 (COMPL (LMEM (MAP FST kvl))) =
                  DRESTRICT f2 (COMPL (LMEM (MAP FST kvl))))``,
   Induct THENL [
-    SRW_TAC [][GSYM fmap_EQ_THM, FUPDATE_LIST_THM, DRESTRICT_DEF,
-               LMEM_THM] THEN
+    SRW_TAC [][GSYM fmap_EQ_THM, FUPDATE_LIST_THM, DRESTRICT_DEF] THEN
     PROVE_TAC [],
     ASM_SIMP_TAC (srw_ss()) [FUPDATE_LIST_THM, pairTheory.FORALL_PROD] THEN
     POP_ASSUM (K ALL_TAC) THEN
     SRW_TAC [][GSYM fmap_EQ_THM, FUPDATE_LIST_THM, DRESTRICT_DEF,
                FDOM_FUPDATE, FDOM_FUPDATE_LIST, EXTENSION,
-               LMEM_THM, FAPPLY_FUPDATE_THM] THEN
+               FAPPLY_FUPDATE_THM] THEN
     EQ_TAC THEN REPEAT STRIP_TAC THEN REPEAT COND_CASES_TAC THEN
     SRW_TAC [][] THEN PROVE_TAC []
   ]);
@@ -1248,7 +1302,7 @@ val FM_CONCRETE_EQ_ENUMERATE_CASES = store_thm(
                        FDOM_FUPDATE, FDOM_FUPDATE_LIST, DISJ_IMP_THM,
                        FORALL_AND_THM, FDOM_FEMPTY] THEN
   REPEAT STRIP_TAC THEN
-  FULL_SIMP_TAC (srw_ss()) [pred_setTheory.EXTENSION, IN_LMEM] THEN
+  FULL_SIMP_TAC (srw_ss()) [pred_setTheory.EXTENSION] THEN
   PROVE_TAC [lemma]);
 
 val FMEQ_SINGLE_SIMPLE_ELIM = store_thm(
@@ -1284,7 +1338,7 @@ val FMEQ_SINGLE_SIMPLE_DISJ_ELIM = store_thm(
     to close...
    ---------------------------------------------------------------------- *)
 
-val _ = export_rewrites ["DRESTRICT_FEMPTY", "FRANGE_FEMPTY"]
+val _ = export_rewrites ["DRESTRICT_FEMPTY"]
 
 
 
