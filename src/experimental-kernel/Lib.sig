@@ -102,6 +102,7 @@ sig
   val is_substring  : string -> string -> bool
   val say           : string -> unit
   val prime         : string -> string
+  val unprime       : string -> string
 
   val front_last    : 'a list -> 'a list * 'a
   val butlast       : 'a list -> 'a list

@@ -446,6 +446,14 @@ end
 
 fun prime s = s^"'";
 
+fun unprime s =
+  let
+    val n = size s - 1
+  in
+    if 0 <= n andalso String.sub (s,n) = #"'" then String.substring (s,0,n)
+    else raise ERR "unprime" "string doesn't end with a prime"
+  end;
+
 fun commafy [] = []
   | commafy [x] = [x]
   | commafy (x::rst) = (x::", "::commafy rst);
