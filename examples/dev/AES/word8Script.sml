@@ -232,6 +232,9 @@ val XOR8_def = Define
                   g XOR g1, 
                   h XOR h1)`;
 
+val _ = overload_on ("#",Term`$XOR8`);
+val _ = set_fixity "#" (Infixl 625);
+
 val AND8_def = Define 
  `(a,b,c,d,e,f,g,h) AND8 (a1,b1,c1,d1,e1,f1,g1,h1) 
                      = 
@@ -244,24 +247,27 @@ val AND8_def = Define
                   g /\ g1, 
                   h /\ h1)`;
 
+val _ = overload_on ("&",Term`$AND8`);
+val _ = set_fixity "&" (Infixl 650);
+
 (*---------------------------------------------------------------------------*)
 (* Algebraic lemmas for XOR8                                                 *)
 (*---------------------------------------------------------------------------*)
 
 val XOR8_ZERO = Q.store_thm
 ("XOR8_ZERO", 
- `!x. x XOR8 ZERO = x`, 
+ `!x. x # ZERO = x`, 
  SIMP_TAC std_ss [FORALL_BYTE_VARS,XOR_def,XOR8_def,ZERO_def]);
 
 val XOR8_INV = Q.store_thm
 ("XOR8_INV", 
- `!x. x XOR8 x = ZERO`, 
+ `!x. x # x = ZERO`, 
  SIMP_TAC std_ss [FORALL_BYTE_VARS,XOR_def,XOR8_def,ZERO_def]);
 
 val XOR8_AC = Q.store_thm
 ("XOR8_AC",
- `(!x y z:word8. (x XOR8 y) XOR8 z = x XOR8 (y XOR8 z)) /\
-  (!x y:word8. (x XOR8 y) = (y XOR8 x))`, 
+ `(!x y z:word8. (x # y) # z = x # (y # z)) /\
+  (!x y:word8. (x # y) = (y # x))`, 
  SIMP_TAC std_ss [FORALL_BYTE_VARS,XOR_def,XOR8_def]
  THEN REPEAT STRIP_TAC
  THEN DECIDE_TAC);

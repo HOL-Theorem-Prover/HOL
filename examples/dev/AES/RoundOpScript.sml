@@ -10,7 +10,13 @@
 (*                                                                           *)
 (*---------------------------------------------------------------------------*)
 
-open HolKernel Parse boolLib bossLib pairTools numLib metisLib pairTheory;
+(* For interactive work
+  app load ["sboxTheory","metisLib"];
+  open word8Theory pairTheory metisLib;
+*)
+
+open HolKernel Parse boolLib bossLib 
+     pairTools numLib metisLib pairTheory word8Theory;
 
 (*---------------------------------------------------------------------------*)
 (* Make bindings to pre-existing stuff                                       *)
@@ -65,17 +71,17 @@ val D_HEX_def  = Define  `D_HEX = (F,F,F,F,T,T,F,T)`;
 val E_HEX_def  = Define  `E_HEX = (F,F,F,F,T,T,T,F)`;
 
 (*---------------------------------------------------------------------------*)
-(* XOR on blocks                                                             *)
+(* XOR on blocks. Definition and algebraic properties.                       *)
 (*---------------------------------------------------------------------------*)
 
 val XOR_BLOCK_def = Define
  `XOR_BLOCK ((a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15):block)
             ((b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15):block)
        =
-      (a0 XOR8 b0,   a1 XOR8 b1,   a2 XOR8 b2,   a3 XOR8 b3,
-       a4 XOR8 b4,   a5 XOR8 b5,   a6 XOR8 b6,   a7 XOR8 b7,
-       a8 XOR8 b8,   a9 XOR8 b9,   a10 XOR8 b10, a11 XOR8 b11,
-       a12 XOR8 b12, a13 XOR8 b13, a14 XOR8 b14, a15 XOR8 b15)`;
+      (a0 # b0,   a1 # b1,   a2 # b2,   a3 # b3,
+       a4 # b4,   a5 # b5,   a6 # b6,   a7 # b7,
+       a8 # b8,   a9 # b9,   a10 # b10, a11 # b11,
+       a12 # b12, a13 # b13, a14 # b14, a15 # b15)`;
 
 val ZERO_BLOCK_def = Define
  `ZERO_BLOCK = (ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,
@@ -223,7 +229,7 @@ val InvShiftRows_InvSubBytes_Commute = Q.store_thm
     Multiply a byte (representing a polynomial) by x. 
 
    xtime b = (LeftShift b) 
-                XOR8 
+                # 
              (case BYTE_COMPARE b EIGHTY
                of LESS  -> ZERO 
                || other -> ONE_B)
@@ -238,7 +244,7 @@ val xtime_def = Define
 
 val xtime_distrib = Q.store_thm
 ("xtime_distrib",
- `!a b. xtime (a XOR8 b) = (xtime a) XOR8 (xtime b)`,
+ `!a b. xtime (a # b) = (xtime a) # (xtime b)`,
  SIMP_TAC std_ss [FORALL_BYTE_VARS,XOR8_def] 
    THEN RW_TAC std_ss [xtime_def, XOR8_def, XOR_def] 
    THEN DECIDE_TAC);
@@ -247,21 +253,20 @@ val xtime_distrib = Q.store_thm
 (* Multiplication by a constant                                              *)
 (*---------------------------------------------------------------------------*)
 
-val _ = set_fixity "**" (Infixl 600);
+val _ = set_fixity "**" (Infixl 675);
 
 val (ConstMult_def,ConstMult_ind) = 
-Lib.with_flag (Globals.priming,SOME "")
  Defn.tprove
   (Hol_defn "ConstMult"
      `b1 ** b2 =
         if b1 = ZERO then ZERO else 
-        if (b1 AND8 ONE) = ONE 
-           then b2 XOR8 ((RightShift b1) ** (xtime b2))
-           else          (RightShift b1) ** (xtime b2)`,
+        if (b1 & ONE) = ONE 
+           then b2 # (RightShift b1 ** xtime b2)
+           else      (RightShift b1 ** xtime b2)`,
    WF_REL_TAC `measure (BYTE_TO_NUM o FST)` THEN 
    SIMP_TAC arith_ss [FORALL_BYTE_VARS]     THEN 
-   RW_TAC arith_ss [ZERO_def,RightShift,BYTE_TO_NUM] THEN 
-   RW_TAC arith_ss [B2N]);
+   RW_TAC arith_ss [ZERO_def,RightShift_def,BYTE_TO_NUM_def] THEN 
+   RW_TAC arith_ss [B2N_def]);
 
 val _ = save_thm("ConstMult_def",ConstMult_def);
 val _ = save_thm("ConstMult_ind",ConstMult_ind);
@@ -269,7 +274,7 @@ val _ = computeLib.add_persistent_funs [("ConstMult_def",ConstMult_def)];
 
 val ConstMultDistrib = Q.store_thm
 ("ConstMultDistrib",
- `!x y z. x ** (y XOR8 z) = (x ** y) XOR8 (x ** z)`,
+ `!x y z. x ** (y # z) = (x ** y) # (x ** z)`,
  recInduct ConstMult_ind
    THEN REPEAT STRIP_TAC
    THEN ONCE_REWRITE_TAC [ConstMult_def]
@@ -284,24 +289,33 @@ val defn = Hol_defn
   `IterConstMult (b1,b2,acc) =
      if b1 = ZERO then (b1,b2,acc)
      else IterConstMult (RightShift b1, xtime b2,
-                         if (b1 AND8 ONE) = ONE 
-                          then (b2 XOR8 acc) else acc)`;
+                         if (b1 & ONE) = ONE 
+                          then (b2 # acc) else acc)`;
 
 val (IterConstMult_def,IterConstMult_ind) = 
  Defn.tprove
   (defn,
    WF_REL_TAC `measure (BYTE_TO_NUM o FST)` THEN 
    SIMP_TAC arith_ss [FORALL_BYTE_VARS]     THEN 
-   RW_TAC arith_ss [ZERO_def,RightShift,BYTE_TO_NUM] THEN 
-   RW_TAC arith_ss [B2N]);
+   RW_TAC arith_ss [ZERO_def,RightShift_def,BYTE_TO_NUM_def] THEN 
+   RW_TAC arith_ss [B2N_def]);
 
+val _ = save_thm("IterConstMult_def",IterConstMult_def);
+val _ = save_thm("IterConstMult_ind",IterConstMult_ind);
+val _ = computeLib.add_persistent_funs [("IterConstMult_def",IterConstMult_def)];
 
 (*---------------------------------------------------------------------------*)
 (* Equivalence between recursive and iterative forms.                        *)
 (*---------------------------------------------------------------------------*)
-STUCK ... WHY?
-g`!b1 b2 acc. ((b1 ** b2) XOR8 acc) = SND(SND(IterConstMult (b1,b2,acc)))`;
-e (recInduct IterConstMult_ind THEN RW_TAC std_ss []);
+
+val ConstMultEq = Q.store_thm
+("ConstMultEq",
+ `!b1 b2 acc. (b1 ** b2) # acc = SND(SND(IterConstMult (b1,b2,acc)))`,
+ recInduct IterConstMult_ind THEN RW_TAC std_ss []
+   THEN ONCE_REWRITE_TAC [ConstMult_def,IterConstMult_def]
+   THEN RW_TAC std_ss [XOR8_ZERO,AC a c]
+   THEN FULL_SIMP_TAC std_ss [AC a c]);
+
 
 (*---------------------------------------------------------------------------*)
 (* Exponentiation                                                            *)
@@ -317,172 +331,118 @@ val PolyExp_def =
 
 val MultCol_def = Define
  `MultCol (a,b,c,d) = 
-   ((TWO ** a)   XOR8 (THREE ** b) XOR8  c           XOR8 d,
-     a           XOR8 (TWO ** b)   XOR8 (THREE ** c) XOR8 d,
-     a           XOR8  b           XOR8 (TWO ** c)   XOR8 (THREE ** d),
-    (THREE ** a) XOR8  b           XOR8  c           XOR8 (TWO ** d))`;
+   ((TWO ** a)   # (THREE ** b) #  c           # d,
+     a           # (TWO ** b)   # (THREE ** c) # d,
+     a           #  b           # (TWO ** c)   # (THREE ** d),
+    (THREE ** a) #  b           #  c           # (TWO ** d))`;
 
 val InvMultCol_def = Define
  `InvMultCol (a,b,c,d) = 
-   ((E_HEX ** a) XOR8 (B_HEX ** b) XOR8 (D_HEX ** c) XOR8 (NINE  ** d),
-    (NINE  ** a) XOR8 (E_HEX ** b) XOR8 (B_HEX ** c) XOR8 (D_HEX ** d),
-    (D_HEX ** a) XOR8 (NINE  ** b) XOR8 (E_HEX ** c) XOR8 (B_HEX ** d),
-    (B_HEX ** a) XOR8 (D_HEX ** b) XOR8 (NINE  ** c) XOR8 (E_HEX ** d))`;
+   ((E_HEX ** a) # (B_HEX ** b) # (D_HEX ** c) # (NINE  ** d),
+    (NINE  ** a) # (E_HEX ** b) # (B_HEX ** c) # (D_HEX ** d),
+    (D_HEX ** a) # (NINE  ** b) # (E_HEX ** c) # (B_HEX ** d),
+    (B_HEX ** a) # (D_HEX ** b) # (NINE  ** c) # (E_HEX ** d))`;
 
 (*---------------------------------------------------------------------------*)
-(* Inversion lemmas for column multiplication.                               *)
-(*---------------------------------------------------------------------------*)
-
-val BYTE_CASES_TAC = 
- BYTE_EVAL_TAC
-   THEN REWRITE_TAC [REWRITE_RULE [ZERO_def] XOR8_ZERO]
-   THEN MAP_EVERY Cases_on [`a1`, `a2`, `a3`, `a4`, `a5`, `a6`, `a7`,`a8`]
-   THEN EVAL_TAC;
-
-
-(*---------------------------------------------------------------------------*)
+(* Inversion lemmas for column multiplication. Proved with an ad-hoc tactic  *)
+(*                                                                           *)
 (* Note: could just use case analysis with Sbox_ind, then EVAL_TAC, but      *)
 (* that's far slower.                                                        *)
 (*---------------------------------------------------------------------------*)
 
+val BYTE_CASES_TAC =
+ Ho_Rewrite.ONCE_REWRITE_TAC [FORALL_BYTE_VARS] THEN EVAL_TAC
+ THEN REWRITE_TAC [REWRITE_RULE [ZERO_def] XOR8_ZERO]
+ THEN Cases THEN PURE_REWRITE_TAC [COND_CLAUSES]
+ THEN REPEAT Cases 
+ THEN EVAL_TAC;
+
 val lemma_a1 = Q.prove
-(`!a. E_HEX ** (TWO ** a) XOR8 B_HEX ** a XOR8 
-      D_HEX ** a XOR8 NINE ** (THREE ** a) = a`,
+(`!a. E_HEX ** (TWO ** a) # B_HEX ** a # D_HEX ** a # NINE ** (THREE ** a) = a`,
  BYTE_CASES_TAC);
 
 val lemma_a2 = Q.prove
-(`!b. E_HEX ** (THREE ** b) XOR8 
-      B_HEX ** (TWO ** b)   XOR8 
-      D_HEX ** b            XOR8 
-      NINE  ** b             = ZERO`,
+(`!b. E_HEX ** (THREE ** b) # B_HEX ** (TWO ** b) # D_HEX ** b # NINE  ** b = ZERO`,
  BYTE_CASES_TAC);
 
 val lemma_a3 = Q.prove
-(`!c. E_HEX ** c            XOR8 
-      B_HEX ** (THREE ** c) XOR8 
-      D_HEX ** (TWO ** c)   XOR8 
-      NINE ** c               =  ZERO`,
+(`!c. E_HEX ** c # B_HEX ** (THREE ** c) # D_HEX ** (TWO ** c) # NINE ** c = ZERO`,
  BYTE_CASES_TAC);
 
 val lemma_a4 = Count.apply Q.prove
-(`!d. E_HEX ** d            XOR8 
-      B_HEX ** d            XOR8 
-      D_HEX ** (THREE ** d) XOR8 
-      NINE ** (TWO ** d)      = ZERO`,
+(`!d. E_HEX ** d # B_HEX ** d # D_HEX ** (THREE ** d) # NINE ** (TWO ** d) = ZERO`,
  BYTE_CASES_TAC);
 
 val lemma_b1 = Q.prove
-(`!a. NINE ** (TWO ** a) XOR8 
-      E_HEX ** a         XOR8 
-      B_HEX ** a         XOR8 
-      D_HEX  ** (THREE ** a) = ZERO`,
+(`!a. NINE ** (TWO ** a) # E_HEX ** a # B_HEX ** a # D_HEX  ** (THREE ** a) = ZERO`,
  BYTE_CASES_TAC);
 
 val lemma_b2 = Q.prove
-(`!b. NINE ** (THREE ** b) XOR8 
-      E_HEX ** (TWO ** b)  XOR8 
-      B_HEX ** b           XOR8 
-      D_HEX ** b             = b`,
+(`!b. NINE ** (THREE ** b) # E_HEX ** (TWO ** b) # B_HEX ** b # D_HEX ** b = b`,
  BYTE_CASES_TAC);
 
 val lemma_b3 = Q.prove
-(`!c. NINE ** c             XOR8 
-      E_HEX ** (THREE ** c) XOR8 
-      B_HEX ** (TWO ** c)   XOR8 
-      D_HEX ** c              = ZERO`,
+(`!c. NINE ** c # E_HEX ** (THREE ** c) # B_HEX ** (TWO ** c) # D_HEX ** c = ZERO`,
  BYTE_CASES_TAC);
 
 val lemma_b4 = Count.apply Q.prove
-(`!d. NINE ** d             XOR8 
-      E_HEX ** d            XOR8 
-      B_HEX ** (THREE ** d) XOR8 
-      D_HEX ** (TWO ** d)     = ZERO`,
+(`!d. NINE ** d # E_HEX ** d # B_HEX ** (THREE ** d) # D_HEX ** (TWO ** d) = ZERO`,
  BYTE_CASES_TAC);
 
 val lemma_c1 = Q.prove
-(`!a. D_HEX ** (TWO ** a) XOR8 
-      NINE ** a           XOR8 
-      E_HEX ** a          XOR8 
-      B_HEX  ** (THREE ** a) = ZERO`,
+(`!a. D_HEX ** (TWO ** a) # NINE ** a # E_HEX ** a # B_HEX  ** (THREE ** a) = ZERO`,
  BYTE_CASES_TAC THEN EVAL_TAC);
 
 val lemma_c2 = Q.prove
-(`!b. D_HEX ** (THREE ** b) XOR8 
-      NINE ** (TWO ** b)    XOR8 
-      E_HEX ** b            XOR8 
-      B_HEX ** b              = ZERO`,
+(`!b. D_HEX ** (THREE ** b) # NINE ** (TWO ** b) # E_HEX ** b # B_HEX ** b = ZERO`,
  BYTE_CASES_TAC);
 
 val lemma_c3 = Q.prove
-(`!c. D_HEX ** c           XOR8 
-      NINE ** (THREE ** c) XOR8 
-      E_HEX ** (TWO ** c)  XOR8 
-      B_HEX ** c             = c`,
+(`!c. D_HEX ** c # NINE ** (THREE ** c) # E_HEX ** (TWO ** c) # B_HEX ** c = c`,
  BYTE_CASES_TAC);
 
 val lemma_c4 = Count.apply Q.prove
-(`!d. D_HEX ** d            XOR8 
-      NINE ** d             XOR8 
-      E_HEX ** (THREE ** d) XOR8 
-      B_HEX ** (TWO ** d)     = ZERO`,
+(`!d. D_HEX ** d # NINE ** d # E_HEX ** (THREE ** d) # B_HEX ** (TWO ** d) = ZERO`,
  BYTE_CASES_TAC);
 
 val lemma_d1 = Q.prove
-(`!a. B_HEX ** (TWO ** a) XOR8 
-      D_HEX ** a          XOR8 
-      NINE ** a           XOR8 
-      E_HEX  ** (THREE ** a) = ZERO`,
+(`!a. B_HEX ** (TWO ** a) # D_HEX ** a # NINE ** a # E_HEX  ** (THREE ** a) = ZERO`,
  BYTE_CASES_TAC);
 
 val lemma_d2 = Q.prove
-(`!b. B_HEX ** (THREE ** b) XOR8 
-      D_HEX ** (TWO ** b)   XOR8 
-      NINE ** b             XOR8 
-      E_HEX ** b              = ZERO`,
+(`!b. B_HEX ** (THREE ** b) # D_HEX ** (TWO ** b) # NINE ** b # E_HEX ** b = ZERO`,
  BYTE_CASES_TAC);
 
 val lemma_d3 = Q.prove
-(`!c. B_HEX ** c            XOR8 
-      D_HEX ** (THREE ** c) XOR8 
-      NINE ** (TWO ** c)    XOR8 
-      E_HEX ** c              = ZERO`,
+(`!c. B_HEX ** c # D_HEX ** (THREE ** c) # NINE ** (TWO ** c) # E_HEX ** c = ZERO`,
  BYTE_CASES_TAC THEN EVAL_TAC);
 
 val lemma_d4 = Count.apply Q.prove
-(`!d. B_HEX ** d           XOR8 
-      D_HEX ** d           XOR8 
-      NINE ** (THREE ** d) XOR8 
-      E_HEX ** (TWO ** d)     = d`,
+(`!d. B_HEX ** d # D_HEX ** d # NINE ** (THREE ** d) # E_HEX ** (TWO ** d) = d`,
  BYTE_CASES_TAC);
-
-(*---------------------------------------------------------------------------*)
-(*  Set up permutative rewriting for XOR8                                    *)
-(*---------------------------------------------------------------------------*)
-
-val [a,c] = CONJUNCTS XOR8_AC;
 
 (*---------------------------------------------------------------------------*)
 (* The following lemma is hideous to prove without permutative rewriting     *)
 (*---------------------------------------------------------------------------*)
 
 val rearrange_xors = Q.prove   
-(`(a1 XOR8 b1 XOR8 c1 XOR8 d1) XOR8
-  (a2 XOR8 b2 XOR8 c2 XOR8 d2) XOR8
-  (a3 XOR8 b3 XOR8 c3 XOR8 d3) XOR8
-  (a4 XOR8 b4 XOR8 c4 XOR8 d4) 
+(`(a1 # b1 # c1 # d1) #
+  (a2 # b2 # c2 # d2) #
+  (a3 # b3 # c3 # d3) #
+  (a4 # b4 # c4 # d4) 
      = 
-  (a1 XOR8 a2 XOR8 a3 XOR8 a4) XOR8
-  (b1 XOR8 b2 XOR8 b3 XOR8 b4) XOR8
-  (c1 XOR8 c2 XOR8 c3 XOR8 c4) XOR8
-  (d1 XOR8 d2 XOR8 d3 XOR8 d4)`,
+  (a1 # a2 # a3 # a4) #
+  (b1 # b2 # b3 # b4) #
+  (c1 # c2 # c3 # c4) #
+  (d1 # d2 # d3 # d4)`,
  RW_TAC std_ss [AC a c]);
 
 val mix_lemma1 = Q.prove
 (`!a b c d. 
-   (E_HEX ** ((TWO ** a) XOR8 (THREE ** b) XOR8 c XOR8 d)) XOR8
-   (B_HEX ** (a XOR8 (TWO ** b) XOR8 (THREE ** c) XOR8 d)) XOR8
-   (D_HEX ** (a XOR8 b XOR8 (TWO ** c) XOR8 (THREE ** d))) XOR8
-   (NINE  ** ((THREE ** a) XOR8 b XOR8 c XOR8 (TWO ** d)))
+   (E_HEX ** ((TWO ** a) # (THREE ** b) # c # d)) #
+   (B_HEX ** (a # (TWO ** b) # (THREE ** c) # d)) #
+   (D_HEX ** (a # b # (TWO ** c) # (THREE ** d))) #
+   (NINE  ** ((THREE ** a) # b # c # (TWO ** d)))
       = a`,
  RW_TAC std_ss [ConstMultDistrib] 
    THEN ONCE_REWRITE_TAC [rearrange_xors] 
@@ -490,10 +450,10 @@ val mix_lemma1 = Q.prove
 
 val mix_lemma2 = Q.prove
 (`!a b c d. 
-   (NINE ** ((TWO ** a) XOR8 (THREE ** b) XOR8 c XOR8 d)) XOR8
-   (E_HEX ** (a XOR8 (TWO ** b) XOR8 (THREE ** c) XOR8 d)) XOR8
-   (B_HEX ** (a XOR8 b XOR8 (TWO ** c) XOR8 (THREE ** d))) XOR8
-   (D_HEX ** ((THREE ** a) XOR8 b XOR8 c XOR8 (TWO ** d)))
+   (NINE  ** ((TWO ** a) # (THREE ** b) # c # d)) #
+   (E_HEX ** (a # (TWO ** b) # (THREE ** c) # d)) #
+   (B_HEX ** (a # b # (TWO ** c) # (THREE ** d))) #
+   (D_HEX ** ((THREE ** a) # b # c # (TWO ** d)))
      = b`,
  RW_TAC std_ss [ConstMultDistrib] 
    THEN ONCE_REWRITE_TAC [rearrange_xors] 
@@ -502,10 +462,10 @@ val mix_lemma2 = Q.prove
 
 val mix_lemma3 = Q.prove
 (`!a b c d. 
-   (D_HEX ** ((TWO ** a) XOR8 (THREE ** b) XOR8 c XOR8 d)) XOR8
-   (NINE ** (a XOR8 (TWO ** b) XOR8 (THREE ** c) XOR8 d)) XOR8
-   (E_HEX ** (a XOR8 b XOR8 (TWO ** c) XOR8 (THREE ** d))) XOR8
-   (B_HEX ** ((THREE ** a) XOR8 b XOR8 c XOR8 (TWO ** d)))
+   (D_HEX ** ((TWO ** a) # (THREE ** b) # c # d)) #
+   (NINE  ** (a # (TWO ** b) # (THREE ** c) # d)) #
+   (E_HEX ** (a # b # (TWO ** c) # (THREE ** d))) #
+   (B_HEX ** ((THREE ** a) # b # c # (TWO ** d)))
      = c`,
  RW_TAC std_ss [ConstMultDistrib] 
    THEN ONCE_REWRITE_TAC [rearrange_xors] 
@@ -514,10 +474,10 @@ val mix_lemma3 = Q.prove
 
 val mix_lemma4 = Q.prove
 (`!a b c d. 
-   (B_HEX ** ((TWO ** a) XOR8 (THREE ** b) XOR8 c XOR8 d)) XOR8
-   (D_HEX ** (a XOR8 (TWO ** b) XOR8 (THREE ** c) XOR8 d)) XOR8
-   (NINE ** (a XOR8 b XOR8 (TWO ** c) XOR8 (THREE ** d))) XOR8
-   (E_HEX ** ((THREE ** a) XOR8 b XOR8 c XOR8 (TWO ** d)))
+   (B_HEX ** ((TWO ** a) # (THREE ** b) # c # d)) #
+   (D_HEX ** (a # (TWO ** b) # (THREE ** c) # d)) #
+   (NINE  ** (a # b # (TWO ** c) # (THREE ** d))) #
+   (E_HEX ** ((THREE ** a) # b # c # (TWO ** d)))
      = d`,
  RW_TAC std_ss [ConstMultDistrib] 
    THEN ONCE_REWRITE_TAC [rearrange_xors] 
@@ -559,11 +519,10 @@ val genMixColumns_def = Define
 val MixColumns_def    = Define `MixColumns    = genMixColumns MultCol`;
 val InvMixColumns_def = Define `InvMixColumns = genMixColumns InvMultCol`;
 
-
 val MixColumns_Inversion = Q.store_thm
 ("MixColumns_Inversion",
  `!s. genMixColumns InvMultCol (genMixColumns MultCol s) = s`,
- BLOCK_VAR_TAC
+ SIMP_TAC std_ss [FORALL_BLOCK]
   THEN RESTR_EVAL_TAC [mult,B_HEX,D_HEX,E_HEX,TWO,THREE,NINE]
   THEN RW_TAC std_ss [mix_lemma1,mix_lemma2,mix_lemma3,mix_lemma4]);
 
@@ -583,7 +542,7 @@ val InvMixColumns_Distrib = Q.store_thm
  `!s k. InvMixColumns (AddRoundKey s k) 
             = 
         AddRoundKey (InvMixColumns s) (InvMixColumns k)`,
- TWO_BLOCK_VAR_TAC THEN
+ SIMP_TAC std_ss [FORALL_BLOCK] THEN
  RW_TAC std_ss [XOR_BLOCK_def, AddRoundKey_def, InvMixColumns_def, LET_THM,
                 genMixColumns_def, InvMultCol_def, ConstMultDistrib, AC a c]);
 
