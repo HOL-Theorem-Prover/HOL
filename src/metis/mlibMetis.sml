@@ -46,7 +46,6 @@ val () = traces := aligned_traces;
 (* Helper functions                                                          *)
 (* ------------------------------------------------------------------------- *)
 
-
 (* ------------------------------------------------------------------------- *)
 (* Tuning parameters                                                         *)
 (* ------------------------------------------------------------------------- *)
@@ -72,6 +71,7 @@ local
   fun rp2s name (parm : mlibResolution.parameters) =
     let
       val {restart = r, clause_parm = c, sos_parm = a, set_parm = b} = parm
+      val {termorder_parm = t, ...} = c
     in
       name ^ ":\n" ^
       "  restart .............. " ^ io2s r ^ "\n" ^
@@ -79,7 +79,8 @@ local
       "    literal_order ...... " ^ b2s (#literal_order c) ^ "\n" ^
       "    term_order ......... " ^ b2s (#term_order c) ^ "\n" ^
       "    termorder_parm:\n" ^
-      "      approx ........... " ^ i2s (#approx (#termorder_parm c)) ^ "\n" ^
+      "      stickiness ....... " ^ i2s (#stickiness t) ^ "\n" ^
+      "      precision ........ " ^ i2s (#precision t) ^ "\n" ^
       "  sos_parm:\n" ^
       "    size_power ......... " ^ r2s (#size_power a) ^ "\n" ^
       "    literal_power ...... " ^ r2s (#literal_power a) ^ "\n" ^
@@ -197,7 +198,7 @@ in
         o mlibResolution.update_clause_parm
         o mlibClause.update_term_order)
        not)},
-     {switches = ["","-ro","--order-approx"], arguments = ["0..2"],
+     {switches = ["","-ro","--order-stickiness"], arguments = ["0..2"],
       description = "stickiness of ordering constraints",
       processor = lift1
       (fn (p,x) =>
@@ -205,7 +206,17 @@ in
         o update_resolution p
         o mlibResolution.update_clause_parm
         o mlibClause.update_termorder_parm
-        o mlibTermorder.update_approx)
+        o mlibTermorder.update_stickiness)
+       (K (string_to_int x)))},
+     {switches = ["","-rp","--order-precision"], arguments = ["0..1"],
+      description = "precision of term order constraints",
+      processor = lift1
+      (fn (p,x) =>
+       (change
+        o update_resolution p
+        o mlibResolution.update_clause_parm
+        o mlibClause.update_termorder_parm
+        o mlibTermorder.update_precision)
        (K (string_to_int x)))},
      {switches = ["","-rs","--subsumption"], arguments = ["0..2"],
       description = "amount of forward subsumption",
@@ -225,7 +236,7 @@ in
         o mlibResolution.update_set_parm
         o mlibClauseset.update_simplification)
        (K (string_to_int x)))},
-     {switches = ["","-rp","--splitting"], arguments = ["0..2"],
+     {switches = ["","-rx","--splitting"], arguments = ["0..2"],
       description = "amount of clause splitting",
       processor = lift1
       (fn (p,x) =>

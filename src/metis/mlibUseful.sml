@@ -671,7 +671,7 @@ fun process_options ({name, head, foot, opts} : Allopts) =
       | process (x :: xs) =
       (case List.find (fn {switches = n, ...} => mem x n) opts of
          NONE =>
-           if hd (explode x) <> #"-" then ([], x :: xs)
+           if hd (explode x) <> #"-" orelse x = "-" then ([], x :: xs)
            else escape {message = SOME ("unknown switch \"" ^ x ^ "\""),
                         usage = true, success = false}
        | SOME {arguments = r, processor = f, ...} =>

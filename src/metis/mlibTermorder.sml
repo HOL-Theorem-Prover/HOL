@@ -45,7 +45,8 @@ fun chat s = (trace s; true)
 type parameters =
   {weight     : string * int -> int,
    precedence : (string * int) * (string * int) -> order,
-   approx     : int};      (* How close the approximation is: one of {0,1,2} *)
+   stickiness : int,               (* How long we keep the inequations: 0..2 *)
+   precision  : int};     (* How closely we approximate the term order: 0..1 *)
 
 (* Default weight = uniform *)
 
@@ -57,17 +58,25 @@ val arity : (string * int) * (string * int) -> order =
   fn ((f,m),(g,n)) =>
   if m < n then LESS else if m > n then GREATER else String.compare (f,g);
 
-val defaults = {weight = uniform, precedence = arity, approx = 0};
+val defaults =
+  {weight     = uniform,
+   precedence = arity,
+   stickiness = 0,
+   precision  = 1};
 
-fun update_approx f {weight = w, precedence = p, approx = c} =
-  {weight = w, precedence = p, approx = f c};
+fun update_stickiness f (parm : parameters) : parameters =
+  let val {weight = w, precedence = p, stickiness = k, precision = r} = parm
+  in {weight = w, precedence = p, stickiness = f k, precision = r}
+  end;
+
+fun update_precision f (parm : parameters) : parameters =
+  let val {weight = w, precedence = p, stickiness = k, precision = r} = parm
+  in {weight = w, precedence = p, stickiness = k, precision = f r}
+  end;
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
-
-fun track (parm : parameters) = #approx parm <> 0;
-fun exact (parm : parameters) = #approx parm = 2;
 
 fun eqn_var _ ("",_,vs) = vs | eqn_var f (v,_,vs) = f v vs;
 
@@ -112,12 +121,12 @@ fun divide_gcd eqn =
   in if g <= 1 then eqn else M.map (fn (_,n) => n div g) eqn
   end;
 
-local
-  (* If an equation satisfies neg it's inconsistent: some var must be <= 0 *)
-  fun neg q =
-    M.all (fn ("",_) => true | (_,n) => n < 0) q andalso
-    M.foldl (fn (_,n,m) => n + m) 0 q < 0;
+(* If an equation satisfies this it's inconsistent: some var must be <= 0 *)
+fun inconsistent_eqn q =
+  M.all (fn ("",_) => true | (_,n) => n < 0) q andalso
+  M.foldl (fn (_,n,m) => n + m) 0 q < 0;
 
+local
   (* If an equation satisfies pos then it's completely uninformative *)
   fun pos q =
     M.all (fn ("",_) => true | (_,n) => 0 < n) q andalso
@@ -129,8 +138,10 @@ local
     0 <= M.foldl (fn ("",_,m) => m | (_,n,m) => if 0<n then m+1 else m-1) 0 q;
 in
   fun good_eqn (parm : parameters) eqn =
-    if neg eqn then raise ERR "good_eqn" "trivially inconsistent"
-    else if exact parm then not (pos eqn) else not (bad eqn);
+    if inconsistent_eqn eqn then raise ERR "good_eqn" "inconsistent"
+    else if #stickiness parm <= 0 then false
+    else if #precision parm <= 0 then not (bad eqn)
+    else not (pos eqn);
 end;
 
 fun normalize parm =
@@ -145,26 +156,23 @@ fun normalize parm =
 (* Deriving an equation from a term comparison.                              *)
 (* ------------------------------------------------------------------------- *)
 
+datatype eqn = Equal | Less | Greater | Equation of string mset;
+
 fun mk_eqn (parm : parameters) =
   let
     val {weight = wf, precedence, ...} = parm
-    fun f [] = NONE
+    fun f [] = Equal
       | f ((l,r) :: rest) =
       if l = r then f rest else
-        let
-          val w = M.subtract (weight wf r) (weight wf l)
-        in
-          case M.sign w of NONE => SOME (divide_gcd w)
-          | SOME LESS => raise ERR "add_leq" "violates order (weight)"
-          | SOME GREATER => NONE
-          | SOME EQUAL => g l r rest
+        let val w = M.subtract (weight wf r) (weight wf l)
+        in if M.nonzero w = 0 then g l r rest else Equation (divide_gcd w)
         end
     and g (Fn (f1,a1)) (Fn (f2,a2)) rest =
-      (case precedence ((f1, length a1), (f2, length a2)) of LESS => NONE
-       | GREATER => raise ERR "add_leq" "violates order (precedence)"
+      (case precedence ((f1, length a1), (f2, length a2)) of LESS => Less
+       | GREATER => Greater
        | EQUAL => f (zip a1 a2 @ rest))
-      | g (Var _) _ _ = NONE
-      | g _ (Var _) _ = raise ERR "add_leq" "violates order (var precedence)";
+      | g (Var _) _ _ = Less
+      | g _ (Var _) _ = Greater;
   in
     fn lr => f [lr]
   end;
@@ -268,8 +276,7 @@ fun vars (TO (_,fvs,_,_)) = fvs;
 
 fun add_leq lr (to as TO (parm,vars,eqns,_)) =
   let
-    fun keep eqn =
-      track parm andalso good_eqn parm eqn andalso not (superfluous eqn eqns)
+    fun keep eqn = good_eqn parm eqn andalso not (superfluous eqn eqns)
     fun inc eqn =
       let
         val () = chatto 1 "add_leq input" to
@@ -281,8 +288,10 @@ fun add_leq lr (to as TO (parm,vars,eqns,_)) =
         to
       end
   in
-    case mk_eqn parm lr of NONE => to
-    | SOME eqn => if keep eqn then inc eqn else to
+    case mk_eqn parm lr of Equal => to
+    | Less => to
+    | Greater => raise ERR "add_leq" "violates order (weight)"
+    | Equation eqn => if keep eqn then inc eqn else to
   end;
 
 fun add_leqs lrs to = foldl (uncurry add_leq) to lrs;
@@ -430,6 +439,7 @@ in
       val () = chatto 1 "consistent" to
     in
       if inconsistent (check (omega_eqns vars eqns)) then NONE
+      else if #stickiness parm <= 1 then SOME (TO (parm,[],[],true))
       else SOME (TO (parm,vars,eqns,true))
     end;
 (* This bug has now been fixed, but others may appear in the future :-)
@@ -448,26 +458,34 @@ end;
 fun subsumes (TO (_,_,eqns1,_)) (TO (_,_,eqns2,_)) =
   List.all (fn eqn => superfluous eqn eqns2) eqns1;
 
-fun compare (to as TO (parm,_,eqns,_)) lr =
-  let
-    val () = chatto 1 "compare input" to
-    val _ = chatting 1 andalso
-            chat ("comparing " ^ term_to_string (fst lr) ^
-                  " and " ^ term_to_string (snd lr) ^ "\n")
-    val res =
-      if op= lr then SOME EQUAL
-      else
-        (case total (mk_eqn parm) lr of NONE => SOME GREATER
-         | SOME NONE => SOME LESS
-         | SOME (SOME eqn) =>
-           if strictly_superfluous eqn eqns then SOME LESS
-           else if strictly_superfluous (M.compl eqn) eqns then SOME GREATER
-           else NONE)
-    val _ = chatting 1 andalso
-            chat ("compare result = " ^ partialorder_to_string res ^ "\n")
-  in
-    res
-  end;
+local
+  fun cmp _ _ Equal = SOME EQUAL
+    | cmp _ _ Less = SOME LESS
+    | cmp _ _ Greater = SOME GREATER
+    | cmp parm eqns (Equation eqn) =
+    let
+      val eqn' = M.compl eqn
+    in
+      if inconsistent_eqn eqn then SOME GREATER
+      else if inconsistent_eqn eqn' then SOME LESS
+      else if strictly_superfluous eqn eqns then SOME LESS
+      else if strictly_superfluous eqn' eqns then SOME GREATER
+      else NONE
+    end;
+in
+  fun compare (to as TO (parm,_,eqns,_)) lr =
+    let
+      val () = chatto 1 "compare input" to
+      val _ = chatting 1 andalso
+              chat ("comparing " ^ term_to_string (fst lr) ^
+                    " and " ^ term_to_string (snd lr) ^ "\n")
+      val res = cmp parm eqns (mk_eqn parm lr)
+      val _ = chatting 1 andalso
+              chat ("compare result = " ^ partialorder_to_string res ^ "\n")
+    in
+      res
+    end;
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* Name binding.                                                             *)

@@ -15,10 +15,12 @@ type subst = mlibSubst.subst
 type parameters =
   {weight     : string * int -> int,
    precedence : (string * int) * (string * int) -> order,
-   approx     : int}       (* How close the approximation is: one of {0,1,2} *)
+   stickiness : int,               (* How long we keep the inequations: 0..2 *)
+   precision  : int}      (* How closely we approximate the term order: 0..1 *)
 
-val defaults      : parameters
-val update_approx : (int -> int) -> parameters -> parameters
+val defaults          : parameters
+val update_stickiness : (int -> int) -> parameters -> parameters
+val update_precision  : (int -> int) -> parameters -> parameters
 
 (* The termorder type *)
 type termorder

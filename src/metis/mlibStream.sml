@@ -160,10 +160,10 @@ fun from_list [] = NIL
 fun from_textfile filename =
   let
     open TextIO
-    val fh = openIn filename
+    val (h,c) =
+      if filename = "-" then (stdIn, K ()) else (openIn filename, closeIn)
     fun res () =
-      case inputLine fh of "" => (closeIn fh; NIL)
-      | s => CONS (s, lazify_thunk res)
+      case inputLine h of "" => (c h; NIL) | s => CONS (s, lazify_thunk res)
   in
     res ()
   end;
