@@ -1,6 +1,6 @@
 (* app load ["pairTheory","onestepTheory",
              "word32Theory","armTheory","coreTheory","lemmasTheory"]; *)
-open HolKernel boolLib bossLib Q Parse computeLib
+open HolKernel boolLib bossLib Q computeLib
      arithmeticTheory pairTheory onestepTheory word32Theory
      armTheory coreTheory lemmasTheory;
 
@@ -401,6 +401,6 @@ val FINISH_OFF2 = POP_ASSUM_LIST (K ALL_TAC)
              THEN POP_ASSUM (fn th => REWRITE_TAC [SYM th])
              THEN RW_TAC arith_ss finish_rws;
 
-val UNFOLD_SPEC = ONCE_REWRITE_TAC [STATE_ARM_COR] THEN ASM_SIMP_TAC arith_ss [STATE_ARM_def];
+val UNFOLD_SPEC = REWRITE_TAC [SUB_EQUAL_0,CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV STATE_ARM_def];
 
 (* -------------------------------------------------------- *)

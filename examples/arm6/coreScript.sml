@@ -1,5 +1,5 @@
 (* app load ["onestepTheory","word32Theory","armTheory"]; *)
-open HolKernel boolLib Q bossLib Parse arithmeticTheory
+open HolKernel boolLib Q bossLib arithmeticTheory
      onestepTheory word32Theory armTheory;
 
 (* -------------------------------------------------------- *)
@@ -651,26 +651,9 @@ val STATE_ARM6_IMAP = store_thm("STATE_ARM6_IMAP",
   PROVE_TAC [STATE_ARM6_THM,IS_IMAP_def]
 );
 
-fun T_MINUS_ONE th =
-  REPEAT STRIP_TAC
-    THEN Cases_on `t = 0`
-    THEN ASM_SIMP_TAC std_ss [th]
-    THEN RULE_ASSUM_TAC (REWRITE_RULE [NOT_ZERO_LT_ZERO])
-    THEN IMP_RES_TAC LESS_ADD_1
-    THEN `t = SUC p` by RW_TAC arith_ss []
-    THEN ASM_SIMP_TAC arith_ss [th];
-
 val STATE_ARM6_COR = store_thm("STATE_ARM6_COR",
   `!t a. STATE_ARM6 t a = FUNPOW NEXT_ARM6 t (INIT_ARM6 a)`,
   RW_TAC std_ss [STATE_ARM6_THM,STATE_FUNPOW_LEMMA]
-);
-
-val IMM_ARM6_COR = store_thm("IMM_ARM6_COR",
-  `IMM_ARM6 a t = if t = 0 then 0 else
-                  let tm1 = IMM_ARM6 a (t-1) in
-                     DUR_ARM6 (STATE_ARM6 tm1 a) + tm1`,
-  SIMP_TAC std_ss []
-    THEN T_MINUS_ONE IMM_ARM6_def
 );
 
 (* -------------------------------------------------------- *)

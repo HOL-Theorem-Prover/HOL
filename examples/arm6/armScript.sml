@@ -618,16 +618,6 @@ val SUBST_EQ = store_thm("SUBST_EQ",
     THEN RW_TAC std_ss [SUBST_def]
 );
 
-val STATE_ARM_COR = store_thm("STATE_ARM_COR",
-  `!t a. STATE_ARM t a = if t = 0 then a else NEXT_ARM (STATE_ARM (t-1) a)`,
-  REPEAT STRIP_TAC
-    THEN ASSUME_TAC STATE_ARM_THM
-    THEN IMP_RES_TAC IMAP_COMP
-    THEN POP_ASSUM (fn th =>
-           GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [th])
-    THEN REWRITE_TAC [I_THM]
-);
-
 (* -------------------------------------------------------- *)
 
 val _ = export_theory();

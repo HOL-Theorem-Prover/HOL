@@ -1,6 +1,6 @@
 (* app load ["pairTheory","onestepTheory","word32Theory",
              "armTheory","coreTheory","lemmasTheory","lemmasLib"]; *)
-open HolKernel boolLib Q Parse bossLib simpLib PairRules
+open HolKernel boolLib bossLib Q simpLib PairRules
      arithmeticTheory onestepTheory word32Theory
      armTheory coreTheory lemmasTheory lemmasLib;
 

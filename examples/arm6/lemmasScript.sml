@@ -1,5 +1,5 @@
 (* app load ["word32Theory","word32Lib","armTheory","coreTheory","intLib"]; *)
-open HolKernel boolLib bossLib Q Parse numLib
+open HolKernel boolLib bossLib Q numLib
      arithmeticTheory bitsTheory word32Theory word32Lib
      armTheory coreTheory;
 
@@ -490,7 +490,7 @@ val ALUOUT_ADD = store_thm("ALUOUT_ADD",
   REPEAT STRIP_TAC
     THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
     THEN STRUCT_CASES_TAC (SPEC `b` word_nchotomy)
-    THEN RW_TAC arith_ss [ALUOUT_def,ADD_def,ALU_arith_def,DIVMOD_2EXP_def,SBIT_def,
+    THEN RW_TAC arith_ss [ALUOUT_def,ADD_def,ALU_arith_def,DIVMOD_2EXP,SBIT_def,
                           GSYM MOD_WL_EVAL,ADD_EVAL,w2n_EVAL,GSYM MOD_ADD,MOD_WL_ELIM]
 );
 
@@ -499,7 +499,7 @@ val ALUOUT_SUB = store_thm("ALUOUT_SUB",
   REPEAT STRIP_TAC
     THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
     THEN STRUCT_CASES_TAC (SPEC `b` word_nchotomy)
-    THEN RW_TAC arith_ss [ALUOUT_def,SUB_def,ALU_arith_neg_def,DIVMOD_2EXP_def,SBIT_def,GSYM MOD_WL_EVAL,
+    THEN RW_TAC arith_ss [ALUOUT_def,SUB_def,ALU_arith_neg_def,DIVMOD_2EXP,SBIT_def,GSYM MOD_WL_EVAL,
                           word_sub,TWO_COMP_EVAL,ADD_EVAL,w2n_EVAL,GSYM MOD_ADD,MOD_WL_ELIM]
 );
 
