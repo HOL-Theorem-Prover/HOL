@@ -1,6 +1,5 @@
 (* Unix configuration *)
 
-
 local val XABLE  = "chmod a+x"   (* set execute permission *)
       open Process
 in
@@ -42,3 +41,8 @@ fun emit_hol_unquote_script target qfilter hol quse =
       mk_xable target
    end;
 
+(*---------------------------------------------------------------------------
+        Set C-compiler options for building robdd library.
+ ---------------------------------------------------------------------------*)
+
+use "config-robdd.sml";

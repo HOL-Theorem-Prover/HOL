@@ -8,6 +8,7 @@ val LN_S = _;
 val HOLDIR = _;
 val DEPDIR = _;
 val SRCDIRS = _;
+val GNUMAKE = _;
 
 val SIGOBJ = Path.concat(HOLDIR, "sigobj");
 
@@ -18,22 +19,48 @@ fun itstrings f [] = raise Fail "itstrings: empty list"
 fun fullPath slist = normPath 
    (itstrings (fn chunk => fn path => Path.concat (chunk,path)) slist);
 
-val Holmake = fullPath [HOLDIR, "bin/Holmake"]
-
 fun quote s = String.concat["\"", s, "\""];
 
+local val Holmake_path = fullPath [HOLDIR, "bin/Holmake"]
+in
+fun Holmake dir = 
+  if Process.system Holmake_path = Process.success 
+  then ()
+  else (print ("Build failed in directory "^dir^"\n");
+        raise Fail "Couldn't make directory")
+end;
+
+
+fun gnumake dir = 
+  if Process.system GNUMAKE = Process.success 
+  then ()
+  else (print ("Build failed in directory "^dir
+                ^" ("^GNUMAKE^" failed).\n");
+        raise Fail "Couldn't make directory");
+
 (*---------------------------------------------------------------------------
-           Compile a HOL directory in place.
+           Compile a HOL directory in place. Treat the robdd library
+           specially.
  ---------------------------------------------------------------------------*)
 
 fun build_dir dir =
   let val _ = FileSys.chDir dir
       val _ = print ("Working in directory "^dir^"\n")
-  in 
-     if Process.system Holmake = Process.success 
-     then ()
-     else (print ("Build failed in directory "^dir^"\n");
-           raise Fail "Couldn't make directory")
+  in
+    case Path.splitDirFile dir 
+     of {file="robdd",...} =>
+          (let val buddy_dir = Path.concat(dir,"buddy16")
+           in
+             FileSys.chDir buddy_dir;
+             print ("Working in directory "^buddy_dir^"\n");
+             gnumake buddy_dir;
+             FileSys.chDir dir;
+             print ("Working in directory "^dir^"\n");
+             Holmake dir;
+             gnumake dir
+           end handle _ => 
+             print"\nrobddLib has NOT been built!! (continuing anyway).\n\n")
+      | otherwise => Holmake dir
   end
 
 
@@ -82,6 +109,7 @@ fun transfer_file symlink targetdir (df as (dir,file)) =
    case Path.ext file
     of SOME"ui"  => transfer mv df
      | SOME"uo"  => transfer mv df
+     | SOME"so"  => transfer mv df   (* for robddLib *)
      | SOME"sig" => transfer cp df
      |    _      => ()
   end;
@@ -89,7 +117,7 @@ fun transfer_file symlink targetdir (df as (dir,file)) =
 (*---------------------------------------------------------------------------
         Transport a compiled directory to another location. The 
         symlink argument says whether this is via a symbolic link,
-        or by copying. The ".uo", ".ui", and ".sig" files are 
+        or by copying. The ".uo", ".ui", ".so", and ".sig" files are 
         transported.
  ---------------------------------------------------------------------------*)
 
@@ -151,6 +179,8 @@ fun cleandir dir =
         case Path.ext s
          of SOME "ui" => true
           | SOME "uo" => true
+          | SOME "so" => true         (* for robddLib *)
+          | SOME "o"  => true         (* for robddLib *)
           |    _      => suffixCheck s
       fun del (d,f) = if efile f then rem_file (fullPath [d,f]) else ()
   in 
@@ -164,7 +194,7 @@ fun cleanAlldir dir = (* clean directory d and also remove d/DEPDIR *)
     if (FileSys.isDir depdir handle _ => false)
     then (map_dir (rem_file o normPath o Path.concat) depdir;
           FileSys.rmDir depdir handle e 
-           => (print ("Unable to remove directory "^depdir^"\n"); raise e))
+           => (print ("Unable to remove directory "^depdir^".\n"); ()))
     else ()
   end;
 

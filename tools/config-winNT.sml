@@ -19,7 +19,7 @@ val MK_XABLE_RHS =
 
 
 (*---------------------------------------------------------------------------
-       Write out scripts for running HOL.
+             Write out scripts for running HOL.
  ---------------------------------------------------------------------------*)
 
 local fun fopen file =
@@ -46,3 +46,9 @@ fun emit_hol_unquote_script target qfilter hol quse =
       TextIO.closeOut ostrm
    end
 end;
+
+(*---------------------------------------------------------------------------
+        Set C-compiler options for building robdd library.
+ ---------------------------------------------------------------------------*)
+
+use "config-robdd.sml";

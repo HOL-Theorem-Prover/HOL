@@ -13,13 +13,16 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = _
-val holdir   = _
-val OS       = "unix";    (* Operating system; alternatives are: winNT      *)
-val CC       = "gcc";     (* C compiler (for building quote filter)         *)
+val mosmldir = 
+val holdir   = 
+val OS       =            (* Operating system; choices are: 
+                                "linux", "solaris", "unix", "winNT" *)
 
-val DEPDIR   = ".HOLMK";  (* local dir. where Holmake dependencies kept     *)
-val LN_S     = "ln -s";   (* only change if you are a HOL developer.        *)
+val CC       = "gcc";     (* C compiler (for building quote filter)        *)
+val GNUMAKE  = "gnumake"; (* for robdd library                             *)
+
+val DEPDIR   = ".HOLMK";  (* local dir. where Holmake dependencies kept    *)
+val LN_S     = "ln -s";   (* only change if you are a HOL developer.       *)
 
 (*---------------------------------------------------------------------------
           END user-settable parameters
@@ -40,7 +43,10 @@ fun fullPath slist = normPath
      Load in OS-dependent stuff.
  ---------------------------------------------------------------------------*)
 
-use (fullPath [holdir,"tools/config-"^OS^".sml"]);
+local val OSkind = if OS="linux" orelse OS="solaris" then "unix" else OS
+in
+val _ = use (fullPath [holdir,"tools/config-"^OSkind^".sml"])
+end;
 
 
 (*---------------------------------------------------------------------------
@@ -62,7 +68,8 @@ val SRCDIRS =
   "src/res_quan/theories", "src/res_quan/src", "src/set/src",
   "src/pred_set/src", "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src", "src/integer", "src/BoyerMoore",
-  "src/hol90", "src/boss", "src/finite_map", "src/real", "src/bag"];
+  "src/hol90", "src/boss", "src/finite_map", "src/real", "src/bag", 
+  "src/robdd"];
 
 
 (*---------------------------------------------------------------------------
@@ -111,10 +118,6 @@ fun fill_holes (src,target) repls =
 infix -->
 fun (x --> y) = (x,y);
 
-(*---------------------------------------------------------------------------
-  Give tools/Holmake/Holmake.src its paths and compile it and put it in bin.
- ---------------------------------------------------------------------------*)
-
 fun full_paths (ind,holdir) =
   let fun ext s = Path.concat(holdir,s)
       fun plist [] = raise Fail "plist: empty"
@@ -123,6 +126,8 @@ fun full_paths (ind,holdir) =
   in
    String.concat o plist
   end;
+
+val _ = echo "\nBeginning configuration.";
 
 (*---------------------------------------------------------------------------
     Install the given paths etc in Holmake/Holmake.src, then compile
@@ -161,6 +166,10 @@ val _ =
   end;
 
 
+(*---------------------------------------------------------------------------
+    Instantiate tools/build.src, compile it, and put it in bin/build.
+ ---------------------------------------------------------------------------*)
+
 val _ =
  let open TextIO
      val _ = echo "Making bin/build."
@@ -173,7 +182,9 @@ val _ =
      "val HOLDIR = _;\n" --> String.concat["val HOLDIR = ",quote holdir,";\n"],
      "val DEPDIR = _;\n" --> String.concat["val DEPDIR = ",quote DEPDIR,";\n"],
      "val SRCDIRS = _;\n" --> String.concat["val SRCDIRS = \n","    [",
-                                          full_paths("     ",holdir) SRCDIRS]];
+                                          full_paths("     ",holdir) SRCDIRS],
+     "val GNUMAKE = _;\n" --> String.concat["val GNUMAKE = ",
+                                              quote GNUMAKE,";\n"]];
    Process.system (String.concat
        [fullPath [mosmldir, "bin/mosmlc"], " -o ", bin, space, target]);
    FileSys.remove (fullPath [holdir,"tools/build.ui"]);
@@ -192,8 +203,12 @@ in
    ("(defvar hol98-executable \n  "^
     quote (fullPath [holdir, "bin/hol.unquote"])^
     "\n")]
-end
+end;
 
+(*---------------------------------------------------------------------------
+    Fill in some slots in the Standard Prelude file, and write it to
+    std.prelude in the top level of the distribution directory.
+ ---------------------------------------------------------------------------*)
 
 val _ =
  let open TextIO
@@ -207,6 +222,11 @@ val _ =
           String.concat["      val SIGOBJ = toString(fromString(concat\n",
          "                    (", quote holdir, ",", quote"sigobj",")))\n"]]
   end;
+
+(*---------------------------------------------------------------------------
+     Set the location of HOLDIR in Globals.src and write it to 
+     src/0/Globals.sml
+ ---------------------------------------------------------------------------*)
 
 val _ =
  let open TextIO
@@ -245,7 +265,7 @@ val _ =
     if system (String.concat [CC," ", src," -o ", target]) = success
     then (mk_xable target; print "successful.\n")
     else print "\n>>>>>>Couldn't compile quote filter! (continuing anyway)\n\n"
- end
+ end;
 
 (*---------------------------------------------------------------------------
     Generate a shell script for running HOL through a preprocessor.
@@ -273,15 +293,34 @@ fun help mosmldir holdir =
   end;
 *)
 
+
+(*---------------------------------------------------------------------------
+    Configure the robdd library.
+    Note that CFLAGS, DLLIBCOMP, and ALL are bound in config-robdd.sml.
+ ---------------------------------------------------------------------------*)
+
 val _ =
  let open TextIO
      val _ = echo "Setting up the robdd library Makefile."
-     val src    = fullPath [holdir, "src/robdd/GNUmakefile.src"]
+     val src    = fullPath [holdir, "tools/makefile.robdd.src"]
      val target = fullPath [holdir, "src/robdd/GNUmakefile"]
+     val (cflags,dllibcomp,all) = 
+        case (CFLAGS,DLLIBCOMP,ALL)
+         of (SOME s1, SOME s2, SOME s3) => (s1,s2,s3)
+          | _ => (print (String.concat
+                   ["   Warning! (non-fatal):\n    The robdd package is not ",
+                    "expected to build in OS flavour ", quote OS, 
+                ".\n   Only linux and solaris are currently supported.\n",
+                "   End Warning.\n"]);
+                  ("unknownOS","unknownOS","unknownOS"))
+
   in
      fill_holes (src,target)
        ["MOSMLHOME:=\n"  -->  String.concat["MOSMLHOME:=", mosmldir,"\n"],
-        "HOLDIR:=\n"     -->  String.concat["HOLDIR:=", holdir,"\n"]]
+        "HOLDIR:=\n"     -->  String.concat["HOLDIR:=", holdir,"\n"],
+        "CFLAGS=\n"      -->  String.concat["CFLAGS=",cflags,"\n"],
+        "all:\n"         -->  String.concat["all: ",all,"\n"],
+        "DLLIBCOMP\n"    -->  String.concat["\t",dllibcomp,"\n"]]
   end;
 
-val _ = print "Finished!\n";
+val _ = print "Finished configuration!\n";
