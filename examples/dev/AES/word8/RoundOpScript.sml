@@ -18,7 +18,7 @@
 *)
 
 open HolKernel Parse boolLib bossLib 
-     metisLib pairTheory word8Theory tablesTheory MultTheory;
+     metisLib pairTheory word8Theory tablesTheory MultTheory word8Lib;
 
 (*---------------------------------------------------------------------------*)
 (* Make bindings to pre-existing stuff                                       *)

@@ -1,0 +1,45 @@
+loadPath := "../../" :: "../../dff/" :: !loadPath;
+
+Globals.priming := SOME "";
+app load ["word8CasesLib", "compile"];
+open word8Theory compile;
+
+load "MultTheory";
+
+val xtime_dev = 
+  PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+           (CompileConvert (SPEC_ALL xtime_def));
+val xtime_atm = REFINE (DEPTHR ATM_REFINE) xtime_dev;
+val xtimeNetlist = MAKE_NETLIST xtime_atm;
+
+
+(*---------------------------------------------------------------------------*)
+(* Iterative multiplication.                                                 *)
+(*---------------------------------------------------------------------------*)
+
+val defth = (SPEC_ALL IterConstMult_def);
+val (lt,rt) = boolSyntax.dest_eq(concl defth)
+val (func,args) = dest_comb lt
+val (b,t1,t2) = dest_cond rt
+val fb = mk_pabs(args,b)
+val f1 = mk_pabs(args,t1)
+val f2 = mk_pabs(args,rand t2)
+
+val total_thm = Q.prove
+(`TOTAL(^fb,^f1,^f2)`,
+ RW_TAC list_ss [composeTheory.TOTAL_def,pairTheory.FORALL_PROD] 
+  THEN WF_REL_TAC `w2n o FST` THEN STRIP_TAC THEN
+   word8CasesLib.word8Cases_on `p_1` THEN 
+   RW_TAC std_ss [] THEN REPEAT (POP_ASSUM MP_TAC) THEN word8Lib.WORD_TAC);
+
+val iter_mult_dev = 
+  PURE_REWRITE_RULE[GSYM DEV_IMP_def] (RecCompileConvert defth total_thm);
+val iter_mult_atm = REFINE (DEPTHR ATM_REFINE) iter_mult_dev;
+val iter_mult_Netlist = MAKE_NETLIST iter_mult_atm;
+
+val iter_mult1_dev =
+ REFINE (DEPTHR(LIB_REFINE[xtime_dev])) iter_mult_dev;
+val iter_mult1_atm = REFINE (DEPTHR ATM_REFINE) iter_mult1_dev;
+val iter_mult1_Netlist = MAKE_NETLIST iter_mult1_atm;
+
+
