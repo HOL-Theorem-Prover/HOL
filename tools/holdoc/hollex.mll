@@ -9,7 +9,7 @@ exception Finished    (* raised by reltoken when end of body reached *)
 let comments = ref []
 
 type token =
-    Ident of string
+    Ident of string * bool  (* alphanumeric? *)
   | Indent of int
   | White of string
   | Comment of string
@@ -70,8 +70,8 @@ and
 (* reltoken returns the next token, or raises Finished|BadChar *)
 
   reltoken = parse
-    dollar? idchar+        { Ident (Lexing.lexeme lexbuf) }
-  | dollar? punctchar+     { Ident (Lexing.lexeme lexbuf) }
+    dollar? idchar+        { Ident (Lexing.lexeme lexbuf,true) }
+  | dollar? punctchar+     { Ident (Lexing.lexeme lexbuf,false) }
   | newline white*         { Indent (indent_width (Lexing.lexeme lexbuf)) }
   | white+                 { White (Lexing.lexeme lexbuf) }
   | startcom               { comments := [];

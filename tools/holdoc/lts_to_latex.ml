@@ -4,6 +4,7 @@
 open Hollex
 
 exception Trailing (* there is trailing info in the file *)
+exception BadLabel
 
 (* build a fast stream of tokens from lexed stdin *)
 let tokstream =
@@ -27,7 +28,7 @@ let isIndent t =
 
 let render_token t =
   match t with
-    Ident(s)   -> "I:"^s
+    Ident(s,_) -> "I:"^s
   | Indent(n)  -> "\nN:"^(String.make n '>')
   | White(s)   -> "W:"^s
   | Comment(s) -> "C:(*"^s^"*)-C"
@@ -124,12 +125,12 @@ and parse_rule = parser
     [< 'Sep("("); _ = sp; r1 = parse_rule1 >] -> r1
   | [<>] -> raise (Stream.Error("rule begin: `('"));
 and parse_rule1 = parser
-    [< 'Ident("!"); v = rule_vars; _ = sp; 'Sep(".") ?? "."; _ = sp; 
+    [< 'Ident("!",_); v = rule_vars; _ = sp; 'Sep(".") ?? "."; _ = sp; 
        'Indent(_);
        (n,cat,desc) = rule_name;
        l_lab_r = parse_chunk;
        'Indent(_);
-       _ = sp'; 'Ident("<==") ?? n^": <=="; _ = sp;
+       _ = sp'; 'Ident("<==",_) ?? n^": <=="; _ = sp;
        'Indent(_);
        side = parse_chunk;
        'Indent(_); _ = optind;
@@ -138,9 +139,9 @@ and parse_rule1 = parser
        _ = sp; 'Sep(")") ?? n^": rule end: `)'"; _ = sp >]
       -> let rec isLab ts =
             match ts with
-              (Indent(_)   :: ts) -> isLab ts
-            | (White(_)    :: ts) -> isLab ts
-            | (Ident("--") :: _ ) -> true
+              (Indent(_)     :: ts) -> isLab ts
+            | (White(_)      :: ts) -> isLab ts
+            | (Ident("--",_) :: _ ) -> true
             | _                   -> false
          in
          let rec go c lhs =
@@ -157,12 +158,12 @@ and parse_rule1 = parser
 and rule_vars = parser
     [< 'White(_)  ; r = rule_vars >] -> r
   | [< 'Comment(_); r = rule_vars >] -> r
-  | [< 'Ident(s)  ; r = rule_vars >] -> s :: r
+  | [< 'Ident(s,_); r = rule_vars >] -> s :: r
   | [<>]                             -> []
 
 and rule_name = parser
-    [< 'Indent(_); 'Ident(n) ?? "rule name"; _ = sp; 'Ident("/*") ?? "/*"; _ = sp; 'Ident(cat) ?? "category"; _ = wopt;
-       desc = optcomm; _ = sp; 'Ident("*/") ?? "*/"; _ = sp >]
+    [< 'Indent(_); 'Ident(n,_) ?? "rule name"; _ = sp; 'Ident("/*",_) ?? "/*"; _ = sp; 'Ident(cat,_) ?? "category"; _ = wopt;
+       desc = optcomm; _ = sp; 'Ident("*/",_) ?? "*/"; _ = sp >]
       -> (n,cat,desc)
   | [<>] -> raise (Stream.Error("rule name on new line"));
 
@@ -174,7 +175,7 @@ and parse_rules_ap1 p = parser
        rs = parse_rules_ap2 p >] -> r :: rs
   | [<>]                         -> []
 and parse_rules_ap2 p = parser
-    [< 'Ident("/\\"); _ = sp';
+    [< 'Ident("/\\",_); _ = sp';
        rs = parse_rules_ap1 p >] -> rs
   | [<>]                         -> []
 
@@ -239,13 +240,427 @@ let texify s =
   in
   String.concat "" (mapString go s)
 
+
+
+(* the patterns and lists below are all due to munge_lexer.mll and
+   need updating *)
+
+let is_rule s = try 
+                  (String.index s '.' ) <> (String.length s) -1
+                with
+                  Not_found -> false
+
+let is_type s = List.mem s 
+[ "fd"            ;         
+  "ip"            ;   
+  "port"          ;   
+  "error"         ;   
+  "netmask"       ;   
+  "ifid"          ;   
+  "sockopt"       ;   
+  "int"           ;   
+  "bool"          ;   
+  "string"        ;   
+  "list"          ;   
+  "err"           ;   
+  "void"          ;   
+  "set"           ;   
+  "ipBody"        ;   
+  "msg"           ;   
+  "ifd"           ;   
+  "flags"         ;   
+  "socket"        ;   
+  "boxid"         ;   "hostid" ;
+  "boxThreadState";   "hostThreadState" ;
+  "box"           ;   "host" ;
+  "network" ;
+  "exn"  ; 
+  "lift"  ; 
+  "ref"  ;
+  "msg-ok" ;
+  "ifd-set-ok";
+  "socket-ok";
+  "msg-oq-ok";
+  "box-ok" ; "host-ok" ;
+] 
+
+
+let is_con s = List.mem s 
+[ "EACCES"             ;
+  "EADDRINUSE"         ;
+  "EADDRNOTAVAIL"      ;
+  "EAGAIN"             ;
+  "EBADF"              ;
+  "ECONNREFUSED"       ;
+  "EHOSTUNREACH"       ;
+  "EINTR"              ;
+  "EINVAL"             ;
+  "EMFILE"             ;
+  "EMSGSIZE"           ;
+  "ENFILE"             ;
+  "ENOBUFS"            ;
+  "ENOMEM"             ;
+  "ENOTCONN"           ;
+  "ENOTSOCK"           ;
+  "EPERM"              ;
+  "EDESTADDRREQ"  ; 
+  "EISCONN"  ; 
+  "EWOULDBLOCK"  ; 
+  "ENETUNREACH"  ; 
+  "BadInjection" ;
+  "lo"                 ;
+  "eth0"               ;
+  "eth1"               ;
+  "true"         ;
+  "false"         ;
+  "nil"                ;
+  "OK"                 ;  
+  "Fail"               ;
+  "UDP"                ;
+  "IP"                 ;
+  "IF"                 ;
+  "Flags"              ;
+  "Sock"               ;
+  "alan"               ;
+  "emil"               ;
+  "john"               ;
+  "kurt"               ;
+  "astrocyte"          ;
+  "Run"                ;
+  "Term"               ;
+  "Ret"                ;
+  "RET"                ;
+  "Sendto2"            ;
+  "Recvfrom2"          ;
+  "Select2"            ;
+  "Print2"             ;
+  "Box"                ; "Host" ;
+  "Lift"  ;
+  "Star"  ;
+  "c" ;
+  "RetOK";
+  "RetFail";
+  "Op2" ;
+  "SO_BSDCOMPAT"       ;
+  "SO_REUSEADDR"       ;
+  "ICMP_HOST_UNREACH"  ;
+  "ICMP_PORT_UNREACH"  ;
+  "ICMP_X_UNREACH"  ;
+  "Match_failure"  
+]
+
+
+let is_lib s = List.mem s [
+  "socket"      ;
+  "bind"        ;
+  "connect"     ;
+  "disconnect"  ;
+  "getsockname" ;
+  "getpeername" ;
+  "geterr"      ;
+  "getsockopt"  ;
+  "setsockopt"  ;
+  "sendto"      ;
+  "recvfrom"    ;
+  "close"       ;
+  "select"      ;
+  "getifaddrs"  ;
+  "exit"        ;
+  "print_endline_flush" ;
+  "port_of_int"      ;
+  "int_of_port"      ;
+  "ip_of_string"     ;
+  "iplift_of_string" ;
+  "string_of_iplift" ;
+]
+
+
+let is_aux s = List.mem s 
+ [ "autobind" ;
+  "lookup"   ;
+  "outroute" ;
+  "socks"    ;
+  "sockfd"  ;
+  "sockfds"  ;
+  "unused"   ;
+  "ephemeral";
+  "privileged";
+  "ephemeralErrors" ;
+  "reuseaddr";
+  "bsdcompat";
+  "setbsdcompat" ;
+  "setreuseaddr" ;
+  "UDPpayloadMax" ;
+  "orderings" ;
+  "size"  ;
+  "Con" ;
+  "arity" ;
+  "store"  ; 
+  "closed";
+  "localhost";
+  "Loopback" ;
+  "loop" ;
+  "LOOPBACK"  ; 
+  "MARTIAN"  ; 
+  "LOCAL"  ; 
+  "MCAST"  ; 
+  "MULTICAST"  ; 
+  "BADCLASS"  ; 
+  "ZERONET"  ; 
+  "LIB"  ; 
+  "LIBEX"  ; 
+  "SocketUDP"  ; 
+  "TinyStdio"  ; 
+  "enqueue"  ; 
+  "dequeue"  ; 
+  "dosend"  ; 
+  "boxids" ; "hostids" ;
+  "threadids"  ;
+  "btsType" ; "htsType" ;
+  "RET" ;
+  "CALL";
+  "TAU" ;
+  "PROG" ;
+  "match" ;
+  "score" ;
+  "martian"  ; 
+  "loopback"  ; 
+  "Lbox"  ; "Lhost" ;
+  "Lnetwork"  ; 
+  "Lthread"  ; 
+  "function"  ; 
+  "let"  ; 
+  "raise"  ; 
+  "try"  ; 
+  "while"  ; 
+  "done";
+  "rec" ;
+  "if" ;
+  "iserr";
+  "isterm" ;
+  "Alan";
+  "Kurt";
+  "console" ;
+  "succeed" ;
+  "enter2" ;
+(*  "exit";  clashes with is_lib *)
+  "fail";
+  "badfail";
+  "accept";
+  "emit";
+  "slowsucceed";
+  "slowfail";
+  "slowintr";
+  "slowbadfail";
+  "internaldelivery";
+  "disjoint_addr";
+  "dom";
+  "instep";
+  "Crash";
+  "crash";
+  "map"
+ ] 
+
+
+let is_aux_infix s = List.mem s 
+ [ "and";
+   "or" ;
+   "else" ;
+   "then" ;
+   "do";
+  "in";
+   "with";
+   "ref"
+  ] 
+
+let is_var_prefix s = List.mem s
+[ "v" ;
+  "f"   ; 
+  "ifds" ; 
+  "t"   ; 
+  "s"   ; 
+  "oq"  ; 
+  "oqf" ; 
+  "fd"  ; 
+  "i"   ; 
+  "p"   ; 
+  "e"   ; 
+  "tm"  ; 
+  "mq"  ; 
+  "is"  ; 
+  "ps"  ; 
+  "es"  ; 
+  "tms" ; 
+  "E"   ;
+  "F"   ; 
+  "H"   ; 
+  "Q"   ;
+  "OP"  ;
+  "ifid";
+  "iset";
+  "iprimary";
+  "netmask";
+  "readseq" ;
+  "writeseq" ;
+  "opt" ;
+  "iflist" ;
+  "T" ;
+  "TL" ;
+  "data"  ; 
+  "ra"  ; 
+  "bc"  ; 
+  "body" ;
+  "nb"  ; 
+  "nm"  ; 
+  "mtch";
+  "expr";
+  "fds"
+]
+
+
+let is_var s = (Str.string_match 
+                  (Str.regexp "\([A-Za-z]+\)[0-9]*[']*")
+                  s
+                  0 ) &&
+               (Str.match_end() = String.length s) && 
+               (is_var_prefix (Str.matched_group 1 s))
+
+let subscript_var s = 
+  let _ = (Str.string_match 
+             (Str.regexp "\([A-Za-z]+\)\([0-9]*\)\([']*\)")
+             s
+             0 ) in 
+  if "" <> (Str.matched_group 2 s) then 
+    ((Str.matched_group 1 s)^(Str.matched_group 3 s)^"_{"^(Str.matched_group 2 s)^"}")
+  else 
+    (Str.matched_group 1 s)^(Str.matched_group 3 s)
+
+let extra_left_space s = if List.mem s  [
+  "done";
+  "list"        ;
+  "set"  ;
+  "err"  ;
+  "store";
+  "closed";
+  "ref";
+  "msg-ok" ;
+  "msg-oq-ok" ;
+  "ifd-set-ok";
+  "socket-ok";
+  "box-ok"; "host-ok" ;
+  "network" 
+] then "\\," else ""
+
+
+let extra_right_space s = if List.mem s  [
+  "Select2";
+  "Ret";
+  "Sendto2";
+  "Recvfrom2";
+  "Print2";
+  "console";
+  "reuseaddr";
+  "bsdcompat";
+  "setbsdcompat" ;
+  "setreuseaddr" ;
+  "if";
+  "while";
+  "function";
+  "try";
+  "let";
+  "rec";
+  "raise";
+  "Fail"        ;
+  "disconnect"  ;
+  "getsockname" ;
+  "getpeername" ;
+  "geterr"      ;
+  "close"       ;
+  "exit"        ;
+  "lookup"      ;
+  "print_endline_flush" ;
+  "port_of_int" ;
+  "ip_of_string" 
+] then "\\;" else ""
+
+
+let space s = 
+  (extra_left_space s)^s^(extra_right_space s)
+
+let write_unseen_string s = prerr_endline ("  \"" ^ s ^ "\"  ; ")
+
+let transform s = 
+  let s' = texify s and
+      lsp = extra_left_space s and
+      rsp = extra_right_space s in
+  let sps' = lsp ^ s' ^ rsp in
+      
+  if (is_rule s) then                 "\\tsrule{"^sps'^"}" else 
+  if (is_con s) then                  "\\tscon{"^sps'^"}" else 
+  if (is_aux s) then                  "\\tsaux{"^sps'^"}" else 
+  if (is_aux_infix s) then            "\\tsaux{\\ "^sps'^"\\ }" else 
+  if (is_type s) then               "\\tstype{"^sps'^"}" else 
+  if (is_lib s) then                "\\tslib{"^sps'^"}" else 
+  if (is_var s) then                "\\tsvar{"^sps'^"}" else
+  (write_unseen_string s ; (""^s'^""))
+
+
+let holsyms =
+  [ ("/\\","\\Mand ")
+  ; ("\\/","\\Mor ")
+  ; ("<|","\\langle\\![")
+  ; ("|>","]\\!\\rangle ")
+  ; ("!","\\forall ")
+  ; ("?","\\exists ")
+  ; ("?!","\\exists!")
+  ; ("==>","\\MArrow{}")
+  ; ("<=","\\leq ")
+  ; (">=","\\geq ")
+  ; ("<>","\\neq ")
+(*  ; ("^", "\\Mcaret{}") *)
+                             (* Mquotedstring *)
+(*  ; ("-->","\\Maarrow{}") *)
+  ; ("->","\\Marrow{}")
+  ; ("<=>","\\MDArrow{}")
+(*   ; (";","\\Msemicolon{}")
+  ; (";;","\\Msemisemicolon{}")
+  ; ("::=","\\Mcce{}")
+  ; (":=","\\Mce{}") *)
+  ; ("::","\\Mcoloncolon{}")
+  ; (":","\\Mcolon{}")
+  ; ("[]","\\Mbrackets{}")
+  ]
+
+let holids =
+  [ ("SOME","\\Mcaret{}")
+  ; ("NONE","*")
+  ; ("IN","\\in ")
+  ; ("INTER","\\cap ")
+  ; ("EMPTY","\\emptyset ")
+  ; ("one","()")
+  ; ("SUBSET","\\subseteq ")
+  ] 
+
+(* we return you to your regular programme *)
+
+
+let mident s = (* munge alphanumeric identifier *)
+(*  "\\tsvar{"^texify s^"}" *)
+  try List.assoc s holids
+  with Not_found -> transform s
+
+let msym s = (* munge symbolic identifier *)
+   try List.assoc s holsyms
+   with Not_found -> texify s
+
 let mtok t =
   match t with
-    Ident(s)   -> texify s
-  | Indent(n)  -> ""
-  | White(s)   -> s
-  | Comment(s) -> "\\text{\\small(*"^s^"*)}"
-  | Sep(s)     -> texify s
+    Ident(s,true)  -> mident s
+  | Ident(s,false) -> msym s
+  | Indent(n)      -> ""
+  | White(s)       -> s
+  | Comment(s)     -> "\\text{\\small(*"^s^"*)}"
+  | Sep(s)         -> texify s
 
 let rec munges ls = (* munge a list of lines *)
   match ls with
@@ -261,13 +676,27 @@ and munge xs = (* munge a line of tokens *)
 and munget s = (* munge a string *)
   s
 
+and mungelab s = (* munge the label *)
+  let rec go xs =
+    match xs with
+      (Ident("--",_) :: xs) -> go1 xs []
+    | (Indent(_) :: xs)     -> go xs
+    | _                     -> raise BadLabel
+  and go1 xs ys =
+    match xs with
+      (Ident("-->",_) :: xs) -> munge (List.rev ys)
+    | (x :: xs)              -> go1 xs (x::ys)
+    | _                      -> raise BadLabel
+  in
+  "\\inp{"^go s^"}"
+
 let latex_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)) =
   print_string ("\\rrule"^if side == [] then "n" else "c"
                          ^match comm with Some _ -> "c" | None -> "n");
   print_string ("{"^texify n^"}{"^texify cat^"}");
   print_string ("{"^(match desc with Some d -> texify d | None -> "")^"}\n");
   print_string ("{"^munges lhs^"}\n");
-  print_string ("{"^munge lab^"}\n");
+  print_string ("{"^mungelab lab^"}\n");
   print_string ("{"^munges rhs^"}\n");
   print_string ("{"^munges side^"}\n");
   print_string "{";

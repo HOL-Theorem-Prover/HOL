@@ -5,7 +5,7 @@ open Hollex
 
 let render_token t =
   match t with
-    Ident(s)   -> "I:"^s
+    Ident(s,_) -> "I:"^s
   | Indent(n)  -> "\nN:"^(String.make n '>')
   | White(s)   -> "W:"^s
   | Comment(s) -> "C:(*"^s^"*)-C"

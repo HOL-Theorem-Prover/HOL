@@ -6,7 +6,7 @@ exception BadChar
 exception Finished
 
 type token =
-    Ident of string
+    Ident of string * bool (* alphanumeric? *)
   | Indent of int
   | White of string
   | Comment of string

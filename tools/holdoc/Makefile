@@ -18,7 +18,7 @@ simpledump : $(SIMPLEDUMP_OBJS)
 LTS_TO_LATEX_OBJS=hollex.cmo lts_to_latex.cmo
 
 lts_to_latex : $(LTS_TO_LATEX_OBJS)
-	$(OCAMLC) $(LTS_TO_LATEX_OBJS) -o lts_to_latex
+	$(OCAMLC) str.cma $(LTS_TO_LATEX_OBJS) -o lts_to_latex
 
 # document targets:
 
