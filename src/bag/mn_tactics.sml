@@ -309,11 +309,7 @@ fun pair_CONV t =
    else
       REFL t;
 val PAIR_EQ = pairTheory.PAIR_EQ
-val pair_CASES = prove(
-  (--`!(p:'a # 'b). ?a b. p = (a,b)`--),
-  GEN_TAC THEN CONV_TAC (strip_quant_CONV (lhs_CONV pair_CONV)) THEN
-  REWRITE_TAC [PAIR_EQ] THEN
-  CONV_TAC (DEPTH_CONV Unwind.UNWIND_EXISTS_CONV));
+val pair_CASES = pairTheory.ABS_PAIR_THM
 fun split_pair t =
   if (not (is_pair_type t)) then
     raise (failwith "Must have pair term given as argument")
