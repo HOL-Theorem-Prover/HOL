@@ -10,10 +10,9 @@
 (*==========================================================================*)
 
 
-(* interactive use:
-   app load ["useful", "EquivType", "hol88Lib", "arithLib", "Q",
-             "simpLib", "numLib", "boolSimps","arithSimps","pairSimps"];
-*)
+(* Extensions by Michael Norrish to define exponentiation, division and
+   modulus.                                       October/November 1999  *)
+
 open HolKernel Parse basicHol90Lib;
 infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
 
@@ -407,6 +406,7 @@ val TINT_LT_WELLDEF =
 (* Now define the functions over the equivalence classes                    *)
 (*--------------------------------------------------------------------------*)
 
+val _ = print "Establish type of integers\n";
 
 local
     fun mk_def (d,t,n,f) = {def_name=d, fixity=f, fname=n, func=t}
@@ -540,6 +540,8 @@ val INT_1 =
 (*--------------------------------------------------------------------------*)
 (* Prove lots of boring field theorems                                      *)
 (*--------------------------------------------------------------------------*)
+
+val _ = print "Prove \"lots of boring field theorems\"\n";
 
 (* already defined, but using the wrong term for 0 *)
 val INT_ADD_LID =
@@ -1143,6 +1145,8 @@ val INT_EQ_RMUL =
 (* Prove homomorphisms for the inclusion map                                *)
 (*--------------------------------------------------------------------------*)
 
+val _ = print "Prove homomorphisms for the inclusion map\n"
+
 val INT =
     store_thm("INT",
 	      Term `!n. &(SUC n) = &n + 1`,
@@ -1495,6 +1499,8 @@ val INT_EQ_NEG =
 (* of the natural numbers.                                                  *)
 (*--------------------------------------------------------------------------*)
 
+val _ = print "Proving +ve integers are a copy of natural numbers\n"
+
 val INT_DECOMPOSE =
     store_thm("INT_DECOMPOSE",
 	      Term `!i. ?m n. i = mk_int($tint_eq(m,n))`,
@@ -1641,6 +1647,8 @@ val INT_OF_NUM =
 (* Define division                                                      *)
 (*----------------------------------------------------------------------*)
 
+val _ = print "Integer division\n"
+
 val int_div = new_definition(
   "int_div",
   Term`int_div x y =
@@ -1739,6 +1747,8 @@ val INT_DIV_ID = store_thm(
 (* Define the appropriate modulus function for int_div                  *)
 (*----------------------------------------------------------------------*)
 
+val _ = print "Integer modulus\n"
+
 val int_mod = new_definition(
   "int_mod",
   Term`int_mod p q = if q = 0 then ARB p
@@ -1807,6 +1817,8 @@ val INT_MOD_NEG = store_thm(
 (* Define absolute value                                                *)
 (*----------------------------------------------------------------------*)
 
+val _ = print "Absolute value\n"
+
 val INT_ABS = new_definition(
   "INT_ABS",
   Term`ABS n = if n < 0 then ~n else n`);
@@ -1872,47 +1884,18 @@ val INT_ABS_EQ0 = store_thm(
 val INT_ABS_DIV = store_thm(
   "INT_ABS_DIV",
   Term`!p q. ~(q = 0) ==> ABS ((p / q) * q) <= ABS p`,
-  REPEAT STRIP_TAC THEN Cases_on `0i <= p` THENL  [
-    `?n. p = &n` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
-    POP_ASSUM SUBST_ALL_TAC THEN
-    Cases_on `0 <= q` THENL [
-      `?m. q = &m` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [INT_LE, INT_INJ]) THEN
-      ASM_SIMP_TAC int_ss [INT_DIV, INT_ABS_NUM, INT_MUL, INT_LE] THEN
-      PROVE_TAC [DIVISION, LESS_EQ_ADD, NOT_ZERO_LT_ZERO],
-      `?m. q = ~&m` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_NOT_LE,
-                                  INT_LE_LT] THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [INT_NEG_EQ0, INT_NEG_GE0, INT_LE,
-                                    INT_INJ]) THEN
-      ASM_SIMP_TAC bool_ss [INT_DIV, INT_ABS_NUM, INT_DIV_NEG, INT_INJ,
-                            INT_ABS_NEG, INT_NEG_MUL2, INT_MUL, INT_LE] THEN
-      PROVE_TAC [DIVISION, LESS_EQ_ADD, NOT_ZERO_LT_ZERO]
-    ],
-    `?n. p = ~&n` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_NOT_LE, INT_LE_LT] THEN
-    POP_ASSUM SUBST_ALL_TAC THEN
-    Cases_on `0 <= q` THENL [
-      `?m. q = &m` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [INT_NEG_GE0, INT_INJ, INT_LE,
-                                    NOT_LESS_EQUAL]) THEN
-      ASM_SIMP_TAC bool_ss [INT_DIV, INT_MUL, INT_ABS_NUM, INT_LE, INT_INJ,
-                            INT_DIV_NEG, GSYM INT_NEG_LMUL, INT_ABS_NEG] THEN
-      PROVE_TAC [DIVISION, LESS_EQ_ADD, NOT_ZERO_LT_ZERO],
-      `?m. q = ~&m` by PROVE_TAC [NUM_NEGINT_EXISTS, INT_NOT_LE,
-                                  INT_LE_LT] THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [INT_NEG_EQ0, INT_LE, INT_NEG_GE0,
-                                    NOT_LESS_EQUAL, INT_INJ]) THEN
-      ASM_SIMP_TAC bool_ss [INT_DIV, INT_ABS_NUM, INT_DIV_NEG, INT_MUL,
-                            INT_ABS_NEG, GSYM INT_NEG_RMUL, INT_LE,
-                            INT_INJ, INT_NEGNEG] THEN
-      PROVE_TAC [DIVISION, LESS_EQ_ADD, NOT_ZERO_LT_ZERO]
-    ]
-  ]);
+  REPEAT GEN_TAC THEN
+  STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
+  STRUCT_CASES_TAC (Q.SPEC `q` INT_NUM_CASES) THEN
+  ASM_SIMP_TAC int_ss [INT_INJ, INT_NEG_EQ0, GSYM INT_NEG_LMUL,
+                       GSYM INT_NEG_RMUL, INT_NEG_MUL2, INT_MUL, INT_LE,
+                       INT_DIV, INT_DIV_NEG, INT_ABS_NEG, INT_ABS_NUM] THEN
+  PROVE_TAC [DIVISION, LESS_EQ_EXISTS, NOT_ZERO_LT_ZERO, ZERO_DIV]);
 
 (* can now prove uniqueness of / and % *)
+(* It's a worry that this proof is so long; there may well be a better one
+   making use of INT_NUM_CASES, which I proved after proving this.
+   Let sleeping proofs lie, that's my motto *)
 val INT_DIV_UNIQUE = store_thm(
   "INT_DIV_UNIQUE",
   Term`!p q k.
@@ -2144,15 +2127,14 @@ val INT_MOD_UNIQUE = store_thm(
   POP_ASSUM SUBST_ALL_TAC THEN
   PROVE_TAC [INT_EQ_SUB_LADD, INT_ADD_SYM]);
 
-(*
-val INT_MOD_UNIQUE2 = store_thm(
-  "INT_MOD_UNIQUE2",
-  Term`!p q r.
-         ~(q = 0) /\ (p % q = r) ==>
-         ABS r < ABS q /\ ?k. ABS (k * q) <= ABS p /\ (p = k * q + r)`,
-  SIMP_TAC int_ss [int_mod] THEN
-  REPEAT STRIP_TAC THENL [
-*)
+val INT_ABS_MOD_LT = store_thm(
+  "INT_ABS_MOD_LT",
+  Term`!p q. ~(q = 0) ==> ABS (p % q) < ABS q`,
+  REPEAT GEN_TAC THEN
+  STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
+  STRUCT_CASES_TAC (Q.SPEC `q` INT_NUM_CASES) THEN
+  ASM_SIMP_TAC int_ss [INT_INJ, INT_NEG_EQ0, INT_MOD_NEG, INT_ABS_NUM,
+                       INT_ABS_NEG, INT_MOD, INT_LT, DIVISION]);
 
 val INT_MOD_COMMON_FACTOR = store_thm(
   "INT_MOD_COMMON_FACTOR",
@@ -2198,6 +2180,8 @@ val INT_MUL_DIV = store_thm(
 (*----------------------------------------------------------------------*)
 (* Define exponentiation                                                *)
 (*----------------------------------------------------------------------*)
+
+val _ = print "Exponentiation\n"
 
 val int_exp = Rsyntax.new_recursive_definition{
   def = Term`(int_exp (p:int) 0 = 1) /\
