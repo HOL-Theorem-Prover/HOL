@@ -73,7 +73,8 @@ int prevstate = INITIAL;
                     BEGIN OLDTYQUOTE; }
 <INITIAL>--{ws}*` { fprintf(yyout,
                     "(Term [QUOTE \""); BEGIN OLDTMQUOTE; }
-<INITIAL>``{ws}*: { fprintf(yyout, "(Type [QUOTE \":"); BEGIN TYQUOTE; }
+<INITIAL>``{ws}*:/[A-Za-z[:space:]] {
+                    fprintf(yyout, "(Type [QUOTE \":"); BEGIN TYQUOTE; }
 <INITIAL>``       { fprintf(yyout, "(Term [QUOTE \""); BEGIN TMQUOTE; }
 <INITIAL>`        { fprintf(yyout, "[QUOTE \""); BEGIN QUOTE; }
 <INITIAL>\n       { ECHO; fflush(stdout); fflush(stdout); }
