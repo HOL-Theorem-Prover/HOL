@@ -175,14 +175,19 @@ val EVAL_CONV = CBV_CONV the_compset;
  ---------------------------------------------------------------------------*)
 
 fun write_datatype_info tyinfo =
- let open TypeBasePure
+ let open TypeBasePure Drule
      val tyname = ty_name_of tyinfo
      val size_opt =
        case size_of0 tyinfo
         of SOME (_, ORIG def) => SOME def
          | otherwise => NONE
+      val distinct_opt =  (* Needed since the GSYM'ed eqns are not there! *)
+       case distinct_of tyinfo
+        of SOME th => SOME (LIST_CONJ(th::map Conv.GSYM (CONJUNCTS th)))
+         | otherwise => NONE
+
      val compset_addns =
-           [one_one_of tyinfo, distinct_of tyinfo,
+           [one_one_of tyinfo, distinct_opt,
             size_opt, SOME (lazyfy_thm (case_def_of tyinfo))]
  in
     add_funs (mapfilter Option.valOf compset_addns)
