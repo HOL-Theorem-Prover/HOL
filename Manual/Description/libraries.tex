@@ -1057,34 +1057,33 @@ put the simpler term on the left.
 accessible from within \ml{bossLib}, though some originate in other
 structures.
 
-\paragraph{\ml{pure\_ss}}
+\subsubsection{\ml{pure\_ss} and \ml{bool\_ss}}
 %
 \index{pure_ss@\ml{pure\_ss}}
 %
-This \simpset{} (defined in structure \ml{pureSimps}) contains no
-rewrite theorems at all, and plays the role of a blank slate within
-the space of possible \simpset{}s.  When constructing a completely new
-\simpset, \ml{pure\_ss} is a possible starting point.  The
-\ml{pure\_ss} \simpset{} has just two components: congruence rules for
-specifying how to traverse terms, and a function that turns theorems
-into rewrite rules.  Congruence rules are further described in
-Section~\ref{sec:advanced-simplifier}; the generation of rewrite rules
-from theorems is described in Section~\ref{sec:simplifier-rewriting}.
+The \ml{pure\_ss} \simpset{} (defined in structure \ml{pureSimps})
+contains no rewrite theorems at all, and plays the role of a blank
+slate within the space of possible \simpset{}s.  When constructing a
+completely new \simpset, \ml{pure\_ss} is a possible starting point.
+The \ml{pure\_ss} \simpset{} has just two components: congruence rules
+for specifying how to traverse terms, and a function that turns
+theorems into rewrite rules.  Congruence rules are further described
+in Section~\ref{sec:advanced-simplifier}; the generation of rewrite
+rules from theorems is described in
+Section~\ref{sec:simplifier-rewriting}.
 
-\paragraph{\ml{bool\_ss}}
-%
 \index{bool_ss@\ml{bool\_ss}}
 %
-This \simpset{} (defined in structure \ml{boolSimps}) is often used
-when other \simpset{}s might do too much.  It contains rewrite rules
-for the boolean connectives, and little more.  It contains all of the
-de~Morgan theorems for moving negations in over the connectives
-(conjunction, disjunction, implication and conditional expressions),
-including the quantifier rules that have $\neg(\forall x.\,P(x))$ and
-$\neg(\exists x.\,P (x))$ on their left-hand sides.  It also contains
-the rules specifying the behaviour of the connectives when the
-constants \holtxt{T} and \holtxt{F} appear as their arguments.  (One
-such rule is \holtxt{|- T /\bs{} p = p}.)
+The \ml{bool\_ss} \simpset{} (defined in structure \ml{boolSimps}) is
+often used when other \simpset{}s might do too much.  It contains
+rewrite rules for the boolean connectives, and little more.  It
+contains all of the de~Morgan theorems for moving negations in over
+the connectives (conjunction, disjunction, implication and conditional
+expressions), including the quantifier rules that have $\neg(\forall
+x.\,P(x))$ and $\neg(\exists x.\,P (x))$ on their left-hand sides.  It
+also contains the rules specifying the behaviour of the connectives
+when the constants \holtxt{T} and \holtxt{F} appear as their
+arguments.  (One such rule is \holtxt{|- T /\bs{} p = p}.)
 
 As in the example above, \ml{bool\_ss} also performs
 $\beta$-reductions and one-point unwindings.  The latter turns terms
@@ -1115,13 +1114,13 @@ under a universal quantifier):
 \end{verbatim}
 \end{session}
 
-\paragraph{\ml{std\_ss}}
+\subsubsection{\ml{std\_ss}}
 %
 \index{std_ss@\ml{std\_ss}}
 %
-This \simpset{} is defined in \ml{bossLib}, and adds rewrite rules
-pertinent to the types of sums, pairs and options to \ml{bool\_ss}.
-It can also perform calculations over natural numbers.
+The \ml{std\_ss} \simpset{} is defined in \ml{bossLib}, and adds
+rewrite rules pertinent to the types of sums, pairs and options to
+\ml{bool\_ss}.  It can also perform calculations over natural numbers.
 \begin{session}
 \begin{verbatim}
 - SIMP_CONV std_ss [] ``FST (x,y) + OUTR (INR z)``;
@@ -1136,7 +1135,7 @@ It can also perform calculations over natural numbers.
 \end{verbatim}
 \end{session}
 
-\paragraph{\ml{arith\_ss}}
+\subsubsection{\ml{arith\_ss}}
 %
 \index{arith_ss@\ml{arith\_ss}}
 %
@@ -1174,7 +1173,7 @@ Over the natural numbers, the expression $2 x + y - z + y$ is not
 equal to $2 x + 2 y - z$.  In particular, these expressions are not
 equal when $2x + y < z$.
 
-\paragraph{\ml{list\_ss}}
+\subsubsection{\ml{list\_ss}}
 %
 \index{list_ss@\ml{list\_ss}}
 %
@@ -1235,6 +1234,64 @@ changes, and the behaviour of \ml{SIMP\_CONV} applied to
 \ml{(srw\_ss())} changes with it.  The design philosophy behind
 \ml{srw\_ss} is that it should always be a reasonable first choice in
 all situations where the simplifier is used.
+
+This versatility is illustrated in the following example:
+\begin{session}
+\begin{verbatim}
+- Hol_datatype `tree = Leaf | Node of num => tree => tree`;
+<<HOL message: Defined type: "tree">>
+> val it = () : unit
+
+- SIMP_CONV (srw_ss()) [] ``Node x Leaf Leaf = Node 3 t1 t2``;
+<<HOL message: Initialising SRW simpset ... done>>
+> val it =
+    |- (Node x Leaf Leaf = Node 3 t1 t2) =
+       (x = 3) /\ (Leaf = t1) /\ (Leaf = t2) : thm
+
+- load "pred_setTheory";
+> val it = () : unit
+
+- SIMP_CONV (srw_ss()) [] ``x IN { y | y < 6}``;
+> val it = |- x IN {y | y < 6} = x < 6 : thm
+\end{verbatim}
+\end{session}
+
+Users can augment the stateful \simpset{} themselves with the function
+\begin{boxed}
+\index{export_rewrites@\ml{export\_rewrites}}
+\begin{verbatim}
+   BasicProvers.export_rewrites : string list -> unit
+\end{verbatim}
+\end{boxed}
+The strings passed to \ml{export\_rewrites} are the names of theorems
+in the current segment (those that will be exported when
+\ml{export\_theory} is called.  Not only are these theorems added to
+the underlying \simpset{} in the current session, but they will be
+added in future sessions when the current theory is reloaded.
+\begin{session}
+\begin{verbatim}
+- val tsize_def = Define`
+  (tsize Leaf = 0) /\
+  (tsize (Node n t1 t2) = n + tsize t1 + tsize t2)
+`;
+Definition has been stored under "tsize_def".
+> val tsize_def =
+    |- (tsize Leaf = 0) /\
+       !n t1 t2. tsize (Node n t1 t2) = n + tsize t1 + tsize t2 : thm
+
+- val _ = BasicProvers.export_rewrites ["tsize_def"];
+
+- SIMP_CONV (srw_ss()) [] ``tsize (Node 4 (Node 6 Leaf Leaf) Leaf)``;
+> val it = |- tsize (Node 4 (Node 6 Leaf Leaf) Leaf) = 10 : thm
+\end{verbatim}
+\end{session}
+
+As a general rule, \ml{(srw\_ss())} includes all of its context's
+``obvious rewrites'', as well as code to do standard calculations
+(such as the arithmetic performed in the above example).  It does not
+include decision procedures that may exhibit occasional poor
+performance, so these \simpset{} fragments containing these should be
+added manually.
 
 \subsection{\Simpset{} fragments}
 
