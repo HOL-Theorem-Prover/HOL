@@ -7,6 +7,7 @@ Documentation
 There is an improved interface to documentation:
 
    * A single HTML page gives organized access to
+
       * libraries (source)
       * theories (proved theorems and scripts)
       * proof support (documentation and source)
@@ -22,6 +23,19 @@ There is an improved interface to documentation:
    - separate namespaces
    - improved Holmake
    - improved installation
+
+
+New Examples
+-------------
+
+  * ARM6, due to Anthony Fox
+
+  * Sunrise (revised and extended, and now in the system examples), 
+            due to Peter Homeier
+
+  * Sugar, due to Mike Gordon
+
+  * Rijndael, due to Konrad Slind
 
 
 New proof tools
@@ -51,8 +65,9 @@ New libraries
     only been tested under Linux, though it should be possible to run it
     under Windows.
 
-  * The library word32Lib, which mainly comprises word32Theory (see below),
-    plus an evaluation conversion "WORD_CONV".
+  * The library word32Lib comprises a functor (called "wordFunctor")
+    for creating word theories, an instance of it, word32Theory (see below),
+    plus an evaluation conversion "WORD_CONV". 
 
 
 New theories
@@ -81,15 +96,17 @@ New theories
     rules are also provided, and these support fairly efficient term
     evaluation using WORD_CONV.
 
-    Although the word size and operations are fixed, the functor
-    src/word32/wordFunctor.sml can be used as a basis for defining
-    bespoke word theories.
+    The functor wordFunctor can be used to create bespoke word theories.  
+    For example, a theory of 8-bit words can be obtained by the 
+    invocation
 
-  * A new theory of strings over an alphabet of (256) characters has
-    been provided. String literals are no longer an infinite set of
-    constants, given meaning by mk_thm; instead, they are constructed
-    terms. This removes the last use of mk_thm in the HOL system. Of
-    course, mk_oracle_thm is still available for users.
+      structure word8Script = wordFunctor (val bits = 8)
+
+  * A new theory of strings over an alphabet of 256 characters has
+    been provided. String literals are no longer implemented as an 
+    infinite set of constants, given meaning by mk_thm; instead, they
+    are constructed terms. This removes the last use of mk_thm in the
+    HOL system. 
 
 
 New features
@@ -131,6 +148,9 @@ New features
     and the function dest_thy_const inverts this.  mk_const remains in
     the system, but its behaviour is unspecified when two or more
     constants have the same name.
+
+  * Induct and Induct_on have been improved to deal with mutually
+    recursive datatypes, thanks to code written by Peter Homeier.
 
   * Type abbreviations are now possible, using the function
     Parse.type_abbrev.  When a type abbreviation is made, both the
@@ -211,7 +231,7 @@ Behaviours changed:
     which eta-converts to the above.
 
   * Hol_datatype's definition of large "enumerated types" (data types
-    with only nullary constructors) is now a lot more efficient than
+    with only nullary constructors) is now much more efficient than
     it used to be.
 
   * We have rationalised the ML API.  By default, just about all
@@ -252,6 +272,8 @@ Bugs fixed:
     Viktor Sabelfeld for the report of the bug.  It was caused by the
     now correct behaviour of constant hiding that wasn't correct prior
     to Taupo-6.
+
+   * Permutative rewriting now works
 
 "Gratuitous" incompatibilities:
 -------------------------------
