@@ -531,6 +531,7 @@ and parse_rule1 = parser
 
 and rule_vars = parser
     [< 'White(_)                  ; r = rule_vars >] -> r
+  | [< 'Indent(_)                 ; r = rule_vars >] -> r
   | [< 'Comment(_)                ; r = rule_vars >] -> r
   | [< 'DirBlk("VARS",ts)         ; r = rule_vars >] -> dir_var_vars ts @ r
   | [< 'DirBlk(n,ts) when (dir_proc n ts; true) (* cheat: make it happen right now *)
@@ -665,7 +666,7 @@ let lts_latex_render () =
   in
   print_string "\\newcommand{\\dumpallrules}{\n";
   ignore (List.map go rulecmds);
-  print_string "}\n\n%%%% END %%%%"
+  print_string "}\n\n%%%% END %%%%\n"
 
 
 let pvs = ref []  (* possible variable names; not used for LTS *)
