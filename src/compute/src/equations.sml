@@ -15,7 +15,7 @@ exception No_match;
 val raw_match = raw_match [] empty_tmset
 
 fun match_const (bds,tbds) pc c =
-  (bds, snd (raw_match pc c ([],tbds)))
+  (bds, snd (raw_match pc c (([],empty_tmset),tbds)))
   handle HOL_ERR _ => raise No_match
 ;
 
@@ -112,7 +112,7 @@ end;
  *---------------------------------------------------------------------------*)
 
 fun reduce_cst (th,{Head, Args, Rws=Try{Hcst,Rws=Rewrite rls,Tail},Skip}) =
-      (let val (_,tytheta) = raw_match Hcst Head ([],([],[]))
+      (let val (_,tytheta) = raw_match Hcst Head (([],empty_tmset),([],[]))
                              handle HOL_ERR _ => raise No_match
            val rule_inst = try_rwn tytheta Args rls
        in (true, inst_rw (th,rule_inst))
