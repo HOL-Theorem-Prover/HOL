@@ -34,5 +34,6 @@ sig
     val prove_inductive_relations_exist : monoset -> term -> thm
 
     val MONO_TAC : monoset -> tactic
+    val BACKCHAIN_TAC : tactic
 
 end;
