@@ -83,7 +83,7 @@ fun mk_prec_matrix G = let
     Polyhash.mkPolyTable (length specs * length specs, NotFound)
   val rule_elements = term_grammar.rule_elements o #elements
   fun insert k v = let
-    val insert_result = Polyhash.peekinsert matrix (k, v)
+    val insert_result = Polyhash.peekInsert matrix (k, v)
   in
     case (insert_result, v) of
       (SOME EQUAL, _) => ()  (* ignore this *)
