@@ -21,6 +21,7 @@ rule token =
       | "INCLUDES" { INCLUDES }
       | "PRE_INCLUDES" { PRE_INCLUDES }
       | "OPTIONS"  { OPTIONS }
+      | "EXTRA_CLEANS" { EXTRA_CLEANS }
       | `\\` newline { token lexbuf }
       | newline { NEWLINE }
       | `#`    { comment lexbuf; token lexbuf }

@@ -5,7 +5,7 @@ fun concat_with_spaces [] = ""
 open Holmake_types
 %}
 
-%token EOF COLON TAB NEWLINE INCLUDES OPTIONS PRE_INCLUDES EQUALS
+%token EOF COLON TAB NEWLINE INCLUDES OPTIONS PRE_INCLUDES EQUALS EXTRA_CLEANS
 %token <string> ID
 
 %start MakefileDoc
@@ -21,11 +21,10 @@ open Holmake_types
 
 MakefileDoc:
   Whitespace Rules  {
-    {rules = $2, pre_includes = [], includes = [], options = []}
+    {rules = $2, preliminaries = empty_preliminary }
   }
 | Whitespace Preliminaries Whitespace Rules {
-    {rules = $4, pre_includes = #pre_includes $2, includes = #includes $2,
-     options = #options $2}
+    {rules = $4, preliminaries = $2}
   }
 
 Preliminaries:
@@ -33,11 +32,14 @@ Preliminaries:
   | Preliminary Preliminaries { merge_prelims $1 $2 }
 
 Preliminary:
-    OPTIONS EQUALS Idlist { {options = $3, includes = [], pre_includes = []} }
-  | INCLUDES EQUALS Idlist { {options = [], includes = $3, pre_includes = []} }
-  | PRE_INCLUDES EQUALS Idlist {
-      {options = [], includes = [], pre_includes = $3}
-    }
+    OPTIONS EQUALS Idlist { {options = $3, includes = [],
+                             pre_includes = [], extra_cleans = []} }
+  | INCLUDES EQUALS Idlist { {options = [], includes = $3,
+                              pre_includes = [], extra_cleans = []} }
+  | PRE_INCLUDES EQUALS Idlist { {options = [], includes = [],
+                                  pre_includes = $3, extra_cleans = []} }
+  | EXTRA_CLEANS EQUALS Idlist { {options = [], includes = [],
+                                  pre_includes = [], extra_cleans = $3} }
 
 
 Rules:

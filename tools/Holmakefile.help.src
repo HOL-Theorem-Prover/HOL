@@ -1,5 +1,6 @@
 (0)
 OPTIONS = NO_OVERLAY
+EXTRA_CLEANS = Doc2Html Doc2Tex Doc2Txt makebase Lexer.sml Parser.sml
 
 all: makebase Doc2Html Doc2Tex Doc2Txt
 

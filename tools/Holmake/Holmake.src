@@ -255,13 +255,15 @@ val hmakefile_doc =
      Holmake_rules.parse_from_file hmakefile)
   else Holmake_types.empty_doc
 
-val hmake_includes = #includes hmakefile_doc
+val hmake_prelims = #preliminaries hmakefile_doc
+val hmake_includes = #includes hmake_prelims
 val additional_includes =
   includify (remove_duplicates (cline_additional_includes @ hmake_includes))
 
-val hmake_preincludes = includify (#pre_includes hmakefile_doc)
-val hmake_no_overlay = member "NO_OVERLAY" (#options hmakefile_doc)
-val hmake_no_sigobj = member "NO_SIGOBJ" (#options hmakefile_doc)
+val hmake_preincludes = includify (#pre_includes hmake_prelims)
+val hmake_no_overlay = member "NO_OVERLAY" (#options hmake_prelims)
+val hmake_no_sigobj = member "NO_SIGOBJ" (#options hmake_prelims)
+val extra_cleans = #extra_cleans hmake_prelims
 
 val actual_overlay =
   if no_overlay orelse hmake_no_overlay then NONE
@@ -284,6 +286,7 @@ fun extra_deps t =
 
 fun extra_commands t =
   Option.map #commands (List.find (fn  r => #target r = t) extra_rules)
+
 
 
 val no_sigobj = cline_no_sigobj orelse hmake_no_sigobj
@@ -944,8 +947,10 @@ fun do_target x = let
       | SIG (Theory _) => true
       | SML (Theory _) => true
       | _ => false
+    fun quiet_remove s = FileSys.remove s handle e => ()
   in
     read_files cdstream to_delete FileSys.remove;
+    app quiet_remove extra_cleans;
     true
   end
   fun clean_deps() = let
