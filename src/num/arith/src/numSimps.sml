@@ -357,6 +357,7 @@ val ARITH_ss = simpLib.SIMPSET
 val REDUCE_ss = simpLib.SIMPSET
   {convs = mk_unary_rconv (--`EVEN`--) ::
            mk_unary_rconv (--`ODD`--)  ::
+           mk_unary_rconv (--`PRE`--)  ::
            map mk_redconv [--`$*`--, --`$+`--, --`$-`--,
                            --`$DIV`--, --`$MOD`--, --`$EXP`--,
                            --`$<`--, --`$<=`--, --`$>`--,
