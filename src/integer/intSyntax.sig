@@ -17,6 +17,7 @@ sig
   val geq_tm         : term
   val divides_tm     : term
   val min_tm         : term
+  val max_tm         : term
   val int_injection  : term (* the injection from :num -> :int *)
 
   (* discriminators, constructors, etc *)

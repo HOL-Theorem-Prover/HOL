@@ -26,6 +26,8 @@ val divides_tm = Term`$int_divides : int -> int -> bool`;
 val absval_tm = Term`ABS : int -> int`;
 val min_tm =
  Term.prim_mk_const {Name = "int_min", Thy="integer"}
+val max_tm =
+ Term.prim_mk_const {Name = "int_max", Thy="integer"}
 
 fun dest_binop t (srcf,msg) tm = let
   val (farg1, arg2) = dest_comb tm
