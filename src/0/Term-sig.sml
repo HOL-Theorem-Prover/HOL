@@ -2,7 +2,7 @@ signature Term =
 sig
 
   eqtype term
-  type hol_type     = Type.hol_type
+  type hol_type
   type ('a,'b)subst = ('a,'b)Lib.subst
   type 'a set       = 'a HOLset.set
 

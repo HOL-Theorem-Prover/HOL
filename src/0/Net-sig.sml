@@ -12,7 +12,7 @@
 signature Net =
 sig
   type 'a net
-  type term = Term.term
+  type term
 
   val empty     : 'a net
   val insert    : term * 'a -> 'a net -> 'a net
@@ -34,9 +34,9 @@ sig
 
     A term net is a collection of items, each of which can be thought
     of as being indexed by a path which is computed from a term which
-    is supplied when the item is inserted into the net. Type information, 
+    is supplied when the item is inserted into the net. Type information,
     and the names of variables, is not represented in paths, so more than
-    one term may be indexed by the same path, i.e., the extraction 
+    one term may be indexed by the same path, i.e., the extraction
     operations are not exact. In this sense, term nets are akin to
     hash tables.
 
@@ -45,19 +45,19 @@ sig
   [insert (tm, x) net]
 
     The term tm is used as a key to compute a path at which to
-    store x in net. If the path does not already exist in net, 
-    it is created. Note that insert merely adds x to the net; 
+    store x in net. If the path does not already exist in net,
+    it is created. Note that insert merely adds x to the net;
     if x has already been stored under tm, then it is not overwritten.
 
   [match tm net]
-  
+
     Term nets can be used to cut down on the number of match attempts
     that a matching function would have to make, say when rewriting
-    with a collection of theorems. "match tm net" will return every 
-    element that has been inserted into the net using a term M as the 
+    with a collection of theorems. "match tm net" will return every
+    element that has been inserted into the net using a term M as the
     key, such that M possibly matches tm. The matches are returned in
     "most specific match first" order.
-  
+
    [index tm net]
 
     An alternative use of term nets ignores any paths in the net
@@ -66,15 +66,15 @@ sig
     of results is always a subset of those returned for matches.
 
    [delete (tm,P) net] uses tm as an index into the net. There can be
-     more than one element indexable by tm. The net resulting from 
-     removing all such elements that also meet the predicate P is 
+     more than one element indexable by tm. The net resulting from
+     removing all such elements that also meet the predicate P is
      returned.
 
    [filter P net] The net resulting from removing all elements meeting
       P is returned.
 
    [union net1 net2] joins net1 and net2. Looking up or fetching
-     an element from the result should return the union of the 
+     an element from the result should return the union of the
      results of separately fetching or looking up in net1 and net2.
 
    [map f net] returns a new net, each element of which has had f

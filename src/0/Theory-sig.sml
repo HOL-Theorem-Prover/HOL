@@ -1,13 +1,13 @@
 signature Theory =
 sig
 
-  type hol_type  = Type.hol_type
-  type term      = Term.term
-  type thm       = Thm.thm
+  type hol_type
+  type term
+  type thm
   type ppstream  = Portable.ppstream
   type thy_addon = {sig_ps    : (ppstream -> unit) option,
                     struct_ps : (ppstream -> unit) option}
- 
+
 (* Create a new theory *)
 
   val new_theory         : string -> unit

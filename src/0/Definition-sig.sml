@@ -1,7 +1,7 @@
 signature Definition =
 sig
-  type term = Term.term
-  type thm  = Thm.thm
+  type term
+  type thm
 
   val new_type_definition : string * thm -> thm
   val new_definition      : string * term -> thm

@@ -1,11 +1,5 @@
 structure HolKernel =
 struct
-  structure Type = Type
-  structure Term = Term
-  structure Tag  = Tag
-  structure Thm  = Thm
-  structure Theory = Theory
-  structure Definition = Definition
 
   open Feedback Globals Lib Type Term Thm Theory Definition
 

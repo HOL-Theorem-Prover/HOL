@@ -7,21 +7,21 @@
 
 signature TheoryPP =
 sig
- type thm      = Thm.thm
- type hol_type = Type.hol_type
+ type thm
+ type hol_type
  type ppstream = Portable.ppstream
 
  val pp_type : string -> string -> ppstream -> hol_type -> unit
 
- val pp_sig 
+ val pp_sig
    : (ppstream -> thm -> unit)
      -> {name        : string,
          parents     : string list,
          axioms      : (string * thm) list,
          definitions : (string * thm) list,
          theorems    : (string * thm) list,
-         sig_ps      : (ppstream -> unit) option list} 
-     -> ppstream 
+         sig_ps      : (ppstream -> unit) option list}
+     -> ppstream
      -> unit
 
  val pp_struct
@@ -32,8 +32,8 @@ sig
       axioms      : (string * thm) list,
       definitions : (string * thm) list,
       theorems    : (string * thm) list,
-      struct_ps   : (ppstream -> unit) option list} 
-   -> ppstream 
+      struct_ps   : (ppstream -> unit) option list}
+   -> ppstream
    -> unit
 
 end

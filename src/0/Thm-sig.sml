@@ -1,9 +1,9 @@
 signature Thm =
 sig
   type thm
-  type tag      = Tag.tag
-  type term     = Term.term
-  type hol_type = Type.hol_type
+  type tag
+  type term
+  type hol_type
   type 'a set   = 'a HOLset.set
 
 
