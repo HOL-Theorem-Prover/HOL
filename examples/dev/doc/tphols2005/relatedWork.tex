@@ -1,0 +1,84 @@
+% Gropius, SAFL, Sheeran, LAMBDA, Hunt, Hanna, Johnson, reflect/Forte
+
+%------ LAMBDA: Forman
+
+%------ DDD: Johnson
+
+%------ SAFL: Sharp
+Our compilation method is partly inspired by SAFL 
+(Statically Allocated Functional Language) \cite{MS01b},
+especially the ideas in Richard Sharp's PhD \cite{Sha02}. 
+SAFL is a first-order functional language.
+A user program consists of a sequence of function 
+definitions in which all recursive calls are tail-recursive.
+The compiler translates each function into
+a single hardware block.
+Its high-level of abstraction allows
+the exploitation of powerful program analyses
+and optimisations not available in traditional
+synthesis systems. 
+For instance, the functional properties of SAFL 
+allow equational reasoning and therefore the
+application of semantic-preserving 
+source-to-source manipulations.
+However, the synthesis is not based on
+correct-by-construction transformations
+and the circuit generated and the compiler
+have not been verified.
+
+%------ Lava: Bjesse and Sheeran 
+Lava \cite{BCSS99} is a hardware description language embedded
+in the functional language Haskell \cite{Jon03}.
+The programs consist of definitions
+of gates and their connections (netlists).
+These circuits can be verified with respect to a relation that
+restricts the values of the inputs and outputs.
+This equation is transformed into a logical formula that
+is exported to external theorem provers like 
+Otter~\cite{MW97} and Gandalf~\cite{Tam97}.
+The gate-level synthesis is performed by generating
+structural VHDL code from Lava programs.
+
+%------ mFP: Sheeran
+
+
+%--- Gropius: Blumenrohr
+Gropius is a hardware description language
+defined as a subset of HOL~\mbox{\cite{Blu01,Gropius1,BS99,Gropius2}}.
+It~comprises four languages ranging
+from gate-level abstractions (Gropius 0) to 
+system level structures (Gropius 3).
+The algorithmic level (Gropius 2)
+provides control structures like if-then-else,
+sequential composition and while loop.
+The~atomic commands are DFGs (data flow
+graphs) represented by lambda abstractions.
+The compiler initially combines every while loop into
+a single one at the outermost level of the
+program:
+\[
+\DEF{PROGRAM}\ \VAR{out\_default}\ (\DEF{LOCVAR}\ \VAR{vars}\ 
+(\DEF{WHILE}\ c\ (\DEF{PARTIALIZE}\ \VAR{b})))
+\]
+The body \VAR{b} of the \DEF{WHILE} loop is an acyclic % combinational 
+DFG. The list \VAR{out\_default}
+provides initial values for the output variables.
+The term \DEF{LOCVAR} declares the local variables
+\VAR{vars} and \DEF{PARTIALIZE} converts a
+non-recursive (terminating) DFG into a potentially
+non-terminating command.
+The compiler then synthesises a handshaking
+interface which encapsulates this program.
+Each of these hardware blocks are now regarded
+as primitive blocks or {\em processes\/} at the system level.
+Processes are connected via communication
+units ({\em k-processes\/}) which implement delay,
+synchronisation, duplication,
+splitting and joining of a process output data
+(actually there  are 10 different k-processes \cite{Blu01}).
+Although the synthesis produces the proof of
+correctness of each process and k-process,
+the correctness of the top-level system is not generated.
+The reason for that is mainly because
+the top-level interface of a network of processes and 
+k-processes does not match the handshaking interface pattern.
