@@ -139,7 +139,8 @@ fun find_var_value var =
 fun MOVE_EXISTS_RIGHT_CONV tm =
   if (is_exists tm) then
     let val (curvar,  subterm) = dest_exists tm in
-      if (is_exists subterm) then SWAP_VARS_CONV tm
+      if (is_exists subterm) then
+        (SWAP_VARS_CONV THENC BINDER_CONV MOVE_EXISTS_RIGHT_CONV) tm
       else REFL tm
     end
  else failwith "MOVE_EXISTS_RIGHT_CONV";
@@ -147,7 +148,8 @@ fun MOVE_EXISTS_RIGHT_CONV tm =
 fun MOVE_FORALL_RIGHT_CONV tm =
   if (is_forall tm) then
     let val (curvar,  subterm) = dest_forall tm in
-      if (is_forall subterm) then SWAP_VARS_CONV tm
+      if (is_forall subterm) then
+        (SWAP_VARS_CONV THENC BINDER_CONV MOVE_FORALL_RIGHT_CONV) tm
       else REFL tm
     end
   else failwith "MOVE_FORALL_RIGHT_CONV";
