@@ -5,7 +5,7 @@ predefined rules and tactics. The \ML{} type-discipline
 ensures that only logically sound methods can be used to create values
 of type \ml{thm}.
 In this chapter, a simple but real\footnote{The example
-is `real' in that the need for it came up last week.} example is described. 
+is `real' in that the need for it came up last week.} example is described.
 
 Several implementations of the tool are given to illustrate various styles
 of proof programming. The first implementation is the obvious one, but
@@ -69,7 +69,7 @@ the equations:
    |- t1 /\ (t1 /\ t2) = t1 /\ t2             % Cancel repeated terms  %
 \end{verbatim}\end{hol}
 
-\noindent These equations are easily proved using the 
+\noindent These equations are easily proved using the
 library \ml{taut}. Note that \HOL{} Version 1.12 is used in
 this chapter. Versions of \HOL{} later than 1.12 contain improved
 rewriting tools and a new version of the library \ml{taut} (the old version
@@ -77,13 +77,13 @@ of the library is preserved in the directory
 {\small\verb%contrib/icl-taut%}).
 
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}\begin{verbatim}
 scaup% hol
           _  _    __    _      __    __
    |___   |__|   |  |   |     |__|  |__|
    |      |  |   |__|   |__   |__|  |__|
-   
+
           Version 1.12 (Sun3/Franz), built on Feb 23 1991
 
 #load_library `taut`;;
@@ -93,8 +93,8 @@ Library `taut` loaded.
 () : void
 \end{verbatim}\end{session}
 
-\noindent The library \ml{taut} defines \ml{TAUT\_RULE}\footnote{The function \ml{TAUT\_RULE} has been replaced by a function called \ml{TAUT\_PROVE} 
-in the new version of the \ml{taut} library available in versions of 
+\noindent The library \ml{taut} defines \ml{TAUT\_RULE}\footnote{The function \ml{TAUT\_RULE} has been replaced by a function called \ml{TAUT\_PROVE}
+in the new version of the \ml{taut} library available in versions of
 \HOL{} later than 1.12}
 which converts a term to the corresponding theorem, if the term is a tautology.
 \vfill
@@ -126,7 +126,7 @@ is due to Larry Paulson \cite{lcp_rewrite}, is that a conversion is an
 \ML{} function that maps a term $t_1$ to an equation:
 
 \medskip
-{\small\verb%|- %}$t_1${\small\verb% = %}$t_2$.  
+{\small\verb%|- %}$t_1${\small\verb% = %}$t_2$.
 \medskip
 
 \noindent The intention is that a conversion will only apply to a
@@ -141,9 +141,9 @@ Conversions are applied using the function:
 \end{verbatim}\end{hol}
 
 \noindent This takes an equation {\small\verb%|- %}$t_1${\small\verb% = %}$t_2$
-and generates a conversion (\ie\ \ML{} function of type {\small\verb%term->thm%}) 
+and generates a conversion (\ie\ \ML{} function of type {\small\verb%term->thm%})
 that maps any term $u$ that matches $t_1$ to the theorem
-{\small\verb%|- %}$u${\small\verb% = %}$v$, where $v$ is 
+{\small\verb%|- %}$u${\small\verb% = %}$v$, where $v$ is
 obtained by applying the substitution obtained by matching $u$ with $t_1$ to $t_2$.
 If $u$ doesn't match $t_1$ then the application of \ml{REWR\_CONV} fails.
 
@@ -163,18 +163,18 @@ evaluation failed     REWR_CONV: lhs of theorem doesn't match term
 \end{verbatim}\end{session}
 
 \noindent For our application, the required conversion should map
-a conjunction 
+a conjunction
 
 \medskip
-$t_1${\small\verb% /\ (%}$t_{2_1}${\small\verb% /\ %}$t_{2_2}${\small\verb%)%} 
+$t_1${\small\verb% /\ (%}$t_{2_1}${\small\verb% /\ %}$t_{2_2}${\small\verb%)%}
 \medskip
 
-\noindent in which 
+\noindent in which
 $t_{2_1}${\small\verb% << %}$t_1$ to the equational theorem:
 
 \medskip
 
-{\small\verb%|- %}$t_1${\small\verb% /\ (%}$t_{2_1}${\small\verb% /\ %}$t_{2_2}${\small\verb%)  =  %} $t_{2_1}${\small\verb% /\ (%}$t_1${\small\verb% /\ %}$t_{2_2}${\small\verb%)%} 
+{\small\verb%|- %}$t_1${\small\verb% /\ (%}$t_{2_1}${\small\verb% /\ %}$t_{2_2}${\small\verb%)  =  %} $t_{2_1}${\small\verb% /\ (%}$t_1${\small\verb% /\ %}$t_{2_2}${\small\verb%)%}
 
 \medskip
 
@@ -195,7 +195,7 @@ $t_2${\small\verb% << %}$t_1$, then it should generate the equation:
 processing functions \ml{is\_conj} and \ml{dest\_conj}, where:
 
 \begin{hol}\begin{verbatim}
-   is_conj   : term -> bool 
+   is_conj   : term -> bool
    dest_conj : term -> (term # term)
 \end{verbatim}\end{hol}
 
@@ -216,7 +216,7 @@ false : bool
 evaluation failed     dest_conj
 \end{verbatim}\end{session}
 
-The implementation of the special purpose conversion, 
+The implementation of the special purpose conversion,
 \ml{CONJ\_ORD\_CONV}, is now straightforward.
 
 
@@ -259,7 +259,7 @@ The process of normalizing a conjunction can be split into four phases:
 \begin{quote}
 \ml{CONJ\_ORD\_CONV}
 \end{quote}
-\item Remove repetitions of $t$ of the form $t${\small\verb% /\ %}$t$ 
+\item Remove repetitions of $t$ of the form $t${\small\verb% /\ %}$t$
 by repeatedly applying:
 \begin{quote}
 \ml{REWR\_CONV\ CANCEL1}
@@ -283,7 +283,7 @@ subterms of a term is needed. This is provided by the operator
 \noindent If $c$ is a conversion then \ml{TOP\_DEPTH\_CONV}~$c$ is a
 conversion that repeatedly applies $c$ to all subterms until $c$ is no
 longer applicable to any subterms. The function \ml{TOP\_DEPTH\_CONV}
-is one of a family of operators that apply conversions throughout 
+is one of a family of operators that apply conversions throughout
 terms. Members of this family differ in the order in which subterms
 are visited and the amount of repetition that is done. For more
 details, see the chapter on conversions in \DESCRIPTION.
@@ -381,7 +381,7 @@ This conversion can now be converted to a rule or tactic using the functions
 
 \noindent $\ml{CONV\_RULE}\ c\ \ml{(|- }t\ml{)}$ returns $\ml{|- }t'$, where
 $c\ t$ evaluates to the equation
-$\ml{|-}\ t\ml{=}t'$. 
+$\ml{|-}\ t\ml{=}t'$.
 $\ml{CONV\_TAC}\ c$ is a tactic that
 converts the conclusion of a goal using $c$. For more details see \DESCRIPTION.
 
@@ -433,7 +433,7 @@ To summarize, here is the \ML{} code implementing the normalizer:
     TOP_DEPTH_CONV(REWR_CONV CANCEL2);;
 
    let CONJ_NORM_TAC = CONV_TAC CONJ_NORM_CONV;;
-\end{verbatim}\end{hol} 
+\end{verbatim}\end{hol}
 
 \section{A more efficient implementation}
 
@@ -536,7 +536,7 @@ ex1_list = ["B"; "C"; "A"; "D"] : term list
 There is a predefined sorting function in \ML:
 
 \begin{session}\begin{verbatim}
-#sort;; 
+#sort;;
 sort = - : (((* # *) -> bool) -> * list -> * list)
 
 #sort $< [3;2;5;6;1;1;7;9;3];;
@@ -587,7 +587,7 @@ CONJ_NORM_CONV2 = - : conv
 |- A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D = A /\ B /\ C /\ D
 \end{verbatim}\end{session}
 
-\noindent \ml{CONJ\_CANON\_CONV2} is more than an order of magnitude faster 
+\noindent \ml{CONJ\_CANON\_CONV2} is more than an order of magnitude faster
 than \ml{CONJ\_CANON\_CONV}:
 
 
@@ -748,7 +748,7 @@ is characterized by:
 \noindent Returning to the proof: the final step is now performed by
 popping the assumption and applying to it the function obtained by
 composing \ml{CONJUNCTS} and \ml{MAP\_FIRST} using the \ML{} infixed
-function composition operator \ml{o} 
+function composition operator \ml{o}
 (where \ml{(}$f$~\ml{o}~$g$\ml{)}$x$~\ml{=}~$g$\ml{(}$f$\ml{(}$x$\ml{))}).
 
 \begin{session}\begin{verbatim}
@@ -776,9 +776,9 @@ Previous subproof:
 the tactics just used results in:
 
 \begin{hol}\begin{verbatim}
-   EQ_TAC          THEN 
+   EQ_TAC          THEN
    DISCH_TAC       THEN
-   REPEAT CONJ_TAC THEN 
+   REPEAT CONJ_TAC THEN
    POP_ASSUM(MAP_FIRST ACCEPT_TAC o CONJUNCTS)
 \end{verbatim}\end{hol}
 
@@ -790,9 +790,9 @@ the tactics just used results in:
 
 () : void
 
-#e(EQ_TAC          THEN 
+#e(EQ_TAC          THEN
 #  DISCH_TAC       THEN
-#  REPEAT CONJ_TAC THEN 
+#  REPEAT CONJ_TAC THEN
 #  POP_ASSUM(MAP_FIRST ACCEPT_TAC o CONJUNCTS));;
 OK..
 goal proved
@@ -820,11 +820,11 @@ the application of \ml{PROVE} fails. Using \ml{PROVE}, the definition
 of \ml{CONJ\_EQ} is:
 
 \begin{hol}\begin{verbatim}
-   let CONJ_EQ t1 t2 = 
-    PROVE ("^t1 = ^t2", 
-           EQ_TAC          THEN 
+   let CONJ_EQ t1 t2 =
+    PROVE ("^t1 = ^t2",
+           EQ_TAC          THEN
            DISCH_TAC       THEN
-           REPEAT CONJ_TAC THEN 
+           REPEAT CONJ_TAC THEN
            POP_ASSUM(MAP_FIRST ACCEPT_TAC o CONJUNCTS))
 \end{verbatim}\end{hol}
 
@@ -842,11 +842,11 @@ of \ml{CONJ\_NORM\_CONV2} results in:
 \noindent Continuing the session:
 
 \begin{session}\begin{verbatim}
-#let CONJ_EQ t1 t2 = 
-# PROVE ("^t1 = ^t2", 
-#        EQ_TAC          THEN 
+#let CONJ_EQ t1 t2 =
+# PROVE ("^t1 = ^t2",
+#        EQ_TAC          THEN
 #        DISCH_TAC       THEN
-#        REPEAT CONJ_TAC THEN 
+#        REPEAT CONJ_TAC THEN
 #        POP_ASSUM(MAP_FIRST ACCEPT_TAC o CONJUNCTS));;
 CONJ_EQ = - : (term -> conv)
 
@@ -858,7 +858,7 @@ CONJ_NORM_CONV3 = - : conv
 \end{verbatim}\end{session}
 
 \noindent \ml{CONJ\_NORM\_CONV3} is almost twice
-as efficient as \ml{CONJ\_NORM\_CONV2}. To show this, the timer is switched 
+as efficient as \ml{CONJ\_NORM\_CONV2}. To show this, the timer is switched
 back on.
 
 \begin{session}\begin{verbatim}
@@ -895,7 +895,7 @@ Further improvements are still possible. As an exercise the reader
 might want to decipher the following highly optimized definition of
 \ml{CONJ\_EQ}.
 
-The function \ml{PROVE\_CONJ}, defined below, 
+The function \ml{PROVE\_CONJ}, defined below,
 converts a term $t$ to the theorem \ml{|-}~$t$
 if that theorem occurs in a supplied list of theorems (\ml{ths} in the
 code below), or $t$ is a conjunction each of whose conjuncts occurs in
@@ -939,7 +939,7 @@ t_2 \]
 \begin{hol}\begin{verbatim}
    let CONJ_EQ2 t1 t2 =
     let imp1 = DISCH t1 (PROVE_CONJ (CONJUNCTS(ASSUME t1)) t2)
-    and imp2 = DISCH t2 (PROVE_CONJ (CONJUNCTS(ASSUME t2)) t1) 
+    and imp2 = DISCH t2 (PROVE_CONJ (CONJUNCTS(ASSUME t2)) t1)
     in IMP_ANTISYM_RULE imp1 imp2
 \end{verbatim}\end{hol}
 
@@ -954,7 +954,7 @@ Run time: 0.0s
 
 #let CONJ_EQ2 t1 t2 =
 # let imp1 = DISCH t1 (PROVE_CONJ (CONJUNCTS(ASSUME t1)) t2)
-# and imp2 = DISCH t2 (PROVE_CONJ (CONJUNCTS(ASSUME t2)) t1) 
+# and imp2 = DISCH t2 (PROVE_CONJ (CONJUNCTS(ASSUME t2)) t1)
 # in IMP_ANTISYM_RULE imp1 imp2;;
 CONJ_EQ2 = - : (term -> conv)
 Run time: 0.0s
@@ -1010,7 +1010,7 @@ There is an important difference in the functionality of
 \ml{CONJ\_NORM\_CONV} and the various optimised versions of it. The
 difference is that \ml{CONJ\_NORM\_CONV} applies to any term,
 normalizing all subterms that are conjunctions. However the functions
-\ml{CONJ\_NORM\_CONV}{\small $n$} (where {\small $n = 2,3,4$}) all 
+\ml{CONJ\_NORM\_CONV}{\small $n$} (where {\small $n = 2,3,4$}) all
 fail on non-conjunctions.
 
 \begin{session}\begin{verbatim}
@@ -1024,7 +1024,7 @@ Intermediate theorems generated: 1307
 
 #CONJ_NORM_CONV4 "^ex1 => ^ex1";;
 need 2 nd branch to conditional
-skipping: ex1 " ;; parse failed     
+skipping: ex1 " ;; parse failed
 
 #CONJ_NORM_CONV4 "^ex1 ==> ^ex1";;
 evaluation failed     fail
@@ -1061,7 +1061,7 @@ Although this works, the scanning through subterms done by
 \ml{TOP\_DEPTH\_CONV} is a bit `brute force'. Further efficiency can
 be obtained by writing a special scanning function that
 just applies a conversion to maximal conjunctive subterms.
-This is provided by the code below. 
+This is provided by the code below.
 The understanding of this is a fairly hard exercise for the reader. The
 section on conversions in \DESCRIPTION\ should be helpful.
 
@@ -1115,7 +1115,7 @@ $$\Gamma\turn t\over\Gamma\turn\uquant{x} t$$
 \end{itemize}
 
 
-\noindent and \ml{REFL}: 
+\noindent and \ml{REFL}:
 
 $$ \over\turn t = t$$
 
@@ -1138,12 +1138,12 @@ abstractions, respectively.
 
 \begin{session}\begin{verbatim}
 #letrec CONJ_DEPTH_CONV c tm =
-# if is_conj tm 
+# if is_conj tm
 #  then (c THENC (MK_CONJL o map (CONJ_DEPTH_CONV c) o conjuncts)) tm
 # if is_comb tm
 #  then (let rator,rand = dest_comb tm in
 #         MK_COMB (CONJ_DEPTH_CONV c rator, CONJ_DEPTH_CONV c rand))
-# if is_abs tm 
+# if is_abs tm
 #  then (let bv,body = dest_abs tm in
 #         let bodyth = CONJ_DEPTH_CONV c body in
 #         MK_ABS (GEN bv bodyth))
@@ -1228,7 +1228,7 @@ Here is the complete \ML{} program for the optimized normalizer.
 
 \begin{hol}\begin{verbatim}
    letrec insert ord x l =
-    if null l 
+    if null l
      then [x]
     if ord(x,hd l)
      then x.l
@@ -1247,7 +1247,7 @@ Here is the complete \ML{} program for the optimized normalizer.
 
    let CONJ_EQ t1 t2 =
     let imp1 = DISCH t1 (PROVE_CONJ (CONJUNCTS(ASSUME t1)) t2)
-    and imp2 = DISCH t2 (PROVE_CONJ (CONJUNCTS(ASSUME t2)) t1) 
+    and imp2 = DISCH t2 (PROVE_CONJ (CONJUNCTS(ASSUME t2)) t1)
     in IMP_ANTISYM_RULE imp1 imp2;;
 \end{verbatim}\end{hol}
 
@@ -1269,12 +1269,12 @@ Here is the complete \ML{} program for the optimized normalizer.
 
 \begin{hol}\begin{verbatim}
    letrec CONJ_DEPTH_CONV c tm =
-    if is_conj tm 
+    if is_conj tm
      then (c THENC (MK_CONJL o map (CONJ_DEPTH_CONV c) o conjuncts)) tm
     if is_comb tm
      then (let rator,rand = dest_comb tm in
             MK_COMB (CONJ_DEPTH_CONV c rator, CONJ_DEPTH_CONV c rand))
-    if is_abs tm 
+    if is_abs tm
      then (let bv,body = dest_abs tm in
             let bodyth = CONJ_DEPTH_CONV c body in
             MK_ABS (GEN bv bodyth))

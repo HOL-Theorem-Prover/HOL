@@ -11,17 +11,10 @@
 in \HOL{} in more detail.  The previous chapter has provided a broad
 overview of how proof is done in \HOL{}, while here the emphasis is on
 attaining a more thorough grounding in the material.  As before, we
-are using \textsf{hol.unquote} and we require the following command to
-be entered as a first step: \setcounter{sessioncount}{0}
-\begin{session}
-\begin{verbatim}
-- app load ["arithmeticTheory", "pairTheory"];
-> val it = () : unit
-\end{verbatim}
-\end{session}
-\vspace{1cm}
+are using \textsf{hol.unquote}.
 
-\noindent
+\setcounter{sessioncount}{0}
+
 For a logician, a formal proof is a sequence, each of whose elements
 is either an {\it axiom\/} or follows from earlier members of the
 sequence by a {\it rule of inference\/}.  A theorem is the last
@@ -405,12 +398,12 @@ $\Delta\turn t$ and repeatedly replaces instances of $u_i$ in $t$ by
 the corresponding instance of $v_i$ until no further change occurs.
 The result is a theorem $\Gamma\cup\Delta\turn t'$ where $t'$ is the
 result of rewriting $t$ in this way.  The session below illustrates
-the use of \ml{REWRITE\_RULE}.  In it the list of equations is a list
-\ml{rewrite\_list} containing the pre-proved theorems
-\ml{ADD\_CLAUSES} and \ml{MULT\_CLAUSES}.  These theorems {\it
-  autoload\/} from the theory \ml{arithmetic}, so we must use a fully
-qualified name with the name of the theory as the first component to
-refer to them.  (Alternatively, we could, as in the Euclid example of
+the use of \ml{REWRITE\_RULE}.  In it the list of equations is the
+value \ml{rewrite\_list} containing the pre-proved theorems
+\ml{ADD\_CLAUSES} and \ml{MULT\_CLAUSES}.  These theorems are from the
+theory \ml{arithmetic}, so we must use a fully qualified name with the
+name of the theory as the first component to refer to them.
+(Alternatively, we could, as in the Euclid example of
 chapter~\ref{chap:euclid}, use \ml{open} to bring declare all of the
 values in the theory at the top level.)
 
@@ -489,10 +482,9 @@ t_2 \]
 
 \noindent  This  is   illustrated  in  the
 following new session (note that the session number has been reset to
-{\small\sl 1}, but we'll assume that the same setup (from the previous
-chapter's session 0, has been invoked):
+{\small\sl 1}; we'll again assume that we're using \ml{hol.unquote}.
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}\begin{verbatim}
 - show_assums := true;
 val it = () : unit
@@ -802,17 +794,19 @@ stack.  Subgoals can be considered in any order.  If the tactic solves
 a subgoal (\ie\ returns an empty subgoal list), then the package
 proceeds to the next subgoal in the tree.
 
-The function \ml{set\_goal} of type \ml{goal -> void} initializes the
-subgoal package with a new goal. Usually top-level goals have no
-assumptions; the function \ml{g} is useful in this case.
+The function \ml{set\_goal} of type \ml{goal -> proofs}\footnote{The
+  \ml{proofs} type stores multiple proof attempts (multiple trees) at
+  once.} initializes the subgoal package with a new goal. Usually
+top-level goals have no assumptions; the function \ml{g} is useful in
+this case.
 
 To illustrate the subgoal package the trivial theorem $\vdash
 \uquant{m}m+0=m$ will be proved from the definition of addition (we
-first \ml{open} the theory of arithmetic and \ml{numLib}, to bring the
-theorems and \ml{INDUCT\_TAC} to the top level):
+first \ml{open} the theory of arithmetic to bring ML bindings for its
+theorems to the top level):
 
 \begin{session}\begin{verbatim}
-- open arithmeticTheory numLib;
+- open arithmeticTheory;
 > ...
 - ADD;
 > val it = |- (!n. 0 + n = n) /\ (!m n. (SUC m) + n = SUC(m + n)) : thm
@@ -825,7 +819,6 @@ definition of addition.  Notice that the function \ml{g} does not take
 a term as an argument, but rather a \emph{quotation}, with only one
 set of back-quotes.
 
-\setcounter{sessioncount}{1}
 \begin{session}\begin{verbatim}
 - g `!m. m+0=m`;
 > val it =
@@ -836,7 +829,7 @@ set of back-quotes.
 \end{verbatim}\end{session}
 
 \noindent This sets up the goal. Next the goal is split into a basis and step case
-with \ml{INDUCT\_TAC}. To do this the function \ml{e} (or,
+with \ml{Induct}. To do this the function \ml{e} (or,
 equivalently, \ml{expand}) is used. This applies a tactic to the top
 goal on the stack, then pushes the resulting subgoals onto the goal
 stack, then prints the resulting subgoals. If there are no subgoals,
@@ -844,7 +837,7 @@ the justification function is applied to the theorems solving the
 subgoals that have been proved and the resulting theorems are printed.
 
 \begin{session}\begin{verbatim}
-- e INDUCT_TAC;;
+- e Induct;
 OK..
 2 subgoals:
 > val it =
@@ -887,7 +880,7 @@ OK..
     SUC (m + 0) = SUC m
     ------------------------------------
       m + 0 = m
-\end{verbatim}\end{session}
+\end{verbatim}\label{session:rewrite-add}\end{session}
 
 \noindent and then with the assumption \ml{m+0=m}. The tactic
 \ml{ASM\_REWRITE\_TAC} is used to rewrite with the assumptions of a
@@ -909,7 +902,7 @@ Goal proved.
     Initial goal proved.
      [] |- !m. m + 0 = m
     : GoalstackPure.goalstack
-\end{verbatim}\end{session}
+\end{verbatim}\label{session:asm-rewrite-add}\end{session}
 
 \noindent The top goal is solved, hence the preceding goal (the step case)
 is solved too, and since the basis is already solved, the main goal is
@@ -924,12 +917,12 @@ val it = [] |- !m. m + 0 = m : thm
 \end{verbatim}\end{session}
 
     The proof just done can be `optimized'. For example, instead of
-    first rewriting with \ml{ADD} (box 4) and then with the
-    assumptions (box 5), a single rewriting with \ml{ADD} and the
-    assumptions would suffice.  To illustrate, the last two steps of
-    the proof will be `undone' using the function \ml{backup} (also,
-    \ml{b}) which restores the previous state of the goal and theorem
-    stacks.
+    first rewriting with \ml{ADD} (box \ref{session:rewrite-add}) and
+    then with the assumptions (box \ref{session:asm-rewrite-add}), a
+    single rewriting with \ml{ADD} and the assumptions would suffice.
+    To illustrate, the last two steps of the proof will be `undone'
+    using the function \ml{backup} (also, \ml{b}) which restores the
+    previous state of the goal and theorem stacks.
 
 \begin{session}\begin{verbatim}
 - b();
@@ -1029,7 +1022,7 @@ useful if one wants to do different things to different subgoals.
 \ml{THENL} can be illustrated by doing the proof of $\vdash \uquant{m}m+0=m$ in
 one step.
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}\begin{verbatim}
 - g `!m. m + 0 = m`;
 > val it =
@@ -1065,7 +1058,7 @@ to all the subgoals produced by $T_1$.
 In fact, \ml{ASM\_REWRITE\_TAC[ADD]} will solve the basis as well as
 the step case of the induction for $\uquant{m}m+0=m$, so there is an
 even simpler one-step proof than the one above:
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}\begin{verbatim}
 - g `!m. m+0 = m`;
 > val it =

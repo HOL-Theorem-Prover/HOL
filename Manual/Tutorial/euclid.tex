@@ -2,6 +2,8 @@
 \chapter{Euclid's theorem}
 \label{chap:euclid}
 
+\setcounter{sessioncount}{0}
+
 In this chapter, we prove in \holn{} that for every number, there is a
 prime number that is larger, \ie, that the prime numbers form an
 infinite sequence. This proof has been excerpted and adapted from a
@@ -32,30 +34,18 @@ lower-level libraries).
 
 First, we start the system. We will use make use of the quotation
 pre-processor in the example, so we invoke
-\ml{.../<holdir>/bin/hol.unquote}.  Then we load and open
-\ml{bossLib}. This library provides high-level support for interactive
-proof.  We also open the theory of arithmetic, since we will use some
-of its theorems.  Finally, the function \ml{by} from \ml{bossLib}
-needs to be declared as infix before it can be used as such.
-
+\ml{.../<holdir>/bin/hol.unquote}.  Now, we ``\ml{open}'' the
+arithmetic theory, and specialize the rewriter provided by
+\ml{bossLib} to a simplification set that knows about arithmetic.  The
+former means that all of the \ML{} bindings from the \HOL{} theory of
+arithmetic are available at the top level.  The latter is not
+necessary, but serves to make some of the proofs typeset more nicely.
 \begin{session}
 \begin{verbatim}
-- load "bossLib";
-> ...
+- open arithmeticTheory
+  ...
 
-- open bossLib arithmeticTheory;
-> ...
-
-- infix 8 by;
-\end{verbatim}
-\end{session}
-We specialize the rewriter provided by \ml{bossLib} to a
-simplification set that knows about arithmetic.  This is not necessary
-and only serves to make some of the proofs typeset more nicely.
-\begin{session}
-\begin{verbatim}
 - val ARW_TAC = RW_TAC arith_ss;
-
 > val ARW_TAC =
     fn
     : Thm.thm list -> Term.term list * Term.term ->
@@ -433,11 +423,13 @@ to locate this definition. The function
                 -> ((string * string) * (thm * DB.class)) list
 \end{verbatim}\end{boxed}
 
-is often helpful for such tasks. It takes a list of theory names, and a
-pattern, and looks in the list of theories for any theorem, definition,
-or axiom that has an instance of the pattern as a subterm. If the list
-of theory names is empty, then all loaded theories are included in the
-search. Let's look in the theory of arithmetic for the subterm to be rewritten.
+\noindent
+is often helpful for such tasks. It takes a list of theory names, and
+a pattern, and looks in the list of theories for any theorem,
+definition, or axiom that has an instance of the pattern as a subterm.
+If the list of theory names is empty, then all loaded theories are
+included in the search. Let's look in the theory of arithmetic for the
+subterm to be rewritten.
 
 \begin{session}\begin{verbatim}
 - DB.match ["arithmetic"] (Term`SUC n * x`);
@@ -1492,7 +1484,7 @@ proofs of the theorems in ``sewn-up'' form so that when run, it does
 not involve the goal-stack at all.  In its given form, it can be run
 as input to \textsf{hol.unquote} thus:
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{verbatim}
 $ cd examples/
@@ -1521,29 +1513,25 @@ Theory "scratch" is inconsistent with disk.
 \end{session}
 
 However, we now want to create a \ml{euclidTheory} that we can load in
-other interactive sessions, just as we loaded \ml{arithmeticTheory} in
-the development above.  So, our first step is to create a file
+other interactive sessions.  So, our first step is to create a file
 \ml{euclidScript.sml}, and to copy the body of \ml{euclid.sml} into
-it.  The first (non-comment) line of our new script is
-\[
-    \mbox{\ml{load "bossLib";}}
-\]
-This is necessary in the interactive system, but is redundant when
-creating compiled code as the compiler detects the dependency on
-\ml{bossLib} itself (it needs to \ml{open} it in the very next line).
-This line should be deleted.
+it.
 
-The following line opens \ml{arithmeticTheory} and \ml{bossLib}.
-However, when writing for the compiler, we need to explicitly mention
-the other \HOL{} modules that we depend on.  We must add
+The first non-comment line opens \ml{arithmeticTheory}.  However, when
+writing for the compiler, we need to explicitly mention the other
+\HOL{} modules that we depend on.  We must add
 \[
-\mbox{\ml{open HolKernel basicHol90Lib Parse}}
+\mbox{\ml{open HolKernel boolLib Parse bossLib}}
 \]
 Further, while \textsf{hol} (and \textsf{hol.unquote}) know that
 \ml{THEN} and \ml{THENL} are infixes, the compiler doesn't, so we must
 also add
 \[
 \mbox{\ml{infix THEN THENL}}
+\]
+Similarly, we need to specify that \ml{by} is a tightly binding
+infix.  \[
+\ml{infix 8 by}
 \]
 The next line that poses a difficulty is
 \[
