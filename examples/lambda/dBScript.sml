@@ -224,19 +224,15 @@ RW_TAC std_ss [dFV, dLAMBDA, dFV_dLAMBDA_lemma]);
 (* Inductive definition of proper terms.                                 *)
 (* --------------------------------------------------------------------- *)
 
-val (dOK_DEF, dOK_ind, dOK_cases) = 
-gen_new_inductive_definition bool_monoset
-(Term`(!x. dOK (dVAR x)) /\
-      (!x. dOK (dCON x)) /\
-      (!x t. dOK t ==> dOK (dLAMBDA x t)) /\
-      (!t u. dOK t /\ dOK u ==> dOK (dAPP t u))`);
+val (dOK_DEF, dOK_ind, dOK_cases) = new_inductive_definition
+  `(!x. dOK (dVAR x)) /\
+   (!x. dOK (dCON x)) /\
+   (!x t. dOK t ==> dOK (dLAMBDA x t)) /\
+   (!t u. dOK t /\ dOK u ==> dOK (dAPP t u))`;
 
 val _ = save_thm("dOK_DEF", dOK_DEF);
 val _ = save_thm("dOK_ind",   dOK_ind);
 
-(*
-val dOK_TAC = MAP_FIRST ind_defLib.RULE_TAC dOK_rules;
-*)
 
 (* --------------------------------------------------------------------- *)
 (* Proof of |- !t. dOK t = (dDEG t = 0)                                  *)

@@ -933,13 +933,13 @@ Induct THENL [ALL_TAC, Cases]
 (* A renaming is a parallel substitution of variables for variables.     *)
 (*                                                                       *)
 (*       RENAMING []                     always                          *)
-(*       RENAMING (CONS (x,VAR y) R)     if RENAMING R                   *)
+(*       RENAMING ((x,VAR y)::R)         if RENAMING R                   *)
 (* --------------------------------------------------------------------- *)
 
-val (RENAMING_DEF,RENAMING_IND,RENAMING_CASES) =
-gen_new_inductive_definition bool_monoset
-(Term`RENAMING ([]:('a nc # string) list) /\
-     (!R x y. RENAMING R ==> RENAMING ((VAR y,x)::R))`);
+val (RENAMING_DEF,RENAMING_IND,RENAMING_CASES) = 
+  new_inductive_definition 
+     `RENAMING ([]:('a nc # string) list)
+  /\  (!R x y. RENAMING R ==> RENAMING ((VAR y,x)::R))`;
 
 val _ = save_thm("RENAMING_DEF",RENAMING_DEF);
 val _ = save_thm("RENAMING_IND",RENAMING_IND);
@@ -948,7 +948,7 @@ val _ = save_thm("RENAMING_CASES",RENAMING_CASES);
 val RENAME_DEF =
  Define
      `(RENAME [] x          = x)
-  /\  (RENAME ((p,q)::ss) x = RENAME ss (if (x = q) then VNAME p else x))`;
+  /\  (RENAME ((p,q)::ss) x = RENAME ss (if x=q then VNAME p else x))`;
 
 
 val RENAMING_LEMMA = Q.store_thm("RENAMING_LEMMA",
