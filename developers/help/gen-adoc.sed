@@ -57,8 +57,8 @@ s/^/STRUCTURE: /
 # Get rid of any remaining backslashes starting lines
 s/^\\//
 # Turn double braces into single braces
-s/{{/{/
-s/}}/}/
+s/{{/{/g
+s/}}/}/g
 # Delete the ENDDOC
 /ENDDOC/d
 # delete BLTYPE and ELTYPE
