@@ -72,7 +72,7 @@ val LESS_SUC_EQ_LEMMA =
       (CONJ (ASSUME (--`m < n`--))
             (NOT_EQ_SYM(ASSUME (--`~(n = SUC m)`--))))));
 
-local val FUN_EQ_LEMMA' = INST_TYPE[==`:'a`== |-> ==`:num`==] FUN_EQ_LEMMA
+local val FUN_EQ_LEMMA' = INST_TYPE[alpha |-> Type`:num`] FUN_EQ_LEMMA
 in
 val NEXT_SUC2 =
  store_thm
@@ -348,7 +348,7 @@ val LESS_EQ_SUC_1 =
    INDUCT_TAC
    THEN ASM_REWRITE_TAC[num_CONV (--`1`--),LESS_OR_EQ,LESS_MONO_EQ,LESS_0]);
 
-val EQ_SYM_EQ' = INST_TYPE[==`:'a`== |-> ==`:num`==]EQ_SYM_EQ;
+val EQ_SYM_EQ' = INST_TYPE[alpha |-> Type`:num`] EQ_SYM_EQ;
 
 val SUB_LEMMA1 =
  store_thm
@@ -530,7 +530,7 @@ val _ = save_thm("MULT_IMP_EXPAND",
          unwindLib.EXPAND_AUTO_RIGHT_RULE prims MULT_IMP);
 
 val COND_ADD_LEMMA = store_thm("COND_ADD_LEMMA",
-   --`((b => m | n) + p) = (b => m + p | n + p)`--,
+   --`((if b then m else n) + p) = (if b then m + p else n + p)`--,
    COND_CASES_TAC
     THEN ASM_REWRITE_TAC[]);
 
@@ -557,9 +557,8 @@ val G_FUN = new_definition("G_FUN",
      (t => i1 | n - 1),
      (((t => i1 - 1 | (n - 1) - 1) = 0) \/ (i2 = 0)))`--);
 
-val NEXT_THM' = INST_TYPE[==`:'a`== |-> ==`:num#num`==,
-                          ==`:'b`== |-> ==`:num#num#bool`==]
-                         NEXT_THM;
+val NEXT_THM' = 
+ INST_TYPE[alpha |-> Type`:num#num`, beta  |-> Type`:num#num#bool`] NEXT_THM;
 
 
 val NEXT_MULT_LEMMA1 = save_thm("NEXT_MULT_LEMMA1",
