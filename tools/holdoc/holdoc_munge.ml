@@ -201,7 +201,8 @@ and rule_vars = parser
     [< 'White(_)                  ; r = rule_vars >] -> r
   | [< 'Comment(_)                ; r = rule_vars >] -> r
   | [< 'DirBlk("VARS",ts)         ; r = rule_vars >] -> dir_var_vars ts @ r
-  | [< 'DirBlk(_,_)               ; r = rule_vars >] -> r
+  | [< 'DirBlk(n,ts) when (dir_proc n ts; true) (* cheat: make it happen right now *)
+                                  ; r = rule_vars >] -> r
   | [< 'Ident(s,_)                ; r = rule_vars >] -> s :: r
   | [<>]                                         -> []
 
@@ -329,8 +330,16 @@ let is_aux_infix s = List.mem s !aUX_INFIX_LIST
 
 let is_var_prefix s = List.mem s !vAR_PREFIX_LIST
 
+let var_prefix s =
+  let _ = (Str.search_forward
+             (Str.regexp "\([0-9]*\)\([']*\)$")
+             s
+             0 ) in 
+  Str.string_before s (Str.match_beginning ())
+
 let is_var v s = (* v is a list of universally-quantified rule variables *)
-  List.mem s v
+  List.mem s v ||
+  is_var_prefix (var_prefix s)
 
 let is_num s =
   Str.string_match (Str.regexp "[0-9]+") s 0
@@ -537,6 +546,7 @@ let pvs = ref []
 let mng_latex_render () =
   Stream.iter (fun t -> match t with
                           DirBlk("VARS",ts) -> pvs := !pvs @ dir_var_vars ts
+                        | DirBlk(n,ts)      -> ignore (dir_proc n ts)
                         | _                 -> print_string (mtok !pvs t))
               textokstream
 
