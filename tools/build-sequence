@@ -19,9 +19,9 @@ src/goalstack
 
 src/taut
 src/compute/src
+src/marker
 src/q
 src/combin
-src/marker
 src/labels
 src/lite
 src/refute
@@ -39,7 +39,6 @@ src/num/reduce/src
 src/num/arith/src
 src/num
 src/IndDef
-#src/datatype/parse
 src/datatype/equiv
 src/datatype/record
 src/datatype
