@@ -1,15 +1,137 @@
-Bugs fixed:
------------
+Release Notes for the Kananaskis-1 release of the HOL system.
+-------------------------------------------------------------
 
-  * Muddy wouldn't build on Linux if the binary distribution of Moscow
-    ML was being used because of a lack of header files in an expected
-    place.  Thanks to Hasan Amjad for reporting this bug.
+Documentation
+--------------
 
-  * Define_type.define_type wouldn't work.  This code is deprecated
-    with a capital 'D', but we've provided a fix anyway.  Thanks to
-    Viktor Sabelfeld for the report of the bug.  It was caused by the
-    now correct behaviour of constant hiding that wasn't correct prior
-    to Taupo-6.
+There is an improved interface to documentation:
+
+   * The A single HTML page gives organized access to 
+      * libraries (source)
+      * theories (proved theorems and scripts)
+      * proof support (documentation and source)
+      * an index of all identifiers in the system, with pointers to 
+        source
+
+   * Much new documentation has been written, especially for heavily
+     used proof tools.
+
+* There are several important kernel differences between Kananaskis and
+  Taupo, although we have striven to ensure that old code still runs.
+
+   - separate namespaces
+   - improved Holmake
+   - improved installation
+
+
+New proof tools
+----------------
+
+  * Another complete decision procedure for Presburger arithmetic over
+    the integers and natural numbers, the Omega Test, has been
+    implemented.  It is usually faster than Cooper's algorithm, but
+    problems that require significant work in converting the input
+    problem to DNF can cause it to take much longer.  The Omega Test
+    is available in intLib as intLib.ARITH_CONV.
+
+
+New libraries
+--------------
+
+  * The library HolSatLib (http://www.cl.cam.ac.uk/~mjcg/HolSatLib/)
+    provides a very simple harness for invoking SAT solvers on HOL
+    terms. Currently SATO, GRASP and ZCHAFF are supported. These solvers
+    all require input in the standard DIMACS format for conjunctive normal
+    form (CNF). It should be straightforward to add other DIMACS
+    compatible SAT solvers.  The purpose of HolSatLib is to provide a
+    platform for experimenting with combinations of theorem proving and
+    SAT. HOL can be used to deductively manipulate terms into CNF as
+    required for SAT analysis, and then the results of the analysis can be
+    reimported into HOL and either checked or just trusted.  HolSatLib has
+    only been tested under Linux, though it should be possible to run it
+    under Windows.
+
+  * The library word32Lib, which mainly comprises word32Theory (see below),
+    plus an evaluation conversion "WORD_CONV".
+
+
+New theories
+-------------
+
+  * Laurent Thery's theories of divisibility, primality, and gcd are
+    now part of the system, under the name dividesTheory, primeTheory
+    and gcdTheory.
+
+  * A theory of 32-bit machine arithmetic, due to Anthony Fox,
+    available under the name word32Theory.  The theory defines many 
+    of the `integer' operations found in computer architectures.  It
+    was developed in modelling the ARM instruction set.  The operations
+    can be grouped as follows:
+
+    - Bit-field testing and extraction;
+    - Arithmetic: Addition, Subtraction, Multiplication and Two's
+      Complement;
+    - Logical: One's Complement, Bitwise And, Or and Exclusive Or;
+    - Shifts: Logical Right, Arithmetic Right, Rotate Right, and
+      Rotate Right One Place with Carry Extension.
+
+    Theorems are provided for reasoning about bit-fields, as well as
+    arithmetic (Commutative Ring properties) and the logical
+    operations (Boolean Algebra properties).  A number of rewrite
+    rules are also provided, and these support fairly efficient term
+    evaluation using WORD_CONV.
+
+    Although the word size and operations are fixed, the script 
+    src/word32/word32Script.sml can be used as a basis for defining
+    bespoke word theories.  (The word length is given by a constant, WL.)
+
+  * A new theory of strings over an alphabet of (256) characters has
+    been provided. String literals are no longer an infinite set of
+    constants, given meaning by mk_thm; instead, they are constructed 
+    terms. This removes the last use of mk_thm in the HOL system. Of 
+    course, mk_oracle_thm is still available for users.
+
+
+New features
+-------------
+
+  * relationTheory now defines the constants RTC and RC (reflexive and
+    transitive closure, and reflexive closure) and proves a variety of
+    properties about them.
+
+  * Holmake will now read and act under the supervision of make-files.
+    These files can be used to control construction of object files in
+    languages other than SML, and also have a number of other
+    convenient functions.  The basic format of the make-files read by
+    Holmake is very much like that of standard make-files, but there
+    is no support for patterns.  For more documentation of this, see
+    the Holmake section of the DESCRIPTION.
+
+  * Term and type constants in the logic now enjoy per-theory
+    name-spaces.  This means that multiple theories can share
+    constants with the same names.  If two term constants of the same
+    name are part of the logical context, the parser treats that name
+    as if it were overloaded to both constants.  Constants can be
+    unambigously specified by prepending the theory name and "$".
+    Thus
+
+       ``bool$/\``
+
+    is the conjunction operator in boolTheory, and
+
+       ``:num$num``
+
+    is the num type from numTheory.  There are also new functions in
+    the kernel's ML API for building and pulling apart constants with
+    theory information included.  For example, the function
+    mk_thy_const has the following type
+
+        {Name : string, Thy : string, Ty : hol_type} -> term
+
+    and the function dest_thy_const inverts this.  mk_const remains in
+    the system, but its behaviour is unspecified when two or more
+    constants have the same name.
+
 
 Behaviours changed:
 -------------------
@@ -68,95 +190,17 @@ Behaviours changed:
     substitutions and instantiations.  (Remember also that the infix
     |-> function can be used to construct such records.)
 
-New features:
--------------
 
-  * relationTheory now defines the constants RTC and RC (reflexive and
-    transitive closure, and reflexive closure) and proves a variety of
-    properties about them.
+Bugs fixed:
+-----------
 
-  * Holmake will now read and act under the supervision of make-files.
-    These files can be used to control construction of object files in
-    languages other than SML, and also have a number of other
-    convenient functions.  The basic format of the make-files read by
-    Holmake is very much like that of standard make-files, but there
-    is no support for patterns.  For more documentation of this, see
-    the Holmake section of the DESCRIPTION.
+  * Muddy wouldn't build on Linux if the binary distribution of Moscow
+    ML was being used because of a lack of header files in an expected
+    place.  Thanks to Hasan Amjad for reporting this bug.
 
-  * Term and type constants in the logic now enjoy per-theory
-    name-spaces.  This means that multiple theories can share
-    constants with the same names.  If two term constants of the same
-    name are part of the logical context, the parser treats that name
-    as if it were overloaded to both constants.  Constants can be
-    unambigously specified by prepending the theory name and "$".
-    Thus
+  * Define_type.define_type wouldn't work.  This code is deprecated
+    with a capital 'D', but we've provided a fix anyway.  Thanks to
+    Viktor Sabelfeld for the report of the bug.  It was caused by the
+    now correct behaviour of constant hiding that wasn't correct prior
+    to Taupo-6.
 
-       ``bool$/\``
-
-    is the conjunction operator in boolTheory, and
-
-       ``:num$num``
-
-    is the num type from numTheory.  There are also new functions in
-    the kernel's ML API for building and pulling apart constants with
-    theory information included.  For example, the function
-    mk_thy_const has the following type
-
-        {Name : string, Thy : string, Ty : hol_type} -> term
-
-    and the function dest_thy_const inverts this.  mk_const remains in
-    the system, but its behaviour is unspecified when two or more
-    constants have the same name.
-
-New theories:
--------------
-
-  * Laurent Thery's theories of divisibility, primality, and gcd are
-    now part of the system, under the name dividesTheory, primeTheory
-    and gcdTheory.
-
-  * A theory of 32-bit machine arithmetic, due to Anthony Fox,
-    available under the name word32.  The theory defines many of the
-    `integer' operations found in computer architectures.  It was
-    developed in modelling the ARM instructions set.  The operations
-    can be grouped as follows:
-
-    - Bit-field testing and extraction;
-    - Arithmetic: Addition, Subtraction, Multiplication and Two's
-      Complement;
-    - Logical: One's Complement, Bitwise And, Or and Exclusive Or;
-    - Shifts: Logical Right, Arithmetic Right, Rotate Right, and
-      Rotate Right One Place with Carry Extension.
-
-    Theorems are provided for reasoning about bit-fields, as well as
-    arithmetic (Commutative Ring properties) and the logical
-    operations (Boolean Algebra properties).  A number of rewrite
-    rules are also provided, and these support fairly efficient term
-    evaluation using WORD_CONV.
-
-    Although the word size and operations are fixed---the script can
-    be used as a basis for defining bespoke word theories.  (The word
-    length is given by a constant, WL.)
-
-New tools:
-----------
-
-  * Another complete decision procedure for Presburger arithmetic over
-    the integers and natural numbers, the Omega Test, has been
-    implemented.  It is usually faster than Cooper's algorithm, but
-    problems that require significant work in converting the input
-    problem to DNF can cause it to take much longer.  The Omega Test
-    is available in intLib as intLib.ARITH_CONV.
-
-  * The Hol98 library HolSatLib (http://www.cl.cam.ac.uk/~mjcg/HolSatLib/)
-    provides a very simple harness for invoking SAT solvers on HOL
-    terms. Currently SATO, GRASP and ZCHAFF are supported. These solvers
-    all require input in the standard DIMACS format for conjunctive normal
-    form (CNF). It should be straightforward to add other DIMACS
-    compatible SAT solvers.  The purpose of HolSatLib is to provide a
-    platform for experimenting with combinations of theorem proving and
-    SAT. Hol98 can be used to deductively manipulate terms into CNF as
-    required for SAT analysis, and then the results of the analysis can be
-    reimported into HOL and either checked or just trusted.  HolSatLib has
-    only been tested under Linux, though it should be possible to run it
-    under Windows.
