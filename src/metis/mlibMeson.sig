@@ -1,7 +1,6 @@
 (* ========================================================================= *)
 (* THE MESON PROOF PROCEDURE                                                 *)
-(* Created by Joe Hurd, November 2001                                        *)
-(* Partly ported from the CAML-Light code accompanying John Harrison's book  *)
+(* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 signature mlibMeson =
@@ -16,7 +15,9 @@ type parameters =
    state_simplify   : bool,
    cache_cutting    : bool,
    divide_conquer   : bool,
-   unit_lemmaizing  : bool}
+   unit_lemmaizing  : bool,
+   sort_literals    : int,                        (* In the range [0..2] *)
+   sort_rules       : bool}
 
 type 'a Parmupdate = ('a -> 'a) -> parameters -> parameters
 val defaults                : parameters
@@ -26,6 +27,8 @@ val update_state_simplify   : bool Parmupdate
 val update_cache_cutting    : bool Parmupdate
 val update_divide_conquer   : bool Parmupdate
 val update_unit_lemmaizing  : bool Parmupdate
+val update_sort_literals    : int Parmupdate
+val update_sort_rules       : bool Parmupdate
 
 (* The meson solver *)
 val meson' : string * parameters -> solver_node

@@ -1,23 +1,21 @@
-(*
- * mlibPatricia: Maps over integers implemented as mlibPatricia trees.
- * Copyright (C) 2000 Jean-Christophe FILLIATRE
- *
- * This software is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License version 2, as published by the Free Software Foundation.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * Translated to SML by Michael Norrish, 2001
- *)
+(* ========================================================================= *)
+(* mlibPatricia: Maps over integers implemented as mlibPatricia trees.               *)
+(* Copyright (c) 2000 Jean-Christophe Filliatre, 2001 Michael Norrish        *)
+(*                                                                           *)
+(* This software is free software; you can redistribute it and/or            *)
+(* modify it under the terms of the GNU Library General Public               *)
+(* License version 2, as published by the Free Software Foundation.          *)
+(*                                                                           *)
+(* This software is distributed in the hope that it will be useful,          *)
+(* but WITHOUT ANY WARRANTY; without even the implied warranty of            *)
+(* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                      *)
+(* ========================================================================= *)
 
-(*s Maps of integers implemented as mlibPatricia trees, following Chris
-    Okasaki and Andrew Gill's paper {\em Fast Mergeable Integer Maps}
-    ({\tt\small http://www.cs.columbia.edu/\~{}cdo/papers.html\#ml98maps}).
-    See the documentation of module [Ptset] which is also based on the
-    same data-structure. *)
+(* Maps of integers implemented as mlibPatricia trees, following Chris
+   Okasaki and Andrew Gill's paper {\em Fast Mergeable Integer Maps}
+   ({\tt\small http://www.cs.columbia.edu/\~{}cdo/papers.html\#ml98maps}).
+   See the documentation of module [Ptset] which is also based on the
+   same data-structure. *)
 
 structure mlibPatricia :> mlibPatricia =
 struct

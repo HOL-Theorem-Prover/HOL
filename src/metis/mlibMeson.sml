@@ -1,7 +1,6 @@
 (* ========================================================================= *)
 (* THE MESON PROOF PROCEDURE                                                 *)
-(* Created by Joe Hurd, November 2001                                        *)
-(* Partly ported from the CAML-Light code accompanying John Harrison's book  *)
+(* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 (*
@@ -46,7 +45,9 @@ type parameters =
    state_simplify   : bool,
    cache_cutting    : bool,
    divide_conquer   : bool,
-   unit_lemmaizing  : bool};
+   unit_lemmaizing  : bool,
+   sort_literals    : int,
+   sort_rules       : bool};
 
 val defaults = 
   {ancestor_pruning = true,
@@ -54,62 +55,98 @@ val defaults =
    state_simplify   = true,
    cache_cutting    = false,
    divide_conquer   = false,
-   unit_lemmaizing  = true};
+   unit_lemmaizing  = true,
+   sort_literals    = 1,
+   sort_rules       = true};
 
 type 'a Parmupdate = ('a -> 'a) -> parameters -> parameters
 
 fun update_ancestor_pruning f (parm : parameters) : parameters =
   let
     val {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
-         cache_cutting = c, divide_conquer = d, unit_lemmaizing = u} = parm
+         cache_cutting = c, divide_conquer = d, unit_lemmaizing = u,
+         sort_literals = l, sort_rules = r} = parm
   in
     {ancestor_pruning = f a, ancestor_cutting = b, state_simplify = s,
-     cache_cutting = c, divide_conquer = d, unit_lemmaizing = u}
+     cache_cutting = c, divide_conquer = d, unit_lemmaizing = u,
+     sort_literals = l, sort_rules = r}
   end;
 
 fun update_ancestor_cutting f (parm : parameters) : parameters =
   let
     val {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
-         cache_cutting = c, divide_conquer = d, unit_lemmaizing = u} = parm
+         cache_cutting = c, divide_conquer = d, unit_lemmaizing = u,
+         sort_literals = l, sort_rules = r} = parm
   in
     {ancestor_pruning = a, ancestor_cutting = f b, state_simplify = s,
-     cache_cutting = c, divide_conquer = d, unit_lemmaizing = u}
+     cache_cutting = c, divide_conquer = d, unit_lemmaizing = u,
+     sort_literals = l, sort_rules = r}
   end;
 
 fun update_state_simplify f (parm : parameters) : parameters =
   let
     val {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
-         cache_cutting = c, divide_conquer = d, unit_lemmaizing = u} = parm
+         cache_cutting = c, divide_conquer = d, unit_lemmaizing = u,
+         sort_literals = l, sort_rules = r} = parm
   in
     {ancestor_pruning = a, ancestor_cutting = b, state_simplify = f s,
-     cache_cutting = c, divide_conquer = d, unit_lemmaizing = u}
+     cache_cutting = c, divide_conquer = d, unit_lemmaizing = u,
+     sort_literals = l, sort_rules = r}
   end;
 
 fun update_cache_cutting f (parm : parameters) : parameters =
   let
     val {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
-         cache_cutting = c, divide_conquer = d, unit_lemmaizing = u} = parm
+         cache_cutting = c, divide_conquer = d, unit_lemmaizing = u,
+         sort_literals = l, sort_rules = r} = parm
   in
     {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
-     cache_cutting = f c, divide_conquer = d, unit_lemmaizing = u}
+     cache_cutting = f c, divide_conquer = d, unit_lemmaizing = u,
+     sort_literals = l, sort_rules = r}
   end;
 
 fun update_divide_conquer f (parm : parameters) : parameters =
   let
     val {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
-         cache_cutting = c, divide_conquer = d, unit_lemmaizing = u} = parm
+         cache_cutting = c, divide_conquer = d, unit_lemmaizing = u,
+         sort_literals = l, sort_rules = r} = parm
   in
     {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
-     cache_cutting = c, divide_conquer = f d, unit_lemmaizing = u}
+     cache_cutting = c, divide_conquer = f d, unit_lemmaizing = u,
+     sort_literals = l, sort_rules = r}
   end;
 
 fun update_unit_lemmaizing f (parm : parameters) : parameters =
   let
     val {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
-         cache_cutting = c, divide_conquer = d, unit_lemmaizing = u} = parm
+         cache_cutting = c, divide_conquer = d, unit_lemmaizing = u,
+         sort_literals = l, sort_rules = r} = parm
   in
     {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
-     cache_cutting = c, divide_conquer = d, unit_lemmaizing = f u}
+     cache_cutting = c, divide_conquer = d, unit_lemmaizing = f u,
+     sort_literals = l, sort_rules = r}
+  end;
+
+fun update_sort_literals f (parm : parameters) : parameters =
+  let
+    val {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
+         cache_cutting = c, divide_conquer = d, unit_lemmaizing = u,
+         sort_literals = l, sort_rules = r} = parm
+  in
+    {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
+     cache_cutting = c, divide_conquer = d, unit_lemmaizing = u,
+     sort_literals = f l, sort_rules = r}
+  end;
+
+fun update_sort_rules f (parm : parameters) : parameters =
+  let
+    val {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
+         cache_cutting = c, divide_conquer = d, unit_lemmaizing = u,
+         sort_literals = l, sort_rules = r} = parm
+  in
+    {ancestor_pruning = a, ancestor_cutting = b, state_simplify = s,
+     cache_cutting = c, divide_conquer = d, unit_lemmaizing = u,
+     sort_literals = l, sort_rules = f r}
   end;
 
 (* ------------------------------------------------------------------------- *)
@@ -128,6 +165,16 @@ in
   val mk_mvar      = mk_prefix prefix o int_to_string;
   fun mk_mvars n i = map (Var o mk_mvar) (interval n i);
   val dest_mvar    = string_to_int o dest_prefix prefix;
+end;
+
+local
+  fun sz n [] = n
+    | sz n (Fn (":", [tm, _]) :: tms) = sz n (tm :: tms)
+    | sz n (Var _ :: tms) = sz (n + 1) tms
+    | sz n (Fn (_,l) :: tms) = sz (n + 1) (l @ tms);
+in
+  fun literal_size False = 0
+    | literal_size lit = sz 0 [dest_atom (literal_atom lit)];
 end;
 
 datatype 'a choice = CHOICE of unit -> 'a * 'a choice;
@@ -165,7 +212,7 @@ fun filter_meter meter =
   S.filter (fn a => Option.isSome a orelse not (check_meter (!meter)));
 
 (* ------------------------------------------------------------------------- *)
-(* Compiling the rule set used by meson.                                     *)
+(* mlibMeson rules.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
 type rule = {asms : formula list, c : formula, thm : thm, asmn : int};
@@ -173,7 +220,8 @@ type rule = {asms : formula list, c : formula, thm : thm, asmn : int};
 datatype rules = Rules of rule N.literalnet;
 
 fun dest_rules (Rules r) = r;
-val empty_rules = Rules (N.empty ());
+val empty_rules = Rules (N.empty {fifo = true});
+fun add_rule r (Rules n) = Rules (N.insert r n);
 val num_all_rules = N.size o dest_rules;
 val num_initial_rules = #f o N.size_profile o dest_rules;
 fun num_rules r = num_all_rules r - num_initial_rules r;
@@ -189,7 +237,28 @@ val pp_rules =
   pp_map (map (fn _ |-> x => x) o N.to_maplets o dest_rules)
   (pp_list pp_rule);
 
-fun add_contrapositives chosen sos th (Rules ruls) =
+(* ------------------------------------------------------------------------- *)
+(* Sorting literals within rules.                                            *)
+(* ------------------------------------------------------------------------- *)
+
+val sort_lits = sort_map literal_size (rev_order Int.compare);
+
+(* ------------------------------------------------------------------------- *)
+(* Sorting rules.                                                            *)
+(* ------------------------------------------------------------------------- *)
+
+local
+  fun quality (_ |-> ({asmn, c, ...} : rule)) = (asmn, literal_size c);
+  val qualitywise = lex_combine Int.compare (rev_order Int.compare);
+in
+  val sort_ruls = sort_map quality qualitywise;
+end;
+
+(* ------------------------------------------------------------------------- *)
+(* Compiling the rule set used by meson.                                     *)
+(* ------------------------------------------------------------------------- *)
+
+fun mk_contrapositives chosen opt sos th =
   let
     val th = FRESH_VARS th
     val lits = clause th
@@ -197,20 +266,29 @@ fun add_contrapositives chosen sos th (Rules ruls) =
     fun g l = (List.filter (not o equal (negate l)) lits', l)
     val base = map g (chosen lits)
     val contrs = if sos then (lits', False) :: base else base
-    fun f (a,c) = c |-> {asms = a, c = c, thm = th, asmn = length a}
+    fun f (a,c) = c |-> {asms = opt a, c = c, thm = th, asmn = length a}
   in
-    Rules (foldl (fn (h,t) => N.insert (f h) t) ruls contrs)
+    map f contrs
   end;
 
-fun thms_to_rules chosen thms hyps =
-  let val f = uncurry o add_contrapositives chosen
-  in foldl (f true) (foldl (f false) empty_rules thms) hyps
+fun thms_to_rules parm chosen thms hyps =
+  let
+    val {sort_literals, sort_rules, ...} : parameters = parm
+    val opt = if 1 <= sort_literals then sort_lits else I
+    fun f sos (th,l) = mk_contrapositives chosen opt sos th @ l
+    val contrs = rev (foldl (f true) (foldl (f false) [] thms) hyps)
+    val contrs = if sort_rules then sort_ruls contrs else contrs
+  in
+    foldl (fn (h,t) => add_rule h t) empty_rules contrs
   end;
 
-val meson_rules = thms_to_rules I;
+fun meson_rules parm = thms_to_rules parm I;
 
-local fun only_one (l as [_]) = l | only_one _ = [];
-in val prolog_rules = thms_to_rules (only_one o List.filter positive);
+local
+  fun only_one (l as [_]) = l | only_one _ = [];
+  val chosen = only_one o List.filter positive;
+in
+  fun prolog_rules parm = thms_to_rules parm chosen;
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -299,7 +377,13 @@ fun cache_cut false = I
 (* ------------------------------------------------------------------------- *)
 
 fun grab_unit units (s as {proof = th :: _, ...} : state) =
-  (units := U.add th (!units); s)
+  let
+    val u = !units
+    val th = U.demod u th
+    val () = units := U.add th u
+  in
+    update_proof (cons th o tl) s
+  end
   | grab_unit _ {proof = [], ...} = raise BUG "grab_unit" "no thms";
 
 fun use_unit units g c (s as {env, ...}) =
@@ -368,16 +452,16 @@ fun swivelp m n = update_proof (swivel m n);
 fun meson_expand {parm : parameters, rules, cut, meter, saturated} =
   let
     val {ancestor_pruning, ancestor_cutting, state_simplify,
-         divide_conquer, ...} = parm
+         divide_conquer, sort_literals, ...} = parm
     fun expand ancestors g cont (state as {env, ...}) =
-      (chatting 4 andalso
+      (chatting 5 andalso
        chat ("meson: "^formula_to_string (formula_subst env g)^".\n");
        if not (check_meter (!meter)) then
          (NONE, CHOICE (fn () => expand ancestors g cont state))
        else if ancestor_prune ancestor_pruning env g ancestors then
          raise ERR "meson" "ancestor pruning"
        else if ancestor_cut ancestor_cutting env g ancestors then
-         (record_infs (!meter) 1; cont (update_proof (cons (ASSUME g)) state))
+         cont (update_proof (cons (ASSUME g)) state)
        else
          let
            fun reduction a () =
@@ -385,7 +469,7 @@ fun meson_expand {parm : parameters, rules, cut, meter, saturated} =
                val state = update_env (K(unify_literals env g (negate a))) state
                val state = update_proof (cons (ASSUME g)) state
              in
-               (record_infs (!meter) 1; cont state)
+               cont state
              end
            val expansion = expand_rule ancestors g cont state
          in
@@ -401,8 +485,9 @@ fun meson_expand {parm : parameters, rules, cut, meter, saturated} =
           else (saturated := false; raise ERR "meson" "too deep")
         val (r',offset) = freshen_rule r offset
         val (th,asms,env) = next_state state_simplify env r' g
+        val asms = if 2 <= sort_literals then sort_lits asms else asms
         val () = record_infs (!meter) 1
-        val _ = chatting 5 andalso chat ("meson rule: "^rule_to_string r^"\n")
+        val _ = chatting 6 andalso chat ("meson rule: "^rule_to_string r^"\n")
       in
         expands (g :: ancestors) asms (cont o modus_ponens th asms)
         {env = env, depth = depth, proof = proof, offset = offset}
@@ -434,7 +519,7 @@ fun meson_finally g ({env, proof, ...} : state) =
     val () = assert (length proof = length g) (BUG "meson" "bad final state")
     val g' = map (formula_subst env) g
     val proof' = map (INST env) (rev proof)
-    val _ = chatting 3 andalso chat
+    val _ = chatting 4 andalso chat
       (foldl (fn (h,t)=>t^"  "^thm_to_string h^"\n") "meson_finally:\n" proof')
     val () =
       assert (List.all (uncurry thm_proves) (zip proof' g'))
@@ -476,8 +561,8 @@ fun meson' (name,parm) =
    solver_con =
    fn {slice, units, thms, hyps} =>
    let
-     val ruls = meson_rules thms hyps
-     val _ = chatting 2 andalso chat
+     val ruls = meson_rules parm thms hyps
+     val _ = chatting 3 andalso chat
        (name ^ "--initializing--#thms=" ^ int_to_string (length thms) ^
         "--#hyps=" ^ int_to_string (length hyps) ^
         "--#rules=" ^ int_to_string (num_rules ruls) ^
@@ -502,9 +587,9 @@ fun delta' (name,parm) =
    solver_con =
    fn {slice, units, thms, hyps} =>
    let
-     val ruls = meson_rules thms hyps
+     val ruls = meson_rules parm thms hyps
      val dgoals = thms_to_delta_goals hyps
-     val _ = chatting 2 andalso chat
+     val _ = chatting 3 andalso chat
        (name ^ "--initializing--#thms=" ^ int_to_string (length thms) ^
         "--#hyps=" ^ int_to_string (length hyps) ^
         "--#rules=" ^ int_to_string (num_rules ruls) ^
@@ -535,7 +620,7 @@ fun prolog' (name,parm) =
    solver_con =
    fn {slice, units, thms, hyps} =>
    let
-     val system = mk_system parm units slice (prolog_rules thms hyps)
+     val system = mk_system parm units slice (prolog_rules parm thms hyps)
      fun comment S.NIL = "!\n"
        | comment (S.CONS (NONE, _)) = "-"
        | comment (S.CONS (SOME _, _)) = "$\n"
@@ -544,6 +629,8 @@ fun prolog' (name,parm) =
      fn goals => S.map_thk f (fn () => raw_meson system goals prolog_depth) ()
    end};
 
-val prolog = prolog' ("prolog",defaults);
+local val p = update_sort_literals (K 0) (update_sort_rules (K false) defaults);
+in val prolog = prolog' ("prolog",p);
+end;
 
 end

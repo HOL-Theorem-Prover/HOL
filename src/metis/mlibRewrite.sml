@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* ORDERED REWRITING                                                         *)
-(* Created by Joe Hurd, June 2003                                            *)
+(* Copyright (c) 2003-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 (*
@@ -44,7 +44,7 @@ fun chat s = (trace s; true)
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-val pick = S.find (K true);
+val blind_pick = S.find (K true);
 
 fun retrieve known i =
   (case M.peek (known,i) of SOME rw_ort => rw_ort
@@ -54,7 +54,7 @@ fun retrieve known i =
 (* Representing ordered rewrites.                                            *)
 (* ------------------------------------------------------------------------- *)
 
-datatype orient = Refl | LtoR | RtoL | Both;
+datatype orient = LtoR | RtoL | Both;
 
 datatype rewrs = REWRS of
   {order    : term * term -> order option,
@@ -79,28 +79,28 @@ fun waiting_del i (rw as REWRS {waiting, ...}) =
 (* ------------------------------------------------------------------------- *)
 
 fun empty order =
-  REWRS {order = order, known = M.empty (), rewrites = T.empty (),
-         subterms = T.empty (), waiting = S.empty};
+  REWRS {order = order, known = M.empty (), rewrites = T.empty {fifo = false},
+         subterms = T.empty {fifo = false}, waiting = S.empty};
 
 fun reset (REWRS {order, ...}) = empty order;
 
-fun peek (REWRS {known, ...}) i = O.map fst (M.peek (known,i));
+fun peek (REWRS {known, ...}) i = M.peek (known,i);
 
 fun size (REWRS {known, ...}) = M.numItems known;
 
 fun eqns (REWRS {known, ...}) =
-  map (fn (i,(th,_)) => (i,th)) (M.listItems known);
+  map (fn (i,(th,_)) => th) (M.listItems known);
 
 (* ------------------------------------------------------------------------- *)
 (* Pretty-printing                                                           *)
 (* ------------------------------------------------------------------------- *)
 
-local fun f Refl = "Refl" | f LtoR = "LtoR" | f RtoL = "RtoL" | f Both = "Both";
+local fun f LtoR = "LtoR" | f RtoL = "RtoL" | f Both = "Both";
 in val pp_orient = pp_map f pp_string;
 end;
 
 local
-  val simple = pp_map (map snd o eqns) (pp_list pp_thm);
+  val simple = pp_map eqns (pp_list pp_thm);
 
   fun kws (REWRS {known, waiting, subterms, ...}) =
     (M.listItems known,
@@ -127,36 +127,37 @@ fun chatrewrs s rw =
 (* Add an equation into the system                                           *)
 (* ------------------------------------------------------------------------- *)
 
-fun orient (SOME EQUAL) = Refl
-  | orient (SOME GREATER) = LtoR
-  | orient (SOME LESS) = RtoL
-  | orient NONE = Both;
+fun orient (SOME EQUAL) = NONE
+  | orient (SOME GREATER) = SOME LtoR
+  | orient (SOME LESS) = SOME RtoL
+  | orient NONE = SOME Both;
 
 fun add_rewrite i (th,ort) rewrites =
   let
     val (l,r) = dest_unit_eq th
   in
-    case ort of Refl => raise BUG "add_rewrite" "Refl"
-    | LtoR => T.insert (l |-> (i,true)) rewrites
+    case ort of
+      LtoR => T.insert (l |-> (i,true)) rewrites
     | RtoL => T.insert (r |-> (i,false)) rewrites
     | Both => T.insert (l |-> (i,true)) (T.insert (r |-> (i,false)) rewrites)
   end;
 
-fun add ith rw =
-  let
-    val (i,th) = ith
-    val REWRS {order, known, rewrites, subterms, waiting} = rw
-    val ort = orient (order (dest_unit_eq th))
-    val () = assert (ort <> Refl) (BUG "mlibRewrite.add" "can't add reflexive eqns")
-    val known = M.insert (known, i, (th,ort))
-    val rewrites = add_rewrite i (th,ort) rewrites
-    val waiting = S.add (waiting,i)
-    val rw = REWRS {order = order, known = known, rewrites = rewrites,
-                    subterms = subterms, waiting = waiting}
-    val _ = chatting 1 andalso chatrewrs "add" rw
-  in
-    rw
-  end;
+fun add (i,th) (rw as REWRS {known, ...}) =
+  if Option.isSome (M.peek (known,i)) then rw else
+    let
+      val REWRS {order, rewrites, subterms, waiting, ...} = rw
+      val ort =
+        case orient (order (dest_unit_eq th)) of SOME x => x
+        | NONE => raise BUG "mlibRewrite.add" "can't add reflexive eqns"
+      val known = M.insert (known, i, (th,ort))
+      val rewrites = add_rewrite i (th,ort) rewrites
+      val waiting = S.add (waiting,i)
+      val rw = REWRS {order = order, known = known, rewrites = rewrites,
+                      subterms = subterms, waiting = waiting}
+      val _ = chatting 1 andalso chatrewrs "add" rw
+    in
+      rw
+    end;
 
 (* ------------------------------------------------------------------------- *)
 (* Rewriting (the order must be a refinement of the initial order)           *)
@@ -171,7 +172,6 @@ fun thm_match known order (i,th) =
     fun rw ((l,_),LtoR) tm = can (match l) tm
       | rw ((_,r),RtoL) tm = can (match r) tm
       | rw ((l,r),Both) tm = can (orw (l,r)) tm orelse can (orw (r,l)) tm
-      | rw (_,Refl) _ = raise BUG "mlibRewrite.rewrite" "encountered a Refl"
     fun f (_,(th,ort)) = (dest_unit_eq th, ort)
     val eqs = (map f o List.filter (not o equal i o fst) o M.listItems) known
     fun can_rw tm = List.exists (fn eq => rw eq tm) eqs orelse can_depth tm
@@ -187,42 +187,99 @@ local
 
   fun redex_residue lr th = (if lr then I else swap) (dest_unit_eq th);
 
-  val reorder = rev o sort (fn ((i,_),(j,_)) => Int.compare (i,j));
+  local val reorder = sort (fn ((i,_),(j,_)) => Int.compare (j,i));
+  in fun get_rewrs rw tm = reorder (T.match rw tm);
+  end;
 
-  fun rewr' known rewrites order i =
+  local
+    fun compile_neq (SOME LtoR, lit) =
+      let val lit' = dest_neg lit val (l,r) = dest_eq lit'
+      in SOME (l, (ASSUME lit', r, true))
+      end
+      | compile_neq (SOME RtoL, lit) =
+      let val lit' = dest_neg lit val (l,r) = dest_eq lit'
+      in SOME (r, (ASSUME lit', l, false))
+      end
+      | compile_neq _ = NONE;
+  in
+    val compile_neqs = List.mapPartial compile_neq;
+  end;
+
+  fun rewr known rewrites order i =
     let
-      fun f tm (j,lr) =
+      fun rewr_lit neqs =
         let
-          val () = assert (j <> i) (ERR "rewrite" "same theorem")
-          val (rw,ort) = retrieve known j
-          val () = assert (agree lr ort) (ERR "rewrite" "bad orientation")
-          val (l,r) = redex_residue lr rw
-          val sub = match l tm
-          val () = assert
-            (ort <> Both orelse order (tm, term_subst sub r) = SOME GREATER)
-            (ERR "rewrite" "order violation")
+          fun f tm (j,lr) =
+            let
+              val () = assert (j <> i) (ERR "rewrite" "same theorem")
+              val (rw,ort) = retrieve known j
+              val () = assert (agree lr ort) (ERR "rewrite" "bad orientation")
+              val (l,r) = redex_residue lr rw
+              val sub = match l tm
+              val r' = term_subst sub r
+              val () = assert
+                (ort <> Both orelse order (tm,r') = SOME GREATER)
+                (ERR "rewrite" "order violation")
+            in
+              (INST sub rw, r', lr)
+            end
+          fun rewr_conv tm = first (total (f tm)) (get_rewrs rewrites tm)
+          fun neq_conv tm = Option.map snd (List.find (equal tm o fst) neqs)
+          fun conv tm =
+            case rewr_conv tm of SOME x => x
+            | NONE => (case neq_conv tm of SOME x => x
+                       | NONE => raise ERR "rewrite" "no matching rewrites")
         in
-          (INST sub rw, lr)
+          DEPTH1 conv
         end
-      fun mat tm = first (total (f tm)) (reorder (T.match rewrites tm))
-    in
-      DEPTH (partial (ERR "rewrite" "no matching rewrites") mat)
-    end;
 
-  fun rewr known rewrites order i th =
-    if not (chatting 2) then rewr' known rewrites order i th else
-      let
-        val th' = rewr' known rewrites order i th
-        val m = thm_match known order (i,th')
-        val _ = chat ("rewrite:\n" ^ thm_to_string th ^ "\n ->\n" ^
-                      thm_to_string th' ^ "\n")
-        val () = assert (not m) (BUG "rewrite" "still matches after rewriting")
-      in
-        th'
-      end;
+      fun orient_neq neq = orient (order (dest_eq (negate neq)))
+
+      fun orient_neqs neqs = map (fn neq => (orient_neq neq, neq)) neqs
+
+      fun rewr_neqs dealt [] th = (rev dealt, th)
+        | rewr_neqs dealt ((ort,neq) :: neqs) th =
+        if not (mem neq (clause th)) then rewr_neqs dealt neqs th else
+          let
+            val other_neqs = List.revAppend (dealt,neqs)
+            val (th,neq') = rewr_lit (compile_neqs other_neqs) (th,neq)
+          in
+            if neq' = neq then rewr_neqs ((ort,neq) :: dealt) neqs th else
+              let
+                val ort = orient_neq neq'
+                val active = ort = SOME LtoR orelse ort = SOME RtoL
+              in
+                if active then rewr_neqs [(ort,neq')] other_neqs th
+                else rewr_neqs ((ort,neq') :: dealt) neqs th
+              end
+          end
+
+      fun rewr' th =
+        let
+          val lits = clause th
+          val (neqs,rest) = List.partition (is_eq o negate) lits
+          val (neqs,th) = rewr_neqs [] (orient_neqs neqs) th
+          val neqs = compile_neqs neqs
+        in
+          if M.numItems known = 0 andalso null neqs then th
+          else foldl (fst o rewr_lit neqs o swap) th rest
+        end
+    in
+      fn th =>
+      if not (chatting 2) then rewr' th else
+        let
+          val th' = rewr' th
+          val m = thm_match known order (i,th')
+          val _ = chat ("rewrite:\n" ^ thm_to_string th
+                        ^ "\n ->\n" ^ thm_to_string th' ^ "\n")
+          val () = assert (not m) (BUG "rewrite" "should be normalized")
+        in
+          th'
+        end
+    end;
 in
-  fun rewrite (REWRS {known, rewrites, ...}) order (i,th) =
-    if M.numItems known = 0 then th else rewr known rewrites order i th;
+  fun rewrite (REWRS {known,rewrites,...}) order (i,th) =
+    rewr known rewrites order i th;
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -240,8 +297,7 @@ fun same_redex eq ort eq' =
     val (l',r') = dest_eq eq'
   in
     case ort of
-      Refl => raise BUG "reduce" "Refl in waiting list"
-    | LtoR => l = l'
+      LtoR => l = l'
     | RtoL => r = r'
     | Both => l = l' andalso r = r'
   end;
@@ -251,10 +307,30 @@ fun redex_residues eq ort =
     val (l,r) = dest_eq eq
   in
     case ort of
-      Refl => raise BUG "reduce" "Refl in redexes"
-    | LtoR => [(l,r,true)]
+      LtoR => [(l,r,true)]
     | RtoL => [(r,l,true)]
     | Both => [(l,r,false),(r,l,false)]
+  end;
+
+fun find_rws order known subterms i =
+  let
+    fun valid_rw (l,r,ord) (j,p) =
+      let
+        val t = literal_subterm p (dest_unit (fst (retrieve known j)))
+        val s = match l t
+      in
+        assert (ord orelse order (t, term_subst s r) = SOME GREATER)
+               (ERR "valid" "violates order")
+      end
+
+    fun check_subtm lr (jp as (j,_), todo) =
+      if i <> j andalso not (S.member (todo,j)) andalso can (valid_rw lr) jp
+      then S.add (todo,j) else todo
+
+    fun find (lr as (l,_,_), todo) =
+      foldl (check_subtm lr) todo (T.matched subterms l)
+  in
+    foldl find
   end;
 
 fun reduce1 new i (rpl,spl,todo,rw) =
@@ -265,50 +341,40 @@ fun reduce1 new i (rpl,spl,todo,rw) =
     val th = rewrite rw order (i,th0)
     val eq = dest_unit th
     val identical = eq = eq0
-    val same = identical orelse (ort0 <> Both andalso same_redex eq0 ort0 eq)
-    val ort = if same then ort0 else orient (order (dest_eq eq))
-    val known =
-      if identical then known
-      else if ort = Refl then fst (M.remove (known,i))
-      else M.insert (known,i,(th,ort))
-    val rpl = if same then rpl else S.add (rpl,i)
-    val rewrites =
-      if same orelse ort = Refl then rewrites
-      else add_rewrite i (th,ort) rewrites
-    val todo = if same andalso not new orelse ort = Refl then todo else
-      let
-        fun valid (l,r,ord) (j,p) =
-          let
-            val t = literal_subterm p (dest_unit (fst (retrieve known j)))
-            val s = match l t
-          in
-            assert (ord orelse order (t, term_subst s r) = SOME GREATER)
-            (ERR "valid" "violates order")
-          end
-        fun ck lr (jp as (j,_), todo) =
-          if i <> j andalso not (S.member (todo,j)) andalso can (valid lr) jp
-          then S.add (todo,j) else todo
-        fun check (lr as (l,_,_), todo) =
-          foldl (ck lr) todo (T.matched subterms l)
-      in
-        foldl check todo (redex_residues eq ort)
-      end
+    val same_red = identical orelse (ort0<>Both andalso same_redex eq0 ort0 eq)
+    val rpl = if same_red then rpl else S.add (rpl,i)
     val spl = if new orelse identical then spl else S.add (spl,i)
-    val subterms = if identical andalso not new orelse ort = Refl then subterms
-                   else add_subterms i th subterms
   in
-    (rpl, spl, todo,
-     REWRS {order = order, known = known, rewrites = rewrites,
-            subterms = subterms, waiting = waiting})
+    case (if same_red then SOME ort0 else orient (order (dest_eq eq))) of
+      NONE =>
+      (rpl, spl, todo,
+       REWRS {order = order, known = fst (M.remove (known,i)),
+              rewrites = rewrites, subterms = subterms, waiting = waiting})
+    | SOME ort =>
+      let
+        val known = if identical then known else M.insert (known,i,(th,ort))
+        val rewrites =
+          if same_red then rewrites else add_rewrite i (th,ort) rewrites
+        val todo =
+          if same_red andalso not new then todo
+          else find_rws order known subterms i todo (redex_residues eq ort)
+        val subterms =
+          if identical andalso not new then subterms
+          else add_subterms i th subterms
+      in
+        (rpl, spl, todo,
+         REWRS {order = order, known = known, rewrites = rewrites,
+                subterms = subterms, waiting = waiting})
+      end
   end;
 
 fun add_rewrs known (i,rewrs) =
-  (case M.peek (known,i) of NONE => rewrs
-   | SOME th_ort => add_rewrite i th_ort rewrs);
+  case M.peek (known,i) of NONE => rewrs
+  | SOME th_ort => add_rewrite i th_ort rewrs;
 
 fun add_stms known (i,stms) =
-  (case M.peek (known,i) of NONE => stms
-   | SOME (th,_) => add_subterms i th stms);
+  case M.peek (known,i) of NONE => stms
+  | SOME (th,_) => add_subterms i th stms;
 
 fun rebuild rpl spl rw =
   let
@@ -326,21 +392,35 @@ fun rebuild rpl spl rw =
            subterms = subterms, waiting = waiting}
   end;
 
-fun reduce_acc (rpl, spl, todo, rw as REWRS {waiting, ...}) =
-  case pick todo of
+fun pick known s =
+  case S.find (fn i => snd (retrieve known i) <> Both) s of SOME x => SOME x
+  | NONE => blind_pick s;
+
+fun reduce_acc (rpl, spl, todo, rw as REWRS {known, waiting, ...}) =
+  case pick known todo of
     SOME i => reduce_acc (reduce1 false i (rpl, spl, S.delete (todo,i), rw))
   | NONE =>
-    case pick waiting of
+    case pick known waiting of
       SOME i => reduce_acc (reduce1 true i (rpl, spl, todo, waiting_del i rw))
-    | NONE => rebuild rpl spl rw;
+    | NONE => (rebuild rpl spl rw, rpl);
 
-fun reduce' rw = reduce_acc (S.empty, S.empty, S.empty, rw);
+fun reduce_newr rw =
+  let
+    val REWRS {waiting, ...} = rw
+    val (rw,changed) = reduce_acc (S.empty, S.empty, S.empty, rw)
+    val newr = S.union (changed,waiting)
+    val REWRS {known, ...} = rw
+    fun filt (i,l) = if Option.isSome (M.peek (known,i)) then i :: l else l
+    val newr = S.foldr filt [] newr
+  in
+    (rw,newr)
+  end;
 
-fun reduce rw =
-  if not (chatting 2) then reduce' rw else
+fun reduce' rw =
+  if not (chatting 2) then reduce_newr rw else
     let
       val REWRS {known, order, ...} = rw
-      val rw' = reduce' rw
+      val res as (rw',_) = reduce_newr rw
       val REWRS {known = known', ...} = rw'
       val eqs = map (fn (i,(th,_)) => (i,th)) (M.listItems known')
       val m = List.exists (thm_match known order) eqs
@@ -348,8 +428,12 @@ fun reduce rw =
       val _ = chatrewrs "reduce after" rw'
       val () = assert (not m) (BUG "reduce" "not fully reduced")
     in
-      rw'
+      res
     end;
+
+val reduce = fst o reduce';
+
+fun reduced (REWRS {waiting, ...}) = Intset.isEmpty waiting;
 
 (* ------------------------------------------------------------------------- *)
 (* Rewriting as a derived rule                                               *)

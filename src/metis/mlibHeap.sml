@@ -1,11 +1,10 @@
 (* ========================================================================= *)
 (* A HEAP DATATYPE FOR ML                                                    *)
-(* Created by Joe Hurd, October 2001                                         *)
-(* Taken from Purely Functional Data Structures, by Chris Okasaki.           *)
+(* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
-(*
-*)
+(* Implementation as in Purely Functional Data Structures, Chris Okasaki *)
+
 structure mlibHeap :> mlibHeap =
 struct
 

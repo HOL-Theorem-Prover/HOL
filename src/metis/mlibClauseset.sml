@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* PROCESSING SETS OF CLAUSES AT A TIME                                      *)
-(* Created by Joe Hurd, October 2002                                         *)
+(* Copyright (c) 2002-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 (*
@@ -14,7 +14,7 @@ struct
 
 infix |-> ::> ##;
 
-open mlibUseful mlibTerm mlibMatch mlibClause;
+open mlibUseful mlibTerm mlibClause;
 
 structure T = mlibTermnet; local open mlibTermnet in end;
 structure N = mlibLiteralnet; local open mlibLiteralnet in end;
@@ -27,6 +27,7 @@ type 'a subsume    = 'a S.subsume;
 
 val |<>|          = mlibSubst.|<>|;
 val op ::>        = mlibSubst.::>;
+val term_subst    = mlibSubst.term_subst;
 val formula_subst = mlibSubst.formula_subst;
 
 (* ------------------------------------------------------------------------- *)
@@ -42,29 +43,36 @@ fun chat s = (trace s; true)
 (* Parameters                                                                *)
 (* ------------------------------------------------------------------------- *)
 
-type parameters =
-  {subsumption    : int,
-   simplification : int,
-   splitting      : int};
+type filter = {subsumption : bool, simplification : int, splitting : bool}
+type parameters = {prefactoring : filter, postfactoring : filter}
 
 val defaults =
-  {subsumption    = 2,
-   simplification = 2,
-   splitting      = 0};
+  {prefactoring = {subsumption = true, simplification = 2, splitting = false},
+   postfactoring = {subsumption = true, simplification = 2, splitting = false}};
 
-fun update_subsumption f (parm : parameters) : parameters =
+fun update_subsumption f (parm : filter) : filter =
   let val {subsumption = s, simplification = r, splitting = v} = parm
   in {subsumption = f s, simplification = r, splitting = v}
   end;
 
-fun update_simplification f (parm : parameters) : parameters =
+fun update_simplification f (parm : filter) : filter =
   let val {subsumption = s, simplification = r, splitting = v} = parm
   in {subsumption = s, simplification = f r, splitting = v}
   end;
 
-fun update_splitting f (parm : parameters) : parameters =
+fun update_splitting f (parm : filter) : filter =
   let val {subsumption = s, simplification = r, splitting = v} = parm
   in {subsumption = s, simplification = r, splitting = f v}
+  end;
+
+fun update_prefactoring f (parm : parameters) : parameters =
+  let val {prefactoring = a, postfactoring = b} = parm
+  in {prefactoring = f a, postfactoring = b}
+  end;
+
+fun update_postfactoring f (parm : parameters) : parameters =
+  let val {prefactoring = a, postfactoring = b} = parm
+  in {prefactoring = a, postfactoring = f b}
   end;
 
 (* ------------------------------------------------------------------------- *)
@@ -74,6 +82,8 @@ fun update_splitting f (parm : parameters) : parameters =
 fun ofilt _ NONE = NONE | ofilt p (s as SOME x) = if p x then s else NONE;
 
 fun olist NONE = [] | olist (SOME x) = [x];
+
+val intset_to_string = to_string (pp_map Intset.listItems (pp_list pp_int));
 
 fun psym lit =
   let
@@ -88,13 +98,13 @@ fun add_unit cl units =
 
 fun add_subsum cl = S.add (literals cl |-> cl);
 
-fun clause_to_string cl = PP.pp_to_string (!LINE_LENGTH) mlibClause.pp_clause cl;
+fun clause_subterm c n p = literal_subterm p (List.nth (literals c, n));
 
-fun rewrs_to_string r = PP.pp_to_string (!LINE_LENGTH) mlibClause.pp_rewrs r;
+val clause_to_string = to_string mlibClause.pp_clause;
 
-fun literals_to_string l =
-  PP.pp_to_string (!LINE_LENGTH)
-  (N.pp_literalnet (pp_pair pp_clause pp_int)) l;
+val rewrs_to_string = to_string mlibClause.pp_rewrs;
+
+val literals_to_string = to_string (N.pp_literalnet (pp_pair pp_clause pp_int));
 
 (* ------------------------------------------------------------------------- *)
 (* mlibClause sets                                                               *)
@@ -190,9 +200,12 @@ fun update_subterms p set =
 fun empty (cparm,parm) =
   SET {parm = (cparm,parm), size = 0, units = U.empty,
        rewrites = mlibClause.empty cparm, clauses = [], subsumers = S.empty (),
-       literals = N.empty (), equalities = T.empty (), subterms = T.empty ()};
+       literals = N.empty {fifo = false}, equalities = T.empty {fifo = false},
+       subterms = T.empty {fifo = false}};
 
-fun size (SET {size, ...}) = size;
+fun parm (SET {parm, ...}) = parm;
+
+fun ssize (SET {size, ...}) = size;
 
 fun units (SET {units, ...}) = units;
 
@@ -205,6 +218,8 @@ fun new_units u set = update_units u set;
 (* ------------------------------------------------------------------------- *)
 (* Simplify and strengthen clauses                                           *)
 (* ------------------------------------------------------------------------- *)
+
+fun qsimplify set = let val SET {rewrites = r, ...} = set in QREWRITE r end;
 
 fun simplify set = let val SET {rewrites = r, ...} = set in REWRITE r end;
 
@@ -257,9 +272,9 @@ local
 
   fun split_clause cl comps =
     let
-      val _ = chatting 1 andalso chat "%"
+      val _ = chatting 2 andalso chat "%"
       val cls = spl cl [] comps
-      val _ = chatting 2 andalso chat
+      val _ = chatting 5 andalso chat
         ("\nsplit: components of clause " ^ clause_to_string cl ^ ":\n"
          ^ PP.pp_to_string (!LINE_LENGTH) (pp_list pp_clause) cls ^ "\n")
     in
@@ -297,26 +312,41 @@ fun subsumed (SET {subsumers, ...}) = subsum subsumers;
 (* Add a clause into the set                                                 *)
 (* ------------------------------------------------------------------------- *)
 
+fun add_rewr cl set =
+  if not (is_rewr cl) then (cl,set) else
+    let
+      val SET {rewrites = r, ...} = set
+      val cl = mlibClause.drop_order cl
+      val r = mlibClause.add cl r
+      val _ = chatting 5 andalso
+              chat ("\nrewrite set now:\n" ^ rewrs_to_string r ^ "\n")
+      val set = update_rewrites r set
+    in
+      (cl,set)
+    end;
+
 fun add cl set =
   let
-    val SET {size = n, clauses = c, subsumers = s, literals = l,
+    val SET {size = n, units = u, clauses = c, subsumers = s, literals = l,
              equalities = e, subterms = p, ...} = set
     fun f (x |-> l, net) = N.insert (l |-> x) net
     fun g (x |-> t, net) = T.insert (t |-> x) net
     val set = update_size (n + 1) set
+    val (cl,set) = add_rewr cl set
+    val set = update_units (add_unit cl u) set
     val set = update_clauses (cl :: c) set
     val set = update_subsumers (add_subsum cl s) set
     val set = update_literals (foldl f l (largest_lits cl)) set
     val set = update_equalities (foldl g e (largest_eqs cl)) set
     val set = update_subterms (foldl g p (largest_tms cl)) set
-    val SET {size = n, clauses = c, subsumers = s, literals = l,
+    val SET {size = n, units = u, clauses = c, subsumers = s, literals = l,
              equalities = e, subterms = p, ...} = set
-    val _ = chatting 4 andalso
+    val _ = chatting 7 andalso
             chat ("\nlargest_lits cl:\n" ^
                   (PP.pp_to_string (!LINE_LENGTH)
                    (pp_list (pp_maplet (pp_pair pp_clause pp_int) pp_formula))
                    (largest_lits cl)) ^ "\n")
-    val _ = chatting 3 andalso
+    val _ = chatting 6 andalso
             chat ("\nliteral set now:\n" ^ literals_to_string l ^ "\n")
   in
     set
@@ -345,9 +375,9 @@ fun deduce set =
   in
     fn cl =>
     let
-      val SET {literals = r, equalities = e, subterms = p, ...} = set
+      val SET {literals = l, equalities = e, subterms = p, ...} = set
       val res = []
-      val res = foldl (resolvants r) res (largest_lits cl)
+      val res = foldl (resolvants l) res (largest_lits cl)
       val res = foldl (paramods_from p) res (largest_eqs cl)
       val res = foldl (paramods_into e) res (largest_tms cl)
     in
@@ -361,15 +391,101 @@ fun deduce set =
 (* ------------------------------------------------------------------------- *)
 
 local
-  fun reduce rw cl =
-    let val cl' = REWRITE rw cl
-    in if literals cl = literals cl' then NONE else SOME cl'
+  fun clause_mem cl s =
+    let val {id, ...} = dest_clause cl in Intset.member (s,id) end;
+
+  fun clause_reducibles set =
+    let
+      val SET {rewrites = r, clauses = c, ...} = set
+      fun pred x = let val y = REWRITE r x in literals x <> literals y end
+      val d = List.filter pred c
+    in
+      Intset.addList (Intset.empty, map (#id o dest_clause) d)
     end;
 
-  fun purge [] set = set
-    | purge ns set =
+  fun valid_rw l ro ord tm =
     let
-      fun pred cl = let val {id, ...} = dest_clause cl in not (mem id ns) end
+      val sub = mlibMatch.match l tm
+    in
+      case ro of NONE => () | SOME r =>
+        assert (mlibTermorder.compare ord (tm, term_subst sub r) = SOME GREATER)
+        (ERR "rewr_reducibles" "order violation")
+    end;
+
+  fun consider_rw l ro ((c,n,p),s) =
+    let
+      val {id, order, ...} = dest_clause c
+    in
+      if Intset.member (s,id) then s
+      else if not (can (valid_rw l ro order) (clause_subterm c n p)) then s
+      else Intset.add (s,id)
+    end;
+
+  fun rewr_reducibles set changed_redexes =
+    let
+      val SET {rewrites = r, clauses = c, subterms = p, ...} = set
+
+      fun pk i =
+        case peek r i of SOME x => x
+        | NONE => raise BUG "rewr_reducibles" "vanishing rewrite"
+
+      fun red l ro s = foldl (consider_rw l ro) s (T.matched p l)
+
+      fun reds (i,s) =
+        case pk i of
+          ((l,r),mlibRewrite.LtoR) => red l NONE s
+        | ((l,r),mlibRewrite.RtoL) => red r NONE s
+        | ((l,r),mlibRewrite.Both) => red l (SOME r) (red r (SOME l) s)
+
+      fun unchanged i th =
+        case peek r i of NONE => false
+        | SOME (l_r,_) => l_r = mlibThm.dest_unit_eq th
+
+      fun mk_init_id (cl,(s,s')) =
+        case total dest_rewr cl of NONE => (s,s')
+        | SOME (i,th) =>
+          (Intset.add (s,i), if unchanged i th then Intset.add (s',i) else s')
+          
+      val (s_init,s_id) = foldl mk_init_id (Intset.empty,Intset.empty) c
+
+      fun quick i = snd (pk i) <> mlibRewrite.Both
+
+      val changed_redexes = op@ (List.partition quick changed_redexes)
+    in
+      Intset.difference (foldl reds s_init changed_redexes, s_id)
+    end;
+
+  fun reducibles set l =
+    if not (chatting 4) then
+      if ssize set <= length l then clause_reducibles set
+      else rewr_reducibles set l
+    else
+      let
+        val SET {clauses = c, rewrites = r, ...} = set
+        fun pk i =
+          case List.find (fn cl => #id (dest_clause cl) = i) c of SOME cl => cl
+          | NONE => raise BUG "reducibles" "not a clause"
+        fun i_to_string f =
+          to_string (pp_list pp_clause) o map (f o pk) o Intset.listItems
+        val _ = chat "finding rewritable clauses in the clause set\n"
+        val clause_i = clause_reducibles set
+        val rewr_i = rewr_reducibles set l
+        val () =
+          if Intset.equal (clause_i,rewr_i) then () else
+            (print ("clause_reducibles = " ^ intset_to_string clause_i ^ "\n" ^
+                    i_to_string I clause_i ^ " -->\n" ^
+                    i_to_string (REWRITE r) clause_i ^ "\n" ^
+                    "rewr_reducibles = " ^ intset_to_string rewr_i ^ "\n" ^
+                    i_to_string I rewr_i ^ " -->\n" ^
+                    i_to_string (REWRITE r) rewr_i ^ "\n");
+             raise BUG "purge_reducibles" "rewr <> clause")
+      in
+        rewr_i
+      end;
+
+  fun purge ns set =
+    let
+      fun pred cl = not (clause_mem cl ns)
       val SET {clauses = c, subsumers = s, literals = l,
                equalities = e, subterms = p, ...} = set
       val c = List.filter pred c
@@ -383,17 +499,27 @@ local
       set
     end;
 in
-  fun reducibles set =
-    let
-      val SET {rewrites = r, clauses = c, ...} = set
-      val r = mlibClause.reduce r
-      val set = update_rewrites r set
-      val cls = List.mapPartial (reduce r) c
-      val set = purge (map (#id o dest_clause) cls) set
-      val cls = List.mapPartial (strengthen set) cls
-    in
-      (cls,set)
-    end
+  fun purge_reducibles (set as SET {rewrites = r, ...}) =
+    if reduced r then ([],set) else
+      let
+        val _ = chatting 2 andalso chat "="
+        val _ = chatting 4 andalso chat "\ninter-reducing the clause set\n"
+        val (r,l) = mlibClause.reduce r
+        val set = update_rewrites r set
+        val i = reducibles set l
+        val _ = chatting 2 andalso chat (int_to_string (Intset.numItems i))
+      in
+        if Intset.numItems i = 0 then ([],set) else
+          let
+            val SET {clauses = c, ...} = set
+            val cls = List.filter (fn cl => clause_mem cl i) c
+            val cls = map (REWRITE r) cls
+            val set = purge i set
+          in
+            (cls,set)
+          end
+      end
+      handle ERR_EXN _ => raise BUG "purge_reducibles" "shouldn't fail";
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -408,56 +534,56 @@ local
 
   val utilitywise = Int.compare;
 
+  fun is_subsumption (parm : parameters) =
+    #subsumption (#prefactoring parm) orelse #subsumption (#postfactoring parm);
+
   fun ins (parm : parameters) cl (cls,set,subs) =
     let
-      val SET {units = u, rewrites = r, ...} = set
-      val (cl,set) =
-        if not (is_rewr cl) then (cl,set) else
-          let
-            val cl = mlibClause.drop_order cl
-            val r = mlibClause.add cl r
-            val _ = chatting 2 andalso
-                    chat ("\nrewrite set now:\n" ^ rewrs_to_string r ^ "\n")
-            val set = update_rewrites r set
-          in
-            (cl,set)
-          end
-      val set = update_units (add_unit cl u) set
-      val subs = if #subsumption parm = 0 then subs else add_subsum cl subs
+      val (cl,set) = add_rewr cl set
+      val set = update_units (add_unit cl (units set)) set
+      val subs = if is_subsumption parm then add_subsum cl subs else subs
     in
       (cl :: cls, set, subs)
     end;
 
-  fun quality (parm : parameters) n (_,s,x) =
+  fun quality (parm : parameters) post (_,s,x) =
     let
-      val rw = if n <= #simplification parm then simplify s else I
-      val sb = if n <= #subsumption parm then ofilt (not o subsum x) else I
-      val sp = if n <= #splitting parm then List.concat o map split else I
+      val {subsumption, simplification, splitting} =
+        if post then #postfactoring parm else #prefactoring parm
+      val rw =
+        case simplification of 0 => I | 1 => qsimplify s | _ => simplify s
+      val sb = if subsumption then ofilt (not o subsum x) else I
+      val sp = if splitting then List.concat o map split else I
     in
       sp o olist o sb o strengthen s o rw
     end;
 
   fun fac parm (cl,acc) =
-    foldl (fn (cl,acc) => ins parm cl acc) acc (quality parm 2 acc cl);
-      
+    foldl (fn (cl,acc) => ins parm cl acc) acc (quality parm true acc cl);
+
   fun factor parm (cl,acc) =
     foldl (fn (cl,acc) => foldl (fac parm) (ins parm cl acc) (FACTOR cl)) acc
-    (quality parm 1 acc cl);
-          
+    (quality parm false acc cl);
+
   fun init acc set [] = (rev acc, set)
     | init acc set cls =
     let
       val SET {parm = (_,z), subsumers = subs, ...} = set
       val cls = sort_map utility utilitywise cls
       val (cls,set,_) = foldl (factor z) ([],set,subs) cls
-      val (cls',set) =
-        if List.exists is_rewr cls then reducibles set else ([],set)
-      val (cls1,cls2) = List.partition (fn c => length (literals c) <= 1) cls'
+      val (cls',set) = purge_reducibles set
     in
-      init (cls1 @ cls @ acc) set cls2
+      init (cls @ acc) set cls'
     end;
 in
-  fun initialize cls set = init [] set cls
+  fun initialize cls set =
+    let
+      val _ = chatting 2 andalso chat ("-" ^ int_to_string (length cls))
+      val res as (cls,_) = init [] set cls
+      val _ = chatting 1 andalso chat ("+" ^ int_to_string (length cls))
+    in
+      res
+    end
     handle ERR_EXN _ => raise BUG "mlibClauseset.initialize" "shouldn't fail";
 end;
 
@@ -465,7 +591,13 @@ end;
 (* Pretty-printing                                                           *)
 (* ------------------------------------------------------------------------- *)
 
-val pp_clauseset = pp_bracket "C<" ">" (pp_map size pp_int);
+val pp_clauseset = pp_bracket "C<" ">" (pp_map ssize pp_int);
+
+(* ------------------------------------------------------------------------- *)
+(* Rebinding for signature                                                   *)
+(* ------------------------------------------------------------------------- *)
+
+val size = ssize;
 
 (* Quick testing
 quotation := true;

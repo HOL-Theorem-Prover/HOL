@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* THE SET OF SUPPORT                                                        *)
-(* Created by Joe Hurd, April 2002                                           *)
+(* Copyright (c) 2002-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 (*
@@ -16,6 +16,7 @@ infix |->;
 
 open mlibUseful mlibTerm;
 
+structure I = Intmap; local open Intmap in end;
 structure H = mlibHeap; local open mlibHeap in end;
 structure M = mlibModel; local open mlibModel in end;
 structure C = mlibClause; local open mlibClause in end;
@@ -40,6 +41,7 @@ type parameters =
   {size_power    : real,
    literal_power : real,
    model_power   : real,
+   model_perts   : int,
    model_checks  : int,
    model_parms   : M.parameters list};
 
@@ -49,53 +51,70 @@ val defaults =
   {size_power = 1.0,
    literal_power = 1.0,
    model_power = 1.0,
+   model_perts = 100,
    model_checks = 20,
    model_parms = []};
 
 fun update_size_power f (parm : parameters) : parameters =
   let val {size_power = s, literal_power = r, model_power = m,
-           model_checks = c, model_parms = p} = parm
+           model_perts = p, model_checks = c, model_parms = z} = parm
   in {size_power = f s, literal_power = r, model_power = m,
-      model_checks = c, model_parms = p}
+      model_perts = p, model_checks = c, model_parms = z}
   end;
 
 fun update_literal_power f (parm : parameters) : parameters =
   let val {size_power = s, literal_power = r, model_power = m,
-           model_checks = c, model_parms = p} = parm
+           model_perts = p, model_checks = c, model_parms = z} = parm
   in {size_power = s, literal_power = f r, model_power = m,
-      model_checks = c, model_parms = p}
+      model_perts = p, model_checks = c, model_parms = z}
   end;
 
 fun update_model_power f (parm : parameters) : parameters =
   let val {size_power = s, literal_power = r, model_power = m,
-           model_checks = c, model_parms = p} = parm
+           model_perts = p, model_checks = c, model_parms = z} = parm
   in {size_power = s, literal_power = r, model_power = f m,
-      model_checks = c, model_parms = p}
+      model_perts = p, model_checks = c, model_parms = z}
+  end;
+
+fun update_model_perts f (parm : parameters) : parameters =
+  let val {size_power = s, literal_power = r, model_power = m,
+           model_perts = p, model_checks = c, model_parms = z} = parm
+  in {size_power = s, literal_power = r, model_power = m,
+      model_perts = f p, model_checks = c, model_parms = z}
   end;
 
 fun update_model_checks f (parm : parameters) : parameters =
   let val {size_power = s, literal_power = r, model_power = m,
-           model_checks = c, model_parms = p} = parm
+           model_perts = p, model_checks = c, model_parms = z} = parm
   in {size_power = s, literal_power = r, model_power = m,
-      model_checks = f c, model_parms = p}
+      model_perts = p, model_checks = f c, model_parms = z}
   end;
 
 fun update_model_parms f (parm : parameters) : parameters =
   let val {size_power = s, literal_power = r, model_power = m,
-           model_checks = c, model_parms = p} = parm
+           model_perts = p, model_checks = c, model_parms = z} = parm
   in {size_power = s, literal_power = r, model_power = m,
-      model_checks = c, model_parms = f p}
+      model_perts = p, model_checks = c, model_parms = f z}
   end;
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
+fun percent_to_string x = int_to_string (Real.round (100.0 * x)) ^ "%";
+
 fun clause_to_formula cl = list_mk_disj (C.literals cl);
+
+val clause_id = #id o C.dest_clause;
 
 fun clause_to_string cl = PP.pp_to_string (!LINE_LENGTH) mlibClause.pp_clause cl;
 
-(* This clause_size function deliberately ignores type annotations *)
+val clause_lits = Real.fromInt o length o C.literals;
+
+(* ------------------------------------------------------------------------- *)
+(* Calculate clause_size (ignoring type annotations)                         *)
+(* ------------------------------------------------------------------------- *)
+
 local
   fun sz n []                         = n
     | sz n (Fn (":", [tm, _]) :: tms) = sz n (tm :: tms)
@@ -106,18 +125,42 @@ in
   val clause_size = Real.fromInt o foldl lsz 0 o C.literals;
 end;
 
-val clause_lits = Real.fromInt o length o C.literals;
+(* ------------------------------------------------------------------------- *)
+(* Calculate average satisfiability in the models                            *)
+(* ------------------------------------------------------------------------- *)
 
-(* clause_sat calculates the mean satisfiability *)
-fun clause_sat _ [] _ = 1.0
-  | clause_sat n mods cl =
+fun sat_mod_fm m fm n = Real.fromInt (M.checkn m fm n) / Real.fromInt n;
+
+fun sat_mod_fms _ [] _ = raise BUG "sat_mod_fms" "no formulas"
+  | sat_mod_fms m fms n =
+  let val sum = foldl (fn (fm,x) => sat_mod_fm m fm n + x) 0.0 fms
+  in sum / Real.fromInt (length fms)
+  end;
+
+local
+  fun small_space _ _ 0 _ = true
+    | small_space N n i k =
+    let val k = k * N in k <= n andalso small_space N n (i - 1) k end;
+
+  fun sat_clause m n fm =
+    if small_space (M.size m) n (length (FV fm)) 1 then M.count m fm
+    else (M.checkn m fm n, n);
+
+  fun weight w x = w * x + (1.0 - w);
+in
+  fun sat_wmod_fm (w,m) fm n =
+    let val (i,k) = sat_clause m n fm
+    in weight w (Real.fromInt i / Real.fromInt k)
+    end;
+end;
+
+fun clause_sat [] _ _ = 0.0
+  | clause_sat wmods cl n =
   let
     val fm = clause_to_formula cl
-    fun sat m = Real.fromInt (M.checkn m fm n) / Real.fromInt n
-    val sum_sat = foldl (fn (m,x) => sat m + x) 0.0 mods
-    val mean_sat = sum_sat / Real.fromInt (length mods)
+    val sum = foldl (fn (wmod,x) => sat_wmod_fm wmod fm n + x) 0.0 wmods
   in
-    mean_sat + 1.0
+    sum / Real.fromInt (length wmods)
   end;
 
 (* ------------------------------------------------------------------------- *)
@@ -127,15 +170,15 @@ fun clause_sat _ [] _ = 1.0
 local
   fun priority n = 1e~12 * Real.fromInt n;
 in
-  fun clause_weight (parm : parameters) models dist cl =
+  fun clause_weight (parm : parameters) clsat dist cl =
     let
-      val {size_power, literal_power, model_power, model_checks, ...} = parm
+      val {size_power, literal_power, model_power, ...} = parm
       val {id, ...} = C.dest_clause cl
       val siz = Math.pow (clause_size cl, size_power)
       val lit = Math.pow (clause_lits cl, literal_power)
-      val mods = Math.pow (clause_sat model_checks models cl, model_power)
-      val w = siz * lit * mods * (1.0 + dist) + priority id
-      val _ = chatting 1 andalso
+      val sat = Math.pow (1.0 + clsat, model_power)
+      val w = siz * lit * sat * (1.0 + dist) + priority id
+      val _ = chatting 5 andalso
               chat ("clause_weight: " ^ clause_to_string cl ^ " -> " ^
                     real_to_string w ^ "\n")
     in
@@ -147,19 +190,27 @@ end;
 (* The set of support type                                                   *)
 (* ------------------------------------------------------------------------- *)
 
+type distance = real;
+
 datatype sos = SOS of
-  {parm    : parameters,
-   clauses : (real * (real * clause)) heap,
-   models  : mlibModel.model list};
+  {parm     : parameters,
+   clauses  : (real * (real * clause)) heap,
+   distance : real I.intmap,
+   models   : (real * mlibModel.model) list};
 
 fun update_clauses c sos =
-  let val SOS {parm = p, clauses = _, models = m} = sos
-  in SOS {parm = p, clauses = c, models = m}
+  let val SOS {parm = p, clauses = _, distance = d, models = m} = sos
+  in SOS {parm = p, clauses = c, distance = d, models = m}
+  end;
+
+fun update_distance d sos =
+  let val SOS {parm = p, clauses = c, distance = _, models = m} = sos
+  in SOS {parm = p, clauses = c, distance = d, models = m}
   end;
 
 fun update_models m sos =
-  let val SOS {parm = p, clauses = c, models = _} = sos
-  in SOS {parm = p, clauses = c, models = m}
+  let val SOS {parm = p, clauses = c, distance = d, models = _} = sos
+  in SOS {parm = p, clauses = c, distance = d, models = m}
   end;
 
 (* ------------------------------------------------------------------------- *)
@@ -169,9 +220,36 @@ fun update_models m sos =
 val empty_heap : (real * (real * clause)) heap =
   H.empty (fn ((m,_),(n,_)) => Real.compare (m,n));
 
-fun empty p fms =
-  let val models = map (fn mp => M.new mp fms) (#model_parms p)
-  in SOS {parm = p, clauses = empty_heap, models = models}
+local
+  fun pert_models [] _ _ _ = []
+    | pert_models fms p n mods =
+    let val mods = map (M.perturb fms p) mods
+    in map (fn m => (sat_mod_fms m fms n, m)) mods
+    end;
+
+  fun chatmods wmods =
+    chat ("{" ^ join "," (map (percent_to_string o #1) wmods) ^ "}");
+in
+  fun new_models _ _ _ [] = []
+    | new_models fms p n mps =
+    let
+      val mods = map M.new mps
+      fun filt fm = List.exists (fn m => M.checkn m fm n < n) mods
+      val fms = List.filter filt fms
+      val wmods = pert_models fms p n mods
+      val _ = chatting 2 andalso chatmods wmods
+    in
+      wmods
+    end;
+end;
+
+fun empty parm fms =
+  let
+    val {model_perts,model_checks,model_parms,...} = parm
+    val models = new_models fms model_perts model_checks model_parms
+  in
+    SOS {parm = parm, clauses = empty_heap, distance = I.empty (),
+         models = models}
   end;
 
 fun ssize (SOS {clauses, ...}) = H.size clauses;
@@ -182,18 +260,30 @@ val pp_sos = pp_map (fn s => "S<" ^ int_to_string (ssize s) ^ ">") pp_string;
 (* Adding new clauses                                                        *)
 (* ------------------------------------------------------------------------- *)
 
-local
-  fun add1 d (cl,sos) =
-    let
-      val SOS {parm, clauses, models, ...} = sos
-      val w = clause_weight parm models d cl
-      val sos = update_clauses (H.add (w,(d,cl)) clauses) sos
-    in
-      sos
-    end;
-in
-  fun add (dist,cls) sos = foldl (add1 dist) sos cls;
-end;
+fun add1 dist (cl,sos) =
+  let
+    val SOS {parm, clauses, distance, models, ...} = sos
+    val {model_checks, ...} = parm
+    val {id, ...} = C.dest_clause cl
+    val dist =
+      case I.peek (distance, id) of NONE => dist | SOME d => Real.min (dist,d)
+    val distance = I.insert (distance,id,dist)
+    val sat = clause_sat models cl model_checks
+    val weight = clause_weight parm sat dist cl
+    val sos = update_clauses (H.add (weight,(dist,cl)) clauses) sos
+    val sos = update_distance distance sos
+  in
+    sos
+  end;
+
+fun inc_dist d n = d + log2 (Real.fromInt (1 + n));
+
+fun add (dist,cls) sos =
+  let val dist = inc_dist dist (length cls)
+  in foldl (add1 dist) sos cls
+  end;
+
+fun new parm fms cls = foldl (add1 0.0) (empty parm fms) cls;
 
 (* ------------------------------------------------------------------------- *)
 (* Removing the lightest clause                                              *)
@@ -219,19 +309,6 @@ local
 in
   val to_list = f [];
 end;
-
-(* ------------------------------------------------------------------------- *)
-(* Registering clauses in the models                                         *)
-(* ------------------------------------------------------------------------- *)
-
-fun register cls sos =
-  let
-    val SOS {models, ...} = sos
-    val fms = map clause_to_formula cls
-    val models = map (M.add fms) models
-  in
-    update_models models sos
-  end;
 
 (* ------------------------------------------------------------------------- *)
 (* Rebinding for signature                                                   *)

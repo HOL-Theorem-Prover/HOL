@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* CLAUSE = ID + THEOREM + CONSTRAINTS                                       *)
-(* Created by Joe Hurd, September 2002                                       *)
+(* Copyright (c) 2002-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 signature mlibClause =
@@ -35,7 +35,9 @@ val mk_clause   : parameters -> thm -> clause
 val dest_clause : clause -> bits
 val literals    : clause -> formula list
 val is_empty    : clause -> bool
+val dest_rewr   : clause -> int * thm
 val is_rewr     : clause -> bool
+val rebrand     : parameters -> clause -> clause
 
 (* Using ordering constraints to cut down the set of possible inferences *)
 val largest_lits : clause -> (clause * int, formula) maplet list
@@ -50,9 +52,10 @@ val subsumes : clause -> clause -> bool
 type rewrs
 val empty    : parameters -> rewrs
 val size     : rewrs -> int
+val peek     : rewrs -> int -> ((term * term) * mlibRewrite.orient) option
 val add      : clause -> rewrs -> rewrs
-val reduce   : rewrs -> rewrs
-val eqns     : rewrs -> clause list
+val reduce   : rewrs -> rewrs * int list
+val reduced  : rewrs -> bool
 val pp_rewrs : rewrs pp
 
 (* Simplifying rules: these preserve the clause id *)
@@ -60,12 +63,21 @@ val INST       : subst -> clause -> clause
 val FRESH_VARS : clause -> clause
 val NEQ_VARS   : clause -> clause
 val DEMODULATE : mlibUnits.units -> clause -> clause
+val QREWRITE   : rewrs -> clause -> clause
 val REWRITE    : rewrs -> clause -> clause
 
 (* Ordered resolution and paramodulation: these generate new clause ids *)
 val FACTOR       : clause -> clause list
 val RESOLVE      : clause * int -> clause * int -> clause
 val PARAMODULATE : clause * int * bool -> clause * int * int list -> clause
+
+(* mlibClause derivations *)
+datatype derivation =
+  Axiom
+| mlibResolution of clause * clause
+| Paramodulation of clause * clause
+| Factor of clause
+val derivation : clause -> derivation
 
 (* Pretty printing *)
 val show_id         : bool ref

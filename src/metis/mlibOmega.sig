@@ -1,3 +1,5 @@
+(* Copyright (c) Michael Norrish *)
+
 signature mlibOmega =
 sig
   type arbint   = mlibOmegaint.int

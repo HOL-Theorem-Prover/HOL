@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* THE SET OF SUPPORT                                                        *)
-(* Created by Joe Hurd, April 2002                                           *)
+(* Copyright (c) 2002-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 signature mlibSupport =
@@ -14,6 +14,7 @@ type parameters =
   {size_power    : real,
    literal_power : real,
    model_power   : real,
+   model_perts   : int,
    model_checks  : int,
    model_parms   : mlibModel.parameters list}
 
@@ -22,25 +23,24 @@ val defaults             : parameters
 val update_size_power    : real parmupdate
 val update_literal_power : real parmupdate
 val update_model_power   : real parmupdate
+val update_model_perts   : int parmupdate
 val update_model_checks  : int parmupdate
 val update_model_parms   : mlibModel.parameters list parmupdate
 
 (* The set of support type *)
 type sos
+type distance
 
 (* Basic operations *)
-val empty   : parameters -> formula list -> sos
+val new     : parameters -> formula list -> clause list -> sos
 val size    : sos -> int
 val to_list : sos -> clause list
 val pp_sos  : sos pp
 
 (* Adding new clauses *)
-val add : real * clause list -> sos -> sos
+val add : distance * clause list -> sos -> sos
 
 (* Removing the lightest clause *)
-val remove : sos -> ((real * clause) * sos) option
-
-(* Registering clauses in the models *)
-val register : clause list -> sos -> sos
+val remove : sos -> ((distance * clause) * sos) option
 
 end

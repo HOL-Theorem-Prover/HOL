@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* MATCHING AND UNIFICATION FOR SETS OF TERMS                                *)
-(* Created by Joe Hurd, September 2001                                       *)
+(* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 signature mlibTermnet =
@@ -10,13 +10,15 @@ type 'a pp          = 'a mlibUseful.pp
 type ('a,'b) maplet = ('a,'b) mlibUseful.maplet
 type term           = mlibTerm.term
 
+type parameters = {fifo : bool}
+
 type 'a termnet
 
 (* Basic operations *)
-val empty        : unit -> 'a termnet
+val empty        : parameters -> 'a termnet
 val size         : 'a termnet -> int
 val insert       : (term,'a) maplet -> 'a termnet -> 'a termnet
-val from_maplets : (term,'a) maplet list -> 'a termnet
+val from_maplets : parameters -> (term,'a) maplet list -> 'a termnet
 val filter       : ('a -> bool) -> 'a termnet -> 'a termnet
 
 (* mlibMatching and unifying *)

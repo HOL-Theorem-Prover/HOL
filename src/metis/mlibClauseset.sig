@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* PROCESSING SETS OF CLAUSES AT A TIME                                      *)
-(* Created by Joe Hurd, October 2002                                         *)
+(* Copyright (c) 2002-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 signature mlibClauseset =
@@ -9,19 +9,20 @@ sig
 type 'a pp  = 'a mlibUseful.pp
 type clause = mlibClause.clause
 
-type parameters =
-  {subsumption    : int,                (* Takes values 0..2 *)
-   simplification : int,                (* Takes values 0..2 *)
-   splitting      : int}                (* Takes values 0..2 *)
+type filter = {subsumption : bool, simplification : int, splitting : bool}
+type parameters = {prefactoring : filter, postfactoring : filter}
 
 val defaults              : parameters
-val update_subsumption    : (int -> int) -> parameters -> parameters
-val update_simplification : (int -> int) -> parameters -> parameters
-val update_splitting      : (int -> int) -> parameters -> parameters
+val update_subsumption    : (bool -> bool) -> filter -> filter
+val update_simplification : (int -> int) -> filter -> filter
+val update_splitting      : (bool -> bool) -> filter -> filter
+val update_prefactoring   : (filter -> filter) -> parameters -> parameters
+val update_postfactoring  : (filter -> filter) -> parameters -> parameters
 
 (* mlibClause sets *)
 type clauseset
 val empty     : mlibClause.parameters * parameters -> clauseset
+val parm      : clauseset -> mlibClause.parameters * parameters
 val size      : clauseset -> int
 val units     : clauseset -> mlibUnits.units
 val rewrites  : clauseset -> mlibClause.rewrs

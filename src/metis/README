@@ -1,9 +1,7 @@
 
-   [Metis]
-     * The Metis library is released with [1]HOL 4.
-     * It is an automatic prover for HOL subgoals.
+                       HOL4 Metis Library Documentation
 
-Quick Guide to Using the Metis Library
+Quick Guide to Using the HOL4 Metis Library
 
    At the top of your proof script, write
 
@@ -34,13 +32,15 @@ How It Works
 
     1. First  some  HOL  conversions and tactics simplify the subgoal and
        convert it to conjunctive normal form.
-    2. The normalized problem is converted to first-order syntax.
-    3. Resolution  and  model  elimination provers attack the first-order
-       problem, hopefully deriving a refutation.
-    4. The  first-order  refutation  is  lifted  to  a  HOL  proof of the
+    2. The normalized problem is mapped to first-order syntax.
+    3. The  Metis  first-order  prover  attacks  the first-order problem,
+       hopefully deriving a refutation.
+    4. The  first-order  refutation  is  translated to a HOL proof of the
        original subgoal.
 
-   For more details please refer to the [2]System Description.
+   For  more  details  on  the  interface  please  refer to the [1]System
+   Description.  To  find  out  more  about  the Metis first-order prover
+   (including performance information) you can visit its [2]own web page.
 
 Comparison with MESON_TAC
 
@@ -64,24 +64,30 @@ Comparison with MESON_TAC
 
 Known Bugs
 
-   METIS_TAC   combines  resolution  and  model  elimination  calculi  by
-   time-slicing between them, so in principle it could successfully prove
-   a  subgoal  on  one  occasion  but  diverge  on another. However, this
-   situation isn't likely to arise in practice.
+   At the present time all the bugs are unknown.
 
-History and Credit
+Credits
 
-   This library was written by Joe Hurd, with the intention of evolving a
-   replacement  to  John  Harrison's  MESON_TAC that is commonly used for
-   first-order proof in HOL.
-
-   The  model  elimination and resolution calculi were initially based on
-   MESON_TAC and John Harrison's forthcoming book about theorem proving.
-
-   A  large  collection  of  HOL subgoals are [3]available in first-order
-   format.
+   The  HOL4  Metis  library  was  written  by  Joe  Hurd,  based on John
+   Harrison's  implementation  of  MESON_TAC.  The  library has been much
+   improved  by  feedback  from  HOL4  users, especially Michael Norrish,
+   Konrad Slind and Mike Gordon.
 
 Change Log
+
+  Version 1.5: 14 January 2004
+
+   Subgoals proved by MESON_TAC when HOL is built .......... 2010
+   Proved by METIS_TAC within 10s .......................... 1998
+
+  Between Versions 1.4 and 1.5
+
+     * Scheduling  provers  is  no  longer based on time used, but rather
+       number of inferences.
+     * Simplification of resolution clauses using disequation literals.
+     * Implemented finite models to guide clause selection in resolution.
+     * The  model  elimination  prover  optimizes  the order of rules and
+       literals within rules.
 
   Version 1.4: 2 October 2003
 
@@ -113,14 +119,14 @@ Change Log
 
   Between Versions 1.1 and 1.2
 
-     * Ground-up  reimplementation  of the resolution calculus, which now
-       performs ordered resolution and ordered paramodulation.
+     * Ground-up  rewrite  of the resolution calculus, which now performs
+       ordered resolution and ordered paramodulation.
      * A  single  entry-point  METIS_TAC, which uses heuristics to decide
        whether to apply FO_METIS_TAC or HO_METIS_TAC.
      * {HO|FO}_METIS_TAC  both  initially  operate  in typeless mode, and
        automatically try again with types if an error occurs during proof
        translation.
-     * Extensionality axiom now included in HO_METIS_TAC by default.
+     * Extensionality theorem now included in HO_METIS_TAC by default.
 
   Version 1.1: 21 September 2002
 
@@ -148,8 +154,9 @@ Change Log
    Proved by HO_METIS_TAC within 10s ....................... 1346
    Proved by one of {FO|HO}_METIS_TAC within 10s ........... 1389
 
+   Metis the moon of Jupiter
+
 References
 
-   1. http://hol.sf.net/
-   2. http://www.cl.cam.ac.uk/~jeh1004/research/papers/hol2fol.html
-   3. http://www.cl.cam.ac.uk/~jeh1004/research/problems
+   1. http://www.cl.cam.ac.uk/~jeh1004/research/papers/hol2fol.html
+   2. http://www.cl.cam.ac.uk/~jeh1004/software/metis

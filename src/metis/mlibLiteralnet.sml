@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* MATCHING AND UNIFICATION FOR SETS OF LITERALS                             *)
-(* Created by Joe Hurd, June 2002                                            *)
+(* Copyright (c) 2002-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 (*
@@ -28,10 +28,12 @@ val |<>| = mlibSubst.|<>|;
 (* Literal nets.                                                             *)
 (* ------------------------------------------------------------------------- *)
 
+type parameters = {fifo : bool};
+
 type 'a literalnet =
   ('a T.termnet * 'a T.termnet) * ((int * 'a list) * (int * 'a list));
 
-fun empty () = ((T.empty (), T.empty ()), ((0, []), (0, [])));
+fun empty p = ((T.empty p, T.empty p), ((0,[]),(0,[])));
 
 fun insert (Atom a |-> b) ((p,n),tf)       = ((T.insert (a |-> b) p, n), tf)
   | insert (Not (Atom a) |-> b) ((p,n),tf) = ((p, T.insert (a |-> b) n), tf)
@@ -75,7 +77,7 @@ fun filter pred =
     ((T.filter pred pos, T.filter pred neg), (filt t, filt f))
   end;
 
-fun from_maplets l = foldl (uncurry insert) (empty ()) l;
+fun from_maplets p l = foldl (uncurry insert) (empty p) l;
 
 fun to_maplets ((pos,neg),((_,t),(_,f))) =
   map (fn x => True |-> x) t @

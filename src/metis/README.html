@@ -1,25 +1,16 @@
 <html>
 
 <head>
-<title>Metis Library Documentation</title>
+<title>HOL4 Metis Library Documentation</title>
 </head>
 
 <body bgcolor=white>
 
-<table border>
-<tr>
-<td><img src="metis.jpg" alt="[Metis]"></td>
 
-<td><ul>
-<li>The Metis library is released with <a href="http://hol.sf.net">HOL 4</a>.</li>
-
-<li>It is an automatic prover for HOL subgoals.</li>
-</ul></td>
-</tr>
-</table>
+<h1>HOL4 Metis Library Documentation</h1>
 
 
-<h2>Quick Guide to Using the Metis Library</h2>
+<h2>Quick Guide to Using the HOL4 Metis Library</h2>
 
 At the top of your proof script, write
 
@@ -57,6 +48,7 @@ which both take a list of theorems that are used to prove the subgoal.
 ``(!P. (!n. (!m. m < n ==> P m) ==> P n) ==> !n. P n) ==><br>
 &nbsp !P. P 0 /\ (!n. P n ==> P (SUC n)) ==> !n. P n``;</kbd>
 
+
 <h2>How It Works</h2>
 
 This is how <kbd>METIS_TAC</kbd> proves a HOL subgoal:
@@ -64,22 +56,29 @@ This is how <kbd>METIS_TAC</kbd> proves a HOL subgoal:
 <p>
 
 <ol>
+
 <li>First some HOL conversions and tactics simplify the subgoal and
 convert it to conjunctive normal form.</li>
 
-<li>The normalized problem is converted to first-order syntax.</li>
+<li>The normalized problem is mapped to first-order syntax.</li>
 
-<li>Resolution and model elimination provers attack the first-order
-problem, hopefully deriving a refutation.</li>
+<li>The Metis first-order prover attacks the first-order problem,
+hopefully deriving a refutation.</li>
 
-<li>The first-order refutation is lifted to a HOL proof of the
+<li>The first-order refutation is translated to a HOL proof of the
 original subgoal.</li>
+
 </ol>
 
 <p>
 
-For more details please refer to the
-<a href="http://www.cl.cam.ac.uk/~jeh1004/research/papers/hol2fol.html">System Description</a>.
+For more details on the interface please refer to the <a
+href="http://www.cl.cam.ac.uk/~jeh1004/research/papers/hol2fol.html">System
+Description</a>. To find out more about the Metis first-order prover
+(including performance information) you can visit its <a
+href="http://www.cl.cam.ac.uk/~jeh1004/software/metis">own web
+page</a>.
+
 
 <h2>Comparison with <kbd>MESON_TAC</kbd></h2>
 
@@ -111,32 +110,41 @@ example to illustrate this is the following theorem:
 
 <h2>Known Bugs</h2>
 
-<kbd>METIS_TAC</kbd> combines resolution and model elimination calculi
-by time-slicing between them, so in principle it could successfully
-prove a subgoal on one occasion but diverge on another. However, this
-situation isn't likely to arise in practice.
+At the present time all the bugs are unknown.
 
 
-<h2>History and Credit</h2>
+<h2>Credits</h2>
 
-This library was written by Joe Hurd, with the intention of evolving a
-replacement to John Harrison's <kbd>MESON_TAC</kbd> that is commonly
-used for first-order proof in HOL.
-
-<p>
-
-The model elimination and resolution calculi were initially based on
-<kbd>MESON_TAC</kbd> and John Harrison's forthcoming book about
-theorem proving.
-
-<p>
-
-A large collection of HOL subgoals are <a
-href="http://www.cl.cam.ac.uk/~jeh1004/research/problems">available in
-first-order format</a>.
+The HOL4 Metis library was written by Joe Hurd, based on John
+Harrison's implementation of <kbd>MESON_TAC</kbd>. The library has
+been much improved by feedback from HOL4 users, especially Michael
+Norrish, Konrad Slind and Mike Gordon.</li>
 
 
 <h2>Change Log</h2>
+
+<h3>Version 1.5: 14 January 2004</h3>
+
+<kbd>Subgoals proved by MESON_TAC when HOL is built .......... 2010</kbd><br>
+<kbd>Proved by METIS_TAC within 10s .......................... 1998</kbd><br>
+
+<h3>Between Versions 1.4 and 1.5</h3>
+
+<ul>
+
+<li>Scheduling provers is no longer based on time used, but rather
+number of inferences.</li>
+
+<li>Simplification of resolution clauses using disequation literals.</li>
+
+<li>Implemented finite models to guide clause selection in resolution.</li>
+
+<li>The model elimination prover optimizes the order of rules and
+literals within rules.</li>
+
+</ul>
+
+<p>
 
 <h3>Version 1.4: 2 October 2003</h3>
 
@@ -184,8 +192,8 @@ clauses (usually caused by nested boolean equivalences).</li>
 
 <ul>
 
-<li>Ground-up reimplementation of the resolution calculus, which now
-performs ordered resolution and ordered paramodulation.</li>
+<li>Ground-up rewrite of the resolution calculus, which now performs
+ordered resolution and ordered paramodulation.</li>
 
 <li>A single entry-point <kbd>METIS_TAC</kbd>, which uses heuristics
 to decide whether to apply <kbd>FO_METIS_TAC</kbd> or
@@ -195,7 +203,7 @@ to decide whether to apply <kbd>FO_METIS_TAC</kbd> or
 mode, and automatically try again with types if an error occurs during
 proof translation.</li>
 
-<li>Extensionality axiom now included in <kbd>HO_METIS_TAC</kbd> by
+<li>Extensionality theorem now included in <kbd>HO_METIS_TAC</kbd> by
 default.</li>
 
 </ul>
@@ -238,6 +246,10 @@ optimizations to keep proofs as small as possible.</li>
 <kbd>Proved by FO_METIS_TAC within 10s ....................... 1240</kbd><br>
 <kbd>Proved by HO_METIS_TAC within 10s ....................... 1346</kbd><br>
 <kbd>Proved by one of {FO|HO}_METIS_TAC within 10s ........... 1389</kbd>
+
+<p>
+
+<img src="metis.jpg" alt="Metis the moon of Jupiter">
 
 </body>
 

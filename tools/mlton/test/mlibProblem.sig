@@ -1,7 +1,6 @@
 (* ========================================================================= *)
 (* SOME SAMPLE PROBLEMS TO TEST PROOF PROCEDURES                             *)
-(* Created by Joe Hurd, September 2001                                       *)
-(* Partly ported from the CAML-Light code accompanying John Harrison's book  *)
+(* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 signature mlibProblem =
@@ -26,6 +25,7 @@ val nothing         : unit -> 'a set
 val instant         : unit -> 'a set
 val quick           : unit -> 'a set
 val std             : unit -> 'a set
+val benchmark       : unit -> 'a set
 val meson_benchmark : unit -> 'a set
 
 end

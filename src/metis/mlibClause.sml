@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* CLAUSE = ID + THEOREM + CONSTRAINTS                                       *)
-(* Created by Joe Hurd, September 2002                                       *)
+(* Copyright (c) 2002-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 (*
@@ -206,11 +206,18 @@ fun pp_constraints pp to = T.pp_termorder pp to;
 
 type bits = {parm : parameters, id : int, thm : thm, order : termorder};
 
-datatype clause = CL of parameters * int * thm * termorder;
+datatype clause = CL of parameters * int * thm * termorder * derivation
+and derivation =
+  Axiom
+| mlibResolution of clause * clause
+| Paramodulation of clause * clause
+| Factor of clause;
 
-fun mk_clause p th = CL (p, new_id (), th, no_constraints p);
+fun mk_clause p th = CL (p, new_id (), th, no_constraints p, Axiom);
 
-fun dest_clause (CL (p, i, th, to)) = {parm = p, id = i, thm = th, order = to};
+fun dest_clause (CL (p,i,th,to,_)) = {parm = p, id = i, thm = th, order = to};
+
+fun derivation (CL (_,_,_,_,d)) = d;
 
 val literals = mlibThm.clause o #thm o dest_clause;
 
@@ -231,6 +238,8 @@ fun dest_rewr cl =
 
 val is_rewr = can dest_rewr;
 
+fun rebrand parm (CL (p,i,th,_,d)) = CL (parm, i, th, no_constraints parm, d);
+
 (* ------------------------------------------------------------------------- *)
 (* Pretty-printing.                                                          *)
 (* ------------------------------------------------------------------------- *)
@@ -243,10 +252,10 @@ local
   val pp_it = pp_pair pp_int mlibThm.pp_thm;
   val pp_tc = pp_pair mlibThm.pp_thm pp_constraints;
   val pp_itc = pp_triple pp_int mlibThm.pp_thm pp_constraints;
-  fun f false false = pp_map (fn CL (_,_,th,_) => th) mlibThm.pp_thm
-    | f true false = pp_map (fn CL (_,i,th,_) => (i,th)) pp_it
-    | f false true = pp_map (fn CL (_,_,th,c) => (th,c)) pp_tc
-    | f true true = pp_map (fn CL (_,i,th,c) => (i,th,c)) pp_itc;
+  fun f false false = pp_map (fn CL (_,_,th,_,_) => th) mlibThm.pp_thm
+    | f true false = pp_map (fn CL (_,i,th,_,_) => (i,th)) pp_it
+    | f false true = pp_map (fn CL (_,_,th,c,_) => (th,c)) pp_tc
+    | f true true = pp_map (fn CL (_,i,th,c,_) => (i,th,c)) pp_itc;
 in
   fun pp_clause pp cl = f (!show_id) (!show_constraint) pp cl;
 end;
@@ -258,13 +267,13 @@ end;
 local
   fun fail _ = raise ERR "gen_largest_lits" "fail";
 
-  fun gen_largest_lits f g (CL (p,i,th,c)) =
+  fun gen_largest_lits f g (CL (p,i,th,c,d)) =
     let
       val lits = mlibThm.clause th
       val objs = objects lits
       fun collect (n,l) =
         let val xs = object_map f g l
-        in (CL (p, i, th, obj_order p xs objs c), n) |-> l
+        in (CL (p, i, th, obj_order p xs objs c, d), n) |-> l
         end
     in
       List.mapPartial (total collect) (enumerate 0 lits)
@@ -276,7 +285,7 @@ in
 end;
 
 local
-  fun gen_largest_eqs dest (CL (p,i,th,c)) =
+  fun gen_largest_eqs dest (CL (p,i,th,c,d)) =
     let
       val lits = mlibThm.clause th
       val objs = objects lits
@@ -285,7 +294,7 @@ local
           NONE => acc
         | SOME (x,y) =>
           let
-            fun g b z = (CL (p, i, th, obj_order p [Eq z] objs c), n, b) |-> z
+            fun g b z = (CL (p,i,th,obj_order p [Eq z] objs c,d), n, b) |-> z
           in
             if x = y then acc
             else ocons (total (g false) y) (ocons (total (g true) x) acc)
@@ -308,14 +317,14 @@ local
       C (foldl f)
     end;
 in
-  fun largest_tms (CL (p,i,th,c)) =
+  fun largest_tms (CL (p,i,th,c,d)) =
     let
       val lits = mlibThm.clause th
       val objs = objects lits
       fun ok x = total (obj_order p x objs) c
       fun collect ((n,l),acc) =
         let
-          fun inc c = harvest (CL (p,i,th,c), n)
+          fun inc c = harvest (CL (p,i,th,c,d), n)
           fun f a =
             (case ok (dest_pred a) of NONE => acc
              | SOME c => inc c (literal_subterms a) acc)
@@ -339,14 +348,14 @@ in
     end;
 end;
 
-fun drop_order (cl as CL (p,i,th,c)) =
-  if T.null c then cl else CL (p, i, th, no_constraints p);
+fun drop_order (cl as CL (p,i,th,c,d)) =
+  if T.null c then cl else CL (p, i, th, no_constraints p, d);
 
 (* ------------------------------------------------------------------------- *)
 (* Subsumption                                                               *)
 (* ------------------------------------------------------------------------- *)
 
-fun subsumes (cl as CL (_,_,th,c)) (cl' as CL (_,_,th',c')) =
+fun subsumes (cl as CL (_,_,th,c,_)) (cl' as CL (_,_,th',c',_)) =
   let val subs = mlibSubsume.subsumes1' (mlibThm.clause th) (mlibThm.clause th')
   in List.exists (fn sub => constraint_subsumes sub c c') subs
   end;
@@ -362,6 +371,10 @@ fun empty (parm as {termorder_parm = p, ...}) =
 
 fun size (REWR (_,r)) = mlibRewrite.size r;
 
+fun peek (REWR (p,r)) i =
+  case mlibRewrite.peek r i of NONE => NONE
+  | SOME (th,ort) => SOME (mlibThm.dest_unit_eq th, ort);
+
 fun add cl rewrs =
   let
     val (i,th) = dest_rewr cl
@@ -370,10 +383,10 @@ fun add cl rewrs =
     REWR (parm, mlibRewrite.add (i,th) rw)
   end;
 
-fun reduce (REWR (p,r)) = REWR (p, mlibRewrite.reduce r);
+fun reduce (REWR (p,r)) =
+  let val (r,l) = mlibRewrite.reduce' r in (REWR (p,r), l) end;
 
-fun eqns (REWR (p,r)) =
-  map (fn (i,th) => CL (p, i, th, no_constraints p)) (mlibRewrite.eqns r);
+fun reduced (REWR (_,r)) = mlibRewrite.reduced r;
 
 val pp_rewrs = pp_map (fn REWR (_,r) => r) mlibRewrite.pp_rewrs;
 
@@ -381,9 +394,9 @@ val pp_rewrs = pp_map (fn REWR (_,r) => r) mlibRewrite.pp_rewrs;
 (* Simplifying rules: these preserve the clause id                           *)
 (* ------------------------------------------------------------------------- *)
 
-fun INST sub (cl as CL (p,i,th,c)) =
+fun INST sub (cl as CL (p,i,th,c,d)) =
   if mlibSubst.null sub then cl
-  else CL (p, i, mlibThm.INST sub th, constraint_subst sub c);
+  else CL (p, i, mlibThm.INST sub th, constraint_subst sub c, d);
 
 fun FRESH_VARS cl =
   let
@@ -420,44 +433,58 @@ local
 
   fun neq_simp cl = case neq_simp1 cl of NONE => cl | SOME cl => neq_simp cl;
 
-  fun eq_factor (CL (p,i,th,c)) = CL (p, i, mlibThm.EQ_FACTOR th, c);
+  fun eq_factor (CL (p,i,th,c,d)) = CL (p, i, mlibThm.EQ_FACTOR th, c, d);
 in
   fun NEQ_VARS cl =
     (case neq_simp1 cl of NONE => cl | SOME cl => eq_factor (neq_simp cl))
     handle ERR_EXN _ => raise BUG "NEQ_VARS" "shouldn't fail";
 end;
 
-fun DEMODULATE units (cl as CL (p,i,th,c)) =
+fun DEMODULATE units (cl as CL (p,i,th,c,d)) =
   let
     val lits = mlibThm.clause th
     val th =
       case first (mlibUnits.prove units o wrap) lits of SOME [t] => t
       | _ => mlibUnits.demod units th
   in
-    if mlibThm.clause th = lits then cl else CL (p,i,th,c)
+    if mlibThm.clause th = lits then cl else CL (p,i,th,c,d)
   end;
 
 local
+  fun mk_ord true c = T.compare c | mk_ord false _ = K NONE;
+
   fun rewr r ord th = mlibThm.EQ_FACTOR (mlibRewrite.rewrite r ord th)
 
-  fun rewrite0 r (CL (p,i,th,c)) =
-    case mlibRewrite.peek r i of SOME th => CL (p,i,th,c)
-    | NONE => CL (p, i, rewr r (T.compare c) (i,th), c);
+  fun rewrite0 ord r (CL (p,i,th,c,d)) =
+    case mlibRewrite.peek r i of SOME (th,_) => CL (p,i,th,c,d)
+    | NONE => CL (p, i, rewr r (mk_ord ord c) (i,th), c, d);
 
-  fun REWRITE' (REWR ({term_order = false, ...}, _)) cl = cl
-    | REWRITE' (REWR (_,rw)) cl = rewrite0 rw cl;
+  fun GEN_REWRITE _ (REWR ({term_order = false, ...}, _)) cl = cl
+    | GEN_REWRITE ord (REWR (_,rw)) cl = rewrite0 ord rw cl;
 in
   fun REWRITE rws cl =
-    (if not (chatting 1) then REWRITE' rws cl else
-       let
-         val res = REWRITE' rws cl
-         val _ = literals cl <> literals res andalso chat
-           ("\nREWRITE: " ^ PP.pp_to_string 60 pp_clause cl ^
-            "\nto get: " ^ PP.pp_to_string 60 pp_clause res ^ "\n")
-       in
-         res
-       end)
-    handle ERR_EXN _ => raise BUG "mlibClause.REWRITE" "shouldn't fail";
+    if not (chatting 1) then GEN_REWRITE true rws cl else
+      let
+        val res = GEN_REWRITE true rws cl
+        val _ = literals cl <> literals res andalso chat
+          ("\nREWRITE: " ^ PP.pp_to_string 60 pp_clause cl ^
+           "\nto get: " ^ PP.pp_to_string 60 pp_clause res ^ "\n")
+      in
+        res
+      end
+      handle ERR_EXN _ => raise BUG "mlibClause.REWRITE" "shouldn't fail";
+
+  fun QREWRITE rws cl =
+    if not (chatting 1) then GEN_REWRITE false rws cl else
+      let
+        val res = GEN_REWRITE false rws cl
+        val _ = literals cl <> literals res andalso chat
+          ("\nQREWRITE: " ^ PP.pp_to_string 60 pp_clause cl ^
+           "\nto get: " ^ PP.pp_to_string 60 pp_clause res ^ "\n")
+      in
+        res
+      end
+      handle ERR_EXN _ => raise BUG "mlibClause.QREWRITE" "shouldn't fail";
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -540,12 +567,12 @@ local
 
   fun FAC x lits sub cl =
     let
-      val CL (p,_,th,c) = INST sub cl
+      val CL (p,_,th,c,_) = INST sub cl
       val th = mlibThm.EQ_FACTOR th
       val c = obj_order p [obj_subst sub x] (objects lits) c
       val c = constraint_consistent p c
     in
-      CL (p, new_id (), th, c)
+      CL (p, new_id (), th, c, Factor cl)
     end;
 
   fun final cl sub lr x targs =
@@ -628,7 +655,7 @@ in
 end;
 
 local
-  fun RESOLVE' (CL (p,_,th1,c1), n1) (CL (_,_,th2,c2), n2) =
+  fun RESOLVE' (cl1 as CL (p,_,th1,c1,_), n1) (cl2 as CL (_,_,th2,c2,_), n2) =
     let
       val lit1 = List.nth (mlibThm.clause th1, n1)
       val lit2 = List.nth (mlibThm.clause th2, n2)
@@ -641,7 +668,7 @@ local
       val c = lit_order p lit (mlibThm.clause th) c
       val c = constraint_consistent p c
     in
-      CL (p, new_id (), th, c)
+      CL (p, new_id (), th, c, mlibResolution (cl1,cl2))
     end;
 in
   fun RESOLVE arg1 arg2 =
@@ -667,8 +694,10 @@ local
 
   fun into_obj p = object_map (Pred o dest_atom) (Eq o pick p);
 
-  fun PARAMODULATE' (CL (p,_,th1,c1), n1, lr1) (CL (_,_,th2,c2), n2, p2) =
+  fun PARAMODULATE' (cl1,n1,lr1) (cl2,n2,p2) =
     let
+      val CL (p,_,th1,c1,_) = cl1
+      val CL (_,_,th2,c2,_) = cl2
       val lit1 = List.nth (mlibThm.clause th1, n1)
       val lit2 = List.nth (mlibThm.clause th2, n2)
       val (l1,r1) = (if lr1 then I else swap) (dest_eq lit1)
@@ -688,7 +717,7 @@ local
         end
         handle ERR_EXN _ => raise BUG "PARAMODULATE (rule)" "shouldn't fail"
     in
-      CL (p, new_id (), th, c)
+      CL (p, new_id (), th, c, Paramodulation (cl1,cl2))
     end;
 in
   fun PARAMODULATE arg1 arg2 =

@@ -1,3 +1,5 @@
+(* Copyright (c) Michael Norrish *)
+
 structure mlibOmega :> mlibOmega =
 struct
 

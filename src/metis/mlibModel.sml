@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* FINITE MODELS                                                             *)
-(* Created by Joe Hurd, October 2003                                         *)
+(* Copyright (c) 2003-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 (*
@@ -29,19 +29,12 @@ fun chat s = (trace s; true)
 (* Parameters                                                                *)
 (* ------------------------------------------------------------------------- *)
 
-type parameters = {size : int, perts : int * int};
+type parameters = {size : int};
 
-val defaults = {size = 5, perts = (100,10)};
+val defaults = {size = 5};
 
 fun update_size f (parm : parameters) : parameters =
-  let val {size = n, perts = p} = parm
-  in {size = f n, perts = p}
-  end;
-
-fun update_perts f (parm : parameters) : parameters =
-  let val {size = n, perts = p} = parm
-  in {size = n, perts = f p}
-  end;
+  let val {size = n} = parm in {size = f n} end;
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions.                                                         *)
@@ -49,10 +42,16 @@ fun update_perts f (parm : parameters) : parameters =
 
 val gen = Random.newgenseed 1.0;
 
+type fp = string * int list;
+
 val fp_compare = lex_combine String.compare (lex_compare Int.compare);
 
 val pp_fp = pp_map
   (fn (f,a) => Fn (f, map (fn n => Fn (int_to_string n, [])) a)) pp_term;
+
+fun cached c f k =
+  case Binarymap.peek (!c,k) of SOME v => v
+  | NONE => let val v = f k val () = c := Binarymap.insert (!c,k,v) in v end;
 
 (* ------------------------------------------------------------------------- *)
 (* Valuations.                                                               *)
@@ -68,9 +67,10 @@ fun lookupv (s : valuation) v =
   case Binarymap.peek (s,v) of SOME n => n
   | NONE => raise BUG "mlibModel.lookupv" "";
 
-local fun f n (v,s) = insertv (v |-> Random.range (0,n) gen) s;
-in fun randomv n l = foldl (f n) emptyv l;
-end;
+fun randomv n =
+  let fun f (v,s) = insertv (v |-> Random.range (0,n) gen) s
+  in foldl f emptyv
+  end;
 
 val pp_valuation =
   pp_map (map op|-> o Binarymap.listItems)
@@ -95,35 +95,38 @@ local
       hash
     end;
 
-  (* Extraction is supposed to follow a uniform distribution.              *)
-  (* Unless we are lucky enough to get BASE mod size = 0, to keep the bias *)
-  (* beneath MAX_BIAS we must ensure the number of iterations n satisfies  *)
-  (* BASE^n / size >= 1 / MAX_BIAS.                                        *)
+  (* Extraction is supposed to follow a uniform distribution.             *)
+  (* Unless we are lucky enough to get BASE mod N = 0, to keep the bias   *)
+  (* beneath MAX_BIAS we must ensure the number of iterations n satisfies *)
+  (* BASE^n / N >= 1 / MAX_BIAS.                                          *)
   val BASE = 64;
   val MAX_BIAS = 0.01;
 
   val bias = Real.ceil (1.0 / MAX_BIAS);
-  fun extract size =
+  fun extract N =
     let
-      val base_mod_size = BASE mod size
+      val base_mod_N = BASE mod N
       fun ext _ _ [] = raise BUG "mlibModel.extract" "ran out of data"
         | ext t i (c :: cs) =
           let
-            val i = (base_mod_size * i + base64_to_int c) mod size
+            val i = (base_mod_N * i + base64_to_int c) mod N
             val t = t div BASE
           in
-            if t = 0 orelse base_mod_size = 0 then i else ext t i cs
+            if t = 0 orelse base_mod_N = 0 then i else ext t i cs
           end
     in
-      ext (size * bias - 1) 0
+      ext (N * bias - 1) 0
     end;
 in
-  fun random_fn size id f args =
-    extract size (String.explode (randomize id f false args));
+  fun random_fn N id (f,args) =
+    extract N (String.explode (randomize id f false args));
 
-  fun random_pred id p args =
+  fun random_pred id (p,args) =
     base64_to_int (String.sub (randomize id p true args, 0)) mod 2 = 0;
 end;
+
+fun cached_random_fn cache N id f_args = cached cache (random_fn N id) f_args;
+fun cached_random_pred cache id p_args = cached cache (random_pred id) p_args;
 
 (* ------------------------------------------------------------------------- *)
 (* Representing finite models.                                               *)
@@ -132,70 +135,69 @@ end;
 datatype model = MODEL of
   {parm   : parameters,
    id     : int,
-   overf  : (string * int list, int) Binarymap.dict,
-   overp  : (string * int list, bool) Binarymap.dict,
-   fms    : formula list};
+   cachef : (fp,int) Binarymap.dict ref,
+   cachep : (fp,bool) Binarymap.dict ref,
+   overf  : (fp,int) Binarymap.dict,
+   overp  : (fp,bool) Binarymap.dict};
 
 local
   val new_id = let val n = ref ~1 in fn () => (n := !n + 1; !n) end;
 in
-  fun empty (parm : parameters) =
-    MODEL
-      {parm = parm,
-       id = new_id (),
-       overp = Binarymap.mkDict fp_compare,
-       overf = Binarymap.mkDict fp_compare,
-       fms = []};
+  fun new (parm : parameters) =
+    let
+      val () = assert (1 <= #size parm) (BUG "mlibModel.new" "nonpositive size")
+      val id = new_id ()
+      val cachef = ref (Binarymap.mkDict fp_compare)
+      val cachep = ref (Binarymap.mkDict fp_compare)
+      val overf = Binarymap.mkDict fp_compare
+      val overp = Binarymap.mkDict fp_compare
+    in
+      MODEL
+      {parm = parm, id = id, cachef = cachef, cachep = cachep,
+       overf = overf, overp = overp}
+    end;
 end;
 
 fun msize (MODEL {parm = {size = N, ...}, ...}) = N;
-fun perts (MODEL {parm = {perts = p, ...}, ...}) = p;
 
 fun update_overf f m =
-  let val MODEL {parm, id, overp = p, fms, ...} = m
-  in MODEL {parm = parm, id = id, overf = f, overp = p, fms = fms}
+  let val MODEL {parm, id, cachef=cf, cachep=cp, overp=p, ...} = m
+  in MODEL {parm=parm, id=id, cachef=cf, cachep=cp, overf=f, overp=p}
   end;
 
 fun update_overp p m =
-  let val MODEL {parm, id, overf = f, fms, ...} = m
-  in MODEL {parm = parm, id = id, overf = f, overp = p, fms = fms}
+  let val MODEL {parm, id, cachef=cf, cachep=cp, overf=f, ...} = m
+  in MODEL {parm=parm, id=id, cachef=cf, cachep=cp, overf=f, overp=p}
   end;
 
-fun update_fms fms m =
-  let val MODEL {parm, id, overf = f, overp = p, ...} = m
-  in MODEL {parm = parm, id = id, overf = f, overp = p, fms = fms}
-  end;
-
-fun pp_model pp (MODEL {parm = {size = N, perts = (p,q), ...}, id, ...}) =
-  pp_string pp
-  (int_to_string id ^ ":" ^ int_to_string N
-   ^ "(" ^ int_to_string p ^ "+" ^ int_to_string q ^ ")");
+fun pp_model pp (MODEL {parm = {size = N, ...}, id, ...}) =
+  pp_string pp (int_to_string id ^ ":" ^ int_to_string N);
 
 (* ------------------------------------------------------------------------- *)
 (* Evaluating ground formulas on models                                      *)
 (* ------------------------------------------------------------------------- *)
 
-fun eval_fn m f args =
+fun eval_fn m f_args =
   let
-    val MODEL {parm = {size = N, ...}, id, overf, ...} = m
+    val MODEL {parm = {size = N, ...}, id, cachef, overf, ...} = m
   in
-    case Binarymap.peek (overf,(f,args)) of SOME n => n
-    | NONE => random_fn N id f args
+    case Binarymap.peek (overf,f_args) of SOME n => n
+    | NONE => cached_random_fn cachef N id f_args
   end;
 
-fun eval_pred _ "=" [x,y] = x = y
-  | eval_pred m p args =
+fun eval_pred _ ("=",[x,y]) = x = y
+  | eval_pred m p_args =
   let
-    val MODEL {id,overp,...} = m
+    val MODEL {id,cachep,overp,...} = m
   in
-    case Binarymap.peek (overp,(p,args)) of SOME b => b
-    | NONE => random_pred id p args
+    case Binarymap.peek (overp,p_args) of SOME b => b
+    | NONE => cached_random_pred cachep id p_args
   end;
 
 fun eval_term m v =
   let
     fun e (Var x) = lookupv v x
-      | e (Fn (f,a)) = eval_fn m f (map (eval_term m v) a)
+      | e (Fn (f,a)) = eval_fn m (f, map (eval_term m v) a)
   in
     e
   end;
@@ -205,7 +207,7 @@ fun eval_formula m =
     fun e True _ = true
       | e False _ = false
       | e (Atom (Var _)) _ = raise BUG "eval_formula" "boolean var"
-      | e (Atom (Fn (p,a))) v = eval_pred m p (map (eval_term m v) a)
+      | e (Atom (Fn (p,a))) v = eval_pred m (p, map (eval_term m v) a)
       | e (Not p) v = not (e p v)
       | e (Or (p,q)) v = e p v orelse e q v
       | e (And (p,q)) v = e p v andalso e q v
@@ -222,21 +224,42 @@ fun eval_formula m =
 (* Check whether a random grounding of a formula is satisfied by the model   *)
 (* ------------------------------------------------------------------------- *)
 
-fun check m fm =
+fun check1 fvs m fm =
   let
-    val v = randomv (msize m) (FV fm)
+    val v = randomv (msize m) fvs
     val _ = chatting 3 andalso
             chat ("check: valuation=" ^ valuation_to_string v ^ ".\n")
   in
     eval_formula m v fm
   end;
 
+fun check m fm = check1 (FV fm) m fm;
+
 fun checkn m fm n =
   let
-    val r = funpow n (fn i => if check m fm then i + 1 else i) 0
+    val fvs = FV fm
+    val r =
+      if null fvs then if check1 [] m fm then n else 0
+      else funpow n (fn i => if check1 fvs m fm then i + 1 else i) 0
     val _ = chatting 1 andalso
             chat ("checkn: " ^ formula_to_string fm ^ ": " ^
                   int_to_string r ^ "/" ^ int_to_string n ^ "\n")
+  in
+    r
+  end;
+
+fun count m fm =
+  let
+    val n = rev (interval 0 (msize m))
+    fun f x [] = x
+      | f (i,j) ((v,[]) :: l) =
+      f ((if eval_formula m v fm then i + 1 else i), j + 1) l
+      | f x ((v, w :: ws) :: l) =
+      f x (foldl (fn (i,z) => (insertv (w |-> i) v, ws) :: z) l n)
+    val r = f (0,0) [(emptyv, FV fm)]
+    val _ = chatting 1 andalso
+            chat ("count: " ^ formula_to_string fm ^ ": " ^
+                  int_to_string (fst r) ^ "/" ^ int_to_string (snd r) ^ "\n")
   in
     r
   end;
@@ -245,9 +268,7 @@ fun checkn m fm n =
 (* Sets of model perturbations                                               *)
 (* ------------------------------------------------------------------------- *)
 
-datatype perturbation =
-  PredP of (string * int list, bool) maplet
-| FnP of (string * int list, int) maplet;
+datatype perturbation = PredP of (fp,bool) maplet | FnP of (fp,int) maplet;
 
 val pp_perturbation =
   pp_map (fn PredP (p |-> s) => p |-> bool_to_string s
@@ -297,7 +318,7 @@ fun perturb_fn _ _ [] _ set = set
   let
     val testf =
       let val targset = Intset.addList (Intset.empty, targ)
-      in fn args => Intset.member (targset, eval_fn m f args)
+      in fn args => Intset.member (targset, eval_fn m (f,args))
       end
     val args = map (eval_term m v) tms
     val set = foldl (fn (x,s) => addp (FnP ((f,args) |-> x)) s) set targ
@@ -308,7 +329,7 @@ fun perturb_fn _ _ [] _ set = set
 
 fun perturb_atom m v s (p,tms) =
   let
-    fun testp args = eval_pred m p args = s
+    fun testp args = eval_pred m (p,args) = s
     val args = map (eval_term m v) tms
     val targs = perturb_targets (msize m) testp args
     val set =
@@ -372,7 +393,7 @@ fun perturb m v fm =
   end;
 
 local
-  fun int (vs,fm,n,i,p) m =
+  fun integrate (vs,fm,n,i,p) m =
     let
       val v = randomv (msize m) vs
       val _ = chatting 3 andalso
@@ -383,22 +404,20 @@ local
         | SOME m => ((vs, fm, n, i, p + 1), m)
     end;
 
-  fun chatint (_,fm,n,i,p) =
-    (chat ("integrate: " ^ formula_to_string fm ^ "\n" ^
+  fun chatperturb (_,fm,n,i,p) =
+    (chat ("perturb: " ^ formula_to_string fm ^ "\n" ^
            "     tests=" ^ int_to_string (n + i + p) ^
            ": natural=" ^ int_to_string n ^
            ", impossible=" ^ int_to_string i ^
            ", perturbed=" ^ int_to_string p ^ ".\n"); true);
 in
-  fun integrate fml perts m =
+  fun perturb fms perts m =
     let
-      val MODEL {fms, ...} = m
-      val fms = fml @ fms
       val fmi = map (fn p => (FV p, p, 0, 0, 0)) fms
-      val (fmi,m) = funpow perts (uncurry (maps int)) (fmi,m)
-      val _ = chatting 1 andalso List.all chatint fmi
+      val (fmi,m) = funpow perts (uncurry (maps integrate)) (fmi,m)
+      val _ = chatting 1 andalso List.all chatperturb fmi
     in
-      update_fms fms m
+      m
     end;
 end;
 
@@ -406,10 +425,6 @@ end;
 (* Signature functions                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-fun new p fml = let val m = empty p in integrate fml (fst (perts m)) m end;
-
 val size = msize;
-
-fun add fml m = integrate fml (snd (perts m)) m;
 
 end

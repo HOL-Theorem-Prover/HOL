@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* INTERFACE TO THE LCF-STYLE LOGICAL KERNEL, PLUS SOME DERIVED RULES        *)
-(* Created by Joe Hurd, September 2001                                       *)
+(* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 signature mlibThm =
@@ -56,7 +56,8 @@ val REL_CONGRUENCE : string * int -> thm
 val SYM            : formula -> thm -> thm
 val EQ_FACTOR      : thm -> thm
 val REWR           : thm * bool -> thm * formula * int list -> thm
-val DEPTH          : (term -> thm * bool) -> thm -> thm
+val DEPTH1         : (term->thm*term*bool) -> thm * formula -> thm * formula
+val DEPTH          : (term->thm*term*bool) -> thm -> thm
 
 (* Pretty-printing of theorems and inferences *)
 val pp_thm               : thm pp

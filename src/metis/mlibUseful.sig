@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* ML UTILITY FUNCTIONS                                                      *)
-(* Created by Joe Hurd, April 2001                                           *)
+(* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 signature mlibUseful =
@@ -18,6 +18,7 @@ val total       : ('a -> 'b) -> 'a -> 'b option
 val can         : ('a -> 'b) -> 'a -> bool
 val partial     : exn -> ('a -> 'b option) -> 'a -> 'b
 val timed       : ('a -> 'b) -> 'a -> real * 'b
+val timed_many  : ('a -> 'b) -> 'a -> real * 'b
 val trace_level : int ref
 val traces      : {module : string, alignment : int -> int} list ref
 val tracing     : {module : string, level : int} -> bool
@@ -141,6 +142,7 @@ val pp_porder   : order option pp
 val pp_list     : 'a pp -> 'a list pp
 val pp_pair     : 'a pp -> 'b pp -> ('a * 'b) pp
 val pp_triple   : 'a pp -> 'b pp -> 'c pp -> ('a * 'b * 'c) pp
+val to_string   : 'a pp -> 'a -> string           (* Uses LINE_LENGTH *)
 
 (* Sum datatype *)
 datatype ('a, 'b) sum = INL of 'a | INR of 'b

@@ -1,7 +1,6 @@
 (* ========================================================================= *)
 (* BASIC FIRST-ORDER LOGIC MANIPULATIONS                                     *)
-(* Created by Joe Hurd, September 2001                                       *)
-(* Partly ported from the CAML-Light code accompanying John Harrison's book  *)
+(* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 (*

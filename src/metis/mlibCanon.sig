@@ -1,7 +1,6 @@
 (* ========================================================================= *)
 (* FIRST-ORDER LOGIC CANONICALIZATION                                        *)
-(* Created by Joe Hurd, September 2001                                       *)
-(* Partly ported from the CAML-Light code accompanying John Harrison's book  *)
+(* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 signature mlibCanon =
@@ -29,9 +28,10 @@ val full_skolemize : formula -> formula
 val tautologous : formula list -> bool
 
 (* Conjunctive normal form *)
-val purecnf : formula -> formula
-val cnf     : formula -> formula
-val is_cnf  : formula -> bool
+val purecnf   : formula -> formula
+val cnf       : formula -> formula
+val is_clause : formula -> bool
+val is_cnf    : formula -> bool
 
 (* Converting to clauses *)
 val clausal       : formula -> formula list list

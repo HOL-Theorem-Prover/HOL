@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* MATCHING AND UNIFICATION FOR SETS OF LITERALS                             *)
-(* Created by Joe Hurd, June 2002                                            *)
+(* Copyright (c) 2002-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 signature mlibLiteralnet =
@@ -10,14 +10,16 @@ type 'a pp          = 'a mlibUseful.pp
 type ('a,'b) maplet = ('a,'b) mlibUseful.maplet
 type formula        = mlibTerm.formula
 
+type parameters = {fifo : bool}
+
 type 'a literalnet
 
 (* Basic operations *)
-val empty        : unit -> 'a literalnet
+val empty        : parameters -> 'a literalnet
 val size         : 'a literalnet -> int
 val size_profile : 'a literalnet -> {t : int, f : int, p : int, n : int}
 val insert       : (formula,'a) maplet -> 'a literalnet -> 'a literalnet
-val from_maplets : (formula,'a) maplet list -> 'a literalnet
+val from_maplets : parameters -> (formula,'a) maplet list -> 'a literalnet
 val filter       : ('a -> bool) -> 'a literalnet -> 'a literalnet
 
 (* mlibMatching and unifying *)

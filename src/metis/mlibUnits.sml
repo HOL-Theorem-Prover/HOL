@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* A STORE IN WHICH TO CACHE UNIT THEOREMS                                   *)
-(* Created by Joe Hurd, November 2001                                        *)
+(* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 (*
@@ -18,6 +18,9 @@ open mlibUseful mlibTerm mlibThm mlibMatch;
 infix |-> ::> @> oo ##;
 
 structure N = mlibLiteralnet; local open mlibLiteralnet in end;
+
+val |<>| = mlibSubst.|<>|;
+val formula_subst = mlibSubst.formula_subst;
 
 (* ------------------------------------------------------------------------- *)
 (* Auxiliary functions.                                                      *)
@@ -45,18 +48,27 @@ fun psym lit =
 
 type uns = thm N.literalnet;
 
-val uempty : uns = N.empty ();
+val uempty : uns = N.empty {fifo = false};
 
 fun usubsumes uns lit =
   List.find (fn t => can (match_literals (dest_unit t)) lit)
-  (rev (N.match uns lit));
+  (N.match uns lit);
+
+fun ucontr uns th =
+  let
+    val th = FRESH_VARS th
+    val lit = negate (dest_unit th)
+    fun check t = (unify_literals |<>| (dest_unit t) lit, t)
+  in
+    case first (total check) (N.unify uns lit) of NONE => NONE
+    | SOME (s,t) => SOME (RESOLVE (formula_subst s lit) (INST s t) (INST s th))
+  end;
 
 fun uadd th uns =
   let
     val l = dest_unit th
   in
-    if Option.isSome (usubsumes uns l) then uns
-    else
+    if Option.isSome (usubsumes uns l) then uns else
       (case total psym l of NONE => I | SOME l' => N.insert (l' |-> SYM l th))
       (N.insert (l |-> th) uns)
   end;
@@ -72,7 +84,7 @@ fun uprove uns =
 
 fun udemod uns =
   let
-    fun demod (lit, th) =
+    fun demod (lit,th) =
       case uprove uns [negate lit] of NONE => th
       | SOME [dth] => RESOLVE lit th dth
       | SOME _ => raise BUG "unit_demod" "corrupt"
@@ -84,12 +96,17 @@ fun udemod uns =
 (* The user interface.                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-type units = (thm, uns) sum;
+type units = (thm,uns) sum;
 
 val empty : units = INR uempty;
 
 fun subsumes (INL th) = K (SOME th)
   | subsumes (INR uns) = usubsumes uns;
+
+fun contr (INL th) _ = SOME th
+  | contr (INR uns) th =
+  if is_contradiction th then SOME th
+  else Option.mapPartial (ucontr uns) (total UNIT_SQUASH th);
 
 fun prove (INL th) = SOME o map (fn False => th | lit => CONTR lit th)
   | prove (INR uns) = uprove uns;
@@ -106,14 +123,10 @@ val pp_units = pp_map info pp_string;
 
 fun add _ (U as INL _) = U
   | add th (U as INR uns) =
-  if List.exists (Option.isSome o usubsumes uns) (clause th) then U
-  else
-    let
-      val th = udemod uns th
-    in
-      if is_contradiction th then INL th
-      else case total UNIT_SQUASH th of NONE => U | SOME th => INR (uadd th uns)
-    end;
+  if is_contradiction th then INL th else
+    case total UNIT_SQUASH th of NONE => U
+    | SOME th => (case ucontr uns th of SOME c => INL c
+                  | NONE => INR (uadd th uns));
 
 val addl = C (foldl (uncurry add));
 

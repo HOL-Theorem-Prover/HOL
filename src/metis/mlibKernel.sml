@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* A LCF-STYLE LOGICAL KERNEL FOR FIRST-ORDER CLAUSES                        *)
-(* Created by Joe Hurd, September 2001                                       *)
+(* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 structure mlibKernel :> mlibKernel =

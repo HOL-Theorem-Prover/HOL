@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* SUBSUMPTION CHECKING                                                      *)
-(* Created by Joe Hurd, April 2002                                           *)
+(* Copyright (c) 2002-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 (*
@@ -46,15 +46,17 @@ fun chat s = (trace s; true)
 (* Helper functions                                                          *)
 (* ------------------------------------------------------------------------- *)
 
-fun psym lit =
-  let
-    val (s,(x,y)) = (I ## dest_eq) (dest_literal lit)
-    val () = assert (x <> y) (ERR "psym" "refl")
-  in
-    mk_literal (s, mk_eq (y,x))
-  end;
-
-fun psymize lits = List.mapPartial (total psym) lits @ lits;
+local
+  fun psym lit =
+    let
+      val (s,(x,y)) = (I ## dest_eq) (dest_literal lit)
+      val () = assert (x <> y) (ERR "psym" "refl")
+    in
+      mk_literal (s, mk_eq (y,x))
+    end;
+in
+  fun psymize lits = List.mapPartial (total psym) lits @ lits;
+end;
 
 local
   fun sz n [] = n
@@ -67,16 +69,16 @@ end;
 
 val sort_literals = sort_map literal_size (rev_order Int.compare);
 
+(* Partial evaluation on the first argument *)
 fun compatible a =
-  let
-    val l = psymize [a]
-    fun p b = List.exists (can (unify_literals |<>| b)) l
-  in
-    p
+  let val l = psymize [a]
+  in fn b => List.exists (can (unify_literals |<>| b)) l
   end;
 
 (* ------------------------------------------------------------------------- *)
 (* The core function for subsumption checking                                *)
+(*                                                                           *)
+(* Assumes flits has already been extended with symmetries of equality lits. *)
 (* ------------------------------------------------------------------------- *)
 
 fun qcheck vlits flits =
@@ -109,8 +111,8 @@ datatype 'a subsume = SUBSUME of
 
 fun empty () = SUBSUME
   {zero = S.NIL,
-   one = N.empty (),
-   many = (0, N.empty (), N.empty (), M.empty ())};
+   one = N.empty {fifo = false},
+   many = (0, N.empty {fifo = false}, N.empty {fifo = false}, M.empty ())};
 
 fun size (SUBSUME {zero, one, many = (_,_,_,m)}) =
   S.length zero + N.size one + M.numItems m;
@@ -173,13 +175,11 @@ local
 
   fun submany (_,l,r,m) n flits () =
     let
-      val f =
-        if n = ~1 then (fn ((i,_),s) => I.add (s,i))
-        else (fn ((i,k),s) => if k <= n then I.add (s,i) else s)
-      fun g x (lit,s) = foldl f s (N.unify x lit)
+      fun f ((i,k),s) = if n = ~1 orelse k <= n then I.add (s,i) else s
+      fun g x (lit,s) = foldl f s (N.match x lit)
       fun h i =
         let val (vlits,a) = M.retrieve (m,i)
-        in S.map (C pair a) (subsum flits vlits)
+        in S.map (fn s => (s,a)) (subsum flits vlits)
         end
       fun j [] = S.NIL | j (i :: is) = S.append (h i) (fn () => j is)
       val lis = foldl (g l) I.empty flits
@@ -210,12 +210,8 @@ end;
 (* ------------------------------------------------------------------------- *)
 
 fun subsumes1 vlits flits =
-  let
-    val flits = psymize flits
-  in
-    if subset vlits flits then [|<>|]
-    else (raise BUG "mlibSubsume.subsumes1" "this shouldn't happen at the moment";
-          S.to_list (subsum flits vlits))
+  let val flits = psymize flits
+  in if subset vlits flits then [|<>|] else S.to_list (subsum flits vlits)
   end;
 
 fun subsumes1' vlits flits =

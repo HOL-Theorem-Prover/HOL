@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* PACKAGING UP SOLVERS TO ALLOW THEM TO COOPERATE UNIFORMLY                 *)
-(* Created by Joe Hurd, March 2002                                           *)
+(* Copyright (c) 2002-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 (*
@@ -150,23 +150,16 @@ val pp_solver_node = pp_map (fn mlibSolver_node {name, ...} => name) pp_string;
 (* At each step we schedule a time slice to the least cost solver node.      *)
 (* ------------------------------------------------------------------------- *)
 
-val SLICE : limit ref = ref {time = SOME (1.0 / 3.0), infs = NONE};
+val SLICE : real ref = ref (1.0 / 3.0);
 
-type cost_fn = string * (mlibMeter.meter_reading -> real);
+datatype cost_fn = Time of real | Infs of real;
 
-val once_only : cost_fn =
-  ("once only",
-   fn {infs, ...} => if infs = 0 then 0.0 else ~1.0);
+fun calc_cost (Time x) ({time,...} : meter_reading) = time / x
+  | calc_cost (Infs x) {infs,...} = Real.fromInt infs / x;
 
-fun time_power n : cost_fn =
-  ("time power " ^ Real.toString n,
-   fn {time, ...} => Real.abs (Math.pow (time, n)));
-
-fun infs_power n : cost_fn =
-  ("infs power " ^ Real.toString n,
-   fn {infs, ...} => Real.abs (Math.pow (Real.fromInt infs, n)));
-
-val pp_cost_fn : cost_fn pp = pp_map fst pp_string;
+val pp_cost_fn =
+  pp_map (fn Time x => "time coeff " ^ real_to_string x
+           | Infs x => "infs coeff " ^ real_to_string x) pp_string;
 
 (* ------------------------------------------------------------------------- *)
 (* This allows us to hierarchically arrange solver nodes.                    *)
@@ -181,10 +174,10 @@ in
 end;
 
 datatype subnode = Subnode of
-  {name   : string,
-   used   : meter_reading,
-   cost   : cost_fn,
-   solns  : (unit -> thm list option stream) option};
+  {name  : string,
+   used  : meter_reading,
+   cost  : cost_fn,
+   solns : (unit -> thm list option stream) option};
 
 fun init_subnode (cost, (name, solver : solver)) goal =
   Subnode
@@ -195,31 +188,33 @@ fun init_subnode (cost, (name, solver : solver)) goal =
 
 local
   fun order ((r,_),(s,_)) = Real.compare (r,s);
-  fun munge_node (n, Subnode {solns, cost = (_,f), used, ...}) =
-    case solns of NONE => NONE | SOME _ =>
-      let val c = f used in if c < 0.0 then NONE else SOME (c,n) end;
+  fun munge_node (n, Subnode {solns, cost, used, ...}) =
+    if Option.isSome solns then SOME (calc_cost cost used, n) else NONE;
 in
   fun choose_subnode l =
     case List.mapPartial munge_node (enumerate 0 l) of [] => NONE
     | l => SOME (snd (fst (min order l)))
 end;
 
-fun subnode_info (Subnode {name, used = {time,infs}, solns, ...}) =
-  name ^ (* "(" ^ *) time_to_string time ^ (* ^ "," ^ infs_to_string infs *)
-  (* ")" ^ *) (case solns of NONE => "*" | SOME _ => "");
+fun used_to_string {time,infs} =
+  "(" ^ real_to_string time ^ "," ^ int_to_string infs ^ ")";
+
+fun subnode_info verbose (Subnode {name, used, solns, ...}) =
+  name ^ (if verbose then used_to_string used else time_to_string (#time used))
+  ^ (case solns of NONE => "*" | SOME _ => "");
 
 local
   fun seq f [] = ""
     | seq f (h :: t) = foldl (fn (n, s) => s ^ "--" ^ f n) (f h) t;
 in
-  fun status_info subnodes units =
-    "[" ^ seq subnode_info subnodes ^ "]--u=" ^ U.info units ^ "--";
+  fun status_info verbose subnodes units =
+    "[" ^ seq (subnode_info verbose) subnodes ^ "]--u=" ^ U.info units ^ "--";
 end;
 
-fun schedule check read stat =
+fun schedule check slice read stat =
   let
     fun sched nodes =
-      (chatting 2 andalso chat (stat nodes);
+      (chatting 3 andalso chat (stat false nodes);
        if not (check ()) then
          (chatting 1 andalso chat "?\n"; S.CONS (NONE, fn () => sched nodes))
        else
@@ -227,11 +222,12 @@ fun schedule check read stat =
            NONE => (chatting 1 andalso chat "!\n"; S.NIL)
          | SOME n =>
            let
-             val Subnode {name, used, solns, cost} = List.nth (nodes, n)
+             val Subnode {name, used, solns, cost} = List.nth (nodes,n)
              val _ = chatting 1 andalso chat name
+             val () = slice cost
              val seq = (Option.valOf solns) ()
              val r = read ()
-             val _ = chatting 2 andalso
+             val _ = chatting 3 andalso
                      chat ("--t=" ^ time_to_string (#time r) ^ "\n")
              val used = add_readings used r
              val (res, solns) =
@@ -241,7 +237,7 @@ fun schedule check read stat =
              val nodes = update_nth (K node) n nodes
              val _ =
                Option.isSome res andalso
-               (chatting 2 andalso chat (stat nodes);
+               (chatting 3 andalso chat (stat true nodes);
                 chatting 1 andalso chat "#\n")
            in
              S.CONS (res, fn () => sched nodes)
@@ -252,19 +248,22 @@ fun schedule check read stat =
 
 fun combine_solvers n csolvers {slice, units, thms, hyps} =
   let
-    val _ = chatting 2 andalso chat
+    val _ = chatting 3 andalso chat
       (n ^ "--initializing--#thms=" ^ int_to_string (length thms)
        ^ "--#hyps=" ^ int_to_string (length hyps) ^ ".\n")
     val meter = ref (new_meter expired)
     fun f (mlibSolver_node {name, solver_con}) =
       (name, solver_con {slice=meter, units=units, thms=thms, hyps=hyps})
     val cnodes = map (I ## f) csolvers
-    fun check () =
-      check_meter (!slice) andalso (meter := sub_meter (!slice) (!SLICE); true)
+    fun check () = check_meter (!slice)
+    fun slce cost =
+      meter := sub_meter (!slice)
+      (case cost of Time x => {time = SOME (!SLICE * x), infs = NONE}
+       | Infs x => {time = NONE, infs = SOME (Real.round (!SLICE * x))})
     fun read () = read_meter (!meter)
-    fun stat s = status_info s (!units)
+    fun stat v s = status_info v s (!units)
   in
-    fn goal => schedule check read stat (map (C init_subnode goal) cnodes)
+    fn goal => schedule check slce read stat (map (C init_subnode goal) cnodes)
   end;
 
 fun combine csolvers =
@@ -282,17 +281,22 @@ fun apply_sos_filter {name = sos, filter} (mlibSolver_node {name, solver_con}) =
   let
     fun solver_con' {slice, units, thms, hyps} =
       let
-        val _ = chatting 2 andalso chat
+        val _ = chatting 3 andalso chat
           (name ^ "--initializing--#thms=" ^ int_to_string (length thms) ^
            "--#hyps=" ^ int_to_string (length hyps) ^
            "--apply sos (" ^ sos ^ ").\n")
-        val (hyps', thms') = List.partition filter (thms @ hyps)
+        val (hyps',thms') =
+          if String.isPrefix "?" sos andalso not (null thms) then (hyps,thms)
+          else List.partition filter (hyps @ thms)
       in
         solver_con {slice = slice, units = units, thms = thms', hyps = hyps'}
       end
   in
     mlibSolver_node {name = name, solver_con = solver_con'}
   end;
+
+fun only_if_everything {name, filter} : sos_filter =
+  {name = "?" ^ name, filter = filter};
 
 val everything : sos_filter = {name = "everything", filter = K true};
 

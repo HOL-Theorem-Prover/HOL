@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* METERING TIME AND INFERENCES                                              *)
-(* Created by Joe Hurd, November 2001                                        *)
+(* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 (*
@@ -27,13 +27,34 @@ val unlimited = {time = NONE, infs = NONE};
 
 val expired = {time = SOME 0.0, infs = SOME 0};
 
-fun limit_to_string {time, infs} =
-  "{time = " ^
-   (case time of NONE => "unlimited"
-    | SOME r => Real.fmt (StringCvt.FIX (SOME 3)) r ^ "s") ^
-   ", infs = " ^
-   (case infs of NONE => "unlimited" | SOME i => int_to_string i) ^
-   "}";
+fun pp_limit pp {time,infs} =
+  let
+    open PP
+    val () = begin_block pp INCONSISTENT 1
+    val () = add_string pp "{";
+    val () = begin_block pp INCONSISTENT 2
+    val () = add_string pp "time ="
+    val () = add_break pp (1,0)
+    val () =
+      case time of NONE => add_string pp "unlimited"
+      | SOME t => add_string pp (Real.fmt (StringCvt.FIX (SOME 3)) t)
+    val () = end_block pp
+    val () = add_string pp ","
+    val () = add_break pp (1,0)
+    val () = begin_block pp INCONSISTENT 2
+    val () = add_string pp "infs ="
+    val () = add_break pp (1,0)
+    val () =
+      case infs of NONE => add_string pp "unlimited"
+      | SOME i => add_string pp (int_to_string i)
+    val () = end_block pp
+    val () = add_string pp "}"
+    val () = end_block pp
+  in
+    ()
+  end;
+
+fun limit_to_string l = PP.pp_to_string (!LINE_LENGTH) pp_limit l;
 
 (* ------------------------------------------------------------------------- *)
 (* mlibMeter readings.                                                           *)
@@ -46,28 +67,8 @@ val zero_reading = {time = 0.0, infs = 0};
 fun add_readings {time : real, infs} {time = time', infs = infs'} =
   {time = time + time', infs = infs + infs'};
 
-fun pp_meter_reading pp {time, infs} =
-  let
-    open PP
-    val () = begin_block pp INCONSISTENT 1
-    val () = add_string pp "{";
-    val () = begin_block pp INCONSISTENT 2
-    val () = add_string pp "time ="
-    val () = add_break pp (1, 0)
-    val () = add_string pp (Real.fmt (StringCvt.FIX (SOME 3)) time)
-    val () = end_block pp
-    val () = add_string pp ","
-    val () = add_break pp (1, 0)
-    val () = begin_block pp INCONSISTENT 2
-    val () = add_string pp "infs ="
-    val () = add_break pp (1, 0)
-    val () = pp_int pp infs
-    val () = end_block pp
-    val () = add_string pp "}"
-    val () = end_block pp
-  in
-    ()
-  end;
+val pp_meter_reading =
+  pp_map (fn {time,infs} => {time = SOME time, infs = SOME infs}) pp_limit;
 
 fun meter_reading_to_string r =
   PP.pp_to_string (!LINE_LENGTH) pp_meter_reading r;
@@ -76,13 +77,14 @@ fun meter_reading_to_string r =
 (* mlibMeters record time and inferences.                                        *)
 (* ------------------------------------------------------------------------- *)
 
-type meter = {read : unit -> meter_reading, log : (int -> unit), lim : limit};
+type meter =
+  {rdt : unit -> real, rdi : unit -> int, log : (int -> unit), lim : limit};
 
 fun new_time_meter () =
   let
     val tmr = Timer.startCPUTimer ()
     fun read () =
-      (fn {usr, sys, ...} => Time.+ (usr, sys))
+      (fn {usr,sys,...} => Time.+ (usr,sys))
       (Timer.checkCPUTimer tmr)
   in
     pos o Time.toReal o read
@@ -97,34 +99,26 @@ fun new_inference_meter () =
   end;
 
 fun new_meter lim : meter =
-  let
-    val tread = new_time_meter ()
-    val (iread,ilog) = new_inference_meter ()
-  in
-    {read = (fn () => {time = tread (), infs = iread ()}),
-     log = ilog, lim = lim}
+  let val (rdi,log) = new_inference_meter ()
+  in {rdt = new_time_meter (), rdi = rdi, log = log, lim = lim}
   end;
 
-fun sub_meter {read, log, lim = _} lim =
+fun sub_meter ({rdt, rdi, log, lim = _} : meter) lim =
   let
-    val {time = init_time : real, infs = init_infs} = read ()
-    fun sub {time, infs} =
-      {time = pos (time - init_time), infs = infs - init_infs}
+    val init_time = rdt () and init_infs = rdi ()
+    fun sbt time = pos (time - init_time)
+    fun sbi infs = infs - init_infs
   in
-    {read = sub o read, log = log, lim = lim}
+    {rdt = sbt o rdt, rdi = sbi o rdi, log = log, lim = lim}
   end;
 
-val read_meter = fn ({read, ...} : meter) => read ();
+fun read_meter ({rdt,rdi,...} : meter) = {time = rdt (), infs = rdi ()};
 
-val check_meter = fn ({read, lim = {time, infs}, ...} : meter) =>
-  let
-    val {time = t, infs = i} = read ()
-  in
-    (case time of NONE => true | SOME time => t < time) andalso
-    (case infs of NONE => true | SOME infs => i < infs)
-  end;
+fun check_meter ({rdt, rdi, lim = {time, infs}, ...} : meter) =
+  (case time of NONE => true | SOME time => rdt () < time) andalso
+  (case infs of NONE => true | SOME infs => rdi () < infs);
 
-val record_infs = fn ({log, ...} : meter) => log;
+fun record_infs ({log,...} : meter) = log;
 
 val pp_meter = pp_map read_meter pp_meter_reading;
 

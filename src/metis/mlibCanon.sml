@@ -1,7 +1,6 @@
 (* ========================================================================= *)
 (* FIRST-ORDER LOGIC CANONICALIZATION                                        *)
-(* Created by Joe Hurd, September 2001                                       *)
-(* Partly ported from the CAML-Light code accompanying John Harrison's book  *)
+(* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 (*
@@ -147,7 +146,7 @@ val pnf = prenex o nnf o simplify;
 fun skolem avoid (Exists (y,p)) =
   let
     val xs = subtract (FV p) [y]
-    val f = variant (if xs = [] then "c_" ^ y else "f_" ^ y) avoid
+    val f = variant (if null xs then "c_" ^ y else "f_" ^ y) avoid
   in
     skolem avoid (formula_subst ((y |-> Fn (f, map Var xs)) ::> |<>|) p)
   end
@@ -204,9 +203,9 @@ val purecnf = list_mk_conj o map list_mk_disj o simpcnf;
 
 val cnf = list_mk_conj o map list_mk_disj o fullcnf;
 
-local val is_clause = List.all is_literal o strip_disj o snd o strip_forall;
-in val is_cnf = List.all is_clause o strip_conj;
-end;
+val is_clause = List.all is_literal o strip_disj o snd o strip_forall;
+
+val is_cnf = List.all is_clause o strip_conj;
 
 (* ------------------------------------------------------------------------- *)
 (* Converting to clauses.                                                    *)

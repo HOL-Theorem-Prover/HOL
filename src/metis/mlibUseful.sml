@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* ML UTILITY FUNCTIONS                                                      *)
-(* Created by Joe Hurd, April 2001                                           *)
+(* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 structure mlibUseful :> mlibUseful =
@@ -56,6 +56,21 @@ fun timed f a =
   in
     (Time.toReal usr + Time.toReal sys, res)
   end;
+
+local
+  val MIN = 1.0;
+
+  fun several n t f a =
+    let
+      val (t',res) = timed f a
+      val t = t + t'
+      val n = n + 1
+    in
+      if t > MIN then (t / Real.fromInt n, res) else several n t f a
+    end;
+in
+  fun timed_many f a = several 0 0.0 f a
+end;
 
 val trace_level = ref 1;
 
@@ -309,7 +324,9 @@ fun sort cmp =
     f
   end;
 
-fun sort_map f cmp xs =
+fun sort_map _ _ [] = []
+  | sort_map _ _ (xs as [_]) = xs
+  | sort_map f cmp xs =
   let
     fun ncmp ((m,_),(n,_)) = cmp (m,n)
     val nxs = map (fn x => (f x, x)) xs
@@ -516,6 +533,8 @@ fun pp_triple pp_a pp_b pp_c =
   pp_bracket "(" ")"
   (pp_map (fn (a, b, c) => (a, (b, c)))
    (pp_binop "," pp_a (pp_binop "," pp_b pp_c)));
+
+fun to_string pp_a a = PP.pp_to_string (!LINE_LENGTH) pp_a a;
   
 (* ------------------------------------------------------------------------- *)
 (* Sums.                                                                     *)

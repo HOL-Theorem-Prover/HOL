@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* ORDERED REWRITING                                                         *)
-(* Created by Joe Hurd, June 2003                                            *)
+(* Copyright (c) 2003-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 signature mlibRewrite =
@@ -11,13 +11,14 @@ type term  = mlibTerm.term
 type thm   = mlibThm.thm
 
 type rewrs
+datatype orient = LtoR | RtoL | Both
 
 (* Basic operations *)
 val empty : (term * term -> order option) -> rewrs
 val reset : rewrs -> rewrs
-val peek  : rewrs -> int -> thm option
+val peek  : rewrs -> int -> (thm * orient) option
 val size  : rewrs -> int
-val eqns  : rewrs -> (int * thm) list
+val eqns  : rewrs -> thm list
 
 (* Add an equation into the system *)
 val add : int * thm -> rewrs -> rewrs
@@ -26,7 +27,9 @@ val add : int * thm -> rewrs -> rewrs
 val rewrite : rewrs -> (term * term -> order option) -> int * thm -> thm
 
 (* Inter-reduce the equations in the system *)
-val reduce : rewrs -> rewrs
+val reduced : rewrs -> bool
+val reduce' : rewrs -> rewrs * int list          (* also returns new redexes *)
+val reduce  : rewrs -> rewrs
 
 (* Pretty-printing *)
 val pp_rewrs        : rewrs pp

@@ -1,7 +1,6 @@
 (* ========================================================================= *)
-(* KEEPING TRACK OF TERM ORDERING CONSTRAINTS                                *)
-(* The underlying term order is the Knuth-Bendix order                       *)
-(* Created by Joe Hurd, November 2002                                        *)
+(* KNUTH-BENDIX TERM ORDERING CONSTRAINTS                                    *)
+(* Copyright (c) 2002-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 (*
@@ -80,7 +79,7 @@ fun list_eqn vars =
 
 local
   val no_vars = mlibMultiset.empty String.compare;
-  fun one_var v = mlibMultiset.insert (v, 1) no_vars;
+  fun one_var v = mlibMultiset.insert (v,1) no_vars;
 
   fun kb_weight w =
     let

@@ -1,7 +1,5 @@
-(* Author: Michael Norrish *)
-
-(* very simple-minded implementation of arbitrary precision natural
-   numbers *)
+(* Simple-minded implementation of arbitrary precision natural numbers *)
+(* Copyright (c) Michael Norrish *)
 
 structure mlibArbnum :> mlibArbnum =
 struct

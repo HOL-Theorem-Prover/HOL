@@ -1,3 +1,5 @@
+(* Copyright (c) Michael Norrish *)
+
 signature mlibArbnum =
 sig
 

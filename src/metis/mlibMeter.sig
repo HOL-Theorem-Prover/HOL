@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* METERING TIME AND INFERENCES                                              *)
-(* Created by Joe Hurd, November 2001                                        *)
+(* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 signature mlibMeter =
@@ -12,6 +12,7 @@ type 'a pp = 'a mlibUseful.pp
 type limit          = {time : real option, infs : int option}
 val unlimited       : limit
 val expired         : limit
+val pp_limit        : limit pp
 val limit_to_string : limit -> string
 
 (* mlibMeter readings *)

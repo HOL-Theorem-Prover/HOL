@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* PACKAGING UP SOLVERS TO ALLOW THEM TO COOPERATE UNIFORMLY                 *)
-(* Created by Joe Hurd, March 2002                                           *)
+(* Copyright (c) 2002-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 signature mlibSolver =
@@ -48,14 +48,13 @@ type solver_node
 val mk_solver_node : node_data -> solver_node
 val pp_solver_node : solver_node pp
 
-(* At each step we schedule a time slice to the least cost solver node. *)
+(* At each step we schedule a slice to the least cost solver node. *)
 
-val SLICE : limit ref
+val SLICE : real ref
 
-type cost_fn
-val once_only  : cost_fn          (* The solver is used for one slice         *)
-val time_power : real -> cost_fn  (* Time used (in seconds) raised to a power *)
-val infs_power : real -> cost_fn  (* Inferences used raised to a power        *)
+datatype cost_fn =
+  Time of real          (* Time used divided by a coefficient *)
+| Infs of real          (* Inferences divided by a coefficient *)
 val pp_cost_fn : cost_fn pp
 
 (* This allows us to hierarchically arrange solver nodes. *)
@@ -65,12 +64,13 @@ val combine : (cost_fn * solver_node) list -> solver_node
 (* Overriding the 'natural' set of support from the problem. *)
 
 type sos_filter = {name : string, filter : thm -> bool}
-val apply_sos_filter : sos_filter -> solver_node -> solver_node
+val apply_sos_filter   : sos_filter -> solver_node -> solver_node
+val only_if_everything : sos_filter -> sos_filter
 
 val everything   : sos_filter
 val one_negative : sos_filter
 val one_positive : sos_filter
-val all_negative : sos_filter     (* This one is used by mlibMetis.prove *)
+val all_negative : sos_filter
 val all_positive : sos_filter
 
 (* Initializing a solver node makes it ready for action. *)

@@ -101,14 +101,14 @@ fun possibly f x = f x handle HOL_ERR _ => x;
 
 fun timed_fn s f a =
   let
-    val (t, r) = mlibUseful.timed f a
-    val _ = chatting 1 andalso chat
+    val (t,r) = mlibUseful.timed f a
+    val _ = chatting 2 andalso chat
       ("metis: " ^ s ^ " time: " ^ mlibUseful.real_to_string t ^ "\n")
   in
     r
   end;
 
-val type_vars_in_terms = foldl (fn (h, t) => union (type_vars_in_term h) t) [];
+val type_vars_in_terms = foldl (fn (h,t) => union (type_vars_in_term h) t) [];
 
 fun variant_tys avoid =
   let
@@ -216,7 +216,7 @@ val empty_map = new_map defaults;
 
 fun add_thm vth lmap : logic_map =
   let
-    val _ = chatting 3 andalso
+    val _ = chatting 5 andalso
             chat ("adding thm:\n" ^ thm_to_string (snd vth) ^ "\n")
     val {parm, axioms, thms, hyps, consts} = lmap
     val th = hol_thm_to_fol (#mapping parm) vth
@@ -227,7 +227,7 @@ fun add_thm vth lmap : logic_map =
 
 fun add_hyp vth lmap : logic_map =
   let
-    val _ = chatting 3 andalso
+    val _ = chatting 5 andalso
             chat ("adding hyp:\n" ^ thm_to_string (snd vth) ^ "\n")
     val {parm, axioms, thms, hyps, consts} = lmap
     val th = hol_thm_to_fol (#mapping parm) vth
@@ -264,18 +264,18 @@ local
 
   fun carefully s f t m = f t m
     handle HOL_ERR _ =>
-      (chatting 1 andalso chat
+      (chatting 2 andalso chat
        ("metis: raised exception adding " ^ s ^ ": dropping.\n"); m);
 in
   fun build_map (parm,cs,thmhyps) =
     let
-      val _ = chatting 3 andalso chat "metis: beginning build_map.\n"
+      val _ = chatting 5 andalso chat "metis: beginning build_map.\n"
       val (thms, hyps) = partition (null o hyp) thmhyps
-      val _ = chatting 3 andalso chat "metis: partitioned thms and hyps.\n"
+      val _ = chatting 5 andalso chat "metis: partitioned thms and hyps.\n"
       val (cs,thms) = foldl ithm (cs,[]) thms
-      val _ = chatting 3 andalso chat "metis: applied ithm to theorems.\n"
+      val _ = chatting 5 andalso chat "metis: applied ithm to theorems.\n"
       val (cs,hyps) = foldl ithm (cs,[]) hyps
-      val _ = chatting 3 andalso chat "metis: applied ithm to hypotheses.\n"
+      val _ = chatting 5 andalso chat "metis: applied ithm to hypotheses.\n"
       val lmap = new_map parm
       val lmap = foldl (fn(t,m)=>carefully"a theorem"add_thm t m) lmap thms
       val lmap = foldl (fn(t,m)=>carefully"an assumption"add_hyp t m) lmap hyps
@@ -547,9 +547,9 @@ fun eliminate consts =
   mlibStream.filter
   (fn (_, ths) =>
    null (intersect consts (varnames (map concl ths))) orelse
-   (chatting 1 andalso
+   (chatting 2 andalso
     chat "metis: solution contained a skolem const: dropping.\n";
-    chatting 2 andalso
+    chatting 4 andalso
     chat (foldl (fn (h,t) => t ^ "  " ^ thm_to_string h ^ "\n") "" ths);
     false));
 

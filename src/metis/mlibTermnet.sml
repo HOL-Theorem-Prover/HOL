@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* MATCHING AND UNIFICATION FOR SETS OF TERMS                                *)
-(* Created by Joe Hurd, September 2001                                       *)
+(* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 (*
@@ -19,14 +19,18 @@ open mlibUseful mlibTerm;
 structure M = Binarymap; local open Binarymap in end;
 
 (* ------------------------------------------------------------------------- *)
+(* Tuning parameters.                                                        *)
+(* ------------------------------------------------------------------------- *)
+
+type parameters = {fifo : bool};
+
+(* ------------------------------------------------------------------------- *)
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
 val flatten = List.concat;
 
 val omap = Option.map;
-
-fun fifoize l = map snd (sort (fn ((m,_),(n,_)) => Int.compare (m,n)) l);
 
 (* ------------------------------------------------------------------------- *)
 (* Variable and function maps                                                *)
@@ -37,6 +41,15 @@ fun empty_vmap () : 'a vmap = M.mkDict String.compare;
 
 type 'a fmap = (string * int, 'a) M.dict;
 fun empty_fmap () : 'a fmap = M.mkDict (lex_combine String.compare Int.compare);
+
+(* ------------------------------------------------------------------------- *)
+(* Dealing with the terms that emerge from termnets.                         *)
+(* ------------------------------------------------------------------------- *)
+
+fun fifoize ({fifo, ...} : parameters) l =
+  if fifo then sort (fn ((m,_),(n,_)) => Int.compare (m,n)) l else l;
+
+fun finally parm l = map snd (fifoize parm l);
 
 (* ------------------------------------------------------------------------- *)
 (* Quotient terms                                                            *)
@@ -105,11 +118,11 @@ datatype 'a net =
 | SINGLE of qterm * 'a net
 | MULTIPLE of 'a net option * 'a net fmap;
 
-datatype 'a termnet = NET of int * (int * (int * 'a) net) option;
+datatype 'a termnet = NET of parameters * int * (int * (int * 'a) net) option;
 
-fun empty () : 'a termnet = NET (0,NONE);
+fun empty parm : 'a termnet = NET (parm,0,NONE);
 
-fun size (NET (_,NONE)) = 0 | size (NET (_, SOME (i,_))) = i;
+fun size (NET (_,_,NONE)) = 0 | size (NET (_, _, SOME (i,_))) = i;
 
 fun singles tms a = foldr SINGLE a tms;
 
@@ -127,7 +140,8 @@ local
     | oadd a tms (SOME n) = add a tms n;
   fun ins a tm (i,n) = SOME (i + 1, oadd (RESULT [a]) [tm] n);
 in
-  fun insert (tm |-> a) (NET (k,n)) = NET (k + 1, ins (k,a) (qterm tm) (pre n))
+  fun insert (tm |-> a) (NET (p,k,n)) =
+    NET (p, k + 1, ins (k,a) (qterm tm) (pre n))
     handle ERR_EXN _ => raise BUG "mlibTermnet.insert" "should never fail";
 end;
 
@@ -149,8 +163,8 @@ local
     end
     | mat _ _ = raise BUG "mlibTermnet.match" "mlibMatch";
 in
-  fun match (NET (_,NONE)) _ = []
-    | match (NET (_, SOME (_,n))) tm = fifoize (mat [] [(n,[tm])])
+  fun match (NET (_,_,NONE)) _ = []
+    | match (NET (p, _, SOME (_,n))) tm = finally p (mat [] [(n,[tm])])
     handle ERR_EXN _ => raise BUG "mlibTermnet.match" "should never fail";
 end;
 
@@ -205,8 +219,9 @@ local
     end
     | mat _ _ = raise BUG "mlibTermnet.unify" "mlibMatch";
 in
-  fun unify (NET (_,NONE)) _ = []
-    | unify (NET (_,SOME(_,n))) tm = fifoize (mat [] [(empty_vmap (), n, [tm])])
+  fun unify (NET (_,_,NONE)) _ = []
+    | unify (NET (p, _, SOME (_,n))) tm =
+    finally p (mat [] [(empty_vmap (), n, [tm])])
     handle ERR_EXN _ => raise BUG "mlibTermnet.unify" "should never fail";
 end;
 
@@ -232,8 +247,9 @@ local
              | SOME n => (sub, n, l @ tms) :: rest)
     | mat _ _ = raise BUG "mlibTermnet.matched" "mlibMatch";
 in
-  fun matched (NET (_,NONE)) _ = []
-    | matched (NET (_,SOME(_,n))) tm = fifoize (mat [] [(empty_vmap(),n,[tm])])
+  fun matched (NET (_,_,NONE)) _ = []
+    | matched (NET (p, _, SOME (_,n))) tm =
+    finally p (mat [] [(empty_vmap(),n,[tm])])
     handle ERR_EXN _ => raise BUG "mlibTermnet.matched" "should never fail";
 end;
 
@@ -255,19 +271,21 @@ fun filter pred =
         if i = 0 then NONE else SOME (i, MULTIPLE (vs,fs))
       end
   in
-    fn net as NET (_,NONE) => net | NET (k, SOME (_,n)) => NET (k, filt n)
+    fn net as NET (_,_,NONE) => net
+     | NET (p, k, SOME (_,n)) => NET (p, k, filt n)
   end
   handle ERR_EXN _ => raise BUG "mlibTermnet.filter" "should never fail";
 
-fun from_maplets l = foldl (uncurry insert) (empty ()) l;
+fun from_maplets p l = foldl (uncurry insert) (empty p) l;
 
 local
   fun inc tm (RESULT l) acc = foldl (fn (x,y) => (qterm' tm |-> x) :: y) acc l
     | inc _ _ _ = raise BUG "mlibTermnet.to_maplets" "mlibMatch";
   fun fin (tm |-> (n,a)) = (n, tm |-> a);
 in
-  fun to_maplets (NET (_,NONE)) = []
-    | to_maplets (NET (_,SOME(_,n))) = fifoize (map fin (harvest inc VAR n []));
+  fun to_maplets (NET (_,_,NONE)) = []
+    | to_maplets (NET (p, _, SOME (_,n))) =
+    finally p (map fin (harvest inc VAR n []));
 end;
 
 fun pp_termnet pp_a = pp_map to_maplets (pp_list (pp_maplet pp_term pp_a));

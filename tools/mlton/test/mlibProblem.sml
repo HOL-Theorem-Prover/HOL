@@ -1,7 +1,6 @@
 (* ========================================================================= *)
 (* SOME SAMPLE PROBLEMS TO TEST PROOF PROCEDURES                             *)
-(* Created by Joe Hurd, September 2001                                       *)
-(* Partly ported from the CAML-Light code accompanying John Harrison's book  *)
+(* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 structure mlibProblem :> mlibProblem =
@@ -172,6 +171,11 @@ p /\ (q ==> r) ==> s <=> (~p \/ q \/ s) /\ (~p \/ ~r \/ s)`},
 (p \/ q \/ r) /\ (p \/ q \/ ~r) /\ (p \/ ~q \/ r) /\ (p \/ ~q \/ ~r) /\
 (~p \/ q \/ r) /\ (~p \/ q \/ ~r) /\ (~p \/ ~q \/ r) /\
 (~p \/ ~q \/ ~r) ==> F`},
+
+{name    = "CLAUSE_SIMP",
+ comment = "",
+ goal    = `
+(lit ==> clause) ==> (lit \/ clause <=> clause)`},
 
 (* ------------------------------------------------------------------------- *)
 (* Monadic Predicate Logic.                                                  *)
@@ -422,7 +426,7 @@ p (f a b) (f b c) /\ p (f b c) (f a c) /\
 {name    = "GILMORE_2",
  comment =
 "This is not valid, according to Gilmore. [JRH]\n" ^
-"Confirmed: resolution with literal ordering quickly saturates.",
+"Confirmed: ordered resolution quickly saturates.",
  goal    = `
 ?x y. !z.
   (f x z <=> f z y) /\ (f z y <=> f z z) /\ (f x y <=> f y x) ==>
@@ -669,6 +673,12 @@ f (g (h c)) = h c /\ g (h c) = b /\ f b = a /\ (!x. ~(a = h x)) ==> F`},
  comment = "",
  goal    = `
 (!x. f (f x) = f x) /\ (!x. ?y. f y = x) ==> !x. f x = x`},
+
+{name    = "JIA",
+ comment = "Needs only the K combinator",
+ goal    = `
+(!x y. k % x % y = x) /\ (!v. P (v % a) a) /\ (!w. Q (w % b) b) ==>
+!z. ?x y. P (z % x % y) x /\ Q (z % x % y) y`},
 
 {name    = "WISHNU",
  comment = "Wishnu Prasetya's example. [JRH]",
@@ -4790,6 +4800,16 @@ mk_set "quick" "problems comprising the quick test suite"
   (* tptp *)
   "ALG005-1", "GRP057-1", "LCL107-1", "ROB001-1", "RNG009-7", "RNG035-7"]
  (#probs (std ())));
+
+(* ------------------------------------------------------------------------- *)
+(* Benchmark used to profile mlibMetis implementations.                          *)
+(* ------------------------------------------------------------------------- *)
+
+fun benchmark () = 
+
+mk_set "benchmark" "problems comprising the benchmark problem set"
+
+(#probs (std ()) @ #probs (puzzle ()) @ #probs (hol ()));
 
 (* ------------------------------------------------------------------------- *)
 (* mlibMeson benchmark submitted to the MLton development team on 24/9/2002.     *)

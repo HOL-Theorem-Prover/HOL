@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* THE METIS COMBINATION OF PROOF PROCEDURES FOR FIRST-ORDER LOGIC           *)
-(* Created by Joe Hurd, September 2001                                       *)
+(* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 (*
@@ -14,7 +14,7 @@ app load
 structure mlibMetis :> mlibMetis =
 struct
 
-open mlibUseful mlibTerm mlibThm mlibMeter mlibCanon mlibSolver mlibOptions;
+open mlibUseful mlibTerm mlibThm mlibMeter mlibCanon mlibSolver;
 
 infix |-> ::> @> oo ## ::* ::@;
 
@@ -28,21 +28,22 @@ structure R = mlibResolution; local open mlibResolution in end;
 (* mlibMetis trace levels:
    0: No output
    1: Status information during proof search
-   2: More detailed prover information: slice by slice
-   3: High-level proof search information
-   4: Log of every inference during proof search
-   5: mlibSupport infrastructure such as mlibTermorder *)
+   2: More status information
+   3: More detailed prover information: slice by slice
+   4: High-level proof search information
+   5: Log of every inference during proof search
+   6: mlibSupport infrastructure such as mlibTermorder *)
 
 val aligned_traces =
-  [{module = "mlibRewrite",    alignment = fn n => n + 3},
-   {module = "mlibTermorder",  alignment = fn n => n + 4},
-   {module = "mlibModel",      alignment = fn n => n + 4},
+  [{module = "mlibTermorder",  alignment = fn n => n + 5},
+   {module = "mlibModel",      alignment = fn n => n + 5},
+   {module = "mlibRewrite",    alignment = fn n => n + 4},
+   {module = "mlibClause",     alignment = fn n => n + 4},
    {module = "mlibSolver",     alignment = I},
    {module = "mlibMeson",      alignment = I},
-   {module = "mlibClause",     alignment = fn n => n + 3},
-   {module = "mlibClauseset",  alignment = fn 1 => 1 | n => n + 2},
-   {module = "mlibSupport",    alignment = fn n => n + 3},
-   {module = "mlibResolution", alignment = fn n => if n <= 2 then n else n - 1}];
+   {module = "mlibClauseset",  alignment = I},
+   {module = "mlibSupport",    alignment = I},
+   {module = "mlibResolution", alignment = I}];
 
 val () = trace_level := 1;
 val () = traces := aligned_traces;
@@ -60,24 +61,40 @@ datatype prover =
 | mlibMeson of M.parameters
 | Delta of M.parameters;
 
-type parameters = (prover * sos_filter option * cost_fn) list;
+type prover_parameters = prover * mlibSolver.sos_filter option * mlibSolver.cost_fn;
 
-val default_model = mlibModel.update_perts (K (100,1)) mlibModel.defaults;
+type parameters = prover_parameters list;
 
 local
   val rl = R.update_clause_parm o mlibClause.update_literal_order o K;
   fun rm ns =
     (R.update_sos_parm o mlibSupport.update_model_parms)
-    (fn l => l @ map (fn n => mlibModel.update_size (K n) default_model) ns);
+    (fn l => l @ map (fn n => mlibModel.update_size (K n) mlibModel.defaults) ns);
 in
-  val ord_mlibResolution = mlibResolution o rm [4,5,6] o rl true;
+  fun R_ordered ns = (rm ns o rl true) R.defaults;
 end;
 
-val default_meson = (mlibMeson M.defaults, NONE, time_power 2.0);
-val default_resolution = (mlibResolution R.defaults,SOME everything,time_power 1.3);
-val default_delta = (Delta M.defaults, NONE, once_only);
-val ord_resolution = (ord_mlibResolution R.defaults, NONE, time_power 1.0);
-val defaults = [default_meson,default_resolution,default_delta,ord_resolution];
+val default_meson : prover_parameters =
+  (mlibMeson M.defaults, SOME (only_if_everything all_negative), Infs 2000.0);
+                                 (*                               ^^^^^^   *)
+                                 (* natural speed in inferences per second *)
+
+val default_delta : prover_parameters =
+  (Delta M.defaults, NONE, Infs (0.25 * 2000.0));
+                           (*    ^^^^          *)
+                           (* slow-down factor *)
+
+val default_resolution : prover_parameters =
+  (mlibResolution R.defaults, SOME everything, Infs (2.0 * 300.0));
+                                           (*    ^^^          *)
+                                           (* speed-up factor *)
+
+val ord_resolution : prover_parameters =
+  (mlibResolution (R_ordered [3,4,5]), NONE, Infs (4.0 * 70.0));
+                                         (*    ^^^          *)
+                                         (* speed-up factor *)
+
+val defaults = [default_resolution, default_meson, ord_resolution];
 
 local
   fun b2s true = "on" | b2s false = "off";
@@ -85,14 +102,18 @@ local
   fun io2s NONE = "NONE" | io2s (SOME i) = "SOME " ^ i2s i;
   val r2s = mlibUseful.real_to_string;
   fun mp2s {size, perts = (p,q)} = i2s size ^ "(" ^ i2s p ^ "+" ^ i2s q ^ ")";
-  fun mpl2s l = PP.pp_to_string (!LINE_LENGTH) (pp_list pp_string) (map mp2s l);
+  fun mpl2s l = "[" ^ join ", " (map (int_to_string o #size) l) ^ "]";
 
-  fun rp2s name (parm : R.parameters) =
+  fun f2s (f : mlibClauseset.filter) =
+    "      subsumption ...... " ^ b2s (#subsumption f) ^ "\n" ^
+    "      simplification ... " ^ i2s (#simplification f) ^ "\n" ^
+    "      splitting ........ " ^ b2s (#splitting f) ^ "\n";
+
+  fun raw_rp2s (parm : R.parameters) =
     let
       val {clause_parm = c, sos_parm = a, set_parm = b} = parm
       val {termorder_parm = t, ...} = c
     in
-      name ^ ":\n" ^
       "  clause_parm:\n" ^
       "    term_order ......... " ^ b2s (#term_order c) ^ "\n" ^
       "    literal_order ...... " ^ b2s (#literal_order c) ^ "\n" ^
@@ -103,13 +124,17 @@ local
       "    size_power ......... " ^ r2s (#size_power a) ^ "\n" ^
       "    literal_power ...... " ^ r2s (#literal_power a) ^ "\n" ^
       "    model_power ........ " ^ r2s (#model_power a) ^ "\n" ^
+      "    model_perts ........ " ^ i2s (#model_perts a) ^ "\n" ^
       "    model_checks ....... " ^ i2s (#model_checks a) ^ "\n" ^
       "    model_parms ........ " ^ mpl2s (#model_parms a) ^ "\n" ^
       "  set_parm:\n" ^
-      "    subsumption ........ " ^ i2s (#subsumption b) ^ "\n" ^
-      "    simplification ..... " ^ i2s (#simplification b) ^ "\n" ^
-      "    splitting .......... " ^ i2s (#splitting b) ^ "\n"
+      "    prefactoring:\n" ^ f2s (#prefactoring b) ^
+      "    postfactoring:\n" ^ f2s (#postfactoring b)
     end;
+
+  fun rp2s name (parm : R.parameters) = name ^ ":\n" ^ raw_rp2s parm;
+
+  fun rlp2s name parm = name ^ ":\n" ^ join "  +\n" (map raw_rp2s parm);
 
   fun mp2s name (parm : M.parameters) =
     name ^ ":\n" ^
@@ -118,7 +143,9 @@ local
     "  state_simplify ....... " ^ b2s (#state_simplify parm) ^ "\n" ^
     "  cache_cutting ........ " ^ b2s (#cache_cutting parm) ^ "\n" ^
     "  divide_conquer ....... " ^ b2s (#divide_conquer parm) ^ "\n" ^
-    "  unit_lemmaizing ...... " ^ b2s (#unit_lemmaizing parm) ^ "\n";
+    "  unit_lemmaizing ...... " ^ b2s (#unit_lemmaizing parm) ^ "\n" ^
+    "  sort_literals ........ " ^ i2s (#sort_literals parm) ^ "\n" ^
+    "  sort_rules ........... " ^ b2s (#sort_rules parm) ^ "\n";
 
   fun p2s (mlibResolution r) = rp2s "resolution" r
     | p2s (mlibMeson m) = mp2s "meson" m
@@ -130,8 +157,7 @@ local
   fun c2s c = "cost_fn: " ^ PP.pp_to_string (!LINE_LENGTH) pp_cost_fn c ^ "\n";
 in
   fun parameters_to_string (parm : parameters) =
-    case map (fn (p,s,c) => p2s p ^ s2s s ^ c2s c) parm of [] => ""
-    | h :: t => foldl (fn (x,y) => y ^ "\n" ^ x) h t;
+    join "\n" (map (fn (p,s,c) => p2s p ^ s2s s ^ c2s c) parm);
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -167,237 +193,21 @@ val settings = ref defaults;
 val limit : limit ref = ref {time = NONE, infs = NONE};
 
 local
-  fun lift0 f (s,[]) = f s | lift0 _ _ = raise BUG "lift0" "";
-  fun lift1 f (s,[x]) = f (s,x) | lift1 _ _ = raise BUG "lift1" "";
-  fun lift2 f (s,[x,y]) = f (s,x,y) | lift2 _ _ = raise BUG "lift2" "";
-
-  fun lift_toggle f = lift0 (fn s => f s not);
-
-  fun lift_nat f = int_option (SOME 0, NONE) (fn (s,i) => f s (K i));
-
-  fun lift_int m f = int_option (SOME 0, SOME m) (fn (s,i) => f s (K i));
-
-  fun lift_sign f = int_option (SOME ~1, SOME 1) (fn (s,i) => f s (K i));
-
-  fun lift_real f = real_option (SOME 0.0, NONE) (fn (s,r) => f s (K r));
-
-  fun update_resolution _ f ((mlibResolution p, s, c) :: l) =
-    (mlibResolution (f p), s, c) :: l
-    | update_resolution p _ _ =
-    raise Optionexit
-      {success = false, usage = false,
-       message = SOME ("create resolution prover " ^
-                       "before tweaking parameter " ^ p)};
-
-  fun update_meson _ f ((mlibMeson p, s, c) :: rest) = (mlibMeson (f p), s, c) :: rest
-    | update_meson _ f ((Delta p, s, c) :: rest) = (Delta (f p), s, c) :: rest
-    | update_meson p _ _ =
-    raise Optionexit
-      {success = false, usage = false,
-       message = SOME ("create meson or delta prover " ^
-                       "before tweaking parameter " ^ p)};
-
-  fun update_sos (_,"P") ((p,_,c) :: l) = ((p, SOME all_positive, c) :: l)
-    | update_sos (_,"N") ((p,_,c) :: l) = ((p, SOME all_negative, c) :: l)
-    | update_sos (_,"-") ((p,_,c) :: l) = ((p, NONE, c) :: l)
-    | update_sos (_,"p") ((p,_,c) :: l) = ((p, SOME one_positive, c) :: l)
-    | update_sos (_,"n") ((p,_,c) :: l) = ((p, SOME one_negative, c) :: l)
-    | update_sos (_,"1") ((p,_,c) :: l) = ((p, SOME everything, c) :: l)
-    | update_sos (_,s) (_ :: _) =
-    raise Optionexit
-      {success = false, usage = false,
-       message = SOME ("unknown set of support: \"" ^ s ^ "\"")}
-    | update_sos _ [] =
-    raise Optionexit
-      {success = false, usage = false,
-       message = SOME "create a prover before specifying set of support"};
-
-  fun update_cost (_,r) ((p,s,_) :: l) =
-    (p, s, if Real.== (r, 0.0) then once_only else time_power r) :: l
-    | update_cost _ [] =
-    raise Optionexit
-      {success = false, usage = false,
-       message = SOME "create a prover before specifying cost function"};
-
-  val virgin_settings = ref true;
-
-  fun change f =
-    (if not (!virgin_settings) then ()
-     else (virgin_settings := false; settings := []);
-     settings := rev (f (rev (!settings))));
-in
-  val options =
-    [{switches = ["-t","--time"], arguments = ["SECS"],
-      description = "time per problem",
-      processor =
-      let
-        fun f x = limit := {time = x, infs = NONE}
-      in
-        fn (_,["-"]) => f NONE
-         | x => real_option (SOME 0.0, NONE) (f o SOME o snd) x
-      end},
-     {switches = ["-r","--resolution"], arguments = [],
-      description = "create resolution prover",
-      processor = lift0 (fn _ => change (cons default_resolution))},
-     {switches = ["","-rt","--term-order"], arguments = [],
-      description = "toggle ordered paramodulation",
-      processor = lift_toggle
-      (fn p =>
-       change
-       o update_resolution p
-       o R.update_clause_parm
-       o mlibClause.update_term_order)},
-     {switches = ["","-rl","--literal-order"], arguments = [],
-      description = "toggle ordered resolution",
-      processor = lift_toggle
-      (fn p =>
-       change
-       o update_resolution p
-       o R.update_clause_parm
-       o mlibClause.update_literal_order)},
-     {switches = ["","-ro","--order-stickiness"], arguments = ["0..3"],
-      description = "stickiness of term order constraints",
-      processor = lift_int 3
-      (fn p =>
-       change
-       o update_resolution p
-       o R.update_clause_parm
-       o mlibClause.update_order_stickiness)},
-     {switches = ["","-rp","--order-precision"], arguments = ["0..3"],
-      description = "precision of term order constraints",
-      processor = lift_int 3
-      (fn p =>
-       change
-       o update_resolution p
-       o R.update_clause_parm
-       o mlibClause.update_termorder_parm
-       o mlibTermorder.update_precision)},
-     {switches = ["","-rs","--subsumption"], arguments = ["0..2"],
-      description = "amount of forward subsumption",
-      processor = lift_int 2
-      (fn p =>
-       change
-       o update_resolution p
-       o R.update_set_parm
-       o mlibClauseset.update_subsumption)},
-     {switches = ["","-rw","--simplification"], arguments = ["0..2"],
-      description = "amount of simplification by rewriting",
-      processor = lift_int 2
-      (fn p =>
-       change
-       o update_resolution p
-       o R.update_set_parm
-       o mlibClauseset.update_simplification)},
-     {switches = ["","-rx","--splitting"], arguments = ["0..2"],
-      description = "amount of clause splitting",
-      processor = lift_int 2
-      (fn p =>
-       change
-       o update_resolution p
-       o R.update_set_parm
-       o mlibClauseset.update_splitting)},
-     {switches = ["","-rz","--size-power"], arguments = ["N"],
-      description = "effect of clause size on weight",
-      processor = lift_real
-      (fn p =>
-       change
-       o update_resolution p
-       o R.update_sos_parm
-       o mlibSupport.update_size_power)},
-     {switches = ["","-rn","--literal-power"], arguments = ["N"],
-      description = "effect of #literals on clause weight",
-      processor = lift_real
-      (fn p =>
-       change
-       o update_resolution p
-       o R.update_sos_parm
-       o mlibSupport.update_literal_power)},
-     {switches = ["","-rd","--model-power"], arguments = ["N"],
-      description = "effect of model checking on clause weight",
-      processor = lift_real
-      (fn p =>
-       change
-       o update_resolution p
-       o R.update_sos_parm
-       o mlibSupport.update_model_power)},
-     {switches = ["","-rm","--add-model"], arguments = ["n"],
-      description = "add a finite model with domain {0..n-1}",
-      processor = lift_nat
-      (fn p =>
-       change
-       o update_resolution p
-       o R.update_sos_parm
-       o mlibSupport.update_model_parms
-       o (fn n => fn l => l @ [mlibModel.update_size n default_model]))},
-     {switches = ["-m","--meson"], arguments = [],
-      description = "create model elimination prover",
-      processor = lift0 (fn _ => change (cons default_meson))},
-     {switches = ["-d","--delta"], arguments = [],
-      description = "create delta prover",
-      processor = lift0 (fn _ => change (cons default_delta))},
-     {switches = ["","-ma","--ancestor-pruning"], arguments = [],
-      description = "toggle ancestor pruning",
-      processor = lift_toggle
-      (fn p =>
-       change
-       o update_meson p
-       o M.update_ancestor_pruning)},
-     {switches = ["","-mb","--ancestor-cutting"], arguments = [],
-      description = "toggle ancestor cutting",
-      processor = lift_toggle
-      (fn p =>
-       change
-       o update_meson p
-       o M.update_ancestor_cutting)},
-     {switches = ["","-ms","--state-simplify"], arguments = [],
-      description = "toggle state simplification",
-      processor = lift_toggle
-      (fn p =>
-       change
-       o update_meson p
-       o M.update_state_simplify)},
-     {switches = ["","-mc","--cache-cutting"], arguments = [],
-      description = "toggle cache cutting",
-      processor = lift_toggle
-      (fn p =>
-       change
-       o update_meson p
-       o M.update_cache_cutting)},
-     {switches = ["","-md","--divide-conquer"], arguments = [],
-      description = "toggle divide & conquer searching",
-      processor = lift_toggle
-      (fn p =>
-       change
-       o update_meson p
-       o M.update_divide_conquer)},
-     {switches = ["","-mu","--unit-lemmaizing"], arguments = [],
-      description = "toggle unit lemmaizing",
-      processor = lift_toggle
-      (fn p =>
-       change
-       o update_meson p
-       o M.update_unit_lemmaizing)},
-     {switches = ["-s","--sos"], arguments = ["{P,N,-,p,n,1}"],
-      description = "specify the set of support",
-      processor = lift1 (change o update_sos)},
-     {switches = ["-c","--cost-fn"], arguments = ["N"],
-      description = "specify cost function as time power",
-      processor = real_option (SOME 0.0, NONE) (change o update_cost)}];
-end;
-
-local
+  fun eq_axs g = if eq_occurs g then eq_axioms g else [];
   fun raw a b = (axiomatize a, axiomatize b, I);
-
-  fun syn g =
-    ([], eq_axiomatize (Not (generalize g)), apply_sos_filter all_negative);
+  fun semi g a b = (eq_axs g @ axiomatize a, axiomatize (Not b), I);
+  fun full g = ([], eq_axiomatize (Not g), I);
+  fun is_raw a b = is_cnf a andalso is_cnf b;
+  fun is_semi a b = is_cnf a andalso is_clause b andalso b <> False;
 in
   fun prove g =
     let
       val g = generalize g
-      val (thms, hyps, sos) =
-        case g of Imp (a, Imp (b, False))
-          => if is_cnf a andalso is_cnf b then raw a b else syn g
-        | _ => syn g
+      val (thms,hyps,sos) =
+        case g of
+          Imp (a, Imp (b, False)) => if is_raw a b then raw a b else full g
+        | Imp (a,b) => if is_semi a b then semi g a b else full g
+        | _ => full g
       val solv = sos (metis' (!settings))
     in
       refute (initialize solv {limit = !limit, thms = thms, hyps = hyps})

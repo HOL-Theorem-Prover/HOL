@@ -1,4 +1,4 @@
-(* Author: Michael Norrish *)
+(* Copyright (c) Michael Norrish *)
 
 structure mlibArbint :> mlibArbint =
 struct

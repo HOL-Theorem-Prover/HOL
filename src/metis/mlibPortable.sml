@@ -1,6 +1,6 @@
 (* ========================================================================= *)
-(* MOSML SPECIFIC FUNCTIONS                                                  *)
-(* Created by Joe Hurd, September 2002                                       *)
+(* MOSCOW ML SPECIFIC FUNCTIONS                                              *)
+(* Copyright (c) 2002-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 structure mlibPortable :> mlibPortable =

@@ -1,14 +1,16 @@
 (* ========================================================================= *)
 (* THE RESOLUTION PROOF PROCEDURE                                            *)
-(* Created by Joe Hurd, November 2001                                        *)
+(* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 signature mlibResolution =
 sig
 
-type 'a pp   = 'a mlibUseful.pp
-type formula = mlibTerm.formula
-type clause  = mlibClause.clause
+type 'a pp    = 'a mlibUseful.pp
+type thm      = mlibThm.thm
+type units    = mlibUnits.units
+type clause   = mlibClause.clause
+type distance = mlibSupport.distance
 
 type parameters =
   {clause_parm : mlibClause.parameters,
@@ -23,13 +25,16 @@ val update_sos_parm    : mlibSupport.parameters parmupdate
 
 (* mlibResolution *)
 type resolution
-type components = {set : mlibClauseset.clauseset, sos : mlibSupport.sos}
-val new       : parameters -> formula list -> clause list -> resolution
+val new       : parameters * units * thm list * thm list -> resolution
+val dest      : resolution -> {set : mlibClauseset.clauseset, sos : mlibSupport.sos}
 val size      : resolution -> {used : int, waiting : int, rewrites : int}
-val add       : clause list -> resolution -> resolution
-val select    : resolution -> ((real * clause) * resolution) option
-val deduce    : (real * clause) * resolution -> resolution
-val advance   : resolution -> resolution option     (* select, deduce, add *)
+val units     : resolution -> units
+val new_units : units -> resolution -> resolution
+val select    : resolution -> ((distance * clause) * resolution) option
+val deduce    : clause -> resolution -> clause list
+val factor    : clause list -> resolution -> clause list * resolution
+val add       : distance * clause list -> resolution -> resolution
+val advance   : resolution -> resolution option  (* select deduce factor add *)
 val pp_resolution : resolution pp
 
 (* The resolution procedure as a solver_node *)

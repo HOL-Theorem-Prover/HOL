@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* INTERFACE TO THE LCF-STYLE LOGICAL KERNEL, PLUS SOME DERIVED RULES        *)
-(* Created by Joe Hurd, September 2001                                       *)
+(* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 (*
@@ -473,27 +473,26 @@ in
   val EQ_FACTOR = FACTOR o (W (syms o clause)) o FACTOR;
 end;
 
-local
-  fun rewr (rw,lr) (eq,r) (th,lit,p) = RESOLVE eq rw (EQUALITY lit p r lr th);
+fun REWR' (rw,r,lr) ((th,lit),tm) p =
+  let
+    val eq = if lr then mk_eq (tm,r) else mk_eq (r,tm)
+    val th' = RESOLVE eq rw (EQUALITY lit p r lr th)
+    val lit' = literal_rewrite (p |-> r) lit
+    val tm' = r
+  in
+    ((th',lit'),tm')
+  end;
 
-  fun exp (rw,lr) =
-    let val eq = dest_unit rw
-    in (eq, let val (l,r) = dest_eq eq in if lr then r else l end)
-    end;
-in
-  fun REWR rw_lr th_lit_p = rewr rw_lr (exp rw_lr) th_lit_p;
+fun REWR (rw,lr) (th,lit,p) =
+  let val r = let val (x,y) = dest_unit_eq rw in if lr then y else x end
+  in fst (fst (REWR' (rw,r,lr) ((th,lit), literal_subterm p lit) p))
+  end;
 
-  fun REWR' rw_lr ((th,lit),tm) p =
-    let val eq_r as (eq,r) = exp rw_lr
-    in ((rewr rw_lr eq_r (th,lit,p), literal_rewrite (p |-> r) lit), r)
-    end;  
-end;
-
-fun DEPTH conv =
+fun DEPTH1 conv =
   let
     fun rewr_top (thl_tm as (_,tm)) p =
       (case total conv tm of NONE => thl_tm
-       | SOME rw_lr => rewr_top (REWR' rw_lr thl_tm (rev p)) p)
+       | SOME rw_r_lr => rewr_top (REWR' rw_r_lr thl_tm (rev p)) p)
 
     fun rewr new thl tm_orig p =
       let
@@ -519,14 +518,30 @@ fun DEPTH conv =
         (thl, if xs = ys then tm else Fn (name,ys))
       end
 
-    fun rewr_lits (lit,th) =
-      if not (mem lit (clause th)) then
-        (assert (is_eq (negate lit)) (BUG "DEPTH" "weird"); th)
-      else fst (fst (rewr_below (th,lit) (dest_atom (literal_atom lit)) []))
+    fun rewr_lit th lit =
+      fst (rewr_below (th,lit) (dest_atom (literal_atom lit)) [])
+  in
+    fn (th,lit) =>
+    let
+      val () = assert (mem lit (clause th)) (BUG "DEPTH1" "no such literal")
+      val (th',lit') = rewr_lit th lit
+      val () = chattrans 3 "DEPTH1 (thm)" th th' thm_to_string
+      val () = chattrans 2 "DEPTH1 (lit)" lit lit' formula_to_string
+    in
+      (th',lit')
+    end
+    handle ERR_EXN _ => raise BUG "DEPTH1" "shouldn't fail"
+  end;
+
+fun DEPTH conv =
+  let
+    fun rewr_lit (lit,th) =
+      if mem lit (clause th) then fst (DEPTH1 conv (th,lit))
+      else (assert (is_eq (negate lit)) (BUG "DEPTH" "vanished"); th)
   in
     fn th =>
     let
-      val th' = foldl rewr_lits th (clause th)
+      val th' = foldl rewr_lit th (clause th)
       val () = chattrans 1 "DEPTH" th th' thm_to_string
     in
       th'

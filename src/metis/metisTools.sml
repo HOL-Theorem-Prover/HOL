@@ -32,12 +32,14 @@ local
   open mlibUseful;
   val module = "metisTools";
   val aligned_traces =
-    [{module = "mlibSolver",     alignment = fn 1 => 1 | n => n + 1},
-     {module = "mlibMeson",      alignment = fn 1 => 1 | n => n + 1},
-     {module = "mlibClause",     alignment = fn n => n + 4},
-     {module = "mlibResolution", alignment = fn n => if n <= 3 then n else n+1},
+    [{module = "mlibClause",     alignment = fn n => n + 4},
+     {module = "mlibSolver",     alignment = I},
+     {module = "mlibMeson",      alignment = I},
+     {module = "mlibClauseset",  alignment = I},
+     {module = "mlibSupport",    alignment = I},
+     {module = "mlibResolution", alignment = I},
      {module = "folMapping",     alignment = fn n => n + 3},
-     {module = "folTools",       alignment = fn 1 => 2 | n => n + 2},
+     {module = "folTools",       alignment = I},
      {module = "metisTools",     alignment = I},
      {module = "metisLib",       alignment = I}];
   val () = register_trace ("metis", trace_level, 10);
@@ -54,14 +56,14 @@ end;
 (* Parameters.                                                               *)
 (* ------------------------------------------------------------------------- *)
 
-type Fparm      = folTools.parameters;
-type Mparm      = mlibMetis.parameters;
+type Fparm = folTools.parameters;
+type Mparm = mlibMetis.parameters;
 type parameters = {interface : Fparm, solver : Mparm, limit : limit};
 
 val defaults =
   {interface = folTools.defaults,
-   solver    = mlibMetis.defaults,
-   limit     = mlibMeter.unlimited};
+   limit = mlibMeter.unlimited,
+   solver = mlibMetis.defaults};
 
 fun update_interface f {interface, solver, limit} =
   {interface = f interface, solver = solver, limit = limit};

@@ -1,3 +1,5 @@
+(* Copyright (c) Michael Norrish *)
+
 structure mlibOmegaint :> mlibOmegaint =
 struct
    open mlibArbint

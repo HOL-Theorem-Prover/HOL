@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* A POSSIBLY-INFINITE STREAM DATATYPE FOR ML                                *)
-(* Created by Joe Hurd, April 2001                                           *)
+(* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
 signature mlibStream =
