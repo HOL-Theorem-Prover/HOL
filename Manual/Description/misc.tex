@@ -76,14 +76,14 @@ the parsers for \HOL\ types and terms.
 \section{\holmake---a tool for maintaining \HOL\ formalizations}
 \label{Holmake}
 
-The purpose of \holmake\footnote{{\tt Holmake} was first written by
-  Ken Larsen and then extended by Michael Norrish.} is to maintain
+The purpose of \holmake\footnote{\holmake{} was first written by Ken
+  Larsen and then extended by Michael Norrish.} is to maintain
 dependencies in a \holn{} source directory. A single invocation of
 \holmake{} will compute dependencies between files, (re-)compile plain
 ML code, (re-)compile and execute theory scripts, and (re-)compile the
 resulting theory modules. \holmake{} does not require the user to
-provide any dependency information,\eg, a Makefile. \holmake{} can
-be very convenient to use, but there are some conventions and
+provide any dependency information,\eg, a Makefile. \holmake{} can be
+very convenient to use, but there are some conventions and
 restrictions on it that must be followed, which we will describe in
 the sequel.
 
@@ -103,12 +103,12 @@ simpler so we deal with it first.
 \subsection{System Rebuild}
 
 A system rebuild happens when an existing theory has been improved in
-some way (augmented with a new theorem, a change to a definition, etc.),
-or perhaps some support ML code has been modified or added to the
-formalization under development. The user needs to find and recompile
-just those modules affected by the change. This is what an invocation of
-\holmake{} does, by identifying the out-of-date modules and
-re-compiling and re-executing them.
+some way (augmented with a new theorem, a change to a definition,
+etc.), or perhaps some support ML code has been modified or added to
+the formalization under development. The user needs to find and
+recompile just those modules affected by the change. This is what an
+invocation of \holmake{} does, by identifying the out-of-date modules
+and re-compiling and re-executing them.
 
 
 \subsection{Theory construction}
@@ -151,7 +151,7 @@ compilation environment also provides these structures.  In the common
 case, this is simple; one must only add, at the head of the theory
 script, the following ``boilerplate'':
 \begin{verbatim}
-    open HolKernel Parse basicHol90Lib;
+    open HolKernel Parse boolLib;
     infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
     infixr -->;
 \end{verbatim}
@@ -184,6 +184,9 @@ To make Moscow ML happy, one must instead write something like
 \begin{verbatim}
     val _ = new_theory "ted";
 \end{verbatim}
+\noindent This is because the script file is required to be an ML
+structure, and the contents of a structure must be
+\emph{declarations}, not expressions.
 
 \item In the interactive system, one has to explicitly \verb+load+
   modules; on the other hand, the batch compiler will load modules
@@ -202,13 +205,6 @@ To make Moscow ML happy, one must instead write something like
   you also were managing a \holn{} development there with {\tt
     Holmake}, then MyTheory.sml would get deleted if {\tt Holmake
     clean} was invoked.
-
-\item We can see that some users may not wish to use (some of) the
-  support provided by \verb+basicHol90Lib+, since it is becoming
-  dated. In that case, the same general principle set out above will
-  apply: the user must ensure that the compilation environment for a
-  theory script is the same as the interactive environment it was
-  developed in.
 
 \end{enumerate}
 
@@ -230,30 +226,30 @@ will rebuild files in the current directory if something it depends on
 from another directory is fresher than it is, but it will not do any
 analysis on files in other directories.  If one is developing a system
 over more than one directory, one should write a master Makefile (or
-shell script) that invokes \holmake{} in the subsidiary
-directories, in the correct order, \ie., such that there never is an
-out-of-date dependence leading outside of the current directory. This
-should always be achievable, simply by ordering the directories in the
-order that one would have to ``\verb+use+'' files in them.
+shell script) that invokes \holmake{} in the subsidiary directories,
+in the correct order, \ie., such that there never is an out-of-date
+dependence leading outside of the current directory. This should
+always be achievable, simply by ordering the directories in the order
+that one would have to ``\verb+use+'' files in them.
 
 \subsection{\holmake{}'s command-line arguments}
 
-Like {\tt make}, \holmake{} takes command-line arguments
-corresponding to the targets that the user desires to build.  If there
-are none, then \holmake{} will attempt to build all ML modules and
-HOL theories it can detect in the current directory.  In addition,
-there are three special targets that can be used:
+Like {\tt make}, \holmake{} takes command-line arguments corresponding
+to the targets that the user desires to build.  If there are none,
+then \holmake{} will attempt to build all ML modules and HOL theories
+it can detect in the current directory.  In addition, there are three
+special targets that can be used:
 \begin{description}
 \item[{\tt clean}] Removes all compiled files.
 \item [{\tt cleanDeps}] Removes all of the pre-computed dependency
   files.  This can be an important thing to do if, for example, you
   have introduced a new {\tt .sig} file on top of an existing {\tt
-  .sml} file.
+    .sml} file.
 \item [{\tt cleanAll}] Removes all compiled files as well as all of
   the hidden dependency information.
 \end{description}
 
-\noindent Finally, the user can directly affect the workings of \verb+Holmake+
+\noindent Finally, the user can directly affect the workings of \holmake{}
 with the following command-line options:
 \begin{description}
 \item[\tt -I <directory>] Look in specified directory for additional
@@ -279,12 +275,25 @@ with the following command-line options:
 \item[\tt --holdir <directory>] Associate this build with the given
   HOL directory, rather than the one this version of \holmake{} was
   configured to use by default.
+\item[\tt --holmakefile <file>] Use the given file as a make-file.
+  See section~\ref{sec:using-Holmakefiles} below for more on this.
+\item[\texttt{--no\_holmakefile}]  Do not use a make-file, even if a file
+  called \texttt{Holmakefile} is present in the current directory.
+\item[\texttt{--no\_overlay}] Do not use an overlay file.  All HOL
+  builds require the presence of a special overlay file from the
+  kernel when compiling scripts and libraries.  This is not
+  apppropriate for compiling code that has no connection to HOL, so
+  this option makes the compilation not use the overlay file.  This
+  option is also used in building the kernel before the overlay itself
+  has been compiled.
 \item[\texttt{--no\_sigobj}] Do not link against HOL system's
   directory of HOL system files.  Use of this option goes some way
   towards turning
   \holmake{} into a general MoscowML \textsf{make} system.  However,
   it will still attempt to do ``HOL things'' with files whose names
   end in \texttt{Script} and \texttt{Theory}.
+\item[\texttt{--overlay <file>}] Use the given file as the overlay
+  rather than the default.
 \item[\texttt{--qof}] Standing for ``quit on failure'', if a tactic
   fails to prove a theorem, quit the build.  The default is to use
   \texttt{mk\_thm} to assert that the failed goal is true so that the
@@ -293,13 +302,89 @@ with the following command-line options:
   always rebuild the dependency information, whether or not it thinks
   it needs to.
 \item[{\tt --version} or {\tt -v}] Show some brief version
-  information.  As of this writing, \holmake{} is at version 2.1.1.
+  information.  As of this writing, \holmake{} is at version 3.0.
 \end{description}
 
 \noindent \holmake{} should never exit with the MoscowML message ``Uncaught
 exception''.  Such behaviour is a bug, please report it!
 
 
+\subsection{Using a make-file with \holmake}
+\label{sec:using-Holmakefiles}
+
+\holmake{} will use a make-file to augment its behaviour if one is
+present in the current directory.  By default it will look for a file
+called \texttt{Holmakefile}, but it can be made to look for any file
+at all with the \texttt{--holmakefile} command-line option.  Such
+make-files must conform to the following grammar:
+\newcommand\prelim{\textsl{preliminary}}
+\newcommand\hmrule{\textsl{rule}}
+\newcommand\id{\textsl{id}}
+\newcommand\idlist{\textsl{id-list}}
+\newcommand\commlist{\textsl{command-list}}
+\newcommand\hmnewline{\texttt{<NEWLINE>}}
+\newcommand\hmtab{\texttt{<TAB>}}
+\[
+\begin{array}{lcl}
+\textsl{make-file}& ::= & \prelim^* \;\; (\hmtab|\hmnewline)^*\;\;\hmrule^*\\
+\prelim           & ::= & \texttt{OPTIONS}\;\; \texttt{=}\;\; \idlist\\
+                  &  |  & \texttt{INCLUDES} \;\;\texttt{=}\;\; \idlist\\
+                  &  |  & \texttt{PRE\_INCLUDES} \;\; \texttt{=}\;\;\idlist\\
+\hmrule           & ::= & \id\;\;\texttt{:}\;\;\idlist\;\;\commlist\\
+\idlist           & ::= & \hmtab^* \;\; \hmnewline\\
+                  &  |  & \id \;\; \hmtab^* \;\; \idlist\\
+\commlist         & ::= & \epsilon \quad \mbox{(i.e., nothing)}\\
+                  &  |  & \hmtab \;\; \idlist \;\; \commlist\\
+\end{array}\]
+Note that the \idlist{} non-terminal is always terminated by a newline
+character.\footnote{Note further that, in addition to a single
+  line-feed character, a new-line character can actually be a
+  carriage-return followed by a line-feed or a carriage return on its
+  own.  This accomodates varying definitions of newlines on different
+  operating systems.}  White-space other than tabs and newlines can
+occur anywhere.  Also, the hash character (\texttt{\#}) can be used to
+make the rest of the line it occurs on a comment.  Finally, a
+back-slash character (\texttt{\char'134}) can be used to escape the
+meaning of the following character.  In particular, this means that
+long lines of identifiers can be split onto multiple lines using
+back-slashes.
+
+The \texttt{INCLUDES} preliminary is used to add directories to the
+list of directories consulted when files are compiled and linked.  The
+effect is as if the directories specified had all been included on the
+command-line with \texttt{-I} options.  The \texttt{PRE\_INCLUDES}
+preliminary works similarly, but the directories specified here are
+placed before the \mbox{\texttt{-I <holdir>}} option that is used in
+invocations of the Moscow ML compiler.  This options gives the user a
+way of over-riding code in the core distribution if they choose as the
+compiler will find their own code before the distribution's.
+
+The \texttt{OPTIONS} preliminary is used for the specification of
+options.  There are currently only two possible (others are ignored):
+\texttt{NO\_SIGOBJ} and \texttt{NO\_OVERLAY}.  These have the same
+effect as the corresponding command-line options.
+
+Make-file rules are interpreted in the same way as by traditional
+\textsf{make}.  The files specified after the colon (if any) are those
+files that the target (the file before the colon) is said to
+``depend'' on.  If any of these are newer than the target, then
+\holmake{} rebuilds the target according to the commands.  If there
+are no dependencies, then the commands are always executed.  If there
+are no commands, the extra dependencies are recorded, and will make a
+difference if \holmake{} knows how to build files of the given type.
+Further, dependencies recorded in the make-file are always added to
+those that \holmake{} has managed to infer for itself.  If commands
+are provided for a file-type that \holmake{} knows how to build
+itself, then the make-file's commands take precedence, and only they
+will be executed.
+
+Finally, the commands can use two useful abbreviations for the
+programs executed.  The string \texttt{HOLMOSMLC} is replaced by an
+invocation of the Moscow ML compiler along with the \texttt{-q} flag
+(necessary for handling quotations), and the usual \texttt{-I} include
+specifications (pre-includes, the hol-directory include, and the
+normal includes).  The string \texttt{MOSMLC} is replaced by an
+invocation of the compiler along with just the normal includes.
 
 \section{Flags for the HOL logic}
 \label{HOLflags}
@@ -547,12 +632,12 @@ the quotation for a type needs to provide a hint: the type parser will
 only be called if the first character after the leading {\tt ``} is a
 colon (\verb+:+).
 
-Knowledgable ML programmers will notice that the idiom {\tt ``}$\ldots$ {\tt
-  ``} is not ML-typable; for that reason, it is implemented as a
-  pre-processor to ML, thanks to work by Richard Boulton. Users who wish
-  to use the pre-processor should invoke {\tt
-  <hol-dir>/bin/hol.unquote}. {\small\verb+Holmake+} will accept
-  source files having occurrences of \verb+``+.
+Knowledgable ML programmers will notice that the idiom {\tt
+  ``}$\ldots$ {\tt ``} is not ML-typable; for that reason, it is
+implemented as a pre-processor to ML, thanks to work by Richard
+Boulton. Users who wish to use the pre-processor should invoke {\tt
+  <hol-dir>/bin/hol.unquote}. \holmake{} will accept source files
+having occurrences of \verb+``+.
 
 
 %%% Local Variables:
