@@ -1941,8 +1941,8 @@ fun phase5_CONV defer_dexpansion = let
             m | ax + b  = d | b /\ ?t. ...
          where d is the gcd of m and a *)
       val a_nt = dest_injected a
-      val m_n = Numeral.dest_numeral m_nt
-      val a_n = Numeral.dest_numeral a_nt
+      val m_n = numSyntax.dest_numeral m_nt
+      val a_n = numSyntax.dest_numeral a_nt
       val (d_n, (x_i, y_i)) = extended_gcd(m_n, a_n)
       (* x_i * m_n + y_i * a_n = d_n *)
       val m_nonz =
