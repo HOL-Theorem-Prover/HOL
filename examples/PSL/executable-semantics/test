@@ -1511,3 +1511,21 @@ time
         F_AND(F_NOT(F_BOOL(B_PROP RtoB_ACK)),
               F_NEXT(F_BOOL(B_PROP RtoB_ACK))))))``;
 
+(******************************************************************************
+* Generating checkers from formulas.
+* An example from the Accellera PSL reference manual, page 45.
+* Mentioned in Joe Hurd's ARG Lunch, 4 November 2003.
+******************************************************************************)
+val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
+val a_def = pureDefine `a = 0`;
+val b_def = pureDefine `b = 1`;
+val c_def = pureDefine `c = 2`;
+val alpha = map Term [`a`,`b`,`c`];
+val prop = ``F_AND (F_BOOL (B_PROP c),
+               F_NEXT (F_W (F_BOOL (B_PROP a), F_BOOL (B_PROP b))))``;
+val prop_sere = time EVAL ``checker ^prop``;
+val sere = rhs (concl prop_sere);
+val sere_re = time EVAL ``sere2regexp ^sere``;
+val re = rhs (concl sere_re);
+val dfa = verilog_dfa {alphabet = alpha, name = "Checker1", regexp = re};
+val _ = print ("\n\n" ^ dfa ^ "\n\n");
