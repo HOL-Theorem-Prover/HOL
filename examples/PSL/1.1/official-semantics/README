@@ -1,4 +1,3 @@
-
 This directory contains a deep embedding of the Accellera standard
 Property Specification Language (PSL/Sugar) Version 1.1 in HOL. 
 
@@ -8,15 +7,24 @@ README ......................... This file
 SyntaxScript.sml ............... Abstract syntax of core PSL
 ModelScript.sml ................ Theory of models
 FinitePathScript.sml ........... Theory of finite paths (lists)
-PathScript.sml ................. Finite and infinite paths
 UnclockedSemanticsScript.sml ... Unclocked semantics
 ClockedSemanticsScript.sml ..... Clocked Semantics
 ExtendedSyntaxScript.sml ....... Abstract syntax of full PSL 
 SyntacticSugarScript.sml ....... Semantics of full PSL 
 RewritesScript.sml ............. Rewrites semantics of Sugar
 LemmasScript.sml   ............. Some lemmas from Eisner, Fisman, Havlicek
+ProjectionScript.sml............ Validation of the projection view (incomplete)
 
-Use: Holmake -I ../../path
+Also needed is
+
+PathScript.sml ................. Finite and infinite paths
+
+which is in the directory PSL/path 
+(should be ../../path relative to this one).
+
+To run Holmake including the path directory, use:
+
+   Holmake -I ../../path
 
 MJCG
-Sat Feb 21 2004
+Wed Apr 14 2004
