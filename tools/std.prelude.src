@@ -61,26 +61,14 @@ val _ = installPP TypeBase.pp_tyinfo;
  * Set up the the help paths.                                                *
  *---------------------------------------------------------------------------*)
 
-local open Path
-      fun HELP s = toString(fromString(concat(HOLDIR, concat("help",s))))
-      fun SRC s  = toString(fromString(concat(HOLDIR, concat("src",s))))
-      val SIGOBJ = toString(fromString(concat(HOLDIR, "sigobj")))
+local
+  open Path
+  fun HELP s = toString(fromString(concat(HOLDIR, concat("help",s))))
+  val SIGOBJ = toString(fromString(concat(HOLDIR, "sigobj")))
+  val docdirs = __
 in
   val () = indexfiles := HELP"HOLdbase" :: !indexfiles ;
-  val () = helpdirs := HELP"ADocfiles" :: SIGOBJ  ::
-                       SRC"arith/help/entries"    ::
-                       SRC"hol88/help/entries"    ::
-                       SRC"list/help/entries"     ::
-                       SRC"pair/help/entries"     ::
-                       SRC"pred_set/help/entries" ::
-                       SRC"reduce/help/entries"   ::
-                       SRC"res_quan/help/entries" ::
-                       SRC"set/help/entries"      ::
-                       SRC"string/help/entries"   ::
-                       SRC"taut/help/entries"     ::
-                       SRC"unwind/help/entries"   ::
-                       SRC"utils/help"            ::
-                       SRC"word/help/entries"     :: !helpdirs;
+  val () = helpdirs := docdirs @ (SIGOBJ  :: !helpdirs)
   val () = Help.specialfiles :=
         {file = "README.Hol98", term = "hol", title = "Hol98 Overview"}
         :: !Help.specialfiles

@@ -13,9 +13,9 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = 
-val holdir   = 
-val OS       =        (* Operating system; choices are:
+val mosmldir =
+val holdir   =
+val OS       =            (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
 
 val CC       = "gcc";     (* C compiler (for building quote filter)        *)
@@ -58,8 +58,8 @@ val SRCDIRS =
   "src/bool", "src/basicHol90", "src/goalstack", "src/q", "src/combin",
   "src/lite", "src/ho_match", "src/refute", "src/simp/src", "src/meson/src",
   "src/relation", "src/pair/src", "src/sum", "src/one", "src/option",
-  "src/num", "src/reduce/src", "src/arith/src", 
-  "src/list/src", "src/tree", 
+  "src/num", "src/reduce/src", "src/arith/src",
+  "src/list/src", "src/tree",
   "src/taut", "src/hol88", "src/ind_def/src", "src/IndDef",
   "src/datatype/parse", "src/datatype/equiv", "src/datatype/basicrec",
   "src/utils", "src/datatype/mutrec", "src/datatype/nestrec",
@@ -68,7 +68,7 @@ val SRCDIRS =
   "src/res_quan/theories", "src/res_quan/src", "src/set/src",
   "src/pred_set/src", "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src", "src/integer", "src/BoyerMoore",
-  "src/hol90", "src/boss", "src/finite_map", "src/real", "src/bag", 
+  "src/hol90", "src/boss", "src/finite_map", "src/real", "src/bag",
   "src/robdd"];
 
 
@@ -77,33 +77,39 @@ val SRCDIRS =
  ---------------------------------------------------------------------------*)
 
 val space = " ";
-fun quote s = String.concat["\"", s, "\""];
 fun echo s  = TextIO.output(TextIO.stdOut, s^"\n");
 
-local val expand_backslash =
-        String.translate (fn #"\\" => "\\\\" | ch => Char.toString ch)
+local
+  val munge =
+    String.translate (fn #"\\" => "\\\\" | #"\"" => "\\\"" | ch => str ch)
 in
-fun quote s = String.concat["\"", expand_backslash s, "\""]
+  fun quote s = String.concat["\"", munge s, "\""]
 end;
 
 (*---------------------------------------------------------------------------
       File handling. The following implements a very simple line
       replacement function: it searchs the source file for a line that
-      is equal to "redex" and then replaces it by "residue". As it
+      contains "redex" and then replaces the whole line by "residue". As it
       searches, it copies lines to the target. Each replacement happens
       once; the replacements occur in order. After the last replacement
       is done, the rest of the source is copied to the target.
  ---------------------------------------------------------------------------*)
-
-fun processLinesUntil (istrm,ostrm) (redex,residue) =
-   let open TextIO
-       fun loop () =
-         case inputLine istrm
-          of ""   => ()
-           | line =>  if line = redex
-                       then output(ostrm, residue)
-                       else (output(ostrm, line); loop())
-   in loop() end;
+val _ = load "Substring";
+fun processLinesUntil (istrm,ostrm) (redex,residue) = let
+  open TextIO
+  fun loop () =
+    case inputLine istrm of
+      ""   => ()
+    | line => let
+        val ssline = Substring.all line
+        val (pref, suff) = Substring.position redex ssline
+      in
+        if Substring.size suff > 0 then output(ostrm, residue)
+        else (output(ostrm, line); loop())
+      end
+in
+  loop()
+end;
 
 fun fill_holes (src,target) repls =
  let open TextIO
@@ -210,17 +216,33 @@ end;
     std.prelude in the top level of the distribution directory.
  ---------------------------------------------------------------------------*)
 
-val _ =
- let open TextIO
-     val _ = echo "Setting up the standard prelude."
-     val src    = fullPath [holdir, "tools/std.prelude.src"]
-     val target = fullPath [holdir, "std.prelude"]
+val _ = let
+  open TextIO
+  val _ = echo "Setting up the standard prelude."
+  val src    = fullPath [holdir, "tools/std.prelude.src"]
+  val target = fullPath [holdir, "std.prelude"]
+  val docdirs = let
+    open TextIO
+    val docfile = fullPath[holdir, "tools", "documentation-directories"]
+    val instr  = TextIO.openIn docfile
+    val wholefile = TextIO.inputAll instr
+    val _ = TextIO.closeIn instr
   in
+    map (fn s => Path.concat(holdir, s)) (String.tokens Char.isSpace wholefile)
+  end
+  fun listtostring acc [] = String.concat ("["::List.rev ("]\n"::acc))
+    | listtostring acc [x] = String.concat ("["::List.rev ("]\n"::x::acc))
+    | listtostring acc (x::xs) = listtostring (", \n     "::x::acc) xs
+  val docdirs_str = listtostring [] (map quote docdirs)
+in
      fill_holes (src,target)
-         ["      val SIGOBJ = __\n"
+         ["val SIGOBJ = __"
               -->
           String.concat["      val SIGOBJ = toString(fromString(concat\n",
-         "                    (", quote holdir, ",", quote"sigobj",")))\n"]]
+         "                    (", quote holdir, ",", quote"sigobj",")))\n"],
+          "val docdirs = __" -->
+          ("  val docdirs = map (Path.toString o Path.fromString)\n    "^
+           docdirs_str)]
   end;
 
 (*---------------------------------------------------------------------------
