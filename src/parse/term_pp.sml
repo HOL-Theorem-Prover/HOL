@@ -742,7 +742,9 @@ fun pp_term (G : grammar) TyG = let
                 in
                   case restr_binder of
                     NONE => pr_comb tm Rator Rand
-                  | SOME LAMBDA => pr_abs tm
+                  | SOME LAMBDA =>
+                      if isSome restr_binder_rule then pr_abs tm
+                      else pr_comb tm Rator Rand
                   | SOME (BinderString bs) =>
                       if isSome restr_binder_rule then
                         pr_comb_with_rule (#2 (valOf restr_binder_rule))
