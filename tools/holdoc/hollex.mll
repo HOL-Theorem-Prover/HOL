@@ -5,6 +5,7 @@
 exception Eof         (* raised by holtoken at end of file *)
 exception BadChar     (* raised by holtoken if unrecognised char scanned *)
 exception BadTerm     (* raised if HOL in TeX is ill-terminated *)
+exception BadDir      (* raised if bad directive scanned *)
 
 let comments = ref []
 
@@ -91,17 +92,21 @@ let startdir = "(*["
 let enddir   = "]*)"
 
 let starttex = "(*:"
-let endtex   = ":*)"
+let tendhol  = "]]"
+let tendhol0 = "]>"
 
 (* tokens for TeX *)
 
-let tnormal    = [^ '[' '<' ':' ] | '[' [^ '['] | '<' [^ '['] | ':' [^ '*'] | ':' '*' [^ ')']
+let tnormal    = [^ '[' '<' ':' '%'] |
+                 '[' [^ '['] | '<' [^ '['] | ':' [^ '*'] | '%' [^ '('] |
+                 ':' '*' [^ ')'] | '%' '(' [^ '*'] |
+                 '%' '(' '*' [^ '[']
 
 let tstarthol  = "[["
-let tendhol    = "]]"
-
 let tstarthol0 = "<["
-let tendhol0   = "]>"
+let endtex     = ":*)"
+
+let tstartdir  = "%(*["
 
 
 (* now some rules *)
@@ -146,6 +151,7 @@ and
   | tstarthol      { TeXStartHol }
   | tstarthol0     { TeXStartHol0 }
   | endtex         { HolEndTeX }
+  | tstartdir      { DirBeg }
   | eof            { raise Eof }
 
 {
@@ -159,7 +165,21 @@ let tokstream p =
     try
       Some (let t = !lex lexbuf in
             match t with
-              TeXStartHol  -> lex := holtoken; t
+              DirBeg       -> let n =
+                                let rec go () = match holtoken lexbuf with
+                                                  Ident(s,_) -> s
+                                                | White(_)   -> go ()
+                                                | _          -> raise BadDir
+                                in go ()
+                              in
+                              let rec go ts =
+                                match holtoken lexbuf with
+                                  DirEnd -> DirBlk (n,List.rev ts)
+                                | t      -> go (t::ts)
+                              in
+                              go []
+            | DirEnd       -> raise BadDir
+            | TeXStartHol  -> lex := holtoken; t
             | TeXStartHol0 -> lex := holtoken; t
             | TeXEndHol    -> lex := textoken; t
             | TeXEndHol0   -> lex := textoken; t

@@ -4,6 +4,7 @@ OCAMLC=$(OCAMLPATH)/ocamlc
 OCAMLLEX=$(OCAMLPATH)/ocamllex
 OCAMLDEP=$(OCAMLPATH)/ocamldep
 
+LATEX=latex
 DVIPS=dvips
 
 # main target:
@@ -51,6 +52,12 @@ depend:
 
 %.cmi : %.mli
 	$(OCAMLC) -c $<
+
+%.tex : %.mng mng_to_latex
+	./mng_to_latex < $< > $@
+
+%.dvi : %.tex
+	$(LATEX) $<
 
 %.ps : %.dvi
 	$(DVIPS) $< -o $@

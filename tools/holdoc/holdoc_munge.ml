@@ -124,15 +124,9 @@ and parse_hol = parser
   | [< 'HolStartTeX; ts = parse_tex; ts' = parse_hol >] -> HolStartTeX :: ts @ ts'
   | [< 't;                           ts' = parse_hol >] -> t :: ts'
 
-and sp1 = parser
-    [< 'White(s)                  ; s1 = sp >] -> White(s)     :: s1
-  | [< 'Comment(c)                ; s1 = sp >] -> Comment(c)   :: s1
-  | [< 'DirBeg; (n,ts) = dir_block; s1 = sp >] -> DirBlk(n,ts) :: s1
-                                                 
 and sp = parser
     [< 'White(s)                  ; s1 = sp >] -> White(s)     :: s1
   | [< 'Comment(c)                ; s1 = sp >] -> Comment(c)   :: s1
-  | [< 'DirBeg; (n,ts) = dir_block; s1 = sp >] -> DirBlk(n,ts) :: s1
   | [<>]                                   -> []
 
 and wopt = parser
@@ -143,7 +137,6 @@ and sp' = parser
     [< 'White(s)                  ; s1 = sp' >] -> White(s)     :: s1
   | [< 'Indent(n)                 ; s1 = sp' >] -> Indent(n)    :: s1
   | [< 'Comment(c)                ; s1 = sp' >] -> Comment(c)   :: s1
-  | [< 'DirBeg; (n,ts) = dir_block; s1 = sp' >] -> DirBlk(n,ts) :: s1
   | [<>]                                    -> []
 
 and optind = parser
@@ -206,8 +199,8 @@ and parse_rule1 = parser
 and rule_vars = parser
     [< 'White(_)                  ; r = rule_vars >] -> r
   | [< 'Comment(_)                ; r = rule_vars >] -> r
-  | [< 'DirBeg; (n,ts) = dir_block; r = rule_vars >] -> if n = "VARS" then dir_var_vars ts @ r
-                                                                      else r
+  | [< 'DirBlk("VARS",ts)         ; r = rule_vars >] -> dir_var_vars ts @ r
+  | [< 'DirBlk(_,_)               ; r = rule_vars >] -> r
   | [< 'Ident(s,_)                ; r = rule_vars >] -> s :: r
   | [<>]                                         -> []
 
@@ -770,6 +763,11 @@ let lts_latex_render () =
 
 (* render MNG from whole input stream *)
 
+let pvs = ref []
+
 let mng_latex_render () =
-  Stream.iter (fun t -> print_string (mtok [] t)) textokstream
+  Stream.iter (fun t -> match t with
+                          DirBlk("VARS",ts) -> pvs := !pvs @ dir_var_vars ts
+                        | _                 -> print_string (mtok !pvs t))
+              textokstream
 
