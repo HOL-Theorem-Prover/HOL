@@ -27,6 +27,9 @@ fun add_overloaded_form opname basety oinfo =
     {overloaded_op = opname, base_type = basety, actual_ops = []}::
     oinfo
 
+fun remove_overloaded_form s (oinfo:overload_info) =
+  List.filter (fn x => #overloaded_op x <> s) oinfo
+
 fun add_actual_overloading {opname, realname, realtype} oinfo =
   if is_overloaded oinfo opname then let
     val {base_type, ...} = valOf (info_for_name oinfo opname)

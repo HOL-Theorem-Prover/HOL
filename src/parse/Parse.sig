@@ -115,6 +115,11 @@ in
     (* overloading *)
     val allow_for_overloading_on : string * Type.hol_type -> unit
     val overload_on : string * term -> unit
+    val clear_overloads_on : string -> unit
+
+    val temp_allow_for_overloading_on : string * Type.hol_type -> unit
+    val temp_overload_on : string * term -> unit
+    val temp_clear_overloads_on : string -> unit
 
     (* the following functions affect the grammar, but not so that the
        grammar exported to disk will be modified *)

@@ -44,7 +44,8 @@ fun ptremove {Name, Ty} = {Name = Name, Ty = TCPretype.toType Ty}
 
 fun to_term (Var n) = Term.mk_var (ptremove n)
   | to_term (Const r) = constify (ptremove r)
-  | to_term (Overloaded _) = raise Fail "Preterm.to_term applied to Overloaded"
+  | to_term (Overloaded {Name,Ty,...}) =
+  constify (ptremove {Name = Name, Ty = Ty})
   | to_term (Comb{Rator,Rand}) = Combify{Rator=to_term Rator,Rand=to_term Rand}
   | to_term (Abs{Bvar,Body}) = Term.mk_abs{Bvar=to_term Bvar,Body=to_term Body}
   | to_term (Antiq tm) = tm
@@ -144,44 +145,39 @@ in
   cl
 end;
 
-infix is_instance_of
-fun pty is_instance_of ty =
-  TCPretype.can_unify pty (TCPretype.rename_typevars (TCPretype.fromType ty))
-
-
-fun remove_overloading ptm =
+fun remove_overloading ptm = let
+  open seqmonad
+  infix >- >> ++
+  fun opt2seq m env =
+    case m env of
+      (env', NONE) => seq.empty
+    | (env', SOME result) => seq.result (env', result)
+  fun unify t1 t2 = opt2seq (TCPretype.safe_unify t1 t2)
+in
   case ptm of
-    Var _ => ptm
-  | Const _ => ptm
-  | Comb{Rator,Rand} => Comb{Rator = remove_overloading Rator,
-                             Rand = remove_overloading Rand}
-  | Abs{Bvar, Body} => Abs{Bvar = remove_overloading Bvar,
-                           Body = remove_overloading Body}
-  | Antiq _ => ptm
-  | Constrained(tm,ty) => Constrained(remove_overloading tm, ty)
+    Var _ => return ptm
+  | Const _ => return ptm
+  | Comb{Rator,Rand} => remove_overloading Rator >- (fn Rator' =>
+                        remove_overloading Rand >-  (fn Rand' =>
+                        return (Comb{Rator = Rator', Rand = Rand'})))
+  | Abs{Bvar, Body} => remove_overloading Bvar >-   (fn Bvar' =>
+                       remove_overloading Body >-   (fn Body' =>
+                       return (Abs{Bvar = Bvar', Body = Body'})))
+  | Antiq _ => return ptm
+  | Constrained(tm,ty) => remove_overloading tm >- (fn tm' =>
+                          return (Constrained(tm', ty)))
   | Overloaded{Name,Ty,Info} => let
       val actual_ops = #actual_ops Info
-      val candidates =
-        List.filter (fn (ty, _) => Ty is_instance_of ty) actual_ops
+      fun tryit (ty, n) = let
+        val pty0 = TCPretype.fromType ty
+        val pty = TCPretype.rename_typevars pty0
+      in
+        unify pty Ty >> return (Const{Name=n, Ty=Ty})
+      end
     in
-      case candidates of
-        [] => (print ("No candidate constant for overloaded "^Name);
-               raise PRETERM_ERR "remove_overloading" "No candidate constant")
-      | (ty,n)::rest => let
-          open TCPretype
-          val pty = rename_typevars (fromType ty)
-          val _ = unify Ty pty
-          val _ =
-            case rest of
-              [] => ()
-            | _ =>
-                Lib.mesg true
-                ("Picking "^n^" from candidates for overloaded "^Name)
-        in
-          Const{Name = n, Ty = pty}
-        end
+      tryall tryit actual_ops
     end
-
+end
 
 fun has_unconstrained_uvar ty = let
   open TCPretype
@@ -203,7 +199,30 @@ fun tyVars tm =
   | Constrained(tm,ty) => Lib.union (tyVars tm) (TCPretype.tyvars ty)
   | Overloaded _ => raise Fail "Preterm.tyVars: applied to Overloaded"
 
-fun cleanup0 ptm0 = remove_overloading ptm0
+fun cleanup0 ptm0 = let
+  open seq
+  val result = remove_overloading ptm0 []
+  fun apply_subst subst =
+    app (fn (r, value) => r := SOME value) subst
+in
+  case cases result of
+    NONE => raise PRETERM_ERR "cleanup0"
+      "Couldn't find a sensible resolution for overloaded constants"
+  | SOME ((env,ptm),xs) => let
+    in
+      if !Globals.notify_on_tyvar_guess then
+        case cases xs of
+          NONE => (apply_subst env; ptm)
+        | SOME _ => (Lib.mesg true
+                     "more than one resolution of overloading was possible";
+                     apply_subst env;
+                     ptm)
+      else
+        (apply_subst env; ptm)
+    end
+end
+
+
 
 fun cleanup tm =
   if !Globals.guessing_tyvars then let
@@ -259,3 +278,13 @@ fun cleanup tm =
 fun typecheck pfns tm = (TC pfns tm; cleanup (cleanup0 tm));
 
 end; (* PRETERM *)
+
+(* test the overloading :
+
+new_definition ("f", Term`f p q x = p x /\ q x`);
+allow_for_overloading_on ("/\\", Type`:'a -> 'a -> 'a`);
+overload_on ("/\\", mk_const{Name = "/\\", Ty = Type`:bool->bool->bool`});
+Term`p /\ q`;
+overload_on ("/\\", Term`f`);
+
+*)

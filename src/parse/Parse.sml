@@ -638,8 +638,8 @@ in
     val tystring =
       Portable.pp_to_string 75 (TheoryPP.print_type_to_SML "mkV" "mkT") ty
     val cmdstring = String.concat [
-      "let val mkV s = Type.mk_vartype s\n",
-      "    val mkT s args = Type.mk_type{Tyop = s, Args = args}\n",
+      "val _ = let fun mkV s = Type.mk_vartype s\n",
+      "    fun mkT s args = Type.mk_type{Tyop = s, Args = args}\n",
       "    val ty = ",tystring,"\n",
       "in  Parse.temp_allow_for_overloading_on (", quote s, ", ty) end\n"
                                    ]
@@ -669,8 +669,8 @@ in
       Portable.pp_to_string 75 (TheoryPP.print_type_to_SML "mkV" "mkT") Ty
     val cmdstring = String.concat
       [
-       "let val mkV s = Type.mk_vartype s\n",
-       "    val mkT s args = Type.mk_type{Tyop = s, Args = args}\n",
+       "val _ = let fun mkV s = Type.mk_vartype s\n",
+       "    fun mkT s args = Type.mk_type{Tyop = s, Args = args}\n",
        "    val ty = ",tystring,"\n",
        "    val tm = Term.mk_const{Name = ", quote Name,",\n",
        "                           Ty = ty}\n",
@@ -681,7 +681,18 @@ in
     adjoin_to_theory (toThyaddon cmdstring)
   end
 
-
+  fun temp_clear_overloads_on s = let
+  in
+    the_term_grammar := term_grammar.fupdate_overload_info
+    (Overload.remove_overloaded_form s) (term_grammar());
+    term_grammar_changed := true
+  end
+  fun clear_overloads_on s = let
+    val cmdstring = "val _ = Parse.temp_clear_overloads_on "^quote s^";\n"
+  in
+    temp_clear_overloads_on s;
+    adjoin_to_theory (toThyaddon cmdstring)
+  end
 
 
   fun pp_thm ppstrm th = let

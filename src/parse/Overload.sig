@@ -7,6 +7,7 @@ exception OVERLOAD_ERR of string
 
 val add_overloaded_form :
   string -> Type.hol_type -> overload_info -> overload_info
+val remove_overloaded_form : string -> overload_info -> overload_info
 
 val info_for_name : overload_info -> string -> overloaded_op_info option
 val is_overloaded : overload_info -> string -> bool

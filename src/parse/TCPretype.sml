@@ -36,7 +36,7 @@ fun r ref_equiv value =
   | UVar (r' as ref (SOME t)) => r = r' orelse r ref_equiv t
 
 
-fun bind r value =
+fun unsafe_bind f r value =
   if r ref_equiv value then
     ok
   else
@@ -45,31 +45,87 @@ fun bind r value =
     else
       (fn acc => (((r, !r)::acc, SOME ()) before r := SOME value))
 
-fun unify0 t1 t2 =
+fun gen_unify bind t1 t2 = let
+  val gen_unify = gen_unify bind
+in
   case (t1, t2) of
-    (UVar (r as ref NONE), t) => bind r t
-  | (UVar (r as ref (SOME t1)), t2) => unify0 t1 t2
-  | (t1, t2 as UVar _) => unify0 t2 t1
+    (UVar (r as ref NONE), t) => bind gen_unify r t
+  | (UVar (r as ref (SOME t1)), t2) => gen_unify t1 t2
+  | (t1, t2 as UVar _) => gen_unify t2 t1
   | (Vartype s1, Vartype s2) => if s1 = s2 then ok else fail
   | (Tyop(op1, args1), Tyop(op2, args2)) =>
       if op1 <> op2 orelse length args1 <> length args2 then fail
       else
-        mmap (fn (t1, t2) => unify0 t1 t2) (ListPair.zip(args1, args2)) >>
+        mmap (fn (t1, t2) => gen_unify t1 t2) (ListPair.zip(args1, args2)) >>
         return ()
   | _ => fail
+end
 
 fun unify t1 t2 =
-  case (unify0 t1 t2 []) of
+  case (gen_unify unsafe_bind t1 t2 []) of
     (bindings, SOME ()) => ()
   | (_, NONE) => raise TCERR "unify" "unify failed"
 
 fun can_unify t1 t2 = let
-  val (bindings, result) = unify0 t1 t2 []
+  val (bindings, result) = gen_unify unsafe_bind t1 t2 []
   val _ = app (fn (r, oldvalue) => r := oldvalue) bindings
 in
   isSome result
 end
 
+
+local
+  fun (r ref_equiv value) env =
+    case value of
+      UVar (r' as ref NONE) =>
+        r = r' orelse let
+        in
+          case Lib.assoc1 r' env of
+            NONE => false
+          | SOME (_, v) => (r ref_equiv v) env
+        end
+    | UVar (ref (SOME t)) => (r ref_equiv t) env
+    | _ => false
+  fun (r ref_occurs_in value) env =
+    case value of
+      UVar (r' as ref NONE) =>
+        r = r' orelse let
+        in
+          case Lib.assoc1 r' env of
+            NONE => false
+          | SOME (_, v) => (r ref_occurs_in v) env
+        end
+    | UVar (ref (SOME t)) => (r ref_occurs_in t) env
+    | Vartype _ => false
+    | Tyop(_, args) => List.exists (fn t => (r ref_occurs_in t) env) args
+in
+  fun safe_bind unify r value env =
+    case (Lib.assoc1 r env) of
+      NONE =>
+        if (r ref_equiv value) env then
+          ok env
+        else
+          if (r ref_occurs_in value) env then
+            fail env
+          else
+            ((r,value)::env, SOME ())
+    | SOME (_, v) => unify v value env
+end
+
+
+fun safe_unify t1 t2 = gen_unify safe_bind t1 t2
+
+fun apply_subst subst pty =
+  case pty of
+    Vartype _ => pty
+  | Tyop(s, args) => Tyop(s, map (apply_subst subst) args)
+  | UVar (ref (SOME t)) => apply_subst subst t
+  | UVar (r as ref NONE) => let
+    in
+      case (Lib.assoc1 r subst) of
+        NONE => UVar r
+      | SOME (_, value) => apply_subst subst value
+    end
 
 (* passes over a type, turning all of the type variables into fresh
    UVars, but doing so consistently by using an env, which is an alist
