@@ -179,7 +179,7 @@ val ZCONSTR_ZBOT = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 val (ZRECSPACE_RULES,ZRECSPACE_INDUCT,ZRECSPACE_CASES) =
-  IndDefLib.new_inductive_definition
+  IndDefLib.Hol_reln
    `ZRECSPACE (ZBOT:num->'a->bool) /\
     (!c i r. (!n. ZRECSPACE (r n)) ==> ZRECSPACE (ZCONSTR c i r))`;
 
