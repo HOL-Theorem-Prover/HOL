@@ -23,11 +23,14 @@ infixr --> ##
 
 val lhand = rand o rator
 
+
 fun c1 THENC c2 = THENQC c1 c2
 fun c1 ORELSEC c2 = ORELSEQC c1 c2
 val BINOP_CONV = BINOP_QCONV
 val ALL_CONV = ALL_QCONV
 val TRY_CONV = TRY_QCONV
+val REWRITE_CONV = GEN_REWRITE_CONV TOP_DEPTH_QCONV bool_rewrites
+val DEPTH_CONV = DEPTH_QCONV
 
 fun EVERY_CONJ_CONV c t =
     if is_conj t then BINOP_CONV (EVERY_CONJ_CONV c) t
@@ -262,59 +265,6 @@ in
 end
 
 
-(* ----------------------------------------------------------------------
-    calculate_range_disjunct tm
-
-    tm is of form ?i. (0 <= i /\ i <= u) /\ ...
-    transform this into an appropriate number of disjuncts (or possibly
-    false, if u < 0), of the form
-       P(0) \/ P(1) \/ ... \/ P(u)
-   ---------------------------------------------------------------------- *)
-
-val refl_case = prove(
-  ``!u P. (?i:int. (u <= i /\ i <= u) /\ P i) = P u``,
-  REWRITE_TAC [INT_LE_ANTISYM] THEN REPEAT GEN_TAC THEN EQ_TAC THEN
-  STRIP_TAC THEN ASM_REWRITE_TAC [] THEN Q.EXISTS_TAC `u` THEN
-  ASM_REWRITE_TAC []);
-val nonrefl_case = prove(
-  ``!lo hi P. (?i:int. (lo <= i /\ i <= hi) /\ P i) =
-              lo <= hi /\ (P lo \/ ?i. (lo + 1 <= i /\ i <= hi) /\ P i)``,
-  REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
-    Q.ASM_CASES_TAC `i = lo` THENL [
-      POP_ASSUM SUBST_ALL_TAC THEN ASM_REWRITE_TAC [],
-      REWRITE_TAC [LEFT_AND_OVER_OR] THEN
-      DISJ2_TAC THEN CONJ_TAC THENL [
-        IMP_RES_TAC INT_LE_TRANS,
-        ALL_TAC
-      ] THEN Q.EXISTS_TAC `i` THEN ASM_REWRITE_TAC [] THEN
-      REWRITE_TAC [GSYM int_arithTheory.less_to_leq_samer] THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [INT_LE_LT]) THEN
-      POP_ASSUM_LIST (MAP_EVERY STRIP_ASSUME_TAC) THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      FIRST_X_ASSUM (fn th => MP_TAC th THEN REWRITE_TAC [] THEN NO_TAC)
-    ],
-    Q.EXISTS_TAC `lo` THEN ASM_REWRITE_TAC [INT_LE_REFL],
-    Q.EXISTS_TAC `i` THEN ASM_REWRITE_TAC [] THEN
-    MATCH_MP_TAC INT_LE_TRANS THEN Q.EXISTS_TAC `lo + 1` THEN
-    ASM_REWRITE_TAC [INT_LE_ADDR] THEN CONV_TAC CooperMath.REDUCE_CONV
-  ]);
-
-
-fun calculate_range_disjunct tm = let
-  val (i, body) = dest_exists tm
-  fun recurse tm =
-      ((REWR_CONV refl_case THENC BETA_CONV) ORELSEC
-       (REWR_CONV nonrefl_case THENC
-        LAND_CONV CooperMath.REDUCE_CONV THENC
-        (REWR_CONV CooperThms.F_and_l ORELSEC
-         (REWR_CONV CooperThms.T_and_l THENC
-          FORK_CONV(BETA_CONV,
-                    BINDER_CONV (LAND_CONV
-                                   (LAND_CONV CooperMath.REDUCE_CONV)) THENC
-                    recurse))))) tm
-in
-  BINDER_CONV (RAND_CONV (CooperSyntax.mk_abs_CONV i)) THENC recurse
-end tm
 
 (* ----------------------------------------------------------------------
     do_divisibility_analysis v ctxt tm
@@ -444,7 +394,7 @@ fun calculate_nightmare ctxt tm = let
   val reducer =
       BINDER_CONV (LAND_CONV (RAND_CONV
                                 (RAND_CONV CooperMath.REDUCE_CONV))) THENC
-      calculate_range_disjunct
+      OmegaMath.calculate_range_disjunct
   fun recurse t =
       ((REWR_CONV cnightmare1 THENC reducer) ORELSEC
        (REWR_CONV cnightmare_cons THENC LAND_CONV reducer THENC
@@ -452,9 +402,10 @@ fun calculate_nightmare ctxt tm = let
 in
   BINDER_CONV (REWR_CONV calculational_nightmare THENC
                RAND_CONV expand_evals THENC
-               recurse) THENC
+               recurse THENC REWRITE_CONV []) THENC
   CooperSyntax.push_in_exists THENC
-  EVERY_DISJ_CONV (do_divisibility_analysis v ctxt)
+  EVERY_DISJ_CONV (do_divisibility_analysis v ctxt) THENC
+  REWRITE_CONV []
 end tm
 
 
@@ -615,83 +566,6 @@ in
                                           else VACUOUS_LOW)
 end
 
-(* ----------------------------------------------------------------------
-    eliminate_positive_divides t
-
-    t is a term of the form ?x1 .. xn. body, where body is a conjunction
-    of leaves, possibly including divisibility relations (negated or
-    positive).  This function writes away those (positive) divisibility
-    relations of the form   d | exp   where exp includes at least one
-    variable from x1 .. xn.
-   ---------------------------------------------------------------------- *)
-
-fun eliminate_positive_divides t = let
-  val (vs, body) = strip_exists t
-  fun find_divides tm = let
-  in
-    if is_conj tm then
-      (LAND_CONV find_divides THENC LEFT_AND_EXISTS_CONV) ORELSEC
-      (RAND_CONV find_divides THENC RIGHT_AND_EXISTS_CONV)
-    else if is_divides tm andalso
-            not (null (intersect vs (free_vars (rand tm))))
-    then
-      REWR_CONV INT_DIVIDES THENC
-      BINDER_CONV OmegaMath.leaf_normalise
-    else
-      NO_CONV
-  end tm
-in
-  STRIP_QUANT_CONV find_divides THENC OmegaEq.OmegaEq THENC
-  TRY_CONV eliminate_positive_divides
-end t
-
-(* ----------------------------------------------------------------------
-    eliminate_negative_divides t
-
-    t is a term of the form ?x1 .. xn. body, where body is a conjunction
-    of leaves, possibly including divisibility relations (negated or
-    positive).  This function writes away those negated divisibility
-    relations of the form ~(d | exp) where exp includes at least one
-    variable from x1 .. xn.
-   ---------------------------------------------------------------------- *)
-
-fun eliminate_negative_divides t = let
-  val (vs, _) = strip_exists t
-  fun elim_ndivides tm = let
-    val (c, d) = dest_divides (rand tm)
-    val c_neq_0 = EQT_ELIM (CooperMath.REDUCE_CONV
-                              (mk_neg(mk_eq(rand c, numSyntax.zero_tm))))
-  in
-    MP (SPECL [rand c, d] int_arithTheory.NOT_INT_DIVIDES_POS) c_neq_0
-  end
-  fun rdistrib tm =
-      TRY_CONV (REWR_CONV RIGHT_AND_OVER_OR THENC RAND_CONV rdistrib) tm
-  fun ldistrib tm =
-      TRY_CONV (REWR_CONV LEFT_AND_OVER_OR THENC RAND_CONV ldistrib) tm
-  fun find_divides tm = let
-  in
-    if is_conj tm then
-      (LAND_CONV find_divides THENC rdistrib) ORELSEC
-      (RAND_CONV find_divides THENC ldistrib)
-    else if is_neg tm andalso
-            not (null (intersect vs (free_vars (rand (rand tm)))))
-    then
-      elim_ndivides THENC
-      BINDER_CONV (LAND_CONV (RAND_CONV (CooperMath.REDUCE_CONV))) THENC
-      calculate_range_disjunct THENC
-      EVERY_DISJ_CONV (RAND_CONV OmegaMath.SORT_AND_GATHER1_CONV)
-    else NO_CONV
-  end tm
-  fun push tm = let
-    val (vs, body) = strip_exists tm
-  in
-    CooperSyntax.push_in_exists THENC
-    EVERY_DISJ_CONV (RENAME_VARS_CONV (map (#1 o dest_var) vs))
-  end tm
-in
-  BINDER_CONV find_divides THENC push THENC
-  TRY_CONV eliminate_negative_divides
-end t
 
 
 
@@ -716,7 +590,7 @@ fun eliminate_an_existential0 t = let
     val (lvs, body) = strip_exists tm
   in
     if length lvs = length vs then
-      Profile.profile "eq" OmegaEq.OmegaEq
+      Profile.profile "eq" OmegaMath.OmegaEq
     else
       ALL_CONV
   end tm
@@ -734,30 +608,87 @@ in
 end t
 
 val eliminate_an_existential =
-    TRY_CONV eliminate_negative_divides THENC
-    EVERY_DISJ_CONV (TRY_CONV eliminate_positive_divides THENC
-                     eliminate_an_existential0)
+    TRY_CONV OmegaMath.eliminate_negative_divides THENC
+    EVERY_DISJ_CONV (TRY_CONV OmegaMath.eliminate_positive_divides THENC
+                     eliminate_an_existential0) THENC
+    REWRITE_CONV []
+
+(* ----------------------------------------------------------------------
+    eliminate_existentials t
+
+    given a normalised term of the form
+      ?x1..xn. body
+    eliminate all of its existentials.
+   ---------------------------------------------------------------------- *)
+
+fun eliminate_existentials tm =
+    if is_exists tm then
+      (eliminate_an_existential THENC
+       EVERY_DISJ_CONV eliminate_existentials) tm
+    else REWRITE_CONV [] tm
+
+
+(* ----------------------------------------------------------------------
+    sym_normalise tm
+
+    tm is of form
+      ?x1..xn. body
+    where body has no nested quantifiers.  Only difference with the
+    normalisation routine in OmegaShell is that we don't automatically
+    eliminate divisibility terms, because we're not necessarily going
+    to be able to.  We also have to eliminate equality terms that survive
+    the attempt to get rid of them with OmegaEq.
+   ---------------------------------------------------------------------- *)
+
+fun ISCONST_CONV tm = if is_const tm then ALL_CONV tm else NO_CONV tm
+
+val sym_normalise = let
+  fun push_exs tm = let
+    val vs = map (#1 o dest_var) (#1 (strip_exists tm))
+  in
+    CooperSyntax.push_in_exists THENC EVERY_DISJ_CONV (RENAME_VARS_CONV vs)
+  end tm
+  open OmegaMath
+  val elim_eq = REWR_CONV (GSYM INT_LE_ANTISYM) THENC
+                RAND_CONV leaf_normalise
+in
+  STRIP_QUANT_CONV (Canon.NNF_CONV leaf_normalise false THENC
+                    CSimp.csimp (TRY_CONV leaf_normalise)) THENC
+  push_exs THENC
+  EVERY_DISJ_CONV (OmegaEq THENC DEPTH_CONV elim_eq THENC
+                   (ISCONST_CONV ORELSEC
+                    (STRIP_QUANT_CONV Canon.PROP_DNF_CONV THENC push_exs)))
+end
+
 
 (* ----------------------------------------------------------------------
     find_deep_existentials tm
 
    ---------------------------------------------------------------------- *)
 
-fun find_deep_existentials tm = let
+fun is_bool_binop t = let
+  val (f,args) = strip_comb t
 in
-  if is_forall tm then let
-      val (vs, body) = strip_forall tm
-    in
-      if is_exists body then STRIP_QUANT_CONV find_deep_existentials
-      else CooperSyntax.flip_foralls THENC RAND_CONV eliminate_an_existential
-    end
-  else if is_exists tm then let
-      val (vs, body) = strip_exists tm
-    in
-      if is_forall body then STRIP_QUANT_CONV find_deep_existentials
-      else eliminate_an_existential
-    end
-  else NO_CONV
+  length args = 2 andalso is_const f andalso
+  (List.exists (same_const f) [conjunction, disjunction]
+   orelse same_const f equality andalso type_of (hd args) = bool)
+end
+
+fun findelim_deep_existential tm = let
+in
+  if is_forall tm then
+    (STRIP_QUANT_CONV findelim_deep_existential) ORELSEC
+    (CooperSyntax.flip_foralls THENC RAND_CONV findelim_deep_existential)
+  else if is_exists tm then
+    (STRIP_QUANT_CONV findelim_deep_existential) ORELSEC
+    (sym_normalise THENC EVERY_DISJ_CONV (TRY_CONV eliminate_an_existential))
+  else if is_bool_binop tm then
+    (LAND_CONV findelim_deep_existential) ORELSEC
+    (RAND_CONV findelim_deep_existential)
+  else if is_neg tm then
+    RAND_CONV findelim_deep_existential
+  else
+    NO_CONV
 end tm
 
 end (* struct *)

@@ -8,7 +8,7 @@ test_coopers: test_coopers.uo ../Cooper.uo ../CooperShell.uo \
 	HOLMOSMLC -o test_coopers test_coopers.uo
 
 test_omega: test_omega.uo ../Omega.uo ../OmegaShell.uo ../OmegaSimple.uo \
-            ../IntDP_Munge.uo test_cases.uo
+            ../IntDP_Munge.uo test_cases.uo ../OmegaMath.uo
 	HOLMOSMLC -o test_omega test_omega.uo
 
 tcooper: tcooper.c

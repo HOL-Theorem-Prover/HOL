@@ -14,6 +14,8 @@ fun c1 ORELSEC c2 = ORELSEQC c1 c2
 val BINOP_CONV = BINOP_QCONV
 val ALL_CONV = ALL_QCONV
 
+fun CONV_RULE c th = Conv.CONV_RULE c th handle UNCHANGED => th
+
 fun has_atom dthis is_other t = let
   val (t1, t2) = dthis t
 in
@@ -38,11 +40,19 @@ end t handle (e as HOL_ERR _) => if is_other t then raise e else ALL_CONV t
 fun disj_cong0 c t = let
   val (d1, d2) = dest_disj t
   val notd1_t = mk_neg d1
-  val notd1_thm = EQF_INTRO (ASSUME notd1_t)
-  val d1_thm0 = AP_TERM boolSyntax.negation notd1_thm
-  val d1_thm =
-      CONV_RULE (LAND_CONV c THENC RAND_CONV (REWRITE_CONV [])) d1_thm0
-  val d2_rewritten = DISCH notd1_t (REWRITE_CONV [notd1_thm, d1_thm] d2)
+  val notd1_th = ASSUME notd1_t
+  val rwts =
+      if is_neg d1 then
+        [EQT_INTRO (CONV_RULE (REWR_CONV NOT_NOT_P) notd1_th)]
+      else let
+          val notd1_thm = EQF_INTRO notd1_th
+          val d1_thm0 = AP_TERM boolSyntax.negation notd1_thm
+          val d1_thm =
+              CONV_RULE (LAND_CONV c THENC RAND_CONV (REWRITE_CONV [])) d1_thm0
+        in
+          [notd1_thm, d1_thm]
+        end
+  val d2_rewritten = DISCH notd1_t (REWRITE_CONV rwts d2)
 in
   K (MATCH_MP simple_disj_congruence d2_rewritten) THENC
   TRY_CONV (REWR_CONV T_or_r ORELSEC REWR_CONV F_or_r)

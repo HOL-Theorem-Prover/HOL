@@ -69,6 +69,17 @@ val sumc_MULT = store_thm(
   Induct THEN SRW_TAC [][sumc_thm] THEN
   Cases_on `vs` THEN SRW_TAC [INT_MUL_AC_ss][sumc_thm, INT_LDISTRIB]);
 
+val sumc_singleton = store_thm(
+  "sumc_singleton",
+  ``!f (c:int). sumc (MAP f [c]) [1] = f c``,
+  REWRITE_TAC [INT_ADD_RID, sumc_def, listTheory.MAP,
+               INT_MUL_RID]);
+val sumc_nonsingle = store_thm(
+  "sumc_nonsingle",
+  ``!f cs (c:int) v vs. sumc (MAP f (c::cs)) (v::vs) =
+                  f c * v + sumc (MAP f cs) vs``,
+  REWRITE_TAC [sumc_def, listTheory.MAP])
+
 val modhat_def = Define
   `modhat x y = x - y * ((2 * x + y) / (2 * y))`;
 

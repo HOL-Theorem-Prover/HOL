@@ -1,29 +1,37 @@
 signature OmegaMath =
 sig
   include Abbrev
-  val find_summand          : term -> term -> term
-  val gcd_eq_check          : conv
-  val gcd_le_check          : conv
-  val gcd_check             : conv
+  val find_summand               : term -> term -> term
+  val gcd_eq_check               : conv
+  val gcd_le_check               : conv
+  val gcd_check                  : conv
 
-  val addzero               : conv
+  val addzero                    : conv
 
-  val INT_NORM_CONV         : conv
-  val NAIVE_INT_NORM_CONV   : conv
-  val RLIB_INT_NORM_CONV    : conv
+  val INT_NORM_CONV              : conv
+  val NAIVE_INT_NORM_CONV        : conv
+  val RLIB_INT_NORM_CONV         : conv
 
-  val INT_EQ_CONV           : conv
+  val INT_EQ_CONV                : conv
 
-  val SORT_AND_GATHER1_CONV : conv
-  val SORT_AND_GATHER_CONV  : conv
-  val S_AND_G_MULT          : conv
+  val SORT_AND_GATHER1_CONV      : conv
+  val SORT_AND_GATHER_CONV       : conv
+  val S_AND_G_MULT               : conv
 
-  val MOVE_VCOEFF_TO_FRONT  : term -> conv
-  val NEG_SUM_CONV          : conv
-  val NORMALISE_MULT        : conv
+  val MOVE_VCOEFF_TO_FRONT       : term -> conv
+  val NEG_SUM_CONV               : conv
+  val NORMALISE_MULT             : conv
 
-  val leaf_normalise        : conv
-  val sum_normalise         : conv
+  val leaf_normalise             : conv
+  val sum_normalise              : conv
+  val PRENEX_CONV                : conv
+  val cond_removal               : conv
+
+  val eliminate_positive_divides : conv
+  val eliminate_negative_divides : conv
+  val calculate_range_disjunct   : conv
+
+  val OmegaEq                    : conv
 end;
 
 (*
@@ -114,6 +122,52 @@ end;
    Omega normal form, where the resulting term is of the form
        c1 * v1 + c2 * v2 + c3 * v3 + ... + cn * vn + c
    where the c is always present and maybe 0.
+
+   [PRENEX_CONV t] normalises t by pulling quantifiers to the front, over
+   boolean connectives such as ~ /\ \/ and also if-then-else, as long as
+   the quantifier is not in the guard of the latter.
+
+   [cond_removal t] removes those conditional expressions from t that repeat
+   their guards, and introduces a case split (i.e., disjunctions) at the
+   top level of the term to reflect this.   Don't use if you want to generate
+   CNF.
+
+   [eliminate_positive_divides t] where t is a term of the form
+       ?x1 .. xn. body
+   where body is a conjunction of leaves, possibly including
+   divisibility relations (negated or positive).  This function
+   writes away those (positive) divisibility relations of the form
+       d | exp
+   where exp includes at least one variable from x1 .. xn.
+
+   [eliminate_negative_divides t] where t is a term of the form
+       ?x1 .. xn. body
+   where body is a conjunction of leaves, possibly including
+   divisibility relations (negated or positive).  This function writes
+   away those negated divisibility relations of the form
+       ~(d | exp)
+   where exp includes at least one variable from x1 .. xn.  It
+   introduces case splits in the body (at least where d is not 2), and
+   pushes the existential variables over the resulting disjunctions.
+   It doesn't eliminate the positive divisibility terms that result.
+
+   [calculate_range_disjunct t] where t is of the form
+       ?i. (lo <= i /\ i <= hi) /\ ...
+   and lo and hi are integer literal.  Transforms this into an
+   appropriate number of disjuncts (or possibly false, if hi < lo, of
+   the form
+       P(lo) \/ P (lo + 1) \/ .. P (hi)
+   but where the additions (lo + 1 etc) are reduced to literals
+
+   [OmegaEq t] simplifies an existentially quantified Presburger term,
+   (or returns QConv.UNCHANGED) by using the equality elimination
+   procedure described in section 2.2 of Pugh's CACM paper.
+
+   The term t should be of the form
+      ?v1..vn. body
+   If the conversion is to do anything other than return UNCHANGED,
+   there should be a Omega-normalised equality in (strip_conj body).
+
 
 *)
 

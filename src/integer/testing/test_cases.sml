@@ -57,6 +57,8 @@ val terms_to_test =
    ("NDIV1", Term`!x. 0 < x ==> x DIV 2 < x`),
    ("KXSDIV1", Term`!n. ~(n = 0) /\ EVEN n ==> (n - 2) DIV 2 < n`),
    ("KXSDIV2", Term`!n. ~(n = 0) /\ ~EVEN n ==> (n - 1) DIV 2 < n`),
+   ("simp_divides1", ``!x. 0 < x /\ 2 int_divides x ==> 1 < x``),
+   ("simp_divides2", ``!x. 0 <= x /\ ~(2 int_divides x) ==> 1 <= x``),
    ("sub_zero_coeff", Term`!x y:int. 0 < x ==> y - x < y`),
    ("10000.9391",
     Term`~(v <
