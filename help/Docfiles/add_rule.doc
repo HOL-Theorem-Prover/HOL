@@ -223,7 +223,16 @@ pretty-printing.
                     block_style = (AroundEachPhrase,
                                    (PP.INCONSISTENT, 0))}};
 }
-\noindent The pretty-printer prefers later rules over earlier rules by
+\noindent Note that the above form is not that actually used in the
+system.  As written, this allows for pretty-printing some expressions
+as:
+{
+   if P then
+      <very long term> else Q
+}
+\noindent because the {block_style} is {INCONSISTENT}.
+
+The pretty-printer prefers later rules over earlier rules by
 default (though this choice can be changed with {prefer_form_with_tok}
 (q.v.)), so conditional expressions print using the {if-then-else}
 syntax rather than the {_ => _  | _} syntax.
