@@ -1,0 +1,131 @@
+Release notes for the Taupo-1 release of Hol98
+==============================================
+
+The forthcoming Hol98 release (called Taupo-1) is joint work with
+Bruno Barras, Mike Gordon, and Michael Norrish. Since the release
+offers some significant changes due mainly to work by Michael Norrish,
+we have decided to change the release name from "Athabasca" (a river
+in Alberta) to "Taupo" (a lake in New Zealand).
+
+The following is a brief summary of the new features in this release
+(new since Athabasca-4):
+
+Documentation:
+
+  The new release comes with updated documentation.  This
+  documentation builds on top of the Reference, Description and
+  Tutorial of the original HOL88 manual structure.  The Tutorial has
+  been completely reworked to be up-to-date and correct for hol98,
+  while the Reference and Description are still being worked on.  New
+  features (such as the simplifier, MESON_TAC, and the parser) in the
+  latter pair are described accurately (if not completely), but
+  remnants of oyt-of-date HOL88 documentation persist.
+
+Kernel:
+
+  Term operations are implemented using explicit substitutions.  This
+  work is due to Bruno Barras and allows certain algorithms to be
+  implemented more efficiently without adversely effecting normal
+  efficiency, nor soundness.
+
+New object language support:
+
+  The parser and pretty-printer have been completely re-implemented.
+  Features of the new code are:
+    * Overloading
+        Strings can to be overloaded to stand for multiple different
+        constants.  This extends to numerals so that 0 can stand for a
+        natural number, integer or real depending on context.  This
+        overloading is entirely a facet of the parsing/pretty-printing
+        layer and has no reflection in the core logic or kernel.
+    * Type-checking
+        Type-checking is now done entirely outside of the kernel,
+        making for a cleaner separation of concerns.
+    * First class grammars
+        Grammar values, encoding all of the information about infixes,
+        overloading and other syntactic matters are first class values
+        in the system and can be manipulated with a large suite of
+        exported functions.
+    * New syntax
+        Arithmetic operators are now left associative where
+        appropriate (i.e., +, -, *, DIV).  There is new syntax for
+        records, allowing one to write terms such as
+          record.fld1                          (* field selection *)
+          rcd with fld2 := 3                   (* updating one field *)
+          rcd with <| fld1 := 4; fld2 := T |>  (* updating many fields *)
+        Conditional expressions can now be written with "if-then-else"
+        as well as the traditional "=>-|" syntax.  New mixfix syntaxes
+        can be defined by the user as they choose.
+    * Antiquotation has been changed (to be like hol88) so that free
+      variables in an antiquote can affect the type assignment of
+      variables in the rest of the term, outside of the anti-quote.
+
+New theories:
+
+  * Rings
+      A theory of rings has been developed by Bruno Barras.  It makes
+      use of some nascent abstract theory technology and also forms
+      the basis for code with can perform automatic normalisation of
+      polynomials over rings.
+  * Finite sets
+      A small theory of finite sets, developed by Axel Mamode, is
+      included.  The theory makes use of code to automatically
+      translate results from the general theory of sets.
+
+New libraries:
+
+  * HolBdd
+      Developed by Mike Gordon, this library allows the principled use
+      of BDD technology within HOL.  The library builds on top of the
+      Muddy library, written by Ken Friis Larsen, to make an efficient
+      (i.e., implemented in C) BDD type available.  HolBddLib includes
+      SML code to manipulate BDDs to perform standard tasks such as
+      state space exploration.
+
+  * computeLib
+      Written by Bruno Barras, this library implements a conversion to
+      perform efficient "call-by-value" rewriting.  This allows one to
+      efficiently do computation within the logic.  For example, the
+      arithmetic calculations of reduceLib are now all implemented
+      using this library.
+
+New functionality in old libraries:
+
+  * bossLib:
+      Define has been improved to handle mutual, nested and schematic
+      recursions
+  * Simpsets for:
+      + integers
+      + sets
+  * Goaltrees
+      A new form of goalstack that allows one to keep track of the
+      whole tree of a proof at once.
+  * Datatype:
+      Datatypes are now handled uniformly.  One function,
+      Hol_datatype, is used to declare record types, normal recursive
+      types, nested recursive types and mutually recursive types.  The
+      same uniformity of approach means that Define will define
+      functions over all of these types cleanly.  Old libraries
+      (Define_type, nestedrecLib, Def_MN_Type etc) are still
+      available, though deprecated, but code using these may need
+      slight changes to cope with a change in the form of datatype
+      axioms.
+
+New examples:
+
+  * HolBdd                                   (M. Gordon)
+  * RSA                                      (L. Thery)
+  * Lambda calculus                          (A. Gordon, Melham)
+
+Supported Platforms:
+
+  hol98 is known to build on Linux, Solaris and Windows NT.  It makes
+  no special demands of the O/S (with one exception) so should run on
+  any platform where there is a Moscow ML implementation (i.e., many
+  Unices, and Windows 95, 98 and NT).
+
+  The HolBdd library requires use of dynamic or shared library
+  linking, and this is known to work on Linux and Solaris.  It
+  probably works on other Unices where shared library support works
+  under Moscow ML.  This is known NOT to be available under Windows.
+
