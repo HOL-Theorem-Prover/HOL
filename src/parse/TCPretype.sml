@@ -1,4 +1,5 @@
-
+structure TCPretype :> TCPretype =
+struct
 open Exception
 fun TCERR f msg = HOL_ERR {origin_structure = "TCPretype",
                            origin_function = f, message = msg}
@@ -190,3 +191,5 @@ fun fromType t =
 fun chase (Tyop("fun", [_, ty])) = ty
   | chase (UVar(ref (SOME ty))) = chase ty
   | chase _ = raise Fail "chase applied to non-function type"
+
+end

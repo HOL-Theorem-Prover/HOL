@@ -10,6 +10,7 @@ datatype grammar_rule =
 val std_suffix_precedence = 100
 
 type grammar = (int * grammar_rule) list
+type 'a token = 'a type_token
 
 
 fun n_appls _ ([], t) = t

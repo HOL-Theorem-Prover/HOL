@@ -1,6 +1,4 @@
-local
-  open HOLgrammars
-in
+signature term_grammar = sig
 
   type block_info = PP.break_style * int
   datatype rule_element = TOK of string | TM
@@ -32,7 +30,7 @@ datatype binder = LAMBDA | BinderString of string
 datatype prefix_rule = STD_prefix of rule_record list | BINDER of binder list
 datatype suffix_rule = STD_suffix of rule_record list | TYPE_annotation
 datatype infix_rule =
-  STD_infix of rule_record list * associativity |
+  STD_infix of rule_record list * HOLgrammars.associativity |
   RESQUAN_OP
 
 type listspec =
@@ -104,7 +102,10 @@ val add_listform : grammar -> {separator : string, leftdelim : string,
                                rightdelim : string, cons : string,
                                nilstr : string} -> grammar
 datatype rule_fixity =
-  Infix of associativity * int | Closefix | Suffix of int | TruePrefix of int
+  Infix of HOLgrammars.associativity * int |
+  Closefix |
+  Suffix of int |
+  TruePrefix of int
 
 val rule_fixityToString : rule_fixity -> string
 val add_rule :
@@ -140,7 +141,8 @@ val prefer_form_with_tok :
   grammar -> {term_name : string, tok : string} -> grammar
 
 
-val set_associativity_at_level : grammar -> (int * associativity) -> grammar
+val set_associativity_at_level :
+  grammar -> (int * HOLgrammars.associativity) -> grammar
 val get_precedence : grammar -> string -> rule_fixity option
 
 val merge_grammars : (grammar * grammar) -> grammar

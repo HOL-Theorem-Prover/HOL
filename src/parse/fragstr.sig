@@ -1,6 +1,5 @@
-local
-  open monadic_parse
-in
+signature fragstr = sig
+  type ('a,'b) Parser = ('a,'b) monadic_parse.Parser
   val antiq : ('a, 'a frag) Parser
   val item : char -> (char, 'a frag) Parser
   val itemP : (char -> bool) -> (char, 'a frag) Parser

@@ -1,18 +1,20 @@
-local
-  open monadic_parse HOLgrammars
+signature parse_type = sig
   type 'a token = 'a type_tokens.type_token
-in
-
   datatype grammar_rule =
     SUFFIX of string list
-  | INFIX of {opname : string, parse_string : string} list * associativity
+  | INFIX of {opname : string, parse_string : string} list *
+             HOLgrammars.associativity
 
   type grammar
   val rules : grammar -> (int * grammar_rule) list
 
   val parse_type :
-    {vartype : string -> 'a, tyop : (string * 'a list) -> 'a,
-     antiq : 'b -> 'a} -> bool -> grammar -> ('a, 'b frag) Parser
+    {vartype : string -> 'a,
+     tyop : (string * 'a list) -> 'a,
+     antiq : 'b -> 'a} ->
+    bool ->
+    grammar ->
+    ('a, 'b frag) monadic_parse.Parser
 
     (* The record of functions specify how to deal with the need to
        construct variable types, type operators and antiquotations
@@ -27,10 +29,11 @@ in
        yet. *)
   val empty_grammar : grammar
 
-  val new_binary_tyop : grammar -> {precedence : int,
-                                    infix_form : string option,
-                                    opname : string,
-                                    associativity : associativity} -> grammar
+  val new_binary_tyop :
+    grammar -> {precedence : int,
+                infix_form : string option,
+                opname : string,
+                associativity : HOLgrammars.associativity} -> grammar
   val new_tyop : grammar -> string -> grammar
 
   val std_suffix_precedence : int

@@ -1,4 +1,12 @@
+structure Parse :> Parse = struct
+
 open HolKernel HOLgrammars GrammarSpecials
+
+type pp_element = term_grammar.pp_element
+type PhraseBlockStyle = term_grammar.PhraseBlockStyle
+type ParenStyle = term_grammar.ParenStyle
+type block_info = term_grammar.block_info
+
 
 fun ERROR f msg =
   HOL_ERR {origin_structure = "Parse",
@@ -56,7 +64,10 @@ val type_parser2 =
   ref (parse_type.parse_type typ2_rec false (!the_type_grammar))
 
 (* pretty printing *)
-val term_printer = ref (term_pp.pp_term (term_grammar()) (type_grammar()))
+val grammar_term_printer =
+  ref (term_pp.pp_term (term_grammar()) (type_grammar()))
+fun pp_grammar_term pps t = (!grammar_term_printer) pps t
+val term_printer = ref pp_grammar_term
 val type_printer = ref (type_pp.pp_type (type_grammar()))
 
 fun print_from_grammars (tyG, tmG) =
@@ -328,6 +339,14 @@ in
     end
   end
 
+  fun get_term_printer () = (!term_printer)
+
+  fun set_term_printer new_pp_term = let
+    val old_pp_term = !term_printer
+  in
+    term_printer := new_pp_term;
+    old_pp_term
+  end
 
   val the_term_parser: (term frag list -> Absyn.absyn) ref =
     ref (do_parse (!the_term_grammar) (!type_parser1))
@@ -337,7 +356,8 @@ in
   in
     if (!term_grammar_changed) then let
     in
-      term_printer := term_pp.pp_term (term_grammar()) (type_grammar());
+      grammar_term_printer :=
+        term_pp.pp_term (term_grammar()) (type_grammar());
       the_term_parser := do_parse (!the_term_grammar) (!type_parser1);
       term_grammar_changed := false
     end
@@ -1218,3 +1238,5 @@ val AroundEachPhrase = term_grammar.AroundEachPhrase
 val PPBlock = term_grammar.PPBlock
 val BeginFinalBlock = term_grammar.BeginFinalBlock
 val EndInitialBlock = term_grammar.EndInitialBlock
+
+end
