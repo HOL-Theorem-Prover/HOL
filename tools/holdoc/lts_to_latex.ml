@@ -42,20 +42,6 @@ exception Trailing (* there is trailing info in the file *)
 exception BadLabel
 exception BadDirective (* ill-positioned directive *)
 
-(* build a fast stream of tokens from lexed stdin *)
-let tokstream =
-  let lexbuf = Lexing.from_channel stdin in
-  relheader lexbuf ;
-  let f _ = (* I hope it is valid to assume that *all*
-               tokens are requested, in ascending order! *)
-    try
-      Some (reltoken lexbuf)
-    with
-      Finished -> None
-  in
-  Stream.from f
-
-
 (* a useful helper *)
 let isIndent t =
   match t with
@@ -66,17 +52,6 @@ let isDirEnd t =
   match t with
     DirEnd    -> true
   | _         -> false
-
-let rec render_token t =
-  match t with
-    Ident(s,_)   -> "I:"^s
-  | Indent(n)    -> "\nN:"^(String.make n '>')
-  | White(s)     -> "W:"^s
-  | Comment(s)   -> "C:(*"^s^"*)-C"
-  | DirBeg       -> "D+"
-  | DirEnd       -> "-D"
-  | DirBlk(n,ts) -> "D:"^n^": "^(String.concat " " (List.map render_token ts))^" :D"
-  | Sep(s)       -> "S:"^s
 
 let print_tokenline toks =
     let f t = print_string ((render_token t)^" ")
@@ -116,9 +91,9 @@ double square brackets like this: [[Flags(T,F)]].
 
 
 type rule =
-    Rule of string list * string * string * string option (* v, n, cat, desc, *)
+    Rule of string list * string * string * token list option (* v, n, cat, desc, *)
         * token list list * token list * token list list (* lhs, lab, rhs, *)
-        * token list list * string option (* side, comm *)
+        * token list list * token list option (* side, comm *)
 
 
 let rec parse_line = parser
@@ -137,8 +112,21 @@ and parse_chunk1 n = parser
   | [<>]                  -> []
 
 and optcomm = parser
-    [< 'Comment(c) >] -> Some c
-  | [<>]              -> None
+    [< 'Comment(c) >]                  -> Some [Comment(c)]
+  | [< 'HolStartTeX; ts = parse_tex >] -> Some (HolStartTeX :: ts)
+  | [<>]                               -> None
+
+and parse_tex = parser
+    [< 'HolEndTeX >]                                     -> [HolEndTeX]
+  | [< 'TeXStartHol; ts = parse_hol;  ts' = parse_tex >] -> TeXStartHol :: ts @ ts'
+  | [< 'TeXStartHol0; ts = parse_hol; ts' = parse_tex >] -> TeXStartHol :: ts @ ts'
+  | [< 'TeXNormal(s);                 ts' = parse_tex >] -> TeXNormal(s) :: ts'
+
+and parse_hol = parser
+    [< 'TeXEndHol >]                                    -> [TeXEndHol]
+  | [< 'TeXEndHol0 >]                                   -> [TeXEndHol0]
+  | [< 'HolStartTeX; ts = parse_tex; ts' = parse_hol >] -> HolStartTeX :: ts @ ts'
+  | [< 't;                           ts' = parse_hol >] -> t :: ts'
 
 and sp1 = parser
     [< 'White(s)                  ; s1 = sp >] -> White(s)     :: s1
@@ -235,7 +223,11 @@ and rule_name = parser
 
 
 and parse_rules_and_process p = parser
-    [< _ = sp'; rs = parse_rules_ap1 p >] -> rs
+    [< 'Ident("Net_Hol_reln",_); _ = sp'; rs = parse_rules_ap0 p >] -> rs
+  | [< '_                      ; rs = parse_rules_and_process p  >] -> rs
+and parse_rules_ap0 p = parser
+    [< 'Backtick; _ = sp'; rs = parse_rules_ap1 p >] -> rs
+  | [< rs = parse_rules_and_process p             >] -> rs
 and parse_rules_ap1 p = parser
     [< 'Sep("("); _ = sp; r = (function ts -> p (parse_rule1 ts)); _ = sp';
        rs = parse_rules_ap2 p >] -> r :: rs
@@ -243,23 +235,20 @@ and parse_rules_ap1 p = parser
 and parse_rules_ap2 p = parser
     [< 'Ident("/\\",_); _ = sp';
        rs = parse_rules_ap1 p >] -> rs
-  | [<>]                         -> []
+  | [< 'Backtick >]              -> []
+  | [<>]                         -> raise (Stream.Error("expected /\\ or `"))
 
 (* let's do this thing *)
-
-let grab_rules () =
-  let rules = parse_rules_ap1 (function x -> x) tokstream
-  in
-  if Stream.peek tokstream != None then
-    raise Trailing
-  else
-    rules
-
 
 (* debugging rule printer *)
 
 let print_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)) =
-  print_string ("Rule "^n^" ("^cat^(match desc with Some d -> " "^d | None -> "")^")\n");
+  print_string ("Rule "^n^" ("^cat);
+  (match desc with
+     Some d -> print_string " ";
+               print_tokenline d
+   | None   -> ());
+  print_string ")\n";
   print_string "Vars:\n";
   ignore (List.map (function s -> print_string (s^" ")) v);
   print_newline() ;
@@ -271,9 +260,11 @@ let print_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)) =
   ignore (List.map print_tokenline rhs);
   print_string "Side:\n";
   ignore (List.map print_tokenline side);
-  print_string (match comm with
-                  Some c -> "Comments:\n"^c^"\n"
-               |  None   -> "");
+  (match comm with
+     Some c -> print_string "Comments:\n";
+               print_tokenline c;
+               print_newline()
+  |  None   -> ());
   print_newline()
 
 
@@ -419,6 +410,9 @@ let is_con s = List.mem s
   ; "Lh_console"
   ; "Lh_tau"
   (* rule_ids and rule_cats omitted *)
+  (* added by hand for comments etc *)
+  ; "EWOULDBLOCK"
+  ; "EDESTADDRREQ"
 ]
 
 let is_field s = List.mem s
@@ -643,19 +637,28 @@ let mindent n = (* munge an indentation of level n *)
   let m = (n-5) / 2 in
   String.concat "" (ntimes m "\\quad") ^ " "
 
-let mtok v t =
+let rec mtok v t =
   match t with
     Ident(s,true)  -> mident v s
   | Ident(s,false) -> msym v s
   | Indent(n)      -> mindent n
   | White(s)       -> s
-  | Comment(s)     -> "\\text{\\small(*"^s^"*)}"
+  | Comment(s)     -> "\\tscomm{"^munget v s^"}"
   | DirBlk(_,_)    -> ""
   | DirBeg         -> raise BadDirective
   | DirEnd         -> raise BadDirective
   | Sep(s)         -> texify s
+  | Backtick       -> "\\texttt{`}"
+  | DBacktick      -> "\\texttt{``}"
+  | TeXStartHol    -> "$"
+  | TeXStartHol0   -> ""
+  | TeXEndHol      -> "$"
+  | TeXEndHol0     -> ""
+  | TeXNormal(s)   -> s
+  | HolStartTeX    -> "\\tscomm{"
+  | HolEndTeX      -> "}"
 
-let rec munges v ls = (* munge a list of lines *)
+and munges v ls = (* munge a list of lines *)
   match ls with
     (l::[]) -> munge v l
   | (l::ls) -> munge v l^"{}\\\\\n{}"^munges v ls
@@ -719,7 +722,6 @@ let hol_binders =
   ] 
 
 let potential_vars (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)) =
-    let pot_t s = [] in  (* binders in text *)
     let rec pot_l ts =       (* binders in a line *)
       match ts with
         (Ident(s,_)::ts) -> if List.mem s hol_binders then
@@ -731,26 +733,22 @@ let potential_vars (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)) =
     and bdrs ts =        (* we've hit a binder; read vars until separator *)
       match ts with
         (Ident(s,_)::ts)       -> s :: bdrs ts
-      | (White(s)::ts)         -> bdrs ts
-      | (Indent(s)::ts)        -> bdrs ts
-      | (Comment(s)::ts)       -> bdrs ts
       | (DirBlk("VARS",s)::ts) -> dir_var_vars s @ bdrs ts
-      | (DirBlk(_,s)::ts)      -> bdrs ts
-      | (DirBeg::ts)           -> bdrs ts
-      | (DirEnd::ts)           -> bdrs ts
       | (Sep(s)::ts)           -> pot_l ts
+      | (_::ts)                -> bdrs ts
       | []                     -> [] in
     let rec pot_s ls =       (* binders in lines *)
       match ls with
         (l::ls) -> pot_l l @ pot_s ls
       | []      -> [] in
     v              (* bound at top *)
-    @ pot_t desc   (* bound in each bit... *)
+                   (* bound in each bit... *)
+    @ (match desc with Some c -> pot_l c | None -> [])
     @ pot_s lhs
     @ pot_l lab
     @ pot_s rhs
     @ pot_s side
-    @ (match comm with Some c -> pot_t c | None -> [])
+    @ (match comm with Some c -> pot_l c | None -> [])
 
 (* munge a whole rule *)
 
@@ -759,21 +757,21 @@ let latex_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm) as r) =
   print_string ("\\showrule{\\rrule"^if side == [] then "n" else "c"
                          ^match comm with Some _ -> "c" | None -> "n");
   print_string ("{"^texify n^"}{"^texify cat^"}");
-  print_string ("{"^(match desc with Some d -> munget pvs d | None -> "")^"}\n");
+  print_string ("{"^(match desc with Some d -> munge pvs d | None -> "")^"}\n");
   print_string ("{"^munges pvs lhs^"}\n");
   print_string ("{"^mungelab pvs lab^"}\n");
   print_string ("{"^munges pvs rhs^"}\n");
   print_string ("{"^munges pvs side^"}\n");
   print_string "{";
   (match comm with
-     Some c -> print_string (munget pvs c)
+     Some c -> print_string (munge pvs c)
    | None   -> ());
   print_string "}}\n\n"
 
 (* render the whole input stream *)
 
 let latex_render () =
-  ignore (parse_rules_and_process latex_rule tokstream)
+  ignore (parse_rules_and_process latex_rule holtokstream)
 
 (* main program *)
 

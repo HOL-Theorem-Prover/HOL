@@ -3,7 +3,6 @@
 
 exception Eof
 exception BadChar
-exception Finished
 
 type token =
     Ident of string * bool  (* alphanumeric? *)
@@ -14,8 +13,20 @@ type token =
   | DirEnd  (* ditto *)
   | DirBlk of string * token list (* nonterminal: directive name and body *)
   | Sep of string
+  | Backtick
+  | DBacktick
+  | TeXStartHol   (* [[ *)
+  | TeXStartHol0  (* <[ *)
+  | TeXEndHol     (* ]] *)
+  | TeXEndHol0    (* ]> *)
+  | TeXNormal of string
+  | HolStartTeX   (* ( * : *)
+  | HolEndTeX     (* : * ) *)
 
-val relheader : Lexing.lexbuf -> unit
+val render_token : token -> string
 
-val reltoken : Lexing.lexbuf -> token
+val holtokstream : token Stream.t
+
+val textokstream : token Stream.t
+
 

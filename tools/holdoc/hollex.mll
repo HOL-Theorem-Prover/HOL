@@ -2,9 +2,9 @@
 (* Keith Wansbrough 2001 *)
 
 {
-exception Eof         (* raised by relheader if no body found *)
-exception BadChar     (* raised by reltoken if unrecognised char scanned *)
-exception Finished    (* raised by reltoken when end of body reached *)
+exception Eof         (* raised by holtoken at end of file *)
+exception BadChar     (* raised by holtoken if unrecognised char scanned *)
+exception BadTerm     (* raised if HOL in TeX is ill-terminated *)
 
 let comments = ref []
 
@@ -17,6 +17,15 @@ type token =
   | DirEnd  (* ditto *)
   | DirBlk of string * token list (* nonterminal: directive name and body *)
   | Sep of string
+  | Backtick
+  | DBacktick
+  | TeXStartHol   (* [[ *)
+  | TeXStartHol0  (* <[ *)
+  | TeXEndHol     (* ]] *)
+  | TeXEndHol0    (* ]> *)
+  | TeXNormal of string
+  | HolStartTeX   (* ( * : *)
+  | HolEndTeX     (* : * ) *)
 
 let indent_width s = 
   let l = String.length s in
@@ -33,7 +42,27 @@ let indent_width s =
             in
   go 0 0
 
-} 
+let rec render_token t =
+  match t with
+    Ident(s,_)   -> "I:"^s
+  | Indent(n)    -> "\nN:"^(String.make n '>')
+  | White(s)     -> "W:"^s
+  | Comment(s)   -> "C:(*"^s^"*)-C"
+  | DirBeg       -> "D+"
+  | DirEnd       -> "-D"
+  | DirBlk(n,ts) -> "D:"^n^": "^(String.concat " " (List.map render_token ts))^" :D"
+  | Sep(s)       -> "S:"^s
+  | Backtick     -> "T:`"
+  | DBacktick    -> "T:``"
+  | TeXStartHol  -> "d:[["
+  | TeXStartHol0 -> "d:<["
+  | TeXEndHol    -> "d:]]"
+  | TeXEndHol0   -> "d:]>"
+  | TeXNormal(s) -> "X:"^s^":X"
+  | HolStartTeX  -> "c:(*:"
+  | HolEndTeX    -> ":*):c"
+
+}
 
 (* some classes *)
 let white    = [' ' '\r' '\t' '\012']
@@ -41,9 +70,8 @@ let newline  = '\n'
 
 let backtick = '`'
 
-(* these patterns delimit the scanned "body" area *)
+(* this pattern marks the beginning of the scanned "body" area *)
 let startpat = "Net_Hol_reln" (white | newline)* backtick
-let stoppat  = newline backtick
 
 (* the character classes of HOL *)
 let idchar = ['A'-'Z' 'a'-'z' '0'-'9' '_' '\'']
@@ -62,22 +90,27 @@ let stopcom  = "*)"
 let startdir = "(*["
 let enddir   = "]*)"
 
+let starttex = "(*:"
+let endtex   = ":*)"
+
+(* tokens for TeX *)
+
+let tnormal    = [^ '[' '<' ':' ] | '[' [^ '['] | '<' [^ '['] | ':' [^ '*'] | ':' '*' [^ ')']
+
+let tstarthol  = "[["
+let tendhol    = "]]"
+
+let tstarthol0 = "<["
+let tendhol0   = "]>"
+
 
 (* now some rules *)
 
 rule
 
-(* relheader returns unit when it reaches the beginning of the body *)
-  relheader = parse
-    startpat { () }
-  | _        { relheader lexbuf }
-  | eof      { raise Eof }
+(* holtoken returns the next token, or raises Finished|BadChar *)
 
-and
-
-(* reltoken returns the next token, or raises Finished|BadChar *)
-
-  reltoken = parse
+  holtoken = parse
     dollar? idchar+        { Ident (Lexing.lexeme lexbuf,true) }
   | dollar? (punctchar+
              | specnonagg) { Ident (Lexing.lexeme lexbuf,false) }
@@ -89,7 +122,12 @@ and
                              comment lexbuf;
                              Comment (String.concat "" (List.rev !comments))}
   | nonagg                 { Sep (Lexing.lexeme lexbuf) }
-  | stoppat                { raise Finished }
+  | backtick               { Backtick }
+  | backtick backtick      { DBacktick }
+  | tendhol                { TeXEndHol }
+  | tendhol0               { TeXEndHol0 }
+  | starttex               { HolStartTeX }
+  | eof                    { raise Eof }
   | _                      { raise BadChar }
 
 and
@@ -102,7 +140,40 @@ and
                      comment lexbuf; }
   | stopcom        { }
 
+and
+  textoken = parse
+    tnormal*       { TeXNormal (Lexing.lexeme lexbuf) }
+  | tstarthol      { TeXStartHol }
+  | tstarthol0     { TeXStartHol0 }
+  | endtex         { HolEndTeX }
+  | eof            { raise Eof }
 
 {
-(* trailer *)
+
+(* build a fast stream of tokens from lexed stdin *)
+let tokstream p =
+  let lexbuf = Lexing.from_channel stdin in
+  let lex = ref p in
+  let f _ = (* I hope it is valid to assume that *all*
+               tokens are requested, in ascending order! *)
+    try
+      Some (let t = !lex lexbuf in
+            match t with
+              TeXStartHol  -> lex := holtoken; t
+            | TeXStartHol0 -> lex := holtoken; t
+            | TeXEndHol    -> lex := textoken; t
+            | TeXEndHol0   -> lex := textoken; t
+            | HolStartTeX  -> lex := textoken; t
+            | HolEndTeX    -> lex := holtoken; t
+            | t            -> t)
+    with
+      Eof -> None
+  in
+  Stream.from f
+
+let holtokstream = tokstream holtoken
+
+let textokstream = tokstream textoken
+
 } 
+
