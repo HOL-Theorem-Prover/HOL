@@ -408,7 +408,7 @@ local
   open Preterm TCPretype
   fun name_eq s M = ((s = #Name(dest_var M)) handle HOL_ERR _ => false)
   fun has_any_uvars pty =
-    case pty 
+    case pty
      of UVar (ref NONE)        => true
       | UVar (ref (SOME pty')) => has_any_uvars pty'
       | Tyop(s, args)          => List.exists has_any_uvars args
@@ -448,7 +448,7 @@ in
     toTerm final_ptm
   end
 
-fun parse_in_context FVs q = 
+fun parse_in_context FVs q =
    Lib.with_flag(Globals.notify_on_tyvar_guess,false)
       (parse_in_context0 FVs) q
 end
@@ -1027,7 +1027,7 @@ in
 end
 
 fun new_type_definition (x as {name, inhab_thm, pred}) = let
-  val res = Type_def.new_type_definition x
+  val res = Type_def.new_type_definition0 x
 in
   add_type name;
   res
