@@ -2245,6 +2245,11 @@ val INT_DIVIDES_0 = store_thm(
   Term`(!x. x int_divides 0) /\ (!x. 0 int_divides x = (x = 0))`,
   PROVE_TAC [INT_DIVIDES, INT_MUL_RZERO, INT_MUL_LZERO]);
 
+val INT_DIVIDES_1 = store_thm(
+  "INT_DIVIDES_1",
+  Term`!x. 1 int_divides x`,
+  PROVE_TAC [INT_DIVIDES, INT_MUL_RID]);
+
 val INT_DIVIDES_REFL = store_thm(
   "INT_DIVIDES_REFL",
   Term`!x. x int_divides x`,
