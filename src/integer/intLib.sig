@@ -7,7 +7,7 @@ signature intLib = sig
   val mult_tm : Term.term
   val less_tm : Term.term
   val divides_tm : Term.term
-  val MIN_tm : Term.term
+  val min_tm : Term.term
   val int_injection : Term.term (* the injection from :num -> :int *)
   val int_negation : Term.term  (* the negation function *)
 

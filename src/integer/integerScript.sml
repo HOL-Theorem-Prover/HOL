@@ -2426,11 +2426,11 @@ val INT_EXP_SUBTRACT_EXPONENTS = store_thm(
 
 val INT_MIN = new_definition(
   "INT_MIN",
-  Term`INT_MIN (x:int) y = if x < y then x else y`);
+  Term`int_min (x:int) y = if x < y then x else y`);
 
 val INT_MIN_LT = store_thm(
   "INT_MIN_LT",
-  Term`!x y z. x < INT_MIN y z ==> x < y /\ x < z`,
+  Term`!x y z. x < int_min y z ==> x < y /\ x < z`,
   SIMP_TAC bool_ss [INT_MIN] THEN REPEAT GEN_TAC THEN COND_CASES_TAC THEN
   PROVE_TAC [INT_LT_TRANS, INT_LT_TOTAL]);
 
