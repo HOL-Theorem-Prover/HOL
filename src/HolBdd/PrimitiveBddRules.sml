@@ -17,8 +17,7 @@
 (* BddCompose                                                                *)
 (* BddListCompose                                                            *)
 (* BddRestrict                                                               *)
-(* BddT                                                                      *)
-(* BddF                                                                      *)
+(* BddCon                                                                    *)
 (* BddVar                                                                    *)
 (* BddNot                                                                    *)
 (* BddOp                                                                     *)
@@ -199,11 +198,11 @@ fun BddEqMp th (TermBdd(vm,t1,b)) =
 exception BddReplaceError;
 
 fun BddReplace tbl (TermBdd(vm,tm,b)) =
- let val (_,(l,l'),replacel) = 
+ let val ((l,l'),replacel) = 
        List.foldr
-        (fn(((TermBdd(vm,tm,b)),(TermBdd(vm',tm',b'))), (vm_,(l,l'),replacel))
+        (fn(((TermBdd(vm1,tm,b)),(TermBdd(vm2,tm',b'))), ((l,l'),replacel))
            =>
-           if not(Varmap.eq(vm_,vm) andalso Varmap.eq(vm,vm'))
+           if not(Varmap.eq(vm,vm1) andalso Varmap.eq(vm,vm2))
             then (                print "unequal varmaps\n";       raise BddReplaceError) else
            if not(is_var tm)
             then (print_term tm ; print " should be a variable\n"; raise BddReplaceError) else
@@ -213,10 +212,9 @@ fun BddReplace tbl (TermBdd(vm,tm,b)) =
             then (print_term tm ; print" repeated\n";              raise BddReplaceError) else
            if mem tm' l'
             then (print_term tm'; print" repeated\n";              raise BddReplaceError) 
-            else (vm', 
-                  (tm :: l, tm' :: l'),
+            else ((tm :: l, tm' :: l'),
                   ((bdd.var b, bdd.var b')::replacel)))
-        (vm, ([],[]), [])
+        (([],[]), [])
         tbl
  in
   TermBdd(vm, 
@@ -284,11 +282,11 @@ fun BddCompose (TermBdd(vm,v,b), TermBdd(vm1,tm1,b1)) (TermBdd(vm2,tm2,b2)) =
 exception BddListComposeError;
 
 fun BddListCompose tbl (TermBdd(vm,tm,b)) =
- let val (_,(l,l'),composel) = 
+ let val ((l,l'),composel) = 
        List.foldr
-        (fn(((TermBdd(vm,tm,b)),(TermBdd(vm',tm',b'))), (vm_,(l,l'),composel))
+        (fn(((TermBdd(vm1,tm,b)),(TermBdd(vm2,tm',b'))), ((l,l'),composel))
            =>
-           if not(Varmap.eq(vm_,vm) andalso Varmap.eq(vm,vm'))
+           if not(Varmap.eq(vm,vm1) andalso Varmap.eq(vm,vm2))
             then (                print "unequal varmaps\n";
                                   raise BddListComposeError) else
            if not(is_var tm)
@@ -297,10 +295,9 @@ fun BddListCompose tbl (TermBdd(vm,tm,b)) =
            if mem tm l
             then (print_term tm ; print" repeated\n";
                                   raise BddListComposeError) 
-            else (vm', 
-                  (tm :: l, tm' :: l'),
+            else ((tm :: l, tm' :: l'),
                   ((bdd.var b, b')::composel)))
-        (vm, ([],[]), [])
+        (([],[]), [])
         tbl
  in
   TermBdd(vm, 
@@ -329,7 +326,6 @@ val tb = BddListCompose tbl tb;
 
 val tb = tb1 and tbl = [(tbx,tby),(tby,tbz)];
 val tb = BddListCompose tbl tb;
-(* ! Fail  "Trying to replace with variables already in the bdd" *)
 
 val tb = tb1 and tbl = [(tbx,tby),(tby,tbx)];
 val tb = BddListCompose tbl tb;
@@ -342,11 +338,20 @@ val tb4 = BddListCompose tbl tb;
 
 
 (*****************************************************************************)
-(* BddRestrict [((vm v1 |--> b1),c1),...,(vm vi |--> bi),ci)] (vm tm |--> b) *)
+(* BddRestrict                                                               *)
+(*  [((vm v1 |--> b1),(vm c1 |--> b1')),                                     *)
+(*                                                                           *)
+(*   ((vm vi |--> bi),(vm ci |--> bi'))]                                     *)
+(*  (vm tm |--> b)                                                           *)
 (* (where c1,...,ci are T or F)                                              *)
 (*                                                                           *)
-(*       vm v1 |--> b1   ...   vm vi |-> bi    vm tm |--> b                  *)
-(*  --------------------------------------------------------------------     *)
+(*       vm v1 |--> b1   ...   vm c1 |-> b1'                                 *)
+(*                        .                                                  *)
+(*                        .                                                  *)
+(*                        .                                                  *)
+(*       vm vi |--> bi   ...   vm ci |-> bi'                                 *)
+(*       vm tm |--> b                                                        *)
+(*  ---------------------------------------------------------------          *)
 (*  vm (subst[v1|->ci,...,vi|->ci]tm)                                        *)
 (*  |-->                                                                     *)
 (*  restrict b (assignment[(var b1,mlval c1),...,(var i, mlval ci)]          *)
@@ -363,19 +368,18 @@ fun mlval tm =
 
 in
 
-fun BddRestrict tbcl tb =
+fun BddRestrict tbl tb =
  let val TermBdd(vm,tm,b) = tb
-     val (vml,substl,restrictl) = 
+     val (substl,restrictl) = 
        List.foldr
-        (fn(((TermBdd(vm,tm,b)),c), (vml,substl,restrictl))
+        (fn((TermBdd(vm1,v,b),TermBdd(vm2,c,_)), (substl,restrictl))
            =>
-           if not(Varmap.eq(hd vml,vm))
+           if not(Varmap.eq(vm,vm1) andalso Varmap.eq(vm,vm2))
             then (print "unequal varmaps\n"; raise BddRestrictError) 
-            else ((vm::vml), 
-                  ((tm |-> c)::substl), 
+            else (((tm |-> c)::substl), 
                   ((bdd.var b, mlval c)::restrictl)))
-        ([vm],[],[])
-        tbcl
+        ([],[])
+        tbl
  in
   TermBdd(vm, subst substl tm, bdd.restrict b (bdd.assignment restrictl))
  end
@@ -400,14 +404,14 @@ fun BddFreevarsContractVarmap v (TermBdd(vm,tm,b)) =
   else TermBdd(Varmap.remove (name v) vm, tm, b);
 
 (*****************************************************************************)
-(* Rules for T and F                                                         *)
+(*   BddCon true  vm =  (vm ``T`` |--> TRUE)                                 *)
+(*   BddCon false vm =  (vm ``F`` |--> FALSE)                                *)
 (*****************************************************************************)
 
-fun BddT vm = TermBdd(vm,T,TRUE)
-and BddF vm = TermBdd(vm,F,FALSE);
+fun BddCon tv vm = if tv then TermBdd(vm,T,TRUE) else TermBdd(vm,F,FALSE);
 
 (*****************************************************************************)
-(*                                                                           *)    
+(*                                                                           *) 
 (*     Varmap.peek vm (name v) = SOME n                                      *)
 (*    ---------------------------------   BddVar true                        *)
 (*           vm v |--> ithvar n                                              *)

@@ -122,9 +122,9 @@ in
 fun GenTermToTermBdd leaffn vm tm =
  let fun recfn tm = 
   if tm = T 
-   then BddT vm else
+   then BddCon true vm else
   if tm = F 
-   then BddF vm else
+   then BddCon false vm else
   if is_var tm 
    then BddVar true vm tm else
   if is_neg tm andalso is_var(dest_neg tm) 
@@ -391,18 +391,13 @@ fun BddApReplace tb tm =
 (* failing if this isn't possible                                            *)
 (*****************************************************************************) 
 
-fun split_subst tbl =
- let val (res,rep) = 
-      List.partition 
-       (fn (tb,tb')=>
-         let val tm' = getTerm tb'
-         in
-          (tm'=T) orelse (tm'=F)
-         end)
-       tbl
- in
-  ((map (fn(tb,tb')=>(tb, getTerm tb')) res), rep)
- end;
+val split_subst =
+ List.partition 
+  (fn (tb,tb')=>
+    let val tm' = getTerm tb'
+    in
+     (tm'=T) orelse (tm'=F)
+    end);
 
 (*****************************************************************************)
 (*                    [(vm v1 |--> b1 , vm tm1 |--> b1'),                    *)
@@ -559,12 +554,21 @@ fun computeFixedpoint report vm (th0,thsuc) =
 
 (*****************************************************************************)
 (*            vm tm |--> b                                                   *)
-(*  --------------------------------------------------                       *)
-(*  [((vm v1 |--> b1),c1), ... , ((vm vi |--> bi),ci)]                       *)
+(*  ------------------------------------                                     *)
+(*  [((vm v1 |--> b1),(vm c1 |--> b1')),                                     *)
+(*                      .                                                    *)
+(*                      .                                                    *)
+(*                      .                                                    *)
+(*      ((vm vi |--> bi),(vm ci |--> bi')]                                   *)
 (*                                                                           *)
 (* with the property that                                                    *)
 (*                                                                           *)
-(* BddRestrict [((vm v1 |--> b1),c1),...,(vm vi |--> bi),ci)] (vm tm |--> b) *)
+(* BddRestrict [((vm v1 |--> b1),(vm c1 |--> b1')),                          *)
+(*                              .                                            *)
+(*                              .                                            *)
+(*                              .                 ,                          *)
+(*              ((vm vi |--> bi),(vm ci |--> bi'))]                          *)
+(*             (vm tm |--> b)                                                *)
 (* =                                                                         *)
 (* vm (subst[v1|->ci,...,vi|->ci]tm) |--> TRUE                               *)
 (*****************************************************************************)
@@ -581,7 +585,7 @@ fun BddSatone tb =
                       SOME(s,_) => BddVar true vm (mk_var(s,bool))
                     | NONE      => (print "this should not happen!\n";
                                     raise BddSatoneError)),
-                  if tv then T else F))
+                  BddCon tv vm))
    assl
  end;
 
