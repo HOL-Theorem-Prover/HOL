@@ -22,5 +22,6 @@ structure, and also drives the installed term and theorem
 pretty-printers.
 
 \SEEALSO
-Parse.parse_from_grammars, Parse.Term.
+Parse.parse_from_grammars, Parse.print_from_grammars,
+Parse.temp_set_grammars, Parse.Term.
 \ENDDOC

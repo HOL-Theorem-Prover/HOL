@@ -3,13 +3,10 @@
 \TYPE {Parse.Term : term quotation -> term}
 
 \SYNOPSIS
-Parses a quotation into a term value
+Parses a quotation into a term value.
 
 \KEYWORDS
 Parsing
-
-\LIBRARY
-Parse
 
 \DESCRIBE
 The parsing process for terms divides into four distinct phases.
@@ -84,5 +81,5 @@ All over place, and for all sorts of reasons.
 Turns strings into terms.
 
 \SEEALSO
-Parse.Absyn, Preterm, Type, Parse.overload_on, guessing_overloads, guessing_tyvars, Parse.term_grammar.
+Parse.Absyn, Preterm, Parse.Type, Parse.overload_on, Parse.term_grammar.
 \ENDDOC
