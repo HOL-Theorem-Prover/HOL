@@ -73,7 +73,7 @@ and INDUCTION   = numTheory.INDUCTION;
 
 fun INDUCT_TAC g = INDUCT_THEN INDUCTION ASSUME_TAC g;
 
-val LESS_DEF = 
+val LESS_DEF =
   new_infix_definition
   ("LESS_DEF",
       Term `$< m n = ?P. (!n. P(SUC n) ==> P n) /\ P m /\ ~(P n)`,
@@ -105,19 +105,19 @@ val SUC_LESS =
 val NOT_LESS_0 =
  store_thm
    ("NOT_LESS_0",
-    --`!n. ~(n < NUMERAL ZERO)`--,
+    --`!n. ~(n < ZERO)`--,
    INDUCT_TAC
     THEN REWRITE_TAC[LESS_REFL]
     THEN IMP_RES_TAC(CONTRAPOS
-            (SPECL[--`n:num`--, --`(NUMERAL ZERO)`--] SUC_LESS))
+            (SPECL[--`n:num`--, --`ZERO`--] SUC_LESS))
     THEN ASM_REWRITE_TAC[]);
 
 val LESS_0_0 =
  store_thm
   ("LESS_0_0",
-   --`(NUMERAL ZERO) < SUC (NUMERAL ZERO)`--,
+   --`ZERO < SUC ZERO`--,
    REWRITE_TAC[LESS_DEF]
-    THEN EXISTS_TAC (--`\x.x = (NUMERAL ZERO)`--)
+    THEN EXISTS_TAC (--`\x.x = ZERO`--)
     THEN CONV_TAC(DEPTH_CONV BETA_CONV)
     THEN REWRITE_TAC[NOT_SUC]);
 
@@ -210,7 +210,7 @@ val LESS_SUC_IMP =
 
 (* Move to conversion nets forces different tactic in this proof. kls. *)
 val LESS_0 = store_thm("LESS_0",
-   --`!n. (NUMERAL ZERO) < (SUC n)`--,
+   --`!n. ZERO < (SUC n)`--,
    INDUCT_TAC THEN
    ONCE_REWRITE_TAC[LESS_THM] THEN
    ASM_REWRITE_TAC[]);
@@ -298,7 +298,7 @@ val SIMP_REC_REL =
   ("SIMP_REC_REL",
    Term`!(fun:num->'a) (x:'a) (f:'a->'a) (n:num).
             SIMP_REC_REL fun x f n =
-                (fun (NUMERAL ZERO) = x) /\ 
+                (fun ZERO = x) /\
                 !m. (m < n) ==> (fun(SUC m) = f(fun m))`);
 
 val SIMP_REC_FUN =
@@ -400,7 +400,7 @@ val SIMP_REC_THM =
  store_thm
   ("SIMP_REC_THM",
    --`!(x:'a) f.
-     (SIMP_REC x f (NUMERAL ZERO) = x) /\
+     (SIMP_REC x f ZERO = x) /\
      (!m. SIMP_REC x f (SUC m) = f(SIMP_REC x f m))`--,
     ASM_REWRITE_TAC
      [SIMP_REC, SIMP_REC_FUN_THM1,
@@ -416,7 +416,7 @@ val SIMP_REC_THM =
  * We now use simple recursion to prove that:
  *
  *   |- !x f. ?fun.
- *       (fun (NUMERAL ZERO) = x) /\
+ *       (fun ZERO = x) /\
  *       (!m. fun(SUC m) = f(fun m)m)
  *
  *  We proceed by defining a function PRIM_REC and proving that:
@@ -433,7 +433,7 @@ val SIMP_REC_THM =
  *   (PRE 0 = 0) /\ (!m. PRE(SUC m) = m)
  *---------------------------------------------------------------------------*)
 val PRE_DEF = new_definition("PRE_DEF",
-    --`PRE m = ((m=(NUMERAL ZERO)) => (NUMERAL ZERO) | @n. m = SUC n)`--);
+    --`PRE m = ((m=ZERO) => ZERO | @n. m = SUC n)`--);
 
 
 (* |- (@n. m = n) = m *)
@@ -447,7 +447,7 @@ val SELECT_LEMMA =
 val PRE =
  store_thm
   ("PRE",
-   --`(PRE (NUMERAL ZERO) = (NUMERAL ZERO)) /\ (!m. PRE(SUC m) = m)`--,
+   --`(PRE ZERO = ZERO) /\ (!m. PRE(SUC m) = m)`--,
    REPEAT STRIP_TAC
     THEN REWRITE_TAC[PRE_DEF, INV_SUC_EQ, NOT_SUC, SELECT_LEMMA]);
 
@@ -461,7 +461,7 @@ val PRIM_REC_EQN =
  store_thm
   ("PRIM_REC_EQN",
    --`!(x:'a) f.
-     (!n. PRIM_REC_FUN x f (NUMERAL ZERO) n = x) /\
+     (!n. PRIM_REC_FUN x f ZERO n = x) /\
      (!m n. PRIM_REC_FUN x f (SUC m) n = f (PRIM_REC_FUN x f m (PRE n)) n)`--,
    REPEAT STRIP_TAC
     THEN REWRITE_TAC [PRIM_REC_FUN, SIMP_REC_THM]
@@ -477,7 +477,7 @@ val PRIM_REC_THM =
  store_thm
   ("PRIM_REC_THM",
    --`!x f.
-     (PRIM_REC (x:'a) f (NUMERAL ZERO) = x) /\
+     (PRIM_REC (x:'a) f ZERO = x) /\
      (!m. PRIM_REC x f (SUC m) = f (PRIM_REC x f m) m)`--,
    REPEAT STRIP_TAC
     THEN REWRITE_TAC[PRIM_REC, PRIM_REC_FUN, SIMP_REC_THM]
@@ -504,10 +504,10 @@ local
 in
 val DC = store_thm("DC",
 Term
-  `!P R a. 
+  `!P R a.
       P a /\ (!x. P x ==> ?y. P y /\ R x y)
           ==>
-      ?f. (f (NUMERAL ZERO) = a) /\ (!n. P (f n) /\ R (f n) (f (SUC n)))`,
+      ?f. (f ZERO = a) /\ (!n. P (f n) /\ R (f n) (f (SUC n)))`,
 REPEAT STRIP_TAC
   THEN EXISTS_TAC (Term`SIMP_REC a (\x. @y. P y /\ R x y)`)
   THEN REWRITE_TAC [SIMP_REC_THM] THEN BETA_TAC THEN GEN_TAC
@@ -525,7 +525,7 @@ end;
 (* ADDED TFM 88.04.02							*)
 (*----------------------------------------------------------------------*)
 val num_Axiom = store_thm ("num_Axiom",
- --`!e:'a. !f. ?! fn1. (fn1 (NUMERAL ZERO) = e) /\
+ --`!e:'a. !f. ?! fn1. (fn1 ZERO = e) /\
                    (!n. fn1 (SUC n) = f (fn1 n) n)`--,
    REPEAT GEN_TAC THEN
    CONV_TAC EXISTS_UNIQUE_CONV THEN CONJ_TAC THENL
