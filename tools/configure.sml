@@ -58,41 +58,39 @@ fun copy src dest =  (* Dead simple file copy *)
      Load in systeml structure (with OS-specific stuff available)
  ---------------------------------------------------------------------------*)
 
+(* default values ensure that later things fail if Systeml doesn't compile *)
+fun systeml x = (print "Systeml not correctly loaded.\n";
+                 Process.exit Process.failure);
+val mk_xable = systeml;
+val xable_string = systeml;
+
 val OSkind = if OS="linux" orelse OS="solaris" then "unix" else OS
-val _ =
-  if FileSys.access(fullPath [holmakedir, "Systeml.uo"], [FileSys.A_READ])
-     andalso
-     FileSys.access(fullPath [holmakedir, "Systeml.ui"], [FileSys.A_READ])
-  then let val oldloadpath = !loadPath
-           val _ = loadPath := !loadPath @ [holmakedir]
-       in
-         print "\nSystem specific functions already compiled - good!\n";
-         load (fullPath [holmakedir, "Systeml"]);
-         loadPath := oldloadpath
-       end
-  else let
-      (* copy system-specific implementation of Systeml into place *)
-      val srcfile = fullPath [holmakedir, OSkind ^"-systeml.sml"]
-      val destfile = fullPath [holmakedir, "Systeml.sml"]
-    in
-      print "\nCompiling system specific functions\n";
-      copy srcfile destfile;
-      use destfile
-    end;
+val _ = let
+  (* copy system-specific implementation of Systeml into place *)
+  val srcfile = fullPath [holmakedir, OSkind ^"-systeml.sml"]
+  val destfile = fullPath [holmakedir, "Systeml.sml"]
+in
+  print "\nCompiling system specific functions\n";
+  copy srcfile destfile;
+  use destfile
+end;
 
 open Systeml;
 
 (*---------------------------------------------------------------------------
-     Now compile Systeml.sml; if necessary
+     Now compile Systeml.sml
  ---------------------------------------------------------------------------*)
 
-if not (FileSys.access(fullPath [holmakedir, "Systeml.uo"], [FileSys.A_READ]))
- then let val dir_0 = FileSys.getDir()
-      in FileSys.chDir holmakedir;
-         systeml [compiler, "-c", "Systeml.sml"];
-         FileSys.chDir dir_0
-      end
- else ();
+let
+  val dir_0 = FileSys.getDir()
+in
+  FileSys.chDir holmakedir;
+  if systeml [compiler, "-c", "Systeml.sml"] <> Process.success then
+    (print "Failed to compile system-specific code\n";
+     Process.exit Process.failure)
+  else ();
+  FileSys.chDir dir_0
+end;
 
 
 (*---------------------------------------------------------------------------
