@@ -5,7 +5,7 @@ sig
   type thm          = Thm.thm
   type conv         = Abbrev.conv
   type tactic       = Abbrev.tactic
-  type thry         = TypeBase.typeBase
+  type thry         = TypeBase.TypeInfo.typeBase
   type proofs       = GoalstackPure.proofs
   type absyn        = Absyn.absyn
   type ppstream     = Portable.ppstream
@@ -22,7 +22,7 @@ sig
   val mk_Rdefn   : string -> term -> term -> defn
   val Hol_defn   : string -> term quotation -> defn
   val Hol_Rdefn  : string -> term quotation -> term quotation -> defn
-  
+
   val eqns_of    : defn -> thm
   val eqnl_of    : defn -> thm list
   val ind_of     : defn -> thm option
@@ -33,7 +33,7 @@ sig
   val aux_defn   : defn -> defn option
   val union_defn : defn -> defn option
 
-  val inst_defn  : defn -> (term,term)Lib.subst * 
+  val inst_defn  : defn -> (term,term)Lib.subst *
                            (hol_type,hol_type)Lib.subst -> defn
   val set_reln   : defn -> term -> defn
 
@@ -52,15 +52,15 @@ sig
 
    (* Historical relics *)
 
-   val prim_wfrec_definition : 
-        thry -> string 
+   val prim_wfrec_definition :
+        thry -> string
              -> {R:term, functional:term}
              -> {def:thm, corollary:thm, theory:thry}
 
-   val gen_wfrec_definition : 
+   val gen_wfrec_definition :
          thry -> string
               -> {R:term, eqs:term}
-              -> {rules : thm, 
+              -> {rules : thm,
                   TCs : term list list,
                   full_pats_TCs : (term * term list) list,
                   patterns : Functional.pattern list,
@@ -69,9 +69,9 @@ sig
 
 (*---------------------------------------------------------------------------
 
- [mk_defn stem eqns] attempt to define a function, given some input 
-     equations (eqns) and a "bindstem" (stem). The input equations are 
-     treated as a specification, and mk_defn attempts to derive them from 
+ [mk_defn stem eqns] attempt to define a function, given some input
+     equations (eqns) and a "bindstem" (stem). The input equations are
+     treated as a specification, and mk_defn attempts to derive them from
      a more primitive definition. For non-primitive recursions, termination
      constraints are automatically synthesized. The following kinds of
      equations are handled:
@@ -81,8 +81,8 @@ sig
              -- use standard abbreviation mechanism of HOL
 
        2. Primitive recursive (or non-recursive) over known datatype.
-             -- use Prim_rec.new_recursive_definition with a datatype 
-                axiom fetched from theTypeBase(). This case includes 
+             -- use Prim_rec.new_recursive_definition with a datatype
+                axiom fetched from theTypeBase(). This case includes
                 some mutual recursions, i.e., those that fit into the
                 input format accepted by new_recursive_definition
                 (all arguments to recursive calls are immediate subterms
@@ -90,7 +90,7 @@ sig
 
        3. Non-recursive set of equations, over more complex patterns than
           allowed in 1.
-             -- use wellfounded recursion, and automatically eliminate 
+             -- use wellfounded recursion, and automatically eliminate
                 the vacuous wellfoundedness requirement. There will be
                 no other termination conditions.
 
@@ -101,28 +101,28 @@ sig
                 in 5-7.
 
        5. Nested recursions.
-             -- use wellfounded recursion. An "auxiliary" function 
+             -- use wellfounded recursion. An "auxiliary" function
                 is defined in order to allow the termination relation
-                to be deferred. The termination conditions will be 
+                to be deferred. The termination conditions will be
                 those of the auxiliary function.
 
        6. Mutual recursions that aren't handled by 2.
              -- use wellfounded recursion. An auxiliary `union' function
                 is defined , from which the specified functions are derived.
-                If the union function is a nested recursion, then 5 is 
+                If the union function is a nested recursion, then 5 is
                 also called. The termination conditions will be those
                 of the auxiliary function.
 
        7. Schematic definitions (must be recursive).
              -- free variables occurring in the right hand side and not the
                 left are abstracted out as parameters. All kinds of recursion,
-                including mutual and nested styles are accepted. 
+                including mutual and nested styles are accepted.
 
      For 3-7, induction theorems are derived. Also, the implementation
-     of wellfounded recursion processes functions over a single tupled 
-     argument, but it is convenient for users to give curried definitions, 
+     of wellfounded recursion processes functions over a single tupled
+     argument, but it is convenient for users to give curried definitions,
      so for 3-7, there is an automatic translation from curried recursion
-     equations (and induction theorems) into (and back out of) the tupled 
+     equations (and induction theorems) into (and back out of) the tupled
      form.
 
      A number of primitive definitions may be made in the course of

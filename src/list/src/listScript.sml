@@ -82,8 +82,8 @@ val _ = add_rule {term_name = "CONS", fixity = Infixr 300,
 (* Now, prove the axiomatization of lists.				*)
 (* ---------------------------------------------------------------------*)
 
-val listinfo = valOf (TypeBase.read "list")
-val list_Axiom = TypeBase.axiom_of listinfo
+val listinfo = valOf (TypeBase.TypeInfo.read "list")
+val list_Axiom = TypeBase.TypeInfo.axiom_of listinfo
 
 val list_Axiom_old = store_thm(
   "list_Axiom_old",
@@ -93,7 +93,7 @@ val list_Axiom_old = store_thm(
     ASSUME_TAC list_Axiom THEN
     POP_ASSUM (ACCEPT_TAC o BETA_RULE o Q.SPECL [`x`, `\x y z. f z x y`]),
     REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN
-    HO_MATCH_MP_TAC (TypeBase.induction_of listinfo) THEN
+    HO_MATCH_MP_TAC (TypeBase.TypeInfo.induction_of listinfo) THEN
     simpLib.ASM_SIMP_TAC boolSimps.bool_ss []
   ]);
 
@@ -241,7 +241,7 @@ val NULL = store_thm ("NULL",
 (* |- P [] /\ (!t. P t ==> !h. P(h::t)) ==> (!x.P x)                         *)
 (*---------------------------------------------------------------------------*)
 
-val list_INDUCT0 = TypeBase.induction_of listinfo;
+val list_INDUCT0 = TypeBase.TypeInfo.induction_of listinfo;
 (* only the variables have changed their names, but some proofs rely on
    names -- bad proofs! *)
 val list_INDUCT = store_thm(
@@ -257,7 +257,7 @@ val LIST_INDUCT_TAC = INDUCT_THEN list_INDUCT ASSUME_TAC;
 (* Cases theorem: |- !l. (l = []) \/ (?t h. l = h::t)                        *)
 (*---------------------------------------------------------------------------*)
 
-val list_cases = TypeBase.nchotomy_of listinfo;
+val list_cases = TypeBase.TypeInfo.nchotomy_of listinfo;
 val list_CASES = store_thm(
   "list_CASES",
   --`!l. (l = []) \/ (?t h. l = h::t)`--,
@@ -268,7 +268,7 @@ val list_nchotomy = save_thm("list_nchotomy", list_CASES);
 (* Definition of list_case more suitable to call-by-value computations       *)
 (*---------------------------------------------------------------------------*)
 
-val list_case_def = TypeBase.case_def_of listinfo
+val list_case_def = TypeBase.TypeInfo.case_def_of listinfo
 val list_case_compute = store_thm("list_case_compute",
  --`!(l:'a list). list_case (b:'b) f l =
                   if NULL l then b else f (HD l) (TL l)`--,
@@ -278,10 +278,11 @@ val list_case_compute = store_thm("list_case_compute",
 (* CONS_11:  |- !h t h' t'. (h::t = h' :: t') = (h = h') /\ (t = t')         *)
 (*---------------------------------------------------------------------------*)
 
-val CONS_11 = save_thm("CONS_11", valOf (TypeBase.one_one_of listinfo));
+val CONS_11 = save_thm("CONS_11",
+                       valOf (TypeBase.TypeInfo.one_one_of listinfo));
 
 val NOT_NIL_CONS = save_thm("NOT_NIL_CONS",
-                            valOf (TypeBase.distinct_of listinfo));
+                            valOf (TypeBase.TypeInfo.distinct_of listinfo));
 
 val NOT_CONS_NIL = save_thm("NOT_CONS_NIL",
    CONV_RULE(ONCE_DEPTH_CONV SYM_CONV) NOT_NIL_CONS);
@@ -514,7 +515,7 @@ REWRITE_TAC[relationTheory.WF_DEF] THEN BETA_TAC THEN GEN_TAC
 
 val list_size_def =
   REWRITE_RULE [arithmeticTheory.ADD_ASSOC]
-  (#2 (valOf (TypeBase.size_of listinfo)))
+  (#2 (valOf (TypeBase.TypeInfo.size_of listinfo)))
 val Induct = INDUCT_THEN list_INDUCT STRIP_ASSUME_TAC;
 
 val list_size_cong = store_thm("list_size_cong",
@@ -800,10 +801,10 @@ val _ = adjoin_to_theory
    S "                     FOLDL_CONG, FOLDR_CONG,list_size_cong]";
    S "in";
    S "val _ = DefnBase.write_congs (hocongs@DefnBase.read_congs())";
-   S "end;"; 
+   S "end;";
    NL(); NL();
    S "val _ = let open computeLib";
-   S "        in add_funs [APPEND,APPEND_NIL, FLAT, HD, TL,"; 
+   S "        in add_funs [APPEND,APPEND_NIL, FLAT, HD, TL,";
    S "              LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF,";
    S "              EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR,";
    S "              FOLDL, EL_compute,";

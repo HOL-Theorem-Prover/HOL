@@ -48,10 +48,10 @@ fun foldl f zero []      = zero
 
   fun type2string ty =
     let fun string_aux ty =
-         let val (s,terml) = dest_all_type ty 
+         let val (s,terml) = dest_all_type ty
          in if null terml then s
             else let val sl = map string_aux terml
-                     fun comapp x y = x^","^y 
+                     fun comapp x y = x^","^y
                  in "("^(foldl comapp (hd sl) (tl sl))^")"^s
                  end
          end
@@ -133,10 +133,10 @@ in
     fun store_thm (n, t, tac) = save_thm(n, prove(t,tac))
 
     val app2 = C (curry op^)
-    val typthm = TypeBase.axiom_of tyinfo
-    val typename = TypeBase.ty_name_of tyinfo
+    val typthm = TypeBase.TypeInfo.axiom_of tyinfo
+    val typename = TypeBase.TypeInfo.ty_name_of tyinfo
     val constructor =
-      case TypeBase.constructors_of tyinfo of
+      case TypeBase.TypeInfo.constructors_of tyinfo of
         [x] => x
       | _ => raise ERR "prove_recordtype_thms"
                        "Type to be record has more than one constructor"
@@ -236,8 +236,8 @@ in
 
 
     (* do cases and induction theorem *)
-    val induction_thm = TypeBase.induction_of tyinfo
-    val cases_thm = TypeBase.nchotomy_of tyinfo
+    val induction_thm = TypeBase.TypeInfo.induction_of tyinfo
+    val cases_thm = TypeBase.TypeInfo.nchotomy_of tyinfo
 
     fun gen_var_domty(name, tm, avoids) = let
       val v0 = mk_var(name, #1 (dom_rng (type_of tm)))
@@ -354,7 +354,7 @@ in
       else
         TRUTH
 
-    val oneone_thm = valOf (TypeBase.one_one_of tyinfo)
+    val oneone_thm = valOf (TypeBase.TypeInfo.one_one_of tyinfo)
 
     fun prove_semi11 upd_t = let
       fun tac s = STRUCT_CASES_TAC (SPEC (mk_var(s,typ)) cases_thm)
@@ -439,7 +439,7 @@ in
     end
 
     (* add to the TypeBase's simpls entry for the record type *)
-    val existing_simpls = TypeBase.simpls_of tyinfo
+    val existing_simpls = TypeBase.TypeInfo.simpls_of tyinfo
     val new_simpls = let
       val new_simpls0 =  [accupd_thm, accessor_thm, updfn_thm, updacc_thm,
                           updupd_thm, accfupd_thm, literal_equality]
@@ -448,7 +448,7 @@ in
       else new_simpls0
     end
     val new_tyinfo =
-      TypeBase.put_simpls (existing_simpls @ new_simpls) tyinfo
+      TypeBase.TypeInfo.put_simpls (existing_simpls @ new_simpls) tyinfo
 
     (* set up parsing for the record type *)
     (* want to overload fieldnames as synonyms for the field functions,

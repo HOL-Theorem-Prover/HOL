@@ -14,10 +14,10 @@ local
 
   local open pairTheory sumTheory optionTheory arithmeticTheory in end;
 
-  val bool_info = Option.valOf(TypeBase.read "bool")
+  val bool_info = Option.valOf(TypeBase.TypeInfo.read "bool")
   val bool_size_info = (rator(mk_bool_case(zero_tm,zero_tm,mk_arb bool)),
                         TypeBase.ORIG boolTheory.bool_case_ID)
-  val bool_info' = TypeBase.put_size bool_size_info bool_info
+  val bool_info' = TypeBase.TypeInfo.put_size bool_size_info bool_info
 
   val prod_size_info =
     (let val f = mk_var("f", alpha --> num)
@@ -29,10 +29,10 @@ local
      end,
      TypeBase.ORIG pairTheory.UNCURRY_DEF)
    val prod_info' =
-    TypeBase.put_size prod_size_info
-    (Option.valOf(TypeBase.read"prod"))
+    TypeBase.TypeInfo.put_size prod_size_info
+    (Option.valOf(TypeBase.TypeInfo.read"prod"))
 
-  val sum_info = Option.valOf(TypeBase.read "sum")
+  val sum_info = Option.valOf(TypeBase.TypeInfo.read "sum")
   val sum_case = prim_mk_const{Name="sum_case", Thy="sum"}
   val num = numSyntax.num
   val sum_case_into_num = inst [alpha |-> num] sum_case
@@ -41,9 +41,9 @@ local
   val s = mk_var("s",mk_thy_type{Tyop="sum",Thy="sum",Args=[beta, gamma]})
   val tm = list_mk_abs ([f,g,s], list_mk_comb(sum_case_into_num,[f,g,s]))
   val sum_size_info = (tm,TypeBase.ORIG sumTheory.sum_case_def)
-  val sum_info' = TypeBase.put_size sum_size_info sum_info
+  val sum_info' = TypeBase.TypeInfo.put_size sum_size_info sum_info
 
-  val option_info = Option.valOf(TypeBase.read "option")
+  val option_info = Option.valOf(TypeBase.TypeInfo.read "option")
   val option_case_tm = prim_mk_const{Name="option_case",Thy="option"}
   val option_size_info =
        (let val f = mk_var("f",alpha --> num)
@@ -52,13 +52,13 @@ local
                     [zero_tm,mk_abs(x,mk_suc(mk_comb(f,x)))]))
         end,
         TypeBase.ORIG optionTheory.option_case_def)
-  val option_info' = TypeBase.put_size option_size_info option_info
+  val option_info' = TypeBase.TypeInfo.put_size option_size_info option_info
 
 in
-   val _ = TypeBase.write bool_info'
-   val _ = TypeBase.write prod_info'
-   val _ = TypeBase.write option_info'
-   val _ = TypeBase.write sum_info'
+   val _ = TypeBase.TypeInfo.write bool_info'
+   val _ = TypeBase.TypeInfo.write prod_info'
+   val _ = TypeBase.TypeInfo.write option_info'
+   val _ = TypeBase.TypeInfo.write sum_info'
 end
 
 end;

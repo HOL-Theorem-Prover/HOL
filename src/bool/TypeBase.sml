@@ -13,13 +13,15 @@ type ppstream = Portable.ppstream
 val ERR = mk_HOL_ERR "TypeBase";
 
 
-datatype shared_thm 
-    = ORIG of thm 
+datatype shared_thm
+    = ORIG of thm
     | COPY of string * thm;
 
 fun thm_of (ORIG x)     = x
   | thm_of (COPY (s,x)) = x;
 
+
+structure TypeInfo = struct
 
 datatype tyinfo =
   FACTS of string * {axiom        : shared_thm,
@@ -145,36 +147,36 @@ fun mk_tyinfo {ax,case_def,case_cong,induction,
   end;
 
 
-local fun mk_ti (n,ax,ind) 
+local fun mk_ti (n,ax,ind)
                 (cdef::cds) (ccong::cgs) (oo::oos) (d::ds) (nch::nchs) =
-            mk_tyinfo{ax=COPY(n,ax), induction=COPY(n,ind), case_def=cdef, 
-                      case_cong=ccong, nchotomy=nch, size=NONE, 
+            mk_tyinfo{ax=COPY(n,ax), induction=COPY(n,ind), case_def=cdef,
+                      case_cong=ccong, nchotomy=nch, size=NONE,
                       one_one=oo, distinct=d}
             :: mk_ti (n,ax,ind) cds cgs oos ds nchs
         | mk_ti _ [] [] [] [] [] = []
         | mk_ti _ [] _ _ _ _ = raise ERR "gen_tyinfo" "Too few case defns"
         | mk_ti _ _ _ _ _ _  = raise ERR "gen_tyinfo" "Too many case defns"
 in
-fun gen_tyinfo {ax, ind, case_defs} = 
+fun gen_tyinfo {ax, ind, case_defs} =
  let val nchotomyl  = prove_cases_thm ind
      val case_congs = map2 case_cong_thm nchotomyl case_defs
      val one_ones   = prove_constructors_one_one ax
      val distincts  = prove_constructors_distinct ax
      val _ = (length nchotomyl  = length case_congs andalso
               length case_congs = length one_ones   andalso
-              length one_ones   = length distincts) 
+              length one_ones   = length distincts)
         orelse raise ERR "gen_tyinfo"
                  "Number of theorems automatically proved doesn't match up"
      val tyinfo_1 = mk_tyinfo
-           {ax=ORIG ax, induction=ORIG ind, 
-            case_def=hd case_defs, case_cong=hd case_congs, 
-            nchotomy=hd nchotomyl, size=NONE, 
+           {ax=ORIG ax, induction=ORIG ind,
+            case_def=hd case_defs, case_cong=hd case_congs,
+            nchotomy=hd nchotomyl, size=NONE,
             one_one=hd one_ones, distinct=hd distincts}
  in
    if length nchotomyl = 1 then [tyinfo_1]
    else let val tyname = ty_name_of tyinfo_1
         in tyinfo_1 :: mk_ti (tyname,ax,ind)
-                          (tl case_defs) (tl case_congs) 
+                          (tl case_defs) (tl case_congs)
                           (tl one_ones) (tl distincts) (tl nchotomyl)
         end
  end
@@ -198,8 +200,8 @@ fun pp_tyinfo ppstrm (FACTS(ty_name,recd)) =
         add_string (Lib.quote ty_name); end_block();
    add_break(1,0);
    begin_block CONSISTENT 1;
-   add_string "Primitive recursion:"; add_break (1,0); 
-       (case axiom 
+   add_string "Primitive recursion:"; add_break (1,0);
+       (case axiom
          of ORIG thm  => pp_thm thm
           | COPY(s,_) => add_string ("see "^Lib.quote s)); end_block();
    add_break(1,0);
@@ -213,13 +215,13 @@ fun pp_tyinfo ppstrm (FACTS(ty_name,recd)) =
          add_string "Size:"; add_break (1,0);
          (case size_def
            of COPY(s,th) => add_string ("see "^Lib.quote s)
-            | ORIG th    => if is_const tm 
+            | ORIG th    => if is_const tm
                             then pp_thm th else pp_term tm); end_block();
          add_break(1,0));
 
    begin_block CONSISTENT 1;
-   add_string "Induction:"; add_break (1,0); 
-       (case induction 
+   add_string "Induction:"; add_break (1,0);
+       (case induction
          of ORIG thm  => pp_thm thm
           | COPY(s,_) => add_string ("see "^Lib.quote s)); end_block();
    add_break(1,0);
@@ -316,15 +318,47 @@ end;
 fun read s = get (theTypeBase()) s;
 val elts = listItems o theTypeBase;
 
+end;
+
+fun valOf s opt =
+  case opt of
+    NONE => raise ERR "read" ("No type of name "^s)
+  | SOME x => x
+
+fun valOf2 s t opt =
+  case opt of
+    NONE => raise ERR t ("No "^t^" information for type "^s)
+  | SOME x => x
+
+fun axiom_of s = TypeInfo.axiom_of (valOf s (TypeInfo.read s))
+fun induction_of s = TypeInfo.induction_of (valOf s (TypeInfo.read s))
+fun constructors_of s = TypeInfo.constructors_of (valOf s (TypeInfo.read s))
+fun case_const_of s = TypeInfo.case_const_of (valOf s (TypeInfo.read s))
+fun case_cong_of s = TypeInfo.case_cong_of (valOf s (TypeInfo.read s))
+fun case_def_of s = TypeInfo.case_def_of (valOf s (TypeInfo.read s))
+fun nchotomy_of s = TypeInfo.nchotomy_of (valOf s (TypeInfo.read s))
+fun distinct_of s =
+  valOf2 s "distinct_of" (TypeInfo.distinct_of (valOf s (TypeInfo.read s)))
+fun one_one_of s =
+  valOf2 s "one_one_of" (TypeInfo.one_one_of (valOf s (TypeInfo.read s)))
+fun simpls_of s = TypeInfo.simpls_of (valOf s (TypeInfo.read s))
+fun size_of s =
+  valOf2 s "size_of" (TypeInfo.size_of (valOf s (TypeInfo.read s)))
+
+fun axiom_of0 s = TypeInfo.axiom_of0 (valOf s (TypeInfo.read s))
+fun induction_of0 s = TypeInfo.induction_of0 (valOf s (TypeInfo.read s))
+fun size_of0 s = TypeInfo.size_of0 (valOf s (TypeInfo.read s))
+
+
 
 (*---------------------------------------------------------------------------*
  * Install datatype facts for booleans into theTypeBase.                     *
  *---------------------------------------------------------------------------*)
 
-val [bool_info] = gen_tyinfo {ax=boolTheory.boolAxiom, 
+val [bool_info] = TypeInfo.gen_tyinfo {ax=boolTheory.boolAxiom,
                               ind=boolTheory.bool_INDUCT,
                               case_defs = [boolTheory.bool_case_thm]};
 
-val _ = write bool_info;
+val _ = TypeInfo.write bool_info;
 
 end;

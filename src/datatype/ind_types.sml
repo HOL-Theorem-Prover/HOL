@@ -16,7 +16,7 @@ structure ind_types :> ind_types =
 struct
 
 open HolKernel Parse boolLib InductiveDefinition
-     numTheory arithmeticTheory prim_recTheory 
+     numTheory arithmeticTheory prim_recTheory
      simpLib boolSimps ind_typeTheory;
 
 
@@ -32,7 +32,7 @@ fun -- q x = Term q
 fun == q x = Type q
 
 (*---------------------------------------------------------------------------
-   First some JRH HOL-Light portability stuff. 
+   First some JRH HOL-Light portability stuff.
  ---------------------------------------------------------------------------*)
 
 fun chop_list 0 l      = ([], l)
@@ -59,7 +59,7 @@ val make_args =
 
 fun mk_binop op_t tm1 tm2 = list_mk_comb(op_t, [tm1, tm2])
 
-fun mk_const (thy, n, theta) = 
+fun mk_const (thy, n, theta) =
  let val c0 = prim_mk_const{Name = n, Thy = thy}
      val ty = type_of c0
   in Term.mk_thy_const{Name=n, Thy=thy, Ty=Type.type_subst theta ty}
@@ -105,7 +105,7 @@ fun striplist dest =
 fun tysubst theta ty =
   case subst_assoc (equal ty) theta
    of SOME x => x
-    | NONE => 
+    | NONE =>
        if is_vartype ty then ty
        else let val {Tyop,Thy,Args} = dest_thy_type ty
             in mk_thy_type{Tyop=Tyop,Thy=Thy, Args=map (tysubst theta) Args}
@@ -164,8 +164,8 @@ fun SCRUB_EQUATION eq th =
 
 val justify_inductive_type_model = let
   val aty = Type.alpha
-  val T_tm = boolSyntax.T 
-  and n_tm = Term`n:num` 
+  val T_tm = boolSyntax.T
+  and n_tm = Term`n:num`
   and beps_tm = Term`@x:bool. T`
   fun munion [] s2 = s2
     | munion (h1::s1') s2 =
@@ -731,9 +731,8 @@ end
  *     Required stuff for sum types                                          *
  *---------------------------------------------------------------------------*)
 
-val sum_tyinfo = valOf (TypeBase.read "sum")
-val sum_INDUCT = TypeBase.induction_of sum_tyinfo
-val sum_RECURSION = TypeBase.axiom_of sum_tyinfo
+val sum_INDUCT = TypeBase.induction_of "sum"
+val sum_RECURSION = TypeBase.axiom_of "sum"
 
 val OUTL = sumTheory.OUTL;
 val OUTR = sumTheory.OUTR;
@@ -974,14 +973,14 @@ end
 val CONJ_ACI_CONV = EQT_ELIM o AC_CONV (CONJ_ASSOC, CONJ_COMM);
 val ISO_EXPAND_CONV = PURE_ONCE_REWRITE_CONV[ISO];
 
-fun lift_type_bijections iths cty = 
+fun lift_type_bijections iths cty =
  let val itys = map (hd o snd o dest_type o type_of o lhand o concl) iths
  in assoc cty (zip itys iths)
     handle HOL_ERR _ =>
-     if not (List.exists (C occurs_in cty) itys) 
+     if not (List.exists (C occurs_in cty) itys)
      then Thm.INST_TYPE [Type.alpha |-> cty] ISO_REFL
      else let val (tycon,isotys) = dest_type cty
-          in if tycon = "fun" 
+          in if tycon = "fun"
              then MATCH_MP ISO_FUN
                     (end_itlist CONJ (map (lift_type_bijections iths) isotys))
              else raise ERR "lift_type_bijections"
@@ -1019,12 +1018,12 @@ end
 
 val grab_type = type_of o rand o lhand o snd o strip_forall;;
 
-fun clause_corresponds cl0 = 
+fun clause_corresponds cl0 =
  let val (f0,ctm0) = dest_comb (lhs cl0)
      val c0 = fst(dest_const(fst(strip_comb ctm0)))
      val (dty0,rty0) = dest_fun_ty (type_of f0)
  in
-  fn cl1 => 
+  fn cl1 =>
      let val (f1,ctm1) = dest_comb (lhs cl1)
          val c1 = fst(dest_const(fst(strip_comb ctm1)))
          val (dty1,rty1) = dest_fun_ty (type_of f1)
@@ -1036,7 +1035,7 @@ fun clause_corresponds cl0 =
 fun INSTANTIATE (tmsubst, tysubst) thm = INST tmsubst (INST_TYPE tysubst thm)
 
 fun find P l =
-  case List.find P l 
+  case List.find P l
    of NONE => raise ERR "find" "No element satisfying predicate"
     | SOME x => x;
 
@@ -1050,16 +1049,16 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
   and (pevs1,pbod1) = strip_exists (concl sth1)
   val (pcjs0,qcjs0) = chop_list k (conjuncts pbod0)
   and (pcjs1,qcjs1) = chop_list k (snd(chop_list n (conjuncts pbod1)))
-  val tyal0 = hol98_subst_of 
+  val tyal0 = hol98_subst_of
                (mk_set (zip (map grab_type pcjs1) (map grab_type pcjs0)))
   val tyal1 = map (fn {redex,residue} => {redex=residue,residue=redex}) tyal0
-  val tyins0 = map (fn f => 
+  val tyins0 = map (fn f =>
                  let val (domty,ranty) = dest_fun_ty (type_of f)
                  in ranty |-> tysubst tyal0 domty
                  end) pevs0
-  and tyins1 = map (fn f => 
+  and tyins1 = map (fn f =>
                 let val (domty,ranty) = dest_fun_ty (type_of f)
-                in ranty |-> tysubst tyal1 domty 
+                in ranty |-> tysubst tyal1 domty
                 end) pevs1
   val tth0 = Thm.INST_TYPE tyins0 sth0
   and tth1 = Thm.INST_TYPE tyins1 sth1
@@ -1169,10 +1168,10 @@ end
 (* Define nested type by doing a 1-level unwinding.                          *)
 (* ------------------------------------------------------------------------- *)
 
-fun SCRUB_ASSUMPTION th = 
+fun SCRUB_ASSUMPTION th =
  let val hyps = hyp th
-     val eqn = find (fn t => 
-                let val x = lhs t 
+     val eqn = find (fn t =>
+                let val x = lhs t
                 in List.all (fn u => not (free_in x (rand u))) hyps
                 end) hyps
        val (l,r) = dest_eq eqn
@@ -1193,7 +1192,7 @@ in
   fn ty => Term.mk_var(vary_to_avoid_constants(), ty)
 end
 
-fun define_type_basecase def = 
+fun define_type_basecase def =
   let fun add_id s = fst(dest_var(safeid_genvar Type.bool))
       val def' = map (I ## (map (add_id ## I))) def
   in define_type_mutual def'
@@ -1216,11 +1215,12 @@ fun get_nestedty_info tyname =
                             (CONJUNCTS_CONV
                              (REDEPTH_CONV RIGHT_IMP_FORALL_CONV))))) ind0
        end
+      open TypeBase.TypeInfo
  in
-  case TypeBase.read tyname
-   of SOME tyinfo => SOME (length (TypeBase.constructors_of tyinfo),
-                         hol98_to_jrh_ind (TypeBase.induction_of tyinfo),
-                         TypeBase.axiom_of tyinfo)
+  case read tyname
+   of SOME tyinfo => SOME (length (constructors_of tyinfo),
+                         hol98_to_jrh_ind (induction_of tyinfo),
+                         axiom_of tyinfo)
     | NONE => NONE
  end
 
@@ -1343,24 +1343,24 @@ local
 
   fun modify_item alist (s,l) = (s,map (modify_type alist) l)
   fun modify_clause alist (l,lis) = (l,map (modify_item alist) lis)
-  fun recover_clause id tm = 
+  fun recover_clause id tm =
     let val (con,args) = strip_comb tm
     in (fst(dest_const con)^id, map type_of args)
     end
 
   (* -------------------------------------------------------------------------
      Returns a substitution that will map elements of check_these to
-     things not in check_these or avoids0.  Won't map an element of 
+     things not in check_these or avoids0.  Won't map an element of
      check_these away unless it is in avoids0.
   -------------------------------------------------------------------------- *)
 
   fun mk_thm_avoid check_these avoids0 = let
     fun recurse [] avoids = []
       | recurse (tyv1::tyvs) avoids =
-         if Lib.mem tyv1 avoids 
+         if Lib.mem tyv1 avoids
          then let val newtyv =
                 Lexis.gen_variant Lexis.tyvar_vary (check_these@avoids) "'a"
-              in (mk_vartype tyv1 |-> mk_vartype newtyv) 
+              in (mk_vartype tyv1 |-> mk_vartype newtyv)
                  :: recurse tyvs (newtyv::avoids)
               end
          else recurse tyvs avoids
@@ -1395,7 +1395,7 @@ local
     (k,tyal,cls'',Thm.INST_TYPE tyins ith, Thm.INST_TYPE tyins rth)
   end
 
-  fun define_type_nested def = 
+  fun define_type_nested def =
     let val n = length(itlist (curry op@) (map (map fst o snd) def) [])
         val newtys = map fst def
         val utys = Lib.U (itlist (union o map snd o snd) def [])
@@ -1403,13 +1403,13 @@ local
         val utyvars = type_varsl utys
         val rectys = filter (is_nested newtys) utys
     in
-      if rectys = [] 
+      if rectys = []
       then let val (th1,th2) = define_type_basecase def
            in (n,th1,th2)
-           end 
-      else 
-      let fun compare_types (t1,t2) = 
-            if occurs_in t1 t2 then GREATER else 
+           end
+      else
+      let fun compare_types (t1,t2) =
+            if occurs_in t1 t2 then GREATER else
             if occurs_in t2 t1 then LESS else EQUAL
           val nty = hd (Listsort.sort compare_types rectys)
           val (k,tyal,ncls,ith,rth) =
@@ -1418,7 +1418,7 @@ local
           val (_,ith1,rth1) = define_type_nested cls
           val xnewtys = map (hd o snd o dest_type o type_of)
                             (fst(strip_exists(snd(strip_forall(concl rth1)))))
-          val xtyal = map (fn ty => 
+          val xtyal = map (fn ty =>
                      let val s = dest_vartype ty
                      in (ty |-> find(fn t => "'"^fst(dest_type t) = s) xnewtys)
                      end) (map fst cls)
@@ -1429,7 +1429,7 @@ local
           val irth3 = CONJ ith1 rth1
           val vtylist = itlist (insert o type_of) (variables(concl irth3)) []
           val isoths = CONJUNCTS isoth
-          val isotys = 
+          val isotys =
               map (hd o snd o dest_type o type_of o lhand o concl) isoths
           val ctylist = filter
                 (fn ty => List.exists (fn t => occurs_in t ty) isotys) vtylist
@@ -1450,7 +1450,7 @@ local
                        (conjuncts(snd(strip_exists
                            (snd(strip_forall(rand(concl irth6)))))))
           val id = fst(dest_var(genvar Type.bool))
-          fun mk_newcon tm = 
+          fun mk_newcon tm =
            let val (vs,bod) = strip_forall tm
                val rdeb = rand(lhs bod)
                val rdef = list_mk_abs(vs,rdeb)
@@ -1467,7 +1467,7 @@ local
       end
     end
 in
-val define_type_nested = fn def => 
+val define_type_nested = fn def =>
  let val newtys = map fst def
      val truecons = itlist (curry op@) (map (map fst o snd) def) []
      val (p,ith0,rth0) = define_type_nested def
@@ -1488,8 +1488,8 @@ val define_type_nested = fn def =>
   end
 end
 
-fun define_type d = 
-    define_type_nested d 
+fun define_type d =
+    define_type_nested d
     handle e => raise (wrap_exn "ind_types" "define_type" e);
 
 (* test this with:

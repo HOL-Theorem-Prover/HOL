@@ -4,7 +4,7 @@ struct
 open HolKernel Parse boolLib pairLib
      Rules wfrecUtils Functional Induction DefnBase;
 
-type thry   = TypeBase.typeBase
+type thry   = TypeBase.TypeInfo.typeBase
 type proofs = GoalstackPure.proofs
 type absyn  = Absyn.absyn;
 
@@ -36,7 +36,7 @@ fun make_definition thry s tm = (new_definition(s,tm), thry)
 
 fun head tm = head (rator tm) handle _ => tm;
 
-fun all_fns eqns = 
+fun all_fns eqns =
   mk_set (map (head o lhs o #2 o strip_forall) (strip_conj eqns));
 
 fun dest_hd_eqn eqs =
@@ -48,8 +48,9 @@ fun dest_hd_eqn eqs =
 fun extract_info db =
  let val (rws,congs) = rev_itlist
      (fn tyinfo => fn (R,C) =>
-         (TypeBase.case_def_of tyinfo::R, TypeBase.case_cong_of tyinfo::C))
-     (TypeBase.listItems db) ([],[])
+         (TypeBase.TypeInfo.case_def_of tyinfo::R,
+          TypeBase.TypeInfo.case_cong_of tyinfo::C))
+     (TypeBase.TypeInfo.listItems db) ([],[])
  in {case_congs=congs, case_rewrites=rws}
  end;
 
@@ -97,8 +98,8 @@ val imp_elim =
 local open Psyntax
 in
 fun inject ty [v] = [v]
-  | inject ty (v::vs) = 
-     let val (_,[lty,rty]) = dest_type ty 
+  | inject ty (v::vs) =
+     let val (_,[lty,rty]) = dest_type ty
          val res = mk_comb(mk_const("INL", lty-->ty),v)
          val inr = curry mk_comb (mk_const("INR", rty-->ty))
      in
@@ -107,7 +108,7 @@ fun inject ty [v] = [v]
 
 fun project ty M =
  if is_vartype ty then [M]
- else case dest_thy_type ty 
+ else case dest_thy_type ty
        of {Tyop="sum",Thy="sum",Args=[lty,rty]} =>
             mk_comb(mk_const("OUTL", type_of M-->lty),M)
             :: project rty (mk_comb(mk_const("OUTR", type_of M-->rty),M))
@@ -511,10 +512,10 @@ fun wfrec_eqns thy eqns =
      val (case_rewrites,context_congs) = extraction_thms thy
      val corollaries' = map (simplify case_rewrites) corollaries
      val Xtract = extract [R1] context_congs f (proto_def,WFR)
- in 
-    {proto_def=proto_def, 
+ in
+    {proto_def=proto_def,
      SV=Listsort.sort Term.compare SV,
-     WFR=WFR, 
+     WFR=WFR,
      pats=pats,
      extracta = map Xtract (zip given_pats corollaries')}
  end;
@@ -946,13 +947,14 @@ in
 fun non_wfrec_defn (facts,bind,eqns) =
  let val ((_,args),_) = dest_hd_eqn eqns
  in if Lib.exists is_constructor args
-    then case TypeBase.get facts 
+    then case TypeBase.TypeInfo.get facts
                  (fst(dest_type(type_of(first is_constructor args))))
        of NONE => raise ERR "non_wfrec_defn" "unexpected lhs in definition"
         | SOME tyinfo =>
            let val def = Prim_rec.new_recursive_definition
-                       {name=bind,def=eqns,rec_axiom=TypeBase.axiom_of tyinfo}
-               val ind = TypeBase.induction_of tyinfo
+                       {name=bind,def=eqns,
+                        rec_axiom=TypeBase.TypeInfo.axiom_of tyinfo}
+               val ind = TypeBase.TypeInfo.induction_of tyinfo
            in PRIMREC{eqs=def, ind=ind, bind=bind}
            end
     else ABBREV {eqn=new_definition (bind,eqns), bind=bind}
@@ -1020,7 +1022,7 @@ fun mk_defn stem eqns =
  let val _ = if Lexis.ok_identifier stem then ()
              else raise ERR "define"
                    (String.concat[Lib.quote stem," is not alphanumeric"])
-     val facts = TypeBase.theTypeBase()
+     val facts = TypeBase.TypeInfo.theTypeBase()
  in
   non_wfrec_defn (facts, defSuffix stem, eqns)
   handle HOL_ERR _
@@ -1090,14 +1092,14 @@ fun names_of (AQ tm) S = union (map (fst o Term.dest_var) (all_vars tm)) S
 end;
 
 local val v_vary = vary "v"
-      fun tm_exp tm S = 
+      fun tm_exp tm S =
         case dest_term tm
-         of VAR(s,Ty) => 
+         of VAR(s,Ty) =>
               if wildcard s
               then let val (s',S') = v_vary S in (Term.mk_var(s',Ty),S') end
               else (tm,S)
          | CONST _  => (tm,S)
-         | COMB(Rator,Rand) => 
+         | COMB(Rator,Rand) =>
              let val (Rator',S')  = tm_exp Rator S
                  val (Rand', S'') = tm_exp Rand S
              in (mk_comb(Rator', Rand'), S'')
@@ -1110,11 +1112,11 @@ fun exp (AQ tm) S = let val (tm',S') = tm_exp tm S in (AQ tm',S') end
       if wildcard s
         then let val (s',S') = v_vary S in (IDENT s', S') end
         else (IDENT s, S)
-  | exp (QIDENT (p as (s,_))) S = 
+  | exp (QIDENT (p as (s,_))) S =
       if wildcard s then raise ERR "exp" "wildcard in long id. in pattern"
       else (QIDENT p, S)
-  | exp (APP(M,N)) S = 
-      let val (M',S')   = exp M S 
+  | exp (APP(M,N)) S =
+      let val (M',S')   = exp M S
           val (N', S'') = exp N S'
       in (APP (M',N'), S'')
       end

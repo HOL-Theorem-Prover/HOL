@@ -16,7 +16,7 @@ structure pairScript =
 struct
 
 (*  interactive use:
- app load ["Q", "relationTheory", "mesonLib"]; 
+ app load ["Q", "relationTheory", "mesonLib"];
  open Parse relationTheory mesonLib;
 *)
 open HolKernel Parse boolLib relationTheory mesonLib Rsyntax;
@@ -53,10 +53,10 @@ val _ = add_infix_type
 
 val ABS_REP_prod =
  define_new_type_bijections
-  {ABS="ABS_prod", REP="REP_prod", 
+  {ABS="ABS_prod", REP="REP_prod",
    name="ABS_REP_prod", tyax=prod_TY_DEF};
 
-val IS_PAIR_MK_PAIR = Q.prove 
+val IS_PAIR_MK_PAIR = Q.prove
 (`!x y. IS_PAIR (MK_PAIR x y)`,
 REWRITE_TAC[IS_PAIR_DEF, MK_PAIR_DEF]
  THEN GEN_TAC THEN GEN_TAC
@@ -74,7 +74,7 @@ val REP_ABS_PAIR = Q.prove
  *  Define the constructor for pairs.                                        *
  *---------------------------------------------------------------------------*)
 
-val COMMA_DEF = 
+val COMMA_DEF =
  Q.new_definition("COMMA_DEF", `$, x y = ABS_prod(MK_PAIR x y)`);
 
 val _ = add_rule {term_name = ",", fixity = Infixr 50,
@@ -131,7 +131,7 @@ val ABS_PAIR_THM = Q.store_thm
  *---------------------------------------------------------------------------*)
 
 val PAIR =
-  new_specification{name="PAIR", 
+  new_specification{name="PAIR",
      sat_thm=Ho_Rewrite.REWRITE_RULE[SKOLEM_THM] (GSYM ABS_PAIR_THM),
      consts=[{const_name="FST", fixity=Parse.Prefix},
              {const_name="SND", fixity=Parse.Prefix}]};
@@ -269,7 +269,7 @@ val UNCURRY_CONG =
 
 val LAMBDA_PROD = Q.store_thm("LAMBDA_PROD",
 `!P:'a#'b->'c. (\p. P p) = \(p1,p2). P(p1,p2)`,
- GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN GEN_TAC 
+ GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN GEN_TAC
    THEN STRUCT_CASES_TAC (Q.SPEC `p` ABS_PAIR_THM)
    THEN REWRITE_TAC [UNCURRY,FST,SND]
    THEN BETA_TAC THEN REFL_TAC)
@@ -280,7 +280,7 @@ val LAMBDA_PROD = Q.store_thm("LAMBDA_PROD",
 
 val EXISTS_PROD = Q.store_thm("EXISTS_PROD",
  `(?p. P p) = ?p_1 p_2. P (p_1,p_2)`,
- EQ_TAC THEN STRIP_TAC 
+ EQ_TAC THEN STRIP_TAC
    THENL [MAP_EVERY Q.EXISTS_TAC [`FST p`, `SND p`], Q.EXISTS_TAC `p_1, p_2`]
    THEN ASM_REWRITE_TAC[PAIR]);
 
@@ -329,15 +329,15 @@ val _ = save_thm("PFORALL_THM",PFORALL_THM);
 val PEXISTS_THM = Q.prove
 (`!P:'a -> 'b -> bool. (?x y. P x y) = ?(x,y). P x y`,
 GEN_TAC THEN EQ_TAC
-  THEN SUBST1_TAC 
-        (SYM (ETA_CONV (Term`\p. UNCURRY (\x:'a y:'b. P x y:bool) p`))) THENL 
+  THEN SUBST1_TAC
+        (SYM (ETA_CONV (Term`\p. UNCURRY (\x:'a y:'b. P x y:bool) p`))) THENL
   [STRIP_TAC
-      THEN Q.EXISTS_TAC `(x,y)` 
-      THEN REWRITE_TAC [UNCURRY_VAR, FST, SND] THEN BETA_TAC 
+      THEN Q.EXISTS_TAC `(x,y)`
+      THEN REWRITE_TAC [UNCURRY_VAR, FST, SND] THEN BETA_TAC
       THEN ASM_REWRITE_TAC [],
-   REWRITE_TAC [UNCURRY_VAR] THEN BETA_TAC 
-     THEN STRIP_TAC 
-     THEN Q.EXISTS_TAC `FST p` 
+   REWRITE_TAC [UNCURRY_VAR] THEN BETA_TAC
+     THEN STRIP_TAC
+     THEN Q.EXISTS_TAC `FST p`
      THEN Q.EXISTS_TAC `SND p`
      THEN ASM_REWRITE_TAC[]]);
 
@@ -411,8 +411,8 @@ val _ = adjoin_to_theory
        fun NL() = PP.add_newline ppstrm
    in
       S "val pair_rws = [PAIR, FST, SND];";                 NL();
-      S "val _ = TypeBase.write";                           NL();
-      S "  (TypeBase.mk_tyinfo";                            NL();
+      S "val _ = TypeBase.TypeInfo.write";                  NL();
+      S "  (TypeBase.TypeInfo.mk_tyinfo";                   NL();
       S "     {ax=TypeBase.ORIG pair_Axiom,";               NL();
       S "      case_def=pair_case_thm,";                    NL();
       S "      case_cong=pair_case_cong,";                  NL();

@@ -92,7 +92,7 @@ fun K0 ty = mk_abs(mk_var("v",ty), numSyntax.zero_tm);
 
 fun list_mk_prod_tyl L =
  let val (front,(b,last)) = front_last L
-     val tysize = TypeBase.type_size (TypeBase.theTypeBase())
+     val tysize = TypeBase.TypeInfo.type_size (TypeBase.TypeInfo.theTypeBase())
      val last' = (if b then tysize else K0) last
      handle e => Raise (wrap_exn "TotalDefn" "last'" e);
   in
@@ -144,13 +144,14 @@ fun guessR defn =
            val domty0  = list_mk_prod_tyl domtyl
        in
           [mk_meas domty0,
-           mk_meas (TypeBase.type_size (TypeBase.theTypeBase()) domty)]
+           mk_meas (TypeBase.TypeInfo.type_size
+                    (TypeBase.TypeInfo.theTypeBase()) domty)]
        end
 end;
 
 
 fun proveTotal tac defn =
-  Defn.elim_tcs defn 
+  Defn.elim_tcs defn
     (CONJUNCTS (Tactical.default_prover
                   (list_mk_conj (Defn.tcs_of defn), tac)));
 
@@ -166,13 +167,13 @@ fun TC_SIMP_CONV simps tm =
  (REPEATC
    (CHANGED_CONV
      (Rewrite.REWRITE_CONV
-        (simps @ mapfilter TypeBase.case_def_of
-               (TypeBase.listItems (TypeBase.theTypeBase())))
+        (simps @ mapfilter TypeBase.TypeInfo.case_def_of
+               (TypeBase.TypeInfo.listItems (TypeBase.TypeInfo.theTypeBase())))
        THENC REDEPTH_CONV GEN_BETA_CONV))
   THENC Rewrite.REWRITE_CONV
           (pairTheory.pair_rws @
-           mapfilter (get_orig o #2 o valOf o TypeBase.size_of0)
-               (TypeBase.listItems (TypeBase.theTypeBase())))
+           mapfilter (get_orig o #2 o valOf o TypeBase.TypeInfo.size_of0)
+               (TypeBase.TypeInfo.listItems (TypeBase.TypeInfo.theTypeBase())))
   THENC REDEPTH_CONV BETA_CONV
   THENC Rewrite.REWRITE_CONV [arithmeticTheory.ADD_CLAUSES]) tm;
 
@@ -181,7 +182,7 @@ fun TC_SIMP_CONV simps tm =
  * Trivial wellfoundedness prover for combinations of wellfounded relations.
  *--------------------------------------------------------------------------*)
 
-local fun BC_TAC th = 
+local fun BC_TAC th =
         if (is_imp (#2 (strip_forall (concl th))))
         then MATCH_ACCEPT_TAC th ORELSE MATCH_MP_TAC th
         else MATCH_ACCEPT_TAC th;
@@ -201,7 +202,7 @@ val default_simps =
 
 val ASM_ARITH_TAC =
  REPEAT STRIP_TAC
-    THEN REPEAT (POP_ASSUM 
+    THEN REPEAT (POP_ASSUM
          (fn th => if arithSimps.is_arith (concl th)
                    then MP_TAC th else ALL_TAC))
     THEN numLib.ARITH_TAC;
@@ -237,8 +238,8 @@ fun WF_REL_TAC Rquote = PRIM_WF_REL_TAC Rquote [] default_simps;
  ---------------------------------------------------------------------------*)
 
 local open prim_recTheory relationTheory
-      fun mesg tac (g as (_,tm)) = 
-        (if !Defn.monitoring 
+      fun mesg tac (g as (_,tm)) =
+        (if !Defn.monitoring
            then print(String.concat
                    ["\nCalling ARITH on\n",term_to_string tm,"\n"])
            else ();
@@ -255,7 +256,7 @@ local val term_prover = proveTotal default_prover
       fun try_proof defn Rcand = term_prover (set_reln defn Rcand)
       fun should_try_to_prove_termination defn =
         let val tcs = tcs_of defn
-        in not(null tcs) andalso 
+        in not(null tcs) andalso
            null(intersect (free_varsl tcs) (params_of defn))
         end
 in
@@ -271,10 +272,10 @@ fun primDefine defn =
          else defn
      val _ = save_defn defn'
      val eqns = eqns_of defn'
-     val _ = if null (params_of defn') 
+     val _ = if null (params_of defn')
            then computeLib.add_funs [eqns]
-         else WARN "primDefine" 
-          "Extra free vars in right-hand side!! Making schematic definition!!" 
+         else WARN "primDefine"
+          "Extra free vars in right-hand side!! Making schematic definition!!"
  in
     eqns
  end

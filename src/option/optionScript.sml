@@ -16,7 +16,7 @@ open HolKernel Parse boolLib;
 infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
 
 (*---------------------------------------------------------------------------
-     Make sure that sumTheory and oneTheory is loaded. 
+     Make sure that sumTheory and oneTheory is loaded.
  ---------------------------------------------------------------------------*)
 
 local open sumTheory oneTheory in end;
@@ -33,7 +33,7 @@ val _ = new_theory "option";
  * holML formalization (she called it "lift").                               *
  *---------------------------------------------------------------------------*)
 
-val option_TY_DEF = 
+val option_TY_DEF =
  new_type_definition
   ("option",
    prove(Term`?x:'a + one. (\x.T) x`,
@@ -288,8 +288,8 @@ val _ = adjoin_to_theory
   let val S = PP.add_string ppstrm
       fun NL() = PP.add_newline ppstrm
   in
-    S "val _ = TypeBase.write";                          NL();
-    S "  (TypeBase.mk_tyinfo";                           NL();
+    S "val _ = TypeBase.TypeInfo.write";                 NL();
+    S "  (TypeBase.TypeInfo.mk_tyinfo";                  NL();
     S "     {ax=TypeBase.ORIG option_Axiom,";            NL();
     S "      case_def=option_case_def,";                 NL();
     S "      case_cong=option_case_cong,";               NL();

@@ -134,7 +134,7 @@ fun WEAK_CBV_CONV rws =
     o initial_state rws;
 
 (*---------------------------------------------------------------------------
- * Adding an arbitrary conv 
+ * Adding an arbitrary conv
  *---------------------------------------------------------------------------*)
 
 fun extern_of_conv rws conv tm =
@@ -150,10 +150,10 @@ fun add_conv (cst,arity,conv) rws =
        Support for a global compset.
  ---------------------------------------------------------------------------*)
 
-val bool_redns = 
+val bool_redns =
  strictify_thm LET_DEF
  :: List.map lazyfy_thm
-      [COND_CLAUSES, COND_ID, NOT_CLAUSES, 
+      [COND_CLAUSES, COND_ID, NOT_CLAUSES,
        AND_CLAUSES, OR_CLAUSES, IMP_CLAUSES, EQ_CLAUSES];
 
 fun bool_compset() = from_list bool_redns;
@@ -171,14 +171,14 @@ val EVAL_CONV = CBV_CONV the_compset;
  ---------------------------------------------------------------------------*)
 
 fun write_datatype_info tyinfo =
- let open TypeBase
+ let open TypeBase TypeBase.TypeInfo
      val tyname = ty_name_of tyinfo
      val size_opt =
        case size_of0 tyinfo
         of SOME (_, ORIG def) => SOME def
          | otherwise => NONE
-     val compset_addns = 
-           [one_one_of tyinfo, distinct_of tyinfo, 
+     val compset_addns =
+           [one_one_of tyinfo, distinct_of tyinfo,
             size_opt, SOME (lazyfy_thm (case_def_of tyinfo))]
  in
     add_funs (mapfilter Option.valOf compset_addns)

@@ -94,9 +94,9 @@ fun Cases_on qtm (g as (asl,w)) =
  let val st = find_subterm qtm g
      val ty = cat_tyof st
      val (Tyop,_) = dest_type ty
- in case TypeBase.read Tyop
+ in case TypeBase.TypeInfo.read Tyop
      of SOME facts =>
-        let val thm = TypeBase.nchotomy_of facts
+        let val thm = TypeBase.TypeInfo.nchotomy_of facts
         in case st
            of Free M =>
                if (is_var M) then VAR_INTRO_TAC (ISPEC M thm) g else
@@ -151,9 +151,9 @@ fun induct_on_type st ty =
  let val (Tyop,_) = dest_type ty
        handle HOL_ERR _ => raise ERR "induct_on_type"
            "No induction theorems available for variable types"
- in case TypeBase.read Tyop
+ in case TypeBase.TypeInfo.read Tyop
      of SOME facts =>
-        let val thm = TypeBase.induction_of facts
+        let val thm = TypeBase.TypeInfo.induction_of facts
         in if is_mutind_thm thm
               then Mutual.MUTUAL_INDUCT_TAC thm
               else primInduct st (Prim_rec.INDUCT_THEN thm ASSUME_TAC)

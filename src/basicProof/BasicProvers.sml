@@ -43,7 +43,7 @@ end;
  * is a variable.                                                            *
  *---------------------------------------------------------------------------*)
 
-fun is_bool_atom tm = 
+fun is_bool_atom tm =
   is_var tm andalso (type_of tm = bool)
   orelse is_neg tm andalso is_var (dest_neg tm);
 
@@ -55,7 +55,7 @@ fun orient th =
     else let val (lhs,rhs) = dest_eq c
          in if is_var lhs
             then if is_var rhs
-                 then case Term.compare (lhs, rhs) 
+                 then case Term.compare (lhs, rhs)
                        of LESS  => SYM th
                         | other => th
                  else th
@@ -93,7 +93,7 @@ fun ASSUMS_TAC f P = W (fn (asl,_) =>
 
 fun CONCL_TAC f P = W (fn (_,c) => if (P c) then f else NO_TAC);
 
-fun const_coords c = 
+fun const_coords c =
   let val {Name,Thy,...} = dest_thy_const c in (Name,Thy) end;
 
 fun constructed constr_set tm =
@@ -124,7 +124,7 @@ val BOSS_STRIP_TAC = Tactical.FIRST [GEN_TAC,CONJ_TAC, DTHEN STRIP_ASSUME_TAC]
 end;
 
 fun add_constr tyinfo set =
-   let open TypeBase
+   let open TypeBase TypeBase.TypeInfo
        val C = constructors_of tyinfo
    in Binaryset.addList (set, map const_coords C)
    end;
@@ -133,13 +133,13 @@ infix &&;
 
 fun (ss && thl) = simpLib.++(ss,simpLib.rewrites thl);
 
-fun add_simpls tyinfo ss = ss && TypeBase.simpls_of tyinfo;
+fun add_simpls tyinfo ss = ss && TypeBase.TypeInfo.simpls_of tyinfo;
 
 fun is_dneg tm = 1 < snd(strip_neg tm);
 
-fun breakable tm = 
-    is_exists tm orelse 
-    is_conj tm   orelse 
+fun breakable tm =
+    is_exists tm orelse
+    is_conj tm   orelse
     is_disj tm   orelse
     is_dneg tm   orelse
     T=tm         orelse
@@ -211,7 +211,7 @@ local fun compare ((s1,s2),(t1,t2)) =
       val constr_set0 = Binaryset.empty compare
 in
 fun PRIM_STP_TAC ss finisher =
-  let open TypeBase
+  let open TypeBase TypeBase.TypeInfo
       val tyl = listItems (theTypeBase())
       val constr_set = rev_itlist add_constr tyl constr_set0
       val has_constr_eqn = Lib.can (find_term (constructed constr_set))
@@ -240,7 +240,7 @@ end;
  ---------------------------------------------------------------------------*)
 
 fun STP_TAC ss finisher =
-  let open TypeBase
+  let open TypeBase TypeBase.TypeInfo
       val tyl = listItems (theTypeBase())
       val ss' = rev_itlist add_simpls tyl ss
   in

@@ -25,7 +25,7 @@ val index_compare_def = Define `
 /\ (index_compare (Right_idx n') (Left_idx m') = GREATER) `;
 
 
-fun type_rws tyn = TypeBase.simpls_of (valOf (TypeBase.read tyn));
+fun type_rws tyn = TypeBase.simpls_of tyn
 
 val index_discr = tl (type_rws "index");
 

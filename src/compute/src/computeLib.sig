@@ -6,7 +6,7 @@ sig
   (* compsets and their operations *)
 
   type compset
-  
+
   val new_compset   : thm list -> compset
   val bool_compset  : unit -> compset
 
@@ -29,6 +29,6 @@ sig
   val add_convs     : (term * int * conv) list -> unit
   val EVAL_CONV     : conv
 
-  val write_datatype_info : TypeBase.tyinfo -> unit
+  val write_datatype_info : TypeBase.TypeInfo.tyinfo -> unit
 
 end;

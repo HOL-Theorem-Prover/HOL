@@ -7,7 +7,7 @@
 (* =====================================================================*)
 
 (* interactive use:
-  app load ["numLib", "listTheory", "listSyntax", 
+  app load ["numLib", "listTheory", "listSyntax",
             "BasicProvers", "Q", "SingleStep"];
   open numLib numSyntax BasicProvers listTheory listSyntax SingleStep;
 *)
@@ -26,7 +26,7 @@ val _ = new_theory "string";
 (* Characters are represented by the natural numbers <= 255.            *)
 (* ---------------------------------------------------------------------*)
 
-val is_char = 
+val is_char =
  let val n = mk_var("n",num)
      val topnum = mk_numeral (Arbnum.fromInt 256)
  in mk_abs(n,mk_less(n,topnum))
@@ -36,8 +36,8 @@ val CHAR_EXISTS = Q.prove (`?n. ^is_char n`, Q.EXISTS_TAC `0` THEN REDUCE_TAC);
 
 val CHAR_TYPE = new_type_definition("char", CHAR_EXISTS);
 
-val CHAR_TYPE_FACTS = 
-  define_new_type_bijections 
+val CHAR_TYPE_FACTS =
+  define_new_type_bijections
       {ABS="CHR", REP="ORD",name="char_BIJ", tyax=CHAR_TYPE};
 
 val CHR_ORD  = save_thm("CHR_ORD", CONJUNCT1 CHAR_TYPE_FACTS);
@@ -46,7 +46,7 @@ val ORD_CHR  = save_thm("ORD_CHR",BETA_RULE (CONJUNCT2 CHAR_TYPE_FACTS));
 val ORD_11   = save_thm("ORD_11",prove_rep_fn_one_one CHAR_TYPE_FACTS)
 val CHR_11   = save_thm("CHR_11",
                          BETA_RULE (prove_abs_fn_one_one CHAR_TYPE_FACTS));
-val ORD_ONTO = save_thm("ORD_ONTO", 
+val ORD_ONTO = save_thm("ORD_ONTO",
                          BETA_RULE (prove_rep_fn_onto CHAR_TYPE_FACTS));
 val CHR_ONTO = save_thm("CHR_ONTO",
                          BETA_RULE (prove_abs_fn_onto CHAR_TYPE_FACTS));
@@ -57,16 +57,16 @@ val ORD_BOUND = Q.store_thm
  PROVE_TAC [ORD_ONTO]);
 
 (*---------------------------------------------------------------------------
-    In our development, CHR is not a constructor. Is that really 
-    important? We can at least prove the following theorem about 
+    In our development, CHR is not a constructor. Is that really
+    important? We can at least prove the following theorem about
     equality of chars.
  ---------------------------------------------------------------------------*)
 
 val CHAR_EQ_THM = Q.store_thm
 ("CHAR_EQ_THM",
  `!c1 c2. (c1 = c2) = (ORD c1 = ORD c2)`,
- REPEAT GEN_TAC 
-   THEN EQ_TAC 
+ REPEAT GEN_TAC
+   THEN EQ_TAC
    THEN RW_TAC bool_ss [ORD_11]);
 
 
@@ -80,25 +80,25 @@ REPEAT STRIP_TAC
 
 (*---------------------------------------------------------------------------
       Strings are represented as lists of characters. This gives us
-      EXPLODE and IMPLODE as the functions mapping into, and from, the 
+      EXPLODE and IMPLODE as the functions mapping into, and from, the
       representation.
  ---------------------------------------------------------------------------*)
 
-val is_string = 
+val is_string =
  let val char_ty = mk_type("char",[])
  in mk_abs(mk_var("x",listSyntax.mk_list_type char_ty),T)
  end;
 
-val STRING_EXISTS = Q.prove 
+val STRING_EXISTS = Q.prove
 (`?l. ^is_string l`, Q.EXISTS_TAC `[]` THEN BETA_TAC);
 
 val STRING_TYPE = new_type_definition("string", STRING_EXISTS);
 
-val STRING_TYPE_FACTS = 
-  define_new_type_bijections 
+val STRING_TYPE_FACTS =
+  define_new_type_bijections
       {ABS="IMPLODE", REP="EXPLODE",name="string_bij", tyax=STRING_TYPE};
 
-val IMPLODE_EXPLODE = 
+val IMPLODE_EXPLODE =
   save_thm("IMPLODE_EXPLODE", CONJUNCT1 STRING_TYPE_FACTS);
 
 val EXPLODE_IMPLODE =
@@ -107,16 +107,16 @@ val EXPLODE_IMPLODE =
 
 val EXPLODE_11 = save_thm("EXPLODE_11",prove_rep_fn_one_one STRING_TYPE_FACTS)
 
-val EXPLODE_ONTO = 
-  save_thm("EXPLODE_ONTO", 
-    GEN_ALL 
+val EXPLODE_ONTO =
+  save_thm("EXPLODE_ONTO",
+    GEN_ALL
      (EQ_MP(SPEC_ALL(BETA_RULE (prove_rep_fn_onto STRING_TYPE_FACTS))) TRUTH));
 
-val IMPLODE_11 = 
+val IMPLODE_11 =
   save_thm("IMPLODE_11",
     REWRITE_RULE [] (BETA_RULE (prove_abs_fn_one_one STRING_TYPE_FACTS)));
 
-val IMPLODE_ONTO = 
+val IMPLODE_ONTO =
   save_thm("IMPLODE_ONTO",
        REWRITE_RULE [] (BETA_RULE (prove_abs_fn_onto STRING_TYPE_FACTS)));
 
@@ -130,7 +130,7 @@ val alt_string_Axiom = Q.store_thm
  `!b g. ?f.  (f (IMPLODE []) = b) /\
        (!c t. f (IMPLODE (c::t)) = g c t (f (IMPLODE t)))`,
 REPEAT GEN_TAC
-  THEN STRIP_ASSUME_TAC 
+  THEN STRIP_ASSUME_TAC
      (prove_rec_fn_exists listTheory.list_Axiom
        (Term `(list_rec (b:'a) f ([]:char list) = b) /\
               (list_rec b f (h::t) = f h t (list_rec b f t))`))
@@ -142,7 +142,7 @@ REPEAT GEN_TAC
     Case expression.
  ---------------------------------------------------------------------------*)
 
-val ALT_STRING_CASE_DEF = 
+val ALT_STRING_CASE_DEF =
 new_recursive_definition
  {name="ALT_STRING_CASE_DEF",
   def = Term `(alt_string_case f (IMPLODE [])     = f []) /\
@@ -152,7 +152,7 @@ new_recursive_definition
 val ALT_STRING_CASE_THM  = Q.store_thm
 ("ALT_STRING_CASE_THM",
  `!l f. alt_string_case f (IMPLODE l) = f l`,
- GEN_TAC 
+ GEN_TAC
    THEN STRUCT_CASES_TAC (Q.ISPEC `l:char list` listTheory.list_CASES)
    THEN RW_TAC bool_ss [ALT_STRING_CASE_DEF]);
 
@@ -160,10 +160,10 @@ val ALT_STRING_CASE_THM  = Q.store_thm
     Standard constructors for strings, defined using IMPLODE and EXPLODE.
  ---------------------------------------------------------------------------*)
 
-val EMPTYSTRING_DEF = 
+val EMPTYSTRING_DEF =
  Q.new_definition("EMPTYSTRING_DEF", `EMPTYSTRING:string = IMPLODE []`);
 
-val STRING_DEF = 
+val STRING_DEF =
  Q.new_definition("STRING_DEF", `STRING c str = IMPLODE (c::EXPLODE str)`);
 
 (*---------------------------------------------------------------------------
@@ -201,7 +201,7 @@ val string_Axiom = Q.store_thm
 
 val ALT_STRING_INDUCT_THM = Q.store_thm
 ("ALT_STRING_INDUCT_THM",
- `!P. P (IMPLODE []) /\ 
+ `!P. P (IMPLODE []) /\
      (!c cl. P (IMPLODE cl) ==> P (IMPLODE (c::cl))) ==> !s. P s`,
  RW_TAC bool_ss []
    THEN CHOOSE_THEN SUBST_ALL_TAC (Q.SPEC `s` IMPLODE_ONTO)
@@ -235,7 +235,7 @@ val STRING_CASES = Q.store_thm
      Case expressions over strings.
  ---------------------------------------------------------------------------*)
 
-val STRING_CASE_DEF = 
+val STRING_CASE_DEF =
 new_recursive_definition
  {name="STRING_CASE_DEF",
   def = Term `(string_case b f EMPTYSTRING  = b) /\
@@ -243,9 +243,9 @@ new_recursive_definition
   rec_axiom = string_Axiom};
 
 
-val STRING_CASE_CONG = 
+val STRING_CASE_CONG =
  save_thm("STRING_CASE_CONG", case_cong_thm STRING_CASES STRING_CASE_DEF);
- 
+
 (*---------------------------------------------------------------------------
       Size of a string.
  ---------------------------------------------------------------------------*)
@@ -257,18 +257,18 @@ val STRING_SIZE_DEF = new_recursive_definition
 
 
 (*---------------------------------------------------------------------------
-     Recursion equations for EXPLODE and IMPLODE 
+     Recursion equations for EXPLODE and IMPLODE
  ---------------------------------------------------------------------------*)
 
 val EXPLODE_EQNS = Q.store_thm
 ("EXPLODE_EQNS",
- `(EXPLODE EMPTYSTRING = []) /\ 
+ `(EXPLODE EMPTYSTRING = []) /\
   !c s. EXPLODE (STRING c s) = c::EXPLODE s`,
  REWRITE_TAC [EMPTYSTRING_DEF,EXPLODE_IMPLODE,IMPLODE_EXPLODE,STRING_DEF]);
 
 val IMPLODE_EQNS = Q.store_thm
 ("IMPLODE_EQNS",
- `(IMPLODE [] = EMPTYSTRING) /\ 
+ `(IMPLODE [] = EMPTYSTRING) /\
   !c s. IMPLODE (c::t) = STRING c (IMPLODE t)`,
  REWRITE_TAC [EMPTYSTRING_DEF,EXPLODE_IMPLODE,IMPLODE_EXPLODE,STRING_DEF]);
 
@@ -279,8 +279,8 @@ val _ = adjoin_to_theory
  (fn ppstrm => let
    val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
  in
-   S "val _ = TypeBase.write";
-   S "  (TypeBase.mk_tyinfo";
+   S "val _ = TypeBase.TypeInfo.write";
+   S "  (TypeBase.TypeInfo.mk_tyinfo";
    S "     {ax=TypeBase.ORIG string_Axiom,";
    S "      case_def=STRING_CASE_DEF,";
    S "      case_cong=STRING_CASE_CONG,";
@@ -296,7 +296,7 @@ val _ = adjoin_to_theory
  ---------------------------------------------------------------------------*)
 
 val BY_LISTOP_DEF = Q.new_definition
- ("BY_LIST_OP", 
+ ("BY_LIST_OP",
   `BY_LIST_OP f s = IMPLODE (f (EXPLODE s))`);
 
 

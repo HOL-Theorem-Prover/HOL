@@ -3,8 +3,8 @@ sig
 
  type hol_type     = Type.hol_type
  type thm          = Thm.thm
- type tyinfo       = TypeBase.tyinfo
- type typeBase     = TypeBase.typeBase;
+ type tyinfo       = TypeBase.TypeInfo.tyinfo
+ type typeBase     = TypeBase.TypeInfo.typeBase;
  type 'a quotation = 'a Portable.frag list
  type AST          = ParseDatatype.AST
 
@@ -19,11 +19,11 @@ sig
  val define_type      : tyspec list -> {induction:thm, recursion:thm}
  val new_datatype     : hol_type quotation -> {induction:thm, recursion:thm}
 
- val build_tyinfos    : TypeBase.typeBase
-                         -> {induction:thm, recursion:thm} 
+ val build_tyinfos    : typeBase
+                         -> {induction:thm, recursion:thm}
                            -> tyinfo list
 
- val primHol_datatype : typeBase 
+ val primHol_datatype : typeBase
                            -> hol_type quotation
                              -> (tyinfo * record_rw_names) list
 
@@ -34,13 +34,13 @@ sig
 (*---------------------------------------------------------------------------
 
  [tyspec] A type specification.  The first component is a type variable
-   whose name (less the leading quote) is the name of the new type.  Each 
-   such is accompanied by a list of constructor specifications.  Such a 
-   spec. is a string (the constructor name) and a list of types that are 
+   whose name (less the leading quote) is the name of the new type.  Each
+   such is accompanied by a list of constructor specifications.  Such a
+   spec. is a string (the constructor name) and a list of types that are
    the arguments of that constructor. Recursive occurrences of the types
    are marked by occurrences of the corresponding type variables.
 
- [xlate_parse] Translates the parsed datatype into a type specification, 
+ [xlate_parse] Translates the parsed datatype into a type specification,
    and also produces an accompanying list of "record information" for each
    type within the tyspecs.  Record information is NONE for types that
    aren't records, and for those types that are, it is SOME of the list of
@@ -54,7 +54,7 @@ sig
    type, as well as the names of the extra theorems that have been added
    to the tyinfo as simplification theorems.
 
- [primHol_datatype] A "pure" operation that defines the type but doesn't 
+ [primHol_datatype] A "pure" operation that defines the type but doesn't
    write the underlying database of facts.
 
  [make_tyinfo_persist] Arrange for a tyinfo to be written out to
@@ -64,7 +64,7 @@ sig
     means that the theorems to be added as extra simpls must have already
     been saved.
 
- [Hol_datatype] Define the type and write TypeBase.theTypeBase, and 
+ [Hol_datatype] Define the type and write TypeBase.theTypeBase, and
     arrange for the information about the type to be persistent.
 
 *)

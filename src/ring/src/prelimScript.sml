@@ -18,7 +18,7 @@ val compare_def = Define `
 /\ (compare EQUAL   lt eq gt = eq)
 /\ (compare GREATER lt eq gt = gt) `
 
-fun type_rws tyn = TypeBase.simpls_of (valOf (TypeBase.read tyn));
+fun type_rws tyn = TypeBase.simpls_of tyn
 
 val thms =
   LIST_CONJ
@@ -44,9 +44,9 @@ val list_compare_def = Define `
 val compare_equal = store_thm("compare_equal",
   --` (!x y. (cmp x y = EQUAL) = (x = y))
       ==> !l1 l2. (list_compare cmp l1 l2 = EQUAL) = (l1 = l2)`--,
- DISCH_THEN (ASSUME_TAC o GSYM)  
-   THEN NTAC 2 (Induct THENL [ALL_TAC,GEN_TAC]) 
-   THEN TRY (ASM_REWRITE_TAC[] THEN Cases_on `cmp h h'`) 
+ DISCH_THEN (ASSUME_TAC o GSYM)
+   THEN NTAC 2 (Induct THENL [ALL_TAC,GEN_TAC])
+   THEN TRY (ASM_REWRITE_TAC[] THEN Cases_on `cmp h h'`)
    THEN RW_TAC bool_ss [list_compare_def, compare_def]);
 
 val list_merge_def = Define `

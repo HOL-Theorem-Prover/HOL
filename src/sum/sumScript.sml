@@ -373,8 +373,8 @@ val _ = adjoin_to_theory
    let val S = PP.add_string ppstrm
        fun NL() = PP.add_newline ppstrm
    in
-      S "val _ = TypeBase.write";                           NL();
-      S "  (TypeBase.mk_tyinfo";                            NL();
+      S "val _ = TypeBase.TypeInfo.write";                  NL();
+      S "  (TypeBase.TypeInfo.mk_tyinfo";                   NL();
       S "     {ax=TypeBase.ORIG sum_Axiom,";                NL();
       S "      case_def=sum_case_def,";                     NL();
       S "      case_cong=sum_case_cong,";                   NL();

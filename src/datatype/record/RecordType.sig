@@ -6,6 +6,7 @@ sig
      of the names of the extra theorems that have been added to the
      tyinfo as simplifications *)
 
-  val prove_recordtype_thms 
-    : TypeBase.tyinfo * string list -> TypeBase.tyinfo * string list
+  val prove_recordtype_thms :
+    TypeBase.TypeInfo.tyinfo * string list ->
+    TypeBase.TypeInfo.tyinfo * string list
 end

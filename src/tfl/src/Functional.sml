@@ -3,7 +3,7 @@ struct
 
 open HolKernel boolSyntax wfrecUtils Rsyntax;
 
-type thry   = TypeBase.typeBase
+type thry   = TypeBase.TypeInfo.typeBase
 
 infixr 3 -->;
 infix 3 |->;
@@ -24,9 +24,9 @@ fun match_term thry tm1 tm2 = Term.match_term tm1 tm2;
 fun match_type thry ty1 ty2 = Type.match_type ty1 ty2;
 
 fun match_info db s =
-case TypeBase.get db s
- of SOME facts => SOME{case_const = TypeBase.case_const_of facts,
-                       constructors = TypeBase.constructors_of facts}
+case TypeBase.TypeInfo.get db s
+ of SOME facts => SOME{case_const = TypeBase.TypeInfo.case_const_of facts,
+                       constructors = TypeBase.TypeInfo.constructors_of facts}
   | NONE => NONE
 
 
@@ -145,7 +145,7 @@ fun mk_case ty_info ty_match FV range_ty =
  val fresh_var = wfrecUtils.vary FV
  val divide = partition fresh_var ty_match
  fun expand constructors ty ((_,[]), _) = mk_case_fail"expand_var_row"
-   | expand constructors ty (row as ((prefix, p::rst), rhs)) = 
+   | expand constructors ty (row as ((prefix, p::rst), rhs)) =
        if is_var p
        then let val fresh = fresh_constr ty_match ty fresh_var
                 fun expnd (c,gvs) =
@@ -209,7 +209,7 @@ fun mk_case ty_info ty_match FV range_ty =
      Repeated variable occurrences in a pattern are not allowed.
  ---------------------------------------------------------------------------*)
 
-fun FV_multiset tm = 
+fun FV_multiset tm =
    case dest_term tm
      of VAR v => [mk_var v]
       | CONST _ => []

@@ -2,9 +2,9 @@ signature Functional =
 sig
 
   type term = Term.term
-  type thry = TypeBase.typeBase
+  type thry = TypeBase.TypeInfo.typeBase
 
-   datatype pattern 
+   datatype pattern
         = GIVEN   of term * int
         | OMITTED of term * int
 

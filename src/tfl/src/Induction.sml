@@ -5,7 +5,7 @@ open HolKernel
 
 open boolLib Rules wfrecUtils;
 
-type thry = TypeBase.typeBase
+type thry = TypeBase.TypeInfo.typeBase
 
 infixr 3 -->;
 infix 3 |->;
@@ -15,9 +15,10 @@ val ERR = mk_HOL_ERR "Induction";
 
 
 fun induct_info db s =
- Option.map (fn facts => {nchotomy = TypeBase.nchotomy_of facts,
-                          constructors = TypeBase.constructors_of facts})
-      (TypeBase.get db s);
+ Option.map (fn facts => {nchotomy = TypeBase.TypeInfo.nchotomy_of facts,
+                          constructors =
+                          TypeBase.TypeInfo.constructors_of facts})
+      (TypeBase.TypeInfo.get db s);
 
 (* -----------------------  Miscellaneous function  --------------------------
  *
@@ -94,7 +95,7 @@ fun ipartition gv (constructors,rows) =
               val col_types = #1(wfrecUtils.gtake type_of
                                    (length L, #1(Lib.trye hd in_group)))
           in
-          part{constrs = crst, 
+          part{constrs = crst,
                rows = not_in_group,
                A = {constructor = c,
                     new_formals = map gv col_types,
@@ -178,7 +179,7 @@ fun complete_cases thy =
        GEN a (RIGHT_ASSOC
                (CHOOSE(v, ex_th0)
                  (mk_case ty_info FV thy {path=[v], rows=rows})))
-     end 
+     end
  end;
 
 
@@ -334,7 +335,7 @@ fun tycase ty_info FV thy =
  in mk
  end;
 
-fun type_cases thy = 
+fun type_cases thy =
  let val ty_info = induct_info thy
  in fn ty =>
    let val a = mk_var("a",ty)
@@ -347,7 +348,7 @@ fun type_cases thy =
     GEN a (RIGHT_ASSOC
             (CHOOSE(v, ex_th0)
               (tycase ty_info FV thy {path=[v], types=[([ty], (th0,[]))]})))
-   end 
+   end
  end;
 
 *)
