@@ -1,4 +1,4 @@
-app load ["bossLib","Q","tflLib"];
+app load ["bossLib","Q"];
 open bossLib; infix 8 by;
 
 show_assums := true;
@@ -24,23 +24,30 @@ val SOME N_aux_defn = Defn.aux_defn N_defn;
 val Neqns = Defn.eqns_of N_defn;
 val SOME Nind = Defn.ind_of N_defn;
 
+
+(*---------------------------------------------------------------------------
+     Prove partial correctness.
+ ---------------------------------------------------------------------------*)
+
 val Npartly_correct = prove(Term
  `WF R /\ 
   (!x. ~(x > 100) ==> R (N_aux R (x + 11)) x) /\
   (!x. ~(x > 100) ==> R (x + 11) x)
      ==> 
   !n. N(n) = if n>100 then n-10 else 91`,
-STRIP_TAC THEN tflLib.REC_INDUCT_TAC Nind
+STRIP_TAC THEN recInduct Nind
  THEN REPEAT STRIP_TAC
  THEN ONCE_REWRITE_TAC [Neqns]
- THEN RW_TAC bool_ss []
+ THEN RW_TAC base_ss []
  THENL [DECIDE_TAC   (* slow *),
         Q.PAT_ASSUM `p > q` MP_TAC
           THEN ASM_REWRITE_TAC[]
           THEN reduceLib.REDUCE_TAC]);
 
 (*---------------------------------------------------------------------------
-      Prove termination for N
+      Prove termination for N. This is done by proving the 
+      termination of N_aux. We choose the termination relation
+      and make another definition, Nine1, just for simplicity.
  ---------------------------------------------------------------------------*)
 
 val TR_def = 
@@ -51,40 +58,40 @@ val Nine1_def =
  Define 
     `Nine1 = N_aux TR`;
  
-val WF_TR = Q.prove `WF TR` 
-(RW_TAC bool_ss [prim_recTheory.WF_measure,TR_def]);
+val WF_TR = Q.prove (`WF TR`,
+RW_TAC base_ss [prim_recTheory.WF_measure,TR_def]);
 
 val th = ISPEC (Term`TR`) relationTheory.WF_INDUCTION_THM;
-val ind = CONV_RULE (Halts.simplify_conv)
+val ind = CONV_RULE (Halts.TC_SIMP_CONV)
             (RW.RW_RULE[prim_recTheory.WF_measure,TR_def] th);
 
 val lem0 = DECIDE`(~(x>100)) ==> (101-y < 101-x = x<y)`;
-val lem  = Q.prove`!x. ~(x>100) ==> TR (x + 11) x`
- (RW_TAC arith_ss [prim_recTheory.measure_def,
-                   relationTheory.inv_image_def,TR_def]);
+val lem  = Q.prove(`!x. ~(x>100) ==> TR (x + 11) x`,
+RW_TAC arith_ss [prim_recTheory.measure_def,
+                 relationTheory.inv_image_def,TR_def]);
 
-val eqns0 = ISPEC (Term`TR`) (Defn.eqns_of N_aux_defn);
+val eqns0 = Q.INST [`R` |-> `TR`] (Defn.eqns_of N_aux_defn);
 val eqns1 = REWRITE_RULE [GSYM Nine1_def,prim_recTheory.WF_measure,lem] eqns0;
 val eqns = MP eqns1 WF_TR;
 
-val eqn1 = Q.prove`!x. x>100 ==> (Nine1 x = x-10)`
-(RW_TAC bool_ss [] 
+val eqn1 = Q.prove(`!x. x>100 ==> (Nine1 x = x-10)`,
+RW_TAC base_ss [] 
    THEN MP_TAC eqns
     THEN ASM_REWRITE_TAC []);
 
-val eqn2 = Q.prove 
-`!x. ~(x>100) /\ x < Nine1 (x+11) ==> (Nine1 x = Nine1 (Nine1 (x+11)))`
-(RW_TAC bool_ss [lem] THEN MP_TAC eqns 
- THEN RW_TAC arith_ss 
+val eqn2 = Q.prove
+(`!x. ~(x>100) /\ x < Nine1 (x+11) ==> (Nine1 x = Nine1 (Nine1 (x+11)))`,
+ RW_TAC base_ss [lem] THEN MP_TAC eqns 
+  THEN RW_TAC arith_ss 
        [prim_recTheory.measure_def,relationTheory.inv_image_def,TR_def]); 
 
 
 val nested_tc = Q.prove
-`!x. ~(x > 100) ==> TR (Nine1 (x + 11)) x`
-(RW_TAC bool_ss 
+(`!x. ~(x > 100) ==> TR (Nine1 (x + 11)) x`,
+RW_TAC base_ss 
      [prim_recTheory.measure_def,relationTheory.inv_image_def,TR_def,lem0]
  THEN POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `x`
- THEN tflLib.REC_INDUCT_TAC ind THEN RW_TAC bool_ss []
+ THEN recInduct ind THEN RW_TAC base_ss []
  THEN IMP_RES_THEN (fn th => RULE_ASSUM_TAC (REWRITE_RULE [th])) lem0
  THEN Cases_on `x+11 > 100` THENL
  [RW_TAC arith_ss [eqn1],
@@ -102,8 +109,8 @@ val nested_tc = Q.prove
      THEN PROVE_TAC [eqn2,arithmeticTheory.LESS_TRANS]]]);
 
 val non_nested_tc = Q.prove
-`!x. ~(x > 100) ==> TR (x + 11) x`
-(RW_TAC arith_ss 
+(`!x. ~(x > 100) ==> TR (x + 11) x`,
+RW_TAC arith_ss 
   [prim_recTheory.measure_def,relationTheory.inv_image_def,TR_def]);
 
 val N_defn1 = 
@@ -112,7 +119,7 @@ val N_defn1 =
 
 val N_defn2 = 
   Defn.elim_tcs N_defn1 
-     [WF_TR,nnested_tc,
+     [WF_TR,non_nested_tc,
       REWRITE_RULE [Nine1_def] nested_tc];
 
 val Neqns = Defn.eqns_of N_defn2;
@@ -193,7 +200,7 @@ e (RW_TAC
 (*2*)
 (*3*)
 (*4*)
-e (RW_TAC bool_ss []);
+e (RW_TAC base_ss []);
 e RES_TAC;
 
 
@@ -291,16 +298,16 @@ val TR_def =
 
 val unify_def = defn "unify"
 (Term
- `(Unify(Const m, Const n) = ((m=n) => Subst[] | Fail)) /\
-  (Unify(Const m, App M N) = Fail) /\
-  (Unify(Const m, Var v)   = Subst[(v:'a,Const m)]) /\
-  (Unify(Var v, M)         = (PST(Var v) M => Fail | Subst[(v,M)])) /\
-  (Unify(App M N, Const x) = Fail) /\
-  (Unify(App M N,Var v)    = (PST(Var v)(App M N) => Fail | Subst[(v,App M N)]))
-  /\                         (* or Unify (Var v, App M N) *)
-  (Unify(App M1 N1, App M2 N2) = 
-      subst_case Fail (\theta. 
-          subst_case Fail (\sigma. Subst (compose theta sigma)) 
+   `(Unify(Const m, Const n) = if m=n then Subst[] else Fail)
+ /\ (Unify(Const m, App M N) = Fail)
+ /\ (Unify(Const m, Var v)   = Subst[(v:'a,Const m)])
+ /\ (Unify(Var v, M)         = if PST(Var v) M then Fail else Subst[(v,M)])
+ /\ (Unify(App M N, Const x) = Fail)
+ /\ (Unify(App M N,Var v)    = if PST(Var v)(App M N) 
+                               then Fail else Subst[(v,App M N)])
+ /\ (Unify(App M1 N1, App M2 N2) = 
+       subst_case Fail (\theta. 
+           subst_case Fail (\sigma. Subst (compose theta sigma)) 
                (Unify (subst theta N1, subst theta N2))) (Unify(M1,M2)))`);
 
 
