@@ -2531,11 +2531,46 @@ val _ = add_infix(">=.",450,HOLgrammars.RIGHT);
 
 (* -------------------------------------------------------- *)
 
+val TOPNUM_DEF = new_definition("TOPNUM",`TOPNUM = 2**WL`);
+val MAXNUM_DEF = new_definition("MAXNUM",`MAXNUM = TOPNUM - 1`);
+val wH_def = new_definition("wH",`wH = 2**HB`);
+val wL_def = new_definition("wL",`wL = 2**HB - 1`);
+
 val _ = 
- let open numeral_bitsTheory bitsTheory Drop
-     val THE_WL = SIMP_RULE arith_ss [HB_def,arithmeticTheory.ADD1] WL_def
+ let open arithmeticTheory numeral_bitsTheory bitsTheory Drop
+     val THE_WL = SIMP_RULE arith_ss [HB_def,ADD1] WL_def
+     val wL_thma = SIMP_RULE arith_ss [HB_def] wL_def
+     val wH_thma = SIMP_RULE arith_ss [HB_def] wH_def
+     val word_T_thm = SIMP_RULE arith_ss [THE_WL] word_T
+     val TOPNUM_THMa = SIMP_RULE arith_ss [THE_WL] TOPNUM_DEF
+     val MAXNUM_THMa = SIMP_RULE arith_ss [TOPNUM_THMa] MAXNUM_DEF
+     val TOPNUM_THM = REWRITE_RULE[NUMERAL_DEF] TOPNUM_THMa
+     val MAXNUM_THM = REWRITE_RULE[NUMERAL_DEF] MAXNUM_THMa
+     val HB_THM = REWRITE_RULE[NUMERAL_DEF] HB_def
+     val THE_WL_THM = REWRITE_RULE[NUMERAL_DEF] THE_WL
+     val wL_thm = SIMP_RULE arith_ss [NUMERAL_DEF] wL_thma
+     val wH_thm = SIMP_RULE arith_ss [NUMERAL_DEF] wH_thma
      val MOD_WL_EVAL = REWRITE_RULE [THE_WL,GSYM MOD_2EXP_def] MOD_WL_def
-     val MOD_WL_EVAL_THM = SIMP_RULE arith_ss [MOD_2EXP_def] MOD_WL_EVAL
+     val MSB_EVAL_THM = SIMP_RULE arith_ss 
+            [MSBn_def,HB_def,BIT_def,BITS_def,MOD_2EXP_def,
+             GSYM ODD_MOD2_LEM] MSB_EVAL
+     val LSB_EVAL_THMa = REWRITE_RULE [LSB_ODD] LSB_EVAL
+     val LSB_EVAL_THM = Q.prove(`(LSB (n2w ZERO) = F) /\
+                                 (LSB (n2w (BIT1 n)) = T) /\
+                                 (LSB (n2w (BIT2 n)) = F)`,
+         RW_TAC std_ss[LSB_EVAL_THMa,numeralTheory.numeral_evenodd])
+     val ONE_COMP_THM = SIMP_RULE arith_ss [THE_WL,ONE_COMP_def] ONE_COMP_EVAL
+     val TWO_COMP_THM = SIMP_RULE arith_ss [THE_WL,TWO_COMP_def] TWO_COMP_EVAL
+     val OR_EVAL_THM = REWRITE_RULE [OR_def] OR_EVAL
+     val AND_EVAL_THM = REWRITE_RULE [AND_def] AND_EVAL
+     val EOR_EVAL_THM = REWRITE_RULE [EOR_def] EOR_EVAL
+     val RRX_EVAL2 = SIMP_RULE arith_ss 
+           [GSYM DIV2_def,RRXn_def,LSR_ONE_def,HB_def,SBIT_def] RRX_EVAL
+     val RRX_EVAL3 = CONJ (SIMP_RULE arith_ss [] (Thm.SPEC T (Q.ID_SPEC RRX_EVAL2)))
+                          (SIMP_RULE arith_ss [] (Thm.SPEC F (Q.ID_SPEC RRX_EVAL2)))
+     val ASR_EVAL = REWRITE_RULE [GSYM MOD_2EXP_def]
+           (SIMP_RULE arith_ss [THE_WL,MSBn_def,BIT_def,BITS_def,SUC_SUB,
+                 MOD_2EXP_def,GSYM ODD_MOD2_LEM,HB_def] ASR_THM);
      val LT_EVAL = REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] LT_EVAL
      val LE_EVAL = REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] LE_EVAL
      val GT_EVAL = REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] GT_EVAL
@@ -2544,46 +2579,42 @@ val _ =
      val LS_EVAL = REWRITE_RULE [MOD_WL_EVAL] LS_EVAL
      val HI_EVAL = REWRITE_RULE [MOD_WL_EVAL] HI_EVAL
      val HS_EVAL = REWRITE_RULE [MOD_WL_EVAL] HS_EVAL
-     val MSB_EVAL_THM = SIMP_RULE arith_ss 
-            [MSBn_def,HB_def,BIT_def,BITS_def,DIV_2EXP_def,MOD_2EXP_def,
-             GSYM ODD_MOD2_LEM] MSB_EVAL
-     val LSB_EVAL_THM = REWRITE_RULE [LSB_ODD] LSB_EVAL
-     val word_H_thm = SIMP_RULE arith_ss [HB_def] word_H_def
-     val word_T_thm = SIMP_RULE arith_ss [THE_WL] word_T
-     val w2n_THM  = REWRITE_RULE [MOD_WL_EVAL_THM] w2n_EVAL
-     val ONE_COMP_THM = SIMP_RULE arith_ss [MOD_WL_EVAL_THM,THE_WL] ONE_COMP_def
-     val TWO_COMP_THM = SIMP_RULE arith_ss [MOD_WL_EVAL_THM,THE_WL] TWO_COMP_def
-     val ASR_EVAL = SIMP_RULE arith_ss [THE_WL,MSBn_def,BIT_def,BITS_def,SUC_SUB,
-                 MOD_2EXP_def,GSYM ODD_MOD2_LEM,DIV_2EXP_def,HB_def] ASR_THM
-     val ROR_EVAL = SIMP_RULE arith_ss [HB_def,THE_WL,BITS_def,DIV_2EXP_def] ROR_THM
-     val RRX_EVAL2 = SIMP_RULE arith_ss 
-           [GSYM DIV2_def,RRXn_def,LSR_ONE_def,HB_def,MOD_WL_EVAL_THM,SBIT_def] RRX_EVAL
-     val RRX_EVAL3 = CONJ (SIMP_RULE arith_ss [] (Thm.SPEC T (Q.ID_SPEC RRX_EVAL2)))
-                          (SIMP_RULE arith_ss [] (Thm.SPEC F (Q.ID_SPEC RRX_EVAL2)))
-     val LT_EVAL_THM = SIMP_RULE arith_ss [MOD_2EXP_def,HB_def] LT_EVAL
-     val LE_EVAL_THM = SIMP_RULE arith_ss [MOD_2EXP_def,HB_def] LE_EVAL
-     val GT_EVAL_THM = SIMP_RULE arith_ss [MOD_2EXP_def,HB_def] GT_EVAL
-     val GE_EVAL_THM = SIMP_RULE arith_ss [MOD_2EXP_def,HB_def] GE_EVAL
-     val LO_EVAL_THM = SIMP_RULE arith_ss [MOD_2EXP_def] LO_EVAL
-     val LS_EVAL_THM = SIMP_RULE arith_ss [MOD_2EXP_def] LS_EVAL
-     val HI_EVAL_THM = SIMP_RULE arith_ss [MOD_2EXP_def] HI_EVAL
-     val HS_EVAL_THM = SIMP_RULE arith_ss [MOD_2EXP_def] HS_EVAL
      val wordn = "word"^sbits
+     val WLstr = term_to_string (rhs(concl THE_WL))
+     val HBstr = term_to_string (rhs(concl HB_def))
+     val Lstr  = term_to_string (rhs(concl wL_thma))
+     val Hstr  = term_to_string (rhs(concl wH_thma))
+     val TOPstr = term_to_string (rhs(concl TOPNUM_THMa))
+     val MAXstr = term_to_string (rhs(concl MAXNUM_THMa))
  in exportML(wordn,
     OPEN ["num", "bits", "numeral_bits"]
     :: EQDATATYPE ([],ParseDatatype.parse [QUOTE (wordn^" = n2w of num")])
     :: MLSIG "type num = numML.num"
     :: MLSTRUCT "nonfix - + * < > <= >= ;"
-    :: map (DEFN o PURE_REWRITE_RULE[arithmeticTheory.NUMERAL_DEF])
-       [THE_WL, HB_def, word_0, word_1, word_L_def, word_H_thm, word_T_thm,
-        w2n_THM, MOD_WL_EVAL_THM, MSB_EVAL_THM,  LSB_EVAL_THM, 
+    :: MLSTRUCT (String.concat 
+        ["(*---------------------------------------------------------------------------\n",
+         "         WL = ", WLstr, "\n",
+         "         HB = ", HBstr, "\n",
+         "          L = ", Lstr, "\n",
+         "          H = ", Hstr, "\n",
+         "     TOPNUM = ", TOPstr, "\n",
+         "     MAXNUM = ", MAXstr, "\n",
+         "  ---------------------------------------------------------------------------*)\n"])
+    :: DEFN HB_def :: DEFN WL_def
+    :: DEFN TOPNUM_DEF :: DEFN MAXNUM_DEF 
+    :: DEFN wL_def :: DEFN wH_def
+    :: map (DEFN o PURE_REWRITE_RULE [SYM HB_THM, SYM THE_WL_THM, SYM wL_thm, SYM wH_thm]
+                 o PURE_REWRITE_RULE [NUMERAL_DEF, SYM TOPNUM_THM, SYM MAXNUM_THM])
+       [word_T_thm, word_0, word_1, 
+        NUMERAL_MOD_2EXP, iMOD_2EXP, MOD_WL_EVAL,NUMERAL_DIV_2EXP,
+        w2n_EVAL, MSB_EVAL_THM,  LSB_EVAL_THM, 
         WORD_BIT_def, WORD_BITS_def, WORD_SLICE_def,
-        OR_def, AND_def, EOR_def, ONE_COMP_THM, TWO_COMP_THM, 
-        OR_EVAL, AND_EVAL, EOR_EVAL, ONE_COMP_EVAL, TWO_COMP_EVAL, 
+        ONE_COMP_THM, TWO_COMP_THM, 
+        OR_EVAL_THM, AND_EVAL_THM, EOR_EVAL_THM, 
         ADD_EVAL2, MUL_EVAL2, word_sub_def,
-        LSL_EVAL, LSR_THM, ASR_EVAL, ROR_EVAL, RRX_EVAL3,
-        LT_EVAL_THM, LE_EVAL_THM, GT_EVAL_THM, GE_EVAL_THM, 
-        LO_EVAL_THM, LS_EVAL_THM, HI_EVAL_THM, HS_EVAL_THM]
+        LSL_EVAL, LSR_THM, ASR_EVAL, ROR_THM, RRX_EVAL3,
+        LT_EVAL, LE_EVAL, GT_EVAL, GE_EVAL, 
+        LO_EVAL, LS_EVAL, HI_EVAL, HS_EVAL]
      @ 
      [MLSIG (String.concat["val fromNum : num -> ",wordn]),
       MLSIG (String.concat["val toNum : ",wordn," -> num"]),
