@@ -39,7 +39,7 @@ val numeral_redns =
 
 val div_thm =
     prove
-      (Term `!x y q r. 
+      (Term `!x y q r.
           x DIV y = if (x = q * y + r) /\ (r < y) then q else x DIV y `,
        REPEAT STRIP_TAC THEN COND_CASES_TAC THEN REWRITE_TAC [] THEN
        MATCH_MP_TAC DIV_UNIQUE THEN EXISTS_TAC (Term `r:num`) THEN
@@ -47,7 +47,7 @@ val div_thm =
 
 val mod_thm =
     prove
-      (Term `!x y q r. 
+      (Term `!x y q r.
           x MOD y = if (x = q * y + r) /\ r<y then r else x MOD y`,
        REPEAT STRIP_TAC THEN COND_CASES_TAC THEN REWRITE_TAC [] THEN
        MATCH_MP_TAC MOD_UNIQUE THEN EXISTS_TAC (Term `q:num`) THEN
@@ -59,24 +59,26 @@ fun cbv_DIV_CONV tm =
      val (x,y) = dest_div tm
      val (q,r) = divmod (dest_numeral x, dest_numeral y)
  in SPECL [x, y, mk_numeral q, mk_numeral r] div_thm
- end 
+ end
  handle HOL_ERR _ => failwith "cbv_DIV_CONV"
+      | Div => failwith "cbv_DIV_CONV"
 
 fun cbv_MOD_CONV tm =
  let open Arbnum numSyntax
      val (x,y) = dest_mod tm
-     val (q,r) = divmod (dest_numeral x, dest_numeral y) 
+     val (q,r) = divmod (dest_numeral x, dest_numeral y)
  in SPECL [x, y, mk_numeral q, mk_numeral r] mod_thm
- end handle HOL_ERR _ => failwith "cbv_MOD_CONV";
+ end handle HOL_ERR _ => failwith "cbv_MOD_CONV"
+          | Div => failwith "cbv_MOD_CONV";
 
 
-fun num_compset () = 
+fun num_compset () =
   let open computeLib
       val compset = bool_compset()
       val _ = add_thms numeral_redns compset
       val _ = add_conv (numSyntax.div_tm, 2, cbv_DIV_CONV) compset
       val _ = add_conv (numSyntax.mod_tm, 2, cbv_MOD_CONV) compset
-  in 
+  in
     compset
   end;
 

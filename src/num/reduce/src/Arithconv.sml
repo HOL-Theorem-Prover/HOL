@@ -24,7 +24,7 @@
 structure Arithconv :> Arithconv =
 struct
 
-open HolKernel boolTheory boolLib Parse Rsyntax 
+open HolKernel boolTheory boolLib Parse Rsyntax
      Num_conv numSyntax arithmeticTheory numeralTheory;
 
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
@@ -38,11 +38,11 @@ fun failwith function = raise (ERR function "")
 
 
 (*---------------------------------------------------------------------------
-    A "conv-al" that takes a conv and makes it fail if the 
+    A "conv-al" that takes a conv and makes it fail if the
     result is not either true, false or a numeral.
  ---------------------------------------------------------------------------*)
 
-fun TFN_CONV c t = 
+fun TFN_CONV c t =
  let val result = c t
      val result_t = rhs (concl result)
  in
@@ -59,7 +59,7 @@ end
 local val NEQ_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_eq])
 in
 fun NEQ_CONV tm =
- if is_eq tm then with_exn NEQ_RW tm (ERR "NEQ_CONV" "") 
+ if is_eq tm then with_exn NEQ_RW tm (ERR "NEQ_CONV" "")
  else failwith "NEQ_CONV"
 end;
 
@@ -70,7 +70,7 @@ end;
 local val LT_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_lt])
 in
 fun LT_CONV tm =
-  if is_less tm then with_exn LT_RW tm (ERR "LT_CONV" "") 
+  if is_less tm then with_exn LT_RW tm (ERR "LT_CONV" "")
   else failwith "LT_CONV"
 end;
 
@@ -142,7 +142,7 @@ end;
 (* PRE_CONV "PRE [n]" = |- PRE [n] = [n-1]                               *)
 (*-----------------------------------------------------------------------*)
 
-local 
+local
   val PRE_RW = TFN_CONV (REWRITE_CONV [numeral_distrib, numeral_pre,NORM_0])
 in
 fun PRE_CONV tm =
@@ -247,6 +247,7 @@ fun DIV_CONV tm =
   in
      MP (MP (MP chain p1) p2) p3
   end handle HOL_ERR _ => failwith "DIV_CONV"
+           | Div => raise ERR "DIV_CONV" "attempt to divide by zero"
 end;
 
 (*-----------------------------------------------------------------------*)
@@ -262,7 +263,7 @@ in
 fun MOD_CONV tm =
  let open Arbnum
      val (xn,yn) = dest_mod tm
-     val x = dest_numeral xn 
+     val x = dest_numeral xn
      and y = dest_numeral yn
      val q = x div y
      val p = q * y
@@ -278,6 +279,7 @@ fun MOD_CONV tm =
    in
       MP (MP (MP chain p1) p2) p3
    end handle HOL_ERR _ => failwith "MOD_CONV"
+            | Div => raise ERR "MOD_CONV" "attempt to take mod 0"
 end;
 
 end
