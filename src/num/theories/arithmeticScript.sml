@@ -1443,6 +1443,13 @@ val ODD_EXISTS = store_thm("ODD_EXISTS",
    [REWRITE_TAC[EVEN_ODD_EXISTS],
     DISCH_THEN(CHOOSE_THEN SUBST1_TAC) THEN MATCH_ACCEPT_TAC ODD_DOUBLE]);
 
+val EVEN_EXP = Q.store_thm (
+"EVEN_EXP",
+`!m n. 0 < n /\ EVEN m ==> EVEN (m ** n)`,
+REPEAT STRIP_TAC THEN STRIP_ASSUME_TAC (Q.SPEC `n` num_CASES) THEN
+BasicProvers.RW_TAC bool_ss [EXP, EVEN_MULT] THEN
+METIS_TAC [prim_recTheory.NOT_LESS_0]);
+
 (* --------------------------------------------------------------------- *)
 (* Theorems moved from the "more_arithmetic" library      [RJB 92.09.28] *)
 (* --------------------------------------------------------------------- *)
