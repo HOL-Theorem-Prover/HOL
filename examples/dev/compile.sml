@@ -1421,6 +1421,84 @@ fun LIST_ANTE_EXISTS_INTRO([],th) = th
  |  LIST_ANTE_EXISTS_INTRO((v::vl),th) = 
      ANTE_EXISTS_INTRO v (LIST_ANTE_EXISTS_INTRO(vl,th));
 
+(*****************************************************************************)
+(* ``: ty1 # ... # tyn`` --> [`:ty```, ..., :``tyn``]                        *)
+(*****************************************************************************)
+fun strip_prodtype ty =
+ (let val ("prod", [ty1,ty2]) = dest_type ty
+  in
+  ty1 :: strip_prodtype ty2
+  end)
+ handle _ => [ty];
+(*****************************************************************************)
+(* mapcount f [x1,...,xn] = [f 1 x1, ..., f n xn]                            *)
+(*****************************************************************************)
+local
+fun mapcount_aux n f [] = []
+ |  mapcount_aux n f (x::xl) = f n x :: (mapcount_aux (n+1) f xl);
+in
+fun mapcount f l = mapcount_aux 1 f l
+end;
+
+(*****************************************************************************)
+(* ``s : ty -> ty1 # ... # tyn``  -->  |- ?s1 ... sn. s = s1 <> ... <> sn    *)
+(*****************************************************************************)
+fun BUS_SPLIT tm =                           (* Pretty gross implementation! *)
+ (let val (name,ty) = dest_var tm
+      val ("fun",[ty1,ty2]) = dest_type ty
+      val tyl = strip_prodtype ty2
+      val vl1 = mapcount 
+                 (fn n => fn vty => 
+                   mk_var((name^Int.toString n),``:^ty1->^vty``)) 
+                 tyl
+      val (v1::vl2) = rev vl1
+      val bus = foldl (fn (v,vtm) => ``^v <> ^vtm``) v1 vl2
+      val (tm1::tml) = foldl (fn (_,(x::l)) => ``SND o ^x`` :: x :: l) [tm] vl2
+      val sels = rev(tm1 :: map (fn t => ``FST o ^t``) tml)
+  in
+   prove
+    (list_mk_exists(vl1,mk_eq(tm,bus)),
+     MAP_EVERY EXISTS_TAC sels
+      THEN RW_TAC std_ss [BUS_CONCAT_def,ETA_AX])
+  end)
+  handle HOL_ERR _ => raise ERR "BUS_SPLIT" "not a bus";
+
+(*****************************************************************************)
+(* ``(\(load,inp,done,out). P load inp done out)``                           *)
+(* -->                                                                       *)
+(* |- (\(load,inp,done,out). P load inp done out)                            *)
+(*    =                                                                      *)
+(*    (\(load,inp,done,out).                                                 *)
+(*     ?inp1 ... inpm. (inp = inp1 <> ... <> inpm) /\                        *)
+(*     ?out1 ... outn. (out = out1 <> ... <> outn) /\                        *)
+(*     P load inp done out)                                                  *)
+(*****************************************************************************)
+fun ABS_IN_OUT_SPLIT_CONV tm =
+ let val (args,bdy) = dest_pabs tm
+     val [ld,inp,done,out] = strip_pair args
+     val inpth = BUS_SPLIT inp
+     val (inpvars,inpbdy) = strip_exists(concl inpth)
+     val outth = BUS_SPLIT out
+     val (outvars,outbdy) = strip_exists(concl outth)
+     val goal = 
+          mk_eq
+           (bdy,
+            list_mk_exists
+             (inpvars,
+              mk_conj
+               (inpbdy,
+                list_mk_exists(outvars,mk_conj(outbdy,bdy)))))
+     val th =  prove
+                (goal,
+                 RW_TAC std_ss [LEFT_EXISTS_AND_THM,inpth,outth])
+               handle HOL_ERR _ 
+               => (if_print "ABS_IN_OUT_SPLIT_CONV fails to prove:\n";
+                   if_print_term goal;print"\n";
+                   raise ERR "ABS_IN_OUT_SPLIT_CONV" "proof failure")
+ in
+  MK_PABS(PGEN args th)
+ end;
+
 val at_thms =
  [UNDISCH REG_IMP,UNDISCH REGF_IMP,
   COMB_at,CONSTANT_at,TRUE_at,
@@ -1434,6 +1512,7 @@ val MAKE_NETLIST =
  Ho_Rewrite.REWRITE_RULE [COMB_NOT,COMB_AND,COMB_OR]                       o
  CONV_RULE
   (RATOR_CONV(RAND_CONV(PABS_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))        o
+ CONV_RULE(RATOR_CONV(RAND_CONV ABS_IN_OUT_SPLIT_CONV))                    o
  SIMP_RULE std_ss [UNCURRY]                                                o
  Ho_Rewrite.REWRITE_RULE [BUS_CONCAT_ELIM]                                 o
  Ho_Rewrite.REWRITE_RULE
@@ -1449,7 +1528,7 @@ val MAKE_NETLIST =
   [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
    ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
    Ite_def,Par_def,Seq_def,o_THM];
-
+     
 
 (*****************************************************************************)
 (* Compile a device implementation into a clocked circuit represented in HOL *)
@@ -1485,6 +1564,9 @@ val MAKE_CIRCUIT =
    ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
    GSYM DEL_IMP_THM,DEL_IMP_def,
    Ite_def,Par_def,Seq_def,o_THM];
+
+
+
 
 
 
