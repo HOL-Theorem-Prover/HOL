@@ -33,7 +33,7 @@ local open arithmeticTheory pairTheory in end;
  *---------------------------------------------------------------------------*)
 
 open HolKernel Parse boolLib Num_conv Prim_rec BasicProvers mesonLib
-     simpLib boolSimps pairTheory;
+     simpLib boolSimps pairTheory TotalDefn SingleStep;
 
 val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
 
@@ -43,7 +43,7 @@ val _ = new_theory "list";
 (* Define some useful support, which doesn't get defined until SingleStep    *)
 (* which is in bossLib, alas.                                                *)
 (*---------------------------------------------------------------------------*)
-
+(*
 fun (q by t) = Q.SUBGOAL_THEN q STRIP_ASSUME_TAC THENL [t, ALL_TAC]
 
 fun genCases_on thm q = 
@@ -51,6 +51,7 @@ fun genCases_on thm q =
     (fn th => SUBST_ALL_TAC th THEN ASSUME_TAC th) (Q.SPEC q thm)
 
 val Cases_on = genCases_on arithmeticTheory.num_CASES;
+*)
 
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 
@@ -149,6 +150,9 @@ val APPEND = new_recursive_definition
        rec_axiom = list_Axiom,
        def = --`(!l:'a list. APPEND [] l = l) /\
                   (!l1 l2 h. APPEND (h::l1) l2 = h::APPEND l1 l2)`--};
+
+val _ = set_fixity "<>" (Infixl 500);
+val _ = overload_on ("<>", Term`APPEND`);
 
 val FLAT = new_recursive_definition
       {name = "FLAT",
@@ -772,9 +776,7 @@ val UNZIP_THM = Q.store_thm
  `(UNZIP [] = ([]:'a list,[]:'b list)) /\
   (UNZIP ((x:'a,y:'b)::t) = let (L1,L2) = UNZIP t in (x::L1, y::L2))`,
  RW_TAC bool_ss [UNZIP]
-   THEN genCases_on  (INST_TYPE [alpha |-> Type`:'a list`,
-                                 beta  |-> Type`:'b list`]
-                      pairTheory.ABS_PAIR_THM) `UNZIP t`
+   THEN Cases_on `UNZIP t`
    THEN RW_TAC bool_ss [LET_THM,pairTheory.UNCURRY_DEF,
                         pairTheory.FST,pairTheory.SND]);
 
@@ -1000,6 +1002,41 @@ val IN_LIST_TO_SET = store_thm(
 val _ = export_rewrites ["IN_LIST_TO_SET"]
 
 
+(*---------------------------------------------------------------------------*)
+(* Tail recursive versions for better memory usage when applied in ML        *)
+(*---------------------------------------------------------------------------*)
+
+val _ = Defn.def_suffix := "_DEF";
+
+val LEN_DEF = Define 
+  `(LEN [] n = n) /\ 
+   (LEN (h::t) n = LEN t (n+1))`;
+
+val REV_DEF = Define 
+  `(REV [] acc = acc) /\ 
+   (REV (h::t) acc = REV t (h::acc))`;
+
+val LEN_LENGTH_LEM = Q.store_thm
+("LEN_LENGTH_LEM",
+ `!L n. LEN L n = LENGTH L + n`,
+ Induct THEN RW_TAC arith_ss [LEN_DEF,LENGTH]);
+
+val REV_REVERSE_LEM = Q.store_thm
+("REV_REVERSE_LEM",
+ `!L1 L2. REV L1 L2 = APPEND (REVERSE L1) L2`,
+ Induct THEN RW_TAC arith_ss [REV_DEF,REVERSE_DEF,APPEND]
+        THEN REWRITE_TAC [GSYM APPEND_ASSOC]
+        THEN RW_TAC bool_ss [APPEND]);
+
+val LENGTH_LEN = Q.store_thm
+("LENGTH_LEM",
+ `!L. LENGTH L = LEN L 0`,
+ RW_TAC arith_ss [LEN_LENGTH_LEM]);
+
+val REVERSE_REV = Q.store_thm
+("REVERSE_REV",
+ `!L. REVERSE L = REV L []`,
+ PROVE_TAC [REV_REVERSE_LEM,APPEND_NIL]);
 
 (* --------------------------------------------------------------------- *)
 
@@ -1112,7 +1149,7 @@ val _ =
               MEM, FILTER, FOLDR, FOLDL, EVERY_DEF,
               EXISTS_DEF, MAP2_THM, ZIP_THM, UNZIP_THM, REVERSE_DEF,
               CONJ LAST_NIL LAST_CONS, CONJ FRONT_NIL FRONT_CONS, 
-              ALL_DISTINCT, EL_compute, LENGTH_THM])
+              ALL_DISTINCT, EL_compute, LENGTH_THM, LEN_DEF, REV_DEF])
  end;
 
 val _ = export_theory();
