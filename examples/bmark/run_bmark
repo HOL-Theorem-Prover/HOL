@@ -4,7 +4,7 @@ rm -f *.sig MULT*sml NEXT*sml prims*sml
 
 # Run the benchmark
 
-$1 Bmark.sml
+$1 < Bmark.sml
 
 # Clean up debris
 
