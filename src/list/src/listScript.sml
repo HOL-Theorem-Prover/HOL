@@ -192,6 +192,7 @@ val EXISTS_DEF = new_recursive_definition
        rec_axiom = list_Axiom,
        def = --`(!P:'a->bool. EXISTS P [] = F)
             /\  (!P h t.      EXISTS P (h::t) = P h \/ EXISTS P t)`--};
+val _ = export_rewrites ["EXISTS_DEF"]
 
 val EL = new_recursive_definition
       {name = "EL",
