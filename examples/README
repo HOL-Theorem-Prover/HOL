@@ -4,8 +4,8 @@ Currently on offer are the following:
 
   * MLSyntax
 
-       This example shows the use of a facility for defining mutually
-       recursive types, due to Elsa Gunter of Bell Labs. In the example,
+       This example shows the use of a facility for defining 
+       recursive types, implemented by John Harrison. In the example,
        the type of abstract syntax for a small but not totally
        unrealistic subset of ML is defined, along with a simple mutually
        recursive function over the syntax.

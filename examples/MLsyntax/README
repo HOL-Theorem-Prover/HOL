@@ -1,6 +1,6 @@
 This example defines the abstract syntax for a simple ML-like language,
 and a simple mutually-recursive function for computing the variables of
-an expression of that language.  It exercises Elsa Gunter's type
+an expression of that language.  It exercises the new type
 definition package for mutually recursive concrete types.
 
  The example is also a demonstration of how Holmake works. Just invoke
@@ -20,6 +20,6 @@ in the first place also takes some time.
 attention to this Holmake stuff, do the following in an invocation of
 Hol98:
 
-    app load ["Datatype","mutualLib", "stringTheory", "setTheory"];
+    app load ["Datatype", "stringTheory", "setTheory"];
 
 and then proceed with cut-and-paste from the file MLScript.sml.
