@@ -1,6 +1,6 @@
 (* =====================================================================
  * FILE          : traverse.sml
- * DESCRIPTION   : A programmable term traversal engine for hol90
+ * DESCRIPTION   : A programmable term traversal engine
  *
  * AUTHOR        : Donald Syme
  *                 Based loosely on original HOL rewriting by
@@ -22,6 +22,7 @@ struct
 open HolKernel Drule Conv Psyntax Abbrev liteLib Trace Travrules Opening;
 
 infix THENQC THENCQC ORELSEC IFCQC
+
 fun WRAP x = STRUCT_WRAP "Traverse" x;
 fun ERR x  = STRUCT_ERR "Traverse" x;
 

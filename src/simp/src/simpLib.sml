@@ -38,16 +38,30 @@ type convdata = {name  : string,
 (* Make a rewrite rule into a conversion.                                    *)
 (*---------------------------------------------------------------------------*)
 
+datatype control = UNBOUNDED | BOUNDED of int ref
+
+
+fun appconv (c,UNBOUNDED) tm     = c tm
+  | appconv (c,BOUNDED(ref 0)) _ = failwith "exceeded rewrite bound"
+  | appconv (c,BOUNDED r) tm     = c tm before Portable.dec r;
+
+fun dest_tagged_rewrite thm =
+   (UNBOUNDED, DEST_UNBOUNDED thm) 
+ handle _ =>
+   let val (th,n) = DEST_BOUNDED thm
+   in (BOUNDED (ref n), th)
+   end;
+
 fun mk_rewr_convdata thm =
-   let val th = SPEC_ALL thm
-   in
-      {name="<rewrite>",
-       key=SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
-       trace=100,
-       (* no need to provide extra tracing here; COND_REWR_CONV provides
-          enough tracing itself *)
-       conv=COND_REWR_CONV th}
-     end;
+ let val (tag,thm') = dest_tagged_rewrite thm
+     val th = SPEC_ALL thm'
+ in 
+   {name   = "<rewrite>",
+     key   = SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
+     trace = 100, (* no need to provide extra tracing here; 
+                     COND_REWR_CONV provides enough tracing itself *)
+     conv  = appconv (COND_REWR_CONV th, tag)}
+ end;
 
 (*---------------------------------------------------------------------------*)
 (* Composable simpset fragments                                              *)
@@ -157,7 +171,7 @@ with
     (SIMPSET {convs,rewrs,filter,ac,dprocs,congs},
      SS {mk_rewrs=mk_rewrs',travrules,initial_net,dprocs=dprocs'})
   = let val mk_rewrs = case filter of SOME f => f oo mk_rewrs' | _ => mk_rewrs'
-        val rewrs' = ac_rewrites ac @ flatten (map mk_rewrs rewrs)
+        val rewrs' = flatten (map mk_rewrs (ac_rewrites ac@rewrs))
         val newconvdata = convs @ map mk_rewr_convdata rewrs'
         val net = net_add_convs initial_net newconvdata
     in
@@ -169,28 +183,28 @@ with
 
  val mk_simpset = foldl add_to_ss empty_ss;
 
- (* ---------------------------------------------------------------------
-  * SIMP_QCONV : simpset -> thm list -> conv
-  * ---------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(* SIMP_QCONV : simpset -> thm list -> conv                                  *)
+(*---------------------------------------------------------------------------*)
 
   fun op ++ (ss,ssdata) = add_to_ss (ssdata,ss);
 
   exception CONVNET of net;
 
-  fun rewriter_for_ss (ss as SS{mk_rewrs,travrules,initial_net,...}) =
-      let fun addcontext (context,thms) =
-	  let val net = (raise context) handle CONVNET net => net
-          in CONVNET (net_add_convs net (map mk_rewr_convdata
-					 (flatten (map mk_rewrs thms))))
-	  end
-          fun apply {solver,context,stack} tm =
+  fun rewriter_for_ss (SS{mk_rewrs,travrules,initial_net,...}) =
+    let fun addcontext (context,thms) =
+          let val net = (raise context) handle CONVNET net => net
+          in CONVNET (net_add_convs net 
+                         (map mk_rewr_convdata
+                           (flatten (map mk_rewrs thms))))
+          end
+        fun apply {solver,context,stack} tm =
           let val net = (raise context) handle CONVNET net => net
           in tryfind (fn conv => conv solver stack tm) (lookup tm net)
           end
-      in REDUCER {addcontext=addcontext,
-		  initial=CONVNET initial_net,
-		  apply=apply}
-      end;
+    in REDUCER {addcontext=addcontext, apply=apply,
+                initial=CONVNET initial_net}
+    end;
 
   fun SIMP_QCONV (ss as (SS ssdata)) =
       TRAVERSE {rewriters=[rewriter_for_ss ss],
