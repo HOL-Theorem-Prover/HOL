@@ -641,9 +641,7 @@ REWRITE_TAC[WF_DEF]
   THEN REPEAT GEN_TAC
   THEN DISCH_THEN (MP_TAC o Q.SPEC`\x. x=y`)
   THEN BETA_TAC THEN REWRITE_TAC[ex_lem]
-  THEN STRIP_TAC
-  THEN Q.UNDISCH_THEN `x=y` SUBST_ALL_TAC
-  THEN DISCH_TAC THEN RES_TAC);
+  THEN PROVE_TAC []);
 
 
 (*---------------------------------------------------------------------------
