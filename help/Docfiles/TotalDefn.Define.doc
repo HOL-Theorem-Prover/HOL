@@ -26,7 +26,7 @@ pattern-matching. A call {Define `<spec>`} should conform with the
 following grammar:
 {
        spec ::= <eqn>
-            |   <eqn> /\ <spec>
+            |   (<eqn>) /\ <spec>
 
         eqn ::= <alphanumeric> <pat> ... <pat> = <term>
 
@@ -131,6 +131,9 @@ ML function {xDefine} should be used.
 {Define} fails if the name of the function being defined is not
 alphanumeric.
 
+{Define} fails if there are more free variables on the right hand 
+sides of the recursion equations than the left. 
+
 If {Define} cannot prove the termination of the specified recursive
 function, then {Define} fails. In that case, one has to embark on the
 following multi-step process in order to get the same effect as if
@@ -206,52 +209,8 @@ induction theorem is generated in this case.
          !P h t. filter P (h::t) =
                   (if P h then h::filter P t else filter P t) : thm
 }
-{Define} may be used to declare so-called `schematic` definitions, or
-`recursion schemas`. These are just recursive functions with extra
-free variables (also called `parameters`) on the right-hand side of some
-clauses. Such schemas have been used as the foundation of program
-transformation systems. For example, the following defines a schema for
-binary recursion.
-{
-   Define `binRec (x:'a) =
-             if atomic x then (A x:'b)
-             else join (binRec (left x))
-                       (binRec (right x))`;
-
-   Equations stored under "binRec_def".
-   Induction stored under "binRec_ind".
-
-   <<HOL warning: TotalDefn.primDefine:
-        Extra free vars in right-hand side!! Making schematic definition>>
-
-   > val it =
-       [WF R, !x. ~atomic x ==> R (left x) x,
-              !x. ~atomic x ==> R (right x) x]
-       |-
-       binRec A atomic join left right x =
-         (if atomic x then A x
-          else join (binRec A atomic join left right (left x))
-                    (binRec A atomic join left right (right x))) : thm
-}
-{Define} issues a warning when it detects parameters, but it continues
-with making the definition. Sometimes this is not appropriate, since it
-is a common user error to leave extra free variables on the right hand
-side of a definition. For the sake of being able to introduce schematic
-definitions via {Define}, we content ourselves with issuing a warning.
-
-There are several things to note about schematic definitions. First, the
-termination constraints are collected on the hypotheses of the
-definition (and induction theorem), but a termination proof is only
-attempted when the termination conditions have no occurrences of
-parameters. This is because, in general, termination can only be proved
-after some of the parameters of the scheme have been
-instantiated. Second,  notice that the original definition, in which
-parameters only occur on right hand sides, is transformed into one
-in which the parameters become arguments to the function being defined.
-This is the expected behaviour.
-
-{Define} may be used to define mutually recursive functions. We can
-define a datatype of propositions and a function for putting a
+\noindent {Define} may be used to define mutually recursive functions. 
+We can define a datatype of propositions and a function for putting a
 proposition into negation normal form as follows.  First we define a
 datatype for boolean formulae ({prop}):
 {
@@ -294,7 +253,7 @@ are defined:
           (nnfneg (AND p q) = OR (nnfneg p) (nnfneg q)) /\
           (nnfneg (OR p q) = AND (nnfneg p) (nnfneg q)) : thm
 }
-{Define} may also be used to define non-recursive functions.
+\noindent {Define} may also be used to define non-recursive functions.
 {
    Define `f x (y,z) = (x + 1 = y DIV z)`;
 
@@ -302,10 +261,10 @@ are defined:
 
    > val it = |- !x y z. f x (y,z) = (x + 1 = y DIV z) : thm
 }
-{Define} may also be used to define non-recursive functions with complex
-pattern-matching. The pattern-matching pre-processing of {Define} can be
-convenient for this purpose, but can also generate a large number of
-equations. For example:
+\noindent {Define} may also be used to define non-recursive functions
+with complex pattern-matching. The pattern-matching pre-processing of
+{Define} can be convenient for this purpose, but can also generate a
+large number of equations. For example:
 {
    Define `(g (0,_,_,_,_) = 1) /\
            (g (_,0,_,_,_) = 2) /\
@@ -313,7 +272,7 @@ equations. For example:
            (g (_,_,_,0,_) = 4) /\
            (g (_,_,_,_,0) = 5)`
 }
-yields a definition with thirty-one clauses.
+\noindent yields a definition with thirty-one clauses.
 
 \COMMENTS
 In an {eqn}, no variable can occur more than once on the left hand side
@@ -343,8 +302,8 @@ input to {Define} should instead be a term. However, some important
 pre-processing happens in {Define} that would not be possible if the
 input was a term.
 
-{Define} is a a mechanization of a well-founded recursion theorem,
-which can be found in {relationTheory}.
+{Define} is a mechanization of a well-founded recursion theorem
+{relationTheory.WFREC_COROLLARY}.
 
 {Define} currently has a rather weak termination prover. For example, it
 always fails to prove the termination of nested recursive functions.
@@ -359,6 +318,7 @@ less baggage---it depends only on {numLib} and {pairLib}---than
 
 
 \SEEALSO
-TotalDefn.xDefine, Defn.Hol_defn, Defn.tgoal, Defn.tprove, TotalDefn.WF_REL_TAC, recInduct, EVAL.
+TotalDefn.xDefine, Defn.Hol_defn, Defn.tgoal, Defn.tprove, 
+TotalDefn.WF_REL_TAC, SingleStep.recInduct, bossLib.EVAL_CONV.
 
 \ENDDOC

@@ -1,6 +1,6 @@
 \DOC SPEC_ALL
 
-\TYPE {SPEC_ALL : (thm -> thm)}
+\TYPE {SPEC_ALL : thm -> thm}
 
 \SYNOPSIS
 Specializes the conclusion of a theorem with its own quantified variables.
@@ -24,11 +24,11 @@ Never fails.
 
 \EXAMPLE
 {
-- SPEC (Term `b:bool`) BOOL_CASES_AX;
-> val it =  |- (b = T) \/ (b = F) : thm
+- SPEC_ALL CONJ_ASSOC;
+> val it = |- t1 /\ t2 /\ t3 = (t1 /\ t2) /\ t3 : thm
 }
 \SEEALSO
 Thm.GEN, Drule.GENL, Drule.GEN_ALL, Tactic.GEN_TAC, 
-Thm.SPEC, Drule.SPECL, Drule.SPEC_ALL, Tactic.SPEC_TAC.
+Thm.SPEC, Drule.SPECL, Tactic.SPEC_TAC.
 
 \ENDDOC

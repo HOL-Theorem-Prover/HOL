@@ -68,6 +68,9 @@ The rewrite rules held in {implicit_rewrites} are automatically
 included in the simplifications performed by some of the rewriting tools.
 
 \SEEALSO
-ABS_SIMP, AND_CLAUSES, COND_CLAUSES, EQ_CLAUSES, EXISTS_SIMP, FORALL_SIMP, FST, Rewrite.GEN_REWRITE_RULE, Rewrite.GEN_REWRITE_TAC, IMP_CLAUSES, NOT_CLAUSES, OR_CLAUSES, PAIR, REFL_CLAUSE, Rewrite.REWRITE_RULE, Rewrite.REWRITE_TAC, SND, Rewrite.bool_rewrites, Rewrite.set_implicit_rewrites, Rewrite.add_implicit_rewrites.
+Rewrite.GEN_REWRITE_RULE, Rewrite.GEN_REWRITE_TAC, 
+Rewrite.REWRITE_RULE, Rewrite.REWRITE_TAC, 
+Rewrite.bool_rewrites, Rewrite.set_implicit_rewrites, 
+Rewrite.add_implicit_rewrites.
 
 \ENDDOC
