@@ -27,6 +27,13 @@ let check_close pi got lexbuf =
   else
     raise (Mismatch ("Mismatched delimiters: "^(delim_info pi.expected).sopen^" closed by "^(delim_info got).sclose ^ " at " ^ pretty_pos lexbuf))
 
+let check_close_tex_ml pi lexbuf =
+  let got = DelimText in
+  if pi.expected = DelimTex then
+    raise (Mismatch ("Mismatched delimiters: "^(delim_info pi.expected).sopen^" closed by "^(delim_info got).sclose ^ " at " ^ pretty_pos lexbuf))
+  else
+    Content ((delim_info got).sclose)
+
 let bad_char mode lexbuf =
   raise (BadChar ("didn't expect char '"^Lexing.lexeme lexbuf^"' at " ^ pretty_pos lexbuf ^ " in " ^ render_mode mode ^ " mode (or illegal character in lexeme beginning here)."))
   
@@ -306,7 +313,7 @@ and
     tstarthol      { fun _  -> ToHol(DelimHolTex) }
   | tstarthol0     { fun _  -> ToHol(DelimHolTexMath) }
   | endtex         { fun pi -> check_close pi DelimTex lexbuf }
-  | stopcom        { fun pi -> check_close pi DelimText lexbuf }  (* always an error *)
+  | stopcom        { fun pi -> check_close_tex_ml pi lexbuf }  (* check for ( * : closed by * ) *)
   | tstartdir      { fun _  -> ToDir(DelimDir) }  (* recognised as an alias; closedelim is the same *)
   | startdir       { fun _  -> ToDir(DelimDir) }
 
