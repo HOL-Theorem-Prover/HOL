@@ -79,6 +79,7 @@ sig
 
  (* from Pair_basic *)
 
+(*
  val MK_PAIR : thm * thm -> thm
  val PABS : term -> thm -> thm
  val PABS_CONV : conv -> conv
@@ -100,6 +101,7 @@ sig
  val PALPHA : term -> conv
  val paconv : term -> term -> bool
  val PAIR_CONV : conv -> conv
+*)
 
  (* from pairTools *)
 

@@ -1,15 +1,13 @@
 (*---------------------------------------------------------------------------*
- * Theory of pairs and associated support. This is currently somewhat        *
- * underpowered from Jim Grundy's implementation of the library, but offers  *
- * expanded syntax support.                                                  *
+ * Theory of pairs and associated support.                                   *
  *---------------------------------------------------------------------------*)
 
 structure pairLib :> pairLib =
 struct
 
-local open pairTheory pairSimps pairTools in end;
+local open pairTheory pairSimps pairTools PairRules in end;
 
-open pairSyntax PairedLambda Pair_basic pairTools
+open pairSyntax PairedLambda pairTools
 
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 
