@@ -334,10 +334,31 @@ val _ = adjoin_to_theory
     S "        end;"
   end)};
 
+val _ = TypeBase.write
+  [TypeBasePure.mk_tyinfo
+     {ax=TypeBasePure.ORIG option_Axiom,
+      case_def=option_case_def,
+      case_cong=option_case_cong,
+      induction=TypeBasePure.ORIG option_induction,
+      nchotomy=option_nchotomy,
+      size=NONE,
+      encode=NONE,
+      lift=SOME(mk_var("optionSyntax.lift_option",
+                Parse.Type`:'type -> ('a -> 'term) -> 'a option -> 'term`)),
+      one_one=SOME SOME_11,
+      distinct=SOME NOT_NONE_SOME}];
+
+
 val _ = BasicProvers.export_rewrites
           ["OPTION_MAP_EQ_SOME", "OPTION_MAP_EQ_NONE_both_ways", "THE_DEF",
            "IS_SOME_DEF", "IS_NONE_EQ_NONE", "NOT_IS_SOME_EQ_NONE",
            "option_case_ID", "option_case_SOME_ID", "option_case_def",
            "OPTION_MAP_DEF", "OPTION_JOIN_DEF", "SOME_11", "NOT_SOME_NONE"]
+
+
+val _ = Drop.exportML("option",
+        map Drop.DEFN
+         [OPTION_MAP_DEF, IS_SOME_DEF, IS_NONE_DEF, THE_DEF, OPTION_JOIN_DEF]);
+
 
 val _ = export_theory();
