@@ -82,9 +82,20 @@ val BOOL_ss = SIMPSET
           SELECT_REFL, SELECT_REFL_2],
    congs = [], filter = NONE, ac = [], dprocs = []};
 
+
+(*---------------------------------------------------------------------------
+   Need to rewrite cong. rules to the iterated implication format assumed
+   by the simplifier.
+ ---------------------------------------------------------------------------*)
+
+local val IMP_CONG = REWRITE_RULE [GSYM AND_IMP_INTRO] IMP_CONG
+      val COND_CONG = REWRITE_RULE [GSYM AND_IMP_INTRO] COND_CONG
+in
 val CONG_ss = SIMPSET
-  {convs = [], rewrs = [], congs = [IMP_CONG, COND_CONG],
-   filter=NONE, ac=[], dprocs=[]};
+  {congs = [IMP_CONG, COND_CONG],
+   convs = [], rewrs = [], filter=NONE, ac=[], dprocs=[]}
+end;
+
 
 (* ---------------------------------------------------------------------
  * NOT_ss
@@ -97,7 +108,7 @@ val CONG_ss = SIMPSET
  *    |- ~x \/ y = (x ==> y)
  *    |- x \/ ~y = (y ==> x)
  *
- * but the translation to implications was too dramatic for some ...
+ * but that was too dramatic for some ...
  *
  * --------------------------------------------------------------------*)
 
@@ -177,7 +188,7 @@ val COND_elim_ss =
  * attacking a goal of the form (x = ..) /\ ... x ...
  *
  * Very inefficient on terms with many conjunctions chained together
- *)
+ * ------------------------------------------------------------------------*)
 
 val CONJ_ss = SIMPSET {
   ac = [],
