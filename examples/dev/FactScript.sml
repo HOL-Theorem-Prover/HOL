@@ -11,11 +11,13 @@
 ******************************************************************************)
 (*
 quietdec := true;
-map load  ["compile"];
-open arithmeticTheory pairLib pairTheory PairRules combinTheory
+loadPath :="dff" :: !loadPath;
+map load  ["compile","intLib"];
+open arithmeticTheory intLib pairLib pairTheory PairRules combinTheory
      devTheory composeTheory compileTheory compile;
 infixr 3 THENR;
 infixr 3 ORELSER;
+val _ = intLib.deprecate_int();
 quietdec := false;
 *)
 
@@ -31,6 +33,11 @@ open arithmeticTheory pairLib pairTheory PairRules combinTheory
      composeTheory compile;
 infixr 3 THENR;
 infixr 3 ORELSER;
+
+(******************************************************************************
+* Set default parsing to natural numbers rather than integers
+******************************************************************************)
+val _ = intLib.deprecate_int();
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -88,6 +95,20 @@ val MultThm =
   ("MultThm",
    Term`Mult = UNCURRY $*`,
    RW_TAC arith_ss [FUN_EQ_THM,FORALL_PROD,Mult,MultIterRecThm]);
+
+(*****************************************************************************)
+(* Theorem used in an example in the README file                             *)
+(*****************************************************************************)
+val FactIter_TOTAL =
+ store_thm
+  ("FactIter_TOTAL",
+   ``TOTAL((\(n:num,acc:num). n = 0),
+           (\(n:num,acc:num). (n,acc)),
+           (\(n:num,acc:num). (n - 1,n * acc)))``,
+   RW_TAC list_ss [TOTAL_def]
+    THEN Q.EXISTS_TAC `\(x,y).x`
+    THEN GEN_BETA_TAC
+    THEN DECIDE_TAC);
 
 (*****************************************************************************)
 (* Use Mult_dev to refine ``DEV (UNCURRY $* )`` in FactIter_dev              *)
@@ -161,11 +182,15 @@ val FACT_dev =
   ("FACT_dev",
    REWRITE_RULE [FactThm] Fact3_dev);
 
+val FACT_net =
+ save_thm
+  ("Fact_net",
+   time MAKE_NETLIST FACT_dev);
+
 val FACT_cir =
  save_thm
   ("Fact_cir",
-   time MAKE_NETLIST FACT_dev);
-
+   time MAKE_CIRCUIT FACT_dev);
 
 (*****************************************************************************)
 (* Temporary hack to work around a system prettyprinter bug                  *)

@@ -35,6 +35,11 @@ open arithmeticTheory pairLib pairTheory PairRules combinTheory listTheory
 (*****************************************************************************)
 
 (*****************************************************************************)
+(* Use numbers rather than primes for renaming variables.                    *)
+(*****************************************************************************)
+val _ = (Globals.priming := SOME "");
+
+(*****************************************************************************)
 (* Error reporting function                                                  *)
 (*****************************************************************************)
 val ERR = mk_HOL_ERR "compile";
@@ -1118,8 +1123,8 @@ fun COMB_SYNTH_CONV tm =
               THEN GEN_BETA_TAC 
               THEN REWRITE_TAC[])
            handle HOL_ERR _ =>
-           (if_print "COMB_SYNTH_CONV: can't prove:\n";if_print_term goal;
-            raise ERR "COMB_SYNTH_CONV" "proof validation failure")
+           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+            if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else if is_const bdy orelse numSyntax.is_numeral bdy
      then let val goal = ``^tm = CONSTANT ^bdy ^out_bus``
@@ -1130,8 +1135,8 @@ fun COMB_SYNTH_CONV tm =
               THEN GEN_BETA_TAC 
               THEN REWRITE_TAC[])
            handle HOL_ERR _ =>
-           (if_print "COMB_SYNTH_CONV: can't prove:\n";if_print_term goal;
-            raise ERR "COMB_SYNTH_CONV" "proof validation failure")
+           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+            if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else if is_comb bdy andalso is_const(rator bdy)
      then let val arg = rand bdy
@@ -1148,7 +1153,8 @@ fun COMB_SYNTH_CONV tm =
                THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
                THEN REWRITE_TAC[])
            handle HOL_ERR _ =>
-           (if_print "COMB_SYNTH_CONV: can't prove:\n";if_print_term goal;
+           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+            if_print"\n";
             raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else if is_pair bdy andalso is_BUS_CONCAT out_bus
@@ -1167,8 +1173,8 @@ fun COMB_SYNTH_CONV tm =
              THEN EQ_TAC
              THEN RW_TAC bool_ss [])
            handle HOL_ERR _ =>
-           (if_print "COMB_SYNTH_CONV: can't prove:\n";if_print_term goal;
-            raise ERR "COMB_SYNTH_CONV" "proof validation failure")
+           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+            if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else if is_comb bdy 
               andalso is_comb(rator bdy) 
@@ -1192,13 +1198,146 @@ fun COMB_SYNTH_CONV tm =
               THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
               THEN REWRITE_TAC[])
            handle HOL_ERR _ =>
-           (if_print "COMB_SYNTH_CONV: can't prove:\n";if_print_term goal;
-            raise ERR "COMB_SYNTH_CONV" "proof validation failure")
+           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+            if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else raise ERR "COMB_SYNTH_CONV" "disallowed case"
    end
   else raise ERR "SYNTH_COMB" "not an application of COMB to args";
 
+
+(*****************************************************************************)
+(* If                                                                        *)
+(*                                                                           *)
+(*   f tm --> |- tm' ==> tm                                                  *)
+(*                                                                           *)
+(* then DEPTH_IMP f tm descends recursively through existential              *)
+(* quantifications and conjunctions applying f (or tm --> |- tm ==> tm) if   *)
+(* f fails) and returning |- tm' ==> tm for some term tm'                    *)
+(*                                                                           *)
+(*****************************************************************************)
+fun DEPTH_IMP f tm =
+ if is_exists tm
+  then let val (v,bdy) = dest_exists tm
+       in
+        EXISTS_IMP v (DEPTH_IMP f bdy)
+       end
+  else if is_conj tm
+  then let val (tm1,tm2) = dest_conj tm
+           val th1 = SPEC_ALL(DEPTH_IMP f tm1)
+           val th2 = SPEC_ALL(DEPTH_IMP f tm2)
+       in
+        MATCH_MP MONO_AND (CONJ th1 th2)
+       end
+  else f tm handle _ => DISCH tm (ASSUME tm);
+
+(*****************************************************************************)
+(* AP_ANTE_IMP_TRANS f (|- t1 ==> t2) applies f to t1 to get |- t0 ==> t1    *)
+(* and then, using transitivity of ==>, returns |- t0 ==> t2                 *)
+(*****************************************************************************)
+fun AP_ANTE_IMP_TRANS f th = 
+ IMP_TRANS (f(fst(dest_imp(concl th)))) th;
+
+(*****************************************************************************)
+(* ABS_DEV_IMP f (|- (\p. tm) ===> d) applies f to tm to generate            *)
+(* an implication |- tm' ==> tm and then returns |- (\p. tm') ===> d         *)
+(*****************************************************************************)
+fun ABS_DEV_IMP f th =
+ let val (d1,d2) = dest_dev_imp(concl th)
+     val (args,bdy) = dest_pabs d1
+     val impth = f bdy 
+     val (t1,t2) = dest_imp(concl impth)
+     val (abs1,abs2) = (mk_pabs(args,t1),mk_pabs(args,t2))
+     val th1 = GEN_BETA_CONV(mk_comb(abs1,args))
+     val th2 = GEN_BETA_CONV(mk_comb(abs2,args))
+     val th3 = CONV_RULE
+                (RAND_CONV(REWR_CONV(GSYM th2))
+                  THENC RATOR_CONV(RAND_CONV(REWR_CONV(GSYM th1))))
+                impth
+     val th4 = PGEN args th3
+     val th5 = GSYM(ISPECL[abs1,abs2]DEV_IMP_def)
+     val th6 = CONV_RULE (GEN_PALPHA_CONV (mk_var("x",type_of args))) th4
+     val th7 = EQ_MP th5 th6
+  in
+   MATCH_MP DEV_IMP_TRANS (CONJ th7 th)
+  end;
+
+(*****************************************************************************)
+(* DFF_IMP_INTRO ``DFF p`` --> |- DFF_IMP p => DFF p                         *)
+(*****************************************************************************)
+fun DFF_IMP_INTRO tm =
+ if is_comb tm 
+     andalso is_const(rator tm) 
+     andalso (fst(dest_const(rator tm)) = "DFF")
+  then ISPEC (rand tm) DFF_IMP_THM
+  else DISCH tm (ASSUME tm);
+
+(*****************************************************************************)
+(* Test is a term is of the from ``s1 at p``                                 *)
+(*****************************************************************************)
+fun is_at tm =
+ is_comb tm
+  andalso is_comb(rator tm)
+  andalso is_const(rator(rator tm))
+  andalso (fst(dest_const(rator(rator tm))) = "at");
+
+(*****************************************************************************)
+(* IMP_REFINE (|- tm1 ==> tm2) tm matches tm2 to tm and if a substitution    *)
+(* sub is found such that sub tm2 = tm then |- sub tm1 ==> sub tm2 is        *)
+(* returned; if the match fails IMP_REFINE_Fail is raised.                   *)
+(*****************************************************************************)
+exception IMP_REFINE_Fail;
+
+fun IMP_REFINE th tm =
+ (let val th1 = SPEC_ALL th
+      val (tm1,tm2) = dest_imp(concl th1)
+      val (sub,ins) = match_term tm2 tm
+  in
+   INST sub (INST_TYPE ins th1)
+  end)
+ handle _ => raise IMP_REFINE_Fail;
+
+(*****************************************************************************)
+(* IMP_REFINEL [th1,...,thn] tm applies IMP_REFINE th1,...,IMP_REFINE thn    *)
+(* to tm in turn until one succeeds.  If none succeeds then |- tm => tm      *)
+(* is returned. Never fails.                                                 *)
+(*****************************************************************************)
+fun IMP_REFINEL [] tm = DISCH tm (ASSUME tm)
+ |  IMP_REFINEL (th::thl) tm = 
+     IMP_REFINE th tm handle _
+     => IMP_REFINEL thl tm;
+
+(*****************************************************************************)
+(*     |- (\(v1,...vn). tm) ===> DEV f                                       *)
+(*     -->                                                                   *)
+(*     !v1 ... vn. tm ==> DEV f (v1,...,vn)                                  *)
+(*****************************************************************************)
+fun DEV_IMP_FORALL th =
+ let val (d1,d2) = dest_dev_imp(concl th)
+     val (args,bdy) = dest_pabs d1
+     val th1 = CONV_RULE (REWR_CONV DEV_IMP_def) th
+     val th2 = PSPEC args th1
+     val th3 = CONV_RULE (RATOR_CONV(RAND_CONV PBETA_CONV)) th2
+ in
+  GENL (strip_pair args) th3
+ end;
+
+
+(*****************************************************************************)
+(*           |- !s1 ... sn. P s1 ... sn                                      *)
+(*  -------------------------------------------- at_SPECL ``clk``            *)
+(*        |- P (s1 at clk) ... (sn at clk)                                   *)
+(*****************************************************************************)
+fun at_SPEC_ALL clk th =
+ let val (vl,bdy) = strip_forall(concl th)
+ in
+  SPECL (map (fn v => ``^v at ^clk``) vl) th
+ end;
+
+val at_thms =
+ [UNDISCH REG_IMP,UNDISCH REGF_IMP,
+  COMB_at,CONSTANT_at,TRUE_at,
+  NOT_at,AND_at,OR_at,MUX_at];
 
 (*****************************************************************************)
 (* Compile a device implementation into a netlist represented in HOL         *)
@@ -1208,18 +1347,52 @@ val MAKE_NETLIST =
  SIMP_RULE std_ss [UNCURRY]                                                o
  CONV_RULE
   (RATOR_CONV(RAND_CONV(PABS_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))        o
- Ho_Rewrite.REWRITE_RULE[BUS_CONCAT_ELIM]                                  o
+ Ho_Rewrite.REWRITE_RULE [BUS_CONCAT_ELIM]                                 o
  Ho_Rewrite.REWRITE_RULE
    [FUN_EXISTS_PROD,LAMBDA_PROD,COMB_ID,COMB_CONSTANT_1,COMB_CONSTANT_2,
     COMB_CONSTANT_3,COMB_FST,COMB_SND,GSYM BUS_CONCAT_def,
     (*COMP_SEL_CLAUSES,SEL_CONCAT_CLAUSES,*)BUS_CONCAT_PAIR,BUS_CONCAT_o,
     FST,SND,BUS_CONCAT_ETA,ID_CONST,ID_o,o_ID,
     DEL_CONCAT,DFF_CONCAT,MUX_CONCAT,
+    POSEDGE_IMP_def,LATCH_def,
     COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_CONCAT_SPLIT]                     o
  GEN_BETA_RULE                                                             o
  REWRITE_RULE 
   [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
    ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
+   Par_def,Seq_def,o_THM];
+
+(*****************************************************************************)
+(* Compile a device implementation into a clocked circuit represented in HOL *)
+(*****************************************************************************)
+val MAKE_CIRCUIT =
+ DISCH_ALL                                                                 o
+ AP_ANTE_IMP_TRANS (DEPTH_IMP (IMP_REFINEL at_thms))                       o
+ Ho_Rewrite.REWRITE_RULE[at_CONCAT]                                        o
+ at_SPEC_ALL ``clk:num->bool``                                             o
+ Ho_Rewrite.REWRITE_RULE[GSYM LEFT_FORALL_IMP_THM,REG_CONCAT]              o
+ DEV_IMP_FORALL                                                            o
+ CONV_RULE(RATOR_CONV(RAND_CONV(PABS_CONV EXISTS_OUT_CONV)))               o
+ SIMP_RULE std_ss [UNCURRY]                                                o
+ CONV_RULE
+  (RATOR_CONV(RAND_CONV(PABS_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))        o
+ Ho_Rewrite.REWRITE_RULE
+  [BUS_CONCAT_ELIM,DFF_IMP_def,POSEDGE_IMP_def,LATCH_def,
+   DEL_IMP_def,GSYM DEL_IMP_THM]                                           o
+ ABS_DEV_IMP (DEPTH_IMP DFF_IMP_INTRO)                                     o
+ Ho_Rewrite.REWRITE_RULE
+   [FUN_EXISTS_PROD,LAMBDA_PROD,COMB_ID,COMB_CONSTANT_1,COMB_CONSTANT_2,
+    COMB_CONSTANT_3,COMB_FST,COMB_SND,GSYM BUS_CONCAT_def,
+    (*COMP_SEL_CLAUSES,SEL_CONCAT_CLAUSES,*)BUS_CONCAT_PAIR,BUS_CONCAT_o,
+    FST,SND,BUS_CONCAT_ETA,ID_CONST,ID_o,o_ID,
+    DEL_CONCAT,DFF_CONCAT,MUX_CONCAT,
+    DFF_IMP_def,POSEDGE_IMP_def,LATCH_def,
+    COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_CONCAT_SPLIT]                     o
+ GEN_BETA_RULE                                                             o
+ REWRITE_RULE 
+  [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
+   ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
+   GSYM DEL_IMP_THM,DEL_IMP_def,
    Par_def,Seq_def,o_THM];
 
 
