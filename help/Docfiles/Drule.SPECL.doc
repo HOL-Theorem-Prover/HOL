@@ -24,7 +24,7 @@ It is permissible for the term-list to be empty, in which case
 the application of {SPECL} has no effect.
 
 \FAILURE
-Fails unless each of the terms is of the same as that of the 
+Fails unless each of the terms is of the same type as that of the
 appropriate quantified variable in the original theorem.
 
 \EXAMPLE
