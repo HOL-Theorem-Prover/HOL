@@ -65,18 +65,15 @@ val R_RTC_diamond = store_thm(
          !x p. RTC R x p ==>
                !z. R x z ==>
                    ?u. RTC R p u /\ RTC R z u``,
-  GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC RTC_ind THEN
-  REPEAT STRIP_TAC THENL [
-    PROVE_TAC [RTC_rules],
-    `?v. R y v /\ R z' v` by PROVE_TAC [diamond_def] THEN
-    PROVE_TAC [RTC_rules]
-  ]);
+  GEN_TAC THEN STRIP_TAC THEN 
+  HO_MATCH_MP_TAC RTC_ind THEN
+  PROVE_TAC [diamond_def,RTC_rules]);
 
 val RTC_RTC = store_thm(
   "RTC_RTC",
   ``!R x y z. RTC R x y /\ RTC R y z ==> RTC R x z``,
   SIMP_TAC std_ss [GSYM AND_IMP_INTRO, RIGHT_FORALL_IMP_THM] THEN
-  GEN_TAC THEN HO_MATCH_MP_TAC RTC_ind THEN REPEAT STRIP_TAC THEN
+  GEN_TAC THEN HO_MATCH_MP_TAC RTC_ind THEN 
   PROVE_TAC [RTC_rules]);
 
 val diamond_RTC_lemma = prove(
@@ -85,11 +82,9 @@ val diamond_RTC_lemma = prove(
        !x y. RTC R x y ==> !z. RTC R x z ==>
                                ?u. RTC R y u /\ RTC R z u``,
   GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC RTC_ind THEN
-  REPEAT STRIP_TAC THENL [
-    PROVE_TAC [RTC_rules],
-    `?v. RTC R y v /\ RTC R z' v` by PROVE_TAC [R_RTC_diamond] THEN
-    PROVE_TAC [RTC_RTC, RTC_rules]
-  ]);
+    PROVE_TAC [RTC_RTC, RTC_rules, R_RTC_diamond]
+  );
+
 val diamond_RTC = store_thm(
   "diamond_RTC",
   ``!R. diamond R ==> diamond (RTC R)``,
@@ -106,8 +101,6 @@ val strong = prove(
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   HO_MATCH_MP_TAC strong' THEN REPEAT STRIP_TAC THEN
   PROVE_TAC [RTC_rules]);
-
-
 
 val _ = set_fixity "-||->" (Infix(NONASSOC, 510));
 
@@ -210,8 +203,7 @@ val Kxy_predn = prove(
             (?u v. (z = K # u # v) /\ (x -||-> u) /\ (y -||-> v)) \/
             (z = x)``,
   REPEAT GEN_TAC THEN EQ_TAC THEN
-  RW_TAC std_ss [characterise ``K # x # y``, predn_rules,
-                 Kx_predn]);
+  RW_TAC std_ss [characterise ``K # x # y``, predn_rules, Kx_predn]);
 
 
 val Sxy_predn = prove(
