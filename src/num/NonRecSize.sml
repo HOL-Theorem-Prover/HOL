@@ -8,10 +8,8 @@
 structure NonRecSize =
 struct
 
-
-
 local
-  open HolKernel boolLib Parse Rsyntax
+  open HolKernel boolLib Parse
 
   val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
   fun -- q x = Term q
@@ -33,17 +31,19 @@ local
   val bool_case_rw = prove(Term`!x y. bool_case x x y = (x:'a)`,
     REPEAT GEN_TAC
       THEN BOOL_CASES_TAC (Term`y:bool`)
-     THEN Rewrite.ASM_REWRITE_TAC[boolTheory.bool_case_DEF]);
+     THEN Rewrite.ASM_REWRITE_TAC[bool_case_DEF]
+     THEN BETA_TAC
+     THEN Rewrite.ASM_REWRITE_TAC[COND_CLAUSES]);
   val bool_size_info = (Term`bool_case 0 0`, TypeBase.ORIG bool_case_rw)
   val bool_info' = TypeBase.put_size bool_size_info bool_info
 
   val sum_info = Option.valOf(TypeBase.read "sum")
-  val sum_case = Term`sum$sum_case`
-  val num = numSyntax.num_ty
+  val sum_case = prim_mk_const{Name="sum_case", Thy="sum"}
+  val num = numSyntax.num
   val sum_case_into_num = inst [alpha |-> num] sum_case
-  val f = mk_var{Name="f",Ty=beta-->num}
-  val g = mk_var{Name="g",Ty=mk_vartype"'c" --> num}
-  val s = mk_var{Name="s",Ty=mk_type{Tyop="sum",Args=[beta, mk_vartype "'c"]}}
+  val f = mk_var("f",beta --> num)
+  val g = mk_var("g",gamma --> num)
+  val s = mk_var("s",mk_thy_type{Tyop="sum",Thy="sum",Args=[beta, gamma]})
   val tm = list_mk_abs ([f,g,s], list_mk_comb(sum_case_into_num,[f,g,s]))
   val sum_size_info = (tm,TypeBase.ORIG sumTheory.sum_case_def)
   val sum_info' = TypeBase.put_size sum_size_info sum_info
