@@ -427,6 +427,7 @@ in
   else ()
 end;
 
+val _ = check_against  "tools/smart-configure.sml"
 val _ = check_against "tools/configure.sml"
 val _ = check_against "tools/build.sml"
 val _ = check_against "tools/Holmake/Systeml.sig"
