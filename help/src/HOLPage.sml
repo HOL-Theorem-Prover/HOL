@@ -31,7 +31,7 @@ fun find_most_appealing HOLpath docfile =
       val {dir,file} = splitDirFile docfile
       val {base,ext} = splitBaseExt file
       val docfile_dir = concat(HOLpath,dir)
-      val htmldir  = concat(docfile_dir,"html")
+      val htmldir  = concat(docfile_dir,"HTML")
       val htmlfile = joinBaseExt{base=base,ext=SOME "html"}
       val adocfile = joinBaseExt{base=base,ext=SOME "adoc"}
       val htmlpath = normPath[htmldir,htmlfile]
