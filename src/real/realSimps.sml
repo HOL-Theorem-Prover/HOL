@@ -116,8 +116,11 @@ fun splitfn posneg = posnegonly
   | splitfn nb12 = two_nats
 
 fun transform vs th = let
-  val simp = REWRITE_RULE [REAL_INJ, REAL_NEGNEG, REAL_NEG_EQ0, num_eq_0,
-                           REAL_LT, REAL_LE, REAL_MUL_RZERO, REAL_MUL_LZERO]
+  val simp = REWRITE_RULE ([REAL_INJ, REAL_NEGNEG, REAL_NEG_EQ0, num_eq_0,
+                            REAL_LT, REAL_LE, REAL_MUL_RZERO, REAL_MUL_LZERO,
+                            arithmeticTheory.ZERO_LESS_EQ] @
+                           (map (fn n => List.nth(CONJUNCTS le_int, n))
+                                [1,3]))
   val nvs = map (fn (t,_) => mk_var(#1 (dest_var t), numSyntax.num)) vs
 
   fun recurse vs nvs th =
@@ -164,25 +167,25 @@ val div_ratls = transform [(x, posneg), (y, nb12), (z, nb12)] div_ratl
 val div_ratrs = transform [(x, posneg), (z, nb12), (y, posneg)] div_ratr
 val div_eq_1 = transform [(x, nb12)] (SPEC_ALL REAL_DIV_REFL)
 
-val max_ints = transform [(x, posneg), (y, posneg)] (SPEC_ALL max_def)
-val min_ints = transform [(x, posneg), (y, posneg)] (SPEC_ALL min_def)
+val max_ints = transform [(x, posneg0), (y, posneg0)] (SPEC_ALL max_def)
+val min_ints = transform [(x, posneg0), (y, posneg0)] (SPEC_ALL min_def)
 val max_rats =
     transform [(x, posneg), (y, nb12), (u, posneg), (v, nb12)]
               (SPECL [mk_div(x,y), mk_div(u,v)] max_def)
 val max_ratls =
-    transform [(x, posneg), (y, nb12), (u, posneg)]
+    transform [(x, posneg), (y, nb12), (u, posneg0)]
               (SPECL [mk_div(x,y), u] max_def)
 val max_ratrs =
-    transform [(x, posneg), (y, nb12), (u, posneg)]
+    transform [(x, posneg), (y, nb12), (u, posneg0)]
               (SPECL [u, mk_div(x,y)] max_def)
 val min_rats =
     transform [(x, posneg), (y, nb12), (u, posneg), (v, nb12)]
               (SPECL [mk_div(x,y), mk_div(u,v)] min_def)
 val min_ratls =
-    transform [(x, posneg), (y, nb12), (u, posneg)]
+    transform [(x, posneg), (y, nb12), (u, posneg0)]
               (SPECL [mk_div(x,y), u] min_def)
 val min_ratrs =
-    transform [(x, posneg), (y, nb12), (u, posneg)]
+    transform [(x, posneg), (y, nb12), (u, posneg0)]
               (SPECL [u, mk_div(x,y)] min_def)
 
 val n = mk_var("n", numSyntax.num)
