@@ -9,12 +9,15 @@ COMPFLAGS=-I ${MOSMLHOME}/src/compiler
 MOSMLLEX=${MOSMLHOME}/bin/mosmllex
 MOSMLYACC=${MOSMLHOME}/bin/mosmlyac
 
-all: mk_dbs ../../help/ADocfiles gen-adoc.sed
-	./gen-adocs.sh docdirs
-	./mk_dbs ../../
+DOCDIRFILE = ../../tools/documentation-directories
 
-../../help/ADocfiles:
-	mkdir ../../help/ADocfiles
+index: ./mk_dbs adoc-files
+	./mk_dbs ../../ && touch index
+
+adoc-files: $(DOCDIRFILE)
+	./gen-adocs.sh $(DOCDIRFILE) && touch adoc-files
+
+
 
 mk_dbs: mk_dbs.uo Database.uo Lexer.uo Parser.uo Parsspec.uo
 	$(MOSMLC) $(COMPFLAGS) -o $@ mk_dbs.uo
@@ -35,7 +38,7 @@ Parser.sml Parser.sig: Parser.grm
 	$(MOSMLLEX) $<
 
 clean:
-	rm -f Parser.sig Parser.sml Lexer.sml mk_dbs
+	rm -f Parser.sig Parser.sml Lexer.sml mk_dbs index adoc-files
 	rm -f *.ui
 	rm -f *.uo
 	./clean-adocs.sh docdirs
