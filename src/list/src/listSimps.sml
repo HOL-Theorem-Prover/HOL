@@ -31,7 +31,7 @@ val list_ss = rewrites
  val list_rws = computeLib.add_thms
      [ APPEND,APPEND_NIL, FLAT, HD, TL, LENGTH, MAP, MAP2,
        NULL_DEF, CONS_11, NOT_CONS_NIL, NOT_NIL_CONS,
-       MEM_DEF, EXISTS_DEF, EVERY_DEF,
+       MEM, EXISTS_DEF, EVERY_DEF,
        FILTER, FOLDR, FOLDL, EL_compute,
        computeLib.lazyfy_thm list_case_compute];
 
