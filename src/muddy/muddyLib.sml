@@ -20,31 +20,26 @@ structure muddyLib :> muddyLib =
 struct
 
 (* hand loading for interactive system
-  app load ["Binarymap", "bdd", "Net", "Polyhash", "Psyntax", "unwindLib"];
+  app load ["Binarymap", "bdd", "Net", "Polyhash", "unwindLib"];
 
 *)
 
-open HolKernel Conv Psyntax;
+open HolKernel boolLib;
 
  type robdd = bdd.bdd;
  type 'a net = 'a Net.net;
- type term    = Term.term
- type thm     = Thm.thm
- type conv    = Abbrev.conv
- type tactic  = Abbrev.tactic
  type var_map = (string, int) Binarymap.dict
  type table   = int * var_map
  type bdd_map = (term, robdd) Polyhash.hash_table * term net
+ type var_map = (string, int) Binarymap.dict;
+ type table   = int * var_map;
 
 infix ## |-> THENC;
 
 exception Error;
 fun error () = raise Error;
 
-fun ERR msg func = 
-    raise Exception.HOL_ERR{origin_structure = "robddLib",
-                            origin_function  = func,
-                            message          = msg};
+fun ERR f s = raise (mk_HOL_ERR "muddyLib" f s);
 
 val tag = Tag.read "BDD";
 
@@ -55,9 +50,6 @@ val term_to_string = Parse.term_to_string;
 fun TERNOP_CONV cnv = 
  RAND_CONV cnv 
   THENC RATOR_CONV (RAND_CONV cnv THENC RATOR_CONV(RAND_CONV cnv));
-
-val T = mk_const("T", Type.bool)
-and F = mk_const("F", Type.bool);
 
 fun mk_conj1(t1,t2) =
  if t1 = T 
@@ -77,11 +69,6 @@ fun mk_disj1(t1,t2) =
    else 
    if t1 = T orelse t2 = T then T else mk_disj(t1,t2);
 
-
-(* Should var_map be a hash table? *)
-
-type var_map = (string, int) Binarymap.dict;
-type table   = int * var_map;
 
 (*****************************************************************************)
 (* Create an empty (string,int)dict                                          *)
@@ -164,10 +151,7 @@ val PolyTableSizeHint = ref 1000;
 val current_bdd_map:bdd_map = 
  (Polyhash.mkPolyTable
   (!PolyTableSizeHint, 
-    Exception.HOL_ERR
-      {origin_structure = "BDDOracle",
-       origin_function  = "Polyhash.find",
-       message          = "Hash table lookup failure"}),
+    mk_HOL_ERR "BDDOracle" "Polyhash.find" "Hash table lookup failure"),
   Net.empty);
 
         
@@ -188,8 +172,8 @@ fun check_var tm =
  ERR ("``"^term_to_string tm^"`` is not a variable") "check_var";
 
 fun match_to_pairs []             = []
- |  match_to_pairs ((new,old)::l) =
-     if not(exists (fn (new',_) => new=new') l) 
+ |  match_to_pairs ({residue=new,redex=old}::l) =
+     if not(exists (fn {residue,...} => new=residue) l) 
          andalso (type_of new = bool) andalso check_var new
          andalso (type_of old = bool) andalso check_var old
       then (fst(dest_var old),fst(dest_var new))::match_to_pairs l
@@ -236,7 +220,7 @@ fun NetPeek var_map (htbl,net) tm =
          (rev netl)
    in
     SOME
-     (subst_bdd var_map (match_to_pairs(fst(Psyntax.match_term descr tm))) bdd)
+     (subst_bdd var_map (match_to_pairs(fst(match_term descr tm))) bdd)
    end
  end;
 
@@ -255,51 +239,50 @@ fun NetPeek var_map (htbl,net) tm =
 (*****************************************************************************)
 
 fun fromTerm_aux var_map (htbl,net) tm =
- case Polyhash.peek htbl tm of
-    SOME bdd => bdd
-  | NONE
-    =>
-    case NetPeek var_map (htbl,net) tm of
-       SOME bdd => bdd
+ case Polyhash.peek htbl tm 
+  of SOME bdd => bdd
+   | NONE
+     =>
+   case NetPeek var_map (htbl,net) tm 
+    of SOME bdd => bdd
      | NONE
-       =>
-       if Term.is_var tm then 
-           let val {Name,Ty} = Term.dest_var tm
-           in  
-               if Ty = Type.bool then lookup_var var_map Name
+      =>
+      if Term.is_var tm 
+       then let val (Name,Ty) = dest_var tm
+            in if Ty = Type.bool then lookup_var var_map Name
                else ERR ("Variable "^Name^" is not of type bool") "fromTerm"
-           end 
+            end 
        else
-        let val (comb,args) = Dsyntax.strip_comb tm
-            val {Name, Ty}  = Term.dest_const comb
-        in
-        case Name of
-         "/\\"  => binExp var_map (htbl,net) bdd.And args
-       | "\\/"  => binExp var_map (htbl,net) bdd.Or args
-       | "==>"  => binExp var_map (htbl,net) bdd.Imp args
-       | "="    => let val [arg1,arg2] = args
-                   in
-                    if Term.is_var arg1 andalso Term.is_var arg2
-                    then binExp var_map (htbl,net) bdd.Biimp args
-                    else (ListPair.foldl (fn(x1,x2,bdd) => 
-                            bdd.AND
-                              (binExp var_map (htbl,net) bdd.Biimp [x1,x2],
-                               bdd))
-                         bdd.TRUE
-                         (strip_pair arg1,strip_pair arg2)
-                           handle Interrupt => raise Interrupt
-                                |  _ => ERR "Can't make BDD of equation"
-                                            "fromTerm")
-                   end
-       | "~"    => bdd.NOT(fromTerm_aux var_map (htbl,net) (List.hd args))
-       | "T"    => bdd.TRUE
-       | "F"    => bdd.FALSE
-       | "!"    => quantExp var_map (htbl,net) Dsyntax.strip_forall 
-                            bdd.forall tm
-       | "?"    => quantExp var_map (htbl,net) Dsyntax.strip_exists 
-                          bdd.exist tm
-       | "COND" => condExp var_map (htbl,net) args
-       | _      => ERR ("Can't make BDD from "^Name) "fromTerm_aux"   
+       let val (comb,args) = strip_comb tm
+           val {Name,Thy,Ty}  = dest_thy_const comb
+       in
+       case (Name,Thy) of
+        ("/\\","bool")  => binExp var_map (htbl,net) bdd.And args
+      | ("\\/","bool")  => binExp var_map (htbl,net) bdd.Or args
+      | ("==>","min")  => binExp var_map (htbl,net) bdd.Imp args
+      | ("=","min")    => let val [arg1,arg2] = args
+                 in
+                  if Term.is_var arg1 andalso Term.is_var arg2
+                  then binExp var_map (htbl,net) bdd.Biimp args
+                  else (ListPair.foldl (fn(x1,x2,bdd) => 
+                          bdd.AND
+                            (binExp var_map (htbl,net) bdd.Biimp [x1,x2],
+                             bdd))
+                       bdd.TRUE
+                       (pairSyntax.strip_pair arg1,pairSyntax.strip_pair arg2)
+                         handle Interrupt => raise Interrupt
+                              |  _ => ERR "Can't make BDD of equation"
+                                          "fromTerm")
+                 end
+      | ("~","bool") => bdd.NOT(fromTerm_aux var_map (htbl,net) (List.hd args))
+      | ("T","bool") => bdd.TRUE
+      | ("F","bool") => bdd.FALSE
+      | ("!","bool") => quantExp var_map (htbl,net) strip_forall 
+                           bdd.forall tm
+      | ("?","bool") => quantExp var_map (htbl,net) strip_exists 
+                         bdd.exist tm
+      | ("COND","bool") => condExp var_map (htbl,net) args
+      |       _         => ERR ("Can't make BDD from "^Name) "fromTerm_aux"   
   end
    
 and binExp var_map bdd_map opr [t1,t2] = 
@@ -312,10 +295,10 @@ and binExp var_map bdd_map opr [t1,t2] =
 and quantExp var_map bdd_map strip quant t =
     let val (vars,body) = strip t
         fun find v = 
-            case peek_map var_map (#Name(Term.dest_var v)) of
+            case peek_map var_map (fst(dest_var v)) of
                 SOME i => i
               | NONE   => ERR ("The variable "^
-                                   (#Name(Term.dest_var v))^
+                                   (fst(dest_var v))^
                                    " is not in the mapping")
                                   "quantExp"
         val varset = bdd.makeset (List.map find vars)
@@ -395,16 +378,14 @@ fun fromTerm var_map bdd_map tm =
 (* rlist are the bindings to be handled by bdd.replace.                    *)
 (*****************************************************************************)
 
-fun bdd_match_split []         acc = ([],[])
- |  bdd_match_split ((e,v)::l) acc = 
+fun bdd_match_split [] acc = ([],[])
+ |  bdd_match_split ({redex=v,residue=e}::l) acc = 
      if not(is_var e) orelse mem e acc                         (* ?-quant    *)
       then let val (qlist,rlist) = bdd_match_split l acc
-           in
-            ((e,v)::qlist, rlist)
+           in ({redex=v,residue=e}::qlist, rlist)
            end
       else let val (qlist,rlist) = bdd_match_split l (e::acc)  (* subst      *)
-           in
-            (qlist, (e,v)::rlist)
+           in (qlist, {redex=v,residue=e}::rlist)
            end;
 
 fun BDD_CONV (htbl,net) tm =
@@ -418,21 +399,21 @@ fun BDD_CONV (htbl,net) tm =
        =>
        if Term.is_var tm then ALL_CONV tm
        else
-           let val (comb,args) = Dsyntax.strip_comb tm
-               val {Name, Ty}  = Term.dest_const comb
-           in
-            case Name of
-                "/\\"  => BINOP_CONV (BDD_CONV (htbl,net)) tm
-              | "\\/"  => BINOP_CONV (BDD_CONV (htbl,net)) tm
-              | "==>"  => BINOP_CONV (BDD_CONV (htbl,net)) tm
-              | "="    => BINOP_CONV (BDD_CONV (htbl,net)) tm
-              | "~"    => RAND_CONV  (BDD_CONV (htbl,net)) tm
-              | "T"    => ALL_CONV tm
-              | "F"    => ALL_CONV tm
-              | "!"    => QUANT_CONV (BDD_CONV (htbl,net)) tm
-              | "?"    => QUANT_CONV (BDD_CONV (htbl,net)) tm
-              | "COND" => TERNOP_CONV(BDD_CONV (htbl,net)) tm
-              | _      => ALL_CONV tm
+        let val (comb,args) = strip_comb tm
+            val {Name, Thy, Ty}  = dest_thy_const comb
+        in
+         case (Name,Thy) of
+            ("/\\","bool")  => BINOP_CONV (BDD_CONV (htbl,net)) tm
+          | ("\\/","bool")  => BINOP_CONV (BDD_CONV (htbl,net)) tm
+          | ("==>","min")   => BINOP_CONV (BDD_CONV (htbl,net)) tm
+          | ("=","min")     => BINOP_CONV (BDD_CONV (htbl,net)) tm
+          | ("~","bool")    => RAND_CONV  (BDD_CONV (htbl,net)) tm
+          | ("T","bool")    => ALL_CONV tm
+          | ("F","bool")    => ALL_CONV tm
+          | ("!","bool")    => QUANT_CONV (BDD_CONV (htbl,net)) tm
+          | ("?","bool")    => QUANT_CONV (BDD_CONV (htbl,net)) tm
+          | ("COND","bool") => TERNOP_CONV(BDD_CONV (htbl,net)) tm
+          | otherwise       => ALL_CONV tm
            end
 
 
@@ -458,18 +439,17 @@ and NetPrePeek (htbl,net) tm =
  end
 
 and BDD_MATCH_CONV bdd_map descr tm =
- let val (mlist,tysubst) = Psyntax.match_term descr tm
-     val _ = if not(tysubst = []) then ERR "Bad match" "bdd_match" else ()
-     val vars  = U(map (all_vars o fst) mlist)
+ let val (mlist,tysubst) = match_term descr tm
+     val _ = if null tysubst then () else ERR "Bad match" "bdd_match"
+     val vars = U(map (all_vars o #residue) mlist)
      val (qlist,rlist)  = bdd_match_split mlist (free_vars descr)
      val (qvars,rlist',qconj)  = 
-          foldr (fn ((e,v),(vl,sl,tm)) => 
+          foldr (fn ({redex=v,residue=e},(vl,sl,tm)) => 
                     let val v' = variant vars v
-                    in
-                     (v'::vl,
-                      (if v=v' then sl else (v', v)::sl),
-                      mk_conj1(mk_eq(v',e),tm))
-                     end)
+                    in (v'::vl,
+                        (if v=v' then sl else {redex=v,residue=v'}::sl),
+                        mk_conj1(mk_eq(v',e),tm))
+                    end)
                 ([],[],T)
                 qlist
  in
@@ -677,7 +657,7 @@ fun mk_bdd_thm tm =
   tag 
   ([], (if valOf (bddCheck tm) 
          then tm
-         else Dsyntax.mk_neg tm)
+         else mk_neg tm)
   handle Interrupt => raise Interrupt
                | _ => ERR "Could not reduce term" "mk_bdd_thm");
 
@@ -882,13 +862,13 @@ fun bdd_to_cond bdd =
  let infix 9 sub 
      val op sub = Vector.sub
      val (root,nt) = bdd.nodetable bdd
-     fun var i  = Psyntax.mk_var(get_node_name(#1(nt sub i)),Type.bool)
+     fun var i  = mk_var(get_node_name(#1(nt sub i)),Type.bool)
      fun low i  = #2(nt sub i) 
      fun high i = #3(nt sub i)
      fun bdd_to_cond_aux node = 
            if node=0 then T
       else if node=1 then F 
-                     else Psyntax.mk_cond
+                     else mk_cond
                            (var node, 
                             bdd_to_cond_aux(high node), 
                             bdd_to_cond_aux(low node))
@@ -903,9 +883,9 @@ fun bdd_to_cond bdd =
   else
    if (bdd.equal bdd bdd.FALSE)
     then F
-    else Psyntax.mk_cond(mk_var(get_node_name(bdd.var bdd),bool),
-                         bdd_to_cond(bdd.high bdd),
-                         bdd_to_cond(bdd.low bdd));
+    else mk_cond(mk_var(get_node_name(bdd.var bdd),bool),
+                 bdd_to_cond(bdd.high bdd),
+                 bdd_to_cond(bdd.low bdd));
 
 (*****************************************************************************)
 (* Count number of nodes in a BDD                                            *)
@@ -1016,7 +996,7 @@ fun print_bdd_state dir ((_:int,var_map),bdd_map) =
  in
   List.map
    (fn (descr,bdd) => 
-      let val name  = fst(Psyntax.dest_const(fst(Dsyntax.strip_comb descr)))
+      let val name  = fst(dest_const(fst(strip_comb descr)))
           val file  = dir^"/"^name
           val label = term_to_string descr
           val pairs = var_map_to_pairs var_map;
