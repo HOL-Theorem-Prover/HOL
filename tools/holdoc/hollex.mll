@@ -78,12 +78,12 @@ let startpat = "Net_Hol_reln" (white | newline)* backtick
 
 (* the character classes of HOL *)
 let idchar = ['A'-'Z' 'a'-'z' '0'-'9' '_' '\'']
-let nonagg = ['~' '(' ')' '[' ']' '{' '}' '.' ',']
+let nonagg = ['~' '(' ')' '[' ']' '{' '}' '.' ',' ';']
 let specnonagg = "()" | "[]" | '.' '.'+
                  (* built of nonagg, but aggregating for tokenisation purposes;
                                     this is not HOL but our extension (I think) *)
 let dollar = '$'
-let punctchar = ['!' '"' '#' '%' '&' '*' '+' '-' '/' ':' ';' '<' '=' '>' '?' '@' '\\' '^' '|']
+let punctchar = ['!' '"' '#' '%' '&' '*' '+' '-' '/' ':' '<' '=' '>' '?' '@' '\\' '^' '|']
   (* everything else except '`' ; I'm not sure about '\\' and '"' but hey... *)
 let idorpunctchar = idchar | punctchar
 
