@@ -198,13 +198,31 @@ and
    else false;
 *)
 
+fun contains_forall sense tm =
+  if is_conj tm orelse is_disj tm then
+    List.exists (contains_forall sense) (#2 (strip_comb tm))
+  else if is_neg tm then
+    contains_forall (not sense) (rand tm)
+  else if is_imp tm then
+    contains_forall (not sense) (rand (rator tm)) orelse
+    contains_forall sense (rand tm)
+  else if is_forall tm then
+    sense orelse contains_forall sense (#2 (dest_forall tm))
+  else if is_exists tm then
+    not sense orelse contains_forall sense (#2 (dest_exists tm))
+  else false
+
+
 (* This function determines whether or not to add something as context to
    the arithmetic decision procedure.  Because arithLib.ARITH_CONV can't
    handle implications with nested foralls on the left hand side, we
-   eliminate those here.  *)
+   eliminate those here.  More generally, we can't allow the formula to be
+   added to have any positive universals, because these will translate
+   into negative ones in the context of the wider goal, and thus cause
+   the goal to be rejected.  *)
 fun is_arith_thm thm =
   not (null (hyp thm)) andalso is_arith (concl thm) andalso
-   (not (is_forall (concl thm)));
+   (not (contains_forall true (concl thm)));
 
 type ctxt = thm list;
 
