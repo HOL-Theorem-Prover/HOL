@@ -89,7 +89,7 @@ metis: bin/metis-test.out bin/metis-tptp bin/metis-itptp
 
 Makefile.metis:
 	scripts/deps.pl METIS_SRC ../../src/portableML ../../src/experimental-kernel ../../src/parse ../../src/bool ../../src/goalstack ../../src/taut ../../src/compute/src ../../src/q ../../src/combin ../../src/marker ../../src/labels ../../src/lite ../../src/refute ../../src/simp/src ../../src/metis >Makefile.metis
-	scripts/deps.pl METIS_THEORIES ../../src/meson/src ../../src/basicProof ../../src/relation ../../src/pair/src ../../src/sum ../../src/one ../../src/option ../../src/num/theories ../../src/num/reduce/src ../../src/num/arith/src ../../src/num ../../src/IndDef ../../src/datatype/parse ../../src/datatype/equiv ../../src/datatype/record ../../src/datatype ../../src/list/src ../../src/tfl/src ../../src/unwind ../../src/boss ../../src/llist ../../src/pred_set/src >>Makefile.metis
+	scripts/deps.pl METIS_THEORIES ../../src/meson/src ../../src/basicProof ../../src/relation ../../src/pair/src ../../src/sum ../../src/one ../../src/option ../../src/num/theories ../../src/num/reduce/src ../../src/num/arith/src ../../src/num ../../src/IndDef ../../src/datatype/parse ../../src/datatype/equiv ../../src/datatype/record ../../src/datatype ../../src/list/src ../../src/tfl/src ../../src/unwind ../../src/boss ../../src/Boolify/src ../../src/n_bit ../../src/string ../../src/llist ../../src/pred_set/src ../../src/path ../../src/ring/src ../../src/integer ../../src/res_quan/src ../../src/word/theories ../../src/word/src ../../src/finite_map ../../src/hol88 ../../src/real ../../src/float ../../src/fxp ../../src/bag ../../src/temporal/src ../../src/prob ../../src/HolSat >>Makefile.metis
 
 include Makefile.metis
 
