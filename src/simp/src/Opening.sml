@@ -11,8 +11,8 @@ type congproc  = {relation:tmcid,
 		  depther : thm list * term -> conv} -> conv
 
 
-fun WRAP_ERR x = STRUCT_WRAP "Congprocs" x;
-fun ERR x = STRUCT_ERR "Congprocs" x;
+fun WRAP_ERR x = STRUCT_WRAP "Opening" x;
+fun ERR x = STRUCT_ERR "Opening" x;
 
 (* ---------------------------------------------------------------------
  * is_congruence
@@ -48,13 +48,12 @@ fun ERR x = STRUCT_ERR "Congprocs" x;
  * ---------------------------------------------------------------------*)
 
 fun is_congruence tm =
-   let val (rel,[left,right]) = strip_comb tm
-       val (lop,largs) = strip_comb left
-       val (rop,rargs) = strip_comb right
-   in (can (ho_match_term [] empty_tmset left) right) andalso
-      (can (ho_match_term [] empty_tmset right) left)
-   end
-   handle HOL_ERR _ => false;
+    is_eq tm orelse
+    let val (rel,[left,right]) = strip_comb tm
+    in (can (ho_match_term [] empty_tmset left) right) andalso
+       (can (ho_match_term [] empty_tmset right) left)
+    end
+   handle HOL_ERR _ => false | Bind => false
 fun rel_of_congrule thm =
    let fun aux tm = if (is_congruence tm)
                     then fst (strip_comb tm)
@@ -115,7 +114,7 @@ let
       Side conditions must be passed to the solver, sub-congruences
       must be passed to the depther. *)
 
-   val congrule' = SPEC_ALL congrule
+   val congrule' = GSPEC (GEN_ALL congrule)
    val nconds = nconds_of_congrule congrule'
    val rel = name_of_const(rel_of_congrule congrule')
 
@@ -172,10 +171,12 @@ in fn {relation,solver,depther,freevars} =>
                   let val thm = refl orig
                   in (trace(5,PRODUCE(orig,"UNCHANGED",thm));thm)
                   end
-                val abs_rewr_thm = CONV_RULE (RAND_CONV (MK_ABSL_CONV ho_vars)) rewr_thm
+                val abs_rewr_thm =
+                    CONV_RULE (RAND_CONV (MK_ABSL_CONV ho_vars)) rewr_thm
                 val disch_abs_rewr_thm = itlist DISCH assums abs_rewr_thm
                 val gen_abs_rewr_thm = GENL ho_vars disch_abs_rewr_thm
-                val gen_abs_res = funpow (length ho_vars) rator (rand (concl abs_rewr_thm))
+                val gen_abs_res =
+                    funpow (length ho_vars) rator (rand (concl abs_rewr_thm))
                 val spec_match_thm = SPEC gen_abs_res (GEN genv match_thm)
                 val new_match_thm = MP spec_match_thm gen_abs_rewr_thm
             in process_subgoals (n-1,new_match_thm,more_flags)

@@ -20,5 +20,9 @@ sig
                                             ? and !, included in bool_ss *)
      val ETA_ss : simpLib.ssdata        (* eta conversion;
                                            not included in bool_ss *)
+
+     val LET_ss : simpLib.ssdata        (* writes out let terms, using a
+                                           congruence to evaluate the
+                                           second argument fully first *)
 end
 

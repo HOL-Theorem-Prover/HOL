@@ -5,7 +5,7 @@ open HolKernel boolLib liteLib simpLib pureSimps Ho_Rewrite tautLib;
 
 infix THEN ORELSE THENL THENQC ++;
 
-val (Type,Term) = Parse.parse_from_grammars boolTheory.bool_grammars
+val (Type,Term) = Parse.parse_from_grammars combinTheory.combin_grammars
 fun -- q x = Term q handle e => Raise e;
 fun == q x = Type q handle e => Raise e;
 
@@ -129,6 +129,20 @@ val UNWIND_ss = SIMPSET
    rewrs=[],filter=NONE,ac=[],dprocs=[],congs=[]};
 
 
+(* ----------------------------------------------------------------------
+    LET_ss
+   ---------------------------------------------------------------------- *)
+
+ val let_cong = prove(
+   ``(v:'a = v') ==> (LET (f:'a -> 'b) v = LET f (I v'))``,
+   DISCH_THEN SUBST_ALL_TAC THEN REWRITE_TAC [LET_THM, combinTheory.I_THM])
+val let_I_thm = prove(
+  ``LET f (I x) = f x``,
+  REWRITE_TAC [combinTheory.I_THM, LET_THM]);
+
+val LET_ss = simpLib.SIMPSET {ac = [], congs = [let_cong],
+                              convs = [], filter = NONE, dprocs = [],
+                              rewrs = [let_I_thm]}
 
 (* ----------------------------------------------------------------------
     bool_ss
@@ -150,7 +164,7 @@ val UNWIND_ss = SIMPSET
    ---------------------------------------------------------------------- *)
 
 val bool_ss =
-    pure_ss ++ BOOL_ss ++ NOT_ss ++ CONG_ss ++ UNWIND_ss (* ++ ETA_ss *);
+    pure_ss ++ BOOL_ss ++ NOT_ss ++ CONG_ss ++ UNWIND_ss
 
 
 
