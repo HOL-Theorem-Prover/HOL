@@ -3662,10 +3662,20 @@ val beta0_WCR = store_thm(
     PROVE_TAC [RTC_lcc_rules],
 
     (* LAMi body moves case *)
-    FULL_SIMP_TAC (srw_ss()) [lcc_beta0_LAMi] THENL [
-      Q.EXISTS_TAC `[z/v] M1` THEN
-      `beta0 (LAMi n v M1 z) ([z/v] M1)` by PROVE_TAC [beta0_def] THEN
-      `lcompat_closure beta0 (LAMi n v M1 z) ([z/v] M1)`
+    REPEAT (POP_ASSUM MP_TAC) THEN
+    Q_TAC SUFF_TAC
+          `!x y z n v z'.
+              lcompat_closure beta0 x y /\
+              (!z. lcompat_closure beta0 x z ==>
+                   ?u. RTC (lcompat_closure beta0) y u /\
+                       RTC (lcompat_closure beta0) z u) /\
+              lcompat_closure beta0 (LAMi n v x z) z' ==>
+              ?u. RTC (lcompat_closure beta0) (LAMi n v y z) u /\
+                  RTC (lcompat_closure beta0) z' u` THEN1 METIS_TAC [] THEN
+    SRW_TAC [][lcc_beta0_LAMi] THENL [
+      Q.EXISTS_TAC `[z/v] y` THEN
+      `beta0 (LAMi n v y z) ([z/v] y)` by PROVE_TAC [beta0_def] THEN
+      `lcompat_closure beta0 (LAMi n v y z) ([z/v] y)`
          by PROVE_TAC [lcompat_closure_rules] THEN
       PROVE_TAC [lrcc_lcompat_closure, lrcc_lsubstitutive,
                  beta0_lsubstitutive, relationTheory.RTC_RULES],
@@ -3674,10 +3684,20 @@ val beta0_WCR = store_thm(
     ],
 
     (* LAMi argument moves *)
-    FULL_SIMP_TAC (srw_ss()) [lcc_beta0_LAMi] THENL [
-      Q.EXISTS_TAC `[M1/v] z` THEN
-      `beta0 (LAMi n v z M1) ([M1/v] z)` by PROVE_TAC [beta0_def] THEN
-      `lcompat_closure beta0 (LAMi n v z M1) ([M1/v] z)`
+    REPEAT (POP_ASSUM MP_TAC) THEN
+    Q_TAC SUFF_TAC
+          `!x y z n v z'.
+              lcompat_closure beta0 x y /\
+              (!z. lcompat_closure beta0 x z ==>
+                   ?u. RTC (lcompat_closure beta0) y u /\
+                       RTC (lcompat_closure beta0) z u) /\
+              lcompat_closure beta0 (LAMi n v z x) z' ==>
+              ?u. RTC (lcompat_closure beta0) (LAMi n v z y) u /\
+                  RTC (lcompat_closure beta0) z' u` THEN1 METIS_TAC [] THEN
+    SRW_TAC [][lcc_beta0_LAMi] THENL [
+      Q.EXISTS_TAC `[y/v] z` THEN
+      `beta0 (LAMi n v z y) ([y/v] z)` by PROVE_TAC [beta0_def] THEN
+      `lcompat_closure beta0 (LAMi n v z y) ([y/v] z)`
          by PROVE_TAC [lcompat_closure_rules] THEN
       PROVE_TAC [lcc_cosubstitutive, relationTheory.RTC_RULES],
       PROVE_TAC [RTC_lcc_rules, relationTheory.RTC_RULES],
@@ -3688,23 +3708,9 @@ val beta0_WCR = store_thm(
 val newman_recast = store_thm(
   "newman_recast",
   ``WF (inv R) /\ weak_diamond R ==> diamond_property (RTC R)``,
-  STRIP_TAC THEN SIMP_TAC (srw_ss())[diamond_property_def] THEN
-  `WF (TC (inv R))` by PROVE_TAC [relationTheory.WF_TC] THEN
-  POP_ASSUM (HO_MATCH_MP_TAC o MATCH_MP relationTheory.WF_INDUCTION_THM) THEN
-  SRW_TAC [][TC_inv, relationTheory.inv_DEF] THEN
-  `(M = M1) \/ (?M1'. R M M1' /\ RTC R M1' M1)`
-     by PROVE_TAC [relationTheory.RTC_CASES1] THEN1
-     PROVE_TAC [relationTheory.RTC_RULES] THEN
-  `(M = M2) \/ (?M2'. R M M2' /\ RTC R M2' M2)`
-     by PROVE_TAC [relationTheory.RTC_CASES1] THEN1
-     PROVE_TAC [relationTheory.RTC_RULES] THEN
-  `?M3. RTC R M1' M3 /\ RTC R M2' M3`
-     by PROVE_TAC [weak_diamond_def] THEN
-  `TC R M M1' /\ TC R M M2'` by PROVE_TAC [relationTheory.TC_RULES] THEN
-  `?M1''. RTC R M1 M1'' /\ RTC R M3 M1''` by PROVE_TAC [] THEN
-  `?M2''. RTC R M2 M2'' /\ RTC R M3 M2''` by PROVE_TAC [] THEN
-  `TC R M M3` by PROVE_TAC [EXTEND_RTC_TC] THEN
-  PROVE_TAC [relationTheory.RTC_RTC]);
+  SRW_TAC [][TermRewritingTheory.Newmans_lemma,
+             GSYM TermRewritingTheory.CR_def,
+             GSYM TermRewritingTheory.SN_def]);
 
 val CR_beta0 = store_thm(
   "CR_beta0",
@@ -3988,8 +3994,8 @@ val complete_developments_are_developments = store_thm(
   ``!s. s IN complete_development M ps ==> s IN development M ps``,
   SRW_TAC [][complete_development_thm]);
 
-val complete_develoments_always_exists = store_thm(
-  "complete_develoments_always_exists",
+val complete_developments_always_exist = store_thm(
+  "complete_developments_always_exist",
   ``!M ps. ps SUBSET M ==> ?s. s IN complete_development M ps``,
   REPEAT STRIP_TAC THEN
   `stopped_at M IN development M ps` by SRW_TAC [][development_thm] THEN
@@ -4046,7 +4052,11 @@ val wf_development = store_thm(
 val lemma11_2_28ii = store_thm(
   "lemma11_2_28ii",
   ``diamond_property fd_grandbeta``,
-  SRW_TAC [DNF_ss][diamond_property_def] THEN
+  Q_TAC SUFF_TAC
+        `!M M1 M2. fd_grandbeta M M1 /\ fd_grandbeta M M2 ==>
+                   ?N. fd_grandbeta M1 N /\ fd_grandbeta M2 N`
+        THEN1 SRW_TAC [][diamond_property_def] THEN
+  REPEAT STRIP_TAC THEN
   `?FS1 FS2. (M1 = Cpl(M, FS1)) /\ (M2 = Cpl(M, FS2)) /\ FS1 SUBSET M /\
              FS2 SUBSET M` by
       PROVE_TAC [fd_grandbeta_def] THEN
@@ -4054,7 +4064,7 @@ val lemma11_2_28ii = store_thm(
       FULL_SIMP_TAC (srw_ss()) [redex_occurrences_SUBSET] THEN
   `?s1 s2. s1 IN complete_development M FS1 /\ (last s1 = M1) /\
            s2 IN complete_development M FS2 /\ (last s2 = M2)`
-      by METIS_TAC [complete_develoments_always_exists,
+      by METIS_TAC [complete_developments_always_exist,
                     Cpl_complete_development] THEN
   `finite s1 /\ okpath (labelled_redn beta) s1 /\
    finite s2 /\ okpath (labelled_redn beta) s2`
@@ -4063,7 +4073,7 @@ val lemma11_2_28ii = store_thm(
       by PROVE_TAC [residuals_def, redex_occurrences_SUBSET] THEN
   `?s1' s2'. s1' IN complete_development M1 (residuals s1 FS2) /\
              s2' IN complete_development M2 (residuals s2 FS1)`
-      by PROVE_TAC [complete_develoments_always_exists] THEN
+      by PROVE_TAC [complete_developments_always_exist] THEN
   `(residuals s1 FS1 = {}) /\ (residuals s1' (residuals s1 FS2) = {}) /\
    (residuals s2 FS2 = {}) /\ (residuals s2' (residuals s2 FS1) = {})`
       by PROVE_TAC [complete_development_thm] THEN
@@ -4097,7 +4107,7 @@ val lemma11_2_28ii = store_thm(
 val corollary11_2_29 = store_thm(
   "corollary11_2_29",
   ``CR beta``,
-  SRW_TAC [][CR_def, reduction_def, lemma11_2_28i, diamond_TC,
-             lemma11_2_28ii]);
+  SRW_TAC [][CR_def, reduction_def, lemma11_2_28i, lemma11_2_28ii,
+             TermRewritingTheory.diamond_TC_diamond]);
 
 val _ = export_theory();

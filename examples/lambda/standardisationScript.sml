@@ -896,7 +896,7 @@ val lemma11_4_4 = store_thm(
   `residuals s FS = n_posns 0 (last s')`
      by PROVE_TAC [n_posns_nlabel, SUBSET_INTER_ABSORPTION] THEN
   `?s2. s2 IN complete_development (last s) (residuals s FS)`
-     by PROVE_TAC [complete_develoments_always_exists] THEN
+     by PROVE_TAC [complete_developments_always_exist] THEN
   Q.EXISTS_TAC `s2` THEN
   `s2 IN development (last s) (residuals s FS)`
      by PROVE_TAC [complete_development_thm] THEN
@@ -1110,7 +1110,7 @@ val lemma11_4_5 = store_thm(
                     IN_term_IN_redex_posns] THEN
   Q.ABBREV_TAC `FS' = residual1 M r M1 FS` THEN
   `?s'. s' IN complete_development M1 FS'`
-      by PROVE_TAC [complete_develoments_always_exists,
+      by PROVE_TAC [complete_developments_always_exist,
                     residual1_SUBSET, redex_occurrences_SUBSET] THEN
   `finite s'` by PROVE_TAC [complete_development_thm, FD] THEN
   `first s' = M1` by PROVE_TAC [complete_development_thm, wf_development] THEN

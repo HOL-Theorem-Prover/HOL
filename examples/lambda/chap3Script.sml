@@ -95,12 +95,15 @@ val compat_closure_substitutive = store_thm(
     ASM_SIMP_TAC (srw_ss()) []
   ]);
 
-val (equiv_closure_rules, equiv_closure_ind, equiv_closure_cases) =
-    Hol_reln`(!x y. R x y ==> equiv_closure R x y) /\
-             (!x. equiv_closure R x x) /\
-             (!x y. equiv_closure R x y ==> equiv_closure R y x) /\
-             (!x y z. equiv_closure R x y /\ equiv_closure R y z ==>
-                      equiv_closure R x z)`;
+
+val _ = overload_on ("equiv_closure", ``relation$EQC``)
+
+local
+  open relationTheory
+in
+  val equiv_closure_rules = LIST_CONJ [EQC_R, EQC_REFL, EQC_SYM, EQC_TRANS]
+  val equiv_closure_ind = EQC_INDUCTION
+end
 
 val equiv_closure_substitutive = store_thm(
   "equiv_closure_substitutive",
@@ -373,10 +376,21 @@ val corollary3_2_1 = store_thm(
   ] THEN ASM_SIMP_TAC (srw_ss()) [reduction_def] THEN
   PROVE_TAC [relationTheory.RTC_CASES1]);
 
-val diamond_property_def =
-    Define`diamond_property R =
-             !M M1 M2. R M M1 /\ R M M2 ==> ?M3. R M1 M3 /\ R M2 M3`;
+local open TermRewritingTheory
+in
+val diamond_property_def = save_thm("diamond_property_def", diamond_def)
+end
+val _ = overload_on("diamond_property", ``TermRewriting$diamond``)
 
+(* This is not the same CR as appears in TermRewritingTheory.  There
+     CR R = diamond (RTC R)
+   Here,
+     CR R = diamond (RTC (compat_closure R))
+   In other words, this formulation allows us to write
+     CR beta
+   rather than having to write
+     CR (compat_closure beta)
+*)
 val CR_def = Define`CR R = diamond_property (reduction R)`;
 
 val theorem3_13 = store_thm(
@@ -404,23 +418,7 @@ val corollary3_3_1 = store_thm(
     PROVE_TAC [corollary3_2_1]
   ]);
 
-val diamond_TC = store_thm(
-  "diamond_TC",
-  ``!R. diamond_property R ==> diamond_property (TC R)``,
-  REPEAT STRIP_TAC THEN SIMP_TAC (srw_ss()) [diamond_property_def] THEN
-  Q_TAC SUFF_TAC `!M M1. TC R M M1 ==>
-                         !M2. TC R M M2 ==>
-                              ?M3. TC R M1 M3 /\ TC R M2 M3` THEN1
-    PROVE_TAC [] THEN
-  HO_MATCH_MP_TAC relationTheory.TC_INDUCT THEN REPEAT CONJ_TAC THENL [
-    Q_TAC SUFF_TAC `!x M2. TC R x M2 ==>
-                           !y. R x y ==> ?M3. TC R y M3 /\ TC R M2 M3` THEN1
-      PROVE_TAC [] THEN
-    HO_MATCH_MP_TAC relationTheory.TC_INDUCT_LEFT1 THEN
-    PROVE_TAC [diamond_property_def, relationTheory.TC_RULES],
-    PROVE_TAC [diamond_property_def, relationTheory.TC_RULES]
-  ]);
-
+val diamond_TC = TermRewritingTheory.diamond_TC_diamond
 
 val (grandbeta_rules, grandbeta_ind, grandbeta_cases) =
     Hol_reln`(!M. grandbeta M M) /\
@@ -739,55 +737,28 @@ val lameq_consistent = store_thm(
   `S = K` by PROVE_TAC [corollary3_2_1] THEN
   FULL_SIMP_TAC (srw_ss()) [S_def, K_def]);
 
-val weak_diamond_def =  (* definition 3.19, p39 *)
-    Define`weak_diamond R = !M M1 M2. R M M1 /\ R M M2 ==>
-                                      ?M3. RTC R M1 M3 /\ RTC R M2 M3`;
+val weak_diamond_def =
+    save_thm("weak_diamond_def", TermRewritingTheory.WCR_def)
+val _ = overload_on("weak_diamond", ``TermRewriting$WCR``)
 
-val WCR_def = (* definition 3.20, p39 *)
-    Define`WCR R = weak_diamond (compat_closure R)`;
+(* likewise, these definitions of WCR and SN, differ from those in
+   TermRewriting by wrapping the argument in a call to compat_closure
+*)
+val WCR_def = (* definition 3.20, p39 *) Define`
+  WCR R = weak_diamond (compat_closure R)
+`;
 
-val SN_def = Define`SN R = WF (inv (compat_closure R))`;
+val SN_def = Define`SN R = TermRewriting$SN (compat_closure R)`;
 
-val EXTEND_RTC_TC = store_thm(
-  "EXTEND_RTC_TC",
-  ``!R x y z. R x y /\ RTC R y z ==> TC R x z``,
-  GEN_TAC THEN
-  Q_TAC SUFF_TAC `!y z. RTC R y z ==> !x. R x y ==> TC R x z` THEN1
-        PROVE_TAC [] THEN
-  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
-  PROVE_TAC [relationTheory.TC_RULES]);
+val EXTEND_RTC_TC = relationTheory.EXTEND_RTC_TC
 
 val newmans_lemma = store_thm( (* lemma3_22, p39 *)
   "newmans_lemma",
   ``!R. SN R /\ WCR R ==> CR R``,
-  REPEAT STRIP_TAC THEN
-  `WF (TC (inv (compat_closure R)))` by
-       PROVE_TAC [relationTheory.WF_TC, SN_def] THEN
-  SIMP_TAC (srw_ss()) [CR_def, diamond_property_def] THEN
-  POP_ASSUM (HO_MATCH_MP_TAC o MATCH_MP relationTheory.WF_INDUCTION_THM) THEN
-  SRW_TAC [][relationTheory.inv_DEF, relationTheory.inv_MOVES_OUT] THEN
-  `(M1 = M) \/ (?M1'. compat_closure R M M1' /\ reduction R M1' M1)` by
-     PROVE_TAC [reduction_def, relationTheory.RTC_CASES1]
-  THENL [
-    POP_ASSUM SUBST_ALL_TAC THEN PROVE_TAC [reduction_rules],
-    ALL_TAC
-  ] THEN
-  `(M2 = M) \/ (?M2'. compat_closure R M M2' /\ reduction R M2' M2)` by
-     PROVE_TAC [reduction_def, relationTheory.RTC_CASES1]
-  THENL [
-    POP_ASSUM SUBST_ALL_TAC THEN PROVE_TAC [reduction_rules],
-    ALL_TAC
-  ] THEN
-  `?M0. reduction R M1' M0 /\ reduction R M2' M0` by
-    (FULL_SIMP_TAC (srw_ss()) [reduction_def, WCR_def, weak_diamond_def] THEN
-     PROVE_TAC []) THEN
-  `TC (compat_closure R) M M1' /\ TC (compat_closure R) M M2'` by
-    PROVE_TAC [relationTheory.TC_RULES] THEN
-  `?M10. reduction R M1 M10 /\ reduction R M0 M10` by PROVE_TAC [] THEN
-  `?M20. reduction R M2 M20 /\ reduction R M0 M20` by PROVE_TAC [] THEN
-  `TC (compat_closure R) M M0` by PROVE_TAC [EXTEND_RTC_TC, reduction_def] THEN
-  `?M3. reduction R M10 M3 /\ reduction R M20 M3` by PROVE_TAC [] THEN
-  PROVE_TAC [reduction_rules]);
+  SIMP_TAC (srw_ss()) [SN_def, WCR_def, TermRewritingTheory.Newmans_lemma,
+                       CR_def, reduction_def,
+                       GSYM TermRewritingTheory.diamond_def,
+                       GSYM TermRewritingTheory.CR_def]);
 
 val commute_def =  (* p43 *)
     Define`commute R1 R2 = !x x1 x2. R1 x x1 /\ R2 x x2 ==>
@@ -798,12 +769,8 @@ val commute_COMM = store_thm(
   ``commute R1 R2 = commute R2 R1``,
   PROVE_TAC [commute_def]);
 
-val diamond_RC = store_thm(
-  "diamond_RC",
-  ``!R. diamond_property R ==> diamond_property (RC R)``,
-  SRW_TAC [][relationTheory.RC_DEF, diamond_property_def, RIGHT_AND_OVER_OR,
-             LEFT_AND_OVER_OR, EXISTS_OR_THM] THEN
-  PROVE_TAC [diamond_property_def]);
+val diamond_RC = TermRewritingTheory.diamond_RC_diamond
+  (* |- !R. diamond_property R ==> diamond_property (RC R) *)
 
 val diamond_RTC = store_thm(
   "diamond_RTC",
