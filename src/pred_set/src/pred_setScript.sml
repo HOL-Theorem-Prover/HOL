@@ -2833,6 +2833,7 @@ val IN_CROSS = store_thm(
   "IN_CROSS",
   ``!P Q x. x IN (P CROSS Q) = FST x IN P /\ SND x IN Q``,
   SIMP_TAC bool_ss [GSPECIFICATION, CROSS_DEF, PAIR_EQ]);
+val _ = export_rewrites ["IN_CROSS"]
 
 val CROSS_EMPTY = store_thm(
   "CROSS_EMPTY",
@@ -2977,6 +2978,7 @@ val FINITE_CROSS_EQ = store_thm(
   REPEAT GEN_TAC THEN EQ_TAC THEN
   MESON_TAC [FINITE_CROSS_EQ_lemma, FINITE_CROSS, FINITE_EMPTY,
              CROSS_EMPTY]);
+val _ = export_rewrites ["FINITE_CROSS_EQ"]
 
 (* ====================================================================== *)
 (* Set complements.                                                       *)
