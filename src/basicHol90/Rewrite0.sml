@@ -10,7 +10,7 @@
 (* ===================================================================== *)
 
 
-structure Rewrite :> Rewrite =
+structure Rewrite0 :> Rewrite0 =
 struct
 
 open HolKernel boolTheory Drule;
@@ -29,6 +29,7 @@ type term = Term.term
 type thm  = Thm.thm
 type conv = Abbrev.conv;
 type tactic = Abbrev.tactic;
+
 
 (*---------------------------------------------------------------------------*
  * Split a theorem into a list of theorems suitable for rewriting:           *
@@ -80,7 +81,7 @@ fun stringulate _ [] = []
 
 fun REWRITES_CONV (RW{net,...}) tm = 
  if !monitoring
- then case mapfilter (fn f => f tm) (Net.match tm net)
+ then case mapfilter (fn f => f tm) (Net.lookup tm net)
        of []   => Conv.NO_CONV tm
         | [x]  => (Lib.mesg true (String.concat
                     ["Rewrite:\n", Parse.thm_to_string x])
@@ -88,12 +89,12 @@ fun REWRITES_CONV (RW{net,...}) tm =
         | h::t => (Lib.mesg true (String.concat
            ["Multiple rewrites possible (first taken):\n",
             String.concat (stringulate Parse.thm_to_string (h::t))]); h)
- else Conv.FIRST_CONV (Net.match tm net) tm;
+ else Conv.FIRST_CONV (Net.lookup tm net) tm;
 
 
 fun add_rewrites (RW{thms,net}) thl =
    RW{thms = thms@thl,
-      net = itlist Net.insert
+      net = itlist Net.enter
               (map (fn th => (Dsyntax.lhs(concl th), Conv.REWR_CONV th))
                    (itlist (append o mk_rewrites) thl []))
               net}

@@ -11,7 +11,7 @@ infix THEN THENL ## |->;
 
  type term = Term.term
  type thm = Thm.thm
- type ppstream = Portable_PrettyPrint.ppstream
+ type ppstream = Portable.ppstream
 
 
 fun ERR f s =
@@ -141,7 +141,7 @@ fun mk_tyinfo {ax,case_def,case_cong,induction,
 
 
 fun pp_tyinfo ppstrm (FACTS(ty_name,recd)) =
- let open Portable_PrettyPrint
+ let open Portable
      val {add_string,add_break,begin_block,end_block,...}
           = with_ppstream ppstrm
      val pp_term = Parse.pp_term ppstrm

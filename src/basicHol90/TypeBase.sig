@@ -2,7 +2,7 @@ signature TypeBase =
 sig
  type term = Term.term
  type thm = Thm.thm
- type ppstream = Portable_PrettyPrint.ppstream
+ type ppstream = Portable.ppstream
 
   type tyinfo
   type typeBase

@@ -11,7 +11,7 @@
 (* ===================================================================== *)
 
 
-signature Rewrite =
+signature Rewrite0 =
 sig
 
 type term = Term.term

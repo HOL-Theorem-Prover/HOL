@@ -140,7 +140,7 @@ fun REPEAT tac g = ((tac THEN REPEAT tac) ORELSE ALL_TAC) g ;
  *---------------------------------------------------------------------------*)
 fun achieves th ((asl,w):goal) =
     (Term.aconv (concl th) w) andalso
-    (all (fn h => (Portable_List.exists (Term.aconv h)) asl) (hyp th));
+    (all (fn h => (exists (Term.aconv h)) asl) (hyp th));
 
 
 (*---------------------------------------------------------------------------

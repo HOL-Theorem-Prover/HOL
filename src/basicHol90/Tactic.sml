@@ -51,7 +51,7 @@ val ACCEPT_TAC :thm_tactic = fn th => fn (asl,w) =>
 local val truth = Term`T`
 in
 fun DISCARD_TAC th (asl,w) =
-   if (Portable_List.exists (aconv (concl th)) (truth::asl))
+   if exists (aconv (concl th)) (truth::asl)
    then ALL_TAC (asl,w)
    else raise TACTIC_ERR "DISCARD_TAC" ""
 end;

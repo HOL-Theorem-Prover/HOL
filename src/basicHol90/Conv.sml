@@ -1577,10 +1577,9 @@ fun FUN_EQ_CONV tm =
   case (Type.dest_type(type_of (lhs tm)))
    of {Tyop="fun", Args=[ty1,_]} =>
         (let val vars = free_vars tm
-             val varnm = if (Type.is_vartype ty1) then "x"
-                         else Portable_String.str
-                               (hd(Portable_String.explode
-                                 (#Tyop(Type.dest_type ty1))))
+             val varnm = if Type.is_vartype ty1 then "x"
+                else Char.toString (Lib.trye hd
+                       (String.explode (#Tyop(Type.dest_type ty1))))
              val x = variant vars (mk_var{Name=varnm, Ty=ty1})
              val imp1 = DISCH_ALL (GEN x (AP_THM (ASSUME tm) x))
              val asm = ASSUME (concl (GEN x (AP_THM (ASSUME tm) x)))
