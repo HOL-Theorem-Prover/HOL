@@ -200,10 +200,10 @@ fun mk_prec_matrix G = let
   val first_tok = hd o List.mapPartial (fn TOK s => SOME s | _ => NONE)
   val last_tok = first_tok o List.rev
   val all_lhs =
-    TypeColon::BOS::VS_cons::ResquanOpTok::
+    TypeColon::BOS::VS_cons::ResquanOpTok::Id::
     map STD_HOL_TOK (fnapp_special::(map_rule first_tok Grules))
   val all_rhs =
-    TypeTok::EndBinding::EOS::VS_cons::ResquanOpTok::
+    TypeTok::EndBinding::EOS::VS_cons::ResquanOpTok::Id::
     map STD_HOL_TOK (fnapp_special::(map_rule last_tok Grules))
   (* Between things that are equal, the thing on the left is less than
      all possible left hand sides, and the thing on the right is
@@ -557,7 +557,7 @@ fun parse_term (G : grammar) typeparser = let
               vs_state <> VSRES_Normal then (EndBinding, t)
             else if isSome (Polyhash.peek keyword_table s) then
               (STD_HOL_TOK s, t)
-                 else (Id, t)
+            else (Id, t)
         | Antiquote _ => (Id, t)
         | Numeral _ => (Id, t)
         | QIdent _ => (Id, t)
@@ -942,7 +942,7 @@ fun parse_term (G : grammar) typeparser = let
                     inc_paren
                   else if s = ")" andalso #1 in_vs <> VSRES_Normal then
                     dec_paren
-                       else ok
+                  else ok
               | ResquanOpTok => enter_restm
               | EndBinding => leave_binder
               | _ => ok)
