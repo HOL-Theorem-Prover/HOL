@@ -74,8 +74,9 @@ val end_of_stream  = TextIO.endOfStream
     Efficiency hack.
  ---------------------------------------------------------------------------*)
 
-fun pointer_eq(x,y) = (Obj.magic x : int) = (Obj.magic y : int)
-
+local val cast : 'a -> int = Obj.magic in
+fun pointer_eq (x:'a, y:'a) = (cast x = cast y)
+end;
 
 (*---------------------------------------------------------------------------
     Time
