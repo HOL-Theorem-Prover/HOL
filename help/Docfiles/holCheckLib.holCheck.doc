@@ -11,12 +11,12 @@ holCheck : term * (string * term) list * bool * string option *
 \ELTYPE
 
 \SYNOPSIS
-Basic symbol model checker.
+Basic symbolic model checker.
 
 \DESCRIBE
 Basic symbolic model checker. User specifies a model by giving initial
 states and a labelled transition system as propositional logic terms,
-and then provides a list of CTL of mu-calculus propertes to the model
+and then provides a list of CTL or mu-calculus propertes to the model
 checker, which returns the BDD representation of the property, a
 theorem if the property holds in the model, and a counterexample or
 witness trace if appropriate.
