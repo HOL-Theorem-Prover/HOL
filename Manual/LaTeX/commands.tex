@@ -26,7 +26,6 @@
 \newcommand\adhoc{\mbox{\it ad hoc}}
 \newcommand\etal{{\it et al.\/}}
 \newcommand\etc{\mbox{etc{.}}}
-\def\see#1#2{{\em see\/} #1}
 
 % ---------------------------------------------------------------------
 % Simple abbreviations and macros for mathematical typesetting
@@ -67,7 +66,7 @@
 \newcommand{\leave}[1]{\\[#1]\noindent}
 \newcommand\entails{\mbox{\rule{.3mm}{4mm}\rule[2mm]{.2in}{.3mm}}}
 
-% --------------------------------------------------------------------- 
+% ---------------------------------------------------------------------
 % Font-changing commands
 % ---------------------------------------------------------------------
 
@@ -143,11 +142,11 @@
 %
 % Usage: (1) \setcounter{sessioncount}{1} resets the session counter
 %
-%	 (2) \begin{session}\begin{verbatim}
-%	      .
-%	       < lines from hol session >
-%	      .
-%	     \end{verbatim}\end{session}   
+%        (2) \begin{session}\begin{verbatim}
+%             .
+%              < lines from hol session >
+%             .
+%            \end{verbatim}\end{session}
 %
 %            typesets the session in a numbered box.
 % ---------------------------------------------------------------------
@@ -162,7 +161,7 @@
 \setcounter{sessioncount}{1}
 
 \newenvironment{session}{\begin{flushleft}
- \begin{tabular}{@{}|c@{}|@{}}\hline 
+ \begin{tabular}{@{}|c@{}|@{}}\hline
  \begin{minipage}[b]{\hsbw}
  \vspace*{-.5pt}
  \begin{flushright}
@@ -170,7 +169,7 @@
  \raisebox{0.04in}{\makebox[0.3in][c]{\footnotesize\sl \thesessioncount}}
  \end{flushright}
  \vspace*{-.55in}
- \begingroup\small\baselineskip\HOLSpacing}{\endgroup\end{minipage}\\ \hline 
+ \begingroup\small\baselineskip\HOLSpacing}{\endgroup\end{minipage}\\ \hline
  \end{tabular}
  \end{flushleft}
  \stepcounter{sessioncount}}
@@ -179,24 +178,24 @@
 % Macro for boxed ML functions, etc.
 %
 % Usage: (1) \begin{boxed}\begin{verbatim}
-%	        .
-%	        < lines giving names and types of mk functions >
-%	        .
-%	     \end{verbatim}\end{boxed}   
+%               .
+%               < lines giving names and types of mk functions >
+%               .
+%            \end{verbatim}\end{boxed}
 %
-%            typesets the given lines in a box.  
+%            typesets the given lines in a box.
 %
-%            Conventions: lines are left-aligned under the "g" of begin, 
-%	     and used to highlight primary reference for the ml function(s)
-%	     that appear in the box.
+%            Conventions: lines are left-aligned under the "g" of begin,
+%            and used to highlight primary reference for the ml function(s)
+%            that appear in the box.
 % ---------------------------------------------------------------------
 
 \newenvironment{boxed}{\begin{flushleft}
- \begin{tabular}{@{}|c@{}|@{}}\hline 
+ \begin{tabular}{@{}|c@{}|@{}}\hline
  \begin{minipage}[b]{\hsbw}
 % \vspace*{-.55in}
  \vspace*{.06in}
- \begingroup\small\baselineskip\HOLSpacing}{\endgroup\end{minipage}\\ \hline 
+ \begingroup\small\baselineskip\HOLSpacing}{\endgroup\end{minipage}\\ \hline
  \end{tabular}
  \end{flushleft}}
 
@@ -204,16 +203,16 @@
 % Macro for unboxed ML functions, etc.
 %
 % Usage: (1) \begin{hol}\begin{verbatim}
-%	        .
-%	        < lines giving names and types of mk functions >
-%	        .
-%	     \end{verbatim}\end{hol}   
+%               .
+%               < lines giving names and types of mk functions >
+%               .
+%            \end{verbatim}\end{hol}
 %
 %            typesets the given lines exactly like {boxed}, except there's
-%	     no box.  
+%            no box.
 %
-%            Conventions: lines are left-aligned under the "g" of begin, 
-%	     and used to display ML code in verbatim, left aligned.
+%            Conventions: lines are left-aligned under the "g" of begin,
+%            and used to display ML code in verbatim, left aligned.
 % ---------------------------------------------------------------------
 
 \newenvironment{hol}{\begin{flushleft}
