@@ -170,13 +170,11 @@ fun proveTotal0 tac def =
 end;
 
 (*---------------------------------------------------------------------------
-      Terribly naive, but it still gets a lot.
+      TC prover. Terribly naive, but it still gets a lot.
  ---------------------------------------------------------------------------*)
 
-fun TC_SIMP_CONV tm =
- (Rewrite.REWRITE_CONV
-    [prim_recTheory.WF_measure, prim_recTheory.WF_LESS,
-     prim_recTheory.measure_def, relationTheory.inv_image_def]
+fun TC_SIMP_CONV simps tm =
+ (Rewrite.REWRITE_CONV simps
   THENC REDEPTH_CONV Let_conv.GEN_BETA_CONV
   THENC Rewrite.REWRITE_CONV
           (pairTheory.pair_rws @
@@ -185,17 +183,32 @@ fun TC_SIMP_CONV tm =
   THENC REDEPTH_CONV BETA_CONV
   THENC Rewrite.REWRITE_CONV [arithmeticTheory.ADD_CLAUSES])  tm;
 
-val TC_SIMP_TAC = CONV_TAC TC_SIMP_CONV;
+val default_simps =
+  [combinTheory.o_DEF,combinTheory.I_THM,prim_recTheory.measure_def, 
+   relationTheory.inv_image_def, pairTheory.LEX_DEF];
 
-fun prover g =
-(TC_SIMP_TAC
+
+(*---------------------------------------------------------------------------
+      The default prover is invoked on goals involving measure 
+      functions, so the wellfoundedness proofs for the guessed
+      termination relations (which are measure functions) are 
+      trivial and can be blown away with rewriting.
+ ---------------------------------------------------------------------------*)
+
+local open prim_recTheory relationTheory
+in
+fun default_prover g =
+(CONV_TAC (TC_SIMP_CONV (WF_measure::WF_LESS::WF_Empty::default_simps))
   THEN REPEAT STRIP_TAC
   THEN REPEAT (POP_ASSUM (fn th =>
        if arithSimps.is_arith (concl th)
        then MP_TAC th else ALL_TAC))
-  THEN CONV_TAC arithLib.ARITH_CONV) g;
+  THEN CONV_TAC arithLib.ARITH_CONV) g
+end;
 
-val proveTotal = proveTotal0 prover;
+val proveTotal = proveTotal0 default_prover;
+
+val TC_SIMP_TAC = CONV_TAC (TC_SIMP_CONV []);
 
 (*---------------------------------------------------------------------------
         Support for interactive termination proofs. Brought over
@@ -207,15 +220,33 @@ val tprove = Defn.tprove
 val TC_INTRO_TAC = Defn.TC_INTRO_TAC
 
 
+ (*---------------------------------------------------------------------------
+  * Trivial wellfoundedness prover for combinations of wellfounded relations.
+  *--------------------------------------------------------------------------*)
+
+local fun BC_TAC th = 
+        if (is_imp (#2 (Dsyntax.strip_forall (concl th))))
+        then MATCH_ACCEPT_TAC th ORELSE MATCH_MP_TAC th
+        else MATCH_ACCEPT_TAC th;
+      open relationTheory prim_recTheory pairTheory listTheory
+      val WFthms =  [WF_inv_image, WF_measure, WF_LESS, WF_Empty,
+                     WF_PRED, WF_LIST_PRED, WF_RPROD, WF_LEX, WF_TC]
+in
+fun WF_TAC thms = REPEAT (MAP_FIRST BC_TAC (thms@WFthms) ORELSE CONJ_TAC)
+end;
+
 (*---------------------------------------------------------------------------
     Rquote is a quotation denoting the termination relation. 
  ---------------------------------------------------------------------------*)
 
-fun WF_REL_TAC defn Rquote = 
-  TC_INTRO_TAC defn 
+fun PRIM_WF_REL_TAC defn Rquote WFthms simps g =
+  (TC_INTRO_TAC defn 
     THEN Q.EXISTS_TAC Rquote
-    THEN TC_SIMP_TAC;
+    THEN WF_TAC WFthms
+    THEN CONV_TAC (TC_SIMP_CONV simps)) g;
 
+
+fun WF_REL_TAC defn Rquote = PRIM_WF_REL_TAC defn Rquote [] default_simps;
 
 
 (*---------------------------------------------------------------------------

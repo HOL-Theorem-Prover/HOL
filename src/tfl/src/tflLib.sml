@@ -6,7 +6,7 @@
 structure tflLib :> tflLib = 
 struct
 
-open HolKernel Parse basicHol90Lib Let_conv boolTheory boolTools NonRecSize;
+open HolKernel Parse basicHol90Lib Let_conv boolTheory NonRecSize;
 
 infix THEN ORELSE; infixr -->;
 
@@ -14,7 +14,7 @@ val output = Portable.output
 val std_out = Portable.std_out
 val flush_out = Portable.flush_out
 
-val _ = RW.add_implicit_congs [IMP_CONG,COND_CONG];
+val _ = RW.add_implicit_congs [Thms.IMP_CONG,Thms.COND_CONG];
 val _ = RW.add_implicit_rws pairTheory.pair_rws;
 
 type term = Term.term
@@ -309,7 +309,7 @@ fun std_postprocessor p =
        (fn thl => 
           REWRITE_RULE Fully (Simpls(std_simpls, thl),
                               Context([],DONT_ADD), 
-                              Congs (IMP_CONG::current_congs()), 
+                              Congs (Thms.IMP_CONG::current_congs()), 
                               Solver std_solver))
     end;
 
