@@ -239,9 +239,19 @@ fun term_to_dfactoid t = (term_to_factoid t, ASM t)
     This records what sort of shadow we're currently working on.
    ---------------------------------------------------------------------- *)
 
-datatype elimmode = REAL | DARK | EXACT
+datatype elimmode = REAL | DARK | EXACT | EDARK
+  (* REAL when we're looking for a contradiction (only)
+     DARK when we're looking for satisfiability and the problem is not
+          exact
+     EXACT when we're looking for either a contradiction or satisfiability.
+     EDARK when we're looking for satisfiability (i.e., have switched from
+           a REAL search, but where the problem is still EXACT) *)
+
+
+
 
 fun inexactify EXACT = REAL
+  | inexactify EDARK = DARK
   | inexactify x = x
 
 fun mode_result em result =
@@ -249,6 +259,7 @@ fun mode_result em result =
       EXACT => result
     | REAL => (case result of SATISFIABLE _ => NO_CONCL | x => x)
     | DARK => (case result of CONTR _ => NO_CONCL | x => x)
+    | EDARK => (case result of CONTR _ => NO_CONCL | x => x)
 
 fun combine_dfactoids em i ((f1, d1), (f2, d2)) =
     case em of
@@ -422,7 +433,7 @@ in
                            else SATISFIABLE (add x_var c empty)
   | (SOME (u,du), SOME (l, dl)) =>
     if u < l then
-      if em = DARK then NO_CONCL
+      if em = DARK orelse em = EDARK then NO_CONCL
       else direct_contradiction(du,dl)
     else
       if em = REAL then NO_CONCL
@@ -727,34 +738,30 @@ fun one_step ptree em nextstage kont =
         end
         val (newtree0, uppers, lowers) =
             dbfold categorise (dbempty (dbwidth ptree), [], []) ptree
+        fun drop_contr (CONTR _) = NO_CONCL
+          | drop_contr x = x
+        fun extend_satisfiable r =
+            case r of
+              SATISFIABLE vmap =>
+                SATISFIABLE (extend_vmap ptree var_to_elim vmap)
+            | _ => r
         fun newkont r =
             case (em, mode) of
-              (EXACT, EXACT) => let
-              in
-                case r of
-                  SATISFIABLE vmap =>
-                  kont (SATISFIABLE (extend_vmap ptree var_to_elim vmap))
-                | _ => kont r
-              end
+              (EXACT, EXACT) => kont (extend_satisfiable r)
             | (EXACT, REAL) => let
               in
                 case r of
                   CONTR _ => kont r
-                | _ => one_step ptree DARK nextstage kont
+                | _ => one_step ptree EDARK nextstage kont
               end
             | (REAL, REAL) => kont r
-            | (DARK, DARK) => let
-              in
-                case r of
-                  SATISFIABLE vmap =>
-                  kont (SATISFIABLE (extend_vmap ptree var_to_elim vmap))
-                | CONTR _ => kont NO_CONCL
-                | x => kont x
-              end
+            | (EDARK, EDARK) => kont (drop_contr (extend_satisfiable r))
+            | (EDARK, DARK) => kont (drop_contr (extend_satisfiable r))
+            | (DARK, DARK) => kont (drop_contr (extend_satisfiable r))
             | _ => raise Fail "Can't happen - in newkont calculation"
         fun newnextstage pt k = nextstage pt mode k
       in
-        generate_crossproduct(newtree0, em, var_to_elim, uppers, lowers,
+        generate_crossproduct(newtree0, mode, var_to_elim, uppers, lowers,
                               newnextstage, newkont)
       end
 
@@ -850,21 +857,55 @@ end
          [~13, ~8, ~14, 15, 8], [~10, 9, 15, ~13, 9], [~15, ~14, ~3, 2, 5],
          [2, ~1, ~5, 14, ~7]];
 
+
+   (* very poor performance exhibited here: *)
+   test [[13, ~5, ~12, 11, 1, ~5, ~3, ~6], [14, ~6, ~8, ~1, 4, ~10, 15, 6],
+         [9, ~5, 1, 10, 2, ~1, ~2, 0], [~1, ~13, 14, ~3, 11, ~9, 14, 9],
+         [~13, 1, 5, ~14, ~6, ~3, 14, 12], [11, 8, 9, 12, 1, ~2, ~6, 8],
+         [~14, ~8, ~4, ~2, ~3, 13, ~7, ~10], [~3, 3, ~14, ~3, ~7, 4, ~6, ~6]];
+
    fun print_test (l:int list list) = ignore (printVal l)
 
-   fun sattest i m n = if i <= 0 then ()
+   val current_goal = ref ([] : int list list)
+   val slow_goals = ref  ([] : int list list list)
+   fun sattest i timelimit numcsts numvars = if i <= 0 then ()
                        else let
-                           val t = gen_test m n
+                           val t = gen_test numcsts numvars
+                           val _ = current_goal := t
+                           val ctimer = Timer.startCPUTimer()
+                           val result = test t
+                           val timetaken = Timer.checkCPUTimer ctimer
+                           val _ = if Time.>(#usr timetaken,
+                                             Time.fromSeconds timelimit) then
+                                     slow_goals := t :: (!slow_goals)
+                                   else ()
                          in
-                           case test t of
+                           case result of
                              SAT (b, _) => if b then print "SAT - OK\n"
                                            else (print "SAT - FAILED\n";
                                                  print_test t;
                                                  print "SAT - FAILED\n\n")
                            | PCONTR _ => print "CONTR\n"
                            | PNOCONC => print "PNOCONC\n";
-                           sattest (i - 1) m n
+                           sattest (i - 1) timelimit numcsts numvars
                          end
+
+
+   fun can_throwaway ptree = let
+     val next = throwaway_redundant_factoids ptree (fn p => fn k => p) failkont
+   in
+     dbsize next < dbsize ptree
+   end
+
+   fun dbonestep ptree em =
+     throwaway_redundant_factoids ptree
+                                  (fn p =>
+                                      fn k =>
+                                         one_step ptree em
+                                                  (fn pt =>
+                                                      fn em =>
+                                                         fn k => (pt, em))
+                                                  k) failkont
 
    ---------------------------------------------------------------------- *)
 
