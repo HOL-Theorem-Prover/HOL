@@ -100,7 +100,7 @@ fun quoted_string strm =
   special, return Symbol of it, else return Ident of it.
 *)
 
-val non_aggregating_chars = explode "()[]{}~."
+val non_aggregating_chars = explode "()[]{}~.,"
 fun nonagg_c c = Lib.mem c non_aggregating_chars
 
 fun s_has_nonagg_char s = length (String.fields nonagg_c s) <> 1
