@@ -46,12 +46,21 @@ it as an infix for the purposes of printing and parsing:
 {
    - add_infix ("+", 500, HOLgrammars.LEFT);
    > val it = () : unit
-   - Term`x + y`;
+   - val t = Term`x + y`;
    <<HOL message: inventing new type variable names: 'a, 'b, 'c.>>
-   > val it = `x + y` : Term.term
-   - dest_comb it;
+   > val t = `x + y` : Term.term
+}
+\noindent We can confirm that this new infix has indeed been parsed
+that way by taking the resulting term apart:
+{
+   - dest_comb t;
    > val it = {{Rand = `y`, Rator = `$+ x`}} :
          {{Rand : Term.term, Rator : Term.term}}
+}
+\noindent With its new status, {+} has to be ``quoted'' with a
+dollar-sign if we wish to use it in a position where it is not an
+infix, as in the binding list of an abstraction:
+{
    - Term`\$+. x + y`;
    <<HOL message: inventing new type variable names: 'a, 'b, 'c.>>
    > val it = `\$+. x + y` : Term.term

@@ -1,0 +1,34 @@
+\DOC parse_preTerm
+
+\TYPE {Parse.parse_preTerm : term quotation -> parse_term.preterm}
+
+\SYNOPSIS
+Implements the first phase of term parsing; the removal of special syntax.
+
+\KEYWORDS
+Parsing
+
+\LIBRARY Parse
+
+\DESCRIBE
+The ``let'' expression {`let x = e1 in e2`} will turn into
+{COMB(COMB(VAR "LET", ABS(SIMPLE "x", VAR "e2")), VAR "e1")}.  The
+record syntax {`rec.fld1`} is converted into something of the form
+{COMB(VAR "....fld1", VAR "rec")} where the dots will actually be
+equal to the value of {GrammarSpecials.recsel_special} (a string).
+
+\FAILURE
+
+
+\EXAMPLE
+
+
+\USES
+
+
+\COMMENTS
+
+
+\SEEALSO
+
+\ENDDOC

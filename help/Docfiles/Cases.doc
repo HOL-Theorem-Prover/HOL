@@ -57,10 +57,9 @@ If we have defined the following type:
 \noindent then it is possible to make progress with the goal
 {!x. foofn x >= 10} by applying the tactic {Cases}, thus:
 {
-   - Cases ([], ``!x. foofn x >= 10``)
-   > val it =
-      ([([], `foofn (Bar n) >= 10`), ([], `foofn (Baz b) >= 10`)], fn)
-      : (Term.term list * Term.term) list * (Thm.thm list -> Thm.thm)
+                    ?- !x. foofn x >= 10
+   ======================================================  Cases
+    ?- foofn (Bar n) >= 10        ?- foofn (Baz b) >= 10
 }
 \noindent producing two new goals, one for each constructor of the
 type.
