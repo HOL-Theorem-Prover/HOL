@@ -5,6 +5,7 @@ OCAMLPPFLAGS?=-pp $(OCAMLPATH)/camlp4o
 # add -pp camlp4o for ocaml version 3.03a and above, apparently
 
 OCAMLC=$(OCAMLPATH)/ocamlc $(OCAMLPPFLAGS)
+OCAMLOPT=$(OCAMLPATH)/ocamlopt $(OCAMLPPFLAGS)
 OCAMLLEX=$(OCAMLPATH)/ocamllex
 OCAMLYACC=${OCAMLPATH}/ocamlyacc
 OCAMLDEP=$(OCAMLPATH)/ocamldep $(OCAMLPPFLAGS)
@@ -18,30 +19,30 @@ all: simpledump simpletexdump lts_to_latex mng_to_latex hol_to_latex
 
 # program targets:
 
-SIMPLEDUMP_OBJS=hollex.cmo simpledump.cmo
+SIMPLEDUMP_OBJS=hollex.cmx simpledump.cmx
 
 simpledump : $(SIMPLEDUMP_OBJS)
-	$(OCAMLC) $(SIMPLEDUMP_OBJS) -o simpledump
+	$(OCAMLOPT) $(SIMPLEDUMP_OBJS) -o simpledump
 
-SIMPLETEXDUMP_OBJS=hollex.cmo simpletexdump.cmo
+SIMPLETEXDUMP_OBJS=hollex.cmx simpletexdump.cmx
 
 simpletexdump : $(SIMPLETEXDUMP_OBJS)
-	$(OCAMLC) $(SIMPLETEXDUMP_OBJS) -o simpletexdump
+	$(OCAMLOPT) $(SIMPLETEXDUMP_OBJS) -o simpletexdump
 
-LTS_TO_LATEX_OBJS=hollex.cmo holdoc_init.cmo holdoc_munge.cmo lts_to_latex.cmo
+LTS_TO_LATEX_OBJS=hollex.cmx holdoc_init.cmx holdoc_munge.cmx lts_to_latex.cmx
 
 lts_to_latex : $(LTS_TO_LATEX_OBJS)
-	$(OCAMLC) str.cma $(LTS_TO_LATEX_OBJS) -o lts_to_latex
+	$(OCAMLOPT) str.cmxa $(LTS_TO_LATEX_OBJS) -o lts_to_latex
 
-MNG_TO_LATEX_OBJS=hollex.cmo holdoc_init.cmo holdoc_munge.cmo mng_to_latex.cmo
+MNG_TO_LATEX_OBJS=hollex.cmx holdoc_init.cmx holdoc_munge.cmx mng_to_latex.cmx
 
 mng_to_latex : $(MNG_TO_LATEX_OBJS)
-	$(OCAMLC) str.cma $(MNG_TO_LATEX_OBJS) -o mng_to_latex
+	$(OCAMLOPT) str.cmxa $(MNG_TO_LATEX_OBJS) -o mng_to_latex
 
-HOL_TO_LATEX_OBJS=hollex.cmo holdoc_init.cmo holdoc_munge.cmo hol_to_latex.cmo
+HOL_TO_LATEX_OBJS=hollex.cmx holdoc_init.cmx holdoc_munge.cmx hol_to_latex.cmx
 
 hol_to_latex : $(HOL_TO_LATEX_OBJS)
-	$(OCAMLC) str.cma $(HOL_TO_LATEX_OBJS) -o hol_to_latex
+	$(OCAMLOPT) str.cmxa $(HOL_TO_LATEX_OBJS) -o hol_to_latex
 
 # document targets:
 
@@ -55,7 +56,7 @@ hostlts.dvi : hostlts.tex Net_hostLTSScript.tex ltsmunge.sty
 # other targets:
 
 clean:
-	rm -f simpledump simpletexdump lts_to_latex hollex.ml *.cm[iox] *~ '#*#' \
+	rm -f simpledump simpletexdump lts_to_latex hollex.ml *.cm[iox] *.cmxa *~ '#*#' \
               .depend Net_hostLTSScript.tex hostlts.{dvi,ps} \
               *.{aux,log} hol_to_latex mng_to_latex
 
@@ -63,11 +64,11 @@ depend:	.depend
 
 # implicit rules:
 
-%.cmo : %.ml %.cmi
-	$(OCAMLC) -c $<
+%.cmx : %.ml %.cmi
+	$(OCAMLOPT) -c $<
 
 %.cmi : %.mli
-	$(OCAMLC) -c $<
+	$(OCAMLOPT) -c $<
 
 %.tex : %.mng mng_to_latex
 	./mng_to_latex < $< 2>&1 > $@ | sort | uniq -c | tee $*.errs
@@ -80,9 +81,9 @@ depend:	.depend
 %.ps : %.dvi
 	$(DVIPS) $< -o $@
 
-# this one must come *after* the individual .cmo / .cmi rules:
-%.cmo %.cmi : %.ml
-	$(OCAMLC) -c $<
+# this one must come *after* the individual .cmx / .cmi rules:
+%.cmx %.cmi : %.ml
+	$(OCAMLOPT) -c $<
 
 %.ml : %.mll
 	$(OCAMLLEX) $<
