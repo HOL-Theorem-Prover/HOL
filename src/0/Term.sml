@@ -394,7 +394,7 @@ fun aconv t1 t2 = EQ(t1,t2) orelse
   of (Comb(M,N),Comb(P,Q)) => aconv N Q andalso aconv M P
    | (Abs(Fv(_,ty1),M),
       Abs(Fv(_,ty2),N)) => ty1=ty2 andalso aconv M N
-   | (Clos(e1,b1), 
+   | (Clos(e1,b1),
       Clos(e2,b2)) => (EQ(e1,e2) andalso EQ(b1,b2))
                        orelse aconv (push_clos t1) (push_clos t2)
    | (Clos _, _) => aconv (push_clos t1) t2
@@ -510,22 +510,22 @@ fun dest_comb (Comb r) = r
        abstractions.
   ---------------------------------------------------------------------------*)
 
-local val FORMAT = ERR "list_mk_binder" 
+local val FORMAT = ERR "list_mk_binder"
    "expected first arg to be a constant of type :(<ty>_1 -> <ty>_2) -> <ty>_3"
-   fun check_opt NONE = Lib.I 
+   fun check_opt NONE = Lib.I
      | check_opt (SOME c) =
         if not(is_const c) then raise FORMAT
         else case total (fst o Type.dom_rng o fst o Type.dom_rng o type_of) c
               of NONE => raise FORMAT
-               | SOME ty => (fn abs => 
+               | SOME ty => (fn abs =>
                    let val dom = fst(Type.dom_rng(type_of abs))
                    in mk_comb (inst[ty |-> dom] c, abs)
                    end)
 in
 fun list_mk_binder opt =
  let val f = check_opt opt
- in fn (vlist,tm) 
- => if not (all is_var vlist) then raise ERR "list_mk_binder" "" 
+ in fn (vlist,tm)
+ => if not (all is_var vlist) then raise ERR "list_mk_binder" ""
     else
   let open Polyhash
      val varmap = mkPolyTable(length vlist, Fail "varmap")
@@ -554,7 +554,8 @@ fun mk_abs(Bvar as Fv _, Body) =
       let fun bind (v as Fv _) i        = if v=Bvar then Bv i else v
             | bind (Comb(Rator,Rand)) i = Comb(bind Rator i, bind Rand i)
             | bind (Abs(Bvar,Body)) i   = Abs(Bvar, bind Body (i+1))
-            | bind tm _ = tm
+            | bind (t as Clos _) i      = bind (push_clos t) i
+            | bind tm _ = tm (* constant *)
       in
         Abs(Bvar, bind Body 0)
       end
@@ -593,14 +594,14 @@ local fun peel f (t as Clos _) A = peel f (push_clos t) A
          if HOLset.member(viset,vi) then viset else HOLset.add(viset,vi)
 in
 fun strip_binder opt =
- let val f = case opt 
+ let val f = case opt
               of NONE => (fn (t as Abs _) => SOME t | other => NONE)
                | SOME c => (fn t => let val (rator,rand) = dest_comb t
-                                    in if same_const rator c 
+                                    in if same_const rator c
                                        then SOME rand
                                        else NONE
                                     end handle HOL_ERR _ => NONE)
- in fn tm => 
+ in fn tm =>
    let val (prefixl,body) = peel f tm []
      val prefix = Array.fromList prefixl
      val vmap = curry Array.sub prefix
@@ -746,8 +747,8 @@ fun compare p =
 val empty_tmset = HOLset.empty compare
 
 (*---------------------------------------------------------------------------
-    Matching (first order, modulo alpha conversion) of terms, including 
-    sets of variables and type variables to avoid binding. 
+    Matching (first order, modulo alpha conversion) of terms, including
+    sets of variables and type variables to avoid binding.
  ---------------------------------------------------------------------------*)
 
 local fun MERR s = raise ERR "raw_match_term error" s
@@ -758,7 +759,7 @@ local fun MERR s = raise ERR "raw_match_term error" s
         | free _ _ = true
       fun lookup x ids =
        let fun look [] = if HOLset.member(ids,x) then SOME x else NONE
-             | look ({redex,residue}::t) = 
+             | look ({redex,residue}::t) =
                        if x=redex then SOME residue else look t
        in look end
       fun bound_by_scope M = not (free M 0)
@@ -767,24 +768,24 @@ fun raw_match tyavoids avoidset =
  let val tymatch = Type.raw_match_type tyavoids
      fun dont_bind v = HOLset.member(avoidset,v)
      fun RM (v as Fv(_,Ty)) tm ((S1 as (tmS,Id)),tyS)
-          = if bound_by_scope tm then MERR "variable bound by scope" else 
-            ((case lookup v Id tmS 
-               of NONE => if v=tm then (tmS,HOLset.add(Id,v)) 
+          = if bound_by_scope tm then MERR "variable bound by scope" else
+            ((case lookup v Id tmS
+               of NONE => if v=tm then (tmS,HOLset.add(Id,v))
                                   else ((v |-> tm)::tmS,Id)
-                | SOME tm' => if aconv tm' tm then S1 
+                | SOME tm' => if aconv tm' tm then S1
                               else MERR"double bind on variable"),
              tymatch Ty (type_of tm) tyS)
        | RM (Const(c1, ty1)) (Const(c2, ty2)) (tmS,tyS)
-          = (if c1 <> c2 then MERR "different constants" else 
+          = (if c1 <> c2 then MERR "different constants" else
              case (ty1,ty2)
               of (GRND _, POLY _) => MERR"ground const vs. polymorphic const"
-               | (GRND pat,GRND obj) => if pat=obj then (tmS,tyS) 
+               | (GRND pat,GRND obj) => if pat=obj then (tmS,tyS)
                            else MERR"const-const with different (ground) types"
                | (POLY pat,GRND obj) => (tmS, tymatch pat obj tyS)
                | (POLY pat,POLY obj) => (tmS, tymatch pat obj tyS))
-       | RM (Abs(Fv(_,ty1),M)) 
+       | RM (Abs(Fv(_,ty1),M))
             (Abs(Fv(_,ty2),N)) (tmS,tyS) = RM M N (tmS, tymatch ty1 ty2 tyS)
-       | RM (Comb(M,N)) 
+       | RM (Comb(M,N))
             (Comb(P,Q)) S        = RM M P (RM N Q S)
        | RM (Bv i) (Bv j) S      = if i=j then S else MERR"Bound var. depth"
        | RM (pat as Clos _) ob S = RM (push_clos pat) ob S
@@ -809,7 +810,7 @@ fun norm_subst tytheta =
  end
 
 fun match_terml tyavoids avoids pat ob =
- let val (tmS,(tyS,_)) = raw_match tyavoids avoids pat ob 
+ let val (tmS,(tyS,_)) = raw_match tyavoids avoids pat ob
                                    (([],HOLset.empty compare),([],[]))
  in
    (norm_subst tyS tmS, tyS)
@@ -837,8 +838,8 @@ local val err = ERR "dest_eq_ty" ""
 in
 fun dest_eq_ty t =
  let val ((c,M),N) = with_exn ((dest_comb##I) o dest_comb) t err
- in if same_const c eqc 
-       then (M,N,fst(Type.dom_rng (type_of c))) 
+ in if same_const c eqc
+       then (M,N,fst(Type.dom_rng (type_of c)))
        else raise err
  end
 end;
