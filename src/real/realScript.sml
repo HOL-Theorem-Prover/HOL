@@ -24,8 +24,6 @@ app load ["numLib",
           "realaxTheory"];
 *)
 
-infix THEN THENL ORELSE ORELSEC ##;
-infix 8  by;
 
 open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
      arithmeticTheory numTheory prim_recTheory
@@ -60,6 +58,7 @@ local val reeducate = REWRITE_RULE[REAL_0, REAL_1]
 in
   val REAL_10 = save_thm("REAL_10",reeducate(REAL_10))
   val REAL_ADD_SYM = save_thm("REAL_ADD_SYM",reeducate(REAL_ADD_SYM))
+  val REAL_ADD_COMM = save_thm("REAL_ADD_COMM", REAL_ADD_SYM)
   val REAL_ADD_ASSOC = save_thm("REAL_ADD_ASSOC",reeducate(REAL_ADD_ASSOC))
   val REAL_ADD_LID = save_thm("REAL_ADD_LID",reeducate(REAL_ADD_LID))
   val REAL_ADD_LINV = save_thm("REAL_ADD_LINV",reeducate(REAL_ADD_LINV))
@@ -70,6 +69,7 @@ in
   val REAL_LT_IADD = save_thm("REAL_LT_IADD",reeducate(REAL_LT_IADD))
   val REAL_SUP_ALLPOS = save_thm("REAL_SUP_ALLPOS",reeducate(REAL_SUP_ALLPOS))
   val REAL_MUL_SYM = save_thm("REAL_MUL_SYM",reeducate(REAL_MUL_SYM))
+  val REAL_MUL_COMM = save_thm("REAL_MUL_COMM", REAL_MUL_SYM)
   val REAL_MUL_ASSOC = save_thm("REAL_MUL_ASSOC",reeducate(REAL_MUL_ASSOC))
   val REAL_MUL_LID = save_thm("REAL_MUL_LID",reeducate(REAL_MUL_LID))
   val REAL_MUL_LINV = save_thm("REAL_MUL_LINV",reeducate(REAL_MUL_LINV))
@@ -812,6 +812,7 @@ val REAL_INV1 = prove_thm("REAL_INV1",
 val REAL_OVER1 = prove_thm("REAL_OVER1",
   (--`!x. x / &1 = x`--),
   GEN_TAC THEN REWRITE_TAC[real_div, REAL_INV1, REAL_MUL_RID]);
+val _ = export_rewrites ["REAL_OVER1"]
 
 val REAL_DIV_REFL = prove_thm("REAL_DIV_REFL",
   (--`!x. ~(x = 0) ==> (x / x = &1)`--),
@@ -3279,6 +3280,112 @@ val REAL_ADD_SUB_ALT = store_thm
   ("REAL_ADD_SUB_ALT",
    ``!x y : real. (x + y) - y = x``,
    RW_TAC boolSimps.bool_ss [REAL_EQ_SUB_RADD]);
+
+
+(* ----------------------------------------------------------------------
+   theorems for calculating with the reals; naming scheme taken from
+   Joe Hurd's development of the positive reals with an infinity
+  ---------------------------------------------------------------------- *)
+
+local open markerTheory in end; (* for unint *)
+
+val ui = markerTheory.unint_def
+
+val add_rat = store_thm(
+  "add_rat",
+  ``x / y + u / v =
+      if y = 0 then unint (x/y) + u/v
+      else if v = 0 then x/y + unint (u/v)
+      else if x = 0 then u / v
+      else if u = 0 then x / y
+      else if y = v then (x + u) / v
+      else (x * v + u * y) / (y * v)``,
+  SRW_TAC [][ui, REAL_DIV_LZERO, REAL_DIV_ADD] THEN
+  SRW_TAC [][REAL_ADD_RAT, REAL_MUL_COMM]);
+
+val add_ratl = store_thm(
+  "add_ratl",
+  ``x / y + z =
+      if y = 0 then unint(x/y) + z
+      else if x = 0 then z
+      else if z = 0 then x/y
+      else (x + z * y) / y``,
+  SRW_TAC [][ui, REAL_DIV_LZERO] THEN
+  `z = z/1` by SRW_TAC [][] THEN
+  POP_ASSUM (fn th => CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [th]))) THEN
+  SRW_TAC [][REAL_ADD_RAT, REAL_MUL_COMM]);
+
+val add_ratr = store_thm(
+  "add_ratr",
+  ``x + y / z =
+      if z = 0 then x + unint (y/z)
+      else if x = 0 then y / z
+      else if y = 0 then x
+      else (x * z + y) / z``,
+  ONCE_REWRITE_TAC [REAL_ADD_COMM] THEN
+  SRW_TAC [][add_ratl, REAL_DIV_LZERO]);
+
+val add_ints = store_thm(
+  "add_ints",
+  ``(&n + &m = &(n + m)) /\
+    (~&n + &m = if n <= m then &(m - n) else ~&(n - m)) /\
+    (&n + ~&m = if n < m then ~&(m - n) else &(n - m)) /\
+    (~&n + ~&m = ~&(n + m))``,
+  `!x y. ~x + y = y + ~x` by SRW_TAC [][REAL_ADD_COMM] THEN
+  SRW_TAC [][GSYM REAL_NEG_ADD, GSYM real_sub, REAL_SUB] THEN
+  FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) [] THEN
+  `m = n` by SRW_TAC [numSimps.ARITH_ss][] THEN SRW_TAC [][])
+
+val mult_rat = store_thm(
+  "mult_rat",
+  ``(x / y) * (u / v) =
+       if y = 0 then unint (x/y) * (u/v)
+       else if v = 0 then (x/y) * unint(u/v)
+       else if (x = 0) \/ (u = 0) then 0
+       else (x * u) / (y * v)``,
+  SRW_TAC [][ui, REAL_DIV_LZERO] THEN
+  SRW_TAC [][REAL_DIV_LZERO] THEN
+  MATCH_MP_TAC REAL_EQ_LMUL_IMP THEN
+  Q.EXISTS_TAC `y * v` THEN ASM_REWRITE_TAC [REAL_MUL_ASSOC, REAL_ENTIRE] THEN
+  SRW_TAC [][REAL_DIV_LMUL, REAL_ENTIRE] THEN
+  `y * v * (x / y) * (u / v) = (y * (x / y)) * (v * (u / v))`
+     by CONV_TAC (AC_CONV (REAL_MUL_ASSOC, REAL_MUL_COMM)) THEN
+  POP_ASSUM SUBST_ALL_TAC THEN
+  SRW_TAC [][REAL_DIV_LMUL]);
+
+val mult_ratl = store_thm(
+  "mult_ratl",
+  ``(x / y) * z = if z = 0 then 0
+                  else if y = 0 then unint (x/y) * z
+                  else if x = 0 then 0 else (x * z) / y``,
+  SRW_TAC [][ui] THEN
+  SRW_TAC [][REAL_DIV_LZERO] THEN
+  `z = z / 1` by SRW_TAC [][] THEN
+  POP_ASSUM (fn th => CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[th]))) THEN
+  REWRITE_TAC [mult_rat] THEN SRW_TAC [][]);
+
+val mult_ratr = store_thm(
+  "mult_ratr",
+  ``x * (y/z) = if x = 0 then 0
+                else if z = 0 then x * unint (y/z)
+                else if y = 0 then 0 else (x * y) / z``,
+  CONV_TAC (LAND_CONV (REWR_CONV REAL_MUL_COMM)) THEN
+  SRW_TAC [][mult_ratl] THEN SRW_TAC [][ui, REAL_MUL_COMM]);
+
+val mult_ints = store_thm(
+  "mult_ints",
+  ``(&a * &b = &(a * b)) /\
+    (~&a * &b = ~&(a * b)) /\
+    (&a * ~&b = ~&(a * b)) /\
+    (~&a * ~&b = &(a * b))``,
+  SRW_TAC [][REAL_MUL_LNEG, REAL_MUL_RNEG]);
+
+val neg_rat = store_thm(
+  "neg_rat",
+  ``(~(x / y) = if y = 0 then ~ (unint(x/y)) else ~x / y) /\
+    (x / ~y   = if y = 0 then unint(x/y) else ~x/y)``,
+  SRW_TAC [][ui] THEN
+  SRW_TAC [][real_div, GSYM REAL_NEG_INV, REAL_MUL_LNEG, REAL_MUL_RNEG]);
 
 val _ = export_theory();
 
