@@ -18,17 +18,17 @@ val ERR = mk_HOL_ERR "Term";
 val WARN = HOL_WARNING "Term";
 
 val polymorphic = Type.polymorphic;
-val -->         = Type.-->; 
+val -->         = Type.-->;
 
-infix |-> ##; infixr 3 -->; 
+infix |-> ##; infixr 3 -->;
 
 (*---------------------------------------------------------------------------
                Create the signature for HOL terms
  ---------------------------------------------------------------------------*)
 
-structure TermSig = 
+structure TermSig =
   SIG(type ty = term
-      fun key (Const(r,_)) = r 
+      fun key (Const(r,_)) = r
         | key _ = raise ERR "key" "not a constant"
       val ERR = ERR
       val table_size = 1999)
@@ -49,7 +49,7 @@ val INITIAL {const=eqc,...} = TermSig.insert eq_const
 val INITIAL {const=hil,...} = TermSig.insert hil_const
 val INITIAL {const=imp,...} = TermSig.insert imp_const
 end;
-           
+
 (*---------------------------------------------------------------------------*
  * Useful functions to hide explicit substitutions                           *
  *---------------------------------------------------------------------------*)
@@ -63,7 +63,7 @@ fun is_clos (Clos _) = true | is_clos _ = false;
  ---------------------------------------------------------------------------*)
 
 fun mk_clos (s, Bv i) =
-      (case (Subst.exp_rel(s,i)) 
+      (case (Subst.exp_rel(s,i))
         of (0, SOME t) => t
          | (k, SOME t) => mk_clos (Subst.shift(k,Subst.id), t)
          | (v, NONE)   => Bv v)
@@ -115,9 +115,9 @@ end;
 fun type_vars_in_term (Fv{Ty, ...})      = Type.type_vars Ty
   | type_vars_in_term (Const(_,GRND _))  = []
   | type_vars_in_term (Const(_,POLY Ty)) = Type.type_vars Ty
-  | type_vars_in_term (Comb{Rator,Rand}) 
+  | type_vars_in_term (Comb{Rator,Rand})
     = union (type_vars_in_term Rator) (type_vars_in_term Rand)
-  | type_vars_in_term (Abs{Bvar,Body}) 
+  | type_vars_in_term (Abs{Bvar,Body})
     = union (type_vars_in_term Bvar) (type_vars_in_term Body)
   | type_vars_in_term (t as Clos _) = type_vars_in_term (push_clos t)
   | type_vars_in_term (Bv _) = [];
@@ -171,7 +171,7 @@ fun all_varsl tm_list  = itlist (union o all_vars) tm_list [];
         Free variables of a term. Tail recursive. Returns a set.
  ---------------------------------------------------------------------------*)
 
-fun var_compare (Fv{Name=s1,Ty=ty1}, Fv{Name=s2,Ty=ty2}) = 
+fun var_compare (Fv{Name=s1,Ty=ty1}, Fv{Name=s2,Ty=ty2}) =
        (case String.compare (s1,s2)
          of EQUAL => Type.compare (ty1,ty2)
           | x => x)
@@ -202,12 +202,12 @@ fun free_in tm M =
    end;
 
 (*---------------------------------------------------------------------------
-     The following are used in Thm to check side conditions (e.g., 
+     The following are used in Thm to check side conditions (e.g.,
      does variable v occur free in the assumptions).
  ---------------------------------------------------------------------------*)
- 
-fun tyvar_occurs tyv = 
- let val tyvOcc = Type.type_var_in tyv 
+
+fun tyvar_occurs tyv =
+ let val tyvOcc = Type.type_var_in tyv
      fun occ (Fv{Ty,...})       = tyvOcc Ty
        | occ (Const(_,POLY Ty)) = tyvOcc Ty
        | occ (Const(_,GRND Ty)) = false
@@ -218,7 +218,7 @@ fun tyvar_occurs tyv =
  in occ
  end;
 
-fun var_occurs M = 
+fun var_occurs M =
   let val v = (case M of Fv v => v | _ => raise ERR "" "")
       fun occ (Fv u)             = (v=u)
         | occ (Bv _)             = false
@@ -230,7 +230,7 @@ fun var_occurs M =
    handle HOL_ERR _ => raise ERR "var_occurs" "not a variable";
 
 
-fun existsFV P = 
+fun existsFV P =
   let fun occ (Fv u)             = P u
         | occ (Bv _)             = false
         | occ (Const _)          = false
@@ -240,7 +240,7 @@ fun existsFV P =
    in occ end
    handle HOL_ERR _ => raise ERR "existsFV" "";
 
-fun existsTYV P = 
+fun existsTYV P =
   let val check = Type.exists_tyvar P
       fun occ (Fv{Ty,...})       = check Ty
         | occ (Const(_,POLY Ty)) = check Ty
@@ -346,7 +346,7 @@ end;
 
 
 (*---------------------------------------------------------------------------
-   Normalizing names (before pretty-printing with pp_raw, or trav) and 
+   Normalizing names (before pretty-printing with pp_raw, or trav) and
    full propagation of substitutions.
  ---------------------------------------------------------------------------*)
 
@@ -358,7 +358,7 @@ fun vars_sigma_norm (s,t) =
       in (Comb{Rator = a, Rand = b}, union fva fvb)
       end
   | Bv i =>
-      (case Subst.exp_rel(s,i) 
+      (case Subst.exp_rel(s,i)
         of (0, SOME v)    => vars_sigma_norm (Subst.id, v)
          | (lams, SOME v) => vars_sigma_norm (Subst.shift(lams,Subst.id), v)
          | (lams, NONE)   => (Bv lams, []))
@@ -388,10 +388,10 @@ fun norm_clos tm = fst (vars_sigma_norm(Subst.id,tm));
 
 val decls = map #const o TermSig.resolve;
 
-fun prim_mk_const {Name,Thy} = 
+fun prim_mk_const {Name,Thy} =
  case TermSig.lookup (Name,Thy)
   of SOME{const,...} => const
-   | NONE => raise ERR "prim_mk_const" 
+   | NONE => raise ERR "prim_mk_const"
                (Lib.quote Name^" not found in theory "^Lib.quote Thy)
 
 val ground = Lib.all (fn {redex,residue} => not(polymorphic residue));
@@ -400,7 +400,7 @@ fun create_const errstr (const as Const(_,GRND pat)) Ty =
       if Ty=pat then const else raise ERR "create_const" "not a type match"
   | create_const errstr (const as Const(r,POLY pat)) Ty =
      ((case Type.tymatch pat Ty ([],[])
-        of ([],_) => const 
+        of ([],_) => const
          | (S,[]) => Const(r, if ground S then GRND Ty else POLY Ty)
          | (S, _) => Const(r,POLY Ty))
         handle HOL_ERR _ => raise ERR errstr
@@ -408,16 +408,16 @@ fun create_const errstr (const as Const(_,GRND pat)) Ty =
   | create_const errstr _ _ = raise ERR errstr "non-constant in signature";
 
 
-fun mk_thy_const {Thy,Name,Ty} = 
-  case TermSig.lookup (Name,Thy) 
+fun mk_thy_const {Thy,Name,Ty} =
+  case TermSig.lookup (Name,Thy)
    of NONE => raise ERR "mk_thy_const" (fullname(Name,Thy)^" not found")
     | SOME {const, ...} => create_const "mk_thy_const" const Ty
 
-fun first_decl fname Name = 
+fun first_decl fname Name =
   case TermSig.resolve Name
    of []             => raise ERR fname (Name^" not found")
     | [{const,...}]  => const
-    | {const,...}::_ => 
+    | {const,...}::_ =>
         (WARN fname (Lib.quote Name^": more than one possibility");
          const)
 
@@ -434,7 +434,7 @@ local val INCOMPAT_TYPES  = Lib.C ERR "incompatible types"
       fun lmk_comb err =
         let fun loop (A,_) [] = A
               | loop (A,typ) (tm::rst) =
-                 let val (ty1,ty2) = Type.dom_rng typ 
+                 let val (ty1,ty2) = Type.dom_rng typ
                                      handle HOL_ERR _ => raise err
                  in if type_of tm = ty1
                     then loop(Comb{Rator=A,Rand=tm},ty2) rst
@@ -456,7 +456,7 @@ end;
 
 
 (*---------------------------------------------------------------------------
-           Make a lambda abstraction. Could use sharing types, 
+           Make a lambda abstraction. Could use sharing types,
            but it's not clear that would improve anything.
  *---------------------------------------------------------------------------*)
 
@@ -481,8 +481,8 @@ end;
 fun dest_var (Fv v) = v
   | dest_var _ = raise ERR "dest_var" "not a var"
 
-fun dest_thy_const (Const(id,ty)) = 
-      let val (name,thy) = dest_id id 
+fun dest_thy_const (Const(id,ty)) =
+      let val (name,thy) = dest_id id
       in {Thy=thy, Name=name, Ty=to_hol_type ty}
       end
   | dest_thy_const _ = raise ERR"dest_thy_const" "not a const"
@@ -502,13 +502,13 @@ in
 fun dest_abs(Abs{Bvar as Fv{Name,Ty},Body}) =
      let fun dest (v as (Bv j), i)        = if i=j then Bvar else v
            | dest (v as Fv{Name=s,...},_) = if Name=s then raise CLASH else v
-           | dest (Comb{Rator,Rand},i)    = Comb{Rator=dest(Rator,i), 
+           | dest (Comb{Rator,Rand},i)    = Comb{Rator=dest(Rator,i),
                                                  Rand=dest(Rand,i)}
            | dest (Abs{Bvar,Body},i) = Abs{Bvar=Bvar, Body=dest(Body,i+1)}
            | dest (t as Clos _, i)   = dest (push_clos t, i)
            | dest (tm,_) = tm
      in {Bvar=Bvar, Body=dest(Body,0)}
-        handle CLASH => 
+        handle CLASH =>
         dest_abs(Abs{Bvar=variant (free_vars Body) Bvar, Body=Body})
      end
   | dest_abs (t as Clos _) = dest_abs (push_clos t)
@@ -554,13 +554,13 @@ fun is_abs  (Abs _) = true
 local fun EQ (M,N) = Portable.pointer_eq(M,N)
 in
 fun aconv t1 t2 = EQ(t1,t2) orelse
-  case(t1,t2) 
-   of (Comb{Rator=M,Rand=N}, Comb{Rator=P,Rand=Q}) 
+  case(t1,t2)
+   of (Comb{Rator=M,Rand=N}, Comb{Rator=P,Rand=Q})
        => aconv N Q andalso aconv M P
-    | (Abs{Bvar=Fv{Ty=ty1,...}, Body=M}, Abs{Bvar=Fv{Ty=ty2,...}, Body=N}) 
+    | (Abs{Bvar=Fv{Ty=ty1,...}, Body=M}, Abs{Bvar=Fv{Ty=ty2,...}, Body=N})
        => ty1=ty2 andalso aconv M N
-    | (Clos{Env=e1,Body=b1}, Clos{Env=e2,Body=b2}) 
-       => (EQ(e1,e2) andalso EQ(b1,b2)) orelse 
+    | (Clos{Env=e1,Body=b1}, Clos{Env=e2,Body=b2})
+       => (EQ(e1,e2) andalso EQ(b1,b2)) orelse
           aconv (push_clos t1) (push_clos t2)
     | (Clos _, _) => aconv (push_clos t1) t2
     | (_, Clos _) => aconv t1 (push_clos t2)
@@ -636,7 +636,7 @@ fun subst [] tm = tm
           case assc tm theta
            of SOME residue => residue
 	    | NONE =>
-              (case tm 
+              (case tm
                 of Comb{Rator,Rand} => Comb{Rator=subs Rator, Rand=subs Rand}
                  | Abs{Bvar,Body} => Abs{Bvar=Bvar,Body=subs Body}
 	         | Clos _        => subs(push_clos tm)
@@ -651,12 +651,12 @@ fun subst [] tm = tm
           case assc tm theta
            of SOME residue => DIFF residue
 	    | NONE =>
-	       case tm 
-                of Comb{Rator,Rand} => 
+	       case tm
+                of Comb{Rator,Rand} =>
                     (case delta_pair subs subs (Rator,Rand)
                       of SAME => SAME
                        | DIFF p => DIFF (Comb p))
-                 | Abs{Bvar,Body} => 
+                 | Abs{Bvar,Body} =>
                      (case subs Body
                         of SAME => SAME
                          | DIFF Body' => DIFF(Abs{Bvar=Bvar,Body=Body'}))
@@ -673,7 +673,7 @@ end;
 
 fun inst [] tm = tm
   | inst theta tm =
-     let fun 
+     let fun
          inst1 (bv as Bv _) = bv
        | inst1 (c as Const(_, GRND _)) = c
        | inst1 (c as Const(r, POLY Ty)) =
@@ -707,16 +707,16 @@ fun raw_match (v as Fv{Ty,...}) tm (tmS,tyS) =
      if not(free tm 0) then MERR()
      else ((case Lib.subst_assoc (equal v) tmS
              of NONE => (v |-> tm)::tmS
-              | SOME tm' => if aconv tm' tm then tmS else MERR()), 
+              | SOME tm' => if aconv tm' tm then tmS else MERR()),
              Type.tymatch Ty (type_of tm) tyS)
-  | raw_match (Const(c1, ty1)) (Const(c2, ty2)) (tmS,tyS) 
+  | raw_match (Const(c1, ty1)) (Const(c2, ty2)) (tmS,tyS)
      = if c1 <> c2 then MERR()
-       else (case (ty1,ty2) 
+       else (case (ty1,ty2)
          of (GRND _, POLY _) => MERR()
           | (GRND pat, GRND obj) => if pat=obj then (tmS,tyS) else MERR()
           | (POLY pat, GRND obj) => (tmS, Type.tymatch pat obj tyS)
           | (POLY pat, POLY obj) => (tmS, Type.tymatch pat obj tyS))
-  | raw_match (Comb{Rator=M,Rand=N}) 
+  | raw_match (Comb{Rator=M,Rand=N})
               (Comb{Rator=P,Rand=Q}) S = raw_match M P (raw_match N Q S)
   | raw_match (Abs{Bvar=Fv{Ty=ty1,...}, Body=M})
               (Abs{Bvar=Fv{Ty=ty2,...}, Body=N}) (tmS,tyS)
@@ -728,7 +728,7 @@ fun raw_match (v as Fv{Ty,...}) tm (tmS,tyS) =
 end;
 
 fun norm_subst tytheta =
- let val Theta = inst tytheta 
+ let val Theta = inst tytheta
      fun del A [] = A
        | del A ({redex,residue}::rst) =
          del (let val redex' = Theta(redex)
@@ -746,10 +746,10 @@ fun match_term pat ob =
          Must know that ty is the type of tm1 and tm2.
  ---------------------------------------------------------------------------*)
 
-fun prim_mk_eq ty tm1 tm2 = 
+fun prim_mk_eq ty tm1 tm2 =
   Comb{Rator=Comb{Rator=inst [Type.alpha |-> ty] eqc, Rand=tm1}, Rand=tm2}
 
-       
+
 (*---------------------------------------------------------------------------
       Must know that tm1 and tm2 both have type "bool"
  ---------------------------------------------------------------------------*)
@@ -757,15 +757,27 @@ fun prim_mk_eq ty tm1 tm2 =
 fun prim_mk_imp tm1 tm2  = Comb{Rator=Comb{Rator=imp, Rand=tm1}, Rand=tm2};
 
 
+(* must be careful of closures that may be hiding over the top of
+   an equality *)
 local val Const(eqid,_) = eqc
-      fun get ty = case Type.dest_thy_type ty 
+      fun get ty = case Type.dest_thy_type ty
                     of {Args = h::_, ...} => h | _ => raise ERR "dom" ""
 in
-fun dest_eq_ty (Comb{Rator=Comb{Rator=Const(id,holty),Rand=M},Rand=N}) =
-     if eqid=id then (M,N, get (to_hol_type holty))
-                else raise ERR "dest_eq_ty" ""
-  | dest_eq_ty otherwise = raise ERR "dest_eq_ty" ""
-end;
+fun dest_eq_ty t = let
+  val {Rator,Rand = N} = dest_comb t
+    handle HOL_ERR _ => raise ERR "dest_eq_ty" ""
+  val {Rator = c, Rand = M} = dest_comb Rator
+    handle HOL_ERR _ => raise ERR "dest_eq_ty" ""
+  (* if c is a semantically a constant, then push_clos will have pushed
+     any explicit subsitution right over it, so c must be a constant below
+     or a failure case *)
+in
+  case c of
+    Const(id,holty) => if eqid=id then (M,N, get (to_hol_type holty))
+                       else raise ERR "dest_eq_ty" ""
+  | _ => raise ERR "dest_eq_ty" ""
+end
+end
 
 
 fun break_abs(Abs{Body,...}) = Body
@@ -787,19 +799,19 @@ fun compare (t1 as Clos _, t2)     = compare (push_clos t1, t2)
   | compare (Bv _, _)              = LESS
   | compare (Const _, Fv _)        = GREATER
   | compare (Const _, Bv _)        = GREATER
-  | compare (Const(c1,ty1), 
+  | compare (Const(c1,ty1),
              Const(c2,ty2))        = (case KernelTypes.compare (c1,c2)
-                                       of EQUAL => Type.compare 
+                                       of EQUAL => Type.compare
                                            (to_hol_type ty1, to_hol_type ty2)
                                         | x => x)
   | compare (Const _, _)           = LESS
-  | compare(Comb{Rator=M,Rand=N}, 
+  | compare(Comb{Rator=M,Rand=N},
             Comb{Rator=P,Rand=Q})  = (case compare (M,P)
                                        of EQUAL => compare (N,Q) | x => x)
   | compare (Comb _, Abs _)        = LESS
   | compare (Comb _, _)            = GREATER
   | compare (Abs{Bvar=u,Body=M},
-             Abs{Bvar=v,Body=N})   = (case compare (u,v) 
+             Abs{Bvar=v,Body=N})   = (case compare (u,v)
                                        of EQUAL => compare (M,N) | x => x)
   | compare (Abs _, _)             = GREATER;
 
@@ -830,20 +842,20 @@ val percent = "%";
 fun pp_raw_term index pps tm =
  let open Portable
      val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
-     fun pp (Abs{Bvar,Body}) = 
-          ( add_string "(\\"; 
-            pp Bvar; add_string dot; add_break(1,0);  
+     fun pp (Abs{Bvar,Body}) =
+          ( add_string "(\\";
+            pp Bvar; add_string dot; add_break(1,0);
             pp Body; add_string ")" )
       | pp (Comb{Rator, Rand}) =
-         ( add_string "("; pp Rator; add_break(1,0); 
-                           pp Rand; add_string ")") 
+         ( add_string "("; pp Rator; add_break(1,0);
+                           pp Rand; add_string ")")
       | pp (Bv i) = add_string (dollar^Lib.int_to_string i)
       | pp a      = add_string (percent^Lib.int_to_string (index a))
  in
    begin_block INCONSISTENT 0;
-   add_string "`"; 
-   pp (norm_clos tm); 
-   add_string "`"; 
+   add_string "`";
+   pp (norm_clos tm);
+   add_string "`";
    end_block()
  end;
 
