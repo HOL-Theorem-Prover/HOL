@@ -155,12 +155,12 @@ val equality_removal = store_thm(
   MATCH_MP_TAC equality_removal0 THEN SRW_TAC [][]);
 
 val _ = print "Proving eliminability of quantifiers\n"
-val evalleft_def = Define
-  `(evalleft (x:int) [] = T) /\
-   (evalleft x ((c,y) :: cs) = &c * x <= y /\ evalleft x cs)`
-val evalright_def = Define
-  `(evalright (x:int) [] = T) /\
-   (evalright x ((c,y) :: cs) = y <= &c * x /\ evalright x cs)`
+val evalupper_def = Define
+  `(evalupper (x:int) [] = T) /\
+   (evalupper x ((c,y) :: cs) = &c * x <= y /\ evalupper x cs)`
+val evallower_def = Define
+  `(evallower (x:int) [] = T) /\
+   (evallower x ((c,y) :: cs) = y <= &c * x /\ evallower x cs)`
 
 val lt_mono = prove(
   ``!n (x:int) y. 0 < n ==> (&n * x < & n * y = x < y)``,
@@ -215,20 +215,20 @@ val div_le = prove(
     SRW_TAC [INT_MUL_AC_ss][ile_mono]
   ]);
 
-val smaller_satisfies_lefts = store_thm(
-  "smaller_satisfies_lefts",
-  ``!lefts x y. evalleft x lefts /\ y < x ==> evalleft y lefts``,
-  Induct THEN ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, evalleft_def] THEN
+val smaller_satisfies_uppers = store_thm(
+  "smaller_satisfies_uppers",
+  ``!uppers x y. evalupper x uppers /\ y < x ==> evalupper y uppers``,
+  Induct THEN ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, evalupper_def] THEN
   REVERSE (REPEAT STRIP_TAC) THEN1 PROVE_TAC [] THEN
   `(p_1 = 0) \/ 0 < p_1` by SRW_TAC [ARITH_ss][] THEN1
      (POP_ASSUM SUBST_ALL_TAC THEN FULL_SIMP_TAC (srw_ss())[]) THEN
   PROVE_TAC [INT_LET_TRANS, lt_mono, INT_LE_LT]);
 
-val bigger_satisfies_rights = store_thm(
-  "bigger_satisfies_rights",
-  ``!rights x y. evalright x rights /\ x < y ==> evalright y rights``,
-  Induct THEN SRW_TAC [][evalright_def] THEN
-  Cases_on `h` THEN FULL_SIMP_TAC (srw_ss()) [evalright_def] THEN
+val bigger_satisfies_lowers = store_thm(
+  "bigger_satisfies_lowers",
+  ``!lowers x y. evallower x lowers /\ x < y ==> evallower y lowers``,
+  Induct THEN SRW_TAC [][evallower_def] THEN
+  Cases_on `h` THEN FULL_SIMP_TAC (srw_ss()) [evallower_def] THEN
   Q_TAC SUFF_TAC `r <= &q * y` THEN1 PROVE_TAC [] THEN
   `(q = 0) \/ 0 < q` by SRW_TAC [ARITH_ss][]
      THEN1 FULL_SIMP_TAC (srw_ss())[] THEN
@@ -264,12 +264,12 @@ val fst1_def = Define`fst1 x = (FST x = 1n)`
 
 val _ = augment_srw_ss [rewrites [fst1_def, fst_nzero_def]]
 
-val onlyrights_satisfiable = store_thm(
-  "onlyrights_satisfiable",
-  ``!rights. EVERY fst_nzero rights ==> ?x. evalright x rights``,
-  Induct THEN SRW_TAC [][evalright_def] THEN
+val onlylowers_satisfiable = store_thm(
+  "onlylowers_satisfiable",
+  ``!lowers. EVERY fst_nzero lowers ==> ?x. evallower x lowers``,
+  Induct THEN SRW_TAC [][evallower_def] THEN
   Cases_on `h` THEN
-  FULL_SIMP_TAC (srw_ss()) [evalright_def] THEN
+  FULL_SIMP_TAC (srw_ss()) [evallower_def] THEN
   Q.EXISTS_TAC `if x < r / &q + 1 then r / &q + 1 else x` THEN
   MP_TAC (Q.SPEC `&q` INT_DIVISION) THEN
   ASM_SIMP_TAC (srw_ss() ++ ARITH_ss)[] THEN
@@ -278,7 +278,7 @@ val onlyrights_satisfiable = store_thm(
   Q.ABBREV_TAC `rmodq = r % &q` THEN
   COND_CASES_TAC THENL [
     ASM_SIMP_TAC(srw_ss() ++ ARITH_ss) [INT_LDISTRIB, INT_MUL_COMM] THEN
-    PROVE_TAC [bigger_satisfies_rights],
+    PROVE_TAC [bigger_satisfies_lowers],
     FULL_SIMP_TAC (srw_ss())[INT_NOT_LT] THEN
     MATCH_MP_TAC INT_LE_TRANS THEN Q.EXISTS_TAC `rdivq * &q + &q` THEN
     ASM_SIMP_TAC (srw_ss()) [INT_LT_IMP_LE] THEN
@@ -287,32 +287,32 @@ val onlyrights_satisfiable = store_thm(
     SIMP_TAC (srw_ss() ++ ARITH_ss) [INT_LDISTRIB, INT_MUL_COMM]
   ]);
 
-val onlylefts_satisfiable = store_thm(
-  "onlylefts_satisfiable",
-  ``!lefts. EVERY fst_nzero lefts ==> ?x. evalleft x lefts``,
-  Induct THEN ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, evalleft_def] THEN
+val onlyuppers_satisfiable = store_thm(
+  "onlyuppers_satisfiable",
+  ``!uppers. EVERY fst_nzero uppers ==> ?x. evalupper x uppers``,
+  Induct THEN ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, evalupper_def] THEN
   CONV_TAC (RENAME_VARS_CONV ["c", "L"]) THEN REPEAT STRIP_TAC THEN
-  `?y. evalleft y lefts` by PROVE_TAC [] THEN
+  `?y. evalupper y uppers` by PROVE_TAC [] THEN
   ASM_SIMP_TAC (srw_ss()) [div_le] THEN
   Q.EXISTS_TAC `if y < L / &c then y else L / &c` THEN COND_CASES_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [INT_NOT_LT, INT_LE_LT] THEN
-  PROVE_TAC [smaller_satisfies_lefts]);
+  PROVE_TAC [smaller_satisfies_uppers]);
 
 
 
 val rshadow_row_def = Define
-  `(rshadow_row (leftc, (lefty:int)) [] = T) /\
-   (rshadow_row (leftc, lefty) ((rightc, righty) :: rs) =
-      (&leftc * righty <= &rightc * lefty) /\ rshadow_row (leftc, lefty) rs)`;
+  `(rshadow_row (upperc, (uppery:int)) [] = T) /\
+   (rshadow_row (upperc, uppery) ((lowerc, lowery) :: rs) =
+      (&upperc * lowery <= &lowerc * uppery) /\ rshadow_row (upperc, uppery) rs)`;
 val real_shadow_def = Define
-  `(real_shadow [] rights = T) /\
-   (real_shadow (left::ls) rights =
-      rshadow_row left rights /\ real_shadow ls rights)`;
+  `(real_shadow [] lowers = T) /\
+   (real_shadow (upper::ls) lowers =
+      rshadow_row upper lowers /\ real_shadow ls lowers)`;
 
 val rshadow_row_FOLDL = prove(
-  ``!rights lc ly.
-       rshadow_row (lc,ly) rights =
-       FOLDL (\a r. &lc * SND r <= &(FST r) * ly /\ a) T rights``,
+  ``!lowers lc ly.
+       rshadow_row (lc,ly) lowers =
+       FOLDL (\a r. &lc * SND r <= &(FST r) * ly /\ a) T lowers``,
   CONV_TAC (STRIP_QUANT_CONV
               (LHS_CONV (REWR_CONV (tautLib.TAUT_PROVE ``p = T /\ p``)))) THEN
   Q.SPEC_TAC (`T`, `acc`) THEN CONV_TAC SWAP_VARS_CONV THEN
@@ -323,11 +323,11 @@ val singleton_real_shadow = store_thm(
   "singleton_real_shadow",
   ``!c L x.
        &c * x <= L /\ 0 < c ==>
-       !rights.
-          EVERY fst_nzero rights /\ evalright x rights ==>
-          rshadow_row (c,L) rights``,
+       !lowers.
+          EVERY fst_nzero lowers /\ evallower x lowers ==>
+          rshadow_row (c,L) lowers``,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
-  Induct THEN ASM_SIMP_TAC (srw_ss()) [evalright_def, rshadow_row_def,
+  Induct THEN ASM_SIMP_TAC (srw_ss()) [evallower_def, rshadow_row_def,
                                        FORALL_PROD] THEN
   CONV_TAC (RENAME_VARS_CONV ["rc", "ry"]) THEN
   REPEAT STRIP_TAC THEN
@@ -336,24 +336,24 @@ val singleton_real_shadow = store_thm(
   `&c * (&rc * x) <= &rc * L` by PROVE_TAC [INT_MUL_COMM, INT_MUL_ASSOC] THEN
   PROVE_TAC [INT_LE_TRANS]);
 
-val real_shadow_revimp_lefts1 = store_thm(
-  "real_shadow_revimp_lefts1",
-  ``!lefts rights L x.
-        rshadow_row (1, L) rights /\ evalright x rights /\
-        evalleft x lefts /\ EVERY fst_nzero rights /\
-        EVERY fst1 lefts ==>
-        ?x. x <= L /\ evalleft x lefts /\ evalright x rights``,
+val real_shadow_revimp_uppers1 = store_thm(
+  "real_shadow_revimp_uppers1",
+  ``!uppers lowers L x.
+        rshadow_row (1, L) lowers /\ evallower x lowers /\
+        evalupper x uppers /\ EVERY fst_nzero lowers /\
+        EVERY fst1 uppers ==>
+        ?x. x <= L /\ evalupper x uppers /\ evallower x lowers``,
   Induct THENL [
-    SIMP_TAC (srw_ss())[evalleft_def] THEN
+    SIMP_TAC (srw_ss())[evalupper_def] THEN
     Induct THENL [
-      SRW_TAC [][rshadow_row_def, evalright_def] THEN PROVE_TAC [INT_LE_REFL],
-      ASM_SIMP_TAC (srw_ss()) [rshadow_row_def, evalright_def,
+      SRW_TAC [][rshadow_row_def, evallower_def] THEN PROVE_TAC [INT_LE_REFL],
+      ASM_SIMP_TAC (srw_ss()) [rshadow_row_def, evallower_def,
                                FORALL_PROD] THEN
-      PROVE_TAC [bigger_satisfies_rights, INT_LE_LT, INT_LE_REFL]
+      PROVE_TAC [bigger_satisfies_lowers, INT_LE_LT, INT_LE_REFL]
     ],
-    SIMP_TAC (srw_ss())[FORALL_PROD, evalleft_def] THEN
+    SIMP_TAC (srw_ss())[FORALL_PROD, evalupper_def] THEN
     REPEAT STRIP_TAC THEN
-    `?y. y <= L /\ evalleft y lefts /\ evalright y rights` by PROVE_TAC [] THEN
+    `?y. y <= L /\ evalupper y uppers /\ evallower y lowers` by PROVE_TAC [] THEN
     Q.EXISTS_TAC `if x < y then x else y` THEN
     COND_CASES_TAC THEN ASM_SIMP_TAC (srw_ss()) [] THENL [
       PROVE_TAC [INT_LTE_TRANS, INT_LE_LT],
@@ -361,17 +361,17 @@ val real_shadow_revimp_lefts1 = store_thm(
     ]
   ]);
 
-val real_shadow_revimp_rights1 = store_thm(
-  "real_shadow_revimp_rights1",
-  ``!lefts rights c L x.
-       0 < c /\ rshadow_row (c, L) rights /\ evalleft x lefts /\
-       evalright x rights /\ EVERY fst_nzero lefts /\
-       EVERY fst1 rights ==>
-       ?x. &c * x <= L /\ evalleft x lefts /\ evalright x rights``,
+val real_shadow_revimp_lowers1 = store_thm(
+  "real_shadow_revimp_lowers1",
+  ``!uppers lowers c L x.
+       0 < c /\ rshadow_row (c, L) lowers /\ evalupper x uppers /\
+       evallower x lowers /\ EVERY fst_nzero uppers /\
+       EVERY fst1 lowers ==>
+       ?x. &c * x <= L /\ evalupper x uppers /\ evallower x lowers``,
   Induct THENL [
-    SIMP_TAC (srw_ss())[evalleft_def] THEN
+    SIMP_TAC (srw_ss())[evalupper_def] THEN
     Induct THENL [
-      SRW_TAC [][rshadow_row_def, evalright_def] THEN
+      SRW_TAC [][rshadow_row_def, evallower_def] THEN
       Q.EXISTS_TAC `L / &c` THEN
       Q.SPEC_THEN `&c` MP_TAC INT_DIVISION THEN
       SRW_TAC [ARITH_ss][] THEN
@@ -380,19 +380,19 @@ val real_shadow_revimp_rights1 = store_thm(
       Q.ABBREV_TAC `Lmodc = L % &c` THEN
       ASM_SIMP_TAC (srw_ss())[INT_MUL_COMM],
       ASM_SIMP_TAC (srw_ss())[FORALL_PROD, rshadow_row_def,
-                              evalright_def] THEN
+                              evallower_def] THEN
       REPEAT STRIP_TAC THEN
-      `?y. &c * y <= L /\ evalright y rights` by PROVE_TAC[] THEN
+      `?y. &c * y <= L /\ evallower y lowers` by PROVE_TAC[] THEN
       Q.EXISTS_TAC `if y < p_2 then p_2 else y` THEN
       COND_CASES_TAC THEN ASM_SIMP_TAC (srw_ss())[] THENL [
-        PROVE_TAC [bigger_satisfies_rights],
+        PROVE_TAC [bigger_satisfies_lowers],
         PROVE_TAC [INT_NOT_LT]
       ]
     ],
-    SIMP_TAC (srw_ss()) [FORALL_PROD, evalleft_def] THEN
+    SIMP_TAC (srw_ss()) [FORALL_PROD, evalupper_def] THEN
     CONV_TAC (RENAME_VARS_CONV ["c1", "L1"]) THEN
     REPEAT STRIP_TAC THEN
-    `?y. &c * y <= L /\ evalleft y lefts /\ evalright y rights`
+    `?y. &c * y <= L /\ evalupper y uppers /\ evallower y lowers`
       by PROVE_TAC[] THEN
     Q.EXISTS_TAC `if x < y then x else y` THEN COND_CASES_TAC THEN
     ASM_SIMP_TAC (srw_ss())[] THENL [
@@ -409,11 +409,11 @@ val lemma =
 
 val real_shadow_always_implied = store_thm(
   "real_shadow_always_implied",
-  ``!lefts rights x.
-        evalleft x lefts /\ evalright x rights /\
-        EVERY fst_nzero lefts /\ EVERY fst_nzero rights ==>
-        real_shadow lefts rights``,
-  Induct THEN ASM_SIMP_TAC (srw_ss())[evalleft_def, real_shadow_def,
+  ``!uppers lowers x.
+        evalupper x uppers /\ evallower x lowers /\
+        EVERY fst_nzero uppers /\ EVERY fst_nzero lowers ==>
+        real_shadow uppers lowers``,
+  Induct THEN ASM_SIMP_TAC (srw_ss())[evalupper_def, real_shadow_def,
                                       FORALL_PROD] THEN
   PROVE_TAC [lemma]);
 
@@ -423,36 +423,36 @@ val IMP_AND_THM =
 val _ = print "Proving exact shadow case\n"
 val exact_shadow_case = store_thm(
   "exact_shadow_case",
-  ``!lefts rights.
-      EVERY fst_nzero lefts /\ EVERY fst_nzero rights ==>
-      (EVERY fst1 lefts \/ EVERY fst1 rights) ==>
-      ((?x. evalleft x lefts /\ evalright x rights) =
-       real_shadow lefts rights)``,
+  ``!uppers lowers.
+      EVERY fst_nzero uppers /\ EVERY fst_nzero lowers ==>
+      (EVERY fst1 uppers \/ EVERY fst1 lowers) ==>
+      ((?x. evalupper x uppers /\ evallower x lowers) =
+       real_shadow uppers lowers)``,
   SIMP_TAC (srw_ss()) [EQ_IMP_THM, IMP_AND_THM, FORALL_AND_THM] THEN
   REPEAT CONJ_TAC THENL [
     PROVE_TAC [real_shadow_always_implied],
     (* "reverse" implication case *)
     SIMP_TAC (srw_ss()) [DISJ_IMP_THM, FORALL_AND_THM, IMP_AND_THM] THEN
     CONJ_TAC THENL [
-      (* lefts all one *)
+      (* uppers all one *)
       Induct THENL [
-        SRW_TAC [][evalleft_def, real_shadow_def, onlyrights_satisfiable],
-        SIMP_TAC (srw_ss()) [evalleft_def, real_shadow_def,
+        SRW_TAC [][evalupper_def, real_shadow_def, onlylowers_satisfiable],
+        SIMP_TAC (srw_ss()) [evalupper_def, real_shadow_def,
                              FORALL_PROD] THEN
         SRW_TAC [][] THEN
-        FIRST_X_ASSUM (Q.SPECL_THEN [`rights`] MP_TAC) THEN
+        FIRST_X_ASSUM (Q.SPECL_THEN [`lowers`] MP_TAC) THEN
         ASM_SIMP_TAC (srw_ss())[] THEN STRIP_TAC THEN
-        PROVE_TAC [real_shadow_revimp_lefts1]
+        PROVE_TAC [real_shadow_revimp_uppers1]
       ],
-      (* rights all one *)
+      (* lowers all one *)
       Induct THENL [
-        SRW_TAC [][evalleft_def, real_shadow_def, onlyrights_satisfiable],
-        SIMP_TAC (srw_ss()) [evalleft_def, real_shadow_def,
+        SRW_TAC [][evalupper_def, real_shadow_def, onlylowers_satisfiable],
+        SIMP_TAC (srw_ss()) [evalupper_def, real_shadow_def,
                              FORALL_PROD]  THEN
         REPEAT STRIP_TAC THEN FULL_SIMP_TAC (srw_ss())[] THEN
-        FIRST_X_ASSUM (Q.SPECL_THEN [`rights`] MP_TAC) THEN
+        FIRST_X_ASSUM (Q.SPECL_THEN [`lowers`] MP_TAC) THEN
         ASM_SIMP_TAC (srw_ss())[] THEN
-        PROVE_TAC [real_shadow_revimp_rights1]
+        PROVE_TAC [real_shadow_revimp_lowers1]
       ]
     ]
   ]);
@@ -464,10 +464,10 @@ val dark_shadow_cond_row_def =
                     &d * L < &c * &d * (i + 1)) /\ dark_shadow_cond_row (c,L) t)`;
 
 val dark_shadow_condition_def =
-  Define`(dark_shadow_condition [] rights = T) /\
-         (dark_shadow_condition ((c,L)::lefts) rights =
-            dark_shadow_cond_row (c,L) rights /\
-            dark_shadow_condition lefts rights)`;
+  Define`(dark_shadow_condition [] lowers = T) /\
+         (dark_shadow_condition ((c,L)::uppers) lowers =
+            dark_shadow_cond_row (c,L) lowers /\
+            dark_shadow_condition uppers lowers)`;
 
 val constraint_mid_existence = prove(
   ``!x i j.  0 < x ==>
@@ -498,13 +498,13 @@ val constraint_mid_existence = prove(
   ]);
 
 val dark_shadowrow_constraint_imp = prove(
-  ``!rights lefts c L x.
-       0 < c /\ EVERY fst_nzero rights /\
-       evalleft x lefts /\ evalright x rights /\ &c * x <= L ==>
-       dark_shadow_cond_row (c,L) rights``,
+  ``!lowers uppers c L x.
+       0 < c /\ EVERY fst_nzero lowers /\
+       evalupper x uppers /\ evallower x lowers /\ &c * x <= L ==>
+       dark_shadow_cond_row (c,L) lowers``,
   Induct THENL [
-    SRW_TAC [][evalright_def, dark_shadow_cond_row_def],
-    SIMP_TAC (srw_ss()) [FORALL_PROD, evalright_def,
+    SRW_TAC [][evallower_def, dark_shadow_cond_row_def],
+    SIMP_TAC (srw_ss()) [FORALL_PROD, evallower_def,
                          dark_shadow_cond_row_def] THEN
     CONV_TAC (RENAME_VARS_CONV ["d", "R"]) THEN REPEAT STRIP_TAC THENL [
       `&c * R <= &c * (&d * x)` by PROVE_TAC [le_mono] THEN
@@ -524,27 +524,27 @@ val dark_shadowrow_constraint_imp = prove(
   ]);
 
 val dark_shadow_constraint_implied = prove(
-  ``!lefts rights x.
-       evalleft x lefts /\ evalright x rights /\
-       EVERY fst_nzero lefts /\ EVERY fst_nzero rights ==>
-       dark_shadow_condition lefts rights``,
+  ``!uppers lowers x.
+       evalupper x uppers /\ evallower x lowers /\
+       EVERY fst_nzero uppers /\ EVERY fst_nzero lowers ==>
+       dark_shadow_condition uppers lowers``,
   Induct THENL [
     SRW_TAC [][dark_shadow_condition_def],
-    SIMP_TAC (srw_ss()) [FORALL_PROD, evalleft_def,
+    SIMP_TAC (srw_ss()) [FORALL_PROD, evalupper_def,
                          dark_shadow_condition_def] THEN
     PROVE_TAC [dark_shadowrow_constraint_imp]
   ]);
 
 val real_darkrow_implies_evals = prove(
-  ``!lefts rights x c L.
-       0 < c /\ evalleft x lefts /\ evalright x rights /\
-       EVERY fst_nzero lefts /\ EVERY fst_nzero rights /\
-       rshadow_row (c,L) rights /\ dark_shadow_cond_row (c,L) rights ==>
-       ?y. &c * y <= L /\ evalleft y lefts /\ evalright y rights``,
+  ``!uppers lowers x c L.
+       0 < c /\ evalupper x uppers /\ evallower x lowers /\
+       EVERY fst_nzero uppers /\ EVERY fst_nzero lowers /\
+       rshadow_row (c,L) lowers /\ dark_shadow_cond_row (c,L) lowers ==>
+       ?y. &c * y <= L /\ evalupper y uppers /\ evallower y lowers``,
   Induct THENL [
-    SIMP_TAC (srw_ss()) [evalleft_def] THEN
+    SIMP_TAC (srw_ss()) [evalupper_def] THEN
     Induct THENL [
-      SIMP_TAC (srw_ss()) [evalright_def, rshadow_row_def,
+      SIMP_TAC (srw_ss()) [evallower_def, rshadow_row_def,
                            dark_shadow_cond_row_def] THEN REPEAT STRIP_TAC THEN
       Q.EXISTS_TAC `L / &c` THEN
       Q.SPEC_THEN `&c` MP_TAC INT_DIVISION THEN
@@ -553,12 +553,12 @@ val real_darkrow_implies_evals = prove(
       Q.ABBREV_TAC `Ldivc = L / &c` THEN
       Q.ABBREV_TAC `Lmodc = L % &c` THEN
       ASM_SIMP_TAC (srw_ss())[INT_MUL_COMM],
-      SIMP_TAC (srw_ss()) [evalright_def, rshadow_row_def,
+      SIMP_TAC (srw_ss()) [evallower_def, rshadow_row_def,
                            dark_shadow_cond_row_def, FORALL_PROD] THEN
       CONV_TAC (RENAME_VARS_CONV ["d", "R"]) THEN REPEAT STRIP_TAC THEN
       FIRST_X_ASSUM (MP_TAC o assert (is_forall o concl)) THEN
       ASM_SIMP_TAC (srw_ss())[GSYM IMP_DISJ_THM] THEN STRIP_TAC THEN
-      `?y. &c * y <= L /\ evalright y rights` by PROVE_TAC [] THEN
+      `?y. &c * y <= L /\ evallower y lowers` by PROVE_TAC [] THEN
       `&c * &d * y  <= &d * L` by PROVE_TAC [le_mono, INT_MUL_ASSOC,
                                              INT_MUL_COMM] THEN
       `&c * R <= &c * &d * x` by PROVE_TAC [le_mono, INT_MUL_ASSOC,
@@ -578,7 +578,7 @@ val real_darkrow_implies_evals = prove(
       `&c * j <= L` by PROVE_TAC [le_mono, INT_MUL_ASSOC, INT_MUL_COMM] THEN
       `&c * R <= &c * &d * j` by PROVE_TAC [INT_MUL] THEN
       `R <= &d * j` by PROVE_TAC [le_mono, INT_MUL_ASSOC, INT_MUL_COMM] THEN
-      Q_TAC SUFF_TAC `y < j` THEN1 PROVE_TAC [bigger_satisfies_rights] THEN
+      Q_TAC SUFF_TAC `y < j` THEN1 PROVE_TAC [bigger_satisfies_lowers] THEN
       Q_TAC SUFF_TAC `&d * y < &d * j` THEN1 PROVE_TAC [lt_mono] THEN
       Q_TAC SUFF_TAC `&c * (&d * y) < &c * (&d * j)` THEN1
                                 PROVE_TAC [lt_mono] THEN
@@ -586,9 +586,9 @@ val real_darkrow_implies_evals = prove(
       Q.EXISTS_TAC `&c * R` THEN
       PROVE_TAC [INT_MUL, INT_MUL_ASSOC, INT_MUL_COMM]
     ],
-    SIMP_TAC (srw_ss()) [evalleft_def, FORALL_PROD] THEN
+    SIMP_TAC (srw_ss()) [evalupper_def, FORALL_PROD] THEN
     CONV_TAC (RENAME_VARS_CONV ["d", "L2"]) THEN REPEAT STRIP_TAC THEN
-    `?z. &c * z <= L /\ evalleft z lefts /\ evalright z rights` by
+    `?z. &c * z <= L /\ evalupper z uppers /\ evallower z lowers` by
        (FIRST_X_ASSUM MATCH_MP_TAC THEN PROVE_TAC []) THEN
     Q.EXISTS_TAC `if x < z then x else z` THEN COND_CASES_TAC THEN
     ASM_SIMP_TAC (srw_ss())[] THENL [
@@ -599,16 +599,16 @@ val real_darkrow_implies_evals = prove(
 
 
 val real_darkcond_implies_evals = prove(
-  ``!lefts rights.
-       EVERY fst_nzero lefts /\ EVERY fst_nzero rights /\
-       real_shadow lefts rights /\ dark_shadow_condition lefts rights ==>
-       ?x. evalleft x lefts /\ evalright x rights``,
+  ``!uppers lowers.
+       EVERY fst_nzero uppers /\ EVERY fst_nzero lowers /\
+       real_shadow uppers lowers /\ dark_shadow_condition uppers lowers ==>
+       ?x. evalupper x uppers /\ evallower x lowers``,
   Induct THENL [
-    SIMP_TAC (srw_ss()) [evalleft_def, onlyrights_satisfiable],
-    SIMP_TAC (srw_ss()) [evalleft_def, FORALL_PROD, dark_shadow_condition_def,
+    SIMP_TAC (srw_ss()) [evalupper_def, onlylowers_satisfiable],
+    SIMP_TAC (srw_ss()) [evalupper_def, FORALL_PROD, dark_shadow_condition_def,
                          real_shadow_def] THEN
     CONV_TAC (RENAME_VARS_CONV ["c", "L"]) THEN REPEAT STRIP_TAC THEN
-    `?y. evalleft y lefts /\ evalright y rights` by PROVE_TAC [] THEN
+    `?y. evalupper y uppers /\ evallower y lowers` by PROVE_TAC [] THEN
     REWRITE_TAC [GSYM CONJ_ASSOC] THEN
     MATCH_MP_TAC real_darkrow_implies_evals THEN PROVE_TAC []
   ]);
@@ -616,10 +616,10 @@ val real_darkcond_implies_evals = prove(
 
 val basic_shadow_equivalence = store_thm(
   "basic_shadow_equivalence",
-  ``!lefts rights.
-       EVERY fst_nzero lefts /\ EVERY fst_nzero rights ==>
-       ((?x. evalleft x lefts /\ evalright x rights) =
-        real_shadow lefts rights /\ dark_shadow_condition lefts rights)``,
+  ``!uppers lowers.
+       EVERY fst_nzero uppers /\ EVERY fst_nzero lowers ==>
+       ((?x. evalupper x uppers /\ evallower x lowers) =
+        real_shadow uppers lowers /\ dark_shadow_condition uppers lowers)``,
   REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
     CONJ_TAC THEN1
       (MATCH_MP_TAC real_shadow_always_implied THEN PROVE_TAC []) THEN
@@ -632,9 +632,9 @@ val dark_shadow_row_def = Define
    (dark_shadow_row c (L:int) ((d,R)::rs) =
       &d * L - &c * R >= (&c - 1) * (&d - 1) /\ dark_shadow_row c L rs)`;
 val dark_shadow_def = Define
-  `(dark_shadow [] rights = T) /\
-   (dark_shadow ((c,L)::lefts) rights =
-      dark_shadow_row c L rights /\ dark_shadow lefts rights)`;
+  `(dark_shadow [] lowers = T) /\
+   (dark_shadow ((c,L)::uppers) lowers =
+      dark_shadow_row c L lowers /\ dark_shadow uppers lowers)`;
 
 val move_subs_out = prove(
   ``!x:int y z. (x - y + z = x + z - y) /\ (x - y - z = x - (y + z)) /\
@@ -703,9 +703,9 @@ val lemma =
 
 
 val dark_shadow_row_implies_row_condition = prove(
-  ``!rights c L.
-       EVERY fst_nzero rights /\ 0 < c /\
-       dark_shadow_row c L rights ==> dark_shadow_cond_row (c,L) rights``,
+  ``!lowers c L.
+       EVERY fst_nzero lowers /\ 0 < c /\
+       dark_shadow_row c L lowers ==> dark_shadow_cond_row (c,L) lowers``,
   Induct THEN1 SRW_TAC [][dark_shadow_row_def, dark_shadow_cond_row_def] THEN
   ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, dark_shadow_row_def,
                            dark_shadow_cond_row_def] THEN
@@ -720,9 +720,9 @@ val dark_shadow_row_implies_row_condition = prove(
   PROVE_TAC [lemma]);
 
 val dark_shadow_implies_dark_condition = prove(
-  ``!lefts rights.
-       EVERY fst_nzero lefts /\ EVERY fst_nzero rights ==>
-       (dark_shadow lefts rights ==> dark_shadow_condition lefts rights)``,
+  ``!uppers lowers.
+       EVERY fst_nzero uppers /\ EVERY fst_nzero lowers ==>
+       (dark_shadow uppers lowers ==> dark_shadow_condition uppers lowers)``,
   Induct THEN1 SRW_TAC [][dark_shadow_condition_def] THEN
   ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, dark_shadow_row_implies_row_condition,
                            dark_shadow_def, dark_shadow_condition_def]);
@@ -836,81 +836,81 @@ val div_lemma = prove(
 
 val _ = print "Now proving properties of nightmare function\n"
 val nightmare_def = Define
-  `(nightmare c lefts rights [] = F) /\
-   (nightmare c lefts rights ((d,R)::rs) =
+  `(nightmare c uppers lowers [] = F) /\
+   (nightmare c uppers lowers ((d,R)::rs) =
       (?x i. (0 <= i /\ i <= (&c * &d - &c - &d) / &c) /\ (&d * x = R + i) /\
-             evalleft x lefts /\ evalright x rights) \/
-      nightmare c lefts rights rs)`;
+             evalupper x uppers /\ evallower x lowers) \/
+      nightmare c uppers lowers rs)`;
 
 val nightmare_implies_LHS = store_thm(
   "nightmare_implies_LHS",
-  ``!rs lefts rights c.
-       nightmare c lefts rights rs ==>
-       ?x. evalleft x lefts /\ evalright x rights``,
+  ``!rs uppers lowers c.
+       nightmare c uppers lowers rs ==>
+       ?x. evalupper x uppers /\ evallower x lowers``,
   Induct THEN1 SRW_TAC [][nightmare_def] THEN
   ASM_SIMP_TAC (srw_ss()) [nightmare_def, FORALL_PROD] THEN
   PROVE_TAC []);
 
 val dark_shadow_FORALL = store_thm(
   "dark_shadow_FORALL",
-  ``!lefts rights.
-       dark_shadow lefts rights =
-       !c d L R. MEM (c,L) lefts /\ MEM (d,R) rights ==>
+  ``!uppers lowers.
+       dark_shadow uppers lowers =
+       !c d L R. MEM (c,L) uppers /\ MEM (d,R) lowers ==>
                  &d * L - &c * R >= (&c - 1) * (&d - 1)``,
   REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
-    Induct_on `lefts` THEN1 SRW_TAC [][] THEN
+    Induct_on `uppers` THEN1 SRW_TAC [][] THEN
     ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, dark_shadow_def] THEN
     REVERSE (REPEAT STRIP_TAC) THEN1 PROVE_TAC [] THEN
     Q.PAT_ASSUM `dark_shadow xs ys` (K ALL_TAC) THEN
     Q.PAT_ASSUM `dark_shadow xs ys ==> Q` (K ALL_TAC) THEN
-    Induct_on `rights` THEN1 SRW_TAC [][] THEN
+    Induct_on `lowers` THEN1 SRW_TAC [][] THEN
     ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, dark_shadow_row_def] THEN
     SRW_TAC [][] THEN PROVE_TAC [],
-    Induct_on `lefts` THEN1 SRW_TAC [][dark_shadow_def] THEN
+    Induct_on `uppers` THEN1 SRW_TAC [][dark_shadow_def] THEN
     ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, dark_shadow_def, DISJ_IMP_THM,
                              FORALL_AND_THM, RIGHT_AND_OVER_OR] THEN
     POP_ASSUM (K ALL_TAC) THEN REPEAT STRIP_TAC THEN
     POP_ASSUM (K ALL_TAC) THEN
-    Induct_on `rights` THEN
+    Induct_on `lowers` THEN
     ASM_SIMP_TAC (srw_ss())[dark_shadow_row_def, FORALL_PROD]
   ]);
 
 val real_shadow_FORALL = store_thm(
   "real_shadow_FORALL",
-  ``!lefts rights.
-       real_shadow lefts rights =
-       !c d L R. MEM (c,L) lefts /\ MEM (d,R) rights ==> &c * R <= &d * L``,
+  ``!uppers lowers.
+       real_shadow uppers lowers =
+       !c d L R. MEM (c,L) uppers /\ MEM (d,R) lowers ==> &c * R <= &d * L``,
   Induct THEN
   ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, real_shadow_def] THEN
   POP_ASSUM (K ALL_TAC) THEN REPEAT STRIP_TAC THEN EQ_TAC THEN
   STRIP_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [DISJ_IMP_THM, RIGHT_AND_OVER_OR,
                             FORALL_AND_THM] THEN
-  POP_ASSUM (K ALL_TAC) THEN Induct_on `rights` THEN
+  POP_ASSUM (K ALL_TAC) THEN Induct_on `lowers` THEN
   ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, rshadow_row_def,
                            DISJ_IMP_THM, FORALL_AND_THM]);
 
-val evalleft_FORALL = store_thm(
-  "evalleft_FORALL",
-  ``!lefts x. evalleft x lefts = !c L. MEM (c,L) lefts ==> &c * x <= L``,
+val evalupper_FORALL = store_thm(
+  "evalupper_FORALL",
+  ``!uppers x. evalupper x uppers = !c L. MEM (c,L) uppers ==> &c * x <= L``,
   Induct THEN
-  ASM_SIMP_TAC (srw_ss())[evalleft_def, FORALL_PROD, DISJ_IMP_THM,
+  ASM_SIMP_TAC (srw_ss())[evalupper_def, FORALL_PROD, DISJ_IMP_THM,
                           FORALL_AND_THM]);
 
-val evalright_FORALL = store_thm(
-  "evalright_FORALL",
-  ``!rights x. evalright x rights = !d R. MEM (d,R) rights ==> R <= &d * x``,
+val evallower_FORALL = store_thm(
+  "evallower_FORALL",
+  ``!lowers x. evallower x lowers = !d R. MEM (d,R) lowers ==> R <= &d * x``,
   Induct THEN
-  ASM_SIMP_TAC (srw_ss())[evalright_def, FORALL_PROD, DISJ_IMP_THM,
+  ASM_SIMP_TAC (srw_ss())[evallower_def, FORALL_PROD, DISJ_IMP_THM,
                           FORALL_AND_THM]);
 
 val nightmare_EXISTS = store_thm(
   "nightmare_EXISTS",
-  ``!rs c lefts rights.
-      nightmare c lefts rights rs =
+  ``!rs c uppers lowers.
+      nightmare c uppers lowers rs =
       ?x i d R.
          0 <= i /\ i <= (&d * &c - &c - &d) / &c /\ MEM (d,R) rs /\
-         evalleft x lefts /\ evalright x rights /\
+         evalupper x uppers /\ evallower x lowers /\
          (&d * x = R + i)``,
   Induct THEN
   ASM_SIMP_TAC (srw_ss()) [nightmare_def, FORALL_PROD] THEN
@@ -919,22 +919,22 @@ val nightmare_EXISTS = store_thm(
 
 val final_equivalence = store_thm(
   "final_equivalence",
-  ``!lefts rights m.
-       EVERY fst_nzero lefts /\ EVERY fst_nzero rights /\
-       EVERY (\p. FST p <= m) lefts ==>
-       ((?x. evalleft x lefts /\ evalright x rights) =
-        real_shadow lefts rights /\
-        (dark_shadow lefts rights \/ nightmare m lefts rights rights))``,
+  ``!uppers lowers m.
+       EVERY fst_nzero uppers /\ EVERY fst_nzero lowers /\
+       EVERY (\p. FST p <= m) uppers ==>
+       ((?x. evalupper x uppers /\ evallower x lowers) =
+        real_shadow uppers lowers /\
+        (dark_shadow uppers lowers \/ nightmare m uppers lowers lowers))``,
   REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
     CONJ_TAC THEN1 PROVE_TAC [basic_shadow_equivalence] THEN
     Q_TAC SUFF_TAC
-      `~dark_shadow lefts rights ==> nightmare m lefts rights rights` THEN1
+      `~dark_shadow uppers lowers ==> nightmare m uppers lowers lowers` THEN1
       PROVE_TAC [] THEN STRIP_TAC THEN
     FULL_SIMP_TAC (srw_ss()) [dark_shadow_FORALL, nightmare_EXISTS, int_ge,
                               listTheory.EVERY_MEM, INT_NOT_LE,
                               FORALL_PROD] THEN
-    `&c * x <= L` by PROVE_TAC [evalleft_FORALL] THEN
-    `R <= &d * x` by PROVE_TAC [evalright_FORALL] THEN
+    `&c * x <= L` by PROVE_TAC [evalupper_FORALL] THEN
+    `R <= &d * x` by PROVE_TAC [evallower_FORALL] THEN
     `0 < c /\ 0 < d /\ c <= m` by PROVE_TAC [] THEN
     `&d * (&c * x) <= &d * L /\ &c * R <= &c * (&d * x)` by
        PROVE_TAC [le_mono] THEN
@@ -965,8 +965,8 @@ val final_equivalence = store_thm(
 
 val darkrow_implies_realrow = store_thm(
   "darkrow_implies_realrow",
-  ``!rights c L. 0 < c /\ EVERY fst_nzero rights /\
-                 dark_shadow_row c L rights ==> rshadow_row (c,L) rights``,
+  ``!lowers c L. 0 < c /\ EVERY fst_nzero lowers /\
+                 dark_shadow_row c L lowers ==> rshadow_row (c,L) lowers``,
   Induct THEN1 SRW_TAC [][dark_shadow_row_def, rshadow_row_def] THEN
   ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, dark_shadow_row_def, rshadow_row_def,
                            int_ge, INT_LE_SUB_LADD] THEN
@@ -978,23 +978,23 @@ val darkrow_implies_realrow = store_thm(
 
 val dark_implies_real = store_thm(
   "dark_implies_real",
-  ``!lefts rights. EVERY fst_nzero lefts /\ EVERY fst_nzero rights /\
-                   dark_shadow lefts rights ==> real_shadow lefts rights``,
+  ``!uppers lowers. EVERY fst_nzero uppers /\ EVERY fst_nzero lowers /\
+                   dark_shadow uppers lowers ==> real_shadow uppers lowers``,
   Induct THEN
   ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, dark_shadow_def, real_shadow_def,
                            darkrow_implies_realrow]);
 
 val alternative_equivalence = store_thm(
   "alternative_equivalence",
-  ``!lefts rights m.
-       EVERY fst_nzero lefts /\ EVERY fst_nzero rights /\
-       EVERY (\p. FST p <= m) lefts ==>
-       ((?x. evalleft x lefts /\ evalright x rights) =
-        dark_shadow lefts rights \/ nightmare m lefts rights rights)``,
+  ``!uppers lowers m.
+       EVERY fst_nzero uppers /\ EVERY fst_nzero lowers /\
+       EVERY (\p. FST p <= m) uppers ==>
+       ((?x. evalupper x uppers /\ evallower x lowers) =
+        dark_shadow uppers lowers \/ nightmare m uppers lowers lowers)``,
   REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
-    Q.SPECL_THEN [`lefts`, `rights`, `m`] MP_TAC final_equivalence THEN
+    Q.SPECL_THEN [`uppers`, `lowers`, `m`] MP_TAC final_equivalence THEN
     ASM_REWRITE_TAC [] THEN PROVE_TAC [],
-    Q.SPECL_THEN [`lefts`, `rights`, `m`] MP_TAC final_equivalence THEN
+    Q.SPECL_THEN [`uppers`, `lowers`, `m`] MP_TAC final_equivalence THEN
     ASM_REWRITE_TAC [] THEN PROVE_TAC [dark_implies_real],
     PROVE_TAC [nightmare_implies_LHS]
   ]);
