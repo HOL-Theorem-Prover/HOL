@@ -10,6 +10,8 @@ struct
 
 open HolKernel Parse boolLib QLib tautLib mesonLib Rsyntax simpLib boolSimps;
 
+open BasicProvers
+
 local open combinTheory in end;
 
 val _ = new_theory "relation";
@@ -53,9 +55,17 @@ val reflexive_def = new_definition(
   "reflexive_def",
   ``reflexive (R:'a->'a->bool) = !x. R x x``);
 
+val irreflexive_def = new_definition(
+  "irreflexive_def",
+  ``irreflexive (R:'a->'a->bool) = !x. ~R x x``);
+
 val symmetric_def = new_definition(
   "symmetric_def",
   ``symmetric (R:'a->'a->bool) = !x y. R x y = R y x``);
+
+val antisymmetric_def = new_definition(
+  "antisymmetric_def",
+  ``antisymmetric (R:'a->'a->bool) = !x y. R x y /\ R y x ==> (x = y)``);
 
 val equivalence_def = new_definition(
   "equivalence_def",
@@ -111,24 +121,40 @@ val RTC_TRANSITIVE = store_thm(
   "RTC_TRANSITIVE",
   ``!R:'a->'a->bool. transitive (RTC R)``,
   REWRITE_TAC [transitive_def] THEN MESON_TAC [RTC_RTC]);
+val transitive_RTC = save_thm("transitive_RTC", RTC_TRANSITIVE);
+val _ = export_rewrites ["transitive_RTC"]
 
 val RTC_REFLEXIVE = store_thm(
   "RTC_REFLEXIVE",
   ``!R:'a->'a->bool. reflexive (RTC R)``,
   MESON_TAC [reflexive_def, RTC_RULES]);
+val reflexive_RTC = save_thm("reflexive_RTC", RTC_REFLEXIVE);
+val _ = export_rewrites ["reflexive_RTC"]
 
 val RC_REFLEXIVE = store_thm(
   "RC_REFLEXIVE",
   ``!R:'a->'a->bool. reflexive (RC R)``,
   MESON_TAC [reflexive_def, RC_DEF]);
+val reflexive_RC = save_thm("reflexive_RC", RC_REFLEXIVE);
+val _ = export_rewrites ["reflexive_RC"]
 
 val symmetric_RC = store_thm(
   "symmetric_RC",
   ``!R. symmetric (RC R) = symmetric R``,
   REWRITE_TAC [symmetric_def, RC_DEF] THEN
   REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN ASM_MESON_TAC []);
+val _ = export_rewrites ["symmetric_RC"]
 
+val antisymmetric_RC = store_thm(
+  "antisymmetric_RC",
+  ``!R. antisymmetric (RC R) = antisymmetric R``,
+  SRW_TAC [][antisymmetric_def, RC_DEF] THEN PROVE_TAC []);
+val _ = export_rewrites ["antisymmetric_RC"]
 
+val transitive_RC = store_thm(
+  "transitive_RC",
+  ``!R. transitive R ==> transitive (RC R)``,
+  SRW_TAC [][transitive_def, RC_DEF] THEN PROVE_TAC []);
 
 val TC_SUBSET = Q.store_thm("TC_SUBSET",
 `!R x (y:'a). R x y ==> TC R x y`,
@@ -631,6 +657,7 @@ REWRITE_TAC[WF_DEF]
 val EMPTY_REL_DEF =
 Q.new_definition
         ("EMPTY_REL_DEF", `EMPTY_REL (x:'a) (y:'a) = F`);
+val _ = export_rewrites ["EMPTY_REL_DEF"]
 
 val WF_Empty =
 Q.store_thm
@@ -1136,11 +1163,22 @@ val reflexive_inv = store_thm(
   "reflexive_inv",
   ``!R. reflexive (inv R) = reflexive R``,
   SIMP_TAC bool_ss [inv_DEF, reflexive_def]);
+val _ = export_rewrites ["reflexive_inv"]
+
+val irreflexive_inv = store_thm(
+  "irreflexive_inv",
+  ``!R. irreflexive (inv R) = irreflexive R``,
+  SRW_TAC [][irreflexive_def, inv_DEF]);
 
 val symmetric_inv = store_thm(
   "symmetric_inv",
   ``!R. symmetric (inv R) = symmetric R``,
   SIMP_TAC bool_ss [inv_DEF, symmetric_def] THEN MESON_TAC []);
+
+val antisymmetric_inv = store_thm(
+  "antisymmetric_inv",
+  ``!R. antisymmetric (inv R) = antisymmetric R``,
+  SRW_TAC [][antisymmetric_def, inv_DEF] THEN PROVE_TAC []);
 
 val transitive_inv = store_thm(
   "transitive_inv",
@@ -1156,6 +1194,396 @@ val equivalence_inv_identity = store_thm(
   "equivalence_inv_identity",
   ``!R. equivalence R ==> (inv R = R)``,
   SIMP_TAC bool_ss [equivalence_def, symmetric_inv_identity]);
+
+(* ----------------------------------------------------------------------
+    properties of relations, and set-like operations on relations from
+    Lockwood Morris
+  ---------------------------------------------------------------------- *)
+
+(* ----------------------------------------------------------------------
+    Involutions (functions whose square is the identity)
+  ---------------------------------------------------------------------- *)
+
+open BasicProvers
+val INVOL_DEF = new_definition(
+  "INVOL_DEF",
+  ``INVOL (f:'z->'z) = (f o f = I)``);
+
+val INVOL = store_thm(
+  "INVOL",
+  ``!f:'z->'z. INVOL f = (!x. f (f x) = x)``,
+  SRW_TAC [] [FUN_EQ_THM, INVOL_DEF]);
+
+val INVOL_ONE_ONE = store_thm (
+  "INVOL_ONE_ONE",
+  ``!f:'z->'z. INVOL f ==> (!a b. (f a = f b) = (a = b))``,
+  PROVE_TAC [INVOL]);
+
+val INVOL_ONE_ENO = store_thm (
+  "INVOL_ONE_ENO",
+  ``!f:'z->'z. INVOL f ==> (!a b. (f a = b) = (a = f b))``,
+  PROVE_TAC [INVOL]);
+
+(* logical negation is an involution. *)
+val NOT_INVOL = store_thm (
+  "NOT_INVOL",
+  ``INVOL (~)``,
+  REWRITE_TAC [INVOL, NOT_CLAUSES]);
+
+(* ----------------------------------------------------------------------
+    Idempotent functions are those where f o f = f
+   ---------------------------------------------------------------------- *)
+
+val IDEM_DEF = new_definition(
+  "IDEM_DEF",
+  ``IDEM (f:'z->'z) = (f o f = f)``);
+
+val IDEM = store_thm (
+  "IDEM",
+  ``!f:'z->'z. IDEM f = (!x. f (f x) = f x)``,
+  SRW_TAC [][IDEM_DEF, FUN_EQ_THM]);
+
+(* set up Id as a synonym for equality... *)
+val _ = overload_on("Id", ``(=)``)
+
+(*  but prefer = as the printing form when with two arguments *)
+val _ = overload_on("=", ``(=)``);
+
+(* code below even sets things up so that Id is preferred printing form when
+   an equality term does not have two arguments.  It causes grief in
+   parsing though - another project for the future maybe.
+val _ = remove_termtok {term_name = "=", tok = "="}
+val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 2)),
+                   fixity = Infix(NONASSOC, 100),
+                   paren_style = OnlyIfNecessary,
+                   pp_elements = [HardSpace 1, TOK "=", BreakSpace(1,0)],
+                   term_name = "Id"}
+*)
+
+(* inv is an involution, which we know from theorem inv_inv above *)
+val inv_INVOL = store_thm(
+  "inv_INVOL",
+  ``INVOL inv``,
+  REWRITE_TAC [INVOL, inv_inv]);
+
+(* ----------------------------------------------------------------------
+    composition of two relations, written O (Isabelle/HOL notation)
+   ---------------------------------------------------------------------- *)
+
+val O_DEF = new_definition(
+  "O_DEF",
+  ``(O) R1 R2 (x:'g) (z:'k) = ?y:'h. R1 x y /\ R2 y z``);
+val _ = set_fixity "O" (Infixr 800)
+
+val inv_O = store_thm(
+  "inv_O",
+  ``!R R'. inv (R O R') = inv R' O inv R``,
+  SRW_TAC [][FUN_EQ_THM, O_DEF, inv_DEF] THEN PROVE_TAC []);
+
+(* ----------------------------------------------------------------------
+    relational inclusion, analog of SUBSET
+   ---------------------------------------------------------------------- *)
+
+val RSUBSET = new_definition(
+  "RSUBSET",
+  ``(RSUBSET) R1 R2 = !x y. R1 x y ==> R2 x y``);
+val _ = set_fixity "RSUBSET" (Infixr 450);
+
+(* ----------------------------------------------------------------------
+    relational union
+   ---------------------------------------------------------------------- *)
+
+val RUNION = new_definition(
+  "RUNION",
+  ``(RUNION) R1 R2 x y = R1 x y \/ R2 x y``);
+val _ = set_fixity "RUNION" (Infixl 500)
+
+(* ----------------------------------------------------------------------
+    relational intersection
+   ---------------------------------------------------------------------- *)
+
+val RINTER = new_definition(
+  "RINTER",
+  ``(RINTER) R1 R2 x y = R1 x y /\ R2 x y``);
+val _ = set_fixity "RINTER" (Infixl 600)
+
+(* ----------------------------------------------------------------------
+    relational complement
+   ---------------------------------------------------------------------- *)
+
+val RCOMPL = new_definition(
+  "RCOMPL",
+  ``RCOMPL R x y = ~R x y``);
+
+(* ----------------------------------------------------------------------
+    theorems about reflexive, symmetric and transitive predicates in
+    terms of particular relational-subsets
+   ---------------------------------------------------------------------- *)
+
+val reflexive_Id_RSUBSET = store_thm(
+  "reflexive_RSUBSET_Id",
+  ``!R. reflexive R = (Id RSUBSET R)``,
+  SRW_TAC [][RSUBSET, reflexive_def]);
+
+val symmetric_inv_RSUBSET = store_thm(
+  "symmetric_inv_RSUBSET",
+  ``symmetric R = (inv R RSUBSET R)``,
+  SRW_TAC [][symmetric_def, inv_DEF, RSUBSET] THEN PROVE_TAC []);
+
+val transitive_O_RSUBSET = store_thm(
+  "transitive_O_RSUBSET",
+  ``transitive R = (R O R RSUBSET R)``,
+  SRW_TAC [][transitive_def, O_DEF, RSUBSET] THEN PROVE_TAC []);
+
+(* ----------------------------------------------------------------------
+    various sorts of orders
+   ---------------------------------------------------------------------- *)
+
+val PreOrder = new_definition(
+  "PreOrder",
+  ``PreOrder R = reflexive R /\ transitive R``);
+
+(* The following definition follows Rob Arthan's idea of staying mum,
+   for the most general notion of (partial) order, about whether the
+   relation is to be reflexive, irreflexive, or something in
+   between. *)
+
+val Order = new_definition(
+  "Order",
+  ``Order (Z:'g->'g->bool) = antisymmetric Z /\ transitive Z``);
+
+val WeakOrder = new_definition(
+  "WeakOrder",
+  ``WeakOrder (Z:'g->'g->bool) =
+                       reflexive Z /\ antisymmetric Z /\ transitive Z``);
+
+val StrongOrder = new_definition(
+  "StrongOrder",
+  ``StrongOrder (Z:'g->'g->bool) =
+                     irreflexive Z /\ antisymmetric Z /\ transitive Z``);
+
+val StrongOrd_Ord = store_thm(
+  "StrongOrd_Ord",
+  ``!R. StrongOrder R ==> Order R``,
+  SRW_TAC [][StrongOrder, Order]);
+
+val WeakOrd_Ord = store_thm(
+  "WeakOrd_Ord",
+  ``!R. WeakOrder R ==> Order R``,
+  SRW_TAC [][WeakOrder, Order]);
+
+val WeakOrder_EQ = store_thm(
+  "WeakOrder_EQ",
+  ``!R. WeakOrder R ==> !y z. (y = z) = R y z /\ R z y``,
+  SRW_TAC [][WeakOrder, reflexive_def, antisymmetric_def] THEN PROVE_TAC []);
+
+val RSUBSET_ANTISYM = store_thm(
+  "RSUBSET_ANTISYM",
+  ``!R1 R2. R1 RSUBSET R2 /\ R2 RSUBSET R1 ==> (R1 = R2)``,
+  SRW_TAC [][RSUBSET, FUN_EQ_THM] THEN PROVE_TAC []);
+
+val RSUBSET_antisymmetric = store_thm(
+  "RSUBSET_antisymmetric",
+  ``antisymmetric (RSUBSET)``,
+  REWRITE_TAC [antisymmetric_def, RSUBSET_ANTISYM]);
+
+val RSUBSET_WeakOrder = store_thm(
+  "RSUBSET_WeakOrder",
+  ``WeakOrder (RSUBSET)``,
+  SRW_TAC [][WeakOrder, reflexive_def, antisymmetric_def, transitive_def,
+             RSUBSET, FUN_EQ_THM] THEN
+  PROVE_TAC []);
+
+val EqIsBothRSUBSET = save_thm(
+  "EqIsBothRSUBSET",
+  MATCH_MP WeakOrder_EQ RSUBSET_WeakOrder)
+(* |- !y z. (y = z) = y RSUBSET z /\ z RSUBSET y *)
+
+(* ----------------------------------------------------------------------
+    STRORD makes an order strict (or "strong")
+   ---------------------------------------------------------------------- *)
+
+val STRORD = new_definition(
+  "STRORD",
+  ``STRORD R a b = R a b /\ ~(a = b)``);
+
+val STRORD_AND_NOT_Id = store_thm(
+  "STRORD_AND_NOT_Id",
+  ``STRORD R = R RINTER (RCOMPL Id)``,
+  SRW_TAC [][STRORD, RINTER, RCOMPL, FUN_EQ_THM]);
+
+(* the corresponding "UNSTRORD", which makes an order weak is just RC *)
+
+val RC_OR_Id = store_thm(
+  "RC_OR_Id",
+  ``RC R = R RUNION Id``,
+  SRW_TAC [][RC_DEF, RUNION, FUN_EQ_THM] THEN PROVE_TAC []);
+
+val RC_Weak = store_thm(
+  "RC_Weak",
+  ``Order R = WeakOrder (RC R)``,
+  SRW_TAC [][Order, WeakOrder, EQ_IMP_THM, transitive_RC] THEN
+  FULL_SIMP_TAC (srw_ss()) [transitive_def, RC_DEF, antisymmetric_def] THEN
+  PROVE_TAC []);
+
+val STRORD_Strong = store_thm(
+  "STRORD_Strong",
+  ``!R. Order R = StrongOrder (STRORD R)``,
+  SRW_TAC [][Order, StrongOrder, STRORD, antisymmetric_def, transitive_def,
+             irreflexive_def] THEN PROVE_TAC []);
+
+val STRORD_RC = store_thm(
+  "STRORD_RC",
+  ``!R. StrongOrder R ==> (STRORD (RC R) = R)``,
+  SRW_TAC [][StrongOrder, STRORD, RC_DEF, irreflexive_def, antisymmetric_def,
+             transitive_def, FUN_EQ_THM] THEN PROVE_TAC []);
+
+val RC_STRORD = store_thm(
+  "RC_STRORD",
+  ``!R. WeakOrder R ==> (RC (STRORD R) = R)``,
+  SRW_TAC [][WeakOrder, STRORD, RC_DEF, reflexive_def, antisymmetric_def,
+             transitive_def, FUN_EQ_THM] THEN PROVE_TAC []);
+
+val IDEM_STRORD = store_thm(
+  "IDEM_STRORD",
+  ``IDEM STRORD``,
+  SRW_TAC [][STRORD, IDEM, FUN_EQ_THM] THEN PROVE_TAC []);
+
+val IDEM_RC = store_thm(
+  "IDEM_RC",
+  ``IDEM RC``,
+  SRW_TAC [][IDEM, RC_IDEM]);
+
+val IDEM_SC = store_thm(
+  "IDEM_SC",
+  ``IDEM SC``,
+  SRW_TAC [][IDEM, SC_IDEM]);
+
+val IDEM_TC = store_thm(
+  "IDEM_TC",
+  ``IDEM TC``,
+  SRW_TAC [][IDEM, TC_IDEM]);
+
+val IDEM_RTC = store_thm(
+  "IDEM_RTC",
+  ``IDEM RTC``,
+  SRW_TAC [][IDEM, RTC_IDEM]);
+
+(* ----------------------------------------------------------------------
+    We may define notions of linear (i.e., total) order, but in the
+    absence of numbers I don't see much to prove about them.
+   ---------------------------------------------------------------------- *)
+
+val trichotomous = new_definition(
+  "trichotomous",
+  ``trichotomous (R:'a->'a->bool) = !a b. R a b \/ R b a \/ (a = b)``);
+
+val LinearOrder = new_definition(
+  "LinearOrder",
+  ``LinearOrder (R:'a->'a->bool) = Order R /\ trichotomous R``);
+
+val StrongLinearOrder = new_definition(
+  "StrongLinearOrder",
+  ``StrongLinearOrder (R:'a->'a->bool) = StrongOrder R /\ trichotomous R``);
+
+val WeakLinearOrder = new_definition(
+  "WeakLinearOrder",
+  ``WeakLinearOrder (R:'a->'a->bool) = WeakOrder R /\ trichotomous R``);
+
+val WeakLinearOrder_dichotomy = store_thm(
+  "WeakLinearOrder_dichotomy",
+   ``!R:'a->'a->bool. WeakLinearOrder R =
+                      WeakOrder R /\ (!a b. R a b \/ R b a)``,
+   SRW_TAC [][WeakLinearOrder, trichotomous] THEN
+   PROVE_TAC [WeakOrder_EQ]);
+
+(* ----------------------------------------------------------------------
+    other stuff (inspired by Isabelle's Relation theory)
+   ---------------------------------------------------------------------- *)
+
+val diag_def = new_definition(
+  "diag_def",
+  ``diag A x y = (x = y) /\ x IN A``);
+
+(* properties of O *)
+
+val O_ASSOC = store_thm(
+  "O_ASSOC",
+  ``R1 O (R2 O R3) = (R1 O R2) O R3``,
+  SRW_TAC [][O_DEF, FUN_EQ_THM] THEN PROVE_TAC []);
+
+val Id_O = store_thm(
+  "Id_O",
+  ``Id O R = R``,
+  SRW_TAC [][O_DEF, FUN_EQ_THM])
+val _ = export_rewrites ["Id_O"]
+
+val O_Id = store_thm(
+  "O_Id",
+  ``R O Id = R``,
+  SRW_TAC [][O_DEF, FUN_EQ_THM]);
+val _ = export_rewrites ["O_Id"]
+
+val O_MONO = store_thm(
+  "O_MONO",
+  ``R1 RSUBSET R2 /\ S1 RSUBSET S2 ==> (R1 O S1) RSUBSET (R2 O S2)``,
+  SRW_TAC [][RSUBSET, O_DEF] THEN PROVE_TAC []);
+
+val inv_Id = store_thm(
+  "inv_Id",
+  ``inv Id = Id``,
+  SRW_TAC [][FUN_EQ_THM, inv_DEF, EQ_SYM_EQ]);
+
+val inv_diag = store_thm(
+  "inv_diag",
+  ``inv (diag A) = diag A``,
+  SRW_TAC [][FUN_EQ_THM, inv_DEF, diag_def] THEN PROVE_TAC []);
+
+(* domain of a relation *)
+(* if I just had UNIONs and the like around, I could prove great things like
+     RDOM (R RUNION R') = RDOM R UNION RDOM R'
+*)
+val RDOM_DEF = new_definition(
+  "RDOM_DEF",
+  ``RDOM R x = ?y. R x y``);
+
+val IN_RDOM = store_thm(
+  "IN_RDOM",
+  ``x IN RDOM R = ?y. R x y``,
+  SRW_TAC [][RDOM_DEF, IN_DEF]);
+
+(* range of a relation *)
+val RRANGE_DEF = new_definition(
+  "RRANGE",
+  ``RRANGE R y = ?x. R x y``);
+
+val IN_RRANGE = store_thm(
+  "IN_RRANGE",
+  ``y IN RRANGE R = ?x. R x y``,
+  SRW_TAC [][RRANGE_DEF, IN_DEF]);
+
+(* top and bottom elements of RSUBSET lattice *)
+val RUNIV = new_definition(
+  "RUNIV",
+  ``RUNIV x y = T``);
+val _ = export_rewrites ["RUNIV"]
+
+val RUNIV_SUBSET = store_thm(
+  "RUNIV_SUBSET",
+  ``(RUNIV RSUBSET R = (R = RUNIV)) /\
+    (R RSUBSET RUNIV)``,
+  SRW_TAC [][RSUBSET, FUN_EQ_THM]);
+val _ = export_rewrites ["RUNIV_SUBSET"]
+
+val _ = overload_on ("REMPTY", ``EMPTY_REL``)
+
+val REMPTY_SUBSET = store_thm(
+  "REMPTY_SUBSET",
+  ``REMPTY RSUBSET R /\
+    (R RSUBSET REMPTY = (R = REMPTY))``,
+  SRW_TAC [][RSUBSET, FUN_EQ_THM]);
+val _ = export_rewrites ["REMPTY_SUBSET"]
+
 
 val _ = export_theory();
 
