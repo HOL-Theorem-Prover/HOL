@@ -86,7 +86,9 @@ val set2list_IN_MEM = Q.prove
 
 
 (*---------------------------------------------------------------------------
-    A "fold" operation for sets
+    A "fold" operation for sets ... unfortunately, totally useless, 
+    since CHOICE and REST don't actually give you things you can work
+    with.
  ---------------------------------------------------------------------------*)
 
 val itset_defn = Hol_defn "itset"
