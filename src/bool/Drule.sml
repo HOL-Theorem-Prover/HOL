@@ -122,7 +122,7 @@ end;
 
 fun SPEC_VAR th =
    let val (Bvar,_) = dest_forall (concl th)
-       val bv' = variant (free_varsl (hyp th)) Bvar
+       val bv' = variant (HOLset.listItems (thm_hypfrees th)) Bvar
    in (bv', SPEC bv' th)
    end;
 
@@ -169,9 +169,9 @@ fun LIST_MK_EXISTS l th = itlist (fn x => fn th => MK_EXISTS(GEN x th)) l th;
 fun SIMPLE_EXISTS v th = EXISTS (mk_exists(v, concl th), v) th
 
 fun SIMPLE_CHOOSE v th =
-  case Thm.hyp th
-   of h::_ => CHOOSE(v, ASSUME (boolSyntax.mk_exists(v,h))) th
-    |  []  => raise ERR "SIMPLE_CHOOSE" "";
+  case HOLset.find (fn _ => true) (Thm.hypset th) of
+    SOME h => CHOOSE(v, ASSUME (boolSyntax.mk_exists(v,h))) th
+  | NONE => raise ERR "SIMPLE_CHOOSE" "";
 
 
 
@@ -320,7 +320,7 @@ fun MK_ABS qth =
  *     make_thm Count.Contr(tag fth, hyp fth, w))
  *---------------------------------------------------------------------------*)
 
-fun CONTR tm th = 
+fun CONTR tm th =
   MP (SPEC tm FALSITY) th handle HOL_ERR _ => raise ERR "CONTR" "";
 
 (*---------------------------------------------------------------------------
@@ -331,8 +331,8 @@ fun CONTR tm th =
  *    A, t1 |- t2
  *---------------------------------------------------------------------------*)
 
-fun UNDISCH th = 
-  MP th (ASSUME(fst(dest_imp(concl th)))) 
+fun UNDISCH th =
+  MP th (ASSUME(fst(dest_imp(concl th))))
   handle HOL_ERR  _ => raise ERR "UNDISCH" "";
 
 (*---------------------------------------------------------------------------
@@ -343,7 +343,7 @@ fun UNDISCH th =
  *    A |- t
  *---------------------------------------------------------------------------*)
 
-fun EQT_ELIM th = 
+fun EQT_ELIM th =
   EQ_MP (SYM th) TRUTH handle HOL_ERR _ => raise ERR "EQT_ELIM" "";
 
 
@@ -354,7 +354,7 @@ fun EQT_ELIM th =
  *          |-  t[ti]
  *---------------------------------------------------------------------------*)
 
-fun SPECL tml th = 
+fun SPECL tml th =
   rev_itlist SPEC tml th handle HOL_ERR _ => raise ERR"SPECL" "";
 
 val GENL = itlist GEN;
@@ -474,8 +474,8 @@ fun SELECT_EQ x =
  *   A |- t1 = t2[t3/x]
  *---------------------------------------------------------------------------*)
 
-fun RIGHT_BETA th = 
- TRANS th (BETA_CONV(rhs(concl th))) 
+fun RIGHT_BETA th =
+ TRANS th (BETA_CONV(rhs(concl th)))
  handle HOL_ERR _ => raise ERR "RIGHT_BETA" "";
 
 (*---------------------------------------------------------------------------
@@ -654,7 +654,7 @@ val CONJ_DISCHL = itlist CONJ_DISCH;
  *---------------------------------------------------------------------------*)
 
 fun NEG_DISCH t th =
-  (if concl th = boolSyntax.F 
+  (if concl th = boolSyntax.F
       then NOT_INTRO (DISCH t th) else DISCH t th)
   handle HOL_ERR _ => raise ERR "NEG_DISCH" ""
 
@@ -755,20 +755,20 @@ local fun strip [] _ = []     (* Returns a list of (pat,ob) pairs. *)
         | merge ((x as {redex,residue})::rst) theta =
           case subst_assoc (equal redex) theta
            of NONE      => x::merge rst theta
-            | SOME rdue => if residue=rdue then merge rst theta 
+            | SOME rdue => if residue=rdue then merge rst theta
                            else raise ERR "ISPECL" ""
 in
 fun ISPECL [] = I
   | ISPECL [tm] = ISPEC tm
   | ISPECL tms = fn th =>
-     let val pairs = strip tms (concl th) handle HOL_ERR _ 
+     let val pairs = strip tms (concl th) handle HOL_ERR _
                      => raise ERR "ISPECL" "list of terms too long for theorem"
          val inst = rev_itlist (fn (pat,ob) => fn ty_theta =>
                       let val theta = Type.match_type pat ob
                       in merge theta ty_theta end) pairs []
-                      handle HOL_ERR _ => raise ERR "ISPECL" 
+                      handle HOL_ERR _ => raise ERR "ISPECL"
                               "can't type-instantiate input theorem"
-     in SPECL tms (INST_TYPE inst th) handle HOL_ERR _ 
+     in SPECL tms (INST_TYPE inst th) handle HOL_ERR _
         => raise ERR "ISPECL" "type variable free in assumptions"
      end
 end;
@@ -783,8 +783,9 @@ end;
  *---------------------------------------------------------------------------*)
 
 fun GEN_ALL th =
-   itlist GEN (set_diff (free_vars(concl th))
-                        (free_varsl (hyp th))) th;
+   HOLset.foldl (fn (v, th) => GEN v th)
+                   th
+                   (HOLset.difference (FVL [concl th], thm_hypfrees th))
 
 
 (*---------------------------------------------------------------------------
@@ -799,11 +800,7 @@ fun GEN_ALL th =
  *---------------------------------------------------------------------------*)
 
 fun DISCH_ALL th =
-   case hyp th
-    of []   => th
-     | h::_ => DISCH_ALL (DISCH h th);
-
-
+    HOLset.foldl (fn (h, th) => DISCH h th) th (hypset th)
 
 (*----------------------------------------------------------------------------
  *
@@ -832,11 +829,11 @@ fun UNDISCH_ALL th = if is_imp(concl th) then UNDISCH_ALL (UNDISCH th) else th;
 (*     SPECL (map (variant (freesl (hyp th))) vars) th;;		*)
 (* ---------------------------------------------------------------------*)
 
-local fun varyAcc v (V,l) = 
+local fun varyAcc v (V,l) =
        let val v' = prim_variant V v in (v'::V, v'::l) end
 in
 fun SPEC_ALL th =
-   let val (hvs,con) = (free_varsl ## I) (hyp th, concl th)
+   let val (hvs,con) = (HOLset.listItems ## I) (thm_hypfrees th, concl th)
        val fvs = free_vars con
        val vars = fst(strip_forall con)
    in
@@ -881,7 +878,7 @@ val LIST_CONJ = end_itlist CONJ ;
  * You must specify n, since tn could itself be a conjunction
  *---------------------------------------------------------------------------*)
 
-fun CONJ_LIST 1 th = [th] 
+fun CONJ_LIST 1 th = [th]
   | CONJ_LIST n th =  CONJUNCT1 th :: CONJ_LIST (n-1) (CONJUNCT2 th)
       handle HOL_ERR _ => raise ERR "CONJ_LIST" "";
 
@@ -892,7 +889,7 @@ fun CONJ_LIST 1 th = [th]
  * Flattens out all conjuncts, regardless of grouping
  *---------------------------------------------------------------------------*)
 
-fun CONJUNCTS th = 
+fun CONJUNCTS th =
  (CONJUNCTS (CONJUNCT1 th) @ CONJUNCTS(CONJUNCT2 th))
   handle HOL_ERR _ => [th];
 
@@ -930,21 +927,21 @@ fun IMP_CANON th =
  let val w = concl th
  in if is_forall w then IMP_CANON (SPEC_ALL th) else
     if is_conj w then IMP_CANON(CONJUNCT1 th) @ IMP_CANON(CONJUNCT2 th) else
-    if is_imp w 
+    if is_imp w
     then let val (ant,_) = dest_imp w
          in if is_conj ant
             then let val (conj1,conj2) = dest_conj ant
-                 in IMP_CANON (DISCH conj1 (DISCH conj2 
+                 in IMP_CANON (DISCH conj1 (DISCH conj2
                         (MP th (CONJ(ASSUME conj1)(ASSUME conj2)))))
                  end
-            else 
+            else
             if is_disj ant
             then let val (disj1,disj2) = dest_disj ant
                  in IMP_CANON(DISCH disj1 (MP th (DISJ1(ASSUME disj1) disj2)))
                     @
                     IMP_CANON(DISCH disj2 (MP th (DISJ2 disj1 (ASSUME disj2))))
                  end
-            else 
+            else
             if is_exists ant
             then let val (Bvar,Body) = dest_exists ant
                      val bv' = variant (thm_free_vars th) Bvar
@@ -980,7 +977,7 @@ in
 fun CONTRAPOS impth =
   let val (ant,conseq) = dest_imp (concl impth)
       val notb = mk_neg conseq
-  in DISCH notb 
+  in DISCH notb
       (EQ_MP (SPEC ant imp_th)
              (DISCH ant (MP (ASSUME notb)
                             (MP impth (ASSUME ant)))))
@@ -1063,7 +1060,7 @@ local fun organize eq =    (* a bit slow - analogous to insertion sort *)
 in
 fun DISJ_CASESL disjth thl =
  let val (_,c) = dest_thm disjth
-     fun eq th atm = Lib.exists (aconv atm) (hyp th)
+     fun eq th atm = HOLset.member(hypset th,  atm)
      val tml = strip_disj c
      fun DL th [] = raise ERR"DISJ_CASESL" "no cases"
        | DL th [th1] = PROVE_HYP th th1
@@ -1228,7 +1225,7 @@ fun EXISTS_IMP x th =
            val asm = mk_exists(x,ant)
        in DISCH asm (CHOOSE (x,ASSUME asm) th1)
        end
-       handle HOL_ERR _ => raise ERR "EXISTS_IMP" 
+       handle HOL_ERR _ => raise ERR "EXISTS_IMP"
                             "variable free in assumptions";
 
 
@@ -1259,8 +1256,12 @@ fun GSPEC th =
 
 fun PART_MATCH partfn th =
   let val pth = GSPEC (GEN_ALL th)
+      val conclfvs = Term.FVL [concl th]
+      val hypfvs = Thm.thm_hypfrees th
+      val hyptyvars = HOLset.listItems (Thm.thm_hypfreetys th)
       val pat = partfn(concl pth)
-      val matchfn = match_term pat
+      val matchfn =
+          match_terml hyptyvars (HOLset.intersection(conclfvs, hypfvs)) pat
   in fn tm => INST_TY_TERM (matchfn tm) pth
   end;
 
@@ -1311,14 +1312,16 @@ local fun variants (_,[]) = []
 in
 fun MATCH_MP ith =
  let val bod = fst(dest_imp(snd(strip_forall(concl ith))))
+     val hyptyvars = HOLset.listItems (thm_hypfreetys ith)
+     val lconsts = HOLset.intersection (FVL [concl ith], thm_hypfrees ith)
  in
  fn th =>
-   let val mfn = C Term.match_term (concl th)
+   let val mfn = C (Term.match_terml hyptyvars lconsts) (concl th)
        val tth = INST_TYPE (snd(mfn bod)) ith
        val tbod = fst(dest_imp(snd(strip_forall(concl tth))))
        val tmin = fst(mfn tbod)
-       val hy1 = free_varsl(hyp tth)
-       and hy2 = free_varsl(hyp th)
+       val hy1 = HOLset.listItems (thm_hypfrees tth)
+       and hy2 = HOLset.listItems (thm_hypfrees th)
        val (avs,(ant,conseq)) = (I ## dest_imp) (strip_forall (concl tth))
        val (rvs,fvs) = partition (C free_in ant) (free_vars conseq)
        val afvs = Lib.set_diff fvs (Lib.set_diff hy1 avs)
@@ -1350,7 +1353,7 @@ end;
 
 fun tryalpha v tm =
  let val (Bvar,Body) = dest_abs tm
- in if v = Bvar then tm else 
+ in if v = Bvar then tm else
     if var_occurs v Body then tryalpha (variant (free_vars tm) v) tm
     else mk_abs(v, subst[Bvar |-> v] Body)
  end
@@ -1363,7 +1366,7 @@ fun tryalpha v tm =
 fun match_bvs t1 t2 acc =
  case (dest_term t1, dest_term t2)
   of (LAMB(v1,b1), LAMB(v2,b2))
-      => let val n1 = fst(dest_var v1) 
+      => let val n1 = fst(dest_var v1)
              val n2 = fst(dest_var v2)
              val newacc = if n1 = n2 then acc else insert (n1,n2) acc
          in match_bvs b1 b2 newacc
@@ -1381,40 +1384,40 @@ fun deep_alpha [] tm = tm
      case dest_term tm
       of LAMB(Bvar,Body) =>
           (let val (Name,Ty) = dest_var Bvar
-               val ((vn',_),newenv) = Lib.pluck (fn (_,x) => x = Name) env 
+               val ((vn',_),newenv) = Lib.pluck (fn (_,x) => x = Name) env
                val tm' = tryalpha (mk_var(vn', Ty)) tm
-               val (iv,ib) = dest_abs tm' 
+               val (iv,ib) = dest_abs tm'
            in mk_abs(iv, deep_alpha newenv ib)
            end
            handle HOL_ERR _ => mk_abs(Bvar,deep_alpha env Body))
        | COMB(Rator,Rand) => mk_comb(deep_alpha env Rator, deep_alpha env Rand)
        | otherwise => tm
 
-(* ------------------------------------------------------------------------- 
+(* -------------------------------------------------------------------------
  * BETA_VAR
  *
- * Set up beta-conversion for head instances of free variable v in tm.       
+ * Set up beta-conversion for head instances of free variable v in tm.
  *
  * EXAMPLES
  *
  *   BETA_VAR (--`x:num`--) (--`(P:num->num->bool) x x`--);
  *   BETA_VAR (--`x:num`--) (--`x + 1`--);
  *
- * Note (kxs): I am defining this before Conv, so some conversion(al)s are 
+ * Note (kxs): I am defining this before Conv, so some conversion(al)s are
  * p(re)-defined here. Ugh.
  * -------------------------------------------------------------------------
- * ------------------------------------------------------------------------- 
+ * -------------------------------------------------------------------------
  * PART_MATCH
  *
- * Match (higher-order) part of a theorem to a term.                         
+ * Match (higher-order) part of a theorem to a term.
  *
  * PART_MATCH (snd o strip_forall) BOOL_CASES_AX (--`(P = T) \/ (P = F)`--);
  * val f = PART_MATCH lhs;
  * profile2 f NOT_FORALL_THM (--`~!x. (P:num->num->bool) x y`--);
  * profile2 f NOT_EXISTS_THM (--`?x. ~(P:num->num->bool) x y`--);
- * profile2 f LEFT_AND_EXISTS_THM 
+ * profile2 f LEFT_AND_EXISTS_THM
  *             (--`(?x. (P:num->num->bool) x x) /\ Q (y:num)`--);
- * profile LEFT_AND_EXISTS_CONV 
+ * profile LEFT_AND_EXISTS_CONV
  *           (--`(?x. (P:num->num->bool) x x) /\ Q (x:num)`--);
  * profile2 f NOT_FORALL_THM (--`~!x. (P:num->num->bool) y x`--);
  * profile NOT_FORALL_CONV (--`~!x. (P:num->num->bool) y x`--);
@@ -1449,7 +1452,7 @@ fun deep_alpha [] tm = tm
  *     in finish_fn tyin (map #redex tmin) th0
  *     end
  *   end;
- * 
+ *
  * EXAMPLES:
  *
  * val CET = mk_thm([],(--`(!c. P ($COND c x y) c) = (P x T /\ P y F)`--));
@@ -1458,11 +1461,11 @@ fun deep_alpha [] tm = tm
  * PART_MATCH lhs FORALL_SIMP (--`!x. x + 1 = 2`--); (* fails *)
  * PART_MATCH lhs CET (--`!b. ~(f (b => t | e))`--);
  * PART_MATCH lhs option_CASE_ELIM (--`!b. ~(P (option_CASE e f b))`--);
- * PART_MATCH lhs (MK_FORALL (--`c:bool`--) COND_ELIM_THM) 
+ * PART_MATCH lhs (MK_FORALL (--`c:bool`--) COND_ELIM_THM)
  *                (--`!b. ~(f (b => t | e))`--);
- * PART_MATCH lhs (MK_FORALL (--`c:bool`--) COND_ELIM_THM) 
+ * PART_MATCH lhs (MK_FORALL (--`c:bool`--) COND_ELIM_THM)
  *                 (--`!b. ~(f (b => t | e))`--);
- * ho_term_match [] (--`!c.  P ($COND c x y)`--) 
+ * ho_term_match [] (--`!c.  P ($COND c x y)`--)
  *
  * BUG FIXES & TEST CASES
  *
@@ -1471,7 +1474,7 @@ fun deep_alpha [] tm = tm
  * Before renaming this produced: |- (!x. ?y. Q y x) = (?y. !x. Q (y x) x)
  * After renaming this produced: |- (!p. ?GI. Q GI p) = (?GI. !p. Q (GI p) p)
  *
- * Variable renaming problem (DRS, Feb 1996):  
+ * Variable renaming problem (DRS, Feb 1996):
  * PART_MATCH lhs NOT_FORALL_THM (--`~!y. P x`--);
  * Before fix produced:  |- ~(!x'. P x) = (?x'. ~(P x)) : thm
  * After fix produced:  |- ~(!y. P x) = (?y. ~(P x))
@@ -1484,7 +1487,7 @@ fun deep_alpha [] tm = tm
  * PART_MATCH lhs NOT_FORALL_THM (--`~!x. (\y. t) T`--);
  * Before fix produced (--`?y. ~(\y. t) T`--);
  * After fix produced (--`?x. ~(\y. t) T`--);
- * Fix: 
+ * Fix:
  *      Moved beta reduction to be before alpha renaming.  This makes
  * match_bvs more accurate.  This was not a problem before the previous
  * fix.
@@ -1499,29 +1502,29 @@ fun deep_alpha [] tm = tm
  *      ~(const = const')`--)
  * ------------------------------------------------------------------------- *)
 
-local fun COMB_CONV2 c1 c2 M = 
+local fun COMB_CONV2 c1 c2 M =
         let val (f,x) = dest_comb M in MK_COMB(c1 f, c2 x) end
       fun ABS_CONV c M =
         let val (Bvar,Body) = dest_abs M in ABS Bvar (c Body) end
-      fun RAND_CONV c M = 
+      fun RAND_CONV c M =
         let val (Rator,Rand) = dest_comb M in AP_TERM Rator (c Rand) end
       fun RATOR_CONV c M =
         let val (Rator,Rand) = dest_comb M in AP_THM (c Rator) Rand end
       fun TRY_CONV c M = c M handle HOL_ERR _ => REFL M
-      fun THENC c1 c2 M = 
+      fun THENC c1 c2 M =
         let val th = c1 M in TRANS th (c2 (rhs (concl th))) end;
       fun EVERY_CONV convl = itlist THENC convl REFL
       fun CONV_RULE conv th = EQ_MP (conv(concl th)) th
       fun BETA_CONVS n =
-        if n = 1 then TRY_CONV BETA_CONV 
+        if n = 1 then TRY_CONV BETA_CONV
         else THENC (RATOR_CONV (BETA_CONVS (n-1))) (TRY_CONV BETA_CONV)
 in
-fun BETA_VAR v tm = 
- if is_abs tm 
+fun BETA_VAR v tm =
+ if is_abs tm
  then let val (Bvar,Body) = dest_abs tm
       in if v=Bvar then failwith "BETA_VAR: UNCHANGED"
          else ABS_CONV(BETA_VAR v Body) end
- else 
+ else
  case strip_comb tm
   of (_,[]) => failwith "BETA_VAR: UNCHANGED"
    | (oper,args) =>
@@ -1537,24 +1540,25 @@ fun BETA_VAR v tm =
 fun HO_PART_MATCH partfn th =
  let val sth = SPEC_ALL th
      val bod = concl sth
-     val pbod = partfn bod 
+     val pbod = partfn bod
      val possbetas = mapfilter (fn v => (v,BETA_VAR v bod)) (free_vars bod)
      fun finish_fn tyin ivs =
        let val npossbetas =
-            if null tyin then possbetas else map (inst tyin ## I) possbetas 
+            if null tyin then possbetas else map (inst tyin ## I) possbetas
        in if null npossbetas then Lib.I
           else CONV_RULE (EVERY_CONV (mapfilter (C assoc npossbetas) ivs))
        end
-     val lconsts = intersect (free_vars (concl th)) (free_varsl(hyp th)) 
+     val lconsts = HOLset.intersection (FVL [pbod], thm_hypfrees th)
+     val ltyconsts = HOLset.listItems (thm_hypfreetys th)
  in fn tm =>
-    let val (tmin,tyin) = ho_match_term lconsts pbod tm
+    let val (tmin,tyin) = ho_match_term ltyconsts lconsts pbod tm
         val th0 = INST tmin (INST_TYPE tyin sth)
         val th1 = finish_fn tyin (map #redex tmin) th0
         val th1c = concl th1
     in case match_bvs tm (partfn th1c) []
         of [] => th1
-         | bvms => let val tm1 = deep_alpha bvms th1c 
-                   in EQ_MP (ALPHA th1c tm1) th1 
+         | bvms => let val tm1 = deep_alpha bvms th1c
+                   in EQ_MP (ALPHA th1c tm1) th1
                    end
     end
  end
@@ -1568,14 +1572,14 @@ fun HO_MATCH_MP ith =
            val (ant,_) = dest_imp_only bod
        in case partition (C free_in ant) avs
            of (_,[]) => ith
-            | (svs,pvs) => 
+            | (svs,pvs) =>
               let val th1 = SPECL avs (ASSUME tm)
                   val th2 = GENL svs (DISCH ant (GENL pvs (UNDISCH th1)))
               in MP (DISCH tm th2) ith
               end
        end handle HOL_ERR _ => raise ERR "MATCH_MP" "Not an implication"
      val match_fun = HO_PART_MATCH (fst o dest_imp_only) sth
- in fn th => 
+ in fn th =>
      MP (match_fun (concl th)) th
      handle HOL_ERR _ => raise ERR "MATCH_MP" "No match"
  end;
@@ -1681,65 +1685,66 @@ fun HO_MATCH_MP ith =
 (* ---------------------------------------------------------------------*)
 
 
-local fun not_elim th = 
+local fun not_elim th =
        if is_neg(concl th) then (true, NOT_ELIM th) else (false,th)
-fun canon (fl,th) = 
-   let val w = concl th 
+fun canon (fl,th) =
+   let val w = concl th
    in
-   if is_conj w 
-     then let val (th1,th2) = CONJ_PAIR th 
-          in (canon(fl,th1) @ canon(fl,th2)) 
-          end else 
-   if is_imp w andalso not(is_neg w) then 
-     let val (ant,_) = dest_imp w 
+   if is_conj w
+     then let val (th1,th2) = CONJ_PAIR th
+          in (canon(fl,th1) @ canon(fl,th2))
+          end else
+   if is_imp w andalso not(is_neg w) then
+     let val (ant,_) = dest_imp w
      in if is_conj ant
-        then let val (conj1,conj2) = dest_conj ant 
-                 val cth = MP th (CONJ (ASSUME conj1) (ASSUME conj2)) 
-                 val th1 = DISCH conj2 cth 
-                 and th2 = DISCH conj1 cth 
+        then let val (conj1,conj2) = dest_conj ant
+                 val cth = MP th (CONJ (ASSUME conj1) (ASSUME conj2))
+                 val th1 = DISCH conj2 cth
+                 and th2 = DISCH conj1 cth
              in
                 canon(true,DISCH conj1 th1) @ canon(true,DISCH conj2 th2)
-             end else 
-        if is_disj ant 
-        then let val (disj1,disj2) = dest_disj ant 
-                 val ath = DISJ1 (ASSUME disj1) disj2 
-                 and bth = DISJ2 disj1 (ASSUME disj2) 
+             end else
+        if is_disj ant
+        then let val (disj1,disj2) = dest_disj ant
+                 val ath = DISJ1 (ASSUME disj1) disj2
+                 and bth = DISJ2 disj1 (ASSUME disj2)
                  val th1 = DISCH disj1 (MP th ath)
-                 and th2 = DISCH disj2 (MP th bth) 
+                 and th2 = DISCH disj2 (MP th bth)
              in
                  canon(true,th1) @ canon(true,th2)
-             end else 
-        if is_exists ant 
-        then let val (Bvar,Body) = dest_exists ant 
+             end else
+        if is_exists ant
+        then let val (Bvar,Body) = dest_exists ant
                  val newv = variant(thm_free_vars th) Bvar
-                 val newa = subst [Bvar |-> newv] Body 
+                 val newa = subst [Bvar |-> newv] Body
                  val th1  = MP th (EXISTS (ant,newv) (ASSUME newa))
              in
                canon(true,DISCH newa th1)
              end
         else map (GEN_ALL o (DISCH ant)) (canon (true,UNDISCH th))
-     end else 
-   if is_eq w andalso (type_of (rand w) = Type.bool) 
-   then let val (th1,th2) = EQ_IMP_RULE th 
+     end else
+   if is_eq w andalso (type_of (rand w) = Type.bool)
+   then let val (th1,th2) = EQ_IMP_RULE th
         in (if fl then [GEN_ALL th] else [])@canon(true,th1)@canon(true,th2)
-        end else 
-   if is_forall w then 
-     let val (vs,_) = strip_forall w 
-         val fvs = mk_set (free_varsl(hyp th) @ free_vars (concl th))
+        end else
+   if is_forall w then
+     let val (vs,_) = strip_forall w
+         val fvs = HOLset.listItems (HOLset.union(thm_hypfrees th,
+                                                        FVL [concl th]))
          val nvs = itlist (fn v => fn nv => variant (nv @ fvs) v::nv) vs []
-     in 
-        canon (fl, SPECL nvs th) 
-     end else 
-   if fl then [GEN_ALL th] else [] 
+     in
+        canon (fl, SPECL nvs th)
+     end else
+   if fl then [GEN_ALL th] else []
    end
 in
 fun RES_CANON th =
  let val conjlist = CONJUNCTS (SPEC_ALL th)
-     fun operate th accum = 
+     fun operate th accum =
           accum @ map GEN_ALL (canon (not_elim (SPEC_ALL th)))
      val imps = Lib.rev_itlist operate conjlist []
  in Lib.assert (op not o null) imps
- end handle HOL_ERR _ 
+ end handle HOL_ERR _
  => raise ERR "RES_CANON" "No implication is derivable from input thm"
 end;
 
@@ -1784,14 +1789,14 @@ end;
 (* ---------------------------------------------------------------------*)
 
 fun define_new_type_bijections{name,ABS,REP,tyax} =
-  if not(null (hyp tyax))
+  if not(HOLset.isEmpty (hypset tyax))
   then raise ERR "define_new_type_bijections"
                  "input theorem must have no assumptions"
-  else 
+  else
   let val (_,[P,rep]) = strip_comb(snd(dest_exists(concl tyax)))
       val (a,r) = Type.dom_rng (type_of rep)
   in boolSyntax.new_specification
-      {name=name, 
+      {name=name,
        sat_thm=MP(SPEC P (INST_TYPE[beta |-> a, alpha |-> r]ABS_REP_THM)) tyax,
        consts = [{const_name=REP, fixity=Prefix},
                  {const_name=ABS, fixity=Prefix}]}
@@ -1902,7 +1907,7 @@ fun prove_abs_fn_onto th =
        val thm2 = SYM bth1
        val (r,Body) = dest_forall(concl th2)
        val P = rator(lhs Body)
-       val ex = mk_exists(r, 
+       val ex = mk_exists(r,
                   mk_conj(mk_eq(bv_th1,mk_comb(A, r)), mk_comb(P, r)))
    in GEN bv_th1 (EXISTS(ex,rb) (CONJ thm2 thm1))
    end
@@ -1945,7 +1950,7 @@ fun prove_abs_fn_one_one th =
        val eq = mk_eq(mk_comb(A, r), mk_comb(A, r'))
        val v1 = genvar(type_of r)
        and v2 = genvar(type_of r)
-       val i1 = DISCH eq (SUBST [v1 |-> t1, v2 |-> t2] 
+       val i1 = DISCH eq (SUBST [v1 |-> t1, v2 |-> t2]
                             (mk_eq(v1,v2)) (AP_TERM R (ASSUME eq)))
        val i2    = DISCH r_eq_r' (AP_TERM A (ASSUME r_eq_r'))
        val thm   = IMP_ANTISYM_RULE i1 i2

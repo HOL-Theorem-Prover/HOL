@@ -32,7 +32,7 @@ fun add_assums asl =
 
 
 fun select_disch (h,th) =
-  if op_mem (curry Portable.pointer_eq) h (hyp th) then DISCH h th
+  if HOLset.member(hypset th, h) then DISCH h th
   else th;
 
 (* Only the variables appearing in the discharged hypothese should
@@ -51,10 +51,10 @@ fun impl_of x =
 
 
 
-fun head tm = 
+fun head tm =
   let val a = fst(strip_comb(lhs
                  (snd(strip_forall(Lib.trye hd (strip_conj tm))))))
-  in 
+  in
     fst(dest_var a handle HOL_ERR _ => dest_const a)
   end;
 
@@ -183,7 +183,7 @@ fun inst_hyp (h,thm) =
   handle HOL_ERR _ => thm
 ;
 
-fun import_fun inst thm = 
+fun import_fun inst thm =
   foldl inst_hyp thm inst
 ;
 
@@ -252,14 +252,14 @@ fun compute_cst_arg_map (fv,impargs) strm =
   S strm "      val inst_fun = inst_thm_fun (compute_inst_infos ctab P) in";
     NL strm
   end
-;  
+;
 
 fun export_param_theory () =
   let val defs = rev (map fst (definitions()))
       val thms = rev (map fst (theorems()))
       fun struct_line ppstrm thn =
             (S ppstrm thn; S ppstrm " = inst_fun "; S ppstrm thn)
-      fun sig_line ppstrm thn = 
+      fun sig_line ppstrm thn =
             (S ppstrm thn; S ppstrm " : thm")
       fun sep ppstrm () =
             (S ppstrm ",";

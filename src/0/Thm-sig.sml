@@ -17,7 +17,7 @@ sig
 
   type thm
   type tag      = Tag.tag
-  type term     = Term.term  
+  type term     = Term.term
   type hol_type = Type.hol_type
 
 
@@ -26,9 +26,12 @@ sig
 
   val tag           : thm -> tag
   val hyp           : thm -> term list
+  val hypset        : thm -> term HOLset.set
   val concl         : thm -> term
   val dest_thm      : thm -> term list * term
   val thm_frees     : thm -> term list
+  val thm_hypfrees  : thm -> term HOLset.set
+  val thm_hypfreetys: thm -> hol_type HOLset.set
 
 
   (* The primitive rules of inference *)
@@ -117,6 +120,6 @@ sig
 
   (* Fetching theorems from disk *)
 
-  val disk_thm      : term vector 
+  val disk_thm      : term vector
                        -> string * 'a frag list list * 'a frag list -> thm
 end;

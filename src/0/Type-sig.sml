@@ -48,6 +48,11 @@ sig
  val delta         : hol_type
 
  val type_subst    : (hol_type,hol_type) Lib.subst -> hol_type -> hol_type
+ val raw_match_type: hol_type list -> hol_type -> hol_type ->
+                     ((hol_type,hol_type)Lib.subst * hol_type list) ->
+                     ((hol_type,hol_type)Lib.subst * hol_type list)
  val match_type    : hol_type -> hol_type -> (hol_type,hol_type) Lib.subst
+ val match_typel   : hol_type list -> hol_type -> hol_type ->
+                     (hol_type,hol_type) Lib.subst
 
 end;

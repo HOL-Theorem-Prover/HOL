@@ -2625,12 +2625,7 @@ val ALL_EL_SEG = store_thm("ALL_EL_SEG",
       GEN_TAC THEN STRIP_TAC THEN REPEAT INDUCT_TAC
       THEN REWRITE_TAC[ADD,ADD_0,NOT_SUC_LESS_EQ_0,LESS_EQ_MONO,SEG,ALL_EL]
       THENL[
-        ASM_REWRITE_TAC[]
-        THEN RES_THEN
-            (ASSUME_TAC o
-             (REWRITE_RULE[ADD_CLAUSES]) o
-             (SPECL [(--`0`--),(--`m:num`--)]))
-        THEN DISCH_TAC THEN RES_TAC,
+        mesonLib.ASM_MESON_TAC [ADD_CLAUSES],
         let val lem = SPEC(--`k:num`--) (GEN (--`n:num`--)
             (SYM(TRANS (SPEC_ALL(CONJUNCT2 ADD)) (SPEC_ALL ADD_SUC))))
         in

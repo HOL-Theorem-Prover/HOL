@@ -1,9 +1,9 @@
-(* 
-  app load ["numLib", "pairTheory", 
+(*
+  app load ["numLib", "pairTheory",
             "schneiderUtils", "Temporal_LogicTheory"];
 *)
 
-open HolKernel Parse boolLib Rsyntax 
+open HolKernel Parse boolLib Rsyntax
      numLib numTheory prim_recTheory arithmeticTheory pairTheory
      schneiderUtils Temporal_LogicTheory;
 
@@ -84,7 +84,7 @@ val PBEFORE = new_infixr_definition("PBEFORE",
 
 val PALWAYS_INIT = TAC_PROOF(
 	([],--` (PALWAYS a) 0 = a 0 `--),
-	REWRITE_TAC[PALWAYS] 
+	REWRITE_TAC[PALWAYS]
 	THEN REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`(x<=0) = (x=0)`--))]
 	THEN REWRITE_TAC[ADD_CLAUSES]
 	THEN EQ_TAC THEN REPEAT STRIP_TAC
@@ -96,7 +96,7 @@ val PALWAYS_INIT = TAC_PROOF(
 
 val PEVENTUAL_INIT = TAC_PROOF(
 	([],--` (PEVENTUAL a) 0 = a 0 `--),
-	REWRITE_TAC[PEVENTUAL] 
+	REWRITE_TAC[PEVENTUAL]
 	THEN REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`(x<=0) = (x=0)`--))]
 	THEN REWRITE_TAC[ADD_CLAUSES]
 	THEN EQ_TAC THEN REPEAT STRIP_TAC
@@ -121,7 +121,7 @@ val PUNTIL_INIT = TAC_PROOF(
 	([],--` (a PUNTIL b) 0 = a 0 \/ b 0 `--),
 	REWRITE_TAC[PUNTIL] THEN EQ_TAC THEN REPEAT STRIP_TAC
 	THENL[
-	    DISJ1_TAC THEN POP_ASSUM MATCH_MP_TAC 
+	    DISJ1_TAC THEN POP_ASSUM MATCH_MP_TAC
 	    THEN REWRITE_TAC[LESS_EQ_REFL],
 	    IMP_RES_TAC(EQT_ELIM(ARITH_CONV(--`(x<=0) ==> (0=x)`--)))
 	    THEN POP_ASSUM SUBST1_TAC THEN ASM_REWRITE_TAC[],
@@ -150,7 +150,7 @@ val PWHEN_INIT = TAC_PROOF(
 	ONCE_REWRITE_TAC[TAC_PROOF(([],--`a\/~b = (a/\b)\/~b`--),PROP_TAC)]
 	THEN REWRITE_TAC[PWHEN] THEN EQ_TAC THEN REPEAT STRIP_TAC
 	THENL[
-	    DISJ2_TAC THEN POP_ASSUM MATCH_MP_TAC 
+	    DISJ2_TAC THEN POP_ASSUM MATCH_MP_TAC
 	    THEN REWRITE_TAC[LESS_EQ_REFL],
 	    IMP_RES_TAC(EQT_ELIM(ARITH_CONV(--`(x<=0) ==> (0=x)`--)))
 	    THEN POP_ASSUM SUBST1_TAC THEN ASM_REWRITE_TAC[],
@@ -168,7 +168,7 @@ val PSBEFORE_INIT = TAC_PROOF(
 	    IMP_RES_TAC(EQT_ELIM(ARITH_CONV(--`(x<=0) ==> (0=x)`--)))
 	    THEN POP_ASSUM SUBST1_TAC THEN ASM_REWRITE_TAC[],
 	    RES_TAC THEN UNDISCH_NO_TAC 2 THEN REWRITE_TAC[]
-	    THEN POP_NO_ASSUM 1 MATCH_MP_TAC 
+	    THEN POP_NO_ASSUM 1 MATCH_MP_TAC
 	    THEN REWRITE_TAC[LESS_EQ_REFL],
 	    EXISTS_TAC(--`0`--) THEN ASM_REWRITE_TAC[LESS_EQ_REFL]
 	    THEN REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`((0<=t)/\(t<=0)) = (t=0)`--))]
@@ -178,7 +178,7 @@ val PSBEFORE_INIT = TAC_PROOF(
 
 val PBEFORE_INIT = TAC_PROOF(
 	([],--` (a PBEFORE b) 0 = ~b 0`--),
-	REWRITE_TAC[PBEFORE] THEN EQ_TAC THEN STRIP_TAC 
+	REWRITE_TAC[PBEFORE] THEN EQ_TAC THEN STRIP_TAC
 	THENL[
 	    POP_ASSUM MATCH_MP_TAC THEN REWRITE_TAC[LESS_EQ_REFL],
 	    POP_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[LESS_EQ_REFL],
@@ -189,7 +189,7 @@ val PBEFORE_INIT = TAC_PROOF(
 
 
 val INITIALISATION = TAC_PROOF(
-	([],--` 
+	([],--`
 	( (PNEXT a) 0 = T ) /\
 	( (PSNEXT a) 0 = F ) /\
 	( (PALWAYS a) 0 = a 0 ) /\
@@ -199,7 +199,7 @@ val INITIALISATION = TAC_PROOF(
 	( (a PSBEFORE b) 0 = a 0 /\ ~b 0 ) /\
 	( (a PUNTIL b) 0 = a 0 \/ b 0 ) /\
 	( (a PWHEN b) 0 = a 0 \/ ~b 0 ) /\
-	( (a PBEFORE b) 0 = ~b 0 ) 
+	( (a PBEFORE b) 0 = ~b 0 )
 	`--),
 	REWRITE_TAC[PALWAYS_INIT,PEVENTUAL_INIT,
 		    PSUNTIL_INIT,PSWHEN_INIT,PSBEFORE_INIT,
@@ -219,7 +219,7 @@ val PEVENTUAL_REC = TAC_PROOF(
 	THEN INDUCT_TAC THEN REWRITE_TAC[PSNEXT,PRE,PEVENTUAL_INIT]
 	THEN REWRITE_TAC[NOT_LESS_0,EQT_ELIM(ARITH_CONV(--`~(0<0)`--))]
 	THEN REWRITE_TAC[NOT_LESS_0,EQT_ELIM(ARITH_CONV(--`0<SUC t`--))]
-	THEN REWRITE_TAC[PEVENTUAL]  
+	THEN REWRITE_TAC[PEVENTUAL]
 	THEN EQ_TAC THEN REPEAT STRIP_TAC
 	THENL[
 	    POP_NO_ASSUM 1 (fn x => DISJ_CASES_TAC(REWRITE_RULE[LESS_OR_EQ]x))
@@ -240,17 +240,17 @@ val PSUNTIL_REC = TAC_PROOF(
 	CONV_TAC (X_FUN_EQ_CONV(--`t:num`--)) THEN BETA_TAC
 	THEN INDUCT_TAC THEN REWRITE_TAC[PSNEXT,PRE,PSUNTIL_INIT]
 	THEN REWRITE_TAC[NOT_LESS_0,EQT_ELIM(ARITH_CONV(--`~(0<0)`--))]
-	THEN REWRITE_TAC[NOT_LESS_0,EQT_ELIM(ARITH_CONV(--`0<SUC t`--))] 
-	THEN REWRITE_TAC[PSUNTIL]  
+	THEN REWRITE_TAC[NOT_LESS_0,EQT_ELIM(ARITH_CONV(--`0<SUC t`--))]
+	THEN REWRITE_TAC[PSUNTIL]
 	THEN ONCE_REWRITE_TAC[TAC_PROOF(([],--`a\/b = a\/(~a/\b)`--),PROP_TAC)]
 	THEN EQ_TAC THEN REPEAT STRIP_TAC
 	THENL[
 	    POP_NO_ASSUM 2 (fn x=> DISJ_CASES_TAC(REWRITE_RULE[LESS_OR_EQ]x))
 	    THENL[
 		COPY_ASM_NO 1 THEN LEFT_FORALL_TAC (--`SUC t`--)
-		THEN DISCH_TAC THEN UNDISCH_NO_TAC 1 
+		THEN DISCH_TAC THEN UNDISCH_NO_TAC 1
 		THEN REWRITE_TAC[LESS_EQ_REFL] THEN ASM_REWRITE_TAC[]
-		THEN DISCH_TAC THEN ASM_REWRITE_TAC[] 
+		THEN DISCH_TAC THEN ASM_REWRITE_TAC[]
 		THEN EXISTS_TAC (--`delta:num`--)
 		THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV(--`delta<SUC t ==> delta<=t`--)))
 		THEN ASM_REWRITE_TAC[]
@@ -283,8 +283,8 @@ val PSWHEN_REC = TAC_PROOF(
 	CONV_TAC (X_FUN_EQ_CONV(--`t:num`--)) THEN BETA_TAC
 	THEN INDUCT_TAC THEN REWRITE_TAC[PSNEXT,PRE,PSWHEN_INIT]
 	THEN REWRITE_TAC[NOT_LESS_0,EQT_ELIM(ARITH_CONV(--`~(0<0)`--))]
-	THEN REWRITE_TAC[NOT_LESS_0,EQT_ELIM(ARITH_CONV(--`0<SUC t`--))] 
-	THEN REWRITE_TAC[PSWHEN]  
+	THEN REWRITE_TAC[NOT_LESS_0,EQT_ELIM(ARITH_CONV(--`0<SUC t`--))]
+	THEN REWRITE_TAC[PSWHEN]
 	THEN EQ_TAC THEN REPEAT STRIP_TAC
 	THENL[
 	    POP_NO_ASSUM 3 (fn x=> DISJ_CASES_TAC(REWRITE_RULE[LESS_OR_EQ]x))
@@ -317,9 +317,9 @@ val PSBEFORE_REC = TAC_PROOF(
 	CONV_TAC (X_FUN_EQ_CONV(--`t:num`--)) THEN BETA_TAC
 	THEN INDUCT_TAC THEN REWRITE_TAC[PSNEXT,PRE,PSBEFORE_INIT]
 	THEN REWRITE_TAC[NOT_LESS_0,EQT_ELIM(ARITH_CONV(--`~(0<0)`--))]
-	THEN REWRITE_TAC[NOT_LESS_0,EQT_ELIM(ARITH_CONV(--`0<SUC t`--))] 
+	THEN REWRITE_TAC[NOT_LESS_0,EQT_ELIM(ARITH_CONV(--`0<SUC t`--))]
 	THENL[PROP_TAC,ALL_TAC]
-	THEN REWRITE_TAC[PSBEFORE]  
+	THEN REWRITE_TAC[PSBEFORE]
 	THEN EQ_TAC THEN REPEAT STRIP_TAC
 	THENL[
 	    UNDISCH_HD_TAC THEN REWRITE_TAC[]
@@ -353,11 +353,11 @@ val PALWAYS_REC = TAC_PROOF(
 	CONV_TAC (X_FUN_EQ_CONV(--`t:num`--)) THEN BETA_TAC
 	THEN INDUCT_TAC THEN REWRITE_TAC[PNEXT,PRE,PALWAYS_INIT]
 	THEN REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`~(SUC t=0)`--))]
-	THEN REWRITE_TAC[PALWAYS]  
+	THEN REWRITE_TAC[PALWAYS]
 	THEN EQ_TAC THEN REPEAT STRIP_TAC
 	THENL[
 	    POP_ASSUM MATCH_MP_TAC THEN REWRITE_TAC[LESS_EQ_REFL],
-	    POP_NO_ASSUM 1 MATCH_MP_TAC 
+	    POP_NO_ASSUM 1 MATCH_MP_TAC
 	    THEN UNDISCH_HD_TAC THEN CONV_TAC ARITH_CONV,
 	    POP_NO_ASSUM 0 (fn x => DISJ_CASES_TAC(REWRITE_RULE[LESS_OR_EQ]x))
 	    THENL[
@@ -374,7 +374,7 @@ val PUNTIL_REC = TAC_PROOF(
 	THEN INDUCT_TAC THEN REWRITE_TAC[PNEXT,PRE,PUNTIL_INIT]
 	THEN REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`~(SUC t=0)`--))]
 	THENL[PROP_TAC,ALL_TAC]
-	THEN REWRITE_TAC[PUNTIL]  
+	THEN REWRITE_TAC[PUNTIL]
 	THEN EQ_TAC THEN REPEAT STRIP_TAC
 	THENL[
 	    (* -------------------- 1st goal ------------------	*)
@@ -389,31 +389,31 @@ val PUNTIL_REC = TAC_PROOF(
 	    THENL[ALL_TAC,POP_ASSUM (SUBST1_TAC o SYM) THEN ASM_REWRITE_TAC[]]
 	    THEN COPY_ASM_NO 1 THEN LEFT_FORALL_TAC (--`SUC t`--)
 	    THEN DISCH_TAC THEN UNDISCH_NO_TAC 1 THEN REWRITE_TAC[LESS_EQ_REFL]
-	    THEN ASM_REWRITE_TAC[] THEN DISCH_TAC THEN ASM_REWRITE_TAC[] 
-	    THEN DISJ2_TAC THEN EXISTS_TAC(--`delta:num`--) 
+	    THEN ASM_REWRITE_TAC[] THEN DISCH_TAC THEN ASM_REWRITE_TAC[]
+	    THEN DISJ2_TAC THEN EXISTS_TAC(--`delta:num`--)
 	    THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV(--`delta<SUC t ==> delta<=t`--)))
 	    THEN ASM_REWRITE_TAC[] THEN GEN_TAC THEN DISCH_TAC
 	    THEN POP_NO_ASSUM 3 MATCH_MP_TAC
-	    THEN ASM_REWRITE_TAC[] 
+	    THEN ASM_REWRITE_TAC[]
 	    THEN UNDISCH_HD_TAC THEN CONV_TAC ARITH_CONV,
 	    (* -------------------- 3rd goal ------------------	*)
-	    DISJ2_TAC THEN EXISTS_TAC (--`SUC t`--) 
+	    DISJ2_TAC THEN EXISTS_TAC (--`SUC t`--)
 	    THEN ASM_REWRITE_TAC[LESS_EQ_REFL]
 	    THEN REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`~(SUC t<x /\x<=SUC t)`--))],
 	    (* -------------------- 4th goal ------------------	*)
 	    DISJ1_TAC THEN GEN_TAC THEN REWRITE_TAC[LESS_OR_EQ]
 	    THEN STRIP_TAC
 	    THENL[
-		POP_NO_ASSUM 1 MATCH_MP_TAC 
+		POP_NO_ASSUM 1 MATCH_MP_TAC
 	    	THEN UNDISCH_HD_TAC THEN CONV_TAC ARITH_CONV,
 		ASM_REWRITE_TAC[]],
 	    (* -------------------- 5th goal ------------------	*)
-	    DISJ2_TAC 
+	    DISJ2_TAC
 	    THEN DISJ_CASES_TAC(SPEC(--`b(SUC t):bool`--)BOOL_CASES_AX)
 	    THENL[
 		EXISTS_TAC (--`SUC t`--) THEN ASM_REWRITE_TAC[LESS_EQ_REFL]
-	        THEN REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`~(SUC t<x /\x<=SUC t)`--))],		
-	    	EXISTS_TAC (--`delta:num`--) 
+	        THEN REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`~(SUC t<x /\x<=SUC t)`--))],
+	    	EXISTS_TAC (--`delta:num`--)
 	    	THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV(--`delta<=t ==> delta<=SUC t`--)))
 	    	THEN ASM_REWRITE_TAC[]
 	    	THEN GEN_TAC THEN REWRITE_TAC[LESS_OR_EQ]
@@ -435,7 +435,7 @@ val PWHEN_REC = TAC_PROOF(
 	THEN INDUCT_TAC THEN REWRITE_TAC[PNEXT,PRE,PWHEN_INIT]
 	THEN REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`~(SUC t=0)`--))]
 	THENL[PROP_TAC,ALL_TAC]
-	THEN REWRITE_TAC[PWHEN]  
+	THEN REWRITE_TAC[PWHEN]
 	THEN EQ_TAC THEN REPEAT STRIP_TAC
 	THENL[
 	    DISJ2_TAC THEN COPY_ASM_NO 0 THEN LEFT_FORALL_TAC (--`SUC t`--)
@@ -450,7 +450,7 @@ val PWHEN_REC = TAC_PROOF(
 	    THEN DISCH_TAC THEN UNDISCH_NO_TAC 1 THEN REWRITE_TAC[LESS_EQ_REFL]
 	    THEN ASM_REWRITE_TAC[]
 	    THEN DISCH_TAC THEN ASM_REWRITE_TAC[]
-	    THEN DISJ2_TAC THEN EXISTS_TAC(--`delta:num`--) 
+	    THEN DISJ2_TAC THEN EXISTS_TAC(--`delta:num`--)
 	    THEN ASM_REWRITE_TAC[LESS_EQ_REFL]
 	    THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV(--`delta<SUC t ==> delta<=t`--)))
 	    THEN POP_ASSUM REWRITE1_TAC
@@ -465,7 +465,7 @@ val PWHEN_REC = TAC_PROOF(
 		IMP_RES_TAC(EQT_ELIM(ARITH_CONV(--`t'<SUC t ==> t'<=t`--)))
 		THEN RES_TAC THEN ASM_REWRITE_TAC[],
 		ASM_REWRITE_TAC[]],
-	    DISJ2_TAC THEN EXISTS_TAC(--`delta:num`--) 
+	    DISJ2_TAC THEN EXISTS_TAC(--`delta:num`--)
 	    THEN ASM_REWRITE_TAC[LESS_EQ_REFL]
 	    THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV(--`delta<= t ==> delta<=SUC t`--)))
 	    THEN POP_ASSUM REWRITE1_TAC
@@ -500,14 +500,14 @@ val PBEFORE_REC = TAC_PROOF(
 	    (* -------------------- 4th goal ------------------	*)
 	    POP_NO_ASSUM 2 (fn x=> DISJ_CASES_TAC(REWRITE_RULE[LESS_OR_EQ]x))
 	    THENL[ALL_TAC,POP_ASSUM (SUBST1_TAC o SYM) THEN ASM_REWRITE_TAC[]]
-	    THEN DISJ2_TAC THEN DISJ2_TAC THEN EXISTS_TAC(--`delta:num`--) 
+	    THEN DISJ2_TAC THEN DISJ2_TAC THEN EXISTS_TAC(--`delta:num`--)
 	    THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV(--`delta<SUC t ==> delta<=t`--)))
 	    THEN ASM_REWRITE_TAC[] THEN GEN_TAC THEN DISCH_TAC
 	    THEN POP_NO_ASSUM 3 MATCH_MP_TAC
-	    THEN ASM_REWRITE_TAC[] 
+	    THEN ASM_REWRITE_TAC[]
 	    THEN UNDISCH_HD_TAC THEN CONV_TAC ARITH_CONV,
 	    (* -------------------- 5th goal ------------------	*)
-	    DISJ2_TAC THEN EXISTS_TAC (--`SUC t`--) 
+	    DISJ2_TAC THEN EXISTS_TAC (--`SUC t`--)
 	    THEN ASM_REWRITE_TAC[LESS_EQ_REFL]
 	    THEN REWRITE_TAC[EQT_ELIM(ARITH_CONV
 			(--`(SUC t<=x /\x<=SUC t)=(x=SUC t)`--))]
@@ -516,29 +516,29 @@ val PBEFORE_REC = TAC_PROOF(
 	    DISJ1_TAC THEN REWRITE_TAC[LESS_OR_EQ]
 	    THEN GEN_TAC THEN STRIP_TAC
 	    THENL[
-		POP_NO_ASSUM 1 MATCH_MP_TAC 
+		POP_NO_ASSUM 1 MATCH_MP_TAC
 	    	THEN UNDISCH_HD_TAC THEN CONV_TAC ARITH_CONV,
 		ASM_REWRITE_TAC[]],
 	    (* -------------------- 7th goal ------------------	*)
-	    DISJ2_TAC 
+	    DISJ2_TAC
 	    THEN DISJ_CASES_TAC(SPEC(--`a(SUC t):bool`--)BOOL_CASES_AX)
 	    THENL[
 		EXISTS_TAC (--`SUC t`--) THEN ASM_REWRITE_TAC[LESS_EQ_REFL]
 	    	THEN REWRITE_TAC[EQT_ELIM(ARITH_CONV
 			(--`(SUC t<=x /\x<=SUC t)=(x=SUC t)`--))]
 	    	THEN GEN_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[],
-	    	EXISTS_TAC (--`delta:num`--) 
+	    	EXISTS_TAC (--`delta:num`--)
 	    	THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV(--`delta<=t ==> delta<=SUC t`--)))
 	    	THEN ASM_REWRITE_TAC[]
 	    	THEN GEN_TAC THEN REWRITE_TAC[LESS_OR_EQ]
 	    	THEN STRIP_TAC
 	    	THENL[
 		    POP_NO_ASSUM 4 MATCH_MP_TAC THEN ASM_REWRITE_TAC[]
-	    	    THEN UNDISCH_HD_TAC THEN UNDISCH_HD_TAC 
+	    	    THEN UNDISCH_HD_TAC THEN UNDISCH_HD_TAC
 		    THEN CONV_TAC ARITH_CONV,
 		    ASM_REWRITE_TAC[],
 		    POP_NO_ASSUM 4 MATCH_MP_TAC THEN ASM_REWRITE_TAC[]
-	    	    THEN UNDISCH_HD_TAC THEN UNDISCH_HD_TAC 
+	    	    THEN UNDISCH_HD_TAC THEN UNDISCH_HD_TAC
 		    THEN CONV_TAC ARITH_CONV,
 		    ASM_REWRITE_TAC[]]
 		]
@@ -550,7 +550,7 @@ val PBEFORE_REC = TAC_PROOF(
 
 
 val RECURSION = TAC_PROOF(
-	([],--` 
+	([],--`
 	( ALWAYS a       = \t. (a t /\ NEXT (ALWAYS a) t) ) /\
 	( EVENTUAL a     = \t. (a t \/ NEXT (EVENTUAL a) t) ) /\
 	( (a SUNTIL b)   = \t. ~(b t) ==> a t /\ NEXT (a SUNTIL b) t ) /\
@@ -566,14 +566,14 @@ val RECURSION = TAC_PROOF(
 	( (a PSBEFORE b) = \t. ~b t /\ (a t \/ PSNEXT (a PSBEFORE b) t) ) /\
 	( (a PUNTIL b)   = \t. b t \/ a t /\ PNEXT (a PUNTIL b) t ) /\
 	( (a PWHEN b)    = \t. a t /\ b t \/ ~b t /\ PNEXT (a PWHEN b) t ) /\
-	( (a PBEFORE b)  = \t. ~b t /\ (a t \/ PNEXT (a PBEFORE b) t) ) 
+	( (a PBEFORE b)  = \t. ~b t /\ (a t \/ PNEXT (a PBEFORE b) t) )
 	`--),
-	REWRITE_TAC (map SYM 
+	REWRITE_TAC (map SYM
 			[PALWAYS_REC,PEVENTUAL_REC,
 		    	 PSUNTIL_REC,PSWHEN_REC,PSBEFORE_REC,
 		   	 PUNTIL_REC,PWHEN_REC,PBEFORE_REC])
 	THEN CONV_TAC(DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
-	THEN REWRITE_TAC (map SYM 
+	THEN REWRITE_TAC (map SYM
 			[ALWAYS_REC,EVENTUAL_REC,
 		   	 SUNTIL_REC,SWHEN_REC,SBEFORE_REC,
 		   	 UNTIL_REC,WHEN_REC,BEFORE_REC])
@@ -582,7 +582,7 @@ val RECURSION = TAC_PROOF(
 
 
 (*---------------------------------------------------------------------------
-        Fixpoints 
+        Fixpoints
  ---------------------------------------------------------------------------*)
 
 fun FIXPOINT_CHARACTERIZATION_TAC init_thm rec_thm (asm,g)=
@@ -592,7 +592,7 @@ fun FIXPOINT_CHARACTERIZATION_TAC init_thm rec_thm (asm,g)=
 	    THENL[
 		POP_ASSUM SUBST1_TAC THEN BETA_TAC
 		THEN REWRITE_TAC[init_thm,PSNEXT,PNEXT,ZERO_LEMMA],
-		POP_NO_ASSUM 1 SUBST1_TAC 
+		POP_NO_ASSUM 1 SUBST1_TAC
 		THEN ONCE_REWRITE_TAC[rec_thm]
 		THEN BETA_TAC THEN ASM_REWRITE_TAC[PNEXT,PSNEXT,PRE]
 		],
@@ -658,9 +658,9 @@ val FIXPOINTS = TAC_PROOF(
 	    ( (y = \t. ~b t /\ (a t \/ PSNEXT y t)) = (y = (a PSBEFORE b)) ) /\
 	    ( (y = \t. b t \/ a t /\ PNEXT y t) = (y = (a PUNTIL b)) ) /\
 	    ( (y = \t. a t /\ b t \/ ~b t /\ PNEXT y t) = (y = (a PWHEN b)) ) /\
-	    ( (y = \t. ~b t /\ (a t \/ PNEXT y t)) = (y = (a PBEFORE b)) ) 
+	    ( (y = \t. ~b t /\ (a t \/ PNEXT y t)) = (y = (a PBEFORE b)) )
 	`--),
-	REWRITE_TAC (map SYM 
+	REWRITE_TAC (map SYM
 		[
 		 ALWAYS_FIX,EVENTUAL_FIX,UNTIL_FIX,WHEN_FIX,SPEC_ALL BEFORE_FIX,
 		 PALWAYS_FIX,PEVENTUAL_FIX,
@@ -683,23 +683,23 @@ val FIXPOINTS = TAC_PROOF(
 val PAST_TEMP_TAC  =
 	INDUCT_TAC THENL[ALL_TAC,UNDISCH_HD_TAC]
 	THEN BETA_TAC
-	THEN REWRITE_TAC[INITIALISATION] 
-	THEN BETA_TAC 
-	THEN REWRITE_TAC (map (fn x => BETA_RULE(AP_THM x (--`SUC t`--))) 
+	THEN REWRITE_TAC[INITIALISATION]
+	THEN BETA_TAC
+	THEN REWRITE_TAC (map (fn x => BETA_RULE(AP_THM x (--`SUC t`--)))
 			      (CONJUNCTS RECURSION))
 	THEN BETA_TAC
 	THEN REWRITE_TAC[PNEXT,PSNEXT,ZERO_LEMMA,PRE]
 	THEN (PROP_TAC ORELSE ALL_TAC);
 
-	
+
 
 val PAST_TEMP_TAC2  =
 	SPEC_TAC((--`t:num`--),(--`t:num`--))
 	THEN INDUCT_TAC THENL[ALL_TAC,UNDISCH_HD_TAC]
 	THEN BETA_TAC
-	THEN REWRITE_TAC[INITIALISATION] 
-	THEN BETA_TAC 
-	THEN REWRITE_TAC (map (fn x => BETA_RULE(AP_THM x (--`SUC t`--))) 
+	THEN REWRITE_TAC[INITIALISATION]
+	THEN BETA_TAC
+	THEN REWRITE_TAC (map (fn x => BETA_RULE(AP_THM x (--`SUC t`--)))
 			      (CONJUNCTS RECURSION))
 	THEN BETA_TAC
 	THEN REWRITE_TAC[PNEXT,PSNEXT,ZERO_LEMMA,PRE]
@@ -732,7 +732,7 @@ val PUNTIL_EXPRESSIVE = TAC_PROOF(
 	    ( (a PWHEN b)    = \t. ((\t. ~b t) PUNTIL (\t. a t /\ b t)) t ) /\
 	    ( (a PSWHEN b)   = \t. ~((\t. ~a t \/ ~b t) PUNTIL (\t. ~a t /\ b t)) t ) /\
 	    ( (a PBEFORE b)  = \t. ((\t. ~b t) PUNTIL (\t. a t /\ ~b t)) t  ) /\
-	    ( (a PSBEFORE b) = \t. ~ ((\t. ~a t) PUNTIL b) t  ) 
+	    ( (a PSBEFORE b) = \t. ~ ((\t. ~a t) PUNTIL b) t  )
 	`--),
 	CONV_TAC(DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
 	THEN REPEAT CONJ_TAC THEN PAST_TEMP_TAC );
@@ -747,7 +747,7 @@ val PWHEN_EXPRESSIVE = TAC_PROOF(
 	    ( (a PUNTIL b)   = \t. (b PWHEN (\t. a t ==> b t)) t  ) /\
 	    ( (a PSWHEN b)   = \t. ~((\t. ~a t) PWHEN b) t ) /\
 	    ( (a PBEFORE b)  = \t. ((\t. ~b t) PWHEN (\t. a t \/ b t)) t  ) /\
-	    ( (a PSBEFORE b) = \t. ~(b PWHEN (\t. a t \/ b t)) t  ) 
+	    ( (a PSBEFORE b) = \t. ~(b PWHEN (\t. a t \/ b t)) t  )
 	`--),
 	CONV_TAC(DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
 	THEN REPEAT CONJ_TAC THEN PAST_TEMP_TAC );
@@ -854,7 +854,7 @@ val SBEFORE_AS_SUNTIL1 = TAC_PROOF(
 	THEN DISJ_CASES_TAC(SPEC(--`a:num->bool`--)(GEN(--`b:num->bool`--)DELTA_CASES))
 	THEN RES_TAC
 	THEN LEFT_EXISTS_TAC THEN EXISTS_TAC(--`d:num`--)
-	THEN ASM_REWRITE_TAC[]  
+	THEN ASM_REWRITE_TAC[]
 	THEN MY_MP_TAC (--`d<=delta`--)
 	THENL[
 	    SUBST1_TAC(EQT_ELIM(ARITH_CONV(--`d<=delta = ~(delta<d)`--)))
@@ -889,9 +889,9 @@ val SUNTIL_EXPRESSIVE = TAC_PROOF(
 	    ( (a SBEFORE b) = \t. ((\t. ~b t) SUNTIL (\t. a t /\ ~b t)) t )
 	`--),
 	    REWRITE_TAC[ALWAYS_AS_SUNTIL,EVENTUAL_AS_SUNTIL,
-			BEFORE_AS_SUNTIL,SWHEN_AS_SUNTIL,SBEFORE_AS_SUNTIL1] 
+			BEFORE_AS_SUNTIL,SWHEN_AS_SUNTIL,SBEFORE_AS_SUNTIL1]
 	    THEN CONV_TAC(DEPTH_CONV ETA_CONV) THEN REWRITE_TAC[]
-	    THEN REWRITE_TAC[UNTIL_AS_BEFORE1, WHEN_AS_UNTIL, NOT_SUNTIL] 
+	    THEN REWRITE_TAC[UNTIL_AS_BEFORE1, WHEN_AS_UNTIL, NOT_SUNTIL]
 	    THEN BETA_TAC THEN REWRITE_TAC[]
 	    THEN CONV_TAC(DEPTH_CONV ETA_CONV) THEN REWRITE_TAC[DE_MORGAN_THM]
 	    THEN REWRITE_TAC[TAC_PROOF(([],--`b/\(~a\/~b)=~a/\b`--),PROP_TAC)]);
@@ -912,7 +912,7 @@ val SWHEN_EXPRESSIVE = TAC_PROOF(
 	    REWRITE_TAC[ALWAYS_AS_SWHEN,EVENTUAL_AS_SWHEN,
 			SBEFORE_AS_SWHEN,SUNTIL_AS_SWHEN,
 			UNTIL_AS_WHEN,BEFORE_AS_WHEN,
-			(SYM WHEN_AS_NOT_SWHEN)] 
+			(SYM WHEN_AS_NOT_SWHEN)]
 	    THEN CONV_TAC(DEPTH_CONV ETA_CONV) THEN REWRITE_TAC[]
 	    THEN CONV_TAC FUN_EQ_CONV THEN BETA_TAC
 	    THEN REWRITE_TAC[NOT_SWHEN]);
@@ -932,8 +932,8 @@ val SBEFORE_EXPRESSIVE = TAC_PROOF(
 	    REWRITE_TAC[ALWAYS_AS_SBEFORE,EVENTUAL_AS_SBEFORE,
 			SWHEN_AS_SBEFORE,SUNTIL_AS_SBEFORE1,
 			UNTIL_AS_WHEN,BEFORE_AS_WHEN,
-			(SYM WHEN_AS_NOT_SWHEN)] 
-	    THEN CONV_TAC(DEPTH_CONV ETA_CONV) 
+			(SYM WHEN_AS_NOT_SWHEN)]
+	    THEN CONV_TAC(DEPTH_CONV ETA_CONV)
 	    THEN REWRITE_TAC[NOT_SBEFORE,WHEN_AS_UNTIL]
 	    THEN BETA_TAC
 	    THEN REWRITE_TAC[TAC_PROOF(([],--`b/\(a==>b)=b`--),PROP_TAC)]
@@ -941,7 +941,7 @@ val SBEFORE_EXPRESSIVE = TAC_PROOF(
 	    THEN ONCE_REWRITE_TAC[MORE_EVENT] THEN BETA_TAC
 	    THEN REWRITE_TAC[TAC_PROOF(([],--`~(a==>b)/\~b=a/\~b`--),PROP_TAC)]
 	    THEN REWRITE_TAC[TAC_PROOF(([],--`~(a\/b)/\~(a/\~b)=~b/\~(a/\~b)`--),PROP_TAC)]
-	    THEN CONV_TAC(DEPTH_CONV ETA_CONV) 
+	    THEN CONV_TAC(DEPTH_CONV ETA_CONV)
 	    THEN REWRITE_TAC[]);
 
 
@@ -953,12 +953,12 @@ val UNTIL_EXPRESSIVE = TAC_PROOF(
 	    ( (a WHEN b)    = \t. ((\t. ~b t) UNTIL (\t. a t /\ b t)) t ) /\
 	    ( (a SWHEN b)   = \t. ~((\t. ~a t \/ ~b t) UNTIL (\t. ~a t /\ b t)) t ) /\
 	    ( (a BEFORE b)  = \t. ((\t. ~b t) UNTIL (\t. a t /\ ~b t)) t  ) /\
-	    ( (a SBEFORE b) = \t. ~ ((\t. ~a t) UNTIL b) t  ) 
+	    ( (a SBEFORE b) = \t. ~ ((\t. ~a t) UNTIL b) t  )
 	`--),
 	    REWRITE_TAC[ALWAYS_AS_UNTIL,EVENTUAL_AS_UNTIL,
-			SBEFORE_AS_UNTIL,WHEN_AS_UNTIL,BEFORE_AS_UNTIL1] 
+			SBEFORE_AS_UNTIL,WHEN_AS_UNTIL,BEFORE_AS_UNTIL1]
 	    THEN CONV_TAC(DEPTH_CONV ETA_CONV) THEN REWRITE_TAC[]
-	    THEN REWRITE_TAC[SUNTIL_AS_SBEFORE1, SWHEN_AS_SUNTIL, NOT_UNTIL] 
+	    THEN REWRITE_TAC[SUNTIL_AS_SBEFORE1, SWHEN_AS_SUNTIL, NOT_UNTIL]
 	    THEN BETA_TAC THEN REWRITE_TAC[]
 	    THEN CONV_TAC(DEPTH_CONV ETA_CONV) THEN REWRITE_TAC[DE_MORGAN_THM]
 	    THEN REWRITE_TAC[TAC_PROOF(([],--`b/\(~a\/~b)=~a/\b`--),PROP_TAC)]);
@@ -973,12 +973,12 @@ val WHEN_EXPRESSIVE = TAC_PROOF(
 	    ( (a UNTIL b)   = \t. (b WHEN (\t. a t ==> b t)) t  ) /\
 	    ( (a SWHEN b)   = \t. ~((\t. ~a t) WHEN b) t ) /\
 	    ( (a BEFORE b)  = \t. ((\t. ~b t) WHEN (\t. a t \/ b t)) t  ) /\
-	    ( (a SBEFORE b) = \t. ~(b WHEN (\t. a t \/ b t)) t  ) 
+	    ( (a SBEFORE b) = \t. ~(b WHEN (\t. a t \/ b t)) t  )
 	`--),
 	    REWRITE_TAC[ALWAYS_AS_WHEN,EVENTUAL_AS_WHEN,
 			BEFORE_AS_WHEN,UNTIL_AS_WHEN,
 			SUNTIL_AS_SWHEN,SBEFORE_AS_SWHEN,
-			(SYM SWHEN_AS_NOT_WHEN)] 
+			(SYM SWHEN_AS_NOT_WHEN)]
 	    THEN CONV_TAC(DEPTH_CONV ETA_CONV) THEN REWRITE_TAC[]
 	    THEN CONV_TAC FUN_EQ_CONV THEN BETA_TAC
 	    THEN REWRITE_TAC[NOT_WHEN]);
@@ -998,8 +998,8 @@ val BEFORE_EXPRESSIVE = TAC_PROOF(
 	    REWRITE_TAC[ALWAYS_AS_BEFORE,EVENTUAL_AS_BEFORE,
 			UNTIL_AS_BEFORE1,WHEN_AS_UNTIL,
 			SUNTIL_AS_SWHEN,SBEFORE_AS_SWHEN,
-			(SYM SWHEN_AS_NOT_WHEN)] 
-	    THEN CONV_TAC(DEPTH_CONV ETA_CONV) 
+			(SYM SWHEN_AS_NOT_WHEN)]
+	    THEN CONV_TAC(DEPTH_CONV ETA_CONV)
 	    THEN REWRITE_TAC[NOT_BEFORE,SWHEN_AS_SUNTIL]
 	    THEN BETA_TAC
 	    THEN REWRITE_TAC[TAC_PROOF(([],--`b/\(a==>b)=b`--),PROP_TAC)]
@@ -1008,7 +1008,7 @@ val BEFORE_EXPRESSIVE = TAC_PROOF(
 	    THEN REWRITE_TAC[TAC_PROOF(([],--`~(a==>b)/\~b=a/\~b`--),PROP_TAC)]
 	    THEN REWRITE_TAC[TAC_PROOF(([],--`~(a\/b)/\~(a/\~b)=~b/\~(a/\~b)`--),PROP_TAC)]
 	    THEN REWRITE_TAC[TAC_PROOF(([],--`b/\~(a/\b)=~a/\b`--),PROP_TAC)]
-	    THEN CONV_TAC(DEPTH_CONV ETA_CONV) 
+	    THEN CONV_TAC(DEPTH_CONV ETA_CONV)
 	    THEN REWRITE_TAC[]
 	);
 
@@ -1019,10 +1019,10 @@ val BEFORE_EXPRESSIVE = TAC_PROOF(
 
 
 val NEGATION_NORMAL_FORM = TAC_PROOF(
-	([],--` 
+	([],--`
 	 (~(NEXT a) t       = (NEXT (\t. ~a t)) t)		/\
-	 (~(ALWAYS a) t     = (EVENTUAL (\t. ~a t)) t)		/\ 
-	 (~(EVENTUAL a) t   = (ALWAYS (\t. ~a t)) t)		/\ 
+	 (~(ALWAYS a) t     = (EVENTUAL (\t. ~a t)) t)		/\
+	 (~(EVENTUAL a) t   = (ALWAYS (\t. ~a t)) t)		/\
 	 (~(a WHEN b) t     = ((\t. ~a t) SWHEN b) t)		/\
          (~(a UNTIL b) t    = ((\t. ~a t) SBEFORE b) t) 	/\
          (~(a BEFORE b) t   = ((\t. ~a t) SUNTIL b) t)		/\
@@ -1031,27 +1031,27 @@ val NEGATION_NORMAL_FORM = TAC_PROOF(
          (~(a SBEFORE b) t  = ((\t. ~a t) UNTIL b) t)		/\
 	 (~(PNEXT a) t      = (PSNEXT (\t. ~a t)) t)		/\
 	 (~(PSNEXT a) t     = (PNEXT (\t. ~a t)) t)		/\
-	 (~(PALWAYS a) t    = (PEVENTUAL (\t. ~a t)) t)		/\ 
-	 (~(PEVENTUAL a) t  = (PALWAYS (\t. ~a t)) t)		/\ 
+	 (~(PALWAYS a) t    = (PEVENTUAL (\t. ~a t)) t)		/\
+	 (~(PEVENTUAL a) t  = (PALWAYS (\t. ~a t)) t)		/\
 	 (~(a PWHEN b) t    = ((\t. ~a t) PSWHEN b) t)		/\
          (~(a PUNTIL b) t   = ((\t. ~a t) PSBEFORE b) t) 	/\
          (~(a PBEFORE b) t  = ((\t. ~a t) PSUNTIL b) t)		/\
 	 (~(a PSWHEN b) t   = ((\t. ~a t) PWHEN b) t)		/\
          (~(a PSUNTIL b) t  = ((\t. ~a t) PBEFORE b) t) 	/\
-         (~(a PSBEFORE b) t = ((\t. ~a t) PUNTIL b) t)	
+         (~(a PSBEFORE b) t = ((\t. ~a t) PUNTIL b) t)
 	`--),
 	let val past_nnf_thm =  TAC_PROOF(
-	([],--` 
+	([],--`
 	 (~(PNEXT a) t      = (PSNEXT (\t. ~a t)) t)		/\
 	 (~(PSNEXT a) t     = (PNEXT (\t. ~a t)) t)		/\
-	 (~(PALWAYS a) t    = (PEVENTUAL (\t. ~a t)) t)		/\ 
-	 (~(PEVENTUAL a) t  = (PALWAYS (\t. ~a t)) t)		/\ 
+	 (~(PALWAYS a) t    = (PEVENTUAL (\t. ~a t)) t)		/\
+	 (~(PEVENTUAL a) t  = (PALWAYS (\t. ~a t)) t)		/\
 	 (~(a PWHEN b) t    = ((\t. ~a t) PSWHEN b) t)		/\
          (~(a PUNTIL b) t   = ((\t. ~a t) PSBEFORE b) t) 	/\
          (~(a PBEFORE b) t  = ((\t. ~a t) PSUNTIL b) t)		/\
 	 (~(a PSWHEN b) t   = ((\t. ~a t) PWHEN b) t)		/\
          (~(a PSUNTIL b) t  = ((\t. ~a t) PBEFORE b) t) 	/\
-         (~(a PSBEFORE b) t = ((\t. ~a t) PUNTIL b) t)	
+         (~(a PSBEFORE b) t = ((\t. ~a t) PUNTIL b) t)
 	`--),
 	PAST_TEMP_TAC2
 	THEN REWRITE_TAC[PSNEXT,PNEXT,PRE,EQT_ELIM(ARITH_CONV(--`(0<t)=~(t=0)`--))]
@@ -1065,13 +1065,13 @@ val NEGATION_NORMAL_FORM = TAC_PROOF(
 	THEN REWRITE_TAC[NEXT] THEN BETA_TAC
 	THEN REWRITE_TAC[]
 	end);
-	    
 
 
 
 
-val past_cnf_thm = TAC_PROOF( 
-    ([],--` 
+
+val past_cnf_thm = TAC_PROOF(
+    ([],--`
      ((PNEXT (\t. a t /\ b t)) t      = (PNEXT a) t     /\ (PNEXT b) t)		/\
      ((PSNEXT (\t. a t /\ b t)) t     = (PSNEXT a) t    /\ (PSNEXT b) t)	/\
      ((PALWAYS (\t. a t /\ b t)) t    = (PALWAYS a) t   /\ (PALWAYS b) t)	/\
@@ -1079,18 +1079,18 @@ val past_cnf_thm = TAC_PROOF(
      (((\t. a t /\ b t) PSWHEN c) t   = (a PSWHEN c) t  /\ (b PSWHEN c) t)	/\
      (((\t. a t /\ b t) PUNTIL c) t   = (a PUNTIL c) t  /\ (b PUNTIL c) t)	/\
      (((\t. a t /\ b t) PSUNTIL c) t  = (a PSUNTIL c) t /\ (b PSUNTIL c) t)	/\
-     ((c PBEFORE (\t. a t \/ b t)) t  = (c PBEFORE a) t /\ (c PBEFORE b) t)	/\ 
+     ((c PBEFORE (\t. a t \/ b t)) t  = (c PBEFORE a) t /\ (c PBEFORE b) t)	/\
      ((c PSBEFORE (\t. a t \/ b t)) t = (c PSBEFORE a) t /\ (c PSBEFORE b) t)
     `--),
     SPEC_TAC((--`t:num`--),(--`t:num`--))
     THEN INDUCT_TAC THENL[ALL_TAC,UNDISCH_HD_TAC]
     THEN BETA_TAC
     THEN REWRITE_TAC[INITIALISATION]
-    THEN REWRITE_TAC(map (fn x => BETA_RULE(AP_THM x (--`SUC t`--))) 
+    THEN REWRITE_TAC(map (fn x => BETA_RULE(AP_THM x (--`SUC t`--)))
 			 (CONJUNCTS RECURSION))
     THEN BETA_TAC
     THEN REWRITE_TAC[PNEXT,PSNEXT,ZERO_LEMMA,PRE,
-		     EQT_ELIM(ARITH_CONV(--`(0<t)=~(t=0)`--))] 
+		     EQT_ELIM(ARITH_CONV(--`(0<t)=~(t=0)`--))]
     THEN BETA_TAC
     THENL[
         PROP_TAC,
@@ -1106,16 +1106,16 @@ val past_cnf_thm = TAC_PROOF(
 
 
 
-val future_cnf_thm = TAC_PROOF( 
-    ([],--` 
+val future_cnf_thm = TAC_PROOF(
+    ([],--`
      ((NEXT (\t. a t /\ b t)) t       = (NEXT a) t      /\ (NEXT b) t)		/\
      ((ALWAYS (\t. a t /\ b t)) t     = (ALWAYS a) t    /\ (ALWAYS b) t)	/\
      (((\t. a t /\ b t) WHEN c) t     = (a WHEN c) t    /\ (b WHEN c) t)	/\
      (((\t. a t /\ b t) SWHEN c) t    = (a SWHEN c) t   /\ (b SWHEN c) t)	/\
      (((\t. a t /\ b t) UNTIL c) t    = (a UNTIL c) t   /\ (b UNTIL c) t)	/\
      (((\t. a t /\ b t) SUNTIL c) t   = (a SUNTIL c) t  /\ (b SUNTIL c) t)	/\
-     ((c SBEFORE (\t. a t \/ b t)) t  = (c SBEFORE a) t /\ (c SBEFORE b) t) 	
-    `--),		
+     ((c SBEFORE (\t. a t \/ b t)) t  = (c SBEFORE a) t /\ (c SBEFORE b) t)
+    `--),
 	REWRITE_TAC[past_cnf_thm]
 	THEN REWRITE_TAC[NEXT,ALWAYS] THEN BETA_TAC
 	THEN REWRITE_TAC[] THEN CONV_TAC(DEPTH_CONV FORALL_AND_CONV)
@@ -1123,7 +1123,7 @@ val future_cnf_thm = TAC_PROOF(
 
 
 	THEN REWRITE_TAC[WHEN_SIGNAL,SWHEN_SIGNAL,UNTIL_SIGNAL,SUNTIL_SIGNAL,SBEFORE_SIGNAL]
-	THEN BETA_TAC 
+	THEN BETA_TAC
 	THEN CONV_TAC(DEPTH_CONV NOT_EXISTS_CONV)
 	THEN REPEAT STRIP_TAC
 	THEN EQ_TAC THEN REPEAT STRIP_TAC
@@ -1185,7 +1185,7 @@ val before_cnf_thm = TAC_PROOF(
 					(--`(delta<d) \/ (delta=d) \/(d<delta)`--)))
 		THENL[ALL_TAC,POP_ASSUM DISJ_CASES_TAC]
 	    	THENL[EXISTS_TAC(--`delta:num`--),
-			EXISTS_TAC(--`d:num`--) 
+			EXISTS_TAC(--`d:num`--)
 			THEN POP_ASSUM (fn x => RULE_ASSUM_TAC(REWRITE_RULE[x])),
 			EXISTS_TAC(--`d:num`--)]
 	    	THEN RES_TAC THEN ASM_REWRITE_TAC[]
@@ -1203,7 +1203,7 @@ val before_cnf_thm = TAC_PROOF(
 					(--`(delta<d) \/ (delta=d) \/(d<delta)`--)))
 		THENL[ALL_TAC,POP_ASSUM DISJ_CASES_TAC]
 	    	THENL[EXISTS_TAC(--`delta:num`--),
-			EXISTS_TAC(--`d:num`--) 
+			EXISTS_TAC(--`d:num`--)
 			THEN POP_ASSUM (fn x => RULE_ASSUM_TAC(REWRITE_RULE[x])),
 			EXISTS_TAC(--`d:num`--)]
 	    	THEN RES_TAC THEN ASM_REWRITE_TAC[]
@@ -1213,20 +1213,20 @@ val before_cnf_thm = TAC_PROOF(
 		EXISTS_TAC(--`delta:num`--) THEN ASM_REWRITE_TAC[]
 	    	THEN REPEAT STRIP_TAC THEN RES_TAC]
 	]);
-	    
 
 
 
-	   
+
+
 val CONJUNCTIVE_NORMAL_FORM = TAC_PROOF(
-	([],--` 
+	([],--`
 	 ((NEXT (\t. a t /\ b t))       = \t. (NEXT a) t      /\ (NEXT b) t)	  /\
 	 ((ALWAYS (\t. a t /\ b t))     = \t. (ALWAYS a) t    /\ (ALWAYS b) t)	  /\
 	 (((\t. a t /\ b t) WHEN c)     = \t. (a WHEN c) t    /\ (b WHEN c) t)	  /\
 	 (((\t. a t /\ b t) SWHEN c)    = \t. (a SWHEN c) t   /\ (b SWHEN c) t)	  /\
          (((\t. a t /\ b t) UNTIL c)    = \t. (a UNTIL c) t   /\ (b UNTIL c) t)	  /\
          (((\t. a t /\ b t) SUNTIL c)   = \t. (a SUNTIL c) t  /\ (b SUNTIL c) t)  /\
-         ((c BEFORE (\t. a t \/ b t))   = \t. (c BEFORE a) t  /\ (c BEFORE b) t)  /\ 
+         ((c BEFORE (\t. a t \/ b t))   = \t. (c BEFORE a) t  /\ (c BEFORE b) t)  /\
          ((c SBEFORE (\t. a t \/ b t))  = \t. (c SBEFORE a) t /\ (c SBEFORE b) t) /\
 	 ((PNEXT (\t. a t /\ b t))      = \t. (PNEXT a) t     /\ (PNEXT b) t)	  /\
 	 ((PSNEXT (\t. a t /\ b t))     = \t. (PSNEXT a) t    /\ (PSNEXT b) t)	  /\
@@ -1235,16 +1235,16 @@ val CONJUNCTIVE_NORMAL_FORM = TAC_PROOF(
 	 (((\t. a t /\ b t) PSWHEN c)   = \t. (a PSWHEN c) t  /\ (b PSWHEN c) t)  /\
          (((\t. a t /\ b t) PUNTIL c)   = \t. (a PUNTIL c) t  /\ (b PUNTIL c) t)  /\
          (((\t. a t /\ b t) PSUNTIL c)  = \t. (a PSUNTIL c) t /\ (b PSUNTIL c) t) /\
-         ((c PBEFORE (\t. a t \/ b t))  = \t. (c PBEFORE a) t /\ (c PBEFORE b) t) /\ 
+         ((c PBEFORE (\t. a t \/ b t))  = \t. (c PBEFORE a) t /\ (c PBEFORE b) t) /\
          ((c PSBEFORE (\t. a t \/ b t)) = \t. (c PSBEFORE a) t /\ (c PSBEFORE b) t)
 	`--),
 	CONV_TAC(DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
 	THEN REWRITE_TAC[past_cnf_thm,future_cnf_thm,before_cnf_thm]
 	);
-	    
-	   
+
+
 val DISJUNCTIVE_NORMAL_FORM = TAC_PROOF(
-	([],--` 
+	([],--`
 	 ((NEXT (\t. a t \/ b t))       = \t. (NEXT a) t      \/ (NEXT b) t)	   /\
 	 ((EVENTUAL (\t. a t \/ b t))   = \t. (EVENTUAL a) t  \/ (EVENTUAL b) t)   /\
 	 (((\t. a t \/ b t) WHEN c)     = \t. (a WHEN c) t    \/ (b WHEN c) t)	   /\
@@ -1260,26 +1260,26 @@ val DISJUNCTIVE_NORMAL_FORM = TAC_PROOF(
          ((a PUNTIL (\t. b t \/ c t))   = \t. (a PUNTIL b) t   \/ (a PUNTIL c) t)  /\
          ((a PSUNTIL (\t. b t \/ c t))  = \t. (a PSUNTIL b) t  \/ (a PSUNTIL c) t) /\
          (((\t. a t \/ b t) PBEFORE c)  = \t. (a PBEFORE c) t  \/ (b PBEFORE c) t) /\
-         (((\t. a t \/ b t) PSBEFORE c) = \t. (a PSBEFORE c) t \/ (b PSBEFORE c) t) 
+         (((\t. a t \/ b t) PSBEFORE c) = \t. (a PSBEFORE c) t \/ (b PSBEFORE c) t)
 	`--),
 	CONV_TAC(DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
 	THEN ONCE_REWRITE_TAC[TAC_PROOF(([],--`(a=b)=(~a=~b)`--),PROP_TAC)]
 	THEN REWRITE_TAC[NEGATION_NORMAL_FORM] THEN BETA_TAC
 	THEN REWRITE_TAC[DE_MORGAN_THM,NEGATION_NORMAL_FORM] THEN BETA_TAC
 	THEN REWRITE_TAC
-		(map (fn x => BETA_RULE(AP_THM (SYM x) (--`n:num`--))) 
+		(map (fn x => BETA_RULE(AP_THM (SYM x) (--`n:num`--)))
      		     (CONJUNCTS CONJUNCTIVE_NORMAL_FORM))
 	THEN BETA_TAC THEN REWRITE_TAC[]
 	);
-	    
-	    
+
+
 
 (*---------------------------------------------------------------------------
-        Simplification theorems 
+        Simplification theorems
  ---------------------------------------------------------------------------*)
 
 val SIMPLIFY = TAC_PROOF(
-	([],--` 
+	([],--`
 	 (NEXT (\t.F)		 = \t.F) /\
 	 (NEXT (\t.T)		 = \t.T) /\
 	 (ALWAYS (\t.T)		 = \t.T) /\
@@ -1370,7 +1370,7 @@ val SIMPLIFY = TAC_PROOF(
 
 
 val MORE_EVENT = TAC_PROOF(
-	([],--` 
+	([],--`
 	 ((a WHEN b) 	 = ((\t. a t /\ b t) WHEN b)		) /\
      	 ((a UNTIL b)	 = ((\t. a t /\ ~(b t)) UNTIL b)	) /\
     	 ((a BEFORE b) 	 = ((\t. a t /\ ~(b t)) BEFORE b)	) /\
@@ -1390,7 +1390,7 @@ val MORE_EVENT = TAC_PROOF(
 
 
 val IMMEDIATE_EVENT = TAC_PROOF(
-	([],--` 
+	([],--`
 	   b t ==>
 		((a WHEN b) t     = a t) 	/\
      		((a UNTIL b) t    = T) 		/\
@@ -1408,7 +1408,7 @@ val IMMEDIATE_EVENT = TAC_PROOF(
          	((a PSUNTIL b) t  = T)	 	/\
          	((a PSBEFORE b) t = F)	 	/\
          	((b PSBEFORE a) t = ~a t) `--),
-	DISCH_TAC 
+	DISCH_TAC
 	THEN ONCE_REWRITE_TAC[RECURSION] THEN BETA_TAC THEN ASM_REWRITE_TAC[]
 	THEN ONCE_REWRITE_TAC[RECURSION] THEN BETA_TAC THEN ASM_REWRITE_TAC[]);
 
@@ -1416,7 +1416,7 @@ val IMMEDIATE_EVENT = TAC_PROOF(
 val NO_FUTURE_EVENT = NO_EVENT;
 
 val NO_PAST_EVENT = TAC_PROOF(
-	([],--` 
+	([],--`
 	   (PALWAYS (\t. ~b t)) t ==>
 	 	((a PWHEN b) t    = T)				/\
          	((a PUNTIL b) t   = (PALWAYS a) t)	 	/\
@@ -1432,7 +1432,7 @@ val NO_PAST_EVENT = TAC_PROOF(
 val SOME_FUTURE_EVENT = SOME_EVENT;
 
 val SOME_PAST_EVENT = TAC_PROOF(
-	([],--` 
+	([],--`
 	   (PEVENTUAL b) t ==>
 	 	((a PWHEN b) t    = (a PSWHEN b) t)		/\
          	((a PUNTIL b) t   = (a PSUNTIL b) t)	 	/\
@@ -1444,7 +1444,7 @@ val SOME_PAST_EVENT = TAC_PROOF(
 
 
 (*---------------------------------------------------------------------------
-      Separation theorems 
+      Separation theorems
  ---------------------------------------------------------------------------*)
 
 
@@ -1453,8 +1453,8 @@ val PBEFORE_WRAP = BETA_RULE(AP_THM PBEFORE_REC (--`t:num`--));
 
 val NEXT_AND_PNEXT_SEPARATE = TAC_PROOF(
 	([], --`(NEXT (\t. a t /\ PNEXT b t))
-		= 
-		\t. (b t /\ NEXT a t) 
+		=
+		\t. (b t /\ NEXT a t)
 	`--),
 	CONV_TAC(X_FUN_EQ_CONV (--`t:num`--)) THEN GEN_TAC
 	THEN REWRITE_TAC[NEXT,PNEXT] THEN BETA_TAC
@@ -1467,8 +1467,8 @@ val NEXT_AND_PNEXT_SEPARATE = TAC_PROOF(
 
 val NEXT_AND_PSNEXT_SEPARATE = TAC_PROOF(
 	([], --`(NEXT (\t. a t /\ PSNEXT b t))
-		= 
-		\t. (b t /\ NEXT a t) 
+		=
+		\t. (b t /\ NEXT a t)
 	`--),
 	CONV_TAC(X_FUN_EQ_CONV (--`t:num`--)) THEN GEN_TAC
 	THEN REWRITE_TAC[NEXT,PSNEXT] THEN BETA_TAC
@@ -1481,8 +1481,8 @@ val NEXT_AND_PSNEXT_SEPARATE = TAC_PROOF(
 
 val NEXT_AND_PSUNTIL_SEPARATE = TAC_PROOF(
 	([], --`(NEXT (\t. a t /\ (b PSUNTIL c) t))
-		= 
-		\t. NEXT(\t. a t /\ c t) t \/  
+		=
+		\t. NEXT(\t. a t /\ c t) t \/
 		    (b PSUNTIL c) t /\ NEXT(\t. a t /\ b t) t
 	`--),
 	CONV_TAC(X_FUN_EQ_CONV (--`t:num`--)) THEN GEN_TAC THEN BETA_TAC
@@ -1492,7 +1492,7 @@ val NEXT_AND_PSUNTIL_SEPARATE = TAC_PROOF(
 		(SPECL[(--`\t:num. a t /\ b t /\ PSNEXT (b PSUNTIL c) t`--),
 		       (--`\t:num. a t /\ c t`--)]
 		      OR_NEXT))
-	THEN BETA_TAC 
+	THEN BETA_TAC
 	THEN REWRITE_TAC[TAC_PROOF(([],--`a/\b/\c = (a/\b)/\c`--),PROP_TAC)]
 	THEN SUBST1_TAC(BETA_RULE
 		(SPECL[(--`(b PSUNTIL c)`--),
@@ -1505,19 +1505,19 @@ val NEXT_AND_PSUNTIL_SEPARATE = TAC_PROOF(
 
 val NEXT_AND_PBEFORE_SEPARATE = TAC_PROOF(
 	([], --`(NEXT (\t. a t /\ (b PBEFORE c) t))
-		= 
-		\t. NEXT(\t. a t /\ b t /\ ~c t) t \/  
+		=
+		\t. NEXT(\t. a t /\ b t /\ ~c t) t \/
 		    (b PBEFORE c) t /\ NEXT(\t. a t /\ ~c t) t
 	`--),
 	CONV_TAC(X_FUN_EQ_CONV (--`t:num`--)) THEN GEN_TAC THEN BETA_TAC
 	THEN CONV_TAC(LHS_CONV(REWRITE_CONV[PBEFORE_WRAP]))
-	THEN REWRITE_TAC[TAC_PROOF(([],--`a/\~c/\(b\/d) 
+	THEN REWRITE_TAC[TAC_PROOF(([],--`a/\~c/\(b\/d)
 					= (a/\b/\~c) \/ ((a/\~c)/\d)`--),PROP_TAC)]
 	THEN SUBST1_TAC(BETA_RULE
 		(SPECL[(--`\t:num. (a t /\ ~(c t)) /\ PNEXT (b PBEFORE c) t`--),
 		       (--`\t:num. a t /\ b t /\ ~(c t)`--)]
 		      OR_NEXT))
-	THEN BETA_TAC 
+	THEN BETA_TAC
 	THEN SUBST1_TAC(BETA_RULE
 		(SPECL[(--`(b PBEFORE c)`--),
 		       (--`\t:num. a t /\ ~c t`--)]
@@ -1529,8 +1529,8 @@ val NEXT_AND_PBEFORE_SEPARATE = TAC_PROOF(
 
 val NEXT_OR_PNEXT_SEPARATE = TAC_PROOF(
 	([], --`(NEXT (\t. a t \/ PNEXT b t))
-		= 
-		\t. (b t \/ NEXT a t) 
+		=
+		\t. (b t \/ NEXT a t)
 	`--),
 	CONV_TAC(X_FUN_EQ_CONV (--`t:num`--)) THEN GEN_TAC THEN BETA_TAC
 	THEN REWRITE_TAC[NEXT,PNEXT] THEN BETA_TAC
@@ -1543,8 +1543,8 @@ val NEXT_OR_PNEXT_SEPARATE = TAC_PROOF(
 
 val NEXT_OR_PSNEXT_SEPARATE = TAC_PROOF(
 	([], --`(NEXT (\t. a t \/ PSNEXT b t))
-		= 
-		\t. (b t \/ NEXT a t) 
+		=
+		\t. (b t \/ NEXT a t)
 	`--),
 	CONV_TAC(X_FUN_EQ_CONV (--`t:num`--)) THEN GEN_TAC THEN BETA_TAC
 	THEN REWRITE_TAC[NEXT,PSNEXT] THEN BETA_TAC
@@ -1557,8 +1557,8 @@ val NEXT_OR_PSNEXT_SEPARATE = TAC_PROOF(
 
 val NEXT_OR_PSUNTIL_SEPARATE = TAC_PROOF(
 	([], --`(NEXT (\t. a t \/ (b PSUNTIL c) t))
-		= 
-		\t. NEXT(\t. a t \/ c t) t \/  
+		=
+		\t. NEXT(\t. a t \/ c t) t \/
 		    (b PSUNTIL c) t /\ NEXT b t
 	`--),
 	CONV_TAC(X_FUN_EQ_CONV (--`t:num`--)) THEN GEN_TAC THEN BETA_TAC
@@ -1568,7 +1568,7 @@ val NEXT_OR_PSUNTIL_SEPARATE = TAC_PROOF(
 		(SPECL[(--`\t:num. b t /\ PSNEXT (b PSUNTIL c) t`--),
 		       (--`\t:num. a t \/ c t`--)]
 		      OR_NEXT))
-	THEN BETA_TAC 
+	THEN BETA_TAC
 	THEN SUBST1_TAC(BETA_RULE
 		(SPECL[(--`(b PSUNTIL c)`--),
 		       (--`b:num->bool`--)]
@@ -1580,19 +1580,19 @@ val NEXT_OR_PSUNTIL_SEPARATE = TAC_PROOF(
 
 val NEXT_OR_PBEFORE_SEPARATE = TAC_PROOF(
 	([], --`(NEXT (\t. a t \/ (b PBEFORE c) t))
-		= 
-		\t. NEXT(\t. a t \/ ~c t) t /\  
+		=
+		\t. NEXT(\t. a t \/ ~c t) t /\
 		    ((b PBEFORE c) t \/ NEXT (\t. a t \/ b t) t)
 	`--),
 	CONV_TAC(X_FUN_EQ_CONV (--`t:num`--)) THEN GEN_TAC THEN BETA_TAC
 	THEN CONV_TAC(LHS_CONV(REWRITE_CONV[PBEFORE_WRAP]))
-	THEN REWRITE_TAC[TAC_PROOF(([],--`a\/~c/\(b\/d) 
+	THEN REWRITE_TAC[TAC_PROOF(([],--`a\/~c/\(b\/d)
 					= (a\/~c) /\ ((a\/b)\/d)`--),PROP_TAC)]
 	THEN SUBST1_TAC(BETA_RULE
 		(SPECL[(--`\t:num. (a t \/ b t) \/ PNEXT (b PBEFORE c) t`--),
 		       (--`\t:num. a t \/ ~c t`--)]
 		      AND_NEXT))
-	THEN BETA_TAC 
+	THEN BETA_TAC
 	THEN SUBST1_TAC(BETA_RULE
 		(SPECL[(--`(b PBEFORE c)`--),
 		       (--`\t:num. a t \/ b t`--)]
@@ -1607,26 +1607,26 @@ val NEXT_OR_PBEFORE_SEPARATE = TAC_PROOF(
 
 
 val SUNTIL_AND_SEPARATE = TAC_PROOF(
-	([], --`((\t. a t /\ b t) SUNTIL c) = 
+	([], --`((\t. a t /\ b t) SUNTIL c) =
 		  \t. (a SUNTIL c) t /\ (b SUNTIL c) t`--),
 	CONV_TAC(X_FUN_EQ_CONV (--`t0:num`--)) THEN GEN_TAC
 	THEN REWRITE_TAC[SUNTIL_SIGNAL] THEN BETA_TAC
 	THEN EQ_TAC THEN REPEAT STRIP_TAC
 	THENL[
 	    EXISTS_TAC(--`delta:num`--) THEN ASM_REWRITE_TAC[]
-	    THEN GEN_TAC THEN DISCH_TAC THEN RES_TAC 
+	    THEN GEN_TAC THEN DISCH_TAC THEN RES_TAC
 	    THEN ASM_REWRITE_TAC[],
 	    EXISTS_TAC(--`delta:num`--) THEN ASM_REWRITE_TAC[]
-	    THEN GEN_TAC THEN DISCH_TAC THEN RES_TAC 
+	    THEN GEN_TAC THEN DISCH_TAC THEN RES_TAC
 	    THEN ASM_REWRITE_TAC[],
-	    MY_MP_TAC (--`delta'=(delta:num)`--) 
+	    MY_MP_TAC (--`delta'=(delta:num)`--)
 	    THENL[
 		REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`(a=b) = ~((a<b) \/ (b<a))`--))]
 		THEN STRIP_TAC THEN RES_TAC,
 		DISCH_TAC]
 	    THEN POP_ASSUM(fn x=>RULE_ASSUM_TAC(REWRITE_RULE[x]))
 	    THEN EXISTS_TAC(--`delta:num`--) THEN ASM_REWRITE_TAC[]
-	    THEN GEN_TAC THEN DISCH_TAC THEN RES_TAC 
+	    THEN GEN_TAC THEN DISCH_TAC THEN RES_TAC
 	    THEN ASM_REWRITE_TAC[]
 	    ]);
 
@@ -1635,9 +1635,9 @@ val SUNTIL_AND_SEPARATE = TAC_PROOF(
 
 val SUNTIL_AND_PNEXT_SEPARATE = TAC_PROOF(
 	([], --`(a SUNTIL (\t. b t /\ PNEXT c t))
-		= 
-		\t. (b t /\ PNEXT c t) 
-		    \/ 
+		=
+		\t. (b t /\ PNEXT c t)
+		    \/
 		    (a SUNTIL (\t. a t /\ c t /\ NEXT b t)) t
 	`--),
 	CONV_TAC(X_FUN_EQ_CONV (--`t:num`--)) THEN GEN_TAC
@@ -1645,15 +1645,15 @@ val SUNTIL_AND_PNEXT_SEPARATE = TAC_PROOF(
 	THEN BETA_TAC
 	THEN REWRITE_TAC[TAC_PROOF(([],--`(a\/b) = ~a==>b`--),PROP_TAC)]
 	THEN MATCH_MP_TAC(TAC_PROOF(
-			([],--` (b ==> (a=c)) 
+			([],--` (b ==> (a=c))
 				==>
 				((b ==> a) = (b ==> c)) `--),PROP_TAC))
-	THEN REWRITE_TAC[DE_MORGAN_THM] 
-	THEN REWRITE_TAC[NEXT,PNEXT,SUNTIL_SIGNAL,DE_MORGAN_THM] THEN BETA_TAC 
+	THEN REWRITE_TAC[DE_MORGAN_THM]
+	THEN REWRITE_TAC[NEXT,PNEXT,SUNTIL_SIGNAL,DE_MORGAN_THM] THEN BETA_TAC
 	THEN REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`~(x + SUC y = 0)`--))]
 	THEN REWRITE_TAC[ADD_CLAUSES,PRE]
 	THEN REWRITE_TAC[TAC_PROOF(([],--`a/\~(a/\c/\b) = a/\(c==>~b)`--),PROP_TAC)]
-	THEN DISCH_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC 
+	THEN DISCH_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC
 	THENL[
 	    (* ------------------------------------------------------------------------	*)
 	    EXISTS_TAC(--`delta:num`--) THEN ASM_REWRITE_TAC[]
@@ -1673,7 +1673,7 @@ val SUNTIL_AND_PNEXT_SEPARATE = TAC_PROOF(
 			    ==> p'<SUC p''' `--)))
 		THEN ASM_REWRITE_TAC[]
 		THEN STRIP_TAC,
-		LEFT_NO_FORALL_TAC 4 (--`p:num`--) THEN UNDISCH_HD_TAC 
+		LEFT_NO_FORALL_TAC 4 (--`p:num`--) THEN UNDISCH_HD_TAC
 		THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV(--`(delta=0+(p+1)) ==> p<delta`--)))
 		THEN ASM_REWRITE_TAC[ADD_CLAUSES,ONE]
 		THEN STRIP_TAC
@@ -1684,13 +1684,13 @@ val SUNTIL_AND_PNEXT_SEPARATE = TAC_PROOF(
 	    THEN LEFT_NO_FORALL_TAC 4 (--`0`--) THEN UNDISCH_HD_TAC
 	    THEN ASM_REWRITE_TAC[ADD_CLAUSES] THEN STRIP_TAC,
 	    (* ------------------------------------------------------------------------	*)
-	    EXISTS_TAC(--`delta:num`--) THEN ASM_REWRITE_TAC[]	    
+	    EXISTS_TAC(--`delta:num`--) THEN ASM_REWRITE_TAC[]
 	    THEN DISJ_CASES_TAC(EQT_ELIM(ARITH_CONV(--`(delta=0)\/(0<delta)`--)))
 	    THENL[ASM_REWRITE_TAC[ADD_CLAUSES,EQT_ELIM(ARITH_CONV(--`~(x<0)`--))],ALL_TAC]
 	    THEN GEN_TAC THEN DISCH_TAC THEN RES_TAC
-	    THEN ASM_REWRITE_TAC[TAC_PROOF(([],--`~(b/\c)=(c==>~b)`--),PROP_TAC)]	    
+	    THEN ASM_REWRITE_TAC[TAC_PROOF(([],--`~(b/\c)=(c==>~b)`--),PROP_TAC)]
 	    THEN MAP_EVERY POP_NO_TAC [10,7,6,3,2,1,0]
-	    THEN UNDISCH_NO_TAC 1 
+	    THEN UNDISCH_NO_TAC 1
 	    THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV
 			(--`(x<delta) ==> (SUC(x+t) = delta+t) \/ (SUC x < delta)`--)))
 	    THEN DISCH_TAC THEN LEFT_NO_FORALL_TAC 1 (--`t:num`--)
@@ -1702,9 +1702,9 @@ val SUNTIL_AND_PNEXT_SEPARATE = TAC_PROOF(
 
 val SUNTIL_AND_PSNEXT_SEPARATE = TAC_PROOF(
 	([], --`(a SUNTIL (\t. b t /\ PSNEXT c t))
-		= 
-		\t. (b t /\ PSNEXT c t) 
-		    \/ 
+		=
+		\t. (b t /\ PSNEXT c t)
+		    \/
 		    (a SUNTIL (\t. a t /\ c t /\ NEXT b t)) t
 	`--),
 	CONV_TAC(X_FUN_EQ_CONV (--`t:num`--)) THEN GEN_TAC
@@ -1712,15 +1712,15 @@ val SUNTIL_AND_PSNEXT_SEPARATE = TAC_PROOF(
 	THEN BETA_TAC
 	THEN REWRITE_TAC[TAC_PROOF(([],--`(a\/b) = ~a==>b`--),PROP_TAC)]
 	THEN MATCH_MP_TAC(TAC_PROOF(
-			([],--` (b ==> (a=c)) 
+			([],--` (b ==> (a=c))
 				==>
 				((b ==> a) = (b ==> c)) `--),PROP_TAC))
-	THEN REWRITE_TAC[DE_MORGAN_THM] 
-	THEN REWRITE_TAC[NEXT,PSNEXT,SUNTIL_SIGNAL,DE_MORGAN_THM] THEN BETA_TAC 
+	THEN REWRITE_TAC[DE_MORGAN_THM]
+	THEN REWRITE_TAC[NEXT,PSNEXT,SUNTIL_SIGNAL,DE_MORGAN_THM] THEN BETA_TAC
 	THEN REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`0<x + SUC y`--))]
 	THEN REWRITE_TAC[ADD_CLAUSES,PRE]
 	THEN REWRITE_TAC[TAC_PROOF(([],--`a/\~(a/\c/\b) = a/\(c==>~b)`--),PROP_TAC)]
-	THEN DISCH_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC 
+	THEN DISCH_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC
 	THENL[
 	    (* ------------------------------------------------------------------------	*)
 	    EXISTS_TAC(--`delta:num`--) THEN ASM_REWRITE_TAC[]
@@ -1740,7 +1740,7 @@ val SUNTIL_AND_PSNEXT_SEPARATE = TAC_PROOF(
 			    ==> p'<SUC p''' `--)))
 		THEN ASM_REWRITE_TAC[]
 		THEN STRIP_TAC,
-		LEFT_NO_FORALL_TAC 4 (--`p:num`--) THEN UNDISCH_HD_TAC 
+		LEFT_NO_FORALL_TAC 4 (--`p:num`--) THEN UNDISCH_HD_TAC
 		THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV(--`(delta=0+(p+1)) ==> p<delta`--)))
 		THEN ASM_REWRITE_TAC[ADD_CLAUSES,ONE]
 		THEN STRIP_TAC
@@ -1751,13 +1751,13 @@ val SUNTIL_AND_PSNEXT_SEPARATE = TAC_PROOF(
 	    THEN LEFT_NO_FORALL_TAC 4 (--`0`--) THEN UNDISCH_HD_TAC
 	    THEN ASM_REWRITE_TAC[ADD_CLAUSES] THEN STRIP_TAC,
 	    (* ------------------------------------------------------------------------	*)
-	    EXISTS_TAC(--`delta:num`--) THEN ASM_REWRITE_TAC[]	    
+	    EXISTS_TAC(--`delta:num`--) THEN ASM_REWRITE_TAC[]
 	    THEN DISJ_CASES_TAC(EQT_ELIM(ARITH_CONV(--`(delta=0)\/(0<delta)`--)))
 	    THENL[ASM_REWRITE_TAC[ADD_CLAUSES,EQT_ELIM(ARITH_CONV(--`~(x<0)`--))],ALL_TAC]
 	    THEN GEN_TAC THEN DISCH_TAC THEN RES_TAC
-	    THEN ASM_REWRITE_TAC[TAC_PROOF(([],--`~(b/\c)=(c==>~b)`--),PROP_TAC)]	    
+	    THEN ASM_REWRITE_TAC[TAC_PROOF(([],--`~(b/\c)=(c==>~b)`--),PROP_TAC)]
 	    THEN MAP_EVERY POP_NO_TAC [10,7,6,3,2,1,0]
-	    THEN UNDISCH_NO_TAC 1 
+	    THEN UNDISCH_NO_TAC 1
 	    THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV
 			(--`(x<delta) ==> (SUC(x+t) = delta+t) \/ (SUC x < delta)`--)))
 	    THEN DISCH_TAC THEN LEFT_NO_FORALL_TAC 1 (--`t:num`--)
@@ -1769,8 +1769,8 @@ val SUNTIL_AND_PSNEXT_SEPARATE = TAC_PROOF(
 
 val SUNTIL_OR_PNEXT_SEPARATE = TAC_PROOF(
 	([], --`((\t. a t \/ PNEXT b t) SUNTIL c)
-		= 
-		\t. (c t) \/ 
+		=
+		\t. (c t) \/
 		    (a t \/ PNEXT b t) /\ ((\t. b t \/ NEXT a t ) SUNTIL (NEXT c)) t
 	`--),
 	CONV_TAC(X_FUN_EQ_CONV (--`t:num`--)) THEN GEN_TAC
@@ -1789,8 +1789,8 @@ val SUNTIL_OR_PNEXT_SEPARATE = TAC_PROOF(
 
 val SUNTIL_OR_PSNEXT_SEPARATE = TAC_PROOF(
 	([], --`((\t. a t \/ PSNEXT b t) SUNTIL c)
-		= 
-		\t. (c t) \/ 
+		=
+		\t. (c t) \/
 		    (a t \/ PSNEXT b t) /\ ((\t. b t \/ NEXT a t ) SUNTIL (NEXT c)) t
 	`--),
 	CONV_TAC(X_FUN_EQ_CONV (--`t:num`--)) THEN GEN_TAC
@@ -1829,7 +1829,7 @@ val BEFORE_OR_RIGHT_SEPARATE = TAC_PROOF(
 					(--`(delta<d) \/ (delta=d) \/(d<delta)`--)))
 		THENL[ALL_TAC,POP_ASSUM DISJ_CASES_TAC]
 	    	THENL[EXISTS_TAC(--`delta:num`--),
-			EXISTS_TAC(--`d:num`--) 
+			EXISTS_TAC(--`d:num`--)
 			THEN POP_ASSUM (fn x => RULE_ASSUM_TAC(REWRITE_RULE[x])),
 			EXISTS_TAC(--`d:num`--)]
 	    	THEN RES_TAC THEN ASM_REWRITE_TAC[]
@@ -1847,7 +1847,7 @@ val BEFORE_OR_RIGHT_SEPARATE = TAC_PROOF(
 					(--`(delta<d) \/ (delta=d) \/(d<delta)`--)))
 		THENL[ALL_TAC,POP_ASSUM DISJ_CASES_TAC]
 	    	THENL[EXISTS_TAC(--`delta:num`--),
-			EXISTS_TAC(--`d:num`--) 
+			EXISTS_TAC(--`d:num`--)
 			THEN POP_ASSUM (fn x => RULE_ASSUM_TAC(REWRITE_RULE[x])),
 			EXISTS_TAC(--`d:num`--)]
 	    	THEN RES_TAC THEN ASM_REWRITE_TAC[]
@@ -1857,7 +1857,7 @@ val BEFORE_OR_RIGHT_SEPARATE = TAC_PROOF(
 		EXISTS_TAC(--`delta:num`--) THEN ASM_REWRITE_TAC[]
 	    	THEN REPEAT STRIP_TAC THEN RES_TAC]
 	]);
-	    
+
 
 
 val SUNTIL_OR_SEPARATE = TAC_PROOF(
@@ -1876,7 +1876,7 @@ val MAX_EXISTS = TAC_PROOF(
 		==>
 		(?x. t1<=x /\ x<=t2 /\ phi x)
 		==>
-		(?xmax. 
+		(?xmax.
 			t1<=xmax /\ xmax<=t2 /\ phi xmax /\
 			(!y. xmax<y /\ y<=t2 ==> ~phi y))`--),
 	DISCH_TAC
@@ -1888,10 +1888,10 @@ val MAX_EXISTS = TAC_PROOF(
 			(--`x<=t2 ==> (t2-(t2-x) = x)`--)))
 	    THEN ASM_REWRITE_TAC[],
 	    STRIP_TAC]
-	THEN STRIP_TAC 
+	THEN STRIP_TAC
 	THEN MY_MP_TAC (--`?y. y<=t2-t1 /\ ~psi y `--)
 	THENL[
-	    EXISTS_TAC (--`t2-x:num`--) 
+	    EXISTS_TAC (--`t2-x:num`--)
 	    THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV
 			(--`t1<=x /\ x<=t2 ==> (t2 - x <= t2 - t1)`--)))
 	    THEN ASM_REWRITE_TAC[] THEN RES_TAC,
@@ -1900,7 +1900,7 @@ val MAX_EXISTS = TAC_PROOF(
 	THEN UNDISCH_HD_TAC THEN ASM_REWRITE_TAC[]
 	THEN REWRITE_TAC[TAC_PROOF(([],--`a==>~(b/\~c) = a/\b==>c`--),PROP_TAC)]
 	THEN STRIP_TAC THEN EXISTS_TAC (--`t2-n`--)
-	THEN REPEAT STRIP_TAC 
+	THEN REPEAT STRIP_TAC
 	THENL[
 	    MAP_EVERY UNDISCH_NO_TAC [8,6,5,2] THEN CONV_TAC ARITH_CONV,
 	    MAP_EVERY UNDISCH_NO_TAC [8,6,5,2] THEN CONV_TAC ARITH_CONV,
@@ -1921,7 +1921,7 @@ val MAX_EXISTS = TAC_PROOF(
 
 val SUNTIL_AND_PSUNTIL_SEPARATE = TAC_PROOF(
 	([], --`(a SUNTIL (\t. b t /\ (c PSUNTIL d) t))
-		= 
+		=
 		\t. (c PSUNTIL d) t /\ ((\t. a t /\ NEXT c t) SUNTIL b) t \/
 		    (a SUNTIL (\t. d t /\ ((\t. a t /\ NEXT c t) SUNTIL b) t)) t
 	`--),
@@ -1940,20 +1940,20 @@ val SUNTIL_AND_PSUNTIL_SEPARATE = TAC_PROOF(
 		(* delta<=t holds, so we take the first disjunct, i.e. we must prove 	*)
 		(* (c PSUNTIL d) /\ c /\ (a /\ NEXT c) SUNTIL b				*)
 		(* --------------------------------------------------------------------	*)
-		DISJ1_TAC THEN REPEAT STRIP_TAC	
+		DISJ1_TAC THEN REPEAT STRIP_TAC
 		THENL[
 		    (* --------- prove that (c PSUNTIL d) t holds ---------------------	*)
 		    EXISTS_TAC(--`delta:num`--) THEN ASM_REWRITE_TAC[]
 		    THEN GEN_TAC THEN DISCH_TAC
 		    THEN POP_NO_ASSUM 3 MATCH_MP_TAC THEN ASM_REWRITE_TAC[]
-		    THEN UNDISCH_HD_TAC THEN UNDISCH_NO_TAC 5 THEN CONV_TAC ARITH_CONV, 
+		    THEN UNDISCH_HD_TAC THEN UNDISCH_NO_TAC 5 THEN CONV_TAC ARITH_CONV,
 		    (* ------- prove that ((a /\ NEXT c) SUNTIL b) holds --------------	*)
-		    EXISTS_TAC(--`t1:num`--) THEN ASM_REWRITE_TAC[]	
+		    EXISTS_TAC(--`t1:num`--) THEN ASM_REWRITE_TAC[]
 		    THEN GEN_TAC THEN STRIP_TAC THEN RES_TAC THEN ASM_REWRITE_TAC[]
 		    THEN LEFT_NO_FORALL_TAC 10 (--`SUC(t2)`--) THEN UNDISCH_HD_TAC
 		    THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV(--`(t2<t1)==>(SUC(t2)<=t1)`--)))
 		    THEN IMP_RES_TAC LESS_EQ_TRANS
-		    THEN ASM_REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`(delta<SUC t2) = (delta<=t2)`--))] 
+		    THEN ASM_REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`(delta<SUC t2) = (delta<=t2)`--))]
 		    THEN STRIP_TAC
 		    ],
 		(* --------------------------------------------------------------------	*)
@@ -1966,7 +1966,7 @@ val SUNTIL_AND_PSUNTIL_SEPARATE = TAC_PROOF(
 		THENL[
 		    EXISTS_TAC(--`t1:num`--) THEN ASM_REWRITE_TAC[]
 		    THEN REPEAT STRIP_TAC THEN IMP_RES_TAC LESS_EQ_TRANS
-		    THEN RES_TAC 
+		    THEN RES_TAC
 		    THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV(--`(x<=y)==>(x<SUC y)`--)))
 		    THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV(--`(x<y)==>(SUC x<= y)`--)))
 		    THEN RES_TAC,
@@ -1975,16 +1975,17 @@ val SUNTIL_AND_PSUNTIL_SEPARATE = TAC_PROOF(
 		    ]
 	    ],
 	    (* ------------------------------------------------------------------------	*)
-	    EXISTS_TAC(--`t1:num`--) THEN ASM_REWRITE_TAC[] 
-	    THEN REPEAT STRIP_TAC THEN RES_TAC 
+	    EXISTS_TAC(--`t1:num`--) THEN ASM_REWRITE_TAC[]
+	    THEN REPEAT STRIP_TAC THEN RES_TAC
 	    THEN MAP_EVERY POP_NO_TAC [3,2,1,0]
 	    THEN DISJ_CASES_TAC(REWRITE_RULE[]
 				(SPEC(--`?t2. t<=t2 /\ t2<=t1 /\ d t2`--)BOOL_CASES_AX))
 	    THENL[
 		(* --------  ?t2. t <= t2 /\ t2 <= t1 /\ d t2 -----------------	*)
-		ASSUME_TAC(SPECL[(--`d:num->bool`--),(--`t1:num`--),(--`t:num`--)]
-				(GEN_ALL MAX_EXISTS))
-		THEN UNDISCH_HD_TAC THEN POP_ASSUM REWRITE1_TAC 
+		ASSUME_TAC(Q.INST [`phi` |-> `d:num->bool`,
+                                   `t2` |-> `t1:num`,
+                                   `t1` |-> `t:num`] MAX_EXISTS)
+		THEN UNDISCH_HD_TAC THEN POP_ASSUM REWRITE1_TAC
 		THEN ASM_TAC 2 REWRITE1_TAC THEN STRIP_TAC
 		THEN EXISTS_TAC(--`xmax:num`--) THEN ASM_REWRITE_TAC[]
 		THEN GEN_TAC THEN STRIP_TAC THEN RES_TAC THEN ASM_REWRITE_TAC[]
@@ -1992,7 +1993,7 @@ val SUNTIL_AND_PSUNTIL_SEPARATE = TAC_PROOF(
 		THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV
 				(--`t<=xmax /\ xmax<t' ==> t<t'`--)))
 		THEN MAP_EVERY POP_NO_TAC [4,3,1,0]
-		THEN IMP_RES_TAC LESS_ADD_1 THEN POP_NO_TAC 0 
+		THEN IMP_RES_TAC LESS_ADD_1 THEN POP_NO_TAC 0
 		THEN LEFT_NO_FORALL_TAC 9 (--`p+t`--) THEN UNDISCH_HD_TAC
 		THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV
 					(--`(t'=t+(p+1))/\(t'<=t1) ==> (p+t<t1)`--)))
@@ -2001,20 +2002,20 @@ val SUNTIL_AND_PSUNTIL_SEPARATE = TAC_PROOF(
 		THEN DISCH_TAC THEN ONCE_REWRITE_TAC[ADD_SYM]
 		THEN ASM_REWRITE_TAC[],
 		(* --------  ~(?t2. t <= t2 /\ t2 <= t1 /\ d t2) --------------	*)
-		EXISTS_TAC(--`delta:num`--) 
+		EXISTS_TAC(--`delta:num`--)
 		THEN IMP_RES_TAC LESS_EQ_TRANS THEN ASM_REWRITE_TAC[]
 		THEN UNDISCH_NO_TAC 3 THEN CONV_TAC(DEPTH_CONV NOT_EXISTS_CONV)
 		THEN REWRITE_TAC[TAC_PROOF(
 			([],--`~(a/\b/\c) = (a/\b==>~c)`--),PROP_TAC)]
 		THEN DISCH_TAC
-		THEN GEN_TAC THEN STRIP_TAC 
+		THEN GEN_TAC THEN STRIP_TAC
 	        THEN DISJ_CASES_TAC(EQT_ELIM(ARITH_CONV(--`(t'<=t)\/(t<t')`--)))
 		THENL[ RES_TAC THEN ASM_REWRITE_TAC[],ALL_TAC]
 		THEN LEFT_NO_FORALL_TAC 3 (--`t':num`--) THEN UNDISCH_HD_TAC
 		THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV(--`(t<t')==>(t<=t')`--)))
-		THEN ASM_REWRITE_TAC[] 
+		THEN ASM_REWRITE_TAC[]
 		THEN DISCH_TAC THEN ASM_REWRITE_TAC[]
-		THEN IMP_RES_TAC LESS_ADD_1 
+		THEN IMP_RES_TAC LESS_ADD_1
 		THEN LEFT_NO_FORALL_TAC 11 (--`t+p`--) THEN UNDISCH_HD_TAC
 		THEN ASM_TAC 1 SUBST1_TAC
 		THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV
@@ -2024,14 +2025,14 @@ val SUNTIL_AND_PSUNTIL_SEPARATE = TAC_PROOF(
 		THEN DISCH_TAC THEN ASM_REWRITE_TAC[]
 		],
 	    (* ------------------------------------------------------------------------	*)
-	    EXISTS_TAC(--`t1':num`--) THEN ASM_REWRITE_TAC[] 
-	    THEN REPEAT STRIP_TAC 
+	    EXISTS_TAC(--`t1':num`--) THEN ASM_REWRITE_TAC[]
+	    THEN REPEAT STRIP_TAC
 	    THENL[
 		IMP_RES_TAC LESS_EQ_TRANS,
 		ALL_TAC,
-		LEFT_NO_FORALL_TAC 3 (--`t2:num`--) THEN UNDISCH_HD_TAC 
+		LEFT_NO_FORALL_TAC 3 (--`t2:num`--) THEN UNDISCH_HD_TAC
  		THEN ASM_REWRITE_TAC[] THEN DISCH_TAC
-		THEN LEFT_NO_FORALL_TAC 3 (--`t2:num`--) THEN UNDISCH_HD_TAC 
+		THEN LEFT_NO_FORALL_TAC 3 (--`t2:num`--) THEN UNDISCH_HD_TAC
  		THEN ASM_REWRITE_TAC[] THEN DISCH_TAC
 		THEN DISJ_CASES_TAC(EQT_ELIM(ARITH_CONV(--`(t1<=t2)\/(t2<t1)`--)))
 		THEN RES_TAC
@@ -2040,9 +2041,10 @@ val SUNTIL_AND_PSUNTIL_SEPARATE = TAC_PROOF(
 	    THENL[
 		EXISTS_TAC (--`t1:num`--) THEN ASM_REWRITE_TAC[LESS_EQ_REFL],
 		DISCH_TAC]
-	    THEN ASSUME_TAC(SPECL[(--`d:num->bool`--),(--`t1':num`--),(--`t:num`--)]
-				(GEN_ALL MAX_EXISTS))
-	    THEN UNDISCH_HD_TAC THEN POP_ASSUM REWRITE1_TAC 
+	    THEN ASSUME_TAC(Q.INST [`phi` |-> `d:num->bool`,
+                                    `t1` |-> `t:num`,
+                                    `t2` |-> `t1':num`] MAX_EXISTS)
+	    THEN UNDISCH_HD_TAC THEN POP_ASSUM REWRITE1_TAC
 	    THEN IMP_RES_TAC LESS_EQ_TRANS
 	    THEN ASM_TAC 1 REWRITE1_TAC THEN STRIP_TAC
 	    THEN EXISTS_TAC(--`xmax:num`--) THEN ASM_REWRITE_TAC[]
@@ -2054,7 +2056,7 @@ val SUNTIL_AND_PSUNTIL_SEPARATE = TAC_PROOF(
 				(--`(t'=xmax+(p+1))/\(t'<=t1') ==> (xmax+p<t1')`--)))
 	    THEN ASM_REWRITE_TAC[] THEN MAP_EVERY POP_NO_TAC [4,3,2,1,0]
 	    THEN LEFT_NO_FORALL_TAC 5 (--`t1:num`--) THEN UNDISCH_HD_TAC
-	    THEN ASM_REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`~(x<y) = (y<=x)`--))] 
+	    THEN ASM_REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`~(x<y) = (y<=x)`--))]
 	    THEN DISCH_TAC THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV
 				(--`(t1<=xmax) ==> (t1<=xmax+p)`--)))
 	    THEN ASM_REWRITE_TAC[ONE,ADD_CLAUSES]
@@ -2065,11 +2067,11 @@ val SUNTIL_AND_PSUNTIL_SEPARATE = TAC_PROOF(
 
 
 
-val SUNTIL_AND_PBEFORE_SEPARATE = TAC_PROOF( 
+val SUNTIL_AND_PBEFORE_SEPARATE = TAC_PROOF(
 	([], --`(a SUNTIL (\t. b t /\ (c PBEFORE d) t))
-		= 
+		=
 		\t. (c PBEFORE d) t /\ ((\t. a t /\ ~NEXT d t) SUNTIL b) t \/
-		    (a SUNTIL (\t. c t /\ ~d t /\ 
+		    (a SUNTIL (\t. c t /\ ~d t /\
 			          ((\t. a t /\ ~NEXT d t) SUNTIL b) t)) t
 	`--),
 	CONV_TAC(X_FUN_EQ_CONV (--`t:num`--)) THEN GEN_TAC
@@ -2084,10 +2086,10 @@ val SUNTIL_AND_PBEFORE_SEPARATE = TAC_PROOF(
 	    (* ------------------------------------------------------------------------	*)
 	    DISJ1_TAC THEN REPEAT STRIP_TAC
 	    THENL[
-		DISJ1_TAC THEN GEN_TAC THEN DISCH_TAC 
+		DISJ1_TAC THEN GEN_TAC THEN DISCH_TAC
 		THEN IMP_RES_TAC LESS_EQ_TRANS THEN RES_TAC,
 		EXISTS_TAC(--`t1:num`--) THEN ASM_REWRITE_TAC[]
-		THEN GEN_TAC THEN STRIP_TAC 
+		THEN GEN_TAC THEN STRIP_TAC
 		THEN RES_TAC THEN ASM_REWRITE_TAC[]
 		THEN POP_NO_ASSUM 6 MATCH_MP_TAC THEN UNDISCH_NO_TAC 3
 		THEN CONV_TAC ARITH_CONV
@@ -2105,22 +2107,22 @@ val SUNTIL_AND_PBEFORE_SEPARATE = TAC_PROOF(
 		(* delta<=t holds, so we take the first disjunct, i.e. we must prove 	*)
 		(* (c PBEFORE d) /\ ((a /\ ~NEXT d) SUNTIL b)				*)
 		(* --------------------------------------------------------------------	*)
-		DISJ1_TAC THEN REPEAT STRIP_TAC	
+		DISJ1_TAC THEN REPEAT STRIP_TAC
 		THENL[
 		    (* --------- prove that (c PBEFORE d) t holds ---------------------	*)
 		    DISJ2_TAC THEN EXISTS_TAC(--`delta:num`--) THEN ASM_REWRITE_TAC[]
 		    THEN GEN_TAC THEN DISCH_TAC
 		    THEN POP_NO_ASSUM 3 MATCH_MP_TAC THEN ASM_REWRITE_TAC[]
-		    THEN UNDISCH_HD_TAC THEN UNDISCH_NO_TAC 5 THEN CONV_TAC ARITH_CONV, 
+		    THEN UNDISCH_HD_TAC THEN UNDISCH_NO_TAC 5 THEN CONV_TAC ARITH_CONV,
 		    (* ------- prove that ((a /\ ~NEXT d) SUNTIL b) -------------------	*)
-		    EXISTS_TAC(--`t1:num`--) THEN ASM_REWRITE_TAC[]	
+		    EXISTS_TAC(--`t1:num`--) THEN ASM_REWRITE_TAC[]
 		    THEN GEN_TAC THEN STRIP_TAC THEN RES_TAC THEN ASM_REWRITE_TAC[]
 		    THEN LEFT_NO_FORALL_TAC 9 (--`SUC(t2)`--) THEN UNDISCH_HD_TAC
 		    THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV(--`(t2<t1)==>(SUC(t2)<=t1)`--)))
 		    THEN IMP_RES_TAC LESS_EQ_TRANS
 		    THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV
 				(--`(delta<=t2)==>(delta <= SUC t2)`--)))
-		    THEN ASM_REWRITE_TAC[] 
+		    THEN ASM_REWRITE_TAC[]
 		    ],
 		(* --------------------------------------------------------------------	*)
 		(* t<delta holds, so we take the second disjunct to prove that		*)
@@ -2131,7 +2133,7 @@ val SUNTIL_AND_PBEFORE_SEPARATE = TAC_PROOF(
 		THEN ASM_REWRITE_TAC[] THEN REPEAT STRIP_TAC
 		THENL[
 		    UNDISCH_HD_TAC THEN REWRITE_TAC[]
-		    THEN POP_NO_ASSUM 3 MATCH_MP_TAC 
+		    THEN POP_NO_ASSUM 3 MATCH_MP_TAC
 		    THEN ASM_REWRITE_TAC[LESS_EQ_REFL],
 		    EXISTS_TAC(--`t1:num`--) THEN ASM_REWRITE_TAC[]
 		    THEN GEN_TAC THEN STRIP_TAC THEN CONJ_TAC
@@ -2155,9 +2157,9 @@ val SUNTIL_AND_PBEFORE_SEPARATE = TAC_PROOF(
 	    (* true at time t1>=t, d is false for all t<=t, and a/\~NEXT d holds for 	*)
 	    (* t' with t<=t' /\ t'<t1. 							*)
 	    (* ------------------------------------------------------------------------	*)
-	    EXISTS_TAC(--`t1:num`--) THEN ASM_REWRITE_TAC[] 
+	    EXISTS_TAC(--`t1:num`--) THEN ASM_REWRITE_TAC[]
 	    THEN REPEAT STRIP_TAC THEN RES_TAC (* proves the validity of a up to t1 *)
-	    THEN MAP_EVERY POP_NO_TAC [1,0] 
+	    THEN MAP_EVERY POP_NO_TAC [1,0]
 	    THEN DISJ1_TAC THEN GEN_TAC THEN DISCH_TAC
 	    THEN DISJ_CASES_TAC(EQT_ELIM(ARITH_CONV(--`(t<t')\/(t'<=t)`--)))
 	    THENL[
@@ -2174,9 +2176,9 @@ val SUNTIL_AND_PBEFORE_SEPARATE = TAC_PROOF(
 	    (* c holds at delta<=t, b holds at time t1, d is false for all t' with 	*)
 	    (* delta<=t' /\ t'<=t, and a/\~NEXT d holds for t' with t<=t' /\ t'<t1. 	*)
 	    (* ------------------------------------------------------------------------	*)
-	    EXISTS_TAC(--`t1:num`--) THEN ASM_REWRITE_TAC[] 
+	    EXISTS_TAC(--`t1:num`--) THEN ASM_REWRITE_TAC[]
 	    THEN REPEAT STRIP_TAC THEN RES_TAC (* proves the validity of a up to t1 *)
-	    THEN MAP_EVERY POP_NO_TAC [3,2,1,0] 
+	    THEN MAP_EVERY POP_NO_TAC [3,2,1,0]
 	    THEN DISJ2_TAC THEN EXISTS_TAC(--`delta:num`--) THEN ASM_REWRITE_TAC[]
 	    THEN IMP_RES_TAC LESS_EQ_TRANS THEN ASM_REWRITE_TAC[]
 	    THEN GEN_TAC THEN STRIP_TAC
@@ -2202,25 +2204,25 @@ val SUNTIL_AND_PBEFORE_SEPARATE = TAC_PROOF(
  	    (*	      (--`!t2. t <= t2 /\ t2 < t1 ==> a t2`--)				*)
 	    (*										*)
 	    (* ------------------------------------------------------------------------	*)
-	    EXISTS_TAC(--`t1':num`--) THEN ASM_REWRITE_TAC[] 
-	    THEN REPEAT STRIP_TAC 
+	    EXISTS_TAC(--`t1':num`--) THEN ASM_REWRITE_TAC[]
+	    THEN REPEAT STRIP_TAC
 	    THENL[
 		IMP_RES_TAC LESS_EQ_TRANS,
 		ALL_TAC,
 		LEFT_NO_FORALL_TAC 3 (--`t2:num`--) THEN UNDISCH_HD_TAC
  		THEN ASM_REWRITE_TAC[] THEN DISCH_TAC
-		THEN LEFT_NO_FORALL_TAC 3 (--`t2:num`--) THEN UNDISCH_HD_TAC 
+		THEN LEFT_NO_FORALL_TAC 3 (--`t2:num`--) THEN UNDISCH_HD_TAC
  		THEN ASM_REWRITE_TAC[] THEN DISCH_TAC
 		THEN DISJ_CASES_TAC(EQT_ELIM(ARITH_CONV(--`(t1<=t2)\/(t2<t1)`--)))
 		THEN RES_TAC
 		]
 	    THEN DISJ2_TAC
 	    THEN EXISTS_TAC(--`t1:num`--) THEN ASM_REWRITE_TAC[]
-	    THEN GEN_TAC THEN STRIP_TAC 
-	    THEN UNDISCH_NO_TAC 1 THEN REWRITE_TAC[LESS_OR_EQ] 
+	    THEN GEN_TAC THEN STRIP_TAC
+	    THEN UNDISCH_NO_TAC 1 THEN REWRITE_TAC[LESS_OR_EQ]
 	    THEN STRIP_TAC
 	    THENL[
-	 	IMP_RES_TAC LESS_ADD_1 
+	 	IMP_RES_TAC LESS_ADD_1
 		THEN LEFT_NO_FORALL_TAC 4 (--`t1+p`--) THEN UNDISCH_HD_TAC
 	    	THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV
 				(--`(t'=t1+(p+1))/\(t'<=t1') ==> (t1+p<t1')`--)))
@@ -2239,7 +2241,7 @@ val SUNTIL_AND_PBEFORE_SEPARATE = TAC_PROOF(
 
 val BEFORE_AND_PSUNTIL_SEPARATE = TAC_PROOF(
 	([], --`((\t. a t /\ (b PSUNTIL c) t) BEFORE d)
-		= 
+		=
 		\t. (b PSUNTIL c) t /\ ((\t. ~d t /\ NEXT b t) SUNTIL (\t. a t /\~d t)) t \/
 		    ((\t. c t /\ ((\t. ~d t /\ NEXT b t) SUNTIL (\t. a t /\ ~d t)) t) BEFORE d) t
 	`--),
@@ -2285,9 +2287,9 @@ val BEFORE_AND_PSUNTIL_SEPARATE = TAC_PROOF(
 
 val BEFORE_AND_PBEFORE_SEPARATE = TAC_PROOF(
 	([], --`((\t. a t /\ (b PBEFORE c) t) BEFORE d)
-		= 
+		=
 		\t. (b PBEFORE c) t /\ ((\t. ~d t /\ ~NEXT c t) SUNTIL (\t. a t /\~d t)) t \/
-		    ((\t. b t /\ ~c t /\ 
+		    ((\t. b t /\ ~c t /\
 			 ((\t. ~d t /\ ~NEXT c t) SUNTIL (\t. a t /\ ~d t)) t) BEFORE d) t
 	`--),
 	CONV_TAC(X_FUN_EQ_CONV (--`t:num`--)) THEN GEN_TAC
@@ -2325,7 +2327,7 @@ val BEFORE_AND_PBEFORE_SEPARATE = TAC_PROOF(
 
 val SUNTIL_OR_PSUNTIL_SEPARATE = TAC_PROOF(
 	([], --`((\t. a t \/ (b PSUNTIL c) t) SUNTIL d)
-		= 
+		=
 		 \t. ((b PSUNTIL c) t  \/  ((\t. d t \/ NEXT c t) BEFORE (\t. ~a t /\ ~d t)) t )
 		     /\
 	             ((\t. b t \/ c t \/ ((\t. d t \/ NEXT c t) BEFORE (\t. ~a t /\ ~d t)) t) SUNTIL d) t
@@ -2348,7 +2350,7 @@ val SUNTIL_OR_PSUNTIL_SEPARATE = TAC_PROOF(
 
 val SUNTIL_OR_PBEFORE_SEPARATE = TAC_PROOF(
 	([], --`((\t. a t \/ (b PBEFORE c) t) SUNTIL d)
-		= 
+		=
 		 \t. ((b PBEFORE c) t  \/  ((\t. d t \/ NEXT b t) BEFORE (\t. ~a t /\ ~d t)) t )
 		     /\
 	             ((\t. ~c t \/ ((\t. d t \/ NEXT b t) BEFORE (\t. ~a t /\ ~d t)) t) SUNTIL d) t
@@ -2377,7 +2379,7 @@ val BEFORE_OR_LEFT_SEPARATE = TAC_PROOF(
 	THEN ASSUME_TAC(BETA_RULE
 		 	(SPECL[(--`c:num->bool`--),(--`\t:num. ~b t`--),(--`\t:num. ~a t`--)]
 			(GEN_ALL SUNTIL_AND_SEPARATE)))
-	THEN REWRITE_TAC[DE_MORGAN_THM] 
+	THEN REWRITE_TAC[DE_MORGAN_THM]
 	THEN POP_ASSUM SUBST1_TAC THEN BETA_TAC THEN REWRITE_TAC[]);
 
 
@@ -2392,13 +2394,13 @@ val BEFORE_OR_SEPARATE = TAC_PROOF(
 val BEFORE_LEFT_PNEXT_SEPARATE = TAC_PROOF(
 	([],--`((\t. a t /\ PNEXT b t) BEFORE c)
 		=
-		\t. ~c t /\ a t /\ PNEXT b t 
-		    \/ 
+		\t. ~c t /\ a t /\ PNEXT b t
+		    \/
 		    ~c t /\ ((\t. b t /\ NEXT a t) BEFORE NEXT c) t
 		`--),
 	CONV_TAC(X_FUN_EQ_CONV (--`t:num`--)) THEN GEN_TAC THEN BETA_TAC
 	THEN CONV_TAC(LHS_CONV(REWRITE_CONV[BEFORE_REC]))
-	THEN BETA_TAC 
+	THEN BETA_TAC
 	THEN REWRITE_TAC[TAC_PROOF(([],--`a/\(b\/c) = (a/\b)\/(a/\c)`--),PROP_TAC)]
 	THEN MATCH_MP_TAC(TAC_PROOF(
 			([],--` (a=b) ==> ((c\/a) = (c\/b)) `--),PROP_TAC))
@@ -2413,13 +2415,13 @@ val BEFORE_LEFT_PNEXT_SEPARATE = TAC_PROOF(
 val BEFORE_LEFT_PSNEXT_SEPARATE = TAC_PROOF(
 	([],--`((\t. a t /\ PSNEXT b t) BEFORE c)
 		=
-		\t. ~c t /\ a t /\ PSNEXT b t 
-		    \/ 
+		\t. ~c t /\ a t /\ PSNEXT b t
+		    \/
 		    ~c t /\ ((\t. b t /\ NEXT a t) BEFORE NEXT c) t
 		`--),
 	CONV_TAC(X_FUN_EQ_CONV (--`t:num`--)) THEN GEN_TAC THEN BETA_TAC
 	THEN CONV_TAC(LHS_CONV(REWRITE_CONV[BEFORE_REC]))
-	THEN BETA_TAC 
+	THEN BETA_TAC
 	THEN REWRITE_TAC[TAC_PROOF(([],--`a/\(b\/c) = (a/\b)\/(a/\c)`--),PROP_TAC)]
 	THEN MATCH_MP_TAC(TAC_PROOF(
 			([],--` (a=b) ==> ((c\/a) = (c\/b)) `--),PROP_TAC))
@@ -2460,7 +2462,7 @@ val BEFORE_RIGHT_PSNEXT_SEPARATE = TAC_PROOF(
 
 
 val UNTIL_AND_SEPARATE = TAC_PROOF(
-	([], --`((\t. a t /\ b t) UNTIL c) = 
+	([], --`((\t. a t /\ b t) UNTIL c) =
 		  \t. (a UNTIL c) t /\ (b UNTIL c) t`--),
 	CONV_TAC(X_FUN_EQ_CONV (--`t0:num`--)) THEN GEN_TAC
 	THEN REWRITE_TAC[UNTIL_SIGNAL] THEN BETA_TAC
@@ -2477,26 +2479,26 @@ val SEPARATE_NEXT_THM = TAC_PROOF(
 	    ) /\
 	    ((NEXT (\t. a t /\ PSNEXT b t)) = (\t. b t /\ NEXT a t)
 	    ) /\
-	    ((NEXT (\t. a t /\ (b PSUNTIL c) t)) = 
-		\t. NEXT(\t. a t /\ c t) t \/  
+	    ((NEXT (\t. a t /\ (b PSUNTIL c) t)) =
+		\t. NEXT(\t. a t /\ c t) t \/
 		    (b PSUNTIL c) t /\ NEXT(\t. a t /\ b t) t
 	    ) /\
-	    ((NEXT (\t. a t /\ (b PBEFORE c) t)) = 
-		\t. NEXT(\t. a t /\ b t /\ ~c t) t \/  
+	    ((NEXT (\t. a t /\ (b PBEFORE c) t)) =
+		\t. NEXT(\t. a t /\ b t /\ ~c t) t \/
 		    (b PBEFORE c) t /\ NEXT(\t. a t /\ ~c t) t
 	    ) /\
-	    ((NEXT (\t. a t \/ PNEXT b t)) = 
-		(\t. b t \/ NEXT a t) 
+	    ((NEXT (\t. a t \/ PNEXT b t)) =
+		(\t. b t \/ NEXT a t)
 	    ) /\
-	    ((NEXT (\t. a t \/ PSNEXT b t)) = 
-		(\t. b t \/ NEXT a t) 
+	    ((NEXT (\t. a t \/ PSNEXT b t)) =
+		(\t. b t \/ NEXT a t)
 	    ) /\
-	    ((NEXT (\t. a t \/ (b PSUNTIL c) t)) = 
-		\t. NEXT(\t. a t \/ c t) t \/  
+	    ((NEXT (\t. a t \/ (b PSUNTIL c) t)) =
+		\t. NEXT(\t. a t \/ c t) t \/
 		    (b PSUNTIL c) t /\ NEXT b t
 	    ) /\
-	    ((NEXT (\t. a t \/ (b PBEFORE c) t)) = 
-		\t. NEXT(\t. a t \/ ~c t) t /\  
+	    ((NEXT (\t. a t \/ (b PBEFORE c) t)) =
+		\t. NEXT(\t. a t \/ ~c t) t /\
 		    ((b PBEFORE c) t \/ NEXT (\t. a t \/ b t) t)
 	    )
 	`--),
@@ -2514,41 +2516,41 @@ val SEPARATE_NEXT_THM = TAC_PROOF(
 
 val SEPARATE_SUNTIL_THM = TAC_PROOF(
 	([], --`
-	    ( (a SUNTIL (\t. b t \/ c t)) = 
+	    ( (a SUNTIL (\t. b t \/ c t)) =
 		\t. (a SUNTIL b) t \/ (a SUNTIL c) t ) /\
-	    ( (a SUNTIL (\t. b t /\ PNEXT c t))	= 
-		\t. (b t /\ PNEXT c t) 
-		    \/ 
+	    ( (a SUNTIL (\t. b t /\ PNEXT c t))	=
+		\t. (b t /\ PNEXT c t)
+		    \/
 		    (a SUNTIL (\t. a t /\ c t /\ NEXT b t)) t ) /\
-	    ( (a SUNTIL (\t. b t /\ PSNEXT c t)) = 
-		\t. (b t /\ PSNEXT c t) 
-		    \/ 
+	    ( (a SUNTIL (\t. b t /\ PSNEXT c t)) =
+		\t. (b t /\ PSNEXT c t)
+		    \/
 		    (a SUNTIL (\t. a t /\ c t /\ NEXT b t)) t ) /\
-	    ( (a SUNTIL (\t. b t /\ (c PSUNTIL d) t)) = 
+	    ( (a SUNTIL (\t. b t /\ (c PSUNTIL d) t)) =
 		\t. (c PSUNTIL d) t /\ ((\t. a t /\ NEXT c t) SUNTIL b) t \/
 		    (a SUNTIL (\t. d t /\ ((\t. a t /\ NEXT c t) SUNTIL b) t)) t ) /\
-	    ( (a SUNTIL (\t. b t /\ (c PBEFORE d) t)) = 
+	    ( (a SUNTIL (\t. b t /\ (c PBEFORE d) t)) =
 		\t. (c PBEFORE d) t /\ ((\t. a t /\ ~NEXT d t) SUNTIL b) t \/
-		    (a SUNTIL (\t. c t /\ ~d t /\ 
+		    (a SUNTIL (\t. c t /\ ~d t /\
 			          ((\t. a t /\ ~NEXT d t) SUNTIL b) t)) t ) /\
 	    ( ((\t. a t /\ b t) SUNTIL c) = \t. (a SUNTIL c) t /\ (b SUNTIL c) t ) /\
-	    ( ((\t. a t \/ PNEXT b t) SUNTIL c)	= 
-		\t. (c t) \/ 
+	    ( ((\t. a t \/ PNEXT b t) SUNTIL c)	=
+		\t. (c t) \/
 		    (a t \/ PNEXT b t) /\ ((\t. b t \/ NEXT a t ) SUNTIL (NEXT c)) t ) /\
-	    ( ((\t. a t \/ PSNEXT b t) SUNTIL c) = 
-		\t. (c t) \/ 
+	    ( ((\t. a t \/ PSNEXT b t) SUNTIL c) =
+		\t. (c t) \/
 		    (a t \/ PSNEXT b t) /\ ((\t. b t \/ NEXT a t ) SUNTIL (NEXT c)) t ) /\
 	    ( ((\t. a t \/ (b PSUNTIL c) t) SUNTIL d)
 		=  \t. ((b PSUNTIL c) t  \/  ((\t. d t \/ NEXT c t) BEFORE (\t. ~a t /\ ~d t)) t )
 		       /\
-	               ((\t. b t \/ c t \/ ((\t. d t \/ NEXT c t) BEFORE (\t. ~a t /\ ~d t)) t) 
+	               ((\t. b t \/ c t \/ ((\t. d t \/ NEXT c t) BEFORE (\t. ~a t /\ ~d t)) t)
 			SUNTIL d) t
 	    ) /\
 	    ( ((\t. a t \/ (b PBEFORE c) t) SUNTIL d)
 		= \t. ((b PBEFORE c) t  \/  ((\t. d t \/ NEXT b t) BEFORE (\t. ~a t /\ ~d t)) t )
 		      /\
 	              ((\t. ~c t \/ ((\t. d t \/ NEXT b t) BEFORE (\t. ~a t /\ ~d t)) t) SUNTIL d) t
-	    ) 
+	    )
 	`--),
 	REWRITE_TAC[
 		SUNTIL_AND_SEPARATE,
@@ -2569,38 +2571,38 @@ val SEPARATE_BEFORE_THM = TAC_PROOF(
 	([], --`
 	    ( (a BEFORE (\t. b t \/ c t)) = \t. (a BEFORE b) t /\ (a BEFORE c) t ) /\
 	    ( ((\t. a t \/ b t) BEFORE c) = \t. (a BEFORE c) t \/ (b BEFORE c) t ) /\
-	    ( (a BEFORE (\t. b t /\ PNEXT c t))	= 
+	    ( (a BEFORE (\t. b t /\ PNEXT c t))	=
 		  \t.
 		     ~(b t /\ PNEXT c t)
 		     /\
 		     ( a t \/ ((NEXT a) BEFORE (\t. c t /\ NEXT b t)) t) ) /\
-	    ( (a BEFORE (\t. b t /\ PSNEXT c t)) = 
+	    ( (a BEFORE (\t. b t /\ PSNEXT c t)) =
 		  \t.
 		     ~(b t /\ PSNEXT c t)
 		     /\
 		     ( a t \/ ((NEXT a) BEFORE (\t. c t /\ NEXT b t)) t) ) /\
-	    ( (a BEFORE (\t. b t /\ (c PSUNTIL d) t)) = 
+	    ( (a BEFORE (\t. b t /\ (c PSUNTIL d) t)) =
 		\t. ( ((\t.~c t) PBEFORE d) t \/ ((\t. a t \/ ~NEXT c t) BEFORE b) t) /\
 		    (a BEFORE (\t. d t /\ ((\t. ~a t /\ NEXT c t) SUNTIL b) t)) t ) /\
-	    ( (a BEFORE (\t. b t /\ (c PBEFORE d) t)) = 
+	    ( (a BEFORE (\t. b t /\ (c PBEFORE d) t)) =
 		\t. (((\t.~c t) PSUNTIL d) t \/ ((\t. a t \/ NEXT d t) BEFORE b) t) /\
-		    (a BEFORE (\t. c t /\ ~d t /\ 
+		    (a BEFORE (\t. c t /\ ~d t /\
 			          ((\t. ~a t /\ ~NEXT d t) SUNTIL b) t)) t ) /\
-	    ( ((\t. a t /\ PNEXT b t) BEFORE c)	= 
+	    ( ((\t. a t /\ PNEXT b t) BEFORE c)	=
 		\t. ~c t /\ a t /\ PNEXT b t \/
 		    ~c t /\ ((\t. b t /\ NEXT a t ) BEFORE (NEXT c)) t ) /\
-	    ( ((\t. a t /\ PSNEXT b t) BEFORE c) = 
+	    ( ((\t. a t /\ PSNEXT b t) BEFORE c) =
 		\t. ~c t /\ a t /\ PSNEXT b t \/
 		    ~c t /\ ((\t. b t /\ NEXT a t ) BEFORE (NEXT c)) t ) /\
 	    ( ((\t. a t /\ (b PBEFORE c) t) BEFORE d)
-		= 
+		=
 		\t. (b PBEFORE c) t /\ ((\t. ~d t /\ ~NEXT c t) SUNTIL (\t. a t /\ ~d t)) t \/
-		    ((\t. b t /\ ~c t /\ ((\t. ~d t /\ ~NEXT c t) SUNTIL (\t. a t /\ ~d t)) t) 
+		    ((\t. b t /\ ~c t /\ ((\t. ~d t /\ ~NEXT c t) SUNTIL (\t. a t /\ ~d t)) t)
 		    BEFORE d) t ) /\
 	    ( ((\t. a t /\ (b PSUNTIL c) t) BEFORE d)
-		= 
+		=
 		\t. (b PSUNTIL c) t /\ ((\t. ~d t /\ NEXT b t) SUNTIL (\t. a t /\ ~d t)) t \/
-		    ((\t. c t /\ ((\t. ~d t /\ NEXT b t) SUNTIL (\t. a t /\ ~d t)) t) BEFORE d) t )	    
+		    ((\t. c t /\ ((\t. ~d t /\ NEXT b t) SUNTIL (\t. a t /\ ~d t)) t) BEFORE d) t )
 	`--),
 	REWRITE_TAC[
 	    	BEFORE_AND_PSUNTIL_SEPARATE, BEFORE_AND_PBEFORE_SEPARATE,
@@ -2622,7 +2624,7 @@ val SEPARATE_BEFORE_THM = TAC_PROOF(
 		(BETA_RULE
 		    (SPECL[(--`b:num->bool`--),(--`NEXT c`--),(--`\t:num. ~(a t)`--)]
 			  (GEN_ALL(elem 5 (CONJUNCTS CONJUNCTIVE_NORMAL_FORM))) ))
-	THEN BETA_TAC THEN REWRITE_TAC[NEGATION_NORMAL_FORM] 
+	THEN BETA_TAC THEN REWRITE_TAC[NEGATION_NORMAL_FORM]
 	THEN BETA_TAC THEN REWRITE_TAC[] THEN CONV_TAC(DEPTH_CONV ETA_CONV)
 	THEN REWRITE1_TAC
 		(BETA_RULE
@@ -2631,7 +2633,7 @@ val SEPARATE_BEFORE_THM = TAC_PROOF(
 	THEN BETA_TAC THEN REWRITE_TAC[]
 	);
 
-	
+
 
 (*---------------------------------------------------------------------------
      More separation theorems (this time for the past).
@@ -2641,23 +2643,23 @@ val SEPARATE_PNEXT_THM = TAC_PROOF(
 	([], --`
 	    ((PNEXT (\t. a t /\ NEXT b t)) = (\t. InitPoint t \/ b t /\ PNEXT a t)
 	    ) /\
-	    ((PNEXT (\t. a t /\ (b SUNTIL c) t)) = 
-		\t. PNEXT(\t. a t /\ c t) t \/  
+	    ((PNEXT (\t. a t /\ (b SUNTIL c) t)) =
+		\t. PNEXT(\t. a t /\ c t) t \/
 		    (b SUNTIL c) t /\ PNEXT(\t. a t /\ b t) t
 	    ) /\
-	    ((PNEXT (\t. a t /\ (b BEFORE c) t)) = 
-		\t. PNEXT(\t. a t /\ b t /\ ~c t) t \/  
+	    ((PNEXT (\t. a t /\ (b BEFORE c) t)) =
+		\t. PNEXT(\t. a t /\ b t /\ ~c t) t \/
 		    (b BEFORE c) t /\ PNEXT(\t. a t /\ ~c t) t
 	    ) /\
-	    ((PNEXT (\t. a t \/ NEXT b t)) = 
-		(\t. b t \/ PNEXT a t) 
+	    ((PNEXT (\t. a t \/ NEXT b t)) =
+		(\t. b t \/ PNEXT a t)
 	    ) /\
-	    ((PNEXT (\t. a t \/ (b SUNTIL c) t)) = 
-		\t. PNEXT(\t. a t \/ c t) t \/  
+	    ((PNEXT (\t. a t \/ (b SUNTIL c) t)) =
+		\t. PNEXT(\t. a t \/ c t) t \/
 		    (b SUNTIL c) t /\ PNEXT b t
 	    ) /\
-	    ((PNEXT (\t. a t \/ (b BEFORE c) t)) = 
-		\t. PNEXT(\t. a t \/ ~c t) t /\  
+	    ((PNEXT (\t. a t \/ (b BEFORE c) t)) =
+		\t. PNEXT(\t. a t \/ ~c t) t /\
 		    ((b BEFORE c) t \/ PNEXT (\t. a t \/ b t) t)
 	    )
 	`--),
@@ -2665,15 +2667,15 @@ val SEPARATE_PNEXT_THM = TAC_PROOF(
 	THEN REWRITE_TAC[PNEXT,InitPoint,NEXT] THEN BETA_TAC
 	THEN INDUCT_TAC THEN REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`~(SUC t=0)`--)),PRE]
 	THENL[
-	    PROP_TAC,	    
-	    CONV_TAC(LHS_CONV(REWRITE_CONV[SUNTIL_REC])) 
+	    PROP_TAC,
+	    CONV_TAC(LHS_CONV(REWRITE_CONV[SUNTIL_REC]))
 	    THEN REWRITE_TAC[NEXT] THEN BETA_TAC THEN PROP_TAC,
-	    CONV_TAC(LHS_CONV(REWRITE_CONV[BEFORE_REC])) 
+	    CONV_TAC(LHS_CONV(REWRITE_CONV[BEFORE_REC]))
 	    THEN REWRITE_TAC[NEXT] THEN BETA_TAC THEN PROP_TAC,
-	    PROP_TAC,	    
-	    CONV_TAC(LHS_CONV(REWRITE_CONV[SUNTIL_REC])) 
+	    PROP_TAC,
+	    CONV_TAC(LHS_CONV(REWRITE_CONV[SUNTIL_REC]))
 	    THEN REWRITE_TAC[NEXT] THEN BETA_TAC THEN PROP_TAC,
-	    CONV_TAC(LHS_CONV(REWRITE_CONV[BEFORE_REC])) 
+	    CONV_TAC(LHS_CONV(REWRITE_CONV[BEFORE_REC]))
 	    THEN REWRITE_TAC[NEXT] THEN BETA_TAC THEN PROP_TAC
 	]);
 
@@ -2684,10 +2686,10 @@ val SEPARATE_PSUNTIL_OR_THM = TAC_PROOF(
      	(a PSUNTIL (\t. b t \/ c t) = (\t. (a PSUNTIL b) t \/ (a PSUNTIL c) t))
 	`--),
 	CONV_TAC(DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
-	THEN INDUCT_TAC 
+	THEN INDUCT_TAC
 	THEN REWRITE_TAC[INITIALISATION] THEN BETA_TAC
 	THENL[
-	    PROP_TAC,	    
+	    PROP_TAC,
 	    ONCE_REWRITE_TAC[PSUNTIL_REC] THEN BETA_TAC
 	    THEN REWRITE_TAC[PSNEXT,PRE,ZERO_LEMMA]
 	    THEN ASM_REWRITE_TAC[] THEN PROP_TAC
@@ -2699,7 +2701,7 @@ val SEPARATE_PSUNTIL_AND_THM = TAC_PROOF(
      	((\t. a t /\ b t) PSUNTIL c = (\t. (a PSUNTIL c) t /\ (b PSUNTIL c) t))
 	`--),
 	CONV_TAC(DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
-	THEN INDUCT_TAC 
+	THEN INDUCT_TAC
 	THEN REWRITE_TAC[INITIALISATION] THEN BETA_TAC
 	THEN ONCE_REWRITE_TAC[PSUNTIL_REC] THEN BETA_TAC
 	THEN REWRITE_TAC[PSNEXT,PRE,ZERO_LEMMA]
@@ -2710,15 +2712,15 @@ val SEPARATE_PSUNTIL_AND_THM = TAC_PROOF(
 val SEPARATE_PSUNTIL_OR_NEXT_THM = TAC_PROOF(
 	([],--`
      	((\t. a t \/ NEXT b t) PSUNTIL c =
-      	   (\t. 
+      	   (\t.
         	c t \/
         	(a t \/ NEXT b t) /\ ((\t. b t \/ PNEXT a t) PSUNTIL PSNEXT c) t))
 	`--),
 	CONV_TAC(DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
-	THEN INDUCT_TAC 
+	THEN INDUCT_TAC
 	THENL[
-	    REWRITE_TAC[INITIALISATION] THEN BETA_TAC 
-	    THEN REWRITE_TAC[PSNEXT,ZERO_LEMMA],	    
+	    REWRITE_TAC[INITIALISATION] THEN BETA_TAC
+	    THEN REWRITE_TAC[PSNEXT,ZERO_LEMMA],
 	    ONCE_REWRITE_TAC[PSUNTIL_REC] THEN BETA_TAC
 	    THEN REWRITE_TAC[PSNEXT,PRE,ZERO_LEMMA] THEN BETA_TAC
 	    THEN ASM_REWRITE_TAC[] THEN REWRITE_TAC[PNEXT,PRE,ZERO_LEMMA,NEXT]
@@ -2729,15 +2731,15 @@ val SEPARATE_PSUNTIL_OR_NEXT_THM = TAC_PROOF(
 val SEPARATE_PSUNTIL_AND_NEXT_THM = TAC_PROOF(
 	([],--`
      	(a PSUNTIL (\t. b t /\ NEXT c t) =
-      	   (\t. 
+      	   (\t.
         	b t /\ NEXT c t \/
         	(a PSUNTIL (\t. a t /\ c t /\ PSNEXT b t)) t))
 	`--),
 	CONV_TAC(DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
-	THEN INDUCT_TAC 
+	THEN INDUCT_TAC
 	THENL[
-	    REWRITE_TAC[INITIALISATION] THEN BETA_TAC 
-	    THEN REWRITE_TAC[PSNEXT,ZERO_LEMMA],	    
+	    REWRITE_TAC[INITIALISATION] THEN BETA_TAC
+	    THEN REWRITE_TAC[PSNEXT,ZERO_LEMMA],
 	    ONCE_REWRITE_TAC[PSUNTIL_REC] THEN BETA_TAC
 	    THEN REWRITE_TAC[PSNEXT,PRE,ZERO_LEMMA] THEN BETA_TAC
 	    THEN POP_ASSUM SUBST1_TAC
@@ -2755,12 +2757,12 @@ val SEPARATE_PSUNTIL_AND_NEXT_THM = TAC_PROOF(
 
 val PSUNTIL_AND_SUNTIL_SEPARATE = TAC_PROOF(
 	([], --`(a PSUNTIL (\t. b t /\ (c SUNTIL d) t))
-		= 
+		=
 		\t. (c SUNTIL d) t /\ ((\t. a t /\ PNEXT c t) PSUNTIL b) t \/
 		    (a PSUNTIL (\t. d t /\ ((\t. a t /\ PNEXT c t) PSUNTIL b) t)) t
 	`--),
 	CONV_TAC(DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
-	THEN INDUCT_TAC 
+	THEN INDUCT_TAC
 	THENL[
 	    REWRITE_TAC[INITIALISATION] THEN BETA_TAC
 	    THEN REWRITE_TAC[INITIALISATION,SUNTIL_REC] THEN PROP_TAC,
@@ -2804,12 +2806,12 @@ val PSUNTIL_AND_SUNTIL_SEPARATE = TAC_PROOF(
 
 val PSUNTIL_AND_BEFORE_SEPARATE = TAC_PROOF(
 	([], --`(a PSUNTIL (\t. b t /\ (c BEFORE d) t))
-		= 
+		=
 		\t. (c BEFORE d) t /\ ((\t. a t /\ ~PNEXT d t) PSUNTIL b) t \/
 		    (a PSUNTIL (\t. c t /\ ~d t/\ ((\t. a t /\ ~PNEXT d t) PSUNTIL b) t)) t
 	`--),
 	CONV_TAC(DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
-	THEN INDUCT_TAC 
+	THEN INDUCT_TAC
 	THENL[
 	    REWRITE_TAC[INITIALISATION] THEN BETA_TAC
 	    THEN REWRITE_TAC[INITIALISATION,BEFORE_REC] THEN PROP_TAC,
@@ -2854,7 +2856,7 @@ val SEPARATE_PBEFORE_LEFT_BEFORE_THM = TAC_PROOF(
             ((\t. b t /\ ~c t /\ ((\t. ~d t /\ ~PNEXT c t) PSUNTIL (\t. a t /\ ~d t)) t) PBEFORE d) t))
 	`--),
 	CONV_TAC(DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
-	THEN INDUCT_TAC 
+	THEN INDUCT_TAC
 	THENL[
 	    REWRITE_TAC[INITIALISATION] THEN BETA_TAC
 	    THEN REWRITE_TAC[INITIALISATION,BEFORE_REC] THEN PROP_TAC,
@@ -2871,34 +2873,34 @@ val SEPARATE_PBEFORE_LEFT_BEFORE_THM = TAC_PROOF(
 	    THEN UNDISCH_HD_TAC THEN ASM_REWRITE_TAC[PRE,ZERO_LEMMA,PSNEXT,PNEXT]
 	    THEN DISCH_TAC THEN ASM_REWRITE_TAC[]
 	    THEN RULE_ASSUM_TAC(ONCE_REWRITE_RULE[BEFORE_REC])
-	    THEN UNDISCH_NO_TAC 1 THEN REWRITE_TAC[NEXT] 
+	    THEN UNDISCH_NO_TAC 1 THEN REWRITE_TAC[NEXT]
 	    THEN BETA_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[]
 	    THEN ONCE_REWRITE_TAC[PBEFORE_REC] THEN BETA_TAC
 	    THEN ASM_REWRITE_TAC[]
 	    THEN RULE_ASSUM_TAC(BETA_RULE o ONCE_REWRITE_RULE[PSUNTIL_REC])
-	    THEN UNDISCH_NO_TAC 2 
+	    THEN UNDISCH_NO_TAC 2
 	    THEN REWRITE_TAC[PNEXT,PSNEXT,PRE,ZERO_LEMMA] THEN BETA_TAC
 	    THEN DISJ_CASES_TAC(SPEC(--`(d:num->bool) n`--)BOOL_CASES_AX)
 	    THEN ASM_REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[],
 	    (* --------------------------------------------------------	*)
-	    RULE_ASSUM_TAC(BETA_RULE o ONCE_REWRITE_RULE[PSUNTIL_REC]) 
-	    THEN UNDISCH_NO_TAC 1 
+	    RULE_ASSUM_TAC(BETA_RULE o ONCE_REWRITE_RULE[PSUNTIL_REC])
+	    THEN UNDISCH_NO_TAC 1
 	    THEN REWRITE_TAC[PNEXT,PSNEXT,PRE,ZERO_LEMMA] THEN BETA_TAC
 	    THEN ASM_REWRITE_TAC[],
 	    (* --------------------------------------------------------	*)
 	    ONCE_REWRITE_TAC[BEFORE_REC] THEN REWRITE_TAC[NEXT] THEN BETA_TAC
 	    THEN ASM_REWRITE_TAC[]
-	    THEN RULE_ASSUM_TAC(BETA_RULE o ONCE_REWRITE_RULE[PSUNTIL_REC]) 
-	    THEN UNDISCH_NO_TAC 0 
+	    THEN RULE_ASSUM_TAC(BETA_RULE o ONCE_REWRITE_RULE[PSUNTIL_REC])
+	    THEN UNDISCH_NO_TAC 0
 	    THEN REWRITE_TAC[PNEXT,PSNEXT,PRE,ZERO_LEMMA] THEN BETA_TAC
 	    THEN STRIP_TAC THEN ASM_REWRITE_TAC[],
 	    (* --------------------------------------------------------	*)
 	    ONCE_REWRITE_TAC[BEFORE_REC] THEN REWRITE_TAC[NEXT] THEN BETA_TAC
-	    THEN ASM_REWRITE_TAC[] 
+	    THEN ASM_REWRITE_TAC[]
 	    THEN ONCE_REWRITE_TAC[BEFORE_REC] THEN REWRITE_TAC[NEXT] THEN BETA_TAC
 	    THEN ASM_REWRITE_TAC[]
-	    THEN RULE_ASSUM_TAC(BETA_RULE o ONCE_REWRITE_RULE[PSUNTIL_REC]) 
-	    THEN UNDISCH_NO_TAC 0 
+	    THEN RULE_ASSUM_TAC(BETA_RULE o ONCE_REWRITE_RULE[PSUNTIL_REC])
+	    THEN UNDISCH_NO_TAC 0
 	    THEN REWRITE_TAC[PNEXT,PSNEXT,PRE,ZERO_LEMMA] THEN BETA_TAC
 	    THEN STRIP_TAC THEN ASM_REWRITE_TAC[]
 	]);
@@ -2915,7 +2917,7 @@ val SEPARATE_PBEFORE_LEFT_SUNTIL_THM = TAC_PROOF(
             ((\t. c t /\      ((\t. ~d t /\ PNEXT b t) PSUNTIL (\t. a t /\ ~d t)) t) PBEFORE d) t
 	)`--),
 	CONV_TAC(DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
-	THEN INDUCT_TAC 
+	THEN INDUCT_TAC
 	THENL[
 	    REWRITE_TAC[INITIALISATION] THEN BETA_TAC
 	    THEN REWRITE_TAC[INITIALISATION,SUNTIL_REC] THEN PROP_TAC,
@@ -2932,7 +2934,7 @@ val SEPARATE_PBEFORE_LEFT_SUNTIL_THM = TAC_PROOF(
 	    THEN UNDISCH_HD_TAC THEN ASM_REWRITE_TAC[PRE,ZERO_LEMMA,PSNEXT,PNEXT]
 	    THEN DISCH_TAC THEN ASM_REWRITE_TAC[]
 	    THEN RULE_ASSUM_TAC(ONCE_REWRITE_RULE[SUNTIL_REC])
-	    THEN UNDISCH_NO_TAC 1 THEN REWRITE_TAC[NEXT] 
+	    THEN UNDISCH_NO_TAC 1 THEN REWRITE_TAC[NEXT]
 	    THEN BETA_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[]
 	    THEN ONCE_REWRITE_TAC[PBEFORE_REC] THEN BETA_TAC
 	    THEN ASM_REWRITE_TAC[]
@@ -2940,32 +2942,32 @@ val SEPARATE_PBEFORE_LEFT_SUNTIL_THM = TAC_PROOF(
 	    THEN UNDISCH_NO_TAC 1
 	    THEN REWRITE_TAC[PNEXT,PSNEXT,PRE,ZERO_LEMMA] THEN BETA_TAC
 	    THEN DISJ_CASES_TAC(SPEC(--`(c:num->bool) n`--)BOOL_CASES_AX)
-	    THEN UNDISCH_NO_TAC 1 THEN ASM_REWRITE_TAC[] 
+	    THEN UNDISCH_NO_TAC 1 THEN ASM_REWRITE_TAC[]
 	    THENL[ALL_TAC,STRIP_TAC THEN ASM_REWRITE_TAC[]]
 	    THEN DISJ_CASES_TAC(SPEC(--`(d:num->bool) n`--)BOOL_CASES_AX)
-	    THEN ASM_REWRITE_TAC[] 
+	    THEN ASM_REWRITE_TAC[]
 	    THEN DISJ_CASES_TAC(EQT_ELIM(ARITH_CONV(--`(n=0) \/ ~(n=0)/\(0<n)`--)))
-	    THEN ASM_REWRITE_TAC[] 
+	    THEN ASM_REWRITE_TAC[]
 	    THEN STRIP_TAC THEN ASM_REWRITE_TAC[],
 	    (* --------------------------------------------------------	*)
-	    RULE_ASSUM_TAC(BETA_RULE o ONCE_REWRITE_RULE[PSUNTIL_REC]) 
-	    THEN UNDISCH_NO_TAC 1 
+	    RULE_ASSUM_TAC(BETA_RULE o ONCE_REWRITE_RULE[PSUNTIL_REC])
+	    THEN UNDISCH_NO_TAC 1
 	    THEN REWRITE_TAC[PNEXT,PSNEXT,PRE,ZERO_LEMMA] THEN BETA_TAC
 	    THEN ASM_REWRITE_TAC[],
 	    (* --------------------------------------------------------	*)
 	    ONCE_REWRITE_TAC[SUNTIL_REC] THEN REWRITE_TAC[NEXT] THEN BETA_TAC
 	    THEN ASM_REWRITE_TAC[]
-	    THEN RULE_ASSUM_TAC(BETA_RULE o ONCE_REWRITE_RULE[PSUNTIL_REC]) 
-	    THEN UNDISCH_NO_TAC 0 
+	    THEN RULE_ASSUM_TAC(BETA_RULE o ONCE_REWRITE_RULE[PSUNTIL_REC])
+	    THEN UNDISCH_NO_TAC 0
 	    THEN REWRITE_TAC[PNEXT,PSNEXT,PRE,ZERO_LEMMA] THEN BETA_TAC
 	    THEN STRIP_TAC THEN ASM_REWRITE_TAC[],
 	    (* --------------------------------------------------------	*)
 	    ONCE_REWRITE_TAC[SUNTIL_REC] THEN REWRITE_TAC[NEXT] THEN BETA_TAC
-	    THEN ASM_REWRITE_TAC[] 
+	    THEN ASM_REWRITE_TAC[]
 	    THEN ONCE_REWRITE_TAC[SUNTIL_REC] THEN REWRITE_TAC[NEXT] THEN BETA_TAC
 	    THEN ASM_REWRITE_TAC[]
-	    THEN RULE_ASSUM_TAC(BETA_RULE o ONCE_REWRITE_RULE[PSUNTIL_REC]) 
-	    THEN UNDISCH_NO_TAC 0 
+	    THEN RULE_ASSUM_TAC(BETA_RULE o ONCE_REWRITE_RULE[PSUNTIL_REC])
+	    THEN UNDISCH_NO_TAC 0
 	    THEN REWRITE_TAC[PNEXT,PSNEXT,PRE,ZERO_LEMMA] THEN BETA_TAC
 	    THEN STRIP_TAC THEN ASM_REWRITE_TAC[]
 	]);
@@ -2975,32 +2977,32 @@ val SEPARATE_PBEFORE_LEFT_SUNTIL_THM = TAC_PROOF(
 val SEPARATE_PSUNTIL_THM = TAC_PROOF(
 	([], --`
 	    ( (a PSUNTIL (\t. b t \/ c t)) = \t. (a PSUNTIL b) t \/ (a PSUNTIL c) t ) /\
-	    ( (a PSUNTIL (\t. b t /\ NEXT c t))	= 
-		\t. (b t /\ NEXT c t) 
-		    \/ 
+	    ( (a PSUNTIL (\t. b t /\ NEXT c t))	=
+		\t. (b t /\ NEXT c t)
+		    \/
 		    (a PSUNTIL (\t. a t /\ c t /\ PSNEXT b t)) t ) /\
-	    ( (a PSUNTIL (\t. b t /\ (c SUNTIL d) t)) = 
+	    ( (a PSUNTIL (\t. b t /\ (c SUNTIL d) t)) =
 		\t. (c SUNTIL d) t /\ ((\t. a t /\ PNEXT c t) PSUNTIL b) t \/
 		    (a PSUNTIL (\t. d t /\ ((\t. a t /\ PNEXT c t) PSUNTIL b) t)) t ) /\
-	    ( (a PSUNTIL (\t. b t /\ (c BEFORE d) t)) = 
+	    ( (a PSUNTIL (\t. b t /\ (c BEFORE d) t)) =
 		\t. (c BEFORE d) t /\ ((\t. a t /\ ~PNEXT d t) PSUNTIL b) t \/
-		    (a PSUNTIL (\t. c t /\ ~d t /\ 
+		    (a PSUNTIL (\t. c t /\ ~d t /\
 			          ((\t. a t /\ ~PNEXT d t) PSUNTIL b) t)) t ) /\
 	    ( ((\t. a t /\ b t) PSUNTIL c) = \t. (a PSUNTIL c) t /\ (b PSUNTIL c) t ) /\
-	    ( ((\t. a t \/ NEXT b t) PSUNTIL c)	= 
-		\t. (c t) \/ 
+	    ( ((\t. a t \/ NEXT b t) PSUNTIL c)	=
+		\t. (c t) \/
 		    (a t \/ NEXT b t) /\ ((\t. b t \/ PNEXT a t ) PSUNTIL (PSNEXT c)) t ) /\
 	    ( ((\t. a t \/ (b SUNTIL c) t) PSUNTIL d)
 		=  \t. ((b SUNTIL c) t  \/  ((\t. d t \/ PNEXT c t) PBEFORE (\t. ~a t /\ ~d t)) t )
 		       /\
-	               ((\t. b t \/ c t \/ ((\t. d t \/ PNEXT c t) PBEFORE (\t. ~a t /\ ~d t)) t) 
+	               ((\t. b t \/ c t \/ ((\t. d t \/ PNEXT c t) PBEFORE (\t. ~a t /\ ~d t)) t)
 			PSUNTIL d) t
 	    ) /\
 	    ( ((\t. a t \/ (b BEFORE c) t) PSUNTIL d)
 		= \t. ((b BEFORE c) t  \/  ((\t. d t \/ PSNEXT b t) PBEFORE (\t. ~a t /\ ~d t)) t )
 		      /\
 	              ((\t. ~c t \/ ((\t. d t \/ PSNEXT b t) PBEFORE (\t. ~a t /\ ~d t)) t) PSUNTIL d) t
-	    ) 
+	    )
 	`--),
 	REWRITE_TAC[
 		SEPARATE_PSUNTIL_OR_THM,
@@ -3015,7 +3017,7 @@ val SEPARATE_PSUNTIL_THM = TAC_PROOF(
 	THEN REWRITE_TAC[DE_MORGAN_THM,NEGATION_NORMAL_FORM] THEN BETA_TAC
 	THEN ONCE_REWRITE_TAC[TAC_PROOF(([],--`~a t = (\t. ~a t ) t`--),BETA_TAC THEN REWRITE_TAC[])]
 	THEN REWRITE_TAC[SEPARATE_PBEFORE_LEFT_BEFORE_THM,SEPARATE_PBEFORE_LEFT_SUNTIL_THM]
-	THEN BETA_TAC 
+	THEN BETA_TAC
 	THEN REWRITE_TAC[DE_MORGAN_THM,NEGATION_NORMAL_FORM] THEN BETA_TAC
 	THEN REWRITE_TAC[DE_MORGAN_THM,NEGATION_NORMAL_FORM]);
 
@@ -3028,7 +3030,7 @@ val SEPARATE_PSUNTIL_THM = TAC_PROOF(
 val PNEXT_NEXT = TAC_PROOF(
 	([],--`PNEXT(NEXT a) = \t. InitPoint t \/ a t`--),
 	CONV_TAC FUN_EQ_CONV THEN REWRITE_TAC[PNEXT,NEXT,InitPoint] THEN BETA_TAC
-	THEN GEN_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] 
+	THEN GEN_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[]
 	THEN REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`(n=0) = ~(0<n)`--))]
 	THEN REWRITE_TAC[TAC_PROOF(([],--`~a\/b = a==>b`--),PROP_TAC)]
 	THEN DISCH_TAC THEN IMP_RES_TAC LESS_ADD_1
@@ -3041,7 +3043,7 @@ val PSNEXT_NEXT = TAC_PROOF(
 	([],--`PSNEXT(NEXT a) = \t. ~InitPoint t /\ a t`--),
 	CONV_TAC FUN_EQ_CONV THEN REWRITE_TAC[PSNEXT,NEXT,InitPoint] THEN BETA_TAC
 	THEN REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`(n=0) = ~(0<n)`--))]
-	THEN GEN_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] 
+	THEN GEN_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[]
 	THEN IMP_RES_TAC LESS_ADD_1
 	THEN RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES,num_CONV(--`1`--)])
 	THEN UNDISCH_NO_TAC 1 THEN ASM_REWRITE_TAC[PRE]
@@ -3059,7 +3061,7 @@ val PALWAYS_NEXT = TAC_PROOF(
 	THEN REWRITE_TAC[TAC_PROOF(([],--`b\/~a = a==>b`--),PROP_TAC)]
 	THEN DISCH_TAC THEN IMP_RES_TAC LESS_ADD_1
 	THEN RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES,num_CONV(--`1`--)])
-	THEN ASM_TAC 0 SUBST1_TAC THEN POP_NO_ASSUM 4 MATCH_MP_TAC 
+	THEN ASM_TAC 0 SUBST1_TAC THEN POP_NO_ASSUM 4 MATCH_MP_TAC
 	THEN UNDISCH_NO_TAC 3 THEN UNDISCH_HD_TAC
 	THEN CONV_TAC ARITH_CONV
 	);
@@ -3073,7 +3075,7 @@ val PEVENTUAL_NEXT = TAC_PROOF(
 	    EXISTS_TAC(--`SUC t`--) THEN ASM_REWRITE_TAC[]
 	    THEN UNDISCH_NO_TAC 1 THEN CONV_TAC ARITH_CONV,
 	    RULE_ASSUM_TAC(REWRITE_RULE[EQT_ELIM(ARITH_CONV(--`~(t=0) = (0<t)`--))])
-	    THEN IMP_RES_TAC LESS_ADD_1 
+	    THEN IMP_RES_TAC LESS_ADD_1
 	    THEN RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES,num_CONV(--`1`--)])
 	    THEN POP_ASSUM (fn x=> RULE_ASSUM_TAC(REWRITE_RULE[x]))
 	    THEN EXISTS_TAC(--`p:num`--) THEN ASM_REWRITE_TAC[]
@@ -3083,29 +3085,29 @@ val PEVENTUAL_NEXT = TAC_PROOF(
 
 val PSUNTIL_RIGHT_NEXT = TAC_PROOF(
 	([],--`(a PSUNTIL (NEXT b))  = NEXT ((PNEXT a) PSUNTIL (\t. b t /\ ~InitPoint t))`--),
-	CONV_TAC FUN_EQ_CONV 
+	CONV_TAC FUN_EQ_CONV
 	THEN REWRITE_TAC[PSUNTIL,NEXT,PNEXT,InitPoint] THEN BETA_TAC
 	THEN GEN_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC
 	THENL[
-	    EXISTS_TAC(--`SUC delta`--) 
+	    EXISTS_TAC(--`SUC delta`--)
 	    THEN IMP_RES_TAC(ARITH_PROVE(--`a<=b ==> SUC a <= SUC b`--))
-	    THEN ASM_REWRITE_TAC[ZERO_LEMMA] 
+	    THEN ASM_REWRITE_TAC[ZERO_LEMMA]
 	    THEN ONCE_REWRITE_TAC[ARITH_PROVE(--`(SUC a<b) = (SUC a<b) /\ ~(b=0)`--)]
 	    THEN GEN_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[]
 	    THEN IMP_RES_TAC(ARITH_PROVE(--`~(a=0) ==> (0<a)`--))
-	    THEN IMP_RES_TAC LESS_ADD_1 THEN POP_NO_TAC 0 
+	    THEN IMP_RES_TAC LESS_ADD_1 THEN POP_NO_TAC 0
 	    THEN RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES,num_CONV(--`1`--)])
 	    THEN ASM_REWRITE_TAC[PRE]
 	    THEN POP_NO_ASSUM 6 MATCH_MP_TAC
-	    THEN UNDISCH_NO_TAC 4 THEN UNDISCH_NO_TAC 2 
+	    THEN UNDISCH_NO_TAC 4 THEN UNDISCH_NO_TAC 2
 	    THEN ASM_REWRITE_TAC[] THEN ARITH_TAC,
 	    IMP_RES_TAC(ARITH_PROVE(--`~(a=0) ==> (0<a)`--))
 	    THEN IMP_RES_TAC LESS_ADD_1
 	    THEN RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES,num_CONV(--`1`--)])
 	    THEN POP_ASSUM (fn x=> RULE_ASSUM_TAC(REWRITE_RULE[x]))
-	    THEN EXISTS_TAC(--`p:num`--) 
+	    THEN EXISTS_TAC(--`p:num`--)
 	    THEN IMP_RES_TAC(ARITH_PROVE(--`SUC a <= SUC b ==> a<=b`--))
-	    THEN ASM_REWRITE_TAC[] 
+	    THEN ASM_REWRITE_TAC[]
 	    THEN GEN_TAC THEN STRIP_TAC
 	    THEN LEFT_NO_FORALL_TAC 4 (--`SUC t`--)
 	    THEN RULE_ASSUM_TAC(REWRITE_RULE[ZERO_LEMMA,PRE])
@@ -3116,29 +3118,29 @@ val PSUNTIL_RIGHT_NEXT = TAC_PROOF(
 
 val PSBEFORE_LEFT_NEXT = TAC_PROOF(
 	([],--`((NEXT a) PSBEFORE b) = NEXT ((\t. a t /\ ~InitPoint t) PSBEFORE (PNEXT b))`--),
-	CONV_TAC FUN_EQ_CONV 
+	CONV_TAC FUN_EQ_CONV
 	THEN REWRITE_TAC[PSBEFORE,NEXT,PNEXT,InitPoint] THEN BETA_TAC
 	THEN GEN_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC
 	THENL[
-	    EXISTS_TAC(--`SUC delta`--) 
+	    EXISTS_TAC(--`SUC delta`--)
 	    THEN IMP_RES_TAC(ARITH_PROVE(--`a<=b ==> SUC a <= SUC b`--))
-	    THEN ASM_REWRITE_TAC[ZERO_LEMMA] 
+	    THEN ASM_REWRITE_TAC[ZERO_LEMMA]
 	    THEN ONCE_REWRITE_TAC[ARITH_PROVE(--`(SUC a<=b) = (SUC a<=b) /\ ~(b=0)`--)]
 	    THEN GEN_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[]
 	    THEN IMP_RES_TAC(ARITH_PROVE(--`~(a=0) ==> (0<a)`--))
-	    THEN IMP_RES_TAC LESS_ADD_1 
+	    THEN IMP_RES_TAC LESS_ADD_1
 	    THEN RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES,num_CONV(--`1`--)])
 	    THEN ASM_REWRITE_TAC[PRE]
 	    THEN POP_NO_ASSUM 6 MATCH_MP_TAC
-	    THEN UNDISCH_NO_TAC 4 THEN UNDISCH_NO_TAC 2 
+	    THEN UNDISCH_NO_TAC 4 THEN UNDISCH_NO_TAC 2
 	    THEN ASM_REWRITE_TAC[] THEN ARITH_TAC,
 	    IMP_RES_TAC(ARITH_PROVE(--`~(a=0) ==> (0<a)`--))
 	    THEN IMP_RES_TAC LESS_ADD_1
 	    THEN RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES,num_CONV(--`1`--)])
 	    THEN POP_ASSUM (fn x=> RULE_ASSUM_TAC(REWRITE_RULE[x]))
-	    THEN EXISTS_TAC(--`p:num`--) 
+	    THEN EXISTS_TAC(--`p:num`--)
 	    THEN IMP_RES_TAC(ARITH_PROVE(--`SUC a <= SUC b ==> a<=b`--))
-	    THEN ASM_REWRITE_TAC[] 
+	    THEN ASM_REWRITE_TAC[]
 	    THEN GEN_TAC THEN STRIP_TAC
 	    THEN LEFT_NO_FORALL_TAC 4 (--`SUC t`--)
 	    THEN RULE_ASSUM_TAC(REWRITE_RULE[ZERO_LEMMA,PRE])
@@ -3149,28 +3151,28 @@ val PSBEFORE_LEFT_NEXT = TAC_PROOF(
 
 val PSUNTIL_LEFT_NEXT = TAC_PROOF(
 	([],--`((NEXT a) PSUNTIL b) = NEXT (a PSUNTIL (PSNEXT b))`--),
-	CONV_TAC FUN_EQ_CONV 
+	CONV_TAC FUN_EQ_CONV
 	THEN REWRITE_TAC[PSUNTIL,NEXT,PSNEXT] THEN BETA_TAC
 	THEN GEN_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC
 	THENL[
-	    EXISTS_TAC(--`SUC delta`--) 
+	    EXISTS_TAC(--`SUC delta`--)
 	    THEN IMP_RES_TAC(ARITH_PROVE(--`a<=b ==> SUC a <= SUC b`--))
-	    THEN ASM_REWRITE_TAC[ZERO_LEMMA,PRE] 
+	    THEN ASM_REWRITE_TAC[ZERO_LEMMA,PRE]
 	    THEN ONCE_REWRITE_TAC[ARITH_PROVE(--`(SUC a<b) = (SUC a<b) /\ ~(b=0)`--)]
 	    THEN GEN_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[]
 	    THEN IMP_RES_TAC(ARITH_PROVE(--`~(a=0) ==> (0<a)`--))
-	    THEN IMP_RES_TAC LESS_ADD_1 THEN POP_NO_TAC 0 
+	    THEN IMP_RES_TAC LESS_ADD_1 THEN POP_NO_TAC 0
 	    THEN RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES,num_CONV(--`1`--)])
 	    THEN ASM_REWRITE_TAC[PRE]
 	    THEN POP_NO_ASSUM 6 MATCH_MP_TAC
-	    THEN UNDISCH_NO_TAC 4 THEN UNDISCH_NO_TAC 2 
+	    THEN UNDISCH_NO_TAC 4 THEN UNDISCH_NO_TAC 2
 	    THEN ASM_REWRITE_TAC[] THEN ARITH_TAC,
 	    IMP_RES_TAC LESS_ADD_1
 	    THEN RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES,num_CONV(--`1`--)])
 	    THEN POP_ASSUM (fn x=> RULE_ASSUM_TAC(REWRITE_RULE[x,PRE]))
-	    THEN EXISTS_TAC(--`p:num`--) 
+	    THEN EXISTS_TAC(--`p:num`--)
 	    THEN IMP_RES_TAC(ARITH_PROVE(--`SUC a <= SUC b ==> a<=b`--))
-	    THEN ASM_REWRITE_TAC[] 
+	    THEN ASM_REWRITE_TAC[]
 	    THEN GEN_TAC THEN STRIP_TAC
 	    THEN LEFT_NO_FORALL_TAC 3 (--`SUC t`--)
 	    THEN RULE_ASSUM_TAC(REWRITE_RULE[ZERO_LEMMA,PRE])
@@ -3181,28 +3183,28 @@ val PSUNTIL_LEFT_NEXT = TAC_PROOF(
 
 val PSWHEN_LEFT_NEXT = TAC_PROOF(
 	([],--`((NEXT a) PSWHEN b) = NEXT (a PSWHEN (PSNEXT b))`--),
-	CONV_TAC FUN_EQ_CONV 
+	CONV_TAC FUN_EQ_CONV
 	THEN REWRITE_TAC[PSWHEN,NEXT,PSNEXT] THEN BETA_TAC
 	THEN GEN_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC
 	THENL[
-	    EXISTS_TAC(--`SUC delta`--) 
+	    EXISTS_TAC(--`SUC delta`--)
 	    THEN IMP_RES_TAC(ARITH_PROVE(--`a<=b ==> SUC a <= SUC b`--))
-	    THEN ASM_REWRITE_TAC[ZERO_LEMMA,PRE] 
+	    THEN ASM_REWRITE_TAC[ZERO_LEMMA,PRE]
 	    THEN ONCE_REWRITE_TAC[ARITH_PROVE(--`(SUC a<b) = (SUC a<b) /\ ~(b=0)`--)]
 	    THEN GEN_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[]
 	    THEN IMP_RES_TAC(ARITH_PROVE(--`~(a=0) ==> (0<a)`--))
-	    THEN IMP_RES_TAC LESS_ADD_1 THEN POP_NO_TAC 0 
+	    THEN IMP_RES_TAC LESS_ADD_1 THEN POP_NO_TAC 0
 	    THEN RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES,num_CONV(--`1`--)])
 	    THEN ASM_REWRITE_TAC[PRE]
 	    THEN POP_NO_ASSUM 6 MATCH_MP_TAC
-	    THEN UNDISCH_NO_TAC 4 THEN UNDISCH_NO_TAC 2 
+	    THEN UNDISCH_NO_TAC 4 THEN UNDISCH_NO_TAC 2
 	    THEN ASM_REWRITE_TAC[] THEN ARITH_TAC,
 	    IMP_RES_TAC LESS_ADD_1
 	    THEN RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES,num_CONV(--`1`--)])
 	    THEN POP_ASSUM (fn x=> RULE_ASSUM_TAC(REWRITE_RULE[x,PRE]))
-	    THEN EXISTS_TAC(--`p:num`--) 
+	    THEN EXISTS_TAC(--`p:num`--)
 	    THEN IMP_RES_TAC(ARITH_PROVE(--`SUC a <= SUC b ==> a<=b`--))
-	    THEN ASM_REWRITE_TAC[] 
+	    THEN ASM_REWRITE_TAC[]
 	    THEN GEN_TAC THEN STRIP_TAC
 	    THEN LEFT_NO_FORALL_TAC 3 (--`SUC t`--)
 	    THEN RULE_ASSUM_TAC(REWRITE_RULE[ZERO_LEMMA,PRE])
@@ -3213,16 +3215,16 @@ val PSWHEN_LEFT_NEXT = TAC_PROOF(
 
 val PSBEFORE_RIGHT_NEXT = TAC_PROOF(
 	([],--`(a PSBEFORE (NEXT b)) = NEXT ((PSNEXT a) PSBEFORE b)`--),
-	CONV_TAC FUN_EQ_CONV 
+	CONV_TAC FUN_EQ_CONV
 	THEN REWRITE_TAC[PSBEFORE,NEXT,PSNEXT] THEN BETA_TAC
 	THEN GEN_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC
 	THENL[
-	    EXISTS_TAC(--`SUC delta`--) 
+	    EXISTS_TAC(--`SUC delta`--)
 	    THEN IMP_RES_TAC(ARITH_PROVE(--`a<=b ==> SUC a <= SUC b`--))
-	    THEN ASM_REWRITE_TAC[ZERO_LEMMA,PRE] 
+	    THEN ASM_REWRITE_TAC[ZERO_LEMMA,PRE]
 	    THEN GEN_TAC THEN STRIP_TAC
 	    THEN IMP_RES_TAC(ARITH_PROVE(--`(SUC b<=a) ==> (0<a)`--))
-	    THEN IMP_RES_TAC LESS_ADD_1 THEN MAP_EVERY POP_NO_TAC [3,2,1] 
+	    THEN IMP_RES_TAC LESS_ADD_1 THEN MAP_EVERY POP_NO_TAC [3,2,1]
 	    THEN RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES,num_CONV(--`1`--)])
 	    THEN ASM_REWRITE_TAC[PRE]
 	    THEN POP_NO_ASSUM 4 MATCH_MP_TAC
@@ -3231,12 +3233,12 @@ val PSBEFORE_RIGHT_NEXT = TAC_PROOF(
 	    IMP_RES_TAC LESS_ADD_1
 	    THEN RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES,num_CONV(--`1`--)])
 	    THEN POP_ASSUM (fn x=> RULE_ASSUM_TAC(REWRITE_RULE[x,PRE]))
-	    THEN EXISTS_TAC(--`p:num`--) 
+	    THEN EXISTS_TAC(--`p:num`--)
 	    THEN IMP_RES_TAC(ARITH_PROVE(--`SUC a <= SUC b ==> a<=b`--))
-	    THEN ASM_REWRITE_TAC[] 
+	    THEN ASM_REWRITE_TAC[]
 	    THEN GEN_TAC THEN STRIP_TAC
 	    THEN LEFT_NO_FORALL_TAC 3 (--`SUC t`--)
-	    THEN POP_ASSUM MATCH_MP_TAC 
+	    THEN POP_ASSUM MATCH_MP_TAC
 	    THEN ASM_REWRITE_TAC[LESS_MONO_EQ,ARITH_PROVE(--`(SUC a<=SUC b) = (a<=b)`--)]
 	]);
 
@@ -3244,9 +3246,9 @@ val PSBEFORE_RIGHT_NEXT = TAC_PROOF(
 
 val PUNTIL_LEFT_NEXT = TAC_PROOF(
 	([],--`((NEXT a) PUNTIL b) = NEXT ((\t. a t \/ InitPoint t) PUNTIL (PNEXT b))`--),
-	CONV_TAC FUN_EQ_CONV 
+	CONV_TAC FUN_EQ_CONV
 	THEN ONCE_REWRITE_TAC[TAC_PROOF(([],--`(a=b) = (~a=~b)`--),PROP_TAC)]
-	THEN REWRITE_TAC[NEGATION_NORMAL_FORM] 
+	THEN REWRITE_TAC[NEGATION_NORMAL_FORM]
 	THEN CONV_TAC(DEPTH_CONV ETA_CONV)
 	THEN REWRITE_TAC[PSBEFORE_LEFT_NEXT] THEN BETA_TAC
 	THEN REWRITE_TAC[DE_MORGAN_THM]
@@ -3254,18 +3256,18 @@ val PUNTIL_LEFT_NEXT = TAC_PROOF(
 
 val PWHEN_LEFT_NEXT = TAC_PROOF(
 	([],--`((NEXT a) PWHEN b) = NEXT (a PWHEN (PSNEXT b))`--),
-	CONV_TAC FUN_EQ_CONV 
+	CONV_TAC FUN_EQ_CONV
 	THEN ONCE_REWRITE_TAC[TAC_PROOF(([],--`(a=b) = (~a=~b)`--),PROP_TAC)]
-	THEN REWRITE_TAC[NEGATION_NORMAL_FORM] 
+	THEN REWRITE_TAC[NEGATION_NORMAL_FORM]
 	THEN CONV_TAC(DEPTH_CONV ETA_CONV)
 	THEN REWRITE_TAC[PSWHEN_LEFT_NEXT]
 	);
 
 val PBEFORE_LEFT_NEXT = TAC_PROOF(
 	([],--`((NEXT a) PBEFORE b) = NEXT (a PBEFORE (PSNEXT b))`--),
-	CONV_TAC FUN_EQ_CONV 
+	CONV_TAC FUN_EQ_CONV
 	THEN ONCE_REWRITE_TAC[TAC_PROOF(([],--`(a=b) = (~a=~b)`--),PROP_TAC)]
-	THEN REWRITE_TAC[NEGATION_NORMAL_FORM] 
+	THEN REWRITE_TAC[NEGATION_NORMAL_FORM]
 	THEN CONV_TAC(DEPTH_CONV ETA_CONV)
 	THEN REWRITE_TAC[PSUNTIL_LEFT_NEXT]
 	);
@@ -3273,9 +3275,9 @@ val PBEFORE_LEFT_NEXT = TAC_PROOF(
 
 val PUNTIL_RIGHT_NEXT = TAC_PROOF(
 	([],--`(a PUNTIL (NEXT b)) = NEXT ((PNEXT a) PUNTIL b)`--),
-	CONV_TAC FUN_EQ_CONV 
+	CONV_TAC FUN_EQ_CONV
 	THEN ONCE_REWRITE_TAC[TAC_PROOF(([],--`(a=b) = (~a=~b)`--),PROP_TAC)]
-	THEN REWRITE_TAC[NEGATION_NORMAL_FORM] 
+	THEN REWRITE_TAC[NEGATION_NORMAL_FORM]
 	THEN CONV_TAC(DEPTH_CONV ETA_CONV)
 	THEN REWRITE_TAC[PSBEFORE_RIGHT_NEXT]
 	);
@@ -3283,16 +3285,16 @@ val PUNTIL_RIGHT_NEXT = TAC_PROOF(
 
 val PBEFORE_RIGHT_NEXT = TAC_PROOF(
 	([],--`(a PBEFORE (NEXT b)) = NEXT ((PNEXT a) PBEFORE (\t. ~InitPoint t /\ b t))`--),
-	CONV_TAC FUN_EQ_CONV 
+	CONV_TAC FUN_EQ_CONV
 	THEN ONCE_REWRITE_TAC[TAC_PROOF(([],--`(a=b) = (~a=~b)`--),PROP_TAC)]
-	THEN REWRITE_TAC[NEGATION_NORMAL_FORM] 
+	THEN REWRITE_TAC[NEGATION_NORMAL_FORM]
 	THEN CONV_TAC(DEPTH_CONV ETA_CONV)
 	THEN REWRITE_TAC[PSUNTIL_RIGHT_NEXT]
 	THEN GEN_TAC THEN REWRITE_TAC[PSUNTIL,InitPoint,PNEXT,PSNEXT,NEXT]
 	THEN BETA_TAC THEN REWRITE_TAC[ARITH_PROVE(--`(n=0) = ~(0<n)`--)]
 	THEN EQ_TAC THEN REPEAT STRIP_TAC
 	THEN EXISTS_TAC(--`delta:num`--) THEN ASM_REWRITE_TAC[]
-	THEN GEN_TAC THEN STRIP_TAC 
+	THEN GEN_TAC THEN STRIP_TAC
 	THEN LEFT_NO_FORALL_TAC 2 (--`t':num`--) THEN UNDISCH_HD_TAC
 	THEN ASM_REWRITE_TAC[]
 	THEN IMP_RES_TAC(ARITH_PROVE(--`delta<t' ==> 0<t'`--))
@@ -3302,30 +3304,30 @@ val PBEFORE_RIGHT_NEXT = TAC_PROOF(
 
 val PSWHEN_RIGHT_NEXT = TAC_PROOF(
 	([],--`(a PSWHEN (NEXT b)) = NEXT ((PNEXT a) PSWHEN (\t. b t /\ ~InitPoint t))`--),
-	CONV_TAC FUN_EQ_CONV 
+	CONV_TAC FUN_EQ_CONV
 	THEN REWRITE_TAC[PSWHEN,NEXT,PNEXT,InitPoint] THEN BETA_TAC
 	THEN GEN_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC
 	THENL[
-	    EXISTS_TAC(--`SUC delta`--) 
+	    EXISTS_TAC(--`SUC delta`--)
 	    THEN IMP_RES_TAC(ARITH_PROVE(--`a<=b ==> SUC a <= SUC b`--))
-	    THEN ASM_REWRITE_TAC[ZERO_LEMMA,PRE] 
+	    THEN ASM_REWRITE_TAC[ZERO_LEMMA,PRE]
 	    THEN ONCE_REWRITE_TAC[ARITH_PROVE(--`(SUC a<b) = (SUC a<b) /\ ~(b=0)`--)]
 	    THEN GEN_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[]
 	    THEN IMP_RES_TAC(ARITH_PROVE(--`~(a=0) ==> (0<a)`--))
-	    THEN IMP_RES_TAC LESS_ADD_1 THEN POP_NO_TAC 0 
+	    THEN IMP_RES_TAC LESS_ADD_1 THEN POP_NO_TAC 0
 	    THEN RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES,num_CONV(--`1`--)])
 	    THEN ASM_REWRITE_TAC[PRE]
 	    THEN POP_NO_ASSUM 6 MATCH_MP_TAC
-	    THEN UNDISCH_NO_TAC 4 THEN UNDISCH_NO_TAC 2 
+	    THEN UNDISCH_NO_TAC 4 THEN UNDISCH_NO_TAC 2
 	    THEN ASM_REWRITE_TAC[] THEN ARITH_TAC,
 	    UNDISCH_NO_TAC 1 THEN ASM_REWRITE_TAC[],
 	    IMP_RES_TAC(ARITH_PROVE(--`~(a=0) ==> (0<a)`--))
 	    THEN IMP_RES_TAC LESS_ADD_1
 	    THEN RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES,num_CONV(--`1`--)])
 	    THEN POP_ASSUM (fn x=> RULE_ASSUM_TAC(REWRITE_RULE[x,PRE]))
-	    THEN EXISTS_TAC(--`p:num`--) 
+	    THEN EXISTS_TAC(--`p:num`--)
 	    THEN IMP_RES_TAC(ARITH_PROVE(--`SUC a <= SUC b ==> a<=b`--))
-	    THEN ASM_REWRITE_TAC[] 
+	    THEN ASM_REWRITE_TAC[]
 	    THEN GEN_TAC THEN STRIP_TAC
 	    THEN LEFT_NO_FORALL_TAC 4 (--`SUC t`--)
 	    THEN RULE_ASSUM_TAC(REWRITE_RULE[ZERO_LEMMA,PRE])
@@ -3339,9 +3341,9 @@ val PSWHEN_RIGHT_NEXT = TAC_PROOF(
 
 val PWHEN_RIGHT_NEXT = TAC_PROOF(
 	([],--`(a PWHEN (NEXT b)) = NEXT ((PNEXT a) PWHEN (\t. b t /\ ~InitPoint t))`--),
-	CONV_TAC FUN_EQ_CONV 
+	CONV_TAC FUN_EQ_CONV
 	THEN ONCE_REWRITE_TAC[TAC_PROOF(([],--`(a=b) = (~a=~b)`--),PROP_TAC)]
-	THEN REWRITE_TAC[NEGATION_NORMAL_FORM] 
+	THEN REWRITE_TAC[NEGATION_NORMAL_FORM]
 	THEN CONV_TAC(DEPTH_CONV ETA_CONV)
 	THEN REWRITE_TAC[PSWHEN_RIGHT_NEXT]
 	THEN GEN_TAC THEN REWRITE_TAC[PSWHEN,InitPoint,PNEXT,PSNEXT,NEXT]
@@ -3449,7 +3451,7 @@ val NEXT_INWARDS_NORMAL_FORM = TAC_PROOF(
 	THEN CONV_TAC(DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
 	THEN REWRITE_TAC[NEXT,PNEXT,PSNEXT]
 	THEN BETA_TAC THEN REWRITE_TAC[ZERO_LEMMA,PRE]
-	THEN REPEAT CONJ_TAC THEN INDUCT_TAC 
+	THEN REPEAT CONJ_TAC THEN INDUCT_TAC
 	THEN REWRITE_TAC[INITIALISATION,ZERO_LEMMA,PRE]
 	THEN (PROP_TAC ORELSE ALL_TAC)
 	THEN CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[RECURSION]))
@@ -3482,7 +3484,7 @@ val PNEXT_INWARDS_NORMAL_FORM = TAC_PROOF(
 	( PNEXT (a PSBEFORE b)	= \t. InitPoint t \/ ((PSNEXT a) PSBEFORE (PNEXT b)) t ) /\
 	( PNEXT (a PUNTIL b)	= ((PNEXT a) PUNTIL (PNEXT b))      		) /\
 	( PNEXT (a PWHEN b)	= ((PNEXT a) PWHEN (PNEXT b))      		) /\
-	( PNEXT (a PBEFORE b)	= ((PNEXT a) PBEFORE (PSNEXT b))      		) 
+	( PNEXT (a PBEFORE b)	= ((PNEXT a) PBEFORE (PSNEXT b))      		)
 	`--),
     let val PSNEXT_AS_PNEXT = TAC_PROOF(
 	    ([],--`PSNEXT a t = ~InitPoint t /\ PNEXT a t `--),
@@ -3510,10 +3512,10 @@ val PNEXT_INWARDS_NORMAL_FORM = TAC_PROOF(
 	(* only the past operators remain here *)
 	THEN REPEAT CONJ_TAC
 	THEN CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[RECURSION]))
-	THEN BETA_TAC THEN ASM_REWRITE_TAC[PSNEXT_AS_PNEXT] 
+	THEN BETA_TAC THEN ASM_REWRITE_TAC[PSNEXT_AS_PNEXT]
 	THEN (PROP_TAC ORELSE ALL_TAC)
 	(* only the strong past operators remain here *)
-	THEN POP_NO_TAC 0 
+	THEN POP_NO_TAC 0
 	THEN ONCE_REWRITE_TAC[RECURSION]
 	THEN BETA_TAC THEN REWRITE_TAC[InitPoint,PSNEXT]
 	THEN BETA_TAC THEN REWRITE_TAC[ARITH_PROVE(--`(t=0) = ~(0<t)`--)]
@@ -3545,7 +3547,7 @@ val PSNEXT_INWARDS_NORMAL_FORM = TAC_PROOF(
 	( PSNEXT (a PSBEFORE b)	  = ((PSNEXT a) PSBEFORE (PSNEXT b))  ) /\
 	( PSNEXT (a PUNTIL b)	  = ((PSNEXT a) PUNTIL (PSNEXT b))      		) /\
 	( PSNEXT (a PWHEN b)	  = ((PSNEXT a) PWHEN (PSNEXT b))      		) /\
-	( PSNEXT (a PBEFORE b)	  = ((PSNEXT a) PBEFORE (PSNEXT b))      		) 
+	( PSNEXT (a PBEFORE b)	  = ((PSNEXT a) PBEFORE (PSNEXT b))      		)
 	`--),
     let val PSNEXT_AS_PNEXT = TAC_PROOF(
 	    ([],--`PSNEXT a t = ~InitPoint t /\ PNEXT a t `--),
@@ -3573,10 +3575,10 @@ val PSNEXT_INWARDS_NORMAL_FORM = TAC_PROOF(
 	(* only the past operators remain here *)
 	THEN REPEAT CONJ_TAC
 	THEN CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[RECURSION]))
-	THEN BETA_TAC THEN ASM_REWRITE_TAC[PSNEXT_AS_PNEXT] 
+	THEN BETA_TAC THEN ASM_REWRITE_TAC[PSNEXT_AS_PNEXT]
 	THEN (PROP_TAC ORELSE ALL_TAC)
 	(* only the strong past operators remain here *)
-	THEN POP_NO_TAC 0 
+	THEN POP_NO_TAC 0
 	THEN ONCE_REWRITE_TAC[RECURSION]
 	THEN BETA_TAC THEN REWRITE_TAC[InitPoint,PSNEXT]
 	THEN BETA_TAC THEN REWRITE_TAC[ARITH_PROVE(--`(t=0) = ~(0<t)`--)]

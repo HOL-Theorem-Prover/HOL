@@ -34,7 +34,7 @@ type data = (string * string) * (thm * class)
  ---------------------------------------------------------------------------*)
 
 local open String
-      fun comp ((s1,s2),(t1,t2)) = 
+      fun comp ((s1,s2),(t1,t2)) =
           case compare(s1,t1) of EQUAL => compare(s2,t2) | x => x
 in
 val DBref = ref (mkDict comp :(string*string, data) dict)
@@ -43,7 +43,7 @@ fun lemmas() = !DBref
 end;
 
 (*---------------------------------------------------------------------------
-   Map keys to canonical case 
+   Map keys to canonical case
  ---------------------------------------------------------------------------*)
 
 fun toLower s =
@@ -87,7 +87,7 @@ fun CT() =
   in
     itlist (add o classify thyname Def) (Theory.definitions ())
      (itlist (add o classify thyname Axm) (Theory.axioms ())
-      (itlist (add o classify thyname Thm) (Theory.theorems ()) 
+      (itlist (add o classify thyname Thm) (Theory.theorems ())
               (lemmas())))
   end
 end;
@@ -111,8 +111,8 @@ fun find s = prim_find (occurs(toLower s)) (CT());
  ---------------------------------------------------------------------------*)
 
 fun matchp P thylist =
- let val matchfn = 
-       case List.map norm_thyname thylist 
+ let val matchfn =
+       case List.map norm_thyname thylist
         of []   => (fn (_,(th,_)) => P th)
          | strl => (fn ((s,_),(th,_)) => Lib.mem s strl andalso P th)
  in
@@ -120,10 +120,10 @@ fun matchp P thylist =
  end
 
 
-fun matcher f thyl pat = 
+fun matcher f thyl pat =
   matchp (fn th => can (find_term (can (f pat))) (concl th)) thyl;
 
-val match = matcher (ho_match_term []);
+val match = matcher (ho_match_term [] empty_tmset);
 val apropos = match [];
 
 
@@ -131,7 +131,7 @@ val apropos = match [];
       Some other lookup functions
  ---------------------------------------------------------------------------*)
 
-fun theorem_class thyname thmname = 
+fun theorem_class thyname thmname =
  #2 (Binarymap.find (CT(), (toLower (norm_thyname thyname), toLower thmname)))
 
 fun theorem s1 s2 = fst (theorem_class s1 s2);

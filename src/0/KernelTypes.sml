@@ -1,8 +1,8 @@
-structure KernelTypes :> KernelTypes = 
+structure KernelTypes :> KernelTypes =
 struct
 
 (*---------------------------------------------------------------------------
-    Elements in signatures are determined by a (name,theory) pair. 
+    Elements in signatures are determined by a (name,theory) pair.
     The reference cell is for uniqueness (an interactive session may
     create more than one such pair, and they need to be distinguished).
  ---------------------------------------------------------------------------*)
@@ -17,7 +17,7 @@ fun dest_id ((ref p):id) = p
 fun name_of id = #1(dest_id id)
 fun seg_of id  = #2(dest_id id)
 fun retire r = let val (n,t) = dest_id r in r := (!Globals.old n, t) end
-fun compare (id1,id2) = 
+fun compare (id1,id2) =
   case String.compare (name_of id1, name_of id2)
    of EQUAL => String.compare (seg_of id1, seg_of id2)
     |   x   => x;
@@ -31,7 +31,7 @@ fun id_to_string (ref p) = fullname p;
 
 type tyconst = id * int
 
-datatype hol_type = Tyv of string 
+datatype hol_type = Tyv of string
                   | Tyapp of tyconst * hol_type list;
 
 
@@ -63,18 +63,18 @@ datatype term = Fv of string * hol_type
 (*---------------------------------------------------------------------------
       The representation of theorems. A "tag" is a pair of the oracles
       used and the axioms used. Oracles are represented as ordered lists
-      of strings, and axioms are lists of string refs. 
+      of strings, and axioms are lists of string refs.
  ---------------------------------------------------------------------------*)
 
 datatype tag = TAG of string list * string ref list
 
-datatype thm = THM of tag * term list * term
+datatype thm = THM of tag * term HOLset.set * term
 
 (*---------------------------------------------------------------------------
      The type of witnesses for definitions, used in Theory.
  ---------------------------------------------------------------------------*)
 
-  datatype witness 
+  datatype witness
        = TERM of term
-       | THEOREM of thm 
+       | THEOREM of thm
 end;

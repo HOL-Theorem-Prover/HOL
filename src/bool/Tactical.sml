@@ -68,7 +68,7 @@ fun tac1 THEN tac2 = fn g =>
                                end
                 | (goals,vfun) => (goals@G, vfun::V, length goals::lengths))
             gl ([],[],[]))
-      of ([],V,_) => 
+      of ([],V,_) =>
             ([], let val th = vf (map (fn f => f[]) V) in fn [] => th end)
        | (G,V,lengths) => (G, (vf o mapshape lengths V))
    end
@@ -137,8 +137,8 @@ fun REPEAT tac g = ((tac THEN REPEAT tac) ORELSE ALL_TAC) g ;
  * Tactical to make any tactic valid.
  *
  *    VALID tac
- * 
- * is the same as "tac", except it will fail in the cases where "tac" 
+ *
+ * is the same as "tac", except it will fail in the cases where "tac"
  * returns an invalid proof.
  *---------------------------------------------------------------------------*)
 
@@ -180,19 +180,22 @@ fun POP_ASSUM_LIST asltac (asl,w) = asltac (map ASSUME asl) ([],w);
  * and give it to a function (tactic).
  *---------------------------------------------------------------------------*)
 
-local fun match_with_constants constants pat ob =
-       let val (tm_inst, ty_inst) = ho_match_term [] pat ob
-           val bound_vars = map #redex tm_inst
-       in null (intersect constants bound_vars)
-       end handle HOL_ERR _ => false
+local
+  fun match_with_constants constants pat ob = let
+    val (tm_inst, ty_inst) =
+        ho_match_term [] empty_tmset pat ob
+    val bound_vars = map #redex tm_inst
+  in
+    null (intersect constants bound_vars)
+  end handle HOL_ERR _ => false
 in
 fun PAT_ASSUM pat thfun (asl, w) =
-  case List.filter (can (ho_match_term [] pat)) asl
+  case List.filter (can (ho_match_term [] empty_tmset pat)) asl
    of []  => raise ERR "PAT_ASSUM" "No assumptions match the given pattern"
     | [x] => let val (ob, asl') = Lib.pluck (Lib.equal x) asl
              in thfun (ASSUME ob) (asl', w)
              end
-    |  _  => 
+    |  _  =>
       let val fvars = free_varsl (w::asl)
           val (ob,asl') = Lib.pluck (match_with_constants fvars pat) asl
       in thfun (ASSUME ob) (asl',w)

@@ -175,14 +175,17 @@ fun var_compare (Fv(s1,ty1), Fv(s2,ty2)) =
           | x => x)
   | var_compare _ = raise ERR "FVL" "variable comparison";
 
-val empty_varset = Binaryset.empty var_compare
+val empty_varset = HOLset.empty var_compare
 
 fun FVL [] A = A
-  | FVL ((v as Fv _)::rst) A      = FVL rst (Binaryset.add(A,v))
+  | FVL ((v as Fv _)::rst) A      = FVL rst (HOLset.add(A,v))
   | FVL (Comb(Rator,Rand)::rst) A = FVL (Rator::Rand::rst) A
   | FVL (Abs(_,Body)::rst) A      = FVL (Body::rst) A
   | FVL ((t as Clos _)::rst) A    = FVL (push_clos t::rst) A
   | FVL (_::rst) A                = FVL rst A
+
+val FVL0 = FVL
+fun FVL tmlist = FVL0 tmlist empty_varset
 
 
 (*---------------------------------------------------------------------------*
@@ -372,7 +375,7 @@ val ground = Lib.all (fn {redex,residue} => not(polymorphic residue));
 fun create_const errstr (const as Const(_,GRND pat)) Ty =
       if Ty=pat then const else raise ERR "create_const" "not a type match"
   | create_const errstr (const as Const(r,POLY pat)) Ty =
-     ((case Type.tymatch pat Ty ([],[])
+     ((case Type.raw_match_type [] pat Ty ([],[])
         of ([],_) => const
          | (S,[]) => Const(r, if ground S then GRND Ty else POLY Ty)
          | (S, _) => Const(r,POLY Ty))
@@ -658,9 +661,46 @@ fun inst [] tm = tm
      end;
 
 
-(*---------------------------------------------------------------------------*
- * Matching (first order, modulo alpha conversion) of terms.                 *
- *---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    A total ordering on terms.  Fv < Bv < Const < Comb < Abs
+      (respects alpha equivalence)
+   ---------------------------------------------------------------------- *)
+fun EQ (M,N) = Portable.pointer_eq(M,N)
+fun compare (t1, t2) =
+    if EQ(t1,t2) then EQUAL else
+    case (t1, t2) of
+      (t1 as Clos _, t2)     => compare (push_clos t1, t2)
+    | (t1, t2 as Clos _)     => compare (t1, push_clos t2)
+    | (u as Fv _, v as Fv _) => var_compare (u,v)
+    | (Fv _, _)              => LESS
+    | (Bv _, Fv _)           => GREATER
+    | (Bv i, Bv j)           => Int.compare (i,j)
+    | (Bv _, _)              => LESS
+    | (Const _, Fv _)        => GREATER
+    | (Const _, Bv _)        => GREATER
+    | (Const(c1,ty1),
+       Const(c2,ty2))        => (case KernelTypes.compare (c1,c2) of
+                                  EQUAL => Type.compare (to_hol_type ty1,
+                                                         to_hol_type ty2)
+                                | x => x)
+    | (Const _, _)           => LESS
+    | (Comb(M,N),Comb(P,Q))  => (case compare (M,P) of
+                                  EQUAL => compare (N,Q)
+                                | x => x)
+    | (Comb _, Abs _)        => LESS
+    | (Comb _, _)            => GREATER
+    | (Abs(Fv(_, ty1),M),
+       Abs(Fv(_, ty2),N))    => (case Type.compare(ty1,ty2) of
+                                   EQUAL => compare (M,N)
+                                 | x => x)
+    | (Abs _, _)             => GREATER;
+
+val empty_tmset = HOLset.empty compare
+
+(* ----------------------------------------------------------------------
+    Matching (first order, modulo alpha conversion) of terms, including a
+    set of variables to avoid binding.
+   ---------------------------------------------------------------------- *)
 
 local fun MERR() = raise ERR "match_term.red" ""
       fun free (Bv i) n             = i<n
@@ -668,28 +708,35 @@ local fun MERR() = raise ERR "match_term.red" ""
         | free (Abs(_,Body)) n      = free Body (n+1)
         | free (t as Clos _) n      = free (push_clos t) n
         | free _ _ = true
+      val tymatch = Type.raw_match_type
 in
-fun raw_match (v as Fv(_,Ty)) tm (tmS,tyS) =
-     if not(free tm 0) then MERR()
-     else ((case Lib.subst_assoc (equal v) tmS
-             of NONE => (v |-> tm)::tmS
-              | SOME tm' => if aconv tm' tm then tmS else MERR()),
-             Type.tymatch Ty (type_of tm) tyS)
-  | raw_match (Const(c1, ty1)) (Const(c2, ty2)) (tmS,tyS)
-     = if c1 <> c2 then MERR()
-       else (case (ty1,ty2)
-         of (GRND _, POLY _) => MERR()
-          | (GRND pat, GRND obj) => if pat=obj then (tmS,tyS) else MERR()
-          | (POLY pat, GRND obj) => (tmS, Type.tymatch pat obj tyS)
-          | (POLY pat, POLY obj) => (tmS, Type.tymatch pat obj tyS))
-  | raw_match (Comb(M,N)) (Comb(P,Q)) S = raw_match M P (raw_match N Q S)
-  | raw_match (Abs(Fv(_,ty1),M)) (Abs(Fv(_,ty2),N)) (tmS,tyS)
-     = raw_match M N (tmS, Type.tymatch ty1 ty2 tyS)
-  | raw_match (Bv i) (Bv j) S     = if i=j then S else MERR()
-  | raw_match (pt as Clos _) tm S = raw_match (push_clos pt) tm S
-  | raw_match pt (tm as Clos _) S = raw_match pt (push_clos tm) S
-  | raw_match all other cases     = MERR()
-end;
+fun raw_match tyavoids avoidset pat ob  (S as (tmS,tyS)) = let
+  val raw_match = raw_match tyavoids avoidset
+in
+  case (pat, ob) of
+    (v as Fv(_,Ty), tm) =>
+      if HOLset.member(avoidset,v) andalso v <> tm then MERR()
+      else if not(free tm 0) then MERR()
+      else ((case Lib.subst_assoc (equal v) tmS of
+               NONE => (v |-> tm)::tmS
+             | SOME tm' => if aconv tm' tm then tmS else MERR()),
+            tymatch tyavoids Ty (type_of tm) tyS)
+  | (Const(c1, ty1), Const(c2, ty2)) =>
+      if c1 <> c2 then MERR()
+      else (case (ty1,ty2) of
+              (GRND _, POLY _) => MERR()
+            | (GRND pat, GRND obj) => if pat=obj then (tmS,tyS) else MERR()
+            | (POLY pat, GRND obj) => (tmS, tymatch tyavoids pat obj tyS)
+            | (POLY pat, POLY obj) => (tmS, tymatch tyavoids pat obj tyS))
+  | (Comb(M,N), Comb(P,Q))               => raw_match M P (raw_match N Q S)
+  | (Abs(Fv(_,ty1),M), Abs(Fv(_,ty2),N)) =>
+       raw_match M N (tmS, tymatch tyavoids ty1 ty2 tyS)
+  | (Bv i, Bv j)                         => if i=j then S else MERR()
+  | (Clos _, tm)                         => raw_match (push_clos pat) tm S
+  | (pt, tm as Clos _)                   => raw_match pt (push_clos tm) S
+  | otherwise                            => MERR()
+end
+end (* local *)
 
 fun norm_subst tytheta =
  let val Theta = inst tytheta
@@ -700,11 +747,14 @@ fun norm_subst tytheta =
  in del []
  end
 
-fun match_term pat ob =
-  let val (tm_subst,(ty_subst,_)) = raw_match pat ob ([],([],[]))
-  in (norm_subst ty_subst tm_subst, ty_subst)
-  end;
+fun match_terml tyavoids avoids pat ob = let
+  val (tm_subst, (ty_subst, _)) =
+      raw_match tyavoids avoids pat ob ([], ([], []))
+in
+  (norm_subst ty_subst tm_subst, ty_subst)
+end
 
+val match_term = match_terml [] (HOLset.empty compare)
 
 (*---------------------------------------------------------------------------
          Must know that ty is the type of tm1 and tm2.
@@ -740,61 +790,6 @@ fun break_abs(Abs(_,Body)) = Body
   | break_abs _ = raise ERR "break_abs" "not an abstraction";
 
 
-(*---------------------------------------------------------------------------*
- * A total ordering on terms.  Fv < Bv < Const < Comb < Abs                  *
- *---------------------------------------------------------------------------*)
-
-
-fun compare (t1 as Clos _, t2)     = compare (push_clos t1, t2)
-  | compare (t1, t2 as Clos _)     = compare (t1, push_clos t2)
-  | compare (u as Fv _, v as Fv _) = var_compare (u,v)
-  | compare (Fv _, _)              = LESS
-  | compare (Bv _, Fv _)           = GREATER
-  | compare (Bv i, Bv j)           = Int.compare (i,j)
-  | compare (Bv _, _)              = LESS
-  | compare (Const _, Fv _)        = GREATER
-  | compare (Const _, Bv _)        = GREATER
-  | compare (Const(c1,ty1),
-             Const(c2,ty2))        = (case KernelTypes.compare (c1,c2)
-                                       of EQUAL => Type.compare
-                                           (to_hol_type ty1, to_hol_type ty2)
-                                        | x => x)
-  | compare (Const _, _)           = LESS
-  | compare(Comb(M,N),Comb(P,Q))   = (case compare (M,P)
-                                       of EQUAL => compare (N,Q) | x => x)
-  | compare (Comb _, Abs _)        = LESS
-  | compare (Comb _, _)            = GREATER
-  | compare (Abs(u,M),Abs(v,N))    = (case compare (u,v)
-                                       of EQUAL => compare (M,N) | x => x)
-  | compare (Abs _, _)             = GREATER;
-
-fun aconv_compare (t1, t2) =
-    case (t1, t2) of
-      (t1 as Clos _, t2)     => aconv_compare (push_clos t1, t2)
-    | (t1, t2 as Clos _)     => aconv_compare (t1, push_clos t2)
-    | (u as Fv _, v as Fv _) => var_compare (u,v)
-    | (Fv _, _)              => LESS
-    | (Bv _, Fv _)           => GREATER
-    | (Bv i, Bv j)           => Int.compare (i,j)
-    | (Bv _, _)              => LESS
-    | (Const _, Fv _)        => GREATER
-    | (Const _, Bv _)        => GREATER
-    | (Const(c1,ty1),
-       Const(c2,ty2))        => (case KernelTypes.compare (c1,c2) of
-                                  EQUAL => Type.compare (to_hol_type ty1,
-                                                         to_hol_type ty2)
-                                | x => x)
-    | (Const _, _)           => LESS
-    | (Comb(M,N),Comb(P,Q))  => (case aconv_compare (M,P) of
-                                  EQUAL => aconv_compare (N,Q)
-                                | x => x)
-    | (Comb _, Abs _)        => LESS
-    | (Comb _, _)            => GREATER
-    | (Abs(Fv(_, ty1),M),
-       Abs(Fv(_, ty2),N))    => (case Type.compare(ty1,ty2) of
-                                   EQUAL => aconv_compare (M,N)
-                                 | x => x)
-    | (Abs _, _)             => GREATER;
 
 
 

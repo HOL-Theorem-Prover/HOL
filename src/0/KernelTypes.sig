@@ -1,8 +1,8 @@
-signature KernelTypes = 
+signature KernelTypes =
 sig
 
 (*---------------------------------------------------------------------------
-    Elements in signatures are determined by a (name,theory) pair. 
+    Elements in signatures are determined by a (name,theory) pair.
     The reference cell is for uniqueness: an interactive session may
     create more than one such pair, and they need to be distinguished.
  ---------------------------------------------------------------------------*)
@@ -10,7 +10,7 @@ sig
 type name    = string
 type segment = string
 
-eqtype id 
+eqtype id
 
   val mk_id    : name * segment -> id
   val dest_id  : id -> name * segment
@@ -28,7 +28,7 @@ eqtype id
 
 type tyconst = id * int
 
-datatype hol_type = Tyv of string 
+datatype hol_type = Tyv of string
                   | Tyapp of tyconst * hol_type list;
 
 
@@ -59,14 +59,14 @@ datatype term = Fv of string * hol_type
 
 datatype tag = TAG of string list * string ref list
 
-datatype thm = THM of tag * term list * term
+datatype thm = THM of tag * term HOLset.set * term
 
 
 (*---------------------------------------------------------------------------
      The type of witnesses, used by the definition principles.
  ---------------------------------------------------------------------------*)
 
-  datatype witness 
+  datatype witness
        = TERM of term
-       | THEOREM of thm 
+       | THEOREM of thm
 end

@@ -12,6 +12,8 @@ exception No_match;
 
 (* p and pc are both constants *)
 
+val raw_match = raw_match [] empty_tmset
+
 fun match_const (bds,tbds) pc c =
   (bds, snd (raw_match pc c ([],tbds)))
   handle HOL_ERR _ => raise No_match
@@ -24,8 +26,8 @@ fun match_const (bds,tbds) pc c =
  *---------------------------------------------------------------------------*)
 
 fun match_var (bds,tbds) var arg =
- let val _ = 
-    case Array.sub(bds,var) 
+ let val _ =
+    case Array.sub(bds,var)
      of SOME(tm,_) => if aconv tm (fst arg) then () else raise No_match
       | NONE => Array.update(bds,var,SOME arg)
  in
@@ -55,13 +57,13 @@ and match_solve bds (Pvar var)           arg = match_var bds var arg
 ;
 
 (*---------------------------------------------------------------------------
- * Try a sequence of rewrite rules. No attempt to factorize patterns! 
+ * Try a sequence of rewrite rules. No attempt to factorize patterns!
  *---------------------------------------------------------------------------*)
 
 fun try_rwn ibds lt =
  let fun try_rec [] = raise No_match
        | try_rec ((rw as RW{lhs,npv,...})::rwn) =
-          (let val env = Array.array(npv,NONE) 
+          (let val env = Array.array(npv,NONE)
            in {Rule=rw, Inst=match_list (env,ibds) lhs lt}
            end handle No_match => try_rec rwn)
  in try_rec end
@@ -90,7 +92,7 @@ fun mk_clos(env,t) =
 
 
 (*---------------------------------------------------------------------------
- * It is probably this code that can be improved the most 
+ * It is probably this code that can be improved the most
  *---------------------------------------------------------------------------*)
 
 local fun inst_one_var (SOME(tm,v),(thm,lv)) = (Spec tm thm, v :: lv)
@@ -112,14 +114,14 @@ end;
 fun reduce_cst (th,{Head, Args, Rws=Try{Hcst,Rws=Rewrite rls,Tail},Skip}) =
       (let val (_,tytheta) = raw_match Hcst Head ([],([],[]))
                              handle HOL_ERR _ => raise No_match
-           val rule_inst = try_rwn tytheta Args rls 
+           val rule_inst = try_rwn tytheta Args rls
        in (true, inst_rw (th,rule_inst))
-       end handle No_match 
+       end handle No_match
        => reduce_cst (th,{Head=Head,Args=Args,Rws=Tail,Skip=Skip}))
   | reduce_cst (th,{Head, Args, Rws=Try{Hcst,Rws=Conv fconv,Tail},Skip}) =
       (let val (thm, ft) = fconv (rhs_concl th) in
        (true, (trans_thm th thm, ft))
-       end handle HOL_ERR _ 
+       end handle HOL_ERR _
        => reduce_cst (th,{Head=Head,Args=Args,Rws=Tail,Skip=Skip}))
   | reduce_cst (th,cst) = (false,(th,CST cst))
 ;

@@ -229,15 +229,23 @@ local
          | look ({redex,residue}::t) = if x=redex then SOME residue else look t
    in look end
 in
-fun tymatch (v as Tyv _) ty (p as (S,ids)) =
-      (case lookup v ids S
-        of NONE     => if v=ty then (S,v::ids) else ((v |-> ty)::S,ids)
-         | SOME ty1 => if ty1=ty then p else raise ERR "tymatch" "")
-  | tymatch (Tyapp(c1,A1)) (Tyapp(c2,A2)) B =
-      if c1=c2 then rev_itlist2 tymatch A1 A2 B else raise ERR "tymatch" ""
-  | tymatch _  _  _ = raise ERR "tymatch" ""
+fun tymatch avoids pat ob (p as (S, ids)) = let
+  val tymatch = tymatch avoids
+in
+  case (pat, ob) of
+    (v as Tyv _, ty) =>
+    if Lib.mem v avoids andalso v <> ty then raise ERR "tymatch" ""
+    else (case lookup v ids S of
+            NONE     => if v=ty then (S,v::ids) else ((v |-> ty)::S,ids)
+          | SOME ty1 => if ty1=ty then p else raise ERR "tymatch" "")
+  | (Tyapp(c1,A1), Tyapp(c2,A2)) =>
+    if c1=c2 then rev_itlist2 tymatch A1 A2 p else raise ERR "tymatch" ""
+  | _ =>  raise ERR "tymatch" ""
+end
 
-fun match_type pat ob = fst(tymatch pat ob ([],[]))
+fun match_typel l pat ob = fst (tymatch l pat ob ([], []))
+val match_type = match_typel []
+val raw_match_type = tymatch
 end;
 
 

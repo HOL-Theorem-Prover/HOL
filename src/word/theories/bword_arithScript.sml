@@ -625,7 +625,10 @@ val ACARRY_WSEG = store_thm("ACARRY_WSEG",
 val ICARRY_WSEG = store_thm("ICARRY_WSEG",
     (--`!n. !w1 w2::PWORDLEN n. !cin k m. k < m /\ m <= n ==>
      (ICARRY k (WSEG m 0 w1) (WSEG m 0 w2) cin = ICARRY k w1 w2 cin)`--),
-   let val i_eq_a = DISCH_ALL
+   let val i_eq_a = itlist DISCH [``k <= m``,
+                                  ``PWORDLEN m (WSEG m 0 w2:bool word)``,
+                                  ``PWORDLEN m (WSEG m 0 w1:bool word)``
+                                  ]
      (SYM(UNDISCH_ALL(GQSPECL [(--`m:num`--),(--`WSEG m 0 (w1:bool word)`--),
      (--`WSEG m 0 (w2:bool word)`--), (--`cin:bool`--),(--`k:num`--)]  ACARRY_EQ_ICARRY)))
     in

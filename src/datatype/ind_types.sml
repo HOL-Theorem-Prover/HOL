@@ -299,7 +299,10 @@ fun define_inductive_type cdefs exth = let
   val th1 = ASSUME (valOf (List.find (fn eq => lhand eq = epred) (hyp exth)))
   val th2 = TRANS th1 (SUBS_CONV cdefs (rand(concl th1)))
   val th3 = EQ_MP (AP_THM th2 (rand extm)) exth
-  val th4 = itlist SCRUB_EQUATION (hyp th3) th3
+  fun scrubber th = case HOLset.find (fn _ => true) (hypset th) of
+                      NONE => th
+                    | SOME eq => scrubber (SCRUB_EQUATION eq th)
+  val th4 = scrubber th3
   val mkname = "mk_"^ename
   and destname = "dest_"^ename
   val (bij1,bij2) = new_basic_type_definition ename (mkname,destname) th4
@@ -1133,7 +1136,8 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
     val itha = SPEC_ALL ith0
     val icjs = conjuncts(rand(concl itha))
     val cinsts =
-      map (fn tm => tryfind (fn vtm => ho_match_term [] vtm tm) icjs)
+      map (fn tm =>
+              tryfind (fn vtm => ho_match_term [] empty_tmset vtm tm) icjs)
           (conjuncts (rand ctm2))
     val tvs = subtract (fst(strip_forall(concl ith0)))
                 (itlist (fn (x,_) => union (map #redex x)) cinsts [])
@@ -1147,7 +1151,7 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
     val itha = SPEC_ALL ith1
     val icjs = conjuncts(rand(concl itha))
     val cinsts = map (fn tm => tryfind
-                      (fn vtm => ho_match_term [] vtm tm) icjs)
+                      (fn vtm => ho_match_term [] empty_tmset vtm tm) icjs)
                      (conjuncts (lhand ctm2))
     val tvs = subtract (fst(strip_forall(concl ith1)))
       (itlist (fn (x,_) => union (map #redex x)) cinsts [])

@@ -63,7 +63,8 @@ val implicit = ref empty_rewrites;
 fun add_rewrites (RW{thms,net}) thl =
   RW{thms = thms@thl,
      net = itlist Ho_Net.enter
-     (map (fn th => (free_varsl (hyp th),lhs(concl th), Conv.HO_REWR_CONV th))
+     (map (fn th => (HOLset.listItems (thm_hypfrees th),
+                     lhs(concl th), Conv.HO_REWR_CONV th))
 	(itlist (append o mk_rewrites) thl [])) net}
 
 fun implicit_rewrites() = #thms ((fn (RW x) => x) (!implicit));
@@ -170,7 +171,7 @@ fun GEN_REWRITE_TAC rw_func thl =
  ****************************************************************************)
 
 local fun find_match u =
-       let val hom = ho_match_term [] u
+       let val hom = ho_match_term [] empty_tmset u
            fun find_mt t =
                hom t handle HOL_ERR _ =>
                find_mt(rator t)  handle HOL_ERR _ =>
@@ -201,7 +202,8 @@ end;
 
 val HIGHER_REWRITE_CONV =
   let fun GINST th =
-      let val fvs = subtract (free_vars(concl th)) (free_varsl (hyp th))
+      let val fvs = HOLset.listItems
+                      (HOLset.difference (FVL [concl th], thm_hypfrees th))
           val gvs = map (genvar o type_of) fvs
       in INST (map2 (curry op |->) fvs gvs) th
       end
@@ -215,18 +217,19 @@ val HIGHER_REWRITE_CONV =
           fun insert p = Ho_Net.enter ([],p,p)
           val mnet = itlist insert pats Ho_Net.empty_net
           fun look_fn t = mapfilter
-                    (fn p => if can (ho_match_term [] p) t then p else fail())
+                    (fn p => if can (ho_match_term [] empty_tmset p) t then p
+                             else fail())
                     (lookup t mnet)
       in fn tm =>
           let val ts = find_terms
                         (fn t => not (look_fn t = []) andalso free_in t tm) tm
               val stm = Lib.trye hd (sort free_in ts)
               val pat = Lib.trye hd (look_fn stm)
-              val (tmin,tyin) = ho_match_term [] pat stm
+              val (tmin,tyin) = ho_match_term [] empty_tmset pat stm
               val (pred,(th,beta_fn)) = assoc pat ass_list
               val gv = genvar(type_of stm)
               val abs = mk_abs(gv,subst[stm |-> gv] tm)
-              val (tmin0,tyin0) = ho_match_term [] pred abs
+              val (tmin0,tyin0) = ho_match_term [] empty_tmset pred abs
           in CONV_RULE beta_fn (INST tmin (INST tmin0 (INST_TYPE tyin0 th)))
           end
       end

@@ -63,7 +63,7 @@ fun CONJS_CONV c tm =
   if is_conj tm then BINOP_CONV (CONJS_CONV c) tm else c tm;
 
 
-local val RIGHT_BETAS = 
+local val RIGHT_BETAS =
         rev_itlist (fn a => CONV_RULE (RAND_CONV BETA_CONV) o C AP_THM a)
 in
 fun mymatch_and_instantiate axth pattern instance = let
@@ -192,7 +192,7 @@ end
 (* General version to prove existence.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-fun universalise_clauses tm = 
+fun universalise_clauses tm =
  let val rawcls = conjuncts tm
      val spcls = map (snd o strip_forall) rawcls
      val lpats = map (strip_comb o lhand) spcls
@@ -261,7 +261,7 @@ fun new_recursive_definition0 ax name tm =
                             fixity = Parse.Prefix}) evs }
  end
 
-end
+end (* local *)
 
 (* test with:
      load "listTheory";
@@ -416,10 +416,10 @@ fun num_variant vlist v =
   mk_var{Name=pass Name,  Ty=Ty}
   end;
 
-fun generate_case_constant_eqns ty clist = 
+fun generate_case_constant_eqns ty clist =
  let val (dty,rty) = Type.dom_rng ty
      val {Tyop,Args} = dest_type dty
-     fun mk_cfun ctm (nv,away) = 
+     fun mk_cfun ctm (nv,away) =
        let val (c,args) = strip_comb ctm
            val fty = itlist (curry (op -->)) (map type_of args) rty
            val vname = if (length args = 0) then "v" else "f"
@@ -436,19 +436,19 @@ fun generate_case_constant_eqns ty clist =
    list_mk_conj (ListPair.map clause (arg_list, clist))
  end
 
-fun define_case_constant ax = 
+fun define_case_constant ax =
  let val oktypes = doms_of_tyaxiom ax
      val conjs = strip_conj (#2 (strip_exists (#2 (strip_forall (concl ax)))))
      val newfns = map (rator o lhs o #2 o strip_forall) conjs
      val newtypes = map type_of newfns
-     val usethese = mk_set 
+     val usethese = mk_set
            (List.filter (fn ty => Lib.mem (#1 (dom_rng ty)) oktypes) newtypes)
-     fun mk_defn ty = 
+     fun mk_defn ty =
       let val (dty,rty) = dom_rng ty
           val name = #Tyop (dest_type dty)
           val cs = type_constructors_with_args ax name
           val eqns = generate_case_constant_eqns ty cs
-      in new_recursive_definition 
+      in new_recursive_definition
              {name=name^"_case_def", rec_axiom=ax, def=eqns}
       end
  in
@@ -466,8 +466,8 @@ end
 (* ---------------------------------------------------------------------*)
 
 fun BETAS fnn body =
- if is_var body orelse is_const body then REFL else 
- if is_abs body then ABS_CONV (BETAS fnn (#Body(dest_abs body))) 
+ if is_var body orelse is_const body then REFL else
+ if is_abs body then ABS_CONV (BETAS fnn (#Body(dest_abs body)))
  else let val {Rator,Rand} = dest_comb body
       in if Rator = fnn then BETA_CONV
          else let val cnv1 = BETAS fnn Rator
@@ -565,7 +565,7 @@ end;
 
 fun f {conj1,conj2} = (TACF conj1, TACS conj2)
 and TACS tm =
-  let val (cf,csf) = 
+  let val (cf,csf) =
         f(dest_conj tm) handle HOL_ERR _ => (TACF tm, Lib.K(Lib.K[]))
   in fn x => fn ttac => (cf x ttac)::(csf x ttac)
   end;
@@ -839,7 +839,7 @@ local val v = genvar Type.bool
              val eqn = SYM(CONJS_SIMP BETA_CONV disj1)
          in SUBST[v |-> eqn] ((v \/ disj2) == T) (SPEC disj2 T_OR)
          end
-      
+
 in
 fun SIMP_CONV tm =
    let val (vs,{lhs,rhs}) = (I ## dest_eq) (strip_forall tm)
@@ -1186,7 +1186,7 @@ local val make_args =
  val prove_cases_thm0 =
  let fun mk_exclauses x rpats =
        let val xts = map
-           (fn t => list_mk_exists(List.rev (free_vars t), 
+           (fn t => list_mk_exists(List.rev (free_vars t),
                                    boolSyntax.mk_eq(x,t))) rpats
        in mk_abs{Bvar=x, Body=list_mk_disj xts}
        end
@@ -1703,14 +1703,14 @@ fun numtype nb = if nb <= 1 then bool --> bool else bool --> numtype (nb - 1)
 
 fun generate_fn_term nb ty = genvar (ty --> numtype nb)
 
-fun generate_eqns nb ctrs f = 
+fun generate_eqns nb ctrs f =
  let fun recurse n [] = []
-       | recurse n (x::xs) = 
+       | recurse n (x::xs) =
          (mk_comb{Rator=f, Rand=x} == mk_num nb n):: recurse (n + 1) xs
  in recurse 0 ctrs
  end
 
-fun number nb lst = 
+fun number nb lst =
 let fun number0 _ [] = []
       | number0 n (x::xs) = (encode false nb n,x)::number0 (n+1) xs
 in
@@ -1721,7 +1721,7 @@ fun app_triangle f [] = []
   | app_triangle f [x] = []
   | app_triangle f (x::xs) = map (fn y => f (x, y)) xs @ app_triangle f xs
 
-fun ctrs_with_args clauses = 
+fun ctrs_with_args clauses =
  let fun get_ctr tm = rand (lhs (#2 (strip_forall tm)))
  in map get_ctr clauses
  end

@@ -119,15 +119,16 @@ fun MATCH_SUBS1 th fvs asm (m1:((term,term)subst * (hol_type,hol_type)subst)) =
     if (null fvs)
     then (*not free vars *)
     	((subtract antes' (intersect antes' asm)), (UNDISCH_ALL thm2))
-    else
-       (let val rlist = match_asm nv asm ([],[])
-    	    (afilter (combine(antes, antes')) nv)
-    	val thm3 = UNDISCH_ALL (INST (fst rlist) thm2)
-    	val new_antes = hyp thm3
+    else let
+        val rlist = match_asm nv asm ([],[])
+    	                      (afilter (combine(antes, antes')) nv)
+        val thm2a = INST (fst rlist) thm2
+        val (new_antes, _) = strip_imp (concl thm2a)
+    	val thm3 = UNDISCH_ALL thm2a
     	val sgl =  subtract new_antes (intersect new_antes asm)
-        in
+      in
     	(sgl,thm3)
-        end)
+      end
    end;
 
 fun MATCH_SUBS th fvs asm mlist =

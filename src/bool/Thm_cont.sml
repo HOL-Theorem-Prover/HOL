@@ -366,11 +366,15 @@ fun ANTE_RES_THEN ttac ante : tactic =
 (* be drawn, and does only one-step resolution.		[TFM 90.12.07]  *)
 (* ---------------------------------------------------------------------*)
 
-local fun MATCH_MP impth =
-        let val sth = SPEC_ALL impth
-            val matchfn = match_term (fst(dest_imp(concl sth)))
-        in fn th => MP (INST_TY_TERM (matchfn (concl th)) sth) th
-        end;
+local
+  fun MATCH_MP impth = let
+    val sth = SPEC_ALL impth
+    val hyptyvars = HOLset.listItems (thm_hypfreetys sth)
+    val lconstants = HOLset.intersection (FVL [concl sth], thm_hypfrees sth)
+    val matchfn =
+        match_terml hyptyvars lconstants (fst(dest_imp(concl sth)))
+  in fn th => MP (INST_TY_TERM (matchfn (concl th)) sth) th
+  end;
 
 (* ---------------------------------------------------------------------*)
 (* check ex l : Fail with ex if l is empty, otherwise return l.		*)

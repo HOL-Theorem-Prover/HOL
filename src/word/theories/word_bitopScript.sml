@@ -409,6 +409,8 @@ val SHR_WSEG_NF_lem1 =  ARITH_PROVE (--`0<m ==>((m-1)+1 = m)`--);
 
 val SHR_WSEG_NF_lem2 =  ARITH_PROVE (--`0 < m ==>( (m-1) + (k+1) = m+k)`--);
 
+open SingleStep
+infix 8 by
 val SHR_WSEG_NF = store_thm("SHR_WSEG_NF",
     (--`!n. !w :('a)word :: PWORDLEN n.
      !m k. (m + k) < n ==> 0 < m ==>
@@ -424,13 +426,11 @@ val SHR_WSEG_NF = store_thm("SHR_WSEG_NF",
         RESQ_IMP_RES_THEN COND_REWRITE1_TAC
           (CONV_RULE (ONCE_DEPTH_CONV SYM_CONV)WSEG_BIT)
         THEN RESQ_IMP_RES_TAC WCAT_WSEG_WSEG
-        THEN POP_ASSUM (MP_TAC o (SPECL [(--`k+1`--),(--`1`--),(--`m-1`--)]))
-        THEN MAP_EVERY COND_REWRITE1_TAC [SHR_WSEG_NF_lem1,SHR_WSEG_NF_lem2]
-        THEN DISCH_THEN MATCH_MP_TAC
-     	THEN PURE_REWRITE_TAC[GSYM ADD1,ADD_CLAUSES]
-     	THEN SUBST1_TAC (SPECL[(--`1`--),(--`k:num`--)]ADD_SYM)
-     	THEN COND_REWRITE1_TAC SHR_WSEG_NF_lem2
-    	THEN MATCH_MP_TAC LESS_OR THEN FIRST_ASSUM ACCEPT_TAC,
+        THEN `WCAT (WSEG 1 (m - 1 + (k + 1)) w, WSEG (m - 1) (k + 1) w) =
+              WSEG (m - 1 + 1) (k + 1) w` by
+                   simpLib.ASM_SIMP_TAC bossLib.arith_ss []
+        THEN POP_ASSUM MP_TAC THEN MP_TAC (Q.ASSUME`0<m`)
+        THEN simpLib.SIMP_TAC bossLib.arith_ss [],
     	REFL_TAC]]);
 
 val SHL_WSEG = store_thm("SHL_WSEG",
@@ -497,11 +497,15 @@ val SHL_WSEG_NF = store_thm("SHL_WSEG_NF",
     THEN REWRITE_TAC[PAIR_EQ]
     THEN RESQ_REWRITE1_TAC (GSYM WSEG_BIT) THENL[
       ARITH_TAC,
-      RESQ_IMP_RES_THEN (MP_TAC o (SPECL [(--`k-1`--),(--`m-1`--),(--`1`--)])) WCAT_WSEG_WSEG
-      THEN PURE_ONCE_REWRITE_TAC[ADD_SYM] THEN COND_REWRITE1_TAC SUB_ADD
-      THEN TRY (CONV_TAC (ONCE_DEPTH_CONV num_CONV) THEN IMP_RES_TAC LESS_OR)
-      THEN DISCH_THEN MATCH_MP_TAC THEN ARITH_TAC]);
-
+      RESQ_IMP_RES_THEN ASSUME_TAC WCAT_WSEG_WSEG
+      THEN POP_ASSUM (fn th =>
+                         `WCAT (WSEG (m - 1) (1 + (k - 1)) w,
+                                WSEG 1 (k - 1) w) =
+                          WSEG (1 + (m - 1)) (k - 1) w` by
+                      simpLib.ASM_SIMP_TAC bossLib.arith_ss [th])
+      THEN POP_ASSUM MP_TAC
+      THEN simpLib.ASM_SIMP_TAC bossLib.arith_ss []
+    ]);
 
 val WSEG_SHL = store_thm("WSEG_SHL",
     (--`!n. !w:'a word :: PWORDLEN (SUC n). !m k.

@@ -24,7 +24,7 @@ fun ERR x = STRUCT_ERR "Congprocs" x;
  *   is_congruence (--`(A ==> B) <== (A' ==> B')`--);
  *   is_congruence (--`(!x:'a. P x) <== (!x:'a. P' x)`--);
  *   is_congruence (--`(A <== A') ==> (A ==> B) ==> (A' ==> B')`--); (*false*)
- *  
+ *
  * rel_of_congruence
  *   Discover the relation a congruence is expressed over.
  *
@@ -51,8 +51,8 @@ fun is_congruence tm =
    let val (rel,[left,right]) = strip_comb tm
        val (lop,largs) = strip_comb left
        val (rop,rargs) = strip_comb right
-   in (can (ho_match_term [] left) right) andalso 
-      (can (ho_match_term [] right) left)
+   in (can (ho_match_term [] empty_tmset left) right) andalso
+      (can (ho_match_term [] empty_tmset right) left)
    end
    handle HOL_ERR _ => false;
 fun rel_of_congrule thm =
@@ -67,14 +67,14 @@ fun nconds_of_congrule thm =
    in aux (snd(strip_forall(concl thm)))
    end
    handle e => WRAP_ERR("nconds_of_congrule",e);
-   
+
 (* ---------------------------------------------------------------------
  * CONGPROC : REFL -> congrule -> congproc
- *                                                                   
+ *
  * ---------------------------------------------------------------------*)
 
 fun strip_n_imp 0 tm = ([],tm)
-  | strip_n_imp n tm = 
+  | strip_n_imp n tm =
       let val (x,y) = dest_imp tm
           val (z,w) = strip_n_imp (n-1) y
       in (x::z,w)
@@ -82,7 +82,7 @@ fun strip_n_imp 0 tm = ([],tm)
 
 (* ---------------------------------------------------------------------
  * strip_imp_until_rel
- *                                                                   
+ *
  * this function strips implications off a sub-congruence until
  * it is a relation (i.e. the rhs is one of the genvars we have chosen)
  * or it is no longer an implication (in which case the sub-congruence
@@ -102,12 +102,12 @@ fun strip_imp_until_rel genvars tm =
 
 (* ---------------------------------------------------------------------
  * CONGPROC : REFL -> congrule -> congproc
- *                                                                   
+ *
  * ---------------------------------------------------------------------*)
 
 val equality = boolSyntax.equality
 
-fun CONGPROC refl congrule = 
+fun CONGPROC refl congrule =
 let
 
    (* this discharges each antecedent of the congruence rule.  Each
@@ -118,35 +118,35 @@ let
    val congrule' = SPEC_ALL congrule
    val nconds = nconds_of_congrule congrule'
    val rel = name_of_const(rel_of_congrule congrule')
-  
+
    val (conditions,conc) = strip_n_imp nconds (concl congrule')
-   val matcher = 
+   val matcher =
       HO_PART_MATCH (rand o rator o snd o strip_n_imp nconds) congrule'
 
  (* work out whether context assumptions need to be reprocessed *)
  (* e.g "~g" in the "else" branch of COND_CONG needs to be.     *)
- 
+
    val vars = free_vars (concl congrule')
    fun reprocess_flag assum = if is_var assum then false else true;
-   val reprocess_flags = 
+   val reprocess_flags =
        map (map reprocess_flag o fst o strip_imp_until_rel vars) conditions
 
-in fn {relation,solver,depther,freevars} => 
-  if (relation <> rel) then failwith "not applicable" else fn tm => 
+in fn {relation,solver,depther,freevars} =>
+  if (relation <> rel) then failwith "not applicable" else fn tm =>
   let val match_thm = matcher tm
       val _ = trace(3,OPENING(tm,congrule'))
       val (_,conc) = strip_n_imp nconds (concl match_thm)
       val genvars = free_vars (rand conc)
-        
+
       (* this function does all the work of solving the side conditions
        one by one.  The integer is the number of side conditions
        remaining to be discharged.  Most of the side conditions
        will be sub-congruences of the form (--`A = ?A`--)  *)
-        
+
       fun process_subgoals (0,match_thm,_) = match_thm
         | process_subgoals (n,match_thm,flags::more_flags) =
         let val condition = #1 (dest_imp (concl match_thm))
-            
+
            (* work out whether the condition is a congruence condition
               or a side condition.  If it is two place and the
               head combinator of the rhs is one of the subterms
@@ -156,19 +156,19 @@ in fn {relation,solver,depther,freevars} =>
             val (assums,bdy2) = strip_imp_until_rel genvars bdy1
             val (oper,args) = strip_comb bdy2
         in
-          if (length args = 2 andalso mem (#1 (strip_comb (el 2 args))) genvars) then 
+          if (length args = 2 andalso mem (#1 (strip_comb (el 2 args))) genvars) then
             let val [orig,res] = args
                 val genv = #1 (strip_comb res)
                 val assum_thms = map ASSUME assums
                 fun reprocess thm flag =
                   if flag then CONV_RULE (depther ([],equality)) thm
-                    handle HOL_ERR _ => 
+                    handle HOL_ERR _ =>
                     (trace(5,PRODUCE(orig,"UNCHANGED",thm));thm)
                   else thm
                 val reprocessed_assum_thms = map2 reprocess assum_thms flags
-                val rewr_thm = 
+                val rewr_thm =
                   (depther (reprocessed_assum_thms,oper) orig)
-                  handle HOL_ERR _ => 
+                  handle HOL_ERR _ =>
                   let val thm = refl orig
                   in (trace(5,PRODUCE(orig,"UNCHANGED",thm));thm)
                   end
@@ -186,9 +186,9 @@ in fn {relation,solver,depther,freevars} =>
             in process_subgoals (n-1,new_match_thm,more_flags)
             end
         end
-        
+
       val final_thm = process_subgoals (nconds,match_thm,reprocess_flags)
-        
+
   in
     if (rand (rator (concl final_thm)) = rand (concl final_thm))
       then failwith "unchanged"
@@ -200,13 +200,13 @@ end;
 (* ---------------------------------------------------------------------
  * EQ_CONGPROC
  *
- *  Opening through HOL terms under HOL equality. 
+ *  Opening through HOL terms under HOL equality.
  * ---------------------------------------------------------------------*)
 
 fun EQ_CONGPROC {relation,depther,solver,freevars} tm =
- if relation <> ("=","min") then failwith "not applicable" 
+ if relation <> ("=","min") then failwith "not applicable"
  else
- case dest_term tm 
+ case dest_term tm
   of COMB(Rator,Rand) =>
       (let val th = depther ([],equality) Rator
       in  MK_COMB (th, depther ([],equality)  Rand)
@@ -214,7 +214,7 @@ fun EQ_CONGPROC {relation,depther,solver,freevars} tm =
       end
        handle HOL_ERR _ => AP_TERM Rator (depther ([],equality)  Rand))
    | LAMB(Bvar,Body) =>
-     if mem Bvar freevars then 
+     if mem Bvar freevars then
      let val v = variant (freevars@free_vars Body) Bvar
          val th1 = ALPHA_CONV v tm handle e as HOL_ERR _
          => (trace(0,REDUCE("SIMPLIFIER ERROR: bug when alpha converting",tm));
@@ -224,7 +224,7 @@ fun EQ_CONGPROC {relation,depther,solver,freevars} tm =
          val Body' = body rhs' (* v = Bvar *)
          val body_thm = depther ([],equality) Body'
          val eq_thm' = ABS v body_thm
-     in 
+     in
         TRANS th1 eq_thm'
      end
      else let val _ = trace(4,TEXT "no alpha conversion")
@@ -232,7 +232,7 @@ fun EQ_CONGPROC {relation,depther,solver,freevars} tm =
           in ABS Bvar Bth
           end
    | _ => failwith "unchanged";
-   
+
 
 end (* struct *)
 

@@ -16,9 +16,12 @@ sig
   type hol_type     = Type.hol_type
   type ('a,'b)subst = ('a,'b)Lib.subst
 
+  val empty_tmset   : term HOLset.set
+
   val type_of       : term -> hol_type
   val free_vars     : term -> term list
   val free_vars_lr  : term -> term list
+  val FVL           : term list -> term HOLset.set
   val free_in       : term -> term -> bool
   val all_vars      : term -> term list
   val free_varsl    : term list -> term list
@@ -67,16 +70,17 @@ sig
   val subst         : (term,term) subst -> term -> term
   val inst          : (hol_type,hol_type) subst -> term -> term
 
-  val raw_match     : term -> term
+  val raw_match     : hol_type list -> term HOLset.set -> term -> term
                        -> (term,term)subst
                            * ((hol_type,hol_type)subst * hol_type list)
                        -> (term,term)subst
                             * ((hol_type,hol_type)subst * hol_type list)
   val match_term    : term -> term
                         -> (term,term)subst * (hol_type,hol_type)subst
+  val match_terml   : hol_type list -> term HOLset.set -> term -> term
+                        -> (term,term)subst * (hol_type,hol_type)subst
   val norm_subst    : (hol_type,hol_type)subst
                         -> (term,term)subst -> (term,term)subst
 
   val compare       : term * term -> order
-  val aconv_compare : term * term -> order
 end;
