@@ -9,6 +9,9 @@ and the Moscow ML compiler (version 1.44 or greater) from
 
      http://www.dina.kvl.dk/~sestoft/mosml.html
 
+First, however, please read the rest of these instructions carefully.
+
+
 
 Building the Hol98 system.
 --------------------------
@@ -16,20 +19,23 @@ Building the Hol98 system.
 A. First, install Moscow ML. This is usually straightforward. The
    directory where it lives will be called <mosml-dir> in the following.
 
-   [ Notice that, if you intend to use ML embeddings of C libraries,
-     like the Robdd library, you are so far restricted to running on Linux,
-     Solaris, and OSF/1. Furthermore, you may have to set a few shell
-     variables in order to use C libraries; this is explained in the
-     MoscowML installation directions.
+   * If you intend to use ML embeddings of C libraries, like the HolBdd
+     library, you are so far restricted to running on Linux, Solaris,
+     and other Unix implementations. You will have to build MoscowML
+     from *source* in order to dynamically load C libraries, as is
+     required by, e.g., HolBddLib. In this case, you will have to set a
+     few shell variables; this is explained in the MoscowML installation
+     directions.  
 
-     Further note that if you are running on Windows, you must have
-     the PATH and MOSMLLIB environment variables set as described in
-     the installation guide for Moscow ML.  It seems that Windows
-     won't find the MoscowML DLL without the appropriate entry in
-     PATH, and Moscow ML won't run without knowing where its library
-     is.
+     The upshot: if you are working on a Unix system, you should build
+     MoscowML from source, making the necessary tweaks that enable
+     dynamic linking.
 
-   ]
+   * If you are running on Windows, you must set the PATH and MOSMLLIB
+     environment variables as described in the installation instructions
+     for Moscow ML.  Windows won't find the MoscowML DLL without the
+     appropriate entry in PATH, and Moscow ML won't run without knowing
+     where its library is.
 
 
 B. Unpack Hol98 with the commands
@@ -72,17 +78,24 @@ C. Enter the "tools" directory and edit the file "configure.sml".
            val CC = "gcc";
 
         This parameter may need to be changed, if "gcc" is not on your
-        machine, or can't be found along your path.  We supply a
-        prebuilt executable for Windows machines, so if you have
-        selected "winNT" for your OS value, then you can ignore this.
+        machine, or can't be found along your path.  For Windows
+        machines, we supply a prebuilt executable of the quotation
+        preprocessoer, so if you have selected "winNT" for your OS
+        value, then you can ignore this.
+
+        Another tool that requires a C compiler to be built is the 
+        SMV tool, found in temporalLib. If a C compiler is not
+        designated, temporalLib is still usable, but some proof
+        procedures in it will not work.
+
 
     (4) The following parameter gives the path to the "gnumake" program,
-        which is required to build the robdd library.
+        which is required to build the muddy library.
 
            val GNUMAKE = "gnumake";
 
         If you are building Hol98 on an OS that is *not* Solaris or
-        Linux, the robdd library is not currently accessible. In such a
+        Linux, the muddy library is not currently accessible. In such a
         case, the value of GNUMAKE does not matter.
 
 
@@ -114,13 +127,30 @@ E. If bin/build completes, successfully, you are done. From <hol-dir>
       bin/hol           * The standard Hol98 interactive system;
       bin/hol.unquote   * The interactive system with quote preprocessing;
       bin/Holmake       * A batch compiler for HOL directories;
-      doc/man.ps        * A user manual for the system;
+      src/              * System sources;
+      Manual/           * User manuals for the system;
       examples/         * Examples of the use of the system.
 
 
 
+External tools.
+----------------
+
+The Hol98 installation currently includes a C library (in HolBddLib) and
+the C sources for the SMV model-checker (in temporalLib). Both of these
+require a C compiler to have been specified in tools/configure.sml.  
+
+Loading the BDD libraries muddyLib or HolBddLib will fail unless
+MoscowML has been built with dynamic linking enabled. 
+
+
 Dealing with failure.
 ---------------------
+
+   * If you are engaged in a large formalization, you may find a
+     mysterious `exception 13' being raised. Please contact us if that
+     occurs; it is a MoscowML bug and we have been supplied with a fix
+     by Peter Sestoft.
 
    * Send a message to hol-support@cl.cam.ac.uk giving a full transcript of
      the failed installation. Also make sure that you include the
