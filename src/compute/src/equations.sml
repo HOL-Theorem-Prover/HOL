@@ -15,7 +15,7 @@ exception No_match;
 val raw_match = raw_match [] empty_tmset
 
 fun match_const (bds,tbds) pc c =
-  (bds, snd (raw_match pc c (([],empty_tmset),tbds)))
+  (bds, fst(snd (raw_match pc c ([],tbds))))
   handle HOL_ERR _ => raise No_match
 ;
 
@@ -98,7 +98,7 @@ fun mk_clos(env,t) =
 local fun inst_one_var (SOME(tm,v),(thm,lv)) = (Specialize tm thm, v :: lv)
         | inst_one_var (NONE,_) = raise DEAD_CODE "inst_rw"
 in
-fun inst_rw (th,{Rule=RW{thm,rhs,...}, Inst=(bds,(tysub,_))}) =
+fun inst_rw (th,{Rule=RW{thm,rhs,...}, Inst=(bds,tysub)}) =
   let val tirhs = inst_type_dterm (tysub,rhs)
       val tithm = INST_TYPE tysub thm
       val (spec_thm,venv) = Array.foldl inst_one_var (tithm,[]) bds in
@@ -112,7 +112,7 @@ end;
  *---------------------------------------------------------------------------*)
 
 fun reduce_cst (th,{Head, Args, Rws=Try{Hcst,Rws=Rewrite rls,Tail},Skip}) =
-      (let val (_,tytheta) = raw_match Hcst Head (([],empty_tmset),([],[]))
+      (let val (_,tytheta) = match_term Hcst Head 
                              handle HOL_ERR _ => raise No_match
            val rule_inst = try_rwn tytheta Args rls
        in (true, inst_rw (th,rule_inst))

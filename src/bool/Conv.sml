@@ -173,7 +173,7 @@ fun RHS_CONV conv tm =
 fun NO_CONV _ = raise ERR "NO_CONV" "";
 
 (*---------------------------------------------------------------------------
- * Conversion that always succeeds, using reflexive law:   t --->  |- t==t
+ * Conversion that always succeeds, using reflexive law:   t --->  |- t=t
  *  Identity element for THENC
  *---------------------------------------------------------------------------*)
 
@@ -226,10 +226,7 @@ fun REPEATC conv t = ((conv THENC (REPEATC conv)) ORELSEC ALL_CONV) t;
 fun CHANGED_CONV conv tm =
    let val th = conv tm
        val {lhs,rhs} = dest_eq (concl th)
-   in
-     if (aconv lhs rhs)
-     then raise ERR"CHANGED_CONV" ""
-     else th
+   in if aconv lhs rhs then raise ERR"CHANGED_CONV" ""  else th
    end;
 
 fun TRY_CONV conv = conv ORELSEC ALL_CONV;
@@ -533,14 +530,14 @@ local val alpha = mk_vartype "'a"
 in
 fun EXISTS_OR_CONV tm =
   let val {Bvar,Body} = dest_exists tm
+      val thm = CONV_RULE (RAND_CONV (BINOP_CONV (GEN_ALPHA_CONV Bvar)))
+                          (INST_TYPE [alpha |-> type_of Bvar] thm0)
       val ty = type_of Bvar --> Type.bool
       val P = mk_var{Name=Pname, Ty=ty}
       val Q = mk_var{Name=Qname, Ty=ty}
       val {disj1,disj2} = dest_disj Body
       val lamP = mk_abs{Bvar=Bvar, Body=disj1}
       val lamQ = mk_abs{Bvar=Bvar, Body=disj2}
-      val thm = CONV_RULE (RAND_CONV (BINOP_CONV (GEN_ALPHA_CONV Bvar)))
-                          (INST_TYPE [alpha |-> type_of Bvar] thm0)
   in
     CONV_RULE spotBeta (INST [P |-> lamP, Q |-> lamQ] thm)
   end
@@ -1761,4 +1758,4 @@ in
 end
 
 
-end; (* Conv *)
+end (* Conv *)
