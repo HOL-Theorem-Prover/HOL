@@ -3,14 +3,14 @@
 (* fleshed out.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-structure RealSS :> RealSS = 
+structure realSimps :> realSimps = 
 struct
 
 open Drule realTheory;
 
 val arith_ss = 
   simpLib.++
-    (simpLib.++(boolSimps.bool_ss, pairSimps.PAIR_ss),arithSimps.ARITH_ss);
+    (simpLib.++(boolSimps.bool_ss, pairSimps.PAIR_ss),numSimps.ARITH_ss);
 
 
 val real_ss = simpLib.++(arith_ss, simpLib.SIMPSET {

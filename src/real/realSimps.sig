@@ -1,4 +1,4 @@
-signature RealSS =
+signature realSimps =
 sig
    val real_ss : simpLib.simpset
 

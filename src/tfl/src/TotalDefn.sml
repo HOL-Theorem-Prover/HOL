@@ -5,7 +5,7 @@
 structure TotalDefn :> TotalDefn =
 struct
 
-open HolKernel Parse boolLib pairLib arithLib NonRecSize DefnBase;
+open HolKernel Parse boolLib pairLib NonRecSize DefnBase;
 
 infix ## |-> THEN THENL THENC ORELSE;
 infixr 3 -->;
@@ -204,7 +204,7 @@ end;
 val ASM_ARITH_TAC =
  REPEAT STRIP_TAC
     THEN REPEAT (POP_ASSUM
-         (fn th => if arithSimps.is_arith (concl th)
+         (fn th => if numSimps.is_arith (concl th)
                    then MP_TAC th else ALL_TAC))
     THEN numLib.ARITH_TAC;
 

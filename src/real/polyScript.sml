@@ -10,7 +10,7 @@ struct
 app load ["numLib",
           "mesonLib",
           "tautLib",
-          "arithLib",
+          "numLib",
           "simpLib",
           "boolSimps",
           "arithSimps",
@@ -20,11 +20,11 @@ app load ["numLib",
           "limTheory",
           "listTheory",
           "pred_setTheory",
-          "RealSS", "RealArith"];
+          "realSimps", "RealArith"];
 *)
 
 open HolKernel Parse boolLib hol88Lib reduceLib pairLib numLib
-     mesonLib tautLib arithLib simpLib boolSimps arithSimps RealSS
+     mesonLib tautLib simpLib boolSimps numSimps realSimps
      pairTheory numTheory prim_recTheory arithmeticTheory listTheory
      Ho_Rewrite jrhUtils Canon_Port AC realTheory limTheory listTheory
      pred_setTheory RealArith;

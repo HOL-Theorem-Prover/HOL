@@ -23,7 +23,7 @@ app load ["Arbint",
           "Ho_rewrite",
           "jrhUtils",
           "Canon_Port",
-          "liteLib", "AC", "arithLib" (*goofy*)];
+          "liteLib", "AC", "numLib" (*goofy*)];
 *)
 
 open HolKernel Parse boolLib pairLib hol88Lib numLib reduceLib tautLib

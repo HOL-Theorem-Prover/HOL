@@ -16,7 +16,7 @@ struct
 
   local open transcTheory polyTheory in end;
 
-  open RealArith RealSS Diff;
+  open RealArith realSimps Diff;
 
 
 end;

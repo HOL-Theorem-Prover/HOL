@@ -14,7 +14,6 @@ app load ["numLib",
           "mesonLib",
           "tautLib",
           "pred_setTheory",
-          "arithLib",
           "simpLib",
           "boolSimps",
           "pairSimps",
@@ -30,7 +29,7 @@ infix THEN THENL ORELSE ORELSEC ##;
 
 open HolKernel boolLib hol88Lib numLib reduceLib pairLib
      arithmeticTheory numTheory prim_recTheory
-     mesonLib tautLib arithLib simpLib Ho_Rewrite Arithconv
+     mesonLib tautLib simpLib Ho_Rewrite Arithconv
      jrhUtils Canon_Port AC hratTheory hrealTheory realaxTheory;
 
 val _ = new_theory "real";
