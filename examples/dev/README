@@ -313,30 +313,28 @@ clocked Dtype and Dff, and returns:
 See FactScript.sml for examples (e.g. FACT_cir).
 
 
-MAKE_VERILOG : string -> thm -> (string -> unit) -> unit
---------------------------------------------------------
+PRINT_VERILOG : thm -> unit
+---------------------------
 
 Evaluating
 
- MAKE_VERILOG
-  name
+ PRINT_VERILOG
   (|- InRise clk 
       ==>
       (?v0 .... vn. <circuit>)
       ==>
-      DEV Spec (load at clk,
-                (inp1 <> ... <> inpu) at clk,
-                done at clk,
-                (out1 <> ... <> outv) at clk))
-  output_stream
+      DEV fun (load at clk,
+               (inp1 <> ... <> inpu) at clk,
+               done at clk,
+               (out1 <> ... <> outv) at clk))
 
-creates a module called name that has the definitions of the modules
+creates a module called fun that has the definitions of the modules
 used in <circuit>, and prints it and the definitions it needs to
-output_stream.
+fun.vl.
 
 The header is:
 
- module name (clk,load,inp1,...,inpu,done,out1,...,outv);
+ module fun (clk,load,inp1,...,inpu,done,out1,...,outv);
   input  clk,load;
   input  [<size>:0] inp1,inp2;
   output done;
@@ -348,21 +346,16 @@ internal variables v0, ... ,vn are declared to be wires of appropriate
 widths (computed from their types).
 
 
-MAKE_SIMULATION : int -> int -> thm 
-                  -> (int * int * (string * string) list * int) list 
-                  -> string -> (string -> unit) -> unit
---------------------------------------------------------------------
+MAKE_SIMULATION : thm -> int -> int -> (int*int*(string*string)list*int)list -> unit
+------------------------------------------------------------------------------------
 
 Evaluating
 
- MAKE_SIMULATION maxtime period thm stimulus name out
+ PRINT_SIMULATION thm maxtime period stimulus out
  
-First calls 
-
- MAKE_VERILOG name thm out 
-
-and then adds a clock and a module Main containing an instance of the
-clock and an instance of the module name.
+prints both the Verilog corresponding to th (see PRINT_VERILOG) and
+then adds a clock and a module Main containing an instance of the
+clock and an instance of the module generated from thm.
 
 The module Main has a parameter maxtime giving the length of the
 simulation.
@@ -395,44 +388,24 @@ Each such tuple specifies a transaction:
  5. delay of end_delay;
  6. "load" is driven high.
 
+Example (assumes thm implements a function with two arguments):
+
+
+ PRINT_SIMULATION
+  thm
+  1000 
+  5 
+  [(10, 12, [("inp1", "5"),("inp2","7")], 15),
+   (10, 12, [("inp1", "5"),("inp2","0")], 15),
+   (10, 12, [("inp1", "3"),("inp2","3")], 15)])
+
+
 Current code is extremely "alpha" having only been tested on one example!
 
 I am using Icarus Verilog for simulation
 (http://www.icarus.com/eda/verilog/) and GTKWave
 (http://www.cs.man.ac.uk/apt/tools/gtkwave/) for viewing VCD files.
 Both are public domain and seem to work.
-
-printToFile : string -> ((string -> unit) -> 'a) -> unit
---------------------------------------------------------
-
-Evaluating 
-
- printToFile file_name printer
-
-opens a file called file_name, applies printer to it and then flushes
-and closes the file.  
-
-Example: if thm is:
-
- |- InRise clk 
-     ==>
-     (?v0 .... vn. <circuit>)
-     ==>
-     DEV 
-      Spec 
-      (load at clk,(inp1 <> inp2) at clk,done at clk,(out1 <> out2) at clk)
-
-then typical uses are:
-
- printToFile "Foo.vl" (MAKE_VERILOG "Foo" thm)
-
- printToFile 
-  "Foo.vl" 
-   (MAKE_SIMULATION "Foo" thm 1000 5 
-     [(10, 12, [("inp1", "5"),("inp2","7")], 15),
-      (10, 12, [("inp1", "5"),("inp2","0")], 15),
-      (10, 12, [("inp1", "3"),("inp2","3")], 15)])
-
 
 
 *******************************************************************************

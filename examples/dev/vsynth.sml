@@ -189,6 +189,22 @@ val ADDvDef =
 \\n";
 
 (*****************************************************************************)
+(* Read only register holding a number (default value 0)                     *)
+(*****************************************************************************)
+val CONSTANTvDef =
+"// Read only register\n\
+\module CONSTANT (out);\n\
+\ parameter size  = 31;\n\
+\ parameter value = 0;\n\
+
+\ output [size:0] out;\n\
+\\n\
+\ assign out = value;\n\
+\\n\
+\endmodule\n\
+\\n";
+
+(*****************************************************************************)
 (* Combinational subtractor. Default has 32-bit inputs and output            *)
 (*****************************************************************************)
 val SUBvDef =
@@ -238,12 +254,15 @@ fun string2int s =
 
 (*****************************************************************************)
 (* ``v : num -> wordn`` --> "n-1" (e.g. v:word32`` --> "31")                 *)
+(* ``v : num -> num``   --> 31                                               *)
 (* ``v : num -> bool``  --> "0"                                              *)
 (*****************************************************************************)
 fun var2size tm =
  let val ("fun", [_,ty]) = dest_type(type_of tm)
-     val n = if (ty=bool)
+     val n = if (ty = ``:bool``)
               then 1
+              else if (ty = ``:num``)
+              then 32
               else
                let val chars = explode(fst(dest_type ty))
                    val num = tl(tl(tl(tl chars)))
@@ -453,6 +472,38 @@ fun termToVerilog_Dff (out:string->unit) tm =
   then DffvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
   else raise ERR "termToVerilog_Dff" "bad component term";
 
+
+(*****************************************************************************)
+(* Print an instance of an CONSTANT with a given size and value              *)
+(*****************************************************************************)
+val CONSTANTvInst_count = ref 0;
+fun CONSTANTvInst 
+ (out:string->unit) [("size",size),("value",value)] [out_name] =
+ let val count = !CONSTANTvInst_count
+     val _ = (CONSTANTvInst_count := count+1);
+     val inst_name = "CONSTANT" ^ "_" ^ Int.toString count
+ in
+ (out " CONSTANT   "; out inst_name;
+  out " (";out out_name; out ");\n";
+  out "   defparam ";out inst_name; out ".size  = "; out size; 
+  out "\n";
+  out "   defparam ";out inst_name; out ".value = "; out value; 
+  out ";\n\n")
+ end;
+
+fun termToVerilog_CONSTANT (out:string->unit) tm =
+ if is_comb tm
+     andalso is_const(fst(strip_comb tm))
+     andalso (fst(dest_const(fst(strip_comb tm))) = "CONSTANT")
+     andalso numSyntax.is_numeral(rand(rator tm))
+     andalso is_var (rand tm)
+  then CONSTANTvInst 
+        out 
+        [("size", var2size(last(strip_pair(rand tm)))),
+         ("value",Arbnum.toString(numSyntax.dest_numeral(rand(rator tm))))] 
+        (map (fst o dest_var) (strip_pair(rand tm)))
+  else raise ERR "termToVerilog_CONSTANT" "bad component term";
+
 (*****************************************************************************)
 (* Print an instance of an ADD with a given size                             *)
 (*****************************************************************************)
@@ -566,18 +617,21 @@ fun termToVerilog_EQ (out:string->unit) tm =
   else raise ERR "termToVerilog_EQ" "bad component term";
 
 fun termToVerilog out tm =
- termToVerilog_TRUE out tm  handle _ =>
- termToVerilog_NOT out tm   handle _ =>
- termToVerilog_AND out tm   handle _ =>
- termToVerilog_OR out tm    handle _ =>
- termToVerilog_MUX out tm   handle _ =>
- termToVerilog_Dtype out tm handle _ =>
- termToVerilog_Dff out tm   handle _ =>
- termToVerilog_ADD out tm   handle _ =>
- termToVerilog_SUB out tm   handle _ =>
- termToVerilog_LESS out tm  handle _ =>
- termToVerilog_EQ out tm    handle _ =>
- raise ERR "termToVerilog" "can't handle this case";
+ termToVerilog_TRUE out tm       handle _ =>
+ termToVerilog_NOT out tm        handle _ =>
+ termToVerilog_AND out tm        handle _ =>
+ termToVerilog_OR out tm         handle _ =>
+ termToVerilog_MUX out tm        handle _ =>
+ termToVerilog_Dtype out tm      handle _ =>
+ termToVerilog_Dff out tm        handle _ =>
+ termToVerilog_CONSTANT out tm   handle _ =>
+ termToVerilog_ADD out tm        handle _ =>
+ termToVerilog_SUB out tm        handle _ =>
+ termToVerilog_LESS out tm       handle _ =>
+ termToVerilog_EQ out tm         handle _ =>
+ (if_print "termToVerilog failed on:\n";
+  if_print_term tm;
+  raise ERR "termToVerilog" "can't handle this case");
 
 (* Testing stuff
 val file_name = "foo";
@@ -634,17 +688,18 @@ fun add_module (name,(vdef,vinst)) =
 val _ = 
  map
   add_module
-  [("Dtype", (DtypevDef, DtypevInst)),
-   ("Dff",   (DffvDef,   DffvInst)),
-   ("TRUE",  (TRUEvDef,  TRUEvInst)),
-   ("NOT",   (NOTvDef,   NOTvInst)),
-   ("AND",   (ANDvDef,   ANDvInst)),
-   ("OR",    (ORvDef,    ORvInst)),
-   ("MUX",   (MUXvDef,   MUXvInst)),
-   ("ADD",   (ADDvDef,   ADDvInst)),
-   ("SUB",   (SUBvDef,   SUBvInst)),
-   ("LESS",  (LESSvDef,  LESSvInst)),
-   ("EQ",    (EQvDef,    EQvInst))];
+  [("Dtype",    (DtypevDef,      DtypevInst)),
+   ("Dff",      (DffvDef,        DffvInst)),
+   ("TRUE",     (TRUEvDef,       TRUEvInst)),
+   ("NOT",      (NOTvDef,        NOTvInst)),
+   ("AND",      (ANDvDef,        ANDvInst)),
+   ("OR",       (ORvDef,         ORvInst)),
+   ("MUX",      (MUXvDef,        MUXvInst)),
+   ("CONSTANT", (CONSTANTvDef,   CONSTANTvInst)),
+   ("ADD",      (ADDvDef,        ADDvInst)),
+   ("SUB",      (SUBvDef,        SUBvInst)),
+   ("LESS",     (LESSvDef,       LESSvInst)),
+   ("EQ",       (EQvDef,         EQvInst))];
 
 (*****************************************************************************)
 (* ``v0 <> ... <> vn`` --> [``v0``, ... ,``vn``]                             *)
@@ -669,7 +724,8 @@ fun strip_BUS_CONCAT tm =
 **
 ** -->
 **
-** ((``clk``,``load``,[``inp1``,...,``inpu``],``done``,[``out1``,...,``outv``]),
+** (Spec,
+**  (``clk``,``load``,[``inp1``,...,``inpu``],``done``,[``out1``,...,``outv``]),
 **  [``v0``, ... ,``vn``],
 **  [``M1(...)``, ... ,``Mp(...)``])
 *)
@@ -678,6 +734,7 @@ fun dest_cir thm =
  let val tm = concl(SPEC_ALL thm)
      val (tm1,tm2) = dest_imp tm
      val (tm3,tm4) = dest_imp tm2
+     val spec_tm = rand(rator tm4)
      val clk_tm = rand tm1
      val [load_tm,inp_tm,done_tm,out_tm] =
          map (rand o rator) (strip_pair(rand tm4))
@@ -686,7 +743,7 @@ fun dest_cir thm =
      val inpl = strip_BUS_CONCAT inp_tm
      val outl = strip_BUS_CONCAT out_tm
  in
-  ((clk_tm,load_tm,inpl,done_tm,outl), vars, tml)
+  (spec_tm,(clk_tm,load_tm,inpl,done_tm,outl), vars, tml)
  end;
 
 (*****************************************************************************)
@@ -750,7 +807,8 @@ printToFile "Foo.vl" (MAKE_VERILOG "Foo" thm);
 *)
 
 fun MAKE_VERILOG name thm out =
- let val ((clk, load_tm,inpl,done_tm,outl), 
+ let val (spec_tm,
+          (clk, load_tm,inpl,done_tm,outl), 
           vars, 
           modules) = dest_cir thm
      val clk_name = var_name clk
@@ -839,7 +897,8 @@ printToFile "Foo.vl" (MAKE_SIMULATION maxtime period thm stimulus name);
 
 
 fun MAKE_SIMULATION name thm maxtime period stimulus out =
- let val ((clk, load_tm,inpl,done_tm,outl), 
+ let val (spec_tm,
+          (clk, load_tm,inpl,done_tm,outl), 
           vars, 
           modules) = dest_cir thm
      val clk_name = var_name clk
@@ -881,3 +940,49 @@ fun MAKE_SIMULATION name thm maxtime period stimulus out =
   out ");\n\n";
   out"endmodule\n")
  end;
+
+(*
+** PRINT_VERILOG
+**  (|- InRise clk 
+**      ==>
+**      (?v0 .... vn. <circuit>)
+**      ==>
+**      DEV Spec (load at clk,
+**                (inp1 <> ... <> inpu) at clk,
+**                done at clk,
+**                (out1 <> ... <> outv) at clk))
+** 
+** Prints translation to Verilog to a file Spec.vl and creates a module Spec
+* (fails if Spec isn't a constant)
+*)
+
+fun PRINT_VERILOG thm =
+ let val name = fst(dest_const(#1(dest_cir thm)))
+ in
+  printToFile (name ^ ".vl") (MAKE_VERILOG name thm)
+ end;
+
+(*
+** PRINT_SIMULATION
+**  (|- InRise clk 
+**      ==>
+**      (?v0 .... vn. <circuit>)
+**      ==>
+**      DEV Spec (load at clk,
+**                (inp1 <> ... <> inpu) at clk,
+**                done at clk,
+**                (out1 <> ... <> outv) at clk))
+**  maxtime period stimulus
+** 
+** Prints translation to Verilog and a stimulus to a file Spec.vl and creates 
+** a module Main that invokes module Spec connected to a simulation environment
+** described by stimulus. 
+** (fails if Spec isn't a constant)
+*)
+
+fun PRINT_SIMULATON thm maxtime period stimulus =
+ let val name = fst(dest_const(#1(dest_cir thm)))
+ in
+  printToFile (name ^ ".vl") (MAKE_SIMULATION name thm maxtime period stimulus)
+ end;
+

@@ -508,6 +508,47 @@ val COMB_OR =
    ``COMB (UNCURRY $\/) (in1<>in2,out) = OR(in1,in2,out)``,
    RW_TAC std_ss [COMB_def,OR_def,BUS_CONCAT_def]);
 
+
+val ADD_def =
+ Define
+  `ADD(in1,in2,out) = !t. out t = in1 t + in2 t`;
+
+val COMB_ADD =
+ store_thm
+  ("COMB_ADD",
+   ``COMB (UNCURRY $+) (in1 <> in2, out) = ADD(in1,in2,out)``,
+   RW_TAC std_ss [COMB_def,BUS_CONCAT_def,ADD_def]);
+
+val SUB_def =
+ Define
+  `SUB(in1,in2,out) = !t. out t = in1 t - in2 t`;
+
+val COMB_SUB =
+ store_thm
+  ("COMB_SUB",
+   ``COMB (UNCURRY $-) (in1 <> in2, out) = SUB(in1,in2,out)``,
+   RW_TAC std_ss [COMB_def,BUS_CONCAT_def,SUB_def]);
+
+val EQ_def =
+ Define
+  `EQ(in1,in2,out) = !t. out t = (in1 t = in2 t)`;
+
+val COMB_EQ =
+ store_thm
+  ("COMB_EQ",
+   ``COMB (UNCURRY $=) (in1 <> in2, out) = EQ(in1,in2,out)``,
+   RW_TAC std_ss [COMB_def,BUS_CONCAT_def,EQ_def]);
+
+val LESS_def =
+ Define
+  `LESS(in1,in2,out) = !t. out t = in1 t < in2 t`;
+
+val COMB_LESS =
+ store_thm
+  ("COMB_LESS",
+   ``COMB (UNCURRY $<) (in1 <> in2, out) = LESS(in1,in2,out)``,
+   RW_TAC std_ss [COMB_def,BUS_CONCAT_def,LESS_def]);
+
 val FUN_EXISTS_PROD =
  store_thm
   ("FUN_EXISTS_PROD",
@@ -995,6 +1036,12 @@ val TRUE_at =
    ``TRUE out ==> TRUE(out at clk)``,
    RW_TAC std_ss [TRUE_def,at_def,when]);
 
+val FALSE_at =
+ store_thm
+  ("FALSE_at",
+   ``FALSE out ==> FALSE(out at clk)``,
+   RW_TAC std_ss [FALSE_def,at_def,when]);
+
 val CONSTANT_at =
  store_thm
   ("CONSTANT_at",
@@ -1043,6 +1090,39 @@ val MUX_at =
      ==> 
      MUX(sw at clk,in1 at clk,in2 at clk,out at clk)``,
    RW_TAC std_ss [MUX_def,at_def,when]);
+
+val EQ_at =
+ store_thm
+  ("EQ_at",
+   ``EQ(in1,in2,out) 
+     ==> 
+     EQ(in1 at clk,in2 at clk,out at clk)``,
+   RW_TAC std_ss [EQ_def,at_def,when]);
+
+val ADD_at =
+ store_thm
+  ("ADD_at",
+   ``ADD(in1,in2,out) 
+     ==> 
+     ADD(in1 at clk,in2 at clk,out at clk)``,
+   RW_TAC std_ss [ADD_def,at_def,when]);
+
+val SUB_at =
+ store_thm
+  ("SUB_at",
+   ``SUB(in1,in2,out) 
+     ==> 
+     SUB(in1 at clk,in2 at clk,out at clk)``,
+   RW_TAC std_ss [SUB_def,at_def,when]);
+
+val LESS_at =
+ store_thm
+  ("LESS_at",
+   ``LESS(in1,in2,out) 
+     ==> 
+     LESS(in1 at clk,in2 at clk,out at clk)``,
+   RW_TAC std_ss [LESS_def,at_def,when]);
+
 
 val UNWIND_THM = 
  store_thm

@@ -130,10 +130,16 @@ val COMB_def =
  Define `COMB f (inp,out) = !t. out t = f(inp t)`;   
 
 (*
-Component that constantly outputt T at out.
+Component that constantly outputs T at out.
 *)
 val TRUE_def =
  Define `TRUE out = !t. out t = T`;
+
+(*
+Component that constantly outputs F at out.
+*)
+val TRUE_def =
+ Define `FALSE out = !t. out t = F`;
 
 (*
 Combinational AND-gate, with inputs in1, in2 and output out.

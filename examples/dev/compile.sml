@@ -1442,7 +1442,8 @@ fun IN_OUT_SPLIT th =
 (*****************************************************************************)
 val MAKE_NETLIST =
  CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV))                          o
- Ho_Rewrite.REWRITE_RULE [COMB_NOT,COMB_AND,COMB_OR]                       o
+ Ho_Rewrite.REWRITE_RULE 
+  [COMB_NOT,COMB_AND,COMB_OR,COMB_ADD,COMB_SUB,COMB_LESS,COMB_EQ]          o
  CONV_RULE
   (RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV))))                   o
  SIMP_RULE std_ss [UNCURRY]                                                o
@@ -1465,11 +1466,11 @@ val MAKE_NETLIST =
 (*****************************************************************************)
 (* Compile a device implementation into a clocked circuit represented in HOL *)
 (*****************************************************************************)
-
 val at_thms =
  [UNDISCH REG_IMP,UNDISCH REGF_IMP,
-  EQ_at,COMB_at,CONSTANT_at,TRUE_at,
-  NOT_at,AND_at,OR_at,MUX_at];
+  EQ_at,COMB_at,CONSTANT_at,TRUE_at,FALSE_at,
+  NOT_at,AND_at,OR_at,MUX_at,
+  EQ_at,ADD_at,SUB_at,LESS_at];
 
 val MAKE_CIRCUIT =
  DISCH_ALL                                                                 o
@@ -1480,7 +1481,8 @@ val MAKE_CIRCUIT =
  GEN_ALL                                                                   o
  Ho_Rewrite.REWRITE_RULE[GSYM LEFT_FORALL_IMP_THM,REG_CONCAT]              o
  CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV))                          o
- Ho_Rewrite.REWRITE_RULE [COMB_NOT,COMB_AND,COMB_OR]                       o
+ Ho_Rewrite.REWRITE_RULE 
+  [COMB_NOT,COMB_AND,COMB_OR,COMB_ADD,COMB_SUB,COMB_LESS,COMB_EQ]          o
  CONV_RULE
   (RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV))))                   o
  SIMP_RULE std_ss [UNCURRY]                                                o
