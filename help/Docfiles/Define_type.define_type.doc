@@ -9,6 +9,11 @@ define_type : {name :string, type_spec :term frag list,
 Automatically defines a user-specified concrete recursive data type.
 
 \DESCRIBE
+This function is deprecated, and its use is not recommended.  The
+following documentation is old and not likely to be updated as the
+system further evolves.  The more flexible and powerful {Hol_datatype}
+function should be used instead of {define_type}.
+
 The ML function {define_type} automatically defines any
 required concrete recursive type in the logic. The {name} argument is
 the name under which the results of making the definition will be stored
@@ -59,17 +64,15 @@ Evaluating
  define_type{type_spec = `op = C1 of ty=>...=>ty | ... | Cn of ty=>...=>ty`,
              name, fixities}
 }
-fails if HOL is not in draft mode; if {op} is already the name of a
-type constant or type operator in the current theory; if the supplied constant
-names {C1}, ..., {Cn} are not distinct; if any one of {C1}, ..., {Cn} is
-already a constant in the current theory or is not an allowed name for a
-constant; if {ABS_op} or {REP_op} are already constants in the current theory;
-if there is already an axiom, definition, constant specification or type
-definition stored under either the name {op_TY_DEF} or the name {op_ISO_DEF} in
-the current theory segment; if there is already a theorem stored under the name
-{`name`} in the current theory segment; or (finally) if the input type
-specification does not conform in any other respect to the syntax described
-above.
+fails if the supplied constant names {C1}, ..., {Cn} are not distinct;
+if any one of {C1}, ..., {Cn} is already a constant in the current
+theory or is not an allowed name for a constant; if {ABS_op} or
+{REP_op} are already constants in the current theory; if there is
+already an axiom, definition, constant specification or type
+definition stored under either the name {op_TY_DEF} or the name
+{op_ISO_DEF} in the current theory segment; or (finally) if the input
+type specification does not conform in any other respect to the syntax
+described above.
 
 \EXAMPLE
 The following call to {define_type} defines {tri} to be a simple enumerated
@@ -117,6 +120,16 @@ delimiter that shows a constructor to be Curried. It must occur at the
 the type specification will fail if the "{=>}" occurs underneath an
 existing type constructor.
 
+This function is deprecated.  {Datatype.Hol_datatype} should be used
+instead.  Types defined with {define_type} are not introduced into the
+{TypeBase}, and {define_type} doesn't handle nested or mutual
+recursion.
+
 \SEEALSO
-Prim_rec.INDUCT_THEN, Prim_rec.new_recursive_definition, Prim_rec.prove_cases_thm, Prim_rec.prove_constructors_distinct, Prim_rec.prove_constructors_one_one, Prim_rec.prove_induction_thm, Prim_rec.prove_rec_fn_exists.
+Datatype.Hol_datatype, Prim_rec.INDUCT_THEN,
+Prim_rec.new_recursive_definition, Prim_rec.prove_cases_thm,
+Prim_rec.prove_constructors_distinct,
+Prim_rec.prove_constructors_one_one, Prim_rec.prove_induction_thm,
+Prim_rec.prove_rec_fn_exists.
+
 \ENDDOC
