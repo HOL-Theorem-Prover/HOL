@@ -1,7 +1,7 @@
 structure optionSyntax :> optionSyntax =
 struct
 
-local open sumTheory in end;
+local open sumTheory optionTheory in end;
 
 open HolKernel Abbrev; infix |->;
 
@@ -13,7 +13,7 @@ val ERR = mk_HOL_ERR "optionSyntax";
 
 fun mk_option ty = mk_thy_type{Tyop="option",Thy="option",Args=[ty]};
 
-fun dest_option ty = 
+fun dest_option ty =
   case total dest_thy_type ty
    of SOME{Tyop="option", Thy="option", Args=[ty]} => ty
     | other => raise ERR "dest_option" "not an option type";
@@ -46,27 +46,27 @@ fun mk_the tm =
   mk_comb(inst[alpha |-> dest_option (type_of tm)] the_tm,tm)
   handle HOL_ERR _ => raise ERR "mk_the" "";
 
-fun mk_option_map (f,opt) = 
+fun mk_option_map (f,opt) =
  case total (dom_rng o type_of) f
   of SOME (d,r) => list_mk_comb(inst[alpha|->d,beta|->r]option_map_tm,[f,opt])
    | NONE => raise ERR "mk_option_map" "";
 
-fun mk_option_join tm = 
+fun mk_option_join tm =
  mk_comb
   (inst[alpha |-> dest_option(dest_option(type_of tm))] option_join_tm, tm)
   handle HOL_ERR _ => raise ERR "mk_option_join" "";
 
-fun mk_is_none tm = 
+fun mk_is_none tm =
   mk_comb(inst[alpha |-> dest_option(type_of tm)]is_none_tm, tm)
   handle HOL_ERR _ => raise ERR "mk_is_none" "";
 
-fun mk_is_some tm = 
+fun mk_is_some tm =
   mk_comb(inst[alpha |-> dest_option(type_of tm)]is_some_tm, tm)
   handle HOL_ERR _ => raise ERR "mk_is_some" "";
 
-fun mk_option_case (n,s,p) = 
+fun mk_option_case (n,s,p) =
  case total dest_thy_type (type_of p)
-  of SOME{Tyop="option", Thy="option", Args=[ty]} 
+  of SOME{Tyop="option", Thy="option", Args=[ty]}
       => list_mk_comb
             (inst[alpha |-> type_of n, beta |-> ty]option_case_tm, [n,s,p])
    | otherwise => raise ERR "mk_option_case" "";
@@ -76,7 +76,7 @@ fun mk_option_case (n,s,p) =
          Destructor operations
  ---------------------------------------------------------------------------*)
 
-fun dest_none tm = 
+fun dest_none tm =
  if same_const none_tm tm then type_of tm else raise ERR "dest_none" "";
 
 val dest_some    = dest_monop some_tm    (ERR "dest_some" "")
