@@ -143,4 +143,10 @@ val old = ref (fn s => String.concat["old->",s,"<-old"]);
 
 val priming = ref (NONE:string option);
 
+(*---------------------------------------------------------------------------*
+ *    Flag allowing schematic definitions. Used by code in TotalDefn.        *
+ *---------------------------------------------------------------------------*)
+
+val allow_schema_definition = ref false;
+
 end; (* Globals *)
