@@ -47,19 +47,16 @@ fun string_CONV tm =
  in
  if (str = "emptystring") then raise STRING_CONV_ERR "empty string"
  else 
- case (Portable_String.explode str)
-  of (quotes::h::t) 
-     => if Portable_String.str quotes = "\""
-        then
-        let val code = rev (bits 8 (ord h))
+ case String.explode str
+  of (#"\""::h::t) =>
+        let val code = rev (bits 8 (Char.ord h))
             val tm1 = mk_comb {Rator=STRING, Rand=list_mk_comb(A,code)}
             val def = mk_comb {Rator=tm1,
-                Rand=mk_const{Name=Portable_String.implode (quotes::t),Ty=ty}}
+                Rand=mk_const{Name=String.implode (#"\""::t),Ty=ty}}
         in 
            Thm.mk_oracle_thm string_CONV_tag ([], mk_eq{lhs=tm, rhs=def})
         end
-       else raise STRING_CONV_ERR "badly formed string literal"
-    | _ => raise STRING_CONV_ERR "badly formed string literal"
+   | _ => raise STRING_CONV_ERR "badly formed string literal"
  end
  handle e as HOL_ERR{origin_function = "string_CONV",...} => raise e
         | _ => raise STRING_CONV_ERR ""

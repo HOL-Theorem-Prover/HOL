@@ -13,7 +13,7 @@ type term = Term.term
  *-------------------------------------------------------------------*)
 
 local val prime = 8388593; (* largest prime less than 2^23 *)
-      val ordof = Lib.ordof
+      fun ordof(s,i) = Char.ord (String.sub(s,i))
 in
 fun hash_string str =
     let val l = size str
