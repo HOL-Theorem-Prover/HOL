@@ -11,8 +11,8 @@ Augments simpsets with {ssdata} values.
 
 \DESCRIBE
 The {++} function combines its two arguments and creates a new
-simpset.  This is a powerful way of creating simpsets that are
-tailored to the particular simplification task at hand.
+simpset.  This is a way of creating simpsets that are tailored to the
+particular simplification task at hand.
 
 \FAILURE
 Never fails.
@@ -34,6 +34,6 @@ declared as such at the ML top-level loop, e.g.:
 > infix 0 ++
 }
 
-\SEEALSO mk_simpset, rewrites, SIMP_CONV.
+\SEEALSO mk_simpset, rewrites, SIMP_CONV, bool_ss, UNWIND_ss
 
 \ENDDOC

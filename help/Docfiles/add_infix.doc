@@ -4,7 +4,7 @@
 
 \SYNOPSIS
 Adds a string as an infix with the given precedence and associativity
-to the grammar.
+to the term grammar.
 
 \KEYWORDS
 parsing, prettyprinting
@@ -12,8 +12,8 @@ parsing, prettyprinting
 \LIBRARY Parse
 
 \DESCRIBE
-This function adds the given string to the grammar such that the
-string
+This function adds the given string to the global term grammar such
+that the string
 {
    <str1> s <str2>
 }
@@ -27,13 +27,14 @@ whether or not {s} corresponds to a constant or not.  This resolution
 happens later in the parse, and will result in either a constant or a
 variable with name {s}.  In fact, if this name is overloaded, the
 eventual term generated may have a constant of quite a different name
-again; the resolution of overloading comes as a separate phase.
+again; the resolution of overloading comes as a separate phase (see
+entries for {allow_for_overloading_on} and {overload_on}).
 
 \FAILURE
 {add_infix} fails if the precedence level chosen for the new infix is
 the same as a different type of grammar rule (e.g., suffix or binder),
-or if the precedence level has infixes already but of a different
-associativity.
+or if the specified precedence level has infixes already but of a
+different associativity.
 
 It is also possible that the choice of string {s} will result in
 subsequent attempts to call the term parser failing due to precedence
@@ -41,7 +42,7 @@ conflicts.
 
 \EXAMPLE
 Though we may not have {+} defined as a constant, we can still define
-it as infix for the purposes of printing and parsing:
+it as an infix for the purposes of printing and parsing:
 {
    - add_infix ("+", 500, HOLgrammars.LEFT);
    > val it = () : unit
@@ -59,9 +60,11 @@ it as infix for the purposes of printing and parsing:
               : {{Body : Term.term, Bvar : Term.term}}
 }
 \noindent The generation of three new type variables in the examples
-above reflects the fact that the term in the first example and the
-body of the second are really no different from {f x y}.  The new {+}
-infix is left associative:
+above emphasises the fact that the terms in the first example and the
+body of the second are really no different from {f x y} (where {f} is
+a variable}, and don't have anything to do with the constant for
+addition from {arithmeticTheory}.  The new {+} infix is left
+associative:
 {
    - Term`x + y + z`;
    <<HOL message: inventing new type variable names: 'a, 'b.>>
@@ -134,6 +137,6 @@ current theory is exported.
 
 
 \SEEALSO
-add_binder, add_rule, add_listform.
+add_binder, add_rule, add_listform, Term.
 
 \ENDDOC

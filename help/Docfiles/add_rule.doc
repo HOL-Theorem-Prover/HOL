@@ -233,9 +233,10 @@ For making pretty concrete syntax possible.
 
 \COMMENTS
 Because adding new rules to the grammar may result in precedence
-conflicts in the operator-precedence matrix, it as well with
+conflicts in the operator-precedence matrix, it is as well with
 interactive use to test the {Term} parser immediately after adding a
-new rule, as it is only with this call that the matrix is built.
+new rule, as it is only with this call that the precedence matrix is
+built.
 
 As with other functions in the {Parse} structure, there is a companion
 {temp_add_rule} function, which has the same effect on the global
