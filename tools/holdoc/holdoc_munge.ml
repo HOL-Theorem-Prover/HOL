@@ -209,7 +209,7 @@ let var_prefix s =
   let _ = (Str.search_forward
              (Str.regexp "\([0-9]*\)\([']*\)$")
              s
-             0 ) in 
+             0 ) in
   Str.string_before s (Str.match_beginning ())
 
 let is_var v s = (* v is a list of universally-quantified rule variables *)
@@ -225,11 +225,11 @@ let do_sub s =
   let _ = (Str.search_forward
              (Str.regexp "\([0-9]*\)\([']*\)$")
              s
-             0 ) in 
-  if "" <> (Str.matched_group 1 s) then 
+             0 ) in
+  if "" <> (Str.matched_group 1 s) then
     (texify (Str.string_before s (Str.match_beginning ())),
      "_{"^Str.matched_group 1 s^"}"^Str.matched_group 2 s)
-  else 
+  else
     (texify s,"")
 
 let is_holop s = List.mem s !hOL_OP_LIST
@@ -253,11 +253,11 @@ let mident v s = (* munge alphanumeric identifier *)
                    if (is_con s)         then ("tscon"     ,false) else
                    if (is_aux s)         then ("tsaux"     ,false) else
                    if (is_aux_infix s)   then ("tsauxinfix",false) else
-(* no types:   if (is_type s)      then "tstype" else *)
                    if (is_lib s)         then ("tslib"     ,true ) else
                    if (is_field s)     (* treat as var, because name often shared *)
                       || (is_var v s)    then ("tsvar"     ,true ) else
-                     if (is_holop s)     then ("tsholop"   ,false) else 
+                     if (is_holop s)     then ("tsholop"   ,false) else
+                   if (is_type s)        then ("tstype"    ,false) else
                    (write_unseen_string s;    ("tsunknown" ,false)) in
     if sub then
       let (sb,ss) = do_sub s in
@@ -324,7 +324,7 @@ let rec readbal ds ts tss cf ml = (* read a balanced arg; cf=true ==> level 1 co
                      -> bal ps ds ts tss
     | (t::ts)        -> bal ps (t::ds) ts tss
     | []             -> (match tss with
-                           (ts::tss) when ml -> bal ps (TeXNormal("\\\\\n")::ds) ts tss 
+                           (ts::tss) when ml -> bal ps (TeXNormal("\\\\\n")::ds) ts tss
                          | _                 -> raise (BadArg "1"))
   in
   bal [] ds ts tss
@@ -510,7 +510,7 @@ let rec parse_rule = parser
     [< 'Sep("("); _ = sp; r1 = parse_rule1 >] -> r1
   | [<>] -> raise (Stream.Error("rule begin: `('"));
 and parse_rule1 = parser
-    [< 'Ident("!",_); v = rule_vars; _ = sp; 'Sep(".") ?? "."; _ = sp; 
+    [< 'Ident("!",_); v = rule_vars; _ = sp; 'Sep(".") ?? "."; _ = sp;
        'Indent(_);
        (n,cat,desc) = rule_name;
        l_lab_r = parse_chunk;
@@ -581,24 +581,24 @@ and parse_rules_ap2 p = parser
 
 (* note that we can't find the binders in a set comprehension, *very*
    annoyingly.  See this from Michael:
-   
+
    Subject: Typesetting HOL
    From: Michael Norrish <Michael.Norrish@cl.cam.ac.uk>
    Date: Thu, 5 Jul 2001 12:59:09 +0100
    To: Keith Wansbrough <Keith.Wansbrough@cl.cam.ac.uk>
-   
+
    [..]
-   > * in set comprehension notation { foo | bar }, how can I determine the 
+   > * in set comprehension notation { foo | bar }, how can I determine the
    > set of bound variables?
-   
+
    You can't.  It's a long-standing problem with the syntax.  The parser
    resolves the ambiguity by taking the intersection of variables on the
    left and right-hand sides, unless there are none on one or other side,
    when it just takes the free-vars on the other side to all be bound.
    It's a hideous hack.
-   
+
    Michael.
- 
+
 *)
 
 let hol_binders =
@@ -607,7 +607,7 @@ let hol_binders =
   ; "?!"
   ; "@"
   ; "\\"
-  ] 
+  ]
 
 let potential_vars_line ts =
     let rec pot_l ts =       (* binders in a line *)
