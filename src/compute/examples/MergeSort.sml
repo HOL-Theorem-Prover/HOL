@@ -116,8 +116,11 @@ val rws = from_list (false,[COND_CLAUSES]);
 val _ = add_thms (true,sort_thms) rws;
 
 fun norm q = time (CBV_CONV rws) (--q--);
+(*
+fun norm q = timing.with_stats (timing.tickt "total" (CBV_CONV rws)) (--q--);
+*)
 
-(* rules.sml implemented witout expl. subst. *)
+(* rules.sml implemented witout expl. subst.: quadratic *)
 norm ` merge_sort L4 `;  (* ~ 0.03s *)
 norm ` merge_sort L12 `; (* ~ 0.11s *)
 norm ` merge_sort L20 `; (* ~ 0.30s *)
@@ -126,8 +129,18 @@ norm ` merge_sort L100 `; (* ~ 3.5s *)
 norm ` merge_sort L200 `;  (* ~ 11.7s = 3300 times slower than Moscow ML *)
 norm ` merge_sort L1200 `; (* ~ 377s *)
 
+(* with expl. subst.: N.log N *)
+norm ` merge_sort L12 `; (* ~ 0.1s *)
+norm ` merge_sort L20 `; (* ~ 0.25s *)
+norm ` merge_sort L100 `; (* ~ 2.11s *)
+norm ` merge_sort L200 `; (* ~ 5.2s *)
+norm ` merge_sort L400 `; (* ~ 11.9s *)
+norm ` merge_sort L1200 `; (* ~ 43.4s *)
+val _ = norm ` merge_sort L19200 `; (* ~ 996s *)
+val _ = norm ` merge_sort L38400 `; (* ~ 2090s, 66Mo *)
 
-(* Comparison with REWRITE_CONV *)
+
+(* Comparison with REWRITE_CONV: exponential *)
 
 fun rw_norm q = time (REWRITE_CONV sort_thms) (--q--);
 

@@ -9,6 +9,7 @@ val rws = from_list (false,[COND_CLAUSES]);
 val _ = add_thms (true,[strictify_thm LET_DEF]) rws;
 
 val norm = CBV_CONV rws;
+(* val norm = timing.with_stats (CBV_CONV rws); *)
 val wk_norm = WEAK_CBV_CONV rws;
 
 norm (--` (\x.x) ((\x.x) if T then 0 else 10) `--);
@@ -186,8 +187,8 @@ norm3 `65536+65536`;
 norm3 `131072+131072`;
 norm3 `100-99`;
 norm3 `100*100`;
-norm3 `2 EXP 64`;   (* 1.3s *) 
-norm3 `2 EXP 128`;  (* 5.7s *)
+norm3 `2 EXP 64`;   (* 1.3s / 1.1s (ES) *) 
+norm3 `2 EXP 128`;  (* 5.7s / 4.6s (ES) *)
 reduce `2 EXP 128`; (* 10.5 *)
 
 (* calling external conv. *)
@@ -198,3 +199,11 @@ norm3 `123456789123456789 DIV 9876`;  (* 0.6s *)
 reduce `123456789123456789 DIV 9876`; (* 0.89s *)
 norm3 `123456789123456789 MOD 9876`;  (* 0.6s *)
 reduce `123456789123456789 MOD 9876`; (* 0.88s *)
+
+
+(* "Bug" *)
+val th = SYM(ASSUME(--`x=0`--));
+val tm = --`\(x:num).x=0`--;
+
+val rws = from_list(true,[th]);
+CBV_CONV rws tm;
