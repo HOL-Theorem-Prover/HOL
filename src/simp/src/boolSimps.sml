@@ -9,28 +9,10 @@ val (Type,Term) = Parse.parse_from_grammars boolTheory.bool_grammars
 fun -- q x = Term q handle e => Raise e;
 fun == q x = Type q handle e => Raise e;
 
-(* ---------------------------------------------------------------------
- * bool_ss
- *   This is essentially the same as the old REWRITE_TAC []
- *   with the "basic rewrites" plus:
- *      - ABS_SIMP removed in favour of BETA_CONV
- *      - COND_ID added: (P => Q | Q) = Q
- *      - contextual rewrites for P ==> Q and P => T1 | T2 added
- *   The convs and "basic rewrites" come from BOOL_ss, while the
- *   contextual rewrites are found in CONG_ss.  This split is done so
- *   that the potential inefficient context gathering required for the
- *   congruence reasoning can be omitted in a custom simpset built from
- *   BOOL_ss.
- * --------------------------------------------------------------------*)
 
 fun BETA_CONVS tm = (RATOR_CONV BETA_CONVS THENQC BETA_CONV) tm
 
-fun comb_ETA_CONV t =
-    (if not (is_exists t orelse is_forall t orelse is_select t)
-       then RAND_CONV ETA_CONV
-       else NO_CONV) t
-
-val COND_BOOL_CLAUSES = 
+val COND_BOOL_CLAUSES =
   prove(Term`(!b e. (if b then T else e) = (b \/ e)) /\
              (!b t. (if b then t else T) = (b ==> t)) /\
              (!b e. (if b then F else e) = (~b /\ e)) /\
@@ -40,32 +22,40 @@ REPEAT (STRIP_TAC ORELSE COND_CASES_TAC ORELSE EQ_TAC)
  THENL [DISJ1_TAC THEN ACCEPT_TAC TRUTH,
         DISJ2_TAC THEN FIRST_ASSUM ACCEPT_TAC,
         FIRST_ASSUM MATCH_MP_TAC THEN ACCEPT_TAC TRUTH,
-        POP_ASSUM (K ALL_TAC) THEN 
+        POP_ASSUM (K ALL_TAC) THEN
         POP_ASSUM (MP_TAC o EQ_MP (el 2 (CONJUNCTS (SPEC_ALL NOT_CLAUSES))))
         THEN ACCEPT_TAC
              (EQT_ELIM (el 4 (CONJUNCTS (SPEC(Term`F`) IMP_CLAUSES))))]);
+
+(* ----------------------------------------------------------------------
+    ETA_ss
+      Implemented in a slightly cack-handed way so as to avoid simplifying
+      things like `!x. P x` to `$! P`
+   ---------------------------------------------------------------------- *)
+
+fun comb_ETA_CONV t =
+    (if not (is_exists t orelse is_forall t orelse is_select t)
+       then RAND_CONV ETA_CONV
+       else NO_CONV) t
+
+val ETA_ss = SIMPSET {
+  convs = [{name = "ETA_CONV (eta reduction)",
+            trace = 2,
+            key = SOME ([],
+                       --`(f:('a->'b)->'c) (\x:'a. (g:'a->'b) x)`--),
+            conv = K (K comb_ETA_CONV)},
+           {name = "ETA_CONV (eta reduction)",
+            trace = 2,
+            key = SOME ([], --`\x:'a. \y:'b. (f:'a->'b->'c) x y`--),
+            conv = K (K (ABS_CONV ETA_CONV))}],
+  rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []}
+
 
 val BOOL_ss = SIMPSET
   {convs=[{name="BETA_CONV (beta reduction)",
            trace=2,
            key=SOME ([],(--`(\x:'a. y:'b) z`--)),
-	   conv=K (K BETA_CONV)},
-(* kls. This doesn't make much sense in just the "bool" theory; if you
-   are not using pairs, then rewriting with boolTheory.LET_DEF will suffice!
-	  {name = "let_CONV (reduction of let terms)",
-	   trace = 2,
-	   key = SOME ([], (--`$LET (f:'a->'b) x`--)),
-	   conv = K (K let_CONV)},
-*)
-          {name = "ETA_CONV (eta reduction)",
-           trace = 2,
-           key = SOME ([],
-                       --`(f:('a->'b)->'c) (\x:'a. (g:'a->'b) x)`--),
-           conv = K (K comb_ETA_CONV)},
-          {name = "ETA_CONV (eta reduction)",
-           trace = 2,
-           key = SOME ([], --`\x:'a. \y:'b. (f:'a->'b->'c) x y`--),
-           conv = K (K (ABS_CONV ETA_CONV))}],
+	   conv=K (K BETA_CONV)}],
    rewrs=[REFL_CLAUSE,  EQ_CLAUSES,
           NOT_CLAUSES,  AND_CLAUSES,
           OR_CLAUSES,   IMP_CLAUSES,
@@ -132,7 +122,27 @@ val UNWIND_ss = SIMPSET
    rewrs=[],filter=NONE,ac=[],dprocs=[],congs=[]};
 
 
-val bool_ss = pure_ss ++ BOOL_ss ++ NOT_ss ++ CONG_ss ++ UNWIND_ss;
+
+(* ----------------------------------------------------------------------
+    bool_ss
+      This is essentially the same as the old REWRITE_TAC []
+      with the "basic rewrites" plus:
+         - ABS_SIMP removed in favour of BETA_CONV
+         - COND_ID added: (P => Q | Q) = Q
+         - contextual rewrites for P ==> Q and P => T1 | T2
+         - point-wise unwinding under ! and ?
+         - eta conversion
+
+      Beta conversion and "basic rewrites" come from BOOL_ss, while
+      the contextual rewrites are found in CONG_ss.  Unwinding comes
+      from UNWIND_ss, and eta-conversion comes from ETA_ss.  This
+      split is done so that users have the potential to construct
+      their own custom simpsets more easily.  For example, inefficient
+      context gathering required for the congruence reasoning can be
+      omitted in a custom simpset built from BOOL_ss.
+   ---------------------------------------------------------------------- *)
+
+val bool_ss = pure_ss ++ BOOL_ss ++ NOT_ss ++ CONG_ss ++ UNWIND_ss ++ ETA_ss;
 
 
 

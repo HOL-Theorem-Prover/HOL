@@ -1,7 +1,8 @@
 signature boolSimps =
 sig
      val bool_ss : simpLib.simpset
-     val BOOL_ss : simpLib.ssdata       (* boolean rewrites *)
+     val BOOL_ss : simpLib.ssdata       (* boolean rewrites and
+                                           beta conversion *)
      val CONG_ss : simpLib.ssdata       (* congruence rules for ==> and
                                            if-then-else *)
      val CONJ_ss : simpLib.ssdata       (* congruence rules for /\; not
@@ -13,5 +14,7 @@ sig
                                            not in bool_ss *)
      val UNWIND_ss : simpLib.ssdata     (* "pointwise" elimination for
                                             ? and !, included in bool_ss *)
+     val ETA_ss : simpLib.ssdata        (* eta conversion;
+                                           included in bool_ss *)
 end
 
