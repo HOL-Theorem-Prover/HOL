@@ -87,12 +87,6 @@ val unint_def = new_definition(
 
 val Abbrev_def = new_definition("Abbrev_def", ``Abbrev (x:bool) = x``)
 
-val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
-                  pp_elements = [BreakSpace(5,2), TOK "Abbrev"],
-                  fixity = Suffix 1, paren_style = OnlyIfNecessary,
-                  term_name = "Abbrev"}
-
-
 (*---------------------------------------------------------------------------*)
 (* Support for the simplifier                                                *)
 (*---------------------------------------------------------------------------*)
