@@ -121,6 +121,12 @@ in
   end
 end
 
+(* find anti-unification for list of types *)
+fun aul tyl =
+    case tyl of
+      [] => raise Fail "Overload.aul applied to empty list - shouldn't happen"
+    | (h::t) => foldl (uncurry anti_unify) h t
+
 fun fupd_actual_ops f {base_type, actual_ops} =
   {base_type = base_type, actual_ops = f actual_ops}
 
@@ -194,28 +200,46 @@ fun ntys_equal {Ty = ty1,Name = n1, Thy = thy1}
    it's at the head of the list, meaning that it will be the first choice
    in ambigous resolutions. *)
 fun add_actual_overloading {opname, realname, realthy} oinfo = let
+  val nthy_rec = {Name = realname, Thy = realthy}
   val cnst = prim_mk_const{Name = realname, Thy = realthy}
     handle HOL_ERR _ =>
       raise OVERLOAD_ERR ("No such constant: "^realthy^"$"^realname)
-  val newrec = {Ty = type_of cnst, Name = realname, Thy = realthy}
-  val newrec' = lose_constrec_ty newrec
+  val newrec = dest_thy_const cnst
   val (opc0, cop0) = oinfo
   val opc =
-    if is_overloaded oinfo opname then let
-      val {base_type, ...} = valOf (info_for_name oinfo opname)
-      val newbase = anti_unify base_type (#Ty newrec)
-    in
-      fupd_dict_at_key opname
-      ((fupd_actual_ops
-        (fn ops =>
-         newrec :: Lib.op_set_diff ntys_equal ops [newrec])) o
-       (fupd_base_type (fn b => newbase)))
-      opc0
-    end
-    else
-      Binarymap.insert(opc0, opname,
-                       {actual_ops = [newrec], base_type = #Ty newrec})
-  val cop = update_assoc newrec' opname cop0
+      case info_for_name oinfo opname of
+        SOME {base_type, actual_ops} => let
+          (* this name is already overloaded *)
+          fun eq_nthy aop = #Name aop = realname andalso #Thy aop = realthy
+        in
+          case Lib.total (Lib.pluck eq_nthy) actual_ops of
+            SOME (_, rest) => let
+              (* a constant of same nthy pair was already in the map *)
+              (* must replace it *)
+              val newbase =
+                  foldl (fn (r, ty) => anti_unify (#Ty r) ty) (#Ty newrec) rest
+            in
+              Binarymap.insert(opc0, opname,
+                               {actual_ops = newrec::rest,
+                                base_type = newbase})
+            end
+          | NONE => let
+              (* no constant of this name in the map, so can just cons its *)
+              (* record in *)
+              val newbase = anti_unify base_type (#Ty newrec)
+            in
+              fupd_dict_at_key
+                opname
+                (fupd_actual_ops (cons newrec) o
+                 fupd_base_type (fn b => newbase))
+                opc0
+            end
+        end
+      | NONE =>
+        (* this name not overloaded at all *)
+        Binarymap.insert(opc0, opname,
+                         {actual_ops = [newrec], base_type = #Ty newrec})
+  val cop = update_assoc nthy_rec opname cop0
 in
   (opc, cop)
 end

@@ -1046,28 +1046,49 @@ fun pp_term (G : grammar) TyG = let
             pend true
           end
           val r = {Name = Name, Thy = Thy}
-          fun normal_const () =
+          fun normal_const () = let
+            fun cope_with_rules s = let
+              val crules = lookup_term s
+            in
+              if isSome crules then
+                pr_sole_name s (map #2 (valOf crules))
+              else if s = "0" andalso can_pr_numeral NONE then
+                pr_numeral NONE tm
+              else if Name="EMPTYSTRING" andalso Thy="string" then
+                add_string "\"\""
+              else add_string s
+            end
+          in
             case Overload.overloading_of_term overload_info tm of
               NONE => add_prim_name()
             | SOME s =>
                 (* term is overloaded *)
                 if isPrefix recsel_special s orelse
-                  isPrefix recupd_special s orelse
-                  isPrefix recfupd_special s
-                  (* if overloaded to a record special, ignore it *)
-                  then
-                    add_prim_name()
-                else let
-                  val crules = lookup_term s
-                in
-                  if isSome crules then
-                    pr_sole_name s (map #2 (valOf crules))
-                  else if s = "0" andalso can_pr_numeral NONE then
-                    pr_numeral NONE tm
-                  else if Name="EMPTYSTRING" andalso Thy="string" then
-                    add_string "\"\""
-                       else add_string s
-                end
+                   isPrefix recupd_special s orelse
+                   isPrefix recfupd_special s
+                then
+                  (* if overloaded to a record special, check to see if it *)
+                  (* has a normal name in the map that we could use instead. *)
+                  (* This way we will print out something that can still be *)
+                  (* parsed back to the original term, without having to go *)
+                  (* for full uglification with dollared syntax.  *)
+
+                  (* Note that if we've got this far, we can't print out *)
+                  (* the special record syntax for some other reason, so *)
+                  (* is our "fall-back" action *)
+                  case Overload.info_for_name overload_info Name of
+                    NONE => add_prim_name()
+                  | SOME {actual_ops,...} =>
+                    if List.exists
+                         (fn r => #Thy r = Thy andalso #Name r = Name)
+                         actual_ops
+                    then
+                      cope_with_rules Name
+                    else
+                      add_prim_name()
+                else
+                  cope_with_rules s
+          end
         in
           case (showtypes_v, const_is_polymorphic r, const_has_multi_ovl r) of
             (true, false, true) => add_prim_name()
