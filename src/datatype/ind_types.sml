@@ -15,7 +15,7 @@
 structure ind_types :> ind_types =
 struct
 
-open HolKernel Parse boolLib
+open HolKernel Parse boolLib InductiveDefinition
      numTheory arithmeticTheory prim_recTheory 
      simpLib boolSimps ind_typeTheory;
 
@@ -239,9 +239,8 @@ in
       list_mk_forall(args,rule)
     end
     val rules = list_mk_conj (map mk_rule idefs)
-    val th0 =
-      IndDefLib.derive_nonschematic_inductive_relations rules
-    val th1 = IndDefLib.prove_monotonicity_hyps IndDefLib.bool_monoset th0
+    val th0 = derive_nonschematic_inductive_relations rules
+    val th1 = prove_monotonicity_hyps bool_monoset th0
     val (th2a,th2bc) = CONJ_PAIR th1
     val th2b = CONJUNCT1 th2bc
   in

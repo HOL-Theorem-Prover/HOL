@@ -179,7 +179,7 @@ val ZCONSTR_ZBOT = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 val (ZRECSPACE_RULES,ZRECSPACE_INDUCT,ZRECSPACE_CASES) =
-  IndDefLib.gen_new_inductive_definition IndDefLib.bool_monoset
+  IndDefLib.new_inductive_definition
    ``ZRECSPACE (ZBOT:num->'a->bool) /\
     (!c i r. (!n. ZRECSPACE (r n)) ==> ZRECSPACE (ZCONSTR c i r))``;
 
@@ -300,8 +300,8 @@ val CONSTR_REC = store_thm(
   ``!Fn:num->'a->(num->'a recspace)->(num->'b)->'b.
       ?f. (!c i r. f (CONSTR c i r) = Fn c i r (\n. f (r n)))``,
   REPEAT STRIP_TAC THEN
-  (MP_TAC o IndDefLib.prove_nonschematic_inductive_relations_exist
-            IndDefLib.bool_monoset)
+  (MP_TAC o InductiveDefinition.prove_nonschematic_inductive_relations_exist
+            InductiveDefinition.bool_monoset)
     ``(Z:'a recspace->'b->bool) BOTTOM b /\
      (!c i r y. (!n. Z (r n) (y n)) ==> Z (CONSTR c i r) (Fn c i r y))`` THEN
   DISCH_THEN(CHOOSE_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC MP_TAC)) THEN
