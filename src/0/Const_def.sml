@@ -43,7 +43,7 @@ local fun check_varstruct tm =
       val err = ERR"check_lhs" "bad lhs in def"
 in
 fun check_lhs tm =
-  if is_abs tf) then raise err else
+  if is_abs tm then raise err else
   if is_var tm orelse is_const tm then [tm] else
   let val {Rator,Rand} = dest_comb tm
       val l1 = check_lhs Rator
