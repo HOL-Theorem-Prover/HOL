@@ -6,9 +6,6 @@ all: makebase Doc2Html Doc2Tex Doc2Txt
 makebase : Database.uo Htmlsigs.uo Lexer.uo Parser.uo Parsspec.uo Printbase.uo Texsigs.uo makebase.uo
 (1)
 
-makebase.uo: Keepers.uo Htmlsigs.uo HOLPage.uo Database.ui Printbase.uo Parsspec.uo Symbolic.uo makebase.sml
-	MOSMLC -c makebase.sml
-
 Doc2Html : Doc2Html.uo ParseDoc.uo
 (2)
 
@@ -18,47 +15,9 @@ Doc2Tex : Doc2Tex.uo ParseDoc.uo
 Doc2Txt: Doc2Txt.uo ParseDoc.uo
 (4)
 
-Hasht.uo: Hasht.sml Hasht.ui
-	MOSMLC -c Hasht.sml
-
-Asynt.uo: Asynt.sml
-	MOSMLC -c Asynt.sml
-
-Parser.uo: Parser.sml Asynt.uo Parser.ui
-	MOSMLC -c Parser.sml
-
-Lexer.uo: Parser.uo Stack.uo Hasht.uo Lexer.sml
-	MOSMLC -c Lexer.sml
-
-Texsigs.uo: Texsigs.sml Texsigs.ui Database.uo
-	MOSMLC -c Texsigs.sml
-
-Stack.uo: Stack.sml Stack.ui
-	MOSMLC -c Stack.sml
-
-Printbase.uo: Database.uo Printbase.sml
-	MOSMLC -c Printbase.sml
-
-Parsspec.uo: Asynt.uo Parser.uo Lexer.uo Database.uo Parsspec.sml
-	MOSMLC -c Parsspec.sml
-
-Htmlsigs.uo: Database.uo Htmlsigs.ui Htmlsigs.sml
-	MOSMLC -c Htmlsigs.sml
-
-Database.uo: Database.sml Database.ui
-	MOSMLC -c Database.sml
-
-Symbolic.uo: Symbolic.sml Symbolic.ui
-	MOSMLC -c Symbolic.sml
-
 Lexer.sml: Lexer.lex
 	MOSMLLEX Lexer.lex
 
 Parser.sml: Parser.grm
 	MOSMLYAC Parser.grm
 
-ParseDoc.ui: ParseDoc.sig
-	MOSMLC -c ParseDoc.sig
-
-ParseDoc.uo: ParseDoc.sml
-	MOSMLC -c ParseDoc.sml
