@@ -1025,6 +1025,19 @@ val cooper_lemma_1 = store_thm(
     PROVE_TAC [INT_DIVIDES_LADD]
   ]);
 
+val bmarker_def = new_definition(
+  "bmarker_def",
+  ``bmarker (b:bool) = b``);
+
+val bmarker_rewrites = store_thm(
+  "bmarker_rewrites",
+  ``!p q r. (q /\ bmarker p = bmarker p /\ q) /\
+            (q /\ (bmarker p /\ r) = bmarker p /\ (q /\ r)) /\
+            ((bmarker p /\ q) /\ r = bmarker p /\ (q /\ r))``,
+  REWRITE_TAC [bmarker_def] THEN tautLib.TAUT_TAC);
+
+val _ = hide "bmarker";
+
 val _ = export_theory();
 
 end (* structure *)
