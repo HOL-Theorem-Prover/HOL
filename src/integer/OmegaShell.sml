@@ -6,8 +6,8 @@ open HolKernel boolLib intSyntax QConv integerTheory
 (* Takes a closed Presburger arithmetic term over the integers and
    tries to decide it using the Omega procedure.
 
-   Terms that are Presburger over the naturals or have free variables, or
-   both, are dealt with be by the procedures in Omega.
+   Terms that are Presburger over the naturals or have free variables,
+   or both, are dealt with by the procedures in IntDP_Munge.
 
    This code makes the decision as to whether or not OmegaSimple can be
    used, and also performs the necessary normalisation of the input.
@@ -22,6 +22,7 @@ fun c1 THENC c2 = THENQC c1 c2
 fun c1 ORELSEC c2 = ORELSEQC c1 c2
 val BINOP_CONV = BINOP_QCONV
 val ALL_CONV = ALL_QCONV
+val TRY_CONV = TRY_QCONV
 
 fun ERR f msg = HOL_ERR { origin_structure = "OmegaShell",
                           origin_function = f,
@@ -30,6 +31,31 @@ fun ERR f msg = HOL_ERR { origin_structure = "OmegaShell",
 fun EVERY_SUMMAND c tm =
   if is_plus tm then BINOP_CONV (EVERY_SUMMAND c) tm
   else c tm
+
+(* ----------------------------------------------------------------------
+    check_for_early_equalities t
+
+    t is of the form ?v1..vn. T, and T has been purged of all negations
+    and connectives other than /\ and \/.
+    Before throwing ourselves into DNF-ication, we check to see if T
+    can be seen as
+          (c * vi = ....) /\ P vi
+    If so, the OmegaEq simplification might usefully be applied.  Moreover
+    we may save on having to do it multiple times in lots of different
+    disjuncts if we do it now rather than later.
+   ---------------------------------------------------------------------- *)
+
+val check_for_early_equalities = OmegaEq.OmegaEq
+
+
+(* ----------------------------------------------------------------------
+    leaf_normalise t
+
+    Takes a "leaf term" (a relational operator over integer values) and
+    normalises it to either an equality, a <= or a disjunction of two
+    (un-normalised) <= leaves.  (The latter happens if called onto
+    normalise ~(x = y)).
+   ---------------------------------------------------------------------- *)
 
 local
   val lt_elim = SPEC_ALL int_arithTheory.less_to_leq_samer
@@ -90,19 +116,31 @@ end tm
 val leaf_normalise = REWR_CONV not_eq ORELSEC normalise_numbers
 end (* local *)
 
-fun normalise tm = let
-  val vs = map (#1 o dest_var) (#1 (strip_exists tm))
-  fun is_reln t =
-      List.exists (same_const (#1 (strip_comb t)))
-                  [less_tm, leq_tm, great_tm, geq_tm] orelse
-      is_eq t andalso type_of (rand t) = int_ty
+fun ISCONST_CONV tm = if is_const tm then ALL_CONV tm else NO_CONV tm
+
+(* ----------------------------------------------------------------------
+    normalise t
+
+    Normalises t, where t is of the form
+        ?v1..vn. T
+    and T is a closed term involving usual boolean operators and leaf terms
+    that are relational operators over integers.  T is put into DNF, and
+    the leaf terms are all normalised as well.
+   ---------------------------------------------------------------------- *)
+
+val normalise = let
+  fun push_exs tm = let
+    val vs = map (#1 o dest_var) (#1 (strip_exists tm))
+  in
+    CooperSyntax.push_in_exists THENC EVERY_DISJ_CONV (RENAME_VARS_CONV vs)
+  end tm
 in
   STRIP_QUANT_CONV (Canon.NNF_CONV leaf_normalise false THENC
-                    CSimp.csimp THENC Canon.PROP_DNF_CONV) THENC
-  CooperSyntax.push_in_exists THENC EVERY_DISJ_CONV (RENAME_VARS_CONV vs)
-end tm
+                    CSimp.csimp leaf_normalise) THENC
+  check_for_early_equalities THENC
+  (ISCONST_CONV ORELSEC (STRIP_QUANT_CONV Canon.PROP_DNF_CONV THENC push_exs))
+end
 
-fun ISCONST_CONV tm = if is_const tm then ALL_CONV tm else NO_CONV tm
 
 fun generate_nway_casesplit n = let
   val _ = n >= 1 orelse raise Fail "generate_nway_casesplit: n < 1"
@@ -150,6 +188,16 @@ fun reveal_a_disj tm =
                                   CooperThms.NOT_AND]) ORELSEC
        (REWR_CONV CooperThms.NOT_NOT_P THENC reveal_a_disj)) tm
 
+
+(* ----------------------------------------------------------------------
+    normalise_guard t
+
+    t is a conditional expression with a single leaf term as its guard.
+    If this is a <= leaf, flip its sense (and the corresponding then and
+    else branches) so that the coefficient of the first variable is
+    positive
+   ---------------------------------------------------------------------- *)
+
 val FLIP_COND = prove(
   ``(if g then t:'a else e) = if ~g then e else t``,
   COND_CASES_TAC THEN REWRITE_TAC []);
@@ -180,6 +228,18 @@ fun TOP_SWEEP_ONCE_CONV c t =
 
 val normalise_guards = TOP_SWEEP_ONCE_CONV normalise_guard
 
+(* ----------------------------------------------------------------------
+    cond_removal0 t
+
+    If t contains conditional expressions where guards of these appear
+    more than once, then do a case-split on these guard expressions at
+    the top level.
+    E.g.,
+        (if g then t else e) /\ (if g then t' else e')
+    will turn into
+        g /\ t /\ t' \/ g /\ e /\ e'
+
+   ---------------------------------------------------------------------- *)
 
 fun cond_removal0 t = let
   open Binarymap
@@ -200,9 +260,24 @@ in
   EVERY_DISJ_CONV (LAND_CONV LIST_BETA_CONV THENC REWRITE_CONV [])
 end t
 
+(* ----------------------------------------------------------------------
+    cond_removal t
+
+    Perform cond_removal0 on all of t's disjunctions, not being put off
+    by disjunctions hiding as negated conjunctions.
+   ---------------------------------------------------------------------- *)
+
 fun cond_removal t =
     ((reveal_a_disj THENC BINOP_CONV cond_removal) ORELSEC
      (normalise_guards THENC cond_removal0)) t
+
+
+(* ----------------------------------------------------------------------
+    simple t
+
+    Takes a closed term of form ?v1..vn. T and decides it using the
+    OmegaSimple method.
+   ---------------------------------------------------------------------- *)
 
 val simple =
   TRY_CONV (STRIP_QUANT_CONV cond_removal) THENC
@@ -303,6 +378,8 @@ val decide_closed_presburger =
     TOP_DEPTH_CONV remove_qs_from_guards THENC
     REWRITE_CONV [IMP_DISJ_THM] THENC decide_strategy
 
+(* utility function for assessing how big a term will result when something
+   is converted to DNF naively :
 fun dnf_size t =
     if is_disj t then
       (op+ o (dnf_size ## dnf_size) o dest_disj) t
@@ -310,7 +387,7 @@ fun dnf_size t =
       (op* o (dnf_size ## dnf_size) o dest_conj) t
     else 1
 
-
+*)
 
 
 end (* struct *)

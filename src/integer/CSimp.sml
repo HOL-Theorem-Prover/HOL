@@ -41,47 +41,51 @@ in
     RAND_CONV find_atom THENC move_atom_from_right
 end t handle (e as HOL_ERR _) => if is_other t then raise e else ALL_CONV t
 
-fun disj_cong0 t = let
+fun disj_cong0 c t = let
   val (d1, d2) = dest_disj t
   val notd1_t = mk_neg d1
-  val notd1_thm = ASSUME notd1_t
-  val notd1 =
-      if is_neg d1 then EQT_INTRO (CONV_RULE (REWR_CONV NOT_NOT_P) notd1_thm)
-      else EQF_INTRO (notd1_thm)
-  val d2_rewritten = DISCH notd1_t (REWRITE_CONV [notd1] d2)
+  val notd1_thm = EQF_INTRO (ASSUME notd1_t)
+  val d1_thm0 = AP_TERM boolSyntax.negation notd1_thm
+  val d1_thm =
+      CONV_RULE (LAND_CONV c THENC RAND_CONV (REWRITE_CONV [])) d1_thm0
+  val d2_rewritten = DISCH notd1_t (REWRITE_CONV [notd1_thm, d1_thm] d2)
 in
   K (MATCH_MP simple_disj_congruence d2_rewritten) THENC
   TRY_CONV (REWR_CONV T_or_r ORELSEC REWR_CONV F_or_r)
 end t
 
-val disj_cong = REWR_CONV T_or_l ORELSEC REWR_CONV F_or_l ORELSEC disj_cong0
+fun disj_cong c =
+    REWR_CONV T_or_l ORELSEC REWR_CONV F_or_l ORELSEC disj_cong0 c
 
-fun conj_cong0 t = let
+fun conj_cong0 c t = let
   val (c1, c2) = dest_conj t
-  val c1_thm = if is_neg c1 then EQF_INTRO (ASSUME c1)
-               else EQT_INTRO (ASSUME c1)
-  val c2_rewritten = DISCH c1 (REWRITE_CONV [c1_thm] c2)
+  val c1_thm = EQT_INTRO (ASSUME c1)
+  val c1_neg0 = AP_TERM boolSyntax.negation c1_thm
+  val c1_neg =
+      CONV_RULE (LAND_CONV c THENC RAND_CONV (REWRITE_CONV [])) c1_neg0
+  val c2_rewritten = DISCH c1 (REWRITE_CONV [c1_thm, c1_neg] c2)
 in
   K (MATCH_MP simple_conj_congruence c2_rewritten) THENC
   TRY_CONV (REWR_CONV T_and_r ORELSEC REWR_CONV F_and_r)
 end t
 
-val conj_cong = REWR_CONV T_and_l ORELSEC REWR_CONV F_and_l ORELSEC conj_cong0
+fun conj_cong c =
+    REWR_CONV T_and_l ORELSEC REWR_CONV F_and_l ORELSEC conj_cong0 c
 
 fun IFP is c tm = if is tm then c tm else ALL_CONV tm
 
-fun csimp tm = let
+fun csimp c tm = let
 in
   if is_disj tm then
     if has_atom dest_disj is_conj tm then
       find_atom DISJ_ASSOC DISJ_COMM dest_disj is_conj THENC
-      disj_cong THENC IFP is_disj (RAND_CONV csimp)
-    else BINOP_CONV csimp
+      disj_cong c THENC IFP is_disj (RAND_CONV (csimp c))
+    else BINOP_CONV (csimp c)
     else if is_conj tm then
       if has_atom dest_conj is_disj tm then
         find_atom CONJ_ASSOC CONJ_COMM dest_conj is_disj THENC
-        conj_cong THENC IFP is_conj (RAND_CONV csimp)
-      else BINOP_CONV csimp
+        conj_cong c THENC IFP is_conj (RAND_CONV (csimp c))
+      else BINOP_CONV (csimp c)
     else ALL_CONV
 end tm
 

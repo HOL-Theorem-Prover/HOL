@@ -303,7 +303,8 @@ in
   STRIP_QUANT_CONV (K reordered_thm THENC bring_veq_to_top THENC absify) THENC
   push_exvar_to_bot to_elim THENC LAST_EXISTS_CONV unwinder THENC
   STRIP_QUANT_CONV
-    (EVERY_CONJ_CONV (TRY_CONV (RAND_CONV S_AND_G_MULT THENC gcd_check))) THENC
+    (BLEAF_CONV (op THENC)
+                (TRY_CONV (RAND_CONV S_AND_G_MULT THENC gcd_check))) THENC
   REWRITE_CONV [EXISTS_SIMP] THENC
   ifVarsRemain OmegaEq
 end t
