@@ -1,4 +1,4 @@
-open HolKernel Parse basicHol90Lib
+open HolKernel Parse basicHol90Lib listTheory
      TotalDefn Datatype BasicProvers SingleStep;
 
 infix THEN THENL |->;
