@@ -9,7 +9,7 @@ struct
 app load ["permTheory","bossLib"];
 *)
 
-open HolKernel Parse boolLib bossLib
+open HolKernel Parse boolLib bossLib labelLib
 
 open combinTheory pairTheory relationTheory listTheory metisLib
      BasicProvers
@@ -185,11 +185,13 @@ RW_TAC bool_ss [o_DEF]
 (* the definition assumption is 'backwards' so that it will be OK as an
    assumption and not cause perm to get rewritten out *)
 val perm_t =
-  ``!l1 l2:'a list. (!P. P [] [] /\
+  ``permdef :- !l1 l2:'a list.
+                  perm l1 l2 =
+                    (!P. P [] [] /\
                          (!x l1 l2. P l1 l2 ==> P (x::l1) (x::l2)) /\
                          (!x y l1 l2. P l1 l2 ==> P (x::y::l1) (y::x::l2)) /\
                          (!l1 l2 l3. P l1 l2 /\ P l2 l3 ==> P l1 l3) ==>
-                         P l1 l2) = perm l1 l2``
+                         P l1 l2)``
 
 (* perm's induction principle *)
 val _ = print "Proving perm induction principle\n"
@@ -199,8 +201,8 @@ val perm_ind = prove(
                     (!x y l1 l2. P l1 l2 ==> P (x::y::l1) (y::x::l2)) /\
                     (!l1 l2 l3. P l1 l2 /\ P l2 l3 ==> P l1 l3) ==>
                     !l1 l2. perm l1 l2 ==> P l1 l2``,
-  DISCH_THEN (fn th => REWRITE_TAC [GSYM th]) THEN REPEAT STRIP_TAC THEN
-  FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC []);
+  STRIP_TAC THEN LABEL_X_ASSUM "permdef" (REWRITE_TAC o C cons nil) THEN
+  REPEAT STRIP_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC []);
 val perm_ind = UNDISCH perm_ind
 
 val _ = print "Proving perm rules\n"
@@ -209,11 +211,11 @@ val perm_rules = prove(
                 (!x l1 l2. perm l1 l2 ==> perm (x::l1) (x::l2)) /\
                 (!x y l1 l2. perm l1 l2 ==> perm (x::y::l1) (y::x::l2)) /\
                 (!l1 l2 l3. perm l1 l2 /\ perm l2 l3 ==> perm l1 l3)``,
-  DISCH_THEN (REWRITE_TAC o C cons nil o GSYM) THEN REPEAT STRIP_TAC THENL [
-    `P l1 l2` by RES_TAC THEN METIS_TAC [],
-    `P l1 l2` by RES_TAC THEN METIS_TAC [],
-    `P l1 l2 /\ P l2 l3` by RES_TAC THEN METIS_TAC []
-  ]);
+  STRIP_TAC THEN LABEL_X_ASSUM "permdef" (REWRITE_TAC o C cons nil) THEN
+  REPEAT STRIP_TAC THEN
+  REPEAT
+    (FIRST_X_ASSUM (MP_TAC o SPEC ``P : 'a list -> 'a list -> bool``)) THEN
+  ASM_REWRITE_TAC [] THEN METIS_TAC [])
 val perm_rules = UNDISCH perm_rules
 
 val perm_sym = prove(
@@ -221,7 +223,7 @@ val perm_sym = prove(
   STRIP_TAC THEN
   Q_TAC SUFF_TAC
         `!l1 l2. perm l1 l2 ==> perm l2 l1`
-        THEN1 mesonLib.MESON_TAC [] THEN
+        THEN1 METIS_TAC [] THEN
   HO_MATCH_MP_TAC perm_ind THEN
   SRW_TAC [][perm_rules] THEN METIS_TAC [perm_rules]);
 val perm_sym = UNDISCH perm_sym
@@ -236,8 +238,7 @@ val _ = print "Proving perm symmetric, reflexive & transitive\n"
 
 val perm_PERM = prove(
   ``^perm_t ==> !l1 l2. perm l1 l2 ==> PERM l1 l2``,
-  STRIP_TAC THEN HO_MATCH_MP_TAC perm_ind THEN
-  SRW_TAC [][] THENL [
+  STRIP_TAC THEN HO_MATCH_MP_TAC perm_ind THEN SRW_TAC [][] THENL [
     SRW_TAC [][PERM_CONS_EQ_APPEND] THEN
     MAP_EVERY Q.EXISTS_TAC [`[y]`, `l2`] THEN SRW_TAC [][] THEN
     MAP_EVERY Q.EXISTS_TAC [`[]`, `l2`] THEN SRW_TAC [][],
@@ -254,35 +255,19 @@ val perm_cons_append = prove(
     SRW_TAC [][perm_rules],
     Cases_on `M` THEN SRW_TAC [][] THENL [
       FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][] THEN
-      FIRST_X_ASSUM (Q.SPECL_THEN [`[]`, `l2`] MP_TAC) THEN
-      SRW_TAC [][] THEN METIS_TAC [perm_rules],
+      METIS_TAC [perm_rules, APPEND],
       FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][] THEN
-      MATCH_MP_TAC perm_trans THEN
-      Q.EXISTS_TAC `h'::h::l1` THEN SRW_TAC [][perm_rules, perm_refl]
+      METIS_TAC [perm_rules, perm_refl]
     ],
     `(M = []) \/ (?m1 ms. M = m1::ms)` by (Cases_on `M` THEN SRW_TAC [][]) THEN
     SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][] THENL [
-      MATCH_MP_TAC perm_trans THEN
-      Q.EXISTS_TAC `h::y::x::l1` THEN
-      FIRST_X_ASSUM (Q.SPECL_THEN [`[]`, `l2`] MP_TAC) THEN
-      SRW_TAC [][perm_rules, perm_refl],
+      METIS_TAC [perm_rules, APPEND, perm_refl],
       `(ms = []) \/ (?m2 mss. ms = m2::mss)`
           by (Cases_on `ms` THEN SRW_TAC [][]) THEN
-      SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][] THENL [
-        FIRST_X_ASSUM (Q.SPECL_THEN [`[]`, `l2`] MP_TAC) THEN
-        SRW_TAC [][] THEN
-        MATCH_MP_TAC perm_trans THEN
-        Q.EXISTS_TAC `h::m1::x::l1` THEN SRW_TAC [][perm_rules,perm_refl],
-        FIRST_X_ASSUM (Q.SPECL_THEN [`mss`, `N`] MP_TAC) THEN
-        SRW_TAC [][] THEN MATCH_MP_TAC perm_trans THEN
-        Q.EXISTS_TAC `m2::h::m1::l1` THEN
-        SRW_TAC [][perm_rules, perm_refl] THEN
-        MATCH_MP_TAC perm_trans THEN Q.EXISTS_TAC `m2::m1::h::l1` THEN
-        SRW_TAC [][perm_rules, perm_refl]
-      ]
+      SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][] THEN
+      METIS_TAC [perm_rules, APPEND, perm_refl]
     ],
-    `!h. perm (h::l1) (h::l1')` by METIS_TAC [APPEND] THEN
-    METIS_TAC [perm_trans]
+    METIS_TAC [perm_trans, APPEND]
   ])
 val perm_cons_append =
     SIMP_RULE (bool_ss ++ boolSimps.DNF_ss) [] (UNDISCH perm_cons_append)
@@ -293,13 +278,13 @@ val PERM_perm = prove(
   METIS_TAC [perm_cons_append])
 val PERM_perm = UNDISCH PERM_perm
 
-
 val perm_elim = GEN_ALL
                   (IMP_ANTISYM_RULE (SPEC_ALL perm_PERM) (SPEC_ALL PERM_perm))
 fun remove_eq_asm th = let
   val th0 =
-      CONV_RULE (LAND_CONV (SIMP_CONV (bool_ss ++ boolSimps.ETA_ss)
-                                      [GSYM FUN_EQ_THM]))
+      CONV_RULE (LAND_CONV
+                   (SIMP_CONV (bool_ss ++ boolSimps.ETA_ss)
+                              [GSYM FUN_EQ_THM, labelTheory.label_def]))
                 (DISCH_ALL (REWRITE_RULE [perm_elim] th))
 in
   CONV_RULE Unwind.UNWIND_FORALL_CONV
@@ -314,23 +299,15 @@ val PERM_SWAP_AT_FRONT = store_thm(
   METIS_TAC [remove_eq_asm (List.nth(CONJUNCTS perm_rules, 2)),
              PERM_REFL, PERM_TRANS, PERM_CONS_IFF]);
 
-val PERM_LENGTH = Q.store_thm("PERM_LENGTH",
-`!l1 l2. PERM l1 l2 ==> (LENGTH l1 = LENGTH l2)`,
-HO_MATCH_MP_TAC PERM_IND THEN SRW_TAC [][])
+val PERM_LENGTH = Q.store_thm(
+  "PERM_LENGTH",
+  `!l1 l2. PERM l1 l2 ==> (LENGTH l1 = LENGTH l2)`,
+  HO_MATCH_MP_TAC PERM_IND THEN SRW_TAC [][])
 
-(*---------------------------------------------------------------------------
-    Directly performs one "sorting step" between 2 non-empty lists that
-    are permutations of each other.
- *---------------------------------------------------------------------------*)
-
-(* unused? *)
-val PERM_SORT_STEP = Q.store_thm
-("PERM_SORT_STEP",
- `!l h t. PERM (h::t) l ==> ?rst. h::rst = FILTER ($=h) l`,
- RW_TAC list_ss [PERM_DEF,FILTER]
-   THEN POP_ASSUM (MP_TAC o Q.SPEC`h`)
-   THEN RW_TAC bool_ss []
-   THEN PROVE_TAC[]);
+val PERM_MEM_EQ = Q.store_thm(
+  "PERM_MEM_EQ",
+  `!l1 l2. PERM l1 l2 ==> !x. MEM x l1 = MEM x l2`,
+  HO_MATCH_MP_TAC PERM_IND THEN SRW_TAC [][AC DISJ_ASSOC DISJ_COMM])
 
 (*---------------------------------------------------------------------------*
  * The idea of sortedness requires a "permutation" relation for lists, and   *
@@ -372,12 +349,8 @@ val SORTED_APPEND = Q.store_thm("SORTED_APPEND",
   ==>
     SORTED R (APPEND L1 L2)`,
 Induct_on `L1`
- THEN RW_TAC list_ss [MEM]
- THEN `SORTED R L1 /\ !y. MEM y L1 ==> R h y` by PROVE_TAC [SORTED_EQ]
- THEN RW_TAC bool_ss [SORTED_EQ]
- THEN `MEM y L1 \/ MEM y L2` by PROVE_TAC [MEM_APPEND]
- THEN PROVE_TAC []);
-
+  THEN SRW_TAC [boolSimps.CONJ_ss][SORTED_EQ]
+  THEN PROVE_TAC []);
 
 (*---------------------------------------------------------------------------
                  Partition a list by a predicate.
@@ -417,23 +390,6 @@ RW_TAC bool_ss []
  THEN RW_TAC list_ss []);
 
 
-(*---------------------------------------------------------------------------
-     Everything in the partitions occurs in the original list, and
-     vice-versa. The goal has been generalized.
- ---------------------------------------------------------------------------*)
-
-val PART_MEM = Q.store_thm
-("PART_MEM",
- `!P L a1 a2 l1 l2.
-     ((a1,a2) = PART P L l1 l2)
-       ==>
-      !x. MEM x (APPEND L (APPEND l1 l2)) = MEM x (APPEND a1 a2)`,
- Induct_on `L`
-  THEN RW_TAC bool_ss [PART_DEF]
-  THENL [RW_TAC list_ss [], ALL_TAC, ALL_TAC]
-  THEN RES_THEN MP_TAC THEN NTAC 2 (DISCH_THEN (K ALL_TAC))
-  THEN DISCH_THEN (fn th => REWRITE_TAC [GSYM th])
-  THEN RW_TAC list_ss [MEM,MEM_APPEND] THEN PROVE_TAC[]);
 
 (*---------------------------------------------------------------------------
        Each element in the positive and negative partitions has
@@ -474,6 +430,19 @@ Induct_on `L`
   [Q.EXISTS_TAC `APPEND L (APPEND (h::l1) l2)`,
    Q.EXISTS_TAC `APPEND L (APPEND l1 (h::l2))`]
   THEN PROVE_TAC [APPEND,APPEND_ASSOC,CONS_PERM,PERM_REFL]);
+
+(*---------------------------------------------------------------------------
+     Everything in the partitions occurs in the original list, and
+     vice-versa. The goal has been generalized.
+ ---------------------------------------------------------------------------*)
+
+val PART_MEM = Q.store_thm
+("PART_MEM",
+ `!P L a1 a2 l1 l2.
+     ((a1,a2) = PART P L l1 l2)
+       ==>
+      !x. MEM x (APPEND L (APPEND l1 l2)) = MEM x (APPEND a1 a2)`,
+  METIS_TAC [PART_PERM, PERM_MEM_EQ]);
 
 (*---------------------------------------------------------------------------
      A packaged version of PART. Most theorems about PARTITION
