@@ -23,7 +23,7 @@ struct
 
 
 val num_CONV = Num_conv.num_CONV;
-open Exception;
+open Feedback;
 open Int_extra;
 open Arith_cons;
 open Term_coeffs;
@@ -34,13 +34,13 @@ open Norm_arith;
 open Norm_ineqs;
 open reduceLib;
 open Term;
-open Dsyntax;
+open boolSyntax;
 open Thm;
 open Drule;
 open Lib;
 
 infix ##;
-val MATCH_MP = Conv.MATCH_MP;
+val MATCH_MP = Drule.MATCH_MP;
 
 
    type term = Term.term

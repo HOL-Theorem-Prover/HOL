@@ -25,7 +25,7 @@ type term = Term.term
 type conv = Abbrev.conv;
 
 open Qconv; infix THENC; infix ORELSEC;
-open Term Dsyntax Drule Exception;
+open Term boolSyntax Drule Feedback;
 
 (* Bindings from Conv structure *)
 val TOP_DEPTH_CONV = Conv.TOP_DEPTH_CONV;

@@ -25,7 +25,7 @@ struct
 
 
 fun failwith function = raise
- Exception.HOL_ERR{origin_structure = "Term_coeffs",
+ Feedback.HOL_ERR{origin_structure = "Term_coeffs",
                    origin_function = function,
                           message = ""};
 
@@ -33,7 +33,7 @@ open Lib;
 infix 3 ##;
 
 open Term;
-open Dsyntax;
+open boolSyntax;
 open Arith_cons;
 
 (* datatype frag = datatype Portable.frag; *)

@@ -31,10 +31,10 @@ open Sol_ranges;
 open reduceLib;
 open Drule;
 open Term;
-open Dsyntax;
+open boolSyntax;
 open Thm;
 open Lib;
-open Exception;
+open Feedback;
 
 
 fun failwith function = raise HOL_ERR{origin_structure = "Exists_arith",

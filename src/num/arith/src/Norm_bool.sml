@@ -23,7 +23,7 @@ struct
 
 open Arith_cons;
 open Thm_convs;
-open HolKernel
+open HolKernel boolSyntax
 open Qconv;
 
 type conv = Abbrev.conv;
@@ -31,7 +31,7 @@ type term = Term.term;
 
 infix THENC;
 
-fun failwith function = raise 
+fun failwith function = raise
            HOL_ERR{origin_structure = "Norm_bool",
                     origin_function = function,
                             message = ""};

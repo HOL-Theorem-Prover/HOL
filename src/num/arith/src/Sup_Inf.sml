@@ -25,7 +25,7 @@ struct
 
 open Rationals;
 open Lib; infix ##;
-open Exception;
+open Feedback;
 
 fun failwith function = raise HOL_ERR{origin_structure = "Sup_Inf",
                                       origin_function = function,

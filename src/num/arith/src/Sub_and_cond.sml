@@ -46,7 +46,7 @@ and beta  = Type`:'b`;
 
 fun COND_ABS_CONV tm =
  (let val {Bvar = v,Body = bdy} = dest_abs tm
-      val {cond,larm = x,rarm = y} = dest_cond bdy
+      val {cond,larm = x,rarm = y} = Rsyntax.dest_cond bdy
       val b = assert (not o Lib.mem v o free_vars) cond
       val xf = mk_abs{Bvar = v,Body = x}
       and yf = mk_abs{Bvar = v,Body = y}

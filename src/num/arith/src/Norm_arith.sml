@@ -28,7 +28,7 @@ val num_CONV = Num_conv.num_CONV;
 
 
 fun failwith function = raise
- Exception.HOL_ERR{origin_structure = "Norm_arith",
+ Feedback.HOL_ERR{origin_structure = "Norm_arith",
                     origin_function = function,
                             message = ""};
 
@@ -39,6 +39,7 @@ open Theorems;
 open Thm_convs;
 open reduceLib;
 open HolKernel Drule ;
+open boolSyntax
 
 infix ##;
 infix THENC;
@@ -67,7 +68,7 @@ fun COLLECT_NUM_CONSTS_CONV tm =
        else if (is_num_const (arg2 tm)) then ADD_CONV tm
        else failwith "fail"
   else failwith "fail"
- ) handle (Exception.HOL_ERR _) => failwith "COLLECT_NUM_CONSTS_CONV";
+ ) handle (Feedback.HOL_ERR _) => failwith "COLLECT_NUM_CONSTS_CONV";
 
 (*---------------------------------------------------------------------------*)
 (* NUM_RELN_NORM_CONV : conv -> conv -> conv                                 *)
@@ -121,7 +122,7 @@ fun NUM_RELN_NORM_CONV arith_conv leq_conv tm =
              leq_conv)
          else if (is_geq tm) then (GEQ_NORM_CONV THENC leq_conv)
          else failwith "fail")) tm
- ) handle (Exception.HOL_ERR _) => failwith "NUM_RELN_NORM_CONV";
+ ) handle (Feedback.HOL_ERR _) => failwith "NUM_RELN_NORM_CONV";
 
 (*---------------------------------------------------------------------------*)
 (* MULT_CONV : conv                                                          *)
@@ -162,7 +163,7 @@ fun mult_lookup ths (n,m) =
        in  TRANS th1 th2
        end
   else assoc (n,m) ths
- ) handle (Exception.HOL_ERR _) => failwith "mult_lookup";
+ ) handle (Feedback.HOL_ERR _) => failwith "mult_lookup";
 
 (*---------------------------------------------------------------------------*)
 (* FAST_MULT_CONV : conv                                                     *)
@@ -199,7 +200,7 @@ fun FAST_MULT_CONV tm =
                      end
             end)
   end
- ) handle (Exception.HOL_ERR _) => failwith "FAST_MULT_CONV";
+ ) handle (Feedback.HOL_ERR _) => failwith "FAST_MULT_CONV";
 
 fun reset_multiplication_theorems () =
    multiplication_theorems := ([]:((int * int) * thm) list);
@@ -255,7 +256,7 @@ fun SUM_OF_PRODUCTS_SUC_CONV tm =
            else failwith "fail"
        end
   else failwith "fail"
- ) handle (Exception.HOL_ERR _) => failwith "SUM_OF_PRODUCTS_SUC_CONV"
+ ) handle (Feedback.HOL_ERR _) => failwith "SUM_OF_PRODUCTS_SUC_CONV"
  end;
 
 (*---------------------------------------------------------------------------*)
@@ -301,7 +302,7 @@ fun SUM_OF_PRODUCTS_MULT_CONV tm =
             else failwith "fail"
         end)
   else failwith "fail"
- ) handle (Exception.HOL_ERR _) => failwith "SUM_OF_PRODUCTS_MULT_CONV";
+ ) handle (Feedback.HOL_ERR _) => failwith "SUM_OF_PRODUCTS_MULT_CONV";
 
 (*---------------------------------------------------------------------------*)
 (* SUM_OF_PRODUCTS_CONV : conv                                               *)
@@ -332,7 +333,7 @@ fun SUM_OF_PRODUCTS_CONV tm =
   else if (is_mult tm) then
      ((ARGS_CONV SUM_OF_PRODUCTS_CONV) THENC SUM_OF_PRODUCTS_MULT_CONV) tm
   else failwith "fail"
- ) handle (Exception.HOL_ERR _) => failwith "SUM_OF_PRODUCTS_CONV";
+ ) handle (Feedback.HOL_ERR _) => failwith "SUM_OF_PRODUCTS_CONV";
 
 (*---------------------------------------------------------------------------*)
 (* LINEAR_SUM_CONV : conv                                                    *)
@@ -349,7 +350,7 @@ val LINEAR_SUM_CONV =
         (if (is_plus tm)
          then ((ARGS_CONV LINEAR_SUM_CONV') THENC FILTER_IN_CONV) tm
          else ALL_CONV tm
-        ) handle (Exception.HOL_ERR _) => failwith "LINEAR_SUM_CONV"
+        ) handle (Feedback.HOL_ERR _) => failwith "LINEAR_SUM_CONV"
  in  LINEAR_SUM_CONV'
  end;
 
@@ -370,7 +371,7 @@ fun GATHER_CONV tm =
           | (false,false) => GATHER_NEITHER_CONV
   in  (conv THENC (RATOR_CONV (RAND_CONV (TRY_CONV ADD_CONV)))) tm
   end
- ) handle (Exception.HOL_ERR _) => failwith "GATHER_CONV";
+ ) handle (Feedback.HOL_ERR _) => failwith "GATHER_CONV";
 
 (*---------------------------------------------------------------------------*)
 (* IN_LINE_SUM_CONV : conv -> conv                                           *)
@@ -389,7 +390,7 @@ fun IN_LINE_SUM_CONV conv tm =
  (ADD_ASSOC_CONV THENC
   (RATOR_CONV (RAND_CONV conv)) THENC
   (TRY_CONV SYM_ADD_ASSOC_CONV)) tm
- handle (Exception.HOL_ERR _) => failwith "IN_LINE_SUM_CONV";
+ handle (Feedback.HOL_ERR _) => failwith "IN_LINE_SUM_CONV";
 
 (*---------------------------------------------------------------------------*)
 (* ONE_PASS_SORT_CONV : conv                                                 *)
@@ -448,7 +449,7 @@ fun ONE_PASS_SORT_CONV tm =
                    end
           end)) tm
   else ALL_CONV tm
- ) handle (Exception.HOL_ERR _) => failwith "ONE_PASS_SORT_CONV";
+ ) handle (Feedback.HOL_ERR _) => failwith "ONE_PASS_SORT_CONV";
 
 (*---------------------------------------------------------------------------*)
 (* SORT_AND_GATHER_CONV : conv                                               *)
@@ -461,7 +462,7 @@ fun ONE_PASS_SORT_CONV tm =
 
 fun SORT_AND_GATHER_CONV tm =
  REPEATC (CHANGED_CONV ONE_PASS_SORT_CONV) tm
- handle (Exception.HOL_ERR _) => failwith "SORT_AND_GATHER_CONV";
+ handle (Feedback.HOL_ERR _) => failwith "SORT_AND_GATHER_CONV";
 
 (*---------------------------------------------------------------------------*)
 (* SYM_ONE_MULT_VAR_CONV : conv                                              *)
@@ -474,7 +475,7 @@ fun SYM_ONE_MULT_VAR_CONV tm =
  (if (is_var tm)
   then SYM_ONE_MULT_CONV tm
   else failwith "fail"
- ) handle (Exception.HOL_ERR _) => failwith "SYM_ONE_MULT_VAR_CONV";
+ ) handle (Feedback.HOL_ERR _) => failwith "SYM_ONE_MULT_VAR_CONV";
 
 (*---------------------------------------------------------------------------*)
 (* NORM_ZERO_AND_ONE_CONV : conv                                             *)
@@ -504,7 +505,7 @@ val NORM_ZERO_AND_ONE_CONV =
         else ((TRY_CONV ZERO_MULT_CONV) THENC
               (TRY_CONV SYM_ONE_MULT_VAR_CONV)) tm
  in  fn tm => ((NORM_CONV THENC (TRY_CONV ZERO_PLUS_CONV)) tm
-             handle (Exception.HOL_ERR _) => failwith "NORM_ZERO_AND_ONE_CONV")
+             handle (Feedback.HOL_ERR _) => failwith "NORM_ZERO_AND_ONE_CONV")
  end;
 
 end

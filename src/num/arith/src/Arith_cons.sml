@@ -26,7 +26,7 @@ struct
 local open arithmeticTheory in end;
 
 fun failwith function = raise
- Exception.HOL_ERR{origin_structure = "Arith_cons",
+ Feedback.HOL_ERR{origin_structure = "Arith_cons",
                    origin_function = function,
                            message = ""};
 open HolKernel;
@@ -215,8 +215,8 @@ val is_pre = can dest_pre;
 (* Discriminators for numbers                                                *)
 (*===========================================================================*)
 
-val is_num_const = Term.is_numeral
-val zero = mk_numeral (Arbnum.fromInt 0)
+val is_num_const = numSyntax.is_numeral
+val zero = numSyntax.zero_t
 fun is_zero tm = tm = zero
 
 
@@ -224,8 +224,8 @@ fun is_zero tm = tm = zero
 (* Conversions between ML integers and numeric constant terms                *)
 (*===========================================================================*)
 
-val int_of_term = fromNat o dest_numeral
-val term_of_int = mk_numeral o toNat
+val int_of_term = fromNat o numSyntax.dest_numeral
+val term_of_int = numSyntax.mk_numeral o toNat
 
 (*===========================================================================*)
 (* Generation of a numeric variable from a name                              *)

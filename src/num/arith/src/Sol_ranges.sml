@@ -27,7 +27,7 @@ open Rationals;
 open Sup_Inf;
 open Streams;
 open Lib; infix ##;
-open Exception;
+open Feedback;
 
 fun failwith function = raise HOL_ERR{origin_structure = "Sol_ranges",
                                       origin_function = function,

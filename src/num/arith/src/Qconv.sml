@@ -25,15 +25,15 @@ struct
 
 open Drule;
 
-fun failwith function = raise 
- Exception.HOL_ERR{origin_structure = "Qconv",
+fun failwith function = raise
+ Feedback.HOL_ERR{origin_structure = "Qconv",
                     origin_function = function,
                             message = ""};
 
 type conv = Abbrev.conv;
 open HolKernel;
 
-val rhs = Dsyntax.rhs;
+val rhs = boolSyntax.rhs;
 val aconv = Term.aconv;
 
 (*---------------------------------------------------------------------------*)
@@ -114,7 +114,7 @@ fun REPEATC conv tm =
 fun CHANGED_CONV conv (tm:term) =
    let val th = conv tm
                 handle UNCHANGED => failwith "CHANGED_CONV"
-       val {lhs,rhs} = dest_eq (concl th)
+       val {lhs,rhs} = Rsyntax.dest_eq (concl th)
    in  if (aconv lhs rhs)
        then failwith "CHANGED_CONV"
        else th
@@ -178,7 +178,7 @@ fun ABS_CONV conv tm =
        val bodyth = conv Body
    in
    ABS Bvar bodyth
-   handle (e as Exception.HOL_ERR _) => raise e
+   handle (e as Feedback.HOL_ERR _) => raise e
         | _ => failwith "ABS_CONV"
    end;
 

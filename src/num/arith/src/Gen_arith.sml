@@ -29,9 +29,9 @@ open Sub_and_cond;
 open Prenex;
 open Instance;
 open Lib;
-open Exception;
+open Feedback;
 open Term;
-open Dsyntax;
+open boolSyntax;
 
 
 val REWRITE_CONV = Rewrite.REWRITE_CONV;

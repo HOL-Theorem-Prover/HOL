@@ -13,7 +13,7 @@ struct
 
 
 open arithLib reduceLib;
-open HolKernel Parse Drule Conv Psyntax
+open HolKernel Parse Drule Conv boolSyntax Psyntax
 open liteLib Arith_cons Arith simpLib Traverse Cache Trace;
 
 type conv = Abbrev.conv;
@@ -168,8 +168,8 @@ val linear_reduction = term_of_lin o lin_of_term;
 (* there might still be bugs in this.... DRS 5 Aug 96 *)
 
 fun cond_has_arith_components tm =
-  if is_cond tm then let
-    val {cond,rarm,larm} = Dsyntax.dest_cond tm
+  if boolSyntax.is_cond tm then let
+    val {cond,rarm,larm} = Rsyntax.dest_cond tm
   in
     List.all is_arith [cond, rarm, larm]
   end
@@ -333,11 +333,10 @@ val x = Psyntax.mk_var("x", ==`:num`==)
 val y = Psyntax.mk_var("y", ==`:num`==)
 
 fun reducer t = let
-  open Psyntax
+  open Psyntax numSyntax
   val (_, args) = strip_comb t
-  fun is_suc t = is_comb t andalso fst (dest_comb t) = SUC
   fun reducible t =
-    Term.is_numeral t orelse (is_suc t andalso reducible (snd (dest_comb t)))
+    is_numeral t orelse (is_SUC t andalso reducible (snd (dest_comb t)))
 in
   if List.all reducible args then reduceLib.REDUCE_CONV t else NO_CONV t
 end

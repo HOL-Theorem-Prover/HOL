@@ -33,10 +33,10 @@ open Norm_arith;
 open Norm_ineqs;
 open Solve_ineqs;
 open Drule;
-open Dsyntax;
+open boolSyntax;
 open Thm;
 open Lib;
-open Exception;
+open Feedback;
 
 
 (* datatype frag = datatype Portable.frag; *)

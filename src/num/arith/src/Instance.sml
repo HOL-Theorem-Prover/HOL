@@ -26,7 +26,7 @@ struct
 type term = Term.term
 type conv = Abbrev.conv;
 
-open HolKernel Drule;
+open HolKernel Drule boolSyntax;
 
 (*---------------------------------------------------------------------------*)
 (* INSTANCE_T_CONV : (term -> term list) -> conv -> conv                     *)
@@ -45,7 +45,7 @@ fun INSTANCE_T_CONV detector conv tm =
  let val (univs,tm') = strip_forall tm
      val insts = Lib.mk_set (detector tm')
      val vars = map (genvar o type_of) insts
-     val s = map (fn (v,i) => {residue = v,redex = i}) 
+     val s = map (fn (v,i) => {residue = v,redex = i})
                  (Lib.combine (vars,insts))
      val tm'' = list_mk_forall (vars, subst s tm')
  in  EQT_INTRO (GENL univs (SPECL insts (EQT_ELIM (conv tm''))))

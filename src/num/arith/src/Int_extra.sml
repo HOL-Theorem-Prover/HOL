@@ -21,7 +21,7 @@ struct
   val << = String.<
 
 
-open Exception;
+open Feedback;
 
 (*---------------------------------------------------------------------------*)
 (* Function to compute the Greatest Common Divisor of two integers.          *)
