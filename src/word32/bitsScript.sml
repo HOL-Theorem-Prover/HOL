@@ -547,7 +547,7 @@ val BITWISE_THM = store_thm("BITWISE_THM",
               THEN IMP_RES_TAC LESS_EXP_MULT2
               THEN POP_ASSUM (K ALL_TAC)
               THEN ASM_SIMP_TAC std_ss [ZERO_LT_TWOEXP,ADD_DIV_ADD_DIV,TWO_SUC_SUB,GSYM ADD1,EXP,
-                      ONCE_REWRITE_RULE [MULT_COMM] (REWRITE_RULE [DECIDE ``0 < 2``] (SPEC `2` MOD_TIMES))]
+                      ONCE_REWRITE_RULE [MULT_COMM] (REWRITE_RULE [DECIDE(Term`0 < 2`)] (SPEC `2` MOD_TIMES))]
               THEN SUBST_OCCS_TAC [([2],SYM (SPEC `x` TWO_SUC_SUB))]
               THEN ASM_SIMP_TAC std_ss [GSYM BITS_THM,GSYM BIT_def]
         ]
@@ -564,7 +564,7 @@ val BITWISE_COR = store_thm("BITWISE_COR",
     THEN NTAC 2 (WEAKEN_TAC (K true))
     THEN POP_ASSUM (fn th => REWRITE_TAC [GSYM th])
     THEN ASM_SIMP_TAC std_ss 
-    [BITS_THM,BIT_def,DIV1,EXP_1,DECIDE(Term`SUC x - x = 1`)]
+    [BITS_THM,BIT_def,DIV1,EXP_1,SUC_SUB]
 );
  
 val BITWISE_NOT_COR = store_thm("BITWISE_NOT_COR",
@@ -576,8 +576,7 @@ val BITWISE_NOT_COR = store_thm("BITWISE_NOT_COR",
     THEN IMP_RES_TAC BITWISE_THM
     THEN NTAC 2 (WEAKEN_TAC (K true))
     THEN POP_ASSUM (fn th => REWRITE_TAC [GSYM th])
-    THEN ASM_SIMP_TAC std_ss [BITS_THM,BIT_def,GSYM NOT_MOD2_LEM,DIV1,EXP_1,
-                              DECIDE(Term`SUC x - x = 1`)]
+    THEN ASM_SIMP_TAC std_ss [BITS_THM,BIT_def,GSYM NOT_MOD2_LEM,DIV1,EXP_1,SUC_SUB]
 );
 
 (* -------------------------------------------------------- *)

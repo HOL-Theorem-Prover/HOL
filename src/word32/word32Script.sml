@@ -1138,7 +1138,7 @@ val INw_RSHIFT = store_thm("INw_RSHIFT",
             THEN Cases_on `0 < FUNPOW (\x. x DIV 2 + (if f x then 2 EXP HB else 0)) n (MODw a)`
             THENL [
               IMP_RES_TAC DIV_LESS
-                THEN POP_ASSUM (fn th => ASSUME_TAC (SIMP_RULE std_ss [DECIDE``1 < 2``] (SPEC `2` th)))
+                THEN POP_ASSUM (fn th => ASSUME_TAC (SIMP_RULE std_ss [DECIDE(Term`1 < 2`)] (SPEC `2` th)))
                 THEN PAT_ASSUM `!f a.  FUNPOW (\x. x DIV 2 + (if f x then 2 EXP HB else 0)) n
                                 (MODw a) < 2 EXP WL` (fn th => ASSUME_TAC (SPECL [`f`,`a`] th))
                 THEN IMP_RES_TAC LESS_TRANS,
