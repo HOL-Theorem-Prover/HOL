@@ -7,14 +7,16 @@
 structure BasicProvers :> BasicProvers =
 struct
 
-open HolKernel boolLib;
-open labelLib
-local open labelTheory in end
+open HolKernel boolLib labelLib;
+
+local open labelTheory in end;
+
 type simpset = simpLib.simpset;
 
-infix THEN THENL ORELSE ++;
+infix THEN THENL ORELSE ++ &&;
 
 val op++ = simpLib.++;
+val op&& = simpLib.&&;
 
 val ERR = mk_HOL_ERR "BasicProvers";
 
@@ -113,12 +115,8 @@ in
 val BOSS_STRIP_TAC = Tactical.FIRST [GEN_TAC,CONJ_TAC, DTHEN STRIP_ASSUME_TAC]
 end;
 
-infix &&;
-
-fun (ss && thl) = ss ++ simpLib.rewrites thl;
-
-fun tyi_to_ssdata tyinfo = let
-  open simpLib
+fun tyi_to_ssdata tyinfo = 
+ let open simpLib
   val {rewrs, convs} = TypeBasePure.simpls_of tyinfo;
 in
   SIMPSET {convs = convs, rewrs = rewrs, filter = NONE,
