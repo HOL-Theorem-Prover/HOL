@@ -222,7 +222,7 @@ fun pp_gstk ppstrm  =
              begin_block Portable.CONSISTENT 0;
              ellipsis_action();
              Portable.pr_list
-               pr_goal (fn () => ()) add_newline (rev goals_to_print);
+               pr_goal (fn () => ()) add_newline goals_to_print;
              end_block()
            end
          | pr (GSTK{prop = PROVED (th,_), ...}) =
