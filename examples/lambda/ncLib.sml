@@ -147,7 +147,7 @@ val app_functor = mk_var("app", beta --> beta -->
                                      beta)
 val lam_functor = mk_var("lam", beta --> string_ty --> gennc_ty alpha --> beta)
 
-val FV_t = mk_const("FV", ``:'a nc -> string set``)
+val FV_t = ``nc$FV``
 val swap_t = mk_const("swap", ``:string -> string -> 'a nc -> 'a nc``)
 val nc_info =
     {nullfv = (``LAM "" (VAR "")``,
@@ -160,7 +160,7 @@ val nc_info =
                                    swapTheory.swap_RECURSION_generic),
      swapping = nc_swapping}
 
-val null_fv = ``\x:'a. {} : string set``
+val null_fv = ``K {} : 'a -> string set``
 val null_swap = ``\x:string y:string z:'a. z``
 val null_info = {nullfv = (mk_arb alpha,
                             prove(``^null_fv ^(mk_arb alpha) = {}``,
@@ -170,11 +170,18 @@ val null_info = {nullfv = (mk_arb alpha,
                  recursion = swapTheory.swap_RECURSION_simple,
                  swapping = null_swapping}
 
+(*
+val string_fv = ``\s:string. {s}``
+val string_swap = ``swapstr``
+val string_info = {nullfv = (
+*)
+
 val database = let
   val empty = Binarymap.mkDict String.compare
 in
   Binarymap.insert(empty, "nc", nc_info)
 end
+
 
 
 fun inst_info dest_ty {nullfv, fv, swap, recursion, swapping} = let
@@ -315,7 +322,10 @@ in
                 callthis null_info)
     end
   | NONE => callthis null_info
-end
+end handle InfoProofFailed tm =>
+           raise ERR "prove_recursive_term_function_exists"
+                     ("Couldn't prove function with swap over range - \n\
+                      \goal was "^term_to_string tm)
 
 fun strip_tyannote acc (Absyn.TYPED(_, a, ty)) = strip_tyannote (ty::acc) a
   | strip_tyannote acc x = (List.rev acc, x)

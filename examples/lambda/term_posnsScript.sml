@@ -158,70 +158,59 @@ val vp'_var = ``\s : string v. if v = s then {[]: redpos list} else {}``
 val vp'_con = ``\k:'a v:string. {} : redpos list set``
 val vp'_app = ``\rt ru (t:'a nc) (u:'a nc) v:string.
                     IMAGE (CONS Lt) (rt v) UNION IMAGE (CONS Rt) (ru v)``
-val vp'_lam = ``\rt u:string t:'a nc v.
-                    if u = v then {}
-                    else IMAGE (CONS In) (rt v)``
+val vp'_lam = ``\rt u:string t:'a nc v:string. IMAGE (CONS In) (rt v)``
 
 open metisLib
 
-val stupid_lemma2 = prove(
-  ``(f x = v) /\ (f y = v) ==> ((\s. f (swapstr x y s)) = f)``,
-  SRW_TAC [][swapstr_def, FUN_EQ_THM] THEN SRW_TAC [][])
-val stupid_lemma3 = prove(
-  ``((\s. f (swapstr x y s)) = (\s. f' (swapstr x y s))) = (f = f')``,
-  SRW_TAC [][EQ_IMP_THM] THEN SRW_TAC [][FUN_EQ_THM] THEN
-  POP_ASSUM (MP_TAC o C Q.AP_THM `swapstr x y x'`) THEN
-  SRW_TAC [][]);
-val stupid_lemma4 = prove(
-  ``P SUBSET Q /\ R SUBSET U ==> (P UNION R) SUBSET (Q UNION U)``,
-  SRW_TAC [][SUBSET_DEF]);
-val stupid_lemma5 = prove(
-  ``P SUBSET Q ==> {x | ~(v = x)} INTER P SUBSET Q DELETE v``,
-  SRW_TAC [][SUBSET_DEF]);
-
-
 val v_posns'_exists =
-    (SIMP_RULE (srw_ss() ++ boolSimps.ETA_ss)
-               [swapping_def, IMAGE_EQ_EMPTY,
-                GSPEC_OR, Q.ISPEC `(=)` COND_RAND,
-                COND_RATOR, GSPEC_AND,
-                stupid_lemma2, stupid_lemma3, stupid_lemma4,
-                stupid_lemma5] o
-     Q.INST [`rswap` |->
-                `\x y (f:string -> redpos list set) s. f (swapstr x y s)`,
-             `rFV` |-> `\f. { x | ~(f x =  {})}`,
+    (SIMP_RULE (srw_ss()) [str_swapping, swapfn_def, null_swapping] o
+     Q.INST [`rswap` |-> `\x y z. z`,
+             `rFV` |-> `K {}`,
+             `pswap` |-> `swapstr`,
+             `pFV` |-> `\s. {s}`,
              `X` |-> `{}`,
              `var` |-> `^vp'_var`,
              `con` |-> `^vp'_con`,
              `app` |-> `^vp'_app`,
              `lam` |-> `^vp'_lam`] o
-     INST_TYPE [beta |-> ``:string -> redpos list set``])
-    swapTheory.swap_RECURSION_generic
+     INST_TYPE [beta |-> ``:string``, gamma |-> ``:redpos list set``])
+    swapTheory.swap_RECURSION_pgeneric
 
-val v_posns_exists = prove(
-  ``?v_posns.
-      ((!v k. v_posns v (CON k) = {}) /\
-       (!v s. v_posns v (VAR s) = if v = s then {[]} else {}) /\
-       (!v t u. v_posns v (t @@ u) = IMAGE (CONS Lt) (v_posns v t) UNION
-                                     IMAGE (CONS Rt) (v_posns v u)) /\
-       (!u v t. v_posns u (LAM v t) = if v = u then {}
-                                      else IMAGE (CONS In) (v_posns u t))) /\
-      (!t v x y. v_posns v (swap x y t) = v_posns (swapstr x y v) t) /\
-      (!t v. ~(v IN FV t) ==> (v_posns v t = {}))``,
-  STRIP_ASSUME_TAC v_posns'_exists THEN
-  Q.EXISTS_TAC `\v t. hom t v` THEN SRW_TAC [][] THEN
-  Q.PAT_ASSUM `!t. f t SUBSET g t` MP_TAC THEN
-  SRW_TAC [][SUBSET_DEF] THEN PROVE_TAC []);
+val swap_args = prove(``(?f:'a -> 'b -> 'c. P f) =
+                        (?g:'b -> 'a -> 'c. P (\a b. g b a))``,
+                      SRW_TAC [][EQ_IMP_THM] THENL [
+                        Q.EXISTS_TAC `\a b. f b a` THEN
+                        SRW_TAC [boolSimps.ETA_ss][],
+                        PROVE_TAC []
+                      ]);
+
+val v_posns_exists =
+    CONV_RULE (HO_REWR_CONV swap_args THENC SIMP_CONV bool_ss [])
+              v_posns'_exists
 
 val v_posns_def = new_specification("v_posns_def", ["v_posns"],
                                     v_posns_exists);
 
-val v_posns_thm = save_thm("v_posns_thm", CONJUNCT1 v_posns_def)
+val v_posns_thm0 = save_thm("v_posns_thm0", CONJUNCT1 v_posns_def)
 val v_posns_swap_invariant =
-    save_thm("v_posns_swap_invariant", CONJUNCT1 (CONJUNCT2 v_posns_def))
+    save_thm("v_posns_swap_invariant", CONJUNCT2 v_posns_def)
 val _ = export_rewrites ["v_posns_swap_invariant"]
 
-val v_posns_FV = save_thm("v_posns_FV", CONJUNCT2 (CONJUNCT2 v_posns_def))
+val v_posns_FV = store_thm(
+  "v_posns_FV",
+  ``!t v. ~(v IN FV t) ==> (v_posns v t = {})``,
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][v_posns_thm0] THEN
+  Q_TAC (NEW_TAC "z") `{v;v'} UNION FV t` THEN
+  `LAM v t = LAM z (swap z v t)` by SRW_TAC [][swap_ALPHA] THEN
+  SRW_TAC [][v_posns_thm0] THEN Cases_on `v = v'` THEN SRW_TAC [][]);
+
+val v_posns_LAM = prove(
+  ``v_posns v (LAM u t) = if v = u then {}
+                          else IMAGE (CONS In) (v_posns v t)``,
+  SRW_TAC [][v_posns_FV, v_posns_thm0]);
+val v_posns_thm = save_thm(
+  "v_posns_thm",
+  LIST_CONJ (butlast (CONJUNCTS v_posns_thm0) @ [GEN_ALL v_posns_LAM]))
 
 val v_posns_vsubst = store_thm(
   "v_posns_vsubst",

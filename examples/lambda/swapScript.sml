@@ -477,6 +477,11 @@ val nc_swapping = store_thm(
   ``swapping swap FV``,
   SIMP_TAC (srw_ss()) [swap_swap, swapping_def, swap_identity]);
 
+val str_swapping = store_thm(
+  "str_swapping",
+  ``swapping swapstr (\s. {s})``,
+  REWRITE_TAC [swapping_def] THEN SRW_TAC [][]);
+
 val swapping_implies_empty_swap = store_thm(
   "swapping_implies_empty_swap",
   ``swapping sw fv /\ (fv t = {}) ==> !x y. sw x y t = t``,
@@ -722,7 +727,7 @@ val swap_RECURSION_generic = save_thm(
            `con` |-> `\k p. con k`,
            `app` |-> `\rt ru t u p. app (rt()) (ru()) t u`,
            `lam` |-> `\rt v t p. lam (rt()) v t`] o
-   INST_TYPE [beta |-> ``:one``])
+   INST_TYPE [beta |-> ``:one``, gamma |-> beta])
   swap_RECURSION_pgeneric);
 
 val swap_RECURSION_nosideset = save_thm(
@@ -732,7 +737,7 @@ val swap_RECURSION_nosideset = save_thm(
 val swap_RECURSION_simple = save_thm(
   "swap_RECURSION_simple",
   (SIMP_RULE (srw_ss()) [null_swapping] o
-   Q.INST [`rswap` |-> `\x y z. z`, `rFV` |-> `\z. {}`])
+   Q.INST [`rswap` |-> `\x y z. z`, `rFV` |-> `K {}`])
     swap_RECURSION_nosideset);
 
 

@@ -104,22 +104,22 @@ val head_redex_is_redex = store_thm(
   HO_MATCH_MP_TAC is_head_redex_ind THEN
   SRW_TAC [][redex_posns_thm]);
 
-
-val ihr_renaming_invariant = prove(
-  ``!t R p. RENAMING R ==> (p is_head_redex (t ISUB R) = p is_head_redex t)``,
-  HO_MATCH_MP_TAC nc_INDUCTION THEN SRW_TAC [][ISUB_APP, is_head_redex_thm,
-                                               ISUB_CON, ISUB_VAR_RENAME] THEN
-  Q_TAC (NEW_TAC "z") `FV t UNION DOM R UNION FVS R UNION {x}` THEN
-  `LAM x t = LAM z ([VAR z/x] t)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-  SRW_TAC [][ISUB_LAM] THEN
-  FIRST_X_ASSUM (Q.SPEC_THEN `x` MP_TAC) THEN
-  SRW_TAC [][lemma14a, is_head_redex_thm, SUB_ISUB_SINGLETON, ISUB_APPEND,
-             RENAMING_THM]);
+val ihr_swap_invariant = store_thm(
+  "ihr_swap_invariant",
+  ``!t x y p. p is_head_redex (swap x y t) = p is_head_redex t``,
+  HO_MATCH_MP_TAC simple_induction THEN
+  SRW_TAC [][swapTheory.swap_thm, is_head_redex_thm]);
+val _ = export_rewrites ["ihr_swap_invariant"]
 
 val is_head_redex_vsubst_invariant = store_thm(
   "is_head_redex_vsubst_invariant",
   ``!t v x p. p is_head_redex ([VAR v/x] t) = p is_head_redex t``,
-  SRW_TAC [][ihr_renaming_invariant, SUB_ISUB_SINGLETON, RENAMING_THM]);
+  HO_MATCH_MP_TAC simple_induction THEN
+  SRW_TAC [][is_head_redex_thm, SUB_THM, SUB_VAR] THEN
+  Q_TAC (NEW_TAC "z") `{x;v;v'} UNION FV t` THEN
+  `LAM v t = LAM z (swap z v t)` by SRW_TAC [][swapTheory.swap_ALPHA] THEN
+  SRW_TAC [][swapTheory.swap_thm, swapTheory.swap_subst_out, SUB_THM,
+             is_head_redex_thm]);
 
 val _ = add_infix("is_internal_redex", 750, NONASSOC)
 (* definition 11.4.2 (i) *)
@@ -1492,6 +1492,15 @@ val i_reduces_to_LAMl = prove(
     SRW_TAC [][relationTheory.RTC_RULES] THEN
     PROVE_TAC [relationTheory.RTC_RULES, i_reduce1_under_LAMl]
   ]);
+
+val size_ISUB = prove(
+  ``!R N. RENAMING R ==> (size (N ISUB R) = size N)``,
+  Induct THEN
+  ASM_SIMP_TAC (srw_ss())[ISUB_def, pairTheory.FORALL_PROD,
+                          RENAMING_THM] THEN
+  SRW_TAC [][] THEN SRW_TAC [][]);
+
+val _ = augment_srw_ss [rewrites [size_ISUB]]
 
 val cant_ireduce_to_lam_atom = prove(
   ``!vs M N. (size N = 1) ==> ~(M i_reduce1 LAMl vs N)``,

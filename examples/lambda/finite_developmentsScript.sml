@@ -508,9 +508,6 @@ val n_posns_thm = save_thm(
 val _ = augment_srw_ss [rewrites [n_posns_vsubst_invariant]]
 
 
-val dest_abs_def =
-    define_recursive_term_function `dest_abs (LAM v t : 'a nc) = (v, t)`
-
 val M =
     ``\f : 'a nc -> redpos list set -> 'a lterm.
          lam_case (\s ps. VAR s) (\k ps. CON k)
@@ -536,6 +533,7 @@ val nlabel_exists =
 
 val nlabel_def = new_specification("nlabel_def", ["nlabel"], nlabel_exists);
 
+val lam_case_thm = lam_case_def
 val nlabel_var = prove(
   ``!n s ps. nlabel n (VAR s) ps = VAR s``,
   SIMP_TAC (srw_ss()) [nlabel_def, lam_case_thm]);
@@ -1250,6 +1248,7 @@ val labelled_redn_vposn_sub = store_thm(
     `LAM x body = LAM u ([VAR u/x] body)` by PROVE_TAC [SIMPLE_ALPHA] THEN
     FULL_SIMP_TAC (srw_ss()) [v_posns_thm, null_labelling_subst,
                               null_labelling_thm, SUB_THM] THEN
+    `x' IN v_posns v ([VAR u/x] body)` by SRW_TAC [][v_posns_vsubst] THEN
     `?M. labelled_redn beta ([y/v] ([VAR u/x] body)) (APPEND x' r) M` by
         PROVE_TAC [] THEN
     Q.EXISTS_TAC `LAM u M` THEN PROVE_TAC [labelled_redn_rules]
@@ -1831,42 +1830,61 @@ val lvar_posns_def = Define`
   lvar_posns t = var_posns (strip_label t)
 `;
 
-val update_weighing_def = Define`
-  (update_weighing t [] w =
-     let vps = IMAGE TL (bv_posns (rator t))
-     in
-         \p. if ?vp l. vp IN vps /\ (APPEND vp l = p) then
-               w (Rt :: @l. ?vp. vp IN vps /\ (APPEND vp l = p))
-             else
-               w (Lt::In::p)) /\
-  (update_weighing t (In::pos0) w =
-     let w0 = update_weighing (ncbody t) pos0 (\p. w (In::p))
-     in
-       \p. w0 (TL p)) /\
-  (update_weighing t (Lt::pos0) w =
-     let w0 = update_weighing (rator t) pos0 (\p. w (Lt::p))
-     in
-       \p. if HD p = Lt then w0 (TL p) else w p) /\
-  (update_weighing t (Rt::pos0) w =
-     let w0 = update_weighing (rand t) pos0 (\p. w (Rt::p))
-     in
-       \p. if HD p = Rt then w0 (TL p) else w p)
+val (update_weighing_def, SOME update_weighing_swap) =
+    define_recursive_term_function`
+      (update_weighing (t @@ u) =
+         \rp w p.
+            case rp of
+               [] -> (let vps = IMAGE TL (bv_posns t)
+                      in
+                        if ?vp l. vp IN vps /\ (APPEND vp l = p) then
+                          w (Rt :: @l. ?vp. vp IN vps /\ (APPEND vp l = p))
+                        else w (Lt :: In :: p))
+            || Lt::rp0 -> if HD p = Lt then
+                            update_weighing t rp0 (\p. w(Lt::p)) (TL p)
+                          else w p
+            || Rt::rp0 -> if HD p = Rt then
+                            update_weighing u rp0 (\p. w(Rt::p)) (TL p)
+                          else w p) /\
+      (update_weighing (LAM v t) =
+        \rp w p. update_weighing t (TL rp) (\p. w (In::p)) (TL p))
 `;
+
+val update_weighing_thm = store_thm(
+  "update_weighing_thm",
+  ``(update_weighing (t @@ u) [] w =
+       let vps = IMAGE TL (bv_posns t)
+       in
+           \p. if ?vp l. vp IN vps /\ (APPEND vp l = p) then
+                 w (Rt :: @l. ?vp. vp IN vps /\ (APPEND vp l = p))
+               else
+                 w (Lt::In::p)) /\
+    (update_weighing (LAM v t) (In::pos0) w =
+       let w0 = update_weighing t pos0 (\p. w (In::p))
+       in
+         \p. w0 (TL p)) /\
+    (update_weighing (t @@ u) (Lt::pos0) w =
+       let w0 = update_weighing t pos0 (\p. w (Lt::p))
+       in
+         \p. if HD p = Lt then w0 (TL p) else w p) /\
+    (update_weighing (t @@ u) (Rt::pos0) w =
+       let w0 = update_weighing u pos0 (\p. w (Rt::p))
+       in
+         \p. if HD p = Rt then w0 (TL p) else w p)``,
+  SRW_TAC [][update_weighing_def]);
 
 
 val update_weighing_vsubst = store_thm(
   "update_weighing_vsubst",
   ``!t p u v w. p IN redex_posns t ==>
                 (update_weighing ([VAR v/u]t) p w = update_weighing t p w)``,
-  GEN_TAC THEN completeInduct_on `size t` THEN
-  FULL_SIMP_TAC (srw_ss() ++ DNF_ss) [] THEN GEN_TAC THEN
-  Q.SPEC_THEN `t` STRUCT_CASES_TAC nc_CASES THEN
-  SRW_TAC [][update_weighing_def, redex_posns_thm, SUB_THM] THEN
-  FULL_SIMP_TAC (srw_ss()) [size_thm] THEN
-  SRW_TAC [ARITH_ss][update_weighing_def, bv_posns_vsubst] THEN
-  Q_TAC (NEW_TAC "z") `{u';v';x} UNION FV u` THEN
-  `LAM x u = LAM z ([VAR z/x] u)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-  SRW_TAC [][SUB_THM] THEN SRW_TAC [ARITH_ss][ncbody_def]);
+  HO_MATCH_MP_TAC simple_induction THEN
+  SRW_TAC [][redex_posns_thm, SUB_THM] THEN
+  SRW_TAC [][update_weighing_thm] THEN
+  Q_TAC (NEW_TAC "z") `{u;v;v'} UNION FV t` THEN
+  `LAM v t = LAM z (swap z v t)` by SRW_TAC [][swapTheory.swap_ALPHA] THEN
+  SRW_TAC [][update_weighing_thm, SUB_THM, swapTheory.swap_subst_out,
+             swapTheory.swap_thm]);
 
 val beta0_redex_posn = store_thm(
   "beta0_redex_posn",
@@ -1942,8 +1960,13 @@ val term_weight_vsubst = store_thm(
   "term_weight_vsubst",
   ``!t w u v. term_weight ([VAR v/u] t) w = term_weight t w``,
   SIMP_TAC (srw_ss()) [term_weight_def]);
-
 val _ = export_rewrites ["term_weight_vsubst"]
+
+val term_weight_swap = store_thm(
+  "term_weight_swap",
+  ``term_weight (swap x y t) w = term_weight t w``,
+  SIMP_TAC (srw_ss()) [term_weight_def]);
+val _ = export_rewrites ["term_weight_swap"]
 
 val lterm_term_weight = store_thm(
   "lterm_term_weight",
@@ -1952,43 +1975,59 @@ val lterm_term_weight = store_thm(
   SRW_TAC [][lterm_weight_thm, term_weight_thm, strip_label_thm] THEN
   PROVE_TAC [l14a]);
 
+val w_at_exists =
+  (SIMP_RULE (srw_ss()) [term_weight_thm] o
+   Q.INST [`lam` |-> `\rt v t p w. if p = [] then term_weight (LAM v t) w
+                                   else rt (TL p) (\p. w (In::p))`,
+           `app` |-> `\rt ru t u p w.
+                         case p of
+                            (Lt::p0) -> rt p0 (\p. w (Lt::p))
+                         || (Rt::p0) -> ru p0 (\p. w (Rt::p))
+                         || _ -> term_weight (t @@ u) w`,
+           `var` |-> `\s p w. term_weight (VAR s) w`,
+           `con` |-> `\k p w. term_weight (CON k) w`] o
+   INST_TYPE [beta |-> ``:redpos list -> (redpos list -> num) -> num``])
+  swapTheory.swap_RECURSION_simple
 
-val weight_at_def = Define`
-  (weight_at [] w t = term_weight t w) /\
-  (weight_at (In::p) w t = weight_at p (\p. w (In::p)) (ncbody t)) /\
-  (weight_at (Lt::p) w t = weight_at p (\p. w (Lt::p)) (rator t)) /\
-  (weight_at (Rt::p) w t = weight_at p (\p. w (Rt::p)) (rand t))`;
+val weight_at_def = new_specification(
+  "weight_at_def", ["weight_at"],
+  prove(
+    ``?weight_at.
+         (!t w.
+             weight_at [] w t = term_weight t w) /\
+         (!p w v t.
+             weight_at (In::p) w (LAM v t) = weight_at p (\p. w (In::p)) t) /\
+         (!p w t u.
+              weight_at (Lt::p) w (t @@ u) = weight_at p (\p. w (Lt::p)) t) /\
+         (!p w t u.
+              weight_at (Rt::p) w (t @@ u) = weight_at p (\p. w (Rt::p)) u) /\
+         (!p w t x y. weight_at p w (swap x y t) = weight_at p w t)``,
+    STRIP_ASSUME_TAC w_at_exists THEN
+    Q.EXISTS_TAC `\p w t. hom t p w` THEN SRW_TAC [][] THEN
+    Q.ISPEC_THEN `t` STRUCT_CASES_TAC nc_CASES THEN
+    SRW_TAC [][term_weight_thm]));
+
+val weight_at_swap = save_thm(
+  "weight_at_swap",
+  last (CONJUNCTS weight_at_def));
+val _ = export_rewrites ["weight_at_swap"]
 
 val weight_at_vsubst = store_thm(
   "weight_at_vsubst",
   ``!t w v u p. p IN valid_posns t ==>
                 (weight_at p w ([VAR v/u] t) = weight_at p w t)``,
-  GEN_TAC THEN completeInduct_on `size t` THEN
-  FULL_SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM] THEN
-  GEN_TAC THEN
-  Q.SPEC_THEN `t` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) nc_CASES THEN
-  ASM_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss)
-               [size_thm, SUB_THM, valid_posns_thm,
-                weight_at_def, term_weight_thm,
-                DISJ_IMP_THM, GSYM RIGHT_FORALL_IMP_THM,
-                GSYM LEFT_FORALL_IMP_THM, IMP_CONJ_THM,
-                FORALL_AND_THM, ncbody_def, SUB_LAM_RWT]);
-
+  HO_MATCH_MP_TAC simple_induction THEN
+  SRW_TAC [][valid_posns_thm, SUB_THM] THEN
+  SRW_TAC [][weight_at_def, term_weight_thm] THEN
+  Q_TAC (NEW_TAC "z") `{u;v;v'} UNION FV t` THEN
+  `LAM v t = LAM z (swap z v t)` by SRW_TAC [][swapTheory.swap_ALPHA] THEN
+  SRW_TAC [][weight_at_def, SUB_THM, swapTheory.swap_subst_out,
+             swapTheory.swap_thm]);
 val _ = export_rewrites ["weight_at_vsubst"]
 
-val weight_at_thm = store_thm(
+val weight_at_thm = save_thm(
   "weight_at_thm",
-  ``(!t w. weight_at [] w (t:'a nc) = term_weight t w) /\
-    (!v t p w.
-       p IN valid_posns (t:'a nc) ==>
-       (weight_at (In::p) w (LAM v t) = weight_at p (\p. w (In::p)) t)) /\
-    (!t u p w.
-       p IN valid_posns (t:'a nc) ==>
-       (weight_at (Lt::p) w (t @@ u) = weight_at p (\p. w (Lt::p)) t)) /\
-    (!t u p w.
-       p IN valid_posns (u:'a nc) ==>
-       (weight_at (Rt::p) w (t @@ u) = weight_at p (\p. w (Rt::p)) u))``,
-  SRW_TAC [][weight_at_def, ncbody_def, weight_at_vsubst]);
+  LIST_CONJ (butlast (CONJUNCTS weight_at_def)));
 
 val decreasing_def = Define`
   decreasing t w =
@@ -2037,99 +2076,20 @@ val decreasing_thm = store_thm(
   SIMP_TAC (srw_ss() ++ SatisfySimps.SATISFY_ss)
            [GSYM AND_IMP_INTRO, bv_posns_at_thm, n_posns_lam_posns,
             GSYM LEFT_FORALL_IMP_THM, GSYM RIGHT_FORALL_IMP_THM,
-            weight_at_thm, n_posn_valid_posns]
-  THENL [
-    EQ_TAC THEN REPEAT STRIP_TAC THENL [
-      RES_TAC THEN POP_ASSUM MP_TAC THEN
-      Q_TAC SUFF_TAC `p2 IN valid_posns (strip_label t)` THEN1
-            SRW_TAC [][weight_at_thm] THEN
-      PROVE_TAC [n_posns_lam_posns, var_posns_SUBSET_valid_posns,
-                 bv_posns_at_SUBSET_var_posns],
-      RES_TAC THEN POP_ASSUM MP_TAC THEN
-      Q_TAC SUFF_TAC `p2 IN valid_posns (strip_label u)` THEN1
-            SRW_TAC [][weight_at_thm] THEN
-      PROVE_TAC [var_posns_SUBSET_valid_posns, bv_posns_at_SUBSET_var_posns,
-                 n_posns_lam_posns],
-      `x' IN valid_posns (strip_label t)` by
-          PROVE_TAC [var_posns_SUBSET_valid_posns, n_posns_lam_posns,
-                     bv_posns_at_SUBSET_var_posns] THEN
-      SRW_TAC [][weight_at_thm] THEN PROVE_TAC [],
-      `x' IN valid_posns (strip_label u)` by
-          PROVE_TAC [var_posns_SUBSET_valid_posns, n_posns_lam_posns,
-                     bv_posns_at_SUBSET_var_posns] THEN
-      SRW_TAC [][weight_at_thm] THEN PROVE_TAC []
-    ],
-    EQ_TAC THEN REPEAT STRIP_TAC THEN
-    RES_TAC THEN POP_ASSUM MP_TAC THENL [
-      Q_TAC SUFF_TAC `p2 IN valid_posns (strip_label t)` THEN1
-        SRW_TAC [][weight_at_thm],
-      Q_TAC SUFF_TAC `x' IN valid_posns (strip_label t)` THEN1
-        SRW_TAC [][weight_at_thm]
-    ] THEN
-    PROVE_TAC [var_posns_SUBSET_valid_posns, bv_posns_at_SUBSET_var_posns,
-               n_posns_lam_posns],
-
-    EQ_TAC THEN REPEAT STRIP_TAC THENL [
-      `APPEND p1 [Lt] IN lam_posns (strip_label t)` by
-         PROVE_TAC [n_posns_lam_posns] THEN
-      `(Lt::In::p2) IN
-          bv_posns_at (Lt::In::APPEND p1 [Lt])
-                      (LAM v (strip_label t) @@ strip_label u)`
-         by SRW_TAC [][bv_posns_at_def, ncbody_def] THEN
-      RES_TAC THEN POP_ASSUM MP_TAC THEN
-      `p2 IN valid_posns (strip_label t)`
-         by PROVE_TAC [var_posns_SUBSET_valid_posns,
-                       bv_posns_at_SUBSET_var_posns] THEN
-      `APPEND p1 [Rt] IN valid_posns (strip_label t)`
-         by PROVE_TAC [n_posn_valid_posns] THEN
-      ASM_SIMP_TAC (srw_ss()) [weight_at_thm, valid_posns_thm],
-
-      RES_TAC THEN POP_ASSUM MP_TAC THEN
-      Q_TAC SUFF_TAC `p2 IN valid_posns (strip_label u)` THEN1
-        SRW_TAC [][weight_at_thm] THEN
-      PROVE_TAC [var_posns_SUBSET_valid_posns, n_posns_lam_posns,
-                 bv_posns_at_SUBSET_var_posns],
-
-      FIRST_X_ASSUM (Q.SPEC_THEN `n` MP_TAC) THEN
-      SIMP_TAC (srw_ss()) [bv_posns_at_thm, lam_posns_thm,
-                           GSYM LEFT_FORALL_IMP_THM, weight_at_thm,
-                           lterm_term_weight] THEN
-      FULL_SIMP_TAC (srw_ss()) [lv_posns_def] THEN
-      `p IN valid_posns (strip_label t)`
-         by PROVE_TAC [v_posns_SUBSET_var_posns,
-                       var_posns_SUBSET_valid_posns] THEN
-      DISCH_THEN (Q.SPEC_THEN `p` MP_TAC) THEN
-      ASM_SIMP_TAC (srw_ss()) [weight_at_thm, valid_posns_thm],
-
-      POP_ASSUM MP_TAC THEN
-      `APPEND x [Lt] IN lam_posns (strip_label t)`
-        by PROVE_TAC [n_posns_lam_posns] THEN
-      SRW_TAC [][bv_posns_at_thm, lam_posns_thm] THEN
-      `x'' IN valid_posns (strip_label t)`
-        by PROVE_TAC [bv_posns_at_SUBSET_var_posns,
-                      var_posns_SUBSET_valid_posns] THEN
-      `APPEND x [Rt] IN valid_posns (strip_label t)`
-         by PROVE_TAC [n_posn_valid_posns] THEN
-      SRW_TAC [][valid_posns_thm, weight_at_thm] THEN
-      PROVE_TAC [],
-
-      RES_TAC THEN POP_ASSUM MP_TAC THEN
-      `x' IN valid_posns (strip_label u)`
-         by PROVE_TAC [bv_posns_at_SUBSET_var_posns,
-                       var_posns_SUBSET_valid_posns,
-                       n_posns_lam_posns] THEN
-      SRW_TAC [][weight_at_thm],
-
-      FULL_SIMP_TAC (srw_ss() ++ COND_elim_ss) [] THEN
-      TRY (RES_TAC THEN NO_TAC) THEN REPEAT VAR_EQ_TAC THEN
-      FULL_SIMP_TAC (srw_ss()) [bv_posns_at_def, bv_posns_thm,
-                                lterm_term_weight, lv_posns_def] THEN
-      REPEAT VAR_EQ_TAC THEN
-      `x' IN valid_posns (strip_label t)`
-         by PROVE_TAC [v_posns_SUBSET_var_posns,
-                       var_posns_SUBSET_valid_posns] THEN
-      SRW_TAC [][weight_at_thm, valid_posns_thm]
-    ]
+            weight_at_thm, n_posn_valid_posns] THEN
+  EQ_TAC THEN REPEAT STRIP_TAC THENL [
+    RES_TAC,
+    RES_TAC,
+    FIRST_X_ASSUM (Q.SPECL_THEN [`n`, `[]`, `Lt::In::p`] MP_TAC) THEN
+    SIMP_TAC (srw_ss()) [weight_at_thm, bv_posns_thm, lterm_term_weight] THEN
+    DISCH_THEN MATCH_MP_TAC THEN
+    FULL_SIMP_TAC (srw_ss()) [lv_posns_def],
+    RES_TAC,
+    RES_TAC,
+    Cases_on `n = n'` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+    SRW_TAC [][] THEN
+    FULL_SIMP_TAC (srw_ss()) [weight_at_thm, bv_posns_thm, lterm_term_weight,
+                              lv_posns_def]
   ]);
 
 val nonzero_def = Define`
@@ -2270,13 +2230,13 @@ val weighted_reduction_preserves_nonzero_weighing = store_thm(
             nonzero N' (update_weighing (strip_label M') r w)` THEN1
     SRW_TAC [][weighted_reduction_def] THEN
   HO_MATCH_MP_TAC strong_lrcc_ind THEN
-  SIMP_TAC (srw_ss())[update_weighing_def] THEN
+  SIMP_TAC (srw_ss())[update_weighing_thm, strip_label_thm] THEN
   REPEAT CONJ_TAC THENL [
     SRW_TAC [] [beta0_def, nonzero_def, lvar_posns_def, var_posns_thm,
                 strip_label_thm] THEN
     FULL_SIMP_TAC (srw_ss() ++ DNF_ss)
                   [strip_label_thm, var_posns_thm, var_posns_subst,
-                   bv_posns_thm, strip_label_subst]
+                   bv_posns_thm, strip_label_subst, update_weighing_thm]
     THENL [
       `!vp l. ~(vp IN v_posns v (strip_label t) /\ (APPEND vp l = p))`
           by (REPEAT STRIP_TAC THEN
@@ -2302,13 +2262,13 @@ val weighted_reduction_preserves_nonzero_weighing = store_thm(
     ],
     SIMP_TAC (srw_ss() ++ ETA_ss) [nonzero_thm, strip_label_thm],
     SIMP_TAC (srw_ss() ++ ETA_ss) [nonzero_thm, strip_label_thm],
-    SRW_TAC [][nonzero_thm, strip_label_thm, ncbody_def] THEN
+    SRW_TAC [][nonzero_thm, strip_label_thm] THEN
     IMP_RES_TAC lrcc_beta0_redex_posn THEN
     SRW_TAC [ETA_ss][update_weighing_vsubst],
     SIMP_TAC (srw_ss() ++ ETA_ss) [nonzero_thm, strip_label_thm],
-    SRW_TAC [][nonzero_thm, strip_label_thm, ncbody_def] THEN
+    SRW_TAC [][nonzero_thm, strip_label_thm] THEN
     IMP_RES_TAC lrcc_beta0_redex_posn THEN
-    SRW_TAC [ETA_ss][update_weighing_vsubst]
+    SRW_TAC [ETA_ss][]
   ]);
 
 val wterm_ordering_def = Define`
@@ -2569,56 +2529,47 @@ val weight_at_subst = store_thm(
         DECIDE_TAC,
         ASM_SIMP_TAC (srw_ss()) [] THEN
         ASM_SIMP_TAC (srw_ss() ++ DNF_ss)
-                     [update_weighing_def, bv_posns_thm, v_posns_thm] THEN
+                     [update_weighing_thm, bv_posns_thm, v_posns_thm] THEN
         CONV_TAC (LAND_CONV (ONCE_DEPTH_CONV SWAP_VARS_CONV)) THEN
         DISCH_THEN (fn th => REWRITE_TAC [th]) THEN
-        `{p' | ?x''. (p' = In::x'') /\ x'' IN v_posns v ([VAR z/x] t)} =
-         IMAGE (CONS In) (v_posns v ([VAR z/x] t))`
-            by SRW_TAC [][EXTENSION] THEN
+        Cases_on `v = x` THEN
         ASM_SIMP_TAC (srw_ss()) [SUM_IMAGE_IMAGE, CARD_IMAGE,
-                                 v_posns_FINITE, combinTheory.o_DEF]
+                                 v_posns_FINITE, combinTheory.o_DEF,
+                                 v_posns_vsubst,
+                                 pred_setTheory.SUM_IMAGE_THM]
       ],
 
-      ASM_SIMP_TAC (srw_ss()) [weight_at_thm] THEN
+
+      Cases_on `v = x` THENL [
+        SRW_TAC [][update_weighing_thm, SUB_TWICE_ONE_VAR, SUB_THM,
+                   bv_posns_thm, v_posns_thm, v_posns_vsubst,
+                   pred_setTheory.SUM_IMAGE_THM],
+        ALL_TAC
+      ] THEN
+      ASM_SIMP_TAC (srw_ss() ++ DNF_ss) [weight_at_thm] THEN
       FIRST_X_ASSUM (Q.SPECL_THEN [`z`,`u`,`v`,`x'`] MP_TAC) THEN
-      ASM_SIMP_TAC (srw_ss()) [] THEN
+      SIMP_TAC (srw_ss() ++ DNF_ss) [update_weighing_def, bv_posns_thm] THEN
+      ASM_SIMP_TAC (srw_ss() ++ DNF_ss) [v_posns_thm, v_posns_vsubst] THEN
       DISCH_THEN (Q.SPEC_THEN `\p. if HD p = Lt then
                                      w (Lt::In::In::(TL (TL p)))
                                    else w p` MP_TAC) THEN
       ASM_SIMP_TAC (srw_ss()) [] THEN
       CONV_TAC (LAND_CONV (ONCE_DEPTH_CONV SWAP_VARS_CONV)) THEN
-      Cases_on `?l vp. vp IN v_posns v ([VAR z/x] t) /\ (APPEND vp l = x')`
-      THENL [
-        ASM_SIMP_TAC (srw_ss()) [] THEN
-        DISCH_THEN (fn th => REWRITE_TAC [SYM th]) THEN
-        ASM_SIMP_TAC (srw_ss() ++ DNF_ss)
-                     [update_weighing_def, v_posns_thm, bv_posns_thm] THEN
-        CONV_TAC (LAND_CONV (ONCE_DEPTH_CONV SWAP_VARS_CONV)) THEN
-        REWRITE_TAC [],
-        ASM_SIMP_TAC (srw_ss()) [] THEN
-        Q.ABBREV_TAC `tt = [VAR z/x] t` THEN
-        `x' IN valid_posns tt`
-           by (FULL_SIMP_TAC (srw_ss()) [valid_posns_subst] THEN
-               PROVE_TAC []) THEN
-        ASM_SIMP_TAC (srw_ss()) [weight_at_thm] THEN
-        `{p | ?a b. (p = In::APPEND x' a) /\ (p = In::b) /\
-                     b IN v_posns v tt} =
-         IMAGE (CONS In) { p | ?a. (p = APPEND x' a) /\ (p IN v_posns v tt)}`
+      DISCH_THEN (fn th => REWRITE_TAC [th]) THEN
+      COND_CASES_TAC THEN SRW_TAC [][] THEN
+      `{p | ?a b. (p = In::APPEND x' a) /\ (p = In::b) /\
+                   b IN v_posns v t} =
+       IMAGE (CONS In) { p | ?a. (p = APPEND x' a) /\ (p IN v_posns v t)}`
             by SRW_TAC [][EXTENSION, EQ_IMP_THM] THEN
-        `FINITE {p | ?a. (p = APPEND x' a) /\ (p IN v_posns v tt)}`
-            by (MATCH_MP_TAC (MATCH_MP pred_setTheory.SUBSET_FINITE
-                                       (Q.SPEC `tt` var_posns_FINITE)) THEN
-                ASM_SIMP_TAC (srw_ss() ++ DNF_ss)
-                             [pred_setTheory.SUBSET_DEF] THEN
-                PROVE_TAC [v_posns_SUBSET_var_posns]) THEN
-        ASM_SIMP_TAC (srw_ss() ++ DNF_ss) [SUM_IMAGE_IMAGE, CARD_IMAGE,
-                                           combinTheory.o_DEF] THEN
-        DISCH_THEN (fn th => REWRITE_TAC [SYM th]) THEN
-        ASM_SIMP_TAC (srw_ss() ++ DNF_ss)
-                     [update_weighing_def, bv_posns_thm, v_posns_thm] THEN
-        CONV_TAC (LAND_CONV (ONCE_DEPTH_CONV SWAP_VARS_CONV)) THEN
-        REWRITE_TAC []
-      ]
+      ASM_SIMP_TAC (srw_ss()) [] THEN
+      `FINITE {p | ?a. (p = APPEND x' a) /\ (p IN v_posns v t)}`
+          by (MATCH_MP_TAC (MATCH_MP pred_setTheory.SUBSET_FINITE
+                                     (Q.SPEC `t` var_posns_FINITE)) THEN
+              ASM_SIMP_TAC (srw_ss() ++ DNF_ss)
+                           [pred_setTheory.SUBSET_DEF] THEN
+              PROVE_TAC [v_posns_SUBSET_var_posns]) THEN
+      ASM_SIMP_TAC (srw_ss() ++ DNF_ss) [SUM_IMAGE_IMAGE, CARD_IMAGE,
+                                           combinTheory.o_DEF]
     ]
   ]);
 
@@ -2717,8 +2668,7 @@ val FV_weights_update_weighing = store_thm(
                   (!wf. weight_at p (update_weighing x r wf) y =
                         weight_at p' wf x)``,
   HO_MATCH_MP_TAC strong_labelled_redn_ind THEN
-  SIMP_TAC (srw_ss())[update_weighing_def, v_posns_thm, beta_def,
-                      ncbody_def] THEN
+  SIMP_TAC (srw_ss())[update_weighing_def, v_posns_thm, beta_def] THEN
   REPEAT STRIP_TAC THEN REPEAT VAR_EQ_TAC THENL [
     `p IN var_posns ([arg/x'] body) /\
      p IN valid_posns ([arg/x'] body)`
@@ -2740,7 +2690,7 @@ val FV_weights_update_weighing = store_thm(
           (vp = p1) /\ (l = p2)`
          by (ASM_SIMP_TAC (srw_ss()) [EQ_IMP_THM] THEN STRIP_TAC THEN
              PROVE_TAC [APPEND_var_posns, v_posns_SUBSET_var_posns]) THEN
-      ASM_SIMP_TAC (srw_ss()) [],
+      ASM_SIMP_TAC (srw_ss() ++ DNF_ss) [update_weighing_thm, bv_posns_thm],
       FULL_SIMP_TAC (srw_ss()) [v_posns_thm] THENL [
         Q.EXISTS_TAC `Lt::In::p` THEN
         `p IN var_posns body /\ p IN valid_posns body`
@@ -2748,8 +2698,9 @@ val FV_weights_update_weighing = store_thm(
                          var_posns_SUBSET_valid_posns] THEN
         ASM_SIMP_TAC (srw_ss()) [weight_at_thm, valid_posns_thm,
                                  weight_at_var_posn] THEN
-        ASM_SIMP_TAC (srw_ss() ++ DNF_ss) [] THEN GEN_TAC THEN
-        COND_CASES_TAC THENL [
+        ASM_SIMP_TAC (srw_ss() ++ DNF_ss)
+                     [update_weighing_def, bv_posns_thm] THEN
+        GEN_TAC THEN COND_CASES_TAC THENL [
           POP_ASSUM STRIP_ASSUME_TAC THEN
           `l = []` by PROVE_TAC [v_posns_SUBSET_var_posns,
                                  no_var_posns_in_var_posn_prefix] THEN
@@ -2764,7 +2715,8 @@ val FV_weights_update_weighing = store_thm(
         ASM_SIMP_TAC (srw_ss()) [weight_at_thm, valid_posns_thm] THEN
         REPEAT VAR_EQ_TAC THEN
         ASM_SIMP_TAC (srw_ss()) [weight_at_var_posn] THEN
-        ASM_SIMP_TAC (srw_ss() ++ DNF_ss) [] THEN
+        ASM_SIMP_TAC (srw_ss() ++ DNF_ss)
+                     [update_weighing_def, bv_posns_thm] THEN
         `!vp l. vp IN v_posns x' body /\ (APPEND vp l = APPEND p1 p2) =
                 (vp = p1) /\ (l = p2)`
             by (ASM_SIMP_TAC (srw_ss()) [EQ_IMP_THM] THEN
@@ -3201,8 +3153,7 @@ val weighted_reduction_reduces_ordering = store_thm(
     SIMP_TAC (srw_ss() ++ ETA_ss)
              [update_weighing_def, strip_label_thm,
               decreasing_thm, nonzero_thm, wterm_ordering_def,
-              lterm_term_weight, term_weight_thm, lsize_thm,
-              ncbody_def] THEN
+              lterm_term_weight, term_weight_thm, lsize_thm] THEN
     REPEAT STRIP_TAC THEN
     `r IN redex_posns (strip_label M)` by PROVE_TAC [beta0_redex_posn] THEN
     ASM_SIMP_TAC (srw_ss()) [update_weighing_vsubst],
@@ -3225,7 +3176,7 @@ val weighted_reduction_reduces_ordering = store_thm(
              [update_weighing_def, strip_label_thm,
               decreasing_thm, nonzero_thm, wterm_ordering_def,
               lterm_term_weight, term_weight_thm, lsize_thm,
-              lv_posns_def, ncbody_def] THEN
+              lv_posns_def] THEN
     REPEAT GEN_TAC THEN STRIP_TAC THEN
     `r IN redex_posns (strip_label M)` by PROVE_TAC [beta0_redex_posn] THEN
     ASM_SIMP_TAC (srw_ss()) [update_weighing_vsubst] THEN
@@ -3860,7 +3811,8 @@ val Cpl_complete_development = store_thm(
       by PROVE_TAC [residuals_def] THEN
   ASM_SIMP_TAC (srw_ss())[term_posset_cpl_def] THEN
   `!n. n_posns n (last s') = {}`
-             by METIS_TAC [n_posns_nlabel, pred_setTheory.INTER_EMPTY] THEN
+             by (GEN_TAC THEN Cases_on `n` THEN
+                 SRW_TAC [][n_posns_nlabel]) THEN
   `!N''. ~lcompat_closure beta0 (last s') N''`
       by PROVE_TAC [beta0_n_posns, lrcc_lcompat_closure,
                     pred_setTheory.NOT_IN_EMPTY] THEN

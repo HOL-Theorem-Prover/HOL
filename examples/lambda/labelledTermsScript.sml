@@ -505,10 +505,8 @@ val lSIMPLE_ALPHAi = store_thm(
 val lterm_swapping = store_thm(
   "lterm_swapping",
   ``swapping (swap : string -> string -> 'a lterm -> 'a lterm) FV``,
-  SRW_TAC [][swapping_def, lswap_def, FV_def] THENL [
-    SRW_TAC [][tolabelled_11],
-    SRW_TAC [][swap_identity]
-  ]);
+  SRW_TAC [][swapping_def, lswap_def, FV_def] THEN
+  SRW_TAC [][swap_identity]);
 
 val lswap_identity = save_thm(
   "lswap_identity",
