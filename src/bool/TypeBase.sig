@@ -50,10 +50,11 @@ sig
     val listItems : typeBase -> tyinfo list
 
     (* Imperative database of datatype facts and associated operations. *)
-    val theTypeBase : unit -> typeBase
-    val write       : tyinfo -> unit
-    val read        : string -> tyinfo option
-    val elts        : unit -> tyinfo list
+    val theTypeBase        : unit -> typeBase
+    val write              : tyinfo -> unit
+    val read               : string -> tyinfo option
+    val elts               : unit -> tyinfo list
+    val register_update_fn : (tyinfo -> unit) -> unit
 
   (* Size of a type *)
     val tysize    :

@@ -309,11 +309,14 @@ end;
  *---------------------------------------------------------------------------*)
 
 local val dBase = ref empty
+      val update_fns = ref ([]:(tyinfo -> unit) list)
 in
-  fun theTypeBase() = !dBase;
+  fun theTypeBase() = !dBase
 
+  fun register_update_fn f = (update_fns := f:: !update_fns)
   fun write facts = (dBase := add (theTypeBase()) facts;
-                     Parse.overload_on("case", case_const_of facts));
+                     Parse.overload_on("case", case_const_of facts);
+                     app (fn f => f facts) (!update_fns));
 end;
 
 fun read s = get (theTypeBase()) s;
