@@ -53,10 +53,10 @@ $(t\rightarrow t_1, t_2)$ & {\it if\ }$t${\it \ then\ }$t_1${\it\ else\ }$t_2$
 \end{center}\label{logic-table}
 
 \paragraph{Note on HOL example sessions}
-All of the examples below assume that you are running
+All of the examples below assume that the user is running
 \texttt{hol.unquote}, the executable for which is in the \texttt{bin/}
-directory along with that for \texttt{hol}.  Further, you need to
-execute the following commands before starting the sessions below:
+directory along with that for \texttt{hol}.  Further, the user needs
+to execute the following commands before starting the sessions below:
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{verbatim}
@@ -309,15 +309,15 @@ unification failure message: unify failed
 \begin{session}\begin{verbatim}
 - ``$==> t1 t2``;
 > val it = `t1 ==> t2` : term
+- ``$/\ t1 t2``;
+> val it = `t1 /\ t2` : term
 \end{verbatim}\end{session}
 
-Lambda-terms, or $\lambda$-terms, denote functions. The
-symbol `{\small\verb|\|}'
-is used as an {\small ASCII} approximation to $\lambda$.
-Thus `{\small\verb|\|}$x$\ml{.}$t$' should be read
-as `$\lquant{x}t$'. For example,
-{\small\verb|"\x. x+1"|} is a term that denotes the function
-$n\mapsto n{+}1$.
+    Lambda-terms, or $\lambda$-terms, denote functions. The symbol
+    `{\small\verb|\|}' is used as an {\small ASCII} approximation to
+    $\lambda$.  Thus `{\small\verb|\|}$x$\ml{.}$t$' should be read as
+    `$\lquant{x}t$'. For example, {\small\verb|"\x. x+1"|} is a term
+    that denotes the function $n\mapsto n{+}1$.
 
 \begin{session}\begin{verbatim}
 - ``\x. x + 1``;
@@ -357,12 +357,13 @@ theory.  The \HOL\ system ensures that only well-formed theories can
 be constructed by allowing theorems to be created by {\it formal
   proof\/} only.
 
-A theory is represented in the \HOL\ system as a collection of files,
-called theory files.  Each file has a name of the form $name$\ml{.th},
-where $name$ is a string supplied by the user.
+A theory is represented in the \HOL\ system as a collection of SML
+object files, called theory files.  Each file has a name of the form
+$name$\ml{Theory.}$ext$, where $name$ is a string supplied by the
+user, and $ext$ is one of \ml{sig}, \ml{sml}, \ml{ui}, \ml{uo}.
 
 Theory files are structured hierarchically to represent sequences of
-extensions of an initial theory called \ml{HOL}.  Each theory file
+extensions of an initial theory called \ml{scratch}.  Each theory file
 making up a theory records some types, constants, axioms and theorems,
 together with pointers to other theory files called its {\it
   parents\/}.  This collection of reachable files is called the {\it
@@ -376,64 +377,49 @@ specific name supplied by the user (see the functions \ml{new\_axiom},
 \ml{new\_definition} \etc\ below).
 
 A typical piece of work with the \HOL\ system consists in a number of
-sessions. In the first of these a new theory, ${\cal T}$ say, is
-created by extending existing theories with a number of definitions.
-The concrete result of the session will be a theory file ${\cal
-  T}$\ml{.th} whose contents are created during the session and whose
-ancestry represents the desired logical theory.  In subsequent
-sessions this theory is extended by proving new theorems which will be
-stored in the file ${\cal T}$\ml{.th}. The logical meaning of these
-sessions is that a new extension to ${\cal T}$ is created which
-replaces the old version.  Subsequent pieces of work can build on
-(\ie\ extend) the definitions and theorems of ${\cal T}$ by making it
-a parent of new theories.
+sessions.  A theorem-proving session consists of interactions with the
+system through its ``command-line interface''.  At the same time, it's
+important that the commands the user enters are saved in some sort of
+file (presumably through an editor) so that these commands can be
+replayed later.  For the first sessions of theory development, each
+time \HOL\ is started, the saved commands from previous sessions will
+need to be re-entered into the system.  This can be done with
+cut-and-paste functionality, or the \ml{use} command (which takes a
+file-name and reads it for input).
 
-There are two modes of working with \HOL: {\it draft mode\/} and {\it
-  proof mode\/}.  In draft mode, inconsistencies can be introduced by
-asserting inconsistent axioms, but in proof mode only consistency
-preserving actions (namely valid proof) can be done.  Draft mode is
-analogous to `super user mode' in Unix, in that it gives access to
-dangerous facilities.  Everything that can be done in proof mode can
-be done in draft mode, but not vice versa.
+Eventually (possibly even after the very first session; this is a
+matter of taste), the theory under development will be in a
+sufficiently polished state that the user will want to save it to a
+``script'' file and compile it.  This process is described further in
+the examples below, but produces a theory file that can be loaded in
+the same way as the system's built-in theories.
 
 There is always a {\it current theory\/}, whose name is given by the
-function \ml{current\_theory}.  This function maps the value void,
+function \ml{current\_theory}.  This function maps the unit value,
 written `\ml{()}' in \ML, to a string giving the name of the current
 theory.  Thus the \ML\ expression \ml{current\_theory ()} evaluates to
-a string giving the name of the current theory.  Initially \HOL\ is in
-proof mode with current theory called \ml{HOL}.  So evaluating
-\ml{current\_theory ()} immediately after initiating a \HOL\ session
-gives the value \ml{`HOL`}, as can be seen in the session shown below:
+a string giving the name of the current theory.  Initially \HOL\ has
+its current theory called \ml{scratch}.  In the examples so far, there
+hasn't been a call to \ml{new\_theory}, so the current theory is still
+``scratch''.
 
-
-\setcounter{sessioncount}{1}
 \begin{session}\begin{verbatim}
-% hol
-
-          _  _    __    _      __    __
-   |___   |__|   |  |   |     |__|  |__|
-   |      |  |   |__|   |__   |__|  |__|
-
-          Version 2.0, built on Sep 1 1991
-
-#current_theory();;
-`HOL` : string
-
-#
+- current_theory();
+> val it = "scratch" : string
+-
 \end{verbatim}\end{session}
 
     Executing \ml{new\_theory`$thy$`} creates a new theory called
-    $thy$; it fails if there already exists a file $thy$\ml{.th} in
-    the current working directory (or in any directory on the current
-    \HOL\ {\it search path\/}, for a description of which, see the
-    appropriate section of \DESCRIPTION).
+    $thy$.  Rather than conflict with the existing theory of natural
+    numbers\dots.
 
 \begin{session}\begin{verbatim}
-#new_theory `Peano`;;
-() : void
+- new_theory "Peano";
+> val it = () : unit
 \end{verbatim}\end{session}
 
-\noindent This starts a theory called \ml{Peano},  which is  to be  made into a
+\noindent
+This starts a theory called \ml{Peano}, which is to be made into a
 theory containing Peano's postulates as axioms for the natural
 numbers.\footnote{An elaborate theory of numbers is built into \HOL,
   in which Peano's postulates are in fact derived theorems rather than
@@ -462,8 +448,8 @@ numbers. This postulate is called {\it Mathematical Induction}.
 To fomalize this in \HOL\ a new type is introduced called \ml{nat}:
 
 \begin{session}\begin{verbatim}
-#new_type 0 `nat`;;
-() : void
+- new_type 0 "nat";
+> val it = () : unit
 \end{verbatim}\end{session}
 
     In general \ml{new\_type}$\ n\ \ml{`\ty{op}`}$ makes \ty{op} a new
@@ -482,16 +468,9 @@ To fomalize this in \HOL\ a new type is introduced called \ml{nat}:
 
     Evaluating \ml{new\_constant(`\con{c}`,}$\sigma$\ml{)} makes
     $\con{c}$ a new constant of type $\sigma$ in the current theory.
-    This fails if:
-
-\begin{myenumerate}
-\item not in draft mode;
-\item there already exists a constant named $\con{c}$ in the current
-theory.
-\end{myenumerate}
 
 \begin{session}\begin{verbatim}
-#new_constant(`0`, ":nat");;
+- new_constant("0", ``:nat``);
 evaluation failed     new_constant -- 0 clashes with existing constant
 \end{verbatim}\end{session}
 
@@ -673,30 +652,32 @@ Definitions --  Double_def  |- !x. Double x = x add x
 \end{verbatim}\end{session}
 
 
-The use of axioms, as illustrated here, carries considerable  danger in general
-because it is very easy to assert inconsistent axioms.  It is thus safer to use
-only definitions.  At first sight this might appear impossible, but in fact all
-of ordinary  mathematics  can  be  developed  from  logic  by definition alone.
-Showing this was  the achievement  of Russell  and Whitehead  in their treatise
-{\sl Principia  Mathematica}  \cite{Principia}.    A   theory  containing  only
-definitions is called a {\it definitional theory\/}.   Many useful definitional
-theories are built into the \HOL\ system, or available as libraries.  Examples
-include theories of numbers  (both natural  numbers and  integers), sets, bags,
-finite trees, group theory, properties of fixed points and more.  Libraries are
-constantly being  added  to \HOL\  and users  are encouraged  to contribute new
-theories to the library when they develop them.
+    The use of axioms, as illustrated here, carries considerable
+    danger in general because it is very easy to assert inconsistent
+    axioms.  It is thus safer to use only definitions.  At first sight
+    this might appear impossible, but in fact all of ordinary
+    mathematics can be developed from logic by definition alone.
+    Showing this was the achievement of Russell and Whitehead in their
+    treatise {\sl Principia Mathematica} \cite{Principia}.  A theory
+    containing only definitions is called a {\it definitional
+      theory\/}.  Many useful definitional theories are built into the
+    \HOL\ system, or available as libraries.  Examples include
+    theories of numbers (natural numbers, integers and reals), sets,
+    bags, finite trees, group theory, properties of fixed points and
+    more.  Libraries are constantly being added to \HOL\ and users are
+    encouraged to contribute new theories to the library when they
+    develop them.
 
-\newpage % PBHACK
-
-The theory of numbers built into \HOL\ is a definitional theory that defines
-numbers logically. Peano's postulates are proved from the definitions of
-the type \ml{num} and the constants \ml{0} and \ml{SUC}.
-It follows from Peano's postulates that certain kinds of recursion equations are
-equivalent to non-recursive definitions. There is a built-in theory called
-\ml{prim\_rec} (for `primitive recursion') that supports this,
-together with tools for automatically transforming recursion equations into
-definitions. This is illustrated later but, for example, here are the built-in
-definitions of \ml{+} and \ml{*}:
+    The theory of numbers built into \HOL\ is a definitional theory
+    that defines numbers logically. Peano's postulates are proved from
+    the definitions of the type \ml{num} and the constants \ml{0} and
+    \ml{SUC}.  It follows from Peano's postulates that certain kinds
+    of recursion equations are equivalent to non-recursive
+    definitions. There is a built-in theory called \ml{prim\_rec} (for
+    `primitive recursion') that supports this, together with tools for
+    automatically transforming recursion equations into definitions.
+    This is illustrated later but, for example, here are the built-in
+    definitions of \ml{+} and \ml{*}:
 
 \begin{session}\begin{verbatim}
 #ADD;;
@@ -715,8 +696,6 @@ MULT = |- (!n. 0 * n = 0) /\ (!m n. (SUC m) * n = (m * n) + n)
 \noindent This also illustrates how certain built-in definitions (and theorems)
 are `autoloaded' from the theories where they are defined (\ml{arithmetic} in this
 case).
-
-\newpage % PBHACK
 
 The theory  \ml{arithmetic} contains  too many  pre-proved theorems  to show in
 full, but  here are  the constants,  definitions, and  the first  two (out of
