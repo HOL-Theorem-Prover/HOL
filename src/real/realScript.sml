@@ -3426,14 +3426,112 @@ val eq_ints = store_thm(
     SRW_TAC [][]
   ]);
 
+val REALMUL_AC = CONV_TAC (AC_CONV (REAL_MUL_ASSOC, REAL_MUL_COMM))
 
-(*val div_rat = store_thm(
+val div_ratr = store_thm(
+  "div_ratr",
+  ``x / (y / z) = if (y = 0) \/ (z = 0) then x / unint(y/z)
+                  else x * z / y``,
+  SRW_TAC [][ui] THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN
+  SRW_TAC [][real_div, REAL_INV_MUL, REAL_INV_EQ_0, REAL_INV_INV] THEN
+  REALMUL_AC);
+
+val div_ratl = store_thm(
+  "div_ratl",
+  ``(x/y) / z = if y = 0 then unint(x/y) / z
+                else if z = 0 then unint((x/y)/ z)
+                else x / (y * z)``,
+  SRW_TAC [][ui, real_div, REAL_INV_MUL, REAL_INV_EQ_0, REAL_INV_INV] THEN
+  REALMUL_AC);
+
+
+
+val div_rat = store_thm(
   "div_rat",
   ``(x/y) / (u/v) =
       if (u = 0) \/ (v = 0) then (x/y) / unint (u/v)
       else if y = 0 then unint(x/y) / (u/v)
       else (x * v) / (y * u)``,
-  SRW_TAC [][ui] *)
+  SRW_TAC [][ui] THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN
+  SRW_TAC [][real_div, REAL_INV_MUL, REAL_INV_EQ_0, REAL_INV_INV] THEN
+  REALMUL_AC);
+
+val le_rat = store_thm(
+  "le_rat",
+  ``x / &n <= u / &m = if n = 0 then unint(x/0) <= u / &m
+                       else if m = 0 then x/ &n <= unint(u/0)
+                       else &m * x <= &n * u``,
+  SRW_TAC [][ui] THEN
+  `0 < m /\ 0 < n` by SRW_TAC [numSimps.ARITH_ss][] THEN
+  `0 < &m * &n` by SRW_TAC [][REAL_LT_MUL] THEN
+  POP_ASSUM (ASSUME_TAC o MATCH_MP REAL_LE_LMUL) THEN
+  POP_ASSUM (fn th => CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [GSYM th]))) THEN
+  `&m * &n * (x / &n) = &m * (&n * (x/ &n))` by REALMUL_AC THEN
+  `&m * &n * (u / &m) = &n * (&m * (u / &m))` by REALMUL_AC THEN
+  SRW_TAC [][REAL_DIV_LMUL]);
+
+val le_ratl = save_thm(
+  "le_ratl",
+  SIMP_RULE (srw_ss()) [] (Thm.INST [``m:num`` |-> ``1n``] le_rat));
+
+val le_ratr = save_thm(
+  "le_ratr",
+  SIMP_RULE (srw_ss()) [] (Thm.INST [``n:num`` |-> ``1n``] le_rat));
+
+val le_int = store_thm(
+  "le_int",
+  ``(&n <= &m = n <= m) /\
+    (~&n <= &m = T) /\
+    (&n <= ~&m = (n = 0) /\ (m = 0)) /\
+    (~&n <= ~&m = m <= n)``,
+  SRW_TAC [][REAL_LE_NEG] THENL [
+    MATCH_MP_TAC REAL_LE_TRANS THEN
+    Q.EXISTS_TAC `0` THEN SRW_TAC [][REAL_NEG_LE0],
+    Cases_on `m` THEN SRW_TAC [][REAL_NEG_LE0] THEN
+    SRW_TAC [][REAL_NOT_LE] THEN MATCH_MP_TAC REAL_LTE_TRANS THEN
+    Q.EXISTS_TAC `0` THEN SRW_TAC [][REAL_NEG_LT0]
+  ]);
+
+val lt_rat = store_thm(
+  "lt_rat",
+  ``x / &n < u / &m = if n = 0 then unint(x/0) < u / &m
+                      else if m = 0 then x / & n < unint(u/0)
+                      else &m * x < &n * u``,
+  SRW_TAC [][ui] THEN
+  `0 < m /\ 0 < n` by SRW_TAC [numSimps.ARITH_ss][] THEN
+  `0 < &m * &n` by SRW_TAC [][REAL_LT_MUL] THEN
+  POP_ASSUM (ASSUME_TAC o MATCH_MP REAL_LT_LMUL) THEN
+  POP_ASSUM (fn th => CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [GSYM th]))) THEN
+  `&m * &n * (x / &n) = &m * (&n * (x / &n))` by REALMUL_AC THEN
+  `&m * &n * (u / &m) = &n * (&m * (u / &m))` by REALMUL_AC THEN
+  SRW_TAC [][REAL_DIV_LMUL]);
+
+val lt_ratl = save_thm(
+  "lt_ratl",
+  SIMP_RULE (srw_ss()) [] (Thm.INST [``m:num`` |-> ``1n``] lt_rat));
+
+val lt_ratr = save_thm(
+  "lt_ratr",
+  SIMP_RULE (srw_ss()) [] (Thm.INST [``n:num`` |-> ``1n``] lt_rat));
+
+val lt_int = store_thm(
+  "lt_int",
+  ``(&n < &m = n < m) /\
+    (~&n < &m = ~(n = 0) \/ ~(m = 0)) /\
+    (&n < ~&m = F) /\
+    (~&n < ~&m = m < n)``,
+  SRW_TAC [][REAL_LT_NEG] THENL [
+    Cases_on `m` THEN SRW_TAC [numSimps.ARITH_ss][REAL_NEG_LT0] THEN
+    MATCH_MP_TAC REAL_LET_TRANS THEN Q.EXISTS_TAC `0` THEN
+    SRW_TAC [numSimps.ARITH_ss][REAL_NEG_LE0],
+    SRW_TAC [][REAL_NOT_LT] THEN MATCH_MP_TAC REAL_LE_TRANS THEN
+    Q.EXISTS_TAC `0` THEN SRW_TAC [][REAL_NEG_LE0]
+  ]);
+
+
+
 
 val _ = export_theory();
 

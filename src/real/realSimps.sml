@@ -5,11 +5,9 @@
 structure realSimps :> realSimps =
 struct
 
-open HolKernel boolLib realTheory;
+open HolKernel boolLib realTheory simpLib
 
-val arith_ss =
-  simpLib.++
-    (simpLib.++(boolSimps.bool_ss, pairSimps.PAIR_ss),numSimps.ARITH_ss);
+val arith_ss = boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ numSimps.ARITH_ss
 
 val real_SS = simpLib.SIMPSET
   {ac = [],
@@ -55,8 +53,6 @@ val real_SS = simpLib.SIMPSET
             REAL_MAX_REFL, REAL_LE_MAX1, REAL_LE_MAX2, REAL_MAX_ADD,
             REAL_MAX_SUB]};
 
-val real_ss = simpLib.++ (arith_ss, real_SS);
-
 val real_ac_SS = simpLib.SIMPSET {
   ac = [(SPEC_ALL REAL_ADD_ASSOC, SPEC_ALL REAL_ADD_SYM),
         (SPEC_ALL REAL_MUL_ASSOC, SPEC_ALL REAL_MUL_SYM)],
@@ -66,7 +62,6 @@ val real_ac_SS = simpLib.SIMPSET {
   rewrs = [],
   congs = []};
 
-val real_ac_ss = simpLib.++ (real_ss, real_ac_SS);
 
 (* ----------------------------------------------------------------------
     simple calculation over the reals
@@ -148,16 +143,93 @@ val sub3 = SPECL [realSyntax.mk_div(x,y), z] real_sub
 val sub3 = transform [(x, true), (y, false), (z, true)] sub3
 val sub4 = transform [(x, true), (y, true)] (SPEC_ALL real_sub)
 
+val div_rats = transform [(x, true), (y, false), (u, true), (v, false)] div_rat
+val div_ratls = transform [(x, true), (y, false), (z, false)] div_ratl
+val div_ratrs = transform [(x, true), (z, false), (y, true)] div_ratr
+
+val max_ints = transform [(x, true), (y, true)] (SPEC_ALL max_def)
+val min_ints = transform [(x, true), (y, true)] (SPEC_ALL min_def)
+val max_rats =
+    transform [(x, true), (y, false), (u, true), (v, false)]
+              (SPECL [realSyntax.mk_div(x,y), realSyntax.mk_div(u,v)] max_def)
+val max_ratls =
+    transform [(x, true), (y, false), (u, true)]
+              (SPECL [realSyntax.mk_div(x,y), u] max_def)
+val max_ratrs =
+    transform [(x, true), (y, false), (u, true)]
+              (SPECL [u, realSyntax.mk_div(x,y)] max_def)
+val min_rats =
+    transform [(x, true), (y, false), (u, true), (v, false)]
+              (SPECL [realSyntax.mk_div(x,y), realSyntax.mk_div(u,v)] min_def)
+val min_ratls =
+    transform [(x, true), (y, false), (u, true)]
+              (SPECL [realSyntax.mk_div(x,y), u] min_def)
+val min_ratrs =
+    transform [(x, true), (y, false), (u, true)]
+              (SPECL [u, realSyntax.mk_div(x,y)] min_def)
+
+
+val op_rwts = [mult_ints, add_ints, eq_ints, REAL_DIV_LZERO] @ neg_ths @
+              add_rats @ add_ratls @ add_ratrs @
+              mult_rats @ mult_ratls @ mult_ratrs @
+              sub1 @ sub2 @ sub3 @ sub4 @ div_rats @ div_ratls @ div_ratrs @
+              max_ratls @ max_ratrs @ max_rats @ max_ints @
+              min_ratls @ min_ratrs @ min_rats @ min_ints
+
+
+fun nat2nat th = let
+  val simp = REWRITE_RULE [REAL_INJ, REAL_NEGNEG, REAL_NEG_EQ0, num_eq_0]
+  val th0 =
+    map simp ([INST [``n:num`` |-> ``NUMERAL (NUMERAL_BIT1 n)``] th,
+               INST [``n:num`` |-> ``NUMERAL (NUMERAL_BIT2 n)``] th])
+in
+  List.concat
+    (map (fn th => map simp
+                       [INST [``m:num`` |-> ``NUMERAL(NUMERAL_BIT1 m)``] th,
+                        INST [``m:num`` |-> ``NUMERAL(NUMERAL_BIT2 m)``] th])
+         th0)
+end
+
+val lt_rats = nat2nat lt_rat
+val lt_ratls = nat2nat lt_ratl
+val lt_ratrs = nat2nat lt_ratr
+
+val le_rats = nat2nat le_rat
+val le_ratls = nat2nat le_ratl
+val le_ratrs = nat2nat le_ratr
+
 val eq_rats = transform [(x, true), (y, false), (u, true), (v, false)] eq_rat
 val eq_ratls = transform [(x, true), (y, false), (z, true)] eq_ratl
+val eq_ratrs = transform [(x, true), (y, false), (z, true)] eq_ratr
 
-val rwts = [mult_ints, add_ints, eq_ints, REAL_DIV_LZERO] @ neg_ths @
-           add_rats @ add_ratls @ add_ratrs @
-           mult_rats @ mult_ratls @ mult_ratrs @
-           sub1 @ sub2 @ sub3 @ sub4 @
-           eq_rats @ eq_ratls
+val real_gts = transform [(x, true), (y, true)] (SPEC_ALL real_gt)
+val real_ges = transform [(x, true), (y, true)] (SPEC_ALL real_ge)
+
+val rel_rwts = [eq_ints, le_int, lt_int] @ eq_rats @ eq_ratls @ eq_ratrs @
+               lt_rats @ lt_ratls @ lt_ratrs @ le_rats @ le_ratrs @ le_ratls @
+               real_gts @ real_ges
 
 
+val rwts = op_rwts @ rel_rwts
+
+val REAL_REDUCE_ss = simpLib.rewrites rwts
+
+val real_ss = arith_ss ++ real_SS ++ REAL_REDUCE_ss
+
+val real_ac_ss = real_ss ++ real_ac_SS
+
+fun real_compset () = let
+  open computeLib
+  val compset = reduceLib.num_compset()
+  val _ = add_thms rwts compset
+in
+  compset
+end
+
+(* add real calculation facilities to global functionality *)
+val _ = let open computeLib in add_funs rwts end
+
+val _ = BasicProvers.augment_srw_ss [REAL_REDUCE_ss]
 
 
 
