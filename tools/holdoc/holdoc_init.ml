@@ -16,6 +16,7 @@ let hOL_CURRIED_ALIST = ref []
 
 (* other settings *)
 let eCHO = ref true
+let rCSID = ref None
 
 open Hollex
 exception BadDirective
@@ -52,6 +53,17 @@ let dir_proc n ts =
                           raise BadDirective
     | []               -> []
   in
+  let rec goId ts =
+    match ts with
+      (White(_)::ts)   -> goId ts
+    | (Indent(_)::ts)  -> goId ts
+    | (Comment(_)::ts) -> goId ts
+    | (Str(s)::ts)     -> s
+    | (t::ts)          -> prerr_endline ("Unexpected token in alist(c): "^render_token t);
+                          raise BadDirective
+    | []               -> prerr_endline ("Missing string in RCSID directive");
+                          raise BadDirective
+  in
   match n with
   (* category lists *)
     "TYPE_LIST"       -> tYPE_LIST       := (go ts)  @ !tYPE_LIST
@@ -68,5 +80,6 @@ let dir_proc n ts =
   (* other *)
   | "ECHO"            -> eCHO := true
   | "NOECHO"          -> eCHO := false
+  | "RCSID"           -> rCSID           := Some(goId ts)
   | _                 -> ()
 

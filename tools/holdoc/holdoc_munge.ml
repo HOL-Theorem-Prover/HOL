@@ -666,7 +666,11 @@ let lts_latex_render () =
   in
   print_string "\\newcommand{\\dumpallrules}{\n";
   ignore (List.map go rulecmds);
-  print_string "}\n\n%%%% END %%%%\n"
+  print_string "}\n\n";
+  (match !rCSID with
+     Some s -> print_string ("\\newcommand{\\rulesrcsid}{"^texify s^"}\n\n")
+   | None   -> ());
+  print_string "%%%% END %%%%\n"
 
 
 let pvs = ref []  (* possible variable names; not used for LTS *)

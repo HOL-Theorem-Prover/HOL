@@ -14,6 +14,7 @@ val hOL_ID_ALIST : (string * string) list ref
 val hOL_CURRIED_ALIST : (string * (string * int * bool)) list ref
 
 val eCHO : bool ref
+val rCSID : string option ref
 
 exception BadDirective
 
