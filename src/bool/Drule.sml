@@ -1311,7 +1311,7 @@ local fun variants (_,[]) = []
          case subst_assoc (equal x) theta
           of SOME y => y
            | NONE => x
-      fun req {redex,residue} = (redex=residue);
+      fun req {redex,residue} = (redex=residue)
 in
 fun MATCH_MP ith =
  let val bod = fst(dest_imp(snd(strip_forall(concl ith))))

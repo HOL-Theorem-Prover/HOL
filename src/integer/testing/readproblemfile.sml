@@ -1,3 +1,5 @@
+structure readproblemfile :> readproblemfile =
+struct
 open HolKernel boolLib
 
 open TextIO
@@ -22,7 +24,4 @@ fun foldl f acc is =
 
 fun app f = foldl (fn (t,_) => ignore (f t)) ()
 
-
-
-
-
+end

@@ -100,8 +100,7 @@ REWRITE_TAC [mult_zero_left]);
 
 
 (* A ring is a semi_ring *)
-val semi_ring_of_def = Define
-    ` semi_ring_of = (semi_ring R0 R1 RP RM) `;
+val semi_ring_of_def = Define `semi_ring_of = (semi_ring R0 R1 RP RM) `;
 
 val ring_is_semi_ring = asm_store_thm
     ("ring_is_semi_ring",
@@ -128,7 +127,7 @@ val _ = asm_save_thm("mult_one_right",mult_one_right);
 
 val neg_mult = asm_store_thm
     ("neg_mult",
-     --`!m n. RM (RN a) b = RN (RM a b) `--,
+     --`!a b. RM (RN a) b = RN (RM a b)`--,
 GEN_TAC THEN
 EQ_TRANS_TAC(--` RP (RM (RP a (RN a)) b) (RN (RM a b)) `--) THENL
   [ REWRITE_TAC[distr_left],

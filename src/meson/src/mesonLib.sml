@@ -748,10 +748,10 @@ in
                 in if null ths then cth
                    else Drule.MATCH_MP cth (Lib.end_itlist Thm.CONJ ths)
               handle e as HOL_ERR _ =>
-                (say ("Attempting to match "^
-                      (term_to_string (concl cth))^" and "^
+                (say ("Attempting to match\n  "^
+                      (term_to_string (concl cth))^"\n\nand\n\n   "^
                       (term_to_string (concl (end_itlist CONJ ths)))^
-                      " with n = "^ (int_to_string n)^
+                      "\n\nwith n = "^ (int_to_string n)^
                       " and th = "^(term_to_string (concl th))^"\n");
                  raise e)
           end

@@ -670,9 +670,7 @@ fun MATCH_ACCEPT_TAC thm : tactic =
 (* ---------------------------------------------------------------------*)
 
 local fun efn v (tm,th) =
-         let val ntm = mk_exists(v, tm)
-         in (ntm,CHOOSE (v, ASSUME ntm) th)
-         end
+       let val ntm = mk_exists(v, tm) in (ntm,CHOOSE (v, ASSUME ntm) th) end
 in
 fun MATCH_MP_TAC thm :tactic = let
   val lconsts      = HOLset.intersection 

@@ -95,6 +95,13 @@ val SET_TO_LIST_IN_MEM = Q.store_thm("SET_TO_LIST_IN_MEM",
    THEN RW_TAC bool_ss [listTheory.MEM,NOT_IN_EMPTY]
    THEN PROVE_TAC [REST_DEF, FINITE_DELETE, IN_INSERT, CHOICE_INSERT_REST]);
 
+val UNION_APPEND = Q.store_thm 
+ ("UNION_APPEND",
+  `!l1 l2.
+     (LIST_TO_SET l1) UNION (LIST_TO_SET l2) = LIST_TO_SET (APPEND l1 l2)`,
+  Induct
+   THEN RW_TAC bool_ss [LIST_TO_SET,UNION_EMPTY,listTheory.APPEND]
+   THEN PROVE_TAC [INSERT_UNION_EQ]);
 
 (*---------------------------------------------------------------------------
     Lists and bags. Note that we also have SET_OF_BAG and BAG_OF_SET 
