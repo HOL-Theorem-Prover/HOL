@@ -237,7 +237,7 @@ Cartesian products are defined by representing a pair
 
 \begin{hol}
 \begin{alltt}
-   \bs{}a b. (a=\m{t\sb{1}}) /\verb!\! (b=\m{t\sb{2}})
+   \bs{}a b. (a=\m{t\sb{1}}) /\bs (b=\m{t\sb{2}})
 \end{alltt}
 \end{hol}
 
@@ -393,7 +393,7 @@ transformation:
 
 \begin{hol}
 \begin{alltt}
-   \bs(\m{v\sb{1}},\m{v\sb{2}}).\m{t}\m{\quad \leadsto\quad}UNCURRY(\bs\m{v\sb{1}}.\verb%\%\m{v\sb{2}}.\m{t})
+   \bs(\m{v\sb{1}},\m{v\sb{2}}).\m{t}\m{\quad \leadsto\quad}UNCURRY(\bs\m{v\sb{1}}.\bs\m{v\sb{2}}.\m{t})
 \end{alltt}
 \end{hol}
 
@@ -820,9 +820,9 @@ is logically equivalent to:
 
 \begin{hol}
 \begin{alltt}
-   fun 0       = \verb!\!x\(\sb{1}\) \m{\dots} x\(\sb{i}\).\m{f\sb{1}[}x\(\sb{1}\)\m{,\ldots,\,}x\(\sb{i}]\)
-   fun (SUC n) = \verb!\!x\(\sb{1}\) \m{\dots} x\(\sb{i}\).\m{f\sb{2}[}fun n \m{t\sb{1} \dots t\sb{i},} n\m{,}x\(\sb{1}\)\m{,\ldots,\,}x\(\sb{i}]\)
-               = (\verb!\!f n x\(\sb{1}\) \m{\dots} x\(\sb{i}\).\m{f\sb{2}[}f \m{t\sb{1} \dots t\sb{i},} n\m{,} x\(\sb{1}\)\m{,\ldots,\,}x\(\sb{i}]\)) (fun n) n
+   fun 0       = \bs{}x\(\sb{1}\) \m{\dots} x\(\sb{i}\).\m{f\sb{1}[}x\(\sb{1}\)\m{,\ldots,\,}x\(\sb{i}]\)
+   fun (SUC n) = \bs{}x\(\sb{1}\) \m{\dots} x\(\sb{i}\).\m{f\sb{2}[}fun n \m{t\sb{1} \dots t\sb{i},} n\m{,}x\(\sb{1}\)\m{,\ldots,\,}x\(\sb{i}]\)
+               = (\bs{}f n x\(\sb{1}\) \m{\dots} x\(\sb{i}\).\m{f\sb{2}[}f \m{t\sb{1} \dots t\sb{i},} n\m{,} x\(\sb{1}\)\m{,\ldots,\,}x\(\sb{i}]\)) (fun n) n
 \end{alltt}
 \end{hol}
 
@@ -834,7 +834,7 @@ that
 
 \begin{hol}
 \begin{alltt}
-   x\m{=}\verb!\!x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{1}[}x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\)  {\rm and}  f\(=\)\verb!\!f n x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{2}[}f \m{t\sb{1} \dots t\sb{i},} n\(,\) x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\))
+   x\m{=}\bs{}x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{1}[}x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\)  {\rm and}  f\(=\)\bs{}f n x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{2}[}f \m{t\sb{1} \dots t\sb{i},} n\(,\) x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\))
 \end{alltt}
 \end{hol}
 
@@ -842,8 +842,8 @@ that
 
 \begin{hol}
 \begin{alltt}
-   |- ?fn. fn 0       = \verb!\!x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{1}[}x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\) /\verb!\!
-           fn (SUC n) = (\verb!\!f n x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{2}[}f \m{t\sb{1} \dots t\sb{i},} n\(,\) x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\)) (fn n) n
+   |- ?fn. fn 0       = \bs{}x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{1}[}x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\) /\bs{}
+           fn (SUC n) = (\bs{}f n x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{2}[}f \m{t\sb{1} \dots t\sb{i},} n\(,\) x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\)) (fn n) n
 \end{alltt}
 \end{hol}
 
@@ -856,8 +856,8 @@ yields the following theorem:
 
 \begin{hol}
 \begin{alltt}
-   |- fun 0       = \verb!\!x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{1}[}x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\) /\verb!\!
-      fun (SUC n) = \verb!\!x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{2}[}fun n \m{t\sb{1} \dots t\sb{i},} n\(,\) x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\)
+   |- fun 0       = \bs{}x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{1}[}x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\) /\bs{}
+      fun (SUC n) = \bs{}x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{2}[}fun n \m{t\sb{1} \dots t\sb{i},} n\(,\) x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\)
 \end{alltt}
 \end{hol}
 
@@ -1312,14 +1312,16 @@ are then defined on this type:
    NULL : 'a list -> bool
 \end{verbatim}\end{hol}
 
-The \HOL{} parser\index{parsing, of HOL logic@parsing, of \HOL{} logic!of
-list expressions} has been specially  modified to  parse the expression
+The \HOL{} parser
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!of list expressions}
+has been specially  modified to  parse the expression
 {\small\verb%[]%} into {\small\verb%NIL%}, to parse the expression
 {\small\verb%h :: t%} into {\small\verb%CONS h t%}, and to parse the expression
 {\small\verb%[%}$t_1${\small\verb%;%}$t_2${\small\verb%;%}$\ldots${\small\verb%;%}$t_n${\small\verb%]%}
 into {\small\verb%CONS %}$t_1${\small\verb% (CONS %}$t_2 \cdots\
 ${\small\verb%(CONS %}$t_n${\small\verb%  NIL)%}$\  \cdots\ ${\small\verb%)%}.
-The \HOL{} printer\index{printing, in HOL logic@printing, in \HOL{} logic!of list expressions}
+The \HOL{} printer
+\index{printing, in HOL logic@printing, in \HOL{} logic!of list expressions}
 reverses these transformations.
 
 The functions \ml{NIL} and \ml{CONS} are defined in terms of the representing
@@ -1360,11 +1362,12 @@ states  the  validity  of  primitive recursive definitions on lists, and
 can be used to justify any such definition.  The \ML\
 function {\small\verb+new_recursive_definition+}
 uses this theorem to do automatic
-\index{primitive recursion theorem!automated use of, in HOL system@automated use of, in \HOL{} system|)}  proofs of the existence of primitive
-recursive functions on lists and then make constant specifications to introduce
-constants that  denote  such  functions.  For example, the \HOL{} system defines
-a length function, \ml{LENGTH}, on lists by the primitive recursive
-definition on lists shown below:
+\index{primitive recursion theorem!automated use of, in HOL system@automated use of, in \HOL{} system|)}
+proofs of the existence of primitive recursive functions on lists and
+then make constant specifications to introduce constants that denote
+such functions.  For example, the \HOL{} system defines a length
+function, \ml{LENGTH}, on lists by the primitive recursive definition
+on lists shown below:
 
 \begin{hol}
 \begin{verbatim}
@@ -1374,11 +1377,11 @@ definition on lists shown below:
 \end{verbatim}
 \end{hol}
 
-\noindent When this \ML\
-expression is evaluated, \HOL{} uses \ml{list\_Axiom} to prove existence
-of a function that satisfies the given primitive recursive definition,
-introduces a constant to name this function using a constant specification, and
-stores the resulting theorem:
+\noindent
+When this \ML{} expression is evaluated, \HOL{} uses \ml{list\_Axiom}
+to prove existence of a function that satisfies the given primitive
+recursive definition, introduces a constant to name this function
+using a constant specification, and stores the resulting theorem:
 
 \begin{hol}
 \begin{verbatim}
@@ -1388,10 +1391,10 @@ stores the resulting theorem:
 
 \noindent in the current theory (in this case, the theory \ml{list}).
 
-The predicate \ml{NULL}  and  the
-selectors \ml{HD} and  \ml{TL} are  defined\index{list definitions, in HOL logic@list definitions, in \HOL{} logic}
- in  the theory  \ml{list} by the
-specifications:
+The predicate \ml{NULL} and the selectors \ml{HD} and \ml{TL} are
+defined
+\index{list definitions, in HOL logic@list definitions, in \HOL{} logic}
+in the theory \ml{list} by the specifications:
 
 \begin{hol}
 \index{NULL, the definition in HOL logic@\ml{NULL}, the definition in \HOL{} logic}
