@@ -1,8 +1,8 @@
 (*---------------------------------------------------------------------------*
  * This example defines the abstract syntax for a simple ML-like language,   *
  * and a simple mutually-recursive function for computing the variables      *
- * in a program.  It exercises Elsa Gunter's type definition package for     *
- * mutually recursive concrete types.                                        *
+ * in a program.  It exercises the type definition package on a mutually     *
+ * recursive concrete type.                                                  *
  *                                                                           *
  * The example is also a demonstration of how Holmake works. Just invoke     *
  *                                                                           *
@@ -20,7 +20,7 @@
  * If you are working interactively, i.e., you don't want to pay any         *
  * attention to this Holmake stuff, do the following:                        *
  *                                                                           *
-    app load ["Datatype","mutualLib", "stringTheory", "setTheory"];
+    app load ["bossLib", "stringTheory", "setTheory"];
  *                                                                           *
  * and then proceed with cut-and-paste.                                      *
  *                                                                           *
@@ -58,7 +58,7 @@
 structure MLScript =
 struct
 
-open Datatype Theory Parse ;
+open bossLib Theory Parse ;
 
 local open stringTheory setTheory       (* Make strings and sets be present *)
 in end;   
@@ -77,13 +77,7 @@ val _ = Hol_datatype `var = VAR of string`;
     Define the datatype of ML syntax trees.
  ---------------------------------------------------------------------------*)
 
-val {Cases_Thm, Constructors_Distinct_Thm,
-     Constructors_One_One_Thm, New_Ty_Existence_Thm,
-     New_Ty_Induct_Thm, New_Ty_Uniqueness_Thm}
-  =  
-     Lib.time 
-       (mutualLib.define_type [])
-
+val _ = Hol_datatype
         `atexp = var_exp of var
                | let_exp of dec => exp ;
 
@@ -113,9 +107,8 @@ val {Cases_Thm, Constructors_Distinct_Thm,
       in a program.
  ----------------------------------------------------------------------------*)
 
-val vars_thm = mutualLib.define_mutual_functions {
- name = "vars_thm", rec_axiom = New_Ty_Existence_Thm, fixities = NONE,
-  def = Term
+val Vars_def =
+ xDefine "Vars"
    `(atexpV (var_exp v)      = {v}) /\
     (atexpV (let_exp d e)    = (decV d) UNION (expV e))
      /\
@@ -137,8 +130,7 @@ val vars_thm = mutualLib.define_mutual_functions {
     (valbindV (rec_bind vb)  = (valbindV vb))
      /\
     (patV wild_pat           = {}) /\
-    (patV (var_pat v)        = {v})`
- };
+    (patV (var_pat v)        = {v})`;
 
 val _ = export_theory();
 
