@@ -95,9 +95,9 @@ fun html (name,sectionl) ostrm =
             out "\" TYPE = \"text/css\">";
             out "</HEAD>\n";
             out "<BODY>\n\n";
-            out "<PRE><DIV class = \"TYPE\">";
+            out "<DIV class = \"TYPE\"><PRE>";
             outss ss;
-            out "</DIV></PRE>\n\n")
+            out "</PRE></DIV>\n\n")
        | front_matter _ _ = raise Fail "front_matter: expected TYPE"
 
      fun back_matter (www,release) =
