@@ -8,30 +8,26 @@
  ---------------------------------------------------------------------------*)
 
 (* Interactive use:
-   app load ["bossLib", "Q", "ind_defLib",
+   app load ["bossLib", "Q", "IndDefLib",
              "pred_setTheory", "stringTheory", "dBTheory"];
-   open Rsyntax;
 *)
 
 structure ncScript =
 struct
 
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib
+     IndDefLib bossLib arithmeticTheory pred_setTheory dBTheory;
+
 infixr 3 -->;
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
+infix && ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
+infix 8 by;
 
-open bossLib pred_setTheory dBTheory;
-infix &&; infix 8 by;
-
-val _ = new_theory"nc";
+val _ = new_theory "nc";
 
 
 (*---------------------------------------------------------------------------
             Support bumpf.
  ---------------------------------------------------------------------------*)
-
-val ADD1    = arithmeticTheory.ADD1;
-val dOK_DEF = CONJUNCT1 dOK_DEF;
 
 val FUN_EQ_TAC = CONV_TAC (ONCE_DEPTH_CONV FUN_EQ_CONV)
                    THEN GEN_TAC THEN BETA_TAC;
@@ -41,29 +37,20 @@ val FUN_EQ_TAC = CONV_TAC (ONCE_DEPTH_CONV FUN_EQ_CONV)
             Definition of the type of name carrying terms.
  ---------------------------------------------------------------------------*)
 
-local val existence_lemma = Q.prove(`?x:'a dB. dOK x`, PROVE_TAC [dOK_rules])
-in
-val nc_DEF =
-  new_type_definition
-     {name = "nc",
-      pred = Term`dOK:'a dB->bool`,
-      inhab_thm = existence_lemma}
-end;
-
 val BI_nc =
   define_new_type_bijections
       {name = "BI_nc",
        ABS  = "ABS_nc",
        REP  = "REP_nc",
-       tyax = nc_DEF};
+       tyax = new_type_definition ("nc", 
+                 Q.prove(`?x:'a dB. dOK x`, PROVE_TAC [dOK_DEF]))};
 
 val REP_nc_11 = prove_rep_fn_one_one BI_nc;
 val ABS_nc_11 = prove_abs_fn_one_one BI_nc;
 
 val (ABS_REP, OK_REP_ABS) =
   let val (b1,b2) = CONJ_PAIR BI_nc
-  in
-    (b1, GEN_ALL (fst (EQ_IMP_RULE (SPEC_ALL b2))))
+  in (b1, GEN_ALL (fst (EQ_IMP_RULE (SPEC_ALL b2))))
   end;
 
 val OK_REP = Q.prove(`!u. dOK (REP_nc u)`, PROVE_TAC [BI_nc]);
@@ -80,7 +67,7 @@ val LAM =  Define  `LAM x m = ABS_nc (dLAMBDA x (REP_nc m))`;
 val APP =  xDefine
             "APP"  `$@@ m n = ABS_nc (dAPP (REP_nc m) (REP_nc n))`
 
-val _ = set_fixity "@@" (Infixl 901);
+val _ = set_fixity ("@@", Infixl 901);
 
 
 (* --------------------------------------------------------------------- *)
@@ -342,9 +329,6 @@ PROVE_TAC [ithm]);
 (* The following lemma lets us do this.                                  *)
 (* --------------------------------------------------------------------- *)
 
-val EXT_THM = Q.prove(`!f g. (!x. f x = g x) = (f = g)`,
-PROVE_TAC [EQ_EXT]);
-
 val COMPONENT_THM = Q.prove(
 `!P. (?!f:'A->('B#'C). P f) = ?!p. P(\a.(FST p a, SND p a))`,
 GEN_TAC THEN CONV_TAC (DEPTH_CONV EXISTS_UNIQUE_CONV)
@@ -358,7 +342,7 @@ GEN_TAC THEN CONV_TAC (DEPTH_CONV EXISTS_UNIQUE_CONV)
    PROVE_TAC[],
    Q.PAT_ASSUM `$! M`
       (MP_TAC o Q.SPECL [`(FST o f, SND o f)`, `(FST o f', SND o f')`])
-     THEN ZAP_TAC (std_ss && [combinTheory.o_THM, GSYM EXT_THM])
+     THEN ZAP_TAC (std_ss && [combinTheory.o_THM, FUN_EQ_THM])
             [pairTheory.PAIR_EQ,pairTheory.PAIR]]);
 
 
@@ -370,7 +354,7 @@ FUN_EQ_TAC THEN RW_TAC std_ss [combinTheory.o_THM]);
 
 val COPY_BUILD_lemma =
  let val instth = INST_TYPE [beta |-> Type`:'a nc # 'b`] nc_ITERATOR
-     val con = Term`\k:'a . (CON k, (con k:'b) )`
+     val con = Term`\k:'a. (CON k, (con k:'b) )`
      and var = Term`\s:string. (VAR s:'a nc, (var s:'b) )`
      and app = Term`\p:'a nc # 'b.
                \q:'a nc # 'b.
@@ -380,7 +364,7 @@ val COPY_BUILD_lemma =
     val th1 = SPECL [con,var,app,lam] instth
     val th2 = BETA_RULE (ISPEC (rand(concl th1)) COMPONENT_THM)
     val th3 = EQ_MP th2 (BETA_RULE th1)
-    val th4 = CONV_RULE (DEPTH_CONV Let_conv.let_CONV) th3
+    val th4 = CONV_RULE (DEPTH_CONV pairLib.let_CONV) th3
     val th5 = REWRITE_RULE [pairTheory.PAIR_EQ,wee_lemma] (BETA_RULE th4)
   in
     CONV_RULE (DEPTH_CONV FORALL_AND_CONV) th5
@@ -400,8 +384,8 @@ val COPY_BUILD = Q.prove(
               lam(\y. (FST p([VAR y/x]u),SND p([VAR y/x]u)))))`,
 RW_TAC std_ss [DECIDE `(a /\ b /\ c /\ d) /\ (e /\ f /\ g /\ h)
                           =
-                         (a /\ e) /\ (b /\ f) /\ (c /\ g) /\ (d /\ h)`,
-    REWRITE_RULE pairTheory.pair_rws COPY_BUILD_lemma]);
+                       (a /\ e) /\ (b /\ f) /\ (c /\ g) /\ (d /\ h)`,
+               REWRITE_RULE pairTheory.pair_rws COPY_BUILD_lemma]);
 
 val lemma =
   let
@@ -426,7 +410,7 @@ val COPY_ID = Q.prove(
     (!t u. hom(t @@ u) = (hom t) @@ (hom u)) /\
     (!x u. hom(LAM x u) = ABS(\y. hom([VAR y/x]u)))
          =
-    (hom = (\x. x))`,
+    (hom = \x.x)`,
 GEN_TAC THEN EQ_TAC THEN STRIP_TAC
   THENL [MATCH_MP_TAC lemma, ALL_TAC]
   THEN RW_TAC std_ss [ABS]);
@@ -434,19 +418,16 @@ GEN_TAC THEN EQ_TAC THEN STRIP_TAC
 val messy_lemma = Q.prove(
 `!p:('a nc -> 'a nc) # ('a nc -> 'b).
     ((FST p = \x. x) /\
-     (!k. SND p(CON k) = con k) /\
-     (!x. SND p(VAR x) = var x) /\
-     (!t u. SND p(t @@ u) = app(FST p t,SND p t) (FST p u,SND p u)) /\
-     (!x u. SND p(LAM x u) =
-              lam(\y . (FST p([VAR y/x]u), SND p( [VAR y/x]u)))))
+     (!k. SND p (CON k) = con k) /\
+     (!x. SND p (VAR x) = var x) /\
+     (!t u. SND p (t @@ u) = app(FST p t,SND p t) (FST p u,SND p u)) /\
+     (!x u. SND p (LAM x u) = lam(\y. (FST p([VAR y/x]u), SND p([VAR y/x]u)))))
       =
      ((FST p = (\x . x)) /\
-       (!k. SND p(CON k) = con k) /\
-       (!x. SND p(VAR x) = var x) /\
-       (!t u. SND p(t @@ u) = app(t,SND p t)(u,SND p u)) /\
-       (!x u.
-         SND p(LAM x u) =
-          lam(\y. ([VAR y/x]u, SND p([VAR y/x]u)))))`,
+      (!k. SND p(CON k) = con k) /\
+      (!x. SND p(VAR x) = var x) /\
+      (!t u. SND p(t @@ u) = app(t,SND p t)(u,SND p u)) /\
+      (!x u. SND p(LAM x u) = lam(\y. ([VAR y/x]u, SND p([VAR y/x]u)))))`,
 GEN_TAC THEN EQ_TAC THEN RW_TAC std_ss []);
 
 val pair_lemma = Q.prove(
@@ -460,7 +441,7 @@ CONV_TAC (ONCE_DEPTH_CONV EXISTS_UNIQUE_CONV)
 
 val COPY_THEOREM =
  let val th1 = REWRITE_RULE [COPY_ID,messy_lemma] COPY_BUILD
-     val {conj1, conj2} = dest_conj(body(rand (concl th1)))
+     val (conj1, conj2) = dest_conj(body(rand (concl th1)))
      val p = Term `p : ('a nc -> 'a nc) # ('a nc -> 'b)`
      val v1 = genvar (Type`:'a nc -> 'a nc`)
      and v2 = genvar (Type`:'a nc -> 'b`)
@@ -479,7 +460,7 @@ val COPY_THEOREM =
   end;
 
 val nc_RECURSION = Q.store_thm ("nc_RECURSION",
-  `!con:'a  -> 'b.
+  `!con:'a -> 'b.
    !var:string -> 'b.
    !app:'b -> 'b -> 'a nc -> 'a nc -> 'b.
    !lam:(string -> 'b) -> (string -> 'a nc) -> 'b.
@@ -492,14 +473,13 @@ val nc_RECURSION = Q.store_thm ("nc_RECURSION",
      REWRITE_TAC [COPY_THEOREM]);
 
 val nc_RECURSION_WEAK = Q.store_thm(
-  "nc_RECURSION_WEAK",
+ "nc_RECURSION_WEAK",
   `!con var app lam.
-      ?hom : 'a nc -> 'b.
-        (!k. hom (CON k) = con k) /\
-        (!x. hom (VAR x) = var x) /\
-        (!t u. hom (t @@ u) = app t u (hom t) (hom u)) /\
-        (!x u. hom (LAM x u) =
-                 lam (\y. [VAR y / x] u) (\y. hom ([VAR y / x]u)))`,
+     ?hom : 'a nc -> 'b.
+       (!k. hom (CON k) = con k) /\
+       (!x. hom (VAR x) = var x) /\
+       (!t u. hom (t @@ u) = app t u (hom t) (hom u)) /\
+       (!x u. hom (LAM x u) = lam (\y. [VAR y /x] u) (\y. hom([VAR y /x] u)))`,
   REPEAT GEN_TAC THEN
   STRIP_ASSUME_TAC ((CONJUNCT1 o CONV_RULE EXISTS_UNIQUE_CONV o
                      Q.SPECL [`con`, `var`, `\ht hu t u. app t u ht hu`,
@@ -628,15 +608,14 @@ val _ = save_thm("nc_INDUCTION", nc_INDUCTION);
 (* --------------------------------------------------------------------- *)
 
 fun nc_INDUCT_TAC (A,g) =
- let val {Rand = P,...} = dest_comb g
+ let val (_,P) = dest_comb g
       val ith = ISPEC P nc_INDUCTION
       fun bconv tm
-        = if not((rator tm) = P) then
-          raise HOL_ERR{origin_structure = "defs.sml",
+        = if not(rator tm = P) then
+          raise HOL_ERR{origin_structure = "ncScript.sml",
                         origin_function = "nc_INDUCT_TAC",
                         message = "function bconv failed"}
-        else
-          BETA_CONV tm
+        else BETA_CONV tm
       val bth = CONV_RULE (ONCE_DEPTH_CONV bconv) ith
   in
     (MATCH_MP_TAC bth
@@ -654,16 +633,17 @@ fun nc_INDUCT_TAC (A,g) =
 (*     A |- P(u)    A, ~(x=y) |- P(VAR y)                                *)
 (* --------------------------------------------------------------------- *)
 
-local fun chk st = assert (fn s => s=st)
+local fun fullname {Name,Thy,Ty} = (Name,Thy)
+      fun chk p  = assert (equal p)
       val ERR = HOL_ERR{origin_structure = "ncScript.sml",
                   origin_function = "dest_sub", message = ""}
 in
 fun dest_sub tm =
  case strip_comb tm
   of (sub,[new,old,VARapp]) =>
-        let val _ = (chk "SUB" o #Name o dest_const) sub
-            val {Rator,Rand} = dest_comb VARapp
-            val _ = (chk "VAR" o #Name o dest_const) Rator
+      let val _ = assert(equal("SUB","nc") o fullname o dest_thy_const) sub
+          val (Rator,Rand) = dest_comb VARapp
+          val _ = assert(equal("VAR","nc") o fullname o dest_thy_const) Rator
         in (Rand,new,old)
         end
    |   _ => raise ERR
@@ -677,12 +657,9 @@ fun VAR_SUB_TAC (A,g) =
            PURE_ONCE_REWRITE_TAC [el 2 (CONJUNCTS SUB_THM)])
       (fn neq => STRIP_ASSUME_TAC neq THEN
            PURE_ONCE_REWRITE_TAC [MATCH_MP (el 3 (CONJUNCTS SUB_THM)) neq])
-    (SPEC (mk_eq{lhs=old, rhs=v}) EXCLUDED_MIDDLE)
+    (SPEC (mk_eq(old, v)) EXCLUDED_MIDDLE)
     (A,g)
-    handle HOL_ERR{origin_structure, origin_function, message}
-    => raise HOL_ERR{origin_structure = origin_structure,
-               origin_function = "VAR_SUB_TAC: " ^ origin_function,
-               message = message}
+    handle e => raise (wrap_exn "ncScript" "VAR_SUB_TAC" e)
  end;
 
 (* ===================================================================== *)
@@ -787,11 +764,11 @@ GEN_TAC THEN STRIP_TAC THEN nc_INDUCT_TAC THEN RW_TAC std_ss []
 (* --------------------------------------------------------------------- *)
 
 fun nc_INDUCT_TAC2 (A,g) =
-  let val {Rand = P, ...} = dest_comb g
+  let val (_,P) = dest_comb g
       val ith = ISPEC P nc_INDUCTION2
       fun bconv tm
-        = if not((rator tm) = P) then
-            raise HOL_ERR{origin_structure = "defs.sml",
+        = if not(rator tm = P) then
+            raise HOL_ERR{origin_structure = "ncScript.sml",
                           origin_function = "nc_INDUCT_TAC2",
                           message = "function bconv failed"}
           else BETA_CONV tm
@@ -927,7 +904,7 @@ val ISUB_DEF =
      `($ISUB t [] = t)
   /\  ($ISUB t ((s,x)::rst) = $ISUB ([s/x]t) rst)`;
 
-val _ = set_fixity "ISUB" (Infixr 501);
+val _ = set_fixity ("ISUB", Infixr 501);
 
 val DOM_DEF =
  Define
@@ -959,26 +936,14 @@ Induct THENL [ALL_TAC, Cases]
 (*       RENAMING (CONS (x,VAR y) R)     if RENAMING R                   *)
 (* --------------------------------------------------------------------- *)
 
-val {rules=RENAMING_rules, induction=RENAMING_ind} =
-  let
-     val RENAMING = Term`RENAMING:('a nc # string) list -> bool`
-  in
-    ind_defLib.indDefine "RENAMING_DEF"
-     [(([], []),              `^RENAMING []`),
-      (([],[`^RENAMING R`]), `^RENAMING ((VAR y,x)::R)`)
-     ]
-     Prefix (`^RENAMING R`, [])
-  end;
+val (RENAMING_DEF,RENAMING_IND,RENAMING_CASES) =
+gen_new_inductive_definition bool_monoset
+(Term`RENAMING ([]:('a nc # string) list) /\
+     (!R x y. RENAMING R ==> RENAMING ((VAR y,x)::R))`);
 
-val RENAMING_DEF    = LIST_CONJ RENAMING_rules;
-
-val _ = save_thm("RENAMING",RENAMING_DEF);
-val _ = save_thm("RENAMING_ind",RENAMING_ind);
-
-val RENAMING_TAC   = MAP_FIRST ind_defLib.RULE_TAC RENAMING_rules;
-val RENAMING_cases = ind_defLib.derive_cases_thm (RENAMING_rules,RENAMING_ind);
-fun RENAMING_INDUCT_THEN ttac
-   = ind_defLib.RULE_INDUCT_THEN RENAMING_ind ttac ttac;
+val _ = save_thm("RENAMING_DEF",RENAMING_DEF);
+val _ = save_thm("RENAMING_IND",RENAMING_IND);
+val _ = save_thm("RENAMING_CASES",RENAMING_CASES);
 
 val RENAME_DEF =
  Define
@@ -990,10 +955,9 @@ val RENAMING_LEMMA = Q.store_thm("RENAMING_LEMMA",
 `!ss. RENAMING ss
        ==>
       !tt. RENAMING tt ==> RENAMING (APPEND ss tt)`,
-RENAMING_INDUCT_THEN STRIP_ASSUME_TAC
+HO_MATCH_MP_TAC RENAMING_IND
    THEN RW_TAC list_ss []
-   THEN RENAMING_TAC
-   THEN PROVE_TAC []);
+   THEN PROVE_TAC [RENAMING_CASES]);
 
 
 (* --------------------------------------------------------------------- *)
@@ -1012,17 +976,18 @@ val ISUB_VAR_RENAME = Q.store_thm("ISUB_VAR_RENAME",
 `!ss. RENAMING ss
         ==>
       !x. (VAR x) ISUB ss = VAR (RENAME ss x)`,
-RENAMING_INDUCT_THEN (ASSUME_TAC o GSYM)
-  THEN RW_TAC std_ss [ISUB_DEF, RENAME_DEF, VNAME_DEF,SUB_VAR]);
+HO_MATCH_MP_TAC RENAMING_IND
+  THEN RW_TAC std_ss [ISUB_DEF, RENAME_DEF, VNAME_DEF, SUB_VAR]
+  THEN RW_TAC std_ss []);
 
 val ISUB_CON = Q.store_thm("ISUB_CON",
 `!^R k. (CON k) ISUB ^R = CON k`,
-Induct THEN Ho_rewrite.REWRITE_TAC[pairTheory.FORALL_PROD]
+Induct THEN Ho_Rewrite.REWRITE_TAC[pairTheory.FORALL_PROD]
  THEN RW_TAC std_ss [ISUB_DEF, SUB_THM]);
 
 val ISUB_APP = Q.store_thm("ISUB_APP",
 `!^R t u. (t @@ u) ISUB ^R = (t ISUB ^R) @@ (u ISUB ^R)`,
-Induct THEN Ho_rewrite.REWRITE_TAC[pairTheory.FORALL_PROD]
+Induct THEN Ho_Rewrite.REWRITE_TAC[pairTheory.FORALL_PROD]
   THEN RW_TAC std_ss [ISUB_DEF, SUB_THM]);
 
 val ISUB_LAM = Q.store_thm("ISUB_LAM",
@@ -1030,7 +995,7 @@ val ISUB_LAM = Q.store_thm("ISUB_LAM",
            ==>
         !t. (LAM x t) ISUB ^R = LAM x (t ISUB ^R)`,
 Induct THENL
- [ALL_TAC, Ho_rewrite.REWRITE_TAC[pairTheory.FORALL_PROD]
+ [ALL_TAC, Ho_Rewrite.REWRITE_TAC[pairTheory.FORALL_PROD]
            THEN Cases_on `x` THEN POP_ASSUM MP_TAC]
  THEN RW_TAC list_ss
  [ISUB_DEF,DOM_DEF,FVS_DEF,FV_THM,IN_UNION,IN_SING,DE_MORGAN_THM,SUB_THM]);
@@ -1061,7 +1026,7 @@ end;
 
 val lemma1 = Q.prove(
 `!ss u t x. [t/x](u ISUB ss) = u ISUB (APPEND ss [(t,x)])`,
-Induct THEN Ho_rewrite.REWRITE_TAC[pairTheory.FORALL_PROD]
+Induct THEN Ho_Rewrite.REWRITE_TAC[pairTheory.FORALL_PROD]
    THEN RW_TAC list_ss [ISUB_DEF]);
 
 val lemma2 = Q.prove(
@@ -1069,7 +1034,7 @@ val lemma2 = Q.prove(
 RW_TAC std_ss [ISUB_DEF]);
 
 
-local val {Bvar= hom, Body=def} = dest_exists(concl existence)
+local val (hom,def) = dest_exists(concl existence)
 in
 val lemma3 = Q.prove(
 `^def ==> !u ss. RENAMING ss ==> (^hom (u ISUB ss) = ^hom u)`,
@@ -1094,25 +1059,22 @@ STRIP_TAC THEN nc_INDUCT_TAC2 THENL
        THEN ASM_REWRITE_TAC [MATCH_MP ISUB_LAM (CONJUNCT1 th5)]
     end
     THEN REWRITE_TAC [lemma1,lemma2,GSYM (CONJUNCT2 ISUB_DEF)]
-    THEN CONV_TAC (DEPTH_CONV Let_conv.let_CONV)
+    THEN CONV_TAC (DEPTH_CONV pairLib.let_CONV)
     THEN REWRITE_TAC [GSYM ADD1] THEN AP_TERM_TAC
     THEN REWRITE_TAC [lemma1,lemma2,GSYM (CONJUNCT2 ISUB_DEF)]
     THEN (fn (A,g) =>
-            let val {lhs,rhs} = dest_eq g
-                val eq1 = mk_eq{lhs=lhs, rhs=Term`^hom u`}
-                and eq2 = mk_eq{lhs=rhs, rhs=Term`^hom u`}
+            let val (lhs,rhs) = dest_eq g
+                val eq1 = mk_eq(lhs, Term`^hom u`)
+                and eq2 = mk_eq(rhs, Term`^hom u`)
             in
-              SUBGOAL_THEN (mk_conj{conj1=eq1, conj2=eq2})
+              SUBGOAL_THEN (mk_conj(eq1, eq2))
                   (fn th => REWRITE_TAC [th]) (A,g)
             end)
-     THEN CONJ_TAC THEN FIRST_ASSUM MATCH_MP_TAC
-     THEN REPEAT RENAMING_TAC
-     THEN IMP_RES_THEN MATCH_MP_TAC RENAMING_LEMMA
-     THEN RENAMING_TAC THEN RENAMING_TAC])
+     THEN PROVE_TAC [RENAMING_CASES,RENAMING_LEMMA]])
   end;
 
-val lemma4 = Q.prove(`!x y. RENAMING [VAR x,y]`, REPEAT RENAMING_TAC);
-val lemma5 = Q.prove(`[x/y]u = u ISUB [(x,y)]`, REWRITE_TAC [ISUB_DEF]);
+val lemma4 = Q.prove(`!x y. RENAMING [VAR x,y]`, PROVE_TAC[RENAMING_CASES]);
+val lemma5 = Q.prove(`[x/y]u = u ISUB [(x,y)]`,  REWRITE_TAC [ISUB_DEF]);
 
 val ncLENGTH_EXISTS = Q.store_thm("ncLENGTH_EXISTS",
 `?hom:'a nc->num.
@@ -1120,9 +1082,10 @@ val ncLENGTH_EXISTS = Q.store_thm("ncLENGTH_EXISTS",
      (!x. hom(VAR x) = 1) /\
      (!t u. hom(t @@ u) = (hom t) + (hom u)) /\
      (!x u. hom(LAM x u) = SUC (hom u))`,
-STRIP_ASSUME_TAC existence THEN IMP_RES_TAC lemma3
-    THEN Q.EXISTS_TAC `hom`
-    THEN RW_TAC std_ss [GSYM ADD1,lemma4,lemma5]);
+STRIP_ASSUME_TAC existence 
+  THEN IMP_RES_TAC lemma3
+  THEN Q.EXISTS_TAC `hom`
+  THEN RW_TAC std_ss [GSYM ADD1,lemma4,lemma5]);
 
 
 val _ = export_theory();

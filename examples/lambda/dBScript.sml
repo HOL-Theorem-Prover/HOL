@@ -8,18 +8,18 @@
  ---------------------------------------------------------------------------*)
 
 (* Interactive use:
-   app load ["bossLib", "Q", "pred_setTheory", "stringTheory", "ind_defLib"];
+   app load ["bossLib", "Q", "pred_setTheory", "stringTheory", "IndDefLib"];
 *)
 
 structure dBScript =
 struct
 
-open HolKernel Parse basicHol90Lib;
-infixr 3 -->;
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
+open HolKernel Parse boolLib 
+     bossLib pred_setTheory arithmeticTheory IndDefLib;
 
-open bossLib pred_setTheory;
-infix &&; infix 8 by;
+infixr 3 -->;
+infix && ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
+infix 8 by;
 
 
 val _ = new_theory"dB";
@@ -31,9 +31,6 @@ val _ = new_theory"dB";
 
 val FUN_EQ_TAC = CONV_TAC (ONCE_DEPTH_CONV FUN_EQ_CONV)
                    THEN GEN_TAC THEN BETA_TAC;
-
-val ADD1 = arithmeticTheory.ADD1;
-
 
 val MAX_DEF =
  Define
@@ -130,7 +127,7 @@ val dFV =
 val FINITE_dFV = Q.store_thm("FINITE_dFV",
 `!t. FINITE (dFV t)`,
 Induct
-    THEN RW_TAC std_ss [dFV, FINITE_UNION, FINITE_EMPTY, FINITE_SING]);
+  THEN RW_TAC std_ss [dFV, FINITE_UNION, FINITE_EMPTY, FINITE_SING]);
 
 val FRESH_VAR = Q.store_thm("FRESH_VAR", `!t. ?x. ~(x IN dFV t)`,
 PROVE_TAC
@@ -227,25 +224,19 @@ RW_TAC std_ss [dFV, dLAMBDA, dFV_dLAMBDA_lemma]);
 (* Inductive definition of proper terms.                                 *)
 (* --------------------------------------------------------------------- *)
 
-val {rules=dOK_rules, induction=dOK_ind} =
-  let
-    val dOK = Term`dOK:'a dB->bool`
-  in
-    ind_defLib.indDefine "dOK_DEF"
-       [(([], []),                  `^dOK (dVAR x)`),
-        (([], []),                  `^dOK (dCON x)`),
-        (([],[`^dOK t`]),           `^dOK (dLAMBDA x t)`),
-        (([],[`^dOK t`, `^dOK u`]), `^dOK (dAPP t u)`)]
-     Prefix (`^dOK E`, [])
-  end;
+val (dOK_DEF, dOK_ind, dOK_cases) = 
+gen_new_inductive_definition bool_monoset
+(Term`(!x. dOK (dVAR x)) /\
+      (!x. dOK (dCON x)) /\
+      (!x t. dOK t ==> dOK (dLAMBDA x t)) /\
+      (!t u. dOK t /\ dOK u ==> dOK (dAPP t u))`);
 
-val _ = save_thm("dOK_rules", LIST_CONJ dOK_rules);
-val _ = save_thm("dOK_ind", dOK_ind);
+val _ = save_thm("dOK_DEF", dOK_DEF);
+val _ = save_thm("dOK_ind",   dOK_ind);
 
-val dOK_DEF   = LIST_CONJ dOK_rules;
-val dOK_TAC   = MAP_FIRST ind_defLib.RULE_TAC dOK_rules;
-val dOK_cases = ind_defLib.derive_cases_thm (dOK_rules,dOK_ind);
-fun dOK_INDUCT_THEN ttac = ind_defLib.RULE_INDUCT_THEN dOK_ind ttac ttac;
+(*
+val dOK_TAC = MAP_FIRST ind_defLib.RULE_TAC dOK_rules;
+*)
 
 (* --------------------------------------------------------------------- *)
 (* Proof of |- !t. dOK t = (dDEG t = 0)                                  *)
@@ -253,8 +244,8 @@ fun dOK_INDUCT_THEN ttac = ind_defLib.RULE_INDUCT_THEN dOK_ind ttac ttac;
 
 val Forwards = Q.store_thm("Forwards",
   `!t. dOK t ==> (dDEG t = 0)`,
-dOK_INDUCT_THEN ASSUME_TAC
-   THEN RW_TAC arith_ss [dDEG, MAX_00, dLAMBDA,DECIDE`1=SUC 0`,dDEG_Abst]);
+HO_MATCH_MP_TAC dOK_ind
+   THEN RW_TAC arith_ss [dDEG, MAX_00, dLAMBDA,ONE,dDEG_Abst]);
 
 
 val dWT =
@@ -279,8 +270,7 @@ val dDEG_dABS_dLAMBDA = Q.store_thm("dDEG_dABS_dLAMBDA",
 RW_TAC arith_ss [dLAMBDA]
   THEN Q.X_CHOOSE_TAC `x` (Q.SPEC `t:'a dB` FRESH_VAR)
   THEN Q.ID_EX_TAC THEN Q.EXISTS_TAC `Inst 0 t (dVAR x)`
-  THEN RW_TAC arith_ss [dWT,dWT_Inst,dDEG_Inst,dDEG_Abst_Inst,
-                        GSYM arithmeticTheory.LESS_EQ_0]);
+  THEN RW_TAC arith_ss [dWT,dWT_Inst,dDEG_Inst,dDEG_Abst_Inst, GSYM LESS_EQ_0]);
 
 val Backwards = Q.store_thm("Backwards",
 `!n t. (dDEG t = 0) /\ (dWT t = n) ==> dOK t`,
@@ -316,12 +306,12 @@ val dOK_dSUB_lemma = Q.store_thm("dOK_dSUB_lemma",
    dDEG t <= i /\ dDEG u <= j ==> dDEG (Inst i (Abst i x t) u) <= i+j`,
 Induct
    THEN ZAP_TAC (arith_ss && [Inst, Abst, dDEG, MAX_LESS_EQ, GSYM ADD1])
-                [arithmeticTheory.ADD_CLAUSES]);
+                [ADD_CLAUSES]);
 
 val dOK_dSUB = Q.store_thm("dOK_dSUB",
  `!t u x. dOK t /\ dOK u ==> dOK ([x |-> u] t)`,
 ZAP_TAC (arith_ss && [dDEG_dOK, dSUB])
-     [DECIDE`(x=0) = x <= 0`, dOK_dSUB_lemma, arithmeticTheory.ADD_CLAUSES]);
+     [DECIDE`(x=0) = x <= 0`, dOK_dSUB_lemma, ADD_CLAUSES]);
 
 
 (* --------------------------------------------------------------------- *)
@@ -359,7 +349,7 @@ val dLAMBDA_dSUB = Q.store_thm("dLAMBDA_dSUB",
        ==>
     ([x |-> u] (dLAMBDA y t) = dLAMBDA y ([x |-> u] t))`,
 ZAP_TAC (arith_ss && [dLAMBDA, dSUB, Abst, Inst,dDEG_dOK])
-     [dLAMBDA_dSUB_lemma,  arithmeticTheory.LESS_EQ_0]);
+     [dLAMBDA_dSUB_lemma,  LESS_EQ_0]);
 
 val dLAMBDA_dSUB_EQ_lemma = Q.store_thm("dLAMBDA_dSUB_EQ_lemma",
 `!t u x i.
@@ -392,7 +382,7 @@ val dALPHA = Q.store_thm("dALPHA",
        ==>
     (dLAMBDA x t = dLAMBDA y ([x |-> dVAR y] t))`,
 ZAP_TAC (arith_ss && [dDEG_dOK, dLAMBDA, dSUB])
-  [Rename,arithmeticTheory.LESS_EQ_REFL]);
+  [Rename,LESS_EQ_REFL]);
 
 val dALPHA_STRONG = Q.store_thm("dALPHA_STRONG",
  `!t x y.
@@ -485,7 +475,7 @@ val hom  = Term`HOM  (con:'a ->'b) var abs app`;
 val chom = Term`CHOM (con:'a ->'b) var abs app`;
 
 (*---------------------------------------------------------------------------
-    parallel substitution
+    Parallel substitution
  ---------------------------------------------------------------------------*)
 
 val PSUB =
@@ -699,16 +689,13 @@ RW_TAC std_ss
   (SUBSET_DEF::GSPEC_DEF::SPECIFICATION::dFV_dLAMBDA
     ::map (REWRITE_RULE [SPECIFICATION]) [IN_DELETE, lemma3]));
 
-val lemma5 =
- Q.prove(
-   `!x s t. s SUBSET t /\ ~(x IN t) ==> ~(x IN s)`, PROVE_TAC [SUBSET_DEF]);
+val lemma5 = Q.prove(
+ `!x s t. s SUBSET t /\ ~(x IN t) ==> ~(x IN s)`, 
+ PROVE_TAC [SUBSET_DEF]);
 
 
 val WRAP_DB_EXISTS = Q.store_thm("WRAP_DB_EXISTS",
- `?wrap.
-    !u. dOK u
-         ==>
-        !x. wrap(\s:string. [x |-> dVAR s] u) = dLAMBDA x u`,
+ `?wrap. !u. dOK u ==> !x. wrap(\s:string. [x |-> dVAR s] u) = dLAMBDA x u`,
 Q.EXISTS_TAC
    `\f:string->'a dB.
          let vs = {z | !y. z IN dFV (f y)} in

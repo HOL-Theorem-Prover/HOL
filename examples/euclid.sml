@@ -25,7 +25,7 @@ val ARW_TAC = RW_TAC arith_ss;
 
 val divides = Define `divides a b = ?x. b = a * x`;
 
-set_fixity "divides" (Infixr 450);
+set_fixity ("divides", Infixr 450);
 
 
 (*---------------------------------------------------------------------------*)

@@ -29,7 +29,6 @@ val syn323_1 = bdd_oracle
 val syn029_1 = bdd_oracle 
 `~((~v2 \/ ~v1) /\ v0 /\ (~v0 \/ ~v1 \/ v2) /\ (~v2 \/ v1) /\ (v1 \/ v2))`;
 
-
 val syn052_1 = bdd_oracle 
 `~((~v1 \/ v0) /\ (~v0 \/ v1) /\ (v1 \/ v0) /\ (~v1 \/ v1) /\ (~v0 \/ ~v1))`;
 

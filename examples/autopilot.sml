@@ -198,16 +198,16 @@ val tran_defs =
 
 val nextstate_def = 
   Define
-     `(nextstate st press_att_cws = tran_att_cws st)     
-  /\  (nextstate st press_alt_eng = tran_alt_eng st)
-  /\  (nextstate st press_fpa_sel = tran_fpa_sel st)
-  /\  (nextstate st press_cas_eng = tran_cas_eng st)
-  /\  (nextstate st input_alt     = tran_input_alt st)
-  /\  (nextstate st input_fpa     = tran_input_fpa st)
-  /\  (nextstate st input_cas     = tran_input_cas st)
-  /\  (nextstate st alt_reached   = tran_alt_reached st)
-  /\  (nextstate st fpa_reached   = tran_fpa_reached st)
-  /\  (nextstate st alt_gets_near = tran_alt_gets_near st)`;
+     `(nextstate st press_att_cws  =  tran_att_cws st)     
+  /\  (nextstate st press_alt_eng  =  tran_alt_eng st)
+  /\  (nextstate st press_fpa_sel  =  tran_fpa_sel st)
+  /\  (nextstate st press_cas_eng  =  tran_cas_eng st)
+  /\  (nextstate st input_alt      =  tran_input_alt st)
+  /\  (nextstate st input_fpa      =  tran_input_fpa st)
+  /\  (nextstate st input_cas      =  tran_input_cas st)
+  /\  (nextstate st alt_reached    =  tran_alt_reached st)
+  /\  (nextstate st fpa_reached    =  tran_fpa_reached st)
+  /\  (nextstate st alt_gets_near  =  tran_alt_gets_near st)`;
 
 
 (*---------------------------------------------------------------------------*
@@ -306,7 +306,7 @@ val reachable_valid_state = prove
  (Term`!n st. reachable_in n st ==> valid_state st`,
   Induct THEN 
    ZAP_TAC (std_ss && [reachable_in_def])
-     [is_initial_valid_state,nextstate_valid_state]);
+           [is_initial_valid_state,nextstate_valid_state]);
 
 
 (*---------------------------------------------------------------------------*

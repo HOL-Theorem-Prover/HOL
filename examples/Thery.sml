@@ -94,7 +94,7 @@ e (Cases_on `k` THEN ARW_TAC []);
 
 (* Goal 2.1 *)
 
-e (`2<j` by DECIDE_TAC);
+e (`2 < j` by DECIDE_TAC);
 e (MAP_EVERY Q.EXISTS_TAC [`j-3`, `2`]);
 e DECIDE_TAC;
 
@@ -130,7 +130,27 @@ val eight_three_five = prove(Term `!i. ?j k. i+8 = 3*j + 5*k`,
  Induct THEN ARW_TAC[] 
  THENL [MAP_EVERY Q.EXISTS_TAC [`1`, `1`],
         Cases_on `k` THEN ARW_TAC [] 
-        THENL [`2<j` by DECIDE_TAC THEN 
+        THENL [`2 < j` by DECIDE_TAC THEN 
                MAP_EVERY Q.EXISTS_TAC [`j-3`, `2`],
                MAP_EVERY Q.EXISTS_TAC [`j+2`, `n`]]]
  THEN DECIDE_TAC);
+
+
+(*---------------------------------------------------------------------------
+     Michael Norrish's implementation of Cooper's algorithm for
+     deciding full Presburger arithmetic allows a one step proof!
+
+     Note that Norrish's implementation handles both natural numbers
+     and integers. The proof for integers is much faster.
+ ---------------------------------------------------------------------------*)
+
+load "intLib";
+
+
+(* Integer version *)
+val eight_three_five = 
+  Count.apply intLib.COOPER_PROVE (Term `!i:int. ?j k. i+8 = 3*j + 5*k`);
+
+(* Natural number version *)
+val eight_three_five = 
+  Count.apply intLib.COOPER_PROVE (Term `!i:num. ?j k. i+8 = 3*j + 5*k`);
