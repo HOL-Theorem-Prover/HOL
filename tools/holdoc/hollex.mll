@@ -32,7 +32,7 @@ let indent_width s =
 } 
 
 (* these patterns delimit the scanned "body" area *)
-let startpat = "Net_Hol_reln" white'* backtick
+let startpat = "Net_Hol_reln" (white | newline)* backtick
 let stoppat  = newline backtick
 
 (* the character classes of HOL *)
