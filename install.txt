@@ -5,7 +5,7 @@ Get the Hol98 sources by WWW from
 
      http://www.cl.cam.ac.uk/ftp/hvg/hol98/working.tar.gz
 
-and the Moscow ML compiler (version 1.43 or greater) from
+and the Moscow ML compiler (version 1.44 required) from
 
      http://www.dina.kvl.dk/~sestoft/mosml.html
 
@@ -15,7 +15,7 @@ Building the Hol98 system.
 
 A. First, install Moscow ML. This is usually straightforward. The
    directory where it lives will be called <mosml-dir> in the following.
-   [Notice that, if you intend to use ML embeddings of C libraries, 
+   [Notice that, if you intend to use ML embeddings of C libraries,
    like the Robdd library, you are so far restricted to running on Linux,
    Solaris, and OSF/1. Furthermore, you may have to set a few shell
    variables in order to use C libraries; this is explained in the
@@ -29,28 +29,28 @@ B. Unpack Hol98 with the commands
    in Unix, or the appropriate clicking activity in Windows NT. The
    resulting directory will be called <hol-dir> in the following.  When
    fully built, <hol-dir> takes approximately 35M of disk space, so be
-   sure you have enough before starting.  
+   sure you have enough before starting.
 
 
-C. Go into tools and edit the file "configure.sml". 
+C. Go into tools and edit the file "configure.sml".
 
     (1) You must supply values for the following parameters:
 
             val mosmldir =
-            val holdir   = 
+            val holdir   =
 
         Both values must be absolute (full) pathnames. For example, my
-        local setup has 
+        local setup has
 
             val mosmldir = "/home/kxs/mosml";
             val holdir   = "/home/kxs/hol98";
 
     (2) The following parameter tells the build procedure what operating
-        system is being used. 
+        system is being used.
 
             val OS = "unix";
 
-        Alternative choices for this are: "winNT". 
+        Alternative choices for this are: "winNT".
 
     (3) The following parameter gives the path to a C compiler, which is
         used to compile the quotation preprocessor.
@@ -81,13 +81,13 @@ D. Perform the following 2 shell commands:
    by starting <mosmldir>/bin/mosml and stepping through
    tools/configure.sml. Similarly, the execution of build.sml can also
    be stepped through in MoscowML. This can be somewhat time-consuming,
-   but will help pinpoint the problem. 
+   but will help pinpoint the problem.
 
 
 E. If bin/build completes, successfully, you are done. From <hol-dir>
-   you can access 
+   you can access
 
-      bin/hol           * The standard Hol98 interactive system; 
+      bin/hol           * The standard Hol98 interactive system;
       bin/hol.unquote   * The interactive system with quote preprocessing;
       bin/Holmake       * A batch compiler for HOL directories;
       doc/man.ps        * A user manual for the system;
@@ -102,7 +102,7 @@ Dealing with failure.
      the failed installation, including details of the hardware and OS (and
      also the version of MoscowML being used).
 
-   * If a build attempt fails for some reason, you should attempt to invoke 
+   * If a build attempt fails for some reason, you should attempt to invoke
 
         bin/build cleanAll
 
@@ -113,15 +113,15 @@ Other.
 ------
 
 (The following is untested under the new scheme, so the following might
- be erroneous!)  
+ be erroneous!)
 
 The `robdd' library must be built specially. (It contains a library of C
 functions.)  Once the system has been built, go into src/robdd and edit
 `GNUmakefile'. There are a couple of places in this file where
 differences between Solaris and Linux must be handled; these are clearly
-signposted. After that, invoke  
+signposted. After that, invoke
 
     make
 
 After this, you will have to manually copy the object code for the
-library to <holdir>/sigobj. 
+library to <holdir>/sigobj.
