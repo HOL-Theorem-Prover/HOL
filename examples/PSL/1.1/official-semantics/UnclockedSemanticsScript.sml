@@ -1,6 +1,6 @@
 
 (*****************************************************************************)
-(* Create "UnclockedSugarSemanticsTheory" containing unclocked  semantics    *)
+(* Create "UnclockedSemanticsTheory" containing unclocked  semantics         *)
 (* of PSL Version 1.1.                                                       *)
 (*****************************************************************************)
 
@@ -43,6 +43,7 @@ val _ = new_theory "UnclockedSemantics";
 ******************************************************************************)
 val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
 
+(* Moved to ModelScript.sml
 (******************************************************************************
 * A letter is either TOP, or BOTTOM 
 * or a set of atomic propositions repersenting a state
@@ -50,6 +51,7 @@ val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
 val letter_def =
  Hol_datatype
   `letter = TOP | BOTTOM | STATE of ('prop -> bool)`;
+*)
 
 (******************************************************************************
 * B_SEM l b means "l ||= b" where l is a letter

@@ -71,18 +71,6 @@ val resq_SS =
     [IN_DEF,LESS_def,LESSX_def,LENGTH_def]];
 
 (******************************************************************************
-* FUN_FILTER_COUNT P f m n = P is true for the mth time in f at position n
-******************************************************************************)
-
-val FUN_FILTER_COUNT_def =
- Define
-  `(FUN_FILTER_COUNT P f 0 n = P(f n) /\ !i :: LESS n. ~P(f i))
-   /\
-   (FUN_FILTER_COUNT P f (SUC m) n =
-     ?n' :: LESS n. 
-      FUN_FILTER_COUNT P f m n'  /\ P(f n) /\ !i :: LESS n. n' < i ==> ~P(f i))`;
-
-(******************************************************************************
 * CLOCK c s is true is clock c is true in state s
 ******************************************************************************)
 
@@ -647,12 +635,10 @@ val HOLDS_LAST_1_TAKE_FIRST =
        THEN `HOLDS_LAST P l` by PROVE_TAC[HOLDS_LAST_def]
        THEN RES_TAC]);
 
-val HOLDS_LAST_TAKE_FIRST =
+val TAKE_FIRST_APPEND =
  store_thm
-  ("HOLDS_LAST_TAKE_FIRST",
-   ``!P l. HOLDS_LAST P l 
-           ==>
-           (TAKE_FIRST P l <> BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l = l)``,
+  ("TAKE_FIRST_APPEND",
+   ``!P l. TAKE_FIRST P l <> BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l = l``,
    GEN_TAC
     THEN Induct
     THEN RW_TAC list_ss [HOLDS_LAST_def,TAKE_FIRST_def,BUTFIRSTN_ONE,BUTFIRSTN]
@@ -695,8 +681,7 @@ val HOLDS_LAST_TAKE_FIRSTN =
               (LENGTH (FILTER P l) - 1)
               (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l) =
              BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l` by PROVE_TAC[LENGTH_FILTER_BUTFIRSTN]
-       THEN RW_TAC list_ss [HOLDS_LAST_TAKE_FIRST]]);
-
+       THEN RW_TAC list_ss [TAKE_FIRST_APPEND]]);
 
 val LENGTH_TAKE_FIRSTN =
  store_thm
@@ -1784,7 +1769,7 @@ val S_PROJ =
       ==>
       !l. TOP_FREE l /\ BOTTOM_FREE l
           ==>
-          !c. (LENGTH l > 0 ==> CLOCK c (LAST l)) /\ US_SEM (LIST_PROJ l c) r = S_SEM l c r``,
+          !c. S_SEM l c r = (LENGTH l > 0 ==> CLOCK c (LAST l)) /\ US_SEM (LIST_PROJ l c) r``,
    INDUCT_THEN sere_induct ASSUME_TAC
     THENL
      [(* S_BOOL b *)
@@ -1808,6 +1793,72 @@ val S_PROJ =
       (* S_CLOCK (r,p_2) *)
       RW_TAC list_ss [S_CLOCK_FREE_def]]);
 
+val S_PROJ_COR =
+ store_thm
+  ("S_PROJ_COR",
+   ``!r l c. 
+      S_CLOCK_FREE r 
+      ==>
+      TOP_FREE l /\ BOTTOM_FREE l
+      ==>
+      (S_SEM l c r = 
+       (LENGTH l > 0 ==> CLOCK c (LAST l)) /\ US_SEM (LIST_PROJ l c) r)``,
+   PROVE_TAC[S_PROJ]);
+
+(*****************************************************************************)
+(* Start developing projection view for formulas                             *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Switch default to general (i.e. finite or infinite) paths                 *)
+(*****************************************************************************)
+open PathTheory;
+
+(******************************************************************************
+* FUN_FILTER_COUNT P f m n = P is true for the mth time in f at position n
+******************************************************************************)
+val FUN_FILTER_COUNT_def =
+ Define
+  `(FUN_FILTER_COUNT P f 0 n = P(f n) /\ !i :: LESS n. ~P(f i))
+   /\
+   (FUN_FILTER_COUNT P f (SUC m) n =
+     ?n' :: LESS n. 
+      FUN_FILTER_COUNT P f m n'  /\ P(f n) /\ !i :: LESS n. n' < i ==> ~P(f i))`;
+
+val PATH_FILTER_def =
+ Define
+  `(PATH_FILTER P (FINITE l) = FINITE(FILTER P l))
+   /\
+   (PATH_FILTER P (INFINITE f) =
+     if (!m:num. ?n. m <= n /\ P(f n))
+      then INFINITE(f o (\m. LEAST n. FUN_FILTER_COUNT P f m n))
+      else FINITE(FILTER P (GENLIST f (LEAST i. !j. i <= j ==> ~P(f j)))))`;
+
+val PROJ_def = Define `PROJ p c = PATH_FILTER (CLOCK c) p`;
+
+val FUN_FILTER_COUNT_UNIQUE =
+ store_thm
+  ("FUN_FILTER_COUNT_UNIQUE",
+   ``!P f m n1 n2.
+      FUN_FILTER_COUNT P f m n1 /\ FUN_FILTER_COUNT P f m n2 ==> (n1 = n2)``,
+   GEN_TAC THEN GEN_TAC
+    THEN Induct
+    THEN RW_TAC (list_ss++resq_SS) [FUN_FILTER_COUNT_def]
+    THENL
+     [Cases_on `n1 < n2`
+       THEN RES_TAC
+       THEN Cases_on `n2 < n1`
+       THEN RES_TAC
+       THEN DECIDE_TAC,
+      `n' = n''` by PROVE_TAC[]
+       THEN Cases_on `n1 < n2`
+       THEN RW_TAC std_ss []
+       THEN RES_TAC
+       THEN Cases_on `n2 < n1`
+       THEN RES_TAC
+       THEN DECIDE_TAC]);
+  
+(*
 val PROJ_def =
  Define
   `(PROJ (FINITE l) c = FINITE(LIST_PROJ l c))
@@ -1819,6 +1870,1657 @@ val PROJ_def =
             (FILTER 
              (CLOCK c) 
              (GENLIST f (LEAST i. !j. j > i ==> ~CLOCK c (f j)))))`;
+*)
+
+(******************************************************************************
+* F_CLOCK_FREE f means f contains no clocking statements
+******************************************************************************)
+val F_CLOCK_FREE_def =
+ Define
+  `(F_CLOCK_FREE (F_STRONG_BOOL b)   = T)
+   /\
+   (F_CLOCK_FREE (F_WEAK_BOOL b)     = T)
+   /\
+   (F_CLOCK_FREE (F_NOT f)           = F_CLOCK_FREE f)
+   /\
+   (F_CLOCK_FREE (F_AND(f1,f2))      = F_CLOCK_FREE f1 /\ F_CLOCK_FREE f2)
+   /\
+   (F_CLOCK_FREE (F_STRONG_SERE r)   = S_CLOCK_FREE r)
+   /\
+   (F_CLOCK_FREE (F_WEAK_SERE r)     = S_CLOCK_FREE r)
+   /\
+   (F_CLOCK_FREE (F_NEXT f)          = F_CLOCK_FREE f)
+   /\
+   (F_CLOCK_FREE (F_UNTIL(f1,f2))    = F_CLOCK_FREE f1 /\ F_CLOCK_FREE f2)
+   /\
+   (F_CLOCK_FREE (F_ABORT (f,b))     = F_CLOCK_FREE f)
+   /\
+   (F_CLOCK_FREE (F_SUFFIX_IMP(r,f)) = F_CLOCK_FREE f /\ S_CLOCK_FREE r)
+   /\
+   (F_CLOCK_FREE (F_CLOCK v)         = F)`;
+
+val PATH_TOP_FREE_def =
+ Define
+  `(PATH_TOP_FREE(FINITE l)   = TOP_FREE l)
+   /\
+   (PATH_TOP_FREE(INFINITE f) = !n. ~(f n = TOP))`;
+
+val PATH_BOTTOM_FREE_def =
+ Define
+  `(PATH_BOTTOM_FREE(FINITE l)   = BOTTOM_FREE l)
+   /\
+   (PATH_BOTTOM_FREE(INFINITE f) = !n. ~(f n = BOTTOM))`;
+
+val HD_RESTN_TL =
+ store_thm
+  ("HD_RESTN_TL",
+   ``!n l. HD (RESTN (TL l) n) = EL n (TL l)``,
+   Induct
+    THEN RW_TAC list_ss 
+          [FinitePathTheory.RESTN_def,FinitePathTheory.REST_def]);
+
+val ELEM_FINITE =
+ store_thm
+  ("ELEM_FINITE",
+   ``!n l. ELEM (FINITE l) n = EL n l``,
+   Induct
+    THEN RW_TAC list_ss 
+          [ELEM_def,HEAD_def,RESTN_def,
+           FinitePathTheory.RESTN_def,FinitePathTheory.REST_def,
+           REST_def,RESTN_FINITE,HD_RESTN_TL]);
+
+val ELEM_INFINITE =
+ store_thm
+  ("ELEM_INFINITE",
+   ``!n f. ELEM (INFINITE f) n = f n``,
+   Induct
+    THEN RW_TAC list_ss 
+          [ELEM_def,HEAD_def,RESTN_INFINITE]);
+
+val LENGTH_FILTER_NON_ZERO_EXISTS =
+ store_thm
+  ("LENGTH_FILTER_NON_ZERO_EXISTS",
+   ``!P l. LENGTH (FILTER P l) > 0 ==> ?n. n < LENGTH l /\ P (EL n l)``,
+   GEN_TAC
+    THEN Induct
+    THEN RW_TAC list_ss []
+    THENL
+     [Q.EXISTS_TAC `0`
+       THEN RW_TAC list_ss [],
+      RES_TAC
+       THEN Q.EXISTS_TAC `SUC n`
+       THEN RW_TAC list_ss []]);
+
+val NON_ZERO_EXISTS_LENGTH_FILTER =
+ store_thm
+  ("NON_ZERO_EXISTS_LENGTH_FILTER",
+   ``!P l n. n < LENGTH l /\ P (EL n l) ==> LENGTH (FILTER P l) > 0``,
+   GEN_TAC
+    THEN Induct
+    THEN RW_TAC list_ss []
+    THEN Cases_on `n`
+    THEN RW_TAC list_ss []
+    THEN FULL_SIMP_TAC list_ss []
+    THEN RES_TAC);
+
+
+(*
+val FUN_FILTER_COUNT =
+ store_thm
+  ("FUN_FILTER_COUNT",
+   ``!P f.
+      (!m. ?n. FUN_FILTER_COUNT P f m n)
+      ==> 
+      !m.
+       FUN_FILTER_COUNT P f m ((\m. @n. FUN_FILTER_COUNT P f m n)m)``,
+   RW_TAC std_ss []
+     THEN POP_ASSUM(STRIP_ASSUME_TAC o SPEC_ALL)
+     THEN IMP_RES_TAC SELECT_AX
+     THEN CONV_TAC(DEPTH_CONV ETA_CONV)
+     THEN RW_TAC std_ss []);
+*)
+
+val FUN_FILTER_COUNT =
+ store_thm
+  ("FUN_FILTER_COUNT",
+   ``!P f.
+      (!m. ?n. FUN_FILTER_COUNT P f m n)
+      ==> 
+      !m.
+       FUN_FILTER_COUNT P f m (@n. FUN_FILTER_COUNT P f m n)``,
+   RW_TAC std_ss []
+     THEN POP_ASSUM(STRIP_ASSUME_TAC o SPEC_ALL)
+     THEN IMP_RES_TAC SELECT_AX
+     THEN CONV_TAC(DEPTH_CONV ETA_CONV)
+     THEN RW_TAC std_ss []);
+
+val FUN_FILTER_COUNT_EXISTS =
+ store_thm
+  ("FUN_FILTER_COUNT_EXISTS",
+   ``!P f.
+      (!n:num. ?n'. n <= n' /\ P(f n'))
+      ==> 
+      !m. ?n. FUN_FILTER_COUNT P f m n``,
+   RW_TAC std_ss []
+    THEN Induct_on `m`
+    THEN RW_TAC (list_ss++resq_SS) [FUN_FILTER_COUNT_def]
+    THENL
+     [POP_ASSUM(STRIP_ASSUME_TAC o SPEC ``0``)
+       THEN FULL_SIMP_TAC arith_ss []
+       THEN IMP_RES_TAC
+             (SIMP_RULE std_ss []
+               (ISPEC ``(P :'a -> bool) o (f :num -> 'a)`` LEAST_EXISTS))
+       THEN Q.EXISTS_TAC `$LEAST (P o f)`
+       THEN RW_TAC arith_ss [],
+      ASSUM_LIST(fn thl => STRIP_ASSUME_TAC(Q.SPEC `SUC n` (el 2 thl)))
+       THEN IMP_RES_TAC
+             (SIMP_RULE std_ss []
+               (ISPEC ``\n':num. (P :'a -> bool)(f n') /\ SUC n <= n'`` LEAST_EXISTS))
+       THEN Q.EXISTS_TAC `LEAST n'. P (f n') /\ SUC n <= n'`
+       THEN Q.EXISTS_TAC `n`
+       THEN RW_TAC arith_ss []
+       THEN `SUC n <= i` by DECIDE_TAC
+       THEN Cases_on `P (f i)`
+       THEN RW_TAC arith_ss []
+       THEN IMP_RES_TAC LESS_LEAST
+       THEN POP_ASSUM(STRIP_ASSUME_TAC o SIMP_RULE std_ss [])]);
+
+val NOT_FUN_FILTER_COUNT =
+ store_thm
+  ("NOT_FUN_FILTER_COUNT",
+   ``!P f.
+      ~(!m. ?n. FUN_FILTER_COUNT P f m n)
+      ==> 
+      ?n:num. !n'. n <= n' ==> ~P(f n')``,
+   PROVE_TAC[FUN_FILTER_COUNT_EXISTS]);
+
+val LEAST0 =
+ store_thm
+  ("LEAST0",
+   ``!P. (?i. P i) /\ ((LEAST i. P i) = 0) = P 0``,
+   GEN_TAC
+    THEN EQ_TAC
+    THEN ZAP_TAC list_ss [LESS_LEAST]
+    THEN IMP_RES_TAC FULL_LEAST_INTRO
+    THENL
+     [ASSUM_LIST
+       (fn thl => ASSUME_TAC(GSYM(CONV_RULE(DEPTH_CONV ETA_CONV)(el 5 thl))))
+       THEN RW_TAC arith_ss [],
+      CONV_TAC(DEPTH_CONV ETA_CONV)
+       THEN DECIDE_TAC]);
+
+val IS_LEAST_def =
+ Define
+  `IS_LEAST P n = P n /\ !m:num. m < n ==> ~P m`;
+
+val IS_LEAST_UNIQUE =
+ store_thm
+  ("IS_LEAST_UNIQUE",
+   ``!P m n. IS_LEAST P m /\ IS_LEAST P n ==> (m = n)``,
+   RW_TAC arith_ss [IS_LEAST_def]
+    THEN Cases_on `m < n`
+    THEN RES_TAC
+    THEN Cases_on `n < m`
+    THEN RES_TAC
+    THEN DECIDE_TAC);
+
+val IS_LEAST_SUC =
+ store_thm
+  ("IS_LEAST_SUC",
+   ``!P n. ~(P 0) ==> (IS_LEAST P (SUC n) = IS_LEAST (P o SUC) n)``,
+   RW_TAC arith_ss [IS_LEAST_def]
+    THEN EQ_TAC
+    THEN RW_TAC arith_ss []
+    THEN Cases_on `m = 0`
+    THEN RW_TAC arith_ss []
+    THEN `PRE m < n` by DECIDE_TAC
+    THEN `SUC(PRE m) = m` by DECIDE_TAC
+    THEN PROVE_TAC[]);
+
+val IS_LEAST_LEAST =
+ store_thm
+  ("IS_LEAST_LEAST",
+   ``!P n. P n ==> IS_LEAST P (LEAST n. P n)``,
+   CONV_TAC(DEPTH_CONV ETA_CONV)
+    THEN RW_TAC std_ss [IS_LEAST_def]
+    THEN IMP_RES_TAC LEAST_INTRO
+    THEN IMP_RES_TAC LESS_LEAST);
+
+val IS_LEAST_EQ_IMP =
+ store_thm
+  ("IS_LEAST_EQ_IMP",
+   ``!P m. IS_LEAST P m ==> (m = $LEAST P)``,
+   RW_TAC std_ss []
+    THEN IMP_RES_TAC IS_LEAST_def
+    THEN IMP_RES_TAC IS_LEAST_LEAST
+    THEN IMP_RES_TAC IS_LEAST_UNIQUE
+    THEN RW_TAC std_ss []
+    THEN CONV_TAC(DEPTH_CONV ETA_CONV)
+    THEN RW_TAC std_ss []);
+
+val IS_LEAST_EQ =
+ store_thm
+  ("IS_LEAST_EQ",
+   ``!P n. IS_LEAST P n = (?n. P n) /\ (n = $LEAST P)``,
+   RW_TAC std_ss []
+    THEN EQ_TAC
+    THEN RW_TAC std_ss []
+    THENL
+     [IMP_RES_TAC IS_LEAST_def
+       THEN PROVE_TAC[],
+      IMP_RES_TAC IS_LEAST_EQ_IMP,
+      IMP_RES_TAC IS_LEAST_LEAST
+       THEN POP_ASSUM(ASSUME_TAC o CONV_RULE(DEPTH_CONV ETA_CONV))
+       THEN PROVE_TAC[]]);
+
+val LEAST_SUC =
+ store_thm
+  ("LEAST_SUC",
+   ``!P i. ~(P 0) /\ P i ==> ((LEAST i. P i) = SUC(LEAST i. P(SUC i)))``,
+   RW_TAC list_ss []
+    THEN IMP_RES_TAC IS_LEAST_SUC
+    THEN POP_ASSUM(K ALL_TAC) THEN POP_ASSUM(K ALL_TAC)
+    THEN FULL_SIMP_TAC list_ss [IS_LEAST_EQ]
+    THEN Cases_on `i = 0`
+    THEN RW_TAC std_ss []
+    THEN RES_TAC
+    THEN `?j. i = SUC j` by Cooper.COOPER_TAC
+    THEN RW_TAC list_ss []
+    THEN `(P  o SUC) j` by RW_TAC std_ss []
+    THEN CONV_TAC(RHS_CONV(REWRITE_CONV[GSYM(SIMP_CONV std_ss [] ``(P o SUC) j:bool``)]))
+    THEN CONV_TAC(DEPTH_CONV ETA_CONV)
+    THEN `!n. (SUC n = $LEAST P) = (n = $LEAST (P o SUC))`  by PROVE_TAC[]
+    THEN PROVE_TAC[]);
+
+val LENGTH_PATH_FILTER_NON_ZERO_EXISTS =
+ store_thm
+  ("LENGTH_PATH_FILTER_NON_ZERO_EXISTS",
+   ``!v. LENGTH(PATH_FILTER P v) > 0 ==> ?n. n < LENGTH v /\ P(ELEM v n)``,
+   GEN_TAC
+    THEN Cases_on `v`
+    THEN RW_TAC list_ss 
+          [PATH_FILTER_def,LENGTH_def,GT,ELEM_FINITE,
+           LENGTH_FILTER_NON_ZERO_EXISTS,LS]
+    THENL
+     [POP_ASSUM(STRIP_ASSUME_TAC                         o 
+                SIMP_RULE list_ss [FUN_FILTER_COUNT_def] o 
+                Q.SPEC `0`)
+       THEN Q.EXISTS_TAC `n`
+       THEN RW_TAC list_ss [ELEM_INFINITE],
+      RW_TAC std_ss [ELEM_INFINITE]
+       THEN FULL_SIMP_TAC list_ss []
+       THEN `!n. m <= n ==> ~P (f n)` by PROVE_TAC[]
+       THEN Cases_on `(LEAST i. !j. i <= j ==> ~P (f j)) = 0`
+       THENL
+        [ASSUM_LIST
+          (fn thl => STRIP_ASSUME_TAC(SIMP_RULE list_ss [el 1 thl,GENLIST] (el 3 thl))),
+         Cases_on `!j. 0 <= j ==> ~P (f j)`
+          THENL
+           [POP_ASSUM
+             (STRIP_ASSUME_TAC o
+              ONCE_REWRITE_RULE
+               [SIMP_RULE std_ss []
+                (GSYM(ISPEC ``\i:num. !j. i <= j ==> ~(P:'a->bool) ((f:num->'a) j)`` LEAST0))]),
+            FULL_SIMP_TAC std_ss []
+             THEN PROVE_TAC[]]]]);
+
+val LE_LS_TRANS_X =
+ store_thm
+  ("LE_LS_TRANS_X",
+   ``m:num <= n ==> n:num < p:xnum ==> m < p``,
+   Cases_on `p`
+    THEN RW_TAC arith_ss [LS,LE]);
+
+val LEAST_TAKE_FIRST =
+ store_thm
+  ("LEAST_TAKE_FIRST",
+   ``!l. (?n. n < LENGTH l /\ P(EL n l))
+         ==>
+         (EL (LEAST n. P(EL n l)) l = LAST(TAKE_FIRST P l))``,
+   Induct
+    THEN RW_TAC list_ss [TAKE_FIRST_def,FILTER_APPEND]
+    THEN Induct_on `n`
+    THEN RW_TAC list_ss []
+    THEN FULL_SIMP_TAC list_ss []
+    THEN RES_TAC
+    THEN RW_TAC list_ss []
+    THENL
+     [`(\n. P(EL n (h::l))) 0` by RW_TAC list_ss []
+       THEN IMP_RES_TAC(GSYM LEAST0)
+       THEN FULL_SIMP_TAC list_ss [],
+      `(\n. P(EL n (h::l))) 0` by RW_TAC list_ss []
+       THEN IMP_RES_TAC(GSYM LEAST0)
+       THEN FULL_SIMP_TAC list_ss [],
+      Cases_on `TAKE_FIRST P l = []`
+       THEN IMP_RES_TAC TAKE_FIRST_NIL
+       THEN RW_TAC list_ss []
+       THEN FULL_SIMP_TAC list_ss []
+       THEN RW_TAC list_ss [LAST_DEF]
+       THEN IMP_RES_TAC
+             (SIMP_RULE list_ss [] 
+               (ISPECL
+                 [``\n. (P :'a -> bool) (EL n ((h :'a)::(l :'a list)))``,``SUC n``]
+                 LEAST_SUC))
+       THEN RW_TAC list_ss []]);
+
+val HD_FILTER_LEAST =
+ store_thm
+  ("HD_FILTER_LEAST",
+   ``!P l. (?n. n < LENGTH l /\ P(EL n l))
+           ==>
+           (HD (FILTER P l) = EL (LEAST n. P (EL n l)) l)``,
+   RW_TAC std_ss []
+    THEN IMP_RES_TAC HD_TAKE_FIRST
+    THEN IMP_RES_TAC  LEAST_TAKE_FIRST
+    THEN RW_TAC list_ss []);
+
+val HD_FILTER_LEAST =
+ store_thm
+  ("HD_FILTER_LEAST",
+   ``!P l n. n < LENGTH l /\ P(EL n l)
+             ==>
+             (HD (FILTER P l) = EL (LEAST n. P (EL n l)) l)``,
+   RW_TAC std_ss []
+    THEN IMP_RES_TAC HD_TAKE_FIRST
+    THEN IMP_RES_TAC  LEAST_TAKE_FIRST
+    THEN RW_TAC list_ss []);
+
+val IS_LEAST_MIN =
+ store_thm
+  ("IS_LEAST_MIN",
+   ``!P. IS_LEAST P = IS_LEAST (\n. P n /\ !m. m < n ==> ~(P m))``,
+   CONV_TAC(DEPTH_CONV FUN_EQ_CONV)
+    THEN RW_TAC list_ss [IS_LEAST_def]
+    THEN EQ_TAC
+    THEN RW_TAC list_ss []);
+
+val LEAST_MIN =
+ store_thm
+  ("LEAST_MIN",
+   ``!P n. P n ==> ((LEAST n. P n) = LEAST n. P n /\ !m. m < n ==> ~(P m))``,
+   RW_TAC list_ss []
+    THEN IMP_RES_TAC LEAST_EXISTS_IMP
+    THEN IMP_RES_TAC IS_LEAST_LEAST
+    THEN `?n. P n /\ !m. m < n ==> ~(P m)` by PROVE_TAC[]
+    THEN ASSUM_LIST(fn thl => ASSUME_TAC(ONCE_REWRITE_RULE[IS_LEAST_MIN](el 3 thl)))
+    THEN IMP_RES_TAC
+          (SIMP_RULE list_ss []
+            (ISPEC ``\(n :num). (P :num -> bool) n /\ !(m :num). m < n ==> ~P m``
+             IS_LEAST_LEAST))
+    THEN IMP_RES_TAC IS_LEAST_UNIQUE);
+
+val HD_APPEND =
+ store_thm
+  ("HD_APPEND",
+   ``!l1 l2. ~(l1 = []) ==> (HD(l1 <> l2) = HD l1)``,
+   Induct
+    THEN RW_TAC list_ss [GENLIST]);
+
+val HD_GENLIST_APPEND =
+ store_thm
+  ("HD_GENLIST_APPEND",
+   ``!n l. 0 < n ==> (HD(GENLIST f n <> l) = HD(GENLIST f n))``,
+   RW_TAC list_ss []
+    THEN Cases_on `GENLIST f n`
+    THEN RW_TAC list_ss []
+    THEN POP_ASSUM(ASSUME_TAC o AP_TERM ``LENGTH:'a list->num``)
+    THEN FULL_SIMP_TAC list_ss [LENGTH_GENLIST]);
+
+val TL_APPEND =
+ store_thm
+  ("TL_APPEND",
+   ``!l1 l2. ~(l1 = []) ==> (TL(l1 <> l2) = TL l1 <> l2)``,
+   Induct
+    THEN RW_TAC list_ss [GENLIST]);
+
+val EL_GENLIST =
+ store_thm
+  ("EL_GENLIST",
+   ``!f m n. m < n ==> (EL m (GENLIST f n) = f m)``,
+   GEN_TAC
+    THEN Induct
+    THEN Induct
+    THEN RW_TAC list_ss [GENLIST,SNOC_APPEND]
+    THENL
+     [Cases_on `0 < n`
+       THEN RW_TAC list_ss []
+       THEN RES_TAC
+       THEN FULL_SIMP_TAC list_ss [HD_GENLIST_APPEND]
+       THEN `n = 0` by DECIDE_TAC
+       THEN RW_TAC list_ss [GENLIST],
+     FULL_SIMP_TAC list_ss []
+      THEN Cases_on `GENLIST f n`
+      THEN RW_TAC list_ss [TL_APPEND]
+      THEN POP_ASSUM(ASSUME_TAC o AP_TERM ``LENGTH:'a list->num``)
+      THEN FULL_SIMP_TAC list_ss [LENGTH_GENLIST]
+      THEN Cases_on `m = LENGTH t`
+      THEN RW_TAC list_ss [EL_APPEND2]
+      THEN `m < LENGTH t` by DECIDE_TAC
+      THEN RES_TAC
+      THEN RW_TAC list_ss [EL_APPEND1]]);
+
+val LESS_IS_LEAST_EQ =
+ store_thm
+  ("LESS_IS_LEAST_EQ",
+   ``!P Q n. P n /\ (!m. m <= n ==> (P m = Q m)) 
+             ==> 
+             !n. IS_LEAST P n = IS_LEAST Q n``,
+   RW_TAC list_ss [IS_LEAST_def]
+    THEN EQ_TAC
+    THEN RW_TAC list_ss []
+    THEN RES_TAC
+    THENL
+     [Cases_on `n' <= n`
+       THEN RES_TAC
+       THEN RW_TAC list_ss []
+       THEN `n < n'` by DECIDE_TAC
+       THEN RES_TAC,
+      Cases_on `m <= n`
+       THEN RES_TAC
+       THEN ZAP_TAC list_ss []
+       THEN `n < n'` by DECIDE_TAC
+       THEN RES_TAC,
+     Cases_on `n' <= n`
+       THEN RES_TAC
+       THEN RW_TAC list_ss []
+       THEN `n < n'` by DECIDE_TAC
+       THEN `n <= n` by DECIDE_TAC
+       THEN RES_TAC,
+      Cases_on `m <= n`
+       THEN RES_TAC
+       THEN ZAP_TAC list_ss []
+       THEN `n < n'` by DECIDE_TAC
+       THEN `n <= n` by DECIDE_TAC
+       THEN RES_TAC]);
+
+val LESS_LEAST_EQ =
+ store_thm
+  ("LESS_LEAST_EQ",
+   ``!P Q n. P n /\ (!m. m <= n ==> (P m = Q m)) 
+             ==> 
+             ((LEAST n. P n) = (LEAST n. Q n))``,
+   RW_TAC std_ss []
+    THEN IMP_RES_TAC LESS_IS_LEAST_EQ
+    THEN IMP_RES_TAC IS_LEAST_LEAST
+    THEN RES_TAC
+    THEN IMP_RES_TAC IS_LEAST_EQ_IMP
+    THEN CONV_TAC(DEPTH_CONV ETA_CONV)
+    THEN PROVE_TAC[]);
+
+val PATH_FILTER_LEAST =
+ store_thm
+  ("PATH_FILTER_LEAST",
+   ``!P v.
+      (?n. n < LENGTH v /\ P(ELEM v n))
+      ==>
+      (ELEM (PATH_FILTER P v) 0 = ELEM v LEAST n. P (ELEM v n))``,
+   Cases_on `v`
+    THEN RW_TAC std_ss [PATH_FILTER_def]
+    THEN FULL_SIMP_TAC (list_ss++resq_SS) [ELEM_FINITE,ELEM_INFINITE,FUN_FILTER_COUNT_def,LS,HD]
+    THENL
+     [IMP_RES_TAC HD_FILTER_LEAST,
+      IMP_RES_TAC(SIMP_RULE list_ss [] (ISPEC ``(P:'a->bool) o (f:num->'a)`` LEAST_MIN))
+       THEN RW_TAC std_ss [],
+      `!n. m <= n ==> ~(P(f n))` by PROVE_TAC[]
+       THEN Cases_on `n <  LEAST i. !j. i <= j ==> ~P (f j)`
+       THENL
+        [ASSUM_LIST
+          (fn thl =>
+            ASSUME_TAC
+             (SIMP_RULE list_ss [el 1 thl,EL_GENLIST]
+               (SIMP_RULE
+                 list_ss [LENGTH_GENLIST]
+                 (ISPECL
+                   [``P :'a -> bool``,
+                    ``GENLIST (f :num -> 'a) LEAST (i :num). !(j :num). i <= j ==> ~P (f j)``,
+                    ``n:num``]
+                   HD_FILTER_LEAST))))
+          THEN RW_TAC list_ss []
+          THEN `(\n. P (EL n (GENLIST f LEAST i. !j. i <= j ==> ~P (f j)))) n` 
+                by RW_TAC list_ss [EL_GENLIST]
+          THEN IMP_RES_TAC FULL_LEAST_INTRO
+          THEN `(LEAST n. P (EL n (GENLIST f LEAST i. !j. i <= j ==> ~P (f j)))) 
+                < LEAST i. !j. i <= j ==> ~P (f j)` by DECIDE_TAC
+          THEN RW_TAC list_ss [EL_GENLIST]
+          THEN `!m. m <= n
+                    ==>
+                    ((\n. P (EL n (GENLIST f LEAST i. !j. i <= j ==> ~P (f j)))) m =
+                     (\n. P(f n)) m)`
+                by RW_TAC list_ss [EL_GENLIST]
+          THEN POP_ASSUM(ASSUME_TAC o GSYM)
+          THEN `(\n. P (f n)) n` by RW_TAC std_ss []
+          THEN IMP_RES_TAC LESS_LEAST_EQ
+          THEN FULL_SIMP_TAC std_ss [],
+      `(LEAST i. !j. i <= j ==> ~P (f j)) <= n` by DECIDE_TAC
+       THEN `(\i. !j. i <= j ==> ~P (f j)) m` by PROVE_TAC[]
+       THEN IMP_RES_TAC
+             (ISPEC
+               ``(\(i :num). !(j :num). i <= j ==> ~(P :'a -> bool) ((f :num -> 'a) j))`` 
+               LEAST_INTRO)
+       THEN FULL_SIMP_TAC std_ss []]]);
+
+val PATH_FILTER_LEAST_COR =
+ store_thm
+  ("PATH_FILTER_LEAST_COR",
+   ``!P1 P2 v.
+      LENGTH(PATH_FILTER P1 v) > 0
+      ==>
+      P2 (ELEM (PATH_FILTER P1 v) 0)
+      ==>
+      ?n. n < LENGTH v /\ P1(ELEM v n) /\ (!m. m < n ==> ~P1(ELEM v m)) /\ P2(ELEM v n)``,
+   RW_TAC std_ss []
+    THEN IMP_RES_TAC LENGTH_PATH_FILTER_NON_ZERO_EXISTS
+    THEN IMP_RES_TAC
+          (SIMP_RULE std_ss [] 
+            (ISPECL[``\n:num. (P1:'a -> bool) (ELEM v n)``, ``n:num``]
+                   (GEN_ALL FULL_LEAST_INTRO)))
+    THEN Q.EXISTS_TAC `LEAST n. P1 (ELEM v n)`
+    THEN RW_TAC std_ss []
+    THEN IMP_RES_TAC LESS_LEAST
+    THEN FULL_SIMP_TAC std_ss []
+    THENL
+     [IMP_RES_TAC FULL_LEAST_INTRO
+       THEN IMP_RES_TAC LE_LS_TRANS_X,
+      IMP_RES_TAC(GSYM PATH_FILTER_LEAST)
+       THEN RW_TAC std_ss []]);
+
+val PATH_TOP_FREE_ELEM =
+ store_thm
+  ("PATH_TOP_FREE_ELEM",
+   ``!v. PATH_TOP_FREE v = !i. i < LENGTH v ==> ~(ELEM v i = TOP)``,
+   GEN_TAC
+    THEN Cases_on `v`
+    THEN RW_TAC list_ss 
+          [PATH_TOP_FREE_def,TOP_FREE_EL,ELEM_EL,
+           ELEM_FINITE,ELEM_INFINITE,LENGTH_def,LS]);
+
+val PATH_BOTTOM_FREE_ELEM =
+ store_thm
+  ("PATH_BOTTOM_FREE_ELEM",
+   ``!v. PATH_BOTTOM_FREE v = !i. i < LENGTH v ==> ~(ELEM v i = BOTTOM)``,
+   GEN_TAC
+    THEN Cases_on `v`
+    THEN RW_TAC list_ss 
+          [PATH_BOTTOM_FREE_def,BOTTOM_FREE_EL,ELEM_EL,
+           ELEM_FINITE,ELEM_INFINITE,LENGTH_def,LS]);
+
+val LENGTH_PATH_FILTER_NON_ZERO =
+ store_thm
+  ("LENGTH_PATH_FILTER_NON_ZERO",
+   ``!P n v. n < LENGTH v /\ P(ELEM v n) ==> LENGTH (PATH_FILTER P v) > 0``,
+   RW_TAC list_ss []
+    THEN Cases_on `v`
+    THEN FULL_SIMP_TAC list_ss 
+          [PATH_FILTER_def,LENGTH_def,GT,ELEM_def,LS,
+           RESTN_FINITE,RESTN_INFINITE,HEAD_def,HD_RESTN]
+    THEN IMP_RES_TAC NON_ZERO_EXISTS_LENGTH_FILTER
+    THEN Cases_on `!m. ?n. m <= n /\ P (f n)`
+    THEN RW_TAC list_ss [GT,LENGTH_def]
+    THEN FULL_SIMP_TAC list_ss []
+    THENL
+     [ASSUM_LIST(fn thl => STRIP_ASSUME_TAC(SPEC ``XNUM m`` (el 2 thl)))
+       THEN PROVE_TAC[LE],
+      Cases_on `(LEAST i. !j. i <= j ==> ~P (f j)) = 0`
+       THEN RW_TAC list_ss [GENLIST]
+       THENL
+        [`(\m. !n. m <= n ==> ~P(f n)) m'` by PROVE_TAC[]
+          THEN IMP_RES_TAC LEAST_INTRO
+          THEN FULL_SIMP_TAC list_ss [],
+         Cases_on `n < LEAST i. !j. i <= j ==> ~P (f j)`
+          THENL
+           [`n < LENGTH(GENLIST f LEAST i. !j. i <= j ==> ~P (f j))` 
+             by RW_TAC list_ss [LENGTH_GENLIST]
+             THEN `P(EL n (GENLIST f LEAST i. !j. i <= j ==> ~P (f j)))`
+                   by RW_TAC list_ss [EL_GENLIST]
+             THEN IMP_RES_TAC NON_ZERO_EXISTS_LENGTH_FILTER,
+            `(LEAST i. !j. i <= j ==> ~P (f j)) <= n` by DECIDE_TAC
+             THEN `(\m. !n. m <= n ==> ~P(f n)) m'` by PROVE_TAC[]
+             THEN IMP_RES_TAC LEAST_INTRO
+             THEN FULL_SIMP_TAC list_ss []]]]);
+
+(*
+val ELEM_LEAST =
+ store_thm
+  ("ELEM_LEAST",
+   ``!P v j. j < LENGTH v /\ P(ELEM v j) ==> P(ELEM v LEAST n. P(ELEM v n))``,
+   REPEAT GEN_TAC
+    THEN Cases_on `v`
+    THEN RW_TAC list_ss [ELEM_FINITE,ELEM_INFINITE,LENGTH_def,LS]
+    THENL
+     [`(\n. P(EL n l)) j` by PROVE_TAC[]
+       THEN IMP_RES_TAC FULL_LEAST_INTRO
+       THEN FULL_SIMP_TAC list_ss [],
+      `(\n. P(f n)) j` by PROVE_TAC[]
+       THEN IMP_RES_TAC FULL_LEAST_INTRO
+       THEN FULL_SIMP_TAC list_ss []]);
+*)
+
+val ELEM_LEAST =
+ store_thm
+  ("ELEM_LEAST",
+   ``!P1 P2 v j. 
+      j < LENGTH v /\ P1(ELEM v j) /\ P2(ELEM v j) /\ (!i. i < j ==> ~(P2(ELEM v i)))
+      ==> P1(ELEM v LEAST n. P2(ELEM v n))``,
+   REPEAT GEN_TAC
+    THEN Cases_on `v`
+    THEN RW_TAC list_ss [ELEM_FINITE,ELEM_INFINITE,LENGTH_def,LS]
+    THENL
+     [`(\n. P2(EL n l)) j` by PROVE_TAC[]
+       THEN IMP_RES_TAC FULL_LEAST_INTRO
+       THEN FULL_SIMP_TAC list_ss []
+       THEN Cases_on `j = LEAST n. P2 (EL n l)` 
+       THEN RW_TAC list_ss []
+       THEN `(LEAST n. P2 (EL n l)) < j` by DECIDE_TAC
+       THEN RES_TAC,
+      `(\n. P2(f n)) j` by PROVE_TAC[]
+       THEN IMP_RES_TAC FULL_LEAST_INTRO
+       THEN FULL_SIMP_TAC list_ss []
+       THEN Cases_on `j = LEAST n. P2 (f n)` 
+       THEN RW_TAC list_ss []
+       THEN `(LEAST n. P2 (f n)) < j` by DECIDE_TAC
+       THEN RES_TAC]);
+
+val CLOCK_NOT_LEMMA =
+ store_thm
+  ("CLOCK_NOT_LEMMA",
+   ``PATH_TOP_FREE v /\ PATH_BOTTOM_FREE v
+     ==>
+     !i. i < LENGTH v ==> (CLOCK (B_NOT c) (ELEM v i) =  ~(CLOCK c (ELEM v i)))``,
+   RW_TAC list_ss []
+    THEN Cases_on `(ELEM v i)`
+    THEN RW_TAC list_ss [CLOCK_def,B_SEM_def]
+    THEN IMP_RES_TAC PATH_TOP_FREE_ELEM
+    THEN IMP_RES_TAC PATH_BOTTOM_FREE_ELEM);
+
+val CLOCK_NOT_LEMMA_COR =
+ prove
+  (``!j:num.
+      PATH_TOP_FREE v /\ PATH_BOTTOM_FREE v /\ j < LENGTH v
+      ==>
+      ((!i:num. i < j ==> ~(CLOCK c (ELEM v i)))
+       =
+      (!i:num. i < j ==> CLOCK (B_NOT c) (ELEM v i))) ``,
+   RW_TAC list_ss []
+    THEN EQ_TAC
+    THEN RW_TAC list_ss []
+    THEN RES_TAC
+    THEN IMP_RES_TAC LS_TRANS_X
+    THEN PROVE_TAC[CLOCK_NOT_LEMMA]);
+
+val F_PROJ_F_STRONG_BOOL = 
+ store_thm
+  ("F_PROJ_F_STRONG_BOOL",
+   ``!b. F_CLOCK_FREE (F_STRONG_BOOL b) ==>
+         !v. PATH_TOP_FREE v /\ PATH_BOTTOM_FREE v ==>
+             !c. UF_SEM (PROJ v c) (F_STRONG_BOOL b) = 
+                 F_SEM v c (F_STRONG_BOOL b)``,
+   RW_TAC (list_ss++resq_SS) [UF_SEM,F_SEM,GSYM CLOCK_def,PROJ_def]
+    THEN EQ_TAC
+    THEN RW_TAC std_ss []
+    THENL
+     [IMP_RES_TAC
+       (ISPECL[``CLOCK(c :'a bexp)``,``CLOCK(b :'a bexp)``]PATH_FILTER_LEAST_COR)
+       THEN Q.EXISTS_TAC `n`
+       THEN RW_TAC (list_ss++resq_SS) [CLOCK_TICK_def,LENGTH_SEL]
+       THEN RES_TAC
+       THEN FULL_SIMP_TAC list_ss [CLOCK_def,ELEM_EL,EL_SEL0,B_SEM_def]
+       THEN Cases_on `(ELEM v i)`
+       THEN RW_TAC std_ss [B_SEM_def]
+       THEN IMP_RES_TAC LS_TRANS_X
+       THEN IMP_RES_TAC PATH_BOTTOM_FREE_ELEM,
+      FULL_SIMP_TAC (list_ss++resq_SS) [CLOCK_TICK_def,LENGTH_SEL,ELEM_EL,EL_SEL0]
+       THEN FULL_SIMP_TAC list_ss [GSYM CLOCK_def]
+       THEN IMP_RES_TAC LENGTH_PATH_FILTER_NON_ZERO,
+      FULL_SIMP_TAC (list_ss++resq_SS) [CLOCK_TICK_def,LENGTH_SEL,ELEM_EL,EL_SEL0]
+       THEN FULL_SIMP_TAC list_ss [GSYM CLOCK_def]  
+       THEN IMP_RES_TAC PATH_FILTER_LEAST
+       THEN RW_TAC std_ss []
+       THEN IMP_RES_TAC CLOCK_NOT_LEMMA_COR
+       THEN IMP_RES_TAC(ISPECL[``CLOCK (b :'a bexp)``,``CLOCK (c :'a bexp)``]ELEM_LEAST)]);
+
+val NEUTRAL_COMPLEMENT =
+ store_thm
+  ("NEUTRAL_COMPLEMENT",
+   ``!v. PATH_TOP_FREE v /\ PATH_BOTTOM_FREE v ==> (COMPLEMENT v = v)``,
+   GEN_TAC
+    THEN Cases_on `v`
+    THEN RW_TAC list_ss [PATH_TOP_FREE_def,PATH_BOTTOM_FREE_def,COMPLEMENT_def]
+    THENL
+     [Induct_on `l`
+       THEN RW_TAC list_ss []
+       THEN Cases_on `h`
+       THEN FULL_SIMP_TAC list_ss [TOP_FREE_def,BOTTOM_FREE_def,COMPLEMENT_LETTER_def],
+      CONV_TAC FUN_EQ_CONV
+       THEN Induct
+       THEN RW_TAC list_ss []
+       THENL
+        [Cases_on `f 0`
+          THEN FULL_SIMP_TAC list_ss [COMPLEMENT_LETTER_def]
+          THEN RES_TAC,
+         Cases_on `f(SUC n)`
+          THEN FULL_SIMP_TAC list_ss [COMPLEMENT_LETTER_def]
+          THEN RES_TAC]]);
+
+val NOT_XNUM_0 =
+ store_thm
+  ("NOT_XNUM_0",
+   ``!v. ~(v = XNUM 0) = v > 0``,
+   GEN_TAC
+    THEN Cases_on `v`
+    THEN RW_TAC list_ss [xnum_11,GT]);
+
+val F_PROJ_F_WEAK_BOOL = 
+ store_thm
+  ("F_PROJ_F_WEAK_BOOL",
+   ``!b. F_CLOCK_FREE (F_WEAK_BOOL b) ==>
+         !v. PATH_TOP_FREE v /\ PATH_BOTTOM_FREE v ==>
+             !c. UF_SEM (PROJ v c) (F_WEAK_BOOL b) = 
+                 F_SEM v c (F_WEAK_BOOL b)``,
+   RW_TAC (list_ss++resq_SS) [UF_SEM,F_SEM,GSYM CLOCK_def,PROJ_def]
+    THEN EQ_TAC
+    THEN RW_TAC std_ss []
+    THENL
+     [Cases_on `PATH_FILTER (CLOCK c) v`
+       THEN FULL_SIMP_TAC (list_ss++resq_SS) 
+             [LENGTH_def,xnum_11,xnum_distinct,LENGTH_NIL,CLOCK_TICK_def,LENGTH_SEL,
+              ELEM_EL,EL_SEL0]
+       THEN RW_TAC list_ss []
+       THEN FULL_SIMP_TAC std_ss [GSYM CLOCK_def,ELEM_COMPLEMENT]
+       THEN POP_ASSUM(ASSUME_TAC o Q.AP_TERM `LENGTH`)
+       THEN FULL_SIMP_TAC list_ss [LENGTH_def]
+       THEN Cases_on `LENGTH (PATH_FILTER (CLOCK c) v) > 0`
+       THENL
+        [`XNUM 0 > 0` by PROVE_TAC[]
+          THEN FULL_SIMP_TAC list_ss [GT],
+         `~(?n. n < LENGTH v /\ CLOCK c (ELEM v n))` by PROVE_TAC[LENGTH_PATH_FILTER_NON_ZERO]
+          THEN FULL_SIMP_TAC list_ss []
+          THEN `!n. n < LENGTH v ==> ~CLOCK c (ELEM v n)` by PROVE_TAC[]
+          THEN RES_TAC
+          THEN Cases_on `(ELEM v j)`
+          THEN IMP_RES_TAC PATH_TOP_FREE_ELEM
+          THEN IMP_RES_TAC PATH_BOTTOM_FREE_ELEM
+          THEN IMP_RES_TAC ELEM_COMPLEMENT
+          THEN PROVE_TAC[COMPLEMENT_LETTER_def]],
+      IMP_RES_TAC NEUTRAL_COMPLEMENT 
+       THEN POP_ASSUM(fn th => FULL_SIMP_TAC std_ss [th])
+       THEN FULL_SIMP_TAC (list_ss++resq_SS) 
+             [GSYM CLOCK_def,CLOCK_TICK_def,LENGTH_SEL,ELEM_EL,EL_SEL0]
+       THEN IMP_RES_TAC PATH_FILTER_LEAST
+       THEN `CLOCK b (ELEM v LEAST n. CLOCK c (ELEM v n))` by PROVE_TAC[]
+       THEN IMP_RES_TAC CLOCK_NOT_LEMMA_COR
+       THEN `IS_LEAST (\j. CLOCK c (ELEM v j)) j` 
+             by RW_TAC list_ss
+                 [SIMP_RULE list_ss [] 
+                   (ISPECL[``(\j. CLOCK c (ELEM v j))``,``j:num``]IS_LEAST_def)]
+       THEN IMP_RES_TAC IS_LEAST_EQ_IMP
+       THEN RW_TAC list_ss [],
+      Cases_on `LENGTH (PATH_FILTER (CLOCK c) v) = XNUM 0`
+       THEN RW_TAC list_ss []
+       THEN FULL_SIMP_TAC list_ss [NOT_XNUM_0]
+       THEN IMP_RES_TAC LENGTH_PATH_FILTER_NON_ZERO_EXISTS
+       THEN IMP_RES_TAC PATH_FILTER_LEAST
+       THEN RW_TAC list_ss []
+       THEN IMP_RES_TAC NEUTRAL_COMPLEMENT 
+       THEN POP_ASSUM(fn th => FULL_SIMP_TAC std_ss [th])
+       THEN IMP_RES_TAC
+             (SIMP_RULE list_ss []
+               (ISPEC ``(\n. CLOCK c (ELEM v n))``(GEN_ALL FULL_LEAST_INTRO)))
+       THEN IMP_RES_TAC LE_LS_TRANS_X
+       THEN FULL_SIMP_TAC (list_ss++resq_SS) 
+             [GSYM CLOCK_def,CLOCK_TICK_def,LENGTH_SEL,ELEM_EL,EL_SEL0]
+       THEN ASSUM_LIST
+             (fn thl => 
+               ASSUME_TAC
+                (SIMP_RULE list_ss [el 1 thl,el 3 thl]
+                  (Q.SPEC `LEAST n. CLOCK c (ELEM v n)` (el 8 thl))))
+       THEN `(!i. i < (LEAST n. CLOCK c (ELEM v n)) ==> CLOCK (B_NOT c) (ELEM v i))
+             =
+             (!i. i < (LEAST n. CLOCK c (ELEM v n)) ==> ~(CLOCK c (ELEM v i)))`
+             by PROVE_TAC[CLOCK_NOT_LEMMA_COR]
+        THEN POP_ASSUM(fn th => FULL_SIMP_TAC list_ss [th])
+        THEN FULL_SIMP_TAC list_ss
+              [SIMP_RULE std_ss [] (ISPEC ``\n. CLOCK c (ELEM v n)`` LESS_LEAST)]]);
+
+val COMPLEMENT_LETTER_FILTER =
+ store_thm
+  ("COMPLEMENT_LETTER_FILTER",
+   ``!f. (COMPLEMENT_LETTER o f = f)
+         ==>
+         !n. MAP COMPLEMENT_LETTER (FILTER P (GENLIST f n)) = FILTER P (GENLIST f n)``,
+   RW_TAC list_ss []
+    THEN Induct_on `n`
+    THEN RW_TAC list_ss [GENLIST,FILTER,SNOC_APPEND,FILTER_APPEND]
+    THEN ASSUM_LIST(fn thl => ASSUME_TAC(CONV_RULE FUN_EQ_CONV (el 3 thl)))
+    THEN FULL_SIMP_TAC list_ss []);
+
+val COMPLEMENT_PATH_FILTER =
+ store_thm
+  ("COMPLEMENT_PATH_FILTER",
+   ``!v. (COMPLEMENT v = v)
+         ==> 
+         (COMPLEMENT(PATH_FILTER P v) = PATH_FILTER P v)``,
+   GEN_TAC
+    THEN Cases_on `v`
+    THEN RW_TAC list_ss 
+          [PATH_TOP_FREE_def,PATH_BOTTOM_FREE_def,COMPLEMENT_def,PATH_FILTER_def]
+    THENL
+     [Induct_on `l`
+       THEN RW_TAC list_ss [PATH_FILTER_def,COMPLEMENT_def]
+       THEN Cases_on `h`
+       THEN FULL_SIMP_TAC list_ss [TOP_FREE_def,BOTTOM_FREE_def,COMPLEMENT_LETTER_def],
+      ASM_REWRITE_TAC [GSYM(SIMP_CONV std_ss [] ``(f o g) o h``)],
+      IMP_RES_TAC COMPLEMENT_LETTER_FILTER
+       THEN RW_TAC list_ss []]);
+
+val F_PROJ_F_NOT_BOOL = 
+ store_thm
+  ("F_PROJ_F_NOT_BOOL",
+   ``(F_CLOCK_FREE f ==>
+      !v. PATH_TOP_FREE v /\ PATH_BOTTOM_FREE v ==>
+          !c. UF_SEM (PROJ v c) f = F_SEM v c f)
+     ==>
+     F_CLOCK_FREE (F_NOT f) ==>
+     !v. PATH_TOP_FREE v /\ PATH_BOTTOM_FREE v ==>
+         !c. UF_SEM (PROJ v c) (F_NOT f) = F_SEM v c (F_NOT f)``,
+   RW_TAC (list_ss++resq_SS) [UF_SEM,F_SEM,GSYM CLOCK_def,PROJ_def,F_CLOCK_FREE_def]
+    THEN RES_TAC
+    THEN IMP_RES_TAC NEUTRAL_COMPLEMENT
+    THEN RW_TAC std_ss [COMPLEMENT_PATH_FILTER]);
+
+val F_PROJ_F_NOT_BOOL_FINITE = 
+ store_thm
+  ("F_PROJ_F_NOT_BOOL",
+   ``(F_CLOCK_FREE f ==>
+      !l.
+        PATH_TOP_FREE (FINITE l) /\ PATH_BOTTOM_FREE (FINITE l) ==>
+        !c. UF_SEM (PROJ (FINITE l) c) f = F_SEM (FINITE l) c f) ==>
+     F_CLOCK_FREE (F_NOT f) ==>
+     !l.
+       PATH_TOP_FREE (FINITE l) /\ PATH_BOTTOM_FREE (FINITE l) ==>
+       !c.
+         UF_SEM (PROJ (FINITE l) c) (F_NOT f) =
+         F_SEM (FINITE l) c (F_NOT f)``,
+   RW_TAC (list_ss++resq_SS) [UF_SEM,F_SEM,GSYM CLOCK_def,PROJ_def,F_CLOCK_FREE_def]
+    THEN RES_TAC
+    THEN IMP_RES_TAC NEUTRAL_COMPLEMENT
+    THEN RW_TAC std_ss [COMPLEMENT_PATH_FILTER]);
+
+val F_PROJ_F_AND_BOOL = 
+ store_thm
+  ("F_PROJ_F_AND_BOOL",
+   ``(F_CLOCK_FREE f ==>
+          !v.
+            PATH_TOP_FREE v /\ PATH_BOTTOM_FREE v ==>
+            !c. UF_SEM (PROJ v c) f = F_SEM v c f)
+     /\
+     (F_CLOCK_FREE f' ==>
+          !v.
+            PATH_TOP_FREE v /\ PATH_BOTTOM_FREE v ==>
+            !c. UF_SEM (PROJ v c) f' = F_SEM v c f')
+     ==>
+     F_CLOCK_FREE (F_AND (f,f')) ==>
+     !v.
+      PATH_TOP_FREE v /\ PATH_BOTTOM_FREE v ==>
+      !c. UF_SEM (PROJ v c) (F_AND (f,f')) = F_SEM v c (F_AND (f,f'))``,
+   RW_TAC (list_ss++resq_SS) [UF_SEM,F_SEM,GSYM CLOCK_def,PROJ_def,F_CLOCK_FREE_def]);
+
+val F_PROJ_F_AND_BOOL_FINITE = 
+ store_thm
+  ("F_PROJ_F_AND_BOOL_FINITE",
+   ``(F_CLOCK_FREE f ==>
+       !l.
+        PATH_TOP_FREE (FINITE l) /\ PATH_BOTTOM_FREE (FINITE l) ==>
+        !c. UF_SEM (PROJ (FINITE l) c) f = F_SEM (FINITE l) c f) /\
+     (F_CLOCK_FREE f' ==>
+      !l.
+        PATH_TOP_FREE (FINITE l) /\ PATH_BOTTOM_FREE (FINITE l) ==>
+        !c. UF_SEM (PROJ (FINITE l) c) f' = F_SEM (FINITE l) c f') ==>
+     F_CLOCK_FREE (F_AND (f,f')) ==>
+     !l.
+       PATH_TOP_FREE (FINITE l) /\ PATH_BOTTOM_FREE (FINITE l) ==>
+       !c.
+         UF_SEM (PROJ (FINITE l) c) (F_AND (f,f')) =
+         F_SEM (FINITE l) c (F_AND (f,f'))``,
+   RW_TAC (list_ss++resq_SS) [UF_SEM,F_SEM,GSYM CLOCK_def,PROJ_def,F_CLOCK_FREE_def]);
+
+val PATH_TOP_FREE_SEL =
+ store_thm
+  ("PATH_TOP_FREE_SEL",
+   ``!v. PATH_TOP_FREE v ==> !j. j < LENGTH v ==> TOP_FREE (SEL v (0,j))``,
+   Induct
+    THEN RW_TAC list_ss 
+          [PATH_TOP_FREE_def,TOP_FREE_EL,LENGTH_SEL,LENGTH_def,LS,EL_SEL0,
+           ELEM_FINITE,ELEM_INFINITE]);
+
+val PATH_BOTTOM_FREE_SEL =
+ store_thm
+  ("PATH_BOTTOM_FREE_SEL",
+   ``!v. PATH_BOTTOM_FREE v ==> !j. j < LENGTH v ==> BOTTOM_FREE (SEL v (0,j))``,
+   Induct
+    THEN RW_TAC list_ss 
+          [PATH_BOTTOM_FREE_def,BOTTOM_FREE_EL,LENGTH_SEL,LENGTH_def,LS,EL_SEL0,
+           ELEM_FINITE,ELEM_INFINITE]);
+
+val LENGTH_FILTER =
+ store_thm
+  ("LENGTH_FILTER",
+   ``!l. LENGTH(FILTER P l) <= LENGTH l``,
+   Induct
+    THEN RW_TAC list_ss []);
+
+val LENGTH_PATH_FILTER =
+ store_thm
+  ("LENGTH_PATH_FILTER",
+   ``!v. LENGTH(PATH_FILTER P v) <= LENGTH v``,
+   Induct
+    THEN RW_TAC list_ss [LENGTH_FILTER,PATH_FILTER_def,LENGTH_def,LE]);
+
+val LS_LE_TRANS_X =
+ store_thm
+  ("LS_LE_TRANS_X",
+   ``m:num < n:xnum ==> n <= p:xnum ==> m < p``,
+   Cases_on `n` THEN Cases_on `p`
+    THEN RW_TAC arith_ss [LS,LE]);
+
+val PATH_TAKE_FIRST_def =
+ Define
+  `(PATH_TAKE_FIRST P (FINITE l) = TAKE_FIRST P l)
+   /\
+   (PATH_TAKE_FIRST P (INFINITE f) = GENLIST f (SUC(LEAST n. P(f n))))`;
+
+val PATH_TAKE_FIRSTN_def =
+ Define
+  `(PATH_TAKE_FIRSTN P n (FINITE l) = TAKE_FIRSTN P n l)
+   /\
+   (PATH_TAKE_FIRSTN P 0 (INFINITE f) = [])
+   /\
+   (PATH_TAKE_FIRSTN P (SUC n) (INFINITE f) = 
+     PATH_TAKE_FIRST P (INFINITE f)
+     <> 
+     PATH_TAKE_FIRSTN P n 
+      (INFINITE(\n. f(n + LENGTH(PATH_TAKE_FIRST P (INFINITE f))))))`;
+
+val TAKE_FIRSTN_1 =
+ store_thm
+  ("TAKE_FIRSTN_1",
+   ``!P l. TAKE_FIRSTN P 1 l = TAKE_FIRST P l``,
+   PROVE_TAC[ONE,TAKE_FIRSTN_def,APPEND_NIL]);
+
+val SEL_REC_FINITE =
+ store_thm
+  ("SEL_REC_FINITE",
+   ``!m n l. SEL_REC m n (FINITE l) = SEL_REC m n l``,
+   Induct THEN Induct THEN Induct
+    THEN RW_TAC list_ss
+          [HEAD_def,REST_def,SEL_def,SEL_REC_def,
+           FinitePathTheory.SEL_def,FinitePathTheory.SEL_REC_def,
+           FinitePathTheory.HEAD_def,FinitePathTheory.REST_def]);
+
+val SEL_FINITE =
+ store_thm
+  ("SEL_FINITE",
+   ``!l m n. SEL (FINITE l) (m,n) = SEL l (m,n)``,
+   RW_TAC list_ss 
+    [SEL_def,FinitePathTheory.SEL_def,SEL_REC_FINITE]);
+
+val LENGTH_TAKE_FIRST_NON_EMPTY =
+ store_thm
+  ("LENGTH_TAKE_FIRST_NON_EMPTY",
+   ``!P l. LENGTH l > 0 ==> LENGTH(TAKE_FIRST P l) > 0``,
+   GEN_TAC
+    THEN Induct
+    THEN RW_TAC list_ss [TAKE_FIRST_def]);
+
+val FILTER_TAKE_FIRST =
+ store_thm
+  ("FILTER_TAKE_FIRST",
+   ``!l. (?n. n < LENGTH l /\ P (EL n l))
+         ==> (FILTER P (TAKE_FIRST P l) = [HD (FILTER P l)])``,
+   Induct
+    THEN RW_TAC list_ss [TAKE_FIRST_def,FILTER_APPEND]
+    THEN Cases_on `n`
+    THEN RW_TAC list_ss []
+    THEN FULL_SIMP_TAC list_ss []
+    THEN RES_TAC
+    THEN RW_TAC list_ss []);
+
+val TAKE_FIRSTN_NIL =
+ store_thm
+  ("TAKE_FIRSTN_NIL",
+   ``!P n. TAKE_FIRSTN P n [] = []``,
+   Induct_on `n`
+    THEN RW_TAC list_ss [TAKE_FIRSTN_def,TAKE_FIRST_def,BUTFIRSTN]);
+
+val LENGTH_TAKE_FIRST_TAKE_FIRSTN =
+ store_thm
+  ("LENGTH_TAKE_FIRST_TAKE_FIRSTN",
+   ``LENGTH (TAKE_FIRST P l) <= LENGTH (TAKE_FIRSTN P (SUC n) l)``,
+   RW_TAC list_ss [GSYM TAKE_FIRSTN_1,LENGTH_TAKE_FIRST_MONO]);
+
+val LENGTH_TAKE_FIRSTN_LEMMA =
+ prove
+  (``LENGTH (TAKE_FIRST P l)
+      +
+      LENGTH(TAKE_FIRSTN P (SUC n) (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)) =
+     LENGTH(TAKE_FIRSTN P (SUC(SUC n)) l)``,
+   RW_TAC std_ss [GSYM LENGTH_APPEND,GSYM TAKE_FIRSTN_def]);
+
+val SEL_TAKE_FIRST =
+ store_thm
+  ("SEL_TAKE_FIRST",
+   ``LENGTH l > 0 ==> (SEL l (0, LENGTH(TAKE_FIRST P l)-1) = TAKE_FIRST P l)``,
+   RW_TAC std_ss []
+    THEN `LENGTH (TAKE_FIRST P l) > 0` by PROVE_TAC[LENGTH_TAKE_FIRST_NON_EMPTY]
+    THEN CONV_TAC(LHS_CONV(RATOR_CONV(ONCE_REWRITE_CONV[GSYM TAKE_FIRST_APPEND])))
+    THEN RW_TAC list_ss [SEL_APPEND1,SEL_RESTN_EQ0]);
+
+val SEL_BUTFIRSTN =
+ store_thm
+  ("SEL_BUTFIRSTN",
+    ``!l m n.
+       LENGTH l > m+n /\ n > 0 
+       ==> 
+       (SEL l (0, m+n)  = SEL l (0,m) <> SEL (BUTFIRSTN (SUC m) l) (0,n-1))``,
+    SIMP_TAC list_ss [FinitePathTheory.SEL_def]
+     THEN Induct_on `m`
+     THEN RW_TAC list_ss [FinitePathTheory.SEL_REC_def,ADD_CLAUSES,FinitePathTheory.REST_def]
+     THEN `BUTFIRSTN (SUC m) l = BUTFIRSTN m (TL l)` 
+           by PROVE_TAC[NULL_EQ_NIL,LENGTH_NIL,DECIDE``n>(p:num) ==> ~(n=0)``,CONS,BUTFIRSTN]
+     THEN RW_TAC list_ss []
+     THENL
+      [`(HD l::TL l) = l`
+        by PROVE_TAC[NULL_EQ_NIL,LENGTH_NIL,DECIDE``n>(p:num) ==> ~(n=0)``,CONS]
+        THEN ONCE_REWRITE_TAC[ONE,GSYM ADD1]
+        THEN `BUTFIRSTN (SUC 0) l = TL l` by PROVE_TAC[BUTFIRSTN]
+        THEN ASM_REWRITE_TAC
+               [FinitePathTheory.SEL_REC_def,FinitePathTheory.HEAD_def,
+                FinitePathTheory.REST_def,APPEND,TWO,ADD_CLAUSES,CONS_11],
+       Cases_on `m = 0`
+        THEN RW_TAC list_ss [BUTFIRSTN]
+        THEN ONCE_REWRITE_TAC[ONE,GSYM ADD1]
+        THEN REWRITE_TAC
+               [FinitePathTheory.SEL_REC_def,FinitePathTheory.HEAD_def,
+                FinitePathTheory.REST_def,APPEND,TWO,ADD_CLAUSES]
+        THEN FULL_SIMP_TAC list_ss []
+        THENL
+         [`LENGTH l > SUC(SUC 0)` by DECIDE_TAC
+            THEN `(HD l::TL l) = l` 
+                  by PROVE_TAC[NULL_EQ_NIL,LENGTH_NIL,DECIDE``n>(p:num) ==> ~(n=0)``,CONS]
+            THEN `0 < LENGTH l` by DECIDE_TAC
+            THEN `LENGTH (TL l) = LENGTH l - 1` by PROVE_TAC[LENGTH_TL]
+            THEN `LENGTH (TL l) > 0` by DECIDE_TAC
+            THEN ONCE_REWRITE_TAC[TWO]
+            THEN ONCE_REWRITE_TAC[ONE]
+            THEN `(HD(TL l)::TL(TL l)) = TL l` 
+                  by PROVE_TAC[NULL_EQ_NIL,LENGTH_NIL,DECIDE``n>(p:num) ==> ~(n=0)``,CONS]
+            THEN `BUTFIRSTN (SUC(SUC 0)) l = TL(TL l)` by PROVE_TAC[BUTFIRSTN]
+            THEN RW_TAC list_ss [],
+          `0 < LENGTH l` by DECIDE_TAC
+            THEN `LENGTH (TL l) = LENGTH l - 1` by PROVE_TAC[LENGTH_TL]
+            THEN `LENGTH (TL l) > m + n` by DECIDE_TAC
+            THEN RES_TAC
+            THEN FULL_SIMP_TAC std_ss [DECIDE``m + (n + 1) = SUC(m + n)``,GSYM ADD1]
+            THEN `LENGTH (TL l) > 0` by DECIDE_TAC
+            THEN `(HD(TL l)::TL(TL l)) = TL l` 
+                  by PROVE_TAC[NULL_EQ_NIL,LENGTH_NIL,DECIDE``n>(p:num) ==> ~(n=0)``,CONS]
+            THEN FULL_SIMP_TAC std_ss
+                  [FinitePathTheory.SEL_REC_def,FinitePathTheory.HEAD_def,
+                   FinitePathTheory.REST_def]
+            THEN `HD (TL l)::SEL_REC (m + n) 0 (TL (TL l)) =
+                  (HD (TL l)::SEL_REC m 0 (TL (TL l))) <> 
+                  SEL_REC n 0 (BUTFIRSTN m (TL(TL l)))`
+                  by PROVE_TAC[BUTFIRSTN]
+            THEN FULL_SIMP_TAC std_ss [APPEND,CONS_11]
+            THEN `(HD l::TL l) = l` 
+                  by PROVE_TAC[NULL_EQ_NIL,LENGTH_NIL,DECIDE``n>(p:num) ==> ~(n=0)``,CONS]
+            THEN PROVE_TAC[BUTFIRSTN]]]);
+
+val SEL_TAKE_FIRSTN =
+ store_thm
+  ("SEL_TAKE_FIRSTN",
+   ``!P n l.  
+      LENGTH l > 0 
+      ==> 
+      (SEL l (0, LENGTH(TAKE_FIRSTN P (SUC n) l)-1) = TAKE_FIRSTN P (SUC n) l)``,
+   GEN_TAC
+    THEN Induct
+    THEN RW_TAC list_ss [REWRITE_RULE[ONE]TAKE_FIRSTN_1,SEL_TAKE_FIRST]
+    THEN ONCE_REWRITE_TAC[TAKE_FIRSTN_def]
+    THEN RW_TAC list_ss []
+    THEN `LENGTH (TAKE_FIRST P l) > 0` by PROVE_TAC[LENGTH_TAKE_FIRST_NON_EMPTY]
+    THEN Cases_on `BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l = []`
+    THEN RW_TAC list_ss [TAKE_FIRSTN_NIL,SEL_TAKE_FIRST]
+    THEN `~(LENGTH(BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)=0)` by PROVE_TAC[LENGTH_NIL]
+    THEN `LENGTH(BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l) > 0` by DECIDE_TAC
+    THEN `LENGTH(TAKE_FIRST P (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)) > 0`
+          by PROVE_TAC[LENGTH_TAKE_FIRST_NON_EMPTY]
+    THEN `LENGTH(TAKE_FIRSTN P (SUC n) (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)) > 0` 
+          by PROVE_TAC
+              [LENGTH_TAKE_FIRST_TAKE_FIRSTN,DECIDE``m:num > 0 /\ m <= n:num ==> n > 0``]
+    THEN `LENGTH(TAKE_FIRSTN P (SUC(SUC n)) l) > 0` 
+          by PROVE_TAC
+              [LENGTH_TAKE_FIRST_TAKE_FIRSTN,LENGTH_TAKE_FIRST_SUC,
+               DECIDE``m:num > 0 /\ m <= n:num /\ n <= p:num ==> p > 0``]
+    THEN `LENGTH(TAKE_FIRSTN P (SUC(SUC n)) l) <= LENGTH l` by PROVE_TAC[LENGTH_TAKE_FIRSTN]
+    THEN `LENGTH l > LENGTH(TAKE_FIRSTN P (SUC(SUC n)) l) - 1` by DECIDE_TAC
+    THEN `LENGTH l > LENGTH (TAKE_FIRST P l)
+                     +
+                     LENGTH(TAKE_FIRSTN P (SUC n) (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)) - 1`
+          by PROVE_TAC[LENGTH_TAKE_FIRSTN_LEMMA]
+    THEN `LENGTH l > (LENGTH (TAKE_FIRST P l) - 1)
+                     +
+                     LENGTH(TAKE_FIRSTN P (SUC n) (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l))`
+          by DECIDE_TAC
+    THEN RW_TAC std_ss [DECIDE ``m > 0 ==> (m + n - 1 = (m - 1) + n)``]
+    THEN RW_TAC list_ss [SEL_BUTFIRSTN,SEL_TAKE_FIRST]
+    THEN `SEL (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l) 
+              (0,LENGTH (TAKE_FIRSTN P (SUC n) (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)) - 1) =
+          TAKE_FIRSTN P (SUC n) (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)`
+          by PROVE_TAC[]
+    THEN `SUC(LENGTH (TAKE_FIRST P l) - 1) = LENGTH(TAKE_FIRST P l)` by DECIDE_TAC
+    THEN RW_TAC list_ss []);
+
+val FIRSTN_SEL =
+ store_thm
+  ("FIRSTN_SEL",
+   ``!n l. n < LENGTH l ==> (FIRSTN (SUC n) l = SEL l (0,n))``,
+   Induct
+    THEN RW_TAC list_ss 
+           [FIRSTN,FinitePathTheory.SEL_def,FinitePathTheory.SEL_REC_def,
+            FinitePathTheory.HEAD_def,FinitePathTheory.REST_def,ADD_CLAUSES]
+    THEN REWRITE_TAC
+          [ONE,GSYM ADD1,FIRSTN,FinitePathTheory.SEL_def,FinitePathTheory.SEL_REC_def,
+           FinitePathTheory.HEAD_def,FinitePathTheory.REST_def,ADD_CLAUSES]
+    THEN `(HD l::TL l) = l` by PROVE_TAC[NULL_EQ_NIL,LENGTH_NIL,DECIDE``p:num<n ==> ~(n=0)``,CONS]
+    THEN ZAP_TAC list_ss [FIRSTN,ONE]
+    THEN `0 < LENGTH l` by DECIDE_TAC
+    THEN IMP_RES_TAC LENGTH_TL
+    THEN `0 < LENGTH(TL l)` by DECIDE_TAC
+    THEN `(HD(TL l)::TL(TL l)) = TL l` by PROVE_TAC[NULL_EQ_NIL,LENGTH_NIL,DECIDE``p:num<n ==> ~(n=0)``,CONS]
+    THEN ASSUM_LIST(fn thl => ONCE_REWRITE_TAC[GSYM(el 5 thl)])
+    THEN ASSUM_LIST(fn thl => ONCE_REWRITE_TAC[GSYM(el 1 thl)])
+    THEN REWRITE_TAC
+          [FIRSTN,FinitePathTheory.SEL_def,FinitePathTheory.SEL_REC_def,
+           FinitePathTheory.HEAD_def,FinitePathTheory.REST_def]
+    THEN RW_TAC list_ss []
+    THEN `n < LENGTH(TL l)` by DECIDE_TAC
+    THEN FULL_SIMP_TAC list_ss
+          [FIRSTN,FinitePathTheory.SEL_def,FinitePathTheory.SEL_REC_def,
+           FinitePathTheory.HEAD_def,FinitePathTheory.REST_def]
+    THEN `FIRSTN (SUC n) (HD (TL l)::TL (TL l)) = SEL_REC (SUC n) 0 (HD (TL l)::TL (TL l))` 
+          by PROVE_TAC[ADD1]
+    THEN FULL_SIMP_TAC list_ss
+          [FIRSTN,ADD1,FinitePathTheory.SEL_def,FinitePathTheory.SEL_REC_def,
+           FinitePathTheory.HEAD_def,FinitePathTheory.REST_def]);
+
+
+val SEL_TAKE_FIRSTN =
+ store_thm
+  ("SEL_TAKE_FIRSTN",
+   ``!P n l.  
+      LENGTH l > 0 
+      ==> 
+      (SEL l (0, LENGTH(TAKE_FIRSTN P (SUC n) l)-1) = TAKE_FIRSTN P (SUC n) l)``,
+   GEN_TAC
+    THEN Induct
+    THEN RW_TAC list_ss [REWRITE_RULE[ONE]TAKE_FIRSTN_1,SEL_TAKE_FIRST]
+    THEN ONCE_REWRITE_TAC[TAKE_FIRSTN_def]
+    THEN RW_TAC list_ss []
+    THEN `LENGTH (TAKE_FIRST P l) > 0` by PROVE_TAC[LENGTH_TAKE_FIRST_NON_EMPTY]
+    THEN Cases_on `BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l = []`
+    THEN RW_TAC list_ss [TAKE_FIRSTN_NIL,SEL_TAKE_FIRST]
+    THEN `~(LENGTH(BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)=0)` by PROVE_TAC[LENGTH_NIL]
+    THEN `LENGTH(BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l) > 0` by DECIDE_TAC
+    THEN `LENGTH(TAKE_FIRST P (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)) > 0`
+          by PROVE_TAC[LENGTH_TAKE_FIRST_NON_EMPTY]
+    THEN `LENGTH(TAKE_FIRSTN P (SUC n) (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)) > 0` 
+          by PROVE_TAC
+              [LENGTH_TAKE_FIRST_TAKE_FIRSTN,DECIDE``m:num > 0 /\ m <= n:num ==> n > 0``]
+    THEN `LENGTH(TAKE_FIRSTN P (SUC(SUC n)) l) > 0` 
+          by PROVE_TAC
+              [LENGTH_TAKE_FIRST_TAKE_FIRSTN,LENGTH_TAKE_FIRST_SUC,
+               DECIDE``m:num > 0 /\ m <= n:num /\ n <= p:num ==> p > 0``]
+    THEN `LENGTH(TAKE_FIRSTN P (SUC(SUC n)) l) <= LENGTH l` by PROVE_TAC[LENGTH_TAKE_FIRSTN]
+    THEN `LENGTH l > LENGTH(TAKE_FIRSTN P (SUC(SUC n)) l) - 1` by DECIDE_TAC
+    THEN `LENGTH l > LENGTH (TAKE_FIRST P l)
+                     +
+                     LENGTH(TAKE_FIRSTN P (SUC n) (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)) - 1`
+          by PROVE_TAC[LENGTH_TAKE_FIRSTN_LEMMA]
+    THEN `LENGTH l > (LENGTH (TAKE_FIRST P l) - 1)
+                     +
+                     LENGTH(TAKE_FIRSTN P (SUC n) (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l))`
+          by DECIDE_TAC
+    THEN RW_TAC std_ss [DECIDE ``m > 0 ==> (m + n - 1 = (m - 1) + n)``]
+    THEN RW_TAC list_ss [SEL_BUTFIRSTN,SEL_TAKE_FIRST]
+    THEN `SEL (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l) 
+              (0,LENGTH (TAKE_FIRSTN P (SUC n) (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)) - 1) =
+          TAKE_FIRSTN P (SUC n) (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)`
+          by PROVE_TAC[]
+    THEN `SUC(LENGTH (TAKE_FIRST P l) - 1) = LENGTH(TAKE_FIRST P l)` by DECIDE_TAC
+    THEN RW_TAC list_ss []);
+
+val FILTER_SEL =
+ store_thm
+  ("FILTER_SEL",
+   ``!P n l. 
+      n < LENGTH (FILTER P l)
+      ==>
+      (FILTER P (SEL l (0,LENGTH (TAKE_FIRSTN P (SUC n) l) - 1)) =
+       SEL (FILTER P l) (0,n))``,
+   RW_TAC list_ss []
+    THEN `LENGTH (FILTER P l) > 0` by DECIDE_TAC
+    THEN IMP_RES_TAC LENGTH_FILTER_NON_EMPTY
+    THEN RW_TAC list_ss [SEL_TAKE_FIRSTN, GSYM FIRSTN_FILTER_TAKE_FIRSTN]
+    THEN `LENGTH (FILTER P l) <= LENGTH l` by PROVE_TAC[LENGTH_FILTER]
+    THEN `n < LENGTH l` by DECIDE_TAC
+    THEN RW_TAC list_ss [FIRSTN_SEL]);
+
+val FILTER_SEL_PATH_FILTER_FINITE =
+ store_thm
+  ("FILTER_SEL_PATH_FILTER_FINITE",
+   ``!P n l. 
+      n < LENGTH (PATH_FILTER P (FINITE l))
+      ==>
+      (FILTER P (SEL (FINITE l) (0, LENGTH (PATH_TAKE_FIRSTN P (SUC n) (FINITE l)) - 1))
+       =  
+       SEL (PATH_FILTER P (FINITE l)) (0, n))``,
+   REPEAT GEN_TAC
+    THEN RW_TAC list_ss 
+          [PATH_FILTER_def,LENGTH_def,SEL_FINITE,LS,FILTER_SEL,PATH_TAKE_FIRSTN_def]);
+
+
+(*
+val FILTER_SEL_PATH_FILTER =
+ store_thm
+  ("FILTER_SEL_PATH_FILTER",
+   ``!P n v. 
+      n < LENGTH (PATH_FILTER P v)
+      ==>
+      (FILTER P (SEL v (0, LENGTH (PATH_TAKE_FIRSTN P (SUC n) v) - 1))
+       =  
+       SEL (PATH_FILTER P v) (0, n))``,
+   GEN_TAC THEN GEN_TAC
+    THEN Cases
+    THEN RW_TAC list_ss [FILTER_SEL_PATH_FILTER_FINITE]
+    THEN RW_TAC list_ss [PATH_FILTER_def]
+    THEN FULL_SIMP_TAC list_ss []
+*)
+
+val TOP_FREE_CONS =
+ store_thm
+  ("TOP_FREE_CONS",
+   ``!x l. TOP_FREE(x::l) = TOP_FREE[x] /\ TOP_FREE l``,
+   GEN_TAC
+    THEN Induct_on `l`
+    THEN Cases_on `x`
+    THEN FULL_SIMP_TAC list_ss [TOP_FREE_def]);
+
+val BOTTOM_FREE_CONS =
+ store_thm
+  ("BOTTOM_FREE_CONS",
+   ``!x l. BOTTOM_FREE(x::l) = BOTTOM_FREE[x] /\ BOTTOM_FREE l``,
+   GEN_TAC
+    THEN Induct_on `l`
+    THEN Cases_on `x`
+    THEN FULL_SIMP_TAC list_ss [BOTTOM_FREE_def]);
+
+(*****************************************************************************)
+(* Proofs of TOP_FREE_SEL and BOTTOM_FREE_SEL that follow can probably be    *)
+(* simplified.                                                               *)
+(*****************************************************************************)
+val TOP_FREE_SEL =
+ store_thm
+  ("TOP_FREE_SEL",
+   ``!l n. TOP_FREE l /\ n < LENGTH l ==> TOP_FREE(SEL l (0,n))``,
+   SIMP_TAC list_ss 
+    [GSYM ADD1,FinitePathTheory.SEL_def,FinitePathTheory.SEL_REC_def,
+     FinitePathTheory.HEAD_def,FinitePathTheory.REST_def]
+    THEN Induct_on `n`
+    THEN RW_TAC std_ss [FinitePathTheory.SEL_REC_def]
+    THEN `(HD l::TL l) = l` by PROVE_TAC[NULL_EQ_NIL,LENGTH_NIL,DECIDE``p:num<n ==> ~(n=0)``,CONS]
+    THEN Cases_on `HD l`
+    THEN FULL_SIMP_TAC list_ss [TOP_FREE_def]
+    THENL
+     [PROVE_TAC[TOP_FREE_CONS,TOP_FREE_def],
+      PROVE_TAC[TOP_FREE_CONS,TOP_FREE_def],
+      `0 < LENGTH l` by DECIDE_TAC
+       THEN IMP_RES_TAC LENGTH_TL
+       THEN `n < LENGTH(TL l)` by DECIDE_TAC
+       THEN `TOP_FREE(TL l)` by PROVE_TAC[TOP_FREE_CONS]
+       THEN `n < LENGTH l` by DECIDE_TAC
+       THEN `TOP_FREE (HD l::SEL_REC n 0 (TL l))` by PROVE_TAC[]
+       THEN FULL_SIMP_TAC list_ss [FinitePathTheory.HEAD_def,FinitePathTheory.REST_def],
+      `0 < LENGTH l` by DECIDE_TAC
+       THEN IMP_RES_TAC LENGTH_TL
+       THEN `n < LENGTH(TL l)` by DECIDE_TAC
+       THEN `TOP_FREE(TL l)` by PROVE_TAC[TOP_FREE_CONS]
+       THEN `n < LENGTH l` by DECIDE_TAC
+       THEN `TOP_FREE (HD l::SEL_REC n 0 (TL l))` by PROVE_TAC[]
+       THEN FULL_SIMP_TAC list_ss [FinitePathTheory.HEAD_def,FinitePathTheory.REST_def]]);
+
+val BOTTOM_FREE_SEL =
+ store_thm
+  ("BOTTOM_FREE_SEL",
+   ``!l n. BOTTOM_FREE l /\ n < LENGTH l ==> BOTTOM_FREE(SEL l (0,n))``,
+   SIMP_TAC list_ss 
+    [GSYM ADD1,FinitePathTheory.SEL_def,FinitePathTheory.SEL_REC_def,
+     FinitePathTheory.HEAD_def,FinitePathTheory.REST_def]
+    THEN Induct_on `n`
+    THEN RW_TAC std_ss [FinitePathTheory.SEL_REC_def]
+    THEN `(HD l::TL l) = l` by PROVE_TAC[NULL_EQ_NIL,LENGTH_NIL,DECIDE``p:num<n ==> ~(n=0)``,CONS]
+    THEN Cases_on `HD l`
+    THEN FULL_SIMP_TAC list_ss [BOTTOM_FREE_def]
+    THENL
+     [PROVE_TAC[BOTTOM_FREE_CONS,BOTTOM_FREE_def],
+      `0 < LENGTH l` by DECIDE_TAC
+       THEN IMP_RES_TAC LENGTH_TL
+       THEN `n < LENGTH(TL l)` by DECIDE_TAC
+       THEN `BOTTOM_FREE(TL l)` by PROVE_TAC[BOTTOM_FREE_CONS]
+       THEN `n < LENGTH l` by DECIDE_TAC
+       THEN `BOTTOM_FREE (HD l::SEL_REC n 0 (TL l))` by PROVE_TAC[]
+       THEN FULL_SIMP_TAC list_ss [FinitePathTheory.HEAD_def,FinitePathTheory.REST_def],
+      PROVE_TAC[BOTTOM_FREE_CONS,BOTTOM_FREE_def],
+      `0 < LENGTH l` by DECIDE_TAC
+       THEN IMP_RES_TAC LENGTH_TL
+       THEN `n < LENGTH(TL l)` by DECIDE_TAC
+       THEN `BOTTOM_FREE(TL l)` by PROVE_TAC[BOTTOM_FREE_CONS]
+       THEN `n < LENGTH l` by DECIDE_TAC
+       THEN `BOTTOM_FREE (HD l::SEL_REC n 0 (TL l))` by PROVE_TAC[]
+       THEN FULL_SIMP_TAC list_ss [FinitePathTheory.HEAD_def,FinitePathTheory.REST_def]]);
+
+(*****************************************************************************)
+(* |- !p. EL n (SEL p (0,n)) = EL n p                                        *)
+(*****************************************************************************)
+val EL_SEL0_LEMMA =
+ SIMP_RULE arith_ss 
+   [FinitePathTheory.ELEM_def,FinitePathTheory.HEAD_def,FinitePathTheory.REST_def,
+    FinitePathTheory.HD_RESTN]
+   (Q.SPECL[`n`,`n`]FinitePathTheory.EL_SEL0);
+
+(*****************************************************************************)
+(* |- !p. LENGTH (SEL p (0,n)) = n + 1                                       *)
+(*****************************************************************************)
+val LENGTH_SEL0 =
+  SIMP_RULE arith_ss [] (Q.SPECL[`0`,`n`]FinitePathTheory.LENGTH_SEL);
+
+val LENGTH_TAKE_FIRSTN_SEL_LEMMA =
+ store_thm
+  ("LENGTH_TAKE_FIRSTN_SEL_LEMMA",
+   ``P(EL n l) /\ n < LENGTH l
+     ==>
+     (LENGTH(TAKE_FIRSTN P (SUC (LENGTH (FILTER P (SEL l (0,n))) - 1)) (SEL l (0,n))) - 1 = n)``,
+   RW_TAC list_ss []
+    THEN `LENGTH(SEL l (0,n)) = n+1` by PROVE_TAC[LENGTH_SEL0]
+    THEN `P(EL n (SEL l (0,n)))` by PROVE_TAC[EL_SEL0_LEMMA]
+    THEN `n < LENGTH (SEL l (0,n))` by DECIDE_TAC
+    THEN `LENGTH (FILTER P (SEL l (0,n))) > 0` by PROVE_TAC[NON_ZERO_EXISTS_LENGTH_FILTER]
+    THEN `SUC (LENGTH (FILTER P (SEL l (0,n))) - 1) = LENGTH (FILTER P (SEL l (0,n)))` by DECIDE_TAC
+    THEN RW_TAC list_ss []
+    THEN `P(LAST (SEL l (0,n)))` by PROVE_TAC[EL_LAST_SEL]
+    THEN `HOLDS_LAST P (SEL l (0,n))` by PROVE_TAC[HOLDS_LAST_def]
+    THEN IMP_RES_TAC HOLDS_LAST_TAKE_FIRSTN
+    THEN RW_TAC list_ss []);
+
+(*
+val LENGTH_TAKE_FIRSTN_SEL_LEMMA =
+ store_thm
+  ("LENGTH_TAKE_FIRSTN_SEL_LEMMA",
+   ``P(EL n l) /\ n < LENGTH l
+     ==>
+     (LENGTH(TAKE_FIRSTN P (SUC (LENGTH (FILTER P (SEL l (0,n))) - 1)) l) - 1 = n)``,
+   RW_TAC list_ss []
+    THEN `LENGTH(SEL l (0,n)) = n+1` by PROVE_TAC[LENGTH_SEL0]
+    THEN `P(EL n (SEL l (0,n)))` by PROVE_TAC[EL_SEL0_LEMMA]
+    THEN `n < LENGTH (SEL l (0,n))` by DECIDE_TAC
+    THEN `LENGTH (FILTER P (SEL l (0,n))) > 0` by PROVE_TAC[NON_ZERO_EXISTS_LENGTH_FILTER]
+    THEN `SUC (LENGTH (FILTER P (SEL l (0,n))) - 1) = LENGTH (FILTER P (SEL l (0,n)))` by DECIDE_TAC
+    THEN RW_TAC list_ss []
+    THEN `P(LAST (SEL l (0,n)))` by PROVE_TAC[EL_LAST_SEL]
+    THEN `HOLDS_LAST P (SEL l (0,n))` by PROVE_TAC[HOLDS_LAST_def]
+    THEN RW_TAC list_ss [GSYM FIRSTN_SEL]
+
+Want
+LENGTH (TAKE_FIRSTN P (LENGTH (FILTER P (FIRSTN n l))) l) = n
+reduce using
+LENGTH_FILTER_FIRSTN
+to
+TAKE_FIRSTN P (LENGTH (FILTER P (FIRSTN n l))) l = FILTER P (FIRSTN (LENGTH (TAKE_FIRSTN P n l)) l
+reduce using
+FIRSTN_TAKE_FIRSTN
+to
+TAKE_FIRSTN P (LENGTH (FILTER P (FIRSTN n l))) l = FILTER P (TAKE_FIRSTN P n l)
+reduce using
+FIRSTN_FILTER_TAKE_FIRSTN
+to
+TAKE_FIRSTN P (LENGTH (FILTER P (FIRSTN n l))) l = FIRSTN n (FILTER P l)
+
+
+    THEN IMP_RES_TAC HOLDS_LAST_TAKE_FIRSTN
+    THEN RW_TAC list_ss []);
+*)
+
+val SEL_SEL =
+ store_thm
+  ("SEL_SEL",
+   ``!(l:'a list) n. SEL (SEL l (0,n)) (0,n) = SEL l (0,n)``,
+   SIMP_TAC list_ss
+    [FinitePathTheory.SEL_def,FinitePathTheory.SEL_REC_def,
+     FinitePathTheory.HEAD_def,FinitePathTheory.REST_def]
+    THEN REWRITE_TAC[GSYM ADD1]
+    THEN Induct_on `n`
+    THEN FULL_SIMP_TAC list_ss 
+          [FinitePathTheory.SEL_REC_def,FinitePathTheory.HEAD_def,
+           FinitePathTheory.REST_def]);
+
+(*****************************************************************************)
+(*     |- !n l P.                                                            *)
+(*          P (EL n l) /\ n < LENGTH l ==>                                   *)
+(*          0 < LENGTH (FILTER P (SEL l (0,n))) ==>                          *)
+(*          (FILTER P (SEL l (0,n)) =                                        *)
+(*           SEL (FILTER P (SEL l (0,n)))                                    *)
+(*             (0,LENGTH (FILTER P (SEL l (0,n))) - 1))                      *)
+(*****************************************************************************)
+val FILTER_SEL_COR =
+ GEN_ALL
+  (DISCH_ALL
+   (SIMP_RULE
+    list_ss
+    [SEL_SEL,ASSUME``P(EL n l) /\ n < LENGTH(l:'a letter list)``,
+     LENGTH_TAKE_FIRSTN_SEL_LEMMA]
+    (Q.ISPECL
+      [`P:'a letter -> bool`,`LENGTH(FILTER P (SEL (l:'a letter list) (0,n))) - 1`,`SEL (l:'a letter list) (0,n)`]
+      FILTER_SEL)));
+
+(*****************************************************************************)
+(*  |- j < LENGTH l - 1 ==> (l = SEL l (0,j) <> SEL l (j + 1,LENGTH l - 1))  *)
+(*****************************************************************************)
+val SEL_SPLIT_LEMMA =
+ SIMP_RULE
+  list_ss
+  [SEL_LENGTH]
+  (SPECL
+    [``l:'a list``,``j:num``,``0``,``LENGTH(l:'a list)-1``]
+    FinitePathTheory.SEL_SPLIT);
+
+val SEL_CHOP =
+ store_thm
+  ("SEL_CHOP",
+   ``j < LENGTH l ==> ?l'. l = SEL l (0,j) <> l'``,
+   Cases_on `j = LENGTH l - 1`
+    THEN RW_TAC list_ss [SEL_LENGTH]
+    THENL
+     [Q.EXISTS_TAC `[]`
+       THEN RW_TAC list_ss [],
+      `j < LENGTH l - 1` by DECIDE_TAC
+       THEN PROVE_TAC[SEL_SPLIT_LEMMA]]);
+
+local
+open FinitePathTheory
+in
+val F_PROJ_F_STRONG_SERE_FINITE_LEMMA1 =
+ SIMP_RULE
+  list_ss
+  [ELEM_EL,EL_SEL0,LENGTH_SEL]
+  (ISPECL
+    [``CLOCK c``,``SEL (l :'a letter list) (0,j)``,``j:num``]
+    NON_ZERO_EXISTS_LENGTH_FILTER)
+val F_PROJ_F_STRONG_SERE_FINITE_LEMMA2 =
+ SIMP_RULE
+  list_ss
+  []
+  (ISPECL
+    [``FILTER (CLOCK c) (SEL (l :'a letter list) (0,j))``,
+     ``l' :'a letter list``,
+     ``LENGTH (FILTER (CLOCK c) (SEL (l :'a letter list) (0,j))) - 1``]
+    SEL_APPEND1)
+end;
+
+val F_PROJ_F_STRONG_SERE_FINITE = 
+ store_thm
+  ("F_PROJ_F_STRONG_SERE_FINITE",
+   ``!r.
+      F_CLOCK_FREE (F_STRONG_SERE r) ==>
+      !l.
+        PATH_TOP_FREE (FINITE l) /\ PATH_BOTTOM_FREE (FINITE l) ==>
+        !c.
+          UF_SEM (PROJ (FINITE l) c) (F_STRONG_SERE r) =
+          F_SEM (FINITE l) c (F_STRONG_SERE r)``,
+   RW_TAC (list_ss++resq_SS) 
+    [UF_SEM,F_SEM,GSYM CLOCK_def,PROJ_def,F_CLOCK_FREE_def,LS,PATH_FILTER_def,
+     PATH_TOP_FREE_def,PATH_BOTTOM_FREE_def,SEL_FINITE,LIST_PROJ_def]
+      THEN EQ_TAC
+      THEN RW_TAC list_ss []
+      THENL
+       [`LENGTH (FILTER (CLOCK c) l) <= LENGTH l` by PROVE_TAC[LENGTH_FILTER]
+         THEN `j < LENGTH l` by DECIDE_TAC
+         THEN Q.EXISTS_TAC `LENGTH (TAKE_FIRSTN (CLOCK c) (SUC j) l) - 1`
+         THEN RW_TAC list_ss [LIST_PROJ_def,FILTER_SEL]
+         THENL
+          [`LENGTH (TAKE_FIRSTN (CLOCK c) (SUC j) l) <= LENGTH l` by PROVE_TAC[LENGTH_TAKE_FIRSTN]
+            THEN DECIDE_TAC,
+           `LENGTH (TAKE_FIRSTN (CLOCK c) (SUC j) l) <= LENGTH l` by PROVE_TAC[LENGTH_TAKE_FIRSTN]
+            THEN `LENGTH (TAKE_FIRSTN (CLOCK c) (SUC j) l) - 1 < LENGTH l` by DECIDE_TAC
+            THEN `S_SEM (SEL l (0,(LENGTH (TAKE_FIRSTN (CLOCK c) (SUC j) l) - 1))) c r =
+                  (LENGTH(SEL l (0,(LENGTH (TAKE_FIRSTN (CLOCK c) (SUC j) l) - 1))) > 0 
+                  ==> CLOCK c (LAST(SEL l (0,(LENGTH (TAKE_FIRSTN (CLOCK c) (SUC j) l) - 1))))) 
+                      /\ 
+                      US_SEM (LIST_PROJ (SEL l (0,(LENGTH (TAKE_FIRSTN (CLOCK c) (SUC j) l) - 1))) c) r`
+            by PROVE_TAC[S_PROJ,TOP_FREE_SEL,BOTTOM_FREE_SEL]
+           THEN RW_TAC list_ss [LIST_PROJ_def,FILTER_SEL,SEL_TAKE_FIRSTN,LAST_TAKE_FIRSTN]],
+        `(LENGTH (SEL l (0,j)) > 0 
+          ==> 
+          CLOCK c (LAST (SEL l (0,j)))) /\ US_SEM (FILTER (CLOCK c) (SEL l (0,j))) r`
+         by PROVE_TAC[S_PROJ,TOP_FREE_SEL,BOTTOM_FREE_SEL,LIST_PROJ_def]
+         THEN FULL_SIMP_TAC list_ss [FinitePathTheory.LENGTH_SEL,FinitePathTheory.EL_LAST_SEL]
+         THEN Q.EXISTS_TAC `LENGTH (FILTER (CLOCK c) (SEL l (0,j))) - 1`
+         THEN IMP_RES_TAC NON_ZERO_EXISTS_LENGTH_FILTER
+         THEN RW_TAC list_ss []
+         THEN IMP_RES_TAC SEL_CHOP
+         THENL
+          [POP_ASSUM(fn th => CONV_TAC(RAND_CONV(ONCE_REWRITE_CONV[th])))
+            THEN RW_TAC list_ss [FILTER_APPEND],
+           POP_ASSUM(fn th => CONV_TAC((RATOR_CONV o RAND_CONV o RATOR_CONV) (ONCE_REWRITE_CONV[th])))
+            THEN IMP_RES_TAC F_PROJ_F_STRONG_SERE_FINITE_LEMMA1
+            THEN `LENGTH (FILTER (CLOCK c) (SEL l (0,j))) - 1 < LENGTH(FILTER (CLOCK c) (SEL l (0,j)))`
+                  by DECIDE_TAC
+            THEN `0 < LENGTH (FILTER (CLOCK c) (SEL l (0,j)))` by DECIDE_TAC
+            THEN RW_TAC std_ss [F_PROJ_F_STRONG_SERE_FINITE_LEMMA2,FILTER_APPEND,SEL_LENGTH]]]);
+
+(*
+
+val F_PROJ_F_WEAK_SERE_FINITE = 
+ store_thm
+  ("F_PROJ_F_WEAK_SERE_FINITE",
+   ``!r.
+      F_CLOCK_FREE (F_WEAK_SERE r) ==>
+      !l.
+        PATH_TOP_FREE (FINITE l) /\ PATH_BOTTOM_FREE (FINITE l) ==>
+        !c.
+          UF_SEM (PROJ (FINITE l) c) (F_WEAK_SERE r) =
+          F_SEM (FINITE l) c (F_WEAK_SERE r)``,
+   RW_TAC (list_ss++resq_SS) 
+    [UF_SEM,F_SEM,GSYM CLOCK_def,PROJ_def,F_CLOCK_FREE_def,LS,PATH_FILTER_def,
+     PATH_TOP_FREE_def,PATH_BOTTOM_FREE_def,SEL_FINITE,LIST_PROJ_def]
+      THEN EQ_TAC
+      THEN RW_TAC list_ss [TOP_OMEGA_def,LENGTH_def,LS,LENGTH_CAT]
+      THENL
+       [`LENGTH (FILTER (CLOCK c) l) <= LENGTH l` by PROVE_TAC[LENGTH_FILTER]
+         THEN `j < LENGTH l` by DECIDE_TAC
+         THEN Q.EXISTS_TAC `LENGTH (TAKE_FIRSTN (CLOCK c) (SUC j) l) - 1`
+         THEN RW_TAC list_ss [LIST_PROJ_def,FILTER_SEL]
+         THENL
+          [`LENGTH (TAKE_FIRSTN (CLOCK c) (SUC j) l) <= LENGTH l` by PROVE_TAC[LENGTH_TAKE_FIRSTN]
+            THEN DECIDE_TAC,
+           `LENGTH (TAKE_FIRSTN (CLOCK c) (SUC j) l) <= LENGTH l` by PROVE_TAC[LENGTH_TAKE_FIRSTN]
+            THEN `LENGTH (TAKE_FIRSTN (CLOCK c) (SUC j) l) - 1 < LENGTH l` by DECIDE_TAC
+            THEN `S_SEM (SEL l (0,(LENGTH (TAKE_FIRSTN (CLOCK c) (SUC j) l) - 1))) c r =
+                  (LENGTH(SEL l (0,(LENGTH (TAKE_FIRSTN (CLOCK c) (SUC j) l) - 1))) > 0 
+                  ==> CLOCK c (LAST(SEL l (0,(LENGTH (TAKE_FIRSTN (CLOCK c) (SUC j) l) - 1))))) 
+                      /\ 
+                      US_SEM (LIST_PROJ (SEL l (0,(LENGTH (TAKE_FIRSTN (CLOCK c) (SUC j) l) - 1))) c) r`
+            by PROVE_TAC[S_PROJ,TOP_FREE_SEL,BOTTOM_FREE_SEL]
+           THEN RW_TAC list_ss [LIST_PROJ_def,FILTER_SEL,SEL_TAKE_FIRSTN,LAST_TAKE_FIRSTN]],
+        `(LENGTH (SEL l (0,j)) > 0 
+          ==> 
+          CLOCK c (LAST (SEL l (0,j)))) /\ US_SEM (FILTER (CLOCK c) (SEL l (0,j))) r`
+         by PROVE_TAC[S_PROJ,TOP_FREE_SEL,BOTTOM_FREE_SEL,LIST_PROJ_def]
+         THEN FULL_SIMP_TAC list_ss [FinitePathTheory.LENGTH_SEL,FinitePathTheory.EL_LAST_SEL]
+         THEN Q.EXISTS_TAC `LENGTH (FILTER (CLOCK c) (SEL l (0,j))) - 1`
+         THEN IMP_RES_TAC NON_ZERO_EXISTS_LENGTH_FILTER
+         THEN RW_TAC list_ss []
+         THEN IMP_RES_TAC SEL_CHOP
+         THENL
+          [POP_ASSUM(fn th => CONV_TAC(RAND_CONV(ONCE_REWRITE_CONV[th])))
+            THEN RW_TAC list_ss [FILTER_APPEND],
+           POP_ASSUM(fn th => CONV_TAC((RATOR_CONV o RAND_CONV o RATOR_CONV) (ONCE_REWRITE_CONV[th])))
+            THEN IMP_RES_TAC F_PROJ_F_STRONG_SERE_FINITE_LEMMA1
+            THEN `LENGTH (FILTER (CLOCK c) (SEL l (0,j))) - 1 < LENGTH(FILTER (CLOCK c) (SEL l (0,j)))`
+                  by DECIDE_TAC
+            THEN `0 < LENGTH (FILTER (CLOCK c) (SEL l (0,j)))` by DECIDE_TAC
+            THEN RW_TAC std_ss [F_PROJ_F_STRONG_SERE_FINITE_LEMMA2,FILTER_APPEND,SEL_LENGTH]]]);
+
+
+val F_PROJ_F_NEXT_FINITE = 
+ store_thm
+  ("F_PROJ_F_NEXT_FINITE",
+   ``!f.
+      (F_CLOCK_FREE f ==>
+       !l. PATH_TOP_FREE (FINITE l) /\ PATH_BOTTOM_FREE (FINITE l) ==>
+           !c. UF_SEM (PROJ (FINITE l) c) f = F_SEM (FINITE l) c f)
+      ==>
+      F_CLOCK_FREE (F_NEXT f) ==>
+       !l. PATH_TOP_FREE (FINITE l) /\ PATH_BOTTOM_FREE (FINITE l) ==>
+          !c. UF_SEM (PROJ (FINITE l) c) (F_NEXT f) =
+              F_SEM (FINITE l) c (F_NEXT f)``,
+   RW_TAC (list_ss++resq_SS) 
+    [UF_SEM,F_SEM,GSYM CLOCK_def,PROJ_def,F_CLOCK_FREE_def,LS,PATH_FILTER_def,
+     PATH_TOP_FREE_def,PATH_BOTTOM_FREE_def,SEL_FINITE,LIST_PROJ_def]
+      THEN EQ_TAC
+      THEN RW_TAC list_ss []
+
+val F_PROJ_FINITE =
+ store_thm
+  ("F_PROJ_FINITE",
+   ``!f. 
+      F_CLOCK_FREE f
+      ==>
+      !l. PATH_TOP_FREE (FINITE l) /\ PATH_BOTTOM_FREE (FINITE l)
+          ==>
+          !c. UF_SEM (PROJ (FINITE l) c) f = F_SEM (FINITE l) c f``,
+   INDUCT_THEN fl_induct ASSUME_TAC
+    THENL
+     [(* F_STRONG_BOOL b *)
+      RW_TAC std_ss [F_PROJ_F_STRONG_BOOL],
+      (* F_WEAK_BOOL b *)
+      RW_TAC std_ss [F_PROJ_F_WEAK_BOOL],
+      (* F_NOT_BOOL b *)
+      RW_TAC std_ss [F_PROJ_F_NOT_BOOL_FINITE],
+      (* F_AND_BOOL b *)
+      RW_TAC std_ss [F_PROJ_F_AND_BOOL_FINITE],
+      (* F_STRONG_SERE b *)
+      RW_TAC std_ss [F_PROJ_F_STRONG_SERE_FINITE],
+
+*)
 
 val _ = export_theory();
 
