@@ -2932,6 +2932,31 @@ val SUC_MOD = store_thm
           THEN ASM_REWRITE_TAC [LESS_MONO_ADD_EQ, ADD_MONO_LESS_EQ, ONE]
           THEN PROVE_TAC [LESS_OR]]);
 
+
+(*---------------------------------------------------------------------------*)
+(* We should be able to use "by" construct at this phase of development,     *)
+(* surely?                                                                   *)
+(*---------------------------------------------------------------------------*)
+
+val MOD_ELIM = Q.store_thm 
+("MOD_ELIM",
+ `!P x n. 0 < n /\ P x /\ (!y. P (y + n) ==> P y) ==> P (x MOD n)`,
+GEN_TAC THEN HO_MATCH_MP_TAC COMPLETE_INDUCTION 
+  THEN REPEAT STRIP_TAC 
+  THEN ASM_CASES_TAC (Term `x >= n`) THENL
+  [``P ((x - n) MOD n):bool`` via
+      (Q.PAT_ASSUM `!x'. A x' ==> !n. Q x' n` (MP_TAC o Q.SPEC `x-n`) THEN
+    ``x-n < x`` via FULL_SIMP_TAC bool_ss 
+                  [GREATER_OR_EQ,SUB_RIGHT_LESS,GREATER_DEF] THEN
+    METIS_TAC [NOT_ZERO_LT_ZERO,ADD_SYM,LESS_ADD_NONZERO,LESS_TRANS,
+               SUB_ADD,GREATER_OR_EQ,GREATER_DEF,LESS_OR_EQ,SUB_RIGHT_LESS])
+    THEN ``?z. x = z + n`` via (Q.EXISTS_TAC `x - n` THEN 
+           METIS_TAC [SUB_ADD,GREATER_OR_EQ,GREATER_DEF,LESS_OR_EQ])
+    THEN RW_TAC bool_ss []
+    THEN METIS_TAC [SUB_ADD,GREATER_OR_EQ,GREATER_DEF,LESS_OR_EQ,ADD_MODULUS],
+    METIS_TAC [LESS_MOD,NOT_LESS,LESS_OR_EQ,GREATER_OR_EQ, GREATER_DEF]]);
+
+
 val DOUBLE_LT = store_thm
   ("DOUBLE_LT",
    ``!p q. 2 * p + 1 < 2 * q = 2 * p < 2 * q``,
