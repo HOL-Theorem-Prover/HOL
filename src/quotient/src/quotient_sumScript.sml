@@ -51,40 +51,6 @@ val POP_TAC = POP_ASSUM (fn th => ALL_TAC);
 
 (* for SUM of ABS / REP functions, use infix ++, defined here: *)
 
-val _ = Lib.try add_infix("++", 450, HOLgrammars.RIGHT)
-
-val SUM_MAP_def = xDefine "SUM_MAP"
-       `(($++ f g) (INL (a:'a)) = INL ((f a):'c)) /\
-        (($++ f g) (INR (b:'b)) = INR ((g b):'d))`;
-
-val SUM_MAP = store_thm
-   ("SUM_MAP",
-    (--`!f g (z:'a + 'b).
-         (f ++ g) z = (if ISL z then INL (f (OUTL z))
-                                else INR (g (OUTR z))) :'c + 'd`--),
-    GEN_TAC
-    THEN GEN_TAC
-    THEN Cases
-    THEN REWRITE_TAC[SUM_MAP_def,ISL,OUTL,OUTR]
-   );
-
-val SUM_MAP_CASE = store_thm
-   ("SUM_MAP_CASE",
-    (--`!f g (z:'a + 'b).
-         (f ++ g) z = sum_case (INL o f) (INR o g) z :'c + 'd`--),
-    GEN_TAC
-    THEN GEN_TAC
-    THEN Cases
-    THEN REWRITE_TAC[SUM_MAP_def,sum_case_def,o_THM]
-   );
-
-val SUM_MAP_I = store_thm
-   ("SUM_MAP_I",
-    (--`(I ++ I) = (I : 'a + 'b -> 'a + 'b)`--),
-    CONV_TAC FUN_EQ_CONV
-    THEN Cases
-    THEN REWRITE_TAC[SUM_MAP_def,I_THM]
-   );
 
 (* for SUM of equivalence relations, use infix +++, defined here: *)
 
@@ -323,6 +289,6 @@ val SUM_MAP_RSP = store_thm
 val _ = export_theory();
 
 val _ = print_theory_to_file "-" "quotient_sum.lst";
-                                                                                
+
 val _ = html_theory "quotient_sum";
 

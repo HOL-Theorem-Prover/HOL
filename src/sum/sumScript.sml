@@ -33,6 +33,7 @@ structure sumScript =
 struct
 
 open HolKernel Parse boolLib;
+open BasicProvers
 
 val _ = new_theory "sum";
 
@@ -150,7 +151,8 @@ val INR_11 = TAC_PROOF(([],
    DISCH_THEN SUBST1_TAC THEN REFL_TAC]);
 
 val INR_INL_11 = save_thm("INR_INL_11",
-CONJ (GEN_ALL INL_11) (GEN_ALL INR_11));
+                          CONJ (GEN_ALL INL_11) (GEN_ALL INR_11));
+val _ = export_rewrites ["INR_INL_11"]
 
 (* Prove that left injections and right injections are not equal.	*)
 val INR_neq_INL = store_thm("INR_neq_INL",
@@ -208,7 +210,7 @@ val sum_Axiom0 = prove(
 val sum_INDUCT = save_thm("sum_INDUCT",
                           Prim_rec.prove_induction_thm sum_Axiom0);
 
-val FORALL_SUM = Q.store_thm 
+val FORALL_SUM = Q.store_thm
  ("FORALL_SUM",
   `(!s. P s) = (!x. P (INL x)) /\ (!y. P (INR y))`,
   EQ_TAC THENL
@@ -236,6 +238,7 @@ val sum_distinct = store_thm("sum_distinct",
                      Q.ISPECL [`\x:'a. T`, `\y:'b. F`]) sum_Axiom) THEN
   FIRST_X_ASSUM (MP_TAC o AP_TERM (Term`h:'a + 'b -> bool`)) THEN
   ASM_REWRITE_TAC []);
+val _ = export_rewrites ["sum_distinct"]
 
 val sum_distinct_rev = save_thm("sum_distinct1", GSYM sum_distinct);
 
@@ -258,6 +261,7 @@ val ISL_DEF = TAC_PROOF(
 
 (* Then define ISL with a constant specification.			*)
 val ISL = new_specification("ISL",["ISL"], ISL_DEF);
+val _ = export_rewrites ["ISL"]
 
 (* Derive the defining property for ISR.				*)
 val ISR_DEF = TAC_PROOF(
@@ -273,6 +277,7 @@ val ISR_DEF = TAC_PROOF(
 
 (* Then define ISR with a constant specification.			*)
 val ISR = new_specification("ISR",["ISR"], ISR_DEF);
+val _ = export_rewrites ["ISR"]
 
 (* Derive the defining property of OUTL.				*)
 val OUTL_DEF = TAC_PROOF(([],
@@ -288,6 +293,7 @@ val OUTL_DEF = TAC_PROOF(([],
 
 (* Then define OUTL with a constant specification.			*)
 val OUTL = new_specification("OUTL",["OUTL"], OUTL_DEF)
+val _ = export_rewrites ["OUTL"]
 
 (* Derive the defining property of OUTR.				*)
 val OUTR_DEF = TAC_PROOF(
@@ -303,6 +309,7 @@ val OUTR_DEF = TAC_PROOF(
 
 (* Then define OUTR with a constant specification.			*)
 val OUTR = new_specification("OUTR", ["OUTR"], OUTR_DEF);
+val _ = export_rewrites ["OUTR"]
 
 
 
@@ -349,6 +356,7 @@ val INL = store_thm("INL",
     STRIP_TAC THEN
     STRIP_ASSUME_TAC (SPEC (--`x:('a,'b)sum`--) sum_CASES) THEN
     ASM_REWRITE_TAC [ISL,OUTL]);
+val _ = export_rewrites ["INL"]
 
 (* Prove that: |- !x. ISR(x) ==> INR (OUTR x) = x			*)
 val INR = store_thm("INR",
@@ -356,15 +364,49 @@ val INR = store_thm("INR",
     STRIP_TAC THEN
     STRIP_ASSUME_TAC (SPEC (--`x:('a,'b)sum`--) sum_CASES) THEN
     ASM_REWRITE_TAC [ISR,OUTR]);
+val _ = export_rewrites ["INR"]
 
 val sum_case_def = Prim_rec.new_recursive_definition{
   def = Term`(sum_case f g (INL x) = f x) /\
              (sum_case f g (INR y) = g y)`,
   name = "sum_case_def",
   rec_axiom = sum_Axiom};
+val _ = export_rewrites ["sum_case_def"]
 
 val sum_case_cong = save_thm("sum_case_cong",
                              Prim_rec.case_cong_thm sum_CASES sum_case_def);
+
+
+(* ----------------------------------------------------------------------
+    SUM_MAP
+   ---------------------------------------------------------------------- *)
+open simpLib
+
+val SUM_MAP_def = Prim_rec.new_recursive_definition{
+  name = "SUM_MAP_def",
+  def = ``(($++ f g) (INL (a:'a)) = INL ((f a):'c)) /\
+          (($++ f g) (INR (b:'b)) = INR ((g b):'d))``,
+  rec_axiom = sum_Axiom};
+val _ = set_fixity "++" (Infixl 440)
+val _ = export_rewrites ["SUM_MAP_def"]
+
+val SUM_MAP = store_thm (
+  "SUM_MAP",
+  ``!f g (z:'a + 'b).
+         (f ++ g) z = if ISL z then INL (f (OUTL z))
+                      else INR (g (OUTR z)) :'c + 'd``,
+  SIMP_TAC (srw_ss()) [FORALL_SUM]);
+
+val SUM_MAP_CASE = store_thm (
+  "SUM_MAP_CASE",
+  ``!f g (z:'a + 'b).
+         (f ++ g) z = sum_case (INL o f) (INR o g) z :'c + 'd``,
+  SIMP_TAC (srw_ss()) [FORALL_SUM]);
+
+val SUM_MAP_I = store_thm (
+  "SUM_MAP_I",
+  ``(I ++ I) = (I : 'a + 'b -> 'a + 'b)``,
+  SIMP_TAC (srw_ss()) [FORALL_SUM, FUN_EQ_THM]);
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,
@@ -404,22 +446,18 @@ val _ = TypeBase.write
       encode=NONE,
       fields=[],
       lift=SOME(mk_var("sumSyntax.lift_sum",
-                       Parse.Type`:'type -> ('a -> 'term) -> 
+                       Parse.Type`:'type -> ('a -> 'term) ->
                                             ('b -> 'term) -> ('a,'b)sum -> 'term`)),
       one_one=SOME INR_INL_11,
       distinct=SOME sum_distinct}];
 
-val _ = BasicProvers.export_rewrites ["ISL", "ISR", "OUTL", "OUTR",
-                                      "sum_distinct", "INR_INL_11",
-                                      "sum_case_def", "INL", "INR"];
-
 val OUTL_INR = Q.prove
-(`!y. OUTL(INR y:'a+'b) = 
+(`!y. OUTL(INR y:'a+'b) =
       FAIL OUTL ^(mk_var("applied to INR",bool)) (INR y:'a+'b)`,
  REWRITE_TAC [combinTheory.FAIL_THM]);
 
 val OUTR = Q.prove
-(`(!x. OUTR(INL x:'a+'b) = 
+(`(!x. OUTR(INL x:'a+'b) =
       FAIL OUTR ^(mk_var("applied to INL",bool)) (INL x:'a+'b)) /\
   (!y. OUTR(INR y:'a+'b) = y)`,
  REWRITE_TAC [combinTheory.FAIL_THM,OUTR]);
@@ -432,7 +470,7 @@ val ISR_THM = Q.prove
 (`(!x. ISR (INL x:'a+'b) = F) /\ !y. ISR (INR y:'a+'b) = T`,
  REWRITE_TAC[ISR]);
 
-val _ = 
+val _ =
  let open EmitML combinSyntax
  in exportML ("sum",
     DATATYPE (ParseDatatype.parse `sum = INL of 'a | INR of 'b`)
