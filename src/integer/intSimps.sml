@@ -56,12 +56,6 @@ val INT_REDUCE_ss = simpLib.SIMPSET
   {convs = map mk_conv (exp_pattern::(basic_op_patterns @ basic_rel_patterns)),
    rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
 
-(* It's not clear to me that this is an ideal solution to the problem of
-   calculating with integers.  In particular, the hidden embedding of the
-   call to arithSimps.REDUCE_ss seems a bit dodgy somehow.  Still, you can
-   be sure that only integers will get reduced when this ssdata value is
-   used. *)
-
 val int_ss = simpLib.++(boolSimps.bool_ss, INT_REDUCE_ss)
 
 fun collect_additive_consts tm = let
