@@ -1,0 +1,53 @@
+What's in this directory?
+
+HOLDoc is a system for automatically typesetting HOL scripts, and
+LaTeX documents with interspersed HOL text.
+
+Documentation:
+~~~~~~~~~~~~~~
+holdoc-guide.txt                explains how it all works.
+
+
+Programs:
+~~~~~~~~~
+
+hol_to_latex                    }
+lts_to_latex                    } - see below
+mng_to_latex                    }
+
+
+Source code:
+~~~~~~~~~~~~
+
+Makefile                        makefile to build all the programs
+
+hol_to_latex.ml                 render HOL into LaTeX (not fully working)
+lts_to_latex.ml                 render HOL-encoded labelled transition system into LaTeX
+mng_to_latex.ml                 render LaTeX with embedded HOL (extension .mng) into LaTeX
+
+simpledump.ml                   debugging: dump tokens scanned to stdout
+simpletexdump.ml                debugging: dump TeXed tokens to stdout
+
+holdoc_munge.ml and .mli        main module: do all the work
+hollex.mll and .mli             lexer: lexing the HOL or LaTeX source.
+holdoc_init.ml and .mli         init module: reading the init (.imn) files
+
+
+TeXery:
+~~~~~~~
+
+ltsmunge.sty                    style to be included by LaTeX files using mng_to_latex
+
+leftdisplay.sty                 style file required by ltsmunge.sty
+prooftree.tex                   style file required by lts_to_latex
+t1bchx.fd                       font file (maybe) required by ltsmunge.sty
+t1bchy.fd                       font file (maybe) required by ltsmunge.sty
+
+hostlts.tex                     hardwired wrapper for the LTS resulting from lts_to_latex
+
+llncs.cls                       class file here for convenience
+
+
+That's all, folks!
+
+--KW 8-)
