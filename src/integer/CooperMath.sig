@@ -29,7 +29,8 @@ signature CooperMath = sig
   (* these must be in the form
           c | n * x + m * y + p * z ... + d
      where all variables have coefficients and c is a positive literal.
-     There is no order required of the summands on the right however *)
+     There is no order required of the summands on the right however. *)
+  (* Is a "QConv"; raises QConv.UNCHANGED if a term doesn't change *)
   val check_divides  : term -> thm
 
   (* replaces
@@ -69,6 +70,8 @@ signature CooperMath = sig
      divide cleanly, e.g., factor_out_lits (Arbint.fromInt 2) ``5 + x`` *)
   val factor_out : Arbint.int -> term -> term -> thm
   val factor_out_lits : Arbint.int -> term -> term -> thm
+
+  val BLEAF_CONV : (conv * conv -> conv) -> conv -> conv
 
   (* initial phases of the procedure *)
   val phase1_CONV : conv

@@ -40,12 +40,11 @@ val simple_disj_congruence =
 val simple_conj_congruence =
   tautLib.TAUT_PROVE (Term`!p q r. (p ==> (q = r)) ==>
                                    (p /\ q = p /\ r)`)
-local
-  open QConv
-  val THENQC = fn (c1, c2) => THENQC c1 c2
-  val ORELSEQC = uncurry ORELSEQC
-  infix ORELSEQC THENQC
-in
+open QConv
+val THENQC = uncurry THENQC
+val ORELSEQC = uncurry ORELSEQC
+infix ORELSEQC THENQC
+
 fun congruential_simplification tm = let
   val (d1, d2) = dest_disj tm
 in
@@ -92,7 +91,6 @@ in
 end tm handle HOL_ERR _ =>
   if is_neg tm then RAND_CONV congruential_simplification tm
   else ALL_QCONV tm
-end
 
 val congruential_simplification = QConv.QCONV congruential_simplification
 
@@ -146,8 +144,9 @@ end tm
 
 
 val obvious_improvements =
-  ADDITIVE_TERMS_CONV (TRY_CONV collect_additive_consts) THENC
-  DEPTH_CONV (elim_vars_round_r ORELSEC check_divides) THENC
+  ADDITIVE_TERMS_CONV (QConv.TRY_QCONV collect_additive_consts) THENQC
+  BLEAF_CONV (op THENQC) (elim_vars_round_r ORELSEQC
+                          TRY_QCONV check_divides) THENQC
   REDUCE_CONV
 
 fun do_equality_simplifications tm = let
@@ -282,7 +281,7 @@ in
       (RAND_CONV eliminate_existential) THENC
       (LAND_CONV eliminate_existential)
     else
-      base_case THENC obvious_improvements
+      base_case THENQC obvious_improvements
   end tm
 end
 
@@ -292,7 +291,7 @@ val eliminate_existential_entirely =
     (* by phase 6 *)
     eliminate_existential THENC EVERY_DISJ_CONV (TRY_CONV phase6_CONV) THENC
     (* variables substituted in might result in ground multiplication terms *)
-    REDUCE_CONV THENC obvious_improvements
+    REDUCE_CONV THENQC obvious_improvements
 
 
 fun eliminate_quantifier tm = let
@@ -512,7 +511,7 @@ end tm
 fun finish_pure_goal tm =
     if is_exists tm then
       (finish_pure_goal1 THENC
-       EVERY_DISJ_CONV (obvious_improvements THENC finish_pure_goal)) tm
+       EVERY_DISJ_CONV (obvious_improvements THENQC finish_pure_goal)) tm
     else REDUCE_CONV tm
 
 

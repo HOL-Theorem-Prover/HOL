@@ -97,7 +97,8 @@ in
           val reorder_thm =
             EQT_ELIM(AC_CONV(INT_ADD_ASSOC, INT_ADD_COMM) reorder_t)
         in
-          (K reorder_thm THENC REDUCE_CONV THENC REWRITE_CONV [INT_ADD_RID]) tm
+          (K reorder_thm THENC REDUCE_CONV THENC
+           TRY_CONV (REWR_CONV INT_ADD_RID)) tm
         end
     end
 end

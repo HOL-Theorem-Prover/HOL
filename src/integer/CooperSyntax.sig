@@ -69,8 +69,9 @@ signature CooperSyntax = sig
   val expand_right_and_over_or : conv
 
   (* applies the argument conversion to all arguments of relational binary
-     operators in a standard Cooper formula
-     (operators are =, < or int_divides) *)
+     operators in a standard Cooper formula (operators are =, < or
+     int_divides).  Allows for the conv argument to be a QConv, and will
+     also raise QConv.UNCHANGED itself *)
   val ADDITIVE_TERMS_CONV : conv -> conv
 
 end

@@ -435,13 +435,14 @@ fun expand_right_and_over_or tm =
   ((REWR_CONV RIGHT_AND_OVER_OR THENC
     BINOP_CONV expand_right_and_over_or) ORELSEC ALL_CONV) tm
 
+open QConv
 fun ADDITIVE_TERMS_CONV c tm =
   if is_disj tm orelse is_conj tm then
-    BINOP_CONV (ADDITIVE_TERMS_CONV c) tm
+    BINOP_QCONV (ADDITIVE_TERMS_CONV c) tm
   else if is_neg tm then RAND_CONV (ADDITIVE_TERMS_CONV c) tm
   else if is_less tm orelse is_divides tm orelse is_eq tm then
-    BINOP_CONV c tm
-  else ALL_CONV tm
+    BINOP_QCONV c tm
+  else ALL_QCONV tm
 
 
 end

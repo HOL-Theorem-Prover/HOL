@@ -13,6 +13,7 @@ sig
   val collect_additive_consts : Term.term -> Thm.thm
   (* collects all integer literals in an additive term and sums them;
      e.g.:  3 + x + ~1  --> x + 2
-     the collected numeral always appears on the right *)
+     the collected numeral always appears on the right,
+     fails if there is no collecting to be done *)
 
 end;
