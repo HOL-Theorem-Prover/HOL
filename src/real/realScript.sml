@@ -24,13 +24,14 @@ app load ["numLib",
           "realaxTheory"];
 *)
 
-open HolKernel Parse boolLib;
 infix THEN THENL ORELSE ORELSEC ##;
+infix 8  by;
 
-open HolKernel boolLib hol88Lib numLib reduceLib pairLib
+open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
      arithmeticTheory numTheory prim_recTheory
      mesonLib tautLib simpLib Ho_Rewrite Arithconv
-     jrhUtils Canon_Port AC hratTheory hrealTheory realaxTheory;
+     jrhUtils Canon_Port AC hratTheory hrealTheory realaxTheory
+     BasicProvers SingleStep;
 
 val _ = new_theory "real";
 
@@ -40,9 +41,10 @@ val num_EQ_CONV = Arithconv.NEQ_CONV;
 (* Now define the inclusion homomorphism &:num->real.                        *)
 (*---------------------------------------------------------------------------*)
 
-val real_of_num = new_prim_rec_definition("real_of_num",
-  (--`(real_of_num 0 = real_0) /\
-      (real_of_num(SUC n) = real_of_num n + real_1)`--));
+val real_of_num = new_prim_rec_definition
+ ("real_of_num",
+  --`(real_of_num 0 = real_0) /\
+     (real_of_num(SUC n) = real_of_num n + real_1)`--);
 
 val _ = add_numeral_form(#"r", SOME "real_of_num");
 
@@ -747,7 +749,7 @@ val REAL_LT = prove_thm("REAL_LT",
 
 val REAL_INJ = prove_thm("REAL_INJ",
   (--`!m n. (&m = &n) = (m = n)`--),
-  let val th = PROVE((--`(m:num = n) = m <= n /\ n <= m`--),
+  let val th = prove((--`(m:num = n) = m <= n /\ n <= m`--),
                  EQ_TAC THENL
                   [DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[LESS_EQ_REFL],
                    MATCH_ACCEPT_TAC LESS_EQUAL_ANTISYM]) in
@@ -2425,6 +2427,75 @@ val REAL_LE_RNEG = prove_thm ("REAL_LE_RNEG",
   REWRITE_TAC[REAL_NEG_ADD, REAL_NEG_NEG] THEN
   MATCH_ACCEPT_TAC REAL_ADD_SYM);
 
+val REAL_POW_INV = Q.store_thm
+ ("REAL_POW_INV",
+  `!x n. (inv x) pow n = inv(x pow n)`,
+  Induct_on `n` THEN REWRITE_TAC [pow] THENL
+  [REWRITE_TAC [REAL_INV1],
+   GEN_TAC THEN Cases_on `x = 0r` THENL
+   [POP_ASSUM SUBST_ALL_TAC 
+     THEN REWRITE_TAC [REAL_INV_0,REAL_MUL_LZERO],
+    `~(x pow n = 0)` by PROVE_TAC [POW_NZ] THEN 
+    IMP_RES_TAC REAL_INV_MUL THEN ASM_REWRITE_TAC []]]);
+
+val REAL_POW_DIV = Q.store_thm
+("REAL_POW_DIV",
+ `!x y n. (x / y) pow n = (x pow n) / (y pow n)`,
+ REWRITE_TAC[real_div, POW_MUL, REAL_POW_INV]);
+
+val REAL_POW_ADD = Q.store_thm
+("REAL_POW_ADD",
+ `!x m n. x pow (m + n) = x pow m * x pow n`,
+  Induct_on `m` THEN 
+  ASM_REWRITE_TAC[ADD_CLAUSES, pow, REAL_MUL_LID, REAL_MUL_ASSOC]);
+
+val REAL_LE_RDIV_EQ = Q.store_thm
+("REAL_LE_RDIV_EQ",
+ `!x y z. &0 < z ==> (x <= y / z = x * z <= y)`,
+  REPEAT STRIP_TAC THEN
+  FIRST_ASSUM(fn th =>
+    Rewrite.GEN_REWRITE_TAC LAND_CONV Rewrite.empty_rewrites
+                   [GSYM(MATCH_MP REAL_LE_RMUL th)]) THEN
+  RW_TAC bool_ss [real_div, GSYM REAL_MUL_ASSOC, REAL_MUL_LINV,
+               REAL_MUL_RID, REAL_POS_NZ]);
+
+val REAL_LE_LDIV_EQ = Q.store_thm
+("REAL_LE_LDIV_EQ",
+ `!x y z. &0 < z ==> (x / z <= y = x <= y * z)`,
+  REPEAT STRIP_TAC THEN
+  FIRST_ASSUM(fn th =>
+    Rewrite.GEN_REWRITE_TAC LAND_CONV Rewrite.empty_rewrites
+             [GSYM(MATCH_MP REAL_LE_RMUL th)]) THEN
+  RW_TAC bool_ss [real_div, GSYM REAL_MUL_ASSOC, REAL_MUL_LINV,
+               REAL_MUL_RID, REAL_POS_NZ]);
+
+val REAL_LT_RDIV_EQ = Q.store_thm
+("REAL_LT_RDIV_EQ",
+ `!x y z. &0 < z ==> (x < y / z = x * z < y)`,
+ RW_TAC bool_ss [GSYM REAL_NOT_LE, REAL_LE_LDIV_EQ]);
+
+val REAL_LT_LDIV_EQ = Q.store_thm
+("REAL_LT_LDIV_EQ",
+ `!x y z. &0 < z ==> (x / z < y = x < y * z)`,
+  RW_TAC bool_ss [GSYM REAL_NOT_LE, REAL_LE_RDIV_EQ]);
+
+val REAL_EQ_RDIV_EQ = Q.store_thm
+("REAL_EQ_RDIV_EQ",
+ `!x y z. &0 < z ==> ((x = y / z) = (x * z = y))`,
+ REWRITE_TAC[GSYM REAL_LE_ANTISYM] THEN
+ RW_TAC bool_ss [REAL_LE_RDIV_EQ, REAL_LE_LDIV_EQ]);
+
+val REAL_EQ_LDIV_EQ = Q.store_thm
+("REAL_EQ_LDIV_EQ",
+ `!x y z. &0 < z ==> ((x / z = y) = (x = y * z))`,
+  REWRITE_TAC[GSYM REAL_LE_ANTISYM] THEN
+  RW_TAC bool_ss [REAL_LE_RDIV_EQ, REAL_LE_LDIV_EQ]);
+
+val REAL_OF_NUM_POW = Q.store_thm
+("REAL_OF_NUM_POW",
+ `!x n. (&x) pow n = &(x EXP n)`,
+  Induct_on `n` THEN ASM_REWRITE_TAC[pow, EXP, REAL_MUL]);
+
 val REAL_ADD_LDISTRIB = save_thm ("REAL_ADD_LDISTRIB", REAL_LDISTRIB);
 
 val REAL_ADD_RDISTRIB = save_thm ("REAL_ADD_RDISTRIB", REAL_RDISTRIB);
@@ -2457,5 +2528,4 @@ val REAL_ABS_POS = save_thm ("REAL_ABS_POS", ABS_POS);
 
 val _ = export_theory();
 
-end;
-
+end
