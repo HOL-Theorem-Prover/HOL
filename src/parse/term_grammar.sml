@@ -54,6 +54,8 @@ val bracket_special = "_ bracket"
 val rec_special = "_ record select"
 val vs_cons_special = " _ vs cons"
 val resquan_special = " _ res quan special"
+val nat_elim_term = " _ elim_nat"
+val fromNum_str = "fromNum"
 
 fun reltoString (TOK s) = s
   | reltoString TM = "TM"

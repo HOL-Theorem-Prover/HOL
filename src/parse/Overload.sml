@@ -13,7 +13,7 @@ fun fupd_list_at_P P f list =
   case list of
     [] => NONE
   | x::xs => if P x then SOME (f x :: xs)
-             else Option.map (fn xs' => x::xs) (fupd_list_at_P P f xs)
+             else Option.map (fn xs' => x::xs') (fupd_list_at_P P f xs)
 
 fun info_for_name (overloads:overload_info) s =
   List.find (fn x => #overloaded_op x = s) overloads
@@ -22,7 +22,7 @@ fun is_overloaded (overloads:overload_info) s =
 
 fun add_overloaded_form opname basety oinfo =
   if is_overloaded oinfo opname then
-    raise OVERLOAD_ERR ("add_op_form: " ^ opname ^ " already present")
+    oinfo
   else
     {overloaded_op = opname, base_type = basety, actual_ops = []}::
     oinfo
@@ -60,3 +60,13 @@ fun overloading_of_term (oinfo:overload_info) t =
             actual_ops)
     oinfo
   end
+
+fun overloading_of_nametype (oinfo: overload_info) (n, ty) =
+  myfind (fn {actual_ops, overloaded_op, ...} =>
+          myfind (fn (t, s) =>
+                  if s = n andalso Lib.can (Type.match_type t) ty then
+                    SOME overloaded_op
+                  else
+                    NONE)
+          actual_ops)
+  oinfo

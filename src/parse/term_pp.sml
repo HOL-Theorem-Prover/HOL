@@ -362,16 +362,41 @@ fun pp_term (G : grammar) TyG = let
       pend addparens; end_block()
     end
 
-    fun atom_name tm = #Name (dest_var tm) handle _ => #Name (dest_const tm)
+    fun atom_name tm =
+      #Name (dest_var tm) handle HOL_ERR _ => #Name (dest_const tm)
     fun can_pr_numeral stropt = List.exists (fn (k,s') => s' = stropt) num_info
-    fun pr_numeral stropt tm =
-      if #2 (hd num_info) = stropt then
-        add_string (Arbnum.toString (Term.dest_numeral tm))
-      else let
-        val (k, _) = valOf (List.find (fn (_, s') => s' = stropt) num_info)
+    fun pr_numeral injtermopt tm = let
+      open Overload
+      val numty = Type.mk_type {Tyop = "num", Args = []}
+      val num2numty = Type.-->(numty, numty)
+      val numinfo_search_string = Option.map (#Name o dest_const) injtermopt
+      val (injname0, injty) =
+        case injtermopt of
+          NONE => (term_grammar.nat_elim_term, num2numty)
+        | SOME t => (fn {Name,Ty}=>(Name,Ty)) (dest_const t)
+      val injname =
+        case overloading_of_nametype overload_info (injname0, injty) of
+          NONE => injname0
+        | SOME s => s
+    in
+      pbegin (!Globals.show_types);
+      add_string (Arbnum.toString (Term.dest_numeral tm));
+      if
+        injname <> term_grammar.fromNum_str orelse
+        !Globals.show_numeral_types
+      then let
+        val (k, _) =
+          valOf (List.find (fn (_, s') => s' = numinfo_search_string) num_info)
       in
-        add_string (Arbnum.toString (Term.dest_numeral tm) ^ str k)
+        add_string (str k)
       end
+      else ();
+      if (!Globals.show_types) then
+        (add_string (" "^type_intro); add_break (0,0);
+         type_pp.pp_type_with_depth TyG pps (depth - 1) (#2 (dom_rng injty)))
+      else ();
+      pend (!Globals.show_types)
+    end
 
     fun pr_comb tm t1 t2 = let
       val add_l =
@@ -390,7 +415,7 @@ fun pp_term (G : grammar) TyG = let
           ()
       val _ =
         (if is_numeral t2 andalso can_pr_numeral (SOME (atom_name t1)) then
-           (pr_numeral (SOME (atom_name t1)) t2; raise SimpleExit)
+           (pr_numeral (SOME t1) t2; raise SimpleExit)
          else ()) handle SimpleExit => raise SimpleExit | _ => ()
       val _ =
         if my_is_abs tm then (pr_abs tm; raise SimpleExit)

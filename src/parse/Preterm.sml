@@ -199,22 +199,28 @@ fun tyVars tm =
   | Constrained(tm,ty) => Lib.union (tyVars tm) (TCPretype.tyvars ty)
   | Overloaded _ => raise Fail "Preterm.tyVars: applied to Overloaded"
 
-fun cleanup0 ptm0 = let
+fun do_overloading_removal ptm0 = let
   open seq
   val result = remove_overloading ptm0 []
   fun apply_subst subst =
     app (fn (r, value) => r := SOME value) subst
 in
   case cases result of
-    NONE => raise PRETERM_ERR "cleanup0"
+    NONE => raise PRETERM_ERR "do_overloading_removal"
       "Couldn't find a sensible resolution for overloaded constants"
   | SOME ((env,ptm),xs) => let
     in
-      if !Globals.notify_on_tyvar_guess then
+      if not (!Globals.guessing_overloads) orelse
+         !Globals.notify_on_tyvar_guess
+      then
         case cases xs of
           NONE => (apply_subst env; ptm)
-        | SOME _ => (Lib.mesg true
-                     "more than one resolution of overloading was possible";
+        | SOME _ => (if (not (!Globals.guessing_overloads)) then
+                       raise PRETERM_ERR "do_overloading_removal"
+                         "More than one resolution of overloading possble"
+                     else ();
+                     Lib.mesg true
+                       "more than one resolution of overloading was possible";
                      apply_subst env;
                      ptm)
       else
@@ -222,7 +228,22 @@ in
     end
 end
 
+fun remove_elim_magics ptm =
+  case ptm of
+    Var _ => ptm
+  | Const _ => ptm
+  | Antiq _ => ptm
+  | Comb{Rator = (rator as Const{Name, Ty}), Rand = ptm1} =>
+      if Name = term_grammar.nat_elim_term then ptm1
+      else Comb{Rator = rator, Rand = remove_elim_magics ptm1}
+  | Comb{Rator, Rand} => Comb{Rator = remove_elim_magics Rator,
+                              Rand = remove_elim_magics Rand}
+  | Abs{Bvar, Body} => Abs{Bvar = remove_elim_magics Bvar,
+                           Body = remove_elim_magics Body}
+  | Constrained(tm, ty) => Constrained(remove_elim_magics tm, ty)
+  | Overloaded _ => raise Fail "Preterm.remove_elim_magics on Overloaded"
 
+val cleanup0 = remove_elim_magics o do_overloading_removal
 
 fun cleanup tm =
   if !Globals.guessing_tyvars then let

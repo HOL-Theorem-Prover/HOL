@@ -476,6 +476,7 @@ fun parse_term (G : grammar) typeparser = let
   val Grules = grammar_rules G
   val {type_intro, lambda, endbinding, restr_binders, res_quanop} = specials G
   val num_info = numeral_info G
+  val overload_info = overload_info G
   val closed_lefts = find_prefix_lhses G
   val ty_annote_prec = let
     val ty_annote =
@@ -711,8 +712,14 @@ fun parse_term (G : grammar) typeparser = let
                     else
                       (Lib.mesg true  "No numerals currently allowed";
                        raise Temp)
-                  else
-                    NonTerminal (inject_np (#2 (hd num_info)))
+                  else let
+                    val fns = term_grammar.fromNum_str
+                  in
+                    if Overload.is_overloaded overload_info fns then
+                      NonTerminal (inject_np (SOME fns))
+                    else
+                      NonTerminal (inject_np (#2 (hd num_info)))
+                  end
               end
             | (true, _) => NonTermVS [SIMPLE (token_string tt)]
             | (false, _) => NonTerminal (VAR (token_string tt))

@@ -12,6 +12,8 @@ val remove_overloaded_form : string -> overload_info -> overload_info
 val info_for_name : overload_info -> string -> overloaded_op_info option
 val is_overloaded : overload_info -> string -> bool
 val overloading_of_term : overload_info -> Term.term -> string option
+val overloading_of_nametype :
+  overload_info -> (string * Type.hol_type) -> string option
 
 val add_actual_overloading:
   {opname: string, realname: string, realtype: Type.hol_type} ->

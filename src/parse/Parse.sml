@@ -500,17 +500,17 @@ in
     adjoin_to_theory (toThyaddon cmdstring)
   end
 
-  fun temp_add_numeral_form x = let
+  fun temp_add_bare_numeral_form x = let
   in
     the_term_grammar := term_grammar.add_numeral_form (term_grammar()) x;
     term_grammar_changed := true
   end
-  fun add_numeral_form (c, stropt) = let
+  fun add_bare_numeral_form (c, stropt) = let
     val cmdstring =
       "val _ = Parse.temp_add_numeral_form (#\""^str c^"\", "^
       (case stropt of NONE => "NONE" | SOME s => "SOME "^quote s)^");"
   in
-    temp_add_numeral_form (c, stropt);
+    temp_add_bare_numeral_form (c, stropt);
     adjoin_to_theory (toThyaddon cmdstring)
   end
 
@@ -647,17 +647,38 @@ in
     temp_allow_for_overloading_on (s, ty);
     adjoin_to_theory (toThyaddon cmdstring)
   end
+
+  fun temp_overload_on_by_nametype (s, name, ty) = let
+  in
+    the_term_grammar :=
+    term_grammar.fupdate_overload_info
+    (Overload.add_actual_overloading {opname = s, realname = name,
+                                      realtype = ty}) (term_grammar());
+    term_grammar_changed := true
+  end
+  fun overload_on_by_nametype (s, name, ty) = let
+    val tystring =
+      Portable.pp_to_string 75 (TheoryPP.print_type_to_SML "mkV" "mkT") ty
+    val cmdstring = String.concat
+      [
+       "val _ = let fun mkV s = Type.mk_vartype s\n",
+       "    fun mkT s args = Type.mk_type{Tyop = s, Args = args}\n",
+       "    val ty = ",tystring,"\n",
+       "in  Parse.temp_overload_on_by_nametype (", quote s, ", ",
+       quote name, ", ty) end\n"
+       ]
+  in
+    temp_overload_on_by_nametype (s, name, ty);
+    adjoin_to_theory (toThyaddon cmdstring)
+  end
+
   fun temp_overload_on (s, t) =
     if (not (is_const t)) then
       print "Can't have non-constants as targets of overloading."
     else let
       val {Name,Ty} = dest_const t
     in
-      the_term_grammar :=
-      term_grammar.fupdate_overload_info
-      (Overload.add_actual_overloading {opname = s, realname = Name,
-                                        realtype = Ty}) (term_grammar());
-      term_grammar_changed := true
+      temp_overload_on_by_nametype (s, Name, Ty)
     end
 
   fun overload_on (s, t) = let
@@ -665,20 +686,8 @@ in
       handle HOL_ERR _ =>
         raise ERROR "overload_on"
           "Can't have non-constants as targets of overloading"
-    val tystring =
-      Portable.pp_to_string 75 (TheoryPP.print_type_to_SML "mkV" "mkT") Ty
-    val cmdstring = String.concat
-      [
-       "val _ = let fun mkV s = Type.mk_vartype s\n",
-       "    fun mkT s args = Type.mk_type{Tyop = s, Args = args}\n",
-       "    val ty = ",tystring,"\n",
-       "    val tm = Term.mk_const{Name = ", quote Name,",\n",
-       "                           Ty = ty}\n",
-       "in  Parse.overload_on (", quote s, ", tm) end\n"
-       ]
   in
-    temp_overload_on (s,t);
-    adjoin_to_theory (toThyaddon cmdstring)
+    overload_on_by_nametype (s, Name, Ty)
   end
 
   fun temp_clear_overloads_on s = let
@@ -693,6 +702,44 @@ in
     temp_clear_overloads_on s;
     adjoin_to_theory (toThyaddon cmdstring)
   end
+
+
+  fun temp_add_numeral_form (c, stropt) = let
+    val num_ty = Type.mk_type {Tyop = "num", Args = []}
+      handle HOL_ERR _ =>
+        raise ERROR "add_numeral_form"
+          "Can't add numeral forms without having natural numbers defined"
+    val fromNum_type = Type.-->(num_ty, Type.mk_vartype("'a"))
+    val num2num_ty = Type.-->(num_ty, num_ty)
+    val (injectionfn_name, ifn_ty) =
+      case stropt of
+        NONE => (term_grammar.nat_elim_term, num2num_ty)
+      | SOME s => (s, type_of (#const (const_decl s)))
+          handle HOL_ERR _ =>
+            raise ERROR "add_numeral_form"
+              ("Couldn't find a constant with name "^s)
+  in
+    temp_allow_for_overloading_on (term_grammar.fromNum_str, fromNum_type);
+    temp_overload_on_by_nametype (term_grammar.fromNum_str,
+                                  injectionfn_name, ifn_ty);
+    temp_add_bare_numeral_form (c, stropt)
+  end
+
+  fun add_numeral_form (c, stropt) = let
+    val stroptstr =
+      case stropt of
+        NONE => "NONE"
+      | SOME s => "SOME "^quote s
+    val cmdstring = String.concat
+      [
+       "val _ = Parse.temp_add_numeral_form(#", quote (str c), ", ",
+       stroptstr, ");\n"
+       ]
+  in
+    temp_add_numeral_form (c, stropt);
+    adjoin_to_theory (toThyaddon cmdstring)
+  end
+
 
 
   fun pp_thm ppstrm th = let

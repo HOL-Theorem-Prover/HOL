@@ -103,6 +103,7 @@ in
                         rightdelim : string, cons : string,
                         nilstr : string} -> unit
     val add_numeral_form : (char * string option) -> unit
+    val add_bare_numeral_form : (char * string option) -> unit
     val give_num_priority : char -> unit
     val remove_numeral_form : char -> unit
     val associate_restriction : (string * string) -> unit
@@ -115,10 +116,12 @@ in
     (* overloading *)
     val allow_for_overloading_on : string * Type.hol_type -> unit
     val overload_on : string * term -> unit
+    val overload_on_by_nametype : string * string * Type.hol_type -> unit
     val clear_overloads_on : string -> unit
 
     val temp_allow_for_overloading_on : string * Type.hol_type -> unit
     val temp_overload_on : string * term -> unit
+    val temp_overload_on_by_nametype : string * string * Type.hol_type -> unit
     val temp_clear_overloads_on : string -> unit
 
     (* the following functions affect the grammar, but not so that the
@@ -133,6 +136,7 @@ in
                              rightdelim : string, cons : string,
                              nilstr : string} -> unit
     val temp_add_numeral_form : (char * string option) -> unit
+    val temp_add_bare_numeral_form : (char * string option) -> unit
     val temp_give_num_priority : char -> unit
     val temp_remove_numeral_form : char -> unit
     val temp_associate_restriction : (string * string) -> unit

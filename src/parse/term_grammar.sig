@@ -26,6 +26,9 @@ in
   val rec_special : string
   val std_binder_precedence : int
 
+  val nat_elim_term : string
+  val fromNum_str : string
+
   val reltoString : rule_element -> string
 
   type rule_record = {term_name : string,
