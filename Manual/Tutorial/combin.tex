@@ -1076,7 +1076,7 @@ if you instead prove an appropriately specialised version of
 \texttt{RTC\_RTC} and use this in place of both \texttt{RTC\_RTC} and
 \texttt{RTCredn\_def}.  Let's go back and do this.
 \begin{session}\begin{verbatim}
-- b();`
+- b();
 > val it =
     !x y u v. x -->* y /\ u -->* v ==> x # u -->* y # v
 \end{verbatim}\end{session}
@@ -1297,9 +1297,10 @@ What of $\KC\;x\;y$?  A little thought demonstrates that there really
 must be two cases this time.
 \begin{session}\begin{verbatim}
 val Kxy_predn = prove(
-  ``!x y z. K # x # y -||-> z =
-            (?u v. (z = K # u # v) /\ (x -||-> u) /\ (y -||-> v)) \/
-            (z = x)``,
+  ``!x y z.
+       K # x # y -||-> z =
+       (?u v. (z = K # u # v) /\ (x -||-> u) /\ (y -||-> v)) \/
+       (z = x)``,
   REPEAT GEN_TAC THEN EQ_TAC THEN
   RW_TAC std_ss [characterise ``K # x # y``, predn_rules,
                  Kx_predn]);
