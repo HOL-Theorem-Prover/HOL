@@ -23,6 +23,10 @@ fun ERR f s = HOL_ERR { origin_function = f,
 
 fun lhand t = rand (rator t)
 
+val (Type,Term) = parse_from_grammars integerTheory.integer_grammars;
+fun -- q x = Term q
+fun == q x = Type q
+
 
 (*---------------------------------------------------------------------------*)
 (* Function to compute the Greatest Common Divisor of two integers.          *)
