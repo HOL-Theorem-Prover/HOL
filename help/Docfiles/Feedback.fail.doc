@@ -16,12 +16,12 @@ Always fails.
 
 \EXAMPLE
 {
-    - fail() handle e => Raise e;
+- fail() handle e => Raise e;
 
-    Exception raised at ??.??:
-    fail
-    ! Uncaught exception: 
-    ! HOL_ERR
+Exception raised at ??.??:
+fail
+! Uncaught exception: 
+! HOL_ERR
 }
 
 \SEEALSO

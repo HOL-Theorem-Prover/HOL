@@ -1,6 +1,6 @@
 \DOC failwith
 
-\TYPE {failwith : unit -> 'a}
+\TYPE {failwith : string -> 'a}
 
 \SYNOPSIS Raise a {HOL_ERR}.
 
@@ -20,12 +20,12 @@ Always fails.
 
 \EXAMPLE
 {
-    - failwith "foo" handle e => Raise e;
+- failwith "foo" handle e => Raise e;
 
-    Exception raised at ??.failwith:
-    foo
-    ! Uncaught exception: 
-    ! HOL_ERR
+Exception raised at ??.failwith:
+foo
+! Uncaught exception: 
+! HOL_ERR
 }
 
 \SEEALSO

@@ -1,6 +1,6 @@
 \DOC top_thm
 
-\TYPE {top_thm : (void -> thm)}
+\TYPE {top_thm : unit -> thm}
 
 \SYNOPSIS
 Returns the theorem just proved using the subgoal package.

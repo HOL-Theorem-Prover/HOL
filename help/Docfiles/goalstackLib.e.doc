@@ -1,6 +1,6 @@
 \DOC e
 
-\TYPE {e : (tactic -> void)}
+\TYPE {e : tactic -> goalstack}
 
 \SYNOPSIS
 Applies a tactic to the current goal, stacking the resulting subgoals.

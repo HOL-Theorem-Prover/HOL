@@ -1,6 +1,6 @@
 \DOC b
 
-\TYPE {b : (void -> void)}
+\TYPE {b : unit -> goalstack}
 
 \SYNOPSIS
 Restores the proof state undoing the effects of a previous expansion.

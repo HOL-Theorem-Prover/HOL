@@ -1,6 +1,6 @@
 \DOC p
 
-\TYPE {p : (int -> void)}
+\TYPE {p : unit -> goalstack}
 
 \SYNOPSIS
 Prints the top levels of the subgoal package goal stack.

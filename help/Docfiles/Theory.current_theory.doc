@@ -1,6 +1,6 @@
 \DOC current_theory
 
-\TYPE {current_theory : (void -> string)}
+\TYPE {current_theory : unit -> string}
 
 \SYNOPSIS
 Returns the name of the current theory.

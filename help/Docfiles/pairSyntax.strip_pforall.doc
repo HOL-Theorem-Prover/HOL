@@ -1,0 +1,24 @@
+\DOC strip_pforall
+
+\TYPE {strip_pforall : term -> term list * term}
+
+\LIBRARY pair
+
+\SYNOPSIS
+Iteratively breaks apart paired universal quantifications.
+
+\DESCRIBE
+{strip_pforall "!p1 ... pn. t"} returns {([p1,...,pn],t)}. Note that
+{
+   strip_pforall(list_mk_pforall([p1,...,pn],t))
+}
+\noindent will not return {([p1,...,pn],t)} if {t} is a paired universal
+quantification.
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+boolSyntax.strip_forall, pairSyntax.list_mk_pforall, pairSyntax.dest_pforall.
+
+\ENDDOC

@@ -1,37 +1,26 @@
-\DOC
+\DOC spine_pair
 
 \TYPE {spine_pair : term -> term list}
 
-\SYNOPSIS
-Breaks apart a tuple at its top level.
+\LIBRARY pair
 
-\DESCRIBE
-{spine_pair((t1,...,tn))} returns {[t1,...,tn]}.
-A term that is not a tuple is simply returned as the sole element of a list.
-Note that
+\SYNOPSIS
+Breaks a paired structure into its constituent pieces.
+
+\EXAMPLE
 {
-   spine_pair(list_mk_pair [t1,...,tn])
+- spine_pair (Term `((1,2),(3,4))`);
+> val it = [`(1,2)`, `3`, `4`] : term list
 }
-\noindent will not return {[t1,...,tn]} if {tn} is a pair or a tuple.
+
+\COMMENTS
+Note that {spine_pair} is similar, but not identical, to {strip_pair}
+which works recursively.
 
 \FAILURE
 Never fails.
 
-\EXAMPLE
-{
-- val p = pairSyntax.list_mk_pair [Term `(1,2)`, Term `(3,4)`, Term `(5,6)`];
-> val it = `((1,2),(3,4),5,6)` : term
-
-- pairSyntax.strip_pair p;
-> val it = [`1`, `2`, `3`, `4`, `5`, `6`] : term list
-
-- pairSyntax.spine_pair p;
-> val it = [`(1,2)`, `(3,4)`, `5`, `6`] : term list
-
-- pairSyntax.spine_pair (Term `1`);
-> val it = [`1`] : term list
-}
 \SEEALSO
-pairSyntax.strip_pair, pairSyntax.list_mk_pair, pairSyntax.dest_pair.
+pairSyntax.spine_pair.
 
 \ENDDOC

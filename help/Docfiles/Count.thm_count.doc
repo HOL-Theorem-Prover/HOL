@@ -1,6 +1,6 @@
 \DOC thm_count
 
-\TYPE {thm_count : (void -> int)}
+\TYPE {thm_count : unit -> int}
 
 \SYNOPSIS
 Returns the current value of the theorem counter.

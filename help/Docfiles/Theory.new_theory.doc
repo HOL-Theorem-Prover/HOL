@@ -1,6 +1,6 @@
 \DOC new_theory
 
-\TYPE {new_theory : (string -> void)}
+\TYPE {new_theory : string -> unit}
 
 \SYNOPSIS
 Creates a new theory by extending the current theory with a new theory segment.

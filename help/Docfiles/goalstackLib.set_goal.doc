@@ -1,6 +1,6 @@
 \DOC set_goal
 
-\TYPE {set_goal : (goal -> void)}
+\TYPE {set_goal : term list * term -> unit}
 
 \SYNOPSIS
 Initializes the subgoal package with a new goal.

@@ -1,6 +1,6 @@
 \DOC backup
 
-\TYPE {backup : (void -> void)}
+\TYPE {backup : unit -> goalstack}
 
 \SYNOPSIS
 Restores the proof state, undoing the effects of a previous expansion.

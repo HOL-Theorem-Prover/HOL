@@ -1,6 +1,6 @@
 \DOC top_goal
 
-\TYPE {top_goal : (void -> goal)}
+\TYPE {top_goal : unit -> term list * term}
 
 \SYNOPSIS
 Returns the current goal of the subgoal package.
