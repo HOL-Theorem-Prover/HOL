@@ -1913,6 +1913,33 @@ val _ = save_thm ("IMP_DISJ_THM", IMP_DISJ_THM);
 (*                                                         MN 99.05.06  *)
 (*----------------------------------------------------------------------*)
 
+val DISJ_IMP_THM = let
+  val P = --`P:bool`--
+  val Q = --`Q:bool`--
+  val R = --`R:bool`--
+  val lhs = --`P \/ Q ==> R`--
+  val rhs = --`(P ==> R) /\ (Q ==> R)`--
+  val ass_lhs = ASSUME lhs
+  val ass_P = ASSUME P
+  val ass_Q = ASSUME Q
+  val p_imp_r = DISCH P (MP ass_lhs (DISJ1 ass_P Q))
+  val q_imp_r = DISCH Q (MP ass_lhs (DISJ2 P ass_Q))
+  val lr_imp = DISCH lhs (CONJ p_imp_r q_imp_r)
+  (* half way there! *)
+  val ass_rhs = ASSUME rhs
+  val porq = (--`P \/ Q`--)
+  val ass_porq = ASSUME porq
+  val my_and1 = SPECL [(--`P ==> R`--), (--`Q ==> R`--)] AND1_THM
+  val p_imp_r = MP my_and1 ass_rhs
+  val r_from_p = MP p_imp_r ass_P
+  val my_and2 = SPECL [(--`P ==> R`--), (--`Q ==> R`--)] AND2_THM
+  val q_imp_r = MP my_and2 ass_rhs
+  val r_from_q = MP q_imp_r ass_Q
+  val rl_imp = DISCH rhs (DISCH porq (DISJ_CASES ass_porq r_from_p r_from_q))
+in
+  save_thm("DISJ_IMP_THM", GENL [P,Q,R] (IMP_ANTISYM_RULE lr_imp rl_imp))
+end
+
 (* ---------------------------------------------------------------------*)
 (* IMP_F_EQ_F                                                           *)
 (*                                                                      *)
