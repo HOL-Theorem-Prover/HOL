@@ -1,1 +1,1 @@
-/word[0-9]/s//word<n>/
+/word[0-9]*/s//word<n>/
