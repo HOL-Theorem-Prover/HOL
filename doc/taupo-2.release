@@ -11,6 +11,13 @@ Bugs fixed:
   * Exporting theories with nested recursive types in them led to the
     creation of theory.sml files that weren't syntactically valid.
 
+  * Attempts to define record types that began with letters that were
+    the name of constants (e.g., S, K, I, T and F) failed.  (Don't
+    ask.)
+
+  * Hol_datatype failed in bizarre ways when constructor names were
+    duplicated.  This error is now caught earlier and reported.
+
 New theories:
 -------------
   * A theory of lazy lists
