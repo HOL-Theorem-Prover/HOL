@@ -189,8 +189,8 @@ fun crunch [] = []
 
 local open arithmeticTheory
       val zero_rws = [Rewrite.ONCE_REWRITE_RULE [ADD_SYM] ADD_0, ADD_0]
-      val Zero  = Term`0n`
-      val One   = Term`1n`
+      val Zero  = numSyntax.zero_tm
+      val One   = Term `1n`
   val Plus = mk_thy_const{Name="+", Thy="arithmetic", Ty=num-->num-->num}
    fun mk_plus x y = list_mk_comb(Plus,[x,y])
 in

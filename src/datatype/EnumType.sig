@@ -1,5 +1,7 @@
-signature EnumType = sig
+signature EnumType = 
+sig
   include Abbrev
+
   val define_enum_type :
       (string * string list * string * string) ->
       {TYPE     : hol_type,
@@ -17,6 +19,5 @@ signature EnumType = sig
 
   val enum_type_to_tyinfo : (string * string list) -> TypeBase.TypeInfo.tyinfo
 
-
-end;
+end
 

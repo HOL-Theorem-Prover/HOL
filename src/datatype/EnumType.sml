@@ -8,12 +8,12 @@ struct
 
 open HolKernel boolLib numLib Parse;
 
+infix THEN THENC |->;  infixr -->
+
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
 
-infix THEN THENC |->
-infixr -->
-
 val NUM = num;
+
 fun mk_int_numeral i = mk_numeral (Arbnum.fromInt i);
 
 fun enum_pred k =
@@ -266,6 +266,48 @@ fun define_enum_type(name,clist,ABS,REP) =
     }
  end;
 
+fun check_subst [] = true
+  | check_subst ({redex,residue}::rst) = 
+        type_of redex = type_of residue andalso check_subst rst;
+
+
+fun define_case initiality =
+ let val (V,tm) = strip_forall (concl initiality)
+     val tyinst = list_mk_fun(map type_of V,alpha)
+     val bare_initiality = SPEC_ALL initiality
+     val bare_initiality1 = INST_TYPE [alpha |-> tyinst] bare_initiality
+     val V' = map (Term.inst [alpha |-> tyinst]) V
+     val instantiations = itlist (fn v => fn L => list_mk_abs(V,v)::L) V []
+     val theta = map2(fn v => fn lm => {redex=v,residue=lm}) V' instantiations
+     val inst_initiality = INST theta bare_initiality1
+     val (f,body) = dest_exists (concl inst_initiality)
+     val (dom,_) = dom_rng (type_of f)
+     val tyname = fst(dest_type dom)
+     val constrs = map (rand o lhs) (strip_conj body)
+     val x = mk_var("x",fst(dom_rng(type_of f)))
+     val gfun = list_mk_abs(V@[x], list_mk_comb(f,x::V))
+     val g = mk_var("g",type_of gfun)
+     fun gclause (constr,r) = mk_eq(list_mk_comb(gfun,V@[constr]),r)
+     val gclauses = map gclause (zip constrs V)
+     val RW_CONV = REWRITE_CONV []
+     val RW_CONV1 = PURE_ONCE_REWRITE_CONV [ASSUME body]
+     fun reduce cla = 
+          EQT_ELIM((DEPTH_CONV BETA_CONV THENC RW_CONV1
+                    THENC DEPTH_CONV BETA_CONV THENC RW_CONV) cla)
+     val gclause_thms = GENL V (LIST_CONJ (map reduce gclauses))
+     val exists_tm = mk_exists(g, list_mk_forall(V,
+                         subst [gfun |-> g] (list_mk_conj gclauses)))
+     val gexists = CHOOSE(f,inst_initiality) 
+                     (EXISTS(exists_tm,gfun) gclause_thms)
+     val case_const_name = tyname^"_case"
+ in 
+  new_specification
+    {consts=[{const_name=case_const_name,fixity=Prefix}],
+     name = case_const_name^"_def",
+     sat_thm = gexists}
+ end;
+
+
 fun enum_type_to_tyinfo (ty, constrs) = let
   val abs = "num2"^ty
   val rep = ty^"2num"
@@ -301,9 +343,11 @@ end
 
 end (* struct *)
 
-(* Example *)
+(* Examples *)
 
-(* val res as {TYPE,constrs,defs, ABSconst, REPconst,
+(* 
+
+val res as {TYPE,constrs,defs, ABSconst, REPconst,
             ABS_REP, REP_ABS, ABS_11, REP_11, ABS_ONTO, REP_ONTO, simpls}
   = define_enum_type
             ("colour", ["red", "green", "blue", "brown", "white"],
@@ -323,31 +367,26 @@ val res1 as {TYPE,constrs,defs, ABSconst, REPconst,
                   "a57", "a58", "a59", "a60", "a61", "a62", "a63", "a64"],
         "num2thing", "thing2num");
 
+val res2 as {TYPE,constrs,defs, ABSconst, REPconst,
+            ABS_REP, REP_ABS, ABS_11, REP_11, ABS_ONTO, REP_ONTO, simpls}
+  = Count.apply define_enum_type
+       ("thing", ["z0", "z1", "z2", "z3", "z4", "z5", "z6", "z7", "z8",
+                  "z9", "z10", "z11", "z12", "z13", "z14", "z15", "z16",
+                  "z17", "z18", "z19", "z20", "z21", "z22", "z23", "z24",
+                  "z25", "z26", "z27", "z28", "z29", "z30", "z31", "z32",
+                  "z33", "z34", "z35", "z36", "z37", "z38", "z39", "z40",
+                  "z41", "z42", "z43", "z44", "z45", "z46", "z47", "z48",
+                  "z49", "z50", "z51", "z52", "z53", "z54", "z55", "z56",
+                  "z57", "z58", "z59", "z60", "z61", "z62", "z63", "z64",
+                  "z65", "z66", "z67", "z68", "z69", "z70", "z71", "z72",
+                  "z73", "z74", "z75"],
+        "num2thing", "thing2num");
 
-(* Example of something else that could easily be proved: weak
-   induction. Problem with this is that abstraction is not being
-   supported.
+val initiality = 
+  Count.apply (prove_initiality_thm (#REPconst res2) TYPE constrs) simpls;
 
-fun prove_rep_bound REPconst TYPE =
- let val a = mk_var("a",TYPE)
-     val v = mk_var("v",TYPE)
-     val tm0 = mk_comb (REPconst, a)
-     val tm1 = mk_comb (REPconst, v)
-     val th0 = REFL tm0
-     val tm2 = mk_exists(v,mk_eq(tm0,tm1))
-     val th1 = EXISTS (tm2,a) th0
-     val th2 = PURE_REWRITE_RULE [GSYM REP_ONTO] th1
- in GEN a th2
- end;
-
-val CHAR_INDUCT_THM = Q.store_thm
-("WEAK_INDUCT_THM",
- `!P. (!n. n < 256 ==> P (ABS n)) ==> !x. P x`,
-REPEAT STRIP_TAC
-  THEN STRIP_ASSUME_TAC (Q.SPEC `c` CHR_ONTO)
-  THEN RW_TAC bool_ss []);
-
-*)
+val case_def = 
+  Count.apply define_case initiality;
 
 *)
 
