@@ -1,0 +1,62 @@
+\DOC type_rws
+
+\TYPE {type_rws : string -> thm list}
+
+\SYNOPSIS
+List rewrites for a concrete type.
+
+\KEYWORDS
+datatype, injectivity, distinctness.
+
+\DESCRIBE
+An application {type_rws s}, where {s} is the name of a declared datatype,
+returns a list of rewrite rules corresponding to the types. The list
+typically  contains theorems about the distinctness and injectivity of
+constructors, the definition of the 'case' constant introduced at the
+time the type was defined, and any extra rewrites coming from the use of
+records. 
+
+\FAILURE
+If {s} is not the name of a declared datatype.
+
+\EXAMPLE
+{
+- type_rws "list";
+
+> val it =
+    [|- (!v f. case v f [] = v) /\ !v f a0 a1. case v f (a0::a1) = f a0 a1,
+     |- !a1 a0. ~([] = a0::a1), 
+     |- !a1 a0. ~(a0::a1 = []),
+     |- !a0 a1 a0' a1'. (a0::a1 = a0'::a1') = (a0 = a0') /\ (a1 = a1')]
+
+- Hol_datatype `point = <| x:num ; y:num |>`;
+<<HOL message: Defined type: "point">>
+
+- type_rws "point";
+> val it =
+    [|- !f a0 a1. case f (point a0 a1) = f a0 a1,
+     |- !a0 a1 a0' a1'.
+          (point a0 a1 = point a0' a1') = (a0 = a0') /\ (a1 = a1'),
+     |- !z x p. p with <|y := x; x := z|> = p with <|x := z; y := x|>,
+     |- (!x p. (p with y := x).x = p.x) /\ (!x p. (p with x := x).y = p.y) /\
+        (!x p. (p with x := x).x = x) /\ !x p. (p with y := x).y = x,
+     |- (!n n0. (point n n0).x = n) /\ !n n0. (point n n0).y = n0,
+     |- (!n1 n n0. point n n0 with x := n1 = point n1 n0) /\
+        !n1 n n0. point n n0 with y := n1 = point n n1,
+     |- (!p. p with x := p.x = p) /\ !p. p with y := p.y = p,
+     |- (!x2 x1 p. p with <|x := x1; x := x2|> = p with x := x1) /\
+        !x2 x1 p. p with <|y := x1; y := x2|> = p with y := x1,
+     |- (!p f. (p with y updated_by f).x = p.x) /\
+        (!p f. (p with x updated_by f).y = p.y) /\
+        (!p f. (p with x updated_by f).x = f p.x) /\
+        !p f. (p with y updated_by f).y = f p.y,
+     |- !p n0 n. p with <|x := n0; y := n|> = <|x := n0; y := n|>]
+}
+
+\COMMENTS
+{RW_TAC} and {SRW_TAC} automatically include these rewrites.
+
+\SEEALSO
+bossLib.rewrites, bossLib.RW_TAC.
+
+\ENDDOC

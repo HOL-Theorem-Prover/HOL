@@ -3,40 +3,12 @@
 \TYPE {SIMP_RULE : simpset -> thm list -> thm -> thm}
 
 \SYNOPSIS
-Simplifies the conclusion of a theorem according to the given simpset
-and theorem rewrites.
-
-\KEYWORDS
-simplification.
-
-\LIBRARY
-simpLib
+Simplify a term with the given simpset and theorems.
 
 \DESCRIBE
-{SIMP_RULE} simplifies the conclusion of a theorem, adding the given
-theorems to the simpset parameter as rewrites.  The way in which terms
-are transformed as a part of simplification is described in the entry
-for {SIMP_CONV}.
-
-\FAILURE
-Never fails, but may diverge.
-
-\EXAMPLE
-The following also demonstrates the higher order rewriting
-possible with simplification ({FORALL_AND_THM} states
-{|- (!x. P x /\ Q x) = (!x. P x) /\ (!x. Q x)}):
-{
-- SIMP_RULE bool_ss [boolTheory.FORALL_AND_THM]
-            (ASSUME (Term`!x. P (x + 1) /\ R x /\ x < y`));
-> val it =  [.] |- (!x. P (x + 1)) /\ (!x. R x) /\ (!x. x < y) : thm
-}
-
-
-\COMMENTS
-{SIMP_RULE ss thmlist} is equivalent to {CONV_RULE (SIMP_CONV ss thmlist)}.
+{bossLib.SIMP_RULE} is identical to {simpLib.SIMP_RULE}.
 
 \SEEALSO
-simpLib.ASM_SIMP_RULE, simpLib.SIMP_CONV, simpLib.SIMP_TAC, 
-BasicProvers,bool_ss.
+bossLib.SIMP_RULE.
 
 \ENDDOC

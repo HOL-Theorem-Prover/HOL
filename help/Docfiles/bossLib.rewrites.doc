@@ -3,13 +3,30 @@
 \TYPE {rewrites : thm list -> ssdata}
 
 \SYNOPSIS
-Create an {ssdata} value consisting of the given theorems as
+Creates an {ssdata} value consisting of the given theorems as
 rewrites.
 
-\DESCRIBE
-{bossLib.rewrites} is identical to {simpLib.rewrites}.
+\KEYWORDS
+simplification
+
+\LIBRARY
+simpLib
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+Instead of writing the simpler {SIMP_CONV std_ss thmlist}, one could
+write
+{
+   SIMP_CONV (std_ss ++ rewrites thmlist) []
+}
+More plausibly, {rewrites} can be used to create commonly
+used {ssdata} values containing a great number of rewrites.  This is
+how the basic system's various {ssdata} values are constructed where
+those values consist only of rewrite theorems.
 
 \SEEALSO
-simpLib.rewrites.
+bossLib.++, simpLib.mk_simpset, simpLib.SIMPSET, bossLib.SIMP_CONV.
 
 \ENDDOC

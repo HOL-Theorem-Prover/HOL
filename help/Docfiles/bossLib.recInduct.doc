@@ -1,0 +1,57 @@
+\DOC recInduct
+
+\TYPE {recInduct : thm -> tactic}
+
+\SYNOPSIS
+Performs recursion induction.
+
+\KEYWORDS
+tactic, induction
+
+\LIBRARY
+SingleStep.
+
+\DESCRIBE
+An invocation {recInduct thm} on a goal {g}, where {thm} is typically an
+induction scheme returned from an invocation of {Define} or {Hol_defn},
+attempts to instantiate {thm} to the {g}, and then replaces {g} by the
+instantiated antecedents of {thm}. The order of quantification of the
+goal should correspond with the order of quantification in the
+conclusion of {thm}.
+
+
+\FAILURE
+{recInduct} fails if the goal is not universally quantified in a way
+corresponding with the quantification of the conclusion of {thm}.
+
+\EXAMPLE
+Suppose we had defined the factorial function as 
+{
+   Define `fact x = if x = 0 then 1 else x * fact (x-1)`
+}
+One consequence of this is that an induction theorem is automatically
+generated from the definition and stored in the current theory.
+{
+   - val fact_ind = fetch "-" "fact_ind";
+   > val fact_ind = |- !P. (!x. (~(x = 0) ==> P (x - 1)) ==> P x) ==> !v. P v
+}
+Suppose now that we wish to prove that the factorial function grows
+faster than addition:
+{
+   ?- !x y. x + y < x + fact y
+}
+As stated, the induction won't work, since we want to induct on the
+argument of {fact}, namely the variable {y}. So we change the goal to 
+{
+   ?- !y x. x + y < x + fact y
+}
+
+\COMMENTS
+Note the problem with paired definitions.
+
+\SEEALSO
+bossLib.Induct, bossLib.Induct_on, bossLib.completeInduct_on, 
+bossLib.measureInduct_on, Prim_rec.INDUCT_THEN, bossLib.Cases,
+bossLib.Hol_datatype, goalstackLib.g, goalstackLib.e.
+
+\ENDDOC
