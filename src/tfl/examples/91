@@ -1,98 +1,201 @@
 (*---------------------------------------------------------------------------
- * McCarthy's 91 function.
- *---------------------------------------------------------------------------*)
+           McCarthy's 91 function.
+ ---------------------------------------------------------------------------*)
 
-app load ["tflLib","QLib"];
-open arithTools RW;
+app load ["TotalDefn", "BasicProvers", "SingleStep"];
 
-val USE_ARITH_FACT = IMP_RES_THEN (fn th => RW.RW_TAC[th]) o ARITH;
+open TotalDefn BasicProvers SingleStep;
+infix 8 by;
 
-val N1def = tflLib.Rfunction  "N1def"
-    `measure \x. 101 - x`
-    `ninety1 x = (x>100 => (x-10) | ninety1 (ninety1 (x+11)))`;
+(*---------------------------------------------------------------------------
+         Miscellaneous support
+ ---------------------------------------------------------------------------*)
+
+val arith_ss  = simpLib.++(bool_ss,arithSimps.ARITH_ss);
+fun ARITH q  = EQT_ELIM(arithLib.ARITH_CONV (Term q));
+val ARITH_TAC = CONV_TAC arithLib.ARITH_CONV;
+
+val lem = ARITH `~(x > 100) ==> (101-y < 101-x = x<y)`;
+
+val measure_def   = prim_recTheory.measure_def;
+val inv_image_def = relationTheory.inv_image_def;
 
 
 (*---------------------------------------------------------------------------
- * Beautify the rules and induction theorem.
- *---------------------------------------------------------------------------*)
-val lem0 = ARITH`(~(x>100)) ==> (101-y < 101-x = x<y)`;
-val eqns = ONCE_RW_RULE[lem0] (#rules N1def);
-val induction = ONCE_RW_RULE[lem0] (#induction N1def);
-val tc = ONCE_RW_CONV[lem0] (hd(#tcs N1def));
+       Define the function. Note that the definition of nested
+       functions is achieved by the invisible definition of an
+       "auxiliary" function from which the desired function is 
+       obtained. The termination proof of the desired function
+       is reduced to that of the auxiliary function.
+
+       We use Hol_fun to make the definition, since we are going
+       to tackle the termination proof ourselves.
+ ---------------------------------------------------------------------------*)
+
+val N_defn = 
+ Defn.Hol_defn "N" 
+               `N(x) = if x>100 then x-10 else N (N (x+11))`;
 
 
-(*--------------------------------------------------------------------------- 
- * Prove termination. We need to use wellfounded induction, since 
- * application of recursion induction seems to get derailed by the 
- * destructor-style definition of the function.
- *---------------------------------------------------------------------------*)
+val Neqn = Defn.eqns_of N_defn;
 
-val th = ISPEC (Term`measure \x. 101 - x`) primWFTheory.WF_INDUCTION_THM;
-val ind = CONV_RULE (tflLib.tc_simplifier[]) (RW_RULE[WFTheory.WF_measure] th);
+(*---------------------------------------------------------------------------
+      Prove partial correctness for N, to see how such a proof
+      works when the termination relation has not yet been supplied.
+ ---------------------------------------------------------------------------*)
+
+local val SOME Nind = Defn.ind_of N_defn
+in
+val Npartly_correct = Q.prove(
+ `WF R /\ 
+  (!x. ~(x > 100) ==> R (N_aux R (x + 11)) x) /\
+  (!x. ~(x > 100) ==> R (x + 11) x)
+     ==>
+  !n. N(n) = if n>100 then n-10 else 91`,
+STRIP_TAC THEN recInduct Nind
+  THEN REPEAT STRIP_TAC
+  THEN ONCE_REWRITE_TAC [Neqn]
+  THEN RW_TAC bool_ss []
+  THEN Q.PAT_ASSUM `COND p q r > s` MP_TAC
+  THEN ASM_REWRITE_TAC[] 
+  THENL [NTAC 2 (POP_ASSUM MP_TAC), ALL_TAC]
+  THEN ARITH_TAC)
+end;
 
 
 (*---------------------------------------------------------------------------
- * This proof is rather involved, but the fact that it succeeds shows that,
- * sometimes, termination and partial correctness for nested functions 
- * do not depend on each other, contrary to feelings expressed in
- * the literature. Of course, the termination property for 91 is a
- * partial correctness statement, since it involves the constant "91", but
- * more importantly, it's a termination condition, and if we were forced to
- * put it in one or the other category, it would go in the termination box.
- * The induction hypothesis gets used twice in this proof, once at "x+11" and 
- * once at "ninety1((x+11)+11) - 11".
- *---------------------------------------------------------------------------*)
+      Prove termination for N. The termination relation is 
+      "measure \x. 101 - x". Termination is shown by proving
+      the termination of N_aux.  We also make another definition, 
+      Nine1, just for readability in the proofs.
+ ---------------------------------------------------------------------------*)
 
-val ninety1_terminates = Q.store_thm("ninety1_terminates",
-`!x. ~(x>100) ==> x < ninety1(x+11)`,
-tflLib.PROGRAM_TAC{induction = ind, rules = eqns} 
- THEN IMP_RES_THEN (fn th => RULE_ASSUM_TAC(RW_RULE[th])) lem0 THENL
- [ ARITH_TAC,
-   Q.ASM_CASES_TAC`ninety1((x+11)+11) -11 > 100` THENL
-   [ SUBST_TAC[Q.INST[`x` |-> `ninety1((x+11)+11)`] eqns] 
-       THEN USE_ARITH_FACT`x-11 > 100 ==> x>100` 
-       THEN Q.UNDISCH_TAC`x+11 < ninety1((x+11)+11)` 
-       THEN ARITH_TAC,
-     IMP_RES_TAC(ARITH`v+11<z ==> v<z-11`) THEN RES_TAC 
-      THEN IMP_RES_THEN SUBST_ALL_TAC (ARITH`w+11<y ==> ((y-11)+11 = y)`)
-      THEN IMP_RES_TAC arithmeticTheory.LESS_TRANS],
-   ANTE_RES_THEN IMP_RES_TAC (ARITH`x<x+11`) THEN RES_TAC]);
+val Nine1_def = Define `Nine1 = N_aux (measure \x. 101 - x)`;
+
+val Nine1_def' = BETA_RULE(REWRITE_RULE [measure_def,inv_image_def] Nine1_def);
 
 
-val N1induct = save_thm("ninety1_induct",
-                        RW_RULE[ninety1_terminates] induction);;
-
-val N1eqns = save_thm("ninety1_eqns",RW_RULE[ninety1_terminates] eqns);
-
-
-(*----------------------------------------------------------------------------
- * Prove a property of 91. Induction not needed. Not used in correctness proof.
- *---------------------------------------------------------------------------*)
-
-fun UNROLL1_TAC qtm = 
-  SUBST1_TAC (Q.INST[`x` |-> qtm] N1eqns) THEN reduceLib.REDUCE_TAC;
-
-val climb90 = Q.store_thm("climb90",
-`!n. 90<=n/\n<=100 ==> (ninety1(n) = ninety1(n+1))`,
-RW_TAC[arithmeticTheory.LESS_OR_EQ] THEN GEN_TAC THEN
- SUBST1_TAC(SYM_CONV(Term`90=n`)) THEN REPEAT STRIP_TAC THEN ASM_RW_TAC[] 
- THENL
-   [ UNROLL1_TAC`n:num` THEN USE_ARITH_FACT`x<y ==> ~(x>y) /\ ~(x+1>y)` 
-      THEN UNROLL1_TAC`n+11`  THEN USE_ARITH_FACT`90<n ==> n+11>100` 
-      THEN SUBST1_TAC (ARITH`(n+11)-10 = n+1`),
-     UNROLL1_TAC`100` THEN UNROLL1_TAC`111`,
-     UNROLL1_TAC`100` THEN UNROLL1_TAC`90` THEN UNROLL1_TAC`101`,
-     UNROLL1_TAC`100` THEN UNROLL1_TAC`111`]
-  THEN REFL_TAC);
+local val SOME N_aux_defn = Defn.aux_defn N_defn
+in
+val eqn0 = 
+  REWRITE_RULE [prim_recTheory.WF_measure]
+    (BETA_RULE
+      (Q.INST [`R` |-> `measure \x. 101 - x`]
+            (Defn.eqns_of N_aux_defn)))
+end;
 
 
-(*---------------------------------------------------------------------------*
- * A closed form specification for 91.                                       *
- *---------------------------------------------------------------------------*)
+val eqn1 = Q.prove(`!x. x>100 ==> (Nine1 x = x-10)`,
+RW_TAC bool_ss [Nine1_def] 
+  THEN MP_TAC eqn0 
+  THEN RW_TAC bool_ss []);
 
-val ninety1_correct = Q.store_thm("ninety1_correct",
-`!n. ninety1 n = (n>100 => n-10 | 91)`,
-tflLib.PROGRAM_TAC{induction = N1induct, rules = N1eqns} 
-  THEN ASM_RW_TAC[]
-  THEN POP_ASSUM MP_TAC
-  THEN ARITH_TAC);
+
+val eqn2 = Q.prove
+(`!x. ~(x>100) /\ x < Nine1 (x+11) 
+         ==> 
+     (Nine1 x = Nine1 (Nine1 (x+11)))`,
+ RW_TAC bool_ss [Nine1_def] 
+   THEN MP_TAC eqn0 THEN RW_TAC bool_ss []
+   THEN FIRST_ASSUM (MATCH_MP_TAC o REWRITE_RULE [AND_IMP_INTRO])
+   THEN CONJ_TAC THENL [ALL_TAC, Q.PAT_ASSUM `x<y` MP_TAC]
+   THEN RW_TAC arith_ss [lem,measure_def,inv_image_def]);
+
+
+(*---------------------------------------------------------------------------
+
+        Termination proof. It's worth noting that termination is
+        completely independent of the partial correctness proof.
+        [People used to think that termination and partial correctness
+         of nested recursive functions had to be proved simultaneously;
+         instead of unrolling the function definition for the nested 
+         application of the function, the partial correctness would be
+         used instead. The fear was that it would be circular to expand
+         the function definition before the termination of the function 
+         was proved, i.e., to use it in its own termination proof. This 
+         isn't so: one can validly unroll the definition at "sufficiently 
+         small" instances. Often this suffices to get the proof, and, in
+         such cases, partial correctness need not be involved.]
+
+ ---------------------------------------------------------------------------*)
+
+val (N_eqn, N_ind) = Defn.tprove(N_defn,
+WF_REL_TAC N_defn `measure \x. 101 - x` THEN CONJ_TAC THENL
+ [(* nested TC *)
+  RW_TAC bool_ss [GSYM Nine1_def', lem]
+   THEN measureInduct_on `(\m. 101 - m) x`
+   THEN RW_TAC bool_ss [] 
+   THEN IMP_RES_THEN (fn th => RULE_ASSUM_TAC (REWRITE_RULE [th])) lem
+   THEN Cases_on `x+11 > 100` THENL
+   [RW_TAC arith_ss [eqn1],
+    `x+11 < Nine1((x+11)+11)`  by PROVE_TAC [ARITH `x<x+11`]            THEN
+    `x < Nine1((x+11)+11) -11` by PROVE_TAC [ARITH `x+y < z = x < z-y`] THEN
+    `Nine1 (x+11) = Nine1 (Nine1 ((x+11) + 11))` by PROVE_TAC[eqn2]     THEN
+    Cases_on `Nine1((x+11)+11) -11 > 100` THENL
+     [`Nine1((x+11)+11) > 100` by PROVE_TAC [ARITH`x-11 > 100 ==> x>100`] THEN
+      `Nine1(Nine1((x+11)+11)) = Nine1((x+11)+11) -10` by PROVE_TAC[eqn1] 
+        THEN Q.PAT_ASSUM `Nine1 (x+11) = M` (SUBST_ALL_TAC o SYM) 
+        THEN PROVE_TAC[ARITH`x>100==>x-11<x-10`,arithmeticTheory.LESS_TRANS],
+      RES_TAC 
+       THEN IMP_RES_THEN SUBST_ALL_TAC (ARITH`w+11<y ==> ((y-11)+11 = y)`)
+       THEN PROVE_TAC [eqn2,arithmeticTheory.LESS_TRANS]]],
+  (* non-nested TC *)
+  ARITH_TAC]);
+
+
+(*---------------------------------------------------------------------------
+      Note that the above development is slightly cranky, since
+      the partial correctness theorem has constraints remaining. 
+      These were actually addressed by the termination proof, but 
+      the witnesses were proved and then thrown away. 
+
+      Now try some computations with N.
+ ---------------------------------------------------------------------------*)
+
+load "computeLib"; open computeLib;
+
+(*---------------------------------------------------------------------------
+      First, build a standard computing base, one that knows basic 
+      facts about booleans and numbers (and numerals).
+
+      Note that ">" and ">=" are not defined for numerals, so 
+      we convert to "<" and "<=" via 
+      narithmeticTheory.{GREATER_EQ, GREATER_DEF}.
+ ---------------------------------------------------------------------------*)
+
+val rws = from_list (false,[COND_CLAUSES,NOT_CLAUSES]);
+
+fun norm q = Count.apply (CBV_CONV rws) (--q--);
+
+val num_rws = 
+  let open numeralTheory Rsyntax
+      val REFL_EQ_0 = INST_TYPE [Type.alpha |-> Type`:num`] REFL_CLAUSE
+      val NORM_0 = prove(--`NUMERAL ALT_ZERO = 0`--,
+                         REWRITE_TAC [arithmeticTheory.NUMERAL_DEF, 
+                        arithmeticTheory.ALT_ZERO])
+      val distrib_rws as (th1::th2::rst) = rev (CONJUNCTS numeral_distrib)
+      val drws' = LIST_CONJ (rev (EQT_INTRO th1::EQT_INTRO th2::rst))
+ in 
+  [ drws', REFL_EQ_0, numeral_eq, numeral_suc, numeral_pre, NORM_0,
+    numeral_iisuc, numeral_add, numeral_mult, iDUB_removal,
+    numeral_sub, numeral_lt, numeral_lte, iSUB_THM,
+    numeral_exp, iSQR, 
+    arithmeticTheory.GREATER_EQ, arithmeticTheory.GREATER_DEF
+  ]
+end;
+
+val _ = add_thms (true,num_rws) rws;
+val _ = add_thms (true,[N_eqn]) rws;
+
+norm `N 0`;
+norm `N 10`;
+norm `N 11`;
+norm `N 12`;
+norm `N 40`;
+norm `N 89`;
+norm `N 90`;
+norm `N 99`;
+norm `N 100`;
+norm `N 101`;
+norm `N 102`;
+norm `N 127`;
