@@ -11,7 +11,7 @@
 
 open HolKernel Parse boolLib Prim_rec Num_conv Num_induct;
 open Base Datatype;
-open arithLib numLib res_quanLib;
+open arithLib numLib res_quanLib pairLib;
 open rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory;
 infix THEN THENL THENC ORELSE ORELSEC;
 open Cond_rewrite Res_quan;
@@ -404,7 +404,7 @@ val WCAT_lemma = prove(
     in
     CHOOSE_THEN STRIP_ASSUME_TAC th THEN EXISTS_TAC
         (--`\(w1:('a)word,w2:('a)word).WORD(APPEND(bt w1)((bt w2):'a list))`--)
-    THEN REPEAT GEN_TAC THEN CONV_TAC (LHS_CONV pairSyntax.PAIRED_BETA_CONV)
+    THEN REPEAT GEN_TAC THEN CONV_TAC (LHS_CONV PAIRED_BETA_CONV)
     THEN ASM_REWRITE_TAC[]
     end);
 

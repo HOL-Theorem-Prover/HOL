@@ -25,12 +25,12 @@ val LESS_EQ_SPLIT =
 val SUB_GREATER_EQ_ADD =
   ARITH_PROVE (--`!p n m. (p >= n) ==> (((p - n) >= m) = (p >= (m + n)))`--);
 
-(*ba bb wa wb *)
+(* ba bb wa wb *)
 (* ADD_LESS_EQ_SUB = |- !p n m. n <= p ==> ((n + m) <= p = m <= (p - n)) *)
 val ADD_LESS_EQ_SUB =
    GSYM (REWRITE_RULE[GREATER_EQ] SUB_GREATER_EQ_ADD);
 
-(*wa *)
+(* wa *)
 val ADD_LESS_EQ_TRANS =
   ARITH_PROVE (--`!m n p q. ((m + n) <= p) /\ (q <= n) ==> ((m + q) <= p)`--);
 
@@ -113,8 +113,8 @@ fun WORD_ERR{function,message} =
 open Rsyntax;
 
 val % = Parse.Term
-val alpha_ty = ==`:'a`==
-val bool_ty = ==`:bool`==
+val alpha_ty = Type.alpha
+val bool_ty = Type.bool
 
 
 (* --------------------------------------------------------------------*)
