@@ -1,0 +1,10 @@
+Taupo-6 is very similar to Taupo-5.  The reason for its release is to
+address problems with building under Windows.  Taupo-5 would not build
+under Windows with mosml2.00 (though it would succeed with
+mosml1.44).  This release fixes that problem.
+
+Bugs fixed:
+-----------
+  * The "known constants" behaviour advertised for Taupo-4 (see
+    doc/taupo-4.release) wasn't properly implemented.  Now this
+    behaviour is as described earlier.
