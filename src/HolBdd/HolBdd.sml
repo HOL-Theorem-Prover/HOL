@@ -1,4 +1,6 @@
+(* *)
 structure HolBdd :> HolBdd = struct
+(* *)
 
 (*****************************************************************************)
 (* Ken Larsen's BDDOracle package opened up, renamed  and modified           *)
@@ -240,13 +242,15 @@ fun check_var tm =
  is_var tm orelse 
  hol_err ("``"^Parse.term_to_string tm^"`` is not a variable") "check_var";
 
+exception match_to_pairs_Failure;
+
 fun match_to_pairs []             = []
  |  match_to_pairs ((new,old)::l) =
      if not(exists (fn (new',_) => new=new') l) 
          andalso (type_of new = bool) andalso check_var new
          andalso (type_of old = bool) andalso check_var old
       then (fst(dest_var old),fst(dest_var new))::match_to_pairs l
-      else hol_err "BDD replacement or matching problem" "match_to_pairs";
+      else raise match_to_pairs_Failure;
 
 (*****************************************************************************)
 (*    subst_bdd tab [(oldname1,newname1),...,(oldnamen,newnamen)] bdd        *)
@@ -689,7 +693,16 @@ and BDD_MATCH_CONV bdd_map descr tm =
 (* Transform a term to one that can be represented as a BDD                  *)
 (*****************************************************************************)
 
-fun BDD_TR bdd_map tm = rhs(concl(BDD_CONV bdd_map tm));
+val BDD_CONV_flag = ref false;
+
+fun BDD_TR bdd_map tm = 
+ let val th = BDD_CONV bdd_map tm;
+     val tm = rhs(concl th)
+ in
+  if !BDD_CONV_flag 
+   then (print "BDD_CONV ";print_thm th; print "\n"; tm) 
+   else tm
+ end;
 
 (*****************************************************************************)
 (* Adds a variable to a table if it isn't already there                      *)
@@ -916,16 +929,18 @@ fun termToBdd tm =
       val _             = bdd_state := ((c', var_map'), bdd_map)
   in
    fromTerm var_map' bdd_map tm
-    handle Interrupt => raise Interrupt
-              |    _ => let val tm' = BDD_TR bdd_map tm
-                            val (c'',var_map'') = 
-                                 add_vars_to_table 
-                                  (c', var_map') 
-                                  (all_vars tm')
-                        in
-                         bdd_state := ((c'', var_map''), snd(!bdd_state));
-                         fromTerm var_map'' bdd_map tm'
-                        end
+    handle Interrupt 
+             => raise Interrupt
+      |    match_to_pairs_Failure 
+             => let val tm' = BDD_TR bdd_map tm
+                    val (c'',var_map'') = add_vars_to_table 
+                                           (c', var_map')
+                                           (all_vars tm')
+                in
+                 bdd_state := ((c'', var_map''), snd(!bdd_state));
+                 fromTerm var_map'' bdd_map tm'
+                end
+      |    _ => raise termToBddError
   end) handle Interrupt => raise Interrupt
          |    _         => raise termToBddError ;
 
@@ -1376,7 +1391,9 @@ fun statecount b =
 
 end
 
+(* *)
 end
+(* *)
 
 
 
