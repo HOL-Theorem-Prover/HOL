@@ -12,9 +12,20 @@ fun LEX c1 c2 ((x1,x2),(y1,y2)) =
    of EQUAL => c2 (x2,y2)
     | other => other;
 
-val [eq_alpha,eq_beta,eq_gamma] = 
-   List.map (with_flag (Feedback.emit_WARNING,false) Type.mk_vartype) 
-            ["''a", "''b", "''c"];
+val qmk_vartype = with_flag (Feedback.emit_WARNING,false) mk_vartype;
+
+val eq_alpha = qmk_vartype "''a";
+
+fun unprime s = String.extract(s,1,NONE);
+
+(*---------------------------------------------------------------------------*)
+(* The incoming strings are the names of eqtyvars, hence are prefixed with   *)
+(* double primes.                                                            *)
+(*---------------------------------------------------------------------------*)
+
+fun iconst (slist,n,thy) = 
+    inst (List.map (fn s => (mk_vartype (unprime s) |-> qmk_vartype s)) slist)
+         (prim_mk_const{Name=n,Thy=thy});
 
 (*---------------------------------------------------------------------------*)
 (* The initial constant map has equality, conjunction, disjunction,          *)

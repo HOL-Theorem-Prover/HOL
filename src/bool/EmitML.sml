@@ -1,6 +1,6 @@
 (*===========================================================================*)
-(* Drop: mapping HOL expressions to ML. The basic HOL theory hierarchy has a *)
-(* loose analogue in the hierarchy of basic ML structures. Thus we have      *)
+(* EmitML: mapping HOL expressions to ML. The basic HOL theory hierarchy has *)
+(* a loose analogue in the hierarchy of basic ML structures. Thus we have    *)
 (* something like                                                            *)
 (*                                                                           *)
 (*    HOL Theory         ML Structure                                        *)
@@ -36,12 +36,12 @@
 (*                                                                           *)
 (*===========================================================================*)
 
-structure Drop :> Drop = 
+structure EmitML :> EmitML = 
 struct
 
 open HolKernel boolSyntax Abbrev;
 
-val ERR = mk_HOL_ERR "Drop";
+val ERR = mk_HOL_ERR "EmitML";
 
 (*---------------------------------------------------------------------------*)
 (* Forward references, to be patched up in the appropriate places.           *)
@@ -67,6 +67,8 @@ val dest_pair_hook = ref (fn _ => raise ERR "dest_pair" "undefined")
 val dest_pabs_hook = ref (fn _ => raise ERR "dest_pabs" "undefined")
 val dest_fail_hook = ref (fn _ => raise ERR "dest_fail" "undefined")
 val strip_let_hook = ref (fn _ => raise ERR "strip_let" "undefined")
+val list_mk_prod_hook = ref (fn [x] => x 
+                              | _ => raise ERR "list_mk_prod" "undefined")
 
 fun strip_cons M = 
     case total (!dest_cons_hook) M
@@ -415,6 +417,7 @@ fun pp_defn_as_ML openthys ppstrm =
 local open type_grammar HOLgrammars
       fun problem {opname="sum",  parse_string="+"} = true
         | problem {opname="prod", parse_string="#"} = true
+        | problem {opname="fmap", parse_string="|->"} = true
         | problem otherwise = false
       fun elim (r as (i,INFIX(list,a))) A = 
             let val list' = gather (not o problem) list
@@ -544,10 +547,7 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
                  begin_block CONSISTENT 0; add_string con; add_string " of ";
                  end_block(); 
                begin_block INCONSISTENT 0;
-               pr_list ppty
-                   (fn () => add_string " *")
-                   (fn () => add_break(1,0))
-                   (map ParseDatatype.pretypeToType args);
+               ppty (!list_mk_prod_hook(map ParseDatatype.pretypeToType args));
                end_block(); end_block()))
      fun pp_decl (tyvars,r) (name,Constructors clauselist) =
          (begin_block CONSISTENT 5;
@@ -605,7 +605,7 @@ fun pp_sig strm (s,elems) =
               else (add_string "(";
                     pr_list add_string (fn () => add_string",")
                                        (fn () => ()) tyvars;
-                    add_string")");
+                    add_string(") "^s));
             end_block())
      in begin_block CONSISTENT 0;
         pr_list pp_tydec (fn () => ()) add_newline (map (pair tyvars) tynames);
@@ -644,7 +644,7 @@ fun pp_sig strm (s,elems) =
    end_block();
    flush_ppstream()
  end 
- handle e => raise wrap_exn "Drop" "pp_sig" e;
+ handle e => raise wrap_exn "EmitML" "pp_sig" e;
 
 val MLinfixes = 
   String.fields Char.isSpace "* / div mod + - ^ @ <> > < >= <= := o before";
@@ -694,7 +694,7 @@ fun pp_struct strm (s,elems,cnames) =
    end_block();
    flush_ppstream()
  end 
- handle e => raise wrap_exn "Drop" "pp_struct" e;
+ handle e => raise wrap_exn "EmitML" "pp_struct" e;
 
 
 
@@ -711,9 +711,10 @@ fun pp_struct strm (s,elems,cnames) =
 (*---------------------------------------------------------------------------*)
 
 fun is_eqtyvar ty = 
-  case String.explode (dest_vartype ty)
-   of #"'" :: #"'" ::rst => true
-    | otherwise => false;
+  (case String.explode (dest_vartype ty)
+    of #"'" :: #"'" ::rst => true
+     | otherwise => false)
+   handle HOL_ERR _ => raise ERR "is_eqtyvar" "not a type variable";
 
 fun tyvar_to_eqtyvar ty = 
  let val tyname = dest_vartype ty
@@ -762,7 +763,7 @@ fun munge_def_type def =
  in 
    map (inst theta) clist
  end
- handle e => raise wrap_exn "Drop" "munge_def_type" e;
+ handle e => raise wrap_exn "EmitML" "munge_def_type" e;
 
 (*---------------------------------------------------------------------------*)
 (* Fetch the constructors out of a datatype declaration                      *)
@@ -805,7 +806,7 @@ fun install_consts _ [] = []
       in consts @ install_consts s rst
       end
   | install_consts s (ABSDATATYPE (tyvars,ty)::rst) = 
-    install_consts s (EQDATATYPE (tyvars,ty)::rst)
+     install_consts s (EQDATATYPE (tyvars,ty)::rst)
   | install_consts s (other::rst) = install_consts s rst
 
 
@@ -829,10 +830,12 @@ fun mk_file_ppstream file =
 (*---------------------------------------------------------------------------*)
 
 fun emit_adjoin_call thy consts =
- let fun dest c = let val {Name,Thy,...} = dest_thy_const c in (Name,Thy) end
-     val clist = map dest consts
+ let fun eqtyvars c = map dest_vartype(gather is_eqtyvar(type_vars_in_term c))
+     fun name_thy c = let val {Name,Thy,...} = dest_thy_const c in (Name,Thy) end
+     val sclist = map (fn c => (eqtyvars c,name_thy c)) consts
+     fun listify slist = "["^String.concat (commafy slist)^"]"
      fun paren2 (a,b) = "("^a^","^b^")"
-     fun paren3 (a,b,c) = "("^a^","^b^","^c^")"
+     fun paren3 (a,(b,c)) = "("^listify a^","^b^","^c^")"
  in 
   Theory.adjoin_to_theory
   {sig_ps = NONE,
@@ -842,21 +845,22 @@ fun emit_adjoin_call thy consts =
         fun NL() = add_newline ppstrm
         val BR = add_break ppstrm
     in 
-     S "val _ = let fun foo thy c = "; NL();
-     S "              let val {Name,Ty,...} = Term.dest_thy_const c"; NL();
-     S "              in (c,(thy,Name,Ty))"; NL();
-     S "              end"; NL();
-     S"             val clist = map (fn (n,thy) => prim_mk_const{Name=n,Thy=thy})"; 
-     NL();
-     S"             ["; 
+     S "val _ = "; NL();
+     S "   let fun foo thy c = "; NL();
+     S "         let val {Name,Ty,...} = Term.dest_thy_const c"; NL();
+     S "         in (c,(thy,Name,Ty))"; NL();
+     S "         end"; NL();
+     S "       val clist = map ConstMapML.iconst"; NL();
+     S"         ["; 
      begin_block ppstrm INCONSISTENT 0;
-     Portable.pr_list S (fn () => S",") (fn () => BR(1,0))
-             (map (paren2 o (Lib.quote##Lib.quote)) clist);
+     Portable.pr_list S (fn () => S",") 
+                        (fn () => BR(1,0))
+          (map (paren3 o (map Lib.quote##Lib.mlquote##Lib.mlquote)) sclist);
      end_block ppstrm;
      S"]"; NL();
-     S "    in "; NL();
-     S ("        List.app ConstMapML.prim_insert (map (foo "^Lib.quote thy^") clist)"); NL();
-     S "    end"; NL(); NL(); NL()
+     S "   in "; NL();
+     S ("     List.app ConstMapML.prim_insert (map (foo "^Lib.quote thy^") clist)"); NL();
+     S "   end"; NL()
         end)}
    handle e => raise ERR "emit_adjoin_call" ""
  end;
@@ -885,7 +889,7 @@ fun exportML (s,elems) =
     emit_adjoin_call s consts
    )
    handle e => (List.app TextIO.closeOut [sigStrm, structStrm];
-                raise wrap_exn "Drop" "exportML" e)
+                raise wrap_exn "EmitML" "exportML" e)
   end
   handle e => Raise e;
 

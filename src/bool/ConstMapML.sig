@@ -11,8 +11,5 @@ sig
   val insert       : Term.term -> unit
   val apply        : Term.term -> string * string * Type.hol_type
 
-  val eq_alpha     : Type.hol_type
-  val eq_beta      : Type.hol_type
-  val eq_gamma     : Type.hol_type
-
+  val iconst       : string list * string * string -> term
 end

@@ -1,4 +1,4 @@
-signature Drop = 
+signature EmitML = 
 sig
   include Abbrev
 
@@ -21,6 +21,7 @@ sig
   val dest_pabs_hook           : (term -> term * term) ref
   val dest_fail_hook           : (term -> term * string * term list) ref
   val strip_let_hook           : (term -> (term * term) list list * term) ref
+  val list_mk_prod_hook        : (hol_type list -> hol_type) ref
 
   val pp_type_as_ML     : ppstream -> hol_type -> unit
   val pp_term_as_ML     : string list -> ppstream -> term -> unit
