@@ -1,7 +1,19 @@
 (*---------------------------------------------------------------------------*
  *                                                                           *
- *       The Dutch National Flag - Term Rewriting Emulation                  *
+ *       The Dutch National Flag                                             *
  *                                                                           *
+ * The example is originally from Dijkstra, but is/was very popular as a     *
+ * simple term rewriting system example. There is a linear arrangement of    *
+ * objects coloured Red, White, or Blue. The term rewriting system           *
+ *                                                                           *
+ *          WR --> RW                                                        *
+ *          BR --> RB                                                        *
+ *          BW --> WB                                                        *
+ *                                                                           *
+ * always terminates when applied to the objects, and leaves them such that  *
+ * all the Red ones come first, then the White ones, then the Blue ones.     *
+ * When represented as a functional program, we essentially get a            *
+ * bubblesort.                                                               *
  *---------------------------------------------------------------------------*)
 
 
