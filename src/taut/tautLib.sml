@@ -37,8 +37,8 @@
 structure tautLib :> tautLib =
 struct
 
-open HolKernel Parse boolTheory boolSyntax Rsyntax 
-     Drule Tactic Conv QConv Abbrev;
+open HolKernel Parse boolLib Abbrev Rsyntax;
+
 infix THEN THENL THENC ## |->;
 
 val ERR = mk_HOL_ERR "tautLib"
