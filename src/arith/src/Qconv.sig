@@ -1,7 +1,5 @@
 signature Qconv =
 sig
-  local type int = arbint.int in
-
    type conv = Abbrev.conv
 
    val RULE_OF_CONV : conv -> (Term.term -> Thm.thm)
@@ -16,5 +14,4 @@ sig
    val RATOR_CONV : conv -> conv
    val ABS_CONV : conv -> conv
    val ARGS_CONV : conv -> conv
-  end
 end

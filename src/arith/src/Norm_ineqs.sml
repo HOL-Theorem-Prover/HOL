@@ -17,7 +17,7 @@
 
 structure Norm_ineqs :> Norm_ineqs =
 struct
-  open arbint
+  open Arbint
   val << = String.<
   infix <<
 

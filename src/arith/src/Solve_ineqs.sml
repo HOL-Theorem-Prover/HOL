@@ -17,7 +17,7 @@
 
 structure Solve_ineqs :> Solve_ineqs =
 struct
-  open arbint
+  open Arbint
   val << = String.<
   infix <<
 

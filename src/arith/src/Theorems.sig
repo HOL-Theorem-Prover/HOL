@@ -1,8 +1,5 @@
 signature Theorems =
 sig
-  local type int = arbint.int in
-
-
    val ONE_PLUS : Thm.thm
    val ZERO_PLUS : Thm.thm
    val PLUS_ZERO : Thm.thm
@@ -23,5 +20,4 @@ sig
    val LESS_EQ_TRANSIT : Thm.thm
    val NOT_T_F : Thm.thm
    val NOT_F_T : Thm.thm
-  end
 end

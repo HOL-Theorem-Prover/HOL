@@ -17,7 +17,7 @@
 
 structure Prenex :> Prenex =
 struct
-  open arbint
+  open Arbint
   val << = String.<
 
 

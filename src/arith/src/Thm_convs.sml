@@ -17,15 +17,15 @@
 
 structure Thm_convs :> Thm_convs =
 struct
-  open arbint
+  open Arbint
   val << = String.<
 
 
 open HolKernel boolTheory Drule Theorems Parse;
 
 infix |->;
-val alpha = Type`:'a`
-and beta  = Type`:'b`;
+val alpha = Type.alpha
+and beta  = Type.beta;
 
 val GSYM      = Conv.GSYM;
 val REWR_CONV = Conv.REWR_CONV;

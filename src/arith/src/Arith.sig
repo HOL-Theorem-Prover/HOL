@@ -1,7 +1,5 @@
 signature Arith =
 sig
-  local type int = arbint.int in
-
    type term = Term.term
    type conv = Abbrev.conv
 
@@ -18,5 +16,4 @@ sig
    val non_presburger_subterms : term -> term list
    val PRENEX_CONV : conv
    val SUB_AND_COND_ELIM_CONV : conv
-  end
 end

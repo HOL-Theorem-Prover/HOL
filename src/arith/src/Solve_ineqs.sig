@@ -1,7 +1,7 @@
 signature Solve_ineqs =
 sig
-  local type int = arbint.int in
-
+ local type int = Arbint.int 
+ in
    type term = Term.term
    type thm  = Thm.thm
    type conv = Abbrev.conv
@@ -16,5 +16,5 @@ sig
    val var_to_elim : ('a * (string * int) list) list -> string
    val VAR_ELIM :
           (int * (string * int) list) list -> (int list * (unit -> thm))
-  end
+ end
 end

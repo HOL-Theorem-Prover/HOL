@@ -17,7 +17,7 @@
 
 structure Norm_arith :> Norm_arith =
 struct
-  open arbint
+  open Arbint
   val << = String.<
   infix <<
 

@@ -17,7 +17,7 @@
 
 structure Arith :> Arith =
 struct
-  open arbint
+  open Arbint
   val << = String.<
 
 

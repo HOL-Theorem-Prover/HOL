@@ -8,7 +8,7 @@
  * ---------------------------------------------------------------------*)
 structure arithSimps :> arithSimps =
 struct
-  open arbint
+  open Arbint
   val << = String.<
 
 
@@ -53,14 +53,16 @@ fun term_ord (t1,t2) =
     else failwith "term_ord";
 
 val zero_tm = (--`0`--);
+
 fun dest_SUC tm =
     if (fst(dest_const(rator tm)) = "SUC") then rand tm else fail();
-val num_ty = (==`:num`==);
+
+val num_ty = Type`:num`;
 
 val mk_lin =
   let fun tmord ((term1,n1:int),(term2,n2)) =
             case term_ord (term1,term2)
-             of EQUAL => arbint.compare(n1,n2)
+             of EQUAL => Arbint.compare(n1,n2)
               | x => x
       val tmlt = lt_of_ord tmord;
       fun shrink_likes ((tm1,k1)::(tm2,k2)::rest) =

@@ -52,8 +52,6 @@
 
 signature arithSimps =
 sig
-  local type int = arbint.int in
-
  type conv = Abbrev.conv
      type ctxt (* = thm list *) (* this may become more sophisticted *)
      val ARITH_ss : simpLib.ssdata
@@ -62,5 +60,4 @@ sig
      val clear_arith_caches : unit -> unit
      val is_arith : Term.term -> bool
      val arith_cache : Cache.cache
-  end
 end

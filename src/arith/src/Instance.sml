@@ -19,7 +19,7 @@
 
 structure Instance :> Instance =
 struct
-  open arbint
+  open Arbint
   val << = String.<
 
 

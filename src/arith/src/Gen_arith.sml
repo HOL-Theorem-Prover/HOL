@@ -17,7 +17,7 @@
 
 structure Gen_arith :> Gen_arith =
 struct
-  open arbint
+  open Arbint
   val << = String.<
 
 

@@ -17,7 +17,7 @@
 
 structure Norm_bool :> Norm_bool =
 struct
-  open arbint
+  open Arbint
   val << = String.<
 
 

@@ -1,11 +1,13 @@
 signature Rationals =
 sig
-  local type int = arbint.int in
+ local type int = Arbint.int
+ in
 
-   exception Rat_form
-   exception Rat_inv
-   exception Rat_div
-   eqtype rat
+    exception Rat_form
+    exception Rat_inv
+    exception Rat_div
+    eqtype rat
+
    val Rat : (int * int) -> rat
    val Numerator : rat -> int
    val Denominator : rat -> int
@@ -21,5 +23,5 @@ sig
    val rat_zero : rat
    val rat_one : rat
    val rat_less : rat -> rat -> bool
-  end
+ end
 end

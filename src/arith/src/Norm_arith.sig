@@ -1,8 +1,7 @@
 signature Norm_arith =
 sig
-  local type int = arbint.int in
-
-
+ local type int = Arbint.int
+ in
    type thm = Thm.thm
    type conv = Abbrev.conv
 
@@ -21,5 +20,5 @@ sig
    val SORT_AND_GATHER_CONV : conv
    val SYM_ONE_MULT_VAR_CONV : conv
    val NORM_ZERO_AND_ONE_CONV : conv
-  end
+ end
 end

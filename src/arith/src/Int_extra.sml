@@ -17,7 +17,7 @@
 
 structure Int_extra :> Int_extra =
 struct
-  open arbint
+  open Arbint
   val << = String.<
 
 

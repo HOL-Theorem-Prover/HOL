@@ -18,7 +18,7 @@
 
 structure Rationals :> Rationals =
 struct
-  open arbint
+ open Arbint
   val << = String.<
 
 

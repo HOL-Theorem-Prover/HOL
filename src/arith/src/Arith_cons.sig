@@ -1,8 +1,10 @@
 signature Arith_cons =
 sig
-  local type int = arbint.int in
 
- type term = Term.term
+ local type int = Arbint.int 
+ in
+
+   type term = Term.term
 
    val mk_plus : term * term -> term
    val mk_minus : term * term -> term
@@ -39,5 +41,5 @@ sig
    val mk_num_var : string -> term
    val arg1 : term -> term
    val arg2 : term -> term
-  end
+ end
 end

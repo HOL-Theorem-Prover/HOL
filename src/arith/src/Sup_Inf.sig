@@ -1,6 +1,7 @@
 signature Sup_Inf =
 sig
-  local type int = arbint.int in
+ local type int = Arbint.int 
+ in
 
    datatype bound = Bound of Rationals.rat * (string * Rationals.rat) list
                   | Max_bound of bound list
@@ -18,5 +19,5 @@ sig
    val eval_bound : bound -> bound
    val SUP_INF :
           (int * (string * int) list) list -> (string * bound * bound) list
-  end
+ end
 end

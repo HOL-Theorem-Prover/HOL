@@ -18,7 +18,7 @@
 
 structure Sub_and_cond :> Sub_and_cond =
 struct
-  open arbint
+  open Arbint
   val << = String.<
 
 

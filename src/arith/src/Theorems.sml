@@ -17,7 +17,7 @@
 
 structure Theorems :> Theorems =
 struct
-  open arbint
+  open Arbint
   val << = String.<
 
 

@@ -1,8 +1,5 @@
 signature Solve =
 sig
-  local type int = arbint.int in
-
-
    type term = Term.term
    type conv = Abbrev.conv
 
@@ -14,5 +11,5 @@ sig
    val NEGATE_CONV : conv -> conv
    val DEPTH_FORALL_CONV : conv -> conv 
    val FORALL_ARITH_CONV : conv
-  end
+
 end

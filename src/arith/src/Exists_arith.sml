@@ -18,7 +18,7 @@
 
 structure Exists_arith :> Exists_arith =
 struct
-  open arbint
+  open Arbint
   val << = String.<
 
 

@@ -1,8 +1,5 @@
 signature Thm_convs =
 sig
-  local type int = arbint.int in
-
-
    val CONJ_ASSOC_NORM_CONV : Abbrev.conv
    val DISJ_ASSOC_NORM_CONV : Abbrev.conv
    val EQ_EXPAND_CONV : Abbrev.conv
@@ -47,5 +44,5 @@ sig
    val COND_RATOR_CONV : Abbrev.conv
    val COND_RAND_CONV : Abbrev.conv
    val COND_EXPAND_CONV : Abbrev.conv
-  end
+
 end

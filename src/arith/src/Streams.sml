@@ -17,7 +17,7 @@
 
 structure Streams :> Streams =
 struct
-  open arbint
+  open Arbint
   val << = String.<
 
 

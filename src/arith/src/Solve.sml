@@ -17,7 +17,7 @@
 
 structure Solve :> Solve =
 struct
-  open arbint
+  open Arbint
   val << = String.<
 
 

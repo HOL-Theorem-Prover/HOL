@@ -19,7 +19,7 @@
 
 structure Term_coeffs :> Term_coeffs =
 struct
-  open arbint
+  open Arbint
   val << = String.<
   infix <<
 

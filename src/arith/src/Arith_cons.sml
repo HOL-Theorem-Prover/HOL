@@ -18,7 +18,7 @@
 
 structure Arith_cons :> Arith_cons =
 struct
-  open arbint
+  open Arbint
   val << = String.<
 
 
