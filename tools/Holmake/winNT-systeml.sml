@@ -4,15 +4,14 @@ structure Systeml :> Systeml = struct
    It is the very first thing compiled by the HOL build process so it
    absolutely can not depend on any other HOL source code. *)
 
-local
-  fun dquote s = concat ["\"", s, "\""];
+fun dquote s = concat ["\"", s, "\""];
   fun concat_wspaces munge acc strl =
     case strl of
       [] => concat (List.rev acc)
     | [x] => concat (List.rev (munge x :: acc))
     | (x::xs) => concat_wspaces munge (" " :: munge x :: acc) xs
   open Process
-in
+
   fun systeml l = let
     val command = "call "^concat_wspaces dquote [] l
   in
@@ -27,46 +26,54 @@ in
         FileSys.rename{old=file, new=exe};
         exe
       end
-local
-  fun fopen file = (FileSys.remove file handle _ => (); TextIO.openOut file)
-  fun munge s = String.translate (fn #"/" => "\\" | c => str c) s
-  fun q s = "\""^munge s^"\""
-in
-fun emit_hol_script target mosml std_prelude qend =
- let val ostrm = fopen(target^".bat")
-     fun output s = TextIO.output(ostrm, s)
- in
-    output "@echo off\n";
-    output  "rem The bare hol98 script\n\n";
-    output (String.concat["call ", q mosml, " -P full ", q std_prelude,
-                          " %* ", q qend, "\n"]);
-    TextIO.closeOut ostrm;
-    target
- end
 
-
-fun emit_hol_unquote_script target qfilter mosml std_prelude qinit qend =
- let val ostrm = fopen(target^".bat")
-     fun output s = TextIO.output(ostrm, s)
- in
-    output  "@echo off\n";
-    output  "rem The hol98 script (with quote preprocessing)\n\n";
-    output  (String.concat ["call ", q qfilter, " | ", q mosml,
-                          " -P full ",
-                            q std_prelude, " ", q qinit, " %* ",
-                            q qend, "\n"]);
-    TextIO.closeOut ostrm;
-    target
- end
-end
-
-end (* local *)
 
 val HOLDIR =
 val MOSMLDIR =
 val OS =
 val DEPDIR =
 val GNUMAKE =
+
+local
+  fun fopen file = (FileSys.remove file handle _ => (); TextIO.openOut file)
+  fun munge s = String.translate (fn #"/" => "\\" | c => str c) s
+  fun q s = "\""^munge s^"\""
+in
+fun emit_hol_script target qend =
+ let val ostrm = fopen(target^".bat")
+     fun output s = TextIO.output(ostrm, s)
+     val sigobj = q (fullPath [HOLDIR, "sigobj"])
+     val std_prelude = q (fullPath [HOLDIR, "std.prelude"])
+     val mosml = q (fullPath [MOSMLDIR, "bin", "mosml"])
+ in
+    output "@echo off\n";
+    output  "rem The bare hol98 script\n\n";
+    output (String.concat["call ", mosml, " -P full -I ", sigobj, " ",
+                          std_prelude, " %* ", q qend, "\n"]);
+    TextIO.closeOut ostrm;
+    target
+ end
+
+
+fun emit_hol_unquote_script target qend =
+ let val ostrm = fopen(target^".bat")
+     fun output s = TextIO.output(ostrm, s)
+     val qfilter = q (fullPath [HOLDIR, "bin", "unquote"])
+     val sigobj = q (fullPath [HOLDIR, "sigobj"])
+     val std_prelude = q (fullPath [HOLDIR, "std.prelude"])
+     val mosml = q (fullPath [MOSMLDIR, "bin", "mosml"])
+     val qinit = q (fullPath [HOLDIR, "tools", "unquote-init.sml"])
+ in
+    output  "@echo off\n";
+    output  "rem The hol98 script (with quote preprocessing)\n\n";
+    output  (String.concat ["call ", qfilter, " | ", mosml,
+                          " -P full -I ", sigobj, " ",
+                            std_prelude, " ", qinit, " %* ",
+                            q qend, "\n"]);
+    TextIO.closeOut ostrm;
+    target
+ end
+end (* local *)
 
 
 end; (* struct *)

@@ -266,55 +266,29 @@ val _ =
 
 
 (*---------------------------------------------------------------------------
-    Fill in some slots in the Standard Prelude file, and write it to
-    std.prelude in the top level of the distribution directory.
- ---------------------------------------------------------------------------*)
-
-val _ =
- let open TextIO
-     val _ = echo "Setting up the standard prelude."
-     val src    = fullPath [holdir, "tools/std.prelude.src"]
-     val target = fullPath [holdir, "std.prelude"]
- in
-   fill_holes (src,target)
-     ["val SIGOBJ = __"
-        -->
-      String.concat["      val SIGOBJ = toString(fromString(concat\n",
-                     "                    (", quote holdir,
-                     ",", quote"sigobj",")))\n"]
-     ]
- end;
-
-(*---------------------------------------------------------------------------
       Generate shell scripts for running HOL.
  ---------------------------------------------------------------------------*)
 
 val _ =
  let val _ = echo "Generating bin/hol."
-     val mosml       = fullPath [mosmldir, "bin/mosml"]
-     val std_prelude = fullPath [holdir, "std.prelude"]
      val target      = fullPath [holdir, "bin/hol.bare"]
      val qend        = fullPath [holdir, "tools/end-init.sml"]
      val target_boss = fullPath [holdir, "bin/hol"]
      val qend_boss   = fullPath [holdir, "tools/end-init-boss.sml"]
  in
-   emit_hol_script target mosml std_prelude qend;
-   emit_hol_script target_boss mosml std_prelude qend_boss
+   emit_hol_script target qend;
+   emit_hol_script target_boss qend_boss
  end;
 
 val _ =
  let val _ = echo "Generating bin/hol.unquote."
-     val qfilter     = fullPath [holdir,   "bin/unquote"]
      val target      = fullPath [holdir,   "bin/hol.bare.unquote"]
      val target_boss = fullPath [holdir,   "bin/hol.unquote"]
-     val mosml       = fullPath [mosmldir, "bin/mosml"]
-     val std_prelude = fullPath [holdir,   "std.prelude"]
-     val qinit       = fullPath [holdir,   "tools/unquote-init.sml"]
      val qend        = fullPath [holdir,   "tools/end-init.sml"]
      val qend_boss   = fullPath [holdir,   "tools/end-init-boss.sml"]
  in
-  emit_hol_unquote_script target qfilter mosml std_prelude qinit qend;
-  emit_hol_unquote_script target_boss qfilter mosml std_prelude qinit qend_boss
+  emit_hol_unquote_script target qend;
+  emit_hol_unquote_script target_boss qend_boss
  end;
 
 (*---------------------------------------------------------------------------

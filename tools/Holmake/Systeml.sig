@@ -5,9 +5,10 @@ sig
   val xable_string : string -> string
   val mk_xable : string -> string
 
-  val emit_hol_script : string -> string -> string -> string -> string
-  val emit_hol_unquote_script : string -> string -> string -> string ->
-                                string -> string -> string
+(* first argument to these are the name of the desired executable, the
+   second is the name of the post-initialisation script to run. *)
+  val emit_hol_script : string -> string -> string
+  val emit_hol_unquote_script : string -> string -> string
 
   (* configuration time constants *)
   val HOLDIR : string
