@@ -152,10 +152,10 @@ fun splittable w =
 
 
 fun LIFT_SPLIT_SIMP ss simp tm =
-   UNDISCH_THEN tm 
-     (fn th => MP_TAC (simpLib.SIMP_RULE ss [] th) 
-                 THEN IF_CASES_TAC 
-                 THEN simp 
+   UNDISCH_THEN tm
+     (fn th => MP_TAC (simpLib.SIMP_RULE ss [] th)
+                 THEN IF_CASES_TAC
+                 THEN simp
                  THEN REPEAT BOSS_STRIP_TAC);
 
 fun SPLIT_SIMP simp = TRY IF_CASES_TAC THEN simp ;
@@ -197,7 +197,7 @@ fun SPLIT_SIMP simp = TRY IF_CASES_TAC THEN simp ;
          * eliminate occurrences of T (toss it away) and F (prove the goal)
            in the assumptions.
 
-         * elimininate free occurrences of if-then-else in the 
+         * elimininate free occurrences of if-then-else in the
            assumptions, simplifying the goal afterwards.
 
     7. Apply the finishing tactic.
@@ -249,8 +249,29 @@ fun STP_TAC ss finisher =
 
 
 fun RW_TAC ss thl = STP_TAC (ss && thl) NO_TAC
-
-
 val bool_ss = boolSimps.bool_ss;
+
+open simpLib
+infix ++
+val (srw_ss : simpset ref) = let
+  open TypeBase TypeBase.TypeInfo
+  val base = boolSimps.bool_ss
+  val tyl = listItems (theTypeBase())
+in
+  ref (rev_itlist add_simpls tyl base)
+end;
+
+fun update_fn tyi = srw_ss := (!srw_ss && TypeBase.TypeInfo.simpls_of tyi)
+val _ = TypeBase.TypeInfo.register_update_fn update_fn
+
+fun get_srw_ss () = !srw_ss
+fun augment_srw_ss ssdl =
+    (srw_ss := foldl (fn (ssd,ss) => ss ++ ssd) (!srw_ss) ssdl)
+
+fun SRW_TAC ssdl thl = let
+  val ss = foldl (fn (ssd, ss) => ss ++ ssd) (!srw_ss) ssdl
+in
+  PRIM_STP_TAC (ss && thl) NO_TAC
+end;
 
 end;

@@ -54,6 +54,7 @@ sig
   val list_ss  : simpset
   val &&       : simpset * thm list -> simpset  (* infix && *)
   val RW_TAC   : simpset -> thm list -> tactic
+  val SRW_TAC  : simpLib.ssdata list -> thm list -> tactic
   val EVAL     : term -> thm
 
   (* A compound automated reasoner. *)

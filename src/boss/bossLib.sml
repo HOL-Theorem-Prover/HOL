@@ -51,6 +51,7 @@ val WF_REL_TAC = TotalDefn.WF_REL_TAC;
 val PROVE     = BasicProvers.PROVE
 val PROVE_TAC = BasicProvers.PROVE_TAC
 val RW_TAC    = BasicProvers.RW_TAC
+val SRW_TAC   = BasicProvers.SRW_TAC
 val EVAL      = computeLib.EVAL_CONV;
 
 val && = BasicProvers.&&;
@@ -75,8 +76,13 @@ val std_ss =
      (boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ optionSimps.OPTION_ss ++
       arithSimps.REDUCE_ss ++ sumSimps.SUM_ss)
 
-val arith_ss = std_ss ++ arithSimps.ARITH_ss ++ arithSimps.REDUCE_ss
+val arith_ss = std_ss ++ arithSimps.ARITH_ss
 val list_ss  = arith_ss ++ listSimps.list_ss
+
+val _ = BasicProvers.augment_srw_ss [pairSimps.PAIR_ss, optionSimps.OPTION_ss,
+                                     arithSimps.REDUCE_ss, sumSimps.SUM_ss,
+                                     listSimps.list_ss]
+
 end
 
 fun DECIDE tm =
