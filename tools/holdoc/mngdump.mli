@@ -23,3 +23,5 @@ val rendertexdoc_content : Holdocmodel.texdoc_content -> unit
 val texrenderdirective : Holdocmodel.directive -> unit
 val texrenderdirective_content : Holdocmodel.directive -> unit
 val renderholdoc : Holdocmodel.holdoc -> unit
+val dump_unseen_strings : unit -> unit
+

@@ -20,8 +20,23 @@ let write_warning s =
   print_string ("\n% WARNING: "^s^".\n");
   prerr_endline ("WARNING: " ^ s ^ ".")
 
-(* unrecognised string *)
-let write_unseen_string s = prerr_endline ("  \"" ^ s ^ "\"  ; ")
+(* log an unrecognised string *)
+let unseen_strings = Hashtbl.create 100
+let log_unseen_string s =
+  try
+    let n = Hashtbl.find unseen_strings s in
+    Hashtbl.remove unseen_strings s;
+    Hashtbl.add unseen_strings s (n+1)
+  with
+    Not_found ->
+      Hashtbl.add unseen_strings s 1
+let dump_unseen_strings () =
+  let keys = ref [] in
+  Hashtbl.iter (fun s _ -> keys := s :: !keys) unseen_strings;
+  let keys = List.sort String.compare !keys in
+  prerr_endline (string_of_int (List.length keys) ^ " unseen strings:");
+  List.iter (fun s -> Printf.fprintf stderr "%20s %4d\n" s (Hashtbl.find unseen_strings s)) keys;
+  prerr_endline "(end)"
 
 
 (* -------------------------------------------------------------------- *)
@@ -385,7 +400,7 @@ let munge_ident : pvars -> string -> unit
                          with Not_found ->
                          if (is_holop s)       then ("tsholop"   ,normal) else
                          if (is_type s)        then ("tstype"    ,normal) else
-                         (write_unseen_string s;    ("tsunknown" ,normal)) in
+                         (log_unseen_string s;      ("tsunknown" ,normal)) in
           sub c s
       in
       print_string s_out
