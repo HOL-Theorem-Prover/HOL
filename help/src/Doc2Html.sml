@@ -1,4 +1,3 @@
-
 (*---------------------------------------------------------------------------*)
 (*                                                                           *)
 (*  Invoked with, e.g.,                                                      *)
@@ -113,7 +112,7 @@ fun html (name,sectionl) ostrm =
      out "<DL>\n";
      List.app markout_section (tl sectionl);
      out "</DL>\n\n";
-     back_matter ("http://www.cl.cam.ac.uk/Research/HVG/FTP/", "Kananaskis 1")
+     back_matter ("http://hol.sourceforge.net", "Kananaskis-1")
   end;
 
 fun trans htmldir docdir docname = let

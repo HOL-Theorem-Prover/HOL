@@ -17,6 +17,7 @@ fun unsymb "Type.-->"        = "Type.arrow"
   | unsymb "bossLib.&&"      = "bossLib.amper2"
   | unsymb "BasicProvers.&&" = "BasicProvers.amper2"
   | unsymb "simpLib.++"      = "simpLib.plus2"
+  | unsymb "bossLib.++"      = "bossLib.plus2"
   | unsymb "Parse.--"        = "Parse.minus2"
   | unsymb "Parse.=="        = "Parse.equal2"
   | unsymb other             = other;

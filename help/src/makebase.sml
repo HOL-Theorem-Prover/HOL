@@ -46,7 +46,7 @@ val version =
  "<A HREF=\"http://hol.sourceforge.net\">HOL 4, &nbsp; Kananaskis-1";
 
 (* HOL distribution directory: *)
-val HOLpath = Systeml.HOLDIR;
+val HOLpath = normPath [Systeml.HOLDIR];
 
 (* Default directory containing the signature files: *)
 val libdirDef = normPath[HOLpath,"sigobj"]
