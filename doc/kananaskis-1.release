@@ -209,6 +209,13 @@ New and improved theories
     transitive closure, and reflexive closure) and proves a variety of
     properties about them.
 
+  * Restricted quantification now uses predicate sets, so the meaning of
+    the term ``!x::P. Q x`` is ``!x. x IN P /\ Q x``. The restricted
+    quantification library has been updated to reflect this change, and
+    also shrunk down: in the course of use it was found that more powerful
+    proof tools like the simplifier have removed the need for many of the
+    lower-level tactics.
+
 
 Improved support for large formalizations
 ------------------------------------------
