@@ -188,70 +188,6 @@ in
   recurse t
 end
 
-
-
-(* ----------------------------------------------------------------------
-    apply_fmve cty t
-
-    t is of the form ?x. c1 /\ c2 /\ c3 .. /\ cn
-
-    Every ci is a valid Omega leaf.  This function converts the body
-    into a term involving eval_left and eval_right and an "extra" bit,
-    pushes the existential in over the former pair, and then uses an
-    appropriate rewrite from OmegaTheory.  The right choice of rewrite
-    is specified through the parameter cty.
-   ---------------------------------------------------------------------- *)
-
-datatype ctype = VACUOUS_LOW | VACUOUS_UP | EXACT_LOW | EXACT_UP
-               | NIGHTMARE of term
-(* the nightmare constructor takes a term of type ``:num`` corresponding to
-   the maximum coefficient of the variable to be eliminated in an upper
-   bound constraint *)
-
-fun apply_fmve ctype = let
-  fun initially t = let
-    val (v, body) = dest_exists t
-  in
-    BINDER_CONV (clause_to_evals v) THENC EXISTS_AND_CONV
-  end t
-
-  fun finisher t = let
-    val (v,body) = dest_exists t
-    val (e_ups, e_lows) = dest_conj body
-    val ups = rand e_ups
-    val lows = rand e_lows
-    val ups_nzero = prove_every_fstnzero ups
-    val lows_nzero = prove_every_fstnzero lows
-  in
-    case ctype of
-      VACUOUS_LOW => REWRITE_CONV [evalupper_def] THENC
-                     K (EQT_INTRO (MATCH_MP onlylowers_satisfiable lows_nzero))
-    | VACUOUS_UP =>  REWRITE_CONV [evallower_def] THENC
-                     K (EQT_INTRO (MATCH_MP onlyuppers_satisfiable ups_nzero))
-    | EXACT_LOW => let
-        val low_fst1 = prove_every_fst1 lows
-        val disj = DISJ2 (list_mk_comb(every_t, [fst1_t, ups])) low_fst1
-      in
-        K (MP (MATCH_MP exact_shadow_case (CONJ ups_nzero lows_nzero)) disj)
-      end
-    | EXACT_UP => let
-        val up_fst1 = prove_every_fst1 ups
-        val disj = DISJ1 up_fst1 (list_mk_comb(every_t, [fst1_t, lows]))
-      in
-        K (MP (MATCH_MP exact_shadow_case (CONJ ups_nzero lows_nzero)) disj)
-      end
-    | NIGHTMARE m => let
-        val uppers_lt_m = prove_every_fst_lt_m m ups
-      in
-        K (MATCH_MP alternative_equivalence
-                    (LIST_CONJ [ups_nzero, lows_nzero, uppers_lt_m])) THENC
-        RAND_CONV (RAND_CONV (ALPHA_CONV v))
-      end
-  end t
-in
-  initially THENC LAND_CONV finisher
-end
-
 (* ----------------------------------------------------------------------
     calculate_shadow (sdef, rowdef) t
 
@@ -312,6 +248,183 @@ val calculate_nightmare = let
 in
   recurse
 end
+
+
+(* ----------------------------------------------------------------------
+    apply_fmve cty t
+
+    t is of the form ?x. c1 /\ c2 /\ c3 .. /\ cn
+
+    Every ci is a valid Omega leaf.  This function converts the body
+    into a term involving eval_left and eval_right and an "extra" bit,
+    pushes the existential in over the former pair, and then uses an
+    appropriate rewrite from OmegaTheory.  The right choice of rewrite
+    is specified through the parameter cty.
+   ---------------------------------------------------------------------- *)
+
+datatype ctype = VACUOUS_LOW | VACUOUS_UP | EXACT_LOW | EXACT_UP
+               | NIGHTMARE of term
+(* the nightmare constructor takes a term of type ``:num`` corresponding to
+   the maximum coefficient of the variable to be eliminated in an upper
+   bound constraint *)
+
+fun apply_fmve ctype = let
+  fun initially t = let
+    val (v, body) = dest_exists t
+  in
+    BINDER_CONV (clause_to_evals v) THENC EXISTS_AND_CONV
+  end t
+
+  fun finisher t = let
+    val (v,body) = dest_exists t
+    val (e_ups, e_lows) = dest_conj body
+    val ups = rand e_ups
+    val lows = rand e_lows
+    val ups_nzero = prove_every_fstnzero ups
+    val lows_nzero = prove_every_fstnzero lows
+  in
+    case ctype of
+      VACUOUS_LOW => REWRITE_CONV [evalupper_def] THENC
+                     K (EQT_INTRO (MATCH_MP onlylowers_satisfiable lows_nzero))
+    | VACUOUS_UP =>  REWRITE_CONV [evallower_def] THENC
+                     K (EQT_INTRO (MATCH_MP onlyuppers_satisfiable ups_nzero))
+    | EXACT_LOW => let
+        val low_fst1 = prove_every_fst1 lows
+        val disj = DISJ2 (list_mk_comb(every_t, [fst1_t, ups])) low_fst1
+        val th = MP (MATCH_MP exact_shadow_case (CONJ ups_nzero lows_nzero))
+                    disj
+      in
+        K th THENC calculate_shadow (alt_rshadow, alt_rrow)
+      end
+    | EXACT_UP => let
+        val up_fst1 = prove_every_fst1 ups
+        val disj = DISJ1 up_fst1 (list_mk_comb(every_t, [fst1_t, lows]))
+        val th = MP (MATCH_MP exact_shadow_case (CONJ ups_nzero lows_nzero))
+                    disj
+      in
+        K th THENC calculate_shadow (alt_rshadow, alt_rrow)
+      end
+    | NIGHTMARE m => let
+        val uppers_lt_m = prove_every_fst_lt_m m ups
+      in
+        K (MATCH_MP alternative_equivalence
+                    (LIST_CONJ [ups_nzero, lows_nzero, uppers_lt_m])) THENC
+        RAND_CONV (RAND_CONV (ALPHA_CONV v)) THENC
+        LAND_CONV (calculate_shadow (alt_dshadow, alt_drow)) THENC
+        RAND_CONV (BINDER_CONV calculate_nightmare THENC
+                   CooperSyntax.push_one_exists_over_many_disjs)
+      end
+  end t
+  fun elim_rT tm = (if rand tm = boolSyntax.T then REWR_CONV CooperThms.T_and_r
+                    else ALL_CONV) tm
+in
+  initially THENC LAND_CONV finisher THENC elim_rT
+end
+
+
+(* ----------------------------------------------------------------------
+    best_variable_to_eliminate vs t
+
+    Given a list of variables vs, and a conjunction of leaves t, pick the
+    variable that should be eliminated.  Do this by scanning the term
+    while maintaining a map to information about that variable.
+   ---------------------------------------------------------------------- *)
+
+type varinfo = { maxupc : Arbint.int ref, maxloc : Arbint.int ref,
+                 numups : int ref, numlos : int ref }
+fun new_varinfo () : varinfo =
+    { maxupc = ref Arbint.zero, maxloc = ref Arbint.zero,
+      numups = ref 0, numlos = ref 0}
+exception NotFound
+
+fun variable_information vs t = let
+  val table = Polyhash.mkPolyTable(10, NotFound)
+  fun ins_initial_recs v = Polyhash.insert table (v, new_varinfo())
+  val _ = app ins_initial_recs vs
+  fun examine_cv t = let
+    val (c, v) = dest_mult t
+    val c_i = int_of_term c
+  in
+    case Polyhash.peek table v of
+      NONE => ()
+    | SOME {maxupc, maxloc, numups, numlos} =>
+      if Arbint.<(c_i, Arbint.zero) then (* upper bound *)
+        (maxupc := Arbint.max(!maxupc, Arbint.~ c_i);
+         numups := !numups + 1)
+      else
+        (maxloc := Arbint.max(!maxloc, c_i);
+         numlos := !numlos + 1)
+  end handle HOL_ERR _ => ()
+in
+  app examine_cv (List.concat (map (strip_plus o rand) (strip_conj t)));
+  table
+end
+
+fun findleast gt f l =
+    case l of
+      [] => raise Fail "findleast : empty list"
+    | h::t => let
+        fun recurse (acc as (e, v)) l =
+            case l of
+              [] => (e, v)
+            | h::t => let val v' = f h
+                      in
+                        if gt(v, v') then recurse (h, v') t
+                        else recurse acc t
+                      end
+      in
+        recurse (h, f h) t
+      end
+
+fun best_variable_to_eliminate vs t = let
+  val table = variable_information vs t
+  val items = Polyhash.listItems table
+  fun is_vacuous (_, {numups, numlos,...}) = !numups = 0 orelse !numlos = 0
+  fun is_exact (_, {maxloc, maxupc,...}) = !maxloc = Arbint.one orelse
+                                           !maxupc = Arbint.one
+in
+  case List.find is_vacuous items of
+    NONE => let
+      val exacts = filter is_exact items
+    in
+      if null exacts then let
+          fun f (_, {maxloc, maxupc, ...}) = Arbint.max(!maxloc, !maxupc)
+          val ((v, {maxupc, ...}), _) = findleast Arbint.> f items
+        in
+          (v, NIGHTMARE (rand (term_of_int (!maxupc))))
+        end
+      else let
+          fun f (_, {numups, numlos,...}) = !numups * !numlos
+          val ((v, {maxupc, maxloc,...}), _) = findleast op> f exacts
+        in
+          (v, if !maxupc = Arbint.one then EXACT_UP else EXACT_LOW)
+        end
+    end
+  | SOME (v, {numups, numlos,...}) => (v, if !numlos = 0 then VACUOUS_UP
+                                          else VACUOUS_LOW)
+end
+
+(* ----------------------------------------------------------------------
+    eliminate_an_existential t
+
+    t is of the form ?x1..xn. body, where body is a conjunction of
+    fully normalised leaves.  This function picks one of the quantifiers
+    to eliminate, and then does this.
+   ---------------------------------------------------------------------- *)
+
+fun push_nthvar_to_bot n tm =
+    if n <= 0 then TRY_CONV (SWAP_VARS_CONV THENC
+                             BINDER_CONV (push_nthvar_to_bot 0)) tm
+    else BINDER_CONV (push_nthvar_to_bot (n - 1)) tm
+
+fun eliminate_an_existential t = let
+  val (vs, body) = strip_exists t
+  val (eliminate, category) = best_variable_to_eliminate vs body
+  val v_n = index (fn v => v = eliminate) vs
+in
+  push_nthvar_to_bot v_n THENC
+  LAST_EXISTS_CONV (apply_fmve category)
+end t
 
 
 end (* struct *)
