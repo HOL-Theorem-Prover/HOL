@@ -437,14 +437,29 @@ fun CompileExp tm =
  end;
 
 (*****************************************************************************)
-(* Compile prog tm --> rewrite tm with prog, then compile result             *)
+(* CompileProg prog tm --> rewrite tm with prog, then compile result         *)
 (*****************************************************************************)
-fun Compile prog tm =
+fun CompileProg prog tm =
  let val expand_th = REWRITE_CONV prog tm
      val compile_th = CompileExp (rhs(concl expand_th))
  in
   CONV_RULE (RAND_CONV(REWRITE_CONV[GSYM expand_th])) compile_th
  end;
+
+(*****************************************************************************)
+(* Compile (|- f args = bdy) = CompileProg [|- f args = bdy] ``f``           *)
+(*****************************************************************************)
+fun Compile th =
+ let val (func,_) = 
+      dest_eq(concl(SPEC_ALL th))
+      handle HOL_ERR _ => raise ERR "Compile" "not an equation"
+     val _ = if not(is_const func)
+              then raise ERR "Compile" "rator of lhs not a constant"
+              else ()
+ in
+  CompileProg [th] func
+ end;
+
 
 (*****************************************************************************)
 (*  ``(f = \(x1,x2,...,xn). B)``                                             *)
@@ -489,40 +504,21 @@ val UNPAIR_TOTAL =
    THENC DEPTH_CONV GEN_BETA_CONV);
 
 (*****************************************************************************)
-(* Convert a non-recursive definition to an expression, apply optimisations  *)
-(* and then compile it.                                                      *)
+(* Convert a non-recursive definition to an expression and then compile it   *)
 (*****************************************************************************)
-
-fun ConvertCompile defth =
- let val (l,r) = 
-      dest_eq(concl(SPEC_ALL defth))
-      handle HOL_ERR _
-      => (print "definitions must be equations\n";
-          raise ERR "ConvertCompile" "not an equation")
-     val (func,args) = 
-      dest_comb l 
-      handle HOL_ERR _
-      => (print "lhs not a combination\n";
-          raise ERR "ConvertCompile" "lhs not a combination")
-     val _ = if not(is_const func)
-              then (print_term func; print " is not a constant\n";
-                    raise ERR "ConvertCompile" "rator of lhs not a constant")
-              else ()
- in
-  Compile [Convert defth] func
- end;
+fun CompileConvert defth = Compile(Convert defth);
 
 (*****************************************************************************)
 (* Convert a recursive definition to an expression and then compile it.      *)
 (*****************************************************************************)
-fun RecConvertCompile defth totalth =
+fun RecCompileConvert defth totalth =
  let val (l,r) = dest_eq(concl(SPEC_ALL defth))
      val (func,args) = dest_comb l 
  in
   (SIMP_RULE std_ss [UNPAIR_TOTAL totalth] o
   GEN_BETA_RULE o
   SIMP_RULE std_ss [Seq_def,Par_def,Ite_def])
-  (DISCH_ALL(Compile [RecConvert defth totalth] func))
+  (DISCH_ALL(Compile (RecConvert defth totalth)))
  end;
 
 
@@ -597,14 +593,14 @@ fun hwDefine defq =
                       THEN EXISTS_TAC typedf
                       THEN TotalDefn.TC_SIMP_TAC [] default_simps)
             val devth = PURE_REWRITE_RULE [GSYM DEV_IMP_def]
-                          (RecConvertCompile defth totalth)
+                          (RecCompileConvert defth totalth)
         in
          (defth,ind,devth)
         end
      | otherwise => 
         let val defth = Define defq
             val devth = PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
-                          (ConvertCompile defth)
+                          (CompileConvert defth)
         in (defth,numTheory.INDUCTION,devth)
         end
  end;

@@ -418,23 +418,26 @@ where p1, p2 and p3 are combinatory expressions built from the
 combinators Seq, Par and Ite.
 
 
-Compile : thm list -> term -> thm
----------------------------------------------
+CompileProg : thm list -> term -> thm
+-------------------------------------
 
-Compile takes a program and a constant defined in the program
+CompileProg takes a program and a constant defined in the program
 
- Compile : thm list -> term -> thm
-           --------    ----
-           program   constant
+ CompileProg : thm list -> term -> thm
+               --------    ----
+               program   constant
 
 When the compiler encounters a function f that isn't an application of
 Seq, Par or Ite, then DEV f is generated. It is assumed this
 will subsequently be refined to hardware (see Refine).
 
-N.B. Not sure that the program argument is really useful. 
-     It may get eliminated.
+Compile : thm -> thm
+--------------------
 
-ConvertCompile : thm -> thm
+Compile (|- c = e)  =  CompileProg [|- c = e] ``c``
+
+
+CompileConvert : thm -> thm
 ---------------------------
 
 Converts a non-recursive equation to combinators and then compiles to
@@ -445,14 +448,14 @@ Example:
  Fact;
  > val it = |- !n. Fact n = SND (FactIter (n,1)) : thm
 
- - ConvertCompile Fact;
+ - CompileConvert Fact;
  > val it =
      |- SEQ (SEQ (PAR (ATM (\n. n)) (ATM (\n. 1))) (ATM FactIter)) (ATM SND) 
         ===> 
         DEV Fact : thm
 
 
-RecConvertCompile : thm -> thm -> thm
+RecCompileConvert : thm -> thm -> thm
 -------------------------------------
 
 Converts a recursive equation to combinators and then compiles to a
@@ -469,7 +472,7 @@ Example:
     |- TOTAL
          ((\(n,acc). n = 0),(\(n,acc). (n,acc)),(\(n,acc). (n - 1,n * acc)))
 
- - RecConvertCompile FactIter FactIter_TOTAL;
+ - RecCompileConvert FactIter FactIter_TOTAL;
  > val it =
     |- REC
          (SEQ (PAR (ATM (\(n,acc). n)) (ATM (\(n,acc). 0)))
