@@ -156,7 +156,7 @@ val HexSolitaireFinish_def =
 (*****************************************************************************)
 
 fun report n tb =
- let val (_,t,b) = dest_term_bdd tb
+ let val (_,_,t,b) = dest_term_bdd tb
  in
  (print "\n";
   print_term(getTerm tb);

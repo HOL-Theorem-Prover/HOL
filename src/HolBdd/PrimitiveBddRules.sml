@@ -26,6 +26,7 @@
 (* BddExists                                                                 *)
 (* BddAppall                                                                 *)
 (* BddAppex                                                                  *)
+(* BddSimplify                                                               *)
 (*                                                                           *)
 (*****************************************************************************)
 (*                                                                           *)
@@ -33,6 +34,7 @@
 (*                                                                           *)
 (*   Tue Oct  2 15:03:11 BST 2001 -- created file                            *)
 (*   Fri Oct  5 17:23:09 BST 2001 -- revised file                            *)
+(*   Thu Nov  1 14:18:41 GMT 2001 -- added assumptions to term_bdd values    *)
 (*                                                                           *)
 (*****************************************************************************)
 
@@ -83,7 +85,7 @@ in
 
 local
 
-datatype term_bdd = TermBdd of varmap * term * bdd.bdd;
+datatype term_bdd = TermBdd of (term HOLset.set) * varmap * term * bdd.bdd;
 
 in
 
@@ -91,11 +93,12 @@ in
 (* Destructors for term_bdd                                                  *)
 (*****************************************************************************)
 
-fun dest_term_bdd(TermBdd(vm,tm,b)) = (vm,tm,b);
+fun dest_term_bdd(TermBdd(ass,vm,tm,b)) = (ass,vm,tm,b);
 
-fun getVarmap(TermBdd(vm,tm,b)) = vm
-and getTerm(TermBdd(vm,tm,b))   = tm
-and getBdd(TermBdd(vm,tm,b))    = b;
+fun getAssums(TermBdd(ass,vm,tm,b)) = ass
+and getVarmap(TermBdd(ass,vm,tm,b)) = vm
+and getTerm(TermBdd(ass,vm,tm,b))   = tm
+and getBdd(TermBdd(ass,vm,tm,b))    = b;
 
 (*****************************************************************************)
 (* Name of a boolean variable (raises nameError on non boolean variables)    *)
@@ -111,32 +114,49 @@ fun name v =
 (*****************************************************************************)
 (* Oracle function                                                           *)
 (*                                                                           *)
-(*    vm t |--> TRUE                                                         *)
-(*    --------------                                                         *)
-(*         |- t                                                              *)
+(*   ass vm t |--> TRUE                                                      *)
+(*   ------------------                                                      *)
+(*       ass |- t                                                            *)
 (*****************************************************************************)
 
 val HolBddTag = Tag.read "HolBdd";
 
 exception BddThmOracleError;
 
-fun BddThmOracle(TermBdd(_,tm,bdd)) =
+fun BddThmOracle(TermBdd(ass,_,tm,bdd)) =
  if bdd.equal bdd bdd.TRUE 
-  then mk_oracle_thm HolBddTag ([],tm) 
+  then mk_oracle_thm HolBddTag (HOLset.listItems ass, tm) 
   else raise BddThmOracleError;
 
 (*****************************************************************************)
-(*   vm1 tm |--> b   Varmap.extends vm1 vm2                                  *)
-(*   --------------------------------------                                  *)
-(*             vm2 tm |--> b                                                 *)
+(*   ass vm1 tm |--> b   Varmap.extends vm1 vm2                              *)
+(*   ------------------------------------------                              *)
+(*             ass vm2 tm |--> b                                             *)
 (*****************************************************************************)
 
 exception BddExtendVarmapError;
 
-fun BddExtendVarmap (TermBdd(vm1,tm,b)) vm2 =
+fun BddExtendVarmap (TermBdd(ass,vm1,tm,b)) vm2 =
  if Varmap.extends vm1 vm2 
-  then TermBdd(vm2,tm,b) 
+  then TermBdd(ass,vm2,tm,b) 
   else raise BddExtendVarmapError;
+
+(*****************************************************************************)
+(*   ass vm tm |--> b   not(mem (name v) (free_vars tm))                     *)
+(*   ---------------------------------------------------                     *)
+(*         ass Varmap.remove(name v)vm |--> b                                *)
+(*                                                                           *)
+(* Raises BddFreevarsContractVarmapError if v is free in tm,                 *)
+(* and is the identity otherwise                                             *)
+(*****************************************************************************)
+
+exception BddFreevarsContractVarmapError;
+
+fun BddFreevarsContractVarmap v (TermBdd(ass,vm,tm,b)) =
+ if mem v (free_vars tm)
+  then (print_term v; print " not in free_vars of\n"; print_term tm; print "\n";
+        raise BddFreevarsContractVarmapError)
+  else TermBdd(ass,Varmap.remove (name v) vm, tm, b);
 
 (*****************************************************************************)
 (* Test if a BDD variable is in the support of a bdd                         *)
@@ -149,81 +169,90 @@ fun inSupport n b =
   (bdd.scanset(bdd.support b));
 
 (*****************************************************************************)
-(*   vm tm |--> b   Varmap.peek vm (name v) = SOME n   not(inSupport n b)    *)
-(*   --------------------------------------------------------------------    *)
-(*                      Varmap.remove(name v)vm |--> b                       *)
+(*  ass vm tm |--> b   Varmap.peek vm (name v) = SOME n   not(inSupport n b) *)
+(*  ------------------------------------------------------------------------ *)
+(*               ass (Varmap.remove(name v)vm) tm |--> b                     *)
 (*                                                                           *)
-(* Raises BddContractVarmapError if vm maps v to a BDD variable in b,        *)
+(* Raises BddSupportContractVarmapError if vm maps v to a BDD variable in b, *)
 (* and is the idenetity of v is not mapped to anything by vm                 *)
 (*                                                                           *)
 (*****************************************************************************)
 
 exception BddSupportContractVarmapError;
 
-fun BddSupportContractVarmap v (tb as (TermBdd(vm,tm,b))) =
+fun BddSupportContractVarmap v (tb as (TermBdd(ass,vm,tm,b))) =
  let val s = name v
  in
    case Varmap.peek vm s of
       SOME n => if inSupport n b 
                  then raise BddSupportContractVarmapError
-                 else TermBdd(Varmap.remove s vm, tm, b)
+                 else TermBdd(ass,Varmap.remove s vm, tm, b)
     | NONE   => tb
  end;
 
-
 (*****************************************************************************)
-(*   |- t1 = t2   vm t1 |--> b                                               *)
-(*   --------------------------                                              *)
-(*          vm t2 |--> b                                                     *)
+(*  asl |- t1 = t2   ass vm t1 |--> b                                        *)
+(*  ---------------------------------                                        *)
+(*   (addList ass asl) vm t2 |--> b                                          *)
 (*****************************************************************************)
 
 exception BddEqMpError;
 
-fun BddEqMp th (TermBdd(vm,t1,b)) =
- let val (a,c) = dest_thm th
-     val (l,r) = dest_eq c
+fun BddEqMp th (TermBdd(ass,vm,t1,b)) =
+ let val (asl,c) = dest_thm th
+     val (l,r)   = dest_eq c
  in
-  if not((a=[]) andalso (aconv l t1)) 
-   then raise BddEqMpError 
-   else TermBdd(vm,r,b)
+  if aconv l t1
+   then TermBdd(HOLset.addList(ass,asl),vm,r,b)
+   else raise BddEqMpError 
  end;
 
 (*****************************************************************************)
-(*                    [(vm v1 |--> b1 , vm v1' |--> b1'),                    *)
-(*                                    .                                      *)
-(*                                    .                                      *)
-(*                                    .                                      *)
-(*                     (vm vi |--> bi , vm vi' |--> bi')]                    *)
-(*                    vm tm |--> b                                           *)
+(*         [(ass1 vm v1 |--> b1  , ass1' vm v1' |--> b1'),                   *)
+(*                               .                                           *)
+(*                               .                                           *)
+(*                               .                                           *)
+(*           (assi vm vi |--> bi , assi' vm vi' |--> bi')]                   *)
+(*           ass vm tm |--> b                                                *)
 (*  ------------------------------------------------------------------------ *)
-(*   vm (subst[v1 |-> v1', ... , vi |-> vi']tm)                              *)
+(*   (ass1 U ass1' ... assi U assi' U ass)                                   *)
+(*   vm                                                                      *)
+(*   (subst[v1 |-> v1', ... , vi |-> vi']tm)                                 *)
 (*   |-->                                                                    *)
 (*   replace b (makepairSet(map (var ## var) [(b1,b1'), ... , (bi,bi')]))    *)
 (*****************************************************************************)
 
 exception BddReplaceError;
 
-fun BddReplace tbl (TermBdd(vm,tm,b)) =
- let val ((l,l'),replacel) = 
+fun BddReplace tbl (TermBdd(ass,vm,tm,b)) =
+ let val (ass_union,(l,l'),replacel) = 
        foldr
-        (fn(((TermBdd(vm1,v,b)),(TermBdd(vm2,v',b'))), ((l,l'),replacel))
+        (fn(((TermBdd(ass1,vm1,v,b)), (TermBdd(ass2,vm2,v',b'))), 
+            (ass, (l,l'), replacel))
            =>
            if not(Varmap.eq(vm,vm1) andalso Varmap.eq(vm,vm2))
-            then (                print "unequal varmaps\n";       raise BddReplaceError) else
+            then (                print "unequal varmaps\n";
+                                  raise BddReplaceError) else
            if not(is_var v)
-            then (print_term v  ; print " should be a variable\n"; raise BddReplaceError) else
+            then (print_term v  ; print " should be a variable\n"; 
+                                  raise BddReplaceError) else
            if not(is_var v')
-            then (print_term v' ; print " should be a variable\n"; raise BddReplaceError) else
+            then (print_term v' ; print " should be a variable\n"; 
+                                  raise BddReplaceError) else
            if mem v l
-            then (print_term v  ; print" repeated\n";              raise BddReplaceError) else
+            then (print_term v  ; print" repeated\n";
+                                  raise BddReplaceError) else
            if mem v' l'
-            then (print_term v' ; print" repeated\n";              raise BddReplaceError) 
-            else ((v :: l, v' :: l'),
+            then (print_term v' ; print" repeated\n";
+                                  raise BddReplaceError) 
+            else (HOLset.union(ass,HOLset.union(ass1,ass2)),
+                  (v :: l, v' :: l'),
                   ((bdd.var b, bdd.var b')::replacel)))
-        (([],[]), [])
+        (ass, ([],[]), [])
         tbl
  in
-  TermBdd(vm, 
+  TermBdd(ass_union,
+          vm, 
           subst (ListPair.map (fn(v,v')=>(v|->v')) (l,l')) tm, 
           bdd.replace b (bdd.makepairSet replacel))
  end;
@@ -260,37 +289,46 @@ val tb4 = BddReplace tbl tb;
 ======================================================= End of test examples *)
 
 (*****************************************************************************)
-(*    (vm v |--> b, vm tm1 |--> b1)    vm tm2 |--> b2                        *)
-(*  ------------------------------------------------------                   *)
-(*  vm (subst [v |-> tm1] tm2) |--> compose (var b, b1) b2                   *)
+(*  (ass vm v |--> b, ass1 vm tm1 |--> b1)    ass2 vm tm2 |--> b2            *)
+(*  -------------------------------------------------------------            *)
+(*  (ass U ass1 U ass2) vm                                                   *)
+(*  (subst [v |-> tm1] tm2) |--> compose (var b, b1) b2                      *)
 (*****************************************************************************)
 
 exception BddComposeError;
 
-fun BddCompose (TermBdd(vm,v,b), TermBdd(vm1,tm1,b1)) (TermBdd(vm2,tm2,b2)) =
+fun BddCompose 
+     (TermBdd(ass,vm,v,b), TermBdd(ass1,vm1,tm1,b1)) 
+     (TermBdd(ass2,vm2,tm2,b2)) =
  if Varmap.eq(vm,vm1) andalso Varmap.eq(vm1,vm2)
-  then TermBdd(vm, subst[v |-> tm1]tm2, compose (var b, b1) b2)
+  then TermBdd(HOLset.union(ass,HOLset.union(ass1,ass2)),
+               vm, 
+               subst[v |-> tm1]tm2, 
+               bdd.compose (bdd.var b, b1) b2)
   else (print "different varmaps\n"; raise BddComposeError);
 
 (*****************************************************************************)
-(*                    [(vm v1 |--> b1 , vm tm1 |--> b1'),                    *)
-(*                                    .                                      *)
-(*                                    .                                      *)
-(*                                    .                                      *)
-(*                     (vm vi |--> bi , vm tmi |--> bi')]                    *)
-(*                    vm tm |--> b                                           *)
+(*         [(ass1 vm v1 |--> b1  , ass1' vm v1' |--> b1'),                   *)
+(*                               .                                           *)
+(*                               .                                           *)
+(*                               .                                           *)
+(*           (assi vm vi |--> bi , assi' vm vi' |--> bi')]                   *)
+(*           ass vm tm |--> b                                                *)
 (*  ------------------------------------------------------------------------ *)
-(*   vm (subst[v1 |-> v1', ... , vi |-> vi']tm)                              *)
+(*   (ass1 U ass1' ... assi U assi' U ass)                                   *)
+(*   vm                                                                      *)
+(*   (subst[v1 |-> v1', ... , vi |-> vi']tm)                                 *)
 (*   |-->                                                                    *)
 (*   veccompose (composeSet (map (var ## I) [(b1,b1'), ... , (bi,bi')])) b   *)
 (*****************************************************************************)
 
 exception BddListComposeError;
 
-fun BddListCompose tbl (TermBdd(vm,tm,b)) =
- let val ((l,l'),composel) = 
+fun BddListCompose tbl (TermBdd(ass,vm,tm,b)) =
+ let val (ass_union, (l,l') ,composel) = 
        foldr
-        (fn(((TermBdd(vm1,v,b)),(TermBdd(vm2,tm,b'))), ((l,l'),composel))
+        (fn(((TermBdd(ass1,vm1,v,b)),(TermBdd(ass2,vm2,tm,b'))), 
+            (ass, (l,l'), composel))
            =>
            if not(Varmap.eq(vm,vm1) andalso Varmap.eq(vm,vm2))
             then (                print "unequal varmaps\n";
@@ -301,12 +339,14 @@ fun BddListCompose tbl (TermBdd(vm,tm,b)) =
            if mem v l
             then (print_term v  ; print" repeated\n";
                                   raise BddListComposeError) 
-            else ((v :: l, tm :: l'),
+            else (HOLset.union(ass,HOLset.union(ass1,ass2)),
+                  (v :: l, tm :: l'),
                   ((bdd.var b, b')::composel)))
-        (([],[]), [])
+        (ass, ([],[]), [])
         tbl
  in
-  TermBdd(vm, 
+  TermBdd(ass_union,
+          vm, 
           subst (ListPair.map (fn(v,tm)=>(v|->tm)) (l,l')) tm, 
           bdd.veccompose (bdd.composeSet composel) b)
  end;
@@ -345,22 +385,24 @@ val tb4 = BddListCompose tbl tb;
 
 (*****************************************************************************)
 (* BddRestrict                                                               *)
-(*  [((vm v1 |--> b1),(vm c1 |--> b1')),                                     *)
+(*  [((ass1 vm v1 |--> b1),(ass1' vm c1 |--> b1')),                          *)
 (*                                                                           *)
-(*   ((vm vi |--> bi),(vm ci |--> bi'))]                                     *)
-(*  (vm tm |--> b)                                                           *)
+(*   ((assi vm vi |--> bi),(assi' vm ci |--> bi'))]                          *)
+(*  (ass vm tm |--> b)                                                       *)
 (* (where c1,...,ci are T or F)                                              *)
 (*                                                                           *)
-(*       vm v1 |--> b1   ...   vm c1 |-> b1'                                 *)
-(*                        .                                                  *)
-(*                        .                                                  *)
-(*                        .                                                  *)
-(*       vm vi |--> bi   ...   vm ci |-> bi'                                 *)
-(*       vm tm |--> b                                                        *)
+(*       ass1 vm v1 |--> b1   ...   ass1' vm c1 |-> b1'                      *)
+(*                             .                                             *)
+(*                             .                                             *)
+(*                             .                                             *)
+(*       assi vm vi |--> bi   ...   assi' vm ci |-> bi'                      *)
+(*       ass vm tm |--> b                                                    *)
 (*  ---------------------------------------------------------------          *)
-(*  vm (subst[v1|->ci,...,vi|->ci]tm)                                        *)
-(*  |-->                                                                     *)
-(*  restrict b (assignment[(var b1,mlval c1),...,(var i, mlval ci)]          *)
+(*   (ass1 U ass1' ... assi U assi' U ass)                                   *)
+(*   vm                                                                      *)
+(*   (subst[v1 |-> v1', ... , vi |-> vi']tm)                                 *)
+(*   |-->                                                                    *)
+(*   restrict b (assignment[(var b1,mlval c1),...,(var i, mlval ci)]         *)
 (*****************************************************************************)
 
 exception BddRestrictError;
@@ -375,56 +417,46 @@ fun mlval tm =
 in
 
 fun BddRestrict tbl tb =
- let val TermBdd(vm,tm,b) = tb
-     val (substl,restrictl) = 
+ let val TermBdd(ass,vm,tm,b) = tb
+     val (ass_union, substl, restrictl) = 
        foldr
-        (fn((TermBdd(vm1,v,b),TermBdd(vm2,c,_)), (substl,restrictl))
+        (fn((TermBdd(ass1,vm1,v,b),TermBdd(ass2,vm2,c,_)), 
+            (ass, substl, restrictl))
            =>
            if not(Varmap.eq(vm,vm1) andalso Varmap.eq(vm,vm2))
             then (print "unequal varmaps\n"; raise BddRestrictError) 
-            else (((v |-> c)::substl), 
+            else (HOLset.union(ass,HOLset.union(ass1,ass2)),
+                  ((v |-> c)::substl), 
                   ((bdd.var b, mlval c)::restrictl)))
-        ([],[])
+        (ass, [], [])
         tbl
  in
-  TermBdd(vm, subst substl tm, bdd.restrict b (bdd.assignment restrictl))
+  TermBdd(ass_union, 
+          vm, 
+          subst substl tm, 
+          bdd.restrict b (bdd.assignment restrictl))
  end
 
 end;
 
 (*****************************************************************************)
-(*   vm tm |--> b   not(mem (name v) (free_vars tm))                         *)
-(*   -----------------------------------------------                         *)
-(*           Varmap.remove(name v)vm |--> b                                  *)
-(*                                                                           *)
-(* Raises BddFreevarsContractVarmapError if v is free in tm,                 *)
-(* and is the identity otherwise                                             *)
+(*   BddCon true  vm =  ({} vm ``T`` |--> TRUE)                              *)
+(*   BddCon false vm =  ({} vm ``F`` |--> FALSE)                             *)
 (*****************************************************************************)
 
-exception BddFreevarsContractVarmapError;
-
-fun BddFreevarsContractVarmap v (TermBdd(vm,tm,b)) =
- if mem v (free_vars tm)
-  then (print_term v; print " not in free_vars of\n"; print_term tm; print "\n";
-        raise BddFreevarsContractVarmapError)
-  else TermBdd(Varmap.remove (name v) vm, tm, b);
-
-(*****************************************************************************)
-(*   BddCon true  vm =  (vm ``T`` |--> TRUE)                                 *)
-(*   BddCon false vm =  (vm ``F`` |--> FALSE)                                *)
-(*****************************************************************************)
-
-fun BddCon tv vm = if tv then TermBdd(vm,T,TRUE) else TermBdd(vm,F,FALSE);
+fun BddCon tv vm = 
+ if tv then TermBdd(Term.empty_tmset,vm,T,bdd.TRUE) 
+       else TermBdd(Term.empty_tmset,vm,F,bdd.FALSE);
 
 (*****************************************************************************)
 (*                                                                           *) 
 (*     Varmap.peek vm (name v) = SOME n                                      *)
 (*    ---------------------------------   BddVar true                        *)
-(*           vm v |--> ithvar n                                              *)
+(*         {} vm v |--> ithvar n                                             *)
 (*                                                                           *)
 (*     Varmap.peek vm (name v) = SOME n                                      *)
 (*    ---------------------------------   BddVar false                       *)
-(*           vm v |--> nithvar n                                             *)
+(*        {} vm v |--> nithvar n                                             *)
 (*                                                                           *)
 (*****************************************************************************)
 
@@ -433,24 +465,24 @@ exception BddVarError;
 fun BddVar tv vm v =
  case Varmap.peek vm (name v) of
     SOME n => if tv 
-               then TermBdd(vm, v,        bdd.ithvar n)
-               else TermBdd(vm, mk_neg v, bdd.nithvar n)
+               then TermBdd(Term.empty_tmset,vm, v,        bdd.ithvar n)
+               else TermBdd(Term.empty_tmset,vm, mk_neg v, bdd.nithvar n)
   | NONE   => (print_term v; print " not in varmap\n"; raise BddVarError);
 
 (*****************************************************************************)
-(*   vm  t |--> b                                                            *)
-(*   ----------------                                                        *)
-(*   vm ~t |--> NOT b                                                        *)
+(*     ass vm t |--> b                                                       *)
+(*   --------------------                                                    *)
+(*   ass vm ~t |--> NOT b                                                    *)
 (*****************************************************************************)
 
-fun BddNot(TermBdd(vm,t,b)) =  TermBdd(vm, mk_neg t, NOT b);
+fun BddNot(TermBdd(ass,vm,t,b)) =  TermBdd(ass,vm, mk_neg t, bdd.NOT b);
 
 (*****************************************************************************)
 (* Auxiliary function to perform on two terms the operation corresponding    *)
 (* to a bddop                                                                *)
 (*****************************************************************************)
 
-fun termApply t1 t2 bddop =
+fun termApply t1 t2 (bddop:bdd.bddop) =
  case bddop of
     And    => mk_conj(t1,t2)         
   | Biimp  => mk_eq(t1,t2)           
@@ -464,9 +496,9 @@ fun termApply t1 t2 bddop =
   | Xor    => mk_neg(mk_eq(t1,t2)); 
 
 (*****************************************************************************)
-(*    vm t1 |--> b1     vm t2 |--> b2                                        *)
-(*  -----------------------------------                                      *)
-(*  vm (t1 <bddop> t2) |--> b1 bddop b2                                      *)
+(*       as1 vm t1 |--> b1    ass2 vm t2 |--> b2                             *)
+(*  -------------------------------------------------                        *)
+(*  (ass1 U ass2) vm (t1 <bddop> t2) |--> b1 bddop b2                        *)
 (*                                                                           *)
 (* where <bddop> is an operation of terms corresponding to the BDD           *)
 (* binary operatiobn bddop (N.B. can't use "op" as it's an SML keyword)      *)
@@ -474,127 +506,215 @@ fun termApply t1 t2 bddop =
 
 exception BddOpError;
 
-fun BddOp (bddop, TermBdd(vm1,t1,b1), TermBdd(vm2,t2,b2)) =
+fun BddOp (bddop, TermBdd(ass1,vm1,t1,b1), TermBdd(ass2,vm2,t2,b2)) =
 if Varmap.eq(vm1,vm2)
- then TermBdd(vm1, termApply t1 t2 bddop, bdd.apply b1 b2 bddop)
+ then TermBdd(HOLset.union(ass1,ass2),
+              vm1, 
+              termApply t1 t2 bddop, 
+              bdd.apply b1 b2 bddop)
  else (print "different varmaps\n"; raise BddOpError);
 
 (*****************************************************************************)
-(*  vm t |--> b   vm t1 |--> b1   vm t2 |--> b2                              *)
-(*  -------------------------------------------                              *)
-(*  vm (if t then t1 else t2) |--> ITE b b1 b2                               *)
+(*    ass vm t |--> b   ass1 vm t1 |--> b1   ass2 vm t2 |--> b2              *)
+(*  --------------------------------------------------------------           *)
+(*  (ass U ass1 U ass2) vm (if t then t1 else t2) |--> ITE b b1 b2           *)
 (*****************************************************************************)
 
 exception BddIteError;
 
-fun BddIte(TermBdd(vm,t,b), TermBdd(vm1,t1,b1), TermBdd(vm2,t2,b2)) = 
+fun BddIte(TermBdd(ass,vm,t,b), 
+           TermBdd(ass1,vm1,t1,b1), 
+           TermBdd(ass2,vm2,t2,b2)) = 
  if Varmap.eq(vm,vm1) andalso Varmap.eq(vm1,vm2)
-  then TermBdd(vm, mk_cond(t,t1,t2), ITE b b1 b2)
+  then TermBdd(HOLset.union(ass,HOLset.union(ass1,ass2)),
+               vm, 
+               mk_cond(t,t1,t2), 
+               bdd.ITE b b1 b2)
   else (print "different varmaps\n"; raise BddIteError);
 
 (*****************************************************************************)
-(*                   vm t |--> b                                             *)
-(* ---------------------------------------------------                       *)
-(* vm (!v1...vi. t) |--> forall (makeset[n1,...,ni]) b                       *)
+(*                  ass vm t |--> b                                          *)
+(* -------------------------------------------------------                   *)
+(* ass vm (!v1...vi. t) |--> forall (makeset[n1,...,ni]) b                   *)
 (*                                                                           *)
 (* where the list [v1,...,vi] of variables is supplied as a parameter,       *)
-(* [n1,...,ni] is the list of the corresponding BDD variable numbers and     *)
-(* vm is assumed to contain v1,...,vi                                        *)
+(* [n1,...,ni] is the list of the corresponding BDD variable numbers in vm   *)
+(* and vm is assumed to contain v1,...,vi.                                   *)
+(* Raises BddForallError if any variable vj is not in the domain of vm or if *)
+(* any of v1,...,vi occur free in any assumption                             *)
 (*****************************************************************************)
 
 exception BddForallError;
 
-fun BddForall vl (TermBdd(vm,t,b)) =
- let val bddvars = 
-       List.map 
-        (fn v => case Varmap.peek vm (name v) of
-                    SOME n => n
-                  | NONE   => raise BddForallError) 
-        vl
+fun BddForall vl (TermBdd(ass,vm,t,b)) =
+ let open HOLset bdd
+     val tml = intersection(ass, FVL vl empty_tmset)
  in
-  TermBdd(vm, list_mk_forall(vl,t), bdd.forall (bdd.makeset bddvars) b)
+  if isEmpty tml
+   then
+    let val bddvars = 
+          List.map 
+           (fn v => case Varmap.peek vm (name v) of
+                       SOME n => n
+                     | NONE   => raise BddForallError) 
+           vl
+    in 
+     TermBdd(ass,vm, list_mk_forall(vl,t), forall (makeset bddvars) b)
+    end
+   else 
+    (print_term(hd(listItems tml));
+     print " free in assumptions"; 
+     raise BddForallError)
  end;
 
 (*****************************************************************************)
-(*                   vm t |--> b                                             *)
-(* --------------------------------------------------                        *)
-(* vm (?v1...vi. t) |--> exist (makeset[n1,...,ni]) b                        *)
+(*                  ass vm t |--> b                                          *)
+(* ------------------------------------------------------                    *)
+(* ass vm (?v1...vi. t) |--> exist (makeset[n1,...,ni]) b                    *)
 (*                                                                           *)
 (* where the list [v1,...,vi] of variables is supplied as a parameter,       *)
-(* [n1,...,ni] is the list of the corresponding BDD variable numbers and     *)
-(* vm is assumed to contain v1,...,vi                                        *)
+(* [n1,...,ni] is the list of the corresponding BDD variable numbers in vm   *)
+(* and vm is assumed to contain v1,...,vi.                                   *)
+(* Raises BddExistsError if any variable vj is not in the domain of vm or if *)
+(* any of v1,...,vi occur free in any assumption                             *)
 (*****************************************************************************)
 
 exception BddExistsError;
 
-fun BddExists vl (TermBdd(vm,t,b)) =
- let val bddvars = 
-       List.map 
-        (fn v => case Varmap.peek vm (name v) of
-                    SOME n => n
-                  | NONE   => raise BddExistsError) 
-        vl
+fun BddExists vl (TermBdd(ass,vm,t,b)) =
+ let open HOLset bdd
+     val tml = intersection(ass, FVL vl empty_tmset)
  in
-  TermBdd(vm, list_mk_exists(vl,t), bdd.exist (bdd.makeset bddvars) b)
+  if isEmpty tml
+   then
+    let val bddvars = 
+          List.map 
+           (fn v => case Varmap.peek vm (name v) of
+                       SOME n => n
+                     | NONE   => raise BddExistsError) 
+           vl
+    in 
+     TermBdd(ass,vm, list_mk_exists(vl,t), exist (makeset bddvars) b)
+    end
+   else 
+    (print_term(hd(listItems tml));
+     print " free in assumptions"; 
+     raise BddExistsError)
  end;
 
 (*****************************************************************************)
-(*                   vm t1 |--> b1    vm t2 |--> b2                          *)
-(* ------------------------------------------------------------------------- *)
-(* vm (!v1...vi. t1 <bddop> t2) |--> appall b1 b2 bddop (makeset[n1,...,ni]) *)
+(* ass1 vm t1 |--> b1    ass2 vm t2 |--> b2                                  *)
+(* ----------------------------------------                                  *)
+(* (ass1 U ass1)                                                             *)
+(* vm                                                                        *)
+(* (!v1...vi. t1 <bddop> t2)                                                 *)
+(* |-->                                                                      *)
+(* appall b1 b2 bddop (makeset[n1,...,ni])                                   *)
 (*                                                                           *)
 (* where the list [v1,...,vi] of variables is supplied as a parameter,       *)
 (* [n1,...,ni] is the list of the corresponding BDD variable numbers and     *)
 (* vm is assumed to contain v1,...,vi                                        *)
+(* Raises BddAppallError if any variable vj is not in the domain of vm or if *)
+(* any of v1,...,vi occur free in any assumption                             *)
 (*****************************************************************************)
 
 exception BddAppallError;
 
-fun BddAppall vl (bddop, TermBdd(vm1,t1,b1), TermBdd(vm2,t2,b2)) =
- if Varmap.eq(vm1,vm2)
-  then
-   TermBdd
-    (vm1, 
-     list_mk_forall(vl, termApply t1 t2 bddop), 
-     bdd.appall 
-      b1 
-      b2 
-      bddop 
-      (bdd.makeset
-        (List.map (fn v => case Varmap.peek vm1 (name v) of
-                              SOME n => n
-                            | NONE   => raise BddAppallError) 
-        vl)))
-  else (print "different varmaps\n"; raise BddAppallError);
+fun BddAppall vl (bddop, TermBdd(ass1,vm1,t1,b1), TermBdd(ass2,vm2,t2,b2)) =
+ let open HOLset bdd
+     val ass = union(ass1,ass2)
+     val tml = intersection(ass, FVL vl empty_tmset)
+ in
+  if isEmpty tml
+   then
+    (if Varmap.eq(vm1,vm2)
+      then
+       TermBdd
+        (ass,
+         vm1, 
+         list_mk_forall(vl, termApply t1 t2 bddop), 
+         appall 
+          b1 
+          b2 
+          bddop 
+          (makeset
+            (List.map (fn v => case Varmap.peek vm1 (name v) of
+                                  SOME n => n
+                                | NONE   => raise BddAppallError) 
+            vl)))
+      else (print "different varmaps\n"; raise BddAppallError))
+   else
+    (print_term(hd(listItems tml));
+     print " free in assumptions"; 
+     raise BddAppallError)
+ end;
 
 (*****************************************************************************)
-(*                   vm t1 |--> b1    vm t2 |--> b2                          *)
-(* ------------------------------------------------------------------------- *)
-(* vm (?v1...vi. t1 <bddop> t2) |--> appall b1 b2 bddop (makeset[n1,...,ni]) *)
+(* ass1 vm t1 |--> b1    ass2 vm t2 |--> b2                                  *)
+(* ----------------------------------------                                  *)
+(* (ass1 U ass1)                                                             *)
+(* vm                                                                        *)
+(* (?v1...vi. t1 <bddop> t2)                                                 *)
+(* |-->                                                                      *)
+(* appex b1 b2 bddop (makeset[n1,...,ni])                                    *)
 (*                                                                           *)
 (* where the list [v1,...,vi] of variables is supplied as a parameter,       *)
 (* [n1,...,ni] is the list of the corresponding BDD variable numbers and     *)
 (* vm is assumed to contain v1,...,vi                                        *)
+(* Raises BddAppexError if any variable vj is not in the domain of vm or if *)
+(* any of v1,...,vi occur free in any assumption                             *)
 (*****************************************************************************)
 
 exception BddAppexError;
 
-fun BddAppex vl (bddop, TermBdd(vm1,t1,b1), TermBdd(vm2,t2,b2)) =
- if Varmap.eq(vm1,vm2)
-  then
-   TermBdd
-    (vm1, 
-     list_mk_exists(vl, termApply t1 t2 bddop), 
-     appex
-      b1 
-      b2 
-      bddop 
-      (bdd.makeset
-        (List.map (fn v => case Varmap.peek vm1 (name v) of
-                              SOME n => n
-                            | NONE   => raise BddAppallError) 
-        vl)))
-  else (print "different varmaps\n"; raise BddAppallError);
+fun BddAppex vl (bddop, TermBdd(ass1,vm1,t1,b1), TermBdd(ass2,vm2,t2,b2)) =
+ let open HOLset bdd
+     val ass = union(ass1,ass2)
+     val tml = intersection(ass, FVL vl empty_tmset)
+ in
+  if isEmpty tml
+   then
+    (if Varmap.eq(vm1,vm2)
+      then
+       TermBdd
+        (ass,
+         vm1, 
+         list_mk_exists(vl, termApply t1 t2 bddop), 
+         appex
+          b1 
+          b2 
+          bddop 
+          (makeset
+            (List.map (fn v => case Varmap.peek vm1 (name v) of
+                                  SOME n => n
+                                | NONE   => raise BddAppexError) 
+            vl)))
+      else (print "different varmaps\n"; raise BddAppexError))
+   else
+    (print_term(hd(listItems tml));
+     print " free in assumptions"; 
+     raise BddAppexError)
+ end;
+
+(*****************************************************************************)
+(*  Coudert, Berthet, Madre simplification                                   *)
+(*                                                                           *)
+(*       ass1 vm1 t1 |--> b1     ass2 vm2 t2 |--> b2                         *)
+(*    ---------------------------------------------------                    *)
+(*    (ass1 U ass2 U {t1}) vm1 t2 |--> bdd.simplify b1 b2                    *)
+(*                                                                           *)
+(* Raises BddSimplifyError if vm1 and vm2 are not pointer equal              *)
+(*****************************************************************************)
+
+exception BddSimplifyError;
+
+fun BddSimplify (TermBdd(ass1,vm1,t1,b1), TermBdd(ass2,vm2,t2,b2)) =
+ let open HOLset bdd
+     val ass = add(union(ass1,ass2), t1)
+     val _   = if Varmap.eq(vm1,vm2) then () else raise BddSimplifyError
+ in
+  TermBdd(ass,vm1,t2, simplify b1 b2)
+ end;
 
 end;
 

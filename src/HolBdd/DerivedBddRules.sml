@@ -10,6 +10,7 @@
 (* Revision history:                                                         *)
 (*                                                                           *)
 (*   Mon Oct  8 10:27:40 BST 2001 -- created file                            *)
+(*   Thu Nov  1 21:04:27 GMT 2001 -- updated for judgement assumptions       *)
 (*                                                                           *)
 (*****************************************************************************)
 
@@ -206,13 +207,13 @@ fun bddToTerm varmap =
  end;
 
 (*****************************************************************************)
-(*               vm tm |--> b                                                *)
-(*  --------------------------------------------                             *)
-(*  [oracles: HolBdd]  |- tm = ^(bddToTerm vm b)                             *)
+(*               ass vm tm |--> b                                            *)
+(*  -----------------------------------------------                          *)
+(*  [oracles: HolBdd] ass |- tm = ^(bddToTerm vm b)                          *)
 (*****************************************************************************)
 
 fun TermBddToEqThm tb =
- let val (vm,tm,b) = dest_term_bdd tb
+ let val (_,vm,tm,b) = dest_term_bdd tb
      val tm' = bddToTerm vm b
      val tb' = GenTermToTermBdd failfn vm tm'
  in
@@ -333,9 +334,9 @@ val MakeSimpRecThm =
   (simpLib.SIMP_RULE boolSimps.bool_ss [LEFT_AND_OVER_OR,EXISTS_OR_THM]);
 
 (*****************************************************************************)
-(*  |- t1 = t2   vm t1' |--> b                                               *)
-(*  -------------------------                                                *)
-(*       vm t2' |--> b'                                                      *)
+(*  asl |- t1 = t2   ass vm t1' |--> b                                       *)
+(*  ----------------------------------                                       *)
+(*      (asl U ass) vm t2' |--> b'                                           *)
 (*                                                                           *)
 (* where t1 can be instantiated to t1' and t2' is the corresponding          *)
 (* instance of t2                                                            *)
@@ -344,16 +345,16 @@ val MakeSimpRecThm =
 exception BddApThmError;
 
 fun BddApThm th tb =
- let val (vm,t1',b) = dest_term_bdd tb
+ let val (_,vm,t1',b) = dest_term_bdd tb
  in
   BddEqMp (REWR_CONV th t1') tb 
    handle HOL_ERR _ => hol_err "REWR_CONV failed" "BddApthm"
  end;
 
 (*****************************************************************************)
-(*   vm t |--> b                                                             *)
-(*  -------------                                                            *)
-(*  vm tm |--> b'                                                            *)
+(*  ass vm t |--> b                                                          *)
+(*  ----------------                                                         *)
+(*  ass vm tm |--> b'                                                        *)
 (*                                                                           *)
 (* where boolean variables in t can be renamed to get tm and b' is           *)
 (* the corresponding replacement of BDD variables in b                       *)
@@ -362,14 +363,14 @@ fun BddApThm th tb =
 exception BddApReplaceError;
 
 fun BddApReplace tb tm =
- let val (vm,t,b)  = dest_term_bdd tb
-     val (tml,tyl) = match_term t tm
-     val _         = if null tyl then () else raise BddApReplaceError
-     val tbl       = (List.map 
-                       (fn{redex=old,residue=new}=> 
-                         (BddVar true vm old, BddVar true vm new))
-                       tml 
-                      handle BddVarError => raise BddApReplaceError)
+ let val (_,vm,t,b) = dest_term_bdd tb
+     val (tml,tyl)  = match_term t tm
+     val _          = if null tyl then () else raise BddApReplaceError
+     val tbl        = (List.map 
+                        (fn{redex=old,residue=new}=> 
+                          (BddVar true vm old, BddVar true vm new))
+                        tml 
+                       handle BddVarError => raise BddApReplaceError)
  in
    BddReplace tbl tb
  end;
@@ -411,14 +412,16 @@ val split_subst =
     end);
 
 (*****************************************************************************)
-(*                    [(vm v1 |--> b1 , vm tm1 |--> b1'),                    *)
+(*                    [(ass1 vm v1 |--> b1 , ass1' vm tm1 |--> b1'),         *)
 (*                                    .                                      *)
 (*                                    .                                      *)
 (*                                    .                                      *)
-(*                     (vm vi |--> bi , vm tmi |--> bi')]                    *)
-(*                    vm tm |--> b                                           *)
+(*                     (assi vm vi |--> bi , assi' vm tmi |--> bi')]         *)
+(*                    ass vm tm |--> b                                       *)
 (*  ------------------------------------------------------------------------ *)
-(*   vm (subst[v1 |-> tm1, ... , vi |-> tmi]tm)                              *)
+(*   (as1 U ass1' U ... U assi U assi' U ass)                                *)
+(*   vm                                                                      *)
+(*   (subst[v1 |-> tm1, ... , vi |-> tmi]tm)                                 *)
 (*   |-->                                                                    *)
 (*   <appropriate BDD>                                                       *)
 (*****************************************************************************)
@@ -430,9 +433,9 @@ fun BddSubst tbl tb =
  end;
 
 (*****************************************************************************)
-(*   vm t |--> b                                                             *)
-(*  -------------                                                            *)
-(*  vm tm |--> b'                                                            *)
+(*  ass vm t |--> b                                                          *)
+(*  -----------------                                                        *)
+(*  ass vm tm |--> b'                                                        *)
 (*                                                                           *)
 (* where boolean variables in t can be instantiated to get tm and b' is      *)
 (* the corresponding replacement of BDD variables in b                       *)
@@ -441,16 +444,16 @@ fun BddSubst tbl tb =
 exception BddApSubstError;
 
 fun BddApSubst tb tm =
- let val (vm,t,b)  = dest_term_bdd tb
-     val (tml,tyl) = match_term t tm
-     val _         = if null tyl then () else (print "type match problem\n";
-                                               raise BddApSubstError)
-     val tbl       = (List.map 
-                       (fn{redex=old,residue=new}=> 
-                         (BddVar true vm old, 
-                          GenTermToTermBdd (!termToTermBddFun) vm new))
-                       tml 
-                      handle BddVarError => raise BddApSubstError)
+ let val (_,vm,t,b) = dest_term_bdd tb
+     val (tml,tyl)  = match_term t tm
+     val _          = if null tyl then () else (print "type match problem\n";
+                                                raise BddApSubstError)
+     val tbl        = (List.map 
+                        (fn{redex=old,residue=new}=> 
+                          (BddVar true vm old, 
+                           GenTermToTermBdd (!termToTermBddFun) vm new))
+                        tml 
+                       handle BddVarError => raise BddApSubstError)
  in
    BddSubst tbl tb
  end;
@@ -497,9 +500,9 @@ fun eqToTermBdd leaffn vm th =
 fun intToTerm n = numSyntax.mk_numeral(Arbnum.fromInt n);
 
 (*****************************************************************************)
-(*  vm tm |--> b   conv tm = |= tm = tm'                                     *)
-(*  ------------------------------------                                     *)
-(*           vm tm' |--> b                                                   *)
+(*  ass vm tm |--> b   conv tm = asl |- tm = tm'                             *)
+(*  ---------------------------------------------                            *)
+(*          (ass U asl) vm tm' |--> b                                        *)
 (*****************************************************************************)
 
 fun BddApConv conv tb = BddEqMp (conv(getTerm tb)) tb;
@@ -562,34 +565,37 @@ fun computeFixedpoint report vm (th0,thsuc) =
   fst(iterate (uncurry BddEqualTest) f (tb0,tb0))
  end;
 
-
 (*****************************************************************************)
-(*            vm tm |--> b                                                   *)
-(*  ------------------------------------                                     *)
-(*  [((vm v1 |--> b1),(vm c1 |--> b1')),                                     *)
-(*                      .                                                    *)
-(*                      .                                                    *)
-(*                      .                                                    *)
-(*      ((vm vi |--> bi),(vm ci |--> bi')]                                   *)
+(*              ass vm tm |--> b                                             *)
+(*  ----------------------------------------------                           *)
+(*  [((ass1 vm v1 |--> b1),(ass1' vm c1 |--> b1')),                          *)
+(*                        .                                                  *)
+(*                        .                                                  *)
+(*                        .                                                  *)
+(*   ((assi vm vi |--> bi),(assi' vm ci |--> bi')]                           *)
 (*                                                                           *)
 (* with the property that                                                    *)
 (*                                                                           *)
-(* BddRestrict [((vm v1 |--> b1),(vm c1 |--> b1')),                          *)
-(*                              .                                            *)
-(*                              .                                            *)
-(*                              .                 ,                          *)
-(*              ((vm vi |--> bi),(vm ci |--> bi'))]                          *)
-(*             (vm tm |--> b)                                                *)
+(* BddRestrict [((ass1 vm v1 |--> b1),(ass1' vm c1 |--> b1')),               *)
+(*                                   .                                       *)
+(*                                   .                                       *)
+(*                                   .                       ,               *)
+(*              ((assi vm vi |--> bi),(assi' vm ci |--> bi'))]               *)
+(*             (ass vm tm |--> b)                                            *)
 (* =                                                                         *)
-(* vm (subst[v1|->ci,...,vi|->ci]tm) |--> TRUE                               *)
+(* (ass1 U ass1' U ... U assi U assi' U ass)                                 *)
+(* vm                                                                        *)
+(* (subst[v1|->ci,...,vi|->ci]tm)                                            *)
+(* |-->                                                                      *)
+(* TRUE                                                                      *)
 (*****************************************************************************)
 
 exception BddSatoneError;
 
 fun BddSatone tb =
- let val (vm,tm,b) = dest_term_bdd tb
-     val assl = bdd.getAssignment(bdd.satone b)
-     val vml = Varmap.dest vm
+ let val (_,vm,tm,b) = dest_term_bdd tb
+     val assl        = bdd.getAssignment(bdd.satone b)
+     val vml         = Varmap.dest vm
  in
   List.map 
    (fn (n,tv) => ((case assoc2 n vml of 
@@ -605,8 +611,8 @@ fun BddSatone tb =
 (*         |- p s = ... s ...                                                *)
 (*         |- f 0 s  = ... s ...                                             *)
 (*         |- f (SUC n) s = ... f n ... s ...                                *)
-(*  ---------------------------------------------------                      *)
-(*  [vm ``f i s`` |--> bi,  ... , vm ``f 1 s`` |--> b1]                      *)
+(*  ---------------------------------------------------------                *)
+(*  [{} vm ``f i s`` |--> bi,  ... , {} vm ``f 1 s`` |--> b1]                *)
 (*                                                                           *)
 (* where i is the first number such that |- f i s ==> p s                    *)
 (*****************************************************************************)
@@ -646,7 +652,7 @@ val trl = computeTrace report vm pth (th0,thsuc);
 (*****************************************************************************)
 (*  TraceBack                                                                *)
 (*   vm                                                                      *)
-(*   [vm ``f i s`` |--> bi,  ... , vm ``f 0 s`` |--> b0]                     *)
+(*   [{} vm ``f i s`` |--> bi,  ... , {} vm ``f 0 s`` |--> b0]               *)
 (*   (|- p s = ... s ...)                                                    *)
 (*   (|- R((v1,...,vn),(v1',...,vn')) = ...)                                 *)
 (*                                                                           *)
@@ -665,12 +671,12 @@ val trl = computeTrace report vm pth (th0,thsuc);
 (* and in which state variable vj has value cj (0 <= j <= n).                *)
 (*                                                                           *)
 (* The last element of the list has the form                                 *)
-(* ((vm ``ReachIn R B j s_vec /\ p(v1,...,vn)`` |--> bdd),                   *)
-(*  [((vm v1 |--> b1),(vm c1 |--> b1')),                                     *)
-(*                   .                                                       *)
-(*                   .                                                       *)
-(*                   .                 ,                                     *)
-(*   ((vm vn |--> bn),(vm cn |--> bn'))])                                    *)
+(* (({} vm ``ReachIn R B j s_vec /\ p(v1,...,vn)`` |--> bdd),                *)
+(*  [(({} vm v1 |--> b1),{} vm c1 |--> b1')),                                *)
+(*                      .                                                    *)
+(*                      .                                                    *)
+(*                      .                   ,                                *)
+(*   (({} vm vn |--> bn),({} vm cn |--> bn'))])                              *)
 (*                                                                           *)
 (* If [s0,...,si] is the sequence of states, then                            *)
 (* R(s0,s1), R(s1,s2),...,R(s(i-1),sj) and sj satisfies bj (1 <= j <= i)     *)

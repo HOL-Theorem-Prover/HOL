@@ -1156,19 +1156,24 @@ with the following semantics
 
 The structure \ml{PrimitiveBddRules} defines the type \termbddty{} by
 
+\vspace*{-2mm}
+
 \begin{verbatim}
    datatype term_bdd = TermBdd of varmap * term * bdd;
 \end{verbatim}
 
+\vspace*{-2mm}
+
 The constructor \t{TermBdd} is not exported, so the only way to construct
-values of type \termbddty is using the following inference rules.
+values of type \termbddty is using the following inference rules
+(which are described in more detrail in the rest of this section).
 
 {\footnotesize\begin{verbatim}
    BddExtendVarmap           : term_bdd->varmap->term_bdd
    BddFreevarsContractVarmap : term->term_bdd->term_bdd
    BddSupportContractVarmap  : term->term_bdd->term_bdd
-   BddCon                    : bool->varmap->term_bdd
    BddVar                    : bool->varmap->term->term_bdd
+   BddCon                    : bool->varmap->term_bdd
    BddNot                    : term_bdd->term_bdd
    BddIte                    : term_bdd*term_bdd*term_bdd->term_bdd
    BddOp                     : bddop*term_bdd*term_bdd->term_bdd
@@ -1183,29 +1188,888 @@ values of type \termbddty is using the following inference rules.
    BddEqMp                   : thm->term_bdd->term_bdd
 \end{verbatim}}
 
-These are specified below. In addition, there is also a single oracle function
+Destructors \t{dest\_term\_bdd}, \t{getVarmap}, \t{getTerm}
+and \t{getBdd} are described in Section~\ref{misc}
+
+There is also a single oracle function
+\t{BddThmOracle} that derives the HOL theorem $\vdash t$
+from the representation judgement \termbdd{\rho}{t}{\ml{TRUE}}
+(details are in Section~\ref{oracle}).
+
+\subsection{Rules for generating representation judgements}
 
 
-{\begin{verbatim}
-   BddThmOracle : term_bdd -> thm
-\end{verbatim}}
+\subsubsection*{Extending and contracting the varmap}
 
-which implements the rule
+\newsavebox\BddExtendVarmap
+\begin{lrbox}\BddExtendVarmap
+\begin{minipage}{\minipagewidth}
+
+\begin{footnotesize}
+{\verb+BddExtendVarmap : term_bdd -> varmap -> term_bdd +}
+\end{footnotesize}
+\vspace*{-3mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\vspace*{-2mm}
+
+$$\begin{array}{c}
+\termbdd{\rho_1}{t}{b} \qquad {\footnotesize\t{Varmap.extends}}~\rho_1~\rho_2
+\\ \hline
+\termbdd{\rho_2}{t}{b}
+\end{array}$$
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\begin{footnotesize}
+Raises \t{BddExtendVarmapError} if $\rho_2$ doesn not extend $\rho_1$
+\end{footnotesize}
+\end{minipage}
+\end{lrbox}
+\fbox{\usebox{\BddExtendVarmap}}
+
+\bigskip
+
+\newsavebox\BddFreevarsContractVarmap
+\begin{lrbox}\BddFreevarsContractVarmap
+\begin{minipage}{\minipagewidth}
+
+\begin{footnotesize}
+{\verb+BddFreevarsContractVarmap : term -> term_bdd -> term_bdd +}
+\end{footnotesize}
+\vspace*{-3mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\vspace*{-2mm}
+
+$$\begin{array}{c}
+\termbdd{\rho}{t}{b} \qquad \mbox{$v$ not free in $t$}
+\\ \hline
+\termbdd{({\footnotesize{\texttt{Varmap.remove~"}}}v{\footnotesize{\texttt{"}}}~\rho)}{t}{b}
+\end{array}$$
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\begin{footnotesize}
+Raises \t{BddFreevarsContractVarmapError} if $v$ not free in $t$
+\end{footnotesize}
+\end{minipage}
+\end{lrbox}
+\fbox{\usebox{\BddFreevarsContractVarmap}}
+
+
+
+\bigskip
+
+\newsavebox\BddSupportContractVarmap
+\begin{lrbox}\BddSupportContractVarmap
+\begin{minipage}{\minipagewidth}
+
+\begin{footnotesize}
+{\verb+BddSupportContractVarmap : term -> term_bdd -> term_bdd +}
+\end{footnotesize}
+\vspace*{-3mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\vspace*{-2mm}
+
+$$\begin{array}{c}
+\termbdd{\rho}{t}{b} \qquad \mbox{$\rho(v)$ does occur in $b$}
+\\ \hline
+\termbdd{({\footnotesize{\texttt{Varmap.remove~"}}}v{\footnotesize{\texttt{"}}}~\rho)}{t}{b}
+\end{array}$$
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\begin{footnotesize}
+Raises \t{BddSupportContractVarmapError} if $\rho(v)$ not in the support of $b$
+\end{footnotesize}
+\end{minipage}
+\end{lrbox}
+\fbox{\usebox{\BddSupportContractVarmap}}
+
+
+\subsubsection*{Variables and constants}
+
+\newsavebox\BddVar
+\begin{lrbox}\BddVar
+\begin{minipage}{\minipagewidth}
+
+\begin{footnotesize}
+{\verb+BddVar : bool -> varmap -> term -> term_bdd  +}
+\end{footnotesize}
+\vspace*{-3mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\vspace*{-2mm}
+
+$$\begin{array}{c}
+\begin{array}{c}
+\rho(v)=n
+\\ \hline
+\termbdd{\rho}{v}{{\footnotesize\t{ithvar}}~n}
+\end{array} ~\footnotesize{\t{BddVar~true}}
+
+\\[8mm]
+
+\begin{array}{c}
+\rho(v)=n
+\\ \hline
+\termbdd{\rho}{v}{{\footnotesize\t{nithvar}}~n}
+\end{array}~ {\footnotesize\t{BddVar~false}}
+
+\end{array}$$
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\begin{footnotesize}
+Raises \t{BddVarError} if $v$ not in the domain of $\rho$
+\end{footnotesize}
+\end{minipage}
+\end{lrbox}
+\fbox{\usebox{\BddVar}}
+
+\bigskip
+
+\newsavebox\BddCon
+\begin{lrbox}\BddCon
+\begin{minipage}{\minipagewidth}
+
+\begin{footnotesize}
+{\verb+BddCon : bool -> varmap -> term_bdd  +}
+\end{footnotesize}
+\vspace*{-3mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\vspace*{-2mm}
+
+$$\begin{array}{c}
+\begin{array}{c}
+
+\\ \hline
+\termbdd{\rho}{{\footnotesize\t{T}}}{{\footnotesize\t{TRUE}}}
+\end{array} ~\footnotesize{\t{BddCon~true}}
+
+\\[8mm]
+
+\begin{array}{c}
+\\ \hline
+\termbdd{\rho}{{\footnotesize\t{F}}}{{\footnotesize\t{FALSE}}~n}
+\end{array}~ {\footnotesize\t{BddCon~false}}
+
+\end{array}$$
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\begin{footnotesize}
+Always succeeds
+\end{footnotesize}
+\end{minipage}
+\end{lrbox}
+\fbox{\usebox{\BddCon}}
+
+\subsubsection*{Boolean operations}
+
+
+
+\newsavebox\BddNot
+\begin{lrbox}\BddNot
+\begin{minipage}{\minipagewidth}
+
+\begin{footnotesize}
+{\verb+BddNot : term_bdd -> term_bdd +}
+\end{footnotesize}
+\vspace*{-3mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\vspace*{2mm}
+
+$\begin{array}{c}
+\termbdd{\rho}{t}{b}
+\\ \hline
+\termbdd{\rho}{\neg t}{{\footnotesize\t{NOT}}~b}
+\end{array}$
+
+\vspace*{2mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\begin{footnotesize}
+Always succeeds
+\end{footnotesize}
+\end{minipage}
+\end{lrbox}
+\fbox{\usebox{\BddNot}}
+
+\bigskip
+
+\newsavebox\BddIte
+\begin{lrbox}\BddIte
+\begin{minipage}{\minipagewidth}
+
+\begin{footnotesize}
+{\verb+BddIte : term_bdd * term_bdd * term_bdd -> term_bdd +}
+\end{footnotesize}
+\vspace*{-3mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\vspace*{2mm}
+
+$\begin{array}{c}
+\termbdd{\rho}{t}{b} \qquad \termbdd{\rho_2}{t_1}{b_1} \qquad \termbdd{\rho_2}{t_2}{b_2}
+\\ \hline
+\termbdd{\rho}{\mbox{\footnotesize\t{(if~$t$~then~$t_1$~else~$t_2$)}}}{{\footnotesize\t{ITE}}~b~b_1~b_2}
+\end{array}$
+
+\vspace*{2mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\begin{footnotesize}
+Raises {\footnotesize\t{BddIteError}} if $\rho$, $\rho_1$ and $\rho_2$ are not all 
+pointer equal
+\end{footnotesize}
+\end{minipage}
+\end{lrbox}
+\fbox{\usebox{\BddIte}}
+
+
+\bigskip
+
+\newsavebox\BddOp
+\begin{lrbox}\BddOp
+\begin{minipage}{\minipagewidth}
+
+\begin{footnotesize}
+{\verb+BddOp : bddop * term_bdd * term_bdd -> term_bdd +}
+\end{footnotesize}
+\vspace*{-3mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\vspace*{2mm}
+
+$\begin{array}{c}
+\termbdd{\rho_1}{t_1}{b_1} \qquad \termbdd{\rho_2}{t_2}{b_2}
+\\ \hline
+\termbdd{\rho_1}{{\footnotesize\t{(termApply}}~t_1~t_2~bddop{\footnotesize\t{)}}}{{\footnotesize\t{apply}}~b_1~b_2~bddop}
+\end{array}$
+
+\vspace*{2mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\begin{footnotesize}
+\t{termApply~$t_1$~$t_2$~$bddop$} applies
+the HOL operation
+corresponding to the \Buddy BDD operation $bddop$ to terms $t_1$ and $t_2$
+(see Section~\ref{misc}). The exception 
+{\footnotesize\t{BddOpError}} is raised if $\rho_1$ and $\rho_2$ are not pointer equal
+\end{footnotesize}
+\end{minipage}
+\end{lrbox}
+\fbox{\usebox{\BddOp}}
+
+
+\subsubsection*{Quantification}
+
+\newsavebox\BddForall
+\begin{lrbox}\BddForall
+\begin{minipage}{\minipagewidth}
+
+\begin{footnotesize}
+{\verb+BddForall : term list -> term_bdd -> term_bdd +}
+\end{footnotesize}
+\vspace*{-3mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\vspace*{2mm}
+
+$\begin{array}{c}
+\termbdd{\rho}{t}{b} \qquad \rho(v_1)=n_1,~ $\ldots$~,~ \rho(v_i)=n_i
+\\ \hline
+\termbdd{\rho}{({\footnotesize\forall} v_1~\cdots~v_i.~t)}%
+{{\footnotesize\t{forall~(makeset[}}n_1,\ldots,n_i{\footnotesize\t{])}}~b}
+\end{array}$
+
+\vspace*{2mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\begin{footnotesize}
+Raises \t{BddForallError} if any of the terms in the term list argument
+are not boolean variables in the domain of $\rho$
+\end{footnotesize}
+\end{minipage}
+\end{lrbox}
+\fbox{\usebox{\BddForall}}
+
+\bigskip
+
+
+\newsavebox\BddExists
+\begin{lrbox}\BddExists
+\begin{minipage}{\minipagewidth}
+
+\begin{footnotesize}
+{\verb+BddExists : term list -> term_bdd -> term_bdd +}
+\end{footnotesize}
+\vspace*{-3mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\vspace*{2mm}
+
+$\begin{array}{c}
+\termbdd{\rho}{t}{b} \qquad \rho(v_1)=n_1,~ $\ldots$~,~ \rho(v_i)=n_i
+\\ \hline
+\termbdd{\rho}{({\footnotesize\exists} v_1~\cdots~v_i.~t)}%
+{{\footnotesize\t{exist~(makeset[}}n_1,\ldots,n_i{\footnotesize\t{])}}~b}
+\end{array}$
+
+\vspace*{2mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\begin{footnotesize}
+Raises \t{BddExistsError} if any of the terms in the term list argument
+are not boolean variables in the domain of $\rho$
+\end{footnotesize}
+\end{minipage}
+\end{lrbox}
+\fbox{\usebox{\BddExists}}
+
+\bigskip
+
+
+\newsavebox\BddAppall
+\begin{lrbox}\BddAppall
+\begin{minipage}{\minipagewidth}
+
+\begin{footnotesize}
+{\verb+BddAppall : term list -> bddop * term_bdd * term_bdd -> term_bdd+}
+\end{footnotesize}
+\vspace*{-3mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\vspace*{2mm}
+
+$\begin{array}{c}
+\termbdd{\rho_1}{t_1}{b_1} \qquad \termbdd{\rho_2}{t_2}{b_2} \qquad \rho_1(v_1)=n_1,~ $\ldots$~,~ \rho_1(v_i)=n_i
+\\ \hline
+\begin{array}{l}
+{\rho_1}%
+~{({\footnotesize\forall} v_1~\cdots~v_i.~%
+{\footnotesize\t{termApply}}~t_1~t_2~bddop)}\\
+\mapsto\\
+{{\footnotesize\t{appall}}~b_1~b_2~bddop~%
+{\footnotesize\t{(makeset[}}n_1,\ldots,n_i{\footnotesize\t{])}}~b}
+\end{array}
+\end{array}$
+
+\vspace*{2mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\begin{footnotesize}
+Raises \t{BddAppallError} if $\rho_1$ and $\rho_2$ are not pointer equal, or
+if any of the terms in the term list argument
+are not boolean variables in the domain of $\rho_1$
+\end{footnotesize}
+\end{minipage}
+\end{lrbox}
+\fbox{\usebox{\BddAppall}}
+
+
+\bigskip
+
+
+\newsavebox\BddAppex
+\begin{lrbox}\BddAppex
+\begin{minipage}{\minipagewidth}
+
+\begin{footnotesize}
+{\verb+BddAppex : term list -> bddop * term_bdd * term_bdd -> term_bdd+}
+\end{footnotesize}
+\vspace*{-3mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\vspace*{2mm}
+
+$\begin{array}{c}
+\termbdd{\rho_1}{t_1}{b_1} \qquad \termbdd{\rho_2}{t_2}{b_2} \qquad \rho_1(v_1)=n_1,~ $\ldots$~,~ \rho_1(v_i)=n_i
+\\ \hline
+\begin{array}{l}
+{\rho_1}%
+~{({\footnotesize\exists} v_1~\cdots~v_i.~%
+{\footnotesize\t{termApply}}~t_1~t_2~bddop)}\\
+\mapsto\\
+{{\footnotesize\t{appex}}~b_1~b_2~bddop~%
+{\footnotesize\t{(makeset[}}n_1,\ldots,n_i{\footnotesize\t{])}}~b}
+\end{array}
+\end{array}$
+
+\vspace*{2mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\begin{footnotesize}
+Raises \t{BddAppexError} if $\rho_1$ and $\rho_2$ are not pointer equal, or
+if any of the terms in the term list argument
+are not boolean variables in the domain of $\rho_1$
+\end{footnotesize}
+\end{minipage}
+\end{lrbox}
+\fbox{\usebox{\BddAppex}}
+
+
+\newsavebox\name
+\begin{lrbox}\name
+\begin{minipage}{\minipagewidth}
+
+\begin{footnotesize}
+{\verb+name :  +}
+\end{footnotesize}
+\vspace*{-3mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\vspace*{2mm}
+
+$\begin{array}{c}
+\termbdd{\rho_1}{t}{b} \qquad {\footnotesize\t{Varmap.extends}}~\rho_1~\rho_2
+\\ \hline
+\termbdd{\rho_2}{t}{b}
+\end{array}$
+
+\vspace*{2mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\begin{footnotesize}
+
+\end{footnotesize}
+\end{minipage}
+\end{lrbox}
+\fbox{\usebox{\name}}
+
+
+
+
+
+
+\newsavebox\nameA
+\begin{lrbox}\nameA
+\begin{minipage}{\minipagewidth}
+
+\begin{footnotesize}
+{\verb+nameA :  +}
+\end{footnotesize}
+\vspace*{-3mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\vspace*{2mm}
+
+$\begin{array}{c}
+\termbdd{\rho_1}{t}{b} \qquad {\footnotesize\t{Varmap.extends}}~\rho_1~\rho_2
+\\ \hline
+\termbdd{\rho_2}{t}{b}
+\end{array}$
+
+\vspace*{2mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\begin{footnotesize}
+
+\end{footnotesize}
+\end{minipage}
+\end{lrbox}
+\fbox{\usebox{\nameA}}
+
+
+
+
+
+\subsection{Linking representation judgements to theorems}\label{oracle}
+
+\newsavebox\BddThmOracle
+\begin{lrbox}\BddThmOracle
+\begin{minipage}{\minipagewidth}
+
+{\verb+BddThmOracle : term_bdd -> thm+}
+
+\vspace*{-3mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\vspace*{-2mm}
+
+$$\begin{array}{c}
+\termbdd{\rho}{t}{\ml{TRUE}}
+\\ \hline
+\texttt{[oracles:~HolBdd]} \vdash t
+\end{array}$$
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\begin{footnotesize}
+Allows HOL theorems to be `proved' by BDD calculation using \Buddy.
+Such theorems, and any theorems deduced from them, are tagged with
+\t{HolBdd} and so can be easily identified.
+\end{footnotesize}
+\end{minipage}
+\end{lrbox}
+\fbox{\usebox{\BddThmOracle}}
+
+\bigskip
+
+
+\newsavebox\BddEqMp
+\begin{lrbox}\BddEqMp
+\begin{minipage}{\minipagewidth}
+
+{\verb+BddEqMp : thm -> term_bdd -> term_bdd+}
+
+\vspace*{-3mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\vspace*{-2mm}
+
+$$\begin{array}{c}
+\vdash t_1=t_2 \qquad \termbdd{\rho}{t_1}{b} \qquad 
+\\ \hline
+\termbdd{\rho}{t_2}{b}
+\end{array}$$
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\begin{footnotesize}
+Enables the term part of a representation judgement to be replaced
+by a logically equivalent term. Raises \t{BddEqMpError}
+if the theorem has any assumptions, or if the left hand side of the equation
+isn't $\alpha$-convertable to the term part of the representation judgement
+\end{footnotesize}
+\end{minipage}
+\end{lrbox}
+\fbox{\usebox{\BddEqMp}}
+
+\subsection{Computing reachable states using representation judgements}\label{reach2}
+
+Suppose \ml{th} is an equational theorem $\vdash t_1=t_2$, e.g.~a definition.
+If the right hand side $t_2$ can be represented as a BDD $b$ using
+\ml{termToBdd}, then a BDD representation $\ml{tb}~=~\globtermbdd{t_1}{b}$
+can be created by evaluating
+
+\vspace*{-1mm}
+
+\begin{verbatim}
+ val tb0 = BddEqMp (SYM th) (termToTermBdd(rhs(concl th)))
+\end{verbatim}
+
+\vspace*{-1mm}
+
+\noindent Define $\ml{BddDef}\bnind{\ml{BddDef}}:\ty{thm}\fun\termbddty$ by
+
+\vspace*{-1mm}
+
+\begin{verbatim}
+ fun BddDef th = BddEqMp (SYM th) (termToTermBdd(rhs(concl th)))
+\end{verbatim}
+
+\vspace*{-1mm}
+
+Suppose constants \con{B} and \con{R} have been defined by theorems \ml{B\_def}
+and \ml{R\_def}, respectively, then BDD representation judgements
+
+\smallskip
+$\begin{array}{l}
+\ml{tbB}~~=~~\globtermbdd{\con{B}~(v_1,\ldots,v_n)}{b_{\con{B}}}\\
+\ml{tbR}~~=~~\globtermbdd{\con{R}((v_1,\ldots,v_n),(v'_1,\ldots,v'_n))}{b_{\con{R}}}
+\end{array}$
+\smallskip
+
+\noindent are defined in ML by
+
+\vspace*{-1mm}
+
+\begin{verbatim}
+ val tbB = BddDef B_def
+ and tbR = BddDef R_def;
+\end{verbatim}
+
+\vspace*{-1mm}
+
+Suppose that \con{S} has been defined by \ml{S\_def} and for some
+particular value of \con{i} the BDD representation
+$\ml{tbi}~=~\globtermbdd{\con{S}~\con{i}~(v_1,\ldots,v_n)}{b_{\con{i}}}$
+has been computed, for example, for \ml{\con{i} = 0}, \ml{tb0} is defined by
+
+\vspace*{-1mm}
+
+\begin{verbatim}
+ val tb0 = BddEqMp (SYM S_0) tbB
+\end{verbatim}
+
+\vspace*{-1mm}
+
+An important BDD to calculate is 
+the image of $\con{S}~\con{i}$ under \con{R}:
 
 
 \smallskip
 
-\mbox{}~~~$\begin{array}{c}
-\termbdd{\rho}{t}{\ml{TRUE}}
+~$\begin{array}{l}
+\exists u_1~\cdots~u_n.~\con{S}~\con{i}~(u_1,\ldots,u_n)~\wedge~\con{R}((u_1,\ldots,u_n),(v_1,\ldots,v_n))
+\end{array}
+$
+
+\smallskip
+
+If this is directly converted to a BDD representation judgement, new BDD variables for
+$u_1$, $\ldots$, $u_n$ may be created, which could be inefficient. A better strategy is
+first compute the BDD of
+
+\smallskip
+
+~$\exists v_1~\cdots~v_n.
+    ~\con{S}~\con{i}~(v_1,\ldots,v_n)~\wedge~\con{R}((v_1,\ldots,v_n),(v'_1,\ldots,v'_n))$
+
+\smallskip
+
+and then rename the variables $v'_1$, $\ldots$, $v'_n$ to $v_1$,
+$\ldots$, $v_n$, respectively. A subtlety arises when creating a
+representation judgement rule corresponding to this image
+calculation. Names for the existentially quantified variables are
+needed in the term part of the judgement, but ``$\exists v_1~\cdots~v_n$''
+cannot be used, because the renaming of $v'_1$, $\ldots$, $v'_n$ to
+$v_1$, $\ldots$, $v_n$ would then result in a clash. Note that the BDD
+operation eliminates the nodes corresponding to $v_1$, $\ldots$, $v_n$
+in the BDD, so the renaming doesn't cause a clash in the BDD. However,
+in the term part of the judgement the quantified variables need to be
+renamed -- but what names should be used? In the rule \ml{BddImage}
+described below $v'_1$, $\ldots$, $v'_n$ are used since these are
+guaranteed to be safe as they have just been replaced, but note that
+this is potentially a bit confusing because of the convention that
+priming indicates next-state variables. The ML funtion
+\ml{replace} renames variables in a BDD (see Section~\ref{replace}).
+
+
+\smallskip
+
+
+$\raisebox{3mm}{\ml{BddImage}\bnind{\ml{BddImage}}}~\begin{array}{c}
+\begin{array}{l}
+\termbdd{\rho}{P(v_1,\ldots,v_n)}{b_P} \\
+\termbdd{\rho}{R((v_1,\ldots,v_n),(v'_1,\ldots,v'_n))}{b_R}\\
+\rho(v_1)=n_1 \quad \cdots \quad \rho(v_n)=n_n\\
+\rho(v'_1)=n'_1 \quad \cdots \quad \rho(v'_n)=n'_n
+\end{array}
 \\ \hline
-\texttt{[oracles:~HolBdd]} \vdash t
+\begin{array}{l}
+{\rho}~
+{\exists v'_1~\cdots~v'_n.~ P(v'_1,\ldots,v'_n) \wedge R((v'_1,\ldots,v'_n),(v_1,\ldots,v_n))}\\
+\mapsto\\
+\ml{replace}\\
+~(\ml{appex}~b_P~b_R~\ml{And}~\ml{(makeset[}n_1\ml{,}\ldots\ml{,}n_n\ml{])})\\
+~(\ml{makepairSet[(}n'_1\ml{,}n_1\ml{),}\ldots\ml{,(}n'_n\ml{,}n_n\ml{)]})
+\end{array}
 \end{array}$
 
 \smallskip
 
-This oracle allows theorems `proved' by BDD calculation using \Buddy to be
-created. Such theorems, and any theorems deduced from them, are tagged with
-\t{HolBdd} and so can be easily identified.
+\vspace*{-4mm}
+\begin{flushleft}
+\begin{tabular}{|c|}\hline
+\begin{minipage}{\minipagewidth}
+\smallskip
+\begin{footnotesize}
+\begin{description}
+
+\item $\ml{BddImage} : \termbddty\fun\termbddty\fun\termbddty$\\
+\ml{BddImage}~
+($\globtermbdd{P(v_1,\ldots,v_n)}{b_P})~ 
+(\globtermbdd{R((v_1,\ldots,v_n),(v'_1,\ldots,v'_n))}{b_R}$)\\
+returns
+
+\smallskip
+
+\mbox{}~ $\begin{array}{l}
+{\rho}~
+{\exists v'_1~\cdots~v'_n.~ P(v'_1,\ldots,v'_n) \wedge R((v'_1,\ldots,v'_n),(v_1,\ldots,v_n))}\\
+\mapsto\\
+\ml{replace}\\
+~(\ml{appex}~b_P~b_R~\ml{And}~\ml{(makeset[}\rho_G(v_1)\ml{,}\ldots\ml{,}\rho_G(v_n)\ml{])})\\
+~(\ml{makepairSet[(}\rho_G(v'_1)\ml{,}\rho_G(v_1)\ml{),}\ldots\ml{,(}\rho_G(v'_n)\ml{,}\rho_G(v_n)\ml{)]})
+\end{array}$
+
+%\vspace*{-3.6mm}
+
+\end{description}
+\end{footnotesize}
+\smallskip
+\end{minipage}\\ \hline
+\end{tabular}
+\end{flushleft}
+
+
+\noindent Example: since $\con{S}~(\con{i}{+}1)~(v_1,\ldots,v_n)$ is
+
+
+\smallskip
+
+$\con{S}~\con{i}~(v_1,\ldots,v_n)~\vee~
+\exists v'_1~\cdots~v'_n.~\con{S}~\con{i}~(v'_1,\ldots,v'_n)~\wedge~\con{R}((v'_1,\ldots,v'_n),(v_1,\ldots,v_n))
+$
+
+\smallskip
+
+\noindent the BDD representation of this is computed by
+$\ml{BddOr}(\ml{tbi},\ml{BddImage}~\ml{tbi}~\ml{tbR})$.
+
+The ML function \ml{iterateToFixedPoint2}\bnind{\ml{iterateToFixedPoint2}} defined below takes the
+transitive closure of \con{R} until a fixed-point is reached,
+returning a triple \ml{(th,tb,i\_tm)} where  \ml{th}
+is $\vdash \con{S}~(\con{i}{+}1)~(v_1,\ldots,v_n)~=~\con{S}~\con{i}~(v_1,\ldots,v_n)$,
+\ml{tb} is $\globtermbdd{\con{S}~\con{i}~(v_1,\ldots,v_n)}{b_{\con{i}}}$ (where
+$b_{\con{i}}$ is the BDD computed) and \ml{i\_tm}
+is $\qq{\con{i}}$
+
+\begin{verbatim}
+ fun iterateToFixedPoint2 S_suc tbR tb i =
+  let val i_tm = intToTerm i
+      val tb'  = BddEqMp
+                  (SYM(SimpNum(SPEC i_tm S_suc)))
+                  (BddOr(tb, BddImage tb tbR))
+  in
+   (TermBddOracle(BddEq(tb,tb')), tb, i_tm)
+    handle oracleError => iterateToFixedPoint2 S_suc tbR tb' (i+1)
+  end
+\end{verbatim}
+
+\vspace*{-1mm}
+
+\noindent The representation 
+judgement $\globtermbdd{(\exists i.~\con{S}~i~(v_1,...,v_n))}{b_{\con{i}}}$
+is computed by
+
+\vspace*{-1mm}
+
+\begin{verbatim}
+ let val (th,tb,i_tm) = 
+      iterateToFixedPoint2 S_suc (BddDef R_def) (BddDef S_0) 0
+     val FpThi = SimpNum(SPEC i_tm FpTh)
+ in
+  BddEqMp (SPEC_ALL(MP FpThi (GEN_ALL th))) tb
+ end 
+\end{verbatim}
+
+\vspace*{-1mm}
+
+\noindent where \ml{SPEC\_ALL}\bnind{\ml{SPEC\_ALL}} strips off all outmost universal
+quantifiers (inverse of \ml{GEN\_ALL}\bnind{\ml{GEN\_ALL}}). Note the combination of \HOL{} deduction (\ml{SPEC},
+\ml{SPEC\_ALL}, \ml{GEN\_ALL}, \ml{MP}) and BDD calculation (\ml{BddEqMp}).
+
+The function \ml{iterateToFixedPoint2} is much more efficient on large
+examples than \ml{iterateToFixedPoint}. For example, with
+\ml{iterateToFixedPoint}, the calculation of the BDDs of the sets of
+reachable states of peg solitaire brings my 500MB Linux box to a halt
+thrashing after a couple of days, and only reaches about 15 steps.
+Using \ml{iterateToFixedPoint2} instead, all 32 steps are completed in a few
+hours.
+
+\subsection{Future possibilities}\label{future}
+
+The rules given above all have the same variable map $\rho$ in the
+hypotheses and conclusion. The following experimental rules, which are currently
+not implemented (and so are not given ML names), are not of this form.
+
+Let $\ml{Frees}(t)$ denote the set of free variables in $t$.  
+Let 
+$\ml{Domain}(\rho)$ denote the set of variables $\rho$ is defined on
+(i.e.~$\ml{Domain}(\rho)~=~\{v\mid \exists n.~\rho(v)=n\}$).
+Write
+$\rho_1\subseteq\rho_2$ if $\rho_1$ is a restriction of $\rho_2$
+(i.e.~$\ml{Domain}(\rho_1)\subseteq\ml{Domain}(\rho_2)$).  
+The following rule then holds.
+
+\smallskip
+
+
+$\begin{array}{c}
+\termbdd{\rho_1}{t}{b} \qquad \rho_2\subseteq\rho_1 \qquad \ml{Frees}(t)\subseteq\ml{Domain}(\rho_2)
+\\ \hline
+\termbdd{\rho_2}{t}{b}
+\end{array}$
+
+\smallskip
+
+It may be the case that the BDD representing a term doesn't depend on
+some variables in the term. For example, if $\{\}$ denotes the
+undefined-everywhere function, then $\termbdd{\{\}}{t\vee\neg
+t}{\ml{TRUE}}$ holds for any term $t$. Thus any entries in the
+variable map that map variables to numbers not occuring in the support
+of the BDD can be pruned.  Let $\ml{Support}(b)$ be the set of BDD
+variables (i.e.~numbers) in $b$ and let $\ml{Range}(\rho)$ denote the
+range of $\rho$ (i.e.~$\ml{Range}(\rho)~=~\{n\mid \exists
+v.~\rho(v)=n\}$). Then
+
+\smallskip
+
+$\begin{array}{c}
+\termbdd{\rho_1}{t}{b} \qquad \rho_2\subseteq\rho_1 \qquad \ml{Support}(b)\subseteq\ml{Range}(\rho_2)
+\\ \hline
+\termbdd{\rho_2}{t}{b}
+\end{array}$
+
+\smallskip
+
+Judgements with different variable maps can be combined if the maps are compatible.
+Define 
+
+\smallskip
+
+~$\ml{Compatible}(\rho_1,\rho_2)~=~\forall v~n_1~n_2.~(\rho_1(v)=n_1)\wedge(\rho_2(v)=n_2)\imp(n_1=n_2)$
+
+\smallskip
+
+\noindent Compatible maps $\rho_1$ and $\rho_2$ can be unambiguosly
+joined to form a map $\rho_1\cup \rho_2$. Rules for combining
+judgements with compatible maps can be formulated, for example
+
+\smallskip
+
+$\begin{array}{c}
+\termbdd{\rho_1}{t_1}{b_1} \qquad \termbdd{\rho_2}{t_2}{b_2} \qquad \ml{Compatible}(\rho_1,\rho_2)
+\\ \hline
+\termbdd{\rho_1\cup\rho_2}{t_1\wedge t_2}{b_1~\ml{AND}~ b_2}
+\end{array}$
+
+
+\smallskip
+
+\noindent The rules for other binary operators are similar.
+
+The next major stage in the development of \ml{HolBddLib} will be to
+support judgements with different variable orders: i.e.~calculation
+with $\termbdd{\rho}{t}{b}$ with several different $\rho$s in play,
+rather than just $\termbdd{\rho_G}{t}{b}$. This will enable different
+variable orderings to be used within a single session. It is also
+planned to extend the \Hol{} theory management system so that
+judgements $\termbdd{\rho}{t}{b}$ can be saved to disk and later
+reloaded, just like theorems of higher order logic.
 
 \ml{BddRules} provides the following rules for reasoning
 about BDD representation judgements. Many of these have already been described in
@@ -1439,6 +2303,98 @@ R B $i$ (v1,...,vn)} (see the source code in \ml{BddRules.sml} for
 more details). 
 
 \end{description}
+
+\subsection{Miscellaneous functions}\label{misc}
+
+%\subsubsection*{\t{term\_bdd} destructors}
+
+\newsavebox\destructors
+\begin{lrbox}\destructors
+\begin{minipage}{\minipagewidth}
+
+\begin{footnotesize}
+\begin{verbatim}
+dest_term_bdd : term_bdd -> varmap * term * bdd
+getVarmap     : term_bdd -> varmap
+getTerm       : term_bdd -> term
+getBdd        : term_bdd -> bdd
+\end{verbatim}
+\end{footnotesize}
+\vspace*{-6mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\vspace*{1mm}
+
+\begin{footnotesize}
+\hspace*{-1.5mm}$\begin{array}{ll}
+\t{dest\_term\_bdd}~(\termbdd{\rho}{t}{b})&=~(\rho, t, b)\\
+\t{getVarmap}~(\termbdd{\rho}{t}{b})&=~\rho\\
+\t{getTerm}~(\termbdd{\rho}{t}{b})&=~t\\
+\t{getBdd}~(\termbdd{\rho}{t}{b})&=~b
+\end{array}$
+\end{footnotesize}
+\end{minipage}
+\end{lrbox}
+\fbox{\usebox{\destructors}}
+
+\bigskip
+
+\newsavebox\inSupport
+\begin{lrbox}\inSupport
+\begin{minipage}{\minipagewidth}
+
+\begin{footnotesize}
+{\verb+inSupport : int -> bdd -> bool +}
+\end{footnotesize}
+\vspace*{-3mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\begin{footnotesize}
+\t{inSupport}~$n$~$b$ checks if the BDD variable $n$ occurs in the BDD $b$
+\end{footnotesize}
+\end{minipage}
+\end{lrbox}
+\fbox{\usebox{\inSupport}}
+
+\bigskip
+
+\newsavebox\termApply
+\begin{lrbox}\termApply
+\begin{minipage}{\minipagewidth}
+
+\begin{footnotesize}
+{\verb+termApply : term -> term -> bddop -> term+}
+\end{footnotesize}
+\vspace*{-3mm}
+
+\noindent \rule\minipagewidth{0.1pt}
+
+\begin{footnotesize}
+\t{termApply}~$t_1$~$t_2$~$bddop$ applies the HOL operation
+corresponding to $bddop$ to $t_1$ and $t_2$.
+
+\vspace*{-2mm}
+
+\begin{verbatim}
+   fun termApply t1 t2 bddop =
+    case bddop of
+       And    => mk_conj(t1,t2)
+     | Biimp  => mk_eq(t1,t2)
+     | Diff   => mk_conj(t1, mk_neg t2)
+     | Imp    => mk_imp(t1,t2)
+     | Invimp => mk_imp(t2,t1)
+     | Lessth => mk_conj(mk_neg t1, t2)
+     | Nand   => mk_neg(mk_conj(t1,t2))
+     | Nor    => mk_neg(mk_disj(t1,t2))
+     | Or     => mk_disj(t1,t2)
+     | Xor    => mk_neg(mk_eq(t1,t2));
+\end{verbatim}
+\end{footnotesize}
+\end{minipage}
+\end{lrbox}
+\fbox{\usebox{\termApply}}
 
 \section{The structure \t{DerivedBddRules}}\label{DerivedBddRules}
 
