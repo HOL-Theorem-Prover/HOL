@@ -13,6 +13,7 @@
 (define-prefix-command 'hol-map)
 (make-variable-buffer-local 'hol-buffer-name)
 (make-variable-buffer-local 'hol-buffer-ready)
+(make-variable-buffer-local 'hol-loaded-modules)
 (set-default 'hol-buffer-ready nil)
 (set-default 'hol-buffer-name nil)
 
@@ -171,8 +172,8 @@ process in it."
 (defun send-string-as-hol-goal (s)
   (let ((goal-string
          (format  "goalstackLib.g `%s`" s)))
-    (send-string-to-hol goal-string)
-    (send-string-to-hol "goalstackLib.set_backup 100;")))
+    (send-raw-string-to-hol goal-string)
+    (send-raw-string-to-hol "goalstackLib.set_backup 100;")))
 
 (defun hol-do-goal (arg)
   "Send term around point to HOL process as goal.
@@ -198,27 +199,113 @@ the region contains no backquotes, then send region instead."
     (send-string-to-hol send-string)))
 
 (defun hol-name-top-theorem (string arg)
-  "Name the top theorem of the goalstackLib."
+  "Name the top theorem of the goalstackLib.
+With prefix argument, drop the goal afterwards."
   (interactive "sName for top theorem: \nP")
   (if (not (string= string ""))
-      (send-string-to-hol (format "val %s = top_thm()" string)))
-  (if arg (send-string-to-hol "drop()")))
+      (send-raw-string-to-hol (format "val %s = top_thm()" string)))
+  (if arg (send-raw-string-to-hol "goalstackLib.drop()")))
+
+(defun remove-sml-comments (end)
+  (let (done (start (point)))
+    (while (and (not done) (re-search-forward "(\\*\\|\\*)" end t))
+        (if (string= (match-string 0) "*)")
+            (progn
+              (kill-region (- start 2) (point))
+              (setq done t))
+          ;; found a comment beginning
+          (if (not (remove-sml-comments end)) (setq done t))))
+      (if (not done) (message "Incomplete comment in region given"))
+      done))
+
+(defun remove-hol-term (end-marker)
+  (let ((start (point)))
+    (if (re-search-forward "`" end-marker t)
+        (kill-region (- start 1) (point))
+      (message "Incomplete HOL term/quotation in region given"))))
+
+(defun remove-hol-string (end-marker)
+  (let ((start (point)))
+    (if (re-search-forward "\n\\|[^\\]\"" end-marker t)
+        (if (string= (match-string 0) "\n")
+            (message "String literal terminated by newline - not allowed!")
+          (kill-region (- start 1) (point))))))
+
+
+(defun remove-sml-junk (start end)
+  "Removes all sml comments, HOL terms and strings in the given region."
+  (interactive "r")
+  (let ((m (make-marker)))
+    (set-marker m end)
+    (save-excursion
+      (goto-char start)
+      (while (re-search-forward "(\\*\\|`\\|\"" m t)
+        (cond ((string= (match-string 0) "(*") (remove-sml-comments m))
+              ((string= (match-string 0) "`") (remove-hol-term m))
+              ((string= (match-string 0) "\"") (remove-hol-string m))))
+      (set-marker m nil))))
+
+(defun remove-sml-lets-locals (start end &optional inbody &optional not-at-top)
+  "Removes all local-in-ends and let-in-ends from a region.  We assume
+that the buffer has already had HOL terms, comments and strings removed."
+  (interactive "r")
+  (let ((m (if (not not-at-top) (set-marker (make-marker) end) end)))
+    (if (not not-at-top) (goto-char start))
+    (if (re-search-forward "\\blet\\b\\|\\blocal\\b\\|\\bend\\b" m t)
+        (let ((declstring (match-string 0)))
+          (if (or (string= declstring "let") (string= declstring "local"))
+              (remove-sml-lets-locals (- (point) (length declstring)) m t t)
+            ;; found an "end"
+            (if (not inbody) (message "End without corresponding let/local")
+              (progn (kill-region start (point))
+                     (remove-sml-lets-locals (point) end nil t))))))
+    (if (not not-at-top) (set-marker m nil))))
+
+
+
+
+
+
+
 
 (defun send-string-to-hol (string)
   "Send a string to HOL process."
   (interactive "sString to send to HOL process: ")
+  (let ((buf (ensure-hol-buffer-ok))
+        (tmpbuf (generate-new-buffer "*HOL temporary*")))
+    (save-excursion
+      (set-buffer tmpbuf)
+      (insert string)
+      (goto-char (point-min))
+      (remove-sml-junk (point-min) (point-max))
+      (goto-char (point-min))
+      ;; first thing to do is to search through buffer looking for
+      ;; identifiers of form id.id.  When spotted such identifiers need
+      ;; to have the first component of the name loaded.
+      (while (re-search-forward "\\([A-Za-z_][A-Za-z0-9_]*\\)\\.\\w+"
+                                (point-max) t)
+        (hol-load-string (match-string 1)))
+      ;; next thing to do is to look for open declarations that are not
+      ;; in the scope of lets or locals
+      ; (goto-char (point-min))
+      ; (remove-sml-lets-locals (point) (point-max))
+      (send-raw-string-to-hol string))
+    (kill-buffer tmpbuf)))
+
+(defun send-raw-string-to-hol (string)
+  "Sends a string in the raw to HOL.  Not for interactive use."
   (let ((buf (ensure-hol-buffer-ok)))
     (comint-send-string buf (concat string ";\n"))))
 
 (defun hol-backup ()
   "Perform a HOL backup."
   (interactive)
-  (send-string-to-hol "goalstackLib.b()"))
+  (send-raw-string-to-hol "goalstackLib.b()"))
 
 (defun hol-print ()
   "Print the current HOL goal."
   (interactive)
-  (send-string-to-hol "goalstackLib.p()"))
+  (send-raw-string-to-hol "goalstackLib.p()"))
 
 (defun hol-interrupt ()
   "Perform a HOL interrupt."
@@ -240,18 +327,7 @@ the region contains no backquotes, then send region instead."
 (defun hol-rotate (arg)
   "Rotate the goal stack N times.  Once by default."
   (interactive "p")
-  (send-string-to-hol (format "goalstackLib.r %d" arg)))
-
-(defun copy-region-as-wmizar-tactic (start end)
-  "Send the region as a wmizar tactic (with pe).
-(In other words the pe function must be defined and must expect a term
- frag list.)"
-  (interactive "r")
-  (let* ((region-string (buffer-substring start end))
-         (tactic-string
-          (format "goalstackLib.e (dpt `%s`) handle e => Raise e"
-                  region-string)))
-    (send-string-to-hol tactic-string)))
+  (send-raw-string-to-hol (format "goalstackLib.r %d" arg)))
 
 (defun hol-scroll-up (arg)
   "Scrolls the HOL window."
@@ -272,18 +348,29 @@ the region contains no backquotes, then send region instead."
 (defun hol-use-file (filename)
   "Gets HOL session to \"use\" a file."
   (interactive "fFile to use: ")
-  (send-string-to-hol (concat "use \"" filename "\";")))
+  (send-raw-string-to-hol (concat "use \"" filename "\";")))
 
-(defun hol-load-string (s)
-  (send-string-to-hol
-   (concat "(print  \"Loading " s "\\n\"; " "load \"" s "\");")))
+(defun hol-load-string (s &optional really-load)
+  (let ((buf (ensure-hol-buffer-ok))
+        (commandstring
+         (concat "val _ = (print  \"Loading " s
+                 "\\n\"; " "load \"" s "\");\n")))
+    (save-excursion
+      (set-buffer buf)
+      (let ((already-loaded (member s hol-loaded-modules)))
+        (if (or (not already-loaded) really-load)
+            (progn
+              (if (not already-loaded)
+                  (setq hol-loaded-modules (cons s hol-loaded-modules)))
+              (comint-send-string buf commandstring)))))))
 
 (defun hol-load-file (arg)
   "Gets HOL session to \"load\" the file at point.
 If there is no filename at point, then prompt for file.  If the region
 is active (in transient mark mode) and it looks like it might be a
 module name, then send region instead. With prefix ARG prompt for a
-file-name to load.  "
+file-name to load.  With a positive numeric prefix arg load the requested
+file, even if the HOL mode thinks it already has been."
   (interactive "P")
   (let* ((wap (word-at-point))
          (txt (condition-case nil
@@ -292,9 +379,9 @@ file-name to load.  "
          (s (cond (arg (read-string "Library to load: "))
                   ((and mark-active transient-mark-mode
                         (string-match "^\\w+$" txt)) txt)
-                  (wap wap)
+                  ((and wap (string-match "^\\w+$" wap)) wap)
                   (t (read-string "Library to load: ")))))
-    (hol-load-string s)))
+    (hol-load-string s (and arg (numberp arg) (> arg 0)))))
 
 ;** hol map keys and function definitions
 
@@ -339,7 +426,7 @@ or at level 10 with a bare prefix. "
   "Toggles the globals show_types variable."
   (interactive)
   (message "Toggling show_types")
-  (send-string-to-hol "Globals.show_types := not (!Globals.show_types)"))
+  (send-raw-string-to-hol "Globals.show_types := not (!Globals.show_types)"))
 
 (defun set-hol-executable (filename)
   "Sets the HOL executable variable to be equal to FILENAME."
@@ -349,12 +436,12 @@ or at level 10 with a bare prefix. "
 (defun hol-restart-goal ()
   "Restarts the current goal."
   (interactive)
-  (send-string-to-hol "goalstackLib.restart()"))
+  (send-raw-string-to-hol "goalstackLib.restart()"))
 
 (defun hol-drop-goal ()
   "Drops the current goal."
   (interactive)
-  (send-string-to-hol "goalstackLib.drop()"))
+  (send-raw-string-to-hol "goalstackLib.drop()"))
 
 (defun hol-open-region (start end)
   "Opens the identifiers in the region.
@@ -366,9 +453,24 @@ Doesn't bother trying to open the word open.  Loads modules first."
       (while (re-search-forward "\\w+" end t)
         (let ((module-name (match-string 0)))
           (if (not (string= "open" module-name))
-              (progn
-                (hol-load-string module-name)
-                (send-string-to-hol (concat "open " module-name)))))))))
+              (hol-open-string module-name)))))))
+
+(defun hol-open-string (module-name)
+  (interactive "sName of module to (load and) open: ")
+  (progn
+    (hol-load-string module-name)
+    (send-raw-string-to-hol (concat "open " module-name))))
+
+(defun hol-open-action (arg)
+  "Opens HOL modules.
+If the region is active (and in transient mark mode) and there is no prefix,
+then scan all of the region for module names.  Otherwise prompt for the
+name of the module to load."
+  (interactive "P")
+  (if (and mark-active transient-mark-mode (not arg))
+      (hol-open-region (region-beginning) (region-end))
+    (call-interactively 'hol-open-string)))
+
 
 
 
@@ -388,9 +490,8 @@ Doesn't bother trying to open the word open.  Loads modules first."
 (define-key hol-map "g"    'hol-do-goal)
 (define-key hol-map "h"    'hol98)
 (define-key hol-map "l"    'hol-load-file)
-(define-key hol-map "m"    'copy-region-as-wmizar-tactic)
 (define-key hol-map "n"    'hol-name-top-theorem)
-(define-key hol-map "o"    'hol-open-region)
+(define-key hol-map "o"    'hol-open-action)
 (define-key hol-map "p"    'hol-print)
 (define-key hol-map "r"    'hol-rotate)
 (define-key hol-map "R"    'hol-restart-goal)
