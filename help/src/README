@@ -1,0 +1,32 @@
+File mosml/src/doc/helpsigs/README                     
+
+This directory contains the program used to create the database used
+by the Moscow ML `help' function.  It will not work under MS DOS
+because of the filename name truncation in DOS.
+
+The program illustrates the use of several libraries.
+
+The main program is makebase.  It reads the signatures in directory
+mosml/lib/ and creates 
+
+    * a help database in helpsigs.val
+    * an ASCII format version of the database in index.txt
+    * a LaTeX format version of the database in ../index.tex
+    * HTML versions of the signature files, and an identifier index,
+      with hyperlinks, in directory htmlsigs
+    * a LaTeX format version of the signature files, with layout and 
+      \index{...} markup, in file ../texsigsigs.tex 
+
+To create the main program, type        
+
+        make
+
+To run the program thus compiled, type
+
+        makebase
+
+The program handles only signatures for (old) Moscow ML structure-mode
+unit interfaces, as used in the Moscow ML library.
+
+
+sestoft@dina.kvl.dk 1996-04-10, 2000-06-28

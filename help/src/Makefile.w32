@@ -1,0 +1,69 @@
+# Makefile for help utility recompilation
+
+MOSMLHOME=d:\mosml
+MOSMLTOOLS=camlrunm $(MOSMLHOME)\tools
+MOSMLC=mosmlc -c -I ../../src/compiler
+MOSMLL=mosmlc -I ../../src/compiler
+MOSMLLEX=mosmllex
+MOSMLYACC=mosmlyac
+#CPP=/lib/cpp -P -traditional -Dunix -Umsdos
+
+all: Database.uo Htmlsigs.uo Lexer.uo Parser.uo Parsspec.uo Printbase.uo \
+	makebase.uo makebase
+
+Parser.sml Parser.sig: Parser.grm
+	$(MOSMLYACC) Parser.grm
+
+makebase : Database.uo Htmlsigs.uo Lexer.uo Parser.uo Parsspec.uo \
+    Printbase.uo makebase.uo
+	$(MOSMLL) -o makebase makebase.uo
+
+base:
+	makebase
+
+install:
+	copy helpsigs.val ..\..\src\mosmllib
+	copy helpsigs.val ..\..\lib
+#	copy index.tex ${HOME}/tex/papers/mosml
+
+.SUFFIXES :
+.SUFFIXES : .sml .sig .ui .uo .mlp .lex .c .o
+
+.sig.ui:
+	$(MOSMLC) $(COMPFLAGS) $<
+
+.sml.uo:
+	$(MOSMLC) $(COMPFLAGS) $<
+
+.mlp.sml:
+	$(CPP) $< > $*.sml
+
+.lex.sml:
+	$(MOSMLLEX) $<
+
+depend: Lexer.sml Parser.sml 
+	del -f Makefile.bak
+	copy Makefile Makefile.bak
+	$(MOSMLTOOLS)\cutdeps < Makefile.bak > Makefile
+	$(MOSMLTOOLS)\mosmldep >> Makefile
+
+clean:
+	del Parser.sig
+        del Parser.sml
+        del Lexer.sml
+	del makebase
+        del helpsigs.val
+        del index.txt
+        del index.tex 
+	del *.ui
+	del *.uo
+	del Makefile.bak
+
+### DO NOT DELETE THIS LINE
+Parser.uo: Parser.ui 
+Lexer.uo: Parser.ui 
+Htmlsigs.uo: Htmlsigs.ui Database.ui 
+Printbase.uo: Database.ui 
+Parsspec.uo: Parser.ui Lexer.uo Database.ui 
+Database.uo: Database.ui 
+makebase.uo: Htmlsigs.ui Database.ui Printbase.uo Parsspec.uo 
