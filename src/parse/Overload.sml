@@ -307,9 +307,9 @@ fun merge_oinfos (O1:overload_info) (O2:overload_info) = let
           | EQUAL => let
             in
               if #2 r1 <> #2 r2 then
-                HOL_MESG ("Merging overload information: "^
-                          "arbitrarily choosing to map "^
-                          #Thy (#1 r1)^"$"^ #Name (#1 r1)^" to "^ #2 r2)
+                HOL_MESG ("Merging overload printing information: "^
+                          "arbitrarily choosing to print "^
+                          #Thy (#1 r1)^"$"^ #Name (#1 r1)^" as "^ #2 r2)
               else ();
               merge_cops (r1::acc) r1s r2s
             end
