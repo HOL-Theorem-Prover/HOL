@@ -33,6 +33,7 @@ sig
    val FORK_CONV  : conv * conv -> conv
    val BINOP_CONV : conv -> conv
    val QUANT_CONV : conv -> conv
+   val STRIP_QUANT_CONV : conv -> conv
    val BINDER_CONV : conv -> conv
    val LHS_CONV   : conv -> conv
    val RHS_CONV   : conv -> conv

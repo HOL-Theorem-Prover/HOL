@@ -348,6 +348,11 @@ fun FORK_CONV (conv1,conv2) tm =
 
 fun BINOP_CONV conv tm = FORK_CONV (conv,conv) tm;
 fun QUANT_CONV conv    = RAND_CONV(ABS_CONV conv);
+fun STRIP_QUANT_CONV conv tm =
+  if is_forall tm orelse is_exists tm orelse is_select tm then
+    QUANT_CONV (STRIP_QUANT_CONV conv) tm
+  else
+    conv tm
 fun BINDER_CONV conv   = ABS_CONV conv ORELSEC QUANT_CONV conv;
 
 (* ===================================================================== *)
