@@ -247,7 +247,7 @@ html1/DTD/xhtml1-strict.dtd">
 </pre>
     to
 <pre>
-         p &lt;= MIN m n = p &lt;= m /\ p <= n
+         p &lt;= MIN m n = p &lt;= m /\ p &lt;= n
 </pre>
 
 <li> For reasons of efficiency, all conversions in the system may now
@@ -266,8 +266,8 @@ html1/DTD/xhtml1-strict.dtd">
 <p> For interactive use, <code>CONV_RULE</code> and
     <code>CONV_TAC</code> handle the exception appropriately, and the
     new function <code>QCONV</cdoe> (of type
-    <code>:&nbsp;conv&nbsp;->&nbsp;conv</code>) can make any
-    conversion handle <code>UNCHANGED</code>.  <code>QCONV</code>'s
+    <code>:&nbsp;conv&nbsp;-&gt;&nbsp;conv</code>) can make any
+    conversion handle <code>UNCHANGED</code>.  <code>QCONV</code>&rsquo;s
     implementation is
 <pre>
          fun QCONV c t = c t handle UNCHANGED => REFL t
@@ -309,13 +309,13 @@ html1/DTD/xhtml1-strict.dtd">
     the following no longer puts <code>EVAL</code> into an infinite
     loop: </p>
 <pre>
-         Define`f x = if x < 2 then 1 else x * f(x - 1)`;
+         Define`f x = if x &lt; 2 then 1 else x * f(x - 1)`;
          EVAL ``f x``;
 </pre>
     <p> Instead, the call to <code>EVAL</code> does this: </p>
 <pre>
          - EVAL ``f x``;
-         &gt; val it = |- f x = (if x < 2 then 1 else x * f (x - 1)) : thm
+         &gt; val it = |- f x = (if x &lt; 2 then 1 else x * f (x - 1)) : thm
 </pre>
     <p> The old behaviour can be restored to affected
     <code>compset</code>s with the following: </p>
