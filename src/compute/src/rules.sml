@@ -1,6 +1,17 @@
 local open HolKernel boolTheory
 in
 
+(* Useful data structure to build tail recursive functions of type 'a -> 'b
+ * (left to right) or 'b -> 'a (right to left), when the domain has a
+ * term-like  structure.
+ *)
+datatype ('a,'b,'c) stack =
+    Ztop
+  | Zrator of { Rand : 'a, Ctx : ('a,'b,'c) stack }
+  | Zrand of { Rator : 'b, Ctx : ('a,'b,'c) stack }
+  | Zabs of { Bvar : 'c, Ctx : ('a,'b,'c) stack }
+;
+
 fun RULES_ERR function message =
     HOL_ERR{origin_structure = "rules",
 		      origin_function = function,

@@ -9,7 +9,7 @@ in
  * optimisation is not so important.
  * 
  * [from_term] is the first step of normalisation, and it is not called
- * later on.
+ * later on (except with external conv).
  *)
 
 fun CL_ERR function message =
@@ -21,7 +21,6 @@ fun CL_ERR function message =
 (* Checking that a given thm is a reduction rule we can handle:
  *         (c p1...pn) = rhs
  * with p1...pn  either a const applied to patterns or a free variable.
- * patterns must be linear.
  *)
 datatype pattern =
     Pvar of int
@@ -36,8 +35,10 @@ fun check_arg_form trm =
       chk Rator (pat1::stk) free'
       end
     else if (is_var t) andalso (stk=[]) then
-      if mem t free then raise CL_ERR "check_arg_form" "non linear pattern"
-      else (t::free, Pvar (length free))
+      let val newi = length free in
+      (free, Pvar (newi - index t free - 1))
+      handle HOL_ERR _ => (t::free, Pvar newi)
+      end
     else if is_const t then (free, Papp{Head=t, Args=rev stk})
     else raise CL_ERR "check_arg_form" "ill-formed pattern"
   in case chk trm [] [] of
@@ -86,40 +87,45 @@ fun appl(App(a,l1),arg) = App(a,arg::l1)
   | appl(t,arg) = App(t,[arg])
 ;
 
-(* Type variable instantiation in dterm *)
-local fun tyi_dt tysub (Cst(c,db)) = Cst(Term.inst tysub c, db)
-        | tyi_dt tysub (App(h,l)) = App(tyi_dt tysub h, map (tyi_dt tysub) l)
-  	| tyi_dt tysub (Abs v) = Abs(tyi_dt tysub v)
-  	| tyi_dt _ v = v
-in
-fun inst_dterm [] v = v
-  | inst_dterm tysub v = tyi_dt tysub v
-end;
+(* Type variable instantiation in dterm. Make it tail-recursive ? *)
+fun inst_type_dterm ([],v) = v
+  | inst_type_dterm (tysub,v) =
+      let fun tyi_dt (Cst(c,db)) = Cst(Term.inst tysub c, db)
+            | tyi_dt (App(h,l))  = App(tyi_dt h, map tyi_dt l)
+  	    | tyi_dt (Abs v)     = Abs(tyi_dt v)
+  	    | tyi_dt v           = v
+      in tyi_dt v end
+;
 
 
-datatype db =
+
+datatype action =
+    Rewrite of rewrite list
+  | Conv of Conv.conv
+
+and db =
     EndDb
-  | Try of { Hcst : term, Rws : rewrite list, Tail : db }
+  | Try of { Hcst : term, Rws : action, Tail : db }
   | NeedArg of db
 
 and rewrite =
     RW of { cst: term,          (* constant which the rule applies to *)
             lhs: pattern list,  (* patterns = constant args in lhs of thm *)
+	    npv: int,           (* number of distinct pat vars in lhs *)
 	    rhs: db dterm,
-	    env: (term * db fterm) array,
-                                (* space for values of free vars. of lhs *)
             thm: thm }          (* thm we use for rewriting *)
 ;
 
-fun add_in_db (n,cst,rw,EndDb) =
-      funpow n NeedArg (Try{Hcst=cst, Rws=[rw], Tail=EndDb})
-  | add_in_db (n,cst,rw,Try{Hcst,Rws,Tail}) =
-      if n=0 andalso cst=Hcst then Try{ Hcst=Hcst, Rws=rw::Rws, Tail=Tail }
-      else Try { Hcst=Hcst, Rws=Rws, Tail=add_in_db(n,cst,rw,Tail) }
-  | add_in_db (0,cst,rw,db as (NeedArg _)) =
-      Try{ Hcst=cst, Rws=[rw], Tail=db }
-  | add_in_db (n,cst,rw,NeedArg tail) =
-      NeedArg(add_in_db(n-1,cst,rw,tail))
+fun add_in_db (n,cst,act,EndDb) =
+      funpow n NeedArg (Try{Hcst=cst, Rws=act, Tail=EndDb})
+  | add_in_db (0,cst,act as Rewrite nrws,Try{Hcst,Rws as Rewrite rws,Tail}) =
+      if cst=Hcst then Try{ Hcst=Hcst, Rws=Rewrite(nrws@rws), Tail=Tail }
+      else Try { Hcst=Hcst, Rws=Rws, Tail=add_in_db(0,cst,act,Tail) }
+  | add_in_db (n,cst,act,Try{Hcst,Rws,Tail}) =
+      Try { Hcst=Hcst, Rws=Rws, Tail=add_in_db(n,cst,act,Tail) }
+  | add_in_db (0,cst,act,db) = Try{ Hcst=cst, Rws=act, Tail=db }
+  | add_in_db (n,cst,act,NeedArg tail) =
+      NeedArg(add_in_db(n-1,cst,act,tail))
 ;
 
 fun key_of (RW{cst, lhs, ...}) =
@@ -148,12 +154,27 @@ fun assoc_clause (RWS rws) cst =
       end
 ;
 
-fun from_term rws env t =
-  case dest_term t of
-    VAR _ => (Bv (index t env) handle HOL_ERR _ => Fv)
-  | CONST{Name,...} => Cst (t,assoc_clause rws Name)
-  | COMB{Rator,Rand} => appl(from_term rws env Rator, from_term rws env Rand)
-  | LAMB{Bvar,Body} => Abs(from_term rws (Bvar :: env) Body)
+fun add_in_db_upd rws (name,arity,hcst) act =
+  let val rl = assoc_clause rws name in
+  rl := add_in_db (arity,hcst,act,!rl)
+  end
+;
+
+fun from_term (rws,env,t) =
+  let fun down (env,t,c) =
+        case dest_term t of
+	  VAR _ => up((Bv (index t env) handle HOL_ERR _ => Fv), c)
+  	| CONST{Name,...} => up(Cst (t,assoc_clause rws Name),c)
+  	| COMB{Rator,Rand} => down(env,Rator,Zrator{Rand=(env,Rand),Ctx=c})
+  	| LAMB{Bvar,Body} => down(Bvar :: env, Body, Zabs{Bvar=(), Ctx=c})
+
+      and up (dt, Ztop) = dt
+	| up (dt, Zrator{Rand=(env,arg), Ctx=c}) =
+	    down (env,arg,Zrand{Rator=dt, Ctx=c})
+	| up (dt, Zrand{Rator=dr, Ctx=c}) = up (appl(dr,dt), c)
+	| up (dt, Zabs{Ctx=c,...}) = up(Abs dt, c)
+  in down (env,t,Ztop)
+  end
 ;
 
 
@@ -166,21 +187,14 @@ fun mk_rewrite rws eq_thm =
   let val {lhs,rhs} = dest_eq (concl eq_thm)
       val (fv,cst,pats) = check_arg_form lhs 
       val gen_thm = foldr (uncurry GEN) eq_thm fv
-      val rhsc = from_term rws (rev fv) rhs
+      val rhsc = from_term (rws, rev fv, rhs)
   in RW{ cst=cst,
 	 lhs=pats,
 	 rhs=rhsc,
-	 env=Array.array(length fv,(lhs,NEUTR)),
+	 npv=length fv,
 	 thm=gen_thm }
   end
   handle HOL_ERR _ => raise CL_ERR "mk_rewrite" "cannot use this thm"
-;
-
-
-fun add_in_db_upd rws (name,arity,ty) rw =
-  let val rl = assoc_clause rws name in
-  rl := add_in_db (arity,ty,rw,!rl)
-  end
 ;
 
 
@@ -188,21 +202,28 @@ fun enter_thm rws str thm =
   let val thm0 = Drule.SPEC_ALL thm
       val thm1 = if str then thm0 else lazyfy_thm thm0
       val rw = mk_rewrite rws thm1 in
-  add_in_db_upd rws (key_of rw) rw
+  add_in_db_upd rws (key_of rw) (Rewrite [rw])
   end;
 
 fun enter_one_thm rws str thm =
   List.app (enter_thm rws str) (Drule.CONJUNCTS (Drule.SPEC_ALL thm))
 ;
 
-fun add_clauses str lthm rws =
+fun add_thms (str,lthm) rws =
   List.app (enter_one_thm rws str) lthm
 ;
 
-fun from_list str lthm =
+fun add_conv (cst,arity,conv) rws =
+  let val {Name,...} = dest_const cst in
+  add_in_db_upd rws (Name,arity,cst) (Conv conv)
+  end;
+
+
+fun from_list (str,lthm) =
   let val rws = new_rws() in
-  add_clauses str lthm rws;
+  add_thms (str,lthm) rws;
   rws
   end;
 
 end;
+
