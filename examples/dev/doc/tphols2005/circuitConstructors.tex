@@ -16,7 +16,7 @@ $
    \forall t.\ \VAR{out}\ t = (\sVAR{in}{1}\ t\ \OR\ \sVAR{in}{2}\ t)\\
 \TURNST\ \DEF{NOT}\ (\VAR{inp},\VAR{out}) ~ = 
    \forall t.\ \VAR{out}\ t = \NOT(\VAR{inp}\ t)\\
-\TURNST\ \DEF{MUX} (\VAR{sw,in_1,in_2nout})~ =~
+\TURNST\ \DEF{MUX} (\VAR{sw,in_1,in_2,out})~ =~
  \forall t.\ out~t =  \IF{sw~t}{in_1~t}{in_2~t}\\
 \TURNST\ \DEF{COMB}\ f\ \VAR{(inp,out)} ~ = \forall t.\ \VAR{out}\ t = f (\VAR{inp}\ t)\\
 \TURNST\ \DEF{DEL}\ (\VAR{inp},\VAR{out}) ~ = 
