@@ -1,6 +1,6 @@
 \DOC COND_REWRITE1_CONV
 
-\TYPE {COND_REWRITE1_CONV : (thm list -> thm -> conv)}
+\TYPE {COND_REWRITE1_CONV : thm list -> thm -> conv}
 
 \SYNOPSIS
 A simple conditional rewriting conversion.
@@ -14,19 +14,20 @@ conversion {COND_REWR_CONV}. The input theorem should be in the following form
 {
    A |- !x11 ... . P1 ==> ... !xm1 ... . Pm ==> (!x ... . Q = R)
 }
-\noindent where each antecedent {Pi} itself may be a conjunction or disjunction.
-This theorem is transformed to a standard form expected by
-{COND_REWR_CONV} which carries out the actual rewriting.
-The transformation is performed by {COND_REWR_CANON}. The search function
-passed to {COND_REWR_CONV} is {search_top_down}. The effect of applying
-the conversion {COND_REWRITE1_CONV ths th} to a term {tm} is to derive a theorem
+\noindent where each antecedent {Pi} itself may be a conjunction or
+disjunction.  This theorem is transformed to a standard form expected
+by {COND_REWR_CONV} which carries out the actual rewriting.  The
+transformation is performed by {COND_REWR_CANON}. The search function
+passed to {COND_REWR_CONV} is {search_top_down}. The effect of
+applying the conversion {COND_REWRITE1_CONV ths th} to a term {tm} is
+to derive a theorem
 {
   A' |- tm = tm[R'/Q']
 }
 \noindent where the right hand side of the equation is obtained by rewriting
-the input term {tm} with an instance of the conclusion of the input theorem. 
+the input term {tm} with an instance of the conclusion of the input theorem.
 The theorems in the list {ths} are used to discharge the assumptions
-generated from the antecedents of the input theorem. 
+generated from the antecedents of the input theorem.
 
 \FAILURE
 {COND_REWRITE1_CONV ths th}  fails if {th} cannot be transformed into the
@@ -34,8 +35,9 @@ required form by {COND_REWR_CANON}. Otherwise, it fails if no match
 is found or the theorem cannot be instantiated.
 
 \EXAMPLE
-The following example illustrates a straightforward use of {COND_REWRITE1_CONV}.
-We use the built-in theorem {LESS_MOD} as the input theorem.
+The following example illustrates a straightforward use of
+{COND_REWRITE1_CONV}.  We use the built-in theorem {LESS_MOD} as the
+input theorem.
 {
    #LESS_MOD;;
    Theorem LESS_MOD autoloading from theory `arithmetic` ...
@@ -60,7 +62,7 @@ We use the built-in theorem {LESS_MOD} as the input theorem.
 is supplied, the resulting theorem has no assumptions.
 
 \SEEALSO
-COND_REWR_TAC, COND_REWRITE1_TAC, COND_REWR_CONV, 
+COND_REWR_TAC, COND_REWRITE1_TAC, COND_REWR_CONV,
 COND_REWR_CANON, search_top_down.
 
 \ENDDOC

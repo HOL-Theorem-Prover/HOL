@@ -26,14 +26,14 @@ will return a theorem
 }
 \noindent where {t'} is the result of substituting instances of
 {R[x'/x]} for corresponding instances of {Q[x'/x]} in the original
-term {t[x]}. All instances of {P x'} which 
-do not appear in the original assumption {asml} are added to the assumption.
-The theorems in the list {thms} are used to eliminate the instances {P
-x'} if it is possible.
+term {t[x]}. All instances of {P x'} which do not appear in the
+original assumption {asml} are added to the assumption.  The theorems
+in the list {thms} are used to eliminate the instances {P x'} if it is
+possible.
 
 \FAILURE
 {RESQ_REWRITE1_CONV}  fails if {th} cannot be transformed into the
-required form by the function {RESQ_REWR_CANON}. Otherwise, it fails if no 
+required form by the function {RESQ_REWR_CANON}. Otherwise, it fails if no
 match is found or the theorem cannot be instantiated.
 
 

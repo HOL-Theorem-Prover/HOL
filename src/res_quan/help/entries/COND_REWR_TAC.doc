@@ -1,8 +1,9 @@
 \DOC COND_REWR_TAC
 
 \BLTYPE
-COND_REWR_TAC : ((term -> term ->
- ((term # term) list # (type # type) list) list) -> thm_tactic)
+COND_REWR_TAC :
+ (term -> term -> ((term * term) list * (type * type) list) list) ->
+ thm_tactic
 \ELTYPE
 
 \SYNOPSIS
@@ -34,18 +35,19 @@ in the following form:
 }
 \noindent where {x1}, ..., {xn} are all the variables that occur free in the
 left-hand side of the conclusion of the theorem but do not occur free in the
-assumptions. 
+assumptions.
 
 If {fn} is a function and {th} is an implicative theorem of the kind
 shown above, then {COND_REWR_TAC fn th} will be a tactic which returns
-a list of subgoals if evaluating 
+a list of subgoals if evaluating
 {
    fn Q[x1,...,xn] gl
 }
-\noindent returns a non-empty list of matches when applied to a goal {(asm,gl)}.
+\noindent returns a non-empty list of matches when applied to a goal
+{(asm,gl)}.
 
-Let {ml} be the match list returned by evaluating {fn Q[x1,...,xn]
-gl}. Each element in this list is in the form of
+Let {ml} be the match list returned by evaluating {fn Q[x1,...,xn] gl}.
+Each element in this list is in the form of
 {
    ([(e1,x1);...;(ep,xp)], [(ty1,vty1);...;(tyq,vtyq)])
 }
@@ -68,7 +70,7 @@ unprimed subterms obtained by applying {INST_TYPE} with
 3) if all antecedents appear in {asm}, the goal {gl} is reduced to
 {gl'} by substituting {R'} for each free occurrence of {Q'}, otherwise,
 in addition to the substitution, all antecedents which do not appear
-in {asm} are added to it and new 
+in {asm} are added to it and new
 subgoals corresponding to these antecedents are created. For example,
 if {Pk'}, ..., {Pm'} do not appear in {asm}, the following subgoals
 are returned:
@@ -82,7 +84,7 @@ If {COND_REWR_TAC} is given a theorem {th}:
 }
 \noindent where the variables {y1}, ..., {ym} do not occur free in the
 left-hand side of the conclusion {Q} but they do occur free in the
-antecedents, then, when carrying out Step 2 described 
+antecedents, then, when carrying out Step 2 described
 above, {COND_REWR_TAC} will attempt to find instantiations for these
 variables from the assumption {asm}. For example, if {x1} and {y1}
 occur free in {P1}, and a match is found in which {e1} is an
