@@ -1,4 +1,5 @@
 signature Parse = sig
+
   type term = Term.term
   type hol_type = Type.hol_type
   type thm = Thm.thm

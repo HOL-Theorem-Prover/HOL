@@ -40,7 +40,7 @@ fun is_nb t =
    then let val {Name, Thy, Ty} = dest_thy_const t
         in Name = "ALT_ZERO" andalso Thy="arithmetic" andalso is_numtype Ty
         end
-   else let val (Rand, Rator) = dest_comb t
+   else let val (Rator, Rand) = dest_comb t
             val {Name, Thy, Ty} = dest_thy_const Rator
         in (Name="NUMERAL_BIT1" orelse Name="NUMERAL_BIT2") 
             andalso Thy = "arithmetic"
@@ -60,7 +60,7 @@ fun is_numeral t =
 
 
 fun dest_numeral t =
-  if not(is_numeral t) then raise ERR "dest_numeral" "Term is not a numeral"
+  if not(is_numeral t) then raise ERR "dest_numeral" "term is not a numeral"
   else
   if is_const t then Arbnum.zero
   else 
