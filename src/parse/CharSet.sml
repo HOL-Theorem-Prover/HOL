@@ -43,7 +43,7 @@ struct
     andb(cword, sub(cs, d)) <> word0
   end
 
-  fun isEmpty cs = cs = empty
+  fun isEmpty cs = length cs = 0;
 
   fun union(cs1, cs2) = let
     fun update(i, w) = orb(w, sub(cs2, i))
