@@ -14,9 +14,24 @@ fun itstrings f [] = raise Fail "itstrings: empty list"
 val normPath = (* string list -> string *)
   Path.toString o Path.fromString o itstrings (curry Path.concat);
 
+fun destProperSuffix s1 s2 = 
+  let val sz1 = String.size s1
+      val sz2 = String.size s2
+      open Substring
+ in
+   if sz1 >= sz2 then NONE
+   else let val (prefix, suffix) = splitAt(all s2, sz2 - sz1)
+        in if string suffix = s1 then SOME (string prefix) else NONE
+       end
+ end;
+
+(*---------------------------------------------------------------------------
+    Set values
+ ---------------------------------------------------------------------------*)
+
 (* The version number inserted in generated files: *)
-val version = "<A HREF=\"http://www.cl.cam.ac.uk/Research/HVG/FTP/\">\
-       \HOL Kananaskis 0";
+val version = 
+ "<A HREF=\"http://www.cl.cam.ac.uk/Research/HVG/FTP/\">HOL Kananaskis 0";
 
 (* HOL distribution directory: *)
 val HOLpath = __;
@@ -155,8 +170,14 @@ val SRCFILES =
         handle _ => (print "Couldn't open HOLDIR/sigobj/SRCFILES";
                      raise Fail "File not found")
      val wholefile = inputAll istrm before closeIn istrm
+     fun munge path = 
+       let val {dir,file} = Path.splitDirFile path
+       in case destProperSuffix "Theory" file
+           of SOME thy => (file, Path.concat(dir,thy^"Script.sml"))
+            | NONE     => (file,path^".sml")
+       end
  in
-   map (normPath o single) (String.tokens Char.isSpace wholefile)
+   map (munge o normPath o single) (String.tokens Char.isSpace wholefile)
  end
 
 fun dirToBase (sigdir, docdirs, filename) =

@@ -91,7 +91,7 @@ fun transfer_file symlink targetdir (df as (dir,file)) =
         let val s1' = normPath s1
             val s2' = normPath s2
         in
-          if symlink then link s1' s2' else FileSys.rename {old=s1', new=s2'}
+          if symlink then link s1' s2' else FileSys.rename{old=s1', new=s2'}
         end
       fun transfer f (dir,file1,file2) =
                f (fullPath [dir,file1])
