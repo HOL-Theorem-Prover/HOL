@@ -345,6 +345,16 @@ val BETA_THM =
 
 val _ = save_thm("BETA_THM", BETA_THM);
 
+val LET_THM = 
+ let val f = Term `f:'a->'b`
+     val x = Term `x:'a`
+ in
+  GEN f (GEN x 
+    (RIGHT_BETA(AP_THM (RIGHT_BETA(AP_THM LET_DEF f)) x)))
+ end;
+
+val _ = save_thm("LET_THM", LET_THM);
+
 (*---------------------------------------------------------------------------*
  *  |- !t1:'a. !t2:'b. (\x. t1) t2 = t1                                      *
  *---------------------------------------------------------------------------*)
@@ -2277,6 +2287,31 @@ val ABS_REP_THM =
    end;
 
 val _ = save_thm("ABS_REP_THM", ABS_REP_THM);
+
+
+val LET_RAND = save_thm("LET_RAND",
+ let val tm1 = Term`\x:'a. P (N x:'b):bool`
+     val tm2 = Term`M:'a`
+     val tm3 = Term`\x:'a. N x:'b`
+     val P   = Term`P:'b -> bool`
+     val LET_THM1 = RIGHT_BETA (SPEC tm2 (SPEC tm1 
+                    (Thm.INST_TYPE [beta |-> bool] LET_THM)))
+     val LET_THM2 = AP_TERM P (RIGHT_BETA (SPEC tm2 (SPEC tm3 LET_THM)))
+ in TRANS LET_THM2 (SYM LET_THM1)
+ end);
+
+
+val LET_RATOR = save_thm("LET_RATOR",
+ let val M = Term`M:'a`
+     val b = Term`b:'b`
+     val tm1 = Term`\x:'a. N x:'b->'c`
+     val tm2 = Term`\x:'a. N x ^b:'c`
+     val LET_THM1 = AP_THM (RIGHT_BETA (SPEC M (SPEC tm1 
+                    (Thm.INST_TYPE [beta |-> Type`:^beta ->'c`] LET_THM)))) b
+     val LET_THM2 = RIGHT_BETA (SPEC M (SPEC tm2 
+                      (Thm.INST_TYPE [beta |-> Type`:'c`] LET_THM)))
+ in TRANS LET_THM1 (SYM LET_THM2)
+ end);
 
 val _ = export_theory();
 
