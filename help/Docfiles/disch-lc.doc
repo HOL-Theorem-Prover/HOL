@@ -1,6 +1,6 @@
 \DOC disch
 
-\TYPE {disch : ((term # term list) -> term list)}
+\TYPE {disch : ((term * term list) -> term list)}
 
 \SYNOPSIS
 Removes those elements of a list of terms that are alpha equivalent to a
@@ -12,8 +12,8 @@ alpha equivalent to {"t"}.
 
 \EXAMPLE
 {
-disch ("\x:bool.T",["A = T";"B = 3";"\y:bool.T"]);;
-["A = T";"B = 3"] : term list
+disch (Term`\x:bool.T`, [Term`A = T`,Term`B = 3`,Term`\y:bool.T`]);
+[`A = T`,`B = 3`] : term list
 }
 \SEEALSO
 filter.

@@ -167,12 +167,12 @@ val Inst =
 
 
 val dFV_Abst = Q.store_thm("dFV_Abst",
- `!t i x. ~(x IN dFV t) ==> (Abst i x t = t)`,
+`!t i x. ~(x IN dFV t) ==> (Abst i x t = t)`,
 Induct
   THEN RW_TAC base_ss [Abst, dFV, IN_UNION, IN_SING]);
 
 val dDEG_Abst = Q.store_thm("dDEG_Abst",
- `!t x i. dDEG t <= i ==> dDEG (Abst i x t) <= (SUC i)`,
+`!t x i. dDEG t <= i ==> dDEG (Abst i x t) <= (SUC i)`,
 Induct
   THEN RW_TAC arith_ss [dDEG, Abst, MAX_LESS_EQ, GSYM ADD1]);
 
@@ -458,8 +458,8 @@ RW_TAC arith_ss [dLAMBDA, dLGH, dLGH_Abst]);
 
 val NTH =
  Define
-    `(NTH 0 (CONS h t) = h)
- /\  (NTH (SUC n) (CONS h t) = NTH n t)`;
+    `(NTH 0 (h::t)       = h)
+ /\  (NTH (SUC n) (h::t) = NTH n t)`;
 
 
 (* --------------------------------------------------------------------- *)
@@ -473,7 +473,7 @@ val CHOM =
  /\  (CHOM con var abs app xs (dBOUND n) =
         if n < LENGTH xs then var (NTH n xs) else ARB)
  /\  (CHOM con var abs app xs (dABS t) =
-       abs (\x. CHOM con var abs app (CONS x xs) t))
+       abs (\x. CHOM con var abs app (x::xs) t))
  /\  (CHOM con var abs app xs (dAPP t u) =
          app (CHOM con var abs app xs t) (CHOM con var abs app xs u))`;
 
@@ -509,7 +509,7 @@ Induct THEN RW_TAC list_ss [PSUB]);
 
 (* Awkward proof *)
 val PSUB_Lemma1 = Q.store_thm("PSUB_Lemma1",
-`!t d x xs. PSUB d (CONS x xs) t = Inst d (PSUB (SUC d) xs t) (dVAR x)`,
+`!t d x xs. PSUB d (x::xs) t = Inst d (PSUB (SUC d) xs t) (dVAR x)`,
 Induct
   THEN RW_TAC list_ss [Inst, PSUB] THENL
  [`d < n` by DECIDE_TAC THEN
@@ -555,7 +555,7 @@ Cases_on `u` THEN RW_TAC list_ss [PSUB]);
 val PSUB_Lemma2 = Q.store_thm("PSUB_Lemma2",
 `(PSUB (SUC 0) xs t = PSUB (SUC 0) ys u')
   ==>
-   !x. (PSUB 0 (CONS x xs) t = PSUB 0 (CONS x ys) u')`,
+   !x. (PSUB 0 (x::xs) t = PSUB 0 (x::ys) u')`,
 PROVE_TAC [PSUB_Lemma1]);
 
 val PSUB_Lemma3 = Q.store_thm("PSUB_Lemma3",

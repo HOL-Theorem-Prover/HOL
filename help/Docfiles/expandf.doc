@@ -1,6 +1,6 @@
 \DOC expandf
 
-\TYPE {expandf : (tactic -> void)}
+\TYPE {expandf : (tactic -> unit)}
 
 \SYNOPSIS
 Applies a tactic to the current goal, stacking the resulting subgoals.
@@ -26,12 +26,13 @@ earlier.
 
 \EXAMPLE
 {
-   #g "HD[1;2;3] = 1";;
-   "HD[1;2;3] = 1"
+   - g `HD[1;2;3] = 1`;
+
+   `HD[1;2;3] = 1`
 
    () : void
 
-   #expandf (REWRITE_TAC[HD;TL]);;
+   - expandf (REWRITE_TAC[HD;TL]);;
    OK..
    goal proved
    |- HD[1;2;3] = 1
@@ -43,12 +44,12 @@ earlier.
 \noindent The following example shows how the use of an invalid tactic can
 yield a  theorem which does not correspond to the  goal set.
 {
-   #set_goal([],"1=2");;
-   "1 = 2"
+   - set_goal([], Term `1=2`);
+   `1 = 2`
 
    () : void
 
-   #expandf (REWRITE_TAC[ASSUME "1=2"]);;
+   - expandf (REWRITE_TAC[ASSUME (Term`1=2`)]);
    OK..
    goal proved
    . |- 1 = 2

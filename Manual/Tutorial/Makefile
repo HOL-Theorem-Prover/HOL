@@ -11,6 +11,9 @@ clean:
 tutorial:
 	latex tutorial.tex 
 
+ps:     tutorial
+	dvips -f tutorial.dvi > tutorial.ps
+
 all:
 	make clean; make tutorial; make tutorial
 

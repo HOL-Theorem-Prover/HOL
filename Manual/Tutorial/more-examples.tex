@@ -29,10 +29,36 @@ others) are to be found:
   larger development due to John Harrison. It illustrates the
   automation of \HOL{} on a classic proof.
 
+\item[\tt ind\_def]
+
+This directory contains some examples of an inductive definition package
+in action. Featured are an operational semantics for a small imperative
+programming language, a small process algebra, and combinatory logic
+with its type system. The files were originally developed by Tom Melham
+and Juanito Camilleri and are extensively commented.
+
+Most of the proofs in these theories can now be done much more easily by
+using some of the recently developed proof tools, namely the simplifier
+and the first order prover.
+
 \item [\tt fol.sml]
 
   This file illustrates John Harrison's implementation of a
   model-elimination style first order prover.
+
+\item[\tt lambda]
+
+This directory develops theories of a "de Bruijn" style lambda calculus,
+and also a name-carrying version. (Both are untyped.) The development
+is a revision of the proofs underlying the paper
+{\it "5 Axioms of Alpha Conversion",
+            Andy Gordon and Tom Melham,
+            Proceedings of TPHOLs'96, Springer LNCS 1125}.
+
+\item[\tt parity]
+
+  This sub-directory contains the files used in the parity example of
+  chapter~\ref{parity}.
 
 \item [\tt MLsyntax]
 
@@ -42,15 +68,16 @@ others) are to be found:
   totally unrealistic subset of ML is defined, along with a simple
   mutually recursive function over the syntax.
 
-\item[\tt parity]
-
-  This sub-directory contains the files used in the parity example of
-  chapter~\ref{parity}.
-
 \item[\tt Thery.sml]
 
   A very short example due to Laurent Thery, demonstrating a cute
   inductive proof.
+
+\item[\tt RSA]
+
+       This directory develops some of the mathematics underlying
+       the RSA cryptography scheme. The theories have been 
+       produced by Laurent Thery of INRIA Sophia-Antipolis.
 
 \end{description}
 

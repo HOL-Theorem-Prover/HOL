@@ -907,19 +907,19 @@ Q.EXISTS_TAC `\u y. BETA u (VAR y)` THEN RW_TAC base_ss [BETA]);
 val ISUB_DEF =
  Define
      `($ISUB t [] = t)
-  /\  ($ISUB t (CONS (s,x) rst) = $ISUB ([s/x]t) rst)`;
+  /\  ($ISUB t ((s,x)::rst) = $ISUB ([s/x]t) rst)`;
 
 val _ = set_fixity "ISUB" (Infixr 501);
 
 val DOM_DEF =
  Define
      `(DOM [] = {})
-  /\  (DOM (CONS (x,y) rst) = {y} UNION DOM rst)`;
+  /\  (DOM ((x,y)::rst) = {y} UNION DOM rst)`;
 
 val FVS_DEF =
  Define
     `(FVS [] = {})
- /\  (FVS (CONS (t,x) rst) = FV t UNION FVS rst)`;
+ /\  (FVS ((t,x)::rst) = FV t UNION FVS rst)`;
 
 
 val FINITE_DOM = Q.store_thm("FINITE_DOM",
@@ -947,7 +947,7 @@ val {rules=RENAMING_rules, induction=RENAMING_ind} =
   in
     ind_defLib.indDefine "RENAMING_DEF"
      [(([], []),              `^RENAMING []`),
-      (([],[`^RENAMING R`]), `^RENAMING (CONS (VAR y,x) R)`)
+      (([],[`^RENAMING R`]), `^RENAMING ((VAR y,x)::R)`)
      ]
      Prefix (`^RENAMING R`, [])
   end;
@@ -957,15 +957,15 @@ val RENAMING_DEF    = LIST_CONJ RENAMING_rules;
 val _ = save_thm("RENAMING",RENAMING_DEF);
 val _ = save_thm("RENAMING_ind",RENAMING_ind);
 
-val RENAMING_TAC    = MAP_FIRST ind_defLib.RULE_TAC RENAMING_rules;
-val RENAMING_cases  = ind_defLib.derive_cases_thm (RENAMING_rules,RENAMING_ind);
+val RENAMING_TAC   = MAP_FIRST ind_defLib.RULE_TAC RENAMING_rules;
+val RENAMING_cases = ind_defLib.derive_cases_thm (RENAMING_rules,RENAMING_ind);
 fun RENAMING_INDUCT_THEN ttac
    = ind_defLib.RULE_INDUCT_THEN RENAMING_ind ttac ttac;
 
 val RENAME_DEF =
  Define
-     `(RENAME [] x = x)
-  /\  (RENAME (CONS (p,q) ss) x = RENAME ss (if (x = q) then VNAME p else x))`;
+     `(RENAME [] x          = x)
+  /\  (RENAME ((p,q)::ss) x = RENAME ss (if (x = q) then VNAME p else x))`;
 
 
 val RENAMING_LEMMA = Q.store_thm("RENAMING_LEMMA",
@@ -998,7 +998,7 @@ RENAMING_INDUCT_THEN (ASSUME_TAC o GSYM)
   THEN RW_TAC base_ss [ISUB_DEF, RENAME_DEF, VNAME_DEF,SUB_VAR]);
 
 val ISUB_CON = Q.store_thm("ISUB_CON",
-`!^R k. (CON k) ISUB ^R = (CON k)`,
+`!^R k. (CON k) ISUB ^R = CON k`,
 Induct THEN Ho_rewrite.REWRITE_TAC[pairTheory.FORALL_PROD]
  THEN RW_TAC base_ss [ISUB_DEF, SUB_THM]);
 
