@@ -789,23 +789,29 @@ val elim_lt_coeffs2 = store_thm(
     PROVE_TAC [INT_LET_TRANS]
   ]);
 
-val elim_le_coeffs_pos = store_thm(
-  "elim_le_coeffs_pos",
-  ``!m n x.  0 < m ==>
-             (&n <= m * x = (if m int_divides &n then &n / m
-                              else &n / m + 1) <= x)``,
+val elim_le_coeffs = store_thm(
+  "elim_le_coeffs",
+  ``!m n x.  0 < m ==> (0 <= m * x + n = 0 <= x + n/m)``,
   REPEAT STRIP_TAC THEN
-  `?mn. m = &mn` by PROVE_TAC [NUM_POSINT_EXISTS, INT_LE_LT] THEN
-  FULL_SIMP_TAC arith_ss [GSYM INT_NOT_LT, elim_lt_coeffs2, INT_LT]);
-
-val elim_le_coeffs_neg = store_thm(
-  "elim_le_coeffs_neg",
-  ``!m n x. 0 < m ==> (~&n <= m * x = ~(&n / m) <= x)``,
-  REPEAT STRIP_TAC THEN SIMP_TAC arith_ss [GSYM INT_NOT_LT] THEN
-  `?mn. m = &mn` by PROVE_TAC [NUM_POSINT_EXISTS, INT_LE_LT] THEN
-  CONV_TAC (BINOP_CONV (REWR_CONV (GSYM INT_LT_NEG))) THEN
-  FULL_SIMP_TAC arith_ss [INT_NEGNEG, INT_NEG_RMUL, elim_lt_coeffs1,
-                          INT_LT]);
+  `~(m = 0) /\ ~(m < 0)` by PROVE_TAC [INT_LT_REFL, INT_LT_ANTISYM] THEN
+  Q.SPEC_THEN `m` MP_TAC INT_DIVISION THEN
+  ASM_SIMP_TAC arith_ss [] THEN
+  DISCH_THEN (Q.SPEC_THEN `n` STRIP_ASSUME_TAC) THEN
+  Q.ABBREV_TAC `q = n / m` THEN POP_ASSUM (K ALL_TAC) THEN
+  Q.ABBREV_TAC `r = n % m` THEN POP_ASSUM (K ALL_TAC) THEN
+  FIRST_X_ASSUM SUBST_ALL_TAC THEN
+  SIMP_TAC arith_ss [INT_ADD_ASSOC, INT_MUL_COMM, GSYM INT_LDISTRIB] THEN
+  EQ_TAC THEN STRIP_TAC THENL [
+    `0 < m * (x + q) + m * 1` by
+        (MATCH_MP_TAC INT_LET_TRANS THEN
+         Q.EXISTS_TAC `m * (x + q) + r` THEN
+         ASM_SIMP_TAC arith_ss [INT_LT_LADD, INT_MUL_RID]) THEN
+    `0 < m * (x + q + 1)` by PROVE_TAC [INT_LDISTRIB] THEN
+    `0 < x + q + 1` by PROVE_TAC [INT_LT_MONO, INT_MUL_RZERO] THEN
+    PROVE_TAC [elim_minus_ones, int_sub, less_to_leq_samel],
+    MATCH_MP_TAC INT_LE_TRANS THEN Q.EXISTS_TAC `m * (x + q)` THEN
+    PROVE_TAC [INT_LE_MONO, INT_MUL_RZERO, INT_LE_ADDR]
+  ]);
 
 val elim_eq_coeffs = store_thm(
   "elim_eq_coeffs",

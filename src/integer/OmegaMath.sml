@@ -103,36 +103,12 @@ fun gcd_le_check tm = let
     mk_mult(term_of_int (int_of_term c div g), v)
   end
   val newvars_sum = list_mk_plus (map mapthis vars)
-  val (nq, nr) = divmod(numpart_i, g)
+  val newrhs = mk_plus(mk_mult(g_t, newvars_sum), numpart)
+  val newrhs_th = AP_TERM (rator tm) (INT_RING_CONV (mk_eq(r, newrhs)))
 in
-  if nr = zero then let
-      val factor = mk_plus(newvars_sum, term_of_int nq)
-      val newrhs = mk_mult(g_t, factor)
-      val newrhs_th = AP_TERM (rator tm) (INT_RING_CONV (mk_eq(r, newrhs)))
-      val final_th = MP (SPECL [g_t, zero_tm, factor] INT_LE_MONO) zero_lt_g
-    in
-      K newrhs_th THENC LAND_CONV (K (SYM (SPEC g_t INT_MUL_RZERO))) THENC
-      K final_th
-    end
-  else let
-      val gvars = mk_mult(g_t, newvars_sum)
-      val newrhs = mk_plus(gvars, numpart)
-      val newrhs_th = AP_TERM (rator tm) (INT_RING_CONV(mk_eq(r, newrhs)))
-      val (negnegconv1, negnegconv2, elimth, newlhs) =
-          if is_negated numpart then
-            (REWR_CONV INT_NEGNEG, ALL_QCONV, elim_le_coeffs_pos,
-             rand (rand numpart))
-          else
-            (ALL_QCONV, REWR_CONV INT_NEGNEG ORELSEC REWR_CONV INT_NEG_0,
-             elim_le_coeffs_neg, rand numpart)
-      val final_th = MP (SPECL [g_t, newlhs, newvars_sum] elimth)
-                        zero_lt_g
-    in
-      K newrhs_th THENC REWR_CONV le_move_right_left THENC
-      LAND_CONV (REWR_CONV INT_ADD_LID) THENC LAND_CONV negnegconv1 THENC
-      K final_th THENC LAND_CONV REDUCE_CONV THENC
-      REWR_CONV le_move_all_right THENC RAND_CONV (RAND_CONV negnegconv2)
-    end
+  K newrhs_th THENC
+  K (MP (SPECL [g_t, numpart, newvars_sum] elim_le_coeffs) zero_lt_g) THENC
+  RAND_CONV (RAND_CONV REDUCE_CONV)
 end tm
 
 (* ----------------------------------------------------------------------
