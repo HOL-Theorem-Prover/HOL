@@ -1471,6 +1471,7 @@ fun BUS_SPLIT tm =                           (* Pretty gross implementation! *)
   end)
   handle HOL_ERR _ => raise ERR "BUS_SPLIT" "not a bus";
 
+(************************* Replaced by code from KXS *************************
 (*****************************************************************************)
 (* ``(\(load,inp,done,out). P load inp done out)``                           *)
 (* -->                                                                       *)
@@ -1515,6 +1516,91 @@ fun ABS_IN_OUT_SPLIT_CONV tm =
    MK_PABS(PGEN args th2)
   end)
  handle HOL_ERR _ => REFL tm;
+******************************************************************************)
+
+
+(*---------------------------------------------------------------------------*)
+(*     (?a. P a /\ Q) --> |- (?a. P a /\ Q) = (?a. P a) /\ Q                 *)
+(*---------------------------------------------------------------------------*)
+
+fun LEAND_CONV M =
+  let val (x,N) = dest_exists M
+      val (N1,N2) = dest_conj N
+      val P = mk_abs(x,N1)
+      val thm1 = Specialize N2 (Specialize P
+                (INST_TYPE [alpha |-> type_of x] LEFT_EXISTS_AND_THM))
+      val (ltm,rtm) = dest_eq (concl thm1)
+      val (ex,abstr) = dest_comb ltm
+      val ltma = mk_comb(ex,mk_abs(x,beta_conv (mk_comb(abstr,x))))
+      val thm2 = ALPHA ltm ltma
+      val (c1,c2) = dest_conj rtm
+      val (ex,abstr) = dest_comb c1
+      val c1a = mk_comb(ex,mk_abs(x,beta_conv (mk_comb(abstr,x))))
+      val rtma = mk_conj(c1a,c2)
+      val thm3 = ALPHA rtm rtma
+      val thm4 = MK_COMB
+                  (MK_COMB(REFL (inst [alpha |-> bool] boolSyntax.equality),thm2),
+                   thm3)
+      val thm5 = EQ_MP thm4 thm1  (* lot of work to get renaming! *)
+      val thm6 = CONV_RULE
+                   (RHS_CONV (RATOR_CONV (RAND_CONV (QUANT_CONV BETA_CONV)))) thm5
+      val thm7 = CONV_RULE
+                   (LHS_CONV (QUANT_CONV (RATOR_CONV (RAND_CONV BETA_CONV)))) thm6
+  in thm7
+  end;
+
+(*****************************************************************************)
+(* ``(\(load,inp,done,out). P load inp done out)``                           *)
+(* -->                                                                       *)
+(* |- (\(load,inp,done,out). P load inp done out)                            *)
+(*    =                                                                      *)
+(*    (\(load,inp,done,out).                                                 *)
+(*     ?inp1 ... inpm. (inp = inp1 <> ... <> inpm) /\                        *)
+(*     ?out1 ... outn. (out = out1 <> ... <> outn) /\                        *)
+(*     P load inp done out)                                                  *)
+(*****************************************************************************)
+
+fun ABS_IN_OUT_SPLIT_CONV tm =
+  (let val (args,bdy) = dest_pabs tm
+       val [ld,inp,done,out] = strip_pair args
+       val inpth = BUS_SPLIT inp
+       val (inpvars,inpbdy) = strip_exists(concl inpth)
+       val outth = BUS_SPLIT out
+       val (outvars,outbdy) = strip_exists(concl outth)
+       val goal =
+            mk_eq
+             (bdy,
+              list_mk_exists
+               (inpvars,
+                mk_conj
+                 (inpbdy,
+                  list_mk_exists(outvars,mk_conj(outbdy,bdy)))))
+       val th1 = prove(goal,
+          GEN_BETA_TAC THEN
+          CONV_TAC (RHS_CONV (STRIP_QUANT_CONV
+                    (RAND_CONV (REPEATC (LAST_EXISTS_CONV LEAND_CONV))))) THEN
+          CONV_TAC (RHS_CONV (REPEATC (LAST_EXISTS_CONV LEAND_CONV))) THEN
+          CONV_TAC(RHS_CONV (RATOR_CONV(RAND_CONV (REWRITE_CONV [inpth])))) THEN
+          CONV_TAC(RHS_CONV (REWRITE_CONV [AND_CLAUSES])) THEN
+          CONV_TAC(RHS_CONV (RATOR_CONV(RAND_CONV (REWRITE_CONV [outth])))) THEN
+          CONV_TAC(RHS_CONV (REWRITE_CONV [AND_CLAUSES]))
+          THEN REFL_TAC)
+          handle HOL_ERR _
+              => (if_print "ABS_IN_OUT_SPLIT_CONV fails to prove:\n";
+                  if_print_term goal;print"\n";
+                  raise ERR "ABS_IN_OUT_SPLIT_CONV" "proof failure")
+
+       val th2 = RIGHT_CONV_RULE
+                  (STRIP_QUANT_CONV
+                   (RAND_CONV
+                    (STRIP_QUANT_CONV
+                     (Ho_Rewrite.ONCE_REWRITE_CONV[UNWIND_THM]))
+                    THENC STRIP_QUANT_CONV
+                           (Ho_Rewrite.ONCE_REWRITE_CONV[UNWIND_THM]))) th1
+   in
+    MK_PABS(PGEN args th2)
+   end)
+  handle HOL_ERR _ => REFL tm;
 
 val at_thms =
  [UNDISCH REG_IMP,UNDISCH REGF_IMP,
@@ -1534,7 +1620,7 @@ val MAKE_NETLIST =
  Ho_Rewrite.REWRITE_RULE
    [FUN_EXISTS_PROD,LAMBDA_PROD,COMB_ID,COMB_CONSTANT_1,COMB_CONSTANT_2,
     COMB_CONSTANT_3,COMB_FST,COMB_SND,GSYM BUS_CONCAT_def,
-    (*COMP_SEL_CLAUSES,SEL_CONCAT_CLAUSES,*)BUS_CONCAT_PAIR,BUS_CONCAT_o,
+    BUS_CONCAT_PAIR,BUS_CONCAT_o,
     FST,SND,BUS_CONCAT_ETA,ID_CONST,ID_o,o_ID,
     DEL_CONCAT,DFF_CONCAT,MUX_CONCAT,
     POSEDGE_IMP_def,LATCH_def,
@@ -1550,6 +1636,7 @@ val MAKE_NETLIST =
 (*****************************************************************************)
 (* Compile a device implementation into a clocked circuit represented in HOL *)
 (*****************************************************************************)
+(*
 val MAKE_CIRCUIT =
  DISCH_ALL                                                                 o
  LIST_ANTE_EXISTS_INTRO                                                    o 
@@ -1582,6 +1669,18 @@ val MAKE_CIRCUIT =
    ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
    GSYM DEL_IMP_THM,DEL_IMP_def,
    Ite_def,Par_def,Seq_def,o_THM];
+*)
+
+val MAKE_CIRCUIT =
+ DISCH_ALL                                                                 o
+ LIST_ANTE_EXISTS_INTRO                                                    o 
+ (I ## AP_ANTE_IMP_TRANS (DEPTH_IMP (IMP_REFINEL at_thms)))                o
+ (I ## Ho_Rewrite.REWRITE_RULE[at_CONCAT])                                 o
+ at_SPEC_ALL ``clk:num->bool``                                             o
+ Ho_Rewrite.REWRITE_RULE[GSYM LEFT_FORALL_IMP_THM,REG_CONCAT]              o
+ DEV_IMP_FORALL                                                            o
+ CONV_RULE(RATOR_CONV(RAND_CONV(PABS_CONV EXISTS_OUT_CONV)))               o
+ MAKE_NETLIST;
 
 
 

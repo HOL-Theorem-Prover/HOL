@@ -487,5 +487,5 @@ ML reference "if_print_flag" to false.
 == [06.02.05: MJCG added refinement to clocked dtype registers               ==
 == [08.02.05: MJCG added ?-quantification of internal wires to MAKE_CIRCUIT  ==
 == [10.02.05: MJCG split input and output busses                             ==
-== [11.02.05: MJCG added Holmakefile (thanks to advice from MN)              ==
+== [11.02.05: Holmakefile (thanks to MN) + code improvements (thanks to KXS) ==
 ===============================================================================
