@@ -989,7 +989,7 @@ val _ =
      "    --version | -v       : show version information\n"]
   else
     if show_version then
-      print "Holmake version 2.1.1\n"
+      print "Holmake version 3.0\n"
     else let
       open Process
       val result = deal_with_targets targets
