@@ -391,7 +391,7 @@ local fun add_record_facts (tyinfo, NONE) = (tyinfo, [])
         | field_names_of _ = NONE
 in
 fun primHol_datatype db q =
- let val astl = ParseDatatype.parse q
+ let val astl = ParseDatatype.parse q handle (e as HOL_ERR _) => Raise e
  in
     if is_enum_type_spec astl
       then build_enum_tyinfos astl
