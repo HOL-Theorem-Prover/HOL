@@ -59,6 +59,9 @@ val type_parser2 =
 val term_printer = ref (term_pp.pp_term (term_grammar()) (type_grammar()))
 val type_printer = ref (type_pp.pp_type (type_grammar()))
 
+fun print_from_grammars (tyG, tmG) =
+  (type_pp.pp_type tyG, term_pp.pp_term tmG tyG)
+
 fun update_type_fns () =
   if !type_grammar_changed then let
   in

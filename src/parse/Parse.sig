@@ -99,6 +99,11 @@ in
     val parse_from_grammars :
       (parse_type.grammar * term_grammar.grammar) ->
       ((hol_type frag list -> hol_type) * (term frag list -> term))
+    val print_from_grammars :
+      (parse_type.grammar * term_grammar.grammar) ->
+      ((Portable.ppstream -> hol_type -> unit) *
+       (Portable.ppstream -> term -> unit))
+
     val term_grammar : unit -> grammar
 
     (* the following functions modify the grammar, and do so in such a
