@@ -111,7 +111,7 @@ val div_def = Define
                      in (y <= SUC r => (SUC q,0) 
                         | (*otherwise*) (q, SUC r)))`;
 
-(* Test nested ifs *)
+(* Test nested ifs *)   (* FAILS! *)
 val smaller_def = Define
   `(smaller((0,i), z) = (i:num))    /\
    (smaller((SUC x, i), (0,j)) = j) /\
@@ -536,6 +536,7 @@ end;
         labelled n-ary trees (built from constructor "Node").
  ---------------------------------------------------------------------------*)
  
+FAILS !
 app load ["ltreeTheory", "numLib"]; open numLib listTheory;
 
 val ltree_map_def =

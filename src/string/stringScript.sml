@@ -288,7 +288,10 @@ val _ = adjoin_to_theory
    S "      nchotomy=STRING_CASES,";
    S "      size=SOME(Parse.Term`string_size`,TypeBase.ORIG STRING_SIZE_DEF),";
    S "      one_one=SOME STRING_11,";
-   S "      distinct=SOME (CONJUNCT1 STRING_DISTINCT)});"
+   S "      distinct=SOME (CONJUNCT1 STRING_DISTINCT)});";
+   S " ";
+   S "val _ = computeLib.add_funs";
+   S "        [STRING_CASE_DEF,STRING_SIZE_DEF,EXPLODE_EQNS,IMPLODE_EQNS];"
  end)};
 
 (*---------------------------------------------------------------------------
@@ -301,3 +304,4 @@ val BY_LISTOP_DEF = Q.new_definition
 
 
 val _ = export_theory();
+

@@ -41,6 +41,8 @@ val Neqn = Defn.eqns_of N_defn;
 (*---------------------------------------------------------------------------
       Prove partial correctness for N, to see how such a proof
       works when the termination relation has not yet been supplied.
+      The proof is a bit slow because it's short, and because the 
+      rewriter invokes the arithmetic decision procedure repeatedly.
  ---------------------------------------------------------------------------*)
 
 local val SOME Nind = Defn.ind_of N_defn
@@ -54,11 +56,8 @@ val Npartly_correct = Q.prove(
 STRIP_TAC THEN recInduct Nind
   THEN REPEAT STRIP_TAC
   THEN ONCE_REWRITE_TAC [Neqn]
-  THEN RW_TAC bool_ss []
-  THEN Q.PAT_ASSUM `COND p q r > s` MP_TAC
-  THEN ASM_REWRITE_TAC[] 
-  THENL [NTAC 2 (POP_ASSUM MP_TAC), ALL_TAC]
-  THEN ARITH_TAC)
+  THEN RW_TAC bool_ss [DECIDE (Term`x+11-10 = x+1`)]
+  THEN RW_TAC arith_ss [])
 end;
 
 
@@ -149,23 +148,15 @@ WF_REL_TAC `measure \x. 101 - x`  (* non-nested TC proved here *)
       Now try some computations with N.
  ---------------------------------------------------------------------------*)
 
-local open computeLib arithmeticTheory
-      val compset = reduceLib.reduce_rws()
-      val _ = add_thms [GREATER_EQ, GREATER_DEF] compset
-      val _ = add_thms [N_eqn] compset
-in
-val Eval = Count.apply (CBV_CONV compset) o Term
-end;
-
-Eval `N 0`;
-Eval `N 10`;
-Eval `N 11`;
-Eval `N 12`;
-Eval `N 40`;
-Eval `N 89`;
-Eval `N 90`;
-Eval `N 99`;
-Eval `N 100`;
-Eval `N 101`;
-Eval `N 102`;
-Eval `N 127`;
+EVAL (Term `N 0`);
+EVAL (Term `N 10`);
+EVAL (Term `N 11`);
+EVAL (Term `N 12`);
+EVAL (Term `N 40`);
+EVAL (Term `N 89`);
+EVAL (Term `N 90`);
+EVAL (Term `N 99`);
+EVAL (Term `N 100`);
+EVAL (Term `N 101`);
+EVAL (Term `N 102`);
+EVAL (Term `N 127`);
