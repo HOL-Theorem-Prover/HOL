@@ -95,21 +95,21 @@ val config_src = fullPath [holdir, "tools", "configure.sml"]
 val config_dest = fullPath [holdir, "tools", "newconfig.sml"]
 
 val _ = fill_holes(config_src, config_dest)
-        ["val mosmldir =" --> mosmldir,
-         "val holdir =" --> holdir]
+        ["val mosmldir =" --> ("val mosmldir = \""^mosmldir^"\"\n"),
+         "val holdir =" --> ("val holdir = \""^holdir^"\"\n")]
 
 
 
-val _ - print "Configuring the system\n";
+val _ = print "Configuring the system\n";
 val _ = FileSys.mkDir (fullPath [holdir, "src", "0"]) handle _ => ()
 val _ = Process.system ("mosml < \"" ^ config_dest ^ "\"")
 
 val _ = print "Setting up Globals.sml file\n";
 val _ = fill_holes(fullPath [holdir, "src", "0", "Globals.sml"],
-                   fullPath [holdir, "sigobj", "Globals.sml"])
+                   fullPath [holdir, "sigobj", "Globals.sml"]) []
 
 val _ = FileSys.chDir (fullPath [holdir, "sigobj"])
-val _ = Systeml.systeml [fullPath [holdir, "tools", "Holmake", "Holmake"],
+val _ = Systeml.systeml [fullPath [holdir, "bin", "Holmake"],
                          "Globals.uo"]
 
 val _ = print "Building the help system \n";

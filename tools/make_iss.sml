@@ -1,49 +1,81 @@
 (* program to output iss file *)
+(* to compile this structure, cd to the tools directory, and
+     mosml -o make_iss.exe -I Holmake -I ..\sigobj
+*)
 structure make_iss = struct
 
 structure FileSys = OS.FileSys
 
 val holdir = Globals.HOLDIR
-val systeml = Systeml.winnt_systeml
+val systeml = Systeml.systeml
 
 val sysname = Globals.release ^ " " ^ Int.toString Globals.version
 val _ = print "Changing to hol directory\n"
 val _ = FileSys.chDir holdir
 
+fun normPath s = Path.toString(Path.fromString s)
+fun itstrings f [] = raise Fail "itstrings: empty list"
+  | itstrings f [x] = x
+  | itstrings f (h::t) = f h (itstrings f t);
+
+fun fullPath slist = normPath
+   (itstrings (fn chunk => fn path => Path.concat (chunk,path)) slist);
+
 fun die s = (print s; Process.exit Process.failure)
 
 local
   open FileSys
-  val _ = print "Purging source directory\n"
-  fun traverse dir = let
+  fun traverse P dir = let
     val dir0 = getDir ()
     val _ = chDir dir
     val ds = openDir "."
-    fun dodir docfound acc =
+    fun dodir found_a_keeper acc =
       case readDir ds of
-        NONE => (docfound, acc)
+        NONE => (found_a_keeper, acc)
       | SOME s =>
-          if isDir s then dodir docfound (s::acc)
+          if isDir s then dodir found_a_keeper (s::acc)
           else
-            if String.size s < 6 orelse
-               String.extract(s, String.size s - 4, NONE) <> ".doc"
-            then
-              (remove s; dodir docfound acc)
+            if P s then
+              (remove s; dodir found_a_keeper acc)
             else
               dodir true acc
-    val (docfound, subdirectories) = dodir false []
+    val (found_a_keeper, subdirectories) = dodir false []
     val _ = closeDir ds
-    val subfound = foldl (fn (d,b) => traverse d orelse b) false subdirectories
+    val found_anything_to_keep =
+        foldl (fn (d,b) => traverse P d orelse b) found_a_keeper subdirectories
     val _ = chDir dir0
   in
-    if not docfound andalso not subfound then (rmDir dir; false) else true
+    if not found_anything_to_keep then (rmDir dir; false) else true
   end
+  fun is_not_docfile s =
+      String.size s < 6 orelse
+      String.extract(s, String.size s - 4, NONE) <> ".doc"
+  fun is_html_or_adoc s =
+      String.size s >= 6 andalso let
+        val suff = String.extract(s, String.size s - 5, NONE)
+      in
+        suff = ".html" orelse suff = ".adoc"
+      end
 in
-  val _ = traverse "src" handle OS.SysErr(s,_) => die ("OS error: "^s)
+  val _ = print "Purging source directory\n"
+  val _ = traverse is_not_docfile "src"
+      handle OS.SysErr(s,_) => die ("OS error: "^s)
+  val _ = print "Purging help directory of HTML and .adoc files\n"
+  val _ = traverse is_html_or_adoc "help"
+      handle OS.SysErr(s,_) => die ("OS error: "^s)
 end
 
+val _ = FileSys.chDir holdir
+val _ = print "Removing other unnecessary files: ";
+val _ = FileSys.remove (fullPath ["help", "HOL.Help"])
+    handle Interrupt => raise Interrupt | _ => ()
+val _ = print "help/HOL.Help, "
+val _ = (FileSys.chDir "help", FileSys.chDir "src")
+val _ = systeml [fullPath [holdir, "bin", "Holmake"], "cleanAll"]
+val _ = print "cleanable stuff in help/src\n\n"
+
 val _ = print "Compiling win-config.exe"
-val _ = FileSys.chDir "tools"
+val _ = FileSys.chDir (fullPath [holdir, "tools"])
 val _ = if systeml ["mosmlc", "-I", "Holmake", "-o", "win-config.exe",
                     "win-config.sml"] = Process.success then ()
         else (print "Compilation failed!\n"; Process.exit Process.failure)
@@ -127,9 +159,9 @@ end
 
 val icon_section = "\
 \[Icons]\n\
-\Name : \"{group}\\HOL\" ; FileName : \"{app}\\bin\\hol.bat\" ; WorkingDir: \"{app}\" ; IconFilename : \"{app}\\tools\\HOL.ico\"\n\
-\Name : \"{group}\\``HOL``\" ; FileName : \"{app}\\bin\\hol.unquote.bat\" ; WorkingDir: \"{app}\" ; IconFilename : \"{app}\\tools\\HOL.ico\"\n\
-\Name : \"{userdesktop}\\HOL\" ; FileName : \"{app}\\bin\\hol.bat\" ; WorkingDir: \"{app}\" ; IconFilename : \"{app}\\tools\\HOL.ico\"\n"
+\Name : \"{group}\\HOL\" ; FileName : \"{app}\\bin\\hol.bat\" ; WorkingDir: \"{app}\"\n\
+\Name : \"{group}\\``HOL``\" ; FileName : \"{app}\\bin\\hol.unquote.bat\" ; WorkingDir: \"{app}\"\n\
+\Name : \"{userdesktop}\\HOL\" ; FileName : \"{app}\\bin\\hol.bat\" ; WorkingDir: \"{app}\"\n"
 
 val run_section = "\
 \[Run]\n\
