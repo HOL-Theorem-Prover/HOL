@@ -5,6 +5,7 @@ sig
      list of names for the record fields.  Returns a tyinfo and a list
      of the names of the extra theorems that have been added to the
      tyinfo as simplifications *)
-  val prove_recordtype_thms :
-    (TypeBase.tyinfo * string list) -> (TypeBase.tyinfo * string list)
+
+  val prove_recordtype_thms 
+    : TypeBase.tyinfo * string list -> TypeBase.tyinfo * string list
 end

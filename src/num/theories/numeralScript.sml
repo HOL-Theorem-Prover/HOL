@@ -603,4 +603,13 @@ val numeral_evenodd = store_thm(
   SIMP_TAC bool_ss [NUMERAL_BIT1, ALT_ZERO, NUMERAL_BIT2, ADD_CLAUSES,
                     EVEN, ODD, EVEN_ADD, ODD_ADD]);
 
+
+val numeral_fact = store_thm(
+  "numeral_fact",
+  Term `!n. FACT n = if n = 0 then 1 else n * FACT (PRE n)`,
+ GEN_TAC
+   THEN STRIP_ASSUME_TAC (SPEC (Term`n:num`) num_CASES)
+   THENL [ALL_TAC, POP_ASSUM SUBST_ALL_TAC]
+   THEN  ASM_REWRITE_TAC[FACT,PRE,NOT_SUC]);
+
 val _ = export_theory();

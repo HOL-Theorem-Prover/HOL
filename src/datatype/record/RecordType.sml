@@ -10,6 +10,7 @@ struct
 
 local open HolKernel Parse boolLib
       infix THEN
+      infixr 3 -->
 
 val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
 fun -- q x = Term q
@@ -42,33 +43,26 @@ fun foldl f zero []      = zero
    copyright notice is included in any copy.  *)
 
   fun dest_all_type ty =
-    if is_vartype ty then
-      (dest_vartype ty,[]: hol_type list)
-    else
-      Psyntax.dest_type ty;
+    if is_vartype ty then (dest_vartype ty,[]: hol_type list)
+    else dest_type ty;
+
   fun type2string ty =
-    let
-      fun string_aux ty =
-        let
-          val (s,terml) = dest_all_type ty in
-            if null terml then
-              s
-            else
-              let
-                val sl         = map string_aux terml
-                fun comapp x y = x^","^y in
-                  "("^(foldl comapp (hd sl) (tl sl))^")"^s
-              end
-        end
+    let fun string_aux ty =
+         let val (s,terml) = dest_all_type ty 
+         in if null terml then s
+            else let val sl = map string_aux terml
+                     fun comapp x y = x^","^y 
+                 in "("^(foldl comapp (hd sl) (tl sl))^")"^s
+                 end
+         end
     in
-      (string_aux ty)
+      string_aux ty
     end;
 
   (* end of PW's copyrighted stuff *)
 
   fun variant tml tm = let
-    fun name_of tm = if is_var tm then SOME (fst(dest_var tm))
-                     else NONE
+    fun name_of tm = if is_var tm then SOME (fst(dest_var tm)) else NONE
     val avoidstrs = List.mapPartial name_of tml
     val (Name, Ty) = Term.dest_var tm
   in
@@ -136,7 +130,6 @@ fun foldl f zero []      = zero
 in
   fun prove_recordtype_thms (tyinfo, fields) = let
 
-    open Psyntax
     fun store_thm (n, t, tac) = save_thm(n, prove(t,tac))
 
     val app2 = C (curry op^)
@@ -164,17 +157,13 @@ in
                      "Number of fields doesn't match number of types"}
 
     (* we now have the type actually defined in typthm *)
-    fun letgen x y = x @ [variant x (Psyntax.mk_var (app_letter y,y))]
+    fun letgen x y = x @ [variant x (mk_var (app_letter y,y))]
     val typeletters = foldl letgen [] types
 
     (* now generate accessor functions *)
-    val accfn_types = map (fn x => Type.-->(typ, x)) types
+    val accfn_types = map (fn x => (typ --> x)) types
     local
-      fun constructor_args [] = let
-        fun mkarb typ = Psyntax.mk_const("ARB", typ)
-      in
-        map mkarb types
-      end
+      fun constructor_args [] = map boolSyntax.mk_arb types
         | constructor_args ((f,t)::xs) = let
             val rest = constructor_args xs
             val posn = findi f fields handle _ =>
@@ -368,7 +357,7 @@ in
     val oneone_thm = valOf (TypeBase.one_one_of tyinfo)
 
     fun prove_semi11 upd_t = let
-      fun tac s = STRUCT_CASES_TAC (SPEC (Psyntax.mk_var(s,typ)) cases_thm)
+      fun tac s = STRUCT_CASES_TAC (SPEC (mk_var(s,typ)) cases_thm)
       val r1 = mk_var("r1", typ)
       val r2 = mk_var("r2", typ)
       val upd_tty = type_of upd_t
@@ -394,7 +383,6 @@ in
           !r1 r2. (r1 = r2) = (r1.fld1 = r2.fld1) /\ (r1.fld2 = r2.fld2)
     *)
     local
-      open Psyntax
       val var1 = mk_var(app_letter typ ^ "1", typ)
       val var2 = mk_var(app_letter typ ^ "2", typ)
       val lhs = mk_eq(var1, var2)
@@ -424,7 +412,6 @@ in
          (In the form that it will be printed in.)
     *)
     local
-      open Psyntax
       fun mk_var_avds (nm, ty, avoids) = let
         val v0 = mk_var(nm, ty)
       in
@@ -492,10 +479,10 @@ in
 
     in
       (new_tyinfo,
-       map (fn s => typename ^ s)
-       (["_accessors", "_updates", "_updates_eq_literal", "_updaccs",
-         "_accupds", "_accfupds", "_updupds", "_fn_updates"] @
-        (if not (null upd_canon_thms) then ["_updcanon"] else [])))
+       map (concat typename)
+          (["_accessors", "_updates", "_updates_eq_literal", "_updaccs",
+            "_accupds", "_accfupds", "_updupds", "_fn_updates"] @
+          (if not (null upd_canon_thms) then ["_updcanon"] else [])))
     end
 
 end

@@ -3,6 +3,7 @@ struct
 
   open HolKernel Parse boolLib Boolconv Arithconv
        arithmeticTheory numeralTheory computeLib;
+
   infix THEN |-> ;
 
 type conv   = Abbrev.conv
@@ -35,18 +36,15 @@ val RED_CONV =
 (* Uses computeLib.                                                      *)
 (*-----------------------------------------------------------------------*)
 
-val bool_rewrites = List.map lazyfy_thm
-  [ COND_CLAUSES, COND_ID, NOT_CLAUSES, AND_CLAUSES, OR_CLAUSES,
-    IMP_CLAUSES, EQ_CLAUSES ];
-
 val NORM_0 = prove(Term `NUMERAL ALT_ZERO = 0`,
   REWRITE_TAC [arithmeticTheory.NUMERAL_DEF, arithmeticTheory.ALT_ZERO]);
 
-val numeral_rewrites =
-  [ numeral_distrib, numeral_eq, numeral_suc, numeral_pre, NORM_0,
-    numeral_iisuc, numeral_add, numeral_mult, iDUB_removal,
-    numeral_sub, numeral_lt, numeral_lte, iSUB_THM,
-    numeral_exp, numeral_evenodd, iSQR ];
+val numeral_redns =
+ lazyfy_thm arithmeticTheory.num_case_compute
+  :: [numeral_distrib, numeral_eq, numeral_suc, numeral_pre, NORM_0,
+      numeral_iisuc, numeral_add, numeral_mult, iDUB_removal,
+      numeral_sub, numeral_lt, numeral_lte, iSUB_THM,
+      numeral_exp, numeral_evenodd, iSQR, numeral_fact,MAX_DEF,MIN_DEF];
 
 val div_thm =
     prove
@@ -65,43 +63,38 @@ val mod_thm =
        ASM_REWRITE_TAC []);
 
 
-fun dest_op opr tm =
-    let val (opr',arg) = boolLib.strip_comb tm in
-    if (opr=opr') then arg else raise Fail "dest_op"
-    end;
-
-val divop = Term `$DIV`;
-val modop = Term `$MOD`;
+fun dest_op opr =
+ let val test = equal opr
+ in fn tm =>
+      let val (opr',arg) = strip_comb tm 
+      in if test opr' then arg else raise Fail "dest_op"
+      end
+ end;
 
 fun cbv_DIV_CONV tm =
-  case (dest_op divop tm) of
-    [x,y] => (let
-      open Arbnum numSyntax
-      val (q,r) = divmod (dest_numeral x, dest_numeral y)
-    in
-      SPECL [x, y, mk_numeral q, mk_numeral r] div_thm
-    end handle HOL_ERR _ => failwith "cbv_DIV_CONV")
-  | _ => raise Fail "cbv_DIV_CONV";
+  case dest_op numSyntax.div_tm tm
+   of [x,y] => 
+       (let open Arbnum numSyntax
+            val (q,r) = divmod (dest_numeral x, dest_numeral y)
+        in SPECL [x, y, mk_numeral q, mk_numeral r] div_thm
+        end handle HOL_ERR _ => failwith "cbv_DIV_CONV")
+    | otherwise => raise Fail "cbv_DIV_CONV";
 
 fun cbv_MOD_CONV tm =
-  case (dest_op modop tm) of
-    [x,y] => (let
-      open Arbnum numSyntax
-      val (q,r) = divmod (dest_numeral x, dest_numeral y) in
-      SPECL [x, y, mk_numeral q, mk_numeral r] mod_thm
-    end handle HOL_ERR _ => failwith "cbv_MOD_CONV")
-  | _ => raise Fail "cbv_MOD_CONV";
+  case dest_op numSyntax.mod_tm tm
+   of [x,y] => 
+       (let open Arbnum numSyntax
+            val (q,r) = divmod (dest_numeral x, dest_numeral y) 
+        in SPECL [x, y, mk_numeral q, mk_numeral r] mod_thm
+        end handle HOL_ERR _ => failwith "cbv_MOD_CONV")
+    | otherwise => raise Fail "cbv_MOD_CONV";
 
 
-fun reduce_rws () =
-  let val rws = from_list bool_rewrites
-      val _ = add_thms numeral_rewrites rws
-      val _ = add_conv (divop, 2, cbv_DIV_CONV) rws
-      val _ = add_conv (modop, 2, cbv_MOD_CONV) rws
-  in rws end;
-
-
-local val rws = reduce_rws() in
+local val rws = from_list bool_redns
+      val _ = add_thms numeral_redns rws
+      val _ = add_conv (numSyntax.div_tm, 2, cbv_DIV_CONV) rws
+      val _ = add_conv (numSyntax.mod_tm, 2, cbv_MOD_CONV) rws
+in
 val REDUCE_CONV = CBV_CONV rws
 end;
 
@@ -113,5 +106,14 @@ val REDUCE_RULE = Conv.CONV_RULE REDUCE_CONV;
 
 val REDUCE_TAC = Tactic.CONV_TAC REDUCE_CONV;
 
+(*---------------------------------------------------------------------------
+      Add numeral reductions to global compset
+ ---------------------------------------------------------------------------*)
+
+val _ = let open computeLib
+        in add_funs numeral_redns;
+           add_conv (numSyntax.div_tm, 2, cbv_DIV_CONV) the_compset;
+           add_conv (numSyntax.mod_tm, 2, cbv_MOD_CONV) the_compset
+        end;
 
 end;

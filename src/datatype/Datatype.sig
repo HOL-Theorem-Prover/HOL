@@ -16,9 +16,6 @@ sig
 
 
 
-(* val to_tyspecs       : AST list -> tyspec list
- val fields_of        : AST -> field_names option
-*)
  val define_type      : tyspec list -> {induction:thm, recursion:thm}
  val new_datatype     : hol_type quotation -> {induction:thm, recursion:thm}
 

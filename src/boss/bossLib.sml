@@ -80,6 +80,7 @@ val arith_ss = std_ss ++ arithSimps.ARITH_ss
 val list_ss  = arith_ss ++ listSimps.list_ss
 end
 
+val EVAL = computeLib.EVAL o Parse.Term;
 
 (* 
 val DECIDE     = decisionLib.DECIDE o Parse.Term
@@ -101,32 +102,6 @@ fun ZAP_TAC ss thl =
           ORELSE DECIDE_TAC
           ORELSE BasicProvers.GEN_PROVE_TAC 0 12 1 thl);
 
-
-
-(*---------------------------------------------------------------------------
-   The following is a function creating a new simplification set to be used
-   with computeLib.CBV_CONV. It contains basic definitions about arithmetic
-   operations (those of reduceLib), and several others:
-   LET, pairs, curryfication, options and lists.
- ---------------------------------------------------------------------------*)
-
-local
-fun iter_add []      rws = ()
-  | iter_add (f::fs) rws = (f rws : unit ; iter_add fs rws);
-
-open computeLib
-val added_theories =
-  [ add_thms [strictify_thm LET_DEF],
-    add_thms [lazyfy_thm arithmeticTheory.num_case_compute],
-    pairSimps.PAIR_rws, sumSimps.SUM_rws, optionLib.OPTION_rws,
-    listSimps.list_rws ]
-
-in
-fun initial_rws () =
-  let val rws = reduceLib.reduce_rws ()
-      val () = iter_add added_theories rws
-  in rws end;
-end;
 
 (*---------------------------------------------------------------------------
             Single step interactive proof operations

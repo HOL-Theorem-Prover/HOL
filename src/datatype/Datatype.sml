@@ -385,7 +385,7 @@ end;
 
 (*---------------------------------------------------------------------------
 
-    For a datatype named "ty", primHol_datatype stores the following
+    For a datatype named "ty", Hol_datatype stores the following
     theorems in the current theory, and in TypeBase.theTypeBase. (Some
     other definitions and theorems used in defining the datatype are
     also stored in the current theory, but we will ignore them.)
@@ -423,9 +423,9 @@ fun adjoin {ax,case_def,case_cong,induction,nchotomy,size,one_one,distinct}
                end
           fun do_simpls() = (S "["; app S (Lib.commafy record_rw_names); S "]")
           fun do_field_rws() =
-            if null record_rw_names then (S " tyinfo0")
+            if null record_rw_names then (S " tyinfo0;")
             else (NL();S "       (TypeBase.put_simpls ("; do_simpls();
-                  S " @ TypeBase.simpls_of tyinfo0) tyinfo0)")
+                  S " @ TypeBase.simpls_of tyinfo0) tyinfo0);")
       in
         S "val _ =";                              NL();
         S "   let open TypeBase";                 NL();
@@ -440,6 +440,7 @@ fun adjoin {ax,case_def,case_cong,induction,nchotomy,size,one_one,distinct}
         S ("         distinct="^distinct^"}");    NL();
         S "   in";                                NL();
         S "    TypeBase.write "; do_field_rws();  NL();
+        S "    computeLib.write_datatype_info tyinfo0"; NL();
         S "   end;";                              NL()
       end)};
 
@@ -449,11 +450,13 @@ fun write_tyinfo (tyinfo, record_rw_names) =
      val one_one_name =
        case one_one_of tyinfo
         of NONE => "NONE"
-         | SOME th => (save_thm(name "_11", th); "SOME "^name"_11")
+         | SOME th => 
+            let val nm = name"_11" in save_thm(nm, th); "SOME "^nm end
      val distinct_name =
        case distinct_of tyinfo
         of NONE => "NONE"
-         | SOME th => (save_thm(name "_distinct",th); "SOME "^name"_distinct")
+         | SOME th => 
+            let val nm = name"_distinct" in save_thm(nm,th); "SOME "^nm end
      val case_cong_name =
         let val ccname = name"_case_cong"
         in save_thm (ccname,case_cong_of tyinfo);
@@ -499,10 +502,15 @@ fun write_tyinfo (tyinfo, record_rw_names) =
      record_rw_names
  end;
 
+fun persistent_tyinfo (x as (tyinfo,_)) =
+   (TypeBase.write tyinfo; 
+    computeLib.write_datatype_info tyinfo;
+    write_tyinfo x)
 
 fun Hol_datatype q =
- List.app (fn (x as (tyinfo,_)) => (TypeBase.write tyinfo; write_tyinfo x))
-          (primHol_datatype (TypeBase.theTypeBase()) q);
+  List.app persistent_tyinfo 
+           (primHol_datatype (TypeBase.theTypeBase()) q)
+  handle ? => raise (wrap_exn "Datatype" "Hol_datatype" ?);
 
 
 end (* struct *)

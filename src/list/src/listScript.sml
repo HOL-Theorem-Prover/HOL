@@ -37,8 +37,6 @@ val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 open HolKernel Parse boolLib Num_conv Prim_rec;
 infix THEN ORELSE THENL THENC ORELSEC  |->;
 
-type thm = Thm.thm;
-
 val _ = new_theory "list";
 
 
@@ -68,8 +66,10 @@ val ONE           = arithmeticTheory.ONE;
 val PAIR_EQ = pairTheory.PAIR_EQ;
 
 
+val _ = print "Defining datatype of lists.\n";
 val _ = Datatype.Hol_datatype `list = NIL | CONS of 'a => list`;
 
+val _ = print "Done defining datatype of lists.\n";
 val _ = set_MLname "CONS" "CONS_def";
 
 val _ = add_listform {separator = ";", leftdelim = "[", rightdelim = "]",
@@ -277,7 +277,7 @@ val list_case_compute = store_thm("list_case_compute",
    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [list_case_def,HD, TL,NULL_DEF]);
 
 (*---------------------------------------------------------------------------*)
-(* CONS11:  |- !h t h' t'. (h::t = h' :: t') = (h = h') /\ (t = t')          *)
+(* CONS_11:  |- !h t h' t'. (h::t = h' :: t') = (h = h') /\ (t = t')         *)
 (*---------------------------------------------------------------------------*)
 
 val CONS_11 = save_thm("CONS_11", valOf (TypeBase.one_one_of listinfo));
@@ -796,12 +796,22 @@ val _ = adjoin_to_theory
  struct_ps = SOME
  (fn ppstrm => let
    val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
+   fun NL() = PP.add_newline ppstrm
  in
    S "local val hocongs = [EXISTS_CONG,EVERY_CONG,MAP_CONG,";
    S "                     FOLDL_CONG, FOLDR_CONG,list_size_cong]";
    S "in";
    S "val _ = DefnBase.write_congs (hocongs@DefnBase.read_congs())";
-   S "end;"
+   S "end;"; 
+   NL(); NL();
+   S "val _ = let open computeLib";
+   S "        in add_funs [APPEND,APPEND_NIL, FLAT, HD, TL,"; 
+   S "              LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF,";
+   S "              EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR,";
+   S "              FOLDL, EL_compute,";
+   S "              computeLib.lazyfy_thm list_case_compute,";
+   S "              list_size_def]";
+   S "        end;"
  end)};
 
 

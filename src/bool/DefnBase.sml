@@ -3,8 +3,7 @@ struct
 
 open HolKernel
 
-fun ERR func mesg = HOL_ERR{origin_structure = "DefnBase", 
-                            origin_function = func, message = mesg};
+val ERR = mk_HOL_ERR "DefnBase";
 
 (*---------------------------------------------------------------------------
     The type of definitions. This is an attempt to gather all the 
@@ -103,5 +102,6 @@ in
   fun read_congs() = !non_datatype_congs
   fun write_congs L = (non_datatype_congs := L)
 end;
+
 
 end;

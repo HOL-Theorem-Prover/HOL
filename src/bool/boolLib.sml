@@ -9,11 +9,12 @@ struct
  open boolTheory boolSyntax 
       Drule Tactical Tactic Thm_cont Conv Rewrite Prim_rec Abbrev;
 
- local open DefnBase TypeBase Ho_Net Ho_Rewrite Psyntax Rsyntax in end
+ local open DefnBase TypeBase Ho_Rewrite Psyntax Rsyntax in end
 
 val Term = Parse.Term
 val Type = Parse.Type
 val --   = Parse.--   
+val ==   = Parse.==
 
 (*---------------------------------------------------------------------------
       Stock the rewriter in Ho_Rewrite with some rules not yet 
@@ -39,10 +40,7 @@ REPEAT (STRIP_TAC ORELSE COND_CASES_TAC ORELSE EQ_TAC)
   ACCEPT_TAC (EQT_ELIM (el 4 (CONJUNCTS (SPEC F IMP_CLAUSES))))]
 end);
 
-val _ = 
-  let open boolTheory 
-  in Ho_Rewrite.add_implicit_rewrites [COND_BOOL_CLAUSES]
-  end;
+val _ = Ho_Rewrite.add_implicit_rewrites [COND_BOOL_CLAUSES];
 
 (* ------------------------------------------------------------------------- *)
 (* Alternative version of unique existence, slated for boolTheory.           *)

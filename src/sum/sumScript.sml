@@ -226,7 +226,7 @@ val sum_distinct = store_thm("sum_distinct",
   FIRST_X_ASSUM (MP_TAC o AP_TERM (Term`h:'a + 'b -> bool`)) THEN
   ASM_REWRITE_TAC []);
 
-
+val sum_distinct_rev = save_thm("sum_distinct1", GSYM sum_distinct);
 
 (* ---------------------------------------------------------------------*)
 (* The definitions of ISL, ISR, OUTL, OUTR follow.			*)
@@ -382,9 +382,14 @@ val _ = adjoin_to_theory
       S "      nchotomy=sum_CASES,";                        NL();
       S "      size=NONE,";                                 NL();
       S "      one_one=SOME INR_INL_11,";                   NL();
-      S "      distinct=SOME sum_distinct});"
-  end)};
-
+      S "      distinct=SOME sum_distinct});";              NL();
+      NL();
+      S "val _ = let open computeLib";                      NL();
+      S "        in add_thms (map lazyfy_thm";              NL();
+      S "               [ISL,ISR,OUTL,OUTR,INR_INL_11,";    NL();
+      S "                sum_distinct,sum_distinct1,sum_case_def])";    NL();
+      S "        end;"
+   end)};
 
 
 val _ = export_theory();

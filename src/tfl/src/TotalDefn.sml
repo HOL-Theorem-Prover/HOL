@@ -249,6 +249,19 @@ fun default_prover g =
 end;
 
 
+(* STOP
+fun adjoin_eqns defn =
+ let val 
+ in 
+ adjoin_to_theory
+   {sig_ps = NONE,
+    struct_ps = SOME
+     (fn ppstrm =>
+      let val S = PP.add_string ppstrm
+          fun NL() = PP.add_newline ppstrm
+      in end)}
+*)
+
 local val term_prover = proveTotal default_prover
       open Defn
       fun try_proof defn Rcand = term_prover (set_reln defn Rcand)
@@ -268,9 +281,14 @@ fun primDefine defn =
                "termination proof.\n"]);
                raise ERR "primDefine" "Unable to prove termination")
          else defn
- in
-    save_defn defn';
-    eqns_of defn'
+     val _ = save_defn defn'
+     val eqns = eqns_of defn'
+     val _ = if null (params_of defn') 
+             then computeLib.add_funs [eqns]
+             else HOL_MESG 
+              "Schematic definition (extra free vars in right-hand side)"
+  in
+    eqns
  end
 end;
 

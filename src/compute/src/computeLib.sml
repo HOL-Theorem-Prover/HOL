@@ -1,7 +1,7 @@
 structure computeLib :> computeLib =
 struct
 
-open HolKernel boolSyntax Abbrev clauses compute_rules equations;
+open HolKernel boolSyntax boolTheory Abbrev clauses compute_rules equations;
 
 (* reexporting types from clauses *)
 
@@ -143,5 +143,42 @@ fun extern_of_conv rws conv tm =
 
 fun add_conv (cst,arity,conv) rws =
   add_extern (cst,arity,extern_of_conv rws conv) rws;
+
+
+(*---------------------------------------------------------------------------
+       Support for a global compset.
+ ---------------------------------------------------------------------------*)
+
+val bool_redns = 
+ strictify_thm LET_DEF
+ :: List.map lazyfy_thm
+      [COND_CLAUSES, COND_ID, NOT_CLAUSES, 
+       AND_CLAUSES, OR_CLAUSES, IMP_CLAUSES, EQ_CLAUSES];
+
+val the_compset = from_list bool_redns;
+
+val add_funs = Lib.C add_thms the_compset;
+
+val EVAL = CBV_CONV the_compset;
+
+
+(*---------------------------------------------------------------------------
+      Support for persistence of the_compset
+ ---------------------------------------------------------------------------*)
+
+fun write_datatype_info tyinfo =
+ let open TypeBase
+     val tyname = ty_name_of tyinfo
+     val size_opt =
+       case size_of0 tyinfo
+        of SOME (_, ORIG def) => SOME def
+         | otherwise => NONE
+     val compset_addns = 
+           [one_one_of tyinfo, distinct_of tyinfo, 
+            size_opt, SOME (lazyfy_thm (case_def_of tyinfo))]
+ in
+    add_funs (mapfilter Option.valOf compset_addns)
+ end;
+
 
 end;

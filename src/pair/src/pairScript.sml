@@ -504,6 +504,25 @@ REPEAT STRIP_TAC THEN MATCH_MP_TAC relationTheory.WF_SUBSET
          THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[]]);
 
 
+(*---------------------------------------------------------------------------
+    Generate some ML that gets evaluated at theory load time.
+    It adds relevant rewrites into the global compset.
+ ---------------------------------------------------------------------------*)
+
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME(fn ppstrm =>
+   let val S = PP.add_string ppstrm
+       fun NL() = PP.add_newline ppstrm
+   in
+      S "val _ = let open computeLib";                        NL();
+      S "        in add_funs (map lazyfy_thm";                NL();
+      S "              [CLOSED_PAIR_EQ, FST, SND,";           NL();
+      S "               CURRY_DEF,UNCURRY_DEF,PAIRMAP_THM])"; NL();
+      S "        end;";                                       NL()
+  end)};
+
+
 val _ = export_theory();
 
 val _ = export_theory_as_docfiles (Path.concat (Path.parentArc, "help/thms"))

@@ -162,13 +162,6 @@ fun mk_case ty_info FV thy =
 
 type row = term list * (thm * (term, term) subst)
 
-(*---------------------------------------------------------------------------
-    The fourth argument to "mk_case" says whether we are generating the
-    case theorem from a set of patterns or from a type. Probably the
-    first could be subsumed in the second, but in our implementation,
-    generation from patterns came first.
- ---------------------------------------------------------------------------*)
- 
 fun complete_cases thy =
  let val ty_info = induct_info thy
  in fn pats =>
@@ -298,5 +291,64 @@ in
    GEN P (DISCH (concl Rinduct_assum) dc')
 end
 handle HOL_ERR _ => raise ERR "mk_induction" "failed derivation";
+
+
+
+(*---------------------------------------------------------------------------
+     The case completeness algorithm, but running over types rather
+     than lists of patterns.
+ ---------------------------------------------------------------------------*)
+(*
+fun tycase ty_info FV thy =
+ let
+ val divide:divide_ty = ipartition (wfrecUtils.vary FV)  (*don't eta-expand!!*)
+ fun fail s = raise ERR "tycase" s
+ fun mk{types=[],...} = fail"no types"
+   | mk{path=[], types = [([], (thm, bindings))]} = IT_EXISTS bindings thm
+   | mk{path=u::rstp, types as (ty::_, _)::_} =
+     case ty_info (fst(dest_type ty))
+      of NONE => fail("Not a known datatype: "^fst(dest_type ty))
+       | SOME{constructors,nchotomy} =>
+         let val thm'         = ISPEC u nchotomy
+             val disjuncts    = strip_disj (concl thm')
+             val subproblems  = divide(constructors, types)
+             val groups       = map #group subproblems
+             and new_formals  = map #new_formals subproblems
+             val existentials = map2 alpha_ex_unroll new_formals disjuncts
+             val constraints  = map #1 existentials
+             val vexl         = map #2 existentials
+             fun expnd tm (pats,(th,b)) = (pats,(SUBS[ASSUME tm]th, b))
+             val news = map (fn (nf,types,c) => {path = nf@rstp,
+                                                types = map (expnd c) types})
+                            (zip3 new_formals groups constraints)
+             val recursive_thms = map mk news
+             val build_exists = itlist(CHOOSE o (I##ASSUME))
+             val thms' = map2 build_exists vexl recursive_thms
+             val same_concls = EVEN_ORS thms'
+         in
+           DISJ_CASESL thm' same_concls
+         end
+     end end
+   | mk _ = fail"blunder"
+ in mk
+ end;
+
+fun type_cases thy = 
+ let val ty_info = induct_info thy
+ in fn ty =>
+   let val a = mk_var("a",ty)
+       val v = mk_var("v",ty)
+       val FV = [a,v]
+       val a_eq_v = mk_eq(a,v)
+       val ex_th0 = EXISTS (mk_exists(v,a_eq_v),a) (REFL a)
+       val th0    = ASSUME a_eq_v
+   in
+    GEN a (RIGHT_ASSOC
+            (CHOOSE(v, ex_th0)
+              (tycase ty_info FV thy {path=[v], types=[([ty], (th0,[]))]})))
+   end 
+ end;
+
+*)
 
 end;

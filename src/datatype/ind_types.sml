@@ -300,8 +300,8 @@ fun define_inductive_type cdefs exth = let
   val th2 = TRANS th1 (SUBS_CONV cdefs (rand(concl th1)))
   val th3 = EQ_MP (AP_THM th2 (rand extm)) exth
   val th4 = itlist SCRUB_EQUATION (hyp th3) th3
-  val mkname = "ii_internal_mk_"^ename
-  and destname = "ii_internal_dest_"^ename
+  val mkname = "mk_"^ename
+  and destname = "dest_"^ename
   val (bij1,bij2) = new_basic_type_definition ename (mkname,destname) th4
   val bij2a = AP_THM th2 (rand(rand(concl bij2)))
   val bij2b = TRANS bij2a bij2
@@ -1183,7 +1183,7 @@ fun SCRUB_ASSUMPTION th =
 val safeid_genvar = let
   val count = ref 0
   fun vary_to_avoid_constants () = let
-    val nm = "ii_internal" ^ current_theory() ^ Int.toString (!count)
+    val nm = current_theory() ^ Int.toString (!count)
   in
     if (not (null (decls nm))) then (count := !count + 100;
                                      vary_to_avoid_constants())

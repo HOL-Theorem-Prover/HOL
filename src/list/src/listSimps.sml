@@ -15,15 +15,14 @@ val list_ss = rewrites
         EVERY_APPEND, EXISTS_APPEND];
 
 
-(*---------------------------------------------------------------------------
-     For computeLib.
- ---------------------------------------------------------------------------*)
  val list_rws = computeLib.add_thms
      [ APPEND,APPEND_NIL, FLAT, HD, TL, LENGTH, MAP, MAP2,
        NULL_DEF, CONS_11, NOT_CONS_NIL, NOT_NIL_CONS,
        MEM, EXISTS_DEF, EVERY_DEF,
-       FILTER, FOLDR, FOLDL, EL_compute,
-       computeLib.lazyfy_thm list_case_compute];
+       ZIP, UNZIP,
+       FILTER, FOLDL, FOLDR, FOLDL, EL_compute,
+       computeLib.lazyfy_thm list_case_compute,
+       list_size_def];
 
 end (* struct *)
 

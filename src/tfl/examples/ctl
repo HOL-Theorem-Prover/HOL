@@ -244,7 +244,7 @@ val SAT_defn =
  /\ (STATESAT (M,s) (REG a)    = ?PI. (PI STATE_NO 0 = s) /\ 
                                       (PI IS_FAIR_PATH_IN M) /\ 
                                       (a IN (valids M s))) 
- /\ (STATESAT (M,s) (~f)       = ~STATESAT (M,s) f)
+ /\ (STATESAT (M,s)  ~f        = ~STATESAT (M,s) f)
  /\ (STATESAT (M,s) (f1 \/ f2) = STATESAT (M,s) f1 \/ STATESAT (M,s) f2)
  /\ (STATESAT (M,s) (f1 /\ f2) = STATESAT (M,s) f1 /\ STATESAT (M,s) f2)
  /\ (STATESAT (M,s) (E g1)     = ?PI. (PI IS_FAIR_PATH_IN M) /\

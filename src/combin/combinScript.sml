@@ -99,6 +99,17 @@ val _ = adjoin_to_theory
    (PP.add_string ppstrm "val _ = Parse.hide \"C\";"; 
     PP.add_newline ppstrm))};
 
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME (fn ppstrm =>
+  let val S = PP.add_string ppstrm
+      fun NL() = PP.add_newline ppstrm
+  in
+    S "val _ ="; NL();
+    S "   computeLib.add_funs [K_DEF,S_DEF,I_DEF,C_DEF,W_DEF,o_DEF]"; 
+    NL()
+  end)};
+
 val _ = export_theory();
 
 end;

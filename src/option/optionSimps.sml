@@ -1,5 +1,8 @@
+structure optionSimps :> optionSimps =
+struct
+
 open simpLib optionTheory
 
-val OPTION_ss =
-  rewrites (TypeBase.simpls_of (valOf (TypeBase.read "option")) @
-            [option_APPLY_DEF, option_JOIN_DEF, THE_DEF]);
+val OPTION_ss = rewrites [option_CLAUSES];
+
+end;

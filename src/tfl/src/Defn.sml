@@ -138,14 +138,6 @@ fun ModusPonens th1 th2 =
   handle _ => raise ERR "ModusPonens" "failed";
 
 
-(*
-fun is_abbrev  (ABBREV _)  = true | is_abbrev _  = false;
-fun is_primrec (PRIMREC _) = true | is_primrec _ = false;
-fun is_nonrec  (NONREC _)  = true | is_nonrec _  = false;
-fun is_nestrec (NESTREC _) = true | is_nestrec _ = false;
-fun is_mutrec  (MUTREC _)  = true | is_mutrec _  = false;
-*)
-
 fun eqns_of (ABBREV  {eqn, ...}) = eqn
   | eqns_of (NONREC  {eqs, ...}) = eqs
   | eqns_of (PRIMREC {eqs, ...}) = eqs

@@ -4,7 +4,6 @@ sig
   include Abbrev
   type fixity   = Parse.fixity
   type simpset  = simpLib.simpset
-  type compset  = computeLib.compset
 
   (* Make definitions *)
 
@@ -55,10 +54,7 @@ sig
   val list_ss  : simpset
   val &&       : simpset * thm list -> simpset  (* infix && *)
   val RW_TAC   : simpset -> thm list -> tactic
-
-  (* to be used with computeLib: simplifies pair, sum, option, arith, list. *)
-
-  val initial_rws  : unit -> computeLib.compset
+  val EVAL     : term quotation -> thm
 
   (* A compound automated reasoner. *)
 

@@ -1,1 +1,5 @@
-val OPTION_ss : simpLib.ssdata
+signature optionSimps =
+sig
+  val OPTION_ss : simpLib.ssdata
+end
+

@@ -239,8 +239,9 @@ val option_CLAUSES = save_thm("option_CLAUSES",
                  IS_NONE_option_case,
                  IS_SOME_option_case,
                  IS_SOME_option_case_SOME]@
-                (CONJUNCTS option_case_def)@
-                (CONJUNCTS option_APPLY_DEF)));
+                 CONJUNCTS option_case_def@
+                 CONJUNCTS option_APPLY_DEF@
+                 CONJUNCTS option_JOIN_DEF));
 
 val option_case_compute = store_thm("option_case_compute",
   --`option_case (e:'b) f (x:'a option) =
@@ -301,7 +302,15 @@ val _ = adjoin_to_theory
     S "val option_Induct = Rewrite.ONCE_REWRITE_RULE ";  NL();
     S "                      [boolTheory.CONJ_SYM] option_induction"; NL();
     S "val option_CASES = Rewrite.ONCE_REWRITE_RULE ";   NL();
-    S "                      [boolTheory.DISJ_SYM] option_nchotomy"
+    S "                      [boolTheory.DISJ_SYM] option_nchotomy";
+    NL();NL();
+    S "val _ = let open computeLib";                            NL();
+    S "        in add_funs (map lazyfy_thm";                    NL();
+    S "               [NOT_NONE_SOME,NOT_SOME_NONE,SOME_11,";   NL();
+    S "                option_case_compute,option_APPLY_DEF,";  NL();
+    S "                IS_SOME_DEF,IS_NONE_DEF,THE_DEF,";       NL();
+    S "                option_JOIN_DEF])";                      NL();
+    S "        end;"
   end)};
 
 val _ = export_theory();
