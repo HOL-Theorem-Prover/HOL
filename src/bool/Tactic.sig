@@ -79,4 +79,6 @@ sig
   val via                 : term * tactic -> tactic
   val CONV_TAC            : conv -> tactic
   val BETA_TAC            : tactic
+  val KNOW_TAC            : term -> tactic
+  val SUFF_TAC            : term -> tactic
 end;

@@ -826,4 +826,15 @@ fun HO_MATCH_MP_TAC th =
       end handle e => raise (wrap_exn "Tactic" "HO_MATCH_MP_TAC" e)
  end;
 
+(*---------------------------------------------------------------------------
+     Tactics explicitly declaring subgoals.
+ ---------------------------------------------------------------------------*)
+
+fun SUFF_TAC tm (al, c) =
+  ([(al, mk_imp (tm, c)), (al, tm)],
+   fn [th1, th2] => MP th1 th2
+    | _ => raise ERR "SUFF_TAC" "panic");
+
+fun KNOW_TAC tm = REVERSE (SUFF_TAC tm);
+
 end; (* Tactic *)
