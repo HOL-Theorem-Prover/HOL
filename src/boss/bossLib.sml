@@ -54,8 +54,8 @@ val WF_REL_TAC = TotalDefn.WF_REL_TAC;
 
 val PROVE          = BasicProvers.PROVE
 val PROVE_TAC      = BasicProvers.PROVE_TAC
-val METIS_PROVE    = BasicProvers.PROVE
-val METIS_TAC      = BasicProvers.PROVE_TAC
+val METIS_PROVE    = metisLib.METIS_PROVE
+val METIS_TAC      = metisLib.METIS_TAC
 val RW_TAC         = BasicProvers.RW_TAC
 val SRW_TAC        = BasicProvers.SRW_TAC
 val srw_ss         = BasicProvers.srw_ss
