@@ -1,8 +1,10 @@
 open HolKernel basicHol90Lib Psyntax Parse;
 
-val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
-fun -- q x = Term q
-fun == q x = Type q
+local
+  val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+  fun -- q x = Term q
+  fun == q x = Type q
+in
 
 infix myTRANS THEN ORELSE ORELSEC THENL THENC |->;
 fun th1 myTRANS th2 = TRANS th1 th2;
@@ -962,4 +964,6 @@ in
       val convs = map move_conj_right conjs in
       EVERY_CONV convs term
   end;
+end;
+
 end;
