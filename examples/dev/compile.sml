@@ -1471,7 +1471,6 @@ fun BUS_SPLIT tm =                           (* Pretty gross implementation! *)
   end)
   handle HOL_ERR _ => raise ERR "BUS_SPLIT" "not a bus";
 
-(************************* Replaced by code from KXS *************************
 (*****************************************************************************)
 (* ``(\(load,inp,done,out). P load inp done out)``                           *)
 (* -->                                                                       *)
@@ -1516,9 +1515,8 @@ fun ABS_IN_OUT_SPLIT_CONV tm =
    MK_PABS(PGEN args th2)
   end)
  handle HOL_ERR _ => REFL tm;
-******************************************************************************)
 
-
+(******************** New code from KXS (not fully tested) ********************
 (*---------------------------------------------------------------------------*)
 (*     (?a. P a /\ Q) --> |- (?a. P a /\ Q) = (?a. P a) /\ Q                 *)
 (*---------------------------------------------------------------------------*)
@@ -1589,7 +1587,6 @@ fun ABS_IN_OUT_SPLIT_CONV tm =
               => (if_print "ABS_IN_OUT_SPLIT_CONV fails to prove:\n";
                   if_print_term goal;print"\n";
                   raise ERR "ABS_IN_OUT_SPLIT_CONV" "proof failure")
-
        val th2 = RIGHT_CONV_RULE
                   (STRIP_QUANT_CONV
                    (RAND_CONV
@@ -1601,6 +1598,7 @@ fun ABS_IN_OUT_SPLIT_CONV tm =
     MK_PABS(PGEN args th2)
    end)
   handle HOL_ERR _ => REFL tm;
+******************************************************************************)
 
 val at_thms =
  [UNDISCH REG_IMP,UNDISCH REGF_IMP,
