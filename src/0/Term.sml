@@ -860,100 +860,88 @@ val percent = "%";
  * theorems of the form 0 = x will not match inside other numerals.
  *---------------------------------------------------------------------------*)
 
-fun is_numeral t = let
+fun is_numeral t = 
+let fun is_numtype ty = (* is ty equal to ``:num`` *)
+       if Type.is_vartype ty then false
+       else case Type.dest_type ty
+             of {Tyop="num", Args=[]} => true
+              | _ => false;
+    fun is_num2num_type ty = (* is ty equal to ``:num -> num`` *)
+       if Type.is_vartype ty then false
+       else case Type.dest_type ty
+             of {Tyop="fun", Args=[ty1,ty2]} 
+                  => is_numtype ty1 andalso is_numtype ty2
+              | _ => false
 
-  (* type is equal to ``:num`` *)
-  fun is_numtype ty =
-     case Type.dest_type ty
-      of {Tyop="num", Args=[]} => true
-       | _ => false;
-
-  (* type is equal to ``:num -> num`` *)
-  fun is_num2num_type ty =
-    case Type.dest_type ty
-     of {Tyop="fun", Args=[ty1,ty2]} => is_numtype ty1 andalso is_numtype ty2
-      | _ => false
-
-  (* term is sequence of applications of NUMERAL_BIT1 and NUMERAL_BIT2 to
-     ALT_ZERO *)
-  fun is_nb t =
-    if is_const t then let
-      val {Name, Ty} = dest_const t
-    in
-      Name = "ALT_ZERO" andalso is_numtype Ty
-    end
-    else let
-      val {Rand, Rator} = dest_comb t
-      val {Name, Ty} = dest_const Rator
-    in
-      (Name = "NUMERAL_BIT1" orelse Name = "NUMERAL_BIT2") andalso
-      is_num2num_type Ty andalso is_nb Rand
-    end
+    (* Is t a sequence of applications of NUMERAL_BIT1 and NUMERAL_BIT2 to
+       ALT_ZERO *)
+    fun is_nb t =
+       if is_const t 
+       then let val {Name, Ty} = dest_const t
+            in Name = "ALT_ZERO" andalso is_numtype Ty
+            end
+       else let val {Rand, Rator} = dest_comb t
+                val {Name, Ty} = dest_const Rator
+            in
+             (Name = "NUMERAL_BIT1" orelse Name = "NUMERAL_BIT2") andalso
+             is_num2num_type Ty andalso is_nb Rand
+            end
 in
-  if is_const t then let
-    val {Name, Ty} = dest_const t
-  in
-    is_numtype Ty andalso Name = "0"
-  end
-  else let
-    val {Rator, Rand} = dest_comb t
-    val {Name, Ty} = dest_const Rator
-  in
-    Name = "NUMERAL" andalso is_num2num_type Ty andalso is_nb Rand
-  end handle HOL_ERR _ => false
+  if is_const t 
+  then let val {Name, Ty} = dest_const t
+       in is_numtype Ty andalso Name = "0"
+       end
+  else let val {Rator, Rand} = dest_comb t
+           val {Name, Ty} = dest_const Rator
+       in Name="NUMERAL" andalso is_num2num_type Ty andalso is_nb Rand
+       end handle HOL_ERR _ => false
 end
 
 fun dest_numeral t =
-  if is_numeral t then
-    if is_const t then Arbnum.zero
-    else let
-      val {Rand = arg, ...} = dest_comb t
-      open Arbnum
-      fun recurse t =
-        if is_comb t then let
-          val {Rator, Rand} = dest_comb t
-        in
-          case #Name(dest_const Rator) of
-            "NUMERAL_BIT1" => two * recurse Rand + one
-          | "NUMERAL_BIT2" => two * recurse Rand + two
-          | _ => raise TERM_ERR "dest_numeral" "This should never ever happen"
-        end
-        else zero
-    in
-      recurse arg
-    end
+  if not(is_numeral t) 
+  then raise TERM_ERR "dest_numeral" "Term is not a numeral"
   else
-    raise TERM_ERR "dest_numeral" "Term is not a numeral"
+  if is_const t 
+  then Arbnum.zero
+  else let open Arbnum
+           fun recurse t =
+             if is_comb t 
+             then let val {Rator, Rand} = dest_comb t
+                  in case #Name(dest_const Rator) 
+                      of "NUMERAL_BIT1" => two * recurse Rand + one
+                       | "NUMERAL_BIT2" => two * recurse Rand + two
+                       | _ => raise TERM_ERR "dest_numeral" 
+                                       "This should never ever happen"
+                  end
+             else zero
+       in
+         recurse (rand t)
+       end;
 
-fun prim_mk_numeral {mkCOMB, mkNUM_CONST, mkNUM2_CONST} n = let
-  open Arbnum
-  val numeral = mkNUM2_CONST "NUMERAL"
-  val nb1 = mkNUM2_CONST "NUMERAL_BIT1"
-  val nb2 = mkNUM2_CONST "NUMERAL_BIT2"
-  fun recurse x =
-    if x = zero then
-      mkNUM_CONST "ALT_ZERO"
-    else
-      if x mod two = one then
-        mkCOMB{Rator = nb1, Rand = recurse ((x - one) div two)}
-      else
-        mkCOMB{Rator = nb2, Rand = recurse ((x - two) div two)}
-in
-  if n = zero then
-    mkNUM_CONST "0"
-  else
-    mkCOMB{Rator = numeral, Rand = recurse n}
+fun prim_mk_numeral {mkCOMB, mkNUM_CONST, mkNUM2_CONST} n =
+ let open Arbnum
+     val numeral = mkNUM2_CONST "NUMERAL"
+     val nb1 = mkNUM2_CONST "NUMERAL_BIT1"
+     val nb2 = mkNUM2_CONST "NUMERAL_BIT2"
+     fun recurse x =
+        if x = zero then mkNUM_CONST "ALT_ZERO"
+        else if x mod two = one 
+             then mkCOMB{Rator=nb1, Rand=recurse ((x-one) div two)}
+             else mkCOMB{Rator=nb2, Rand=recurse ((x-two) div two)}
+ in
+  if n = zero then mkNUM_CONST "0"
+  else mkCOMB{Rator=numeral, Rand=recurse n}
 end
 
-fun mk_numeral n = let
-  val numtype = Type.mk_type {Tyop = "num", Args = []}
-  val num2type = Type.mk_type {Tyop = "fun", Args = [numtype, numtype]}
-in
-  prim_mk_numeral
-  {mkCOMB = mk_comb,
-   mkNUM_CONST = (fn s => mk_const {Name = s, Ty = numtype}),
-   mkNUM2_CONST = (fn s => mk_const {Name = s, Ty = num2type})} n
-end
+fun mk_numeral n = 
+ let val numtype = Type.mk_type {Tyop="num", Args=[]}
+     val num2type = Type.mk_type {Tyop="fun", Args=[numtype, numtype]}
+ in
+   prim_mk_numeral
+      {mkCOMB = mk_comb,
+       mkNUM_CONST  = (fn s => mk_const {Name=s, Ty=numtype}),
+       mkNUM2_CONST = (fn s => mk_const {Name=s, Ty=num2type})} n
+ end
 
 
 (* takes a numeral term and turns it into a string *)
