@@ -10,7 +10,7 @@ Raw-sig.uo: Raw-sig.sml Sig.uo Lib.ui
 Type.uo: Type.sml Raw-sig.uo Lexis.ui
 	HOLMOSMLC -c -toplevel Raw-sig.ui Sig.ui Type.sml
 
-Term.uo: Term.sml Type.uo Globals.ui HOLset.ui
+Term.uo: Term.sml Type.uo Globals.ui ../prekernel/HOLset.ui
 	HOLMOSMLC -c -toplevel Globals.ui Type.ui Raw-sig.ui Sig.ui Term.sml
 
 Tag.uo: Tag.sml Raw-sig.uo Globals.ui
@@ -34,13 +34,13 @@ Net.uo: Net.sml Term.uo
 Type-sig.uo: Type-sig.sml Lib.ui
 	HOLMOSMLC -c -toplevel Type-sig.sml
 
-Term-sig.uo: Term-sig.sml Lib.ui HOLset.ui
+Term-sig.uo: Term-sig.sml Lib.ui ../prekernel/HOLset.ui
 	HOLMOSMLC -c -toplevel Term-sig.sml
 
 Tag-sig.uo: Tag-sig.sml
 	HOLMOSMLC -c -toplevel Tag-sig.sml
 
-Thm-sig.uo: Thm-sig.sml Lib.ui HOLset.ui
+Thm-sig.uo: Thm-sig.sml Lib.ui ../prekernel/HOLset.ui
 	HOLMOSMLC -c -toplevel Thm-sig.sml
 
 TheoryPP-sig.uo: TheoryPP-sig.sml

@@ -146,16 +146,16 @@ fun split_after n alist =
 
 
 fun itlist f L base_value =
-   let fun it [] = base_value
-         | it (a::rst) = f a (it rst)
-   in it L
+   let fun itl [] = base_value
+         | itl (a::rst) = f a (itl rst)
+   in itl L
    end;
 
 fun itlist2 f L1 L2 base_value =
-  let fun it ([],[]) = base_value
-        | it (a::rst1, b::rst2) = f a b (it (rst1,rst2))
-        | it _ = raise ERR "itlist2" "lists of different length"
-   in  it (L1,L2)
+  let fun itl ([],[]) = base_value
+        | itl (a::rst1, b::rst2) = f a b (itl (rst1,rst2))
+        | itl _ = raise ERR "itlist2" "lists of different length"
+   in  itl (L1,L2)
    end;
 
 fun rev_itlist f =
@@ -248,6 +248,7 @@ fun upto b t =
   in List.rev (up b [])
   end;
 
+type 'a cmp       = 'a * 'a -> order
 fun list_compare cfn =
  let fun comp ([],[]) = EQUAL
        | comp ([], _) = LESS
@@ -255,6 +256,11 @@ fun list_compare cfn =
        | comp (h1::t1, h2::t2) =
           case cfn (h1,h2) of EQUAL => comp (t1,t2) | x => x
   in comp end;
+
+fun pair_compare (acmp, bcmp) ((a1, b1), (a2, b2)) =
+    case acmp(a1, a2) of
+      EQUAL => bcmp(b1, b2)
+    | x => x
 
 (*---------------------------------------------------------------------------*
  * For loops                                                                 *

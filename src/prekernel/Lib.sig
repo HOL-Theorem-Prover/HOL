@@ -110,7 +110,10 @@ sig
   val funpow        : int -> ('a -> 'a) -> 'a -> 'a
   val with_flag     : 'a ref * 'a -> ('b -> 'c) -> 'b -> 'c
   val hash          : int -> string -> int*int -> int
-  val list_compare  : ('a * 'a -> order) -> 'a list * 'a list -> order
+
+  type 'a cmp       = 'a * 'a -> order
+  val pair_compare  : ('a cmp * 'b cmp) -> ('a * 'b) cmp
+  val list_compare  : 'a cmp -> 'a list cmp
 
   datatype 'a delta
        = SAME
