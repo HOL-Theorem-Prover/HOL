@@ -2772,6 +2772,42 @@ val FINITE_BIGUNION = store_thm(
                     IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM,
                     BIGUNION_INSERT, FINITE_UNION]);
 
+(* ====================================================================== *)
+(* Set complements.                                                       *)
+(* ====================================================================== *)
+
+val COMPL_DEF = new_definition ("COMPL_DEF", ``COMPL P = UNIV DIFF P``);
+
+val IN_COMPL = store_thm
+  ("IN_COMPL",
+   ``!(x:'a) s. x IN COMPL s = ~(x IN s)``,
+   SIMP_TAC bool_ss [COMPL_DEF, IN_DIFF, IN_UNIV]);
+
+val COMPL_COMPL = store_thm
+  ("COMPL_COMPL",
+   ``!(s:'a->bool). COMPL (COMPL s) = s``,
+   SIMP_TAC bool_ss [EXTENSION, IN_COMPL]);
+
+val COMPL_CLAUSES = store_thm
+  ("COMPL_CLAUSES",
+   ``!(s:'a->bool). (COMPL s INTER s = {})
+                    /\ (COMPL s UNION s = UNIV)``,
+   SIMP_TAC bool_ss [EXTENSION, IN_COMPL, IN_INTER, IN_UNION, NOT_IN_EMPTY,
+                     IN_UNIV]);
+
+val COMPL_SPLITS = store_thm
+  ("COMPL_SPLITS",
+   ``!(p:'a->bool) q. p INTER q UNION COMPL p INTER q = q``,
+   SIMP_TAC bool_ss [EXTENSION, IN_COMPL, IN_INTER, IN_UNION, NOT_IN_EMPTY,
+                     IN_UNIV]
+   THEN MESON_TAC []);
+
+val INTER_UNION_COMPL = store_thm
+  ("INTER_UNION_COMPL",
+   ``!(s:'a->bool) t. s INTER t
+                      = COMPL (COMPL s UNION COMPL t)``,
+   SIMP_TAC bool_ss [EXTENSION, IN_COMPL, IN_INTER, IN_UNION, NOT_IN_EMPTY,
+                     IN_UNIV]);
 
 (*---------------------------------------------------------------------------
     A "fold" operation for sets
