@@ -292,15 +292,13 @@ end;
  *  Print a theory as a module.
  *---------------------------------------------------------------------------*)
 
-val swap_fregs_defq = `
-fun swap_grefs () = let
-  val tmpvalue = !internal_grammar_ref
-in
-  internal_grammar_ref := (Parse.type_grammar(), Parse.term_grammar());
-  Parse.temp_set_grammars tmpvalue
-end
-`
-val [QUOTE swap_fregs_def] = swap_fregs_defq
+val swap_fregs_def = "\
+\fun swap_grefs () = let\
+\  val tmpvalue = !internal_grammar_ref\
+\in\
+\  internal_grammar_ref := (Parse.type_grammar(), Parse.term_grammar());\
+\  Parse.temp_set_grammars tmpvalue\
+\end"
 
 fun pp_theory_struct ppstrm info_record = let
   open Term
