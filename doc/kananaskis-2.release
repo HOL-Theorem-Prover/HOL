@@ -102,6 +102,21 @@ New features:
     whose type has changed, for more detail on this.  (Thanks to
     Lockwood Morris for this feature suggestion.)
 
+  * There is a new simpset fragment in realSimps, REAL_REDUCE_ss,
+    which performs calculations over ground rational values.  Thus,
+
+      SIMP_CONV (std_ss ++ REAL_REDUCE_ss) [] ``1/3 - 3/7``
+
+    returns
+
+      > val it = |- 1 / 3 - 3 / 7 = ~2 / 21 : thm
+
+    When realSimps is loaded, REAL_REDUCE_ss is automatically added to
+    the stateful-rewriting simpset, and bossLib's EVAL is also
+    augmented with this functionality.  This code also removes common
+    factors from fractions even when there are no other arithmetic
+    operations being performed.
+
 New theories:
 -------------
 
