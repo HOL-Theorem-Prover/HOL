@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib
 
-open bossLib llistTheory BasicProvers
+open bossLib llistTheory BasicProvers metisLib
 
 local open pred_setLib fixedPointTheory in end
 
@@ -214,6 +214,35 @@ val pmap_thm = store_thm(
     (!x r p.
          pmap f g (pcons x r p) = pcons (f x) (g r) (pmap f g p))``,
   SRW_TAC [][pmap_def, stopped_at_def, pcons_def, first_def]);
+val _ = export_rewrites ["pmap_thm"]
+
+val first_pmap = store_thm(
+  "first_pmap",
+  ``!p. first (pmap f g p) = f (first p)``,
+  CONV_TAC (HO_REWR_CONV FORALL_path) THEN SRW_TAC [][]);
+val _ = export_rewrites ["first_pmap"]
+
+val last_pmap = store_thm(
+  "last_pmap",
+  ``!p. finite p ==> (last (pmap f g p) = f (last p))``,
+  HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][]);
+val _ = export_rewrites ["last_pmap"]
+
+val finite_pmap = store_thm(
+  "finite_pmap",
+  ``!(f:'a -> 'c) (g:'b -> 'd) p. finite (pmap f g p) = finite p``,
+  Q_TAC SUFF_TAC
+       `(!p. finite p ==> !(f:'a -> 'c) (g:'b -> 'd). finite (pmap f g p)) /\
+        (!p. finite p ==> !(f:'a -> 'c) (g:'b -> 'd) p0. (
+                                p = pmap f g p0) ==> finite p0)`
+        THEN1 METIS_TAC [] THEN
+  CONJ_TAC THEN HO_MATCH_MP_TAC finite_path_ind THEN
+  SRW_TAC [][] THEN
+  Q.ISPEC_THEN `p0` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC)
+               path_cases THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []);
+val _ = export_rewrites ["finite_pmap"]
+
 
 
 val tail_def =
@@ -237,6 +266,12 @@ val first_label_def =
 
 val _ = BasicProvers.export_rewrites ["first_label_def"]
 
+
+(* ----------------------------------------------------------------------
+    length : ('a,'b) path -> num option
+      NONE indicates an infinite path
+      SOME n indicates a path with n states, and n - 1 transitions
+   ---------------------------------------------------------------------- *)
 
 val length_def =
     Define`length p = if finite p then
@@ -289,18 +324,44 @@ val finite_length = store_thm(
   PROVE_TAC [finite_length_lemma, optionTheory.option_CASES,
              optionTheory.NOT_NONE_SOME]);
 
+
+val length_pmap = store_thm(
+  "length_pmap",
+  ``!f g p. length (pmap f g p) = length p``,
+  REPEAT GEN_TAC THEN Cases_on `finite p` THENL [
+    Q_TAC SUFF_TAC `!p. finite p ==> (length (pmap f g p) = length p)` THEN1
+          METIS_TAC [] THEN
+    HO_MATCH_MP_TAC finite_path_ind THEN
+    SRW_TAC [][length_thm],
+    `~finite (pmap f g p)` by METIS_TAC [finite_pmap] THEN
+    METIS_TAC [finite_length]
+  ]);
+val _ = export_rewrites ["length_pmap"]
+
+(* ----------------------------------------------------------------------
+    el : num -> ('a, 'b) path -> 'a
+
+    return the nth state, counting from zero.  To be a valid index,
+    n must be IN PL p.
+   ---------------------------------------------------------------------- *)
+
 val el_def = Define`
   (el 0 p = first p) /\ (el (SUC n) p = el n (tail p))
 `;
 val _ = BasicProvers.export_rewrites ["el_def"]
+
+(* ----------------------------------------------------------------------
+    nth_label : num -> ('a,'b) path -> 'b
+
+    returns the nth label, counting from zero up.  To be a valid index,
+    n + 1 must be in PL p.
+   ---------------------------------------------------------------------- *)
 
 val nth_label_def = Define`
   (nth_label 0 p = first_label p) /\
   (nth_label (SUC n) p = nth_label n (tail p))
 `;
 val _ = BasicProvers.export_rewrites ["nth_label_def"]
-
-
 
 val path_Axiom = store_thm(
   "path_Axiom",
@@ -393,6 +454,16 @@ val finite_pconcat = store_thm(
              pconcat_eq_pcons] THEN
   SRW_TAC [][] THEN PROVE_TAC []);
 
+(* ----------------------------------------------------------------------
+    PL : ('a,'b) path -> num set
+
+    PL(p) returns the set of valid indices into a path, where the index
+    is going to extract a state.  When extracting labels (with nth_label),
+    index + 1 must be in PL set for the path.  E.g., it's only valid to
+    talk about the 0th label, if the list is two states long, and thus
+    accepts indices {0, 1}.
+   ---------------------------------------------------------------------- *)
+
 val PL_def = Define`PL p = { i | finite p ==> i < THE (length p) }`
 
 val infinite_PL = store_thm(
@@ -433,6 +504,29 @@ val PL_downward_closed = store_thm(
   "PL_downward_closed",
   ``!i p. i IN PL p ==> !j. j < i ==> j IN PL p``,
   SRW_TAC [][PL_def] THEN PROVE_TAC [arithmeticTheory.LESS_TRANS]);
+
+
+val PL_pmap = store_thm(
+  "PL_pmap",
+  ``PL (pmap f g p) = PL p``,
+  SRW_TAC [][PL_def, length_pmap, pred_setTheory.EXTENSION]);
+val _ = export_rewrites ["PL_pmap"]
+
+val el_pmap = store_thm(
+  "el_pmap",
+  ``!i p. i IN PL p ==> (el i (pmap f g p) = f (el i p))``,
+  Induct THEN CONV_TAC (HO_REWR_CONV FORALL_path) THEN SRW_TAC [][]);
+val _ = export_rewrites ["el_pmap"]
+
+val nth_label_pmap = store_thm(
+  "nth_label_pmap",
+  ``!i p. SUC i IN PL p ==> (nth_label i (pmap f g p) = g (nth_label i p))``,
+  Induct THEN GEN_TAC THEN
+  Q.SPEC_THEN `p` STRUCT_CASES_TAC path_cases THEN
+  SRW_TAC [][]);
+val _ = export_rewrites ["nth_label_pmap"]
+
+(* ---------------------------------------------------------------------- *)
 
 val firstP_at_def =
     Define`firstP_at P p i = i IN PL p /\ P (el i p) /\
@@ -656,6 +750,17 @@ val el_drop = store_thm(
     SRW_TAC [][arithmeticTheory.ADD_CLAUSES]
   ]);
 val _ = BasicProvers.export_rewrites ["el_drop"]
+
+val nth_label_drop = store_thm(
+  "nth_label_drop",
+  ``!i j p.  SUC(i + j) IN PL p ==>
+             (nth_label i (drop j p) = nth_label (i + j) p)``,
+  Induct_on `j` THENL [
+    SRW_TAC [][],
+    GEN_TAC THEN CONV_TAC (HO_REWR_CONV FORALL_path) THEN
+    SRW_TAC [][arithmeticTheory.ADD_CLAUSES]
+  ]);
+val _ = BasicProvers.export_rewrites ["nth_label_drop"]
 
 (* ----------------------------------------------------------------------
     ``take n p`` takes n _labels_ from p
@@ -1016,6 +1121,18 @@ val finite_okpath_ind = store_thm(
         PROVE_TAC [] THEN
   HO_MATCH_MP_TAC finite_path_ind THEN
   ASM_SIMP_TAC (srw_ss()) []);
+
+val okpath_pmap = store_thm(
+  "okpath_pmap",
+  ``!R f g p. okpath R p /\ (!x r y. R x r y ==> R (f x) (g r) (f y)) ==>
+              okpath R (pmap f g p)``,
+  REPEAT STRIP_TAC THEN
+  Q_TAC SUFF_TAC
+        `!p. (?p0. okpath R p0 /\ (p = pmap f g p0)) ==> okpath R p` THEN1
+        METIS_TAC[] THEN
+  HO_MATCH_MP_TAC okpath_co_ind THEN SRW_TAC [][] THEN
+  Q.SPEC_THEN `p0` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) path_cases THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []);
 
 val plink_def = new_specification(
   "plink_def",
