@@ -968,6 +968,21 @@ val w2n_EVAL = store_thm("w2n_EVAL",
     THEN B_FULL_SIMP_TAC [EQUIV_def]
 );
 
+val w2n_ELIM = store_thm("w2n_ELIM",
+  `!a. n2w (w2n a) = a`,
+  REPEAT STRIP_TAC
+    THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
+    THEN REWRITE_TAC [w2n_EVAL,MODw_ELIM]
+);
+
+val n2w_11 = store_thm("n2w_11",
+  `!a b. (n2w a = n2w b) = (MODw a = MODw b)`,
+  REPEAT STRIP_TAC
+    THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
+    THEN STRUCT_CASES_TAC (SPEC `b` word_nchotomy)
+    THEN REWRITE_TAC [n2w_def,mk_word_eq_one_one,EQUIV_QT,GSYM EQUIV_def]
+);
+
 (* -------------------------------------------------------- *)
 
 fun SELECT_WORD_TAC th1 th2 =
