@@ -30,7 +30,7 @@ structure finite_mapScript =
 struct
 
 open HolKernel Parse boolLib IndDefLib numLib pred_setTheory
-     sumTheory pairTheory BasicProvers SingleStep bossLib metisLib 
+     sumTheory pairTheory BasicProvers SingleStep bossLib metisLib
      simpLib;
 
 local open pred_setLib listTheory in end
@@ -562,6 +562,9 @@ val fmap_EQ_THM = Q.store_thm
    Q.ASM_CASES_TAC `x IN FDOM f` THEN PROVE_TAC [NOT_FDOM_FAPPLY_FEMPTY],
    STRIP_TAC THEN ASM_REWRITE_TAC []
  ]);
+
+(* and it's more useful still if the main equality is the other way 'round *)
+val fmap_EXT = save_thm("fmap_EXT", GSYM fmap_EQ_THM)
 
 
 (*---------------------------------------------------------------------------
@@ -1161,22 +1164,22 @@ val IN_DOMSUB_NOT_EQUAL = Q.prove
 
 val SUBMAP_FUPDATE = Q.store_thm
 ("SUBMAP_FUPDATE_",
- `!(f:'a |->'b) g x y. 
-     (f |+ (x,y)) SUBMAP g = 
+ `!(f:'a |->'b) g x y.
+     (f |+ (x,y)) SUBMAP g =
         x IN FDOM(g) /\ (FAPPLY g x = y) /\ (f\\x) SUBMAP (g\\x)`,
- RW_TAC std_ss [SUBMAP_DEF] 
-  THEN EQ_TAC 
+ RW_TAC std_ss [SUBMAP_DEF]
+  THEN EQ_TAC
   THEN RW_TAC std_ss [] THENL
   [METIS_TAC [IN_INSERT,FDOM_FUPDATE],
    METIS_TAC [IN_INSERT,FDOM_FUPDATE,FAPPLY_FUPDATE_THM],
    FULL_SIMP_TAC std_ss [FDOM_DOMSUB,IN_DELETE,FDOM_FUPDATE,IN_INSERT],
-   FULL_SIMP_TAC std_ss 
+   FULL_SIMP_TAC std_ss
      [FDOM_DOMSUB,IN_DELETE,IN_INSERT,FAPPLY_FUPDATE_THM,DOMSUB_FAPPLY_THM]
     THEN Q.PAT_ASSUM `$! M` (MP_TAC o Q.SPEC `x'`)
     THEN RW_TAC std_ss [FDOM_FUPDATE,IN_INSERT],
    FULL_SIMP_TAC std_ss [FDOM_DOMSUB,IN_DELETE,FDOM_FUPDATE,IN_INSERT]
     THEN METIS_TAC[],
-   FULL_SIMP_TAC std_ss 
+   FULL_SIMP_TAC std_ss
      [FDOM_DOMSUB,IN_DELETE,IN_INSERT,FAPPLY_FUPDATE_THM,DOMSUB_FAPPLY_THM,
       FDOM_FUPDATE]
     THEN RW_TAC std_ss []]);
@@ -1373,15 +1376,15 @@ val FMEQ_SINGLE_SIMPLE_DISJ_ELIM = store_thm(
   PROVE_TAC [FAPPLY_FUPDATE]);
 
 val FAPPLY_FEMPTY = Q.prove
-(`FAPPLY (FEMPTY:('a,'b)fmap) x :'b = 
+(`FAPPLY (FEMPTY:('a,'b)fmap) x :'b =
   FAIL FAPPLY ^(mk_var("empty map",bool)) FEMPTY x`,
  REWRITE_TAC [combinTheory.FAIL_THM]);
 
-val DRESTRICT_PRED_THM = 
+val DRESTRICT_PRED_THM =
   SIMP_RULE std_ss [boolTheory.IN_DEF]
    (CONJ DRESTRICT_FEMPTY DRESTRICT_FUPDATE);
 
-val DRESTRICT_PRED_THM = 
+val DRESTRICT_PRED_THM =
   SIMP_RULE std_ss [boolTheory.IN_DEF]
    (CONJ DRESTRICT_FEMPTY DRESTRICT_FUPDATE);
 
@@ -1392,7 +1395,7 @@ val DRESTRICT_PRED_THM =
 val th = GEN_ALL
              (CONV_RULE (DEPTH_CONV ETA_CONV)
                (ABS (Term `a:'a`)
-                 (SIMP_RULE std_ss [IN_SING,IN_DEF] 
+                 (SIMP_RULE std_ss [IN_SING,IN_DEF]
                    (Q.SPEC `{x}` (Q.SPEC `a` IN_COMPL)))));
 
 val RRESTRICT_PRED_THM = Q.prove
@@ -1401,7 +1404,7 @@ val RRESTRICT_PRED_THM = Q.prove
        RRESTRICT (f |+ (x,y)) P =
         if P y then RRESTRICT f P |+ (x,y)
           else RRESTRICT (DRESTRICT f (\a. ~(a = x))) P)`,
- REWRITE_TAC [RRESTRICT_FEMPTY] 
+ REWRITE_TAC [RRESTRICT_FEMPTY]
   THEN METIS_TAC [REWRITE_RULE [th] RRESTRICT_FUPDATE, IN_DEF]);
 
 val FRANGE_EQNS = Q.prove
@@ -1422,19 +1425,19 @@ fun tupled_constructor capp =
      val argtys = map type_of args
      val cvar = mk_var(fst(dest_const c),list_mk_prod argtys --> target)
      val new = list_mk_pabs(args,mk_comb(cvar,list_mk_pair args))
- in 
+ in
     mk_thm([],mk_eq(c,new))
  end;
 
-val reshape = 
+val reshape =
   PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o
-  pairLib.GEN_BETA_RULE o 
+  pairLib.GEN_BETA_RULE o
   PURE_REWRITE_RULE [tupled_constructor (Term`FUPDATE f (x,y)`),
                      tupled_constructor (Term`x INSERT s`)];
 
 val T_INTRO = PURE_ONCE_REWRITE_RULE [PROVE[] (Term `x = (x = T)`)];
 
-val _ = 
+val _ =
  let open EmitML combinSyntax ParseDatatype arithmeticTheory
      val fmapdecl = parse `fmap = FEMPTY | FUPDATE of fmap => 'a#'b`
   in try exportML ("fmap",
@@ -1446,12 +1449,12 @@ val _ =
     :: MLSIG "val FUPDATE  : ('a,'b) fmap * ('a * 'b) -> ('a,'b)fmap"
     :: MLSIG "val FDOM     : ('a,'b) fmap -> 'a set"
     ::
-    [DEFN_NOSIG(reshape(CONJ FDOM_FEMPTY FDOM_FUPDATE)), 
+    [DEFN_NOSIG(reshape(CONJ FDOM_FEMPTY FDOM_FUPDATE)),
      DEFN (reshape (CONJ FAPPLY_FEMPTY FAPPLY_FUPDATE_THM)),
      DEFN (reshape FCARD_DEF),
      DEFN (reshape lookup_DEF),
      DEFN (reshape FUPDATE_LIST),
-     DEFN (reshape(CONJ FUNION_FEMPTY_1 
+     DEFN (reshape(CONJ FUNION_FEMPTY_1
                   (CONJ FUNION_FEMPTY_2 FUNION_FUPDATE_1))),
      DEFN (reshape (CONJ DOMSUB_FEMPTY DOMSUB_FUPDATE_THM)),
      DEFN (reshape (CONJ (T_INTRO (SPEC_ALL SUBMAP_FEMPTY)) SUBMAP_FUPDATE)),
