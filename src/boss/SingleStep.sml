@@ -3,14 +3,14 @@ struct
 
 open HolKernel Parse boolLib pairSyntax PairedLambda;
 
-infix THEN THENL ORELSE |-> ##;
-infixr -->;
+infix THEN THENL ORELSE |-> ##;   infixr -->;
 
 val ERR = mk_HOL_ERR "SingleStep";
 
 fun name_eq s M = ((s = fst(dest_var M)) handle HOL_ERR _ => false)
-fun tm_free_eq M N P =
-   (aconv N P andalso free_in N M) orelse raise ERR "tm_free_eq" ""
+
+fun tm_free_eq M N P = 
+  (aconv N P andalso free_in N M) orelse raise ERR "tm_free_eq" ""
 
 (*---------------------------------------------------------------------------*
  * Mildly altered STRUCT_CASES_TAC, so that it does a SUBST_ALL_TAC instead  *
@@ -30,20 +30,29 @@ fun away gfrees0 bvlist =
        in ((v,v')::plist, v'::gfrees)
        end) bvlist ([], gfrees0)));
 
-fun FREEUP [] g = ALL_TAC g
-  | FREEUP tofree (g as (asl,w)) =
-     let val (V,_) = strip_forall w
-         val gfrees = free_varsl (w::asl)
-         val Vmap = away gfrees V
-         val tobind = map snd (gather (fn (v,_) => not (mem v tofree)) Vmap)
+(*---------------------------------------------------------------------------*)
+(* Make free whatever bound variables would prohibiting the case split       *)
+(* or induction. This is not trivial, since the act of freeing up a variable *)
+(* can change its name (if another with same name already occurs free in     *)
+(* hypotheses). Then the term being split (or inducted) on needs to be       *)
+(* renamed as well.                                                          *)
+(*---------------------------------------------------------------------------*)
+
+fun FREEUP [] M g = (ALL_TAC,M)
+  | FREEUP tofree M (g as (asl,w)) =
+     let val (V,_) = strip_forall w   (* ignore renaming here : idleness! *)
+         val Vmap = away (free_varsl (w::asl)) V
+         val theta = gather (fn (v,_) => mem v tofree) Vmap
+         val rebind = map snd (gather (fn (v,_) => not (mem v tofree)) Vmap)
      in
-       (MAP_EVERY X_GEN_TAC (map snd Vmap)
-          THEN MAP_EVERY ID_SPEC_TAC (rev tobind)) g
+       ((MAP_EVERY X_GEN_TAC (map snd Vmap)
+          THEN MAP_EVERY ID_SPEC_TAC (rev rebind)),
+        subst (map op|-> theta) M)
      end;
 
 (*---------------------------------------------------------------------------*
  * Do case analysis on given term. The quotation is parsed into a term M that*
- * must match a subterm in the body (or the assumptions). If M is a variable,*
+ * must match a subterm in the goal (or the assumptions). If M is a variable,*
  * then the match of the names must be exact. Once the term to split over is *
  * known, its type and the associated facts are obtained and used to do the  *
  * split with. Variables of M might be quantified in the goal. If so, we try *
@@ -53,34 +62,33 @@ fun FREEUP [] g = ALL_TAC g
  * the term is boolean, we do a case-split on whether it is true or false.   *
  *---------------------------------------------------------------------------*)
 
-datatype category = Free of term
-                  | Bound of term list * term
-                  | Alien of term
+datatype category 
+    = Free of term
+    | Bound of term list * term  (* in Bound(V,M), V = vars to be freed up *)
+    | Alien of term;
 
 fun cat_tyof (Free M)      = type_of M
   | cat_tyof (Bound (_,M)) = type_of M
   | cat_tyof (Alien M)     = type_of M
 
 fun prim_find_subterm FVs tm (asl,w) =
-   if is_var tm
-   then let val name = fst(dest_var tm)
-        in
-          Free (Lib.first(name_eq name) FVs)
-          handle HOL_ERR _
-          => Bound(let val (V,_) = strip_forall w
-                       val v = Lib.first (name_eq name) V
-                   in
-                     ([v], v)
-                   end)
-        end
-   else Free (tryfind(fn x => find_term (can(tm_free_eq x tm)) x) (w::asl))
-        handle HOL_ERR _
-        => Bound(let val (V,body) = strip_forall w
-                     val M = find_term (can (tm_free_eq body tm)) body
-                 in
-                    (intersect (free_vars M) V, M)
-                 end)
-                 handle HOL_ERR _ => Alien tm;
+ if is_var tm
+ then let val name = fst(dest_var tm)
+      in Free (Lib.first(name_eq name) FVs)
+         handle HOL_ERR _
+         => Bound(let val (BV,_) = strip_forall w
+                      val v = Lib.first (name_eq name) BV
+                  in ([v], v)
+                  end)
+      end
+ else Free (tryfind(fn x => find_term (can(tm_free_eq x tm)) x) (w::asl))
+      handle HOL_ERR _
+      => Bound(let val (V,body) = strip_forall w
+                   val M = find_term (can (tm_free_eq body tm)) body
+               in (intersect (free_vars M) V, M)
+               end)
+      handle HOL_ERR _ 
+      => Alien tm;
 
 fun find_subterm qtm (g as (asl,w)) =
   let val FVs = free_varsl (w::asl)
@@ -90,9 +98,8 @@ fun find_subterm qtm (g as (asl,w)) =
   end;
 
 
-fun Cases_on qtm (g as (asl,w)) =
- let val st = find_subterm qtm g
-     val ty = cat_tyof st
+fun primCases_on st (g as (_,w)) =
+ let val ty = cat_tyof st
      val (Tyop,_) = dest_type ty
  in case TypeBase.read Tyop
      of SOME facts =>
@@ -102,27 +109,36 @@ fun Cases_on qtm (g as (asl,w)) =
                if (is_var M) then VAR_INTRO_TAC (ISPEC M thm) g else
                if ty=bool then ASM_CASES_TAC M g
                else TERM_INTRO_TAC (ISPEC M thm) g
-            | Bound(V,M) => (FREEUP V THEN VAR_INTRO_TAC (ISPEC M thm)) g
+            | Bound(V,M) => let val (tac,M') = FREEUP V M g
+                            in (tac THEN VAR_INTRO_TAC (ISPEC M' thm)) g end
             | Alien M    => if ty=bool then ASM_CASES_TAC M g
                             else TERM_INTRO_TAC (ISPEC M thm) g
         end
-      | NONE => raise ERR "Cases_on"
+      | NONE => raise ERR "primCases_on"
                    ("No cases theorem found for type: "^Lib.quote Tyop)
  end
- handle e as HOL_ERR _ => Raise e;
 
+fun Cases_on qtm g = primCases_on (find_subterm qtm g) g
+  handle e => raise wrap_exn "SingleStep" "Cases_on" e;
+
+fun Cases (g as (_,w)) =
+  let val (Bvar,_) = with_exn dest_forall w (ERR "Cases" "not a forall")
+  in primCases_on (Bound([Bvar],Bvar)) g
+  end
+  handle e => raise wrap_exn "SingleStep" "Cases" e;
 
 fun primInduct st ind_tac (g as (asl,c)) =
  let fun ind_non_var V M =
-       let val Mfrees = free_vars M
+       let val (tac,M') = FREEUP V M g
+           val Mfrees = free_vars M'
            fun has_vars tm = not(null_intersection (free_vars tm) Mfrees)
            val tms = filter has_vars asl
            val newvar = variant (free_varsl (c::asl))
-                                (mk_var("v",type_of M))
-           val tm = mk_exists(newvar, mk_eq(newvar, M))
-           val th = EXISTS(tm,M) (REFL M)
+                                (mk_var("v",type_of M'))
+           val tm = mk_exists(newvar, mk_eq(newvar, M'))
+           val th = EXISTS(tm,M') (REFL M')
         in
-          FREEUP V
+          tac
             THEN MAP_EVERY UNDISCH_TAC tms
             THEN CHOOSE_THEN MP_TAC th
             THEN MAP_EVERY ID_SPEC_TAC Mfrees
@@ -137,20 +153,21 @@ fun primInduct st ind_tac (g as (asl,c)) =
               end
          else ind_non_var [] M g
       | Bound(V,M) =>
-         if is_var M then (FREEUP V THEN ID_SPEC_TAC M THEN ind_tac) g
+         if is_var M 
+           then let val (tac,M') = FREEUP V M g
+                in (tac THEN ID_SPEC_TAC M' THEN ind_tac) g
+                end
          else ind_non_var V M g
       | Alien M =>
          if is_var M then raise ERR "primInduct" "Alien variable"
          else ind_non_var (free_vars M) M g
  end
- handle e => Raise e;
 
 val is_mutind_thm = is_conj o snd o strip_imp o snd o strip_forall o concl;
 
 fun induct_on_type st ty =
- let val (Tyop,_) = dest_type ty
-       handle HOL_ERR _ => raise ERR "induct_on_type"
-           "No induction theorems available for variable types"
+ let val (Tyop,_) = with_exn dest_type ty (ERR "induct_on_type"
+                     "No induction theorems available for variable types")
  in case TypeBase.read Tyop
      of SOME facts =>
         let val thm = TypeBasePure.induction_of facts
@@ -166,8 +183,20 @@ fun Induct_on qtm g =
  let val st = find_subterm qtm g
  in induct_on_type st (cat_tyof st) g
  end
- handle e => raise (wrap_exn "SingleStep" "Induct_on" e)
+ handle e => raise wrap_exn "SingleStep" "Induct_on" e
 
+
+fun grab_var M =
+  if is_forall M then fst(dest_forall M) else
+  if is_conj M then fst(dest_forall(fst(dest_conj M)))
+  else raise ERR "Induct" "expected a forall or a conjunction of foralls";
+
+fun Induct (g as (_,w)) =
+ let val v = grab_var w
+     val (_,ty) = dest_var (grab_var w)
+ in induct_on_type (Bound([v],v)) ty g
+ end
+ handle e => raise wrap_exn "SingleStep" "Induct" e
 
 fun completeInduct_on qtm g =
  let val st = find_subterm qtm g
@@ -176,6 +205,7 @@ fun completeInduct_on qtm g =
  in
      primInduct st ind_tac g
  end
+ handle e => raise wrap_exn "SingleStep" "completeInduct_on" e
 
 
 (*---------------------------------------------------------------------------
@@ -205,38 +235,10 @@ fun measureInduct_on q (g as (asl,w)) =
      val ind_thm2 = GEN_BETA_RULE (SPEC meas' ind_thm1)
      val ind_tac = Prim_rec.INDUCT_THEN ind_thm2 ASSUME_TAC
  in
-     primInduct st ind_tac g handle e => Raise e
+     primInduct st ind_tac g
  end
+ handle e => raise wrap_exn "SingleStep" "measureInduct_on" e
 end
-
-
-fun Cases (g as (_,w)) =
-  let val (Bvar,_) = with_exn dest_forall w (ERR "Cases" "not a forall")
-      val (Name,_) = dest_var Bvar
-  in Cases_on [QUOTE Name] g
-  end
-
-
-(*---------------------------------------------------------------------------
-     If we don't do the GEN_TAC first, then Induct_on tries to parse
-     `Name` in the context of the freevars of the goal.  But if
-     Name is universally quantified, then it's not free, and the
-     attempt to parse it won't have get any contextual help, and the
-     parser will report that a type variable has been guessed, completely
-     un-necessarily.
- ---------------------------------------------------------------------------*)
-
-fun grab_var M =
-  if is_forall M then fst(dest_forall M) else
-  if is_conj M then fst(dest_forall(fst(dest_conj M)))
-  else raise ERR "Induct" "expected a forall or a conjunction of foralls";
-
-
-fun Induct (g as (_,w)) =
- let val v = grab_var w
-     val (_,ty) = dest_var (grab_var w)
- in induct_on_type (Bound([v],v)) ty g
- end;
 
 
 (*---------------------------------------------------------------------------
@@ -269,7 +271,7 @@ fun recInduct thm =
        end
   in tac
   end
-  handle e => Raise e;
+  handle e => raise wrap_exn "SingleStep" "recInduct" e
 
 
 (*---------------------------------------------------------------------------*
