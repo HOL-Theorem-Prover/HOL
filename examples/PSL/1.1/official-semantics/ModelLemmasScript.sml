@@ -93,23 +93,6 @@ val MODEL_SIMPLE_MODEL =
     THEN RW_TAC (srw_ss()) [SUBSET_UNIV]);
 
 (*****************************************************************************)
-(* In the open model over a set B:'state -> bool, every state variable in    *)
-(* B is "free" (has non-deterministic behavior). Normally B will be the      *)
-(* set of variables in a formula.                                            *)
-(*****************************************************************************)
-
-val OPEN_MODEL_def =
- Define 
-  `OPEN_MODEL(B:'state -> bool) = 
-    SIMPLE_MODEL B (\(s,s'). s IN B /\ s' IN B)`;
-
-val MODEL_OPEN_MODEL =
- store_thm
-  ("MODEL_OPEN_MODEL",
-   ``MODEL(OPEN_MODEL B)``,
-   RW_TAC list_ss [MODEL_SIMPLE_MODEL,OPEN_MODEL_def]);
-
-(*****************************************************************************)
 (* Product of two models                                                     *)
 (*                                                                           *)
 (*    (S1,S01,R1,P1,L1) || (S2,S02,R2,P2,L2)                                 *)
@@ -215,6 +198,25 @@ val automaton_def =
        Delta: 'state # 'label # 'state -> bool;
        Q0:    'state -> bool;
        F:     'state -> bool |>`;
+
+(*****************************************************************************)
+(* The open model over a set P of propositions P : 'prop -> bool             *)
+(*****************************************************************************)
+val OPEN_MODEL_def =
+ Define 
+  `OPEN_MODEL(P:'prop -> bool) = 
+    <| S  := {s | s SUBSET P};
+       S0 := {s | s SUBSET P};
+       R  := {(s,t) | s SUBSET P /\ t SUBSET P}; 
+       P  := P; 
+       L  := \s. {p | p IN s} |>`;
+
+val MODEL_OPEN_MODEL =
+ store_thm
+  ("MODEL_OPEN_MODEL",
+   ``MODEL(OPEN_MODEL P)``,
+   RW_TAC list_ss [MODEL_def,OPEN_MODEL_def]
+    THEN FULL_SIMP_TAC (srw_ss()) []);
 
 val AUTOMATON_def =
  Define
@@ -354,37 +356,27 @@ SIMP_CONV (srw_ss())
       F     := final_states |>)``;
 
 SIMP_CONV (srw_ss()) 
-  [MODEL_AUTOMATON_PROD_def,OPEN_MODEL_def,SIMPLE_MODEL_def]
-  ``OPEN_MODEL states
+  [MODEL_AUTOMATON_PROD_def,OPEN_MODEL_def]
+  ``OPEN_MODEL P
     ||
-    <| Sigma := alphabet;
+    <| Sigma := { p | p SUBSET P};
        Q     := states;
        Delta := delta;
        Q0    := initial_states;
        F     := final_states |>``;
 
 SIMP_CONV (srw_ss()) 
-  [MODEL_AUTOMATON_PROD_def,OPEN_MODEL_def,SIMPLE_MODEL_def,MODEL_TO_AUTOMATON_def]
+  [MODEL_AUTOMATON_PROD_def,OPEN_MODEL_def,MODEL_TO_AUTOMATON_def]
   ``MODEL_TO_AUTOMATON
-     (<| S  := states;
-         S0 := initial_states;
-         R  := {(s,s') | T};
-         P  := props;
-         L  := val_fn |>
+     (OPEN_MODEL P
       ||
-      <| Sigma := {a | a SUBSET props};
+      <| Sigma := { p | p SUBSET P};
          Q     := states;
          Delta := delta;
          Q0    := initial_states;
          F     := final_states |>)``;
 
 ******************************************************************************)
-
-(*****************************************************************************)
-(* A computation of M is a path of M starting from an initial state          *)
-(*****************************************************************************)
-val COMPUTATION_def =
- Define `COMPUTATION M w = ? s. s IN M.S0 /\ PATH M s w`;
 
 (******************************************************************************
 * LANGUAGE A p is true of path p iff p is a computation path of model M
@@ -696,11 +688,336 @@ val UF_SEM_TOP_FREE_F_ALWAYS =
     THEN `j < LENGTH l` by DECIDE_TAC
     THEN RES_TAC);
 
+val O_TRUE_def =
+ Define `O_TRUE = O_BOOL B_TRUE`;
+
+val O_SEM_O_TRUE =
+ store_thm
+  ("O_SEM_O_TRUE",
+   ``O_SEM M O_TRUE s``,
+   RW_TAC std_ss [O_TRUE_def,O_SEM_def,B_SEM_def]);
+
+val O_EF_def =
+ Define `O_EF f = O_EU(O_TRUE, f)`;
+
+val PATH_ELEM_0 =
+ store_thm
+  ("PATH_ELEM_0",
+   ``PATH M s p ==> (ELEM p 0 = s)``,
+   Cases_on `p`
+    THEN RW_TAC (std_ss++resq_SS) [PATH_def,ELEM_FINITE,ELEM_INFINITE,EL]);
+
+val O_SEM_O_EF =
+ store_thm
+  ("O_SEM_O_EF",
+   ``O_SEM M (O_EF f) s =      
+      ?p :: PATH M s. ?i :: (LESS(LENGTH p)).  O_SEM M f (ELEM p i)``,
+   RW_TAC (std_ss++resq_SS) [IN_DEF,O_EF_def,O_SEM_def,LESSX_def,O_SEM_O_TRUE]
+    THEN EQ_TAC
+    THEN ZAP_TAC std_ss [PATH_ELEM_0]);
+
+val O_AG_def =
+ Define `O_AG f = O_NOT(O_EF(O_NOT f))`;
+
+val O_SEM_O_AG =
+ store_thm
+  ("O_SEM_O_AG",
+   ``O_SEM M (O_AG f) s =      
+      !p :: PATH M s. !i :: (LESS(LENGTH p)).  O_SEM M f (ELEM p i)``,
+   RW_TAC (std_ss++resq_SS) [IN_DEF,O_SEM_O_EF,O_AG_def,O_SEM_def,LESSX_def]
+    THEN EQ_TAC
+    THEN ZAP_TAC std_ss [PATH_ELEM_0]);
+
+(*****************************************************************************)
+(* Lemmas about MAP_PATH                                                     *)
+(*****************************************************************************)
+
+val LENGTH_MAP_PATH =
+ store_thm
+  ("LENGTH_MAP_PATH",
+   ``!g p. LENGTH(MAP_PATH g p) = LENGTH p``,
+   Cases_on `p`
+    THEN RW_TAC list_ss [MAP_PATH_def,LENGTH_def]);
+
+val ELEM_MAP_PATH =
+ store_thm
+  ("LENGTH_MAP_PATH",
+   ``n < LENGTH p ==> (ELEM (MAP_PATH g p) n = g(ELEM p n))``,
+   Cases_on `p`
+    THEN RW_TAC list_ss 
+          [MAP_PATH_def,ELEM_INFINITE,ELEM_FINITE,LENGTH_def,LS,EL_MAP]);
+
+val RESTN_MAP_PATH =
+ store_thm
+  ("RESTN_MAP_PATH",
+   ``n < LENGTH p ==> (RESTN (MAP_PATH g p) n = MAP_PATH g (RESTN p n))``,
+   Cases_on `p`
+    THEN RW_TAC list_ss 
+          [MAP_PATH_def,ELEM_INFINITE,ELEM_FINITE,LENGTH_def,LS,EL_MAP,
+           RESTN_FINITE,RESTN_INFINITE]
+    THEN Q.UNDISCH_TAC `n < LENGTH l`
+    THEN Q.SPEC_TAC(`l`,`l`)
+    THEN Induct_on `n`
+    THEN RW_TAC list_ss [FinitePathTheory.RESTN_def,FinitePathTheory.REST_def]
+    THEN `~(LENGTH l = 0)` by DECIDE_TAC
+    THEN `~(l = [])` by PROVE_TAC[LENGTH_NIL]
+    THEN RW_TAC list_ss [TL_MAP]
+    THEN `LENGTH (TL l) = LENGTH l - 1` by RW_TAC arith_ss [LENGTH_TL]
+    THEN `n < LENGTH(TL l)` by DECIDE_TAC
+    THEN PROVE_TAC[]);
+
+(*****************************************************************************)
+(* M |=ltl G b! <=> M |=ctl AG b!                                            *)
+(*****************************************************************************)
+val SHARED_ALWAYS_STRONG_BOOL =
+ store_thm
+  ("SHARED_ALWAYS_STRONG_BOOL",
+   ``UF_VALID M (F_G(F_STRONG_BOOL b)) = O_VALID M (O_AG(O_BOOL b))``,
+   RW_TAC (arith_ss++resq_SS) 
+    [IN_DEF,LESSX_def,UF_VALID_def,O_VALID_def,UF_SEM_F_G, 
+     O_SEM_O_AG,COMPUTATION_def,UF_SEM,O_SEM_def,ELEM_RESTN,
+     ELEM_MAP_PATH,LENGTH_MAP_PATH]
+    THEN EQ_TAC
+    THEN RW_TAC std_ss []
+    THENL
+     [`LENGTH (RESTN (MAP_PATH (\s. STATE (M.L s)) p) i) > 0 /\
+       B_SEM (STATE (M.L (ELEM p i))) b \/
+       ?j. j < i /\ (ELEM (MAP_PATH (\s. STATE (M.L s)) p) j = TOP) /\
+           ~(LENGTH p = XNUM j)`
+       by PROVE_TAC[]
+       THEN `j < LENGTH p` by PROVE_TAC[LS_TRANS_X]
+       THEN FULL_SIMP_TAC std_ss [ELEM_MAP_PATH,letter_distinct],
+      RW_TAC list_ss [RESTN_MAP_PATH,LENGTH_MAP_PATH]
+       THEN Cases_on `v`
+       THEN RW_TAC list_ss [RESTN_FINITE,RESTN_INFINITE,LENGTH_def,GT]
+       THEN IMP_RES_TAC LENGTH_RESTN_COR
+       THEN FULL_SIMP_TAC list_ss [RESTN_FINITE,LENGTH_def,xnum_11,SUB,LS]]);
+
+(*****************************************************************************)
+(* M |=ltl G b <=> M |=ctl AG b                                              *)
+(*****************************************************************************)
+val SHARED_ALWAYS_WEAK_BOOL =
+ store_thm
+  ("SHARED_ALWAYS_WEAK_BOOL",
+   ``UF_VALID M (F_G(F_WEAK_BOOL b)) = O_VALID M (O_AG(O_BOOL b))``,
+   RW_TAC (arith_ss++resq_SS) 
+    [IN_DEF,LESSX_def,UF_VALID_def,O_VALID_def,UF_SEM_F_G, 
+     O_SEM_O_AG,COMPUTATION_def,UF_SEM,O_SEM_def,ELEM_RESTN,
+     ELEM_MAP_PATH,LENGTH_MAP_PATH]
+    THEN EQ_TAC
+    THEN RW_TAC std_ss []
+    THEN `((LENGTH (RESTN (MAP_PATH (\s. STATE (M.L s)) p) i) =
+            XNUM 0) \/ B_SEM (STATE (M.L (ELEM p i))) b) \/
+            ?j. j < i /\ (ELEM (MAP_PATH (\s. STATE (M.L s)) p) j = TOP) /\
+                ~(LENGTH p = XNUM j)`
+          by PROVE_TAC[]
+     THEN TRY(`j < LENGTH p` by PROVE_TAC[LS_TRANS_X])
+     THEN FULL_SIMP_TAC std_ss [ELEM_MAP_PATH,letter_distinct]
+     THEN `i < LENGTH(MAP_PATH (\s. STATE (M.L s)) p)` by PROVE_TAC[LENGTH_MAP_PATH]
+     THEN FULL_SIMP_TAC list_ss 
+           [RESTN_MAP_PATH,LENGTH_MAP_PATH,PATH_FINITE_LENGTH_RESTN_0_COR]
+     THEN `LENGTH(MAP_PATH (\s. STATE (M.L s)) p) = LENGTH(FINITE l)` by PROVE_TAC[]
+     THEN FULL_SIMP_TAC list_ss [LENGTH_def,LENGTH_MAP_PATH,LS]);
+
+val O_OR_def =
+ Define
+  `O_OR(f1,f2) = O_NOT(O_AND(O_NOT f1, O_NOT f2))`;
+
+val O_SEM_O_OR =
+ store_thm
+  ("O_SEM_O_OR",
+   ``O_SEM M (O_OR (f1,f2)) s = O_SEM M f1 s \/ O_SEM M f2 s``,
+   RW_TAC list_ss [O_SEM_def,O_OR_def]);
+
+val O_IMP_def =
+ Define
+  `O_IMP(f1,f2) = O_OR(O_NOT f1, f2)`;
+
+val O_SEM_O_IMP =
+ store_thm
+  ("O_SEM_O_IMP",
+   ``O_SEM M (O_IMP (f1,f2)) s = O_SEM M f1 s ==> O_SEM M f2 s``,
+   RW_TAC list_ss [O_SEM_def,O_SEM_O_OR,O_IMP_def]
+    THEN PROVE_TAC[]);
+
+val O_IFF_def =
+ Define
+  `O_IFF(f1,f2) = O_AND(O_IMP(f1, f2), O_IMP(f2, f1))`;
+
+val O_SEM_O_IFF =
+ store_thm
+  ("O_SEM_O_IFF",
+   ``O_SEM M (O_IFF (f1,f2)) s = (O_SEM M f1 s = O_SEM M f2 s)``,
+   RW_TAC list_ss [O_SEM_def,O_SEM_O_IMP,O_IFF_def]
+    THEN PROVE_TAC[]);
+
+(*****************************************************************************)
+(* M |=ctl AG(b1 <-> b2)  ==>  M |=ctl AG b1 <-> AG b2                       *)
+(*****************************************************************************)
+val O_SEM_AG_B_IFF_IMP =
+ store_thm
+  ("O_SEM_AG_B_IFF_IMP",
+   ``O_VALID M (O_AG(O_BOOL(B_IFF(b1, b2)))) ==>
+      O_VALID M (O_IFF(O_AG(O_BOOL b1), O_AG(O_BOOL b2)))``,
+   RW_TAC (list_ss++resq_SS) 
+    [O_VALID_def,B_OR_def,B_IFF_def,B_IMP_def,B_SEM_def,B_SEM_def,
+     O_SEM_O_AG,O_SEM_def,O_SEM_O_IFF]
+    THEN PROVE_TAC[]);
+
+(*
+Ultimately want:
+
+ M0 || A |= G b ==> !pi. pi in COMPUTATION M0 ==> pi || A |= G b
+
+try to prove
+
+ M0 || A |= f ==> !pi. pi in COMPUTATION M0 ==> pi || A |= f
+*)
+
+(*
+val OPEN_MODEL_PROD =
+ store_thm
+  ("OPEN_MODEL_PROD",
+   ``UF_VALID (MODEL_AUTOMATON_PROD (OPEN_MODEL P) A) f
+     ==>
+     !p. COMPUTATION M0 p
+         ==>
+         UF_VALID (MODEL_AUTOMATON_PROD (PATH_TO_MODEL p) A) f``,
+    RW_TAC (srw_ss()++resq_SS)
+     [UF_VALID_def,MODEL_AUTOMATON_PROD_def,OPEN_MODEL_def,
+      COMPUTATION_def,PATH_TO_MODEL_def,PATH_def,IN_DEF]
+     THEN ASSUM_LIST(fn thl => STRIP_ASSUME_TAC(Q.SPEC `INFINITE p` (el 5 thl)))
+     THEN FULL_SIMP_TAC (srw_ss()++resq_SS) [PATH_def]
+
+val OPEN_MODEL_PROD_INFINITE =
+ store_thm
+  ("OPEN_MODEL_PROD_INFINITE",
+   ``UF_VALID (MODEL_AUTOMATON_PROD (OPEN_MODEL P) A) f
+     ==>
+     !p. COMPUTATION M0 (INFINITE p)
+         ==>
+         UF_VALID (MODEL_AUTOMATON_PROD (PATH_TO_MODEL(INFINITE p)) A) f``,
+    RW_TAC (srw_ss()++resq_SS)
+     [UF_VALID_def,MODEL_AUTOMATON_PROD_def,OPEN_MODEL_def,
+      COMPUTATION_def,PATH_TO_MODEL_def,PATH_def,IN_DEF]
+     THEN ASSUM_LIST(fn thl => STRIP_ASSUME_TAC(Q.SPEC `INFINITE p` (el 5 thl)))
+     THEN FULL_SIMP_TAC (srw_ss()++resq_SS) [PATH_def]
+*)
+
+val UF_INFINITE_VALID_def =
+ Define
+  `UF_INFINITE_VALID M f =
+   !pi. COMPUTATION M (INFINITE pi) 
+        ==> 
+        UF_SEM (MAP_PATH (\s. STATE (M.L s)) (INFINITE pi)) f`;
+
+val IN_COMPUTATION =
+ store_thm
+  ("IN_COMPUTATION",
+   ``w IN COMPUTATION M = ?s. s IN M.S0 /\ PATH M s w``,
+   RW_TAC list_ss [IN_DEF,COMPUTATION_def]);
+
+
+(*****************************************************************************)
+(* Conversion of a computation to a model (Kripke structure)                 *)
+(*****************************************************************************)
+val COMPUTATION_TO_MODEL_def =
+ Define
+  `(COMPUTATION_TO_MODEL(FINITE l) = 
+    <| S  := {n | n < LENGTH l};
+       S0 := {0};
+       R  := {(n,n') | n < LENGTH l /\ n' < LENGTH l /\ (n' = n+1)};
+       P  := {p:'prop | ?i. i < LENGTH l /\ p IN EL i l};
+       L  := \n. {p | n < LENGTH l /\ p IN (EL n l)} |>)
+   /\
+   (COMPUTATION_TO_MODEL(INFINITE f) = 
+    <| S  := {n | T};
+       S0 := {0};
+       R  := {(n,n') | n' = n+1};
+       P  := {p:'prop | ?i. p IN f i};
+       L  := \n. {p | p IN (f n)} |>)`;
+
+val MODEL_COMPUTATION_TO_MODEL =
+ store_thm
+  ("MODEL_COMPUTATION_TO_MODEL",
+   ``!p. 0 < LENGTH p ==>  MODEL(COMPUTATION_TO_MODEL p)``,
+   GEN_TAC
+    THEN Cases_on `p`
+    THEN RW_TAC list_ss [SUBSET_DEF,MODEL_def,COMPUTATION_TO_MODEL_def]   
+    THEN FULL_SIMP_TAC (srw_ss()) [SUBSET_UNIV,LENGTH_def,LS]
+    THEN PROVE_TAC[]);
+
+(*****************************************************************************)
+(* mike,                                                                     *)
+(*                                                                           *)
+(* >If M (I assume I meant "M0") is the open model, would you expect:        *)
+(* >                                                                         *)
+(* > (M0 || A |=ltl f) and pi a computation of M0 implies (pi || A |=ltl f)  *)
+(* >                                                                         *)
+(* >to hold.                                                                 *)
+(*                                                                           *)
+(* yes.                                                                      *)
+(*                                                                           *)
+(* cindy.                                                                    *)
+(*****************************************************************************)
+
+(*
+
+val FST_LEMMA =
+ prove
+  (``!Q x. (\(s,t). Q s) x = Q(FST x)``,
+   Cases_on `x`
+    THEN RW_TAC std_ss []);
+
+val OPEN_MODEL_PROD_INFINITE =
+ store_thm
+  ("OPEN_MODEL_PROD_INFINITE",
+   ``UF_VALID (MODEL_AUTOMATON_PROD (OPEN_MODEL P) A) f
+     ==>
+     !pi. COMPUTATION (OPEN_MODEL P) (INFINITE pi)
+          ==>
+          UF_INFINITE_VALID 
+           (MODEL_AUTOMATON_PROD (COMPUTATION_TO_MODEL(INFINITE pi)) A)
+           f``,
+    RW_TAC (srw_ss()++resq_SS)
+     [UF_VALID_def,UF_INFINITE_VALID_def,MODEL_AUTOMATON_PROD_def,OPEN_MODEL_def, 
+      COMPUTATION_def,IN_COMPUTATION,COMPUTATION_TO_MODEL_def,PATH_def]
+     THEN FULL_SIMP_TAC list_ss 
+           [FST_LEMMA,PROVE[]``(!v. (?s. P s v) ==> Q v) = !v s. P s v ==> Q v``,
+            MAP_PATH_def]
+     THEN ASSUM_LIST
+           (fn thl => ASSUME_TAC
+                       (SPECL 
+                         [``INFINITE(\n. (pi(FST(pi' n)), t)):(('a -> bool) # 'b) path``,
+                          ``(pi 0,t):('a -> bool) # 'b``] 
+                         (el 6 thl)))
+     THEN FULL_SIMP_TAC list_ss [MAP_PATH_def]
+
+     THEN `PATH
+            <|S := {(s,t) | s SUBSET P /\ t IN A.Q};
+              S0 := {(s,t) | s SUBSET P /\ t IN A.Q0};
+              R :=
+                {((s,t),s',t') |
+                 (s SUBSET P /\ s' SUBSET P) /\ (t,s,t') IN A.Delta};
+              P := P; L := (\(s,t). s)|> (pi 0,t)
+            (INFINITE (\n. (pi (FST (pi' n)),t))) 
+            ==>
+            UF_SEM
+              (MAP_PATH (\s'. STATE (FST s'))
+                        (INFINITE (\n. (pi (FST (pi' n)),t)))) f`
+          by PROVE_TAC[]
+
+
+
+
+
+
+
+     THEN ASSUM_LIST(fn thl => STRIP_ASSUME_TAC(Q.SPEC `INFINITE p'` (el 6 thl)))
+     THEN FULL_SIMP_TAC (srw_ss()++resq_SS) [PATH_def,MAP_PATH_def,IN_COMPUTATION]
+
+     THEN Induct_on `n`
+     THEN RW_TAC list_ss []
+*)
+
 val _ = export_theory();
-
-
-
-
-
-
-

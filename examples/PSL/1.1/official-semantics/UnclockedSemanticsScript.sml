@@ -14,6 +14,9 @@
 ******************************************************************************)
 (*
 quietdec := true;
+loadPath                                  (* Add path to loadPath            *)
+ :=
+ "../../path" :: !loadPath;
 map load 
  ["SyntaxTheory","PathTheory","ModelTheory"];
 quietdec := false;
@@ -296,6 +299,23 @@ val UF_SEM =
          US_SEM (SEL (COMPLEMENT v) (0,j)) r ==> UF_SEM (RESTN v j) f)``,
    RW_TAC std_ss [UF_SEM_def]);
 
+(*****************************************************************************)
+(* Map a function over a path (used to define Lhat -- see LRM B.2.2)         *)
+(*****************************************************************************)
+val MAP_PATH_def =
+ Define
+  `(MAP_PATH g (FINITE l) = FINITE(MAP g l))
+   /\
+   (MAP_PATH g (INFINITE f) = INFINITE(\n. g(f n)))`;
+
+(******************************************************************************
+* UF_VALID M f means "Lhat(pi) |= f" for all computations pi of M
+******************************************************************************)
+val UF_VALID_def = (* from UnclockedSemanticsScript.sml *)
+ Define
+  `UF_VALID M f = 
+    !v::(COMPUTATION M). UF_SEM (MAP_PATH (\s. STATE(M.L s)) v) f`;
+
 (******************************************************************************
 * PATH M s is true of p iff p is a computation path of M
 * (now defined in ModelTheory)
@@ -326,6 +346,13 @@ val O_SEM_def =
    (O_SEM M (O_EG f) s = 
      ?p :: PATH M s.
        (ELEM p 0 = s) /\ !j :: (LESS(LENGTH p)). O_SEM M f (ELEM p j))`;
+
+(******************************************************************************
+* O_VALID M f means "M, s |= f" for all initial states s 
+******************************************************************************)
+val O_VALID_def =
+ Define
+  `O_VALID M f = !s::(M.S0). O_SEM M f s`;
 
 val _ = export_theory();
 

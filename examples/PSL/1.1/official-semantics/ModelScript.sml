@@ -8,13 +8,14 @@
 (*****************************************************************************)
 (* A model is a quintuple (S,S0,R,P,L), represented as a record, where       *)
 (*                                                                           *)
-(*  - S  : 'state                    is a set of states                      *)
+(*  - S  : 'state -> bool            is a set of states                      *)
 (*  - S0 : 'state -> bool            is a subset of S, the initial states    *)
 (*  - R  : 'state # 'state -> bool   is a transition relation                *)
-(*  - P  : 'prop                     is a set of atomic proposition          *)
+(*  - P  : 'prop -> bool             is a set of atomic proposition          *)
 (*  - L  : 'state -> ('prop -> bool) maps each state to the                  *)
 (*                                   set of propositions true in that state  *)
 (*                                                                           *)
+(* The type parameters are: ``: ('state,'prop)model``                        *)
 (* N.B. terms that follow are not contrained to use type variables 'state    *)
 (* and 'prop, but may use 'a, 'b etc or whatever typechecking assigns.       *)
 (*****************************************************************************)
@@ -26,7 +27,7 @@
 
 (*
 quietdec := true;                         (* Switch off output               *)
-loadPath                                  (* Add official-semantics to path  *)
+loadPath                                  (* Add path to loadPath            *)
  :=
  "../../path" :: !loadPath;
 map load ["pred_setLib","PathTheory"];
@@ -95,6 +96,14 @@ val PATH_def =
    /\
    (PATH M s (INFINITE f) = 
      (s = f 0) /\ !n. f n IN M.S /\ (f n, f(SUC n)) IN M.R)`;
+
+(*****************************************************************************)
+(* A computation of M is a path of M starting from an initial state          *)
+(*****************************************************************************)
+val COMPUTATION_def =
+ Define 
+  `COMPUTATION M w = 
+    ?s. s IN M.S0 /\ PATH M s w`;
 
 val _ = export_theory();
 

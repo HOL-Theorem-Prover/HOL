@@ -22,12 +22,12 @@ loadPath
  "../official-semantics" :: "../../regexp" :: "../../path" :: !loadPath;
 map load 
  ["UnclockedSemanticsTheory", 
-  "SyntacticSugarTheory", "ClockedSemanticsTheory", "RewritesTheory", 
+  "SyntacticSugarTheory", "ClockedSemanticsTheory", "RewritesTheory", "whileTheory",
   "rich_listTheory", "intLib", "res_quanLib", "res_quanTheory",
   "LemmasTheory","RewritesPropertiesTheory"];
 open FinitePathTheory PathTheory SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
-     arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
+     arithmeticTheory listTheory whileTheory rich_listTheory res_quanLib res_quanTheory
      ClockedSemanticsTheory LemmasTheory RewritesPropertiesTheory;
 val _ = intLib.deprecate_int();
 quietdec := false;
@@ -44,8 +44,9 @@ open HolKernel Parse boolLib bossLib;
 ******************************************************************************)
 open FinitePathTheory PathTheory SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
-     arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
-     ClockedSemanticsTheory LemmasTheory RewritesPropertiesTheory;
+     arithmeticTheory listTheory whileTheory rich_listTheory res_quanLib 
+     res_quanTheory ClockedSemanticsTheory LemmasTheory 
+     RewritesPropertiesTheory;
 
 (******************************************************************************
 * Set default parsing to natural numbers rather than integers 
