@@ -14,10 +14,10 @@
 * Compile using "Holmake -I ../official-semantics -I ../regexp"
 ******************************************************************************)
 (* 
+*)
 loadPath := "../official-semantics" :: "../regexp" :: !loadPath;
 app load ["bossLib","metisLib","intLib","res_quanTools","pred_setLib",
           "PropertiesTheory", "regexpLib"];
-*)
 
 (******************************************************************************
 * Boilerplate needed for compilation
@@ -29,8 +29,8 @@ open HolKernel Parse boolLib;
 ******************************************************************************)
 
 (* 
-quietdec := true;
 *)
+quietdec := true;
 
 open bossLib metisLib rich_listTheory pred_setLib intLib;
 open regexpTheory matcherTheory;
@@ -38,8 +38,8 @@ open FinitePathTheory PathTheory UnclockedSemanticsTheory
      ClockedSemanticsTheory PropertiesTheory;
 
 (*
-quietdec := false;
 *)
+quietdec := false;
 
 (******************************************************************************
 * Set default parsing to natural numbers rather than integers 

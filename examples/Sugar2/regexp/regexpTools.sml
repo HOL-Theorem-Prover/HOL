@@ -234,76 +234,10 @@ end;
 (* Export a regular expression as a Verilog state machine.                   *)
 (*---------------------------------------------------------------------------*)
 
-local
-  val empty : (term, int * bool * term list) Binarymap.dict =
-    Binarymap.mkDict compare;
-
-  fun finalize acc =
-    let
-      fun h ((i,_,_), (j,_,_)) = Int.compare (i,j)
-      fun g t = let val (i,_,_) = Binarymap.find (acc,t) in i end
-      fun f (_,(i,a,ts),l) = (i, a, map g ts) :: l
-    in
-      mlibUseful.sort h (Binarymap.foldl f [] acc)
-    end;
-
-  fun initial r =
-    let
-      val ty = (hd o snd o dest_type o type_of) r
-      val e = inst [alpha |-> ty] initial_regexp2na_tm
-      val t = mk_comb (e, r)
-      val res = rhs (concl (EVAL t))
-    in
-      listSyntax.mk_list ([res], numSyntax.num)
-    end;
-
-  fun accepting r s =
-    let
-      val ty = (hd o snd o dest_type o type_of) r
-      val e = inst [alpha |-> ty] eval_accepts_tm
-      val t =
-        list_mk_comb (e, [r, s])
-        handle HOL_ERR _ => raise Fail "export_dfa.transition.list_mk_comb"
-      val res = rhs (concl (EVAL t))
-      val _ =
-        res = T orelse res = F orelse
-        raise ERR "export_regexp" "couldn't reduce eval_accepts"        
-    in 
-      res = T
-    end;
-
-  fun transition r s x =
-    let
-      val ty = (hd o snd o dest_type o type_of) r
-      val e = inst [alpha |-> ty] eval_transitions_tm
-      val t =
-        list_mk_comb (e, [r, s, x])
-        handle HOL_ERR _ =>
-          raise Fail
-            ("export_dfa.transition.list_mk_comb:" ^
-             " e = " ^ type_to_string (type_of e) ^
-             ", r = " ^ type_to_string (type_of r) ^
-             ", s = " ^ type_to_string (type_of s) ^
-             ", x = " ^ type_to_string (type_of x))
-      val res = rhs (concl (EVAL t))
-    in
-      res
-    end;
-
-  fun export _ _ acc [] = finalize acc
-    | export alph r acc (s :: rest) =
-    if Option.isSome (Binarymap.peek (acc,s)) then export alph r acc rest else
-      let
-        val i = Binarymap.numItems acc
-        val a = accepting r s
-        val ts = map (transition r s) alph
-        val acc = Binarymap.insert (acc, s, (i,a,ts))
-      in
-        export alph r acc (ts @ rest)
-      end;
-in
-  fun export_dfa alphabet r = export alphabet r empty [initial r];
-end;
+fun DISCH_CONJ [] = I
+  | DISCH_CONJ [x] = DISCH x
+  | DISCH_CONJ (x :: (xs as _ :: _)) =
+  CONV_RULE (REWR_CONV AND_IMP_INTRO) o DISCH x o DISCH_CONJ xs;
 
 fun all_subsets [] = [[]]
   | all_subsets (x :: xs) =
@@ -311,25 +245,254 @@ fun all_subsets [] = [[]]
   in map (cons (x,true)) y @ map (cons (x,false)) y
   end;
 
-fun hol_subset l =
+val dest_in = dest_binop ``(IN)`` (ERR "dest_in" "");
+
+fun mk_alph s =
   let
-    val ty = type_of (fst (hd l))
-    val emp = inst [alpha |-> ty] pred_setSyntax.empty_tm
-    val ins = inst [alpha |-> ty] pred_setSyntax.insert_tm
-    fun f ((_,false),s) = s
-      | f ((x,true),s) =
-      list_mk_comb (ins, [x,s])
-      handle HOL_ERR _ => raise Fail "export_set_dfa.hol_subset.f"
+    val t = map (rhs o concl o EVAL) s
+    val ts = zip t s
   in
-    foldr f emp l
+    fn x => assoc x ts
   end;
 
-fun export_set_dfa props r =
-  let
-    val x = all_subsets props
-    val y = map hol_subset x
-  in
-    (x, export_dfa y r)
-  end;
+datatype 'a condition =
+  Leaf of 'a
+| Branch of string * 'a condition * 'a condition;
+
+local
+  val s = ``s : num -> bool``;
+
+  val empty : (term,int) Binarymap.dict = Binarymap.mkDict compare;
+
+  fun member (m : (term,int) Binarymap.dict) t =
+    Option.isSome (Binarymap.peek (m, t));
+
+  fun harvest_terms acc [] = acc
+    | harvest_terms acc (Leaf (tm,_) :: l) = harvest_terms (tm :: acc) l
+    | harvest_terms acc (Branch (_,a,b) :: l) = harvest_terms acc (a :: b :: l);
+
+  fun finalize (set : (term,int) Binarymap.dict) =
+    let
+      fun f (Leaf (tm,th)) = Leaf (Binarymap.find (set,tm), th)
+        | f (Branch (c,a,b)) = Branch (c, f a, f b)
+      fun g acc [] = acc
+        | g acc ((i,t,a,c) :: r) = g ((i, t, a, f c) :: acc) r
+    in
+      g []
+    end;
+
+  fun initial r =
+    let
+      val ty = (hd o snd o dest_type o type_of) r
+      val e = inst [alpha |-> ty] initial_regexp2na_tm
+      val t =
+        mk_comb (e, r)
+        handle HOL_ERR _ =>
+          raise Fail
+            ("export_nfa.initial.mk_comb: " ^
+             " e = " ^ type_to_string (type_of e) ^
+             ", r = " ^ type_to_string (type_of r))
+      val res = rhs (concl (EVAL t))
+    in
+      listSyntax.mk_list ([res], numSyntax.num)
+    end;
+
+  fun accept r s =
+    let
+      val ty = (hd o snd o dest_type o type_of) r
+      val e = inst [alpha |-> ty] eval_accepts_tm
+      val t =
+        list_mk_comb (e, [r, s])
+        handle HOL_ERR _ => raise Fail "export_nfa.accept.list_mk_comb"
+      val th = EVAL t
+      val res = rhs (concl th)
+      val _ =
+        res = T orelse res = F orelse
+        raise ERR "export_nfa.accept" "couldn't reduce eval_accepts"
+    in 
+      (res = T, th)
+    end;
+
+  fun simp tm =
+    let val th = CONV_RULE EVAL (ASSUME tm)
+    in CONV_RULE (RAND_CONV (SIMP_CONV boolSimps.bool_ss [th]))
+    end;
+
+  fun mk_condition (m,d,gen) =
+    let
+      fun g bs = GEN s o SPEC s o gen o DISCH_CONJ (rev bs)
+
+      fun f bs th =
+        let val (_,tm) = dest_eq (concl th) in
+          case total dest_cond tm of NONE => Leaf (tm, g bs th)
+          | SOME (c,_,_) =>
+            let
+              val t = find_term (can d) c
+              val v = d t
+              val s = #Name (dest_thy_const v)
+              val tm = m v
+              val tm' = mk_neg tm
+            in
+              Branch (s, f (tm :: bs) (simp tm th), f (tm' :: bs) (simp tm' th))
+            end
+        end
+    in
+      f []
+    end;
+
+  fun trans alph r s =
+    let
+      val ty = (hd o snd o dest_type o type_of) r
+      val x = genvar ty
+      fun mvar t = pred_setSyntax.mk_in (t,x)
+      fun dvar t =
+        let val (a,b) = dest_in t
+        in if b = x then alph a else raise ERR "term_to_bexp.var" "not a var"
+        end
+      val gen = GEN x
+      val e = inst [alpha |-> ty] eval_transitions_tm
+      val t =
+        list_mk_comb (e, [r, s, x])
+        handle HOL_ERR _ =>
+          raise Fail
+            ("export_nfa.trans.list_mk_comb:" ^
+             " e = " ^ type_to_string (type_of e) ^
+             ", r = " ^ type_to_string (type_of r) ^
+             ", s = " ^ type_to_string (type_of s) ^
+             ", x = " ^ type_to_string (type_of x))
+      val th = EVAL t
+    in
+      mk_condition (mvar,dvar,gen) th
+    end;
+
+  fun export _ _ _ set acc [] = finalize set acc
+    | export alph r trans set acc (tm :: rest) =
+    if member set tm then export alph r trans set acc rest else
+      let
+        val i = Binarymap.numItems set
+        val set = Binarymap.insert (set, tm, i)
+        val a = accept r tm
+        val c = trans alph r tm
+        val rest = harvest_terms rest [c]
+        val acc = (i, tm, a, c) :: acc
+      in
+        export alph r trans set acc rest
+      end;
+in
+  fun extract_dfa alph r =
+    export (mk_alph alph) r trans empty [] [initial r];
+end;
+
+local
+  fun claim r =
+    "------------------------------- " ^
+    "Checker ------------------------------------\n" ^
+    "The following regular expression as a Verilog state machine\n" ^
+    term_to_string r;
+
+  fun comment s =
+    String.concat
+    (map (fn x => "// " ^ x ^ "\n") (String.fields (fn c => c = #"\n") s));
+in
+  fun header r = comment (claim r);
+end;
+
+local
+  fun log2 n =
+    Int.toString (Real.ceil (Math.ln (Real.fromInt n) / Math.ln 2.0));
+
+  open PP;
+
+  fun pp_alphs _ _ [] = raise ERR "verilog_dfa" "empty alphabet"
+    | pp_alphs s pp (h :: t) =
+    (add_string pp h;
+     app (fn a => (add_string pp s; add_break pp (1,0); add_string pp a)) t);
+
+  fun pp_condition pp (Leaf (i,_)) =
+    add_string pp ("state = " ^ Int.toString i ^ ";")
+    | pp_condition pp (Branch (c,a,b)) =
+    (begin_block pp CONSISTENT 0;
+     begin_block pp CONSISTENT 2;
+     add_string pp ("if (" ^ c ^ ")");
+     add_break pp (1,0);
+     pp_condition pp a;
+     end_block pp;
+     add_newline pp;
+     begin_block pp CONSISTENT 2;
+     add_string pp "else";
+     add_break pp (1,0);
+     pp_condition pp b;
+     end_block pp;
+     end_block pp);
+
+  fun pp_case pp (i,_,(a,_),t) =
+    (begin_block pp CONSISTENT 2;
+     add_string pp (Int.toString i ^ ":");
+     add_break pp (1,0);
+     if a then add_string pp "$display (\"Checker: property violated!\");"
+     else pp_condition pp t;
+     end_block pp;
+     add_newline pp;
+     add_newline pp)
+
+  fun pp_module pp (alph,table) =
+    (begin_block pp CONSISTENT 0;
+
+     begin_block pp INCONSISTENT (size "module Checker (");
+     add_string pp "module Checker (";
+     pp_alphs "," pp alph;
+     add_string pp ");";
+     end_block pp;
+     add_newline pp;
+     add_newline pp;
+
+     begin_block pp INCONSISTENT (size "input ");
+     add_string pp "input ";
+     pp_alphs "," pp alph;
+     add_string pp ";";
+     end_block pp;
+     add_newline pp;
+
+     add_string pp ("reg   [" ^ log2 (length table) ^ ":0] state;");
+     add_newline pp;
+     add_newline pp;
+
+     add_string pp "initial state = 0;";
+     add_newline pp;
+     add_newline pp;
+
+     begin_block pp INCONSISTENT (size "always @ (");
+     add_string pp "always @ (";
+     pp_alphs " or" pp alph;
+     add_string pp ")";
+     end_block pp;
+     add_newline pp;
+     begin_block pp INCONSISTENT 2;
+     add_string pp "begin";
+     add_newline pp;
+     begin_block pp INCONSISTENT 2;
+     add_string pp "case (state)";
+     add_newline pp;
+     app (pp_case pp) table;
+     add_string pp "default: $display (\"Checker: unknown state\");";
+     end_block pp;
+     add_newline pp;
+     add_string pp "endcase";
+     end_block pp;
+     add_newline pp;
+     add_string pp "end";
+     add_newline pp;
+     add_newline pp;
+
+     add_string pp "endmodule";
+     add_newline pp;
+     
+     end_block pp);
+in
+  fun module a r =
+    pp_to_string 79 pp_module (map (#Name o dest_thy_const) a, extract_dfa a r);
+end;
+
+fun verilog_dfa alph r = header r ^ "\n" ^ module alph r;
 
 end

@@ -5,14 +5,10 @@
 (*****************************************************************************)
 
 loadPath := "../official-semantics" :: "../regexp" :: !loadPath;
-app
- load
- ["bossLib","metisLib","intLib","stringLib","pred_setLib",
-  "regexpLib","ExecuteSemanticsTheory","PropertiesTheory"];
+app load ["bossLib","intLib","regexpLib","ExecuteTools"];
 
 quietdec := true;
-open bossLib metisLib intLib stringLib rich_listTheory
-open regexpLib FinitePathTheory UnclockedSemanticsTheory ExecuteSemanticsTheory;
+open bossLib regexpLib;
 quietdec := false;
 
 (******************************************************************************
@@ -29,70 +25,6 @@ set_trace "regexpTools" 2;
 * Set default parsing to natural numbers rather than integers
 ******************************************************************************)
 val _ = intLib.deprecate_int();
-
-(******************************************************************************
-* Version of Define that doesn't add to the EVAL compset
-******************************************************************************)
-val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
-
-(******************************************************************************
-* Evaluating expressions of the form x IN {y1; y2; ...; yn}
-******************************************************************************)
-
-(* For the current set of Sugar2 example properties, the following INSERT
-   theorems seem to work better than this general conversion.
-val _ =
- computeLib.add_convs
-  [(``$IN``,
-    2,
-    (pred_setLib.SET_SPEC_CONV ORELSEC pred_setLib.IN_CONV EVAL))];
-*)
-
-val () = computeLib.add_funs
-  [pred_setTheory.IN_INSERT,
-   pred_setTheory.NOT_IN_EMPTY];
-
-(******************************************************************************
-* Evaluating Sugar2 formulas
-******************************************************************************)
-val _ = computeLib.add_funs
-         ([PathTheory.SEL_REC_AUX,
-           UF_SEM_F_UNTIL_REC,
-(* Joe: I _think_ these might not be necessary anymore.
-           UF_SEM_F_SUFFIX_IMP_FINITE_REC_AUX,
-           UF_SEM_F_SUFFIX_IMP_FINITE_REC,
-           UF_SEM_F_SUFFIX_IMP_REC,
-*)
-           B_SEM,
-           EVAL_US_SEM,
-           EVAL_UF_SEM_F_SUFFIX_IMP,
-           EVAL_UF_SEM_F_WEAK_IMP,
-           UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP]);
-
-(******************************************************************************
-* For simplification during symbolic evaluation of Sugar2 formulas
-******************************************************************************)
-
-(* Rejected by computeLib.add_funs, but (used to be) useful for simplification.
-val SOME_EL_F =
- prove
-  (``SOME_EL (\x. F) l = F``,
-   Induct_on `l`
-    THEN RW_TAC std_ss [SOME_EL]);
-*)
-
-val EXISTS_COND = prove
-  (``!p c a b.
-       EXISTS p (if c then a else b) = if c then EXISTS p a else EXISTS p b``,
-   RW_TAC std_ss []);
-
-val COND_SIMP = prove
-  (``!c a b.
-       (COND c a F = c /\ a) /\ (COND c a T = ~c \/ a) /\
-       (COND c T b = c \/ b) /\ (COND c F b = ~c /\ b)``,
-   RW_TAC std_ss [IMP_DISJ_THM]);
-
-val () = computeLib.add_funs [EXISTS_COND, COND_SIMP];
 
 (******************************************************************************
 * Examples

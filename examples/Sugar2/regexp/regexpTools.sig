@@ -27,11 +27,22 @@ val chr_sat_conv : Abbrev.conv
 (* Set this to a SAT solver for evaluating the Prefix operator *)
 val prefix_sat_conv : Abbrev.conv ref        (* by default = set_sat_conv *)
 
-(* Exporting state machines *)
+(* Exporting state machines
 val export_dfa : Term.term list -> Term.term -> (int * bool * int list) list
 
 val export_set_dfa :
   Term.term list -> Term.term ->
   (Term.term * bool) list list * (int * bool * int list) list
+*)
+
+datatype 'a condition =
+  Leaf of 'a
+| Branch of string * 'a condition * 'a condition
+
+val extract_dfa :
+  Term.term list -> Term.term ->
+  (int * Term.term * (bool * Thm.thm) * (int * Thm.thm) condition) list
+
+val verilog_dfa : Term.term list -> Term.term -> string
 
 end
