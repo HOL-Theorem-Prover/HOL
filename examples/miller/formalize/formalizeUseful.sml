@@ -346,7 +346,7 @@ in
 end;
 
 fun top_sort f [] = []
-  | top_sort f l = 
+  | top_sort f l =
   let
     val (x, rest) = top_min f l
   in
@@ -416,7 +416,7 @@ fun pp_map f pp_a (ppstrm : ppstream) x : unit = pp_a ppstrm (f x);
 
 fun pp_string ppstrm =
   let
-    val {add_string,add_break,begin_block,end_block,add_newline,...} 
+    val {add_string,add_break,begin_block,end_block,add_newline,...}
       = Portable.with_ppstream ppstrm
 
   in
@@ -428,10 +428,10 @@ fun pp_string ppstrm =
 fun pp_unknown ppstrm _ = pp_string ppstrm "_";
 
 fun pp_int ppstrm i = pp_string ppstrm (int_to_string i);
-                  
+
 fun pp_pair pp1 pp2 ppstrm =
   let
-    val {add_string,add_break,begin_block,end_block,add_newline,...} 
+    val {add_string,add_break,begin_block,end_block,add_newline,...}
       = Portable.with_ppstream ppstrm
 
   in
@@ -447,7 +447,7 @@ fun pp_pair pp1 pp2 ppstrm =
 
 fun pp_list pp ppstrm =
   let
-    val {add_string,add_break,begin_block,end_block,add_newline,...} 
+    val {add_string,add_break,begin_block,end_block,add_newline,...}
       = Portable.with_ppstream ppstrm
 
     val pp_elt = pp ppstrm
@@ -1019,7 +1019,7 @@ fun op THEN1 (tac1 : tactic, tac2 : tactic) : tactic =
   handle HOL_ERR{origin_structure,origin_function,message}
   => raise ERR "THEN1" (origin_structure^"."^origin_function^": "^message);
 
-val op>> = THEN1;
+val op>> = op THEN1;
 
 (*---------------------------------------------------------------------------
  * REVERSE tac: A tactical that reverses the list of subgoals of tac.
