@@ -27,6 +27,8 @@ infix THEN THENL ORELSE ORELSEC ##;
 
 val _ = new_theory "nets";
 
+val _ = Parse.reveal "B";
+
 val num_EQ_CONV = Arithconv.NEQ_CONV;
 
 (*---------------------------------------------------------------------------*)

@@ -25,6 +25,8 @@ infix THEN THENL ORELSE ORELSEC ##;
 
 val _ = new_theory "lim";
 
+val _ = Parse.reveal "B";
+
 (*---------------------------------------------------------------------------*)
 (* Specialize nets theorems to the pointwise limit of real->real functions   *)
 (*---------------------------------------------------------------------------*)

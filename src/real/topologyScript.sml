@@ -468,6 +468,13 @@ val MR1_LIMPT = prove_thm("MR1_LIMPT",
   MATCH_MP_TAC REAL_LT_IMP_NE THEN
   ASM_REWRITE_TAC[REAL_LT_HALF1]);
 
+
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME (fn ppstrm => 
+   (PP.add_string ppstrm "val _ = Parse.hide \"B\";"; 
+    PP.add_newline ppstrm))};
+
 val _ = export_theory();
 
 end;
