@@ -491,7 +491,7 @@ in
       val uo_deps =
         List.mapPartial (fn (UI x) => SOME (UO x) | _ => NONE) alldeps
     in
-      set_union uo_deps alldeps
+      set_union uo_deps (set_union alldeps firstcut)
     end
   | _ => file_dependencies
 end
