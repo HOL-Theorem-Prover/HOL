@@ -70,7 +70,7 @@ end;
 
 fun store_thm(s,q,t) = Tactical.store_thm(s,btm q,t);
 fun prove (q, t) = Tactical.prove(btm q,t);
-fun new_definition(s,q) = Const_def.new_definition(s,btm q);
+fun new_definition(s,q) = Parse.new_definition(s,btm q);
 fun new_infixl_definition(s,q,f) = Parse.new_infixl_definition(s,btm q,f);
 fun new_infixr_definition(s,q,f) = Parse.new_infixr_definition(s,btm q,f);
 fun define q s f = Parse.new_gen_definition(s, btm q, f)
