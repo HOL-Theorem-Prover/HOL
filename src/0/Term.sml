@@ -619,15 +619,12 @@ local fun check [] = ()
         | check ({redex,residue}::rst) =
             if type_of redex = type_of residue then check rst
             else raise ERR "subst" "redex has different type than residue"
-      fun assc _ [] = NONE
-        | assc tm ({redex,residue}::rst) =
-                  if aconv tm redex then SOME residue else assc tm rst
 in
 fun subst [] tm = tm
   | subst theta tm =
     let val _ = check theta
         fun subs tm =
-          case assc tm theta
+          case Lib.subst_assoc (aconv tm) theta
            of SOME residue => residue
 	    | NONE =>
               (case tm

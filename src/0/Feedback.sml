@@ -70,7 +70,7 @@ fun format_ERR {message,origin_function,origin_structure} =
 fun format_MESG s = String.concat["<<HOL message: ", s, ".>>\n"];
 
 fun format_WARNING structName fnName mesg =
-  String.concat["<<HOL warning! ", 
+  String.concat["<<HOL warning: ", 
                 structName, ".", fnName, ":\n  ", mesg, ".>>\n"];
 
 val ERR_to_string     = ref format_ERR
