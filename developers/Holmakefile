@@ -1,4 +1,14 @@
-OPTIONS = NO_OVERLAY
+OPTIONS = NO_SIGOBJ
+EXES = comparelogs swings average
+EXTRA_CLEANS = $(EXES)
+
+all: $(EXES)
 
 comparelogs : comparelogs.uo
+	$(MOSMLC) -o $@ $<
+
+swings : swings.uo
+	$(MOSMLC) -o $@ $<
+
+average : average.uo
 	$(MOSMLC) -o $@ $<

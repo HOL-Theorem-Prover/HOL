@@ -1,11 +1,20 @@
-val args = CommandLine.arguments()
+val args0 = CommandLine.arguments()
+
+fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
+             Process.exit Process.failure)
+
+val (bequiet, args) =
+    case args0 of
+      [] => die "Must specify at least one file to \"analyse\""
+    | ["-q"] => die "Must specify at least one file to \"analyse\""
+    | "-q" :: rest => (true, rest)
+    | _ => (false, args0)
 
 val base = hd args
 
 fun print_dashes () =
     (print (StringCvt.padLeft #"-" (25 * length args + 20) "");
      print "\n")
-
 
 fun read_file (fname,m) = let
   val instr = TextIO.openIn fname
@@ -51,10 +60,12 @@ end
 
 fun fmt_real r = centered25 (Real.fmt (StringCvt.FIX (SOME 3)) r)
 
-val _ = (print (StringCvt.padLeft #" " 20 "");
-         app (print o fmt_fname) args;
-         print "\n";
-         print_dashes())
+val _ = if not bequiet then
+          (print (StringCvt.padLeft #" " 20 "");
+           app (print o fmt_fname) args;
+           print "\n";
+           print_dashes())
+        else ()
 
 fun print_line m thyname = let
   open StringCvt
@@ -92,9 +103,11 @@ in
 end
 
 
-val _ = (print_dashes();
-         print (StringCvt.padRight #" " 20 "Total");
-         app print_entry args;
-         print "\n")
+val _ = if not bequiet then
+          (print_dashes();
+           print (StringCvt.padRight #" " 20 "Total");
+           app print_entry args;
+           print "\n")
+        else ()
 
 
