@@ -1,4 +1,4 @@
-athabasca-4:
+athabasca-4: (* tagged in the repository *)
    * "Norrish" numerals implemented.  These allow numerals in the
      logic to be arbitrarily large, with the various operations on
      them dramatically improved in efficiency.  (Standard arithmetic
@@ -8,7 +8,7 @@ athabasca-4:
    * The build process has been made a great deal more independent of
      Unix, and it is possible to build hol98 on Windows NT.
 
-taupo-0:  (* not released *)
+taupo-0:  (* not released or tagged *)
    * New extensible parser implemented
 
 taupo-1:
