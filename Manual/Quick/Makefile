@@ -11,11 +11,11 @@ clean:
 cleanPS: clean
 	rm -f *.dvi *.ps
 
+cleanAll: cleanPS
+	rm underscore.sty
+
 underscore.sty:
-	@echo "**********************************************"
-	@echo "*** Please download underscore.sty from CTAN *"
-	@echo "**********************************************"
-	@echo
+	wget http://www.tex.ac.uk/tex-archive/macros/latex/contrib/misc/underscore.sty
 
 quick.ps: quick.tex underscore.sty
 	latex quick.tex; dvips -Ppdf -G0 -t landscape quick -o
