@@ -1,5 +1,5 @@
 (*****************************************************************************)
-(* Examples of parsing the PSL/Sugar semantics                               *)
+(* Examples of evaluating PSL/Sugar constructs on paths                      *)
 (* Run hol and then do "use examples;"                                       *)
 (*****************************************************************************)
 
@@ -28,7 +28,6 @@ EvalFL "{x}{y}{p}{q}   |= {x;y} |=> {p;q}";
 EvalFL "{x}{y}{p}{q}   |= {x;y;p} |-> {p;q}";
 EvalFL "{x}{y}{p}{q}   |= {x;y;T} |-> {p;q}";
 
-
 (******************************************************************************
 * Example 1 (LRM Version 1.0, page 45)
 *
@@ -42,6 +41,11 @@ EvalFL "{x}{y}{p}{q}   |= {x;y;T} |-> {p;q}";
 *
 ******************************************************************************)
 
+
+(******************************************************************************
+* Individually evaluate "a until! b@clk" on sub-paths of
+* "{}{clk}{}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk}"
+******************************************************************************)
 EvalFL "{}{clk}{}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk} |= a until! b"; (* w^0 *)
 EvalFL "  {clk}{}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk} |= a until! b"; (* w^1 *)
 EvalFL "       {}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk} |= a until! b"; (* w^2 *)
@@ -53,9 +57,16 @@ EvalFL "                              {clk,b}{b}{clk} |= a until! b"; (* w^7 *)
 EvalFL "                                     {b}{clk} |= a until! b"; (* w^8 *)
 EvalFL "                                        {clk} |= a until! b"; (* w^9 *)
 
+(******************************************************************************
+* Evaluate all the above with one command
+******************************************************************************)
 EvalAllFL
  ("{}{clk}{}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk}", "a until! b");
 
+(******************************************************************************
+* Individually evaluate "(a until! b)@clk" on sub-paths of
+* "{}{clk}{}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk}"
+******************************************************************************)
 EvalFL "{}{clk}{}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk} |= (a until! b)@clk"; (* w^0 *)
 EvalFL "  {clk}{}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk} |= (a until! b)@clk"; (* w^1 *)
 EvalFL "       {}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk} |= (a until! b)@clk"; (* w^2 *)
@@ -67,6 +78,9 @@ EvalFL "                              {clk,b}{b}{clk} |= (a until! b)@clk"; (* w
 EvalFL "                                     {b}{clk} |= (a until! b)@clk"; (* w^8 *)
 EvalFL "                                        {clk} |= (a until! b)@clk"; (* w^9 *)
 
+(******************************************************************************
+* Evaluate all the above with one command
+******************************************************************************)
 EvalAllFL
  ("{}{clk}{}{clk,a}{a}{clk,a,b}{}{clk,b}{b}{clk}", "(a until! b)@clk");
 
@@ -85,8 +99,12 @@ EvalAllFL
 *
 ******************************************************************************)
 
+(******************************************************************************
+* Individually evaluate "c && next! (a until! b)" on sub-paths of
+* "{c,clk2}{clk1}{}{clk1,a,clk2}{a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}"
+******************************************************************************)
 EvalFL "{c,clk2}{clk1}{}{clk1,a,clk2}{a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}\
-\       |= (c && next! (a until! b))@clk1";  (* w^0 *)
+\       |= c && next! (a until! b)";  (* w^0 *)
 EvalFL "        {clk1}{}{clk1,a,clk2}{a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}\
 \       |= c && next! (a until! b)";  (* w^1 *)
 EvalFL "              {}{clk1,a,clk2}{a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}\
@@ -106,10 +124,17 @@ EvalFL "                                                            {b}{clk1,clk
 EvalFL "                                                               {clk1,clk2}\
 \       |= c && next! (a until! b)";  (* w^9 *)
 
+(******************************************************************************
+* Evaluate all the above with one command
+******************************************************************************)
 EvalAllFL
  ("{c,clk2}{clk1}{}{clk1,a,clk2}{a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}",
   "c && next! (a until! b)");
 
+(******************************************************************************
+* Individually evaluate "(c && next! (a until! b))@clk1" on sub-paths of
+* "{c,clk2}{clk1}{}{clk1,a,clk2}{a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}"
+******************************************************************************)
 EvalFL "{c,clk2}{clk1}{}{clk1,a,clk2}{a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}\
 \       |= (c && next! (a until! b))@clk1";  (* w^0 *)
 EvalFL "        {clk1}{}{clk1,a,clk2}{a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}\
@@ -131,10 +156,12 @@ EvalFL "                                                            {b}{clk1,clk
 EvalFL "                                                               {clk1,clk2}\
 \       |= (c && next! (a until! b))@clk1";  (* w^9 *)
 
+(******************************************************************************
+* Evaluate all the above with one command
+******************************************************************************)
 EvalAllFL
  ("{c,clk2}{clk1}{}{clk1,a,clk2}{a}{clk1,a,b,c}{c,clk2}{clk1,b}{b}{clk1,clk2}",
   "(c && next! (a until! b))@clk1");
-
 
 (******************************************************************************
 * Example 1 (LRM Version 1.0, page 33)
@@ -148,6 +175,9 @@ EvalAllFL
 * {}{clk,a}{a}{clk,b}{b}
 ******************************************************************************)
 
+(******************************************************************************
+* Evaluate SEREs on all sub-intervals of given interval
+******************************************************************************)
 EvalAllSERE
  ("{}{clk,a}{a}{clk,b}{b}",
   "{a;b}");
@@ -155,7 +185,6 @@ EvalAllSERE
 EvalAllSERE
  ("{}{clk,a}{a}{clk,b}{b}",
   "{a;b}@clk");
-
 
 (******************************************************************************
 * Example 2 (LRM Version 1.0, page 33)
@@ -171,6 +200,9 @@ EvalAllSERE
 * {clk2}{clk1,a}{a}{clk1,b,clk2}{c}{clk1}{c,clk2}{clk1}
 ******************************************************************************)
 
+(******************************************************************************
+* Evaluate SEREs on all sub-intervals of given interval
+******************************************************************************)
 EvalAllSERE
  ("{clk2}{clk1,a}{a}{clk1,b,clk2}{c}{clk1}{c,clk2}{clk1}",
   "{{a;b};c}");

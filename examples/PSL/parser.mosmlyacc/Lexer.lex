@@ -55,13 +55,7 @@ Simple lexer for PSL/Sugar properties
  }
 
 rule Token = parse 
-    [` ` `\t` `\n` `\r`]{ Token lexbuf }
-  | `~`?[`0`-`9`]+ { case Int.fromString (getLexeme lexbuf) of
-                               NONE   => lexerError lexbuf "internal error"
-                             | SOME i => Number i}
-  | [`a`-`z``A`-`Z`][`a`-`z``A`-`Z``0`-`9`]*
-                        { keyword (getLexeme lexbuf) }
-  | "(*"                { commentStart := getLexemeStart lexbuf;
+    "(*"                { commentStart := getLexemeStart lexbuf;
                           commentDepth := 1; 
                           SkipComment lexbuf; Token lexbuf }
   | `@`                 { AT }
@@ -115,13 +109,19 @@ rule Token = parse
   | "within_"           { WITHINU }
   | "X!"                { XX }
   | eof                 { EOF }
+  | [` ` `\t` `\n` `\r`]{ Token lexbuf }
+  | [`0`-`9`]+          { case Int.fromString (getLexeme lexbuf) of
+                             NONE   => lexerError lexbuf "internal error"
+                           | SOME i => Number i}
+  | [`_``a`-`z``A`-`Z`][`_``a`-`z``A`-`Z``0`-`9`]*
+                        { keyword (getLexeme lexbuf) }
+
   | _                   { lexerError lexbuf "Illegal symbol in input" }
 
 and SkipComment = parse
     "*)"                { commentDepth := !commentDepth - 1;  
                           if !commentDepth = 0 then ()
-                          else SkipComment lexbuf 
-                        } 
+                          else SkipComment lexbuf } 
    | "(*"               { commentDepth := !commentDepth + 1; 
                           SkipComment lexbuf }
    | (eof | `\^Z`)      { commentNotClosed lexbuf }
