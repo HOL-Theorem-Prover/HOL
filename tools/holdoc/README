@@ -15,6 +15,11 @@ hol_to_latex                    }
 lts_to_latex                    } - see below
 mng_to_latex                    }
 
+extractDatatypes                a helper Perl script to build .imn
+                                files from *Theory.sig files.  It
+                                identifies types, constructors, and
+                                fields from Hol_datatype-defined
+                                datatypes.
 
 Source code:
 ~~~~~~~~~~~~
