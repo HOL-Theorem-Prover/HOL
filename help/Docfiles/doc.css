@@ -7,6 +7,7 @@ DIV.TYPE
   border: solid;
   border-color : black;
   color: crimson;
+  width : 100%;
   font-weight: bold;
   font-family: Courier, monospace;
   font-size: large}
