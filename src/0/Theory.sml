@@ -1155,7 +1155,7 @@ fun gen_export_theory printers (thy as {thid,con_wrt_disk,STH,GR,
 
 fun prim_export_theory printers = gen_export_theory printers (scrubCT());
 
-fun export_theory printers =
+fun export_theory0 printers =
   case prim_export_theory printers
    of SUCCESS _ => ()
     | FAILURE (CLIENT nl) => ()
@@ -1205,7 +1205,7 @@ fun prim_new_theory printers str =
    of SUCCESS x => (SUCCESS (makeCT x) handle e => FAILURE (INTERNAL e))
     | FAILURE x  => FAILURE x;
 
-fun new_theory printers str =
+fun new_theory0 printers str =
   case prim_new_theory printers str
    of FAILURE (CLIENT (EXN e)) => raise e
     | FAILURE (CLIENT (BADNAMES _)) => ()
@@ -1289,7 +1289,7 @@ fun print_theory_to_file printers file =
     in Portable.close_out (print_theory_to_outstream printers outfile)
     end
 
-fun print_theory printers =
+fun print_theory0 printers =
    pp_theory printers (Portable_PrettyPrint.mk_ppstream
                        (Portable_PrettyPrint.defaultConsumer()))
    (theCT())

@@ -51,7 +51,7 @@ datatype 'a failed = SYSTEM   of exn     (* OS/network not right *)
 
 (* Viewing the current theory *)
 
-  val print_theory              : TheoryPP.HOLprinters -> unit
+  val print_theory0             : TheoryPP.HOLprinters -> unit
   val print_theory_to_file      : TheoryPP.HOLprinters -> string -> unit
   val print_theory_to_outstream :
     TheoryPP.HOLprinters -> Portable.outstream -> Portable.outstream
@@ -63,7 +63,7 @@ datatype 'a failed = SYSTEM   of exn     (* OS/network not right *)
 
   val prim_new_theory :
     TheoryPP.thm_printer option -> string -> (unit,clientfixable failed) result
-  val new_theory : TheoryPP.thm_printer option -> string -> unit
+  val new_theory0 : TheoryPP.thm_printer option -> string -> unit
 
 (* Operations for making theory persistent (write it to disk) *)
 
@@ -71,7 +71,7 @@ datatype 'a failed = SYSTEM   of exn     (* OS/network not right *)
 
   val prim_export_theory :
     TheoryPP.thm_printer option  -> (unit, string list failed) result
-  val export_theory : TheoryPP.thm_printer option -> unit
+  val export_theory0 : TheoryPP.thm_printer option -> unit
 
 
 (* Support operations for theories-as-structures *)
