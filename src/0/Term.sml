@@ -16,7 +16,7 @@ open Exception Lib;
 
 val --> = Type.-->; infixr 3 -->; infix |->;
 
-fun TERM_ERR function message = 
+fun TERM_ERR function message =
  Exception.HOL_ERR{origin_structure = "Term",
                    origin_function = function,
                    message = message};
@@ -72,7 +72,7 @@ local fun range ty = case (Type.dest_type ty)
         | ty_of (Comb{Rator, ...}) E = range (ty_of Rator E)
         | ty_of (Abs{Bvar = Fv{Ty,...},Body}) E = Ty --> ty_of Body (Ty::E)
         | ty_of _ _ = raise TERM_ERR "type_of" "term construction"
-in 
+in
   fun type_of tm = ty_of tm []
 end;
 
@@ -82,7 +82,7 @@ end;
  *---------------------------------------------------------------------------*)
 fun type_vars_in_term (Fv{Ty, ...}) = Type.type_vars Ty
   | type_vars_in_term (Const(_,Ty)) = Type.type_vars Ty
-  | type_vars_in_term (Comb{Rator,Rand}) = union (type_vars_in_term Rator) 
+  | type_vars_in_term (Comb{Rator,Rand}) = union (type_vars_in_term Rator)
                                                  (type_vars_in_term Rand)
   | type_vars_in_term (Abs{Bvar,Body}) = union (type_vars_in_term Bvar)
                                                (type_vars_in_term Body)
@@ -95,7 +95,7 @@ fun type_vars_in_term (Fv{Ty, ...}) = Type.type_vars Ty
  * efficiently, say by an ordered list.                                      *
  *---------------------------------------------------------------------------*)
 local
-fun frees(v as Fv _) free_list = 
+fun frees(v as Fv _) free_list =
       if (mem v free_list) then free_list else v::free_list
   | frees(Comb{Rator, Rand}) free_list = frees Rand (frees Rator free_list)
   | frees(Abs{Body,...}) free_list = frees Body free_list
@@ -108,7 +108,7 @@ end;
 (*---------------------------------------------------------------------------*
  * The free variables of a lambda term, in textual order.                    *
  *---------------------------------------------------------------------------*)
-fun free_vars_lr tm = 
+fun free_vars_lr tm =
   let fun frees(v as Fv _) A = insert v A
         | frees(Comb{Rator, Rand}) A = frees Rator (frees Rand A)
         | frees(Abs{Body,...}) A = frees Body A
@@ -149,8 +149,8 @@ fun free_in tm M =
  *---------------------------------------------------------------------------*)
 
 local val TYANTIQ_ERR = TERM_ERR"term_lt" "type antiquotes are not terms"
-      fun atom_lt {Name=(s1:string),Ty=ty1} 
-                  {Name=s2,Ty=ty2} 
+      fun atom_lt {Name=(s1:string),Ty=ty1}
+                  {Name=s2,Ty=ty2}
            = case String.compare (s1,s2)
               of LESS => true
                | EQUAL => Type.type_lt ty1 ty2
@@ -160,18 +160,18 @@ fun term_lt (ty_antiq _) _ = raise TYANTIQ_ERR
   | term_lt _ (ty_antiq _) = raise TYANTIQ_ERR
   | term_lt (Fv v1) (Fv v2) = atom_lt v1 v2
   | term_lt (Fv _) _ = true
-  
+
   | term_lt (Bv _)  (Fv _)  = false
   | term_lt (Bv i1) (Bv i2) = i1<i2
   | term_lt (Bv _)     _    = true
 
   | term_lt (Const _) (Fv _) = false
   | term_lt (Const _) (Bv _) = false
-  | term_lt (Const(ref n1,ty1)) 
+  | term_lt (Const(ref n1,ty1))
             (Const(ref n2,ty2)) = atom_lt {Name=n1,Ty=ty1} {Name=n2,Ty=ty2}
   | term_lt (Const _) _ = true
 
-  | term_lt (Comb{Rator=rator1,Rand=rand1}) 
+  | term_lt (Comb{Rator=rator1,Rand=rand1})
             (Comb{Rator=rator2,Rand=rand2}) =
       term_lt rator1 rator2
       orelse (if (rator2=rator1) then term_lt rand1 rand2 else false)
@@ -194,14 +194,14 @@ end;
  * Hence, I need a "backward" reference from Theory to Term.                 *
  *---------------------------------------------------------------------------*)
 local val inST_ref  = ref (fn _:string => false)
-      val mk_const_ref  = ref (fn _:{Name:string,Ty:Type.hol_type} 
+      val mk_const_ref  = ref (fn _:{Name:string,Ty:Type.hol_type}
                                 => Fv{Name="",Ty=Type.mk_vartype"'a"})
-      val const_decl_ref  = ref (fn _:string => 
+      val const_decl_ref  = ref (fn _:string =>
           {const = Fv{Name="",Ty=Type.mk_vartype"'a"},theory="",place=Prefix})
       val started = ref false
 in
   fun init f g h = if !started then ()
-                   else (inST_ref := f; mk_const_ref := g; 
+                   else (inST_ref := f; mk_const_ref := g;
                          const_decl_ref := h; started := true);
 
   fun inST s = (!inST_ref) s;
@@ -214,7 +214,7 @@ end;
  *---------------------------------------------------------------------------*)
 local fun num2name s i = s^Lib.int_to_string i
 in
-fun subscripts x s = 
+fun subscripts x s =
    let val project = num2name (s^x)
        val cnt = ref 0
        fun incr() = (cnt := !cnt + 1; project (!cnt))
@@ -232,9 +232,9 @@ fun primes s =
      next
    end;
 
-fun nameStrm s = 
- (case !Globals.priming 
-   of NONE => primes 
+fun nameStrm s =
+ (case !Globals.priming
+   of NONE => primes
     | SOME x => subscripts x) s;
 
 
@@ -273,7 +273,7 @@ fun away L init incr =
             of LESS => vary A t s
              | EQUAL => vary [] (A@t) (incr())
              | GREATER => vary (h::A) t s
-  in 
+  in
     vary [] L init
   end;
 
@@ -284,7 +284,7 @@ fun variant [] v = v
   | variant vlist (Fv{Name,Ty}) =
     let val next = nameStrm Name
         val V = map var_name vlist  (* wasteful *)
-        fun loop name = 
+        fun loop name =
            let val s = away V name next
            in if (inST s) then loop (next()) else s
            end
@@ -295,7 +295,7 @@ end;
 
 
 (*---------------------------------------------------------------------------
- * Making applications 
+ * Making applications
  *---------------------------------------------------------------------------*)
 
 local fun ERR s = TERM_ERR s "incompatible types"
@@ -318,9 +318,9 @@ fun list_mk_comb (f,L) =
  * Special case when Rator is an abstraction - examine the type of
  * the bound variable.
  *---------------------------------------------------------------------------*)
-fun mk_comb(r as {Rator = Abs{Bvar = Fv{Ty,...},...}, Rand}) = 
+fun mk_comb(r as {Rator = Abs{Bvar = Fv{Ty,...},...}, Rand}) =
       if (type_of Rand = Ty) then Comb r else raise INCOMPAT_TYPES1
-  | mk_comb{Rator,Rand} = list_mk_comb (Rator,[Rand]) 
+  | mk_comb{Rator,Rand} = list_mk_comb (Rator,[Rand])
                           handle HOL_ERR _ => raise INCOMPAT_TYPES1
 end;
 
@@ -330,11 +330,11 @@ end;
  *---------------------------------------------------------------------------*)
 local
 val bv0  = Bv 0  val bv1  = Bv 1  val bv2=Bv 2 val bv3 = Bv 3 val bv4 = Bv 4
-val bv5  = Bv 5  val bv6  = Bv 6  val bv7=Bv 7 val bv8=Bv 8 val bv9 = Bv 9 
+val bv5  = Bv 5  val bv6  = Bv 6  val bv7=Bv 7 val bv8=Bv 8 val bv9 = Bv 9
 val bv10 = Bv 10 val bv11 = Bv 11 val bv12=Bv 12 val bv13=Bv 13 val bv14=Bv 14
-val bv15 = Bv 15 val bv16 = Bv 16 val bv17 = Bv 17 val bv18 = Bv 18 
-val bv19 = Bv 19 val bv20 = Bv 20 val bv21 = Bv 21 val bv22 = Bv 22  
-val bv23 = Bv 23 val bv24 = Bv 24 val bv25 = Bv 25 val bv26 = Bv 26 
+val bv15 = Bv 15 val bv16 = Bv 16 val bv17 = Bv 17 val bv18 = Bv 18
+val bv19 = Bv 19 val bv20 = Bv 20 val bv21 = Bv 21 val bv22 = Bv 22
+val bv23 = Bv 23 val bv24 = Bv 24 val bv25 = Bv 25 val bv26 = Bv 26
 val bv27 = Bv 27 val bv28 = Bv 28 val bv29 = Bv 29 val bv30 = Bv 30
 val bv31 = Bv 31 val bv32 = Bv 32 val bv33 = Bv 33 val bv34 = Bv 34
 in
@@ -372,22 +372,22 @@ fun dest_comb (Comb cmb) = cmb
   | dest_comb _ = raise TERM_ERR "dest_comb" "not a comb"
 
 (*---------------------------------------------------------------------------
- * The pure way to do abstraction destruction. Problem is that you may 
+ * The pure way to do abstraction destruction. Problem is that you may
  * get a form of variable capture: consider
  *
  *     Abs{Bvar = v, Body = Comb{Rator = Bv 0, Rand = v}}.
  *
- * If you do a dest_abs on this, you will identify Rator and Rand unless 
- * you rename. So what? Well, if you don't rename in this situation, 
+ * If you do a dest_abs on this, you will identify Rator and Rand unless
+ * you rename. So what? Well, if you don't rename in this situation,
  *
  *   mk_abs o dest_abs <> I
  *
  *
  * fun dest_abs(Abs{Bvar,Body}) =
  *      let fun unbind i (v as (Bv j)) = if (i=j) then Bvar else v
- *            | unbind i (Comb{Rator,Rand}) = 
+ *            | unbind i (Comb{Rator,Rand}) =
  *                Comb{Rator = unbind i Rator, Rand = unbind i Rand}
- *            | unbind i (Abs{Bvar,Body}) = 
+ *            | unbind i (Abs{Bvar,Body}) =
  *                Abs{Bvar=Bvar,Body=unbind (i+1) Body}
  *            | unbind _ tm = tm
  *      in
@@ -400,14 +400,14 @@ local exception CLASH
 in
 fun dest_abs(Abs{Bvar as Fv{Name,Ty},Body}) =
    let fun dest (v as (Bv j), i) = if (i=j) then Bvar else v
-         | dest (v as Fv{Name = s,...}, _) = 
+         | dest (v as Fv{Name = s,...}, _) =
                if (Name = s) then raise CLASH else v
-         | dest (Comb{Rator,Rand},i) = 
+         | dest (Comb{Rator,Rand},i) =
               Comb{Rator = dest(Rator,i), Rand = dest(Rand,i)}
          | dest (Abs{Bvar,Body},i) = Abs{Bvar=Bvar,Body = dest(Body,i+1)}
          | dest (tm,_) = tm
    in {Bvar = Bvar, Body = dest(Body,0)}
-      handle CLASH => 
+      handle CLASH =>
       dest_abs(Abs{Bvar = variant (free_vars Body) Bvar, Body = Body})
    end
   | dest_abs _ = raise TERM_ERR "dest_abs" "not a lambda abstraction"
@@ -456,77 +456,77 @@ fun dest_term (Fv a) = VAR a
 
 local fun EQ (M:term,N:term) = Portable.pointer_eq(M,N)
 in
-fun aconv t1 t2 = EQ(t1,t2) orelse 
+fun aconv t1 t2 = EQ(t1,t2) orelse
 (case(t1,t2) of
-   (Comb{Rator=M,Rand=N},Comb{Rator=P,Rand=Q}) => aconv N Q andalso aconv M P 
+   (Comb{Rator=M,Rand=N},Comb{Rator=P,Rand=Q}) => aconv N Q andalso aconv M P
  | (Abs{Bvar=Fv{Ty=ty1,...}, Body=M},
     Abs{Bvar=Fv{Ty=ty2,...}, Body=N}) => (ty1=ty2) andalso (aconv M N)
  | (M,N) => (M=N))
 end;
 
 (* Is there a faster version of this? *)
-fun term_compare tm1 tm2 = 
+fun term_compare tm1 tm2 =
     if (aconv tm1 tm2) then EQUAL
     else if term_lt tm1 tm2 then LESS else GREATER;
 
 
 
 (*---------------------------------------------------------------------------
- * General term substitution. It's only this complicated because we rename. 
- * Why, if we have dB terms? Because we want to be able to re-parse 
+ * General term substitution. It's only this complicated because we rename.
+ * Why, if we have dB terms? Because we want to be able to re-parse
  * prettyprinted terms, i.e., parse o pp = I
  *
  * When we are trying to replace in term M using a substitution theta,
  * we
  * 1. Go through the substitution checking that the types of the redex and
- *    residue are the same. (This could be lazified, but isn't.) 
- * 
+ *    residue are the same. (This could be lazified, but isn't.)
+ *
  * 2. Start with M; try to find a {redex,incoming} record in theta s.t. redex
  *    is aconv with M. Since we are using dB terms, this automatically checks
  *    if M is free (modulo alpha convertibility).
- * 
+ *
  * 3a. Suppose this isn't possible; recurse into the structure of M
- * 
+ *
  * 3b. Suppose this is possible. Now we have some work to do.
- * 
- *     1. Check that the free_variables of the residue are not bound by the 
- *        current scope. If the scope is empty, there is no need to compute 
+ *
+ *     1. Check that the free_variables of the residue are not bound by the
+ *        current scope. If the scope is empty, there is no need to compute
  *        FV(residue). Otherwise, we compute the names of all free variables
- *        in residue (if that hasn't been done already), and store them in 
- *        the cell "fn_residue" of the binding. Now we call function "itr" 
+ *        in residue (if that hasn't been done already), and store them in
+ *        the cell "fn_residue" of the binding. Now we call function "itr"
  *        which iterates back in the scope, checking for each element "s" of
- *        the scope, whether it is a name of a free variable in residue. If 
- *        it is, we have found a clash. However, our heuristic is to go to 
+ *        the scope, whether it is a name of a free variable in residue. If
+ *        it is, we have found a clash. However, our heuristic is to go to
  *        the "most outlying clash" (this allows a subtle optimization), so we
- *        iterate through the entire scope, keeping track of the index of the 
- *        last clash. If we come out of the scope and there were no clashes, 
- *        then we do the replacement. Otherwise, there was a clash; 
- *        compute all the free variable names that could come in from theta 
+ *        iterate through the entire scope, keeping track of the index of the
+ *        last clash. If we come out of the scope and there were no clashes,
+ *        then we do the replacement. Otherwise, there was a clash;
+ *        compute all the free variable names that could come in from theta
  *        (if it hasn't already been done). Then raise the CLASH exception,
- *        with the index of the lambda to propagate to. (This index allows 
- *        us to ignore problems having to do with propagating back to the 
- *        most outlying clash when there are duplicated variables in the 
+ *        with the index of the lambda to propagate to. (This index allows
+ *        us to ignore problems having to do with propagating back to the
+ *        most outlying clash when there are duplicated variables in the
  *        scope, e.g., \x x.M.)
- * 
- * 3a1. Suppose we were at an "\v.M" and we recursed into M, adding the name 
+ *
+ * 3a1. Suppose we were at an "\v.M" and we recursed into M, adding the name
  *      of v to the scope. We have to handle the CLASH exception.
- * 
+ *
  *      - If it is 0, then we are the most outlying clash. We rename the bound
- *        variable to be different than "anything in sight", i.e., the scope 
- *        (of the Abs), all the names of variables (free or bound) in M, and 
- *        the names of all free variables that could possibly come in from 
+ *        variable to be different than "anything in sight", i.e., the scope
+ *        (of the Abs), all the names of variables (free or bound) in M, and
+ *        the names of all free variables that could possibly come in from
  *        theta. Now recurse. If there is a CLASH arising from this recursive
- *        call, it cannot possibly be a result of the newly chosen name, 
- *        so simply decrement the index and propagate the CLASH. (This is 
- *        our subtle optimization, since otherwise, the CLASH could have 
- *        been from our newly chosen name, and we would have to again search 
+ *        call, it cannot possibly be a result of the newly chosen name,
+ *        so simply decrement the index and propagate the CLASH. (This is
+ *        our subtle optimization, since otherwise, the CLASH could have
+ *        been from our newly chosen name, and we would have to again search
  *        for a new variable name at this node.)
- * 
+ *
  *      - if it is not 0, then decrement the index and propagate.
- * 
+ *
  *---------------------------------------------------------------------------*)
 
-type binding = {redex : term, 
+type binding = {redex : term,
                 incoming : {residue:term,
                             fn_residue : string Binaryset.set option ref}};
 
@@ -553,7 +553,7 @@ end;
 exception CLASH of int;
 
 fun check ([],S) = S
-  | check ({redex,residue}::rst, S) = 
+  | check ({redex,residue}::rst, S) =
      if (type_of redex = type_of residue)
      then check(rst,{redex=redex,
                      incoming={residue=residue,
@@ -564,7 +564,7 @@ local val incoming_names = ref NONE:string Binaryset.set option ref
       fun opr {residue, fn_residue as ref NONE} =
              let val S = free_names residue
              in fn_residue := SOME S;  S
-             end                           
+             end
         | opr {fn_residue = ref (SOME S), ...} = S
 in
 fun subst [] tm = tm
@@ -574,7 +574,7 @@ fun subst [] tm = tm
         fun mk_incoming() =
              case !incoming_names
               of SOME N => N   (* already computed *)
-               | NONE   => 
+               | NONE   =>
                   let val N = rev_itlist(fn x => fn S =>
                       Binaryset.union (opr(#incoming x),S))
                          bindings empty_string_set
@@ -587,25 +587,25 @@ fun subst [] tm = tm
                   let val names = opr rcd
                       fun itr ([],_,NONE) = SOME residue
                         | itr ([],_, SOME i) = (mk_incoming();  raise CLASH i)
-                        | itr (s::S,n,top) = 
-                           itr(S, n+1, if Binaryset.member(names,s) 
+                        | itr (s::S,n,top) =
+                           itr(S, n+1, if Binaryset.member(names,s)
                                        then (SOME n) else top)
                     in  itr(scope,0,NONE)
                     end
              fun assc [] = NONE
-               | assc ({redex,incoming}::rst) = 
-                  if (aconv tm redex) 
+               | assc ({redex,incoming}::rst) =
+                  if (aconv tm redex)
                   then check_for_clash(incoming,scope)
                   else assc rst
          in
              assc bindings
          end
 
-    fun subs(tm,scope) = 
+    fun subs(tm,scope) =
      case lookup(tm,scope)
        of SOME residue => residue
-        | NONE => case tm 
-          of Comb{Rator,Rand} => 
+        | NONE => case tm
+          of Comb{Rator,Rand} =>
                  Comb{Rator=subs(Rator,scope), Rand=subs(Rand,scope)}
           | Abs{Bvar as Fv{Name,Ty},Body}
               => (Abs{Bvar=Bvar,Body=subs(Body,Name::scope)}
@@ -622,7 +622,7 @@ fun subst [] tm = tm
                      end
                   | CLASH i => raise CLASH(i-1))
           | _ => tm
-    in 
+    in
       subs (tm,[])
     end
 end;
@@ -632,7 +632,7 @@ end;
  * Tests
  * Example from LCF code:
  *
- *   theta = { x'/z; x/y }  (* i.e., the parallel replacement of z by x' 
+ *   theta = { x'/z; x/y }  (* i.e., the parallel replacement of z by x'
  *                                   and y by x *)
  *   tm = "\x'. ((f y z) (\x. g x' x y z))"
      Term.subst [Term`z:bool` |-> Term`x':bool`,
@@ -667,10 +667,10 @@ end;
               (Term`\y :'a. (x:bool)`);
  * val it = (--`\y'. f y`--) : term
 
- * cut-down version of Klaus Schneider bug 
+ * cut-down version of Klaus Schneider bug
 
       val tm = Term`\(p:'a) (q:'a). f (x:'a) (y:'a) : 'a`;
-      val theta = [Term`x:'a` |-> Term`q:'a`, 
+      val theta = [Term`x:'a` |-> Term`q:'a`,
                    Term`y:'a` |-> Term`p:'a`];
       subst theta tm;
 
@@ -697,8 +697,8 @@ end;
  *
  * `\y''. y,(\y'. y'')`
  *
- * 
-    beta_conv 
+ *
+    beta_conv
         (Term`(\x y z. y x z z_1 z_2 y_1 y_2) (y z)`);
  *  val it = \y_3 z_3. y_3 (y z) z_3 z_1 z_2 y_1 y_2
 
@@ -709,13 +709,13 @@ end;
  * General term substitution without renaming
  *local
  *fun check [] = ()
- *  | check ({redex,residue}::rst) = 
+ *  | check ({redex,residue}::rst) =
  *      if (type_of redex = type_of residue)
  *      then check rst
  *      else raise TERM_ERR{function = "subst",
  *                          message = "redex has different type than residue"}
  *fun aconv_assoc item =
- *   let fun assc ({redex,residue}::rst) = 
+ *   let fun assc ({redex,residue}::rst) =
  *            if (aconv item redex)
  *            then SOME residue
  *            else assc rst
@@ -726,14 +726,14 @@ end;
  *fun subst [] = Lib.I
  *  | subst s =
  *      let val _ = check s
- *          fun subs tm = 
+ *          fun subs tm =
  *             case (aconv_assoc tm s)
  *               of (SOME residue) => residue
- *                | NONE => 
+ *                | NONE =>
  *                  (case tm
- *                   of (Comb{Rator,Rand}) => Comb{Rator = subs Rator, 
+ *                   of (Comb{Rator,Rand}) => Comb{Rator = subs Rator,
  *                                                 Rand = subs Rand}
- *                    | (Abs{Bvar,Body}) => Abs{Bvar = Bvar, 
+ *                    | (Abs{Bvar,Body}) => Abs{Bvar = Bvar,
  *                                              Body = subs Body}
  *                    | _ => tm)
  *      in subs
@@ -746,7 +746,7 @@ local val fn_rand = ref NONE
 in
 fun beta_conv (Comb{Rator = Abs{Body,...}, Rand}) =
  let val _ = fn_rand := NONE
-     fun free_rand_names() = 
+     fun free_rand_names() =
           case !fn_rand
            of SOME S => S
             | NONE => let val S = free_names Rand
@@ -756,15 +756,15 @@ fun beta_conv (Comb{Rator = Abs{Body,...}, Rand}) =
             let val names = free_rand_names()
                 fun itr([],_,NONE) = Rand
                   | itr ([],_, SOME i) = raise CLASH i
-                  | itr (s::S,n,top) = 
-                     itr(S, n+1, if Binaryset.member(names,s) 
+                  | itr (s::S,n,top) =
+                     itr(S, n+1, if Binaryset.member(names,s)
                                  then (SOME n) else top)
             in  itr(scope,0,NONE)
             end
      fun subs ((tm as Bv j),i,scope) = if (i=j) then check scope else tm
-       | subs (Comb{Rator,Rand},i,scope) = 
+       | subs (Comb{Rator,Rand},i,scope) =
                 Comb{Rator=subs(Rator,i,scope), Rand=subs(Rand,i,scope)}
-       | subs (Abs{Bvar as Fv{Name,Ty},Body},i,scope) = 
+       | subs (Abs{Bvar as Fv{Name,Ty},Body},i,scope) =
                 (Abs{Bvar=Bvar,Body=subs(Body,i+1,Name::scope)}
                  handle CLASH 0
                    => let val taken0 = Binaryset.union
@@ -772,7 +772,7 @@ fun beta_conv (Comb{Rator = Abs{Body,...}, Rand}) =
                           val taken = Binaryset.addList(taken0,scope)
                           val Name' = vary taken Name (nameStrm Name)
                       in
-                        Abs{Bvar=Fv{Name=Name', Ty=Ty}, 
+                        Abs{Bvar=Fv{Name=Name', Ty=Ty},
                             Body=subs(Body,i+1,Name'::scope)}
                         handle CLASH i => raise CLASH(i-1)
                       end
@@ -808,26 +808,26 @@ fun capture_depth (v,scope) =
 exception INST_CLASH of {var:term, scope:term list};
 
 
-fun inst [] tm = tm | 
+fun inst [] tm = tm |
 inst theta tm =
  let fun inst1 ((bv as Bv _),_,_) = bv
-       | inst1 (c as Const(r,Ty),_,_) = 
+       | inst1 (c as Const(r,Ty),_,_) =
             (case (Type.ty_sub theta Ty)
                of Type.SAME => c
                 | Type.DIFF ty => Const(r, ty))
-       | inst1 (v as Fv{Name,Ty},scope1,scope2) = 
+       | inst1 (v as Fv{Name,Ty},scope1,scope2) =
             let val v' = case (Type.ty_sub theta Ty)
                           of Type.SAME => v
                            | Type.DIFF ty => Fv{Name=Name, Ty=ty}
             in if (capture_depth(v',scope2) = ~1) then v'
                else raise INST_CLASH{var=v', scope=scope2}
             end
-       | inst1 (Comb{Rator,Rand},scope1,scope2) = 
+       | inst1 (Comb{Rator,Rand},scope1,scope2) =
                 Comb{Rator = inst1(Rator,scope1,scope2),
                      Rand  = inst1(Rand,scope1,scope2)}
-       | inst1 (Abs{Bvar as Fv{Name,Ty},Body},scope1,scope2) = 
+       | inst1 (Abs{Bvar as Fv{Name,Ty},Body},scope1,scope2) =
             let val v = Fv{Name=Name,Ty=Type.type_subst theta Ty}
-                val Bvar' = 
+                val Bvar' =
                   if (capture_depth(Bvar,scope1)=capture_depth(v,scope2))
                   then v
                   else variant scope2 v
@@ -849,18 +849,18 @@ inst theta tm =
 
 
 (*---------------------------------------------------------------------------
- * Non renaming version of inst: different from hol88 inst, in that no 
+ * Non renaming version of inst: different from hol88 inst, in that no
  * "away-from" list required
  *local
- *val check : Type.hol_type subst -> bool = 
+ *val check : Type.hol_type subst -> bool =
  *    Lib.all (fn {redex,...} => Type.is_vartype redex)
  *in
  *fun inst [] tm = tm
  *  | inst theta tm =
  *     if (check theta)
- *     then let fun inst1 (Fv{Name,Ty}) = Fv{Name=Name, 
+ *     then let fun inst1 (Fv{Name,Ty}) = Fv{Name=Name,
  *                                           Ty = Type.type_subst theta Ty}
- *                | inst1 (Const{Name,Ty}) = Const{Name=Name, 
+ *                | inst1 (Const{Name,Ty}) = Const{Name=Name,
  *                                                 Ty=Type.type_subst theta Ty}
  *                | inst1 (Comb{Rator,Rand}) = Comb{Rator = inst1 Rator,
  *                                                  Rand = inst1 Rand}
@@ -901,13 +901,13 @@ end;
 
 fun tm_reduce (v as Fv{Ty,...}) tm (tm_theta,ty_theta) =
      if (is_free tm)
-      then (if (seen v tm tm_theta) then tm_theta else (v |-> tm)::tm_theta, 
+      then (if (seen v tm tm_theta) then tm_theta else (v |-> tm)::tm_theta,
             Type.type_reduce Ty (type_of tm) ty_theta)
        else raise MTM_ERR
-  | tm_reduce (Const(r1, ty1)) 
+  | tm_reduce (Const(r1, ty1))
               (Const(r2, ty2)) (tm_theta,ty_theta) =
-       if (r1=r2) 
-       then (tm_theta,Type.type_reduce ty1 ty2 ty_theta) 
+       if (r1=r2)
+       then (tm_theta,Type.type_reduce ty1 ty2 ty_theta)
        else raise MTM_ERR
   | tm_reduce (Comb{Rator=M1, Rand=M2})
               (Comb{Rator=N1, Rand=N2}) S = tm_reduce M2 N2 (tm_reduce M1 N1 S)
@@ -921,19 +921,19 @@ fun tm_reduce (v as Fv{Ty,...}) tm (tm_theta,ty_theta) =
 local fun del [] A = A
         | del ((rr as {redex,residue})::rst) A =
            if (redex=residue) then del rst A else del rst (rr::A)
-      fun del1 theta = 
+      fun del1 theta =
          let fun delth [] A = A
                | delth ({redex,residue}::rst) A =
                   let val redex' = inst theta redex
-                  in if (redex' = residue) then delth rst A 
+                  in if (redex' = residue) then delth rst A
                      else delth rst ((redex' |-> residue)::A)
                   end
-         in delth 
+         in delth
          end
 in
-fun match_term pat ob = 
+fun match_term pat ob =
    let val (tm_subst,ty_subst) = tm_reduce pat ob ([],[])
-   in 
+   in
       (del1 ty_subst tm_subst [], del ty_subst [])
    end
 end;
@@ -955,9 +955,9 @@ local val dummy = Fv{Name ="dummy",Ty = Type.mk_vartype"'x"}
       val binder_restr_ref = ref (fn () => ([]:(string*string) list))
       val started = ref false
 in
-  fun pair_ops f g h i = 
+  fun pair_ops f g h i =
     if !started then ()
-    else (dest_pabs_ref := f; dest_pair_ref := g; 
+    else (dest_pabs_ref := f; dest_pair_ref := g;
           strip_pair_ref := h; binder_restr_ref := i; started := true)
 
   fun d_pabs x = (!dest_pabs_ref) x;
@@ -974,7 +974,7 @@ val percent = "%";
 
 (*---------------------------------------------------------------------------
  * alphanumeric binders have a space between them and the variable:
- * otherwise we get the following buggy prettyprint reported by Paul 
+ * otherwise we get the following buggy prettyprint reported by Paul
  * Curzon (LOCAL is a binder)
  *
  *     LOCALx. <body>
@@ -985,14 +985,14 @@ fun pad_binder s = if (Lexis.ok_symbolic s) then s else s^space;
 (*--------------------- Breaking terms down --------------------------------*)
 
 (*---------------------------------------------------------------------------
- * Strips leading lambdas off a term, not bothering to adjust indices 
+ * Strips leading lambdas off a term, not bothering to adjust indices
  *---------------------------------------------------------------------------*)
 fun de_abs (Abs{Bvar,Body}) =
         let val (bvs, core) = de_abs Body
         in (Bvar::bvs, core)
         end
   | de_abs tm = ([],tm);
- 
+
 
 local fun strip (Comb{Rator=Const(ref "~",_), Rand}) n = strip Rand (n+1)
         | strip tm n = (n,tm)
@@ -1047,7 +1047,7 @@ exception NOT_SET_ABS;
 
 fun strip_set_abs(tm as Abs _) =
     let val {Bvar,Body} = dest_abs tm
-    in case Body 
+    in case Body
          of Comb{Rator=Comb{Rator=Const c,Rand=tm1},Rand=tm2} =>
               if (name_of c = ",")
               then if ([Bvar] = intersect (free_vars tm1) (free_vars tm2))
@@ -1055,7 +1055,7 @@ fun strip_set_abs(tm as Abs _) =
               else raise TERM_ERR"strip_set_abs" "badly formed set abstraction"
           | _ => raise TERM_ERR"strip_set_abs" "badly formed set abstraction"
     end
-  | strip_set_abs tm = 
+  | strip_set_abs tm =
       let val {varstruct, body} = d_pabs tm
           val L = s_pair varstruct
           val {fst,snd} = d_pair body
@@ -1080,7 +1080,7 @@ in
 fun pr_var ppstrm =
    let val add_string = add_string ppstrm
        fun pr_atom 0 _ _ = add_string " ... "
-	 | pr_atom n {Name,Ty} showtype = 
+	 | pr_atom n {Name,Ty} showtype =
              if (showtype)
              then ( add_string ("("^Name^" :");
                     Type.pp_type ppstrm Ty (n-1);
@@ -1089,15 +1089,15 @@ fun pr_var ppstrm =
              else add_string Name
        fun pr_v 0 _ _ = add_string " ... "
          | pr_v n _ (Fv v) = pr_atom n v (!Globals.show_types)
-         | pr_v n E (Bv i) = 
+         | pr_v n E (Bv i) =
               if (!Globals.show_dB)
               then add_string ("("^Lib.int_to_string i^")")
               else pr_atom n (lookup i E) false
          | pr_v _ _ _ = raise TERM_ERR "pr_var" "not a var"
    in   pr_v
    end
-fun pr_var_list ppstrm n = 
-   pr_list_to_ppstream ppstrm 
+fun pr_var_list ppstrm n =
+   pr_list_to_ppstream ppstrm
       (fn ppstrm => pr_var ppstrm n [])
       (fn _ => ())
       (fn ppstrm => add_break ppstrm (1,0))
@@ -1106,7 +1106,7 @@ end;
 
 
 (*---------------------------------------------------------------------------
- * Varstructs are odious. I found that the easiest way to handle them 
+ * Varstructs are odious. I found that the easiest way to handle them
  * is to map them to (perhaps partial) s-expressions.
  *---------------------------------------------------------------------------*)
 datatype sexp = premature_end
@@ -1140,10 +1140,10 @@ fun get_backbone (unc(M,N)) = M::(get_backbone N)
  * a varstruct list.
  *---------------------------------------------------------------------------*)
 fun pr_varstruct ppstrm =
-   let val {add_string,add_break,begin_block,end_block,...} = 
+   let val {add_string,add_break,begin_block,end_block,...} =
               with_ppstream ppstrm
        val pr_var = pr_var ppstrm
-       fun pr_infix_unc L n = 
+       fun pr_infix_unc L n =
            ( begin_block INCONSISTENT 2;
              add_string "(";
              pr_list
@@ -1155,9 +1155,9 @@ fun pr_varstruct ppstrm =
        and
            pr_vstruct n (S as unc _) = pr_infix_unc (get_backbone S) n
          | pr_vstruct n (atom (v as Fv _)) = pr_var n [] v
-         | pr_vstruct _ premature_end = 
+         | pr_vstruct _ premature_end =
 	   raise TERM_ERR "pr_vstruct" "premature end"
-         | pr_vstruct _ (atom _) = 
+         | pr_vstruct _ (atom _) =
 	       raise TERM_ERR "pr_vstruct" "badly formed varstruct"
    in   pr_vstruct
    end;
@@ -1187,7 +1187,7 @@ fun strip_varstruct ppstrm =
           in ((fn n => pvlist n V)::L, M', (e@rev V))
           end
        | strip tm = ([],tm,[])
- in 
+ in
    strip
  end;
 
@@ -1197,24 +1197,24 @@ fun strip_varstruct ppstrm =
  *
  *     RQ <pred1> (\x. RQ <pred2> (\y. M))
  *
- * where RQ is a restricted quantifier constant. If pred1 and pred2 are the 
- * same, then we want to print 
+ * where RQ is a restricted quantifier constant. If pred1 and pred2 are the
+ * same, then we want to print
  *
  *     RQ x y ::<pred1>. M
  *
  * but if not then we print
- * 
+ *
  *     RQ x::<pred1>. RQ y::pred2. M
  *
  * The problem comes with testing that pred1 and pred2 are the same. We
  * test up to alpha-convertibility, but we can't just check the dB structure,
- * since pred2 is one binder "past" pred1. 
+ * since pred2 is one binder "past" pred1.
  *
  * Example.
  *
  *     - %`!x y. !a::($> x). !b::($> y). (x > y) ==> (a > b)`;
  *     val it = (--`!x y. !a b ::($> x). x > y ==> a > b`--) : term
- * 
+ *
  * Showing the dB structure and the restricted quantifiers, this is
  *
  *     - %`!x y. !a::($> x). !b::($> y). (x > y) ==> (a > b)`;
@@ -1222,8 +1222,8 @@ fun strip_varstruct ppstrm =
  *     `!x y. RES_FORALL ($> (1))
  *            (\a. RES_FORALL ($> (1)) (\b. (3) > (2) ==> (1) > (0)))`
  *
- * Notice that the "x" in "($> x)" is one away from its binder, as is the 
- * "y" in "($> y)". Hence, just testing with aconv will not be correct. 
+ * Notice that the "x" in "($> x)" is one away from its binder, as is the
+ * "y" in "($> y)". Hence, just testing with aconv will not be correct.
  *
  *---------------------------------------------------------------------------*)
 
@@ -1231,7 +1231,7 @@ fun bump (Bv i) = Bv (i+1)
   | bump (Comb{Rator,Rand}) = Comb{Rator=bump Rator, Rand=bump Rand}
   | bump (Abs{Bvar,Body}) = Abs{Bvar=Bvar,Body=bump Body}
   | bump x = x;
-      
+
 fun strip_restr_quant ppstrm {binder,restr,rest} =
  let val pvstruct = pr_varstruct ppstrm
      val pvar = pr_var ppstrm
@@ -1262,10 +1262,10 @@ fun strip_restr_quant ppstrm {binder,restr,rest} =
 fun strip_let ppstrm =
  let fun strip (M as Comb{Rator=Comb{Rator=Const c,Rand=A1},Rand=A2}) =
    if (name_of c <> "LET") then ([],M,[])
-   else (case A1 
+   else (case A1
     of Abs{Bvar,Body} => ([((fn n => pr_var ppstrm n [] Bvar),A2)],Body,[Bvar])
      | Comb{Rator=Const c,...} =>
-         if (name_of c = "UNCURRY") 
+         if (name_of c = "UNCURRY")
          then let val (s,tm2,e) = dest_uncurry A1
               in if (hd(rev(get_backbone s)) = premature_end) then ([],M,[])
                  else ([((fn n => pr_varstruct ppstrm n s),A2)],tm2,e)
@@ -1276,15 +1276,15 @@ fun strip_let ppstrm =
 and
  blat (M,tm1,tm2) =
   case (strip tm1)
-    of (L,Abs{Bvar,Body},e) => 
+    of (L,Abs{Bvar,Body},e) =>
          (((fn n => pr_var ppstrm n [] Bvar),tm2)::L,Body, Bvar::e)
      | (L, tm as Comb{Rator = Const c,...},e0) =>
          if (name_of c = "UNCURRY")
          then let val (s,tm3,e1) = dest_uncurry tm
-              in if (hd(rev(get_backbone s)) = premature_end) 
+              in if (hd(rev(get_backbone s)) = premature_end)
                  then (L,tm,e0)
                  else (((fn n => pr_varstruct ppstrm n s),tm2)::L,tm3,(e1@e0))
-          end 
+          end
           else ([],M,[])
      | _ => ([],M,[])
  in
@@ -1294,17 +1294,17 @@ and
 (*---------------------------------------------------------------------------
  * How should a constant name be printed? Here it is hardwired, but we should
  * actually leave it up to the user. Some of the cases to consider are:
- * 
+ *
  *   A. If we are printing a constant that is really a binder or an infix,
  *      then we should "dollar" it.
  *
  *   B. If the constant is not in the symbol table, then it can be one of two
  *      things: a member of a constant family, or an overwritten constant.
- *      if the latter, we should tell the user that the constant is out of  
+ *      if the latter, we should tell the user that the constant is out of
  *      date by printing some funny syntax around the name.
  *
- *   C. What about overwritten constant families? A member of a constant 
- *      family is considered to be overwritten if its type has been 
+ *   C. What about overwritten constant families? A member of a constant
+ *      family is considered to be overwritten if its type has been
  *      overwritten.
  *---------------------------------------------------------------------------*)
 datatype dollared = maybe | no
@@ -1324,37 +1324,43 @@ fun trans_name ("NIL", "list",_,_)      = "[]"
 fun cname ((r as ref name),ty) d =
   let val {const=Const(r1,_),theory,place} = const_decl name
       val cstr = trans_name (name,theory,place,d)
-  in 
-    if (r = r1) then cstr else old name 
+  in
+    if (r = r1) then cstr else old name
   end handle HOL_ERR _ => old name
 
 
-fun listCONS ty = 
+fun listCONS ty =
   let val (x,y) = Type.dom_rng (snd (Type.dom_rng ty))
   in case (Type.dest_type x)
       of {Tyop="list",Args=[_]} => (x=y)
        | _ => raise TERM_ERR "" ""
-  end 
+  end
   handle HOL_ERR _ => false;
 
-fun is_pred_ty ty = 
+fun is_pred_ty ty =
   (case Type.dest_type (snd(Type.dom_rng ty))
     of {Tyop="bool",Args=[]} => true
-    | _ => false) 
+    | _ => false)
   handle HOL_ERR _ => false;
 
-fun is_set_ty ty = 
+fun is_set_ty ty =
   (case (Type.dest_type ty) of {Tyop="set",...} => true | _ => false)
   handle HOL_ERR _ => false;
 
 fun setINSERT ty =
   let val hty = snd(Type.dom_rng(snd(Type.dom_rng ty)))
-  in 
+  in
    is_pred_ty hty orelse is_set_ty hty
   end handle HOL_ERR _ => false;
 
 (*---------------------------------------------------------------------------*
- * A numeral is a nest of NUMERAL_BIT{1,2}s built up from ZERO.              *
+ * A numeral is a nest of NUMERAL_BIT{1,2}s built up from ALT_ZERO wrapped
+ * inside the NUMERAL tag, or it is a straight ZERO constant.  This
+ * difference in treatment between zero and the other numerals leaves
+ * zero as a constant in the logic, which is useful elsewhere.
+ * (Principle of least surprises and all that.)  The use of ALT_ZERO rather
+ * than ZERO inside the representations for other numerals means that
+ * theorems of the form 0 = x will not match inside other numerals.
  *---------------------------------------------------------------------------*)
 
 fun is_numeral t = let
@@ -1374,12 +1380,12 @@ fun is_numeral t = let
   end handle HOL_ERR _ => false
 
   (* term is sequence of applications of NUMERAL_BIT1 and NUMERAL_BIT2 to
-     ZERO *)
+     ALT_ZERO *)
   fun is_nb t =
     if is_const t then let
       val {Name, Ty} = dest_const t
     in
-      Name = "ZERO" andalso is_numtype Ty
+      Name = "ALT_ZERO" andalso is_numtype Ty
     end
     else let
       val {Rand, Rator} = dest_comb t
@@ -1388,30 +1394,39 @@ fun is_numeral t = let
       (Name = "NUMERAL_BIT1" orelse Name = "NUMERAL_BIT2") andalso
       is_num2num_type Ty andalso is_nb Rand
     end
-
-  val {Rator, Rand} = dest_comb t
-  val {Name, Ty} = dest_const Rator
 in
-  Name = "NUMERAL" andalso is_num2num_type Ty andalso is_nb Rand
-end handle HOL_ERR _ => false
+  if is_const t then let
+    val {Name, Ty} = dest_const t
+  in
+    is_numtype Ty andalso Name = "ZERO"
+  end
+  else let
+    val {Rator, Rand} = dest_comb t
+    val {Name, Ty} = dest_const Rator
+  in
+    Name = "NUMERAL" andalso is_num2num_type Ty andalso is_nb Rand
+  end handle HOL_ERR _ => false
+end
 
 fun dest_numeral t =
-  if is_numeral t then let
-    val {Rand = arg, ...} = dest_comb t
-    open arbnum
-    fun recurse t =
-      if is_comb t then let
-        val {Rator, Rand} = dest_comb t
-      in
-        case #Name(dest_const Rator) of
-          "NUMERAL_BIT1" => two * recurse Rand + one
-        | "NUMERAL_BIT2" => two * recurse Rand + two
-        | _ => raise TERM_ERR "dest_numeral" "This should never ever happen"
-      end
-      else zero
-  in
-    recurse arg
-  end
+  if is_numeral t then
+    if is_const t then arbnum.zero
+    else let
+      val {Rand = arg, ...} = dest_comb t
+      open arbnum
+      fun recurse t =
+        if is_comb t then let
+          val {Rator, Rand} = dest_comb t
+        in
+          case #Name(dest_const Rator) of
+            "NUMERAL_BIT1" => two * recurse Rand + one
+          | "NUMERAL_BIT2" => two * recurse Rand + two
+          | _ => raise TERM_ERR "dest_numeral" "This should never ever happen"
+        end
+        else zero
+    in
+      recurse arg
+    end
   else
     raise TERM_ERR "dest_numeral" "Term is not a numeral"
 
@@ -1422,14 +1437,17 @@ fun prim_mk_numeral {mkCOMB, mkNUM_CONST, mkNUM2_CONST} n = let
   val nb2 = mkNUM2_CONST "NUMERAL_BIT2"
   fun recurse x =
     if x = zero then
-      mkNUM_CONST "ZERO"
+      mkNUM_CONST "ALT_ZERO"
     else
       if x mod two = one then
         mkCOMB{Rator = nb1, Rand = recurse ((x - one) div two)}
       else
         mkCOMB{Rator = nb2, Rand = recurse ((x - two) div two)}
 in
-  mkCOMB{Rator = numeral, Rand = recurse n}
+  if n = zero then
+    mkNUM_CONST "ZERO"
+  else
+    mkCOMB{Rator = numeral, Rand = recurse n}
 end
 
 fun mk_numeral n = let
@@ -1456,16 +1474,16 @@ val n2i = arbnum.toString o dest_numeral
 
 local
 
-val pp_tm_ref : (ppstream -> term -> gravity -> term list -> int -> unit) ref 
+val pp_tm_ref : (ppstream -> term -> gravity -> term list -> int -> unit) ref
     = ref (fn _ => fn _ => fn _ => fn _ => fn _ => ())
 
 fun initial_pp_tm ppstrm =
-   let val {add_string,add_break,begin_block,end_block,add_newline,...} = 
+   let val {add_string,add_break,begin_block,end_block,add_newline,...} =
               with_ppstream ppstrm
        val pr_var = pr_var ppstrm
        val pr_var_list = pr_var_list ppstrm
        val pr_varstruct = pr_varstruct ppstrm
-       val strip_varstruct = strip_varstruct ppstrm  
+       val strip_varstruct = strip_varstruct ppstrm
        val add_lparen = add_lparen ppstrm
        val add_rparen = add_rparen ppstrm
        val pp_type = Type.pp_type ppstrm
@@ -1476,7 +1494,7 @@ fun initial_pp_tm ppstrm =
              if ptype
              (* maybe (add_break(1,0);BB;add_string":";pp_type;EB  ... *)
              then (add_string " :"; pp_type ty (n-1); add_string ")")
-             else () 
+             else ()
           end
        fun pr_term_hook tm grav E n = (!pp_tm_ref) ppstrm tm grav E n
 
@@ -1531,6 +1549,7 @@ and
     pr_term _ _ _ 0 = add_string " ... "
   | pr_term (v as Fv _) grav E n = pr_var n E v
   | pr_term (v as Bv _) grav E n = pr_var n E v
+  | pr_term (Const(ref"ZERO", _)) _ _ _ = add_string "0"
   | pr_term (c as Const p) _ _ n = pr_const p n maybe
   | pr_term (tm as Abs _) grav E n =         (* simple abstractions *)
            let val (F,body,e) = strip_varstruct tm
@@ -1550,11 +1569,11 @@ and
                pr_term_hook body BOTTOM (e@E) (n-1);
                end_block();
              add_rparen grav WEAK;
-             end_block() 
+             end_block()
            end
 
     (*-----------------------------------------------------------------------
-     * conditionals, the only 3 argument built in constant recognized by 
+     * conditionals, the only 3 argument built in constant recognized by
      * pr_term
      *-----------------------------------------------------------------------*)
   | pr_term (Comb{Rator=Comb{Rator=Comb{Rator=Const(ref"COND",_),Rand=b},
@@ -1573,7 +1592,7 @@ and
            )
 
     (*-----------------------------------------------------------------------
-     * 2 argument specially handled constants: CONS, INSERT, LET, all 
+     * 2 argument specially handled constants: CONS, INSERT, LET, all
      * infixes, and restricted quantifiers.
      *-----------------------------------------------------------------------*)
 
@@ -1583,7 +1602,7 @@ and
      if (listCONS Ty)
      then let val l = strip_list tm []
          in
-          case (Portable_List.hd l) 
+          case (Portable_List.hd l)
              of Const(ref"NIL",_) =>
                     ( begin_block INCONSISTENT 1;
                       add_string "[";
@@ -1601,7 +1620,7 @@ and
      * enumerated set
      *-----------------------------------------------------------------------*)
   | pr_term(tm as Comb{Rator=Comb{Rator=Const(ref"INSERT",ty),...},...})
-      grav E n = 
+      grav E n =
        if (setINSERT ty)
        then let val L = strip_infix tm
                 val (front,last) = Lib.front_last L
@@ -1610,7 +1629,7 @@ and
               of Const(ref"EMPTY",_) =>
                   ( begin_block INCONSISTENT 1;
                     add_string "{";
-                    Portable_PrettyPrint.pr_list 
+                    Portable_PrettyPrint.pr_list
                          (fn trm => pr_term_hook trm BOTTOM E (n-1))
                                (fn () => add_string ";")
                                (fn () => add_break(1,0))   front;
@@ -1619,7 +1638,7 @@ and
            end
        else pr_comb (rator tm) (rand tm) grav E n
     (*-----------------------------------------------------------------------
-     * let statements 
+     * let statements
      *-----------------------------------------------------------------------*)
   | pr_term (tm as Comb{Rator as Comb{Rator=Const(ref"LET",_),...}, Rand})
             grav E n =
@@ -1631,7 +1650,7 @@ and
               let val (F,body,e') = strip_varstruct arg
               in begin_block INCONSISTENT 2;
                    add_string s; add_break(1,0);
-                   f n;  (* print let-bound name *) 
+                   f n;  (* print let-bound name *)
                    if (null F)  (* args *) then () else add_string " ";
                    pr_list (fn f => f n) (fn () => ())
                            (fn () => add_break(1,0))   F;
@@ -1647,12 +1666,12 @@ and
            add_lparen grav WEAK;
            begin_block CONSISTENT 0;
            if !Globals.in_at_end then begin_block CONSISTENT 0 else ();
-           begin_block CONSISTENT 0; 
-               pr_list pr_and_binds 
+           begin_block CONSISTENT 0;
+               pr_list pr_and_binds
                   (fn () => ()) (fn () => add_break(1,0))
                   (rev1(L,[]));  end_block();
            add_break(1,0);
-           add_string "in"; 
+           add_string "in";
            if !Globals.in_at_end then end_block() else ();
            add_break(1,0);
            pr_term_hook m BOTTOM (e@E) (n-1);  (* pp the body *)
@@ -1673,10 +1692,10 @@ and
         else
        (case (Lib.assoc2 name (binder_restrictions()))
         of NONE => pr_comb Rator Rand grav E n  (* not a restr. quantifier *)
-         | SOME (binder,_) => 
+         | SOME (binder,_) =>
            (case (strip_restr_quant ppstrm {binder=name,restr=t1,rest=Rand})
             of ([],_,_) => pr_comb Rator Rand grav E n
-             | (F,body,e) => 
+             | (F,body,e) =>
                ( begin_block CONSISTENT 2;
                  add_lparen grav WEAK;
                  add_string (pad_binder binder);
@@ -1695,7 +1714,7 @@ and
                  end_block()))))
 
     (*-----------------------------------------------------------------------
-     * Built in constants taking one argument : negation ("~"), GSPEC, 
+     * Built in constants taking one argument : negation ("~"), GSPEC,
      * UNCURRY, <binder>, <binder> <vstruct>
      *-----------------------------------------------------------------------*)
     (* negations *)
@@ -1724,12 +1743,12 @@ and
         end handle NOT_SET_ABS => pr_comb Rator Rand grav E n )
 
     (*-----------------------------------------------------------------------
-     * lambda varstructs:  \(x,y). M 
+     * lambda varstructs:  \(x,y). M
      *-----------------------------------------------------------------------*)
   | pr_term (tm as Comb{Rator as Const(ref"UNCURRY",_),Rand}) grav E n =
      (case (strip_varstruct tm)
       of ([],_,_) => pr_comb Rator Rand grav E n
-       | (F,body,e) => 
+       | (F,body,e) =>
          ( begin_block CONSISTENT 2;
            add_lparen grav WEAK;
            add_string "\\";
@@ -1745,15 +1764,15 @@ and
           end_block()))
 
     (*----------------------------------------------------------------------
-     *  binder applied to varstruct: e.g.,  !(x,y,z). M  
+     *  binder applied to varstruct: e.g.,  !(x,y,z). M
      *----------------------------------------------------------------------*)
   | pr_term (Comb{Rator as Const(cr as (ref cstr,_)),
                   Rand as Comb{Rator = Const(ref"UNCURRY",_),...}})
-              grav E n = 
+              grav E n =
       if (fixity_of cstr <> Binder) then pr_comb Rator Rand grav E n
       else (case (strip_varstruct Rand)
             of ([],_,_) => pr_comb Rator Rand grav E n
-             | (F,body,e) => 
+             | (F,body,e) =>
                (begin_block CONSISTENT 2;
                 add_lparen grav WEAK;
                 add_string (pad_binder (cname cr no));
@@ -1769,11 +1788,11 @@ and
                 end_block()))
 
     (*-----------------------------------------------------------------------
-     * "binder" case: e.g. !x y z. M. 
+     * "binder" case: e.g. !x y z. M.
      *-----------------------------------------------------------------------*)
   | pr_term (trm as Comb{Rator=c as Const(cr as (ref name,_)),Rand=tm as Abs _})
             grav E n =
-      if (fixity_of name <> Binder) 
+      if (fixity_of name <> Binder)
       then pr_comb c tm grav E n
       else let val (V,body) = strip_binder_vars trm
            in begin_block INCONSISTENT 2;
@@ -1799,8 +1818,8 @@ and
    * fall through case for combs
    *-------------------------------------------------------------------------*)
   | pr_term (Comb{Rator, Rand}) grav E n = pr_comb Rator Rand grav E n
-           
-  | pr_term (ty_antiq ty) grav E n = 
+
+  | pr_term (ty_antiq ty) grav E n =
      (begin_block CONSISTENT 0;
       add_string ("(ty_antiq("^(!Globals.type_pp_prefix)^"`:");
       pp_type ty (n-1);
@@ -1831,7 +1850,7 @@ fun reset_pp_term () = (pp_tm_ref := initial_pp_tm);
 
 end;
 
-fun pp_term ppstrm tm = 
+fun pp_term ppstrm tm =
    if (!Globals.max_print_depth = 0)
    then Portable_PrettyPrint.add_string ppstrm " ... "
    else pp_tm ppstrm tm BOTTOM [] (!Globals.max_print_depth);
@@ -1841,9 +1860,9 @@ fun pp_term ppstrm tm =
  *  Raw syntax prettyprinter for terms.                                      *
  *---------------------------------------------------------------------------*)
 
-fun pp_raw_term index pps tm = 
+fun pp_raw_term index pps tm =
 let val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
-    fun pr_term (Abs{Bvar,Body}) = 
+    fun pr_term (Abs{Bvar,Body}) =
           ( add_string "(\\"; pr_term Bvar; add_string dot;
                               add_break(1,0);  pr_term Body; add_string ")" )
       | pr_term (Comb{Rator, Rand}) =
@@ -1860,7 +1879,7 @@ end;
 
 
 (*---------------------------------------------------------------------------*
- * Hidden information sharing between Term and Net. Term nets need to 
+ * Hidden information sharing between Term and Net. Term nets need to
  * break terms apart when they are accessed, and it is slow to do this
  * by use of dest_abs.
  *---------------------------------------------------------------------------*)
@@ -1868,7 +1887,7 @@ local fun break_abs(Abs r) = r
         | break_abs _ = raise TERM_ERR"hidden.break_abs" "not an abstraction"
       val used = ref false
 in
-fun Net_init r = 
+fun Net_init r =
   if !used then () else (r := break_abs; used := true)
 end;
 
@@ -1878,11 +1897,11 @@ end;
  *---------------------------------------------------------------------------*)
 local val used = ref false
       fun constify{Name,Ty} =
-        let val (Const(r,_)) = #const(const_decl Name) 
-        in Const(r,Ty) 
+        let val (Const(r,_)) = #const(const_decl Name)
+        in Const(r,Ty)
         end
 in
-fun Preterm_init r1 r2 = 
+fun Preterm_init r1 r2 =
   if !used then () else (r1 := constify; r2 := Comb; used := true)
 end;
 
@@ -1894,8 +1913,8 @@ local val used = ref false
       fun break_const(Const x) = x
         | break_const _ = raise TERM_ERR"break_const" ""
 in
- fun Theory_init r1 r2 = 
-      if !used then () 
+ fun Theory_init r1 r2 =
+      if !used then ()
        else (r1 := Const; r2 := break_const; used := true)
 end;
 
@@ -1905,7 +1924,7 @@ end;
  *---------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------
- * Traverse a term, performing a given (side-effecting) operation at the 
+ * Traverse a term, performing a given (side-effecting) operation at the
  * leaves. For our purposes, bound variables can be ignored.
  *---------------------------------------------------------------------------*)
 fun trav f =
@@ -1913,8 +1932,8 @@ fun trav f =
         | trv (a as Const _) = f a
         | trv (Comb{Rator, Rand}) = (trv Rator; trv Rand)
         | trv (Abs{Bvar, Body})  = (trv Bvar; trv Body)
-        | trv _ = () 
-  in 
+        | trv _ = ()
+  in
     trv
   end;
 
@@ -1927,12 +1946,12 @@ end;
 local val eekr = ref(ref"")
       val used = ref false
 in
- fun minTheory_init c = 
-    if !used then () 
-    else case c 
+ fun minTheory_init c =
+    if !used then ()
+    else case c
            of Const(r,_) => (eekr := r; used := true)
             | _ => raise TERM_ERR"minTheory_init" ""
- fun mk_eq_nocheck ty M N = 
+ fun mk_eq_nocheck ty M N =
   Comb{Rator=Comb{Rator=Const(!eekr,ty-->ty-->Type.bool),Rand=M},Rand=N}
 end;
 
@@ -1942,9 +1961,9 @@ end;
 
 local val used = ref false
 in
-fun Thm_init r r1 r2 r3 = 
-   if !used then () 
-   else (r := mk_eq_nocheck; 
+fun Thm_init r r1 r2 r3 =
+   if !used then ()
+   else (r := mk_eq_nocheck;
          r1 := Comb; r2 := Abs; r3 := Bv;
          used := true)
 end;
