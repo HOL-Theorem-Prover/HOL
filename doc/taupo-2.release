@@ -5,6 +5,13 @@ Bugs fixed:
     in the way of an error message.  Fixed at least one instance of
     this problem.
 
+  * HOLSimps.hol_ss had lost its pointwise elimination conversions
+    (these simplified terms like ?x. .. /\ (x = f) /\ ... ).
+
+  * Exporting theories with nested recursive types in them led to the
+    creation of theory.sml files that weren't syntactically valid.
+
 New theories:
 -------------
   * A theory of lazy lists
+  * A collection of theories about temporal logic.

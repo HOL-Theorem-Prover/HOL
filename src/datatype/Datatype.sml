@@ -196,7 +196,7 @@ in
              NL();
              S ("                "^s^"),")
            end
-         | NONE => (S "NONE,"; NL())
+         | NONE => (S "      size = NONE,"; NL())
        fun do_simpls () = (S "["; app S (Lib.commafy extras); S "]")
      in
        S "val _ =";                           NL();
