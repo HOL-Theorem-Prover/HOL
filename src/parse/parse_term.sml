@@ -544,7 +544,7 @@ fun parse_term (G : grammar) typeparser = let
   val is_binder = is_binder G
   val grammar_tokens = term_grammar.grammar_tokens G
   val lex  = let
-    val specials = (endbinding::grammar_tokens)
+    val specials = endbinding::grammar_tokens @ term_grammar.known_constants G
     val ttlex = term_tokens.lex specials
   in
     fn (qb, ps) =>
