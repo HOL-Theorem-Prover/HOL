@@ -11,6 +11,7 @@
  ---------------------------------------------------------------------------*)
 
 load "muddyLib";
+
 fun bdd_oracle q =
   let val tm = Parse.Term q
       val V = free_vars tm
@@ -21,46 +22,9 @@ fun bdd_oracle q =
 
 show_tags := true;
 
-val mjcg_yes = bdd_oracle 
-`((adder1____carry__1__1 = ~a__0 /\ b__0) /\
-  (adder1____carry__1__2 =
-   b__1 /\ adder1____carry__1__1 \/
-   ~a__1 /\ ~(b__1 = adder1____carry__1__1)) /\
-  (adder1____carry__2__1 = a__0 /\ b__0) /\
-  (adder1____carry__2__2 =
-   b__1 /\ adder1____carry__2__1 \/
-   a__1 /\ ~(b__1 = adder1____carry__2__1))) /\
- (adder2____carry__1__1 = cnt__0 /\ a__0) /\
- (adder2____carry__1__2 = a__1 /\ adder2____carry__1__1) /\
- (adder2____carry__1__3 = a__2 /\ adder2____carry__1__2) /\
- (adder2____carry__2__1 = ~(cnt__0 = a__0) /\ ~(cnt__0 = b__0)) /\
- (adder2____carry__2__2 =
-  ~(cnt__0 = b__1) /\ adder2____carry__2__1 \/
-  ~(a__1 = adder2____carry__1__1) /\
-  ~(~(cnt__0 = b__1) = adder2____carry__2__1)) /\
- (adder2____carry__2__3 =
-  ~(cnt__0 = b__2) /\ adder2____carry__2__2 \/
-  ~(a__2 = adder2____carry__1__2) /\
-  ~(~(cnt__0 = b__2) = adder2____carry__2__2)) ==>
- ((out__2 =
-   ~(~(a__2 = b__2) = adder1____carry__1__2) /\ cnt__0 \/
-   ~(~(a__2 = b__2) = adder1____carry__2__2) /\ ~cnt__0) /\
-  (out__1 =
-   ~(~(a__1 = b__1) = adder1____carry__1__1) /\ cnt__0 \/
-   ~(~(a__1 = b__1) = adder1____carry__2__1) /\ ~cnt__0) /\
-  (out__0 = ~(a__0 = b__0) /\ cnt__0 \/ ~(a__0 = b__0) /\ ~cnt__0) =
-  (out__2 =
-   ~(~(~(a__2 = adder2____carry__1__2) = ~(cnt__0 = b__2)) =
-     adder2____carry__2__2)) /\
-  (out__1 =
-   ~(~(~(a__1 = adder2____carry__1__1) = ~(cnt__0 = b__1)) =
-     adder2____carry__2__1)) /\
-  (out__0 = ~(~(cnt__0 = a__0) = ~(cnt__0 = b__0))))`;
-
 
 val syn323_1 = bdd_oracle 
 `~((v0 \/ v1) /\ (~v0 \/ v1) /\ (~v1 \/ v0) /\ (~v0 \/ ~v1))`;
-
 
 val syn029_1 = bdd_oracle 
 `~((~v2 \/ ~v1) /\ v0 /\ (~v0 \/ ~v1 \/ v2) /\ (~v2 \/ v1) /\ (v1 \/ v2))`;
@@ -206,6 +170,42 @@ val puz014_1 = bdd_oracle
   (~v4 \/ v5 \/ v6) /\
   (~v7 \/ ~v8 \/ v9) /\
   (~v10 \/ ~v11 \/ v12))` ;
+
+val mjcg_yes = bdd_oracle 
+`((adder1____carry__1__1 = ~a__0 /\ b__0) /\
+  (adder1____carry__1__2 =
+   b__1 /\ adder1____carry__1__1 \/
+   ~a__1 /\ ~(b__1 = adder1____carry__1__1)) /\
+  (adder1____carry__2__1 = a__0 /\ b__0) /\
+  (adder1____carry__2__2 =
+   b__1 /\ adder1____carry__2__1 \/
+   a__1 /\ ~(b__1 = adder1____carry__2__1))) /\
+ (adder2____carry__1__1 = cnt__0 /\ a__0) /\
+ (adder2____carry__1__2 = a__1 /\ adder2____carry__1__1) /\
+ (adder2____carry__1__3 = a__2 /\ adder2____carry__1__2) /\
+ (adder2____carry__2__1 = ~(cnt__0 = a__0) /\ ~(cnt__0 = b__0)) /\
+ (adder2____carry__2__2 =
+  ~(cnt__0 = b__1) /\ adder2____carry__2__1 \/
+  ~(a__1 = adder2____carry__1__1) /\
+  ~(~(cnt__0 = b__1) = adder2____carry__2__1)) /\
+ (adder2____carry__2__3 =
+  ~(cnt__0 = b__2) /\ adder2____carry__2__2 \/
+  ~(a__2 = adder2____carry__1__2) /\
+  ~(~(cnt__0 = b__2) = adder2____carry__2__2)) ==>
+ ((out__2 =
+   ~(~(a__2 = b__2) = adder1____carry__1__2) /\ cnt__0 \/
+   ~(~(a__2 = b__2) = adder1____carry__2__2) /\ ~cnt__0) /\
+  (out__1 =
+   ~(~(a__1 = b__1) = adder1____carry__1__1) /\ cnt__0 \/
+   ~(~(a__1 = b__1) = adder1____carry__2__1) /\ ~cnt__0) /\
+  (out__0 = ~(a__0 = b__0) /\ cnt__0 \/ ~(a__0 = b__0) /\ ~cnt__0) =
+  (out__2 =
+   ~(~(~(a__2 = adder2____carry__1__2) = ~(cnt__0 = b__2)) =
+     adder2____carry__2__2)) /\
+  (out__1 =
+   ~(~(~(a__1 = adder2____carry__1__1) = ~(cnt__0 = b__1)) =
+     adder2____carry__2__1)) /\
+  (out__0 = ~(~(cnt__0 = a__0) = ~(cnt__0 = b__0))))`;
 
 val mul03_be  = bdd_oracle
  `(p_00_00 = x1 /\ y1) /\
@@ -424,7 +424,7 @@ val puz030_1 = bdd_oracle
   (~v23 \/ v22) /\
   (~v22 \/ v23 \/ v24))` ;
 
-(* takes a little while *)
+
 val dk27_be  = bdd_oracle
  `(ge2 = ~in4 /\ ~in3 /\ ~in2 /\ ~in0) /\
   (ge7 = ge2 /\ ~in1) /\

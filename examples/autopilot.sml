@@ -70,6 +70,7 @@ Hol_datatype `states = <| att_cws  : off_eng;
                           cas_disp : disp_status;
                           altitude : altitude_vals |>`;
 
+
 (*---------------------------------------------------------------------------*
  * State predicates.                                                         *
  *---------------------------------------------------------------------------*)
@@ -355,7 +356,7 @@ Induct
 
 val reachable_induct = prove
 (Term`!P. (!st. is_initial st ==> P st) /\ 
-          (!st st' e. is_reachable st ==> P (nextstate st e))
+          (!st e. is_reachable st ==> P (nextstate st e))
           ==>
           !st. is_reachable st ==> P st`,
  RW_TAC std_ss [is_reachable_def]
