@@ -181,22 +181,3 @@ val CBVTerminates = Q.prove(`CBVTerminates ^guess1`,
           #2(valOf(TypeBase.size_of(valOf(TypeBase.read"arith"))))])
 end;
 
-(*---------------------------------------------------------------------------
-   Now for the hard one.
- ---------------------------------------------------------------------------*)
-
-g`CBNTerminates ^guess1`;
-
-val [guess1,_] = TotalDefn.guessR CBV_defn
-
-Defn.tgoal CBN_defn;
-e (WF_REL_TAC CBV_defn `^guess1` THEN RW_TAC arith_ss []);
-
-
-val SOME CBN_union = Defn.union_defn CBN_defn;
-val SOME CBN_aux   = Defn.aux_defn CBN_union;
-
-val SOME CBV_aux   = Defn.aux_defn CBV_defn;
-Defn.eqns_of CBV_aux;
-Defn.tcs_of CBV_aux;
-

@@ -59,11 +59,10 @@ val iota_length = Q.prove
  ---------------------------------------------------------------------------*)
 
 local open computeLib
-      val compset = reduceLib.reduce_rws()
+      val compset = bossLib.initial_rws()
       val _ = add_thms (true,[iota_eqn]) compset
-      val eval_iota = CBV_CONV compset
 in
-fun Eval q = Count.apply eval_iota (Term q)
+val Eval = Count.apply (CBV_CONV compset) o Term
 end;
 
 Eval `iota 0 0`;

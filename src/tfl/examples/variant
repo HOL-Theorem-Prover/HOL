@@ -2,6 +2,7 @@ app load ["bossLib", "QLib"];
 open bossLib;
 infix 8 by; infix &&;
 
+
 (*---------------------------------------------------------------------------
      Find an element not in a given list.
  ---------------------------------------------------------------------------*)
@@ -88,11 +89,10 @@ local open listTheory computeLib
   val MEM_IF = Q.prove(`!x h t. MEM x (h::t) = if x=h then T else MEM x t`,
                        RW_TAC list_ss [MEM])
   val MEM_DEF' = CONJ (CONJUNCT1 MEM) MEM_IF
-  val compset = reduceLib.reduce_rws()
+  val compset = bossLib.initial_rws()
   val _ = add_thms (true,[variant_eqn,MEM_DEF']) compset
-  val eval_variant = CBV_CONV compset
 in
-fun Eval q = Count.apply eval_variant (Term q)
+val Eval = Count.apply (CBV_CONV compset) o Term
 end;
 
 Eval `variant 1 [1;2;3;4;5;6;7;8;9;10;11;13;14;15;16;16;16;16;165]`;

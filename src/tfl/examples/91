@@ -151,13 +151,12 @@ WF_REL_TAC N_defn `measure \x. 101 - x` THENL
       Now try some computations with N.
  ---------------------------------------------------------------------------*)
 
-local open arithmeticTheory computeLib
+local open computeLib
       val compset = reduceLib.reduce_rws()
       val _ = add_thms(true,[GREATER_EQ, GREATER_DEF]) compset
       val _ = add_thms (true,[N_eqn]) compset
-      val evalN = CBV_CONV compset
 in
-fun Eval q = Count.apply evalN (Term q)
+val Eval = Count.apply (CBV_CONV compset) o Term
 end;
 
 Eval `N 0`;

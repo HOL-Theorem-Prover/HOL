@@ -1,4 +1,4 @@
-app load ["bossLib", "QLib", "numLib", "computeLib"];
+app load ["bossLib", "QLib", "numLib"];
 
 open bossLib arithmeticTheory numLib;
 infix 8 by;
@@ -29,6 +29,7 @@ val (exp_eqns, exp_ind) = Defn.tprove
       THEN MP_TAC (Q.SPEC `SUC(SUC v4)` 
                   (REWRITE_RULE [DECIDE `0<2`] (Q.SPEC`2` DIVISION)))
       THEN RW_TAC arith_ss []]);
+
 
 (*---------------------------------------------------------------------------*
  * A form of correctness: exp is equal to the prim. rec defn. of EXP         *
@@ -75,12 +76,11 @@ RW_TAC std_ss []
   THEN RW_TAC std_ss [exp_eqns]);
 
 
-local open arithmeticTheory computeLib
-      val compset = reduceLib.reduce_rws()
-      val _ = add_thms (true,[alt_exp_eqns,boolTheory.LET_THM]) compset
-      val eval_exp = CBV_CONV compset
+local open computeLib
+      val compset = bossLib.initial_rws()
+      val _ = add_thms (true,[alt_exp_eqns]) compset
 in
-fun Eval q = Count.apply eval_exp (Term q)
+val Eval = Count.apply (CBV_CONV compset) o Term
 end;
 
 Eval `exp 2 1`;
