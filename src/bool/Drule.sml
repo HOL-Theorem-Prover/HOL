@@ -889,7 +889,7 @@ fun CONJ_LIST 1 th = [th]
  * Flattens out all conjuncts, regardless of grouping
  *---------------------------------------------------------------------------*)
 
-fun CONJUNCTS th = (CONJUNCTS (CONJUNCT1 th) @ 
+fun CONJUNCTS th = (CONJUNCTS (CONJUNCT1 th) @
                     CONJUNCTS(CONJUNCT2 th)) handle HOL_ERR _ => [th];
 
 (*---------------------------------------------------------------------------
@@ -1151,7 +1151,7 @@ fun ALPHA_CONV x t = let
   val (dty, _) = dom_rng (type_of t)
                  handle HOL_ERR _ =>
                         raise ERR "ALPHA_CONV" "Second term not an abstraction"
-  val (xstr, xty) = with_exn dest_var x 
+  val (xstr, xty) = with_exn dest_var x
                       (ERR "ALPHA_CONV" "First term not a variable")
   val _ = Type.compare(dty, xty) = EQUAL
           orelse raise ERR "ALPHA_CONV"
@@ -1732,8 +1732,7 @@ fun canon (fl,th) =
         end else
    if is_forall w then
      let val (vs,_) = strip_forall w
-         val fvs = HOLset.listItems
-                    (HOLset.union(hyp_frees th, FVL[concl th] empty_tmset))
+         val fvs = HOLset.listItems (FVL[concl th] (hyp_frees th))
          val nvs = itlist (fn v => fn nv => variant (nv @ fvs) v::nv) vs []
      in
         canon (fl, SPECL nvs th)
