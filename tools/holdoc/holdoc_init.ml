@@ -1,6 +1,8 @@
 (* holdoc_init.ml -- initial settings of various category lists *)
 (* Keith Wansbrough 2001,2002 *)
 
+open Holdocmodel
+
 (* these are now always initialised from a file; there are no defaults *)
 
 type curried_info = {
@@ -106,3 +108,9 @@ let hOLDELIMUNBAL = ref false
    symbolic identifiers that contain nonaggregating characters; user-extensible *)
 let nonagg_specials = ref ["()"; "[]"; ".."; "..."]
 
+
+let do_directive : directive_content0 -> unit
+    = function
+      | DirThunk f -> f ()
+      | DirVARS is -> ()  (* ignore *)
+      | DirRCSID s -> rCSID := Some s

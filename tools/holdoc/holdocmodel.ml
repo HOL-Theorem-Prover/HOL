@@ -60,6 +60,7 @@ and directive_content = directive_content0 located
 and directive_content0 =
      DirThunk of (unit -> unit)       (* do it; not the nicest implementation! *)
    | DirVARS of (bool * string) list  (* VARS directive - special handling *)
+   | DirRCSID of string
 
 
 let zero_loc = (Lexing.dummy_pos, Lexing.dummy_pos)

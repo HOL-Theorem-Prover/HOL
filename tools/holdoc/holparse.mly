@@ -228,7 +228,7 @@ directive0 :
 | ECHO dirstuff /* used as comment in existing files sadly */
                                               { loc (DirThunk (fun () -> eCHO  := true )) }
 | NOECHO opt_whitestuff                       { loc (DirThunk (fun () -> eCHO  := false)) }
-| RCSID opt_whitestuff Str opt_whitestuff     { loc (DirThunk (fun () -> rCSID := Some $3)) }
+| RCSID opt_whitestuff Str opt_whitestuff     { loc (DirRCSID $3) }
 | HOLDELIM opt_whitestuff Str opt_whitestuff Str opt_whitestuff
                                { loc (DirThunk (fun () -> hOLDELIMOPEN := $3; hOLDELIMCLOSE := $5)) }
 | NEWMODE opt_whitestuff Ident opt_whitestuff { loc (DirThunk (fun () -> new_mode    (fst $3))) }

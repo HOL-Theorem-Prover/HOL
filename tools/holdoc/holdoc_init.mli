@@ -51,3 +51,5 @@ val hOLDELIMUNBAL : bool ref
 
 val nonagg_specials : string list ref
 
+
+val do_directive : Holdocmodel.directive_content0 -> unit

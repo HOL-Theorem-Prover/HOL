@@ -118,7 +118,7 @@ let potential_vars : holdoc -> pvars
       and bdrs l vs = function
           ((HolIdent(b,s)         ,_)::ts) -> bdrs l (s::vs) ts
         | ((HolDir (DirVARS bis,_),_)::ts) -> bdrs l (List.map snd bis @ vs) ts
-        | ((HolDir (DirThunk f ,_),_)::ts) -> bdrs l vs ts  (* don't do the directive here! *)
+        | ((HolDir (_          ,_),_)::ts) -> bdrs l vs ts  (* don't do the directive here! *)
         | ((HolSep s              ,_)::ts) -> go vs ts
         | (_ ::ts)  -> bdrs l vs ts
         | []        -> write_warning ("unexpected end of binder list",l); go vs []
@@ -451,9 +451,9 @@ let rec munge_hol_content : pvars -> hol_content -> unit
                                        "\\tscomm{") "}"
                                     munge_texify_text s)
         | HolTex d          -> (fun () -> wrap "\\tsholcomm{" "}" rendertexdoc d)
-        | HolDir (DirThunk f,_) -> f () (* do it now, even if not echoing *);
-                                   (fun () -> ())
         | HolDir (DirVARS _ ,_) -> (fun () -> ())    (* ignore *)
+        | HolDir (dir       ,_) -> do_directive dir (* do it now, even if not echoing *);
+                                   (fun () -> ())
       in
       if !eCHO then
         render_it ()
@@ -531,9 +531,7 @@ and texrenderdirective : directive -> unit
     = fun d -> texrenderdirective_content d
 
 and texrenderdirective_content : directive_content -> unit
-    = fun (d,_) -> match d with
-        DirThunk f -> f ()
-      | DirVARS bis -> ()   (* ignore VARS in TeX mode *)
+    = fun (d,_) -> do_directive d
 
 and renderholdoc : holdoc -> unit
     = fun d ->

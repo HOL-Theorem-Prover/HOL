@@ -6,6 +6,7 @@ open Holdocmodel
 open Holparse
 open Holparsesupp
 open Hollex
+open Holdoc_init
 
 
 let dolist f cs =
@@ -60,7 +61,5 @@ and dumphol_content = fun (x,_) ->
 and dumpdirective d = dumpdirective_content d
 
 and dumpdirective_content = fun (x,_) ->
-  match x with
-    DirThunk f -> (f (); "")  (* do it now! (side-effecting) *)
-  | DirVARS bis -> ""  (* ignore! *)
+  (do_directive x; "")  (* do it now! (side-effecting) *)
 

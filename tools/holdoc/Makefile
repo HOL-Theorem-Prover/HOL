@@ -41,7 +41,7 @@ mng_to_latex : holdocmodel.cmx holdoc_init.cmx holparsesupp.cmx hollex.cmx holpa
 # other targets:
 
 clean:
-	rm -f simpledump simpletexdump $(GENMLSOURCES) $(GENMLISOURCES) \
+	rm -f simpledump simpletexdump simplemosmldump $(GENMLSOURCES) $(GENMLISOURCES) \
 	      *.cm[iox] *.cmxa *~ '#*#' \
 	      *.o \
               .depend \
