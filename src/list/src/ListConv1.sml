@@ -44,7 +44,11 @@ fun LIST_CONV_ERR{function,message} =
            origin_function = function,
            message = message};
 
-val % = Parse.Term;
+val (Type,Term) = parse_from_grammars rich_listTheory.rich_list_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
+val % = Term;
 val alpha_ty = Type.alpha
 val bool_ty = Type.bool;
 
