@@ -29,15 +29,14 @@ structure finite_mapScript =
 struct
 (* interactive use:
 
- app load ["IndDefLib", "PairedDefinition", "numLib", "NonRecSize",
-           "oneTheory", "Q"];
+ app load ["IndDefLib", "numLib", "NonRecSize", "oneTheory", "Q"];
 
- open IndDefLib oneTheory sumTheory pairTheory PairedDefinition 
+ open IndDefLib oneTheory sumTheory pairTheory 
       numTheory prim_recTheory numLib;
 *)
 
 
-open HolKernel Parse boolLib PairedDefinition IndDefLib numLib
+open HolKernel Parse boolLib IndDefLib numLib
      oneTheory sumTheory pairTheory numTheory prim_recTheory;
 
 infixr -->;

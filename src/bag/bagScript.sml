@@ -1,11 +1,11 @@
 (*
    fun mload s = (print ("Loading "^s^"\n"); load s);
    app mload ["pred_setTheory", "mnUtils", "QLib", "numLib",
-              "BasicProvers", "SingleStep", "PairedDefinition"];
+              "BasicProvers", "SingleStep"];
 *)
 
 open HolKernel Parse boolLib numLib Prim_rec mnUtils pred_setTheory 
-     BasicProvers SingleStep PairedDefinition;
+     BasicProvers SingleStep;
 
 infix THEN ORELSE THENL THENC ORELSEC >- ++ |->;
 infix 8 by;

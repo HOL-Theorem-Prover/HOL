@@ -25,19 +25,14 @@ val _ = new_theory "integer";
 
 (* interactive mode
   app load ["jrhUtils", "EquivType", "liteLib", "QLib",
-        "SingleStep", "BasicProvers", "boolSimps", "pairSimps", "arithSimps",
-        "numLib", "PairedDefinition"];
+     "SingleStep", "BasicProvers", "boolSimps", "pairSimps", 
+     "arithSimps", "numLib"];
 *)
 open jrhUtils EquivType liteLib arithLib
      arithmeticTheory prim_recTheory numTheory
-     simpLib numLib boolTheory liteLib PairedDefinition;
+     simpLib numLib boolTheory liteLib;
 
 infix ++;
-
-fun new_prim_rec_definition(s,tm) =
-  Prim_rec.new_recursive_definition {
-    name = s, rec_axiom = prim_recTheory.num_Axiom, def = tm
-  };
 
 
 val int_ss = boolSimps.bool_ss ++ arithSimps.ARITH_ss ++ pairSimps.PAIR_ss;
@@ -508,10 +503,11 @@ val _ = overload_on (">=", Term`$int_ge`);
 (*--------------------------------------------------------------------------*)
 
 val int_of_num =
-    new_prim_rec_definition
-    ("int_of_num",
-     Term `(int_of_num 0 = int_0) /\
-           (int_of_num (SUC n) = (int_of_num n) + int_1)`);
+    new_recursive_definition
+      {name = "int_of_num",
+       rec_axiom = prim_recTheory.num_Axiom,
+       def = Term `(int_of_num 0 = int_0) /\
+                   (int_of_num (SUC n) = (int_of_num n) + int_1)`};
 
 val _ = add_numeral_form(#"i", SOME "int_of_num");
 
