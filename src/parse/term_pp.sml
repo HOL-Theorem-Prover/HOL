@@ -14,13 +14,6 @@ infixr -->;
    Miscellaneous syntax stuff.
  ---------------------------------------------------------------------------*)
 
-fun is_let tm =
- let val c = rator(rator tm)
- in case dest_thy_const c
-     of {Name="LET",Thy="bool",...} => true
-      | otherwise => false
- end handle HOL_ERR _ => false;
-
 val dest_pair = sdest_binop (",", "pair") (PP_ERR "dest_pair" "");
 val is_pair = Lib.can dest_pair;
 
@@ -380,6 +373,17 @@ fun pp_term (G : grammar) TyG = let
       | _ => raise PP_ERR "my_dest_abs" "term not an abstraction"
 
   fun my_is_abs tm = can my_dest_abs tm
+
+  (* allow any constant that overloads to the string "LET" to be treated as
+     a let. *)
+  fun is_let tm = let
+    val (let_tm,f_tm) = dest_comb(rator tm)
+  in
+    Overload.overloading_of_term overload_info let_tm = SOME "LET" andalso
+    my_is_abs f_tm
+  end handle HOL_ERR _ => false;
+
+
 
   fun dest_vstruct bnder res t =
       case bnder of
@@ -1192,7 +1196,7 @@ fun pp_term (G : grammar) TyG = let
         end
     end
 
-    fun pr_let lgrav rgrav tm = let
+    fun pr_let0 tm = let
       fun find_base acc tm =
         if is_let tm then let
           val (let_tm, args) = strip_comb tm
@@ -1210,28 +1214,44 @@ fun pp_term (G : grammar) TyG = let
         bvars_seen := bvars_seen_here @ old_seen;
         spacep (not (null args));
         add_string "="; spacep true;
+        begin_block INCONSISTENT 2;
         pr_term rhs_t Top Top Top (depth - 1);
+        end_block();
         bvars_seen := old_seen
       end
       val (values, abstr) = find_base [] tm
       val (varnames, body) =
           strip_nvstructs NONE NONE (length values) abstr
       val name_value_pairs = ListPair.zip (varnames, values)
+    in
+      (* put a block around the "let ... in" phrase *)
+      begin_block CONSISTENT 0;
+      add_string "let ";
+      (* put a block around the variable bindings *)
+      begin_block INCONSISTENT 0;
+      pr_list pr_leteq (fn () => add_string " and")
+              (fn () => spacep true) name_value_pairs;
+      end_block(); (* end of variable binding block *)
+      spacep true; add_string "in";
+      end_block(); (* end of "let ... in" phrase block *)
+      if is_let body then (add_break(1,0); pr_let0 body)
+      else
+        (add_break(1,2);
+         (* a lie! but it works *)
+         pr_term body RealTop RealTop RealTop (depth - 1))
+    end
+
+    fun pr_let lgrav rgrav tm = let
       val addparens = lgrav <> RealTop orelse rgrav <> RealTop
       val old_bvars_seen = !bvars_seen
     in
-      pbegin addparens; begin_block INCONSISTENT 2;
-      add_string "let"; spacep true;
-      begin_block INCONSISTENT 0;
-      pr_list pr_leteq (fn () => (spacep true; add_string "and"))
-              (fn () => spacep true) name_value_pairs;
+      begin_block CONSISTENT 0;
+      pbegin addparens;
+      pr_let0 tm;
+      pend addparens;
       end_block();
-      spacep true; add_string "in"; spacep true;
-      (* a lie! but it works *)
-      pr_term body RealTop RealTop RealTop (depth - 1);
-      bvars_seen := old_bvars_seen;
-      end_block(); pend addparens
-    end handle HOL_ERR _ => uncurry (pr_comb tm) (dest_comb tm)
+      bvars_seen := old_bvars_seen
+    end
 
     fun print_ty_antiq tm = let
       val ty = dest_ty_antiq tm
