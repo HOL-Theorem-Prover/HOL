@@ -1,7 +1,6 @@
 signature bossLib =
 sig
 
-local
   type thm      = Thm.thm
   type term     = Term.term
   type hol_type = Type.hol_type
@@ -10,7 +9,6 @@ local
   type simpset  = simpLib.simpset
   type defn     = Defn.defn
   type 'a quotation = 'a Portable.frag list
-in
 
   (* Make definitions *)
 
@@ -19,7 +17,7 @@ in
   val xDefine      : string -> term quotation -> thm
   val Hol_defn     : string -> term quotation -> defn
   val WF_REL_TAC   : term quotation -> tactic
- 
+
   (* Fetch the rewrite rules for a type. *)
 
   val type_rws : string -> thm list
@@ -63,6 +61,5 @@ in
   (* A compound automated reasoner. *)
   val ZAP_TAC  : simpset -> thm list -> tactic
 
-end
 
 end;
