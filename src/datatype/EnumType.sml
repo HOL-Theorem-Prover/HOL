@@ -287,9 +287,10 @@ fun define_case initiality =
                 let val th0 = AP_THM th v
                 in TRANS th0 (BETA_CONV (rhs (concl th0)))
                 end) V fclause)
-     val gclause_thms = GENL V (LIST_CONJ (map reduce (zip gclauses bodythl)))
-     val exists_tm = mk_exists(g, list_mk_forall(V,
-                         subst [gfun |-> g] (list_mk_conj gclauses)))
+
+     val gclause_thms = LIST_CONJ (map(GENL V o reduce) (zip gclauses bodythl))
+     val exists_tm = mk_exists(g,subst [gfun |-> g] 
+                        (list_mk_conj (map (curry list_mk_forall V) gclauses)))
      val gexists = CHOOSE(f,inst_initiality)
                      (EXISTS(exists_tm,gfun) gclause_thms)
      val case_const_name = tyname^"_case"
@@ -405,7 +406,7 @@ fun enum_type_to_tyinfo (ty, constrs) = let
                       val thl = CONJUNCTS (SPEC_ALL case_def)
                   in LIST_CONJ (map (GENL V) thl)
                   end
-  open TypeBase TypeBase.TypeInfo
+  open TypeBase TypeInfo
   val tyinfo0 =
       mk_tyinfo { ax = ORIG initiality,
                   induction = ORIG induction,
