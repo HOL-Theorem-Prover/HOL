@@ -65,10 +65,10 @@ val fqsort_MEM_stable = Q.store_thm
 recInduct fqsort_ind
  THEN RW_TAC std_ss [fqsort_eqns,partition_def]
  THEN LET_EQ_TAC [LET2_RATOR,LET2_RAND]
- THEN RW_TAC list_ss [MEM_APPEND_DISJ,MEM]
+ THEN RW_TAC list_ss []
  THEN RES_THEN (TRY o SUBST1_TAC o SPEC_ALL)
  THEN Q.PAT_ASSUM `x = y` (MP_TAC o MATCH_MP part_MEM)
- THEN RW_TAC list_ss [] THEN PROVE_TAC [MEM_APPEND_DISJ]);
+ THEN RW_TAC list_ss [] THEN PROVE_TAC []);
 
 
 (*---------------------------------------------------------------------------*
@@ -100,7 +100,7 @@ val fqsort_PERM = Q.store_thm
   THEN MATCH_MP_TAC PERM_trans1
   THEN Q.EXISTS_TAC`APPEND l1 l2`
   THEN RW_TAC std_ss [] THENL
-  [Q.PAT_ASSUM `x = y` (MP_TAC o MATCH_MP part_PERM) THEN RW_TAC list_ss [],
+  [PROVE_TAC [APPEND,APPEND_NIL,part_PERM],
    `PERM l1 (fqsort ord l1)` by RES_TAC THEN 
    `PERM l2 (fqsort ord l2)` by RES_TAC THEN PROVE_TAC [PERM_cong]]);
 

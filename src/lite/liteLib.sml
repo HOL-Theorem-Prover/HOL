@@ -3,9 +3,7 @@ struct
 
 open Feedback Thm Conv Abbrev;
 
-infix THENC ORELSEC --> |->;
-
-val (op -->) = Type.-->;
+infix THENC ORELSEC |->;
 
 (*---------------------------------------------------------------------------
  * Fake for NJSML: it does not use Interrupt anyway so it won't ever 
@@ -336,17 +334,17 @@ val BODY_CONV =
 
 val rhs = boolSyntax.rhs;
 
-infix THENQC;
+infix THENQC THENCQC;
+
 fun op THENQC (conv1,conv2) tm =
   let val th1 = conv1 tm 
   in let val th2 = conv2(rhs(concl th1)) 
      in TRANS th1 th2 
      end handle HOL_ERR _ => th1
   end
-  handle HOL_ERR _ => conv2 tm;;  (* Seems ORELSE like *)
+  handle HOL_ERR _ => conv2 tm;
 
 
-infix THENCQC;
 fun op THENCQC (conv1,conv2) tm =
   let val th1 = conv1 tm 
   in let val th2 = conv2(rhs(concl th1)) 
@@ -387,7 +385,8 @@ fun REDEPTH_QCONV conv tm =
 
 fun TOP_DEPTH_QCONV conv tm =
    ((REPEATQC conv) THENQC
-    ((SUB_QCONV (TOP_DEPTH_QCONV conv)) THENCQC
+    (SUB_QCONV (TOP_DEPTH_QCONV conv) 
+      THENCQC
      (conv THENCQC (TOP_DEPTH_QCONV conv)))) tm;;
 
 fun TOP_SWEEP_QCONV conv tm =

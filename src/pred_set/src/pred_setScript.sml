@@ -125,6 +125,7 @@ val _ = add_rule{term_name = "gspec special", fixity = Closefix,
                                 BreakSpace(1,0),TM, TOK "}"],
                  paren_style = OnlyIfNecessary,
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0))};
+
 (* the phrase "gspec special" is dealt with in the translation from
    pre-pre-terms to terms *)
 
