@@ -6,7 +6,6 @@ The contents of this directory are
 README ......................... This file
 SyntaxScript.sml ............... Abstract syntax of core PSL
 ModelScript.sml ................ Theory of models
-FinitePathScript.sml ........... Theory of finite paths (lists)
 UnclockedSemanticsScript.sml ... Unclocked semantics
 ClockedSemanticsScript.sml ..... Clocked Semantics
 ExtendedSyntaxScript.sml ....... Abstract syntax of full PSL 
@@ -17,9 +16,10 @@ ProjectionScript.sml............ Validation of the projection view (incomplete)
 
 Also needed is
 
+FinitePathScript.sml ........... Theory of finite paths (lists)
 PathScript.sml ................. Finite and infinite paths
 
-which is in the directory PSL/path 
+which are in the directory PSL/path 
 (should be ../../path relative to this one).
 
 To run Holmake including the path directory, use:
@@ -28,3 +28,4 @@ To run Holmake including the path directory, use:
 
 MJCG
 Wed Apr 14 2004
+
