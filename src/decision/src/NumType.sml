@@ -10,9 +10,9 @@ open Exception
 fun failwith function = raise HOL_ERR{origin_structure = "NumType",
                                       origin_function = function,
                                       message = ""};
-type num = arbint.int;
-val num0 = arbint.zero
-val num1 = arbint.one
+type num = Arbint.int;
+val num0 = Arbint.zero
+val num1 = Arbint.one
 
 
 (*--------------------------------------------------------------------------*)
@@ -20,7 +20,7 @@ val num1 = arbint.one
 (*--------------------------------------------------------------------------*)
 
 fun gcd (i,j) = let
-  open arbint
+  open Arbint
   exception non_neg
   fun gcd' (i,j) = let
     val r = (i mod j)
@@ -33,7 +33,7 @@ in
   else
      if (i < j) then gcd' (j,i) else gcd' (i,j)
        ) handle non_neg => failwith "gcd"
-     | Portable_Int.Mod => failwith "gcd"
+     | Portable.Mod => failwith "gcd"
 end;
 
 (*--------------------------------------------------------------------------*)
@@ -41,18 +41,18 @@ end;
 (*--------------------------------------------------------------------------*)
 
 fun lcm (i,j) = let
-  open arbint
+  open Arbint
 in
-  (i * j) div (gcd (i,j))
+  (i*j) div (gcd (i,j))
 end
   handle HOL_ERR _ => failwith "lcm"
        | General.Div => failwith "lcm";
 
-val op*    = arbint.*
-val op-    = arbint.-
-val op+    = arbint.+
-val op div = arbint.div
-val op<    = arbint.<
+val op*    = Arbint.*
+val op-    = Arbint.-
+val op+    = Arbint.+
+val op div = Arbint.div
+val op<    = Arbint.<
 
 (*--------------------------------------------------------------------------*)
 (* Make the definitions                                                     *)

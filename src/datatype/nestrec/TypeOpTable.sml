@@ -18,7 +18,7 @@ structure TypeOpTable :> TypeOpTable =
   type thm = Thm.thm
   type type_info = TypeInfo.type_info
 
-     val ord = Portable_Char.ord;
+  val ord = Char.ord;
 	(*
 	 * Process a single type operator
 	 * Figure out its arity, name, and information about the
@@ -28,21 +28,18 @@ structure TypeOpTable :> TypeOpTable =
 	 *)
 
 fun make(tyop_prefix, recursor_thms) =
-let val tyop_suffix = "_" ^ Portable_String.substring
-				       (tyop_prefix,0,
-					size tyop_prefix - 1)
+let val tyop_suffix = 
+            "_" ^String.substring (tyop_prefix,0,size tyop_prefix - 1)
 	fun underscore [] = ""
 	  | underscore [s] = s
 	  | underscore (s::ss) = s ^ "_" ^ (underscore ss)
 	    
-	val symbolic_ords = map ord 
-                             (Portable_String.explode "#?+*/\\=<>&%@!,:;_|~-")
-	    
-	fun rename_symbolic s = "ch"^Portable_Int.toString(ord s)
-	    
+	val symbolic_ords = String.explode "#?+*/\\=<>&%@!,:;_|~-"
+	fun rename_symbolic s = "ch"^Int.toString(Char.ord s)
+
 	fun mk_symbolic_free_const_name n =
-	    if Lib.mem (Portable_String.ordof(n,0)) symbolic_ords
-   	    then underscore (map rename_symbolic (Portable_String.explode n))
+	    if Lib.mem (String.sub(n,0)) symbolic_ords
+   	    then underscore (map rename_symbolic (String.explode n))
 	    else n
 
 	fun type_to_string ty =

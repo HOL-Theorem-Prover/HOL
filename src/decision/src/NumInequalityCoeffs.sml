@@ -140,7 +140,7 @@ fun merge_coeffs coeffs1 coeffs2 =
                          then merge (tl vcoeffs1) (tl vcoeffs2)
                          else (name1,(coeff1 + coeff2))::
                                  (merge (tl vcoeffs1) (tl vcoeffs2))
-                    else if (Portable_String.< (name1,name2))
+                    else if (String.< (name1,name2))
                          then (name1,coeff1)::(merge (tl vcoeffs1) vcoeffs2)
                          else (name2,coeff2)::(merge vcoeffs1 (tl vcoeffs2))
                 end)

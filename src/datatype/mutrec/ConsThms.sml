@@ -174,7 +174,7 @@ fun mk_def_term ftn_var old_type (app_con::app_con_list) count =
 	    else mk_function_variable new_type
 	val new_conjunct =
 	    mk_eq {lhs = mk_comb {Rator = new_ftn_var, Rand = app_con},
-                   rhs = Term.mk_numeral (arbnum.fromInt count)}
+                   rhs = Term.mk_numeral (Arbnum.fromInt count)}
 (*		   rhs = mk_const {Name = Lib.int_to_string count,
 				   Ty = num_ty}}
 *)

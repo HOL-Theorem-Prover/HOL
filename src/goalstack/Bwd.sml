@@ -147,7 +147,7 @@ fun enumerate l = enum 0 l;
 
 local
 fun ppgoal ppstrm (asl,w) =
-   let open Portable_PrettyPrint
+   let open Portable
        val {add_string, add_break,
             begin_block, end_block, add_newline, ...} = with_ppstream ppstrm
        val pr = Parse.pp_term ppstrm
@@ -185,20 +185,20 @@ end;
 fun pp_gstk ppstrm  =
    let val pr_goal = pp_goal ppstrm
        val {add_string, add_break, begin_block, end_block, add_newline, ...} =
-                     Portable_PrettyPrint.with_ppstream ppstrm
+                     Portable.with_ppstream ppstrm
        fun pr (GSTK{prop = POSED g, stack = []}) =
-              (begin_block Portable_PrettyPrint.CONSISTENT 0;
+              (begin_block Portable.CONSISTENT 0;
                add_string"Initial goal:";
                add_newline(); add_newline();
                pr_goal g;
                end_block())
          | pr (GSTK{prop = POSED _, stack = {goals,...}::_}) =
-             (begin_block Portable_PrettyPrint.CONSISTENT 0;
-              Portable_PrettyPrint.pr_list
+             (begin_block Portable.CONSISTENT 0;
+              Portable.pr_list
                    pr_goal (fn () => ()) add_newline (rev goals);
               end_block())
          | pr (GSTK{prop = PROVED th, ...}) =
-             (begin_block Portable_PrettyPrint.CONSISTENT 0;
+             (begin_block Portable.CONSISTENT 0;
               add_string "Initial goal proved.";
               add_newline();
               Parse.pp_thm ppstrm th;

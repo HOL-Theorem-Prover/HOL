@@ -36,11 +36,11 @@ signature GoalstackPure =
       val hd_proj: (goalstack -> 'a) -> proofs -> 'a
 
       val initial_proofs : unit -> proofs
-      val set_goal_pp :(Portable_PrettyPrint.ppstream -> goal -> unit)
-                       -> (Portable_PrettyPrint.ppstream -> goal -> unit)
-      val std_goal_pp : (Portable_PrettyPrint.ppstream -> goal -> unit)
+      val set_goal_pp :(Portable.ppstream -> goal -> unit)
+                       -> (Portable.ppstream -> goal -> unit)
+      val std_goal_pp : (Portable.ppstream -> goal -> unit)
 
-      val pp_goalstack : Portable_PrettyPrint.ppstream -> goalstack -> unit
-      val pp_proofs : Portable_PrettyPrint.ppstream -> proofs -> unit
+      val pp_goalstack : Portable.ppstream -> goalstack -> unit
+      val pp_proofs : Portable.ppstream -> proofs -> unit
 
     end

@@ -6,7 +6,7 @@ signature goalstackLib =
     type goal = Abbrev.goal
     type goalstack = GoalstackPure.goalstack
     type proofs = GoalstackPure.proofs
-    type 'a quotation = 'a Portable_General.frag list
+    type 'a quotation = 'a Portable.frag list
 
       (* Starting a proof *)
       val g        : term quotation -> proofs
@@ -41,12 +41,12 @@ signature goalstackLib =
       val rotate_proofs : int -> proofs
 
       (* Switch to a different prettyprinter for all goals *)
-      val set_goal_pp :(Portable_PrettyPrint.ppstream -> goal -> unit)
-                       -> (Portable_PrettyPrint.ppstream -> goal -> unit)
+      val set_goal_pp :(Portable.ppstream -> goal -> unit)
+                       -> (Portable.ppstream -> goal -> unit)
       (* Standard system prettyprinter for goals *)
-      val std_goal_pp : (Portable_PrettyPrint.ppstream -> goal -> unit)
+      val std_goal_pp : (Portable.ppstream -> goal -> unit)
 
       (* Prettyprinters for the state of the proof manager *)
-      val pp_goalstack : Portable_PrettyPrint.ppstream -> goalstack -> unit
-      val pp_proofs : Portable_PrettyPrint.ppstream -> proofs -> unit
+      val pp_goalstack : Portable.ppstream -> goalstack -> unit
+      val pp_proofs : Portable.ppstream -> proofs -> unit
   end

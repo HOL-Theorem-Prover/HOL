@@ -19,8 +19,8 @@ struct
 open MutRecMask;
 nonfix quot ;
 nonfix rem;
-val quot = Portable_Int.quot
-val rem = Portable_Int.rem;
+val quot = Int.quot
+val rem = Int.rem;
 infix 7 quot rem;
 
 open HolKernel Parse basicHol90Lib TypeInfo;
@@ -62,7 +62,7 @@ fun dest_sum ty =
 
 
 (* mk_const {Name = int_to_string n, Ty = num} *)
-fun mk_hol_num n = Term.mk_numeral(arbnum.fromInt n);
+fun mk_hol_num n = Term.mk_numeral(Arbnum.fromInt n);
 
 fun find test [] = NONE
   | find test (x::xs) = if test x then SOME x else find test xs
@@ -650,9 +650,9 @@ val _ = define_constructors ("", [], mut_rec_ty_spec)
 
     val ord_a = 97
     fun name_of_num n =
-	if n < 26 then Portable_Char.toString(Portable_Char.chr(n + ord_a))
+	if n < 26 then Char.toString(Char.chr(n + ord_a))
 	else name_of_num ((n quot 26) - 1) 
-             ^ Portable_Char.toString(Portable_Char.chr((n rem 26) + ord_a))
+             ^ Char.toString(Char.chr((n rem 26) + ord_a))
 
     fun mk_new_tyvar_name {type_num, avoiding_tyvar_names} =
 	let val new_tyvar_name = "'" ^ (name_of_num type_num)
@@ -1317,8 +1317,8 @@ val rep_abs_eq_simps =
       (CONV_RULE (DEPTH_CONV numLib.num_EQ_CONV)
        (REWRITE_RULE [lemma,joint_select_def]
 	(SYM (SPEC applied_joint_constructor
-	      (CONJUNCT2 (Portable_List.nth 
-                              ((rep_abs_thms,(type_num type_name) - 1))))))))))
+	      (CONJUNCT2 (List.nth 
+                  ((rep_abs_thms,(type_num type_name) - 1))))))))))
     spec_cases
 
 
@@ -1380,7 +1380,7 @@ fun case_thm type_name num =
 	GEN var
 	(REWRITE_RULE
 	 rep_abs_thms 
-	 (Portable_List.nth (CONJUNCTS (SPEC
+	 (List.nth (CONJUNCTS (SPEC
 			 (mk_comb {Rator = get_rep type_name,
 				   Rand = var})
 			(ASSUME new_ty_induct_prop)),

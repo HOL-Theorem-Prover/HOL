@@ -426,7 +426,7 @@ fun ONE_PASS_SORT_CONV tm =
                                  and name2 = var_of_prod tm2'
                              in  if (name1 = name2) then
                                     IN_LINE_SUM_CONV GATHER_CONV tm'
-                                 else if (Portable_String.< (name2,name1)) then
+                                 else if (String.< (name2,name1)) then
                                     IN_LINE_SUM_CONV ADD_SYM_CONV tm'
                                  else ALL_CONV tm'
                              end
@@ -440,7 +440,7 @@ fun ONE_PASS_SORT_CONV tm =
                 else let val name1 = var_of_prod tm1
                          and name2 = var_of_prod tm2
                      in  if (name1 = name2) then GATHER_CONV tm'
-                         else if (Portable_String.< (name2,name1)) then
+                         else if (String.< (name2,name1)) then
                            ADD_SYM_CONV tm'
                          else ALL_CONV tm'
                      end
@@ -580,7 +580,7 @@ val INEQ_GATHER_CONV =
                                   (name1,coeff1 - coeff2)::b1,
                                   b2)
                         end)
-                    else if (Portable_String.< (name1,name2)) then
+                    else if (String.< (name1,name2)) then
                        (let val (c,b1,b2) =
                                subtract_common_terms (tl vcoeffs1) vcoeffs2
                         in  (c,(name1,coeff1)::b1,b2)
@@ -871,7 +871,7 @@ fun WEIGHTED_SUM name (right_th,left_th) =
           end
    in  apply_rule2 (fn _ => fn _ => (rel,new_coeffs),rule) right_th left_th
    end
-   handle Portable_Int.Div => failwith "WEIGHTED_SUM"
+   handle Portable.Div => failwith "WEIGHTED_SUM"
         | (HOL_ERR _) => failwith "WEIGHTED_SUM";
 
 (*--------------------------------------------------------------------------*)
@@ -898,7 +898,7 @@ fun var_to_elim rel_and_coeffs_list =
                    else ((occsl,occsr),occse)
                end
        fun min_increase num_of_occs =
-          let open Portable_Int
+          let open Int
               exception Minimum
               fun minimum [] = raise Minimum
                 | minimum ((name,((l,r),e))::rest) =
@@ -921,11 +921,11 @@ fun var_to_elim rel_and_coeffs_list =
           let fun count' partial [] = [partial]
                 | count' (partial as (previous,n)) (s::ss) =
                  if (s = previous)
-                 then count' (previous,Portable_Int.+ (n,1)) ss
+                 then count' (previous,Int.+ (n,1)) ss
                  else partial :: count' (s,1) ss
           in  count' (name,1) names
           end
-       val acc = count o sort (curry Portable_String.<) o flatten
+       val acc = count o sort (curry String.<) o flatten
        fun merge (_,ydefault) (xs,[]) =
           map (fn (key,x) => (key,(x,ydefault))) xs
          | merge (xdefault,_) ([],ys) =
@@ -933,7 +933,7 @@ fun var_to_elim rel_and_coeffs_list =
          | merge (d as (xd,yd)) (xs as (keyx,x) :: xs',ys as (keyy,y) :: ys') =
           if (keyx = keyy)
           then (keyx,(x,y)) :: merge d (xs',ys')
-          else if (Portable_String.< (keyx,keyy))
+          else if (String.< (keyx,keyy))
                then (keyx,(x,yd)) :: merge d (xs',ys)
                else (keyy,(xd,y)) :: merge d (xs,ys')
        val occs = map (fn (rel,(_,vcoeffs)) => var_to_elim' rel vcoeffs)

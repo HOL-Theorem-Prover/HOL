@@ -15,10 +15,10 @@ type num = NumType.num
 
 val num_ty = mk_type ("num",[]);
 
-fun term_of_num n = mk_numeral (arbint.toNat n)
+fun term_of_num n = mk_numeral (Arbint.toNat n)
   handle HOL_ERR _ => failwith "term_of_num";
 
-fun num_of_term tm = arbint.fromNat (dest_numeral tm)
+fun num_of_term tm = Arbint.fromNat (dest_numeral tm)
   handle HOL_ERR _ => failwith "num_of_term";
 
 val plus  = "+"

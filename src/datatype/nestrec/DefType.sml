@@ -26,7 +26,7 @@ structure DefType :> DefType =
                      origin_structure = "def_type"}
             
 
-        val int_to_string = Portable_Int.toString
+        val int_to_string = Int.toString
         (*
          * This type lets us put tags on the new types which we
          * define to represent the expanded type operators in a mutual
@@ -1042,9 +1042,9 @@ fun define_type def_type_spec recursor_thms =
             end
 
         fun strip_int Name =
-            let val len = Portable_String.size Name
-            in if len >4 andalso Portable_String.substring (Name,0,4) = "int_"
-                   then Portable_String.substring (Name,4,len - 4)
+            let val len = String.size Name
+            in if len >4 andalso String.substring (Name,0,4) = "int_"
+                   then String.substring (Name,4,len - 4)
                else Name
             end
 

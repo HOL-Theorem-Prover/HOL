@@ -119,11 +119,10 @@ end;
 (* ---------------------------------------------------------------------*)
 
 local
-fun fch ty = (hd o explode o #Tyop o dest_type) ty
-             handle _ => Portable_Char.chr 120 (* "x" *)
+fun fch ty = (hd o explode o #Tyop o dest_type) ty handle _ => #"x"
 fun suff f c l =
    if (f c = "")
-   then if (Portable_List.exists (fn x => fch x = c) l)
+   then if (exists (fn x => fch x = c) l)
         then ("0", fn ch => (if (ch=c) then "0" else f ch))
         else ("",f)
    else let val n = int_to_string(string_to_int(f c) + 1)
@@ -134,7 +133,7 @@ fun mkvs f rvs [] = []
       let val c = fch h
           val (s,f') = suff f c t
 (*           val v = variant rvs (mk_primed_var{Name = c^s, Ty = h}) *)
-          val v = variant rvs (mk_var{Name = Portable_String.str c^s, Ty = h})
+          val v = variant rvs (mk_var{Name = String.str c^s, Ty = h})
       in
       v::(mkvs f' (v::rvs) t)
       end
@@ -170,7 +169,7 @@ in
 fun mk_subset_pred tysl =
    let val (tys,rectys) = unzip (map pargs tysl)
    in
-   if (not(Portable_List.exists zero rectys))
+   if (not(exists zero rectys))
    then raise ERR "mk_subst_pred" "no non-recursive constructor"
    else let val repty = mk_sum_ty (map mk_tuple_ty tys)
             val tlty = mk_type{Tyop = "list",
@@ -280,18 +279,18 @@ end;
 
 local
 fun variant l1 l2 n =
-   let val ty = mk_vartype(Portable_String.concat (l2@[int_to_string n]))
+   let val ty = mk_vartype(String.concat (l2@[int_to_string n]))
    in
-   if (Portable_List.exists (fn t => t=ty) l1)
+   if (exists (fn t => t=ty) l1)
    then variant l1 l2 (n+1)
    else ty
    end
 in
-fun variant_tyvar [] l2 = mk_vartype (Portable_String.concat l2)
+fun variant_tyvar [] l2 = mk_vartype (String.concat l2)
   | variant_tyvar l1 l2 =
-      let val ty = mk_vartype (Portable_String.concat l2)
+      let val ty = mk_vartype (String.concat l2)
       in
-      if (Portable_List.exists (fn t => t = ty) l1)
+      if (exists (fn t => t = ty) l1)
       then variant l1 l2 1
       else ty
       end
@@ -532,7 +531,7 @@ fun LENGTH_ELIM_CONV tm =
        val n = rand(rand Rator)
        val [ty] = #Args(dest_type bv_ty)
        val ty_subst = INST_TYPE[alpha |-> ty]
-       val st = Portable_String.str(hd(explode(#Tyop(dest_type ty))))
+       val st = String.str(hd(explode(#Tyop(dest_type ty))))
        val bvs = fst(strip_forall Rand)
        val vs = genvs bvs ty st n
        val lam = mk_abs{Bvar = Bvar, Body = Rand}
@@ -963,7 +962,7 @@ fun make_conditional [] (h::_) = h
 local fun isl (SOME _) = true
         | isl NONE = false
       fun mkflag l = (length l <> 1)
-      fun nonrec l = not(Portable_List.exists isl l)
+      fun nonrec l = not(exists isl l)
 in
 fun make_function atys th =
    let val cs = strip_conj(#Body(dest_abs(rand(concl th))))

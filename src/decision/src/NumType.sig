@@ -1,6 +1,6 @@
 signature NumType =
 sig
-   type num = arbint.int
+   type num = Arbint.int
    val num0 : num
    val num1 : num
    val + : num * num -> num

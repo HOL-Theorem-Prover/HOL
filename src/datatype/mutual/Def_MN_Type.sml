@@ -117,11 +117,10 @@ val AND = --`$/\`--;
 (* ---------------------------------------------------------------------*)
 
 local
-fun fch ty = (hd o explode o #Tyop o dest_type) ty
-             handle _ => Portable_Char.chr 120 (* "x" *)
+fun fch ty = (hd o explode o #Tyop o dest_type) ty handle _ => #"x"
 fun suff f c l =
    if (f c = "")
-   then if (Portable_List.exists (fn x => fch x = c) l)
+   then if (exists (fn x => fch x = c) l)
         then ("0", fn ch => (if (ch=c) then "0" else f ch))
         else ("",f)
    else let val n = int_to_string(string_to_int(f c) + 1)
@@ -132,7 +131,7 @@ fun mkvs f rvs [] = []
       let val c = fch h
           val (s,f') = suff f c t
 (*           val v = variant rvs (mk_primed_var{Name = c^s, Ty = h}) *)
-          val v = variant rvs (mk_var{Name = Portable_String.str c^s, Ty = h})
+          val v = variant rvs (mk_var{Name = String.str c^s, Ty = h})
       in
       v::(mkvs f' (v::rvs) t)
       end
@@ -156,10 +155,10 @@ end;
 
 local
 fun fch ty = (hd o explode o #Tyop o dest_type o hd o #Args o dest_type) ty
-             handle _ => Portable_Char.chr 120 (* "x" *)
+             handle _ => #"x"
 fun suff f c l =
    if (f c = "")
-   then if (Portable_List.exists (fn x => fch x = c) l)
+   then if (exists (fn x => fch x = c) l)
         then ("0", fn ch => (if (ch=c) then "0" else f ch))
         else ("",f)
    else let val n = int_to_string(string_to_int(f c) + 1)
@@ -170,7 +169,7 @@ fun mkfs f rvs [] = []
       let val c = fch h
           val (s,f') = suff f c t
 (*           val v = variant rvs (mk_primed_var{Name = "fn"^c^s, Ty = h}) *)
-          val v = variant rvs (mk_var{Name = "fn"^Portable_String.str c^s,
+          val v = variant rvs (mk_var{Name = "fn"^String.str c^s,
                                       Ty = h})
       in
       v::(mkfs f' (v::rvs) t)

@@ -40,7 +40,7 @@ type term = Term.term
 type hol_type = Type.hol_type
 type tyinfo = TypeBase.tyinfo
 type typeBase = TypeBase.typeBase;
-type 'a quotation = 'a frag list;
+type 'a quotation = 'a Portable.frag list;
 
 
 fun ERR func mesg =

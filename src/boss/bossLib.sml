@@ -21,7 +21,7 @@ open HolKernel Parse basicHol90Lib;
   type thm = Thm.thm
   type tactic = Abbrev.tactic
   type simpset = simpLib.simpset
-  type 'a quotation = 'a Portable_General.frag list
+  type 'a quotation = 'a Portable.frag list
 
 infix THEN THENL ORELSE |->;
 infixr -->;

@@ -34,7 +34,7 @@ val filter = Lib.filter;
 
 val mapfilter = Lib.mapfilter;
 
-val exists = Portable_List.exists;
+val exists = List.exists;
 
 val forall= Lib.all;
 
@@ -105,7 +105,7 @@ val operator = #1 o Dsyntax.strip_comb;
 
 fun name_of_const c =
   if NumArithCons.is_num_const c then
-    arbint.toString (NumHOLType.num_of_term c)
+    Arbint.toString (NumHOLType.num_of_term c)
   else
     #Name (Rsyntax.dest_const c);
 

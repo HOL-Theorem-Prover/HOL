@@ -91,14 +91,14 @@ fun pp_proofs ppstrm =
    let val pr_goal = Bwd.pp_goal ppstrm
        val pr_thm = Parse.pp_thm ppstrm
        val {add_string, add_break, begin_block, end_block, add_newline, ...} =
-                     Portable_PrettyPrint.with_ppstream ppstrm
+                     Portable.with_ppstream ppstrm
        fun pr1 (GOALSTACK x) =
             if (project inactive x)
-            then (begin_block Portable_PrettyPrint.CONSISTENT 2;
+            then (begin_block Portable.CONSISTENT 2;
                   add_string"Completed:";  add_break(1,0);
                   pr_thm (project Bwd.extract_thm x);
                   end_block())
-            else (begin_block Portable_PrettyPrint.CONSISTENT 2;
+            else (begin_block Portable.CONSISTENT 2;
                   add_string"Incomplete:";   add_break(1,0);
                   add_string"Initial goal:"; add_break(1,0);
                   pr_goal (project Bwd.initial_goal x);
@@ -112,20 +112,20 @@ fun pp_proofs ppstrm =
           let val len = length extants
           in if (len = 0)
              then add_string"There are currently no proofs."
-             else ( begin_block Portable_PrettyPrint.CONSISTENT 2;
+             else ( begin_block Portable.CONSISTENT 2;
                     add_string("Proof manager status:");  add_break(1,0);
                     (case len of 1 => add_string "1 proof."
                           | n => add_string(int_to_string n^" proofs."));
                     end_block(); add_newline();
                     map (fn (i,x) =>
-                          (begin_block Portable_PrettyPrint.CONSISTENT 0;
+                          (begin_block Portable.CONSISTENT 0;
                            add_string(int_to_string i^". ");
                            pr1 x;
                           end_block(); add_newline()))
                         (enumerate extants);
                     ())
           end
-   in fn pl => (begin_block Portable_PrettyPrint.CONSISTENT 0;
+   in fn pl => (begin_block Portable.CONSISTENT 0;
                 pr pl; end_block())
    end;
 end (* GoalstackPure *)

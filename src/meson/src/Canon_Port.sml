@@ -96,7 +96,7 @@ in
                 (fn (k,n) => if k = h then n else fail()) cheads
               in
                 (if length ns < 2 then fail() else h,
-                 end_itlist (curry Portable_Int.min) ns)
+                 end_itlist (curry Int.min) ns)
               end
           in
             mapfilter getmin hops

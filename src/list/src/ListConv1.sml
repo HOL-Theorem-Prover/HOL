@@ -376,17 +376,7 @@ val term_of_int =
       fn n => mk_const{Name=int_to_string n,Ty=ty}
     end;
 
-(* -------------------------------------------------------------- *)
-(* Following local functions added by BtG 14 Mar 94               *)
-
-fun butlast [x] = []
-  | butlast (a::b) = a::(butlast b)
-  | butlast _ = raise LIST_CONV_ERR{function = "butlast",
-                                   message = "empty list"};
-
-fun last [x] = x
-  | last (a::b) = last b
-  | last _ = raise LIST_CONV_ERR{function = "last",message = "empty list"};
+fun butlast l = fst (front_last l);
 
 (* ------------------------------------------------------------------------- *)
 (* EQ_LENGTH_INDUCT_TAC : tactic                                             *)
@@ -553,6 +543,7 @@ val FOLDL_CONV  =
 (* and conv is a conversion which will be passed to FOLDR_CONV or        *)
 (* FOLDL_CONV to reduce the right-hand side of the above theorem         *)
 (* --------------------------------------------------------------------- *)
+
 val list_FOLD_CONV =
   fn foldthm => fn conv => fn tm =>
    (let val (cname,args) = (strip_comb tm)
@@ -579,79 +570,8 @@ val list_FOLD_CONV =
 			=> (raise LIST_CONV_ERR{function="list_FOLD_CONV",
 			        message=(origin_function^": "^message)});
 
-
-(*--------------------------------------------------------------------------*)
-(* The following definition of ADD_CONV is copied from num_lib. It was in the*)
-(* core in HOL88 but is in the library in HOL90 so cant be used in the core  *)
-
-infix 5 |->
-
-local
-val nv = --`n:num`--
-and mv = --`m:num`--
-and numty = ==`:num`==
-and plus = --`$+`--
-val asym = SPECL [nv,mv] (arithmeticTheory.ADD_SYM)
-val Sth = let val addc = arithmeticTheory.ADD_CLAUSES
-              val (t1,t2) = CONJ_PAIR (CONJUNCT2(CONJUNCT2 addc))
-          in
-          TRANS t1 (SYM t2)
-          end
-val ladd0 = let val addc = arithmeticTheory.ADD_CLAUSES
-            in
-            GEN (--`n:num`--) (CONJUNCT1 addc)
-            end
-val v1 = genvar (==`:num`==)
-and v2 = genvar (==`:num`==)
-fun tm_to_int tm = string_to_int(#Name(dest_const tm))
-and int_to_tm i  = mk_const{Name = int_to_string i, Ty = numty}
-val pl = --`$+`--
-val lra = mk_comb{Rator = pl, Rand = v1}
-fun mk_pat (n,m) = mk_eq{lhs = mk_comb{Rator = lra, Rand = m},
-                         rhs = mk_comb{Rator = mk_comb{Rator = pl, Rand = n},
-                                       Rand = v2}}
-fun trans (c,mi) th =
-   let val {Rator,Rand = m} = dest_comb(rand(concl th))
-       val n = rand Rator
-       val nint = int_to_tm c
-       and mint = int_to_tm mi
-       val nth = SYM(num_CONV n)
-       and mth = SYM(num_CONV mint)
-       val thm1 = INST [mv |-> nint, nv |-> m] Sth
-   in
-   SUBST [v1 |-> nth, v2 |-> mth] (mk_pat(nint,m)) thm1
-   end
-val zconv = RAND_CONV(REWR_CONV ladd0)
-fun conv th (n,m) =
-   let val (thm,count,mint) = (ref th, ref n, ref m)
-   in
-   ( while (!count <> 0)
-     do ( Portable_Ref.dec count;
-          Portable_Ref.inc mint;
-          thm := TRANS (!thm) (trans (!count, !mint) (!thm))
-        );
-     CONV_RULE zconv (!thm)
-   )
-   end
-
-fun ADD_CONV tm =
-   let val (c,[n,m]) = (assert (fn c => (c = plus)) ## I) (strip_comb tm)
-       val nint = tm_to_int n
-       and mint = tm_to_int m
-   in
-   if not(mint < nint)
-   then conv (REFL tm) (nint,mint)
-   else let val th1 = conv(REFL(mk_comb{Rator=mk_comb{Rator=c,Rand=m},Rand=n}))
-                          (mint,nint)
-        in
-        TRANS (INST [nv |-> n, mv |-> m] asym) th1
-        end
-   end
-   handle HOL_ERR _ => raise LIST_CONV_ERR{function = "ADD_CONV",message = ""}
-in
- val SUM_CONV =
-    list_FOLD_CONV (rich_listTheory.SUM_FOLDR) ADD_CONV;
-end;
+val SUM_CONV =
+    list_FOLD_CONV (rich_listTheory.SUM_FOLDR) numLib.ADD_CONV;
 
 (*---------------------------------------------------------------------*)
 (* Filter                                                              *)

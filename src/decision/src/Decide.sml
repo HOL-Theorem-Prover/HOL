@@ -16,7 +16,7 @@ struct
 local
 
 open HolKernel Parse basicHol90Lib
-     Portable_List Psyntax DecisionConv DecisionSupport DecisionNormConvs
+     Psyntax DecisionConv DecisionSupport DecisionNormConvs
 infix THEN THENL THENC
 in
 
@@ -139,7 +139,7 @@ fun top_level_discriminate ps tm =
                                else npsr1
                            end
                       else raise Discriminate
-                 else let val n = foldl Portable_Int.min (hd ns) (tl ns)
+                 else let val n = foldl Int.min (hd ns) (tl ns)
                       in  (n,assoc n (npsl @ npsr))
                       end
              end
@@ -283,7 +283,7 @@ fun DECIDE_HOMOGENEOUS_CONV debug weight
        val (tms,procs) = unzip tps'
        val ths = map deduce tms
        val names = map #Name procs
-       val name_size = 1 + foldl Portable_Int.max 0 (map size names)
+       val name_size = 1 + foldl Int.max 0 (map size names)
        fun pad s = s ^ spaces (name_size - size s)
        val _ = (map (fn (name,th) => (debug_print (pad name);
                                       debug_print_thm th; debug_print "\n"))

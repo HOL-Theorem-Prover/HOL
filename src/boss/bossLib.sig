@@ -8,7 +8,7 @@ local
   type fixity = Parse.fixity
   type tactic = Abbrev.tactic
   type simpset = simpLib.simpset
-  type 'a quotation = 'a Portable_General.frag list
+  type 'a quotation = 'a Portable.frag list
 in
 
   (* Define a datatype *)
