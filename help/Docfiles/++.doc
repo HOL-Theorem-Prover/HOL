@@ -30,8 +30,8 @@ exploit the former's point-wise elimination conversions.
 The {++} identifier is not an infix by default, and so needs to be
 declared as such at the ML top-level loop, e.g.:
 {
-- infix ++;
-> infix 0 ++
+   - infix ++;
+   > infix 0 ++
 }
 
 \SEEALSO mk_simpset, rewrites, SIMP_CONV, bool_ss, UNWIND_ss
