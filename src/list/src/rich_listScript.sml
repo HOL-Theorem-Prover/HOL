@@ -3074,6 +3074,134 @@ val MAP2_ZIP = save_thm("MAP2_ZIP", listTheory.MAP2_ZIP);
 val ZIP = save_thm("ZIP", listTheory.ZIP);
 val UNZIP = save_thm("UNZIP", listTheory.UNZIP);
 
+(*---------------------------------------------------------------------------
+   A bunch of properties relating to the use of IS_PREFIX as a partial order
+ ---------------------------------------------------------------------------*)
+
+open simpLib;
+
+val IS_PREFIX_NIL = store_thm
+  ("IS_PREFIX_NIL",
+   ``!(x:'a list). IS_PREFIX x [] /\ (IS_PREFIX [] x = (x = []))``,
+   STRIP_TAC
+   THEN MP_TAC (Q.SPEC `x` list_CASES)
+   THEN STRIP_TAC
+   THEN ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX]
+   THEN PROVE_TAC [NOT_NIL_CONS]);
+
+val IS_PREFIX_REFL = store_thm
+  ("IS_PREFIX_REFL",
+   ``!(x:'a list). IS_PREFIX x x``,
+   INDUCT_THEN list_INDUCT MP_TAC
+   THEN SIMP_TAC boolSimps.bool_ss [IS_PREFIX]);
+
+val IS_PREFIX_ANTISYM = store_thm
+  ("IS_PREFIX_ANTISYM",
+   ``!(x:'a list) y. IS_PREFIX y x /\ IS_PREFIX x y ==> (x = y)``,
+   INDUCT_THEN list_INDUCT ASSUME_TAC
+   THEN SIMP_TAC boolSimps.bool_ss [IS_PREFIX_NIL]
+   THEN REPEAT GEN_TAC
+   THEN MP_TAC (Q.SPEC `y` list_CASES)
+   THEN STRIP_TAC
+   THEN ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX_NIL]
+   THEN ONCE_REWRITE_TAC [IS_PREFIX]
+   THEN PROVE_TAC []);
+
+val IS_PREFIX_TRANS = store_thm
+  ("IS_PREFIX_TRANS",
+   ``!(x:'a list) y z. IS_PREFIX x y /\ IS_PREFIX y z ==> IS_PREFIX x z``,
+   INDUCT_THEN list_INDUCT ASSUME_TAC
+   THEN SIMP_TAC boolSimps.bool_ss [IS_PREFIX_NIL]
+   THEN REPEAT GEN_TAC
+   THEN MP_TAC (Q.SPEC `y` list_CASES)
+   THEN STRIP_TAC
+   THEN ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX_NIL]
+   THEN MP_TAC (Q.SPEC `z` list_CASES)
+   THEN STRIP_TAC
+   THEN ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX_NIL]
+   THEN ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX]
+   THEN PROVE_TAC []);
+
+val IS_PREFIX_BUTLAST = store_thm
+  ("IS_PREFIX_BUTLAST",
+   ``!x:'a y. IS_PREFIX (x::y) (BUTLAST (x::y))``,
+   REPEAT GEN_TAC
+   THEN Q.SPEC_TAC (`x`, `x`)
+   THEN Q.SPEC_TAC (`y`, `y`)
+   THEN INDUCT_THEN list_INDUCT ASSUME_TAC
+   THEN ASM_SIMP_TAC boolSimps.bool_ss [BUTLAST_CONS, IS_PREFIX]);
+
+val IS_PREFIX_LENGTH = store_thm
+  ("IS_PREFIX_LENGTH",
+   ``!(x:'a list) y. IS_PREFIX y x ==> LENGTH x <= LENGTH y``,
+   INDUCT_THEN list_INDUCT ASSUME_TAC
+   THEN ASM_SIMP_TAC boolSimps.bool_ss [LENGTH, ZERO_LESS_EQ]
+   THEN REPEAT GEN_TAC
+   THEN MP_TAC (Q.SPEC `y` list_CASES)
+   THEN STRIP_TAC
+   THEN ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX, LENGTH, LESS_EQ_MONO]);
+
+val IS_PREFIX_LENGTH_ANTI = store_thm
+  ("IS_PREFIX_LENGTH_ANTI",
+   ``!(x:'a list) y. IS_PREFIX y x /\ (LENGTH x = LENGTH y) = (x = y)``,
+   (INDUCT_THEN list_INDUCT ASSUME_TAC
+    THEN1 PROVE_TAC [LENGTH_NIL, IS_PREFIX_REFL])
+   THEN REPEAT GEN_TAC
+   THEN MP_TAC (Q.SPEC `y` list_CASES)
+   THEN STRIP_TAC
+   THENL [ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX, LENGTH, LESS_EQ_MONO]
+          THEN PROVE_TAC [NOT_CONS_NIL],
+          ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX, LENGTH, CONS_11]
+          THEN PROVE_TAC [numTheory.INV_SUC, IS_PREFIX_REFL]]);
+
+val IS_PREFIX_SNOC = store_thm
+  ("IS_PREFIX_SNOC",
+   ``!(x:'a) y z. IS_PREFIX (SNOC x y) z = IS_PREFIX y z \/ (z = SNOC x y)``,
+   GEN_TAC
+   THEN GEN_TAC
+   THEN Q.SPEC_TAC (`x`, `x`)
+   THEN Q.SPEC_TAC (`y`, `y`)
+   THEN INDUCT_THEN list_INDUCT ASSUME_TAC
+   THENL [REPEAT GEN_TAC
+          THEN MP_TAC (Q.SPEC `z` list_CASES)
+          THEN STRIP_TAC
+          THEN ASM_SIMP_TAC boolSimps.bool_ss
+               [SNOC, IS_PREFIX_NIL, IS_PREFIX, CONS_11, NOT_CONS_NIL]
+          THEN PROVE_TAC [],
+          REPEAT GEN_TAC
+          THEN MP_TAC (Q.SPEC `z` list_CASES)
+          THEN STRIP_TAC
+          THEN ASM_SIMP_TAC boolSimps.bool_ss
+               [SNOC, IS_PREFIX_NIL, IS_PREFIX, CONS_11, NOT_CONS_NIL]
+          THEN PROVE_TAC []]);
+
+val IS_PREFIX_APPEND1 = store_thm
+  ("IS_PREFIX_APPEND1",
+   ``!a b c. IS_PREFIX c (APPEND a b) ==> IS_PREFIX c a``,
+   INDUCT_THEN list_INDUCT ASSUME_TAC
+   THEN ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX, APPEND]
+   THEN REPEAT GEN_TAC
+   THEN MP_TAC (Q.SPEC `c` list_CASES)
+   THEN STRIP_TAC
+   THEN ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX]
+   THEN PROVE_TAC []);
+
+val IS_PREFIX_APPEND2 = store_thm
+  ("IS_PREFIX_APPEND2",
+   ``!a b c. IS_PREFIX (APPEND b c) a ==> IS_PREFIX b a \/ IS_PREFIX a b``,
+   INDUCT_THEN list_INDUCT ASSUME_TAC
+   THEN ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX]
+   THEN REPEAT GEN_TAC
+   THEN MP_TAC (Q.SPEC `b` list_CASES)
+   THEN STRIP_TAC
+   THEN ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX, APPEND]
+   THEN PROVE_TAC []);
+
+val IS_PREFIX_APPENDS = store_thm
+  ("IS_PREFIX_APPENDS",
+   ``!a b c. IS_PREFIX (APPEND a c) (APPEND a b) = IS_PREFIX c b``,
+   INDUCT_THEN list_INDUCT ASSUME_TAC
+   THEN ASM_SIMP_TAC boolSimps.bool_ss [APPEND, IS_PREFIX]);
 
 val _ = export_theory();
 
