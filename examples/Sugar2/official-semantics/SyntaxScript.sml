@@ -24,7 +24,7 @@ open HolKernel Parse boolLib bossLib;
 (******************************************************************************
 * Version of Define that doesn't add to the EVAL compset
 ******************************************************************************)
-val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;w
+val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
 
 (******************************************************************************
 * Start a new theory called SyntaxTheory
