@@ -105,14 +105,23 @@ fun strip_binop dest =
 
 (* For right-associative binary operators. Tail recursive. *)
 
-fun spine_binop dest = 
- let fun strip A tm = 
-       case dest tm 
+fun spine_binop dest =
+ let fun strip A tm =
+       case dest tm
          of NONE => rev (tm::A)
           | SOME (l,r) => strip (l::A) r
  in strip []
  end;
 
+(* for left-associative binary operators.  Tail recursive *)
+fun lspine_binop dest = let
+  fun strip A tm =
+      case dest tm of
+        NONE => tm :: A
+      | SOME (l,r) => strip (r::A) l
+in
+  strip []
+end;
 
 (* For right-associative binary operators. Tail recursive. *)
 
