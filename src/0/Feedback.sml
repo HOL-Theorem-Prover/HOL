@@ -228,7 +228,18 @@ fun get_tracefn nm =
     NONE => raise ERR "get_tracefn" ("No trace "^quote nm^" is registered")
   | SOME {value = TRFP{get,...},...} => get
 
-val _ = register_btrace ("assumptions", Globals.show_assums);
-val _ = register_btrace ("numeral types", Globals.show_numeral_types);
+val () = register_btrace ("assumptions", Globals.show_assums);
+val () = register_btrace ("numeral types", Globals.show_numeral_types);
+
+val () = let
+  val v = Globals.show_types_verbosely
+  val t = Globals.show_types
+  fun get () = if !v then 2 else if !t then 1 else 0
+  fun set i = if i = 0 then (v := false; t := false)
+              else if i = 1 then (v := false; t := true)
+              else (v := true; t := true)
+in
+  register_ftrace ("types", (get,set), 2)
+end;
 
 end  (* Feedback *)
