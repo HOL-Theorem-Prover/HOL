@@ -7,14 +7,16 @@ val version = "<A HREF=\"http://www.cl.cam.ac.uk/Research/HVG/FTP/\">\
        \HOL Kananaskis 0";
 
 (* HOL distribution directory: *)
-
-val HOLpath = "/home/kxs/kanan"
+val HOLpath = "/home/kxs/kanan";
 
 (* Default directory containing the signature files: *)
 val libdirDef = Path.concat(HOLpath,"sigobj")
 
 (* Default filename for the resulting help database: *)
 val helpfileDef = Path.concat(Path.concat(HOLpath, "help"),"HOL.Help")
+
+(* Default filename for the HOL reference page: *)
+val HOLpageDef = Path.concat(Path.concat(HOLpath, "help"),"HOLindex.html")
 
 (* Default filename for the ASCII format database: *)
 val txtIndexDef = "index.txt"
@@ -106,7 +108,8 @@ fun mk_HOLdocfile_entry (dir,s) =
          else String.substring(s,0,size s - 7)
       end
  in
-    {comp=Database.Term(content, SOME"HOL"), file=s, line=0}
+    {comp=Database.Term(content, SOME"HOL"), 
+     file=Path.concat(dir,s), line=0}
  end
 
 local fun is_adocfile s =
@@ -121,7 +124,7 @@ fun docdir_to_entries path (endpath, entries) =
       val L0 = Mosml.listDir dir
       val L1 = List.filter is_docfile L0
   in
-    List.foldl (fn (s,l) => mk_HOLdocfile_entry (dir,s)::l) entries L1
+    List.foldl (fn (s,l) => mk_HOLdocfile_entry (endpath,s)::l) entries L1
   end
 end;
 
@@ -150,30 +153,35 @@ fun dirToBase (sigdir, docdirs, filename) =
     end
     handle exn as OS.SysErr (str, _) => (print(str ^ "\n\n"); raise exn)
 
-fun process (libdir, helpfile, txtIndex, texIndex, htmldir, htmlIndex) =
-    (print ("Reading signatures in directory " ^ libdir ^ 
-	    "\nand writing help database in file " ^ helpfile ^ "\n");
-     dirToBase (libdir, docdirs, helpfile);
-     print ("\nWriting ASCII signature index in file " ^ txtIndex ^ "\n");
-     Printbase.printASCIIBase(helpfile, txtIndex);
-     print ("\nWriting Latex signature index in file " ^ texIndex ^ "\n");
-     Printbase.printLatexBase(helpfile, texIndex);
-     print ("\nCreating HTML versions of signature files\n");
-     Htmlsigs.sigsToHtml version bgcolor stoplist helpfile (libdir, htmldir);
-     print ("\nWriting HTML signature index in file " ^ htmlIndex ^ "\n");
-     Htmlsigs.printHTMLBase version bgcolor (helpfile, htmlIndex)
+fun process (libdir, helpfile, txtIndex, texIndex, htmldir, htmlIndex, HOLpage)
+ =
+ (print ("Reading signatures in directory " ^ libdir ^ 
+        "\nand writing help database in file " ^ helpfile ^ "\n")
+ ; dirToBase (libdir, docdirs, helpfile)
+ ; print ("\nWriting ASCII signature index in file " ^ txtIndex ^ "\n")
+ ; Printbase.printASCIIBase(helpfile, txtIndex)
+ ; print ("\nWriting Latex signature index in file " ^ texIndex ^ "\n")
+ ; Printbase.printLatexBase(helpfile, texIndex)
+ ; print ("\nCreating HTML versions of signature files\n")
+ ; Htmlsigs.sigsToHtml 
+     version bgcolor stoplist helpfile HOLpath (libdir, htmldir)
+ ; print ("\nWriting HTML signature index in file " ^ htmlIndex ^ "\n")
+ ; Htmlsigs.printHTMLBase version bgcolor HOLpath (helpfile, htmlIndex)
+ ; HOLPage.printHOLPage version bgcolor HOLpath (helpfile, HOLpage)
      (*  ;
      print ("\nWriting LaTeX signature bodies in file " ^ texSigs ^ "\n");
      Texsigs.sigsToLatex stoplist libdir helpfile texSigs
      *)
-    )    
+ )    
 
 val _ = 
     case CommandLine.arguments () of
 	[]       => 
 	    process (libdirDef, helpfileDef, 
-		     txtIndexDef, texIndexDef, htmlDirDef, htmlIndexDef)
+		     txtIndexDef, texIndexDef, 
+                     htmlDirDef, htmlIndexDef, HOLpageDef)
       | [libdir] => 
 	    process (libdir, helpfileDef, 
-		     txtIndexDef, texIndexDef, htmlDirDef, htmlIndexDef)
+		     txtIndexDef, texIndexDef, 
+                     htmlDirDef, htmlIndexDef, HOLpageDef)
       | _ => print "Usage: makebase\n"

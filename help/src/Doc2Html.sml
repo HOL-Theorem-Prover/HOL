@@ -221,7 +221,7 @@ fun html (name,sectionl) ostrm =
                  fun outlinks [] = ()
                    | outlinks [s] = link s
                    | outlinks (h::t) = 
-                           (link h; out","; out "&nbsp;"; outlinks t)
+                           (link h; out","; out "&nbsp;&nbsp;\n"; outlinks t)
              in
                 out "<DT><STRONG>SEEALSO</STRONG>&nbsp;&nbsp;";
                 outlinks (map string sslist)
@@ -251,6 +251,20 @@ fun html (name,sectionl) ostrm =
      back_matter ("http://www.cl.cam.ac.uk/Research/HVG/FTP/", "Kananaskis 0")
   end;
  
+
+(*
+fun trans docfile htmlfile =
+ let val ostrm = TextIO.openOut htmlfile
+ in case Path.splitBaseExt docfile
+     of {base,ext=SOME "doc"} =>
+        (let 
+         in html (Path.file base,parse docfile) ostrm
+          ; TextIO.closeOut ostrm
+         end
+       handle e => print ("Failed to translate file: "
+                    ^docfile^"---"^exnMessage e^"\n"))
+   | otherwise => print ("Failed to parse file name: "^docfile^"\n");
+*)
 
 fun trans htmldir docfile =
  case Path.splitBaseExt docfile

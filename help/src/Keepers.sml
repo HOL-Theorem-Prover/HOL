@@ -60,8 +60,8 @@ val keepers =
      "gcdTheory.sig", "dividesTheory.sig", "intSyntax.sig",
 
      (* list *)
-     "rich_listTheory.sig","listTheory.sig", "listLib.sig",
-     "operatorTheory.sig",
+     "rich_listTheory.sig", "listTheory.sig", "listLib.sig",
+     "operatorTheory.sig", "listSyntax.sig", "listSimps.sig",
 
      (* lite *)
      "liteLib.sig",
@@ -85,7 +85,7 @@ val keepers =
      "oneTheory.sig",
 
      (* option *)
-     "optionLib.sig","optionTheory.sig",
+     "optionLib.sig","optionTheory.sig", "optionSyntax.sig",
 
      (* pair *)
      "pairLib.sig", "pairTheory.sig", "pairSyntax.sig",
@@ -143,7 +143,7 @@ val keepers =
      "stringSimps.sig",
 
      (* disjoint union *)
-     "sumTheory.sig", "sumSimps.sig",
+     "sumTheory.sig", "sumSimps.sig", "sumSyntax.sig",
 
      (* tautLib *)
      "tautLib.sig",

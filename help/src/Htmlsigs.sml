@@ -26,9 +26,14 @@ fun destProperSuffix s1 s2 =
 val destTheorysig = destProperSuffix "Theory.sig";
 
 (*---------------------------------------------------------------------------
-   This won't work on a file system without symbolic links. So we will
-   have to think of a better way, in order to get this to work on 
-   Windows.
+   Locating the source of a ".sig" file. This uses the path held in a
+   symbolic link, so this won't work on a file system without symbolic
+   links. We will have to think of a better way, in order to get this
+   to work on Windows. We will also have to tell people to do a
+
+       bin/build -symlink
+
+   for this scheme to work.
  ---------------------------------------------------------------------------*)
 
 fun srcfile sigfile = 
@@ -44,8 +49,25 @@ fun srcfile sigfile =
        end
   else NONE;
 
+fun find_most_appealing HOLpath docfile =
+  let open Path FileSys
+      val {dir,file} = splitDirFile docfile
+      val {base,ext} = splitBaseExt file
+      val docfile_dir = concat(HOLpath,dir)
+      val htmldir  = concat(docfile_dir,"html")
+      val htmlfile = joinBaseExt{base=base,ext=SOME "html"}
+      val adocfile = joinBaseExt{base=base,ext=SOME "adoc"}
+      val htmlpath = concat(htmldir,htmlfile)
+      val adocpath = concat(docfile_dir,adocfile)
+      val docpath  = concat(docfile_dir,file)
+  in
+     if FileSys.access(htmlpath,[A_READ]) then SOME htmlpath else
+     if FileSys.access(adocpath,[A_READ]) then SOME adocpath else 
+     if FileSys.access(file,[A_READ]) then SOME docpath
+     else NONE
+  end;
 
-fun processSig db version bgcolor sigfile htmlfile =
+fun processSig db version bgcolor HOLpath sigfile htmlfile =
     let val strName = Path.base (Path.file sigfile)
 	val is = TextIO.openIn sigfile
 	val lines = Substring.fields (fn c => c = #"\n") 
@@ -155,51 +177,15 @@ fun processSig db version bgcolor sigfile htmlfile =
 	fun idhref_full link id = 
 	    (out "<A HREF=\""; out link; out "\">"; out id; out"</A>")
 
-(*
         fun locate_docfile id =
            let open FileSys Path Database
-           in case lookup(db,id) 
-               of {comp=Database.Term(content,SOME "HOL"),file,line} :: _ => 
-                   let val {dir,file=docfile} = splitDirFile file
-                       val {base, ...} = splitBaseExt docfile
-                       val htmldir = Path.concat(dir,"html")
-                       val html = joinBaseExt{base=base,ext=SOME"html"}
-                       val adoc = joinBaseExt{base=base,ext=SOME"adoc"}
-                       val html_docfile = joinDirFile{dir=htmldir,file=html}
-                       val adocfile = joinDirFile{dir=dir,file=adoc}
-                   in
-                     if FileSys.access(html_docfile,[A_READ])
-                        then SOME html_docfile else
-                     if FileSys.access(adocfile,[A_READ])
-                        then SOME adocfile else 
-                     if FileSys.access(file,[A_READ])
-                        then SOME file 
-                        else NONE
-                   end
-              | otherwise => NONE
-           end
-*)
-        fun locate_docfile id =
-           let open FileSys Path Database
-           in case lookup(db,id) 
-               of {comp=Database.Term(dir,SOME "HOL"),file,line} :: _ => 
-                   let val {base, ...} = splitBaseExt file
-                       val htmldir = Path.concat(dir,"html")
-                       val html = joinBaseExt{base=base,ext=SOME"html"}
-                       val adoc = joinBaseExt{base=base,ext=SOME"adoc"}
-                       val html_docfile = joinDirFile{dir=htmldir,file=html}
-                       val adocfile = joinDirFile{dir=dir,file=adoc}
-                   in
-print ("Looking for "^html_docfile^"\n");
-                     if FileSys.access(html_docfile,[A_READ])
-                        then SOME html_docfile else
-                     if FileSys.access(adocfile,[A_READ])
-                        then SOME adocfile else 
-                     if FileSys.access(file,[A_READ])
-                        then SOME file 
-                        else NONE
-                   end
-              | otherwise => NONE
+               fun trav [] = NONE
+                 | trav({comp=Database.Term(x,SOME "HOL"),file,line}::rst)
+                   = if x=id then find_most_appealing HOLpath file
+                             else trav rst
+                 | trav (_::rst) = trav rst
+           in 
+             trav (lookup(db,id))
            end
 
           
@@ -278,7 +264,7 @@ print ("Looking for "^html_docfile^"\n");
 		    (process ln lineno; loop lnr (lineno+1))
 	    in loop lines 1 end
     in
-	print "Creating "; print htmlfile; print " from "; 
+	print "Creating "; print htmlfile; print " from ";
 	print sigfile; print "\n"
        ; 
         traverse pass1;
@@ -301,20 +287,20 @@ print ("Looking for "^html_docfile^"\n");
         TextIO.closeOut os
     end
 
-fun processSigfile db version bgcolor stoplist sigdir htmldir sigfile =
+fun processSigfile db version bgcolor stoplist sigdir htmldir HOLpath sigfile =
     let val {base, ext} = Path.splitBaseExt sigfile
 	val htmlfile = Path.joinBaseExt{base=base, ext=SOME "html"}
     in 
 	case ext of
 	    SOME "sig" => 
 		if List.exists (fn name => base = name) stoplist then ()
-		else processSig db version bgcolor
+		else processSig db version bgcolor HOLpath
 		                (Path.concat(sigdir, sigfile))
 		                (Path.concat(htmldir, htmlfile))
 	  | _          => ()
     end
 
-fun sigsToHtml version bgcolor stoplist helpfile (sigdir, htmldir) =
+fun sigsToHtml version bgcolor stoplist helpfile HOLpath (sigdir, htmldir) =
     let open FileSys Database
 	val db = readbase helpfile
 	fun mkdir htmldir =
@@ -324,13 +310,13 @@ fun sigsToHtml version bgcolor stoplist helpfile (sigdir, htmldir) =
 		(FileSys.mkDir htmldir; 
 		 print "Created directory "; print htmldir; print "\n");
     in 
-	mkdir htmldir;
-	app (processSigfile db version bgcolor stoplist sigdir htmldir) 
-	    (Mosml.listDir sigdir)
+     mkdir htmldir;
+     app (processSigfile db version bgcolor stoplist sigdir htmldir HOLpath) 
+	 (Mosml.listDir sigdir)
     end
     handle exn as OS.SysErr (str, _) => (print(str ^ "\n\n"); raise exn)
 
-fun printHTMLBase version bgcolor (sigfile, outfile) =
+fun printHTMLBase version bgcolor HOLpath (sigfile, outfile) =
     let open Database
 	val db = readbase sigfile
 	val os = TextIO.openOut outfile
@@ -366,12 +352,9 @@ fun printHTMLBase version bgcolor (sigfile, outfile) =
 	    end
 	fun mkref line file = idhref file line file 
 	fun mkHOLref docfile = 
-            let val frontpath = Path.base docfile
-                val {dir,file} = Path.splitDirFile frontpath
-                val dir' = Path.concat(dir,"html")
-                val file' = Path.concat (dir',file)
-            in strhref file' "Docfile"
-            end
+            case find_most_appealing HOLpath docfile
+             of SOME file => href "Docfile" file
+              | NONE => out "not linked"
 	fun nextfile last [] = out ")\n"
 	  | nextfile last ((e1 as {comp, file, line}) :: erest) =
 	    if comp = last then
