@@ -15,5 +15,5 @@ mkword.exe: mkword.uo wordFunctorLib.uo
 	$(HOLMOSMLC) -o $@ mkword.uo
 	$(CP) $@ $(protect $(HOLDIR)/bin)
 
-selftest.exe: selftest.uo mkword.exe
+selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
