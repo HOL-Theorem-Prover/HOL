@@ -164,6 +164,9 @@ fun build_help () =
      val doc2html = fullPath [dir,"Doc2Html"]
      val docpath  = fullPath [HOLDIR, "help", "Docfiles"]
      val htmlpath = fullPath [docpath, "html"]
+     val _        = if (FileSys.isDir htmlpath handle _ => false) then ()
+                    else (print ("Creating directory "^htmlpath^"\n");
+                          FileSys.mkDir htmlpath)
      val cmd1     = String.concat [doc2html, " ",docpath, " ", htmlpath]
      val cmd2     = fullPath [dir,"makebase"]
  in
