@@ -12,6 +12,7 @@ sig
   val Define       : term quotation -> thm
   val xDefine      : string -> term quotation -> thm
   val Hol_defn     : string -> term quotation -> defn
+  val Hol_reln     : term quotation -> thm * thm * thm
   val WF_REL_TAC   : term quotation -> tactic
 
   (* Fetch the rewrite rules for a type. *)

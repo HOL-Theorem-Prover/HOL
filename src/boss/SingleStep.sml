@@ -62,7 +62,7 @@ fun cat_tyof (Free M)      = type_of M
   | cat_tyof (Alien M)     = type_of M
 
 fun prim_find_subterm FVs tm (asl,w) =
-   if (is_var tm)
+   if is_var tm
    then let val name = fst(dest_var tm)
         in
           Free (Lib.first(name_eq name) FVs)
@@ -95,7 +95,7 @@ fun Cases_on qtm (g as (asl,w)) =
      val ty = cat_tyof st
      val (Tyop,_) = dest_type ty
  in case TypeBase.read Tyop
-    of SOME facts =>
+     of SOME facts =>
         let val thm = TypeBase.nchotomy_of facts
         in case st
            of Free M =>
@@ -106,8 +106,8 @@ fun Cases_on qtm (g as (asl,w)) =
             | Alien M    => if ty=bool then ASM_CASES_TAC M g
                             else TERM_INTRO_TAC (ISPEC M thm) g
         end
-     | NONE => raise ERR "Cases_on"
-                         ("No cases theorem found for type: "^Lib.quote Tyop)
+      | NONE => raise ERR "Cases_on"
+                   ("No cases theorem found for type: "^Lib.quote Tyop)
  end
  handle e as HOL_ERR _ => Raise e;
 
@@ -145,22 +145,28 @@ fun primInduct st ind_tac (g as (asl,c)) =
  end
  handle e => Raise e;
 
+val is_mutind_thm = is_conj o snd o strip_imp o snd o strip_forall o concl;
 
-fun Induct_on qtm g =
- let val st = find_subterm qtm g
-     val (Tyop,_) = dest_type(cat_tyof st)
-       handle HOL_ERR _ =>
-         raise ERR "Induct_on"
+fun induct_on_type st ty =
+ let val (Tyop,_) = dest_type ty
+       handle HOL_ERR _ => raise ERR "induct_on_type"
            "No induction theorems available for variable types"
  in case TypeBase.read Tyop
      of SOME facts =>
         let val thm = TypeBase.induction_of facts
-            val ind_tac = Prim_rec.INDUCT_THEN thm ASSUME_TAC
-        in primInduct st ind_tac g
+        in if is_mutind_thm thm
+              then Mutual.MUTUAL_INDUCT_TAC thm
+              else primInduct st (Prim_rec.INDUCT_THEN thm ASSUME_TAC)
         end
-      | NONE => raise ERR "Induct_on"
+      | NONE => raise ERR "induct_on_type"
                     ("No induction theorem found for type: "^Lib.quote Tyop)
  end
+
+fun Induct_on qtm g =
+ let val st = find_subterm qtm g
+ in induct_on_type st (cat_tyof st) g
+ end
+ handle e => raise (wrap_exn "SingleStep" "Induct_on" e)
 
 
 fun completeInduct_on qtm g =
@@ -211,17 +217,25 @@ fun Cases (g as (_,w)) =
   end
 
 
+(*---------------------------------------------------------------------------
+     If we don't do the GEN_TAC first, then Induct_on tries to parse
+     `Name` in the context of the freevars of the goal.  But if
+     Name is universally quantified, then it's not free, and the
+     attempt to parse it won't have get any contextual help, and the
+     parser will report that a type variable has been guessed, completely
+     un-necessarily.
+ ---------------------------------------------------------------------------*)
+
+fun grab_var M = 
+  if is_forall M then fst(dest_forall M) else
+  if is_conj M then fst(dest_forall(fst(dest_conj M)))
+  else raise ERR "Induct" "expected a forall or a conjunction of foralls";
+
+
 fun Induct (g as (_,w)) =
- let val (Bvar,_) = with_exn dest_forall w (ERR "Induct" "not a forall")
-     val (Name,_) = dest_var Bvar
- in
-   (* if we don't do the GEN_TAC first, then Induct_on tries to parse
-      `Name` in the context of the freevars of the goal.  But if
-      Name is universally quantified, then it's not free, and the
-      attempt to parse it won't have get any contextual help, and the
-      parser will report that a type variable has been guessed, completely
-      un-necessarily. *)
-   (Tactic.GEN_TAC THEN Induct_on [QUOTE Name]) g
+ let val v = grab_var w
+     val (_,ty) = dest_var (grab_var w)
+ in induct_on_type (Bound([v],v)) ty g
  end;
 
 
