@@ -4,7 +4,7 @@ Release Notes for the Kananaskis-1 release of the HOL-4 system
 It has been a long time since our last major release. Progress has
 been made on many fronts. The HOL system has become easier to use,
 and it has grown a lot as well. Our goal continues to be the provision
-of a research platform suitable for  
+of a research platform suitable for
 
     * formalizing mathematics,
     * verifying hardware and software, and
@@ -35,7 +35,7 @@ Documentation
 --------------
 
  Much new documentation has been written, especially for heavily
-used proof tools. Existing documentation has been spruced up, and there 
+used proof tools. Existing documentation has been spruced up, and there
 is a new interface to it. The HOL Reference Page, located at
 
    <holdir>/help/HOLindex.html
@@ -51,16 +51,16 @@ gives organized access to
 New Examples
 -------------
 
-  * ARM6 -- Anthony Fox has formalized version 6 of the Acorn Risc 
-            Machine and completed a proof of its correctness. 
+  * ARM6 -- Anthony Fox has formalized version 6 of the Acorn Risc
+            Machine and completed a proof of its correctness.
 
   * Sugar2 -- Mike Gordon has deeply embedded Sugar 2.0, the Accellera
-            standard property language. 
+            standard property language.
 
   * miller -- Joe Hurd has completely formalized an argument for the
             correctness of the Miller-Rabin probabilistic primality
             test.  Also included are some cute smaller examples using
-            probability.  
+            probability.
 
   * Rijndael -- Konrad Slind has formalized and proved the functional
             correctness of Rijndael, the new AES crypto algorithm.
@@ -77,7 +77,7 @@ New and improved proof tools
     implemented.  It is usually faster than Cooper's algorithm, but
     problems that require significant work in converting the input to
     DNF can cause it to take much longer.  The Omega Test is available
-    in intLib as intLib.ARITH_CONV.  
+    in intLib as intLib.ARITH_CONV.
 
   * Induct and Induct_on have been improved to deal with mutually
     recursive datatypes, thanks to code written by Peter Homeier.
@@ -100,7 +100,7 @@ New and improved proof tools
          > val it = |- FACT 6 = 720 : thm
 
     Definitions made with Define also automatically update this global
-    set of rewrites. There is support for monitoring EVAL and its kin, 
+    set of rewrites. There is support for monitoring EVAL and its kin,
     and for controlling the depth of its expansions.
 
   * The system now maintains a "stateful" simpset that is updated
@@ -128,10 +128,10 @@ New and improved proof tools
     this simpset and also implements RW_TAC's aggressive stripping and
     normalisation strategies.
 
-  * Permutative rewriting now has a kinder interface. Previously the 
+  * Permutative rewriting now has a kinder interface. Previously the
     simplifier cared about the order of the submitted (A,C) theorems,
     and required them to be fully specialized. No longer! Permutative
-    rewrite sets can now be easily built with simpLib.ac_ss. 
+    rewrite sets can now be easily built with simpLib.ac_ss.
 
   * Much attention has been paid to efficiency problems arising from big
     terms (ranging to those with hundreds of thousands or millions of
@@ -140,7 +140,7 @@ New and improved proof tools
     improvements have generally been backwards compatible, but have also
     required some new (experimental) primitives. Consult the
     hol-developers discussion list at SourceForge for further
-    information. 
+    information.
 
 
 New libraries
@@ -161,7 +161,7 @@ New and improved theories
 -------------------------
 
   * Laurent Thery's theories of divisibility, primality, and gcd are
-    now part of the distribution, under the name dividesTheory, 
+    now part of the distribution, under the name dividesTheory,
     primeTheory and gcdTheory.
 
   * A theory of 32-bit machine arithmetic, due to Anthony Fox,
@@ -189,18 +189,18 @@ New and improved theories
 
       structure word8Script = wordFunctor (val bits = 8)
 
-  * A replacement theory of strings over an alphabet of 256 characters 
+  * A replacement theory of strings over an alphabet of 256 characters
     has been provided. String literals are no longer implemented as an
     infinite set of constants, given meaning by mk_thm; instead, they
     are constructed terms. This removes the last use of mk_thm in the
     HOL system. Note however, that this new theory is not backwards
     compatible: it will break code that treats string literals as
-    constants. 
+    constants.
 
   * A small theory of set-theoretic fixpoints, due to Michael Norrish.
 
   * A small theory supporting relatively efficient definitional CNF, due
-    to Joe Hurd. 
+    to Joe Hurd.
 
   * A small theory of container types, offering maps between lists,
     finite sets, and multisets (bags).
@@ -219,7 +219,7 @@ Improved support for large formalizations
     have a number of other convenient functions.  The basic format of
     the make-files read by Holmake is very much like that of standard
     make-files, but there is no support for patterns.  For more
-    documentation, see the Holmake section of the DESCRIPTION.  
+    documentation, see the Holmake section of the DESCRIPTION.
 
 
 New syntax support
@@ -258,10 +258,10 @@ New syntax support
 
         type_abbrev("set", ``:'a -> bool``)
 
-    is used in pred_setTheory to establish ``:'a set`` as an 
+    is used in pred_setTheory to establish ``:'a set`` as an
     abbreviation for functions of type ``'a -> bool``.  After issuing
     this command, one can write  ``NS:num set`` and ``:'b set``. When
-    printed, types do not include abbreviations. 
+    printed, types do not include abbreviations.
 
   * Syntax for ML-style case expressions is now supported.  The same
     patterns supported by Define are allowed.  Some examples of the
@@ -317,8 +317,8 @@ Modified syntax support
 
       <rcd-type-name>_<fldname>
 
-    E.g., "rcd_fld". If you really like the 'dot' syntax, you can 
-    always write 
+    E.g., "rcd_fld". If you really like the 'dot' syntax, you can
+    always write
 
       \r. r.fld
 
@@ -372,32 +372,26 @@ Modified syntax support
     distribution, though the source code is still present in the
     src/retired/set directory. With the "set" type abbreviation,
     pred_setLib (including pred_setTheory) should be a "drop-in"
-    replacement for set. 
+    replacement for set.
 
-  * Similarly, the inductive definition packages from Melham and 
+  * Similarly, the inductive definition packages from Melham and
     Harrison have been merged into one. Please consult the
     examples/ind_def  directory to see what syntactic changes are
-    necessary. 
+    necessary.
 
-  * Eta-conversion used to be part of std_ss, but it has been removed. 
+  * Eta-conversion used to be part of std_ss, but it has been removed.
     This may break some proofs.
 
-  * The functions "theorem", "definition" and "axiom" for retrieving
-    theorems from the current theory segment have disappeared.  They
-    have been replaced by a more general function "fetch", which
-    doesn't categorise theorems and will fetch anything by its name.
-    This function also takes the name of the theory segment from which
-    the theorem/definition/axiom is to be retrieved.  A call to
+  * The functions "theorems", "definitions" and "axioms" have gained a
+    theory-segment parameter.  These functions take the name of the
+    theory segment from which the theorems/definitions/axioms are to
+    be retrieved.  A call to
 
-      theorem "foo_thm"
+      theorems ()
 
     should thus be replaced with
 
-      fetch "-" "foo_thm"
-
-    The functions "theorems", "definitions" and "axioms" remain, but
-    have also gained an additional theory-segment parameter.
-
+      theorems "-"
 
 Bugs fixed:
 -----------
@@ -434,6 +428,13 @@ Miscellaneous
     options, disjoint sums), with additional tools too (arithmetic
     decision procedure, definition principles).
 
+  * The unquote filter is also better at handling Control-C
+    interruptions.  If in the middle of entering a input line that
+    includes a delimiter (such as parentheses, various quotes etc),
+    control-C causes the filter to completely forget that this has
+    happened.  This mimics the behaviour of Moscow ML's "native"
+    interactive loop.
+
   * The installation procedure has been somewhat simplified. In
     particular, installation on Windows is easier.
 
@@ -457,4 +458,4 @@ following way:
 
   With HOL 4, we do away with the habit of associating implementations
 with their year of origin.  Individual releases within HOL 4 will
-retain the <lake>-<number> naming scheme. 
+retain the <lake>-<number> naming scheme.
