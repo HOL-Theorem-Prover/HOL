@@ -14,31 +14,10 @@ end;
 (*---------------------------------------------------------------------------*
  *       Establish the basic environment.                                    *
  *---------------------------------------------------------------------------*)
+
 open HolKernel Globals;
 infix ## |->;
 infixr 3 -->;
-
-val _ = quotation := true
-val _ = Help.displayLines := 40;
-
-val _ = load "Parse"; open Parse;
-load "DB";
-
-local
-  fun capture_errors ppfn pps x =
-    ppfn pps x
-    handle (e as HOL_ERR _)  => (print "Pretty-printer error:\n";
-                                 print_HOL_ERR e)
-         | e => (print "Pretty-printer error:\n";
-                 print (exnMessage e);
-                 print "\n")
-in
-  val _ = installPP (capture_errors (term_pp_with_delimiters pp_term))
-  val _ = installPP (capture_errors (type_pp_with_delimiters pp_type))
-  val _ = installPP (capture_errors pp_thm)
-  val _ = installPP (capture_errors term_grammar.prettyprint_grammar)
-end
-
 
 
 (*---------------------------------------------------------------------------*
@@ -46,17 +25,39 @@ end
  * rewriting, etc. That's what the next few lines achieve.                   *
  *---------------------------------------------------------------------------*)
 
-val _ = app load ["basicHol90Lib", "goalstackLib", "Psyntax", "Rsyntax"];
-open basicHol90Lib goalstackLib Psyntax ;
+val _ = app load ["Parse, "basicHol90Lib", 
+                  "goalstackLib", "Psyntax", "Rsyntax"];
+
+open Parse basicHol90Lib goalstackLib Psyntax;
 
 infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 infix 8 via;
 
-val _ = installPP goalstackLib.pp_proofs
-val _ = installPP goalstackLib.pp_goalstack
-val _ = installPP Rewrite.pp_rewrites;
-val _ = installPP TypeBase.pp_tyinfo;
-val _ = installPP Defn0.pp_defn;
+
+(*---------------------------------------------------------------------------*
+ *   Install prettyprinters                                                  *
+ *---------------------------------------------------------------------------*)
+
+local fun capture_errors ppfn pps x =
+             ppfn pps x 
+             handle (e as HOL_ERR _) => (print "Pretty-printer error:\n"; 
+                                         print_HOL_ERR e)
+                  | e => (print "Pretty-printer error:\n";
+                          print (exnMessage e);
+                          print "\n")
+in
+  val _ = installPP (capture_errors (term_pp_with_delimiters pp_term))
+  val _ = installPP (capture_errors (type_pp_with_delimiters pp_type))
+  val _ = installPP (capture_errors pp_thm)
+  val _ = installPP (capture_errors term_grammar.prettyprint_grammar)
+
+  val _ = installPP goalstackLib.pp_proofs
+  val _ = installPP goalstackLib.pp_goalstack
+  val _ = installPP Rewrite.pp_rewrites
+  val _ = installPP TypeBase.pp_tyinfo
+  val _ = installPP DefnBase.pp_defn
+end;
+
 
 (*---------------------------------------------------------------------------*
  * Set up the the help paths.                                                *
@@ -74,6 +75,15 @@ in
         {file = "README.Hol98", term = "hol", title = "Hol98 Overview"}
         :: !Help.specialfiles
 end
+
+
+(*---------------------------------------------------------------------------*
+ *  Set parameters for parsing and help.                                     *
+ *---------------------------------------------------------------------------*)
+
+val _ = quotation := true
+val _ = Help.displayLines := 40;
+
 
 (*---------------------------------------------------------------------------*
  * Print a banner.                                                           *
