@@ -13,8 +13,8 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
- val mosmldir = "/local/scratch-1/mjcg/HOL98/mosml";
- val holdir   = "/local/scratch-1/mjcg/HOL98/hol98";
+val mosmldir =
+val holdir   =
 
 val OS       = "linux";   (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
