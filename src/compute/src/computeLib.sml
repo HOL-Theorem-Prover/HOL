@@ -195,6 +195,10 @@ fun write_datatype_info tyinfo =
        case size_of0 tyinfo
         of SOME (_, ORIG def) => SOME def
          | otherwise => NONE
+     val boolify_opt =
+       case boolify_of0 tyinfo
+        of SOME (_, ORIG def) => SOME def
+         | otherwise => NONE
      val distinct_opt =  (* Needed since the GSYM'ed eqns are not there! *)
        case distinct_of tyinfo
         of SOME th => SOME (LIST_CONJ(th::map Conv.GSYM (CONJUNCTS th)))
@@ -202,7 +206,7 @@ fun write_datatype_info tyinfo =
 
      val compset_addns =
            [one_one_of tyinfo, distinct_opt,
-            size_opt, SOME (lazyfy_thm (case_def_of tyinfo))]
+            size_opt, boolify_opt, SOME (lazyfy_thm (case_def_of tyinfo))]
  in
     add_funs (mapfilter Option.valOf compset_addns)
  end
