@@ -9,7 +9,8 @@ val item : ''a -> (''a, ''a) Parser
 val itemP : ('a -> bool) -> ('a, 'a) Parser
 val eof : (unit, 'a) Parser
 
-val sepby : ('sep, 'b) Parser -> ('a, 'b) Parser -> ('a list, 'b) Parser
+val sepby  : ('sep, 'b) Parser -> ('a, 'b) Parser -> ('a list, 'b) Parser
+val sepby1 : ('sep, 'b) Parser -> ('a, 'b) Parser -> ('a list, 'b) Parser
 val chainl :
   ('b, 'c) Parser -> ('b -> 'b -> 'b, 'c) Parser -> 'b -> ('b, 'c) Parser
 val chainl1 : ('b, 'c) Parser -> ('b -> 'b -> 'b, 'c) Parser -> ('b, 'c) Parser

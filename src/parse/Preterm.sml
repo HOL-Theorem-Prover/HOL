@@ -9,11 +9,13 @@ fun PRETERM_ERR function message =
                    message = message};
 
 
-datatype preterm = Var   of {Name : string,  Ty : Type.hol_type}
-                 | Const of {Name : string,  Ty : Type.hol_type}
+type pretype = Type.hol_type
+
+datatype preterm = Var   of {Name : string,  Ty : pretype}
+                 | Const of {Name : string,  Ty : pretype}
                  | Comb  of {Rator: preterm, Rand : preterm}
                  | Abs   of {Bvar : preterm, Body : preterm}
-                 | Constrained of preterm * Type.hol_type
+                 | Constrained of preterm * pretype
                  | Antiq of Term.term
 
 (*---------------------------------------------------------------------------*
@@ -135,8 +137,8 @@ end end;
 
 
 fun zap_dollar ""  = raise PRETERM_ERR"zap_dollar" "empty string"
-  | zap_dollar s = 
-      if String.sub(s,0) = #"$" 
+  | zap_dollar s =
+      if String.sub(s,0) = #"$"
        then String.substring(s,1,String.size s-1)
       else s;
 
@@ -158,7 +160,7 @@ local fun askii n = Char.toString(Char.chr (n + 97));
       nonfix div mod
       val div = Int.div and mod = Int.mod
 in
-fun num2tyv m = 
+fun num2tyv m =
  Type.mk_vartype
     (String.concat(["'",askii(mod(m,26)), nonzero(div(m,26))]))
 end;

@@ -38,10 +38,12 @@ fun wholething p = p >-> eof
 
 val grab_whitespace = many (itemP Char.isSpace)
 
-fun sepby sep p =
+fun sepby1 sep p =
   (p >- (fn i =>
-  (sep >> sepby sep p >- (fn rest => return (i::rest))) +++
-  return [i])) +++ (return [])
+  (sep >> sepby1 sep p >- (fn rest => return (i::rest))) +++
+  return [i]))
+
+fun sepby sep p = sepby1 sep p ++ return []
 
 fun parse p = p >-> grab_whitespace
 fun token p = grab_whitespace >> p

@@ -45,10 +45,10 @@ end
 
 (* type parsing *)
 val type_parser1 =
-  ref (parse_type.parse_type (!the_type_grammar):
+  ref (parse_type.parse_type false (!the_type_grammar):
        term frag list -> (term frag list * term parse_type.pretype option))
 val type_parser2 =
-  ref (parse_type.parse_type (!the_type_grammar):
+  ref (parse_type.parse_type false (!the_type_grammar):
        hol_type frag list -> (hol_type frag list *
                               hol_type parse_type.pretype option))
 
@@ -59,8 +59,8 @@ val type_printer = ref (type_pp.pp_type (type_grammar()))
 fun update_type_fns () =
   if !type_grammar_changed then let
   in
-    type_parser1 := parse_type.parse_type (type_grammar());
-    type_parser2 := parse_type.parse_type (type_grammar());
+    type_parser1 := parse_type.parse_type false (type_grammar());
+    type_parser2 := parse_type.parse_type false (type_grammar());
     type_printer := type_pp.pp_type (type_grammar());
     type_grammar_changed := false
   end
@@ -86,6 +86,7 @@ local
 in
 
   fun toType (ty: term pretype) = toType0 (remove_aqs ty)
+  val pretype2type = toType0
 
   fun ftoString [] = ""
     | ftoString (QUOTE s :: rest) = s ^ ftoString rest

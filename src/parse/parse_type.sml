@@ -21,7 +21,7 @@ fun n_appls([], t) = t
 fun n_appls_l([], t) = raise Fail "parse_type.n_appls_l: can't happen"
   | n_appls_l(op1::ops, args) = n_appls(ops, pType(token_string op1, args))
 
-fun parse_type G = let
+fun parse_type allow_unknown_suffixes G = let
   val lex = type_tokens.lex
   (* extra fails on next two definitions will effectively make the stream
      push back the unwanted token *)
@@ -35,8 +35,10 @@ fun parse_type G = let
     (item LParen >> f >-> item RParen)
 
   fun parse_op slist =
-    itemP (fn t => is_ident t andalso
-           isSome (List.find (fn s => token_string t = s) slist))
+    itemP (fn t =>
+           is_ident t andalso
+           (allow_unknown_suffixes orelse
+            isSome (List.find (fn s => token_string t = s) slist)))
   fun parse_binop stlist = let
     fun doit t = let
       val result =
@@ -47,7 +49,7 @@ fun parse_type G = let
       | SOME r => return (#opname r)
     end
   in
-    itemP is_ident >-  doit
+    (itemP is_ident ++ itemP is_typesymbol) >-  doit
   end
 
 

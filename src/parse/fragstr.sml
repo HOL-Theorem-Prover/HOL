@@ -69,7 +69,8 @@ fun identP0 P = let
         open Substring
         val (l,r) = splitl P (all s)
       in
-        pushback (QUOTE (string r)) >> return (string l)
+        (if size r > 0 then pushback (QUOTE (string r)) else ok) >>
+        return (string l)
       end
 in
   strip_eqs >> ((get >- h) ++ return "")
