@@ -13,8 +13,8 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = 
-val holdir   = 
+val mosmldir =
+val holdir   =
 
 val OS       = "linux";   (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
@@ -55,18 +55,18 @@ end;
  ---------------------------------------------------------------------------*)
 
 val SRCDIRS =
- ["src/portableML", "src/0", "src/parse", "src/bool", "src/goalstack", 
+ ["src/portableML", "src/0", "src/parse", "src/bool", "src/goalstack",
   "src/taut", "src/compute/src", "src/q", "src/combin", "src/lite",
   "src/refute", "src/simp/src", "src/meson/src","src/basicProof",
   "src/relation", "src/pair/src", "src/sum", "src/one", "src/option",
   "src/num/theories", "src/num/reduce/src", "src/num/arith/src","src/num",
-  "src/IndDef", 
+  "src/IndDef",
   "src/datatype/parse", "src/datatype/equiv",  "src/datatype/record",
   "src/datatype",  "src/list/src", "src/tfl/src", "src/unwind", "src/boss",
   "src/llist", "src/integer", "src/res_quan/src",
   "src/pred_set/src",  "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src",
-  "src/finite_map", "src/hol88", "src/real", "src/bag", "src/ring/src", 
+  "src/finite_map", "src/hol88", "src/real", "src/bag", "src/ring/src",
   "src/temporal/src", "src/temporal/smv.2.4.3", "src/prob"]
   @
   (if OS="linux" orelse OS="solaris"
@@ -137,8 +137,12 @@ fun full_paths (ind,holdir) =
    String.concat o plist
   end;
 
-fun systeml l = 
- let val command = String.concat l
+fun concat_with_spaces [] acc = String.concat (List.rev acc)
+  | concat_with_spaces [x] acc = String.concat (List.rev (x::acc))
+  | concat_with_spaces (h::t) acc = concat_with_spaces t (" " :: h :: acc)
+
+fun systeml l =
+ let val command = concat_with_spaces l []
  in if Process.system command = Process.success then ()
      else (print ("Executing\n  "^command^"\nfailed.\n"); raise Fail "")
  end;
@@ -175,71 +179,29 @@ val _ =
           -->  String.concat["fun MK_XABLE file = ", MK_XABLE_RHS, ";\n"],
         "val DEFAULT_OVERLAY = _;\n"
           --> "val DEFAULT_OVERLAY = SOME \"Overlay.ui\"\n"];
-    systeml [yaccer, space, "Parser.grm"];
-    systeml [lexer, space, "Lexer.lex"];
-    systeml [compiler, " -c ", "Parser.sig"];
-    systeml [compiler, " -c ", "Parser.sml"];
-    systeml [compiler, " -c ", "Lexer.sml" ];
-    systeml [compiler, " -c ", "Holdep.sml"];
-    systeml [yaccer, space, "Holmake_parse.grm"];
-    systeml [lexer, space, "Holmake_tokens.lex"];
-    systeml [compiler, " -c ", "Holmake_types.sig"];
-    systeml [compiler, " -c ", "Holmake_types.sml"];
-    systeml [compiler, " -c ", "Holmake_parse.sig"];
-    systeml [compiler, " -c ", "Holmake_parse.sml"];
-    systeml [compiler, " -c ", "Holmake_tokens.sml"];
-    systeml [compiler, " -c ", "Holmake_rules.sig"];
-    systeml [compiler, " -c ", "Holmake_rules.sml"];
+    systeml [yaccer, "Parser.grm"];
+    systeml [lexer, "Lexer.lex"];
+    systeml [compiler, "-c", "Parser.sig"];
+    systeml [compiler, "-c", "Parser.sml"];
+    systeml [compiler, "-c", "Lexer.sml" ];
+    systeml [compiler, "-c", "Holdep.sml"];
+    systeml [yaccer, "Holmake_parse.grm"];
+    systeml [lexer, "Holmake_tokens.lex"];
+    systeml [compiler, "-c", "Holmake_types.sig"];
+    systeml [compiler, "-c", "Holmake_types.sml"];
+    systeml [compiler, "-c", "Holmake_parse.sig"];
+    systeml [compiler, "-c", "Holmake_parse.sml"];
+    systeml [compiler, "-c", "Holmake_tokens.sml"];
+    systeml [compiler, "-c", "Holmake_rules.sig"];
+    systeml [compiler, "-c", "Holmake_rules.sml"];
     if OS <> "winNT" then
-      systeml [compiler, " -standalone -o ", bin, space, target]
+      systeml [compiler, "-standalone -o", bin, target]
     else
-      systeml [compiler, " -o ", bin, space, target];
+      systeml [compiler, "-o", bin, target];
     mk_xable bin;
     FileSys.chDir current_dir
   end
 handle _ => (print "Couldn't build Holmake\n"; Process.exit Process.failure)
-(*
-val _ =
- let val _ = echo "Making bin/Holmake."
-     val current_dir = FileSys.getDir()
-     val hmakedir    = normPath(Path.concat(holdir, "tools/Holmake"))
-     val   _        = FileSys.chDir hmakedir
-     val src       = "Holmake.src"
-     val target    = "Holmake.sml"
-     val bin       = fullPath [holdir, "bin/Holmake"]
-     val compiler  = fullPath [mosmldir, "bin/mosmlc"]
-     val lexer     = fullPath [mosmldir, "bin/mosmllex"]
-     val yaccer    = fullPath [mosmldir, "bin/mosmlyac"]
-     fun systeml l = 
-       let val command = String.concat l
-       in if Process.system command = Process.success then ()
-          else (print ("Executing\n  "^command^"\nfailed.\n"); raise Fail "")
-       end
-  in
-    fill_holes (src,target)
-       ["val HOLDIR = _;\n"
-          --> String.concat["val HOLDIR = ",    quote holdir,";\n"],
-        "val MOSMLDIR = _;\n"
-          -->  String.concat["val MOSMLDIR = ", quote mosmldir, ";\n"],
-        "val DEPDIR = _;\n"
-          -->  String.concat["val DEPDIR = ",   quote DEPDIR, ";\n"],
-        "fun MK_XABLE file = _;\n"
-          -->  String.concat["fun MK_XABLE file = ", MK_XABLE_RHS, ";\n"]];
-    systeml [yaccer, space, "Parser.grm"];
-    systeml [lexer, space, "Lexer.lex"];
-    systeml [compiler, " -c ", "Parser.sig"];
-    systeml [compiler, " -c ", "Parser.sml"];
-    systeml [compiler, " -c ", "Lexer.sml" ];
-    systeml [compiler, " -c ", "Holdep.sml"];
-    if OS <> "winNT" then
-      systeml [compiler, " -standalone -o ", bin, space, target]
-    else
-      systeml [compiler, " -o ", bin, space, target];
-    mk_xable bin;
-    FileSys.chDir current_dir
-  end
-handle _ => (print "Couldn't build Holmake\n"; Process.exit Process.failure)
-*)
 
 (*---------------------------------------------------------------------------
     Instantiate tools/build.src, compile it, and put it in bin/build.
@@ -451,10 +413,10 @@ val _ =
      val text     = fullPath [dir_1,    "textdb"]
      val dbase    = fullPath [holdir, "help", "HOLdbase"]
  in
-   if not (FileSys.access (text, [FileSys.A_READ])) 
+   if not (FileSys.access (text, [FileSys.A_READ]))
      then (print "No text database for help system found!\n";
            print "We assume you know what you're doing.\n")
-     else 
+     else
        (FileSys.chDir dir_1;
         systeml [compiler, "-c", "Database.sig"];
         systeml [compiler, "-c", "Database.sml"];
