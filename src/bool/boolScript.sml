@@ -22,8 +22,8 @@ val _ = new_theory "bool";
  *             BASIC DEFINITIONS                                             *
  *---------------------------------------------------------------------------*)
 
-val T_DEF = 
- Definition.new_definition 
+val T_DEF =
+ Definition.new_definition
    ("T_DEF",          Term `T = ((\x:bool. x) = \x:bool. x)`);
 
 val _ = add_const "T";
@@ -32,8 +32,8 @@ val FORALL_DEF =
  Definition.new_definition
    ("FORALL_DEF",     Term `! = \P:'a->bool. P = \x. T`);
 
-val EXISTS_DEF = 
- Definition.new_definition 
+val EXISTS_DEF =
+ Definition.new_definition
    ("EXISTS_DEF",     Term `? = \P:'a->bool. P ($@ P)`);
 
 val _ = (add_binder("!", std_binder_precedence); add_const "!");
@@ -50,33 +50,33 @@ val OR_DEF =
 val _ = (add_infix ("/\\", 400, RIGHT); add_const "/\\");
 val _ = (add_infix ("\\/", 300, RIGHT); add_const "\\/");
 
-val F_DEF = 
- Definition.new_definition 
+val F_DEF =
+ Definition.new_definition
    ("F_DEF",          Term `F = !t. t`);
 
 val _ = Parse.add_const "F";
 
-val NOT_DEF = 
+val NOT_DEF =
  Definition.new_definition
    ("NOT_DEF",        Term `~ = \t. t ==> F`);
 
 val EXISTS_UNIQUE_DEF =
 Definition.new_definition
-("EXISTS_UNIQUE_DEF", Term `?! = \P:'a->bool. 
+("EXISTS_UNIQUE_DEF", Term `?! = \P:'a->bool.
                                     $? P /\ !x y. P x /\ P y ==> (x=y)`);
 
 val LET_DEF =
- Definition.new_definition 
+ Definition.new_definition
    ("LET_DEF",        Term `LET = \(f:'a->'b) x. f x`);
 
 val COND_DEF =
  Definition.new_definition
-   ("COND_DEF",       Term `COND = \t t1 t2. 
+   ("COND_DEF",       Term `COND = \t t1 t2.
                                       @x:'a. ((t=T) ==> (x=t1)) /\
                                              ((t=F) ==> (x=t2))`);
 val ONE_ONE_DEF =
  Definition.new_definition
-   ("ONE_ONE_DEF",    Term `ONE_ONE = \f:'a->'b. !x1 x2. 
+   ("ONE_ONE_DEF",    Term `ONE_ONE = \f:'a->'b. !x1 x2.
                                          (f x1 = f x2) ==> (x1 = x2)`);
 
 val ONTO_DEF =
@@ -91,7 +91,7 @@ val TYPE_DEFINITION =
                               (!x. P x = (?x'. x = rep x'))`);
 
 val _ = add_binder ("?!", std_binder_precedence);
-val _ = List.app add_const 
+val _ = List.app add_const
            ["~", "?!", "LET", "COND", "ONE_ONE", "ONTO","TYPE_DEFINITION"];
 
 (*---------------------------------------------------------------------------*
@@ -99,9 +99,9 @@ val _ = List.app add_const
  *---------------------------------------------------------------------------*)
 
 open Portable;
-val _ = add_rule {term_name   = "~", 
+val _ = add_rule {term_name   = "~",
                   fixity      = TruePrefix 900,
-                  pp_elements = [TOK "~"], 
+                  pp_elements = [TOK "~"],
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundEachPhrase, (CONSISTENT, 0))};
 
@@ -114,7 +114,7 @@ val _ = add_rule {term_name   = "let", fixity = TruePrefix 2,
 
 val _ = add_infix ("and", 9, HOLgrammars.LEFT)
 
-val _ = add_rule{term_name   = "COND", 
+val _ = add_rule{term_name   = "COND",
                  fixity      = Infix (HOLgrammars.RIGHT, 3),
                  pp_elements = [HardSpace 1, TOK "=>", BreakSpace(1,0), TM,
                                 BreakSpace(1,0), TOK "|", HardSpace 1],
@@ -135,7 +135,7 @@ val _ = add_rule{term_name   = "COND",
 (*---------------------------------------------------------------------------*
  *                   AXIOMS                                                  *
  *                                                                           *
- * Bruno Barras noticed that the axiom IMP_ANTISYM_AX from the original      * 
+ * Bruno Barras noticed that the axiom IMP_ANTISYM_AX from the original      *
  * HOL logic was provable.                                                   *
  *---------------------------------------------------------------------------*)
 
@@ -207,10 +207,10 @@ val rhs = snd o dest_eq;
 local val imp = Term`$==>`  val notc = Term`$~`
 in
 fun dest_imp M =
- let val (Rator,conseq) = dest_comb M 
+ let val (Rator,conseq) = dest_comb M
  in if is_comb Rator
     then let val (Rator,ant) = dest_comb Rator
-         in if Rator=imp then (ant,conseq) 
+         in if Rator=imp then (ant,conseq)
             else raise Fail "dest_imp"
          end
     else if Rator=notc then (conseq,F) else raise Fail "dest_imp"
@@ -307,14 +307,14 @@ fun EQT_INTRO th =
 val IMP_ANTISYM_AX =
  let val t1 = --`t1:bool`--
      val t2 = --`t2:bool`--
-     fun dsch t1 t2 th = DISCH (--`^t2 ==> ^t1`--) 
+     fun dsch t1 t2 th = DISCH (--`^t2 ==> ^t1`--)
                            (DISCH (--`^t1 ==> ^t2`--) th)
       fun sch t1 t2 = --`(^t1==>^t2) ==> (^t2==>^t1) ==> (^t1=^t2)`--
       val abs = MP (FALSITY_CONV (--`F=T`--)) (MP (ASSUME (--`T==>F`--)) TRUTH)
-      val tht = BOOL_CASE (sch T t2) t2 t2 
+      val tht = BOOL_CASE (sch T t2) t2 t2
                           (dsch T T (REFL T)) (dsch F T (SYM abs))
-      val thf = BOOL_CASE (sch F t2) t2 t2 
-                          (dsch T F abs) (dsch F F (REFL F)) 
+      val thf = BOOL_CASE (sch F t2) t2 t2
+                          (dsch T F abs) (dsch F F (REFL F))
  in
    GEN t1 (GEN t2 (BOOL_CASE (sch t1 t2) t1 t1 tht thf))
  end;
@@ -1557,7 +1557,7 @@ val LEFT_OR_EXISTS_THM =
 	val ep = mk_exists(x,P)
 	val tm = mk_disj(ep,Q)
 	val otm = mk_exists(x,mk_disj(P,Q))
-	val t1 = DISJ1 (ASSUME P) Q 
+	val t1 = DISJ1 (ASSUME P) Q
         val t2 = DISJ2 P (ASSUME Q)
 	val th1 = EXISTS(otm,x) t1 and th2 = EXISTS(otm,x) t2
 	val thm1 = DISJ_CASES (ASSUME tm) (CHOOSE(x,ASSUME ep)th1) th2
@@ -2465,9 +2465,9 @@ val _ = save_thm("COND_EXPAND", COND_EXPAND);
 val TYPE_DEFINITION_THM =
   let val P   = Term `P:'a-> bool`
       val rep = Term `rep :'b -> 'a`
-  in 
-    GEN P (GEN rep 
-      (RIGHT_BETA(AP_THM 
+  in
+    GEN P (GEN rep
+      (RIGHT_BETA(AP_THM
           (RIGHT_BETA (AP_THM TYPE_DEFINITION P)) rep)))
   end;
 
@@ -2895,7 +2895,7 @@ val MONO_OR = save_thm("MONO_OR",
      val th2 = ASSUME tm2
      val th3 = ASSUME tm3
      val th4 = DISJ1 (MP th1 (ASSUME (Term `x:bool`))) (Term`w:bool`)
-     val th5 = DISJ2 (Term`y:bool`) (MP th2 (ASSUME (Term `z:bool`))) 
+     val th5 = DISJ2 (Term`y:bool`) (MP th2 (ASSUME (Term `z:bool`)))
      val th6 = DISJ_CASES th3 th4 th5
      val th7 = DISCH tm1 (DISCH tm2 (DISCH tm3 th6))
      val th8 = SPEC (Term`^tm3 ==> ^tm4`) (SPEC tm2 (SPEC tm1 AND_IMP_INTRO))
@@ -2992,7 +2992,7 @@ val MONO_COND = save_thm("MONO_COND",
      val tm2 = Term `z ==> w`
      val tm3 = Term `if b then x else z:bool`
      val tm4 = Term `b:bool`
-     val tm5 = Term `x:bool` 
+     val tm5 = Term `x:bool`
      val tm6 = Term `z:bool`
      val tm7 = Term `y:bool`
      val tm8 = Term `w:bool`
@@ -3059,8 +3059,8 @@ val EXISTS_UNIQUE_REFL = save_thm("EXISTS_UNIQUE_REFL",
      val th5 = ASSUME (mk_conj(tmx,tmy))
      val th6 = CONJUNCT1 th5
      val th7 = CONJUNCT2 th5
-     val th8 = EQ_MP (BETA_CONV (concl th6)) th6 
-     val th9 = EQ_MP (BETA_CONV (concl th7)) th7 
+     val th8 = EQ_MP (BETA_CONV (concl th6)) th6
+     val th9 = EQ_MP (BETA_CONV (concl th7)) th7
      val th10 = TRANS th8 (SYM th9)
      val th11 = DISCH (hd(hyp th10)) th10
      val th12 = GEN (Term`x:'a`) (GEN (Term`y:'a`) th11)
@@ -3098,7 +3098,7 @@ val UNWIND_THM1 = save_thm("UNWIND_THM1",
      val th9 = EXISTS (tm1,a) th8
      val th10 = DISCH Pa th9
      val th11 = SPEC Pa (SPEC tm1 IMP_ANTISYM_AX)
- in 
+ in
     GEN P (GEN a (MP (MP th11 th6) th10))
  end);
 
@@ -3123,7 +3123,7 @@ val UNWIND_THM2 = save_thm("UNWIND_THM2",
      val th5 = SPEC a_eq_x (SPEC x_eq_a IMP_ANTISYM_AX)
      val th6 = MP (MP th5 th4) th3
      val th7 = MK_COMB (MK_COMB (REFL (Term`$/\`), th6), REFL Px)
-     val th8 = MK_COMB (REFL(Term`$? :('a->bool)->bool`), 
+     val th8 = MK_COMB (REFL(Term`$? :('a->bool)->bool`),
                         ABS (Term`x:'a`) th7)
      val th9 = MK_COMB(MK_COMB (REFL(Term`$= :bool->bool->bool`), th8),th2)
      val th10 = EQ_MP (SYM th9) th1
@@ -3149,7 +3149,7 @@ val UNWIND_FORALL_THM1 = save_thm("UNWIND_FORALL_THM1",
      val th5 = SUBST [v |-> th4] (concl th2) th2
      val th6 = DISCH fv (GEN (Term`x:'a`) (DISCH tm2 th5))
      val th7 = MP (MP (SPEC tm1 (SPEC fv IMP_ANTISYM_AX)) th6) th3
- in 
+ in
    GEN f (GEN v (SYM th7))
  end);
 
@@ -3171,7 +3171,7 @@ val UNWIND_FORALL_THM2 = save_thm("UNWIND_FORALL_THM2",
      val th5 = SUBST [v |-> SYM th4] (concl th2) th2
      val th6 = DISCH fv (GEN (Term`x:'a`) (DISCH tm2 th5))
      val th7 = MP (MP (SPEC tm1 (SPEC fv IMP_ANTISYM_AX)) th6) th3
- in 
+ in
    GEN f (GEN v (SYM th7))
  end);
 
@@ -3208,7 +3208,7 @@ val SKOLEM_THM = save_thm("SKOLEM_THM",
      val th17 = GEN x (EXISTS(Term`?y. ^P x y`,Term`f (x:'a):'b`) th16)
      val th18 = DISCH tm2 (CHOOSE (f,th2) th17)
      val th19 = MP (MP (SPEC tm1 (SPEC tm2 IMP_ANTISYM_AX)) th18) th14
- in 
+ in
      GEN P (SYM th19)
  end);
 
@@ -3217,7 +3217,7 @@ val SKOLEM_THM = save_thm("SKOLEM_THM",
     Support for pattern matching on booleans.
 
     bool_case_thm =
-        |- (!e0 e1. bool_case e0 e1 T = e0) /\ 
+        |- (!e0 e1. bool_case e0 e1 T = e0) /\
             !e0 e1. bool_case e0 e1 F = e1
  ---------------------------------------------------------------------------*)
 
@@ -3247,7 +3247,7 @@ val bool_case_ID = save_thm("bool_case_ID",
                  (RIGHT_BETA(AP_THM
                    (RIGHT_BETA(AP_THM bool_case_DEF x)) x)) b)
      val th1 = TRANS th0 (SPEC x (SPEC b COND_ID))
- in 
+ in
    GEN x (GEN b th1)
  end);
 
@@ -3286,7 +3286,7 @@ val bool_INDUCT = save_thm("bool_INDUCT",
      val th7 = SUBST [v |-> SYM th5] (Term`^P ^v`) th3
      val th8 = SUBST [v |-> SYM th6] (Term`^P ^v`) th4
      val th9 = GEN b (DISJ_CASES th1 th7 th8)
- in 
+ in
      GEN P (DISCH tm1 th9)
  end);
 
@@ -3411,14 +3411,14 @@ end
 
 
 (*---------------------------------------------------------------------------
-     From Joe Hurd : case analysis on the (4) functions in the 
-     type :bool -> bool. 
+     From Joe Hurd : case analysis on the (4) functions in the
+     type :bool -> bool.
 
      val BOOL_FUN_CASES_THM =
      |- !f. (f = \b. T) \/ (f = \b. F) \/ (f = \b. b) \/ (f = \b. ~b)
  ---------------------------------------------------------------------------*)
 
-val BOOL_FUN_CASES_THM = 
+val BOOL_FUN_CASES_THM =
  let val x       = mk_var("x",bool)
      val f       = mk_var("f",bool-->bool)
      val KF      = Term `\b:bool.F`
@@ -3486,7 +3486,7 @@ val _ = save_thm("BOOL_FUN_CASES_THM",BOOL_FUN_CASES_THM);
 (*---------------------------------------------------------------------------
      Another from Joe Hurd : consequence of BOOL_FUN_CASES_THM
 
-     BOOL_FUN_INDUCT = 
+     BOOL_FUN_INDUCT =
      |- !P. P (\b. T) /\ P (\b. F) /\ P (\b. b) /\ P (\b. ~b) ==> !f. P f
  ---------------------------------------------------------------------------*)
 
@@ -3510,7 +3510,7 @@ val _ = save_thm("BOOL_FUN_CASES_THM",BOOL_FUN_CASES_THM);
     end
 
 
-val BOOL_FUN_INDUCT = 
+val BOOL_FUN_INDUCT =
  let val f = mk_var("f",bool-->bool)
      val g = mk_var("g",bool-->bool)
      val f_eq_g = mk_eq(f,g)
@@ -3544,6 +3544,26 @@ end;
 
 val BOOL_FUN_INDUCT = save_thm("BOOL_FUN_INDUCT",BOOL_FUN_INDUCT);
 
+val _ = new_constant("magic__case_constant", Type`:'a -> ('a -> 'b) -> 'b`);
+val _ = new_constant("magic__case_split",
+                     Type`:('a -> 'b) -> ('a -> 'b) -> 'a -> 'b`);
+val _ = new_constant("magic__case_arrow", Type`:'a -> 'b -> 'a -> 'b`);
+
+val _ = add_rule{pp_elements = [TOK "->"], fixity = Infixr 8,
+                 block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                 paren_style = OnlyIfNecessary,
+                 term_name = "magic__case_arrow"}
+
+val _ = add_rule{pp_elements = [TOK "||"], fixity = Infixr 6,
+                 block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                 paren_style = OnlyIfNecessary,
+                 term_name = "magic__case_split"}
+
+val _ = add_rule{pp_elements = [TOK "case", TM, TOK "of", TM, TOK "esac"],
+                 fixity = Closefix,
+                 block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                 paren_style = OnlyIfNecessary,
+                 term_name = "magic__case_constant"}
 
 val _ = export_theory();
 

@@ -361,4 +361,19 @@ val [bool_info] = TypeInfo.gen_tyinfo {ax=boolTheory.boolAxiom,
 
 val _ = TypeInfo.write bool_info;
 
+(* ---------------------------------------------------------------------- *
+ * Install case transformation function for parser                        *
+ * ---------------------------------------------------------------------- *)
+
+    val _ = let
+      fun lookup s =
+          case TypeInfo.read s of
+            SOME tyi => SOME {constructors = TypeInfo.constructors_of tyi,
+                              case_const = TypeInfo.case_const_of tyi}
+          | NONE => NONE
+    in
+      Preterm.provide_case_information
+        (#functional o Pmatch.mk_functional lookup)
+    end
+
 end;
