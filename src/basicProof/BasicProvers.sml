@@ -300,11 +300,13 @@ val pending_updates = ref ([]: simpLib.ssdata list);
 fun initialise_srw_ss() =
   if !srw_ss_initialised then !srw_ss
   else let in
-     HOL_MESG "Initialising SRW simpset - this will happen just once"
-   ; srw_ss := rev_itlist add_simpls (tyinfol()) (!srw_ss)
-   ; srw_ss := foldl (fn (ssd,ss) => ss ++ ssd) (!srw_ss) (!pending_updates)
-   ; srw_ss_initialised := true
-   ; !srw_ss
+     HOL_PROGRESS_MESG ("Initialising SRW simpset ... ", "done")
+     (fn () =>
+         (srw_ss := rev_itlist add_simpls (tyinfol()) (!srw_ss) ;
+          srw_ss := foldl (fn (ssd,ss) => ss ++ ssd) (!srw_ss)
+                          (!pending_updates) ;
+          srw_ss_initialised := true)) () ;
+     !srw_ss
   end;
 
 fun augment_srw_ss ssdl =
