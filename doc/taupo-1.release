@@ -42,8 +42,8 @@ New object language support:
         natural number, integer or real depending on context.  This
         overloading is entirely a facet of the parsing/pretty-printing
         layer and has no reflection in the core logic or kernel.
-    * Type-checking
-        Type-checking is now done entirely outside of the kernel,
+    * Type inference
+        Type inference is now done entirely outside of the kernel,
         making for a cleaner separation of concerns.
     * First class grammars
         Grammar values, encoding all of the information about infixes,
@@ -87,7 +87,8 @@ New libraries:
       state space exploration.
 
   * computeLib
-      Written by Bruno Barras, this library implements a conversion to
+      Written by Bruno Barras, drawing on experience implementing the
+      Coq theorem prover, this library implements a conversion to
       perform efficient "call-by-value" rewriting.  This allows one to
       efficiently do computation within the logic.  For example, the
       arithmetic calculations of reduceLib are now all implemented
