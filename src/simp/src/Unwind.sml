@@ -134,19 +134,12 @@ fun find_var_value var =
  * that rewrite.  Having swapped the variable in question to the right,
  * we call the same [[conv]] recursively on the body of the quantification.
  *
- * GSPEC's are "temporary" workarounds for a higher-order-matching
- * renaming bug found by Michael Norrish.  DRS Aug 5 1996,
  *------------------------------------------------------------------------*)
-
-val GSWAP_EXISTS_THM = GSPEC SWAP_EXISTS_THM;
-val GSWAP_FORALL_THM = GSPEC SWAP_FORALL_THM;
 
 fun MOVE_EXISTS_RIGHT_CONV tm =
   if (is_exists tm) then
     let val (curvar,  subterm) = dest_exists tm in
-      if (is_exists subterm) then
-          (REWR_CONV GSWAP_EXISTS_THM THENC
-           (RAND_CONV (ABS_CONV MOVE_EXISTS_RIGHT_CONV))) tm
+      if (is_exists subterm) then SWAP_VARS_CONV tm
       else REFL tm
     end
  else failwith "MOVE_EXISTS_RIGHT_CONV";
@@ -154,9 +147,7 @@ fun MOVE_EXISTS_RIGHT_CONV tm =
 fun MOVE_FORALL_RIGHT_CONV tm =
   if (is_forall tm) then
     let val (curvar,  subterm) = dest_forall tm in
-      if (is_forall subterm) then
-          (REWR_CONV GSWAP_FORALL_THM THENC
-           (RAND_CONV (ABS_CONV MOVE_FORALL_RIGHT_CONV))) tm
+      if (is_forall subterm) then SWAP_VARS_CONV tm
       else REFL tm
     end
   else failwith "MOVE_FORALL_RIGHT_CONV";
