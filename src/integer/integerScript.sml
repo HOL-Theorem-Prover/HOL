@@ -2196,6 +2196,7 @@ val INT_MUL_DIV = store_thm(
 (* Define divisibility                                                  *)
 (*----------------------------------------------------------------------*)
 
+val _ = print "Facts about integer divisibility\n";
 val INT_DIVIDES = new_definition (
   "INT_DIVIDES",
   Term`int_divides p q = ?m:int. m * p = q`);
@@ -2216,6 +2217,76 @@ val INT_DIVIDES_MOD0 = store_thm(
     PROVE_TAC [INT_MOD_EQ0],
     ASM_REWRITE_TAC [INT_MUL_RZERO]
   ]);
+
+val INT_DIVIDES_0 = store_thm(
+  "INT_DIVIDES_0",
+  Term`(!x. x int_divides 0) /\ (!x. 0 int_divides x = (x = 0))`,
+  PROVE_TAC [INT_DIVIDES, INT_MUL_RZERO, INT_MUL_LZERO]);
+
+val INT_DIVIDES_REFL = store_thm(
+  "INT_DIVIDES_REFL",
+  Term`!x. x int_divides x`,
+  PROVE_TAC [INT_DIVIDES, INT_MUL_LID]);
+
+val INT_DIVIDES_TRANS = store_thm(
+  "INT_DIVIDES_TRANS",
+  Term`!x y z. x int_divides y /\ y int_divides z ==> x int_divides z`,
+  PROVE_TAC [INT_DIVIDES, INT_MUL_ASSOC]);
+
+val INT_DIVIDES_LMUL = store_thm(
+  "INT_DIVIDES_LMUL",
+  Term`!p q r. p int_divides q ==> (p int_divides (q * r))`,
+  PROVE_TAC [INT_MUL_ASSOC, INT_MUL_SYM, INT_DIVIDES]);
+
+val INT_DIVIDES_RMUL = store_thm(
+  "INT_DIVIDES_RMUL",
+  Term`!p q r. p int_divides q ==> (p int_divides (r * q))`,
+  PROVE_TAC [INT_MUL_ASSOC, INT_MUL_SYM, INT_DIVIDES]);
+
+val INT_DIVIDES_LADD = store_thm(
+  "INT_DIVIDES_LADD",
+  Term`!p q r. p int_divides q ==>
+               (p int_divides (q + r) = p int_divides r)`,
+  REWRITE_TAC [INT_DIVIDES] THEN REPEAT STRIP_TAC THEN EQ_TAC THEN
+  DISCH_THEN (Q.X_CHOOSE_THEN `n` ASSUME_TAC) THENL [
+    Q.EXISTS_TAC `n - m` THEN
+    ASM_REWRITE_TAC [INT_SUB_RDISTRIB, INT_ADD_SUB],
+    Q.EXISTS_TAC `m + n` THEN
+    ASM_REWRITE_TAC [INT_RDISTRIB]
+  ]);
+
+val INT_DIVIDES_RADD = save_thm(
+  "INT_DIVIDES_RADD",
+  ONCE_REWRITE_RULE [INT_ADD_COMM] INT_DIVIDES_LADD);
+
+val INT_DIVIDES_NEG = store_thm(
+  "INT_DIVIDES_NEG",
+  Term`!p q. (p int_divides ~q = p int_divides q) /\
+             (~p int_divides q = p int_divides q)`,
+  REWRITE_TAC [INT_DIVIDES] THEN ONCE_REWRITE_TAC [INT_NEG_MINUS1] THEN
+  REPEAT STRIP_TAC THEN EQ_TAC THEN
+  DISCH_THEN (Q.X_CHOOSE_THEN `n` ASSUME_TAC) THENL [
+    Q.EXISTS_TAC `~1 * n` THEN
+    ASM_REWRITE_TAC [GSYM INT_MUL_ASSOC, GSYM INT_NEG_MINUS1,
+                     INT_NEGNEG],
+    PROVE_TAC [INT_MUL_ASSOC],
+    PROVE_TAC [INT_MUL_ASSOC, INT_MUL_SYM],
+    PROVE_TAC [INT_NEG_MINUS1, INT_NEG_MUL2]
+  ]);
+
+val INT_DIVIDES_LSUB = store_thm(
+  "INT_DIVIDES_LSUB",
+  Term`!p q r. p int_divides q ==>
+               (p int_divides (q - r) = p int_divides r)`,
+  REWRITE_TAC [int_sub] THEN
+  PROVE_TAC [INT_DIVIDES_NEG, INT_DIVIDES_LADD]);
+
+val INT_DIVIDES_RSUB = store_thm(
+  "INT_DIVIDES_RSUB",
+  Term`!p q r. p int_divides q ==>
+               (p int_divides (r - q) = p int_divides r)`,
+  REWRITE_TAC [int_sub] THEN
+  PROVE_TAC [INT_DIVIDES_NEG, INT_DIVIDES_RADD]);
 
 (*----------------------------------------------------------------------*)
 (* Define exponentiation                                                *)
@@ -2348,6 +2419,20 @@ val INT_EXP_SUBTRACT_EXPONENTS = store_thm(
        `p * p ** m / p ** n = p * (p ** m / p ** n)`
          by (MATCH_MP_TAC INT_MUL_DIV THEN ASM_SIMP_TAC int_ss [INT_EXP_EQ0])
        THEN RW_TAC int_ss []]]);
+
+(*----------------------------------------------------------------------*)
+(* Define integer minimum                                               *)
+(*----------------------------------------------------------------------*)
+
+val INT_MIN = new_definition(
+  "INT_MIN",
+  Term`INT_MIN (x:int) y = if x < y then x else y`);
+
+val INT_MIN_LT = store_thm(
+  "INT_MIN_LT",
+  Term`!x y z. x < INT_MIN y z ==> x < y /\ x < z`,
+  SIMP_TAC bool_ss [INT_MIN] THEN REPEAT GEN_TAC THEN COND_CASES_TAC THEN
+  PROVE_TAC [INT_LT_TRANS, INT_LT_TOTAL]);
 
 (*----------------------------------------------------------------------*)
 (* Prove rewrites for calculation with integers                         *)

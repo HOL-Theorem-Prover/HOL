@@ -19,7 +19,7 @@ fun is_int_literal t =
 val elim_thms = [INT_ADD_CALCULATE, INT_SUB_CALCULATE, INT_MUL_CALCULATE,
                  INT_DIV_CALCULATE, INT_MOD_CALCULATE, INT_EXP_CALCULATE,
                  INT_LT_CALCULATE, INT_LE_CALCULATE, INT_EQ_CALCULATE,
-                 INT_GT_CALCULATE, INT_GE_CALCULATE]
+                 INT_GT_CALCULATE, INT_GE_CALCULATE, INT_DIVIDES_MOD0]
 val elim_ints =
   simpLib.SIMP_CONV (simpLib.++(boolSimps.bool_ss, arithSimps.REDUCE_ss))
   elim_thms
@@ -40,7 +40,7 @@ val basic_op_patterns =
   ["int_add", "int_sub", "int_mul", "int_div", "int_mod"]
 val basic_rel_patterns =
   map (fn s => list_mk_comb(mk_const{Name = s, Ty = int_rel}, [x,y]))
-  ["=", "int_lt", "int_le", "int_ge", "int_gt"]
+  ["=", "int_lt", "int_le", "int_ge", "int_gt", "int_divides"]
 val exp_pattern = list_mk_comb(mk_const{Name = "int_exp",
                                         Ty = int_ty --> (num_ty --> int_ty)},
                                [x,n])
