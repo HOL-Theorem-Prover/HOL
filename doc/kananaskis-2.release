@@ -51,7 +51,9 @@ New features:
   * The term and type parsers now report errors with an indication as
     to where in the parse they have occurred.  If the error is found
     during a run of Holmake, the location includes the line number in
-    the file where the error is.  (Many thanks to Keith Wansbrough for
+    the file where the error is.  Pragma comments of the form
+    (*#loc 100 5*) allow the line and column numbers to be overridden,
+    a la C's #line directive.  (Many thanks to Keith Wansbrough for
     the implementation of this feature.)  The lexer is also much
     faster than it used to be.
 
