@@ -1,14 +1,12 @@
 signature ParseDatatype =
 sig
-
- type hol_type = Type.hol_type
+ include Abbrev
  type tyname   = string
- type quote    = hol_type frag list
 
   datatype pretype
       = dVartype of string
-      | dTyop    of (string * pretype list)
-      | dAQ      of Type.hol_type
+      | dTyop    of string * pretype list
+      | dAQ      of hol_type
 
   val pretypeToType : pretype -> hol_type
 
@@ -21,7 +19,7 @@ sig
 
   type AST = tyname * datatypeForm
 
-  val parse : quote -> AST list
+  val parse : hol_type quotation -> AST list
 
 (*---------------------------------------------------------------------------
   grammar we're parsing is:
@@ -37,6 +35,5 @@ sig
   the standard HOL distribution.  In the event that => is an infix, this
   code will still work as long as the input puts the types in parentheses.
  ---------------------------------------------------------------------------*)
-
 
 end;

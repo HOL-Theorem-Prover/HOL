@@ -37,8 +37,7 @@
 structure Datatype :> Datatype =
 struct
 
-open HolKernel Parse Drule Tactical Tactic Conv Prim_rec ParseDatatype;
-open boolSyntax
+open HolKernel Parse boolLib Prim_rec ParseDatatype;
 
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
 fun -- q x = Term q
@@ -69,12 +68,8 @@ type record_rw_names = string list
    types are marked by occurrences of the corresponding type variables.
  ---------------------------------------------------------------------------*)
 
-fun ERR func mesg =
-    HOL_ERR{origin_structure = "Datatype",
-            origin_function = func,
-            message = mesg};
-
-val numty = mk_type{Tyop="num",Args=[]};
+val ERR = mk_HOL_ERR "Datatype";
+val num = numSyntax.num
 
 val defn_const =
   #1 o strip_comb o lhs o #2 o strip_forall o hd o strip_conj o concl;
@@ -91,18 +86,18 @@ end;
 local open Portable
       fun num_variant vlist v =
         let val counter = ref 0
-            val names = map (#Name o dest_var) vlist
-            val {Name,Ty} = dest_var v
+            val names = map (fst o dest_var) vlist
+            val (Name,Ty) = dest_var v
             fun pass str =
                if mem str names
                then (inc counter; pass (Name^Lib.int_to_string(!counter)))
                else str
-        in mk_var{Name=pass Name,  Ty=Ty}
+        in mk_var(pass Name,  Ty)
         end
 in
 fun mk_tyvar_size vty (V,away) =
-  let val fty = vty --> numty
-      val v = num_variant away (mk_var{Name="f", Ty=fty})
+  let val fty = vty --> num
+      val v = num_variant away (mk_var("f", fty))
   in (v::V, v::away)
   end
 end;
@@ -130,11 +125,11 @@ end;
 
 local fun drop [] ty = fst(dom_rng ty)
         | drop (_::t) ty = drop t (snd(dom_rng ty));
-      fun Zero() = mk_const{Name="0",Ty= mk_type{Tyop="num",Args=[]}}
+      fun Zero() = mk_thy_const{Name="0",Thy="num",Ty=num}
         handle HOL_ERR _ => raise ERR "type_size.Zero()" "Numbers not declared"
-      fun Kzero ty = mk_abs{Bvar=mk_var{Name="v",Ty=ty}, Body=Zero()}
+      fun Kzero ty = mk_abs(mk_var("v",ty), Zero())
       fun OK f ty M =
-         let val {Rator,Rand} = dest_comb M
+         let val (Rator,Rand) = dest_comb M
          in (Rator=f) andalso is_var Rand andalso (type_of Rand = ty)
          end
 in
@@ -149,7 +144,7 @@ fun tysize (theta,omega,gamma) clause ty =
              (first (fn (f,sz) => Lib.can (find_term(OK f ty)) (rhs clause))
                   alist)
         | NONE =>
-           let val {Tyop,Args} = dest_type ty
+           let val (Tyop,Args) = dest_type ty
            in case gamma Tyop
                of SOME f =>
                    let val vty = drop Args (type_of f)
@@ -196,27 +191,27 @@ local open arithmeticTheory
       val zero_rws = [Rewrite.ONCE_REWRITE_RULE [ADD_SYM] ADD_0, ADD_0]
       val Zero  = Term`0n`
       val One   = Term`1n`
-      val Plus  = mk_const{Name="+", Ty=numty-->numty-->numty}
-      fun mk_plus x y = list_mk_comb(Plus,[x,y])
+  val Plus = mk_thy_const{Name="+", Thy="arithmetic", Ty=num-->num-->num}
+   fun mk_plus x y = list_mk_comb(Plus,[x,y])
 in
 fun define_size ax db =
  let val dtys = Prim_rec.doms_of_tyaxiom ax  (* primary types in axiom *)
-     val tyvars = Lib.U (map (#Args o dest_type) dtys)
+     val tyvars = Lib.U (map (snd o dest_type) dtys)
      val (_, abody) = strip_forall(concl ax)
      val (exvs, ebody) = strip_exists abody
      (* list of all constructors with arguments *)
      val conjl = strip_conj ebody
      val bare_conjl = map (snd o strip_forall) conjl
      val capplist = map (rand o lhs) bare_conjl
-     val def_name = #Tyop(dest_type(type_of(hd capplist)))
+     val def_name = fst(dest_type(type_of(hd capplist)))
      (* 'a -> num variables : size functions for type variables *)
      val fparams = rev(fst(rev_itlist mk_tyvar_size tyvars
                              ([],free_varsl capplist)))
      val fparams_tyl = map type_of fparams
      fun proto_const n ty =
-         mk_var{Name=n, Ty=itlist (curry op-->) fparams_tyl (ty --> numty)}
+         mk_var(n, itlist (curry op-->) fparams_tyl (ty --> num))
      fun tyop_binding ty =
-       let val root_tyop = #Tyop(dest_type ty)
+       let val root_tyop = fst(dest_type ty)
        in (root_tyop, (ty, proto_const(root_tyop^"_size") ty))
        end
      val tyvar_map = zip tyvars fparams
@@ -237,7 +232,7 @@ fun define_size ax db =
      val dty_fns = fst(dupls (map head_of_clause dty_clauses) ([],[]))
      fun dty_size ty =
         let val (d,r) = dom_rng ty
-        in list_mk_comb(proto_const(#Tyop(dest_type d)^"_size") d,fparams)
+        in list_mk_comb(proto_const(fst(dest_type d)^"_size") d,fparams)
         end
      val dty_map = zip dty_fns (map (dty_size o type_of) dty_fns)
      val non_dty_fns = fst(dupls (map head_of_clause non_dty_clauses) ([],[]))
@@ -251,28 +246,28 @@ fun define_size ax db =
      val nested_map1 = crunch nested_map0
      fun omega ty = assoc1 ty nested_map1
      val sizer = tysize(theta,omega,gamma)
-     fun mk_app cl v = mk_comb{Rator=sizer cl (type_of v), Rand=v}
+     fun mk_app cl v = mk_comb(sizer cl (type_of v), v)
      val fn_i_map = dty_map @ nested_map0
      fun clause cl =
          let val fcapp = lhs cl
-             val {Rator=fn_i, Rand=capp} = dest_comb fcapp
+             val (fn_i, capp) = dest_comb fcapp
          in
-         mk_eq{lhs=mk_comb{Rator=assoc fn_i fn_i_map, Rand=capp},
-               rhs = case snd(strip_comb capp)
-                      of [] => Zero
-                       | L  => end_itlist mk_plus (One::map (mk_app cl) L)}
+         mk_eq(mk_comb(assoc fn_i fn_i_map, capp),
+               case snd(strip_comb capp)
+                of [] => Zero
+                 | L  => end_itlist mk_plus (One::map (mk_app cl) L))
          end
      val pre_defn0 = list_mk_conj (map clause bare_conjl)
-     val pre_defn1 = #rhs(dest_eq(concl   (* remove zero additions *)
+     val pre_defn1 = rhs(concl   (* remove zero additions *)
                       ((DEPTH_CONV BETA_CONV THENC
-                        Rewrite.PURE_REWRITE_CONV zero_rws) pre_defn0)))
+                        Rewrite.PURE_REWRITE_CONV zero_rws) pre_defn0))
      val defn = new_recursive_definition
                  {name=def_name^"_size_def",
                   rec_axiom=ax, def=pre_defn1}
      val cty = (I##(type_of o last)) o strip_comb o lhs o snd o strip_forall
      val ctyl = Lib.mk_set (map cty (strip_conj (concl defn)))
      val const_tyl = gather (fn (c,ty) => mem ty dtys) ctyl
-     val const_tyopl = map (fn (c,ty) => (c,#Tyop(dest_type ty))) const_tyl
+     val const_tyopl = map (fn (c,ty) => (c,fst(dest_type ty))) const_tyl
  in
     SOME {def=defn,const_tyopl=const_tyopl}
  end
@@ -311,7 +306,7 @@ fun to_tyspecs ASTs =
             then if null args then tyname_as_tyvar s
                  else raise ERR "to_tyspecs"
                      "Can't use new types as operators - leave them nullary"
-            else mk_type{Tyop=s, Args=map mk_hol_type args}
+            else mk_type(s, map mk_hol_type args)
       fun constructor (cname, ptys) = (cname, map mk_hol_type ptys)
   in
      map (tyname_as_tyvar##map constructor) asts

@@ -15,8 +15,7 @@ val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
 fun -- q x = Term q
 fun == q x = Type q
 
-fun ERR f s = HOL_ERR {origin_structure = "RecordType",
-                       origin_function = f, message=s};
+val ERR = mk_HOL_ERR "RecordType";
 
 fun map3 f ([], _, _) = []
   | map3 f (x::xs, ys, zs) = f (x, hd ys, hd zs) :: map3 f (xs, tl ys, tl zs)
@@ -68,13 +67,12 @@ fun foldl f zero []      = zero
   (* end of PW's copyrighted stuff *)
 
   fun variant tml tm = let
-    fun name_of tm = if is_var tm then SOME (#Name (Term.dest_var tm))
+    fun name_of tm = if is_var tm then SOME (fst(dest_var tm))
                      else NONE
     val avoidstrs = List.mapPartial name_of tml
-    val {Name, Ty} = Term.dest_var tm
+    val (Name, Ty) = Term.dest_var tm
   in
-    Term.mk_var{Name = Lexis.gen_variant Lexis.tmvar_vary avoidstrs Name,
-                Ty = Ty}
+    Term.mk_var(Lexis.gen_variant Lexis.tmvar_vary avoidstrs Name,Ty)
   end
 
 

@@ -43,8 +43,7 @@ structure EquivType :> EquivType =
 struct
 
 (* The Standard Header *)
-open HolKernel Parse boolLib;
-open Psyntax liteLib boolTheory;
+open HolKernel Parse boolLib liteLib;
 
 infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
 
@@ -103,8 +102,8 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
                                  REP = repname,
                                  tyax = tydef})
   val absty = mk_type(tyname,[])
-  val (abs,rep) = ((I ## rator) o dest_comb o lhs o snd o dest_forall o hd o
-                 conjuncts o concl) tybij
+  val (abs,rep) = ((I ## rator) o dest_comb o lhs o snd o dest_forall 
+                                o fst o dest_conj o concl) tybij
 
   val refl = PROVE
     ((--`!h. ^eqv h h`--),

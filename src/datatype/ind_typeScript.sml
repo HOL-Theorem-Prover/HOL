@@ -1,8 +1,8 @@
 structure ind_typeScript =
 struct
 
-open HolKernel boolLib Parse Psyntax simpLib boolSimps
-open numTheory arithmeticTheory prim_recTheory
+open HolKernel boolLib Prim_rec Parse simpLib boolSimps;
+open numTheory prim_recTheory arithmeticTheory;
 
 infix THEN THENC THENL |-> ++
 
@@ -57,7 +57,7 @@ val NUMPAIR_INJ = store_thm (
   POP_ASSUM MP_TAC THEN REWRITE_TAC[NUMPAIR] THEN
   SIMP_TAC hol_ss [EQ_MULT_LCANCEL, EQ_ADD_RCANCEL, EXP_EQ_0]);
 
-val NUMPAIR_DEST = Rsyntax.new_specification {
+val NUMPAIR_DEST = new_specification {
   consts = [{const_name = "NUMFST", fixity = Prefix},
             {const_name = "NUMSND", fixity = Prefix}],
   name = "NUMPAIR_DEST",
@@ -79,7 +79,7 @@ val NUMSUM_INJ = store_thm(
   REPEAT COND_CASES_TAC THEN REWRITE_TAC[EVEN, EVEN_DOUBLE] THEN
   SIMP_TAC hol_ss [INV_SUC_EQ, EQ_MULT_LCANCEL]);
 
-val NUMSUM_DEST = Rsyntax.new_specification{
+val NUMSUM_DEST = new_specification{
   consts = [{const_name = "NUMLEFT", fixity = Prefix},
             {const_name = "NUMRIGHT", fixity = Prefix}],
   name = "NUMSUM_DEST",
@@ -184,15 +184,13 @@ val (ZRECSPACE_RULES,ZRECSPACE_INDUCT,ZRECSPACE_CASES) =
     (!c i r. (!n. ZRECSPACE (r n)) ==> ZRECSPACE (ZCONSTR c i r))``;
 
 local fun new_basic_type_definition tyname (mkname, destname) thm =
-       let open Rsyntax
-           val {Rator=pred, Rand=witness} = dest_comb(concl thm)
+       let val (pred, witness) = dest_comb(concl thm)
            val predty = type_of pred
            val dom_ty = #1 (dom_rng predty)
-           val x = mk_var{Name="x", Ty=dom_ty}
+           val x = mk_var("x", dom_ty)
            val witness_exists = EXISTS
-              (mk_exists{Bvar=x, Body=mk_comb{Rator=pred, Rand=x}},witness) thm
-           val tyax = new_type_definition{name=tyname,
-                                          inhab_thm=witness_exists}
+              (mk_exists(x, mk_comb(pred, x)),witness) thm
+           val tyax = new_type_definition(tyname,witness_exists)
            val (mk_dest, dest_mk) = CONJ_PAIR(define_new_type_bijections
                {name=(tyname^"_repfns"), ABS=mkname, REP=destname, tyax=tyax})
        in
@@ -346,7 +344,7 @@ val CONSTR_REC = store_thm(
 (* The following is useful for coding up functions casewise.                 *)
 (* ------------------------------------------------------------------------- *)
 
-val FCONS = Prim_rec.new_recursive_definition {
+val FCONS = new_recursive_definition {
   rec_axiom = num_Axiom,
   name = "FCONS",
   def = ``(!a f. FCONS (a:'a) f 0 = a) /\

@@ -19,26 +19,18 @@
 structure ParseDatatype :> ParseDatatype =
 struct
 
- type hol_type = Type.hol_type
  type tyname   = string
- type quote    = hol_type frag list
+
+ open HolKernel Abbrev optmonad monadic_parse fragstr;
+ infix >> >- >-> ++
+
+val ERR = mk_HOL_ERR "ParseDatatype";
 
 
-fun ERR s1 s2 =
- Feedback.HOL_ERR
-  {origin_structure = "ParseDatatype",
-   origin_function = s1,
-   message = s2};
-
-
-open optmonad
-open monadic_parse
-open fragstr
-infix >> >- >-> ++
-
-datatype pretype =
-  dVartype of string | dTyop of (string * pretype list) |
-  dAQ of Type.hol_type
+datatype pretype 
+   = dVartype of string 
+   | dTyop of string * pretype list
+   | dAQ of Type.hol_type
 
 type field = string * pretype
 type constructor = string * pretype list
@@ -49,10 +41,11 @@ datatype datatypeForm
 
 type AST = tyname * datatypeForm
 
+(* Should use long identifiers! *)
 fun pretypeToType pty =
   case pty of
     dVartype s => Type.mk_vartype s
-  | dTyop (s, args) => Type.mk_type{Tyop=s, Args=map pretypeToType args}
+  | dTyop (s, args) => Type.mk_type(s, map pretypeToType args)
   | dAQ pty => pty
 
 fun ident0 s = let
@@ -68,6 +61,7 @@ fun ident s = token ident0 s
 fun parse_type strm =
   parse_type.parse_type {vartype = dVartype, tyop = dTyop, antiq = dAQ} true
   (Parse.type_grammar()) strm
+
 fun parse_constructor_id s =
   (token (many1_charP (fn c => Lexis.in_class (Lexis.hol_symbols, Char.ord c)))
    ++
@@ -100,18 +94,15 @@ val parse_G =
 
 fun fragtoString (QUOTE s) = s
   | fragtoString (ANTIQUOTE _) = " ^... "
+
 fun quotetoString [] = ""
   | quotetoString (x::xs) = fragtoString x ^ quotetoString xs
 
-fun parse strm = let
-  val result = fragstr.parse (sepby1 (symbol ";") parse_G) strm
-in
-  case result of
-    (strm, SOME result) => result
-  | (strm, NONE) =>
-      raise ERR "parse"
-        ("Parse failed with input remaining: "^quotetoString strm)
-end
+fun parse strm =
+  case fragstr.parse (sepby1 (symbol ";") parse_G) strm
+   of (strm, SOME result) => result
+    | (strm, NONE) => raise ERR "parse"
+          ("Parse failed with input remaining: "^quotetoString strm)
 
 
 (*---------------------------------------------------------------------------

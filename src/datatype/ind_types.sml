@@ -19,29 +19,20 @@ open HolKernel boolLib Parse Psyntax
 open numTheory arithmeticTheory prim_recTheory simpLib boolSimps
 open ind_typeTheory
 
-type hol_type     = Type.hol_type
-type thm          = Thm.thm
 type constructor  = string * hol_type list
 type tyspec       = hol_type * constructor list
 
 infix THEN THENC THENL |-> ORELSEC
 infixr --> ##;
 
-(* ------------------------------------------------------------------------- *)
-(* Handy utility to produce "SUC o SUC o SUC ..." form of numeral.           *)
-(* ------------------------------------------------------------------------- *)
-
-fun ERR f s =
-  HOL_ERR{origin_structure="ind_types",
-          origin_function=f,message=s};
+val ERR = mk_HOL_ERR "ind_types";
 
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
 fun -- q x = Term q
 fun == q x = Type q
 
 (*---------------------------------------------------------------------------
-   First some JRH HOL-Light portability stuff. This was in jrh_simple_lib,
-   but I got rid of that ... probably the wrong thing to do.
+   First some JRH HOL-Light portability stuff. 
  ---------------------------------------------------------------------------*)
 
 fun chop_list 0 l      = ([], l)
@@ -52,10 +43,7 @@ val lhand = rand o rator;
 val LAND_CONV = RATOR_CONV o RAND_CONV;
 val RIGHT_BETAS = rev_itlist(fn a=>CONV_RULE(RAND_CONV BETA_CONV) o C AP_THM a)
 
-val sucivate =
-  let val zero = Term`0` and suc = Term`SUC`
-  in fn n => funpow n (curry mk_comb suc) zero
-  end
+fun sucivate n = funpow n numSyntax.mk_suc numSyntax.zero_tm;
 
 val make_args =
   let fun margs n s avoid [] = []
@@ -70,12 +58,12 @@ val make_args =
    end handle _ => raise ERR "make_args" "";
 
 fun mk_binop op_t tm1 tm2 = list_mk_comb(op_t, [tm1, tm2])
-fun mk_const (thy, n, theta) = let
-  val c0 = prim_mk_const{Name = n, Thy = thy}
-  val ty = type_of c0
-in
-  Term.mk_thy_const{Name = n, Thy = thy, Ty = Type.type_subst theta ty}
-end;
+
+fun mk_const (thy, n, theta) = 
+ let val c0 = prim_mk_const{Name = n, Thy = thy}
+     val ty = type_of c0
+  in Term.mk_thy_const{Name=n, Thy=thy, Ty=Type.type_subst theta ty}
+  end;
 
 fun mk_icomb(tm1,tm2) =
    let val (ty, _) = Type.dom_rng (type_of tm1)
@@ -130,15 +118,12 @@ fun SIMPLE_EXISTS v th = EXISTS (mk_exists(v, concl th),v) th;
 fun SIMPLE_CHOOSE v th = CHOOSE(v,ASSUME (mk_exists(v, hd(hyp th)))) th;
 
 fun new_basic_type_definition tyname (mkname, destname) thm =
-  let open Rsyntax
-      val {Rator=pred, Rand=witness} = dest_comb(concl thm)
+  let val (pred, witness) = dest_comb(concl thm)
       val predty = type_of pred
       val dom_ty = #1 (dom_rng predty)
-      val x = mk_var{Name="x", Ty=dom_ty}
-      val witness_exists = EXISTS
-            (mk_exists{Bvar=x, Body=mk_comb{Rator=pred, Rand=x}},witness) thm
-      val tyax = new_type_definition{name=tyname,
-                                     inhab_thm=witness_exists}
+      val x = mk_var("x", dom_ty)
+      val witness_exists = EXISTS(mk_exists(x, mk_comb(pred,x)),witness) thm
+      val tyax = new_type_definition(tyname,witness_exists)
       val (mk_dest, dest_mk) = CONJ_PAIR(define_new_type_bijections
               {name=(tyname^"_repfns"), ABS=mkname, REP=destname, tyax=tyax})
   in
@@ -152,7 +137,7 @@ fun new_basic_type_definition tyname (mkname, destname) thm =
 
 fun SCRUB_EQUATION eq th =
    let val (l,r) = dest_eq eq
-   in MP (Rsyntax.INST [l |-> r] (DISCH eq th)) (REFL r)
+   in MP (INST [l |-> r] (DISCH eq th)) (REFL r)
    end;
 
 (* ------------------------------------------------------------------------- *)
@@ -165,7 +150,9 @@ fun SCRUB_EQUATION eq th =
 
 val justify_inductive_type_model = let
   val aty = Type.alpha
-  val T_tm = Term`T` and n_tm = Term`n:num` and beps_tm = Term`@x:bool. T`
+  val T_tm = boolSyntax.T 
+  and n_tm = Term`n:num` 
+  and beps_tm = Term`@x:bool. T`
   fun munion [] s2 = s2
     | munion (h1::s1') s2 =
        let val (_,s2') = Lib.pluck (fn h2 => h2 = h1) s2
@@ -399,9 +386,8 @@ in
         Term.subst (map2 (fn l => fn r => (l |-> r)) argsin argsgen) asmin
       val asmquant =
         list_mk_forall(snd(strip_comb(rand(rand asmgen))),asmgen)
-      val th1 =
-        Rsyntax.INST (map2 (curry op |->) argsgen argsin)
-        (SPEC_ALL (ASSUME asmquant))
+      val th1 = INST (map2 (curry op |->) argsgen argsin)
+                     (SPEC_ALL (ASSUME asmquant))
       val th2 = MP th1 (end_itlist CONJ pths)
       val th3 = EQ_MP (SYM conth3) (CONJ tth th2)
     in
@@ -454,7 +440,7 @@ end;
 (* Derive the induction theorem.                                             *)
 (* ------------------------------------------------------------------------- *)
 
-val conjuncts = strip_conj
+val conjuncts = strip_conj;
 
 fun derive_induction_theorem consindex tybijpairs conthms iith rth = let
   val bths = map2
@@ -500,8 +486,7 @@ fun create_recursive_functions tybijpairs consindex conthms rth = let
     conthms
   val fxths2 = map (fn th => TRANS th (BETA_CONV (rand(concl th)))) fxths1
   fun mk_tybijcons (th1,th2) = let
-    val th3 =
-      Rsyntax.INST [rand(lhand(concl th2)) |-> rand(lhand(concl th1))] th2
+    val th3 = INST [rand(lhand(concl th2)) |-> rand(lhand(concl th1))] th2
     val th4 = AP_TERM (rator(lhand(rand(concl th2)))) th1
   in
     EQ_MP (SYM th3) th4
@@ -585,7 +570,7 @@ in
       val (cctm,itm) = dest_comb ccitm
       val (rargs,iargs) = partition (C free_in rtm) args
       val xths = map (extract_arg itm) iargs
-      val cargs' = map (Rsyntax.subst [itm |-> i] o lhand o concl) xths
+      val cargs' = map (subst [itm |-> i] o lhand o concl) xths
       val indices = map sucivate (upto (length rargs - 1))
       val rindexed = map (curry mk_comb r) indices
       val rargs' =
@@ -623,7 +608,7 @@ val EXISTS_EQUATION =
         end
     end;
 
-val bndvar = #Bvar o Term.dest_abs
+val bndvar = Term.bvar
 local
   val CCONV = funpow 3 RATOR_CONV (REPEATC (GEN_REWRITE_CONV I [FCONS]))
 in
@@ -638,7 +623,7 @@ in
     val betm = let
       val (v,bod) = dest_abs(rand(concl eth))
     in
-      Rsyntax.subst[v |-> fnn] bod
+      subst[v |-> fnn] bod
     end
     val LCONV = REWR_CONV (ASSUME betm)
     val fnths =
@@ -809,7 +794,7 @@ val generalize_recursion_theorem = let
     val dty = hd(snd(dest_type ty))
     val x = mk_var("x",dty)
     val (y,bod) = dest_abs outl
-    val r = mk_abs(x,Rsyntax.subst[y |-> mk_comb(fnn,x)] bod)
+    val r = mk_abs(x,subst[y |-> mk_comb(fnn,x)] bod)
     val l = mk_var(s,type_of r)
     val th1 = ASSUME (mk_eq(l,r))
   in
@@ -829,7 +814,7 @@ in
       val inls = mk_inls sty
       and outls = mk_outls sty
       val zty = type_of(rand(snd(strip_forall(hd(conjuncts bod)))))
-      val ith = Thm.INST_TYPE [zty |-> sty] th
+      val ith = INST_TYPE [zty |-> sty] th
       val (avs,ebod) = strip_forall(concl ith)
       val (evs,bod) = strip_exists ebod
       val fns' = map2 mk_newfun evs outls
@@ -990,32 +975,26 @@ end
 val CONJ_ACI_CONV = EQT_ELIM o AC_CONV (CONJ_ASSOC, CONJ_COMM);
 val ISO_EXPAND_CONV = PURE_ONCE_REWRITE_CONV[ISO];
 
-fun lift_type_bijections iths cty = let
-  val itys = map (hd o snd o dest_type o type_of o lhand o concl) iths
-in
-  assoc cty (zip itys iths)
-  handle HOL_ERR _ =>
-    if not (List.exists (C occurs_in cty) itys) then
-      Thm.INST_TYPE [Type.alpha |-> cty] ISO_REFL
-    else let
-      val (tycon,isotys) = dest_type cty
-    in
-      if tycon = "fun" then
-        MATCH_MP ISO_FUN
-        (end_itlist CONJ (map (lift_type_bijections iths) isotys))
-      else
-        raise HOL_ERR
-          {origin_function = "lift_type_bijections",
-           origin_structure = "ind_types",
-           message = ("Unexpected type operator \""^tycon^"\"")}
-    end
-end
+fun lift_type_bijections iths cty = 
+ let val itys = map (hd o snd o dest_type o type_of o lhand o concl) iths
+ in assoc cty (zip itys iths)
+    handle HOL_ERR _ =>
+     if not (List.exists (C occurs_in cty) itys) 
+     then Thm.INST_TYPE [Type.alpha |-> cty] ISO_REFL
+     else let val (tycon,isotys) = dest_type cty
+          in if tycon = "fun" 
+             then MATCH_MP ISO_FUN
+                    (end_itlist CONJ (map (lift_type_bijections iths) isotys))
+             else raise ERR "lift_type_bijections"
+                      ("Unexpected type operator \""^tycon^"\"")
+          end
+ end
 
 (* ------------------------------------------------------------------------- *)
 (* Prove isomorphism of nested types where former is the smaller.            *)
 (* ------------------------------------------------------------------------- *)
 
-val T_tm = Term.mk_const{Name = "T", Ty = Type.bool};
+val T_tm = boolSyntax.T
 
 val DE_EXISTENTIALIZE_RULE = let
   val pth = prove(
@@ -1041,29 +1020,26 @@ end
 
 val grab_type = type_of o rand o lhand o snd o strip_forall;;
 
-fun clause_corresponds cl0 = let
-  val (f0,ctm0) = dest_comb (lhs cl0)
-  val c0 = fst(dest_const(fst(strip_comb ctm0)))
-  val (dty0,rty0) = dest_fun_ty (type_of f0)
-in
-  fn cl1 => let
-    val (f1,ctm1) = dest_comb (lhs cl1)
-    val c1 = fst(dest_const(fst(strip_comb ctm1)))
-    val (dty1,rty1) = dest_fun_ty (type_of f1)
-  in
-    (c0 = c1) andalso (dty0 = rty1) andalso (rty0 = dty1)
-  end
-end
+fun clause_corresponds cl0 = 
+ let val (f0,ctm0) = dest_comb (lhs cl0)
+     val c0 = fst(dest_const(fst(strip_comb ctm0)))
+     val (dty0,rty0) = dest_fun_ty (type_of f0)
+ in
+  fn cl1 => 
+     let val (f1,ctm1) = dest_comb (lhs cl1)
+         val c1 = fst(dest_const(fst(strip_comb ctm1)))
+         val (dty1,rty1) = dest_fun_ty (type_of f1)
+     in
+         (c0 = c1) andalso (dty0 = rty1) andalso (rty0 = dty1)
+     end
+ end
 
-fun jrh_inst_flip theta = map (fn (l,r) => r |-> l) theta
 fun INSTANTIATE (tmsubst, tysubst) thm = INST tmsubst (INST_TYPE tysubst thm)
 
 fun find P l =
-  case List.find P l of
-    NONE => raise HOL_ERR {origin_function = "find",
-                           origin_structure = "ind_types",
-                           message = "No element satisfying predicate"}
-  | SOME x => x
+  case List.find P l 
+   of NONE => raise ERR "find" "No element satisfying predicate"
+    | SOME x => x;
 
 
 fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
@@ -1073,22 +1049,19 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
   and (pevs1,pbod1) = strip_exists (concl sth1)
   val (pcjs0,qcjs0) = chop_list k (conjuncts pbod0)
   and (pcjs1,qcjs1) = chop_list k (snd(chop_list n (conjuncts pbod1)))
-  val tyal0 = mk_set (zip (map grab_type pcjs1) (map grab_type pcjs0))
-  val tyal1 = map (fn (a,b) => (b,a)) tyal0
-  val tyins0 = map
-   (fn f => let
-     val (domty,ranty) = dest_fun_ty (type_of f)
-   in
-     (tysubst tyal0 domty,ranty)
-   end) pevs0
-  and tyins1 = map
-   (fn f => let
-     val (domty,ranty) = dest_fun_ty (type_of f)
-   in
-     (tysubst tyal1 domty,ranty)
-   end) pevs1
-  val tth0 = Thm.INST_TYPE (jrh_inst_flip tyins0) sth0
-  and tth1 = Thm.INST_TYPE (jrh_inst_flip tyins1) sth1
+  val tyal0 = Hol88Subst.subst_of 
+               (mk_set (zip (map grab_type pcjs1) (map grab_type pcjs0)))
+  val tyal1 = map (fn {redex,residue} => {redex=residue,residue=redex}) tyal0
+  val tyins0 = map (fn f => 
+                 let val (domty,ranty) = dest_fun_ty (type_of f)
+                 in ranty |-> type_subst tyal0 domty
+                 end) pevs0
+  and tyins1 = map (fn f => 
+                let val (domty,ranty) = dest_fun_ty (type_of f)
+                in ranty |-> type_subst tyal1 domty 
+                end) pevs1
+  val tth0 = Thm.INST_TYPE tyins0 sth0
+  and tth1 = Thm.INST_TYPE tyins1 sth1
   val (evs0,bod0) = strip_exists(concl tth0)
   and (evs1,bod1) = strip_exists(concl tth1)
   val (lcjs0,rcjs0) = chop_list k (map (snd o strip_forall) (conjuncts bod0))
@@ -1156,17 +1129,14 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
   val cth2 = CONJ_ACI_CONV (mk_eq(ctm1,ctm2))
   val cth3 = TRANS cth1 cth2
   val DETRIV_RULE = TRIV_ANTE_RULE o REWRITE_RULE[sth0, sth1]
-  fun instfixup (ty,tm) = (map (fn {redex, residue} => (residue, redex)) ty,
-                           map (fn {redex, residue} => (residue, redex)) tm)
   val jth0 = let
     val itha = SPEC_ALL ith0
     val icjs = conjuncts(rand(concl itha))
-    val cinsts0 =
+    val cinsts =
       map (fn tm => tryfind (fn vtm => ho_match_term [] vtm tm) icjs)
-      (conjuncts (rand ctm2))
-    val cinsts = map instfixup cinsts0
+          (conjuncts (rand ctm2))
     val tvs = subtract (fst(strip_forall(concl ith0)))
-                (itlist (fn (x,_) => union (map snd x)) cinsts [])
+                (itlist (fn (x,_) => union (map #redex x)) cinsts [])
     val ctvs =
       map (fn p => let val x = mk_var("x",hd(snd(dest_type(type_of p))))
       in (p |-> mk_abs(x,T_tm)) end) tvs
@@ -1176,12 +1146,11 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
   and jth1 = let
     val itha = SPEC_ALL ith1
     val icjs = conjuncts(rand(concl itha))
-    val cinsts0 = map (fn tm => tryfind
+    val cinsts = map (fn tm => tryfind
                       (fn vtm => ho_match_term [] vtm tm) icjs)
                      (conjuncts (lhand ctm2))
-    val cinsts = map instfixup cinsts0
     val tvs = subtract (fst(strip_forall(concl ith1)))
-      (itlist (fn (x,_) => union (map snd x)) cinsts [])
+      (itlist (fn (x,_) => union (map #redex x)) cinsts [])
     val ctvs =
       map (fn p => let val x = mk_var("x",hd(snd(dest_type(type_of p)))) in
            (p |-> mk_abs(x,T_tm)) end) tvs
@@ -1199,19 +1168,16 @@ end
 (* Define nested type by doing a 1-level unwinding.                          *)
 (* ------------------------------------------------------------------------- *)
 
-fun SCRUB_ASSUMPTION th = let
-  val hyps = hyp th
-  val eqn =
-    find
-    (fn t => let
-      val x = lhs t
-    in
-      List.all (fn u => not (free_in x (rand u))) hyps
-    end) hyps
-  val (l,r) = dest_eq eqn
-in
-  MP (Thm.INST [l |-> r] (DISCH eqn th)) (REFL r)
-end
+fun SCRUB_ASSUMPTION th = 
+ let val hyps = hyp th
+     val eqn = find (fn t => 
+                let val x = lhs t 
+                in List.all (fn u => not (free_in x (rand u))) hyps
+                end) hyps
+       val (l,r) = dest_eq eqn
+ in
+    MP (Thm.INST [l |-> r] (DISCH eqn th)) (REFL r)
+ end
 
 val safeid_genvar = let
   val count = ref 0
@@ -1223,15 +1189,14 @@ val safeid_genvar = let
     else (count := !count + 1; nm)
   end
 in
-  fn ty => Term.mk_var{Name = vary_to_avoid_constants(), Ty = ty}
+  fn ty => Term.mk_var(vary_to_avoid_constants(), ty)
 end
 
-fun define_type_basecase def = let
-  fun add_id s = fst(dest_var(safeid_genvar Type.bool))
-  val def' = map (I ## (map (add_id ## I))) def
-in
-  define_type_mutual def'
-end
+fun define_type_basecase def = 
+  let fun add_id s = fst(dest_var(safeid_genvar Type.bool))
+      val def' = map (I ## (map (add_id ## I))) def
+  in define_type_mutual def'
+  end
 
 val SIMPLE_BETA_RULE = GSYM o SIMP_RULE bool_ss [FUN_EQ_THM];
 val ISO_USAGE_RULE = MATCH_MP ISO_USAGE;
@@ -1260,7 +1225,8 @@ fun get_nestedty_info tyname =
 
 
 
-(* JRH's package returns the list type's induction theorem as:
+(*---------------------------------------------------------------------------
+   JRH's package returns the list type's induction theorem as:
       !P. P [] /\ (!h t. P t ==> P (h::t)) ==> !l. P l
    hol90 tradition is to have induction theorems where the universal
    variables in the hypotheses are pushed as far to the right as possible, so
@@ -1277,7 +1243,8 @@ fun get_nestedty_info tyname =
    below does this too.
 
    Finally, munge_ind_thm composes the two functions.
-*)
+ ---------------------------------------------------------------------------*)
+
 local
   fun CONJUNCTS_CONV c tm =
     if is_conj tm then BINOP_CONV (CONJUNCTS_CONV c) tm else c tm
@@ -1365,52 +1332,41 @@ end
 local
   fun is_nested vs ty =
     not (is_vartype ty) andalso not (intersect (type_vars ty) vs = [])
-  fun modify_type alist ty =
-    rev_assoc ty alist
-    handle HOL_ERR _ =>
-      (let
-        val (tycon,tyargs) = dest_type ty
-      in
-         mk_type(tycon,map (modify_type alist) tyargs)
-      end handle HOL_ERR _ => ty)
-  fun modify_item alist (s,l) = (s,map (modify_type alist) l)
+  fun modify_item alist (s,l) = (s,map (type_subst alist) l)
   fun modify_clause alist (l,lis) = (l,map (modify_item alist) lis)
-  fun recover_clause id tm = let
-    val (con,args) = strip_comb tm
-  in
-    (fst(dest_const con)^id, map type_of args)
-  end
+  fun recover_clause id tm = 
+    let val (con,args) = strip_comb tm
+    in (fst(dest_const con)^id, map type_of args)
+    end
 
-  (* returns a substitution that will map elements of check_these to
-     things not in check_these or avoids0.  Won't map an element of check_these
-     away unless it is in avoids0 *)
+  (* -------------------------------------------------------------------------
+     Returns a substitution that will map elements of check_these to
+     things not in check_these or avoids0.  Won't map an element of 
+     check_these away unless it is in avoids0.
+  -------------------------------------------------------------------------- *)
+
   fun mk_thm_avoid check_these avoids0 = let
-    fun recurse cts avoids =
-      case cts of
-        [] => []
-      | (tyv1::tyvs) =>
-          if Lib.mem tyv1 avoids then let
-            val newtyv =
-              Lexis.gen_variant Lexis.tyvar_vary (check_these @ avoids) "'a"
-          in
-            (mk_vartype tyv1 |-> mk_vartype newtyv) ::
-            recurse tyvs (newtyv::avoids)
-          end
-          else
-            recurse tyvs avoids
+    fun recurse [] avoids = []
+      | recurse (tyv1::tyvs) avoids =
+         if Lib.mem tyv1 avoids 
+         then let val newtyv =
+                Lexis.gen_variant Lexis.tyvar_vary (check_these@avoids) "'a"
+              in (mk_vartype tyv1 |-> mk_vartype newtyv) 
+                 :: recurse tyvs (newtyv::avoids)
+              end
+         else recurse tyvs avoids
   in
     recurse check_these avoids0
   end
+
   fun create_auxiliary_clauses nty avoids = let
     val id = fst(dest_var(safeid_genvar Type.bool))
     val (tycon,tyargs) = dest_type nty
     val (k,ith0,rth0) =
       valOf (get_nestedty_info tycon)
       handle Option.Option =>
-        raise HOL_ERR {origin_function = "define_type_nested",
-                       origin_structure = "ind_types",
-                       message = ("Can't find definition for nested type: "^
-                                  tycon)}
+        raise ERR "define_type_nested"
+               ("Can't find definition for nested type: "^ tycon)
     val rth0_tvs = map dest_vartype (Term.type_vars_in_term (concl rth0))
     val avoid_tyal = mk_thm_avoid rth0_tvs avoids
     val rth = Thm.INST_TYPE avoid_tyal rth0
@@ -1424,109 +1380,101 @@ local
     val mtys = itlist (insert o type_of) cjs' []
     val pcons = map (fn ty => filter (fn t => type_of t = ty) cjs') mtys
     val cls' = zip mtys (map (map (recover_clause id)) pcons)
-    val tyal =
-      map (fn ty => (mk_vartype("'"^fst(dest_type ty)^id),ty)) mtys
-    val cls'' = map (modify_type tyal ## map (modify_item tyal)) cls'
+    val tyal = map (fn ty => ty |-> mk_vartype("'"^fst(dest_type ty)^id)) mtys
+    val cls'' = map (type_subst tyal ## map (modify_item tyal)) cls'
   in
     (k,tyal,cls'',Thm.INST_TYPE tyins ith, Thm.INST_TYPE tyins rth)
   end
-  fun define_type_nested def = let
-    val n = length(itlist (curry op@) (map (map fst o snd) def) [])
-    val newtys = map fst def
-    val utys = Lib.U (itlist (union o map snd o snd) def [])
-    val utyvars = type_varsl utys
-    val rectys = filter (is_nested newtys) utys
-  in
-    if rectys = [] then let
-      val (th1,th2) = define_type_basecase def
+
+  fun define_type_nested def = 
+    let val n = length(itlist (curry op@) (map (map fst o snd) def) [])
+        val newtys = map fst def
+        val utys = Lib.U (itlist (union o map snd o snd) def [])
+        val utyvars = type_varsl utys
+        val rectys = filter (is_nested newtys) utys
     in
-      (n,th1,th2)
-    end else let
-      fun compare_types (t1,t2) = if occurs_in t1 t2 then GREATER
-                                  else if occurs_in t2 t1 then LESS
-                                  else EQUAL
-      val nty = hd (Listsort.sort compare_types rectys)
-      val (k,tyal,ncls,ith,rth) =
-        create_auxiliary_clauses nty (map dest_vartype utyvars)
-      val cls = map (modify_clause tyal) def @ ncls
-      val (_,ith1,rth1) = define_type_nested cls
-      val xnewtys =
-        map (hd o snd o dest_type o type_of)
-        (fst(strip_exists(snd(strip_forall(concl rth1)))))
-      val xtyal =
-        map
-        (fn ty => let
-          val s = dest_vartype ty
-        in
-          (ty |-> find (fn t => "'"^fst(dest_type t) = s) xnewtys)
-        end) (map fst cls)
-      val ith0 = Thm.INST_TYPE xtyal ith
-      and rth0 = Thm.INST_TYPE xtyal rth
-      val (isoth,rclauses) =
-        prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1)
-      val irth3 = CONJ ith1 rth1
-      val vtylist = itlist (insert o type_of) (variables(concl irth3)) []
-      val isoths = CONJUNCTS isoth
-      val isotys =
-        map (hd o snd o dest_type o type_of o lhand o concl) isoths
-      val ctylist = filter
-        (fn ty => List.exists (fn t => occurs_in t ty) isotys) vtylist
-      val atylist = itlist (union o striplist dest_fun_ty) ctylist []
-      val isoths' = map (lift_type_bijections isoths)
-        (filter (fn ty => List.exists
-                 (fn t => occurs_in t ty) isotys) atylist)
-      val cisoths = map (BETA_RULE o lift_type_bijections isoths') ctylist
-      val uisoths = map ISO_USAGE_RULE cisoths
-      val visoths = map (ASSUME o concl) uisoths
-      val irth4 =
-        itlist PROVE_HYP uisoths (REWRITE_FUN_EQ_RULE visoths irth3)
-      val irth5 = REWRITE_RULE
-        (rclauses :: map SIMPLE_ISO_EXPAND_RULE isoths') irth4
-      val irth6 = repeat SCRUB_ASSUMPTION irth5
-      val ncjs = filter (fn t =>
-                         List.exists (not o is_var)
-                         (snd(strip_comb(rand(lhs(snd(strip_forall t)))))))
-        (conjuncts(snd(strip_exists
-                       (snd(strip_forall(rand(concl irth6)))))))
-      val id = fst(dest_var(genvar Type.bool))
-      fun mk_newcon tm = let
-        val (vs,bod) = strip_forall tm
-        val rdeb = rand(lhs bod)
-        val rdef = list_mk_abs(vs,rdeb)
-        val newname = fst(dest_var(safeid_genvar Type.bool))
-        val def = mk_eq(mk_var(newname,type_of rdef),rdef)
-        val dth = new_definition (newname, def)
+      if rectys = [] 
+      then let val (th1,th2) = define_type_basecase def
+           in (n,th1,th2)
+           end 
+      else 
+      let fun compare_types (t1,t2) = 
+            if occurs_in t1 t2 then GREATER else 
+            if occurs_in t2 t1 then LESS else EQUAL
+          val nty = hd (Listsort.sort compare_types rectys)
+          val (k,tyal,ncls,ith,rth) =
+              create_auxiliary_clauses nty (map dest_vartype utyvars)
+          val cls = map (modify_clause tyal) def @ ncls
+          val (_,ith1,rth1) = define_type_nested cls
+          val xnewtys = map (hd o snd o dest_type o type_of)
+                            (fst(strip_exists(snd(strip_forall(concl rth1)))))
+          val xtyal = map (fn ty => 
+                     let val s = dest_vartype ty
+                     in (ty |-> find(fn t => "'"^fst(dest_type t) = s) xnewtys)
+                     end) (map fst cls)
+          val ith0 = Thm.INST_TYPE xtyal ith
+          and rth0 = Thm.INST_TYPE xtyal rth
+          val (isoth,rclauses) =
+               prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1)
+          val irth3 = CONJ ith1 rth1
+          val vtylist = itlist (insert o type_of) (variables(concl irth3)) []
+          val isoths = CONJUNCTS isoth
+          val isotys = 
+              map (hd o snd o dest_type o type_of o lhand o concl) isoths
+          val ctylist = filter
+                (fn ty => List.exists (fn t => occurs_in t ty) isotys) vtylist
+          val atylist = itlist (union o striplist dest_fun_ty) ctylist []
+          val isoths' = map (lift_type_bijections isoths)
+                            (filter (fn ty => List.exists
+                                      (fn t => occurs_in t ty) isotys) atylist)
+          val cisoths = map (BETA_RULE o lift_type_bijections isoths') ctylist
+          val uisoths = map ISO_USAGE_RULE cisoths
+          val visoths = map (ASSUME o concl) uisoths
+          val irth4 =
+               itlist PROVE_HYP uisoths (REWRITE_FUN_EQ_RULE visoths irth3)
+          val irth5 = REWRITE_RULE
+                       (rclauses :: map SIMPLE_ISO_EXPAND_RULE isoths') irth4
+          val irth6 = repeat SCRUB_ASSUMPTION irth5
+          val ncjs = filter (fn t => List.exists (not o is_var)
+                             (snd(strip_comb(rand(lhs(snd(strip_forall t)))))))
+                       (conjuncts(snd(strip_exists
+                           (snd(strip_forall(rand(concl irth6)))))))
+          val id = fst(dest_var(genvar Type.bool))
+          fun mk_newcon tm = 
+           let val (vs,bod) = strip_forall tm
+               val rdeb = rand(lhs bod)
+               val rdef = list_mk_abs(vs,rdeb)
+               val newname = fst(dest_var(safeid_genvar Type.bool))
+               val def = mk_eq(mk_var(newname,type_of rdef),rdef)
+               val dth = new_definition (newname, def)
+           in
+              SIMPLE_BETA_RULE dth
+           end
+          val dths = map mk_newcon ncjs
+          val (ith6,rth6) = CONJ_PAIR(PURE_REWRITE_RULE dths irth6)
       in
-        SIMPLE_BETA_RULE dth
+        (n,ith6,rth6)
       end
-      val dths = map mk_newcon ncjs
-      val (ith6,rth6) = CONJ_PAIR(PURE_REWRITE_RULE dths irth6)
-    in
-      (n,ith6,rth6)
     end
-  end
 in
-  val define_type_nested = fn def => let
-    val newtys = map fst def
-    val truecons = itlist (curry op@) (map (map fst o snd) def) []
-    val (p,ith0,rth0) = define_type_nested def
-    val (avs,etm) = strip_forall(concl rth0)
-    val allcls = conjuncts(snd(strip_exists etm))
-    val relcls = fst(chop_list (length truecons) allcls)
-    val gencons =
-      map (repeat rator o rand o lhand o snd o strip_forall) relcls
-    val cdefs =
-      map2 (fn s => fn r =>
-            SYM(new_definition (s, mk_eq(mk_var(s,type_of r),r))))
-      truecons gencons
-    val tavs = make_args "f" [] (map type_of avs)
-    val ith1 = SUBS cdefs ith0
-    and rth1 = GENL tavs (SUBS cdefs (SPECL tavs rth0))
-    val retval = (p,ith1,rth1)
+val define_type_nested = fn def => 
+ let val newtys = map fst def
+     val truecons = itlist (curry op@) (map (map fst o snd) def) []
+     val (p,ith0,rth0) = define_type_nested def
+     val (avs,etm) = strip_forall(concl rth0)
+     val allcls = conjuncts(snd(strip_exists etm))
+     val relcls = fst(chop_list (length truecons) allcls)
+     val gencons = map(repeat rator o rand o lhand o snd o strip_forall) relcls
+     val cdefs = map2 (fn s => fn r =>
+                        SYM(new_definition (s, mk_eq(mk_var(s,type_of r),r))))
+                      truecons gencons
+     val tavs = make_args "f" [] (map type_of avs)
+     val ith1 = SUBS cdefs ith0
+     and rth1 = GENL tavs (SUBS cdefs (SPECL tavs rth0))
+     val retval = (p,ith1,rth1)
   in
     {induction = munge_ind_thm ith1,
      recursion = canonicalise_tyvars def rth1}
-(*     (fn (a,b,c) => (munge_ind_thm b, canonicalise_tyvars def c)) retval *)
   end
 end
 
