@@ -8,7 +8,8 @@
 structure Cond_rewrite :> Cond_rewrite =
 struct
 
-open HolKernel Drule Conv Tactic Tactical Thm_cont Rewrite;
+open HolKernel Drule Conv Tactic Tactical Thm_cont Rewrite
+open boolSyntax Rsyntax
 infix ## THEN THENL ORELSEC;
 
  type hol_type = Type.hol_type;
@@ -112,7 +113,7 @@ fun var_cap th fv sv newvs =
 fun MATCH_SUBS1 th fvs asm (m1:((term,term)subst * (hol_type,hol_type)subst)) =
     let fun afilter l fvs =
     	   mapfilter (fn (a,a') =>
-                          if null(intersect fvs (frees a)) 
+                          if null(intersect fvs (frees a))
     	                  then raise COND_REWR_ERR{function="MATCH_SUBS1",
                                                    message=""}
                           else a') l
@@ -127,7 +128,7 @@ fun MATCH_SUBS1 th fvs asm (m1:((term,term)subst * (hol_type,hol_type)subst)) =
     then (*not free vars *)
     	((subtract antes' (intersect antes' asm)), (UNDISCH_ALL thm2))
     else
-       (let val rlist = match_asm nv asm ([],[]) 
+       (let val rlist = match_asm nv asm ([],[])
     	    (afilter (combine(antes, antes')) nv)
     	val thm3 = UNDISCH_ALL (INST (fst rlist) thm2)
     	val new_antes = hyp thm3
@@ -169,7 +170,7 @@ fun MATCH_SUBS th fvs asm mlist =
 (* of Pk and instantiate the y's using these matches.			 *)
 (* --------------------------------------------------------------------- *)
 
-fun COND_REWR_TAC f th = 
+fun COND_REWR_TAC f th =
   (fn (asm,gl) =>
     (let val (vars,body) = strip_forall (concl th)
     	val (antes,eqn) = strip_imp body
@@ -253,14 +254,14 @@ val COND_REWRITE1_TAC:thm_tactic = fn  th =>
 (* instance(s) are used in a REWRITE_CONV to produce the final theorem.  *)
 (* --------------------------------------------------------------------- *)
 
-fun COND_REWR_CONV f th = (fn tm => 
+fun COND_REWR_CONV f th = (fn tm =>
     let val (vars,b) = strip_forall (concl th)
     val tm1 = lhs(snd(strip_imp b))
     val ilist = f tm1 tm
     in
     if (null ilist)
     then raise COND_REWR_ERR{function="COND_REWR_CONV", message="no match"}
-    else  let val thm1 = SPEC_ALL th 
+    else  let val thm1 = SPEC_ALL th
     	  val rlist = map (fn l => UNDISCH_ALL(INST_TY_TERM l thm1)) ilist
           in
     	    REWRITE_CONV rlist tm

@@ -1,6 +1,6 @@
 (* =====================================================================
-    FILE: mk_res_quan.ml	    DATE: 1 Aug 92	
-    BY: Wai Wong		
+    FILE: mk_res_quan.ml	    DATE: 1 Aug 92
+    BY: Wai Wong
 
     Create the theory res_quan containing all theorems about
     restricted quantifiers.
@@ -151,7 +151,7 @@ structure res_quanScript =
 struct
 
 
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib;
 
 val _ = new_theory"res_quan";
 

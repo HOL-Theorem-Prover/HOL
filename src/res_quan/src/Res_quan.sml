@@ -10,7 +10,8 @@ structure Res_quan :> Res_quan =
 struct
 
 
-open HolKernel Drule Conv Tactic Tactical Resolve Thm_cont Rewrite;
+open HolKernel Drule Conv Tactic Tactical Thm_cont Rewrite;
+open boolSyntax
 infix ## THEN THENL THENC;
 infixr -->;
 
@@ -38,7 +39,7 @@ val (mk_resq_forall,mk_resq_exists,mk_resq_select,mk_resq_abstract) =
       let val xty = type_of x
           val t2_ty = type_of t2
           val ty = (xty --> Type.bool) --> (xty --> t2_ty)
-                    --> 
+                    -->
                    (if cons="RES_ABSTRACT" then (xty --> t2_ty) else
                     if cons="RES_SELECT"   then xty else Type.bool)
         in
@@ -572,7 +573,7 @@ fun check_varstruct tm =
   if is_var tm
   then [tm]
   else
-   let val {fst=t1,snd=t2} = dest_pair tm
+   let val (t1,t2) = pairSyntax.dest_pair tm
                handle _ => raise RES_QUAN_ERR {function="check_varstruct",
                                                message = "bad varstruct"}
 
