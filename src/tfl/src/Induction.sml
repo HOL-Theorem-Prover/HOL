@@ -1,7 +1,9 @@
 structure Induction :> Induction =
 struct
 
-open HolKernel boolLib Rules wfrecUtils;
+open HolKernel
+
+open boolLib Rules wfrecUtils;
 
 type thry = TypeBase.typeBase
 
@@ -13,10 +15,9 @@ val ERR = mk_HOL_ERR "Induction";
 
 
 fun induct_info db s =
-case TypeBase.get db s
- of SOME facts => SOME{nchotomy = TypeBase.nchotomy_of facts,
-                       constructors = TypeBase.constructors_of facts}
-  | NONE => NONE
+ Option.map (fn facts => {nchotomy = TypeBase.nchotomy_of facts,
+                          constructors = TypeBase.constructors_of facts})
+      (TypeBase.get db s);
 
 (* -----------------------  Miscellaneous function  --------------------------
  *
@@ -352,3 +353,4 @@ fun type_cases thy =
 *)
 
 end;
+
