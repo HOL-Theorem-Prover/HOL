@@ -23,7 +23,7 @@ open Systeml;
 val HOLDIR0 = Systeml.HOLDIR;
 val MOSMLDIR0 = Systeml.MOSMLDIR;
 val DEPDIR = ".HOLMK";
-val DEFAULT_OVERLAY = SOME "Overlay.ui";
+val DEFAULT_OVERLAY = "Overlay.ui";
 
 val SYSTEML = Systeml.systeml
 
@@ -139,27 +139,27 @@ fun parse_command_line list = let
       end
   end
 
-  val (rem0, includes) = find_pairs "-I" list
-  val (rem1, dontmakes) = find_pairs "-d" rem0
-  val (rem2, debug) = find_toggle "--debug" rem1
-  val (rem3, help) = find_alternative_tags  ["--help", "-h"] rem2
-  val rem4 = rem3
-  val (rem5, rebuild_deps) = find_alternative_tags ["--rebuild_deps","-r"] rem4
-  val (rem6, cmdl_HOLDIRs) = find_pairs "--holdir" rem5
-  val (rem7, no_sigobj) = find_alternative_tags ["--no_sigobj", "-n"] rem6
-  val (rem8, allfast) = find_toggle "--fast" rem7
-  val (rem9, fastfiles) = find_pairs "-f" rem8
-  val (rem10, qofp) = find_toggle "--qof" rem9
-  val (rem11, no_hmakefile) = find_toggle "--no_holmakefile" rem10
-  val (rem12, user_hmakefile) =
-    find_one_pairtag "--holmakefile" NONE SOME rem11
-  val (rem13, no_overlay) = find_toggle "--no_overlay" rem12
-  val (rem14, user_overlay) = find_one_pairtag "--overlay" NONE SOME rem13
-  val (rem15, cmdl_MOSMLDIRs) = find_pairs "--mosmldir" rem14
-  val (rem16, interactive_flag) = find_alternative_tags ["--interactive", "-i"]
-                                                        rem15
+  val (rem, includes) = find_pairs "-I" list
+  val (rem, dontmakes) = find_pairs "-d" rem
+  val (rem, debug) = find_toggle "--debug" rem
+  val (rem, help) = find_alternative_tags  ["--help", "-h"] rem
+  val (rem, rebuild_deps) = find_alternative_tags ["--rebuild_deps","-r"] rem
+  val (rem, cmdl_HOLDIRs) = find_pairs "--holdir" rem
+  val (rem, no_sigobj) = find_alternative_tags ["--no_sigobj", "-n"] rem
+  val (rem, allfast) = find_toggle "--fast" rem
+  val (rem, fastfiles) = find_pairs "-f" rem
+  val (rem, qofp) = find_toggle "--qof" rem
+  val (rem, no_hmakefile) = find_toggle "--no_holmakefile" rem
+  val (rem, user_hmakefile) =
+    find_one_pairtag "--holmakefile" NONE SOME rem
+  val (rem, no_overlay) = find_toggle "--no_overlay" rem
+  val (rem, user_overlay) = find_one_pairtag "--overlay" NONE SOME rem
+  val (rem, cmdl_MOSMLDIRs) = find_pairs "--mosmldir" rem
+  val (rem, interactive_flag) = find_alternative_tags ["--interactive", "-i"]
+                                rem
+  val (rem, keep_going_flag) = find_alternative_tags ["-k", "--keep-going"] rem
 in
-  {targets=rem16, debug=debug, show_usage=help,
+  {targets=rem, debug=debug, show_usage=help,
    always_rebuild_deps=rebuild_deps,
    additional_includes=includes,
    dontmakes=dontmakes, no_sigobj = no_sigobj,
@@ -186,7 +186,8 @@ in
        in
          warn "Ignoring all but last --mosmldir spec.\n";
          SOME (List.last cmdl_MOSMLDIRs)
-       end}
+       end,
+   keep_going_flag = keep_going_flag}
 end
 
 
@@ -197,10 +198,10 @@ val {targets, debug, dontmakes, show_usage, allfast, fastfiles,
      cmdl_HOLDIR, cmdl_MOSMLDIR,
      no_sigobj = cline_no_sigobj,
      quit_on_failure, no_hmakefile, user_hmakefile, no_overlay,
-     user_overlay} =
+     user_overlay, keep_going_flag} =
   parse_command_line (CommandLine.arguments())
 
-(* find HOLDIR and MOSMLDIR by first looking at command-line, then looking 
+(* find HOLDIR and MOSMLDIR by first looking at command-line, then looking
    for a value compiled into the code.
 *)
 val HOLDIR    = case cmdl_HOLDIR of NONE => HOLDIR0 | SOME s => s
@@ -241,55 +242,94 @@ val hmakefile =
       if FileSys.access(s, [FileSys.A_READ]) then s
       else die_with ("Couldn't read/find makefile: "^s)
 
-val hmakefile_doc =
+fun base_environment s = let
+  open Holmake_types
+  val p = Systeml.protect
+in
+  case s of
+    "HOLDIR" => [LIT (p HOLDIR)]
+  | "SIGOBJ" => [VREF "HOLDIR", LIT "/sigobj"]
+  | "MOSMLDIR" => [LIT (p MOSMLDIR)]
+  | "MOSMLCOMP" => [VREF "MOSMLDIR", LIT "/bin/mosmlc"]
+  | "MOSMLLEX" => [VREF "MOSMLDIR", LIT "/bin/mosmllex"]
+  | "MOSMLYAC" => [VREF "MOSMLDIR", LIT "/bin/mosmlyac"]
+  | "UNQUOTE" => [VREF "HOLDIR", LIT (xable_string "/bin/unquote")]
+  | _ => (case Process.getEnv s of
+            NONE => [LIT ""]
+          | SOME v => [LIT v])
+end
+
+val hmakefile_toks =
   if FileSys.access(hmakefile, [FileSys.A_READ]) andalso not no_hmakefile
-  then
-    (if debug then
-       print ("Reading additional information from "^hmakefile^"\n")
-     else ();
-     Holmake_rules.parse_from_file hmakefile)
-  else Holmake_types.empty_doc
+  then let
+      open Holmake_types
+      fun createLexerStream is =
+          Lexing.createLexer
+            (fn buff => fn n => Nonstdio.buff_input is buff 0 n)
+      val strm = BasicIO.open_in hmakefile
+      val lbf = createLexerStream strm
+      val tok = Holmake_tokens.token
+      fun recurse acc =
+          case tok lbf of
+            EOF => List.rev acc
+          | t => recurse (to_token t::acc)
+      val () = if debug then
+                print ("Reading additional information from "^hmakefile^"\n")
+              else ()
+    in
+      recurse []
+    end
+  else []
 
-fun environment s =
-    case s of
-      "HOLDIR" => HOLDIR
-    | "SIGOBJ" => Path.concat(HOLDIR, "sigobj")
-    | _ => raise Fail ("Unknown makefile variable "^s)
-fun interpret id = id environment
-val interpret_list = map interpret
+val hmakefile_env0 = Holmake_types.extend_env hmakefile_toks base_environment
 
-val hmake_prelims = #preliminaries hmakefile_doc
-val hmake_includes = interpret_list (#includes hmake_prelims)
-val hmake_options = interpret_list (#options hmake_prelims)
+
+fun envlist id = let
+  open Holmake_types
+in
+  map dequote (tokenize (perform_substitution hmakefile_env0 [VREF id]))
+end
+
+val hmake_includes = envlist "INCLUDES"
+val hmake_options = envlist "OPTIONS"
 val additional_includes =
   includify (remove_duplicates (cline_additional_includes @ hmake_includes))
 
-val hmake_preincludes =
-    includify (interpret_list (#pre_includes hmake_prelims))
+val hmake_preincludes = includify (envlist "PRE_INCLUDES")
 val hmake_no_overlay = member "NO_OVERLAY" hmake_options
 val hmake_no_sigobj = member "NO_SIGOBJ" hmake_options
-val extra_cleans = interpret_list (#extra_cleans hmake_prelims)
+val extra_cleans = envlist "EXTRA_CLEANS"
 
 val actual_overlay =
   if no_overlay orelse hmake_no_overlay then NONE
   else
     case user_overlay of
-      NONE => DEFAULT_OVERLAY
-    | SOME s => let
-      in
-        case DEFAULT_OVERLAY of
-          NONE =>
-            die_with "Can't use overlays with this version of HOL."
-        | SOME _ => user_overlay
-      end
+      NONE => SOME DEFAULT_OVERLAY
+    | SOME _ => user_overlay
 
+val no_sigobj = cline_no_sigobj orelse hmake_no_sigobj
+val std_include_flags = if no_sigobj then [] else ["-I", SIGOBJ]
 
+val hmakefile_env = let
+  open Holmake_types
+  val addincludes = spacify (map Systeml.protect additional_includes)
+  val stdincludes =
+      spacify (map Systeml.protect (hmake_preincludes @ std_include_flags)) ^
+      " " ^ addincludes
+in
+  (fn s =>
+      case s of
+        "HOLMOSMLC" => [VREF "MOSMLCOMP", LIT (" -q "^stdincludes)]
+      | "HOLMOSMLC-C" => let
+          val overlaystring = case actual_overlay of NONE => "" | SOME s => s
+        in
+          [VREF "MOSMLCOMP", LIT (" -q "^stdincludes^" -c "^overlaystring)]
+        end
+      | "MOSMLC" => [VREF "MOSMLCOMP", LIT (" "^addincludes)]
+      | _ => hmakefile_env0 s)
+end
 
-fun interpret_rule {commands, dependencies, target} =
-    {commands = map interpret_list commands,
-     dependencies = interpret_list dependencies,
-     target = interpret target}
-val extra_rules = map interpret_rule (#rules hmakefile_doc)
+val extra_rules = Holmake_types.mk_rules hmakefile_toks hmakefile_env
 
 fun extra_deps t =
   Option.map #dependencies (List.find (fn r => #target r = t) extra_rules)
@@ -299,41 +339,43 @@ fun extra_commands t =
 
 val extra_targets = map #target extra_rules
 
-val no_sigobj = cline_no_sigobj orelse hmake_no_sigobj
-val std_include_flags = if no_sigobj then [] else ["-I", SIGOBJ]
-
-fun run_extra_command c =
-  case c of
-    [] => (* empty command; do nothing *) Process.success
-  | (w0 :: ws) => let
-      (* w0 subject to substitution *)
-      (* idea for future : allow for special form of quotation around a
-         file-name in ws to indicate that it should have the dq munging
-         done on it *)
-      val w_list =
-        case w0 of
-          "HOLMOSMLC" =>
-            MOSMLCOMP :: "-q" :: (hmake_preincludes @ std_include_flags @
-                                  additional_includes)
-        | "HOLMOSMLC-C" => let
-            val overlay_stringl =
-              case actual_overlay of
-                NONE => []
-              | SOME s => [s]
-          in
-            MOSMLCOMP :: "-q" :: (hmake_preincludes @ std_include_flags @
-                                  additional_includes @ ["-c"] @
-                                  overlay_stringl)
-          end
-        | "MOSMLC" => MOSMLCOMP :: additional_includes
-        | "MOSMLLEX" => [fullPath [MOSMLDIR, "bin/mosmllex"]]
-        | "MOSMLYAC" => [fullPath [MOSMLDIR, "bin/mosmlyac"]]
-        | _ => [w0]
-    in
-      TextIO.output(TextIO.stdOut, spacify c ^ "\n");
-      TextIO.flushOut TextIO.stdOut;
-      SYSTEML (w_list @ ws)
-    end
+fun run_extra_command c = let
+  open Holmake_types
+  fun vref_ify cmd s =
+      if String.isPrefix cmd s then let
+          val rest = String.extract(s, size cmd, NONE)
+          val cmdq = perform_substitution hmakefile_env [VREF cmd]
+        in
+          SOME (cmdq ^ rest)
+        end
+      else NONE
+  fun dovrefs cmds s =
+      case cmds of
+        [] => s
+      | (c::cs) => (case vref_ify c s of NONE => dovrefs cs s | SOME s => s)
+  (* make sure that cmds is in order of decreasing length so that
+     we don't substitute for "foo", when we should be substituting for
+     "foobar" *)
+  val c = dovrefs ["HOLMOSMLC-C", "HOLMOSMLC", "MOSMLC", "MOSMLLEX",
+                   "MOSMLYAC"] c
+  val (echo_command, c) =
+      if size c > 0 andalso String.sub(c, 0) = #"@" then
+        (false, String.extract(c, 1, NONE))
+      else (true, c)
+  val (ignore_error, c) =
+      if echo_command andalso size c > 0 andalso String.sub(c, 0) = #"-" then
+        (true, String.extract(c, 1, NONE))
+      else (false, c)
+  val () =
+      if echo_command then (TextIO.output(TextIO.stdOut, c ^ "\n");
+                            TextIO.flushOut TextIO.stdOut)
+      else ()
+  val result = Process.system c
+in
+  if result <> Process.success andalso ignore_error then
+    Process.success
+  else result
+end
 
 
 fun run_extra_commands tgt commands =
@@ -494,7 +536,7 @@ fun primary_dependent f =
       UO c => SOME (SML c)
     | UI c => SOME (SIG c)
     | SML (Theory s) => SOME (SML (Script s))
-    | SIG (Theory s) => SOME (SML (Theory s))
+    | SIG (Theory s) => SOME (SML (Script s))
     | _ => NONE
 
 (*** Construction of secondary dependencies *)
@@ -743,6 +785,7 @@ fun variant str =  (* get an unused file name in the current directory *)
 
 
 (*** Compilation of files *)
+val failed_script_cache = ref (Binaryset.empty String.compare)
 
 fun build_command c arg = let
   val include_flags = hmake_preincludes @ std_include_flags @
@@ -762,7 +805,7 @@ in
          open Process
          val res =
           if has_unquoter()
-            (* force to always use unquoter if present, so as to generate 
+            (* force to always use unquoter if present, so as to generate
                location pragmas. Must test for existence, for bootstrapping.
                Was: has_dq (normPath file) (* handle double-backquotes *) *)
           then let val clone = variant file
@@ -788,6 +831,9 @@ in
         res = success
      end
   | BuildScript s => let
+      val _ = not (Binaryset.member(!failed_script_cache, s)) orelse
+              (print ("Not re-running "^s^"Script; believe it will fail\n");
+               raise CompileFailed)
       val scriptsml_file = SML (Script s)
       val scriptsml = fromFile scriptsml_file
       val script   = s^"Script"
@@ -819,6 +865,10 @@ in
           [thysmlfile, thysigfile]
         val res2    = Systeml.systeml [fullPath [FileSys.getDir(), script']]
         val _       = app FileSys.remove [script', scriptuo, scriptui]
+        val ()      = if res2 <> success then
+                        failed_script_cache :=
+                        Binaryset.add(!failed_script_cache, s)
+                      else ()
       in
         (res2 = success) andalso
         (FileSys.access(thysmlfile, [FileSys.A_READ]) orelse
@@ -845,9 +895,7 @@ fun do_a_build_command target pdep secondaries =
          UO c           => build_command MOSMLC pdep
        | UI c           => build_command MOSMLC pdep
        | SML (Theory s) => build_command (BuildScript s) pdep
-       | SIG (Theory s) => true (* because building our primary dependent,
-                                   the Theory.sml file, will have built us too
-                                *)
+       | SIG (Theory s) => build_command (BuildScript s) pdep
        | x => raise Fail "Can't happen"
                     (* can't happen because do_a_build_command is only
                        called on targets that have primary_dependents,
@@ -934,9 +982,10 @@ in
           else if List.all (make_up_to_date false (target::ctxt))
                            secondaries
           then
-            if List.exists
-               (fn dep => (fromFile dep) forces_update_of (fromFile target))
-               secondaries
+            if not (FileSys.access(tgt_str, [FileSys.A_READ])) orelse
+               List.exists
+                 (fn dep => (fromFile dep) forces_update_of (fromFile target))
+                 secondaries
             then
               case extra_commands (fromFile target) of
                 (* NONE is impossible because for something to have
@@ -1058,7 +1107,21 @@ in
 end
 
 
-fun deal_with_targets list =
+fun deal_with_targets list = let
+  fun stop_on_failure tgts =
+      case tgts of
+        [] => true
+      | (t::ts) => if do_target t then stop_on_failure ts else false
+  fun keep_going tgts = let
+    fun recurse acc tgts =
+        case tgts of
+          [] => acc
+        | (t::ts) => recurse (do_target t andalso acc) tgts
+  in
+    recurse true tgts
+  end
+  val strategy = if keep_going_flag then keep_going else stop_on_failure
+in
   case list of
     [] => let
       val targets = generate_all_plausible_targets ()
@@ -1067,9 +1130,10 @@ fun deal_with_targets list =
         print("Generated targets are: "^print_list (map fromFile targets)^"\n")
         else ()
     in
-      alltrue (map (do_target o fromFile) targets)
+      strategy  (map (fromFile) targets)
     end
-  | x =>  alltrue (map do_target x)
+  | x =>  strategy x
+end
 
 
 val _ =
@@ -1090,6 +1154,7 @@ val _ =
      "    --holdir <directory> : use specified directory as HOL root\n",
      "    --holmakefile <file> : use file as Holmakefile\n",
      "    --interactive | -i   : run HOL with \"interactive\" flag set\n",
+     "    --keep-going | -k    : don't stop on failure\n",
      "    --mosmldir directory : use specified directory as MoscowML root\n",
      "    --no_holmakefile     : don't use any Holmakefile\n",
      "    --no_overlay         : don't use an overlay file\n",

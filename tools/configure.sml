@@ -201,15 +201,10 @@ val _ =
     systeml [compiler, "-c", "Parser.sml"];
     systeml [compiler, "-c", "Lexer.sml" ];
     systeml [compiler, "-c", "Holdep.sml"];
-    systeml [yaccer, "Holmake_parse.grm"];
     systeml [lexer, "Holmake_tokens.lex"];
     systeml [compiler, "-c", "Holmake_types.sig"];
     systeml [compiler, "-c", "Holmake_types.sml"];
-    systeml [compiler, "-c", "Holmake_parse.sig"];
-    systeml [compiler, "-c", "Holmake_parse.sml"];
     systeml [compiler, "-c", "Holmake_tokens.sml"];
-    systeml [compiler, "-c", "Holmake_rules.sig"];
-    systeml [compiler, "-c", "Holmake_rules.sml"];
     if OS <> "winNT" then
       systeml [compiler, "-standalone", "-o", bin, "Holmake.sml"]
     else

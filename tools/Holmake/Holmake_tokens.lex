@@ -1,45 +1,46 @@
 (* tokens for Holmakefiles *)
 {
-  fun fromEscapedString s = let
-    fun munge [] = []
-      | munge [#"\\"] = raise Fail "no trailing backslashes"
-      | munge [c] = [c]
-      | munge (#"\\"::c::cs) = c :: munge cs
-      | munge (c::cs) = c :: munge cs
-  in
-    String.implode (munge (String.explode s))
-  end
-  open Holmake_parse
+  open Holmake_types
 }
 
 let newline = "\r\n" | `\n` | `\r`
-let whitespace = `\r` | `\t` | `\n` | ` `
+let whitespace = `\r` | `\t` | `\n` | ` ` | "\\" newline
+let nonlws = ([` ` `\t`]|"\\" newline)* (* no newline whitespace *)
 let alpha = [ `A` - `Z`  `a` - `z` ]
 let number = [`0` - `9`]
+let cmdtext = ([^ `\n` `\r` `\\`] | "\\"  _)* (newline | eof)
+let rulebody = `\t` cmdtext
+let ident = (alpha | number | `_` ) +
+let comment = `#` cmdtext
+(* text where comments possible, but not including the comments *)
+let composs_text = ([^ `\n` `#` `\\`] | "\\" _ | "\\#")* `\\`?
+(* text that actually includes comments, allowing for later processing to
+   remove them *)
+let include_com_text =
+   ([^ `\n` `\r` `#` `\\`] | "\\" _ )* (comment|newline|eof)
+let nonspec_char = ([^ `\n` `\r` `:` `#` `\\`] | `\\` _)
+
 rule token =
-  parse `:` { COLON }
-      | `=` { EQUALS }
-      | `\t` { TAB }
-      | "INCLUDES" { INCLUDES }
-      | "PRE_INCLUDES" { PRE_INCLUDES }
-      | "OPTIONS"  { OPTIONS }
-      | "EXTRA_CLEANS" { EXTRA_CLEANS }
-      | (`\\` newline | ` ` | "\\\t" ) + { WS }
-      | newline { NEWLINE }
-      | `#`    { comment lexbuf; token lexbuf }
-      | "$(" alpha (alpha | number) * `)` {
-           let val lb = Lexing.getLexeme lexbuf in
-             VARREF (String.extract(lb, 2, SOME (String.size lb - 3)))
-           end
-        }
-      | ([^ `\\` `\r` `\t` `\n` ` ` `#` `:` `=` `$`] | (`\\` _))+ {
-            ID (fromEscapedString (Lexing.getLexeme lexbuf))
-        }
-      | eof { EOF }
-      | _ { raise Fail ("Unexpected character "^Lexing.getLexeme lexbuf) }
-and comment =
-  parse newline { () }
-      | _ { comment lexbuf }
+  parse
+    whitespace + { token lexbuf }
+  | comment { token lexbuf }
+  | ident nonlws `=` composs_text  {
+      DEFN (Lexing.getLexeme lexbuf)
+    }
+  | [^ `\n` `\r` ] * [^ `\\` ] `=` {
+      raise Fail ("Bad LHS for variable definition: "^Lexing.getLexeme lexbuf)
+    }
+  | `=` {
+      raise Fail ("Bad LHS for variable definition: "^Lexing.getLexeme lexbuf)
+    }
+  | nonspec_char+ `:` include_com_text rulebody*
+    {
+      RULE (Lexing.getLexeme lexbuf)
+    }
+  | `:` { raise Fail "Rule with no targets" }
+  | nonspec_char+ { raise Fail ("Bogus rule start: "^Lexing.getLexeme lexbuf) }
+  | eof { EOF }
+  | _ { raise Fail ("Didn't expect to see: "^Lexing.getLexeme lexbuf) }
 
 ;
 

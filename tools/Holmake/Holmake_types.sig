@@ -1,16 +1,24 @@
-type id = (string -> string) -> string
+datatype pretoken = DEFN of string | RULE of string | EOF
 
-type rule = {target : id, dependencies : id list,
-             commands : id list list}
+datatype frag = LIT of string | VREF of string
+type quotation = frag list
 
-type preliminary = {includes : id list, pre_includes : id list,
-                    options : id list, extra_cleans : id list}
+datatype token = HM_defn of string * quotation
+               | HM_rule of { targets : quotation, dependencies : quotation,
+                              commands : quotation list }
 
-type doc = {rules : rule list,
-            preliminaries : preliminary }
+type env = string -> quotation
 
+val to_token : pretoken -> token
 
-val empty_doc : doc
-val empty_preliminary : preliminary
+val perform_substitution : env -> quotation -> string
 
-val merge_prelims : preliminary -> preliminary -> preliminary
+val extend_env : token list -> env -> env
+val empty_env : env
+
+val tokenize : string -> string list
+val dequote : string -> string
+
+val mk_rules : token list -> env ->
+               { target : string, dependencies : string list,
+                 commands : string list} list
