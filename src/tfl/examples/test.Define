@@ -570,8 +570,8 @@ val ltree_map_o = Q.prove(
 `!g t f. ltree_map f (ltree_map g t) = ltree_map (f o g) t`,
 recInduct ltree_map_ind
   THEN RW_TAC std_ss [ltree_map_eqn]
-  THENL [RW_TAC std_ss [combinTheory.o_DEF],
-         Induct_on `tl` THEN ZAP_TAC list_ss [listTheory.MEM]]);
+  THEN Induct_on `tl` 
+  THEN ZAP_TAC list_ss [listTheory.MEM]);
 
 val ltree_occurs_def =
  Hol_defn "ltree_occurs"
