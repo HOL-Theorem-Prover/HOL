@@ -1327,37 +1327,46 @@ fun OKform case_def =
      check (zip opvars rhs_heads)
   end
 
-
 fun case_cong_thm nchotomy case_def =
- let val _ = assert OKform case_def
+ let open Psyntax
+     val _ = assert OKform case_def
+     val clause1 =
+       let val c = concl case_def in fst(dest_conj c) handle HOL_ERR _ => c end
+     val V = butlast (snd (strip_comb (lhs (#2 (strip_forall clause1)))))
      val gl = case_cong_term case_def
-     val {ant,conseq} = dest_imp gl
+     val (ant,conseq) = dest_imp gl
      val imps = CONJUNCTS (ASSUME ant)
      val M_eq_M' = hd imps
-     val {lhs=M, rhs=M'} = dest_eq (concl M_eq_M')
-     fun get_asm tm = (#ant o dest_imp o #2 o strip_forall) tm handle _ => tm
+     val (M, M') = dest_eq (concl M_eq_M')
+     fun get_asm tm = (fst o dest_imp o #2 o strip_forall) tm handle _ => tm
      val case_assms = map (ASSUME o get_asm o concl) imps
-     val {lhs=lconseq, rhs=rconseq} = dest_eq conseq
-     val lconseq_thm = SUBST_CONV[M |-> M_eq_M'] lconseq lconseq
+     val (lconseq, rconseq) = dest_eq conseq
+     val lconseq_thm = SUBST_CONV [M |-> M_eq_M'] lconseq lconseq
      val lconseqM' = rhs(concl lconseq_thm)
      val nchotomy' = ISPEC M' nchotomy
      val disjrl = map ((I##rhs) o strip_exists)	(strip_disj (concl nchotomy'))
-     fun zot icase_thm (iimp,(vlist,disjrhs)) =
-       let val lth = Rewrite.REWRITE_CONV[icase_thm, case_def] lconseqM'
-           val rth = Rewrite.REWRITE_CONV[icase_thm, case_def] rconseq
+     val V' = butlast(snd(strip_comb rconseq))
+     val theta = map2 (fn v => fn v' => {redex=v,residue=v'}) V V'
+     fun zot (p as (icase_thm, case_def_clause)) (iimp,(vlist,disjrhs)) =
+       let val lth = TRANS (AP_TERM(rator lconseqM') icase_thm) case_def_clause
+           val rth = TRANS (AP_TERM(rator rconseq) icase_thm)
+                           (INST theta case_def_clause)
            val theta = Term.match_term disjrhs
-                     ((rhs o #ant o dest_imp o #2 o strip_forall o concl) iimp)
+                     ((rhs o fst o dest_imp o #2 o strip_forall o concl) iimp)
            val th = MATCH_MP iimp icase_thm
            val th1 = TRANS lth th
        in (TRANS th1 (SYM rth), (vlist, #1 theta))
        end
-     val thm_substs = map2 zot (Lib.trye tl case_assms)
-                               (zip (Lib.trye tl imps) disjrl)
+     val thm_substs = map2 zot
+                       (zip (Lib.trye tl case_assms)
+                            (map SPEC_ALL (CONJUNCTS case_def)))
+                       (zip (Lib.trye tl imps) disjrl)
      val aag = map (TRANS lconseq_thm o EQ_EXISTS_LINTRO) thm_substs
  in
-   GEN_ALL (DISCH_ALL (DISJ_CASESL nchotomy' aag))
+   GENL (M::M'::V) (DISCH_ALL (DISJ_CASESL nchotomy' aag))
  end
  handle HOL_ERR _ => raise ERR "case_cong_thm" "construction failed";
+
 
 
 (* The standard versions of these (in Conv) check that the term being

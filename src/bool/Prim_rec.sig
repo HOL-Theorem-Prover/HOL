@@ -12,9 +12,7 @@
 signature Prim_rec =
 sig
 
-   type term = Term.term
-   type thm  = Thm.thm
-   type tactic = Abbrev.tactic
+   include Abbrev
 
    (*-----------------------------------------------------------------------
        Returns the types defined by an axiom. Does not return type 
@@ -23,7 +21,7 @@ sig
        the operator must already have an axiom elsewhere.
     ------------------------------------------------------------------------*)
 
-   val doms_of_tyaxiom : thm -> Type.hol_type list
+   val doms_of_tyaxiom : thm -> hol_type list
 
    (*------------------------------------------------------------------------
       Given a type axiom and the type name, returns the constructors
