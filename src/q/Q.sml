@@ -260,17 +260,20 @@ end
 val INST_TYPE = Thm.INST_TYPE o mk_type_rsubst;
 
 
-(*---------------------------------------------------------------------------
- * A couple from jrh.
- *---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    Abbreviation tactics
+
+   ---------------------------------------------------------------------- *)
+
+fun ABB l r =
+    CHOOSE_THEN (fn th => SUBST_ALL_TAC th THEN ASSUME_TAC th)
+                (Thm.EXISTS(mk_exists(l, mk_eq(r, l)), r) (Thm.REFL r))
 
 fun ABBREV_TAC q (g as (asl,w)) =
  let val ctxt = free_varsl(w::asl)
      val (lhs,rhs) = dest_eq (Parse.parse_in_context ctxt q)
  in
-    CHOOSE_THEN (fn th => SUBST_ALL_TAC th THEN ASSUME_TAC th)
-    (Thm.EXISTS (mk_exists(lhs, mk_eq(rhs,lhs)),rhs) (Thm.REFL rhs))
-    g
+    ABB lhs rhs g
  end;
 
 fun UNABBREV_TAC [QUOTE s] = let val s' = Lib.deinitcomment s in
@@ -279,19 +282,46 @@ fun UNABBREV_TAC [QUOTE s] = let val s' = Lib.deinitcomment s in
          THEN BETA_TAC end
   | UNABBREV_TAC _ = raise Q_ERR "UNABBREV_TAC" "unexpected quote format"
 
+
 fun PAT_ABBREV_TAC q (g as (asl, w)) =
     let val fv_set = FVL (w::asl) empty_tmset
         val ctxt = HOLset.listItems fv_set
         val (l,r) = dest_eq(Parse.parse_in_context ctxt q)
         fun matchr t = raw_match [] fv_set r t ([],[])
         val l = variant (HOLset.listItems (FVL [r] fv_set)) l
+        fun finder t = not (is_var t orelse is_const t) andalso can matchr t
     in
-      case Lib.total (find_term (fn t => not (is_var t orelse is_const t) andalso can matchr t)) w of
+      case Lib.total (find_term finder) w of
         NONE => raise Q_ERR "PAT_ABBREV_TAC" "No matching term found"
-      | SOME t =>
-        CHOOSE_THEN (fn th => SUBST_ALL_TAC th THEN ASSUME_TAC th)
-                    (Thm.EXISTS (mk_exists(l, mk_eq(t, l)), t)
-                                (Thm.REFL t)) g
+      | SOME t => ABB l t g
     end
+
+fun MATCH_ABBREV_TAC q (g as (asl, w)) = let
+  val ctxt_set = FVL (w::asl) empty_tmset
+  val ctxt = HOLset.listItems ctxt_set
+  val pattern = ptm_with_ctxtty ctxt bool q
+  val fixed_tyvars = Lib.U (map type_vars_in_term
+                                (Lib.intersect ctxt (free_vars pattern)))
+  val (tminst, _) = match_terml fixed_tyvars ctxt_set pattern w
+  fun ABB' {redex = l, residue= r} = ABB l r
+in
+  MAP_EVERY ABB' tminst g
+end
+
+fun HO_MATCH_ABBREV_TAC q (g as (asl, w)) = let
+  val ctxt_set = FVL (w::asl) empty_tmset
+  val ctxt = HOLset.listItems ctxt_set
+  val pattern = ptm_with_ctxtty ctxt bool q
+  val fixed_tyvars = Lib.U (map type_vars_in_term
+                                (Lib.intersect ctxt (free_vars pattern)))
+  val (tminst, tyinst) = ho_match_term fixed_tyvars ctxt_set pattern w
+  val unbeta_goal =
+      Tactical.default_prover(mk_eq(w, subst tminst (inst tyinst pattern)),
+                              BETA_TAC THEN REFL_TAC)
+  fun ABB' {redex = l, residue= r} = ABB l r
+in
+  CONV_TAC (K unbeta_goal) THEN MAP_EVERY ABB' tminst
+end g
+
 
 end; (* Q *)
