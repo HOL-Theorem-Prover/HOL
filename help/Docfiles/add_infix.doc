@@ -71,7 +71,7 @@ infix, as in the binding list of an abstraction:
 \noindent The generation of three new type variables in the examples
 above emphasises the fact that the terms in the first example and the
 body of the second are really no different from {f x y} (where {f} is
-a variable}, and don't have anything to do with the constant for
+a variable), and don't have anything to do with the constant for
 addition from {arithmeticTheory}.  The new {+} infix is left
 associative:
 {

@@ -13,9 +13,9 @@ An application {(f ## g) (x,y)} fails if {f x} fails or {g y} fails.
 
 \EXAMPLE
 {
-    - (equal 1 ## I) (3,"foo");
+- (equal 1 ## I) (3,"foo");
 
-    > val it = (false, "foo") : bool * string
+> val it = (false, "foo") : bool * string
 }
 
 \COMMENTS

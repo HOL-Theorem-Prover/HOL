@@ -21,9 +21,9 @@ Never fails.
 Here we add the {UNWIND_ss} ssdata value to the {pure_ss} simpset to
 exploit the former's point-wise elimination conversions.
 {
-- SIMP_CONV (pure_ss ++ boolSimps.UNWIND_ss) []
-            (Term`!x. x ==> (?y. P(x,y) /\ (y = 5))`);
-> val it = |- (!x. x ==> (?y. P (x,y) /\ (y = 5))) = P (T,5) : thm
+   - SIMP_CONV (pure_ss ++ boolSimps.UNWIND_ss) []
+               (Term`!x. x ==> (?y. P(x,y) /\ (y = 5))`);
+   > val it = |- (!x. x ==> (?y. P (x,y) /\ (y = 5))) = P (T,5) : thm
 }
 
 \COMMENTS

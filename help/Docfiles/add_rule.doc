@@ -22,8 +22,8 @@ parsing
 The function {add_rule} is a fundamental method for adding parsing
 (and thus printing) rules to the global term grammar that sits behind
 the functions {Term} and {--}, and the pretty-printer installed for
-terms.  It is used to for everything except the addition of
-list-forms, for which refer to the entry for {add_listform}.
+terms.  It is used for everything except the addition of list-forms,
+for which refer to the entry for {add_listform}.
 
 There are five components in the record argument to {add_rule}.  The
 {term_name} component is the name of the term (whether a constant or a
