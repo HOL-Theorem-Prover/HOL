@@ -3,7 +3,7 @@ load "HolBdd";
 load "StateEnum";
 *)
 
-open HolBdd StateEnum;
+open HolBdd StateEnum BddRules;
 
 
 (*****************************************************************************)
