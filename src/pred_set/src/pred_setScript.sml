@@ -3811,7 +3811,7 @@ RW_TAC set_ss [CROSS_EMPTY,Once CROSS_INSERT_LEFT]
 
 val count_EQN = Q.store_thm
 ("count_EQN",
- `!n. count n = if n = 0 then {} else 
+ `!n. count n = if n = 0 then {} else
             let p = PRE n in p INSERT (count p)`,
  REWRITE_TAC [count_def]
   THEN Induct
@@ -3846,13 +3846,13 @@ val _ = export_rewrites
      "IN_INTER", "INTER_FINITE", "INTER_IDEMPOT",
      "INTER_SUBSET", "INTER_UNIV", "SUBSET_INTER",
      (* "PSUBSET" *)
-     "PSUBSET_IRREFL", "PSUBSET_FINITE",
+     "PSUBSET_IRREFL",
      (* "REST" *)
      "REST_PSUBSET", "REST_SING", "REST_SUBSET",
      (* "SING" *)
      "SING", "SING_FINITE",
      (* "SUBSET" *)
-     "SUBSET_FINITE", "SUBSET_INSERT", "SUBSET_REFL",
+     "SUBSET_INSERT", "SUBSET_REFL",
      (* "UNION" *)
      "IN_UNION", "UNION_IDEMPOT", "UNION_SUBSET",
      "SUBSET_UNION",
@@ -3898,23 +3898,23 @@ fun tupled_constructor capp =
      val argtys = map type_of args
      val cvar = mk_var(fst(dest_const c),list_mk_prod argtys --> target)
      val new = list_mk_abs(args,mk_comb(cvar,list_mk_pair args))
- in 
+ in
     mk_thm([],mk_eq(c,new))
  end;
 
-val reshape = BETA_RULE o 
+val reshape = BETA_RULE o
               PURE_REWRITE_RULE [tupled_constructor (Term`x INSERT s`)];
 
 val F_INTRO = PURE_REWRITE_RULE [PROVE[] (Term `~x = (x = F)`)];
 val T_INTRO = PURE_ONCE_REWRITE_RULE [PROVE[] (Term `x = (x = T)`)];
 
-fun scoped_parse q = 
+fun scoped_parse q =
  let val (tyg,tmg) = (type_grammar(),term_grammar())
      val tyg' = type_grammar.remove_abbreviation tyg "set"
      val _ = temp_set_grammars(tyg',tmg)
      val astl = ParseDatatype.parse q
      val _ = temp_set_grammars(tyg,tmg)
- in 
+ in
    astl
  end;
 
@@ -3944,7 +3944,7 @@ val MIN_SET_EMPTY = Q.prove
 (* membership checks are linear and subset checks are quadratic.             *)
 (*---------------------------------------------------------------------------*)
 
-val _ = 
+val _ =
  let open EmitML combinSyntax
      val setdecl = scoped_parse `set = EMPTY | INSERT of 'a => set`
      val _ = new_type("set",1)
@@ -3974,8 +3974,8 @@ val _ =
     :: MLSIG "val count    : num -> num set"
     ::
     (map (DEFN_NOSIG o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o reshape)
-     [CONJ (F_INTRO NOT_IN_EMPTY) IN_INSERT, 
-      CONJ (CONJUNCT1 UNION_EMPTY) INSERT_UNION, 
+     [CONJ (F_INTRO NOT_IN_EMPTY) IN_INSERT,
+      CONJ (CONJUNCT1 UNION_EMPTY) INSERT_UNION,
       CONJ (CONJUNCT1 INTER_EMPTY) INSERT_INTER,
       CONJ EMPTY_DELETE DELETE_INSERT,
       CONJ DIFF_EMPTY DIFF_INSERT,
