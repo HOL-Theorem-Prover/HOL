@@ -101,9 +101,9 @@ in
 fun el n l = if n<1 then raise ERR "el" "index too small" else elem(n,l)
 end;
 
-fun index x l =
+fun index P l =
   let fun idx (i, [])   = raise ERR "index" "no such element"
-        | idx (i, y::l) = if x=y then i else idx (i+1, l)
+        | idx (i, y::l) = if P y then i else idx (i+1, l)
   in idx(0,l)
   end;
 
