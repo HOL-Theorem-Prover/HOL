@@ -12,6 +12,10 @@
 signature Type_def =
 sig
 
-val new_type_definition : {name:string, pred:Term.term,
+(* this function now has the zero appended to the name to avoid clashes
+   with the function of the same name defined in Parse, which calls this
+   function and also updates the type grammar to cause things to print
+   properly. *)
+val new_type_definition0 : {name:string, pred:Term.term,
                            inhab_thm : Thm.thm} -> Thm.thm
 end;

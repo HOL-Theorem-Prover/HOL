@@ -8,7 +8,7 @@
 (* DATE          : September 11, 1991                                    *)
 (* ===================================================================== *)
 
-structure Type_def :> Type_def = 
+structure Type_def :> Type_def =
 struct
 
 open Exception Theory Thm Term Dsyntax
@@ -74,37 +74,37 @@ in
   fun store_definition x = !store_defnr x
 end;
 
-fun new_type_definition {name,pred,inhab_thm} =
+fun new_type_definition0 {name,pred,inhab_thm} =
  let val generated_name = name^"_TY_DEF"
      val bool = Type.bool
  in
-  if not(List.null(Term.free_vars pred)) 
+  if not(List.null(Term.free_vars pred))
   then raise TYPE_DEF_ERR "subset predicate must be a closed term"
-  else 
+  else
   if not (case (Type.dest_type(Term.type_of pred))
             of {Tyop="fun",Args=[_,ty]} => (ty=bool)
              | _ => false)
   then raise TYPE_DEF_ERR"subset predicate has the wrong type"
-  else 
-  if not(List.null(hyp inhab_thm)) 
+  else
+  if not(List.null(hyp inhab_thm))
   then raise TYPE_DEF_ERR"existence theorem must have no assumptions"
-  else 
-  if not((pred = rator(#Body(dest_exists(concl inhab_thm)))) 
+  else
+  if not((pred = rator(#Body(dest_exists(concl inhab_thm))))
        handle HOL_ERR _ => false)
   then raise TYPE_DEF_ERR "existence theorem must match subset predicate"
-  else 
-  let val {Args = [ty,_],...} = Type.dest_type(type_of pred) 
+  else
+  let val {Args = [ty,_],...} = Type.dest_type(type_of pred)
       and evar = #Bvar(dest_exists(concl inhab_thm))
-      val tyvarsl = Term.type_vars_in_term pred 
+      val tyvarsl = Term.type_vars_in_term pred
       val _ = Theory.new_type {Name=name, Arity=List.length tyvarsl}
       val newty  = Type.mk_type{Tyop=name, Args=tyvarsl}
       val repty  = newty --> ty
       val rep    = Term.mk_primed_var{Name="rep", Ty=repty}
       val TYDEF  = mk_const{Name="TYPE_DEFINITION",
                             Ty = (ty-->bool) --> (repty-->bool)}
-  in 
-    store_definition 
-       (generated_name, Lib.LEFT name, inhab_thm, 
+  in
+    store_definition
+       (generated_name, Lib.LEFT name, inhab_thm,
         mk_exists{Bvar=rep, Body=list_mk_comb(TYDEF,[pred,rep])})
   end
 end;
