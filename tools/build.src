@@ -21,7 +21,7 @@ fun fullPath slist = normPath
 
 fun quote s = String.concat["\"", s, "\""];
 
-local val Holmake_path = fullPath [HOLDIR, "bin/Holmake"]
+local val Holmake_path = fullPath [HOLDIR, "bin/Holmake --qof"]
 in
 fun Holmake dir =
   if Process.system Holmake_path = Process.success
@@ -57,8 +57,8 @@ fun build_dir dir =
                           " temporal Lib has NOT been built!! ",
                           "(continuing anyway).\n\n"]))
      | _ => Holmake dir
-  end 
-  handle OS.SysErr(s, erropt) 
+  end
+  handle OS.SysErr(s, erropt)
     => (print ("OS error: "^s^" - "^
             (case erropt of SOME s' => OS.errorMsg s' | _ => "") ^ "\n");
         Process.exit Process.failure);
@@ -121,7 +121,7 @@ fun transfer_file symlink targetdir (df as (dir,file)) =
 (*---------------------------------------------------------------------------
         Transport a compiled directory to another location. The
         symlink argument says whether this is via a symbolic link,
-        or by copying. The ".uo", ".ui", ".so", ".xable" and ".sig" 
+        or by copying. The ".uo", ".ui", ".so", ".xable" and ".sig"
         files are transported.
  ---------------------------------------------------------------------------*)
 
@@ -183,7 +183,7 @@ fun suffixCheck s =
 end;
 
 (*---------------------------------------------------------------------------
-    "cleandir" could be extended to do a better job of cleaning up 
+    "cleandir" could be extended to do a better job of cleaning up
     directories where external tools have been built.
  ---------------------------------------------------------------------------*)
 
