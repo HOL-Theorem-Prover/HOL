@@ -24,9 +24,9 @@ top-level conjuncts in a term.
 \EXAMPLE
 {
 - EVERY_CONJ_CONV BETA_CONV (Term`(\x. x /\ y) p`);
-> val it = |- (\x. x /\ y) p = p /\ y : Thm.thm
+> val it = |- (\x. x /\ y) p = p /\ y : thm
 - EVERY_CONJ_CONV BETA_CONV (Term`(\y. y /\ p) q /\ (\z. z) r`);
-> val it = |- (\y. y /\ p) q /\ (\z. z) r = (q /\ p) /\ r : Thm.thm
+> val it = |- (\y. y /\ p) q /\ (\z. z) r = (q /\ p) /\ r : thm
 }
 
 \USES

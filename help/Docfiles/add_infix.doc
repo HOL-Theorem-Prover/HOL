@@ -48,14 +48,14 @@ it as an infix for the purposes of printing and parsing:
    > val it = () : unit
    - val t = Term`x + y`;
    <<HOL message: inventing new type variable names: 'a, 'b, 'c.>>
-   > val t = `x + y` : Term.term
+   > val t = `x + y` : term
 }
 \noindent We can confirm that this new infix has indeed been parsed
 that way by taking the resulting term apart:
 {
    - dest_comb t;
    > val it = {{Rand = `y`, Rator = `$+ x`}} :
-         {{Rand : Term.term, Rator : Term.term}}
+         {{Rand : term, Rator : term}}
 }
 \noindent With its new status, {+} has to be ``quoted'' with a
 dollar-sign if we wish to use it in a position where it is not an
@@ -63,10 +63,10 @@ infix, as in the binding list of an abstraction:
 {
    - Term`\$+. x + y`;
    <<HOL message: inventing new type variable names: 'a, 'b, 'c.>>
-   > val it = `\$+. x + y` : Term.term
+   > val it = `\$+. x + y` : term
    - dest_abs it;
    > val it = {{Body = `x + y`, Bvar = `$+`}}
-              : {{Body : Term.term, Bvar : Term.term}}
+              : {{Body : term, Bvar : term}}
 }
 \noindent The generation of three new type variables in the examples
 above emphasises the fact that the terms in the first example and the
@@ -77,22 +77,22 @@ associative:
 {
    - Term`x + y + z`;
    <<HOL message: inventing new type variable names: 'a, 'b.>>
-   > val it = `x + y + z` : Term.term
+   > val it = `x + y + z` : term
    - dest_comb it;
    > val it =
        {{Rand = `z`, Rator = `$+ (x + y)`}}
-       : {{Rand : Term.term, Rator : Term.term}}
+       : {{Rand : term, Rator : term}}
 }
 \noindent It is also more tightly binding than {/\} (which has
 precedence 400 by default):
 {
    - Term`p /\ q + r`;
    <<HOL message: inventing new type variable names: 'a, 'b.>>
-   > val it = `p /\ q + r` : Term.term
+   > val it = `p /\ q + r` : term
    - dest_comb it;
    > val it =
        {{Rand = `q + r`, Rator = `$/\ p`}}
-       : {{Rand : Term.term, Rator : Term.term}}
+       : {{Rand : term, Rator : term}}
 }
 \noindent An attempt to define a right associative operator at the
 same level fails:

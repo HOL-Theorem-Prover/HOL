@@ -25,22 +25,22 @@ this function:
 {
    - val t = Term`!x. P x /\ ~Q x`;
    <<HOL message: inventing new type variable names: 'a.>>
-   > val t = `!x. P x /\ ~Q x` : Term.term
+   > val t = `!x. P x /\ ~Q x` : term
    - remove_rules_for_term "!";
    > val it = () : unit
    - t;
-   > val it = `! (\x. P x /\ ~Q x)` : Term.term
+   > val it = `! (\x. P x /\ ~Q x)` : term
 }
 \noindent Similarly, one can remove the two rules for conditional
 expressions and see the raw syntax as follows:
 {
    - val t = Term`if p then q else r`;
    <<HOL message: inventing new type variable names: 'a.>>
-   > val t = `if p then q else r` : Term.term
+   > val t = `if p then q else r` : term
    - remove_rules_for_term "COND";
    > val it = () : unit
    - t;
-   > val it = `COND p q r` : Term.term
+   > val it = `COND p q r` : term
 }
 
 \COMMENTS

@@ -32,7 +32,7 @@ We define the equivalent of intersection over predicates:
 {
    - val inter = new_definition("inter", Term`inter p q x = p x /\ q x`);
    <<HOL message: inventing new type variable names: 'a.>>
-   > val inter = |- !p q x. inter p q x = p x /\ q x : Thm.thm
+   > val inter = |- !p q x. inter p q x = p x /\ q x : thm
 }
 \noindent We overload on our new intersection constant, and can
 be sure that in ambiguous situations, it will be preferred:
@@ -43,9 +43,9 @@ be sure that in ambiguous situations, it will be preferred:
    - Term`p /\ q`;
    <<HOL message: more than one resolution of overloading was possible.>>
    <<HOL message: inventing new type variable names: 'a.>>
-   > val it = `p /\ q` : Term.term
+   > val it = `p /\ q` : term
    - type_of it;
-   > val it = `:'a -> bool` : Type.hol_type
+   > val it = `:'a -> bool` : hol_type
 }
 \noindent Note that the original constant is considered overloaded to
 itself, so that our one call to {overload_on} now allows for two
@@ -57,9 +57,9 @@ with the original constant:
    > val it = () : unit
    - Term`p /\ q`;
    <<HOL message: more than one resolution of overloading was possible.>>
-   > val it = `p /\ q` : Term.term
+   > val it = `p /\ q` : term
    - type_of it;
-   > val it = `:bool` : Type.hol_type
+   > val it = `:bool` : hol_type
 }
 \noindent Note that in order to specify the original conjunction
 constant, we used the qualified identifier syntax, with the {$}.  If

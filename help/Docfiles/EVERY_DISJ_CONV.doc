@@ -27,7 +27,7 @@ top-level disjuncts in the term.
     (Term`(\x. x /\ p) q \/ (\x. x) r \/ (\y. s /\ y) u`);
 > val it =
     |- (\x. x /\ p) q \/ (\x. x) r \/ (\y. s /\ y) u = q /\ p \/ r \/ s /\ u
-    : Thm.thm
+    : thm
 }
 \USES
 Useful for applying a conversion to all of the ``significant''

@@ -32,16 +32,16 @@ ignored.
      "==>", "="]
     : string list
 - Term`p /\ q`;
-> val it = `p /\ q` : Term.term
+> val it = `p /\ q` : term
 - set_known_constants (Lib.subtract (known_constants()) ["/\\"]);
 > val it = () : unit
 - Term`p /\ q`;
 <<HOL message: inventing new type variable names: 'a, 'b, 'c.>>
-> val it = `p /\ q` : Term.term
+> val it = `p /\ q` : term
 - strip_comb it;
-> val it = (`$/\`, [`p`, `q`]) : Term.term * Term.term list
+> val it = (`$/\`, [`p`, `q`]) : term * term list
 - dest_var (#1 it);
-> val it = ("/\\", `:'a -> 'b -> 'c`) : string * Type.hol_type
+> val it = ("/\\", `:'a -> 'b -> 'c`) : string * hol_type
 }
 
 \USES

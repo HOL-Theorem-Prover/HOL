@@ -20,6 +20,6 @@ in neither {P} nor {Q}, {AND_EXISTS_CONV} returns the theorem:
 in which the variable {x} is free in either {P} or {Q}.
 
 \SEEALSO
-EXISTS_AND_CONV, LEFT_AND_EXISTS_CONV, RIGHT_AND_EXISTS_CONV.
+EXISTS_AND_CONV, LEFT_AND_EXISTS_CONV, RIGHT_AND_EXISTS_CONV
 
 \ENDDOC

@@ -25,6 +25,6 @@ list should not be relied on.
 Fails unless the given term has type {bool}.
 
 \SEEALSO
-ASSUME, UNDISCH.
+ASSUME, UNDISCH
 
 \ENDDOC

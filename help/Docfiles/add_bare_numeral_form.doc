@@ -33,7 +33,7 @@ The following function, {binary_of}, defined with equations:
 {
    val bthm =
      |- binary_of n = if n = 0 then 0
-                      else n MOD 10 + 2 * binary_of (n DIV 10) : Thm.thm
+                      else n MOD 10 + 2 * binary_of (n DIV 10) : thm
 }
 \noindent can be used to convert numbers whose decimal notation is
 {x}, to numbers whose binary notation is {x} (as long as {x} only
@@ -45,10 +45,10 @@ form that could be used by users wanting to deal with binary numbers:
    - add_bare_numeral_form(#"b", SOME "binary_of");
    > val it = () : unit
    - Term`1011b`;
-   > val it = `1011b` : Term.term
+   > val it = `1011b` : term
    - dest_comb it;
    > val it = {{Rand = `1011`, Rator = `binary_of`}} :
-        {{Rand : Term.term, Rator : Term.term}}
+        {{Rand : term, Rator : term}}
 }
 
 \USES

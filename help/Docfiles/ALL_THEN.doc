@@ -23,6 +23,6 @@ Writing compound tactics or tacticals, e.g. terminating list iterations
 of theorem-tacticals.
 
 \SEEALSO
-ALL_TAC, FAIL_TAC, NO_TAC, NO_THEN, THEN_TCL, ORELSE_TCL.
+ALL_TAC, FAIL_TAC, NO_TAC, NO_THEN, THEN_TCL, ORELSE_TCL
 
 \ENDDOC

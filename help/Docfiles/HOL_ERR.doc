@@ -30,9 +30,9 @@ pattern matching:
 {
    - val HOL_ERR r = test_exn;
 
-   > val r = {{message = "incomprehensible input",
-               origin_function = "bar",
-               origin_structure = "Foo"}}
+   > val r = {message = "incomprehensible input",
+              origin_function = "bar",
+              origin_structure = "Foo"}
 }
 In current ML implementations supporting HOL, exceptions that propagate
 to the top level without being handled do not print informatively:

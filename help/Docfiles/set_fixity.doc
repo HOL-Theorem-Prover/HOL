@@ -36,24 +36,24 @@ appropriate fixities:
                   (Term`(f 0 n = n) /\ (f (SUC n) m = SUC (SUC (f n m)))`);
    > val thm =
        |- (!n. f 0 n = n) /\ !n m. f (SUC n) m = SUC (SUC (f n m))
-       : Thm.thm
+       : thm
    - set_fixity "f" (Infixl 500);
    > val it = () : unit
    - thm;
    > val it =
-       |- (!n. 0 f n = n) /\ !n m. SUC n f m = SUC (SUC (n f m)) : Thm.thm
+       |- (!n. 0 f n = n) /\ !n m. SUC n f m = SUC (SUC (n f m)) : thm
 }
 \noindent The same function can be used to alter the fixities of existing
 constants:
 {
    - val t = Term`2 + 3 + 4 - 6`;
-   > val t = `2 + 3 + 4 - 6` : Term.term
+   > val t = `2 + 3 + 4 - 6` : term
    - set_fixity "+" (Infixr 501);
    > val it = () : unit
    - t;
-   > val it = `(2 + 3) + 4 - 6` : Term.term
+   > val it = `(2 + 3) + 4 - 6` : term
    - dest_comb (Term`3 - 1 + 2`);
-   > val it = (`$- 3`, `1 + 2`) : Term.term * Term.term
+   > val it = (`$- 3`, `1 + 2`) : term * term
 }
 
 \COMMENTS

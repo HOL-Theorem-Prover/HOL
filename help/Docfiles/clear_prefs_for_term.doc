@@ -27,7 +27,7 @@ syntax is used for input, the term is printed out in the
 {
    - Term`p => q | r`;
    <<HOL message: inventing new type variable names: 'a.>>
-   > val it = `(if p then q else r)` : Term.term
+   > val it = `(if p then q else r)` : term
 }
 \noindent If {clear_prefs_for_term} is applied, neither syntax will print:
 {
@@ -35,7 +35,7 @@ syntax is used for input, the term is printed out in the
    > val it = () : unit
    - Term`p => q | r`;
    <<HOL message: inventing new type variable names: 'a.>>
-   > val it = `COND p q r` : Term.term
+   > val it = `COND p q r` : term
 }
 
 \SEEALSO

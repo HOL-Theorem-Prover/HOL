@@ -27,6 +27,6 @@ as a place-holder in building compound tactics using tacticals such as
 {THENL}.
 
 \SEEALSO
-NO_TAC, REPEAT, THENL.
+NO_TAC, REPEAT, THENL
 
 \ENDDOC

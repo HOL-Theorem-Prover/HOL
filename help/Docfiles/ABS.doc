@@ -29,6 +29,6 @@ assumptions {A}.
 }
 
 \SEEALSO
-ETA_CONV, EXT, MK_ABS.
+ETA_CONV, EXT, MK_ABS
 
 \ENDDOC

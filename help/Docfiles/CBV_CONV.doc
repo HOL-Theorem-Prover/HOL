@@ -68,11 +68,11 @@ needed for basic boolean and arithmetical calculations built in.
    > val rws = RWS<hash_table> : comp_rws
 
    - CBV_CONV rws (--`(\x.x) ((\x.x) if T then 0+0 else 10)`--);
-   > val it = |- (\x. x) ((\x. x) (if T then 0 + 0 else 10)) = 0 + 0 : Thm.thm
+   > val it = |- (\x. x) ((\x. x) (if T then 0 + 0 else 10)) = 0 + 0 : thm
 
    - CBV_CONV (initial_rws())
               (--`if 100 - 5 * 5 < 80  then 2 EXP 16 else 3`--);
-   > val it = |- (if 100 - 5 * 5 < 80 then 2 EXP 16 else 3) = 65536 : Thm.thm
+   > val it = |- (if 100 - 5 * 5 < 80 then 2 EXP 16 else 3) = 65536 : thm
 }
 \noindent Failing to give enough rules may make {CBV_CONV} build a
 huge result, or even loop. The same may occur if the initial term to
@@ -87,7 +87,7 @@ reduce contains free variables.
    - set_skip rws "COND" (SOME 1);
    > val it = () : unit
    - CBV_CONV rws (--`exp 2 n`--);
-   > val it = |- exp 2 n = (if n = 0 then 1 else 2 * exp 2 (n - 1)) : Thm.thm
+   > val it = |- exp 2 n = (if n = 0 then 1 else 2 * exp 2 (n - 1)) : thm
 }
 \noindent The first invocation of {CBV_CONV} loops since the exponent
 never reduces to 0.  Below the first steps are computed:

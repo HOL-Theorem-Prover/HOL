@@ -45,6 +45,6 @@ resolvent obtained from the theorem {A |- t} and the assumptions of {g}, fails
 when applied in sequence to {g}.
 
 \SEEALSO
-IMP_RES_TAC, IMP_RES_THEN, MATCH_MP, RES_TAC, RES_THEN.
+IMP_RES_TAC, IMP_RES_THEN, MATCH_MP, RES_TAC, RES_THEN
 
 \ENDDOC

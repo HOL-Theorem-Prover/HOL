@@ -48,7 +48,7 @@ A NAND relation can be defined as follows.
    > val it =
        |- !in_1 in_2 out.
               NAND2 (in_1,in_2) out = !t. out t = ~(in_1 t /\ in_2 t)
-       : Thm.thm
+       : thm
 }
 \SEEALSO
 new_binder_definition, new_gen_definition, new_infix_definition,

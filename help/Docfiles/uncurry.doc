@@ -8,7 +8,7 @@ Converts a function taking two arguments into a function taking a single
 paired argument.
 
 \DESCRIBE
-The application {uncurry f} returns {\(x,y). f x y}, so that
+The application {uncurry f} returns {fn (x,y) => f x y}, so that
 {
    uncurry f (x,y) = f x y
 }

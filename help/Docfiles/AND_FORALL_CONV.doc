@@ -18,6 +18,6 @@ When applied to a term of the form {(!x.P) /\ (!x.Q)}, the conversion
 Fails if applied to a term not of the form {(!x.P) /\ (!x.Q)}.
 
 \SEEALSO
-FORALL_AND_CONV, LEFT_AND_FORALL_CONV, RIGHT_AND_FORALL_CONV.
+FORALL_AND_CONV, LEFT_AND_FORALL_CONV, RIGHT_AND_FORALL_CONV
 
 \ENDDOC

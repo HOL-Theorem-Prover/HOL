@@ -27,10 +27,10 @@ Fails unless the terms provided are alpha-equivalent.
       ALPHA M N
   end;
 
-> val it = |- (!x. x = x) = (!y. y = y) : Thm.thm
+> val it = |- (!x. x = x) = (!y. y = y) : thm
 }
 
 \SEEALSO
-aconv, ALPHA_CONV, GEN_ALPHA_CONV.
+aconv, ALPHA_CONV, GEN_ALPHA_CONV
 
 \ENDDOC

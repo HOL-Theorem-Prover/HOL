@@ -29,7 +29,7 @@ as follows:
    > val it = () : unit
    - Term`if p then q else r`;
    <<HOL message: inventing new type variable names: 'a.>>
-   > val it = `p => q | r` : Term.term
+   > val it = `p => q | r` : term
 }
 
 

@@ -35,6 +35,6 @@ function returned by {ABS_CONV c} may also fail if the ML function
 |- (\x. 1 = x) = (\x. x = 1)
 }
 \SEEALSO
-RAND_CONV, RATOR_CONV, SUB_CONV.
+RAND_CONV, RATOR_CONV, SUB_CONV
 
 \ENDDOC

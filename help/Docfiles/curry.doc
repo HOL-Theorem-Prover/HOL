@@ -6,7 +6,7 @@
 Converts a function on a pair to a corresponding curried function.
 
 \DESCRIBE
-The application {curry f} returns {\x y. f(x,y)}, so that
+The application {curry f} returns {fn x => fn y => f(x,y)}, so that
 {
    curry f x y = f(x,y)
 }

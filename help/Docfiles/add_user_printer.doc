@@ -35,7 +35,7 @@ to be
 {
    type userprinter =
      sysprinter -> (grav * grav * grav) -> int -> Portable.ppstream ->
-     Term.term -> unit
+     term -> unit
 }
 \noindent where the type {grav} is
 {
@@ -43,7 +43,7 @@ to be
 }
 \noindent and the type {sysprinter} is another abbreviation
 {
-   type sysprinter = (grav * grav * grav) -> int -> Term.term -> unit
+   type sysprinter = (grav * grav * grav) -> int -> term -> unit
 }
 \noindent Thus, when the user's printing function is called, it is
 passed seven parameters, including three "gravity" values in a triple.

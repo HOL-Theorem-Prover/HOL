@@ -26,15 +26,15 @@ no effect.
 - load "realTheory";
 > val it = () : unit
 - realTheory.REAL_INV_LT1;
-> val it = |- !x. 0 < x /\ x < 1 ==> 1 < inv x : Thm.thm
+> val it = |- !x. 0 < x /\ x < 1 ==> 1 < inv x : thm
 - clear_overloads_on "<";
 > val it = () : unit
 - realTheory.REAL_INV_LT1;
-> val it = |- !x. 0 real_lt x /\ x real_lt 1 ==> 1 real_lt inv x : Thm.thm
+> val it = |- !x. 0 real_lt x /\ x real_lt 1 ==> 1 real_lt inv x : thm
 - clear_overloads_on "&";
 > val it = () : unit
 - realTheory.REAL_INV_LT1;
-> val it = |- !x. 0r real_lt x /\ x real_lt 1r ==> 1r real_lt inv x : Thm.thm
+> val it = |- !x. 0r real_lt x /\ x real_lt 1r ==> 1r real_lt inv x : thm
 }
 
 \USES

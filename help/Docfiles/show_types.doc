@@ -19,13 +19,13 @@ Never fails.
 \EXAMPLE
 {
 - BOOL_CASES_AX;;
-> val it = |- !t. (t = T) \/ (t = F) : Thm.thm
+> val it = |- !t. (t = T) \/ (t = F) : thm
 
 - show_types := true;
 > val it = () : unit
 
 - BOOL_CASES_AX;;
-> val it = |- !(t :bool). (t = T) \/ (t = F) : Thm.thm
+> val it = |- !(t :bool). (t = T) \/ (t = F) : thm
 }
 
 \COMMENTS

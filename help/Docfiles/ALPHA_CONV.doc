@@ -24,6 +24,6 @@ abstraction, or if {x} is a variable {v} and {tm} is a lambda abstraction
 {\y.t} but the types of {v} and {y} differ.
 
 \SEEALSO
-ALPHA, GEN_ALPHA_CONV.
+ALPHA, GEN_ALPHA_CONV
 
 \ENDDOC

@@ -34,7 +34,7 @@ grammar with the ability to lex numerals and deal with symbols such as
    - load "arithmeticTheory";
    > val it = () : unit
    - val t = Term`2 + 3`;
-   > val t = `2 + 3` : Term.term
+   > val t = `2 + 3` : term
 }
 \noindent Then the {parse_from_grammars} function is used to make the
 values {Type} and {Term} use the grammar present in the simpler theory
@@ -42,15 +42,15 @@ of booleans.  Using this function fails to parse numerals or even the
 {+} infix:
 {
    - val (Type,Term) = parse_from_grammars boolTheory.bool_grammars;
-   > val Type = fn : Type.hol_type frag list -> Type.hol_type
-     val Term = fn : Term.term frag list -> Term.term
+   > val Type = fn : hol_type frag list -> hol_type
+     val Term = fn : term frag list -> term
    - Term`2 + 3`;
    <<HOL message: No numerals currently allowed.>>
    ! Uncaught exception:
    ! HOL_ERR <poly>
    - Term`x + y`;
    <<HOL message: inventing new type variable names: 'a, 'b.>>
-   > val it = `x $+ y` : Term.term
+   > val it = `x $+ y` : term
 }
 \noindent But, as the last example above also demonstrates, the
 pretty-printer is still dependent on the global grammar, and the
@@ -58,9 +58,10 @@ global value of {Term} can still be accessed through the {Parse}
 structure:
 {
    - t;
-   > val it = `2 + 3` : Term.term
+   > val it = `2 + 3` : term
+
    - Parse.Term`2 + 3`;
-   > val it = `2 + 3` : Term.term
+   > val it = `2 + 3` : term
 }
 
 \USES

@@ -51,8 +51,7 @@ If we have defined the following type:
    - val foofn_def = Define `(foofn (Bar n) = n + 10) /\
                              (foofn (Baz x) = 10)`;
    > val foofn_def =
-       |- (!n. foofn (Bar n) = n + 10) /\ !x. foofn (Baz x) = 10
-       : Thm.thm
+       |- (!n. foofn (Bar n) = n + 10) /\ !x. foofn (Baz x) = 10 : thm
 }
 \noindent then it is possible to make progress with the goal
 {!x. foofn x >= 10} by applying the tactic {Cases}, thus:

@@ -30,7 +30,7 @@ lemma:
 \EXAMPLE
 {
 - CBV_CONV (initial_rws()) (--`EVERY (\n. EVEN n) [4;6;8;10;12;14;16]`--);
-> val it = |- EVERY (\n. EVEN n) [4; 6; 8; 10; 12; 14; 16] = T : Thm.thm
+> val it = |- EVERY (\n. EVEN n) [4; 6; 8; 10; 12; 14; 16] = T : thm
 }
 
 \SEEALSO

@@ -6,7 +6,7 @@
 Constructs a {let} term.
 
 \DESCRIBE
-{mk_let {{func = f, arg = x)} returns {--`LET f x`--}. If {func} is of the form
+{mk_let {{func = f, arg = x}}} returns {--`LET f x`--}. If {func} is of the form
 {--`\y. t`--} then the result will be pretty-printed as {--`let y = x in t`--}.
 
 \FAILURE

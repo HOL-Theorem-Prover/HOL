@@ -13,11 +13,8 @@ Breaks apart a combination (function application) into rator and rand.
 \noindent returns {{Rator = t1, Rand = t2}}.
 
 \FAILURE
-Fails with
-{
-    HOL_ERR{{origin_structure = "Term", origin_function = "dest_comb",
-            message = "not a comb"}}
-}
+Fails if the argument is not a function application.
+
 \SEEALSO
 mk_comb, is_comb, dest_var, dest_const, dest_abs, strip_comb.
 

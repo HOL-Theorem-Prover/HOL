@@ -25,13 +25,13 @@ Never fails, as it is just an SML value.
 > val it = () : unit
 
 - Term`~3`;
-> val it = `~3` : Term.term
+> val it = `~3` : term
 
 - show_numeral_types := true;
 > val it = () : unit
 
 - Term`~3`;
-> val it = `~3i` : Term.term
+> val it = `~3i` : term
 }
 \USES
 Can help to disambiguate terms involving numerals.

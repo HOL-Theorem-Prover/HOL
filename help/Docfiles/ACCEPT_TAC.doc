@@ -34,6 +34,6 @@ Used for completing proofs by supplying an existing theorem, such as an axiom,
 or a lemma already proved.
 
 \SEEALSO
-MATCH_ACCEPT_TAC.
+MATCH_ACCEPT_TAC
 
 \ENDDOC

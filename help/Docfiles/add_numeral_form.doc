@@ -58,9 +58,9 @@ context.
    > val it = () : unit
    - Term`3`;
    <<HOL message: more than one resolution of overloading was possible.>>
-   > val it = `3` : Term.term
+   > val it = `3` : term
    - type_of it;
-   > val it = `:int` : Type.hol_type
+   > val it = `:int` : hol_type
 }
 \noindent The parser has chosen to give the string ``3'' integer type
 (it will prefer the most recently specified possibility, in common
@@ -68,18 +68,19 @@ with overloading in general).  However, numerals can appear with
 natural number type in appropriate contexts:
 {
    - Term`(SUC 3, 4 + ~x)`;
-   > val it = `(SUC 3,4 + ~x)` : Term.term
+   > val it = `(SUC 3,4 + ~x)` : term
    - type_of it;
-   > val it = `:num # int` : Type.hol_type
+   > val it = `:num # int` : hol_type
 }
 \noindent Moreover, one can always use the character suffixes to
 absolutely specify the type of the numeral form:
 {
    - Term`f 3 /\ p`;
    <<HOL message: more than one resolution of overloading was possible.>>
-   > val it = `f 3 /\ p` : Term.term
+   > val it = `f 3 /\ p` : term
+
    - Term`f 3n /\ p`;
-   > val it = `f 3 /\ p` : Term.term
+   > val it = `f 3 /\ p` : term
 }
 
 \COMMENTS

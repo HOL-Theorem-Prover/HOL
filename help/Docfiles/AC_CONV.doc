@@ -41,6 +41,6 @@ Note that the preproved associative and commutative laws for the operators {+},
 {*}, {/\} and {\/} are already in the right form to give to {AC_CONV}.
 
 \SEEALSO
-SYM_CONV.
+SYM_CONV
 
 \ENDDOC

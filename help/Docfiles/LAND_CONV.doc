@@ -27,7 +27,7 @@ a term {t} to a theorem {|- t = t'}).
 \EXAMPLE
 {
 - LAND_CONV REDUCE_CONV (Term`(3 + 5) * 7`);
-> val it = |- (3 + 5) * 7 = 8 * 7 : Thm.thm
+> val it = |- (3 + 5) * 7 = 8 * 7 : thm
 }
 
 \SEEALSO

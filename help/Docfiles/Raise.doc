@@ -14,7 +14,7 @@ message, and prints the information on the {outstream} held in
 {ERR_outstream}.
 
 \FAILURE
-Never fails.
+Never fails, since it always succeeds in raising the supplied exception.
 
 \EXAMPLE
 {

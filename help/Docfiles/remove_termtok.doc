@@ -29,10 +29,10 @@ expressions, this would be achievable as follows:
    > val it = () : unit
    - Term`if p then q else r`;
    <<HOL message: inventing new type variable names: 'a, 'b, 'c, 'd, 'e, 'f.>>
-   > val it = `if p then q else r` : Term.term
+   > val it = `if p then q else r` : term
    - Term`p => q | r`;
    <<HOL message: inventing new type variable names: 'a.>>
-   > val it = `COND p q r` : Term.term
+   > val it = `COND p q r` : term
 }
 \noindent The second invocation of the parser above demonstrates that
 once the rule for the {if-then-else} syntax has been removed, a string
@@ -49,7 +49,7 @@ have its preferred flag set.  This can be accomplished with
    > val it = () : unit
    - Term`p => q | r`;
    <<HOL message: inventing new type variable names: 'a.>>
-   > val it = `p => q | r` : Term.term
+   > val it = `p => q | r` : term
 }
 
 \USES
