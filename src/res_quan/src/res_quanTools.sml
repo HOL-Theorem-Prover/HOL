@@ -486,7 +486,8 @@ fun POP_ASSUM_TAC tac =
 
 val RESQ_TAC =
   POP_ASSUM_TAC
-  (SIMP_TAC bool_ss [RES_EXISTS_UNIQUE, RES_FORALL, RES_EXISTS, RES_SELECT]);
+  (SIMP_TAC bool_ss
+   [RES_EXISTS_UNIQUE_ALT, RES_FORALL, RES_EXISTS, RES_SELECT]);
 
 (* ===================================================================== *)
 (* Functions for making definition with restrict universal quantified	 *)

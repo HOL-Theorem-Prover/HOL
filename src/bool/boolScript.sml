@@ -204,7 +204,7 @@ val RES_EXISTS_UNIQUE_DEF =
  Definition.new_definition
    ("RES_EXISTS_UNIQUE_DEF",
     Term `RES_EXISTS_UNIQUE =
-          \p m. ?(x : 'a) :: p. m x /\ !y :: p. m y ==> (y = x)`);
+          \p m. (?(x : 'a) :: p. m x) /\ !x y :: p. m x /\ m y ==> (x = y)`);
 
 val _ = add_const "RES_EXISTS_UNIQUE";
 val _ = associate_restriction ("?!",  "RES_EXISTS_UNIQUE");

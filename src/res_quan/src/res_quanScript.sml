@@ -38,7 +38,7 @@ val op>> = op THEN1;
 (* Definitions to support restricted abstractions and quantifications    *)
 (* --------------------------------------------------------------------- *)
 
-(* JEH: Moved to boolTheory: the following versions remove some lambdas *)
+(* JEH: Defns moved to boolTheory: the following versions remove lambdas *)
 
 val RES_FORALL = store_thm
   ("RES_FORALL",
@@ -52,7 +52,9 @@ val RES_EXISTS = store_thm
 
 val RES_EXISTS_UNIQUE = store_thm
   ("RES_EXISTS_UNIQUE",
-   ``!p m. RES_EXISTS_UNIQUE p m = ?x::p. m x /\ !y::p. m y ==> (y = x)``,
+   ``!p m.
+       RES_EXISTS_UNIQUE p m =
+       (?x :: p. m x) /\ !x y :: p. m x /\ m y ==> (x = y)``,
    RW_TAC bool_ss [RES_EXISTS_UNIQUE_DEF]);
 
 val RES_SELECT = store_thm
@@ -207,7 +209,7 @@ val RES_EXISTS_UNIQUE_NULL = store_thm
 val RES_EXISTS_UNIQUE_ALT = store_thm
   ("RES_EXISTS_UNIQUE_ALT",
    ``!(p : 'a -> bool) m.
-       RES_EXISTS_UNIQUE p m = (?x :: p. m x /\ !y :: p. m y ==> (x = y))``,
+       RES_EXISTS_UNIQUE p m = (?x :: p. m x /\ !y :: p. m y ==> (y = x))``,
    RW_TAC bool_ss [SPECIFICATION, RES_EXISTS_UNIQUE, RES_EXISTS, RES_FORALL]
    THEN PROVE_TAC []);
 
