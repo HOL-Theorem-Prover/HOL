@@ -4,13 +4,14 @@
 (* -------------------                                                       *)
 (*                                                                           *)
 (* Some BDD utilities and derived rules using MuDDy and PrimitiveBddRules    *)
-(* (builds on some of Ken Larsen's code                                      *)
+(* (builds on some of Ken Larsen's code)                                     *)
 (*****************************************************************************)
 (*                                                                           *)
 (* Revision history:                                                         *)
 (*                                                                           *)
 (*   Mon Oct  8 10:27:40 BST 2001 -- created file                            *)
 (*   Thu Nov  1 21:04:27 GMT 2001 -- updated for judgement assumptions       *)
+(*   Mon Nov  5 11:15:51 GMT 2001 -- updated documentation in comments       *)
 (*                                                                           *)
 (*****************************************************************************)
 
@@ -86,10 +87,6 @@ fun statecount b =
       then 0.0
       else sat / Math.pow(2.0, free)
  end;
-
-(*****************************************************************************)
-(* Test if a term is constructed using a BuDDY BDD binary operation (bddop)  *)
-(*****************************************************************************)
 
 (*****************************************************************************)
 (* Destruct a term corresponding to a BuDDY BDD binary operation (bddop).    *)
@@ -181,13 +178,13 @@ fun extendVarmap [] vm = vm
                   end;
 
 (*****************************************************************************)
-(* Convert the BDD part of a term_bdd to a term                              *)
+(* Convert a BDD to a nested conditional term with respect to a varmap       *)
 (*****************************************************************************)
 
 exception bddToTermError;
 
 fun bddToTerm varmap =
- let val pairs = Binarymap.listItems varmap
+ let val pairs = Varmap.dest varmap
      fun get_node_name n =
       case assoc2 n pairs of
          SOME(str,_) => str
@@ -226,7 +223,7 @@ fun TermBddToEqThm tb =
 
 val global_varmap = ref(Varmap.empty);
 
-fun showVarmap () = Binarymap.listItems(!global_varmap);
+fun showVarmap () = Varmap.dest(!global_varmap);
 
 (*****************************************************************************)
 (* Add variables to global_varmap and then call GenTermToTermBdd             *)
@@ -341,8 +338,6 @@ val MakeSimpRecThm =
 (* where t1 can be instantiated to t1' and t2' is the corresponding          *)
 (* instance of t2                                                            *)
 (*****************************************************************************)
-
-exception BddApThmError;
 
 fun BddApThm th tb =
  let val (_,vm,t1',b) = dest_term_bdd tb
@@ -479,9 +474,9 @@ val tb3 = BddApSubst tb1 ``p /\ T /\ q``;
 ======================================================= End of test examples *)
 
 (*****************************************************************************)
-(*     |- t1 = t2                                                            *)
-(*   ---------------                                                         *)
-(*     vm t1 |--> b                                                          *)
+(*          asl |- t1 = t2                                                   *)
+(*   ------------------------------                                          *)
+(*   (addList ass [])  vm t1 |--> b                                          *)
 (*                                                                           *)
 (* Fails if t2 is not built from variables using bddops                      *)
 (*****************************************************************************)
@@ -500,9 +495,9 @@ fun eqToTermBdd leaffn vm th =
 fun intToTerm n = numSyntax.mk_numeral(Arbnum.fromInt n);
 
 (*****************************************************************************)
-(*  ass vm tm |--> b   conv tm = asl |- tm = tm'                             *)
-(*  ---------------------------------------------                            *)
-(*          (ass U asl) vm tm' |--> b                                        *)
+(*  ass vm tm |--> b   conv tm  =  asl |- tm = tm'                           *)
+(*  ----------------------------------------------                           *)
+(*         (addList ass asl) vm tm' |--> b                                   *)
 (*****************************************************************************)
 
 fun BddApConv conv tb = BddEqMp (conv(getTerm tb)) tb;
@@ -544,7 +539,7 @@ fun iterate p f =
 (* for tracing.                                                              *)
 (*                                                                           *)
 (* A state of the iteration is a pair (tb,tb') consisting of the             *)
-(* previous term_bdd tb and the current one tb'. The initial state            *)
+(* previous term_bdd tb and the current one tb'. The initial state           *)
 (* is (somewhat arbitarily) taken to be (tb0,tb0).                           *)
 (*****************************************************************************)
 

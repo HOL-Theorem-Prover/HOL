@@ -89,12 +89,13 @@ val eq = Portable.pointer_eq : varmap*varmap->bool;
 (*****************************************************************************)
 
 fun extends (vm1:varmap) (vm2:varmap) =
- Binarymap.foldl
-  (fn (s,n,bv) => bv andalso (case Binarymap.peek(vm2,s) of
-                                 SOME m => (m=n)
-                               | NONE   => false))
- true
- vm1;
+ eq(vm1,vm2)
+  orelse Binarymap.foldl
+          (fn (s,n,bv) => bv andalso (case Binarymap.peek(vm2,s) of
+                                         SOME m => (m=n)
+                                       | NONE   => false))
+          true
+          vm1;
 
 (*****************************************************************************)
 (* remove s vm removes entry for string s from vm                            *)

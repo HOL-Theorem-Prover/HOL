@@ -1,0 +1,132 @@
+<HTML>
+<HEAD>
+<TITLE>HolBddLib</TITLE>
+
+
+
+<LINK rel   = stylesheet type="text/css"
+      href  = "http://www.cl.cam.ac.uk/users/mjcg/style.css"
+      title = "style.css">
+
+
+
+</HEAD>
+
+<BODY>
+
+
+<IMG ALT="Picture of Lake Kananaskis + a picture of a BDD"
+     SRC="doc/HolBdd.jpg">
+
+<H1>HolBddLib</H1>
+
+<UL>
+
+<LI> <A HREF="http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/hol/hol98/src/HolBdd/">
+<TT>HolBddLib</TT> Version 2</A> is now available as part
+of <A HREF="http://www.cl.cam.ac.uk/~mjcg/InstallKananaskis.html">HOL98 [Kananaskis 0]</A>.
+
+<LI><A HREF="http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/~checkout~/hol/hol98/src/HolBdd/doc/HolBdd.ps.gz">
+Compressed postscript documentation</A> from the
+<A HREF="http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/hol/hol98/src/HolBdd/doc/">
+Documentation directory for <TT>HolBddLib</TT> Version 2</A>
+
+</UL>
+
+<P>
+<HR>
+<P>
+
+
+<H1>Edited extracts from the preface to the Version 2 documentation</H1>
+
+<p>
+In the fully expansive (or LCF-style) approach to theorem proving, theorems are represented by an abstract type
+whose primitive operations are the axioms and inference rules of a
+logic.  Theorem proving tools are implemented by composing together
+the inference rules using ML programs.
+
+<p>
+This idea can be generalised to computing valid judgements that
+represent other kinds of information. In particular, consider
+judgements <FONT color="red">(a,<font face="symbol">r</font>,t,b)</FONT>, 
+where <FONT color="red">a</FONT> is a set of boolean terms
+(assumptions) that are assumed true, <FONT color="red"><font face="symbol">r</font></FONT> represents a variable
+order, <FONT color="red">t</FONT> is a boolean term all of whose free variables are boolean
+and <FONT color="red">b</FONT> is a BDD. Such a judgement is valid if under the assumptions
+<FONT color="red">a</FONT>, the BDD representing <FONT color="red">t</FONT> 
+with respect to <FONT color="red"><font face="symbol">r</font></FONT> is <FONT color="red">b</FONT>, 
+and we will write <FONT color="red">a&nbsp;<font face="symbol">r</font>&nbsp;t&nbsp;-->&nbsp;b</FONT> 
+when this is the case.
+
+<p>
+The derivation of "theorems" like <FONT color="red">a&nbsp;<font face="symbol">r</font>&nbsp;t&nbsp;-->&nbsp;b</FONT> can be viewed
+as "proof" in the style of LCF by defining an abstract type <tt>term_bdd</tt>
+that models
+judgements 
+<FONT color="red"><span class="roman">a</span>&nbsp;<font face="symbol">r</font>&nbsp;
+<span class="roman">t</span>&nbsp;-->&nbsp;<span class="roman">b</span></FONT> analogously
+to the way the type <tt>thm</tt> models theorems <FONT color="red"><tt>|-</tt> t</FONT>.
+
+<p>
+<tt>HolBddLib</tt> Version&nbsp;2 provides a
+kernel of representation judgement rules as 
+infrastructure for building fully-expansive
+combinations of HOL theorem proving and BDD-based symbolic calculation
+algorithms, like model checkers.
+<p>
+<tt>HolBddLib</tt> currently contains two main structures: <tt>PrimitiveBddRules</tt>
+which defines a protected type <tt>term_bdd</tt> and rules for generating
+values of this type, and <tt>DerivedBddRules</tt> that contains derived
+rules for performing simple fixed-point calculations.  There is also a
+theory <tt>DerivedBddRulesTheory</tt> containing the theorems on
+reachability and fixed points needed by the derived rules,
+and two small subsidiary structures <tt>Varmap</tt> and <tt>PrintBdd</tt>.
+
+<p>
+The development of <tt>HolBddLib</tt> has gone through two phases.  The
+first phase consisted in experiments with different ways of linking
+higher order logic terms to binary decision diagrams.
+These are described in the paper 
+<A HREF="http://www.cl.cam.ac.uk/~mjcg/TPHOLs2000/TPHOLs2000Final.ps.gz">
+<i>Reachability programming in HOL98 using BDDs</i></A>. 
+
+<p>
+
+<tt>HolBddLib</tt> Version&nbsp;2 provides a less developed interactive
+programming environment than 
+<A HREF="http://www.cl.cam.ac.uk/users/mjcg/HolBddLib/index.version1.html">Version&nbsp;1</A>.
+It is more oriented to
+providing a clean and simple API allowing implementers to create their
+own combinations of model checking and theorem
+proving. Such a combination could be a Voss-like verification
+platform.
+
+<P>
+<HR>
+<P>
+
+<ADDRESS>
+MICHAEL J. C. GORDON<BR>
+
+University of Cambridge<BR>
+<A HREF="http://www.cl.cam.ac.uk/home.html">Computer Laboratory</A><BR>
+<A HREF="http://www.cl.cam.ac.uk/site-maps/gates2.html">Room FE19</A><BR>
+<A HREF="http://www.cl.cam.ac.uk/site-maps/gates.html">William Gates Building</A><BR>
+JJ Thomson Avenue<BR>
+Cambridge CB3 0FD<BR>
+United Kingdom<BR>
+work phone: +44 1223 334627<BR>
+work fax:   +44 1223 334678<BR>
+UK <A HREF="http://www.efax.com">eFax</A>: +44 870 1612485<BR>
+US <A HREF="http://www.efax.com">eFax</A>: (509) 692-9378<BR>
+home: +44 1223 362123<BR>
+email: <A HREF = "mailto:mjcg&#64;cl.cam.ac.uk"><KBD>mjcg&#64;cl.cam.ac.uk</KBD></A>
+</ADDRESS>
+
+
+
+</BODY>
+</HTML>
+
+
