@@ -1,0 +1,212 @@
+(*===========================================================================*)
+(* Define WHILE loops, give Hoare rules, and define LEAST operator as a      *)
+(* binder.                                                                   *)
+(*===========================================================================*)
+
+structure whileScript =
+struct
+
+open HolKernel boolLib Parse Prim_rec simpLib boolSimps metisLib 
+     combinTheory prim_recTheory arithmeticTheory BasicProvers;
+
+val _ = new_theory "while";
+
+fun INDUCT_TAC g = INDUCT_THEN numTheory.INDUCTION ASSUME_TAC g;
+
+val cond_lemma = prove(
+  ``(if ~p then q else r) = (if p then r else q)``,
+  Q.ASM_CASES_TAC `p` THEN ASM_REWRITE_TAC []);
+
+(* ----------------------------------------------------------------------
+    Existence of WHILE
+   ---------------------------------------------------------------------- *)
+
+val ITERATION = Q.store_thm
+("ITERATION",
+  `!P g. ?f. !x. f x = if P x then x else f (g x)`,
+  REPEAT GEN_TAC THEN
+  Q.EXISTS_TAC `\x. if ?n. P (FUNPOW g n x) then
+                      FUNPOW g (@n. P (FUNPOW g n x) /\
+                                    !m.  m < n ==> ~P (FUNPOW g m x)) x
+                    else ARB` THEN BETA_TAC THEN
+  GEN_TAC THEN COND_CASES_TAC THENL [
+    POP_ASSUM STRIP_ASSUME_TAC THEN
+    COND_CASES_TAC THENL [
+      SELECT_ELIM_TAC THEN CONJ_TAC THENL [
+        Q.EXISTS_TAC `0` THEN
+        ASM_REWRITE_TAC [FUNPOW, NOT_LESS_0],
+        Q.X_GEN_TAC `m` THEN REPEAT STRIP_TAC THEN
+        Q.SUBGOAL_THEN `m = 0` (fn th => REWRITE_TAC [th, FUNPOW]) THEN
+        Q.SPEC_THEN `m` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC)
+                    num_CASES THEN
+        REWRITE_TAC [] THEN
+        FIRST_X_ASSUM (Q.SPEC_THEN `0` MP_TAC) THEN
+        ASM_REWRITE_TAC [FUNPOW, LESS_0]
+      ],
+      SELECT_ELIM_TAC THEN
+      CONJ_TAC THENL [
+        Q.SPEC_THEN `\n. P (FUNPOW g n x)` (IMP_RES_TAC o BETA_RULE) WOP THEN
+        METIS_TAC [],
+        Q.X_GEN_TAC `m` THEN REPEAT STRIP_TAC THEN
+        Q.SUBGOAL_THEN `?p. m = SUC p` (CHOOSE_THEN SUBST_ALL_TAC) THENL [
+          Q.SPEC_THEN `m` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC)
+                      num_CASES THEN
+          FULL_SIMP_TAC bool_ss [FUNPOW] THEN METIS_TAC [],
+          ALL_TAC
+        ] THEN
+        FULL_SIMP_TAC bool_ss [FUNPOW] THEN
+        Q.SUBGOAL_THEN `?n. P (FUNPOW g n (g x))`
+                       (fn th => REWRITE_TAC [th]) THEN1 METIS_TAC [] THEN
+        POP_ASSUM (Q.SPEC_THEN `SUC m` (ASSUME_TAC o GEN_ALL o
+                                        SIMP_RULE bool_ss [FUNPOW,
+                                                           LESS_MONO_EQ])) THEN
+        SELECT_ELIM_TAC THEN CONJ_TAC THENL [
+          METIS_TAC [],
+          Q.X_GEN_TAC `m` THEN REPEAT STRIP_TAC THEN
+          METIS_TAC [LESS_LESS_CASES]
+        ]
+      ]
+    ],
+    POP_ASSUM (ASSUME_TAC o SIMP_RULE bool_ss []) THEN
+    FIRST_ASSUM (ASSUME_TAC o SIMP_RULE bool_ss [FUNPOW] o
+                 GEN_ALL o SPEC ``SUC n``) THEN
+    ASM_REWRITE_TAC [] THEN METIS_TAC [FUNPOW]
+  ]);
+
+
+(*---------------------------------------------------------------------------*)
+(*  WHILE = |- !P g x. WHILE P g x = if P x then WHILE P g (g x) else x      *)
+(*---------------------------------------------------------------------------*)
+
+val WHILE = new_specification 
+ ("WHILE", ["WHILE"],
+  (CONV_RULE (BINDER_CONV SKOLEM_CONV THENC SKOLEM_CONV) o GEN_ALL o
+   REWRITE_RULE [o_THM, cond_lemma] o
+   SPEC ``$~ o P : 'a -> bool``) ITERATION);
+
+
+val WHILE_INDUCTION = Q.store_thm
+("WHILE_INDUCTION",
+ `!B C R.
+     WF R /\ (!s. B s ==> R (C s) s) 
+     ==> !P. (!s. (B s ==> P (C s)) ==> P s) ==> !v. P v`,
+ METIS_TAC [relationTheory.WF_INDUCTION_THM]);
+
+
+val HOARE_SPEC_DEF = new_definition
+ ("HOARE_SPEC_DEF", 
+ ``HOARE_SPEC P C Q = !s. P s ==> Q (C s)``);
+
+(*---------------------------------------------------------------------------
+       The while rule from Hoare logic, total correctness version.
+ ---------------------------------------------------------------------------*)
+
+val WHILE_RULE = Q.store_thm
+("WHILE_RULE",
+ `!R B C.
+     WF R /\ (!s. B s ==> R (C s) s)
+      ==>
+        HOARE_SPEC (\s. P s /\ B s) C P 
+     (*------------------------------------------*) ==>
+        HOARE_SPEC P (WHILE B C) (\s. P s /\ ~B s)`,
+ REPEAT GEN_TAC THEN STRIP_TAC 
+  THEN REWRITE_TAC [HOARE_SPEC_DEF] THEN BETA_TAC THEN DISCH_TAC
+  THEN MP_TAC (SPEC_ALL WHILE_INDUCTION) THEN ASM_REWRITE_TAC[]
+  THEN DISCH_THEN HO_MATCH_MP_TAC (* recInduct *)
+  THEN METIS_TAC [WHILE]);
+
+
+(*---------------------------------------------------------------------------*)
+(* LEAST number satisfying a predicate.                                      *)
+(*---------------------------------------------------------------------------*)
+
+val LEAST_DEF = new_definition(
+  "LEAST_DEF",
+  ``LEAST P = WHILE ($~ o P) SUC 0``);
+
+val _ = set_fixity "LEAST" Binder;
+
+val LEAST_INTRO = store_thm(
+  "LEAST_INTRO",
+  ``!P x. P x ==> P ($LEAST P)``,
+  GEN_TAC THEN SIMP_TAC (srw_ss()) [LEAST_DEF] THEN
+  Q_TAC SUFF_TAC `!m n. P (m + n) ==> P (WHILE ($~ o P) SUC n)`
+  THENL [
+    SRW_TAC [][] THEN
+    FIRST_X_ASSUM (Q.SPECL_THEN [`x`,`0`] MP_TAC) THEN
+    ASM_SIMP_TAC bool_ss [ADD_CLAUSES],
+    ALL_TAC
+  ] THEN
+  INDUCT_TAC THENL [
+    ONCE_REWRITE_TAC [WHILE] THEN
+    ASM_SIMP_TAC bool_ss [ADD_CLAUSES, o_THM],
+    ONCE_REWRITE_TAC [WHILE] THEN
+    SRW_TAC [][ADD_CLAUSES] THEN
+    FIRST_X_ASSUM MATCH_MP_TAC THEN
+    ASM_SIMP_TAC bool_ss [ADD_CLAUSES]
+  ]);
+
+val LESS_LEAST = store_thm(
+  "LESS_LEAST",
+  ``!P m. m < $LEAST P ==> ~ P m``,
+  GEN_TAC THEN
+  Q.ASM_CASES_TAC `?x. P x` THENL [
+    POP_ASSUM STRIP_ASSUME_TAC THEN
+    REWRITE_TAC [LEAST_DEF] THEN
+    Q_TAC SUFF_TAC `!y n. n + y < WHILE ($~ o P) SUC n ==> ~P(n + y)` THENL [
+      STRIP_TAC THEN GEN_TAC THEN
+      POP_ASSUM (Q.SPECL_THEN [`m`, `0`] MP_TAC) THEN
+      SIMP_TAC bool_ss [ADD_CLAUSES],
+      ALL_TAC
+    ] THEN
+    INDUCT_TAC THENL [
+      ONCE_REWRITE_TAC [WHILE] THEN SRW_TAC [][LESS_REFL, ADD_CLAUSES],
+      GEN_TAC THEN
+      Q.SUBGOAL_THEN `n + SUC y = SUC n + y` SUBST_ALL_TAC THEN1
+        SRW_TAC [][ADD_CLAUSES] THEN
+      STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
+      RULE_ASSUM_TAC (ONCE_REWRITE_RULE [WHILE]) THEN
+      Q.ASM_CASES_TAC `P n` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+      Q.SUBGOAL_THEN `SUC n + y = n + SUC y` SUBST_ALL_TAC THEN1
+        SRW_TAC [][ADD_CLAUSES] THEN
+      METIS_TAC [LESS_ADD_SUC, LESS_TRANS, LESS_REFL]
+    ],
+    METIS_TAC []
+  ]);
+
+val FULL_LEAST_INTRO = store_thm(
+  "FULL_LEAST_INTRO",
+  ``!x. P x ==> P ($LEAST P) /\ $LEAST P <= x``,
+  METIS_TAC [LEAST_INTRO, NOT_LESS, LESS_LEAST]);
+
+val LEAST_ELIM = store_thm(
+  "LEAST_ELIM",
+  ``!Q P. (?n. P n) /\ (!n. (!m. m < n ==> ~ P m) /\ P n ==> Q n) ==>
+          Q ($LEAST P)``,
+  METIS_TAC [LEAST_INTRO, LESS_LEAST]);
+
+val LEAST_EXISTS = store_thm
+  ("LEAST_EXISTS",
+   ``!p. (?n. p n) = (p ($LEAST p) /\ !n. n < $LEAST p ==> ~p n)``,
+   GEN_TAC
+   THEN MATCH_MP_TAC EQ_TRANS
+   THEN Q.EXISTS_TAC `?n. p n /\ (!m. m < n ==> ~p m)`
+   THEN CONJ_TAC
+   THENL [(Tactical.REVERSE EQ_TAC THEN1 METIS_TAC [])
+          THEN REPEAT STRIP_TAC
+          THEN CCONTR_TAC
+          THEN (SUFF_TAC ``!n : num. ~p n`` THEN1 METIS_TAC [])
+          THEN HO_MATCH_MP_TAC COMPLETE_INDUCTION
+          THEN METIS_TAC [],
+          (Tactical.REVERSE EQ_TAC THEN1 METIS_TAC [])
+          THEN STRIP_TAC
+          THEN METIS_TAC [LESS_LEAST, LEAST_INTRO]]);
+
+val LEAST_EXISTS_IMP = store_thm
+  ("LEAST_EXISTS_IMP",
+   ``!p. (?n. p n) ==> (p ($LEAST p) /\ !n. n < $LEAST p ==> ~p n)``,
+   REWRITE_TAC [LEAST_EXISTS]);
+
+val _ = export_theory();
+
+end
