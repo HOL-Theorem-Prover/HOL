@@ -102,7 +102,7 @@ parse "`" ws * "--"  { print "\"])"; INITIAL lexbuf }
     | `\\`   { print "\\\\"; OLDTMQUOTE lexbuf }
     | `"`   { print "\\\""; OLDTMQUOTE lexbuf }
     | `\t`   { print "\\t"; OLDTMQUOTE lexbuf }
-    | newline{ print " \",\nOLDTMQUOTE \""; OLDTMQUOTE lexbuf }
+    | newline{ print " \",\nQUOTE \""; OLDTMQUOTE lexbuf }
     | _      { ECHO lexbuf; OLDTMQUOTE lexbuf }
     | eof    { () }
 
@@ -114,7 +114,7 @@ parse "`" ws * "=="  { print "\"])"; INITIAL lexbuf }
     | `\\`   { print "\\\\"; OLDTYQUOTE lexbuf }
     | `"`   { print "\\\""; OLDTYQUOTE lexbuf }
     | `\t`   { print "\\t"; OLDTYQUOTE lexbuf }
-    | newline{ print " \",\nOLDTYQUOTE \""; OLDTYQUOTE lexbuf }
+    | newline{ print " \",\nQUOTE \""; OLDTYQUOTE lexbuf }
     | _      { ECHO lexbuf; OLDTYQUOTE lexbuf }
     | eof    { () }
 
