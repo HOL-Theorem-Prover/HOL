@@ -31,6 +31,7 @@ sig
     val fail              : unit -> 'a
     val failwith          : string -> 'a
     val HOL_MESG          : string -> unit
+    val HOL_PROGRESS_MESG : string * string -> ('a -> 'b) -> 'a -> 'b
     val HOL_WARNING       : string -> string -> string -> unit
     val HOL_WARNINGloc    : string -> string -> locn.locn -> string -> unit
 

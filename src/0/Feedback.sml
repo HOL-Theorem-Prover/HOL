@@ -135,6 +135,16 @@ fun HOL_MESG s =
         flush_out (!MESG_outstream))
   else ()
 
+fun HOL_PROGRESS_MESG (start, finish) f x =
+    if !emit_MESG then let
+        val () = output(!MESG_outstream, "<<HOL message: "^ start)
+        val () = flush_out (!MESG_outstream)
+      in
+        f x before
+        (output(!MESG_outstream, finish ^ ">>\n"); flush_out (!MESG_outstream))
+      end
+    else f x
+
 fun HOL_WARNING s1 s2 s3 =
   if !emit_WARNING
   then (output(!WARNING_outstream, !WARNING_to_string s1 s2 s3);
