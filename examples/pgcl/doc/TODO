@@ -1,0 +1,19 @@
+To Do List
+----------
+
+Partially Ordered Sets:
+
+Positive Numbers:
+
+Expectations:
+- Develop theory of 1-bounded expectation for qtlTheory
+
+WP:
+- Theorems connecting wlp and wp
+  - Perhaps via expect_lfp t = expect_gfp t?
+
+Temporal Logic:
+- Get it working with positive reals and 1-bounded expectations.
+- Verify random walker
+
+Example Verifications:
