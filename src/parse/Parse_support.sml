@@ -55,7 +55,7 @@ fun make_aq tm {scope,free} = let
   open Term Preterm
   fun from ltm (E as (lscope,scope,free)) =
     case ltm of
-      VAR (v as (Name,Ty)) => 
+      VAR (v as (Name,Ty)) =>
        let val pty = Pretype.fromType Ty
            val v' = {Name=Name, Ty=pty}
        in if mem v' lscope then (Var v', E)
@@ -69,15 +69,15 @@ fun make_aq tm {scope,free} = let
                end
        end
     | CONST{Name,Thy,Ty} => (Const{Name=Name,Thy=Thy,Ty=Pretype.fromType Ty},E)
-    | COMB(Rator,Rand)   => 
+    | COMB(Rator,Rand)   =>
        let val (ptm1,E1) = from (dest_term Rator) E
            val (ptm2,E2) = from (dest_term Rand) E1
        in (Comb{Rator=ptm1, Rand=ptm2}, E2)
        end
-    | LAMB(Bvar,Body) => 
+    | LAMB(Bvar,Body) =>
        let val (s,ty) = dest_var Bvar
            val v' = {Name=s, Ty = Pretype.fromType ty}
-           val (Body',(_,_,free')) = from (dest_term Body) 
+           val (Body',(_,_,free')) = from (dest_term Body)
                                           (v'::lscope, scope, free)
        in (Abs{Bvar=Var v', Body=Body'}, (lscope,scope,free'))
        end
@@ -148,10 +148,10 @@ end
  * Free occurrences of variables.
  *---------------------------------------------------------------------------*)
 
-fun make_free_var (s,E) = 
+fun make_free_var (s,E) =
  let open Preterm
  in (Var{Name=s, Ty=lookup_fvar(s,E)}, E)
-     handle HOL_ERR _ => 
+     handle HOL_ERR _ =>
        let val tyv = Pretype.new_uvar()
        in (Var{Name=s, Ty=tyv}, add_free((s,tyv), E))
        end
@@ -224,7 +224,7 @@ fun make_qconst _ (p as (thy,s)) E =
 fun make_atom oinfo s E =
  make_bvar(s,E) handle HOL_ERR _
   =>
-  if Lib.mem s (Overload.known_constants oinfo) then
+  if Overload.is_overloaded oinfo s then
     (gen_overloaded_const oinfo s, E)
   else
   case List.find (fn rfn => String.isPrefix rfn s)
