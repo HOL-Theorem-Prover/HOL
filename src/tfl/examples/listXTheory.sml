@@ -9,9 +9,9 @@ struct
   local open WFTheory optionTheory rec_typeTheory
   in end;
   val _ = Theory.link_parents
-          ("listX",922903215,411142)
-          [("option",922898734,256999), ("rec_type",922898789,942101),
-           ("WF",922898870,496728)];
+          ("listX",927258083,938096)
+          [("option",927222864,902058), ("rec_type",927222918,415281),
+           ("WF",927222990,444400)];
   val _ = Theory.incorporate_types "listX" [];
   val _ = Theory.incorporate_consts "listX"
      [("mem",pty`:'a -> 'a list -> bool`,Term.Prefix),
