@@ -16,8 +16,7 @@ DOCTOTEXSED=../../../Manual/Reference/bin/doc-to-tex.sed
 # ---------------------------------------------------------------------
 # Pathname to the makeindex script
 # ---------------------------------------------------------------------
-MAKEINDEX=../../../Manual/LaTeX/makeindex ../../../
-#MAKEINDEX=makeindex
+MAKEINDEX=makeindex
 
 default:
 	@echo "INSTRUCTIONS: Type \"make all\" to make the documentation"
@@ -26,7 +25,8 @@ default:
 # Remove all trace of previous LaTeX jobs
 # ---------------------------------------------------------------------
 clean:
-	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg
+	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind \
+          entries.tex theorems.tex
 	@echo "\begin{theindex}" > index.tex
 	@echo "\mbox{}" >> index.tex
 	@echo "\end{theindex}" >> index.tex
@@ -47,7 +47,7 @@ theorems:
 	/bin/sh ${DOCTOTEX} ${DOCTOTEXSED} ${Help}/thms theorems.tex
 
 index:
-	${MAKEINDEX} res_quan.idx index.tex
+	${MAKEINDEX} res_quan.idx
 
 res_quan:
 	$(LATEX) res_quan.tex
