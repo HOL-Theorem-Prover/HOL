@@ -241,7 +241,7 @@ fun add_rws (RW{thms,rw_net,congs, cong_net}) thl =
 fun add_congs (RW{cong_net, congs, thms, rw_net}) thl =
   RW{thms = thms, rw_net = rw_net,
      congs = thl::congs,
-     cong_net = itlist Net.enter
+     cong_net = itlist Net.insert
          (map (fn th =>
                 let val c = concl th
                     val eq = #conseq(dest_imp c) handle _ => c
