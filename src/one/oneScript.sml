@@ -24,7 +24,7 @@
 structure oneScript =
 struct
 
-open Lib HolKernel Parse basicHol90Lib;
+open Lib HolKernel Parse boolLib;
 
 type thm = Thm.thm;
 infix THEN THENL;
@@ -38,7 +38,7 @@ val _ = new_theory "one";
 (* prove the (trivial) theorem: ?b.(\b.b)b.				*)
 (*----------------------------------------------------------------------*)
 
-val EXISTS_ONE_REP = 
+val EXISTS_ONE_REP =
    prove(--`?b:bool. (\b.b) b`--,
          EXISTS_TAC (--`T`--) THEN
          CONV_TAC BETA_CONV THEN
@@ -47,10 +47,9 @@ val EXISTS_ONE_REP =
 (* Use the type definition mechanism to introduce the new type.		*)
 (* The theorem returned is:   |- ?rep. TYPE_DEFINITION (\b.b) rep	*)
 
-val one_TY_DEF = REWRITE_RULE [boolTheory.TYPE_DEFINITION]
-       (new_type_definition{name = "one", 
-                            pred = --`\b:bool.b`--, 
-                            inhab_thm = EXISTS_ONE_REP});
+val one_TY_DEF = REWRITE_RULE [boolTheory.TYPE_DEFINITION_THM]
+       (Rsyntax.new_type_definition{name = "one",
+                                    inhab_thm = EXISTS_ONE_REP});
 
 (* ---------------------------------------------------------------------*)
 (* The proof of the `axiom` for type :one follows.			*)
@@ -59,32 +58,32 @@ val one_TY_DEF = REWRITE_RULE [boolTheory.TYPE_DEFINITION]
 val one_axiom = store_thm("one_axiom",
   Term`!f g:'a -> one. f = g`,
     CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN
-    REPEAT GEN_TAC THEN 
+    REPEAT GEN_TAC THEN
     STRIP_ASSUME_TAC (CONV_RULE (DEPTH_CONV BETA_CONV) one_TY_DEF) THEN
     FIRST_ASSUM MATCH_MP_TAC THEN
     EQ_TAC THEN DISCH_THEN (K ALL_TAC) THEN
     POP_ASSUM (CONV_TAC o REWR_CONV) THENL
-    [EXISTS_TAC (Term`g (x:'a):one`), EXISTS_TAC (Term`f (x:'a):one`)] 
+    [EXISTS_TAC (Term`g (x:'a):one`), EXISTS_TAC (Term`f (x:'a):one`)]
     THEN REFL_TAC);
 
 (*---------------------------------------------------------------------------
     Define the constant `one` of type one....
  ---------------------------------------------------------------------------*)
 
-val one_DEF = 
+val one_DEF =
  new_definition
    ("one_DEF", Term`one = @x:one.T`);
 
 (*---------------------------------------------------------------------------
-  The following theorem shows that there is only one value of type :one 
+  The following theorem shows that there is only one value of type :one
  ---------------------------------------------------------------------------*)
 
 val one = store_thm("one",
  Term`!v:one. v = one`,
- GEN_TAC THEN 
+ GEN_TAC THEN
  ACCEPT_TAC (CONV_RULE (DEPTH_CONV BETA_CONV)
-   (AP_THM 
-     (SPECL [Term`\x:'a.(v:one)`, 
+   (AP_THM
+     (SPECL [Term`\x:'a.(v:one)`,
              Term`\x:'a.one`] one_axiom) (Term`x:'a`))));
 
 (*---------------------------------------------------------------------------
@@ -93,14 +92,14 @@ val one = store_thm("one",
 
 val one_Axiom = store_thm("one_Axiom",
     --`!e:'a. ?!fn. fn one = e`--,
-    STRIP_TAC THEN 
-    CONV_TAC EXISTS_UNIQUE_CONV THEN 
+    STRIP_TAC THEN
+    CONV_TAC EXISTS_UNIQUE_CONV THEN
     STRIP_TAC THENL
-    [EXISTS_TAC (--`\(x:one).(e:'a)`--) THEN 
+    [EXISTS_TAC (--`\(x:one).(e:'a)`--) THEN
      BETA_TAC THEN REFL_TAC,
      REPEAT STRIP_TAC THEN
      CONV_TAC FUN_EQ_CONV THEN
-     ONCE_REWRITE_TAC [one] THEN 
+     ONCE_REWRITE_TAC [one] THEN
      ASM_REWRITE_TAC[]]);
 
 val _ = export_theory();
