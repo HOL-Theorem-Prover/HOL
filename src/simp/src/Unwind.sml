@@ -418,35 +418,6 @@ fun ENSURE_EQ_CONV var tm =
         then SPEC (dest_neg tm) EQF_INTRO_THM
         else SPEC tm EQT_INTRO_THM;
 
-
-(*-------------------------------------------------------------------
- * LAST_EXISTS_CONV : Apply a conversion to the last existential in
- * a nesting of existential bindings, i.e.
- *    ?x1 x2 x3...xn.  T1
- * conv gets applied to
- *    ?xn. T1
- *------------------------------------------------------------------------*)
-
-fun LAST_EXISTS_CONV conv tm =
-  let val (var,body) = dest_exists tm
-  in if (is_exists body) then RAND_CONV (ABS_CONV (LAST_EXISTS_CONV conv)) tm
-     else conv tm
-  end;
-
-(*-------------------------------------------------------------------
- * LAST_FORALL_CONV : Apply a conversion to the last universal
- * quantification in a nesting of universal quantifications, i.e.
- *    !x1 x2 x3...xn.  T1
- * conv gets applied to
- *    !xn. T1
- *------------------------------------------------------------------------*)
-
-fun LAST_FORALL_CONV conv tm =
-  let val (var,body) = dest_forall tm
-  in if (is_forall body) then RAND_CONV (ABS_CONV (LAST_FORALL_CONV conv)) tm
-     else conv tm
-  end;
-
 (*-------------------------------------------------------------------
  * ELIM_EXISTS_CONV :
  *    Eliminate an existential witnessed by an equality somewhere

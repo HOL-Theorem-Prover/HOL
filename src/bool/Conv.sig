@@ -17,6 +17,7 @@ sig
    val STRIP_BINDER_CONV     : term option -> conv -> conv
    val STRIP_QUANT_CONV      : conv -> conv
    val LAST_EXISTS_CONV      : conv -> conv
+   val LAST_FORALL_CONV      : conv -> conv
    val LHS_CONV              : conv -> conv
    val RHS_CONV              : conv -> conv
    val NO_CONV               : conv

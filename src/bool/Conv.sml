@@ -356,6 +356,11 @@ in
   else c tm
 end
 
+fun LAST_FORALL_CONV c tm =
+  if is_forall (#2 (Psyntax.dest_forall tm)) then
+    BINDER_CONV (LAST_FORALL_CONV c) tm
+  else c tm
+
 val DEPTH_CONV = QCONV o DEPTH_QCONV;;
 val REDEPTH_CONV = QCONV o REDEPTH_QCONV;;
 val TOP_DEPTH_CONV = QCONV o TOP_DEPTH_QCONV;
