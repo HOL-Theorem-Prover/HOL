@@ -90,7 +90,7 @@ val DIV_THEN_MULT = store_thm
    ``!p q. SUC q * (p DIV SUC q) <= p``,
    NTAC 2 STRIP_TAC
    ++ KNOW_TAC `?r. p = (p DIV SUC q) * SUC q + r`
-   >> PROVE_TAC [DIVISION, DECIDE `0 < SUC q`]
+   >> PROVE_TAC [DIVISION, DECIDE ``0 < SUC q``]
    ++ SUFF_TAC `p = SUC q * (p DIV SUC q) + r`
    >> (KILL_ALL_TAC ++ DECIDE_TAC)
    ++ PROVE_TAC [MULT_COMM]);
@@ -445,7 +445,7 @@ val INV_SUC_MAX = store_thm
   ("INV_SUC_MAX",
    ``!n. 1 / & (SUC n) <= 1``,
    REWRITE_TAC [GSYM REAL_INV_1OVER]
-   ++ Induct >> RW_TAC arith_ss [DECIDE `SUC 0 = 1`, REAL_INV1, REAL_LE_REFL]
+   ++ Induct >> RW_TAC arith_ss [DECIDE ``SUC 0 = 1``, REAL_INV1, REAL_LE_REFL]
    ++ SUFF_TAC `inv (& (SUC (SUC n))) <= inv (& (SUC n))`
    >> PROVE_TAC [REAL_LE_TRANS]
    ++ SUFF_TAC `inv (& (SUC (SUC n))) < inv (& (SUC n))` >> REAL_ARITH_TAC

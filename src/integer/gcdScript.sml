@@ -77,7 +77,7 @@ val GCD_IS_GCD = store_thm("GCD_IS_GCD",
                            recInduct gcd_ind THEN ARW [GCD] THEN
                            PROVE_TAC [IS_GCD_0L,IS_GCD_0R,
                                       IS_GCD_MINUS_L,IS_GCD_MINUS_R,
-                                      DECIDE`~(y<=x) ==> SUC x <= SUC y`,
+                                      DECIDE(Term`~(y<=x) ==> SUC x <= SUC y`),
                                       LESS_EQ_MONO,SUB_MONO_EQ]);
 
 val GCD_REF = store_thm("GCD_REF",
@@ -125,7 +125,7 @@ recInduct gcd_ind THEN ARW [GCD]
   THEN Q.PAT_ASSUM `$! M` MATCH_MP_TAC
   THENL [`?z. x = y+z` by (Q.EXISTS_TAC `x-y` THEN DECIDE_TAC),
          `?z. y = x+z` by (Q.EXISTS_TAC `y-x` THEN DECIDE_TAC)]
-  THEN RW_TAC std_ss [DECIDE `(x + y) - x = y`]
+  THEN RW_TAC std_ss [DECIDE (Term`(x + y) - x = y`)]
   THEN PROVE_TAC [DIVIDES_ADD_2,ADD_ASSOC,MULT_CLAUSES,
                   ADD_CLAUSES,LEFT_ADD_DISTRIB]);
 
@@ -281,7 +281,7 @@ val GCD_EFFICIENTLY = store_thm(
   `q * a <= q * a + r` by SIMP_TAC arith_ss [] THEN
   POP_ASSUM (SUBST_ALL_TAC o ONCE_REWRITE_RULE [GCD_SYM] o
              MATCH_MP gcd_lemma) THEN
-  SIMP_TAC std_ss [DECIDE `(x:num) + y - x = y`] THEN
+  SIMP_TAC std_ss [DECIDE (Term`(x:num) + y - x = y`)] THEN
   CONV_TAC (RAND_CONV (REWR_CONV GCD_SYM)) THEN REWRITE_TAC []);
 
 val _ = export_theory();

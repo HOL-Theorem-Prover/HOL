@@ -57,7 +57,7 @@ val (unif_bound_def, unif_bound_ind) = Defn.tprove
       WF_REL_TAC g
       ++ STRIP_TAC
       ++ KNOW_TAC `2 * (SUC v DIV 2) <= SUC v`
-      >> PROVE_TAC [DECIDE `2 = SUC 1`, DIV_THEN_MULT]
+      >> PROVE_TAC [DECIDE ``2 = SUC 1``, DIV_THEN_MULT]
       ++ DECIDE_TAC)
   end;
 
@@ -74,7 +74,7 @@ val (unif_def, unif_ind) = Defn.tprove
       WF_REL_TAC g
       ++ STRIP_TAC
       ++ KNOW_TAC `2 * (SUC v2 DIV 2) <= SUC v2`
-      >> PROVE_TAC [DECIDE `2 = SUC 1`, DIV_THEN_MULT]
+      >> PROVE_TAC [DECIDE ``2 = SUC 1``, DIV_THEN_MULT]
       ++ DECIDE_TAC)
   end;
 
@@ -127,7 +127,7 @@ val UNIF_BOUND_UPPER = store_thm
    ++ Cases_on `SUC v DIV 2 = 0`
    >> (POP_ASSUM MP_TAC
        ++ RW_TAC std_ss [SUC_DIV_TWO_ZERO]
-       ++ RW_TAC arith_ss [DECIDE `SUC 0 = 1`, DIV_TWO_BASIC,
+       ++ RW_TAC arith_ss [DECIDE ``SUC 0 = 1``, DIV_TWO_BASIC,
 			   unif_bound_def, EXP])
    ++ RES_TAC
    ++ POP_ASSUM MP_TAC
@@ -227,8 +227,8 @@ val PROB_UNIF = store_thm
    ++ RW_TAC std_ss [COND_RAND, COND_EXPAND]
    ++ (CONV_TAC o RATOR_CONV o ONCE_REWRITE_CONV) [EQ_SYM_EQ]
    ++ RW_TAC std_ss [LEFT_AND_OVER_OR, RIGHT_AND_OVER_OR]
-   ++ RW_TAC std_ss [PROVE [] `~X /\ X = F`,
-                     DECIDE `((m:num) + 1 = n) /\ (m = n) = F`]
+   ++ RW_TAC std_ss [PROVE [] ``~X /\ X = F``,
+                     DECIDE ``((m:num) + 1 = n) /\ (m = n) = F``]
    ++ MP_TAC (Q.SPEC `k` EVEN_ODD_EXISTS_EQ)
    ++ MP_TAC (Q.SPEC `k` EVEN_OR_ODD)
    ++ (STRIP_TAC ++ RW_TAC std_ss [] ++ RW_TAC std_ss [DIV_TWO_CANCEL]) <<
@@ -236,7 +236,7 @@ val PROB_UNIF = store_thm
     >> (STRIP_TAC
         ++ SUFF_TAC `~(SUC (2 * k) = 2 * m)` >> DECIDE_TAC
         ++ PROVE_TAC [EVEN_DOUBLE, ODD_DOUBLE, EVEN_ODD])
-    ++ RW_TAC std_ss [DECIDE `(2:num * a = 2 * b) = (a = b)`]
+    ++ RW_TAC std_ss [DECIDE ``(2:num * a = 2 * b) = (a = b)``]
     ++ KILL_ALL_TAC
     ++ Q.SPEC_TAC (`SUC v DIV 2`, `n`)
     ++ STRIP_TAC
@@ -258,7 +258,7 @@ val PROB_UNIF = store_thm
     ++ RW_TAC std_ss [],
     KNOW_TAC `!k. ~(2 * k = SUC (2 * m))`
     >> PROVE_TAC [EVEN_DOUBLE, ODD_DOUBLE, EVEN_ODD]
-    ++ RW_TAC std_ss [DECIDE `(2 * a + 1 = SUC (2 * b)) = (a = b)`]
+    ++ RW_TAC std_ss [DECIDE ``(2 * a + 1 = SUC (2 * b)) = (a = b)``]
     ++ KILL_ALL_TAC
     ++ Q.SPEC_TAC (`SUC v DIV 2`, `n`)
     ++ STRIP_TAC
@@ -344,7 +344,7 @@ val PROB_UNIF_GOOD = store_thm
        ++ PROVE_TAC [POW_HALF_POS, REAL_INV_POS])
    ++ RW_TAC std_ss [POW_HALF_EXP, REAL_INVINV_ALL, GSYM REAL_INV_1OVER]
    ++ MATCH_MP_TAC (PROVE [REAL_LE_LMUL]
-	`0:real < &(SUC n) /\ &(SUC n):real * x <= &(SUC n) * y ==> x <= y`)
+       ``0:real < &(SUC n) /\ &(SUC n):real * x <= &(SUC n) * y ==> x <= y``)
    ++ RW_TAC arith_ss [REAL_LT, REAL_MUL_RINV, REAL_MUL_ASSOC, REAL_MUL_LID]
    ++ RW_TAC std_ss [REAL_LE, REAL_MUL]
    ++ SUFF_TAC `SUC (2 * n) <= SUC n * 2`
@@ -368,8 +368,8 @@ val PROB_UNIFORM_LOWER_BOUND = store_thm
    ++ Induct
    >> (RW_TAC arith_ss []
        ++ POP_ASSUM (MP_TAC o Q.SPEC `0`)
-       ++ MP_TAC (DECIDE `!m. m < SUC 0 = (m = 0)`)
-       ++ MP_TAC (DECIDE `SUC 0 = 1`)
+       ++ MP_TAC (DECIDE ``!m. m < SUC 0 = (m = 0)``)
+       ++ MP_TAC (DECIDE ``SUC 0 = 1``)
        ++ RW_TAC std_ss []
        ++ RW_TAC real_ss [])
    ++ RW_TAC arith_ss []
@@ -394,8 +394,8 @@ val PROB_UNIFORM_UPPER_BOUND = store_thm
    ++ Induct
    >> (RW_TAC arith_ss []
        ++ POP_ASSUM (MP_TAC o Q.SPEC `0`)
-       ++ MP_TAC (DECIDE `!m. m < SUC 0 = (m = 0)`)
-       ++ MP_TAC (DECIDE `SUC 0 = 1`)
+       ++ MP_TAC (DECIDE ``!m. m < SUC 0 = (m = 0)``)
+       ++ MP_TAC (DECIDE ``SUC 0 = 1``)
        ++ RW_TAC std_ss []
        ++ RW_TAC real_ss [])
    ++ RW_TAC arith_ss []
@@ -433,10 +433,10 @@ val PROB_UNIFORM_PAIR_SUC = store_thm
    ++ RW_TAC std_ss [COND_RAND, COND_EXPAND]
    ++ (CONV_TAC o RATOR_CONV o ONCE_REWRITE_CONV) [EQ_SYM_EQ]
    ++ RW_TAC std_ss [LEFT_AND_OVER_OR, RIGHT_AND_OVER_OR]
-   ++ RW_TAC std_ss [PROVE [] `~X /\ X = F`]
+   ++ RW_TAC std_ss [PROVE [] ``~X /\ X = F``]
    ++ KNOW_TAC `!m. (m = k) /\ (m < SUC n) = (m = k)` >> DECIDE_TAC
    ++ KNOW_TAC `!m. (m = k') /\ (m < SUC n) = (m = k')` >> RW_TAC arith_ss []
-   ++ RW_TAC std_ss [PROVE [] `X \/ (X /\ Y) = X`]
+   ++ RW_TAC std_ss [PROVE [] ``X \/ (X /\ Y) = X``]
    ++ NTAC 2 (POP_ASSUM (K ALL_TAC))
    ++ KNOW_TAC `(\s. ~(FST (unif n s) < SUC n) /\
             (FST (uniform t (SUC n) (SND (unif n s))) = k) \/
