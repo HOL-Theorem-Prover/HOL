@@ -79,9 +79,11 @@ val INT_NORM_CONV = let
         SPEC (rand t) INT_NEG_MINUS1
       else ALL_QCONV t
 in
-  integerRingLib.INT_NORM_CONV THENC
-  REWRITE_CONV [int_sub, INT_NEG_LMUL, INT_ADD_ASSOC, move_numeral_right] THENC
-  addzero THENC put_in_times1
+  Profile.profile "INC.ringLib" integerRingLib.INT_NORM_CONV THENC
+  Profile.profile "INC.rewriting"
+    (REWRITE_CONV [int_sub, INT_NEG_LMUL, INT_ADD_ASSOC,
+                   move_numeral_right]) THENC
+  Profile.profile "INC.final" (addzero THENC put_in_times1)
 end
 
 
@@ -211,7 +213,9 @@ fun eliminate_equality v tm = let
   val rhs = rand tm
   val (v_t, rest) = Lib.pluck (fn t => rand t = v) (strip_plus rhs)
   val new_rhs = mk_plus(v_t, list_mk_plus rest)
-  val rhs_th = EQT_ELIM (integerRingLib.INT_RING_CONV (mk_eq(rhs, new_rhs)))
+  val IRC = if length rest > 20 then integerRingLib.INT_RING_CONV
+            else AC_CONV(INT_ADD_ASSOC, INT_ADD_COMM)
+  val rhs_th = EQT_ELIM (IRC (mk_eq(rhs, new_rhs)))
   val dealwith_negative_coefficient =
       if is_negated (lhand v_t) then
         REWR_CONV (GSYM INT_EQ_NEG) THENC
@@ -251,11 +255,14 @@ end tm
 fun OmegaEq t = let
   val (exvars, body) = strip_exists t
   val exv_set = HOLset.addList(empty_tmset, exvars)
+  val gcd_check = Profile.profile "gcd_check" OmegaMath.gcd_check
+  val INT_NORM_CONV = Profile.profile "INT_NORM_CONV" INT_NORM_CONV
   val _ = length exvars > 0 orelse
           raise ERR "OmegaEq" "Term not existentially quantified"
   val conjns = strip_conj body
   val (vwithleast, conj, rest) =
-      find_eliminable_equality exv_set (NONE, NONE, []) conjns
+      Profile.profile "find_elim_eq"
+      (find_eliminable_equality exv_set (NONE, NONE, [])) conjns
   val _ = isSome vwithleast orelse raise UNCHANGED
   val (to_elim, elimc) = valOf vwithleast
   val c = valOf conj
@@ -274,7 +281,7 @@ in
   push_exvar_to_bot to_elim THENC
   LAST_EXISTS_CONV (REWR_CONV UNWIND_THM2 THENC BETA_CONV) THENC
   STRIP_QUANT_CONV (EVERY_CONJ_CONV (RAND_CONV INT_NORM_CONV THENC
-                                     OmegaMath.gcd_check)) THENC
+                                     gcd_check)) THENC
   OmegaEq
 end t
 

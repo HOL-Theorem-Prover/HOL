@@ -1,4 +1,4 @@
-structure OmegaMath = struct
+structure OmegaMath :> OmegaMath = struct
 
 open HolKernel boolLib intSyntax integerTheory int_arithTheory
 
@@ -125,7 +125,8 @@ in
             (REWR_CONV INT_NEGNEG, ALL_QCONV, elim_le_coeffs_pos,
              rand (rand numpart))
           else
-            (ALL_QCONV, REWR_CONV INT_NEGNEG, elim_le_coeffs_neg, rand numpart)
+            (ALL_QCONV, REWR_CONV INT_NEGNEG ORELSEC REWR_CONV INT_NEG_0,
+             elim_le_coeffs_neg, rand numpart)
       val final_th = MP (SPECL [g_t, newlhs, newvars_sum] elimth)
                         zero_lt_g
     in
