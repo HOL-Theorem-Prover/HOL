@@ -54,12 +54,7 @@ VERSION = 17
 RD = $(TARGET)$(VERSION)
 
 clean:
-	cd examples/milner; make clean
-	cd examples/cmilner; make clean
-	cd examples/queen; make clean
-	cd examples/adder; make clean
-	cd examples/fdd; make clean
-	cd examples/calculator; make clean
+	cd examples/adder && make clean
 	cd src; make clean
 	cd doc; make clean
 	rm -f *~
