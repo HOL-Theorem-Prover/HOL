@@ -89,6 +89,14 @@ in
   recurse [] tm
 end
 
+val dest_div = dest_binop div_tm ("dest_div", "Term not a division")
+val is_div = can dest_div
+fun mk_div (t1, t2) = list_mk_comb(div_tm, [t1, t2])
+
+val dest_mod = dest_binop mod_tm ("dest_mod", "Term not a modulo")
+val is_mod = can dest_mod
+fun mk_mod (t1, t2) = list_mk_comb(mod_tm, [t1, t2])
+
 fun mk_absval tm = mk_comb(absval_tm, tm)
 fun is_absval tm = is_comb tm andalso rator tm = absval_tm
 
