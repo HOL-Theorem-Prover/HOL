@@ -890,6 +890,32 @@ val APPEND_FRONT_LAST = store_thm(
   REWRITE_TAC [NOT_CONS_NIL] THEN STRIP_TAC THEN
   ASM_REWRITE_TAC [FRONT_CONS, LAST_CONS, APPEND]);
 
+(* ----------------------------------------------------------------------
+    ALL_DISTINCT
+   ---------------------------------------------------------------------- *)
+
+val ALL_DISTINCT = new_recursive_definition {
+  def = Term`(ALL_DISTINCT [] = T) /\
+             (ALL_DISTINCT (h::t) = ~MEM h t /\ ALL_DISTINCT t)`,
+  name = "ALL_DISTINCT",
+  rec_axiom = list_Axiom};
+
+val lemma = prove(
+  ``!l x. (FILTER ((=) x) l = []) = ~MEM x l``,
+  LIST_INDUCT_TAC THEN
+  ASM_SIMP_TAC (bool_ss ++ COND_elim_ss)
+               [FILTER, MEM, NOT_CONS_NIL, EQ_IMP_THM,
+                LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]);
+
+val ALL_DISTINCT_FILTER = store_thm(
+  "ALL_DISTINCT_FILTER",
+  ``!l. ALL_DISTINCT l = !x. MEM x l ==> (FILTER ((=) x) l = [x])``,
+  LIST_INDUCT_TAC THEN
+  ASM_SIMP_TAC (bool_ss ++ COND_elim_ss)
+               [ALL_DISTINCT, MEM, FILTER, DISJ_IMP_THM,
+                FORALL_AND_THM, CONS_11, EQ_IMP_THM, lemma] THEN
+  metisLib.METIS_TAC []);
+
 (* --------------------------------------------------------------------- *)
 
 val _ = adjoin_to_theory
