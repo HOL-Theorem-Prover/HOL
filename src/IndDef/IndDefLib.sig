@@ -24,6 +24,7 @@ sig
   val new_simple_inductive_definition : term list -> thm * thm * thm
 
   val RULE_INDUCT_THEN : thm -> thm_tactic -> tactic
+  val RULE_INDUCT_TAC  : thm -> tactic
 
   val prove_nonschematic_inductive_relations_exist : monoset -> term -> thm
   val derive_nonschematic_inductive_relations : term -> thm
