@@ -50,14 +50,22 @@ fun pretypeToType pty =
     end
   | dAQ pty => pty
 
-val bads = CharSet.addString(CharSet.empty, "()$\"")
+val bads = CharSet.addString(CharSet.empty, "()\"")
 
-fun ident_munge qb s = let
+fun ident_munge dollared qb s = let
   val s0 = String.sub(s, 0)
 in
   if Char.isAlpha s0 then
-    if s <> "of" then (qbuf.advance qb; s)
+    if s <> "of" orelse dollared then (qbuf.advance qb; s)
     else raise ERR "ident" "Expected an identifier, got (reserved word) \"of\""
+  else if s0 = #"$" then
+    (* Allow leading dollar signs as quoting mechanism (for "of", but to
+       also cope with potential user paranoia over names of infix
+       constructors).
+       Note that the base_lexer ensures that only one dollar sign is possible
+       at the head of a BT_Ident string, and that it is followed by a
+       non-empty string *)
+    ident_munge true qb (String.extract(s, 1, NONE))
   else let
       val s_chars = CharSet.addString(CharSet.empty, s)
       val overlap = CharSet.intersect(bads, s_chars)
@@ -69,18 +77,44 @@ end
 
 fun ident qb =
     case qbuf.current qb of
-      base_tokens.BT_Ident s => ident_munge qb s
+      base_tokens.BT_Ident s => ident_munge false qb s
     | bt => raise ERR "ident" ("Expected an identifier, got "^
                                base_tokens.toString bt)
 
-fun scan s qb =
-    case qbuf.current qb of
-      base_tokens.BT_Ident s' => if s <> s' then
-                                   raise ERR "scan"
-                                         ("Wanted \""^s^"\"; got \""^s'^"\"")
-                                 else qbuf.advance qb
-    | x => raise ERR "scan" ("Wanted \""^s^"\"; got \""^
-                             base_tokens.toString x^"\"")
+fun pdtok_of qb = let
+  open base_tokens CharSet
+  fun advance () = qbuf.advance qb
+in
+  case qbuf.current qb of
+    t as BT_Ident s =>
+    if Char.isAlpha (String.sub(s, 0)) then (advance, t)
+    else let
+        (* use of CharSet bads here is really a check for just the parentheses
+           as the other characters in bads shouldn't be occurring in
+           symbolic identifiers *)
+        val (ss1, ss2) = Substring.splitl (fn c => not (member(bads, c)))
+                                          (Substring.all s)
+        val s1 = Substring.string ss1
+        val s2 = Substring.string ss2
+      in
+        if s1 = "" orelse s2 = "" then (advance, t)
+        else ((fn () => qbuf.replace_current (BT_Ident s2) qb), BT_Ident s1)
+      end
+  | t => (advance, t)
+end;
+
+
+fun scan s qb = let
+  val (adv, t) = pdtok_of qb
+in
+  case t of
+    base_tokens.BT_Ident s' => if s <> s' then
+                                 raise ERR "scan"
+                                           ("Wanted \""^s^"\"; got \""^s'^"\"")
+                               else adv()
+  | x => raise ERR "scan" ("Wanted \""^s^"\"; got \""^
+                           base_tokens.toString x^"\"")
+end
 
 fun qtyop {Tyop, Thy, Args} = dTyop {Tyop = Tyop, Thy = SOME Thy, Args = Args}
 fun tyop (s, args) = dTyop {Tyop = s, Thy = NONE, Args = args}
