@@ -137,7 +137,7 @@ val keepers =
      "numRingTheory.sig",      "semi_ringTheory.sig",
 
      (* simpLib *)
-     "simpLib.sig", 
+     "simpLib.sig", "boolSimps.sig",
 
      (* string *)
      "stringLib.sig", "stringTheory.sig", "stringSyntax.sig", 
@@ -166,5 +166,8 @@ val keepers =
      "bword_numTheory.sig","word_bitopTheory.sig",
 
      (* HolSat *)
-     "HolSatLib.sig", "canon_supportTheory.sig",
-     "canonTools.sig"];
+     "HolSatLib.sig", "canon_supportTheory.sig", "canonTools.sig",
+
+     (* simpsets *)
+     "optionSimps.sig", "numSimps.sig", "intSimps"
+  ];

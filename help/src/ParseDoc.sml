@@ -57,7 +57,7 @@ datatype section
    | SEEALSO of substring list;
 
 
-val valid_keywords =
+val valid_keywords =   (* not currently used *)
     Binaryset.addList(Binaryset.empty String.compare,
                       ["DOC", "ELTYPE", "BLTYPE", "TYPE", "SYNOPSIS",
                        "COMMENTS", "USES", "SEEALSO", "KEYWORDS", "DESCRIBE",
@@ -274,4 +274,4 @@ fun parse_file docfile =
   end handle ParseError s => raise ParseError (docfile^": "^s)
            | x => (warn ("Exception raised in "^docfile^"\n"); raise x)
 
-end; (* struct *)
+end
