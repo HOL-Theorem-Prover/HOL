@@ -458,6 +458,30 @@ CONJ_TAC THEN
    THEN REWRITE_TAC [CONS_11,NOT_NIL_CONS, NOT_CONS_NIL,APPEND]
    THEN GEN_TAC THEN MATCH_ACCEPT_TAC EQ_SYM_EQ);
 
+val APPEND_11 = store_thm(
+  "APPEND_11",
+  Term`(!l1 l2 l3:'a list. (APPEND l1 l2 = APPEND l1 l3) = (l2 = l3)) /\
+       (!l1 l2 l3:'a list. (APPEND l2 l1 = APPEND l3 l1) = (l2 = l3))`,
+  CONJ_TAC THEN LIST_INDUCT_TAC THEN
+  ASM_REWRITE_TAC [APPEND, CONS_11, APPEND_NIL] THEN
+  Q.SUBGOAL_THEN
+    `!h l1 l2:'a list. APPEND l1 (h::l2) = APPEND (APPEND l1 [h]) l2`
+    (ONCE_REWRITE_TAC o C cons [])
+  THENL [
+    GEN_TAC THEN POP_ASSUM (K ALL_TAC) THEN LIST_INDUCT_TAC THEN
+    REWRITE_TAC [APPEND, CONS_11] THEN POP_ASSUM ACCEPT_TAC,
+    ASM_REWRITE_TAC [] THEN GEN_TAC THEN POP_ASSUM (K ALL_TAC) THEN
+    LIST_INDUCT_TAC THEN REWRITE_TAC [APPEND, CONS_11] THENL [
+      LIST_INDUCT_TAC THEN
+      REWRITE_TAC [APPEND, CONS_11, NOT_NIL_CONS, DE_MORGAN_THM,
+                   APPEND_eq_NIL, NOT_CONS_NIL],
+      GEN_TAC THEN LIST_INDUCT_TAC THEN
+      ASM_REWRITE_TAC [APPEND, CONS_11, APPEND_eq_NIL, NOT_CONS_NIL,
+                       NOT_NIL_CONS]
+    ]
+  ]);
+
+
 (* Computing EL when n is in numeral representation *)
 val EL_compute = store_thm("EL_compute",
 Term `!n. EL n l = if n=0 then HD l else EL (PRE n) (TL l)`,
