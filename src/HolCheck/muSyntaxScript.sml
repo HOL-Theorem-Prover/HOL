@@ -197,6 +197,32 @@ val FV_def = save_thm("FV_def",Define `
 
 val CLOSED_def = save_thm("CLOSED_def",Define `CLOSED (f:'prop mu) = (FV f = {})`)
 
+val IS_PROP_def = Define `
+(IS_PROP (T:'prop mu) = T) /\
+(IS_PROP F = T) /\
+(IS_PROP (~f) = IS_PROP f) /\ 
+(IS_PROP (f1 /\ f2) = (IS_PROP f1) /\ (IS_PROP f2)) /\
+(IS_PROP (f1 \/ f2) = (IS_PROP f1) /\ (IS_PROP f2)) /\
+(IS_PROP (RV Q) = F) /\
+(IS_PROP (AP p) = T) /\
+(IS_PROP (<<a>> f) = F) /\
+(IS_PROP ([[a]] f) = F) /\
+(IS_PROP (mu Q.. f) =  F)  /\ 
+(IS_PROP (nu Q.. f) =  F)`
+
+val AP_SUBST_def = Define `
+(AP_SUBST g ap (T:'prop mu) = (T:'prop mu)) /\
+(AP_SUBST g ap F = F) /\
+(AP_SUBST g ap (~f) = ~(AP_SUBST g ap f)) /\ 
+(AP_SUBST g ap (f1 /\ f2) = (AP_SUBST g ap f1) /\ (AP_SUBST g ap f2)) /\
+(AP_SUBST g ap (f1 \/ f2) = (AP_SUBST g ap f1) \/ (AP_SUBST g ap f2)) /\
+(AP_SUBST g ap (RV Q) = (RV Q)) /\
+(AP_SUBST g ap (AP p) = if (p=ap) then g else AP p) /\
+(AP_SUBST g ap (<<a>> f) = <<a>> (AP_SUBST g ap f)) /\
+(AP_SUBST g ap ([[a]] f) = [[a]] (AP_SUBST g ap f)) /\
+(AP_SUBST g ap (mu Q.. f) = (mu Q.. (AP_SUBST g ap f)))  /\ 
+(AP_SUBST g ap (nu Q.. f) =  (nu Q.. (AP_SUBST g ap f)))`
+
 val RVNEG_SYM = save_thm("RVNEG_SYM",prove(``!Q Q' (f:'prop mu). RVNEG Q (RVNEG Q' f) = RVNEG Q' (RVNEG Q f)``,
 REPEAT GEN_TAC
 THEN Induct_on `f` THEN SIMP_TAC std_ss (RVNEG_def::(tsimps "mu")) THEN FULL_SIMP_TAC std_ss [] THENL [

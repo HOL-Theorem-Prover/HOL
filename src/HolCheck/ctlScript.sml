@@ -73,19 +73,6 @@ val kripke_structure_def =
        P: 'prop -> bool;
        L: 'state -> ('prop -> bool) |>`;
 
-val TOTAL_def = Define `TOTAL R = !s. ?s'. R(s,s')`;
-
-(* show that the totalisation in ctlTools works *)
-val TOTAL_THM = save_thm("TOTAL_THM",prove(``!R. TOTAL \(s,s').(R(s,s') \/ ((~?s'.R(s,s')) /\ (s'=s)))``,
-REWRITE_TAC [TOTAL_def] THEN PBETA_TAC
-THEN REPEAT GEN_TAC
-THEN CONV_TAC (EXISTS_OR_CONV)
-THEN CONV_TAC (RAND_CONV EXISTS_AND_CONV)
-THEN Cases_on `(?s'. R (s,s'))` THENL [
-DISJ1_TAC THEN ASM_REWRITE_TAC [],
-DISJ2_TAC THEN ASM_REWRITE_TAC []
-THEN Q.EXISTS_TAC `s` THEN REFL_TAC]))
-
 (******************************************************************************
 * B_SEM l b means "l |= b" where l is a letter, i.e. l : 'prop -> bool
 ******************************************************************************)

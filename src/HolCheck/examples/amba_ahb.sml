@@ -4,6 +4,9 @@ load "boolSyntax";
 load "muLib";
 load "CTL" *)
 
+
+(* FIXME: WARNING! WARNING! Ever since a change to the way I do abstractions, this example pretty much dies in the refinement 
+          stage. Run with abstraction off and it goes through eventually. This is under investigation. *)
 structure amba_ahb =
 struct
 
@@ -19,12 +22,13 @@ open Ho_Rewrite;
 open Tactical;
 open Tactic;
 open PairRules;
-open holCheckTools
+open commonTools
 open bddTools
 open ctlTheory
 open ctlSyntax
 open ksTools
 open amba_ahbTheory;
+open modelTools
 
 in
 
@@ -79,7 +83,7 @@ local
     val ctl_grant = C_AG (((ahb_AP "hbusreq_1") C_AND (C_NOT(ahb_AP "hmask_0"))) C_IMP (C_AF (ahb_AP "hgrant_1")))
 
     (* for low priority guy we can't guarantee the bus but the possibility should exist *)
-    val ctl_grant2 = C_AG (((ahb_AP "hbusreq_2") C_AND (C_NOT(ahb_AP "hmask_1"))) C_IMP (C_EF (ahb_AP "hgrant_2")))
+    val ctl_grant2 = C_EF (((ahb_AP "hbusreq_2") C_AND (C_NOT(ahb_AP "hmask_1"))) C_IMP (C_EF (ahb_AP "hgrant_2")))
 
     (* transfer completes within two cycles from transfer start (this is for without waitstates so now obsolete) *)
     (* AG (init ==> AX AX hreadyout)  
@@ -119,23 +123,22 @@ local
 		"htrans_1","htrans_1'","hresp_0","hresp_0'","hresp_1","hresp_1'","hmask_0","hmask_0'","hmask_1","hmask_1'","hbusreq_0",
 		"hbusreq_0'","hbusreq_1","hbusreq_1'","hbusreq_2","hbusreq_2'","hgrant_0","hgrant_0'","hgrant_1","hgrant_1'","hgrant_2",
 		"hgrant_2'","hsel_0","hsel_0'","hsel_1","hsel_1'","haddr_0","haddr_0'","hws0","hws0'","hws1","hws1'","hws2","hws2'",
-		"hws3","hws3'","hmaster_0","hmaster_0'","bb0","bb0'","bb1","bb1'","bb2","bb2'","bb3","bb3'","hburst_m2_0","hburst_m2_0'",
-		"hburst_m1_0","hburst_m1_0'","hburst_0","hburst_0'","hslv0splt_0","hslv0splt_0'","hslv0splt_1","hslv0splt_1'","hsplit_0",
-		"hsplit_0'","hsplit_1","hsplit_1'"];
+		"hws3","hws3'","hmaster_0","hmaster_0'","bb0","bb0'","bb1","bb1'","bb2","bb2'","bb3","bb3'","hburst_m2_0",
+		"hburst_m2_0'","hburst_m1_0","hburst_m1_0'","hburst_0","hburst_0'","hslv0splt_0","hslv0splt_0'","hslv0splt_1",
+		"hslv0splt_1'","hsplit_0","hsplit_0'","hsplit_1","hsplit_1'"];
 
 in 
 
-fun mk_ahb() = ((rhs(concl(Drule.SPEC_ALL I1rh)),T1rh,true,SOME "ahb",SOME bvmh, SOME state),
-		[ctl_inith,ctl_grant_always,ctl_grant,ctl_grant2,ctl_latf,ctl_trans_lat])
+fun mk_ahb() = ((set_init (rhs (concl(Drule.SPEC_ALL I1rh)))) o (set_trans T1rh) o (set_ric true) o (set_name "ahb") o 
+		 (set_vord bvmh)o (set_state state) o 
+		 (set_props[("ctl_inith",ctl_inith),("ctl_grant_always",ctl_grant_always),("ctl_grant",ctl_grant),
+			    ("ctl_grant2",ctl_grant2),("ctl_latf",ctl_latf),("ctl_trans_lat",ctl_trans_lat)])) empty_model
 
 (* interactive usage example
 app load ["bdd","holCheck","amba_ahb"];
-bdd.init 100000 10000; 
-val ahb = amba_ahb.mk_ahb();  (* init the defs *)
-val ((S0,T1,Ric,nm,vars,state),fl) = ahb;
-val dtb = PrimitiveBddRules.dest_term_bdd; 
-val _ = set_trace "metis" 0; val _ = set_trace "meson" 0; val _ = set_trace "notify type variable guesses" 0; 
-val (res,ksd,ic) = holCheck.holCheck (fst ahb) (snd ahb) NONE NONE handle ex => Raise ex;
+val ahb1 = amba_ahb.mk_ahb();  (* init the defs *)
+val ahb1 = modelTools.set_flag_abs false ahb1;
+val ahb2 = holCheck.holCheck ahb1 handle ex => Raise ex;
 *) 
 
 end

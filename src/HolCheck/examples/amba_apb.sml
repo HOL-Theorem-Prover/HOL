@@ -19,11 +19,12 @@ open amba_apbTheory;
 open Tactical;
 open Tactic;
 open PairRules;
-open holCheckTools
+open commonTools
 open bddTools
 open ctlTheory
 open ctlSyntax
 open ksTools
+open modelTools
 
 in
 
@@ -56,16 +57,15 @@ local
 
 in 
 
-fun mk_apb() = ((rhs (concl(Drule.SPEC_ALL INIT_APB_def)), T1rp, true, SOME "apb", SOME bvmp, SOME state),[ ctl_initp, ctl_latw, ctl_latr, ctl_dlp])
+fun mk_apb() =  ((set_init (rhs (concl(Drule.SPEC_ALL INIT_APB_def)))) o (set_trans T1rp) o (set_ric true) o (set_name "apb") o 
+		 (set_vord bvmp)o (set_state state) o 
+		 (set_props[("ctl_initp",ctl_initp),("ctl_latw", ctl_latw),("ctl_latr", ctl_latr),("ctl_dlp", ctl_dlp)])) empty_model
+
 
 (* interactive usage example
-app load ["bdd","holCheck","amba_apb"];
-bdd.init 100000 10000; 
-val apb = amba_apb.mk_apb();  (* init the defs *)
-val ((S0,T1,Ric,nm,vars,state),fl) = apb;
-val dtb = PrimitiveBddRules.dest_term_bdd; 
-val _ = set_trace "metis" 0; val _ = set_trace "meson" 0; val _ = set_trace "notify type variable guesses" 0; 
-val (res,ksd,ic) = holCheck.holCheck (fst apb) (snd apb) NONE NONE handle ex => Raise ex;
+app load ["holCheck","amba_apb"];
+val apb1 = amba_apb.mk_apb();  (* init the defs *)
+val apb2 = holCheck.holCheck apb1 handle ex => Raise ex;
 *) 
 
 end

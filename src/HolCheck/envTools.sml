@@ -46,37 +46,53 @@ open numLib;
 open reachTheory;
 open bddTools
 open envTheory
+open lazyTools
 
 in
+
+fun env_type state = stringLib.string_ty --> ((type_of state) --> bool)
+
+val _ = set_trace "notify type variable guesses" 0;
+val empty_env_tm = ``env$EMPTY_ENV``
+val env_tm = inst [alpha|->(env_type ``x``)]  ``e`` (* FIXME: get rid of the x *)
+val _ = set_trace "notify type variable guesses" 1;
 
 (* rvl: list of (rel var:string,corresponding boolean term for state set:bool) pairs 
    state: term representing state vector (type is bool # bool # ... # bool)
    OUT: term for env: string -> 'state->bool, of the form \rv. if rv=rv1 then \state.s1 else if rv=rv2 ... else \state.F *)
  fun mk_env (rvh::rvt) state = ``(^(mk_env rvt state))[[[^(fromMLstring(fst rvh))<--^(mk_pabs(state,(snd rvh)))]]]``
- |   mk_env [] state = (inst [alpha |-> type_of state] ``EMPTY_ENV``)
+ |   mk_env [] state = (inst [alpha |-> type_of state] empty_env_tm)
 
 (* given an env e[[[Q<--X]]], return (e,(Q,x)) *)
 fun dest_env ie = let val (test,x,ie2) = dest_cond(body(snd(dest_eq(concl(ONCE_REWRITE_CONV [ENV_UPDATE_def] ie))))) 
 		 in (fst (dest_comb ie2),(snd(dest_eq test),x)) end
 
 (* given an env term, returns the term  assigned to q *) 
-fun get_env_val state q e = 
-    if (Term.compare(mk_abs(mk_var("q",``:string``),mk_pabs(state,``F:bool``)),e)=EQUAL) then ``F:bool``
+local 
+fun get_env_val_aux empty_env q e = 
+    if (Term.compare(empty_env,e)=EQUAL) then F
     else let val (_,ll) = strip_comb e
-	 in if (Term.compare(q,List.nth(ll,1))=EQUAL) then List.nth(ll,2) else get_env_val state q (List.nth(ll,0)) end 
+	 in if (Term.compare(q,List.nth(ll,1))=EQUAL) then List.nth(ll,2) else get_env_val_aux empty_env q (List.nth(ll,0)) end 
+in fun get_env_val state q e = get_env_val_aux (mk_abs(mk_var("q",``:string``),mk_pabs(state,F))) q e end
 
 (*given an env ie s.t. ie(bv)=X, return |- ie(bv) = X without simplifying X and without opening up ie (which is a huge nested cond)*)
-fun eval_env ie ieo bv seth thl = 
+local
+fun eval_env_thm ie ieo bv seth thl = 
     let val (e,(v,x)) = dest_env ie
     in if (Term.compare(v,bv)=EQUAL) 
-	   then PURE_REWRITE_CONV ((ISPECL [e,v,x] ENV_EVAL)::thl) (mk_comb(ieo,bv))
+       then PURE_REWRITE_CONV ((ISPECL [e,v,x] ENV_EVAL)::thl) (mk_comb(ieo,bv))
        else let val seqth = Binarymap.find(Binarymap.find(seth,fromHOLstring bv),fromHOLstring v) 
-	    in eval_env e ieo bv seth ((MP (ISPECL [e,bv,v,x] ENV_UPDATE_INV) seqth)::thl) end
+	    in eval_env_thm e ieo bv seth ((MP (ISPECL [e,bv,v,x] ENV_UPDATE_INV) seqth)::thl) end
     end
-    
+in    
+fun eval_env ie ieo bv state seth sel thl = 
+    mk_lthm (fn _ => (mk_eq(mk_comb(ieo,bv),get_env_val state bv ie),(fn _ => eval_env_thm ie ieo bv seth thl)))
+	    (fn _ => eval_env_thm ie ieo bv seth thl)  
+end
+
 (* given an env e[[[Q<--X]]]...[[[Qn<--Xn]]], returns [(Q,X)...(Qn,Xn)] *)
 fun strip_env state ie = 
-    if (Term.compare(ie, inst [alpha|->type_of state] ``EMPTY_ENV``)=EQUAL) then []
+    if (Term.compare(ie, inst [alpha|->type_of state] empty_env_tm)=EQUAL) then []
     else let val (ie2,(q,s)) = dest_env ie in (q,s)::(strip_env state ie2) end 
 
 (* returns the prefix of ie upto and including the last assignment to q *)
@@ -91,7 +107,7 @@ fun ENV_FIND_CONV ie 0 = RAND_CONV
 
 (* return theorems for normalised ie and ie', in which the mapping in which ie and ie' are different is moved to the end. 
    ASSERT: ie and ie' are different in only one mapping *semantically*
-           it may happen that a mapping is different in syntx, but the semantics are same. This happens *only* if some Q maps
+           it may happen that a mapping is different in syntax, but the semantics are same. This happens *only* if some Q maps
            to {} in ie and FP....0 in ie' (and analogously for gfp's) 
    ASSERT: in ie and ie', the map order is the same i.e. nth mapping in both is for the same var *)
 fun ENV_NORM_CONV seth state ie ie' = 
@@ -103,7 +119,7 @@ fun ENV_NORM_CONV seth state ie ie' =
 	val maps = strip_env state ie
 	val maps' = strip_env state ie'
 	val eqths = List.map (fn ((q,s),(q',s')) => (* theorems converting semantically equal terms to syntactically equal ones *)
-			       if (Term.compare(s,inst [alpha|->type_of state] ``{}``)=EQUAL) 
+			       if (Term.compare(s,inst [alpha|->type_of state] pred_setSyntax.empty_tm)=EQUAL) 
 			       then SOME (REWRITE_CONV[STATES_def,ENV_EVAL,EMPTY_ENV_def] s') else NONE)
 				       (ListPair.zip(maps,maps'))
 	val (ie_eqth,_) = List.foldl (fn (eqth,(ie,n)) => (* |- old_ie = old_ie with {}'s replaced by appropriate values to match ie' *)

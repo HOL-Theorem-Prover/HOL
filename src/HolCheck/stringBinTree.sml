@@ -140,7 +140,7 @@ and mk_tree_aux keymap ranks cl mxl i s keys dummy =
 in
 
 (* builds Patricia trie term for the given map *)
-fun mk_tree keymap = 
+fun mk_tree abs keymap = 
   let val keys = fst(ListPair.unzip keymap)
       val keymap2 = List.foldl (fn ((k,v),bm) => Binarymap.insert(bm,k,v)) (Binarymap.mkDict String.compare) keymap
       (*val _ = printVal (Binarymap.listItems keymap2); val _ = print " keymap2\n";*)
@@ -152,9 +152,10 @@ fun mk_tree keymap =
      (*val _ = printVal ranks; val _ = print " ranks\n";*)
      (*val _ = printVal cl; val _ = print " cl\n";*)
       val dummy = if (List.null keys) then ``ARB`` else ``ARB:^(ty_antiq(type_of (snd(hd keymap))))``
-  in mk_abs(mk_var("t",``:string``),mk_let(mk_abs(mk_var("x",``:char list``),
-						  mk_tree_aux keymap2 ranks cl mxl 0 "" sk dummy),
-					   ``EXPLODE (STRCAT t ^(fromMLstring stuffing))``)) end
+      val tree = mk_let(mk_abs(mk_var("x",``:char list``),
+			       mk_tree_aux keymap2 ranks cl mxl 0 "" sk dummy),
+					   ``EXPLODE (STRCAT t ^(fromMLstring stuffing))``)
+  in mk_abs(mk_var("t",``:string``),if isSome abs then mk_pabs(valOf abs,tree) else tree) end
 
 val find_CONV = 
     let val rws = new_compset [lazyfy_thm COND_CLAUSES,stringTheory.EXPLODE_EQNS,strictify_thm LET_DEF,combinTheory.o_DEF,

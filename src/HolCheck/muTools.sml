@@ -43,11 +43,22 @@ open reachTheory;
 open bddTools
 open envTheory
 open envTools
+open lazyTools
 
 in
 
-fun mk_imf_thm mf  (tysimps,seths) prop_type = prove(``IMF (^mf)``,
-						     SIMP_TAC std_ss ([IMF_def,MU_SUB_def,NNF_def,RVNEG_def]@tysimps@seths))
+val _ = set_trace "notify type variable guesses" 0;
+val IS_PROP_tm = ``muSyntax$IS_PROP``; (* FIXME: this should be in muSyntax? *)
+val _ = set_trace "notify type variable guesses" 0;
+
+fun mk_imf_thm imftm mf tysimps prop_type = 
+    let val jf = (fn _ => let val (tysimps,sel) = tysimps() 
+				     in prove(``IMF (^mf)``,SIMP_TAC std_ss ([IMF_def,MU_SUB_def,NNF_def,RVNEG_def]@tysimps@sel)) end) 
+    in  mk_lthm (fn _ => (mk_comb(imftm,mf),jf)) jf end
+
+fun prove_is_prop p_ty mf = 
+    let val th1 = PURE_REWRITE_CONV [IS_PROP_def] (mk_comb (inst [alpha |-> p_ty] IS_PROP_tm,mf))
+    in REWRITE_RULE [ISPEC (rhs(concl th1)) EQ_CLAUSES] th1 end
 
 (* FIXME: in many places, awkward use of BddEqMp can be replaced by cleaner eqToTermBdd *)  
 end

@@ -8,7 +8,6 @@ open setLemmasTheory
 open muSyntaxTheory
 open muTheory
 open ksTheory
-open decompTheory
 open reachTheory
 
 infix &&; infix 8 by;

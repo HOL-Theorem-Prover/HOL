@@ -1,6 +1,14 @@
-(* NOTE: do manual init instead of loading holbddlib if loading large bdd's *)
-(*List.app load ["Array2","ListPair","bossLib","simpLib","Binarymap","pairSyntax","boolSyntax","muLib"];*)
 
+
+(********************************************************************************************************)
+(* Tic-tac-toe or naughts-and-crosses                                                                   *)
+(*                                                                                                      *)
+(* State vars are m (A has just moved), ui_j (A has claimed grid square (i,j), vi_j (ditto for B)       *)
+(*                                                                                                      *)
+(* This example is mainly for testing algorithms on an interleaved transition system. It is also the    *)
+(* simplest example (other than the mod8 counter toy example).                                          *)
+(*                                                                                                      *)
+(********************************************************************************************************)
 structure ttt =
 
 struct
@@ -8,38 +16,26 @@ struct
 local
 
 open Globals HolKernel Parse
-
-open Array2;
-open ListPair;
-open bossLib;
-open simpLib;
-open Binarymap;
-open pairSyntax;
-open boolSyntax;
-open stringLib
-open ctlTheory;
-open ctlSyntax;
-open pairSyntax;
-open ksTools;
-open holCheckTools
+open Array2 ListPair bossLib simpLib Binarymap pairSyntax boolSyntax stringLib
+open ctlTheory ctlSyntax commonTools holCheckLib 
 
 in 
 
 (* n is size of grid *)
 fun makeTTT n =
   let	
-    val am = Array2.tabulate Array2.RowMajor (n,n,(fn (x,y) => "u"^Int.toString(x)^"_"^Int.toString(y)));
-    val bm = Array2.tabulate Array2.RowMajor (n,n,(fn (x,y) => "v"^Int.toString(x)^"_"^Int.toString(y)));
-    val am' = Array2.array(n,n,"");
-    val bm' = Array2.array(n,n,"");
-    val _ =  Array2.copy {src=({base=am,row=0,col=0,nrows=NONE,ncols=NONE}),dst=am',dst_row=0,dst_col=0};
-    val _ = Array2.copy {src=({base=bm,row=0,col=0,nrows=NONE,ncols=NONE}),dst=bm',dst_row=0,dst_col=0};
-    val _ = Array2.modify Array2.RowMajor (fn s => s^"'") am';
-    val _ = Array2.modify Array2.RowMajor (fn s => s^"'") bm';
-    val lam = Array2.fold Array2.RowMajor (fn (h,t) => t@[h]) [] am;
-    val lbm = Array2.fold Array2.RowMajor (fn (h,t) => t@[h]) [] bm;
-    val lam' = Array2.fold Array2.RowMajor (fn (h,t) => t@[h]) [] am';
-    val lbm' = Array2.fold Array2.RowMajor (fn (h,t) => t@[h]) [] bm';
+    val am = Array2.tabulate Array2.RowMajor (n,n,(fn (x,y) => "u"^Int.toString(x)^"_"^Int.toString(y)))
+    val bm = Array2.tabulate Array2.RowMajor (n,n,(fn (x,y) => "v"^Int.toString(x)^"_"^Int.toString(y)))
+    val am' = Array2.array(n,n,"")
+    val bm' = Array2.array(n,n,"")
+    val _ =  Array2.copy {src=({base=am,row=0,col=0,nrows=NONE,ncols=NONE}),dst=am',dst_row=0,dst_col=0}
+    val _ = Array2.copy {src=({base=bm,row=0,col=0,nrows=NONE,ncols=NONE}),dst=bm',dst_row=0,dst_col=0}
+    val _ = Array2.modify Array2.RowMajor (fn s => s^"'") am'
+    val _ = Array2.modify Array2.RowMajor (fn s => s^"'") bm'
+    val lam = Array2.fold Array2.RowMajor (fn (h,t) => t@[h]) [] am
+    val lbm = Array2.fold Array2.RowMajor (fn (h,t) => t@[h]) [] bm
+    val lam' = Array2.fold Array2.RowMajor (fn (h,t) => t@[h]) [] am'
+    val lbm' = Array2.fold Array2.RowMajor (fn (h,t) => t@[h]) [] bm'
 
     (* Good variable order is V01 < v01' < v02 < v02' ...                        *)
     (* Function shuffle below used to create it                                  *)
@@ -48,8 +44,6 @@ fun makeTTT n =
      ListPair.foldr (fn(x1,x2,l) => x1 :: x2 :: l) [] (l1,l2);
 
     val bvm = ["m","m'"]@(shuffle(lam @ lbm, lam' @ lbm'));
-
-    (*val state  = pairSyntax.list_mk_pair (List.map mk_bool_var (lam @lbm @ ["m"]))*)
 
     (* Finishing condition *)
     
@@ -105,7 +99,7 @@ fun makeTTT n =
      
     (* Properties for players A and B, as ctl formulae *)
     infixr 5 C_AND infixr 5 C_OR infixr 2 C_IMP infix C_IFF;
-    val state = ksTools.mk_state I1 T1
+    val state = mk_state I1 T1
     fun ttt_AP s = C_AP state (mk_bool_var s)
     fun win pm pl =
     let
@@ -128,9 +122,7 @@ fun makeTTT n =
     let
       val pl_won = win pm pl
       val pl_mv = if pl=0 then ttt_AP "m" else C_NOT(ttt_AP "m")
-    in C_EG (pl_won C_OR
-	      ((pl_mv C_AND (C_EF pl_won)) C_OR ((C_NOT pl_mv) C_AND  (C_AF pl_won))))
-    end
+    in C_EG (pl_won C_OR ((pl_mv C_AND (C_EF pl_won)) C_OR ((C_NOT pl_mv) C_AND  (C_AF pl_won)))) end
 
     val isInit = list_C_AND (List.map (fn v => if v = "m" then ttt_AP "m" else C_NOT(ttt_AP v)) (lam @ lbm @ ["m"]))
 
@@ -140,77 +132,31 @@ fun makeTTT n =
 
     val B_win = win bm 1; (* a win position for B *)
 
-    val B_can_win = can_win bm 1; (* B has a winning strategy *)
+    val B_can_win = can_win bm 1 (* B has a winning strategy *)
 
+    val fl =[("isInit",isInit),("A_win",A_win),("B_win",B_win),("A_canwin",A_can_win),("B_can_win",B_can_win)] 
+    (* this is for testing what holCheck does if supplied with both mu and CTL forumlas
+     val fl' = [("muisInit",ctl2muTools.ctl2mu ((snd o hd) fl))]@fl@
+	      [("muAcw",ctl2muTools.ctl2mu ((snd o last o butlast) fl))]*)
   in
-    ((I1,T1,false,SOME "ttt",SOME bvm,SOME state),[isInit,A_win,B_win,A_can_win,B_can_win])	
+    ((set_init I1) o (set_trans T1) o (set_ric false) o (set_name "ttt") o (set_vord bvm)o (set_state state) o 
+    (set_props fl)) empty_model
   end
 
 end
 end
 
-(* usage example
+(* usage example (start hol including the HolCheck/examples directory, using the -I command line option)
 
-app load ["bdd","holCheck","ttt"];
-bdd.init 100000 10000;
-val n = 1;
-val tll = ttt.makeTTT n;  (* init the defs *)
-val ((S0,T1,Ric,nm,vars,state),fl) = tll;
-val dtb = PrimitiveBddRules.dest_term_bdd;
-val _ = set_trace "metis" 0; val _ = set_trace "meson" 0; val _ = set_trace "notify type variable guesses" 0; 
-val (res,ksd,ic) = holCheck.holCheck (fst tll) (snd tll) NONE NONE handle ex => Raise ex;
+val _ = app load ["holCheckLib","ttt"];
+(*val _ = set_trace "HolCheckDBGLZ" 0; val _ = set_trace "HolCheckDBG" 0;
+val _ = set_trace "HolCheckPRF" 0; val _ = set_trace "HolCheckLZ" 1; *)
+val ttt1 = ttt.makeTTT 3; (* n=1 gives more interesting results. Pretty much all props fail for n=3 and you can't even get traces *)
+val ttt2 = holCheckLib.holCheck ttt1 handle ex => Raise ex;
+val ttt3 = holCheckLib.prove_model ttt2;
+val res = holCheckLib.get_results ttt3;
 
 *)
 
-(*
-(* basic test formulae *)
-val mf0 = ``mu "Q".. T``;
-val mf1 = ``mu "Q".. (RV "Q")``;1
-val mf2 = ``mu "Q".. (T \/ (RV "Q"))``;
-val mf3 = ``mu "Q" .. (T \/ (RV "Q") \/ (RV "P"))``;
-val mf4 = ``mu "Q" .. (<<"u0_0">> (T \/ (RV "Q")))``;
-val mf5 = ``mu "Q" .. (<<"u0_0">> (T \/ (RV "Q" \/ RV "P")))``;
-val mf6 = ``mu "Q" .. (T \/ (mu "P".. RV "P") \/ (RV "Q"))``;
-val mf7 = ``mu "Q" .. (T \/ (mu "P".. RV "P" \/ RV "Q"))``;
-val mf8 = ``mu "Q" .. (T \/ (mu "P".. RV "P" \/ T \/ RV "Q"))``;
-val mf9 = ``mu "Q" .. (T \/ (mu "P".. RV "P" \/ T \/ RV "Q") \/ (RV "Q"))``;
-val mf10 = ``nu "Q".. T``;
-val mf11 = ``nu "Q".. (RV "Q")``;
-val mf12 = ``nu "Q".. (T /\ (RV "Q"))``;
-val mf13 = ``nu "Q" .. (T /\ (RV "Q") /\ (RV "P"))``;
-val mf14 = ``nu "Q" .. (<<"u0_0">> (T /\ (RV "Q")))``;
-val mf15 = ``nu "Q" .. (<<"u0_0">> (T /\ (RV "Q" \/ RV "P")))``;
-val mf16 = ``nu "Q" .. (T /\ (nu "P".. RV "P") \/ (RV "Q"))``;
-val mf17 = ``nu "Q" .. (T /\ (nu "P".. RV "P" \/ RV "Q"))``;
-val mf18 = ``nu "Q" .. (T /\ (nu "P".. RV "P" \/ T \/ RV "Q"))``;
-val mf19 = ``nu "Q" .. (T /\ (nu "P".. RV "P" \/ T \/ RV "Q") \/ (RV "Q"))``;
-val mf20 = ``nu "Q" .. (T /\ (mu "P".. RV "P" \/ T \/ RV "Q") \/ (RV "Q"))``;
-val mf21 = ``nu "Q" .. (T /\ (mu "P".. RV "P" \/ (T \/ T \/ T \/ T \/ T \/ T) \/ RV "Q") \/ (RV "Q"))``;
-val mf22 = ``mu "Q1" .. (mu "Q2" .. (RV "Q1") \/ (RV "Q2") \/ TR)``;
-val mf23 =  ``mu "Q" .. TR /\ ~(RV "P") /\ <<"u0_0">> (RV "Q")``;
-val mf24 = ``AP "m" /\ AP "m"``;
-val mf25 = ``~(T /\ F \/ AP "m") \/ AP "u0_0"``;
-val mf26 = ``[["."]] T``;
-val mf27 = ``RV "P"``;
-val mf28 = ``mu "Q" .. T``;
-val mf29 = ``mu "Q" .. AP "m" /\ T``;
-val mf30 = ``mu "Q" .. AP "m" /\ T \/ F /\ <<"u0_0">> T``;
-val mf31 = ``~TR``;
-val mf32 = ``mu "Q" .. (RV "P")``;
-val mf33 = ``mu "Q" .. (RV "Q")``;
-val mf34 = ``mu "Q" .. (RV "P") /\ T``;
-val mf35 = ``mu "Q" .. T /\ (RV "P")``;
-val mf36 = ``RV "P" \/ T``;
-val mf37 = ``~(RV "P")``;
-val mf38 = ``mu "Q" .. (~(RV "P"))``;
-val mf39 = ``<<"u0_0">> TR``;
-val mf40 = ``<<"u0_0">> (RV "P")``;
-val mf41 = ``mu "Q" .. (mu "Q'" .. TR)``;
-val mf42 = ``mu "Q" .. (mu "Q'" .. (RV "P"))``;
-val mf43 = ``mu "Q" .. (RV "Q")``;
-val mf44 = ``mu "Q" .. (nu "P" .. (RV "Q") /\ (RV "P"))``;
-val mf45 = ``mu "Q1" .. (mu "Q2" .. FL)``;
-val mf46 = ``mu "Q1" .. (mu "Q2" .. (RV "Q1") \/ (RV "Q2") \/ TR)``;
-*)
 
 

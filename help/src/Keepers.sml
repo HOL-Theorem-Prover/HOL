@@ -192,5 +192,5 @@ val keepers =
      "fxpTheory.sig",
 
      (* HolCheck model checker *)
-     "holCheck.sig","holCheckLib.sig"
+     "holCheckLib.sig"
   ];

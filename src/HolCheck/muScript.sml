@@ -231,6 +231,8 @@ val MU_SAT_AP = save_thm("MU_SAT_AP",prove(``!s ks e. wfKS ks ==> !a. MU_SAT (AP
 
 val MU_SAT_LFP = save_thm("MU_SAT_LFP",prove(``!s ks e. (wfKS ks ==> (!Q f. MU_SAT (mu Q .. f) ks e s = ?n. s IN FP f Q ks e[[[Q<--{}]]] n))``,RW_TAC std_ss [MU_SAT_def,STATES_def,SET_SPEC,wfKS_def]))
 
+val MU_SAT_GFP = save_thm("MU_SAT_GFP",prove(``!s ks e. (wfKS ks ==> (!Q f. MU_SAT (nu Q .. f) ks e s = !n. s IN FP f Q ks e[[[Q<--ks.S]]] n))``,RW_TAC std_ss [MU_SAT_def,STATES_def,SET_SPEC,wfKS_def]))
+
 val SAT_OVER_DISJ = prove(``!(f:'prop mu) (g:'prop mu) (ks:('prop,'state) KS) e s. MU_SAT (f \/ g) ks e s = MU_SAT f ks e s \/ MU_SAT g ks e s``,
 RW_TAC std_ss [MU_SAT_def,STATES_def,UNION_DEF,SET_SPEC])
 
@@ -1144,6 +1146,88 @@ val fol3 = save_thm("fol3",prove(``!p x y z. ((x /\ y) ==> z) ==>((p ==> (x/\y))
 val fol4 = save_thm("fol4",prove(``!p x y z. ((x \/ y) ==> z) ==>((p ==> (x\/y))==>(p==>z))``,PROVE_TAC []))
 
 val fol5 = save_thm("fol5",prove(``!p x y. (x ==> y) ==> ((p==>x)==>(p==>y))``,PROVE_TAC []))
+
+(* AP substitution used by abstraction engine*)
+
+fun ap_subst_fp_TAC gfp (asl:term list,w) = 
+let val (w1l,w1r) = (rand o hd o snd o strip_comb ## rand o hd o snd o strip_comb)(dest_eq w)
+    val fp_thm = if gfp then MU_SAT_GFP else MU_SAT_LFP
+    val dest_b = if gfp then dest_forall else dest_exists
+    val (fa,w2) = strip_forall (concl  (INST_TYPE [alpha |-> ``:'state``,beta|->``:'prop``] fp_thm))
+    val w2l = rhs(concl(ISPECL [``s':'state``,``(ks:('prop,'state) KS)``,``e:string -> 'state -> bool``,``s:string``,w1l] 
+			   (mk_thm([],list_mk_forall (fa,snd(dest_imp w2))))))
+    val w2r = rhs(concl(ISPECL [``s':'state``,``(ks:('prop,'state) KS)``,``e:string -> 'state -> bool``,``s:string``,w1r] 
+			   (mk_thm([],list_mk_forall (fa,snd(dest_imp w2))))))
+    val gl = list_mk_forall([``n:num``,``e:string -> 'state -> bool``,``s':'state``],mk_eq(snd(dest_b(w2l)),snd(dest_b(w2r))))
+in 
+    (FULL_SIMP_TAC std_ss [fp_thm]
+    THEN SUBGOAL_THEN gl ASSUME_TAC
+    THENL 
+    [
+     REWRITE_TAC [GSYM EXTENSION]
+     THEN Induct_on `n` THENL 
+     [
+      SIMP_TAC std_ss [STATES_def,ENV_UPDATE_def],
+      SIMP_TAC std_ss [STATES_def,ENV_UPDATE]
+      THEN REWRITE_TAC [EXTENSION]
+      THEN REWRITE_TAC [GSYM MU_SAT_def]
+      THEN ASSUM_LIST PROVE_TAC 
+      ],
+     ASSUM_LIST PROVE_TAC
+     ]) (asl,w)
+end
+
+val AP_SUBST_LEM = prove(``!(f:'prop mu) g ap (ks:('prop,'state) KS). 
+			    wfKS ks ==> (IS_PROP g) ==> (!e s. MU_SAT (AP ap) ks e s = MU_SAT g ks e s) 
+			    ==> (!e s. MU_SAT f ks e s = MU_SAT (AP_SUBST g ap f) ks e s)``,
+Induct_on `g` 
+THEN Induct_on `f` 
+THEN RW_TAC std_ss [IS_PROP_def,AP_SUBST_def,MU_SAT_NEG,MU_SAT_CONJ,MU_SAT_DISJ,MU_SAT_DMD,MU_SAT_BOX,MU_SAT_RV] 
+THEN FULL_SIMP_TAC std_ss [IS_PROP_def,AP_SUBST_def,MU_SAT_NEG,MU_SAT_CONJ,MU_SAT_DISJ,MU_SAT_DMD,MU_SAT_BOX,MU_SAT_RV] 
+THEN RES_TAC 
+THEN (TRY (PROVE_TAC [])) 
+THEN FIRST_PROVE [NTAC 6 (POP_ASSUM (K ALL_TAC)) THEN ap_subst_fp_TAC true,
+		  NTAC 6 (POP_ASSUM (K ALL_TAC)) THEN ap_subst_fp_TAC false,
+		  ap_subst_fp_TAC true,
+		  ap_subst_fp_TAC false])
+ 
+val lm1 = prove(``!(g:'prop mu) (ks:('prop,'state) KS) e e'. wfKS ks ==> (IS_PROP g) ==> 
+	 (!s. MU_SAT g ks e s = MU_SAT g ks e' s)``,
+Induct_on `g` THEN RW_TAC std_ss [SET_SPEC,IS_PROP_def]
+THENL[
+ FULL_SIMP_TAC std_ss [SET_SPEC,IS_PROP_def,MU_SAT_def,STATES_def,wfKS_def,IN_UNIV,NOT_IN_EMPTY,SET_SPEC],
+FULL_SIMP_TAC std_ss [SET_SPEC,IS_PROP_def,MU_SAT_def,STATES_def,wfKS_def,IN_UNIV,NOT_IN_EMPTY,SET_SPEC],
+metisLib.METIS_TAC [MU_SAT_NEG],
+metisLib.METIS_TAC [MU_SAT_CONJ],
+metisLib.METIS_TAC [MU_SAT_DISJ],
+metisLib.METIS_TAC [MU_SAT_AP]])
+
+val lm2 = prove(``!(ap:'prop). IS_PROP (AP ap)``,REWRITE_TAC [IS_PROP_def])
+
+val lm3 = prove(``!(g:'prop mu) ap (ks:('prop,'state) KS) e. 
+			    wfKS ks ==> (IS_PROP g) ==> 
+				((!e s. MU_SAT (AP ap) ks e s = MU_SAT g ks e s) 
+			    = (!s. MU_SAT (AP ap) ks e s = MU_SAT g ks e s))``,
+REPEAT STRIP_TAC THEN EQ_TAC THENL [
+metisLib.METIS_TAC [],
+ASSUME_TAC lm2 
+THEN metisLib.METIS_TAC [lm1] 
+])
+
+val AP_SUBST = save_thm("AP_SUBST",prove(``!(f:'prop mu) g ap (ks:('prop,'state) KS) e (s:'state). 
+			    wfKS ks ==> (IS_PROP g) ==> (!s. MU_SAT (AP ap) ks e s = MU_SAT g ks e s) 
+			    ==> (MU_SAT f ks e s = MU_SAT (AP_SUBST g ap f) ks e s)``,
+metisLib.METIS_TAC [AP_SUBST_LEM,lm3]))
+
+val lm4 = prove(``!(f:'prop mu) g ap (ks:('prop,'state) KS)  e (s:'state). 
+			    wfKS ks ==> (IS_PROP g) ==> (!s. MU_SAT (AP ap) ks e s = MU_SAT g ks e s) 
+			    ==> ((s IN ks.S0 ==> MU_SAT f ks e s) = (s IN ks.S0 ==> MU_SAT (AP_SUBST g ap f) ks e s))``,
+metisLib.METIS_TAC [AP_SUBST])
+
+val AP_SUBST_MODEL = save_thm("AP_SUBST_MODEL",prove(``!(f:'prop mu) g ap (ks:('prop,'state) KS)   e (s:'state). 
+			    wfKS ks ==> (IS_PROP g) ==> (!s. MU_SAT (AP ap) ks e s = MU_SAT g ks e s) 
+			    ==> (MU_MODEL_SAT f ks e = MU_MODEL_SAT (AP_SUBST g ap f) ks e)``,
+metisLib.METIS_TAC [lm4,MU_MODEL_SAT_def]))
 
 val _ = export_theory()
 

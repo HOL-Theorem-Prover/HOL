@@ -42,7 +42,7 @@ open listSimps;
 open numLib;
 open reachTheory;
 open bddTools
-open holCheckTools
+open ksTools
 
 fun t2tb vm t = DerivedBddRules.GenTermToTermBdd (!DerivedBddRules.termToTermBddFun) vm t
 
