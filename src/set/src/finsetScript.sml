@@ -101,7 +101,7 @@ val IMP_finset =store_thm(
 val REV_IMP_finset = store_thm(
   "REV_IMP_finset",
   ``!P. (!fs:'a finset. P fs) = (!s. FINITE s ==> P (finset_ABS s))``,
-  SIMP_TAC bool_ss [finset_ISO_DEF, IMP_finset]);
+  SIMP_TAC BasicProvers.bool_ss [finset_ISO_DEF, IMP_finset]);
 
     (* The translation process TRANSLATE_RULE implemented here is to
      track sets and try to transform them in finsets, using just
@@ -207,8 +207,8 @@ local
                  TAC_PROOF (([], to_be_proved),
                             GEN_TAC THEN EQ_TAC THENL
                             [REPEAT STRIP_TAC THEN
-                             POP_ASSUM (fn th => SIMP_TAC bool_ss [SIMP_RULE bool_ss [CONJUNCT1 finset_ISO_DEF] (SPEC hint th)]),
-                             SIMP_TAC bool_ss []]),
+                             POP_ASSUM (fn th => SIMP_TAC BasicProvers.bool_ss [SIMP_RULE BasicProvers.bool_ss [CONJUNCT1 finset_ISO_DEF] (SPEC hint th)]),
+                             SIMP_TAC BasicProvers.bool_ss []]),
                  to_find)
             end;
     end;
@@ -270,7 +270,7 @@ in
         end
 end;
 
-fun TRANSLATE_RULE thms th= (ABSORB_RULE o (ASM_SIMP_RULE bool_ss ((!TRANSLATE_RULE_THMS) @ thms)) o SET_TO_FINSET_FORALL_RULE) th;
+fun TRANSLATE_RULE thms th= (ABSORB_RULE o (ASM_SIMP_RULE BasicProvers.bool_ss ((!TRANSLATE_RULE_THMS) @ thms)) o SET_TO_FINSET_FORALL_RULE) th;
 
 (* !a a'. (finset_REP a = finset_REP a') = a = a' *)
 val _ = add_thm_to_transl (prove_rep_fn_one_one finset_ISO_DEF);
@@ -353,11 +353,11 @@ val FINSET_CASES = store_thm (
          (?(e:'a) fs'. (fs = e fINSERT fs') /\ ~(e fIN fs'))``,
   GEN_TAC THEN
   STRIP_ASSUME_TAC (Q.SPEC `fs` fREP_ONTO) THEN
-  ASM_SIMP_TAC bool_ss [fEMPTY_DEF, FINITE_EMPTY, fABS_11] THEN
+  ASM_SIMP_TAC BasicProvers.bool_ss [fEMPTY_DEF, FINITE_EMPTY, fABS_11] THEN
   DISJ_CASES_THEN STRIP_ASSUME_TAC (Q.SPEC `r` SET_CASES) THEN
-  FULL_SIMP_TAC bool_ss [FINITE_INSERT, NOT_INSERT_EMPTY] THEN
+  FULL_SIMP_TAC BasicProvers.bool_ss [FINITE_INSERT, NOT_INSERT_EMPTY] THEN
   Q.EXISTS_TAC `x` THEN Q.EXISTS_TAC `finset_ABS t` THEN
-  FULL_SIMP_TAC bool_ss [fIN_DEF, fINSERT_DEF, finset_ISO_DEF]);
+  FULL_SIMP_TAC BasicProvers.bool_ss [fIN_DEF, fINSERT_DEF, finset_ISO_DEF]);
 
 val EMPTY_fEMPTY = store_thm(
   "EMPTY_fEMPTY",
@@ -367,22 +367,22 @@ val EMPTY_fEMPTY = store_thm(
 val INSERT_fINSERT = store_thm (
   "INSERT_fINSERT",
   ``x INSERT (finset_REP s) = finset_REP (x fINSERT s)``,
-  SIMP_TAC bool_ss [fINSERT_DEF, rew, FINITE_REP, FINITE_INSERT]);
+  SIMP_TAC BasicProvers.bool_ss [fINSERT_DEF, rew, FINITE_REP, FINITE_INSERT]);
 
 val DIFF_fDIFF = store_thm(
   "DIFF_fDIFF",
   ``finset_REP fs DIFF finset_REP fs' = finset_REP (fs fDIFF fs')``,
-  SIMP_TAC bool_ss [FINITE_DIFF, FINITE_REP, rew, fDIFF_DEF]);
+  SIMP_TAC BasicProvers.bool_ss [FINITE_DIFF, FINITE_REP, rew, fDIFF_DEF]);
 
 val UNION_fUNION = store_thm (
   "UNION_fUNION",
   ``(finset_REP s1) UNION (finset_REP s2) = finset_REP (s1 fUNION s2)``,
-  SIMP_TAC bool_ss [fUNION_DEF, rew, FINITE_REP, FINITE_UNION]);
+  SIMP_TAC BasicProvers.bool_ss [fUNION_DEF, rew, FINITE_REP, FINITE_UNION]);
 
 val INTER_fINTER = store_thm (
   "INTER_fINTER",
   ``(finset_REP s1) INTER (finset_REP s2) = finset_REP (s1 fINTER s2)``,
-  SIMP_TAC bool_ss [fINTER_DEF, rew, FINITE_REP, INTER_FINITE]);
+  SIMP_TAC BasicProvers.bool_ss [fINTER_DEF, rew, FINITE_REP, INTER_FINITE]);
 
 val _ =
   add_thms_to_transl [EMPTY_fEMPTY, INSERT_fINSERT, DIFF_fDIFF, UNION_fUNION,
@@ -391,11 +391,11 @@ val _ =
 val DELETE_fDELETE = store_thm(
   "DELETE_fDELETE",
   ``finset_REP fs DELETE x = finset_REP (fs fDELETE x)``,
-  SIMP_TAC bool_ss [FINITE_DELETE, FINITE_REP, rew, fDELETE_DEF]);
+  SIMP_TAC BasicProvers.bool_ss [FINITE_DELETE, FINITE_REP, rew, fDELETE_DEF]);
 val REST_fREST = store_thm(
   "REST_fREST",
   ``REST (finset_REP fs) = finset_REP (fREST fs)``,
-  SIMP_TAC bool_ss [fREST_DEF, rew, FINITE_REP, REST_DEF, FINITE_DELETE]);
+  SIMP_TAC BasicProvers.bool_ss [fREST_DEF, rew, FINITE_REP, REST_DEF, FINITE_DELETE]);
 
 val EQ_fEQ = store_thm(
   "EQ_fEQ",
@@ -436,7 +436,7 @@ val TRANSLATE_THMS =
         UNION_fUNION, INTER_fINTER, EQ_fEQ] @
        (map  GSYM [fIN_DEF, fSUBSET_DEF]))
 
-fun TRANSLATE_TAC thms = ASM_SIMP_TAC bool_ss ((!TRANSLATE_THMS) @ thms);
+fun TRANSLATE_TAC thms = ASM_SIMP_TAC BasicProvers.bool_ss ((!TRANSLATE_THMS) @ thms);
 
 fun op_set_delete (cmp_fn:'a -> 'a -> bool) [] _ = []
   | op_set_delete cmp_fn (big::tl1) small =
@@ -516,12 +516,12 @@ val lemma = prove(
   GEN_TAC THEN Induct_on `n` THENL [
     REPEAT STRIP_TAC THEN SIMP_TAC hol_ss [EVEN, ODD_EVEN] THEN
     Q.EXISTS_TAC `0 fINSERT fEMPTY` THEN
-    SIMP_TAC bool_ss [TRANSLATE_RULE [] IN_SING],
+    SIMP_TAC BasicProvers.bool_ss [TRANSLATE_RULE [] IN_SING],
     POP_ASSUM STRIP_ASSUME_TAC THEN REPEAT STRIP_TAC THENL
     let
       fun prover (th1, th2, ptm) =
-        SIMP_TAC bool_ss [EVEN, th1] THEN EQ_TAC THENL [
-          RW_TAC bool_ss [] THEN
+        SIMP_TAC BasicProvers.bool_ss [EVEN, th1] THEN EQ_TAC THENL [
+          RW_TAC BasicProvers.bool_ss [] THEN
           Q.EXISTS_TAC ptm THEN
           ASM_SIMP_TAC hol_ss [TRANSLATE_RULE [] th2] THEN
           GEN_TAC THEN
