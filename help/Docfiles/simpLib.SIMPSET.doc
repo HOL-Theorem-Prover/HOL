@@ -32,18 +32,9 @@ Here we describe each in turn.
 
 The {ac} field is a list of ``AC theorem'' pairs.  Each such pair is
 the pair of theorems stating that a given binary function is
-associative and commutative.  The form of the associative theorem must
-be
-{
-   |- x op (y op z) = (x op y) op z
-}
-and the commutative theorem (the second element of the pair)
-must be of the form
-{
-   |- x op y = y op x
-}
-Note that neither theorem can have any universal
-quantification.
+associative and commutative.  The theorems can be given in either
+order, can present the associativity theorem in either direction, and
+can be generalised to any extent.
 
 The {congs} field is a list of congruence theorems justifying the
 addition of theorems to simplification contexts.  For example, the
@@ -87,8 +78,12 @@ If the value is {SOME(lcs, t)}, then the term {t} is used as a pattern
 specifying those terms to which the conversion should be applied.
 Further, the list {lcs} (which must be a list of variables), specifies
 those variables in {t} which shouldn't be generalised against; they
-are effectively local constants.  The {name} and {trace} fields are
-only relevant to the debugging facilities of the simplifier.
+are effectively local constants.  Note, however, that the types in the
+pattern term {t} will not be used to eliminate possible matches, so
+that if a match is desired with a particular type instantiation of a
+term, then the conversion will need to reject the input itself.  The
+{name} and {trace} fields are only relevant to the debugging
+facilities of the simplifier.
 
 The {dprocs} field of the record passed to {SIMPSET} is where decision
 procedures can be specified.  The construction of values of type
