@@ -337,17 +337,20 @@ fun EVERY_CONJ_CONV c tm =
       end
     | NONE => c tm
 
-fun QUANT_CONV conv    = RAND_CONV(ABS_CONV conv);
+fun QUANT_CONV conv  = RAND_CONV(ABS_CONV conv);
+fun BINDER_CONV conv = ABS_CONV conv ORELSEC QUANT_CONV conv;
+
+fun STRIP_BINDER_CONV opt conv tm =
+  let val (vlist,M) = strip_binder opt tm
+  in GEN_ABS opt vlist (conv M)
+  end
 
 fun STRIP_QUANT_CONV conv tm =
-  if is_forall tm orelse is_exists tm orelse
-     is_select tm orelse is_exists1 tm
-  then
-    QUANT_CONV (STRIP_QUANT_CONV conv) tm
-  else
-    conv tm
-
-fun BINDER_CONV conv   = ABS_CONV conv ORELSEC QUANT_CONV conv;
+ (if is_forall tm then STRIP_BINDER_CONV (SOME boolSyntax.universal) else
+  if is_exists tm then STRIP_BINDER_CONV (SOME boolSyntax.existential) else
+  if is_select tm then STRIP_BINDER_CONV (SOME boolSyntax.select) else
+  if is_exists1 tm then STRIP_BINDER_CONV (SOME boolSyntax.exists1) 
+  else K conv) conv tm;
 
 fun LAST_EXISTS_CONV c tm = let
   val (bv, body) = Psyntax.dest_exists tm

@@ -101,7 +101,6 @@ val dest_eq = dest_binop ("=","min")      dest_eq_ty_err
 fun dest_eq_ty M = let val (l,r) = dest_eq M in (l, r, type_of l) end
 
 fun lhs M = fst(dest_eq M) handle HOL_ERR _ => raise lhs_err
-
 fun rhs M = snd(dest_eq M) handle HOL_ERR _ => raise rhs_err
 
 val dest_neg = dest_monop ("~","bool") (ERR"dest_neg" "not a negation");
@@ -162,27 +161,20 @@ val is_arb       = can dest_arb;
  * Construction and destruction functions that deal with SML lists           *
  *---------------------------------------------------------------------------*)
 
-val list_mk_comb = HolKernel.list_mk_comb
-val list_mk_abs  = HolKernel.list_mk_abs
-
-val list_mk_forall = list_mk_binder 
- (fn abs => mk_comb(inst[alpha |-> fst(dom_rng(type_of abs))]universal,abs))
-
-val list_mk_exists = list_mk_binder
- (fn abs => mk_comb(inst[alpha |-> fst(dom_rng(type_of abs))]existential,abs))
-
+val list_mk_comb     = HolKernel.list_mk_comb
+val list_mk_abs      = HolKernel.list_mk_abs
+val list_mk_forall   = list_mk_binder (SOME universal)
+val list_mk_exists   = list_mk_binder (SOME existential)
 val list_mk_conj     = list_mk_rbinop (curry mk_conj)
 val list_mk_disj     = list_mk_rbinop (curry mk_disj)
 fun list_mk_imp(A,c) = list_mk_rbinop (curry mk_imp) (A@[c]);
 
-val strip_comb   = HolKernel.strip_comb
-val strip_abs    = HolKernel.strip_abs
-val strip_forall = HolKernel.strip_binder 
-                     (fn t => if is_forall t then SOME (rand t) else NONE)
-val strip_exists = HolKernel.strip_binder 
-                     (fn t => if is_exists t then SOME (rand t) else NONE)
-val strip_conj   = strip_binop  (total dest_conj)
-val strip_disj   = strip_binop  (total dest_disj)
+val strip_comb       = HolKernel.strip_comb
+val strip_abs        = HolKernel.strip_abs
+val strip_forall     = HolKernel.strip_binder (SOME universal)
+val strip_exists     = HolKernel.strip_binder (SOME existential)
+val strip_conj       = strip_binop  (total dest_conj)
+val strip_disj       = strip_binop  (total dest_disj)
 
 val strip_imp =
   let val desti = total dest_imp

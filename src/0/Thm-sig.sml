@@ -99,7 +99,7 @@ sig
 
   (* Multiple binders *)
 
-  val GEN_ABS       : (term -> term) -> term list -> thm -> thm
+  val GEN_ABS       : term option -> term list -> thm -> thm
 
   (* Oracle invocation *)
 

@@ -82,7 +82,7 @@ sig
   val mk_const      : string * hol_type -> term
   val list_mk_comb  : term * term list -> term
   val mk_comb       : term * term -> term
-  val list_mk_binder: (term -> term) -> term list * term -> term
+  val list_mk_binder: term option -> term list * term -> term
   val list_mk_abs   : term list * term -> term
   val mk_abs        : term * term -> term
   val dest_var      : term -> string * hol_type
@@ -90,7 +90,7 @@ sig
   val dest_comb     : term -> term * term
   val dest_abs      : term -> term * term
   val strip_abs     : term -> term list * term
-  val strip_binder  : (term -> term option) -> term -> term list * term
+  val strip_binder  : term option -> term -> term list * term
   val is_var        : term -> bool
   val is_genvar     : term -> bool
   val is_const      : term -> bool
@@ -204,7 +204,7 @@ sig
   val Mk_comb       : thm -> thm * thm * (thm -> thm -> thm)
   val Mk_abs        : thm -> term * thm * (thm -> thm)
   val Specialize    : term -> thm -> thm
-  val GEN_ABS       : (term -> term) -> term list -> thm -> thm
+  val GEN_ABS       : term option -> term list -> thm -> thm
   val mk_oracle_thm : tag -> term list * term -> thm
   val mk_thm        : term list * term -> thm
   val mk_axiom_thm  : string ref * term -> thm

@@ -103,6 +103,7 @@ val strip_fun =
   in strip []
   end;
 
+
 val strip_comb =
  let val destc = total dest_comb
      fun strip rands M =

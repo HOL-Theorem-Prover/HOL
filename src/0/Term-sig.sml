@@ -32,13 +32,13 @@ sig
   val list_mk_comb  : term * term list -> term
   val mk_comb       : term * term -> term
   val mk_abs        : term * term -> term
-  val list_mk_binder : (term -> term) -> term list * term -> term
+  val list_mk_binder : term option -> term list * term -> term
   val list_mk_abs   : term list * term -> term
   val dest_var      : term -> string * hol_type
   val dest_const    : term -> string * hol_type
   val dest_thy_const : term -> {Thy:string, Name:string, Ty:hol_type}
   val dest_comb     : term -> term * term
-  val strip_binder  : (term -> term option) -> term -> term list * term
+  val strip_binder  : term option -> term -> term list * term
   val strip_abs     : term -> term list * term
   val dest_abs      : term -> term * term
   val is_var        : term -> bool

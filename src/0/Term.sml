@@ -97,6 +97,17 @@ fun type_of tm = ty_of tm []
 end;
 
 
+(*---------------------------------------------------------------------------
+                Discriminators
+ ---------------------------------------------------------------------------*)
+
+fun is_bvar (Bv _)    = true | is_bvar _  = false;
+fun is_var  (Fv _)    = true | is_var _   = false;
+fun is_const(Const _) = true | is_const _ = false;
+fun is_comb(Comb _) = true | is_comb(Clos(_,Comb _)) = true | is_comb _ = false
+fun is_abs(Abs _) = true | is_abs(Clos(_,Abs _)) = true | is_abs _ = false;
+
+
 (*---------------------------------------------------------------------------*
  * The type variables of a lambda term. Tail recursive (from Ken Larsen).    *
  *---------------------------------------------------------------------------*)
@@ -370,204 +381,9 @@ fun dest_var (Fv v) = v
 
 val is_var = can dest_var;
 
-(*---------------------------------------------------------------------------
-       Making abstractions. list_mk_binder is a relatively
-       efficient version for making terms with many consecutive
-       abstractions.
-  ---------------------------------------------------------------------------*)
-
-fun list_mk_binder f (vlist,tm) =
- if not (all is_var vlist) then raise ERR "list_mk_binder" "" else
- let open Polyhash
-     val varmap = mkPolyTable(length vlist, Fail "varmap")
-     fun enumerate [] _ A = A
-       | enumerate (h::t) i A = (insert varmap (h,i); enumerate t (i-1) (h::A))
-     val rvlist = enumerate vlist (length vlist - 1) []
-     fun lookup v vmap = case peek vmap v of NONE => v | SOME i => Bv i
-     fun increment vmap = transform (fn x => x+1) vmap
-     fun bind (v as Fv _) vmap k = k (lookup v vmap)
-       | bind (Comb(M,N)) vmap k = bind M vmap (fn m =>
-                                   bind N vmap (fn n => k (Comb(m,n))))
-       | bind (Abs(v,M)) vmap k  = bind M (increment vmap)
-                                          (fn q => k (Abs(v,q)))
-       | bind (t as Clos _) vmap k = bind (push_clos t) vmap k
-       | bind tm vmap k = k tm
- in
-   rev_itlist (fn v => fn M => f(Abs(v,M))) rvlist (bind tm varmap I)
- end;
-
-val list_mk_abs = list_mk_binder I;
-
-fun mk_abs(Bvar as Fv _, Body) =
-      let fun bind (v as Fv _) i        = if v=Bvar then Bv i else v
-            | bind (Comb(Rator,Rand)) i = Comb(bind Rator i, bind Rand i)
-            | bind (Abs(Bvar,Body)) i   = Abs(Bvar, bind Body (i+1))
-            | bind tm _ = tm
-      in
-        Abs(Bvar, bind Body 0)
-      end
-  | mk_abs _ = raise ERR "mk_abs" "Bvar not a variable"
-
-
-
-(*---------------------------------------------------------------------------
-            Taking terms apart
-
-    These operations are all easy, except for taking apart multiple
-    abstractions. It can happen, via beta-conversion or substitution,
-    or instantiation, that a free variable is bound by the scope. One
-    of the tasks of strip_abs is to sort the resulting mess out.
-    strip_abs works by first classifying all the free variables in the
-    body as being captured by the prefix bindings or not. Each capturing
-    prefix binder is then renamed until it doesn't capture. Then we go
-    through the body and replace the dB indices of the prefix with the
-    corresponding free variables. These may in fact fall under another
-    binder; the renaming of that will, if necessary, get done if that
-    binder is taken apart (by a subsequent dest/strip_binder).
- ---------------------------------------------------------------------------*)
-
-local fun peel f (t as Clos _) A = peel f (push_clos t) A
-        | peel f tm A =
-            case f tm
-             of SOME(Abs(v,M)) => peel f M (v::A)
-              | otherwise => (A,tm)
-      datatype occtype = PREFIX of int | BODY
-      fun array_to_revlist A =
-        let val top = Array.length A - 1
-            fun For i acc =
-              if i>top then acc else For (i+1) (Array.sub(A,i)::acc)
-        in For 0 []
-        end
-      val vi_empty = HOLset.empty (fn ((v1,i1),(v2,i2)) => var_compare(v1,v2))
-      fun add_vi viset vi =
-         if HOLset.member(viset,vi) then viset else HOLset.add(viset,vi)
-in
-fun strip_binder f tm =
- let val (prefixl,body) = peel f tm []
-     val prefix = Array.fromList prefixl
-     val vmap = curry Array.sub prefix
-     val (insertAVbody,insertAVprefix,lookAV,dupls) =
-        let open Polyhash  (* AV is hashtable  of (var,occtype) elems *)
-            val AV = mkPolyTable(Array.length prefix, Fail"AV")
-            fun insertl [] _ dupls = dupls
-              | insertl (x::rst) i dupls =
-                  let val n = fst(dest_var x)
-                  in case peekInsert AV (n,PREFIX i)
-                      of NONE => insertl rst (i+1) dupls
-                       | SOME _ => insertl rst (i+1) ((x,i)::dupls)
-                  end
-            val dupls = insertl prefixl 0 []
-        in ((fn s => insert AV (s,BODY)),         (* insertAVbody *)
-            (fn (s,i) => insert AV (s,PREFIX i)), (* insertAVprefix *)
-            peek AV,                              (* lookAV *)
-            dupls)
-        end
-     fun variantAV n =
-       let val next = Lexis.nameStrm n
-           fun loop s = case lookAV s of NONE => s | SOME _ => loop (next())
-       in loop n
-       end
-     fun CVs (v as Fv(n,_)) capt k =
-          (case lookAV n
-            of SOME (PREFIX i) => k (add_vi capt (vmap i,i))
-             | SOME BODY => k capt
-             | NONE => (insertAVbody n; k capt))
-       | CVs(Comb(M,N)) capt k = CVs N capt (fn c => CVs M c k)
-       | CVs(Abs(_,M)) capt k  = CVs M capt k
-       | CVs(t as Clos _) capt k = CVs (push_clos t) capt k
-       | CVs tm capt k = k capt
-     fun unclash insert [] = ()
-       | unclash insert ((v,i)::rst) =
-           let val (n,ty) = dest_var v
-               val n' = variantAV n
-               val v' = mk_var(n',ty)
-           in Array.update(prefix,i,v')
-            ; insert (n',i)
-            ; unclash insert rst
-           end
-     fun unbind (v as Bv i) j k = k (vmap(i-j) handle Subscript => v)
-       | unbind (Comb(M,N)) j k = unbind M j (fn m =>
-                                  unbind N j (fn n => k(Comb(m,n))))
-       | unbind (Abs(v,M)) j k  = unbind M (j+1) (fn q => k(Abs(v,q)))
-       | unbind (t as Clos _) j k = unbind (push_clos t) j k
-       | unbind tm j k = k tm
- in
-     unclash insertAVprefix dupls
-   ; unclash (insertAVbody o fst) (HOLset.listItems(CVs body vi_empty I))
-   ; (array_to_revlist prefix, unbind body 0 I)
- end
-end;
-
-
-val strip_abs = strip_binder (fn (t as Abs _) => SOME t | other => NONE)
-
-local exception CLASH
-in
-fun dest_abs(Abs(Bvar as Fv(Name,Ty), Body)) =
-     let fun dest (v as (Bv j), i)     = if i=j then Bvar else v
-           | dest (v as Fv(s,_), _)    = if Name=s then raise CLASH else v
-           | dest (Comb(Rator,Rand),i) = Comb(dest(Rator,i),dest(Rand,i))
-           | dest (Abs(Bvar,Body),i)   = Abs(Bvar, dest(Body,i+1))
-           | dest (t as Clos _, i)     = dest (push_clos t, i)
-           | dest (tm,_) = tm
-     in (Bvar, dest(Body,0))
-        handle CLASH =>
-        dest_abs(Abs(variant (free_vars Body) Bvar, Body))
-     end
-  | dest_abs (t as Clos _) = dest_abs (push_clos t)
-  | dest_abs _ = raise ERR "dest_abs" "not a lambda abstraction"
-end;
-
-
-fun break_abs(Abs(_,Body)) = Body
-  | break_abs(t as Clos _) = break_abs (push_clos t)
-  | break_abs _ = raise ERR "break_abs" "not an abstraction";
-
-fun dest_thy_const (Const(id,ty)) =
-      let val (name,thy) = dest_id id
-      in {Thy=thy, Name=name, Ty=to_hol_type ty}
-      end
-  | dest_thy_const _ = raise ERR"dest_thy_const" "not a const"
-
-fun break_const (Const p) = (I##to_hol_type) p
-  | break_const _ = raise ERR "break_const" "not a const"
-
-fun dest_const (Const(id,ty)) = (name_of id, to_hol_type ty)
-  | dest_const _ = raise ERR "dest_const" "not a const"
-
-fun dest_comb (Comb r) = r
-  | dest_comb (t as Clos _) = dest_comb (push_clos t)
-  | dest_comb _ = raise ERR "dest_comb" "not a comb"
-
-
-(*---------------------------------------------------------------------------
-               Derived destructors
- ---------------------------------------------------------------------------*)
-
-fun rator (Comb(Rator,_)) = Rator
-  | rator (Clos(Env, Comb(Rator,_))) = mk_clos(Env,Rator)
-  | rator _ = raise ERR "rator" "not a comb"
-
-fun rand (Comb(_,Rand)) = Rand
-  | rand (Clos(Env, Comb(_,Rand))) = mk_clos(Env,Rand)
-  | rand _ = raise ERR "rand" "not a comb"
-
-val bvar = fst o dest_abs;
-val body = snd o dest_abs;
-
-
-(*---------------------------------------------------------------------------
-                Discriminators
- ---------------------------------------------------------------------------*)
-
-fun is_bvar (Bv _)    = true | is_bvar _  = false;
-fun is_var  (Fv _)    = true | is_var _   = false;
-fun is_const(Const _) = true | is_const _ = false;
-fun is_comb(Comb _) = true | is_comb(Clos(_,Comb _)) = true | is_comb _ = false
-fun is_abs(Abs _) = true | is_abs(Clos(_,Abs _)) = true | is_abs _ = false;
 
 (*---------------------------------------------------------------------------*
- *       Alpha conversion                                                    *
+ *                  Alpha conversion                                         *
  *---------------------------------------------------------------------------*)
 
 fun rename_bvar s t =
@@ -582,9 +398,11 @@ in
 fun aconv t1 t2 = EQ(t1,t2) orelse
  case(t1,t2)
   of (Comb(M,N),Comb(P,Q)) => aconv N Q andalso aconv M P
-   | (Abs(Fv(_,ty1),M),Abs(Fv(_,ty2),N)) => ty1=ty2 andalso aconv M N
-   | (Clos(e1,b1), Clos(e2,b2)) => (EQ(e1,e2) andalso EQ(b1,b2))
-                                   orelse aconv (push_clos t1) (push_clos t2)
+   | (Abs(Fv(_,ty1),M),
+      Abs(Fv(_,ty2),N)) => ty1=ty2 andalso aconv M N
+   | (Clos(e1,b1), 
+      Clos(e2,b2)) => (EQ(e1,e2) andalso EQ(b1,b2))
+                       orelse aconv (push_clos t1) (push_clos t2)
    | (Clos _, _) => aconv (push_clos t1) t2
    | (_, Clos _) => aconv t1 (push_clos t2)
    | (M,N)       => (M=N)
@@ -632,7 +450,7 @@ local fun pop (tm as Bv i, k) =
         | pop (tm,k) = tm
       fun eta_body (Comb(Rator,Bv 0)) = pop (Rator,0)
         | eta_body (tm as Clos _)     = eta_body (push_clos tm)
-        | eta_body _ = raise ERR "eta_conv" "not a eta-redex"
+        | eta_body _ = raise ERR "eta_conv" "not an eta-redex"
 in
 fun eta_conv (Abs(_,Body)) = eta_body Body
   | eta_conv (tm as Clos _)  = eta_conv (push_clos tm)
@@ -686,6 +504,211 @@ fun inst [] tm = tm
     in
       inst1 tm
     end;
+
+fun dest_comb (Comb r) = r
+  | dest_comb (t as Clos _) = dest_comb (push_clos t)
+  | dest_comb _ = raise ERR "dest_comb" "not a comb"
+
+
+(*---------------------------------------------------------------------------
+       Making abstractions. list_mk_binder is a relatively
+       efficient version for making terms with many consecutive
+       abstractions.
+  ---------------------------------------------------------------------------*)
+
+fun list_mk_binder opt =
+ let val f = case opt 
+             of NONE => Lib.I 
+              | SOME c => 
+                 if is_const c then 
+                    (fn abs => 
+                       let val dom = fst(Type.dom_rng(type_of abs))
+                       in mk_comb (inst[Type.alpha |-> dom] c, abs)
+                       end)
+                 else raise ERR "list_mk_binder" "expected a constant"
+ in fn (vlist,tm) 
+ => if not (all is_var vlist) then raise ERR "list_mk_binder" "" 
+    else
+  let open Polyhash
+     val varmap = mkPolyTable(length vlist, Fail "varmap")
+     fun enumerate [] _ A = A
+       | enumerate (h::t) i A = (insert varmap (h,i); enumerate t (i-1) (h::A))
+     val rvlist = enumerate vlist (length vlist - 1) []
+     fun lookup v vmap = case peek vmap v of NONE => v | SOME i => Bv i
+     fun increment vmap = transform (fn x => x+1) vmap
+     fun bind (v as Fv _) vmap k = k (lookup v vmap)
+       | bind (Comb(M,N)) vmap k = bind M vmap (fn m =>
+                                   bind N vmap (fn n => k (Comb(m,n))))
+       | bind (Abs(v,M)) vmap k  = bind M (increment vmap)
+                                          (fn q => k (Abs(v,q)))
+       | bind (t as Clos _) vmap k = bind (push_clos t) vmap k
+       | bind tm vmap k = k tm
+  in
+     rev_itlist (fn v => fn M => f(Abs(v,M))) rvlist (bind tm varmap I)
+  end
+ end
+ handle e => raise wrap_exn "Term" "list_mk_binder" e;
+
+val list_mk_abs = list_mk_binder NONE;
+
+fun mk_abs(Bvar as Fv _, Body) =
+      let fun bind (v as Fv _) i        = if v=Bvar then Bv i else v
+            | bind (Comb(Rator,Rand)) i = Comb(bind Rator i, bind Rand i)
+            | bind (Abs(Bvar,Body)) i   = Abs(Bvar, bind Body (i+1))
+            | bind tm _ = tm
+      in
+        Abs(Bvar, bind Body 0)
+      end
+  | mk_abs _ = raise ERR "mk_abs" "Bvar not a variable"
+
+
+(*---------------------------------------------------------------------------
+            Taking terms apart
+
+    These operations are all easy, except for taking apart multiple
+    abstractions. It can happen, via beta-conversion or substitution,
+    or instantiation, that a free variable is bound by the scope. One
+    of the tasks of strip_abs is to sort the resulting mess out.
+    strip_abs works by first classifying all the free variables in the
+    body as being captured by the prefix bindings or not. Each capturing
+    prefix binder is then renamed until it doesn't capture. Then we go
+    through the body and replace the dB indices of the prefix with the
+    corresponding free variables. These may in fact fall under another
+    binder; the renaming of that will, if necessary, get done if that
+    binder is taken apart (by a subsequent dest/strip_binder).
+ ---------------------------------------------------------------------------*)
+
+local fun peel f (t as Clos _) A = peel f (push_clos t) A
+        | peel f tm A =
+            case f tm
+             of SOME(Abs(v,M)) => peel f M (v::A)
+              | otherwise => (A,tm)
+      datatype occtype = PREFIX of int | BODY
+      fun array_to_revlist A =
+        let val top = Array.length A - 1
+            fun For i acc =
+              if i>top then acc else For (i+1) (Array.sub(A,i)::acc)
+        in For 0 []
+        end
+      val vi_empty = HOLset.empty (fn ((v1,i1),(v2,i2)) => var_compare(v1,v2))
+      fun add_vi viset vi =
+         if HOLset.member(viset,vi) then viset else HOLset.add(viset,vi)
+in
+fun strip_binder opt =
+ let val f = case opt 
+              of NONE => (fn (t as Abs _) => SOME t | other => NONE)
+               | SOME c => (fn t => let val (rator,rand) = dest_comb t
+                                    in if same_const rator c 
+                                       then SOME rand
+                                       else NONE
+                                    end handle HOL_ERR _ => NONE)
+ in fn tm => 
+   let val (prefixl,body) = peel f tm []
+     val prefix = Array.fromList prefixl
+     val vmap = curry Array.sub prefix
+     val (insertAVbody,insertAVprefix,lookAV,dupls) =
+        let open Polyhash  (* AV is hashtable  of (var,occtype) elems *)
+            val AV = mkPolyTable(Array.length prefix, Fail"AV")
+            fun insertl [] _ dupls = dupls
+              | insertl (x::rst) i dupls =
+                  let val n = fst(dest_var x)
+                  in case peekInsert AV (n,PREFIX i)
+                      of NONE => insertl rst (i+1) dupls
+                       | SOME _ => insertl rst (i+1) ((x,i)::dupls)
+                  end
+            val dupls = insertl prefixl 0 []
+        in ((fn s => insert AV (s,BODY)),         (* insertAVbody *)
+            (fn (s,i) => insert AV (s,PREFIX i)), (* insertAVprefix *)
+            peek AV,                              (* lookAV *)
+            dupls)
+        end
+     fun variantAV n =
+       let val next = Lexis.nameStrm n
+           fun loop s = case lookAV s of NONE => s | SOME _ => loop (next())
+       in loop n
+       end
+     fun CVs (v as Fv(n,_)) capt k =
+          (case lookAV n
+            of SOME (PREFIX i) => k (add_vi capt (vmap i,i))
+             | SOME BODY => k capt
+             | NONE => (insertAVbody n; k capt))
+       | CVs(Comb(M,N)) capt k = CVs N capt (fn c => CVs M c k)
+       | CVs(Abs(_,M)) capt k  = CVs M capt k
+       | CVs(t as Clos _) capt k = CVs (push_clos t) capt k
+       | CVs tm capt k = k capt
+     fun unclash insert [] = ()
+       | unclash insert ((v,i)::rst) =
+           let val (n,ty) = dest_var v
+               val n' = variantAV n
+               val v' = mk_var(n',ty)
+           in Array.update(prefix,i,v')
+            ; insert (n',i)
+            ; unclash insert rst
+           end
+     fun unbind (v as Bv i) j k = k (vmap(i-j) handle Subscript => v)
+       | unbind (Comb(M,N)) j k = unbind M j (fn m =>
+                                  unbind N j (fn n => k(Comb(m,n))))
+       | unbind (Abs(v,M)) j k  = unbind M (j+1) (fn q => k(Abs(v,q)))
+       | unbind (t as Clos _) j k = unbind (push_clos t) j k
+       | unbind tm j k = k tm
+ in
+     unclash insertAVprefix dupls
+   ; unclash (insertAVbody o fst) (HOLset.listItems(CVs body vi_empty I))
+   ; (array_to_revlist prefix, unbind body 0 I)
+ end
+ end
+end;
+
+val strip_abs = strip_binder NONE;
+
+local exception CLASH
+in
+fun dest_abs(Abs(Bvar as Fv(Name,Ty), Body)) =
+     let fun dest (v as (Bv j), i)     = if i=j then Bvar else v
+           | dest (v as Fv(s,_), _)    = if Name=s then raise CLASH else v
+           | dest (Comb(Rator,Rand),i) = Comb(dest(Rator,i),dest(Rand,i))
+           | dest (Abs(Bvar,Body),i)   = Abs(Bvar, dest(Body,i+1))
+           | dest (t as Clos _, i)     = dest (push_clos t, i)
+           | dest (tm,_) = tm
+     in (Bvar, dest(Body,0))
+        handle CLASH =>
+        dest_abs(Abs(variant (free_vars Body) Bvar, Body))
+     end
+  | dest_abs (t as Clos _) = dest_abs (push_clos t)
+  | dest_abs _ = raise ERR "dest_abs" "not a lambda abstraction"
+end;
+
+
+fun break_abs(Abs(_,Body)) = Body
+  | break_abs(t as Clos _) = break_abs (push_clos t)
+  | break_abs _ = raise ERR "break_abs" "not an abstraction";
+
+fun dest_thy_const (Const(id,ty)) =
+      let val (name,thy) = dest_id id
+      in {Thy=thy, Name=name, Ty=to_hol_type ty}
+      end
+  | dest_thy_const _ = raise ERR"dest_thy_const" "not a const"
+
+fun break_const (Const p) = (I##to_hol_type) p
+  | break_const _ = raise ERR "break_const" "not a const"
+
+fun dest_const (Const(id,ty)) = (name_of id, to_hol_type ty)
+  | dest_const _ = raise ERR "dest_const" "not a const"
+
+(*---------------------------------------------------------------------------
+               Derived destructors
+ ---------------------------------------------------------------------------*)
+
+fun rator (Comb(Rator,_)) = Rator
+  | rator (Clos(Env, Comb(Rator,_))) = mk_clos(Env,Rator)
+  | rator _ = raise ERR "rator" "not a comb"
+
+fun rand (Comb(_,Rand)) = Rand
+  | rand (Clos(Env, Comb(_,Rand))) = mk_clos(Env,Rand)
+  | rand _ = raise ERR "rand" "not a comb"
+
+val bvar = fst o dest_abs;
+val body = snd o dest_abs;
 
 
 (* ----------------------------------------------------------------------

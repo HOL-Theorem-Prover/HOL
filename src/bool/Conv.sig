@@ -13,9 +13,10 @@ sig
    val EVERY_DISJ_CONV       : conv -> conv
    val EVERY_CONJ_CONV       : conv -> conv
    val QUANT_CONV            : conv -> conv
+   val BINDER_CONV           : conv -> conv
+   val STRIP_BINDER_CONV     : term option -> conv -> conv
    val STRIP_QUANT_CONV      : conv -> conv
    val LAST_EXISTS_CONV      : conv -> conv
-   val BINDER_CONV           : conv -> conv
    val LHS_CONV              : conv -> conv
    val RHS_CONV              : conv -> conv
    val NO_CONV               : conv

@@ -240,15 +240,15 @@ fun ABS v (THM(ocl,asl,c)) =
  *   A |- (Q v1...vn.t1) = (Q v1...vn.t2)    (where no vi is free in A)      *
  *---------------------------------------------------------------------------*)
 
-fun GEN_ABS f vlist (th as THM(ocl,asl,c)) =
+fun GEN_ABS opt vlist (th as THM(ocl,asl,c)) =
  let open HOLset
      val vset = addList(Term.empty_varset,vlist)
      val hset = hypset th
  in if isEmpty (intersection(vset,hset))
     then let val (lhs,rhs,ty) = with_exn Term.dest_eq_ty c 
                                   (thm_err "GEN_ABS" "not an equality")
-             val lhs' = list_mk_binder f (vlist,lhs)
-             val rhs' = list_mk_binder f (vlist,rhs)
+             val lhs' = list_mk_binder opt (vlist,lhs)
+             val rhs' = list_mk_binder opt (vlist,rhs)
          in make_thm Count.GenAbs
                (ocl,asl,mk_eq_nocheck (Term.type_of lhs') lhs' rhs')
          end
