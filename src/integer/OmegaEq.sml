@@ -40,6 +40,11 @@ fun c1 THENC c2 = THENQC c1 c2
 fun c1 ORELSEC c2 = ORELSEQC c1 c2
 val BINOP_CONV = BINOP_QCONV
 val ALL_CONV = ALL_QCONV
+val TRY_CONV = TRY_QCONV
+
+fun EVERY_CONJ_CONV c tm =
+    if is_conj tm then BINOP_CONV (EVERY_CONJ_CONV c) tm
+    else c tm
 
 fun ERR f msg = HOL_ERR { origin_structure = "OmegaEq",
                           origin_function = f,
@@ -155,7 +160,8 @@ fun sum_to_sumc tm = let
   val (cs_t, vs_t) = (mk_list ## mk_list) (cs, vs)
   val sumc_t = list_mk_comb(sumc_t, [cs_t, vs_t])
 in
-  SYM (REWRITE_CONV [INT_ADD_ASSOC, sumc_def, INT_ADD_RID, INT_MUL_RID] sumc_t)
+  SYM ((REWRITE_CONV [INT_ADD_ASSOC, sumc_def, INT_MUL_RID] THENC
+        REWR_CONV INT_ADD_RID) sumc_t)
 end
 
 (* ----------------------------------------------------------------------
@@ -227,13 +233,15 @@ in
            RAND_CONV (* sumc term *)
              (LAND_CONV (LAND_CONV (* first arg of MAP *)
                            (BINDER_CONV (RAND_CONV REDUCE_CONV THENC
-                                         REWRITE_CONV [modhat_def]))) THENC
+                                         REWRITE_CONV [modhat_def] THENC
+                                         REDUCE_CONV))) THENC
               sumc_eliminate (BETA_CONV THENC REDUCE_CONV)) THENC
              REWRITE_CONV [INT_MUL_LZERO, INT_ADD_RID, INT_ADD_ASSOC,
                            INT_ADD_LID])) THENC
      RAND_CONV (* old equality conjunct *)
        (REWRITE_CONV [sumc_def] THENC
-        REWRITE_CONV [INT_MUL_RID, INT_ADD_ASSOC, INT_ADD_RID]))
+        REWRITE_CONV [INT_MUL_RID, INT_ADD_ASSOC] THENC
+        RAND_CONV (REWR_CONV INT_ADD_RID)))
 end tm
 
 val eliminate_equality =
@@ -258,6 +266,7 @@ in
 end tm
 
 val S_AND_G_MULT = Profile.profile "S_AND_G_MULT" OmegaMath.S_AND_G_MULT
+val EX_REFL = EQT_INTRO (SPEC_ALL EXISTS_REFL)
 fun OmegaEq t = let
   val (exvars, body) = strip_exists t
   val exv_set = HOLset.addList(empty_tmset, exvars)
@@ -271,32 +280,46 @@ fun OmegaEq t = let
   val _ = isSome vwithleast orelse raise UNCHANGED
   val (to_elim, elimc) = valOf vwithleast
   val c = valOf conj
+  val newrhs = if null rest then c else mk_conj(c, list_mk_conj rest)
   val reordered_thm =
-      EQT_ELIM (Profile.profile "AC" (AC_CONV(CONJ_ASSOC, CONJ_COMM))
-                       (mk_eq(body, mk_conj(c, list_mk_conj rest))))
-  val bring_veq_to_top =
+      EQT_ELIM (AC_CONV(CONJ_ASSOC, CONJ_COMM) (mk_eq(body, newrhs)))
+  val bring_veq_to_top = let
+    val (rCONV, finisher) = if null rest then (I, ALL_CONV)
+                            else (LAND_CONV,
+                                  LEFT_AND_EXISTS_CONV THENC
+                                  BINDER_CONV (REWR_CONV (GSYM CONJ_ASSOC)))
+  in
       if elimc = Arbint.one then
-        LAND_CONV (phase2_CONV to_elim THENC LAND_CONV (REWR_CONV INT_MUL_LID))
+        rCONV (phase2_CONV to_elim THENC LAND_CONV (REWR_CONV INT_MUL_LID))
       else
-        LAND_CONV (eliminate_equality to_elim) THENC LEFT_AND_EXISTS_CONV THENC
-        BINDER_CONV (REWR_CONV (GSYM CONJ_ASSOC))
+        rCONV (eliminate_equality to_elim) THENC finisher
+  end
   fun ifVarsRemain c t = if is_exists t then c t else ALL_QCONV t
+  val (absify, unwinder) =
+      if null rest andalso elimc = Arbint.one then
+        (ALL_CONV, REWR_CONV EX_REFL)
+      else (STRIP_QUANT_CONV (RAND_CONV (mk_abs_CONV to_elim)),
+            REWR_CONV UNWIND_THM2 THENC BETA_CONV)
 in
-  STRIP_QUANT_CONV (Profile.profile "first"
-                    (K reordered_thm THENC bring_veq_to_top) THENC
-                    Profile.profile "second"
-                    (STRIP_QUANT_CONV (RAND_CONV (mk_abs_CONV to_elim)))) THENC
-  Profile.profile "third" (push_exvar_to_bot to_elim THENC
-  LAST_EXISTS_CONV (REWR_CONV UNWIND_THM2 THENC BETA_CONV)) THENC
-  Profile.profile "fourth" (STRIP_QUANT_CONV (EVERY_CONJ_CONV (RAND_CONV S_AND_G_MULT THENC
-                                     gcd_check))) THENC
+  STRIP_QUANT_CONV (K reordered_thm THENC bring_veq_to_top THENC absify) THENC
+  push_exvar_to_bot to_elim THENC LAST_EXISTS_CONV unwinder THENC
+  STRIP_QUANT_CONV
+    (EVERY_CONJ_CONV (TRY_CONV (RAND_CONV S_AND_G_MULT THENC gcd_check))) THENC
+  REWRITE_CONV [EXISTS_SIMP] THENC
   ifVarsRemain OmegaEq
 end t
 
 (* some test terms:
 
 time OmegaEq   ``?x y z. 0 <= 2 * x + ~3 * y + 5 * z + 10 /\
-                         (0  = 3 * x + 4 * y + ~7 * z + 3)``
+                         (0  = 3 * x + 4 * y + ~7 * z + 3)``;
+
+time OmegaEq   ``?i j. 0 <= 1 * i + 0 /\ 0 <= 1 * j + 0 /\
+                       (0 = 3 * i + 5 * j + ~1 * n + 0)``;
+
+time OmegaEq   ``?i j. (0 = 3 * i + 5 * j + ~1 * n + 0)``;
+
+time OmegaEq   ``?i j. (0 = 3 * i + 6 * j + ~1 * n + 0)``;
 
 
 *)
