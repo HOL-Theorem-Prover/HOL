@@ -8,8 +8,8 @@ structure temporalLib :> temporalLib =
 struct
 
 (*---------------------------------------------------------------------------
-   Note (kxs): the pathname and file handling in this file should be 
-               made portable. 
+   Note (kxs): the pathname and file handling in this file should be
+               made portable.
  ---------------------------------------------------------------------------*)
 
 val smv_tmp_dir = ref "/tmp/";
@@ -22,6 +22,11 @@ val smv_call    = ref "smv.xable -r -v -f ";
     type conv = Abbrev.conv
 
 open HolKernel Parse basicHol90Lib;
+val (Type,Term) =
+  parse_from_grammars Omega_AutomataTheory.Omega_Automata_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
@@ -34,8 +39,8 @@ type smv_output =
 	 Resources:string list}
 
 
-datatype temp_formula = 
-	truesig | 
+datatype temp_formula =
+	truesig |
 	falsesig |
 	var of string |
 	neg of temp_formula |
@@ -140,29 +145,29 @@ fun hol2temporal t =
 	 else if f=PEVENTUAL then peventual(hol2temporal x)
 	 else      (* -------- binary temporal operator or signal evalutation ---------	*)
 	    let val {Rator=temp_op,Rand=b} = dest_comb f
-	     in if temp_op = WHEN then 
+	     in if temp_op = WHEN then
 			when((hol2temporal b),(hol2temporal x))
-		else if temp_op = UNTIL then 
+		else if temp_op = UNTIL then
 			until((hol2temporal b),(hol2temporal x))
-		else if temp_op = BEFORE then    
+		else if temp_op = BEFORE then
 			befor((hol2temporal b),(hol2temporal x))
-		else if temp_op = SWHEN then 
+		else if temp_op = SWHEN then
 			swhen((hol2temporal b),(hol2temporal x))
-		else if temp_op = SUNTIL then 
+		else if temp_op = SUNTIL then
 			suntil((hol2temporal b),(hol2temporal x))
-		else if temp_op = SBEFORE then    
+		else if temp_op = SBEFORE then
 			sbefor((hol2temporal b),(hol2temporal x))
-		else if temp_op = PWHEN then 
+		else if temp_op = PWHEN then
 			pwhen((hol2temporal b),(hol2temporal x))
-		else if temp_op = PUNTIL then 
+		else if temp_op = PUNTIL then
 			puntil((hol2temporal b),(hol2temporal x))
-		else if temp_op = PBEFORE then    
+		else if temp_op = PBEFORE then
 			pbefor((hol2temporal b),(hol2temporal x))
-		else if temp_op = PSWHEN then 
+		else if temp_op = PSWHEN then
 			pswhen((hol2temporal b),(hol2temporal x))
-		else if temp_op = PSUNTIL then 
+		else if temp_op = PSUNTIL then
 			psuntil((hol2temporal b),(hol2temporal x))
-		else if temp_op = PSBEFORE then    
+		else if temp_op = PSBEFORE then
 			psbefor((hol2temporal b),(hol2temporal x))
 		else (hol2temporal f)
 	    end
@@ -175,90 +180,90 @@ fun hol2temporal t =
 fun temporal2hol truesig  = (--`\t:num.T`--)
   | temporal2hol falsesig = (--`\t:num.F`--)
   | temporal2hol (var(x)) = mk_var{Name=x,Ty=(==`:num->bool`==)}
-  | temporal2hol (neg f)  = 
+  | temporal2hol (neg f)  =
 	let val t = temporal2hol f in (--`\t:num. ~^t t`--) end
-  | temporal2hol (conj(f1,f2)) = 
-	let 
+  | temporal2hol (conj(f1,f2)) =
+	let
 	   val t1 = temporal2hol f1
 	   val t2 = temporal2hol f2
-	 in (--`\t:num. ^t1 t /\ ^t2 t`--) 
+	 in (--`\t:num. ^t1 t /\ ^t2 t`--)
 	end
-  | temporal2hol (disj(f1,f2)) = 
-	let 
+  | temporal2hol (disj(f1,f2)) =
+	let
 	   val t1 = temporal2hol f1
 	   val t2 = temporal2hol f2
-	 in (--`\t:num. ^t1 t \/ ^t2 t`--) 
+	 in (--`\t:num. ^t1 t \/ ^t2 t`--)
 	end
-  | temporal2hol (imp(f1,f2)) = 
-	let 
+  | temporal2hol (imp(f1,f2)) =
+	let
 	   val t1 = temporal2hol f1
 	   val t2 = temporal2hol f2
-	 in (--`\t:num. ^t1 t ==> ^t2 t`--) 
+	 in (--`\t:num. ^t1 t ==> ^t2 t`--)
 	end
-  | temporal2hol (equ(f1,f2)) = 
-	let 
+  | temporal2hol (equ(f1,f2)) =
+	let
 	   val t1 = temporal2hol f1
 	   val t2 = temporal2hol f2
-	 in (--`\t:num. ^t1 t = ^t2 t`--) 
+	 in (--`\t:num. ^t1 t = ^t2 t`--)
 	end
-  | temporal2hol (ifte(f1,f2,f3)) = 
-	let 
+  | temporal2hol (ifte(f1,f2,f3)) =
+	let
 	   val t1 = temporal2hol f1
 	   val t2 = temporal2hol f2
 	   val t3 = temporal2hol f3
-	 in (--`\t:num. ^t1 t => ^t2 t | ^t3 t `--) 
+	 in (--`\t:num. ^t1 t => ^t2 t | ^t3 t `--)
 	end
-  | temporal2hol (next f) = 
+  | temporal2hol (next f) =
 	mk_comb{Rator=NEXT,Rand=(temporal2hol f)}
-  | temporal2hol (always f) = 
+  | temporal2hol (always f) =
 	mk_comb{Rator=ALWAYS,Rand=(temporal2hol f)}
-  | temporal2hol (eventual f) = 
+  | temporal2hol (eventual f) =
 	mk_comb{Rator=EVENTUAL,Rand=(temporal2hol f)}
-  | temporal2hol (pnext f) = 
+  | temporal2hol (pnext f) =
 	mk_comb{Rator=PNEXT,Rand=(temporal2hol f)}
-  | temporal2hol (psnext f) = 
+  | temporal2hol (psnext f) =
 	mk_comb{Rator=PSNEXT,Rand=(temporal2hol f)}
-  | temporal2hol (palways f) = 
+  | temporal2hol (palways f) =
 	mk_comb{Rator=PALWAYS,Rand=(temporal2hol f)}
-  | temporal2hol (peventual f) = 
+  | temporal2hol (peventual f) =
 	mk_comb{Rator=PEVENTUAL,Rand=(temporal2hol f)}
-  | temporal2hol (when(x,b)) = 
+  | temporal2hol (when(x,b)) =
 	mk_comb{Rator=mk_comb{Rator=WHEN,Rand=(temporal2hol x)},
 		Rand=(temporal2hol b)}
-  | temporal2hol (until(x,b)) = 
+  | temporal2hol (until(x,b)) =
 	mk_comb{Rator=mk_comb{Rator=UNTIL,Rand=(temporal2hol x)},
 		Rand=(temporal2hol b)}
-  | temporal2hol (befor(x,b)) = 
+  | temporal2hol (befor(x,b)) =
 	mk_comb{Rator=mk_comb{Rator=BEFORE,Rand=(temporal2hol x)},
 		Rand=(temporal2hol b)}
-  | temporal2hol (swhen(x,b)) = 
+  | temporal2hol (swhen(x,b)) =
 	mk_comb{Rator=mk_comb{Rator=SWHEN,Rand=(temporal2hol x)},
 		Rand=(temporal2hol b)}
-  | temporal2hol (suntil(x,b)) = 
+  | temporal2hol (suntil(x,b)) =
 	mk_comb{Rator=mk_comb{Rator=SUNTIL,Rand=(temporal2hol x)},
 		Rand=(temporal2hol b)}
-  | temporal2hol (sbefor(x,b)) = 
+  | temporal2hol (sbefor(x,b)) =
 	mk_comb{Rator=mk_comb{Rator=SBEFORE,Rand=(temporal2hol x)},
 		Rand=(temporal2hol b)}
-  | temporal2hol (pwhen(x,b)) = 
+  | temporal2hol (pwhen(x,b)) =
 	mk_comb{Rator=mk_comb{Rator=PWHEN,Rand=(temporal2hol x)},
 		Rand=(temporal2hol b)}
-  | temporal2hol (puntil(x,b)) = 
+  | temporal2hol (puntil(x,b)) =
 	mk_comb{Rator=mk_comb{Rator=PUNTIL,Rand=(temporal2hol x)},
 		Rand=(temporal2hol b)}
-  | temporal2hol (pbefor(x,b)) = 
+  | temporal2hol (pbefor(x,b)) =
 	mk_comb{Rator=mk_comb{Rator=PBEFORE,Rand=(temporal2hol x)},
 		Rand=(temporal2hol b)}
-  | temporal2hol (pswhen(x,b)) = 
+  | temporal2hol (pswhen(x,b)) =
 	mk_comb{Rator=mk_comb{Rator=PSWHEN,Rand=(temporal2hol x)},
 		Rand=(temporal2hol b)}
-  | temporal2hol (psuntil(x,b)) = 
+  | temporal2hol (psuntil(x,b)) =
 	mk_comb{Rator=mk_comb{Rator=PSUNTIL,Rand=(temporal2hol x)},
 		Rand=(temporal2hol b)}
-  | temporal2hol (psbefor(x,b)) = 
+  | temporal2hol (psbefor(x,b)) =
 	mk_comb{Rator=mk_comb{Rator=PSBEFORE,Rand=(temporal2hol x)},
 		Rand=(temporal2hol b)}
- 
+
 
 
 
@@ -279,7 +284,7 @@ fun var_names truesig          = []
   | var_names (ifte(f1,f2,f3)) = (var_names f1)@(var_names f2)@(var_names f3)
   | var_names (next f)         = var_names f
   | var_names (always f)       = var_names f
-  | var_names (eventual f)     = var_names f 
+  | var_names (eventual f)     = var_names f
   | var_names (when(x,b))      = (var_names x)@(var_names b)
   | var_names (until(x,b))     = (var_names x)@(var_names b)
   | var_names (befor(x,b))     = (var_names x)@(var_names b)
@@ -289,7 +294,7 @@ fun var_names truesig          = []
   | var_names (pnext f)        = var_names f
   | var_names (psnext f)       = var_names f
   | var_names (palways f)      = var_names f
-  | var_names (peventual f)    = var_names f 
+  | var_names (peventual f)    = var_names f
   | var_names (pwhen(x,b))     = (var_names x)@(var_names b)
   | var_names (puntil(x,b))    = (var_names x)@(var_names b)
   | var_names (pbefor(x,b))    = (var_names x)@(var_names b)
@@ -309,7 +314,7 @@ fun new_sig_var name fb index =
      in if mem n fb then new_sig_var name fb (index+1)
 	else n
     end
-  
+
 
 
 (* *********************** tsubst & temp_subst ********************************	*)
@@ -321,7 +326,7 @@ fun new_sig_var name fb index =
 
 fun tsubst v x t =
     if v=t then x else
-      case t of 
+      case t of
 	  falsesig 	 => falsesig
 	| truesig 	 => truesig
 	| var(n) 	 => var(n)
@@ -353,7 +358,7 @@ fun tsubst v x t =
 
 fun temp_subst [] t = t |
     temp_subst ((v,x)::sigma) t = temp_subst sigma (tsubst v x t)
-  
+
 
 fun def_subst [] t = t |
     def_subst (equ(ell,phi)::s) t = def_subst s (tsubst phi ell t)
@@ -379,38 +384,38 @@ val fb = ref([]:string list); (* contains the names of forbidden variables *)
 fun tableau Phi =
     case Phi of
 	  var(_)	=> ([],Phi)
-        | neg phi 	=> 
+        | neg phi 	=>
 		let val (defs,phi') = tableau phi
 		 in (defs,neg(phi'))
 		end
-        | conj(phi,psi)	=> 
+        | conj(phi,psi)	=>
 		let val (defs1,phi') = tableau phi
 		    val (defs2,psi') = tableau (def_subst defs1 psi)
 		 in (defs1 @ defs2,conj(phi',psi'))
 		end
-        | disj(phi,psi)	=> 
+        | disj(phi,psi)	=>
 		let val (defs1,phi') = tableau phi
 		    val (defs2,psi') = tableau (def_subst defs1 psi)
 		 in (defs1 @ defs2,disj(phi',psi'))
 		end
-        | imp(phi,psi)	=> 
+        | imp(phi,psi)	=>
 		let val (defs1,phi') = tableau phi
 		    val (defs2,psi') = tableau (def_subst defs1 psi)
 		 in (defs1 @ defs2,imp(phi',psi'))
 		end
-        | equ(phi,psi)	=> 
+        | equ(phi,psi)	=>
 		let val (defs1,phi') = tableau phi
 		    val (defs2,psi') = tableau (def_subst defs1 psi)
 		 in (defs1 @ defs2, equ(phi',psi'))
 		end
-        | ifte(phi,alpha,beta) => 
+        | ifte(phi,alpha,beta) =>
 		let val (defs1,phi') = tableau phi
 		    val (defs2,alpha') = tableau (def_subst defs1 alpha)
 		    val (defs3,beta')  = tableau (def_subst (defs1 @ defs2) beta)
 		 in (defs1 @ defs2 @ defs3,ifte(phi',alpha',beta'))
 		end
-        | next phi => 
-		let 
+        | next phi =>
+		let
 		    val (defs,phi') = tableau phi
 		    val ell0_name = new_sig_var "ell" (!fb) 0
 		    val u = (fb := ell0_name::(!fb) )
@@ -422,8 +427,8 @@ fun tableau Phi =
 		    val def1 = equ(ell1,next(ell0))
 		 in ( defs @ [def0,def1], ell1)
 		end
-        | always phi => 
-		let 
+        | always phi =>
+		let
 		    val (defs,phi') = tableau phi
 		    val ell_name = new_sig_var "ell" (!fb) 0
 		    val u = (fb := ell_name::(!fb) )
@@ -431,8 +436,8 @@ fun tableau Phi =
 		    val def = equ(ell,always(phi'))
 		 in (defs @ [def], ell)
 		end
-        | eventual phi => 
-		let 
+        | eventual phi =>
+		let
 		    val (defs,phi') = tableau phi
 		    val ell_name = new_sig_var "ell" (!fb) 0
 		    val u = (fb := ell_name::(!fb) )
@@ -440,8 +445,8 @@ fun tableau Phi =
 		    val def = equ(ell,eventual(phi'))
 		 in (defs @ [def], ell)
 		end
-        | when(phi,psi) => 
-		let 
+        | when(phi,psi) =>
+		let
 		    val (defs1,phi') = tableau phi
 		    val (defs2,psi') = tableau (def_subst defs1 psi)
 		    val ell_name = new_sig_var "ell" (!fb) 0
@@ -450,8 +455,8 @@ fun tableau Phi =
 		    val def = equ(ell,when(phi',psi'))
 		 in (defs1 @ defs2 @ [def], ell)
 		end
-        | until(phi,psi) => 
-		let 
+        | until(phi,psi) =>
+		let
 		    val (defs1,phi') = tableau phi
 		    val (defs2,psi') = tableau (def_subst defs1 psi)
 		    val ell_name = new_sig_var "ell" (!fb) 0
@@ -460,8 +465,8 @@ fun tableau Phi =
 		    val def = equ(ell,until(phi',psi'))
 		 in (defs1 @ defs2 @ [def], ell)
 		end
-        | befor(phi,psi) => 
-		let 
+        | befor(phi,psi) =>
+		let
 		    val (defs1,phi') = tableau phi
 		    val (defs2,psi') = tableau (def_subst defs1 psi)
 		    val ell_name = new_sig_var "ell" (!fb) 0
@@ -470,8 +475,8 @@ fun tableau Phi =
 		    val def = equ(ell,befor(phi',psi'))
 		 in (defs1 @ defs2 @ [def], ell)
 		end
-        | swhen(phi,psi) => 
-		let 
+        | swhen(phi,psi) =>
+		let
 		    val (defs1,phi') = tableau phi
 		    val (defs2,psi') = tableau (def_subst defs1 psi)
 		    val ell_name = new_sig_var "ell" (!fb) 0
@@ -480,8 +485,8 @@ fun tableau Phi =
 		    val def = equ(ell,swhen(phi',psi'))
 		 in (defs1 @ defs2 @ [def], ell)
 		end
-        | suntil(phi,psi) => 
-		let 
+        | suntil(phi,psi) =>
+		let
 		    val (defs1,phi') = tableau phi
 		    val (defs2,psi') = tableau (def_subst defs1 psi)
 		    val ell_name = new_sig_var "ell" (!fb) 0
@@ -490,8 +495,8 @@ fun tableau Phi =
 		    val def = equ(ell,suntil(phi',psi'))
 		 in (defs1 @ defs2 @ [def], ell)
 		end
-        | sbefor(phi,psi) => 
-		let 
+        | sbefor(phi,psi) =>
+		let
 		    val (defs1,phi') = tableau phi
 		    val (defs2,psi') = tableau (def_subst defs1 psi)
 		    val ell_name = new_sig_var "ell" (!fb) 0
@@ -500,8 +505,8 @@ fun tableau Phi =
 		    val def = equ(ell,sbefor(phi',psi'))
 		 in (defs1 @ defs2 @ [def], ell)
 		end
-        | pnext phi => 
-		let 
+        | pnext phi =>
+		let
 		    val (defs,phi') = tableau phi
 		    val ell_name = new_sig_var "ell" (!fb) 0
 		    val u = (fb := ell_name::(!fb) )
@@ -509,8 +514,8 @@ fun tableau Phi =
 		    val def = equ(ell,pnext(phi'))
 		 in (defs @ [def], ell)
 		end
-        | psnext phi => 
-		let 
+        | psnext phi =>
+		let
 		    val (defs,phi') = tableau phi
 		    val ell_name = new_sig_var "ell" (!fb) 0
 		    val u = (fb := ell_name::(!fb) )
@@ -518,8 +523,8 @@ fun tableau Phi =
 		    val def = equ(ell,psnext(phi'))
 		 in (defs @ [def], ell)
 		end
-        | palways phi => 
-		let 
+        | palways phi =>
+		let
 		    val (defs,phi') = tableau phi
 		    val ell_name = new_sig_var "ell" (!fb) 0
 		    val u = (fb := ell_name::(!fb) )
@@ -527,8 +532,8 @@ fun tableau Phi =
 		    val def = equ(ell,pnext(palways(phi')))
 		 in (defs @ [def], conj(phi',ell))
 		end
-        | peventual phi => 
-		let 
+        | peventual phi =>
+		let
 		    val (defs,phi') = tableau phi
 		    val ell_name = new_sig_var "ell" (!fb) 0
 		    val u = (fb := ell_name::(!fb) )
@@ -536,8 +541,8 @@ fun tableau Phi =
 		    val def = equ(ell,psnext(peventual(phi')))
 		 in (defs @ [def], disj(phi',ell))
 		end
-        | pwhen(phi,psi) => 
-		let 
+        | pwhen(phi,psi) =>
+		let
 		    val (defs1,phi') = tableau phi
 		    val (defs2,psi') = tableau (def_subst defs1 psi)
 		    val ell_name = new_sig_var "ell" (!fb) 0
@@ -549,8 +554,8 @@ fun tableau Phi =
 		     disj(conj(phi,psi),conj(neg(psi),ell))
 		    )
 		end
-        | puntil(phi,psi) => 
-		let 
+        | puntil(phi,psi) =>
+		let
 		    val (defs1,phi') = tableau phi
 		    val (defs2,psi') = tableau (def_subst defs1 psi)
 		    val ell_name = new_sig_var "ell" (!fb) 0
@@ -558,12 +563,12 @@ fun tableau Phi =
 		    val ell = var(ell_name)
 		    val def = equ(ell,pnext(puntil(phi',psi')))
 		 in (
-		     defs1 @ defs2 @ [def], 
+		     defs1 @ defs2 @ [def],
 		     disj(psi',conj(phi',ell))
 		    )
 		end
-        | pbefor(phi,psi) => 
-		let 
+        | pbefor(phi,psi) =>
+		let
 		    val (defs1,phi') = tableau phi
 		    val (defs2,psi') = tableau (def_subst defs1 psi)
 		    val ell_name = new_sig_var "ell" (!fb) 0
@@ -571,12 +576,12 @@ fun tableau Phi =
 		    val ell = var(ell_name)
 		    val def = equ(ell,pnext(pbefor(phi',psi')))
 		 in (
-		     defs1 @ defs2 @ [def], 
+		     defs1 @ defs2 @ [def],
 		     conj(neg(psi'),disj(phi',ell))
 		    )
 		end
-        | pswhen(phi,psi) => 
-		let 
+        | pswhen(phi,psi) =>
+		let
 		    val (defs1,phi') = tableau phi
 		    val (defs2,psi') = tableau (def_subst defs1 psi)
 		    val ell_name = new_sig_var "ell" (!fb) 0
@@ -584,12 +589,12 @@ fun tableau Phi =
 		    val ell = var(ell_name)
 		    val def = equ(ell,psnext(pswhen(phi',psi')))
 		 in (
-		     defs1 @ defs2 @ [def], 
+		     defs1 @ defs2 @ [def],
 		     disj(conj(phi,psi),conj(neg(psi),ell))
 		    )
 		end
-        | psuntil(phi,psi) => 
-		let 
+        | psuntil(phi,psi) =>
+		let
 		    val (defs1,phi') = tableau phi
 		    val (defs2,psi') = tableau (def_subst defs1 psi)
 		    val ell_name = new_sig_var "ell" (!fb) 0
@@ -597,12 +602,12 @@ fun tableau Phi =
 		    val ell = var(ell_name)
 		    val def = equ(ell,psnext(psuntil(phi',psi')))
 		 in (
-		     defs1 @ defs2 @ [def], 
+		     defs1 @ defs2 @ [def],
 		     disj(psi',conj(phi',ell))
 		    )
 		end
-        | psbefor(phi,psi) => 
-		let 
+        | psbefor(phi,psi) =>
+		let
 		    val (defs1,phi') = tableau phi
 		    val (defs2,psi') = tableau (def_subst defs1 psi)
 		    val ell_name = new_sig_var "ell" (!fb) 0
@@ -610,7 +615,7 @@ fun tableau Phi =
 		    val ell = var(ell_name)
 		    val def = equ(ell,psnext(psbefor(phi',psi')))
 		 in (
-		     defs1 @ defs2 @ [def], 
+		     defs1 @ defs2 @ [def],
 		     conj(neg(psi'),disj(phi',ell))
 		    )
 		end
@@ -663,13 +668,13 @@ fun tableau Phi =
 (* tactic here to do the reduction. Do not replace it with STRIP_TAC.		*)
 (* ----------------------------------------------------------------------------	*)
 
-fun MY_STRIP_TAC (asm,g) = 
+fun MY_STRIP_TAC (asm,g) =
     let val {ant=a,conseq=Phi} = dest_imp g
      in
 	(REPEAT ((CONV_TAC LEFT_IMP_EXISTS_CONV) THEN GEN_TAC)
 	 THEN DISCH_TAC
 	 THEN POP_ASSUM (fn x=> MAP_EVERY ASSUME_TAC (CONJUNCTS x))
-	) 
+	)
 	(asm,g)
     end
 
@@ -685,7 +690,7 @@ val boolean_sig_ops = TAC_PROOF(
 			( s_imp a b = \t:num. (a t ==> b t) ) /\
 			( s_equiv a b = \t:num. (a t = b t) ) /\
 			( s_ifte a b c = \t:num. (a t => b t | c t))
-		     ) 
+		     )
 		    /\
 		     (!a b c.
 			(!t:num. ~a t = (s_not a) t) /\
@@ -694,7 +699,7 @@ val boolean_sig_ops = TAC_PROOF(
 			(!t:num. (a t ==> b t) = s_imp a b t) /\
 			(!t:num. (a t = b t)   = s_equiv a b t) /\
 			(!t:num. (a t => b t | c t) = s_ifte a b c t)
-		     ) 
+		     )
 	`--),
 	EXISTS_TAC (--`\a.\t:num.~a t`--)
 	THEN EXISTS_TAC (--`\a b.\t:num. a t /\ b t`--)
@@ -707,7 +712,7 @@ val boolean_sig_ops = TAC_PROOF(
 
 
 
-fun PAST_RECURSION_TAC (asm,g) = 
+fun PAST_RECURSION_TAC (asm,g) =
     let fun tll 0 l = l | tll n (e::l) = tll (n-1) l
 	val rec_thm = Past_Temporal_LogicTheory.RECURSION
 	val past_rec_thms = (map (GEN_ALL o SYM) (tll 8 (CONJUNCTS rec_thm)))
@@ -715,7 +720,7 @@ fun PAST_RECURSION_TAC (asm,g) =
        (
 	MAP_EVERY ASSUME_TAC past_rec_thms
 	THEN MAP_EVERY (UNDISCH_TAC o concl) past_rec_thms
-	THEN ASSUME_TAC boolean_sig_ops 
+	THEN ASSUME_TAC boolean_sig_ops
 	THEN UNDISCH_TAC (concl boolean_sig_ops) THEN STRIP_TAC
 	THEN POP_ASSUM (fn x => REWRITE_TAC[x])
 	THEN CONV_TAC(DEPTH_CONV ETA_CONV)
@@ -732,7 +737,7 @@ fun PAST_RECURSION_TAC (asm,g) =
     end
 
 
-fun TEMP_DEFS_CONV t = 
+fun TEMP_DEFS_CONV t =
     let
 	(* ----------------------------------------------------------------------------	*)
 	(* First we construct the goal that is to be proved. For this reason, we invoke	*)
@@ -772,14 +777,14 @@ fun TEMP_DEFS_CONV t =
 		end
 	val flat_hdefs = map (fun_eta_conv o temporal2hol) (flatten_defs defs)
 	val inst_list = map rhs flat_hdefs
-	val tac = 
-	    EQ_TAC 	
+	val tac =
+	    EQ_TAC
 	    THENL[
-		DISCH_TAC  
+		DISCH_TAC
 		THEN MAP_EVERY EXISTS_TAC inst_list THEN BETA_TAC
 		THEN UNDISCH_TAC t
 		THEN PAST_RECURSION_TAC,
-		MY_STRIP_TAC 
+		MY_STRIP_TAC
 		THEN UNDISCH_TAC hpt THEN ASM_REWRITE_TAC[] THEN BETA_TAC
 		THEN PAST_RECURSION_TAC
 		]
@@ -790,7 +795,7 @@ fun TEMP_DEFS_CONV t =
 
 
 
-fun UNSAFE_TEMP_DEFS_CONV t = 
+fun UNSAFE_TEMP_DEFS_CONV t =
     let
 	(* ----------------------------------------------------------------------------	*)
 	(* First we construct the goal that is to be proved. For this reason, we invoke	*)
@@ -819,7 +824,7 @@ fun UNSAFE_TEMP_DEFS_CONV t =
 	val varnames = map lhs hdefs
 	val defterm = (list_mk_conj hdefs)
 	val tt = list_mk_exists(varnames,mk_conj{conj1 = hpt, conj2 = defterm})
-	val goal = ([],--`^t = ^tt`--) : goal 
+	val goal = ([],--`^t = ^tt`--) : goal
      in mk_thm goal
     end
 
@@ -868,12 +873,12 @@ fun UNSAFE_TEMP_DEFS_CONV t =
 
 
 
-fun LTL2OMEGA_CONV t = 
+fun LTL2OMEGA_CONV t =
     let
 	val future_temp_ops = constants "Temporal_Logic"
 	val past_temp_ops = constants "Past_Temporal_Logic"
 	val temp_ops = future_temp_ops @ past_temp_ops
-	fun elem 0 l = hd l 
+	fun elem 0 l = hd l
 	  | elem i l = elem (i-1) (tl l)
 	fun delete 0 (e::l) = l
 	  | delete i (e::l) = (e::(delete (i-1) l))
@@ -894,15 +899,15 @@ fun LTL2OMEGA_CONV t =
 	    	let val {lhs=ell,rhs=phi} = dest_eq def
 		 in ((--`T`--),(--`!t:num. ^ell t = ^phi t`--),(--`T`--))
 		end
-	    else 
+	    else
 		let val thm = ((PURE_REWRITE_CONV def2omega_thms) THENC
 			       (PURE_REWRITE_CONV past_nx_thms)) def
 		    val r = rhs(concl thm)
 		    val {conj1=init_condition,conj2=rest} = dest_conj r
 		    val {conj1=trans_rel,conj2=accept} = dest_conj rest
 		 in (init_condition,trans_rel,accept)
-		end 
-	val simplify_conv = rhs o  concl o ((DEPTH_CONV BETA_CONV) THENC (REWRITE_CONV[])) 
+		end
+	val simplify_conv = rhs o  concl o ((DEPTH_CONV BETA_CONV) THENC (REWRITE_CONV[]))
 	val thm0 = TEMP_DEFS_CONV t
 	val defterm = rhs(concl thm0)
 	val (dvars,rest) = strip_exists defterm
@@ -918,18 +923,18 @@ fun LTL2OMEGA_CONV t =
 	val init_condition = simplify_conv init_condition
 	val trans_rel      = simplify_conv trans_rel
 	val acceptance     = simplify_conv acceptance
-	val automaton_kernel = list_mk_conj[init_condition,trans_rel,acceptance]	
+	val automaton_kernel = list_mk_conj[init_condition,trans_rel,acceptance]
 	val automaton = list_mk_exists(dvars,automaton_kernel)
 	val goal = ([],mk_eq{lhs=defterm,rhs=automaton}):goal
-	fun EX_TAC (asm,g) = 
+	fun EX_TAC (asm,g) =
 	    let val {Bvar=x,Body=t} = dest_exists g
 	     in EXISTS_TAC x (asm,g)
 	    end
 	val tac = PURE_REWRITE_TAC[(REPEATC(CHANGED_CONV(DEPTH_CONV FORALL_AND_CONV))) trans_rel]
 		  THEN REWRITE_TAC def2omega_thms
 		  THEN REWRITE_TAC past_nx_thms
-		  THEN (CONV_TAC(DEPTH_CONV FUN_EQ_CONV)) THEN BETA_TAC 
-		  THEN REWRITE_TAC[] 
+		  THEN (CONV_TAC(DEPTH_CONV FUN_EQ_CONV)) THEN BETA_TAC
+		  THEN REWRITE_TAC[]
 		  THEN EQ_TAC THEN MY_STRIP_TAC THEN REPEAT EX_TAC
 		  THEN RULE_ASSUM_TAC EQT_INTRO
 		  THEN ASM_REWRITE_TAC[]
@@ -939,12 +944,12 @@ fun LTL2OMEGA_CONV t =
 
 
 
-fun UNSAFE_LTL2OMEGA_CONV t = 
+fun UNSAFE_LTL2OMEGA_CONV t =
     let
 	val future_temp_ops = constants "Temporal_Logic"
 	val past_temp_ops = constants "Past_Temporal_Logic"
 	val temp_ops = future_temp_ops @ past_temp_ops
-	fun elem 0 l = hd l 
+	fun elem 0 l = hd l
 	  | elem i l = elem (i-1) (tl l)
 	fun delete 0 (e::l) = l
 	  | delete i (e::l) = (e::(delete (i-1) l))
@@ -965,15 +970,15 @@ fun UNSAFE_LTL2OMEGA_CONV t =
 	    	let val {lhs=ell,rhs=phi} = dest_eq def
 		 in ((--`T`--),(--`!t:num. ^ell t = ^phi t`--),(--`T`--))
 		end
-	    else 
+	    else
 		let val thm = ((PURE_REWRITE_CONV def2omega_thms) THENC
 			       (PURE_REWRITE_CONV past_nx_thms)) def
 		    val r = rhs(concl thm)
 		    val {conj1=init_condition,conj2=rest} = dest_conj r
 		    val {conj1=trans_rel,conj2=accept} = dest_conj rest
 		 in (init_condition,trans_rel,accept)
-		end 
-	val simplify_conv = rhs o  concl o ((DEPTH_CONV BETA_CONV) THENC (REWRITE_CONV[])) 
+		end
+	val simplify_conv = rhs o  concl o ((DEPTH_CONV BETA_CONV) THENC (REWRITE_CONV[]))
 	val thm0 = UNSAFE_TEMP_DEFS_CONV t
 	val defterm = rhs(concl thm0)
 	val (dvars,rest) = strip_exists defterm
@@ -989,7 +994,7 @@ fun UNSAFE_LTL2OMEGA_CONV t =
 	val init_condition = simplify_conv init_condition
 	val trans_rel      = simplify_conv trans_rel
 	val acceptance     = simplify_conv acceptance
-	val automaton_kernel = list_mk_conj[init_condition,trans_rel,acceptance]	
+	val automaton_kernel = list_mk_conj[init_condition,trans_rel,acceptance]
 	val automaton = list_mk_exists(dvars,automaton_kernel)
 	val goal = ([],mk_eq{lhs=defterm,rhs=automaton}):goal
 	val thm1 = mk_thm goal
@@ -1034,13 +1039,13 @@ fun UNSAFE_LTL2OMEGA_CONV t =
 (* Given a term t and a variable x that occurs free in t, the function closure	*)
 (* finds the smallest subterm of t that contains x and quantify it depending on *)
 (* the flag exquan. This function is used to get rid of free numeric variables.	*)
-(* ----------------------------------------------------------------------------	*)	
+(* ----------------------------------------------------------------------------	*)
 
 exception NOT_GOOD_FORMULA;
 
 fun closure exquan x t =
 	    (let val {Name=_,Ty=_} = dest_var t
-	      in if x=t then 
+	      in if x=t then
 		    if exquan then mk_exists{Bvar=x,Body=t}
 		    else mk_forall{Bvar=x,Body=t}
 		 else t
@@ -1056,11 +1061,11 @@ fun closure exquan x t =
 	     end)
 	 handle _=>
 	    if (is_neg t) then mk_neg (closure (not exquan) x (dest_neg t))
-	    else if (is_conj t) then 
+	    else if (is_conj t) then
 		let val {conj1=t1,conj2=t2} = dest_conj t
 		    val occ1 = mem x (free_vars t1)
 		    val occ2 = mem x (free_vars t2)
-		 in 
+		 in
 		    if (occ1 andalso occ2) then
 		        if exquan then mk_exists{Bvar=x,Body=t}
 		        else mk_forall{Bvar=x,Body=t}
@@ -1070,11 +1075,11 @@ fun closure exquan x t =
 			mk_conj{conj1=t1,conj2=(closure exquan x t2)}
 		    else t
 		end
-	    else if (is_disj t) then 
+	    else if (is_disj t) then
 		let val {disj1=t1,disj2=t2} = dest_disj t
 		    val occ1 = mem x (free_vars t1)
 		    val occ2 = mem x (free_vars t2)
-		 in 
+		 in
 		    if (occ1 andalso occ2) then
 		        if exquan then mk_exists{Bvar=x,Body=t}
 		        else mk_forall{Bvar=x,Body=t}
@@ -1084,11 +1089,11 @@ fun closure exquan x t =
 			mk_disj{disj1=t1,disj2=(closure exquan x t2)}
 		    else t
 		end
-	    else if (is_imp t) then 
+	    else if (is_imp t) then
 		let val {ant=t1,conseq=t2} = dest_imp t
 		    val occ1 = mem x (free_vars t1)
 		    val occ2 = mem x (free_vars t2)
-		 in 
+		 in
 		    if (occ1 andalso occ2) then
 		        if exquan then mk_exists{Bvar=x,Body=t}
 		        else mk_forall{Bvar=x,Body=t}
@@ -1098,22 +1103,22 @@ fun closure exquan x t =
 			mk_imp{ant=t1,conseq=(closure (not exquan) x t2)}
 		    else t
 		end
-	    else if (is_eq t) then 
+	    else if (is_eq t) then
 		let val {lhs=t1,rhs=t2} = dest_eq t
 		    val occ1 = mem x (free_vars t1)
 		    val occ2 = mem x (free_vars t2)
-		 in 
+		 in
 		    if (occ1 andalso occ2) then
 		        if exquan then mk_exists{Bvar=x,Body=t}
 		        else mk_forall{Bvar=x,Body=t}
 		    else raise NOT_GOOD_FORMULA
 		end
-	    else if (is_cond t) then 
+	    else if (is_cond t) then
 		let val {cond=t1,larm=t2,rarm=t3} = dest_cond t
 		    val occ1 = mem x (free_vars t1)
 		    val occ2 = mem x (free_vars t2)
 		    val occ3 = mem x (free_vars t3)
-		 in 
+		 in
 		    if (occ1 andalso occ2 andalso occ3) then
 		        if exquan then mk_exists{Bvar=x,Body=t}
 		        else mk_forall{Bvar=x,Body=t}
@@ -1124,7 +1129,7 @@ fun closure exquan x t =
 
 
 
-fun TEMP_NORMALIZE_CONV t = 
+fun TEMP_NORMALIZE_CONV t =
     let
 	(* ----------------------------------------------------------------------------	*)
 	(* First we check whether there is a free numeric variable. If so, we choose	*)
@@ -1132,18 +1137,18 @@ fun TEMP_NORMALIZE_CONV t =
 	(* the function tableau above and generate the corresponding hol term. 		*)
 	(* ----------------------------------------------------------------------------	*)
 	val num_vars = filter (fn x => (type_of x) = (==`:num`==)) (free_vars t)
-	fun close_all [] t = t 
+	fun close_all [] t = t
 	  | close_all (x::vl) t = close_all vl (closure false x t)
 	val t = close_all num_vars t
 	val forall_always_thm = TAC_PROOF(
 		([],--`!P. (!n. P n) = ALWAYS P 0`--),
-		REWRITE_TAC[Temporal_LogicTheory.ALWAYS] 
-		THEN BETA_TAC 
+		REWRITE_TAC[Temporal_LogicTheory.ALWAYS]
+		THEN BETA_TAC
 		THEN REWRITE_TAC[arithmeticTheory.ADD_CLAUSES]);
 	val exists_eventual_thm = TAC_PROOF(
 		([],--`!P. (?n. P n) = EVENTUAL P 0`--),
-		REWRITE_TAC[Temporal_LogicTheory.EVENTUAL] 
-		THEN BETA_TAC 
+		REWRITE_TAC[Temporal_LogicTheory.EVENTUAL]
+		THEN BETA_TAC
 		THEN REWRITE_TAC[arithmeticTheory.ADD_CLAUSES]);
 	fun QUAN_TEMP_CONV t =
 	    if is_forall t then
@@ -1155,7 +1160,7 @@ fun TEMP_NORMALIZE_CONV t =
 	    	 in BETA_RULE(SPEC b exists_eventual_thm)
 	    	end
 	    else REFL t
-	val thm1 = 
+	val thm1 =
 		((DEPTH_CONV FUN_EQ_CONV) THENC
 		 (DEPTH_CONV BETA_CONV) THENC
 		 (DEPTH_CONV (CHANGED_CONV QUAN_TEMP_CONV))
@@ -1187,7 +1192,7 @@ val print_states = ref false;
 
 
 fun term2smv_string t =
-    (let val {Name=n,Ty=typ} = dest_const t 
+    (let val {Name=n,Ty=typ} = dest_const t
       in if n="T" then "1" else if n="F" then "0" else n
      end)
   handle _=> (* ------ propositional or temporal operator or signal evalutation -------	*)
@@ -1233,7 +1238,7 @@ fun genbuechi2smv_string b =
 	val inout_vars = free_vars b
 	val vars = inout_vars @ state_vars
 	fun var_list2smv [] = "" |
-	    var_list2smv (v::vl) = 
+	    var_list2smv (v::vl) =
 		let val {Name=n,Ty=_} = dest_var v
 		 in "   "^n^" : boolean;\n"^(var_list2smv vl)
 		end
@@ -1250,14 +1255,14 @@ fun genbuechi2smv_string b =
 	(acceptance (strip_conj accept))^"\n\n"^
 	"SPEC (EG 1) -> !"^(term2smv_string init_condition)^"\n\n"
     end;
-	
 
-fun hol2smv t = 
+
+fun hol2smv t =
     let val thm0 = TEMP_NORMALIZE_CONV (mk_neg t)
 	val t0 = rhs(concl thm0)
 	val thm1 = LTL2OMEGA_CONV t0
 	val b = rhs(concl thm1)
-     in 
+     in
 	genbuechi2smv_string b
     end
 
@@ -1275,7 +1280,7 @@ fun interpret_smv_output stl =
 	    beginl (e1::s1) (e2::s2) = (e1=e2) andalso (beginl s1 s2)
 	fun begins s1 s2 = beginl (explode s1) (explode s2)
 	val stll = ref stl
-	val proved = 
+	val proved =
 	    let val (l::ll) = !stll
 	     in (stll := ll; beginl [#"\n",#"e",#"u",#"r",#"t"] (rev(explode l)))
 	    end
@@ -1288,18 +1293,18 @@ fun interpret_smv_output stl =
 		else l::(read_state_lines())
 	    end
 	fun loop_starts() = beginl (explode "-- loop") (explode(hd(!stll)))
-	fun resource_starts() = beginl (explode "resou") (explode(hd(!stll)))	   
+	fun resource_starts() = beginl (explode "resou") (explode(hd(!stll)))
 	fun another_state() = beginl (explode "state") (explode(hd(!stll)))
 	val init_sequence = ref ([]:string list list)
 	val loop_sequence = ref ([]:string list list)
      in (if proved then ()
-	 else 
+	 else
 	    (stll := skip_lines(tl(!stll));
 	     while another_state() do
 		(stll := tl(!stll);
 		 init_sequence := (read_state_lines())::(!init_sequence);
 		 stll := skip_lines(!stll));
-	     if loop_starts() then 
+	     if loop_starts() then
 		(stll := tl(!stll);
 	         while another_state() do
 		    (stll := tl(!stll);
@@ -1309,7 +1314,7 @@ fun interpret_smv_output stl =
 	 {Proved = proved,
 	  Init_Sequence = rev(!init_sequence),
 	  Loop_Sequence = if !loop_sequence=[] then [] else rev(tl(!loop_sequence)),
-	  Resources = skip_lines(!stll)})	     
+	  Resources = skip_lines(!stll)})
     end
 
 
@@ -1326,7 +1331,7 @@ fun print_smv_info smv_info =
 	     Resources = resources} = smv_info
 	val state_count = ref 0;
 	fun s_print (s:string) = print s
-	fun print_state sa = s_print(String.concat sa)	
+	fun print_state sa = s_print(String.concat sa)
 	fun s_print_sequence [] = () |
 	    s_print_sequence (sa::sl) =
 		(
@@ -1336,33 +1341,33 @@ fun print_smv_info smv_info =
 		print_state sa;
 		s_print_sequence sl
 		)
-     in if proved then 
+     in if proved then
 	    (
-	     s_print "SMV has done the proof!\n"; 
-	     s_print (String.concat resources); 
+	     s_print "SMV has done the proof!\n";
+	     s_print (String.concat resources);
 	     ()
 	    )
-	else 
+	else
 	    (
 	     s_print "===============================================\n";
 	     s_print "Formula is not true! Consider the countermodel:\n";
 	     s_print "===============================================\n";
 	     s_print_sequence init_sequence;
-	     if loop_sequence=[] then () 
-	     else 
+	     if loop_sequence=[] then ()
+	     else
 		(
 	         s_print "\n======== A loop starts here=============\n";
 		 s_print_sequence loop_sequence
 		);
 	     s_print "===============================================\n";
-	     s_print (String.concat resources); 
+	     s_print (String.concat resources);
 	     s_print "===============================================\n";
 	     s_print "SMV_AUTOMATON_CONV fails now!!!\n";
 	     s_print "===============================================\n";
 	    ()
 	    )
     end
-	 
+
 
 
 (* ************************************************************************************	*)
@@ -1375,14 +1380,14 @@ fun print_smv_info smv_info =
 (* automaton.										*)
 (* ************************************************************************************	*)
 
-fun SMV_AUTOMATON_CONV automaton = 
+fun SMV_AUTOMATON_CONV automaton =
     let val smv_program = genbuechi2smv_string automaton
 	val file_st = TextIO.openOut((!smv_tmp_dir)^"smv_file.smv")
  	val _ = (
-		TextIO.output(file_st,smv_program); 
+		TextIO.output(file_st,smv_program);
 		TextIO.flushOut file_st;
 		TextIO.closeOut file_st)
-	val _ = Process.system 
+	val _ = Process.system
 			((!smv_path)^(!smv_call)^" "
 			^(!smv_tmp_dir)^"smv_file.smv > "
 			^(!smv_tmp_dir)^"smv_out")
@@ -1394,9 +1399,9 @@ fun SMV_AUTOMATON_CONV automaton =
 	val p = interpret_smv_output(rev(!sl))
 	val _ = Process.system("rm "^(!smv_tmp_dir)^"smv_file.smv")
 	val _ = Process.system("rm "^(!smv_tmp_dir)^"smv_out")
-     in 
+     in
 	if #Proved(p) then mk_thm([],mk_eq{lhs=automaton,rhs=(--`F`--)})
-	else 
+	else
 	   (print "SMV computes the following countermodel:\n";
 	    print_smv_info p;
 	    (NO_CONV (--`F`--))
@@ -1412,27 +1417,27 @@ fun SMV_AUTOMATON_CONV automaton =
 (* Finally, we can combine all the stuff together.					*)
 (* ************************************************************************************	*)
 
-fun LTL_CONV t = 
+fun LTL_CONV t =
     let val t0 = mk_neg t
         val thm0 = TEMP_NORMALIZE_CONV t0
 	val t1 = rhs(concl thm0)
 	val thm1 = LTL2OMEGA_CONV t1
 	val automaton = rhs(concl thm1)
-	val thm2 = SMV_AUTOMATON_CONV automaton 
-     in 
+	val thm2 = SMV_AUTOMATON_CONV automaton
+     in
 	EQT_INTRO(REWRITE_RULE[](TRANS (TRANS thm0 thm1) thm2))
     end
 
 
 
-fun UNSAFE_LTL_CONV t = 
+fun UNSAFE_LTL_CONV t =
     let val t0 = mk_neg t
         val thm0 = TEMP_NORMALIZE_CONV t0
 	val t1 = rhs(concl thm0)
 	val thm1 = UNSAFE_LTL2OMEGA_CONV t1
 	val automaton = rhs(concl thm1)
-	val thm2 = SMV_AUTOMATON_CONV automaton 
-     in 
+	val thm2 = SMV_AUTOMATON_CONV automaton
+     in
 	EQT_INTRO(REWRITE_RULE[](TRANS (TRANS thm0 thm1) thm2))
     end
 
