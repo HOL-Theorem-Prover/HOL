@@ -11,6 +11,28 @@ Q. Are error messages during the build like the following a source for
 
      > /local/scratch/kxs/144/bin/mosmlyac: 4 shift/reduce conflicts.
 
+Q. Why can't I write ``MAP ~ x``? (1)
+
+  -- When you attempt this, you will get the error message
+       No rule for [~]
+     meaning that the parser wants to do a reduction involving just
+     the special symbol ~, and it can't find a rule that allows this.
+     The rule in the grammar is TM ::= ~ TM.
+
+     ~ is treated specially, and not just as a function that you'd
+     apply to arguments normally, for two reasons:
+
+        * it can have precedence weaker than just function
+          application.  This means that when you write ~f x, this is
+          parsed as ~(f x).
+
+        * it can group without needing extra parentheses, so you can
+          write ~~b; you don't need to write ~(~b).
+
+     To make ~ lose its special status, you should prefix it with a
+     $.  ``MAP $~ x`` will work in the example, assuming that x has
+     type :bool list.
+
 Q. How do I prove strings equal or inequal? (1)
 
   -- Use stringLib.string_EQ_CONV, which reduces equalities over
