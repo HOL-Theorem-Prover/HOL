@@ -29,8 +29,8 @@ type simpset = simpLib.simpset
 (*     (p \/ ~q \/ ~v) /\ (v \/ ~p \/ ~q) /\ (v \/ p \/ q) /\ v2             *)
 (* ------------------------------------------------------------------------- *)
 
-val readable_vars      : term -> term
-val READABLE_VARS_CONV : conv
+val prettify_vars      : term -> term
+val PRETTIFY_VARS_CONV : conv
 
 (* ------------------------------------------------------------------------- *)
 (* Conversion to combinators {S,K,I}.                                        *)
@@ -130,7 +130,7 @@ val DNF_CONV'      : conv -> conv       (* takes a 'leaf conversion' *)
 val DNF_CONV       : conv
 
 (* ------------------------------------------------------------------------- *)
-(* Definitional negation normal form                                         *)
+(* Definitional Negation Normal Form                                         *)
 (*                                                                           *)
 (* Example:                                                                  *)
 (*   (~(p = ~(q = r)) = ~(~(p = q) = r))                                     *)
@@ -141,23 +141,27 @@ val DNF_CONV       : conv
 val DEF_NNF_CONV : conv
   
 (* ------------------------------------------------------------------------- *)
-(* Definitional conjunctive normal form                                      *)
+(* Definitional Conjunctive Normal Form                                      *)
 (*                                                                           *)
 (* Example:                                                                  *)
 (*   (~(p = ~(q = r)) = ~(~(p = q) = r))                                     *)
 (*   =                                                                       *)
-(*   ?v v' v'' v''' v''''.                                                   *)
-(*     (v''' \/ ~v' \/ ~v'''') /\ (v' \/ ~v''' \/ ~v'''') /\                 *)
-(*     (v'''' \/ ~v' \/ ~v''') /\ (v'''' \/ v' \/ v''') /\                   *)
-(*     (r \/ ~v'' \/ ~v''') /\ (v'' \/ ~r \/ ~v''') /\                       *)
-(*     (v''' \/ ~v'' \/ ~r) /\ (v''' \/ v'' \/ r) /\ (q \/ ~p \/ ~v'') /\    *)
-(*     (p \/ ~q \/ ~v'') /\ (v'' \/ ~p \/ ~q) /\ (v'' \/ p \/ q) /\          *)
-(*     (v \/ p \/ ~v') /\ (~p \/ ~v \/ ~v') /\ (v' \/ p \/ ~v) /\            *)
-(*     (v' \/ ~p \/ v) /\ (r \/ q \/ ~v) /\ (~q \/ ~r \/ ~v) /\              *)
-(*     (v \/ q \/ ~r) /\ (v \/ ~q \/ r) /\ v''''                             *)
+(*   ?v v1 v2 v3 v4.                                                         *)
+(*     (v4 \/ v1 \/ v3) /\ (v4 \/ ~v1 \/ ~v3) /\ (v1 \/ ~v3 \/ ~v4) /\       *)
+(*     (v3 \/ ~v1 \/ ~v4) /\ (v3 \/ v2 \/ ~r) /\ (v3 \/ ~v2 \/ r) /\         *)
+(*     (v2 \/ r \/ ~v3) /\ (~r \/ ~v2 \/ ~v3) /\ (v2 \/ p \/ ~q) /\          *)
+(*     (v2 \/ ~p \/ q) /\ (p \/ q \/ ~v2) /\ (~q \/ ~p \/ ~v2) /\            *)
+(*     (v1 \/ p \/ v) /\ (v1 \/ ~p \/ ~v) /\ (p \/ ~v \/ ~v1) /\             *)
+(*     (v \/ ~p \/ ~v1) /\ (v \/ q \/ r) /\ (v \/ ~q \/ ~r) /\               *)
+(*     (q \/ ~r \/ ~v) /\ (r \/ ~q \/ ~v) /\ v4                              *)
 (* ------------------------------------------------------------------------- *)
 
-val DEF_CNF_CONV : conv
+val PURE_DEF_CNF_CONV    : conv         (* Introduces definitions *)
+val CLEANUP_DEF_CNF_CONV : conv         (* Converts defns to CNF *)
+val DEF_CNF_CONV         : conv         (* NNF + PURE + CLEANUP *)
+
+val ORACLE_PURE_DEF_CNF_CONV : conv     (* Simply asserts the conversion thm *)
+val ORACLE_DEF_CNF_CONV      : conv     (* NNF + ORACLE_PURE + CLEANUP *)
 
 (* ------------------------------------------------------------------------- *)
 (* Removes leading existential quantifiers from a theorem.                   *)
