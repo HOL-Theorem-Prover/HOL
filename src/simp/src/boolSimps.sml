@@ -106,7 +106,7 @@ val NOT_ss = rewrites [NOT_IMP,
 
 infix THEN
 val COND_COND_SAME = prove(
-  Term`!P f g x y. (COND P f g) (COND P x y) = COND P (f x) (g y)`,
+  Term`!P (f:'a->'b) g x y. (COND P f g) (COND P x y) = COND P (f x) (g y)`,
   REPEAT GEN_TAC THEN COND_CASES_TAC THEN REWRITE_TAC []);
 
 fun celim_rand_CONV tm = let
