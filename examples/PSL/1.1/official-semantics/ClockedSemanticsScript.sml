@@ -170,7 +170,7 @@ val F_SEM_def =
     /\
     (F_SEM v c (F_WEAK_BOOL b) = 
       !j :: LESS(LENGTH v). 
-        CLOCK_TICK (SEL (COMPLEMENT v) (0,j)) c /\ B_SEM (ELEM v j) b)
+        CLOCK_TICK (SEL (COMPLEMENT v) (0,j)) c ==> B_SEM (ELEM v j) b)
     /\
     (F_SEM v c (F_STRONG_SERE r) = 
       ?j :: LESS(LENGTH v). S_SEM (SEL v (0,j)) c r)
@@ -232,7 +232,7 @@ val F_SEM =
      /\
      (F_SEM v c (F_WEAK_BOOL b) = 
        !j :: LESS(LENGTH v). 
-         CLOCK_TICK (SEL (COMPLEMENT v) (0,j)) c /\ B_SEM (ELEM v j) b)
+         CLOCK_TICK (SEL (COMPLEMENT v) (0,j)) c ==> B_SEM (ELEM v j) b)
      /\
      (F_SEM v c (F_STRONG_SERE r) = 
        ?j :: LESS(LENGTH v). S_SEM (SEL v (0,j)) c r)
