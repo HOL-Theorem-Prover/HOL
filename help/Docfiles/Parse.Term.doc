@@ -84,5 +84,5 @@ All over place, and for all sorts of reasons.
 Turns strings into terms.
 
 \SEEALSO
-Absyn, Preterm, Type, Parse.overload_on, guessing_overloads, guessing_tyvars, Parse.term_grammar.
+Parse.Absyn, Preterm, Type, Parse.overload_on, guessing_overloads, guessing_tyvars, Parse.term_grammar.
 \ENDDOC
