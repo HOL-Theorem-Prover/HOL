@@ -8,6 +8,7 @@ datatype pretoken = DEFN of string | RULE of string | EOF
 datatype frag = LIT of string | VREF of string
 type quotation = frag list
 type env = string -> quotation
+type rule_info = {dependencies : string list, commands : string list}
 datatype token = HM_defn of string * quotation
                | HM_rule of { targets : quotation, dependencies : quotation,
                               commands : quotation list }
@@ -271,25 +272,61 @@ in
   recurse [] ss
 end
 
-fun mk_rules toks env =
-    case toks of
-      [] => []
-    | (HM_rule {targets, dependencies, commands} :: rest) => let
-        val tgts = map dequote (tokenize (perform_substitution env targets))
-        val deps =
-            map dequote (tokenize (perform_substitution env dependencies))
-        fun mk_rule t = let
-          fun newenv s = if s = "<" then
-                           [LIT (hd deps)] handle Empty => [LIT ""]
-                         else if s = "@" then [LIT t]
-                         else env s
+fun mk_rules warn toks env = let
+  fun recurse (p as (tgt1, deponly_rules, fullrules)) toklist =
+      case toklist of
+        [] => let
+          fun foldthis (k, deps, result) =
+              case Binarymap.peek(result, k) of
+                NONE => Binarymap.insert(result, k, {dependencies = deps,
+                                                     commands = []})
+              | SOME {dependencies, commands} =>
+                Binarymap.insert(result, k,
+                                 {dependencies = dependencies @ deps,
+                                  commands = commands})
         in
-          { target = t, dependencies = deps,
-            commands = map (perform_substitution newenv) commands }
+          (tgt1, Binarymap.foldl foldthis fullrules deponly_rules)
         end
-      in
-        map mk_rule tgts @ mk_rules rest env
-      end
-    | _ :: rest => mk_rules rest env
+      | (HM_rule {targets, dependencies, commands} :: rest) => let
+          val tgts = map dequote (tokenize (perform_substitution env targets))
+          val deps =
+              map dequote (tokenize (perform_substitution env dependencies))
+          fun mk_rule t = let
+            fun newenv s = if s = "<" then
+                             [LIT (hd deps)] handle Empty => [LIT ""]
+                           else if s = "@" then [LIT t]
+                           else env s
+          in
+            { dependencies = deps,
+              commands = map (perform_substitution newenv) commands }
+          end
+          val tgt1 = case tgt1 of NONE => SOME (hd tgts) | SOME _ => tgt1
+        in
+          if null commands then
+            recurse (tgt1,
+                     foldl (fn (t, dict) => Binarymap.insert(dict, t, deps))
+                           deponly_rules tgts,
+                     fullrules) rest
+          else let
+              fun foldthis (t, dict) =
+                  case Binarymap.peek(dict, t) of
+                    NONE => Binarymap.insert(dict, t, mk_rule t)
+                  | SOME _ => let
+                    in
+                      warn ("Later rule for `"^t^
+                            "' takes precedence over earlier one.");
+                      Binarymap.insert(dict, t, mk_rule t)
+                    end
+            in
+              recurse (tgt1, deponly_rules, foldl foldthis fullrules tgts) rest
+            end
+        end
+      | _ :: rest => recurse p rest
+  (* need two declarations because of value polymorphism restriction *)
+  val dict1 = Binarymap.mkDict String.compare
+  val dict2 = Binarymap.mkDict String.compare
+in
+  recurse (NONE, dict1, dict2) toks
+end
 
 end (* struct *)

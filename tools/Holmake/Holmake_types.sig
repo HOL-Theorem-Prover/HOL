@@ -19,6 +19,14 @@ val empty_env : env
 val tokenize : string -> string list
 val dequote : string -> string
 
-val mk_rules : token list -> env ->
-               { target : string, dependencies : string list,
-                 commands : string list} list
+type rule_info = {dependencies : string list, commands : string list}
+
+val mk_rules : (string -> unit) -> token list -> env ->
+               (string option * (string, rule_info) Binarymap.dict)
+
+(*
+   [mk_rules warn toklist e] returns a pair of a possibly absent first target,
+   and a rule "database", mapping target names to dependency and command
+   information.  The warn function is used to output warning messages
+   about the toklist.
+*)

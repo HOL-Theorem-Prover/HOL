@@ -344,17 +344,16 @@ in
       | _ => hmakefile_env0 s)
 end
 
-val extra_rules = Holmake_types.mk_rules hmakefile_toks hmakefile_env
+val (first_target, extra_rules) =
+    Holmake_types.mk_rules warn hmakefile_toks hmakefile_env
 
-fun extra_deps t =
-  Option.map #dependencies (List.find (fn r => #target r = t) extra_rules)
+fun extra_deps t = Option.map #dependencies (Binarymap.peek(extra_rules, t))
 
-fun extra_commands t =
-  Option.map #commands (List.find (fn  r => #target r = t) extra_rules)
+fun extra_commands t = Option.map #commands (Binarymap.peek(extra_rules, t))
 
-val extra_targets = map #target extra_rules
+val extra_targets = Binarymap.foldr (fn (k,_,acc) => k::acc) [] extra_rules
 
-fun extra_rule_for t = List.find(fn r => #target r = t) extra_rules
+fun extra_rule_for t = Binarymap.peek(extra_rules, t)
 
 (* treat targets as sets *)
 infix in_target
@@ -1131,7 +1130,7 @@ in
 end
 
 fun generate_all_plausible_targets () = let
-  val extra_targets = [toFile (#target(hd extra_rules))] handle Empty => []
+  val extra_targets = case first_target of NONE => [] | SOME s => [toFile s]
   fun find_files ds P =
     case FileSys.readDir ds of
       NONE => (FileSys.closeDir ds; [])
