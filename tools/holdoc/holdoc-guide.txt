@@ -191,6 +191,14 @@ Note that in TeX, you should usually append a space, thus:
 
 in case the next character is not a backslash or other delimiter!
 
+(*[ HOL_CURRIED_ALIST id "\TeXery" 2 id "\moreTexery" 3 ]*) adds the
+named identifiers to the list of "curried HOL identifier", which have
+the specified number of arguments, which are passed to the specified
+TeX command.  Note that commas within an argument are converted to
+"}{", but the extra TeX args introduced this way do not count towards
+the number specified in this directive.  An argument is a (possibly
+qualified using dot notation) id, or a balanced-paren subsequence.
+
 
 The last two are a bit different.
 

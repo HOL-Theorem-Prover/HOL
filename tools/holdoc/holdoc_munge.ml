@@ -232,11 +232,6 @@ let is_aux_infix s = List.mem s !aUX_INFIX_LIST
 
 let is_var_prefix s = List.mem s !vAR_PREFIX_LIST
 
-let hOL_CURRIED_ALIST = ref [
-    ("FUPDATE",("\\Mfupdate",2))
-  ; ("Timed",("\\Mtimed",1))
-]
-
 let is_curried s =
   try Some (List.assoc s !hOL_CURRIED_ALIST)
   with Not_found -> None
