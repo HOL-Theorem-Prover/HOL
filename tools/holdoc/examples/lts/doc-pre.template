@@ -1,5 +1,7 @@
 \documentclass[10pt]{article}
 
+\usepackage{geometry}
+\usepackage{holdoc}
 \usepackage{ltsmunge}
 
 \makeatletter

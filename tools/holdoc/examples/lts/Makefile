@@ -4,7 +4,7 @@
 # locations of various programs:
 #
 HOLDOCDIR=../..
-LIBDIR=.
+LIBDIR=../common
 
 LTSTOLATEX=$(HOLDOCDIR)/lts_to_latex
 MNGTOLATEX=$(HOLDOCDIR)/mng_to_latex
@@ -12,17 +12,14 @@ LATEX=latex
 DVIPS=dvips
 
 #
-# location of ltsmunge.sty and other TeX style files:
+# location of holdoc.sty and other TeX style files:
 #
 EXTRATEXINPUTS=$(LIBDIR)
-  # no need to give current directory here; it's just a placeholder.
-  # Normally this would point to another directory, containing your
-  # standard set of HOLDoc style files.
 
 #
 # list of .imn include files to use:
 #
-IMNFILES=Store_auto.imn Store.imn
+IMNFILES=Store_auto.imn $(LIBDIR)/hol.imn Store.imn
   # list here the HOLDoc init (.imn) files to be used.
 
 #
@@ -111,7 +108,7 @@ space := $(nullstring) # end of the line
 #
 # extra dependencies:
 #
-StoreLTS-doc.dvi : $(LIBDIR)/ltsmunge.sty
+StoreLTS-doc.dvi : $(LIBDIR)/holdoc.sty ltsmunge.sty
 
 #
 # end of Makefile

@@ -101,7 +101,7 @@ val (rules, ind, cases) =
 
     <==
 
-      ~(loc IN FDOM s)
+      loc NOTIN FDOM s
 
 
     (*:
