@@ -687,7 +687,7 @@ val [ADDw,ADD_0w,ADD1w,ADD_ASSOCw,ADD_CLAUSESw,
     defs = [r("w_0_def",Prefix,"w_0",(Term`0`)),
             r("w_1_def",Prefix,"w_1",(Term`AONE`)),
             r("w_T_def",Prefix,"w_T",(Term`COMP0`)),
-            r("SUCw_def",Prefix,"SUCw",(Term`SUC`)),
+            r("word_suc",Prefix,"word_suc",(Term`SUC`)),
             r("word_add",Infixl 500,"word_add",(Term`$+`)),
             r("word_mul",Infixl 550,"word_mul",(Term`$*`)),
             r("word_1comp",Prefix,"word_1comp",(Term`ONE_COMP`)),
@@ -888,7 +888,7 @@ val ONE_COMP_TWO_COMP = store_thm("ONE_COMP_TWO_COMP",
 );
 
 val SUBw = store_thm("SUBw",
-  `!m n. SUCw m - n = SUCw (m - n)`,
+  `!m n. word_suc m - n = word_suc (m - n)`,
   B_RW_TAC [ADD1w,ADD_SUB_SYM]
 );
 
