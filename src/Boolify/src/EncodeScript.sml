@@ -25,6 +25,84 @@ val REVERSE = Tactical.REVERSE;
         Theorems that should be somewhere else.
  ---------------------------------------------------------------------------*)
 
+val MOD_1 = store_thm
+  ("MOD_1",
+   ``!n. n MOD 1 = 0``,
+   GEN_TAC
+   ++ MATCH_MP_TAC MOD_UNIQUE
+   ++ Q.EXISTS_TAC `n`
+   ++ RW_TAC arith_ss []);
+
+val EVEN_MOD2 = store_thm
+  ("EVEN_MOD2",
+   ``!x. EVEN x = (x MOD 2 = 0)``,
+   RW_TAC std_ss [EVEN_EXISTS]
+   ++ EQ_TAC <<
+   [RW_TAC std_ss []
+    ++ ONCE_REWRITE_TAC [MULT_COMM]
+    ++ RW_TAC arith_ss [MOD_EQ_0],
+    RW_TAC std_ss []
+    ++ Q.EXISTS_TAC `x DIV 2`
+    ++ MP_TAC (Q.SPEC `2` DIVISION)
+    ++ SIMP_TAC arith_ss []
+    ++ DISCH_THEN (fn th => CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [th])))
+    ++ RW_TAC arith_ss []]);
+
+val SUC_MOD = store_thm
+  ("SUC_MOD",
+   ``!n a b. 0 < n ==> ((SUC a MOD n = SUC b MOD n) = (a MOD n = b MOD n))``,
+   RW_TAC std_ss [ADD1]
+   ++ MP_TAC (Q.SPEC `n` (GSYM MOD_PLUS))
+   ++ ASM_REWRITE_TAC []
+   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
+   ++ REVERSE EQ_TAC >> RW_TAC std_ss []
+   ++ IMP_RES_TAC MOD_MOD
+   ++ POP_ASSUM (fn th => MP_TAC (CONJ (Q.SPEC `a` th) (Q.SPEC `b` th)))
+   ++ DISCH_THEN (fn th => CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [GSYM th])))
+   ++ ASM_SIMP_TAC std_ss [MOD_PLUS]
+   ++ Know `a MOD n < n /\ b MOD n < n` >> RW_TAC std_ss [DIVISION]
+   ++ Q.SPEC_TAC (`b MOD n`, `b`)
+   ++ Q.SPEC_TAC (`a MOD n`, `a`)
+   ++ RW_TAC std_ss [GSYM ADD1]
+   ++ Cases_on `SUC a < n` <<
+   [IMP_RES_TAC (GSYM DIVISION)
+    ++ POP_ASSUM (K ALL_TAC)
+    ++ POP_ASSUM (MP_TAC o Q.SPEC `SUC a`)
+    ++ RW_TAC arith_ss [LESS_DIV_EQ_ZERO]
+    ++ POP_ASSUM (ASSUME_TAC o SYM)
+    ++ MATCH_MP_TAC numTheory.INV_SUC
+    ++ ASM_SIMP_TAC std_ss []
+    ++ MATCH_MP_TAC LESS_MOD
+    ++ Suff `~(SUC b = n)` >> DECIDE_TAC
+    ++ STRIP_TAC
+    ++ RW_TAC std_ss []
+    ++ FULL_SIMP_TAC arith_ss [DIVMOD_ID],
+    Q.PAT_ASSUM `X = Y` MP_TAC
+    ++ Know `SUC a = n` >> DECIDE_TAC
+    ++ POP_ASSUM (K ALL_TAC)
+    ++ ASM_SIMP_TAC std_ss [DIVMOD_ID]
+    ++ STRIP_TAC
+    ++ DISCH_THEN (ASSUME_TAC o SYM)
+    ++ IMP_RES_TAC (GSYM DIVISION)
+    ++ POP_ASSUM (K ALL_TAC)
+    ++ POP_ASSUM (MP_TAC o Q.SPEC `SUC b`)
+    ++ ASM_SIMP_TAC arith_ss []
+    ++ Cases_on `SUC b DIV n` >> RW_TAC arith_ss []
+    ++ POP_ASSUM (K ALL_TAC)
+    ++ POP_ASSUM (K ALL_TAC)
+    ++ Cases_on `n'` >> RW_TAC arith_ss []
+    ++ RW_TAC arith_ss [MULT]]);
+
+val DOUBLE_LT = store_thm
+  ("DOUBLE_LT",
+   ``!p q. 2 * p + 1 < 2 * q = 2 * p < 2 * q``,
+   RW_TAC std_ss []
+   ++ EQ_TAC >> DECIDE_TAC
+   ++ RW_TAC std_ss [GSYM ADD1]
+   ++ MATCH_MP_TAC LESS_NOT_SUC
+   ++ RW_TAC arith_ss []
+   ++ PROVE_TAC [EVEN_ODD, EVEN_DOUBLE, ODD_DOUBLE]);
+
 val IS_PREFIX_NIL = store_thm
   ("IS_PREFIX_NIL",
    ``!(x:'a list). IS_PREFIX x [] /\ (IS_PREFIX [] x = (x = []))``,
@@ -70,10 +148,11 @@ val IS_PREFIX_LENGTH = store_thm
 
 val IS_PREFIX_LENGTH_ANTI = store_thm
   ("IS_PREFIX_LENGTH_ANTI",
-   ``!(x:'a list) y. IS_PREFIX y x /\ (LENGTH x = LENGTH y) ==> (x = y)``,
-   Induct >> PROVE_TAC [LENGTH_NIL]
+   ``!(x:'a list) y. IS_PREFIX y x /\ (LENGTH x = LENGTH y) = (x = y)``,
+   Induct >> PROVE_TAC [LENGTH_NIL, IS_PREFIX_REFL]
    ++ Cases_on `y` >> RW_TAC list_ss [LENGTH_NIL]
-   ++ RW_TAC list_ss [IS_PREFIX, LENGTH]);
+   ++ RW_TAC list_ss [IS_PREFIX, LENGTH]
+   ++ PROVE_TAC [IS_PREFIX_REFL]);
 
 val IS_PREFIX_SNOC = store_thm
   ("IS_PREFIX_SNOC",
@@ -478,6 +557,99 @@ val wf_encode_num = store_thm
     POP_ASSUM_LIST (K ALL_TAC) ++
     ONCE_REWRITE_TAC [MULT_COMM] ++
     RW_TAC arith_ss [MULT_DIV]]);
+
+(*---------------------------------------------------------------------------
+        Bounded numbers (bit encoding)
+ ---------------------------------------------------------------------------*)
+
+val encode_bnum_def =
+  Define
+  `(encode_bnum 0 (n : num) = []) /\
+   (encode_bnum (SUC m) n = (EVEN n) :: encode_bnum m (n DIV 2))`;
+
+val wf_bnum_def =
+  Define
+  `wf_bnum m p =
+   !x y. p x /\ p y /\ (x MOD (2 EXP m) = y MOD (2 EXP m)) ==> (x = y)`;
+
+val wf_bnum = store_thm
+  ("wf_bnum",
+   ``!m n. n < 2 EXP m ==> wf_bnum m (\x. x < n)``,
+   RW_TAC std_ss [wf_bnum_def]
+   ++ POP_ASSUM MP_TAC
+   ++ RW_TAC arith_ss [LESS_MOD]);
+
+val encode_bnum_length = store_thm
+  ("encode_bnum_length",
+   ``!m n. LENGTH (encode_bnum m n) = m``,
+   Induct
+   ++ RW_TAC std_ss [LENGTH, encode_bnum_def]);
+
+val wf_encode_bnum = store_thm
+  ("wf_encode_bnum",
+   ``!p m. wf_encoder p (encode_bnum m) = wf_bnum m p``,
+   RW_TAC std_ss [wf_bnum_def, wf_encoder_def]
+   ++ HO_MATCH_MP_TAC
+      (PROVE []
+       ``(!x y. p x /\ p y ==> (Q x y = R x y)) ==>
+         ((!x y. p x /\ p y /\ Q x y ==> P x y) =
+          (!x y. p x /\ p y /\ R x y ==> P x y))``)
+   ++ RW_TAC std_ss []
+   ++ MP_TAC
+      (Q.SPECL [`encode_bnum m y`, `encode_bnum m x`]
+       (INST_TYPE [alpha |-> bool] IS_PREFIX_LENGTH_ANTI))
+   ++ RW_TAC std_ss [encode_bnum_length]
+   ++ POP_ASSUM_LIST (K ALL_TAC)
+   ++ Q.SPEC_TAC (`y`, `y`)
+   ++ Q.SPEC_TAC (`x`, `x`)
+   ++ Q.SPEC_TAC (`m`, `m`)
+   ++ Induct
+   ++ RW_TAC std_ss [encode_bnum_def, EXP, MOD_1]
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ MP_TAC (Q.SPEC `2` DIVISION)
+   ++ SIMP_TAC arith_ss []
+   ++ DISCH_THEN (fn th => MP_TAC (CONJ (Q.SPEC `x` th) (Q.SPEC `y` th)))
+   ++ DISCH_THEN (fn th => CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [th])))
+   ++ Know `!n. (n MOD 2 = 0) \/ (n MOD 2 = 1)`
+   >> (STRIP_TAC
+       ++ Suff `n MOD 2 < 2` >> DECIDE_TAC
+       ++ RW_TAC arith_ss [DIVISION])
+   ++ STRIP_TAC
+   ++ Know `(EVEN y = EVEN x) = (x MOD 2 = y MOD 2)`
+   >> (RW_TAC std_ss [EVEN_MOD2]
+       ++ POP_ASSUM (fn th => MP_TAC (CONJ (Q.SPEC `x` th) (Q.SPEC `y` th)))
+       ++ STRIP_TAC
+       ++ ASM_REWRITE_TAC []
+       ++ METIS_TAC [])
+   ++ DISCH_THEN (fn th => REWRITE_TAC [th])
+   ++ MATCH_MP_TAC (PROVE [] ``(R ==> P) /\ (P ==> (Q = R)) ==> (P /\ Q = R)``)
+   ++ CONJ_TAC
+   >> (RW_TAC std_ss []
+       ++ Suff `?m n. (m * 2 + x MOD 2) MOD 2 = (n * 2 + y MOD 2) MOD 2`
+       >> (RW_TAC std_ss []
+           ++ POP_ASSUM MP_TAC
+           ++ MP_TAC (Q.SPEC `2` MOD_PLUS)
+           ++ SIMP_TAC arith_ss []
+           ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
+           ++ RW_TAC arith_ss [MOD_EQ_0, MOD_MOD])
+       ++ Suff `0 < 2 /\ 0 < 2 ** m` >> PROVE_TAC [MOD_MULT_MOD, MULT_COMM]
+       ++ REWRITE_TAC [ZERO_LESS_EXP, TWO]
+       ++ DECIDE_TAC)
+   ++ DISCH_THEN (fn th => REWRITE_TAC [th])
+   ++ Suff `((x DIV 2) MOD 2 ** m = (y DIV 2) MOD 2 ** m) =
+            ((x DIV 2 * 2) MOD (2 * 2 ** m) =
+             (y DIV 2 * 2) MOD (2 * 2 ** m))`
+   >> (POP_ASSUM (MP_TAC o Q.SPEC `y`)
+       ++ STRIP_TAC
+       ++ RW_TAC arith_ss [GSYM ADD1]
+       ++ POP_ASSUM MP_TAC
+       ++ MP_TAC (Q.SPEC `2 * 2 ** m` SUC_MOD)
+       ++ Suff `0 < 2 * 2 ** m` >> RW_TAC std_ss []
+       ++ REWRITE_TAC [GSYM EXP, ZERO_LESS_EXP, TWO])
+   ++ REWRITE_TAC [GSYM EXP]
+   ++ ONCE_REWRITE_TAC [MULT_COMM]
+   ++ REWRITE_TAC [EXP, TWO]
+   ++ RW_TAC arith_ss [GSYM MOD_COMMON_FACTOR, ZERO_LESS_EXP]);
 
 (*---------------------------------------------------------------------------
         Polymorphic n-ary trees.
