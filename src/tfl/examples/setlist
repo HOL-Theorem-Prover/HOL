@@ -6,7 +6,8 @@
  ---------------------------------------------------------------------------*)
 
 app load ["bossLib", "pred_setTheory"]; 
-open pred_setTheory bossLib;
+open pred_setTheory bossLib; 
+infix 8 by;
 
 (*---------------------------------------------------------------------------
        Make definition of set2list function.
