@@ -421,7 +421,8 @@ val string_to_int =
           Int.fromString
 
 val say = TextIO.print;
-fun quote s = String.concat ["\"",String.toString s,"\""]
+fun mlquote s = String.concat ["\"",String.toString s,"\""]
+fun quote s = String.concat ["\"",s,"\""]
 
 fun prime s = s^"'";
 

@@ -97,17 +97,26 @@ sig
   val reset : ('a,'b) istream -> ('a,'b) istream
 
   val say : string -> unit
+
+  (* quote puts double quotes around a string;
+
+     mlquote does this and also quotes all of the characters in the string
+     so that the resulting string could be printed out in a way that would
+     make it a valid ML lexeme  (e.g., newlines turn into \n)
+  *)
   val quote : string -> string
+  val mlquote : string -> string
+
   val words2 : string -> string -> string list
   val commafy : string list -> string list
   val prime : string -> string
 
   val front_last : 'a list -> 'a list * 'a
-  val last : 'a list -> 'a 
+  val last : 'a list -> 'a
   val funpow : int -> ('a -> 'a) -> 'a -> 'a
   val mesg : bool -> string -> unit
   val with_flag :'a ref * 'a -> ('b -> 'c) -> 'b -> 'c
   val hash : int -> string -> int*int -> int
-  datatype ('a,'b) sum = LEFT of 'a 
+  datatype ('a,'b) sum = LEFT of 'a
                        | RIGHT of 'b
 end
