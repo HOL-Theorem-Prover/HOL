@@ -230,21 +230,14 @@ val SNOC = new_list_rec_definition ("SNOC",
      (!x x' l. SNOC (x:'a) (CONS x' l) = CONS x' (SNOC x l))`--));
 
 
-
-
 (*-------------------------------------------------------------- *)
 (* Reductions	    	    	    				 *)
 (* Spec:    	    	    	    				 *)
 (*	FOLDR f [x0;x1;...;xn-1] e = f(x0,f(x1,...f(xn-1,e)...)) *)
 (*	FOLDL f e [x0;x1;...;xn-1] = f(...f(f(e,x0),x1),...xn-1) *)
 (*-------------------------------------------------------------- *)
-val FOLDR = new_list_rec_definition("FOLDR",
-    (--`(!f e. FOLDR (f:'a->'b->'b) e [] = e) /\
-     (!f e x l. FOLDR f e (CONS x l) = f x (FOLDR f e l))`--));
-
-val FOLDL = new_list_rec_definition("FOLDL",
-    (--`(!f e. FOLDL (f:'b->'a->'b) e [] = e) /\
-     (!f e x l. FOLDL f e (CONS x l) = FOLDL f (f e x) l)`--));
+val FOLDR = save_thm("FOLDR", listTheory.FOLDR);
+val FOLDL = save_thm("FOLDL", listTheory.FOLDL);
 
 
 
@@ -254,11 +247,7 @@ val FOLDL = new_list_rec_definition("FOLDL",
 (* 	FILTER P [x0; ...; xn-1] = [...;xi;...]			*)
 (* 	  where P xi holds for all xi in the resulting list	*)
 (*--------------------------------------------------------------*)
-val FILTER = new_list_rec_definition("FILTER",
-    (--`(!P. FILTER P [] = []) /\
-     (!(P:'a->bool) x l. FILTER P (CONS x l) =
-	(P x => CONS x (FILTER P l) | FILTER P l))`--));
-
+val FILTER = save_thm("FILTER", listTheory.FILTER);
 
 
 
