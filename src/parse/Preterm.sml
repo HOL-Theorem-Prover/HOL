@@ -145,6 +145,8 @@ fun TC printers = let
 in check
 end end;
 
+val typecheck_phase1 = TC
+
 (*---------------------------------------------------------------------------
  * Post-type inference processing. Currently, this just guesses type
  * variables for the remaining unconstrained type variables.
@@ -348,6 +350,7 @@ fun remove_elim_magics ptm =
   | Overloaded _ => raise Fail "Preterm.remove_elim_magics on Overloaded"
 
 val cleanup0 = remove_elim_magics o do_overloading_removal
+val overloading_resolution = cleanup0
 
 fun cleanup tm =
   if !Globals.guessing_tyvars then let
@@ -374,7 +377,7 @@ fun cleanup tm =
            (fn Body' => return (Term.mk_abs{Bvar = Bvar', Body = Body'})))
       | Antiq t => return t
       | Constrained(tm, ty) => cleanup tm
-      | Overloaded _ => raise Fail "Preterm.cleanup: applied to Overloaded"
+      | Overloaded _ => raise PRETERM_ERR "toTerm" "applied to Overloaded"
     end
     val (newV, result) = cleanup tm V
     val guessed_vars = List.take(newV, length newV - length V)
@@ -399,6 +402,9 @@ fun cleanup tm =
    clean shr tm
  end
 
+fun overloading_resolution ptm = cleanup0 ptm
+
+val toTerm = cleanup
 
 fun typecheck pfns tm = let
   val _ = TC pfns tm

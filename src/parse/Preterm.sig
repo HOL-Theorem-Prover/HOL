@@ -10,14 +10,27 @@ sig
                    | Constrained of preterm * TCPretype.pretype
                    | Antiq of Term.term
 
-  (* Performs a type-check, altering the types attached to the various
-     components of the preterm, but without attempting to convert the preterm
-     into a genuine term *)
-  val TC :
+  (* Performs the first phase of type-checking, altering the types
+     attached to the various components of the preterm, but without
+     resolving overloading.  The two printing functions are used to
+     report errors. *)
+  val typecheck_phase1 :
     ((Term.term -> string) * (Type.hol_type -> string)) option ->
     preterm -> unit
-  (* Does the type-checking and then generates a full-blown term, if
-     possible. *)
+
+  (* performs overloading resolution, possibly guessing overloads if
+     this is both allowed by Globals.guessing_overloads and required by
+     ambiguity in the term *)
+  val overloading_resolution : preterm -> preterm
+
+
+  (* converts a preterm into a term.  Will guess type variables for
+     unassigned pretypes if Globals.guessing_tyvars is true.
+     Will fail if the preterm contains any Overloaded constructors, or
+     if the types attached to the leaves aren't valid for the kernel.  *)
+  val toTerm : preterm -> Term.term
+
+  (* essentially the composition of all three of the above *)
   val typecheck:
     ((Term.term -> string) * (Type.hol_type -> string)) option ->
     preterm -> Term.term
