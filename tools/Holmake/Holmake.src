@@ -463,7 +463,7 @@ in
       open Process
       val res =
         if has_dq (TextIO.openIn(normPath file)) (* handle double-backquotes *)
-        then let val clone = variant (file^".orig")
+        then let val clone = variant file
                  val _ = FileSys.rename {old=file, new=clone}
              in if unquote_to clone file = Process.success
                 then let
