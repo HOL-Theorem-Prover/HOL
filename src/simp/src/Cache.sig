@@ -5,10 +5,10 @@
   * part of its input - e.g. "contextual" decision procedures
   * such as CTXT_ARITH
   *
-  * Two arguments are needed.  The
-  * first should determine if a given theorem is relevant to
-  * the decision procedure.  The second should be a conversion
-  * i.e. convert a term t to |- t = x for some value x.
+  * Two arguments are needed.  The first should determine if a given
+  * term is relevant to the decision procedure i.e., might be rewritten
+  * by it.  The second should be a conversion i.e. convert a term t to
+  * |- t = x for some value x.
   *
   * Returns a new conversion, and a reference to a table used
   * as a cache.  The table is returned to enable users to
