@@ -510,7 +510,7 @@ local
       in
         prove_case d ((a, (false, b) :: path) :: (b, (true, a) :: path) :: rest)
       end
-    else if tm = d then
+    else if aconv tm d then
       foldl (fn ((true, a), th) => DISJ2 a th | ((false, b), th) => DISJ1 th b)
       (ASSUME d) path
     else prove_case d rest
