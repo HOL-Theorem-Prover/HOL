@@ -2,9 +2,6 @@
 open HolKernel boolLib Q Parse bossLib prim_recTheory combinTheory
      onestepTheory bitsTheory word32Theory;
 
-infix 8 by;
-infix THEN THENC THENL ++;
-
 (* -------------------------------------------------------- *)
 
 val _ = new_theory "arm";
@@ -43,20 +40,21 @@ val SUBST_def = Define`SUBST m (a,w) b = if (a = b) then w else m b`;
 val SET_NZC_def = Define`
   SET_NZC N Z C n =
     w32 (SBIT N 31 + SBIT Z 30 + SBIT C 29 + BITSw 28 0 n)`;
-    
+ 
 val SET_NZCV_def = Define`
   SET_NZCV N Z C V n =
     w32 (SBIT N 31 + SBIT Z 30 + SBIT C 29 + SBIT V 28 + BITSw 27 0 n)`;
-    
+
 val SET_MODE_def = Define`
   SET_MODE mode cpsr =
-    let m = if mode = usr then 16 else
-            if mode = fiq then 17 else
-            if mode = irq then 18 else
-            if mode = svc then 19 else
-            if mode = abt then 23 else
-            if mode = und then 27 else
-            (* mode = safe *)   0 in
+    let m = case mode of
+               usr -> 16
+            || fiq -> 17
+            || irq -> 18
+            || svc -> 19
+            || abt -> 23
+            || und -> 27
+            || _ -> 0 in
   w32 (SLICEw 31 5 cpsr + m)`;
 
 val SET_IFMODE_def = Define`
@@ -69,12 +67,12 @@ val SET_IFMODE_def = Define`
 val DECODE_MODE_def = Define`
   DECODE_MODE cpsr =
     let m = BITS 4 0 cpsr in
-      if m = 16 then usr else
-      if m = 17 then fiq else
-      if m = 18 then irq else
-      if m = 19 then svc else
-      if m = 23 then abt else
-      if m = 27 then und else safe`;
+     if m = 16 then usr else
+     if m = 17 then fiq else
+     if m = 18 then irq else
+     if m = 19 then svc else
+     if m = 23 then abt else
+     if m = 27 then und else safe`;
 
 val DECODE_PSR_def = Define`
   DECODE_PSR cpsr =
@@ -82,11 +80,13 @@ val DECODE_PSR_def = Define`
 
 val MODE_SPSR_def = Define`
    MODE_SPSR mode =
-       if mode = fiq then spsr_fiq else
-       if mode = irq then spsr_irq else
-       if mode = svc then spsr_svc else
-       if mode = abt then spsr_abt else
-       if mode = und then spsr_und else ARB`;
+     case mode of
+        fiq -> spsr_fiq
+     || irq -> spsr_irq
+     || svc -> spsr_svc
+     || abt -> spsr_abt
+     || und -> spsr_und
+     || otherwise -> ARB`;
 
 val USER_def = Define`
    USER mode = (mode = usr) \/ (mode = safe)`;
@@ -116,30 +116,11 @@ val SPSR_WRITE_def = Define`
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
 
-val NUM_REG_fiq_def = Define`
-  NUM_REG_fiq n = if n = 8 then r8_fiq else
-                  if n = 9 then r9_fiq else
-                  if n = 10 then r10_fiq else
-                  if n = 11 then r11_fiq else
-                  if n = 12 then r12_fiq else
-                  if n = 13 then r13_fiq else
-                  (* n = 14 *)   r14_fiq`;
-
-val NUM_REG_irq_def = Define`
-  NUM_REG_irq n = if n = 13 then r13_irq else
-                  (* n = 14 *)   r14_irq`;
-
-val NUM_REG_svc_def = Define`
-  NUM_REG_svc n = if n = 13 then r13_svc else
-                  (* n = 14 *)   r14_svc`;
-
-val NUM_REG_abt_def = Define`
-  NUM_REG_abt n = if n = 13 then r13_abt else
-                  (* n = 14 *)   r14_abt`;
-
-val NUM_REG_und_def = Define`
-  NUM_REG_und n = if n = 13 then r13_und else
-                  (* n = 14 *)   r14_und`;
+val NUM_REG_fiq_def = Define `NUM_REG_fiq n = num2reg_fiq (n - 8)`;
+val NUM_REG_irq_def = Define `NUM_REG_irq n = num2reg_irq (n - 13)`;
+val NUM_REG_svc_def = Define `NUM_REG_svc n = num2reg_svc (n - 13)`;
+val NUM_REG_abt_def = Define `NUM_REG_abt n = num2reg_abt (n - 13)`;
+val NUM_REG_und_def = Define `NUM_REG_und n = num2reg_und (n - 13)`;
 
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
@@ -160,7 +141,7 @@ val REG_READ_def = Define`
       reg_abt (NUM_REG_abt n)
     else (* mode = und *)
       reg_und (NUM_REG_und n)`;
-         
+
 val REG_WRITE_def = Define`
   REG_WRITE (REG reg_usr reg_fiq reg_irq reg_svc reg_abt reg_und) mode n d =
     if (n = 15) \/ USER mode \/ (mode = fiq) /\ n < 8 \/ ~(mode = fiq) /\ n < 13 then
@@ -175,7 +156,7 @@ val REG_WRITE_def = Define`
       REG reg_usr reg_fiq reg_irq reg_svc (SUBST reg_abt (NUM_REG_abt n,d)) reg_und
     else (* mode = und *)
       REG reg_usr reg_fiq reg_irq reg_svc reg_abt (SUBST reg_und (NUM_REG_und n,d))`;
-         
+
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
 
@@ -206,7 +187,7 @@ val MEM_WRITE_BYTE_def = Define`
 val MEM_WRITE_WORD_def = Define`
   MEM_WRITE_WORD mem word addr = SUBST mem (TO_W30 addr,word)`;
 
-(* Memory write never gives an abort error and read only gives error upon misalignment *)
+(* Memory read/write never gives an abort error *)
 (* Can be adapted to give more realistic MMU behaviour *)
 
 (* -------------------------------------------------------- *)
@@ -379,13 +360,13 @@ val ALU_def = Define`
    if (opc = 1) \/ (opc = 9)  then EOR rn op2    else
    if (opc = 2) \/ (opc = 10) then SUB rn op2 T  else
    if (opc = 4) \/ (opc = 11) then ADD rn op2 F  else
-   if opc = 3  then ADD (NOT rn) op2 T    else
+   if opc = 3  then ADD (NOT rn) op2 T           else
    if opc = 5  then ADD rn op2 c                 else
    if opc = 6  then SUB rn op2 c                 else
-   if opc = 7  then ADD (NOT rn) op2 c    else
+   if opc = 7  then ADD (NOT rn) op2 c           else
    if opc = 12 then ORR rn op2                   else
    if opc = 13 then ALU_logic op2                else
-   if opc = 14 then AND rn (NOT op2)      else
+   if opc = 14 then AND rn (NOT op2)             else
    (* opc = 15 *)   ALU_logic (NOT op2)`;
 
 (* -------------------------------------------------------- *)
@@ -582,7 +563,7 @@ val DECODE_INST_def = Define`
           if BIT 25 n then br else undef
         else
           if BIT 25 n /\ BIT 24 n then swi_ex else undef`;
-  
+
 val NEXT_ARM_def = Define`
   NEXT_ARM (ARM mem reg psr) =
     let n = w2n (MEM_READ_WORD mem (WORD_ALIGN (FETCH_PC reg))) in
@@ -607,7 +588,7 @@ val NEXT_ARM_def = Define`
         SWI (ARM mem reg psr)
       else
         EXCEPTION (ARM mem reg psr) 2`;
-    
+
 val STATE_ARM_def = Define`
   (STATE_ARM 0 a = a) /\
   (STATE_ARM (SUC t) a = NEXT_ARM (STATE_ARM t a))`;

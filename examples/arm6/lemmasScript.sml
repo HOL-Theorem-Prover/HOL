@@ -597,22 +597,19 @@ val CPSR_WRITE_READ = store_thm("CPSR_WRITE_READ",
 
 val DECODE_MODE_LEM = store_thm("DECODE_MODE_LEM",
   `!m psr. BITS 4 0 (w2n (SET_MODE m psr)) =
-                if m = usr then 16 else
-                if m = fiq then 17 else
-                if m = irq then 18 else
-                if m = svc then 19 else
-                if m = abt then 23 else
-                if m = und then 27 else 0`,
-  SIMP_TAC arith_ss [SET_MODE_def,GSYM BITSw_def,BITS_EVAL,MODw_THM,HB_def,BITS_COMP_THM]
-    THEN RW_TAC arith_ss [SLICEw_THM,SIMP_RULE arith_ss [DIV1] (SPECL [`4`,`0`] BITS2_THM),MOD_TIMES]
+                case m of usr -> 16 || fiq -> 17
+                       || irq -> 18 || svc -> 19
+                       || abt -> 23 || und -> 27 || _ -> 0`,
+  Cases
+    THEN RW_TAC arith_ss [w2n_EVAL,SET_MODE_def,MODw_THM,HB_def,BITS_COMP_THM,SLICEw_THM]
+    THEN SIMP_TAC std_ss [MOD_TIMES,MOD_EQ_0,SIMP_RULE arith_ss [DIV1] (SPECL [`4`,`0`] BITS2_THM)]
 );
 
 val DECODE_MODE_THM = store_thm("DECODE_MODE_THM",
   `!m psr x y. DECODE_MODE (w2n (SET_IFMODE x y m psr)) = m`,
   REPEAT STRIP_TAC
-    THEN SIMP_TAC std_ss [SET_IFMODE_def,DECODE_MODE_def,DECODE_MODE_LEM]
     THEN Cases_on `m`
-    THEN SIMP_TAC arith_ss [mode_distinct]
+    THEN RW_TAC arith_ss [SET_IFMODE_def,DECODE_MODE_def,DECODE_MODE_LEM]
 );
   
 val PSR_WRITE_COMM = store_thm("PSR_WRITE_COMM",
