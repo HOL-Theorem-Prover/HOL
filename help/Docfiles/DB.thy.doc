@@ -10,14 +10,14 @@ theory.
 
 \DESCRIBE
 An invocation {DB.thy s} returns the contents of the specified theory segment
-{s} in a list of {(thyname,name),(thm,class)} tuples. In a tuple,
-{(thyname,name)} designate the theory and the name given to the object
+{s} in a list of {(thy,name),(thm,class)} tuples. In a tuple,
+{(thy,name)} designate the theory and the name given to the object
 in the theory. The {thm} element is the named object, and {class} its 
 classification (one of {Thm} (theorem), {Axm} (axiom), or {Def} (definition)).
 
 Case distinctions are ignored when determining the segment. The current 
 segment may be specified, either by the distinguished literal "-", 
-or by the name.
+or by the name given when creating the segment with {new_theory}.
        
 \FAILURE
 Never fails, but will return an empty list when {s} does not designate
@@ -33,11 +33,12 @@ a currently loaded theory segment.
           !r. IS_PAIR r = (REP_prod (ABS_prod r) = r), Db.Def)),
      (("pair", "CLOSED_PAIR_EQ"),
       (|- !x y a b. ((x,y) = (a,b)) = (x = a) /\ (y = b), Db.Thm)),
-     .
-     .
-     .
+         .
+         .
+         .
 }
 
 \SEEALSO
-DB.all_thms, DB.theorems, DB.theorem_class, DB.match.
+DB.class, DB.data, DB.all_thms, DB.theorems, DB.theorem_class, DB.match
+Theory.new_theory.
 \ENDDOC

@@ -1,6 +1,6 @@
 \DOC hyp
 
-\TYPE {hyp : (thm -> term list)}
+\TYPE {hyp : thm -> term list}
 
 \SYNOPSIS
 Returns the hypotheses of a theorem.

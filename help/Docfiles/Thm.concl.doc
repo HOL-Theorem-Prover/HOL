@@ -1,6 +1,6 @@
 \DOC concl
 
-\TYPE {concl : (thm -> term)}
+\TYPE {concl : thm -> term}
 
 \SYNOPSIS
 Returns the conclusion of a theorem.

@@ -13,12 +13,11 @@ attempts to define the function in the logic. If this attempt is
 successful, the specification is derived from the definition. The
 derived specification is returned to the user, and also stored in the
 current theory. {Define} may be used to define abbreviations,
-recursive functions, and mutually recursive functions. Also, recursion
-schemes may be processed by {Define}. An induction theorem may be
-stored in the current theory as a by-product of {Define}'s
-execution. This induction theorem follows the recursion structure of
-the function, and may be useful when proving properties of the
-function.
+recursive functions, and mutually recursive functions. An induction 
+theorem may be stored in the current theory as a by-product of 
+{Define}'s activity. This induction theorem follows the 
+recursion structure of the function, and may be useful when proving 
+properties of the function.
 
 {Define} takes as input a quotation representing a conjunction of
 equations. The specified function(s) may be phrased using ML-style
@@ -134,8 +133,8 @@ alphanumeric.
 {Define} fails if there are more free variables on the right hand 
 sides of the recursion equations than the left. 
 
-If {Define} cannot prove the termination of the specified recursive
-function, then {Define} fails. In that case, one has to embark on the
+{Define} fails if it cannot prove the termination of the 
+specified recursive function. In that case, one has to embark on the
 following multi-step process in order to get the same effect as if
 {Define} had succeeded: (1) construct the function and synthesize its
 termination conditions with {Hol_defn}; (2) set up a goal to prove the
@@ -303,7 +302,7 @@ pre-processing happens in {Define} that would not be possible if the
 input was a term.
 
 {Define} is a mechanization of a well-founded recursion theorem
-{relationTheory.WFREC_COROLLARY}.
+({relationTheory.WFREC_COROLLARY}).
 
 {Define} currently has a rather weak termination prover. For example, it
 always fails to prove the termination of nested recursive functions.
@@ -318,7 +317,8 @@ less baggage---it depends only on {numLib} and {pairLib}---than
 
 
 \SEEALSO
-TotalDefn.xDefine, Defn.Hol_defn, Defn.tgoal, Defn.tprove, 
-TotalDefn.WF_REL_TAC, SingleStep.recInduct, bossLib.EVAL_CONV.
+TotalDefn.xDefine, TotalDefn.DefineSchema, Defn.Hol_defn, 
+Defn.tgoal, Defn.tprove, TotalDefn.WF_REL_TAC, 
+SingleStep.recInduct, bossLib.EVAL_CONV, bossLib.EVAL_TAC.
 
 \ENDDOC

@@ -13,7 +13,7 @@ Implements the following rule of simultaneous substitution
 {
     A1 |- t1 = u1 ,  ... , An |- tn = un ,    A |- t[t1,...,tn]
    -------------------------------------------------------------
-                  A u A1 u ... u An |- t[ui]
+        A u A1 u ... u An |- t[u1,...,un]
 }
 \noindent Evaluating
 {
@@ -30,12 +30,6 @@ of {ti} at the places marked by {xi} must be free (i.e. {ti} must not
 contain any bound variables).  {SUBST} automatically renames bound
 variables to prevent free variables in {ui} becoming bound after
 substitution.
-
-{SUBST} is a complex primitive because it performs both parallel
-simultaneous substitution and renaming of variables. This is for
-efficiency reasons, but it would be logically cleaner if {SUBST} were
-simpler.
-
 
 \FAILURE
 If the template does not match the conclusion of the hypothesis, or the
@@ -75,6 +69,9 @@ equations (i.e. the terms {t1}, ... , {tn}).
 
 > val it = [.] |- (0 + 1) + 1 + 1 > 0 + 1 : thm
 }
+
+\COMMENTS
+{SUBST} is perhaps overly complex for a primitive rule of inference.
 
 \USES
 For substituting at selected occurrences. Often useful for writing

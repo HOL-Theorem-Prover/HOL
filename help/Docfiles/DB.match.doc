@@ -9,15 +9,14 @@ Attempt to find matching theorems in the specified theories.
 matching, database.
 
 \DESCRIBE
-An invocation {DB.match [s1,...,sn] M} collects all theorems, definitions, and 
-axioms of the theories designated by {s1},...,{sn} that have a subterm
-that matches M. If there are no matches, the empty list is returned.
+An invocation {DB.match [s1,...,sn] M} collects all theorems, definitions, 
+and axioms of the theories designated by {s1},...,{sn} that have a subterm
+that matches {M}. If there are no matches, the empty list is returned.
 
 The strings {s1},...,{sn} should be a subset of the currently loaded
-theory segments.
-
-If the list of theories is empty, then all currently loaded theories
-are searched.
+theory segments. The string {"-"} may be used to designate the
+current theory segment. If the list of theories is empty, then all 
+currently loaded theories are searched. 
 
 \FAILURE
 Never fails.
@@ -55,6 +54,6 @@ The notion of matching is a restricted version of higher-order matching.
 For locating theorems when doing interactive proof.
 
 \SEEALSO
-DB.find, DB.theorems, Db.thy, Db.all_thms.
+DB.matcher, DB.matchp, DB.find, DB.theorems, Db.thy, Db.all_thms.
 
 \ENDDOC
