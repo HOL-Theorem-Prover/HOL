@@ -1,7 +1,7 @@
 structure abstraction :> abstraction =
 struct
 
-open HolKernel Parse basicHol90Lib;
+open HolKernel Parse boolLib;
 infix o |->;
 
 fun ABS_ERR function message =
@@ -55,7 +55,7 @@ fun head tm =
   let val a = fst(strip_comb(lhs
                  (snd(strip_forall(Lib.trye hd (strip_conj tm))))))
   in 
-    #Name(dest_var a handle HOL_ERR _ => dest_const a)
+    fst(dest_var a handle HOL_ERR _ => dest_const a)
   end;
 
 fun param_eq eqs0 =
@@ -64,10 +64,10 @@ fun param_eq eqs0 =
      val fvrhs = subtract (free_varsl (map rhs eqs)) (free_varsl (map lhs eqs))
      val pv = filter (C mem fvrhs) (!fv_ass)
      val ty = type_of(fst(strip_comb(lhs(hd eqs))))
-     val old_var = mk_var{Name=nm, Ty=ty}
-     val newvar = mk_var{Name=nm, Ty=foldr (op -->) ty (map type_of pv)}
+     val old_var = mk_var(nm, ty)
+     val newvar = mk_var(nm, foldr (op -->) ty (map type_of pv))
      val _ = if null pv then () else add_impl_param nm pv
- in subst [old_var|->list_mk_comb(newvar,pv)] eqs0
+ in subst [old_var |-> list_mk_comb(newvar,pv)] eqs0
  end;
 
 fun new_param_definition (x,tm) = new_definition(x, param_eq tm);
@@ -143,8 +143,8 @@ fun first_match env mfun [] = raise ABS_ERR "first_match" "no match"
 
 fun inst_csts inst env tm =
   case dest_term tm of
-    LAMB{Bvar,Body} => inst_csts inst (Bvar::env) Body
-  | COMB{Rator,Rand} =>
+    LAMB(Bvar,Body) => inst_csts inst (Bvar::env) Body
+  | COMB(Rator,Rand) =>
       (SOME (first_match env (match_term tm) inst)
        handle HOL_ERR _ =>
 	 (case inst_csts inst env Rand of
@@ -171,10 +171,10 @@ fun inst_all ctab thm =
   handle HOL_ERR _ => thm;
 
 (* example:
-inst_all [--`0+0`--,--`0-0`--]
-  (GEN_ALL(CONJ(GEN (--`y:num`--) (REFL(--` x+y = x-y `--)))
-	     (REFL(--`z`--))))
-;
+   inst_all [--`0+0`--,--`0-0`--]
+      (GEN_ALL(CONJ(GEN (--`y:num`--) (REFL(--` x+y = x-y `--)))
+                 (REFL(--`z`--))))
+    ;
 *)
 
 
@@ -202,10 +202,8 @@ type cinst_infos =
 
 fun compute_inst_infos ctab ({Rename,Inst,Rule,...}:inst_infos) =
   let fun mk_def tm =
-        case Rename(#Name(dest_const(fst(strip_comb tm)))) of
-	  SOME name =>
-	    SOME(name^"_def",
-		 mk_eq{lhs=mk_var{Name=name,Ty=type_of tm},rhs=tm})
+        case Rename(#Name(dest_thy_const(fst(strip_comb tm)))) of
+	  SOME name => SOME(name^"_def", mk_eq(mk_var(name,type_of tm),tm))
 	| NONE => NONE
       val defs = List.mapPartial mk_def ctab
       val thms = map (GSYM o new_param_definition) defs
@@ -232,11 +230,11 @@ fun functor_header strm =
 ;
 
 fun compute_cst_arg_map (fv,impargs) strm =
-  let val thcsts = map (#Name o dest_const) (constants(current_theory()))
+  let val thcsts = map (#Name o dest_thy_const) (constants(current_theory()))
       fun is_param_cst (x,iargs) =
         mem x thcsts andalso all (C mem fv) iargs
       val ptab = filter is_param_cst impargs
-      val pr_var = S strm o #Name o dest_var
+      val pr_var = S strm o fst o dest_var
       fun sep() = (S strm ","; NL strm; S strm "          ")
   in
   S strm "  let open Parse abstraction"; NL strm;

@@ -2,12 +2,10 @@ structure ringLib :> ringLib =
 struct
 
 (*
-load "ringNormTheory";
-load "quote";
-load "computeLib";
+  app load ["ringNormTheory", "quote", "computeLib"];
 *)
 
-open HolKernel Parse basicHol90Lib prelimTheory quoteTheory quote computeLib;
+open HolKernel Parse boolLib prelimTheory quoteTheory quote computeLib;
 
 infix ORELSE THEN THENL THENC o |->;
 infixr -->;
@@ -59,14 +57,14 @@ end;
 
 (* Get the type of (semi-)ring values from the correctness lemma *)
 val find_type =
-  snd o dom_rng o snd o dom_rng o (#Ty) o dest_const o
+  snd o dom_rng o snd o dom_rng o snd o dest_const o
     fst o strip_comb o rhs o snd o strip_forall o concl;
 
 fun is_ring_thm th =
-  let val {Rator,Rand} = dest_comb (concl th) in
-  case #Name (dest_const Rator) of
-    "is_ring" => true
-  | "is_semi_ring" => false
+  let val (Rator,Rand) = dest_comb (concl th) in
+  case dest_thy_const Rator of
+    {Name="is_ring",Thy="ring",...} => true
+  | {Name="is_semi_ring", Thy="semi_ring",...} => false
   | _ => raise RING_ERR "" ""
   end
   handle HOL_ERR _ => raise RING_ERR "is_ring" "mal-formed thm"
@@ -182,7 +180,7 @@ fun comp_rws cst_rws lhs_thms rhs_thms =
   end;
 
 fun binop_eq ty =
-  let val eq = mk_const{Name = "=", Ty = ty --> ty --> bool}
+  let val eq = inst [alpha  |-> ty] boolSyntax.equality
       fun mk_eq th1 th2 =
         CONV_RULE(RAND_CONV(REWRITE_CONV []))
           (MK_COMB(AP_TERM eq th1, th2))
@@ -201,7 +199,7 @@ val rings = (Polyhash.mkPolyTable(7,no_such_ring) :
 fun add_ring ty rng = Polyhash.insert rings (ty,rng);
 
 fun RING_NORM_CONV tm = #NormConv (Polyhash.find rings (type_of tm)) tm;
-fun RING_CONV tm      = #EqConv (Polyhash.find rings (#ty (dest_eq_ty tm))) tm;
+fun RING_CONV tm      = #EqConv (Polyhash.find rings (#3 (dest_eq_ty tm))) tm;
 fun reify tml         = #Reify (Polyhash.find rings (type_of (hd tml))) tml;
 
 
@@ -222,7 +220,7 @@ fun declare_ring {RingThm,IsConst,Rewrites} =
         handle HOL_ERR _ => raise RING_ERR "norm_conv" ""
 
       fun eq_conv t = 
-  	let val {lhs,rhs} = dest_eq t 
+  	let val (lhs,rhs) = dest_eq t 
             val {Metamap,Poly=[p1,p2]} = reify_fun [lhs,rhs]
 	    val mthm = SPEC Metamap SoundThm
             val th1 = simp_rule (SPEC p1 mthm)

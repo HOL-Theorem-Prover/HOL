@@ -6,17 +6,19 @@ load "integerRingTheory";
 load "ringLib";
 *)
 
-open HolKernel Parse basicHol90Lib integerTheory integerRingTheory;
+open HolKernel Parse boolLib integerTheory integerRingTheory
+     
 infix THEN THENL THENC o;
 infix 8 by;
 
 
-val num_to_int = --`&`--;
-val int_0 = --`int_0`--;
-val int_1 = --`int_1`--;
+val num_to_int = intSyntax.int_injection;
+val int_0 = intSyntax.zero_tm
+val int_1 = intSyntax.one_tm
 fun is_closed_int t =
   mem t [int_0,int_1] orelse
-    ((is_comb t) andalso (rator t)=num_to_int) andalso (is_numeral (rand t));
+    ((is_comb t) andalso (rator t)=num_to_int) andalso 
+     (numSyntax.is_numeral (rand t));
 
 val _ = ringLib.declare_ring
     { RingThm = int_ring_thms,

@@ -1,5 +1,5 @@
 
-open HolKernel Parse basicHol90Lib
+open HolKernel Parse boolLib
      TotalDefn Datatype BasicProvers SingleStep;
 
 infix THEN THENL;

@@ -4,7 +4,7 @@ load "RecordType";
 load "semi_ringTheory";
 *)
 
-open HolKernel Parse basicHol90Lib abs_tools;
+open HolKernel Parse boolLib abs_tools;
 open BasicProvers SingleStep Datatype;
 
 infix ORELSE THEN THENL o;

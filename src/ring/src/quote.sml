@@ -1,4 +1,3 @@
-
 local open HolKernel Parse quoteTheory
 in
 infix THEN THENL |->;
@@ -8,16 +7,19 @@ fun QUOTE_ERR function message =
 		      origin_function = function,
 		      message = message};
 
-fun mk_comb2 (a,b,c) = mk_comb{Rator=mk_comb{Rator=a,Rand=b}, Rand=c};
-fun mk_comb3 (a,b,c,d) = mk_comb{Rator=mk_comb2(a,b,c),Rand=d};
+fun mk_comb2 (a,b,c) = mk_comb(mk_comb(a,b),c);
+fun mk_comb3 (a,b,c,d) = mk_comb(mk_comb2(a,b,c),d);
 
 (* reify varmap *)
 val mevm = --`Empty_vm : 'a varmap`--;
 val mnvm = --`Node_vm : 'a->'a varmap->'a varmap->'a varmap`--;
-fun vm_ty ty = inst [==`:'a`== |-> ty];
+fun vm_ty ty = inst [alpha |-> ty];
 
 
-datatype varnode = Lf | Nd of term * varnode ref * varnode ref
+datatype varnode 
+    = Lf 
+    | Nd of term * varnode ref * varnode ref
+
 type varmap = varnode ref;
 
 fun meta_map ty =
@@ -41,8 +43,8 @@ val mri = --`Right_idx`--
 val mei = --`End_idx`--;
 
 fun meta_index Ei = mei
-  | meta_index (Li i) = mk_comb{Rator=mli, Rand=meta_index i}
-  | meta_index (Lr i) = mk_comb{Rator=mri, Rand=meta_index i}
+  | meta_index (Li i) = mk_comb(mli, meta_index i)
+  | meta_index (Lr i) = mk_comb(mri, meta_index i)
 ;
 
 
@@ -50,7 +52,7 @@ fun search_term t vm =
   case !vm of
     Lf => NONE
   | Nd(x,v1,v2) =>
-      (if (aconv t x) then SOME Ei
+      (if aconv t x then SOME Ei
       else case search_term t v1 of
 	SOME i => SOME (Li i)
       |	NONE =>
@@ -117,12 +119,12 @@ fun meta_expr ty is_qu { Op1, Op2, Vars, Csts } =
         else 
 	  let val oper =
     	    if is_comb t then
-	      let val {Rator=r1,Rand=a1} = dest_comb t in
+	      let val (r1,a1) = dest_comb t in
 	      case op_assoc r1 Op1 of
 		SOME ope => SOME(mk_op t ope [meta_rec a1])
 	      |	NONE =>
 		  if is_comb r1 then
-      	    	    let val {Rator=r2,Rand=a2} = dest_comb r1 in
+      	    	    let val (r2,a2) = dest_comb r1 in
     	    	    case op_assoc r2 Op2 of
 		      SOME ope =>
 			SOME(mk_op t ope [meta_rec a2, meta_rec a1])
@@ -136,10 +138,9 @@ fun meta_expr ty is_qu { Op1, Op2, Vars, Csts } =
 	  | NONE => Pvar (term_index t)
 	  end
 
-      fun meta_pol (Pvar i) = mk_comb{Rator=Vars,Rand=meta_index i}
-        | meta_pol (Pquote t) = mk_comb{Rator=Csts,Rand=t}
-	| meta_pol (Pnode(h,l)) =
-	    foldl (fn (a,ht) => mk_comb{Rator=ht,Rand=meta_pol a}) h l
+      fun meta_pol (Pvar i) = mk_comb(Vars,meta_index i)
+        | meta_pol (Pquote t) = mk_comb(Csts,t)
+	| meta_pol (Pnode(h,l)) = foldl(fn(a,ht) => mk_comb(ht,meta_pol a)) h l
 
       fun non_trivial (Pvar _) =
 	    raise QUOTE_ERR "meta_expr" "unrecognized polynomial expression"

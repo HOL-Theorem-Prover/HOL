@@ -1,4 +1,4 @@
-open HolKernel Parse basicHol90Lib listTheory
+open HolKernel Parse boolLib listTheory
      TotalDefn Datatype BasicProvers SingleStep;
 
 infix THEN THENL |->;
@@ -7,7 +7,7 @@ val _ = new_theory "prelim";
 
 
 (* ternary comparisons *)
-val _ = Hol_datatype ` ordering = LESS | EQUAL | GREATER `;
+val _ = Hol_datatype `ordering = LESS | EQUAL | GREATER`;
 
 val _ = set_MLname "LESS" "LESS_def";
 val _ = set_MLname "EQUAL" "EQUAL_def";

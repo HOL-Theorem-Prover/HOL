@@ -1,7 +1,7 @@
 open abstraction;
 
 local
-open HolKernel Parse basicHol90Lib
+open HolKernel Parse boolLib
 in
 
 (* My stuffs: adding implicit arguments to preterms and TotalDefn.Define *)
@@ -10,11 +10,12 @@ in
 local open Absyn in
 
 val add_ip =
-  let fun add_ip (c as IDENT s) =
-            foldl (fn (v,pt) => APP(pt,v)) c (impl_of s)
+  let fun add_ip (c as IDENT s) = foldl (fn (v,pt) => APP(pt,v)) c (impl_of s)
+        | add_ip (c as QIDENT (t,n)) = 
+             foldl (fn (v,pt) => APP(pt,v)) c (impl_of n)
   	| add_ip (APP(Rator,Rand)) = APP(add_ip Rator, add_ip Rand)
-  	| add_ip (LAM(vs,body)) = LAM(vs, add_ip body)
-  	| add_ip (TYPED(pt,ty)) = TYPED(add_ip pt ,ty)
+  	| add_ip (LAM(vs,body))    = LAM(vs, add_ip body)
+  	| add_ip (TYPED(pt,ty))    = TYPED(add_ip pt ,ty)
   	| add_ip pt = pt
   in add_ip
   end
@@ -43,11 +44,11 @@ fun asm_store_thm(x,cl,tac) =
 
 
 fun Term q = let
-    val pt = Parse.parse_preTerm q
+    val pt = Parse.Absyn q
     val pt' = add_ip pt
     val prfns = SOME(term_to_string, type_to_string)
   in
-    Preterm.typecheck prfns (resolve_names pt')
+    Preterm.typecheck prfns (absyn_to_preterm pt')
   end
 
 fun --q _ = Term q;

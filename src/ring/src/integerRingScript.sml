@@ -4,7 +4,7 @@ load "integerTheory";
 load "bossLib";
 *)
 
-open HolKernel Parse basicHol90Lib bossLib  integerTheory ringTheory;
+open HolKernel Parse boolLib bossLib integerTheory ringTheory;
 
 infix THEN THENL THENC o;
 infix 8 by;
