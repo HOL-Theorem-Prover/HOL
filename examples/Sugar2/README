@@ -3,13 +3,13 @@ property language Sugar 2.0 in HOL. The official documentation is at
 
  http://www.haifa.il.ibm.com/projects/verification/sugar/literature.html
 
-Note that as a result of trying to prove some "sanity checking"
-properties, bugs have been found in the current version of the HOL
-semantics (reflecting bugs in the Accellera submission).  The
-semantics will be updated as soon as these bugs are fixed, but until
-this is done the semantics should be regarded as flawed (in particular
-the current version has some known-to-be-wrong parts that were added
-to help some interim checks go through).
+Note that as a result of trying to prove some `sanity checking'
+properties, bugs were found in the version of the HOL semantics
+corresponding to the Accellera submission.  The current semantics has
+been modified and now passes the initial `sanity checks' (see
+PathScript.sml). However, until confirmation that the changes are
+correct has been given, the semantics should be regarded as
+provisional. Also, further checking might reveal more bugs.
 
 The contents of this directory are
 

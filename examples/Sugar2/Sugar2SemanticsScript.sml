@@ -235,6 +235,7 @@ val F_SEM_defn =
     /\
     (F_SEM M p (STRONG_CLOCK c) (F_UNTIL(f1,f2)) = 
       ?i k. k >= i                                               /\
+            (IS_FINITE_PATH p ==> k < PATH_LENGTH p)             /\
             FIRST_RISE M p c i                                   /\
             F_SEM M (RESTN p k) (WEAK_CLOCK B_TRUE) (F_BOOL c)   /\  
             F_SEM M (RESTN p k) (STRONG_CLOCK c) f2              /\
@@ -282,22 +283,22 @@ val F_SEM_defn =
 * Start of weak clock clauses
 ******************************************************************************)
    (F_SEM M p (WEAK_CLOCK c) (F_BOOL b) =
-     (?i. FIRST_RISE M p c i)
-     ==> (?i. FIRST_RISE M p c i /\ B_SEM M (L M (PATH_EL p i)) b))
+     (!i. FIRST_RISE M p c i ==> B_SEM M (L M (PATH_EL p i)) b))
     /\
     (F_SEM M p (WEAK_CLOCK c) (F_NOT f) = 
       ~(F_SEM M p (STRONG_CLOCK c) f)) 
     /\
     (F_SEM M p (WEAK_CLOCK c) (F_AND(f1,f2)) = 
-      ?i. FIRST_RISE M p c i
+      !i. FIRST_RISE M p c i
           ==>
           (F_SEM M (RESTN p i) (WEAK_CLOCK c) f1 /\
            F_SEM M (RESTN p i) (WEAK_CLOCK c) f2))
     /\
     (F_SEM M p (WEAK_CLOCK c) (F_NEXT f) = 
-      ?i. (FIRST_RISE M p c i /\
-           (IS_FINITE_PATH p ==> i < PATH_LENGTH p - 1))
+      !i. FIRST_RISE M p c i 
           ==>
+          (IS_FINITE_PATH p ==> i < PATH_LENGTH p - 1)
+          /\
           F_SEM M (RESTN p (i+1)) (WEAK_CLOCK c) f)
     /\
     (F_SEM M p (WEAK_CLOCK c) (F_UNTIL(f1,f2)) = 
@@ -313,7 +314,7 @@ val F_SEM_defn =
                    F_SEM M (RESTN p j) (WEAK_CLOCK c) f1))
     /\
     (F_SEM M p (WEAK_CLOCK c) (F_SUFFIX_IMP(r,f)) = 
-      ?i. FIRST_RISE M p c i ==>
+      !i. FIRST_RISE M p c i ==>
           !j. S_SEM M (LHAT M (PATH_SEG p (i,j))) c r
               ==>
               F_SEM M (RESTN p j) (WEAK_CLOCK c) f)
@@ -328,10 +329,8 @@ val F_SEM_defn =
                F_SEM M (RESTN p l) (WEAK_CLOCK B_TRUE) (F_BOOL(B_NOT c))))
     /\
     (F_SEM M p (WEAK_CLOCK c) (F_WEAK_IMP(r1,r2)) = 
-      (?i. FIRST_RISE M p c i)
-      ==>
-      ?i. FIRST_RISE M p c i
-          /\
+      !i. FIRST_RISE M p c i
+          ==>
           !j. S_SEM M (LHAT M (PATH_SEG p (i,j))) c r1
               ==>
               ((?k. S_SEM M (LHAT M (PATH_SEG p (j,k))) c r2)
@@ -341,7 +340,7 @@ val F_SEM_defn =
                    ?w. S_SEM M (LHAT M (PATH_SEG p (j,k)) <> w) c r2))
     /\
     (F_SEM M p (WEAK_CLOCK c) (F_ABORT (f,b)) =
-      ?i. FIRST_RISE M p c i 
+      !i. FIRST_RISE M p c i 
           ==>
           (F_SEM M (RESTN p i) (WEAK_CLOCK c) f 
            \/
