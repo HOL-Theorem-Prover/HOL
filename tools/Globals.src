@@ -71,11 +71,14 @@ val show_scrub = ref true
  * Assignable function for printing errors.                                  *
  *---------------------------------------------------------------------------*)
 
+local open Portable
+in
 val output_HOL_ERR =
    ref (fn {message,origin_function,origin_structure} =>
          ( output(std_out, ("\nException raised at "^origin_structure^"."^
 			    origin_function^":\n"^message^"\n"));
-	  Portable.flush_out std_out));
+	  flush_out std_out))
+end;
 
 (*---------------------------------------------------------------------------*
  * Prettyprinting flags                                                      *
@@ -104,6 +107,7 @@ val pp_flags = {show_restrict  = ref true,
                 infix_at_front = ref false,
                 stack_infixes  = ref true,
                 in_at_end      = ref false};
+
 
 (*---------------------------------------------------------------------------*
  * For showing the representation of a term having restricted quantifiers    *
@@ -143,6 +147,7 @@ val goal_line = ref "------------------------------------";
  * At the end of type inference, HOL now guesses names for unconstrained     *
  * type variables, if this flag is set.                                      *
  *---------------------------------------------------------------------------*)
+
 val guessing_tyvars = ref true;
 
 (*---------------------------------------------------------------------------*
