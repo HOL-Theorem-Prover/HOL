@@ -97,6 +97,14 @@ val HS_EVAL = REWRITE_RULE [MOD_WL_EVAL] HS_EVAL;
 
 (* -------------------------------------------------------- *)
 
+fun NUMERAL_ONLY_RULE l n x =
+  let val y = SPEC_ALL x
+  in CONJ ((GEN_ALL o simpLib.SIMP_RULE bossLib.arith_ss l o Q.INST [n |-> `0`]) y)
+          ((GEN_ALL o Q.INST [n |-> `NUMERAL n`]) y)
+  end;
+
+(* -------------------------------------------------------- *)
+
 val wl = (numSyntax.dest_numeral o rhs o concl) THE_WL;
 val sn = Arbnum.toString wl;
 
@@ -118,7 +126,10 @@ fun word_compset () =
       MSB_EVAL2, LSB_EVAL2,
       iBITWISE, NUMERAL_BITWISE, NUMERAL_DIV2, SIGN_EXTEND_def,
       DIVMOD_2EXP, iMOD_2EXP, NUMERAL_MOD_2EXP, NUMERAL_DIV_2EXP, TIMES_2EXP_def,
-      MSBn_def, LSBn_def, BITV_def, SBIT_def, BITS_def, BIT_def, SLICE_def
+      MSBn_def, LSBn_def, BITV_def, SBIT_def,
+      NUMERAL_ONLY_RULE [NUMERAL_DIV_2EXP,iMOD_2EXP] `n` BITS_def,
+      NUMERAL_ONLY_RULE [NUMERAL_DIV_2EXP,iMOD_2EXP] `n` SLICE_def,
+      NUMERAL_ONLY_RULE [BITS_ZERO2] `n`  BIT_def
       ] rws
 in
    rws
