@@ -441,7 +441,7 @@ following session.
       mk_eq
        (mk_var("x",mk_type("num",[])),
         mk_numeral (Arbnum.fromString "1")));
-  > val it = `x = x = 1` : Term.term
+  > val it = `x = x = 1` : term
 \end{verbatim}\end{session}
 
 The original quotation type checker was designed and implemented by
@@ -470,10 +470,10 @@ in this case).
 \begin{session}\begin{verbatim}
 - Term `\x. x`;
 <<HOL message: inventing new type variable names: 'a.>>
-> val it = `\x. x` : Term.term
+> val it = `\x. x` : term
 
 - type_of it;
-> val it = `:'a -> 'a` : Type.hol_type
+> val it = `:'a -> 'a` : hol_type
 \end{verbatim}\end{session}
 
 \noindent For terms of polymorphic type, \ie, terms whose types have
@@ -488,7 +488,7 @@ type information):
 
 - Term `f x`;
 <<HOL message: inventing new type variable names: 'a, 'b.>>
-> val it = `(f :'a -> 'b) (x :'a)` : Term.term
+> val it = `(f :'a -> 'b) (x :'a)` : term
 \end{verbatim}\end{session}
 
 \noindent In this example, {\small\verb%x%} is unconstrained in the term
@@ -523,10 +523,10 @@ system will inform us that overloading resolution is being performed.
 
 - Term `~~x`;
 <<HOL message: more than one resolution of overloading was possible.>>
-> val it = `~~x` : Term.term
+> val it = `~~x` : term
 
 - type_of it;
-> val it = `:bool` : Type.hol_type
+> val it = `:bool` : hol_type
 \end{verbatim}\end{session}
 
 A priority mechanism is used to resolve multiple possible choices. In
@@ -544,10 +544,10 @@ type {\small\verb+:int+}.
 
 - Term `~(x = ~~x)`;
 <<HOL message: more than one resolution of overloading was possible.>>
-> val it = `~((x :bool) = ~~x)` : Term.term
+> val it = `~((x :bool) = ~~x)` : term
 
 - Term `~(x:int = ~~x)`;
-> val it = `~((x :int) = ~~x)` : Term.term
+> val it = `~((x :int) = ~~x)` : term
 \end{verbatim}\end{session}
 
 Note that the symbol {\small\verb+~+} stands for two different constants in
@@ -582,7 +582,7 @@ The following session illustrates antiquotation.
 > val y = `x + 1` : term
 
 val z = Term `y = ^y`;
-> val z = `y = x + 1` : Term.term
+> val z = `y = x + 1` : term
 
 - Term `!x:num.?y:num.^z`;
 > val it = `!x. ?y. y = x + 1` : term
@@ -609,9 +609,9 @@ quotation requires the use of {\small\verb+ty_antiq+}. For example,
 ! Term `!P:^pred. P x ==> Q x`;
 !           ^^^^
 ! Type clash: expression of type
-!   Type.hol_type
+!   hol_type
 ! cannot have type
-!   Term.term
+!   term
 
 - Term `!P:^(ty_antiq pred). P x ==> Q x`;
 > val it = `!P. P x ==> Q x` : term
@@ -1080,21 +1080,17 @@ in Chapter~\ref{logic}: \ml{SELECT\_AX}.
 > val it = () : unit
 
 - th;
-> val it =  [P x] |- P ($@ P) : Thm.thm
+> val it =  [P x] |- P ($@ P) : thm
 \end{verbatim}\end{session}\index{theorem notation, in HOL logic@theorem notation, in \HOL\ logic|)}
-\subsection{Oracles}
 
 \subsection{Oracles}
 
-Hol98 extends the LCF tradition by allowing the use of an \emph {oracle}
+Hol98 extends the \LCF\ tradition by allowing the use of an \emph {oracle}
 mechanism to allow arbitrary formulas to become elements of the
 \verb+thm+ type. By use of this mechanism, Hol98 can utilize the results
-of arbitrary proof procedures.\footnote{Some care should be taken with
-proof procedures for theories lacking a formalization in the HOL
-logic. The product of such procedures can be used in HOL without damage;
-however, in the end it won't be clear --- at least in HOL --- what has
-been proven.} In spite of such liberalness, the system can still make
-strong assertions about the security of ML objects of type \verb+thm+.
+of arbitrary proof procedures. In spite of such liberalness, the system
+can still make strong assertions about the security of ML objects of
+type \verb+thm+. 
 
 To avoid unsoundness, the system attaches a \emph{tag} to any theorem
 coming from an oracle. The system propagates this tag through every
@@ -1113,6 +1109,7 @@ Tagged theorems can be created via
 
 which directly creates the requested theorem and attaches the given tag to
 it. Tags may be created with
+
 \begin{hol}
 \index{Tag.read@\ml{Tag.read}!making tags}
 \begin{verbatim}
@@ -1137,7 +1134,7 @@ tracking the use of axioms in proofs.}
 > val it = () : unit
 
 - mk_thm([], Term `F`);;
-> val it = [oracles: MK_THM] [axioms: ] [] |- F : Thm.thm
+> val it = [oracles: MK_THM] [axioms: ] [] |- F : thm
 \end{verbatim}\end{session}\index{mk_thm@mk_thm)}
 
 There are three elements to the left of the turnstile in the fully printed
@@ -1158,6 +1155,13 @@ No serious attempt is made to prevent spoofing: a person may attach tag
 \verb+X+ on an assertion coming from tool \verb+Y+ if desired. However, the
 tags for \verb+mk_thm+ and validity checking cannot be spoofed.
 
+\noindent{\bf Remark}
+
+Some care should be taken with using oracles to bring in results of
+proof procedures for theories lacking a formalization in the \HOL\
+logic. The product of such procedures can be used in \HOL\ without damage;
+however, in the end it won't be clear --- at least in \HOL\ --- what has
+been proven.
 
 \section{Theories}\index{theories, in HOL logic@theories, in \HOL\ logic!representation of|(}
 \label{theoryfns}
@@ -1809,7 +1813,7 @@ within any given session, one would bind results to \ML\ identifiers.
 
 \index{type definitions, in HOL logic@type definitions, in \HOL\ logic!properties of bijections for|)}
 
-\subsection{Primitive ML function for accessing theories}
+\subsection{ML functions for accessing theories}
 
 \index{theories, in HOL logic@theories, in \HOL\ logic!functions for accessing|(}
 \index{axioms!retrieval of, in HOL system@retrieval of, in \HOL\ system|(}
@@ -1889,8 +1893,688 @@ which takes a theory name and then
 prints out the named theory in a readable format.\index{axioms!retrieval of, in HOL system@retrieval of, in \HOL\ system|)}\index{theories, in HOL logic@theories, in \HOL\ logic!functions for accessing|)}
 
 
-\subsection{The theory {\tt bool}}
-\label{boolthy}
+\subsection{Type abbreviations}\label{typeabbrev}\index{types, in HOL logic@types, in \HOL\ logic!abbreviation of}\index{type abbreviations!in HOL logic@in \HOL\ logic}\index{abbreviation of types, in HOL logic@abbreviation of types, in \HOL\ logic|(}
+It is possible to introduce an abbreviation for a monomorphic type using the
+function:
+
+\begin{boxed}\index{new_type_abbrev@\ml{new\_type\_abbrev}|pin}
+\begin{verbatim}
+   new_type_abbrev : (string * type) -> void
+\end{verbatim}\end{boxed}
+
+\noindent Evaluating \ml{new\_type\_abbrev(`}$name$\ml{`,":}$\sigma$\ml{")}
+enables $name$ to be used in quotations instead of $\sigma$. The evaluation
+fails
+if $\sigma$ is polymorphic. Type abbreviations
+are recorded in theory files, so that
+when a theory is loaded, any type abbreviations made are
+activated. The list of currently active abbreviations in a theory
+is given by the function:
+
+\begin{boxed}\index{type_abbrevs@\ml{type\_abbrevs}|pin}
+\begin{verbatim}
+   type_abbrevs : string -> (string * type) list
+\end{verbatim}\end{boxed}
+
+
+Note that abbreviation can also be made using antiquotation\index{antiquotation, in HOL logic terms@antiquotation, in \HOL\ logic terms}, without the
+restriction to monomorphic types. Such \ML\ abbreviations are not, of course,
+stored in theory files and so do not persist beyond a single session.
+The following session illustrates various ways of
+abbreviating types:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+*new_theory `numpair`;;
+() : void
+
+#new_type_abbrev(`numpair`, ":num*num");;
+() : void
+
+#let t1 = "x:numpair";;
+t1 = "x" : term
+
+#type_of t1;;
+":num * num" : type
+
+#":numpair" = ":num*num";;
+true : bool
+\end{verbatim}\end{session}
+
+\noindent The alternative to introducing a type abbreviation is
+to give an \ML\ name to the type, and then to use this name via antiquotation.
+Continuing the session:\index{abbreviation of types, in HOL logic@abbreviation of types, in \HOL\ logic|)}
+
+\begin{session}\begin{verbatim}
+#let ty = ":num*num";;
+ty = ":num * num" : type
+
+#let t2 = "x:^ty";;
+t2 = "x" : term
+
+#t1 = t2;;
+true : bool
+\end{verbatim}\end{session}
+
+\pagebreak[2]
+
+\noindent The type abbreviation is stored in the theory file and so
+persists across sessions. This can be seen by the result of printing
+the theory \ml{numpair}:
+
+\begin{session}\begin{verbatim}
+#print_theory`numpair`;;
+The Theory numpair
+Parents --  HOL
+Type Abbreviations --  numpair ":num * num"
+******************** numpair ********************
+
+() : void
+\end{verbatim}\end{session}
+
+\noindent If the session is then ended:
+
+\begin{session}\begin{verbatim}
+#close_theory();;
+() : void
+
+#quit();;
+\end{verbatim}\end{session}
+
+\noindent and a new session is started in which the theory \ml{numpair} is
+loaded:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#load_theory`numpair`;;
+Theory numpair loaded
+() : void
+
+#"x:numpair";;
+"x" : term
+
+#type_abbrevs `-`;;
+[(`numpair`, ":num * num")] : (string * type) list
+\end{verbatim}\end{session}
+
+\noindent then the type abbreviation persists.
+
+Type abbreviations tend to be little used in practice; the antiquotation
+method is usually sufficient.
+
+
+\subsection{Holmake --- a tool for maintaining \HOL\
+formalizations}\label{Holmake}  
+
+The purpose of \verb+Holmake+\footnote{{\tt Holmake} was first written
+  by Ken Larsen and then extended by Michael Norrish.} is to maintain
+dependencies in a Hol98 source directory. A single invocation of {\tt
+  Holmake} will compute dependencies between files, (re-)compile plain
+ML code, (re-)compile and execute theory scripts, and (re-)compile the
+resulting theory modules. {\tt Holmake} does not require the user to
+provide any dependency information,\eg, a Makefile. {\tt Holmake} can
+be very convenient to use, but there are some conventions and
+restrictions on it that must be followed, which we will describe in
+the sequel.
+
+{\tt Holmake} can be accessed through
+\begin{verbatim}
+   <hol-dir>/bin/Holmake.
+\end{verbatim}
+
+The development model that {\tt Holmake} is designed to support is that
+there are two modes of work: theory construction and system revision.
+In `theory construction' mode, the user builds up a theory by
+interacting with HOL, perhaps over many sessions. In `system rebuild'
+mode, a component that others depend on has been altered, so all modules
+dependent on it have to be brought up to date. System rebuild mode is
+simpler so we deal with it first.  
+
+\subsubsection{System Rebuild}
+
+A system rebuild happens when an existing theory has been improved in
+some way (augmented with a new theorem, a change to a definition, etc.),
+or perhaps some support ML code has been modified or added to the
+formalization under development. The user needs to find and recompile
+just those modules affected by the change. This is what an invocation of
+{\tt Holmake} does, by identifying the out-of-date modules and
+re-compiling and re-executing them.  
+
+
+\subsubsection{Theory construction}
+
+To start a theory construction, some context (semantic, and also proof
+support) is established, typically by loading parent theories and
+useful libraries. In the course of building the theory, the user keeps
+track of the ML---which, for example, establishes context, makes
+definitions, builds and invokes tactics, and saves theorems---in a
+text file. This file is used to achieve inter-session persistence of
+the theory being constructed, i.e., the text file resulting from
+session $n$ is ``\verb+use+''d to start session $n+1$; after that,
+theory construction resumes.
+
+Once the user finishes the perhaps long and arduous task of constructing
+a theory, the user should
+\begin{enumerate}
+\item make the script separately compilable;
+\item invoke {\tt Holmake}. This will (a) compile and execute the
+  script file; and (b) compile the resulting theory file. After this,
+  the theory file is available for use.
+\end{enumerate}
+
+\subsubsection{Making the script separately compilable}
+
+First, the invocation
+\begin{verbatim}
+    val _ = export_theory();
+\end{verbatim}
+should be added at the end of the file. When the script is finally
+executed, this call writes the theory to disk.
+
+Second, we address a crucial environmental issue: if a theory script
+has been constructed using\verb+ <holdir>/bin/hol+, then it has been
+developed in an environment where some commonly used structures, \eg,
+\verb+Tactic+, have already been loaded and opened for the user's
+convenience. When we wish to apply {\tt Holmake} to a script developed
+in this way, we have to take some extra steps to ensure that the
+compilation environment also provides these structures.  In the common
+case, this is simple; one must only add, at the head of the theory
+script, the following ``boilerplate'':
+\begin{verbatim}
+    open HolKernel Parse basicHol90Lib;
+    infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
+    infixr -->;
+\end{verbatim}
+This will duplicate the starting environment that one obtains with
+\verb+<holdir>/bin/hol+ and \verb+<holdir>/bin/hol.unquote+.
+
+Now the script should be separately compilable. Invoke {\tt Holmake}
+to check; MoscowML will flag any unaccounted-for identifiers it finds.
+The user has to resolve these, either by using the `dot' notation to
+locate the identifier for the compiler, or by \verb+open+ing the
+relevant module. This ``compile/resolve-identifier'' loop should
+continue until {\tt Holmake} succeeds in compiling the module.
+
+The following notes may be of some further help.
+
+\begin{enumerate}
+\item The filenames of theory scripts must follow the following
+  convention: a HOL theory script for theory ``x'' should be named
+\begin{verbatim}
+  xScript.sml.
+\end{verbatim}
+  If there is a corresponding signature (and there needn't be), it
+  should---following Moscow ML convention---be named
+  \verb+xScript.sig+. When \verb+export_theory+ is called during an
+  invocation of \verb+Holmake+, the files
+\begin{verbatim}
+    xTheory.{sig,sml}
+\end{verbatim}
+will be generated and then compiled.
+
+\item In the MoscowML batch compiler, modules are not allowed to have
+  unbound top-level expressions. Hence, something like the following
+  is not allowed:
+\begin{verbatim}
+    new_theory "ted";
+\end{verbatim}
+To make Moscow ML happy, one must instead write something like
+\begin{verbatim}
+    val _ = new_theory "ted";
+\end{verbatim}
+
+\item In the interactive system, one has to explicitly \verb+load+
+  modules; on the other hand, the batch compiler will load modules
+  automatically.  For example, in order to execute \verb+open Foo+ (or
+  refer to values in \verb+Foo+) in the interactive system, one must
+  first have executed \verb+load "Foo"+. Contrarily, the batch
+  compiler will reject files having occurrences of \verb+load+, since
+  \verb+load+ is only defined for the interactive system.
+
+\item Take care not to have the string "Theory" embedded in the name
+  of any of your files. Hol98 generates files containing this string,
+  and when it cleans up after itself, it removes such files using a
+  regular expression. This will also remove other files with names
+  containing "Theory". For example, if, in your development directory,
+  you had a file of ML code named
+\begin{verbatim}
+   MyTheory.sml
+\end{verbatim}
+  and you also were managing a Hol98 development there with {\tt
+    Holmake}, then MyTheory.sml would get deleted if {\tt Holmake
+    clean} was invoked.
+
+\item We can see that some users may not wish to use (some of) the
+  support provided by \verb+basicHol90Lib+, since it is becoming
+  dated. In that case, the same general principle set out above will
+  apply: the user must ensure that the compilation environment for a
+  theory script is the same as the interactive environment it was
+  developed in.
+
+\end{enumerate}
+
+\subsubsection{Summary}
+
+A complete theory construction is performed by the following steps:
+\begin{itemize}
+\item Construct theory script, perhaps over many sessions;
+\item Transform script into separately compilable form;
+\item Invoke {\tt Holmake} to generate the theory and compile it.
+\end{itemize}
+
+After that, the theory is usable as an ML module.
+
+\subsubsection{What {\tt Holmake} doesn't do}
+
+{\tt Holmake} only works properly on the current directory.  Holmake
+will rebuild files in the current directory if something it depends on
+from another directory is fresher than it is, but it will not do any
+analysis on files in other directories.  If one is developing a system
+over more than one directory, one should write a master Makefile (or
+shell script) that invokes {\tt Holmake} in the subsidiary
+directories, in the correct order, \ie., such that there never is an
+out-of-date dependence leading outside of the current directory. This
+should always be achievable, simply by ordering the directories in the
+order that one would have to ``\verb+use+'' files in them.
+
+\subsubsection{{\tt Holmake}'s command-line arguments}
+
+Like {\tt make}, {\tt Holmake} takes command-line arguments
+corresponding to the targets that the user desires to build.  If there
+are none, then {\tt Holmake} will attempt to build all ML modules and
+HOL theories it can detect in the current directory.  In addition,
+there are three special targets that can be used:
+\begin{description}
+\item[{\tt clean}] Removes all compiled files.
+\item [{\tt cleanDeps}] Removes all of the pre-computed dependency
+  files.  This can be an important thing to do if, for example, you
+  have introduced a new {\tt .sig} file on top of an existing {\tt
+  .sml} file.
+\item [{\tt cleanAll}] Removes all compiled files as well as all of
+  the hidden dependency information.
+\end{description}
+
+Finally, the user can directly affect the workings of \verb+Holmake+
+with the following command-line options:
+\begin{description}
+\item[\tt -I <directory>] Look in specified directory for additional
+  MoscowML object files, including other HOL theories.  This option
+  can be repeated, with multiple {\tt -I}'s to allow for multiple
+  directories to be referenced.
+\item[\tt -d <file>] Ignore the given file and don't try to build it.
+  The file may be rebuilt anyway if other files you have specified
+  depend on it.  This is useful to stop Holmake from attempting to
+  compile files that are interactive scripts (include use of {\tt
+  load} or {\tt use}, for example).
+\item[{\tt --help} or {\tt -h}] Prints out a useful option summary and
+  exits.
+\item[\tt --holdir <directory>] Associate this build with the given
+  HOL directory, rather than the one this version of {\tt Holmake} was
+  configured to use by default.
+\item[{\tt --rebuild\_deps} or {\tt -r}] Forces {\tt Holmake} to
+  always rebuild the dependency information, whether or not it thinks
+  it needs to.
+\item[{\tt --version} or {\tt -v}] Show some brief version
+  information.  As of this writing, {\tt Holmake} is at version 2.04.
+\end{description}
+
+{\tt Holmake} should never exit with the MoscowML message ``Uncaught
+exception''.  Such behaviour is a bug, please report it!
+
+
+\section{The theory {\tt min}}\label{minTheory}
+
+The theory \ml{min}\index{min, the HOL theory@\ml{min}, the \HOL\
+theory|(} contains the declarations of the constants for equality,
+implication, and choice.
+
+\section{Primitive rules of inference of the HOL Logic}
+\label{rules}
+
+\index{inference rules, of HOL logic@inference rules, of \HOL\ logic!primitive|(}
+The primitive rules of inference of the logic were described abstractly
+in Section~\ref{HOLrules}. The descriptions relied on meta-variables
+$t$, $t_1$, $t_2$, and so on.
+%In Section~\ref{avra_theorems}, a primitive inference was defined as
+%a pair $(L,(\Gamma,t))$ belonging to
+%a deductive system.
+In the \HOL\ logic, infinite families of primitive
+inferences are grouped together and thought of as single primitive inference
+schemes.\index{families of inferences, in HOL logic@families of inferences, in \HOL\ logic}  Each family contains all the concrete instances of one
+particular inference `pattern'. These can be produced, in
+abstract form, by instantiating the meta-variables in Section~\ref{HOLrules}
+to concrete terms.
+
+In \HOL, primitive inference schemes are represented
+by \ML\ functions that return theorems as values.
+That is, for particular \HOL\ terms, the \ML\ functions return
+the instance of the theorem at those terms. The \ML\ functions
+are part of the \ML\ abstract type
+ \ml{thm}\index{thm@\ml{thm}}:
+although \ml{thm} has no primitive constructors, it has (eight)
+operations which return theorems as values: \ml{ASSUME}, \ml{REFL},
+\ml{BETA\_CONV}, \ml{SUBST}, \ml{ABS}, \ml{INST\_TYPE},
+\ml{DISCH} and \ml{MP}.\index{inference schemes, in HOL logic@inference schemes, in \HOL\ logic}
+
+The \ML\ functions that implement the primitive inference schemes in the
+\HOL\ system are described below.  The same notation\index{notation!for
+specification of rules}\index{inferences, in HOL logic@inferences, in
+\HOL\ logic!notation for} is used here as in Section~\ref{HOLrules}:
+hypotheses above a horizontal line and conclusion\index{conclusions!of
+inference rules} beneath. The machine-readable {\small ASCII} notation
+is used for the logical constants.
+
+\subsection{Assumption introduction}\index{assumption introduction,
+in HOL logic@assumption introduction, in \HOL\ logic!ML function
+for@\ML\ function for} 
+
+\begin{boxed}
+\index{ASSUME@\ml{ASSUME}|pin}
+\begin{verbatim}
+   ASSUME : term -> thm
+\end{verbatim}\end{boxed}
+
+\begin{center}
+\begin{tabular}{c}
+  \\ \hline
+$t${\small\verb% |- %}$t$ \\
+\end{tabular}
+\end{center}
+
+\noindent
+{\small\verb%ASSUME %}$t${\small\verb%%} evaluates to $t${\small\verb%|- %}$t$.
+Failure if $t$ is not of type \ml{bool}.
+
+\bigskip
+
+\subsection{Reflexivity}\index{reflexivity, in HOL logic@reflexivity, in \HOL\ logic!ML function for@\ML\ function for}
+
+\begin{boxed}\index{REFL@\ml{REFL}|pin}
+\begin{verbatim}
+   REFL : term -> thm
+\end{verbatim}\end{boxed}
+
+\begin{center}
+\begin{tabular}{c}
+  \\ \hline
+{\small\verb% |- %}$t${\small\verb% = %}$t$ \\
+\end{tabular}
+\end{center}
+
+\noindent {\small\verb%REFL %}$t${\small\verb%%} evaluates to
+{\small\verb%|- %}$t${\small\verb% = %}$t$. A call to \ml{REFL} never fails.
+
+\bigskip
+
+\subsection{Beta-conversion}\index{beta-conversion, in HOL logic@beta-conversion, in \HOL\ logic!ML function for@\ML\ function for}
+
+\begin{boxed}\index{BETA_CONV@\ml{BETA\_CONV}|pin}
+\begin{verbatim}
+   BETA_CONV : term -> thm
+\end{verbatim}\end{boxed}
+
+\begin{center}
+\begin{tabular}{c}
+  \\ \hline
+{\small\verb% |- (\%}$x${\small\verb%.%}$t_1${\small\verb%)%}$t_2${\small\verb% = %}$t_1[t_2/x]$
+\end{tabular}
+\end{center}
+
+\begin{itemize}
+\item where $t_1[t_2/x]$ denotes the result of substituting $t_2$ for $x$
+in $t_1$, with suitable renaming of variables to prevent free variables
+in $t_2$ becoming bound after substitution. The substitution
+ $t_1[t_2/x]$ is always defined.
+\end{itemize}
+
+
+\noindent {\small\verb%BETA_CONV (\%}$x${\small\verb%.%}$t_1${\small\verb%)%}$t_2${\small\verb%%} evaluates to the
+theorem {\small\verb%|- (\%}$x${\small\verb%.%}$t_1${\small\verb%)%}$t_2${\small\verb% = %}$t_1[t_2/x]$.
+Failure if the argument to \ml{BETA\_CONV} is not a $\beta$-redex (\ie\ is not
+of the form {\small\verb%(\%}$x${\small\verb%.%}$t_1${\small\verb%)%}$t_2${\small\verb%%}).
+
+\bigskip
+
+\subsection{Substitution}\index{substitution rule, in HOL logic@substitution rule, in \HOL\ logic!ML function for@\ML\ function for|(}\index{SUBST@\ml{SUBST}|(}
+
+\begin{boxed}
+\begin{verbatim}
+   SUBST : (thm * term)list -> term -> thm -> thm
+\end{verbatim}\end{boxed}
+
+\begin{center}
+\begin{tabular}{c}
+$\Gamma_1${\small\verb% |- %} $t_1${\small\verb%=%}$t'_1$ {\small\verb%  %} $\cdots$ {\small\verb%  %}
+$\Gamma_n${\small\verb% |- %} $t_n${\small\verb%=%}$t'_n$ {\small\verb%  %}
+$\Gamma${\small\verb% |- %} $t[t_1,\ldots,t_n]$ \\ \hline
+$\Gamma_1 \cup \cdots
+\cup \Gamma_n \cup \Gamma${\small\verb% |- %} $t[t'_1,\ldots,t'_n]$ \\
+\end{tabular}
+\end{center}
+
+\bigskip
+
+\begin{itemize}
+\item where $t[t_1,\ldots,t_n]$ denotes a term $t$ with some free
+occurrences of the terms $t_1$, $\dots$, $t_n$ singled out and
+$t[t'_1,\ldots,t'_n]$ denotes the result of simultaneously replacing each
+such occurrences of $t_i$ by $t'_i$ (for $1{\leq}i {\leq} n$),
+with suitable renaming of variables to prevent free variables
+in $t_i'$ becoming bound after substitution.
+\end{itemize}
+
+\noindent
+The first argument to {\small\verb%SUBST%} is a list
+{\small\verb%[(|-%}$t_1${\small\verb%=%}$t'_1${\small\verb%, %}$x_1${\small\verb%);%}$\:\ldots\:${\small\verb%;(|-%}$t_n${\small\verb%=%}
+$t'_n${\small\verb%, %}$x_n${\small\verb%)]%}.  The second argument is a
+template term $t[x_1,\ldots,x_n]$ in which occurrences of the variable
+$x_i$ (where $1 \leq i\leq n$) are used to mark the places where
+substitutions with {\small\verb%|- %}$t_i${\small\verb%=%}$t'_i$ are to be
+done. Thus
+
+\bigskip
+
+{\small\verb%SUBST [(|-%}$t_1${\small\verb%=%}$t'_1${\small\verb%, %}$x_1${\small\verb%);%}$\ldots${\small\verb%;(|-%}$t_n${\small\verb%=%}
+$t'_n${\small\verb%, %}$x_n${\small\verb%)]  %}$t[x_1,\ldots,x_n]${\small\verb%  %}
+$\Gamma${\small\verb% |- %}$t[t_1,\ldots,t_n]$
+
+\bigskip
+
+\noindent returns $\Gamma${\small\verb% |- %}$t[t'_1,\ldots,t'_n]$.
+Failure if:
+\begin{myenumerate}
+\item any of the arguments are of the wrong form;
+\item the type of $x_i$ is not equal to the type of $t_i$ for some
+$1\leq i\leq n$.
+\end{myenumerate}\index{SUBST@\ml{SUBST}|)}\index{substitution rule, in HOL logic@substitution rule, in \HOL\ logic!ML function for@\ML\ function for|)}
+
+\subsection{Abstraction}\index{abstraction rule, in HOL logic@abstraction rule, in \HOL\ logic!ML function for@\ML\ function for}
+\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!inference rules for}
+
+
+\begin{boxed}\index{ABS@\ml{ABS}|pin}
+\begin{verbatim}
+   ABS : term -> thm -> thm
+\end{verbatim}\end{boxed}
+
+
+\begin{center}
+\begin{tabular}{c}
+$\Gamma${\small\verb% |- %}$t_1${\small\verb% = %}$t_2$ \\ \hline
+$\Gamma${\small\verb% |- (\%}$x${\small\verb%.%}$t_1${\small\verb%) = (\%}$x${\small\verb%.%}$t_2${\small\verb%)%} \\
+\end{tabular}
+\end{center}
+
+\begin{itemize}
+\item where $x$ is not free in $\Gamma$.
+\end{itemize}
+
+\noindent
+{\small\verb%ABS %}$x${\small\verb% %}$\Gamma${\small\verb% |- %}$t_1${\small\verb%=%}$t_2$ returns the theorem
+$\Gamma${\small\verb% |- (\%}$x${\small\verb%.%}$t_1${\small\verb%) = (\%}$x${\small\verb%.%}$t_2${\small\verb%)%}.
+Failure if $x$ is not a variable, or $x$
+ occurs free in any assumption in $\Gamma$.
+
+
+\bigskip
+
+\subsection{Type instantiation}\index{type instantiation, in HOL logic@type instantiation, in \HOL\ logic!ML function for@\ML\ function for}\index{types, in HOL logic@types, in \HOL\ logic!instantiation of}
+
+\begin{boxed}\index{INST_TYPE@\ml{INST\_TYPE}|pin}
+\begin{verbatim}
+   INST_TYPE : (type*type) list -> thm -> thm
+\end{verbatim}\end{boxed}
+
+\begin{center}
+\begin{tabular}{c}
+$\Gamma${\small\verb% |- %}$t$ \\ \hline
+$\Gamma${\small\verb% |- %}$t[\sigma_1,\ \ldots\ ,\sigma_n/\alpha_1,\ \ldots\ ,\alpha_n]$
+\end{tabular}
+\end{center}
+
+\bigskip
+
+\begin{itemize}
+\item $t[\sigma_1,\ \ldots\ ,\sigma_n/\alpha_1,\ \ldots\ ,\alpha_n]$
+denotes the result of substituting (in parallel) the types $\sigma_1$,
+$\ldots$\ , $\sigma_n$ for the type variables $\alpha_1$, $\ldots$\ ,
+$\alpha_n$ in $t$, with the restriction that none of $\alpha_1$, $\ldots$\
+, $\alpha_n$ occur in $\Gamma$.
+\end{itemize}
+
+\noindent
+{\small\verb%INST_TYPE[(%}$\sigma_1${\small\verb%,%}$\alpha_1${\small\verb%);%}$\ldots${\small\verb%;(%}$\sigma_n${\small\verb%,%}$\alpha_n${\small\verb%)] %}$th$
+returns the result of instantiating each occurrence of $\alpha_i$ in the
+theorem $th$ to $\sigma_i$ (for $1 \leq i \leq n$). Failure if:
+\begin{myenumerate}
+\item arguments of the wrong form (\eg\ an $\alpha_i$ is not a type variable);
+\item $\alpha_i$
+(for $1\leq i\leq n$) occurs in any assumption in $\Gamma$.
+\end{myenumerate}
+
+\bigskip
+
+\subsection{Discharging an assumption}\index{discharging assumptions, in HOL logic@discharging assumptions, in \HOL\ logic!ML function for@\ML\ function for}
+
+
+\begin{boxed}\index{DISCH@\ml{DISCH}|pin}
+\begin{verbatim}
+   DISCH : term -> thm -> thm
+\end{verbatim}\end{boxed}
+
+\begin{center}
+\begin{tabular}{c}
+$\Gamma${\small\verb% |- %} $t_2$ \\ \hline
+$\Gamma{-}\{t_1\}${\small\verb% |- %} $t_1${\small\verb% ==> %}$t_2$
+\end{tabular}
+\end{center}
+
+\begin{itemize}
+\item  $\Gamma{-}\{t_1\}$ denotes the set obtained by removing $t_1$
+from $\Gamma$ (note that $t_1$ need not occur in $\Gamma$; in this case
+$\Gamma{-}\{t_1\} = \Gamma$).
+\end{itemize}
+
+\noindent
+{\small\verb%DISCH %}$t_1${\small\verb% %}$\Gamma${\small\verb% |- %}$t_2$
+evaluates to the theorem
+$\Gamma{-}\{t_1\}${\small\verb% |- %}$t_1${\small\verb% ==> %}$t_2$.
+\ml{DISCH} fails if the term given as its first argument is not of
+type \ml{bool}.
+
+
+
+\bigskip
+
+\subsection{Modus Ponens}\index{Modus Ponens, in HOL logic@Modus Ponens, in \HOL\ logic!ML function for@\ML\ function for}
+
+
+\begin{boxed}\index{MP@\ml{MP}|pin}
+\begin{verbatim}
+   MP : thm -> thm -> thm
+\end{verbatim}\end{boxed}
+
+\begin{center}
+\begin{tabular}{c}
+$\Gamma_1${\small\verb% |- %}$t_1${\small\verb% ==> %}$t_2$ {\small\verb%     %} $\Gamma_2${\small\verb% |- %}$t_1$ \\
+\hline
+$\Gamma_1 \cup \Gamma_2${\small\verb% |- %}$t_2$ \\
+\end{tabular}
+\end{center}
+
+\noindent
+{\small\verb%MP%} takes two theorems (in the order shown above) and returns
+the result of applying Modus Ponens; it fails if the arguments are not of the
+right form.
+\index{inference rules, of HOL logic@inference rules, of \HOL\ logic!primitive|)}
+
+\section{The theory {\tt bool}}\label{boolfull}
+
+The theory \ml{bool}\index{bool, the HOL theory@\ml{bool}, the \HOL\ theory|(} has already been partly described in
+Section~\ref{boolthy}.
+It contains the definitions of several sorts of constants:
+
+\begin{myenumerate}
+
+
+\item logical constants:\index{primitive constants, of HOL logic@primitive constants, of \HOL\ logic}\index{truth values, in HOL logic@truth values, in \HOL\ logic}\index{logical constants, in HOL logic@logical constants, in \HOL\ logic}\index{ implication, in HOL logic@{\small\verb+==>+} (implication, in \HOL\ logic)}\index{conjunction, in HOL logic@conjunction, in \HOL\ logic}\index{disjunction, in HOL logic@disjunction, in \HOL\ logic}%
+\index{constants, in HOL logic@constants, in \HOL\ logic!logical}\index{ universal quantifier, in HOL logic@{\small\verb+"!+} (universal quantifier, in \HOL\ logic)}%
+\index{ existential quantifier, in HOL logic@{\small\verb+?+} (existential quantifier, in \HOL\ logic)}%
+\index{ conjunction, in HOL logic@{\small\verb+/\+} (conjunction, in \HOL\ logic)}%
+\index{ disjunction, in HOL logic@{\small\verb+\/+} (disjunction, in \HOL\ logic)}%
+\index{F@\ml{F}}\index{T@\ml{T}}%
+\index{existential quantifier, in HOL logic@existential quantifier, in \HOL\ logic}%
+\index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic}
+\index{ negation, in HOL logic@{\small\verb+~+} (negation, in \HOL\ logic)}
+\index{ exists unique, in HOL logic@{\small\verb+?"!+} (exists unique, in \HOL\ logic)}%
+\index{ choice function, in HOL logic@{\small\verb+"@+} (choice function, in \HOL\ logic)}%
+\index{choice operator, in HOL logic@choice operator, in \HOL\ logic}%
+\index{equality, in HOL logic@equality, in \HOL\ logic}%
+\index{iff, in HOL logic@iff, in \HOL\ logic}%
+\index{implication, in HOL logic@implication, in \HOL\ logic}%
+\index{one-to-one predicate, in HOL logic@one-to-one predicate, in \HOL\ logic!in bool theory@in \ml{bool} theory}%
+\index{onto predicate, in HOL logic@onto predicate, in \HOL\ logic!in bool theory@in \ml{bool} theory} \ml{T}, \ml{F}, {\small\verb!~!},
+{\small\verb%/\%}, {\small\verb%\/%}, \ml{==>},
+\ml{=}, \ml{!}, \ml{?}, \ml{?!} and \ml{@}.
+
+\item system constants\index{constants, in HOL logic@constants, in \HOL\ logic!system}, which are used in coding \HOL\ theories as
+\LCF\index{LCF@\LCF}\ theories. These constants are \ml{HOL\_DEFINITION}\index{HOL_DEFINITION@\ml{HOL\_DEFINITION}} and
+\ml{BINDERS}\index{BINDERS@\ml{BINDERS}}. They have no logical significance
+and are part of the internal workings of the \HOL\ system.
+
+
+\item miscellaneous constants\index{constants, in HOL logic@constants, in \HOL\ logic!abbreviational}%
+\index{COND@\ml{COND}}%
+\index{FCOND@\ml{FCOND}}%
+\index{LET@\ml{LET}}%
+\index{CURRY@\ml{CURRY}}%
+\index{UNCURRY@\ml{UNCURRY}}%
+\index{RES_FORALL@\ml{RES\_FORALL}}%
+\index{RES_EXISTS@\ml{RES\_EXISTS}}%
+\index{RES_SELECT@\ml{RES\_SELECT}}%
+\index{RES_ABSTRACT@\ml{RES\_ABSTRACT}}%
+\index{ARB@\ml{ARB}}, which support various special syntactic forms:
+\ml{COND} (for conditionals, see Section~\ref{conditionals});
+\ml{LET} (for \ml{let}-terms\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL\ logic!constant for}, see Section~\ref{let-exp});
+\ml{CURRY} and \ml{UNCURRY} (for paired abstractions,
+see Section~\ref{HOL-varstruct}); and
+\ml{RES\_FORALL},
+\ml{RES\_EXISTS},
+\ml{RES\_SELECT},
+\ml{RES\_ABSTRACT}
+and \ml{ARB} (for restricted quantification,
+see Section~\ref{res-quant}).
+
+\item the constant \ml{TYPE\_DEFINITION}\index{TYPE_DEFINITION@\ml{TYPE\_DEFINITION}}, which is used by the type definition mechanism\index{constants, in HOL logic@constants, in \HOL\ logic!for type definitions} (see Section~\ref{type-defs}).
+
+\item constants associated with pairs:\index{constants, in HOL logic@constants, in \HOL\ logic!for pairs}
+\index{MK_PAIR@\ml{MK\_PAIR}}
+\index{IS_PAIR@\ml{IS\_PAIR}}
+ \ml{,} (\ie\ the comma symbol),
+\ml{MK\_PAIR}, \ml{IS\_PAIR}, \ml{REP\_prod}, \ml{FST} and \ml{SND}
+(see Section~\ref{prod} below).
+\end{myenumerate}
+
 
 \index{axioms!primitive, of HOL logic@primitive, of \HOL\ logic|(}
 At start-up,  the  initial  theory  for  users  of  the \HOL\  system is called
@@ -2085,3194 +2769,3 @@ The Axiom of Infinity\index{axioms!in ind theory@in \ml{ind} theory} is
 This asserts that there exists a one-to-one map from {\small\verb%ind%} to
 itself that is not onto. This implies that the type {\small\verb%ind%}
 denotes an infinite set.\index{axioms!primitive, of HOL logic@primitive, of \HOL\ logic|)}
-
-\noindent For further discussion of the
-theory \ml{bool} see Section~\ref{boolfull}.
-
-\subsection{Primitive rules of inference of the HOL Logic}
-\label{rules}
-
-\index{inference rules, of HOL logic@inference rules, of \HOL\ logic!primitive|(}
-The primitive rules of inference of the logic were described abstractly
-in Section~\ref{HOLrules}. The descriptions relied on meta-variables
-$t$, $t_1$, $t_2$, and so on.
-%In Section~\ref{avra_theorems}, a primitive inference was defined as
-%a pair $(L,(\Gamma,t))$ belonging to
-%a deductive system.
-In the \HOL\ logic, infinite families of primitive
-inferences are grouped together and thought of as single primitive inference
-schemes.\index{families of inferences, in HOL logic@families of inferences, in \HOL\ logic}  Each family contains all the concrete instances of one
-particular inference `pattern'. These can be produced, in
-abstract form, by instantiating the meta-variables in Section~\ref{HOLrules}
-to concrete terms.
-
-In \HOL, primitive inference schemes are represented
-by \ML\ functions that return theorems as values.
-That is, for particular \HOL\ terms, the \ML\ functions return
-the instance of the theorem at those terms. The \ML\ functions
-are part of the \ML\ abstract type
- \ml{thm}\index{thm@\ml{thm}}:
-although \ml{thm} has no primitive constructors, it has (eight)
-operations which return theorems as values: \ml{ASSUME}, \ml{REFL},
-\ml{BETA\_CONV}, \ml{SUBST}, \ml{ABS}, \ml{INST\_TYPE},
-\ml{DISCH} and \ml{MP}.\index{inference schemes, in HOL logic@inference schemes, in \HOL\ logic}
-
-The \ML\ functions that implement the primitive inference
-schemes in the \HOL\
-system are  described  below.
-The same notation\index{notation!for specification of rules}\index{inferences, in HOL logic@inferences, in \HOL\ logic!notation for}
- is used here as in Section~\ref{HOLrules}:
-hypotheses above a horizontal line and conclusion\index{conclusions!of inference rules} beneath.
-The  machine-readable  {\small ASCII}
-notation is used for the logical constants.
-
-\subsubsection{Assumption introduction}\index{assumption introduction, in HOL logic@assumption introduction, in \HOL\ logic!ML function for@\ML\ function for}
-
-\begin{boxed}
-\index{ASSUME@\ml{ASSUME}|pin}
-\begin{verbatim}
-   ASSUME : term -> thm
-\end{verbatim}\end{boxed}
-
-\begin{center}
-\begin{tabular}{c}
-  \\ \hline
-$t${\small\verb% |- %}$t$ \\
-\end{tabular}
-\end{center}
-
-\noindent
-{\small\verb%ASSUME %}$t${\small\verb%%} evaluates to $t${\small\verb%|- %}$t$.
-Failure if $t$ is not of type \ml{bool}.
-
-\bigskip
-
-\subsubsection{Reflexivity}\index{reflexivity, in HOL logic@reflexivity, in \HOL\ logic!ML function for@\ML\ function for}
-
-\begin{boxed}\index{REFL@\ml{REFL}|pin}
-\begin{verbatim}
-   REFL : term -> thm
-\end{verbatim}\end{boxed}
-
-\begin{center}
-\begin{tabular}{c}
-  \\ \hline
-{\small\verb% |- %}$t${\small\verb% = %}$t$ \\
-\end{tabular}
-\end{center}
-
-\noindent {\small\verb%REFL %}$t${\small\verb%%} evaluates to
-{\small\verb%|- %}$t${\small\verb% = %}$t$. A call to \ml{REFL} never fails.
-
-\bigskip
-
-\subsubsection{Beta-conversion}\index{beta-conversion, in HOL logic@beta-conversion, in \HOL\ logic!ML function for@\ML\ function for}
-
-\begin{boxed}\index{BETA_CONV@\ml{BETA\_CONV}|pin}
-\begin{verbatim}
-   BETA_CONV : term -> thm
-\end{verbatim}\end{boxed}
-
-\begin{center}
-\begin{tabular}{c}
-  \\ \hline
-{\small\verb% |- (\%}$x${\small\verb%.%}$t_1${\small\verb%)%}$t_2${\small\verb% = %}$t_1[t_2/x]$
-\end{tabular}
-\end{center}
-
-\begin{itemize}
-\item where $t_1[t_2/x]$ denotes the result of substituting $t_2$ for $x$
-in $t_1$, with suitable renaming of variables to prevent free variables
-in $t_2$ becoming bound after substitution. The substitution
- $t_1[t_2/x]$ is always defined.
-\end{itemize}
-
-
-\noindent {\small\verb%BETA_CONV (\%}$x${\small\verb%.%}$t_1${\small\verb%)%}$t_2${\small\verb%%} evaluates to the
-theorem {\small\verb%|- (\%}$x${\small\verb%.%}$t_1${\small\verb%)%}$t_2${\small\verb% = %}$t_1[t_2/x]$.
-Failure if the argument to \ml{BETA\_CONV} is not a $\beta$-redex (\ie\ is not
-of the form {\small\verb%(\%}$x${\small\verb%.%}$t_1${\small\verb%)%}$t_2${\small\verb%%}).
-
-\bigskip
-
-\subsubsection{Substitution}\index{substitution rule, in HOL logic@substitution rule, in \HOL\ logic!ML function for@\ML\ function for|(}\index{SUBST@\ml{SUBST}|(}
-
-\begin{boxed}
-\begin{verbatim}
-   SUBST : (thm * term)list -> term -> thm -> thm
-\end{verbatim}\end{boxed}
-
-\begin{center}
-\begin{tabular}{c}
-$\Gamma_1${\small\verb% |- %} $t_1${\small\verb%=%}$t'_1$ {\small\verb%  %} $\cdots$ {\small\verb%  %}
-$\Gamma_n${\small\verb% |- %} $t_n${\small\verb%=%}$t'_n$ {\small\verb%  %}
-$\Gamma${\small\verb% |- %} $t[t_1,\ldots,t_n]$ \\ \hline
-$\Gamma_1 \cup \cdots
-\cup \Gamma_n \cup \Gamma${\small\verb% |- %} $t[t'_1,\ldots,t'_n]$ \\
-\end{tabular}
-\end{center}
-
-\bigskip
-
-\begin{itemize}
-\item where $t[t_1,\ldots,t_n]$ denotes a term $t$ with some free
-occurrences of the terms $t_1$, $\dots$, $t_n$ singled out and
-$t[t'_1,\ldots,t'_n]$ denotes the result of simultaneously replacing each
-such occurrences of $t_i$ by $t'_i$ (for $1{\leq}i {\leq} n$),
-with suitable renaming of variables to prevent free variables
-in $t_i'$ becoming bound after substitution.
-\end{itemize}
-
-\noindent
-The first argument to {\small\verb%SUBST%} is a list
-{\small\verb%[(|-%}$t_1${\small\verb%=%}$t'_1${\small\verb%, %}$x_1${\small\verb%);%}$\:\ldots\:${\small\verb%;(|-%}$t_n${\small\verb%=%}
-$t'_n${\small\verb%, %}$x_n${\small\verb%)]%}.  The second argument is a
-template term $t[x_1,\ldots,x_n]$ in which occurrences of the variable
-$x_i$ (where $1 \leq i\leq n$) are used to mark the places where
-substitutions with {\small\verb%|- %}$t_i${\small\verb%=%}$t'_i$ are to be
-done. Thus
-
-\bigskip
-
-{\small\verb%SUBST [(|-%}$t_1${\small\verb%=%}$t'_1${\small\verb%, %}$x_1${\small\verb%);%}$\ldots${\small\verb%;(|-%}$t_n${\small\verb%=%}
-$t'_n${\small\verb%, %}$x_n${\small\verb%)]  %}$t[x_1,\ldots,x_n]${\small\verb%  %}
-$\Gamma${\small\verb% |- %}$t[t_1,\ldots,t_n]$
-
-\bigskip
-
-\noindent returns $\Gamma${\small\verb% |- %}$t[t'_1,\ldots,t'_n]$.
-Failure if:
-\begin{myenumerate}
-\item any of the arguments are of the wrong form;
-\item the type of $x_i$ is not equal to the type of $t_i$ for some
-$1\leq i\leq n$.
-\end{myenumerate}\index{SUBST@\ml{SUBST}|)}\index{substitution rule, in HOL logic@substitution rule, in \HOL\ logic!ML function for@\ML\ function for|)}
-
-\subsubsection{Abstraction}\index{abstraction rule, in HOL logic@abstraction rule, in \HOL\ logic!ML function for@\ML\ function for}
-\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!inference rules for}
-
-
-\begin{boxed}\index{ABS@\ml{ABS}|pin}
-\begin{verbatim}
-   ABS : term -> thm -> thm
-\end{verbatim}\end{boxed}
-
-
-\begin{center}
-\begin{tabular}{c}
-$\Gamma${\small\verb% |- %}$t_1${\small\verb% = %}$t_2$ \\ \hline
-$\Gamma${\small\verb% |- (\%}$x${\small\verb%.%}$t_1${\small\verb%) = (\%}$x${\small\verb%.%}$t_2${\small\verb%)%} \\
-\end{tabular}
-\end{center}
-
-\begin{itemize}
-\item where $x$ is not free in $\Gamma$.
-\end{itemize}
-
-\noindent
-{\small\verb%ABS %}$x${\small\verb% %}$\Gamma${\small\verb% |- %}$t_1${\small\verb%=%}$t_2$ returns the theorem
-$\Gamma${\small\verb% |- (\%}$x${\small\verb%.%}$t_1${\small\verb%) = (\%}$x${\small\verb%.%}$t_2${\small\verb%)%}.
-Failure if $x$ is not a variable, or $x$
- occurs free in any assumption in $\Gamma$.
-
-
-\bigskip
-
-\subsubsection{Type instantiation}\index{type instantiation, in HOL logic@type instantiation, in \HOL\ logic!ML function for@\ML\ function for}\index{types, in HOL logic@types, in \HOL\ logic!instantiation of}
-
-\begin{boxed}\index{INST_TYPE@\ml{INST\_TYPE}|pin}
-\begin{verbatim}
-   INST_TYPE : (type*type) list -> thm -> thm
-\end{verbatim}\end{boxed}
-
-\begin{center}
-\begin{tabular}{c}
-$\Gamma${\small\verb% |- %}$t$ \\ \hline
-$\Gamma${\small\verb% |- %}$t[\sigma_1,\ \ldots\ ,\sigma_n/\alpha_1,\ \ldots\ ,\alpha_n]$
-\end{tabular}
-\end{center}
-
-\bigskip
-
-\begin{itemize}
-\item $t[\sigma_1,\ \ldots\ ,\sigma_n/\alpha_1,\ \ldots\ ,\alpha_n]$
-denotes the result of substituting (in parallel) the types $\sigma_1$,
-$\ldots$\ , $\sigma_n$ for the type variables $\alpha_1$, $\ldots$\ ,
-$\alpha_n$ in $t$, with the restriction that none of $\alpha_1$, $\ldots$\
-, $\alpha_n$ occur in $\Gamma$.
-\end{itemize}
-
-\noindent
-{\small\verb%INST_TYPE[(%}$\sigma_1${\small\verb%,%}$\alpha_1${\small\verb%);%}$\ldots${\small\verb%;(%}$\sigma_n${\small\verb%,%}$\alpha_n${\small\verb%)] %}$th$
-returns the result of instantiating each occurrence of $\alpha_i$ in the
-theorem $th$ to $\sigma_i$ (for $1 \leq i \leq n$). Failure if:
-\begin{myenumerate}
-\item arguments of the wrong form (\eg\ an $\alpha_i$ is not a type variable);
-\item $\alpha_i$
-(for $1\leq i\leq n$) occurs in any assumption in $\Gamma$.
-\end{myenumerate}
-
-\bigskip
-
-\subsubsection{Discharging an assumption}\index{discharging assumptions, in HOL logic@discharging assumptions, in \HOL\ logic!ML function for@\ML\ function for}
-
-
-\begin{boxed}\index{DISCH@\ml{DISCH}|pin}
-\begin{verbatim}
-   DISCH : term -> thm -> thm
-\end{verbatim}\end{boxed}
-
-\begin{center}
-\begin{tabular}{c}
-$\Gamma${\small\verb% |- %} $t_2$ \\ \hline
-$\Gamma{-}\{t_1\}${\small\verb% |- %} $t_1${\small\verb% ==> %}$t_2$
-\end{tabular}
-\end{center}
-
-\begin{itemize}
-\item  $\Gamma{-}\{t_1\}$ denotes the set obtained by removing $t_1$
-from $\Gamma$ (note that $t_1$ need not occur in $\Gamma$; in this case
-$\Gamma{-}\{t_1\} = \Gamma$).
-\end{itemize}
-
-\noindent
-{\small\verb%DISCH %}$t_1${\small\verb% %}$\Gamma${\small\verb% |- %}$t_2$
-evaluates to the theorem
-$\Gamma{-}\{t_1\}${\small\verb% |- %}$t_1${\small\verb% ==> %}$t_2$.
-\ml{DISCH} fails if the term given as its first argument is not of
-type \ml{bool}.
-
-
-
-\bigskip
-
-\subsubsection{Modus Ponens}\index{Modus Ponens, in HOL logic@Modus Ponens, in \HOL\ logic!ML function for@\ML\ function for}
-
-
-\begin{boxed}\index{MP@\ml{MP}|pin}
-\begin{verbatim}
-   MP : thm -> thm -> thm
-\end{verbatim}\end{boxed}
-
-\begin{center}
-\begin{tabular}{c}
-$\Gamma_1${\small\verb% |- %}$t_1${\small\verb% ==> %}$t_2$ {\small\verb%     %} $\Gamma_2${\small\verb% |- %}$t_1$ \\
-\hline
-$\Gamma_1 \cup \Gamma_2${\small\verb% |- %}$t_2$ \\
-\end{tabular}
-\end{center}
-
-\noindent
-{\small\verb%MP%} takes two theorems (in the order shown above) and returns
-the result of applying Modus Ponens; it fails if the arguments are not of the
-right form.
-\index{inference rules, of HOL logic@inference rules, of \HOL\ logic!primitive|)}
-
-\subsection{Type abbreviations}\label{typeabbrev}\index{types, in HOL logic@types, in \HOL\ logic!abbreviation of}\index{type abbreviations!in HOL logic@in \HOL\ logic}\index{abbreviation of types, in HOL logic@abbreviation of types, in \HOL\ logic|(}
-It is possible to introduce an abbreviation for a monomorphic type using the
-function:
-
-\begin{boxed}\index{new_type_abbrev@\ml{new\_type\_abbrev}|pin}
-\begin{verbatim}
-   new_type_abbrev : (string * type) -> void
-\end{verbatim}\end{boxed}
-
-\noindent Evaluating \ml{new\_type\_abbrev(`}$name$\ml{`,":}$\sigma$\ml{")}
-enables $name$ to be used in quotations instead of $\sigma$. The evaluation
-fails
-if $\sigma$ is polymorphic. Type abbreviations
-are recorded in theory files, so that
-when a theory is loaded, any type abbreviations made are
-activated. The list of currently active abbreviations in a theory
-is given by the function:
-
-\begin{boxed}\index{type_abbrevs@\ml{type\_abbrevs}|pin}
-\begin{verbatim}
-   type_abbrevs : string -> (string * type) list
-\end{verbatim}\end{boxed}
-
-
-Note that abbreviation can also be made using antiquotation\index{antiquotation, in HOL logic terms@antiquotation, in \HOL\ logic terms}, without the
-restriction to monomorphic types. Such \ML\ abbreviations are not, of course,
-stored in theory files and so do not persist beyond a single session.
-The following session illustrates various ways of
-abbreviating types:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-*new_theory `numpair`;;
-() : void
-
-#new_type_abbrev(`numpair`, ":num*num");;
-() : void
-
-#let t1 = "x:numpair";;
-t1 = "x" : term
-
-#type_of t1;;
-":num * num" : type
-
-#":numpair" = ":num*num";;
-true : bool
-\end{verbatim}\end{session}
-
-\noindent The alternative to introducing a type abbreviation is
-to give an \ML\ name to the type, and then to use this name via antiquotation.
-Continuing the session:\index{abbreviation of types, in HOL logic@abbreviation of types, in \HOL\ logic|)}
-
-\begin{session}\begin{verbatim}
-#let ty = ":num*num";;
-ty = ":num * num" : type
-
-#let t2 = "x:^ty";;
-t2 = "x" : term
-
-#t1 = t2;;
-true : bool
-\end{verbatim}\end{session}
-
-\pagebreak[2]
-
-\noindent The type abbreviation is stored in the theory file and so
-persists across sessions. This can be seen by the result of printing
-the theory \ml{numpair}:
-
-\begin{session}\begin{verbatim}
-#print_theory`numpair`;;
-The Theory numpair
-Parents --  HOL
-Type Abbreviations --  numpair ":num * num"
-******************** numpair ********************
-
-() : void
-\end{verbatim}\end{session}
-
-\noindent If the session is then ended:
-
-\begin{session}\begin{verbatim}
-#close_theory();;
-() : void
-
-#quit();;
-\end{verbatim}\end{session}
-
-\noindent and a new session is started in which the theory \ml{numpair} is
-loaded:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#load_theory`numpair`;;
-Theory numpair loaded
-() : void
-
-#"x:numpair";;
-"x" : term
-
-#type_abbrevs `-`;;
-[(`numpair`, ":num * num")] : (string * type) list
-\end{verbatim}\end{session}
-
-\noindent then the type abbreviation persists.
-
-Type abbreviations tend to be little used in practice; the antiquotation
-method is usually sufficient.
-
-\section{Standard theories}
-
-\index{theories, in HOL logic@theories, in \HOL\ logic!hierarchies of}
-The collection of theories distributed with the \HOL\ system
-\index{ancestry, of HOL system theories@ancestry, of \HOL\ system
-theories}
-is:
-The theories listed in Table \ref{nativeTheories} come
-pre-built in the system (we have omitted a few of the less commonly used
-ones).
-\begin{table}
-\begin{center}
-\begin{tabular}{|r|l|} \hline
-minTheory & the origin theory \\
-boolTheory & definitions of logical operators and basic axioms \\
-pairTheory & basic theory of pairs \\
-numTheory & Peano's axioms derived from the axiom of infinity \\
-prim\_recTheory, & the primitive recursion theorem \\
-arithmeticTheory & Peano arithmetic development \\
-integerTheory & integers, by John Harrison \\
-TCTheory & transitive closure of a relation \\
-primWFTheory & wellfounded relations, plus WF induction and recursion \\
-WFTheory & instances of wellfoundedness at various types \\
-setTheory & sets as a separate type (includes finite sets) \\
-pred\_setTheory & sets as predicates (includes finite sets) \\
-bagTheory & bags (also known as \emph{multi-sets})\\
-listTheory & lists  \\
-rich\_listTheory & extended theory of lists \\
-optionTheory & the ``option'' type \\
-finite\_mapTheory & finite maps from $\alpha$ to $\beta$ \\
-ltreeTheory & polymorphic finitely branching trees \\
-combinTheory & combinators \\
-sumTheory & disjoint sums \\
-restr\_binderTheory & definitions of binder restrictions \\
-res\_quanTheory & restricted quantifier support \\
-asciiTheory & ascii \\
-stringTheory & strings \\
-wordTheory & ({\it plus others}) theory of bitstrings \\
-realTheory & ({\it plus others}) real numbers and analysis \\
-HOLTheory & equivalent to HOL theory from hol88/90\\  \hline
-\end{tabular}
-\caption{Native Theories}\label{nativeTheories}
-\end{center}
-\end{table}
-
-% \begin{center}\index{BASIC-HOL@\ml{BASIC-HOL}}\index{bool, the HOL
-% theory@\ml{bool}, the \HOL\ theory}\index{ind, the theory@\ml{ind},
-% the theory}
-
-\begin{figure}
-\centerline{\psfig{figure=hol98.pic}}
-\caption{System dependencies}
-\end{figure}
-
-\noindent In the rest of this section, each of these theories is briefly
-described.  A complete list of all the definitions and theorems in each
-theory is not given here; the sections that follow provide only an
-overview of the contents of each theory.  For a complete list of all the
-built-in axioms, definitions and theorems in \HOL, see \REFERENCE.
-
-\subsection{The theory {\tt min}}\label{minTheory}
-
-The theory \ml{min}\index{bool, the HOL theory@\ml{bool}, the \HOL\ theory|(} has already been partly described in
-Section~\ref{boolthy}.
-It contains the declarations of the constants for equality, implication,
-and choice.
-
-\subsection{The theory {\tt bool}}\label{boolfull}
-
-The theory \ml{bool}\index{bool, the HOL theory@\ml{bool}, the \HOL\ theory|(} has already been partly described in
-Section~\ref{boolthy}.
-It contains the definitions of several sorts of constants:
-
-\begin{myenumerate}
-
-
-\item logical constants:\index{primitive constants, of HOL logic@primitive constants, of \HOL\ logic}\index{truth values, in HOL logic@truth values, in \HOL\ logic}\index{logical constants, in HOL logic@logical constants, in \HOL\ logic}\index{ implication, in HOL logic@{\small\verb+==>+} (implication, in \HOL\ logic)}\index{conjunction, in HOL logic@conjunction, in \HOL\ logic}\index{disjunction, in HOL logic@disjunction, in \HOL\ logic}%
-\index{constants, in HOL logic@constants, in \HOL\ logic!logical}\index{ universal quantifier, in HOL logic@{\small\verb+"!+} (universal quantifier, in \HOL\ logic)}%
-\index{ existential quantifier, in HOL logic@{\small\verb+?+} (existential quantifier, in \HOL\ logic)}%
-\index{ conjunction, in HOL logic@{\small\verb+/\+} (conjunction, in \HOL\ logic)}%
-\index{ disjunction, in HOL logic@{\small\verb+\/+} (disjunction, in \HOL\ logic)}%
-\index{F@\ml{F}}\index{T@\ml{T}}%
-\index{existential quantifier, in HOL logic@existential quantifier, in \HOL\ logic}%
-\index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic}
-\index{ negation, in HOL logic@{\small\verb+~+} (negation, in \HOL\ logic)}
-\index{ exists unique, in HOL logic@{\small\verb+?"!+} (exists unique, in \HOL\ logic)}%
-\index{ choice function, in HOL logic@{\small\verb+"@+} (choice function, in \HOL\ logic)}%
-\index{choice operator, in HOL logic@choice operator, in \HOL\ logic}%
-\index{equality, in HOL logic@equality, in \HOL\ logic}%
-\index{iff, in HOL logic@iff, in \HOL\ logic}%
-\index{implication, in HOL logic@implication, in \HOL\ logic}%
-\index{one-to-one predicate, in HOL logic@one-to-one predicate, in \HOL\ logic!in bool theory@in \ml{bool} theory}%
-\index{onto predicate, in HOL logic@onto predicate, in \HOL\ logic!in bool theory@in \ml{bool} theory} \ml{T}, \ml{F}, {\small\verb!~!},
-{\small\verb%/\%}, {\small\verb%\/%}, \ml{==>},
-\ml{=}, \ml{!}, \ml{?}, \ml{?!} and \ml{@}.
-
-\item system constants\index{constants, in HOL logic@constants, in \HOL\ logic!system}, which are used in coding \HOL\ theories as
-\LCF\index{LCF@\LCF}\ theories. These constants are \ml{HOL\_DEFINITION}\index{HOL_DEFINITION@\ml{HOL\_DEFINITION}} and
-\ml{BINDERS}\index{BINDERS@\ml{BINDERS}}. They have no logical significance
-and are part of the internal workings of the \HOL\ system.
-
-
-\item miscellaneous constants\index{constants, in HOL logic@constants, in \HOL\ logic!abbreviational}%
-\index{COND@\ml{COND}}%
-\index{FCOND@\ml{FCOND}}%
-\index{LET@\ml{LET}}%
-\index{CURRY@\ml{CURRY}}%
-\index{UNCURRY@\ml{UNCURRY}}%
-\index{RES_FORALL@\ml{RES\_FORALL}}%
-\index{RES_EXISTS@\ml{RES\_EXISTS}}%
-\index{RES_SELECT@\ml{RES\_SELECT}}%
-\index{RES_ABSTRACT@\ml{RES\_ABSTRACT}}%
-\index{ARB@\ml{ARB}}, which support various special syntactic forms:
-\ml{COND} (for conditionals, see Section~\ref{conditionals});
-\ml{LET} (for \ml{let}-terms\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL\ logic!constant for}, see Section~\ref{let-exp});
-\ml{CURRY} and \ml{UNCURRY} (for paired abstractions,
-see Section~\ref{HOL-varstruct}); and
-\ml{RES\_FORALL},
-\ml{RES\_EXISTS},
-\ml{RES\_SELECT},
-\ml{RES\_ABSTRACT}
-and \ml{ARB} (for restricted quantification,
-see Section~\ref{res-quant}).
-
-\item the constant \ml{TYPE\_DEFINITION}\index{TYPE_DEFINITION@\ml{TYPE\_DEFINITION}}, which is used by the type definition mechanism\index{constants, in HOL logic@constants, in \HOL\ logic!for type definitions} (see Section~\ref{type-defs}).
-
-\item constants associated with pairs:\index{constants, in HOL logic@constants, in \HOL\ logic!for pairs}
-\index{MK_PAIR@\ml{MK\_PAIR}}
-\index{IS_PAIR@\ml{IS\_PAIR}}
- \ml{,} (\ie\ the comma symbol),
-\ml{MK\_PAIR}, \ml{IS\_PAIR}, \ml{REP\_prod}, \ml{FST} and \ml{SND}
-(see Section~\ref{prod} below).
-\end{myenumerate}
-
-\subsection{Pairs and the type {\tt prod}}\label{prod}
-
-\index{representing types, in HOL logic@representing types, in \HOL\ logic!pair example of|(}
-\index{pairs, in HOL logic@pairs, in \HOL\ logic|(}
-\index{product types!in HOL logic@in \HOL\ logic|(}
-The Cartesian  product  type  operator\index{type operators, in HOL logic@type operators, in \HOL\ logic!for pairs}  \ml{prod}\index{prod@\ml{prod}} is  defined  in  the  theory \ml{bool}, although logically it should really  be in  a separate  theory.  The
-reason for its  definition early  on is that certain  syntactic forms (\eg\
-paired abstractions) presuppose pairs.
-
-Values of type
-{\small\verb%(%}$\sigma_1${\small\verb%,%}$\sigma_2${\small\verb%)prod%} are
-ordered pairs  whose  first  component  has  type  $\sigma_1$  and whose second
-component has type $\sigma_2$.  The \HOL\ parser\index{parsing, of HOL logic@parsing, of \HOL\ logic!of pairs}
-converts
-type expressions of the
-form \ml{":}$\sigma_1${\small\verb%#%}$\sigma_2$\ml{"}\index{ product type operator, in HOL logic@{\small\verb+#+} (product
-type operator, in \HOL\ logic)} into
-\ml{(}$\sigma_1$\ml{,}$\sigma_2$\ml{)prod}\index{ pair constructor, in HOL
-logic@\ml{,} (pair constructor, in \HOL\ logic)}, and   the   printer
-inverts  this transformation. Pairs\index{pairing constructor, in HOL
-logic@pairing constructor, in \HOL\ logic} are constructed with an infixed
-comma symbol
-
-
-\begin{hol}\begin{verbatim}
-   $, : 'a -> 'b -> 'a # 'b
-\end{verbatim}\end{hol}
-
-\noindent so, for example, if $t_1$ and $t_2$ have types $\sigma_1$ and
-$\sigma_2$
-respectively, then \ml{"}$t_1$\ml{,}$t_2$\ml{"} is a term with type
-$\sigma_1${\small\verb%#%}$\sigma_2$. It is usual, but not necessary, to write
-pairs within brackets:
-\ml{"(}$t_1$\ml{,}$t_2$\ml{)"}. The comma symbol associates\index{pairing constructor, in HOL logic@pairing constructor, in \HOL\ logic!associativity of} to the right, so
- that
-\ml{"(}$t_1$\ml{,}$t_2$\ml{,}$\ldots$\ml{,}$t_n$\ml{)"}
-means
-\ml{"(}$t_1$\ml{,(}$t_2$\ml{,}$\ldots$\ml{,}$t_n$\ml{))"}.
-The constants
-
-
-\begin{hol}
-\index{FST, the constant in HOL logic@\ml{FST}, the constant in \HOL\ logic}
-\index{SND, the constant in HOL logic@\ml{SND}, the constant in \HOL\ logic}
-\begin{verbatim}
-   FST : * # ** -> *
-   SND : * # ** -> **
-\end{verbatim}\end{hol}
-
-\noindent select the first and second components of pairs.
-
-Cartesian products are defined by representing a pair
-{\small\verb%(%}$t_1${\small\verb%,%}$t_2${\small\verb%)%} by the function
-
-\begin{hol}\begin{alltt}
-   \verb!\!a b. (a=\m{t\sb{1}}) /\verb!\! (b=\m{t\sb{2}})
-\end{alltt}\end{hol}
-
-\noindent The
-representing type of $\sigma_1${\small\verb%#%}$\sigma_2$ is thus
-$\sigma_1${\small\verb%->%}$\sigma_2${\small\verb%->bool%}.  To define
-pairs this way, the constants \ml{MK\_PAIR} and
-\ml{IS\_PAIR}\index{IS_PAIR@\ml{IS\_PAIR}} are first defined.
-
-
-\begin{hol}
-\index{MK_PAIR_DEF@\ml{MK\_PAIR\_DEF}}
-\index{IS_PAIR_DEF@\ml{IS\_PAIR\_DEF}}
-\begin{verbatim}
-   MK_PAIR_DEF   |- !x y. MK_PAIR x y = (\a b. (a = x) /\ (b = y))
-
-   IS_PAIR_DEF   |- !p. IS_PAIR p = (?x y. p = MK_PAIR x y)
-\end{verbatim}\end{hol}
-
-\noindent From these two definitions it is easy to prove that:
-
-\begin{hol}\begin{verbatim}
-   |- ?p:'a->'b->bool. IS_PAIR p
-\end{verbatim}\end{hol}
-
-\noindent since {\small\verb%|- IS_PAIR(MK_PAIR x y)%} follows  easily from the
-definition of  \ml{IS\_PAIR}.    The  existence  theorem shown  above is called
-{\small\verb%PAIR_EXISTS%}\index{PAIR_EXISTS@\ml{PAIR\_EXISTS}}.
- Given this theorem, the type operator
-{\small\verb%prod%} is defined by evaluating:
-
-\begin{hol}\begin{verbatim}
-   new_type_definition(`prod`, "IS_PAIR:(*->**->bool)->bool", PAIR_EXISTS)
-\end{verbatim}\end{hol}
-
-\noindent which results in the definitional axiom\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL\ logic}\index{axioms!in bool theory@in \ml{bool} theory} \ml{prod\_TY\_DEF} shown
-below being asserted in the theory \ml{bool}.
-
-\begin{hol}\begin{verbatim}
-   prod_TY_DEF  |- ?rep. TYPE_DEFINITION IS_PAIR rep
-\end{verbatim}\end{hol}
-
-Next, a new constant {\small\verb%REP_prod%} is defined, which
-maps a pair to its representation as a function:
-
-\begin{hol}
-\index{REP_prod@\ml{REP\_prod}}
-\begin{verbatim}
-   REP_prod    |- REP_prod =
-                  (@rep : 'a # 'b -> 'a -> 'b -> bool.
-                    (!p' p''. (rep p' = rep p'') ==> (p' = p'')) /\
-                    (!p. IS_PAIR p = (?p'. p = rep p')))
-\end{verbatim}\end{hol}
-
-The infix constructor `{\small\verb%,%}'
-and the selectors
-{\small\verb%FST:'a#'b->'a%} and {\small\verb%SND:'a#'b->'b%} are then
-defined by the equations shown below.
-
-
-\begin{hol}\index{COMMA_DEF@\ml{COMMA\_DEF}}
-\index{FST_DEF@\ml{FST\_DEF}}
-\index{SND_DEF@\ml{SND\_DEF}}
-\index{pairing constructor, in HOL logic@pairing constructor, in \HOL\ logic!definition of}
-\index{FST, the constant in HOL logic@\ml{FST}, the constant in \HOL\ logic!definition of}
-\index{selectors, in HOL logic@selectors, in \HOL\ logic}
-\begin{verbatim}
-   COMMA_DEF  |- !x y. x,y = (@p. REP_prod p = MK_PAIR x y)
-
-   FST_DEF    |- !p. FST p = (@x. ?y. MK_PAIR x y = REP_prod p)
-
-   SND_DEF    |- !p. SND p = (@y. ?x. MK_PAIR x y = REP_prod p)
-\end{verbatim}\end{hol}
-
-The following standard theorems about pairs follow easily from these
-definitions and the axiom \ml{prod\_TY\_DEF}.  Although these theorems could
-be derived by formal proof, they are (for implementation reasons) asserted as
-axioms in the theory \ml{bool} .
-
-
-\begin{hol}
-\index{PAIR@\ml{PAIR}}
-\index{FST, the axiom in HOL logic@\ml{FST}, the axiom in \HOL\ logic}
-\index{SND, the axiom in HOL logic@\ml{SND}, the axiom in \HOL\ logic}
-\index{PAIR_EQ@\ml{PAIR\_EQ}}
-\begin{verbatim}
-   PAIR     |- !x. (FST x,SND x) = x
-
-   FST      |- !x y. FST(x,y) = x
-
-   SND      |- !x y. SND(x,y) = y
-
-   PAIR_EQ  |- !x y a b. (x,y = a,b)  =  (x = a) /\ (y = b)
-\end{verbatim}\end{hol}
-\index{pairs, in HOL logic@pairs, in \HOL\ logic|)}
-\index{product types!in HOL logic@in \HOL\ logic|)}
-\index{representing types, in HOL logic@representing types, in \HOL\ logic!pair example of|)}
-\index{bool, the HOL theory@\ml{bool}, the \HOL\ theory|)}
-
-
-\subsubsection{Paired abstractions}
-\label{HOL-varstruct}
-\index{pairs, in HOL logic@pairs, in \HOL\ logic!in abstractions|(}
-\index{UNCURRY@\ml{UNCURRY}|(}
-
-\index{terms, in HOL logic@terms, in \HOL\ logic!pair|(}
-\index{parsing, of HOL logic@parsing, of \HOL\ logic!of quotation syntax|(}
-\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!paired|(}
-\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!uncurrying, in paired|(}
-The quotation parser\index{parsing, of HOL logic@parsing, of \HOL\ logic!of function abstractions}\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!abbreviation for multiple}\index{terms, in HOL logic@terms, in \HOL\ logic!function abstraction}
- will convert\footnote{Only when the theory of pairs is loaded.}
-{\small\verb%"\(%}$x_1${\small\verb%,%}$x_2${\small\verb%).%}$t${\small\verb%"%}
-to {\small\verb%"UNCURRY(\%}$x_1\ x_2${\small\verb%.%}$t${\small\verb%)"%},
-where the constant {\small\verb%UNCURRY%}
-is defined by:
-
-\begin{hol}\begin{verbatim}
-   UNCURRY f (x,y)  =  f x y
-\end{verbatim}\end{hol}
-
-\noindent See Section~\ref{prod} for more details and an explanation
-of pair terms \ml{($t_1$,$t_2$)}.
-The transformation is done recursively so that, for example,
-
-
-\begin{hol}\begin{alltt}
-   "\verb%\%(\m{x\sb{1}},\m{x\sb{2}},\m{x\sb{3}}).\m{t}"
-\end{alltt}\end{hol}
-
-\noindent is converted to
-
-\begin{hol}\begin{alltt}
-   "UNCURRY \verb%\%\m{x\sb{1}}.UNCURRY(\verb%\%\m{x\sb{2}},\m{x\sb{3}}.\m{t}))"
-\end{alltt}\end{hol}
-
-\noindent More generally,
-the quotation parser repeatedly applies the transformation:
-
-\begin{hol}\begin{alltt}
-   "\verb%\%(\m{v\sb{1}},\m{v\sb{2}}).\m{t}"\m{\quad \leadsto\quad }"UNCURRY(\verb%\%\m{v\sb{1}}.\verb%\%\m{v\sb{2}}.\m{t})"
-\end{alltt}\end{hol}
-
-\noindent until no more variable structures remain. For example:
-
-\begin{flushleft}
-\begin{tabular}{@{}ll}
-{\small\verb%   "\(%}$x${\small\verb%,%}$y${\small\verb%).%}$t${\small\verb%"%}
-&$\leadsto\ \ ${\small\verb%"UNCURRY(\%}$x\
-y${\small\verb%.%}$t${\small\verb%)"%}\\
-{\small\verb%   "\(%}$x_1${\small\verb%,%}$x_2${\small\verb%,%}$\ldots${\small\verb%,%}$x_n${\small\verb%).%}$t${\small\verb%"%}
-&$\leadsto\ \ ${\small\verb%"UNCURRY(\%}$x_1${\small\verb%.\(%}$x_2${\small\verb%,%}$\ldots${\small\verb%,%}$x_n${\small\verb%).%}$t${\small\verb%)"%}\\
-{\small\verb%   "\((%}$x_1${\small\verb%,%}$\ldots${\small\verb%,%}$x_n${\small\verb%),%}$y_1${\small\verb%,%}$\ldots${\small\verb%,%}$y_m${\small\verb%).%}t{\small\verb%"%}
-&$\leadsto\ \ ${\small\verb%"UNCURRY(\(%}$x_1${\small\verb%,%}$\ldots${\small\verb%,%}$x_n${\small\verb%).\(%}$y_1${\small\verb%,%}$\ldots${\small\verb%,%}$y_m${\small\verb%).%}$t${\small\verb%)"%}\\
-\end{tabular}
-\end{flushleft}
-
-\index{parsing, of HOL logic@parsing, of \HOL\ logic!of quotation syntax|)}
-The \HOL\ top-level printer\index{printing, in HOL logic@printing, in \HOL\ logic!of function abstractions}
- inverts these transformations. For example:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#"\((a,b),(x,y)). a+b < x*y";;
-"\((a,b),x,y). a + b < x * y" : term
-
-#set_flag(`print_uncurry`,false);;
-true : bool
-
-#"\((a,b),(x,y)). (a+b) < (x*y)";;
-"UNCURRY(UNCURRY(\a b. UNCURRY(\x y. (a + b) < (x * y))))" : term
-\end{verbatim}\end{session}
-
-Note that a variable structure like \ml{"(x,y)"} in
-{\small\verb%"\(x,y).x+y"%}
-is not a subterm
-of the abstraction\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!subterms of} in which it occurs; it disappears on parsing\index{binders, in HOL logic@binders, in \HOL\ logic!parsing of}\index{parsing, of HOL logic@parsing, of \HOL\ logic!of binders}. This can
-lead to unexpected errors (accompanied by obscure error messages).
-For example:
-
-\begin{session}\begin{verbatim}
-#"\(x,y).x+y";;
-"\(x,y). x + y" : term
-
-#let p = "(x:num,y:num)";;
-p = "x,y" : term
-
-#"\^p.x+y";;
-evaluation failed     mk_abs in quotation
-\end{verbatim}\end{session}
-
-Furthermore, if the type checker complains, it may print out
-diagnostic messages referring to the transformed term:
-
-\begin{session}\begin{verbatim}
-#"\(x,y). x+1";;
-Indeterminate types:
-    "UNCURRY:(num -> (?1 -> num)) -> (num * ?2 -> num)"
-
-evaluation failed     types indeterminate in quotation
-\end{verbatim}\end{session}
-
-If $b$ is a binder, then
-\ml{"}$b$\ml{(}$x_1${\small\verb%,%}$x_2${\small\verb%).%}$t${\small\verb%"%}
-is parsed as
-{\small\verb%"$%}$b${\small\verb%(\(%}$x_1${\small\verb%,%}$x_2${\small\verb%).%}$t${\small\verb%)"%}, and hence transformed as above.
-For example, {\small\verb%"!(x,y).x>y"%} parses to
-{\small\verb%"$!(UNCURRY(\x.\y.$> x y))"%} (where {\small{\tt >}} is an infixed
-constant of the theory {\small\verb%num%} meaning `is greater than')\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!paired|)}.
-\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!uncurrying, in paired|)}\index{pairs, in HOL logic@pairs, in \HOL\ logic!in abstractions|)}\index{terms, in HOL logic@terms, in \HOL\ logic!pair|)}\index{UNCURRY@\ml{UNCURRY}|)}
-
-
-%A good exercise for the reader would be to understand why this use
-%of \ml{UNCURRY} supports the intuitive meaning suggested by the surface
-%notation.
-
-Applications of paired abstraction to tuples can be $\beta$-reduced using
-\ml{PAIRED\_BETA\_CONV} (see Section~\ref{genbeta}).
-
-
-\subsubsection{{\tt let}-terms}
-\label{let-exp}
-
-
-The quotation parser\index{parsing, of HOL logic@parsing, of \HOL\ logic!of let-terms@of \ml{let}-terms}
- accepts \ml{let}-terms\index{terms, in HOL logic@terms, in \HOL\ logic!let-@\ml{let}-}\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL\ logic!as abbreviations} superficially similar to those in
-\ML. For example, the following term is allowed:
-
-\begin{hol}\begin{verbatim}
-   "let x = 1 and y = 2 in x+y"
-
-   "let f(x,y) = (x*x)+(y*y) and a = 20*20 and b = 50*49 in f(a,b)"
-\end{verbatim}\end{hol}
-
-\ml{let}-terms are actually abbreviations for ordinary  terms which are
-specially supported by the parser and pretty printer.
-The constant \ml{LET}\index{LET@\ml{LET}} is defined (in the theory \ml{bool}) by:
-
-\begin{hol}\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!relation to let-terms@relation to \ml{let}-terms}
-\begin{verbatim}
-   LET = (\f x. f x)
-\end{verbatim}\end{hol}
-
-\noindent and is used to encode \ml{let}-terms in the logic. The parser
-repeatedly applies the transformations:
-
-\bigskip
-
-\noindent
-{\small\begin{tabular}{@{}ll}
-{\small\verb%   "let %}$f\ v_1\ \ldots\ v_n${\small\verb% = %}$t_1${\small\verb% in %}$t_2${\small\verb%"%}
-&$\leadsto\ \ ${\small\verb%"LET(\%}$f${\small\verb%.%}$t_2$
-{\small\verb%)(\%}$v_1\ \ldots\ v_n${\small\verb%.%}$t_1${\small\verb%)"%}\\
-{\small\verb%   "let (%}$v_1${\small\verb%,%}$\ldots${\small\verb%,%}$v_n${\small\verb%) = %}$t_1${\small\verb% in %}$t_2${\small\verb%"%}
-&$\leadsto\ \ ${\small\verb%"LET(\(%}$v_1${\small\verb%,%}$\ldots${\small\verb%,%}$v_n${\small\verb%).%}$t_2${\small\verb%)%}$t_1${\small\verb%"%}\\
-{\small\verb%   "let %}$v_1${\small\verb%=%}$t_1${\small\verb% and %}$\ldots${\small\verb% and %}$v_n${\small\verb%=%}$t_n${\small\verb% in %}$t${\small\verb%"%}
-&$\leadsto\ \ ${\small\verb%"LET(%}$\ldots${\small\verb%(LET(LET(\%}$v_1\ldots v_n${\small\verb%.%}$t${\small\verb%)%}$t_1${\small\verb%)%}$t_2${\small\verb%)%}$\ldots${\small\verb%)%}$t_n${\small\verb%"%}\\
-\end{tabular}}
-
-\bigskip
-
-
-\noindent The printer\index{printing, in HOL logic@printing, in \HOL\ logic!of let-terms@of \ml{let}-terms} inverts these transformations if the flag
-\ml{print\_let} is \ml{true}.  For example:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#"let x = 1 and y = 2 in x+y";;
-"let x = 1 and y = 2 in x + y" : term
-
-#set_flag(`print_let`,false);;
-true : bool
-
-#"let x = 1 and y = 2 in x+y";;
-"LET(LET(\x y. x + y)1)2"
-
-#"let (x,y) = (1,2) in x+y";;
-"LET(UNCURRY(\x y. x + y))(1,2)" : term
-\end{verbatim}\end{session}
-
-Note that, as with uncurried terms, the underlying representation in \HOL\ can
-manifest itself in error messages. For example:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#"let x = y in z";;
-Indeterminate types:  "LET:(?1 -> ?2) -> (?3 -> ?4)"
-
-evaluation failed     types indeterminate in quotation
-\end{verbatim}\end{session}
-
-The reader is recommended to convince himself or herself that the
-translations of \ml{let}-terms represent the intuitive meaning suggested by
-the surface syntax.\index{quotation, in HOL logic@quotation, in \HOL\ logic|)}\index{quotation, in HOL logic@quotation, in \HOL\ logic!of non-primitive terms|)}\index{terms, in HOL logic@terms, in \HOL\ logic!syntax of|)}\index{type checking, in HOL logic@type checking, in \HOL\ logic!special forms in|)}
-
-\ml{let}-terms can be simplified with \ml{let\_CONV} -- see Section~\ref{let-terms}.
-
-
-
-
-\subsection{The theory {\tt relation}}
-
-\subsection{The theory {\tt num}}
-
-The theory \ml{num}\index{num, the theory in HOL logic@\ml{num}, the theory in \HOL\ logic}
-defines the type \ml{num} of natural numbers to be
-isomorphic to a countable subset of the primitive type \ml{ind}.  In this
-theory, the constants \ml{0}\index{ zero, in HOL logic@\ml{0} ( zero, in \HOL\ logic)}
- and \ml{SUC} (the successor function) are defined
-and Peano's axioms\index{axioms!in num theory@in \ml{num} theory}\index{Peano's axioms}\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL\ logic} pre-proved in the form:
-
-
-\begin{hol}
-\index{NOT_SUC@\ml{NOT\_SUC}}
-\index{INV_SUC@\ml{INV\_SUC}}
-\index{INDUCTION@\ml{INDUCTION}}
-\begin{verbatim}
-   NOT_SUC    |- !n. ~(SUC n = 0)
-   INV_SUC    |- !m n. (SUC m = SUC n) ==> (m = n)
-   INDUCTION  |- !P. P 0 /\ (!n. P n ==> P(SUC n)) ==> (!n. P n)
-\end{verbatim}\end{hol}
-
-In higher order logic, Peano's axioms are sufficient for developing number
-theory because addition and multiplication can be defined. In first order
-logic these must be taken as primitive.  Note also that
-{\small\verb%INDUCTION%}\index{induction rule!for numbers, in HOL logic@for numbers, in \HOL\ logic} could not be stated as a single axiom in
-first order logic because predicates (\eg\ {\small\verb%P%}) cannot be
-quantified.
-
-Uses of the theorem \ml{INDUCTION} are supported by the built-in derived
-inference rule \ml{INDUCT}\index{INDUCT@\ml{INDUCT}}
-and the built-in
-tactic \ml{INDUCT\_TAC}\index{INDUCT_TAC@\ml{INDUCT\_TAC}}
-(see the documentation on these functions in \REFERENCE\ for details).
-
-\subsection{The theory {\tt prim\_rec}}
-\label{prim_rec}
-
-\index{primitive recursive definitions, in HOL logic@primitive recursive definitions, in \HOL\ logic!automated|(}
-\index{primitive recursion theorem!for numbers|(}
-\index{prim_rec@\ml{prim\_rec}|(}
-In classical logic, unlike domain theory logics such as \PPL\index{PPlambda (same as PPLAMBDA), of LCF system@\ml{PP}$\lambda$ (same as \ml{PPLAMBDA}), of \ml{LCF} system},
-arbitrary recursive definitions\index{recursive definitions, in classical logics} are not allowed. For example, there is no
-function $f$ (of type \ml{num->num}) such that
-
-\begin{hol}
-{\small\verb%   !%}$x${\small\verb%. %}$f$ $x${\small\verb%  =  (%}$f$ $x${\small\verb%) + 1%}
-\end{hol}
-
-\noindent Certain restricted forms of recursive\index{primitive recursive
-functions}
-definition do, however, uniquely
-define functions. An important example are the {\it primitive recursive\/}
-functions.\footnote{In higher order logic, primitive recursion
-is much more powerful than in first order logic;
-for example, Ackermann's function can be defined
-by primitive recursion in higher order logic.} For
-any $x$ and $f$ the {\it primitive
-recursion theorem\/} tells us that there is a unique function
-{\small\verb%fn%} such that:
-
-\begin{hol}
-{\small\verb%   %}\ml{fn}{\small\verb% 0 = %}$x${\small\verb%) /\ (!%}$n${\small\verb%.%}\ml{fn}{\small\verb%(%}\ml{SUC} $n${\small\verb%) = %}$f${\small\verb% (%}\ml{fn} $n${\small\verb%)%} $n${\small\verb%)%}
-\end{hol}
-
-The primitive recursion
- theorem follows from Peano's\index{Peano's axioms}
- axioms. When the \HOL\
-system is built, the following theorem is proved and stored in the theory
-{\small\verb%prim_rec%}:
-
-
-\begin{hol}\index{num_Axiom@\ml{num\_Axiom}}
-\index{characterizing theorem!for numbers}
-\begin{verbatim}
-   num_Axiom   |- !x f. ?!fn. (fn 0 = x) /\ (!n. fn(SUC n) = f (fn n) n)
-\end{verbatim}\end{hol}
-
-\noindent The theorem states the validity of primitive recursive
-definitions on the natural numbers: for any \ml{x} and \ml{f} there exists a
-corresponding total function \ml{fn} which satisfies
-the primitive recursive definition whose form is determined by \ml{x} and
-\ml{f}.
-
-\subsubsection{Primitive recursive definitions}\label{num-prim-rec}
-
-\index{type definitions, in HOL logic@type definitions, in \HOL\ logic!primitive recursive|(}
-\index{recursive definitions, in HOL logic@recursive definitions, in \HOL\ logic!automated, for numbers|(}
-\index{primitive recursion theorem!automated use of, in HOL system@automated use of, in \HOL\ system|(}
-The primitive\index{primitive recursive definitions, in HOL logic@primitive recursive definitions, in \HOL\ logic!justification of} recursion theorem
-can be used to justify any  definition of a
-function on the  natural numbers  by primitive  recursion.   For example, a
-primitive recursive definition in higher order
-logic of the form
-
-\begin{hol}\begin{alltt}
-   fun 0       x\(\sb{1}\) \m{\dots} x\(\sb{i}\) = \m{f\sb{1}[}x\(\sb{1}\)\m{,\ldots,\,} x\(\sb{i}]\)
-   fun (SUC n) x\(\sb{1}\) \m{\dots} x\(\sb{i}\) = \m{f\sb{2}[}fun n \m{t\sb{1} \dots t\sb{i},} n\m{,} x\(\sb{1}\)\m{,\ldots,\,}x\(\sb{i}]\)
-\end{alltt}\end{hol}
-
-\noindent where all the free variables in the  terms $t_1$,
-\dots, $t_i$ are contained in $\{$\ml{n}, $\ml{x}_1$, \dots, $\ml{x}_i\}$,
-is logically equivalent to:
-
-\begin{hol}\begin{alltt}
-   fun 0       = \verb!\!x\(\sb{1}\) \m{\dots} x\(\sb{i}\).\m{f\sb{1}[}x\(\sb{1}\)\m{,\ldots,\,}x\(\sb{i}]\)
-   fun (SUC n) = \verb!\!x\(\sb{1}\) \m{\dots} x\(\sb{i}\).\m{f\sb{2}[}fun n \m{t\sb{1} \dots t\sb{i},} n\m{,}x\(\sb{1}\)\m{,\ldots,\,}x\(\sb{i}]\)
-               = (\verb!\!f n x\(\sb{1}\) \m{\dots} x\(\sb{i}\).\m{f\sb{2}[}f \m{t\sb{1} \dots t\sb{i},} n\m{,} x\(\sb{1}\)\m{,\ldots,\,}x\(\sb{i}]\)) (fun n) n
-\end{alltt}\end{hol}
-
-The existence  of  a  recursive  function  \ml{fun} which  satisfies these two
-equations follows directly from the primitive recursion theorem
-\ml{num\_Axiom} shown above.   Specializing the  quantified variables \verb!x!
-and \verb!f!  in  a suitably  type-instantiated version  of \ml{num\_Axiom} so
-that
-
-\begin{hol}\begin{alltt}
-   x\m{=}\verb!\!x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{1}[}x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\)  {\rm and}  f\(=\)\verb!\!f n x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{2}[}f \m{t\sb{1} \dots t\sb{i},} n\(,\) x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\))
-\end{alltt}\end{hol}
-
-\noindent yields (ignoring the uniqueness of \ml{fn})
-the existence theorem shown below:
-
-\begin{hol}\begin{alltt}
-   |- ?fn. fn 0       = \verb!\!x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{1}[}x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\) /\verb!\!
-           fn (SUC n) = (\verb!\!f n x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{2}[}f \m{t\sb{1} \dots t\sb{i},} n\(,\) x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\)) (fn n) n
-\end{alltt}\end{hol}
-
-\noindent This theorem allows a constant \ml{fun} to be introduced (via the
-definitional mechanism of constant specifications---see Section~\ref{conspec})
-to denote the recursive function that satisfies the two equations in the body
-of the theorem. Introducing a constant \ml{fun} to name the function asserted
-to exist by the theorem shown above, and simplifying using $\beta$-reduction,
-yields the following theorem:
-
-\begin{hol}\begin{alltt}
-   |- fun 0       = \verb!\!x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{1}[}x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\) /\verb!\!
-      fun (SUC n) = \verb!\!x\(\sb{1}\) \(\dots\) x\(\sb{i}\).\m{f\sb{2}[}fun n \m{t\sb{1} \dots t\sb{i},} n\(,\) x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\)
-\end{alltt}\end{hol}
-
-\noindent It follows immediately from this theorem that the constant \ml{fun}
-satisfies the primitive recursive defining equations given by the theorem shown
-below:
-
-\begin{hol}\begin{alltt}
-   |- fun 0 x\(\sb{1}\) \(\dots\) x\(\sb{i}\) = \m{f\sb{1}[}x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\)
-      fun (SUC n) x\(\sb{1}\) \(\dots\) x\(\sb{i}\) = \m{f\sb{2}[}fun n \m{t\sb{1} \dots t\sb{i},} n\(,\) x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\)
-\end{alltt}\end{hol}
-
-To automate the use of the primitive recursion theorem in deriving recursive
-definitions of this kind, the \HOL\ system provides two functions which,
-together, first do automatic proofs of the existence of primitive recursive
-functions and then make constant specifications to introduce constants that
-denote such functions:
-
-\begin{boxed}
-\index{new_prim_rec_definition@\ml{new\_prim\_rec\_definition}|pin}
-\index{new_infix_prim_rec_definition@\ml{new\_infix\_prim\_rec\_definition}|pin}
-\begin{verbatim}
-   new_prim_rec_definition       : (string # term) -> thm
-   new_infix_prim_rec_definition : (string # term) -> thm
-\end{verbatim}\end{boxed}
-
-\noindent Evaluating
-
-\begin{hol}\begin{alltt}
-   new_prim_rec_definition
-    (`fun_DEF`,
-     "(fun 0 x\(\sb{1}\) \(\dots\) x\(\sb{i}\) = \m{f\sb{1}[}x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\) /\verb!\!
-      (fun (SUC n) x\(\sb{1}\) \(\dots\) x\(\sb{i}\) = \m{f\sb{2}[}fun n \m{t\sb{1} \dots t\sb{i},} n\(,\) x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\))");;
-\end{alltt}\end{hol}
-
-\noindent automatically proves the theorem:
-
-\begin{hol}\begin{alltt}
-   |-  ?fun. !x\(\sb{1}\) \(\dots\) x\(\sb{i}\). fun 0 x\(\sb{1}\) \(\dots\) x\(\sb{i}\) = \m{f\sb{1}[}x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\) /\verb!\!
-             !x\(\sb{1}\) \(\dots\) x\(\sb{i}\). fun (SUC n) x\(\sb{1}\) \(\dots\) x\(\sb{i}\) = \m{f\sb{2}[}fun n \m{t\sb{1} \dots t\sb{i},} n\(,\) x\(\sb{1}\)\(,\ldots,\,\)x\(\sb{i}]\)
-\end{alltt}\end{hol}
-
-\noindent and then declares a new constant \ml{fun} with this property as its
-specification. This constant specification is returned as a theorem by
-\ml{new\_prim\_rec\_definition} and is saved with name \ml{fun\_DEF}\index{DEF@$\ldots$\ml{\_DEF}}
-in the current theory segment. Failure occurs if:
-
-\begin{myenumerate}
-\item \HOL\ cannot prove there is a function satisfying the specification
-(\ie\ if the term supplied to \ml{new\_prim\_rec\_definition}
- is not a well-formed primitive recursive definition);
-\item any other condition for making a constant specification is violated
-(see the failure conditions for \ml{new\_specification} in
-Section~\ref{conspec}).
-\end{myenumerate}
-
-The \ML\  function \ml{new\_prim\_rec\_definition}  is, in  fact, slightly more
-general than  is  indicated  by  the  example  application  shown  above.    In
-particular, a  curried\index{currying, in ML@currying, in \ML!in primitive recursive definitions}
-primitive  recursive  function defined  using this \ML\
-function can be defined  by primitive  recursion on  any one  of its arguments.
-For example, a curried  addition function  \ml{plus:num->num->num} can be
-defined by primitive recursion on its first argument:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#let PLUS = new_prim_rec_definition
-#           (`PLUS`,
-#            "(plus 0 n = n) /\
-#             (plus (SUC m) n = SUC(plus m n))");;
-PLUS = |- (!n. plus 0 n = n) /\ (!m n. plus(SUC m)n = SUC(plus m n))
-\end{verbatim}\end{session}
-
-\noindent or by primitive recursion on its second argument:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#let PLUS = new_prim_rec_definition
-#            (`PLUS`,
-#             "(plus m 0 = m) /\
-#              (plus m (SUC n) = SUC(plus m n))");;
-PLUS = |- (!m. plus m 0 = m) /\ (!m n. plus m(SUC n) = SUC(plus m n))
-\end{verbatim}\end{session}
-
-The \ML\ function \ml{new\_prim\_rec\_definition} also allows the user to
-partially specify the value of a function defined (possibly recursively) on the
-natural numbers by giving its value for only one of \ml{0} or \ml{SUC n}.  For
-example, a decrement function \ml{DEC}, whose value is specified for only
-positive natural numbers, can be defined using \ml{new\_prim\_rec\_definition}
-as follows
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#let DEC = new_prim_rec_definition
-#            (`DEC`, "DEC (SUC n) = n");;
-DEC = |- !n. DEC(SUC n) = n
-\end{verbatim}\end{session}
-
-\noindent This definition specifies the value of the function \ml{DEC} only for
-positive natural numbers. In particular, the value of \ml{DEC 0} is left
-unspecified, and the only non-trivial property that can be proved to hold of
-the constant \ml{DEC} is the property stated by the theorem returned by the
-call to \ml{new\_prim\_rec\_definition} shown in the session above.
-
-The function  \ml{new\_infix\_prim\_rec\_definition}\index{new_infix_prim_rec_definition@\ml{new\_infix\_prim\_rec\_definition}}
- can  be used  to define an
-infixed\index{infixes, in HOL logic@infixes, in \HOL\ logic!primitive recursive definitions}
- function by primitive recursion on the natural numbers.  It takes its
-arguments in the same form as \ml{new\_prim\_rec\_definition} and has similar
-failure conditions; the only difference is that the resulting function constant
-has infix status.  Here, for example, is the recursive definition of the
-constant \ml{+} used by the system:
-
-\begin{hol}\begin{verbatim}
-   new_infix_prim_rec_definition
-    (`ADD`,
-     "($+ 0 n = n) /\
-      ($+ (SUC m) n = SUC($+ m n))")
-\end{verbatim}\end{hol}
-
-\noindent The  {\small\verb%$%}'s  are  there (as documentation)
-  to  indicate  that  the constant
-{\small\verb%+%}\index{ addition, in HOL logic@\ml{+} (addition, in \HOL\ logic)}
-is  being  declared  to  be  an  infix.   Evaluating this \ML\
-expression will  create  the  following  constant specification  in the current
-theory:
-
-\begin{hol}\index{ADD@\ml{ADD}}
-\begin{verbatim}
-   ADD   |- (!n. 0 + n = n) /\ (!m n. (SUC m) + n = SUC(m + n))
-\end{verbatim}\end{hol}
-
-For further details about recursive definitions, see
-Section~\ref{prim-rec-defs}, or the \REFERENCE\ documentation
-on
-\ml{new\_prim\_rec\_definition} and \ml{new\_infix\_prim\_rec\_definition}.
-\index{prim_rec@\ml{prim\_rec}|)}
-\index{primitive recursion theorem!automated use of, in HOL system@automated use of, in \HOL\ system|)}
-\index{primitive recursion theorem!for numbers|)}
-\index{primitive recursive definitions, in HOL logic@primitive recursive definitions, in \HOL\ logic!automated|)}
-\index{recursive definitions, in HOL logic@recursive definitions, in \HOL\ logic!automated, for numbers|)}
-\index{type definitions, in HOL logic@type definitions, in \HOL\ logic!primitive recursive|)}
-
-\subsubsection{The less-than relation}
-
-The less-than relation `{\small{\tt\verb+<+}}'\index{ less than, in HOL logic@\ml{<} (less than, in \HOL\ logic)}
-  is most  naturally defined by
-primitive recursion. However, it  is  needed for
-the proof of the primitive recursion theorem,
-so  it  must  be  defined
-before definition  by primitive recursion is available.
-The theory \ml{prim\_rec} therefore  contains the following
-non-recursive definition\index{less than, in HOL logic@less than, in \HOL\ logic} of \ml{<}:
-
-\begin{hol}
-\index{LESS@\ml{LESS}}
-\begin{verbatim}
-   LESS  |- !m n. m < n = (?P. (!n'. P(SUC n') ==> P n') /\ P m /\ ~P n)
-\end{verbatim}\end{hol}
-
-\noindent
-This definition says that {\small\verb%"m < n%"} if there exists a set (with
-characteristic function {\small\verb%P%}) that is downward
-closed\footnote{A set of numbers is {\it downward closed\/} if whenever it
-contains the successor of a number, it also contains the number.} and
-contains {\small\verb%m%} but not {\small\verb%n%}.
-
-\subsection{The theory {\tt arithmetic}}
-
-
-The built-in theory {\small\verb%arithmetic%}\index{number theory, in HOL logic@number theory, in \HOL\ logic}
-\index{arithmetic@\ml{arithmetic}} contains primitive recursive
-definitions of following standard arithmetic operators.
-
-
-\begin{hol}
-\index{ADD@\ml{ADD}}
-\index{SUB@\ml{SUB}}
-\index{MULT@\ml{MULT}}
-\index{EXP@\ml{EXP}}
-\index{ subtraction, in HOL logic@\ml{-} (subtraction, in \HOL\ logic)}
-\index{ multiplication, in HOL logic@\ml{*} (multiplication, in \HOL\ logic)}
-\begin{verbatim}
-   ADD            |- (!n. 0 + n = n) /\
-                     (!m n. (SUC m) + n = SUC(m + n))
-
-   SUB            |- (!m. 0 - m = 0) /\
-                     (!m n. (SUC m) - n = (m < n => 0 | SUC(m - n)))
-
-   MULT           |- (!n. 0 * n = 0) /\
-                     (!m n. (SUC m) * n = (m * n) + n)
-
-   EXP            |- (!m. m EXP 0 = 1) /\
-                     (!m n. m EXP (SUC n) = m * (m EXP n))
-\end{verbatim}\end{hol}
-
-\noindent It also contains the following non-recursive definitions.
-
-\begin{hol}
-\index{arithmetic, in HOL logic@arithmetic, in \HOL\ logic}
-\index{ greater than, in HOL logic@\ml{>} (greater than, in \HOL\ logic)}
-\index{ less or equal, in HOL logic@\ml{<=} (less or equal, in \HOL\ logic)}
-\index{ greater or equal, in HOL logic@\ml{>=} (greater or equal, in \HOL\ logic)}
-\index{MOD@\ml{MOD}}
-\index{DIV@\ml{DIV}}
-\begin{verbatim}
-   GREATER        |- !m n. m > n = n < m
-
-   LESS_OR_EQ     |- !m n. m <= n = m < n \/ (m = n)
-
-   GREATER_OR_EQ  |- !m n. m >= n = m > n \/ (m = n)
-
-   DIVISION       |- !n. 0 < n ==> (!k. (k = ((k DIV n) * n) + (k MOD n)) /\
-                                        (k MOD n) < n)
-\end{verbatim}\end{hol}
-
-An \adhoc\ but useful collection of over a hundred elementary theorems of
-arithmetic are pre-proved when \HOL\ is built and stored in the theory
-{\small\verb%arithmetic%}.  Each theorem will be autoloaded when its name is
-first mentioned during any \HOL\ session. For a complete list of available
-theorems, see \REFERENCE.
-
-\subsubsection{The theory {\tt numeral}}\label{numeral}\index{numeral,
-the construction of in HOL logic@\ml{numeral}, the construction of in \HOL\ logic}
-
-The type \ml{:num}\index{num, the type in \HOL\
-  logic@\ml{num}, the type in \HOL\ logic}, is typically thought of as
-  providing an infinite collection of numerals: \ml{1}, \ml{2}, \ml{3},
-  etc.  However, the \HOL\ logic has no way to define an infinite
-  family of constants, thus all numerals other than $0$ are actually
-  built up using the constants introduced by the following definitions:
-\begin{itemize}
-\item $\vdash \forall x.\, \ml{NUMERAL}(x) = x$
-\item $\vdash \forall x.\, \ml{NUMERAL\_BIT1}(x) = 2x + 1$
-\item $\vdash \forall x.\, \ml{NUMERAL\_BIT2}(x) = 2x + 2$
-\item $\vdash \ml{ALT\_ZERO} = 0$
-\end{itemize}
-
-\noindent For example, the numeral $5$ is represented by the term
-\[
-   \ml{NUMERAL}(\ml{NUMERAL\_BIT1}(\ml{NUMERAL\_BIT2}(\ml{ALT\_ZERO})))
-\]
-but the \HOL\ parser and pretty-printer make such terms
-appear as numerals. This binary representation for numerals allows for
-asymptotically efficient calculation. Theorems supporting arithmetic 
-calculations involving numerals can be found in the \ml{numeral} theory;
-these are mechanized by the \ml{reduce} library.
-
-Numerals are related to numbers via the derived inference rule
-\ml{num\_CONV}, found in the \ml{numLib} library.
-
-\begin{boxed}
-\index{num_CONV@\ml{num\_CONV}|pin}
-\begin{verbatim}
-   numLib.num_CONV : term -> thm
-\end{verbatim}\end{boxed}
-
-\noindent \ml{num\_CONV} can be used to generate the ``\ml{SUC}''
-equation for any non-zero numeral.  For example:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-- load "numLib"; open numLib;
-
-- num_CONV (Term `1`);
-> val it = |- 1 = SUC 0 : thm
-
-- num_CONV (Term `2`);
-> val it = |- 2 = SUC 1 : thm
-
-- num_CONV (Term `3141592653`);
-> val it = |- 3141592653 = SUC 3141592652 : thm
-\end{verbatim}\end{session}
-
-\noindent The \ml{num\_CONV} function works purely by inference, using
-the definitions provided above.\footnote{In previous versions of \HOL,
-\ml{num\_CONV} would not prove its result, which was not in keeping with
-the \LCF\ approach, and which moreover made \ml{num\_CONV} dependent on
-the underlying implementation of numbers. This made \ml{num\_CONV}
-incomplete on \ML\ systems without arbitrary-sized numbers.}
-
-When other numeric theories are loaded (such as those for the reals or
-integers), numerals are overloaded so that the numeral {\small\verb+1+} can
-actually stand for a natural number, an integer or a real value.  In
-order to precisely specify the desired type, the user can use single
-character suffixes (`\ml{n}' for the natural numbers, and `\ml{i}' for
-the integers): 
-
-\begin{session}
-\begin{verbatim}
-- load "integerTheory";
-> val it = () : unit
-
-- Term`2`;
-<<HOL message: more than one resolution of overloading was possible.>>
-> val it = `2` : term
-
-- type_of it;
-> val it = `:int` : hol_type
-
-- Term`2n`;
-> val it = `2` : term
-
-- type_of it;
-> val it = `:num` : hol_type
-
-- type_of (Term `42i`);
-> val it = `:int` : hol_type
-\end{verbatim}\end{session}
-
-Question: what does $42i$ mean? There's a different map for the
-integers. Need to discuss it in the theory of integers.
-
-Question: are the character suffixes recognized by the direct
-construction routines?
-
-Question: how are new character suffixes created?
-
-
-\subsection{The theory {\tt list}}\label{avra_list}\index{list, the type operator in HOL logic@\ml{list}, the type operator in \HOL\ logic}
-
-\index{recursive definitions, in HOL logic@recursive definitions, in \HOL\ logic!automated for lists|(}
-\index{types, in HOL logic@types, in \HOL\ logic!tools for construction of}
-\index{lists, in HOL logic@lists, in \HOL\ logic|(}
-\index{list theory, in HOL logic@\ml{list} theory, in \HOL\ logic|(}
-\index{ lists, in HOL logic@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (lists, in \HOL\ logic)|(}
-The theory \ml{list} introduces the unary type operator \ml{list} by a type
-definition.\footnote{For details of the definition,
-see~\cite{HOL-paper,Melham-banff}.}  The standard list processing functions
-are then defined on this type:
-
-\begin{hol}
-\index{NIL@\ml{NIL}}
-\index{CONS@\ml{CONS}}
-\index{HD, the constant in HOL logic@\ml{HD}, the constant in \HOL\ logic}
-\index{TL, the constant in HOL logic@\ml{TL}, the constant in \HOL\ logic}
-\index{NULL, the constant in HOL logic@\ml{NULL}, the constant in \HOL\ logic}
-\begin{verbatim}
-   NIL  : 'a list
-   CONS : 'a -> 'a list -> 'a list
-   HD   : 'a list -> 'a
-   TL   : 'a list -> 'a list
-   NULL : 'a list -> bool
-\end{verbatim}\end{hol}
-
-The \HOL\ parser\index{parsing, of HOL logic@parsing, of \HOL\ logic!of list expressions} has been specially  modified to  parse the expression
- {\small\verb%[]%} into
-{\small\verb%NIL%} and to parse the expression
-{\small\verb%[%}$t_1${\small\verb%;%}$t_2${\small\verb%;%}$\ldots${\small\verb%;%}$t_n${\small\verb%]%}
-into {\small\verb%CONS %}$t_1${\small\verb% (CONS %}$t_2 \cdots\
-${\small\verb%(CONS %}$t_n${\small\verb%  NIL)%}$\  \cdots\ ${\small\verb%)%}.
-The \HOL\ printer\index{printing, in HOL logic@printing, in \HOL\ logic!of list expressions}
- reverses these transformations.
-
-The functions \ml{NIL} and \ml{CONS} are defined in terms of the representing
-type of lists. From their definitions, the following fundamental theorems about
-lists\index{list theorems, in HOL logic@list theorems, in \HOL\ logic|(}
-are proved and stored in the theory \ml{list}.
-
-\begin{hol}
-\index{list_Axiom@\ml{list\_Axiom}}
-\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL\ logic}
-\index{axioms!in list theory@in \ml{list} theory}
-\index{list_INDUCT@\ml{list\_INDUCT}}
-\index{list_CASES@\ml{list\_CASES}}
-\index{CONS_11@\ml{CONS\_{11}}}
-\index{NOT_NIL_CONS@\ml{NOT\_NIL\_CONS}}
-\index{NOT_CONS_NIL@\ml{NOT\_CONS\_NIL}}
-\index{characterizing theorem!for lists}
-\begin{verbatim}
-   list_Axiom    |- !x f. ?!fn.(fn[] = x) /\ (!h t. fn(CONS h t) = f(fn t)h t)
-
-   list_INDUCT   |- !P. P[] /\ (!t. P t ==> (!h. P(CONS h t))) ==> (!l. P l)
-
-   list_CASES    |- !l. (l = []) \/ (?t h. l = CONS h t)
-
-   CONS_11       |- !h t h' t'. (CONS h t = CONS h' t') = (h = h') /\ (t = t')
-
-   NOT_NIL_CONS  |- !h t. ~([] = CONS h t)
-
-   NOT_CONS_NIL  |- !h t. ~(CONS h t = [])
-\end{verbatim}\end{hol}
-
-The theorem  \ml{list\_Axiom}  shown  above  is  analogous   to  the  primitive
-recursion theorem\index{primitive recursion theorem!for lists} on the
-natural numbers discussed above in
-Section~\ref{num-prim-rec}.  It  states  the  validity  of  primitive recursive
-definitions on lists, and can be used to justify any such definition.  The \ML\
-function
-
-\begin{boxed}
-\index{new_recursive_definition@\ml{new\_recursive\_definition}|pin}
-\begin{verbatim}
-   new_recursive_definition : fixity -> thm -> string -> term -> thm
-\end{verbatim}\end{boxed}
-
-\noindent uses this theorem to do automatic\index{primitive recursion theorem!automated use of, in HOL system@automated use of, in \HOL\ system}
- proofs of the existence of primitive
-recursive functions on lists and then make constant specifications to introduce
-constants that  denote  such  functions.  For example, the \HOL\ system defines
-a length function, \ml{LENGTH}, on lists by the primitive recursive
-definition on lists shown below:
-
-\begin{hol}\begin{verbatim}
-   new_recursive_definition Prefix list_Axiom "LENGTH"
-      (Term `(LENGTH NIL = 0) /\
-             (!h t. LENGTH (h::t) = SUC (LENGTH t))`)
-\end{verbatim}\end{hol}
-
-\noindent When this \ML\
-expression is evaluated, \HOL\ uses \ml{list\_Axiom} to prove existence
-of a function that satisfies the given primitive recursive definition,
-introduces a constant to name this function using a constant specification, and
-stores the resulting theorem:
-
-
-\begin{hol}\begin{verbatim}
-    LENGTH   |- (LENGTH[] = 0) /\ (!h t. LENGTH(h::t) = SUC(LENGTH t))
-\end{verbatim}\end{hol}
-
-\noindent in the current theory (in this case, the theory \ml{list}).
-
-The predicate \ml{NULL}  and  the
-selectors \ml{HD} and  \ml{TL} are  defined\index{list definitions, in HOL logic@list definitions, in \HOL\ logic}
- in  the theory  \ml{list} by the
-specifications:
-
-
-\begin{hol}
-\index{NULL, the definition in HOL logic@\ml{NULL}, the definition in \HOL\ logic}
-\index{HD, the definition in HOL logic@\ml{HD}, the definition in \HOL\ logic}
-\index{TL, the definition in HOL logic@\ml{TL}, the definition in \HOL\ logic}
-\begin{verbatim}
-   NULL |- NULL[] /\ (!h t. ~NULL(CONS h t))
-
-   HD   |- !h t. HD(CONS h t) = h
-
-   TL   |- !h t. TL(CONS h t) = t
-\end{verbatim}\end{hol}
-
-\noindent The following primitive recursive definitions of functions on lists
-are also made in the theory \ml{list}:
-
-
-\begin{hol}
-\index{SUM, the theorem in HOL logic@\ml{SUM}, the theorem in \HOL\ logic}
-\index{APPEND, the theorem in HOL logic@\ml{APPEND}, the theorem in \HOL\ logic}
-\index{concatenation, of lists!in HOL logic@in \HOL\ logic}
-\index{FLAT, the theorem in HOL logic@\ml{FLAT}, the theorem in \HOL\ logic}
-\index{LENGTH, the theorem in HOL logic@\ml{LENGTH}, the theorem in \HOL\ logic}
-\index{MAP, the theorem in HOL logic@\ml{MAP}, the theorem in \HOL\ logic}
-\index{EL, the theorem in HOL logic@\ml{EL}, the theorem in \HOL\ logic}
-
-\index{SUM, the constant in HOL logic@\ml{SUM}, the constant in \HOL\ logic}
-\index{APPEND, the constant in HOL logic@\ml{APPEND}, the constant in \HOL\ logic}
-\index{FLAT, the constant in HOL logic@\ml{FLAT}, the constant in \HOL\ logic}
-\index{LENGTH, the constant in HOL logic@\ml{LENGTH}, the constant in \HOL\ logic}
-\index{MAP, the constant in HOL logic@\ml{MAP}, the constant in \HOL\ logic}
-\index{EL, the constant in HOL logic@\ml{EL}, the constant in \HOL\ logic}
-\index{EVERY, the HOL constant@\ml{EVERY}, the \HOL\ constant}
-\index{EVERY_DEF@\ml{EVERY\_DEF}}
-\begin{verbatim}
-   SUM        |- (SUM [] = 0) /\ (!h t. SUM(h::t) = h + SUM t)
-
-   APPEND     |- (!l. APPEND [] l = l) /\
-                 (!l1 l2 h. APPEND (h::l1) l2 = h::APPEND l1 l2)
-
-   FLAT       |- (FLAT[] = []) /\ (!h t. FLAT(h::t) = APPEND h (FLAT t))
-
-   LENGTH     |- (LENGTH [] = 0) /\ (!h t. LENGTH (h::t) = SUC(LENGTH t))
-
-   MAP        |- (!f. MAP f [] = []) /\
-                 (!f h t. MAP f (h::t) = f h::MAP f t)
-
-   EL         |- (!l. EL 0 l = HD l) /\ (!l n. EL (SUC n)l = EL n (TL l))
-
-   EVERY_DEF  |- (!P. EVERY P [] = T) /\
-                 (!P h t. EVERY P (h::t) = P h /\ EVERY P t)
-\end{verbatim}\end{hol}
-
-\noindent For a complete list of available theorems about lists, see
-\REFERENCE. 
-
-\index{list theorems, in HOL logic@list theorems, in \HOL\ logic|)} \index{
-lists, in HOL logic@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (lists, in \HOL\
-logic)|)} \index{list theory, in HOL logic@\ml{list} theory, in \HOL\ logic|)}
-\index{lists, in HOL logic@lists, in \HOL\ logic|)} \index{recursive
-definitions, in HOL logic@recursive definitions, in \HOL\ logic!automated for
-lists|)}
-
-\subsection{The theory {\tt combin}}
-
-\index{function composition, in HOL logic@function composition, in \HOL\
-logic|(}
-
-The theory \ml{combin}\index{combin@\ml{combin}}\index{combinators, in HOL
-logic@combinators, in \HOL\ logic} contains the definitions of function
-composition (infixed \ml{o})\index{ function composition operator, in HOL
-logic@\ml{o} (function composition operator, in \HOL\ logic)|(}
- and the combinators \ml{S}\index{S, constant in HOL logic@\ml{S}, constant in
-\HOL\ logic}, \ml{K}\index{K, the constant in HOL logic@\ml{K}, the constant in
-\HOL\ logic}
- and \ml{I}\index{I, constant in HOL logic@\ml{I}, constant in \HOL\ logic}.
-
-
-\begin{hol} \index{K_DEF@\ml{K\_DEF}} \index{S_DEF@\ml{S\_DEF}}
-\index{I_DEF@\ml{I\_DEF}} \begin{verbatim}
-   o_DEF |- !f g. f o g = (\x. f(g x))
-
-   K_DEF |- K = (\x y. x)
-
-   S_DEF |- S = (\f g x. f x(g x))
-
-   I_DEF |- I = S K K \end{verbatim}\end{hol}
-
-
-\noindent The following elementary properties are pre-proved in the theory
-\ml{combin}:
-
-\begin{hol} \index{K_THM@\ml{K\_THM}} \index{S_THM@\ml{S\_THM}}
-\index{I_THM@\ml{I\_THM}} \index{I_o_ID@\ml{I\_o\_ID}} \begin{verbatim}
-   o_THM |- !f g x. (f o g)x = f(g x)
-
-   o_ASSOC |- !f g h. f o (g o h) = (f o g) o h
-
-   K_THM |- !x y. K x y = x
-
-   S_THM |- !f g x. S f g x = f x(g x)
-
-   I_THM |- !x. I x = x
-
-   I_o_ID |- !f. (I o f = f) /\ (f o I = f) \end{verbatim}\end{hol}
-
-Having the symbols \ml{o}, \ml{S}, \ml{K} and \ml{I} as built-in
-constants\index{variables, in HOL logic@variables, in \HOL\ logic!with constant
-names} is sometimes inconvenient because they are often wanted as mnemonic
-names for variables (\eg\ \ml{S} to range over sets and \ml{o} to range over
-outputs).  These names may therefore be changed in future releases of the
-system, or the theory \ml{combin} may be made into a library.  But variables
-(though not constants) with these names can be used in the current system if
-\ml{o}, \ml{S}, \ml{K} and \ml{I} are first hidden (see Section~\ref{hidden}).
-\index{ function composition operator, in HOL logic@\ml{o} (function
-composition operator, in \HOL\ logic)|)} \index{function composition, in HOL
-logic@function composition, in \HOL\ logic|)}
-
-\subsection{The theories {\tt tree} and {\tt ltree}} \index{recursive
-definitions, in HOL logic@recursive definitions, in \HOL\ logic!automated, for
-trees|(}
-
-\index{labelled tree theory, in HOL logic@labelled \ml{tree} theory, in \HOL\
-logic|(} The theories \ml{tree}\index{tree, the HOL theory@\ml{tree}, the \HOL\
-theory}
- and \ml{ltree}\index{ltree, the HOL theory@\ml{ltree}, the \HOL\ theory|(}
- contain the definitions of two structurally-isomorphic types of
-finitely-branching ordered trees.  The types defined in these theories are used
-by Tom Melham's\index{Melham, T.} type definition package (see
-Section~\ref{types-package}) to construct representations for arbitrary
-concrete recursive types.  They are not intended for general use, and the
-theorems stored in these two built-in theories are therefore not loaded into
-the system at start-up.  The following is a summary of the main theorems which
-are available in the theories \ml{tree} and \ml{ltree}, and which may be of use
-in certain specialized applications.  For full details of the logical basis for
-these two theories, see~\cite{Melham-banff}.
-
-\subsubsection{The theory {\tt tree}}
-
-In the theory \ml{tree}, a type \ml{tree}\index{tree, the HOL type@\ml{tree},
-the \HOL\ type} is defined to denote the set of all ordered trees whose nodes
-can branch any (finite) number of times.  A constructor function
-
-\index{node@\ml{node}} \begin{hol}\begin{verbatim}
-   node : (tree)list -> tree \end{verbatim}\end{hol}
-
-\noindent is then defined in the theory \ml{tree}.  This function can be used
-to construct any tree-structured value of type \ml{tree}.  The expression
-\ml{"node []"} denotes the tree consisting of a single leaf node with no
-subtrees.  If $tl\ml{:(tree)list}$ is a non-empty list of trees, then the term
-$\ml{"node }tl\ml{"}$ denotes the tree whose immediate subtrees are the trees
-in the list $tl$.  Using \ml{node}, it is possible to construct a tree of any
-shape.  For example, the tree
-
-\begin{center}
-{\setlength{\unitlength}{0.75mm}
-\begin{picture}(60,25)
-\thicklines
-\put(10,10){\makebox(0,0){$\bullet$}}
-\put(30,10){\makebox(0,0){$\bullet$}}
-\put(50,10){\makebox(0,0){$\bullet$}}
-\put(30,20){\makebox(0,0){$\bullet$}}
-\put(44,0){\makebox(0,0){$\bullet$}}
-\put(56,0){\makebox(0,0){$\bullet$}}
-\put(30,20){\line(0,-1){10}}
-\put(30,20){\line(2,-1){20}}
-\put(30,20){\line(-2,-1){20}}
-\put(50,10){\line(3,-5){6}}
-\put(50,10){\line(-3,-5){6}}
-\end{picture}}
-\end{center}
-
-\noindent is denoted by the term
-\ml{"node[node[]; node[]; node[node[]; node[]]"}.
-
-The next two theorems follow from the formal definition of \ml{node} and
-are stored in the theory \ml{tree}:
-
-
-\begin{hol}
-\index{node_11@\ml{node\_{11}}}
-\index{tree_Induct@\ml{tree\_Induct}}
-\index{induction rule!for trees, in HOL logic@for \ml{trees}, in \HOL\ logic}
-\begin{verbatim}
-   node_11      |- !tl1 tl2. (node tl1 = node tl2) = (tl1 = tl2)
-   tree_Induct  |- !P. (!tl. EVERY P tl ==> P(node tl)) ==> (!t. P t)
-\end{verbatim}\end{hol}
-
-\noindent These  two  theorems are  analogous to  the Peano\index{Peano's axioms}  postulates for the
-natural numbers, and are used to prove the  following abstract characterization
-of the defined type \ml{tree}.
-
-
-\begin{hol}
-\index{tree_Axiom@\ml{tree\_Axiom}}
-\index{characterizing theorem!for finitely-branching ordered trees}
-\begin{verbatim}
-   tree_Axiom  |- !f. ?! fn. !tl. fn(node tl) = f(MAP fn tl)tl
-\end{verbatim}\end{hol}
-
-\noindent This theorem states the validity of general `primitive recursive'
-definitions of functions over finitely-branching ordered trees.
-
-\subsubsection{The theory {\tt ltree}}
-
-In the theory \ml{ltree}\index{ltree@$\ldots$\ml{ltree}}, a type of {\it
-labelled\/} trees (called \ml{(*)ltree}) is defined. Labelled trees have the
-same sort of structure as values of the defined type \ml{tree} discussed above.
-The only difference is that a tree of type \ml{(*)ltree} has a value or `label'
-of type \ml{*} associated with each of its nodes.  A constructor
-
-\begin{hol}
-\index{Node@\ml{Node}}
-\begin{verbatim}
-   Node : * -> (*)ltree -> (*)ltree
-\end{verbatim}\end{hol}
-
-\noindent is defined in the theory \ml{ltree}.  The function \ml{Node}
-constructs labelled trees by mapping a label of type \ml{*} and a list of
-labelled subtrees to a labelled tree of type \ml{(*)ltree}.
-The following theorems
- about labelled trees are pre-proved and stored in the
-theory \ml{ltree}.
-
-
-\begin{hol}
-\index{Node_11@\ml{Node\_{11}}}
-\index{ltree_Induct@\ml{ltree\_Induct}}
-\index{ltree_Axiom@\ml{ltree\_Axiom}}
-\begin{verbatim}
-   Node_11       |- !v1 v2 trl1 trl2.
-                    (Node v1 trl1 = Node v2 trl2) = (v1 = v2) /\ (trl1 = trl2)
-   ltree_Induct  |- !P. (!t. EVERY P t ==> (!h. P(Node h t))) ==> (!l. P l)
-   ltree_Axiom   |- !f. ?! fn. !v tl. fn(Node v tl) = f(MAP fn tl)v tl
-\end{verbatim}\end{hol}
-
-\noindent These  theorems  are  analogous to  their counterparts  in the theory
-\ml{tree} discussed  above.    The theorems  \ml{Node\_{11}}
-and \ml{ltree\_Induct} amount to a Peano-type characterization of labelled
-trees, and the theorem \ml{ltree\_Axiom} is a primitive recursion theorem for
-labelled trees.
-\index{labelled tree theory, in HOL logic@labelled \ml{tree} theory, in \HOL\ logic|)}
-\index{ltree, the HOL theory@\ml{ltree}, the \HOL\ theory|)}
-\index{recursive definitions, in HOL logic@recursive definitions, in \HOL\ logic!automated, for trees|)}
-
-\subsection{The theory {\tt tydefs}}
-
-The theory \ml{tydefs}\index{tydefs@\ml{tydefs}}
- is a  technical theory used
-to support the type definition package described in
-Section~\ref{types-package}.  The main result proved in \ml{tydefs} is a
-theorem called \ml{TY\_DEF\_THM}\index{TY_DEF_THM@\ml{TY\_DEF\_THM}},
- which is used by the type definition package
-to derive automatically abstract characterizations for
-arbitrary concrete recursive types.  The interested reader can find the
-details of the derivation of \ml{TY\_DEF\_THM} in~\cite{Melham-banff}.
-
-\subsection{The theory {\tt sum}}
-\label{sum}
-
-
-The theory \ml{sum}\index{sum@\ml{sum}}
- defines the binary  disjoint union\index{disjoint union theory, in HOL
-logic@disjoint union theory, in \HOL\ logic|(}  type operator \ml{sum}.
-A type  {\small\verb%(%}$\sigma_1${\small\verb%,%}$\sigma_2${\small\verb%)sum%}
-denotes the  disjoint  union  of  types  $\sigma_1$  and $\sigma_2$.   The type
-operator {\small\verb%sum%} can be defined just as {\small\verb%prod%} was, but
-the details are omitted here.\footnote{The definition of disjoint  unions in
-the
-HOL system is due to Tom Melham. The technical details of this definition can
-be found in~\cite{Melham-banff}.}  The \HOL\ parser\index{parsing, of HOL logic@parsing, of \HOL\ logic!of sum types}
-converts
-\ml{":}$\sigma_1${\small\verb%+%}$\sigma_2$\ml{"}\index{ disjoint union
-type operator, in HOL logic@\ml{+} (disjoint union
-type operator, in HOL logic)} into
-\ml{(}$\sigma_1$\ml{,}$\sigma_2$\ml{)sum}, and the printer inverts this.
-
-The standard operations on sums are:
-
-
-\begin{hol}
-\index{disjoint union theory, in HOL logic@disjoint union theory, in \HOL\ logic|)}
-\index{INL, the constant in HOL logic@\ml{INL}, the constant in \HOL\ logic}
-\index{INR, the constant in HOL logic@\ml{INR}, the constant in \HOL\ logic}
-\index{ISL, the constant in HOL logic@\ml{ISL}, the constant in \HOL\ logic}
-\index{ISR, the constant in HOL logic@\ml{ISR}, the constant in \HOL\ logic}
-\index{OUTL, the constant in HOL logic@\ml{OUTL}, the constant in \HOL\ logic}
-\index{OUTR, the constant in HOL logic@\ml{OUTR}, the constant in \HOL\ logic}
-\begin{verbatim}
-   INL  : *      -> * + **
-   INR  : **     -> * + **
-   ISL  : * + ** -> bool
-   ISR  : * + ** -> bool
-   OUTL : * + ** -> *
-   OUTR : * + ** -> **
-\end{verbatim}\end{hol}
-
-\noindent These are all defined as constants in the theory \ml{sum}.  The
-constants \ml{INL} and \ml{INR} inject into the left and right summands,
-respectively. The constants \ml{ISL} and \ml{ISR} test for membership of the
-left and right summands, respectively. The constants \ml{OUTL} and \ml{OUTR}
-project from a sum to the left and right summands, respectively.
-
-The following two theorems, which are minor variants of each other, are
-pre-proved in the built-in theory \ml{sum}. Each one, on its own, provides a
-complete and abstract characterization of the disjoint sum type.
-
-\begin{hol}
-\index{sum_Axiom@\ml{sum\_Axiom}}
-\index{sum_axiom@\ml{sum\_axiom}}
-\begin{verbatim}
-   sum_axiom   |- !f g. ?! h. (h o INL = f) /\ (h o INR = g)
-
-   sum_Axiom = |- !f g. ?! h. (!x. h(INL x) = f x) /\ (!x. h(INR x) = g x)
-\end{verbatim}\end{hol}
-
-\noindent Also provided as built-in, are the following theorems having to
-do with the discriminator functions \ml{ISL} and \ml{ISR}:
-
-\begin{hol}
-\index{ISL, the theorem in HOL logic@\ml{ISL}, the theorem in \HOL\ logic}
-\index{ISR, the theorem in HOL logic@\ml{ISR}, the theorem in \HOL\ logic}
-\index{ISL_OR_ISR@\ml{ISL\_OR\_ISR}}
-\begin{verbatim}
-   ISL         |- (!x. ISL(INL x)) /\ (!y. ~ISL(INR y))
-
-   ISR         |- (!x. ISR(INR x)) /\ (!y. ~ISR(INL y))
-
-   ISL_OR_ISR  |- !x. ISL x \/ ISR x
-\end{verbatim}\end{hol}
-
-\noindent The \ml{sum} theory also provides the following built-in theorems:
-
-\begin{hol}
-\index{OUTL, the theorem in HOL logic@\ml{OUTL}, the theorem in \HOL\ logic}
-\index{OUTR, the theorem in HOL logic@\ml{OUTR}, the theorem in \HOL\ logic}
-\index{INL, the theorem in HOL logic@\ml{INL}, the theorem in \HOL\ logic}
-\index{INR, the theorem in HOL logic@\ml{INR}, the theorem in \HOL\ logic}
-\begin{verbatim}
-   OUTL        |- !x. OUTL(INL x) = x
-
-   OUTR        |- !x. OUTR(INR x) = x
-
-   INL         |- !x. ISL x ==> (INL(OUTL x) = x)
-
-   INR         |- !x. ISR x ==> (INR(OUTR x) = x)
-\end{verbatim}\end{hol}
-
-\noindent which describe the projection functions \ml{OUTL} and \ml{OUTR}.
-
-\subsection{The theory {\tt one}}%
-\index{one, the HOL theory@\ml{one}, the \HOL\ theory}%
-\index{one, the HOL type@\ml{one}, the \HOL\ type}%
-
-The theory \ml{one} defines  the type  \ml{":one"} which  contains one element.
-The constant  \ml{one}  is specified  to denote  this element.   The pre-proved
-theorems in the theory \ml{one} are:
-
-\begin{hol}
-\index{one_axiom@\ml{one\_axiom}}
-\index{one, the HOL theorem@\ml{one}, the \HOL\ theorem}
-\index{one_Axiom@\ml{one\_Axiom}}
-\begin{verbatim}
-   one_axiom   |- !(f:* -> one) (g:* -> one). f = g
-   one         |- !(v:one). v = one
-   one_Axiom   |- !(e:*). ?!(fn:one->*). fn one = e
-\end{verbatim}\end{hol}
-
-\noindent These three theorems are equivalent characterizations of the type
-with only one value.
-
-\subsection{The theory {\tt res\_quan}}\label{res-quant}
-
-\index{types, in HOL logic@types, in \HOL\ logic!dependent}
-\index{dependent types in HOL logic@dependent types in \HOL\ logic}
-\index{quantifiers!restricted}
-
-The theory \ml{res\_quan} contains the definitions of the constants
-{\small\verb!RES_FORALL!}, {\small\verb!RES_EXISTS!},
-{\small\verb!RES_SELECT!}, and {\small\verb!RES_ABSTRACT!},
-which are used to support restricted
-quantification\index{quantifiers!restricted} in the \HOL\ logic.  This
-implements a method of simulating subtypes and dependent types with
-predicates. The definitions are:
-
-\begin{hol}
-\index{RES_FORALL@\ml{RES\_FORALL}}
-\index{RES_EXISTS@\ml{RES\_EXISTS}}
-\index{RES_SELECT@\ml{RES\_SELECT}}
-\index{RES_ABSTRACT@\ml{RES\_ABSTRACT}}
-\index{ARB@\ml{ARB}}
-\begin{verbatim}
-   RES_FORALL   |- !P B. RES_FORALL P B = (!x. P x ==> B x)
-
-   RES_EXISTS   |- !P B. RES_EXISTS P B = (?x. P x /\ B x)
-
-   RES_SELECT   |- !P B. RES_SELECT P B = (@x. P x /\ B x)
-
-   RES_ABSTRACT |- !P B. RES_ABSTRACT P B = (\x. if P x then B x else ARB)
-\end{verbatim}\end{hol}
-
-
-The new syntax automatically translates as follows:
-
-\begin{hol}
-{\small\verb%   \%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_ABSTRACT %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
-{\small\verb%   !%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_FORALL   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
-{\small\verb%   ?%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_EXISTS   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}\\
-{\small\verb%   @%}$v${\small\verb%::%}$P${\small\verb%.%}$B${\small\verb%    <---->   RES_SELECT   %}$P${\small\verb% (\%}$v${\small\verb%.%}$B${\small\verb%)%}
-\end{hol}
-
-Anything can be written between the binder and `\ml{::}' that can be
-written between the binder and `\ml{.}`. See the examples below.
-
-Currently no derived rules are provided to support this notation, so
-any inferences will need to work on the underlying semantic
-representation.
-
-User-defined binders can also have restricted forms, which are set up
-with the function:
-
-\begin{boxed}\index{associate_restriction@\ml{associate\_restriction}|pin}
-\begin{verbatim}
-   associate_restriction : (string * string) -> *
-\end{verbatim}\end{boxed}
-
-
-\noindent If \m{c} is the name
-of a binder and \ml{RES\_}\m{c} is the name of a suitable constant (which
-must be explicitly defined), then executing:
-
-\begin{hol}
-{\small\verb%   associate_restriction(`%}$c${\small\verb%`, `RES_%}$c${\small\verb%`)%}
-\end{hol}
-
-\noindent will cause the parser and pretty-printer to support:
-
-\begin{hol}
-{\small\verb%   %}$c$ $v${\small\verb%::%}$P${\small\verb%. %}$B${\small\verb%    <---->   RES_%}$c$ $P${\small\verb% (\%}$v${\small\verb%. %}$B${\small\verb%)%}
-\end{hol}
-
-Here is an example session:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#"!x y::P. x<y";;
-"!x y :: P. x < y" : term
-
-#set_flag(`print_restrict`, false);;
-true : bool
-
-#"!x y::P. x<y";;
-"RES_FORALL P(\x. RES_FORALL P(\y. x < y))" : term
-
-#"?(x,y) p::(\(m,n).m<n). p=(x,y)";;
-"RES_EXISTS
- (\(m,n). m < n)
- (\(x,y). RES_EXISTS(\(m,n). m < n)(\p. p = x,y))"
-: term
-
-#"\x y z::P.[0;x;y;z]";;
-"RES_ABSTRACT P(\x. RES_ABSTRACT P(\y. RES_ABSTRACT P(\z. [0;x;y;z])))"
-: term
-\end{verbatim}\end{session}
-
-A conversion that rewrites away the constants \ml{RES\_ABSTRACT},
-\ml{RES\_FORALL}, \ml{RES\_EXISTS} and \ml{RES\_SELECT} is:
-
-\begin{hol}\begin{verbatim}
-   let RESTRICT_CONV =
-        (PURE_REWRITE_CONV [definition `bool` `RES_ABSTRACT`;
-                            definition `bool` `RES_FORALL`;
-                            definition `bool` `RES_EXISTS`;
-                            definition `bool` `RES_SELECT`])
-        THENC (DEPTH_CONV BETA_CONV)
-\end{verbatim}\end{hol}
-
-\noindent This is a bit unsatisfactory, as is shown by the artificial
-example below:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#let t = "!x y::P.?f:num->num::Q. f(@n::R.T) = (x+y)";;
-t = "!x y :: P. ?f :: Q. f(@n :: R. T) = x + y" : term
-
-#RESTRICT_CONV t;;
-|- (!x y :: P. ?f :: Q. f(@n :: R. T) = x + y) =
-   (!x. P x ==> (!x'. P x' ==> (?x. Q x /\ (x(@x. R x /\ T) = x + x'))))
-\end{verbatim}\end{session}
-
-The variable $x$ in the definitions of the constants
-\ml{RES\_ABSTRACT}, \ml{RES\_FORALL}, \ml{RES\_EXISTS} and
-\ml{RES\_SELECT} gets confused with the variable in the supplied term.
-This can be avoided by changing \ml{RESTRICT\_CONV} to perform
-explicit alpha-conversion. For example, by implementing a conversion:
-
-\begin{hol}
-{\small\verb%   RES_FORALL %}$P${\small\verb% (\%}$v$\ml{.}$B$\ml{[}$v$\ml{])  ---->  !}$v$\ml{. }$P$ $v$\ml{ ==> }$B$\ml{[}$v$\ml{]}
-\end{hol}
-
-\noindent Dealing with the case when
-$v$ is a variable structure is also desirable. For example:
-
-\begin{session}\begin{verbatim}
-#let t1 = "!(m,n)::P. m<n";;
-t1 = "!(m,n) :: P. m < n" : term
-
-#RESTRICT_CONV t1;;
-|- (!(m,n) :: P. m < n) = (!x. P x ==> (\(m,n). m < n)x)
-
-\end{verbatim}\end{session}
-
-\noindent If anyone writes the desired conversions please let us know!
-
-Here is an example of a user-defined restriction:
-
-\begin{session}\begin{verbatim}
-#new_binder_definition(`DURING`, "DURING(p:num#num->bool) = $!p");;
-|- !p. $DURING p = $! p
-
-#"DURING x::(m,n). p x";;
-no restriction constant associated with DURING
-skipping: x " ;; parse failed
-
-#new_definition
-# (`RES_DURING`, "RES_DURING(m,n)p = !x. m<=x /\ x<=n ==> p x");;
-|- !m n p. RES_DURING(m,n)p = (!x. m <= x /\ x <= n ==> p x)
-
-#associate_restriction(`DURING`,`RES_DURING`);;
-() : void
-
-#"DURING x::(m,n). p x";;
-"DURING x :: (m,n). p x" : term
-
-#set_flag(`print_restrict`,false);;
-true : bool
-
-#"DURING x::(m,n). p x";;
-"RES_DURING(m,n)(\x. p x)" : term
-\end{verbatim}\end{session}
-
-
-\subsection{The theory {\tt option}}
-\subsection{The theory {\tt finite\_map}}
-\subsection{The theory {\tt ascii}}
-\subsection{The theory {\tt string}}
-\subsection{The theory {\tt bag}}
-\subsection{The theory {\tt integer}}
-\subsection{Theories for the real numbers}
-\subsection{Theories for sets}
-\subsubsection{The theory {\tt set}}
-\subsubsection{The theory {\tt pred\_set}}
-\subsubsection{The theory {\tt finset}}
-\section{Syntax for sets}\index{set theory notation}
-
-The special purpose set-theoretic notations
-{\small\verb%"{%}$t_1,t_2,\ldots,t_n${\small\verb%}"%} and
-{\small\verb%"{%}$t${\small\verb%|%}$p${\small\verb%}"%} are available.
-The normal interpretation of the former is the finite set containing
-$t_1,t_2,\ldots, t_n$ and the normal interpretation of the latter
-is the set of all $t$s such that $p$.
-
-For example,
-\begin{hol}\begin{verbatim}
-   "{1,2,3,4}"
-\end{verbatim}\end{hol}
-
-\noindent parses to
-
-\begin{hol}\begin{verbatim}
-   "1 INSERT (2 INSERT (3 INSERT (4 INSERT EMPTY)))"
-\end{verbatim}\end{hol}
-
-\noindent Similarly, {\small\verb%"{%}$t${\small\verb%|%}$p${\small\verb%}"%}
-parses to:
-
-\medskip
-
-\noindent{\small
-{\verb%   `%}}{\small{\verb%GSPEC(\(%}$x_1${\verb%,%}$\ldots${\verb%,%}$x_n${\verb%).(%}$t${\verb%,%}$p${\verb%))"%}
-}
-
-\medskip
-
-\noindent where $x_1$, $\ldots$ , $x_n$ are the free variables occurring in both $t$
-and $p$.  If there are no such free variables then an error results.
-The order in which the variables are listed in the variable structure
-of the paired abstraction is an unspecified function of the structure
-of $t$ (it is approximately left to right).
-
-For example,
-
-\begin{hol}\begin{verbatim}
-   "{x+y | (x < y) /\ (y < z)}"
-\end{verbatim}\end{hol}
-
-\noindent parses to:
-
-\begin{hol}\begin{verbatim}
-   "GSPEC(\(x,y). ((x+y), (x < y) /\ (y < z)))"
-\end{verbatim}\end{hol}
-
-\noindent where \ml{GSPEC} is defined by:
-
-\begin{hol}\begin{verbatim}
-   |- !f. GSPEC f = SPEC(\x. ?y. x,T = f y)
-\end{verbatim}\end{hol}
-
-\noindent and \ml{SPEC} abstracts a predicate to a set (it is the abstraction
-bijection used in the definition of the type operator \ml{set}).
-Other examples are:
-
-\begin{hol}\begin{verbatim}
-   "{x+y+z | (x < y) /\ (y < z)}"
-\end{verbatim}\end{hol}
-
-\noindent will parse to:
-
-\begin{hol}\begin{verbatim}
-   "GSPEC(\(x,y,z). (x+(y+z), (x < y /\ y < z)))"
-\end{verbatim}\end{hol}
-
-\noindent and
-
-\begin{hol}\begin{verbatim}
-   "{x+y+w | (x < y) /\ (y < z)}"
-\end{verbatim}\end{hol}
-
-\noindent will parse to:
-
-\begin{hol}\begin{verbatim}
-   "GSPEC(\(x,y). (x+(y+w), (x < y /\ y < z)))"
-\end{verbatim}\end{hol}
-
-
-\section{The type definition package}\label{types-package}\index{extension, of HOL logic@extension, of \HOL\ logic!by type definition|(}
-\index{type definition package, in HOL system@type definition package, in \HOL\ system|(}
-
-In the \HOL\ system, new types and type operators can be introduced\index{extension, of HOL logic@extension, of \HOL\ logic}
-using the  consistency-preserving definitional  mechanism  of
-type  definitions\index{type definition extension, in HOL logic@type definition extension, in \HOL\ logic|(} (see Sections~\ref{tydefs} and~\ref{type-defs}).  The \ML\
-rule for introducing a new type is:
-
-\begin{hol}
-\index{new_type_definition@\ml{new\_type\_definition}}
-\begin{verbatim}
-   new_type_definition : (string # term # thm) -> thm
-\end{verbatim}\end{hol}
-
-\noindent This rule allows
-axioms of a restricted form to be added to the primitive basis of the logic.
-These axioms are analogous to definitional axioms for new constants: they
-define new types in terms of other type expressions already present in the
-logic. Like the rule \ml{new\_definition} for making constant definitions,
-the rule  \ml{new\_type\_definition}
- for type definitions
-ensures that adding a new syntactic entity (in this case, a type or
-type operator) is a conservative extension of the logic.
-
-The basic idea behind \ml{new\_type\_definition} is  that a  type definition is
-made by  adding an  axiom to  the logic  which asserts  that the  set of values
-denoted by a  new type  is isomorphic\index{isomorphism of types, in HOL logic@isomorphism of types, in \HOL\ logic}  to an  appropriate subset  of the values
-denoted by  a type  expression already  present in  the logic.   A definitional
-axiom\index{definitional axioms} of this form merely states
-that a  new type  is isomorphic  to a particular
-subset of an existing type.  From such type definition  axioms, it  is usual to
-prove theorems that characterize newly-defined types more abstractly.  The idea
-is to prove a collection of theorems that state  the essential  properties of a
-new type without reference to how it is defined.   These  theorems then
-constitute a derived `abstract axiomatization' of the new type, and
-once  they have  been proved they
-become the basis for all further reasoning about it.
-
-With this approach, introducing a new type (or type operator) in \HOL\
-involves two distinct steps:
-
-\setcounter{myenumi}{1}
-\begin{list}{\arabic{myenumi}.}{\usecounter{myenumi}
-\setlength{\leftmargin}{10mm}
-\setlength{\rightmargin}{5mm}
-\setlength{\labelwidth}{3mm}
-\setlength{\labelsep}{2mm}
-\setlength{\listparindent}{0mm}
-\setlength{\itemsep}{8pt plus1pt minus2pt}
-\setlength{\topsep}{3mm}
-\setlength{\parsep}{0mm}}
-\setlength{\abovedisplayshortskip}{8pt plus1pt minus1pt}
-\setlength{\belowdisplayshortskip}{8pt plus1pt minus1pt}
-
-\item Finding an appropriate representation for the new type, and making a type \mbox{definition} using \ml{new\_type\_definition} based
- on this representation.
-
-\item Using the axiomatic definition of the new type and the properties of its
-representation to prove a set of theorems that abstractly characterizes it.
-
-\end{list}
-
-Defining a new type using this approach can be hard work.  But a set of tools
-is provided in the system which---for a certain class of commonly-used {\it
-concrete recursive types\/}\index{types, in HOL logic@types, in \HOL\
-logic!tools for construction of}\index{concrete recursive types, in HOL
-logic@concrete recursive types, in \HOL\ logic}---automatically carries out all
-the formal proofs necessary to define these types and derive abstract
-characterizations from their definitions.  This section provides a user-level
-overview of these tools.  Details of the formal proofs carried out by these
-tools are discussed in~\cite{Melham-banff}.
-
-\subsection{Defining types}
-
-\index{type definition package, in HOL system@type definition package, in \HOL\ system!use of, in recursive type definition|(}
-\index{recursive types, in HOL logic@recursive types, in \HOL\ logic!tools for construction of|(}
-The main \ML\ function in the \HOL\ type definition package is
-
-\begin{boxed}
-\index{define_type@\ml{define\_type}|pin}
-\begin{verbatim}
-   define_type : string -> string -> thm
-\end{verbatim}\end{boxed}
-
-\noindent This function can be used to define any concrete recursive type in
-the \HOL\ system.  These are types whose values are generated by a set of {\it
-constructors\/} (i.e.\ functions) which yield concrete representations for
-these values.  Examples include types which denote finite sets of atomic values
-(enumerated types), types which denote sets of structured values (record types)
-or finite disjoint unions of structured values (variant records), and types
-which denote sets of recursive data structures (recursive types).
-
-The two inputs to \ml{define\_type} are both strings.  The first string
-is a name  under which the results of making
-the type definition will be stored in the current theory segment. The second is
-a user-supplied informal\footnote{ In this context, {\it informal\/} means not
-in the language of higher order logic.} specification of the concrete
-recursive type to be defined.  This type specification is written in
-a notation (explained below) which resembles
-a data type declaration in functional programming languages like Standard
-\ML~\cite{sml}.  It simply states the names of the new type's
-constructors and the logical types of their \mbox{arguments.}  The output is a
-theorem which abstractly characterizes the properties of
-the desired recursive type---i.e.\ a
-derived `abstract axiomatization' of the type.
-
-\subsubsection{Input syntax}
-
-The type specification given as input\index{type definition package, in HOL system@type definition package, in \HOL\ system!input to|(} to \ml{define\_type}
-must be an \ML\ string\index{strings, in ML@strings, in \ML!as input to HOL type definition package@as input to \HOL\ type definition package} (of \ML\ type \ml{string}) of the form:
-
-{\def\op{{\normalsize\sl op}}
-\begin{hol}\begin{alltt}
-   `{\op} = \(C\sb{1}\;ty{}\sb{1}\sp{1}\;\ldots\;ty{}\sb{1}\sp{k\sb{1}} \) | \(\cdots\) | \(C\sb{m}\;ty{}\sb{m}\sp{1}\;\ldots\;ty{}\sb{m}\sp{k\sb{m}}\)`
-\end{alltt}\end{hol}}
-
-\noindent where each $ty_i^{j}$ is either a type expression already defined
-as a type in the current theory (this type expression must not
-contain \ty{op}) or is the name \ty{op} itself.  A string of this form
-describes an $n$-ary type operator \ty{op},
-where $n$ is the number of distinct type variables in the types
-$ty_i^{j}$ on the right hand side of the equation.
-If $n = 0$ then \ty{op} is a type constant;
-otherwise \ty{op} is an $n$-ary type operator.  The concrete
-type described has $m$
-distinct constructors \m{C_1, \dots, C_m} where $m \geq 1$.
-Each constructor \m{C_i} takes $k_i$ arguments, where $k_i \geq 0$;
-and the types of these arguments are given by the type
-expressions $ty_i^j$ for $1 \leq j \leq k_i$.  If one or more of the type
-expressions $ty_i^{j}$ is the type \ty{op} itself, then the \mbox{equation}
-specifies a {\it recursive\/} type.  In any specification of a recursive type,
-at least one constructor must be non-recursive---i.e.\ all its arguments must
-have types which already exist in the current theory.
-
-The input parser for \ml{define\_type} treats type expressions exactly as the
-\HOL\ quotation parser does, with precedences among the various built-in type
-operators in force.\index{type definition package, in HOL system@type definition package, in \HOL\ system!input to|)}
-
-\subsubsection{The type specified}
-
-The logical type described by an input string of the form
-shown above is intended
-to denote the set of all values which can be finitely
-generated using the constructors \m{C_1, \dots, C_m},
-where each constructor is one-to-one and any two
-different constructors yield different values.   Every value of this
-type will be denoted by some term of the form:
-
-\[ C_i\;x_i^1\;\ldots\;x_i^{k_i} \]
-
-\noindent where $x_i^j$ is a term of type $ty_i^j$ for $1 \leq j \leq
-k_i$. In addition, any two terms:
-
-\[ C_i\;x_i^1\;\ldots\;x_i^{k_i} \qquad {\rm and} \qquad
-   C_j\;x_j^1\;\ldots\;x_j^{k_j} \]
-
-\noindent denote equal values exactly when their constructors are the same
-(i.e.\ $i=j$) and these constructors are applied to equal arguments
-(i.e.\ $x_i^n = x_j^n\;\,{\rm for}\;\,1\leq n\leq k_i$).
-
-\subsubsection{The output}\label{define-type-output}
-\index{type definition package, in HOL system@type definition package, in \HOL\ system!output of|(}
-
-\noindent For any type specification
-in the form of an equation of the kind discussed above, executing:
-
-{\def\op{{\normalsize\sl op}}
-\begin{hol}
-\index{define_type@\ml{define\_type}}
-\begin{alltt}
-   define\_type `\m{name}` `{\op} = \(C\sb{1}\;ty{}\sb{1}\sp{1}\;\ldots\;ty{}\sb{1}\sp{k\sb{1}} \) | \(\cdots\) | \(C\sb{m}\;ty{}\sb{m}\sp{1}\;\ldots\;ty{}\sb{m}\sp{k\sb{m}}\)`
-\end{alltt}\end{hol}}
-
-\noindent will make a formal definition for a
-type (or  type operator) \ty{op}
-in the current theory segment, make appropriate definitions for
-constants  \m{C_1, C_2,\dots, C_m},
-and automatically prove a theorem which
-provides an abstract
-characterization\index{characterizing theorem!for defined types}\index{automated derivation!of characterizing theorems for recursive types}
-of the newly-defined type \ty{op}.  This theorem, which is
-stored in the current theory segment under the name $name$ and also returned by
-\ml{define\_type}, has the form shown below:
-
-{\def\op{{\normalsize\sl op}}
-\begin{hol}\begin{alltt}
-   |- !f\(\sb{1}\:\cdots\:\)f\(\sb{m}\). ?!fn:{\op}->*.
-         !x\(\sb{1}\sp{1}\;\,\cdots\,\;\)x\(\sb{1}\sp{k\sb{1}}\). fn(\m{C}\(\sb{1}\,\) x\(\sb{1}\sp{1}\;\,\ldots\,\;\)x\(\sb{1}\sp{k\sb{1}}\)) = f\(\sb{1}\) (fn x\(\sb{1}\sp{1}\))\(\;\ldots\;\)(fn x\(\sb{1}\sp{k\sb{1}}\)) x\(\sb{1}\sp{1}\;\ldots\;\)x\(\sb{1}\sp{k\sb{1}}\)
-                                      \(\vdots\)
-         !x\(\sb{m}\sp{1}\;\cdots\;\)x\(\sb{1}\sp{k\sb{m}}\!\). fn(\m{C}\(\sb{m}\) x\(\sb{m}\sp{1}\;\ldots\;\)x\(\sb{m}\sp{k\sb{m}}\)) = f\(\sb{m}\) (fn x\(\sb{m}\sp{1}\))\(\;\ldots\;\)(fn x\(\sb{m}\sp{k\sb{m}}\)) x\(\sb{m}\sp{1}\;\ldots\;\)x\(\sb{m}\sp{k\sb{m}}\)
-\end{alltt}\end{hol}}
-
-
-\noindent where the right hand sides of the equations include recursive
-applications `$\ml{fn}\;\ml{x}_i^j$' only for variables  $\ml{x}_i^j$ of type
-\ty{op}.  (See the examples given below.) A theorem of this form asserts the
-unique existence of primitive recursive functions defined by cases on the
-constructors \m{C_1, C_2,\dots,C_m}.  This is a slight
-extension of the {\it initiality\/}\index{initiality} property by which
-structures of this kind are characterized in the `initial algebra' approach to
-specifying abstract data types~\cite{goguen}.  This property provides an
-abstract characterization of the type \ty{op} which is both succinct and
-complete, in the sense that it completely determines the structure of the
-values of \ty{op} up to isomorphism.
-
-The call to \ml{define\_type} shown above fails if:
-
-\begin{myenumerate}
-
-\item not in draft mode\index{draft mode, in HOL system@draft mode, in \HOL\ system};
-
-\item \ty{op} is already the name of a type constant or type operator in the
-current theory;
-
-\item any one of $C_1,\dots,C_{m}$ is already the name
-of a constant in the current theory.
-
-\item either \ty{op} or any one $C_{1},\dots,C_{m}$ is not a
-legal identifier.  Identifiers must start with a letter (as defined by
-\ml{is\_letter}) and contain only alphanumeric characters (as defined by
-\ml{is\_alphanum})
-
-\item $\ml{ABS\_}\ty{op}$\index{ABS_@\ml{ABS\_}$\ldots$}
- or $\ml{REP\_}\ty{op}$\index{REP_@\ml{REP\_}$\ldots$}
- are already constants in the
-current theory;
-
-\item there is already an axiom, definition, constant specification or type
-definition stored under either the name
-$\ty{op}\ml{\_TY\_DEF}$\index{TY_DEF@$\ldots$\ml{\_TY\_DEF}} or the name
-$\ty{op}\ml{\_ISO\_DEF}$ in the current
-theory segment.
-
-\item there is already a theorem stored under the name \ml{`\m{name}`} in the
-current theory segment.
-
-\item the input type specification does not conform to the syntax described
-above.
-
-\end{myenumerate}
-\index{recursive types, in HOL logic@recursive types, in \HOL\ logic!tools for construction of|)}\index{type definition extension, in HOL logic@type definition extension, in \HOL\ logic|)}
-\index{type definition package, in HOL system@type definition package, in \HOL\ system!output of|)}
-\index{type definition package, in HOL system@type definition package, in \HOL\ system!use of, in recursive type definition|)}
-
-\subsubsection{Examples}\label{define-type-example}
-
-\index{primitive recursion theorem!a degenerate case|(}
-The session that follows illustrates the use of \ml{define\_type} in defining
-a variety of simple concrete types.  It is assumed that the session begins
-with the user in draft mode.
-
-The first definition is simple, the definition of a type \ml{three} with
-exactly three distinct values: \ml{ONE}, \ml{TWO}, and \ml{THREE}.
-
-\setcounter{sessioncount}{1}\label{types-session}
-\begin{session}\begin{verbatim}
-#let three_Axiom = define_type `three_Axiom` `three = ONE | TWO | THREE`;;
-three_Axiom =
-|- !e0 e1 e2. ?! fn. (fn ONE = e0) /\ (fn TWO = e1) /\ (fn THREE = e2)
-\end{verbatim}\end{session}
-
-\noindent The theorem returned by \ml{define\_type} provides a complete
-and abstract characterization of
-a defined logical type \ml{three} which denotes a set of
-exactly three elements.  This characterization takes the form of a
-degenerate `primitive recursion'
- theorem for the concrete type \ml{three}.
-Since \ml{three} is an enumerated type with no recursive constructors,
-the theorem returned by \ml{define\_type} simply
-states that any function defined by cases on the three constants  \ml{ONE},
-\ml{TWO}, and \ml{THREE} exists and is uniquely defined.
-
-It follows immediately from this theorem that the type constant \ml{three}
-denotes a set containing exactly three values: the fact that the function
-\ml{fn} always exists implies that the constants \ml{ONE}, \ml{TWO}, and
-\ml{THREE} denote distinct values of type \ml{three}, and the fact that \ml{fn}
-is uniquely determined by its values for \ml{ONE}, \ml{TWO}, and \ml{THREE}
-implies that these constants denote the only values of type \ml{three}.
-\index{primitive recursion theorem!a degenerate case|)}
-
-The next call to \ml{define\_type} defines a `record type' \ml{rec}, values of
-which are records with three boolean fields (essentially 3-tuples):
-
-\begin{session}\begin{verbatim}
-#let rec_Axiom = define_type `rec_Axiom` `rec = REC bool bool bool`;;
-rec_Axiom = |- !f. ?! fn. !b0 b1 b2. fn(REC b0 b1 b2) = f b0 b1 b2
-\end{verbatim}\end{session}\label{rec-def}
-
-\noindent Here, the resulting theorem states that a function \ml{fn} on
-record values of type \ml{rec} can be
-uniquely defined in terms of a function \ml{f} of the three components of
-the record.
-
-A more interesting {\it recursive\/}
-  example is the type of natural
-numbers\index{number theory, in HOL logic@number theory, in \HOL\ logic!type definition package version of}
-\index{type definition package, in HOL system@type definition package, in \HOL\ system!use of, to build number theory}, which can be defined using \ml{define\_type} as follows:
-
-\begin{session}\begin{verbatim}
-#let nat_Axiom = define_type `nat_Axiom` `nat = Z | Suc nat`;;
-nat_Axiom = |- !e f. ?! fn. (fn Z = e) /\ (!n. fn(Suc n) = f(fn n)n)
-\end{verbatim}\end{session}
-
-\noindent Here, the input string describes a type \ml{nat} with two
-constructors: \ml{Z}, which stands for zero; and \ml{Suc}, which is the
-successor function on natural numbers.  (The names
-\ml{Z}, and \ml{Suc} are used here because \ml{0} and \ml{SUC} are already
-constants in the built-in \HOL\ theory \ml{num}.)
-The output theorem is just the primitive recursion
-theorem\footnote{See Section~\ref{prim_rec} for a discussion of
-the primitive recursion theorem.}
-for the natural numbers; it states that any primitive recursive definition on
-the natural numbers (\ie\ on values of type \ml{nat})
-uniquely defines a total function.
-
-A recursive type of labelled binary trees\index{binary tree theory, in HOL logic@binary tree theory, in \HOL\ logic|(}, where labels of type \ml{*}
-appear only on leaf nodes, can likewise be defined using \ml{define\_type}.
-The input states that a binary tree is either a leaf node (\ml{LEAF})
-labelled by a value of type \ml{*} or an internal node \ml{NODE} with
-two binary trees as subtrees:
-
-\begin{session}\begin{verbatim}
-#let btree_Axiom =
-#    define_type `btree_Axiom` `btree = LEAF * | NODE btree btree`;;
-btree_Axiom =
-|- !f0 f1.
-    ?! fn.
-     (!x. fn(LEAF x) = f0 x) /\
-     (!b1 b2. fn(NODE b1 b2) = f1(fn b1)(fn b2)b1 b2)
-\end{verbatim}\end{session}\label{btree-def}
-
-\noindent The result returned by the call to {\small \verb!define_type!} is,
-in this case, an abstract
-characterization for a defined type {\small\verb!(*)btree!},
-in the form of a `primitive recursion theorem' for the required
-type of labelled binary trees.\index{binary tree theory, in HOL logic@binary tree theory, in \HOL\ logic|)}
-
-Any simple  concrete  recursive  type  can  be  defined  automatically  from  a
-user-supplied equation using \ml{define\_type} in exactly the same way.
-
-\subsection{Defining recursive functions}\label{prim-rec-defs}
-
-\index{type definition package, in HOL system@type definition package, in \HOL\ system!use of, in recursive function definition|(}
-\index{recursive definitions, in HOL logic@recursive definitions, in \HOL\ logic!automated, for recursive types|(}
-\index{primitive recursion theorem!for binary trees|(}
-An important property of the characterizing theorems for concrete types
-shown in the examples given above is that they
-provide a formal
-means for defining recursive functions on those types.
-When a concrete
-recursive type  \ty{op} is
- characterized by a theorem of the kind returned by
-\ml{define\_type}\index{types, in HOL logic@types, in \HOL\ logic!tools for construction of} (see Section~\ref{define-type-output}) this theorem
-can be used to
-prove the existence of any
-{\it primitive recursive\/} function on \ty{op} and to
-define constants which denote such functions.
-
-This is illustrated
-for a particular
-example by the method of defining primitive recursive functions on
-the natural numbers  discussed in Section~\ref{num-prim-rec}.  In that section,
-an \ML\ function \ml{new\_prim\_rec\_definition}\index{new_prim_rec_definition@\ml{new\_prim\_rec\_definition}}
- was described which automates
-the logical inferences necessary to derive particular primitive recursive
-definitions on the built-in defined type \ml{num} of natural numbers.  The
-basis of this function is the primitive recursion theorem
-
-\begin{hol}
-\index{num_Axiom@\ml{num\_Axiom}}
-\begin{verbatim}
-   num_Axiom   |- !x f. ?!fn. (fn 0 = x) /\ (!n. fn(SUC n) = f (fn n) n)
-\end{verbatim}\end{hol}
-
-\noindent which is pre-proved and stored in the built-in theory \ml{prim\_rec}\index{prim_rec@\ml{prim\_rec}}
-(see Section~\ref{prim_rec}).  The \ML\ function
-\ml{new\_prim\_rec\_definition} uses \ml{num\_Axiom} to automate the
-justification of any user-supplied primitive recursive definition on the
-natural numbers.
-
-The type definition package\index{primitive recursion theorem!automated use of, in HOL system@automated use of, in \HOL\ system|(} provides a similar function for defining
-primitive recursive functions on
-arbitrary concrete recursive
-types.\footnote{In fact, {\tt new\_prim\_rec\_definition} is defined in ML
-using the more general tools provided by the type definition package.}
-The \ML\ function
-
-\begin{boxed}\index{new_recursive_definition@\ml{new\_recursive\_definition}|pin}
-\begin{verbatim}
-   new_recursive_definition : bool -> thm -> string -> term -> thm
-\end{verbatim}\end{boxed}
-
-\noindent automates the
-inferences necessary to justify any given primitive recursive definition on a
-concrete recursive type of the kind definable by \ml{define\_type}.
- It takes four arguments.  The first is a boolean
-flag which indicates if the function to be defined will be an infix\index{infixes, in HOL logic@infixes, in \HOL\ logic!in recursive type definitions} or not.
-The second is the primitive recursion theorem for the concrete type in question
-(\ie\ a theorem obtained from {\small\verb!define_type!}).\index{define_type@\ml{define\_type}}  The third
-argument is a name under which the resulting definition will be saved in the
-current theory segment.
-The fourth argument is a term giving the desired primitive recursive
-definition.  The value returned
-by  {\small\verb!new_recursive_definition!} is a theorem
-which states the primitive recursive definition requested by the
-user.  This theorem is derived by formal proof from an instance of the general
-primitive recursion theorem\index{automated derivation!of recursive definitions}
- given as the second argument.
-
-If the \ML\ variable \ty{op}\ml{\_Axiom} is bound to a theorem of the form
-returned by \ml{define\_type},
-then evaluating:
-
-{\def\op{{\normalsize\sl op}}
-\begin{hol}\begin{alltt}
-   new_recursive_definition
-     `\m{flag}` \op\_Axiom `\m{name}` "{\normalsize\it primitive recursive definition on \op}"
-\end{alltt}\end{hol}}
-
-\noindent  automatically proves the existence of the primitive recursive
-function supplied as the fourth argument,
-and then declares a new constant in the current theory
-with this definition as its
-specification. This constant specification is returned as a theorem
-and is saved in the current theory segment under the name
-$name$.
-If $flag$ is \ml{true}, the constant is given infix status.
-Failure occurs if:
-
-\begin{myenumerate}
-\item \HOL\ cannot prove there is a function
-satisfying the defining equations supplied by the user
-(\ie\ the term supplied to \ml{new\_recursive\_definition}
- is not a well-formed primitive recursive definition on values
-of type \ty{op});
-\item any other condition for making a constant specification is violated
-(see the failure conditions for \ml{new\_specification} in
-Section~\ref{conspec}).
-\end{myenumerate}
-
-Curried\index{currying, in ML@currying, in \ML!in recursive definitions}
-functions defined using \ml{new\_recursive\_definition} can be
-recursive on any one of their arguments.  Furthermore, defining equations need
-not be given for all the constructors of the concrete type in question.  See
-the examples given in the next section, or the examples of functions
-defined on \ml{num} given in Section~\ref{num-prim-rec} for more details.
-
-The \ML\ function
-
-\begin{boxed}
-\index{prove_rec_fn_exists@\ml{prove\_rec\_fn\_exists}|pin}
-\begin{verbatim}
-   prove_rec_fn_exists : thm -> term -> thm
-\end{verbatim}\end{boxed}
-
-\noindent is a version of \ml{new\_recursive\_definition} which proves only
-that the required function exists; it does not make a constant specification.
-The first argument is a theorem of the form returned by \ml{define\_type},
-and the second is a user-supplied primitive recursive function definition.
-The theorem which is returned asserts the existence of the recursively-defined
-function in question (if it is primitive recursive over the type characterized
-by the theorem given as the first argument).
-\index{recursive definitions, in HOL logic@recursive definitions, in \HOL\ logic!automated, for recursive types|)}
-\index{type definition package, in HOL system@type definition package, in \HOL\ system!use of, in recursive function definition|)}
-\index{primitive recursion theorem!automated use of, in HOL system@automated use of, in \HOL\ system|)}
-
-\subsubsection{More examples}
-
-Continuing the example session started above in Section~\ref{define-type-example},
-the following interactions with the system show how the \ML\ function
-\ml{new\_recursive\_definition} can be used to define functions on concrete types,
-which have themselves been defined using \ml{define\_type}.
-
-Given the characterizing theorem
-\ml{btree\_Axiom} for the type of labelled binary trees
-defined in Section~\ref{types-session}, a recursive function \ml{Leaves}, which
-computes the number of leaf nodes in a binary tree,
-can be defined recursively in \HOL\ as shown below:
-
-\begin{session}\begin{verbatim}
-#let Leaves =
-#    new_recursive_definition false btree_Axiom `Leaves`
-#      "(Leaves (LEAF (x:*)) = 1) /\
-#       (Leaves (NODE t1 t2) = (Leaves t1) + (Leaves t2))";;
-Leaves =
-|- (!x. Leaves(LEAF x) = 1) /\
-   (!t1 t2. Leaves(NODE t1 t2) = (Leaves t1) + (Leaves t2))
-\end{verbatim}\end{session}
-
-\noindent The result of the call to {\small\verb!new_recursive_definition!} is
-a theorem which states that the constant {\small\verb!Leaves!} satisfies the
-primitive-recursive defining equations supplied by the user.  This theorem is
-derived automatically from an instance of the general primitive recursion
-theorem for binary trees ({\small\verb!btree_Axiom!}) and an appropriate
-constant specification for the constant {\small\verb!Leaves!}.
-
-The function defined using \ml{new\_recursive\_definition}\index{type
-definition package, in HOL system@type definition package, in \HOL\
-system!use of, in case definition} need not, in fact, be recursive.
-Here is the definition of a predicate \ml{IsLeaf}, which is true of
-binary trees which are leaves, but is false of the internal nodes in a
-binary tree:
-
-\begin{session}\begin{verbatim}
-#let IsLeaf =
-#    new_recursive_definition false btree_Axiom `IsLeaf`
-#      "(IsLeaf (NODE t1 t2) = F) /\ (IsLeaf (LEAF (x:*)) = T)";;
-IsLeaf = |- (!t1 t2. IsLeaf(NODE t1 t2) = F) /\ (!x. IsLeaf(LEAF x) = T)
-\end{verbatim}\end{session}
-
-\noindent Note that two equations defining a (recursive or non-recursive)
-function on binary trees by cases can be given in either order.  Here, the
-\ml{NODE} case is given first, and the \ml{LEAF} case second.  The reverse
-order was used in the above definition of \ml{Leaves}.
-
-The \ML\ function  {\small\verb!new_recursive_definition!} also allows the user
-to partially specify\index{type definition package, in HOL system@type definition package, in \HOL\ system!use of, in partial definition} the value of a function defined on a concrete type, by
-allowing defining equations for some of the constructors to be omitted.  Here,
-for example, is the definition of a function \ml{Label} which extracts the
-label from a leaf node.  The value of \ml{Label} applied to an internal node
-is left unspecified:
-
-\begin{session}\begin{verbatim}
-#let Label =
-#    new_recursive_definition false btree_Axiom `Label`
-#      "Label (LEAF (x:*)) = x";;
-Label = |- !x. Label(LEAF x) = x
-\end{verbatim}\end{session}
-
-\index{type definition package, in HOL system@type definition package, in \HOL\ system!use of, in curried infix definition|(}
-Curried functions can also be defined, and the recursion can be on any
-argument.  The next definition defines an infix (curried)
-function \ml{<<} which expresses the idea that one tree is a proper
-subtree of another.
-
-\begin{session}\begin{verbatim}
-#let Subtree =
-#    new_recursive_definition true btree_Axiom `Subtree`
-#      "(<< (t:(*)btree) (LEAF (x:*)) = F) /\
-#       (<< t (NODE t1 t2) = ((t=t1) \/ (t=t2) \/ (<< t t1) \/ (<< t t2)))";;
-Subtree =
-|- (!t x. t << (LEAF x) = F) /\
-   (!t t1 t2.
-     t << (NODE t1 t2) = (t = t1) \/ (t = t2) \/ t << t1 \/ t << t2)
-\end{verbatim}\end{session}
-
-\noindent Note that the first argument to the \ML\ function is \ml{true}
-(to indicate that the function being defined is to have infix status) and that
-the constant \ml{<<} is an infix after the definition has been made.
-Furthermore, the function \ml{<<} is recursive on its second argument\index{type definition package, in HOL system@type definition package, in \HOL\ system!use of, in curried infix definition|)}.
-
-Finally, the function {\small\verb!new_recursive_definition!} can also be used
-to define functions by cases on enumerated types.  For example, a predicate
-\ml{One}, which is true of only the value \ml{ONE} of the three-valued type
-\ml{three} defined above in Section~\ref{types-session}, can be defined as
-follows:
-
-\begin{session}\begin{verbatim}
-#let One = new_recursive_definition false three_Axiom `One`
-#            "(One ONE = T) /\ (One TWO = F) /\ (One THREE = F)";;
-One = |- (One ONE = T) /\ (One TWO = F) /\ (One THREE = F)
-\end{verbatim}\end{session}
-
-The existence only of
-any function definable using \ml{new\_recursive\_definition} can be proved
-using \ml{prove\_rec\_fn\_exists}.  For example:
-
-\begin{session}\begin{verbatim}
-#close_theory();;
-() : void
-
-#let exists = prove_rec_fn_exists three_Axiom
-#             "(f ONE = T) /\ (f TWO = F) /\ (f THREE = F)";;
-exists = |- ?f. (f ONE = T) /\ (f TWO = F) /\ (f THREE = F)
-\end{verbatim}\end{session}
-
-\noindent The resulting theorem simply states the existence of the
-required function.  Here, a constant is not defined, and the user need
-not be in draft mode.
-\index{primitive recursion theorem!for binary trees|)}
-
-\subsection{Structural induction}
-
-\index{type definition package, in HOL system@type definition package, in \HOL\ system!use of, to build induction tools|(}
-\index{induction rule!structural, derivation of|(}
-For any concrete recursive type definable
- using the \HOL\ type definition package there is a structural induction
-theorem which states the validity of proof by induction
-on the structure of the type's values.  The \ML\ function
-
-\begin{boxed}
-\index{prove_induction_thm@\ml{prove\_induction\_thm}|pin}
-\begin{verbatim}
-   prove_induction_thm : thm -> thm
-\end{verbatim}\end{boxed}
-
-
-\noindent can be used to derive a structural induction\index{automated derivation!of structural induction theorems}\index{induction rule!for concrete recursive types}
-theorem for any concrete
-recursive type defined using \ml{define\_type}.  If the \ML\
-variable \ty{op}\ml{\_Axiom} is bound to a theorem of the form
-returned by \ml{define\_type},
-then executing
-
-\[ \ml{prove\_induction\_thm}\;\ty{op}\ml{\_Axiom} \]
-
-\noindent will prove  and  return a  structural induction  theorem for
-the concrete type
-\ty{op}.  The `induction' theorem is degenerate in the case of non-recursive
-types (see the examples given below). Failure occurs, or an unpredictable
-output theorem is returned, if the input theorem does not have the form
-of a theorem  returned by \ml{define\_type}.
-
-\subsubsection{Examples}
-
-A structural induction theorem on the type of binary trees defined in the session
-beginning on Section~\ref{types-session} can be proved by:
-
-\begin{session}\begin{verbatim}
-#let btree_Induct = prove_induction_thm btree_Axiom;;
-btree_Induct =
-|- !P.
-    (!x. P(LEAF x)) /\ (!b1 b2. P b1 /\ P b2 ==> P(NODE b1 b2)) ==>
-    (!b. P b)
-\end{verbatim}\end{session}
-
-
-\noindent The output theorem states that a predicate \ml{P} is true of all
-binary trees if it is true of all labelled leaf nodes, and whenever it is true
-of two binary trees \ml{b1} and \ml{b2} it is also true of the binary tree
-\ml{NODE b1 b2}, in which \ml{b1} and \ml{b2} occur as immediate left and right
-subtrees.
-
-For non-recursive types, the induction theorem returned by
-\ml{prove\_induction\_thm} is degenerate: there are no `step' cases in the
-induction.  For the two types \ml{three} and \ml{rec} defined in the preceding
-interactions of this session, the induction theorems are:
-
-\begin{session}\begin{verbatim}
-#let three_Induct = prove_induction_thm three_Axiom;;
-three_Induct = |- !P. P ONE /\ P TWO /\ P THREE ==> (!t. P t)
-
-#let rec_Induct = prove_induction_thm rec_Axiom;;
-rec_Induct = |- !P. (!b0 b1 b2. P(REC b0 b1 b2)) ==> (!r. P r)
-\end{verbatim}\end{session}
-
-\noindent Here, induction simply reduces to the consideration of
-cases,\index{case analysis, in HOL logic@case analysis, in \HOL\ logic!as instance  of induction} one for each of the constructors for the concrete type involved.
-\index{induction rule!structural, derivation of|)}
-
-\subsection{Structural induction tactics}
-\label{avrasi}
-%I added one paragraph because this section is so out of sequence. Avra 9/11/89.
-
-\index{theorem continuations!use of, in derivation of induction tactics|(}
-This section has been included here for reference
-because it relates chiefly to the
-type definition package, but it involves concepts not defined until
-later, in Chapter~\ref{tactics-and-tacticals}. Tactics, goals
-and subgoals are
-defined in Section~\ref{tactics}; and theorem continuations, in
-Section~\ref{asm-manip}. \ml{MAP\_EVERY} is defined in Section~\ref{avra_manip1}.
-\ml{ASSUME\_TAC} is defined in Section~\ref{avra_builtin}.
-\ml{MP\_TAC}  and \ml{INDUCT\_TAC} can be found in \REFERENCE.
-
-The \ML\ function
-
-\begin{boxed}
-\index{INDUCT_THEN@\ml{INDUCT\_THEN}|pin}
-\index{induction tactics!derivation of|(}
-\begin{verbatim}
-   INDUCT_THEN : thm -> (thm -> tactic) -> tactic
-\end{verbatim}\end{boxed}
-
-\noindent can be used to generate
-a structural induction tactic\index{automated derivation!of structural induction tactics}
-for any concrete types definable using \ml{define\_type}.\index{define_type@\ml{define\_type}}  The first argument
-is an induction theorem of the form returned by the function
-\ml{prove\_induction\_thm}\index{prove_induction_thm@\ml{prove\_induction\_thm}} discussed in the previous section.  The second
-argument is a theorem continuation\index{characterizing theorem!use of, in deriving induction} (see
-Chapter~\ref{tactics-and-tacticals}) that determines what is to be done with
-the induction hypotheses when the resulting tactic is applied to a goal.
-
-If $th$ is an induction theorem for a concrete type \ty{op} with
-$m$ constructors  \mbox{$C_1$, \dots, $C_m$}
-(\ie\ a theorem of the kind returned by
-\ml{prove\_induction\_thm}) and $F$ is a theorem continuation, then the
-tactic $\ml{INDUCT\_THEN}\;th\;F$ will reduce a goal
-{\small\verb%(%}$\Gamma${\small\verb%,"!%}$x{:}
-\ty{op}${\small\verb%.%}$t[x]${\small\verb%")%} to the collection of $m$
-induction subgoals generated by:
-
-\[ \begin{array}[t]{@{}l@{}l}
- \ml{MAP\_EVERY } F \ml{ [}th_1^1\ml{;}\;\ldots\ml{;}\;th_1^{k_1}\ml{]} &
-\ml{ (}\Gamma\ml{, "}t[ C_1\;x_1^1\;\ldots\;x_1^{k_1}]\ml{")},\\
-\qquad\qquad \vdots & \mbox{} \\
- \ml{MAP\_EVERY } F \ml{ [}th_m^1\ml{;}\;\ldots\ml{;}\;th_m^{k_m}\ml{]} &
-\ml{ (}\Gamma\ml{, "}t[ C_m\;x_m^1\;\ldots\;x_m^{k_m}]\ml{")}
- \end{array}
-\]\index{MAP_EVERY@\ml{MAP\_EVERY}}
-
-\noindent where $th_i^j$ is a theorem of the form $\ml{|- }t[x_i^j]$ asserting
-the truth of $t[x_i^j]$ for the $j$th recursive argument (for non-recursive
-arguments, there will be no $th_i^j$ in the list) of the $i$th constructor
-$C_i$ (for $1 \leq i \leq m$).
-
-The most common use of \ml{INDUCT\_THEN} is in conjunction with the theorem
-continuation \ml{ASSUME\_TAC}.  For example, the built-in
-induction tactic \ml{INDUCT\_TAC} for mathematical induction on
-the natural numbers is defined in \ML\ by:
-
-\begin{hol}
-\index{INDUCT_TAC@\ml{INDUCT\_TAC}}
-\begin{verbatim}
-   let INDUCT_TAC = INDUCT_THEN INDUCTION ASSUME_TAC
-\end{verbatim}\end{hol}
-
-\noindent This built-in tactic reduces a goal
- {\small\verb%(%}$\Gamma${\small\verb%,"!%}$n${\small\verb%.%}$t[n]${\small\verb%")%} to a basis subgoal
-{\small\verb%(%}$\Gamma${\small\verb%,"%}$t[${\small\verb%0%}$]${\small\verb%")%}
-and a step subgoal
-{\small\verb%(%}$\Gamma\cup\{${\small\verb%"%}$t[n]${\small\verb%"%}$\}${\small\verb%,"%}$t[${\small\verb%SUC %}$n]${\small\verb%")%}.
-The extra assumption  {\small\verb%"%}$t[n]${\small\verb%"%} (\ie\ the
-induction hypothesis)
-is added to the assumptions $\Gamma$ by \ml{ASSUME\_TAC}.
-
-By contrast, the
-induction tactic \ml{INDUCT\_MP\_TAC} (which is not built-in) defined
-by:
-
-\begin{hol}\begin{verbatim}
-   let INDUCT_MP_TAC = INDUCT_THEN INDUCTION MP_TAC
-\end{verbatim}\end{hol}
-
-\noindent reduces a goal
- {\small\verb%(%}$\Gamma${\small\verb%,"!%}$n${\small\verb%.%}$t[n]${\small\verb%")%} to a basis subgoal
-{\small\verb%(%}$\Gamma${\small\verb%,"%}$t[${\small\verb%0%}$]${\small\verb%")%}
-and an induction step subgoal
-{\small\verb%(%}$\Gamma${\small\verb%, "%}$t[n]${\small\verb% ==> %}$t[${\small\verb%SUC %}$n]${\small\verb%")%}.
-Here, the theorem continuation \ml{MP\_TAC} makes the induction hypothesis
-an antecedent of the step subgoal, rather than an assumption.
-
-As this example illustrates, the theorem continuation $F$ in
-an induction tactic
-
-\[ \ml{INDUCT\_THEN }th\;\;F \]
-
-\noindent generated using an induction theorem $th$ can be thought of as a
-function which determines what is to be done with the induction hypotheses
-corresponding to the recursive arguments of constructors in the step
-cases of a proof by structural induction.  When $F$ is \ml{ASSUME\_TAC},
-the induction hypotheses become assumptions in the subgoals generated; and when
-$F$ is \ml{MP\_TAC}, the induction hypotheses become the antecedents of
-implicative subgoals.  Other theorem continuations (for which, see
-Chapter~\ref{tactics-and-tacticals} and \REFERENCE) can also be used\index{theorem continuations!use of, in derivation of induction tactics|)}.
-\index{type definition package, in HOL system@type definition package, in \HOL\ system!use of, to build induction tools|)}\index{induction tactics!derivation of|)}
-
-\subsection{Other tools}
-
-
-The function
-
-\begin{boxed}
-\index{prove_constructors_one_one@\ml{prove\_constructors\_one\_one}|pin}
-\begin{verbatim}
-   prove_constructors_one_one : thm -> thm
-\end{verbatim}\end{boxed}
-
-\noindent proves that the constructors\index{constructors, of concrete types in HOL logic@constructors, of concrete types in \HOL\ logic!proving one-to-one}
- of a concrete type which take arguments
-are one-to-one\index{automated derivation!of one-to-one theorems}.  The argument to \ml{prove\_constructors\_one\_one} is a
-theorem of the form returned by \ml{define\_type}.
-
-The function
-
-\begin{boxed}
-\index{prove_constructors_distinct@\ml{prove\_constructors\_distinct}|pin}
-\begin{verbatim}
-   prove_constructors_distinct : thm -> thm
-\end{verbatim}\end{boxed}
-
-\noindent proves that the constructors\index{constructors, of concrete types in HOL logic@constructors, of concrete types in \HOL\ logic!proving distinct}
- of a concrete type yield distinct\index{automated derivation!of
-distinctness theorems} values.  The argument to
-\ml{prove\_constructors\_distinct} is again
-a theorem of the form returned by \ml{define\_type}.
-
-The function
-
-\begin{boxed}
-\index{prove_cases_thm@\ml{prove\_cases\_thm}|pin}
-\begin{verbatim}
-   prove_cases_thm : thm -> thm
-\end{verbatim}\end{boxed}
-
-\noindent proves a cases\index{automated derivation!of case analysis theorems}
- theorem\index{case analysis, in HOL logic@case analysis, in \HOL\ logic!theorems for} for any concrete type.  Such a theorem states that every
-value can be constructed using one of the type's constructors.  This property
-follows more easily (and therefore is faster to prove) from induction than from
-primitive recursion, so the function \ml{prove\_cases\_thm} takes as an
-argument an induction theorem of the kind returned by
-\ml{prove\_induction\_thm}.\index{prove_induction_thm@\ml{prove\_induction\_thm}}
-
-These auxiliary tools work for any concrete type definable using
-\ml{define\_type}.
-
-\subsubsection{Examples}
-
-The following interactions with the system show the proof that the constructor
-\ml{LEAF} for the type \ml{(*)btree}  is one-one,
-and also that the constructor \ml{REC} for the type \ml{rec} is one-to-one.
-
-\begin{session}\begin{verbatim}
-#let LEAF_one_one = prove_constructors_one_one btree_Axiom;;
-LEAF_one_one =
-|- (!x x'. (LEAF x = LEAF x') = (x = x')) /\
-   (!b1 b2 b1' b2'.
-     (NODE b1 b2 = NODE b1' b2') = (b1 = b1') /\ (b2 = b2'))
-
-#let REC_one_one = prove_constructors_one_one rec_Axiom;;
-REC_one_one =
-|- !b0 b1 b2 b0' b1' b2'.
-    (REC b0 b1 b2 = REC b0' b1' b2') =
-    (b0 = b0') /\ (b1 = b1') /\ (b2 = b2')
-\end{verbatim}\end{session}
-
-The function \ml{prove\_constructors\_one\_one} fails when the concrete
-type involved has no constructors that take arguments.  For example:
-
-\begin{session}\begin{verbatim}
-#let th = prove_constructors_one_one three_Axiom;;
-evaluation failed     prove_constructors_one_one: invalid input theorem
-\end{verbatim}\end{session}
-
-The function \ml{prove\_constructors\_distinct} returns the theorem stating
-that the constructors of a concrete type yield pair-wise distinct values.  For
-example:
-
-\begin{session}\begin{verbatim}
-#let NOT_LEAF_NODE = prove_constructors_distinct btree_Axiom;;
-NOT_LEAF_NODE = |- !x b1 b2. ~(LEAF x = NODE b1 b2)
-
-#let three_distinct = prove_constructors_distinct three_Axiom;;
-three_distinct = |- ~(ONE = TWO) /\ ~(ONE = THREE) /\ ~(TWO = THREE)
-\end{verbatim}\end{session}
-
-Cases theorems\index{case analysis, in HOL logic@case analysis, in \HOL\ logic!as instance  of induction} are proved from structural induction theorems. For the binary
-tree example considered in the present session, here is the cases theorem:
-
-\begin{session}\begin{verbatim}
-#let btree_cases = prove_cases_thm btree_Induct;;
-btree_cases = |- !b. (?x. b = LEAF x) \/ (?b1 b2. b = NODE b1 b2)
-\end{verbatim}\end{session}
-
-\noindent Note that the structural induction theorem for binary trees,
-\ml{btree\_Induct}, is used.
-\index{extension, of HOL logic@extension, of \HOL\ logic!by type definition|)}
-\index{type definition package, in HOL system@type definition package, in \HOL\ system|)}
-
-\section{Miscellaneous system features}
-\label{avramisc}
-
-This section describes some of the features
-that exist for managing the interface\index{HOL system@\HOL\ system!adjustment of user interface of} to the
-\HOL\ system.
-
-\begin{itemize}
-\item Flags for controlling the parsing and printing of terms.
-\item A mechanism called {\it sticky types\/} allows default types of
-variables to be established.
-\item A facility called {\it interface maps\/} permits
-a limited amount of overloading to be achieved. Interface maps also support
- the use of conventional logical characters on bit-mapped screens.
-\item Functions for changing the {\small ASCII}
-versions to $\lambda$ and $\vdash$ inside quotations
-(the defaults are {\small\verb%\%} and
-{\small\verb%|-%} respectively).
-\item A method for hiding constants from the quotation parser, so that
-variables
-with the same names as constants can be input by quotation.
-\item A method for arranging for definitions and theorems (and so on)
-to be loaded automatically when their names are encountered by the \ML\ parser.
-\item Functions to control whether entire theories are kept in memory
-(`cached') or not.
-\item A function for adjusting the maximum depth to which terms and
-theorems are printed by the pretty printer (the default is 500).
-\item Functions for counting the number of primitive inferences done in
-an evaluation, and timing it.
-\end{itemize}
-
-\subsection{Flags for the HOL logic}
-\label{HOLflags}
-
-\index{HOL system@\HOL\ system!adjustment of user interface of|(} The
-subset of flags\index{HOL system@\HOL\ system!flags in}\index{flags,
-  in ML@flags, in \ML} that control aspects of \HOL\ relating to the
-logic is summarized in the table below.
-
-
-\begin{center}
-\index{counting inferences, in HOL proofs@counting inferences, in \HOL\ proofs}
-\index{inferences, in HOL logic@inferences, in \HOL\ logic!counting of}
-\index{printing, in HOL logic@printing, in \HOL\ logic!of types}
-\index{types, in HOL logic@types, in \HOL\ logic!printing of}
-\index{types, in HOL logic@types, in \HOL\ logic!default}
-\index{theory files!pretty printing of}
-\index{pretty printing!flags for, in HOL system@flags for, in \HOL\ system}
-\index{type checking, in HOL logic@type checking, in \HOL\ logic!verbose errors in}
-\index{interface maps}
-\index{printing, in HOL logic@printing, in \HOL\ logic!of quantification}
-\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL\ logic!pretty printing of}
-\index{infixes, in HOL logic@infixes, in \HOL\ logic!pretty printing of}
-\index{printing, in HOL logic@printing, in \HOL\ logic!pretty printing}
-%\index{printing, in HOL logic@printing, in \HOL\ logic!undischarging
-%IS_ASSUMPTION_OFs in@undischarging \ml{IS\_ASSUMPTION\_OF}s in}
-%\index{IS_ASSUMPTION_OF@\ml{IS\_ASSUMPTION\_OF}}
-\index{timing@\ml{timing}}
-\index{show_types@\ml{show\_types}}
-\index{sticky@\ml{sticky}}
-\index{theory_pp@\ml{theory\_pp}}
-\index{type_error@\ml{type\_error}}
-\index{interface_print@\ml{interface\_print}}
-\index{print_cond@\ml{print\_cond}}
-\index{print_quant@\ml{print\_quant}}
-\index{print_let@\ml{print\_let}}
-\index{print_list@\ml{print\_list}}
-\index{print_uncurry@\ml{print\_uncurry}}
-\index{print_infix@\ml{print\_infix}}
-\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!paired}
-\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!pretty printing, of paired}
-\begin{tabular}{|l|l|l|} \hline
-\multicolumn{3}{|c|}{ } \\
-\multicolumn{3}{|c|}{\bf Settable system flags} \\
-\multicolumn{3}{|c|}{ } \\
-{\it Flag} & {\it Function} &
-{\it Default value} \\ \hline
- & &  \\
-\ml{timing} &    Print number of theorems proved& \ml{false}\\ \hline
-
-\ml{show\_types} &    Prints types in quotations   &    \ml{false}\\ \hline
-
-\ml{sticky}     &         Activates sticky types   &        \ml{false}\\ \hline
-
-
-\ml{theory\_pp} & Pretty printing of theory files &   \ml{false} \\ \hline
-
-\ml{type\_error} & Verbose type checking errors in quotations& \ml{true} \\ \hline
-
-\ml{interface\_print}  &   Causes inverse of interface map &     \ml{true}\\[-1mm]
- &                       to be used when printing & \\ \hline
-
-\ml{print\_cond} & Pretty print \HOL\ conditionals  &      \ml{true}\\ \hline
-
-\ml{print\_quant} &   Pretty print \HOL\ quantifications &     \ml{true}\\ \hline
-
-\ml{print\_let} &   Pretty print \HOL\ \ml{let}-expressions   &\ml{true}\\ \hline
-
-\ml{print\_list}   &       Pretty print \HOL\ lists &           \ml{true}\\ \hline
-
-\ml{print\_uncurry} & Pretty print \HOL\ paired abstractions & \ml{true}\\ \hline
-
-\ml{print\_infix} &    Pretty print \HOL\ infixes & \ml{true}\\ \hline
-\end{tabular}
-\end{center}
-
-
-\subsection{Hiding constants}
-\label{hidden}
-
-\index{parsing, of HOL logic@parsing, of \HOL\ logic!hiding constant status in|(}
-\index{HOL system@\HOL\ system!hiding constants in|(}
-The following function can be used to hide\index{constants, in HOL logic@constants, in \HOL\ logic!hiding status of|(} the constant  status of  a name from
-the quotation parser.
-
-\begin{boxed}
-\index{hide_constant@\ml{hide\_constant}|pin}
-\begin{verbatim}
-   hide_constant : string -> void
-\end{verbatim}\end{boxed}
-
-
-\noindent Evaluating \ml{hide\_constant\ `}$x$\ml{`}
-makes the quotation parser treat $x$ as a variable (lexical
-rules permitting), even if $x$ is the name of a constant in the current theory
-(constants and variables can have the same name).
-This is useful if one wants to use variables\index{variables, in HOL logic@variables, in \HOL\ logic!with constant names}  with the same names
-as previously declared (or built-in) constants (\eg\ \ml{o}, \ml{I}, \ml{S}
-\etc).
-The name $x$ is still a
-constant for the constructors, theories, etc; \ml{hide\_constant}
-affects only  parsing.
-
-Hiding a constant and then attempting to declare it as a new
-constant will fail (as it must, if the system is to remain sound).\index{soundness!of HOL logic@of \HOL\ logic}\index{constants, in HOL logic@constants, in \HOL\ logic!hiding status of|)}
-
-The function
-
-\begin{boxed}
-\index{unhide_constant@\ml{unhide\_constant}|pin}
-\begin{verbatim}
-   unhide_constant : string -> void
-\end{verbatim}\end{boxed}
-
-\noindent undoes the hiding; it fails if its argument is not a previously
-hidden constant.
-
-The function:
-
-\begin{boxed}
-\index{is_hidden@\ml{is\_hidden}|pin}
-\begin{verbatim}
-   is_hidden : string -> bool
-\end{verbatim}\end{boxed}
-
-\noindent tests whether a string is the name of a hidden constant.
-\index{HOL system@\HOL\ system!adjustment of user interface of|)}
-\index{HOL system@\HOL\ system!hiding constants in|)}
-\index{parsing, of HOL logic@parsing, of \HOL\ logic!hiding constant status in|)}
-
-\subsection{Adjusting the pretty-print depth}
-
-\index{ML@\ML!pretty printer for|(}
-The following \ML\ function  can be used to adjust the maximum depth of
-printing\index{printing, in HOL logic@printing, in \HOL\ logic!structural depth adjustment in}.
-
-\begin{boxed}
-\index{max_print_depth@\ml{max\_print\_depth}|pin}
-\begin{verbatim}
-   max_print_depth : int -> int
-\end{verbatim}\end{boxed}
-
-\noindent The default print depth\index{default print depth, for HOL logic@default print depth, for \HOL\ logic|(} is $500$. Evaluating
-\ml{max\_print\_depth}$\ n$ sets the maximum to $n$ and returns
-the previous value
-of the maximum. Subterms nested more deeply than
-the maximum print depth are printed as
-{\small\verb%&%}. For example:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#ADD_CLAUSES;;
-Theorem ADD_CLAUSES autoloaded from theory `arithmetic`.
-ADD_CLAUSES =
-|- (0 + m = m) /\
-   (m + 0 = m) /\
-   ((SUC m) + n = SUC(m + n)) /\
-   (m + (SUC n) = SUC(m + n))
-
-|- (0 + m = m) /\
-   (m + 0 = m) /\
-   ((SUC m) + n = SUC(m + n)) /\
-   (m + (SUC n) = SUC(m + n))
-
-#max_print_depth 7;;
-500 : int
-
-#ADD_CLAUSES;;
-|- (& + & = m) /\ (& + & = m) /\ ((& + & = &(&) /\ (& + (& = &(&)
-
-#max_print_depth 5;;
-7 : int
-
-#ADD_CLAUSES;;
-|- (& /\ (& /\ (& /\ (&
-
-#max_print_depth 3;;
-5 : int
-
-#ADD_CLAUSES;;
-|- &
-\end{verbatim}\end{session}
-\index{default print depth, for HOL logic@default print depth, for \HOL\ logic|)}
-
-\subsection{Timing and counting theorems}
-
-Whenever \HOL\  performs  a  primitive  inference  (or  accepts   an  axiom  or
-definition) a counter\index{inferences, in HOL logic@inferences, in \HOL\ logic!counting of}\index{timing of HOL evaluations@timing of \HOL\ evaluations}\index{HOL system@\HOL\ system!timing and counting inferences in}  is incremented.  The value of this counter is returned by
-the function:
-
-\begin{boxed}
-\index{thm_count@\ml{thm\_count}|pin}
-\index{counting inferences, in HOL proofs@counting inferences, in \HOL\ proofs}
-\begin{verbatim}
-   thm_count : void -> int
-\end{verbatim}\end{boxed}
-
-\noindent This counter can be reset with the function:
-
-\begin{boxed}
-\index{set_thm_count@\ml{set\_thm\_count}|pin}
-\begin{verbatim}
-   set_thm_count : int -> int
-\end{verbatim}\end{boxed}
-
-\noindent The previous value of the counter is returned.
-
-The following function is used to switch \ML\ into a  mode in  which the number
-of primitive inferences done during each top-level interaction is  shown.
-Run-time and garbage collection time are also shown.
-
-\begin{boxed}
-\index{timer@\ml{timer}|pin}
-\begin{verbatim}
-   timer : bool -> bool
-\end{verbatim}\end{boxed}
-
-\noindent Executing \ml{timer true} causes  the number  of primitive inferences
-and timings to be  printed; \ml{timer  false} switches  the printing  off.  The
-previous setting  is
-returned.    Executing  \ml{timer}$\ b$  is equivalent to
-setting the flag \ml{timing} to the value $b$.
-
