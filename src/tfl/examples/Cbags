@@ -1,0 +1,91 @@
+app load ["bossLib", "bagTheory", "stringTheory", "wordTheory"];
+         
+
+open bossLib;
+
+Hol_datatype 
+    `basic_integral_type 
+          = Char 
+          | Short
+          | Int 
+          | Long`;
+
+val basic_integral = theorem "basic_integral_type_Axiom"
+
+val _ = Hol_datatype
+  `CType = Void 
+         | Unsigned of basic_integral_type
+         | Signed of basic_integral_type
+         | Ptr of CType
+         | Array of CType => num
+         | Struct of string
+         | Function of CType => CType list`;
+
+val _ =
+ Hol_datatype `MemObj = MByte of bool word 
+                      | MFunRef of string => num
+                      | MUndefined`;
+
+val c_binops = Hol_datatype
+    `c_binops = CPlus | CMinus  | CLess  | CGreat | CLessE | CGreatE |
+                CEq   | CAssign | CTimes | CDiv   | CMod   | CNotEq`;
+
+val c_unops = Hol_datatype
+    `c_unops = CUnPlus | CUnMinus | CComp | CNot | CNullFunRef`;
+
+val _ = Hol_datatype
+  `CExpr = Cnum of num  
+         | Cchar of num 
+         | Cnullptr of CType
+         | Var of string 
+         | CFunRef of string
+         | COr of CExpr => CExpr
+         | CAnd of CExpr => CExpr
+         | CCond of CExpr => CExpr => CExpr
+         | CApBinary of c_binops => CExpr => CExpr
+         | CApUnary of c_unops => CExpr
+         | Deref of CExpr
+         | Addr of CExpr
+         | Assign of c_binops => CExpr => CExpr => (num -> num)
+         | SVar of CExpr => string
+         | FnApp of CExpr => CExpr list
+         | CommaSep of CExpr => CExpr
+         | Cast of CType => CExpr
+         | PostInc of CExpr |CAndOr_sqpt of CExpr
+         | FnApp_sqpt of CExpr => CExpr list
+         | LVal of num => CType
+         | RValreq of CExpr
+         | ECompVal of MemObj list => CType
+         | UndefinedExpr`;
+
+val rbags_defn = 
+ Defn.Hol_defn "rbags"
+  `(rbags (COr e1 e2) = BAG_UNION (rbags e1) (rbags e2)) /\
+   (rbags (CAnd e1 e2) = BAG_UNION (rbags e1) (rbags e2)) /\
+   (rbags (CApBinary bf e1 e2) = BAG_UNION (rbags e1) (rbags e2)) /\
+   (rbags (CApUnary uf e) = rbags e) /\
+   (rbags (Deref e) = rbags e) /\
+   (rbags (Addr e) = rbags e) /\
+   (rbags (Assign f e1 e2 b) = BAG_UNION (rbags e1) b) /\
+   (rbags (SVar e s) = rbags e) /\
+   (rbags (FnApp e el) = BAG_UNION (rbags e) (rbagsl el)) /\
+   (rbags (CommaSep e1 e2) = BAG_UNION (rbags e1) (rbags e2)) /\
+   (rbags (Cast t e) = rbags e) /\
+   (rbags (PostInc e) = rbags e) /\
+   (rbags (CAndOr_sqpt e) = rbags e) /\
+   (rbags (RValreq e) = rbags e) /\
+   (rbags (CCond e1 e2 e3) = BAG_UNION 
+                               (BAG_UNION (rbags e1) (rbags e2)) (rbags e3)) /\
+   (rbags ____ = EMPTY_BAG) /\
+   (rbagsl [] = EMPTY_BAG) /\
+   (rbagsl (CONS e es) = BAG_UNION (rbags e) (rbagsl es))`;
+
+val (rbags_eqns,rbags_ind) = 
+ Defn.tprove
+  (rbags_defn,
+   TotalDefn.WF_REL_TAC `^(hd(tl(TotalDefn.guessR rbags_defn)))`
+      THEN Induct_on `el`
+      THEN RW_TAC list_ss [listTheory.list_size_def]
+      THEN POP_ASSUM (MP_TAC o SPEC_ALL)
+      THEN RW_TAC list_ss [definition"CExpr_size_def"]);
+
