@@ -21,8 +21,9 @@ Bugs fixed:
     Thanks to Steve Brackin for the report of this bug.
   * The record type package was failing to prove the "record
     theorems", causing Hol_datatype to raise an exception, if the name
-    of the record type began with an "x" or a "z".  Thanks to Steve
-    Brackin for the report of this bug.
+    of the record type began with an "x" or a "z", or if the name of
+    the type was "r1" or "r2".  Thanks to Steve Brackin for the report
+    of these bugs.
 
 New features:
 -------------
