@@ -1,0 +1,20 @@
+(* Initialisation code specific to hol.unquote *)
+val _ = quietdec := true;
+
+(* install the version of use that can cope with `` ... `` syntax *)
+let
+  val holdir = _
+in
+  Meta.use (Path.concat (holdir, Path.concat ("tools", "use.sml")))
+end;
+
+(* make the pretty-printer print terms and types with `` .... `` syntax *)
+val _ = let
+in
+  term_pp_prefix := "``";
+  term_pp_suffix := "``";
+  type_pp_prefix := "``";
+  type_pp_suffix := "``"
+end
+
+val _ = quietdec := false;

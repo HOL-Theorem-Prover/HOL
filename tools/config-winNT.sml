@@ -9,7 +9,7 @@ fun mk_xable file =   (* returns the name of the executable *)
   end
 
 
-val MK_XABLE_RHS = 
+val MK_XABLE_RHS =
  "let val exe = file^\".exe\" \
 \       val _ = FileSys.remove exe handle _ => () \
 \  in \
@@ -26,7 +26,7 @@ local fun fopen file =
        let val _ = FileSys.remove file handle _ => ()
        in TextIO.openOut file
        end
-in        
+in
 fun emit_hol_script target mosml std_prelude =
    let val ostrm = fopen(target^".bat")
        fun output s = TextIO.output(ostrm, s)
@@ -37,12 +37,12 @@ fun emit_hol_script target mosml std_prelude =
    end;
 
 
-fun emit_hol_unquote_script target qfilter hol quse =
+fun emit_hol_unquote_script target qfilter hol quse qinit =
    let val ostrm = fopen(target^".bat")
        fun output s = TextIO.output(ostrm, s)
    in
       output  "rem The hol98 script (with quote preprocessing)\n\n";
-      output  (String.concat [qfilter, " | ", hol, " ", quse, " %*\n"]);
+      output  (String.concat [qfilter, " | ", hol, " ", qinit, " %*\n"]);
       TextIO.closeOut ostrm
    end
 end;
@@ -51,4 +51,4 @@ end;
         Set C-compiler options for building robdd library.
  ---------------------------------------------------------------------------*)
 
-use "config-robdd.sml";
+use (fullPath [holdir, "tools", "config-robdd.sml"]);

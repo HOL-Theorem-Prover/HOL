@@ -13,9 +13,9 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = "/usr/groups/hol/mosml.144";
-val holdir   = "/local/scratch/bb236/hol98";
-val OS       = "linux"       (* Operating system; choices are:
+val mosmldir = _
+val holdir   = _
+val OS       = _          (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
 
 val CC       = "gcc";     (* C compiler (for building quote filter)        *)
@@ -63,11 +63,11 @@ val SRCDIRS =
   "src/datatype/parse", "src/datatype/equiv", "src/datatype/basicrec",
   "src/utils", "src/datatype/mutrec", "src/datatype/nestrec",
   "src/datatype/mutual", "src/datatype", "src/datatype/record",
-  "src/decision/src", "src/tfl/src", "src/unwind", "src/boss", 
+  "src/decision/src", "src/tfl/src", "src/unwind", "src/boss",
   "src/res_quan/theories", "src/res_quan/src", "src/set/src",
   "src/pred_set/src", "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src", "src/integer", "src/BoyerMoore",
-  "src/hol90", "src/finite_map", "src/real", "src/bag", 
+  "src/hol90", "src/finite_map", "src/real", "src/bag",
   "src/robdd","src/muddy"];
 
 
@@ -79,9 +79,9 @@ val space  = " ";
 fun echo s = TextIO.output(TextIO.stdOut, s^"\n");
 
 local val expand_backslash =
-            String.translate 
-                (fn #"\\" => "\\\\" 
-                  | #"\"" => "\\\"" 
+            String.translate
+                (fn #"\\" => "\\\\"
+                  | #"\"" => "\\\""
                   | ch => String.str ch)
 in
 fun quote s = String.concat["\"", expand_backslash s, "\""]
@@ -96,16 +96,16 @@ end;
       is done, the rest of the source is copied to the target.
  ---------------------------------------------------------------------------*)
 
-fun processLinesUntil (istrm,ostrm) (redex,residue) = 
+fun processLinesUntil (istrm,ostrm) (redex,residue) =
  let open TextIO
      fun loop () =
-       case inputLine istrm 
+       case inputLine istrm
         of ""   => ()
-         | line => 
+         | line =>
             let val ssline = Substring.all line
                 val (pref, suff) = Substring.position redex ssline
             in
-              if Substring.size suff > 0 
+              if Substring.size suff > 0
               then output(ostrm, residue)
               else (output(ostrm, line); loop())
             end
@@ -205,14 +205,14 @@ val _ =
     Instantiate tools/hol98-mode.src, and put it in tools/hol98-mode.el
  ---------------------------------------------------------------------------*)
 
-val _ = 
+val _ =
  let open TextIO
      val _ = echo "Making hol98-mode.el (for Emacs)"
      val src = fullPath [holdir, "tools/hol98-mode.src"]
     val target = fullPath [holdir, "tools/hol98-mode.el"]
  in
     fill_holes (src, target)
-      ["(defvar hol98-executable HOL98-EXECUTABLE\n" 
+      ["(defvar hol98-executable HOL98-EXECUTABLE\n"
         -->
        ("(defvar hol98-executable \n  "^
         quote (fullPath [holdir, "bin/hol.unquote"])^"\n")]
@@ -224,12 +224,12 @@ val _ =
     std.prelude in the top level of the distribution directory.
  ---------------------------------------------------------------------------*)
 
-val _ = 
+val _ =
  let open TextIO
      val _ = echo "Setting up the standard prelude."
      val src    = fullPath [holdir, "tools/std.prelude.src"]
      val target = fullPath [holdir, "std.prelude"]
-     val docdirs = 
+     val docdirs =
         let val docfile = fullPath[holdir,"tools","documentation-directories"]
             val instr  = openIn docfile
             val wholefile = inputAll instr
@@ -247,9 +247,9 @@ val _ =
      ["val SIGOBJ = __"
         -->
       String.concat["      val SIGOBJ = toString(fromString(concat\n",
-                     "                    (", quote holdir, 
+                     "                    (", quote holdir,
                      ",", quote"sigobj",")))\n"],
-      "val docdirs = __" 
+      "val docdirs = __"
       -->
       ("  val docdirs = map (Path.toString o Path.fromString)\n    "^
            docdirs_str)]
@@ -291,13 +291,13 @@ val _ =
 val _ =
   let val _ = print "Attempting to compile quote filter ... "
       val src    = fullPath [holdir, "src/quote-filter/filter.c"]
-      val target = fullPath [holdir, "bin/unquote"] 
-        
+      val target = fullPath [holdir, "bin/unquote"]
+
       open Process
   in
     if system (String.concat [CC," ", src," -o ", target]) = success
-    then ((mk_xable target; print "successful.\n") 
-          handle _ 
+    then ((mk_xable target; print "successful.\n")
+          handle _
            => print(String.concat["\n>>>>>Failed to move quote filter!",
                     "(continuing anyway)\n\n"]))
     else print "\n>>>>>>Couldn't compile quote filter! (continuing anyway)\n\n"
@@ -309,12 +309,19 @@ val _ =
 
 val _ =
  let val _ = echo "Generating bin/hol.unquote."
-     val qfilter = fullPath [holdir, "bin/unquote"]
-     val hol     = fullPath [holdir, "bin/hol"]
-     val quse    = fullPath [holdir, "tools/use.sml"]
-     val target  = fullPath [holdir, "bin/hol.unquote"]
+     val qfilter  = fullPath [holdir, "bin/unquote"]
+     val hol      = fullPath [holdir, "bin/hol"]
+     val qinitsrc = fullPath [holdir, "tools", "unquote-init.src"]
+     val qinit    = fullPath [holdir, "tools", "unquote-init.sml"]
+     val target   = fullPath [holdir, "bin/hol.unquote"]
+     (* also need to generate quote-init.sml from quote-init.src *)
+     val _ =
+       fill_holes (qinitsrc, qinit)
+       ["val holdir = _" -->
+        String.concat ["val holdir = ", quote holdir, "\n"]
+       ]
  in
-   emit_hol_unquote_script target qfilter hol quse
+   emit_hol_unquote_script target qfilter hol qinit
  end;
 
 (*
@@ -360,7 +367,7 @@ val _ =
   end;
 
 (*---------------------------------------------------------------------------
-    Configure the muddy library. This is only temporary, until I know 
+    Configure the muddy library. This is only temporary, until I know
     more about how it should configure on other systems than linux.
  ---------------------------------------------------------------------------*)
 
@@ -374,7 +381,7 @@ val _ =
                ["   Warning! (non-fatal):\n    The muddy package is not ",
                 "expected to build in OS flavour ", quote OS,
                 ".\n   Only linux and solaris are currently supported.\n",
-                "   End Warning.\n"]); 
+                "   End Warning.\n"]);
               "unknownOS")
          else "$(SMLOBJ) $(SIGOBJ) muddy.so"
   in

@@ -1,4 +1,3 @@
-val _ = quietdec := true;
 val _ = print "Rebinding \"use\" for quotation pre-processing.\n"
 
 (*---------------------------------------------------------------------------*
@@ -11,12 +10,12 @@ local fun has_dq file =
            fun loop() =
              case TextIO.input1 istrm
               of NONE => false
-               | SOME #"`" => 
-                   (case TextIO.input1 istrm 
+               | SOME #"`" =>
+                   (case TextIO.input1 istrm
                      of NONE => false | SOME #"`" => true | _ => loop())
                | SOME _ => loop()
            val status = loop()
-       in 
+       in
           TextIO.closeIn istrm;
           status
        end
@@ -24,12 +23,12 @@ local fun has_dq file =
          Process.system (String.concat
              [Path.concat(HOLDIR, "bin/unquote"), " ",file1, " ",file2])
 in
-fun use s = 
+fun use s =
   if has_dq s
   then let val filename = FileSys.tmpName()^".hol98"
-       in 
+       in
          if unquote_to s filename = Process.success
-         then 
+         then
             (Meta.use filename; FileSys.remove filename)
              handle e => (FileSys.remove filename handle _ => (); raise e)
          else (TextIO.output(TextIO.stdOut,
@@ -38,4 +37,3 @@ fun use s =
   else Meta.use s
 end;
 
-val _ = quietdec := false;

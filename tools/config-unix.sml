@@ -30,13 +30,13 @@ fun emit_hol_script target mosml std_prelude =
    end;
 
 
-fun emit_hol_unquote_script target qfilter hol quse =
+fun emit_hol_unquote_script target qfilter hol qinit =
    let val ostrm = TextIO.openOut target
        fun output s = TextIO.output(ostrm, s)
    in
       output  "#!/bin/sh\n";
       output  "# The hol98 script (with quote preprocessing)\n\n";
-      output  (String.concat [qfilter, " | ", hol, " ", quse, " $*\n"]);
+      output  (String.concat [qfilter, " | ", hol, " ", qinit, " $*\n"]);
       TextIO.closeOut ostrm;
       mk_xable target
    end;

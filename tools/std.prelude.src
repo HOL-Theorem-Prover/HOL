@@ -34,8 +34,8 @@ local
                  print (exnMessage e);
                  print "\n")
 in
-  val _ = installPP (capture_errors (pp_with_bquotes pp_term))
-  val _ = installPP (capture_errors (pp_with_bquotes pp_type))
+  val _ = installPP (capture_errors (term_pp_with_delimiters pp_term))
+  val _ = installPP (capture_errors (type_pp_with_delimiters pp_type))
   val _ = installPP (capture_errors pp_thm)
 end
 
