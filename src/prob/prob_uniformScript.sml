@@ -22,8 +22,7 @@ local
 in
   val std_ss' =
     (boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ optionSimps.OPTION_ss ++
-     numSimps.REDUCE_ss ++ sumSimps.SUM_ss ++ boolSimps.ETA_ss ++
-     rewrites [LET_THM]);
+     numSimps.REDUCE_ss ++ sumSimps.SUM_ss ++ boolSimps.ETA_ss);
 end;
 
 (* ------------------------------------------------------------------------- *)

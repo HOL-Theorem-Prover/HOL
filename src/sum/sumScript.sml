@@ -358,9 +358,9 @@ val sum_case_cong = save_thm("sum_case_cong",
 
 val LET_SUM = store_thm(
   "LET_SUM",
-  ``(LET f (INL a) = LET (\v. f (INL v)) a) /\
-    (LET f (INR b) = LET (\u. f (INR u)) b)``,
-  REWRITE_TAC [LET_THM] THEN BETA_TAC THEN REWRITE_TAC []);
+  ``(LET f (I (INL a)) = LET (\v. f (INL v)) (I a)) /\
+    (LET f (I (INR b)) = LET (\u. f (INR u)) (I b))``,
+  REWRITE_TAC [LET_THM, combinTheory.I_THM] THEN BETA_TAC THEN REWRITE_TAC []);
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,

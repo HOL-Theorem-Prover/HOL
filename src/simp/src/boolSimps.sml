@@ -3,7 +3,7 @@ struct
 
 open HolKernel boolLib liteLib simpLib pureSimps Ho_Rewrite tautLib;
 
-infix THEN ORELSE THENL THENQC ++;
+infix THENQC
 
 val (Type,Term) = Parse.parse_from_grammars combinTheory.combin_grammars
 fun -- q x = Term q handle e => Raise e;
@@ -133,22 +133,32 @@ val UNWIND_ss = SIMPSET
     LET_ss
    ---------------------------------------------------------------------- *)
 
-(*
  val let_cong = prove(
    ``(v:'a = v') ==> (LET (f:'a -> 'b) v = LET f (I v'))``,
    DISCH_THEN SUBST_ALL_TAC THEN REWRITE_TAC [LET_THM, combinTheory.I_THM])
 val let_I_thm = prove(
   ``LET (f : 'a -> 'b) (I x) = f x``,
-  REWRITE_TAC [combinTheory.I_THM, LET_THM]);*)
+  REWRITE_TAC [combinTheory.I_THM, LET_THM]);
 
-val LET_ss = let
-  val sLET = INST_TYPE[Type.alpha |-> bool] (SPEC_ALL LET_THM)
+val LET_ss =
+    simpLib.SIMPSET {ac = [], congs = [let_cong], convs = [], filter = NONE,
+                     dprocs = [], rewrs = [let_I_thm]}
+
+val LET_COMP_ss = let
+  val let_comp_cong = prove(
+    ``(v:'a = v') ==> (M:'a -> 'b = M') ==> (LET M v = LET M' (I v'))``,
+     REPEAT (DISCH_THEN SUBST_ALL_TAC) THEN
+     REWRITE_TAC [combinTheory.I_THM])
+  val let_simp = prove(``LET (\x:'a. M:'b) v = M``, REWRITE_TAC [LET_THM])
+  val I_LET = prove(``LET (f:bool -> 'a) (I x) = f x``,
+                    REWRITE_TAC [combinTheory.I_THM, LET_THM])
   val x = mk_var("x",bool)
-  val T_value = INST [x|->boolSyntax.T] sLET
-  val F_value = INST [x|->boolSyntax.F] sLET
+  val T_value = INST [x|->boolSyntax.T] I_LET
+  val F_value = INST [x|->boolSyntax.F] I_LET
 in
-  simpLib.SIMPSET {ac = [], congs = [], convs = [], filter = NONE,
-                   dprocs = [], rewrs = [T_value, F_value]}
+  simpLib.SIMPSET {ac = [], congs = [let_comp_cong],
+                   convs = [], filter = NONE, dprocs = [],
+                   rewrs = [T_value, F_value, let_simp]}
 end
 
 (* ----------------------------------------------------------------------
@@ -159,15 +169,14 @@ end
          - COND_ID added: (P => Q | Q) = Q
          - contextual rewrites for P ==> Q and P => T1 | T2
          - point-wise unwinding under ! and ?
-         - eta conversion
 
       Beta conversion and "basic rewrites" come from BOOL_ss, while
       the contextual rewrites are found in CONG_ss.  Unwinding comes
-      from UNWIND_ss, and eta-conversion comes from ETA_ss.  This
-      split is done so that users have the potential to construct
-      their own custom simpsets more easily.  For example, inefficient
-      context gathering required for the congruence reasoning can be
-      omitted in a custom simpset built from BOOL_ss.
+      from UNWIND_ss.  This split is done so that users have the
+      potential to construct their own custom simpsets more easily.
+      For example, inefficient context gathering required for the
+      congruence reasoning can be omitted in a custom simpset built
+      from BOOL_ss.
    ---------------------------------------------------------------------- *)
 
 val bool_ss =

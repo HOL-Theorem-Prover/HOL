@@ -407,8 +407,8 @@ REWRITE_TAC [boolTheory.LET_DEF] THEN BETA_TAC
 
 val LET_PAIR = store_thm(
   "LET_PAIR",
-  ``LET f (x,y) = LET (\v1. LET (\v2. f(v1,v2)) y) x``,
-  REWRITE_TAC [LET_THM] THEN BETA_TAC THEN REWRITE_TAC []);
+  ``LET f (I (x,y)) = LET (\v1. LET (\v2. f(v1,v2)) (I y)) (I x)``,
+  REWRITE_TAC [LET_THM, combinTheory.I_THM] THEN BETA_TAC THEN REWRITE_TAC []);
 
 
 (*---------------------------------------------------------------------------

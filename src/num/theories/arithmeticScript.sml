@@ -3029,10 +3029,10 @@ val LEAST_EXISTS_IMP = store_thm
 
 val LET_NUM = store_thm(
   "LET_NUM",
-  ``(LET f 0 = f 0) /\
-    (LET f (SUC x) = LET (\v. f (SUC v)) x) /\
-    (LET f (NUMERAL v) = f (NUMERAL v))``,
-  REWRITE_TAC [LET_THM] THEN BETA_TAC THEN REWRITE_TAC []);
+  ``(LET f (I 0) = f 0) /\
+    (LET f (I (SUC x)) = LET (\v. f (SUC v)) (I x)) /\
+    (LET f (I (NUMERAL v)) = f (NUMERAL v))``,
+  REWRITE_TAC [LET_THM, combinTheory.I_THM] THEN BETA_TAC THEN REWRITE_TAC []);
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,

@@ -24,5 +24,12 @@ sig
      val LET_ss : simpLib.ssdata        (* writes out let terms, using a
                                            congruence to evaluate the
                                            second argument fully first *)
+     val LET_COMP_ss : simpLib.ssdata
+     (* traverses let terms but doesn't allow the beta redex unless
+        the RHS is T or F.  Add theorems of the form
+           LET f (I v) = ...
+        to allow additional forms looking like v to be treated as values. *)
+
+
 end
 

@@ -286,11 +286,11 @@ val option_case_cong =
   save_thm("option_case_cong",
       Prim_rec.case_cong_thm option_nchotomy option_case_def);
 
-val OPTION_LET = store_thm(
-  "OPTION_LET",
-  ``(LET f NONE = f NONE) /\
-    (LET f (SOME x) = LET (\v. f (SOME v)) x)``,
-  ASM_REWRITE_TAC [LET_THM] THEN BETA_TAC THEN REWRITE_TAC []);
+val LET_OPTION = store_thm(
+  "LET_OPTION",
+  ``(LET f (I NONE) = f NONE) /\
+    (LET f (I (SOME x)) = LET (\v. f (SOME v)) (I x))``,
+  ASM_REWRITE_TAC [LET_THM, combinTheory.I_THM] THEN BETA_TAC THEN REWRITE_TAC []);
 
 
 val _ = adjoin_to_theory
@@ -338,6 +338,6 @@ val _ = BasicProvers.export_rewrites
            "IS_SOME_DEF", "IS_NONE_EQ_NONE", "NOT_IS_SOME_EQ_NONE",
            "option_case_ID", "option_case_SOME_ID", "option_case_def",
            "OPTION_MAP_DEF", "OPTION_JOIN_DEF", "SOME_11", "NOT_SOME_NONE",
-           "OPTION_LET"]
+           "LET_OPTION"]
 
 val _ = export_theory();
