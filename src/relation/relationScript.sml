@@ -10,6 +10,8 @@ struct
 
 open HolKernel Parse boolLib QLib tautLib mesonLib Rsyntax simpLib boolSimps;
 
+local open combinTheory in end;
+
 val _ = new_theory "relation";
 
 (*---------------------------------------------------------------------------*)

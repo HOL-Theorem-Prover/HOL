@@ -84,11 +84,11 @@ val I_THM = store_thm("I_THM",
 
 val I_o_ID = store_thm("I_o_ID",
    --`!f. (I o f = f) /\ (f o I = f)`--,
-   REPEAT STRIP_TAC
-   THEN CONV_TAC (DEPTH_CONV FUN_EQ_CONV)
-   THEN REWRITE_TAC [ o_DEF ]
-   THEN CONV_TAC (REDEPTH_CONV BETA_CONV)
-   THEN REWRITE_TAC [ I_THM ]);
+   REWRITE_TAC [I_THM, o_THM, FUN_EQ_THM]);
+
+val K_o_THM = store_thm("K_o_THM",
+  --`(!f v. K v o f = K v) /\ (!f v. f o K v = K (f v))`--,
+  REWRITE_TAC [o_THM, K_THM, FUN_EQ_THM]);
 
 
 val _ = adjoin_to_theory
@@ -104,7 +104,7 @@ val _ = adjoin_to_theory
       fun NL() = PP.add_newline ppstrm
   in
     S "val _ ="; NL();
-    S "   computeLib.add_funs [K_DEF,S_DEF,I_DEF,C_DEF,W_DEF,o_DEF]";
+    S "   computeLib.add_funs [K_DEF,S_DEF,I_THM,C_DEF,W_DEF,o_DEF]";
     NL()
   end)};
 
