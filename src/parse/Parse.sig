@@ -13,40 +13,6 @@ signature Parse = sig
      | Prefix
      | Binder
 
-  val fromTGfixity : term_grammar.rule_fixity -> fixity
-  val LEFT       : associativity
-  val RIGHT      : associativity
-  val NONASSOC   : associativity
-
-  val Infixl     : int -> fixity
-  val Infixr     : int -> fixity
-  val Infix      : associativity * int -> fixity
-  val TruePrefix : int -> fixity
-  val Closefix   : fixity
-  val Suffix     : int -> fixity
-  val fixity     : string -> fixity
-
-  (* more constructors/values that come across from term_grammar *)
-
-  val TM : term_grammar.pp_element
-  val TOK : string -> term_grammar.pp_element
-  val BreakSpace : (int * int) -> term_grammar.pp_element
-  val HardSpace : int -> term_grammar.pp_element
-  val BeginFinalBlock : term_grammar.block_info -> term_grammar.pp_element
-  val EndInitialBlock : term_grammar.block_info -> term_grammar.pp_element
-  val PPBlock : term_grammar.pp_element list * term_grammar.block_info
-                -> term_grammar.pp_element
-
-  val OnlyIfNecessary : term_grammar.ParenStyle
-  val ParoundName : term_grammar.ParenStyle
-  val ParoundPrec : term_grammar.ParenStyle
-  val Always : term_grammar.ParenStyle
-
-  val AroundEachPhrase : PhraseBlockStyle
-  val AroundSamePrec   : PhraseBlockStyle
-  val AroundSameName   : PhraseBlockStyle
-
-
   (* Parsing Types *)
   val type_grammar : unit -> parse_type.grammar
   val Type         : hol_type frag list -> hol_type
@@ -93,12 +59,12 @@ signature Parse = sig
   val remove_type_infix : string -> unit *)
 
   (* Parsing terms *)
-    val parse_preTerm : term frag list -> Absyn.absyn
-    val toTerm  : term_grammar.grammar -> Absyn.absyn -> term
-    val resolve_names : Absyn.absyn -> Preterm.preterm
-    val preTerm : term frag list -> Preterm.preterm
-    val Term : term frag list -> term
-    val -- : term frag list -> 'a -> term
+    val absyn_to_term    : term_grammar.grammar -> Absyn.absyn -> term
+    val absyn_to_preterm : Absyn.absyn -> Preterm.preterm
+    val Absyn            : term frag list -> Absyn.absyn
+    val Preterm          : term frag list -> Preterm.preterm
+    val Term             : term frag list -> term
+    val --               : term frag list -> 'a -> term
     val parse_in_context : term list -> term frag list -> term
     val parse_from_grammars :
       (parse_type.grammar * term_grammar.grammar) ->
@@ -111,14 +77,15 @@ signature Parse = sig
     val term_grammar : unit -> term_grammar.grammar
 
     (* the following functions modify the grammar, and do so in such a
-       way that the exported theory will have the same grammar *)
-    val add_infix : string * int * associativity -> unit
-    val add_rule : {term_name : string,
-                    fixity : fixity,
-                    pp_elements: pp_element list,
-                    paren_style : ParenStyle,
-                    block_style : PhraseBlockStyle * block_info} -> unit
-    val add_binder : (string * int) -> unit
+       way that the exported theory will have the same grammar
+    *)
+    val add_const  : string -> unit
+    val add_infix  : string * int * associativity -> unit
+    val std_binder_precedence : int
+    val add_binder : string * int -> unit
+    val add_rule   : {term_name : string, fixity :fixity,
+                      pp_elements: pp_element list, paren_style : ParenStyle,
+                      block_style : PhraseBlockStyle * block_info} -> unit
     val add_listform : {separator : string, leftdelim : string,
                         rightdelim : string, cons : string,
                         nilstr : string} -> unit
@@ -129,13 +96,14 @@ signature Parse = sig
     val associate_restriction : (string * string) -> unit
     val prefer_form_with_tok : {term_name : string, tok : string} -> unit
     val clear_prefs_for_term : string -> unit
-    val set_fixity : string -> fixity -> unit
+    val set_fixity : string * fixity -> unit
 
     val remove_rules_for_term : string -> unit
     val remove_termtok : {term_name : string, tok : string} -> unit
+
     (* overloading and records *)
     val overload_on : string * term -> unit
-    val overload_on_by_nametype : string * string * hol_type -> unit
+    val overload_on_by_nametype : string * string * string * hol_type -> unit
     val clear_overloads_on : string -> unit
     val add_record_field : string * term -> unit
     val add_record_update : string * term -> unit
@@ -161,18 +129,25 @@ signature Parse = sig
     val temp_associate_restriction : (string * string) -> unit
     val temp_prefer_form_with_tok : {term_name : string, tok : string} -> unit
     val temp_clear_prefs_for_term : string -> unit
-    val temp_set_fixity : string -> fixity -> unit
+    val temp_set_fixity : string * fixity -> unit
 
     val temp_remove_rules_for_term : string -> unit
     val temp_remove_termtok : {term_name : string, tok : string} -> unit
     val temp_set_associativity : (int * associativity) -> unit
 
     val temp_overload_on : string * term -> unit
-    val temp_overload_on_by_nametype : string * string * hol_type -> unit
+    val temp_overload_on_by_nametype
+       : string * string * string * hol_type -> unit
     val temp_clear_overloads_on : string -> unit
     val temp_add_record_field : string * term -> unit
     val temp_add_record_update : string * term -> unit
     val temp_add_record_fupdate : string * term -> unit
+
+    val standard_spacing : string -> fixity
+                           -> {term_name   : string, fixity:fixity,
+                               pp_elements : pp_element list,
+                               paren_style : ParenStyle,
+                               block_style : PhraseBlockStyle * block_info}
 
   (* Pretty printing *)
   val pp_term : General.ppstream -> term -> unit
@@ -197,35 +172,15 @@ signature Parse = sig
   val print_type : hol_type -> unit
   val print_term : term -> unit
 
-  (* definitional principles that have an impact on parsing *)
-  val new_infixl_definition : (string * term * int) -> thm
-  val new_infixr_definition : (string * term * int) -> thm
-  val new_binder_definition : (string * term) -> thm
-  val new_gen_definition : (string * term * fixity) -> thm
-  val new_infix : {Name : string, Ty : hol_type, Prec : int} -> unit
-  val new_binder : {Name : string, Ty : hol_type} -> unit
-  val new_type : {Name : string, Arity : int} -> unit
-  val new_type_definition :
-    {name : string, pred : term, inhab_thm : thm} -> thm
-  val new_infix_type : {Name : string, Arity : int, ParseName : string option,
-                        Assoc : associativity, Prec : int} -> unit
-
-  val new_specification :
-    {name : string, sat_thm : thm,
-     consts : {fixity : fixity, const_name : string} list} -> thm
-  val new_definition : (string * term) -> thm
-  val new_constant : {Name : string, Ty : hol_type} -> unit
-
-  (* Theory manipulation functions that also have an impact *)
-  val new_theory : string -> unit
-  val export_theory : unit -> unit
   val export_theory_as_docfiles : string -> unit
   val export_theorems_as_docfiles : string -> (string * thm) list -> unit
-  val print_theory : unit -> unit
 
-  (* stuff inserted rather after the fact that used to be in old Parse,
-     and is still needed *)
-  val typedTerm : term frag list -> hol_type -> term
+  val update_grms   : ('a -> unit) -> 'a -> unit
+  val mk_local_grms :
+    (string * (parse_type.grammar * term_grammar.grammar)) list ->
+    unit
+
+
   val hide : string -> unit
   val reveal : string -> unit
   val hidden : string -> bool
@@ -239,5 +194,36 @@ signature Parse = sig
      This function is called by new_definition and friends, so it shouldn't
      be necessary for users to call it in most circumstances. *)
   val remember_const : string -> unit
+
+  val LEFT       : associativity
+  val RIGHT      : associativity
+  val NONASSOC   : associativity
+
+  val Infixl     : int -> fixity
+  val Infixr     : int -> fixity
+  val Infix      : associativity * int -> fixity
+  val TruePrefix : int -> fixity
+  val Closefix   : fixity
+  val Suffix     : int -> fixity
+  val fixity     : string -> fixity
+
+  (* more constructors/values that come across from term_grammar *)
+
+  val TM               : pp_element
+  val TOK              : string -> pp_element
+  val BreakSpace       : int * int -> pp_element
+  val HardSpace        : int -> pp_element
+  val BeginFinalBlock  : block_info -> pp_element
+  val EndInitialBlock  : block_info -> pp_element
+  val PPBlock          : pp_element list * block_info -> pp_element
+
+  val OnlyIfNecessary  : ParenStyle
+  val ParoundName      : ParenStyle
+  val ParoundPrec      : ParenStyle
+  val Always           : ParenStyle
+
+  val AroundEachPhrase : PhraseBlockStyle
+  val AroundSamePrec   : PhraseBlockStyle
+  val AroundSameName   : PhraseBlockStyle
 
 end

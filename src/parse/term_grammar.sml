@@ -1,4 +1,10 @@
+structure term_grammar :> term_grammar =
+struct
+
 open HOLgrammars GrammarSpecials
+
+  type ppstream = Portable.ppstream
+
 
   type block_info = PP.break_style * int
   datatype rule_element = TOK of string | TM
@@ -97,12 +103,12 @@ datatype grammar = GCONS of
    overload_info : overload_info,
    constants : string list}
 
-fun specials (GCONS G: grammar) = #specials G
-fun numeral_info (GCONS G: grammar) = #numeral_info G
-fun overload_info (GCONS G: grammar) = #overload_info G
+fun specials (GCONS G) = #specials G
+fun numeral_info (GCONS G) = #numeral_info G
+fun overload_info (GCONS G) = #overload_info G
 fun known_constants (GCONS G) = #constants G
-fun grammar_rules (GCONS G:grammar) = map #2 (#rules G)
-fun rules (GCONS G : grammar) = (#rules G)
+fun grammar_rules (GCONS G) = map #2 (#rules G)
+fun rules (GCONS G) = (#rules G)
 
 fun fupdate_rules f (GCONS{rules, specials, numeral_info,
                            overload_info, constants}) =
@@ -201,13 +207,7 @@ fun update_assoc (item as (k,v)) alist =
 fun associate_restriction G (b, s) =
   fupdate_specials (fupdate_restr_binders (update_assoc (b, s))) G
 
-fun is_binder (G:grammar) = let
-  val bs = binders G
-  fun member x [] = false
-    | member x (y::ys) = x = y orelse member x ys
-in
-  fn s => member s bs
-end
+fun is_binder G = let val bs = binders G in fn s => Lib.mem s bs end
 
 datatype stack_terminal =
   STD_HOL_TOK of string | BOS | EOS | Id  | TypeColon | TypeTok | EndBinding |
@@ -557,10 +557,10 @@ datatype rule_fixity =
   Infix of associativity * int | Closefix | Suffix of int | TruePrefix of int
 fun rule_fixityToString f =
   case f of
-    Infix(a,i) => "term_grammar.Infix("^assocToString a^", "^Int.toString i^")"
-  | Closefix => "term_grammar.Closefix"
-  | Suffix p => "term_grammar.Suffix "^Int.toString p
-  | TruePrefix p => "term_grammar.TruePrefix "^Int.toString p
+    Infix(a,i) => "Infix("^assocToString a^", "^Int.toString i^")"
+  | Closefix => "Closefix"
+  | Suffix p => "Suffix "^Int.toString p
+  | TruePrefix p => "TruePrefix "^Int.toString p
 
 
 fun clear_prefs_for s =
@@ -878,3 +878,4 @@ in
 end
 
 
+end; (* struct *)

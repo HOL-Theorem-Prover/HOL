@@ -1,9 +1,49 @@
-open Term HolKernel Portable term_grammar HOLtokens HOLgrammars
-open GrammarSpecials
+structure term_pp :> term_pp =
+struct
 
-fun PP_ERR f mesg = HOL_ERR {origin_structure = "term_pp",
-                             origin_function = f,
-                             message = mesg}
+open Portable Feedback Term HolKernel term_grammar
+     HOLtokens HOLgrammars GrammarSpecials;
+
+
+val PP_ERR = mk_HOL_ERR "term_pp";
+
+(*---------------------------------------------------------------------------
+   Miscellaneous syntax stuff.
+ ---------------------------------------------------------------------------*)
+
+fun is_let tm =
+ let val c = rator(rator tm)
+ in case dest_thy_const c
+     of {Name="LET",Thy="bool",...} => true
+      | otherwise => false
+ end handle HOL_ERR _ => false;
+
+fun dest_pair tm =
+ let val {Rator,Rand=snd} = dest_comb tm
+     val {Rator=c,Rand=fst} = dest_comb Rator
+ in case dest_thy_const c
+     of {Name=",",Thy="pair",...} => (fst,snd)
+      | otherwise => raise PP_ERR"" ""
+ end handle HOL_ERR _ => raise PP_ERR "dest_pair" "";
+
+val is_pair = Lib.can dest_pair;
+
+fun mk_pair (fst,snd) =
+ let infix -->
+     val fsty = type_of fst
+     val sndty = type_of snd
+     val c = mk_thy_const{Name=",",Thy="pair",
+              Ty=fsty --> sndty --> mk_type{Tyop="prod",Args=[fsty,sndty]}}
+ in list_mk_comb(c,[fst,snd])
+ end;
+
+fun acc_strip_comb M rands =
+ let val {Rator,Rand} = dest_comb M
+ in acc_strip_comb Rator (Rand::rands)
+ end
+ handle HOL_ERR _ => (M,rands);
+
+fun strip_comb tm = acc_strip_comb tm [];
 
 fun string_of_nspaces n = String.concat (List.tabulate(n, (fn _ => " ")))
 val isPrefix = String.isPrefix
@@ -25,14 +65,14 @@ fun countP P [] = 0
   | countP P (x::xs) = if P x then 1 + countP P xs else countP P xs
 val numTMs = countP (fn TM => true | _ => false)
 
-fun find_partial f [] = NONE
-  | find_partial f (x::xs) = let
-      val result = f x
-    in
-      case result of
-        SOME x => result
-      | NONE => find_partial f xs
-    end
+fun find_partial f  =
+ let fun find [] = NONE
+       | find (x::xs) =
+           case f x
+            of NONE => find xs
+             | result => result
+ in find end;
+
 
 fun splitP P thelist = let
   fun with_acc acc [] = acc
@@ -83,6 +123,7 @@ fun has_name s tm =
 datatype bvar = Simple of term | Restricted of {Bvar : term, Restrictor : term}
 fun bv2term (Simple t) = t | bv2term (Restricted {Bvar,...}) = Bvar
 
+
 fun my_dest_abs tm =
   case dest_term tm of
     LAMB{Bvar, Body} => (Bvar, Body)
@@ -93,7 +134,7 @@ fun my_dest_abs tm =
       val (v1, body0) = my_dest_abs Rand
       val (v2, body) = my_dest_abs body0
     in
-      (mk_pair{fst = v1, snd = v2}, body)
+      (mk_pair(v1, v2), body)
     end
   | _ => raise PP_ERR "my_dest_abs" "term not an abstraction"
 
@@ -328,9 +369,9 @@ fun pp_term (G : grammar) TyG = let
          or not the restrictor might print an endbinding token. *)
 
     infix might_print nmight_print
-    fun {Name,Ty} nmight_print str = let
+    fun (r as {Name,Thy,Ty}) nmight_print str = let
       val actual_name0 =
-        case Overload.overloading_of_nametype overload_info (Name,Ty) of
+        case Overload.overloading_of_nametype overload_info r of
           NONE => Name
         | SOME s => s
       fun testit s = if isPrefix s actual_name0 then SOME s else NONE
@@ -351,7 +392,8 @@ fun pp_term (G : grammar) TyG = let
       case (dest_term tm) of
         COMB{Rator, Rand} => Rator might_print str orelse Rand might_print str
       | LAMB{Body,...} => Body might_print str
-      | x => (dest_atom tm) nmight_print str
+      | VAR{Name,Ty} => Name = str
+      | CONST x => x nmight_print str
 
 
     fun pr_res_vstructl restrictor res_op vsl = let
@@ -423,17 +465,18 @@ fun pp_term (G : grammar) TyG = let
       val numty = Type.mk_type {Tyop = "num", Args = []}
       val num2numty = Type.-->(numty, numty)
       val numinfo_search_string = Option.map (#Name o dest_const) injtermopt
-      val (injname0, injty) =
+      val inj_record =
         case injtermopt of
-          NONE => (nat_elim_term, num2numty)
-        | SOME t => (fn {Name,Ty}=>(Name,Ty)) (dest_const t)
+          NONE => {Name = nat_elim_term, Thy = "arithmetic", Ty = num2numty}
+        | SOME t => dest_thy_const t
+      val {Name = injname0, Thy = injthy, Ty = injty} = inj_record
       val injname =
-        case overloading_of_nametype overload_info (injname0, injty) of
+        case overloading_of_nametype overload_info inj_record of
           NONE => injname0
         | SOME s => s
     in
       pbegin (!Globals.show_types);
-      add_string (Arbnum.toString (Term.dest_numeral tm));
+      add_string (Arbnum.toString (Numeral.dest_numeral tm));
       if
         injname <> fromNum_str orelse
         !Globals.show_numeral_types
@@ -462,13 +505,14 @@ fun pp_term (G : grammar) TyG = let
         | _ => false
       val addparens = add_l orelse add_r
       val _ =
-        if is_numeral tm andalso can_pr_numeral NONE then
+        if Numeral.is_numeral tm andalso can_pr_numeral NONE then
           (pr_numeral NONE tm; raise SimpleExit)
         else
           ()
       val _ =
-        (if is_numeral t2 andalso can_pr_numeral (SOME (atom_name t1)) then
-           (pr_numeral (SOME t1) t2; raise SimpleExit)
+        (if Numeral.is_numeral t2
+            andalso can_pr_numeral (SOME (atom_name t1))
+         then (pr_numeral (SOME t1) t2; raise SimpleExit)
          else ()) handle SimpleExit => raise SimpleExit | _ => ()
       val _ =
         if my_is_abs tm then (pr_abs tm; raise SimpleExit)
@@ -478,7 +522,7 @@ fun pp_term (G : grammar) TyG = let
           is_const t1 andalso #Name (dest_const t1) = "GSPEC" andalso
           my_is_abs t2 then let
             val (_, body) = my_dest_abs t2
-            val {fst = l, snd = r} = dest_pair body
+            val (l, r) = dest_pair body
           in
             begin_block CONSISTENT 0;
             add_string "{"; begin_block CONSISTENT 0;
@@ -804,12 +848,8 @@ fun pp_term (G : grammar) TyG = let
           val (r as {nilstr, cons, ...}) =
             valOf (List.find (fn r => #cons r = fname) lrules)
           val sep = #separator r
-          fun spacify front s =
-            if Char.isAlphaNum(String.sub(s,0)) then
-              if front then " "^s else s^" "
-            else s
-          val rdelim = spacify true (#rightdelim r)
-          val ldelim = spacify false (#leftdelim r)
+          val rdelim = #rightdelim r
+          val ldelim = #leftdelim r
           (* list will never be empty *)
           fun pr_list tm = let
             fun recurse tm = let
@@ -925,7 +965,7 @@ fun pp_term (G : grammar) TyG = let
           if print_type then add_type() else ();
           pend print_type; end_block()
         end
-      | CONST{Name = cname0, Ty} => let
+      | CONST{Name = cname0, Thy, Ty} => let
           val cname =
             case Overload.overloading_of_term overload_info tm of
               SOME s =>
@@ -1124,3 +1164,5 @@ fun p ty =
 p (Type`:(bool,num)fmap`)
 
 *)
+
+end; (* term_pp *)

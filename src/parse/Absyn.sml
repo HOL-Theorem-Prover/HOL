@@ -1,16 +1,16 @@
 structure Absyn :> Absyn =
 struct
 
-open HolKernel;
+open Feedback HolKernel;
 infix ##;
 
 type term = Term.term
-type pretype = TCPretype.pretype
+type pretype = Pretype.pretype
 type 'a quotation = 'a Portable.quotation
 
-fun ERR f s =
-    HOL_ERR{origin_structure="Absyn",
-            origin_function=f, message=s};
+fun ERR f s = HOL_ERR
+   {origin_structure="Absyn",
+    origin_function=f, message=s};
 
    datatype vstruct
        = VAQ    of term
@@ -21,6 +21,7 @@ fun ERR f s =
    datatype absyn
        = AQ    of term
        | IDENT of string
+       | QIDENT of string * string
        | APP   of absyn * absyn
        | LAM   of vstruct * absyn
        | TYPED of absyn * pretype
@@ -30,16 +31,50 @@ fun ERR f s =
         Useful absyn operations.
  ---------------------------------------------------------------------------*)
 
-fun pdest_comb t = let
-  val {Rator,Rand} = Term.dest_comb t
-in
-  (Rator, Rand)
-end
-fun atom_name tm = #Name(dest_var tm handle HOL_ERR _ => dest_const tm);
-fun dest_pabs tm = let val {varstruct, body} = Dsyntax.dest_pabs tm
-                   in (varstruct,body)
-                   end;
+fun pdest_comb t = 
+ let val {Rator,Rand} = Term.dest_comb t
+ in (Rator, Rand)
+ end
 
+fun atom_name tm = #Name(dest_var tm handle HOL_ERR _ => dest_const tm);
+
+fun dest_pair tm =
+ let val {Rator,Rand=snd} = dest_comb tm
+     val {Rator=c,Rand=fst} = dest_comb Rator
+ in case dest_thy_const c
+     of {Name=",",Thy="pair",...} => (fst,snd)
+      | otherwise => raise ERR"" ""
+ end handle HOL_ERR _ => raise ERR "dest_pair" "";
+
+val is_pair = Lib.can dest_pair;
+
+fun mk_pair (fst,snd) =
+ let infix -->
+     val fsty = type_of fst
+     val sndty = type_of snd
+     val c = mk_thy_const{Name=",",Thy="pair",
+              Ty=fsty --> sndty --> mk_type{Tyop="prod",Args=[fsty,sndty]}}
+ in list_mk_comb(c,[fst,snd])
+ end;
+
+local val ucheck = Lib.assert (Lib.curry (op =) "UNCURRY" o #Name o dest_const)
+fun dpa tm =
+  let val {Bvar,Body} = dest_abs tm in (Bvar, Body) end 
+  handle HOL_ERR _
+  => let val {Rator,Rand} = dest_comb tm
+         val _ = ucheck Rator
+         val (lv, body) = dpa Rand
+         val (rv, body) = dpa body
+     in
+       (mk_pair(lv, rv), body)
+     end
+in
+fun dest_pabs tm =
+   let val (pr as (varstruct,_)) = dpa tm
+   in if is_pair varstruct then pr
+      else raise ERR "dest_pabs" "not a paired abstraction"
+   end
+end;
 
 fun mk_AQ x        = AQ x
 fun mk_ident s     = IDENT s

@@ -1,6 +1,14 @@
-(* add comments ; comments should skip over antiquotations *)
-datatype 'a term_token =
-  Ident of string | Antiquote of 'a | Numeral of (string * char option)
+structure term_tokens :> term_tokens =
+struct
+
+  val WARN = Feedback.HOL_WARNING "term lexer" "";
+
+
+  datatype 'a term_token =
+    Ident of string
+  | Antiquote of 'a
+  | Numeral of (string * char option)
+  | QIdent of (string * string)
 
 open optmonad monadic_parse
 open fragstr
@@ -23,16 +31,16 @@ fun bslash_error strm =
    (fn x =>
     case x of
       QUOTE s =>
-        (Lib.mesg true ("Don't recognise \\"^String.substring(s,0,1)^
+        (WARN ("Don't recognise \\"^String.substring(s,0,1)^
                         " as a valid backslash escape.\n");
          pushback x >> fail)
     | ANTIQUOTE _ => let
       in
-        Lib.mesg true "Must not have antiquotations inside strings.\n";
+        WARN "Must not have antiquotations inside strings.\n";
         pushback x >> fail
       end)) strm
 
-fun failwith s x = (Lib.mesg true s ; fail) x
+fun failwith s x = (WARN s ; fail) x
 fun qstring_contents strm =
   (many (many1_charP q_ok ++
          (string "\\\\" >> return "\\") ++
@@ -100,7 +108,7 @@ fun quoted_string strm =
   special, return Symbol of it, else return Ident of it.
 *)
 
-val non_aggregating_chars = explode "()[]{}~.,"
+val non_aggregating_chars = explode "()[]{}~.,;"
 fun nonagg_c c = Lib.mem c non_aggregating_chars
 
 fun s_has_nonagg_char s = length (String.fields nonagg_c s) <> 1
@@ -124,7 +132,7 @@ fun strip_eqs [] = []
   | strip_eqs (QUOTE ""::xs) = strip_eqs xs
   | strip_eqs x = x
 
-fun lex keywords0 afn frags0 = let
+fun lex keywords0 frags0 = let
   val non_agg_specials = List.filter s_has_nonagg_char keywords0
   fun handle_symbolics dollarp ss = let
     open Substring
@@ -183,38 +191,35 @@ in
           (* could be a long-ID or a normal identifier *)
           val (id, rest) = splitl ok_inid str
         in
-          if not (isEmpty rest) andalso sub(rest,0) = #"$" then
-            (* this is a possible long-ID *)
-            if Lib.mem (string id) (afn()) then let
-              (* the id string is a possible theory name *)
-              val rest = slice(rest, 1, NONE) (* skip dollar sign *)
-            in
-              case getc rest of
-                NONE =>
-                  raise LEX_ERR ("long $-id "^string id^" with no sub-part")
-              | SOME(c3, rest) => let (* c3 will be alphabetic or a hol sym *)
-                  fun grab_id P = let
-                    val (sub_id, push_this_back) = splitl P rest
-                    val final_id = string (span(str, sub_id))
-                      (* ignores any leading dollar-sign *)
-                    val (final_frags,_) =
-                      pushback_s (string push_this_back) frags3
-                  in
-                    (final_frags, SOME (Ident final_id))
-                  end
+          if not (isEmpty rest) andalso sub(rest,0) = #"$" then let
+            (* long-ID *)
+            (* the id string is a possible theory name *)
+            val rest = slice(rest, 1, NONE) (* skip dollar sign *)
+          in
+            case getc rest of
+              NONE =>
+                raise LEX_ERR ("long $-id "^string id^" with no sub-part")
+            | SOME(c3, rest) => let (* c3 will be alphabetic or a hol sym *)
+                fun grab_id P = let
+                  val (constant_name, push_this_back) = splitl P rest
+                  (* ignores any leading dollar-sign *)
+                  val (final_frags,_) =
+                    pushback_s (string push_this_back) frags3
                 in
-                  if Char.isAlpha c3 then grab_id ok_inid
-                  else
-                    if fromLex Lexis.hol_symbols c3 then
-                      grab_id (fromLex Lexis.hol_symbols)
-                    else
-                      raise LEX_ERR ("sub-component starting with "^
-                                     String.str c3^ " after "^string id^
-                                     " lexically bad")
+                  (final_frags,
+                   SOME (QIdent(string id, string constant_name)))
                 end
-            end
-            else
-              raise LEX_ERR (string id ^ " not a known theory name")
+              in
+                if Char.isAlpha c3 then grab_id ok_inid
+                else
+                  if fromLex Lexis.hol_symbols c3 then
+                    grab_id (fromLex Lexis.hol_symbols)
+                  else
+                    raise LEX_ERR ("sub-component starting with "^
+                                   String.str c3^ " after "^string id^
+                                   " lexically bad")
+              end
+          end
           else (* not a possible long-ID *) let
             val (final_frags, _) = pushback_s (string rest) frags3
             val final_id = string (span(str0, id))
@@ -236,17 +241,6 @@ in
     end (* SOME (QUOTE s) let *)
 end (* newlex *)
 
-
-
-
-
-
-
-
-
-
-
-
 fun token_string (Ident s) = s
   | token_string _ = raise Fail "token_string of something with no string"
 fun dest_aq (Antiquote x) = x
@@ -257,7 +251,7 @@ fun is_ident (Ident _) = true
 fun is_aq (Antiquote _) = true
   | is_aq _ = false
 
-
+end (* struct *)
 
 (* good parsing/lexing test:
 

@@ -1,6 +1,6 @@
-signature TCPretype = sig
+signature Pretype = sig
 datatype pretype =
-  Vartype of string | Tyop of (string * pretype list) |
+  Vartype of string | Tyop of string * pretype list |
   UVar of pretype option ref
 val tyvars : pretype -> string list
 val new_uvar : unit -> pretype

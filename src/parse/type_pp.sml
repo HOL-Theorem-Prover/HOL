@@ -1,3 +1,6 @@
+structure type_pp :> type_pp =
+struct
+
 open Type Portable parse_type
 open HOLgrammars
 
@@ -6,9 +9,9 @@ datatype mygrav =
 
 datatype single_rule = SR | IR of (associativity * string)
 
-fun Fail s = Exception.HOL_ERR {origin_function = "pp_type",
-                                origin_structure = "type_pp",
-                                message = s};
+fun Fail s = Feedback.HOL_ERR {origin_function = "pp_type",
+                               origin_structure = "type_pp",
+                               message = s};
 
 fun pp_type0 (G:grammar) = let
   fun lookup_tyop s = let
@@ -132,6 +135,8 @@ fun pp_type_with_depth G = let
 in
   (fn pps => fn depth => fn ty => baseprinter pps ty Top depth)
 end
+
+end; (* struct *)
 
 (* testing
 

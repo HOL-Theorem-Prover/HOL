@@ -10,8 +10,7 @@ signature parse_term = sig
 
     val parse_term :
       term_grammar.grammar ->
-      (TCPretype.pretype, ''a frag) monadic_parse.Parser ->
-      (unit -> string list) -> (* ancestry function *)
+      (Pretype.pretype, ''a frag) monadic_parse.Parser ->
       (''a frag list * ''a PStack) ->
       (''a frag list * ''a PStack) * unit option
 

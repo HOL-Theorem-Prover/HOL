@@ -3,6 +3,9 @@ open monadic_parse optmonad term_tokens term_grammar HOLgrammars
 open GrammarSpecials
 infix >> >- ++ >->
 
+val WARN = Feedback.HOL_WARNING "parse_term";
+
+
 exception ParseTermError of string
 type 'a token = 'a term_tokens.term_token
 
@@ -33,12 +36,12 @@ fun quotetoString [] = ""
 
 datatype 'a varstruct =
   SIMPLE of string | VPAIR of ('a varstruct * 'a varstruct) |
-  TYPEDV of 'a varstruct * TCPretype.pretype |
+  TYPEDV of 'a varstruct * Pretype.pretype |
   RESTYPEDV of 'a varstruct * 'a preterm | VS_AQ of 'a
 and 'a preterm =
   COMB of ('a preterm * 'a preterm) | VAR of string |
   ABS of ('a varstruct * 'a preterm) | AQ of 'a |
-  TYPED of ('a preterm * TCPretype.pretype)
+  TYPED of ('a preterm * Pretype.pretype)
 
 fun strip_comb0 acc (COMB(t1, t2)) = strip_comb0 (t2::acc) t1
   | strip_comb0 acc t = (t, acc)
@@ -428,7 +431,7 @@ fun is_nonterm t = not (is_terminal t)
 
 
 datatype 'a lookahead_item =
-  Token of 'a term_token | PreType of TCPretype.pretype |
+  Token of 'a term_token | PreType of Pretype.pretype |
   LA_Symbol of stack_terminal
 
 datatype vsres_state = VSRES_Normal | VSRES_VS | VSRES_RESTM
@@ -489,7 +492,7 @@ fun findpos P [] = NONE
   | findpos P (x::xs) = if P x then SOME(0,x)
                         else Option.map (fn (n,x) => (n + 1, x)) (findpos P xs)
 
-fun parse_term (G : grammar) typeparser afn = let
+fun parse_term (G : grammar) typeparser = let
   val Grules = grammar_rules G
   val {type_intro, lambda, endbinding, restr_binders, res_quanop} = specials G
   val num_info = numeral_info G
@@ -505,7 +508,7 @@ fun parse_term (G : grammar) typeparser afn = let
   val rule_db = mk_ruledb G
   val is_binder = is_binder G
   val grammar_tokens = term_grammar.grammar_tokens G
-  val lex = lift (term_tokens.lex (endbinding::grammar_tokens) afn)
+  val lex = lift (term_tokens.lex (endbinding::grammar_tokens))
   val keyword_table = Polyhash.mkPolyTable (50, Fail "")
   val _ = app (fn v => Polyhash.insert keyword_table (v, ())) grammar_tokens
   fun itemP P = lex >- (fn t => if P t then return t else fail)
@@ -531,6 +534,7 @@ fun parse_term (G : grammar) typeparser afn = let
                  else (Id, t)
         | Antiquote _ => (Id, t)
         | Numeral _ => (Id, t)
+        | QIdent _ => (Id, t)
       end
     | SOME (PreType ty) => (TypeTok, t)
     | SOME (LA_Symbol st) => (st, t)
@@ -704,15 +708,19 @@ fun parse_term (G : grammar) typeparser afn = let
             case (#1 (hd inv), tt) of
               (VSRES_VS, Numeral _) => let
               in
-                Lib.mesg true "can't have numerals in binding positions";
+                WARN "term_parser" "can't have numerals in binding positions";
                 raise Temp
               end
             | (_, Numeral(dp, copt)) => let
                 val numeral_part =
-                  Term.prim_mk_numeral
-                  {mkCOMB = (fn {Rator, Rand} => COMB(Rator, Rand)),
-                   mkNUM_CONST = VAR,
-                   mkNUM2_CONST = VAR} (Arbnum.fromString dp)
+                  Numeral.gen_mk_numeral
+                       {mk_comb = (fn {Rator, Rand} => COMB(Rator, Rand)),
+                        ZERO = VAR "num$0",
+                        ALT_ZERO = VAR "arithmetic$ALT_ZERO",
+                        NUMERAL  = VAR "arithmetic$NUMERAL",
+                        BIT1     = VAR "arithmetic$NUMERAL_BIT1",
+                        BIT2     = VAR "arithmetic$NUMERAL_BIT2"}
+                    (Arbnum.fromString dp)
                 fun inject_np NONE = numeral_part
                   | inject_np (SOME s) = COMB(VAR s, numeral_part)
               in
@@ -723,8 +731,8 @@ fun parse_term (G : grammar) typeparser afn = let
                     case injector of
                       NONE => let
                       in
-                        Lib.mesg true ("Invalid suffix "^str c^
-                                       " for numeral");
+                        WARN "term_parser"
+                         ("Invalid suffix "^str c^ " for numeral");
                         raise Temp
                       end
                     | SOME (_, strop) => NonTerminal (inject_np strop)
@@ -732,12 +740,12 @@ fun parse_term (G : grammar) typeparser afn = let
                 | NONE =>
                   if null num_info then
                     if dp = "0" then
-                      (Lib.mesg true
+                      (WARN "term_parser"
                        ("0 treated specially and allowed - "^
                         "no other numerals permitted");
                       NonTerminal (inject_np NONE))
                     else
-                      (Lib.mesg true  "No numerals currently allowed";
+                      (WARN "term_parser"  "No numerals currently allowed";
                        raise Temp)
                   else let
                     val fns = fromNum_str
@@ -745,8 +753,9 @@ fun parse_term (G : grammar) typeparser afn = let
                     if Overload.is_overloaded overload_info fns then
                       NonTerminal (inject_np (SOME fns))
                     else
-                      (Lib.mesg true ("No overloadings exist for "^fns^
-                                      ": use character suffix for numerals");
+                      (WARN "term_parser"
+                       ("No overloadings exist for "^fns^
+                        ": use character suffix for numerals");
                        raise Temp)
                       (* NonTerminal (inject_np (#2 (hd num_info))) *)
                   end
@@ -807,7 +816,7 @@ fun parse_term (G : grammar) typeparser afn = let
                 COMB(COMB(VAR (Lib.assoc (BinderString binder) restr_binders),
                           P),
                      ABS(v', t))
-                handle Exception.HOL_ERR _ =>
+                handle Feedback.HOL_ERR _ =>
                   raise ERROR "parse_term"
                     ("No restricted quantifier associated with "^binder)
         fun abs_fn (v,t) =
@@ -819,7 +828,7 @@ fun parse_term (G : grammar) typeparser afn = let
               NONE => ABS(v,t)
             | SOME(v', P) =>
                 COMB(COMB(VAR (Lib.assoc LAMBDA restr_binders), P), ABS(v', t))
-                handle Exception.HOL_ERR _ =>
+                handle Feedback.HOL_ERR _ =>
                   raise ERROR "parse_term"
                     "No restricted quantifier associated with lambda"
         val vsl = List.rev vsl

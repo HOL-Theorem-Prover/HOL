@@ -1,7 +1,7 @@
 signature Absyn =
 sig
   type term = Term.term
-  type pretype = TCPretype.pretype
+  type pretype = Pretype.pretype
   type 'a quotation = 'a Portable.quotation
 
    datatype vstruct
@@ -13,6 +13,7 @@ sig
    datatype absyn
        = AQ    of term
        | IDENT of string
+       | QIDENT of string * string
        | APP   of absyn * absyn
        | LAM   of vstruct * absyn
        | TYPED of absyn * pretype
@@ -87,5 +88,4 @@ sig
   val is_exists  : absyn -> bool
   val is_exists1 : absyn -> bool
   val is_select  : absyn -> bool
-
 end;

@@ -1,3 +1,8 @@
+structure Overload :> Overload =
+struct
+
+open HolKernel Lexis
+
 (* invariant on the type overloaded_op_info;
      base_type is the anti-unification of all the types in the actual_ops
      list
@@ -5,9 +10,10 @@
      all members of the list have non-empty actual_ops lists
 *)
 
-type overloaded_op_info = {overloaded_op: string,
-                           base_type : Type.hol_type,
-                           actual_ops : (Type.hol_type * string) list}
+type overloaded_op_info = {
+  overloaded_op: string,
+  base_type : Type.hol_type,
+  actual_ops : (Type.hol_type * string * string) list}
 type overload_info = overloaded_op_info list
 
 exception OVERLOAD_ERR of string
@@ -71,7 +77,7 @@ local
   fun canonicalise ty = let
     val tyvars = type_vars ty
     val replacements =
-      map mk_vartype (generate_iterates (length tyvars) Lib.tyvar_vary "'a")
+      map mk_vartype (generate_iterates (length tyvars) tyvar_vary "'a")
     val subst =
       ListPair.map (fn (ty1, ty2) => Lib.|->(ty1, ty2)) (tyvars, replacements)
   in
@@ -121,15 +127,15 @@ fun remove_overloaded_form s (oinfo:overload_info) =
 (* a predicate on pairs of operations and types that returns true if
    they're equal, given that two types are equal if they can match
    each other *)
-fun ntys_equal (ty1,n1:string) (ty2,n2) =
-  type_compare (ty1, ty2) = SOME EQUAL andalso n1 = n2
+fun ntys_equal (ty1,n1,thy1) (ty2,n2,thy2) =
+  type_compare (ty1, ty2) = SOME EQUAL andalso n1 = n2 andalso thy1 = thy2
 
 
 (* put a new overloading resolution into the database.  If it's already
    there for a given operator, don't mind.  In either case, make sure that
    it's at the head of the list, meaning that it will be the first choice
    in ambigous resolutions. *)
-fun add_actual_overloading {opname, realname, realtype} oinfo =
+fun add_actual_overloading {opname, realname, realtype, realthy} oinfo =
   if is_overloaded oinfo opname then let
     val {base_type, ...} = valOf (info_for_name oinfo opname)
     val newbase = anti_unify base_type realtype
@@ -137,13 +143,13 @@ fun add_actual_overloading {opname, realname, realtype} oinfo =
     valOf (fupd_list_at_P (fn x => #overloaded_op x = opname)
            ((fupd_actual_ops
              (fn ops =>
-              (realtype, realname) ::
-              Lib.op_set_diff ntys_equal ops [(realtype, realname)])) o
+              (realtype, realname, realthy) ::
+              Lib.op_set_diff ntys_equal ops [(realtype,realname,realthy)])) o
             (fupd_base_type (fn b => newbase)))
            oinfo)
   end
   else
-    {actual_ops = [(realtype, realname)],
+    {actual_ops = [(realtype, realname, realthy)],
      overloaded_op = opname,
      base_type = realtype} ::
     oinfo
@@ -155,11 +161,13 @@ fun myfind f [] = NONE
 fun overloading_of_term (oinfo:overload_info) t =
   if not (Term.is_const t) then NONE
   else let
-    val {Name,Ty} = Term.dest_const t
+    val {Name,Ty,Thy} = Term.dest_thy_const t
   in
     myfind (fn {actual_ops,overloaded_op,...} =>
-            myfind (fn (t,s) =>
-                    if s = Name andalso Lib.can (Type.match_type t) Ty then
+            myfind (fn (t,s,thy) =>
+                    if s = Name andalso thy = Thy andalso
+                       Lib.can (Type.match_type t) Ty
+                    then
                       SOME overloaded_op
                     else
                       NONE)
@@ -167,15 +175,17 @@ fun overloading_of_term (oinfo:overload_info) t =
     oinfo
   end
 
-fun overloading_of_nametype (oinfo: overload_info) (n, ty) =
+fun overloading_of_nametype oinfo {Name = n, Thy = th, Ty = ty} =
   myfind (fn {actual_ops, overloaded_op, ...} =>
-          myfind (fn (t, s) =>
-                  if s = n andalso Lib.can (Type.match_type t) ty then
+          myfind (fn (t, s, th') =>
+                  if s = n andalso th' = th andalso
+                     Lib.can (Type.match_type t) ty
+                  then
                     SOME overloaded_op
                   else
                     NONE)
           actual_ops)
-  oinfo
+  (oinfo : overload_info)
 
 fun rev_append [] rest = rest
   | rev_append (x::xs) rest = rev_append xs (x::rest)
@@ -212,3 +222,4 @@ in
 end
 
 
+end (* Overload *)

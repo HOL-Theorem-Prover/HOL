@@ -1,18 +1,13 @@
 structure Parse_support :> Parse_support =
 struct
 
-type hol_type = Type.hol_type;
-type pretype = TCPretype.pretype;
+type pretype = Pretype.pretype
+type preterm = Preterm.preterm
+type term    = Term.term
 
-open Exception Lib;
+open Lib Feedback HolKernel GrammarSpecials;
 
-open GrammarSpecials
-
-fun ERROR function message =
- Exception.HOL_ERR{origin_structure = "Parse_support",
-                   origin_function = function,
-                   message = message};
-
+val ERROR = mk_HOL_ERR "Parse_support";
 
 (*---------------------------------------------------------------------------
        Parsing environments
@@ -60,51 +55,57 @@ fun make_aq tm {scope,free} = let
   open Term Preterm
   fun from ltm (E as (lscope,scope,free)) =
     case ltm of
-      VAR (v as {Name,Ty}) => let
-        val pty = TCPretype.fromType Ty
-        val v' = {Name=Name, Ty=pty}
-      in
-        if mem v' lscope then (Var v', E)
-        else
-          case assoc1 Name scope of
-            SOME(_,ntv) => (Constrained(Var{Name=Name,Ty=ntv}, pty), E)
-          | NONE => let
-            in
-              case assoc1 Name free of
-                NONE => (Var v', (lscope,scope, (Name,pty)::free))
-              | SOME(_,ntv) => (Constrained(Var{Name=Name,Ty=ntv},pty), E)
-            end
-      end
-    | CONST {Name, Ty} => (Const{Name=Name, Ty = TCPretype.fromType Ty}, E)
-    | COMB{Rator,Rand} => let
-        val (ptm1,E1) = from (dest_term Rator) E
-        val (ptm2,E2) = from (dest_term Rand) E1
-      in
-        (Comb{Rator=ptm1, Rand=ptm2}, E2)
-      end
-    | LAMB{Bvar,Body} => let
-        val v = dest_var Bvar
-        val v' = {Name= #Name v, Ty = TCPretype.fromType (#Ty v)}
-        val (Body',(_,_,free')) =
-          from (dest_term Body) (v'::lscope, scope, free)
-      in
-        (Abs{Bvar=Var v', Body=Body'}, (lscope,scope,free'))
-      end
+      VAR (v as {Name,Ty}) => 
+       let val pty = Pretype.fromType Ty
+           val v' = {Name=Name, Ty=pty}
+       in if mem v' lscope then (Var v', E)
+          else
+          case assoc1 Name scope 
+           of SOME(_,ntv) => (Constrained(Var{Name=Name,Ty=ntv}, pty), E)
+            | NONE => let in
+               case assoc1 Name free 
+                of NONE => (Var v', (lscope,scope, (Name,pty)::free))
+                 | SOME(_,ntv) => (Constrained(Var{Name=Name,Ty=ntv},pty), E)
+               end
+       end
+    | CONST{Name,Thy,Ty} => (Const{Name=Name,Thy=Thy,Ty=Pretype.fromType Ty},E)
+    | COMB{Rator,Rand}   => 
+       let val (ptm1,E1) = from (dest_term Rator) E
+           val (ptm2,E2) = from (dest_term Rand) E1
+       in (Comb{Rator=ptm1, Rand=ptm2}, E2)
+       end
+    | LAMB{Bvar,Body} => 
+       let val v = dest_var Bvar
+           val v' = {Name= #Name v, Ty = Pretype.fromType (#Ty v)}
+           val (Body',(_,_,free')) = from (dest_term Body) 
+                                          (v'::lscope, scope, free)
+       in (Abs{Bvar=Var v', Body=Body'}, (lscope,scope,free'))
+       end
   val (ptm, (_,_,free)) = from (dest_term tm) ([],scope,free)
 in
   (ptm, {scope=scope,free=free})
 end;
 
 
-(*---------------------------------------------------------------------------
- * Getting constants from the symbol table
+(*---------------------------------------------------------------------------*
+ * Generating fresh constant instances                                       *
  *---------------------------------------------------------------------------*)
-fun gen_const s = let
-  val {Name,Ty} = Term.dest_const(#const(Term.const_decl s))
-  val pty = TCPretype.fromType Ty
-in
-  Preterm.Const {Name = Name, Ty = TCPretype.rename_typevars pty}
-end;
+
+fun gen_thy_const (thy,s) =
+  let val c = Term.prim_mk_const{Name=s, Thy=thy}
+  in Preterm.Const {Name=s, Thy=thy,
+        Ty=Pretype.rename_typevars 
+                 (Pretype.fromType (Term.type_of c))}
+  end
+
+fun gen_const s = 
+ case Term.decls s
+  of [] => raise ERROR "gen_const" ("unable to find constant "^Lib.quote s)
+   | h::_ => let val {Name,Thy,Ty} = Term.dest_thy_const h
+             in Preterm.Const 
+                  {Name=Name, Thy=Thy,
+                   Ty=Pretype.rename_typevars (Pretype.fromType Ty)}
+             end;
 
 
 
@@ -119,7 +120,7 @@ fun make_binding_occ s binder E =
        Lexis.ok_symbolic s orelse
        raise ERROR "make_binding_occ"
          (s ^ " is not lexically permissible as a binding variable")
-     val ntv = TCPretype.new_uvar()
+     val ntv = Pretype.new_uvar()
      val E' = add_scope((s,ntv),E)
  in
   case binder
@@ -131,8 +132,8 @@ fun make_binding_occ s binder E =
 
 fun make_aq_binding_occ aq binder E = let
   val (v as {Name,Ty}) = Term.dest_var aq
-  val pty = TCPretype.fromType Ty
-  val v' = {Name = Name, Ty = TCPretype.fromType Ty}
+  val pty = Pretype.fromType Ty
+  val v' = {Name = Name, Ty = Pretype.fromType Ty}
   val E' = add_scope ((Name,pty),E)
   open Preterm
 in
@@ -152,7 +153,7 @@ fun make_free_var (s,E) = let
 in
   (Var{Name=s, Ty=lookup_fvar(s,E)}, E)
   handle HOL_ERR _ => let
-    val tyv = TCPretype.new_uvar()
+    val tyv = Pretype.new_uvar()
   in
     (Var{Name=s, Ty = tyv}, add_free((s,tyv), E))
   end
@@ -173,12 +174,12 @@ fun gen_overloaded_const oinfo s = let
   val opinfo = valOf (info_for_name oinfo s)
 in
   case #actual_ops opinfo of
-    [(ty, s)] =>
-      Preterm.Const{Name = s,
-                    Ty = TCPretype.rename_typevars (TCPretype.fromType ty)}
+    [(ty, thy,s)] =>
+      Preterm.Const{Name = s, Thy=thy,
+                    Ty=Pretype.rename_typevars (Pretype.fromType ty)}
   | _ => let
-      val base_pretype0 = TCPretype.fromType (#base_type opinfo)
-      val new_pretype = TCPretype.rename_typevars base_pretype0
+      val base_pretype0 = Pretype.fromType (#base_type opinfo)
+      val new_pretype = Pretype.rename_typevars base_pretype0
     in
       Preterm.Overloaded{Name = s, Ty = new_pretype, Info = opinfo}
     end
@@ -207,30 +208,39 @@ end
 
 fun make_const s E = (gen_const s, E)
 
-fun make_atom (oinfo, kcs) s E = make_bvar(s,E)
-  handle HOL_ERR _ =>
-    if Overload.is_overloaded oinfo s then
-      (gen_overloaded_const oinfo s, E)
-    else
-      case
-        List.find (fn rfn => String.isPrefix rfn s)
-        [recsel_special, recupd_special, recfupd_special]
-      of
-        SOME rfn =>
-          raise ERROR "make_atom"
-            ("Record field "^String.extract(s, size rfn, NONE)^
-             " not registered")
-      | NONE =>
-          if (Lexis.is_string_literal s) then
-            (gen_const s, E)
-            handle HOL_ERR _ =>
-              raise ERROR "make_atom"
+(*---------------------------------------------------------------------------
+    "make_qconst" ignores overloading and visibility information. The
+    idea is that if we ask to make a long identifier, it should be 
+    treated as visible.
+ ---------------------------------------------------------------------------*)
+
+fun make_qconst _ (p as (thy,s)) E = 
+  if Lexis.is_string_literal s andalso thy="string"
+  then (gen_const s, E) handle HOL_ERR _ 
+        => raise ERROR "make_qconst"
                 "string literals not lexically OK until stringTheory loaded"
-          else
-            if Lib.mem s kcs then
-              (gen_const s, E)
-            else
-              make_free_var  (s, E)
+  else (gen_thy_const p, E);
+
+
+fun make_atom (oinfo, kcs) s E = 
+ make_bvar(s,E) handle HOL_ERR _ 
+  =>
+  if Overload.is_overloaded oinfo s 
+  then (gen_overloaded_const oinfo s, E)
+  else 
+  case List.find (fn rfn => String.isPrefix rfn s)
+                 [recsel_special, recupd_special, recfupd_special]
+   of NONE =>
+       if Lexis.is_string_literal s 
+       then (gen_const s, E) handle HOL_ERR _ 
+             => raise ERROR "make_atom"
+                "string literals not lexically OK until stringTheory loaded"
+       else if Lib.mem s kcs then (gen_const s, E)
+            else make_free_var  (s, E)
+    | SOME rfn => 
+        raise ERROR "make_atom"
+               ("Record field "^String.extract(s, size rfn, NONE)^
+                " not registered")
 
 (*---------------------------------------------------------------------------
  * Combs
@@ -327,7 +337,7 @@ fun bind_restr_term binder vlist restr tm (E as {scope=scope0,...}:env)=
 
 fun split ty =
   case ty of
-    TCPretype.Tyop("prod",Args) => Args
+    Pretype.Tyop("prod",Args) => Args
   | _ => raise ERROR "split" "not a product";
 
 
