@@ -642,6 +642,7 @@ fun eliminate_existentials tm =
    ---------------------------------------------------------------------- *)
 
 fun ISCONST_CONV tm = if is_const tm then ALL_CONV tm else NO_CONV tm
+fun IFEXISTS c tm = if is_exists tm then c tm else ALL_CONV tm
 
 val sym_normalise = let
   fun push_exs tm = let
@@ -658,8 +659,9 @@ in
                              REWRITE_CONV [])) THENC
   push_exs THENC
   EVERY_DISJ_CONV (OmegaEq THENC DEPTH_CONV elim_eq THENC
-                   (ISCONST_CONV ORELSEC
-                    (STRIP_QUANT_CONV Canon.PROP_DNF_CONV THENC push_exs)))
+                   TRY_CONV (REWR_CONV EXISTS_SIMP) THENC
+                   IFEXISTS
+                     (STRIP_QUANT_CONV Canon.PROP_DNF_CONV THENC push_exs))
 end
 
 

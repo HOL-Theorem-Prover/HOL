@@ -87,6 +87,8 @@ val terms_to_test =
                   (SUC (0 + u) + SUC (v :num) + SUC u + u +
                    (0 + SUC (SUC z + (x :num)) + 0) + 0))) +
             SUC (z + u)) + x + ((y :num) + z + u) + 0`),
+   ("EX1_NOT_COMM", ``~((?!x y. (x = y) \/ (x = SUC y)) =
+                        (?!y x. (x = y) \/ (x = SUC y)))``),
    ("NUM1", Term`!n:num m. n + m > 10 ==> n + 2 * m > 10`),
    ("at.ADD", concl arithmeticTheory.ADD),
    ("at.EVEN", concl arithmeticTheory.EVEN),
