@@ -15,35 +15,36 @@ The parsing process for terms divides into four distinct phases.
 
 The first phase converts the quotation argument into a relatively
 simple parse tree datatype, with the following datatype definition
-(from {parse_term}):
+(from {Absyn}):
 {
-   datatype 'a varstruct =
-     SIMPLE of string | VPAIR of ('a varstruct * 'a varstruct) |
-     TYPEDV of 'a varstruct * TCPretype.pretype |
-     RESTYPEDV of 'a varstruct * 'a preterm | VS_AQ of 'a
-   and 'a preterm =
-     COMB of ('a preterm * 'a preterm) | VAR of string |
-     ABS of ('a varstruct * 'a preterm) | AQ of 'a |
-     TYPED of ('a preterm * TCPretype.pretype)
+   datatype vstruct
+       = VAQ    of term
+       | VIDENT of string
+       | VPAIR  of vstruct * vstruct
+       | VTYPED of vstruct * pretype
+   datatype absyn
+       = AQ    of term
+       | IDENT of string
+       | APP   of absyn * absyn
+       | LAM   of vstruct * absyn
+       | TYPED of absyn * pretype
 }
-\noindent Further, the {RESTYPEDV} constructor is only used
-internally, so never appears as a result.  This phase of parsing is
-concerned with the treatment of the rawest syntax.  It has no notion
-of whether or not a term corresponds to a constant or a variable, so
-all {preterm} leaves are ultimately either {VAR}s or {AQ}s
-(anti-quotations).
+\noindent This phase of parsing is concerned with the treatment of the
+rawest syntax.  It has no notion of whether or not a term corresponds
+to a constant or a variable, so all {preterm} leaves are ultimately
+either {IDENTS}s or {AQ}s (anti-quotations).
 
-This phase converts infixes, mixfixes and all the other categories of
-syntactic rule from the global grammar into simple structures built up
-using {COMB}.  For example, {`x op y`} (where {op} is an infix) will
-turn into
+This first phase converts infixes, mixfixes and all the other
+categories of syntactic rule from the global grammar into simple
+structures built up using {COMB}.  For example, {`x op y`} (where {op}
+is an infix) will turn into
 {
-   COMB(COMB(VAR "op", VAR "x"), VAR "y")
+   APP(APP(IDENT "op", IDENT "x"), IDENT "y")
 }
 \noindent and {`tok1 x tok2 y`} (where {tok1 _ tok2} has been declared as a
 {TruePrefix} form for the term {f}) will turn into
 {
-   COMB(COMB(VAR "f", VAR "x"), VAR "y")
+   APP(APP(IDENT "f", IDENT "x"), IDENT "y")
 }
 \noindent The special syntaxes for ``let'' and record expressions are also
 handled at this stage.  For more details on how this is done see the
@@ -69,16 +70,14 @@ still be completely determined by the interaction of the possible
 types for the overloaded possibilities.
 
 Finally, depending on the value of the global flags {guessing_tyvars}
-and {guessing_overloads}, the parser may make fairly arbitrary choices
-about how to resolve
-
+and {guessing_overloads}, the parser will choices about how to resolve
+any remaining ambiguities.
 
 \FAILURE
 All over place, and for all sorts of reasons.
 
 \USES
 Turns strings into terms.
-
 
 \SEEALSO
 parse_preTerm, preTerm, Type, allow_for_overloading_on, overload_on,
