@@ -56,8 +56,13 @@ val list_mk_pair = end_itlist (curry mk_pair);
       in left-to-right order.
  ---------------------------------------------------------------------------*)
 
-val dest_pair = pairTheory.dest_pair;
-val strip_pair = pairTheory.strip_pair;
+val dest_pair = pairTheory.dest_pair
+val strip_pair = pairTheory.strip_pair
+
+fun spine_pair M = 
+  case total dest_pair M
+   of NONE => [M]
+    | SOME (fst,snd) => fst :: spine_pair snd;
 
 (*---------------------------------------------------------------------------
     Inverse of strip_pair ... returns unconsumed elements in input list.
