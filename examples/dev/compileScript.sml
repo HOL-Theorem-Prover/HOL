@@ -332,23 +332,29 @@ val COMB_SND =
 
 val SEL_2_1_def =
  Define
-  `SEL_2_1 (inp,out) = !t. out t = FST(inp t)`;
+  `SEL_2_1 (inp,out) = (out = FST o inp)`;
 
 val SEL_2_2_def =
  Define
-  `SEL_2_2 (inp,out) = !t. out t = SND(inp t)`;
+  `SEL_2_2 (inp,out) = (out = SND o inp)`;
 
 val SEL_3_1_def =
  Define
-  `SEL_3_1 (inp,out) = !t. out t = FST(inp t)`;
+  `SEL_3_1 (inp,out) = (out = FST o inp)`;
 
 val SEL_3_2_def =
  Define
-  `SEL_3_2 (inp,out) = !t. out t = FST(SND(inp t))`;
+  `SEL_3_2 (inp,out) = (out = FST o SND o inp)`;
 
 val SEL_3_3_def =
  Define
-  `SEL_3_3 (inp,out) = !t. out t = SND(SND(inp t))`;
+  `SEL_3_3 (inp,out) = (out = SND o SND o inp)`;
+
+val SEL_DEFS =
+ save_thm
+  ("SEL_DEFS",
+   LIST_CONJ[SEL_2_1_def,SEL_2_2_def,
+             SEL_3_1_def,SEL_3_2_def,SEL_3_3_def]);
 
 val COMP_SEL_2_1 =
  store_thm
@@ -356,7 +362,8 @@ val COMP_SEL_2_1 =
    ``COMB (\(x,y). x) = SEL_2_1``,
    RW_TAC std_ss [FUN_EQ_THM]
     THEN Q.SPEC_TAC(`x`,`x`)
-    THEN SIMP_TAC std_ss [COMB_def,SEL_2_1_def,FORALL_PROD]
+    THEN SIMP_TAC std_ss 
+          [COMB_def,SEL_2_1_def,FORALL_PROD,o_DEF,FUN_EQ_THM]
     THEN GEN_BETA_TAC
     THEN PROVE_TAC[]);
 
@@ -366,7 +373,8 @@ val COMP_SEL_2_2 =
    ``COMB (\(x,y). y) = SEL_2_2``,
    RW_TAC std_ss [FUN_EQ_THM]
     THEN Q.SPEC_TAC(`x`,`x`)
-    THEN SIMP_TAC std_ss [COMB_def,SEL_2_2_def,FORALL_PROD]
+    THEN SIMP_TAC std_ss 
+          [COMB_def,SEL_2_2_def,FORALL_PROD,o_DEF,FUN_EQ_THM]
     THEN GEN_BETA_TAC
     THEN PROVE_TAC[]);
 
@@ -376,7 +384,8 @@ val COMP_SEL_3_1 =
    ``COMB (\(x,y,z). x) = SEL_3_1``,
    RW_TAC std_ss [FUN_EQ_THM]
     THEN Q.SPEC_TAC(`x`,`x`)
-    THEN SIMP_TAC std_ss [COMB_def,SEL_3_1_def,FORALL_PROD]
+    THEN SIMP_TAC std_ss 
+          [COMB_def,SEL_3_1_def,FORALL_PROD,o_DEF,FUN_EQ_THM]
     THEN GEN_BETA_TAC
     THEN PROVE_TAC[]);
 
@@ -386,7 +395,8 @@ val COMP_SEL_3_2 =
    ``COMB (\(x,y,z). y) = SEL_3_2``,
    RW_TAC std_ss [FUN_EQ_THM]
     THEN Q.SPEC_TAC(`x`,`x`)
-    THEN SIMP_TAC std_ss [COMB_def,SEL_3_2_def,FORALL_PROD]
+    THEN SIMP_TAC std_ss 
+          [COMB_def,SEL_3_2_def,FORALL_PROD,o_DEF,FUN_EQ_THM]
     THEN GEN_BETA_TAC
     THEN PROVE_TAC[]);
 
@@ -396,7 +406,8 @@ val COMP_SEL_3_3 =
    ``COMB (\(x,y,z). z) = SEL_3_3``,
    RW_TAC std_ss [FUN_EQ_THM]
     THEN Q.SPEC_TAC(`x`,`x`)
-    THEN SIMP_TAC std_ss [COMB_def,SEL_3_3_def,FORALL_PROD]
+    THEN SIMP_TAC std_ss 
+          [COMB_def,SEL_3_3_def,FORALL_PROD,o_DEF,FUN_EQ_THM]
     THEN GEN_BETA_TAC
     THEN PROVE_TAC[]);
 

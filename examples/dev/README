@@ -10,6 +10,7 @@
 == [18.01.05: MJCG added Refine and revised FactScript.sml]                  ==
 == [19.01.05: MJCG changed to use refinement combinators]                    ==
 == [20.01.05: MJCG added netlist synthesis]                                  ==
+== [21.01.05: MJCG minor changes and README update]                          ==
 ===============================================================================
 
 composeScript.sml ......... definition of devices and their composition
@@ -17,6 +18,20 @@ devScript.sml.............. definition and theorems on liveness
 compileScript.sml ......... definitions and theorems to support compiler
 compile.sml ............... convert to combinators and compile to devices
 FactScript.sml ............ an example
+
+*******************************************************************************
+There are four levels of abstraction:
+
+ S: Source       (subset of TFL)
+ I: Intermediate (source combinators Atm, Seq, Par, Ite, Rec)
+ C: Compiled     (hardware combinators ATM, SEQ, PAR, ITE, REC)
+ N: Netlist      (existentially quantified conjunction of device predicates)
+ V: Verilog      (netlist pretty-printed into Verilog)
+
+The main user-level functions are hwDefine, REFINE and MAKE_NETLIST
+for creating hardware, refining it and then creating a netlist
+representation. Translation to Verilog is not yet implemented.
+*******************************************************************************
 
 To make generated hardware a bit more readable, the following
 (experimental) infixes are now defined in composeScript.sml
@@ -30,11 +45,11 @@ The bus concatenation operator <> is defined by:
 
 and some bus component selection operators are defined by:
 
-   SEL_2_1_def = |- SEL_2_1 (inp,out) = !t. out t = FST(inp t)
-   SEL_2_2_def = |- SEL_2_2 (inp,out) = !t. out t = SND(inp t)
-   SEL_3_1_def = |- SEL_3_1 (inp,out) = !t. out t = FST(inp t)
-   SEL_3_2_def = |- SEL_3_2 (inp,out) = !t. out t = FST(SND(inp t))
-   SEL_3_3_def = |- SEL_3_3 (inp,out) = !t. out t = SND(SND(inp t))
+   SEL_2_1_def = SEL_2_1 (inp,out) = (out = FST o inp)
+   SEL_2_2_def = SEL_2_2 (inp,out) = (out = SND o inp)
+   SEL_3_1_def = SEL_3_1 (inp,out) = (out = FST o inp)
+   SEL_3_2_def = SEL_3_2 (inp,out) = (out = FST o SND o inp)
+   SEL_3_3_def = SEL_3_3 (inp,out) = (out = SND o SND o inp)
 
 These operators are introduced when creating netlists using
 MAKE_NETLIST (see example below).
@@ -44,9 +59,8 @@ Other operators used in netlists are:
   |- CONSTANT c out = !t. out t = c
   |- BINOP f (in1,in2,out) = !t. out t = f(in1 t,in2 t)
 
-The main user-level functions are hwDefine, REFINE and MAKE_NETLIST
-for creating hardware, refining it and then creating a netlist
-representation.
+*******************************************************************************
+
 
 hwDefine : term frag list -> thm * thm * thm
 --------------------------------------------
