@@ -32,7 +32,8 @@ fun LIST_UNDISCH_TAC [] = ALL_TAC
 in
 
 fun DECISION_TAC conv p : Abbrev.tactic =
-   fn gl as (hs,_) => (LIST_UNDISCH_TAC (filter p hs) THEN CONV_TAC conv) gl;
+   fn gl as (hs,_) =>
+      (LIST_UNDISCH_TAC (mk_set (filter p hs)) THEN CONV_TAC conv) gl;
 
 val show_proving = ref false;
 
