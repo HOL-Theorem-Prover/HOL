@@ -1241,6 +1241,7 @@ val IMAGE_EQ_EMPTY =
      GEN_TAC THEN
      STRIP_ASSUME_TAC (SPEC (--`s:'a set`--) SET_CASES) THEN
      ASM_REWRITE_TAC [IMAGE_EMPTY,IMAGE_INSERT,NOT_INSERT_EMPTY]);
+val _ = export_rewrites ["IMAGE_EQ_EMPTY"]
 
 val IMAGE_DELETE = store_thm("IMAGE_DELETE",
 (--`!(f:'a->'b) x s. ~(x IN s) ==> (IMAGE f (s DELETE x) = (IMAGE f s))`--),
