@@ -1,7 +1,7 @@
 structure gcdScript =
 struct
 
-open HolKernel Parse basicHol90Lib bossLib tflLib
+open HolKernel Parse basicHol90Lib bossLib
      arithmeticTheory dividesTheory primeTheory;
 
 infix THEN THENC THENL;
@@ -58,15 +58,6 @@ val IS_GCD_MINUS_R = store_thm("IS_GCD_MINUS_R",
                             PROVE_TAC[IS_GCD_MINUS_L,IS_GCD_SYM]
                      );
 
-(* Previous definition
-
-val GCD = Define `gcd a b 
-                    = 
-                   ((a=b) => a 
-                 | ((a < b) => ((a = 0) => b | gcd a (b-a))
-                            |  ((b = 0) => a | gcd (a-b) b)))`;
-*)
-
 val GCD = 
  Define 
      `(gcd 0 y = y)
@@ -79,7 +70,7 @@ val gcd_ind = GEN_ALL (theorem "gcd_ind");
 
 val GCD_IS_GCD = store_thm("GCD_IS_GCD",
  Term`!a b. is_gcd a b (gcd a b)`,
-(tflLib.REC_INDUCT_TAC gcd_ind THEN ARW [GCD] THEN 
+(recInduct gcd_ind THEN ARW [GCD] THEN 
  PROVE_TAC [IS_GCD_0L,IS_GCD_0R,IS_GCD_MINUS_L,IS_GCD_MINUS_R,
       DECIDE`~(y<=x) ==> SUC x <= SUC y`,LESS_EQ_MONO,SUB_MONO_EQ]));
 
@@ -122,32 +113,13 @@ val EUCLIDES_AUX = prove(Term
 `!a b c d. divides c (d*a) /\ divides c (d*b)
                ==> 
              divides c (d*gcd a b)`,
-tflLib.REC_INDUCT_TAC gcd_ind THEN ARW [GCD]
+recInduct gcd_ind THEN ARW [GCD]
   THEN Q.PAT_ASSUM `$! M` MATCH_MP_TAC
   THENL [`?z. x = y+z` by (Q.EXISTS_TAC `x-y` THEN DECIDE_TAC),
          `?z. y = x+z` by (Q.EXISTS_TAC `y-x` THEN DECIDE_TAC)]
   THEN RW_TAC base_ss [DECIDE `(x + y) - x = y`]
-  THEN PROVE_TAC 
-        [DIVIDES_ADD_2,ADD_ASSOC,MULT_CLAUSES,ADD_CLAUSES,LEFT_ADD_DISTRIB]);
+  THEN PROVE_TAC [DIVIDES_ADD_2,ADD_ASSOC,MULT_CLAUSES,ADD_CLAUSES,LEFT_ADD_DISTRIB]);
 
-(* Old version
-val EUCLIDES_AUX = prove(Term `!m a b  c d. (m = a+b) /\ divides c (d*a) /\ divides c (d*b)
-                                 ==> divides c (d*gcd a b)`,
-                           INDUCT_THEN COMPLETE_INDUCTION ASSUME_TAC 
-                           THEN ARW[] THEN ONCE_REWRITE_TAC[GCD] THEN ARW[]
-                           THENL [
-                             ` d* a <= d*b` by PROVE_TAC[LESS_MONO_MULT,MULT_SYM,LESS_OR_EQ]
-                               THEN  `divides c (d*(b-a))` by 
-                                  PROVE_TAC[LEFT_SUB_DISTRIB, DIVIDES_ADD_2, ADD_SYM,SUB_ADD]
-                               THEN ARW[],
-                             `b < a` by ARW[]
-                               THEN ` d* b <= d*a` by PROVE_TAC[LESS_MONO_MULT,MULT_SYM,LESS_OR_EQ]
-                               THEN  `divides c (d*(a-b))` by 
-                                 PROVE_TAC[LEFT_SUB_DISTRIB, DIVIDES_ADD_2, ADD_SYM,SUB_ADD]
-                               THEN ARW[]
-                           ]
-                         );
-*)
 val L_EUCLIDES = store_thm("L_EUCLIDES",
                            Term `!a b c. (gcd a b = 1) /\ divides b (a*c) ==> divides b c`,
                            ARW[] 
