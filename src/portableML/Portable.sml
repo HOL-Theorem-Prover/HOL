@@ -71,11 +71,10 @@ val input_line     = TextIO.inputLine
 val end_of_stream  = TextIO.endOfStream
 
 (*---------------------------------------------------------------------------
-    Efficiency hack, currently disabled.
+    Efficiency hack.
  ---------------------------------------------------------------------------*)
 
-fun pointer_eq(x,y) = x=y
-(* ((Unsafe.cast x:int) = (Unsafe.cast y:int)) *)
+fun pointer_eq(x,y) = (Obj.magic x : int) = (Obj.magic y : int)
 
 
 (*---------------------------------------------------------------------------
