@@ -217,7 +217,7 @@ fun name_from_fname fname = let
   val ss0 = all (Path.file fname)
   val (ss1,_) = position ".doc" ss0
 in
-  case tokens (equal #".") ss1 of
+  case tokens (equal #".") (all (Symbolic.tosymb (string ss1))) of
     [] => raise Fail "Can't happen"
   | [x] => x
   | (_::y::_) => y
