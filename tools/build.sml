@@ -26,7 +26,7 @@ fun quote s = String.concat["\"", s, "\""];
 fun die s =
     let open TextIO
     in
-      output(stdErr, s);
+      output(stdErr, s ^ "\n");
       flushOut stdErr;
       Process.exit Process.failure
     end
@@ -142,7 +142,7 @@ fun Holmake dir =
          die ("Selftest failed in directory "^dir))
     else
       ()
-  else die ("Build failed in directory "^dir^"\n");
+  else die ("Build failed in directory "^dir);
 
 
 fun Gnumake dir =
@@ -182,8 +182,8 @@ fun map_dir f dir =
   in List.app f files
      handle OS.SysErr(s, erropt)
        => die ("OS error: "^s^" - "^
-              (case erropt of SOME s' => OS.errorMsg s' | _ => "")^"\n")
-       | otherexn => die ("map_dir: "^General.exnMessage otherexn^"\n")
+              (case erropt of SOME s' => OS.errorMsg s' | _ => ""))
+       | otherexn => die ("map_dir: "^General.exnMessage otherexn)
   end;
 
 
@@ -212,7 +212,7 @@ fun bincopy file path =  (* Dead simple file copy - binary version *)
 fun link b s1 s2 =
   let open Process
   in if SYSTEML ["ln", "-s", s1, s2] = success then ()
-     else die ("Unable to link file "^quote s1^" to file "^quote s2^".\n")
+     else die ("Unable to link file "^quote s1^" to file "^quote s2^".")
   end
 
 (* f is either bincopy or copy *)
@@ -308,7 +308,7 @@ in
 end
 handle OS.SysErr(s, erropt) =>
        die ("OS error: "^s^" - "^
-            (case erropt of SOME s' => OS.errorMsg s' | _ => "") ^ "\n");
+            (case erropt of SOME s' => OS.errorMsg s' | _ => ""));
 
 
 (*---------------------------------------------------------------------------
@@ -324,7 +324,7 @@ fun upload (src,target,symlink) =
         handle OS.SysErr(s, erropt) =>
                die ("OS error: "^s^" - "^
                     (case erropt of SOME s' => OS.errorMsg s'
-                                  | _ => "") ^ "\n");
+                                  | _ => ""));
 
 (*---------------------------------------------------------------------------
     For each element in SRCDIRS, build it, then upload it to SIGOBJ.
