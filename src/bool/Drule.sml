@@ -832,14 +832,15 @@ fun UNDISCH_ALL th = if is_imp(concl th) then UNDISCH_ALL (UNDISCH th) else th;
 (*     SPECL (map (variant (freesl (hyp th))) vars) th;;		*)
 (* ---------------------------------------------------------------------*)
 
-local fun f v (vs,l) = let val v' = variant vs v in (v'::vs, v'::l) end
+local fun varyAcc v (V,l) = 
+       let val v' = prim_variant V v in (v'::V, v'::l) end
 in
 fun SPEC_ALL th =
    let val (hvs,con) = (free_varsl ## I) (hyp th, concl th)
        val fvs = free_vars con
-       and vars = fst(strip_forall con)
+       val vars = fst(strip_forall con)
    in
-     SPECL (snd(itlist f vars (hvs@fvs,[]))) th
+     SPECL (snd(itlist varyAcc vars (hvs@fvs,[]))) th
    end
 end;
 
