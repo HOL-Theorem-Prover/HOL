@@ -22,7 +22,8 @@ open HolKernel Parse boolLib pairLib simpLib;
    in the event of listTheory and optionTheory changing. *)
 
 local open listTheory optionTheory 
-           listSyntax optionSyntax numSyntax oneSyntax sumSyntax
+           combinSyntax listSyntax optionSyntax numSyntax oneSyntax sumSyntax
+           combinML listML optionML numML oneML sumML boolML pairML
            EvalRef Lift Drop
 in end;
 
