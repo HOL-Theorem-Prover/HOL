@@ -1,0 +1,16 @@
+\DOC let_tm
+
+\TYPE {let_tm : term}
+
+\SYNOPSIS
+Constant denoting {let} expressions.
+
+\LIBRARY boolSyntax
+
+\DESCRIBE
+The ML variable {boolSyntax.let_tm} is bound to the term {bool$LET}.
+
+\SEEALSO equality, implication, select, T, F, universal,
+ existential, exists1,  conjunction, disjunction, bool_case, arb.
+
+\ENDDOC

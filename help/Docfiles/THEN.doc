@@ -1,6 +1,6 @@
 \DOC THEN
 
-\TYPE {$THEN : (tactic -> tactic -> tactic)}
+\TYPE {op THEN : tactic * tactic -> tactic}
 
 \SYNOPSIS
 Applies two tactics in sequence.
@@ -23,7 +23,7 @@ Although normally used to sequence tactics which generate a single subgoal,
 it is worth remembering that it is sometimes useful to apply the same tactic
 to multiple subgoals; sequences like the following:
 {
-   EQ_TAC THENL [ASM_REWRITE_TAC[]; ASM_REWRITE_TAC[]]
+   EQ_TAC THENL [ASM_REWRITE_TAC[], ASM_REWRITE_TAC[]]
 }
 \noindent can be replaced by the briefer:
 {
