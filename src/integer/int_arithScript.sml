@@ -709,6 +709,26 @@ val elim_lt_coeffs2 = store_thm(
     PROVE_TAC [INT_LET_TRANS]
   ]);
 
+val elim_eq_coeffs = store_thm(
+  "elim_eq_coeffs",
+  ``!m x y.  ~(m = 0) ==>
+             ((&m * x = y) = &m int_divides y /\ (x = y / &m))``,
+  REPEAT STRIP_TAC THEN
+  ASM_SIMP_TAC bool_ss [INT_DIVIDES] THEN EQ_TAC THEN STRIP_TAC THENL [
+    POP_ASSUM (SUBST_ALL_TAC o SYM) THEN CONJ_TAC THENL [
+      PROVE_TAC [INT_MUL_COMM],
+      ALL_TAC
+    ] THEN ONCE_REWRITE_TAC [INT_MUL_COMM] THEN
+    ASM_SIMP_TAC bool_ss [INT_MUL_DIV, INT_INJ, INT_MOD_ID, INT_DIV_ID,
+                          INT_MUL_RID],
+    POP_ASSUM SUBST_ALL_TAC THEN POP_ASSUM (SUBST_ALL_TAC o SYM) THEN
+    ASM_SIMP_TAC bool_ss [INT_MUL_DIV, INT_INJ, INT_MOD_ID, INT_DIV_ID,
+                          INT_MUL_RID] THEN
+    PROVE_TAC [INT_MUL_COMM]
+  ]);
+
+
+
 val _ = export_theory();
 
 end (* structure *)

@@ -85,6 +85,44 @@ val F_or_r = GEN_ALL (List.nth(OR_CLAUSES0, 3))
 
 val REDUCE_CONV = intSimps.REDUCE_CONV
 
+(*---------------------------------------------------------------------------*)
+(* Function to compute the Greatest Common Divisor of two integers.          *)
+(*---------------------------------------------------------------------------*)
+
+fun gcd (i,j) = let
+  exception non_neg
+  open Arbint
+  fun gcd' (i,j) = let
+    val r = (i mod j)
+  in
+    if (r = zero) then j else gcd' (j,r)
+  end
+in
+  (if ((i < zero) orelse (j < zero)) then raise non_neg
+  else if (i < j) then gcd' (j,i) else gcd' (i,j))
+  handle _ => raise ERR "gcd" "negative arguments to gcd"
+end;
+
+fun gcdl l =
+  case l of
+    [] => raise ERR "gcdl" "empty list"
+  | (h::t) => foldl gcd h t
+
+(*---------------------------------------------------------------------------*)
+(* Function to compute the Lowest Common Multiple of two integers.           *)
+(*---------------------------------------------------------------------------*)
+
+fun lcm (i,j) = let open Arbint in (i * j) div (gcd (i,j)) end
+handle _ => raise ERR "lcm" "negative arguments to lcm";
+
+fun calc_lcm ints =
+  case ints of
+    [] => raise Fail "Should never happen"
+  | [x] => x
+  | (x::y::xs) => calc_lcm (lcm (x, y)::xs)
+
+
+
 fun remove_bare_vars tm =
   if is_conj tm orelse is_disj tm orelse is_less tm orelse is_plus tm orelse
      is_divides tm orelse is_eq tm
@@ -280,8 +318,18 @@ end tm
    our variable are cast in the form
      c1 int_divides (c2 * x) + e
    where both c1 and c2 are positive constants
+
+   Finally, if the coefficients of variables in less-than or equality terms
+   have a gcd > 1, then we can divide through by that gcd.
 *)
+
+
 val INT_DIVIDES_NEG = CONV_RULE (DEPTH_CONV FORALL_AND_CONV) INT_DIVIDES_NEG
+val elim_eq_coeffs' =
+  CONV_RULE (STRIP_QUANT_CONV (RAND_CONV
+                               (BINOP_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ]))))
+  elim_eq_coeffs
+
 local
   val myrewrite_conv = REWRITE_CONV [INT_NEG_ADD, INT_NEG_LMUL, INT_NEGNEG]
   fun normalise_eqs var tm =
@@ -314,7 +362,7 @@ in
     else if free_in var tm andalso (is_less tm orelse is_eq tm) then let
       open Arbint
       val tt = if is_eq tm then EQ else LT
-      val var_onL = sum_var_coeffs var (rand (rator tm))
+      val var_onL = sum_var_coeffs var (land tm)
       val var_onR = sum_var_coeffs var (rand tm)
       val (dir1, dir2) = if var_onL < var_onR then (Left, Right)
                          else (Right, Left)
@@ -322,12 +370,79 @@ in
       val move_CONV =
         move_terms_from tt dir1 (free_in var) THENC
         move_terms_from tt dir2 (not o free_in var)
+      fun factor_out g g_t tm =
+        if is_plus tm then BINOP_CONV (factor_out g g_t) tm
+        else let
+          val (c,v) = dest_mult tm
+          val c_n = int_of_term c
+          val new_c = c_n div g
+          val new_c_t = term_of_int new_c
+          val new_c_thm = SYM (REDUCE_CONV (mk_mult(g_t,new_c_t)))
+          val cx_eq_thm0 = LAND_CONV (K new_c_thm) tm
+          val reassociate = SYM (SPECL [v, new_c_t, g_t]
+                                 integerTheory.INT_MUL_ASSOC)
+        in
+          TRANS cx_eq_thm0 reassociate
+        end handle HOL_ERR _ => REFL tm
+
+      fun factor_out_over_sum tm = let
+        (* tm is a sum of multiplications where the left hand argument
+           of each multiplication is the same numeral.  We want to turn
+              c * x + c * y + ... + c * z
+           into
+              c * (x + y + ... + z)
+        *)
+      in
+        REWRITE_CONV [GSYM INT_LDISTRIB] tm
+      end
+
+      fun fiddle_negs tm = let
+        (* used over a sum of multiplications to fix
+           ~a * (b * c) into a * (~b * c) *)
+        val _ = dest_mult tm
+      in
+        TRY_CONV (REWR_CONV (GSYM INT_NEG_LMUL) THENC
+                  REWR_CONV INT_NEG_RMUL THENC
+                  RAND_CONV (REWR_CONV INT_NEG_LMUL)) tm
+      end handle HOL_ERR _ => BINOP_CONV fiddle_negs tm
+
+      fun reduce_by_gcd tm = let
+        val (l,r) = (land tm, rand tm)
+        val ts = strip_plus l @ strip_plus r
+        val coeffs =
+          List.mapPartial (fn a => if is_var (rand a) then
+                                     SOME (rand (rator a))
+                                   else NONE) ts
+        (* if there are no variables left in the term, the following will
+           raise an exception, which is fine; it will be caught by the
+           TRY_CONV above us *)
+        val g = gcdl (map (Arbint.abs o intSyntax.int_of_term) coeffs)
+        val _ = g <> one orelse raise ERR "" ""
+        val g_t = term_of_int g
+        val gnum_t = rand g_t
+        val gnum_nonzero =
+          EQF_ELIM (REDUCE_CONV (mk_eq(gnum_t, numSyntax.zero_tm)))
+        val elim_coeffs_thm =
+          case (tt, dir2) of
+            (LT, Left) => MATCH_MP elim_lt_coeffs2 gnum_nonzero
+          | (LT, Right) => MATCH_MP elim_lt_coeffs1 gnum_nonzero
+          | (EQ, Left) => MATCH_MP elim_eq_coeffs gnum_nonzero
+          | (EQ, Right) => MATCH_MP elim_eq_coeffs' gnum_nonzero
+      in
+        BINOP_CONV (factor_out g g_t) THENC
+        move_terms_from tt dir1 is_mult THENC
+        conv_at dir2 fiddle_negs THENC
+        conv_at dir2 factor_out_over_sum THENC
+        REWR_CONV elim_coeffs_thm THENC
+        REDUCE_CONV
+      end tm
     in
       (move_CONV THENC conv_at dir2 collect_terms THENC
        conv_at dir1 collect_up_other_freevars THENC
        TRY_CONV (conv_at dir1 collect_additive_consts) THENC
        conv_at dir2 (LAND_CONV REDUCE_CONV) THENC
        REWRITE_CONV [INT_MUL_LZERO, INT_ADD_LID, INT_ADD_RID] THENC
+       TRY_CONV (reduce_by_gcd THENC TRY_CONV move_CONV) THENC
        normalise_eqs var) tm
     end else if is_neg tm then RAND_CONV (phase2_CONV var) tm
     else if is_divides tm then
@@ -418,36 +533,6 @@ fun find_coeff var term =
   else if is_neg term then find_coeff var (rand term)
   else NONE
 
-(*---------------------------------------------------------------------------*)
-(* Function to compute the Greatest Common Divisor of two integers.          *)
-(*---------------------------------------------------------------------------*)
-
-fun gcd (i,j) = let
-  exception non_neg
-  open Arbint
-  fun gcd' (i,j) = let
-    val r = (i mod j)
-  in
-    if (r = zero) then j else gcd' (j,r)
-  end
-in
-  (if ((i < zero) orelse (j < zero)) then raise non_neg
-  else if (i < j) then gcd' (j,i) else gcd' (i,j))
-  handle _ => raise ERR "gcd" "negative arguments to gcd"
-end;
-
-(*---------------------------------------------------------------------------*)
-(* Function to compute the Lowest Common Multiple of two integers.           *)
-(*---------------------------------------------------------------------------*)
-
-fun lcm (i,j) = let open Arbint in (i * j) div (gcd (i,j)) end
-handle _ => raise ERR "lcm" "negative arguments to lcm";
-
-fun calc_lcm ints =
-  case ints of
-    [] => raise Fail "Should never happen"
-  | [x] => x
-  | (x::y::xs) => calc_lcm (lcm (x, y)::xs)
 
 
 
