@@ -115,7 +115,8 @@ fun drop_upto stopats strm = let
 in
   (many ((monadic_parse.itemP is_antiq >> ok) ++
          (many1_charP (fn c => not (member c fsts)) >> ok)) >>
-   ((tryall string stopats) ++ (get >> drop_upto stopats))) strm
+   ((tryall string stopats) ++
+    (itemP (fn c => true) >> drop_upto stopats))) strm
 end
 
 fun nonempty P = P >- (fn s => if s = "" then fail else return s)
