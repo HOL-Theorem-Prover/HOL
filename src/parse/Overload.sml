@@ -41,6 +41,7 @@ type overload_info = ((string,overloaded_op_info) Binarymap.dict *
 val null_oinfo = (Binarymap.mkDict String.compare, [])
 
 fun oinfo_ops (oi,_) = Binarymap.listItems oi
+fun print_map (_, pm) = pm
 
 fun update_assoc k v [] = [(k,v)]
   | update_assoc k v ((k',v')::kvs) = if k = k' then (k,v)::kvs

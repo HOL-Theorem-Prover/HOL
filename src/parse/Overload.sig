@@ -13,7 +13,14 @@ sig
   type overload_info
 
   val null_oinfo : overload_info
+
+  (* the parse map, taking strings to possible constants *)
   val oinfo_ops : overload_info -> (string * overloaded_op_info) list
+
+  (* the print map, taking constants to at most one string *)
+  val print_map : overload_info -> (nthy_rec * string) list
+
+
 
   val fupd_actual_ops :
     (const_rec list -> const_rec list) -> overloaded_op_info ->

@@ -1386,9 +1386,49 @@ val _ = temp_add_rule
 
 val min_grammars = current_grammars();
 
-(* hideous hack section *)
+(* ----------------------------------------------------------------------
+    hideous hack section
+   ---------------------------------------------------------------------- *)
 
     val _ = initialise_typrinter type_pp.pp_type
     val _ = Definition.new_specification_hook := List.app add_const;
+
+(* when new_theory is called, and if the new theory has the same name
+   as the theory segment we were in anyway, then arrange that
+   constants from this segment in the overload info section are removed.
+
+   This needs to be done because no such constant can exist any more *)
+
+  fun clear_thy_consts_from_oinfo thy oinfo = let
+    val all_parse_consts = Overload.oinfo_ops oinfo
+    fun bad_parse_guy (nm, {base_type, actual_ops}) = let
+      fun bad_guy {Name, Thy, ...} = if Thy = thy then
+                                       SOME (nm, {Name = Name, Thy = Thy})
+                                     else NONE
+    in
+      List.mapPartial bad_guy actual_ops
+    end
+    val parses_to_remove = List.concat (map bad_parse_guy all_parse_consts)
+    val all_print_consts = Overload.print_map oinfo
+    fun bad_print_guy (x as {Name,Thy}, nm) =
+        if Thy = thy then SOME (nm, x) else NONE
+    val prints_to_remove = List.mapPartial bad_print_guy all_print_consts
+    fun foldthis ((nm, r), oi) = Overload.remove_mapping nm r oi
+  in
+    foldl foldthis (foldl foldthis oinfo parses_to_remove) prints_to_remove
+  end
+
+  fun clear_thy_consts_from_grammar thy = let
+    val new_grammar =
+        term_grammar.fupdate_overload_info (clear_thy_consts_from_oinfo thy)
+                                           (term_grammar())
+  in
+    the_term_grammar := new_grammar;
+    term_grammar_changed := true
+  end
+
+  val _ = after_new_theory
+          (fn (old, new) => if old = new then clear_thy_consts_from_grammar old
+                            else ())
 
 end
