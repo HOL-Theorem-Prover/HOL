@@ -39,10 +39,32 @@ fun gnumake dir =
         raise Fail "Couldn't make directory");
 
 (*---------------------------------------------------------------------------
-           Compile a HOL directory in place. Treat the robdd library
-           specially.
+           Compile a HOL directory in place. Some libraries, 
+           e.g., the robdd libraries, need special treatment.
  ---------------------------------------------------------------------------*)
 
+fun build_dir dir =
+  let val _ = FileSys.chDir dir
+      val _ = print ("Working in directory "^dir^"\n")
+      val d = #file(Path.splitDirFile dir)
+  in
+   if (d = "robdd" orelse d = "muddy")
+   then let val buddy_dir = Path.concat(dir,
+                  if d="robdd" then "buddy16" else "buddy17")
+        in  
+             FileSys.chDir buddy_dir;
+             print ("Working in directory "^buddy_dir^"\n");
+             gnumake buddy_dir;
+             FileSys.chDir dir;
+             print ("Working in directory "^dir^"\n");
+             Holmake dir;
+             gnumake dir
+        end handle _ => print(String.concat["\n", d,
+                 "Lib has NOT been built!! (continuing anyway).\n\n"])
+   else Holmake dir
+  end
+
+(*
 fun build_dir dir =
   let val _ = FileSys.chDir dir
       val _ = print ("Working in directory "^dir^"\n")
@@ -62,7 +84,7 @@ fun build_dir dir =
              print"\nrobddLib has NOT been built!! (continuing anyway).\n\n")
       | otherwise => Holmake dir
   end
-
+*)
 
 (*---------------------------------------------------------------------------
       Arrange for all executables and relevant .sig files 

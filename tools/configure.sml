@@ -68,7 +68,7 @@ val SRCDIRS =
   "src/pred_set/src", "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src", "src/integer", "src/BoyerMoore",
   "src/hol90", "src/finite_map", "src/real", "src/bag", 
-  "src/robdd"];
+  "src/robdd","src/muddy"];
 
 
 (*---------------------------------------------------------------------------
@@ -349,10 +349,35 @@ val _ =
   in
      fill_holes (src,target)
        ["MOSMLHOME:=\n"  -->  String.concat["MOSMLHOME:=", mosmldir,"\n"],
-        "HOLDIR:=\n"     -->  String.concat["HOLDIR:=", holdir,"\n"],
+        "CC=\n"          -->  String.concat["CC=", CC,"\n"],
         "CFLAGS=\n"      -->  String.concat["CFLAGS=",cflags,"\n"],
         "all:\n"         -->  String.concat["all: ",all,"\n"],
         "DLLIBCOMP\n"    -->  String.concat["\t",dllibcomp,"\n"]]
   end;
 
-val _ = print "Finished configuration!\n";
+(*---------------------------------------------------------------------------
+    Configure the muddy library. This is only temporary, until I know 
+    more about how it should configure on other systems than linux.
+ ---------------------------------------------------------------------------*)
+
+val _ =
+ let open TextIO
+     val _ = echo "Setting up the muddy library Makefile."
+     val src    = fullPath [holdir, "tools/makefile.muddy.src"]
+     val target = fullPath [holdir, "src/muddy/Makefile"]
+     val all = if not(OS="linux")
+        then (print (String.concat
+               ["   Warning! (non-fatal):\n    The muddy package is not ",
+                "expected to build in OS flavour ", quote OS,
+                ".\n   Only linux and solaris are currently supported.\n",
+                "   End Warning.\n"]); 
+              "unknownOS")
+         else "$(SMLOBJ) $(SIGOBJ) muddy.so"
+  in
+     fill_holes (src,target)
+       ["MOSMLHOME=\n"  -->  String.concat["MOSMLHOME=", mosmldir,"\n"],
+        "CC=\n"          -->  String.concat["CC=", CC,"\n"],
+        "all:\n"         -->  String.concat["all: ",all,"\n"]]
+  end;
+
+val _ = print "\nFinished configuration!\n";

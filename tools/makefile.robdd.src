@@ -4,7 +4,7 @@
 # in <holdir>/tools.
 
 MOSMLHOME:=
-HOLDIR:=
+CC=
 MOSMLRUNTIME:=$(MOSMLHOME)/src/runtime
 
 OPTS:=-fPIC
@@ -35,14 +35,14 @@ all:
 
 # DLLIBCOMP can have the following values:
 #
-# LINUX:   gcc -shared -Wl,-soname,$@ -o $@  $^ $(LIBS)
+# LINUX:   $(CC) -shared -Wl,-soname,$@ -o $@  $^ $(LIBS)
 # SOLARIS: ld -G -B dynamic -o $@  $^ $(LIBS)
 
 $(DLLIB): $(COBJS)
 DLLIBCOMP
 
 %.o: %.c
-	gcc -c $(CFLAGS) -o $@ $<
+	$(CC) -c $(CFLAGS) -o $@ $<
 
 clean:
 	rm -f *.u? 

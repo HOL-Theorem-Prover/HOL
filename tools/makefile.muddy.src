@@ -1,0 +1,73 @@
+# Point this to where you unpacked mosml
+MOSMLHOME=
+
+MOSMLBIN=$(MOSMLHOME)/bin
+MOSMLRUNTIME=$(MOSMLHOME)/src/runtime
+MOSMLTOOLS=$(MOSMLBIN)/camlrunm $(MOSMLHOME)/tools
+MOSMLC=$(MOSMLBIN)/mosmlc -c
+
+# Your C compiler
+CC=
+
+LD=gcc -rdynamic
+DYNLD=ld -shared
+
+OPTS=-O3 -fPIC
+CINCLUDE=-I$(MOSMLRUNTIME) -I./buddy17/src
+CFLAGS= -Dunix $(OPTS) $(CINCLUDE)
+LIBS=-L./buddy17/src -lbdd
+
+CFILES=muddy.c
+COBJS=muddy.o
+
+BUDDYLIB=./buddy17/src/libbdd.a
+
+SMLS=MuddyCore.sml bdd.sml bvec.sml fdd.sml
+SIGS=bdd.sig  bvec.sig  fdd.sig
+
+SMLSRC=$(SMLLS)
+SIGSRC=$(SIGLS)
+
+SMLOBJ=MuddyCore.uo bdd.uo bvec.uo fdd.uo
+SIGOBJ=bdd.ui  bvec.ui  fdd.ui
+
+.SUFFIXES :
+.SUFFIXES : .sml .sig .ui .uo .c .o
+
+all:
+
+muddy.so: $(COBJS) $(BUDDYLIB)
+	$(DYNLD) -o $@ $(COBJS) $(LIBS)
+
+$(BUDDYLIB):
+	cd buddy17; make
+
+.sig.ui:
+	$(MOSMLC) $<
+
+.sml.uo:
+	$(MOSMLC) $<
+
+.c.o:
+	$(CC) -c $(CFLAGS) -o $@ $<
+
+clean:
+	rm -f *.u? 
+	rm -f *.o *.so
+	rm -f Makefile.bak
+
+depend : 
+	mv Makefile Makefile.bak
+	(sed -n -e '1,/^### DO NOT DELETE THIS LINE/p' Makefile.bak;	 \
+         $(CC) -MM $(CINCLUDE) $(OPTS) *.c) > Makefile
+	$(MOSMLTOOLS)/mosmldep >> Makefile
+
+
+### EVERYTHING THAT GOES BEYOND THIS COMMENT WILL BE ERASED WITHOUT WARNING
+### DO NOT DELETE THIS LINE
+muddy.o: muddy.c
+fdd.uo: fdd.ui bdd.ui MuddyCore.uo 
+fdd.ui: bdd.ui 
+bvec.uo: bvec.ui bdd.ui fdd.ui MuddyCore.uo 
+bvec.ui: bdd.ui fdd.ui 
+bdd.uo: bdd.ui MuddyCore.uo 
