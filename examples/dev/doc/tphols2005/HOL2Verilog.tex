@@ -1,13 +1,13 @@
-
+\vspace*{-2mm}
 
 We illustrate the translation from higher order logic to hardware with a
 simple toy example: the factorial function. This example is chosen for
 clarity and is not typical of the kind of
-applications were are working on!  For a discussion of those
+applications were are working on!  For a brief discussion of those
 applications see Section~\ref{secCaseStudy}.
 The factorial function \DEF{FACT} satisfies
 
-\vspace*{-2mm}
+\vspace*{-1mm}
 
 {\baselineskip10pt\begin{alltt}
  \(\vdash (\DEF{FACT} 0 = 1) \wedge {\forall}n. \DEF{FACT}(\DEF{Suc} n) = \DEF{Suc} n \times \DEF{FACT} n\)
@@ -67,17 +67,19 @@ implicit \texttt{Define}), but it also creates a theorem:
 
 \vspace*{-2mm}
 
-\noindent The term to the left of $\Longrightarrow$ is a high level
+\noindent The term to the left of $\Longrightarrow$ is a high-level
 representation of an implementation using `circuit constructors' which
-are described in the appendix.  The term \DEF{Dev~FactIter} describes
-a behaviour that applies the function \DEF{FactIter} under the control
-of a four-phase handshake. The details of the handshake are specified
-in the definition of the higher order function \DEF{Dev} in
-Section~\ref{secSpecification}. The theorem that is proved automatically by
-\texttt{hwDefine} verifies that the circuit is a correct
-implementation (of \DEF{FactIter} in the example above). We want to implement \DEF{FACT}, so
-we create an
-implementation of it, called \DEF{Fact}, using \DEF{FactIter}:
+are described in Section~{secImplementation} and formally defined in the
+appendix.  The term \DEF{Dev~FactIter} describes a behaviour that
+applies the function \DEF{FactIter} under the control of a four-phase
+handshake. The details of the handshake are specified in the
+definition of the higher order function \DEF{Dev} in
+Section~\ref{secSpecification}. The theorem that is proved
+automatically by
+\texttt{hwDefine} verifies that the generated high-level design is a correct
+implementation. In our example, we want to implement the factorial
+function \DEF{FACT}, so we create an implementation of it, called
+\DEF{Fact}, using \DEF{FactIter}:
 
 \vspace*{-2mm}
 
@@ -112,8 +114,8 @@ implementation of it, called \DEF{Fact}, using \DEF{FactIter}:
 \noindent The circuit here contains \DEF{Dev~FactIter} preceded and
 followed by some combinational logic. We can refine this
 implementation by replacing the specification
-\DEF{Dev~FactIter} by the previously constructed implementation
-(our circuit constructors are compositional).
+\DEF{Dev~FactIter} by the previously constructed implementation.
+%(our circuit constructors are compositional).
 
 \vspace*{-2mm}
 
@@ -135,8 +137,8 @@ Components in a
 circuit of the form $\DEF{Dev}~f$ are specifications to compute
 $f$. They can either be refined to implementations (like we just
 refined \DEF{Dev~FactIter}) or they can be converted to
-combinational logic (assuming we can directly implement
-$f$ in terms of logic gates).
+combinational logic (assuming we can implement
+$f$ using logic gates) and wrapped with a handshaking interface.
 
 Suppose we wanted to use a sequential implementation of multiplication,
 then we would synthesise a theorem:
@@ -150,8 +152,8 @@ then we would synthesise a theorem:
 \vspace*{-2mm}
 
 \noindent and then refine the occurrence of $\DEF{Dev}(\times)$
-to \texttt{(...)}.  In this fashion we can incrementally develop a
-circuit in a top-down fashion. To manage such developments we have
+to \texttt{(...)}.  Thus we can incrementally develop a
+circuit top-down. To manage such developments we have
 implemented operators for combining refinements analogous to rewriting
 operators \cite{paulson83}.
 
@@ -168,7 +170,7 @@ what remains is enough to give an idea).
 \( \vdash ({\exists}v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 ...                                             \)
 \(      ... v51 v52 v53 v54 v55.                                                                       \)
 \(     \DEF{CONSTANT} 1 v0 {\wedge} \DEF{DEL}(load,v20) {\wedge} \DEF{NOT}(v20,v19) {\wedge}       \)
-\(     \DEF{NOT}(v50,v37) {\wedge} \DEF{COMB}({\times}) (v10\texttt{<>}v9,v49) {\wedge}                     \)
+\(     \DEF{NOT}(v50,v37) {\wedge} \DEF{COMB}({\times})(v10\texttt{<>}v9,v49) {\wedge}                     \)
       \(\raisebox{3mm}{\vdots}\)
 \(     \DEF{DEL}(v49,v35) {\wedge} \DEF{DFF}(v36,v38,v13) {\wedge} \DEF{DFF}(v35,v37,v12) {\wedge} \)
 \(     \DEF{AND}(v2,v8,v55) {\wedge} \DEF{AND}(v55,v53,done))                                     \)
@@ -184,20 +186,22 @@ standard way in higher order logic \cite{Mel93} and built out of two
 kinds of abstract registers: a unit delay \DEF{DEL} and edge-triggered
 register \DEF{DFF}. The other components are combinational and
 comprise boolean functions \DEF{NOT},
-\DEF{AND}, \DEF{OR}, multiplexers \DEF{MUX}, constants $\DEF{CONSTANT}~n$
+\DEF{AND}, \DEF{OR}, multiplexers \DEF{MUX}, constants $\DEF{CONSTANT}~n$ that output a value $n$,
 and functional blocks
-$\DEF{COMB}~f$ that compute the function $f$. These components are
+$\DEF{COMB}~f$ that compute the function $f$ (if $f$ takes two arguments,
+then the input will be $a_1\texttt{<>}a_2$, where $a_1$ and $a_2$ carry the arguments
+and \texttt{<>} is bus concatenation). These components are
 described in more detail in Section~\ref{secImplementation}. To
-create a netlist that can be converted to hardware, the occurrences of
+create standard hardware, the occurrences of
 \DEF{DEL} and \DEF{DFF} need to be implemented using standard
 clocked registers. This involves converting from an abstract `cycle
 based' model to a clocked synchronous model. The particular theory of
 doing this that we use was developed by Melham \cite{Mel93}. We have
-incorporated his theory (and even some of his old HOL88 code) to
-implement a synthesis script. Applied to our factorial implementation,
-this yields a theorem of the form:
+incorporated his theory (and even some of his old HOL88 code) in
+our compiler. Applied to our factorial implementation,
+we get:
 
-\vspace*{-1mm}
+\vspace*{-1.5mm}
 
 {\baselineskip10pt\begin{alltt}
 \( \vdash \DEF{InfRise} clk                                                                        \)
@@ -212,7 +216,7 @@ this yields a theorem of the form:
 \(   \Rightarrow \DEF{Dev} \DEF{FACT} (load \DEF{at} clk, inp \DEF{at} clk, done \DEF{at} clk, out \DEF{at} clk) \)
 \end{alltt}}
 
-\vspace*{-2mm}
+\vspace*{-2.5mm}
 
 This theorem uses explicitly clocked registers \DEF{Dtype} and
 \DEF{Dff} (defined in Section~\ref{secImplementation}) and states
@@ -223,16 +227,16 @@ synthesised circuit implements a handshake computing
 of $s$ abstracted on rising edges of $clk$.
 
 We have implemented a program in Standard ML that prints a netlist of
-the sort generated above as Verilog. Although the HDL created is not
+the sort occurring in the theorem above as Verilog. Although the HDL created is not
 formally verified (it cannot be, as Verilog has no formal semantic
-specification) visual inspection and other tools can yield a high
-degree of confidence that it corresponds to the verified netlist
+specification) visual inspection and other tools can improve our
+confidence that it corresponds to the verified netlist
 represented in higher order logic. The Verilog we create is intended
 to be synthesisable, but we have not yet tried any actual synthesis
 experiments. A tiny fragment of the Verilog for the \DEF{FACT}
 implementation is:
 
-\vspace*{-3mm}
+\vspace*{-2mm}
 
 {\baselineskip6pt\footnotesize\begin{verbatim}
 module FACT (clk,load,inp,done,out);

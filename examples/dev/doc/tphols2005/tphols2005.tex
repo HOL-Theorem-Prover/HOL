@@ -36,22 +36,23 @@ Cambridge CB3 0FD, UK            &\hspace*{5mm}& Utah UT84112, USA
 
 \begin{abstract}
 A special purpose theorem prover for creating hardware implementations
-is described.  Implementations are created as theorems
-$\vdash {\it{Imp}}\Rightarrow{\it{Spec}}$, where {\it{Imp}}
-describes a circuit that implements a four-phase handshake computing
-a function defined in higher order logic by {\it{Spec}}.  The compiler
-goes through several phases, each refining the implementation to a
-more concrete form, until a representation that can be output as
+is described.  Implementations are created as theorems $\vdash
+{\it{Imp}}\Rightarrow{\it{Spec}}$, where {\it{Imp}} describes a
+circuit that implements a four-phase handshake computing a function
+defined in higher order logic by {\it{Spec}}.  The compiler goes
+through several phases, each refining the implementation to a more
+concrete form, until a representation that can be output as
 synthesisable Verilog is deduced.  The compilation to hardware is
 transparent and programmable. Users can tune the generated hardware
 either by deductively pre-optimising the higher order logic
 specifications, or by adding optimisations to the theorem proving
 script that performs compilation.  The hardware designs we construct
-may not have the highest performance, but we anticipate that having
-guaranteed-correct implementations will interest some clients.  As a
-case study we are working on producing components useful for building
-cryptographic hardware.  This will result in a reference library of
-``golden'' implementations.
+may not have the highest performance, but we hope that having
+guaranteed-correct implementations will be important for some applications.
+An example is one of our case studies in which we are working on
+producing components for building cryptographic hardware, with
+the eventual goal of developing a reference library of ``golden''
+implementations.
 
 
 \end{abstract}

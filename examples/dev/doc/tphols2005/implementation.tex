@@ -42,13 +42,12 @@ as an applicative expression, $e_c$ say, built from the operators \DEF{Seq}
 
 The encoding into an applicative expression built out of \DEF{Seq},
 \DEF{Par}, \DEF{Ite} and \DEF{Rec} is performed by a proof script
-coded in HOL4's metalanguage, Standard ML and results in a theorem $\vdash (\lambda(x_1,\ldots,x_n).~e)~=~e_c$,
-and hence $\vdash f=e_c$.
-The algorithm used is straightforward
-and is not described here. As an example, the proof script deduces
-from:
+coded in the theorem prover's metalanguage, Standard ML, and results
+in a theorem $\vdash (\lambda(x_1,\ldots,x_n).~e)~=~e_c$, and hence
+$\vdash f=e_c$.  The algorithm used is straightforward and is not
+described here. As an example, the proof script deduces from:
 
-\vspace*{-2mm}
+\vspace*{-1mm}
 
 \begin{alltt}
 \( \vdash \DEF{FactIter}(n,acc) = (\texttt{if} n=0 \texttt{then} (n,acc) \texttt{else} \DEF{FactIter}(n-1,n{\times}acc)) \)
@@ -75,12 +74,12 @@ from:
 The next step is to replace the combinators \DEF{Seq},
 \DEF{Par}, \DEF{Ite} and \DEF{Rec} with corresponding circuit constructors
 \DEF{SEQ},
-\DEF{PAR}, \DEF{ITE} and \DEF{REC} that build handshaking devices (see the appendix for their definitions)
-The key property of these constructors
-are the following theorems that enable us to compositionally deduce
-theorems of the form $\vdash {\it{Imp_C}}
+\DEF{PAR}, \DEF{ITE} and \DEF{REC} that build handshaking devices (see the appendix for their definitions).
+The key property of these constructors are the following theorems that
+enable us to compositionally deduce theorems of the form $\vdash
+{\it{Imp_C}}
 \Longrightarrow \DEF{Dev}~f$, where ${\it{Imp_C}}$ is a term
-constructed using  the circuit constructors, and hence a handshaking device
+constructed using  the circuit constructors, and hence is a handshaking device
 (the long implication symbol $\Longrightarrow$ denotes
 implication lifted to functions
 $f \Longrightarrow g~=~\forall x.~f(x)\Rightarrow g(x)$): 
@@ -140,8 +139,8 @@ $\vdash e_C \FIMP \DEF{Dev}~f$
 
 A function $f$ which is combinational (i.e.~can be implemented
 directly with logic gates without using registers) can be packaged as
-a handshaking device using a constructor \DEF{ATM} which creates a
-simple handshake interface and satisfies:
+a handshaking device using a constructor \DEF{ATM}, which creates a
+simple handshake interface and satisfies the refinement theorem:
 
 \vspace*{-4mm}
 $$\begin{array}{l}
@@ -196,9 +195,9 @@ constructors \DEF{ATM},
 \DEF{SEQ}, \DEF{PAR}, \DEF{ITE}, \DEF{REC}, \DEF{PRECEDE} and \DEF{FOLLOW}. If the theorem
 is rewritten with the definitions of these constructors (see their
 definitions in the appendix) we get a circuit built out of standard
-kinds of gates (\DEF{AND}, \DEF{OR}, \DEF{NOT} and \DEF{MUX}) a
+kinds of gates (\DEF{AND}, \DEF{OR}, \DEF{NOT} and \DEF{MUX}), a
 generic combinational component $\DEF{COMB}~g$ (where $g$ will be a
-combinational function represented as a HOL $\lambda$-expression) and two
+function represented as a HOL $\lambda$-expression) and two
 kinds of synchronous elements:
 \DEF{DEL} and \DEF{DFF}. 
 
@@ -207,7 +206,7 @@ into circuits built only out of components that it is assumed can be directly re
 hardware. Such components  currently include boolean functions (e.g. $\wedge$,
 $\vee$ and $\neg$), multiplexers and simple operations  on $n$-bit words (e.g.~versions
 of $+$, $-$ and $<$, various shifts etc.). 
-A special purpose proof rule uses a naive recursive method to synthesise
+A special purpose proof rule uses a straightforward recursive algorithm to synthesise
 combinational circuits. For example:
 
 \vspace*{-2mm}
@@ -277,7 +276,7 @@ register defined by:
 
 \vspace*{2mm}
 
-$\DEF{Dtype}(ck,d,q) ~=~ \forall t.~q(t{+}1) = (\texttt{if}~\DEF{Posedge}~ck~(t{+}1)~\texttt{then}~d~t~\texttt{else}~q~t)$
+$\DEF{Dtype}(ck,d,q) ~=~ \forall t.~q(t{+}1) = \texttt{if}~\DEF{Posedge}~ck~(t{+}1)~\texttt{then}~d~t~\texttt{else}~q~t$
 
 \vspace*{2mm}
 
@@ -292,7 +291,7 @@ $\DEF{Dff}(ck,d,q) ~ = ~ (q~0~ =~F)~\wedge~\DEF{Dtype}(ck,d,q)$
 If $s$ is a signal, then $s~\DEF{at}~\VAR{clk}$ is the temporal
 abstraction consisting of the values of $s$ at positive edges of
 $\VAR{clk}$. 
-Melham has described in his monograph that:
+Melham shows in his monograph that:
 
 
 
@@ -307,7 +306,7 @@ Melham has described in his monograph that:
 By instantiating $\VAR{load}$, $inp$, $done$ and $out$ in the theorem
 obtained by Step~3 to $\VAR{load}~\DEF{at}~\VAR{clk}$, $inp~\DEF{at}~\VAR{clk}$,
 $done~\DEF{at}~\VAR{clk}$ and $out~\DEF{at}~\VAR{clk}$, respectively, and then
-performing some deductions involving Melham's theorems above (and the
+performing some deductions involving Melham's theorems (and the
 monotonicity of existential quantification and conjunction with
 respect to implication) we obtain a theorem
 

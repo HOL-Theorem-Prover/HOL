@@ -63,8 +63,8 @@ adding a key to the matrix with exclusive or.
 
 Many of our specifications are not tail recursive, but formally
 deriving (and verifying) tail-recursive versions was
-straightforward. We were then able to generate circuits directly via
-an application of the compiler.  As illustrated in
+straightforward. We were then able to generate circuits directly by invoking
+the compiler.  As illustrated in
 Section~\ref{secHOL2Verilog}, we explored various options for
 generating components either as separate handshaking designs or expanding
 them into combinational logic. We have also explored converting our
@@ -74,7 +74,9 @@ ROM device.  For synthesizing the tables directly into hardware, we
 have automated the definition of a function on bytes as a balanced
 \texttt{if} expression, branching on each successive bit of its input.
 
-{\footnotesize\begin{verbatim}
+\vspace*{-2mm}
+
+{\footnotesize\baselineskip10pt\begin{verbatim}
 0xB ** x = if WORD_BIT 7 x then
              if WORD_BIT 6 x then 
                ...
@@ -84,6 +86,8 @@ have automated the definition of a function on bytes as a balanced
              if WORD_BIT 6 x then
                ...
 \end{verbatim}}
+
+\vspace*{-2mm}
 
 Our experience so far is positive: compiling implementations by
 deduction provides a secure and flexible framework for creating and
