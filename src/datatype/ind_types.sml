@@ -9,21 +9,21 @@
 (* ========================================================================= *)
 
 (*
-   app load ["HOLSimps", "Q", "numLib", "IndDefLib", "tautLib"]
+   app load [(* "HOLSimps", *) "Q", "numLib", "IndDefLib", "tautLib"];
 *)
 
 structure ind_types :> ind_types =
 struct
 
-open HolKernel boolLib Parse Psyntax
-open numTheory arithmeticTheory prim_recTheory simpLib boolSimps
-open ind_typeTheory
+open HolKernel Parse boolLib
+     numTheory arithmeticTheory prim_recTheory 
+     simpLib boolSimps ind_typeTheory;
+
 
 type constructor  = string * hol_type list
 type tyspec       = hol_type * constructor list
 
-infix THEN THENC THENL |-> ORELSEC
-infixr --> ##;
+infix THEN THENC THENL |-> ORELSEC; infixr --> ##;
 
 val ERR = mk_HOL_ERR "ind_types";
 
@@ -96,6 +96,20 @@ fun striplist dest =
   in
      fn x => strip x []
   end;
+
+(*---------------------------------------------------------------------------
+   This is not the same as Type.type_subst, which only substitutes
+   for variables!
+ ---------------------------------------------------------------------------*)
+
+fun tysubst theta ty =
+  case subst_assoc (equal ty) theta
+   of SOME x => x
+    | NONE => 
+       if is_vartype ty then ty
+       else let val {Tyop,Thy,Args} = dest_thy_type ty
+            in mk_thy_type{Tyop=Tyop,Thy=Thy, Args=map (tysubst theta) Args}
+            end;
 
 fun SUBS_CONV [] tm = REFL tm
   | SUBS_CONV ths tm =
@@ -240,7 +254,6 @@ end
 (* (This could be done much more efficiently/cleverly, but it's OK.)         *)
 (* ------------------------------------------------------------------------- *)
 
-
 fun prove_model_inhabitation rth = let
   val srules = map SPEC_ALL (CONJUNCTS rth)
   val (imps,bases) = partition (is_imp o concl) srules
@@ -382,8 +395,7 @@ in
       val argsin = map rand (strip_conj(lhand asmin))
       val argsgen =
         map (fn tm => mk_var(fst(dest_var(rand tm)),type_of tm)) argsin
-      val asmgen =
-        Term.subst (map2 (fn l => fn r => (l |-> r)) argsin argsgen) asmin
+      val asmgen = Term.subst (map2 (curry op |->) argsin argsgen) asmin
       val asmquant =
         list_mk_forall(snd(strip_comb(rand(rand asmgen))),asmgen)
       val th1 = INST (map2 (curry op |->) argsgen argsin)
@@ -536,7 +548,7 @@ in
 end
 local
   val zty = Type`:'Z`
-  val numty = Type`:num`
+  val numty = numSyntax.num
   val s = mk_var("s",numty --> zty)
   fun extract_arg tup v =
     if v = tup then REFL tup
@@ -716,10 +728,9 @@ end
 
 *)
 
-(* ------------------------------------------------------------------------- *)
-(* Temporary non-mutual version, just to define sum type.                    *)
-(* ------------------------------------------------------------------------- *)
-
+(*---------------------------------------------------------------------------*
+ *     Required stuff for sum types                                          *
+ *---------------------------------------------------------------------------*)
 
 val sum_tyinfo = valOf (TypeBase.read "sum")
 val sum_INDUCT = TypeBase.induction_of sum_tyinfo
@@ -752,7 +763,6 @@ val generalize_recursion_theorem = let
     fun mk_inls ty =
       if is_vartype ty then [mk_var("x",ty)]
       else let
-
         val (_,[ty1,ty2]) = dest_type ty
         val inls1 = mk_inls ty1
         and inls2 = mk_inls ty2
@@ -925,16 +935,6 @@ fun occurs_in ty bigty =
   (not (is_vartype bigty) andalso
    exists (occurs_in ty) (snd(dest_type bigty)))
 
-fun tysubst alist ty =
-  rev_assoc ty alist
-  handle HOL_ERR _ =>
-    if is_vartype ty then ty
-    else let
-      val (tycon,tyvars) = dest_type ty
-    in
-      mk_type(tycon,map (tysubst alist) tyvars)
-    end
-
 (* ------------------------------------------------------------------------- *)
 (* Dispose of trivial antecedent.                                            *)
 (* ------------------------------------------------------------------------- *)
@@ -1054,11 +1054,11 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
   val tyal1 = map (fn {redex,residue} => {redex=residue,residue=redex}) tyal0
   val tyins0 = map (fn f => 
                  let val (domty,ranty) = dest_fun_ty (type_of f)
-                 in ranty |-> type_subst tyal0 domty
+                 in ranty |-> tysubst tyal0 domty
                  end) pevs0
   and tyins1 = map (fn f => 
                 let val (domty,ranty) = dest_fun_ty (type_of f)
-                in ranty |-> type_subst tyal1 domty 
+                in ranty |-> tysubst tyal1 domty 
                 end) pevs1
   val tth0 = Thm.INST_TYPE tyins0 sth0
   and tth1 = Thm.INST_TYPE tyins1 sth1
@@ -1332,7 +1332,15 @@ end
 local
   fun is_nested vs ty =
     not (is_vartype ty) andalso not (intersect (type_vars ty) vs = [])
-  fun modify_item alist (s,l) = (s,map (type_subst alist) l)
+  fun modify_type theta ty =
+    case subst_assoc (equal ty) theta
+     of SOME x => x
+      | NONE => (let val {Tyop,Thy,Args} = dest_thy_type ty
+                 in mk_thy_type{Tyop=Tyop,Thy=Thy,
+                                Args=map (modify_type theta) Args}
+                 end handle HOL_ERR _ => ty)
+
+  fun modify_item alist (s,l) = (s,map (modify_type alist) l)
   fun modify_clause alist (l,lis) = (l,map (modify_item alist) lis)
   fun recover_clause id tm = 
     let val (con,args) = strip_comb tm
@@ -1381,7 +1389,7 @@ local
     val pcons = map (fn ty => filter (fn t => type_of t = ty) cjs') mtys
     val cls' = zip mtys (map (map (recover_clause id)) pcons)
     val tyal = map (fn ty => ty |-> mk_vartype("'"^fst(dest_type ty)^id)) mtys
-    val cls'' = map (type_subst tyal ## map (modify_item tyal)) cls'
+    val cls'' = map (modify_type tyal ## map (modify_item tyal)) cls'
   in
     (k,tyal,cls'',Thm.INST_TYPE tyins ith, Thm.INST_TYPE tyins rth)
   end
@@ -1390,6 +1398,7 @@ local
     let val n = length(itlist (curry op@) (map (map fst o snd) def) [])
         val newtys = map fst def
         val utys = Lib.U (itlist (union o map snd o snd) def [])
+(*        val utyvars = Lib.mk_set (List.filter is_vartype utys) *)
         val utyvars = type_varsl utys
         val rectys = filter (is_nested newtys) utys
     in
@@ -1478,7 +1487,9 @@ val define_type_nested = fn def =>
   end
 end
 
-val define_type = define_type_nested
+fun define_type d = 
+    define_type_nested d 
+    handle e => raise (wrap_exn "ind_types" "define_type" e);
 
 (* test this with:
 
