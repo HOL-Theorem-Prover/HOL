@@ -15,8 +15,6 @@ fun ERR f msg = HOL_ERR { origin_structure = "OmegaMath",
                           origin_function = f,
                           message = msg}
 
-val INT_RING_CONV = EQT_ELIM o integerRingLib.INT_RING_CONV
-
 (* ----------------------------------------------------------------------
     gcd_eq_check tm
 
@@ -216,11 +214,15 @@ val NAIVE_INT_NORM_CONV = let
     val summands = strip_plus tm
     val dm = total (#2 o dest_mult)
     val collected = partition (op= o (dm ## dm)) [] summands
-    val newrhs = let
-      val (nums, vars) = Lib.pluck (fn p => is_int_literal (hd p)) collected
-    in
-      mk_plus (list_mk_plus (map list_mk_plus vars), list_mk_plus nums)
-    end handle HOL_ERR _ => list_mk_plus (map list_mk_plus collected)
+    fun partition_compare(pl1, pl2) =
+        case (dm (hd pl1), dm (hd pl2)) of
+          (NONE, NONE) => EQUAL
+        | (NONE, SOME x) => GREATER
+        | (SOME v, NONE) => LESS
+        | (SOME v1, SOME v2) =>
+          String.compare (#1 (dest_var v1), #1 (dest_var v2))
+    val sorted_collected = Listsort.sort partition_compare collected
+    val newrhs = list_mk_plus (map list_mk_plus sorted_collected)
     val newrhs_th = EQT_ELIM(AC_CONV (INT_ADD_ASSOC, INT_ADD_COMM)
                                      (mk_eq(tm, newrhs)))
   in
@@ -258,6 +260,29 @@ in
   if tmsize 0 tm < 100 then NAIVE_INT_NORM_CONV tm
   else RLIB_INT_NORM_CONV tm
 end
+
+(* ----------------------------------------------------------------------
+    INT_EQ_CONV tm
+
+    tm is of the form t1 = t2.
+    This code normalises t1 and t2 using INT_NORM_CONV above, and if both
+    reduce to the same term, returns the theorem |- t1 = t2
+    Otherwise, fails.
+   ---------------------------------------------------------------------- *)
+
+fun INT_EQ_CONV tm = let
+  val (l,r) = dest_eq tm
+              handle HOL_ERR _ =>
+                     raise ERR "INT_EQ_CONV" "Term not an equality"
+  val lthm = INT_NORM_CONV l
+  val rthm = INT_NORM_CONV r
+in
+  TRANS lthm (SYM rthm)
+  handle HOL_ERR _ =>
+         raise ERR "INT_EQ_CONV" "Terms don't reduce to equal terms"
+end
+
+
 
 
 

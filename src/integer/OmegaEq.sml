@@ -1,4 +1,4 @@
-structure OmegaEq =
+structure OmegaEq :> OmegaEq =
 struct
 
 (* ----------------------------------------------------------------------
@@ -146,7 +146,7 @@ end
     the form
        |- tm = sumc cs vs
     where cs is a list of numeral coefficients, and vs a list of
-    variables (except that one of the vs will actually be the numeral 1.
+    variables (except that one of the vs will actually be the numeral 1).
    ---------------------------------------------------------------------- *)
 
 val sumc_t = ``sumc``
@@ -159,6 +159,41 @@ fun sum_to_sumc tm = let
 in
   SYM (REWRITE_CONV [INT_ADD_ASSOC, sumc_def, INT_ADD_RID, INT_MUL_RID] sumc_t)
 end
+
+(* ----------------------------------------------------------------------
+    sumc_eliminate reducer tm
+
+    Takes a term of the form
+      sumc (MAP f cs) vs
+    and turns it into a regular sum, assuming that the last v will actually
+    be the integer 1, using the reducer parameter to evaluate each
+    instance of the application of f to c.
+   ---------------------------------------------------------------------- *)
+
+local
+  val sumc_singleton = prove(
+    ``!f (c:int). sumc (MAP f [c]) [1] = f c``,
+    REWRITE_TAC [INT_ADD_RID, sumc_def, listTheory.MAP, INT_MUL_RID]);
+  val sumc_nonsingle = prove(
+    ``!f cs (c:int) v vs. sumc (MAP f (c::cs)) (v::vs) =
+                    f c * v + sumc (MAP f cs) vs``,
+    REWRITE_TAC [sumc_def, listTheory.MAP])
+in
+fun sumc_eliminate reducer tm = let
+  fun recurse tm =
+      if listSyntax.is_nil (rand (rand tm)) then
+        (REWR_CONV sumc_singleton THENC reducer) tm
+      else
+        (REWR_CONV sumc_nonsingle THENC LAND_CONV (LAND_CONV reducer) THENC
+         RAND_CONV recurse) tm
+in
+  if listSyntax.is_nil (rand tm) then
+    REWRITE_CONV [listTheory.MAP, sumc_def]
+  else
+    recurse
+end tm
+end (* local *)
+
 
 (* ----------------------------------------------------------------------
     eliminate_equality v tm
@@ -188,12 +223,23 @@ fun eliminate_equality v tm = let
                    REWRITE_CONV [INT_NEG_ADD, INT_NEG_LMUL, INT_NEGNEG])
       else ALL_QCONV
 in
-  RAND_CONV (K rhs_th) THENC
-  dealwith_negative_coefficient THENC
+  RAND_CONV (K rhs_th) THENC dealwith_negative_coefficient THENC
   RAND_CONV (RAND_CONV sum_to_sumc) THENC
   instantiate_eqremoval THENC
-  REWRITE_CONV [listTheory.MAP, modhat_def, sumc_def, INT_MUL_LZERO,
-                INT_ADD_RID, INT_ADD_ASSOC] THENC REDUCE_CONV
+  BINDER_CONV
+    (LAND_CONV (* new equality conjunct *)
+       (RAND_CONV (* rhs of equality *)
+          (LAND_CONV (LAND_CONV REDUCE_CONV) THENC
+           RAND_CONV (* sumc term *)
+             (LAND_CONV (LAND_CONV (* first arg of MAP *)
+                           (BINDER_CONV (RAND_CONV REDUCE_CONV THENC
+                                         REWRITE_CONV [modhat_def]))) THENC
+              sumc_eliminate (BETA_CONV THENC REDUCE_CONV)) THENC
+             REWRITE_CONV [INT_MUL_LZERO, INT_ADD_RID, INT_ADD_ASSOC,
+                           INT_ADD_LID])) THENC
+     RAND_CONV (* old equality conjunct *)
+       (REWRITE_CONV [sumc_def] THENC
+        REWRITE_CONV [INT_MUL_RID, INT_ADD_ASSOC, INT_ADD_RID]))
 end tm
 
 val eliminate_equality =
@@ -240,6 +286,7 @@ fun OmegaEq t = let
       else
         LAND_CONV (eliminate_equality to_elim) THENC LEFT_AND_EXISTS_CONV THENC
         BINDER_CONV (REWR_CONV (GSYM CONJ_ASSOC))
+  fun ifVarsRemain c t = if is_exists t then c t else ALL_QCONV t
 in
   STRIP_QUANT_CONV (K reordered_thm THENC bring_veq_to_top THENC
                     STRIP_QUANT_CONV (RAND_CONV (mk_abs_CONV to_elim))) THENC
@@ -247,13 +294,13 @@ in
   LAST_EXISTS_CONV (REWR_CONV UNWIND_THM2 THENC BETA_CONV) THENC
   STRIP_QUANT_CONV (EVERY_CONJ_CONV (RAND_CONV INT_NORM_CONV THENC
                                      gcd_check)) THENC
-  OmegaEq
+  ifVarsRemain OmegaEq
 end t
 
 (* some test terms:
 
-   ``?x y z. 0 <= 2 * x + ~3 * y + 5 * z + 10 /\
-             (0  = 3 * x + 4 * y + ~7 * z + 3)``
+time OmegaEq   ``?x y z. 0 <= 2 * x + ~3 * y + 5 * z + 10 /\
+                         (0  = 3 * x + 4 * y + ~7 * z + 3)``
 
 
 *)

@@ -1,10 +1,15 @@
 signature OmegaMath =
 sig
   include Abbrev
-  val gcd_eq_check : conv
-  val gcd_le_check : conv
-  val gcd_check    : conv
-  val INT_NORM_CONV: conv
+  val gcd_eq_check        : conv
+  val gcd_le_check        : conv
+  val gcd_check           : conv
+
+  val INT_NORM_CONV       : conv
+  val NAIVE_INT_NORM_CONV : conv
+  val RLIB_INT_NORM_CONV  : conv
+
+  val INT_EQ_CONV         : conv
 
 end;
 
@@ -35,6 +40,19 @@ end;
 
    [INT_NORM_CONV tm] normalises tm, distributing multiplications over
    sums and collecting up variable coefficients.
+
+   [NAIVE_INT_NORM_CONV tm] does the same, and should work well over small
+   problem sizes.
+
+   [RLIB_INT_NORM_CONV tm] also normalises, but this time using ringLib's
+   normalisation facilities, which tend to come into their own only with
+   larger problem sizes.
+
+   [INT_EQ_CONV tm] takes tm (of form t1 = t2), where both t1 and t2 are
+   suitable for normalisation by INT_NORM_CONV and proves them equal by
+   normalising both sides of the equation.  Returns the equation as
+   the theorem; *not* |- (t1 = t2) = T  (which is what things like
+   integerRingLib.INT_RING_CONV and AC_CONV do).
 
 *)
 
