@@ -252,7 +252,7 @@ in
   fn tm =>
   case (dest_op divop tm) of
     [xn,yn] => (let
-      open arbnum
+      open Arbnum
       val x = int_of_term xn
       and y = int_of_term yn
       val q = x div y
@@ -292,7 +292,7 @@ in
   case (dest_op modop tm)
    of [xn,yn] =>
       (let val x = int_of_term xn and y = int_of_term yn
-           open arbnum
+           open Arbnum
            val q = x div y
            val p = q * y
            val r = x - p

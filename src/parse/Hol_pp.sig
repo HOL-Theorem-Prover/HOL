@@ -12,9 +12,6 @@
 
 signature Hol_pp =
 sig
-(*
-  structure Term : Public_term_sig
-*)
   val pp_type : Portable.ppstream -> Type.hol_type -> unit
   val pp_term : Portable.ppstream -> Term.term -> unit
   val type_to_string : Type.hol_type -> string
