@@ -13,3 +13,7 @@ New theories:
 
 New tools:
 ----------
+  * A small suite of functions for managing "tracing variables"; i.e.,
+    those variables which can be set to cause various tools to be more
+    or less verbose in their diagnostic/logging output.  See under
+    "trace" in the online help or the REFERENCE manual.
