@@ -2299,6 +2299,37 @@ in
   save_thm("DISJ_IMP_THM", GENL [P,Q,R] (IMP_ANTISYM_RULE lr_imp rl_imp))
 end
 
+(* ----------------------------------------------------------------------
+    IMP_CONJ_THM = |- !P Q R. P ==> Q /\ R = (P ==> Q) /\ (P ==> R)
+                                                          MN 2002.10.06
+   ---------------------------------------------------------------------- *)
+
+val IMP_CONJ_THM = let
+  val P = mk_var("P", bool)
+  val Q = mk_var("Q", bool)
+  val R = mk_var("R", bool)
+  val QandR = mk_conj(Q,R)
+  val PimpQandR = mk_imp(P, QandR)
+  val PiQaR_th = ASSUME PimpQandR
+  val P_th = ASSUME P
+  val QaR_th = MP PiQaR_th P_th
+  val (Q_th, R_th) = CONJ_PAIR QaR_th
+  val PQ_th = DISCH P Q_th
+  val PR_th = DISCH P R_th
+  val L2R = DISCH PimpQandR (CONJ PQ_th PR_th)
+  val PiQ = mk_imp(P, Q)
+  val PiR = mk_imp(P, R)
+  val PiQaPiR = mk_conj(PiQ, PiR)
+  val PiQaPiR_th = ASSUME PiQaPiR
+  val (PiQ_th, PiR_th) = CONJ_PAIR PiQaPiR_th
+  val Q_th = MP PiQ_th P_th
+  val R_th = MP PiR_th P_th
+  val QaR_th = CONJ Q_th R_th
+  val R2L = DISCH PiQaPiR (DISCH P QaR_th)
+in
+  save_thm("IMP_CONJ_THM", GENL [P,Q,R] (IMP_ANTISYM_RULE L2R R2L))
+end
+
 (* ---------------------------------------------------------------------*)
 (* IMP_F_EQ_F                                                           *)
 (*                                                                      *)
