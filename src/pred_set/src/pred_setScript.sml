@@ -3927,6 +3927,10 @@ fun scoped_parse q =
    astl
  end;
 
+val BIGINTER_EMPTY = Q.prove
+(`BIGINTER EMPTY = FAIL BIGINTER ^(mk_var("Empty set",bool)) EMPTY`,
+ REWRITE_TAC [combinTheory.FAIL_THM]);
+
 (*---------------------------------------------------------------------------*)
 (* Export an ML model of (finite) sets. Although the representation used in  *)
 (* pred_set is 'a -> bool, the ML representation is a concrete type with     *)
@@ -3941,7 +3945,7 @@ fun scoped_parse q =
 (*---------------------------------------------------------------------------*)
 
 val _ = 
- let open Drop
+ let open Drop combinSyntax
      val setdecl = scoped_parse `set = EMPTY | INSERT of 'a => set`
      val _ = new_type("set",1)
   in try exportML ("set",
@@ -3977,7 +3981,7 @@ val _ =
       PSUBSET_EQN,
       CONJ IMAGE_EMPTY IMAGE_INSERT,
       CONJ BIGUNION_EMPTY BIGUNION_INSERT,
-      CONJ BIGINTER_SING BIGINTER_INSERT,
+      LIST_CONJ [BIGINTER_EMPTY,BIGINTER_SING, BIGINTER_INSERT],
       CONJ CARD_EMPTY (UNDISCH (SPEC_ALL CARD_INSERT)),
       CONJ (T_INTRO (CONJUNCT1 (SPEC_ALL DISJOINT_EMPTY))) DISJOINT_INSERT,
       CROSS_EQNS,
