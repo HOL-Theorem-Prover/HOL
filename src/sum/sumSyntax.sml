@@ -58,4 +58,17 @@ fun mk_sum_case (f,g,s) =
        (inst [alpha |-> r, beta |-> df, gamma |-> dg] sum_case_tm, [f,g,s])
   end;
 
+
+(*---------------------------------------------------------------------------*)
+(* Lift from ML sums to HOL sums                                             *)
+(*---------------------------------------------------------------------------*)
+
+fun lift_sum ty =
+  let open sumML
+      val [inl,inr] = map (TypeBasePure.cinst ty) [inl_tm,inr_tm]
+      fun lift f g (INL x) = list_mk_comb(inl, [f x])
+        | lift f g (INR y) = list_mk_comb(inr, [g y])
+  in lift
+ end;
+
 end
