@@ -9,7 +9,7 @@ sig
   val SIMPLE_EXISTS    : term -> thm -> thm
   val SIMPLE_CHOOSE    : term -> thm -> thm
   val EQT_INTRO        : thm -> thm
-  val GSUBS            : ((term,term)subst -> term -> term) 
+  val GSUBS            : ((term,term)subst -> term -> term)
                            -> thm list -> thm -> thm
   val SUBST_CONV       : (term,thm)subst -> term -> term -> thm
   val ADD_ASSUM        : term -> thm -> thm
@@ -80,13 +80,11 @@ sig
   val prove_abs_fn_onto    : thm -> thm
   val prove_abs_fn_one_one : thm -> thm
 
-  val define_new_type_bijections 
+  val define_new_type_bijections
     : {name:string, ABS:string, REP:string, tyax:thm} -> thm
 
   val MK_BOUNDED     : thm -> int -> thm
   val DEST_BOUNDED   : thm -> thm * int
-  val MK_UNBOUNDED   : thm -> thm
-  val DEST_UNBOUNDED : thm -> thm
   val Ntimes         : thm -> int -> thm
   val Once           : thm -> thm
 

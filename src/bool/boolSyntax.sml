@@ -40,7 +40,6 @@ val let_tm       = prim_mk_const {Name="LET",       Thy="bool"};
 val arb          = prim_mk_const {Name="ARB",       Thy="bool"};
 val bool_case    = prim_mk_const {Name="bool_case", Thy="bool"};
 val bounded_tm   = prim_mk_const {Name="BOUNDED",   Thy="bool"};
-val unbounded_tm = prim_mk_const {Name="UNBOUNDED", Thy="bool"};
 
 
 

@@ -2097,32 +2097,20 @@ fun prove_abs_fn_one_one th =
 (* Rules related to "semantic tags" for controlling rewriting                *)
 (*---------------------------------------------------------------------------*)
 
-fun MK_UNBOUNDED th = EQ_MP (SYM (SPEC (concl th) UNBOUNDED_THM)) th;
-
 fun MK_BOUNDED th n =
   if n<0 then raise ERR "MK_BOUNDED" "negative bound"
   else
-  EQ_MP (SYM (SPEC (mk_var(Int.toString n, bool))
-             (SPEC (concl th) BOUNDED_THM)))
-        th;
-
-fun DEST_UNBOUNDED th =
- case strip_comb (concl th)
-  of (c,[a]) => if same_const unbounded_tm c
-                then EQ_MP (SPEC a UNBOUNDED_THM) th
-                else raise ERR "DEST_UNBOUNDED" ""
-   | other => raise ERR "DEST_UNBOUNDED" "";
+    ADD_ASSUM (mk_comb(bounded_tm, mk_var(Int.toString n, bool))) th
 
 fun DEST_BOUNDED th =
- case strip_comb (concl th)
-  of (c,[a1,a2]) =>
-        if same_const bounded_tm c
-         then let val (s,_) = dest_var a2
-              in (EQ_MP (SPEC a2 (SPEC a1 BOUNDED_THM)) th,
-                  Option.valOf(Int.fromString s))
-              end
-         else raise ERR "DEST_BOUNDED" ""
-   | other => raise ERR "DEST_BOUNDED" "";
+    case HOLset.find (aconv bounded_tm o rator) (hypset th) of
+      SOME h => let
+        val arg = rand h
+      in
+        (PROVE_HYP (EQ_MP (SYM (SPEC arg BOUNDED_THM)) TRUTH) th,
+         valOf (Int.fromString (#1 (dest_var arg))))
+      end
+    | NONE => raise ERR "DEST_BOUNDED" "Theorem not bounded"
 
 val Ntimes = MK_BOUNDED;
 val Once = C Ntimes 1;

@@ -433,16 +433,10 @@ end handle Option.Option =>
                             "No applicable SUC term to eliminate"
 
 fun numfilter th = let
-  val (wrapper, baseth) =
-      case total DEST_BOUNDED th of
-        NONE => (case total DEST_UNBOUNDED th of
-                   NONE => (I, th)
-                 | SOME th' => (MK_UNBOUNDED, th'))
-      | SOME (th', n) => ((fn th => MK_BOUNDED th n), th')
-  val newth = repeat eliminate_SUCn (repeat eliminate_single_SUC baseth)
+  val newth = repeat eliminate_SUCn (repeat eliminate_single_SUC th)
 in
-  if Term.compare(concl newth, concl baseth) = EQUAL then [th]
-  else [th, wrapper newth]
+  if aconv (concl newth) (concl th) then [th]
+  else [th, newth]
 end
 
 val ARITH_RWTS_ss =

@@ -23,7 +23,6 @@ sig
   val let_tm         : term
   val arb            : term
   val bounded_tm     : term
-  val unbounded_tm   : term
   val res_forall_tm  : term
   val res_exists_tm  : term
   val res_exists1_tm : term

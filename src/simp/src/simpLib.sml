@@ -46,7 +46,7 @@ fun appconv (c,UNBOUNDED) tm     = c tm
   | appconv (c,BOUNDED r) tm     = c tm before Portable.dec r;
 
 fun dest_tagged_rewrite thm = let
-  val (th,n) = DEST_BOUNDED thm
+  val (th, n) = DEST_BOUNDED thm
 in
   (BOUNDED (ref n), th)
 end handle HOL_ERR _ => (UNBOUNDED, thm)

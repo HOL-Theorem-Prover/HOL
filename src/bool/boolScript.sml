@@ -220,27 +220,22 @@ val _ = (add_const "RES_SELECT"; associate_restriction ("@",  "RES_SELECT"));
 (* Experimental rewriting directives                                         *)
 (*---------------------------------------------------------------------------*)
 
-val UNBOUNDED_DEF =
-  Definition.new_definition
-    ("UNBOUNDED_DEF",
-     Term `UNBOUNDED = \b:bool. b`);
-
 val BOUNDED_DEF =
   Definition.new_definition
     ("BOUNDED_DEF",
-     Term `BOUNDED = \(b:bool) (v:bool). b`);
+     Term `BOUNDED = \(v:bool). T`);
 
 
 (*---------------------------------------------------------------------------*)
 (* Support for detecting datatypes in theory files                           *)
 (*---------------------------------------------------------------------------*)
 
-val DATATYPE_TAG_DEF = 
+val DATATYPE_TAG_DEF =
   Definition.new_definition
     ("DATATYPE_TAG_DEF",
      Term`DATATYPE = \x. T`);
 
-val _ = List.app add_const ["UNBOUNDED", "BOUNDED", "DATATYPE"];
+val _ = List.app add_const ["BOUNDED", "DATATYPE"];
 
 (*---------------------------------------------------------------------------*
  *                   THEOREMS                                                *
@@ -3920,23 +3915,12 @@ val _ = add_rule{pp_elements = [PPBlock([TOK "case", BreakSpace(1,2),
 
 
 val BOUNDED_THM =
- let val b = Term `b:bool`
-     val v = Term `v:bool`
- in
-  GEN b (GEN v
-    (RIGHT_BETA(AP_THM (RIGHT_BETA(AP_THM BOUNDED_DEF b)) v)))
- end;
+    let val v = Term `v:bool`
+    in
+      GEN v (RIGHT_BETA(AP_THM BOUNDED_DEF v))
+    end;
 
 val _ = save_thm("BOUNDED_THM", BOUNDED_THM);
-
-val UNBOUNDED_THM =
- let val b = Term `b:bool`
- in
-  GEN b (RIGHT_BETA(AP_THM UNBOUNDED_DEF b))
- end;
-
-val _ = save_thm("UNBOUNDED_THM", UNBOUNDED_THM);
-
 
 (*---------------------------------------------------------------------------*)
 (* LCOMM_THM : derive "left-commutativity" from associativity and            *)
@@ -3974,7 +3958,7 @@ val DATATYPE_TAG_THM = save_thm("DATATYPE_TAG_THM",
 val DATATYPE_BOOL = save_thm("DATATYPE_BOOL",
  let val thm1 = INST_TYPE [alpha |-> bool] DATATYPE_TAG_THM
      val bvar = mk_var("bool",bool--> bool-->bool)
- in 
+ in
     SPEC (list_mk_comb(bvar,[T,F])) thm1
  end);
 
