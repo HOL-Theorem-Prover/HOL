@@ -63,8 +63,9 @@ val SRCDIRS =
   "src/IndDef",
   "src/datatype/parse", "src/datatype/equiv",  "src/datatype/record",
   "src/datatype",  "src/list/src", "src/tfl/src", "src/unwind", "src/boss",
-  "src/string", "src/llist", "src/integer", "src/res_quan/src",
-  "src/pred_set/src",  "src/word/theories", "src/word/src",
+  "src/string", "src/llist",   "src/pred_set/src", "src/integer",
+  "src/res_quan/src",
+  "src/word/theories", "src/word/src",
   "src/finite_map", "src/hol88", "src/real", "src/bag", "src/ring/src",
   "src/temporal/src", "src/temporal/smv.2.4.3", "src/prob"]
   @
@@ -400,7 +401,7 @@ val _ =
     "\tHOLMOSMLYAC Parser.grm\n" --> String.concat["\t",yaker," Parser.grm\n"]]
  ;
   fill_holes (src2,target2)
-   ["val HOLpath = __;\n"  
+   ["val HOLpath = __;\n"
       --> String.concat["val HOLpath = ", quote holdir, ";\n"]]
  end;
 
