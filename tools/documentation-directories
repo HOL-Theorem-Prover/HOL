@@ -1,9 +1,9 @@
 help/Docfiles
+src/num/arith/help/entries
+src/num/reduce/help/entries
 src/compute/help/entries
 src/hol88/help/entries
 src/list/help/entries
-src/num/arith/help/entries
-src/num/reduce/help/entries
 src/pair/help/entries
 src/pred_set/help/entries
 src/res_quan/help/entries
