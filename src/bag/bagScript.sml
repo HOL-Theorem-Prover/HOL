@@ -92,6 +92,7 @@ val BAG_IN_BAG_INSERT = store_thm(
         BAG_IN e1 (BAG_INSERT e2 b) = (e1 = e2) \/ BAG_IN e1 b`--),
   SIMP_TAC hol_ss [BAG_IN, BAG_INN, BAG_INSERT] THEN
   REPEAT GEN_TAC THEN COND_CASES_TAC THEN SIMP_TAC hol_ss []);
+val _ = export_rewrites ["BAG_IN_BAG_INSERT"]
 
 val BAG_INN_BAG_INSERT = store_thm(
   "BAG_INN_BAG_INSERT",
@@ -1426,12 +1427,13 @@ val FINITE_SET_OF_BAG = store_thm(
       `?b0. b = BAG_INSERT e b0`
          by PROVE_TAC [BAG_IN_BAG_DELETE, BAG_DELETE] THEN
       POP_ASSUM SUBST_ALL_TAC THEN
-      FULL_SIMP_TAC (srw_ss()) [BAG_IN_BAG_INSERT, DISJ_IMP_THM] THEN
+      FULL_SIMP_TAC (srw_ss()) [DISJ_IMP_THM] THEN
       `b0 e = n`
         by FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) [BAG_INSERT] THEN
       PROVE_TAC []
     ]
   ]);
+val _ = export_rewrites ["FINITE_SET_OF_BAG"]
 
 (* ----------------------------------------------------------------------
     IMAGE for bags.
@@ -1493,7 +1495,7 @@ val BAG_IN_FINITE_BAG_IMAGE = store_thm(
         by PROVE_TAC [arithmeticTheory.num_CASES,
                       arithmeticTheory.NOT_ZERO_LT_ZERO] THEN
     `?e bf0. (bf = BAG_INSERT e bf0)` by PROVE_TAC [BCARD_SUC] THEN
-    `BAG_IN e bf` by SRW_TAC [][BAG_IN_BAG_INSERT] THEN
+    `BAG_IN e bf` by SRW_TAC [][] THEN
     `BAG_IN e (BAG_FILTER (\e0. f e0 = x) b)` by PROVE_TAC [] THEN
     POP_ASSUM (STRIP_ASSUME_TAC o SIMP_RULE bool_ss [BAG_IN_BAG_FILTER]) THEN
     PROVE_TAC [BAG_IN, BAG_INN],
