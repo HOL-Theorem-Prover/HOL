@@ -28,6 +28,8 @@ sig
  val mk_thy_type   : {Thy:string, Tyop:string, Args:hol_type list} -> hol_type
  val dest_thy_type : hol_type -> {Thy:string, Tyop:string, Args:hol_type list}
 
+ val decls         : string -> {Thy:string, Tyop:string} list
+
  val type_vars     : hol_type -> hol_type list
  val type_varsl    : hol_type list -> hol_type list
  val type_var_in   : hol_type -> hol_type -> bool

@@ -16,6 +16,7 @@ sig
   val mk_type       : string * hol_type list -> hol_type
   val dest_type     : hol_type -> string * hol_type list
   val break_type    : hol_type -> KernelTypes.tyconst * hol_type list
+  val decls         : string -> {Thy:string, Tyop:string} list
   val is_type       : hol_type -> bool
   val polymorphic   : hol_type -> bool
   val compare       : hol_type * hol_type -> order

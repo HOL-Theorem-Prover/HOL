@@ -63,12 +63,21 @@ fun make_type (tyc as (_,arity)) Args (fnstr,name) =
 
 fun mk_thy_type {Thy,Tyop,Args} = 
  case TypeSig.lookup (Tyop,Thy) 
-  of NONE => raise ERR "mk_thy_type" (fullname(Tyop,Thy)^" not found")
-   | SOME{const,...} => make_type const Args ("mk_thy_type",fullname(Tyop,Thy))
- 
+  of SOME{const,...} => make_type const Args ("mk_thy_type",fullname(Tyop,Thy))
+   | NONE => raise ERR "mk_thy_type"
+                 (Tyop^" has not been declared in theory "^quote Thy^".")
+
+local fun dest e = 
+        let val (c,_) = #const e
+        in {Tyop=KernelTypes.name_of c, Thy=KernelTypes.seg_of c}
+        end
+in 
+val decls = map dest o TypeSig.resolve
+end;
+
 fun first_decl fname Tyop =
  case TypeSig.resolve Tyop
-  of []             => raise ERR fname (Lib.quote Tyop^" not found")
+  of []            => raise ERR fname (Lib.quote Tyop^" has not been declared")
    | [{const,...}]  => const
    | {const,...}::_ => (WARN fname "more than one possibility"; const)
 
