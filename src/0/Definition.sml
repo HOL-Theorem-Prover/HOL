@@ -109,7 +109,7 @@ val new_definition_hook = ref
 
 val new_specification_hook = ref 
  (fn _ => raise ERR "new_specification" 
-            "introduced constants have not been added to the parser")
+            "introduced constants have not been added to the grammar")
 
 (*---------------------------------------------------------------------------*)
 (*                DEFINITION PRINCIPLES                                      *)

@@ -151,7 +151,7 @@ fun mk_vartype "'a" = alpha  | mk_vartype "'b" = beta
   | mk_vartype "'c" = gamma  | mk_vartype "'d" = delta
   | mk_vartype "'e" = etyvar | mk_vartype "'f" = ftyvar
   | mk_vartype s = if Lexis.allowed_user_type_var s then Tyv s
-                   else raise ERR "mk_vartype" "incorrect syntax"
+                   else (WARN "mk_vartype" "non-standard syntax"; Tyv s)
 
 fun dest_vartype (Tyv s) = s
   | dest_vartype _ = raise ERR "dest_vartype" "not a type variable";
