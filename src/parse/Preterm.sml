@@ -229,6 +229,9 @@ fun remove_overloading ptm = let
     | Constrained(tm,_) => overloaded_subterms acc tm
     | _ => acc
   val overloads = overloaded_subterms [] ptm
+  val _ =
+      Lib.mesg (length overloads >= 30)
+      "warning: overloading resolution might have > 1 billion choices"
   fun workfunction list =
     case list of
       [] => return []
