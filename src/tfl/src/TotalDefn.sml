@@ -12,6 +12,7 @@ infixr 3 -->;
 
 
 val ERR = mk_HOL_ERR "TotalDefn";
+val WARN = HOL_WARNING "TotalDefn";
 
 fun proper_subterm tm1 tm2 =
   not(aconv tm1 tm2) andalso Lib.can (find_term (aconv tm1)) tm2;
@@ -185,7 +186,7 @@ local fun BC_TAC th =
         then MATCH_ACCEPT_TAC th ORELSE MATCH_MP_TAC th
         else MATCH_ACCEPT_TAC th;
       open relationTheory prim_recTheory pairTheory
-      val WFthms = [WF_inv_image, WF_measure, WF_LESS, WF_Empty,
+      val WFthms = [WF_inv_image, WF_measure, WF_LESS, WF_EMPTY_REL,
                     WF_PRED, WF_RPROD, WF_LEX, WF_TC]
 in
 fun WF_TAC thms = REPEAT (MAP_FIRST BC_TAC (thms@WFthms) ORELSE CONJ_TAC)
@@ -244,7 +245,7 @@ local open prim_recTheory relationTheory
          tac g)
 in
 fun default_prover g =
- (CONV_TAC (TC_SIMP_CONV (WF_measure::WF_LESS::WF_Empty::default_simps))
+ (CONV_TAC (TC_SIMP_CONV (WF_measure::WF_LESS::WF_EMPTY_REL::default_simps))
    THEN mesg ASM_ARITH_TAC) g
 end;
 
@@ -284,9 +285,9 @@ fun primDefine defn =
      val _ = save_defn defn'
      val eqns = eqns_of defn'
      val _ = if null (params_of defn') 
-             then computeLib.add_funs [eqns]
-             else HOL_MESG 
-              "Schematic definition (extra free vars in right-hand side)"
+           then computeLib.add_funs [eqns]
+         else WARN "primDefine" 
+           "Extra free vars in right-hand side!! Making schematic definition" 
   in
     eqns
  end
