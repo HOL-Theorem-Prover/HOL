@@ -266,7 +266,7 @@ fun build_adoc_files () = let
     map normPath (String.tokens Char.isSpace wholefile)
   end handle _ => (print "Couldn't read documentation directories file\n";
                    [])
-  val doc2txt = fullPath [HOLDIR, "help", "src", "Doc2Txt"]
+  val doc2txt = fullPath [HOLDIR, "help", "src", "Doc2Txt.exe"]
   fun make_adocs dir = let
     val fulldir = fullPath [HOLDIR, dir]
   in
@@ -285,8 +285,8 @@ end
 fun build_help () =
  let val dir = Path.concat(Path.concat (HOLDIR,"help"),"src")
      val _ = FileSys.chDir dir
-     val _ = build_dir dir
-     val doc2html = fullPath [dir,"Doc2Html"]
+     val _ = build_dir dir (* builds the documentation tools called below *)
+     val doc2html = fullPath [dir,"Doc2Html.exe"]
      val docpath  = fullPath [HOLDIR, "help", "Docfiles"]
      val htmlpath = fullPath [docpath, "HTML"]
      val _        = if (FileSys.isDir htmlpath handle _ => false) then ()
