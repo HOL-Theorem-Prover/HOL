@@ -269,6 +269,8 @@ in
   | "MOSMLLEX" => [VREF "protect $(MOSMLDIR)/bin/mosmllex"]
   | "MOSMLYAC" => [VREF "protect $(MOSMLDIR)/bin/mosmlyac"]
   | "UNQUOTE" => [VREF ("protect $(HOLDIR)/" ^ xable_string "/bin/unquote")]
+  | "MV" => if Systeml.OS = "winNT" then [LIT "rename"] else [LIT "/bin/mv"]
+  | "CP" => if Systeml.OS = "winNT" then [LIT "copy"] else [LIT "/bin/cp"]
   | _ => (case Process.getEnv s of
             NONE => [LIT ""]
           | SOME v => [LIT v])
