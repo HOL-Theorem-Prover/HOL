@@ -55,15 +55,15 @@ val def_suffix = TotalDefn.def_suffix;
 
 
 (*---------------------------------------------------------------------------
-     Support for higher-order recursion. There should be a better 
-     place for this. Probably listTheory would be right, but then 
+     Support for higher-order recursion. There should be a better
+     place for this. Probably listTheory would be right, but then
      Context would have to be known earlier.
  ---------------------------------------------------------------------------*)
 
 local open Context listTheory
      val hocongs = [EXISTS_CONG,EVERY_CONG,MAP_CONG,
                     FOLDL_CONG, FOLDR_CONG,list_size_cong]
-in 
+in
   val _ = write_context (hocongs@read_context())
 end;
 
@@ -82,21 +82,27 @@ infix &&;
      The following simplification sets will be applied in a context
      that extends that loaded by bossLib. They are intended to be used
      by RW_TAC. The choice of which simpset to use depends on factors
-     such as running time.  For example, RW_TAC with arith_ss (and thus 
-     with list_ss) may take a long time on some goals featuring arithmetic 
-     terms (since the arithmetic decision procedure may be invoked). In 
-     such cases, it may be worth dropping down to use std_ss, 
-     supplying whatever arithmetic theorems are required, so that 
+     such as running time.  For example, RW_TAC with arith_ss (and thus
+     with list_ss) may take a long time on some goals featuring arithmetic
+     terms (since the arithmetic decision procedure may be invoked). In
+     such cases, it may be worth dropping down to use std_ss,
+     supplying whatever arithmetic theorems are required, so that
      simplification is quick.
  ---------------------------------------------------------------------------*)
 
 (* val bool_ss = boolSimps.bool_ss *)
-val std_ss  = simpLib.++(boolSimps.bool_ss,pairSimps.PAIR_ss)
-              && let open sumTheory optionTheory
-                 in type_rws "sum" @
-                    type_rws "option" @
-                    [ISL,ISR,OUTL,OUTR,INL,INR,
-                     THE_DEF, option_APPLY_DEF] end;
+local
+  open simpLib
+  infix ++
+in
+  val std_ss =
+    (boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ optionSimps.OPTION_ss) &&
+    let
+      open sumTheory
+    in
+      type_rws "sum" @ [ISL,ISR,OUTL,OUTR,INL,INR]
+    end
+end
 
 val arith_ss = simpLib.++(std_ss, arithSimps.ARITH_ss)
 val list_ss  = simpLib.++(arith_ss, listSimps.list_ss);
@@ -106,8 +112,8 @@ val DECIDE     = decisionLib.DECIDE o Parse.Term
 val DECIDE_TAC = decisionLib.DECIDE_TAC
 
 fun ZAP_TAC ss thl =
-   BasicProvers.STP_TAC ss 
-      (tautLib.TAUT_TAC 
+   BasicProvers.STP_TAC ss
+      (tautLib.TAUT_TAC
           ORELSE DECIDE_TAC
           ORELSE BasicProvers.GEN_PROVE_TAC 0 12 1 thl);
 
