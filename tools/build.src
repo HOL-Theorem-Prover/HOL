@@ -237,7 +237,7 @@ fun build_help () =
      val _ = print "Generating ASCII versions of Docfiles... "
      val _ = if build_adoc_files () then print "done\n" else ()
  in
-   print "Gemerating HTML versions of Docfiles... "
+   print "Generating HTML versions of Docfiles... "
  ;
    if SYSTEML cmd1  = Process.success then print "done\n"
    else (print ("Build failed in directory "^dir^"\n");
