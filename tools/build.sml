@@ -26,7 +26,7 @@ val GNUMAKE = Systeml.GNUMAKE
  ---------------------------------------------------------------------------*)
 
 val SRCDIRS0 =
- ["src/portableML", "src/0", "src/parse", "src/bool", "src/goalstack",
+ ["src/parse", "src/bool", "src/goalstack",
   "src/taut", "src/compute/src", "src/q", "src/combin", "src/marker",
   "src/labels", "src/lite", "src/refute", "src/simp/src", "src/metis",
   "src/meson/src","src/basicProof", "src/relation", "src/pair/src",
@@ -220,7 +220,13 @@ fun upload (src,target,symlink) =
 
 fun buildDir symlink s = (build_dir s; upload(s,SIGOBJ,symlink));
 
-fun build_src symlink = List.app (buildDir symlink) SRCDIRS;
+fun build_src use_expk symlink = let
+  val el1 = fullPath [HOLDIR, "src", "portableML"]
+  val el2 = fullPath [HOLDIR, "src",
+                      if use_expk then "experimental-kernel" else "0"]
+in
+  List.app (buildDir symlink) (el1::el2::SRCDIRS)
+end
 
 fun rem_file f =
  FileSys.remove f
@@ -314,9 +320,9 @@ fun make_buildstamp () =
 end
 
 
-fun build_hol symlink =
+fun build_hol use_expk symlink =
   let val _ = clean_sigobj()
-      val _ = build_src symlink
+      val _ = build_src use_expk symlink
       val _ = make_buildstamp()
       val _ = build_help()
   in
@@ -388,7 +394,8 @@ val help_mesg = "Usage: build\n\
                 \   or: build small\n\
                 \   or: build clean\n\
                 \   or: build cleanAll\n\
-                \   or: build help.";
+                \   or: build help.\n\
+                \Add -expk to build an experimental kernel.\n";
 
 fun check_against s = let
   open Time
@@ -414,19 +421,27 @@ fun symlink_check() =
        Process.exit Process.failure)
     else link
 
-val _ =
-  case Mosml.argv ()
-   of [_]             => build_hol cp                (* no symbolic linking *)
-    | [_,"-symlink"]  => build_hol (symlink_check()) (* w/ symbolic linking *)
-    | [_,"-small"]    => build_hol mv                (* by renaming *)
-    | [_,"-dir",path] => buildDir cp path
-    | [_,"-dir",path,
-         "-symlink"]  => buildDir link path
-    | [_,"-clean"]    => clean_dirs cleandir
-    | [_,"-cleanAll"] => clean_dirs cleanAlldir
-    | [_,"clean"]     => clean_dirs cleandir
-    | [_,"cleanAll"]  => clean_dirs cleanAlldir
-    | [_,"symlink"]   => build_hol (symlink_check())
-    | [_,"small"]     => build_hol mv
-    | [_,"help"]      => build_help()
-    | otherwise       => errmsg help_mesg
+
+
+val _ = let
+  val cmdline = CommandLine.arguments()
+  val (expks, rest) = List.partition (fn e => e = "-expk") cmdline
+  val use_expk = not (null expks)
+  val build_hol = build_hol use_expk
+in
+  case rest of
+    []             => build_hol cp                (* no symbolic linking *)
+  | ["-symlink"]  => build_hol (symlink_check()) (* w/ symbolic linking *)
+  | ["-small"]    => build_hol mv                (* by renaming *)
+  | ["-dir",path] => buildDir cp path
+  | ["-dir",path,
+     "-symlink"]  => buildDir (symlink_check()) path
+  | ["-clean"]    => clean_dirs cleandir
+  | ["-cleanAll"] => clean_dirs cleanAlldir
+  | ["clean"]     => clean_dirs cleandir
+  | ["cleanAll"]  => clean_dirs cleanAlldir
+  | ["symlink"]   => build_hol (symlink_check())
+  | ["small"]     => build_hol mv
+  | ["help"]      => build_help()
+  | otherwise     => errmsg help_mesg
+end
