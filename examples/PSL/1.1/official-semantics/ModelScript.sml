@@ -98,11 +98,12 @@ val MAKE_SIMPLE_MODEL =
 val PROD_def =
  Define 
   `PROD (M1:('state1, 'prop1) model) (M2:('state2, 'prop2) model) =
-    <| S  := {(s1,s2) | M1.S  s1 /\ M2.S  s2};
-       S0 := {(s1,s2) | M1.S0 s1 /\ M2.S0 s2};
-       R  := {((s1,s2),(s1',s2')) | M1.R(s1,s1') /\ M2.R(s2,s2')};
-       P  := {p | if ISL p then M1.P(OUTL p) else M2.P(OUTR p)};
-       L  := \(s1,s2). {p | if ISL p then M1.L s1 (OUTL p) else M2.L s2 (OUTR p)} |>`;
+    <| S  := {(s1,s2) | s1 IN M1.S  /\ s2 IN M2.S};
+       S0 := {(s1,s2) | s1 IN M1.S0 /\ s2 IN M2.S0};
+       R  := {((s1,s2),(s1',s2')) | (s1,s1') IN M1.R /\ (s2,s2') IN M2.R};
+       P  := {p | if ISL p then OUTL p IN M1.P else OUTR p IN M2.P};
+       L  := \(s1,s2). 
+              {p | if ISL p then OUTL p IN M1.L s1 else OUTR p IN M2.L s2} |>`;
 
 val _ = set_fixity "||" (Infixl 650);
 val _ = overload_on ("||", ``PROD``);
@@ -151,7 +152,7 @@ val PATH_TO_MODEL_def =
   `(PATH_TO_MODEL(FINITE l) = 
     <| S  := {n | n < LENGTH l};
        S0 := {0};
-       R  := {(n,n') | n' = n+1};
+       R  := {(n,n') | n < LENGTH l /\ n' < LENGTH l /\ (n' = n+1)};
        P  := {p:'prop | FINITE_LETTER_IN p l};
        L  := \n. {p | L_SEM (EL n l) p} |>)
    /\
@@ -182,16 +183,47 @@ val automaton_def =
 val MODEL_TO_AUTOMATON_def =
  Define
   `MODEL_TO_AUTOMATON (M:('state,'prop)model) =
-    <| Sigma := {p : 'prop | T};
-       Q     := {s : ('state)option | T};
-       Delta := {(SOME s, a, SOME s') | M.R(s,s') /\ (a = M.L s')}
+    <| Sigma := {p : 'prop | p IN M.P};
+       Q     := {SOME s : ('state)option | s IN M.S} UNION {NONE};
+       Delta := {(SOME s, a, SOME s') | s IN M.S /\ s' IN M.S /\ 
+                                        (s,s') IN M.R /\ (a = M.L s')}
                 UNION
                 {(NONE, a, SOME s) | s IN M.S0 /\ (a = M.L s)};
        Q0    := {NONE :  ('state)option};
-       F     := {s : ('state)option | T} |>`;
+       F     := {SOME s : ('state)option | s IN M.S} UNION {NONE} |>`;
 
-(* This looks like rubbish!
+(* Examples
 
+SIMP_CONV (srw_ss()) [MODEL_TO_AUTOMATON_def,PATH_TO_MODEL_def]
+``PATH_TO_MODEL(FINITE l)``;
+
+SIMP_CONV (srw_ss()) [MODEL_TO_AUTOMATON_def,PATH_TO_MODEL_def]
+``MODEL_TO_AUTOMATON(PATH_TO_MODEL(FINITE l))``;
+
+SIMP_CONV (srw_ss()) 
+ [MODEL_TO_AUTOMATON_def,PATH_TO_MODEL_def,PROD_def]
+ ``MODEL_TO_AUTOMATON(PATH_TO_MODEL(INFINITE f) || M)``;
+
+SIMP_CONV (srw_ss()) 
+  [MODEL_TO_AUTOMATON_def,PATH_TO_MODEL_def,PROD_def]
+  ``MODEL_TO_AUTOMATON
+    (PATH_TO_MODEL(FINITE l) || 
+     <| S  := states;
+        S0 := initial_states;
+        R  := trans;
+        P  := props;
+        L  := val_fn |>)``;
+
+SIMP_CONV (srw_ss()) 
+  [MODEL_TO_AUTOMATON_def,PATH_TO_MODEL_def,PROD_def]
+  ``(PATH_TO_MODEL(INFINITE f) || 
+     <| S  := states;
+        S0 := initial_states;
+        R  := trans;
+        P  := props;
+        L  := val_fn |>)``;
+
+This is not right:
 (*****************************************************************************)
 (* Convert an automation to a model.                                         *)
 (*****************************************************************************)
