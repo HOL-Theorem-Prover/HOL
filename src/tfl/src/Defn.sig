@@ -7,7 +7,7 @@ sig
   type tactic       = Abbrev.tactic
   type thry         = TypeBase.typeBase
   type proofs       = GoalstackPure.proofs
-  type defn         = Defn0.defn
+  type defn         = DefnBase.defn
   type absyn        = Absyn.absyn
   type ppstream     = Portable.ppstream
   type 'a quotation = 'a Portable.frag list
@@ -15,12 +15,34 @@ sig
 
   val monitoring : bool ref    (* currently useless *)
 
+  val ind_suffix : string ref
+  val def_suffix : string ref
+
   val mk_defn    : string -> term -> defn
   val mk_Rdefn   : string -> term -> term -> defn
   val Hol_defn   : string -> term quotation -> defn
   val Hol_Rdefn  : string -> term quotation -> term quotation -> defn
+  
+  val eqns_of    : defn -> thm
+  val eqnl_of    : defn -> thm list
+  val ind_of     : defn -> thm option
+  val tcs_of     : defn -> term list
+  val reln_of    : defn -> term option
+  val params_of  : defn -> term list
 
-  (* val save_defn : defn -> unit *)
+  val aux_defn   : defn -> defn option
+  val union_defn : defn -> defn option
+
+  val inst_defn  : defn -> (term,term)Lib.subst * 
+                           (hol_type,hol_type)Lib.subst -> defn
+  val set_reln   : defn -> term -> defn
+
+  val elim_tcs   : defn -> thm list -> defn
+  val simp_tcs   : defn -> conv -> defn
+  val prove_tcs  : defn -> tactic -> defn
+
+  val save_defn  : defn -> unit
+
   val tgoal      : defn -> proofs
   val tprove     : defn * tactic -> thm * thm
   val TC_INTRO_TAC : defn -> tactic

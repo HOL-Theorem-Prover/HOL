@@ -5,7 +5,7 @@
 structure TotalDefn :> TotalDefn =
 struct
 
-open HolKernel Parse basicHol90Lib arithLib Let_conv NonRecSize Defn0;
+open HolKernel Parse basicHol90Lib arithLib Let_conv NonRecSize DefnBase;
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
@@ -13,7 +13,7 @@ type thm    = Thm.thm;
 type conv   = Abbrev.conv
 type tactic = Abbrev.tactic;
 type proofs = GoalstackPure.proofs
-type defn   = Defn0.defn;
+type defn   = DefnBase.defn;
 type 'a quotation = 'a Portable.frag list
 
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
@@ -131,7 +131,7 @@ fun list_mk_prod_tyl L =
  * The second measure is just the total size of the arguments.               *
  *---------------------------------------------------------------------------*)
 
-local open Defn0
+local open Defn
 in
 fun guessR defn =
  if null (tcs_of defn) then []
@@ -154,7 +154,7 @@ end;
 
 
 fun proveTotal tac defn = 
-       elim_tcs defn (CONJUNCTS (prove(list_mk_conj (tcs_of defn), tac)))
+  Defn.elim_tcs defn (CONJUNCTS (prove(list_mk_conj (Defn.tcs_of defn), tac)))
 
 (*---------------------------------------------------------------------------
       Default TC simplifier and prover. Terribly terribly naive, but 
@@ -233,10 +233,6 @@ fun WF_REL_TAC defn Rquote = PRIM_WF_REL_TAC defn Rquote [] default_simps;
        fails, the definition attempt fails.
  ---------------------------------------------------------------------------*)
 
-val ind_suffix = ref "_ind";
-val def_suffix = ref "_def";
-
-
 (*---------------------------------------------------------------------------
       The default prover is invoked on goals involving measure 
       functions, so the wellfoundedness proofs for the guessed
@@ -252,83 +248,34 @@ fun default_prover g =
 end;
 
 
-(*---------------------------------------------------------------------------
-    primDefine bindstem <defn> operates as follows:
-
-        1. If the definition is not recursive or is
-           primitive recursive, the defining equations are 
-           stored under bindstem_def (and returned).
-        2. Otherwise, we check to see if the definition
-           is schematic. If so, the induction theorem is stored
-           under bindstem_ind and the recursion equations are stored
-           under bindstem_def.
-        3. Otherwise, an attempt is made to prove termination. If this fails, 
-           then xDefine fails (and cleans up after itself).
-        4. Otherwise, the termination conditions are eliminated, and
-           the induction theorem is stored under bindstem_ind and
-           the recursion equations are stored under bindstem_def, before
-           the recursion equations are returned.
- ---------------------------------------------------------------------------*)
-
 local val term_prover = proveTotal default_prover
-      fun try_proof defn Rcand = term_prover (Defn0.set_reln defn Rcand)
+      open Defn
+      fun try_proof defn Rcand = term_prover (set_reln defn Rcand)
+      fun should_try_to_prove_termination defn = 
+            not(null(tcs_of defn)) andalso null(params_of defn)
 in
-fun primDefine bindstem defn =
- let val defname = bindstem^ !def_suffix
-     val indname = bindstem^ !ind_suffix
- in
-   if Defn0.is_nonrec defn 
-   then (Theory.set_MLname bindstem defname;
-         Lib.say ("Definition stored under "^Lib.quote defname^".\n");
-         (case Defn0.ind_of defn
-           of NONE => ()
-            | SOME th => (Lib.say (String.concat 
-                       ["Induction stored under ", Lib.quote indname, ".\n"]);
-                       save_thm(indname, th); ()));
-         Defn0.eqns_of defn)
-   else 
-   if Defn0.is_primrec defn 
-   then (Theory.set_MLname bindstem defname;
-         Lib.say ("Definition stored under "^Lib.quote defname^".\n");
-         Defn0.eqns_of defn)
-   else
-   if not(null(Defn0.params_of defn)) 
-   then let val ind = Option.valOf (Defn0.ind_of defn)
-        in
-          Lib.say (String.concat
-           ["Schematic definition.\nEquations stored under ",
-            Lib.quote defname, ".\nInduction stored under ",
-            Lib.quote indname, ".\n"]);
-          save_thm(indname, ind);
-          save_thm(defname, Defn0.eqns_of defn)
-        end
-   else 
-    let val defn' = Lib.tryfind (try_proof defn) (guessR defn) 
-                    handle HOL_ERR _ => defn
-    in 
-       if null(Defn0.tcs_of defn')
-       then let val ind = Option.valOf (Defn0.ind_of defn')
-            in
-               Lib.say (String.concat
-                ["Equations stored under ",    Lib.quote defname,
-                 ".\nInduction stored under ", Lib.quote indname, ".\n"]);
-               save_thm(indname, ind);
-               save_thm(defname, Defn0.eqns_of defn')
-            end
-       else (Lib.say (String.concat
+fun primDefine defn =
+ let val defn' = 
+       if should_try_to_prove_termination defn 
+         then Lib.tryfind (try_proof defn) (guessR defn)
+               handle HOL_ERR _ => (Lib.say (String.concat
                ["Unable to prove totality!\nUse \"Defn.Hol_defn\" to make ",
                "the definition,\nand \"Defn.tgoal <defn>\" to set up the ",
                "termination proof.\n"]);
              raise ERR "primDefine" "Unable to prove termination")
-    end
+         else defn
+ in 
+    save_defn defn'; 
+    eqns_of defn'
  end
 end;
 
-fun xDefine stem q = primDefine stem (Defn.Hol_defn stem q);
+
+fun xDefine stem q = primDefine (Defn.Hol_defn stem q);
 
 
 (*---------------------------------------------------------------------------
-     Define and DefineR
+     Define
  ---------------------------------------------------------------------------*)
 
 local fun msg alist invoc = String.concat
@@ -345,7 +292,7 @@ fun Define q =
        val bindstem = mk_bindstem (ERR "Define" "") 
             "xDefine <alphanumeric-stem> <eqns-quotation>" names 
    in 
-       primDefine bindstem (Defn.mk_defn bindstem tm)
+       primDefine (Defn.mk_defn bindstem tm)
    end               
 end;
 
