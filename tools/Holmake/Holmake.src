@@ -786,7 +786,7 @@ in
       val b = build_command MOSMLC scriptsml_file
       val _ = b orelse raise CompileFailed
       val _ = print ("Linking "^scriptuo^
-                     " to produce theory building executable\n")
+                     " to produce theory-builder executable\n")
       val objectfiles =
         if allfast andalso not (member s fastfiles) orelse
            not allfast andalso member s fastfiles
