@@ -2,7 +2,7 @@ Q. HOL is failing to complete the build process.  It stops when trying
    to create the HolBdd theory.  Why is this, and what should I do? (5)
 
   -- The problem is almost certainly that your copy of MoscowML hasn't
-     been built with dynamic linking correctly enabled.  This in turns
+     been built with dynamic linking correctly enabled.  This in turn
      means that the Muddy BDD package that HolBdd uses can't load.
      You can test that this is the problem by running hol, and then
      trying
