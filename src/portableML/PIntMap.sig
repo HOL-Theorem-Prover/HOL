@@ -16,6 +16,9 @@
  * Translated to SML by Michael Norrish, 2001.
  *)
 
+signature PIntMap =
+sig
+
 type 'a t
 
 type key = int
@@ -44,3 +47,5 @@ val fold : (int * 'a * 'b -> 'b) -> 'b -> 'a t -> 'b
 val choose : 'a t -> 'a t * (int * 'a)
 
 val size : 'a t -> int
+
+end

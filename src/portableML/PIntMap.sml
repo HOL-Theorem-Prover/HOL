@@ -22,6 +22,9 @@
     See the documentation of module [Ptset] which is also based on the
     same data-structure. *)
 
+structure PIntMap :> PIntMap =
+struct
+
 type key = int
 
 datatype 'a t =
@@ -145,3 +148,4 @@ fun fold f accu s = case s of
                     | Leaf (k,x) => f (k, x, accu)
                     | Branch (_,_,t0,t1,_) => fold f (fold f accu t1) t0
 
+end
