@@ -352,3 +352,21 @@ Bugs fixed:
 
     The functions "theorems", "definitions" and "axioms" remain, but
     have also gained an additional theory-segment parameter.
+
+A note on nomenclature
+----------------------
+
+  We have retroactively decided to number HOL implementations in the
+  following way:
+
+  1   HOL88 and earlier: implementations based on a Lisp substrate,
+      with Classic ML.
+  2   HOL90: implementations in Standard ML, principally using the
+      SML/NJ implementation.
+  3   HOL98 (Athabasca and Taupo releases): implementations using
+      Moscow ML, and with a new library and theory mechanism.
+  4   HOL (Kananaskis releases)
+
+  Therefore, with HOL 4, we do away with the habit of associating
+  implementations with year numbers.  Individual releases within HOL 4
+  will retain the <lake>-<number> naming scheme.
