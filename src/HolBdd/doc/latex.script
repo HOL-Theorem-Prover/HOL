@@ -6,4 +6,6 @@ latex HolBdd;
 latex HolBdd;
 dvips HolBdd;
 gzip -c HolBdd.ps > HolBdd.ps.gz
+scp HolBdd.ps.gz /home/mjcg/public_html/HolBddLib/doc/HolBdd2.ps.gz
+
 
