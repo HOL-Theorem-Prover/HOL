@@ -73,7 +73,8 @@ val _ = computeLib.add_convs [(ord_tm, 1, ORD_CHR_CONV)];
   test1`"abcdefghijklmnopqrstuvwxyz" = "abcdefghijklmnopqrstuvwxyzA"`;
 
   This shows that the reflexivity rewrite should be applied first, when 
-  dealing with equality sub-terms.
+  dealing with equality sub-terms. How do I teach the system to apply
+  it first?
 
  ---------------------------------------------------------------------------*)
 

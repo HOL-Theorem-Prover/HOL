@@ -36,6 +36,7 @@ sig
    val fromMLstring   : string -> term
    val fromHOLstring  : term -> string
 
+   val ORD_CHR_CONV   : conv
    val char_EQ_CONV   : conv
    val string_EQ_CONV : conv
    
