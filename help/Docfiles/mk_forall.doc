@@ -1,23 +1,18 @@
 \DOC mk_forall
 
-\TYPE {mk_forall : {{Bvar : term, Body : term}} -> term}
+\TYPE {mk_forall : term * term -> term}
 
 \SYNOPSIS
 Term constructor for universal quantification.
 
 \DESCRIBE
-{mk_forall{{Bvar = v, Body = t}}} returns {--`!v. t`--}.
+If {v} is a variable and {t} is a term of type {bool}, then 
+{mk_forall (v,t)} returns the term {!v. t}.
 
 \FAILURE
-Fails with
-{
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_forall",
-            message = ""}}
-}
-\noindent
-if {Bvar} is not a variable or if {Body} is not of type {==`:bool`==}.
+Fails if {v} is not a variable or if {t} is not of type {bool}.
 
 \SEEALSO
-dest_forall, is_forall, list_mk_forall.
+dest_forall, is_forall, list_mk_forall, strip_forall.
 
 \ENDDOC

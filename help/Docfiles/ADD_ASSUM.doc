@@ -1,6 +1,6 @@
 \DOC ADD_ASSUM
 
-\TYPE {ADD_ASSUM : (term -> thm -> thm)}
+\TYPE {ADD_ASSUM : term -> thm -> thm}
 
 \SYNOPSIS
 Adds an assumption to a theorem.

@@ -1,22 +1,17 @@
 \DOC dest_conj
 
-\TYPE {dest_conj : term -> {{conj1 :term, conj2 :term}}}
+\TYPE {dest_conj : term -> term * term}
 
 \SYNOPSIS
 Term destructor for conjunctions.
 
 \DESCRIBE
-{dest_conj(--`t1 /\ t2`--)} returns {{conj1 = t1, conj2 = t2}}.
+If {M} is a term {t1 /\ t2}, then {dest_conj M} returns {(t1,t2)}.
 
 \FAILURE
-Fails with
-{
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_conj",
-            message = "not a conj"}}
-}
-\noindent if term is not a conjunction.
+Fails if {M} is not a conjunction.
 
 \SEEALSO
-mk_conj, is_conj.
+mk_conj, is_conj, list_mk_conj, strip_conj.
 
 \ENDDOC

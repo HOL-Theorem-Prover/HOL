@@ -19,7 +19,15 @@ in neither {P} nor {Q}, {AND_EXISTS_CONV} returns the theorem:
 {(?x.P) /\ (?x.Q)}, or if it is applied to a term {(?x.P) /\ (?x.Q)}
 in which the variable {x} is free in either {P} or {Q}.
 
+\COMMENTS
+It may be easier to use higher order rewriting with some of
+{BOTH_EXISTS_AND_THM}, {LEFT_EXISTS_AND_THM}, and 
+{RIGHT_EXISTS_AND_THM}.
+
+
 \SEEALSO
 EXISTS_AND_CONV, LEFT_AND_EXISTS_CONV, RIGHT_AND_EXISTS_CONV
+BOTH_EXISTS_AND_THM, LEFT_EXISTS_AND_THM, RIGHT_EXISTS_AND_THM.
+
 
 \ENDDOC

@@ -1,6 +1,6 @@
 \DOC AC_CONV
 
-\TYPE {AC_CONV : ((thm # thm) -> conv)}
+\TYPE {AC_CONV : (thm * thm) -> conv}
 
 \SYNOPSIS
 Proves equality of terms using associative and commutative laws.
@@ -23,17 +23,17 @@ commutative laws.
 
 \FAILURE
 Fails if the associative or commutative law has an invalid form, or if the
-term is not an equation between AC-equivalent terms.
+term is not an equation between AC-equivalent terms. 
 
 \EXAMPLE
+Consider the terms {x + SUC t + ((3 + y) + z)} and {3 + SUC t + x + y + z}.
+{AC_CONV} proves them equal.
 {
-   - let val M = Parse.Term 
-                 `x + (SUC t) + ((3 + y) + z) = 3 + (SUC t) + x + y + z`
-     in 
-     AC_CONV(ADD_ASSOC,ADD_SYM) M
-     end;
+   - AC_CONV(ADD_ASSOC,ADD_SYM)
+       (Term `x + (SUC t) + ((3 + y) + z) = 3 + (SUC t) + x + y + z`);
 
-   |- (x + ((SUC t) + ((3 + y) + z)) = 3 + ((SUC t) + (x + (y + z)))) = T
+   > val it = 
+     |- (x + ((SUC t) + ((3 + y) + z)) = 3 + ((SUC t) + (x + (y + z)))) = T
 }
 
 \COMMENTS

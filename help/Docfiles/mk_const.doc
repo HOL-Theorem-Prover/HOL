@@ -1,39 +1,52 @@
 \DOC mk_const
 
-\TYPE {mk_const : {{Name:string, Ty : hol_type}} -> term}
+\TYPE {mk_const : string * hol_type -> term}
 
 \SYNOPSIS
 Constructs a constant.
 
 \DESCRIBE
-{mk_const{{Name = "const", Ty = ty}}} returns the constant {{--`const:ty`--}}.
+If {n} is a string that has been previously declared to be a constant 
+with type {ty} and and {ty1} is an instance of {ty}, then 
+{mk_const(n,ty1)} returns the specified instance of the constant.
+
+Note, however, that constants with the same name (and type) may be 
+declared in different theories. If two theories having constants with
+the same name {n}, are in the ancestry of the current theory, then 
+{mk_const(n,ty)} will issue a warning before arbitrarily selecting
+which constant to construct. In such situations, {mk_thy_const}
+allows one to specify exactly which constant to construct.
 
 \FAILURE
-Fails with
-{
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_const",
-            message}}
-}
-\noindent
-where {message} is prefixed with {"not in term signature"} if the string
-supplied is not the name of a known constant, or {"not a type instance"}
-if the string is known as a constant but the type supplied is not an
-instance of the declared type of that constant.
+Fails if {n} is not the name of a known constant, or if {ty} is not an
+instance of the type that the constant has in the signature.
 
 \EXAMPLE
 {
-   - mk_const {{Name = "T", Ty = ==`:bool`==}};
-   > val it = (--`T`--) : term
+   - mk_const ("T", bool);
+   > val it = `T` : term
 
-   - Dsyntax.mk_const {{Name = "T", Ty = ==`:num`==}} handle e => Raise e;
-   Exception raised at Dsyntax.mk_const:
-   not a type instance: T
+   - mk_const ("=", bool --> bool --> bool);
+   > val it = `$=` : term
 
-   - mk_const {{Name = "test", Ty = ==`:bool`==}} handle e => Raise e;
-   Exception raised at Dsyntax.mk_const:
-   not in term signature: test
+   - try mk_const ("test", bool);
+   Exception raised at Term.mk_const:
+   test not found
 }
+The following example shows a new constant being introduced that 
+has the same name as the standard equality of HOL. Then we attempt
+to make an instance of that constant.
+{
+   - new_constant ("=", bool --> bool --> bool);
+   > val it = () : unit
+
+   - mk_const("=", bool --> bool --> bool);
+   <<HOL warning: Term.mk_const: "=": more than one possibility>>
+
+   > val it = `$=` : term
+}
+
 \SEEALSO
-dest_const, is_const, mk_var, mk_comb, mk_abs.
+mk_thy_const, dest_const, is_const, mk_var, mk_comb, mk_abs.
 
 \ENDDOC

@@ -16,8 +16,12 @@ the identity for the {THEN} tactical.
 Never fails.
 
 \EXAMPLE
-The tactic {INDUCT_TAC THENL [ALL_TAC;tac]}, applied to a goal {g}, applies
-{INDUCT_TAC} to {g} to give a basis and step subgoal; it then returns the
+The tactic 
+{
+   INDUCT_THEN numTheory.INDUCTION THENL [ALL_TAC, tac]
+}
+\noindent applied to a goal {g}, applies {INDUCT_THEN numTheory.INDUCTION}
+to {g} to give a basis and step subgoal; it then returns the
 basis unchanged, along with the subgoals produced by applying {tac} to the
 step.
 
@@ -27,6 +31,6 @@ as a place-holder in building compound tactics using tacticals such as
 {THENL}.
 
 \SEEALSO
-NO_TAC, REPEAT, THENL
+INDUCT_THEN, NO_TAC, REPEAT, THENL
 
 \ENDDOC

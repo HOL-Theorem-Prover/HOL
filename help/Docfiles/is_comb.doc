@@ -1,13 +1,13 @@
 \DOC is_comb
 
-\TYPE {is_comb : (term -> bool)}
+\TYPE {is_comb : term -> bool}
 
 \SYNOPSIS
 Tests a term to see if it is a combination (function application).
 
 \DESCRIBE
-{is_comb "t1 t2"} returns {true}. If the term is not a combination the result
-is {false}.
+If term {M} has the form {f x}, then {is_comb M} equals {true}. 
+Otherwise, the result is {false}.
 
 \FAILURE
 Never fails

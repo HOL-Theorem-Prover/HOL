@@ -1,0 +1,19 @@
+\DOC is_arb
+
+\TYPE {is_arb : term -> bool}
+
+\SYNOPSIS
+Tests a term to see if it's an instance of {ARB}.
+
+\LIBRARY boolSyntax
+
+\DESCRIBE
+Returns {true} if and only if {M} has the form {ARB}.
+
+\USES
+None known.
+
+\SEEALSO
+mk_arb, dest_arb.
+
+\ENDDOC

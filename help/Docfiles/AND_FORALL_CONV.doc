@@ -17,6 +17,9 @@ When applied to a term of the form {(!x.P) /\ (!x.Q)}, the conversion
 \FAILURE
 Fails if applied to a term not of the form {(!x.P) /\ (!x.Q)}.
 
+\COMMENT
+It may be easier to use higher order rewriting with {FORALL_AND_THM}.
+
 \SEEALSO
 FORALL_AND_CONV, LEFT_AND_FORALL_CONV, RIGHT_AND_FORALL_CONV
 

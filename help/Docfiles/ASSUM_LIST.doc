@@ -1,6 +1,6 @@
 \DOC ASSUM_LIST
 
-\TYPE {ASSUM_LIST : ((thm list -> tactic) -> tactic)}
+\TYPE {ASSUM_LIST : (thm list -> tactic) -> tactic}
 
 \SYNOPSIS
 Applies a tactic generated from the goal's assumption list.
@@ -8,13 +8,15 @@ Applies a tactic generated from the goal's assumption list.
 \KEYWORDS
 theorem-tactic, assumption.
 
+\LIBRARY bool
+
 \DESCRIBE
 When applied to a function of type {thm list -> tactic} and a goal,
 {ASSUM_LIST} constructs a tactic by applying {f} to a list of {ASSUME}d
 assumptions of the goal, then applies that tactic to the goal.
 {
-   ASSUM_LIST f ({{A1;...;An}} ?- t)
-         = f [A1 |- A1; ... ; An |- An] ({{A1;...;An}} ?- t)
+   ASSUM_LIST f ({{A1,...,An}} ?- t)
+         = f [A1 |- A1, ... , An |- An] ({{A1,...,An}} ?- t)
 }
 \FAILURE
 Fails if the function fails when applied to the list of {ASSUME}d assumptions,

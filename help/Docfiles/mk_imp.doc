@@ -1,20 +1,18 @@
 \DOC mk_imp
 
-\TYPE {mk_imp : {{ant : term, conseq : term}} -> term}
+\TYPE {mk_imp : term * term -> term}
 
 \SYNOPSIS
 Constructs an implication.
 
 \DESCRIBE
-{mk_imp{{ant = t1, conseq = t2}}} returns {--`t1 ==> t2`--}.
+If {t1} and {t2} are terms of type {bool}, then {mk_imp(t1,t2)} 
+constructs the term {t1 ==> t2}.
 
 \FAILURE
-Fails with
-{
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_imp",
-            message = "Non-boolean argument"}}
-}
+Fails if {t1} and {t2} are not both of type {bool}.
+
 \SEEALSO
-dest_imp, is_imp, list_mk_imp.
+dest_imp, dest_imp_only, is_imp, is_imp_only, list_mk_imp.
 
 \ENDDOC

@@ -1,31 +1,29 @@
 \DOC list_mk_imp
 
-\TYPE {list_mk_imp : (goal -> term)}
+\TYPE {list_mk_imp : term list * term -> term}
 
 \SYNOPSIS
 Iteratively constructs implications.
 
 \DESCRIBE
-{list_mk_imp(["t1";...;"tn"],"t")} returns {"t1 ==> ( ... (tn ==> t)...)"}.
+{list_mk_imp([t1,...,tn],t)} returns {t1 ==> ( ... (tn ==> t)...)}.
 
 \FAILURE
-Fails with {list_mk_imp} if any of {t1},...,{tn} are not of type {":bool"} or
-if the list of terms is non-empty and {t} is not of type {":bool"}. If the
+Fails if any of {t1},...,{tn} are not of type {bool}. Also fails
+if the list of terms is non-empty and {t} is not of type {bool}. If the
 list of terms is empty the type of {t} can be anything.
 
 \EXAMPLE
 {
-#list_mk_imp (["T";"F"],"T");;
-"T ==> F ==> T" : term
+- list_mk_imp ([T,F],T);
+> val it = `T ==> F ==> T` : term
 
-#list_mk_imp (["T";"1"],"T");;
+
+- try list_mk_imp ([T,F],mk_var("x",alpha));
 evaluation failed     list_mk_imp
 
-#list_mk_imp (["T";"F"],"1");;
-evaluation failed     list_mk_imp
-
-#list_mk_imp ([],"1");;
-"1" : term
+- list_mk_imp ([],mk_var("x",alpha));
+> val it = `x` : term
 }
 \SEEALSO
 strip_imp, mk_imp.

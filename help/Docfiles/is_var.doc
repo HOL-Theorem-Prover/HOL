@@ -1,13 +1,12 @@
 \DOC is_var
 
-\TYPE {is_var : (term -> bool)}
+\TYPE {is_var : term -> bool}
 
 \SYNOPSIS
 Tests a term to see if it is a variable.
 
 \DESCRIBE
-{is_var "var:ty"} returns {true}. If the term is not a variable the result
-is {false}.
+If {M} is a HOL variable, then {is_var M} returns {true}. If the term is not a variable the result is {false}.
 
 \FAILURE
 Never fails.

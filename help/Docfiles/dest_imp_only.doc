@@ -1,0 +1,18 @@
+\DOC dest_imp_only
+
+\TYPE {dest_imp_only : term -> term * term}
+
+\SYNOPSIS
+Breaks an implication into antecedent and consequent.
+
+\DESCRIBE
+If {M} is a term with the form {t1 ==> t2}, then {dest_imp_only M} 
+returns {(t1,t2)}.
+
+\FAILURE
+Fails if {M} is not an implication.
+
+\SEEALSO
+mk_imp, dest_imp, is_imp, is_imp_only, strip_imp, list_mk_imp.
+
+\ENDDOC

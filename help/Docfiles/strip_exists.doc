@@ -1,16 +1,17 @@
 \DOC strip_exists
 
-\TYPE {strip_exists : (term -> goal)}
+\TYPE {strip_exists : term -> term list * term}
 
 \SYNOPSIS
 Iteratively breaks apart existential quantifications.
 
 \DESCRIBE
-{strip_exists "?x1 ... xn. t"} returns {(["x1";...;"xn"],"t")}. Note that
+If {M} has the structure {?x1 ... xn. t} then {strip_exists M}
+returns {([x1,...,xn],t)}. Note that
 {
    strip_exists(list_mk_exists(["x1";...;"xn"],"t"))
 }
-\noindent will not return {(["x1";...;"xn"],"t")} if {t} is an existential
+\noindent will not return {([x1,...,xn],t)} if {t} is an existential
 quantification.
 
 \FAILURE

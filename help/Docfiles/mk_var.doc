@@ -1,12 +1,13 @@
 \DOC mk_var
 
-\TYPE {mk_var : {{Name:string, Ty: hol_type}} -> term}
+\TYPE {mk_var : string * hol_type -> term}
 
 \SYNOPSIS
 Constructs a variable of given name and type.
 
 \DESCRIBE 
-{mk_var{{Name = "var", Ty = ty}}} returns the variable {--`var:ty`--}. 
+If {v} is a string and {ty} is a HOL type, then {mk_var(v, ty)} returns 
+a HOL variable. 
 
 \FAILURE
 Never fails.

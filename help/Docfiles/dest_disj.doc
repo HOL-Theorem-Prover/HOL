@@ -1,22 +1,18 @@
 \DOC dest_disj
 
-\TYPE {dest_disj : term -> {{disj1 :term, disj2 :term}}}
+\TYPE {dest_disj : term -> term * term}
 
 \SYNOPSIS
 Term destructor for disjunctions.
 
 \DESCRIBE
-{dest_disj(--`t1 /\ t2`--)} returns {{disj1 = t1, disj2 = t2}}.
+If {M} is a term having the form {t1 \/ t2}, then {dest_disj M} returns
+{(t1,t2)}.
 
 \FAILURE
-Fails with
-{
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_disj",
-            message = "not a disj"}}
-}
-\noindent if term is not a disjunction.
+Fails if {M} is not a disjunction.
 
 \SEEALSO
-mk_disj, is_disj.
+mk_disj, is_disj, strip_disj, list_mk_disj.
 
 \ENDDOC

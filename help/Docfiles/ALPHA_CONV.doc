@@ -1,6 +1,6 @@
 \DOC ALPHA_CONV
 
-\TYPE {ALPHA_CONV : (term -> conv)}
+\TYPE {ALPHA_CONV : term -> conv}
 
 \SYNOPSIS
 Renames the bound variable of a lambda-abstraction.

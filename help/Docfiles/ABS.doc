@@ -20,7 +20,7 @@ assumptions {A}.
 
 \EXAMPLE
 {
-- let val m = Parse.Term `m:num`
+- let val m = Term `m`
   in
       ABS m (REFL m)
   end;

@@ -9,7 +9,7 @@ Conversion that always succeeds and leaves a term unchanged.
 conversion, identity.
 
 \DESCRIBE
-When applied to a term {``t``}, the conversion {ALL_CONV} returns the
+When applied to a term {t}, the conversion {ALL_CONV} returns the
 theorem {|- t = t}.
 
 \FAILURE

@@ -19,17 +19,6 @@ alpha-equivalent, {ALPHA} returns the theorem {|- t1 = t1'}.
 \FAILURE
 Fails unless the terms provided are alpha-equivalent.
 
-\EXAMPLE
-{
-- let val M = Term`!x:num. x = x`
-      val N = Term`!y:num. y = y`
-  in
-      ALPHA M N
-  end;
-
-> val it = |- (!x. x = x) = (!y. y = y) : thm
-}
-
 \SEEALSO
 aconv, ALPHA_CONV, GEN_ALPHA_CONV
 

@@ -5,6 +5,10 @@
 \SYNOPSIS
 Strips identical operands from functions on both sides of an equation.
 
+\LIBRARY bool
+
+\STRUCTURE Tactic
+
 \KEYWORDS
 tactic.
 

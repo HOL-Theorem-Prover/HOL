@@ -1,19 +1,17 @@
 \DOC dest_var
 
-\TYPE {dest_var : term -> {{Name :string, Ty: hol_type}}}
+\TYPE {dest_var : term -> string * hol_type}
 
 \SYNOPSIS
 Breaks apart a variable into name and type.
 
 \DESCRIBE
-{dest_var (--`var:ty`--)} returns {{Name = "var", Ty = (==`:ty`==)}}.
+If {M} is a HOL variable, then {dest_var M} returns {(v,ty)}, where {v} 
+is the name of the variable, an {ty} is its type.
 
 \FAILURE
-Fails with
-{
-    HOL_ERR{{origin_structure = "Term", origin_function = "dest_var",
-            message = "not a var"}}
-}
+Fails if {M} is not a variable.
+
 \SEEALSO
 mk_var, is_var, dest_const, dest_comb, dest_abs.
 

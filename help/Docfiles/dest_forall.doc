@@ -1,23 +1,17 @@
 \DOC dest_forall
 
-\TYPE {dest_forall : term -> {{Bvar :term, Body :term}}}
+\TYPE {dest_forall : term -> term * term}
 
 \SYNOPSIS
 Breaks apart a universally quantified term into quantified variable and body.
 
 \DESCRIBE
-{dest_forall} is a term destructor for universal quantification:
-{dest_forall (--`!var. t`--)} returns {{Bvar = var, Body = t}}.
+If {M} has the form {!x. t}, then {dest_forall M} returns {(x,t)}.
 
 \FAILURE
-Fails with
-{
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "dest_forall",
-            message = "not a forall"}}
-}
-\noindent if term is not a universal quantification.
+Fails if {M} is not a universal quantification.
 
 \SEEALSO
-mk_forall, is_forall, strip_forall.
+mk_forall, is_forall, strip_forall, list_mk_forall.
 
 \ENDDOC

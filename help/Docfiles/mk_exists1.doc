@@ -1,18 +1,18 @@
-\DOC mk_select
+\DOC mk_exists1
 
-\TYPE {mk_select : term * term -> term}
+\TYPE {mk_exists1 : term * term -> term}
 
 \SYNOPSIS
-Constructs a choice-term.
+Term constructor for unique existence.
 
 \DESCRIBE
 If {v} is a variable and {t} is a term of type {bool}, then 
-{mk_select (v,t)} returns {@var. t}.
+{mk_exists1 (v,t)} returns the term {?!v. t}.
 
 \FAILURE
 Fails if {v} is not a variable or if {t} is not of type {bool}.
 
 \SEEALSO
-dest_select, is_select.
+dest_exists1, is_exists1.
 
 \ENDDOC

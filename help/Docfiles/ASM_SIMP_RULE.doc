@@ -1,6 +1,6 @@
 \DOC ASM_SIMP_RULE
 
-\TYPE {simpLib.ASM_SIMP_RULE : simpset -> thm list -> thm -> thm}
+\TYPE {ASM_SIMP_RULE : simpset -> thm list -> thm -> thm}
 
 \SYNOPSIS
 Simplifies a theorem, using the theorem's assumptions as rewrites in
@@ -19,8 +19,10 @@ Never fails, but may diverge.
 > val it =  [.] |- T : thm
 }
 
-\USES
-Not clear to this author.
+\USES 
+The assumptions can be used to simplify the conclusion of the theorem.
+For example, if the conclusion of a theorem is an implication, the
+antecedent together with the hypotheses may help simplify the conclusion.
 
 \SEEALSO SIMP_CONV, SIMP_RULE.
 

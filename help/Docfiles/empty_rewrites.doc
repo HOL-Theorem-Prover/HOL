@@ -1,6 +1,6 @@
 \DOC empty_rewrites
 
-\TYPE {empty_rewrites: rewrites }
+\TYPE {empty_rewrites: rewrites}
 
 \SYNOPSIS
 The empty database of rewrite rules.
@@ -9,6 +9,7 @@ The empty database of rewrite rules.
 Used to build other rewrite sets.
 
 \SEEALSO
-base_rewrites, add_base_rewrites, add_rewrites.
+bool_rewrites, implicit_rewrites, add_rewrites, 
+add_implicit_rewrites, set_implicit_rewrites.
 
 \ENDDOC

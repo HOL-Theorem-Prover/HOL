@@ -5,6 +5,10 @@
 \SYNOPSIS
 Strips a function application from both sides of an equational goal.
 
+\LIBRARY bool
+
+\STRUCTURE Tactic
+
 \KEYWORDS
 tactic.
 
@@ -21,6 +25,6 @@ Fails unless the goal is equational, with both sides being applications
 of the same function.
 
 \SEEALSO
-AP_TERM, AP_THM.
+AP_TERM, AP_THM, AP_THM_TAC.
 
 \ENDDOC

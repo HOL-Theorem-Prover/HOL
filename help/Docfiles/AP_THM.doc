@@ -1,6 +1,6 @@
 \DOC AP_THM
 
-\TYPE {AP_THM : (thm -> term -> thm)}
+\TYPE {AP_THM : thm -> term -> thm}
 
 \SYNOPSIS
 Proves equality of equal functions applied to a term.
@@ -22,6 +22,6 @@ of which are functions whose domain type is the same as that of the
 supplied term.
 
 \SEEALSO
-AP_TERM, ETA_CONV, EXT, FUN_EQ_CONV, MK_COMB.
+AP_THM_TAC, AP_TERM, ETA_CONV, EXT, FUN_EQ_CONV, MK_COMB.
 
 \ENDDOC

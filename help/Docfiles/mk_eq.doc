@@ -1,19 +1,16 @@
 \DOC mk_eq
 
-\TYPE {mk_eq : {{lhs : term, rhs: term}} -> term}
+\TYPE {mk_eq : term * term -> term}
 
 \SYNOPSIS
 Constructs an equation.
 
 \DESCRIBE
-{mk_eq{{lhs = t1, rhs = t2}}} returns {--`t1 = t2`--}.
+{mk_eq(t1, t2)} returns the term {t1 = t2}.
 
 \FAILURE
-Fails with
-{
-    HOL_ERR{{origin_structure = "Dsyntax", origin_function = "mk_eq",
-            message = "lhs and rhs have different types"}}
-}
+Fails if the type of {t1} is not equal to that of {t2}.
+
 \SEEALSO
 dest_eq, is_eq.
 

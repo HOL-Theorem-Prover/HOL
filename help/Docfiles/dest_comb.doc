@@ -1,16 +1,13 @@
 \DOC dest_comb
 
-\TYPE {dest_comb : term -> {{Rator :term, Rand :term}}}
+\TYPE {dest_comb : term -> term * term}
 
 \SYNOPSIS
 Breaks apart a combination (function application) into rator and rand.
 
 \DESCRIBE
-{dest_comb} is a term destructor for combinations:
-{
-   dest_comb (--`t1 t2`--)
-}
-\noindent returns {{Rator = t1, Rand = t2}}.
+{dest_comb} is a term destructor for combinations. If term {M} has the
+form {f x}, then {dest_comb M} equals {(f,x)}.
 
 \FAILURE
 Fails if the argument is not a function application.

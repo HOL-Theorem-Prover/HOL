@@ -1,9 +1,11 @@
 \DOC ASSUME
 
-\TYPE {ASSUME : (term -> thm)}
+\TYPE {ASSUME : term -> thm}
 
 \SYNOPSIS
 Introduces an assumption.
+
+\LIBRARY HolKernel
 
 \KEYWORDS
 rule, assumption.
@@ -17,9 +19,6 @@ When applied to a term {t}, which must have type {bool}, the inference rule
 }
 \FAILURE
 Fails unless the term {t} has type {bool}.
-
-\COMMENTS
-The type of {ASSUME} is shown by the system as {conv}.
 
 \SEEALSO
 ADD_ASSUM, REFL.

@@ -1,12 +1,14 @@
 \DOC ASM_REWRITE_TAC
 
-\TYPE {ASM_REWRITE_TAC : (thm list -> tactic)}
+\TYPE {ASM_REWRITE_TAC : thm list -> tactic}
 
 \SYNOPSIS
-Rewrites a goal including built-in rewrites and the goal's assumptions.
+Rewrites a goal using built-in rewrites and the goal's assumptions.
 
 \KEYWORDS
 tactic.
+
+\LIBRARY bool
 
 \DESCRIBE
 {ASM_REWRITE_TAC} generates rewrites with the tautologies in {basic_rewrites},
@@ -29,21 +31,21 @@ eventually proved.
 The use of assumptions in rewriting, specially when they are not in an
 obvious equational form, is illustrated below:
 {
-   - let val asm = [Parse.Term `(P:'a->bool) x`]
-         val goal = Parse.Term `(P:'a->bool) x = (Q:'a -> bool) x`
+   - let val asm = [Term `P x`]
+         val goal = Term `P x = Q x`
      in
-     ASM_REWRITE_TAC[](asm, goal)
+     ASM_REWRITE_TAC[] (asm, goal)
      end;
 
-   val it = ([([--`P x`--], --`Q x`--)], fn) : tactic_result
+   val it = ([([`P x`], `Q x`)], fn) : tactic_result
 
-   - let val asm = [Parse.Term `~(P:'a->bool) x`]
-         val goal = Parse.Term `(P:'a->bool) x = (Q:'a -> bool) x`
+   - let val asm = [Term `~P x`]
+         val goal = Term `P x = Q x`
      in
-     ASM_REWRITE_TAC[](asm, goal)
+     ASM_REWRITE_TAC[] (asm, goal)
      end;
 
-   val it = ([([--`~P x`--], --`~Q x`--)], fn) : tactic_result
+   val it = ([([`~P x`], `~Q x`)], fn) : tactic_result
 }
 \SEEALSO
 basic_rewrites, FILTER_ASM_REWRITE_TAC, FILTER_ONCE_ASM_REWRITE_TAC,

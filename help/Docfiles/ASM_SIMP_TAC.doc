@@ -1,13 +1,13 @@
 \DOC ASM_SIMP_TAC
 
-\TYPE {simpLib.ASM_SIMP_TAC : simpset -> thm list -> tactic}
+\TYPE {ASM_SIMP_TAC : simpset -> thm list -> tactic}
 
 \SYNOPSIS
 Simplifies a goal using the simpset, the provided theorems, and the
 goal's assumptions.
 
 \KEYWORDS
-simplification, tactic.
+simplification, rewriting, tactic.
 
 \LIBRARY simpLib
 

@@ -1,6 +1,6 @@
 \DOC ASM_MESON_TAC
 
-\TYPE {mesonLib.ASM_MESON_TAC : thm list -> tactic}
+\TYPE {ASM_MESON_TAC : thm list -> tactic}
 
 \SYNOPSIS
 Performs first order proof search to prove the goal, using the
@@ -8,7 +8,9 @@ assumptions and the theorems given.
 
 \KEYWORDS decision procedure, tactic.
 
-\LIBRARY mesonLib
+\LIBRARY meson
+
+\structure mesonLib
 
 \DESCRIBE
 {ASM_MESON_TAC} is identical in behaviour to {MESON_TAC} except that

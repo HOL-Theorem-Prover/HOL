@@ -1,0 +1,24 @@
+\DOC mk_arb
+
+\TYPE {mk_arb : hol_type -> term}
+
+\SYNOPSIS
+Creates a type instance of the {ARB} constant.
+
+\LIBRARY
+
+\DESCRIBE
+For any HOL type {ty}, {mk_arb ty} creates a type instance of the {ARB}
+constant. 
+
+\FAILURE
+Never fails.
+
+\COMMENTS
+{ARB} is a fixed but arbitrary constant of type {alpha}. It is 
+occasionally useful for creating pseudo-partial functions.
+
+\SEEALSO
+dest_arb, is_arb.
+
+\ENDDOC
