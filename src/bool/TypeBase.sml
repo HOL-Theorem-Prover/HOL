@@ -100,4 +100,14 @@ val _ =
                              | SOME {constructors,...} => constructors))
   end
 
+(*---------------------------------------------------------------------------*)
+(* Syntax operations on case expressions                                     *)
+(*---------------------------------------------------------------------------*)
+
+fun mk_case x   = TypeBasePure.mk_case (theTypeBase()) x
+fun dest_case x = TypeBasePure.dest_case (theTypeBase()) x
+fun is_case x   = TypeBasePure.is_case (theTypeBase()) x;
+
+fun is_constructor x = TypeBasePure.is_constructor (theTypeBase()) x;
+
 end

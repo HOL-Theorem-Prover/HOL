@@ -33,4 +33,9 @@ sig
    val size_of0           : string -> (term * shared_thm) option
    val encode_of0         : string -> (term * shared_thm) option
 
-end;
+   val mk_case            : term * (term * term) list -> term
+   val dest_case          : term -> term * term * (term * term) list
+   val is_case            : term -> bool
+   val is_constructor     : term -> bool
+
+end

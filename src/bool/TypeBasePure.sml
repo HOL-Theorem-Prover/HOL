@@ -463,7 +463,8 @@ fun type_lift db ty =
 end;
 
 (*---------------------------------------------------------------------------*)
-(* Instantiate a constructor to a type. Used in lifting                      *)
+(* Instantiate a constructor to a type. Used in lifting (see                 *)
+(* datatype/Lift.sml                                                         *)
 (*---------------------------------------------------------------------------*)
 
 fun cinst ty c =
@@ -471,5 +472,72 @@ fun cinst ty c =
       val theta = match_type cty ty
   in inst theta c
   end
+
+(*---------------------------------------------------------------------------*)
+(* Syntax operations on the (extensible) set of case expressions.            *)
+(*---------------------------------------------------------------------------*)
+
+fun mk_case tybase (exp, plist) =
+  case get tybase (fst(dest_type (type_of exp)))
+   of NONE => raise ERR "mk_case" "unable to analyze type"
+    | SOME tyinfo =>
+       let val c = case_const_of tyinfo
+           val fns = map (fn (p,R) => list_mk_abs(snd(strip_comb p),R)) plist
+           val ty' = list_mk_fun (map type_of fns@[type_of exp],
+                                  type_of (snd (hd plist)))
+           val theta = match_type (type_of c) ty'
+       in list_mk_comb(inst theta c,fns@[exp])
+       end;
+                         
+
+local fun build_case_clause(constr,rhs) =
+ let val (args,r) = strip_fun (type_of constr)
+     fun peel [] N = ([],N)
+       | peel (_::tys) N = 
+           let val (v,M) = dest_abs N
+               val (V,M') = peel tys M
+           in (v::V,M')
+           end
+     val (V,rhs') = peel args rhs
+     val theta = match_type (list_mk_fun (args,ind))
+                            (list_mk_fun (map type_of V, ind))
+     val constr' = inst theta constr
+  in (list_mk_comb(constr',V), rhs')
+  end
+in
+fun dest_case tybase M = 
+  let val (c,args) = strip_comb M
+      val (cases,arg) = front_last args
+      val tyop = fst(dest_type (type_of arg))
+  in case get tybase tyop
+      of NONE => raise ERR "dest_case" "unable to destruct case expression"
+       | SOME tyinfo => 
+          let val d = case_const_of tyinfo
+          in if same_const c d
+           then let val constrs = constructors_of tyinfo
+                in (c, arg, map build_case_clause (zip constrs cases))
+                end
+           else raise ERR "dest_case" "unable to destruct case expression"
+          end
+  end
+end
+
+fun is_case tybase M = 
+  let val (c,args) = strip_comb M
+      val tyop = fst(dest_type (type_of (last args)))
+  in case get tybase tyop
+      of NONE => raise ERR "is_case" ("unknown type operator: "^Lib.quote tyop)
+       | SOME tyinfo => same_const c (case_const_of tyinfo) 
+  end 
+  handle HOL_ERR _ => false;
+
+fun is_constructor tybase c =
+  let val (_,ty) = strip_fun (type_of c)
+      val {Tyop,...} = dest_thy_type ty
+  in case get tybase Tyop
+     of NONE => false
+      | SOME tyinfo => op_mem same_const c (constructors_of tyinfo)
+  end handle HOL_ERR _ => false;
+
 
 end
