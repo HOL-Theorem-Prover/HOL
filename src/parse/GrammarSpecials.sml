@@ -5,6 +5,7 @@ struct
   val bracket_special = "_ bracket"
   val recsel_special = " _ record select"
   val recupd_special = " _ record update"
+  val recfupd_special = " _ record fupdate"
   val recwith_special = " _ record with"
   val reccons_special = " _ record cons"
   val recnil_special = " _ record nil"

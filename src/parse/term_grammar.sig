@@ -82,6 +82,7 @@ val STtoString : grammar -> stack_terminal -> string
 val stdhol : grammar
 
 val grammar_tokens : grammar -> string list
+val rule_tokens : grammar -> grammar_rule -> string list
 val find_suffix_rhses : grammar -> stack_terminal list
 val find_prefix_lhses : grammar -> stack_terminal list
 

@@ -7,6 +7,7 @@ sig
   val resquan_special : string
   val recsel_special : string
   val recupd_special : string
+  val recfupd_special : string
   val reccons_special : string
   val recnil_special : string
   val recwith_special : string

@@ -15,17 +15,19 @@ signature parse_term = sig
 
     datatype 'a lookahead_item =
       Token of 'a term_tokens.term_token |
-      PreType of TCPretype.pretype
+      PreType of TCPretype.pretype |
+      LA_Symbol of stack_terminal
 
     datatype 'a stack_item =
       Terminal of stack_terminal |
       NonTerminal of 'a preterm |
       NonTermVS of 'a varstruct list
 
+    datatype vsres_state = VSRES_Normal | VSRES_VS | VSRES_RESTM
     datatype 'a PStack =
       PStack of {stack : ('a stack_item * 'a lookahead_item) list,
                  lookahead : 'a lookahead_item list,
-                 in_vstruct : bool}
+                 in_vstruct : (vsres_state * int) list}
     val pstack : 'a PStack -> ('a stack_item * 'a lookahead_item) list
 
     exception PrecConflict of stack_terminal * stack_terminal

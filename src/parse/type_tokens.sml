@@ -19,8 +19,8 @@ fun lex s =
    (symbol "," >> return Comma) ++
    (token (item #"'" >> normal_alpha_ident)  >-
     (fn s => return (TypeVar ("'"^s)))) ++
-   (token (many1_charP HOLid) >- return o TypeIdent) ++
-   (token (many1_charP (HOLsym ANDNOT ITEMS "(),")) >- return o TypeSymbol)) s
+   (token (many1_charP (fromLex Lexis.tyvar_ids)) >- return o TypeIdent) ++
+   (token (many1_charP (HOLsym ANDNOT ITEM #",")) >- return o TypeSymbol)) s
 
 
 fun token_string (TypeIdent s) = s

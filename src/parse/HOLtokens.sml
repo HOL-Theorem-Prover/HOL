@@ -3,11 +3,14 @@ type charclass = char -> bool
 infix ANDNOT OR
 fun (P ANDNOT Q) x = P x andalso not (Q x)
 fun (P OR Q) x = P x orelse Q x
-fun ITEMS s x = Lib.mem x (String.explode s)
+fun ITEMS s = let val clist = String.explode s in (fn x => Lib.mem x clist) end
 fun ITEM c x = x = c
 
 val empty = fn c => false
 
-(* we put _ into both sets *)
-val HOLsym = Char.isPunct ANDNOT ITEMS "$'\""
-val HOLid = Char.isAlphaNum OR ITEMS "_'"
+fun fromLex a c = Lexis.in_class(a, ord c)
+
+val HOLsym = fromLex Lexis.hol_symbols
+
+val HOLspecials = ITEMS "(){}[]."
+

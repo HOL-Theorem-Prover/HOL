@@ -291,7 +291,7 @@ in
   in
     fn q => let
       val ((cs, p), _) = pt (q, PStack {lookahead = [], stack = [],
-                                        in_vstruct = false})
+                                        in_vstruct = [(VSRES_Normal, 0)]})
         handle term_tokens.LEX_ERR s =>
           raise ERROR "Term" ("Lexical error - "^s)
 

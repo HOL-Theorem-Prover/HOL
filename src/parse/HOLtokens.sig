@@ -2,7 +2,8 @@ type charclass = char -> bool
 
 val empty : charclass
 val HOLsym : charclass
-val HOLid : charclass
+val HOLspecials : charclass
+val fromLex : Word8Array.array -> charclass
 
 val ANDNOT : charclass * charclass -> charclass
 val OR : charclass * charclass -> charclass

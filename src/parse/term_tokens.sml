@@ -1,7 +1,6 @@
 (* add comments ; comments should skip over antiquotations *)
 datatype 'a term_token =
-  Ident of string | Symbol of string | Antiquote of 'a |
-  Numeral of (string * char option)
+  Ident of string | Antiquote of 'a | Numeral of (string * char option)
 
 open optmonad monadic_parse
 open fragstr
@@ -12,9 +11,6 @@ exception LEX_ERR of string
 
 open HOLtokens
 infix OR
-
-fun member x [] = false
-  | member x (y::ys) = x = y orelse member x ys
 
 val quotec = #"\"" and bslashc = #"\\" and nlc = #"\n"
 fun q_ok c = c <> quotec andalso c <> bslashc andalso c <> nlc
@@ -27,11 +23,14 @@ fun bslash_error strm =
    (fn x =>
     case x of
       QUOTE s =>
-        (print ("Don't recognise \\"^String.substring(s,0,1)^
-                " as a valid backslash escape.\n");
+        (Lib.mesg true ("Don't recognise \\"^String.substring(s,0,1)^
+                        " as a valid backslash escape.\n");
          pushback x >> fail)
-    | ANTIQUOTE _ => (print "Must not have antiquotations inside strings.\n";
-                      pushback x >> fail))) strm
+    | ANTIQUOTE _ => let
+      in
+        Lib.mesg true "Must not have antiquotations inside strings.\n";
+        pushback x >> fail
+      end)) strm
 
 fun failwith s x = (print s ; fail) x
 fun qstring_contents strm =
@@ -102,22 +101,11 @@ fun quoted_string strm =
 *)
 
 val non_aggregating_chars = explode "()[]{}~."
-fun nonagg_c c = member c non_aggregating_chars
+fun nonagg_c c = Lib.mem c non_aggregating_chars
 
 fun s_has_nonagg_char s = length (String.fields nonagg_c s) <> 1
 
 fun pushback_s s = if s <> "" then pushback (QUOTE s) else ok
-fun split_into_regions s = let
-  val ss = Substring.all s
-  val P =
-    case Substring.getc ss of
-      SOME(c, _) => if HOLid c then HOLid
-                    else HOLsym
-    | NONE => raise Fail "term_tokens.split_into_regions given empty string"
-  val (r1, r2) = Substring.splitl P ss
-in
-  (Substring.string r1, Substring.string r2)
-end
 
 fun compare_pos (((pfx1, _), n1), ((pfx2, _), n2)) = let
   open Substring
@@ -127,48 +115,48 @@ in
   else Int.compare(s1, s2)
 end
 
+fun std_id strm  =
+  (itemP (fromLex Lexis.alphabet) >-
+   (fn c1 => many_charP (fromLex Lexis.alphanumerics) >-
+    (fn remainder => return (str c1 ^ remainder)))) strm
+
+
 fun lex keywords0 afn = let
   val non_agg_specials = List.filter s_has_nonagg_char keywords0
-  val keywords =
-    Listsort.sort (fn (s1, s2) => Int.compare(size s2, size s1)) keywords0
   fun doit dollarp s = let
     open Substring
     val ss = all s
-    fun dollarit s = if dollarp then Ident s else Symbol s
+    fun dollarit s = Ident ((if dollarp then "$" else "") ^ s)
     val non_agg_positions0 =
       map (fn na => (position na ss, na)) non_agg_specials
     val non_agg_positions = Listsort.sort compare_pos non_agg_positions0
     val ((pfx, sfx), na) = hd non_agg_positions
-    fun deal_with_tokensubstring ts =
-      if member (string ts) keywords then return (dollarit (string ts))
-      else let
-        val (r1, r2) = split_into_regions (string ts)
-      in
-        pushback_s r2 >>
-        (if not dollarp andalso member r1 keywords then return (Symbol r1)
-         else return (Ident r1))
-      end
   in
     if (size pfx = 0) then
       pushback_s (string (triml (String.size na) sfx)) >> return (dollarit na)
     else
-      pushback_s (string sfx) >> deal_with_tokensubstring pfx
+      pushback_s (string sfx) >> return (dollarit (string pfx))
   end
 in
   (token antiq >- return o Antiquote) ++
   (token quoted_string >- return o Ident) ++
-  (token (many1_charP HOLid >-                               (fn thyname =>
-          item #"$" >>
-          (many1_charP HOLsym ++ many_charP HOLid) >-        (fn partname =>
-          if member thyname (afn()) then
-            return (Ident(thyname^"$"^partname))
-          else
-            raise LEX_ERR ("Invalid theory name: "^thyname))))) ++
+  (token (optional (item #"$") >- (return o isSome) >-
+          (fn dollared =>
+           std_id >-
+           (fn idstr =>
+            ((item #"$" >>
+              (many1_charP HOLsym ++ std_id) >-
+              (fn partname =>
+               if Lib.mem idstr (afn()) then
+                 return (Ident(idstr^"$"^partname))
+               else
+                 raise LEX_ERR ("Invalid theory name: "^idstr))) ++
+             (return (Ident ((if dollared then "$" else "")^idstr)))))))) ++
   (token (many1_charP Char.isDigit >-       (fn dp =>
           optional (itemP Char.isAlpha) >-  (fn csuffix =>
           return (Numeral(dp, Option.map Char.toLower csuffix)))))) ++
   (token ((optional (item #"$")) >- return o isSome >-   (fn b =>
-          many1_charP (HOLsym OR HOLid) >- doit b)))
+          many1_charP (HOLsym OR HOLspecials) >- doit b)))
 end
 
 
@@ -178,15 +166,12 @@ end
 
 
 fun token_string (Ident s) = s
-  | token_string (Symbol s) = s
   | token_string _ = raise Fail "token_string of something with no string"
 fun dest_aq (Antiquote x) = x
   | dest_aq _ = raise Fail "dest_aq of non antiquote token"
 
 fun is_ident (Ident _) = true
   | is_ident _ = false
-fun is_symbol (Symbol _) = true
-  | is_symbol _ = false
 fun is_aq (Antiquote _) = true
   | is_aq _ = false
 

@@ -12,6 +12,8 @@ datatype grav = Top | RealTop | Prec of (int * string)
 fun grav_name (Prec(n, s)) = s | grav_name _ = ""
 fun grav_prec (Prec(n,s)) = n | grav_prec _ = ~1
 
+fun dest_atom tm = dest_var tm handle HOL_ERR _ => dest_const tm
+
 fun pneeded_by_style (rr: term_grammar.rule_record, pgrav, fname, fprec) =
   case #paren_style rr of
     Always => true
@@ -272,16 +274,60 @@ fun pp_term (G : grammar) TyG = let
        finish off with a single :: <tm>. For example \x y z::Q.
 
        The accompanying can_print_vstructl function spots when the
-       situation as described above pertains.  *)
+       situation as described above pertains.
+
+       One final wrinkle has to be dealt with:
+         The restricting term might have an occurrence in it of
+         something that needs to be printed so that it looks like the
+         endbinding token.  If this happens, then the restriction needs
+         to be parenthesised.  In particular, the standard syntax has
+         "." as the endbinding token and as the infix record selection
+         operator, so that if you write
+             !x y :: (rec.fld1). body
+         the parenthesisation needs to be preserved.
+
+         So, we have one last auxiliary function which determines whether
+         or not the restrictor might print an endbinding token. *)
+
+    infix might_print nmight_print
+    fun {Name,Ty} nmight_print str = let
+      val actual_name0 =
+        case Overload.overloading_of_nametype overload_info (Name,Ty) of
+          NONE => Name
+        | SOME s => s
+      fun testit s = if isPrefix s actual_name0 then SOME s else NONE
+      val actual_name =
+        case find_partial testit [recsel_special, recupd_special,
+                                  recfupd_special] of
+          NONE => actual_name0
+        | SOME s => s
+      val rule = lookup_term actual_name
+    in
+      case rule of
+        NONE => Name = str
+      | SOME [(_, rr)] => mem str (term_grammar.rule_tokens G rr)
+      | SOME _ => raise Fail "term_pp.nmight_print: can't happen"
+    end
+
+    fun tm might_print str =
+      case (dest_term tm) of
+        COMB{Rator, Rand} => Rator might_print str orelse Rand might_print str
+      | LAMB{Body,...} => Body might_print str
+      | x => (dest_atom tm) nmight_print str
+
+
     fun pr_res_vstructl restrictor res_op vsl = let
       val simples = map (Simple o bv2term) vsl
+      val add_final_parens = restrictor might_print endbinding
     in
       begin_block CONSISTENT 2;
       begin_block INCONSISTENT 2;
       pr_list pr_vstruct (fn () => ()) (fn () => add_break(1,0)) simples;
       end_block();
       add_string res_op;
+      pbegin add_final_parens;
       pr_term restrictor Top Top Top (depth - 1);
+      pend add_final_parens;
       end_block ()
     end
     fun can_print_vstructl vsl = let
@@ -786,7 +832,6 @@ fun pp_term (G : grammar) TyG = let
       | COMB{Rator, Rand} => let
           val (f, args) = strip_comb Rator
           fun is_atom tm = is_const tm orelse is_var tm
-          fun dest_atom tm = dest_var tm handle HOL_ERR _ => dest_const tm
           fun pr_atomf fname = let
             val candidate_rules = lookup_term fname
             fun is_list (r as {nilstr, cons, ...}) tm =

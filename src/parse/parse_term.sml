@@ -1,12 +1,10 @@
+open Lib
 open monadic_parse optmonad term_tokens term_grammar HOLgrammars
 open GrammarSpecials
 infix >> >- ++ >->
 
 exception ParseTermError of string
 type 'a token = 'a term_tokens.term_token
-
-fun member x [] = false
-  | member x (y::ys) = x = y orelse member x ys
 
 fun insert_sorted (k, v) [] = [(k, v)]
   | insert_sorted kv1 (wholething as (kv2::rest)) = let
@@ -213,7 +211,7 @@ fun mk_prec_matrix G = let
     case rule of
       INFIX(STD_infix(rules, _)) => map rule_right rules
     | INFIX RESQUAN_OP => [ResquanOpTok]
-    | PREFIX (BINDER _) => [STD_HOL_TOK endbinding]
+    | PREFIX (BINDER _) => [EndBinding]
     | PREFIX (STD_prefix rules) => map rule_right rules
     | FNAPP => [STD_HOL_TOK fnapp_special]
     | VSCONS => [VS_cons]
@@ -329,7 +327,7 @@ fun mk_prec_matrix G = let
 in
   app insert_eqs Grules ;
   insert (BOS, EOS) EQUAL;
-  insert (STD_HOL_TOK lambda, STD_HOL_TOK endbinding) EQUAL;
+  insert (STD_HOL_TOK lambda, EndBinding) EQUAL;
   app terms_between_equals (calc_eqpairs());
   (* these next equality pairs will never have terms interfering between
      them, so we can insert the equality relation between them after doing
@@ -430,13 +428,15 @@ fun is_nonterm t = not (is_terminal t)
 
 
 datatype 'a lookahead_item =
-  Token of 'a term_token | PreType of TCPretype.pretype
+  Token of 'a term_token | PreType of TCPretype.pretype |
+  LA_Symbol of stack_terminal
 
+datatype vsres_state = VSRES_Normal | VSRES_VS | VSRES_RESTM
 
 datatype 'a PStack =
   PStack of {stack : ('a stack_item * 'a lookahead_item) list,
              lookahead : 'a lookahead_item list,
-             in_vstruct : bool}
+             in_vstruct : (vsres_state * int) list}
 
 
 
@@ -447,14 +447,29 @@ fun pla (PStack{lookahead,...}) = lookahead
 fun upd_la (PStack {stack, lookahead, in_vstruct}) new =
   PStack{stack = stack, lookahead = new, in_vstruct = in_vstruct}
 fun invstructp0 (PStack{in_vstruct,...}) = in_vstruct
-fun into_vs0 (PStack{in_vstruct,lookahead,stack}) =
-  PStack{stack = stack, lookahead = lookahead, in_vstruct = true}
-fun outof_vs0 (PStack{in_vstruct,lookahead,stack}) =
-  PStack{stack = stack, lookahead = lookahead, in_vstruct = false}
 
-fun into_vs (cs, p) = ((cs, into_vs0 p), SOME ())
-fun outof_vs (cs, p) = ((cs, outof_vs0 p), SOME ())
+fun fupd_hd f [] = []
+  | fupd_hd f (x::xs) = f x :: xs
+
+fun fupd_fst f (x,y) = (f x, y)
+fun fupd_snd f (x,y) = (x, f y)
+
+fun fupd_vs0 f (PStack{in_vstruct,lookahead,stack}) =
+  PStack{stack = stack, lookahead = lookahead, in_vstruct = f in_vstruct}
+
 fun invstructp (cs, p) = ((cs, p), SOME (invstructp0 p))
+
+fun inc_paren (cs, p) = ((cs, fupd_vs0 (fupd_hd (fupd_snd (fn n => n + 1))) p),
+                         SOME ())
+fun dec_paren (cs, p) = ((cs, fupd_vs0 (fupd_hd (fupd_snd (fn n => n - 1))) p),
+                         SOME ())
+fun enter_binder (cs,p) =
+  ((cs, fupd_vs0 (fn rest => (VSRES_VS, 0)::rest) p), SOME ())
+fun enter_restm (cs, p) =
+  ((cs, fupd_vs0 (fupd_hd (fupd_fst (K VSRES_RESTM))) p), SOME ())
+fun leave_restm (cs, p) =
+  ((cs, fupd_vs0 (fupd_hd (fupd_fst (K VSRES_VS))) p), SOME ())
+fun leave_binder (cs, p) = ((cs, fupd_vs0 tl p), SOME ())
 
 fun push_pstack p i = upd_stack p (i::pstack p)
 fun top_pstack p = hd (pstack p)
@@ -489,27 +504,36 @@ fun parse_term (G : grammar) typeparser afn = let
   val prec_matrix = mk_prec_matrix G
   val rule_db = mk_ruledb G
   val is_binder = is_binder G
-  val lex = lift (term_tokens.lex (grammar_tokens G) afn)
+  val grammar_tokens = term_grammar.grammar_tokens G
+  val lex = lift (term_tokens.lex (endbinding::grammar_tokens) afn)
+  val keyword_table = Polyhash.mkPolyTable (50, Fail "")
+  val _ = app (fn v => Polyhash.insert keyword_table (v, ())) grammar_tokens
   fun itemP P = lex >- (fn t => if P t then return t else fail)
   fun item t = itemP (fn t' => t = t')
 
-  fun transform in_vs (t:'a lookahead_item option) =
+  fun transform (in_vs as (vs_state, nparens)) (t:'a lookahead_item option) =
     case t of
-      NONE => EOS
+      NONE => (EOS, t)
     | SOME (Token x) => let
       in
         case x of
-          Ident s => if s = res_quanop andalso in_vs then ResquanOpTok else Id
-        | Symbol s =>
-            if s = type_intro then TypeColon
-            else if s = vs_cons_special then VS_cons
-            else if s = endbinding then EndBinding
-            else if s = res_quanop andalso in_vs then ResquanOpTok
-                 else (STD_HOL_TOK s)
-        | Antiquote a => Id
-        | Numeral _ => Id
+          Ident s =>
+            if String.sub(s,0) = #"$" then
+              (Id, SOME (Token (Ident (String.extract(s,1,NONE)))))
+            else if s = res_quanop andalso vs_state = VSRES_VS then
+              (ResquanOpTok, t)
+            else if s = type_intro then (TypeColon, t)
+            else if s = vs_cons_special then (VS_cons, t)
+            else if s = endbinding andalso nparens = 0 andalso
+              vs_state <> VSRES_Normal then (EndBinding, t)
+            else if isSome (Polyhash.peek keyword_table s) then
+              (STD_HOL_TOK s, t)
+                 else (Id, t)
+        | Antiquote _ => (Id, t)
+        | Numeral _ => (Id, t)
       end
-    | SOME (PreType ty) => TypeTok
+    | SOME (PreType ty) => (TypeTok, t)
+    | SOME (LA_Symbol st) => (st, t)
 
   (* find the initial segment of the stack such that all of the segment
      has the equality relation between components and such that the first
@@ -666,7 +690,7 @@ fun parse_term (G : grammar) typeparser afn = let
       in
         pop >> invstructp >-
         (fn inv =>
-         if inv then
+         if #1 (hd inv) = VSRES_VS then
            push (NonTermVS [VS_AQ a], tt)
          else
            push (NonTerminal (AQ a), tt))
@@ -677,13 +701,13 @@ fun parse_term (G : grammar) typeparser afn = let
         pop >> invstructp >-
         (fn inv => let
           val thing_to_push =
-            case (inv, tt) of
-              (true, Numeral _) => let
+            case (#1 (hd inv), tt) of
+              (VSRES_VS, Numeral _) => let
               in
                 Lib.mesg true "can't have numerals in binding positions";
                 raise Temp
               end
-            | (false, Numeral(dp, copt)) => let
+            | (_, Numeral(dp, copt)) => let
                 val numeral_part =
                   Term.prim_mk_numeral
                   {mkCOMB = (fn {Rator, Rand} => COMB(Rator, Rand)),
@@ -699,7 +723,8 @@ fun parse_term (G : grammar) typeparser afn = let
                     case injector of
                       NONE => let
                       in
-                        print ("Invalid suffix "^str c^" for numeral\n");
+                        Lib.mesg true ("Invalid suffix "^str c^
+                                       " for numeral");
                         raise Temp
                       end
                     | SOME (_, strop) => NonTerminal (inject_np strop)
@@ -723,8 +748,8 @@ fun parse_term (G : grammar) typeparser afn = let
                       NonTerminal (inject_np (#2 (hd num_info)))
                   end
               end
-            | (true, _) => NonTermVS [SIMPLE (token_string tt)]
-            | (false, _) => NonTerminal (VAR (token_string tt))
+            | (VSRES_VS, _) => NonTermVS [SIMPLE (token_string tt)]
+            | _ => NonTerminal (VAR (token_string tt))
         in
            push (thing_to_push, Token tt)
         end handle Temp => fail)
@@ -820,7 +845,7 @@ fun parse_term (G : grammar) typeparser afn = let
       in
          repeatn 3 pop >> push (NonTermVS (map (fn v => RESTYPEDV(v,t)) vsl),
                                 Token (Ident "XXX")) >>
-         into_vs
+         leave_restm
       end
     | _ => let
       fun is_vcons_list [] = false
@@ -859,26 +884,31 @@ fun parse_term (G : grammar) typeparser afn = let
 
   val shift =
     current_la >-
-    (fn la => invstructp >-
+    (fn la => invstructp >- (return o hd) >-
      (fn in_vs =>
       case la of
         [] => fail
-      | (x::xs) => let
-          val terminal = transform in_vs (SOME x)
+      | (x0::xs) => let
+          val (terminal,x) = transform in_vs (SOME x0)
         in
-          push (Terminal terminal, x) >>
+          push (Terminal terminal, valOf x) >>
           (if null xs then get_item else set_la xs) >>
              (case terminal of
-                STD_HOL_TOK s => if is_binder s then into_vs
-                                 else ok
-              | ResquanOpTok => outof_vs
-              | EndBinding => outof_vs
+                STD_HOL_TOK s =>
+                  if is_binder s then enter_binder
+                  else if s = "(" andalso #1 in_vs <> VSRES_Normal then
+                    inc_paren
+                  else if s = ")" andalso #1 in_vs <> VSRES_Normal then
+                    dec_paren
+                       else ok
+              | ResquanOpTok => enter_restm
+              | EndBinding => leave_binder
               | _ => ok)
         end))
 
 
   fun doit (tt, (top_item, top_token), in_vs) = let
-    val input_term = transform in_vs tt
+    val (input_term, _) = transform (hd in_vs) tt
     val top = dest_terminal top_item
     val ttt = Terminal input_term
     fun less_action stack =
@@ -887,17 +917,17 @@ fun parse_term (G : grammar) typeparser afn = let
          then we should insert the magical function application operator *)
       case stack of
         (NonTerminal _, _)::_ => let
-          val fnt = Token (Symbol fnapp_special)
+          val fnt = LA_Symbol (STD_HOL_TOK fnapp_special)
         in
-          if member input_term closed_lefts then
+          if mem input_term closed_lefts then
             current_la >- (fn oldla => set_la (fnt::oldla))
           else
             shift
         end
       | (NonTermVS _, _) :: _ => let
-          val fnt = Token (Symbol vs_cons_special)
+          val fnt = LA_Symbol VS_cons
         in
-          if member input_term closed_lefts then
+          if mem input_term closed_lefts then
             current_la >- (fn oldla => set_la (fnt::oldla))
           else
             shift

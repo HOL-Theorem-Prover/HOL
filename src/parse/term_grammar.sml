@@ -229,7 +229,7 @@ val stdhol : grammar =
             (SOME 2000, FNAPP),
             (SOME 2500,
              INFIX (STD_infix ([{term_name = recsel_special,
-                                 elements = [RE (TOK "->")],
+                                 elements = [RE (TOK ".")],
                                  preferred = false,
                                  block_style = (AroundEachPhrase,
                                                 (PP.CONSISTENT, 0)),
@@ -251,7 +251,7 @@ val stdhol : grammar =
    overload_info = []
    }
 
-fun grammar_tokens G = let
+local
   open stmonad
   infix >>
   fun add x acc = (x::acc, ())
@@ -259,31 +259,39 @@ fun grammar_tokens G = let
     | specials_from_elm ((TOK x)::xs) = add x >> specials_from_elm xs
     | specials_from_elm (TM::xs) = specials_from_elm xs
   val mmap = (fn f => fn args => mmap f args >> ok)
-  fun rule_specials (PREFIX(STD_prefix rules)) =
+  fun rule_specials G r = let
+    val rule_specials = rule_specials G
+  in
+    case r of
+      PREFIX(STD_prefix rules) =>
         mmap (specials_from_elm o rule_elements o #elements) rules
-    | rule_specials (PREFIX (BINDER b)) =
-        mmap add (map (binder_to_string G) b) >>
-        add (#endbinding (#specials G))
-    | rule_specials (SUFFIX(STD_suffix rules)) =
+    | PREFIX (BINDER b) =>
+        mmap add (map (binder_to_string G) b)
+    | SUFFIX(STD_suffix rules) =>
         mmap (specials_from_elm o rule_elements o #elements) rules
-    | rule_specials (SUFFIX TYPE_annotation) = add (#type_intro (#specials G))
-    | rule_specials (INFIX(STD_infix (rules, _))) =
+    | SUFFIX TYPE_annotation => add (#type_intro (#specials G))
+    | INFIX(STD_infix (rules, _)) =>
         mmap (specials_from_elm o rule_elements o #elements) rules
-    | rule_specials (INFIX RESQUAN_OP) = ok
-    | rule_specials (CLOSEFIX rules) =
+    | INFIX RESQUAN_OP => ok
+    | CLOSEFIX rules =>
         mmap (specials_from_elm o rule_elements o #elements) rules
-    | rule_specials (LISTRULE rlist) = let
+    | LISTRULE rlist => let
         fun process r =
           add (#separator r) >> add (#leftdelim r) >> add (#rightdelim r)
       in
         mmap process rlist
       end
-    | rule_specials FNAPP = ok
-    | rule_specials VSCONS = ok
-  fun gs (G:grammar) = mmap (rule_specials o #2) (#rules G)
-  val (all_specials, ()) = gs G []
+    | FNAPP => ok
+    | VSCONS => ok
+  end
 in
-  Lib.mk_set all_specials
+  fun grammar_tokens G = let
+    fun gs (G:grammar) = mmap (rule_specials G o #2) (#rules G)
+    val (all_specials, ()) = gs G []
+  in
+    Lib.mk_set all_specials
+  end
+  fun rule_tokens G r = Lib.mk_set (#1 (rule_specials G r []))
 end
 
 (* turn a rule element list into a list of std_hol_toks *)
