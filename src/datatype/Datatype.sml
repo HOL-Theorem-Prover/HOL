@@ -321,29 +321,38 @@ val new_asts_datatype  = define_type o to_tyspecs;
 fun new_datatype q     = new_asts_datatype (ParseDatatype.parse q);
 
 
+(* ----------------------------------------------------------------------
+    Determine if a parsed type spec is calling for an enumerated type
+   ---------------------------------------------------------------------- *)
+
+(* returns false if there is more than one type called for.  Really, *)
+(* if there is more than one type, but they are all for enumerated types *)
+(* we should be able to disentangle them and call type definition for each *)
+(* of them independently *)
+
+fun is_enum_type_spec astl =
+    case astl of
+      [(ty,Constructors constrs)] => List.all (null o #2) constrs
+    (* recall that constrs is a list of constr-name - type arguments pairs *)
+    | _ => false
+
+
+(* ----------------------------------------------------------------------
+    Build a tyinfo list for an enumerated type.
+   ---------------------------------------------------------------------- *)
+
+fun build_enum_tyinfo (tyname, ast) =
+    case ast of
+      Constructors clist => EnumType.enum_type_to_tyinfo (tyname, map #1 clist)
+    | _ => raise ERR "build_enum_tyinfo" "Should never happen"
+
+fun build_enum_tyinfos astl = map build_enum_tyinfo astl
+
+
+
 (*---------------------------------------------------------------------------
     Returns a list of tyinfo thingies
  ---------------------------------------------------------------------------*)
-
-(*
-fun build_tyinfos db {induction,recursion} =
- let val case_defs = Prim_rec.define_case_constant recursion
-     val tyinfol = TypeBase.gen_tyinfo
-                      {ax=recursion, ind=induction, case_defs=case_defs}
- in case define_size recursion db
-     of NONE => (Lib.mesg true "Couldn't define size function"; tyinfol)
-      | SOME {def,const_tyopl} =>
-          map (fn tyinfo =>
-                let val tyname = TypeBase.ty_name_of tyinfo
-                in case assoc2 tyname const_tyopl
-                    of SOME(c,tyop) => TypeBase.put_size (c,def) tyinfo
-                     | NONE => (Lib.mesg true
-                                  ("Can't find size constant for"^tyname);
-                                raise ERR "build_tyinfos" "")
-                end)
-            tyinfol handle HOL_ERR _ => tyinfol
- end;
-*)
 
 fun build_tyinfos db {induction,recursion} =
  let val case_defs = Prim_rec.define_case_constant recursion
@@ -380,7 +389,11 @@ in
 fun primHol_datatype db q =
    let val astl = ParseDatatype.parse q
        val field_names_list = map field_names_of astl
-       val tyinfos = build_tyinfos db (new_asts_datatype astl)
+       val tyinfos =
+           if is_enum_type_spec astl then
+             build_enum_tyinfos astl
+           else
+             build_tyinfos db (new_asts_datatype astl)
    in
       map add_record_facts (zip tyinfos field_names_list)
    end
