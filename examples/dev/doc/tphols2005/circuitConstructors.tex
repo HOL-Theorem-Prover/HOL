@@ -1,0 +1,154 @@
+\newpage
+%--------------------------------------------------------------------------
+\section*{Appendix: The circuit constructors}
+\label{CircuitConstructors}
+%--------------------------------------------------------------------------
+\vspace*{-3mm}
+
+The components used in the definitions of the circuit constructors are:
+
+\smallskip
+$
+\begin{array}{l}
+\TURNST\ \DEF{AND}\ (\sVAR{in}{1},\sVAR{in}{2},\VAR{out}) ~ = 
+   \forall t.\ \VAR{out}\ t = (\sVAR{in}{1}\ t\ \AND\ \sVAR{in}{2}\ t)\\
+\TURNST\ \DEF{OR}\ (\sVAR{in}{1},\sVAR{in}{2},\VAR{out}) ~ =
+   \forall t.\ \VAR{out}\ t = (\sVAR{in}{1}\ t\ \OR\ \sVAR{in}{2}\ t)\\
+\TURNST\ \DEF{NOT}\ (\VAR{inp},\VAR{out}) ~ = 
+   \forall t.\ \VAR{out}\ t = \NOT(\VAR{inp}\ t)\\
+\TURNST\ \DEF{MUX} (\VAR{sw,in_1,in_2nout})~ =~
+ \forall t.\ out~t =  \IF{sw~t}{in_1~t}{in_2~t}\\
+\TURNST\ \DEF{COMB}\ f\ \VAR{(inp,out)} ~ = \forall t.\ \VAR{out}\ t = f (\VAR{inp}\ t)\\
+\TURNST\ \DEF{DEL}\ (\VAR{inp},\VAR{out}) ~ = 
+    (\VAR{out}\ 0 = \VAR{inp}\ 0)\ \AND\ 
+    (\forall t.\ \VAR{out} (t{+}1) = \VAR{inp}\ t)\\
+\TURNST\ \DEF{DFF} (\VAR{d,clk,q})~ =~
+ \forall t.\ q (t{+}1) =  \IF{\DEF{Posedge}\ \VAR{clk}\ (t{+}1)}{d (t{+}1)}{q\ t}
+\end{array}
+$
+ 
+
+$
+\TURNST\ \DEF{POSEDGE} (\VAR{inp},\VAR{out}) = 
+    \exists c_0~ c_1.\ \DEF{DEL} (\VAR{inp},c_0)\ \AND\
+                  \DEF{NOT} (c_0, c_1)\ \AND\ \DEF{AND} (c_1,\VAR{inp},\VAR{out})
+$
+
+$
+\begin{array}{l}
+\TURNST\ \DEF{ATM}\ f\ (\VAR{load,inp,done,out}) =\\
+\phantom{\TURNST\ ~~}    \exists c_0~ c_1.\ \DEF{POSEDGE} (\VAR{load}, c_0)\ \AND \ 
+\DEF{NOT} (c_0, \VAR{done})\ \AND\\
+\phantom{\TURNST\ ~~\exists c_0, c_1.\ }  \DEF{COMB}\ f\ (\VAR{inp},c_1)\ \AND\ \DEF{DEL} (c_1,\VAR{out})
+\end{array}
+$
+
+
+$
+\begin{array}{l}
+\TURNST\ \DEF{SEQ}\ f\ g\ (\VAR{load,inp,done,out}) = \\
+\phantom{\TURNST\ ~~} \exists c_0~ c_1~ c_2~ c_3~ \VAR{data}.\\
+\phantom{\TURNST\ ~~\exists~}                      \DEF{NOT} (c_2,c_3) \ \AND \ 
+                      \DEF{OR} (c_3,\VAR{load},c_0) \ \AND \  f (c_0,\VAR{inp},c_1,\VAR{data}) \ \AND \\
+\phantom{\TURNST\ ~~ \exists~} 
+        g (c_1,\VAR{data},c_2,\VAR{out})\ \AND\ 
+        \DEF{AND} (c_1,c_2,\VAR{done}) 
+\end{array}
+$
+
+$
+\begin{array}{l}
+\TURNST\ \DEF{PAR}\ f\ g\ (\VAR{load,inp,done,out}) = \\
+\phantom{\TURNST\ ~}     \exists c_0~c_1~\VAR{start}~\sVAR{done}{1}~\sVAR{done}{2}~
+                                 \sVAR{data}{1}~\sVAR{data}{2}~\sVAR{out}{1}~\sVAR{out}{2}.\\
+\phantom{\TURNST\ ~~ \exists~}
+       \DEF{POSEDGE} (\VAR{load},c_0)\ \AND\  
+       \DEF{DEL} (\VAR{done},c_1)\ \AND \ 
+       \DEF{AND} (c_0,c_1,\VAR{start})\ \AND\\
+\phantom{\TURNST\ ~~ \exists~}
+       f (\VAR{start},\VAR{inp},\sVAR{done}{1},\sVAR{data}{1})\ \AND \ 
+       g (\VAR{start},\VAR{inp},\sVAR{done}{2},\sVAR{data}{2})\ \AND\\
+\phantom{\TURNST\ ~~ \exists~}
+       \DEF{DFF} (\sVAR{data}{1},\sVAR{done}{1},\sVAR{out}{1})\ \AND \  
+       \DEF{DFF} (\sVAR{data}{2},\sVAR{done}{2},\sVAR{out}{2})\ \AND\\
+\phantom{\TURNST\ ~~ \exists~}
+       \DEF{AND} (\sVAR{done}{1},\sVAR{done}{2},done)\ \AND \ 
+       (\VAR{out} = \LAMBDA{t}{(\sVAR{out}{1}\ t,\sVAR{out}{2}\ t)})
+\end{array}
+$
+
+$
+\begin{array}{l}
+\TURNST\ \DEF{ITE}\ e\ f\ g\ (\VAR{load,inp,done,out}) =\\
+\phantom{\TURNST\ ~}
+   \exists c_0~c_1~c_2~\VAR{start}~\VAR{start'}~\VAR{done\_e}~\VAR{data\_e}~q~ 
+                          \VAR{not\_e}~\VAR{data\_f}~\VAR{data\_g}~\VAR{sel}\\
+\phantom{\TURNST\ ~\exists }
+                  \VAR{done\_f}~\VAR{done\_g}~
+                          \VAR{start\_f}~\VAR{start\_g}.\ \\
+\phantom{\TURNST\ ~\exists ~}
+           \DEF{POSEDGE} (\VAR{load},c_0)\ \AND\
+           \DEF{DEL} (\VAR{done},c_1)\ \AND\ \DEF{AND} (c_0,c_1,\VAR{start})\ \AND \\
+\phantom{\TURNST\ ~\exists ~}
+           e (\VAR{start},\VAR{inp},\VAR{done\_e},\VAR{data\_e})\ \AND\
+           \DEF{POSEDGE} (\VAR{done\_e},\VAR{start'})\ \AND \\
+\phantom{\TURNST\ ~\exists ~}
+           \DEF{DFF} (\VAR{data\_e},\VAR{done\_e},\VAR{sel})\ \AND\
+           \DEF{DFF} (\VAR{inp},\VAR{start},q)\ \AND \\
+\phantom{\TURNST\ ~\exists ~}
+           \DEF{AND} (\VAR{start'},\VAR{data\_e},\VAR{start\_f})\ \AND\
+           \DEF{NOT} (\VAR{data\_e},\VAR{not\_e})\ \AND \\
+\phantom{\TURNST\ ~\exists ~}
+           \DEF{AND} (\VAR{start'},\VAR{not\_e},\VAR{start\_g})\ \AND\
+           f (\VAR{start\_f},q,\VAR{done\_f},\VAR{data\_f})\ \AND\\
+\phantom{\TURNST\ ~\exists ~}
+           g (\VAR{start\_g},q,\VAR{done\_g},\VAR{data\_g})\ \AND\
+           \DEF{MUX} (\VAR{sel},\VAR{data\_f},\VAR{data\_g},out)\ \AND \\
+\phantom{\TURNST\ ~\exists ~}
+           \DEF{AND} (\VAR{done\_e},\VAR{done\_f},c_2)\ \AND\
+           \DEF{AND} (c_2,\VAR{done\_g},\VAR{done}) 
+\end{array}
+$
+
+$
+\begin{array}{l}
+\TURNST\ \DEF{REC}\ e\ f\ g\ (\VAR{load,inp,done,out}) = \\
+\phantom{\TURNST\ ~}
+     \exists \VAR{done\_g}~ \VAR{data\_g}~ \VAR{start\_e}~ q~ \VAR{done\_e}~ 
+             \VAR{data\_e}~ \VAR{start\_f}~ \VAR{start\_g}~ \VAR{inp\_e}~ 
+             \VAR{done\_f}\\[-1mm]
+\phantom{\TURNST\ ~\exists }
+             \sVAR{c}{0}~ \sVAR{c}{1}~ 
+             \sVAR{c}{2}~ \sVAR{c}{3}~\sVAR{c}{4}~
+             \VAR{start}~ \VAR{sel}~ \VAR{start'}~ \VAR{not\_e}. \\[0.5mm]
+\phantom{\TURNST\ ~\exists~ }
+        \DEF{POSEDGE}(\VAR{load},\sVAR{c}{0})\ \AND\
+        \DEF{DEL}(\VAR{done},\sVAR{c}{1})\ \AND\
+        \DEF{AND}(\sVAR{c}{0},\sVAR{c}{1},\VAR{start})\ \AND \\
+\phantom{\TURNST\ ~\exists~ }
+        \DEF{OR}(\VAR{start,sel,start\_e})\ \AND\
+        \DEF{POSEDGE}(\VAR{done\_g,sel})\ \AND \\
+\phantom{\TURNST\ ~\exists~ }
+        \DEF{MUX}(\VAR{sel,data\_g,inp,inp\_e})\ \AND\
+           \DEF{DFF}(\VAR{inp\_e},\VAR{start\_e},q)\ \AND \\
+\phantom{\TURNST\ ~\exists~ }
+           e (\VAR{start\_e},\VAR{inp\_e},\VAR{done\_e},\VAR{data\_e}) \AND\
+        \DEF{POSEDGE}(\VAR{done\_e,start'})\ \AND \\
+\phantom{\TURNST\ ~\exists~ }
+        \DEF{AND}(\VAR{start',data\_e,start\_f})\ \AND\
+        \DEF{NOT}(\VAR{data\_e,not\_e})\ \AND \\
+\phantom{\TURNST\ ~\exists~ }
+        \DEF{AND}(\VAR{not\_e,start',start\_g})\ \AND\
+           f (\VAR{start\_f},q,\VAR{done\_f},\VAR{out})\ \AND\\
+\phantom{\TURNST\ ~\exists~ }
+           g (\VAR{start\_g},q,\VAR{done\_g},\VAR{data\_g})\ \AND\
+        \DEF{DEL}(\VAR{done\_g},\sVAR{c}{3})\ \AND\\
+\phantom{\TURNST\ ~\exists~ }
+        \DEF{AND}(\VAR{done\_g},\sVAR{c}{3},\sVAR{c}{4})\ \AND\
+        \DEF{AND}(\VAR{done\_f},\VAR{done\_e},\sVAR{c}{2})\ \AND\
+        \DEF{AND}(\sVAR{c}{2},\sVAR{c}{4},\VAR{done})
+\end{array}
+$
+
+%\fbox{Can we put the diagrams back so that they all fit onto the rest of this page?}
+

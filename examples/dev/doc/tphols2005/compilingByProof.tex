@@ -1,0 +1,17 @@
+
+Steps 1 and 2 in the previous section are performed automatically when
+a function is defined using the \texttt{hwDefine} command.  Steps 3
+and 4 are invoked using separate SML functions applied to the output
+of \texttt{hwDefine}. All these steps are implemented as derived proof
+rules, so that the circuit produced is formally verified by theorem
+proving.
+
+
+Typically one defines several functions using \texttt{hwDefine} in a
+top-down fashion, as illustrated in Section~\ref{secHOL2Verilog}.  The
+combination of the resulting implementations can be done
+interactively, or by writing a script (analogous to a Makefile) in
+SML. The user must explicitly declare constants that are to be
+combinational primitives, and must also supply implementations of
+these in the form of Verilog modules.
+

@@ -1,26 +1,25 @@
 
-Our system is implemented in HOL4, but we think the ideas could be
+Our system is implemented in HOL4, but the ideas could be
 realised in other programmable higher order logic proof systems like
 Isabelle, PVS, NuPrl and Coq. In such systems, functions are defined
 recursively and then proof scripts are executed to prove properties of
 the functions.  Proof scripts are programs that perform sequences of
 deductions to create theorems.
 
-In our system we create theorems of the form $\vdash
-{\it{Imp}}\Longrightarrow\texttt{DEV}~f$, where {\it{Imp}} is a term
-describing a circuit and $\texttt{DEV}~f$ specifies that function $f$
-is computed. The operator $\Longrightarrow$ is intuitively
-implication, but is actually lifted implication between functions (see
-Section~\ref{secSpecification} for an explanation).
-Several different representations of implementations are
-created, with the lowest level currently corresponding to
+The key idea of our approach to synthesis is to create theorems of the
+form $\vdash {\it{Imp}}\Longrightarrow\texttt{DEV}~f$, where
+{\it{Imp}} is a term describing a circuit, $\texttt{DEV}~f$ specifies
+that function $f$ is computed by a four-phase handshake and the
+operator $\Longrightarrow$ means that the implementation meets the
+specification.  Several different representations of implementations
+are created, with the lowest level currently corresponding to
 synthesisable Verilog.
 
-We illustrate the synthesis flow we have created inside HOL4 on a
+We illustrate the translation from higher order logic to hardware with a
 simple toy example: the factorial function. This example is chosen for
 clarity in illustrating our ideas and is not typical of the kind of
-applications were are working on!  For a discussion of the
-applications we are interested in, see Section~\ref{secRelatedWork}.
+applications were are working on!  For a discussion of those
+applications see Section~\ref{secRelatedWork}.
 
 The factorial function \texttt{FACT} satisfies
 
@@ -31,7 +30,7 @@ The factorial function \texttt{FACT} satisfies
 \end{verbatim}}
 
 \vspace*{-2mm}
-As we can only synthesise tail recursions, the first
+We can only synthesise tail recursions, so the first
 step is to define a tail-recursive function \texttt{FactIter} and show
 that it can be used to compute \texttt{Fact}.
 
@@ -82,18 +81,17 @@ implicit \texttt{Define}), but it also creates a theorem:
 
 \vspace*{-2mm}
 
-\noindent The term to the left of the lifted implication \texttt{===>}
-represents an implementation using
-`circuit combinators' which are described in
-Section~\ref{secSpecification} (\texttt{REC} is a recursion combinator).  The term \texttt{DEV~FactIter}
-describes a behaviour that applies the function \texttt{FactIter}
-under the control of a four-phase handshake, which is specified in the
+\noindent The term to the left of \texttt{===>}
+represents an implementation using `circuit constructors' which are
+described in the appendix.  The term \texttt{DEV~FactIter} describes a
+behaviour that applies the function \texttt{FactIter} under the
+control of a four-phase handshake, which is specified in the
 definition of the higher order function \texttt{DEV} (also described
 in Section~\ref{secSpecification}). The theorem, which is proved
 automatically by \texttt{hwDefine}, verifies that the circuit is a
-correct implementation of \texttt{FactIter}. As it is \texttt{FACT}, not
-\texttt{FactIter}, that we want to implement, we create an implementation
-of it:
+correct implementation of \texttt{FactIter}. As it is the factorial
+function \texttt{FACT} that we want to implement, we create an
+implementation of it, called \texttt{Fact}, using \texttt{FactIter}:
 
 \vspace*{-2mm}
 
@@ -104,9 +102,9 @@ of it:
 \vspace*{-2mm}
 
 \noindent The implicit \texttt{Define} creates a
-theorem correxponding to this definition, and from the
-theorem relating \texttt{FACT} and \texttt{FactIter} proved above,
-we get that \texttt{Fact} is equal to \texttt{FACT}:
+theorem corresponding to this definition. From the
+theorem relating \texttt{FACT} and \texttt{FactIter} proved above
+we get that \texttt{Fact} is equal to \texttt{FACT}.
 
 \vspace*{-2mm}
 
@@ -128,11 +126,11 @@ we get that \texttt{Fact} is equal to \texttt{FACT}:
 
 \vspace*{-2mm}
 
-\noindent The circuit here contains \texttt{DEV~FactIter}, but we have
-already constructed an implementation for that, so we can refine the
-implementation of \texttt{DEV~Fact} by replacing the specification
-\texttt{DEV~FactIter} by its implementation (our circuit combinators
-are compositional).
+\noindent The circuit here contains \texttt{DEV~FactIter} preceded and
+followed by some combinational logic. We can refine this
+implementation by replacing the specification
+\texttt{DEV~FactIter} by the previously constructed implementation
+(our circuit constructors are compositional).
 
 \vspace*{-2mm}
 
@@ -149,7 +147,12 @@ are compositional).
 \vspace*{-2mm}
 
 At this point, we need to decide whether multiplication (\texttt{*})
-has a combinational or sequential implementation. 
+has a combinational or sequential implementation.\footnote{In the HOL term
+``\texttt{UNCURRY~\$*}'' the \texttt{\$} tells the parser to
+suppress \texttt{*}'s infix status and \texttt{UNCURRY} creates a
+function taking a pair as an argument, which is needed as HOL's
+built-in multiplication infix \texttt{*} is a curried function,
+but \texttt{DEV}'s type assumes it is applied to a paired function.}
 
 Components in a
 circuit of the form \texttt{DEV~f} are specifications to compute
@@ -157,11 +160,6 @@ $f$. They can either be refined to implementations (like we just
 refined \texttt{DEV~FactIter}) or they can be converted to
 combinational logic (assuming we have a combinational circuit to
 compute $f$ in our library of components).
-In \texttt{DEV(UNCURRY~\$*)} the \texttt{\$} tells the parser to
-suppress \texttt{*}'s infix status and \texttt{UNCURRY} creates a
-function taking a pair as an argument (HOL's built-in multiplication infix \texttt{*}
-is a curried function).
-
 
 Suppose we wanted to use a sequential implimentation of multiplication,
 then we would synthesise a theorem:
@@ -199,13 +197,14 @@ give an idea).
      ...
      DEL (v49,v35) /\ DFF (v36,v38,v13) /\ DFF (v35,v37,v12) /\
      AND (v2,v8,v55) /\ AND (v55,v53,done)) 
-    ===> 
-    DEV FACT
+    ==> 
+    DEV FACT (load,inp,done,out) 
 \end{verbatim}}
 
 \vspace*{-2mm}
 
-The circuit to the left of \texttt{===>} is a netlist represented in
+The arguments \texttt{(load,inp,done,out)} are control and data lines of the component
+and are explained later. The circuit to the left of \texttt{==>} is a netlist represented in
 the standard way in higher order logic \cite{Mel93} and built out of
 two kinds of abstract registers: a unit delay \texttt{DEL} and
 edge-triggered register \texttt{DFF}. The other components are
@@ -217,9 +216,9 @@ described in more detail in Section~\ref{secCompilingByProof}. To
 create a netlist that can be converted to hardware, the occurences of
 \texttt{DEL} and \texttt{DFF} need to be implemented using standard
 clocked registers. This invoves converting from an abstract `cycle
-based' model to a clocked synchronous model. The theory of doing this
-was developed in detail by Melham \cite{Mel93}. We have incorporated
-Melham's theory (and even some of his old HOL88 code) to
+based' model to a clocked synchronous model. The particular theory of doing this that we use
+was developed by Melham \cite{Mel93}. We have incorporated
+his theory (and even some of his old HOL88 code) to
 implement a synthesis script. Applied to our factorial implementation, this yields
 a theorem of the form:
 
@@ -247,17 +246,15 @@ This theorem uses explicitly clocked registers \texttt{Dtype} and
 that, assuming a live clock (\texttt{InfRise~clk} means \texttt{clk}
 has infinitely many rising edges), then the behaviour of the
 synthesised circuit implements a handshake computing
-\texttt{FACT}. The occurrence of \texttt{==>} rather than
-\texttt{===>} and the explicit parameters to \texttt{DEV~FACT} are
-explained later (for now we just note that \texttt{s~at~clk} is the
-signal \texttt{s} abstracted on rising edges of \texttt{clk}).
+\texttt{FACT}. The temporally abstracted signals of the form \texttt{s~at~clk} are
+signals \texttt{s} abstracted on rising edges of \texttt{clk}.
 
 We have implemented a program in Standard ML that prints a netlist of
 the sort generated above as Verilog. Although the HDL created is not
 formally verified (it cannot be, as Verilog has no formal semantic
 specification) visual inspection and other tools can yield a high
 degree of confidence that it corresponds to the verified netlist
-represented in higher order logic. The verilog we create is intended
+represented in higher order logic. The Verilog we create is intended
 to be synthesisable, but we have not yet tried any actual synthesis
 experiments.
 

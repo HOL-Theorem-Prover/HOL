@@ -3,7 +3,7 @@
 \input{notation.tex}
 
 %--------------------------------------------------------------------------
-\title{A Proof-Producing Hardware Compiler for a Simple Functional Language}
+\title{A Proof-Producing Hardware Compiler for a Subset of Higher Order Logic}
 
 \author{}
 \institute{}
@@ -35,7 +35,7 @@ Cambridge CB3 0FD, UK            &\hspace*{5mm}& Utah UT84112, USA
 \thispagestyle{empty}
 
 \begin{abstract}
-To be written last!
+To be written last! (Could be first bit of the introduction.)
 \end{abstract}
 
 %--------------------------------------------------------------------------
@@ -58,10 +58,16 @@ To be written last!
 \input{devSpecification.tex}
 
 %--------------------------------------------------------------------------
+\section{Steps of compilation}
+\label{secImplementation}
+%--------------------------------------------------------------------------
+\input{implementation.tex}
+
+%--------------------------------------------------------------------------
 \section{Compiling by proof}
 \label{secCompilingByProof}
 %--------------------------------------------------------------------------
-
+\input{compilingByProof.tex}
 
 %--------------------------------------------------------------------------
 \section{Case study}
@@ -86,6 +92,12 @@ To be written last!
 \bibliographystyle{plain}
 \bibliography{tphols2005}
 %--------------------------------------------------------------------------
+
+%--------------------------------------------------------------------------
+%\section*{Appendix: The circuit constructors}
+%\label{CircuitConstructors}
+%--------------------------------------------------------------------------
+\input{circuitConstructors.tex}
 
 \end{document}
 % LocalWords:  langle

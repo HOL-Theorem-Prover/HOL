@@ -1,0 +1,335 @@
+We implement functions $f$ where
+$
+f : \sigma_1\times\cdots\times\sigma_m \rightarrow \tau_1\times\cdots\times\tau_n
+$
+and (for practical applications) $\sigma_1,\ldots,\sigma_m,\tau_1,\ldots,\tau_n$ are the types of
+values that can be carried on busses (e.g. $n$-bit words).
+The starting point of compilation is the definition of such a function $f$ by an equation of
+the form: $f(x_1,\ldots,x_n)=e$, where any recursive calls of $f$ in
+$e$ must be tail-recursive. Applying \texttt{hwDefine} to such a
+definition will first define $f$ in higher order logic (using TFL
+\cite{Slind?})  and then generate a theorem $\vdash {\it{Imp_C}}
+\Longrightarrow \DEF{Dev}~f$, where ${\it{Imp_C}}$ is a term
+constructed using `circuit constructors.
+%\DEF{ATM}, \DEF{SEQ},
+%\DEF{PAR}, \DEF{ITE} and \DEF{REC}, which are defined below.  
+To support top-down development, ${\it{Imp_C}}$ can also contain terms
+$\DEF{Dev}~f_1$, $\ldots$, $\DEF{Dev}~f_p$, where functions $f_1$,
+$\ldots$, $f_p$ are not yet implemented. The compilation by deduction
+goes through a number of steps.
+
+\subsection*{Step 1: conversion to combinators}
+
+The first step in translating $f(x_1,\ldots,x_n)=e$ is to encode $e$
+as an applicative expression, $e_c$ say, built from the operators \DEF{Seq}
+(compute in sequence),
+\DEF{Par} (compute in parallel), \DEF{Ite} (if-then-else) and \DEF{Rec} (recursion), defined by:
+\[
+\begin{array}{ll}
+\DEF{Seq}~f_1~f_2     &   = \lambda x.~f_2(f_1~x)\\
+\DEF{Par}~f_1~f_2     &   = \lambda x.~(f_1~x,~f_2~x)\\
+\DEF{Ite}~f_1~f_2~f_3 &   = \lambda x.~ \TT{if}~f_1~x~\TT{then}~f_2~x~\TT{else}~f_3~x\\
+\DEF{Rec}~f_1~f_2~f_3 &   = \epsilon f.~f~=~\lambda x.~\TT{if}~f_1~x~\TT{then}~f_2~x~\TT{else}~f(f_3~x)
+\end{array}
+\]
+$\DEF{Rec}~f_1~f_2~f_3$ is defined using Hilbert's
+$\epsilon$-operator, and means ``choose a function $f$ such that $f$
+satisfies the equation $f =
+\lambda x.~\TT{if}~f_1~x~\TT{then}~f_2~x~\TT{else}~f(f_3~x)$''.  
+%In
+%practise, $f_1$, $f_2$ and $f_3$ will be such that $f$ is uniquely
+%determined.  
+
+The encoding into an applicative expression built out of \DEF{Seq},
+\DEF{Par}, \DEF{Ite} and \DEF{Rec} is performed by a proof script
+coded in HOL4's metalanguage, Standard ML and results in a theorem $\vdash (\lambda(x_1,\ldots,x_n).~e)~=~e_c$,
+and hence $\vdash f=e_c$.
+The algorithm used is straightforward
+and is not described here. As an example, the proof script deduces
+from:
+
+\vspace*{-2mm}
+
+\begin{verbatim}
+ |- FactIter (n,acc) =
+     (if n = 0 then (n,acc) else FactIter (n - 1,n * acc))
+\end{verbatim}
+
+\vspace*{-1mm}
+
+\noindent the theorem:
+
+\vspace*{-1mm}
+
+{\baselineskip10pt\begin{verbatim}
+ |- FactIter =
+     Rec (Seq (Par (\(n,acc). n) (\(n,acc). 0)) (UNCURRY $=))
+         (Par (\(n,acc). n) (\(n,acc). acc))
+         (Par (Seq (Par (\(n,acc). n) (\(n,acc). 1)) (UNCURRY $-))
+              (Seq (Par (\(n,acc). n) (\(n,acc). acc)) (UNCURRY $*)))
+\end{verbatim}}
+
+\subsection*{Step 2: implementation using circuit constructors}
+
+The next step is to replace the combinators \DEF{Seq},
+\DEF{Par}, \DEF{Ite} and \DEF{Rec} with corresponding circuit constructors
+\DEF{SEQ},
+\DEF{PAR}, \DEF{ITE} and \DEF{REC} that build had shaking devices and, for easy access, are defined
+at the end of this paper in the appendix.  The key property of these constructors
+are the following theorems that enable us to compositionally deduce
+theorems of the form $\vdash {\it{Imp_C}}
+\Longrightarrow \DEF{Dev}~f$, where ${\it{Imp_C}}$ is a term
+constructed using  the circuit constructors, and hence a handshaking device
+(the long implication symbol $\Longrightarrow$ denotes
+implication lifted to functions
+$f \Longrightarrow g~=~\forall x.~f(x)\Rightarrow g(x)$): 
+
+\vspace*{-3mm}
+$$\begin{array}{l}
+~\TURNST\ \DEF{Dev}\ f\ \FIMP \  \DEF{Dev}\ f\\[1mm]
+
+
+~\TURNST\
+(P_1\ \FIMP\ \DEF{Dev}~f_1)~\AND~(P_2 \ \FIMP\ \DEF{Dev}~f_2)\\
+\phantom{~\TURNST~}
+ \IMP ~
+(\DEF{SEQ}\ P_1\ P_2 \ \FIMP \ \DEF{Dev}\ (\DEF{Seq}~f_1~f_2))\\[1mm]
+
+
+~\TURNST\ 
+(P_1 \ \FIMP\ \DEF{Dev}~f_1)~\AND~(P_2 \ \FIMP\ \DEF{Dev}~f_2)\\
+\phantom{~\TURNST~}
+\IMP ~
+(\DEF{PAR}\ P_1\ P_2\ \FIMP \ \DEF{Dev}\ (\DEF{Par}~f_1~f_2))\\[1mm]
+
+
+~\TURNST\ 
+(P_1 \ \FIMP\ \DEF{Dev}~f_1)~\AND~(P_2 \ \FIMP\ \DEF{Dev}~f_2)~\AND~(P_3 \ \FIMP\ \DEF{Dev}~f_3)\\
+\phantom{~\TURNST~}
+\IMP ~
+(\DEF{ITE}\ P_1\ P_2\ P_3\  \FIMP \ \DEF{Dev}\ (\DEF{Ite}~f_1~f_2~f_3))\\[1mm]
+
+
+~\TURNST\ 
+\DEF{Total}(f_1,f_2,f_3)\\
+\phantom{~\TURNST~}
+\IMP ~
+(P_1 \ \FIMP\ \DEF{Dev}~f_1)~\AND~(P_2 \ \FIMP\ \DEF{Dev}~f_2)~\AND~(P_3 \ \FIMP\ \DEF{Dev}~f_3)\\
+\phantom{~\TURNST~}
+\IMP ~
+(\DEF{REC}\ P_1\ P_2\ P_3 \ \FIMP \ \DEF{Dev}\ (\DEF{Rec}~f_1~f_2~f_3))\\
+
+\end{array}$$
+where $\DEF{Total}(f_1,f_2,f_3)$ is a predicate ensuring that 
+there is a unique function satisfying $f = \lambda
+x.~\TT{if}~f_1~x~\TT{then}~f_2~x~\TT{else}~f(f_3~x)$.
+%\[
+%\DEF{Total}(f_1,f_2,f_3)~=~\exists variant.~\forall x.~\neg(f_1~x)
+%                                        \IMP variant(f_3~x) < variant~x
+%\]
+
+If $e_c$ is an expression built using \DEF{Seq},
+\DEF{Par}, \DEF{Ite} and \DEF{Rec} then, by suitably instantiating the predicate variables $P_1$, $P_2$ and $P_3$,  
+these theorems allow us to construct an expression $e_C$
+built from circuit constructos \DEF{SEQ},
+\DEF{PAR}, \DEF{ITE} and \DEF{REC} such that $\vdash e_C \FIMP \DEF{Dev}~e_c$. From Step~1 we have
+$\vdash f=e_c$, hence $\vdash e_C \FIMP \DEF{Dev}~f$
+
+
+A function $f$ which is combinational (i.e.~can be implemented directly with logic
+gates without using registers) can be packaged as a handshaking device
+using a contructor \DEF{ATM} which create a simple handshake interface and satisfies:
+
+\vspace*{-4mm}
+$$\begin{array}{l}
+%\texttt{ATM\_INTRO}\\
+~\TURNST\ \DEF{ATM}\ f\ \FIMP \  \DEF{Dev}\ f\\
+\phantom{~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~}\\[-4mm]
+\end{array}$$
+
+\noindent The circuit constructor \DEF{ATM} is defined with the other constructors in Section~\ref{CircuitConstructors}.
+To avoid a proliferation  of internal handshakes, when the proof script that constructs $e_C$ from $e_c$ 
+is implementing $\DEF{Seq}~f_1~f_2$, it checks to see whether $f_1$ or $f_2$ 
+are compositions of combinational functions and if so introduces \DEF{PRECEDE} or \DEF{FOLLOW} instead of \DEF{SEQ},
+using the theorems:
+
+\vspace*{-4mm}
+$$\begin{array}{l}
+~\TURNST\
+      (P\ \FIMP\ \DEF{Dev}~f_2)~\IMP~(\DEF{PRECEDE}~f_1~P\ \FIMP\ \DEF{Dev}\ (\DEF{Seq}~f_1~f_2))\\
+\phantom{~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~}\\[-4mm]
+~\TURNST\
+(P\ \FIMP\ \DEF{Dev}~f_1)~\IMP~(\DEF{FOLLOW}~P~f_2\  \FIMP\ \DEF{Dev}\ (\DEF{Seq}~f_1~f_2))\\
+\end{array}$$
+
+
+\noindent $\DEF{PRECEED}~f~d$ processes inputs with $f$ before sending them to $d$ and
+$\DEF{FOLLOW}~d~f$ processes outputs of $d$ with
+$f$. The construction $\DEF{SEQ}~d_1~d_2$ introduces a handshake between the executions
+of $d_1$ and $d_2$, but $\DEF{PRECEED}~f~d$ and $\DEF{FOLLOW}~d~f$
+just `wire' f before or after $d$, respectively, without introducing a
+handshake. The definitions are:
+
+\vspace*{3mm}
+
+$\begin{array}{l}
+\DEF{PRECEDE}~f~d~(load,inp,done,out)  =\\
+~~ \exists v.~ \DEF{COMB}~f~(inp,v) ~\wedge~ d(load,v,done,out)\\
+ \\
+\DEF{FOLLOW}~d~f~ (load,inp,done,out)  =\\
+~~ \exists v.~d(load,inp,done,v) ~\wedge~ \DEF{COMB}~f~(v,out)
+\end{array}$
+\vspace*{3mm}
+
+\subsection*{Step 3: unfolding to a cycle-level netlist}
+
+The result of Step~2 is a theorem
+$\vdash e_C \FIMP \DEF{Dev}~f$ where $e_C$ is an expression built out of the circuit
+constructors \DEF{ATM}, 
+\DEF{SEQ}, \DEF{PAR}, \DEF{ITE}, \DEF{REC}, \DEF{PRECEDE} and \DEF{FOLLOW}. If the theorem
+is rewritten with the definitions of these constructors (see their
+definitions in the appendix) we get a circuit built out of standard
+kinds of gates (\DEF{AND}, \DEF{OR}, \DEF{NOT} and \DEF{MUX}) a
+generic combinational component $\DEF{COMB}~g$ (where $g$ will be a
+combinational function reprensted as a HOL $\lambda$-expression) and two
+kinds of synchonous elements:
+\DEF{DEL} and \DEF{DFF}. 
+
+The next phase of compilation converts terms of the form $\DEF{COMB}~g~(inp,out)$
+into circuits built only out of components that it is assumed can be directly realised in
+hardware. Such components  currently include boolean functions (e.g. $\wedge$,
+$\vee$ and $\neg$), multiplexers and simple operations  on $n$-bit words (e.g.~versions
+of $+$, $-$ and $<$, various shifts etc.). 
+A special purpose proof rule uses a naive recursive method to synthesise
+combinational circuits. For example:
+
+\vspace*{-2mm}
+
+{\baselineskip10pt\begin{verbatim}
+ |- COMB (\(m,n). (m < n,m + 1)) (inp1 <> inp2,out1 <> out2) =
+     ?v0.
+       COMB (UNCURRY $<) (inp1 <> inp2,out1) /\ CONSTANT 1 v0 /\
+       COMB (UNCURRY $+) (inp1 <> v0,out2)
+\end{verbatim}}
+\vspace*{-2mm}
+
+\noindent where {\verb+<>+} is bus concatenation,
+{\verb+CONSTANT 1 v0+} drives \texttt{v0} high continuously, and
+{\verb+COMB (UNCURRY $<)+} and {\verb&COMB (UNCURRY $+)&} are assumed
+given components (if they were not given, then the could be
+implemented explicitly, but one has to stop somewhere). 
+ 
+The abstract registers \DEF{DEL} and \DEF{DFF} used in the definitions of
+the circuit constructs are defined by:
+
+\vspace*{-2mm}
+
+{\baselineskip10pt\begin{verbatim}
+ |- DEL (inp,out) = (out 0 = inp 0) /\ !t. out (t + 1) = inp t 
+
+ |- DFF (d,clk,q) =
+     !t. q (t + 1) = (if POSEDGE clk (t + 1) then d (t + 1) else q t)
+\end{verbatim}}
+
+\vspace*{-2mm}
+
+These definitions were chosen for convenience in defining
+\DEF{ATM}, \DEF{SEQ}, \DEF{PAR}, \DEF{ITE} and \DEF{REC}, but they are not standard.
+First, \DEF{DEL} is not explicity clocked, and it also has a
+non-standard behaviour on initialisation (i.e.~at time $0$).  Second,
+\DEF{DFF} is transparent on the positive edge of clock (i.e.~ there is
+no delay from \texttt{d} to
+\texttt{q} at the time just after \texttt{clk} has risen. 
+However, we can easily implement \DEF{DEL} and \DEF{DFF} in terms of off-the-shelf
+standard components,  \DEF{REG} and \DEF{REGF}, where:
+
+\begin{verbatim}
+ |- REG (inp,out) = !t. out (t + 1) = inp t 
+
+ |- REGF (inp,out) = (out 0 = F) /\ REG (inp,out)
+\end{verbatim}
+
+Both \DEF{DEL} and \DEF{DFF} can be realised by combinations of
+\DEF{REG} and \DEF{REGF} (and some combinational logic). We omit
+details here. The final part of Step~3 is to rewrite with the
+definitions of \DEF{DEL}, \DEF{DFF} and $\FIMP$ to get an implication
+theorem $\vdash {\it{Imp}}_C \IMP \DEF{Dev}~f~(load,inp,done,out)$, where ${\it{Imp}}_C$
+is an existentially quantified conjunction of predicates describing
+primitive components (combinational components plus \DEF{REG} and
+\DEF{REGF}).
+
+\subsection*{Step 4: temporal refinement to a clocked synchronous circuit}
+
+At the end of Step~3 one has a circuit built out of standard gates,
+operations $\texttt{COMB}~op$ where $op$ has a known implementation as
+a combinational circuit, and registers \DEF{REG} and \DEF{REGF}.  The
+next step is to replace these abstract `cycle level' registers with
+standard clocked synchronous parts. Up until now we have viewed
+signals as abstract sequences of values.  We now move to a finer
+temporal granularity in which values are sampled on the edge of a
+clock; such values can be latched by edge-triggered registers, like
+Dtypes. We implement \DEF{DEL} and \DEF{DFF} in terms of a standard
+dtype register defined by:
+
+\vspace*{2mm}
+
+$\DEF{Dtype}(ck,d,q) ~=~ \forall t.~q(t{+}1) = (\texttt{if}~\DEF{Posedge}~ck~(t{+}1)~\texttt{then}~d~t~\texttt{else}~q~t)$
+
+\vspace*{2mm}
+
+\noindent and a version of this register that initialises to a state holding $F$ (i.e.~$0$):
+
+\vspace*{2mm}
+
+$\DEF{Dff}(ck,d,q) ~ = ~ (q~0~ =~F)~\wedge~\DEF{Dtype}(ck,d,q)$
+
+\vspace*{2mm}
+
+If $s$ is a signal, then $s~\DEF{at}~clk$ is the temporal
+abstraction consisting of the values of $s$ at positive edges of
+$clk$. 
+Melham has described in his monograph (and previously proved mechanically in HOL88) that:
+
+
+
+
+{\baselineskip10pt\begin{verbatim}
+|- InfRise clk ==> !d q. Dtype (clk,d,q) ==> REG (d at clk,q at clk)
+
+|- InfRise clk ==> !d q. Dff (clk,d,q) ==> REGF (d at clk,q at clk)
+\end{verbatim}}
+
+
+
+By instantiating $load$, $inp$, $done$ and $out$ in the theorem
+obtained by Step~3 to $load~\DEF{at}~clk$, $inp~\DEF{at}~clk$,
+$done~\DEF{at}~clk$ and $out~\DEF{at}~clk$, respectively, and then
+performing some deductions involving Melham's theorems above (and the
+monotonicity of existential quantification and conjunction with
+respect to implication) we obtain a theorem
+
+\vspace*{2mm}
+
+$\vdash \DEF{InfRise}~clk~\IMP~{\it{Imp}}~\IMP~\DEF{Dev}~f~(load~\DEF{at}~clk,inp~\DEF{at}~clk,done~\DEF{at}~clk,out~\DEF{at}~clk)$.
+
+\vspace*{2mm}
+
+The term ${\it{Imp}}$ represents the compiled implementation of $\DEF{Dev}~f$ in higher order logic.
+It differs from ${\it{Imp}}_C$ produced by Step~3 in having an explicit clock and using
+registers $\DEF{Dtype}$ and $\DEF{Dff}$ rather than \texttt{REG} and \texttt{REGF}.
+
+\subsection*{Step 5: translation to Verilog}
+
+The implementation ${\it{Imp}}$ produced by Step~4 is a circuit
+represented in a standard way (as described, for example, in Melham's book)
+as a conjunction of predicates representing primitive components,
+with internal lines existentially quantified.
+
+This can be `pretty printed' directly into Verilog. Unfortunately Verilog is not a semantically formal notation,
+so we cannot deduce Verilog by proof. However, there is a direct and transparent correspondence
+between the structure of ${\it{Imp}}$ and the Verilog text that is printed.
+
+\bigskip
+{\it Hope to add an example as soon as printing is working}
+\bigskip
+
