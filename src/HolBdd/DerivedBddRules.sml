@@ -54,10 +54,11 @@ in
 fun BddEqualTest (TermBdd(_,_,b1)) (TermBdd(_,_,b2)) = bdd.equal b1 b2;
 
 (*****************************************************************************)
-(* Test if the BDD part is TRUE                                              *)
+(* Test if the BDD part is TRUE or FALSE                                     *)
 (*****************************************************************************)
 
-fun isTRUE tb = bdd.equal (getBdd tb) bdd.TRUE;
+fun isTRUE  tb = bdd.equal (getBdd tb) bdd.TRUE
+and isFALSE tb = bdd.equal (getBdd tb) bdd.FALSE;
 
 (*****************************************************************************)
 (* Count number of states (code from Ken Larsen)                             *)
@@ -537,15 +538,44 @@ fun computeFixedpoint report vm (th0,thsuc) =
   fst(iterate (uncurry BddEqualTest) f (tb0,tb0))
  end;
 
+
+(*****************************************************************************)
+(*            vm tm |--> b                                                   *)
+(*  --------------------------------------------------                       *)
+(*  [((vm v1 |--> b1),c1), ... , ((vm vi |--> bi),ci)]                       *)
+(*                                                                           *)
+(* with the property that                                                    *)
+(*                                                                           *)
+(* BddRestrict [((vm v1 |--> b1),c1),...,(vm vi |--> bi),ci)] (vm tm |--> b) *)
+(* =                                                                         *)
+(* vm (subst[v1|->ci,...,vi|->ci]tm) |--> TRUE                               *)
+(*****************************************************************************)
+
+exception BddSatoneError;
+
+fun BddSatone tb =
+ let val (vm,tm,b) = dest_term_bdd tb
+     val assl = bdd.getAssignment(bdd.satone b)
+     val vml = Varmap.dest vm
+ in
+  List.map 
+   (fn (n,tv) => ((case assoc2 n vml of 
+                      SOME(s,_) => BddVar true vm (mk_var(s,bool))
+                    | NONE      => (print "this should not happen!\n";
+                                    raise BddSatoneError)),
+                  if tv then T else F))
+   assl
+ end;
+
 (*****************************************************************************)
 (*                                                                           *)
 (*         |- p s = ... s ...                                                *)
 (*         |- f 0 s  = ... s ...                                             *)
 (*         |- f (SUC n) s = ... f n ... s ...                                *)
 (*  ---------------------------------------------------                      *)
-(*  [vm ``f 1 s`` |--> b1,  ... , vm ``f i s`` |--> bi]                      *)
+(*  [vm ``f i s`` |--> bi,  ... , vm ``f 1 s`` |--> b1]                      *)
 (*                                                                           *)
-(* where i is the first number such that |- p s /\ f i s                     *)
+(* where i is the first number such that |- f i s ==> p s                    *)
 (*****************************************************************************)
 
 exception computeTraceError;
@@ -553,7 +583,7 @@ exception computeTraceError;
 fun computeTrace report vm pth (th0,thsuc) =
  let val ptb = eqToTermBdd (fn tm => raise computeFixedpointError) vm pth
      val tb0 = eqToTermBdd (fn tm => raise computeFixedpointError) vm th0
-     fun p tbl = isTRUE(BddOp(bdd.And, ptb, hd tbl))
+     fun p tbl = not(isFALSE(BddOp(bdd.And, hd tbl, ptb)))
      fun f n tbl =  
       (report n (hd tbl);
        let val tb =
@@ -564,10 +594,23 @@ fun computeTrace report vm pth (th0,thsuc) =
         tb :: tbl
        end)
  in
-  if isTRUE(BddOp(bdd.And,ptb,tb0))
-   then [tb0]
-   else iterate p f [tb0]
+  if p[tb0] then [tb0] else iterate p f [tb0]
  end;
+
+
+
+
+(* Test example (Solitaire)
+
+val vm = solitaire_varmap;
+
+val pth = SolitaireFinish_def;
+
+val (th0,thsuc) = (in_th0,in_thsuc);
+
+val trl = computeTrace report vm pth (th0,thsuc);
+
+*)
 
 
 end;
