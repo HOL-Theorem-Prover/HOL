@@ -11,16 +11,18 @@ val say = Lib.say
     * Tracing utilities
     * ---------------------------------------------------------------------*)
 
-    datatype action = TEXT of string
-      | REDUCE of (string * Term.term)
-      | REWRITING of (Term.term * Thm.thm)
-      | SIDECOND_ATTEMPT of Term.term
-      | SIDECOND_SOLVED of Thm.thm
-      | SIDECOND_NOT_SOLVED of Term.term
-      | OPENING of (Term.term * Thm.thm)
-      | PRODUCE of (Term.term * string * Thm.thm)
-      | IGNORE of (string * Thm.thm)
-      | MORE_CONTEXT of Thm.thm;
+    datatype action =
+             LZ_TEXT of unit -> string
+           | TEXT of string
+           | REDUCE of (string * Term.term)
+           | REWRITING of (Term.term * Thm.thm)
+           | SIDECOND_ATTEMPT of Term.term
+           | SIDECOND_SOLVED of Thm.thm
+           | SIDECOND_NOT_SOLVED of Term.term
+           | OPENING of (Term.term * Thm.thm)
+           | PRODUCE of (Term.term * string * Thm.thm)
+           | IGNORE of (string * Thm.thm)
+           | MORE_CONTEXT of Thm.thm;
 
    val trace_hook : ((int * action) -> unit) ref = ref (fn (n,s) => ());
    fun trace x = (!trace_hook) x
@@ -28,7 +30,8 @@ val say = Lib.say
 val trace_level = ref 0;
 val _ = Feedback.register_trace("simplifier", trace_level, 7);
 
-fun tty_trace (TEXT s) = (say "  "; say s; say "\n")
+fun tty_trace (LZ_TEXT fs) = (say "  "; say (fs ()); say "\n")
+  | tty_trace (TEXT s) = (say "  "; say s; say "\n")
   | tty_trace (REDUCE (s,tm)) = (say "  "; say s; say " "; print_term tm; say "\n")
   | tty_trace (REWRITING (tm,thm)) =
     (say "  rewriting "; print_term tm; say " with "; print_thm thm; say "\n")

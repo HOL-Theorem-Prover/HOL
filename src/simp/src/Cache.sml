@@ -45,25 +45,8 @@ fun CACHE (filt,conv) =
   end
 
 fun clear_cache cache = (cache := new_table())
-fun print_cache (cache:cache) = let
-  val key_item_pairs = Polyhash.listItems (!cache)
-  fun print_thmopt (SOME thm) = (print "SOME "; Parse.print_thm thm)
-    | print_thmopt NONE = print "NONE"
-  fun pr_list0 pfn [] = print "]"
-    | pr_list0 pfn [x] = (pfn x; print "]")
-    | pr_list0 pfn (x::xs) = (pfn x; print ", "; pr_list0 pfn xs)
-  fun pr_list pfn l = (print "["; pr_list0 pfn l)
-  fun pr_v (tml, thmopt) = (print "("; pr_list Parse.print_term tml;
-                            print ", "; print_thmopt thmopt; print ")")
-  fun pr_kv ((l, tm), vlist) = let
-  in
-    Parse.print_term tm; print " |-> ";
-    pr_list pr_v vlist; print "\n"
-  end
-in
-  app pr_kv key_item_pairs
-end
 
+fun cache_values (ref cache) = Polyhash.listItems cache
 
 
 end; (* local *)
