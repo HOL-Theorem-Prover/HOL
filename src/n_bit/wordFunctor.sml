@@ -37,7 +37,7 @@ val INw_def    = Define `INw n = n < 2 EXP WL`;
 
 val EQUIV_def  = xDefine "EQUIV" `x == y = (MODw x = MODw y)`;
 
-val EQUIV_QT = store_thm("EQUIV_QT",
+val EQUIV_QT = prove(
   `!x y. x == y = ($== x = $== y)`,
   REPEAT STRIP_TAC THEN EQ_TAC
     THEN B_RW_TAC [FUN_EQ_THM,EQUIV_def,MODw_def]
@@ -59,27 +59,20 @@ val WL_SUB_SUC_X = SIMP_CONV arith_ss [WL_def] (Term`WL - SUC x`);
 
 (* -------------------------------------------------------- *)
 
-val FUNPOW_THM = store_thm("FUNPOW_THM",
+val FUNPOW_THM = prove(
   `!f n x. FUNPOW f n (f x) = f (FUNPOW f n x)`,
   Induct_on `n` THEN ASM_REWRITE_TAC [FUNPOW]
 );
 
-val FUNPOW_THM2 = store_thm("FUNPOW_THM2",
+val FUNPOW_THM2 = prove(
   `!f n x. FUNPOW f (SUC n) x = f (FUNPOW f n x)`,
   Induct_on `n` THEN B_RW_TAC [FUNPOW,FUNPOW_THM]
 );
 
-val FUNPOW_COMP = store_thm("FUNPOW_COMP",
+val FUNPOW_COMP = prove(
   `!f m n a. FUNPOW f m (FUNPOW f n a) = FUNPOW f (m + n) a`,
   Induct_on `n` THEN ASM_REWRITE_TAC [ADD_CLAUSES,FUNPOW]
 );
-
-(*
-val FUNPOW_EVAL = store_thm("FUNPOW_EVAL",
-  `!f n x. FUNPOW f n x = if n = 0 then x else FUNPOW f (n-1) (f x)`,
-  Induct_on `n` THEN A_RW_TAC [FUNPOW]
-);
-*)
 
 (* -------------------------------------------------------- *)
 
@@ -98,7 +91,7 @@ val MODw_IDEM2 = store_thm("MODw_IDEM2",
   B_RW_TAC [INw_MODw,TOw_IDEM]
 );
 
-val TOw_QT = store_thm("TOw_QT",
+val TOw_QT = prove(
   `!a. MODw a == a`,
   B_RW_TAC [EQUIV_def,MODw_IDEM2]
 );
@@ -116,44 +109,44 @@ val MOD_ADD = store_thm("MOD_ADD",
   B_RW_TAC [MODw_def,MOD_PLUS,ZERO_LT_TWOEXP]
 );
 
-val MODw_MULT = store_thm("MODw_MULT",
+val MODw_MULT = prove(
  `!a b. MODw (a * b) = MODw (MODw a * MODw b)`,
   B_RW_TAC [MODw_def,MOD_TIMES2,ZERO_LT_TWOEXP]
 );
 
 val AONE_def = Define `AONE = 1`;
 
-val ADD_QT = store_thm("ADD_QT",
+val ADD_QT = prove(
   `(!n. 0 + n == n) /\ !m n. SUC m + n == SUC (m + n)`,
   A_RW_TAC [EQUIV_def,ADD]
 );
 
-val ADD_0_QT = store_thm("ADD_0_QT",
+val ADD_0_QT = prove(
   `!a. a + 0 == a`,
   A_RW_TAC [EQUIV_def]
 );
 
-val ADD_COMM_QT = store_thm("ADD_COMM_QT",
+val ADD_COMM_QT = prove(
   `!a b. a + b == b + a`,
   A_RW_TAC [EQUIV_def]
 );
 
-val ADD_ASSOC_QT = store_thm("ADD_ASSOC_QT",
+val ADD_ASSOC_QT = prove(
   `!a b c. a + (b + c) == a + b + c`,
   A_RW_TAC [EQUIV_def]
 );
 
-val MULT_QT = store_thm("MULT_QT",
+val MULT_QT = prove(
   `(!n. 0 * n == 0) /\ !m n. SUC m * n == m * n + n`,
   A_RW_TAC [EQUIV_def,MULT]
 );
 
-val ADD1_QT = store_thm("ADD1_QT",
+val ADD1_QT = prove(
   `!m. SUC m == m + AONE`,
   A_RW_TAC [EQUIV_def,ADD1,AONE_def]
 );
 
-val ADD_CLAUSES_QT = store_thm("ADD_CLAUSES_QT",
+val ADD_CLAUSES_QT = prove(
   `(!m. 0 + m == m) /\ (!m. m + 0 == m) /\ (!m n. SUC m + n == SUC (m + n)) /\
       (!m n. m + SUC n == SUC (m + n))`,
   A_RW_TAC [EQUIV_def,ADD_CLAUSES]
@@ -165,7 +158,7 @@ val SPEC_MOD_TIMES = (REWRITE_RULE [MULT_LEFT_1] o SPEC `1`
 val exp_gteq = REDUCE_RULE (MATCH_MP TWOEXP_MONO2 (SPEC `WL` ZERO_LESS_EQ));
 
 
-val SUC_EQUIV_COMP = store_thm("SUC_EQUIV_COMP",
+val SUC_EQUIV_COMP = prove(
   `!a b. SUC a == b ==> a == (b + (2 EXP WL - 1))`,
   B_RW_TAC [EQUIV_def]
     THEN ONCE_REWRITE_TAC [MOD_ADD]
@@ -174,7 +167,7 @@ val SUC_EQUIV_COMP = store_thm("SUC_EQUIV_COMP",
     THEN A_SIMP_TAC [ONCE_REWRITE_RULE [ADD_COMM] SPEC_MOD_TIMES]
 );
 
-val INV_SUC_EQ_QT = store_thm("INV_SUC_EQ_QT",
+val INV_SUC_EQ_QT = prove(
   `!m n. (SUC m == SUC n) = (m == n)`,
   A_RW_TAC [EQUIV_def]
     THEN EQ_TAC
@@ -189,14 +182,14 @@ val INV_SUC_EQ_QT = store_thm("INV_SUC_EQ_QT",
     ]
 );
 
-val ADD_INV_0_QT = store_thm("ADD_INV_0_QT",
+val ADD_INV_0_QT = prove(
   `!m n. (m + n == m) ==> (n == 0)`,
   Induct_on `m`
     THEN B_RW_TAC [ADD_CLAUSES]
     THEN B_FULL_SIMP_TAC [INV_SUC_EQ_QT]
 );
 
-val ADD_INV_0_EQ_QT = store_thm("ADD_INV_0_EQ_QT",
+val ADD_INV_0_EQ_QT = prove(
   `!m n. (m + n == m) = (n == 0)`,
   REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC
     THEN IMP_RES_TAC ADD_INV_0_QT
@@ -205,32 +198,32 @@ val ADD_INV_0_EQ_QT = store_thm("ADD_INV_0_EQ_QT",
     THEN ASM_A_SIMP_TAC [MODw_0,MODw_IDEM2]
 );
 
-val EQ_ADD_LCANCEL_QT = store_thm("EQ_ADD_LCANCEL_QT",
+val EQ_ADD_LCANCEL_QT = prove(
   `!m n p. (m + n == m + p) = (n == p)`,
   Induct_on `m` THEN ASM_REWRITE_TAC [ADD_CLAUSES,INV_SUC_EQ_QT]
 );
 
-val EQ_ADD_RCANCEL_QT = store_thm("EQ_ADD_RCANCEL_QT",
+val EQ_ADD_RCANCEL_QT = prove(
   `!m n p. (m + p == n + p) = (m == n)`,
   ONCE_REWRITE_TAC[ADD_COMM] THEN MATCH_ACCEPT_TAC EQ_ADD_LCANCEL_QT
 );
 
-val LEFT_ADD_DISTRIB_QT = store_thm("LEFT_ADD_DISTRIB_QT",
+val LEFT_ADD_DISTRIB_QT = prove(
   `!m n p. p * (m + n) == p * m + p * n`,
   A_RW_TAC [EQUIV_def,LEFT_ADD_DISTRIB]
 );
 
-val MULT_ASSOC_QT = store_thm("MULT_ASSOC_QT",
+val MULT_ASSOC_QT = prove(
   `!m n p. m * (n * p) == m * n * p`,
   A_RW_TAC [EQUIV_def,MULT_ASSOC]
 );
 
-val MULT_COMM_QT = store_thm("MULT_COMM_QT",
+val MULT_COMM_QT = prove(
   `!m n. m * n == n * m`,
   A_RW_TAC [EQUIV_def,MULT_COMM]
 );
 
-val MULT_CLAUSES_QT = store_thm("MULT_CLAUSES_QT",
+val MULT_CLAUSES_QT = prove(
   `!m n. (0 * m == 0) /\ (m * 0 == 0) /\ (AONE * m == m) /\ (m * AONE == m) /\
          (SUC m * n == m * n + n) /\ (m * SUC n == m + m * n)`,
   A_RW_TAC [EQUIV_def,MULT_CLAUSES,AONE_def]
@@ -244,7 +237,7 @@ val TWO_COMP_def = Define`TWO_COMP x = 2 EXP WL - MODw x`;
 
 val MODw_LESS = REWRITE_RULE [MODw_def,INw_def] INw_MODw;
 
-val ADD_TWO_COMP_QT = store_thm("ADD_TWO_COMP_QT",
+val ADD_TWO_COMP_QT = prove(
   `!a. MODw a + TWO_COMP a == 0`,
   A_RW_TAC [TWO_COMP_def,EQUIV_def,MODw_def]
    THEN ASSUME_TAC (SPEC `a` MODw_LESS)
@@ -252,7 +245,7 @@ val ADD_TWO_COMP_QT = store_thm("ADD_TWO_COMP_QT",
    THEN ASM_A_SIMP_TAC [GSYM LESS_EQ_ADD_SUB,ADD_SUB,ZERO_MOD,DIVMOD_ID,ZERO_LT_TWOEXP]
 );
 
-val TWO_COMP_ONE_COMP_QT = store_thm("TWO_COMP_ONE_COMP_QT",
+val TWO_COMP_ONE_COMP_QT = prove(
   `!a. TWO_COMP a == ONE_COMP a + AONE`,
   STRIP_TAC THEN REWRITE_TAC [AONE_def]
     THEN ASSUME_TAC (SPEC `a` (REWRITE_RULE [INw_def] INw_MODw))
@@ -272,18 +265,17 @@ val TWO_COMP_ONE_COMP_QT = store_thm("TWO_COMP_ONE_COMP_QT",
 val BIT_BITS_THM_0 = (GEN `n` o SIMP_RULE arith_ss [] o SPECL [`n`,`0`]) BIT_BITS_THM;
 
 (* |- !a b. (!x. x < WL ==> (BIT x a = BIT x b)) = a == b *)
-val BIT_EQUIV_THM = save_thm("BIT_EQUIV_THM",
+val BIT_EQUIV_THM =
    SIMP_RULE bool_ss [BITS_ZERO3,GSYM MODw_def,GSYM WL_def,GSYM EQUIV_def,LESS_EQ_IMP_LESS_SUC,
                 REWRITE_RULE [GSYM LESS_EQ,GSYM WL_def] (ONCE_REWRITE_CONV [GSYM LESS_EQ_MONO] (Term`x <= HB`))]
-                    (SPEC `HB` BIT_BITS_THM_0)
-);
+                    (SPEC `HB` BIT_BITS_THM_0);
 
 (* -------------------------------------------------------- *)
 
 (* |- !n h. SLICE h 0 n = BITS h 0 n *)
 val SLICE_COR = (GEN_ALL o SIMP_RULE arithr_ss [] o SPECL [`n`,`h`,`0`]) SLICE_THM;
 
-val BITS_SUC2 = store_thm("BITS_SUC2",
+val BITS_SUC2 = prove(
   `!n a. BITS (SUC n) 0 a = SLICE (SUC n) (SUC n) a + BITS n 0 a`,
   A_RW_TAC [GSYM SLICE_COR,SLICE_COMP_THM]
 );
@@ -346,83 +338,58 @@ val COMP0_def = Define `COMP0 = ONE_COMP 0`;
 
 (* -------------------------------------------------------- *)
 
-val BITWISE_THM2 = save_thm("BITWISE_THM2",
-  (GEN `y` o GEN `op` o GEN `a` o GEN `b`)
-  (SIMP_RULE bool_ss [BITWISE_THM] (SPECL [`BITWISE WL op a b`,`y`] BIT_EQUIV_THM))
-);
+val BITWISE_THM2 = (GEN `y` o GEN `op` o GEN `a` o GEN `b`)
+  (SIMP_RULE bool_ss [BITWISE_THM] (SPECL [`BITWISE WL op a b`,`y`] BIT_EQUIV_THM));
 
-val OR_ASSOC_QT = save_thm("OR_ASSOC_QT",
-  (GEN `a` o GEN `b` o GEN `c`)
+val OR_ASSOC_QT = (GEN `a` o GEN `b` o GEN `c`)
   (SIMP_RULE bool_ss [BITWISE_THM,DISJ_ASSOC,GSYM OR_def]
-  (SPECL [`BITWISE WL $\/ (BITWISE WL $\/ a b) c`,`$\/`,`a`,`BITWISE WL $\/ b c`] BITWISE_THM2))
-);
+  (SPECL [`BITWISE WL $\/ (BITWISE WL $\/ a b) c`,`$\/`,`a`,`BITWISE WL $\/ b c`] BITWISE_THM2));
 
-val OR_COMM_QT = save_thm("OR_COMM_QT",
-  (GEN `a` o GEN `b`)
+val OR_COMM_QT = (GEN `a` o GEN `b`)
   (SIMP_RULE bool_ss [BITWISE_THM,DISJ_COMM,GSYM OR_def]
-  (SPECL [`BITWISE WL ($\/) b a`,`$\/`,`a`,`b`] BITWISE_THM2))
-);
+  (SPECL [`BITWISE WL ($\/) b a`,`$\/`,`a`,`b`] BITWISE_THM2));
 
-val OR_ABSORB_QT = save_thm("OR_ABSORB_QT",
-  (GEN `a` o GEN `b`)
+val OR_ABSORB_QT = (GEN `a` o GEN `b`)
   (SIMP_RULE bool_ss [BITWISE_THM,PROVE [] `!a b. a /\ (a \/ b) = a`,GSYM OR_def,GSYM AND_def]
-  (SPECL [`a`,`$/\`,`a`,`BITWISE WL $\/ a b`] BITWISE_THM2))
-);
+  (SPECL [`a`,`$/\`,`a`,`BITWISE WL $\/ a b`] BITWISE_THM2));
 
-val OR_IDEM_QT = save_thm("OR_IDEM_QT",
-  GEN_ALL (SIMP_RULE bool_ss [OR_CLAUSES,GSYM OR_def] (SPECL [`a`,`$\/`,`a`,`a`] BITWISE_THM2))
-);
+val OR_IDEM_QT =
+  GEN_ALL (SIMP_RULE bool_ss [OR_CLAUSES,GSYM OR_def] (SPECL [`a`,`$\/`,`a`,`a`] BITWISE_THM2));
 
-val AND_ASSOC_QT = save_thm("AND_ASSOC_QT",
-  (GEN `a` o GEN `b` o GEN `c`)
+val AND_ASSOC_QT = (GEN `a` o GEN `b` o GEN `c`)
   (SIMP_RULE bool_ss [BITWISE_THM,CONJ_ASSOC,GSYM AND_def]
-  (SPECL [`BITWISE WL $/\ (BITWISE WL $/\ a b) c`,`$/\`,`a`,`BITWISE WL $/\ b c`] BITWISE_THM2))
-);
+  (SPECL [`BITWISE WL $/\ (BITWISE WL $/\ a b) c`,`$/\`,`a`,`BITWISE WL $/\ b c`] BITWISE_THM2));
 
-val AND_COMM_QT = save_thm("AND_COMM_QT",
-  (GEN `a` o GEN `b`)
+val AND_COMM_QT = (GEN `a` o GEN `b`)
   (SIMP_RULE bool_ss [BITWISE_THM,CONJ_COMM,GSYM AND_def]
-  (SPECL [`BITWISE WL $/\ b a`,`$/\`,`a`,`b`] BITWISE_THM2))
-);
+  (SPECL [`BITWISE WL $/\ b a`,`$/\`,`a`,`b`] BITWISE_THM2));
 
-val AND_ABSORB_QT = save_thm("AND_ABSORB_QT",
-  (GEN `a` o GEN `b`)
+val AND_ABSORB_QT = (GEN `a` o GEN `b`)
   (SIMP_RULE bool_ss [BITWISE_THM,PROVE [] `!a b. a \/ (a /\ b) = a`,GSYM AND_def,GSYM OR_def]
-  (SPECL [`a`,`$\/`,`a`,`BITWISE WL $/\ a b`] BITWISE_THM2))
-);
+  (SPECL [`a`,`$\/`,`a`,`BITWISE WL $/\ a b`] BITWISE_THM2));
 
-val AND_IDEM_QT = save_thm("AND_IDEM_QT",
-  GEN_ALL (SIMP_RULE bool_ss [AND_CLAUSES,GSYM AND_def] (SPECL [`a`,`$/\`,`a`,`a`] BITWISE_THM2))
-);
+val AND_IDEM_QT = 
+  GEN_ALL (SIMP_RULE bool_ss [AND_CLAUSES,GSYM AND_def] (SPECL [`a`,`$/\`,`a`,`a`] BITWISE_THM2));
 
-val OR_COMP_QT = save_thm("OR_COMP_QT",
+val OR_COMP_QT = 
   GEN_ALL (SIMP_RULE bool_ss [EXCLUDED_MIDDLE,ONE_COMP_TRUE,ONE_COMP_THM,GSYM OR_def,GSYM COMP0_def]
-          (SPECL [`ONE_COMP 0`,`$\/`,`a`,`ONE_COMP a`] BITWISE_THM2))
-);
+          (SPECL [`ONE_COMP 0`,`$\/`,`a`,`ONE_COMP a`] BITWISE_THM2));
 
-val AND_COMP_QT = save_thm("AND_COMP_QT",
-  GEN_ALL (SIMP_RULE bool_ss [ONE_COMP_THM,ZERO_IS_FALSE,GSYM AND_def]
-          (SPECL [`0`,`$/\`,`a`,`ONE_COMP a`] BITWISE_THM2))
-);
+val AND_COMP_QT = GEN_ALL (SIMP_RULE bool_ss [ONE_COMP_THM,ZERO_IS_FALSE,GSYM AND_def]
+          (SPECL [`0`,`$/\`,`a`,`ONE_COMP a`] BITWISE_THM2));
 
-val ONE_COMP_QT = save_thm("ONE_COMP_QT",
-  GEN_ALL (SIMP_RULE bool_ss [BITWISE_ONE_COMP_THM,ONE_COMP_THM]
-          (SPECL [`a`,`\x y. ~x`,`ONE_COMP a`,`b`] BITWISE_THM2))
-);
+val ONE_COMP_QT = GEN_ALL (SIMP_RULE bool_ss [BITWISE_ONE_COMP_THM,ONE_COMP_THM]
+          (SPECL [`a`,`\x y. ~x`,`ONE_COMP a`,`b`] BITWISE_THM2));
 
-val RIGHT_AND_OVER_OR_QT = save_thm("RIGHT_AND_OVER_OR_QT",
-  (GEN `a` o GEN `b` o GEN `c`)
+val RIGHT_AND_OVER_OR_QT = (GEN `a` o GEN `b` o GEN `c`)
   (SIMP_RULE bool_ss [BITWISE_THM,RIGHT_AND_OVER_OR,GSYM AND_def,GSYM OR_def]
   (SPECL [`BITWISE WL $\/ (BITWISE WL $/\ a c) (BITWISE WL $/\ b c)`,
-          `$/\`,`BITWISE WL $\/ a b`,`c`] BITWISE_THM2))
-);
+          `$/\`,`BITWISE WL $\/ a b`,`c`] BITWISE_THM2));
 
-val RIGHT_OR_OVER_AND_QT = save_thm("RIGHT_OR_OVER_AND_QT",
-  (GEN `a` o GEN `b` o GEN `c`)
+val RIGHT_OR_OVER_AND_QT = (GEN `a` o GEN `b` o GEN `c`)
   (SIMP_RULE bool_ss [BITWISE_THM,RIGHT_OR_OVER_AND,GSYM AND_def,GSYM OR_def]
   (SPECL [`BITWISE WL $/\ (BITWISE WL $\/ a c) (BITWISE WL $\/ b c)`,
-          `$\/`,`BITWISE WL $/\ a b`,`c`] BITWISE_THM2))
-);
+          `$\/`,`BITWISE WL $/\ a b`,`c`] BITWISE_THM2));
 
 val DE_MORGAN_THM_QT1 =
   (SIMP_RULE bool_ss [BITWISE_THM,BITWISE_ONE_COMP_THM,ONE_COMP_THM,GSYM AND_def,GSYM OR_def]
@@ -434,15 +401,13 @@ val DE_MORGAN_THM_QT2 =
   (SPECL [`ONE_COMP (BITWISE WL $\/ a b)`,
           `$/\`,`ONE_COMP a`,`ONE_COMP b`] BITWISE_THM2));
 
-val DE_MORGAN_THM_QT = save_thm("DE_MORGAN_THM_QT",
-  (GEN `a` o GEN `b`)
+val DE_MORGAN_THM_QT = (GEN `a` o GEN `b`)
   (CONJ (ONCE_REWRITE_RULE [EQUIV_SYM] DE_MORGAN_THM_QT1)
-        (ONCE_REWRITE_RULE [EQUIV_SYM] DE_MORGAN_THM_QT2))
-);
+        (ONCE_REWRITE_RULE [EQUIV_SYM] DE_MORGAN_THM_QT2));
 
 (* -------------------------------------------------------- *)
 
-val BIT_EQUIV = store_thm("BIT_EQUIV",
+val BIT_EQUIV = prove(
   `!n a b. n < WL ==> a == b ==> (BIT n a = BIT n b)`,
   B_RW_TAC [GSYM BIT_EQUIV_THM]
 );
@@ -451,12 +416,12 @@ val BIT_EQUIV = store_thm("BIT_EQUIV",
 
 val HB_LESS_WL = REWRITE_RULE [SYM WL_def] (SPEC `HB` LESS_SUC_REFL);
 
-val LSB_WELLDEF = store_thm("LSB_WELLDEF",
+val LSB_WELLDEF = prove(
   `!a b. a == b ==> (LSBn a = LSBn b)`,
   B_RW_TAC [WL_POS,REDUCE_RULE (SPEC `0` BIT_EQUIV),LSBn_def]
 );
 
-val MSB_WELLDEF = store_thm("MSB_WELLDEF",
+val MSB_WELLDEF = prove(
   `!a b. a == b ==> (MSBn a = MSBn b)`,
   B_RW_TAC [HB_LESS_WL,REDUCE_RULE (SPEC `HB` BIT_EQUIV),MSBn_def]
 );
@@ -512,7 +477,7 @@ val lemma4 = prove(
     THEN ASM_A_SIMP_TAC []
 );
 
-val BITWISE_ISTEP = store_thm("BITWISE_ISTEP",
+val BITWISE_ISTEP = prove(
   `!n op a b. 0 < n ==> (BITWISE n op (a DIV 2) (b DIV 2) =
                         (BITWISE n op a b) DIV 2 + SBIT (op (BIT n a) (BIT n b)) (n - 1))`,
   Induct_on `n`
@@ -549,7 +514,7 @@ val MODw_2EXP_GT_WL = prove(
     THEN ASM_B_SIMP_TAC [ZERO_LT_TWOEXP,MOD_EQ_0]
 );
 
-val BITWISE_WELLDEF = store_thm("BITWISE_WELLDEF",
+val BITWISE_WELLDEF = prove(
   `!n op a b c d. a == b /\ c == d ==> (BITWISE n op) a c == (BITWISE n op) b d`,
   Induct_on `n`
     THEN REPEAT STRIP_TAC
@@ -574,7 +539,7 @@ val BITWISE_WELLDEF = store_thm("BITWISE_WELLDEF",
     ]
 );
 
-val BITWISEw_WELLDEF = save_thm("BITWISEw_WELLDEF",SPEC `WL` BITWISE_WELLDEF);
+val BITWISEw_WELLDEF = SPEC `WL` BITWISE_WELLDEF;
 
 val OR_WELLDEF  = REWRITE_RULE [GSYM OR_def]  (SPEC `$\/` BITWISEw_WELLDEF);
 val AND_WELLDEF = REWRITE_RULE [GSYM AND_def] (SPEC `$/\` BITWISEw_WELLDEF);
@@ -582,14 +547,14 @@ val EOR_WELLDEF = REWRITE_RULE [GSYM EOR_def] (SPEC `(\x y. ~(x = y))` BITWISEw_
 
 (* -------------------------------------------------------- *)
 
-val SUC_WELLDEF = store_thm("SUC_WELLDEF",
+val SUC_WELLDEF = prove(
   `!a b. a == b ==> SUC a == SUC b`,
   B_RW_TAC [EQUIV_def,ADD1]
     THEN ONCE_REWRITE_TAC [MOD_ADD]
     THEN ASM_REWRITE_TAC []
 );
 
-val ADD_WELLDEF = store_thm("ADD_WELLDEF",
+val ADD_WELLDEF = prove(
   `!a b c d. a == b /\ c == d ==> a + c == b + d`,
   B_RW_TAC [EQUIV_def]
     THEN ONCE_REWRITE_TAC [MOD_ADD]
@@ -597,24 +562,24 @@ val ADD_WELLDEF = store_thm("ADD_WELLDEF",
 );
 
 
-val MUL_WELLDEF = store_thm("MUL_WELLDEF",
+val MUL_WELLDEF = prove(
   `!a b c d. a == b /\ c == d ==> a * c == b * d`,
   B_RW_TAC [EQUIV_def]
     THEN ONCE_REWRITE_TAC [MODw_MULT]
     THEN ASM_REWRITE_TAC []
 );
 
-val ONE_COMP_WELLDEF = store_thm("ONE_COMP_WELLDEF",
+val ONE_COMP_WELLDEF = prove(
   `!a b. a == b ==> ONE_COMP a == ONE_COMP b`,
   B_RW_TAC [EQUIV_def,ONE_COMP_def]
 );
 
-val TWO_COMP_WELLDEF = store_thm("TWO_COMP_WELLDEF",
+val TWO_COMP_WELLDEF = prove(
   `!a b. a == b ==> TWO_COMP a == TWO_COMP b`,
   B_RW_TAC [EQUIV_def,TWO_COMP_def]
 );
 
-val TOw_WELLDEF = store_thm("TOw_WELLDEF",
+val TOw_WELLDEF = prove(
   `!a b. a == b ==> MODw a == MODw b`,
   B_RW_TAC [EQUIV_def]
 );
@@ -626,26 +591,26 @@ val ASR_ONE_def = Define `ASR_ONE a = LSR_ONE a + SBIT (MSBn a) HB`;
 val ROR_ONE_def = Define `ROR_ONE a = LSR_ONE a + SBIT (LSBn a) HB`;
 val RRXn_def    = Define `RRXn c a  = LSR_ONE a + SBIT c HB`;
 
-val LSR_ONE_WELLDEF = store_thm("LSR_ONE_WELLDEF",
+val LSR_ONE_WELLDEF = prove(
   `!a b. a == b ==> LSR_ONE a == LSR_ONE b`,
   B_RW_TAC [EQUIV_def,LSR_ONE_def]
 );
 
-val ASR_ONE_WELLDEF = store_thm("ASR_ONE_WELLDEF",
+val ASR_ONE_WELLDEF = prove(
   `!a b. a == b ==> ASR_ONE a == ASR_ONE b`,
   B_RW_TAC [EQUIV_def,ASR_ONE_def,LSR_ONE_def]
     THEN IMP_RES_TAC (REWRITE_RULE [EQUIV_def] MSB_WELLDEF)
     THEN ASM_REWRITE_TAC []
 );
 
-val ROR_ONE_WELLDEF = store_thm("ROR_ONE_WELLDEF",
+val ROR_ONE_WELLDEF = prove(
   `!a b. a == b ==> ROR_ONE a == ROR_ONE b`,
   B_RW_TAC [EQUIV_def,ROR_ONE_def,LSR_ONE_def]
     THEN IMP_RES_TAC (REWRITE_RULE [EQUIV_def] LSB_WELLDEF)
     THEN ASM_REWRITE_TAC []
 );
 
-val RRX_WELLDEF = store_thm("RRX_WELLDEF",
+val RRX_WELLDEF = prove(
   `!a b c. a == b ==> (RRXn c) a == (RRXn c) b`,
   B_RW_TAC [EQUIV_def,RRXn_def,LSR_ONE_def]
 );
@@ -933,11 +898,6 @@ val dest_word_mk_word_eq2 = prove(
   STRIP_TAC THEN REWRITE_TAC [dest_word_mk_word_eq]
 );
 
-(* |- !a. dest_word (mk_word ($== a)) = $== a *)
-val dest_word_mk_word_eq3 = save_thm("dest_word_mk_word_eq3",
-  (GEN_ALL o REWRITE_RULE [GSYM FUN_EQ_THM] o GEN `x` o SPEC_ALL) dest_word_mk_word_eq2
-);
-
 val dest_word_mk_word_exists = prove(
   `?x. ^dest_word (^mk_word ($== a)) x`,
   B_RW_TAC [dest_word_mk_word_eq2,EQUIV_def] THEN PROVE_TAC []
@@ -1104,7 +1064,7 @@ val LSL_LIMIT = store_thm("LSL_LIMIT",
 
 (* -------------------------------------------------------- *)
 
-val MOD_MOD_DIV = store_thm("MOD_MOD_DIV",
+val MOD_MOD_DIV = prove(
   `!a b. INw (MODw a DIV 2 EXP b)`,
   A_RW_TAC [MODw_THM,BITS_DIV_THM]
     THEN ASSUME_TAC (SPECL [`HB`,`b`,`a`] BITSLT_THM)
@@ -1113,7 +1073,7 @@ val MOD_MOD_DIV = store_thm("MOD_MOD_DIV",
     THEN ASM_REWRITE_TAC [WL_def,INw_def]
 );
 
-val MOD_MOD_DIV_2EXP = store_thm("MOD_MOD_DIV_2EXP",
+val MOD_MOD_DIV_2EXP = prove(
   `!a n. MODw (MODw a DIV 2 EXP n) DIV 2 = MODw a DIV 2 EXP SUC n`,
   A_RW_TAC [ZERO_LT_TWOEXP,DIV_DIV_DIV_MULT,TOw_IDEM,MOD_MOD_DIV,
             GSYM (ONCE_REWRITE_RULE [MULT_COMM] EXP)]
@@ -1146,7 +1106,7 @@ val MOD_WL = (GEN_ALL o CONJUNCT2 o SPEC_ALL o REWRITE_RULE [WL_POS] o SPEC `WL`
 
 val n2w_TIMES2 = ONCE_REWRITE_RULE [ADD_COMM] n2w_TIMES;
 
-val LEFT_SHIFT_LESS = store_thm("LEFT_SHIFT_LESS",
+val LEFT_SHIFT_LESS = prove(
   `!n m a. a < 2 EXP m ==> 2 EXP n + a * 2 EXP n <= 2 EXP (m + n)`,
   A_RW_TAC [GSYM MULT,LESS_EQ,EXP_ADD,LESS_MONO_MULT]
 );
