@@ -1132,6 +1132,13 @@ val CONSTANT_at =
    ``CONSTANT c out ==> CONSTANT c (out at clk)``,
    RW_TAC std_ss [CONSTANT_def,at_def,when]);
 
+val EQ_at =
+ store_thm
+  ("EQ_at",
+   ``(f = g) ==> (f at clk = g at clk)``,
+   RW_TAC std_ss [REG_def,BUS_CONCAT_def]
+    THEN PROVE_TAC[]);
+
 val COMB_at =
  store_thm
   ("COMB_at",

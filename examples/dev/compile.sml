@@ -1518,7 +1518,7 @@ fun ABS_IN_OUT_SPLIT_CONV tm =
 
 val at_thms =
  [UNDISCH REG_IMP,UNDISCH REGF_IMP,
-  COMB_at,CONSTANT_at,TRUE_at,
+  EQ_at,COMB_at,CONSTANT_at,TRUE_at,
   NOT_at,AND_at,OR_at,MUX_at];
 
 (*****************************************************************************)
