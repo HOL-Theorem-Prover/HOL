@@ -15,6 +15,9 @@ val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
 fun -- q x = Term q
 fun == q x = Type q
 
+fun ERR f s = HOL_ERR {origin_structure = "RecordType",
+                       origin_function = f, message=s};
+
 fun map3 f ([], _, _) = []
   | map3 f (x::xs, ys, zs) = f (x, hd ys, hd zs) :: map3 f (xs, tl ys, tl zs)
 
@@ -145,11 +148,8 @@ in
     val constructor =
       case TypeBase.constructors_of tyinfo of
         [x] => x
-      | _ =>
-          raise HOL_ERR {origin_function = "prove_recordtype_thms",
-                         origin_structure = "RecordType",
-                         message =
-                         "Type to be record has more than one constructor"}
+      | _ => raise ERR "prove_recordtype_thms"
+                       "Type to be record has more than one constructor"
     val (typ, types) = let
       fun domtys acc ty = let
         val (d1, rty) = dom_rng ty
