@@ -72,8 +72,8 @@ local open simpLib sumTheory
       infix ++
 in
 val std_ss =
-     (boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ optionSimps.OPTION_ss)
-       && (type_rws "sum" @ [ISL,ISR,OUTL,OUTR,INL,INR])
+     (boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ optionSimps.OPTION_ss ++
+      arithSimps.REDUCE_ss ++ sumSimps.SUM_ss)
 
 val arith_ss = std_ss ++ arithSimps.ARITH_ss ++ arithSimps.REDUCE_ss
 val list_ss  = arith_ss ++ listSimps.list_ss
