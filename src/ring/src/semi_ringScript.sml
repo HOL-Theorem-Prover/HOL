@@ -1,6 +1,5 @@
 (*
-load "abs_tools";
-load "RecordType";
+app load ["abs_tools", "RecordType", "BasicProvers", "SingleStep", "Datatype"];
 *)
 open HolKernel Parse boolLib abs_tools;
 open BasicProvers SingleStep Datatype;
