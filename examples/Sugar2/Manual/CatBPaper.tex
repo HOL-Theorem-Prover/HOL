@@ -353,9 +353,11 @@ collapses to \Sugar when the are no infinite types.
 
 \subsection{Education}
 
-I teach both semantic embedding and property specification as part of an undergraduate course at
+I teach both semantic embedding and property specification as part of
+an undergraduate course at
 Cambridge\footnote{\url{http://www.cl.cam.ac.uk/users/mjcg/Teaching/SpecVer2/SpecVer2.html}},
-and being able to illustrate the ideas on a real example like \Sugar is pedagogically valuable.
+and being able to illustrate the ideas on a real example like \Sugar
+is pedagogically valuable.
 
 Also, the definition of \Sugar in the \Hol system is an interesting
 case study. It nicely illustrates some issues in making total
@@ -624,8 +626,9 @@ $\t{L}_{\t{M}}$ to finite sequences of states
      {\FSem{M}{{\pi}}{{\c}}{\fStrongImp{r1}{r2}}}
       \Or
       {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(0,j)}))}{\c}{r1} 
-          \And 
-          {\Forall}k. k \Ge j {\Imp} {\Exists}w. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))w}{\c}{r2})
+          \Imp ({\Exists}k. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))}{\c}{r2})
+             \Or
+             {\Forall}k. {\Exists}w. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))w}{\c}{r2})
     {\And}
     ({\FSem{M}{{\pi}}{{\c}}{\fAbort{f}{b}}} =
       ({\FSem{M}{\pi}{{\c}}{f }}
@@ -752,7 +755,7 @@ with Cindy Eisner.}
 
 \medskip
 
-\texttt{$G$(req\_in -> $X$(req\_out@clkb)) @clka}
+~~\texttt{G(req\_in -> X(req\_out@clkb)) @clka}
 
 \medskip
 
@@ -765,7 +768,7 @@ Thus \texttt{clkb} ``protects''
 
 \medskip
 
-\texttt{req\_out@clkb@clka = req\_out@clkb}
+~~\texttt{req\_out@clkb@clka = req\_out@clkb}
 
 \medskip
 
@@ -773,7 +776,7 @@ Thus \texttt{clkb} ``protects''
 
 \medskip
 
-\texttt{req\_out@clkb = [$\neg$clkb $U$ (clkb $\wedge$ req\_out)]}
+~~\texttt{req\_out@clkb = [$\neg$clkb U (clkb $\wedge$ req\_out)]}
 
 \medskip
 
@@ -782,7 +785,7 @@ then we would be forced to have:
 
 \medskip
 
-\texttt{req\_out@clkb@clka = [$\neg$clkb $U$ (clkb $\wedge$ req\_out)]@clka}
+~~\texttt{req\_out@clkb@clka = [$\neg$clkb U (clkb $\wedge$ req\_out)]@clka}
 
 \medskip
 
@@ -790,7 +793,7 @@ then we would be forced to have:
 
 \medskip
 
-\texttt{req\_out@clkb@clka = req\_out@clkb}
+~~\texttt{req\_out@clkb@clka = req\_out@clkb}
 
 \medskip
 
@@ -929,7 +932,7 @@ and use the following two definitions:
 
 {\begin{alltt}
     ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\FBool{b}}} = 
-      {\Exists}i. FirstRise M {\Pi} c i {\And} {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{i})}{b}}
+      {\Exists}i. FirstRise M {\Pi} c i {\And} {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{i})}{b}})
     {\And}
     ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fNot{f}}} = 
       {\Not}({\FSem{M}{{\pi}}{{\weakClock{c}}}{f}})) 
@@ -1115,8 +1118,8 @@ rising edge of \t{c}.
 
 \medskip
 
-$\vdash~ \t{FirstRise~M}~{\pi}~\t{c~i}~\Rightarrow~(\forall \t{j}.~\t{j} < \t{i} ~\Rightarrow~
-\neg(\bSem{M}{L_{M}(\pi_j)}{\t{c}})~\wedge~\bSem{M}{L_{M}(\pi_i)}{\t{c}}$
+$\vdash~ \t{FirstRise~M}~{\pi}~\t{c~i}~\Rightarrow~\forall \t{j}.~\t{j} < \t{i} ~\Rightarrow~
+\neg\bSem{M}{L_{M}(\pi_j)}{\t{c}}~\wedge~\bSem{M}{L_{M}(\pi_i)}{\t{c}}$
 
 \medskip
 
