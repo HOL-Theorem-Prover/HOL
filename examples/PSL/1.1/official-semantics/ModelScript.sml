@@ -29,8 +29,8 @@ quietdec := true;                         (* Switch off output               *)
 loadPath                                  (* Add official-semantics to path  *)
  :=
  "../../path" :: !loadPath;
-map load ["PathTheory"];
-open PathTheory;
+map load ["pred_setLib","PathTheory"];
+open ped_setTheory PathTheory;
 quietdec := false;                        (* Restore output                  *)
 *)
 
@@ -38,7 +38,7 @@ quietdec := false;                        (* Restore output                  *)
 (* Boilerplate needed for compilation                                        *)
 (*****************************************************************************)
 
-open HolKernel Parse boolLib bossLib PathTheory;
+open HolKernel Parse boolLib bossLib pred_setTheory PathTheory;
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -49,15 +49,6 @@ open HolKernel Parse boolLib bossLib PathTheory;
 (*****************************************************************************)
 
 val _ = new_theory "Model";
-
-(*****************************************************************************)
-(* A simpset fragment to rewrite away quantifiers restricted with :: LESS    *)
-(*****************************************************************************)
-val resq_SS =
- simpLib.merge_ss
-  [res_quanTools.resq_SS,
-   rewrites
-    [LESS_def,LENGTH_def,IN_LESS,IN_LESSX]];
 
 (*****************************************************************************)
 (* Stop ``S`` parsing to the S-combinator                                    *)

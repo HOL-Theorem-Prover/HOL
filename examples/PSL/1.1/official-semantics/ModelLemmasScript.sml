@@ -258,10 +258,10 @@ val AUTOMATON_MODEL_TO_AUTOMATON =
 (*  where a is the labeling of s. P are the propositions of M and            *)
 (*  L(s,t) = L(s).                                                           *)
 (*****************************************************************************) 
-val AUTOMATON_MODEL_PROD_def =
+val MODEL_AUTOMATON_PROD_def =
  Define 
-  `AUTOMATON_MODEL_PROD 
-    (A:('prop -> bool, 'state1) automaton) (M:('state2, 'prop) model) =
+  `MODEL_AUTOMATON_PROD 
+    (M:('state2, 'prop) model) (A:('prop -> bool, 'state1) automaton)  =
     <| S  := {(s,t) | s IN M.S  /\ t IN A.Q};
        S0 := {(s,t) | s IN M.S0 /\ t IN A.Q0};
        R  := {((s,t),(s',t')) | 
@@ -269,13 +269,13 @@ val AUTOMATON_MODEL_PROD_def =
        P  := M.P;
        L  := \(s,t). M.L s |>`;
 
-val _ = overload_on ("||", ``AUTOMATON_MODEL_PROD``);
+val _ = overload_on ("||", ``MODEL_AUTOMATON_PROD``);
 
-val MODEL_AUTOMATON_MODEL_PROD =
+val MODEL_MODEL_AUTOMATON_PROD =
  store_thm
-  ("MODEL_AUTOMATON_MODEL_PROD",
-   ``!A M. AUTOMATON A /\ MODEL M ==> MODEL(A || M)``,
-   RW_TAC list_ss [MODEL_def,AUTOMATON_def,AUTOMATON_MODEL_PROD_def]
+  ("MODEL_MODEL_AUTOMATON_PROD",
+   ``!M A. MODEL M /\ AUTOMATON A ==> MODEL(M || A)``,
+   RW_TAC list_ss [MODEL_def,AUTOMATON_def,MODEL_AUTOMATON_PROD_def]
     THEN FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF]
     THEN RW_TAC list_ss []
     THEN RES_TAC
@@ -335,25 +335,49 @@ SIMP_CONV (srw_ss())
         L  := val_fn |>)``;
 
 SIMP_CONV (srw_ss()) 
-  [AUTOMATON_MODEL_PROD_def,SIMPLE_MODEL_def]
-  ``<| Sigma := alphabet;
+  [MODEL_TO_AUTOMATON_def,PATH_TO_MODEL_def,MODEL_AUTOMATON_PROD_def]
+  ``(PATH_TO_MODEL(FINITE l) ||
+    <| Sigma := alphabet;
+      Q     := states;
+      Delta := delta;
+      Q0    := initial_states;
+      F     := final_states |>)``;
+ 
+SIMP_CONV (srw_ss()) 
+  [MODEL_TO_AUTOMATON_def,PATH_TO_MODEL_def,MODEL_AUTOMATON_PROD_def]
+  ``MODEL_TO_AUTOMATON
+    (PATH_TO_MODEL(FINITE l) || 
+    <| Sigma := alphabet;
+      Q     := states;
+      Delta := delta;
+      Q0    := initial_states;
+      F     := final_states |>)``;
+
+SIMP_CONV (srw_ss()) 
+  [MODEL_AUTOMATON_PROD_def,OPEN_MODEL_def,SIMPLE_MODEL_def]
+  ``OPEN_MODEL states
+    ||
+    <| Sigma := alphabet;
        Q     := states;
        Delta := delta;
        Q0    := initial_states;
-       F     := final_states |>
-    ||
-    SIMPLE_MODEL initial_states (\(s,s'). ?a. delta(s,a,s'))``;
+       F     := final_states |>``;
 
 SIMP_CONV (srw_ss()) 
-  [AUTOMATON_MODEL_PROD_def,SIMPLE_MODEL_def,MODEL_TO_AUTOMATON_def]
+  [MODEL_AUTOMATON_PROD_def,OPEN_MODEL_def,SIMPLE_MODEL_def,MODEL_TO_AUTOMATON_def]
   ``MODEL_TO_AUTOMATON
-     (<| Sigma := alphabet;
-        Q     := states;
-        Delta := delta;
-        Q0    := initial_states;
-        F     := final_states |>
-     ||
-     SIMPLE_MODEL initial_states (\(s,s'). ?a. delta(s,a,s')))``;
+     (<| S  := states;
+         S0 := initial_states;
+         R  := {(s,s') | T};
+         P  := props;
+         L  := val_fn |>
+      ||
+      <| Sigma := {a | a SUBSET props};
+         Q     := states;
+         Delta := delta;
+         Q0    := initial_states;
+         F     := final_states |>)``;
+
 ******************************************************************************)
 
 (*****************************************************************************)
