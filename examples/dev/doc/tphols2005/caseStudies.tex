@@ -4,43 +4,128 @@ of the AES encryption algorithm.
 \paragraph{Booth Multiplier}
 \paragraph{AES}
 
-AES is a recent encryption standard \cite{AES}, chosen to replace the
-aging Digital Encryption Standard (DES). Building on a functional
-correctness proof of AES \cite{slind:aes}, we are working on applying
-the hardware synthesis infrastructure described in the previous
-sections to produce a hardware implementation of AES. Although this
-work is still underway, interesting observations can still be
-made. Currently, all the major components of a `round' of encryption
-are synthesized. In particular, in a round, the following sub-routines
-are invoked: (a) application of an \emph{sbox}; (b) xor-ing the state
-with a key from the key schedule; (c) shifting of rows, and (d) column
-multiplication.  The application of the sbox is, so far, being treated
-as combinational.  Xor-ing of the state synthesizes to a combinational
-circuit, as does row shifting, which is quite nicely synthesized to a
-circuit that merely does some rewiring. The most interesting component
-so far has been column multiplication, which relies on a special
-Galois Field multiplication.  In the following, the function
-\verb+xtime+, which operates over eight-bit bytes, is used to
-implement the (recursive) multiplication function which is written
-infix \verb+b1 ** b2+. Left shift (\verb+<<+), right shift
-(\verb+>>>+), and least-and-most significant bit operations
-(\verb+MSB+,\verb+LSB+) are also used.
+The Advanced Encryption Standard (AES) \cite{AES} for private-key encryption
+specifies a multi-round algorithm with primitive computations based on finite
+field operations.  Starting from an existing formalization of AES
+\cite{slind:aes}, we have generated netlists and circuits for the major
+components of an encryption (and decryption) round.  Although out work on AES
+is incomplete, our current progress provides several illustrations of our
+synthesis methodology.
 
+The AES formalization includes a proof of functional correctness  for the
+algorithm: specifically, encryption and decryption are inverse functions.
+Deriving the hardware from the proven specification using logical inference
+assures us that the hardware encrypter is the inverse of the hardware
+decrypter.
+
+An encryption round performs the following transformations on a 4-by-4 matrix
+of input bytes:
+\begin{enumerate}
+\item
+application of an \emph{sbox}, an invertible function from bytes to bytes,
+to each byte
+\item
+a cyclical shift of each row
+\item
+multiplication of each column by a fixed degree 3 polynomial, with coefficients
+in the 256 element finite field, GF($2^8$).
+\item
+adding a key to the matrix with exclusive or
+\end{enumerate}
+
+\begin{figure}
 \begin{verbatim}
- xtime w = w << 1 # (if MSB w then 0x1Bw else 0w
+ShiftRows (b00,b01,b02,b03,b10,b11,b12,b13,b20,b21,b22,b23,b30,b31,b32,b33) =
+          (b00,b01,b02,b03,b11,b12,b13,b10,b22,b23,b20,b21,b33,b30,b31,b32)
+\end{verbatim}
+\begin{verbatim}
+|- (?v0 v1 v2.
+      DEL (load,v2) /\ NOT (v2,v1) /\ AND (v1,load,v0) /\
+      NOT (v0,done) /\ DEL (inp1,out1) /\ DEL (inp2,out2) /\
+      DEL (inp3,out3) /\ DEL (inp4,out4) /\ DEL (inp6,out5) /\
+      DEL (inp7,out6) /\ DEL (inp8,out7) /\ DEL (inp5,out8) /\
+      DEL (inp11,out9) /\ DEL (inp12,out10) /\ DEL (inp9,out11) /\
+      DEL (inp10,out12) /\ DEL (inp16,out13) /\ DEL (inp13,out14) /\
+      DEL (inp14,out15) /\ DEL (inp15,out16)) ==>
+    DEV ShiftRows (load, inp1 <> ... inp16, done, out1 <> ... <> out16) 
+\end{verbatim}
+\caption{Row shifting}
+\label{AES:shift}
+\end{figure}
 
- b_1 ** b_2 =
-    if b_1 = 0w then 0w else 
-    if LSB b_1 then b2 # ((b_1 >>> 1) ** xtime b_2)
-              else       ((b_1 >>> 1) ** xtime b_2)
+The discussion about multiplication below applies to the sbox implementation,
+although the sbox is a more complicated function.  The row shift operation
+translates into a simple circuit whose wiring reflects the permutation
+(Fig.~\ref{AES:shift}).  The multiplication algorithm admits several
+implementation strategies, each with important hardware
+differences.  The key addition is similar to the row shift.
+
+\begin{figure}
+\begin{verbatim}
+xtime w = w << 1 # (if MSB w then 0x1B else 0x0)
+
+b_1 ** b_2 =
+   if b_1 = 0x0 then 0x0
+   else if LSB b_1 then b2 # ((b_1 >>> 1) ** xtime b_2)
+   else                      ((b_1 >>> 1) ** xtime b_2)
+
+IterMult (b1,b2,acc) =
+   if b1 = 0w then (b1,b2,acc)
+   else IterMult (b1 >>> 1, xtime b2, if LSB b1 then (b2 # acc) else acc)
+\end{verbatim}
+\caption{AES Multipliers}
+\label{AES:mult}
+\end{figure}
+
+The column multiplication step multiplies (in GF($2^8$)) each input byte by a
+pre-specified constant, meaning that multiplications by only a small handful
+of numbers are needed (0x2 and 0x3 for encryption, and 0x9, 0xB, 0xD, and 0xE
+for decryption).  Fig.~\ref{AES:mult} gives the specification for this
+multiplication, written infix \verb+b1 ** b2+.  The \verb+<<+ and \verb+>>>+
+operators denote left shift and logical right shift; the \verb+#+ operator
+denotes exclusive or; and the \verb+MSB+ and \verb+LSB+ functions return the
+most and least significant bit, respectively.
+
+The specification cannot be used in hardware synthesis, because it is not
+tail-recursive.  The tail recursive function \verb+IterMult+
+(Fig.~\ref{AES:mult}) is easily proven equivalent to \verb+**+.  A
+straightforward application of the hardware synthesis methodology yields a
+netlist or Verilog for \verb+IterMult+.  The occurrence of \verb+xtime+ in the
+function yields a choice in hardware generation.  We can treat the \verb+xtime+
+function as a handshaking device, and refine it into \verb+IterMult+ after both
+are converted into circuit constructors.  Alternately, we can replace the
+definition of \verb+xtime+ in \verb+IterMult+ with \verb+xtime+'s body.  Since
+\verb+xtime+ is a small combinational circuit, the latter approach has the
+advantage of generating less handshaking hardware.
+
+Instead of generating an iterative circuit for the general multiplication
+function, we have the option to generate combinational circuits for only the
+six needed values of the first argument.  Partially evaluating the definition
+of \verb+**+ on its potential first arguments automatically proves six theorems
+similar to the following:
+\begin{verbatim}0xB ** x = x # xtime (x # xtime (xtime x))\end{verbatim}
+We then take these theorems as specifications for one argument multipliers and
+transforms them into hardware.  The \verb+xtime+ component can be supplied
+either before or after synthesis, as in the previous example.
+
+We can apply partial evaluation even further, and supply all of the 256
+possible second arguments as well, to derive multiplication tables, each 256
+bytes in size.
+\begin{verbatim}
+(0xB ** 0x0 = 0x0) /\ ... /\ (0xB ** 0xFF = 0xA3)
+\end{verbatim}
+These tables could be incorporated into a RAM or ROM device.  For synthesizing
+the tables directly into hardware, we have automated the definition of a
+function on bytes as a balanced \verb+if+ expression, branching on each
+successive bit of its input.
+\begin{verbatim}
+0xB ** x = if WORD_BIT 7 x then
+             if WORD_BIT 6 x then 
+               ...
+                       if WORD_BIT 0 then 0xA3 else 0xA8
+               ...
+           else
+             if WORD_BIT 6 x then
+               ...
 \end{verbatim}
 
-There are at least five different ways this function could be presented:
-\begin{enumerate}
-\item Direct translation of the recursive algorithm
-\item Tail recursive algorithm
-\item Partial evaluation with respect to the first argument
-\item The result of the previous partially evaluated with respect to all
-second arguments. The results of this can be represented in tabular form,
-or as a balanced \verb+if+-tree.
-\end{enumerate}
