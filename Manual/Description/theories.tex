@@ -4,17 +4,17 @@
 The collection of theories distributed with the \HOL\ system
 \index{ancestry, of HOL system theories@ancestry, of \HOL\ system
 theories}
-is:
-The theories listed in Table \ref{nativeTheories} come
-pre-built in the system (we have omitted a few of the less commonly used
-ones).
+is listed in Table \ref{nativeTheories}. Some of the less commonly used
+theories have been omitted.
+
 \begin{table}
 \begin{center}
-\begin{tabular}{|r|l|} \hline
+\begin{tabular}{|l|l|} \hline
 minTheory & the origin theory \\
 boolTheory & definitions of logical operators and basic axioms \\
 combinTheory & combinators \\
-pairTheory & basic theory of pairs \\
+pairTheory & theory of pairs \\
+sumTheory & disjoint sums \\
 relationTheory & transitive closure and wellfoundedness \\
 numTheory & Peano's axioms derived from the axiom of infinity \\
 prim\_recTheory, & the primitive recursion theorem \\
@@ -26,9 +26,8 @@ bagTheory & bags (also known as \emph{multisets})\\
 listTheory & lists  \\
 rich\_listTheory & extended theory of lists \\
 optionTheory & the {\tt option} type \\
-finite\_mapTheory & finite maps from $\alpha$ to $\beta$ \\
+finite\_mapTheory & finite functions \\
 ltreeTheory & polymorphic finitely branching trees \\
-sumTheory & disjoint sums \\
 restr\_binderTheory & definitions of binder restrictions \\
 res\_quanTheory & restricted quantifier support \\
 asciiTheory & ascii \\
@@ -886,27 +885,80 @@ on
 
 \subsubsection{The less-than relation}
 
-The less-than relation `{\small{\tt\verb+<+}}'\index{ less than, in HOL logic@\ml{<} (less than, in \HOL\ logic)}
-  is most  naturally defined by
-primitive recursion. However, it  is  needed for
-the proof of the primitive recursion theorem,
-so  it  must  be  defined
-before definition  by primitive recursion is available.
-The theory \ml{prim\_rec} therefore  contains the following
-non-recursive definition\index{less than, in HOL logic@less than, in \HOL\ logic} of \ml{<}:
+The less-than relation `{\small{\tt\verb+<+}}'\index{ less than, in HOL
+  logic@\ml{<} (less than, in \HOL\ logic)} is most naturally defined by
+  primitive recursion. However, it is needed for the proof of the
+  primitive recursion theorem, so it must be defined before definition
+  by primitive recursion is available. The theory \ml{prim\_rec}
+  therefore contains the following non-recursive definition\index{less
+  than, in HOL logic@less than, in \HOL\ logic} of \ml{<}:
 
 \begin{hol}
 \index{LESS@\ml{LESS}}
 \begin{verbatim}
-   LESS  |- !m n. m < n = (?P. (!n'. P(SUC n') ==> P n') /\ P m /\ ~P n)
+   LESS  |- !m n. m < n = (?P. (!n. P(SUC n) ==> P n) /\ P m /\ ~P n)
 \end{verbatim}\end{hol}
 
 \noindent
-This definition says that {\small\verb%"m < n%"} if there exists a set (with
+This definition says that {\small\verb%m < n%} if there exists a set (with
 characteristic function {\small\verb%P%}) that is downward
 closed\footnote{A set of numbers is {\it downward closed\/} if whenever it
 contains the successor of a number, it also contains the number.} and
 contains {\small\verb%m%} but not {\small\verb%n%}.
+
+\subsubsection{Consequences of primitive recursion}
+
+Once the primitive recursion theorem is available, other useful theorems
+can be proved. The theory \ml{prim\_rec} supplies the Axiom of Dependent
+Choice, which is a theorem in \HOL\ because it follows from
+{\small\verb+SELECT_AX+}:
+
+\begin{hol}
+\index{Axiom of Dependent Choice@\ml{DC}}
+\begin{verbatim}
+   DC  |- !P R a.
+            P a /\ (!x. P x ==> ?y. P y /\ R x y)
+             ==>
+           ?f. (f 0 = a) /\ !n. P (f n) /\ R (f n) (f (SUC n))
+\end{verbatim}\end{hol}
+
+The theorem {\small\verb+DC+} is useful when one wishes to build a
+function having a certain property from a relational
+characterization. An alternate characterization of wellfoundedness is
+the absence of infinite decreasing $R$ chains. By use of {\small\verb+DC+},
+this can be proved to be equal to the the notion of wellfoundedness
+(namely, that every set has an $R$-minimal element) defined in the
+theory {\small\verb+relation+}.
+
+\begin{hol}
+\index{Wellfounded@\ml{Wellfounded}}
+\begin{verbatim}
+   wellfounded_def    |- wellfounded (R:'a->'a->bool) 
+                            = 
+                         ~?f. !n. R (f (SUC n)) (f n)
+
+   WF_IFF_WELLFOUNDED |- !R. WF R = wellfounded R
+\end{verbatim}\end{hol}
+
+The theory \ml{prim\_rec} also provides theorems asserting the
+wellfoundedness of the predecessor relation and the less-than relation,
+as well as the wellfoundedness of measure functions.
+
+\begin{hol}
+\index{WF_PRED\ml{WF_PRED}}
+\index{WF_LESS@\ml{WF_LESS}}
+\index{measure_def@\ml{measure_def}}
+\index{WF_measure@\ml{WF_measure}}
+\begin{verbatim}
+   WF_PRED     |- WF (\x y. y = SUC x)
+
+   WF_LESS     |- WF $<
+
+   measure_def |- measure = inv_image $<
+
+   WF_measure  |- !m. WF (measure m)
+\end{verbatim}\end{hol}
+
 
 \subsection{The theory {\tt arithmetic}}
 

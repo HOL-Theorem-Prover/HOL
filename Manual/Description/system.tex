@@ -872,58 +872,6 @@ The corresponding destructor functions are called \ml{strip\_comb}, \etc,
 \index{terms, in HOL logic@terms, in \HOL\ logic!constructors for|)}
 
 
-\subsubsection{Conditionals}\label{conditionals}
-
-A conditional\index{terms, in HOL logic@terms, in \HOL\ logic!conditional}\index{conditional predicate, in HOL logic@conditional predicate, in \HOL\ logic}\index{conditionals, in HOL logic@conditionals, in \HOL\ logic}
- term \ml{`if $t_1\ $then$\ t_2\ $else$\ t_3$`} abbreviates the application
-\ml{COND\ $t_1\ t_2\ t_3$}, where \ml{COND}\index{COND@\ml{COND}}\index{conditionals, in HOL logic@conditionals, in \HOL\ logic}
-is a constant defined in the theory \ml{bool} (see Section~\ref{boolthy}).
-The syntax \ml{$t_1\ $=>$\ t_2\ $|$\ t_3$} is also permitted. An
-iterated conditional 
-
-\[
-t_{11}\ \ml{=>}\ t_{12}\ \ml{|}\
-t_{21}\ \ml{=>}\ t_{22}\ \ml{|}\
-\ \ldots\ \ml{|}\
-t_{n1}\ \ml{=>}\ t_{n2}\ \ml{|}\ t_{n3}
-\]
-
-\noindent translates\index{parsing, of HOL logic@parsing, of \HOL\ logic!of conditionals} to:
-
-\[
-t_{11}\ \ml{=>}\ t_{12}\ \ml{|}\
-(t_{21}\ \ml{=>}\ t_{22}\ \ml{|}\
-\ \ldots\ \ml{|}\
-(t_{n1}\ \ml{=>}\ t_{n2}\ \ml{|}\ t_{n3})\ \ldots\ )
-\]
-
-\noindent which, in turn, abbreviates:
-
-\[\ml{COND}\ t_{11}\ t_{12}\ \ml{(COND}\ t_{21}\ t_{22}\ \ldots\
-\ml{(COND}\ t_{n1}\ t_{n2}\ t_{n3}\ml{)}\ \ldots\ \ml{)}\]
-
-\noindent For example, 
-
-\begin{session}\begin{verbatim}
-- Term `if b then if c then if d then e else f else g else h`;
-<<HOL message: inventing new type variable names: 'a.>>
-
-> val it =
-    `(if b then (if c then (if d then e else f) else g) else h)`
-    : term
-
-- Term `b => c => d => e | f | g | h`;
-<<HOL message: inventing new type variable names: 'a.>>
-
-> val it =
-    `(if b then (if c then (if d then e else f) else g) else h)`
-    : term
-
-\end{verbatim}\end{session}
-
-\noindent Note that the system alway prints out conditionals in the "if $t_1$ then
-$t_2$ else $t_3$" form. 
-
 \section{Theorems}
 \label{avra_theorems}
 % I have added this section in a hurry 9 Nov 89.  Was missing!
@@ -1083,90 +1031,10 @@ in Chapter~\ref{logic}: \ml{SELECT\_AX}.
 > val it =  [P x] |- P ($@ P) : thm
 \end{verbatim}\end{session}\index{theorem notation, in HOL logic@theorem notation, in \HOL\ logic|)}
 
-\subsection{Oracles}
-
-Hol98 extends the \LCF\ tradition by allowing the use of an \emph {oracle}
-mechanism to allow arbitrary formulas to become elements of the
-\verb+thm+ type. By use of this mechanism, Hol98 can utilize the results
-of arbitrary proof procedures. In spite of such liberalness, the system
-can still make strong assertions about the security of ML objects of
-type \verb+thm+. 
-
-To avoid unsoundness, the system attaches a \emph{tag} to any theorem
-coming from an oracle. The system propagates this tag through every
-inference that the theorem participates in. If it happens that falsity
-becomes derived, the offending oracle can be found by examining the tags
-component of the theorem. A theorem proved without use of any oracle
-will have an empty tag, and can thus be considered to have been proved
-in the HOL logic.
-
-Tagged theorems can be created via
-\begin{hol}
-\index{mk_oracle_thm@\ml{mk\_oracle\_thm}!type of}
-\begin{verbatim}
-    val mk_oracle_thm : tag -> term list * term -> thm
-\end{verbatim}\end{hol}
-
-which directly creates the requested theorem and attaches the given tag to
-it. Tags may be created with
-
-\begin{hol}
-\index{Tag.read@\ml{Tag.read}!making tags}
-\begin{verbatim}
-     Tag.read : string -> tag.
-\end{verbatim}
-\end{hol}
-
-As well as providing principled access to the results of external
-reasoners, tags are used to implement some useful `system' operations on
-theorems. For example, one can directly create a theorem via the function
-\verb+mk_thm+. The tag \verb+MK_THM+ gets attached to each theorem
-created with this call. This allows users to directly create useful
-theorems, \eg, to use as test data for derived rules of inference.
-Another tag is used to implement validity checking in tactics.
-
-The tags in a theorem can be viewed by setting \verb+Globals.show_tags+ to
-true. For example, we have\footnote{Hol98 currently also uses tags for
-tracking the use of axioms in proofs.}
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-- Globals.show_tags := true;
-> val it = () : unit
-
-- mk_thm([], Term `F`);;
-> val it = [oracles: MK_THM] [axioms: ] [] |- F : thm
-\end{verbatim}\end{session}\index{mk_thm@mk_thm)}
-
-There are three elements to the left of the turnstile in the fully printed
-representation of a theorem: the first two comprise the tags component and the
-third is the standard assumption list. The tag component of a theorem
-can be extracted by
- \begin{verbatim}
-     Thm.tag : thm -> tag
- \end{verbatim}
-\noindent and prettyprinted by
- \begin{verbatim}
-     Tag.pp : ppstream -> tag -> unit.
- \end{verbatim}
-
-\noindent{\bf Remark}
-
-No serious attempt is made to prevent spoofing: a person may attach tag
-\verb+X+ on an assertion coming from tool \verb+Y+ if desired. However, the
-tags for \verb+mk_thm+ and validity checking cannot be spoofed.
-
-\noindent{\bf Remark}
-
-Some care should be taken with using oracles to bring in results of
-proof procedures for theories lacking a formalization in the \HOL\
-logic. The product of such procedures can be used in \HOL\ without damage;
-however, in the end it won't be clear --- at least in \HOL\ --- what has
-been proven.
-
 \section{Theories}\index{theories, in HOL logic@theories, in \HOL\ logic!representation of|(}
 \label{theoryfns}
 
-It was mentioned in Chapter~\ref{logic} that a theory is a $4$-tuple
+In Chapter~\ref{logic} a theory is described as a $4$-tuple
 
 \[ {\cal T}\ =\ \langle{\sf Struc}_{\cal T},\
                 {\sf Sig}_{\cal T},\
@@ -1185,16 +1053,21 @@ the set of axioms of ${\cal T}$;
 theorems of ${\cal T}$.
 \end{myenumerate}
 
-Such a theory is represented  in the  \HOL\ system  as a  collection of files,
-called theory files\index{theory files|(}. Each  file is an ML structure
-with a name  of the  form $name$\ml{Theory}, where
-$name$ is a string supplied by the user when the theory is created.  Various additional pieces of
-information are stored in the theory files, including the parsing status of the
-constants (\eg\ whether they are infixes or binders), as well as several items
-involving concepts not yet introduced: type abbreviations (see
-Section~\ref{typeabbrev} for this); and which axioms are definitions, type
-definitions or specifications (see Section~\ref{avra_definitional} for the last
-three).
+In Hol98, there is a distinction between building a theory and using
+it. Theories are built in an interactive manner: axioms,
+definitions and theorems can be entered into, or deleted from, the
+theory under construction at any time. Once the user has built the
+theory to his or her satisfaction, it can be exported to disk, to be
+imported in later sessions, without having to load the tools and replay
+the proofs that created the theory in the first place. 
+
+A theory suitable for importing into a session is represented in the
+\HOL\ system as a compiled ML module with a name  of the  form
+$name$\ml{Theory}, where $name$ is a string supplied by the user when
+the theory is created.  Various additional pieces of 
+information are stored in the theory structure, including the parsing
+status of the constants (\eg\ whether they are infixes or
+binders). 
 
 Theory files are structured hierarchically to represent sequences of
 extensions of an initial theory (see Section~\ref{extensions}) called
@@ -1203,27 +1076,24 @@ axioms and theorems, together with pointers to other theory files called its
 {\it parents\/}\index{parents, of HOL theories@parents, of \HOL\ theories}.  The theory represented by such a theory file is obtained by
 taking the union of all the types, constants, axioms and theorems in the file,
 together with the types, constants, axioms and theorems in all the theory
-files reachable by following pointers to parents. This collection of reachable
-files is called the {\it ancestry\/}\index{ancestry, of HOL system theories@ancestry, of \HOL\ system theories}\index{theories, in HOL logic@theories, in \HOL\ logic!hierarchies of}
-of the theory file. 
+files reachable by following pointers to parents. This collection of
+reachable files is called the {\it ancestry\/}\index{ancestry, of HOL
+system theories@ancestry, of \HOL\ system theories}\index{theories, in
+HOL logic@theories, in \HOL\ logic!hierarchies of} of the theory file. 
 
-% Axioms (including
-% definitions and specifications) and theorems are named in the \HOL\ system by
-% two strings: the name of the theory file in which they are stored, together with
-% a name supplied by the user\index{theory files|)}.
-
-The data stored in a single theory file is called a {\it theory segment\/}\index{theory segments};
-this is not really a logical concept, but rather a concept of the
-representation of theories in the \HOL\ system. It is necessary to distinguish
-theories from their constituent theory segments  because the naming of data
-in theories is based on the names given to segments.  Specifically, axioms,
-definitions, specifications and theorems are named\index{theories, in HOL logic@theories, in \HOL\ logic!naming of}
- by a pair of strings
-$\langle thy,name \rangle$,
-where $thy$ is the name of the theory segment current when the
-item was declared and $name$ is a specific name supplied by the user (see the
-functions \ml{new\_axiom}, \ml{new\_definition}, below). Different items
-can have the same specific name if the associated segment is different.
+The data stored in a single theory file is called a {\it theory
+segment\/}\index{theory segments}; this is not really a logical concept,
+but rather a concept of the representation of theories in the \HOL\
+system. It is necessary to distinguish theories from their constituent
+theory segments because the naming of data in theories is based on the
+names given to segments.  Specifically, axioms, definitions,
+specifications and theorems are named\index{theories, in HOL
+logic@theories, in \HOL\ logic!naming of} by an \ML\ long identifier
+$thy${\small\verb+Theory.+}$name$, where $thy$ is the name of the theory
+segment current when the item was declared and $name$ is a specific name
+supplied by the user (see the functions \ml{new\_axiom}, \ml{new\_definition},
+below). Different items can have the same specific name if the
+associated segment is different.  
 
 A typical\index{HOL system@\HOL\ system!typical work in} piece of work with the \HOL\ system consists in a number of
 sessions\index{sessions with HOL system@sessions, with \HOL\ system}.
@@ -1256,90 +1126,95 @@ in whatever logical context they desire.
 \subsection{Primitive ML functions for creating theories}
 \label{theoryprims}
 
-The \ML\ functions for creating theories\index{theories, in HOL logic@theories, in \HOL\ logic!creation of|(} are listed below.
+The \ML\ functions for creating theories and manipulating
+\index{theories, in HOL logic@theories, in \HOL\ logic!creation of|(}
+are listed below.  
 
 \begin{boxed}
 \index{new_theory@\ml{new\_theory}|pin}
 \begin{verbatim}
-   new_theory : string -> void
+   new_theory : string -> unit
 \end{verbatim}\end{boxed}
 
-\noindent \ml{new\_theory `$thy$`} can be done in both
-proof\index{proof mode, in HOL system@proof mode, in \HOL\ system} and
-draft\index{draft mode, in HOL system@draft mode, in \HOL\ system} modes. It
-switches into draft mode for a new theory with name $thy$ and it fails if
-there already exists a file $thy$\ml{.th} in the current search path. The
-current theory becomes a new parent of $thy$.
+\noindent One makes a theory by a call to \verb+new_theory+.  This
+allocates a new `area' where subsequent theory operations take effect.
 
+If the current theory ($thy_1$ say) at the time of a call to
+{\small\verb+new_theory +}$thy_2$ is non-empty, \ie, has had an axiom, 
+definition, or theorem stored in it, then $thy_1$ is exported before $thy_2$
+is allocated. Furthermore, $thy_2$ will have $thy_1$ as a parent.
 
-\begin{boxed}
-\index{new_parent@\ml{new\_parent}|pin}
-\begin{verbatim}
-   new_parent : string -> void
-\end{verbatim}\end{boxed}
+If {\small\verb+new_theory +}$thy$ is called when the current theory is
+ already named $thy$, then that is interpreted as a request to clear the
+theory area for $thy$.
 
+A call to {\small\verb+new_theory "+}$name${\small\verb+"+} fails if:
+\begin{itemize}
 
-\noindent Executing \ml{new\_parent}\ $thy$ makes $thy$ into
-a parent
-of the current theory. Failure if:
-\begin{myenumerate}
-\item not in draft mode;
-\item $thy$ is not a theory on the current search path;
-\item there is a type in $thy$ with the same
-name as a type in the current theory;
-\item there is a constant in $thy$ with the same
-name as a constant in the current theory.
-\end{myenumerate}
+\item $name$ is not an alphanumeric starting with a letter.
 
+\item there is a theory already named $name$ in the ancestry of the
+current theory.
+
+\item if it is necessary to export the current theory before creating
+the new theory and the export attempt fails.
+
+\end{itemize}
+
+\noindent{\bf Remark} Elements stored in the current theory may be
+overwritten by subsequent additions, or deleted outright. Any theory
+elements that were built from overwritten or deleted elements are now
+held to be {\it out-of-date}, and will not be included in the theory
+when it is finally exported.  Out-of-date constants and types are
+detected by the \HOL\ printer, which will print them surrounded by
+odd-looking syntax to alert the user.
 
 \begin{boxed}
 \index{new_type@\ml{new\_type}|pin}
 \begin{verbatim}
-   new_type : int -> string -> void
+   new_type : int -> string -> unit
 \end{verbatim}\end{boxed}
 
 
-\noindent Executing \ml{new\_type}$\ n\ \ml{`\ty{op}`}$ makes \ty{op}
-a new $n$-ary type operator\index{type operators, in HOL logic@type operators, in \HOL\ logic!declaration} in the current theory.
+\noindent Executing \ml{new\_type}$\ n\ \ml{"\ty{op}"}$ makes \ty{op}
+a new $n$-ary type operator\index{type operators, in HOL logic@type
+operators, in \HOL\ logic!declaration} in the current theory. 
 Failure if:
 \begin{myenumerate}
-\item not in draft mode;
-\item there already exists a type operator named $\ty{op}$ in the current
-theory.
+\item there already exists a type operator named $\ty{op}$ in an ancestor
+      theory.
+\item \ty{op} is not an allowed name for a type.
 \end{myenumerate}
 
 
 \begin{boxed}
 \index{new_constant@\ml{new\_constant}|pin}
 \begin{verbatim}
-   new_constant : (string * type) -> void
+   new_constant : (string * type) -> unit
 \end{verbatim}\end{boxed}
 
-\noindent Executing {\small\verb%new_constant(`%}$c${\small\verb%`,%}$\sigma${\small\verb%)%} makes
+\noindent Executing {\small\verb%new_constant("%}$c${\small\verb%",%}$\sigma${\small\verb%)%} makes
 $c_{\sigma'}$ a new constant\index{constants, in HOL logic@constants, in \HOL\ logic!declaration of} of the current theory,
 for all $c_{\sigma'}$ where $\sigma'$ is an instance of $\sigma$.
 The type $\sigma$ is
 called the {\it generic type\/}\index{generic types, in HOL logic@generic types, in \HOL\ logic} of $c$. Failure if:
 \begin{myenumerate}
-\item not in draft mode;
-\item there already exists a constant named $c$ in the current
-theory.
+\item there already exists a constant named $c$ in an ancestor theory.
 \end{myenumerate}
 
 \begin{boxed}
 \index{new_infix@\ml{new\_infix}|pin}
 \begin{verbatim}
-   new_infix : (string * type) -> void
+   new_infix : (string * type) -> unit
 \end{verbatim}\end{boxed}
 
 
-\noindent Executing \ml{new\_infix(`}$ix$\ml{`,}$\sigma$\ml{)}
+\noindent Executing \ml{new\_infix("}$ix$\ml{",}$\sigma$\ml{)}
 declares $ix$ to be a new constant with generic type $\sigma$ and
 infix status.
 Failure if:
 \begin{myenumerate}
-\item not in draft mode;
-\item there already exists a constant named $ix$ in the current theory;
+\item there already exists a constant named $ix$ in an ancestor theory;
 \item $\sigma$ not of the form \ml{$\sigma_1$->$\sigma_2$->$\sigma_3$}.
 \end{myenumerate}
 
@@ -1347,17 +1222,16 @@ Failure if:
 \begin{boxed}
 \index{new_binder@\ml{new\_binder}|pin}
 \begin{verbatim}
-   new_binder : (string * type) -> void
+   new_binder : (string * type) -> unit
 \end{verbatim}\end{boxed}
 
 
-\noindent Executing \ml{new\_binder(`}$b$\ml{`,}$\sigma$\ml{)}\index{binders, in HOL logic@binders, in \HOL\ logic!declaration of}
+\noindent Executing \ml{new\_binder("}$b$\ml{",}$\sigma$\ml{)}\index{binders, in HOL logic@binders, in \HOL\ logic!declaration of}
 declares $b$ to be a new constant with generic type $\sigma$ and
 binder status.
 Failure if:
 \begin{myenumerate}
-\item not in draft mode;
-\item there already exists a constant named $b$ in the current theory;
+\item there already exists a constant named $b$ an ancestor theory;
 \item $\sigma$ not of the form \ml{($\sigma_1$->$\sigma_2$)->$\sigma_3$}.
 \end{myenumerate}
 
@@ -1368,14 +1242,12 @@ Failure if:
 \end{verbatim}\end{boxed}
 
 
-\noindent Executing \ml{new\_axiom(`}$name$\ml{`,}$t$\ml{)} declares the
+\noindent Executing \ml{new\_axiom("}$name$\ml{",}$t$\ml{)} declares the
 sequent
 \ml{(\{\},$t$)} to be an axiom\index{axioms!declaration of, in HOL logic@declaration of, in \HOL\ logic} of the current theory with name $name$.
 Failure if:
 \begin{myenumerate}
-\item not in draft mode;
-\item there is already an axiom, definition or specification
-named $name$ in the current theory segment.
+\item $t$ contains out-of-date constants or types.
 \end{myenumerate}
 
 
@@ -1388,21 +1260,31 @@ Once a theorem has been proved, it can be saved with the function
 \end{verbatim}\end{boxed}
 
 \noindent
-Evaluating \ml{save\_thm(`}$name$\ml{`,}$th$\ml{)} will save the theorem\index{theorems, in HOL logic@theorems, in \HOL\ logic!saving of}\index{saving theorems}
+Evaluating \ml{save\_thm("}$name$\ml{",}$th$\ml{)} will save the theorem\index{theorems, in HOL logic@theorems, in \HOL\ logic!saving of}\index{saving theorems}
 $th$ with name $name$ in the current theory segment.
 
-The following function is used to finish a session in  draft mode\index{draft mode, in HOL system@draft mode, in \HOL\ system}  and save the
-current theory segment in a theory file on disk.
 
-\begin{boxed}
-\index{close_theory@\ml{close\_theory}|pin}
+\subsection{Theories and the file system}
+
+Hol98 provides persistent theories: once a user has finished working on
+a theory, it can be written out to a file, to be used in future
+formalization efforts. Before the current theory is written out, all
+out-of-date entities are scrubbed out. Also the parenthood of the theory
+is computed: it is the fringe of the theory graph at the time
+\verb+export_theory+ is called.
 \begin{verbatim}
-   close_theory : void -> void
-\end{verbatim}\end{boxed}
+    export_theory : unit -> unit
+\end{verbatim}
+There is also a more general export operation---\verb+prim_export_theory+ ---
+which invokes user-supplied prettyprinters just before printing the end
+of the theory signature and structure. This can be used to, for example,
+store theory-specific proof tools with the theory.
 
-\noindent {\bf Warning:} quitting \HOL\ without\index{exiting of HOL system@exiting of \HOL\ system} closing the session with
-\ml{close\_theory} may result in the theory segment created during the session
-being lost (\ie\ not saved in a theory file)!\index{theories, in HOL logic@theories, in \HOL\ logic!creation of|)}
+When \verb+export_theory+ is invoked from an interactive session, the
+theory is exported, but not compiled. This makes it difficult to
+\verb+load+ the theory in a later session. Currently,
+\verb+export_theory+ is only useful when invoked under the control of
+\verb+Holmake+.
 
 \subsection{Functions for creating definitional extensions}\index{extension, of HOL logic@extension, of \HOL\ logic!definitional}\index{definitional extension, of HOL logic@definitional extension, of \HOL\ logic}\index{theories, in HOL logic@theories, in \HOL\ logic!extension of|(}
 \label{avra_definitional}
@@ -1447,73 +1329,20 @@ the current theory.
 
 
 \noindent Evaluating
- \ml{new\_definition(`}$name$\ml{`,\ "}$c\ v_1\ \cdots\ v_n\ =\ t$\ml{")},
+ \ml{new\_definition("}$name$\ml{",\ }$c\ v_1\ \cdots\ v_n\ =\ t$\ml{)},
 where $c$ is not already a constant, declares the sequent
 \ml{(\{\},$\lambda v_1\ \cdots\ v_n.\  t$)} to be a constant definition\index{definitions, adding to HOL logic@definitions, adding to \HOL\ logic}
 of the current theory. The name associated with the definition in
 this theory is $name$.
 Failure if:
 \begin{myenumerate}
-\item not in draft mode;
-\item there is already an axiom, definition or specification
-named $name$ in the current theory segment;
-\item $c$ is already a constant in the current theory;
+\item $c$ is already a constant in an ancestor current theory;
 \item $t$ contains free variables that are not in any of
 the variable structures $v_1$, $\dots$, $v_n$ (this is equivalent
 to requiring $\lambda v_1\ \cdots\ v_n.\  t$ to be a closed term);
 \item there is a type variable in  $v_1$, $\dots$, $v_n$ or $t$
 that does not occur in the type of $c$.
 \end{myenumerate}
-
-The following two functions declare new constants that have infix\index{infixes, in HOL logic@infixes, in \HOL\ logic!declaration of}\index{infixes, in HOL logic@infixes, in \HOL\ logic} or binder
-status. The failure conditions are the same as for \ml{new\_definition},
-with the
-additional conditions that the constants being declared must be types of
-the appropriate form (\ml{$\sigma_1$->$\sigma_2$->$\sigma_3$} for infixes and
-\ml{($\sigma_1$->$\sigma_2$)->$\sigma_3$} for binders).
-
-
-\begin{boxed}
-\index{new_infix_definition@\ml{new\_infix\_definition}|pin}
-\index{new_binder_definition@\ml{new\_binder\_definition}|pin}
-\begin{verbatim}
-   new_infix_definition  : (string * term) -> thm
-   new_binder_definition : (string * term) -> thm
-\end{verbatim}\end{boxed}
-
-\noindent Note that until an infix or binder declaration has been processed the
-constant being defined will not have its special status.\index{parsing, of HOL logic@parsing, of \HOL\ logic!of constants, before definition} It is therefore
-necessary to use
-the constant in normal prefix position when making the definition\index{defining mechanisms, for HOL logic@defining mechanisms, for \HOL\ logic}. For example,
-
-\begin{hol}
-{\small\verb%   new_infix_definition(`%}$ix${\small\verb%_DEF`, "%}$m$ $ix$ $n${\small\verb% = ... ")%}
-\end{hol}
-
-\noindent will not work, as at the time when the quotation is parsed, \ml{ix}
-does not have infix status and hence \ml{m ix n} will parse with \ml{m} as the
-function. The definition must thus have the form:
-
-\begin{hol}
-{\small\verb%   new_infix_definition(`%}$ix${\small\verb%_DEF`, "%}$ix$ $m$ $n${\small\verb% = ... ")%}
-\end{hol}
-
-\noindent Only after this has been processed will $ix$ be an infix. It is a
-common practice among \HOL\ users to write a {\small\verb%$%}\index{ escape, in HOL logic parser@{\small\verb+$+} (escape, in \HOL\ logic parser)}\index{declared constants, in HOL logic@declared constants, in \HOL\ logic}
-before
-the constant being defined as an infix or binder
-to indicate that after the definition is made, it will have a special
-syntactic status; \ie\ to write:
-
-\begin{hol}
-{\small\verb%   new_infix_definition(`%}$ix${\small\verb%_DEF`, "$%}$ix$ $m$ $n${\small\verb% = ... ")%}
-\end{hol}
-
-\noindent and similarly with \ml{new\_binder\_definition}. This use of
-{\small\verb%$%} is not necessary; but after the definition has been
-made {\small\verb%$%} must, of course,
- be used if the syntactic status needs to be suppressed.
-\index{constant definition extension, of HOL logic@constant definition extension, of \HOL\ logic!ML function for@\ML\ function for|)}
 
 \subsubsection{Constant specifications}
 \label{conspec}
@@ -1529,8 +1358,7 @@ is defined to be a pair:
 \noindent such that:
 
 \begin{myenumerate}
-\item $c_1$, $\dots$, $c_n$ are distinct names that
-are not the names of any constants in ${\sf Sig}_{\cal T}$.
+\item $c_1$, $\dots$, $c_n$ are distinct names.
 \item $\lquant{{x_1}_{\sigma_1}
 \cdots {x_n}_{\sigma_n}}t_{\ty{bool}}\ \in\ {\sf Terms}_{\cal T}$.
 \item $tyvars(\lquant{{x_1}_{\sigma_1}
@@ -1555,8 +1383,8 @@ Evaluating:
 
 \begin{tabular}{l}
    \ml{new\_specification}\\
-\ \ml{`}$name$\ml{`}\\
-\ \ml{[`}$flag_1$\ml{`,`}$c_1$\ml{`;\ }$\ldots$\ml{\ ;\ `}$flag_n$\ml{`,`}$c_n$\ml{`]}\\
+\ \ml{"}$name$\ml{"}\\
+\ \ml{[}$flag_1$\ml{,"}$c_1$\ml{",\ }$\ldots$\ml{\ ,\ "}$flag_n$\ml{","}$c_n$\ml{"]}\\
 \ \ml{|-\ ?}$x_1\ \cdots\ x_n$\ml{.}\  $t$\ml{[}$x_1$\ml{,}$\ \ldots\
 $\ml{,}$x_n$\ml{]}\\
 \end{tabular}
@@ -1568,22 +1396,22 @@ $c_n$ satisfying the property:
 
 \[ \ml{|- }t\ml{[}c_1\ml{,}\ \ldots\ \ml{,}c_n\ml{]} \]
 
-\noindent If \ml{`}$flag_i$\ml{`} is \ml{`constant`}
+\noindent If $flag_i$ is \ml{constant}
 then $c_i$ is declared an ordinary constant, if it is
-\ml{`infix`} then $c_i$ is declared an infix and if it is
-\ml{`binder`}\index{binders, in HOL logic@binders, in \HOL\ logic} then $\ml{c}_i$ is declared
-a binder.  Any other value of flag causes an error. This theorem is stored,
+\ml{infixl}$\ n$ then $c_i$ is declared a left associative infix with
+binding strength $n$, if it is
+\ml{infixr}$\ n$ then $c_i$ is declared a right associative infix with
+binding strength $n$, and if it is
+\ml{binder}\index{binders, in HOL logic@binders, in \HOL\ logic} then $\ml{c}_i$ is declared
+a binder.  This theorem is stored,
 with name $name$, as a definition in the current theory segment. A call to
 \ml{new\_specification} fails if:
 
 \begin{myenumerate}
-\item not in draft mode;
-\item there is already an axiom, definition or specification
-named $name$ in the current theory segment;
 \item the theorem argument has a non-empty assumption list;
 \item there are free variables in the theorem argument;
 \item $c_1$, $\dots$, $c_n$ are not distinct variables;
-\item some $c_i$ is already a constant in the current theory;
+\item some $c_i$ is already a constant in an ancestor theory;
 \item some $c_i$ is not an allowed name for a constant;
 \item some $flag_i$ is not either \ml{constant}, \ml{infix}
 or \ml{binder};
@@ -1639,7 +1467,7 @@ evaluating:
 
 {\def\op{{\normalsize\sl op}}
 \begin{hol}\begin{alltt}
-   new_type_definition(`{\op}`, \m{t}, |- ?\m{x}.\m{\:t \;x})
+   new_type_definition("{\op}", \m{t}, |- ?\m{x}.\m{\:t \;x})
 \end{alltt}\end{hol}}
 
 \noindent results in \ty{op} being declared as a new $n$-ary type operator
@@ -1651,9 +1479,7 @@ characterized by the definitional\index{definitional axioms}\index{type operator
 
 \noindent which is stored as a definition with the automatically
 generated name
-\ty{op}\ml{\_TY\_DEF}.\index{TY_DEF@$\ldots$\ml{\_TY\_DEF}}\footnote{In
-previous versions of HOL, type definitions
-were stored as axioms rather than definitions.} The constant
+\ty{op}\ml{\_TY\_DEF}.\index{TY_DEF@$\ldots$\ml{\_TY\_DEF}}. The constant
 \ml{TYPE\_DEFINITION}\index{TYPE_DEFINITION@\ml{TYPE\_DEFINITION}}
 is defined in the theory \ml{bool} by:
 
@@ -1663,14 +1489,11 @@ is defined in the theory \ml{bool} by:
        (!x. P x = (?x'. x = rep x'))
 \end{verbatim}\end{hol}
 
-\noindent Executing \ml{new\_type\_definition(`\ty{op}`,\ }$t$\ml{,\
+\noindent Executing \ml{new\_type\_definition("\ty{op}",\ }$t$\ml{,\
 |- ?}$x$\ml{.}\ $t\ x$\ml{)} fails if:
 \begin{myenumerate}
-\item not in draft mode;
 \item $\ty{op}$ is already the name of a type or type operator
-in the current theory;
-\item there already exists a constant definition, constant specification,
-type definition or axiom named  \ty{op}\ml{\_TY\_DEF} in the current theory;
+in an ancestor theory;
 \item $t$ does not have a type of the form $\sigma$\ml{->bool}.
 \end{myenumerate}
 \index{extension, of HOL logic@extension, of \HOL\ logic!by type definition|)}
@@ -1708,7 +1531,7 @@ Evaluating:
 \medskip
 {\def\op{{\normalsize\sl op}}
 \begin{hol}\begin{alltt}
-   define\_new\_type\_bijections `\m{name}` `\m{abs}` `\m{rep}`
+   define\_new\_type\_bijections "\m{name}" "\m{abs}" "\m{rep}"
            |- ?rep:newty->ty. TYPE\_DEFINITION \m{P} rep
 \end{alltt}\end{hol}}
 
@@ -1724,7 +1547,7 @@ such that:
 \end{alltt}\end{hol}}
 
 \noindent This theorem, which is the defining property for the constants
-\m{abs} and \m{rep}, is stored under the name `\m{name}` in the current theory
+\m{abs} and \m{rep}, is stored under the name "\m{name}" in the current theory
 segment.  It is also the value returned by \ml{define\_new\_type\_bijections}.
 The theorem states that \m{abs} is the left inverse of \m{rep} and---for
 values satisfying \m{P}---that \m{rep} is the left inverse of \m{abs}.
@@ -1734,11 +1557,8 @@ A call to
 fails if:
 
 \begin{myenumerate}
-\item not in draft mode;
 \item either $abs$ or $rep$ is already the name of a constant in
-the current theory;
-\item there already exists a constant definition, constant specification,
-type definition or axiom named  \m{name} in the current theory;
+an ancestor theory;
 \item $th$ is not a theorem of the form returned by
 \ml{new\_type\_definition}.
 \end{myenumerate}%
@@ -1805,11 +1625,7 @@ is onto, returning the theorem:
 
 \noindent All four functions will fail if applied to any theorem that does not
 have the form of a theorem returned by \ml{define\_new\_type\_bijections}.
-None of these functions saves anything on the current theory file. In fact, it
-should usually be unnecessary to save the results proved by these functions,
-since they can be generated quickly whenever required from the theorem returned
-by \ml{define\_new\_type\_bijections}, which is itself saved.  Of course,
-within any given session, one would bind results to \ML\ identifiers.
+None of these functions saves anything in the current theory.
 
 \index{type definitions, in HOL logic@type definitions, in \HOL\ logic!properties of bijections for|)}
 
@@ -1828,8 +1644,8 @@ names are used when accessing theories with the functions
 
 The current theory\index{theories, in HOL logic@theories, in \HOL\ logic!hierarchies of}
 can be extended by adding new parents, types,
-constants, axioms and definitions. Theories that are already the parents of
-other theories cannot be extended in this way; they can be thought of as
+constants, axioms and definitions. Theories that are in the ancestry of
+the current theory cannot be extended in this way; they can be thought of as
 \emph{frozen}.
 
 There are various functions for loading the contents of theory files:
@@ -1870,27 +1686,27 @@ specifications and type definitions are both retrieved using the function
 \ml{definitions}.
 
 
-Individual axioms, definitions and theorems can be read (from the current or
-ancestor theories) using the following \ML\ functions:
+Individual axioms, definitions and theorems can be read from the current theory
+using the following \ML\ functions:
 
 \begin{boxed}
 \index{axiom@\ml{axiom}|pin}
 \index{definition@\ml{definition}|pin}
 \index{theorem@\ml{theorem}|pin}
 \begin{verbatim}
-   axiom      : string -> string -> thm
-   definition : string -> string -> thm
-   theorem    : string -> string -> thm
+   axiom      : string -> thm
+   definition : string -> thm
+   theorem    : string -> thm
 \end{verbatim}\end{boxed}
 
-\noindent The  first  argument  is  the  theory (\ml{`-`}  can be  used for the
-current theory); the second argument is  the user  supplied name  of the axiom,
-definition or theorem in the theory.
+\noindent The  first  argument  is the user  supplied name  of the axiom,
+definition or theorem in the current theory.
 
-Theories can be printed using the function
-{\small\verb%print_theory%}\index{printing, in HOL logic@printing, in \HOL\ logic!of theories}\index{print_theory@\ml{print\_theory}},
-which takes a theory name and then
-prints out the named theory in a readable format.\index{axioms!retrieval of, in HOL system@retrieval of, in \HOL\ system|)}\index{theories, in HOL logic@theories, in \HOL\ logic!functions for accessing|)}
+The contents of the current theory can be printed in a readable format using the function
+{\small\verb%print_theory%}\index{printing, in HOL logic@printing, in \HOL\ logic!of theories}\index{print_theory@\ml{print\_theory}}.
+\index{axioms!retrieval of, in HOL system@retrieval of, in \HOL\
+system|)}\index{theories, in HOL logic@theories, in \HOL\
+logic!functions for accessing|)} 
 
 
 \subsection{Type abbreviations}\label{typeabbrev}\index{types, in HOL logic@types, in \HOL\ logic!abbreviation of}\index{type abbreviations!in HOL logic@in \HOL\ logic}\index{abbreviation of types, in HOL logic@abbreviation of types, in \HOL\ logic|(}
@@ -1899,7 +1715,7 @@ function:
 
 \begin{boxed}\index{new_type_abbrev@\ml{new\_type\_abbrev}|pin}
 \begin{verbatim}
-   new_type_abbrev : (string * type) -> void
+   new_type_abbrev : (string * type) -> unit
 \end{verbatim}\end{boxed}
 
 \noindent Evaluating \ml{new\_type\_abbrev(`}$name$\ml{`,":}$\sigma$\ml{")}
@@ -1926,10 +1742,10 @@ abbreviating types:
 \setcounter{sessioncount}{1}
 \begin{session}\begin{verbatim}
 *new_theory `numpair`;;
-() : void
+() : unit
 
 #new_type_abbrev(`numpair`, ":num*num");;
-() : void
+() : unit
 
 #let t1 = "x:numpair";;
 t1 = "x" : term
@@ -1969,14 +1785,14 @@ Parents --  HOL
 Type Abbreviations --  numpair ":num * num"
 ******************** numpair ********************
 
-() : void
+() : unit
 \end{verbatim}\end{session}
 
 \noindent If the session is then ended:
 
 \begin{session}\begin{verbatim}
 #close_theory();;
-() : void
+() : unit
 
 #quit();;
 \end{verbatim}\end{session}
@@ -1988,7 +1804,7 @@ loaded:
 \begin{session}\begin{verbatim}
 #load_theory`numpair`;;
 Theory numpair loaded
-() : void
+() : unit
 
 #"x:numpair";;
 "x" : term
@@ -2003,230 +1819,43 @@ Type abbreviations tend to be little used in practice; the antiquotation
 method is usually sufficient.
 
 
-\subsection{Holmake --- a tool for maintaining \HOL\
-formalizations}\label{Holmake}  
-
-The purpose of \verb+Holmake+\footnote{{\tt Holmake} was first written
-  by Ken Larsen and then extended by Michael Norrish.} is to maintain
-dependencies in a Hol98 source directory. A single invocation of {\tt
-  Holmake} will compute dependencies between files, (re-)compile plain
-ML code, (re-)compile and execute theory scripts, and (re-)compile the
-resulting theory modules. {\tt Holmake} does not require the user to
-provide any dependency information,\eg, a Makefile. {\tt Holmake} can
-be very convenient to use, but there are some conventions and
-restrictions on it that must be followed, which we will describe in
-the sequel.
-
-{\tt Holmake} can be accessed through
-\begin{verbatim}
-   <hol-dir>/bin/Holmake.
-\end{verbatim}
-
-The development model that {\tt Holmake} is designed to support is that
-there are two modes of work: theory construction and system revision.
-In `theory construction' mode, the user builds up a theory by
-interacting with HOL, perhaps over many sessions. In `system rebuild'
-mode, a component that others depend on has been altered, so all modules
-dependent on it have to be brought up to date. System rebuild mode is
-simpler so we deal with it first.  
-
-\subsubsection{System Rebuild}
-
-A system rebuild happens when an existing theory has been improved in
-some way (augmented with a new theorem, a change to a definition, etc.),
-or perhaps some support ML code has been modified or added to the
-formalization under development. The user needs to find and recompile
-just those modules affected by the change. This is what an invocation of
-{\tt Holmake} does, by identifying the out-of-date modules and
-re-compiling and re-executing them.  
-
-
-\subsubsection{Theory construction}
-
-To start a theory construction, some context (semantic, and also proof
-support) is established, typically by loading parent theories and
-useful libraries. In the course of building the theory, the user keeps
-track of the ML---which, for example, establishes context, makes
-definitions, builds and invokes tactics, and saves theorems---in a
-text file. This file is used to achieve inter-session persistence of
-the theory being constructed, i.e., the text file resulting from
-session $n$ is ``\verb+use+''d to start session $n+1$; after that,
-theory construction resumes.
-
-Once the user finishes the perhaps long and arduous task of constructing
-a theory, the user should
-\begin{enumerate}
-\item make the script separately compilable;
-\item invoke {\tt Holmake}. This will (a) compile and execute the
-  script file; and (b) compile the resulting theory file. After this,
-  the theory file is available for use.
-\end{enumerate}
-
-\subsubsection{Making the script separately compilable}
-
-First, the invocation
-\begin{verbatim}
-    val _ = export_theory();
-\end{verbatim}
-should be added at the end of the file. When the script is finally
-executed, this call writes the theory to disk.
-
-Second, we address a crucial environmental issue: if a theory script
-has been constructed using\verb+ <holdir>/bin/hol+, then it has been
-developed in an environment where some commonly used structures, \eg,
-\verb+Tactic+, have already been loaded and opened for the user's
-convenience. When we wish to apply {\tt Holmake} to a script developed
-in this way, we have to take some extra steps to ensure that the
-compilation environment also provides these structures.  In the common
-case, this is simple; one must only add, at the head of the theory
-script, the following ``boilerplate'':
-\begin{verbatim}
-    open HolKernel Parse basicHol90Lib;
-    infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
-    infixr -->;
-\end{verbatim}
-This will duplicate the starting environment that one obtains with
-\verb+<holdir>/bin/hol+ and \verb+<holdir>/bin/hol.unquote+.
-
-Now the script should be separately compilable. Invoke {\tt Holmake}
-to check; MoscowML will flag any unaccounted-for identifiers it finds.
-The user has to resolve these, either by using the `dot' notation to
-locate the identifier for the compiler, or by \verb+open+ing the
-relevant module. This ``compile/resolve-identifier'' loop should
-continue until {\tt Holmake} succeeds in compiling the module.
-
-The following notes may be of some further help.
-
-\begin{enumerate}
-\item The filenames of theory scripts must follow the following
-  convention: a HOL theory script for theory ``x'' should be named
-\begin{verbatim}
-  xScript.sml.
-\end{verbatim}
-  If there is a corresponding signature (and there needn't be), it
-  should---following Moscow ML convention---be named
-  \verb+xScript.sig+. When \verb+export_theory+ is called during an
-  invocation of \verb+Holmake+, the files
-\begin{verbatim}
-    xTheory.{sig,sml}
-\end{verbatim}
-will be generated and then compiled.
-
-\item In the MoscowML batch compiler, modules are not allowed to have
-  unbound top-level expressions. Hence, something like the following
-  is not allowed:
-\begin{verbatim}
-    new_theory "ted";
-\end{verbatim}
-To make Moscow ML happy, one must instead write something like
-\begin{verbatim}
-    val _ = new_theory "ted";
-\end{verbatim}
-
-\item In the interactive system, one has to explicitly \verb+load+
-  modules; on the other hand, the batch compiler will load modules
-  automatically.  For example, in order to execute \verb+open Foo+ (or
-  refer to values in \verb+Foo+) in the interactive system, one must
-  first have executed \verb+load "Foo"+. Contrarily, the batch
-  compiler will reject files having occurrences of \verb+load+, since
-  \verb+load+ is only defined for the interactive system.
-
-\item Take care not to have the string "Theory" embedded in the name
-  of any of your files. Hol98 generates files containing this string,
-  and when it cleans up after itself, it removes such files using a
-  regular expression. This will also remove other files with names
-  containing "Theory". For example, if, in your development directory,
-  you had a file of ML code named
-\begin{verbatim}
-   MyTheory.sml
-\end{verbatim}
-  and you also were managing a Hol98 development there with {\tt
-    Holmake}, then MyTheory.sml would get deleted if {\tt Holmake
-    clean} was invoked.
-
-\item We can see that some users may not wish to use (some of) the
-  support provided by \verb+basicHol90Lib+, since it is becoming
-  dated. In that case, the same general principle set out above will
-  apply: the user must ensure that the compilation environment for a
-  theory script is the same as the interactive environment it was
-  developed in.
-
-\end{enumerate}
-
-\subsubsection{Summary}
-
-A complete theory construction is performed by the following steps:
-\begin{itemize}
-\item Construct theory script, perhaps over many sessions;
-\item Transform script into separately compilable form;
-\item Invoke {\tt Holmake} to generate the theory and compile it.
-\end{itemize}
-
-After that, the theory is usable as an ML module.
-
-\subsubsection{What {\tt Holmake} doesn't do}
-
-{\tt Holmake} only works properly on the current directory.  Holmake
-will rebuild files in the current directory if something it depends on
-from another directory is fresher than it is, but it will not do any
-analysis on files in other directories.  If one is developing a system
-over more than one directory, one should write a master Makefile (or
-shell script) that invokes {\tt Holmake} in the subsidiary
-directories, in the correct order, \ie., such that there never is an
-out-of-date dependence leading outside of the current directory. This
-should always be achievable, simply by ordering the directories in the
-order that one would have to ``\verb+use+'' files in them.
-
-\subsubsection{{\tt Holmake}'s command-line arguments}
-
-Like {\tt make}, {\tt Holmake} takes command-line arguments
-corresponding to the targets that the user desires to build.  If there
-are none, then {\tt Holmake} will attempt to build all ML modules and
-HOL theories it can detect in the current directory.  In addition,
-there are three special targets that can be used:
-\begin{description}
-\item[{\tt clean}] Removes all compiled files.
-\item [{\tt cleanDeps}] Removes all of the pre-computed dependency
-  files.  This can be an important thing to do if, for example, you
-  have introduced a new {\tt .sig} file on top of an existing {\tt
-  .sml} file.
-\item [{\tt cleanAll}] Removes all compiled files as well as all of
-  the hidden dependency information.
-\end{description}
-
-Finally, the user can directly affect the workings of \verb+Holmake+
-with the following command-line options:
-\begin{description}
-\item[\tt -I <directory>] Look in specified directory for additional
-  MoscowML object files, including other HOL theories.  This option
-  can be repeated, with multiple {\tt -I}'s to allow for multiple
-  directories to be referenced.
-\item[\tt -d <file>] Ignore the given file and don't try to build it.
-  The file may be rebuilt anyway if other files you have specified
-  depend on it.  This is useful to stop Holmake from attempting to
-  compile files that are interactive scripts (include use of {\tt
-  load} or {\tt use}, for example).
-\item[{\tt --help} or {\tt -h}] Prints out a useful option summary and
-  exits.
-\item[\tt --holdir <directory>] Associate this build with the given
-  HOL directory, rather than the one this version of {\tt Holmake} was
-  configured to use by default.
-\item[{\tt --rebuild\_deps} or {\tt -r}] Forces {\tt Holmake} to
-  always rebuild the dependency information, whether or not it thinks
-  it needs to.
-\item[{\tt --version} or {\tt -v}] Show some brief version
-  information.  As of this writing, {\tt Holmake} is at version 2.04.
-\end{description}
-
-{\tt Holmake} should never exit with the MoscowML message ``Uncaught
-exception''.  Such behaviour is a bug, please report it!
-
-
 \section{The theory {\tt min}}\label{minTheory}
 
 The theory \ml{min}\index{min, the HOL theory@\ml{min}, the \HOL\
-theory|(} contains the declarations of the constants for equality,
-implication, and choice.
+theory|(} declares the type constant {\small\verb+bool+} of booleans,
+the binary type operator {\small\verb+fun+} of functions, and the type
+constant {\small\verb+ind+} of individuals.  Building on this, three
+primitive constants\index{constants, in HOL 
+ logic@constants, in \HOL\ logic!primitive logical}\index{primitive
+ constants, of HOL logic@primitive constants, of \HOL\ logic}
+are declared in the theory {\small\verb%min%}: equality, implication, and a choice operator.
+\index{ equality, in HOL logic@\ml{=} (equality, in
+ \HOL\ logic)}\index{equality, in HOL logic@equality, in \HOL\ logic} 
+
+Equality ({\small\verb+$= : 'a -> 'a -> bool+}) parses as an infix, with binding
+precedence, 100 (which is low).  
+
+Implication ({\small\verb+$==> : bool -> bool -> bool+}) parsese as an
+infix with binding precedence 200, associating to the right. 
+
+
+ Equality\index{equality, in HOL logic@equality, in \HOL\
+ logic}\index{implication, in HOL logic@implication, in \HOL\ logic} 
+ and implication are standard predicate calculus notions, but choice is
+ more exotic: 
+if $t$ is a term having type $\sigma${\small\verb%->bool%},
+then {\small\verb%@x.%}$t${\small\verb% x%} (or, equivalently,
+{\small\verb%$@%}$t$) denotes {\it some\/} member of the set whose
+characteristic\index{characteristic predicate, of type definitions}
+ function is $t$. If the set is empty, then
+{\small\verb%@x.%}$t${\small\verb% x%} denotes an arbitrary member of the
+set denoted by $\sigma$. The constant {\small\verb%@%} is a higher order
+version of Hilbert's\index{Hilbert, D.}\index{epsilon operator}
+ $\hilbert$-operator; it is related to the constant
+$\iota$ in Church's formulation of higher order logic. For more details,
+see Church's\index{Church, A.} original paper \cite{Church}, Leisenring's\index{Leisenring, A.} book
+on Hilbert's $\hilbert$-symbol \cite{Leisenring}, or
+Andrews' textbook on type theory \cite{Andrews}.
 
 \section{Primitive rules of inference of the HOL Logic}
 \label{rules}
@@ -2508,115 +2137,114 @@ the result of applying Modus Ponens; it fails if the arguments are not of the
 right form.
 \index{inference rules, of HOL logic@inference rules, of \HOL\ logic!primitive|)}
 
+\section{Oracles}
+
+Hol98 extends the \LCF\ tradition by allowing the use of an \emph {oracle}
+mechanism which enables arbitrary formulas to become elements of the
+\verb+thm+ type. By use of this mechanism, Hol98 can utilize the results
+of arbitrary proof procedures. In spite of such liberalness, one
+can still make strong assertions about the security of ML objects of
+type \verb+thm+. 
+
+To avoid unsoundness, a \emph{tag} is attached to any theorem
+coming from an oracle. This tag is propagated through every
+inference that the theorem participates in (much as ordinary assumptions
+are propagated in the inference rule {\small\verb+MP+}). If it happens
+that falsity becomes derived, the offending oracle can be found by
+examining the tags component of the theorem. A theorem proved without
+use of any oracle will have an empty tag, and can thus be considered to
+have been proved solely by deductive steps in the HOL logic.
+
+A tagged theorem can be created via
+
+\begin{boxed}
+\begin{hol}
+\index{mk_oracle_thm@\ml{mk\_oracle\_thm}!type of}
+\begin{verbatim}
+    val mk_oracle_thm : tag -> term list * term -> thm
+\end{verbatim}\end{hol}\end{boxed}
+
+which directly creates the requested theorem and attaches the given tag to
+it. Tags may be created with
+
+\begin{boxed}
+\begin{hol}
+\index{Tag.read@\ml{Tag.read}!making tags}
+\begin{verbatim}
+     Tag.read : string -> tag.
+\end{verbatim}\end{hol}\end{boxed}
+
+As well as providing principled access to the results of external
+reasoners, tags are used to implement some useful `system' operations on
+theorems. For example, one can directly create a theorem via the function
+\verb+mk_thm+. The tag \verb+MK_THM+ gets attached to each theorem
+created with this call. This allows users to directly create useful
+theorems, \eg, to use as test data for derived rules of inference.
+Another tag is used to implement so-called `validity checking' for tactics.
+
+The tags in a theorem can be viewed by setting \verb+Globals.show_tags+ to
+true. For example, we have\footnote{Hol98 currently also uses tags for
+tracking the use of axioms in proofs.}
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+- Globals.show_tags := true;
+> val it = () : unit
+
+- mk_thm([], Term `F`);;
+> val it = [oracles: MK_THM] [axioms: ] [] |- F : thm
+\end{verbatim}\end{session}\index{mk_thm@mk_thm)}
+
+There are three elements to the left of the turnstile in the fully printed
+representation of a theorem: the first two comprise the tags component and the
+third is the standard assumption list. The tag component of a theorem
+can be extracted by
+\begin{boxed}
+ \begin{verbatim}
+     Thm.tag : thm -> tag
+ \end{verbatim}\end{boxed}
+
+\noindent and prettyprinted by
+
+\begin{boxed} \begin{verbatim}
+     Tag.pp : ppstream -> tag -> unit.
+\end{verbatim}\end{boxed}
+
+\noindent{\bf Remark}
+
+No serious attempt is made to prevent spoofing: a person may attach tag
+\verb+X+ on an assertion coming from a proof procedure named \verb+Y+ if
+desired. However, the tags for \verb+mk_thm+ and validity checking
+cannot be spoofed. 
+
+\noindent{\bf Remark}
+
+Some care should be taken with using oracles to bring in results of
+proof procedures for theories lacking a formalization in the \HOL\
+logic. The product of such procedures can be used in \HOL\ without damage;
+however, in the end it won't be clear --- at least in \HOL\ --- what has
+been proven.
+
+
 \section{The theory {\tt bool}}\label{boolfull}
-
-The theory \ml{bool}\index{bool, the HOL theory@\ml{bool}, the \HOL\ theory|(} has already been partly described in
-Section~\ref{boolthy}.
-It contains the definitions of several sorts of constants:
-
-\begin{myenumerate}
-
-
-\item logical constants:\index{primitive constants, of HOL logic@primitive constants, of \HOL\ logic}\index{truth values, in HOL logic@truth values, in \HOL\ logic}\index{logical constants, in HOL logic@logical constants, in \HOL\ logic}\index{ implication, in HOL logic@{\small\verb+==>+} (implication, in \HOL\ logic)}\index{conjunction, in HOL logic@conjunction, in \HOL\ logic}\index{disjunction, in HOL logic@disjunction, in \HOL\ logic}%
-\index{constants, in HOL logic@constants, in \HOL\ logic!logical}\index{ universal quantifier, in HOL logic@{\small\verb+"!+} (universal quantifier, in \HOL\ logic)}%
-\index{ existential quantifier, in HOL logic@{\small\verb+?+} (existential quantifier, in \HOL\ logic)}%
-\index{ conjunction, in HOL logic@{\small\verb+/\+} (conjunction, in \HOL\ logic)}%
-\index{ disjunction, in HOL logic@{\small\verb+\/+} (disjunction, in \HOL\ logic)}%
-\index{F@\ml{F}}\index{T@\ml{T}}%
-\index{existential quantifier, in HOL logic@existential quantifier, in \HOL\ logic}%
-\index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic}
-\index{ negation, in HOL logic@{\small\verb+~+} (negation, in \HOL\ logic)}
-\index{ exists unique, in HOL logic@{\small\verb+?"!+} (exists unique, in \HOL\ logic)}%
-\index{ choice function, in HOL logic@{\small\verb+"@+} (choice function, in \HOL\ logic)}%
-\index{choice operator, in HOL logic@choice operator, in \HOL\ logic}%
-\index{equality, in HOL logic@equality, in \HOL\ logic}%
-\index{iff, in HOL logic@iff, in \HOL\ logic}%
-\index{implication, in HOL logic@implication, in \HOL\ logic}%
-\index{one-to-one predicate, in HOL logic@one-to-one predicate, in \HOL\ logic!in bool theory@in \ml{bool} theory}%
-\index{onto predicate, in HOL logic@onto predicate, in \HOL\ logic!in bool theory@in \ml{bool} theory} \ml{T}, \ml{F}, {\small\verb!~!},
-{\small\verb%/\%}, {\small\verb%\/%}, \ml{==>},
-\ml{=}, \ml{!}, \ml{?}, \ml{?!} and \ml{@}.
-
-\item system constants\index{constants, in HOL logic@constants, in \HOL\ logic!system}, which are used in coding \HOL\ theories as
-\LCF\index{LCF@\LCF}\ theories. These constants are \ml{HOL\_DEFINITION}\index{HOL_DEFINITION@\ml{HOL\_DEFINITION}} and
-\ml{BINDERS}\index{BINDERS@\ml{BINDERS}}. They have no logical significance
-and are part of the internal workings of the \HOL\ system.
-
-
-\item miscellaneous constants\index{constants, in HOL logic@constants, in \HOL\ logic!abbreviational}%
-\index{COND@\ml{COND}}%
-\index{FCOND@\ml{FCOND}}%
-\index{LET@\ml{LET}}%
-\index{CURRY@\ml{CURRY}}%
-\index{UNCURRY@\ml{UNCURRY}}%
-\index{RES_FORALL@\ml{RES\_FORALL}}%
-\index{RES_EXISTS@\ml{RES\_EXISTS}}%
-\index{RES_SELECT@\ml{RES\_SELECT}}%
-\index{RES_ABSTRACT@\ml{RES\_ABSTRACT}}%
-\index{ARB@\ml{ARB}}, which support various special syntactic forms:
-\ml{COND} (for conditionals, see Section~\ref{conditionals});
-\ml{LET} (for \ml{let}-terms\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL\ logic!constant for}, see Section~\ref{let-exp});
-\ml{CURRY} and \ml{UNCURRY} (for paired abstractions,
-see Section~\ref{HOL-varstruct}); and
-\ml{RES\_FORALL},
-\ml{RES\_EXISTS},
-\ml{RES\_SELECT},
-\ml{RES\_ABSTRACT}
-and \ml{ARB} (for restricted quantification,
-see Section~\ref{res-quant}).
-
-\item the constant \ml{TYPE\_DEFINITION}\index{TYPE_DEFINITION@\ml{TYPE\_DEFINITION}}, which is used by the type definition mechanism\index{constants, in HOL logic@constants, in \HOL\ logic!for type definitions} (see Section~\ref{type-defs}).
-
-\item constants associated with pairs:\index{constants, in HOL logic@constants, in \HOL\ logic!for pairs}
-\index{MK_PAIR@\ml{MK\_PAIR}}
-\index{IS_PAIR@\ml{IS\_PAIR}}
- \ml{,} (\ie\ the comma symbol),
-\ml{MK\_PAIR}, \ml{IS\_PAIR}, \ml{REP\_prod}, \ml{FST} and \ml{SND}
-(see Section~\ref{prod} below).
-\end{myenumerate}
-
 
 \index{axioms!primitive, of HOL logic@primitive, of \HOL\ logic|(}
 At start-up,  the  initial  theory  for  users  of  the \HOL\  system is called
-\ml{bool}\index{HOL@\ml{HOL}}, which is constructed when the \HOL\ system is built.
-The theory {\small\verb%bool%} introduces the type
- {\small\verb%bool%} and
+\ml{bool}\index{HOL@\ml{HOL}}, which is constructed when the \HOL\
+system is built. The theory {\small\verb%bool%} 
 contains the five axioms\index{axioms!in bool theory@in \ml{bool} theory}
 for higher order logic. These axioms, together with the rules
-of inference described later in Section~\ref{rules}, constitute the core of the
+of inference described in Section~\ref{rules}, constitute the core of the
 \HOL\ logic.  Because of the way the \HOL\ system evolved from
-\LCF,\index{LCF@\LCF}\footnote{To simplify the porting of the LCF theorem-proving
-tools to the HOL system, the HOL logic was made as like PP$\lambda$ (the logic
-built-in to LCF) as possible.} the particular axiomatization\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL\ logic} of
-higher order logic it uses differs from the classical
-axiomatization due to Church\index{Church, A.} \cite{Church}.  The biggest difference is that
-in Church's formulation type variables\index{type variables, in HOL
- logic@type variables, in \HOL\ logic!differences from classical} are in
- the meta-language, whereas in the \HOL\ logic they are part of the object language.
-
-There are three primitive constants\index{constants, in HOL
- logic@constants, in \HOL\ logic!primitive logical}\index{primitive
- constants, of HOL logic@primitive constants, of \HOL\ logic}
- in the theory {\small\verb%bool%}\index{bool, the type in HOL logic@\ml{bool}, the type in \HOL\ logic}:
-{\small\verb%=%}\index{ equality, in HOL logic@\ml{=} (equality, in \HOL\ logic)}\index{equality, in HOL logic@equality, in \HOL\ logic}
- (equality, an infix), {\small\verb%==>%}\index{ implication, in HOL logic@{\small\verb+==>+} (implication, in \HOL\ logic)} (implication, an
-infix) and {\small\verb%@%}\index{ choice function, in HOL logic@{\small\verb+"@+} (choice function, in \HOL\ logic)}\index{choice operator, in HOL logic@choice operator, in \HOL\ logic} (choice, a binder).  Equality\index{equality, in HOL logic@equality, in \HOL\ logic}\index{implication, in HOL logic@implication, in \HOL\ logic}
- and implication
-are standard predicate calculus notions, but choice is more exotic:
-if $t$ is a term having type $\sigma${\small\verb%->bool%},
-then {\small\verb%@x.%}$t${\small\verb% x%} (or, equivalently,
-{\small\verb%$@%}$t$) denotes {\it some\/} member of the set whose
-characteristic\index{characteristic predicate, of type definitions}
- function is $t$. If the set is empty, then
-{\small\verb%@x.%}$t${\small\verb% x%} denotes an arbitrary member of the
-set denoted by $\sigma$. The constant {\small\verb%@%} is a higher order
-version of Hilbert's\index{Hilbert, D.}\index{epsilon operator}
- $\hilbert$-operator; it is related to the constant
-$\iota$ in Church's formulation of higher order logic. For more details,
-see Church's\index{Church, A.} original paper \cite{Church}, Leisenring's\index{Leisenring, A.} book
-on Hilbert's $\hilbert$-symbol \cite{Leisenring}, or
-Andrews' textbook on type theory \cite{Andrews}.
-
+\LCF,\index{LCF@\LCF}\footnote{To simplify the porting of the LCF
+theorem-proving tools to the HOL system, the HOL logic was made as like
+PP$\lambda$ (the logic built-in to LCF) as possible.} the particular
+axiomatization\index{axioms!non-primitive, of HOL logic@non-primitive,
+of \HOL\ logic} of higher order logic it uses differs from the classical
+axiomatization due to Church\index{Church, A.} \cite{Church}.  The
+biggest difference is that in Church's formulation type
+variables\index{type variables, in HOL  logic@type variables, in \HOL\
+logic!differences from classical} are in  the meta-language, whereas in
+the \HOL\ logic they are part of the object language. 
 
 The logical constants\index{logical constants, in HOL logic@logical constants, in \HOL\ logic} {\small\verb%T%}\index{truth values, in HOL logic@truth values, in \HOL\ logic!constants for}\index{T@\ml{T}!defined in terms of primitives} (truth), {\small\verb%F%}\index{F@\ml{F}!defined in terms of primitives} (falsity),
 {\small\verb%~%} (negation)\index{ negation, in HOL logic@{\small\verb+~+} (negation, in \HOL\ logic)}, {\small\verb%/\%} (conjunction)\index{ conjunction, in HOL logic@{\small\verb+/\+} (conjunction, in \HOL\ logic)}\index{conjunction, in HOL logic@conjunction, in \HOL\ logic!defined in terms of primitives},
@@ -2656,11 +2284,11 @@ listed below are fairly standard; each one is preceded by its \ML\ name.
 \index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic!definitional axiom for}
 \index{exists unique, in HOL logic@exists unique, in \HOL\ logic!definitional axiom for}
 \begin{verbatim}
-   T_DEF              |- T   = ((\x:bool. x)=(\x. x))
+   T_DEF              |- T   = ((\x:bool. x) = (\x. x))
 
-   FORALL_DEF         |- $!  = \P:*->bool. P=(\x. T)
+   FORALL_DEF         |- $!  = \P:'a->bool. P = (\x. T)
 
-   EXISTS_DEF         |- $?  = \P:*->bool. P($@ P)
+   EXISTS_DEF         |- $?  = \P:'a->bool. P($@ P)
 
    AND_DEF            |- $/\ = \t1 t2. !t. (t1 ==> t2 ==> t) ==> t
 
@@ -2674,7 +2302,11 @@ listed below are fairly standard; each one is preceded by its \ML\ name.
 \end{verbatim}\end{hol}
 
 
-There are four\index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic!in four primitive axioms} axioms in the theory {\small\verb%bool%}\index{bool, the HOL theory@\ml{bool}, the \HOL\ theory}:
+There are five
+\index{universal quantifier, in HOL logic@universalquantifier, 
+       in \HOL\ logic!in four primitive axioms}
+axioms in the theory {\small\verb%bool%}\index{bool, the HOL
+theory@\ml{bool}, the \HOL\ theory}; the first four are the following: 
 
 \begin{hol}
 \index{BOOL_CASES_AX@\ml{BOOL\_CASES\_AX}}
@@ -2697,35 +2329,9 @@ There are four\index{universal quantifier, in HOL logic@universal quantifier, in
 
 \noindent
 The fifth and last axiom of the \HOL\ logic is the Axiom of
-Infinity;\index{axiom of infinity} this
-is in the theory {\small\verb%ind%} described in Section~\ref{ind}.
-
-The theory {\small\verb%bool%} also supplies the definitions of a number of
-useful constants. The constant {\small\verb%LET%}\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL\ logic!constant for} is used in representing terms
-containing local variable bindings (\ie\
-{\small\verb%let%}-terms\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL\ logic!definitional axiom for}, as discussed in Section~\ref{let}), and the
-constant {\small\verb%COND%} is used in representing conditionals.  Both
-constants are defined in the theory \ml{bool}, and have the following
-definitions:
-
-\begin{hol}
-\index{LET_DEF@\ml{LET\_DEF}}
-\index{COND_DEF@\ml{COND\_DEF}}
-\index{COND@\ml{COND}}
-\index{LET@\ml{LET}}
-\index{conditional predicate, in HOL logic@conditional predicate, in \HOL\ logic!definitional axiom for}
-\index{conditionals, in HOL logic@conditionals, in \HOL\ logic}
-\begin{verbatim}
-   LET_DEF      |- LET       = \f x. f x
-
-   COND_DEF     |- COND      = \t t1 t2.@x.((t=T)==>(x=t1))/\((t=F)==>(x=t2))
-
-   ARB          |- ARB = (@x. T)
-\end{verbatim}\end{hol}
-
-\noindent The theory \ml{bool} also contains the definitions of
-the constants {\small\verb%ONE_ONE%} and
-{\small\verb%ONTO%}, which are used in stating the Axiom of Infinity\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL\ logic}\index{axiom of infinity} (see Section~\ref{ind})\index{specification of constants, in HOL logic@specification of constants, in \HOL\ logic|)}. The definitions are:
+Infinity\index{axiom of infinity}. Its statement is phrased in terms of
+the function properties {\small\verb%ONE_ONE%} and {\small\verb%ONTO%}. The
+definitions are:  
 
 \begin{hol}
 \index{ONE_ONE_DEF@\ml{ONE\_ONE\_DEF}}
@@ -2738,24 +2344,7 @@ the constants {\small\verb%ONE_ONE%} and
    ONTO_DEF    |- ONTO f    = (!y. ?x. y = f x)
 \end{verbatim}\end{hol}
 
-% \subsubsection{The theory {\tt ind}}
-% \label{ind}
-
-The theory {\small\verb%bool%}\index{ind, the theory@\ml{ind}, the
-theory} also introduces the type {\small\verb%ind%}\index{ind, the type@\ml{ind}, the type} of
-{\it individuals\/}\index{individuals}
- and the {\it Axiom of Infinity\/}\index{axiom of infinity}. This axiom states
-that the set denoted by {\small\verb%ind%} is infinite. The four other
-axioms of the theory {\small\verb%bool%}, the rules of inference in
-Section~\ref{rules} and the Axiom of Infinity are, together, sufficient for
-developing all of standard mathematics. Thus, in principle, the user of the
-\HOL\ system should never need to make a non-definitional\index{axioms!dispensibility of adding}\index{definitional theories} theory. In
-practice, it is often very tempting to take the risk of introducing new
-axioms because deriving them from definitions can be tedious---proving that
-`axioms' follow from definitions amounts to proving their consistency.
-
-
-The Axiom of Infinity\index{axioms!in ind theory@in \ml{ind} theory} is
+The Axiom of Infinity\index{axioms!in bool theory@in \ml{bool} theory} is
 
 {\begin{hol}
 \index{INFINITY_AX@\ml{INFINITY\_AX}}
@@ -2769,3 +2358,95 @@ The Axiom of Infinity\index{axioms!in ind theory@in \ml{ind} theory} is
 This asserts that there exists a one-to-one map from {\small\verb%ind%} to
 itself that is not onto. This implies that the type {\small\verb%ind%}
 denotes an infinite set.\index{axioms!primitive, of HOL logic@primitive, of \HOL\ logic|)}
+
+The four other axioms of the theory {\small\verb%bool%}, the rules of
+inference in Section~\ref{rules} and the Axiom of Infinity are,
+together, sufficient for developing all of standard mathematics. Thus,
+in principle, the user of the \HOL\ system should never need to make a
+non-definitional\index{axioms!dispensibility of
+adding}\index{definitional theories} theory. In practice, it is often
+very tempting to take the risk of introducing new axioms because
+deriving them from definitions can be tedious---proving that `axioms'
+follow from definitions amounts to proving their consistency.
+
+The theory {\small\verb%bool%} also supplies the definitions of a number of
+useful constants. The constant {\small\verb%LET%}\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL\ logic!constant for} is used in representing terms
+containing local variable bindings (\ie\
+{\small\verb%let%}-terms\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL\ logic!definitional axiom for}, as discussed in Section~\ref{let}), and the
+constant {\small\verb%COND%} is used in representing conditionals.  The
+polymorphic constant {\small\verb+ARB+} is used to denote a fixed but
+arbitrary element in a type, which is occasionally useful when
+attempting to deal with the issue of partiality.
+
+\begin{hol}
+\index{LET_DEF@\ml{LET\_DEF}}
+\index{COND_DEF@\ml{COND\_DEF}}
+\index{COND@\ml{COND}}
+\index{LET@\ml{LET}}
+\index{conditional predicate, in HOL logic@conditional predicate, in \HOL\ logic!definitional axiom for}
+\index{conditionals, in HOL logic@conditionals, in \HOL\ logic}
+\begin{verbatim}
+   LET_DEF      |- LET    = \f x. f x
+
+   COND_DEF     |- COND   = \t t1 t2.@x.((t=T)==>(x=t1))/\((t=F)==>(x=t2))
+
+   ARB_DEF      |- ARB    = @x. T
+\end{verbatim}\end{hol}
+
+\subsection{Conditionals}\label{conditionals}
+
+A conditional\index{terms, in HOL logic@terms, in \HOL\ logic!conditional}\index{conditional predicate, in HOL logic@conditional predicate, in \HOL\ logic}\index{conditionals, in HOL logic@conditionals, in \HOL\ logic}
+ term \ml{`if $t_1\ $then$\ t_2\ $else$\ t_3$`} abbreviates the application
+\ml{COND\ $t_1\ t_2\ t_3$}, where \ml{COND}\index{COND@\ml{COND}}\index{conditionals, in HOL logic@conditionals, in \HOL\ logic}
+is a constant defined in the theory \ml{bool} (see Section~\ref{boolthy}).
+The syntax \ml{$t_1\ $=>$\ t_2\ $|$\ t_3$} is also permitted. An
+iterated conditional 
+
+\[
+t_{11}\ \ml{=>}\ t_{12}\ \ml{|}\
+t_{21}\ \ml{=>}\ t_{22}\ \ml{|}\
+\ \ldots\ \ml{|}\
+t_{n1}\ \ml{=>}\ t_{n2}\ \ml{|}\ t_{n3}
+\]
+
+\noindent translates\index{parsing, of HOL logic@parsing, of \HOL\ logic!of conditionals} to:
+
+\[
+t_{11}\ \ml{=>}\ t_{12}\ \ml{|}\
+(t_{21}\ \ml{=>}\ t_{22}\ \ml{|}\
+\ \ldots\ \ml{|}\
+(t_{n1}\ \ml{=>}\ t_{n2}\ \ml{|}\ t_{n3})\ \ldots\ )
+\]
+
+\noindent which, in turn, abbreviates:
+
+\[\ml{COND}\ t_{11}\ t_{12}\ \ml{(COND}\ t_{21}\ t_{22}\ \ldots\
+\ml{(COND}\ t_{n1}\ t_{n2}\ t_{n3}\ml{)}\ \ldots\ \ml{)}\]
+
+\noindent For example, 
+
+\begin{session}\begin{verbatim}
+- Term `if b then if c then if d then e else f else g else h`;
+<<HOL message: inventing new type variable names: 'a.>>
+
+> val it =
+    `(if b then (if c then (if d then e else f) else g) else h)`
+    : term
+
+- Term `b => c => d => e | f | g | h`;
+<<HOL message: inventing new type variable names: 'a.>>
+
+> val it =
+    `(if b then (if c then (if d then e else f) else g) else h)`
+    : term
+
+\end{verbatim}\end{session}
+
+\noindent Note that the system alway prints out conditionals in the "if $t_1$ then
+$t_2$ else $t_3$" form. 
+
+
+Discuss \verb+TYPE_DEFINITION+ here?
+
+A large number of theorems involving the logical constants are
+pre-proved in the theory {\small\verb+bool+}. 
