@@ -13,9 +13,9 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = _
-val holdir   = _
-val OS       = _          (* Operating system; choices are:
+val mosmldir = 
+val holdir   = 
+val OS       =        (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
 
 val CC       = "gcc";     (* C compiler (for building quote filter)        *)
@@ -57,9 +57,9 @@ val SRCDIRS =
  ["src/portableML", "src/0", "src/parse",
   "src/bool", "src/basicHol90", "src/goalstack", "src/q", "src/combin",
   "src/lite", "src/ho_match", "src/refute", "src/simp/src", "src/meson/src",
-  "src/relation", "src/num",
-  "src/pair/src", "src/list/src", "src/sum", "src/tree", "src/one",
-  "src/option","src/reduce/src", "src/arith/src",
+  "src/relation", "src/pair/src", "src/sum", "src/one", "src/option",
+  "src/num", "src/reduce/src", "src/arith/src", 
+  "src/list/src", "src/tree", 
   "src/taut", "src/hol88", "src/ind_def/src", "src/IndDef",
   "src/datatype/parse", "src/datatype/equiv", "src/datatype/basicrec",
   "src/utils", "src/datatype/mutrec", "src/datatype/nestrec",
@@ -68,7 +68,7 @@ val SRCDIRS =
   "src/res_quan/theories", "src/res_quan/src", "src/set/src",
   "src/pred_set/src", "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src", "src/integer", "src/BoyerMoore",
-  "src/hol90", "src/boss", "src/finite_map", "src/real", "src/bag",
+  "src/hol90", "src/boss", "src/finite_map", "src/real", "src/bag", 
   "src/robdd"];
 
 
@@ -239,7 +239,7 @@ val _ =
   end;
 
 (*---------------------------------------------------------------------------
-    Generate a shell script for running HOL.
+      Generate a shell script for running HOL.
  ---------------------------------------------------------------------------*)
 
 val _ =

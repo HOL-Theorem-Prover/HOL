@@ -6,24 +6,23 @@ val _ = print "Rebinding \"use\" for quotation pre-processing.\n"
  * of "use" is found in the "Meta" structure.                                *
  *---------------------------------------------------------------------------*)
 
-local 
-fun has_dq file =
-  let val istrm = TextIO.openIn file
-      fun loop() =
-       case TextIO.input1 istrm
-        of NONE => false
-         | SOME #"`" => (case TextIO.input1 istrm 
-                          of NONE => false | SOME #"`" => true | _ => loop())
-         | _ => loop()
-      val status = loop()
-  in 
-     TextIO.closeIn istrm;
-     status
-  end
-
-fun unquote_to file1 file2 =
-   Process.system (String.concat
-     [Path.concat(HOLDIR, "bin/unquote"), " ",file1, " ",file2])
+local fun has_dq file =
+       let val istrm = TextIO.openIn file
+           fun loop() =
+             case TextIO.input1 istrm
+              of NONE => false
+               | SOME #"`" => 
+                   (case TextIO.input1 istrm 
+                     of NONE => false | SOME #"`" => true | _ => loop())
+               | SOME _ => loop()
+           val status = loop()
+       in 
+          TextIO.closeIn istrm;
+          status
+       end
+       fun unquote_to file1 file2 =
+         Process.system (String.concat
+             [Path.concat(HOLDIR, "bin/unquote"), " ",file1, " ",file2])
 in
 fun use s = 
   if has_dq s

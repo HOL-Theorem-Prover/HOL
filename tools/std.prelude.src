@@ -50,6 +50,7 @@ val _ = app load ["basicHol90Lib", "goalstackLib"];
 open basicHol90Lib goalstackLib;
 
 infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
+infix 8 via;
 
 val _ = installPP goalstackLib.pp_proofs
 val _ = installPP goalstackLib.pp_goalstack
