@@ -27,11 +27,14 @@ sig
    val PART_MATCH : (term -> term) -> thm -> conv
    val REWR_CONV  : thm -> conv
    val MATCH_MP   : thm -> thm -> thm
+   val LAND_CONV  : conv -> conv
    val RAND_CONV  : conv -> conv
    val RATOR_CONV : conv -> conv
    val ABS_CONV   : conv -> conv
    val FORK_CONV  : conv * conv -> conv
    val BINOP_CONV : conv -> conv
+   val EVERY_DISJ_CONV : conv -> conv
+   val EVERY_CONJ_CONV : conv -> conv
    val QUANT_CONV : conv -> conv
    val STRIP_QUANT_CONV : conv -> conv
    val BINDER_CONV : conv -> conv

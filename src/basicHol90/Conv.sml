@@ -233,6 +233,9 @@ in
     raise CONV_ERR "RATOR_CONV" ("Application of AP_THM failed: "^message)
 end
 
+(* remember this as "left-hand conv", where RAND_CONV is "right-hand conv". *)
+fun LAND_CONV c = RATOR_CONV (RAND_CONV c)
+
 (* ---------------------------------------------------------------------*)
 (* ABS_CONV conv "\x. t[x]" applies conv to t[x]			*)
 (* 									*)
@@ -379,9 +382,15 @@ fun FORK_CONV (conv1,conv2) tm =
     end;
 
 fun BINOP_CONV conv tm = FORK_CONV (conv,conv) tm;
+fun EVERY_DISJ_CONV c tm =
+  if is_disj tm then BINOP_CONV (EVERY_DISJ_CONV c) tm else c tm
+fun EVERY_CONJ_CONV c tm =
+  if is_conj tm then BINOP_CONV (EVERY_CONJ_CONV c) tm else c tm
+
 fun QUANT_CONV conv    = RAND_CONV(ABS_CONV conv);
 fun STRIP_QUANT_CONV conv tm =
-  if is_forall tm orelse is_exists tm orelse is_select tm then
+  if is_forall tm orelse is_exists tm orelse is_select tm orelse is_uexists tm
+  then
     QUANT_CONV (STRIP_QUANT_CONV conv) tm
   else
     conv tm
