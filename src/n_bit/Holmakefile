@@ -1,6 +1,6 @@
-EXTRA_CLEANS = mkword.exe
+EXTRA_CLEANS = mkword.exe selftest.exe
 
-all: mkword.exe
+all: mkword.exe selftest.exe
 
 wordFunctor.uo: wordFunctor.sml selectUtil.uo bitsTheory.uo
 	$(HOLMOSMLC) -c -toplevel Overlay.ui wordFunctor.sml
@@ -14,3 +14,6 @@ mkword.uo: wordFunctor.uo mkword.sml
 mkword.exe: mkword.uo wordFunctorLib.uo
 	$(HOLMOSMLC) -o $@ mkword.uo
 	$(CP) $@ $(protect $(HOLDIR)/bin)
+
+selftest.exe: selftest.uo mkword.exe
+	$(HOLMOSMLC) -o $@ $<
