@@ -94,7 +94,7 @@ Now you will need to rebuild \HOL{} from the sources.\footnote{It is
   web-page mentioned above.}
 
 Before beginning you must have a current version of MoscowML.  In
-particular, you must have version 1.44 or later.  MoscowML is
+particular, you must have version 2.00 or later.  MoscowML is
 available on the web from
 \[
 \texttt{\oneurl{http://www.dina.kvl.dk/\~{}sestoft/mosml.html}}
@@ -159,7 +159,7 @@ something like:
 \begin{verbatim}
 $ more configure.sml
   ...
-val mosmldir = "/usr/groups/hol/mosml.144";
+val mosmldir = "/local/scratch/kxs/200";
 val holdir   = "/local/scratch/mn200/hol98";
 val OS       = "linux"       (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
@@ -180,25 +180,26 @@ system.  In particular, it will compile \textsf{Holmake} and
 
 \begin{session}
 \begin{verbatim}
-$ /usr/groups/hol/mosml.144/bin/mosml < configure.sml
-Moscow ML version 1.44 (August 1999)
+$ /local/scratch/kxs/200/bin/mosml < configure.sml
+Moscow ML version 2.00 (June 2000)
 Enter `quit();' to quit.
-- > val mosmldir = "/usr/groups/hol/mosml.144" : string
-- > val holdir = "/local/scratch/mn200/hol98" : string
-- > val OS = "linux" : string
-  val CC = "gcc" : string
+- > val mosmldir = "/local/scratch/kxs/200" : string
+  val holdir = "/local/scratch/mn200/Work/hol98" : string
+  val OS = "linux" : string
+- > val CC = "gcc" : string
   ...
 Beginning configuration.
 - Making bin/Holmake.
-- Making bin/build.
+  ...
+Making bin/build.
 - Making hol98-mode.el (for Emacs)
 - Setting up the standard prelude.
 - Setting up src/0/Globals.sml.
 - Generating bin/hol.
+- Generating bin/hol.unquote.
 - Attempting to compile quote filter ... successful.
-Generating bin/hol.unquote.
-- Setting up the robdd library Makefile.
 - Setting up the muddy library Makefile.
+- Setting up the help Makefile.
 -
 Finished configuration!
 -
