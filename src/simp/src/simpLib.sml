@@ -100,9 +100,11 @@ fun PROVE_LCOMM (assoc,sym) =
  fun mk_rewr_convdata thm =
    let val th = SPEC_ALL thm
    in
-      {name=("<rewrite> with "^Parse.thm_to_string th),
+      {name="<rewrite>",
        key=SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
-       trace=3,
+       trace=100,
+       (* no need to provide extra tracing here; COND_REWR_CONV provides
+          enough tracing itself *)
        conv=COND_REWR_CONV th}
      end;
 
