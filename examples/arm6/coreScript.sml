@@ -308,13 +308,13 @@ val PSRWA_def = Define`
       else if (is = t3) /\ (ic = mrs_msr) then
          if ~bit21 \/ (~bit19 /\ ~bit16) \/
             (USER nbs /\ (bit22 \/ (~bit19 /\ bit16))) then
-            (F,F)
+            (F,ARB)
          else
             (T,~bit22)
       else if (is = t4) /\ (ic = swi_ex) then
          (T,F)
       else
-         (F,F)`;
+         (F,ARB)`;
             
 val ALUOUT_def = Define`
   ALUOUT (n,z,c,v,res) = res`;
@@ -666,6 +666,11 @@ val STATE_ARM6_THM = store_thm("STATE_ARM6_THM",
   PROVE_TAC [STATE_ARM6_def,IMAP_def]
 );
 
+val STATE_ARM6_IMAP = store_thm("STATE_ARM6_IMAP",
+  `IS_IMAP STATE_ARM6`,
+  PROVE_TAC [STATE_ARM6_THM,IS_IMAP_def]
+);
+
 fun T_MINUS_ONE th =
   REPEAT STRIP_TAC
     THEN Cases_on `t = 0`
@@ -674,13 +679,6 @@ fun T_MINUS_ONE th =
     THEN IMP_RES_TAC LESS_ADD_1
     THEN `t = SUC p` by RW_TAC arith_ss []
     THEN ASM_SIMP_TAC arith_ss [th];
-
-(*
-val STATE_ARM6_COR = store_thm("STATE_ARM6_COR",
-  `!t a. STATE_ARM6 t a = if t = 0 then INIT_ARM6 a else NEXT_ARM6 (STATE_ARM6 (t-1) a)`,
-  T_MINUS_ONE STATE_ARM6_def
-);
-*)
 
 val STATE_ARM6_COR = store_thm("STATE_ARM6_COR",
   `!t a. STATE_ARM6 t a = FUNPOW NEXT_ARM6 t (INIT_ARM6 a)`,

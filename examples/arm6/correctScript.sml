@@ -1,6 +1,6 @@
-(* app load ["bossLib","combinTheory","pairTheory","onestepTheory",
+(* app load ["pairTheory","onestepTheory",
              "word32Theory","word32Lib","armTheory","coreTheory","lemmasTheory","lemmasLib"]; *)
-open HolKernel boolLib Q Parse bossLib simpLib combinTheory PairRules
+open HolKernel boolLib Q Parse bossLib simpLib PairRules
      arithmeticTheory onestepTheory word32Theory word32Lib
      armTheory coreTheory lemmasTheory lemmasLib;
 
@@ -29,21 +29,23 @@ val DUR_ARM6_WELL = store_thm("DUR_ARM6_WELL",
 );
  
 val IMM_ARM6_UNIFORM = store_thm("IMM_ARM6_UNIFORM",
-  `UIMM IMM_ARM6 STATE_ARM6 DUR_ARM6`,
-  REWRITE_TAC [UIMM_def,DUR_ARM6_WELL,IMM_ARM6_def]
+  `UNIFORM IMM_ARM6 STATE_ARM6`,
+  REWRITE_TAC [UNIFORM_def]
+    THEN EXISTS_TAC `DUR_ARM6`
+    THEN RW_TAC bool_ss [UIMMERSION_def,DUR_ARM6_WELL,IMM_ARM6_def]
 );
- 
+
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
 
-val ARM6_ONTO_INIT = store_thm("ARM6_ONTO_INIT",
-  `ONTO_INIT ABS_ARM6 I INIT_ARM6`,
-  REWRITE_TAC [ONTO_INIT_def,I_THM]
-   THEN Cases
+val ARM6_DATA_ABSTRACTION = store_thm("ARM6_DATA_ABSTRACTION",
+  `DATA_ABSTRACTION ABS_ARM6 (STATE_ARM 0) (STATE_ARM6 0)`,
+  RW_TAC std_ss [DATA_ABSTRACTION_def]
+   THEN Cases_on `a`
    THEN EXISTS_TAC `ARM6 f (DP (ADD8_PC r) p ARB ARB ARB ARB)
              (CTRL ARB ARB ARB ARB ARB ARB ARB ARB
                ARB ARB ARB ARB ARB ARB ARB ARB ARB ARB ARB)`
-   THEN SIMP_TAC std_ss [ABS_ARM6_def,SUB8_INV,INIT_ARM6_def]
+   THEN SIMP_TAC std_ss [ABS_ARM6_def,SUB8_INV,STATE_ARM_def,STATE_ARM6_def,INIT_ARM6_def]
 );
 
 (* -------------------------------------------------------- *)
@@ -317,19 +319,16 @@ val ARM6_TCON_LEM1 = Count.apply store_thm("ARM6_TCON_LEM1",
  
 val ARM6_TCON_ONE = GEN_ALL (SIMP_RULE bool_ss [] ARM6_TCON_LEM1);
 
+val INIT = REWRITE_RULE [GSYM FUN_EQ_THM] (CONJUNCT1 STATE_ARM6_def);
+
 val ARM6_TIME_CON_IMM = store_thm("ARM6_TIME_CON_IMM",
-  `TCON_IMM STATE_ARM6 IMM_ARM6`,
-  ASSUME_TAC STATE_ARM6_THM
-    THEN ASSUME_TAC IMM_ARM6_UNIFORM
-    THEN IMP_RES_TAC TC_IMM_ONE_STEP_THM
-    THEN NTAC 4 (POP_ASSUM (K ALL_TAC))
-    THEN POP_ASSUM (fn th => REWRITE_TAC [th])
-    THEN POP_ASSUM_LIST (K ALL_TAC)
+  `TCON_IMMERSION STATE_ARM6 IMM_ARM6`,
+  SIMP_TAC bool_ss [TC_IMMERSION_ONE_STEP_THM,STATE_ARM6_IMAP,IMM_ARM6_UNIFORM]
     THEN REPEAT STRIP_TAC
     THEN Cases_on `a`
     THEN Cases_on `d`
     THEN Cases_on `c`
-    THEN REWRITE_TAC [ARM6_TCON_ZERO,ARM6_TCON_ONE]
+    THEN REWRITE_TAC [INIT,ARM6_TCON_ZERO,ARM6_TCON_ONE]
 );
 
 (* -------------------------------------------------------- *)
@@ -932,19 +931,13 @@ val ARM6_COR_ONE = GEN_ALL (SIMP_RULE bool_ss [] ARM6_COR_LEM1);
 
 val CORRECT_ARM6 = store_thm("CORRECT_ARM6",
   `CORRECT STATE_ARM STATE_ARM6 IMM_ARM6 ABS_ARM6`,
-  MAP_EVERY ASSUME_TAC [STATE_ARM_THM,STATE_ARM6_THM,IMM_ARM6_UNIFORM,
-                        ARM6_ONTO_INIT,ARM6_TIME_CON_IMM]
-    THEN `TCON STATE_ARM` by IMP_RES_TAC TC_I_LEMMA
-    THEN `CORRECT STATE_ARM STATE_ARM6 IMM_ARM6 ABS_ARM6 =
-           (!a. STATE_ARM 0 (ABS_ARM6 a) = ABS_ARM6 (STATE_ARM6 (IMM_ARM6 a 0) a)) /\
-            !a. STATE_ARM 1 (ABS_ARM6 a) = ABS_ARM6 (STATE_ARM6 (IMM_ARM6 a 1) a)`
-      by IMP_RES_TAC ONE_STEP_THM
-    THEN POP_ASSUM (fn th => REWRITE_TAC [th])
+  SIMP_TAC bool_ss [MATCH_MP TC_I_LEMMA STATE_ARM_THM,ARM6_TIME_CON_IMM,
+                    ONE_STEP_THM,IMM_ARM6_UNIFORM,ARM6_DATA_ABSTRACTION]
     THEN REPEAT STRIP_TAC
     THEN Cases_on `a`
     THEN Cases_on `d`
     THEN Cases_on `c`
-    THEN REWRITE_TAC [ARM6_COR_ZERO,ARM6_COR_ONE]
+    THEN REWRITE_TAC [INIT,ARM6_COR_ZERO,ARM6_COR_ONE]
 );
 
 (* -------------------------------------------------------- *)

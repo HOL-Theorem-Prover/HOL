@@ -120,8 +120,8 @@ val DP_ALU3 = ABBREV_TAC `alu3 = ALU6 data_proc t3 i
                                                (RBA data_proc t3 i))) (BIT 29 cpsr)))
                                    (BIT 29 cpsr)`;
 
-val DP_PSR3 = ABBREV_TAC `psr3 = if FST (if BITw 20 i then (T,T) else (F,F)) then
-                (if SND (if BITw 20 i then (T,T) else (F,F)) then
+val DP_PSR3 = ABBREV_TAC `psr3 = if FST (if BITw 20 i then (T,T) else (F,ARB)) then
+                (if SND (if BITw 20 i then (T,T) else (F,ARB)) then
                    CPSR_WRITE psr
                      (PSRDAT data_proc t3 i (DECODE_MODE cpsr) (AREGN1 F)
                         (CPSR_READ psr)
@@ -168,8 +168,8 @@ val RS_ALU4 = ABBREV_TAC `alu4 = ALU6 reg_shift t4 i
                                            (DECODE_MODE cpsr) (RBA reg_shift t4 i))
                                         (BIT 29 cpsr))) (BIT 29 cpsr)`;
 
-val RS_PSR4 = ABBREV_TAC `psr4 = if FST (if BITw 20 i then (T,T) else (F,F)) then
-                (if SND (if BITw 20 i then (T,T) else (F,F)) then
+val RS_PSR4 = ABBREV_TAC `psr4 = if FST (if BITw 20 i then (T,T) else (F,ARB)) then
+                (if SND (if BITw 20 i then (T,T) else (F,ARB)) then
                    CPSR_WRITE psr
                      (PSRDAT reg_shift t4 i (DECODE_MODE cpsr) (AREGN1 F)
                         (CPSR_READ psr)
