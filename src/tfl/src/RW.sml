@@ -219,8 +219,8 @@ abstype simpls = RW of {thms :thm list list,
                         cong_net :(term -> thm) Net.net}
 with
 val empty_simpls = RW{thms = [[]],  congs = [[]],
-                      rw_net = Net.empty_net,
-                      cong_net = Net.empty_net};
+                      rw_net = Net.empty,
+                      cong_net = Net.empty};
 
 fun dest_simpls (RW{thms, congs,...}) =
    {rws = rev(flatten thms), congs = rev(flatten congs)};
@@ -229,7 +229,7 @@ fun dest_simpls (RW{thms, congs,...}) =
 fun add_rws (RW{thms,rw_net,congs, cong_net}) thl =
  RW{thms   = thl::thms,
     congs  = congs, cong_net = cong_net,
-    rw_net = itlist Net.enter
+    rw_net = itlist Net.insert
              (map (fn th => let val left = Dsyntax.lhs(#2(strip_imp(concl th)))
                             in  (left,  PRIM_RW_CONV th)
                             end)
@@ -285,7 +285,7 @@ let fun try [] = raise failed
             end)
         handle HOL_ERR _ => try rst
 in
-  try (Net.lookup tm rw_net)
+  try (Net.match tm rw_net)
 end end;
 
 (*---------------------------------------------------------------------------
@@ -293,13 +293,13 @@ end end;
  * a constant, but I don't currently check that.
  *---------------------------------------------------------------------------*)
 fun CONG_STEP (RW{cong_net,...}) tm =
-  Lib.trye hd (Net.lookup tm cong_net) tm;
+  Lib.trye hd (Net.match tm cong_net) tm;
 
 
 (*----------------------------------------------------------------------------
  *                          Prettyprinting
  *---------------------------------------------------------------------------*)
-local open Portable_PrettyPrint
+local open Portable
 in
 fun pp_simpls ppstrm (RW{thms,congs,...}) =
    let val {add_string,add_break,begin_block,end_block,add_newline,...} =

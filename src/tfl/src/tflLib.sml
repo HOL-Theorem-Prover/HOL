@@ -37,7 +37,7 @@ fun func_of_cond_eqn tm =
     #1(strip_comb(#lhs(dest_eq(#2 (strip_forall(#2(strip_imp tm)))))));
 
 fun timer s1 f s2 =
-   let open Portable_Timer Portable_Time
+   let open Timer Time
    in if !timing
       then let val _ = output(std_out, s1)
                val _ = flush_out std_out

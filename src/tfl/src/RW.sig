@@ -15,7 +15,7 @@ sig
   val add_congs    : simpls -> thm list -> simpls
   val join_simpls  : simpls -> simpls -> simpls
   val std_simpls   : simpls
-  val pp_simpls    : Portable_PrettyPrint.ppstream -> simpls -> unit
+  val pp_simpls    : Portable.ppstream -> simpls -> unit
   val embedded_ref : (term -> term -> bool) ref
 
   (* The implicit simplification set *)
