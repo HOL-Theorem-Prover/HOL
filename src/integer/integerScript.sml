@@ -509,6 +509,10 @@ val int_ge =
     new_infixr_definition("int_ge",
 			 Term `$int_ge x y = y <= x:int`,
 			 450);
+val natge = Term`$>= : num -> num -> bool`
+val _ = allow_for_overloading_on (">=", Type`:'a -> 'a -> bool`);
+val _ = overload_on (">=", natge);
+val _ = overload_on (">=", Term`$int_ge`);
 
 (*--------------------------------------------------------------------------*)
 (* Now define the inclusion homomorphism int_of_num:num->int.               *)
@@ -2330,19 +2334,15 @@ val _ = print "Proving rewrites for calculation with integers\n"
 
 val INT_ADD_CALCULATE = store_thm(
   "INT_ADD_CALCULATE",
-  Term`!p q n m.
+  Term`!p:int n m.
           (0 + p = p) /\ (p + 0 = p) /\
           (&n + &m = &(n + m)) /\
           (&n + ~&m = if m <= n then &(n - m) else ~&(m - n)) /\
-          (~p + q = q + ~p) /\ (~p + ~q = ~(p + q))`,
-  SIMP_TAC int_ss [INT_ADD_LID, INT_ADD_RID, INT_ADD, GSYM INT_NEG_ADD,
-                   INT_ADD_COMM] THEN
-  REPEAT GEN_TAC THEN COND_CASES_TAC THENL [
-    ASM_SIMP_TAC int_ss [GSYM int_sub, INT_EQ_SUB_RADD, INT_ADD, INT_INJ],
-    SIMP_TAC int_ss [GSYM int_sub, INT_EQ_SUB_RADD] THEN
-    CONV_TAC (RHS_CONV (REWR_CONV INT_ADD_COMM)) THEN
-    SIMP_TAC int_ss [GSYM int_sub, INT_EQ_SUB_LADD] THEN
-    ASM_SIMP_TAC int_ss [INT_ADD, INT_INJ]
+          (~&n + &m = if n <= m then &(m - n) else ~&(n - m)) /\
+          (~&n + ~&m = ~&(n + m))`,
+  SIMP_TAC (int_ss ++ COND_elim_ss) [
+    INT_ADD_LID, INT_ADD_RID, INT_ADD, GSYM INT_NEG_ADD, INT_ADD_COMM,
+    GSYM int_sub, INT_EQ_SUB_RADD, INT_INJ, INT_SUB
   ]);
 
 val INT_SUB_CALCULATE = save_thm("INT_SUB_CALCULATE", int_sub);
@@ -2378,6 +2378,41 @@ val INT_EXP_CALCULATE = store_thm(
   SIMP_TAC int_ss [INT_EXP, int_exp] THEN
   SIMP_TAC int_ss [NUMERAL_DEF, ODD_NB1, EVEN_NB2, INT_EXP_NEG]);
 
+val INT_LT_CALCULATE = store_thm(
+  "INT_LT_CALCULATE",
+  Term`!n m.  (&n < &m = n < m) /\ (~&n < ~&m = m < n) /\
+              (~&n < &m = ~(n = 0) \/ ~(m = 0)) /\ (&n < ~&m = F)`,
+  SIMP_TAC int_ss [INT_LT, INT_LT_NEG] THEN
+  Induct THENL [
+    SIMP_TAC int_ss [INT_NEG_0, INT_LT, INT_NEG_GT0],
+    GEN_TAC THEN CONJ_TAC THENL [
+      SIMP_TAC int_ss [INT, INT_NEG_ADD, INT_LT_ADDNEG2] THEN
+      ASM_SIMP_TAC int_ss [INT_ADD],
+      SIMP_TAC int_ss [INT, INT_LT_ADD_SUB, int_sub, GSYM INT_NEG_ADD] THEN
+      ASM_SIMP_TAC int_ss [INT_ADD]
+    ]
+  ]);
+
+val INT_LE_CALCULATE = save_thm("INT_LE_CALCULATE", INT_LE_LT);
+val INT_GT_CALCULATE = save_thm("INT_GT_CALCULATE", int_gt);
+val INT_GE_CALCULATE = save_thm("INT_GE_CALCULATE", int_ge);
+
+val int_eq_calculate = prove(
+  Term`!n m. ((&n = ~&m) = (n = 0) /\ (m = 0)) /\
+             ((~&n = &m) = (n = 0) /\ (m = 0))`,
+  Induct THENL [
+    SIMP_TAC int_ss [INT_NEG_0, INT_INJ, GSYM INT_NEG_EQ],
+    SIMP_TAC int_ss [INT] THEN GEN_TAC THEN CONJ_TAC THENL [
+      SIMP_TAC int_ss [GSYM INT_EQ_SUB_LADD, int_sub, GSYM INT_NEG_ADD] THEN
+      ASM_SIMP_TAC int_ss [INT_ADD],
+      SIMP_TAC int_ss [INT_NEG_ADD, GSYM INT_EQ_SUB_LADD, int_sub] THEN
+      ASM_SIMP_TAC int_ss [INT_NEGNEG, INT_ADD]
+    ]
+  ]);
+
+val INT_EQ_CALCULATE = save_thm(
+  "INT_EQ_CALCULATE",
+  LIST_CONJ [INT_INJ, INT_EQ_NEG, int_eq_calculate]);
 
 (* val _ = Globals.show_numeral_types := true *)
 val _ = export_theory();
