@@ -1,6 +1,6 @@
-\DOC 
+\DOC
 
-\TYPE {type thy_addon} 
+\TYPE {type thy_addon}
 
 \SYNOPSIS
 Type of theory additions.
@@ -11,8 +11,8 @@ theory, addition.
 \DESCRIBE
 The type abbreviation
 {
-   thy_addon = {sig_ps : (ppstream -> unit) option,
-                struct_ps : (ppstream -> unit) option}
+   thy_addon = {{sig_ps : (ppstream -> unit) option,
+                struct_ps : (ppstream -> unit) option}}
 }
 packages up the arguments to {adjoin_to_theory}. The {sig_ps}
 argument is an optional prettyprinter, which will be invoked when
