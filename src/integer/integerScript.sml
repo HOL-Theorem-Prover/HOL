@@ -483,33 +483,26 @@ val int_sub =
 			 Term `$int_sub x y = x + ~y`,
 			 500);
 
-val natsub = Term`$-`;
-val _ = overload_on("-", natsub);
-val _ = overload_on("-", Term`$int_sub`);
 
 val int_le =
     new_infixr_definition("int_le",
 			 Term `$int_le x y = ~(y<x:int)`,
 			 450);
 
-val natlte = Term`$<=`;
-val _ = overload_on ("<=", natlte);
-val _ = overload_on ("<=", Term`$int_le`);
 
 val int_gt =
     new_infixr_definition("int_gt",
 			 Term `$int_gt (x:int) y = y < x`,
 			 450);
-val natgt = Term`$>`;
-val _ = overload_on (">", natgt);
-val _ = overload_on (">", Term`$int_gt`);
 
 val int_ge =
     new_infixr_definition("int_ge",
 			 Term `$int_ge x y = y <= x:int`,
 			 450);
-val natge = Term`$>= : num -> num -> bool`
-val _ = overload_on (">=", natge);
+
+val _ = overload_on ("-",  Term`$int_sub`);
+val _ = overload_on (">",  Term`$int_gt`);
+val _ = overload_on ("<=", Term`$int_le`);
 val _ = overload_on (">=", Term`$int_ge`);
 
 (*--------------------------------------------------------------------------*)
