@@ -874,13 +874,13 @@ val REVERSE_DEF = new_recursive_definition {
   name = "REVERSE_DEF",
   rec_axiom = list_Axiom,
   def = ``(REVERSE [] = []) /\
-          (REVERSE (h::t) = APPEND (REVERSE t) [h])``};
+          (REVERSE (h::t) = (REVERSE t) ++ [h])``};
 val _ = export_rewrites ["REVERSE_DEF"]
 
 val REVERSE_APPEND = store_thm(
   "REVERSE_APPEND",
   ``!l1 l2:'a list.
-       REVERSE (APPEND l1 l2) = APPEND (REVERSE l2) (REVERSE l1)``,
+       REVERSE (l1 ++ l2) = (REVERSE l2) ++ (REVERSE l1)``,
   LIST_INDUCT_TAC THEN
   ASM_REWRITE_TAC [APPEND, REVERSE_DEF, APPEND_NIL, APPEND_ASSOC]);
 
@@ -1008,13 +1008,13 @@ val LEN_LENGTH_LEM = Q.store_thm
 
 val REV_REVERSE_LEM = Q.store_thm
 ("REV_REVERSE_LEM",
- `!L1 L2. REV L1 L2 = APPEND (REVERSE L1) L2`,
+ `!L1 L2. REV L1 L2 = (REVERSE L1) ++ L2`,
  Induct THEN RW_TAC arith_ss [REV_DEF,REVERSE_DEF,APPEND]
         THEN REWRITE_TAC [GSYM APPEND_ASSOC]
         THEN RW_TAC bool_ss [APPEND]);
 
 val LENGTH_LEN = Q.store_thm
-("LENGTH_LEM",
+("LENGTH_LEN",
  `!L. LENGTH L = LEN L 0`,
  RW_TAC arith_ss [LEN_LENGTH_LEM]);
 
