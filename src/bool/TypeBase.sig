@@ -35,10 +35,15 @@ sig
    val size_of0           : string -> (term * shared_thm) option
    val encode_of0         : string -> (term * shared_thm) option
 
+   val is_constructor     : term -> bool
+
    val mk_case            : term * (term * term) list -> term
    val dest_case          : term -> term * term * (term * term) list
-   val strip_case         : term -> term * (term * term) list
    val is_case            : term -> bool
-   val is_constructor     : term -> bool
+   val strip_case         : term -> term * (term * term) list
+
+   val mk_record          : hol_type -> (string * term) list -> term
+   val dest_record        : term -> (string * term) list
+   val is_record          : term -> bool
 
 end

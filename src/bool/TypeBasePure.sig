@@ -81,16 +81,14 @@ sig
 
    val cinst           : hol_type -> term -> term
 
-   val mk_case         : typeBase -> term * (term * term) list -> term
-   val dest_case       : typeBase -> term -> term * term * (term * term) list
-   val strip_case      : typeBase -> term -> term * (term * term) list
-   val is_case         : typeBase -> term -> bool
-
    val is_constructor  : typeBase -> term -> bool
 
-(*
+   val mk_case         : typeBase -> term * (term * term) list -> term
+   val dest_case       : typeBase -> term -> term * term * (term * term) list
+   val is_case         : typeBase -> term -> bool
+   val strip_case      : typeBase -> term -> term * (term * term) list
+
    val mk_record       : typeBase -> hol_type -> (string * term) list -> term
    val dest_record     : typeBase -> term -> (string * term) list
    val is_record       : typeBase -> term -> bool
-*)
 end

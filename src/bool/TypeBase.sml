@@ -102,14 +102,26 @@ val _ =
   end
 
 (*---------------------------------------------------------------------------*)
+(* Is a term a constructor for some datatype.                                *)
+(*---------------------------------------------------------------------------*)
+
+fun is_constructor x = TypeBasePure.is_constructor (theTypeBase()) x;
+
+(*---------------------------------------------------------------------------*)
 (* Syntax operations on case expressions                                     *)
 (*---------------------------------------------------------------------------*)
 
 fun mk_case x   = TypeBasePure.mk_case (theTypeBase()) x
 fun dest_case x = TypeBasePure.dest_case (theTypeBase()) x
-fun strip_case x = TypeBasePure.strip_case (theTypeBase()) x
 fun is_case x   = TypeBasePure.is_case (theTypeBase()) x;
+fun strip_case x = TypeBasePure.strip_case (theTypeBase()) x
 
-fun is_constructor x = TypeBasePure.is_constructor (theTypeBase()) x;
+(*---------------------------------------------------------------------------*)
+(* Syntax operations on records                                              *)
+(*---------------------------------------------------------------------------*)
+
+fun mk_record x y   = TypeBasePure.mk_record (theTypeBase()) x y
+fun dest_record x = TypeBasePure.dest_record (theTypeBase()) x
+fun is_record x   = TypeBasePure.is_record (theTypeBase()) x;
 
 end

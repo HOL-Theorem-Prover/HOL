@@ -497,11 +497,22 @@ fun cinst ty c =
   end
 
 (*---------------------------------------------------------------------------*)
+(* Is a constant a constructor for some datatype.                            *)
+(*---------------------------------------------------------------------------*)
+
+fun is_constructor tybase c =
+  let val (_,ty) = strip_fun (type_of c)
+  in case prim_get tybase (type_names ty)
+     of NONE => false
+      | SOME tyinfo => op_mem same_const c (constructors_of tyinfo)
+  end handle HOL_ERR _ => false;
+
+(*---------------------------------------------------------------------------*)
 (* Syntax operations on the (extensible) set of case expressions.            *)
 (*---------------------------------------------------------------------------*)
 
 fun mk_case tybase (exp, plist) =
-  case get tybase (fst(dest_type (type_of exp)))
+  case prim_get tybase (type_names (type_of exp))
    of NONE => raise ERR "mk_case" "unable to analyze type"
     | SOME tyinfo =>
        let val c = case_const_of tyinfo
@@ -512,22 +523,11 @@ fun mk_case tybase (exp, plist) =
        in list_mk_comb(inst theta c,fns@[exp])
        end;
                          
-(*
-fun build_case_clause(constr,rhs) =
- let val (args,r) = strip_fun (type_of constr)
-     fun peel [] N = ([],N)
-       | peel (_::tys) N = 
-           let val (v,M) = dest_abs N
-               val (V,M') = peel tys M
-           in (v::V,M')
-           end
-     val (V,rhs') = peel args rhs
-     val theta = match_type (list_mk_fun (args,ind))
-                            (list_mk_fun (map type_of V, ind))
-     val constr' = inst theta constr
-  in (list_mk_comb(constr',V), rhs')
-  end
-*)
+(*---------------------------------------------------------------------------*)
+(* dest_case destructs one level of pattern matching. To deal with nested    *)
+(* patterns, use strip_case.                                                 *)
+(*---------------------------------------------------------------------------*)
+
 local fun build_case_clause((ty,constr),rhs) =
  let val (args,tau) = strip_fun (type_of constr)
      fun peel  [] N = ([],N)
@@ -546,8 +546,7 @@ in
 fun dest_case tybase M = 
   let val (c,args) = strip_comb M
       val (cases,arg) = front_last args
-      val tyop = fst(dest_type (type_of arg))
-  in case get tybase tyop
+  in case prim_get tybase (type_names (type_of arg))
       of NONE => raise ERR "dest_case" "unable to destruct case expression"
        | SOME tyinfo => 
           let val d = case_const_of tyinfo
@@ -563,14 +562,14 @@ end
 
 fun is_case tybase M = 
   let val (c,args) = strip_comb M
-      val tyop = fst(dest_type (type_of (last args)))
-  in case get tybase tyop
+      val (tynames as (_,tyop)) = type_names (type_of (last args))
+  in case prim_get tybase tynames
       of NONE => raise ERR "is_case" ("unknown type operator: "^Lib.quote tyop)
        | SOME tyinfo => same_const c (case_const_of tyinfo) 
   end 
   handle HOL_ERR _ => false;
 
-fun foo tybase (pat,rhs) = 
+local fun dest tybase (pat,rhs) = 
   let val patvars = free_vars pat
   in if is_case tybase rhs
        then let val (case_tm,exp,clauses) = dest_case tybase rhs
@@ -578,29 +577,105 @@ fun foo tybase (pat,rhs) =
             in if mem exp patvars andalso
                   null_intersection [exp] (free_varsl rhsides)
                 then flatten
-                       (map (foo tybase)
+                       (map (dest tybase)
                          (zip (map (fn p => subst [exp |-> p] pat) pats) rhsides))
                 else [(pat,rhs)]
              end
        else [(pat,rhs)]
-  end;
-
+  end
+in
 fun strip_case tybase M = 
   case total (dest_case tybase) M
    of NONE => (M,[])
-    | SOME(case_tm,exp,cases) => (exp, flatten (map (foo tybase) cases));
+    | SOME(case_tm,exp,cases) => (exp, flatten (map (dest tybase) cases))
+end;
         
 
-fun is_constructor tybase c =
-  let val (_,ty) = strip_fun (type_of c)
-      val {Tyop,...} = dest_thy_type ty
-  in case get tybase Tyop
-     of NONE => false
-      | SOME tyinfo => op_mem same_const c (constructors_of tyinfo)
-  end handle HOL_ERR _ => false;
+(*---------------------------------------------------------------------------*)
+(* Support for syntactic operations for record types.                        *)
+(*---------------------------------------------------------------------------*)
 
-(* 
+fun is_record_type tybase ty =
+  not (null (fields_of (valOf (prim_get tybase (type_names ty)))))
+  handle HOL_ERR _ => false;
+     
+fun is_record tybase M = is_record_type tybase (type_of M);
+
+(*---------------------------------------------------------------------------*)
+(* The function                                                              *)
+(*                                                                           *)
+(*   dest_record : tyBase -> term -> (string * hol_type) list                *)
+(*                                                                           *)
+(* needs to know about the TypeBase in order to tell if the term is an       *)
+(* element of a record type.                                                 *)
+(*---------------------------------------------------------------------------*)
+
+fun mk_K_1 (tm,ty) = 
+  let val K_tm = prim_mk_const{Name="K",Thy="combin"}
+  in mk_comb(inst [alpha |-> type_of tm, beta |-> ty] K_tm,tm)
+  end;
+fun dest_K_1 tm = 
+  let val K_tm = prim_mk_const{Name="K",Thy="combin"}
+  in dest_monop K_tm (ERR "dest_K_1" "not a K-term") tm
+  end;
+
+fun get_field_name s1 s2 =
+  let val prefix = String.extract(s2,0,SOME(String.size s1))
+      val rest = String.extract(s2,String.size s1 + 1, NONE)
+      val middle = String.extract(rest,0,SOME(String.size rest - 5))
+      val suffix = String.extract(rest,String.size middle, NONE)
+  in 
+    if prefix = s1 andalso suffix = "_fupd"
+      then middle 
+      else raise ERR "get_field" ("unable to parse "^Lib.quote s2)
+  end;
+
+(*---------------------------------------------------------------------------*)
+(* A record looks like `fupd arg_1 (fupd arg_2 ... (fupd arg_n ARB) ...)`    *)
+(* where each arg_i is a (name,type) pair showing how the ith field should   *)
+(* be declared.                                                              *)
+(*---------------------------------------------------------------------------*)
+
+fun dest_field tm =
+  let val (ty,_) = dom_rng (type_of tm)
+      val tyname = fst(dest_type ty)
+      val (updf,arg) = dest_comb tm
+      val (name0,ty) = dest_const updf
+      val name = get_field_name tyname name0
+  in 
+    (name,dest_K_1 arg)
+  end
+  handle HOL_ERR _ => raise ERR "dest_field" "unexpected term structure";
+
+
+fun dest_record tybase tm =
+  let fun dest tm =
+       if is_arb tm then []
+       else let val (f,a) = dest_comb tm
+            in dest_field f::dest a
+            end
+       handle HOL_ERR _ => raise ERR "dest_record" "unexpected term structure"
+  in
+   if is_record tybase tm then dest tm 
+    else raise ERR "dest_record" "not a record"
+  end;
+     
+
 fun mk_record tybase ty fields = 
-*)
+ if is_record_type tybase ty
+  then let val (Thy,Tyop) = type_names ty
+        val upd_names = map (fn p => String.concat [Tyop,"_",fst p,"_fupd"]) fields
+        val updfns = map (fn n => prim_mk_const{Name=n,Thy=Thy}) upd_names
+        fun ifn c = let val (_,ty') = strip_fun (type_of c)
+                        val theta = match_type ty' ty
+                    in inst theta c
+                    end
+        val updfns' = map ifn updfns
+        fun mk_field (updfn,v) tm = 
+              mk_comb(mk_comb(updfn, mk_K_1(v,type_of v)),tm)
+       in
+         itlist mk_field (zip updfns' (map snd fields)) (mk_arb ty)
+       end
+  else raise ERR "mk_record" "first arg. not a record type";
 
 end
