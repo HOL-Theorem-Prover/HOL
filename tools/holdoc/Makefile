@@ -33,7 +33,8 @@ hostlts.dvi : hostlts.tex Net_hostLTSScript.tex ltsmunge.sty
 # other targets:
 
 clean:
-	rm -f simpledump lts_to_latex hollex.ml *.cm[iox] *~ '#*#' .depend Net_hostLTSScript.tex
+	rm -f simpledump lts_to_latex hollex.ml *.cm[iox] *~ '#*#' \
+              .depend Net_hostLTSScript.tex hostlts.{dvi,ps}
 
 depend:
 	$(OCAMLDEP) *.mli *.mll *.ml > .depend
@@ -48,7 +49,7 @@ depend:
 	$(OCAMLC) -c $<
 
 %.ps : %.dvi
-	$(DVIPS) %< -o $@
+	$(DVIPS) $< -o $@
 
 # this one must come *after* the individual .cmo / .cmi rules:
 %.cmo %.cmi : %.ml
