@@ -31,6 +31,7 @@ in
    fun trace x = (!trace_hook) x
 
 val trace_level = ref 0;
+val _ = Lib.register_trace "simplifier" trace_level;
 
 fun tty_trace (TEXT s) = (say "  "; say s; say "\n")
   | tty_trace (REDUCE (s,tm)) = (say "  "; say s; say " "; print_term tm; say "\n")
