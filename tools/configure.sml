@@ -15,7 +15,7 @@
 
 val mosmldir = ;
 val holdir   = ;
-val OS       = ;          (* Operating system; choices are:
+val OS       = "linux";          (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
 
 val CC       = "gcc";     (* C compiler (for building quote filter)        *)
@@ -68,7 +68,8 @@ val SRCDIRS =
   "src/integer", "src/res_quan/src", "src/set/src", "src/pred_set/src",
   "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src", "src/BoyerMoore",
-  "src/hol90", "src/finite_map", "src/real", "src/bag", "src/ring/src"] @
+  "src/hol90", "src/finite_map", "src/real", "src/bag", "src/ring/src", 
+  "src/temporal/src"] @
  (if OS = "linux" orelse OS = "solaris" then ["src/muddy", "src/HolBdd"]
   else []);
 
@@ -384,7 +385,7 @@ val _ =
      fill_holes (src,target)
        ["MOSMLHOME=\n"  -->  String.concat["MOSMLHOME=", mosmldir,"\n"],
         "CC=\n"         -->  String.concat["CC=", CC,"\n"],
-        "CFLAGS="     -->  String.concat["CFLAGS=",cflags,"\n"],
+        "CFLAGS="       -->  String.concat["CFLAGS=",cflags,"\n"],
         "all:\n"        -->  String.concat["all: ",all,"\n"],
         "DLLIBCOMP"     -->  String.concat["\t", dllibcomp, "\n"]
         ]
