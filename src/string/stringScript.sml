@@ -14,8 +14,6 @@
 
 open HolKernel boolLib numLib numSyntax BasicProvers SingleStep listTheory;
 
-infix THEN ; infixr -->;
-
 (* ---------------------------------------------------------------------*)
 (* Create the new theory						*)
 (* ---------------------------------------------------------------------*)
@@ -105,6 +103,8 @@ val EXPLODE_IMPLODE =
   save_thm ("EXPLODE_IMPLODE",
     GEN_ALL (EQ_MP (SPEC_ALL(BETA_RULE (CONJUNCT2 STRING_TYPE_FACTS))) TRUTH));
 
+val _ = export_rewrites ["IMPLODE_EXPLODE", "EXPLODE_IMPLODE"]
+
 val EXPLODE_ONTO =
   save_thm("EXPLODE_ONTO",
     GEN_ALL
@@ -119,6 +119,8 @@ val EXPLODE_11 = save_thm("EXPLODE_11",prove_rep_fn_one_one STRING_TYPE_FACTS)
 val IMPLODE_11 =
   save_thm("IMPLODE_11",
     REWRITE_RULE [] (BETA_RULE (prove_abs_fn_one_one STRING_TYPE_FACTS)));
+
+val _ = export_rewrites ["IMPLODE_11", "EXPLODE_11"]
 
 (*---------------------------------------------------------------------------
     Definability of prim. rec. functions over strings.
@@ -219,7 +221,7 @@ val STRING_INDUCT_THM = Q.store_thm
 val STRING_ACYCLIC = Q.store_thm
 ("STRING_ACYCLIC",
  `!s c. ~(STRING c s = s) /\ ~(s = STRING c s)`,
- HO_MATCH_MP_TAC STRING_INDUCT_THM 
+ HO_MATCH_MP_TAC STRING_INDUCT_THM
    THEN RW_TAC bool_ss [STRING_11,STRING_DISTINCT]);
 
 
@@ -268,6 +270,34 @@ val IMPLODE_EQNS = Q.store_thm
   !c s. IMPLODE (c::t) = STRING c (IMPLODE t)`,
  REWRITE_TAC [EMPTYSTRING_DEF,EXPLODE_IMPLODE,IMPLODE_EXPLODE,STRING_DEF]);
 
+val _ = export_rewrites ["EXPLODE_EQNS", "IMPLODE_EQNS"]
+
+(* ----------------------------------------------------------------------
+    More rewrites for IMPLODE and EXPLODE
+   ---------------------------------------------------------------------- *)
+
+val EXPLODE_EQ_THM = store_thm(
+  "EXPLODE_EQ_THM",
+  ``!s h t. ((h :: t = EXPLODE s) = (s = STRING h (IMPLODE t))) /\
+            ((EXPLODE s = h :: t) = (s = STRING h (IMPLODE t)))``,
+  REPEAT GEN_TAC THEN
+  CONV_TAC (RAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ]))) THEN
+  REWRITE_TAC [] THEN SRW_TAC [][EQ_IMP_THM] THEN
+  POP_ASSUM (MP_TAC o Q.AP_TERM `IMPLODE`) THEN
+  simpLib.SIMP_TAC bool_ss [IMPLODE_EQNS, IMPLODE_EXPLODE]);
+
+val IMPLODE_EQ_THM = store_thm(
+  "IMPLODE_EQ_THM",
+  ``!c s l. ((STRING c s = IMPLODE l) = (l = c :: EXPLODE s)) /\
+            ((IMPLODE l = STRING c s) = (l = c :: EXPLODE s))``,
+  REPEAT GEN_TAC THEN
+  CONV_TAC (RAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ]))) THEN
+  REWRITE_TAC [] THEN SRW_TAC [][EQ_IMP_THM] THEN
+  POP_ASSUM (MP_TAC o Q.AP_TERM `EXPLODE`) THEN
+  simpLib.SIMP_TAC bool_ss [EXPLODE_EQNS, EXPLODE_IMPLODE]);
+
+val _ = export_rewrites ["EXPLODE_EQ_THM", "IMPLODE_EQ_THM"]
+
 (*---------------------------------------------------------------------------
       Size of a string.
  ---------------------------------------------------------------------------*)
@@ -276,6 +306,8 @@ val STRLEN_DEF = new_recursive_definition
    {def = Term`(STRLEN "" = 0) /\
                (STRLEN (STRING c s) = 1 + STRLEN s)`,
     name="STRLEN_DEF", rec_axiom = string_Axiom};
+
+val _ = export_rewrites ["STRLEN_DEF"]
 
 val STRLEN_THM = Q.store_thm
 ("STRLEN_THM",
@@ -289,9 +321,9 @@ val STRLEN_THM = Q.store_thm
        String concatenation
  ---------------------------------------------------------------------------*)
 
-val STRCAT = 
+val STRCAT =
   new_definition
-   ("STRCAT", 
+   ("STRCAT",
     Term `STRCAT s1 s2 = IMPLODE(APPEND (EXPLODE s1) (EXPLODE s2))`);
 
 val STRCAT_EQNS = Q.store_thm
@@ -302,7 +334,7 @@ val STRCAT_EQNS = Q.store_thm
  RW_TAC bool_ss [STRCAT,APPEND,APPEND_NIL,EXPLODE_EQNS,
                  IMPLODE_EQNS,IMPLODE_EXPLODE]);
 
-val STRCAT_ASSOC = Q.store_thm 
+val STRCAT_ASSOC = Q.store_thm
 ("STRCAT_ASSOC",
  `!s1 s2 s3. STRCAT s1 (STRCAT s2 s3) = STRCAT (STRCAT s1 s2) s3`,
  RW_TAC bool_ss [STRCAT,IMPLODE_11,EXPLODE_IMPLODE,APPEND_ASSOC]);
@@ -324,7 +356,7 @@ val STRCAT_ACYCLIC = Q.store_thm
      String length and concatenation
  ---------------------------------------------------------------------------*)
 
-val STRLEN_CAT = Q.store_thm 
+val STRLEN_CAT = Q.store_thm
 ("STRLEN_CAT",
  `!x y. STRLEN (STRCAT x y) = (STRLEN x + STRLEN y)`,
  REWRITE_TAC[STRCAT,STRLEN_THM,LENGTH_APPEND,EXPLODE_IMPLODE]);
@@ -336,7 +368,7 @@ val STRLEN_CAT = Q.store_thm
 
 val isPREFIX =
  Q.new_definition
-   ("isPREFIX", 
+   ("isPREFIX",
     `isPREFIX s1 s2 = ?s3. s2 = STRCAT s1 s3`);
 
 
