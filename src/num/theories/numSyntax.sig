@@ -81,6 +81,9 @@ sig
   val mk_numeral    : Arbnum.num -> Term.term
   val dest_numeral  : term -> Arbnum.num
 
+  val int_of_term   : term -> int
+  val term_of_int   : int -> term
+
   val list_mk_plus  : term list -> term
   val list_mk_mult  : term list -> term
   val strip_plus    : term -> term list

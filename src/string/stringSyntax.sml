@@ -1,7 +1,7 @@
 structure stringSyntax :> stringSyntax =
 struct
 
-open HolKernel boolLib stringTheory numSyntax;
+open HolKernel boolLib stringTheory numSyntax;   infix |->;
 
 val ERR = mk_HOL_ERR "stringSyntax";
 

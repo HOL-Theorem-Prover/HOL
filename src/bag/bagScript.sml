@@ -12,7 +12,8 @@ infix 8 by;
 
 val hol_ss = mn_ss;
 
-val bag = ty_antiq(Type`:'a -> num`);
+val _ = type_abbrev("bag", Type`:'a -> num`)
+val _ = type_abbrev("multiset", Type`:'a -> num`)
 
 fun ARITH q = EQT_ELIM (ARITH_CONV (Parse.Term q));
 
@@ -23,11 +24,11 @@ val _ = print "Defining basic bag operations\n"
 
 val EMPTY_BAG = new_definition (
   "EMPTY_BAG",
-  (--`(EMPTY_BAG:'a->num) = K 0`--));
+  (--`(EMPTY_BAG:'a bag) = K 0`--));
 
 val EMPTY_BAG_alt = store_thm (
   "EMPTY_BAG_alt",
-  --`EMPTY_BAG:'a->num = \x.0`--,
+  --`EMPTY_BAG:'a bag = \x.0`--,
   FUN_EQ_TAC THEN SIMP_TAC hol_ss [EMPTY_BAG]);
 
 val BAG_INN = new_definition(
@@ -48,11 +49,11 @@ val BAG_IN = new_definition (
   (--`BAG_IN (e:'a) b = BAG_INN e 1 b`--));
 
 val BAG_UNION = new_definition ("BAG_UNION",
-                (--`BAG_UNION b (c:'a -> num) = \x. b x + c x`--));
+                (--`BAG_UNION b (c:'a bag) = \x. b x + c x`--));
 
 val BAG_DIFF = new_definition (
   "BAG_DIFF",
-  (--`BAG_DIFF b1 (b2:'a->num) = \x. b1 x - b2 x`--));
+  (--`BAG_DIFF b1 (b2:'a bag) = \x. b1 x - b2 x`--));
 
 val BAG_INSERT = new_definition (
   "BAG_INSERT",
@@ -1326,7 +1327,7 @@ val BAG_REST_DEF = Q.new_definition
 
 val BAG_INSERT_CHOICE_REST = Q.store_thm
 ("BAG_INSERT_CHOICE_REST",
- `!b:^bag. ~(b = {||}) ==> (b = BAG_INSERT (BAG_CHOICE b) (BAG_REST b))`,
+ `!b:'a bag. ~(b = {||}) ==> (b = BAG_INSERT (BAG_CHOICE b) (BAG_REST b))`,
  REPEAT STRIP_TAC
    THEN IMP_RES_THEN MP_TAC BAG_CHOICE_DEF
    THEN NORM_TAC num_ss
@@ -1335,13 +1336,13 @@ val BAG_INSERT_CHOICE_REST = Q.store_thm
 
 val SUB_BAG_REST = Q.store_thm
 ("SUB_BAG_REST",
- `!b:^bag. SUB_BAG (BAG_REST b) b`,
+ `!b:'a bag. SUB_BAG (BAG_REST b) b`,
  NORM_TAC num_ss [BAG_REST_DEF,SUB_BAG,BAG_INN,BAG_DIFF,EL_BAG,BAG_INSERT,
                   arithmeticTheory.GREATER_EQ]);
 
 val PSUB_BAG_REST = Q.store_thm
 ("PSUB_BAG_REST",
- `!b:^bag. ~(b = {||}) ==> PSUB_BAG (BAG_REST b) b`,
+ `!b:'a bag. ~(b = {||}) ==> PSUB_BAG (BAG_REST b) b`,
  REPEAT STRIP_TAC
    THEN IMP_RES_THEN MP_TAC BAG_CHOICE_DEF
    THEN NORM_TAC num_ss [BAG_REST_DEF,PSUB_BAG, SUB_BAG,BAG_IN, BAG_INN,
@@ -1364,7 +1365,7 @@ val SUB_BAG_DIFF_EXISTS = Q.prove
 
 val SUB_BAG_CARD = Q.store_thm
 ("SUB_BAG_CARD",
- `!b1 b2:^bag. FINITE_BAG b2 /\ SUB_BAG b1 b2 ==> BAG_CARD b1 <= BAG_CARD b2`,
+`!b1 b2:'a bag. FINITE_BAG b2 /\ SUB_BAG b1 b2 ==> BAG_CARD b1 <= BAG_CARD b2`,
 RW_TAC bool_ss []
   THEN `?d. b2 = BAG_UNION b1 d` by PROVE_TAC [SUB_BAG_DIFF_EQ]
   THEN RW_TAC bool_ss []
@@ -1390,7 +1391,7 @@ RW_TAC num_ss [SUB_BAG,BAG_UNION,BAG_INN]);
 
 val PSUB_BAG_CARD = Q.store_thm
 ("PSUB_BAG_CARD",
- `!b1 b2:^bag. FINITE_BAG b2 /\ PSUB_BAG b1 b2 ==> BAG_CARD b1 < BAG_CARD b2`,
+`!b1 b2:'a bag. FINITE_BAG b2 /\ PSUB_BAG b1 b2 ==> BAG_CARD b1 < BAG_CARD b2`,
 RW_TAC bool_ss [PSUB_BAG]
   THEN `?d. b2 = BAG_UNION b1 d` by PROVE_TAC [SUB_BAG_DIFF_EQ]
   THEN RW_TAC bool_ss []

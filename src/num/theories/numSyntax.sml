@@ -144,6 +144,9 @@ struct
   val dest_numeral = Literal.dest_numeral
   val is_numeral   = Literal.is_numeral
 
+  val int_of_term = Arbnum.toInt o numSyntax.dest_numeral
+  fun term_of_int i = numSyntax.mk_numeral(Arbnum.fromInt i)
+
 (*---------------------------------------------------------------------------
      Dealing with lists of things to be added or multiplied.
  ---------------------------------------------------------------------------*)

@@ -159,11 +159,14 @@ val is_list_case = can dest_list_case
 
 fun mk_list (l,ty) = itlist (curry mk_cons) l (mk_nil ty);
 
-fun dest_list tm = 
-  let val (f,b) = front_last(strip_binop (total dest_cons) tm)
-  in if is_nil b then (f,eltype b)
-     else raise ERR "dest_list" "expected nil at end of list"
-  end;
+fun dest_list M = 
+ let fun dest M =
+       case total dest_cons M
+       of NONE => if is_nil M then [] 
+                  else raise ERR "dest_list" "not terminated with nil"
+        | SOME(h,t) => h::dest t
+ in (dest M, dest_list_type (type_of M))
+ end;
 
 val is_list = can dest_list;
 

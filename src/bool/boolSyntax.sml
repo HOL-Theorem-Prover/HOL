@@ -166,8 +166,8 @@ val strip_comb       = HolKernel.strip_comb
 val strip_abs        = HolKernel.strip_abs
 val strip_forall     = HolKernel.strip_binder (SOME universal)
 val strip_exists     = HolKernel.strip_binder (SOME existential)
-val strip_conj       = strip_binop  (total dest_conj)
-val strip_disj       = strip_binop  (total dest_disj)
+val strip_conj       = strip_binop (total dest_conj)
+val strip_disj       = strip_binop (total dest_disj)
 
 val strip_imp =
   let val desti = total dest_imp
