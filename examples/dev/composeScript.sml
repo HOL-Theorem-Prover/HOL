@@ -416,7 +416,7 @@ val ITE_def =
 
 (*****************************************************************************)
 (* TOTAL(f1,f2,f3) checks the termination for                                *)
-(* f = (\x. if (f1 x) then (f2 x) else f(f3 x))                              *)
+(* TAILREC f1 f2 f3 = \x. if (f1 x) then (f2 x) else TAILREC f1 f2 f3 (f3 x) *)
 (*****************************************************************************)
 
 val TOTAL_def = 
@@ -424,6 +424,25 @@ val TOTAL_def =
    `TOTAL(f1,f2,f3) = 
       ?variant. !x. ~(f1 x) ==> (variant (f3 x)) < (variant x)`;
 
+val TAILREC_def = 
+ TotalDefn.DefineSchema `TAILREC x = if f1 x then f2 x else TAILREC (f3 x)`;
+
+val TAILREC_THM = Q.prove
+(`!f1 f2 f3 x. 
+    (?R. WF R /\ !x. ~f1 x ==> R (f3 x) x) ==> 
+    (TAILREC f1 f2 f3 x = if f1 x then f2 x else TAILREC f1 f2 f3 (f3 x))`,
+  METIS_TAC [DISCH_ALL TAILREC_def]);
+
+val TOTAL_LEMMA = Q.store_thm
+("TOTAL_LEMMA",
+ `TOTAL(f1,f2,f3) ==> 
+   !x. (TAILREC f1 f2 f3) x =
+          if f1 x then f2 x else TAILREC f1 f2 f3 (f3 x)`,
+ RW_TAC std_ss [TOTAL_def]
+   THEN MATCH_MP_TAC TAILREC_THM
+   THEN Q.EXISTS_TAC `measure variant`
+   THEN METIS_TAC [prim_recTheory.WF_measure,
+                   prim_recTheory.measure_thm]);
 
 (*****************************************************************************)
 (* The recursion                                                             *)
@@ -1282,40 +1301,6 @@ val EXT_CALL = Q.store_thm ("EXT_CALL",
         THEN PROVE_TAC [MUX_def]);
 
 
-val TOTAL_LEMMA = Q.store_thm
-("TOTAL_LEMMA",
- `TOTAL(f1,f2,f3) ==> 
-   !x. (@f. f = (\x. if f1 x then f2 x else f (f3 x))) x 
-          =
-        if f1 x then f2 x
-        else (@f. f = \x. if f1 x then f2 x else f (f3 x)) (f3 x)`,
-    ASM_REWRITE_TAC [TOTAL_def]
-    THEN STRIP_TAC
-    THEN GEN_TAC
-    THEN `WF (measure variant)` by PROVE_TAC [prim_recTheory.WF_measure]
-    THEN `!x. ((variant (f3 x)) < (variant x)) = (measure variant) (f3 x) x`
-           by RW_TAC arith_ss [relationTheory.inv_image_def,
-                               prim_recTheory.measure_def]
-    THEN `!x. ~(f1 x) ==> (measure variant) (f3 x) x` by PROVE_TAC []
-    THEN `!x. TAILREC f1 f2 f3 x = if f1 x then f2 x else TAILREC f1 f2 f3 (f3 x)`
-                  by PROVE_TAC [DISCH_ALL (TotalDefn.DefineSchema
-                         `TAILREC x = if f1 x then f2 x else TAILREC (f3 x)`)]
-    THEN ASSUME_TAC (jrhUtils.HALF_MK_ABS
-            (Q.ASSUME `!x. TAILREC f1 f2 f3 x = (if f1 x then f2 x
-                                                else TAILREC f1 f2 f3 (f3 x))`))
-    THEN `?f. f = (\x. if f1 x then f2 x else f (f3 x))` by PROVE_TAC []
-    THEN Q.PAT_ASSUM `(f:'a->'b) = X` 
-          (fn th => ASSUME_TAC
-             (EXISTS (Term`?f:'a -> 'b. (f = (\x. if f1 x then f2 x else f (f3 x)))`,
-                      Term `f: 'a -> 'b`) th))
-    THEN Q.PAT_ASSUM `?(f:'a->'b). X` (fn th => ASSUME_TAC (SELECT_RULE th) )
-    THEN Q.PAT_ASSUM `(@f. f = X) = (\(x:'a). Y)`
-             (fn th => ASSUME_TAC (MK_COMB(th,Q.REFL `x`)))
-    THEN Q.PAT_ASSUM `(@f. f = X) x = (\(x:'a). Y) x`
-             (fn th => ASSUME_TAC (Thm.Beta th))
-    THEN PROVE_TAC []);
-
-
 (*****************************************************
  BASE_LEMMA
  when the base case is busy, cond and step remain idle 
@@ -1451,8 +1436,7 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
       (SAFE_DEV f2 (start_f,q,done_f,out)) /\
       (SAFE_DEV f3 (start_g,q,done_g,data_g))) ==>
       COMPUTE
-           (t,(@f. f = (\x. (if f1 x then f2 x else f (f3 x)))), 
-           inp_e,done,out)`,
+           (t,TAILREC f1 f2 f3,inp_e,done,out)`,
      RW_TAC arith_ss [SAFE_DEV_def,COMPUTE_def, CALL_def,SELECT_def,FINISH_def]
      THEN completeInduct_on `variant (inp_e (t+1))`
      THEN REPEAT STRIP_TAC
@@ -1544,13 +1528,12 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
                 (out tf = f2 (q (tte + 1)))` by RW_TAC arith_ss []
      THEN `tte+1 = te` by RW_TAC arith_ss []
      THEN `tf > t+1` by RW_TAC arith_ss []
-     THEN `out tf = (@f. f = (\x. (if f1 x then f2 x else f (f3 x)))) (inp_e (t + 1))`
+     THEN `out tf = TAILREC f1 f2 f3 (inp_e (t + 1))`
           by REWRITE_TAC []
      THENL [
      `TOTAL(f1,f2,f3)` by PROVE_TAC [TOTAL_def]
-     THEN `!x. (@f. f = (\x. (if f1 x then f2 x else f (f3 x)))) x =
-               (if f1 x then f2 x
-                else (@f. f = (\x. (if f1 x then f2 x else f (f3 x)))) (f3 x))`
+     THEN `!x. TAILREC f1 f2 f3 x =
+                 if f1 x then f2 x else TAILREC f1 f2 f3 (f3 x)`
             by IMP_RES_TAC TOTAL_LEMMA
      THEN PROVE_TAC []
      ,
@@ -2015,8 +1998,7 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
      ,
      (* variant (f3 (inp_e (t+1))) = variant ((inp_e (ttg+1))) *)
      `?tf'. tf' > ttg + 1 /\ HOLDF (ttg + 1,tf') done /\ done tf' /\
-          (out tf' = (@f. f = (\x. (if f1 x then f2 x else f (f3 x))))
-                     (inp_e (ttg + 1)))` by RW_TAC arith_ss []
+          (out tf' = TAILREC f1 f2 f3 (inp_e (ttg + 1)))` by RW_TAC arith_ss []
      THEN Q.PAT_ASSUM `(variant (f3 (inp_e (t+1))) = variant (inp_e (ttg+1))) ==> X` kill
      THEN `tf' > t+1` by RW_TAC arith_ss []
      THEN `HOLDF (t+1,tf') done` by ASM_REWRITE_TAC []
@@ -2040,16 +2022,11 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
      ,
      (* f3 (inp_e (t+1)) = (inp_e (ttg+1)) prvd *)
      `TOTAL(f1,f2,f3)` by PROVE_TAC[TOTAL_def]
-     THEN `!x. (@f. f = (\x. (if f1 x then f2 x else f (f3 x)))) x =
-                        (if f1 x then f2 x
-                        else
-                  (@f. f = (\x. (if f1 x then f2 x else f (f3 x)))) (f3 x))`
+     THEN `!x. TAILREC f1 f2 f3 x = if f1 x then f2 x else TAILREC f1 f2 f3 (f3 x)`
            by IMP_RES_TAC TOTAL_LEMMA
-     THEN `((@f. f = (\x. (if f1 x then f2 x else f (f3 x)))) (inp_e (ttg+1))) =
-            (@f. f = (\x. (if f1 x then f2 x else f (f3 x)))) (inp_e (t+1))`
+     THEN `TAILREC f1 f2 f3 (inp_e (ttg+1)) = TAILREC f1 f2 f3 (inp_e (t+1))`
            by PROVE_TAC []
-     THEN `out tf' = ((@f. f = (\x. (if f1 x then f2 x else f (f3 x))))
-                      (inp_e (t + 1)))` by PROVE_TAC []
+     THEN `out tf' = TAILREC f1 f2 f3 (inp_e (t+1))` by PROVE_TAC []
      THEN Q.EXISTS_TAC `tf'`
      THEN PROVE_TAC []
      ]]]]]]]]]]]);
@@ -2060,10 +2037,10 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
 (******************** SAFE_REC  ******************)
 
 val SAFE_REC = Q.store_thm ("SAFE_REC",
-  `TOTAL(f1,f2,f3) /\ (REC (SAFE_DEV f1) (SAFE_DEV f2) (SAFE_DEV f3) 
-         (load,inp,done,out))
+  `TOTAL(f1,f2,f3) /\ 
+   REC (SAFE_DEV f1) (SAFE_DEV f2) (SAFE_DEV f3) (load,inp,done,out)
    ==>
-   SAFE_DEV (@f. f = (\x. (if f1 x then f2 x else f (f3 x)))) (load,inp,done,out)`,
+   SAFE_DEV (TAILREC f1 f2 f3) (load,inp,done,out)`,
    ASM_REWRITE_TAC [REC_def,SIMP_SAFE_DEV,TOTAL_def] THEN (REPEAT STRIP_TAC)  
      THENL [
      `inp_e (t+1) = inp (t+1)` by IMP_RES_TAC EXT_CALL
@@ -2112,8 +2089,7 @@ val SAFE_REC = Q.store_thm ("SAFE_REC",
                          done_f (t + 1)` kill
      THEN Q.PAT_ASSUM `!(t:num). done_g t /\ ~POSEDGE start_g (t + 1) ==> 
                          done_g (t + 1)` kill
-     THEN `COMPUTE (t,(@f. f = (\x. (if f1 x then f2 x else f (f3 x)))),
-             inp_e,done,out)` by IMP_RES_TAC REC_LEMMA
+     THEN `COMPUTE (t,TAILREC f1 f2 f3,inp_e,done,out)` by IMP_RES_TAC REC_LEMMA
      THEN REWRITE_TAC [COMPUTE_def]
      THEN IMP_RES_TAC COMPUTE_def
      THEN (REPEAT (Q.PAT_ASSUM `HOLDF Y X ==> Z` kill))

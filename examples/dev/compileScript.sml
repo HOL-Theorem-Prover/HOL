@@ -86,8 +86,7 @@ val Par_def =
 val Ite_def =
  Define `Ite f1 f2 f3 = \x. if f1 x then f2 x else f3 x`;
 
-val Rec_def =
- Define `Rec f1 f2 f3 = @f. f = \x. if f1 x then f2 x else f(f3 x)`;
+val Rec_def = Define `Rec = TAILREC`;
 
 (*****************************************************************************)
 (* Introduction rules for devices                                            *)
@@ -206,6 +205,7 @@ val REC_INTRO =
 
 (*****************************************************************************)
 (* A Rec satisfies the expected recursive equation if total                  *)
+(* Unused?                                                                   *)
 (*****************************************************************************)
 val TOTAL_LEMMA_COR =
  store_thm
@@ -228,11 +228,10 @@ val TOTAL_THM =
       (!x. f x = if f1 x then f2 x else f (f3 x))
       ==>
       (f = Rec f1 f2 f3)``,
-   RW_TAC std_ss [Rec_def]
+   REWRITE_TAC [Rec_def,FUN_EQ_THM]
+    THEN REPEAT STRIP_TAC
     THEN IMP_RES_TAC TOTAL_LEMMA
     THEN IMP_RES_TAC TOTAL_def
-    THEN CONV_TAC(FUN_EQ_CONV)
-    THEN GEN_TAC
     THEN measureInduct_on `variant x`
     THEN Cases_on `f1 x`
     THEN PROVE_TAC[]);
