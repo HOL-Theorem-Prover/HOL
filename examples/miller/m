@@ -4,6 +4,6 @@ export Holmake=../../../bin/Holmake
 for dir in ho_prover subtypes RSA formalize prob groups miller
 do
         cd $dir
-        m $*
+        ./m $*
         cd ..
 done
