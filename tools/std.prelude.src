@@ -51,13 +51,12 @@ local
   open Path
   fun HELP s = toString(fromString(concat(HOLDIR, concat("help",s))))
   val SIGOBJ = toString(fromString(concat(HOLDIR, "sigobj")))
-  val docdirs = [HOLDIR]
 in
-  val () = indexfiles := HELP"HOL.Help" :: !indexfiles ;
-  val () = helpdirs := docdirs @ (SIGOBJ  :: !helpdirs)
+  val () = indexfiles := HELP "HOL.Help" :: !indexfiles 
+  val () = helpdirs   := HOLDIR :: SIGOBJ :: !helpdirs
   val () = Help.specialfiles :=
-        {file = "README.Hol98", term = "hol", title = "Hol98 Overview"}
-        :: !Help.specialfiles
+             {file = "README.Hol98", term = "hol", title = "Hol98 Overview"}
+             :: !Help.specialfiles
 end
 
 
