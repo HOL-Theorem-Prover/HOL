@@ -1,6 +1,6 @@
 (* =====================================================================
  * FILE          : simpLib.sml
- * DESCRIPTION   : A programmable, contextual, conditional simplifier for hol90
+ * DESCRIPTION   : A programmable, contextual, conditional simplifier
  *
  * AUTHOR        : Donald Syme
  *                 Based loosely on original HOL rewriting by
@@ -14,153 +14,208 @@ struct
 open HolKernel boolLib liteLib Trace Cond_rewr Travrules Traverse Ho_Net;
 
 infix |>;
-infix THEN
 
 fun ERR x      = STRUCT_ERR "simpLib" x ;
 fun WRAP_ERR x = STRUCT_WRAP "simpLib" x;
 
-   (* ---------------------------------------------------------------------
-    * simpsets and basic operations on them
-    *
-    * Simpsets contain enough information to spark off term traversal
-    * quickly and efficiently.  In theory the net need not be stored
-    * (and the code would look neater if it wasn't), but in practice
-    * it has to be.
-    * ---------------------------------------------------------------------*)
+val equality = boolSyntax.equality
 
+fun option_cases f e (SOME x) = f x
+  | option_cases f e NONE = e;
 
-   type convdata = {name: string,
-                    key: (term list * term) option,
-                    trace: int,
-                    conv: (term list -> term -> thm) -> term list -> conv};
+infix oo;
+fun f oo g = fn x => flatten (map f (g x));
 
-  datatype ssdata = SIMPSET of
-    {convs: convdata list,
-     rewrs: thm list,
-     ac: (thm * thm) list,
-     filter: (thm -> thm list) option,
-     dprocs: Traverse.reducer list,
-     congs: thm list};
-
-   val equality = boolSyntax.equality
-
-   (* ---------------------------------------------------------------------
-    * net_add_convs (internal function)
-    *
-    * Add conversions to the initial context net.
-    *
-    * USER_CONV wraps a bit of tracing around a user conversion.
-    * ---------------------------------------------------------------------*)
-
-   type net = ((term list -> term -> thm) -> term list -> conv) net;
-
-   abstype simpset =
-     SS of {mk_rewrs: (thm -> thm list),
-            initial_net : net,
-            dprocs: reducer list,
-            travrules: travrules}
-   with
-
-   fun USER_CONV {name,key,trace=trace_level,conv} =
-     let val trace_string1 = "trying "^name^" on"
-         val trace_string2 = name^" ineffectual"
-     in fn solver => fn stack => fn tm =>
- 	   let val _ = trace(trace_level+2,REDUCE(trace_string1,tm))
-               val thm = conv solver stack tm
-	   in
-              trace(trace_level,PRODUCE(tm,name,thm));
-              thm
-	   end
-           handle e as HOL_ERR _
-           => (trace (trace_level+2,TEXT trace_string2); raise e)
-     end;
-
-   val any = mk_var("x",Type.alpha);
-
-   fun option_cases f e (SOME x) = f x
-     | option_cases f e NONE = e;
-
-   fun net_add_conv (data as {name,key,trace,conv}:convdata) =
-         enter (option_cases #1 [] key,
-		option_cases #2 any key,
-		USER_CONV data);
-
-   fun net_add_convs net convs = itlist net_add_conv convs net;
-
-   fun mk_rewr_convdata thm =
-      let val th = SPEC_ALL thm
-      in
-        {name=("<rewrite> with "^Parse.thm_to_string th),
-         key=SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
-         trace=3,
-         conv=COND_REWR_CONV th}
-       end;
-
-   (* ---------------------------------------------------------------------
-    * mk_simpset
-    * ---------------------------------------------------------------------*)
-
-   infix oo;
-   fun f oo g = fn x => flatten (map f (g x));
+(*---------------------------------------------------------------------------*)
+(* Left commutativity is automatically generated for use in permutative      *)
+(* rewriting                                                                 *)
+(*---------------------------------------------------------------------------*)
 
 fun PROVE_LCOMM (assoc,sym) =
   let val a' = SPEC_ALL assoc
-       val s' = SPEC_ALL sym
+      val s' = SPEC_ALL sym
       val thm1 = CONV_RULE (RAND_CONV(RATOR_CONV(RAND_CONV(REWR_CONV s')))) a'
    in CONV_RULE (RAND_CONV(REWR_CONV (GSYM a'))) thm1
   end;
 
 
-val empty_ss = SS {mk_rewrs=fn x => [x],
-		   initial_net=empty_net,
-		   dprocs=[],travrules=mk_travrules []};
+ (*--------------------------------------------------------------------------*)
+ (*  Faffing about to handle the variety of ways in which AC theorems could  *)
+ (* be given as input.                                                       *)
+ (*--------------------------------------------------------------------------*)
 
-fun add_to_ss
-    (SIMPSET {convs,rewrs,filter,ac,dprocs,congs},
-     SS {mk_rewrs=mk_rewrs',travrules,initial_net,dprocs=dprocs'}) =
-    let val mk_rewrs =
-	case filter of
-            SOME f => f oo mk_rewrs' | NONE => mk_rewrs'
-	val rewrs' =
-            map (fn (assoc,sym) => GSYM assoc) ac @
-	    map (fn (assoc,sym) => sym) ac @
-	    map (fn (assoc,sym) => PROVE_LCOMM (assoc,sym)) ac @
-	    flatten (map mk_rewrs rewrs)
-	val newconvdata = convs @ map mk_rewr_convdata rewrs'
-	val net = net_add_convs initial_net newconvdata
-    in SS {mk_rewrs=mk_rewrs,
-	initial_net = net,
-	dprocs= dprocs @ dprocs',
-	travrules = merge_travrules [travrules,mk_travrules congs]}
+ val (comm_tm,assoc_tm) = 
+    let val f = mk_var("f",Type.alpha --> Type.alpha --> Type.alpha)
+        val x = mk_var("x",Type.alpha)
+        val y = mk_var("y",Type.alpha)
+        val z = mk_var("z",Type.alpha)
+   in (mk_eq (list_mk_comb(f,[x,y]),list_mk_comb(f,[y,x])),
+       mk_eq (list_mk_comb(f,[x,list_mk_comb(f,[y,z])]),
+              list_mk_comb(f,[list_mk_comb(f,[x,y]),z])))
+   end;
+
+  val is_comm = can (match_term comm_tm);
+  val is_assoc = can (match_term assoc_tm);
+
+ fun norm_ac (th1,th2) =
+   let val th1' = SPEC_ALL th1
+       val th2' = SPEC_ALL th2
+       val tm1 = concl th1'
+       val tm2 = concl th2'
+   in if is_comm tm2
+         then if is_assoc tm1 then (th1,th2) else
+              let val th1a = GSYM th1
+              in if is_assoc (concl (SPEC_ALL th1a)) then (th1a,th2)
+                 else (HOL_MESG "unable to AC-normalize input"; 
+                       ERR ("norm_ac", "failed"))
+              end
+         else if is_comm tm1 
+                 then if is_assoc tm2 then (th2,th1) else
+                      let val th2a = GSYM th2
+                      in if is_assoc (concl (SPEC_ALL th2a)) then (th2a,th1)
+                         else (HOL_MESG "unable to AC-normalize input";
+                               ERR ("norm_ac", "failed"))
+                      end
+         else (HOL_MESG "unable to AC-normalize input"; 
+               ERR ("norm_ac", "failed"))
     end;
 
-val mk_simpset = foldl add_to_ss empty_ss;
+ fun mk_ac (th1,th2) A = 
+   let val (a,c) = norm_ac(th1,th2)
+       val lcomm = PROVE_LCOMM (a,c)
+   in 
+     GSYM a::c::lcomm::A
+   end
+   handle HOL_ERR _ => A;
 
-fun rewrites rewrs =
-  SIMPSET {convs=[],rewrs=rewrs,filter=NONE,ac=[],dprocs=[],congs=[]};
+ fun ac_rewrites aclist = Lib.itlist mk_ac aclist [];
 
-fun dproc_ss dproc =
-  SIMPSET {convs=[],rewrs=[],filter=NONE,ac=[],dprocs=[dproc],congs=[]};
+ type convdata = {name: string,
+                  key: (term list * term) option,
+                  trace: int,
+                  conv: (term list -> term -> thm) -> term list -> conv};
 
-fun D (SIMPSET s) = s;
+ fun mk_rewr_convdata thm =
+   let val th = SPEC_ALL thm
+   in
+      {name=("<rewrite> with "^Parse.thm_to_string th),
+       key=SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
+       trace=3,
+       conv=COND_REWR_CONV th}
+     end;
 
-fun merge_ss s =
-  SIMPSET {convs=flatten (map (#convs o D) s),
-	   rewrs=flatten (map (#rewrs o D) s),
-	   filter=SOME (end_foldr (op oo) (mapfilter (the o #filter o D) s))
-                  handle HOL_ERR _ => NONE,
-	   ac=flatten (map (#ac o D) s),
-	   dprocs=flatten (map (#dprocs o D) s),
-	   congs=flatten (map (#congs o D) s)};
 
-   (* ---------------------------------------------------------------------
-    * SIMP_CONV : simpset -> thm list -> conv
-    * ---------------------------------------------------------------------*)
+ datatype ssdata = SIMPSET of
+   {convs: convdata list,
+    rewrs: thm list,
+    ac: (thm * thm) list,
+    filter: (thm -> thm list) option,
+    dprocs: Traverse.reducer list,
+    congs: thm list};
 
-fun op ++ (ss,ssdata) = add_to_ss (ssdata,ss);
 
-   exception CONVNET of net;
-   fun rewriter_for_ss (ss as SS{mk_rewrs,travrules,initial_net,...}) =
+ fun rewrites rewrs =
+   SIMPSET {convs=[],rewrs=rewrs,filter=NONE,ac=[],dprocs=[],congs=[]};
+
+ fun dproc_ss dproc =
+   SIMPSET {convs=[],rewrs=[],filter=NONE,ac=[],dprocs=[dproc],congs=[]};
+
+ fun ac_ss aclist =
+   SIMPSET {convs=[],rewrs=[],filter=NONE,ac=aclist,dprocs=[],congs=[]};
+
+ fun D (SIMPSET s) = s;
+
+ fun merge_ss s =
+    SIMPSET {convs=flatten (map (#convs o D) s),
+             rewrs=flatten (map (#rewrs o D) s),
+            filter=SOME (end_foldr (op oo) (mapfilter (the o #filter o D) s))
+                    handle HOL_ERR _ => NONE,
+                ac=flatten (map (#ac o D) s),
+	    dprocs=flatten (map (#dprocs o D) s),
+	     congs=flatten (map (#congs o D) s)};
+
+ (* ---------------------------------------------------------------------
+  * simpsets and basic operations on them
+  *
+  * Simpsets contain enough information to spark off term traversal
+  * quickly and efficiently.  In theory the net need not be stored
+  * (and the code would look neater if it wasn't), but in practice
+  * it has to be.
+  * ---------------------------------------------------------------------*)
+
+ type net = ((term list -> term -> thm) -> term list -> conv) net;
+
+abstype simpset =
+     SS of {mk_rewrs: (thm -> thm list),
+            initial_net : net,
+            dprocs: reducer list,
+            travrules: travrules}
+ with
+
+ val empty_ss = SS {mk_rewrs=fn x => [x],
+                    initial_net=empty_net,
+                    dprocs=[],travrules=mk_travrules []};
+
+  (* ---------------------------------------------------------------------
+   * USER_CONV wraps a bit of tracing around a user conversion.
+   *
+   * net_add_convs (internal function) adds conversions to the 
+   * initial context net.
+   * ---------------------------------------------------------------------*)
+
+ fun USER_CONV {name,key,trace=trace_level,conv} =
+  let val trace_string1 = "trying "^name^" on"
+      val trace_string2 = name^" ineffectual"
+  in fn solver => fn stack => fn tm =>
+      let val _ = trace(trace_level+2,REDUCE(trace_string1,tm))
+          val thm = conv solver stack tm
+      in
+        trace(trace_level,PRODUCE(tm,name,thm));
+        thm
+      end
+      handle e as HOL_ERR _
+      => (trace (trace_level+2,TEXT trace_string2); raise e)
+  end;
+
+ val any = mk_var("x",Type.alpha);
+
+ fun net_add_conv (data as {name,key,trace,conv}:convdata) =
+     enter (option_cases #1 [] key,
+            option_cases #2 any key,
+            USER_CONV data);
+
+ fun net_add_convs net convs = itlist net_add_conv convs net;
+
+
+ (* ---------------------------------------------------------------------
+  * mk_simpset
+  * ---------------------------------------------------------------------*)
+
+ fun add_to_ss
+    (SIMPSET {convs,rewrs,filter,ac,dprocs,congs},
+     SS {mk_rewrs=mk_rewrs',travrules,initial_net,dprocs=dprocs'}) 
+  = let val mk_rewrs = case filter of SOME f => f oo mk_rewrs' | _ => mk_rewrs'
+        val rewrs' = ac_rewrites ac @ flatten (map mk_rewrs rewrs)
+        val newconvdata = convs @ map mk_rewr_convdata rewrs'
+        val net = net_add_convs initial_net newconvdata
+    in 
+       SS {mk_rewrs=mk_rewrs,
+	initial_net=net,
+             dprocs=dprocs @ dprocs',
+          travrules=merge_travrules [travrules,mk_travrules congs]}
+    end;
+
+ val mk_simpset = foldl add_to_ss empty_ss;
+
+ (* ---------------------------------------------------------------------
+  * SIMP_QCONV : simpset -> thm list -> conv
+  * ---------------------------------------------------------------------*)
+
+  fun op ++ (ss,ssdata) = add_to_ss (ssdata,ss);
+
+  exception CONVNET of net;
+
+  fun rewriter_for_ss (ss as SS{mk_rewrs,travrules,initial_net,...}) =
       let fun addcontext (context,thms) =
 	  let val net = (raise context) handle CONVNET net => net
           in CONVNET (net_add_convs net (map mk_rewr_convdata
@@ -176,15 +231,15 @@ fun op ++ (ss,ssdata) = add_to_ss (ssdata,ss);
       end;
 
    fun SIMP_QCONV (ss as (SS ssdata)) =
-      TRAVERSE {rewriters= [rewriter_for_ss ss],
+      TRAVERSE {rewriters=[rewriter_for_ss ss],
 		dprocs= #dprocs ssdata,
 		relation= equality,
 		travrules= merge_travrules [EQ_tr,#travrules ssdata]};
 
- end (* abstype for SS *)
+end (* abstype for SS *)
 
-   fun SIMP_CONV ss l = TRY_CONV (SIMP_QCONV ss l);
-   fun SIMP_PROVE ss l = EQT_ELIM o SIMP_QCONV ss l;
+  fun SIMP_CONV ss l = TRY_CONV (SIMP_QCONV ss l);
+  fun SIMP_PROVE ss l = EQT_ELIM o SIMP_QCONV ss l;
 
    (* ---------------------------------------------------------------------
     * SIMP_TAC : simpset -> tactic

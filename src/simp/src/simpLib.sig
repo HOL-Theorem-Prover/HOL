@@ -45,9 +45,9 @@ sig
     * be thought of as infinite families of rewrites.
     *
     * Conversions can be keyed by term patterns (implemented 
-    * using termnets).  Thus a conversion
-    * won't even be called if the target term doesn't match 
-    * (in the termnet sense of matching) its key.
+    * using termnets).  Thus a conversion won't even be called if 
+    * the target term doesn't match (in the termnet sense of matching)
+    * its key.
     * ---------------------------------------------------------------------*)
     
   type convdata = { name: string,
@@ -63,10 +63,13 @@ sig
      dprocs: Traverse.reducer list,
       congs: thm list};
 
-  (* for making simple simpset fragments *)
+  (*------------------------------------------------------------------------*)
+  (* Easy building of common kinds of ssdata objects                        *)
+  (*------------------------------------------------------------------------*)
 
   val rewrites : thm list -> ssdata
   val dproc_ss : Traverse.reducer -> ssdata
+  val ac_ss    : (thm * thm) list -> ssdata
   val merge_ss : ssdata list -> ssdata
 
    (* ---------------------------------------------------------------------
@@ -92,10 +95,7 @@ sig
     * 
     * SIMP_CONV makes a simplification conversion from the given simpset.  The 
     * conversion uses a top-depth strategy for rewriting.  It sets both
-    * the solver and the depther to be SIMP_CONV itself.  SIMP_QCONV is
-    * a version of this which raises UNCHANGED if no change occurs.
-    * The action of SIMP_QCONV is as follows:
-    *           ....
+    * the solver and the depther to be SIMP_CONV itself. 
     *
     * FAILURE CONDITIONS
     *
