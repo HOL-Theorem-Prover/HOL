@@ -40,6 +40,7 @@ signature locn = sig
   (* adjusting locations *)
   val move_start : int -> locn -> locn
   val split_at   : int -> locn -> (locn * locn)
+  val near       : locn -> locn
 
   (* merging locations *)
   val between    : locn -> locn -> locn

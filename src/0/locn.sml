@@ -90,16 +90,16 @@ struct
     | split_at delta locn
       = (locn,locn)
 
-  fun loc_near (loc as Loc_Near _) = loc
-    | loc_near  loc                = Loc_Near loc
+  fun near (loc as Loc_Near _) = loc
+    | near  loc                = Loc_Near loc
 
   fun between (Loc(lploc,_))  (Loc(_,rploc))  = Loc(lploc,rploc)
     | between  Loc_None        rloc           = rloc
     | between  lloc            Loc_None       = lloc
-    | between  Loc_Unknown     rloc           = loc_near rloc
-    | between  lloc            Loc_Unknown    = loc_near lloc
-    | between (Loc_Near lloc)  rloc           = loc_near (between lloc rloc)
-    | between  lloc           (Loc_Near rloc) = loc_near (between lloc rloc)
+    | between  Loc_Unknown     rloc           = near rloc
+    | between  lloc            Loc_Unknown    = near lloc
+    | between (Loc_Near lloc)  rloc           = near (between lloc rloc)
+    | between  lloc           (Loc_Near rloc) = near (between lloc rloc)
 
   type 'a located = 'a * locn
 
