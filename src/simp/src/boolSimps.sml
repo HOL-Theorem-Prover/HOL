@@ -270,13 +270,24 @@ val LIFT_COND_ss =
  * assumed while rewriting the other.  This is typically useful when
  * attacking a goal of the form (x = ..) /\ ... x ...
  *
- * Very inefficient on terms with many conjunctions chained together
+ * Not efficient on terms with many conjunctions chained together
  * ------------------------------------------------------------------------*)
 
 val CONJ_ss = SIMPSET {
   ac = [],
   congs = [REWRITE_RULE [GSYM AND_IMP_INTRO] (SPEC_ALL boolTheory.AND_CONG)],
   convs = [], dprocs = [], filter = NONE, rewrs = []}
+
+(* ----------------------------------------------------------------------
+    A boolean formula normaliser that attempts to create formulas with
+    maximum opportunity for UNWIND_ss to eliminate equalities
+   ---------------------------------------------------------------------- *)
+
+val DNF_ss = rewrites [FORALL_AND_THM, EXISTS_OR_THM,
+                       DISJ_IMP_THM, IMP_CONJ_THM,
+                       RIGHT_AND_OVER_OR, LEFT_AND_OVER_OR,
+                       GSYM LEFT_FORALL_IMP_THM, GSYM RIGHT_FORALL_IMP_THM,
+                       GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM]
 
 
 end (* struct *)

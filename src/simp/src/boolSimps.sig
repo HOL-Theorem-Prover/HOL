@@ -25,5 +25,26 @@ sig
                                            congruence to evaluate the
                                            second argument first *)
 
+     val DNF_ss : simpLib.ssdata
+        (* converts a term to DNF at the level of propositional logic, and
+           also moves quantifiers around to give them maximum useful scope
+           over their bodies:
+               (?x. P x) /\ Q   -->  ?x. P x /\ Q
+               P /\ (?x. Q x)   -->  ?x. P /\ Q x
+               (?x. P x) ==> Q  -->  !x. P x ==> Q
+               P ==> !x. Q x    -->  !x. P ==> Q x
+               !x. P x /\ Q x   -->  (!x. P x) /\ (!x. Q x)
+               ?x. P x \/ Q x   -->  (?x. P x) \/ (?x. Q x)
+           Think of this simpset fragment as attempting to achieve as
+           much as possible of STRIP_TAC within a single goal.
+
+           Note that it leaves ==> alone, but includes the following
+           extra rewrites:
+               P \/ Q ==> R     -->  (P ==> R) /\ (Q ==> R)
+               P ==> Q /\ R     -->  (P ==> Q) /\ (P ==> R)
+
+           This simpset fragment will give UNWIND_ss maximum opportunity to
+           eliminate equalities. *)
+
 end
 
