@@ -157,6 +157,14 @@ val UNCURRY = Q.new_definition
 
 val UNCURRY_VAR = save_thm("UNCURRY_VAR", UNCURRY);  (* compatibility *)
 
+val ELIM_UNCURRY = store_thm(
+  "ELIM_UNCURRY",
+  ``!f:'a -> 'b -> 'c. UNCURRY f = \x. f (FST x) (SND x)``,
+  GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN
+  REWRITE_TAC [UNCURRY] THEN CONV_TAC (RAND_CONV BETA_CONV) THEN
+  REFL_TAC);
+
+
 val UNCURRY_DEF = Q.store_thm
  ("UNCURRY_DEF",
   `!f x y. UNCURRY f (x,y) :'c = f x y`,
@@ -551,7 +559,7 @@ S"       Support for definitions using varstructs"; NL();
 S"----------------------------------------------------------------*)"; NL();
 NL();
 S "open HolKernel boolLib;"; NL();
-S "infix |-> ORELSEC THENC;"; NL(); 
+S "infix |-> ORELSEC THENC;"; NL();
 NL();
 S "val ERR1 = mk_HOL_ERR \"pairSyntax\""; NL();
 S "val ERR2 = mk_HOL_ERR \"PairedLambda\""; NL();
