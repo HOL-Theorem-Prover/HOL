@@ -15,6 +15,16 @@ local
 
   local open pairTheory sumTheory optionTheory arithmeticTheory in end;
 
+  val bool_info = Option.valOf(TypeBase.read "bool")
+  val bool_case_rw = prove(Term`!x b. bool$bool_case x x b = (x:'a)`,
+    REPEAT GEN_TAC
+      THEN BOOL_CASES_TAC (Term`b:bool`)
+     THEN Rewrite.ASM_REWRITE_TAC[bool_case_DEF] THEN BETA_TAC
+     THEN Rewrite.ASM_REWRITE_TAC[COND_CLAUSES]);
+  val bool_size_info = (Term`bool$bool_case 0n 0n`, 
+                        TypeBase.ORIG bool_case_rw)
+  val bool_info' = TypeBase.put_size bool_size_info bool_info
+
   val prod_size_info =
     (let val f = mk_var("f", alpha --> num)
          val g = mk_var("g", beta --> num)
@@ -27,16 +37,6 @@ local
    val prod_info' =
     TypeBase.put_size prod_size_info
     (Option.valOf(TypeBase.read"prod"))
-
-  val bool_info = Option.valOf(TypeBase.read "bool")
-  val bool_case_rw = prove(Term`!x y. bool_case x x y = (x:'a)`,
-    REPEAT GEN_TAC
-      THEN BOOL_CASES_TAC (Term`y:bool`)
-     THEN Rewrite.ASM_REWRITE_TAC[bool_case_DEF]
-     THEN BETA_TAC
-     THEN Rewrite.ASM_REWRITE_TAC[COND_CLAUSES]);
-  val bool_size_info = (Term`bool_case 0 0`, TypeBase.ORIG bool_case_rw)
-  val bool_info' = TypeBase.put_size bool_size_info bool_info
 
   val sum_info = Option.valOf(TypeBase.read "sum")
   val sum_case = prim_mk_const{Name="sum_case", Thy="sum"}

@@ -21,18 +21,18 @@ struct
 
 local open numeralTheory in end;
 
-open HolKernel boolLib Rsyntax Num_conv Parse;
-infix THEN THENC THENL;
+open HolKernel boolLib Num_conv Parse numSyntax;
+
+infix THEN THENC THENL |-> ##;
+infixr -->;
 
 val ERR = mk_HOL_ERR "numLib";
 
-infix |-> ##;
-infixr -->;
 
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
 fun -- q x = Term q
 
-val N = Type`:num`
+val N = numSyntax.num;
 
 (* --------------------------------------------------------------------- *)
 (* EXISTS_LEAST_CONV: applies the well-ordering property to non-empty    *)
@@ -50,11 +50,11 @@ local val wop = arithmeticTheory.WOP
       val acnv = RAND_CONV o ABS_CONV
 in
 fun EXISTS_LEAST_CONV tm =
-   let val {Bvar,Body = P} = dest_exists tm
+   let val (Bvar,P) = dest_exists tm
        val n = check Bvar
        val thm1 = UNDISCH (SPEC (rand tm) wth)
        val thm2 = CONV_RULE (GEN_ALPHA_CONV n) thm1
-       val {Rator=c1,Rand=c2} = dest_comb (#Body(dest_exists(concl thm2)))
+       val (c1,c2) = dest_comb (snd(dest_exists(concl thm2)))
        val bth1 = RAND_CONV BETA_CONV c1
        val bth2 = acnv (RAND_CONV (RAND_CONV BETA_CONV)) c2
        val n' = variant (n :: free_vars tm) n
@@ -62,10 +62,10 @@ fun EXISTS_LEAST_CONV tm =
        val thm3 = EXISTS_EQ n (MK_COMB(bth1,abth2))
        val imp1 = DISCH tm (EQ_MP thm3 thm2)
        val eltm = rand(concl thm3)
-       val thm4 = CONJUNCT1 (ASSUME (#Body(dest_exists eltm)))
+       val thm4 = CONJUNCT1 (ASSUME (snd(dest_exists eltm)))
        val thm5 = CHOOSE (n,ASSUME eltm) (EXISTS (tm,n) thm4)
    in
-   IMP_ANTISYM_RULE imp1 (DISCH eltm thm5)
+     IMP_ANTISYM_RULE imp1 (DISCH eltm thm5)
    end
    handle HOL_ERR _ => raise ERR "EXISTS_LEAST_CONV" ""
 end;
@@ -91,34 +91,30 @@ local val EXISTS_GREATEST = arithmeticTheory.EXISTS_GREATEST
       and red4 = n o n o b o n o n o b o n o n
 in
 fun EXISTS_GREATEST_CONV tm =
-   let val {conj1=lc,conj2=rc} = dest_conj tm
+   let val (lc,rc) = dest_conj tm
        val pred = rand lc
-       val {Bvar=xv,Body=xb} = dest_exists lc
-       val {Bvar=yv,Body=yb} = dest_exists rc
-       val zv = #Bvar (dest_forall yb)
+       val (xv,xb) = dest_exists lc
+       val (yv,yb) = dest_exists rc
+       val zv = fst (dest_forall yb)
        val prealpha = CONV_RULE
          (red1 BETA_CONV THENC red2 BETA_CONV THENC
           red3 BETA_CONV THENC red4 BETA_CONV) (SPEC pred EXISTS_GREATEST)
-       val rqd = mk_eq {lhs = tm, rhs =
-            mk_exists{Bvar=xv,Body=mk_conj{conj1=xb, conj2=subst[yv|->xv] yb}}}
+       val rqd = mk_eq (tm, mk_exists(xv,mk_conj(xb,subst[yv |-> xv] yb)))
    in
-   Lib.S (Lib.C EQ_MP) (Lib.C ALPHA rqd o concl) prealpha
+      Lib.S (Lib.C EQ_MP) (Lib.C ALPHA rqd o concl) prealpha
    end
-   handle _ => raise ERR "EXISTS_GREATEST_CONV" ""
+   handle HOL_ERR _ => raise ERR "EXISTS_GREATEST_CONV" ""
 end;
 
 
-local open Psyntax
-      val SUC = mk_const("SUC", mk_type("fun", [N, N]))
-      fun mk_SUC t = mk_comb(SUC, t)
-      fun SEC_ERR m = ERR "SUC_ELIM_CONV" m
+local fun SEC_ERR m = ERR "SUC_ELIM_CONV" m
       fun assert f x = f x orelse raise SEC_ERR "assertion failed"
 in
 fun SUC_ELIM_CONV tm =
    let val (v,bod) = dest_forall tm
        val _ = assert (fn x => type_of x = N) v
        val (sn,n) = (genvar N, genvar N)
-       val suck_suc = subst [mk_SUC v |-> sn] bod
+       val suck_suc = subst [numSyntax.mk_suc v |-> sn] bod
        val suck_n = subst [v |-> n] suck_suc
        val _ = assert (fn x => x <> tm) suck_n
        val th1 = ISPEC (list_mk_abs ([sn,n],suck_n))
@@ -131,8 +127,47 @@ fun SUC_ELIM_CONV tm =
    end
 end;
 
-val num_CONV   = Num_conv.num_CONV
-val INDUCT_TAC = Num_induct.INDUCT_TAC
+val num_CONV = Num_conv.num_CONV;
+
+(*---------------------------------------------------------------------------
+     Forward rule for induction
+ ---------------------------------------------------------------------------*)
+
+local val v1 = genvar Type.bool
+      and v2 = genvar Type.bool
+in
+fun INDUCT (base,step) =
+   let val (Bvar,Body) = dest_forall(concl step)
+       val (ant,_) = dest_imp Body
+       val P  = mk_abs(Bvar, ant)
+       val P0 = mk_comb(P, zero_tm)
+       val Pv = mk_comb(P,Bvar)
+       val PSUC = mk_comb(P, mk_suc Bvar)
+       val base' = EQ_MP (SYM(BETA_CONV P0)) base
+       and step'  = SPEC Bvar step
+       and hypth  = SYM(RIGHT_BETA(REFL Pv))
+       and concth = SYM(RIGHT_BETA(REFL PSUC))
+       and IND    = SPEC P numTheory.INDUCTION
+       val template = mk_eq(concl step', mk_imp(v1, v2))
+       val th1 = SUBST[v1 |-> hypth, v2|->concth] template (REFL (concl step'))
+       val th2 = GEN Bvar (EQ_MP th1 step')
+       val th3 = SPEC Bvar (MP IND (CONJ base' th2))
+   in
+     GEN Bvar (EQ_MP (BETA_CONV(concl th3)) th3)
+   end
+   handle HOL_ERR _ => raise ERR "INDUCT" ""
+end;
+
+(* --------------------------------------------------------------------- *)
+(*             [A] !n.t[n]                                               *)
+(*  ================================                                     *)
+(*   [A] t[0]  ,  [A,t[n]] t[SUC x]                                      *)
+(* --------------------------------------------------------------------- *)
+
+fun INDUCT_TAC g =
+  INDUCT_THEN numTheory.INDUCTION ASSUME_TAC g 
+  handle HOL_ERR _ => raise ERR "INDUCT_TAC" "";
+
 
 val REDUCE_CONV = reduceLib.REDUCE_CONV
 val REDUCE_RULE = reduceLib.REDUCE_RULE
@@ -141,24 +176,5 @@ val REDUCE_TAC  = reduceLib.REDUCE_TAC
 val ARITH_CONV  = arithLib.ARITH_CONV
 val ARITH_PROVE = arithLib.ARITH_PROVE
 val ARITH_TAC   = CONV_TAC ARITH_CONV;
-
-(* Numeral handling *)
-local fun mk_arith_fun s = mk_thy_const{Name=s, Thy="arithmetic", Ty=N-->N}
-in
-val mk_numeral = 
- Numeral.gen_mk_numeral
-    {mk_comb  = Term.mk_comb,
-     ZERO     = mk_thy_const{Name="0", Thy="num", Ty=N},
-     ALT_ZERO = mk_thy_const{Name="ALT_ZERO", Thy="arithmetic",Ty=N},
-     NUMERAL  = mk_arith_fun "NUMERAL",
-     BIT1     = mk_arith_fun "NUMERAL_BIT1",
-     BIT2     = mk_arith_fun "NUMERAL_BIT1"}
-end;
-
-
-(* takes a numeral term and turns it into a string *)
-val n2i = Arbnum.toString o Numeral.dest_numeral
-
-(* Should also include con-/de-structors for all the standard operations. *)
 
 end; (* numLib *)
