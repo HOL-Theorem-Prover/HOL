@@ -13,8 +13,8 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = "/home/kxs/144";
-val holdir   = "/home/kxs/working";
+val mosmldir = ;
+val holdir   = ;
 val OS       = "linux"           (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
 
