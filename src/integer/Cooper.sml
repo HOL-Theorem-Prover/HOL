@@ -1677,6 +1677,7 @@ val phase5_CONV  = let
   *)
   val prelim_left = BINDER_CONV (RAND_CONV BETA_CONV)
   val prelim_right =
+    (* turn minus terms F (b - k) into F (b + ~1 * k) *)
     STRIP_QUANT_CONV
     (RAND_CONV (RAND_CONV
                 (fn t => if is_minus t then
@@ -1693,6 +1694,10 @@ val phase5_CONV  = let
   end
 
   fun quick_cst_elim tm = let
+    (* eliminates constraints of the form
+          K (lo < x /\ x <= hi) x
+       where hi - lo <= 1, either replacing it with x = lo, or just false
+       fails (NO_CONV) otherwise. *)
     val (_, args) = strip_comb tm  (* K and its args *)
     val cst = hd args
     val (_, cstargs) = strip_comb cst  (* two conjuncts *)
@@ -1710,13 +1715,8 @@ val phase5_CONV  = let
       NO_CONV tm
   end
 
-  fun under_single_quantifier tm = let
-    val (bvar, body) = dest_exists tm
-  in
-    BINDER_CONV (RAND_CONV (mk_abs_CONV bvar)) THENC
-    REWR_CONV UNWIND_THM2 THENC BETA_CONV
-  end tm
   fun reduce_if_ground tm =
+    (* calls REDUCE_CONV on a ground term, does nothing otherwise *)
     if is_exists tm orelse not (null (free_vars tm)) then ALL_CONV tm
     else REDUCE_CONV tm
 
@@ -1734,11 +1734,16 @@ val phase5_CONV  = let
     val (lhs_var, lhs_body) = dest_exists tm
     val body_conjuncts = cpstrip_conj (rand lhs_body)
     fun simple_divides tm = let
+      (* true if a term is a divides mentioning only the existential
+         variable *)
       val (l,r) = dest_divides tm
     in
       free_vars r = [lhs_var]
     end handle HOL_ERR _ => false
+
     fun find_sdivides c tm = let
+      (* knowing that a simple divides term is a "conjunct" of tm, apply *)
+      (* conversion c to that term *)
       val (l,r) = dest_conj tm
     in
       if List.exists simple_divides (cpstrip_conj l) then
@@ -1755,6 +1760,7 @@ val phase5_CONV  = let
       (phase1_CONV THENC phase2_CONV lhs_var THENC c) tm
 
     fun pull_out_exists tm = let
+      (* pulls out a nested existential quantifier to the head of the term *)
       val (c1, c2) = dest_conj tm
       val (cvl, thm) =
         if has_exists c1 then (LAND_CONV, GSYM LEFT_EXISTS_AND_THM)
@@ -1771,6 +1777,9 @@ val phase5_CONV  = let
       else LAND_CONV (find_cst c) tm
 
     fun simp_if_rangeonly tm = let
+      (* simplifies ?x. K (lo < x /\ x <= hi) x  to T, *)
+      (* knowing that a contradictory constraint would have already been *)
+      (* dealt with *)
       val (bv, body) = dest_exists tm
     in
       if is_constraint body then
@@ -1799,6 +1808,10 @@ val phase5_CONV  = let
         BINDER_CONV (RAND_CONV (find_sdivides elim_sdivides)) THENC
         pull_eliminate THENC simplify_constrained_disjunct
       else if List.all (not o mem lhs_var o free_vars) body_conjuncts then
+        (* case where existential only has scope over constraint, and
+           bound variable doesn't appear elsewhere, which can happen if
+           the F term is something like (\x. F), which tends to happen in
+           the construction of the neginf term. *)
         EXISTS_AND_CONV THENC
         LAND_CONV (BINDER_CONV (UNCONSTRAIN THENC resquan_onestep) THENC
                    EXISTS_OR_CONV THENC
@@ -1815,9 +1828,19 @@ val phase5_CONV  = let
   end tm
 
   val elim_bterms_on_right =
+    (* the second disjunct produced by phase4 is of form
+          ?b k. (MEM b [...] /\ K (lo < k /\ k <= hi) k) /\ F(b + k) *)
+    (* first try eliminating trivial constraints on k *)
     TRY_CONV (STRIP_QUANT_CONV (LAND_CONV (RAND_CONV quick_cst_elim)) THENC
               (BINDER_CONV Unwind.UNWIND_EXISTS_CONV ORELSEC
                REWRITE_CONV [])) THENC
+    (* at this stage, k may or may not have been eliminated by the previous
+       step, either by becoming false, which will have already turned the
+       whole term false, or by becoming unwound.
+       In the former, the TRY_CONV will do nothing because the LAND_CONV
+       will fail.
+       Otherwise, the basic action here is to expand out all of the
+       "b" possibilities in the list *)
     TRY_CONV (TRY_CONV SWAP_VARS_CONV THENC
               STRIP_QUANT_CONV
               (LAND_CONV (REWRITE_CONV [listTheory.MEM] THENC
@@ -1830,7 +1853,7 @@ val phase5_CONV  = let
                                    RAND_CONV BETA_CONV) THENC
                                   reduce_if_ground)) THENC
                 TRY_CONV push_in_exists) ORELSEC
-               (* if the list was empty; there won't be an equality to do
+               (* if the list was empty, there won't be an equality to do
                   UNWIND_EXISTS_CONV on, and the above will fail; in that case,
                   rewrite to push falsity upwards to the top level. *)
                REWRITE_CONV []))
