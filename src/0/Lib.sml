@@ -48,14 +48,14 @@ fun fst (x,_) = x   and   snd (_,y) = y;
  * Success and failure.                                                      *
  *---------------------------------------------------------------------------*)
 
-fun can f x = 
+fun can f x =
   (f x; true) handle Interrupt => raise Interrupt | _  => false;
 
 fun total f x = SOME (f x) handle Interrupt => raise Interrupt | _ => NONE;
 
-fun partial e f x = 
-   case f x 
-    of SOME y => y 
+fun partial e f x =
+   case f x
+    of SOME y => y
      | NONE => raise e;
 
 
@@ -79,7 +79,7 @@ end;
  * For interactive use: "Raise" prints out the exception.                    *
  *---------------------------------------------------------------------------*)
 
-fun try f x = 
+fun try f x =
   f x handle Interrupt => raise Interrupt | e => Exception.Raise e;
 
 
@@ -90,7 +90,7 @@ fun assert P x = if P x then x else raise LIB_ERR"assert" "predicate not true"
  *        Common list operations                                             *
  *---------------------------------------------------------------------------*)
 
-fun tryfind f = 
+fun tryfind f =
  let fun F [] = raise LIB_ERR "tryfind" "all applications failed"
        | F (h::t) = f h handle Interrupt => raise Interrupt | _ => F t
  in F
@@ -101,8 +101,8 @@ local fun elem (_, [])     = raise LIB_ERR "el" "index too large"
         | elem (1, h::_)   = h
         | elem (n, _::rst) = elem (n-1, rst)
 in
-fun el n l = 
-  if n<1 then raise LIB_ERR "el" "index too small" 
+fun el n l =
+  if n<1 then raise LIB_ERR "el" "index too small"
   else elem(n,l)
 end;
 
@@ -116,8 +116,8 @@ fun map2 f L1 L2 =
 
 fun all P =
    let fun every [] = true
-         | every (a::rst) = P a andalso every rst       
-   in every 
+         | every (a::rst) = P a andalso every rst
+   in every
    end;
 
 fun all2 P =
@@ -135,7 +135,7 @@ fun first P =
    in oneth
    end;
 
-fun split_after n alist = 
+fun split_after n alist =
    if (n >= 0)
    then let fun spa 0 (L,R) = (rev L,R)
               | spa n (L,a::rst) = spa (n-1) (a::L, rst)
@@ -148,7 +148,7 @@ fun split_after n alist =
 fun itlist f L base_value =
    let fun it [] = base_value
          | it (a::rst) = f a (it rst)
-   in it L 
+   in it L
    end;
 
 fun itlist2 f L1 L2 base_value =
@@ -182,7 +182,7 @@ fun gather p L = itlist (fn x => fn y => if (p x) then x::y else y) L []
 
 val filter = gather;
 
-fun partition p alist = 
+fun partition p alist =
    itlist (fn x => fn (L,R) => if (p x) then (x::L, R) else (L, x::R))
           alist ([],[]);
 
@@ -190,15 +190,15 @@ fun zip [] [] = []
   | zip (a::b) (c::d) = (a,c)::zip b d
   | zip _ _ = raise LIB_ERR "zip" "different length lists"
 
-fun unzip L = 
+fun unzip L =
   itlist (fn (x,y) => fn (l1,l2) =>(x::l1, y::l2)) L ([],[]);
 
 fun combine(l1,l2) = zip l1 l2
 val split = unzip
 
-fun mapfilter f list = 
-   itlist(fn i => fn L => (f i::L) 
-                          handle Interrupt => raise Interrupt 
+fun mapfilter f list =
+   itlist(fn i => fn L => (f i::L)
+                          handle Interrupt => raise Interrupt
                                |         _ => L) list [];
 
 fun flatten [] = []
@@ -213,20 +213,20 @@ fun last [] = raise LIB_ERR "last" "empty list"
   | last [x] = x
   | last (_::t) = last t
 
-fun pluck P = 
+fun pluck P =
   let fun pl _ [] = raise LIB_ERR "pluck" "predicate not satisfied"
-        | pl A (h::t) = 
-           if P h then (h, rev_itlist cons A t) 
+        | pl A (h::t) =
+           if P h then (h, rev_itlist cons A t)
                   else pl (h::A) t
-  in 
-     pl [] 
+  in
+     pl []
   end;
 
 fun funpow n f x =
    let fun iter (0,res) = res
          | iter (n,res) = iter (n-1, f res)
    in
-     if (n<0) then x else iter(n,x) 
+     if (n<0) then x else iter(n,x)
    end;
 
 (*---------------------------------------------------------------------------*
@@ -256,7 +256,7 @@ fun assoc item =
    end
 
 fun assoc1 item =
-   let fun assc ((entry as (key,_))::rst) = 
+   let fun assc ((entry as (key,_))::rst) =
              if (item = key) then SOME entry else assc rst
          | assc [] = NONE
     in assc
@@ -270,8 +270,8 @@ fun assoc2 item =
    end;
 
 fun words2 sep string =
-    snd (itlist (fn ch => fn (chs,tokl) => 
-          if ch=sep 
+    snd (itlist (fn ch => fn (chs,tokl) =>
+          if ch=sep
           then if (null chs) then ([],tokl)
 		else ([], (Portable.implode chs :: tokl))
           else (ch::chs, tokl))
@@ -282,11 +282,11 @@ fun words2 sep string =
  * A naive merge sort.                                                       *
  *---------------------------------------------------------------------------*)
 
-fun sort P = 
+fun sort P =
   let fun merge [] a = a
         | merge a [] = a
-        | merge (A as (a::t1)) (B as (b::t2)) = 
-             if P a b then a::merge t1 B 
+        | merge (A as (a::t1)) (B as (b::t2)) =
+             if P a b then a::merge t1 B
                       else b::merge A t2
       fun srt [] = []
         | srt [a] = a
@@ -305,7 +305,7 @@ type ('a,'b) subst = {redex:'a, residue:'b} list
 
 fun subst_assoc test =
  let fun assc [] = NONE
-       | assc ({redex,residue}::rst) = 
+       | assc ({redex,residue}::rst) =
           if (test redex) then SOME(residue) else assc rst
    in assc
    end;
@@ -323,7 +323,7 @@ fun mem i =
          | itr [] = false
    in itr
    end;
-    
+
 fun insert i L = if (mem i L) then L else i::L
 
 fun mk_set [] = []
@@ -346,7 +346,7 @@ fun intersect [] _ = []
 
 fun null_intersection _  [] = true
   | null_intersection [] _ = true
-  | null_intersection (a::rst) S = 
+  | null_intersection (a::rst) S =
         if (mem a S) then false
         else null_intersection rst S
 
@@ -389,7 +389,7 @@ fun op_union eq_func =
 (* Union of a family of sets *)
 fun op_U eq_func set_o_sets = itlist (op_union eq_func) set_o_sets [];
 
-fun op_intersect eq_func a b = 
+fun op_intersect eq_func a b =
   let val mem = op_mem eq_func
       val in_b = C mem b
       val mk_set = op_mk_set eq_func
@@ -397,7 +397,7 @@ fun op_intersect eq_func a b =
    end;
 
 (* All the elements in the first set that are not also in the second set. *)
-fun op_set_diff eq_func S1 S2 = 
+fun op_set_diff eq_func S1 S2 =
   let val memb = op_mem eq_func
   in filter (fn x => not (memb x S2)) S1
   end;
@@ -407,12 +407,22 @@ fun op_set_diff eq_func S1 S2 =
  *---------------------------------------------------------------------------*)
 
 val int_to_string = Int.toString;
-val string_to_int = 
+val string_to_int =
   partial (LIB_ERR "string_to_int" "not convertable")
           Int.fromString
 
 val say = TextIO.print;
-fun quote s = String.concat ["\"",s,"\""];
+fun quote s = let
+  fun munge c =
+    case c of
+      #"\\" => "\\\\"
+    | #"\n" => "\\n"
+    | #"\"" => "\\\""
+    | x => str x
+in
+  String.concat ["\"",String.translate munge s,"\""]
+end
+
 fun prime s = s^"'";
 
 fun commafy [] = []
@@ -427,7 +437,7 @@ fun commafy [] = []
 fun start_time () = Timer.startCPUTimer()
 
 fun end_time timer =
-  let val {gc,sys,usr} = Timer.checkCPUTimer timer 
+  let val {gc,sys,usr} = Timer.checkCPUTimer timer
   in
      Portable.output(Portable.std_out,
           "runtime: "^Time.toString usr ^ "s,\
@@ -439,8 +449,8 @@ fun end_time timer =
 fun time f x =
   let val timer = start_time()
       val y = f x
-  in  
-     end_time timer;  y 
+  in
+     end_time timer;  y
   end
 
 
@@ -451,10 +461,10 @@ fun time f x =
 fun with_flag (flag,b) f x =
   let val fval = !flag
       val () = flag := b
-      val res = f x handle e => (flag := fval; 
+      val res = f x handle e => (flag := fval;
                                  case e of Interrupt => raise e
                                          | _ => Exception.Raise e)
-   in 
+   in
      flag := fval;
      res
    end;
@@ -470,11 +480,11 @@ abstype ('a,'b) istream = STRM of {mutator : 'a -> 'a,
                                    init    : 'a}
 with
   fun mk_istream f i g = STRM{mutator=f, project=g, state=ref i, init=i}
-  fun next(strm as STRM{mutator, state, ...}) =  
+  fun next(strm as STRM{mutator, state, ...}) =
     let val _ = state := mutator (!state)
     in strm end;
   fun state(STRM{project,state, ...}) = project(!state)
-  fun reset(strm as STRM{state, init, ...}) = 
+  fun reset(strm as STRM{state, init, ...}) =
       let val _ = state := init
       in strm end;
 end;
@@ -495,10 +505,10 @@ fun mesg false _ = ()
 local open Char String
 in
 fun hash size = fn s =>
-  let fun hsh(i,A) = 
+  let fun hsh(i,A) =
        hsh(i+1, (A*4 + ord(sub(s,i))) mod size)
         handle Subscript => A
-  in hsh end 
+  in hsh end
 end;
 
 
