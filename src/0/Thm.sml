@@ -34,12 +34,12 @@ fun Assert b s1 s2 = if b then () else ERR s1 s2
  * Miscellaneous syntax routines.                                            *
  *---------------------------------------------------------------------------*)
 
-val bool    = Type.bool
-val alpha   = Type.alpha
-fun dom ty  = fst (Type.dom_rng ty)
-fun rng ty  = snd (Type.dom_rng ty);
-val EQ      = Portable.pointer_eq
-val std_tag = Tag.std_tag
+val bool      = Type.bool
+val alpha     = Type.alpha
+fun dom ty    = fst (Type.dom_rng ty)
+fun rng ty    = snd (Type.dom_rng ty);
+val EQ        = Portable.pointer_eq
+val empty_tag = Tag.empty_tag
 
 
 (*---------------------------------------------------------------------------
@@ -139,7 +139,7 @@ fun is_bool tm = (type_of tm = bool);
 
 fun ASSUME tm =
    (Assert (is_bool tm) "ASSUME" "not a proposition";
-    make_thm Count.Assume (std_tag,[tm],tm));
+    make_thm Count.Assume (empty_tag,[tm],tm));
 
 
 (*---------------------------------------------------------------------------*
@@ -151,7 +151,7 @@ fun ASSUME tm =
 val mk_eq_nocheck = Term.prim_mk_eq;
 
 fun refl_nocheck ty tm =
-  make_thm Count.Refl (std_tag, [], mk_eq_nocheck ty tm tm);
+  make_thm Count.Refl (empty_tag, [], mk_eq_nocheck ty tm tm);
 
 fun REFL tm = refl_nocheck (type_of tm) tm;
 
@@ -164,7 +164,7 @@ fun REFL tm = refl_nocheck (type_of tm) tm;
 
 fun BETA_CONV tm = 
    make_thm Count.Beta 
-      (std_tag, [], mk_eq_nocheck (type_of tm) tm (beta_conv tm))
+      (empty_tag, [], mk_eq_nocheck (type_of tm) tm (beta_conv tm))
    handle HOL_ERR _ => ERR "BETA_CONV" "not a beta-redex"
 
 
@@ -290,7 +290,7 @@ fun MP (THM(o1,asl1,c1)) (THM(o2,asl2,c2)) =
 
 fun ALPHA t1 t2 =
    if aconv t1 t2
-   then make_thm Count.Alpha (std_tag, [], mk_eq_nocheck (type_of t1) t1 t2)
+   then make_thm Count.Alpha (empty_tag, [], mk_eq_nocheck (type_of t1) t1 t2)
    else ERR "ALPHA" "";
 
 
@@ -338,7 +338,7 @@ fun ALPHA t1 t2 =
 
 fun ETA_CONV tm =
    make_thm Count.EtaConv
-      (std_tag, [], mk_eq_nocheck (type_of tm) tm (eta_conv tm))
+      (empty_tag, [], mk_eq_nocheck (type_of tm) tm (eta_conv tm))
    handle HOL_ERR _ => ERR"ETA_CONV" "";
 
 
@@ -837,7 +837,7 @@ fun DISJ_CASES dth ath bth =
       val (disj1,disj2) = dest_disj (concl dth)
   in
    make_thm Count.DisjCases
-       (itlist Tag.merge [tag dth, tag ath, tag bth] std_tag,
+       (itlist Tag.merge [tag dth, tag ath, tag bth] empty_tag,
         union_hyp (hyp dth) (union_hyp (disch(disj1, hyp ath))
                                        (disch(disj2, hyp bth))),
         concl ath)
@@ -965,7 +965,7 @@ end;
 fun Beta th =
    let val (lhs, rhs, ty) = Term.dest_eq_ty (concl th)
    in make_thm Count.Beta 
-        (std_tag, hyp th, mk_eq_nocheck ty lhs (Term.lazy_beta_conv rhs))
+        (empty_tag, hyp th, mk_eq_nocheck ty lhs (Term.lazy_beta_conv rhs))
    end
    handle HOL_ERR _ => ERR "Beta" "";
 
@@ -981,7 +981,7 @@ fun Beta th =
 fun Eta th =
   let val (lhs, rhs, ty) = Term.dest_eq_ty (concl th)
   in make_thm Count.EtaConv 
-       (std_tag, hyp th, mk_eq_nocheck ty lhs (eta_conv rhs))
+       (empty_tag, hyp th, mk_eq_nocheck ty lhs (eta_conv rhs))
   end
   handle HOL_ERR _ => ERR "Eta" "";
 

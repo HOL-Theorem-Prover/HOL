@@ -127,8 +127,9 @@ end;
 signature RawTag =
 sig
   type tag = KernelTypes.tag
-  val std_tag       : tag
+  val empty_tag     : tag
   val ax_tag        : string ref -> tag
+  val isEmpty       : tag -> bool
   val merge         : tag -> tag -> tag
   val read          : string -> tag
   val read_disk_tag : string -> tag

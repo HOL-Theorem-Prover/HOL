@@ -112,8 +112,10 @@ fun pp_sig pp_thm info_record ppstrm = let
      add_break(2,0);
      add_string class;
      add_break(2,0);
-     Lib.with_flag(Globals.show_tags,true)
-     (Lib.with_flag(Globals.show_assums, true) pp_thm) th;
+     if null (Thm.hyp th) andalso Tag.isEmpty (Thm.tag th)
+       then pp_thm th
+       else with_flag(Globals.show_tags,true)
+             (with_flag(Globals.show_assums, true) pp_thm) th;
      end_block())
   fun pr_thms _ [] = ()
     | pr_thms heading plist =

@@ -98,7 +98,7 @@ fun bind s ty =
    mk_thy_const {Name=s,Ty=ty,Thy=current_theory()}
   );
 
-fun mk_def (w as TERM _, tm)    = (w, Thm.mk_defn_thm (Tag.std_tag, tm))
+fun mk_def (w as TERM _, tm)    = (w, Thm.mk_defn_thm (Tag.empty_tag, tm))
   | mk_def (w as THEOREM th,tm) = (w, Thm.mk_defn_thm (Thm.tag th, tm))
 
 val new_definition_hook = ref

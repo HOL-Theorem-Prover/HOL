@@ -17,8 +17,10 @@ val ERR = mk_HOL_ERR "Tag";
 fun oracles_of (TAG(O,_)) = O;
 fun axioms_of  (TAG(_,A)) = A;
 
-val std_tag  = TAG ([],[])
+val empty_tag  = TAG ([],[])
 fun ax_tag r = TAG ([],[r])
+
+val isEmpty = equal empty_tag;
 
 (*---------------------------------------------------------------------------*
  * Create a tag. The input string should be an alphanumeric identifier,      *
@@ -29,7 +31,7 @@ fun read s =
  if Lexis.ok_identifier s then TAG ([s],[])
   else raise ERR "read" (Lib.quote s^" is not an identifier");
 
-fun read_disk_tag "" = TAG([],[])
+fun read_disk_tag "" = empty_tag
   | read_disk_tag s  = TAG (Lib.words2 " " s, [])
 
 (*---------------------------------------------------------------------------
