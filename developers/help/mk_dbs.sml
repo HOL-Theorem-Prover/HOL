@@ -40,6 +40,39 @@ in
   String.tokens Char.isSpace wholefile
 end
 
+fun quote s = "\"" ^ s ^ "\""
+
+
+fun print_component out c = let
+  fun print s = TextIO.output(out, s)
+  open Database
+in
+  case c of
+    Str => print "Str"
+  | Exc s => print ("Exc "^quote s)
+  | Typ s => print ("Typ "^quote s)
+  | Val s => print ("Val "^quote s)
+  | Con s => print ("Con "^quote s)
+  | Term(s, NONE) => print ("Term "^quote s)
+  | Term(s, SOME s2) => print ("Term "^quote s^" "^quote s2)
+end
+
+
+fun print_entry out {comp, file,line} = let
+  fun print s = TextIO.output(out,s)
+in
+  print (Int.toString line); print " ";
+  print (quote file);        print " ";
+  print_component out comp
+end
+
+
+fun print_entrylist out [] = ()
+  | print_entrylist out [x] = (print_entry out x; TextIO.output(out, "\n"))
+  | print_entrylist out (x::xs) = (print_entry out x;
+                                   TextIO.output(out, ";\n");
+                                   print_entrylist out xs)
+
 
 (*---------------------------------------------------------------------------
  * The database of all hol ".doc" files.
@@ -242,10 +275,14 @@ fun buildDb holpath = let
      "numRingLib.sig",         "ringTheory.sig",
      "numRingTheory.sig",      "semi_ringTheory.sig"]
 
- in
-   Database.writebase (Path.concat(holpath, Path.concat ("help", "HOLdbase")),
-                       Database.fromList all_indices)
- end;
+  val destination =
+    Path.concat(holpath, Path.concat ("tools",
+                                      Path.concat("helpdb", "textdb")))
+  val outs = TextIO.openOut destination
+  val _ = print_entrylist outs all_indices
+in
+  TextIO.closeOut outs
+end;
 
 
 fun errmsg s = TextIO.output(TextIO.stdErr, s ^ "\n");
