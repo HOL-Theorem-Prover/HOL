@@ -1,3 +1,7 @@
+(*---------------------------------------------------------------------------
+     A battery of tests for the "Define" function in bossLib.
+ ---------------------------------------------------------------------------*)
+
 app load ["bossLib", "Q"]; open bossLib;
 infix &&; infix 8 by;
 
@@ -235,20 +239,6 @@ val accRec_def0 =
          then join (A x) u
          else accRec (dest x, join (D x:'b) u)`;
 
-(* Simplify constraints *)
-
-val accRec_def = 
- UNDISCH
- (REWRITE_RULE pairTheory.pair_rws
-   (BETA_RULE (REWRITE_RULE[relationTheory.inv_image_def]
-      (REWRITE_RULE
-        [UNDISCH (ISPEC (Term`FST:'a#'b->'a`)
-                    (Q.ID_SPEC relationTheory.WF_inv_image))]
-        (Q.INST [`R :'a#'b -> 'a#'b -> bool`
-                   |->
-                 `inv_image R (FST :'a#'b -> 'a)`]
-         (DISCH_ALL accRec_def0))))));
-
 (*---------------------------------------------------------------------------
         Binary recursive schema.
  ---------------------------------------------------------------------------*)
@@ -313,163 +303,6 @@ val fqsort_def =
 val variant_def = 
   Hol_defn "variant" 
      `variant x L = if MEM x L then variant (x+1) L else x`;
-
-
-(*---------------------------------------------------------------------------
-      Example of a "do-it-yourself" termination proof for variant.
- ---------------------------------------------------------------------------*)
-
-Defn.tgoal variant_def;  
-
-e (WF_REL_TAC variant_def 
-       `measure \(x,L). LENGTH(FILTER (\y. x <= y) L)`);
-
-(* Step-by-step way
-b();
-e (TotalDefn.TC_INTRO_TAC variant_def 
-     THEN Q.EXISTS_TAC`measure \(x,L). LENGTH(FILTER (\y. x <= y) L)`
-     THEN TotalDefn.TC_SIMP_TAC);
-*)
-e (RW_TAC std_ss []   (* Blasted eta-conv. to be done before induction *)
-   THEN Induct_on `L` THEN RW_TAC list_ss [listTheory.FILTER,listTheory.MEM]);
-
-(* Need a lemma *)
-
-val LENGTH_FILTER_SUBSET = Q.prove(
-`(!y. P y ==> Q y) ==> !L. LENGTH(FILTER P L) <= LENGTH (FILTER Q L)`,
-DISCH_TAC THEN Induct THEN ZAP_TAC (list_ss && [listTheory.FILTER]) []);
-
-(* Finish proof *)
-e (RW_TAC arith_ss [DECIDE `x<SUC y = x <= y`,LENGTH_FILTER_SUBSET]);
-val [variant_eqns,variant_ind] = CONJUNCTS (top_thm());
-
-
-(*---------------------------------------------------------------------------
-     All wrapped up after proof found.
- ---------------------------------------------------------------------------*)
-
-val (variant_eqn, variant_ind) = 
-Defn.tprove 
-  (variant_def, WF_REL_TAC variant_def 
-      `measure \(x,L). LENGTH(FILTER (\y. x<=y) L)`
-     THEN RW_TAC std_ss []
-     THEN Induct_on `L` 
-     THEN RW_TAC list_ss [listTheory.FILTER,listTheory.MEM,
-                          DECIDE `x<SUC y = x <= y`,LENGTH_FILTER_SUBSET]);
-
-(*---------------------------------------------------------------------------
-       Properties.
- ---------------------------------------------------------------------------*)
-
-val variant_correct = Q.prove(
-`!x L. ~MEM (variant x L) L`,
-recInduct variant_ind
-  THEN RW_TAC std_ss []
-  THEN ONCE_REWRITE_TAC [variant_eqn]
-  THEN RW_TAC std_ss []);
-
-(*---------------------------------------------------------------------------*
- *   Of all the numbers that aren't in L, variant x L is the                 *
- *   smallest one that is greater-than-or-equal-to x.                        *
- *---------------------------------------------------------------------------*)
-
-val variant_minimal = Q.prove(
-`!x L y. ~MEM y L /\ x<=y ==> variant x L <= y`,
-recInduct variant_ind
-  THEN RW_TAC std_ss []
-  THEN ONCE_REWRITE_TAC [variant_eqn]
-  THEN RW_TAC std_ss []
-  THEN `x < y` by PROVE_TAC [arithmeticTheory.LESS_OR_EQ]
-  THEN RW_TAC arith_ss []);
-
-
-(*---------------------------------------------------------------------------
-         Evaluation of variant with computeLib
- ---------------------------------------------------------------------------*)
-load "computeLib";  open computeLib;
-
-(*---------------------------------------------------------------------------
-    First, build a standard computing base, one that knows basic 
-    facts about booleans and numbers (and numerals).
-
-    Note that ">" and ">=" are not defined for numerals, so 
-    we convert to "<" and "<=" via arithmeticTheory.{GREATER_EQ, GREATER_DEF}.
- ---------------------------------------------------------------------------*)
-
-val rws = from_list (false,[COND_CLAUSES,NOT_CLAUSES]);
-
-fun norm q = Count.apply (CBV_CONV rws) (--q--);
-
-val num_rws = 
-  let open numeralTheory Rsyntax
-      val REFL_EQ_0 = INST_TYPE [Type.alpha |-> Type`:num`] REFL_CLAUSE
-      val NORM_0 = prove(--`NUMERAL ALT_ZERO = 0`--,
-                         REWRITE_TAC [arithmeticTheory.NUMERAL_DEF, 
-                        arithmeticTheory.ALT_ZERO])
-      val distrib_rws as (th1::th2::rst) = rev (CONJUNCTS numeral_distrib)
-      val drws' = LIST_CONJ (rev (EQT_INTRO th1::EQT_INTRO th2::rst))
- in 
-  [ drws', REFL_EQ_0, numeral_eq, numeral_suc, numeral_pre, NORM_0,
-    numeral_iisuc, numeral_add, numeral_mult, iDUB_removal,
-    numeral_sub, numeral_lt, numeral_lte, iSUB_THM,
-    numeral_exp, iSQR, 
-    arithmeticTheory.GREATER_EQ, arithmeticTheory.GREATER_DEF
-  ]
-end;
-
-val _ = add_thms (true,num_rws) rws;
-
-(*---------------------------------------------------------------------------
-        recast MEM definition as if-then-else
- ---------------------------------------------------------------------------*)
-
-local val MEM_IF = Q.prove(
-           `!x h t. MEM x (h::t) = if x=h then T else MEM x t`,
-            RW_TAC list_ss [listTheory.MEM]);
-      val MEM_DEF' = CONJ (CONJUNCT1 listTheory.MEM) MEM_IF
-in
-val _ = add_thms (true,[variant_eqn,MEM_DEF']) rws
-end;
-
-norm `variant 1 [1;2;3;4;5;6;7;8;9;10;11;13;14;15;16;16;16;16;165]`;
-norm `variant 1 [1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;16;16;16;165]`;
-norm `variant (SUC 0) []`;
-norm `variant (SUC 0) [SUC(SUC 0)]`;
-
-(*---------------------------------------------------------------------------
-      Example of a "do-it-yourself" termination proof for qsort.
- ---------------------------------------------------------------------------*)
-
-Defn.tgoal qsort_def;  
-e (WF_REL_TAC qsort_def `measure (LENGTH o SND)`);
-e (RW_TAC list_ss [combinTheory.o_DEF,DECIDE `x<SUC y = x <= y`]);
-
-val FILTER_KT = Q.prove(`!l. FILTER (K T) l = l`,
-Induct THEN RW_TAC list_ss [listTheory.FILTER,combinTheory.K_DEF]);
-
-val lem = REWRITE_RULE [FILTER_KT]
-            (Q.INST [`Q` |-> `K T`] LENGTH_FILTER_SUBSET);
-e (RW_TAC std_ss [lem, combinTheory.K_DEF]);
-e (RW_TAC std_ss [lem, combinTheory.K_DEF]);
-
-(* Done, make ML bindings, and should also add into theory *)
-
-val (qsort_eqns,qsort_ind) = 
-  let val th = top_thm() in (CONJUNCT1 th, CONJUNCT2 th) end;
-
-(*---------------------------------------------------------------------------
-       All wrapped up after proof found.
- ---------------------------------------------------------------------------*)
-
-val (qsort_eqn,qsort_ind) = 
-Defn.tprove 
-   (qsort_def, 
-     WF_REL_TAC qsort_def `measure (LENGTH o SND)`
-       THEN RW_TAC list_ss 
-             [combinTheory.o_DEF,combinTheory.K_DEF,
-              DECIDE `x<SUC y = x <= y`,
-              REWRITE_RULE [FILTER_KT]
-                  (Q.INST [`Q` |-> `K T`] LENGTH_FILTER_SUBSET)]);
 
 
 (*---------------------------------------------------------------------------
