@@ -9,11 +9,7 @@
 
 signature Res_quan =
 sig
- type term     = Term.term
- type thm      = Thm.thm
- type tactic   = Abbrev.tactic
- type conv     = Abbrev.conv
- type thm_tactic = Abbrev.thm_tactic;
+ include Abbrev
 
 val mk_resq_forall: term * term * term -> term
 val mk_resq_exists: term * term * term -> term

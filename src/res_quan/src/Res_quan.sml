@@ -9,18 +9,9 @@
 structure Res_quan :> Res_quan =
 struct
 
+open HolKernel Drule Conv Tactic Tactical Thm_cont Rewrite boolSyntax;
 
-open HolKernel Drule Conv Tactic Tactical Thm_cont Rewrite;
-open boolSyntax
-infix ## THEN THENL THENC;
-infixr -->;
-
- type term     = Term.term
- type thm      = Thm.thm
- type tactic   = Abbrev.tactic
- type conv     = Abbrev.conv
- type thm_tactic = Abbrev.thm_tactic;
-
+infix ## THEN THENL THENC;  infixr -->;
 
 fun RES_QUAN_ERR {function,message} =
     HOL_ERR{origin_structure = "Res_quan",
@@ -38,13 +29,13 @@ val (mk_resq_forall,mk_resq_exists,mk_resq_select,mk_resq_abstract) =
  let fun mk_resq_quan cons s (x,t1,t2) =
       let val xty = type_of x
           val t2_ty = type_of t2
-          val ty = (xty --> Type.bool) --> (xty --> t2_ty)
+          val ty = (xty --> bool) --> (xty --> t2_ty)
                     -->
                    (if cons="RES_ABSTRACT" then (xty --> t2_ty) else
                     if cons="RES_SELECT"   then xty else Type.bool)
         in
-          mk_comb{Rator=mk_comb{Rator=mk_const{Name=cons,Ty=ty},Rand=t1},
-                  Rand=mk_abs{Bvar=x,Body=t2}}
+          mk_comb(mk_comb(mk_thy_const{Name=cons,Thy="res_quan",Ty=ty},t1),
+                  mk_abs(x,t2))
         end
         handle _ => raise RES_QUAN_ERR {function="mk_resq_quan",message = s}
     in
@@ -67,12 +58,15 @@ fun list_mk_resq_exists (ress,body) =
 
 val (dest_resq_forall,dest_resq_exists,dest_resq_select,dest_resq_abstract) =
     let fun dest_resq_quan cons s =
-         let val check = assert (fn c => #Name(dest_const c) = cons)
+         let val check = assert (fn c => 
+                          let val {Name,Thy,...} = dest_thy_const c
+                          in Name=cons andalso Thy="res_quan"
+                          end)
          in
-           fn tm => (let val {Rator = op1 ,Rand = rand1} = dest_comb tm
-                     val {Rator = op2, Rand = c1} = dest_comb op1
+           fn tm => (let val (op1, rand1) = dest_comb tm
+                     val (op2, c1) = dest_comb op1
                      val _ = check op2
-                     val {Bvar = c2,Body = c3} = dest_abs rand1
+                     val (c2,c3) = dest_abs rand1
                      in
                        (c2,c1,c3)
                      end)
@@ -122,11 +116,10 @@ val is_resq_abstract = can dest_resq_abstract;
 
 fun RESQ_SPEC v' th =
     let val dthm = res_quanTheory.RES_FORALL
-    in
-        let val (v,P,tm) = dest_resq_forall (concl th)
+    in let val (v,P,tm) = dest_resq_forall (concl th)
         in
          BETA_RULE (UNDISCH_ALL (ISPEC v'
-                    (EQ_MP (ISPECL[P,mk_abs{Bvar=v,Body=tm}] dthm) th)))
+                    (EQ_MP (ISPECL[P,mk_abs(v,tm)] dthm) th)))
         end
     end
     handle HOL_ERR{message = s,...} =>
@@ -137,6 +130,7 @@ fun RESQ_SPEC v' th =
 (* An analogy to SPECL as RESQ_SEPC to SPEC.				*)
 (* Instatiate a list of restricted universal quantifiers.		*)
 (* ---------------------------------------------------------------------*)
+
 fun RESQ_SPECL vs th = rev_itlist RESQ_SPEC vs th;
 
 (* ---------------------------------------------------------------------*)
@@ -144,6 +138,7 @@ fun RESQ_SPECL vs th = rev_itlist RESQ_SPEC vs th;
 (* An analogy to SPEC_ALL as RESQ_SEPC to SPEC.				*)
 (* Strip a list of restricted universal quantifiers.			*)
 (* ---------------------------------------------------------------------*)
+
 fun RESQ_SPEC_ALL th =
     let val vs = map fst (fst (strip_resq_forall (concl th)))
     in
@@ -155,16 +150,16 @@ fun RESQ_SPEC_ALL th =
 (* Instantiate a universal quantifier which may be either an ordinary	*)
 (* or restricted.							*)
 (* ---------------------------------------------------------------------*)
+
 fun GQSPEC tm th =
-    if (is_resq_forall (concl th))
-    then RESQ_SPEC tm th
-    else ISPEC tm th;
+    if is_resq_forall (concl th) then RESQ_SPEC tm th else ISPEC tm th;
 
 (* --------------------------------------------------------------------- *)
 (* GQSPECL : term list -> thm -> thm					*)
 (* Instantiate a list of universal quantifiers which may be a mixture	*)
 (* of ordinary or restricted in any order.				*)
 (* --------------------------------------------------------------------- *)
+
 fun GQSPECL tms th = rev_itlist GQSPEC tms th;
 
 (* --------------------------------------------------------------------- *)
@@ -172,6 +167,7 @@ fun GQSPECL tms th = rev_itlist GQSPEC tms th;
 (* Strip a list of universal quantifiers which may be a mixture		*)
 (* of ordinary or restricted in any order.				*)
 (* --------------------------------------------------------------------- *)
+
 fun GQSPEC_ALL th =
     if (is_resq_forall (concl th))
     then  let val v = #1 (dest_resq_forall (concl th))
@@ -179,7 +175,7 @@ fun GQSPEC_ALL th =
     	   GQSPEC_ALL (RESQ_SPEC v th)
           end
     else if (is_forall (concl th))
-    then let val v = #Bvar (dest_forall (concl th))
+    then let val v = fst (dest_forall (concl th))
          in
     	  GQSPEC_ALL (SPEC v th)
          end
@@ -200,7 +196,7 @@ fun RESQ_HALF_SPEC th =
       let val (v,P,tm) = dest_resq_forall (concl th)
       in
          CONV_RULE ((ONCE_DEPTH_CONV BETA_CONV)THENC (GEN_ALPHA_CONV v))
-              (EQ_MP (ISPECL[P,mk_abs{Bvar=v,Body=tm}] dthm) th)
+              (EQ_MP (ISPECL[P,mk_abs(v,tm)] dthm) th)
       end
     end
     handle HOL_ERR{message = s,...} =>
@@ -220,7 +216,7 @@ fun RESQ_HALF_EXISTS th =
      let val (v,P,tm) = dest_resq_exists (concl th)
      in
       CONV_RULE ((ONCE_DEPTH_CONV BETA_CONV)THENC (GEN_ALPHA_CONV v))
-          (EQ_MP (ISPECL[P,mk_abs{Bvar=v,Body=tm}] dthm) th)
+          (EQ_MP (ISPECL[P,mk_abs(v,tm)] dthm) th)
         end
     end
     handle HOL_ERR{message = s,...} =>
@@ -239,8 +235,8 @@ fun RESQ_HALF_EXISTS th =
 fun RESQ_GEN (v,P) th =
     let val dthm = res_quanTheory.RES_FORALL
     fun REV_MATCH_EQ_MP th1 th2 = MATCH_MP (snd (EQ_IMP_RULE th1)) th2
-    val P' = mk_comb{Rator=P,Rand=v}
-    val B' = mk_abs{Bvar=v, Body=concl th}
+    val P' = mk_comb(P,v)
+    val B' = mk_abs(v, concl th)
     val th1 = CONV_RULE (DEPTH_CONV BETA_CONV)(ISPECL[P,B']dthm)
     in
       REV_MATCH_EQ_MP th1 (GEN v
@@ -253,7 +249,7 @@ fun RESQ_GENL vps th = itlist RESQ_GEN vps th;
 
 fun RESQ_GEN_ALL th =
     let fun dest_p tm =
-        let val {Rator=p,Rand=v} = dest_comb tm
+        let val (p,v) = dest_comb tm
         in
     	   if not(is_var v)
            then raise RES_QUAN_ERR {function="RESQ_GEN_ALL",message = ""}
@@ -268,8 +264,7 @@ fun RESQ_GEN_ALL th =
 (* RESQ_MATCH_MP (|- !x :: P. Q[x]) (|- P x') returns |- Q[x']  	    	*)
 (* --------------------------------------------------------------------- *)
 
-fun RESQ_MATCH_MP th1 th2 =
-    MATCH_MP (RESQ_HALF_SPEC th1) th2;
+fun RESQ_MATCH_MP th1 th2 = MATCH_MP (RESQ_HALF_SPEC th1) th2;
 
 (* ===================================================================== *)
 (* Tactics   	    	    	    					*)
@@ -293,7 +288,7 @@ val (RESQ_HALF_GEN_TAC:tactic, RESQ_GEN_TAC:tactic) =
     fun gtac tac (asl, w) =
        let val (var,cond,body) = dest_resq_forall w
        val thm = RIGHT_CONV_RULE (GEN_ALPHA_CONV var)
-                     (ISPECL [cond, mk_abs{Bvar=var,Body=body}] RESQ_FORALL)
+                     (ISPECL [cond, mk_abs(var,body)] RESQ_FORALL)
        in
           (SUBST1_TAC thm THEN tac) (asl, w)
        end
@@ -329,7 +324,7 @@ fun RESQ_EXISTS_TAC tm =
     let val RESQ_EXISTS = res_quanTheory.RES_EXISTS
     val (var,cond,body) = dest_resq_exists w
     val thm = RIGHT_CONV_RULE (GEN_ALPHA_CONV var)
-        (ISPECL [cond, mk_abs{Bvar=var,Body=body}] RESQ_EXISTS)
+        (ISPECL [cond, mk_abs(var,body)] RESQ_EXISTS)
     in
      (SUBST1_TAC thm THEN EXISTS_TAC tm THEN BETA_TAC) (asl, w)
     end):tactic;
@@ -343,7 +338,7 @@ fun RESQ_EXISTS_TAC tm =
 (*
 fun MATCH_MP impth  =
     let val sth = SPEC_ALL impth
-    val matchfn = match_term (#conseq(dest_imp(concl sth)))
+    val matchfn = match_term (snd(dest_imp(concl sth)))
     in
      fn th =>
        MP (INST_TY_TERM (matchfn (concl th)) sth) th
@@ -385,7 +380,7 @@ val RESQ_FORALL_CONV = (fn tm =>
     val (var,pred,t) = dest_resq_forall tm
     in
        RIGHT_CONV_RULE ((GEN_ALPHA_CONV var) THENC (ONCE_DEPTH_CONV BETA_CONV))
-                       (ISPECL [pred,mk_abs{Bvar=var,Body=t}] dthm)
+                       (ISPECL [pred,mk_abs(var,t)] dthm)
     end
     handle _ =>
         raise RES_QUAN_ERR {function="RESQ_FORALL_CONV",message = ""})
@@ -408,9 +403,9 @@ val LIST_RESQ_FORALL_CONV  = (fn tm =>
 
 val IMP_RESQ_FORALL_CONV  = (fn tm =>
     let val dthm = res_quanTheory.RES_FORALL
-    val {Bvar=var, Body=a} = dest_forall tm
-    val {ant=ante,conseq=t} = dest_imp a
-    val {Rator=pred,Rand=v} = dest_comb ante
+    val (var, a) = dest_forall tm
+    val (ante,t) = dest_imp a
+    val (pred,v) = dest_comb ante
     in
      if not(var = v)
      then raise RES_QUAN_ERR {function="IMP_RESQ_FORALL_CONV",
@@ -418,7 +413,7 @@ val IMP_RESQ_FORALL_CONV  = (fn tm =>
      else
        SYM (RIGHT_CONV_RULE ((GEN_ALPHA_CONV var) THENC
                              (ONCE_DEPTH_CONV BETA_CONV))
-                            (ISPECL [pred,mk_abs{Bvar=var,Body=t}] dthm))
+                            (ISPECL [pred,mk_abs(var,t)] dthm))
     end
      handle HOL_ERR _ =>
         raise RES_QUAN_ERR {function="IMP_RESQ_FORALL_CONV",message = ""})
@@ -432,9 +427,9 @@ val IMP_RESQ_FORALL_CONV  = (fn tm =>
 val RESQ_FORALL_AND_CONV = (fn tm =>
     let val rthm = res_quanTheory.RESQ_FORALL_CONJ_DIST
     val (var,pred,conj) = dest_resq_forall tm
-    val {conj1=left,conj2=right} = dest_conj conj
-    val left_pred = mk_abs{Bvar=var,Body=left}
-    val right_pred = mk_abs{Bvar=var,Body=right}
+    val (left,right) = dest_conj conj
+    val left_pred = mk_abs(var,left)
+    val right_pred = mk_abs(var,right)
     val thm = ISPECL [pred, left_pred, right_pred] rthm
     val c = LEFT_THENC_RIGHT
         (RF_CONV(BOTH_CONV BETA_CONV)) (BOTH_CONV(RF_CONV BETA_CONV))
@@ -457,9 +452,7 @@ val AND_RESQ_FORALL_CONV = (fn tm =>
     val (var1,pred1,body1) = dest_resq_forall conj1
     val (var2,pred2,body2) = dest_resq_forall conj2
     val thm = SYM(
-        ISPECL[pred1,
-               mk_abs{Bvar=var1,Body=body1},
-               mk_abs{Bvar=var2,Body=body2}] rthm)
+        ISPECL[pred1, mk_abs(var1,body1), mk_abs(var2,body2)] rthm)
     val c = LEFT_THENC_RIGHT
         (BOTH_CONV(RF_CONV BETA_CONV)) (RF_CONV(BOTH_CONV BETA_CONV))
     in
@@ -478,7 +471,7 @@ val RESQ_FORALL_SWAP_CONV = (fn tm =>
     let val rthm = res_quanTheory.RESQ_FORALL_REORDER
     val (i,P,body) = dest_resq_forall tm
     val (j,Q,R) = dest_resq_forall body
-    val thm1 = ISPECL [P,Q,mk_abs{Bvar=i, Body=mk_abs{Bvar=j, Body=R}}] rthm
+    val thm1 = ISPECL [P,Q,mk_abs(i, mk_abs(j, R))] rthm
     (* Reduce the two beta-redexes on either side of the equation. *)
     val c1 = RF_CONV(RF_CONV(RATOR_CONV BETA_CONV THENC BETA_CONV))
     val thm2 = CONV_RULE (LHS_CONV c1 THENC RHS_CONV c1) thm1
@@ -507,7 +500,7 @@ val RESQ_EXISTS_CONV = (fn tm' =>
     val (v,P,tm) = dest_resq_exists tm'
     in
      RIGHT_CONV_RULE ((ONCE_DEPTH_CONV BETA_CONV)THENC (GEN_ALPHA_CONV v))
-     (ISPECL[P,mk_abs{Bvar=v,Body=tm}] dthm)
+     (ISPECL[P,mk_abs(v,tm)] dthm)
     end
      handle HOL_ERR {message = s,...} =>
         raise RES_QUAN_ERR {function="RESQ_EXISTS_CONV",message = s})
@@ -595,19 +588,18 @@ fun check_varstruct tm =
 *)
 
 fun check_lhs tm =
- if is_var tm
- then [tm]
- else if is_const tm
+ if is_var tm then [tm] else 
+ if is_const tm
  then raise RES_QUAN_ERR {function="check_lhs",
                           message = "attempt to redefine the constant " ^
-                                    (#Name(dest_const tm))}
+                                    (fst(dest_const tm))}
  else if not(is_comb tm)
  then raise RES_QUAN_ERR {function="check_lhs",
               message ="lhs not of form (--`x = ...`--) or (--`f x = ... `--)"}
  else
-  let val {Rator=t1,Rand=t2} = dest_comb tm
-  val l1 = check_lhs t1
-  val l2 = check_varstruct t2
+  let val (t1,t2) = dest_comb tm
+      val l1 = check_lhs t1
+      val l2 = check_varstruct t2
   in
      if intersect l1 l2 = []
      then l1@l2
@@ -622,7 +614,7 @@ fun check_lhs tm =
 
 fun get_type left rightty =
   if is_var left then rightty
-  else get_type (rator left)  (Parse.Type`:^(type_of(rand left))->^rightty`)
+  else get_type (rator left)  (type_of(rand left) --> rightty)
   handle _ => raise RES_QUAN_ERR {function="get_type",  message = "bad lhs"};
 
 (* ---------------------------------------------------------------------*)
@@ -635,7 +627,7 @@ fun get_type left rightty =
 
 fun RESQ_DEF_EXISTS_RULE tm =
     let val (gvars,tm') = strip_forall tm
-    val (ress,{lhs=lh,rhs=rh}) = ((I ## dest_eq) o strip_resq_forall) tm'
+    val (ress,(lh,rh)) = ((I ## dest_eq) o strip_resq_forall) tm'
     	handle _ => raise RES_QUAN_ERR {function="RESQ_DEF_EXISTS_RULE",
                                         message = "definition not an equation"}
     val leftvars = check_lhs lh
@@ -644,7 +636,7 @@ fun RESQ_DEF_EXISTS_RULE tm =
     val resvars = map fst ress
     val finpred = mk_set (flatten (map (free_vars o snd) ress))
     val pConst = hd leftvars
-    val cname = #Name(dest_var pConst)
+    val cname = fst(dest_var pConst)
     in
     if not(Lexis.allowed_term_constant cname) then
     	raise RES_QUAN_ERR {function="RESQ_DEF_EXISTS_RULE",
@@ -670,16 +662,10 @@ fun RESQ_DEF_EXISTS_RULE tm =
                                          (type_vars_in_term pConst)))^
                                      "an unbound type variable in definition")}
     else
-      let val gl =
-         list_mk_forall
-           (finpred,
-            mk_exists
-               {Bvar=pConst,
-                Body=list_mk_resq_forall
-                       (ress,
-    	                list_mk_forall
-                           ((subtract(tl leftvars) resvars),
-                            mk_eq{lhs=lh,rhs=rh}))})
+      let val gl = list_mk_forall (finpred,
+                    mk_exists(pConst, list_mk_resq_forall
+                      (ress, list_mk_forall 
+                              (subtract(tl leftvars) resvars, mk_eq(lh,rh)))))
       val ex = list_mk_abs((tl leftvars), rh)
       val defthm = prove(gl,
     	REPEAT GEN_TAC THEN EXISTS_TAC ex THEN BETA_TAC
@@ -706,7 +692,7 @@ open Parse
 
 fun new_gen_resq_definition flag (name, tm) = let
   val def_thm = RESQ_DEF_EXISTS_RULE tm
-  val cname = (#Name o dest_var o #Bvar o dest_exists o concl) def_thm
+  val cname = (fst o dest_var o fst o dest_exists o concl) def_thm
 in
 
   new_specification {name=name,
@@ -732,8 +718,7 @@ val new_binder_resq_definition =  new_gen_resq_definition Binder;
 (* --------------------------------------------------------------------- *)
 local fun check st l =
     if null l
-    then raise RES_QUAN_ERR {function="check",
-                  message = st}
+    then raise RES_QUAN_ERR {function="check", message = st}
     else l
 
 (* --------------------------------------------------------------------- *)
@@ -744,7 +729,6 @@ local fun check st l =
 
 and  check_res th =
     if is_forall (concl th) then
-(*        CONV_RULE (ONCE_DEPTH_CONV RESQ_FORALL_CONV) th *)
     	GEN_ALL(RESQ_HALF_SPEC(SPEC_ALL th))
     else (RESQ_HALF_SPEC th)
       handle _ => raise RES_QUAN_ERR {function="check_res",
@@ -757,8 +741,7 @@ in
 
 fun RESQ_IMP_RES_THEN ttac resth =
     let val th = check_res resth
-    in
-     IMP_RES_THEN ttac th
+    in IMP_RES_THEN ttac th
     end
     handle HOL_ERR{message = s,...} =>
         raise RES_QUAN_ERR {function="RESQ_IMP_RES_THEN",message = s}

@@ -8,17 +8,9 @@
 structure Cond_rewrite :> Cond_rewrite =
 struct
 
-open HolKernel Drule Conv Tactic Tactical Thm_cont Rewrite
-open boolSyntax Rsyntax
+open HolKernel boolLib Rsyntax;
+
 infix ## THEN THENL ORELSEC;
-
- type hol_type = Type.hol_type;
- type term     = Term.term
- type thm      = Thm.thm
- type tactic   = Abbrev.tactic
- type conv     = Abbrev.conv
- type thm_tactic = Abbrev.thm_tactic;
-
 
 fun COND_REWR_ERR {function,message} =
           HOL_ERR{origin_structure = "Cond_rewrite",

@@ -12,17 +12,19 @@
 structure pred_setScript =
 struct
 
-open HolKernel Parse boolLib Rsyntax Prim_rec
-     arithmeticTheory prim_recTheory numTheory Num_induct Num_conv;
+(* interactive use
+app load ["pairLib", "numLib", "PGspec"];
+*)
+open HolKernel Parse boolLib Prim_rec pairLib numLib
+     numTheory prim_recTheory arithmeticTheory;
 
-type thm = Thm.thm
 infix THEN THENL THENC ORELSE ORELSEC |->;
 
-val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 
 (* ---------------------------------------------------------------------*)
 (* Create the new theory.						*)
 (* ---------------------------------------------------------------------*)
+
 val _ = new_theory "pred_set";
 
 val set = ty_antiq(Type`:'a->bool`);
@@ -35,8 +37,8 @@ val set = ty_antiq(Type`:'a->bool`);
 (* The axiom of specification: x IN {y | P y} iff P x			*)
 (* ---------------------------------------------------------------------*)
 
-val SPECIFICATION = new_infixr_definition(
-  "SPECIFICATION",
+val SPECIFICATION = 
+ new_infixr_definition( "SPECIFICATION",
   --`!P x. $IN (x:'a) (P:^set) = P x`--,
   450);
 
@@ -100,7 +102,7 @@ val GSPEC_DEF_LEMMA =
 (* --------------------------------------------------------------------- *)
 
 val GSPECIFICATION =
-    Rsyntax.new_specification
+    new_specification
       {name = "GSPECIFICATION",
       sat_thm = GSPEC_DEF_LEMMA,
       consts = [{const_name = "GSPEC", fixity = Prefix}]};
@@ -108,6 +110,7 @@ val GSPECIFICATION =
 (* --------------------------------------------------------------------- *)
 (* load generalized specification code.					 *)
 (* --------------------------------------------------------------------- *)
+
 val SET_SPEC_CONV = PGspec.SET_SPEC_CONV GSPECIFICATION;
 
 (* --------------------------------------------------------------------- *)
@@ -956,7 +959,7 @@ val CHOICE_EXISTS =
      CONV_TAC (ONCE_DEPTH_CONV NOT_FORALL_CONV) THEN
      REWRITE_TAC []);
 
-val CHOICE_DEF = Rsyntax.new_specification
+val CHOICE_DEF = new_specification
                    {name= "CHOICE_DEF",sat_thm=CHOICE_EXISTS,
                     consts=[{const_name="CHOICE",fixity=Prefix}]};
 
@@ -1376,7 +1379,7 @@ val lemma3 = TAC_PROOF(([],
      CONV_TAC (ONCE_DEPTH_CONV BETA_CONV) THEN
      REPEAT STRIP_TAC THEN
      (fn (A,g) =>
-       let val tm = mk_conj{conj1 = --`^(rand(lhs g)) IN s`--, conj2 = g}
+       let val tm = mk_conj(Term`^(rand(lhs g)) IN s`, g)
        in SUBGOAL_THEN tm (fn th => ACCEPT_TAC(CONJUNCT2 th))(A,g)
        end)
      THEN CONV_TAC SELECT_CONV THEN

@@ -11,25 +11,18 @@
 structure PGspec :> PGspec =
 struct
 
-type conv = Abbrev.conv;
-open HolKernel Parse boolTheory Drule Conv;
-open boolSyntax
+open HolKernel Parse boolLib pairSyntax PairedLambda
 
-infix THENC ORELSEC;
-infix ## |->;
+infix THENC ORELSEC ## |->;
 
-fun GSPEC_ERR{function,message} =
+fun SPEC_ERR{function,message} =
       HOL_ERR{origin_structure="Gspec",
               origin_function=function,
               message=message};
 
-val alpha_ty = ==`:'a`==;
-val beta_ty = ==`:'b`==;
-val bool_ty = ==`:bool`==;
+
 val PAIR = pairTheory.PAIR;
 
-fun dest_pair tm =
-  let val (f,s) = pairSyntax.dest_pair tm in {fst=f,snd=s} end
 
 (* --------------------------------------------------------------------- *)
 (* Local function: MK_PAIR						 *)
@@ -44,16 +37,14 @@ fun dest_pair tm =
 (* --------------------------------------------------------------------- *)
 
 fun MK_PAIR vs v =
-   if (null (tl vs))
-   then (REFL v) else
+   if null (tl vs)
+   then REFL v else
    let val vty = type_of v
-       val {Args=[ty1,ty2],...} = dest_type vty
-       val inst = SYM(SPEC v (INST_TYPE [{redex=alpha_ty,residue=ty1},
-                                         {redex=beta_ty, residue=ty2}] PAIR))
-       val (fst,snd) = pairSyntax.dest_pair(rhs(concl inst))
+       val [ty1,ty2] = snd(dest_type vty)
+       val inst = SYM(SPEC v (INST_TYPE [alpha |-> ty1, beta |-> ty2] PAIR))
+       val (fst,snd) = dest_pair(rhs(concl inst))
        val gv = genvar ty2
-   in SUBST [gv |-> MK_PAIR (tl vs) snd]
-            (mk_eq{lhs=v,rhs=pairSyntax.mk_pair(fst,gv)}) inst
+   in SUBST [gv |-> MK_PAIR (tl vs) snd] (mk_eq(v,mk_pair(fst,gv))) inst
    end;
 
 (* ---------------------------------------------------------------------*)
@@ -61,7 +52,7 @@ fun MK_PAIR vs v =
 (*									*)
 (* A call to:								*)
 (* 									*)
-(*  EXISTS_TUPLE_CONV [`x1`,...,`xn`] (--`?v. tm' = (\(x1,...,xn). tm) v*)
+(*  EXISTS_TUPLE_CONV [`x1`,...,`xn`] `?v. tm' = (\(x1,...,xn). tm) v   *)
 (*									*)
 (* returns:								*)
 (*									*)
@@ -69,21 +60,19 @@ fun MK_PAIR vs v =
 (* ---------------------------------------------------------------------*)
 
 local
-fun EX v tm th =
-      EXISTS (mk_exists{Bvar=v,Body=subst[{redex=tm,residue=v}](concl th)},tm)
-             th
-and CH tm th = CHOOSE (tm,ASSUME (mk_exists{Bvar=tm,Body=hd(hyp th)})) th
-val conv = RAND_CONV (BETA_CONV ORELSEC pairSyntax.PAIRED_BETA_CONV)
+fun EX v tm th = EXISTS (mk_exists(v,subst[tm |-> v] (concl th)),tm) th
+and CH tm th = CHOOSE (tm,ASSUME (mk_exists(tm,hd(hyp th)))) th
+val conv = RAND_CONV (BETA_CONV ORELSEC PAIRED_BETA_CONV)
 in
 fun EXISTS_TUPLE_CONV vs tm =
-   let val tup = end_itlist (fn a => fn b => pairSyntax.mk_pair(a,b)) vs
-       val {Bvar,Body} = dest_exists tm
+   let val tup = end_itlist (curry mk_pair) vs
+       val (Bvar,Body) = dest_exists tm
        val tupeq = MK_PAIR vs Bvar
        val asm1 = SUBST [Bvar |-> tupeq] Body (ASSUME Body)
        val comp = pairSyntax.strip_pair (rand(concl tupeq))
        val thm1 = Lib.itlist2 EX vs comp asm1
        val imp1 = DISCH tm (CHOOSE (Bvar,ASSUME tm) thm1)
-       val asm2 = ASSUME (subst [{redex=Bvar,residue=tup}] Body)
+       val asm2 = ASSUME (subst [Bvar |-> tup] Body)
        val thm2 = itlist CH vs (EXISTS (tm,tup) asm2)
        val imp2 = DISCH (hd(hyp thm2)) thm2
        val eq = IMP_ANTISYM_RULE imp1 imp2
@@ -104,7 +93,7 @@ end;
 local
 val EQT = el 1 (CONJUNCTS (SPEC (--`c:bool`--) EQ_CLAUSES))
 val PEQ = let val inst = INST_TYPE
-                           [beta_ty |-> bool_ty]
+                           [beta |-> bool]
                            (GENL[--`x:'a`--, --`y:'b`--,
                                  --`a:'a`--, --`b:'b`--] pairTheory.PAIR_EQ)
               val spec = SPECL [(--`a:'a`--),(--`T`--),
@@ -114,11 +103,10 @@ val PEQ = let val inst = INST_TYPE
 in
 fun PAIR_EQ_CONV tm =
    let val (vs,body) = strip_exists tm
-       val {lhs,rhs} = dest_eq body
-       val {fst=a,snd=T} = dest_pair lhs
-       val {fst=b,snd=c} = dest_pair rhs
-       val th = SPECL [a,b,c]
-                      (INST_TYPE [{redex=alpha_ty,residue=type_of a}] PEQ)
+       val (lhs,rhs) = dest_eq body
+       val (a,T) = dest_pair lhs
+       val (b,c) = dest_pair rhs
+       val th = SPECL [a,b,c] (INST_TYPE [alpha |-> type_of a] PEQ)
    in itlist EXISTS_EQ vs th
    end
 end;
@@ -132,13 +120,13 @@ end;
 (* ---------------------------------------------------------------------*)
 
 fun ELIM_EXISTS_CONV tm =
-   let val {Bvar,Body} = dest_exists tm
-       val {conj1=eq,conj2=body} = dest_conj Body
+   let val (Bvar,Body) = dest_exists tm
+       val (eq,body) = dest_conj Body
        val (asm1,asm2) = (SYM ## I) (CONJ_PAIR (ASSUME Body))
        val imp1 = DISCH tm (CHOOSE(Bvar,ASSUME tm)
-                                  (SUBST [Bvar |-> asm1] body asm2))
+                           (SUBST [Bvar |-> asm1] body asm2))
        val r = lhs eq
-       val asm = subst [{redex=Bvar,residue=r}] body
+       val asm = subst [Bvar  |-> r] body
        val imp2 = DISCH asm (EXISTS (tm,r) (CONJ (REFL r) (ASSUME asm)))
    in
    IMP_ANTISYM_RULE imp1 imp2
@@ -147,13 +135,13 @@ fun ELIM_EXISTS_CONV tm =
 (* ---------------------------------------------------------------------*)
 (* Local function: PROVE_EXISTS.					*)
 (*									*)
-(* PROVE_EXISTS `--)?x. tm(--` (x not free in tm) returns:		*)
+(* PROVE_EXISTS `?x. tm` (x not free in tm) returns:		        *)
 (*									*)
 (*   |- ?x.tm = tm							*)
 (* ---------------------------------------------------------------------*)
 
 fun PROVE_EXISTS tm =
-   let val {Bvar,Body} = dest_exists tm
+   let val (Bvar,Body) = dest_exists tm
        val v = genvar (type_of Bvar)
        val imp1 = DISCH tm (CHOOSE (v,ASSUME tm) (ASSUME Body))
        val imp2 = DISCH Body (EXISTS (tm,v) (ASSUME Body))
@@ -167,11 +155,11 @@ fun PROVE_EXISTS tm =
 (* makes variants of the variables in l2 such that they are all not in	*)
 (* l1 and are all different.						*)
 (* ---------------------------------------------------------------------*)
+
 fun list_variant l1 l2 =
-   if (null l2)
-   then []
+   if null l2 then []
    else let val v = variant l1 (hd l2)
-        in (v::list_variant (v::l1) (tl l2))
+        in v::list_variant (v::l1) (tl l2)
         end;
 
 (* ---------------------------------------------------------------------*)
@@ -199,56 +187,58 @@ fun list_variant l1 l2 =
 (*									*)
 (*   GSPEC (\(x1,...,xn). (t[x1,...,xn], p[x1,...,xn]))		        *)
 (* ---------------------------------------------------------------------*)
-
+fun check_const (s,thy) = 
+  assert (fn c => 
+           let val {Name, Thy, ...} = dest_thy_const c
+           in s=Name andalso thy=Thy
+           end handle HOL_ERR _ => false);
 
 local
-fun check name = assert (fn tm => #Name(dest_const tm) = name)
 val RAconv = RAND_CONV o ABS_CONV
 val conv = RAND_CONV(RAconv(RAND_CONV BETA_CONV))
 val conv2 = RAND_CONV (PAIR_EQ_CONV THENC PROVE_EXISTS)
 (* Would be simpler with dest_pabs *)
 fun mktup tm =
-   let val {Bvar,Body} = dest_abs(rand tm)
+   let val (Bvar,Body) = dest_abs(rand tm)
        val (xs,res) = mktup Body
-   in ((Bvar::xs),res)
-   end handle _ => let val {Bvar,Body} = dest_abs tm
-                   in ([Bvar], #fst(dest_pair Body))
-                   end
+   in (Bvar::xs,res)
+   end handle HOL_ERR _ => 
+        let val (Bvar,Body) = dest_abs tm
+        in ([Bvar], fst(dest_pair Body))
+        end
 in
 fun SET_SPEC_CONV th =
- let val GSPEC = let val vs = fst(strip_forall(concl th))
-                 in  GENL (rev vs) (SPECL vs th)
-                 end
-in fn tm =>
-   let val (_,[v,set]) = (check "IN" ## I) (strip_comb tm)
-       val {Rator,Rand=f} = dest_comb set
-       val _ = check "GSPEC" Rator
+ let val GSPEC = 
+        let val vs = fst(strip_forall(concl th))
+        in GENL (rev vs) (SPECL vs th)
+        end
+ in fn tm =>
+   let val (_,[v,set]) = (check_const ("IN","pred_set") ## I) (strip_comb tm)
+       val (Rator,f) = dest_comb set
+       val _ = check_const ("GSPEC","pred_set") Rator
        val vty = type_of v
-       and {Args=[uty,_],...} = dest_type(type_of f)
-       val inst = SPEC v (INST_TYPE [{redex=alpha_ty,residue=vty},
-                                     {redex=beta_ty,residue=uty}] GSPEC)
+       and [uty,_] = snd(dest_type(type_of f))
+       val inst = SPEC v (INST_TYPE [alpha |-> vty, beta |-> uty] GSPEC)
        val (vs,res) = mktup f
    in
-   if (all (not o (C free_in res)) vs)
+   if all (not o (C free_in res)) vs
    then let val spec = CONV_RULE conv (SPEC f inst)
      	    val thm1 = CONV_RULE conv2 spec
         in thm1
         end
-   else if (is_var res)
+   else if is_var res
         then let val spec = CONV_RULE conv (SPEC f inst)
                  val thm1 = CONV_RULE (RAND_CONV PAIR_EQ_CONV) spec
              in TRANS thm1 (ELIM_EXISTS_CONV (rhs(concl thm1)))
              end
         else let val spec = SPEC f inst
                  val exsts = rhs(concl spec)
-(* val nvs = list_variant (#Bvar(dest_exists exsts)::free_vars v) vs *)
                  val nvs = list_variant (free_vars v) vs
                  val thm = EXISTS_TUPLE_CONV nvs exsts
-             in
-             TRANS spec (CONV_RULE (RAND_CONV PAIR_EQ_CONV) thm)
+             in TRANS spec (CONV_RULE (RAND_CONV PAIR_EQ_CONV) thm)
              end
    end
-   handle _ => raise GSPEC_ERR{function="SET_SPEC_CONV", message = ""}
+   handle e => raise (wrap_exn "PGspec" "SET_SPEC_CONV" e)
 end end;
 
 end; (* Gspec *)
