@@ -140,7 +140,7 @@ rule
 (* qualified identifiers are not supported *)
 
   holtoken = parse
-    '"' ([^ '"'] | '\\' [ 'n' '"' '\\' 'r' ])* '"'
+    '"' ([^ '"' '\\'] | '\\' _ )* '"'
                            { let s = Lexing.lexeme lexbuf in
                              Str (String.sub s 1 (String.length s - 2)) }
   | startdir               { DirBeg }
@@ -157,7 +157,7 @@ rule
   | backtick               { Backtick }
   | backtick backtick      { DBacktick }
   | eof                    { raise (Eof "in HOL source") }
-  | _                      { raise (BadChar ("didn't expect char '"^Lexing.lexeme lexbuf^"'")) }
+  | _                      { raise (BadChar ("didn't expect char '"^Lexing.lexeme lexbuf^"' at char " ^ string_of_int (Lexing.lexeme_start lexbuf))) }
 
 and
   comment = parse
@@ -233,7 +233,7 @@ let tokstream p chan =
                                Ident(s,true)
                              else
                                TeXNormal(s)
-                | None    -> !lex lexbuf in
+                | None    -> (let tok = !lex lexbuf in print_string (render_token tok) ; tok) in
   let push s  = match !pending with
                   (* failure here would be an internal error *)
                   None    -> if s = "" then
