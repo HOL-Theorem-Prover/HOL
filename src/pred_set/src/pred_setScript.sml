@@ -19,10 +19,6 @@ app load ["pairLib", "numLib", "PGspec", "PSet_ind"];
 open HolKernel Parse boolLib Prim_rec pairLib numLib
      numTheory prim_recTheory arithmeticTheory BasicProvers;
 
-infix THEN THENL THENC ORELSE ORELSEC |->;
-infix 8 by
-
-
 (* ---------------------------------------------------------------------*)
 (* Create the new theory.						*)
 (* ---------------------------------------------------------------------*)
@@ -2956,6 +2952,106 @@ val _ = save_thm("ITSET_THM",ITSET_THM);
 val _ = save_thm("ITSET_EMPTY",
                   REWRITE_RULE []
                       (MATCH_MP (SPEC (Term`{}`) ITSET_THM) FINITE_EMPTY));
+
+
+val ITSET_INSERT = store_thm(
+  "ITSET_INSERT",
+  ``!s. FINITE s ==>
+        !f x b. ITSET f (x INSERT s) b =
+                ITSET f (REST (x INSERT s)) (f (CHOICE (x INSERT s)) b)``,
+  REPEAT STRIP_TAC THEN
+  POP_ASSUM (fn th =>
+    `FINITE (x INSERT s)` by PROVE_TAC [th, FINITE_INSERT]) THEN
+  IMP_RES_TAC ITSET_THM THEN
+  POP_ASSUM (fn th => CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [th]))) THEN
+  SIMP_TAC bool_ss [NOT_INSERT_EMPTY]);
+
+val absorption = #1 (EQ_IMP_RULE (SPEC_ALL ABSORPTION))
+val delete_non_element = #1 (EQ_IMP_RULE (SPEC_ALL DELETE_NON_ELEMENT))
+
+val AC_ITSET_INSERT = store_thm(
+  "AC_ITSET_INSERT",
+  ``!f s. (!x y z. f x (f y z) = f (f x y) z) /\
+          (!x y. f x y = f y x) /\
+          FINITE s ==>
+          !x b. ITSET f (x INSERT s) b = ITSET f (s DELETE x) (f x b)``,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  completeInduct_on `CARD s` THEN
+  POP_ASSUM (ASSUME_TAC o SIMP_RULE bool_ss [GSYM RIGHT_FORALL_IMP_THM,
+                                             AND_IMP_INTRO]) THEN
+  GEN_TAC THEN
+  SIMP_TAC bool_ss [ITSET_INSERT] THEN
+  REPEAT STRIP_TAC THEN
+  Q.ABBREV_TAC `t = REST (x INSERT s)` THEN
+  Q.ABBREV_TAC `y = CHOICE (x INSERT s)` THEN
+  `~(y IN t)` by PROVE_TAC [CHOICE_NOT_IN_REST] THEN
+  Cases_on `x IN s` THENL [
+    FULL_SIMP_TAC bool_ss [absorption] THEN
+    Cases_on `x = y` THENL [
+      POP_ASSUM SUBST_ALL_TAC THEN
+      Q_TAC SUFF_TAC `t = s DELETE y` THEN1 SRW_TAC [][] THEN
+      `s = y INSERT t` by PROVE_TAC [NOT_IN_EMPTY, CHOICE_INSERT_REST] THEN
+      SRW_TAC [][DELETE_INSERT, delete_non_element],
+      `s = y INSERT t` by PROVE_TAC [NOT_IN_EMPTY, CHOICE_INSERT_REST] THEN
+      `x IN t` by PROVE_TAC [IN_INSERT] THEN
+      Q.ABBREV_TAC `u = t DELETE x` THEN
+      `t = x INSERT u` by SRW_TAC [][INSERT_DELETE] THEN
+      `~(x IN u)` by PROVE_TAC [IN_DELETE] THEN
+      `s = x INSERT (y INSERT u)` by SRW_TAC [][INSERT_COMM] THEN
+      POP_ASSUM SUBST_ALL_TAC THEN
+      FULL_SIMP_TAC bool_ss [FINITE_INSERT, CARD_INSERT, DELETE_INSERT,
+                             IN_INSERT] THEN
+      ASM_SIMP_TAC arith_ss [delete_non_element] THEN AP_TERM_TAC THEN
+      PROVE_TAC []
+    ],
+    ALL_TAC
+  ] THEN (* ~(x IN s) *)
+  ASM_SIMP_TAC bool_ss [delete_non_element] THEN
+  `x INSERT s = y INSERT t`
+     by PROVE_TAC [NOT_EMPTY_INSERT, CHOICE_INSERT_REST] THEN
+  Cases_on `x = y` THENL [
+    POP_ASSUM SUBST_ALL_TAC THEN
+    Q_TAC SUFF_TAC `t = s` THEN1 SRW_TAC [][] THEN
+    FULL_SIMP_TAC bool_ss [EXTENSION, IN_INSERT] THEN PROVE_TAC [],
+    ALL_TAC
+  ] THEN (* ~(x = y) *)
+  `x IN t /\ y IN s` by PROVE_TAC [IN_INSERT] THEN
+  Q.ABBREV_TAC `u = s DELETE y` THEN
+  `~(y IN u)` by PROVE_TAC [IN_DELETE] THEN
+  `s = y INSERT u` by SRW_TAC [][INSERT_DELETE] THEN
+  POP_ASSUM SUBST_ALL_TAC THEN
+  FULL_SIMP_TAC bool_ss [IN_INSERT, FINITE_INSERT, CARD_INSERT,
+                         DELETE_INSERT, delete_non_element] THEN
+  Q.PAT_ASSUM `CHOICE s = y` (K ALL_TAC) THEN
+  Q.PAT_ASSUM `REST s = t` (K ALL_TAC) THEN
+  `t = x INSERT u` by
+     (FULL_SIMP_TAC bool_ss [EXTENSION, IN_INSERT] THEN PROVE_TAC []) THEN
+  ASM_SIMP_TAC arith_ss [delete_non_element] THEN AP_TERM_TAC THEN
+  PROVE_TAC []);
+
+val SUM_SET_def = new_definition(
+  "SUM_SET_def",
+  ``SUM_SET s = ITSET (+) s 0``);
+
+val SUM_SET_THM = store_thm(
+  "SUM_SET_THM",
+  ``(SUM_SET {} = 0) /\
+    (!x s. FINITE s ==> (SUM_SET (x INSERT s) = x + SUM_SET (s DELETE x)))``,
+  CONJ_TAC THEN REWRITE_TAC [SUM_SET_def] THENL [
+    SIMP_TAC bool_ss [FINITE_EMPTY, ITSET_THM],
+    ASSUME_TAC (SIMP_RULE arith_ss [] (Q.ISPEC `(+)` AC_ITSET_INSERT)) THEN
+    ASM_SIMP_TAC arith_ss [] THEN
+    Q_TAC SUFF_TAC
+      `!s. FINITE s ==>
+           !x n. ITSET (+) s (x + n) = x + ITSET (+) s n` THEN1
+      PROVE_TAC [ADD_CLAUSES, FINITE_DELETE] THEN
+    HO_MATCH_MP_TAC FINITE_INDUCT THEN CONJ_TAC THENL [
+      SIMP_TAC bool_ss [ITSET_THM, FINITE_EMPTY],
+      REPEAT STRIP_TAC THEN
+      ASM_SIMP_TAC bool_ss [delete_non_element] THEN
+      REWRITE_TAC [ADD_ASSOC]
+    ]
+  ]);
 
 val _ = export_rewrites
     [
