@@ -1324,8 +1324,9 @@ val INJ_EMPTY =
      REWRITE_TAC [INJ_DEF,NOT_IN_EMPTY,EXTENSION] THEN
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN RES_TAC);
 
-val INJ_DELETE = Q.prove 
-(`!s t f. INJ f s t ==> !e. e IN s ==> INJ f (s DELETE e) (t DELETE (f e))`,
+val INJ_DELETE = Q.store_thm
+("INJ_DELETE",
+ `!s t f. INJ f s t ==> !e. e IN s ==> INJ f (s DELETE e) (t DELETE (f e))`,
 RW_TAC bool_ss [INJ_DEF, DELETE_DEF] THENL
 [`~(e = x)` by FULL_SIMP_TAC bool_ss
                  [DIFF_DEF,DIFF_INSERT, DIFF_EMPTY, IN_DELETE] THEN
@@ -1414,8 +1415,9 @@ val BIJ_COMPOSE =
      REPEAT STRIP_TAC THENL
      [IMP_RES_TAC INJ_COMPOSE,IMP_RES_TAC SURJ_COMPOSE]);
 
-val BIJ_DELETE = Q.prove (
-`!s t f. BIJ f s t ==> !e. e IN s ==> BIJ f (s DELETE e) (t DELETE (f e))`, 
+val BIJ_DELETE = Q.store_thm 
+("BIJ_DELETE",
+ `!s t f. BIJ f s t ==> !e. e IN s ==> BIJ f (s DELETE e) (t DELETE (f e))`, 
 RW_TAC bool_ss [BIJ_DEF, SURJ_DEF, INJ_DELETE, DELETE_DEF, INJ_DEF] THENL
 [FULL_SIMP_TAC bool_ss [DIFF_DEF,DIFF_INSERT, DIFF_EMPTY, IN_DELETE] THEN 
   METIS_TAC [],
@@ -2014,6 +2016,22 @@ val CARD_PSUBSET =
      ASM_REWRITE_TAC [LESS_EQ] THEN
      REPEAT STRIP_TAC THEN FIRST_ASSUM ACCEPT_TAC);
 
+val SUBSET_EQ_CARD = Q.store_thm 
+("SUBSET_EQ_CARD",
+ `!s. FINITE s ==> !t. FINITE t /\ (CARD s = CARD t) /\ s SUBSET t ==> (s=t)`, 
+SET_INDUCT_TAC THEN RW_TAC bool_ss [EXTENSION] THENL
+[PROVE_TAC [CARD_DEF, CARD_EQ_0], ALL_TAC] THEN
+ EQ_TAC THEN RW_TAC bool_ss [] THENL 
+ [FULL_SIMP_TAC bool_ss [SUBSET_DEF], ALL_TAC] THEN
+ Q.PAT_ASSUM `!t. FINITE t /\ (CARD s = CARD t) /\ s SUBSET t ==> (s = t)`
+            (MP_TAC o Q.SPEC `t DELETE e`) THEN
+ RW_TAC arith_ss [FINITE_DELETE, CARD_DELETE, SUBSET_DELETE] THENL
+ [ALL_TAC, FULL_SIMP_TAC bool_ss [INSERT_SUBSET]] THEN
+ `CARD t = SUC (CARD s)` by PROVE_TAC [CARD_INSERT] THEN
+ `s SUBSET t` by FULL_SIMP_TAC bool_ss [INSERT_SUBSET] THEN
+ FULL_SIMP_TAC arith_ss [] THEN
+ RW_TAC bool_ss [INSERT_DEF, DELETE_DEF, GSPECIFICATION,IN_DIFF,NOT_IN_EMPTY]);
+
 val CARD_SING =
     store_thm
     ("CARD_SING",
@@ -2102,8 +2120,9 @@ val LESS_CARD_DIFF =
      IMP_RES_TAC (PURE_ONCE_REWRITE_RULE [GSYM NOT_LESS] th4)
      end);
 
-val FINITE_BIJ_CARD_EQ = Q.prove (
-`!S. FINITE S ==> !t f. BIJ f S t /\ FINITE t ==> (CARD S = CARD t)`,
+val FINITE_BIJ_CARD_EQ = Q.store_thm 
+("FINITE_BIJ_CARD_EQ",
+ `!S. FINITE S ==> !t f. BIJ f S t /\ FINITE t ==> (CARD S = CARD t)`,
 SET_INDUCT_TAC THEN RW_TAC bool_ss [BIJ_EMPTY, CARD_EMPTY] THEN
 `BIJ f s (t DELETE (f e))` by 
      METIS_TAC [DELETE_NON_ELEMENT, IN_INSERT, DELETE_INSERT, BIJ_DELETE] THEN
@@ -2111,7 +2130,7 @@ RW_TAC bool_ss [CARD_INSERT] THEN
 Q.PAT_ASSUM `$! m` (MP_TAC o Q.SPECL [`t DELETE f e`, `f`]) THEN
 RW_TAC bool_ss [FINITE_DELETE] THEN
 `f e IN t` by (Q.PAT_ASSUM `BIJ f (e INSERT s) t` MP_TAC THEN
-               RW_TAC (bool_ss++SET_SPEC_ss) [BIJ_DEF, INJ_DEF, INSERT_DEF]) THEN
+               RW_TAC (bool_ss++SET_SPEC_ss) [BIJ_DEF,INJ_DEF,INSERT_DEF]) THEN
 RW_TAC arith_ss [CARD_DELETE] THEN
 `~(CARD t = 0)` by METIS_TAC [EMPTY_DEF, IN_DEF, CARD_EQ_0] THEN
 RW_TAC arith_ss []);
@@ -3403,8 +3422,9 @@ ONCE_ASM_REWRITE_TAC [] THEN
 FULL_SIMP_TAC arith_ss [CARD_UNION, DELETE_NON_ELEMENT] THEN
 METIS_TAC [IN_INSERT]);
 
-val SUM_SAME_IMAGE = Q.prove (
-`!P. FINITE P 
+val SUM_SAME_IMAGE = Q.store_thm 
+("SUM_SAME_IMAGE",
+ `!P. FINITE P 
      ==> !f p. p IN P /\ (!q. q IN P ==> (f p = f q)) 
                ==> (SUM_IMAGE f P = CARD P * f p)`,
 SET_INDUCT_TAC THEN
@@ -3625,7 +3645,6 @@ val partition_def = new_definition(
   ``partition R s =
       { t | ?x. x IN s /\ (t = { y | y IN s /\ R x y})}``);
 
-
 val BIGUNION_partition = store_thm(
   "BIGUNION_partition",
   ``R equiv_on s ==> (BIGUNION (partition R s) = s)``,
@@ -3672,20 +3691,25 @@ val partition_elements_interrelate = store_thm(
   SIMP_TAC (srw_ss()) [partition_def, GSYM LEFT_FORALL_IMP_THM] THEN
   PROVE_TAC [equiv_on_def]);
 
-val partition_SUBSET = Q.prove (
-`!R s t. R equiv_on s /\ t IN (partition R s) ==> t SUBSET s`, 
+val partition_SUBSET = Q.store_thm 
+("partition_SUBSET",
+ `!R s t. R equiv_on s /\ t IN (partition R s) ==> t SUBSET s`, 
 RW_TAC bool_ss [partition_def, GSPECIFICATION, SUBSET_DEF] THEN
 FULL_SIMP_TAC bool_ss [GSPECIFICATION,pairTheory.PAIR_EQ]);
 
-val FINITE_partition = Q.prove (
-`!R s. R equiv_on s /\ FINITE s 
+val FINITE_partition = Q.store_thm 
+("FINITE_partition",
+ `!R s. R equiv_on s /\ FINITE s 
        ==> FINITE (partition R s) /\ 
            !t. t IN (partition R s) ==> FINITE t`,
 METIS_TAC [FINITE_BIGUNION_EQ, partition_SUBSET, 
            SUBSET_FINITE, BIGUNION_partition]);
 
-val partition_CARD = Q.prove (
-`!R s. R equiv_on s /\ FINITE s ==> (CARD s = SUM_IMAGE CARD (partition R s))`,
+val partition_CARD = Q.store_thm 
+("partition_CARD",
+ `!R s. R equiv_on s /\ FINITE s 
+          ==> 
+        (CARD s = SUM_IMAGE CARD (partition R s))`,
 METIS_TAC [FINITE_partition, BIGUNION_partition, DISJ_BIGUNION_CARD,
            partition_elements_disjoint, FINITE_BIGUNION, partition_def]);
 
