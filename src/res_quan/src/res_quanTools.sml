@@ -70,7 +70,7 @@ fun list_mk_res_exists (ress,body) =
 val (dest_res_forall, dest_res_exists, dest_res_exists_unique,
      dest_res_select, dest_res_abstract) =
     let fun dest_res_quan cons s =
-         let val check = assert (fn c => 
+         let val check = assert (fn c =>
                           let val {Name,Thy,...} = dest_thy_const c
                           in Name=cons andalso Thy="bool"
                           end)
@@ -127,8 +127,8 @@ local
            val v = fst (dest_abs b)
          in
            c
-           THENC RAND_CONV (ABS_CONV (RAND_CONV BETA_CONV))
            THENC RAND_CONV (ALPHA_CONV v)
+           THENC RAND_CONV (ABS_CONV (RAND_CONV BETA_CONV))
          end
        else c) tm
     end;
@@ -543,7 +543,7 @@ fun check_varstruct tm =
 *)
 
 fun check_lhs tm =
- if is_var tm then [tm] else 
+ if is_var tm then [tm] else
  if is_const tm
  then raise ERR "check_lhs" ("attempt to redefine the constant " ^
                              fst (dest_const tm))
@@ -608,7 +608,7 @@ fun RESQ_DEF_EXISTS_RULE tm =
     else
       let val gl = list_mk_forall (finpred,
                     mk_exists(pConst, list_mk_res_forall
-                      (ress, list_mk_forall 
+                      (ress, list_mk_forall
                               (subtract(tl leftvars) resvars, mk_eq(lh,rh)))))
       val ex = list_mk_abs((tl leftvars), rh)
       val defthm = prove(gl,
