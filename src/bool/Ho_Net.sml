@@ -16,10 +16,6 @@
  *
  * This only becomes really important when you have contextual rewriting.
  *
- * I'm sure all this code could be made faster.  The Isabelle term-nets
- * are no doubt much superior.  Also, this is compiled against the
- * public, not private Term structure.  The private might be faster.
- *
  * MODIFIED    : Donald Syme, November 1995, to be keyed up to higher order
  *               matching, based on JRH's code from GTT.  
  * ===================================================================== *)
@@ -29,8 +25,6 @@ struct
 
 
 open HolKernel boolSyntax;
-
-infix ##;
 
 val ERR = mk_HOL_ERR "Ho_Net";
 

@@ -4,6 +4,6 @@ sig
 
   val define_size : thm -> TypeBasePure.typeBase 
                         -> {def : thm, 
-                            const_tyopl : (term * string)list} option
+                            const_tyopl : (term * (string*string))list} option
                   
 end

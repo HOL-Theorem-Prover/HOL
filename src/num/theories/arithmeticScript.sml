@@ -3231,6 +3231,7 @@ val _ = adjoin_to_theory
    S "      nchotomy=num_CASES,";
    S "      size=SOME(Parse.Term`\\x:num. x`, TypeBasePure.ORIG boolTheory.REFL_CLAUSE),";
    S "      encode=NONE,";
+   S "      fields=[],";
    S "      lift=SOME(mk_var(\"numSyntax.lift_num\",Parse.Type`:'type -> num -> 'term`)),";
    S "      one_one=SOME prim_recTheory.INV_SUC_EQ,";
    S "      distinct=SOME numTheory.NOT_SUC}];"

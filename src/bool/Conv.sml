@@ -24,10 +24,6 @@ exception UNCHANGED
 
 fun QCONV c tm = c tm handle UNCHANGED => REFL tm
 
-infix 3 ##
-infix 5 |->
-infixr -->;
-
 val ERR = mk_HOL_ERR "Conv";
 
 

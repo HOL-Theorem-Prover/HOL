@@ -90,13 +90,16 @@ fun crosslessdiag l1 l2 =
       nfilter (fn (n,_) => not (n mod diaglength = 1)) cross
     end
 
-fun update_tyinfo new_simpls tyinfo = let
+fun update_tyinfo fields new_simpls tyinfo = let
   open TypeBasePure
   val existing_simpls = simpls_of tyinfo
   fun add_rwts {convs, rewrs} newrwts =
       {convs = convs, rewrs = rewrs @ newrwts}
+  val base = put_simpls (add_rwts existing_simpls new_simpls) tyinfo
 in
-  put_simpls (add_rwts existing_simpls new_simpls) tyinfo
+  case fields of 
+    NONE => base
+  | SOME flds => put_fields flds base
 end
 
 (* ----------------------------------------------------------------------
@@ -112,7 +115,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
 
   val app2 = C (curry op^)
   val typthm = TypeBasePure.axiom_of tyinfo
-  val typename = TypeBasePure.ty_name_of tyinfo
+  val (thyname,typename) = TypeBasePure.ty_name_of tyinfo
   val constructor =
     case TypeBasePure.constructors_of tyinfo of
       [x] => x
@@ -478,7 +481,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
       fupdcanon_thm :: fupdcanon_comp_thm :: new_simpls0
     else new_simpls0
   end
-  val new_tyinfo = update_tyinfo new_simpls tyinfo
+  val new_tyinfo = update_tyinfo (SOME (zip fields types)) new_simpls tyinfo
 
   (* set up parsing for the record type *)
   val brss = GrammarSpecials.bigrec_subdivider_string
@@ -517,7 +520,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
        else []))
   in
     (new_tyinfo,
-     "RecordType.update_tyinfo ["^String.concat (Lib.commafy thm_str_list)^
+     "RecordType.update_tyinfo NONE ["^String.concat (Lib.commafy thm_str_list)^
      "] ")
   end
 

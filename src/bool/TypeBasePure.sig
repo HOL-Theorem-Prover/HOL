@@ -9,7 +9,7 @@ sig
    type typeBase
    type simpfrag = simpfrag.simpfrag
    datatype shared_thm = ORIG of thm
-                       | COPY of string * thm
+                       | COPY of (string * string) * thm
 
    val gen_tyinfo      : {ax  : thm,
                           ind : thm,
@@ -24,11 +24,12 @@ sig
                           encode    : (term * shared_thm) option,
                           lift      : term option,
                           one_one   : thm option,
-                          distinct  : thm option} -> tyinfo
+                          distinct  : thm option,
+                          fields    : (string * hol_type) list} -> tyinfo
 
    val pp_tyinfo       : ppstream -> tyinfo -> unit
 
-   val ty_name_of      : tyinfo -> string
+   val ty_name_of      : tyinfo -> string * string
    val axiom_of        : tyinfo -> thm
    val induction_of    : tyinfo -> thm
    val constructors_of : tyinfo -> term list
@@ -38,6 +39,7 @@ sig
    val nchotomy_of     : tyinfo -> thm
    val distinct_of     : tyinfo -> thm option
    val one_one_of      : tyinfo -> thm option
+   val fields_of       : tyinfo -> (string * hol_type) list
    val simpls_of       : tyinfo -> simpfrag
    val size_of         : tyinfo -> (term * thm) option
    val encode_of       : tyinfo -> (term * thm) option
@@ -54,11 +56,13 @@ sig
    val put_size        : term * shared_thm -> tyinfo -> tyinfo
    val put_encode      : term * shared_thm -> tyinfo -> tyinfo
    val put_lift        : term -> tyinfo -> tyinfo
+   val put_fields      : (string * hol_type) list -> tyinfo -> tyinfo
 
    (* Functional databases of datatype facts and associated operations *)
 
    val empty           : typeBase
    val add             : typeBase -> tyinfo -> typeBase
+   val prim_get        : typeBase -> string * string -> tyinfo option
    val get             : typeBase -> string -> tyinfo option
    val listItems       : typeBase -> tyinfo list
 
@@ -83,4 +87,10 @@ sig
    val is_case         : typeBase -> term -> bool
 
    val is_constructor  : typeBase -> term -> bool
+
+(*
+   val mk_record       : typeBase -> hol_type -> (string * term) list -> term
+   val dest_record     : typeBase -> term -> (string * term) list
+   val is_record       : typeBase -> term -> bool
+*)
 end

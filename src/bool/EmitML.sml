@@ -562,8 +562,25 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
                   (fn () => ())
                   (fn () => add_break(1,0)) clauselist;
           end_block(); end_block())
-       | pp_decl tyvars (name,Record flist) = raise ERR "pp_datatype_as_ML" 
-                                         "Records not yet dealt with"
+       | pp_decl (tyvars,_) (name,Record flist) = 
+           let open ParseDatatype
+               val fields = map (I##pretypeToType) flist
+               fun pp_field (s,ty) =
+                 (begin_block CONSISTENT 2;
+                  add_string s; add_break (1,0);
+                  add_string" : "; ppty ty; end_block())
+           in begin_block CONSISTENT 0;
+              add_string "datatype";
+              pp_tyvars tyvars;
+              add_string(" "^name^" = ");
+              add_string(name^"C of {");
+              begin_block INCONSISTENT 0;
+              pr_list pp_field (fn () => add_string",")
+                               (fn () => add_break(1,0)) fields;
+              end_block();
+              add_string"}";
+              end_block()
+           end
  in 
     begin_block CONSISTENT 0
   ; pr_list (pp_decl (tyvars,ref true))

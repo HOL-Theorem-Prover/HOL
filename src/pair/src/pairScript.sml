@@ -479,6 +479,7 @@ val _ = adjoin_to_theory
       S "      nchotomy=ABS_PAIR_THM,";                      NL();
       S "      size=NONE,";                                  NL();
       S "      encode=NONE,";                                NL();
+      S "      fields=[],";                                  NL();
       S "      lift=SOME(mk_var(\"pairSyntax.lift_prod\",Parse.Type`:'type -> ('a -> 'term) -> ('b -> 'term) -> 'a # 'b -> 'term`)),";
       NL();
       S "      one_one=SOME CLOSED_PAIR_EQ,";                NL();

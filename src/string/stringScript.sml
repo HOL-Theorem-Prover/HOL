@@ -260,6 +260,7 @@ val _ = TypeBase.write
         size=SOME(Parse.Term`STRLEN`,TypeBasePure.ORIG STRLEN_DEF),
         encode=NONE, lift=NONE,
         one_one=SOME STRING_11,
+        fields = [],
        distinct=SOME (CONJUNCT1 STRING_DISTINCT)}];
 
 (*---------------------------------------------------------------------------*)
@@ -508,6 +509,7 @@ val _ = adjoin_to_theory
    S "      encode=NONE,";
    S "      lift=SOME(mk_var(\"stringSyntax.lift_string\",Parse.Type`:'type -> string -> 'term`)),";
    S "      one_one=SOME STRING_11,";
+   S "      fields = [],";
    S "      distinct=SOME (CONJUNCT1 STRING_DISTINCT)}];";
    S " ";
    S "val _ = computeLib.add_funs";

@@ -6,10 +6,6 @@ open HolKernel boolSyntax;
 type thry   = string -> {case_const : term,
                          constructors : term list} option
 
-infixr 3 -->;
-infix 3 |->;
-infix 4 ##;
-
 val ERR = mk_HOL_ERR "Functional";
 
 

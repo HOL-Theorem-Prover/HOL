@@ -1,11 +1,12 @@
 signature RecordType =
 sig
+  include Abbrev
 
   val prove_recordtype_thms
     : TypeBasePure.tyinfo * string list -> TypeBasePure.tyinfo * string
 
-  val update_tyinfo : Thm.thm list -> TypeBasePure.tyinfo ->
-                      TypeBasePure.tyinfo
+  val update_tyinfo : (string * hol_type) list option -> thm list -> 
+                      TypeBasePure.tyinfo -> TypeBasePure.tyinfo
 end
 
 (*

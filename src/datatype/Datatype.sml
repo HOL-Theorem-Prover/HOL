@@ -34,8 +34,6 @@
     open Rsyntax ParseDatatype;
 *)
 
-(*
-*)
 structure Datatype :> Datatype =
 struct
 
@@ -44,8 +42,6 @@ open HolKernel Parse boolLib Prim_rec ParseDatatype DataSize
 local open ind_typeTheory in end;
 
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
-
-infix ## |-> THEN THENC THENL;   infixr -->;
 
 type hol_type     = Type.hol_type
 type thm          = Thm.thm
@@ -76,6 +72,86 @@ val ERR = mk_HOL_ERR "Datatype";
  ---------------------------------------------------------------------------*)
 
 val define_type = ind_types.define_type;
+
+(*---------------------------------------------------------------------------*)
+(* Generate a string that, when evaluated as ML, will create the given type. *)
+(* Copied from TheoryPP.sml. Parameterized by strings representing *)
+(*---------------------------------------------------------------------------*)
+
+fun extern_type mk_vartype_str mk_thy_type_str ppstrm ty = 
+ let open Portable
+     val {add_break,add_newline,
+          add_string,begin_block,end_block,...} = with_ppstream ppstrm
+     val extern = extern_type mk_vartype_str mk_thy_type_str ppstrm
+
+ in
+  if is_vartype ty
+  then case dest_vartype ty
+        of "'a" => add_string "alpha"
+         | "'b" => add_string "beta"
+         | "'c" => add_string "gamma"
+         | "'d" => add_string "delta"
+         |   s  => add_string (mk_vartype_str^quote s)
+  else
+  case dest_thy_type ty
+   of {Tyop="bool",Thy="min", Args=[]} => add_string "bool"
+    | {Tyop="ind", Thy="min", Args=[]} => add_string "ind"
+    | {Tyop="fun", Thy="min", Args=[d,r]}
+       => (add_string "(";
+           begin_block INCONSISTENT 0;
+             extern d;
+             add_break (1,0);
+             add_string "-->";
+             add_break (1,0);
+             extern r;
+           end_block ();
+           add_string ")")
+   | {Tyop,Thy,Args}
+      => let in
+           add_string mk_thy_type_str;
+           begin_block INCONSISTENT 0;
+           add_string (quote Thy);
+           add_break (1,0);
+           add_string (quote Tyop);
+           add_break (1,0);
+           add_string "[";
+           begin_block INCONSISTENT 0;
+           pr_list extern (fn () => add_string ",")
+                          (fn () => add_break (1,0)) Args;
+           end_block (); add_string "]";
+           end_block ()
+         end
+ end
+
+fun with_parens pfn ppstrm x =
+  let open Portable
+  in add_string ppstrm "("; pfn ppstrm x; add_string ppstrm ")"
+  end
+
+fun pp_fields ppstrm fields =
+ let open Portable
+     val {add_break,add_newline,
+          add_string,begin_block,end_block,...} = with_ppstream ppstrm
+     fun pp_field (s,ty) =
+        (begin_block CONSISTENT 0;
+         add_string ("("^Lib.quote s);
+         add_string ",";
+         extern_type "U" "T" ppstrm ty;
+         add_string ")";
+         end_block())
+ in 
+  begin_block CONSISTENT 0;
+  add_string "let fun T t s A = mk_thy_type{Thy=t,Tyop=s,Args=A}"; add_newline();
+  add_string "    val U = mk_vartype"; add_newline();
+  add_string "in"; add_newline();
+  begin_block CONSISTENT 0;
+   add_string "[";
+   begin_block INCONSISTENT 0;
+   pr_list pp_field (fn () => add_string ",")
+                    (fn () => add_break (1,0)) fields;
+   end_block (); add_string "] end";
+   end_block ()
+ end
 
 
 (*---------------------------------------------------------------------------
@@ -230,7 +306,7 @@ local
             in case assoc2 tyname const_tyopl
                 of SOME(c,tyop) => TypeBasePure.put_size(c,size_eqs) info
                  | NONE => (HOL_MESG
-                              ("Can't find size constant for"^tyname)
+                              ("Can't find size constant for"^(snd tyname))
                              ; raise ERR "build_tyinfos" "")
             end
        in
@@ -481,6 +557,23 @@ in
 end
 
 fun handle_big_record ast =
+    (* ast is a type declaration of the form 
+           tyname = <foo>
+       where <foo> might be a record or a standard algebraic type with  
+       constructors 
+       This code looks at ast, and does nothing unless the <foo> is a big record.
+       If so, it translates 
+         rcdty = <| fld1 : ty1 ; fld2 : ty2 ; ... fldmax : tymax |>
+       into
+         rcdty = <| subrec_fld1 : subrec1_ty ; subrec_fld2 : subrec2_ty ... |> ; 
+         subrec1_ty = <| fld1 : ty1 ; fld2 : ty2 ; ... |> ; 
+         subrec2_ty = <| fld11 : ty11 ; fld12 : ty12 ; ... |> ; 
+         ...
+       Return a pair.  The first is the new list of type declarations.
+                       The second is the list of old type declarations for just
+                       those record types that were too big.
+       (The actual calculation of subrec_ty etc is done by really_handle_big_record.)
+    *)
     case ast of
       (tyname, Constructors _) => ([ast], [])
     | (tyname, Record fields) =>
@@ -579,9 +672,9 @@ fun prove_bigrec_theorems tyinfos ss (tyname, fldlist) = let
   open TypeBasePure
   val tyinfos = map #1 (tyinfos : (tyinfo * string) list)
   fun tyinfo_for ty = let
-    val {Tyop,...} = dest_thy_type ty
+    val {Thy,Tyop,...} = dest_thy_type ty
   in
-    List.find (fn tyi => ty_name_of tyi = Tyop) tyinfos
+    List.find (fn tyi => ty_name_of tyi = (Thy,Tyop)) tyinfos
   end
 
   fun mk_accessor fldname = let
@@ -738,35 +831,41 @@ fun augment_tyinfos persistp tyis thminfo_list = let
      tyinfo -> tyinfo; these functions will be applied to the basic tyinfo
      created for the record type).
 
-     [thminfo_list] is of type (string * (string * thm) list) list,
+     [thminfo_list] is of type 
+        (string * (string * thm) list * (string * hol_type) list) list,
+
      basically an association list from type names to extra stuff.
-     The theorems need to be added to the corresponding tyinfos, and
-     they are accompanied by the names under which they have been
-     stored in the theory segment.
+     The second component of each triple is theorems which need to be
+     added to the corresponding tyinfos, and they are accompanied by
+     the names under which they have been stored in the theory
+     segment.  The third component is field information for that type.
 
      [persistp] is true iff we need to adjoin stuff to make the change
      persistent. *)
   fun tyi_compare((ty1, _), (ty2, _)) =
-      String.compare(TypeBasePure.ty_name_of ty1,
-                     TypeBasePure.ty_name_of ty2)
+      Lib.pair_compare(String.compare,String.compare)
+            (TypeBasePure.ty_name_of ty1,
+             TypeBasePure.ty_name_of ty2)
   val tyis = Listsort.sort tyi_compare tyis
-  val thminfo_list = Listsort.sort
-                       (fn ((s1,_), (s2,_)) => String.compare(s1, s2))
-                       thminfo_list
-  fun merge acc tyis (thmi_list : (string * (string * thm) list) list)  =
+  fun alist_comp ((s1,_,_), (s2,_,_)) = String.compare(s1, s2)
+  val thminfo_list = Listsort.sort alist_comp thminfo_list
+  type thmdata = (string * thm) list
+  type flddata = (string * hol_type) list
+  fun merge acc tyis (thmi_list : (string * thmdata * flddata) list) =
       case (tyis, thmi_list) of
         ([], _ :: _ ) => raise Fail "Datatype.sml: invariant failure 101"
       | ([], []) => acc
       | (_, []) => tyis @ acc
-      | ((tyi_s as (tyi, ty_s))::tyi_rest, (th_s, thms)::thmi_rest) => let
+      | ((tyi_s as (tyi, ty_s))::tyi_rest, (th_s, thms, flds)::thmi_rest) => let
         in
-          case String.compare (TypeBasePure.ty_name_of tyi, th_s) of
+          case String.compare
+                   (snd(TypeBasePure.ty_name_of tyi), th_s) of
             LESS => merge (tyi_s::acc) tyi_rest thmi_list
           | GREATER => raise Fail "Datatype.sml: invariant failure 102"
           | EQUAL => let
-              val tyi' = RecordType.update_tyinfo (map #2 thms) tyi
+              val tyi' = RecordType.update_tyinfo (SOME flds) (map #2 thms) tyi
               val ty_s' = if persistp then
-                            "(RecordType.update_tyinfo [" ^
+                            "(RecordType.update_tyinfo NONE [" ^
                             String.concat (Lib.commafy (map #1 thms)) ^
                             "] o " ^ ty_s ^ ")"
                           else ty_s
@@ -820,6 +919,28 @@ local
 
   fun insert_tyarguments prevtypes astl =
       map (fn (s, dt) => (s, astpty_map (reform_tyops prevtypes) dt)) astl
+
+  fun getfldinfo bigrecinfo = let 
+      fun mapthis (s, l) = (s, map (I ## ParseDatatype.pretypeToType) l)
+  in
+      map mapthis bigrecinfo
+  end
+  fun merge_alists alist1 alist2 = let 
+      fun recurse acc alist1 alist2 = 
+          case (alist1, alist2) of 
+              ([], []) => List.rev acc
+            | (_, []) => List.rev acc @ map (fn (s,d) => (s, d, [])) alist1
+            | ([], _) => List.rev acc @ map (fn (s,d) => (s, [], d)) alist2
+            | ((a1k, a1d)::a1s, (a2k, a2d)::a2s) => 
+              case String.compare (a1k, a2k) of 
+                  LESS => recurse ((a1k,a1d,[]) :: acc) a1s alist2
+                | EQUAL => recurse ((a1k,a1d,a2d) :: acc) a1s a2s
+                | GREATER => recurse ((a2k,[],a2d) :: acc) alist1 a2s
+      fun alistcomp ((s1, d1), (s2, d2)) = String.compare(s1, s2)
+  in
+      recurse [] (Listsort.sort alistcomp alist1) (Listsort.sort alistcomp alist2)
+  end
+      
 in
 fun prim_define_type_from_astl prevtypes f db astl0 = let
   (* precondition: astl has been sorted, so that, for example,  those
@@ -831,7 +952,11 @@ in
       val (newastls, bigrecords) = reformulate_record_types astl
       val (db, tyinfos) = f prevtypes db newastls
       val function_defns = map define_bigrec_functions bigrecords
-      val tyinfos = augment_tyinfos true tyinfos function_defns
+      val fldinfo = getfldinfo bigrecords (* list of (string * (string*type) list) 
+                                             recording user's desired fields for 
+                                             each big record type *)
+      val merged_alists = merge_alists function_defns fldinfo
+      val tyinfos = augment_tyinfos true tyinfos merged_alists
       val ss = let
         open simpLib boolSimps
         fun foldthis (tyi, ss) =
@@ -842,8 +967,9 @@ in
       val newtheorems = map (prove_bigrec_theorems tyinfos ss) bigrecords
      (* don't need to make this stuff persist because what's adjoined already
         will mention the theorems that should be in the typebase.  What we've
-        done here is made the theorems look right. *)
-      val tyinfos = augment_tyinfos false tyinfos newtheorems
+        done here is made the theorems look right. 
+      *)
+      val tyinfos = augment_tyinfos false tyinfos merged_alists
     in
       (db, tyinfos)
     end
@@ -924,9 +1050,10 @@ fun primHol_datatype db q =
         5. ty_nchotomy      (* case completeness *)
         6. ty_size_def      (* size of type defn *)
         7. ty_to_bool_def   (* encoder for the type *)
-        7. lift             (* lifter (ML -> HOL) for the type  *)
-        8. one_one          (* one-one-ness of the constructors *)
-        9. distinct         (* distinctness of the constructors *)
+        8. lift             (* lifter (ML -> HOL) for the type  *)
+        9. one_one          (* one-one-ness of the constructors *)
+        10. distinct        (* distinctness of the constructors *)
+        11. fields          (* fields, if it is a record type *)
 
    We also adjoin some ML to the current theory so that if the theory
    gets exported and loaded in a later session, these "datatype"
@@ -936,9 +1063,9 @@ fun primHol_datatype db q =
 
 fun adjoin [] = raise ERR "Hol_datatype" "no tyinfos"
   | adjoin (string_etc0 :: strings_etc) =
- adjoin_to_theory
-   {sig_ps = NONE,
-    struct_ps = SOME
+    adjoin_to_theory
+    {sig_ps = NONE,
+     struct_ps = SOME
      (fn ppstrm =>
       let val S = PP.add_string ppstrm
           fun NL() = PP.add_newline ppstrm
@@ -961,7 +1088,7 @@ fun adjoin [] = raise ERR "Hol_datatype" "no tyinfos"
           fun do_extras extra_string =
               (S ("      val tyinfo0 = " ^ extra_string ^ "tyinfo0"); NL())
           fun do_string_etc ({ax,case_def,case_cong,induction,nchotomy,
-            one_one,distinct,encode,lift,size}, extra_simpls_string) =
+            one_one,distinct,encode,lift,size,fields}, extra_simpls_string) =
             (S "    let";                                               NL();
              S "      open TypeBasePure";                               NL();
              S "      val tyinfo0 = mk_tyinfo";                         NL();
@@ -974,7 +1101,8 @@ fun adjoin [] = raise ERR "Hol_datatype" "no tyinfos"
              do_encode encode;                                          NL();
              S("         lift=NONE,");                                  NL();
              S("         one_one="^one_one^",");                        NL();
-             S("         distinct="^distinct^"}");                      NL();
+             S("         distinct="^distinct^",");                      NL();
+             S("         fields="^fields^"}");                      NL();
              do_extras extra_simpls_string;
              S "      val () = computeLib.write_datatype_info tyinfo0"; NL();
              S "    in";                                                NL();
@@ -988,9 +1116,11 @@ fun adjoin [] = raise ERR "Hol_datatype" "no tyinfos"
         S "  ];";                                                       NL()
       end)};
 
+fun string_pair(s1,s2) = "("^Lib.quote s1^","^Lib.quote s2^")";
+
 fun write_tyinfo tyinfo =
  let open TypeBasePure
-     fun name s = ty_name_of tyinfo ^ s
+     fun name s = snd(ty_name_of tyinfo) ^ s
      val one_one_name =
        case one_one_of tyinfo
         of NONE => "NONE"
@@ -1016,14 +1146,14 @@ fun write_tyinfo tyinfo =
         in
         case axiom_of0 tyinfo
          of ORIG th => (save_thm (axname, th); "ORIG "^axname)
-          | COPY (s,th) => "COPY ("^Lib.quote s^","^s^"_Axiom)"
+          | COPY (sp,th) => "COPY ("^string_pair sp^","^snd(sp)^"_Axiom)"
         end
      val induction_name =
         let val indname = name"_induction"
         in
         case induction_of0 tyinfo
          of ORIG th => (save_thm (indname, th); "ORIG "^indname)
-          | COPY (s,th) => "COPY ("^Lib.quote s^","^s^"_induction)"
+          | COPY (sp,th) => "COPY ("^string_pair sp^","^snd(sp)^"_induction)"
         end
      val size_info =
        let val sd_name = name"_size_def"
@@ -1031,8 +1161,8 @@ fun write_tyinfo tyinfo =
        case size_of0 tyinfo
         of NONE => NONE
          | SOME (tm, ORIG def) => SOME (tm, "ORIG "^sd_name)
-         | SOME (tm, COPY(s,def))
-            => SOME (tm, "COPY ("^Lib.quote s^","^s^"_size_def)")
+         | SOME (tm, COPY(sp,def))
+            => SOME (tm, "COPY ("^string_pair sp^","^snd(sp)^"_size_def)")
        end
      val encode_info =
        let val sd_name = "encode_"^name"_def"
@@ -1040,8 +1170,8 @@ fun write_tyinfo tyinfo =
        case encode_of0 tyinfo
         of NONE => NONE
          | SOME (tm, ORIG def) => SOME (tm, "ORIG "^sd_name)
-         | SOME (tm, COPY(s,def))
-            => SOME (tm, "COPY ("^Lib.quote s^",encode_"^s^"_def)")
+         | SOME (tm, COPY(sp,def))
+            => SOME (tm, "COPY ("^string_pair sp^",encode_"^snd(sp)^"_def)")
        end
      val lift_info = NONE
  in
@@ -1054,6 +1184,7 @@ fun write_tyinfo tyinfo =
     encode    = encode_info,
     lift      = lift_info,
     one_one   = one_one_name,
+    fields    = Portable.pp_to_string 60 pp_fields (fields_of tyinfo),
     distinct  = distinct_name}
  end;
 
@@ -1069,7 +1200,7 @@ fun persistent_tyinfo tyinfos_etc =
 
 (*---------------------------------------------------------------------------*)
 (* Construct trivial theorem from which structure of original datatype can   *)
-(* recovered.                                                                *)
+(* be recovered.                                                             *)
 (*---------------------------------------------------------------------------*)
 
 fun mk_datatype_presentation thy tyspecl =
@@ -1084,7 +1215,7 @@ fun mk_datatype_presentation thy tyspecl =
         | type_dec (tyname,Record fields) = 
           let val fvars = map (mk_var o (I##pretypeToType)) fields
               val tyn_var = mk_var(tyname,ind)
-              val record_var = mk_var("record",	
+              val record_var = mk_var("record", 
                                       list_mk_fun(ind::map type_of fvars,bool))
           in
             list_mk_comb(record_var,tyn_var::fvars)
@@ -1103,8 +1234,8 @@ fun Hol_datatype q =
   val tyinfos_etc = primHol_datatype (TypeBase.theTypeBase()) q
   val _     = datatype_thm (mk_datatype_presentation (current_theory()) tyspecl)
   val tynames = map (TypeBasePure.ty_name_of o #1) tyinfos_etc
-  val tynames = filter (not o is_substring bigrec_subdivider_string) tynames
-  val tynames = map Lib.quote tynames
+  val tynames = filter (not o is_substring bigrec_subdivider_string o snd) tynames
+  val tynames = map (Lib.quote o snd) tynames
   val message = "Defined "^(if length tynames > 1 then "types" else "type")^
                 ": "^String.concat (Lib.commafy tynames)
  in

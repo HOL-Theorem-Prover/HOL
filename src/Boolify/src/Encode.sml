@@ -21,9 +21,9 @@ infixr 1 -->;
 val ERR = mk_HOL_ERR "Encode";
 
 val head = Lib.repeat rator;
+fun pair_string(s1,s2) = s1^"$"^s2;
 
 val bool_list = mk_list_type bool;
-
 val bool_nil = inst [alpha |-> bool] listSyntax.nil_tm;
 val bool_cons = inst [alpha |-> bool] listSyntax.cons_tm;
 val bool_append = inst [alpha |-> bool] listSyntax.append_tm;
@@ -129,6 +129,12 @@ fun unflatten f =
   in
     rev o map (rev o snd) o foldl h []
   end;
+
+fun tyconst_names ty = 
+  let val {Thy,Tyop,Args} = dest_thy_type ty
+  in (Thy,Tyop)
+  end;
+
 fun define_encode ax db =
  let val dtys = Prim_rec.doms_of_tyaxiom ax  (* primary types in axiom *)
      val tyvars = Lib.U (map (snd o dest_type) dtys)
@@ -189,12 +195,6 @@ fun define_encode ax db =
          mk_eq(mk_comb(assoc fn_i fn_i_map, capp),
                end_itlist (curry mk_bool_append)
                (bl :: map (mk_app cl) (snd(strip_comb capp))))
-(*
-               case snd(strip_comb capp)
-                of [] => bool_nil ()
-                 | L  => end_itlist (curry mk_bool_append)
-                         (mk_bool_cons (T, bool_nil ())::map (mk_app cl) L))
-*)
          end
      val bare_conjls = unflatten (rator o lhs) bare_conjl
      val annot_conjs =
@@ -212,7 +212,7 @@ fun define_encode ax db =
      val cty = (I##(type_of o last)) o strip_comb o lhs o snd o strip_forall
      val ctyl = Lib.mk_set (map cty (strip_conj (concl defn)))
      val const_tyl = gather (fn (c,ty) => mem ty dtys) ctyl
-     val const_tyopl = map (fn (c,ty) => (c,fst(dest_type ty))) const_tyl
+     val const_tyopl = map (fn (c,ty) => (c,tyconst_names ty)) const_tyl
  in
     SOME {def=defn,const_tyopl=const_tyopl}
  end
@@ -231,7 +231,8 @@ fun insert_encode {def, const_tyopl} tyinfol =
           let val tyname = TypeBasePure.ty_name_of info
           in case assoc2 tyname const_tyopl 
               of SOME(c,tyop) => TypeBasePure.put_encode(c,encode_eqs) info
-               | NONE => (HOL_MESG ("Can't find encode constant for"^tyname);
+               | NONE => (HOL_MESG ("Can't find encode constant for"
+                                 ^Lib.quote(pair_string tyname));
                          raise ERR "build_tyinfos" "")
           end
      in
@@ -246,11 +247,12 @@ fun add_encode tyinfol =
    else let
       val db = TypeBase.theTypeBase ()
       val recursion = TypeBasePure.axiom_of (hd tyinfol)
-      val ty = TypeBasePure.ty_name_of (hd tyinfol)
+      val tyname = TypeBasePure.ty_name_of (hd tyinfol)
     in
       case define_encode recursion db 
        of SOME s => insert_encode s tyinfol
-        | NONE => (HOL_MESG("Couldn't define encode function for type "^ty)
+        | NONE => (HOL_MESG("Couldn't define encode function for type "
+                            ^Lib.quote (pair_string tyname))
                    ; tyinfol)
     end;
 

@@ -88,7 +88,7 @@ in
 (*===========================================================================*)
 
 fun termEval tm =
- let val tm_as_MLstring = PP.pp_to_string 70 Drop.pp_term_as_ML tm
+ let val tm_as_MLstring = PP.pp_to_string 70 EmitML.pp_term_as_ML tm
      val MLstring = lift (type_of tm) tm_as_MLstring
  in 
      if !checkingML then 

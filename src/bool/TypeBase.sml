@@ -55,6 +55,7 @@ fun case_const_of s   = TypeBasePure.case_const_of (valOf s (read s))
 fun case_cong_of s    = TypeBasePure.case_cong_of (valOf s (read s))
 fun case_def_of s     = TypeBasePure.case_def_of (valOf s (read s))
 fun nchotomy_of s     = TypeBasePure.nchotomy_of (valOf s (read s))
+fun fields_of s       = TypeBasePure.fields_of (valOf s (read s))
 fun distinct_of s     = valOf2 s "distinct_of"
                             (TypeBasePure.distinct_of (valOf s (read s)))
 fun one_one_of s      = valOf2 s "one_one_of"

@@ -182,7 +182,7 @@ fun pprint pp x =
  in
    let val _  = pp strm x
    in flush_ppstream strm; ()
-   end handle _ => flush_ppstream strm
+   end handle e => (flush_ppstream strm; raise e)
  end;
 
 

@@ -364,6 +364,7 @@ fun enum_type_to_tyinfo (ty, constrs) = let
                   encode = NONE,
                   lift = NONE,
                   one_one = NONE,
+                  fields = [],
                   distinct = distinct }
 in
   case distinct of

@@ -6,35 +6,41 @@ structure TypeBasePure :> TypeBasePure =
 struct
 
 open HolKernel boolSyntax Drule Conv Prim_rec;
-
 type ppstream = Portable.ppstream
 
 val ERR = mk_HOL_ERR "TypeBasePure";
+
+fun type_names ty = 
+  let val {Thy,Tyop,Args} = Type.dest_thy_type ty
+  in (Thy,Tyop)
+  end;
 
 type simpfrag = simpfrag.simpfrag
 
 datatype shared_thm
     = ORIG of thm
-    | COPY of string * thm;
+    | COPY of (string * string) * thm;
 
 fun thm_of (ORIG x)     = x
   | thm_of (COPY (s,x)) = x;
 
 
 datatype tyinfo =
-  FACTS of string * {axiom        : shared_thm,
-                     induction    : shared_thm,
-                     case_def     : thm,
-                     case_cong    : thm,
-                     nchotomy     : thm,
-                     case_const   : term,
-                     constructors : term list,
-                     size         : (term * shared_thm) option,
-                     encode       : (term * shared_thm) option,
-                     lift         : term option,
-                     distinct     : thm option,
-                     one_one      : thm option,
-                     simpls       : simpfrag};
+  FACTS of (string * string) * 
+           {axiom        : shared_thm,
+            induction    : shared_thm,
+            case_def     : thm,
+            case_cong    : thm,
+            nchotomy     : thm,
+            case_const   : term,
+            constructors : term list,
+            size         : (term * shared_thm) option,
+            encode       : (term * shared_thm) option,
+            lift         : term option,
+            distinct     : thm option,
+            one_one      : thm option,
+            fields       : (string * hol_type) list,
+            simpls       : simpfrag};
 
 (*---------------------------------------------------------------------------
                   Projections
@@ -49,10 +55,11 @@ fun induction_of (FACTS(_,{induction,...})) = thm_of induction
 fun nchotomy_of (FACTS(_,{nchotomy,...})) = nchotomy
 fun distinct_of (FACTS(_,{distinct,...})) = distinct
 fun one_one_of (FACTS(_,{one_one,...})) = one_one
+fun fields_of (FACTS(_,{fields,...})) = fields
 fun simpls_of (FACTS(_,{simpls,...})) = simpls
 fun axiom_of0 (FACTS(_,{axiom,...})) = axiom
 fun axiom_of (FACTS(_,{axiom,...})) = thm_of axiom
-fun ty_name_of (FACTS(s,_)) = s
+fun ty_name_of (FACTS(sp,_)) = sp
 
 fun size_of0 (FACTS(_,{size,...})) = size;
 fun size_of (FACTS(_,{size=NONE,...})) = NONE
@@ -68,66 +75,76 @@ fun lift_of(FACTS(_,{lift,...})) = lift;
                     Making alterations
  ---------------------------------------------------------------------------*)
 
-fun put_nchotomy th (FACTS(s,
+fun put_nchotomy th (FACTS(sp,
  {axiom, case_const,case_cong,case_def,constructors,
-  induction, nchotomy, distinct, one_one, simpls, 
+  induction, nchotomy, distinct, one_one, fields, simpls, 
   size, encode, lift}))
   =
-  FACTS(s, {axiom=axiom, case_const=case_const,
+  FACTS(sp,{axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def, constructors=constructors,
             induction=induction, nchotomy=th, distinct=distinct,
-            one_one=one_one, simpls=simpls, 
+            one_one=one_one, fields=fields, simpls=simpls, 
             size=size, encode=encode,lift=lift})
 
-fun put_simpls thl (FACTS(s,
+fun put_simpls thl (FACTS(sp,
  {axiom, case_const, case_cong, case_def, constructors,
-  induction, nchotomy, distinct, one_one, simpls, size, encode,lift}))
+  induction, nchotomy, distinct, one_one, fields, simpls, size, encode,lift}))
   =
-  FACTS(s, {axiom=axiom, case_const=case_const,
+  FACTS(sp, {axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, simpls=thl, 
+            one_one=one_one, fields=fields, simpls=thl, 
             size=size, encode=encode,lift=lift});
 
-fun put_induction th (FACTS(s,
+fun put_induction th (FACTS(sp,
  {axiom, case_const,case_cong,case_def,constructors,
-  induction, nchotomy, distinct, one_one, simpls, size, encode,lift}))
+  induction, nchotomy, distinct, one_one, fields, simpls, size, encode,lift}))
   =
-  FACTS(s, {axiom=axiom, case_const=case_const,
+  FACTS(sp, {axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def, constructors=constructors,
             induction=th, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, simpls=simpls, 
+            one_one=one_one, fields=fields, simpls=simpls, 
             size=size, encode=encode,lift=lift})
 
-fun put_size (size_tm,size_rw) (FACTS(s,
+fun put_size (size_tm,size_rw) (FACTS(sp,
  {axiom, case_const,case_cong,case_def,constructors,
-  induction, nchotomy, distinct, one_one, simpls, size, encode,lift}))
+  induction, nchotomy, distinct, one_one, fields, simpls, size, encode,lift}))
   =
-  FACTS(s, {axiom=axiom, case_const=case_const,
+  FACTS(sp, {axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, simpls=simpls, size=SOME(size_tm,size_rw),
+            one_one=one_one, fields=fields, simpls=simpls, size=SOME(size_tm,size_rw),
             encode=encode,lift=lift});
 
-fun put_encode (encode_tm,encode_rw) (FACTS(s,
+fun put_encode (encode_tm,encode_rw) (FACTS(sp,
  {axiom, case_const,case_cong,case_def,constructors,
-  induction, nchotomy, distinct, one_one, simpls, size, encode,lift}))
+  induction, nchotomy, distinct, one_one, fields, simpls, size, encode,lift}))
   =
-  FACTS(s, {axiom=axiom, case_const=case_const,
+  FACTS(sp, {axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, simpls=simpls,
+            one_one=one_one, fields=fields, simpls=simpls,
             size=size, encode=SOME(encode_tm,encode_rw), lift=lift});
 
-fun put_lift lift_tm (FACTS(s,
+fun put_lift lift_tm (FACTS(sp,
  {axiom, case_const,case_cong,case_def,constructors,
-  induction, nchotomy, distinct, one_one, simpls, size, encode, lift}))
+  induction, nchotomy, distinct, one_one, fields, simpls, size, encode, lift}))
   =
-  FACTS(s, {axiom=axiom, case_const=case_const,
+  FACTS(sp, {axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, simpls=simpls,
+            one_one=one_one, fields=fields, simpls=simpls,
             size=size, encode=encode, lift=SOME lift_tm});
+
+fun put_fields flds (FACTS(sp,
+ {axiom, case_const,case_cong,case_def,constructors,
+  induction, nchotomy, distinct, one_one, fields, simpls, size, encode, lift}))
+  =
+  FACTS(sp, {axiom=axiom, case_const=case_const,
+            case_cong=case_cong,case_def=case_def,constructors=constructors,
+            induction=induction, nchotomy=nchotomy, distinct=distinct,
+            one_one=one_one, fields=flds, simpls=simpls,
+            size=size, encode=encode, lift=lift});
 
 
 (*---------------------------------------------------------------------------*
@@ -141,7 +158,7 @@ fun basic_info case_def =
      val constrs = map (#1 o strip_comb o rand) lefts
      val ty      = type_of (rand (Lib.trye hd lefts))
  in
-   (fst(dest_type ty), constrs)
+   (type_names ty, constrs)
  end
  handle HOL_ERR _ => raise ERR "basic_info" "";
 
@@ -157,12 +174,12 @@ val defn_const =
  *---------------------------------------------------------------------------*)
 
 fun mk_tyinfo {ax,case_def,case_cong,induction,
-               nchotomy,size,encode,lift,one_one,distinct} =
-  let val (ty_name,constructors) = basic_info case_def
+               nchotomy,size,encode,lift,one_one,fields, distinct} =
+  let val (ty_names,constructors) = basic_info case_def
       val inj = case one_one of NONE => [] | SOME x => [x]
       val D  = case distinct of NONE => [] | SOME x => CONJUNCTS x
   in
-   FACTS(ty_name,
+   FACTS(ty_names,
      {constructors = constructors,
       case_const   = defn_const case_def,
       case_def     = case_def,
@@ -171,6 +188,7 @@ fun mk_tyinfo {ax,case_def,case_cong,induction,
       nchotomy     = nchotomy,
       one_one      = one_one,
       distinct     = distinct,
+      fields       = fields,
       simpls       = {rewrs = case_def :: (D@map GSYM D@inj), convs = []},
       size         = size,
       encode       = encode,
@@ -183,7 +201,7 @@ local fun mk_ti (n,ax,ind)
                 (cdef::cds) (ccong::cgs) (oo::oos) (d::ds) (nch::nchs) =
             mk_tyinfo{ax=COPY(n,ax), induction=COPY(n,ind), case_def=cdef,
                       case_cong=ccong, nchotomy=nch, one_one=oo, distinct=d,
-                      size=NONE, encode=NONE,lift=NONE}
+                      size=NONE, encode=NONE,lift=NONE, fields=[]}
             :: mk_ti (n,ax,ind) cds cgs oos ds nchs
         | mk_ti _ [] [] [] [] [] = []
         | mk_ti _ [] _ _ _ _ = raise ERR "gen_tyinfo" "Too few case defns"
@@ -201,8 +219,8 @@ fun gen_tyinfo {ax, ind, case_defs} =
                  "Number of theorems automatically proved doesn't match up"
      val tyinfo_1 = mk_tyinfo
            {ax=ORIG ax, induction=ORIG ind,
-            case_def=hd case_defs, case_cong=hd case_congs,
-            nchotomy=hd nchotomyl, size=NONE, encode=NONE, lift=NONE,
+            case_def=hd case_defs, case_cong=hd case_congs, nchotomy=hd nchotomyl, 
+            size=NONE, encode=NONE, lift=NONE, fields=[],
             one_one=hd one_ones, distinct=hd distincts}
  in
    if length nchotomyl = 1 then [tyinfo_1]
@@ -214,28 +232,31 @@ fun gen_tyinfo {ax, ind, case_defs} =
  end
 end;
 
+fun name_pair(s1,s2) = s1^"$"^s2;
 
-fun pp_tyinfo ppstrm (FACTS(ty_name,recd)) =
+fun pp_tyinfo ppstrm (FACTS(ty_names,recd)) =
  let open Portable
      val {add_string,add_break,begin_block,end_block,...}
           = with_ppstream ppstrm
      val pp_term = Parse.pp_term ppstrm
      val pp_thm = Parse.pp_thm ppstrm
      val {constructors, case_const, case_def, case_cong, induction,
-          nchotomy,one_one,distinct,simpls,size,encode,lift,axiom} = recd
+          nchotomy,one_one,distinct,simpls,size,encode,lift,axiom,fields} = recd
+     val ty_namestring = name_pair ty_names
  in
    begin_block CONSISTENT 0;
      begin_block INCONSISTENT 0;
         add_string "-----------------------"; add_newline ppstrm;
         add_string "-----------------------"; add_newline ppstrm;
         add_string "HOL datatype:"; add_break(1,0);
-        add_string (Lib.quote ty_name); end_block();
+        add_string (Lib.quote ty_namestring); end_block();
    add_break(1,0);
    begin_block CONSISTENT 1;
    add_string "Primitive recursion:"; add_break (1,0);
        (case axiom
          of ORIG thm  => pp_thm thm
-          | COPY(s,_) => add_string ("see "^Lib.quote s)); end_block();
+          | COPY(sp,_) => add_string ("see "^Lib.quote (name_pair sp))); 
+        end_block();
    add_break(1,0);
    begin_block CONSISTENT 1; add_string "Case analysis:";
                              add_break (1,0); pp_thm case_def; end_block();
@@ -246,7 +267,7 @@ fun pp_tyinfo ppstrm (FACTS(ty_name,recd)) =
         (begin_block CONSISTENT 1;
          add_string "Size:"; add_break (1,0);
          (case size_def
-           of COPY(s,th) => add_string ("see "^Lib.quote s)
+           of COPY(sp,th) => add_string ("see "^Lib.quote (name_pair sp))
             | ORIG th    => if is_const tm
                             then pp_thm th else pp_term tm)
          ; end_block(); add_break(1,0));
@@ -258,7 +279,7 @@ fun pp_tyinfo ppstrm (FACTS(ty_name,recd)) =
         (begin_block CONSISTENT 1;
          add_string "Encoder:"; add_break (1,0);
          (case encode_def
-           of COPY(s,th) => add_string ("see "^Lib.quote s)
+           of COPY(sp,th) => add_string ("see "^Lib.quote (name_pair sp))
             | ORIG th    => if is_const tm
                             then pp_thm th else pp_term tm);
           end_block();
@@ -268,7 +289,7 @@ fun pp_tyinfo ppstrm (FACTS(ty_name,recd)) =
    add_string "Induction:"; add_break (1,0);
        (case induction
          of ORIG thm  => pp_thm thm
-          | COPY(s,_) => add_string ("see "^Lib.quote s)); end_block();
+          | COPY(sp,_) => add_string ("see "^Lib.quote (name_pair sp))); end_block();
    add_break(1,0);
    begin_block CONSISTENT 1; add_string "Case completeness:";
    add_break (1,0); pp_thm nchotomy; end_block();
@@ -299,9 +320,11 @@ type typeBase = tyinfo Binaryset.set
 
 val empty =
    Binaryset.empty (fn (f1,f2) =>
-       String.compare (ty_name_of f1, ty_name_of f2));
+     Lib.pair_compare (String.compare,String.compare)
+               (ty_name_of f1, ty_name_of f2));
 
-fun get db s = Binaryset.find (fn f => (s = ty_name_of f)) db;
+fun prim_get db sp = Binaryset.find (fn f => (sp = ty_name_of f)) db;
+fun get db s = Binaryset.find (fn f => (s = snd(ty_name_of f))) db;
 fun add db f = Binaryset.add(db,f);
 val listItems = Binaryset.listItems;
 
@@ -576,5 +599,8 @@ fun is_constructor tybase c =
       | SOME tyinfo => op_mem same_const c (constructors_of tyinfo)
   end handle HOL_ERR _ => false;
 
+(* 
+fun mk_record tybase ty fields = 
+*)
 
 end

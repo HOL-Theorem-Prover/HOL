@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* Some (mutually, nested) recursive types from various sources, collected   *)
-(* by jrh.                                                                   *)
+(* by jrh, and expanded on over the years.                                   *)
 (* ========================================================================= *)
 
 app load ["bossLib", "setTheory", "stringTheory"];
@@ -294,6 +294,41 @@ Hol_datatype
                | ACOND of aexp => aexp => aexp
                | AFORALL of string => aexp
                | AEXISTS of string => aexp`;
+
+(*---------------------------------------------------------------------------*)
+(* Records                                                                   *)
+(*---------------------------------------------------------------------------*)
+
+val _ = Hol_datatype `recd = <| A : num;  B : bool; 
+                                C1 : 'a list; C2 : bool ; 
+                                C3 : num # num |>`;
+
+
+val _ = Hol_datatype `recd1 = <| A : num;  B: bool; 
+                                 C1 : 'a list; C2 : bool ; 
+                                 C3 : num # num ; 
+                                 C4 : 'a -> 'b ;
+                                 C5 : bool; 
+                                 C6 : num ;
+                                 C7 : string ;
+                                 C8 : bool; 
+                                 C9 : num ;
+                                 C10 : string;
+                                 C11 : string;
+                                 C12 : string;
+                                 C13 : string;
+                                 C14 : string;
+                                 C15 : string;
+                                 C16 : string;
+                                 C17 : bool |>`;
+TypeBase.fields_of "recd1";
+
+val _ = Hol_datatype `file = Text of string 
+                           | Dir of directory
+                       ;
+                      directory = <| owner : string ;
+                                     files : (string # file) list |>`;
+
 
 (* ------------------------------------------------------------------------- *)
 (* 68000 instruction set.                                                    *)

@@ -2,7 +2,6 @@ structure DataSize :> DataSize =
 struct
 
 open HolKernel Parse boolLib Prim_rec 
-
 val ERR = mk_HOL_ERR "DataSize";
 
 val num = numSyntax.num
@@ -11,6 +10,11 @@ val defn_const =
   #1 o strip_comb o lhs o #2 o strip_forall o hd o strip_conj o concl;
 
 val head = Lib.repeat rator;
+
+fun tyconst_names ty = 
+  let val {Thy,Tyop,Args} = dest_thy_type ty
+  in (Thy,Tyop)
+  end;
 
 local open Portable
       fun num_variant vlist v =
@@ -166,7 +170,7 @@ fun define_size ax db =
      val cty = (I##(type_of o last)) o strip_comb o lhs o snd o strip_forall
      val ctyl = Lib.mk_set (map cty (strip_conj (concl defn)))
      val const_tyl = gather (fn (c,ty) => mem ty dtys) ctyl
-     val const_tyopl = map (fn (c,ty) => (c,fst(dest_type ty))) const_tyl
+     val const_tyopl = map (fn (c,ty) => (c,tyconst_names ty)) const_tyl
  in
     SOME {def=defn,const_tyopl=const_tyopl}
  end

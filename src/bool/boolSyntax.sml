@@ -16,10 +16,6 @@ open Feedback Lib HolKernel boolTheory;
 
 val ERR = mk_HOL_ERR "boolSyntax";
 
-infixr 3 -->;
-infix 5 |->;
-
-
 (*---------------------------------------------------------------------------
        Basic constants
  ---------------------------------------------------------------------------*)

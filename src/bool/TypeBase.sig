@@ -1,6 +1,7 @@
 signature TypeBase =
 sig
 
+   type hol_type  = Type.hol_type
    type term      = Term.term
    type thm       = Thm.thm
    type tyinfo    = TypeBasePure.tyinfo
@@ -23,6 +24,7 @@ sig
    val case_def_of        : string -> thm
    val nchotomy_of        : string -> thm
    val distinct_of        : string -> thm
+   val fields_of          : string -> (string * hol_type) list
    val one_one_of         : string -> thm
    val simpls_of          : string -> simpfrag.simpfrag
    val size_of            : string -> term * thm
