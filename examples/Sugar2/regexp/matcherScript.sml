@@ -1506,8 +1506,8 @@ val amatch = store_thm
    >> RW_TAC std_ss []
    ++ Induct_on `l`
    >> RW_TAC std_ss
-      [astep_def, da_step_def, na2da_def, EXISTS_MEM, set_of_list,
-       accept_regexp2na_def, NULL_DEF, TL]
+      [astep_def, da_step_def, na2da_def, eval_accepts, EXISTS_MEM,
+       set_of_list, accept_regexp2na_def]
    ++ ONCE_REWRITE_TAC [astep_def]
    ++ SIMP_TAC std_ss [da_step_regexp2na, eval_transitions_def, NULL_DEF, TL]
    ++ RW_TAC std_ss [initial_regexp2na_def, HD]);
@@ -1518,7 +1518,7 @@ val acheck = store_thm
        acheck r f l =
        !n. n < LENGTH l /\ sem r (FIRSTN (SUC n) l) ==> f (BUTFIRSTN n l)``,
    RW_TAC std_ss
-   [GSYM da_match, da_match_def, regexp2da_def, da_accepts_na2da, acheck_def]
+   [acheck_def, GSYM da_match, da_match_def, regexp2da_def, da_accepts_na2da]
    ++ RW_TAC std_ss [initial_regexp2na_def]
    ++ Q.SPEC_TAC (`[initial (regexp2na r)]`, `k`)
    ++ Q.SPEC_TAC (`[]`, `h`)
@@ -1529,7 +1529,7 @@ val acheck = store_thm
       (METIS_PROVE [num_CASES]
        ``(P = Q 0 /\ !n. Q (SUC n)) ==> (P = !n. Q n)``)
    ++ RW_TAC arith_ss
-      [LENGTH, FIRSTN, BUTFIRSTN, da_step_regexp2na, areport_def,
+      [LENGTH, FIRSTN, BUTFIRSTN, da_step_regexp2na, areport_def, eval_accepts,
        accept_regexp2na_def, eval_transitions_def, initial_regexp2na_def]);
 
 val () = export_theory ();
