@@ -31,6 +31,6 @@ function returned by {RAND_CONV c} may also fail if the ML function
 |- SUC 2 = SUC(SUC 1)
 }
 \SEEALSO
-ABS_CONV, LAND_CONV, RATOR_CONV, SUB_CONV.
+ABS_CONV, BINOP_CONV, LAND_CONV, RATOR_CONV, SUB_CONV.
 
 \ENDDOC

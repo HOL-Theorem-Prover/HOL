@@ -6,7 +6,7 @@
 Applies a conversion to every top-level disjunct in a term.
 
 \KEYWORDS
-conversion
+conversional
 
 \DESCRIBE
 The term {EVERY_DISJ_CONV c t} takes the conversion {c} and applies

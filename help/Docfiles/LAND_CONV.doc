@@ -31,6 +31,6 @@ a term {t} to a theorem {|- t = t'}).
 }
 
 \SEEALSO
-RAND_CONV, RATOR_CONV, ABS_CONV.
+ABS_CONV, BINOP_CONV, RAND_CONV, RATOR_CONV.
 
 \ENDDOC
