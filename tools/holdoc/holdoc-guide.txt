@@ -219,6 +219,11 @@ the output.
 Note that ECHO / NOECHO are only respected in MNG mode.
 
 
+(*[ RCSID "$Id$" ]*) records the given string as the RCS ID for the
+file.  lts_to_latex uses this to define the command \rulesrcsid, which
+can be useful to identify the version of munged rules.
+
+
 One for MNG source:
 
 %(*[ SHOWRULE select.4 ]*)
