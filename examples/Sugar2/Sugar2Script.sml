@@ -2,12 +2,22 @@
 (* Some sanity checking properties of the Sugar 2.0 semantics in HOL         *)
 (*****************************************************************************)
 
+(*****************************************************************************)
+(* START BOILERPLATE                                                         *)
+(*****************************************************************************)
+
 (******************************************************************************
 * Load theories
 * (commented out for compilation)
 ******************************************************************************)
 (*
-load "Sugar2SemanticsTheory"; load "rich_listTheory"; load "intLib";
+load "Sugar2SemanticsTheory"; 
+load "rich_listTheory"; load "intLib"; load "res_quanTheory";
+
+quietdec := true;
+open Sugar2SemanticsTheory PathTheory 
+     arithmeticTheory listTheory rich_listTheory res_quanTheory;
+quietdec := false;
 *)
 
 
@@ -19,7 +29,12 @@ open Globals HolKernel Parse boolLib bossLib;
 (******************************************************************************
 * Open theories
 ******************************************************************************)
-open Sugar2SemanticsTheory PathTheory listTheory rich_listTheory;
+open Sugar2SemanticsTheory PathTheory 
+     arithmeticTheory listTheory rich_listTheory res_quanTheory;
+
+(*****************************************************************************)
+(* END BOILERPLATE                                                           *)
+(*****************************************************************************)
 
 (******************************************************************************
 * Set default parsing to natural numbers rather than integers 
@@ -70,8 +85,9 @@ val S_REPEAT_BOOL_TRUE =
               HD_EL_MAP]]);
 
 val FIRST_RISE_IMP =
- prove
-  (``FIRST_RISE M p c i ==>
+ store_thm
+  ("FIRST_RISE_IMP",
+   ``FIRST_RISE M p c i ==>
       (!j. j < i ==> ~B_SEM M (getL M (PATH_EL p j)) c) 
       /\ 
       B_SEM M (getL M (PATH_EL p i)) c``,
@@ -154,8 +170,9 @@ val FIRST_RISE_IMP =
                    [MAP_APPEND,th,PATH_SEG_EL,APPEND_CANCEL])]]);
 
 val NEXT_RISE_IMP =
- prove
-  (``NEXT_RISE M p c (i,j) ==>
+ store_thm
+  ("NEXT_RISE_IMP",
+   ``NEXT_RISE M p c (i,j) ==>
       (!k. i <= k /\ k < j ==> ~B_SEM M (getL M (PATH_EL p k)) c) 
       /\ 
       (i <= j ==> B_SEM M (getL M (PATH_EL p j)) c)``,
@@ -236,13 +253,15 @@ val NEXT_RISE_IMP =
                   [MAP_APPEND,th,PATH_SEG_EL,APPEND_CANCEL])]]);
 
 val EL_MAP_COR =
- prove
-  (``!f. n < LENGTH l ==> (EL n (MAP f l) = f (EL n l))``,
+ store_thm
+  ("EL_MAP_COR",
+   ``!f. n < LENGTH l ==> (EL n (MAP f l) = f (EL n l))``,
    RW_TAC std_ss [EL_MAP]);
 
 val FIRST_RISE_REVIMP =
- prove
-  (``(!j. j < i ==> ~B_SEM M (getL M (PATH_EL p j)) c) 
+ store_thm
+  ("FIRST_RISE_REVIMP",
+   ``(!j. j < i ==> ~B_SEM M (getL M (PATH_EL p j)) c) 
      /\ B_SEM M (getL M (PATH_EL p i)) c
      ==>
      FIRST_RISE M p c i``,
@@ -303,8 +322,9 @@ val FIRST_RISE_TRUE =
     THEN ZAP_TAC std_ss [intLib.COOPER_PROVE``(!j. ~(j < i)) = (i=0)``]);
 
 val NEXT_RISE_REVIMP =
- prove
-  (``i <= j                                                       /\
+ store_thm
+  ("NEXT_RISE_REVIMP",
+   ``i <= j                                                       /\
      (!k. i <= k /\ k < j ==> ~B_SEM M (getL M (PATH_EL p k)) c)  /\ 
      B_SEM M (getL M (PATH_EL p j)) c  
      ==>
@@ -375,11 +395,28 @@ val NEXT_RISE_TRUE =
        THEN DECIDE_TAC,
       intLib.COOPER_TAC]);
 
+val NEXT_RISE_TRUE_COR =
+ store_thm
+  ("NEXT_RISE_TRUE_COR",
+   ``i <= j /\ NEXT_RISE M p B_TRUE (i,j) = (i = j)``,
+   EQ_TAC
+    THEN RW_TAC arith_ss [NEXT_RISE_TRUE]
+    THEN PROVE_TAC[NEXT_RISE_TRUE]);
+
 val NEXT_RISE_TRUE_EXISTS =
- prove
-  (``?k. NEXT_RISE M p B_TRUE (j,k)``,
+ store_thm
+  ("NEXT_RISE_TRUE_EXISTS",
+   ``?k. NEXT_RISE M p B_TRUE (j,k)``,
    Q.EXISTS_TAC `j`
     THEN RW_TAC std_ss 
+     [SIMP_RULE arith_ss [] (Q.SPECL[`p`,`j`,`j`](GEN_ALL NEXT_RISE_TRUE))]);
+
+val NEXT_RISE_LEQ_TRUE_EXISTS =
+ store_thm
+  ("NEXT_RISE_LEQ_TRUE_EXISTS",
+   ``?k. j <= k /\ NEXT_RISE M p B_TRUE (j,k)``,
+   Q.EXISTS_TAC `j`
+    THEN RW_TAC arith_ss 
      [SIMP_RULE arith_ss [] (Q.SPECL[`p`,`j`,`j`](GEN_ALL NEXT_RISE_TRUE))]);
 
 (******************************************************************************
@@ -400,19 +437,145 @@ val fl_induct =
          (TypeBase.induction_of "fl")))));
 
 (******************************************************************************
-* Strong clocking with T equal to weaking clocking with T:
-* p |=T!= f  <==>  p |=T= f
+* Negated clocking of f with T! equal to clocking with T of F_NOT f:
+* ~(p |=T!= f)  <==>  p |=T= !f
 ******************************************************************************)
+val F_SEM_TRUE_WEAK_NOT_EQ =
+ store_thm
+  ("F_SEM_TRUE_WEAK_NOT_EQ",
+   ``!f M p. 
+      F_SEM M p (WEAK_CLOCK B_TRUE) (F_NOT f) = ~(F_SEM M p (STRONG_CLOCK B_TRUE) f)``,
+   INDUCT_THEN fl_induct ASSUME_TAC
+    THEN RW_TAC std_ss [F_SEM_def]);
+
+val F_SEM_TRUE_STRONG_NOT_EQ =
+ store_thm
+  ("F_SEM_TRUE_STRONG_NOT_EQ",
+   ``!f M p. 
+       F_SEM M p (STRONG_CLOCK B_TRUE) (F_NOT f) = ~(F_SEM M p (WEAK_CLOCK B_TRUE) f)``,
+   INDUCT_THEN fl_induct ASSUME_TAC
+    THEN RW_TAC std_ss [F_SEM_def]);
+
+val INFINITE_PL =
+ store_thm
+  ("INFINITE_PL",
+   ``IS_INFINITE_PATH p ==> !n. PL p n``,
+   PROVE_TAC[PL_def,NOT_IS_INFINITE_PATH]);
+
+val FINITE_PL =
+ store_thm
+  ("FINITE_PL",
+   ``IS_FINITE_PATH p ==> PL p 0``,
+   RW_TAC std_ss [PL_def,FINITE_PATH_NONEMPTY]);
+   
+val NEXT_TRUE_GE =
+ store_thm
+  ("NEXT_TRUE_GE",
+   ``x' >= x /\ NEXT_RISE M p B_TRUE (x,x') = (x=x')``,
+   EQ_TAC
+    THEN RW_TAC arith_ss [NEXT_RISE_TRUE]
+    THEN IMP_RES_TAC(DECIDE``x' >= x = x <= x'``)
+    THEN FULL_SIMP_TAC std_ss [NEXT_RISE_TRUE]);
+
+(******************************************************************************
+* Strong clocking with T equal to weaking clocking with T for infinite paths
+* IS_INFINITE_PATH p ==> (p |=T!= f  <==>  p |=T= f)
+******************************************************************************)
+val F_SEM_INFINITE_TRUE_EQ =
+ store_thm
+  ("F_SEM_INFINITE_TRUE_EQ",
+   ``!f M p. 
+      IS_INFINITE_PATH p
+      ==>
+      (F_SEM M p (STRONG_CLOCK B_TRUE) f = F_SEM M p (WEAK_CLOCK B_TRUE) f)``,
+   INDUCT_THEN fl_induct ASSUME_TAC
+    THEN RW_TAC std_ss
+          [F_SEM_def,FIRST_RISE_TRUE,B_SEM_def,
+           RES_FORALL,RES_EXISTS,IN_DEF,RESTN_def,
+           NEXT_RISE_TRUE_EXISTS]
+    THEN IMP_RES_TAC NOT_IS_INFINITE_PATH
+    THEN IMP_RES_TAC INFINITE_PL
+    THEN RW_TAC arith_ss 
+          [intLib.COOPER_PROVE ``((?k. !l. ~(l >= k))=F) /\ ((?k. !l. ~(l > k))=F)``,
+           NEXT_RISE_LEQ_TRUE_EXISTS,
+           NEXT_TRUE_GE,SAME_PATH_KIND_def,PL_def,IS_FINITE_PATH_RESTN]
+    THEN TRY(PROVE_TAC[IS_INFINITE_PATH_RESTN,IS_INFINITE_PATH_CAT]));
+
+val PL_EXISTS_FORALL_LEMMA =
+ store_thm
+  ("PL_EXISTS_FORALL_LEMMA",
+   ``IS_FINITE_PATH p 
+     ==> 
+     ((PL p x /\ !x'. PL p x' ==> ~(x' >= x)) = F)``,
+   ZAP_TAC arith_ss 
+    [PL_def,
+     intLib.COOPER_PROVE``x < n /\ (!x'. x' < n ==> ~(x' >= x)) = F``]);
+
+val SAME_PATH_KIND_LEMMA =
+ store_thm
+  ("SAME_PATH_KIND_LEMMA",
+   ``SAME_PATH_KIND p1 p2 /\ IS_FINITE_PATH p1 ==> IS_FINITE_PATH p2``,
+    PROVE_TAC [SAME_PATH_KIND]);
+
+(******************************************************************************
+* Strong clocking with T equal to weaking clocking with T for finite paths:
+* IS_FINITE p ==> (p |=T!= f  <==>  p |=T= f)
+******************************************************************************)
+local
+val INIT_TAC =
+ RW_TAC std_ss 
+  [F_SEM_def,FIRST_RISE_TRUE,B_SEM_def,RES_FORALL,RES_EXISTS,IN_DEF,FINITE_PL,
+   NEXT_RISE_TRUE_EXISTS,RESTN_def,IS_FINITE_PATH_RESTN];
+in
+val F_SEM_FINITE_TRUE_EQ =
+ store_thm
+  ("F_SEM_FINITE_TRUE_EQ",
+   ``!f M p. 
+      IS_FINITE_PATH p
+      ==>
+      (F_SEM M p (STRONG_CLOCK B_TRUE) f = F_SEM M p (WEAK_CLOCK B_TRUE) f)``,
+   INDUCT_THEN fl_induct ASSUME_TAC
+    THENL
+     [(* F_BOOL b *)
+      INIT_TAC,
+      (* F_NOT b *)
+      INIT_TAC,
+      (* F_AND (f1,f2) *)
+      INIT_TAC,
+      (* F_NEXT f *)
+      INIT_TAC,
+      (* F_UNTIL(f1,f2) f *)
+      INIT_TAC 
+       THEN RW_TAC arith_ss 
+             [PL_EXISTS_FORALL_LEMMA,FINITE_PATH_NONEMPTY],
+      (* F_SUFFIX_IMP(s,f) *)
+      INIT_TAC,
+      (* F_STRONG_IMP(s1,s2) *)
+      INIT_TAC 
+       THEN RW_TAC arith_ss 
+             [PL_EXISTS_FORALL_LEMMA,FINITE_PATH_NONEMPTY],
+      (* F_WEAK_IMP(s1,s2) *)
+      INIT_TAC 
+       THEN EQ_TAC
+       THEN RW_TAC std_ss [NEXT_RISE_TRUE_COR]
+       THEN PROVE_TAC[],
+      (* F_ABORT(f,b)) *)
+      INIT_TAC 
+       THEN PROVE_TAC[IS_FINITE_PATH_CAT,SAME_PATH_KIND_LEMMA],
+      (* F_WEAK_CLOCK(f,c) *)
+      INIT_TAC,
+      (* F_STRONG_CLOCK(f,c) *)
+      INIT_TAC]);
+end;
+
 val F_SEM_TRUE_EQ =
  store_thm
   ("F_SEM_TRUE_EQ",
-   ``!f M p. 
-      (F_SEM M p (STRONG_CLOCK B_TRUE) f = F_SEM M p (WEAK_CLOCK B_TRUE) f)``,
-   INDUCT_THEN fl_induct ASSUME_TAC
-    THEN RW_TAC std_ss 
-          [F_SEM_def,FIRST_RISE_TRUE,B_SEM_def,
-           intLib.COOPER_PROVE ``(?k. !l. ~(l > k))=F``,NEXT_RISE_TRUE_EXISTS]
-    THEN PROVE_TAC[]);
+   ``!p f M. 
+       F_SEM M p (STRONG_CLOCK B_TRUE) f = F_SEM M p (WEAK_CLOCK B_TRUE) f``,
+   Cases
+    THEN PROVE_TAC[IS_INFINITE_PATH_def,IS_FINITE_PATH_def,
+                   F_SEM_INFINITE_TRUE_EQ,F_SEM_FINITE_TRUE_EQ]);
 
 (******************************************************************************
 * US_SEM M w r means "w is in the language of r" in the unclocked semantics
@@ -443,7 +606,6 @@ val US_SEM_def =
    (US_SEM M w (S_REPEAT r) = 
      ?wlist. (w = CONCAT wlist) /\ EVERY (\w. US_SEM M w r) wlist)`;
 
-
 (******************************************************************************
 * UF_SEM M p f means "p |= f"  in the unclocked semantics
 * (F_WEAK_IMP case unfolded to make totality proof go through)
@@ -460,35 +622,37 @@ val UF_SEM_def =
       UF_SEM M p f1 /\ UF_SEM M p f2)
     /\
     (UF_SEM M p (F_NEXT f) = 
-      (IS_FINITE_PATH p ==> PATH_LENGTH p > 1) /\
-       UF_SEM M (RESTN p 1) f)
+      PL p 1 /\ UF_SEM M (RESTN p 1) f)
     /\
     (UF_SEM M p (F_UNTIL(f1,f2)) = 
-      ?k. (IS_FINITE_PATH p ==> k < PATH_LENGTH p) /\
-          UF_SEM M (RESTN p k) f2              /\
-          !j. j < k ==> UF_SEM M (RESTN p j) f1)
+      ?k :: PL p. UF_SEM M (RESTN p k) f2 /\
+                  !j :: PL p. j < k ==> UF_SEM M (RESTN p j) f1)
     /\
     (UF_SEM M p (F_SUFFIX_IMP(r,f)) = 
-      !j. US_SEM M (LHAT M (PATH_SEG p (0,j))) r
-          ==>
-          UF_SEM M (RESTN p j) f)
+      !j :: PL p. US_SEM M (LHAT M (PATH_SEG p (0,j))) r
+                  ==>
+                  UF_SEM M (RESTN p j) f)
     /\
     (UF_SEM M p (F_STRONG_IMP(r1,r2)) = 
-      !j. US_SEM M (LHAT M (PATH_SEG p (0,j))) r1
-          ==>
-          ?k. US_SEM M (LHAT M (PATH_SEG p (j,k))) r2)
+      !j :: PL p. US_SEM M (LHAT M (PATH_SEG p (0,j))) r1
+                  ==>
+                  ?k :: PL p. j <= k /\ US_SEM M (LHAT M (PATH_SEG p (j,k))) r2)
     /\
     (UF_SEM M p (F_WEAK_IMP(r1,r2)) = 
-      !j. US_SEM M (LHAT M (PATH_SEG p (0,j))) r1 ==>
-           (?k. US_SEM M (LHAT M (PATH_SEG p (j,k))) r2) \/
-           !k. (IS_FINITE_PATH p ==> k < PATH_LENGTH p)
-               ==> ?w. US_SEM M (LHAT M (PATH_SEG p (j,k)) <> w) r2)  
+      !j :: PL p. US_SEM M (LHAT M (PATH_SEG p (0,j))) r1 ==>
+                  (?k :: PL p. j <= k /\ US_SEM M (LHAT M (PATH_SEG p (j,k))) r2) 
+                  \/
+                  !k :: PL p. 
+                   j <= k ==> ?w. US_SEM M (LHAT M (PATH_SEG p (j,k)) <> w) r2)  
     /\
     (UF_SEM M p (F_ABORT (f,b)) =
       UF_SEM M p f 
       \/
-      ?j p'. UF_SEM M (RESTN p j) (F_BOOL b) /\ 
-             UF_SEM M (PATH_CAT(PATH_SEG p (0,j-1),p')) f)`;
+      ?j :: PL p. 0 < j
+        /\
+        ?p' :: SAME_PATH_KIND p. 
+          UF_SEM M (RESTN p j) (F_BOOL b) /\ 
+          UF_SEM M (PATH_CAT(PATH_SEG p (0,j-1),p')) f)`;
 
 (******************************************************************************
 * UF_SEM M p f means "p |= f"  in the unclocked semantics
@@ -507,37 +671,38 @@ val UF_SEM =
        UF_SEM M p f1 /\ UF_SEM M p f2)
      /\
      (UF_SEM M p (F_NEXT f) = 
-       (IS_FINITE_PATH p ==> PATH_LENGTH p > 1) /\
-        UF_SEM M (RESTN p 1) f)
+       PL p 1 /\ UF_SEM M (RESTN p 1) f)
      /\
      (UF_SEM M p (F_UNTIL(f1,f2)) = 
-       ?k. (IS_FINITE_PATH p ==> k < PATH_LENGTH p) /\
-           UF_SEM M (RESTN p k) f2              /\
-           !j. j < k ==> UF_SEM M (RESTN p j) f1)
+       ?k :: PL p. UF_SEM M (RESTN p k) f2 /\
+                   !j :: PL p. j < k ==> UF_SEM M (RESTN p j) f1)
      /\
      (UF_SEM M p (F_SUFFIX_IMP(r,f)) = 
-       !j. US_SEM M (LHAT M (PATH_SEG p (0,j))) r
-           ==>
-           UF_SEM M (RESTN p j) f)
+       !j :: PL p. US_SEM M (LHAT M (PATH_SEG p (0,j))) r
+                   ==>
+                   UF_SEM M (RESTN p j) f)
      /\
      (UF_SEM M p (F_STRONG_IMP(r1,r2)) = 
-       !j. US_SEM M (LHAT M (PATH_SEG p (0,j))) r1
-           ==>
-           ?k. US_SEM M (LHAT M (PATH_SEG p (j,k))) r2)
+       !j :: PL p. US_SEM M (LHAT M (PATH_SEG p (0,j))) r1
+                   ==>
+                   ?k :: PL p. j <= k /\ US_SEM M (LHAT M (PATH_SEG p (j,k))) r2)
      /\
     (UF_SEM M p (F_WEAK_IMP(r1,r2)) = 
-       !j. US_SEM M (LHAT M (PATH_SEG p (0,j))) r1 ==>
-           (?k. US_SEM M (LHAT M (PATH_SEG p (j,k))) r2) \/  
-           !k. (IS_FINITE_PATH p ==> k < PATH_LENGTH p)
-               ==> ?w. US_SEM M (LHAT M (PATH_SEG p (j,k)) <> w) r2)  
+       !j :: PL p. US_SEM M (LHAT M (PATH_SEG p (0,j))) r1 ==>
+                   (?k :: PL p. j <= k /\ US_SEM M (LHAT M (PATH_SEG p (j,k))) r2) 
+                   \/  
+                    !k :: PL p. 
+                      j <= k ==> ?w. US_SEM M (LHAT M (PATH_SEG p (j,k)) <> w) r2)  
      /\
      (UF_SEM M p (F_ABORT (f,b)) =
        UF_SEM M p f 
        \/
-       ?j p'. UF_SEM M (RESTN p j) (F_BOOL b) /\ 
-              UF_SEM M (PATH_CAT(PATH_SEG p (0,j-1),p')) f)``,
+       ?j :: PL p. 0 < j 
+        /\
+        ?p' :: SAME_PATH_KIND p.
+          UF_SEM M (RESTN p j) (F_BOOL b) /\ 
+          UF_SEM M (PATH_CAT(PATH_SEG p (0,j-1),p')) f)``,
    SIMP_TAC std_ss [UF_SEM_def]);
-
 
 (******************************************************************************
 * Structural induction rule for SEREs
@@ -582,35 +747,10 @@ val S_CLOCK_FREE_def =
 * a SERE r is the same as the clocked semantics with clock equal to T
 ******************************************************************************)
 
-(******************************************************************************
-* Old proof (now commented out)
 val S_SEM_TRUE_LEMMA =
- prove
-  (``!M w r. 
-      S_CLOCK_FREE r
-      ==>
-      (S_SEM M w B_TRUE r = US_SEM M w r)``,
-   recInduct (fetch "-" "US_SEM_ind")
-    THEN RW_TAC std_ss [S_SEM_def, US_SEM_def, S_CLOCK_FREE_def]
-    THENL
-     [RW_TAC std_ss 
-       [B_SEM_def,CONJ_ASSOC,LENGTH1,
-        intLib.COOPER_PROVE ``n >= 1 /\ (!i. ~(1 <= i) \/ ~(i < n)) = (n = 1)``]
-       THEN EQ_TAC
-       THEN RW_TAC list_ss [LENGTH]
-       THEN RW_TAC list_ss [LENGTH]
-       THEN FULL_SIMP_TAC list_ss [LENGTH],
-      RW_TAC list_ss [EVERY_EL]
-       THEN EQ_TAC
-       THEN RW_TAC list_ss [LENGTH]
-       THEN Q.EXISTS_TAC `wlist`
-       THEN FULL_SIMP_TAC list_ss [EVERY_EL]
-       THEN ZAP_TAC list_ss [EL_IS_EL]]);
-******************************************************************************)
-
-val S_SEM_TRUE_LEMMA =
- prove
-  (``!r M w. 
+ store_thm
+  ("S_SEM_TRUE_LEMMA",
+   ``!r M w. 
       S_CLOCK_FREE r
       ==>
       (S_SEM M w B_TRUE r = US_SEM M w r)``,
@@ -629,7 +769,7 @@ val S_SEM_TRUE =
   ("S_SEM_TRUE",
    ``S_CLOCK_FREE r ==> (S_SEM M w B_TRUE r = US_SEM M w r)``,
    Cases_on `M` THEN Cases_on `r'` THEN Cases_on `r''` THEN Cases_on `r'`
-    THEN RW_TAC std_ss [ S_SEM_TRUE_LEMMA]);
+    THEN RW_TAC std_ss [S_SEM_TRUE_LEMMA]);
 
 (******************************************************************************
 * F_CLOCK_FREE f means f contains no clocking statements
@@ -659,48 +799,98 @@ val F_CLOCK_FREE_def =
    (F_CLOCK_FREE (F_STRONG_CLOCK v)    = F)`;
 
 (******************************************************************************
-* Proof that if F_CLOCK_FREE f then the unclocked semantics of
-* an FL formula f is the same as the clocked semantics with clock equal to T
+* Sanity checking that F_UNTIL(F_BOOL B_TRUE, f) get right semantics
+* with strong clock T
 ******************************************************************************)
 local
 val INIT_TAC =
- RW_TAC std_ss 
-  [F_SEM_def,UF_SEM_def,F_CLOCK_FREE_def,FIRST_RISE_TRUE,RESTN_def,
-   DECIDE``0 < n-1 = n > 1``,DECIDE``n >= 0``,DECIDE``0 <= n``]
+ RW_TAC arith_ss 
+  [F_SEM_def,UF_SEM_def,F_CLOCK_FREE_def,FIRST_RISE_TRUE,RESTN_def,B_SEM_def,
+   PL_def,RES_FORALL_DEF,RES_EXISTS_DEF,IN_DEF,FINITE_PATH_NONEMPTY,
+   DECIDE``0 < n-1 = n > 1``,DECIDE``n >= 0``,DECIDE``0 <= n``];
 in
-val F_SEM_TRUE_LEMMA =
+val F_TRUE_UNTIL = 
  store_thm
-  ("F_SEM_TRUE_LEMMA",
-   ``!M p f. 
-      F_CLOCK_FREE f 
+  ("F_TRUE_UNTIL",
+   ``F_SEM M p (STRONG_CLOCK B_TRUE) (F_UNTIL(F_BOOL B_TRUE, f)) =
+      ?n :: PL p. F_SEM M (RESTN p n) (STRONG_CLOCK B_TRUE) f ``,
+   INIT_TAC
+    THEN EQ_TAC
+    THEN ZAP_TAC std_ss []
+    THEN Q.EXISTS_TAC `0`
+    THEN ZAP_TAC std_ss [FINITE_PATH_NONEMPTY,DECIDE``n >= 0``]);
+end;
+
+(******************************************************************************
+* If F_CLOCK_FREE f then the unclocked semantics of an
+* FL formula f is the same as the clocked semantics with clock equal to T!
+* (i.e. strongly clocked)
+******************************************************************************)
+local
+val INIT_TAC =
+ RW_TAC arith_ss 
+  [F_SEM_def,UF_SEM_def,F_CLOCK_FREE_def,FIRST_RISE_TRUE,RESTN_def,
+   PL_def,RES_FORALL_DEF,RES_EXISTS_DEF,IN_DEF,FINITE_PATH_NONEMPTY,
+   DECIDE``0 < n-1 = n > 1``,DECIDE``n >= 0``,DECIDE``0 <= n``];
+in
+val F_SEM_STRONG_FREE_TRUE_LEMMA =
+ store_thm
+  ("F_SEM_STRONG_FREE_TRUE_LEMMA",
+   ``!f M p. 
+      F_CLOCK_FREE f
       ==>
-      (F_SEM M p (WEAK_CLOCK B_TRUE) f = UF_SEM M p f)``,
-   REWRITE_TAC[GSYM F_SEM_TRUE_EQ]
-    THEN recInduct (fetch "-" "UF_SEM_ind")
-    THEN REPEAT CONJ_TAC
+      (F_SEM M p (STRONG_CLOCK B_TRUE) f = UF_SEM M p f)``,
+   INDUCT_THEN fl_induct ASSUME_TAC
     THENL
-     [(* F_STRONG_CLOCK v16 *)
-      INIT_TAC,
-      (* F_WEAK_CLOCK v14 *)
-      INIT_TAC,
-      (* F_BOOL b *)
+     [(* F_BOOL b *)
       INIT_TAC,
       (* F_NOT b *)
-      INIT_TAC THEN RW_TAC std_ss [GSYM F_SEM_TRUE_EQ],
+      INIT_TAC THEN PROVE_TAC[F_SEM_TRUE_EQ],
       (* F_AND (f1,f2) *)
       INIT_TAC,
       (* F_NEXT f *)
-      INIT_TAC,
+      INIT_TAC 
+       THEN EQ_TAC
+       THEN RW_TAC arith_ss [DECIDE``0 < x = 1 <= x``]
+       THENL
+        [RES_TAC
+          THEN DECIDE_TAC,
+         IMP_RES_TAC NEXT_RISE_TRUE
+          THEN RW_TAC std_ss [],
+         Q.EXISTS_TAC `1`
+          THEN RW_TAC arith_ss [NEXT_RISE_TRUE]],
       (* F_UNTIL(f1,f2) f *)
-      INIT_TAC THEN RW_TAC std_ss [B_SEM_def],
-      (* F_SUFFIX_IMP f *)
+      INIT_TAC THEN RW_TAC std_ss [B_SEM_def]
+       THEN EQ_TAC
+       THEN RW_TAC std_ss []
+       THENL
+        [Q.EXISTS_TAC `x'`
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss [DECIDE ``0 <= n``],
+         Q.EXISTS_TAC `0`
+          THEN RW_TAC std_ss [FINITE_PATH_NONEMPTY]
+          THEN Q.EXISTS_TAC `x`
+          THEN RW_TAC arith_ss []],
+      (* F_SUFFIX_IMP(s,f) *)
       INIT_TAC THEN RW_TAC std_ss [S_SEM_TRUE],
-      (* F_STRONG_IMP f *)
-      INIT_TAC THEN RW_TAC std_ss [S_SEM_TRUE],
-      (* F_WEAK_IMP f *)
-      INIT_TAC THEN ZAP_TAC std_ss [S_SEM_TRUE,NEXT_RISE_TRUE_EXISTS],
+      (* F_STRONG_IMP(s1,s2) *)
+      INIT_TAC 
+       THEN RW_TAC std_ss [S_SEM_TRUE,NEXT_TRUE_GE,DECIDE``m <= n = n >= m``] 
+       THEN EQ_TAC
+       THEN RW_TAC std_ss []
+       THEN PROVE_TAC[],
+      (* F_WEAK_IMP(s1,s2) *)
+      INIT_TAC 
+       THEN RW_TAC std_ss [S_SEM_TRUE,NEXT_TRUE_GE,DECIDE``m <= n = n >= m``] 
+       THEN EQ_TAC
+       THEN RW_TAC std_ss []
+       THEN PROVE_TAC[],
       (* F_ABORT(f,b)) *)
-      INIT_TAC THEN RW_TAC std_ss [B_SEM_def]])
+      INIT_TAC THEN RW_TAC std_ss [B_SEM_def],
+      (* F_WEAK_CLOCK(f,c) *)
+      INIT_TAC,
+      (* F_STRONG_CLOCK(f,c) *)
+      INIT_TAC]);
 end;
 
 (******************************************************************************
@@ -738,21 +928,24 @@ val S_CLOCK_COMP_def =
 ******************************************************************************)
 
 val LENGTH_NIL_LEMMA =
- prove
-  (``LENGTH l >= 1 ==> ~(l = [])``,
+ store_thm
+  ("LENGTH_NIL_LEMMA",
+   ``LENGTH l >= 1 ==> ~(l = [])``,
    RW_TAC list_ss [DECIDE``m>=1 = ~(m=0)``,LENGTH_NIL]);
 
 val EL_BUTLAST =
- prove
-  (``!w n. n < PRE(LENGTH w) ==> (EL n (BUTLAST w) = EL n w)``,
+ store_thm
+  ("EL_BUTLAST",
+   ``!w n. n < PRE(LENGTH w) ==> (EL n (BUTLAST w) = EL n w)``,
    Induct
     THEN RW_TAC list_ss [FRONT_DEF]
     THEN Cases_on `n`
     THEN RW_TAC list_ss [EL]);
 
 val EL_PRE_LENGTH =
- prove
-  (``!w. LENGTH w >= 1 ==> (EL (LENGTH w - 1) w = LAST w)``,
+ store_thm
+  ("EL_PRE_LENGTH",
+   ``!w. LENGTH w >= 1 ==> (EL (LENGTH w - 1) w = LAST w)``,
    Induct
     THEN RW_TAC list_ss []
     THEN Cases_on `LENGTH w`
@@ -763,8 +956,9 @@ val EL_PRE_LENGTH =
     THEN FULL_SIMP_TAC arith_ss []);
  
 val EVERY_EL_SINGLETON_LENGTH =
- prove
-  (``!wlist P.
+ store_thm
+  ("EVERY_EL_SINGLETON_LENGTH",
+   ``!wlist P.
       (!n. n < LENGTH wlist ==> ?l. (EL n wlist = [l]) /\ P l)
       ==>
       (LENGTH(CONCAT wlist) = LENGTH wlist)``,
@@ -780,8 +974,9 @@ val EVERY_EL_SINGLETON_LENGTH =
     THEN RW_TAC list_ss []);
 
 val EVERY_EL_SINGLETON =
- prove
-  (``!wlist P.
+ store_thm
+  ("EVERY_EL_SINGLETON",
+   ``!wlist P.
       (!n. n < LENGTH wlist ==> ?l. (EL n wlist = [l]) /\ P l)
       ==>
       (CONCAT wlist = MAP HD wlist)``,
@@ -821,7 +1016,8 @@ val S_CLOCK_COMP_ELIM =
           THEN RW_TAC list_ss [HD_EL_MAP,EL_MAP]
           THEN IMP_RES_TAC LENGTH_NIL_LEMMA
           THEN IMP_RES_TAC LENGTH_BUTLAST
-          THEN IMP_RES_TAC(DECIDE``n < m ==> (m = PRE p) ==> (1 <= SUC n /\ SUC n < p)``)
+          THEN IMP_RES_TAC
+                (DECIDE``n < m ==> (m = PRE p) ==> (1 <= SUC n /\ SUC n < p)``)
           THEN RES_TAC
           THEN POP_ASSUM(ASSUME_TAC o SIMP_RULE arith_ss [])
           THEN RW_TAC list_ss [EL_BUTLAST],
@@ -878,7 +1074,6 @@ val F_W_def =
 val F_W_CLOCK_def =
  Define
   `F_W_CLOCK c f = F_W(F_BOOL(B_NOT c),F_AND(F_BOOL c, f))`;
-
 
 (******************************************************************************
 * Rules for compiling clocked FL formulas to unclocked formulas

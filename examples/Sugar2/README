@@ -5,10 +5,9 @@ property language Sugar 2.0 in HOL. The official documentation is at
 
 As a result of trying to prove some `sanity checking' properties, bugs
 were found in the version of the HOL semantics corresponding to the
-Accellera submission.  The current semantics has been modified to
-correct the first batch of bugs, but still fails some checks, thus the
-the semantics should be regarded as provisional. For the latest
-work-in-progress version see:
+Accellera submission.  Although the current semantics has been
+modified to correct the first batch of bugs, the semantics should be
+regarded as provisional. For the latest work-in-progress version see:
 
  http://www.cl.cam.ac.uk/~mjcg/Sugar/
 

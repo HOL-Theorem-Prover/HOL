@@ -58,7 +58,13 @@
 \newcommand{\OSem}[3]{(\(\tt{#1,~#2~{\models}~#3}\))}
 \newcommand{\Osem}{\texttt{O\_SEM}\xspace}
 \newcommand{\oSem}[3]{(\tt{#1,~#2~{\models}~#3})}
-
+\newcommand{\Pl}{\(\texttt{pl}\xspace\)}
+\newcommand{\pl}{\texttt{pl}\xspace}
+\newcommand{\Sim}{\(\texttt{sim}\xspace\)}
+\renewcommand{\sim}{\texttt{sim}\xspace}
+\newcommand{\ResExists}[2]{\(\exists{\tt#1}\in\pl\hspace*{0.5mm}#2\)}
+\newcommand{\ResForall}[2]{\(\forall{\tt#1}\in\pl\hspace*{0.5mm}#2\)}
+\newcommand{\Similar}[2]{\(\texttt{similar}\hspace*{0.5mm}#1\hspace*{0.5mm}#2\)}
 \newcommand{\BProp}[1]{\(#1\)}
 \newcommand{\bProp}[1]{#1}
 \newcommand{\sFusion}[2]{#1\texttt{:}#2}
@@ -95,7 +101,7 @@
 \newcommand{\oEu}[2]{\texttt{[}#1~{\texttt{U}}~#2\texttt{]}}
 
 \newcommand{\fAnd}[2]{#1 \wedge #2}
-\newcommand{\fNext}[1]{\texttt{X!}#1}
+\newcommand{\fNext}[1]{\texttt{X!}\hspace*{0.8mm}#1}
 \newcommand{\fUntil}[2]{\texttt{[}#1~\texttt{U}~#2\texttt{]}}
 \newcommand{\fSuffixImp}[2]{\{#1\}(#2)}
 \newcommand{\fStrongImp}[2]{\{#1\}\texttt{|->}\{#2\}\texttt{!}}
@@ -189,18 +195,18 @@ University of Cambridge Computer Laboratory\\
 William Gates Building,
 JJ Thomson Avenue, Cambridge CB3 0FD, U.K.\\
 Email: \email{mjcg@cl.cam.ac.uk} \qquad
-Web: \texttt{http://www.cl.cam.ac.uk/\homedir mjcg}
+Web: \texttt{http://www.cl.cam.ac.uk/\homedir mjcg}\\[2mm]
+{\normalsize\sf\today}
 \end{tabular}}
 
 \maketitle                            % typeset the title of the contribution
 
-\vspace*{-3mm}
+\vspace*{-6mm}
 
 \begin{abstract}
 The Accellera standards-promoting organisation has selected \Sugar,
 IBM's formal specification language, as a standard that it says will
 drive assertion-based verification.
-
 \Sugar combines aspects of Interval Temporal Logic (ITL), Linear
 Temporal Logic (LTL) and Computation Tree Logic (CTL) into a property
 language suitable for both formal verification and use with simulation
@@ -208,11 +214,15 @@ test benchs. As industrial strength languages go it is remarkably
 elegant, consisting of a small kernel conservatively extended by
 numerous definitions.
 
-We have constructed a semantic embedding of \Sugar in the version of
+We are constructing a semantic embedding of \Sugar in the version of
 higher order logic supported by the \Hol system. To `sanity check' the
-semantics we subjected it to some `formal challenges' and bugs in the
-semantics were discovered and fixed. Further formal challenges may
-well reveal more bugs.
+semantics we tried to prove some simple properties and as a result a few bugs
+were discovered. Further analysis may well reveal more.
+
+%\medskip
+%
+%{\red\bf\it WARNING: this draft is in an inconsistent state because
+%the semantics has been updated with the result that some of the commentary is invalid.}
 
 We are contemplating a variety of applications of the mechanised
 semantics, including the exploitation of existing work to build a
@@ -222,7 +232,7 @@ infinite state spaces, which might involve developing extensions of
 \Sugar.
 \end{abstract}
 
-\vspace*{-3mm}
+\vspace*{-6mm}
 
 \section{Background on Accellera and Sugar}
 
@@ -356,11 +366,12 @@ One might think of using some standard representation of mathematical content,
 like  MathML\footnote{\url{http://www.w3.org/Math/}}, however there is currently
 not much mathematically sophisticated tool support for such XML-based representations. 
 
-Higher order logic is a fairly widely used formalisation medium
-(e.g. versions of higher order logic are used by \Hol,
-Isabelle/HOL, PVS, NuPrl and Coq) and once one has a representation
-in it then representations in other formats should be straightforward
-to derive.
+Higher order logic is a widely used formalisation medium
+(versions of higher order logic are used by \Hol, Isabelle/HOL, PVS,
+NuPrl and Coq) and the semantic embedding of model-checkable logics in HOL
+is standard \cite{Rajan95:CAV,Nipkow-Paulson-Wenzel:2002}. Once one has
+a representation in it then representations in other formats should be
+straightforward to derive.
 
 \vspace*{-3mm}
 
@@ -414,12 +425,17 @@ theories, like ZF).  We hope that the \Hol notation that follows is
 sufficiently close to standard informal notation that it needs no
 systematic explanation.
 
-We use Church's $\lambda$-notation for denoting functions: 
-a `lambda-term' like $\lambda x.~t$, where $x$
-is a variable and $t$ a term, denotes the function 
-that maps a value $v$ to the result of substituting $v$ for the
-variable $x$ in $t$ (the infix notation $x \mapsto t$ is
-sometimes used instead of $\lambda x.~t$).
+We use Church's $\lambda$-notation for denoting functions: a
+`lambda-term' like $\lambda x.~t$, where $x$ is a variable and $t$ a
+term, denotes the function that maps a value $v$ to the result of
+substituting $v$ for the variable $x$ in $t$ (the infix notation $x
+\mapsto t$ is sometimes used instead of $\lambda x.~t$). If $P$ is a
+function that returns a truth-value (i.e.~a predicate), then $P$ can
+be thought of a set, and we write $x \in P$ to mean $P(x)$ is
+true. Note that $\lambda x .~\cdots{x}\cdots$ corresponds to the set abstraction
+$\{x \mid ~\cdots{x}\cdots\}$. We write $\forall x\in P.~Q(x)$, $\exists x\in
+P.~Q(x)$ to mean $\forall x.~P(x)\Rightarrow Q(x)$, $\exists
+x.~P(x)\wedge Q(x)$, respectively.
 
 To embed\footnote{We shall only be concerned with so called `deep
 embeddings' here.}  a language in \Hol one first defines constructors
@@ -580,7 +596,7 @@ holds for every \texttt{w} in \texttt{wlist}.
 
 \Sugar has a kernel combining standard LTL notation
 with a less standard \t{abort} operation and some constructs using SEREs. The suffix
-``\texttt{!}~'' found on some constructs indicates
+``\texttt{!}'' found on some constructs indicates
 that these are `strong' (i.e. liveness-enforcing) operators.  The
 distinction between strong and weak operators is given in the
 semantics of full \Sugar in Section~\ref{SugarSemantics}. Numerous
@@ -640,17 +656,14 @@ $\t{L}_{\t{M}}$ to finite sequences of states
 
 
 {\begin{alltt}
-    ({\FSem{M}{{\pi}}{{\c}}{\FBool{b}}} = 
-     {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{0})}{b}}
+
+    ({\FSem{M}{{\pi}}{{\c}}{\FBool{b}}} = {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{0})}{b}})
     {\And}
-    ({\FSem{M}{{\pi}}{{\c}}{\fNot{f}}} =
-     {\Not}({\FSem{M}{{\pi}}{\c}{f}})) 
+    ({\FSem{M}{{\pi}}{{\c}}{\fNot{f}}} = {\Not}{\FSem{M}{{\pi}}{\c}{f}})
     {\And}
-    ({\FSem{M}{{\pi}}{{\c}}{\fAnd{f1}{f2}}} =
-     {\FSem{M}{\pi}{{\c}}{f1}} {\And} {\FSem{M}{\pi}{{\c}}{f2}})
+    ({\FSem{M}{{\pi}}{{\c}}{\fAnd{f1}{f2}}} = {\FSem{M}{\pi}{{\c}}{f1}} {\And} {\FSem{M}{\pi}{{\c}}{f2}})
     {\And}
-    ({\FSem{M}{{\pi}}{{\c}}{\fNext{f}}} =
-     {\FSem{M}{\restN{{\pi}}{1}}{{\c}}{f)}}
+    ({\FSem{M}{{\pi}}{{\c}}{\fNext{f}}} = {\FSem{M}{\restN{{\pi}}{1}}{{\c}}{f}})
     {\And}
     ({\FSem{M}{{\pi}}{{\c}}{\fUntil{f1}{f2}}} = 
       {\Exists}k. {\FSem{M}{\restN{{\pi}}{k}}{\c}{f2}} {\And} {\Forall}j. j \Le k \Imp {\FSem{M}{\restN{{\pi}}{j}}{{\c}}{f1}})
@@ -659,20 +672,20 @@ $\t{L}_{\t{M}}$ to finite sequences of states
       {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(0,j)}))}{\c}{r} {\Imp} {\FSem{M}{\restN{{\pi}}{j}}{{\c}}{f}})
     {\And}
     ({\FSem{M}{{\pi}}{{\c}}{\fStrongImp{r1}{r2}}} = 
-      {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(0,j)}))}{\c}{r1} {\Imp} {\Exists}k. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))}{\c}{r2})
+      {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(0,j)}))}{\c}{r1} 
+          {\Imp} {\Exists}k. j \Leq k \And \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))}{\c}{r2})
     {\And}
     ({\FSem{M}{{\pi}}{{\c}}{\fWeakImp{r1}{r2}}} = 
-     {\FSem{M}{{\pi}}{{\c}}{\fStrongImp{r1}{r2}}}
-      \Or
       {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(0,j)}))}{\c}{r1} 
-          \Imp ({\Exists}k. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))}{\c}{r2})
+          \Imp ({\Exists}k. j \Leq k \And \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))}{\c}{r2})
              \Or
-             {\Forall}k. {\Exists}w. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))w}{\c}{r2})
+             {\Forall}k. j \Leq k \Imp {\Exists}w. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))w}{\c}{r2})
     {\And}
     ({\FSem{M}{{\pi}}{{\c}}{\fAbort{f}{b}}} =
       ({\FSem{M}{\pi}{{\c}}{f }}
        {\Or}
-       {\Exists}j {\Pi}'. {\FSem{M}{\restN{{\pi}}{j}}{\c}{{\FBool{b}}}} {\And} {\FSem{M}{\pathCat{\pathSeg{\pi}{(i,j-1)}}{{\pi}'}}{{\c}}{f}}))
+       {\Exists}j {\Pi}'. {\FSem{M}{\restN{{\pi}}{j}}{\c}{{\FBool{b}}}} {\And} {\FSem{M}{\pathCat{\pathSeg{\pi}{(0,j-1)}}{{\pi}'}}{{\c}}{f}}))
+
 \end{alltt}}
 
 \subsection{CTL: Sugar Optional Branching Extension (OBE)}\label{OBEfinite}
@@ -854,7 +867,10 @@ one of the formal challenges to which we hope to submit the semantics.
 \subsection{Finite paths}\label{finite}
 
 \Sugar gives a semantics to formulas for both finite and infinite
-paths.  To represent this, we model a path as being either a finite
+paths.  To represent this, we model a path as being either a 
+non-empty\footnote{The need for finite paths to be non-empty arose
+when trying to prove some properties. This requirement does not seem to be explicit in
+the Accellera specification.} finite
 list of states or a function from natural numbers to states and define a
 predicate \t{finite} to test if a path is a finite list. The function
 \t{length} gives the length of a finite path (it is not defined on
@@ -866,7 +882,7 @@ paths for which \t{finite} is not true).
 
 \noindent as meaning 
 
-~~``for every $j$: (\t{finite}~$\pi$ implies $j < \t{length}(\pi)$) implies $~\cdots~j~\cdots$''
+~~``for every $j$: (\t{finite}~$\pi$ implies $j < \t{length}~\pi$) implies $~\cdots~j~\cdots$''
 
 \noindent and we interpret the official semantics locution 
 
@@ -874,75 +890,92 @@ paths for which \t{finite} is not true).
 
 \noindent as meaning 
 
-~~``there exists $j$ s.t. (\t{finite}~$\pi$ implies $j < \t{length}(\pi)$) and $~\cdots~j~\cdots$''
+~~``there exists $j$ s.t. (\t{finite}~$\pi$ implies $j < \t{length}~\pi$) and $~\cdots~j~\cdots$''
+
+Define ${\pl~\pi~n}$ to mean that
+if $\pi$ is finite then $n$ is
+less than the length of $\pi$, i.e.~the predicate \pl is defined by
+
+~~$\pl~\pi~n~=~\t{finite}~\pi~\Rightarrow~ n < \t{length}~\pi$
+
+We can then write ``$\forall i\in\pl~\pi.~\cdots~i~\cdots$'' and ``$\exists i\in\pl~\pi.~\cdots~i~\cdots$''
+for the locutions above. The name ``$\pl$'' is short for ``path length''
+
+Define $\sim~\pi~\pi'$ to mean that $\pi$ and $\pi'$ are similar in that they are
+either both finite or both infinite:
+
+~~$\sim~\pi~\pi'~=~(\rm{finite}~\pi~=~\rm{finite}~\pi')$
+
+We will write ``$\exists \pi'\in\sim~\pi.~\cdots~\pi'~\cdots$'' to restrict quantification
+of $\pi'$ to range of paths that are similar (in the sense just defined) to $\pi$. This
+comes up in the semantics of \texttt{abort} formulas.
 
 Here is a version of the unclocked FL semantics that allows
 paths to be finite.
 
 
-
-
 {\begin{alltt}
-    ({\FSem{M}{{\pi}}{{\c}}{\FBool{b}}} = 
-     {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{0})}{b}}
+
+    ({\FSem{M}{{\pi}}{{\c}}{\FBool{b}}} = {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{0})}{b}})
     {\And}
-    ({\FSem{M}{{\pi}}{{\c}}{\fNot{f}}} =
-     {\Not}({\FSem{M}{{\pi}}{\c}{f}})) 
+    ({\FSem{M}{{\pi}}{{\c}}{\fNot{f}}} = {\Not}{\FSem{M}{{\pi}}{\c}{f}}))
     {\And}
-    ({\FSem{M}{{\pi}}{{\c}}{\fAnd{f1}{f2}}} =
-     {\FSem{M}{\pi}{{\c}}{f1}} {\And} {\FSem{M}{\pi}{{\c}}{f2}})
+    ({\FSem{M}{{\pi}}{{\c}}{\fAnd{f1}{f2}}} = {\FSem{M}{\pi}{{\c}}{f1}} {\And} {\FSem{M}{\pi}{{\c}}{f2}})
     {\And}
-    ({\FSem{M}{{\pi}}{{\c}}{\fNext{f}}} =
-     ({\IsFinitePath} {\Pi} {\Imp} \PathLength {\Pi} \Ge 1) \And {\FSem{M}{\restN{{\pi}}{1}}{{\c}}{f)}}
+    ({\FSem{M}{{\pi}}{{\c}}{\fNext{f}}} = {\Pl \Pi 1} \And {\FSem{M}{\restN{{\pi}}{1}}{{\c}}{f}})
     {\And}
     ({\FSem{M}{{\pi}}{{\c}}{\fUntil{f1}{f2}}} = 
-      {\Exists}k. {\FSem{M}{\restN{{\pi}}{k}}{\c}{f2}} 
-          \And ({\IsFinitePath} {\Pi} {\Imp} k {\Le} \PathLength {\Pi}) \And {\Forall}j. j \Le k \Imp {\FSem{M}{\restN{{\pi}}{j}}{{\c}}{f1}})
+      {\ResExists{k}{\pi}}. 
+       {\FSem{M}{\restN{{\pi}}{k}}{\c}{f2}} \And {\ResForall{j}{\pi}}. j {\Le} k \Imp {\FSem{M}{\restN{{\pi}}{j}}{{\c}}{f1}})
     {\And}
     ({\FSem{M}{{\pi}}{{\c}}{\fSuffixImp{r}{f}}} = 
-      {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(0,j)}))}{\c}{r} {\Imp} {\FSem{M}{\restN{{\pi}}{j}}{{\c}}{f}})
+      {\ResForall{j}{\pi}}. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(0,j)}))}{\c}{r} {\Imp} {\FSem{M}{\restN{{\pi}}{j}}{{\c}}{f}})
     {\And}
     ({\FSem{M}{{\pi}}{{\c}}{\fStrongImp{r1}{r2}}} = 
-      {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(0,j)}))}{\c}{r1} {\Imp} {\Exists}k. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))}{\c}{r2})
+      {\ResForall{j}{\pi}}. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(0,j)}))}{\c}{r1} 
+                {\Imp} {\ResExists{k}{\pi}}. j \Leq k \And \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))}{\c}{r2})
     {\And}
     ({\FSem{M}{{\pi}}{{\c}}{\fWeakImp{r1}{r2}}} = 
-     {\FSem{M}{{\pi}}{{\c}}{\fStrongImp{r1}{r2}}}
-      \Or
-      {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(0,j)}))}{\c}{r1} 
-          \Imp ({\Exists}k. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))}{\c}{r2})
-             \Or
-             {\Forall}k. ({\IsFinitePath} {\Pi} {\Imp} k {\Le} \PathLength {\Pi}) 
-                  \Imp {\Exists}w. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))w}{\c}{r2})
+      {\ResForall{j}{\pi}}. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(0,j)}))}{\c}{r1} 
+                \Imp ({\ResExists{k}{\pi}}. j \Leq k \And \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))}{\c}{r2})
+                   \Or
+                   {\ResForall{k}{\pi}}. j \Leq k \Imp {\Exists}w. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))w}{\c}{r2})
     {\And}
     ({\FSem{M}{{\pi}}{{\c}}{\fAbort{f}{b}}} =
       ({\FSem{M}{\pi}{{\c}}{f }}
        {\Or}
-       {\Exists}j {\Pi}'. {\FSem{M}{\restN{{\pi}}{j}}{\c}{{\FBool{b}}}} {\And} {\FSem{M}{\pathCat{\pathSeg{\pi}{(0,j-1)}}{{\pi}'}}{{\c}}{f}}))
+       {\ResExists{j}{\pi}}. 0 < j \And
+        \Exists{\Pi}'\In\Sim {\Pi}. {\FSem{M}{\restN{{\pi}}{j}}{\c}{{\FBool{b}}}} {\And} {\FSem{M}{\pathCat{\pathSeg{\pi}{(0,j-1)}}{{\pi}'}}{{\c}}{f}}))
 \end{alltt}}
 
 This semantics is similar to an existing unpublished semantics of unclocked 
 FL formulas\footnote{Personal communication from Cindy Eisner.},
-except that the restriction $\tt{finite~\pi~\Rightarrow~k < length~\pi}$
-and disjunct $\tt{({\exists}k.~\sSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))}{\c}{r2})}$
-were added to the semantics of $\fWeakImp{r1}{r2}$ to ensure equivalence with the clocked semantics
-in Section~\ref{FL}.
+except that the restrictions ``$\in\pl\hspace*{0.5mm}\pi$'' and ``$\in\sim\hspace*{0.5mm}\pi$'' were added to the quantifications,
+%and also the disjunct $\tt{({\exists}k.~\sSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))}{\c}{r2})}$
+and also some changes were made to
+%was added to 
+the semantics of $\fWeakImp{r1}{r2}$ to get the proof of the equivalence with the clocked semantics
+in Section~\ref{FL} to go through.
 
 The following four sub-sections are the manually typeset HOL semantics of \Sugar.
+
+%\vspace*{-4mm}
 
 \subsection{Boolean expressions}
 
 The semantics below is identical to that given earlier
 in Section~\ref{review}.
 
+%\vspace*{-4mm}
+
 {\begin{alltt}
-   ({\BSem{M}{l}{\bProp{p}}}     = \(p\) {\In} P\(\sb{M}\) {\And} \(p\) {\In} l)
-   {\And}
-   ({\BSem{M}{l}{\bTrue}}     = T)
-   {\And}
-   ({\BSem{M}{l}{{\bNot{b}}}}    = {\Not}{\BSem{M}{l}{b}})
-   {\And}
-   ({\BSem{M}{l}{\bAnd{b1}{b2}}} = {\BSem{M}{l}{b1}} {\And} {\BSem{M}{l}{b2}})
+   ({\BSem{M}{l}{\bProp{p}}}   \(\hspace*{1.5mm}\)  = \(p\) {\In} P\(\sb{M}\) {\And} \(p\) {\In} l) \(\hspace*{0.5mm}\)           {\And}
+   ({\BSem{M}{l}{\bTrue}}     \(\hspace*{1.3mm}\)= T)                        \(\hspace*{1mm}\)  {\And}
+   ({\BSem{M}{l}{{\bNot{b}}}}    \(\hspace*{1.5mm}\)= {\Not}{\BSem{M}{l}{b}})      \(\hspace*{1.5mm}\)         {\And}
+   ({\BSem{M}{l}{\bAnd{b1}{b2}}} \(\hspace*{0mm}\)= {\BSem{M}{l}{b1}} {\And} {\BSem{M}{l}{b2}})
 \end{alltt}}
+
+%\vspace*{-4mm}
 
 \subsection{Sugar Extended Regular Expressions}\label{FullSERE}
 
@@ -960,6 +993,8 @@ If \texttt{wlist} is a list of lists then
 in \texttt{wlist} and if $P$ is some predicate
 then \texttt{\EVERY{$P$}wlist} means that $P(\texttt{w})$
 holds for every \texttt{w} in \texttt{wlist}.
+
+\vspace*{-3mm}
 
 {\begin{alltt}
    ({\SSem{M}{w}{c}{\sBool{b}}} = 
@@ -994,11 +1029,11 @@ holds for every \texttt{w} in \texttt{wlist}.
      {\SSem{M}{w}{c1}{r}})
 \end{alltt}}
 
-\vspace*{-8mm}
+%\vspace*{-8mm}
 
 \subsection{Foundation Language}\label{FL}
 
-\vspace*{-2mm}
+%\vspace*{-2mm}
 
 We define a semantic function \Fsem such that $\Fsem~\t{M}~\pi~\t{c}~\t{f}$
 means FL formula \t{f} is true of path $\pi$ if the current clock is \t{c}.
@@ -1007,75 +1042,75 @@ The cases for weak (\t{c}) and strong (\t{c!}) clocks are considered separately.
 \noindent We write $\fSem{M}{\pi}{c}{r}$ for $\Fsem~\t{M}~\pi~\t{c}~\t{f}$
 and use the following two definitions:
 
-\vspace*{-4.5mm}
+%\vspace*{-4.5mm}
 
 {\begin{alltt}
    FirstRise M {\Pi} c i    = \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(0,i)}))}{\bTrue}{\sCat{\sRepeat{\sBool{\bNot{c}}}}{\sBool{c}}}
+
    NextRise M {\Pi} c (i,j) = \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(i,j)}))}{\bTrue}{\sCat{\sRepeat{\sBool{\bNot{c}}}}{\sBool{c}}}
 \end{alltt}}
 
-\vspace*{-3.5mm}
+%\vspace*{-3.5mm}
 
 \noindent The semantic clauses are then:
 
-\vspace*{-3.5mm}
+%\vspace*{-3.5mm}
 
 {\begin{alltt}
+
     ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\FBool{b}}} = 
-      {\Exists}i. FirstRise M {\Pi} c i {\And} {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{i})}{b}})
+      {\ResExists{i}{\pi}}. FirstRise M {\Pi} c i {\And} {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{i})}{b}})
     {\And}
     ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fNot{f}}} = 
-      {\Not}({\FSem{M}{{\pi}}{{\weakClock{c}}}{f}})) 
+      {\Not}{\FSem{M}{{\pi}}{{\weakClock{c}}}{f}}) 
     {\And}
     ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fAnd{f1}{f2}}} = 
-      {\Exists}i. FirstRise M {\Pi} c i {\And} 
-          {\FSem{M}{\restN{{\pi}}{i}}{{\strongClock{c}}}{f1}}    {\And}
-          {\FSem{M}{\restN{{\pi}}{i}}{{\strongClock{c}}}{f2}})
+      {\ResExists{i}{\pi}}. FirstRise M {\Pi} c i {\And} 
+                {\FSem{M}{\restN{{\pi}}{i}}{{\strongClock{c}}}{f1}}    {\And}
+                {\FSem{M}{\restN{{\pi}}{i}}{{\strongClock{c}}}{f2}})
     {\And}
     ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fNext{f}}} = 
-      {\Exists}i. FirstRise M {\Pi} c i            {\And} 
-          ({\IsFinitePath} {\Pi} {\Imp} i {\Le} \PathLength {\Pi} - 1) {\And}
-          {\FSem{M}{\restN{{\pi}}{i+1}}{{\strongClock{c}}}{f)}}
+      {\ResExists{i}{\pi}}. FirstRise M {\Pi} c i {\And} 
+                \ResExists{j}{\pi}. 
+                  i < j \And NextRise M {\Pi} c (i+1,j) \And {\FSem{M}{\restN{{\pi}}{j}}{{\strongClock{c}}}{f}})
     {\And}
     ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fUntil{f1}{f2}}} = 
-      {\Exists}i k. k {\Geq} i  \(\hspace*{0.8mm}\)                 {\And}
-            ({\IsFinitePath} {\Pi} {\Imp} k {\Le} \PathLength {\Pi}) \And
-            FirstRise M {\Pi} c i    \(\hspace*{0.4mm}\)    {\And}
-            {\FSem{M}{\restN{{\pi}}{k}}{\weakClock{\T}}{{\FBool{c}}}} \(\hspace*{0.8mm}\)           {\And}  
-            {\FSem{M}{\restN{{\pi}}{k}}{{\strongClock{c}}}{f2}}           {\And}
-            {\Forall}j. i {\Leq} j {\And} j {\Le} k {\And} 
-                {\FSem{M}{\restN{{\pi}}{j}}{\weakClock{\T}}{{\FBool{c}}}} 
-                {\Imp}
-                {\FSem{M}{\restN{{\pi}}{j}}{{\strongClock{c}}}{f1}})
+      {\ResExists{i k}{\pi}}. k {\Geq} i  \(\hspace*{0.8mm}\)  \(\hspace*{3.5mm}\)               {\And}
+                  FirstRise M {\Pi} c i    \(\hspace*{0.4mm}\) \(\hspace*{2mm}\)   {\And}
+                  {\FSem{M}{\restN{{\pi}}{k}}{\weakClock{\T}}{{\FBool{c}}}} \(\hspace*{3mm}\)           {\And}  
+                  {\FSem{M}{\restN{{\pi}}{k}}{{\strongClock{c}}}{f2}}       \(\hspace*{2mm}\)    {\And}
+                  {\ResForall{j}{\pi}}. 
+                    i {\Leq} j {\And} j {\Le} k {\And} 
+                    {\FSem{M}{\restN{{\pi}}{j}}{\weakClock{\T}}{{\FBool{c}}}} 
+                    {\Imp}
+                    {\FSem{M}{\restN{{\pi}}{j}}{{\strongClock{c}}}{f1}})
     {\And}
     ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fSuffixImp{r}{f}}} = 
-      {\Exists}i. FirstRise M {\Pi} c i {\And} 
-          {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(i,j)}))}{c}{r}
-              {\Imp}
-              {\FSem{M}{\restN{{\pi}}{j}}{{\strongClock{c}}}{f}})
+      {\ResExists{i}{\pi}}. FirstRise M {\Pi} c i {\And} 
+                {\ResForall{j}{\pi}}. i \Leq j \And \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(i,j)}))}{c}{r}
+                          {\Imp}
+                          {\FSem{M}{\restN{{\pi}}{j}}{{\strongClock{c}}}{f}})
     {\And}
     ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fStrongImp{r1}{r2}}} = 
-      {\Exists}i. FirstRise M {\Pi} c i {\And} 
-          {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(i,j)}))}{c}{r1}
-              {\Imp}
-              {\Exists}k. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))}{c}{r2})
+      {\ResExists{i}{\pi}}. FirstRise M {\Pi} c i {\And} 
+                {\ResForall{j}{\pi}}. 
+                     i \Leq j \And \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(i,j)}))}{c}{r1}
+                     {\Imp}
+                     {\ResExists{k}{\pi}}. j \Leq k \And \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))}{c}{r2})
     {\And}
     ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fWeakImp{r1}{r2}}} = 
      {\FSem{M}{{\pi}}{{\strongClock{c}}}{\fStrongImp{r1}{r2}}}
      {\Or}
-     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fWeakImp{r1}{r2}}}
-      {\And}
-      {\Forall}j. ({\IsFinitePath} {\Pi} {\Imp} j {\Le} \PathLength {\Pi})
-          {\Imp}
-          {\Exists}k. NextRise M {\Pi} c (j,k)))
+     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fWeakImp{r1}{r2}}} {\And}
+       {\ResForall{j}{\pi}}. {\ResExists{k}{\pi}}. j {\Leq} k \And NextRise M {\Pi} c (j,k)))
     {\And}
     ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fAbort{f}{b}}} =
-      {\Exists}i. FirstRise M {\Pi} c i {\And}
-          ({\FSem{M}{\restN{{\pi}}{i}}{{\strongClock{c}}}{f }}
-           {\Or}
-           {\Exists}j {\Pi}'. 
-             {\FSem{M}{\restN{{\pi}}{j}}{\weakClock{\T}}{{\FBool{\bAnd{c}{b}}}}} {\And} 
-             {\FSem{M}{\pathCat{\pathSeg{\pi}{(i,j-1)}}{{\pi}'}}{{\strongClock{c}}}{f}}))
+      {\ResExists{i}{\pi}}. FirstRise M {\Pi} c i {\And}
+                ({\FSem{M}{\restN{{\pi}}{i}}{{\strongClock{c}}}{f }}
+                 {\Or}
+                 {\ResExists{j}{\pi}}. i \Le j \And 
+                   \Exists{\Pi}'\In\Sim {\Pi}. 
+                    {\FSem{M}{\restN{{\pi}}{j}}{\weakClock{\T}}{{\FBool{\bAnd{c}{b}}}}} {\And} {\FSem{M}{\pathCat{\pathSeg{\pi}{(i,j-1)}}{{\pi}'}}{{\strongClock{c}}}{f}}))
     {\And}
     ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fWeakClock{f}{c1}}} =   
       {\FSem{M}{{\pi}}{{\weakClock{c1}}}{f)}}
@@ -1084,68 +1119,60 @@ and use the following two definitions:
       {\FSem{M}{{\pi}}{{\strongClock{c1}}}{f}})
     {\And}
     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{{\FBool{b}}}} = 
-      {\Forall}i. FirstRise M {\Pi} c i {\Imp} {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{i})}{b}})
+      {\ResForall{i}{\pi}}. FirstRise M {\Pi} c i {\Imp} {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{i})}{b}})
     {\And}
     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fNot{f}}} = 
-      {\Not}({\FSem{M}{{\pi}}{{\strongClock{c}}}{f}})) 
+      {\Not}{\FSem{M}{{\pi}}{{\strongClock{c}}}{f}}) 
     {\And}
     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fAnd{f1}{f2}}} = 
-      {\Forall}i. FirstRise M {\Pi} c i
-          {\Imp}
-          ({\FSem{M}{\restN{{\pi}}{i}}{{\weakClock{c}}}{f1}} {\And}
-           {\FSem{M}{\restN{{\pi}}{i}}{{\weakClock{c}}}{f2}}))
+       {\ResForall{i}{\pi}}. FirstRise M {\Pi} c i
+                 {\Imp}
+                 ({\FSem{M}{\restN{{\pi}}{i}}{{\weakClock{c}}}{f1}} {\And} {\FSem{M}{\restN{{\pi}}{i}}{{\weakClock{c}}}{f2}}))
     {\And}
     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fNext{f}}} = 
-      {\Forall}i. (FirstRise M {\Pi} c i {\And}
-          ({\IsFinitePath} {\Pi} {\Imp} i {\Le} \PathLength {\Pi} - 1))
-           {\Imp}
-           {\FSem{M}{\restN{{\pi}}{i+1}}{{\weakClock{c}}}{f}})
+      {\ResForall{i}{\pi}}. FirstRise M {\Pi} c i {\Imp} 
+                \ResExists{j}{\pi}. 
+                  i < j \And NextRise M {\Pi} c (i+1,j) \And {\FSem{M}{\restN{{\pi}}{j}}{{\strongClock{c}}}{f}})
     {\And}
     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fUntil{f1}{f2}}} = 
       {\FSem{M}{{\pi}}{{\strongClock{c}}}{\fUntil{f1}{f2}}}  
-      {\Or}
-      ({\Exists}k. {\Forall}l. l {\Ge} k
-               {\Imp}
-               {\FSem{M}{\restN{{\pi}}{l}}{\weakClock{\T}}{{\FBool{\bNot{c}}}}}   {\And} 
-               {\Forall}j. j {\Leq} k 
-                   {\Imp}
-                   {\FSem{M}{\restN{{\pi}}{j}}{\weakClock{\T}}{{\FBool{c}}}} {\Imp} {\FSem{M}{\restN{{\pi}}{j}}{{\weakClock{c}}}{f1}}))
+       {\Or}
+      ({\ResExists{k}{\pi}}.
+        {\ResForall{l}{\pi}}.
+          l {\Geq} k {\Imp} {\FSem{M}{\restN{{\pi}}{l}}{\weakClock{\T}}{{\FBool{\bNot{c}}}}}
+                    {\And} 
+                    {\ResForall{j}{\pi}}. 
+                      j {\Leq} k {\Imp} {\FSem{M}{\restN{{\pi}}{j}}{\weakClock{\T}}{{\FBool{c}}}} {\Imp} {\FSem{M}{\restN{{\pi}}{j}}{{\weakClock{c}}}{f1}}))
     {\And}
     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fSuffixImp{r}{f}}} = 
-      {\Forall}i. FirstRise M {\Pi} c i {\Imp}
-          {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(i,j)}))}{c}{r}
-              {\Imp}
-              {\FSem{M}{\restN{{\pi}}{j}}{{\weakClock{c}}}{f}})
+      {\ResForall{i}{\pi}}. FirstRise M {\Pi} c i {\Imp}
+                {\ResForall{j}{\pi}}. i \Leq j \And \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(i,j)}))}{c}{r}
+                          {\Imp}
+                          {\FSem{M}{\restN{{\pi}}{j}}{{\weakClock{c}}}{f}})
     {\And}
     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fStrongImp{r1}{r2}}} = 
       {\FSem{M}{{\pi}}{{\strongClock{c}}}{\fStrongImp{r1}{r2}}}  
       {\Or}
       ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fWeakImp{r1}{r2}}} 
        {\And}
-       {\Exists}k. {\Forall}l. l {\Ge} k 
-               {\Imp} 
-               {\FSem{M}{\restN{{\pi}}{l}}{\weakClock{\T}}{{\FBool{\bNot{c}}}}}))
+       {\ResExists{k}{\pi}}. {\ResForall{l}{\pi}}. l {\Geq} k {\Imp} {\FSem{M}{\restN{{\pi}}{l}}{\weakClock{\T}}{{\FBool{\bNot{c}}}}}))
     {\And}
     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fWeakImp{r1}{r2}}} = 
-      {\Forall}i.  FirstRise M {\Pi} c i
-           {\Imp}
-           {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(i,j)}))}{c}{r1}
-               {\Imp}
-               (({\Exists}k. \SSem{M}{ (\lHat{M} (\pathSeg{\pi}{(j,k)}))}{c}{r2})
-                {\Or}
-                {\Forall}k. ({\IsFinitePath} {\Pi} {\Imp} k {\Le} \PathLength {\Pi})
-                     {\Imp}
-                     {\Exists}w. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}){\cat}w)}{c}{r2}))
+      {\ResForall{i}{\pi}}.  FirstRise M {\Pi} c i
+                 {\Imp}
+                 {\ResForall{j}{\pi}}. i \Leq j \And \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(i,j)}))}{c}{r1}
+                           {\Imp}
+                           (({\ResExists{k}{\pi}}. j \Leq k \And \SSem{M}{ (\lHat{M} (\pathSeg{\pi}{(j,k)}))}{c}{r2})
+                            {\Or}
+                            {\ResForall{k}{\pi}}. j \Leq k \Imp {\Exists}w. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}){\cat}w)}{c}{r2}))
     {\And}
     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fAbort{f}{b}}} =
-      {\Forall}i. FirstRise M {\Pi} c i 
-          {\Imp}
-          ({\FSem{M}{\restN{{\pi}}{i}}{{\weakClock{c}}}{f}} 
-           {\Or}   
-           {\Exists}j {\Pi}'. 
-            {\FSem{M}{\restN{{\pi}}{j}}{\weakClock{\T}}{{\FBool{\bAnd{c}{b}}}}}
-            {\And}
-            {\FSem{M}{\pathCat{\pathSeg{\pi}{(i,j-1)}}{{\pi}'}}{{\weakClock{c}}}{f}}))
+      {\ResForall{i}{\pi}}. FirstRise M {\Pi} c i 
+                {\Imp}
+                ({\FSem{M}{\restN{{\pi}}{i}}{{\weakClock{c}}}{f}} 
+                 {\Or}   
+                 {\ResExists{j}{\pi}}. i \Le j \And
+                  \Exists{\Pi}'\In\Sim {\Pi}. {\FSem{M}{\restN{{\pi}}{j}}{\weakClock{\T}}{{\FBool{\bAnd{c}{b}}}}} {\And} {\FSem{M}{\pathCat{\pathSeg{\pi}{(i,j-1)}}{{\pi}'}}{{\weakClock{c}}}{f}}))
     {\And}
     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fWeakClock{f}{c1}}} =   
       {\FSem{M}{{\pi}}{{\weakClock{c1}}}{f}})
@@ -1155,10 +1182,10 @@ and use the following two definitions:
 \end{alltt}}
 
 
-This semantics of FL formulas differs from the one we originally transcribed from the \Sugar document
-as a result of some mismatches found when trying to prove the equivalence of
-the clocked and unclocked semantics when the clock is \t{T}. See Section~\ref{progress}
-for a discussion of the differences.
+This semantics of FL formulas differs from the one we originally transcribed from the Accellera submission document
+\cite{Accellera}.
+See the Appendix for the original semantics and Section~\ref{progress} for a discussion of the differences
+between it and the current semantics in Section~\ref{FL}.
 
 
 
@@ -1182,29 +1209,26 @@ Write $\oSem{M}{s}{f}$ for \texttt{\Osem~M~s~f}, and then the semantics of the O
    (\OSem{M}{s}{\oAnd{f1}{f2}} = \OSem{M}{s}{f1} {\And} \OSem{M}{s}{f2})
    {\And}
    (\OSem{M}{s}{\oEx{f}} = 
-     {\Exists}{\Pi}. Path M {\Pi}                 {\And} 
-         ({\IsFinitePath} {\Pi} {\Imp} 1 {\Le} \PathLength {\Pi}) {\And} 
-         (\PathEl{{\pi}}{0} = s) {\And} \OSem{M}{\pathEl{{\pi}}{1}}{f})
+     {\Exists}{\Pi}. Path M {\Pi} {\And} \Pl \Pi 1 {\And} (\PathEl{{\pi}}{0} = s) {\And} \OSem{M}{\pathEl{{\pi}}{1}}{f})
    {\And}
    (\OSem{M}{s}{\oEu{f1}{f2}} = 
-     {\Exists}{\Pi}. Path M {\Pi}                    {\And} 
-         (\PathEl{{\pi}}{0} = s)                     {\And} 
-         {\Exists}k. ({\IsFinitePath} {\Pi} {\Imp} k {\Le} \PathLength {\Pi}) {\And}
-             \OSem{M}{\pathEl{{\pi}}{k}}{f2}             {\And} 
-             {\Forall}j. j {\Le} k {\Imp} \OSem{M}{\pathEl{{\pi}}{j}}{f1})
+     {\Exists}{\Pi}. Path M {\Pi} {\And} (\PathEl{{\pi}}{0} = s)
+         {\And} 
+         {\ResExists{k}{\pi}}. 
+           \OSem{M}{\pathEl{{\pi}}{k}}{f2} {\And} {\ResForall{j}{\pi}}. j {\Le} k {\Imp} \OSem{M}{\pathEl{{\pi}}{j}}{f1})
    {\And}
    (\OSem{M}{s}{\oEg{f}} = 
-     {\Exists}{\Pi}. Path M {\Pi} {\And} 
-         (\PathEl{{\pi}}{0} = s)  {\And} 
-         {\Forall}j. ({\IsFinitePath} {\Pi} {\Imp} j {\Le} \PathLength {\Pi}) {\Imp} \OSem{M}{\pathEl{{\pi}}{j}}{f})
+     {\Exists}{\Pi}. Path M {\Pi} {\And} (\PathEl{{\pi}}{0} = s) {\And} {\ResForall{j}{\pi}}. \OSem{M}{\pathEl{{\pi}}{j}}{f})
 \end{alltt}}
 
 \section{Progress on analysing the semantics}\label{progress}
 
 We have established a number of properties of the semantics using the \HOL system.
 Some of these went through first time without any problems,
-but others revealed bugs in the original HOL semantics.
+but others revealed bugs both in the \Sugar semantics and  original HOL representation
+of the semantics.
 
+\subsection{Properties of $\t{FirstRise}$ and $\t{NextRise}$}
 
 Recall the definitions:
 
@@ -1249,10 +1273,9 @@ $\begin{array}{l}
 \vdash~ \t{i}\leq \t{j}~\Rightarrow~(\t{NextRise~M}~{\pi}~\t{\T~(i,j)}~=~(\t{i} = \t{j}))
 \end{array}$
 
-\medskip
+\subsection{Relating the clocked and unclocked semantics}\label{relatingclocks}
 
-
-The next thing we have proved is that if we define \t{ClockFree~r} to mean
+If we define \t{ClockFree~r} to mean
 that \t{r} contains no clocking constructs (a simple recursion over the syntax of SEREs),
 then clocking with \T{} is equivalent to the unclocked SERE semantics.
 
@@ -1265,7 +1288,7 @@ $\vdash~\forall{\t{r}}.~\t{ClockFree~r}~\Rightarrow~(\sSem{M}{w}{\T}{r}~=~\sSem{
 The proof of this is an easy structural induction, and shows that the semantics in Section~\ref{FullSERE}
 collapses to that in Section~\ref{SimpleSERE} when the clock is \T.
 
-We next tried to prove a similar result for FL formulas, but this turned out to be impossible.
+We tried to prove a similar result for FL formulas, but this turned out to be impossible.
 The reason is that the proof required first showing
 
 
@@ -1333,30 +1356,347 @@ formulas or SEREs, the semantics on the left of the equation is the
 one in Section~\ref{FL} and the semantics on the right of the equation
 is the one in Section~\ref{finite}.  The proof attempt failed because
 the unclocked semantics for $\tt{\fUntil{f1}{f2}}$ had a path length
-check, but the strongly clocked semantics didn't. By adding the
-conjunct $\t{finite}~\pi~\Rightarrow~\t{k}<\t{length}~\pi$ to the
-strongly clocked semantics the proof could be completed.
+check, but the strongly clocked semantics didn't. After restricting
+the quantification of \t{k} in the strongly clocked semantics to
+values satisfying $\pl~\pi$ the proof went through.
+
+\subsection{Further analysis}
+
+The original semantics specifies
+that some of the quantifications over the variables
+$\t{i}$, $\t{j}$, $\t{k}$ etc.{} be restricted to range over values
+the are smaller than the length of the current path $\pi$
+(we represent this using $\pl\hspace*{0.5mm}\pi$).
+Our initial attempts to relate the clocked and unclocked semantics needed
+additional quantifier restrictions to be added, as discussed at the end of
+Section~\ref{relatingclocks} above. However, during email discussions with the
+\Sugar designers it became clear that in fact all quantifications
+should be restricted, for otherwise the semantics would rely on the
+HOL logic's default interpretions of terms like $\pi^j$ when $\pi$ is
+finite and $j \geq \t{length}~\pi$.\footnote{The logical treatment of
+`undefined' terms like $1/0$ or $\t{hd[]}$ has been much
+discussed. HOL uses a simple and consistent approach based on
+Hilbert's $\varepsilon$-operator. Other approaches include `free
+logics' (i.e.~logics with non-denoting terms) and three-valued logics
+in which formulas can evaluate to $true$, $false$ and $undefined$.}
+With HOL's default interpretation of `meaningless' terms, it is
+unclear whether the semantics accurately reflects the designers
+intentions.
+
+Thus the semantics was modified so that all quantifications are
+suitably restricted.  In addition, and in the same spirit, we added
+the requirement that all terms $\pathSeg{\pi}{(m,n)}$ occured in a
+context where $m\leq n$, so that the arbitrary value of
+$\pathSeg{\pi}{(m,n)}$ when $m>n$ was not invoked. Unfortunately
+these changes broke the
+existing proof of
+
+\medskip
+
+$~~\vdash~\forall{\t{f}}~\pi.~\fSem{M}{\pi}{\T}{f}~=~\sSem{M}{\pi}{\T\texttt{!}}{f})$
+
+\medskip
+
+and hence the proof relating the clocked and unclocked semantics.
+
+Further discussion with the \Sugar designers at first suggested that
+in fact this property should not be expected to hold after all.  What
+we thought had happened was that our semantics, following the
+Accellera submission semantics, was imprecise about certain details,
+and this imprecision conspired to make the property true.  When we
+sharpened the semantics (to eliminate meaningless terms), the property
+became false. However, in the end it turned out that there was just a
+bug in the semantics: ``$\t{l}>\t{k}$'' should be ``$\t{l}\geq\t{k}$''
+in the weakly clocked semantics of until and strong suffix
+implication, and when this change was made the proof of the above
+property, and the equivalence between the unclocked and true-clocked
+semantics, went through. However, just as we thought everything was
+sorted out, the \Sugar designers announced they had discovered a bug
+and pointed out that we should not have been able to prove what we had
+without a tweak.  Careful analysis showed that a discrepancy between
+the semantics in this paper and what was defined in HOL had crept
+in. The bug in the HOL semantics allowed a proof to succeed when it
+shouldn't have. After fixing the discrepancy the proofs failed, as
+they should, and after the correct fix was made they went through.
 
 \section{Conclusions}
 
 It was quite straightforward to use the informal semantics in the
-\Sugar documentation to create a deep
-embedding of the whole \Sugar kernel.  Proving some simple `sanity
-checking' lemmas with a proof assistant revealed minor bugs in the
-translated semantics (and possibly in the original). We cannot claim
-that the current semantics is `golden', since other errors may have
-crept in and not yet been detected, but the process of analysing it
-using machine assisted proof has increased our confidence in its
-correctness.
+\Sugar documentation to create a deep embedding of the whole \Sugar
+kernel.  Attempting to prove some simple `sanity checking' lemmas with
+a proof assistant quickly revealed bugs in the translated semantics (and
+possibly in the original). Further probing revealed more bugs.
+
+It is hoped that the
+semantics in Section~\ref{SugarSemantics} is correct, but until
+further properties are proved we cannot be sure, and the experience so
+far suggests caution!
+
+Although the process of analysing the semantics using machine assisted
+proof has revealed a number of interesting issues, we expect eventually
+to converge on a semantics that, with high confidence, is correct.
 
 \section{Acknowledgements}
 
-Cindy Eisner patiently answered numerous email questions
-in great detail. She also supplied valuable comments and corrections
+Cindy Eisner and Dana Fisman patiently answered numerous email questions
+in great detail. They also supplied valuable comments and corrections
 to an earlier version of this paper, and suggested
 ways of modifying the HOL semantics to get the proofs described in Section~\ref{progress} to go through.
 
 \bibliographystyle{plain}{\bibliography{CatBPaper}}
+
+\newpage
+\section*{APPENDIX: Initial HOL semantics}\label{appendix}
+
+
+This appendix consists of a typeset version of our initial transcription into higher order logic of
+the semantics in the Sugar documentation
+
+~~{\footnotesize
+\url{http://www.haifa.il.ibm.com/projects/verification/sugar/literature.html}}
+
+This semantics turned out to be inadequate for the reasons discussed in Section~\ref{progress}.
+
+\section{Boolean expressions}
+
+\vspace*{-2mm}
+
+{\begin{alltt}
+   ({\BSem{M}{l}{\bProp{p}}}   \(\hspace*{1.5mm}\)  = \(p\) {\In} P\(\sb{M}\) {\And} \(p\) {\In} l) \(\hspace*{0.5mm}\)           {\And}
+   ({\BSem{M}{l}{\bTrue}}     \(\hspace*{1.3mm}\)= T)                        \(\hspace*{1mm}\)  {\And}
+   ({\BSem{M}{l}{{\bNot{b}}}}    \(\hspace*{1.5mm}\)= {\Not}{\BSem{M}{l}{b}})      \(\hspace*{1.5mm}\)         {\And}
+   ({\BSem{M}{l}{\bAnd{b1}{b2}}} \(\hspace*{0mm}\)= {\BSem{M}{l}{b1}} {\And} {\BSem{M}{l}{b2}})
+\end{alltt}}
+
+\vspace*{-6mm}
+
+\section{Sugar Extended Regular Expressions}
+
+If \texttt{wlist} is a list of lists then
+\texttt{\CONCAT{wlist}} is the concatenation of the lists
+in \texttt{wlist} and if $P$ is some predicate
+then \texttt{\EVERY{$P$}wlist} means that $P(\texttt{w})$
+holds for every \texttt{w} in \texttt{wlist}.
+
+\begin{alltt}
+   ({\SSem{M}{w}{c}{\sBool{b}}} = 
+     {\Exists}n. n {\Geq} 1                                 {\And} 
+         ({\Length} w = n)                         {\And} 
+         ({\Forall}i. 1 {\Leq} i {\And} i {\Le} n {\Imp} {\BSem{M}{\el{i-1}{w}}{\bNot{c}}} {\And}
+         {\BSem{M}{\el{n-1}{w}}{\bAnd{c}{b}}})
+   {\And}
+   ({\SSem{M}{w}{c}{\sCat{r1}{r2}}} = 
+     {\Exists}w1 w2. (w = w1{\Cat}w2) {\And} {\SSem{M}{w1}{c}{r1}} {\And} {\SSem{M}{w2}{c}{r2}})
+   {\And}
+   ({\SSem{M}{w}{c}{\sFusion{r1}{r2}}} = 
+     {\Exists}w1 w2 l. (w = w1{\cat}[l]{\cat}w2) {\And} 
+               {\SSem{M}{(w1{\cat}\texttt{[}l\texttt{]})}{c}{r1}} {\And} {\SSem{M}{(\texttt{[}l\texttt{]}{\cat}w2)}{c}{r2}}) 
+   {\And}
+   ({\SSem{M}{w}{c}{\sOr{r1}{r2}}} = 
+     {\SSem{M}{w}{c}{r1}} {\Or} {\SSem{M}{w}{c}{r2}}) 
+   {\And}
+   ({\SSem{M}{w}{c}{\sRigAnd{r1}{r2}}} = 
+     {\SSem{M}{w}{c}{r1}} {\And} {\SSem{M}{w}{c}{r2}}) 
+   {\And}
+   ({\SSem{M}{w}{c}{\sFlexAnd{r1}{r2}}} = 
+     {\Exists}w1 w2. (w = w1{\Cat}w2) {\And} 
+             (({\SSem{M}{w}{c}{r1}} {\And} {\SSem{M}{w1}{c}{r2}}) 
+              {\Or}
+              ({\SSem{M}{w}{c}{r2}} {\And} {\SSem{M}{w1}{c}{r1}})))
+   {\And}
+   ({\SSem{M}{w}{c}{\sRepeat{r}}} = 
+     {\Exists}wlist. (w = \CONCAT{wlist}) {\And} \EVERY{({\Lam}w. {\SSem{M}{w}{c}{r}})}{wlist})
+   {\And}
+   ({\SSem{M}{w}{c}{\sClock{r}{c1}}} =
+     {\SSem{M}{w}{c1}{r}})
+\end{alltt}
+
+\section{Foundation Language}
+
+The following two constants are defined:
+
+\begin{alltt}
+   FirstRise M {\Pi} c i    = \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(0,i)}))}{\bTrue}{\sCat{\sRepeat{\sBool{\bNot{c}}}}{\sBool{c}}}
+   NextRise M {\Pi} c (i,j) = \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(i,j)}))}{\bTrue}{\sCat{\sRepeat{\sBool{\bNot{c}}}}{\sBool{c}}}
+\end{alltt}
+
+The semantic clauses are then:
+
+\begin{alltt}
+    ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\FBool{b}}} = 
+      {\Exists}i. FirstRise M {\Pi} c i {\And} {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{i})}{b}}
+    {\And}
+    ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fNot{f}}} = 
+      {\Not}({\FSem{M}{{\pi}}{{\weakClock{c}}}{f}})) 
+    {\And}
+    ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fAnd{f1}{f2}}} = 
+      {\Exists}i. FirstRise M {\Pi} c i {\And} 
+          {\FSem{M}{\restN{{\pi}}{i}}{{\strongClock{c}}}{f1}}    {\And}
+          {\FSem{M}{\restN{{\pi}}{i}}{{\strongClock{c}}}{f2}})
+    {\And}
+    ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fNext{f}}} = 
+      {\Exists}i. FirstRise M {\Pi} c i            {\And} 
+          ({\IsFinitePath} {\Pi} {\Imp} i {\Le} \PathLength {\Pi} - 1) {\And}
+          {\FSem{M}{\restN{{\pi}}{i+1}}{{\strongClock{c}}}{f)}}
+    {\And}
+    ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fUntil{f1}{f2}}} = 
+      {\Exists}i k. k {\Geq} i             {\And}
+            FirstRise M {\Pi} c i  {\And}
+            {\FSem{M}{\restN{{\pi}}{k}}{\weakClock{\T}}{{\FBool{c}}}}      {\And}  
+            {\FSem{M}{\restN{{\pi}}{k}}{{\strongClock{c}}}{f2}}     {\And}
+            {\Forall}j. i {\Leq} j {\And} j {\Le} k {\And} 
+              {\FSem{M}{\restN{{\pi}}{j}}{\weakClock{\T}}{{\FBool{c}}}} 
+              {\Imp}
+              {\FSem{M}{\restN{{\pi}}{j}}{{\strongClock{c}}}{f1}})
+    {\And}
+    ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fSuffixImp{r}{f}}} = 
+      {\Exists}i. FirstRise M {\Pi} c i {\And} 
+          {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(i,j)}))}{c}{r}
+              {\Imp}
+              {\FSem{M}{\restN{{\pi}}{j}}{{\strongClock{c}}}{f}})
+    {\And}
+    ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fStrongImp{r1}{r2}}} = 
+      {\Exists}i. FirstRise M {\Pi} c i {\And} 
+          {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(i,j)}))}{c}{r1}
+              {\Imp}
+              {\Exists}k. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))}{c}{r2})
+    {\And}
+    ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fWeakImp{r1}{r2}}} = 
+     {\FSem{M}{{\pi}}{{\strongClock{c}}}{\fStrongImp{r1}{r2}}}
+      {\Or}
+     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fWeakImp{r1}{r2}}}
+      {\And}
+      {\Forall}j. ({\IsFinitePath} {\Pi} {\Imp} j {\Le} \PathLength {\Pi})
+          {\Imp}
+          {\Exists}k. NextRise M {\Pi} c (j,k)))
+    {\And}
+    ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fAbort{f}{b}}} =
+      {\Exists}i. FirstRise M {\Pi} c i {\And}
+          ({\FSem{M}{\restN{{\pi}}{i}}{{\strongClock{c}}}{f }}
+           {\Or}
+           {\Exists}j {\Pi}'. 
+             {\FSem{M}{\restN{{\pi}}{j}}{\weakClock{\T}}{{\FBool{\bAnd{c}{b}}}}} {\And} 
+             {\FSem{M}{\pathCat{\pathSeg{\pi}{(i,j-1)}}{{\pi}'}}{{\strongClock{c}}}{f}}))
+    {\And}
+    ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fWeakClock{f}{c1}}} =   
+      {\FSem{M}{{\pi}}{{\weakClock{c1}}}{f)}}
+    {\And}
+    ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fStrongClock{f}{c1}}} =   
+      {\FSem{M}{{\pi}}{{\strongClock{c1}}}{f}})
+    {\And}
+    ({\FSem{M}{{\pi}}{{\weakClock{c}}}{{\FBool{b}}}} = 
+      {\Exists}i. FirstRise M {\Pi} c i 
+          {\Imp} 
+          {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{i})}{b}})
+    {\And}
+    ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fNot{f}}} = 
+      {\Not}({\FSem{M}{{\pi}}{{\strongClock{c}}}{f}})) 
+    {\And}
+    ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fAnd{f1}{f2}}} = 
+      {\Exists}i. FirstRise M {\Pi} c i
+          {\Imp}
+          ({\FSem{M}{\restN{{\pi}}{i}}{{\weakClock{c}}}{f1}} 
+           {\And}
+           {\FSem{M}{\restN{{\pi}}{i}}{{\weakClock{c}}}{f2}}))
+    {\And}
+    ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fNext{f}}} = 
+      {\Exists}i. (FirstRise M {\Pi} c i 
+           {\And}
+           ({\IsFinitePath} {\Pi} {\Imp} i {\Le} \PathLength {\Pi} - 1))
+           {\Imp}
+           {\FSem{M}{\restN{{\pi}}{i+1}}{{\weakClock{c}}}{f}})
+    {\And}
+    ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fUntil{f1}{f2}}} = 
+      {\FSem{M}{{\pi}}{{\strongClock{c}}}{\fUntil{f1}{f2}}}  
+      {\Or}
+      ({\Exists}k. {\Forall}l. l {\Ge} k
+               {\Imp}
+               {\FSem{M}{\restN{{\pi}}{l}}{\weakClock{\T}}{{\FBool{\bNot{c}}}}} 
+               {\And} 
+               {\Forall}j. j {\Leq} k 
+                   {\Imp}
+                   {\FSem{M}{\restN{{\pi}}{j}}{\weakClock{\T}}{{\FBool{c}}}}
+                   {\Imp}
+                   {\FSem{M}{\restN{{\pi}}{j}}{{\weakClock{c}}}{f1}}))
+    {\And}
+    ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fSuffixImp{r}{f}}} = 
+      {\Exists}i. FirstRise M {\Pi} c i {\Imp}
+          {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(i,j)}))}{c}{r}
+              {\Imp}
+              {\FSem{M}{\restN{{\pi}}{j}}{{\weakClock{c}}}{f}})
+    {\And}
+
+    ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fStrongImp{r1}{r2}}} = 
+      {\FSem{M}{{\pi}}{{\strongClock{c}}}{\fStrongImp{r1}{r2}}}  
+      {\Or}
+      ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fWeakImp{r1}{r2}}} 
+       {\And}
+       {\Exists}k. {\Forall}l. l {\Ge} k 
+               {\Imp} 
+               {\FSem{M}{\restN{{\pi}}{l}}{\weakClock{\T}}{{\FBool{\bNot{c}}}}}))
+    {\And}
+    ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fWeakImp{r1}{r2}}} = 
+      {\Exists}i.  FirstRise M {\Pi} c i
+           {\Imp}
+           {\Forall}j. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(i,j)}))}{c}{r1}
+               {\Imp}
+               (({\Exists}k. \SSem{M}{ (\lHat{M} (\pathSeg{\pi}{(j,k)}))}{c}{r2})
+                {\Or}
+                {\Forall}k. ({\IsFinitePath} {\Pi} {\Imp} k {\Le} \PathLength {\Pi})
+                    {\Imp}
+                    {\Exists}w. \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}){\cat}w)}{c}{r2}))
+    {\And}
+    ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fAbort{f}{b}}} =
+      {\Exists}i. FirstRise M {\Pi} c i 
+          {\Imp}
+          ({\FSem{M}{\restN{{\pi}}{i}}{{\weakClock{c}}}{f}} 
+           {\Or}   
+           {\Exists}j {\Pi}'. {\FSem{M}{\restN{{\pi}}{j}}{\weakClock{\T}}{{\FBool{\bAnd{c}{b}}}}}
+                   {\And}
+                  {\FSem{M}{\pathCat{\pathSeg{\pi}{(i,j-1)}}{{\pi}'}}{{\weakClock{c}}}{f}}))
+    {\And}
+    ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fWeakClock{f}{c1}}} =   
+      {\FSem{M}{{\pi}}{{\weakClock{c1}}}{f}})
+    {\And}
+    ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fStrongClock{f}{c1}}} =   
+      {\FSem{M}{{\pi}}{{\strongClock{c1}}}{f}})
+\end{alltt}
+
+\section{Optional Branching Extension}
+
+The following predicate is defined
+
+\begin{alltt}
+   Path M {\Pi} = {\Forall}n. \getR{M}(\PathEl{{\pi}}{n}, \PathEl{{\pi}}{n+1})
+\end{alltt}
+
+The semantic clauses are then:
+
+\begin{alltt}
+   (\OSem{M}{s}{\oBool{b}} = {\BSem{M}{\lNoHat{M}(s)}{b}})
+   {\And}
+   (\OSem{M}{s}{\oNot{f}} = {\Not}(\OSem{M}{s}{f})) 
+   {\And}
+   (\OSem{M}{s}{\oAnd{f1}{f2}} = \OSem{M}{s}{f1} {\And} \OSem{M}{s}{f2})
+   {\And}
+   (\OSem{M}{s}{\oEx{f}} = 
+     {\Exists}{\Pi}. Path M {\Pi}                 {\And} 
+         ({\IsFinitePath} {\Pi} {\Imp} 1 {\Le} \PathLength {\Pi}) {\And} 
+         (\PathEl{{\pi}}{0} = s) {\And} \OSem{M}{\pathEl{{\pi}}{1}}{f})
+   {\And}
+   (\OSem{M}{s}{\oEu{f1}{f2}} = 
+     {\Exists}{\Pi}. Path M {\Pi}                    {\And} 
+         (\PathEl{{\pi}}{0} = s)                     {\And} 
+         {\Exists}k. ({\IsFinitePath} {\Pi} {\Imp} k {\Le} \PathLength {\Pi}) {\And}
+             \OSem{M}{\pathEl{{\pi}}{k}}{f2}             {\And} 
+             {\Forall}j. j {\Le} k {\Imp} \OSem{M}{\pathEl{{\pi}}{j}}{f1})
+   {\And}
+   (\OSem{M}{s}{\oEg{f}} = 
+     {\Exists}{\Pi}. Path M {\Pi} {\And} 
+         (\PathEl{{\pi}}{0} = s)  {\And} 
+         {\Forall}j. ({\IsFinitePath} {\Pi} {\Imp} j {\Le} \PathLength {\Pi}) {\Imp} \OSem{M}{\pathEl{{\pi}}{j}}{f})
+\end{alltt}
+
 
 \end{document}
 

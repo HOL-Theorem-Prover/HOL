@@ -1,5 +1,6 @@
 (*****************************************************************************)
 (* Create PathTheory to support Sugar2Theory                                 *)
+(* Version with all finite paths non-empty                                   *)
 (*****************************************************************************)
 
 (******************************************************************************
@@ -39,45 +40,44 @@ val CONCAT_def =
 
 (******************************************************************************
 * A path is is finite ot infinite
+* Finite paths are non-empty and so are represented by a pair (x,xl) 
+* where x is the head and xl the tail
 ******************************************************************************)
 val path_def =
  Hol_datatype
-  `path = FINITE_PATH   of 's list
+  `path = FINITE_PATH   of ('s # 's list)
         | INFINITE_PATH of (num -> 's)`;
 
 (******************************************************************************
 * Tests
 ******************************************************************************)
 val IS_FINITE_PATH_def = 
- Define `(IS_FINITE_PATH(FINITE_PATH l)   = T)
+ Define `(IS_FINITE_PATH(FINITE_PATH p)   = T)
          /\
          (IS_FINITE_PATH(INFINITE_PATH f) = F)`;
 
 val IS_INFINITE_PATH_def = 
- Define `(IS_INFINITE_PATH(FINITE_PATH l)   = F)
+ Define `(IS_INFINITE_PATH(FINITE_PATH p)   = F)
          /\
          (IS_INFINITE_PATH(INFINITE_PATH f) = T)`;
 
-(******************************************************************************
-* PATH_LENGTH(FINITE_PATH l) = LENGTH l
-* (PATH_LENGTH is not specified on infinite paths)
-******************************************************************************)
-val PATH_LENGTH_def = 
- Define `PATH_LENGTH (FINITE_PATH l)   = LENGTH l`;
+val SAME_PATH_KIND_def =
+ Define
+  `SAME_PATH_KIND p1 p2 = (IS_INFINITE_PATH p1 = IS_INFINITE_PATH p2)`;
 
 (******************************************************************************
-* HEAD (p0 p1 p2 p3 ...) = p0(p1 p2 p3 ...)
+* HEAD (p0 p1 p2 p3 ...) = p0
 ******************************************************************************)
 val HEAD_def = 
- Define `(HEAD (FINITE_PATH l)   = HD l)
+ Define `(HEAD (FINITE_PATH p) = FST p)
          /\
-         (HEAD (INFINITE_PATH f) = f 0)`;
+         (HEAD (INFINITE_PATH f)  = f 0)`;
 
 (******************************************************************************
 * REST (p0 p1 p2 p3 ...) = (p1 p2 p3 ...)
 ******************************************************************************)
 val REST_def = 
- Define `(REST (FINITE_PATH l)   = FINITE_PATH(TL l))
+ Define `(REST (FINITE_PATH p) = FINITE_PATH(HD(SND p), TL(SND p)))
          /\
          (REST (INFINITE_PATH f) = INFINITE_PATH(\n. f(n+1)))`;
 
@@ -86,6 +86,77 @@ val REST_def =
 ******************************************************************************)
 val RESTN_def = 
  Define `(RESTN p 0 = p) /\ (RESTN p (SUC n) = RESTN (REST p) n)`;
+
+(******************************************************************************
+* Simple properties
+******************************************************************************)
+val NOT_IS_INFINITE_PATH =
+ store_thm
+  ("NOT_IS_INFINITE_PATH",
+   ``IS_INFINITE_PATH p = ~(IS_FINITE_PATH p)``,
+   Cases_on `p`
+    THEN RW_TAC std_ss [IS_INFINITE_PATH_def,IS_FINITE_PATH_def]);
+
+val NOT_IS_FINITE_PATH =
+ store_thm
+  ("NOT_IS_FINITE_PATH",
+   ``IS_FINITE_PATH p = ~(IS_INFINITE_PATH p)``,
+   Cases_on `p`
+    THEN RW_TAC std_ss [IS_INFINITE_PATH_def,IS_FINITE_PATH_def]);
+
+val SAME_PATH_KIND =
+ store_thm
+  ("SAME_PATH_KIND",
+   ``(SAME_PATH_KIND p1 p2 = (IS_INFINITE_PATH p1 = IS_INFINITE_PATH p2))
+     /\
+     (SAME_PATH_KIND p1 p2 = (IS_FINITE_PATH p1 = IS_FINITE_PATH p2))``,
+   PROVE_TAC[SAME_PATH_KIND_def,NOT_IS_FINITE_PATH]);
+
+val IS_INFINITE_PATH_REST =
+ store_thm
+  ("IS_INFINITE_PATH_REST",
+   ``!p. IS_INFINITE_PATH(REST p) = IS_INFINITE_PATH p``,
+   Induct
+    THEN RW_TAC list_ss [REST_def,IS_INFINITE_PATH_def,IS_FINITE_PATH_def]);
+
+val IS_INFINITE_PATH_RESTN =
+ store_thm
+  ("IS_INFINITE_PATH_RESTN",
+   ``!n p. IS_INFINITE_PATH(RESTN p n) = IS_INFINITE_PATH p``,
+   Induct
+    THEN RW_TAC list_ss [RESTN_def,IS_INFINITE_PATH_REST]);
+
+val IS_FINITE_PATH_REST =
+ store_thm
+  ("IS_FINITE_PATH_REST",
+   ``!p. IS_FINITE_PATH(REST p) = IS_FINITE_PATH p``,
+   Induct
+    THEN RW_TAC list_ss [REST_def,IS_INFINITE_PATH_def,IS_FINITE_PATH_def]);
+
+val IS_FINITE_PATH_RESTN =
+ store_thm
+  ("IS_FINITE_PATH_RESTN",
+   ``!n p. IS_FINITE_PATH(RESTN p n) = IS_FINITE_PATH p``,
+   Induct
+    THEN RW_TAC list_ss [RESTN_def,IS_FINITE_PATH_REST]);
+
+(******************************************************************************
+* PATH_LENGTH(FINITE_PATH(x,l)) = 1 + LENGTH l
+* (PATH_LENGTH is not specified on infinite paths)
+******************************************************************************)
+val PATH_LENGTH_def = 
+ Define `PATH_LENGTH (FINITE_PATH p)   = 1 + LENGTH(SND p)`;
+
+(******************************************************************************
+* Finite paths are non-empty
+******************************************************************************)
+
+val FINITE_PATH_NONEMPTY =
+ store_thm
+  ("FINITE_PATH_NONEMPTY",
+   ``!p. IS_FINITE_PATH p ==> 0 < PATH_LENGTH p``,
+   Induct
+    THEN RW_TAC arith_ss [IS_FINITE_PATH_def,PATH_LENGTH_def]);
 
 (******************************************************************************
 * PATH_EL (p0 p1 p2 p3 ...) n = pn
@@ -149,10 +220,24 @@ val PATH_SEG_def = Define `PATH_SEG p (m,n) = PATH_SEG_REC (n-m+1) m p`;
 ******************************************************************************)
 val PATH_CONS_def = 
  Define 
-  `(PATH_CONS(x, FINITE_PATH l) = FINITE_PATH(x :: l))
+  `(PATH_CONS(x, FINITE_PATH p) = FINITE_PATH(x, FST p :: SND p))
    /\
    (PATH_CONS(x, INFINITE_PATH f) = 
      INFINITE_PATH(\n. if n=0 then x else f(n-1)))`;
+
+val IS_INFINITE_PATH_CONS =
+ store_thm
+  ("IS_INFINITE_PATH_CONS",
+   ``!p x. IS_INFINITE_PATH(PATH_CONS(x,p)) = IS_INFINITE_PATH p``,
+   Induct
+    THEN RW_TAC list_ss [IS_INFINITE_PATH_def,PATH_CONS_def]);
+
+val IS_FINITE_PATH_CONS =
+ store_thm
+  ("IS_FINITE_PATH_CONS",
+   ``!p x. IS_FINITE_PATH(PATH_CONS(x,p)) = IS_FINITE_PATH p``,
+   Induct
+    THEN RW_TAC list_ss [IS_FINITE_PATH_def,PATH_CONS_def]);
 
 (******************************************************************************
 * PATH_EL (RESTN p n) 0 = PATH_EL p n
@@ -172,6 +257,24 @@ val PATH_CAT_def =
   `(PATH_CAT([], p) = p) 
    /\ 
    (PATH_CAT((x::w), p) = PATH_CONS(x, PATH_CAT(w,p)))`;
+
+val IS_INFINITE_PATH_CAT =
+ store_thm
+  ("IS_INFINITE_PATH_CAT",
+   ``!p l. IS_INFINITE_PATH(PATH_CAT(l,p)) = IS_INFINITE_PATH p``,
+   Induct
+    THEN RW_TAC std_ss []
+    THEN Induct_on `l`
+    THEN RW_TAC list_ss [IS_INFINITE_PATH_def,PATH_CAT_def,IS_INFINITE_PATH_CONS]);
+
+val IS_FINITE_PATH_CAT =
+ store_thm
+  ("IS_FINITE_PATH_CAT",
+   ``!p l. IS_FINITE_PATH(PATH_CAT(l,p)) = IS_FINITE_PATH p``,
+   Induct
+    THEN RW_TAC std_ss []
+    THEN Induct_on `l`
+    THEN RW_TAC list_ss [IS_FINITE_PATH_def,PATH_CAT_def,IS_FINITE_PATH_CONS]);
 
 val ALL_EL_F =
  store_thm
