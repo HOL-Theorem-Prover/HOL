@@ -1,31 +1,5 @@
-A new working release of Hol98, Taupo-2, is now available for FTP from 
-Cambridge. It can be obtained from
-
-    http://www.ftp.cl.cam.ac.uk/ftp/hvg/hol98/taupo-2.tar.gz
-
-Installation instructions may be found at 
-
-    http://www.ftp.cl.cam.ac.uk/ftp/hvg/hol98/taupo-2.install.txt
-
-
-
-The release is primarily intended to fix some egregious bugs in
-Taupo-1. However, there are two significant new additions: 
-
-  * A theory of lazy lists, found in llistTheory (due to Michael Norrish).
-
-  * A port of Klaus Schneider's thorough treatment of temporal logic and
-    omega-automata. The library is accessed via "temporalLib", and some
-    examples of its use can be found in 
-
-         src/temporal/examples.sml. 
-
-    The library uses SMV as a decision procedure. 
-
-
 Bugs fixed:
 -----------
-
   * Automatic dependency analysis in Holmake could get confused (in
     the presence of unbalanced `` "tokens" or other lexical problems)
     and bail out without much in the way of an error message.  Fixed
@@ -49,7 +23,7 @@ Bugs fixed:
   * Hol_datatype failed on nested recursive definitions when a type
     variable in the attempted definition was the same as the variable
     used as the range type of the recursive function in the recursion
-    theorem for the type under which the recursion was nested. Got that?
+    theorem for the type under which the recursion was nested.
 
   * Hol_datatype returned type axioms with poor choices of type
     variables ('Z, 'Z0, 'Z1 etc)
@@ -62,11 +36,12 @@ Bugs fixed:
   * The definitions of a new record type's functional update functions
     (those that allow terms such as ``r with fld1 updated_by SUC``)
     are now added to the set of simplification theorems in the
-    TypeBase.  These theorems are automatically used by tools such as 
-    RW_TAC.
+    TypeBase.  These theorems are used by tools such as RW_TAC.
 
+New theories:
+-------------
 
-Future work will include bringing the documentation up-to-date.
+  * A theory of lazy lists
 
-
-February 19, 2000.
+  * A thorough treatment of temporal logic, as well as omega-automata.
+    Includes SMV as a decision procedure.
