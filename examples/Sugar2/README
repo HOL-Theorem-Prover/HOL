@@ -1,43 +1,15 @@
 
-This directory contains a deep embedding of the Accellera standard
-Property Specification Language (PSL/Sugar) in HOL. 
+Accellera standard Property Specification Language (PSL/Sugar) in HOL
 
 The contents of this directory are
 
 README ......................... This file
-SyntaxScript.sml ............... Syntax of Sugar in HOL
-KripkeScript.sml ............... Theory of Kripke structures
-FinitePathScript.sml ........... Theory of finite paths (lists)
-PathScript.sml ................. Finite and infinite paths
-UnclockedSemanticsScript.sml ... Unclocked semantics
-ClockedSemanticsScript.sml ..... Clocked Semantics
-RewritesScript.sml ............. Rewrites semantics of Sugar
-PropertiesScript.sml ........... Proofs of properties of semantics
+official-semantics ............. Directory containing official Accellera semantics
+executable-semantics ........... Directory containing start of an executable semantics
+regexp ......................... Directory containing regular expression matcher
 Manual ......................... Directory containing old papers on the semantics
 index.html ..................... Pointer to MJCG's Sugar page (latest versions here)
 
-As a result of trying to prove some `sanity checking' properties, bugs
-were found in the HOL semantics.  Although the current semantics has
-been modified to correct all known bugs, the semantics is still
-evolving and should be regarded as provisional.  The current draft
-documentation is at
-
- http://www.eda.org/vfv/docs/formal_semantics_standalone.pdf
-
-This semantics has evolved considerably from the original one
-submitted to Accellera and appearing in the LRM. The changes, which
-make Sugar closer to ForSpec, has resulted in a much simpler
-semantics, and many proofs are now much shorter than before.
-
-The last round of analysis using HOL revealed two problems.
-
-1. The rewrite and direct semantics differed for "f abort b".
-   This was fixed by restricting the requirement that the 
-   two semantics agree to hold only for paths which the 
-   current clock is true in the initial state.
-
-2. The clocked and unclocked semantics of suffix implications {r}(f)
-   were incompatible. This was fixed by changing the clocked semantics.
 
 (*****************************************************************************)
 (*                             ACKNOWLEDGEMENT                               *)
@@ -48,3 +20,4 @@ The last round of analysis using HOL revealed two problems.
 
 MJCG
 Mon Jan 27 16:18:00 GMT 2003
+Wed Mar 19 20:22:03 GMT 2003
