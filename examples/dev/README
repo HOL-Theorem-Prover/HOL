@@ -19,7 +19,7 @@ There are six levels of abstraction:
  S: Source       (subset of TFL)
  I: Intermediate (source combinators Atm, Seq, Par, Ite, Rec)
  D: Devices      (handshake hardware combinators: ATM, SEQ, PAR, ITE, REC)
- N: Netlist      (abstract device predicates: unclocked DEL and DFF)
+ N: Netlist      (abstract device predicates: unclocked DEL, DELT, DELT and DFF)
  C: Circuit      (clocked synchronous device predicates: Dtype, Dff)
  V: Verilog      (netlist pretty-printed into Verilog)
 
@@ -49,42 +49,40 @@ following components combinational components:
   |- OR (in1,in2,out)      = !t. out t = in1 t \/ in2 t
   |- NOT (inp,out)         = !t. out t = ~inp t
 
-and two kinds of sequential components (registers):
+and sequential components (registers):
 
-  |- DEL (inp,out)         = (out 0 = inp 0) /\ !t. out(t+1) = inp t
-  |- DFF (d,clk,q)         = !t. q(t+1) =
-                                 if POSEDGE clk (t+1) then d(t+1) else q t
+  |- DEL (inp,out) = !t. out(t+1) = inp t
+  |- DELT(inp,out) = (out 0 = T) /\ !t. out(t+1) = inp t
+  |- DELF(inp,out) = (out 0 = F) /\ !t. out(t+1) = inp t
+  |- DFF (d,clk,q) = !t. q(t+1) = if POSEDGE clk (t+1) then d(t+1) else q t
 
 where:
 
   |- POSEDGE s t = if t=0 then F else ~s(t-1) /\ s t
 
-The components DEL and DFF do not correspond to standard components,
-so they are implemented in terms of simpler ones:
+The sequential components are then implemented in terms of clocked reqisters:
 
-  |- REG (inp,out) = !t. out (t + 1) = inp t
-  |- REGF(inp,out) = (out 0 = F) /\ REG (inp,out)
-
-These are then implemented in terms of standard clocked reqisters:
-
-  |- Dtype (ck,d,q) = !t. q (t+1) = (if Rise ck t then d t else q t)
-  |- Dff   (ck,d,q) = (q 0 = F) /\ Dtype(ck,d,q)
+  |- Dtype     (ck,d,q) = !t. q (t+1) = (if Rise ck t then d t else q t)
+  |- FlipFlopT (ck,d,q) = (q 0 = T) /\ Dtype(ck,d,q)
+  |- FlipFlopF (ck,d,q) = (q 0 = F) /\ Dtype(ck,d,q)
 
 where:
 
  |- Rise s t = ~(s t) /\ s(t+1)
 
-The implementation of REG and REGF in terms of Dtype and Dff involves
-a temporal abstraction, since Dtype and Dff are edge-triggered on a
-clock, but REG and REGF are not.  The refinement from the unclocked
-level of abstraction to the clocked circuit level is implemented
-formally using infrastructure from Melham's theory of temporal
-abstraction in the directory dff:
+The implementation of DEL, DELT, DELF, DFF in terms of Dtype,
+FlipFlopT and FlipFlopF involves a temporal abstraction, since Dtype
+and the flip-flops are edge-triggered on a clock, but DEL, DELT, DELF,
+DFF are not.  The refinement from the unclocked level of abstraction
+to the clocked circuit level is implemented formally using
+infrastructure from Melham's theory of temporal abstraction in the
+directory dff:
 
 Using Melham's dff theories it is proved in compileScript.sml that:
 
- |- InfRise clk ==> !d q. Dtype (clk,d,q) ==> REG (d at clk,q at clk)
- |- InfRise clk ==> !d q. Dff (clk,d,q) ==> REGF (d at clk,q at clk)
+ |- InfRise clk ==> !d q. Dtype (clk,d,q)     ==> DEL (d at clk,q at clk)
+ |- InfRise clk ==> !d q. FlipFlopT (clk,d,q) ==> DELT (d at clk,q at clk)
+ |- InfRise clk ==> !d q. FlipFlopF (clk,d,q) ==> DELF (d at clk,q at clk)
 
 Where
 
@@ -296,10 +294,10 @@ Evaluating
 
  MAKE_CIRCUIT (|- <device> ===> DEV f)
 
-unfolds <device> into a netlist, then replaces DEL and DFF by
-implementations using REG and REGF and then, uing Melham's temporal
-abstraction theory in dff, refines the unclocked REG and REGF to
-clocked Dtype and Dff, and returns:
+unfolds <device> into a netlist, then replaces DFF by an
+implementation in terms of DEL and DELT, and then, uing Melham's
+temporal abstraction theory in dff, refines any unclocked DEL, DELT
+and DELF to clocked Dtype and Dff, and returns:
 
  |- InfClock clk
     ==>

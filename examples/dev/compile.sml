@@ -1471,7 +1471,7 @@ val MAKE_NETLIST =
 (* Compile a device implementation into a clocked circuit represented in HOL *)
 (*****************************************************************************)
 val at_thms =
- [UNDISCH REG_IMP,UNDISCH REGF_IMP,
+ [UNDISCH DEL_IMP,UNDISCH DELT_IMP,UNDISCH DELF_IMP,
   EQ_at,COMB_at,CONSTANT_at,TRUE_at,FALSE_at,
   NOT_at,AND_at,OR_at,MUX_at,
   EQ_at,ADD_at,SUB_at,LESS_at];
@@ -1483,7 +1483,7 @@ val MAKE_CIRCUIT =
  (I ## Ho_Rewrite.REWRITE_RULE[at_CONCAT])                                 o
  at_SPEC_ALL ``clk:num->bool``                                             o
  GEN_ALL                                                                   o
- Ho_Rewrite.REWRITE_RULE[GSYM LEFT_FORALL_IMP_THM,REG_CONCAT]              o
+ Ho_Rewrite.REWRITE_RULE[GSYM LEFT_FORALL_IMP_THM,DEL_CONCAT]              o
  CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV))                          o
  Ho_Rewrite.REWRITE_RULE 
   [COMB_NOT,COMB_AND,COMB_OR,COMB_ADD,COMB_SUB,COMB_LESS,COMB_EQ]          o
@@ -1491,8 +1491,8 @@ val MAKE_CIRCUIT =
   (RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV))))                   o
  SIMP_RULE std_ss [UNCURRY]                                                o
  Ho_Rewrite.REWRITE_RULE
-  [BUS_CONCAT_ELIM,DFF_IMP_def,POSEDGE_IMP_def,LATCH_def,
-   DEL_IMP_def,GSYM DEL_IMP_THM]                                           o
+  [BUS_CONCAT_ELIM,DFF_IMP_def,POSEDGE_IMP_def,LATCH_def
+   (*DEL_IMP_def,GSYM DEL_IMP_THM*)]                                           o
  DEV_IMP (DEPTH_IMP DFF_IMP_INTRO)                                         o
  Ho_Rewrite.REWRITE_RULE
    [FUN_EXISTS_PROD,LAMBDA_PROD,COMB_ID,COMB_CONSTANT_1,COMB_CONSTANT_2,
@@ -1507,7 +1507,7 @@ val MAKE_CIRCUIT =
  REWRITE_RULE 
   [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
    ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
-   GSYM DEL_IMP_THM,DEL_IMP_def,
+   (*GSYM DEL_IMP_THM,DEL_IMP_def,*)
    Ite_def,Par_def,Seq_def,o_THM];
 
 

@@ -188,11 +188,28 @@ val DtypevDef =
 \\n";
 
 (*****************************************************************************)
+(* Boolean positive edge triggered flip-flop starting in state 1             *)
+(*****************************************************************************)
+val FlipFlopTvDef =
+"// Boolean positive edge triggered flip-flop starting in state 1\n\
+\module FlipFlopT (clk,d,q);\n\
+\ input clk,d;\n\
+\ output q;\n\
+\ reg q;\n\
+\\n\
+\ initial q = 1;\n\
+\\n\
+\ always @(posedge clk) q <= d;\n\
+\\n\
+\endmodule\n\
+\\n";
+
+(*****************************************************************************)
 (* Boolean positive edge triggered flip-flop starting in state 0             *)
 (*****************************************************************************)
-val DffvDef =
+val FlipFlopFvDef =
 "// Boolean positive edge triggered flip-flop starting in state 0\n\
-\module Dff (clk,d,q);\n\
+\module FlipFlopF (clk,d,q);\n\
 \ input clk,d;\n\
 \ output q;\n\
 \ reg q;\n\
@@ -380,7 +397,7 @@ fun termToVerilog_NOT (out:string->unit) tm =
   else raise ERR "termToVerilog_NOT" "bad component term";
 
 (*****************************************************************************)
-(* Print an instance of an AND                                                *)
+(* Print an instance of an AND                                               *)
 (*****************************************************************************)
 val ANDvInst_count = ref 0;
 fun ANDvInst (out:string->unit) [] [in1_name,in2_name,out_name] =
@@ -540,28 +557,52 @@ fun termToVerilog_Dtype (out:string->unit) tm =
   else raise ERR "termToVerilog_Dtype" "bad component term";
 
 (*****************************************************************************)
-(* Print an instance of a Dff                                                *)
+(* Print an instance of a FlipFlopT                                          *)
 (*****************************************************************************)
-val DffvInst_count = ref 0;
-fun DffvInst (out:string->unit) [] [clk_name,in_name,out_name] =
- let val count = !DffvInst_count
-     val _ = (DffvInst_count := count+1);
-     val inst_name = "Dff" ^ "_" ^ Int.toString count
+val FlipFlopTvInst_count = ref 0;
+fun FlipFlopTvInst (out:string->unit) [] [clk_name,in_name,out_name] =
+ let val count = !FlipFlopTvInst_count
+     val _ = (FlipFlopTvInst_count := count+1);
+     val inst_name = "FlipFlopT" ^ "_" ^ Int.toString count
  in
- (out " Dff        "; out inst_name;
+ (out " FlipFlopT        "; out inst_name;
   out " (";out clk_name;out",";out in_name;out",";out out_name; out ");";
   out "\n\n")
  end;
 
-fun termToVerilog_Dff (out:string->unit) tm =
+fun termToVerilog_FlipFlopT (out:string->unit) tm =
  if is_comb tm
      andalso is_const(fst(strip_comb tm))
-     andalso (fst(dest_const(fst(strip_comb tm))) = "Dff")
+     andalso (fst(dest_const(fst(strip_comb tm))) = "FlipFlopT")
      andalso is_pair(rand tm)
      andalso (length(strip_pair(rand tm)) = 3)
      andalso all is_var (strip_pair(rand tm))
-  then DffvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
-  else raise ERR "termToVerilog_Dff" "bad component term";
+  then FlipFlopTvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
+  else raise ERR "termToVerilog_FlipFlopT" "bad component term";
+
+(*****************************************************************************)
+(* Print an instance of a FlipFlopF                                          *)
+(*****************************************************************************)
+val FlipFlopFvInst_count = ref 0;
+fun FlipFlopFvInst (out:string->unit) [] [clk_name,in_name,out_name] =
+ let val count = !FlipFlopFvInst_count
+     val _ = (FlipFlopFvInst_count := count+1);
+     val inst_name = "FlipFlopF" ^ "_" ^ Int.toString count
+ in
+ (out " FlipFlopF        "; out inst_name;
+  out " (";out clk_name;out",";out in_name;out",";out out_name; out ");";
+  out "\n\n")
+ end;
+
+fun termToVerilog_FlipFlopF (out:string->unit) tm =
+ if is_comb tm
+     andalso is_const(fst(strip_comb tm))
+     andalso (fst(dest_const(fst(strip_comb tm))) = "FlipFlopF")
+     andalso is_pair(rand tm)
+     andalso (length(strip_pair(rand tm)) = 3)
+     andalso all is_var (strip_pair(rand tm))
+  then FlipFlopFvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
+  else raise ERR "termToVerilog_FlipFlopF" "bad component term";
 
 
 (*****************************************************************************)
@@ -716,7 +757,8 @@ fun termToVerilog out tm =
  termToVerilog_DEL out tm        handle _ =>
  termToVerilog_DFF out tm        handle _ =>
  termToVerilog_Dtype out tm      handle _ =>
- termToVerilog_Dff out tm        handle _ =>
+ termToVerilog_FlipFlopT out tm  handle _ =>
+ termToVerilog_FlipFlopF out tm  handle _ =>
  termToVerilog_CONSTANT out tm   handle _ =>
  termToVerilog_ADD out tm        handle _ =>
  termToVerilog_SUB out tm        handle _ =>
@@ -749,8 +791,11 @@ MUXvInst out [("size","15")] ["sw","inB1","inB2","outB"];
 DtypevInst out [("size","31")] ["clk1","in1","out1"];
 DtypevInst out [("size","15")] ["clk2","in2","out2"];
 
-DffvInst out [] ["clk1","in1","out1"];
-DffvInst out [] ["clk2","in2","out2"];
+FlipFlopTvInst out [] ["clk1","in1","out1"];
+FlipFlopTvInst out [] ["clk2","in2","out2"];
+
+FlipFlopFvInst out [] ["clk1","in1","out1"];
+FlipFlopFvInst out [] ["clk2","in2","out2"];
 
 ADDvInst out [("size","31")] ["inA1","inA2","outA"];
 ADDvInst out [("size","15")] ["inB1","inB2","outB"];
@@ -781,20 +826,21 @@ fun add_module (name,(vdef,vinst)) =
 val _ = 
  map
   add_module
-  [("DEL",      (DELvDef,        DELvInst)),
-   ("DFF",      (DFFvDef,        DFFvInst)),
-   ("Dtype",    (DtypevDef,      DtypevInst)),
-   ("Dff",      (DffvDef,        DffvInst)),
-   ("TRUE",     (TRUEvDef,       TRUEvInst)),
-   ("NOT",      (NOTvDef,        NOTvInst)),
-   ("AND",      (ANDvDef,        ANDvInst)),
-   ("OR",       (ORvDef,         ORvInst)),
-   ("MUX",      (MUXvDef,        MUXvInst)),
-   ("CONSTANT", (CONSTANTvDef,   CONSTANTvInst)),
-   ("ADD",      (ADDvDef,        ADDvInst)),
-   ("SUB",      (SUBvDef,        SUBvInst)),
-   ("LESS",     (LESSvDef,       LESSvInst)),
-   ("EQ",       (EQvDef,         EQvInst))];
+  [("DEL",       (DELvDef,        DELvInst)),
+   ("DFF",       (DFFvDef,        DFFvInst)),
+   ("Dtype",     (DtypevDef,      DtypevInst)),
+   ("FlipFlopT", (FlipFlopTvDef,  FlipFlopTvInst)),
+   ("FlipFlopF", (FlipFlopFvDef,  FlipFlopFvInst)),
+   ("TRUE",      (TRUEvDef,       TRUEvInst)),
+   ("NOT",       (NOTvDef,        NOTvInst)),
+   ("AND",       (ANDvDef,        ANDvInst)),
+   ("OR",        (ORvDef,         ORvInst)),
+   ("MUX",       (MUXvDef,        MUXvInst)),
+   ("CONSTANT",  (CONSTANTvDef,   CONSTANTvInst)),
+   ("ADD",       (ADDvDef,        ADDvInst)),
+   ("SUB",       (SUBvDef,        SUBvInst)),
+   ("LESS",      (LESSvDef,       LESSvInst)),
+   ("EQ",        (EQvDef,         EQvInst))];
 
 (*****************************************************************************)
 (* ``v0 <> ... <> vn`` --> [``v0``, ... ,``vn``]                             *)
@@ -1266,9 +1312,9 @@ and inputs = [("inp", "5")];
 (*****************************************************************************)
 
 val maxtime_default  = ref 1000
-and period_default   = ref 5
+and period_default   = ref 10
 and stimulus_default = ref(fn (inputs:(string * string) list)
-                           => [(10, 10, inputs, 15)]);
+                           => [(13, 13, inputs, 13)]);
 
 fun SIMULATE thm inputs =
  let val name = fst(dest_const(#1(dest_cir thm)))

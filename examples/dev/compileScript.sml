@@ -688,7 +688,7 @@ val POSEDGE_IMP =
   ("POSEDGE_IMP",
    ``POSEDGE_IMP = 
       \(inp,out).
-         ?c0 c1. DEL (inp,c0) /\ NOT (c0,c1) /\ AND (c1,inp,out)``,
+         ?c0 c1. DELT (inp,c0) /\ NOT (c0,c1) /\ AND (c1,inp,out)``,
    RW_TAC std_ss [FUN_EQ_THM,FORALL_PROD,POSEDGE_IMP_def]);
 
 val CALL =
@@ -790,68 +790,10 @@ val REC =
 val DEL_Del =
  store_thm
   ("DEL_Del",
-   ``!inp out. DEL(inp,out) = (out 0 = inp 0) /\ Del(inp,out)``,
-   PROVE_TAC[DEL_def,Del]);
-
-(*
-Unit delay component (i.e. a register): 
-value output at out is the value input at inp at the previous time.
-*)
-val REG_def =
- Define `REG(inp,out) = !t. out(t+1) = inp t`;
-
-(*
-Flip-Flop that powers up in F state
-*)
-val REGF_def =
- Define
-  `REGF(inp,out) = (out 0 = F) /\ REG(inp,out)`;
-
-(* Implementation of DEL using REG and REGF
-
-                        inp
-                         |
-       |-----|           |
-       |  T  |           +-------------|
-       |-----|           |             |
-          |              |             |
-       c0 |              |             |
-          |              |             |
-    |-----------|   |---------|        |
-    |    REGF   |   |   REG   |        |
-    |-----------|   |---------|        |
-          |              |             |
-       c1 |           c2 |             |
-          |              |             |
-    |----------------------------------------|
-    |                   MUX                  |
-    |----------------------------------------|
-                         |
-                         |
-                        out
-*)
-val DEL_IMP_def =
- Define 
-  `DEL_IMP(inp,out) = 
-    ?c0 c1 c2. 
-     TRUE c0 /\ REGF(c0,c1) /\ REG(inp,c2) /\ MUX(c1,c2,inp,out)`;
-
-val DEL_IMP_THM =
- store_thm
-  ("DEL_IMP_THM",
-   ``DEL_IMP = DEL``,
+   ``DEL = Del``,
    RW_TAC std_ss [FUN_EQ_THM]
     THEN Cases_on `x`
-    THEN RW_TAC std_ss [DEL_IMP_def,DEL_def,TRUE_def,REGF_def,REG_def,MUX_def]
-    THEN EQ_TAC
-    THEN RW_TAC std_ss []
-    THEN RW_TAC std_ss []
-    THEN Q.EXISTS_TAC `\t. T`
-    THEN Q.EXISTS_TAC `\t. if t=0 then F else T`
-    THEN Q.EXISTS_TAC `\t. q(t-1)`
-    THEN ZAP_TAC arith_ss []
-    THEN `(t-1)+1 = t` by DECIDE_TAC
-    THEN PROVE_TAC[]);
+    THEN RW_TAC std_ss [DEL_def,Del]);
 
 (* Sort of transparent latch
 
@@ -859,7 +801,7 @@ val DEL_IMP_THM =
         |        |        |------|
         |        |        |      |
         |        |     |-----|   |
-        |        |     | REG |   |
+        |        |     | DEL |   |
         |        |     |-----|   |
         |        |        |      |
         |        |      c |      |
@@ -875,14 +817,14 @@ val DEL_IMP_THM =
 
 val LATCH_def =
  Define
-  `LATCH(sw,d,q) = ?c. MUX(sw,d,c,q) /\ REG(q,c)`;
+  `LATCH(sw,d,q) = ?c. MUX(sw,d,c,q) /\ DEL(q,c)`;
 
 val LATCH_THM =
  store_thm
   ("LATCH_THM",
    ``LATCH(sw,d,q) = 
       (!t. sw t ==> (q t = d t)) /\ (!t. ~(sw(t+1)) ==> (q(t+1) = q t))``,
-   RW_TAC std_ss [LATCH_def,MUX_def,REG_def]
+   RW_TAC std_ss [LATCH_def,MUX_def,DEL_def]
     THEN EQ_TAC
     THEN RW_TAC std_ss []
     THEN RW_TAC std_ss []
@@ -896,7 +838,7 @@ val LATCH_IMP =
  store_thm
   ("LATCH_IMP",
    ``LATCH(sw,d,q) ==> !t. q(t+1) = if sw(t+1) then d(t+1) else q t``,
-   RW_TAC std_ss [LATCH_def,MUX_def,REGF_def,REG_def]
+   RW_TAC std_ss [LATCH_def,MUX_def,DELF_def,DEL_def]
     THEN PROVE_TAC[]);
 
 (* Implementation of DFF using LATCH
@@ -947,10 +889,16 @@ val Inf_Rise_POSEDGE =
        THEN RW_TAC arith_ss []]);
 
 (*****************************************************************************)
+(* Flip-flop that powers up outputting T                                     *)
+(*****************************************************************************)
+val FlipFlopT_def =
+ Define `FlipFlopT(ck,d,q) = (q 0 = T) /\ Dtype(ck,d,q)`;
+
+(*****************************************************************************)
 (* Flip-flop that powers up outputting F                                     *)
 (*****************************************************************************)
-val Dff_def =
- Define `Dff(ck,d,q) = (q 0 = F) /\ Dtype(ck,d,q)`;
+val FlipFlopF_def =
+ Define `FlipFlopF(ck,d,q) = (q 0 = F) /\ Dtype(ck,d,q)`;
 
 (*****************************************************************************)
 (* Abstract on rising edge ("s at clk" analogous to PSL's "s@clk")           *)
@@ -972,18 +920,18 @@ val at_CONCAT =
 val InfRise_def =
  Define `InfRise clk = Inf(Rise clk)`;
 
-val REG_IMP =
+val DEL_IMP =
  store_thm
-  ("REG_IMP",
-   ``InfRise clk ==> !d q. Dtype(clk,d,q) ==> REG(d at clk, q at clk)``,
-   PROVE_TAC[Dtype_correct,REG_def,Del,InfRise_def,at_def]);
+  ("DEL_IMP",
+   ``InfRise clk ==> !d q. Dtype(clk,d,q) ==> DEL(d at clk, q at clk)``,
+   PROVE_TAC[Dtype_correct,DEL_def,Del,InfRise_def,at_def]);
 
 val Dtype0 =
  store_thm
   ("Dtype0",
-   ``~(q 0) /\ Dtype (clk,d,q) /\ Istimeof 0 (Rise clk) t 
+   ``Dtype (clk,d,q) /\ Istimeof 0 (Rise clk) t 
      ==> 
-     !t'. t' <= t ==> ~(q t')``,
+     !t'. t' <= t ==> (q t' = q 0)``,
    RW_TAC arith_ss [Dtype,Istimeof]
     THEN Induct_on `t'`
     THEN RW_TAC arith_ss [ADD1]);
@@ -1012,22 +960,35 @@ val IstimeofTimeof0 =
       METIS_TAC
        [BETA_RULE(Q.ISPEC `\t. sig t /\ !t'. t' < t ==> ~sig t'` SELECT_UNIQUE)]]);
 
-val REGF_IMP =
+val DELT_IMP =
  store_thm
-  ("REGF_IMP",
-   ``InfRise clk ==> !d q. Dff(clk,d,q) ==> REGF(d at clk, q at clk)``,
-   RW_TAC std_ss[REGF_def,Del,Dff_def,REG_IMP,Istimeof_thm7,InfRise_def]
+  ("DELT_IMP",
+   ``InfRise clk ==> !d q. FlipFlopT(clk,d,q) ==> DELT(d at clk, q at clk)``,
+   RW_TAC std_ss[PURE_REWRITE_RULE[GSYM DEL_def]DELT_def,
+                 Del,FlipFlopT_def,DEL_IMP,Istimeof_thm7,InfRise_def]
     THEN RW_TAC std_ss [at_def,when,Timeof]
     THEN `?t. Istimeof 0 (Rise clk) t` by PROVE_TAC[]
     THEN IMP_RES_TAC Dtype0
     THEN RW_TAC std_ss [GSYM Timeof]
     THEN METIS_TAC[IstimeofTimeof0,DECIDE``t <= t``]);
 
-val REG_CONCAT =
+val DELF_IMP =
  store_thm
-  ("REG_CONCAT",
-   ``REG(in1<>in2,out1<>out2) = REG(in1,out1) /\ REG(in2,out2)``,
-   RW_TAC std_ss [REG_def,BUS_CONCAT_def]
+  ("DELF_IMP",
+   ``InfRise clk ==> !d q. FlipFlopF(clk,d,q) ==> DELF(d at clk, q at clk)``,
+   RW_TAC std_ss[PURE_REWRITE_RULE[GSYM DEL_def]DELF_def,
+                 Del,FlipFlopF_def,DEL_IMP,Istimeof_thm7,InfRise_def]
+    THEN RW_TAC std_ss [at_def,when,Timeof]
+    THEN `?t. Istimeof 0 (Rise clk) t` by PROVE_TAC[]
+    THEN IMP_RES_TAC Dtype0
+    THEN RW_TAC std_ss [GSYM Timeof]
+    THEN METIS_TAC[IstimeofTimeof0,DECIDE``t <= t``]);
+
+val DEL_CONCAT =
+ store_thm
+  ("DEL_CONCAT",
+   ``DEL(in1<>in2,out1<>out2) = DEL(in1,out1) /\ DEL(in2,out2)``,
+   RW_TAC std_ss [DEL_def,BUS_CONCAT_def]
     THEN PROVE_TAC[]);
 
 val TRUE_at =
@@ -1052,7 +1013,7 @@ val EQ_at =
  store_thm
   ("EQ_at",
    ``(f = g) ==> (f at clk = g at clk)``,
-   RW_TAC std_ss [REG_def,BUS_CONCAT_def]
+   RW_TAC std_ss [DEL_def,BUS_CONCAT_def]
     THEN PROVE_TAC[]);
 
 val COMB_at =

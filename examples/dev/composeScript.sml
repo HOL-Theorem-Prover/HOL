@@ -14,6 +14,7 @@
 quietdec := true;
 (* show_assums := true; *)
 map load  ["metisLib","TotalDefn","jrhUtils"];
+open arithmeticTheory metisLib TotalDefn jrhUtils;
 quietdec := false;
 *) 
 
@@ -168,11 +169,22 @@ val MUX_def =
   `MUX(sel,in1,in2,out) = !t. out t = if sel t then in1 t else in2 t`
 
 (*
-Unit delay component (i.e. a register): 
-value output at out is the value input at inp at the previous time.
+Polymorphic unit delay component (i.e. a register):
 *)
 val DEL_def =
- Define `DEL(inp,out) = ((out 0 = inp 0) /\ (!t. out(t+1) = inp t))`;
+ Define `DEL(inp,out) = !t. out(t+1) = inp t`;
+
+(*
+Boolean unit delay component that initialises into state T
+*)
+val DELT_def =
+ Define `DELT(inp,out) = (out 0 = T) /\ !t. out(t+1) = inp t`;
+
+(*
+Boolean unit delay component that initialises into state F
+*)
+val DELF_def =
+ Define `DELF(inp,out) = (out 0 = F) /\ !t. out(t+1) = inp t`;
 
 (*****************************************************************************)
 (* Now some implementations built using the basic components,                *)
@@ -182,26 +194,26 @@ val DEL_def =
 (*
       inp
        |
-       |-------|
-       |       |
-    |-----|    |
-    | DEL |    |
-    |-----|    |
-       |       |
-    c0 |       |
-       |       |
-    |-----|    |
-    | NOT |    |
-    |-----|    |
-       |       |
-    c1 |       |
-       |       |
-    |-------------|
-    |     AND     |
-    |-------------|
-          |
-          |
-         out
+       |--------|
+       |        |
+   |-------|    |
+   | DELT  |    |
+   |-------|    |
+       |        |
+    c0 |        |
+       |        |
+    |-----|     |
+    | NOT |     | 
+    |-----|     |
+       |        |
+    c1 |        |
+       |        |
+    |--------------|
+    |      AND     |
+    |--------------|
+           |
+           |
+          out
 
 POSEDGE_IMP implements POSEDGE in the sense that 
 
@@ -213,7 +225,7 @@ which is proved as theorem POSEDGE_IMPL below.
 val POSEDGE_IMP_def =
  Define
   `POSEDGE_IMP(inp,out) =
-     ?c0 c1. DEL(inp,c0) /\ NOT(c0,c1) /\ AND(c1,inp,out)`;
+     ?c0 c1. DELT(inp,c0) /\ NOT(c0,c1) /\ AND(c1,inp,out)`;
 
 (*****************************************************************************)
 (* Implementation of an atomic handshaking device.                           *)
@@ -492,8 +504,6 @@ val COMPUTE_def = Define `COMPUTE(t,f,inp,done,out) =
        (?t'. t' > t + 1 /\ HOLDF (t + 1,t') done /\ done t' /\
             (out t' = f (inp (t + 1))))`;
 
-
-
 (*****************************************************************************)
 (* Now we start the proofs                                                   *)
 (*****************************************************************************)
@@ -511,9 +521,9 @@ val POSEDGE_IMPL =
     `POSEDGE_IMP(inp,out) ==> !t. out t = POSEDGE inp t`,
     RW_TAC arith_ss [POSEDGE_IMP_def, POSEDGE]
     THEN Cases_on `t=0`
-    THENL [FULL_SIMP_TAC arith_ss [DEL_def, NOT_def, AND_def,POSEDGE_def],
+    THENL [FULL_SIMP_TAC arith_ss [DELT_def, NOT_def, AND_def,POSEDGE_def],
            `?n. t = n+1` by PROVE_TAC [num_CASES,ADD1]
-          THEN FULL_SIMP_TAC arith_ss [DEL_def, NOT_def, AND_def, POSEDGE]]);
+            THEN FULL_SIMP_TAC arith_ss [DELT_def, NOT_def, AND_def, POSEDGE]]);
 
 
 val ATM_SPEC_def =
@@ -544,11 +554,10 @@ val ATM_IMP =
                     NOT_def,MUX_def,DEL_def,COMB_def]
     THEN RW_TAC std_ss []
     THEN Cases_on `done t`
-    THENL
-     [IMP_RES_TAC POSEDGE_IMPL THEN PROVE_TAC[],
-      FULL_SIMP_TAC arith_ss [POSEDGE_IMP_def, NOT_def, AND_def, DEL_def]
-        THEN PROVE_TAC[]]);
-     
+    THEN IMP_RES_TAC POSEDGE_IMPL 
+    THEN RW_TAC arith_ss [POSEDGE_def]
+    THEN PROVE_TAC[]);
+
 val SAFE_ATM =
  Q.store_thm
   ("SAFE_ATM",
@@ -911,7 +920,7 @@ val POSEDGE_LEMMA =  Q.store_thm
 ("POSEDGE_LEMMA",
  `t > 0 /\ POSEDGE_IMP (inp,out) /\ POSEDGE inp t ==> POSEDGE out t`,
  Cases_on `t` THEN 
- RW_TAC arith_ss [POSEDGE_IMP_def, POSEDGE_def,AND_def, DEL_def, NOT_def]
+ RW_TAC arith_ss [POSEDGE_IMP_def, POSEDGE_def,AND_def, DELT_def, NOT_def]
  THEN RW_TAC arith_ss [] THEN PROVE_TAC [ADD1]);
 
 val INTERVAL_LEMMA = Q.store_thm("INTERVAL_LEMMA",

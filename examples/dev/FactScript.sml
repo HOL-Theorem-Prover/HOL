@@ -203,6 +203,12 @@ val _ = PRINT_VERILOG FACT_cir;  (* N.B. FACT.vl overwritten by stuff below! *)
 (*****************************************************************************)
 val _ = (dump_all_flag:=true);(* dump changes of all variables into VCD file *)
 
+(*
+ iverilog -o FACT.vvp FACT.vl; 
+ vvp FACT.vvp; 
+ gtkwave FACT.vcd
+*)
+
 (*****************************************************************************)
 (* Temporary hack to work around a system prettyprinter bug                  *)
 (*****************************************************************************)
