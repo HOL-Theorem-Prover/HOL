@@ -18,7 +18,7 @@ open HolKernel boolLib intSyntax QConv
 
 open integerTheory OmegaTheory
 
-infix THENC THEN ORELSEC |->
+infix THENC THEN THENL ORELSEC |->
 infixr --> ##
 
 val lhand = rand o rator
@@ -48,6 +48,7 @@ fun ERR f msg = HOL_ERR { origin_structure = "OmegaSymbolic",
    ---------------------------------------------------------------------- *)
 
 val pvar = mk_var("p", bool)
+val qvar = mk_var("q", bool)
 val xvar = mk_var("x", int_ty)
 fun clause_to_evals v tm = let
   val step0 = REWRITE_CONV [GSYM CONJ_ASSOC]
@@ -227,6 +228,91 @@ in
 end
 
 (* ----------------------------------------------------------------------
+    expand_evals tm
+
+    tm is of form p /\ (evalupper x list1 /\ evallower x list2)
+    rewrite away the evallower and evalupper terms, keeping everything
+    right associated
+   ---------------------------------------------------------------------- *)
+
+val (evalhi10, evalhi_cons0) = munge_to_altform "cs" evalupper_def
+val (evallo1, evallo_cons) = munge_to_altform "cs" evallower_def
+
+val evalhi1 = AP_THM (AP_TERM conjunction evalhi10) qvar
+val evalhi_cons =
+    CONV_RULE (RAND_CONV (RAND_CONV (REWR_CONV (GSYM CONJ_ASSOC))))
+              (AP_TERM (mk_comb(conjunction, pvar))
+                       (AP_THM (AP_TERM conjunction evalhi_cons0) qvar))
+
+
+val expand_evals = let
+  fun reclos tm =
+      (REWR_CONV evallo1 ORELSEC
+       (REWR_CONV evallo_cons THENC RAND_CONV reclos)) tm
+  fun rechis tm =
+      ((RAND_CONV (REWR_CONV evalhi1 THENC RAND_CONV reclos)) ORELSEC
+       (REWR_CONV evalhi_cons THENC RAND_CONV rechis)) tm
+in
+  rechis
+end
+
+
+(* ----------------------------------------------------------------------
+    calculate_range_disjunct c tm
+
+    tm is of form ?i. (0 <= i /\ i <= u) /\ ...
+    transform this into an appropriate number of disjuncts (or possibly
+    false, if u < 0), of the form
+       P(0) \/ P(1) \/ ... \/ P(u)
+    and apply conversion c to each disjunct
+   ---------------------------------------------------------------------- *)
+
+val refl_case = prove(
+  ``!u P. (?i:int. (u <= i /\ i <= u) /\ P i) = P u``,
+  REWRITE_TAC [INT_LE_ANTISYM] THEN REPEAT GEN_TAC THEN EQ_TAC THEN
+  STRIP_TAC THEN ASM_REWRITE_TAC [] THEN Q.EXISTS_TAC `u` THEN
+  ASM_REWRITE_TAC []);
+val nonrefl_case = prove(
+  ``!lo hi P. (?i:int. (lo <= i /\ i <= hi) /\ P i) =
+              lo <= hi /\ (P lo \/ ?i. (lo + 1 <= i /\ i <= hi) /\ P i)``,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+    Q.ASM_CASES_TAC `i = lo` THENL [
+      POP_ASSUM SUBST_ALL_TAC THEN ASM_REWRITE_TAC [],
+      REWRITE_TAC [LEFT_AND_OVER_OR] THEN
+      DISJ2_TAC THEN CONJ_TAC THENL [
+        IMP_RES_TAC INT_LE_TRANS,
+        ALL_TAC
+      ] THEN Q.EXISTS_TAC `i` THEN ASM_REWRITE_TAC [] THEN
+      REWRITE_TAC [GSYM int_arithTheory.less_to_leq_samer] THEN
+      RULE_ASSUM_TAC (REWRITE_RULE [INT_LE_LT]) THEN
+      POP_ASSUM_LIST (MAP_EVERY STRIP_ASSUME_TAC) THEN
+      POP_ASSUM SUBST_ALL_TAC THEN
+      FIRST_X_ASSUM (fn th => MP_TAC th THEN REWRITE_TAC [] THEN NO_TAC)
+    ],
+    Q.EXISTS_TAC `lo` THEN ASM_REWRITE_TAC [INT_LE_REFL],
+    Q.EXISTS_TAC `i` THEN ASM_REWRITE_TAC [] THEN
+    MATCH_MP_TAC INT_LE_TRANS THEN Q.EXISTS_TAC `lo + 1` THEN
+    ASM_REWRITE_TAC [INT_LE_ADDR] THEN CONV_TAC CooperMath.REDUCE_CONV
+  ]);
+
+
+fun calculate_range_disjunct c tm = let
+  val (i, body) = dest_exists tm
+  fun recurse tm =
+      ((REWR_CONV refl_case THENC BETA_CONV THENC c) ORELSEC
+       (REWR_CONV nonrefl_case THENC
+        LAND_CONV CooperMath.REDUCE_CONV THENC
+        (REWR_CONV CooperThms.F_and_l ORELSEC
+         (REWR_CONV CooperThms.T_and_l THENC
+          FORK_CONV(BETA_CONV THENC c,
+                    BINDER_CONV (LAND_CONV
+                                   (LAND_CONV CooperMath.REDUCE_CONV)) THENC
+                    recurse))))) tm
+in
+  BINDER_CONV (RAND_CONV (CooperSyntax.mk_abs_CONV i)) THENC recurse
+end tm
+
+(* ----------------------------------------------------------------------
     calculate_nightmare t
 
     t is a term of the form nightmare m ups lows tlist.
@@ -235,17 +321,31 @@ end
 
    ---------------------------------------------------------------------- *)
 
-val (nightmare1, nightmare_cons) = munge_to_altform "rs" nightmare_def
+val (cnightmare10, cnightmare_cons0) = munge_to_altform "rs" calc_nightmare_def
+
+val reassoc_internals = LEFT_AND_EXISTS_CONV THENC
+                        BINDER_CONV (REWR_CONV (GSYM CONJ_ASSOC))
+val cnightmare1 = CONV_RULE (RAND_CONV reassoc_internals)
+                            (AP_THM (AP_TERM conjunction cnightmare10) pvar)
+
+val cnightmare_cons =
+    CONV_RULE (RAND_CONV (REWR_CONV RIGHT_AND_OVER_OR THENC
+                          LAND_CONV reassoc_internals))
+              (AP_THM (AP_TERM conjunction cnightmare_cons0) pvar)
 
 val calculate_nightmare = let
   val reducer =
-      STRIP_QUANT_CONV (LAND_CONV (RAND_CONV
-                                     (RAND_CONV CooperMath.REDUCE_CONV)))
+      BINDER_CONV (LAND_CONV (RAND_CONV
+                                (RAND_CONV CooperMath.REDUCE_CONV))) THENC
+      calculate_range_disjunct ALL_CONV (* should be a conversion to do
+                                           divides elimination *)
   fun recurse t =
-      ((REWR_CONV nightmare1 THENC reducer) ORELSEC
-       (REWR_CONV nightmare_cons THENC LAND_CONV reducer THENC
+      ((REWR_CONV cnightmare1 THENC reducer) ORELSEC
+       (REWR_CONV cnightmare_cons THENC LAND_CONV reducer THENC
         RAND_CONV recurse)) t
 in
+  REWR_CONV calculational_nightmare THENC
+  expand_evals THENC
   recurse
 end
 

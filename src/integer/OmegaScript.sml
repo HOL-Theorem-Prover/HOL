@@ -1053,5 +1053,20 @@ val eval_step_extra4 = store_thm(
     ((evalupper x ups /\ evallower x lows) /\ (ex /\ ex')) /\ p``,
   REWRITE_TAC [CONJ_ASSOC]);
 
+val calc_nightmare_def =
+    Define`(calc_nightmare x c [] = F) /\
+           (calc_nightmare x c ((d,R)::rs) =
+                (?i. (0 <= i /\ i <= (&c * &d - &c - &d) / &c) /\
+                     (&d * x = R + i)) \/
+                calc_nightmare x c rs)`;
+
+val calculational_nightmare = store_thm(
+  "calculational_nightmare",
+  ``!rs. nightmare x c uppers lowers rs =
+         calc_nightmare x c rs /\ evalupper x uppers /\ evallower x lowers``,
+  Induct THEN SRW_TAC [][nightmare_def, calc_nightmare_def] THEN
+  Cases_on `h` THEN SRW_TAC [][nightmare_def, calc_nightmare_def] THEN
+  PROVE_TAC []);
+
 val _ = export_theory();
 
