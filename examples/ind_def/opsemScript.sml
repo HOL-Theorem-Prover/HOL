@@ -25,7 +25,7 @@ open HolKernel Parse basicHol90Lib;
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
-open stringLib ind_defLib Datatype; 
+open stringLib ind_defLib Datatype;
 
 
 (* ---------------------------------------------------------------------*)
@@ -79,17 +79,17 @@ val bexp = Type`:^state -> bool`;
 (*									*)
 (* ---------------------------------------------------------------------*)
 
-val _ = Hol_datatype 
-          `comm 
-             = Skip 
-             | :=    of string => ^nexp 
+val _ = Hol_datatype
+          `comm
+             = Skip
+             | :==    of string => ^nexp
              | ;;    of  comm => comm
              | If    of ^bexp => comm => comm
              | While of ^bexp => comm`;
 
-val _ = set_fixity ":=" (Infixr 400);
+val _ = set_fixity ":==" (Infixr 400);
 val _ = set_fixity ";;" (Infixr 350);
-val _ = set_MLname ":=_DEF" "assign_def";
+val _ = set_MLname ":==_DEF" "assign_def";
 val _ = set_MLname ";;_DEF" "seq_def";
 
 (* ===================================================================== *)
@@ -119,10 +119,10 @@ fun (x ------------------------------------------------------------------- y)
 val State = ty_antiq state;
 val Bexp = ty_antiq bexp;
 
-val {rules,induction} = 
+val {rules,induction} =
  let val EVAL = Term`EVAL : comm -> ^State -> ^State -> bool`
  in
-  indDefine "trans" 
+  indDefine "trans"
    [
 
     ([],                                                            [])
@@ -131,7 +131,7 @@ val {rules,induction} =
 
     ([],                                                            [])
     -------------------------------------------------------------------
-               `^EVAL (V := E) s (\v. (v=V) => E s | s v)`            ,
+               `^EVAL (V :== E) s (\v. (v=V) => E s | s v)`            ,
 
 
     ([        `^EVAL C1 s1 s2`,         `^EVAL C2 s2 s3`          ],[])
@@ -214,7 +214,7 @@ val ecases = derive_cases_thm (rules,induction);
 (*      |- !C s1 s2.							*)
 (*          EVAL C s1 s2 =						*)
 (*             (C = Skip) ... \/					*)
-(*             (?V E. (C = V := E) ...) \/				*)
+(*             (?V E. (C = V :== E) ...) \/				*)
 (*             (?C1 C2 s2'. (C = C1 ; C2) ...) \/			*)
 (*             (?C1 B C2. (C = If B C1 C2) /\ B s1 ...) \/		*)
 (*             (?C2 B C1. (C = If B C1 C2) /\ ~B s1 ...) \/		*)
@@ -238,11 +238,11 @@ val ecases = derive_cases_thm (rules,induction);
 (* These can then generally be used for substitution.			*)
 (* ---------------------------------------------------------------------*)
 
-val (distinct,const11) = 
+val (distinct,const11) =
   let val (SOME facts) = TypeBase.read "comm"
       val (SOME thm1) = TypeBase.distinct_of facts
       val (SOME thm2) = TypeBase.one_one_of facts
-  in 
+  in
     (CONJ thm1 (GSYM thm1),thm2)
   end;
 
@@ -263,7 +263,7 @@ val SIMPLIFY = REWRITE_RULE [distinct, const11];
 (* sets of theorems of this type.					 *)
 (* --------------------------------------------------------------------- *)
 
-val CASE_TAC = DISCH_THEN 
+val CASE_TAC = DISCH_THEN
                (STRIP_ASSUME_TAC o SIMPLIFY o ONCE_REWRITE_RULE[ecases]);
 
 (* --------------------------------------------------------------------- *)
@@ -279,12 +279,13 @@ val SKIP_THM = store_thm("SKIP_THM",
 
 
 (* --------------------------------------------------------------------- *)
-(* ASSIGN_THM : EVAL (V := E) s1 s2 is provable only by the assignment	 *)
+(* ASSIGN_THM : EVAL (V :== E) s1 s2 is provable only by the assignment	 *)
 (* rule, which requires that s2 be the state s1 with V updated to E.	 *)
 (* --------------------------------------------------------------------- *)
 
 val ASSIGN_THM = store_thm ("ASSIGN_THM",
- (--`!s1 s2 V E. EVAL (V := E) s1 s2 = ((\v. ((v=V) => E s1 | s1 v)) = s2)`--),
+ (--`!s1 s2 V E. EVAL (V :== E) s1 s2 =
+                 ((\v. if v=V then  E s1 else s1 v) = s2)`--),
      REPEAT GEN_TAC THEN EQ_TAC THENL
      [CASE_TAC THEN ASM_REWRITE_TAC [],
       DISCH_THEN (SUBST1_TAC o SYM) THEN MAP_FIRST RULE_TAC rules]);
@@ -500,12 +501,12 @@ val WHILE_LEMMA1 = TAC_PROOF(([],
 
 val WHILE_LEMMA2 =
     TAC_PROOF(([],
-  --`!C s1 s2. 
+  --`!C s1 s2.
      EVAL C s1 s2 ==>
      !B' C'. (C = While B' C') ==>
              (!s1 s2. P s1 /\ B' s1 /\ EVAL C' s1 s2 ==> P s2) ==>
              (P s1 ==> P s2)`--),
-     RULE_INDUCT_THEN sind (REFL_MP_THEN ASSUME_TAC) ASSUME_TAC THEN 
+     RULE_INDUCT_THEN sind (REFL_MP_THEN ASSUME_TAC) ASSUME_TAC THEN
      REWRITE_TAC [distinct, const11] THEN REPEAT GEN_TAC THEN
      DISCH_THEN (STRIP_THM_THEN SUBST_ALL_TAC) THEN
      REPEAT STRIP_TAC THEN RES_TAC);
