@@ -237,12 +237,6 @@ fun EVERY_CONV convl tm =
 
 
 (*---------------------------------------------------------------------------
- * Apply a conversion zero or more times.
- *---------------------------------------------------------------------------*)
-
-fun REPEATC conv t = ((conv THENC (REPEATC conv)) ORELSEC ALL_CONV) t;
-
-(*---------------------------------------------------------------------------
  * Cause the conversion to fail if it does not change its input.
  *---------------------------------------------------------------------------*)
 
@@ -264,6 +258,12 @@ fun QCHANGED_CONV conv tm =
     conv tm
     handle UNCHANGED => raise ERR "QCHANGED_CONV" "Input term unchanged"
 
+(*---------------------------------------------------------------------------
+ * Apply a conversion zero or more times.
+ *---------------------------------------------------------------------------*)
+
+fun REPEATC conv t =
+    ((QCHANGED_CONV conv THENC (REPEATC conv)) ORELSEC ALL_CONV) t;
 
 fun TRY_CONV conv = conv ORELSEC ALL_CONV;
 
