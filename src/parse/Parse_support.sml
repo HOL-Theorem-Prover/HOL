@@ -212,8 +212,8 @@ fun make_const s E = (gen_const s, E)
  ---------------------------------------------------------------------------*)
 
 local val num_ty = Pretype.Tyop{Thy="num", Tyop = "num", Args = []}
-      val char_ty = Pretype.Tyop{Thy="char", Tyop = "char", Args = []}
-      val string_ty = Pretype.Tyop{Thy = "string", Tyop = "string", Args = []}
+      val char_ty   = Pretype.Tyop{Thy="string", Tyop="char", Args = []}
+      val string_ty = Pretype.Tyop{Thy="string", Tyop="string", Args = []}
       fun funty ty1 ty2 = Pretype.Tyop{Thy="min", Tyop="fun", Args=[ty1,ty2]}
       fun mk_comb(ptm1,ptm2) = Preterm.Comb{Rator=ptm1,Rand=ptm2}
       val CHR = Preterm.Const
