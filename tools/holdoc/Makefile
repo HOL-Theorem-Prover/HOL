@@ -4,9 +4,11 @@ OCAMLC=$(OCAMLPATH)/ocamlc
 OCAMLLEX=$(OCAMLPATH)/ocamllex
 OCAMLDEP=$(OCAMLPATH)/ocamldep
 
+DVIPS=dvips
+
 # main target:
 
-all: simpledump lts_to_latex hostlts.dvi
+all: simpledump lts_to_latex hostlts.ps
 
 # program targets:
 
@@ -44,6 +46,9 @@ depend:
 
 %.cmi : %.mli
 	$(OCAMLC) -c $<
+
+%.ps : %.dvi
+	$(DVIPS) %< -o $@
 
 # this one must come *after* the individual .cmo / .cmi rules:
 %.cmo %.cmi : %.ml
