@@ -6,16 +6,11 @@ struct
              "numeralTheory","selectUtil","abbrevUtil","bitsTheory"];
 *)
 
-infix 8 by;
-infix THEN THENC THENL ++ |->;
-
 open HolKernel boolLib abbrevUtil selectUtil Q Parse EquivType
      computeLib bossLib simpLib numLib pairTheory numeralTheory
      arithmeticTheory prim_recTheory bitsTheory;
 
 val PROVE = fn thl => fn q => PROVE thl (Term q);
-
-val _ = set_fixity "==" (Infixr 450);
 
 val RIGHT_REWRITE_RULE =
      GEN_REWRITE_RULE (RAND_CONV o DEPTH_CONV) empty_rewrites;
@@ -25,6 +20,8 @@ val RIGHT_REWRITE_RULE =
 val sbits = Int.toString bits;
 
 val _ = new_theory ("word"^sbits);
+
+val _ = set_fixity "==" (Infixr 450);
 
 (* -------------------------------------------------------- *)
 

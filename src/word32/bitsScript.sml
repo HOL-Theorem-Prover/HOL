@@ -2,9 +2,15 @@
 open HolKernel boolLib abbrevUtil Q Parse bossLib simpLib
      numLib pairTheory numeralTheory arithmeticTheory prim_recTheory;
 
-infix 8 by;
-infix THEN THENC THENL ++ |->;
- 
+
+(* this makes the dependence on listTheory explicit.  Without it,
+   listTheory can change, and bitsScript won't get recompiled.  This
+   is despite the fact that it depends on bossLib, which indirectly depends
+   on listTheory (via listSimps).  The problem is that bossLib doesn't
+   get recompiled because listSimps' signature doesn't change in the event
+   of listTheory changing. *)
+local open listTheory in end;
+
 (* -------------------------------------------------------- *)
 
 val _ = new_theory "bits";
@@ -20,15 +26,15 @@ val DIV_2EXP_def    = Define `DIV_2EXP x n = n DIV 2 EXP x`;
 val MOD_2EXP_def    = Define `MOD_2EXP x n = n MOD 2 EXP x`;
 
 val DIVMOD_2EXP_def = Define `DIVMOD_2EXP x n = (n DIV 2 EXP x,n MOD 2 EXP x)`;
- 
+
 val SBIT_def        = Define `SBIT b n = if b then 2 EXP n else 0`;
- 
+
 val BITS_def        = Define `BITS h l n = MOD_2EXP (SUC h-l) (DIV_2EXP l n)`;
- 
+
 val BIT_def         = Define `BIT b n = (BITS b b n = 1)`;
- 
+
 val SLICE_def       = Define `SLICE h l n = MOD_2EXP (SUC h) n - MOD_2EXP l n`;
- 
+
 val LSBn_def        = Define `LSBn = BIT 0`;
 
 val BITWISE_def =
@@ -78,14 +84,14 @@ val ONE_LT_TWOEXP_SUCN = prove(
   `!n. 1 < 2 EXP n * 2`,
   Induct_on `n` THEN A_RW_TAC [EXP,MULT_INCREASES2]
 );
- 
+
 val TWOEXP_MONO = store_thm("TWOEXP_MONO",
   `!a b. a < b ==> 2 EXP a < 2 EXP b`,
   REPEAT STRIP_TAC
     THEN IMP_RES_TAC LESS_ADD_1
     THEN ASM_R_SIMP_TAC [EXP_ADD,MULT_INCREASES2,ONE_LT_TWOEXP_SUCN,ZERO_LT_TWOEXP]
 );
- 
+
 val TWOEXP_MONO2 = store_thm("TWOEXP_MONO2",
   `!a b. a <= b ==> 2 EXP a <= 2 EXP b`,
   REPEAT STRIP_TAC
@@ -117,7 +123,7 @@ val DIV_MULT_LEM = store_thm("DIV_MULT_LEM",
     THEN EXISTS_TAC `m MOD n`
     THEN A_RW_TAC [GSYM DIVISION]
 );
- 
+
 (* |- !x n. n DIV 2 EXP x * 2 EXP x <= n *)
 val DIV_MULT_LESS_EQ = GEN_ALL (SIMP_RULE bool_ss [ZERO_LT_TWOEXP] (SPECL [`n`,`2 EXP x`] DIV_MULT_LEM));
 
@@ -125,13 +131,13 @@ val MOD_2EXP_LEM = store_thm("MOD_2EXP_LEM",
   `!n x. n MOD 2 EXP x = n - n DIV 2 EXP x * 2 EXP x`,
   A_RW_TAC [DIV_MULT_LESS_EQ,GSYM ADD_EQ_SUB,ZERO_LT_TWOEXP,GSYM DIVISION]
 );
- 
+
 val DIV_MULT_LEM2 = prove(
   `!a b p. a DIV 2 EXP (b + p) * 2 EXP (p + b) <= a DIV 2 EXP b * 2 EXP b`,
   B_RW_TAC [SPECL [`a DIV 2 EXP b`,`2 EXP p`] DIV_MULT_LEM,
             EXP_ADD,MULT_ASSOC,GSYM DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP,LESS_MONO_MULT]
 );
- 
+
 val MOD_EXP_ADD = prove(
   `!a b p. a MOD 2 EXP (b + p) = a MOD 2 EXP b + (a DIV 2 EXP b) MOD 2 EXP p * 2 EXP b`,
   REPEAT STRIP_TAC
@@ -141,12 +147,12 @@ val MOD_EXP_ADD = prove(
            (GSYM o SPECL [`a DIV 2 EXP (b + p) * 2 EXP (p + b)`,`a DIV 2 EXP b * 2 EXP b`]) LESS_EQ_ADD_SUB)
     THEN ASM_A_SIMP_TAC [DIV_MULT_LEM2,DIV_MULT_LEM,ZERO_LT_TWOEXP,SUB_ADD]
 );
- 
+
 val DIV_MOD_MOD_DIV = prove(
   `!a b p. (a DIV 2 EXP b) MOD 2 EXP p = a MOD 2 EXP (b + p) DIV 2 EXP b`,
   A_RW_TAC [MOD_EXP_ADD,ADD_DIV_ADD_DIV,ZERO_LT_TWOEXP,LESS_DIV_EQ_ZERO,DIVISION]
 );
- 
+
 val DIV_MOD_MOD_DIV2 = prove(
   `!a b c. (a DIV 2 EXP b) MOD 2 EXP (c - b) = (a MOD 2 EXP c) DIV 2 EXP b`,
   REPEAT STRIP_TAC
@@ -209,7 +215,7 @@ val BITS_ZERO = store_thm("BITS_ZERO",
                         REWRITE_RULE [ADD1] o SPECL [`h`,`h + 1 + p`,`n`]) BITSLT_THM)
     THEN A_FULL_SIMP_TAC []
 );
- 
+
 val BITS_ZERO2 = store_thm("BITS_ZERO2",
   `!h l. BITS h l 0 = 0`,
   B_RW_TAC [BITS2_THM,ZERO_MOD,ZERO_DIV,ZERO_LT_TWOEXP]
@@ -257,13 +263,13 @@ val MOD2_EQ_0 = prove(
   `!q. (q * 2) MOD 2 = 0`,
   A_RW_TAC [MOD_EQ_0]
 );
- 
+
 val ONE_TWO_LEM = prove(
   `!n. (n MOD 2 = 0) \/ (n MOD 2 = 1)`,
   `!n. n < 2 ==> ((n = 0) \/ (n = 1))` by DECIDE_TAC
     THEN A_RW_TAC [DIVISION]
 );
- 
+
 val NOT_MOD2_LEM = store_thm("NOT_MOD2_LEM",
   `!n. ~(n MOD 2 = 0) = (n MOD 2 = 1)`,
   STRIP_TAC THEN ASSUME_TAC (SPEC `n` ONE_TWO_LEM) THEN EQ_TAC THEN A_RW_TAC []
@@ -273,7 +279,7 @@ val NOT_MOD2_LEM2 = store_thm("NOT_MOD2_LEM2",
   `!n a. ~(n MOD 2 = 1) = (n MOD 2 = 0)`,
   B_RW_TAC [GSYM NOT_MOD2_LEM]
 );
- 
+
 val EVEN_MOD2_LEM = store_thm("EVEN_MOD2_LEM",
   `!n. EVEN n = ((n MOD 2) = 0)`,
   B_RW_TAC [ONCE_REWRITE_RULE [MULT_COMM] EVEN_EXISTS]
@@ -285,7 +291,7 @@ val EVEN_MOD2_LEM = store_thm("EVEN_MOD2_LEM",
         THEN A_RW_TAC []
     ]
 );
- 
+
 val ODD_MOD2_LEM = store_thm("ODD_MOD2_LEM",
  `!n. ODD n = ((n MOD 2) = 1)`,
   STRIP_TAC THEN REWRITE_TAC [ODD_EVEN,EVEN_MOD2_LEM,NOT_MOD2_LEM]
@@ -305,7 +311,7 @@ val DIV_MULT_THM = store_thm("DIV_MULT_THM",
   `!x n. n DIV 2 EXP x * 2 EXP x = n - n MOD 2 EXP x`,
   A_RW_TAC [DIV_MULT_LESS_EQ,MOD_2EXP_LEM,SUB_SUB]
 );
- 
+
 val DIV_MULT_THM2 = save_thm("DIV_MULT_THM2",
   ONCE_REWRITE_RULE [MULT_COMM] (REWRITE_RULE [EXP_1] (SPEC `1` DIV_MULT_THM))
 );
@@ -321,7 +327,7 @@ val LESS_EQ_EXP_MULT = store_thm("LESS_EQ_EXP_MULT",
 
 val LESS_EXP_MULT = (EQT_ELIM o SIMP_CONV bool_ss [LESS_IMP_LESS_OR_EQ,LESS_EQ_EXP_MULT])
                       ``!a b. a < b ==> ?p. 2 EXP b = p * 2 EXP a``;
- 
+
 (* -------------------------------------------------------- *)
 
 val SLICE_LEM1 = store_thm("SLICE_LEM1",
@@ -383,7 +389,7 @@ val SLICELT_THM = store_thm("SLICELT_THM",
     THEN ASSUME_TAC (SPECL [`SUC h`,`n`] MOD_2EXP_LT)
     THEN R_RW_TAC [SLICE_def,MOD_2EXP_def,ZERO_LT_TWOEXP,SUB_RIGHT_LESS]
 );
- 
+
 val BITS_SLICE_THM = store_thm("BITS_SLICE_THM",
   `!h l n. BITS h l (SLICE h l n) = BITS h l n`,
   B_RW_TAC [SLICELT_THM,BITS_LT_HIGH,ZERO_LT_TWOEXP,SLICE_THM,MULT_DIV]
@@ -456,17 +462,17 @@ val NOT_BIT = store_thm("NOT_BIT",
   `!n a. ~BIT n a = (BITS n n a = 0)`,
   B_RW_TAC [BIT_def,BITS_THM,SUC_SUB,EXP_1,GSYM NOT_MOD2_LEM]
 );
- 
+
 val NOT_BITS = store_thm("NOT_BITS",
   `!n a. ~(BITS n n a = 0) = (BITS n n a = 1)`,
   B_RW_TAC [GSYM NOT_BIT,GSYM BIT_def]
 );
- 
+
 val NOT_BITS2 = store_thm("NOT_BITS2",
   `!n a. ~(BITS n n a = 1) = (BITS n n a = 0)`,
   B_RW_TAC [GSYM NOT_BITS]
 );
- 
+
 val BIT_SLICE = store_thm("BIT_SLICE",
   `!n a b. (BIT n a = BIT n b) = (SLICE n n a = SLICE n n b)`,
   REPEAT STRIP_TAC THEN EQ_TAC
@@ -504,7 +510,7 @@ val SUB_BITS = prove(
         THEN ASM_REWRITE_TAC []
     ]
 );
- 
+
 val SBIT_DIV = store_thm("SBIT_DIV",
   `!b m n. n < m ==> (SBIT b (m - n) = SBIT b m DIV 2 EXP n)`,
   B_RW_TAC [SBIT_def,ZERO_DIV,ZERO_LT_TWOEXP,SIMP_RULE arith_ss [] (SPEC `1` lem4)]
@@ -535,7 +541,7 @@ val DECEND_LEMMA = prove(
   `!P l y.  (!x. l <= x /\ x <= SUC y ==> P x) ==> (!x. l <= x /\ x <= y ==> P x)`,
   A_RW_TAC []
 );
- 
+
 val BIT_BITS_LEM = prove(
   `!h l a b. l <= h ==> (BITS h l a = BITS h l b) ==> (BIT h a = BIT h b)`,
   B_RW_TAC [BIT_SLICE,SLICE_THM]
@@ -596,7 +602,7 @@ val LESS_EXP_MULT2 = store_thm("LESS_EXP_MULT2",
     THEN EXISTS_TAC `p`
     THEN FULL_SIMP_TAC arith_ss [EXP_ADD,MULT_COMM]
 );
- 
+
 val BITWISE_LEM = store_thm("BITWISE_THM",
   `!n op a b. BIT n (BITWISE (SUC n) op a b) = op (BIT n a) (BIT n b)`,
   A_RW_TAC [SBIT_def,BITWISE_def,NOT_BIT]
@@ -640,7 +646,7 @@ val BITWISE_COR = store_thm("BITWISE_COR",
     THEN POP_ASSUM (fn th => REWRITE_TAC [GSYM th])
     THEN ASM_REWRITE_TAC [BITS_THM,BIT_def,DIV1,EXP_1,SUC_SUB]
 );
- 
+
 val BITWISE_NOT_COR = store_thm("BITWISE_NOT_COR",
   `!x n op a b. x < n ==> ~op (BIT x a) (BIT x b) ==> ((BITWISE n op a b DIV 2 EXP x) MOD 2 = 0)`,
   NTAC 6 STRIP_TAC
@@ -667,21 +673,21 @@ val MOD_LESS = prove(
   `!n a. 0 < n ==> a MOD n < n`,
   PROVE_TAC [DIVISION]
 );
- 
+
 val MOD_LESS1 = prove(
   `!n. 0 < n ==> a MOD n + 1 <= n`,
   REPEAT STRIP_TAC THEN IMP_RES_TAC MOD_LESS
     THEN POP_ASSUM (fn th => ASSUME_TAC (SPEC `a` th))
     THEN A_RW_TAC []
 );
- 
+
 val MOD_ZERO = prove(
   `!n. 0 < n /\ 0 < a /\ a <= n /\ (a MOD n = 0) ==> (a = n)`,
   REPEAT STRIP_TAC
     THEN Cases_on `a < n`
     THEN A_FULL_SIMP_TAC [LESS_MOD,GSYM NOT_ZERO_LT_ZERO]
 );
- 
+
 val MOD_PLUS_1 = store_thm("MOD_PLUS_1",
   `!n. 0 < n ==> !x. ((x + 1) MOD n = 0) = (x MOD n + 1 = n)`,
   REPEAT STRIP_TAC
@@ -702,7 +708,7 @@ val MOD_PLUS_1 = store_thm("MOD_PLUS_1",
         ]
     ]
 );
- 
+
 val MOD_ADD_1 = store_thm("MOD_ADD_1",
   `!n. 0 < n ==> !x. ~((x + 1) MOD n = 0) ==> ((x + 1) MOD n = x MOD n + 1)`,
   B_RW_TAC [MOD_PLUS_1]
@@ -712,11 +718,11 @@ val MOD_ADD_1 = store_thm("MOD_ADD_1",
     THEN POP_ASSUM (fn th => ASSUME_TAC (SPEC `x` th))
     THEN `x MOD n + 1 < n` by ASM_A_SIMP_TAC []
     THEN ASM_B_SIMP_TAC [MOD_TIMES,LESS_MOD]
- 
+
 );
 
 (* -------------------------------------------------------- *)
 
 val _ = export_theory();
- 
+
 (* -------------------------------------------------------- *)
