@@ -113,6 +113,9 @@ fun fromInt n =
   else (true, Arbnum.fromInt n)
 
 
+fun min (i,j) = if i < j then i else j
+fun max (i,j) = if i < j then j else i
+
 fun abs (_, n) = (true, n)
 
 fun fromNat n = (true, n)

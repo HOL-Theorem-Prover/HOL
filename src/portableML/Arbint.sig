@@ -37,5 +37,7 @@ sig
   val abs : int -> int
 
   val compare : int * int -> order
+  val min : int * int -> int
+  val max : int * int -> int
 
 end
