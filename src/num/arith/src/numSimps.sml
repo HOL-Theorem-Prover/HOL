@@ -233,6 +233,8 @@ fun CTXT_ARITH thms tm =
     val context = map concl thms
     fun try gl = let
       val gl' = list_mk_imp(context,gl)
+      val _ = trace (5, LZ_TEXT (fn () => "Trying cached arithmetic d.p. on "^
+                                          term_to_string gl'))
     in
       rev_itlist (C MP) thms (ARITH gl')
     end
@@ -244,18 +246,23 @@ fun CTXT_ARITH thms tm =
   end
   else
     if (type_of tm = num_ty) then let
-      val reduction = linear_reduction tm
-    in
-      if (reduction = tm) then
-        failwith "CTXT_ARITH: no reduction possible"
-      else let
-        val context = map concl thms
-        val gl = list_mk_imp(context,mk_eq(tm,reduction))
-        val thm = rev_itlist (C MP) thms (ARITH gl)
+        val _ = trace(5, LZ_TEXT (fn () => "Linear reduction on "^
+                                           term_to_string tm))
+        val reduction = linear_reduction tm
       in
-        trace(1,PRODUCE(tm,"ARITH",thm)); thm
+        if (reduction = tm) then
+          (trace (5, TEXT ("No reduction possible"));
+           failwith "CTXT_ARITH: no reduction possible")
+        else let
+            val context = map concl thms
+            val gl = list_mk_imp(context,mk_eq(tm,reduction))
+            val _ = trace(6, LZ_TEXT (fn () => "Calling ARITH on reduction: "^
+                                               term_to_string gl))
+            val thm = rev_itlist (C MP) thms (ARITH gl)
+          in
+            trace(1,PRODUCE(tm,"ARITH",thm)); thm
+          end
       end
-    end
     else failwith "CTXT_ARITH: not applicable";
 
 val (CACHED_ARITH,arith_cache) = let
@@ -337,8 +344,8 @@ fun reducer t =
    if List.all reducible args then reduceLib.REDUCE_CONV t else NO_CONV t
  end
 
-fun mk_redconv0 pat = 
-   {name = "REDUCE_CONV (arithmetic reduction)", 
+fun mk_redconv0 pat =
+   {name = "REDUCE_CONV (arithmetic reduction)",
     trace = 2,
     key = SOME([], pat), conv = K (K reducer)}
 
