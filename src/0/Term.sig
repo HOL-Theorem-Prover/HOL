@@ -27,7 +27,7 @@ sig
   val genvar       : Type.hol_type -> term
   val genvars      : Type.hol_type -> int -> term list
   val variant      : term list -> term -> term
-  
+
   (* Constructors and destructors *)
   val mk_var         : {Name : string, Ty : Type.hol_type} -> term
   val mk_primed_var  : {Name : string, Ty : Type.hol_type} -> term
@@ -45,19 +45,20 @@ sig
   val is_const       : term -> bool
   val is_comb        : term -> bool
   val is_abs         : term -> bool
-  
+  val is_ty_antiq    : term -> bool
+
   val rator : term -> term
   val rand  : term -> term
   val bvar  : term -> term
   val body  : term -> term
   val is_bvar : term -> bool
-  
+
   (* Prelogic *)
   val aconv : term -> term -> bool
   val subst : (term,term) Lib.subst -> term -> term
   val inst  : (Type.hol_type,Type.hol_type) Lib.subst -> term -> term
   val beta_conv  : term -> term
-  val match_term : term -> term -> 
+  val match_term : term -> term ->
                   (term,term)Lib.subst * (Type.hol_type,Type.hol_type)Lib.subst
 
   (* Miscellaneous *)
@@ -84,7 +85,7 @@ sig
   val pp_raw_term : (term -> int) -> ppstream -> term -> unit
 
   (* Functor avoidance technique, via "one-time" references. *)
-  val init : (string -> bool) -> 
+  val init : (string -> bool) ->
              ({Name:string, Ty:Type.hol_type} -> term) ->
              (string -> {const:term, theory:string, place:fixity})
              -> unit
@@ -105,7 +106,7 @@ sig
                     -> unit
   val TheoryPP_init : ((term -> unit) -> (term -> unit)) ref -> unit
 
-  val Thm_init : (Type.hol_type -> term -> term -> term) ref 
+  val Thm_init : (Type.hol_type -> term -> term -> term) ref
                  -> ({Rator:term, Rand:term} -> term) ref      (* Comb *)
                   -> ({Bvar:term, Body:term} -> term) ref      (* Abs *)
                    -> (int -> term) ref                        (* Bv *)

@@ -416,6 +416,8 @@ end;
 fun dest_ty_antiq (ty_antiq ty) = ty
   | dest_ty_antiq _ = raise TERM_ERR "dest_ty_antiq" "not a type antiquotation"
 
+val is_ty_antiq = can dest_ty_antiq
+
 (*---------------------------------------------------------------------------
  * Discriminators.
  *---------------------------------------------------------------------------*)
