@@ -6,13 +6,14 @@
 structure EnumType :> EnumType =
 struct
 
-open HolKernel boolLib numLib Parse;
+open HolKernel boolLib Parse numLib;
 
-infix THEN THENC |->;  infixr -->
+infix THEN THENC |-> ##;  infixr -->
+
+val ERR = mk_HOL_ERR "EnumType";
+val NUM = num;
 
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
-
-val NUM = num;
 
 fun mk_int_numeral i = mk_numeral (Arbnum.fromInt i);
 
@@ -175,12 +176,9 @@ fun alphavar n = mk_var("x"^Int.toString n, alpha)
 
 local
   val n = mk_var("n", NUM)
-
 in
-
 fun prove_initiality_thm rep ty constrs simpls = let
   val ncases = length constrs
-
 
   fun generate_ntree lo hi =
       (* invariant: lo <= hi *)
@@ -224,9 +222,6 @@ end;
 end (* local *)
 
 
-
-
-
 (*---------------------------------------------------------------------------*)
 (* The main entrypoints                                                      *)
 (*---------------------------------------------------------------------------*)
@@ -266,10 +261,6 @@ fun define_enum_type(name,clist,ABS,REP) =
     }
  end;
 
-fun check_subst [] = true
-  | check_subst ({redex,residue}::rst) = 
-        type_of redex = type_of residue andalso check_subst rst;
-
 
 fun define_case initiality =
  let val (V,tm) = strip_forall (concl initiality)
@@ -289,12 +280,14 @@ fun define_case initiality =
      val g = mk_var("g",type_of gfun)
      fun gclause (constr,r) = mk_eq(list_mk_comb(gfun,V@[constr]),r)
      val gclauses = map gclause (zip constrs V)
-     val RW_CONV = REWRITE_CONV []
-     val RW_CONV1 = PURE_ONCE_REWRITE_CONV [ASSUME body]
-     fun reduce cla = 
-          EQT_ELIM((DEPTH_CONV BETA_CONV THENC RW_CONV1
-                    THENC DEPTH_CONV BETA_CONV THENC RW_CONV) cla)
-     val gclause_thms = GENL V (LIST_CONJ (map reduce gclauses))
+     val bodythl = CONJUNCTS (ASSUME body)
+     fun reduce (cla,fclause) = 
+       EQ_MP (SYM (DEPTH_CONV BETA_CONV cla)) 
+             (rev_itlist (fn v => fn th =>
+                let val th0 = AP_THM th v
+                in TRANS th0 (BETA_CONV (rhs (concl th0)))
+                end) V fclause)
+     val gclause_thms = GENL V (LIST_CONJ (map reduce (zip gclauses bodythl)))
      val exists_tm = mk_exists(g, list_mk_forall(V,
                          subst [gfun |-> g] (list_mk_conj gclauses)))
      val gexists = CHOOSE(f,inst_initiality) 
@@ -308,6 +301,93 @@ fun define_case initiality =
  end;
 
 
+fun strip_vars tm =
+  let fun pull_off_var tm acc =
+        let val (Rator, Rand) = dest_comb tm
+        in if is_var Rand then pull_off_var Rator (Rand::acc) else (tm, acc)
+        end handle HOL_ERR _ => (tm, acc)
+  in pull_off_var tm []
+  end;
+
+fun case_cong_term case_def =
+ let val clauses = (strip_conj o concl) case_def
+     val clause1 = Lib.trye hd clauses
+     val left = (fst o dest_eq o #2 o strip_forall) clause1
+     val ty = type_of (rand left)
+     val allvars = all_varsl clauses
+     val M = variant allvars (mk_var("M", ty))
+     val M' = variant (M::allvars) (mk_var("M",ty))
+     val lhsM = mk_comb(rator left, M)
+     val c = #1(strip_comb left)
+     fun mk_clause clause =
+       let val (lhs,rhs) = (dest_eq o #2 o strip_forall) clause
+           val func = (#1 o strip_comb) rhs
+           val (Name,Ty) = dest_var func
+           val func' = variant allvars (mk_var(Name^"'", Ty))
+           val capp = rand lhs
+           val (constr,xbar) = strip_vars capp
+       in (func',
+           list_mk_forall
+           (xbar, mk_imp(mk_eq(M',capp),
+                         mk_eq(list_mk_comb(func,xbar),
+                               list_mk_comb(func',xbar)))))
+       end
+     val (funcs',clauses') = unzip (map mk_clause clauses)
+ in
+    mk_imp(list_mk_conj(mk_eq(M,M')::clauses'),
+           mk_eq(lhsM, list_mk_comb(c,(funcs'@[M']))))
+ end;
+
+fun EQ_EXISTS_LINTRO (thm,(vlist,theta)) =
+  let val [veq] = filter (can dest_eq) (hyp thm)
+      fun CHOOSER v (tm,thm) =
+        let val w = (case (subst_assoc (equal v) theta)
+                      of SOME w => w
+                       | NONE => v)
+            val ex_tm = mk_exists(w, tm)
+        in (ex_tm, CHOOSE(w, ASSUME ex_tm) thm)
+        end
+  in snd(itlist CHOOSER vlist (veq,thm))
+  end;
+
+fun case_cong_thm nchotomy case_def =
+ let val case_def = SPEC_ALL case_def
+     val clause1 = 
+       let val c = concl case_def in fst(dest_conj c) handle HOL_ERR _ => c end
+     val V = butlast (snd(strip_comb(lhs clause1)))
+     val gl = case_cong_term case_def
+     val (ant,conseq) = dest_imp gl
+     val imps = CONJUNCTS (ASSUME ant)
+     val M_eq_M' = hd imps
+     val (M, M') = dest_eq (concl M_eq_M')
+     fun get_asm tm = (fst o dest_imp o #2 o strip_forall) tm handle _ => tm
+     val case_assms = map (ASSUME o get_asm o concl) imps
+     val (lconseq, rconseq) = dest_eq conseq
+     val lconseq_thm = SUBST_CONV [M |-> M_eq_M'] lconseq lconseq
+     val lconseqM' = rhs(concl lconseq_thm)
+     val nchotomy' = ISPEC M' nchotomy
+     val disjrl = map ((I##rhs) o strip_exists)	(strip_disj (concl nchotomy'))
+     val V' = butlast(snd(strip_comb rconseq))
+     val theta = map2 (fn v => fn v' => {redex=v,residue=v'}) V V'
+     fun zot (p as (icase_thm, case_def_clause)) (iimp,(vlist,disjrhs)) =
+       let val lth = TRANS (AP_TERM(rator lconseqM') icase_thm) case_def_clause
+           val rth = TRANS (AP_TERM(rator rconseq) icase_thm) 
+                           (INST theta case_def_clause)
+           val theta = Term.match_term disjrhs
+                     ((rhs o fst o dest_imp o #2 o strip_forall o concl) iimp)
+           val th = MATCH_MP iimp icase_thm
+           val th1 = TRANS lth th
+       in (TRANS th1 (SYM rth), (vlist, #1 theta))
+       end
+     val thm_substs = map2 zot
+                       (zip (Lib.trye tl case_assms) (CONJUNCTS case_def))
+                       (zip (Lib.trye tl imps) disjrl)
+     val aag = map (TRANS lconseq_thm o EQ_EXISTS_LINTRO) thm_substs
+ in
+   GENL (M::M'::V) (DISCH_ALL (DISJ_CASESL nchotomy' aag))
+ end
+ handle HOL_ERR _ => raise ERR "case_cong_thm" "construction failed";
+
 fun enum_type_to_tyinfo (ty, constrs) = let
   val abs = "num2"^ty
   val rep = ty^"2num"
@@ -320,13 +400,13 @@ fun enum_type_to_tyinfo (ty, constrs) = let
       if length constrs > 20 then NONE
       else SOME (prove_distinctness_thm simpls constrs)
   val initiality = prove_initiality_thm (#REPconst result) TYPE constrs simpls
-  val case_def = hd (Prim_rec.define_case_constant initiality)
+  val case_def = define_case initiality
   open TypeBase TypeBase.TypeInfo
   val tyinfo0 =
       mk_tyinfo { ax = ORIG initiality,
                   induction = ORIG induction,
                   case_def = case_def,
-                  case_cong = case_cong_thm nchotomy case_def,
+                  case_cong = Prim_rec.case_cong_thm nchotomy case_def,
                   nchotomy = nchotomy,
                   size = size,
                   one_one = NONE,
@@ -338,24 +418,70 @@ in
   put_simpls simpls tyinfo0
 end
 
-
-
-
 end (* struct *)
 
-(* Examples *)
+(*---------------------------------------------------------------------------
+               Examples 
+ ---------------------------------------------------------------------------*)
 
 (* 
 
-val res as {TYPE,constrs,defs, ABSconst, REPconst,
-            ABS_REP, REP_ABS, ABS_11, REP_11, ABS_ONTO, REP_ONTO, simpls}
+val {TYPE,constrs,defs, ABSconst, REPconst,
+     ABS_REP, REP_ABS, ABS_11, REP_11, ABS_ONTO, REP_ONTO, simpls}
   = define_enum_type
             ("colour", ["red", "green", "blue", "brown", "white"],
              "num2colour", "colour2num");
 
+val {TYPE,constrs,defs, ABSconst, REPconst,
+     ABS_REP, REP_ABS, ABS_11, REP_11, ABS_ONTO, REP_ONTO, simpls}
+  = define_enum_type
+            ("foo", ["B0", "B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8",
+                     "B9", "B10", "B11", "B12", "B13", "B14", "B15", "B16",
+                     "B17", "B18", "B19", "B20", "B21", "B22", "B23", "B24",
+                     "B25", "B26", "B27", "B28", "B29", "B30"],
+             "num2foo", "foo2num");
 
-val res1 as {TYPE,constrs,defs, ABSconst, REPconst,
-            ABS_REP, REP_ABS, ABS_11, REP_11, ABS_ONTO, REP_ONTO, simpls}
+val initiality = 
+  Count.apply (prove_initiality_thm REPconst TYPE constrs) simpls;
+val case_def = Count.apply define_case initiality;
+val nchotomy = Count.apply (prove_cases_thm ABS_ONTO) (rev defs);
+val case_cong = Count.apply (case_cong_thm nchotomy) case_def;
+
+val {TYPE,constrs,defs, ABSconst, REPconst,
+     ABS_REP, REP_ABS, ABS_11, REP_11, ABS_ONTO, REP_ONTO, simpls}
+  = define_enum_type
+            ("bar", ["C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8",
+                     "C9", "C10", "C11", "C12", "C13", "C14", "C15", "C16",
+                     "C17", "C18", "C19", "C20", "C21", "C22", "C23", "C24",
+                     "C25", "C26", "C27", "C28", "C29", "C30", "C31", "C32", 
+                     "C33", "C34", "C35", "C36", "C37", "C38", "C39", "C40"],
+             "num2bar", "bar2num");
+val initiality = 
+  Count.apply (prove_initiality_thm REPconst TYPE constrs) simpls;
+val case_def = Count.apply define_case initiality;
+val nchotomy = Count.apply (prove_cases_thm ABS_ONTO) (rev defs);
+val case_cong = Count.apply (case_cong_thm nchotomy) case_def;
+
+
+val {TYPE,constrs,defs, ABSconst, REPconst,
+     ABS_REP, REP_ABS, ABS_11, REP_11, ABS_ONTO, REP_ONTO, simpls}
+  = define_enum_type
+            ("dar", ["D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8",
+                     "D9", "D10", "D11", "D12", "D13", "D14", "D15", "D16",
+                     "D17", "D18", "D19", "D20", "D21", "D22", "D23", "D24",
+                     "D25", "D26", "D27", "D28", "D29", "D30", "D31", "D32", 
+                     "D33", "D34", "D35", "D36", "D37", "D38", "D39", "D40",
+                     "D41", "D42", "D43", "D44", "D45", "D46", "D47", "D48",
+                     "D49", "D50", "D51","D52","D53","D54","D55"],
+             "num2dar", "dar2num");
+val initiality = 
+  Count.apply (prove_initiality_thm REPconst TYPE constrs) simpls;
+val case_def = Count.apply define_case initiality;
+val nchotomy = Count.apply (prove_cases_thm ABS_ONTO) (rev defs);
+val case_cong = Count.apply (case_cong_thm nchotomy) case_def;
+
+val {TYPE,constrs,defs, ABSconst, REPconst,
+     ABS_REP, REP_ABS, ABS_11, REP_11, ABS_ONTO, REP_ONTO, simpls}
   = Count.apply define_enum_type
        ("thing", ["a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8",
                   "a9", "a10", "a11", "a12", "a13", "a14", "a15", "a16",
@@ -366,9 +492,14 @@ val res1 as {TYPE,constrs,defs, ABSconst, REPconst,
                   "a49", "a50", "a51", "a52", "a53", "a54", "a55", "a56",
                   "a57", "a58", "a59", "a60", "a61", "a62", "a63", "a64"],
         "num2thing", "thing2num");
+val initiality = 
+  Count.apply (prove_initiality_thm REPconst TYPE constrs) simpls;
+val case_def = Count.apply define_case initiality;
+val nchotomy = Count.apply (prove_cases_thm ABS_ONTO) (rev defs);
+val case_cong = Count.apply (case_cong_thm nchotomy) case_def;
 
-val res2 as {TYPE,constrs,defs, ABSconst, REPconst,
-            ABS_REP, REP_ABS, ABS_11, REP_11, ABS_ONTO, REP_ONTO, simpls}
+val {TYPE,constrs,defs, ABSconst, REPconst,
+     ABS_REP, REP_ABS, ABS_11, REP_11, ABS_ONTO, REP_ONTO, simpls}
   = Count.apply define_enum_type
        ("thing", ["z0", "z1", "z2", "z3", "z4", "z5", "z6", "z7", "z8",
                   "z9", "z10", "z11", "z12", "z13", "z14", "z15", "z16",
@@ -383,10 +514,34 @@ val res2 as {TYPE,constrs,defs, ABSconst, REPconst,
         "num2thing", "thing2num");
 
 val initiality = 
-  Count.apply (prove_initiality_thm (#REPconst res2) TYPE constrs) simpls;
+  Count.apply (prove_initiality_thm REPconst TYPE constrs) simpls;
+val case_def = Count.apply define_case initiality;
+val nchotomy = Count.apply (prove_cases_thm ABS_ONTO) (rev defs);
+val case_cong = Count.apply (case_cong_thm nchotomy) case_def;
 
-val case_def = 
-  Count.apply define_case initiality;
+
+val {TYPE,constrs,defs, ABSconst, REPconst,
+     ABS_REP, REP_ABS, ABS_11, REP_11, ABS_ONTO, REP_ONTO, simpls}
+  = Count.apply define_enum_type
+       ("thing", ["Z0", "Z1", "Z2", "Z3", "Z4", "Z5", "Z6", "Z7", "Z8",
+                  "Z9", "Z10", "Z11", "Z12", "Z13", "Z14", "Z15", "Z16",
+                  "Z17", "Z18", "Z19", "Z20", "Z21", "Z22", "Z23", "Z24",
+                  "Z25", "Z26", "Z27", "Z28", "Z29", "Z30", "Z31", "Z32",
+                  "Z33", "Z34", "Z35", "Z36", "Z37", "Z38", "Z39", "Z40",
+                  "Z41", "Z42", "Z43", "Z44", "Z45", "Z46", "Z47", "Z48",
+                  "Z49", "Z50", "Z51", "Z52", "Z53", "Z54", "Z55", "Z56",
+                  "Z57", "Z58", "Z59", "Z60", "Z61", "Z62", "Z63", "Z64",
+                  "Z65", "Z66", "Z67", "Z68", "Z69", "Z70", "Z71", "Z72",
+                  "Z73", "Z74", "Z75", "Z76", "Z77", "Z78", "Z79", "Z80", 
+                  "Z81", "Z82", "Z83", "Z84", "Z85", "Z86", "Z87", "Z88",
+                  "Z89", "Z90", "Z91", "Z92", "Z93", "Z94", "Z95", "Z96",
+                  "Z97", "Z98", "Z99"],
+        "num2thing", "thing2num");
+
+val initiality = 
+  Count.apply (prove_initiality_thm REPconst TYPE constrs) simpls;
+val case_def = Count.apply define_case initiality;
+val nchotomy = Count.apply (prove_cases_thm ABS_ONTO) (rev defs);
+val case_cong = Count.apply (case_cong_thm nchotomy) case_def;
 
 *)
-
