@@ -310,7 +310,7 @@ val LCONS_ok = prove(
     FULL_SIMP_TAC hol_ss [] THEN
     Cases_on `h = h'` THEN FULL_SIMP_TAC hol_ss [] THEN ELIM_TAC THEN
     RES_TAC THEN Q.EXISTS_TAC `SUC n` THEN
-    ASM_SIMP_TAC hol_ss [lrep_take_tl, ldest_rep]
+    ASM_SIMP_TAC (hol_ss ++ ETA_ss) [lrep_take_tl, ldest_rep]
   ]);
 
 val lcons_repabs = prove(
@@ -324,7 +324,7 @@ val LHDTL_CONS_THM = store_thm(
   "LHDTL_CONS_THM",
   ``!h t. (LHD (LCONS h t) = SOME h) /\ (LTL (LCONS h t) = SOME t)``,
   REPEAT STRIP_TAC THEN SIMP_TAC hol_ss [LHD, LCONS, lcons_repabs, LTL] THEN
-  SIMP_TAC hol_ss [lcons_rep, ldest_rep, llist_absrep]);
+  SIMP_TAC (hol_ss ++ ETA_ss) [lcons_rep, ldest_rep, llist_absrep]);
 
 (* &&& FAILS  ... last tactic ... appears not to understand alpha-conv! ... *)
 val lrep_ltl = prove(

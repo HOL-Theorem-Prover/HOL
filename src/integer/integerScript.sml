@@ -2811,12 +2811,12 @@ val INT_MAX_LT = store_thm(
 val INT_MIN_NUM = store_thm(
   "INT_MIN_NUM",
   ``!m n. int_min (&m) (&n) = &(MIN m n)``,
-  SIMP_TAC (bool_ss ++ COND_elim_ss) [INT_MIN, MIN_DEF, INT_LT]);
+  SIMP_TAC (bool_ss ++ LIFT_COND_ss) [INT_MIN, MIN_DEF, INT_LT]);
 
 val INT_MAX_NUM = store_thm(
   "INT_MAX_NUM",
   ``!m n. int_max (&m) (&n) = &(MAX m n)``,
-  SIMP_TAC (bool_ss ++ COND_elim_ss) [INT_MAX, MAX_DEF, INT_LT]);
+  SIMP_TAC (bool_ss ++ LIFT_COND_ss) [INT_MAX, MAX_DEF, INT_LT]);
 
 
 (* ----------------------------------------------------------------------

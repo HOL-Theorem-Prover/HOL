@@ -154,7 +154,7 @@ val INJP_INJ = store_thm(
   Q.X_GEN_TAC `n:num` THEN POP_ASSUM(MP_TAC o REWRITE_RULE[INJP]) THEN
   DISCH_THEN(MP_TAC o GEN ``b:bool`` o C Q.AP_THM `NUMSUM b n`) THEN
   DISCH_THEN(fn th => MP_TAC(Q.SPEC `T` th) THEN MP_TAC(Q.SPEC `F` th)) THEN
-  SIMP_TAC bool_ss [NUMSUM_DEST]);
+  SIMP_TAC (bool_ss ++ ETA_ss) [NUMSUM_DEST]);
 
 (* ------------------------------------------------------------------------- *)
 (* Now, set up "constructor" and "bottom" element.                           *)
@@ -198,7 +198,7 @@ local fun new_basic_type_definition tyname (mkname, destname) thm =
        end
 in
 val recspace_tydef =
-  new_basic_type_definition "recspace" 
+  new_basic_type_definition "recspace"
       ("mk_rec","dest_rec") (CONJUNCT1 ZRECSPACE_RULES)
 end;
 
@@ -281,7 +281,7 @@ val CONSTR_IND = store_thm(
         FIRST_ASSUM (fn imp => (MP_TAC (HO_MATCH_MP imp implhs)))) THEN
       REWRITE_TAC[CONSTR] THEN
       RULE_ASSUM_TAC(REWRITE_RULE[snd recspace_tydef]) THEN
-      ASM_SIMP_TAC bool_ss []
+      ASM_SIMP_TAC (bool_ss ++ ETA_ss) []
     ],
     ASM_REWRITE_TAC[] THEN
     DISCH_THEN(MP_TAC o Q.SPEC `dest_rec (x:'a recspace)`) THEN

@@ -12,9 +12,13 @@ sig
                                            inwards, included in bool_ss *)
      val COND_elim_ss : simpLib.ssdata  (* eliminates if-then-else's;
                                            not in bool_ss *)
+     val LIFT_COND_ss : simpLib.ssdata  (* lifts conds high in a term, but
+                                           doesn't eliminate them; can merge
+                                           those of the same guard or
+                                           opposing guards *)
      val UNWIND_ss : simpLib.ssdata     (* "pointwise" elimination for
                                             ? and !, included in bool_ss *)
      val ETA_ss : simpLib.ssdata        (* eta conversion;
-                                           included in bool_ss *)
+                                           not included in bool_ss *)
 end
 

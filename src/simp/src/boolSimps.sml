@@ -149,7 +149,8 @@ val UNWIND_ss = SIMPSET
       omitted in a custom simpset built from BOOL_ss.
    ---------------------------------------------------------------------- *)
 
-val bool_ss = pure_ss ++ BOOL_ss ++ NOT_ss ++ CONG_ss ++ UNWIND_ss ++ ETA_ss;
+val bool_ss =
+    pure_ss ++ BOOL_ss ++ NOT_ss ++ CONG_ss ++ UNWIND_ss (* ++ ETA_ss *);
 
 
 
@@ -170,30 +171,82 @@ val bool_ss = pure_ss ++ BOOL_ss ++ NOT_ss ++ CONG_ss ++ UNWIND_ss ++ ETA_ss;
  * ---------------------------------------------------------------------- *)
 
 
-val COND_COND_SAME = prove(
-  Term`!P (f:'a->'b) g x y.
-        (COND P f g) (COND P x y)
-           =
-        COND P (f x) (g y)`,
+val NESTED_COND = prove(
+  Term`!p q r s.
+          (COND p (COND p q r) s = COND p q s) /\
+          (COND p q (COND p r s) = COND p q s) /\
+          (COND p (COND (~p) q r) s = COND p r s) /\
+          (COND p q (COND (~p) r s) = COND p q r)`,
   REPEAT GEN_TAC THEN COND_CASES_TAC THEN REWRITE_TAC []);
 
-fun celim_rand_CONV tm = 
- let val (Rator, Rand) = Term.dest_comb tm
-     val (f, _) = strip_comb Rator
-     val proceed = not (same_const conditional f) handle HOL_ERR _ => true
- in
+fun celim_rand_CONV tm = let
+  val (Rator, Rand) = Term.dest_comb tm
+  val proceed = let
+    val (f, args) = strip_comb Rator
+  in
+    not (same_const f conditional) orelse null args orelse
+    let
+      fun dneg t = (dest_neg t, false) handle HOL_ERR _ => (t, true)
+      val fg0 = hd args
+      val xg0 = hd (#2 (strip_comb Rand))
+      val (fg, fposp) = dneg fg0
+      val (xg, xposp) = dneg xg0
+    in
+      case Term.compare(fg, xg) of
+        LESS => false
+      | EQUAL => xposp andalso not fposp
+      | GREATER => true
+    end
+  end
+in
   (if proceed then REWR_CONV boolTheory.COND_RAND else NO_CONV) tm
 end
+
+fun COND_ABS_CONV tm =let
+  open Type Rsyntax
+  infix |-> THENC
+  val {Bvar=v,Body=bdy} = dest_abs tm
+  val {cond,larm=x,rarm=y} = Rsyntax.dest_cond bdy
+  val b = assert (not o Lib.mem v o free_vars) cond
+  val xf = mk_abs{Bvar=v,Body=x}
+  val yf = mk_abs{Bvar=v,Body=y}
+  val th1 = INST_TYPE [alpha |-> type_of v, beta |-> type_of x] COND_ABS
+  val th2 = SPECL [b,xf,yf] th1
+in
+  CONV_RULE (RATOR_CONV (RAND_CONV
+                           (ABS_CONV (RATOR_CONV (RAND_CONV BETA_CONV) THENC
+                                      RAND_CONV BETA_CONV) THENC
+                            ALPHA_CONV v))) th2
+end handle HOL_ERR _ => failwith "COND_ABS_CONV";
+
 
 val COND_elim_ss =
   simpLib.SIMPSET {ac = [], congs = [],
                    convs = [{conv = K (K celim_rand_CONV),
                              name = "conditional lifting at rand",
                              key = SOME([], Term`(f:'a -> 'b) (COND P Q R)`),
+                             trace = 2},
+                            {conv = K (K COND_ABS_CONV),
+                             name = "conditional lifting under abstractions",
+                             key = SOME([], Term`\x:'a. COND p (q x) (r x)`),
                              trace = 2}],
                    dprocs = [], filter = NONE,
                    rewrs = [boolTheory.COND_RATOR, boolTheory.COND_EXPAND,
-                            COND_COND_SAME]}
+                            NESTED_COND]}
+
+val LIFT_COND_ss =
+    simpLib.SIMPSET {ac = [], congs = [],
+                     convs = [{conv = K (K celim_rand_CONV),
+                               name = "conditional lifting at rand",
+                               key = SOME([], Term`(f:'a -> 'b) (COND P Q R)`),
+                               trace = 2},
+                              {conv = K (K COND_ABS_CONV),
+                               name = "conditional lifting under abstractions",
+                               key = SOME([], Term`\x:'a. COND p (q x) (r x)`),
+                               trace = 2}],
+                     dprocs = [], filter = NONE,
+                     rewrs = [boolTheory.COND_RATOR, NESTED_COND]}
+
 
 (* ----------------------------------------------------------------------
  * CONJ_ss

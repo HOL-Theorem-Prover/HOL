@@ -4,7 +4,7 @@
               "BasicProvers", "SingleStep"];
 *)
 
-open HolKernel Parse boolLib 
+open HolKernel Parse boolLib boolSimps
      numLib Prim_rec mnUtils pred_setTheory  BasicProvers SingleStep;
 
 infix THEN ORELSE THENL THENC ORELSEC >- ++ |->;
@@ -528,8 +528,8 @@ val BAG_UNION_EMPTY = store_thm(
      (!b. BAG_UNION EMPTY_BAG b = b) /\
      (!b1 b2. (BAG_UNION b1 b2 = EMPTY_BAG) =
               (b1 = EMPTY_BAG) /\ (b2 = EMPTY_BAG))`--,
-  SIMP_TAC hol_ss [BAG_UNION, EMPTY_BAG] THEN REPEAT STRIP_TAC THEN
-  EQ_TAC THEN
+  SIMP_TAC (hol_ss ++ ETA_ss) [BAG_UNION, EMPTY_BAG] THEN
+  REPEAT STRIP_TAC THEN EQ_TAC THEN
   DISCH_THEN (REPEAT_TCL STRIP_THM_THEN (CONV_RULE FUN_EQ_CONV >-
               SIMP_RULE hol_ss [] >- ASSUME_TAC)) THEN
   REPEAT STRIP_TAC THEN FUN_EQ_TAC THEN
@@ -621,7 +621,7 @@ end;
 val move_BAG_UNION_over_eq = store_thm(
   "move_BAG_UNION_over_eq",
   --`!X Y Z:'a->num. (BAG_UNION X Y = Z) ==> (X = BAG_DIFF Z Y)`--,
-  SIMP_TAC hol_ss [BAG_UNION, BAG_DIFF]);
+  SIMP_TAC (hol_ss ++ ETA_ss) [BAG_UNION, BAG_DIFF]);
 
 val COMM_BAG_UNION = store_thm(
   "COMM_BAG_UNION",
