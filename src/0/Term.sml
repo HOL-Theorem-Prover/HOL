@@ -270,7 +270,7 @@ fun variant [] v = v
 fun prim_variant [] v = v
   | prim_variant vlist (Fv{Name,Ty}) =
        mk_var{Name=away (map var_name vlist) (nameStrm Name) Name, Ty=Ty}
-  | prim_variant _ _ = raise TERM_ERR "prim_variant" 
+  | prim_variant _ _ = raise TERM_ERR "prim_variant"
                                       "2nd arg. should be a variable"
 end;
 
@@ -879,6 +879,8 @@ fun tm_reduce (v as Fv{Ty,...}) tm (tm_theta,ty_theta) =
         tm_reduce M N (tm_theta,Type.type_reduce ty1 ty2 ty_theta)
   | tm_reduce (Bv i) (Bv j) S = if (i=j) then S else raise MTM_ERR
   | tm_reduce _ _ _ = raise MTM_ERR;
+
+val term_reduce = tm_reduce
 
 
 local fun del [] A = A
