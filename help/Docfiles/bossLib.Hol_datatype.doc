@@ -33,7 +33,7 @@ When a datatype is successfully defined, a number of standard theorems
 are automatically proved about the new type: the constructors of the type
 are proved to be injective and disjoint, induction and case analysis
 theorems are proved, and each type also has a `size' function defined
-for it. All these theorems are added to a database accessed via the 
+for it. All these theorems are added to a database accessed via the
 functions in {TypeBase}.
 
 \FAILURE
@@ -44,7 +44,7 @@ In the following, we shall show how some important types may be defined.
 To begin, we can define a type of binary trees where the leaves
 are numbers.
 {
-    - Hol_datatype `tree = Leaf of num 
+    - Hol_datatype `tree = Leaf of num
                          | Node of tree => tree`;
 }
 Next, we change the tree to one that has polymorphic values at internal
@@ -82,7 +82,7 @@ Elsa Gunter, captures a subset of Core ML.
        valbind = bind  of pat => exp
                | bindl of pat => exp => valbind
                | rec_bind of valbind ;
- 
+
            pat = wild_pat
                | var_pat of string`
 }
@@ -90,22 +90,24 @@ Datatype specifications allow the use of record types, which may be
 recursive. For example, the following datatype declarations could be
 used to formalize a simple file system.
 {
-   Hol_datatype `file = Text of string 
-                      | Dir of directory 
-                   ;
-           directory = <| owner : string ; files : (string * file) list |>`
+   Hol_datatype
+          `file = Text of string
+                | Dir of directory
+              ;
+           directory = <| owner : string ;
+                          files : (string # file) list |>`
 }
 
 \COMMENTS
 The notation used to declare datatypes is, unfortunately, not the same
 as that of ML. An ML declaration
 {
-   datatype ('a,'b) btree = Leaf of 'a 
+   datatype ('a,'b) btree = Leaf of 'a
                           | Node of 'b * ('a,'b) btree * ('a,'b) btree
 }
 would be declared in HOL as
 {
-   Hol_datatype btree = Leaf of 'a 
+   Hol_datatype btree = Leaf of 'a
                       | Node of 'b => btree => btree
 }
 The {=>} notation is intended to replace {*} in an ML description, and

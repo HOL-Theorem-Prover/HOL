@@ -2,6 +2,9 @@
 
 \TYPE {intLib.deprecate_int : unit -> unit}
 
+\KEYWORDS
+parsing
+
 \SYNOPSIS
 Makes the parser never consider integers as a numeric possibility.
 
@@ -15,8 +18,9 @@ never be parsed as integers.
 This function, by affecting the global grammar, also affects the
 behaviour of the pretty-printer.  A term that includes affected
 constants will print with those constants in ``fully qualified form'',
-typically as {integer$op}, and numerals will simply print with a
-trailing {i}.
+typically as {integer$op}, and numerals will print with a trailing
+{i}.  (Incidentally, the parser will always read integer terms if they
+are presented to it in this form.)
 
 \FAILURE
 Never fails.
@@ -50,16 +54,18 @@ that we just get natural numbers:
    - type_of it;
    > val it = ``:num`` : hol_type
 }
-The term we started out with, is now printed in rather ugly fashion:
+The term we started out with is now printed in rather ugly fashion:
 {
    - t;
    > val it = ``integer$int_add 2i x`` : term
 }
 
-\COMMENT
+\COMMENTS
 If one wishes to simply prefer the natural numbers, say, to the
 integers, and yet still retain integers as a possibility, use
-{numLib.prefer_num} rather than this function.
+{numLib.prefer_num} rather than this function.  This function only
+brings about a ``temporary'' effect; it does not cause the change to
+be exported with the current theory.
 
 \SEEALSO
 numLib.deprecate_num, intLib.prefer_int, numLib.prefer_num.
