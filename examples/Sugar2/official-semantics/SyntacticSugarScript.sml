@@ -141,7 +141,8 @@ val S_GOTO_REPEAT_ITER_def =
     S_REPEAT_ITER (S_CAT(S_REPEAT(S_BOOL(B_NOT b)),S_BOOL b))`;
 
 (******************************************************************************
-* S_RANGE_GOTO_REPEAT r (i,j)) = r[=i..j] = {r[=i]} | {r[*=i+1)]} | ... | {r[=j]}
+* S_RANGE_GOTO_REPEAT r (i,j)) = 
+*  r[=i..j] = {r[=i]} | {r[*=i+1)]} | ... | {r[=j]}
 ******************************************************************************)
 val S_RANGE_GOTO_REPEAT_def =
  Define
