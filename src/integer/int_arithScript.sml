@@ -1037,6 +1037,59 @@ val bmarker_rewrites = store_thm(
             ((bmarker p /\ q) /\ r = bmarker p /\ (q /\ r))``,
   REWRITE_TAC [bmarker_def] THEN tautLib.TAUT_TAC);
 
+val positive_mod_part = prove(
+  ``!p q r. 0 < q /\ 0 <= r /\ r < q ==>
+            ((p * q + r) % q = r)``,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC INT_MOD_UNIQUE THEN
+  ASM_SIMP_TAC bool_ss [INT_LT_GT] THEN PROVE_TAC []);
+
+infix 8 on
+val int_ss = int_ss ++ numSimps.ARITH_ss
+val tac1 =
+    Q.EXISTS_TAC `&n - r` THEN
+    ASM_SIMP_TAC bool_ss [INT_LE_SUB_LADD, INT_LE_SUB_RADD, move_sub,
+                          INT_LE_LADD] THEN
+    `0 < r` by FULL_SIMP_TAC bool_ss [INT_LE_LT] THEN
+    FULL_SIMP_TAC int_ss [GSYM INT_ADD_ASSOC, INT_SUB_ADD2,
+                           less_to_leq_samer, INT_ADD_COMM] THEN
+    SUBST_ALL_TAC on
+      (`&n + q * &n = (q + 1) * &n`,
+       SIMP_TAC bool_ss [INT_ADD_COMM, INT_RDISTRIB, INT_MUL_LID]) THEN
+    ASM_SIMP_TAC bool_ss [INT_MOD_COMMON_FACTOR]
+val tac2 =
+    STRIP_TAC THEN REPEAT VAR_EQ_TAC THEN
+    FULL_SIMP_TAC bool_ss [INT_ADD_RID] THEN
+    POP_ASSUM MP_TAC THEN
+    `0 <= i` by PROVE_TAC [INT_LE_TRANS, INT_LE_01] THEN
+    `i < &n` by ASM_SIMP_TAC bool_ss [less_to_leq_samel, GSYM int_sub] THEN
+    ASM_SIMP_TAC bool_ss [positive_mod_part] THEN
+    STRIP_TAC THEN VAR_EQ_TAC THEN FULL_SIMP_TAC int_ss []
+val NOT_INT_DIVIDES = store_thm(
+  "NOT_INT_DIVIDES",
+  ``!c d. ~(c = 0) ==>
+          (~(c int_divides d) =
+           ?i. 1 <= i /\ i <= ABS c - 1 /\ c int_divides d + i)``,
+  REPEAT GEN_TAC THEN
+  Q.SPEC_THEN `c` STRIP_ASSUME_TAC INT_NUM_CASES THEN
+  ASM_SIMP_TAC bool_ss [INT_DIVIDES_NEG, INT_ABS_NUM, INT_ABS_NEG,
+                        INT_NEG_EQ0] THEN
+  REPEAT STRIP_TAC THEN
+  ASM_SIMP_TAC bool_ss [INT_DIVIDES_MOD0] THEN
+  FIRST_ASSUM (MP_TAC o Q.SPEC `d` o MATCH_MP INT_DIVISION) THEN
+  ASM_SIMP_TAC int_ss [INT_LT] THEN STRIP_TAC THEN
+  Q.ABBREV_TAC `q = d / &n` THEN POP_ASSUM (K ALL_TAC) THEN
+  Q.ABBREV_TAC `r = d % &n` THEN POP_ASSUM (K ALL_TAC) THEN
+  EQ_TAC THEN STRIP_TAC THENL [tac1,tac2,tac1,tac2]);
+
+val NOT_INT_DIVIDES_POS = store_thm(
+  "NOT_INT_DIVIDES_POS",
+  ``!n d. ~(n = 0) ==>
+          (~(&n int_divides d) =
+           ?i. (1 <= i /\ i <= &n - 1) /\ &n int_divides d + i)``,
+  REPEAT STRIP_TAC THEN
+  `~(&n = 0)` by ASM_SIMP_TAC bool_ss [INT_INJ] THEN
+  ASM_SIMP_TAC bool_ss [NOT_INT_DIVIDES, INT_ABS_NUM, CONJ_ASSOC]);
+
 val _ = hide "bmarker";
 
 val _ = export_theory();

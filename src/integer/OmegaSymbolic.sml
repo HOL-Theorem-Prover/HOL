@@ -44,7 +44,8 @@ fun ERR f msg = HOL_ERR { origin_structure = "OmegaSymbolic",
 (* ----------------------------------------------------------------------
     clause_to_evals v t
 
-    where v is a variable, and t is a conjunction of <= leaves.
+    where v is a variable, and t is a conjunction of <= or divisibility
+    leaves.
     Returns a theorem of the form
        t = (evalleft v lefts /\ evalright v rights) /\ extras
     where v is not free in extras.  Extras may be the term T.
@@ -89,7 +90,8 @@ fun clause_to_evals v tm = let
           (eval_step_extra1, eval_step_extra2, eval_step_upper1,
            eval_step_lower1, RAND_CONV, I)
     val t = get_t c2
-    val cf = CooperMath.sum_var_coeffs v (rand t)
+    val cf = if is_neg t orelse is_divides t then Arbint.zero
+             else CooperMath.sum_var_coeffs v (rand t)
   in
     if cf = Arbint.zero then
       if is_const ex then REWR_CONV ex1
@@ -614,6 +616,86 @@ in
 end
 
 (* ----------------------------------------------------------------------
+    eliminate_positive_divides t
+
+    t is a term of the form ?x1 .. xn. body, where body is a conjunction
+    of leaves, possibly including divisibility relations (negated or
+    positive).  This function writes away those (positive) divisibility
+    relations of the form   d | exp   where exp includes at least one
+    variable from x1 .. xn.
+   ---------------------------------------------------------------------- *)
+
+fun eliminate_positive_divides t = let
+  val (vs, body) = strip_exists t
+  fun find_divides tm = let
+  in
+    if is_conj tm then
+      (LAND_CONV find_divides THENC LEFT_AND_EXISTS_CONV) ORELSEC
+      (RAND_CONV find_divides THENC RIGHT_AND_EXISTS_CONV)
+    else if is_divides tm andalso
+            not (null (intersect vs (free_vars (rand tm))))
+    then
+      REWR_CONV INT_DIVIDES THENC
+      BINDER_CONV OmegaMath.leaf_normalise
+    else
+      NO_CONV
+  end tm
+in
+  STRIP_QUANT_CONV find_divides THENC OmegaEq.OmegaEq THENC
+  TRY_CONV eliminate_positive_divides
+end t
+
+(* ----------------------------------------------------------------------
+    eliminate_negative_divides t
+
+    t is a term of the form ?x1 .. xn. body, where body is a conjunction
+    of leaves, possibly including divisibility relations (negated or
+    positive).  This function writes away those negated divisibility
+    relations of the form ~(d | exp) where exp includes at least one
+    variable from x1 .. xn.
+   ---------------------------------------------------------------------- *)
+
+fun eliminate_negative_divides t = let
+  val (vs, _) = strip_exists t
+  fun elim_ndivides tm = let
+    val (c, d) = dest_divides (rand tm)
+    val c_neq_0 = EQT_ELIM (CooperMath.REDUCE_CONV
+                              (mk_neg(mk_eq(rand c, numSyntax.zero_tm))))
+  in
+    MP (SPECL [rand c, d] int_arithTheory.NOT_INT_DIVIDES_POS) c_neq_0
+  end
+  fun rdistrib tm =
+      TRY_CONV (REWR_CONV RIGHT_AND_OVER_OR THENC RAND_CONV rdistrib) tm
+  fun ldistrib tm =
+      TRY_CONV (REWR_CONV LEFT_AND_OVER_OR THENC RAND_CONV ldistrib) tm
+  fun find_divides tm = let
+  in
+    if is_conj tm then
+      (LAND_CONV find_divides THENC rdistrib) ORELSEC
+      (RAND_CONV find_divides THENC ldistrib)
+    else if is_neg tm andalso
+            not (null (intersect vs (free_vars (rand (rand tm)))))
+    then
+      elim_ndivides THENC
+      BINDER_CONV (LAND_CONV (RAND_CONV (CooperMath.REDUCE_CONV))) THENC
+      calculate_range_disjunct THENC
+      EVERY_DISJ_CONV (RAND_CONV OmegaMath.SORT_AND_GATHER1_CONV)
+    else NO_CONV
+  end tm
+  fun push tm = let
+    val (vs, body) = strip_exists tm
+  in
+    CooperSyntax.push_in_exists THENC
+    EVERY_DISJ_CONV (RENAME_VARS_CONV (map (#1 o dest_var) vs))
+  end tm
+in
+  BINDER_CONV find_divides THENC push THENC
+  TRY_CONV eliminate_negative_divides
+end t
+
+
+
+(* ----------------------------------------------------------------------
     eliminate_an_existential t
 
     t is of the form ?x1..xn. body, where body is a conjunction of
@@ -626,7 +708,7 @@ fun push_nthvar_to_bot n tm =
                              BINDER_CONV (push_nthvar_to_bot 0)) tm
     else BINDER_CONV (push_nthvar_to_bot (n - 1)) tm
 
-fun eliminate_an_existential t = let
+fun eliminate_an_existential0 t = let
   val (vs, body) = strip_exists t
   val (eliminate, category) = best_variable_to_eliminate vs body
   val v_n = index (fn v => v = eliminate) vs
@@ -651,5 +733,31 @@ in
   mypush_in_exs
 end t
 
+val eliminate_an_existential =
+    TRY_CONV eliminate_negative_divides THENC
+    EVERY_DISJ_CONV (TRY_CONV eliminate_positive_divides THENC
+                     eliminate_an_existential0)
+
+(* ----------------------------------------------------------------------
+    find_deep_existentials tm
+
+   ---------------------------------------------------------------------- *)
+
+fun find_deep_existentials tm = let
+in
+  if is_forall tm then let
+      val (vs, body) = strip_forall tm
+    in
+      if is_exists body then STRIP_QUANT_CONV find_deep_existentials
+      else CooperSyntax.flip_foralls THENC RAND_CONV eliminate_an_existential
+    end
+  else if is_exists tm then let
+      val (vs, body) = strip_exists tm
+    in
+      if is_forall body then STRIP_QUANT_CONV find_deep_existentials
+      else eliminate_an_existential
+    end
+  else NO_CONV
+end tm
 
 end (* struct *)
