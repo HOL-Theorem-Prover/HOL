@@ -323,47 +323,74 @@ fun QUANTIFY_CONDITIONS thm =
  else [thm]
  handle e => WRAP_ERR("QUANTIFY_CONDITIONS",e);
 
-fun IMP_CANON th =
- let val w = concl th
- in if is_conj w
-      then IMP_CANON (CONJUNCT1 th) @ IMP_CANON (CONJUNCT2 th)
-    else
-    if is_imp w
-    then
-    let val (ant,c) = dest_imp w
-    in if is_conj ant
-       then let val (conj1,conj2) = dest_conj ant
-            in IMP_CANON
-                (DISCH conj1 (DISCH conj2
-                    (MP th (CONJ (ASSUME conj1) (ASSUME conj2)))))
-            end else
-       if is_disj ant
-       then let val (disj1,disj2) = dest_disj ant
-            in IMP_CANON (DISCH disj1 (MP th (DISJ1 (ASSUME disj1) disj2)))
-               @
-               IMP_CANON (DISCH disj2 (MP th (DISJ2 disj1 (ASSUME disj2))))
-            end else
-       if is_exists ant
-       then let val (Bvar,Body) = dest_exists ant
-                val bv' = variant (thm_frees th) Bvar
-                val body' = subst [Bvar |-> bv'] Body
+fun imp_canon_munge acc antthlist =
+    case antthlist of
+      [] => acc
+    | ((ants, th) :: rest) =>
+      imp_canon_munge (List.foldl (uncurry DISCH) th ants :: acc) rest
+
+fun IMP_CANON acc thl =
+    case thl of
+      [] => imp_canon_munge [] acc
+    | (ants, th)::ths =>
+      let val w = concl th
+      in
+        if is_conj w then let
+            val (th1, th2) = CONJ_PAIR th
+          in
+            IMP_CANON acc ((ants, th1) :: (ants, th2) :: ths)
+          end
+        else
+          if is_imp w then let
+              val (ant,c) = dest_imp w
             in
-              IMP_CANON (DISCH body' (MP th (EXISTS(ant, bv') (ASSUME body'))))
+              if is_conj ant then let
+                  val (conj1,conj2) = dest_conj ant
+                  val newth =
+                      DISCH conj1 (DISCH conj2 (MP th (CONJ (ASSUME conj1)
+                                                            (ASSUME conj2))))
+                in
+                  IMP_CANON acc ((ants, newth) :: ths)
+                end
+              else if is_disj ant then let
+                  val (disj1,disj2) = dest_disj ant
+                  val newth1 = DISCH disj1 (MP th (DISJ1 (ASSUME disj1) disj2))
+                  val newth2 = DISCH disj2 (MP th (DISJ2 disj1 (ASSUME disj2)))
+                in
+                  IMP_CANON acc ((ants, newth1) :: (ants, newth2) :: ths)
+                end
+              else if is_exists ant then let
+                  val (Bvar,Body) = dest_exists ant
+                  val bv' = variant (thm_frees th) Bvar
+                  val body' = subst [Bvar |-> bv'] Body
+                  val newth =
+                      DISCH body' (MP th (EXISTS(ant, bv') (ASSUME body')))
+                in
+                  IMP_CANON acc ((ants, newth) :: ths)
+                end
+              else if c = boolSyntax.F then
+                IMP_CANON ((ants, NOT_INTRO th) :: acc) ths
+              (* we want [.] |- F theorems to rewrite to [.] |- x = F,
+                 done above in IMP_EQ_CANON, but we don't want this to
+                 be done for |- P ==> F, which would set up a rewrite
+                 of the form |- P ==> (x = F), which would match any
+                 boolean term and force endless attempts to prove P.
+                 Instead, convert to |- ~P *)
+              else
+                IMP_CANON ((ant::ants, UNDISCH th)::acc) ths
             end
-       else if c = boolSyntax.F then [NOT_INTRO th]
-         (* we want [.] |- F theorems to rewrite to [.] |- x = F, done above in
-            IMP_EQ_CANON, but we don't want this to be done for |- P ==> F,
-            which would set up a rewrite of the form |- P ==> (x = F),
-            which would match any boolean term and force endless attempts
-            to prove P.  Instead, convert to |- ~P *)
-       else map (DISCH ant) (IMP_CANON (UNDISCH th))
-    end
-    else if is_forall w then IMP_CANON (SPEC_ALL th)
-    else if is_res_forall w then
-      IMP_CANON (CONV_RULE (REWR_CONV RES_FORALL_THM THENC
-                            QUANT_CONV (RAND_CONV BETA_CONV)) th)
-    else [th]
- end;
+          else if is_forall w then
+            IMP_CANON acc ((ants, SPEC_ALL th) :: ths)
+          else if is_res_forall w then let
+              val newth = CONV_RULE (REWR_CONV RES_FORALL_THM THENC
+                                     QUANT_CONV (RAND_CONV BETA_CONV)) th
+            in
+              IMP_CANON acc ((ants, newth) :: ths)
+            end
+          else IMP_CANON ((ants, th)::acc) ths
+      end
+
+val IMP_CANON = (fn th => IMP_CANON [] [([], th)])
 
 infix oo;
 fun f oo g = fn x => flatten (map f (g x));
