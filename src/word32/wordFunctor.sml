@@ -28,7 +28,9 @@ val RIGHT_REWRITE_RULE =
 
 (* -------------------------------------------------------- *)
 
-val _ = new_theory ("word"^Int.toString bits);
+val sbits = Int.toString bits;
+
+val _ = new_theory ("word"^sbits);
 
 (* -------------------------------------------------------- *)
 
@@ -681,7 +683,7 @@ val [ADDw,ADD_0w,ADD1w,ADD_ASSOCw,ADD_CLAUSESw,
      DE_MORGAN_THMw]
  =
  define_equivalence_type
-   {name = "word",
+   {name = "word"^sbits,
     equiv = EQUIVw_QT,
     defs = [r("w_0_def",Prefix,"w_0",(Term`0`)),
             r("w_1_def",Prefix,"w_1",(Term`AONE`)),
@@ -715,10 +717,13 @@ val [ADDw,ADD_0w,ADD1w,ADD_ASSOCw,ADD_CLAUSESw,
                RIGHT_OR_OVER_AND_QT,DE_MORGAN_THM_QT]
   };
 
-val wn_def = Define `wn n = mk_word ($EQUIVw n)`;
-val NUMw_def = Define`NUMw w = MODw ($@ (dest_word w))`;
+val mk_word   = prim_mk_const {Name = "mk_word"^sbits,  Thy = "word"^sbits};
+val dest_word = prim_mk_const {Name = "dest_word"^sbits,Thy = "word"^sbits};
 
-val word_tybij = definition "word_tybij";
+val wn_def = Define `wn n = ^mk_word ($EQUIVw n)`;
+val NUMw_def = Define`NUMw w = MODw ($@ (^dest_word w))`;
+
+val word_tybij = definition ("word"^sbits^"_tybij");
 val mk_word_one_one  = BETA_RULE (prove_abs_fn_one_one word_tybij);
 val word_abs_fn_onto = BETA_RULE (prove_abs_fn_onto word_tybij);
 
@@ -884,12 +889,12 @@ val EQUIV_EXISTS = prove(`!y. ?x. $EQUIVw y = $EQUIVw x`, PROVE_TAC []);
 val mk_word_eq_one_one = SIMP_RULE bool_ss [EQUIV_EXISTS] (SPECL [`$EQUIVw x`,`$EQUIVw y`] mk_word_one_one);
 
 val dest_word_mk_word_eq = prove(
-  `!a. dest_word (mk_word ($EQUIVw a)) = $EQUIVw a`,
+  `!a. ^dest_word (^mk_word ($EQUIVw a)) = $EQUIVw a`,
   STRIP_TAC THEN REWRITE_TAC [EQUIV_EXISTS,GSYM (BETA_RULE word_tybij)]
 );
 
 val dest_word_mk_word_eq2 = prove(
-  `!a x. (dest_word (mk_word ($EQUIVw a)) x) = (a EQUIVw x)`,
+  `!a x. (^dest_word (^mk_word ($EQUIVw a)) x) = (a EQUIVw x)`,
   STRIP_TAC THEN REWRITE_TAC [dest_word_mk_word_eq]
 );
 
@@ -899,7 +904,7 @@ val dest_word_mk_word_eq3 = save_thm("dest_word_mk_word_eq3",
 );
 
 val dest_word_mk_word_exists = prove(
-  `?x. dest_word (mk_word ($EQUIVw a)) x`,
+  `?x. ^dest_word (^mk_word ($EQUIVw a)) x`,
   B_RW_TAC [dest_word_mk_word_eq2,EQUIVw_def] THEN PROVE_TAC []
 );
 
