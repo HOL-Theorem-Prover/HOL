@@ -14,14 +14,9 @@
 structure dBScript =
 struct
 
-open HolKernel Parse boolLib 
+open HolKernel Parse boolLib
      bossLib numLib IndDefLib
-     pred_setTheory arithmeticTheory 
-
-infixr 3 -->;
-infix && ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-infix 8 by;
-
+     pred_setTheory arithmeticTheory
 
 val _ = new_theory"dB";
 
@@ -32,10 +27,6 @@ val _ = new_theory"dB";
 
 val FUN_EQ_TAC = CONV_TAC (ONCE_DEPTH_CONV FUN_EQ_CONV)
                    THEN GEN_TAC THEN BETA_TAC;
-
-val MAX_DEF =
- Define
-     `MAX m n = if m <= n then n else m`;
 
 val MAX_00 = Q.prove(
   `!m n. (MAX m n = 0) = (m=0) /\ (n=0)`,  RW_TAC arith_ss [MAX_DEF]);
@@ -238,8 +229,9 @@ val _ = save_thm("dOK_ind",   dOK_ind);
 
 val Forwards = Q.store_thm("Forwards",
   `!t. dOK t ==> (dDEG t = 0)`,
-HO_MATCH_MP_TAC dOK_ind
-   THEN RW_TAC arith_ss [dDEG, MAX_00, dLAMBDA,ONE,dDEG_Abst]);
+  HO_MATCH_MP_TAC dOK_ind THEN
+  RW_TAC bool_ss [ONE, dDEG, MAX_00, dLAMBDA,SUB_EQ_0] THEN
+  MATCH_MP_TAC dDEG_Abst THEN ASM_SIMP_TAC arith_ss []);
 
 
 val dWT =
@@ -336,12 +328,11 @@ Induct
   THEN RW_TAC arith_ss [Inst, Abst, dFV_Abst, dDEG, MAX_LESS_EQ]);
 
 val dLAMBDA_dSUB = Q.store_thm("dLAMBDA_dSUB",
- `!t u x y.
-    ~(x=y) /\ ~(y IN dFV u) /\ dOK t
-       ==>
-    ([x |-> u] (dLAMBDA y t) = dLAMBDA y ([x |-> u] t))`,
-ZAP_TAC (arith_ss && [dLAMBDA, dSUB, Abst, Inst,dDEG_dOK])
-     [dLAMBDA_dSUB_lemma,  LESS_EQ_0]);
+  `!t u x y.
+      ~(x=y) /\ ~(y IN dFV u) /\ dOK t ==>
+      ([x |-> u] (dLAMBDA y t) = dLAMBDA y ([x |-> u] t))`,
+  SIMP_TAC (srw_ss()) [dLAMBDA, dSUB, Abst, Inst, dDEG_dOK] THEN
+  SIMP_TAC (bool_ss ++ ARITH_ss) [ONE, dLAMBDA_dSUB_lemma]);
 
 val dLAMBDA_dSUB_EQ_lemma = Q.store_thm("dLAMBDA_dSUB_EQ_lemma",
 `!t u x i.
@@ -351,9 +342,10 @@ Induct
    THEN RW_TAC arith_ss [Abst, Inst, dDEG, MAX_LESS_EQ]);
 
 val dLAMBDA_dSUB_EQ = Q.store_thm("dLAMBDA_dSUB_EQ",
- `!t u x.
+  `!t u x.
       dOK t ==> ([x |-> u] (dLAMBDA x t) = dLAMBDA x t)`,
-RW_TAC arith_ss [dDEG_dOK, dLAMBDA, dSUB, Abst, Inst, dLAMBDA_dSUB_EQ_lemma]);
+  RW_TAC bool_ss [dDEG_dOK, dLAMBDA, dSUB, Abst, Inst, DECIDE ``0 <= SUC x``,
+                  dLAMBDA_dSUB_EQ_lemma]);
 
 val dSUB_ID_lemma = Q.store_thm("dSUB_ID_lemma",
 `!t i x. dDEG t <= i ==> (Inst i (Abst i x t) (dVAR x) = t)`,
@@ -550,9 +542,9 @@ Induct THEN RW_TAC std_ss [] THENL
   map IMP_RES_TAC [PSUB_dCON, PSUB_dVAR, PSUB_dBOUND, PSUB_dABS, PSUB_dAPP]
   THEN BasicProvers.NORM_TAC std_ss [CHOM]
   THEN IMP_RES_TAC (PROVE [] (Term `x ==> ~x ==> F`))
-  THEN Q.PAT_ASSUM `PSUB p q r = PSUB a b c` MP_TAC 
+  THEN Q.PAT_ASSUM `PSUB p q r = PSUB a b c` MP_TAC
   THEN RW_TAC std_ss [CHOM,PSUB]
-  THENL [AP_TERM_TAC THEN PROVE_TAC[PSUB_Lemma2], PROVE_TAC []]);
+  THENL [AP_TERM_TAC THEN PROVE_TAC[PSUB_Lemma2, ONE], PROVE_TAC []]);
 
 val HOM_lemma = Q.store_thm("HOM_lemma",
   `(!x.   ^hom (dVAR x)   = var x) /\
@@ -683,7 +675,7 @@ RW_TAC std_ss
     ::map (REWRITE_RULE [SPECIFICATION]) [IN_DELETE, lemma3]));
 
 val lemma5 = Q.prove(
- `!x s t. s SUBSET t /\ ~(x IN t) ==> ~(x IN s)`, 
+ `!x s t. s SUBSET t /\ ~(x IN t) ==> ~(x IN s)`,
  PROVE_TAC [SUBSET_DEF]);
 
 

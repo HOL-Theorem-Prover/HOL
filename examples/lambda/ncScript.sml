@@ -17,10 +17,6 @@ struct
 open HolKernel Parse boolLib
      bossLib arithmeticTheory pred_setTheory dBTheory;
 
-infixr 3 -->;
-infix && ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-infix 8 by;
-
 val _ = new_theory "nc";
 
 
@@ -234,11 +230,7 @@ STRIP_ASSUME_TAC WRAP_DB_EXISTS
   THEN RW_TAC OK_ss [lemma,LAM,SUB_DEF,VARR]);
 
 
-val ABS =
-  new_specification
-    {name = "ABS_DEF",
-     consts = [{const_name = "ABS", fixity = Prefix}],
-     sat_thm = ABS_EXISTS};
+val ABS = new_specification ("ABS_DEF", ["ABS"], ABS_EXISTS);
 
 (* ********************************************************************* *)
 (* End of characterization.                                              *)
@@ -511,10 +503,7 @@ val BODY_DEF =
       `?f:'a nc -> (string->'a nc). !x u. f(LAM x ^u) = \y. [VAR y/x]u`,
       STRIP_ASSUME_TAC th2 THEN Q.EXISTS_TAC `hom` THEN RW_TAC std_ss [])
  in
-    new_specification
-       {name = "BODY_DEF",
-        consts = [{const_name="BODY", fixity=Prefix}],
-        sat_thm = lemma}
+    new_specification ("BODY_DEF", ["BODY"], lemma)
  end;
 
 (* --------------------------------------------------------------------- *)
@@ -705,13 +694,21 @@ nc_INDUCT_TAC
 
 
 (* ===================================================================== *)
-(* Andy's injectivity theorems                                           *)
+(* Injectivity theorems                                                  *)
 (* ===================================================================== *)
 
 val INJECTIVITY_LEMMA1 = Q.store_thm("INJECTIVITY_LEMMA1",
 `!x u x1 u1.
    (LAM x u = LAM x1 u1) ==> (u = [VAR x/x1]u1)`,
 PROVE_TAC [nc_INJECTIVITY,lemma14a]);
+
+val LAM_VAR_INJECTIVE = store_thm(
+  "LAM_VAR_INJECTIVE",
+  ``!x b1 b2. (LAM x b1 = LAM x b2) = (b1 = b2)``,
+  REPEAT GEN_TAC THEN EQ_TAC THEN SIMP_TAC std_ss [] THEN STRIP_TAC THEN
+  IMP_RES_THEN SUBST_ALL_TAC INJECTIVITY_LEMMA1 THEN
+  SIMP_TAC std_ss [lemma14a]);
+
 
 val lemma =
  REWRITE_RULE [IN_UNION,IN_SING,DE_MORGAN_THM,IN_INSERT]
@@ -872,11 +869,7 @@ Q.EXISTS_TAC `\lam t. let x = @x. ~(x IN (FV lam)) in [t/x](BODY lam x)`
    THEN STRIP_ASSUME_TAC (SPEC_ALL lemma)
    THEN RW_TAC std_ss [lemma15a,lemma14a]);
 
-val BETA =
-  new_specification
-  {name    = "BETA_DEF",
-   consts  = [{fixity = Prefix, const_name = "BETA"}],
-   sat_thm = BETA_EXISTS};
+val BETA = new_specification ("BETA_DEF", ["BETA"], BETA_EXISTS);
 
 (* --------------------------------------------------------------------- *)
 (* BODY is definable given BETA.                                         *)
@@ -896,7 +889,7 @@ Q.EXISTS_TAC `\u y. BETA u (VAR y)` THEN RW_TAC std_ss [BETA]);
 (*       FVS [(t1,x1),...,(tn,xn)] = FV t1 UNION ... UNION FV tn         *)
 (* --------------------------------------------------------------------- *)
 
-val ISUB_DEF =
+val ISUB_def =
  Define
      `($ISUB t [] = t)
   /\  ($ISUB t ((s,x)::rst) = $ISUB ([s/x]t) rst)`;
@@ -955,6 +948,45 @@ HO_MATCH_MP_TAC RENAMING_IND
    THEN RW_TAC list_ss []
    THEN PROVE_TAC [RENAMING_CASES]);
 
+(* ----------------------------------------------------------------------
+    Simple properties of ISUB
+   ---------------------------------------------------------------------- *)
+
+val SUB_ISUB_SINGLETON = store_thm(
+  "SUB_ISUB_SINGLETON",
+  ``!t x u. [t/x]u = u ISUB [(t,x)]``,
+  SRW_TAC [][ISUB_def]);
+
+val ISUB_APPEND = store_thm(
+  "ISUB_APPEND",
+  ``!R1 R2 t. (t ISUB R1) ISUB R2 = t ISUB (APPEND R1 R2)``,
+  Induct THEN
+  ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, ISUB_def]);
+
+(* ----------------------------------------------------------------------
+    ... and of RENAMING
+   ---------------------------------------------------------------------- *)
+
+val _ = temp_type_abbrev("renaming", ``:('a nc # string) list``)
+val RENAMING_THM = store_thm(
+  "RENAMING_THM",
+  ``RENAMING ([]:'a renaming) /\
+    (!(R:'a renaming) h.
+       RENAMING (h::R) = RENAMING R /\ ?y x. h = (VAR y,x)) /\
+    (!R1 R2:'a renaming.
+       RENAMING (APPEND R1 R2) = RENAMING R1 /\ RENAMING R2)``,
+  Q.SUBGOAL_THEN
+    `RENAMING ([]:'a renaming) /\
+    (!R:'a renaming h.
+       RENAMING (h::R) = RENAMING R /\ ?y x. h = (VAR y,x))`
+    (fn th => STRIP_ASSUME_TAC th THEN ASM_REWRITE_TAC [])
+  THENL [
+    SIMP_TAC (srw_ss()) [RENAMING_DEF] THEN REPEAT GEN_TAC THEN
+    CONV_TAC (LAND_CONV (REWR_CONV RENAMING_CASES)) THEN SRW_TAC [][] THEN
+    PROVE_TAC [],
+    Induct THEN SRW_TAC [][] THEN PROVE_TAC []
+  ]);
+
 
 (* --------------------------------------------------------------------- *)
 (* Interaction of ISUB with syntax constructors.                         *)
@@ -973,18 +1005,18 @@ val ISUB_VAR_RENAME = Q.store_thm("ISUB_VAR_RENAME",
         ==>
       !x. (VAR x) ISUB ss = VAR (RENAME ss x)`,
 HO_MATCH_MP_TAC RENAMING_IND
-  THEN RW_TAC std_ss [ISUB_DEF, RENAME_DEF, VNAME_DEF, SUB_VAR]
+  THEN RW_TAC std_ss [ISUB_def, RENAME_DEF, VNAME_DEF, SUB_VAR]
   THEN RW_TAC std_ss []);
 
 val ISUB_CON = Q.store_thm("ISUB_CON",
 `!^R k. (CON k) ISUB ^R = CON k`,
 Induct THEN Ho_Rewrite.REWRITE_TAC[pairTheory.FORALL_PROD]
- THEN RW_TAC std_ss [ISUB_DEF, SUB_THM]);
+ THEN RW_TAC std_ss [ISUB_def, SUB_THM]);
 
 val ISUB_APP = Q.store_thm("ISUB_APP",
 `!^R t u. (t @@ u) ISUB ^R = (t ISUB ^R) @@ (u ISUB ^R)`,
 Induct THEN Ho_Rewrite.REWRITE_TAC[pairTheory.FORALL_PROD]
-  THEN RW_TAC std_ss [ISUB_DEF, SUB_THM]);
+  THEN RW_TAC std_ss [ISUB_def, SUB_THM]);
 
 val ISUB_LAM = Q.store_thm("ISUB_LAM",
 `!^R x. ~(x IN (DOM ^R UNION FVS ^R))
@@ -994,94 +1026,23 @@ Induct THENL
  [ALL_TAC, Ho_Rewrite.REWRITE_TAC[pairTheory.FORALL_PROD]
            THEN Cases_on `x` THEN POP_ASSUM MP_TAC]
  THEN RW_TAC list_ss
- [ISUB_DEF,DOM_DEF,FVS_DEF,FV_THM,IN_UNION,IN_SING,DE_MORGAN_THM,SUB_THM]);
+ [ISUB_def,DOM_DEF,FVS_DEF,FV_THM,IN_UNION,IN_SING,DE_MORGAN_THM,SUB_THM]);
 
-(* --------------------------------------------------------------------- *)
-(* Definition of length -- set-based construction.                       *)
-(* --------------------------------------------------------------------- *)
-
-val existence =
- let val instth = INST_TYPE [beta |-> Type`:num`] nc_RECURSION
-     val con = `\x. 1` and
-         var = `\x. 1` and
-         app = `\n m t u. (n + m)` and
-         lam = `\f g. let v = NEW(FV(ABS g)) in (f v) + 1`
-     val th1 = BETA_RULE (Q.SPECL [con,var,app,lam] instth)
-     val th2 = BETA_RULE (CONJUNCT1 (CONV_RULE EXISTS_UNIQUE_CONV th1))
- in
-   REWRITE_RULE [ABS] th2
- end;
-
-local val def = body(rand(concl existence))
-in
-val vlemma = Q.prove(
-`^def ==> !x y z. hom([VAR y/z](VAR x)) = 1`,
-RW_TAC std_ss [] THEN Cases_on `z:string = x`
- THEN RW_TAC std_ss [SUB_THM])
-end;
-
-val lemma1 = Q.prove(
-`!ss u t x. [t/x](u ISUB ss) = u ISUB (APPEND ss [(t,x)])`,
-Induct THEN Ho_Rewrite.REWRITE_TAC[pairTheory.FORALL_PROD]
-   THEN RW_TAC list_ss [ISUB_DEF]);
-
-val lemma2 = Q.prove(
-`[a/b]([x/y]u) = u ISUB [(x,y);(a,b)]`,
-RW_TAC std_ss [ISUB_DEF]);
+val _ = BasicProvers.export_rewrites ["FV_THM", "nc_DISTINCT",
+                                      "nc_INJECTIVITY", "LAM_VAR_INJECTIVE"];
 
 
-local val (hom,def) = dest_exists(concl existence)
-in
-val lemma3 = Q.prove(
-`^def ==> !u ss. RENAMING ss ==> (^hom (u ISUB ss) = ^hom u)`,
-STRIP_TAC THEN nc_INDUCT_TAC2 THENL
- [RW_TAC std_ss [ISUB_CON],
-  RW_TAC std_ss [ISUB_VAR_RENAME],
-  RW_TAC std_ss [ISUB_APP],
-  Q.EXISTS_TAC `{}`
-    THEN REWRITE_TAC [FINITE_EMPTY,NOT_IN_EMPTY]
-    THEN REPEAT STRIP_TAC THEN
-    let val vs = Term`(DOM ss) UNION (FVS (ss:('a nc # string) list))
-                               UNION (FV (u:'a nc))`
-        val th1 = Q.prove(`FINITE ^vs`,
-                  REWRITE_TAC [FINITE_UNION,FINITE_FV, FINITE_FVS,FINITE_DOM])
-        val th2 = MATCH_MP NEW_FRESH_string th1
-        val th3 = REWRITE_RULE [UNION_ASSOC] th2
-        val th4 = PURE_ONCE_REWRITE_RULE [IN_UNION] th3
-        val th5 = REWRITE_RULE [GSYM UNION_ASSOC,DE_MORGAN_THM] th4
-        val th6 = MATCH_MP SIMPLE_ALPHA (CONJUNCT2 th5)
-    in
-      SUBST1_TAC (Q.SPEC `y` th6)
-       THEN ASM_REWRITE_TAC [MATCH_MP ISUB_LAM (CONJUNCT1 th5)]
-    end
-    THEN REWRITE_TAC [lemma1,lemma2,GSYM (CONJUNCT2 ISUB_DEF)]
-    THEN CONV_TAC (DEPTH_CONV pairLib.let_CONV)
-    THEN REWRITE_TAC [GSYM ADD1] THEN AP_TERM_TAC
-    THEN REWRITE_TAC [lemma1,lemma2,GSYM (CONJUNCT2 ISUB_DEF)]
-    THEN (fn (A,g) =>
-            let val (lhs,rhs) = dest_eq g
-                val eq1 = mk_eq(lhs, Term`^hom u`)
-                and eq2 = mk_eq(rhs, Term`^hom u`)
-            in
-              SUBGOAL_THEN (mk_conj(eq1, eq2))
-                  (fn th => REWRITE_TAC [th]) (A,g)
-            end)
-     THEN PROVE_TAC [RENAMING_CASES,RENAMING_LEMMA]])
-  end;
+val NEW_ELIM_RULE = store_thm(
+  "NEW_ELIM_RULE",
+  ``!P X. FINITE X /\ (!v:string. ~(v IN X) ==> P v) ==>
+          P (NEW X)``,
+  PROVE_TAC [dBTheory.NEW_FRESH_string]);
 
-val lemma4 = Q.prove(`!x y. RENAMING [VAR x,y]`, PROVE_TAC[RENAMING_CASES]);
-val lemma5 = Q.prove(`[x/y]u = u ISUB [(x,y)]`,  REWRITE_TAC [ISUB_DEF]);
-
-val ncLENGTH_EXISTS = Q.store_thm("ncLENGTH_EXISTS",
-`?hom:'a nc->num.
-     (!k. hom(CON k) = 1) /\
-     (!x. hom(VAR x) = 1) /\
-     (!t u. hom(t @@ u) = (hom t) + (hom u)) /\
-     (!x u. hom(LAM x u) = SUC (hom u))`,
-STRIP_ASSUME_TAC existence
-  THEN IMP_RES_TAC lemma3
-  THEN Q.EXISTS_TAC `hom`
-  THEN RW_TAC std_ss [GSYM ADD1,lemma4,lemma5]);
+val NEW_ELIM_RULE_SUBSET = store_thm(
+  "NEW_ELIM_RULE_SUBSET",
+  ``!P X Y. FINITE X /\ Y SUBSET X /\ (!v:string. ~(v IN Y) ==> P v) ==>
+            P (NEW X)``,
+  PROVE_TAC [dBTheory.NEW_FRESH_string, pred_setTheory.SUBSET_DEF]);
 
 
 val _ = export_theory();
