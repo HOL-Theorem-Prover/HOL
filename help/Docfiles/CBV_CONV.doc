@@ -8,118 +8,115 @@ Call by value rewriting.
 \LIBRARY compute
 
 \DESCRIBE
-The conversion {CBV_CONV} expects an simplification set (ss) and a term. Its
-term argument is rewritten using the equations added in the ss. The strategy
-used is somewhat similar to ML's, that is call-by-value (arguments of
-constants are completely reduced before the rewrites associated to the
-constant are applied) with weak reduction (no reduction of the function body
-before the function is applied). The main differences are that beta-redexes
-are reduced with a call-by-name strategy (the argument is not reduced), and
-reduction under binders is done when it occurs in a position where it cannot
-be substituted.
+The conversion {CBV_CONV} expects an simplification set and a
+term. Its term argument is rewritten using the equations added in the
+simplification set. The strategy used is somewhat similar to ML's,
+that is call-by-value (arguments of constants are completely reduced
+before the rewrites associated to the constant are applied) with weak
+reduction (no reduction of the function body before the function is
+applied). The main differences are that beta-redexes are reduced with
+a call-by-name strategy (the argument is not reduced), and reduction
+under binders is done when it occurs in a position where it cannot be
+substituted.
 
 The simplification sets are mutable objects, this means they are
-extended by side-effect. The function {new_rws} will create a new ss
+extended by side-effect. The function {new_rws} will create a new set
 containing only reflexivity ({REFL_CLAUSE}). Theorems can be added to
-a ss with function {add_thms}. Function {from_list} simply combines
-{new_rws} and {add_thms}.
+a set with the function {add_thms}.  The function {from_list} simply
+combines {new_rws} and {add_thms}.
 
-It is also possible to add conversions to a ss with {add_conv}. The only
-restriction is that a constant (c) and an arity (n) must be provided. The
-conversion will be called only on terms in which c is applied to n arguments.
+It is also possible to add conversions to a simplification set with
+{add_conv}. The only restriction is that a constant ({c}) and an arity
+({n}) must be provided. The conversion will be called only on terms in
+which {c} is applied to {n} arguments.
 
-Two theorem "preprocessors" are provided to control the stricticity of
-the arguments of a constant. {lazyfy_thm} has pattern variables on the
-left hand side turned into abstractions on the right hand side. This
-transformation is applied on every conjunct, and removes prenex
-universal quantifications. A typical example is {COND_CLAUSES}:
-
+Two theorem ``preprocessors'' are provided to control the strictness
+of the arguments of a constant. {lazyfy_thm} has pattern variables on
+the left hand side turned into abstractions on the right hand
+side. This transformation is applied on every conjunct, and removes
+prenex universal quantifications. A typical example is {COND_CLAUSES}:
+{
   (COND T a b = a) /\ (COND F a b = b)
-
-Using these equations is very inefficient because both a and b are
-evaluated, regardless of the value of the boolean expression. It is
-better to use {COND_CALUSES} with the form above
-
+}
+\noindent Using these equations is very inefficient because both {a}
+and {b} are evaluated, regardless of the value of the boolean
+expression. It is better to use {COND_CLAUSES} with the form above
+{
   (COND T = \a b. a) /\ (COND F = \a b. b)
-
-The call-by-name evaluation of beta_redexes avoids computing the unused
-branch of the conditional.
+}
+\noindent The call-by-name evaluation of beta redexes avoids computing
+the unused branch of the conditional.
 
 Conversely, {strictify_thm} does the reverse transformation. This is
-particularly relevant for LET_DEF:
-
+particularly relevant for {LET_DEF}:
+{
   LET = \f x. f x   -->   LET f x = f x
+}
+\noindent This forces the evaluation of the argument before reducing the
+beta-redex. Hence the usual behaviour of {LET}.
 
-This forces the evaluation of the argument before reducing the
-beta-redex. Hence the usual behaviour of LET.
-
-It is necessary to provide rules for all the constants appearing in the
-expression to reduce (all also for those that appear in the right hand side
-of a rule), unless the given constant is considered as a constructor of the
-representation chosen. As an example, {initial_rws} provides a way to create
-a new simplification set with all the rules needed for basic boolean and
-arithmetical calculations built in.
+It is necessary to provide rules for all the constants appearing in
+the expression to reduce (all also for those that appear in the right
+hand side of a rule), unless the given constant is considered as a
+constructor of the representation chosen. As an example, {initial_rws}
+provides a way to create a new simplification set with all the rules
+needed for basic boolean and arithmetical calculations built in.
 
 \EXAMPLE
 {
-- val rws = from_list (lazyfy_thm [COND_CLAUSES]);
-> val rws = RWS<hash_table> : comp_rws
+   - val rws = from_list (lazyfy_thm [COND_CLAUSES]);
+   > val rws = RWS<hash_table> : comp_rws
 
-- CBV_CONV rws (--` (\x.x) ((\x.x) if T then 0+0 else 10) `--);
-> val it = |- (\x. x) ((\x. x) (if T then 0 + 0 else 10)) = 0 + 0 : Thm.thm
+   - CBV_CONV rws (--`(\x.x) ((\x.x) if T then 0+0 else 10)`--);
+   > val it = |- (\x. x) ((\x. x) (if T then 0 + 0 else 10)) = 0 + 0 : Thm.thm
 
-- CBV_CONV(initial_rws()) (--` if 100 - 5 * 5 < 80  then 2 EXP 16 else 3 `--); 
-> val it = |- (if 100 - 5 * 5 < 80 then 2 EXP 16 else 3) = 65536 : Thm.thm
+   - CBV_CONV (initial_rws())
+              (--`if 100 - 5 * 5 < 80  then 2 EXP 16 else 3`--);
+   > val it = |- (if 100 - 5 * 5 < 80 then 2 EXP 16 else 3) = 65536 : Thm.thm
 }
-
-Failing to give enough rules may make CBV_CONV build a huge result, or even
-loop. The same may occur if the initial term to reduce contains free
-variables.
-
-\EXAMPLE
+\noindent Failing to give enough rules may make {CBV_CONV} build a
+huge result, or even loop. The same may occur if the initial term to
+reduce contains free variables.
 {
-val eqn = bossLib.Define ` exp n p = if p=0 then 1 else n * (exp n (p-1)) `;
-val rws = bossLib.initial_rws();
-val _ = add_thms(true,[eqn]) rws;
+   val eqn = bossLib.Define `exp n p = if p=0 then 1 else n * (exp n (p-1))`;
+   val rws = bossLib.initial_rws();
+   val _ = add_thms(true,[eqn]) rws;
 
-- CBV_CONV rws (--` exp 2 n `--);
-> Interrupted.
-- set_skip rws "COND" (SOME 1);
-> val it = () : unit
-- CBV_CONV rws (--` exp 2 n `--);
-> val it = |- exp 2 n = (if n = 0 then 1 else 2 * exp 2 (n - 1)) : Thm.thm
+   - CBV_CONV rws (--`exp 2 n`--);
+   > Interrupted.
+   - set_skip rws "COND" (SOME 1);
+   > val it = () : unit
+   - CBV_CONV rws (--`exp 2 n`--);
+   > val it = |- exp 2 n = (if n = 0 then 1 else 2 * exp 2 (n - 1)) : Thm.thm
 }
-
-The first invocation of CBV_CONV loops since the exponent never reduces to 0.
-Below is the first steps computed:
-
+\noindent The first invocation of {CBV_CONV} loops since the exponent
+never reduces to 0.  Below the first steps are computed:
+{
     exp 2 n
     if n = 0 then 1 else 2 * exp 2 (n-1)
     if n = 0 then 1 else 2 * if (n-1) = 0 then 1 else 2 * exp 2 (n-1-1)
     ...
-
-The call to {set_skip} means that if the constants {COND} appears applied
-to one argument and does not create a redex (in the example, if the
-condition does not reduce to T or F), then the forthcoming arguments (the
-two branches of the conditional) are not reduced at all.
+}
+\noindent The call to {set_skip} means that if the constants {COND}
+appears applied to one argument and does not create a redex (in the
+example, if the condition does not reduce to {T} or {F}), then the
+forthcoming arguments (the two branches of the conditional) are not
+reduced at all.
 
 
 \FAILURE
-Should never fail. Nonetheless, using rewrites with assumptions may cause
-problems when rewriting under abstractions. The following example
-illustrates that issue.
-
-\EXAMPLE
+Should never fail. Nonetheless, using rewrites with assumptions may
+cause problems when rewriting under abstractions. The following
+example illustrates that issue.
 {
-- val th = ASSUME(--`0=x`--);
-- val tm = --`\(x:num).x=0`--;
-- val rws = from_list [th];
-- CBV_CONV rws tm;
+   - val th = ASSUME(--`0=x`--);
+   - val tm = --`\(x:num).x=0`--;
+   - val rws = from_list [th];
+   - CBV_CONV rws tm;
 }
-
-This fails because the 0 is replaced by x, making the assumption 0=x. Then,
-the abstraction cannot be rebuilt since x appears free in the assumptions.
-
+\noindent This fails because the 0 is replaced by {x}, making the
+assumption {0=x}. Then, the abstraction cannot be rebuilt since {x}
+appears free in the assumptions.
 
 \SEEALSO
 
