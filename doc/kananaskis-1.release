@@ -55,6 +55,30 @@ New theories:
     now part of the system, under the name dividesTheory, primeTheory
     and gcdTheory.
 
+  * A theory of 32-bit machine arithmetic, due to Anthony Fox,
+    available under the name word32.  The theory defines many of the
+    `integer' operations found in computer architectures.  It was
+    developed in modelling the ARM instructions set.  The operations
+    can be grouped as follows:
+
+    - Bit-field testing and extraction;
+    - Arithmetic: Addition, Subtraction, Multiplication and Two's
+      Complement;
+    - Logical: One's Complement, Bitwise And, Or and Exclusive Or;
+    - Shifts: Logical Right, Arithmetic Right, Rotate Right, and
+      Rotate Right One Place with Carry Extension.
+
+    Theorems are provided for reasoning about bit-fields, as well as
+    arithmetic (Commutative Ring properties) and the logical
+    operations (Boolean Algebra properties).
+
+    A number of rewrite rules are also provided, and these support
+    fairly efficient term evaluation using WORD_CONV.
+
+    Although the word size and operations are fixed---the script can
+    be used as a basis for defining bespoke word theories.  (The word
+    length is given by a constant, WL.)
+
 New tools:
 ----------
 
