@@ -283,4 +283,4 @@ in
   end_block()
 end;
 
-end (* struct *)
+end
