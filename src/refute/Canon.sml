@@ -4,12 +4,20 @@ struct
 open HolKernel boolLib liteLib AC Ho_Rewrite Abbrev tautLib;
 infixr 5 |-> -->
 infix THEN THENL THENC THENCQC THENQC
+
 fun ERR x = STRUCT_ERR "Canon" x;
 fun WRAP_ERR x = STRUCT_WRAP "Canon" x;
 
 val (Type,Term) = Parse.parse_from_grammars combinTheory.combin_grammars
 fun -- q x = Term q
 fun == q x = Type q
+
+val INST  = HolKernel.INST;
+val subst = HolKernel.subst;
+
+val conj_tm = boolSyntax.conjunction;
+val disj_tm = boolSyntax.disjunction;
+val false_tm = boolSyntax.F
 
 val EXISTS_DEF           = boolTheory.EXISTS_DEF
 val EXISTS_UNIQUE_DEF    = boolTheory.EXISTS_UNIQUE_DEF
@@ -30,11 +38,6 @@ val RIGHT_IMP_EXISTS_THM = GSYM RIGHT_EXISTS_IMP_THM;
  *
  * Taken directly from GTT.
  * ------------------------------------------------------------------------- *)
-
-val conj_tm = boolSyntax.conjunction;
-val disj_tm = boolSyntax.disjunction;
-val false_tm = boolSyntax.F
-
 val (args,ONEWAY_SKOLEM_CONV) =
   let val args = ref []
       val P = (--`P:'a->bool`--)
@@ -54,15 +57,15 @@ val (args,ONEWAY_SKOLEM_CONV) =
 	val fvs = free_vars bod
     in if mem v fvs then
 	let val nfvs = intersect fvs gvs
-	    val eps = mk_thy_const("@","min",
-                         (type_of v --> Type.bool) --> type_of v)
+	    val eps = mk_thy_const{Name="@",Thy="min",
+                         Ty=(type_of v --> Type.bool) --> type_of v}
 	    val etm = mk_comb(eps,atm)
 	    val stm = list_mk_abs(nfvs,etm)
 	    val gv = genvar(type_of stm)
 	    val th1 = ASSUME(mk_eq(gv,stm))
 	    val th2 = RIGHT_BETAS nfvs th1
-	    val th3 = PINST  [aty |-> type_of v]
-                             [P |-> atm, z |-> lhs(concl th2)] pth2
+	    val th3 = PINST [aty |-> type_of v]
+                            [P |-> atm, z |-> lhs(concl th2)] pth2
 	in
 	    CONV_RULE (RAND_CONV BETA_CONV) (MP th3 th2)
 	end
@@ -323,7 +326,7 @@ val PRENEX_CONV =
 	     handle DEST_CONST =>
 	     let val (oper,l) = dest_comb lop
 		 val cname = name_of_const oper
-	     in if cname = ("/\\","bool") orelse
+	     in if cname = ("/\\","bool") orelse 
                    cname = ("\\/","bool") orelse cname = ("==>","min")
                 then let val th =
 		           let val lth = PRENEX_QCONV l
@@ -468,7 +471,7 @@ val RATSKOL =
 val SKELIM =
     let fun skelim eq th =
 	let val (l,r) = dest_eq eq
-	in MP (INST [(l |-> r)] (DISCH eq th)) (REFL r)
+	in MP (INST [l |-> r] (DISCH eq th)) (REFL r)
 	end
     in fn skols => fn th =>
 	let val vars = map lhand skols

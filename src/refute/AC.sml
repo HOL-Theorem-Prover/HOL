@@ -5,7 +5,9 @@
 structure AC :> AC = 
 struct
 
-open HolKernel boolSyntax Drule Conv Psyntax liteLib Ho_Rewrite Abbrev;
+open HolKernel boolSyntax Drule Conv liteLib Ho_Rewrite Abbrev;
+
+val INST = HolKernel.INST
 
 infix 5 |->
 infix THENCQC THENQC
@@ -22,8 +24,7 @@ val CONJ_ACI =
     let fun FIND_CONJS thl tm =
 	let val (l,r) = dest_conj tm
 	in CONJ (FIND_CONJS thl l) (FIND_CONJS thl r)
-	end
-	    handle HOL_ERR _ => first (fn th => concl th = tm) thl 
+	end handle HOL_ERR _ => first (fn th => concl th = tm) thl 
     in fn tm =>
 	let val (l,r) = dest_eq tm 
 	    val thl = CONJUNCTS(ASSUME l) 
