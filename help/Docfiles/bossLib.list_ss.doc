@@ -1,4 +1,4 @@
-\DOC arith_ss
+\DOC list_ss
 
 \TYPE {list_ss : simpset}
 
@@ -9,8 +9,8 @@ Simplification set for lists.
 simplification, list.
 
 \DESCRIBE
-The simplification set {list_ss} is a version of {arith_ss} enhanced 
-for the theory of lists. The following rewrites are currently used to 
+The simplification set {list_ss} is a version of {arith_ss} enhanced
+for the theory of lists. The following rewrites are currently used to
 augment those already present from {arith_ss}:
 {
     |- (!l. APPEND [] l = l) /\
@@ -37,7 +37,7 @@ augment those already present from {arith_ss}:
     |- !l1 l2. LENGTH (APPEND l1 l2) = LENGTH l1 + LENGTH l2
     |- !l f. LENGTH (MAP f l) = LENGTH l
     |- !f l1 l2. MAP f (APPEND l1 l2) = APPEND (MAP f l1) (MAP f l2)
-    |- !a1 a0. ~(a0::a1 = []) 
+    |- !a1 a0. ~(a0::a1 = [])
     |- !a1 a0. ~([] = a0::a1)
     |- !l f. ((MAP f l = []) = (l = [])) /\
              (([] = MAP f l) = (l = []))
@@ -63,9 +63,9 @@ augment those already present from {arith_ss}:
 }
 
 \SEEALSO
-BasicProvers.RW_TAC, BasicProvers.SRW_TAC, 
+BasicProvers.RW_TAC, BasicProvers.SRW_TAC,
 simpLib.SIMP_TAC, simpLib.SIMP_CONV, simpLib.SIMP_RULE,
-BasicProvers.bool_ss, bossLib.std_ss, bossLib.arith_ss. 
+BasicProvers.bool_ss, bossLib.std_ss, bossLib.arith_ss.
 
 
 \ENDDOC
