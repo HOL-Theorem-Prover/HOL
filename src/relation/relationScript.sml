@@ -1342,7 +1342,7 @@ val RCOMPL = new_definition(
    ---------------------------------------------------------------------- *)
 
 val reflexive_Id_RSUBSET = store_thm(
-  "reflexive_RSUBSET_Id",
+  "reflexive_Id_RSUBSET",
   ``!R. reflexive R = (Id RSUBSET R)``,
   SRW_TAC [][RSUBSET, reflexive_def]);
 
