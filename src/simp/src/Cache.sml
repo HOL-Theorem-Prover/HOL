@@ -4,14 +4,26 @@ struct
 open HolKernel liteLib Trace Abbrev boolSyntax Rsyntax;
 
 infix <<;  (* A subsetof B *)
-fun x << y = all (C mem y) x;
+fun x << y = HOLset.isSubset(x,y)
 
 type key = term list * term    (* Observation: seems term list is always [] *)
-type data = (term list * thm option) list
+type data = (term HOLset.set * thm option) list
 type table = (key, data) Polyhash.hash_table
 type cache = table ref;
 
-local exception NOT_FOUND
+local
+
+  fun all_hyps thmlist = let
+    fun foldthis (th, acc) = let
+      val hyps = hypset th
+    in
+      HOLset.union(hyps, acc)
+    end
+  in
+    List.foldl foldthis empty_tmset thmlist
+  end
+
+      exception NOT_FOUND
       exception FIRST
       fun first p [] = raise FIRST
         | first p (h::t) = if p h then h else first p t
@@ -29,7 +41,7 @@ fun CACHE (filt,conv) =
         let val _ = if (filt tm) then ()
                     else failwith "CACHE_CCONV: not applicable"
             val prevs = Polyhash.find (!cache) ([],tm) handle NOT_FOUND => []
-            val curr = flatten (map Thm.hyp thms)
+            val curr = all_hyps thms
             fun ok (prev,SOME thm) = prev << curr
               | ok (prev,NONE) = curr << prev
         in (case (snd (first ok prevs)) of
@@ -39,7 +51,8 @@ fun CACHE (filt,conv) =
           let val thm = conv thms tm
               handle e as (HOL_ERR _)
                  => (trace(2,REDUCE("Inserting failed ctxt",
-                           mk_imp{ant=list_mk_conj curr, conseq=tm}))
+                           mk_imp{ant=list_mk_conj (HOLset.listItems curr),
+                                  conseq=tm}))
                      ;
                      Polyhash.insert (!cache) (([],tm),(curr,NONE)::prevs);
                      raise e)
@@ -52,7 +65,13 @@ fun CACHE (filt,conv) =
 
 fun clear_cache cache = (cache := new_table())
 
-fun cache_values (ref cache) = Polyhash.listItems cache
+fun cache_values (ref cache) = let
+  val items = Polyhash.listItems cache
+  fun tolist (set, thmopt) = (HOLset.listItems set, thmopt)
+  fun ToList (k, stlist) = (k, map tolist stlist)
+in
+  map ToList items
+end
 
 
 end; (* local *)
