@@ -1,0 +1,49 @@
+\DOC MATCH_ABBREV_TAC
+
+\TYPE {Q.MATCH_ABBREV_TAC : term quotation -> tactic}
+
+\SYNOPSIS
+Introduces abbreviations by matching a pattern against the goal statement.
+
+\DESCRIBE
+When applied to the goal {(asl, w)}, the tactic {Q.MATCH_ABBREV_TAC q}
+parses the quotation {q} in the context of the goal, producing a term
+to use as a pattern.  The tactic then attempts a (first order) match
+of the pattern against the term {w}.  Variables that occur in both the
+pattern and the goal are treated as ``local constants'', and will not
+acquire instantiations.
+
+For each variable {v} in the pattern that has not been treated as a
+local constant, there will be a instantiation term {t}, such that the
+substitution {pattern[v1 |-> t1, v2 |-> t2, ...]} produces {w}.  The
+effect of the tactic is to then perform abbreviations in the goal,
+replacing each {t} with the corresponding {v}, and adding assumptions
+of the form {t = v} to the goal.
+
+\FAILURE
+{MATCH_ABBREV_TAC} fails if the pattern provided does not match the
+goal, or if variables from the goal are used in the pattern in ways
+that make the pattern fail to type-check.
+
+\EXAMPLE
+If the current goal is
+{
+   ?- (n + 10) * y <= 42315 /\ (!x y. x < y ==> f x < f y)
+}
+then applying the tactic {Q.MATCH_ABBREV_TAC `X <= Y /\ P`} results in
+the goal
+{
+   (n + 10) * y = X , 42315 = Y , (!x y. x < y ==> f x < f y) = P
+      ?-
+   X <= Y /\ P
+}
+
+\COMMENTS
+Though most of the rewriting and simplification tools leave
+abbreviations undisturbed in the assumptions, both {RW_TAC} and
+{SRW_TAC} will eliminate them.
+
+\SEEALSO
+Q.ABBREV_TAC, Q.HO_MATCH_ABBREV_TAC, Q.PAT_ABBREV_TAC.
+
+\ENDDOC
