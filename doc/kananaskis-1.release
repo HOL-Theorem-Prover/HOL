@@ -336,3 +336,19 @@ Bugs fixed:
     source code is still present in the src/retired/set directory.
     With the "set" type abbreviation enabled, pred_setTheory should
     be a "drop-in" replacement for set.
+
+  * The functions "theorem", "definition" and "axiom" for retrieving
+    theorems from the current theory segment have disappeared.  They
+    have been replaced by a more general function "fetch", which
+    doesn't categorise theorems and will fetch anything by its name.
+    This function also takes the name of the theory segment from which
+    the theorem/definition/axiom is to be retrieved.  A call to
+
+      theorem "foo_thm"
+
+    should thus be replaced with
+
+      fetch "-" "foo_thm"
+
+    The functions "theorems", "definitions" and "axioms" remain, but
+    have also gained an additional theory-segment parameter.
