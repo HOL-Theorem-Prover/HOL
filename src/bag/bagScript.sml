@@ -969,6 +969,7 @@ val IN_SET_OF_BAG = Q.store_thm(
   "IN_SET_OF_BAG",
   `!x b. x IN SET_OF_BAG b = BAG_IN x b`,
   SIMP_TAC hol_ss [SET_OF_BAG, SPECIFICATION]);
+val _ = export_rewrites ["IN_SET_OF_BAG"]
 
 val _ = print "Bag disjointness\n"
 val BAG_DISJOINT = new_definition(
