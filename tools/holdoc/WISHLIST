@@ -1,0 +1,114 @@
+Wishlist for HOLDoc munger
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This file contains a list of feature requests for the HOLDoc munging
+system.  See also the wishlist at the end of holdoc-guide.txt
+
+* ------------------------------------------------------------------ *
+
+  Correctly parse ([[x]]) in TeX mode - at present, ([[ is parsed as a
+  single token and the [[ is thereby missed.  The problem is that
+  Keith was too lazy to complement the regexp in hollex.mll by hand -
+  see comments there at tnormal.
+
+* ------------------------------------------------------------------ *
+
+  Deal with subscripts properly:
+
+Subject: munger questions
+From: James Leifer <James.Leifer@inria.fr>
+Date: Tue, 15 Oct 2002 11:44:50 +0200
+To: Keith Wansbrough <Keith.Wansbrough@cl.cam.ac.uk>
+
+Dear K,
+
+What is the "right way" to munge labelled arrows and turnstiles?
+
+E.g. I'd like to write
+
+   [[ e -->_hm e' ]]
+
+and get
+
+   e \longrightarrow_{\mathit{hm}} e'
+
+I though of making "-->_" a curried function, but it seems that only
+alpha chars are accepted.
+
+Ta, J
+
+Subject: Re: munger questions
+From: Keith Wansbrough <kw217@cl.cam.ac.uk>
+Date: Tue, 15 Oct 2002 11:03:07 +0100
+To: James Leifer <James.Leifer@inria.fr>
+Cc: pes20, mn200
+
+> Dear K,
+>
+> What is the "right way" to munge labelled arrows and turnstiles?
+
+Hmm!  No way at present.  Basically, subscripts and superscripts are
+not properly handled at present, and I'm thinking of adding them
+throughout.
+
+I'm not entirely sure of the best approach, though.  At the moment, an
+underscore is an alphanumeric, rather than a symbol.  So x_hm' parses
+as a single token, but -->_hm' parses as two tokens.  It's important
+to have _ as alpha, because we fairly often write
+a_big_long_symbol_name.
+
+x_hm' could be mapped to \mathit{x}_{\mathit{hm'}} by simply looking
+for identifiers with a single underscore near the end, and rendering
+them specially.  There is already some magic to do this for numeric
+subscripts.
+
+-->_hm', however, is trickier - maybe "_hm'" should render as
+"_{\mathit{hm'}}", and TeX should be relied upon to do the right
+thing.
+
+None of these solutions deal with -->_x+y or -->_(x+y) however.  You
+could define "_" as a curried function of one argument that removed
+the parentheses, and give it a definition of "_{#1}".  Then you could
+write "x _ hm'" and "-->_ hm'" and "-->_ (x+y)".  Not entirely
+satisfactory (the spaces are required), but better.
+
+Other suggestions welcome!
+
+--KW 8-)
+--
+Keith Wansbrough <kw217@cl.cam.ac.uk>
+http://www.cl.cam.ac.uk/users/kw217/
+University of Cambridge Computer Laboratory.
+
+* ------------------------------------------------------------------ *
+
+  Give error messages if the "tokens" mentioned in directives are not
+  in fact single tokens of the right type:
+
+
+
+Subject: Re: munger questions
+From: James Leifer <James.Leifer@inria.fr>
+Date: Tue, 15 Oct 2002 12:13:20 +0200
+To: Keith Wansbrough <Keith.Wansbrough@cl.cam.ac.uk>
+
+>> > Other suggestions welcome!
+>>
+>> What goes wrong if we allow non-alphanumerics to be curried functions?
+>> Then we could have -->_ as a function, no?
+>
+> No, because _ is alpha:  the above parses as two tokens
+
+ok!
+
+something else, shouldn't there be an error message if we mistakenly
+put
+
+    __      "\Mhole "
+
+inside a HOL_SYM_ALIST?  (There's no error and nothing gets munged,
+i.e. [[ __ ]] shows up in red.)
+
+J
+
+* ------------------------------------------------------------------ *
