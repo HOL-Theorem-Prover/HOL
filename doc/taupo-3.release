@@ -6,10 +6,12 @@ Bugs fixed:
   * Hol_datatype didn't allow a constructor of a new type "ty" to be
     "mk_ty".
 
-  * Konrad fixed numerous TFL bugs but hasn't put anything here about
-    them yet.
+  * A variety of TFL bugs.
 
   * numLib.REDUCE_CONV failed to reduce terms of the form ``0 >= x``.
+
+  * Restricted quantifiers with list literals in the restriction were
+    failing to pretty-print.
 
 New theories:
 -------------
@@ -21,3 +23,8 @@ New tools:
     Cooper's algorithm, and is complete.  It allows any alternation of
     quantifiers including ?! (exists unique).  It is not very
     efficient, but proves many results in a few seconds.
+
+  * A small suite of functions for managing "tracing variables"; i.e.,
+    those variables which can be set to cause various tools to be more
+    or less verbose in their diagnostic/logging output.  See under
+    "trace" in the online help or the REFERENCE manual.

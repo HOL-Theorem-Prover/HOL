@@ -4,16 +4,8 @@ Bugs fixed:
     adding too much context in some cases, and thereby failing to
     prove goals that were really within its scope.
 
-  * Restricted quantifiers with list literals in the restriction were
-    failing to pretty-print.  This bug was actually fixed in time for
-    Taupo-3, but wasn't mentioned in its release notes.
-
 New theories:
 -------------
 
 New tools:
 ----------
-  * A small suite of functions for managing "tracing variables"; i.e.,
-    those variables which can be set to cause various tools to be more
-    or less verbose in their diagnostic/logging output.  See under
-    "trace" in the online help or the REFERENCE manual.
