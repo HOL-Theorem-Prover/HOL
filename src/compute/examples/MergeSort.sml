@@ -112,8 +112,8 @@ val L38400_def = Define_rw ` L38400 = double L19200 `;
 (* Save the useful thms *)
 val sort_thms = rev (!thms);
 
-val rws = from_list false [COND_CLAUSES];
-val _ = add_clauses true sort_thms rws;
+val rws = from_list (false,[COND_CLAUSES]);
+val _ = add_thms (true,sort_thms) rws;
 
 fun norm q = time (CBV_CONV rws) (--q--);
 
@@ -122,6 +122,7 @@ norm ` merge_sort L4 `;  (* ~ 0.03s *)
 norm ` merge_sort L12 `; (* ~ 0.11s *)
 norm ` merge_sort L20 `; (* ~ 0.30s *)
 norm ` merge_sort L40 `; (* ~ 0.89s *)
+norm ` merge_sort L100 `; (* ~ 3.5s *)
 norm ` merge_sort L200 `;  (* ~ 11.7s = 3300 times slower than Moscow ML *)
 norm ` merge_sort L1200 `; (* ~ 377s *)
 
