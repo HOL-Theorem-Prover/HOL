@@ -21,8 +21,12 @@ val (redn_rules, redn_ind, redn_cases) =
     (!f g x. S # f # g # x --> (f # x) # (g # x))`;
 
 val redn_ind = CONV_RULE (RENAME_VARS_CONV ["P"]) redn_ind
-val _ = set_MLname "-->" "redn";
+val _ = app (uncurry set_MLname) [
+          ("-->", "redn"), ("-->_rules", "redn_rules"),
+          ("-->_ind", "redn_ind"), ("-->_cases", "redn_cases")
+        ];
 
+val _ = hide "RTC";
 val (RTC_rules, RTC_ind, RTC_cases) =
   IndDefLib.Hol_reln `
     (!x.     RTC R x x) /\
@@ -114,7 +118,10 @@ val (predn_rules, predn_ind, predn_cases) =
        (!f g x. S # f # g # x -||-> (f # x) # (g # x))`;
 
 val predn_ind = CONV_RULE (RENAME_VARS_CONV ["P"]) predn_ind;
-
+val _ = app (uncurry set_MLname) [
+    ("-||->_rules", "predn_rules"), ("-||->_ind", "predn_ind"),
+    ("-||->_cases", "predn_cases")
+  ];
 val RTC_monotone = store_thm(
   "RTC_monotone",
   ``!R1 R2. (!x y. R1 x y ==> R2 x y) ==>
