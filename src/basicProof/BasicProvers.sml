@@ -115,7 +115,7 @@ in
 val BOSS_STRIP_TAC = Tactical.FIRST [GEN_TAC,CONJ_TAC, DTHEN STRIP_ASSUME_TAC]
 end;
 
-fun tyi_to_ssdata tyinfo = 
+fun tyi_to_ssdata tyinfo =
  let open simpLib
   val {rewrs, convs} = TypeBasePure.simpls_of tyinfo;
 in
@@ -359,7 +359,7 @@ in
   if not (null (!exports)) andalso thyname <> oldname then
     HOL_WARNING "BasicProvers" "setup_exports"
                 ("\"new_theory\" is throwing away rewrite exports for "^
-                 "theory"^oldname)
+                 "theory "^Lib.quote oldname)
   else ();
   exports := [];
   adjoin_to_theory {sig_ps = SOME print_sig, struct_ps = SOME print_export}
