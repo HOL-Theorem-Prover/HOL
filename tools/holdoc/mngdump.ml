@@ -463,7 +463,7 @@ and munge_curried : pvars -> hol_content -> curried_info -> hol_content list -> 
        ts)
     else
       match readarg info.cy_commas info.cy_multiline ts with
-        (dss,ts) -> go (n-1) (dss @ args) ts
+        (dss,ts) -> go (n-1) (List.rev_append dss args) ts
   in
   try
     go info.cy_arity [] ts
