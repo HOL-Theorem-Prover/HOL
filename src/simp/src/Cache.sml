@@ -15,7 +15,13 @@ local exception NOT_FOUND
       exception FIRST
       fun first p [] = raise FIRST
         | first p (h::t) = if p h then h else first p t
-      fun new_table() = Polyhash.mkPolyTable (100,NOT_FOUND) : table
+      fun all_aconv [] [] = true
+        | all_aconv [] _ = false
+        | all_aconv _ [] = false
+        | all_aconv (h1::t1) (h2::t2) = aconv h1 h2 andalso all_aconv t1 t2
+      fun comp ((l1, t1), (l2, t2)) = all_aconv l1 l2 andalso aconv t1 t2
+      fun new_table() =
+          Polyhash.mkTable (Polyhash.hash, comp) (100,NOT_FOUND) : table
 in
 fun CACHE (filt,conv) =
   let val cache = ref (new_table()) : cache
