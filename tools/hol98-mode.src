@@ -573,6 +573,24 @@ or at level 10 with a bare prefix. "
   (send-raw-string-to-hol (format "DB.match [] (Term`%s`)" tm)
                           hol-echo-commands-p))
 
+(defun hol-drop-all-goals ()
+  "Drops all HOL goals from the current proofs object."
+  (interactive)
+  (send-raw-string-to-hol
+   (concat "goalstackLib.dropn (case goalstackLib.status() of "
+           "GoalstackPure.PRFS l => List.length l)")))
+
+(defun hol-subgoal-tactic ()
+  "Sends term at point (delimited by backquote characters) as a
+subgoal.  Will usually create at least two sub-goals; one will be the
+term just sent, and the others will be the term sent STRIP_ASSUME'd
+onto the assumption list of the old goal.  (Loads the Q module if not
+already loaded.)"
+  (interactive)
+  (send-string-to-hol
+   (format "goalstackLib.e (Q.SUBGOAL_THEN `%s` STRIP_ASSUME_TAC)"
+           (hol-term-at-point))))
+
 (define-key global-map "\M-h" 'hol-map)
 
 (define-key hol-map "\C-a" 'hol-toggle-show-assums)
@@ -584,11 +602,13 @@ or at level 10 with a bare prefix. "
 (define-key hol-map "\M-f" 'forward-hol-tactic)
 (define-key hol-map "\M-b" 'backward-hol-tactic)
 (define-key hol-map "\M-r" 'copy-region-as-hol-definition)
+(define-key hol-map "\M-s" 'hol-subgoal-tactic)
 (define-key hol-map "\M-v" 'hol-scroll-down)
 (define-key hol-map "b"    'hol-backup)
 (define-key hol-map "d"    'hol-d-map)
   (define-key hol-d-map "r"  'hol-drop-goal)
   (define-key hol-d-map "m"  'hol-db-match)
+(define-key hol-map "D"    'hol-drop-all-goals)
 (define-key hol-map "e"    'copy-region-as-hol-tactic)
 (define-key hol-map "g"    'hol-do-goal)
 (define-key hol-map "h"    'hol98)
