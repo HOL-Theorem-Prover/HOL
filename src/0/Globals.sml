@@ -159,5 +159,6 @@ val allow_schema_definition = ref false;
 
 val interactive = ref false;
 
+val hol_clock = Timer.startCPUTimer()
 
 end; (* Globals *)
