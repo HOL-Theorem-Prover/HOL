@@ -86,36 +86,40 @@ datatype grammar_rule =
 
 type overload_info = Overload.overload_info
 
-type grammar = {rules : (int option * grammar_rule) list,
-                specials : {type_intro : string,
-                            lambda : string,
-                            endbinding : string,
-                            restr_binders : (binder * string) list,
-                            res_quanop : string},
-                numeral_info : (char * string option) list,
-                overload_info : overload_info}
+datatype grammar = GCONS of
+  {rules : (int option * grammar_rule) list,
+   specials : {type_intro : string,
+               lambda : string,
+               endbinding : string,
+               restr_binders : (binder * string) list,
+               res_quanop : string},
+   numeral_info : (char * string option) list,
+   overload_info : overload_info}
 
-fun specials (G: grammar) = #specials G
-fun numeral_info (G: grammar) = #numeral_info G
-fun overload_info (G: grammar) = #overload_info G
+fun specials (GCONS G: grammar) = #specials G
+fun numeral_info (GCONS G: grammar) = #numeral_info G
+fun overload_info (GCONS G: grammar) = #overload_info G
+fun grammar_rules (GCONS G:grammar) = map #2 (#rules G)
+fun rules (GCONS G : grammar) = (#rules G)
 
-fun fupdate_rules f {rules, specials, numeral_info, overload_info} =
-  {rules = f rules, specials = specials, numeral_info = numeral_info,
-   overload_info = overload_info}
-fun fupdate_specials f {rules, specials, numeral_info, overload_info} =
-  {rules = rules, specials = f specials, numeral_info = numeral_info,
-   overload_info = overload_info}
-fun fupdate_numinfo f {rules, specials, numeral_info, overload_info} =
-  {rules = rules, specials = specials, numeral_info = f numeral_info,
-   overload_info = overload_info}
-fun fupdate_overload_info f {rules, specials, numeral_info, overload_info} =
-  {rules = rules, specials = specials, numeral_info = numeral_info,
-   overload_info = f overload_info}
+fun fupdate_rules f (GCONS{rules, specials, numeral_info, overload_info}) =
+  GCONS{rules = f rules, specials = specials, numeral_info = numeral_info,
+        overload_info = overload_info}
+fun fupdate_specials f (GCONS{rules, specials, numeral_info, overload_info}) =
+  GCONS {rules = rules, specials = f specials, numeral_info = numeral_info,
+         overload_info = overload_info}
+fun fupdate_numinfo f (GCONS {rules, specials, numeral_info, overload_info}) =
+  GCONS {rules = rules, specials = specials, numeral_info = f numeral_info,
+         overload_info = overload_info}
+fun fupdate_overload_info f
+  (GCONS {rules, specials, numeral_info, overload_info}) =
+  GCONS {rules = rules, specials = specials, numeral_info = numeral_info,
+         overload_info = f overload_info}
 
 fun update_restr_binders rb
   {lambda, endbinding, type_intro, restr_binders, res_quanop} =
   {lambda = lambda, endbinding = endbinding, type_intro = type_intro,
-   restr_binders = rb, res_quanop = res_quanop}
+         restr_binders = rb, res_quanop = res_quanop}
 
 fun fupdate_restr_binders f
   {lambda, endbinding, type_intro, restr_binders, res_quanop} =
@@ -158,7 +162,7 @@ fun fupdate_prulelist f rules = map f rules
 
 fun binder_to_string (G:grammar) b =
   case b of
-    LAMBDA => #lambda (#specials G)
+    LAMBDA => #lambda (specials G)
   | BinderString s => s
 
 fun binders (G: grammar) = let
@@ -170,7 +174,7 @@ fun binders (G: grammar) = let
         | _ => binders0 xs acc
       end
 in
-  binders0 (#rules G) []
+  binders0 (rules G) []
 end
 
 fun resquan_op (G: grammar) = #res_quanop (specials G)
@@ -203,12 +207,13 @@ fun STtoString (G:grammar) x =
   | EOS => "<end of string>"
   | VS_cons => "<gap between varstructs>"
   | Id => "<identifier>"
-  | TypeColon => #type_intro (#specials G)
+  | TypeColon => #type_intro (specials G)
   | TypeTok => "<type>"
-  | EndBinding => #endbinding (#specials G) ^ " (end binding)"
-  | ResquanOpTok => #res_quanop (#specials G)^" (res quan operator)"
+  | EndBinding => #endbinding (specials G) ^ " (end binding)"
+  | ResquanOpTok => #res_quanop (specials G)^" (res quan operator)"
 
 val stdhol : grammar =
+  GCONS
   {rules = [(SOME 0, PREFIX (BINDER [LAMBDA])),
             (SOME 4, INFIX RESQUAN_OP),
             (SOME 5, VSCONS),
@@ -275,7 +280,7 @@ local
         mmap add (map (binder_to_string G) b)
     | SUFFIX(STD_suffix rules) =>
         mmap (specials_from_elm o rule_elements o #elements) rules
-    | SUFFIX TYPE_annotation => add (#type_intro (#specials G))
+    | SUFFIX TYPE_annotation => add (#type_intro (specials G))
     | INFIX(STD_infix (rules, _)) =>
         mmap (specials_from_elm o rule_elements o #elements) rules
     | INFIX RESQUAN_OP => ok
@@ -292,7 +297,7 @@ local
   end
 in
   fun grammar_tokens G = let
-    fun gs (G:grammar) = mmap (rule_specials G o #2) (#rules G)
+    fun gs (G:grammar) = mmap (rule_specials G o #2) (rules G)
     val (all_specials, ()) = gs G []
   in
     Lib.mk_set all_specials
@@ -316,7 +321,7 @@ fun find_suffix_rhses (G : grammar) = let
     | select (LISTRULE rlist) =
         map (fn r => [STD_HOL_TOK (#rightdelim r)]) rlist
     | select _ = []
-  val suffix_rules = List.concat (map (select o #2) (#rules G))
+  val suffix_rules = List.concat (map (select o #2) (rules G))
 in
   Id :: map List.last suffix_rules
 end
@@ -335,7 +340,7 @@ fun find_prefix_lhses (G : grammar) = let
         map (fn r => [STD_HOL_TOK (#leftdelim r)]) rlist
     | _ => []
   end
-  val prefix_rules = List.concat (map (select o #2) (#rules G))
+  val prefix_rules = List.concat (map (select o #2) (rules G))
 in
   Id :: map hd prefix_rules
 end
@@ -368,11 +373,9 @@ fun compatible_listrule (G:grammar) arg = let
         | _ => recurse rules
       end
 in
-  recurse (#rules G)
+  recurse (rules G)
 end
 
-fun grammar_rules (G:grammar) = map #2 (#rules G)
-fun rules (G : grammar) = (#rules G)
 
 fun aug_compare (NONE, NONE) = EQUAL
   | aug_compare (_, NONE) = LESS
@@ -459,7 +462,7 @@ infix Gmerge
 fun ((g1:grammar) Gmerge (g2:(int option * grammar_rule) list)) = let
   val g0_rules =
     Listsort.sort (fn (e1,e2) => aug_compare(#1 e1, #1 e2))
-    (#rules g1 @ g2)
+    (rules g1 @ g2)
   val g_rules =  resolve_same_precs g0_rules
 in
   fupdate_rules (fn _ => g_rules) g1
@@ -600,7 +603,8 @@ fun find_partial f [] = NONE
       | y => y
     end
 
-fun get_precedence ({rules,...}:grammar) s = let
+fun get_precedence (G:grammar) s = let
+  val rules = rules G
   fun check_rule (p, r) = let
     fun elmem s [] = false
       | elmem s ({elements, ...}::xs) =
@@ -669,13 +673,149 @@ end
 fun merge_grammars (G1:grammar, G2:grammar) :grammar = let
   val g0_rules =
     Listsort.sort (fn (e1,e2) => aug_compare(#1 e1, #1 e2))
-    (#rules G1 @ #rules G2)
+    (rules G1 @ rules G2)
   val newrules = resolve_same_precs g0_rules
-  val newspecials = merge_specials (#specials G1) (#specials G2)
-  val new_numinfo = Lib.union (#numeral_info G1) (#numeral_info G2)
+  val newspecials = merge_specials (specials G1) (specials G2)
+  val new_numinfo = Lib.union (numeral_info G1) (numeral_info G2)
   val new_oload_info =
-    Overload.merge_oinfos (#overload_info G1) (#overload_info G2)
+    Overload.merge_oinfos (overload_info G1) (overload_info G2)
 in
-  {rules = newrules, specials = newspecials, numeral_info = new_numinfo,
-   overload_info = new_oload_info}
+  GCONS {rules = newrules, specials = newspecials, numeral_info = new_numinfo,
+         overload_info = new_oload_info}
 end
+
+(* ----------------------------------------------------------------------
+ * Prettyprinting grammars
+ * ---------------------------------------------------------------------- *)
+
+datatype ruletype_info = add_prefix | add_suffix | add_both | add_nothing
+
+fun prettyprint_grammar pstrm (G :grammar) = let
+  open Portable
+  val {add_string, add_break, begin_block, end_block,...} = with_ppstream pstrm
+
+  fun pprint_rr m rr = let
+    val rels = rule_elements (#elements rr)
+    val (pfx, sfx) =
+      case m of
+        add_prefix => ("", " TM")
+      | add_suffix => ("TM ", "")
+      | add_both => ("TM ", " TM")
+      | add_nothing => ("", "")
+    fun special_case s =
+      if s = bracket_special then "just parentheses, no term produced"
+      else if s = recsel_special then "record field selection"
+      else if s = recupd_special then "record field update"
+      else if s = recfupd_special then "functional record update"
+      else if s = recwith_special then "record update"
+           else s
+
+    val tmid_suffix0 = "  ["^ special_case (#term_name rr)^"]"
+    val tmid_suffix =
+      case rels of
+        [TOK s] => if s <> #term_name rr then tmid_suffix0 else ""
+      | _ => tmid_suffix0
+  in
+    begin_block INCONSISTENT 2;
+    add_string pfx;
+    pr_list (fn (TOK s) => add_string ("\""^s^"\"") | TM => add_string "TM")
+            (fn () => add_string " ") (fn () => ()) rels;
+    add_string sfx;
+    add_string tmid_suffix;
+    end_block ()
+  end
+
+
+  fun pprint_rrl (m:ruletype_info) (rrl : rule_record list) = let
+  in
+    begin_block INCONSISTENT 0;
+    pr_list (pprint_rr m) (fn () => add_string " |")
+            (fn () => add_break(1,0)) rrl;
+    end_block ()
+  end
+
+  fun print_binder b = let
+    val bname0 =
+      case b of
+        LAMBDA => #lambda (specials G)
+      | BinderString s => s
+    val bname = "\"" ^ bname0 ^ "\""
+    val endb = "\"" ^ #endbinding (specials G) ^ "\""
+  in
+    add_string (bname ^ " <..binders..>  " ^ endb ^ " TM")
+  end
+
+
+  fun print_binderl bl = let
+  in
+    begin_block INCONSISTENT 0;
+    pr_list print_binder (fn () => add_string " |")
+            (fn () => add_break (1,0)) bl;
+    end_block()
+  end
+
+
+  fun pprint_grule (r: grammar_rule) =
+    case r of
+      PREFIX (STD_prefix rrl) => pprint_rrl add_prefix rrl
+    | PREFIX (BINDER blist) => print_binderl blist
+    | SUFFIX (STD_suffix rrl) => pprint_rrl add_suffix rrl
+    | SUFFIX TYPE_annotation => let
+        val type_intro = #type_intro (specials G)
+      in
+        add_string ("TM \""^type_intro^"\" TY  (type annotation)")
+      end
+    | INFIX (STD_infix (rrl, a)) => let
+        val assocstring =
+          case a of
+            LEFT => "L-"
+          | RIGHT => "R-"
+          | NONASSOC => "non-"
+      in
+        begin_block CONSISTENT 0;
+        pprint_rrl add_both rrl;
+        add_break (3,0);
+        add_string ("("^assocstring^"associative)");
+        end_block()
+      end
+    | INFIX RESQUAN_OP => let
+        val rsqstr = #res_quanop (specials G)
+      in
+        add_string ("TM \""^rsqstr^
+                    "\" TM (restricted quantification operator)")
+      end
+    | CLOSEFIX rrl => pprint_rrl add_nothing rrl
+    | FNAPP => add_string "TM TM  (function application)"
+    | VSCONS => add_string "TM TM  (binder argument concatenation)"
+    | LISTRULE lrs => let
+        fun pr_lrule {leftdelim, rightdelim, separator, ...} =
+          add_string ("\""^leftdelim^"\" ... \""^rightdelim^
+                      "\"  (separator = \""^ separator^"\")")
+      in
+        begin_block CONSISTENT 0;
+        pr_list pr_lrule (fn () => add_string " |")
+                         (fn () => add_break(1,0)) lrs;
+        end_block ()
+      end
+
+  fun print_whole_rule (intopt, rule) = let
+    val precstr0 =
+      case intopt of
+        NONE => ""
+      | SOME n => "("^Int.toString n^")"
+    val precstr = StringCvt.padRight #" " 7 precstr0
+  in
+    begin_block CONSISTENT 0;
+    add_string precstr;
+    add_string "TM  ::=  ";
+    pprint_grule rule;
+    end_block()
+  end
+
+in
+  begin_block CONSISTENT 0;
+  pr_list print_whole_rule (fn () => ()) (fn () => add_break (1,0)) (rules G);
+  end_block ()
+end
+
+

@@ -132,5 +132,6 @@ val get_precedence : grammar -> string -> rule_fixity option
 
 val merge_grammars : (grammar * grammar) -> grammar
 
+val prettyprint_grammar : Portable.ppstream -> grammar -> unit
 
 end
