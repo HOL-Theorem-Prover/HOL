@@ -1,0 +1,11 @@
+OPTIONS = NO_OVERLAY
+
+Overlay.uo: Overlay.sml RestrictedTerm-sig.uo Definition.ui Net.ui
+	HOLMOSMLC -c -toplevel RestrictedTerm-sig.ui Definition.ui Net.ui Overlay.sml
+
+RestrictedTerm-sig.uo: Type.ui HOLset.ui RestrictedTerm-sig.sml
+	HOLMOSMLC -c -toplevel RestrictedTerm-sig.sml
+
+Term.ui: Term.sig RestrictedTerm-sig.uo
+	HOLMOSMLC -c RestrictedTerm-sig.ui Term.sig
+
