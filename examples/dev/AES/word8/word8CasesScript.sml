@@ -1,87 +1,116 @@
 (*===========================================================================*)
 (* Simple theory of bytes.                                                   *)
 (*===========================================================================*)
+val _ = new_theory "word8Cases"
+
 load "word8Lib";
-open HolKernel Parse boolLib bossLib word8Lib word8Theory;
+open HolKernel Parse boolLib bossLib word8Lib word8Theory
 
-val _ = new_theory "word8Cases";
+fun fold_term f [x] = x
+  | fold_term f (h::t) = f (h, (fold_term f t))
 
-val word8Type = mk_type ("word8", []);
-val alphaType = mk_vartype "'a";
-
-fun iota n acc =
-  if n < 0 then []
-  else if n = 0 then 0 :: acc
-  else iota (n - 1) (n :: acc)
+fun foldr2 f b [] [] = b
+  | foldr2 f b (h1::t1) (h2::t2) = f(h1, h2, (foldr2 f b t1 t2))
 
 fun buildVar name t n = mk_var ((name ^ int_to_string n), t)
 
+val word8Type = mk_type ("word8", [])
+val alphaType = mk_vartype "'a"
+val nums = upto 0 255
+val vars = map (buildVar "w" alphaType) nums
+val consts = map (fn n => ``n2w ^(numSyntax.term_of_int n)``) nums
+
+
+local
+
+val not_eq_lem = Q.prove (
+`!x y. ~(x = y) /\ x < 256 /\ y < 256 ==> ~(n2w x = n2w y)`,
+RW_TAC std_ss [] THEN WORD_TAC THEN
+RW_TAC arith_ss [fetch "bits" "MOD_2EXP_def"])
+
+val bound_thm = Q.prove (
+`!x. ?y. y < 256 /\ (x = n2w y)`,
+RW_TAC list_ss [] THEN Q.EXISTS_TAC `w2n x` THEN
+RW_TAC arith_ss [fetch "arithmetic" "DIVISION",
+                 w2n_ELIM, SIMP_RULE arith_ss [WL_def, HB_def] w2n_LT])
+
+val pr_body_eqns = map2 (fn c => fn v => ``fn ^c = ^v``) 
+                        (rev consts) (rev vars)
+val pr_witness_eqns = map (fn c => ``x = ^c``) consts
+val pr_witness = ``\x. ^(foldr2 mk_cond ``ARB`` pr_witness_eqns vars)``
+
+val use_top_assum = POP_ASSUM (fn thm => PURE_ONCE_REWRITE_TAC [GSYM thm])
+val use_top_assum2 = POP_ASSUM (fn thm => SIMP_TAC arith_ss [thm])
+
 val prim_rec = prove (
-let val nums = iota 255 []
-    val vars = map (buildVar "w" alphaType) nums
-    val body_eqns = 
-      Lib.map2
-       (fn n => fn v =>
-         ``fn (n2w ^(numSyntax.term_of_int n)) = ^v``)
-       nums vars
+foldr mk_forall ``?!fn. (\fn. ^(fold_term mk_conj pr_body_eqns)) fn`` 
+      (rev vars),
+REPEAT GEN_TAC THEN REWRITE_TAC [EXISTS_UNIQUE_THM] THEN BETA_TAC THEN
+REPEAT STRIP_TAC
+THENL
+ [EXISTS_TAC pr_witness THEN REPEAT STRIP_TAC THEN
+   BETA_TAC THEN SIMP_TAC arith_ss [not_eq_lem],
+  ALL_TAC] THEN
+NTAC 256 (POP_ASSUM MP_TAC) THEN
+NTAC 256 use_top_assum THEN
+REPEAT STRIP_TAC THEN
+CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN
+`?n. n < 256 /\ (w = n2w n)` by RW_TAC std_ss [bound_thm] THEN
+RW_TAC std_ss [] THEN (POP_ASSUM MP_TAC) THEN
+REPEAT
+     (Cases_on `n` THENL
+        [use_top_assum2 THEN DISCH_TAC THEN REFL_TAC, POP_ASSUM (K ALL_TAC)]
+      THEN
+      Cases_on `n'` THENL
+        [use_top_assum2 THEN DISCH_TAC THEN REFL_TAC, POP_ASSUM (K ALL_TAC)])
+THEN FULL_SIMP_TAC arith_ss [])
+
+in 
+
+word8PrimRec = BETA_RULE prim_rec
+
+end
+
+val induct = Prim_rec.prove_induction_thm word8PrimRec
+
+(*
+local 
+
+val inner_clauses =
+     Lib.map2 (fn c => fn v => ``^c -> ^v``) consts vars
+val inner_clauses2 = 
+    fold_term (fn (x, y) => ``^x || ^y``) inner_clauses
+
+fun mk_thm c v = 
+  foldr mk_forall
+        ``(case ^c of ^inner_clauses2) = ^v``
+        vars
+
 in
-  foldr mk_forall ``?fn. ^(foldr mk_conj (hd body_eqns) (tl body_eqns))`` vars
-end,
 
-                        
-);
+end
+*)
 
-val case_analysis = prove (
-let val nums = iota 255 []
-    val vars = map (buildVar "w" alphaType) nums
-    val inner_clauses =
-         Lib.map2 (fn n => fn v => 
-                    ``n2w ^(numSyntax.term_of_int n) -> ^v``)
-                  nums vars
-    val inner_clauses2 = 
-        foldr (fn (x, y) => ``^x || ^y``) (hd inner_clauses) (tl inner_clauses)
-    val clauses = 
-        (Lib.map2 (fn n => fn v =>
-                     foldr mk_forall
-                           ``(case n2w ^(numSyntax.term_of_int n) of
-                                ^inner_clauses2) =
-                             ^v``
-                           vars)
-                   nums vars)
+(*
+local
+
+val less_than_lems =
+  map (fn n => prove (``^(numSyntax.term_of_int n) < 256``,
+                      RW_TAC list_ss [])) nums
+
+val not_eq_thms = flatten
+  (List.map (fn i =>
+              List.map (fn j =>
+                          Q.prove (`~(n2w ^(numSyntax.term_of_int i) =
+                                   n2w ^(numSyntax.term_of_int j))`,
+                                 SIMP_TAC arith_ss [not_eq_lem]))
+                       (upto 0 (i - 1)))
+            nums)
+
 in
-  foldr mk_conj (hd clauses) (tl clauses)
-end,
+val distinct = LIST_CONJ not_eq_thms
+end
 
-);
-
-val induction = prove (
-let val clauses =
-       List.map 
-        (fn n => ``(P :word8 -> bool) (n2w ^(numSyntax.term_of_int n))``)
-        (iota 255 [])
-in
-  ``!(P :word8 -> bool). ^(foldr mk_conj (hd clauses) (tl clauses)) ==> 
-                         !b. P b``
-end,
-
-
-);
-
-
-val distinctness = prove (
-let val clauses = flatten
-      (List.map (fn i =>
-                  List.map (fn j =>
-                              ``~(n2w ^(numSyntax.term_of_int i) =
-                                  n2w ^(numSyntax.term_of_int j))``)
-                           (iota (i - 1) []))
-                (iota 255 []))
-in
-  foldr mk_conj (hd clauses) (tl clauses)
-end,
-
-);
-
-
+*)
 val _ = export_theory();
 
