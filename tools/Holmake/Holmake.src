@@ -502,12 +502,26 @@ in
     in
       if compile debug (include_flags@["-o", script, scriptuo]) = success
       then let val script' = MK_XABLE script
+               val thysmlfile = s^"Theory.sml"
+               val thysigfile = s^"Theory.sig"
+               val _ =
+                 app (fn s => FileSys.remove s handle OS.SysErr _ => ())
+                 [thysmlfile, thysigfile]
                val res2    = system (fullPath [".", script'])
                val _       = app FileSys.remove [script', scriptuo, scriptui]
+               val thyproduced =
+                 (FileSys.access(thysmlfile, [FileSys.A_READ]) orelse
+                  (print (script'^" didn't produce "^thysmlfile^"; \
+                         \maybe need export_theory in Script\n");
+                   false)) andalso
+                 (FileSys.access(thysigfile, [FileSys.A_READ]) orelse
+                  (print (script'^" didn't produce "^thysigfile^"; \
+                         \maybe need export_theory in Script\n");
+                   false))
            in
-             res2 = success
+             res2 = success andalso thyproduced
            end
-      else (print "Failed to build script file\n"; false)
+      else (print ("Failed to build script file, "^script^"\n"); false)
     end handle CompileFailed => false
              | FileNotFound => false
 end
@@ -586,10 +600,10 @@ exception DirNotFound
 
 (** Dealing with the command-line *)
 fun do_target x = let
-  fun read_files ds P action = 
+  fun read_files ds P action =
      case FileSys.readDir ds
       of NONE => FileSys.closeDir ds
-       | SOME nextfile => 
+       | SOME nextfile =>
            (if P nextfile then action nextfile else ();
             read_files ds P action)
 
@@ -639,7 +653,7 @@ fun generate_all_plausible_targets () = let
   fun find_files ds P =
     case FileSys.readDir ds of
       NONE => []
-    | SOME fname => if P fname then fname::find_files ds P 
+    | SOME fname => if P fname then fname::find_files ds P
                                else find_files ds P
   val cds = FileSys.openDir "."
   fun ok_file f =
