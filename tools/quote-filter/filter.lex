@@ -52,6 +52,7 @@ and STRING =
 parse "\\\"" { ECHO lexbuf }
     | "\""   { ECHO lexbuf; INITIAL lexbuf }
     | _      { ECHO lexbuf; STRING lexbuf }
+    | eof    { () }
 
 and COMMENT =
 parse "(*"   { ECHO lexbuf; inc comdepth; COMMENT lexbuf }
@@ -59,6 +60,7 @@ parse "(*"   { ECHO lexbuf; inc comdepth; COMMENT lexbuf }
                if !comdepth < 1 then INITIAL lexbuf
                else COMMENT lexbuf }
     | _      { ECHO lexbuf; COMMENT lexbuf }
+    | eof    { () }
 
 and QUOTE =
 parse "`"    { print "\"]"; INITIAL lexbuf }
@@ -68,6 +70,7 @@ parse "`"    { print "\"]"; INITIAL lexbuf }
     | `\t`   { print "\\t"; QUOTE lexbuf }
     | `\n`   { print " \",\nQUOTE \""; QUOTE lexbuf }
     | _      { ECHO lexbuf; QUOTE lexbuf }
+    | eof    { () }
 
 and TMQUOTE =
 parse "``"   { print "\"])"; INITIAL lexbuf }
@@ -77,6 +80,7 @@ parse "``"   { print "\"])"; INITIAL lexbuf }
     | `\t`   { print "\\t"; TMQUOTE lexbuf }
     | `\n`   { print " \",\nQUOTE \""; TMQUOTE lexbuf }
     | _      { ECHO lexbuf; TMQUOTE lexbuf }
+    | eof    { () }
 
 and TYQUOTE =
 parse "``"   { print "\"])"; INITIAL lexbuf }
@@ -84,8 +88,9 @@ parse "``"   { print "\"])"; INITIAL lexbuf }
     | `\\`   { print "\\\\"; TYQUOTE lexbuf }
     | `"`   { print "\\\""; TYQUOTE lexbuf }
     | `\t`   { print "\\t"; TYQUOTE lexbuf }
-    | `\n`   { print " \",\nTYQUOTE \""; TYQUOTE lexbuf }
+    | `\n`   { print " \",\nQUOTE \""; TYQUOTE lexbuf }
     | _      { ECHO lexbuf; TYQUOTE lexbuf }
+    | eof    { () }
 
 and OLDTMQUOTE =
 parse "`" ws * "--"  { print "\"])"; INITIAL lexbuf }
@@ -97,6 +102,7 @@ parse "`" ws * "--"  { print "\"])"; INITIAL lexbuf }
     | `\t`   { print "\\t"; OLDTMQUOTE lexbuf }
     | `\n`   { print " \",\nOLDTMQUOTE \""; OLDTMQUOTE lexbuf }
     | _      { ECHO lexbuf; OLDTMQUOTE lexbuf }
+    | eof    { () }
 
 and OLDTYQUOTE =
 parse "`" ws * "=="  { print "\"])"; INITIAL lexbuf }
@@ -108,6 +114,7 @@ parse "`" ws * "=="  { print "\"])"; INITIAL lexbuf }
     | `\t`   { print "\\t"; OLDTYQUOTE lexbuf }
     | `\n`   { print " \",\nOLDTYQUOTE \""; OLDTYQUOTE lexbuf }
     | _      { ECHO lexbuf; OLDTYQUOTE lexbuf }
+    | eof    { () }
 
 and ANTIQUOTE =
 parse id { ECHO lexbuf; print "),QUOTE \"" }
@@ -117,5 +124,6 @@ parse id { ECHO lexbuf; print "),QUOTE \"" }
             end }
     | ws + { ANTIQUOTE lexbuf }
     | _    { ECHO lexbuf }
+    | eof  { () }
 
 ;
