@@ -1,0 +1,1634 @@
+\chapter{Introduction to Proof with HOL}
+\label{proof}
+
+
+For a logician, a formal proof is a sequence, each of whose  elements is
+either an {\it axiom\/} or follows from earlier members of the sequence by a
+{\it rule of inference\/}.  A theorem is the last element of a proof.
+
+Theorems are represented in \HOL\ by values of an abstract
+type\footnote{Abstract types are explained in \DESCRIPTION.}
+{\small\verb%thm%}.  The  only way  to create theorems is by generating a
+proof.  In \HOL\ (following \LCF), this consists in applying \ML\ functions
+representing {\it rules of inference\/} to  axioms or previously generated
+theorems.  The sequence of such applications  directly corresponds to a
+logician's proof.
+
+There are five axioms of the \HOL\ logic and eight primitive
+inference rules. The axioms are bound to ML names. For example, the Law of
+Excluded Middle is bound to the \ML\ name {\small\verb%BOOL_CASES_AX%}:
+
+\begin{session}
+\begin{verbatim}
+#BOOL_CASES_AX;;
+|- !t. (t = T) \/ (t = F)
+\end{verbatim}
+\end{session}
+
+Theorems are printed with a preceding turnstile {\small\verb%|-%} as
+illustrated above; the symbol `{\small\verb%!%}' is the universal
+quantifier `$\forall$'.  Rules of inference are \ML\ functions that
+return values of type {\small\verb%thm%}.  
+An example of a rule of inference is {\it
+specialization\/} (or $\forall$-elimination). 
+In standard `natural deduction'
+notation this is:
+
+\[ \Gamma\turn \uquant{x}t\over \Gamma\turn t[t'/x]\]
+
+\begin{itemize}
+\item $t[t'/x]$ denotes the result of substituting $t'$ for free
+occurrences of $x$ in $t$, with the restriction that no free variables in $t'$
+become bound after substitution.
+\end{itemize}
+
+\noindent This rule is represented in \ML\ 
+by a function
+{\small\verb%SPEC%},\footnote{{\tt SPEC} is not a 
+primitive rule of inference in the HOL logic, but is a derived rule. Derived rules
+are described in Section~\ref{forward}.}
+which takes as arguments a term
+{\small\verb%"%}$a${\small\verb%"%} and a theorem 
+{\small\verb%|- !%}$x${\small\verb%.%}$t[x]$ and returns the theorem 
+{\small\verb%|- %}$t[a]$, the result of substituting $a$ for $x$ in $t[x]$. 
+
+\setcounter{sessioncount}{1}
+\begin{session}
+\begin{verbatim}
+#let Th1 = BOOL_CASES_AX;;
+Th1 = |- !t. (t = T) \/ (t = F)
+
+#let Th2 = SPEC "1 = 2" Th1;;
+Th2 = |- ((1 = 2) = T) \/ ((1 = 2) = F)
+\end{verbatim}
+\end{session}
+
+This session consists of a proof of two steps: using an axiom and
+applying the rule \ml{SPEC}; it interactively performs the following proof:
+
+
+\begin{enumerate}
+\item $\turn \uquant{t} t=\top\ \disj\  t=\bot$ \hfill
+[Axiom \ml{BOOL\_CASES\_AX}]
+\item $\turn (1{=}2)=\top\ \disj\ (1{=}2)=\bot$\hfill [Specializing line 1 to `$1{=}2$']
+\end{enumerate}
+
+If the argument to an \ML\ function representing a rule of inference is of the
+wrong kind, or violates a condition of the rule, then the application fails.
+For example, $\ml{SPEC}\ t\ th$ will fail if $th$ is not of the form
+$\ml{|-\ !}x\ml{.}\cdots$ 
+or if it is of this form but the type of $t$ is not the same
+as the type of $x$, or if the free variable restriction is not met.
+
+\begin{session}
+\begin{verbatim}
+#SPEC "1=2" Th2;;
+evaluation failed     SPEC
+
+#SPEC "1" Th1;;
+evaluation failed     SPEC
+\end{verbatim}
+\end{session}
+
+\noindent As this session illustrates, the failure token does not always
+indicate the exact reason for failure. The failure conditions for rules of
+inference are given in \REFERENCE.
+
+A proof in the \HOL\ system is constructed by repeatedly applying inference
+rules to axioms or to previously proved theorems.
+Since proofs may consist of millions of steps, it is necessary to provide
+tools to make proof construction easier for the user.  The proof generating
+tools in the \HOL\ system are just those of \LCF, and are described later.
+
+
+The general form of a theorem is  $t_1,\ldots,t_n\ $\ml{|-}$\  t$, where $t_1$,
+$\ldots$ , $t_n$ are boolean terms called  the {\it  assumptions} and  $t$ is a
+boolean term called the {\it conclusion\/}.  Such a theorem asserts that if its
+assumptions are true then so is its conclusion.  Its truth conditions are thus
+the same as those for the single term 
+$(t_1${\small\verb%/\%}$\ldots${\small\verb%/\%}$t_n$)\ml{==>}$t$.  
+Theorems  with  no  assumptions are printed
+out in the form \ml{|-}$\ t$.
+
+
+The five  axioms and  eight primitive  inference rules  of the  \HOL\ logic are
+described in  detail in  the document \DESCRIPTION.  Every
+value of  type  \ml{thm}  in  the  \HOL\ system  can be  obtained by repeatedly
+applying primitive inference rules to axioms.  When the \HOL\  system is built,
+the eight  primitive rules  of inference  are defined  and the  five axioms are
+bound to their \ML\ names, all other predefined theorems are proved using rules
+of inference as the system is made.\footnote{This is a slight
+over-simplification.} This is one of the reasons why making  \ml{hol} takes so
+long.
+
+In the rest of this chapter, the  process of  {\it forward  proof\/}, which has
+just been sketched, is described in more detail.   In Chapter~\ref{tactics} {\it
+goal directed proof\/} is  described, including  the important  notions of {\it
+tactics\/} and {\it tacticals\/}, due to Robin Milner.
+
+\section{Forward proof}
+\label{forward}
+
+Three of the primitive inference rules of the
+\HOL\ logic are \ml{ASSUME} (assumption introduction),
+\ml{DISCH} (discharging or assumption elimination) and \ml{MP} (Modus Ponens).
+These rules will be used to illustrate forward proof and the writing of derived
+rules.
+
+The inference rule {\small\verb%ASSUME%} generates theorems of the form
+$t${\small\verb% |- %}$t$. Note, however, that the \ML\ printer prints each
+assumption as a dot (but this default can be changed; see below).  The function
+{\small\verb%dest_thm%} decomposes a theorem into a pair consisting of list of
+assumptions and the conclusion. The \ML\ type \ml{goal} abbreviates
+{\small\verb%(term)list # term%}, this is motivated in Section~\ref{tactics}.
+
+\begin{session}
+\begin{verbatim}
+#let Th3 = ASSUME "t1==>t2";;
+Th3 = . |- t1 ==> t2
+
+#dest_thm Th3;;
+["t1 ==> t2"],"t1 ==> t2" : goal
+\end{verbatim}
+\end{session}
+
+A sort of dual to \ml{ASSUME} is the primitive inference rule
+\ml{DISCH} (discharging, assumption elimination) which infers from
+a theorem of the form $\cdots t_1\cdots\ml{\ |-\ }t_2$ the new theorem
+$\cdots\ \cdots\ \ml{|-}\ t_1\ml{==>}t_2$. \ml{DISCH} takes as arguments
+the term to be discharged (\ie\ $t_1$) and the theorem from whose
+assumptions it is to be discharged and returns the result of the discharging.
+The following session illustrates this; it also illustrates what happens when
+\ml{=>}, which is part of the syntax of conditional terms
+(see the table on page~\pageref{logic-table}), 
+is erroneously typed instead of the implication symbol \ml{==>}.
+
+\begin{session}
+\begin{verbatim}
+#let Th4 = DISCH "t1=>t2" Th3;;
+need 2 nd branch to conditional
+skipping: t2 " Th3 ;; parse failed     
+
+#let Th4 = DISCH "t1==>t2" Th3;;
+Th4 = |- (t1 ==> t2) ==> t1 ==> t2
+\end{verbatim}
+\end{session}
+
+\noindent Note that the term being discharged need not be in the assumptions; in
+this case they will be unchanged.
+
+\begin{session}\begin{verbatim}
+#DISCH "1=2" Th3;;
+. |- (1 = 2) ==> t1 ==> t2
+
+#dest_thm it;;
+(["t1 ==> t2"], "(1 = 2) ==> t1 ==> t2") : goal
+\end{verbatim}\end{session}
+
+
+In \HOL\,  the  rule  \ml{MP}  of  Modus  Ponens  is  specified in conventional
+notation by:  
+
+\[ \Gamma_1 \turn t_1 \imp t_2 \qquad\qquad \Gamma_2\turn t_1\over
+\Gamma_1 \cup \Gamma_2 \turn t_2\]
+
+\noindent The \ML\ function \ml{MP} takes argument theorems of the
+form \ml{$\cdots\ $|-$\ t_1$\ ==>\ $t_2$} and \ml{$\cdots\ $|-$\ t_1$}
+and returns \ml{$\cdots\ $|-$\ t_2$}. The next session illustrates the use of
+\ml{MP} and also a common error, namely not supplying the \HOL\ logic type
+checker with enough information. 
+
+\begin{session}\begin{verbatim}
+#let Th5 = ASSUME "t1";;
+Indeterminate types:  "t1:?"
+
+evaluation failed     types indeterminate in quotation
+
+#let Th5 = ASSUME "t1:bool";;
+Th5 = . |- t1
+
+#let Th6 = MP Th3 Th5;;
+Th6 = .. |- t2
+\end{verbatim}\end{session}
+
+The hypotheses of \ml{Th6} can be inspected with the \ML\ function \ml{hyp},
+which returns the list of assumptions of a theorem (the conclusion is returned by
+\ml{concl}).
+
+\begin{session}\begin{verbatim}
+#hyp Th6;;
+["t1 ==> t2"; "t1"] : term list
+\end{verbatim}\end{session}
+
+\HOL\ can be made to print out hypotheses of theorems explicitly by
+telling \ML\ to use the function \ml{print\_all\_thm} instead of
+the default \ml{print\_thm}. 
+
+\begin{session}\begin{verbatim}
+#top_print print_all_thm;;
+- : (thm -> void)
+
+#Th5;;
+t1 |- t1
+
+#Th6;;
+t1 ==> t2, t1 |- t2
+\end{verbatim}\end{session}
+
+
+\noindent Discharging \ml{Th6} twice establishes the theorem
+\ml{|-\ t1 ==> (t1==>t2) ==> t2}.
+
+\begin{session}\begin{verbatim}
+#let Th7 = DISCH "t1==>t2" Th6;;
+Th7 = t1 |- (t1 ==> t2) ==> t2
+
+#let Th8 = DISCH "t1:bool" Th7;;
+Th8 = |- t1 ==> (t1 ==> t2) ==> t2
+\end{verbatim}\end{session}
+
+The sequence of theorems: \ml{Th3},
+\ml{Th5}, \ml{Th6}, \ml{Th7}, \ml{Th8} constitutes a proof in \HOL\ of
+the theorem \ml{|-\ t1 ==> (t1 ==> t2) ==> t2}. In stardard logical notation this
+proof could be written:
+
+\begin{enumerate}
+\item $ t_1\imp t_2\turn t_1\imp t_2$ \hfill
+[Assumption introduction]
+\item $ t_1\turn t_1$ \hfill
+[Assumption introduction]
+\item $t_1\imp t_2,\ t_1 \turn t_2 $ \hfill
+[Modus Ponens applied to lines 1 and 2]
+\item $t_1 \turn (t_1\imp t_2)\imp t_2$ \hfill
+[Discharging the first assumption of line 3]
+\item $\turn t_1 \imp (t_1 \imp t_2) \imp t_2$ \hfill
+[Discharging the only assumption of line 4]
+\end{enumerate}
+
+\subsection{Derived rules}
+
+
+A {\it proof from hypothesis $th_1, \ldots, th_n$} is a sequence each of whose
+elements is either an axiom, or one of the hypotheses $th_i$, or follows from
+earlier elements by a rule of inference.
+
+For example, a proof of $\Gamma,\ t'\turn t$ from the hypothesis
+$\Gamma\turn t$ is:
+
+
+\begin{enumerate}
+\item $t'\turn t'$ \hfill [Assumption introduction]
+\item $\Gamma\turn t$ \hfill [Hypothesis]
+\item $\Gamma\turn t'\imp t$ \hfill [Discharge $t'$ from line 2]
+\item $\Gamma,\ t'\turn t$ \hfill [Modus Ponens applied to lines 3 and 1]
+\end{enumerate}
+
+\noindent This proof works for any hypothesis of the form $\Gamma\turn t$ 
+and any boolean term $t'$ and
+shows that the result of adding an arbitrary hypothesis to a theorem is another
+theorem (because the four lines above can be added to any proof of
+$\Gamma\turn t$ to get a proof of $\Gamma,\ t'\turn t$).\footnote{This property
+of the logic is called {\it monotonicity}.} For example,
+the next session uses this proof to add the hypothesis \ml{"t3"} to
+\ml{Th6}.
+
+\begin{session}\begin{verbatim}
+#let Th9 = ASSUME "t3:bool";;
+Th9 = t3 |- t3
+
+#let Th10 = DISCH "t3:bool" Th6;;
+Th10 = t1 ==> t2, t1 |- t3 ==> t2
+
+#let Th11 = MP Th10 Th9;;
+Th11 = t1 ==> t2, t1, t3 |- t2
+\end{verbatim}\end{session}
+
+
+A {\it derived rule\/} is an \ML\ procedure that generates a proof from given hypotheses
+each time it is invoked. The hypotheses are the arguments of the rule.
+To illustrate this, a rule, called \ml{ADD\_ASSUM}, will now
+be defined as an \ML\ procedure that carries
+out the proof above. In standard notation this would be described by:
+
+\[ \Gamma\turn t\over \Gamma,\ t'\turn t \]
+
+\noindent The \ML\ definition is:
+
+\begin{session}\begin{verbatim}
+#let ADD_ASSUM t th =
+# let th9 = ASSUME t
+# in
+# let th10 = DISCH t th
+# in
+# MP th10 th9;;
+ADD_ASSUM = - : (term -> thm -> thm)
+
+#ADD_ASSUM "t3:bool" Th6;;
+t1 ==> t2, t1, t3 |- t2
+\end{verbatim}\end{session}
+
+\noindent The body of \ml{ADD\_ASSUM} has been coded  to mirror  the proof done
+in session~10 above, so as to show how an interactive proof  can be generalized
+into a  procedure.   But \ml{ADD\_ASSUM}  can be  written much more
+concisely as:
+
+\begin{session}\begin{verbatim}
+#let ADD_ASSUM t th = MP (DISCH t th) (ASSUME t);;
+ADD_ASSUM = - : (term -> thm -> thm)
+
+#ADD_ASSUM t3 Th6;;
+t1 ==> t2, t1, t3 |- t2
+\end{verbatim}\end{session}
+
+
+Another example of  a derived  inference rule  is \ml{UNDISCH};  this moves the
+antecedent of an implication to the assumptions.
+
+\[ \Gamma\turn t_1\imp t_2 \over\Gamma,\ t_1\turn t_2 \]
+
+\noindent An \ML\ derived rule that implements this is:
+
+
+\begin{session}\begin{verbatim}
+#let UNDISCH th =
+# MP th (ASSUME(fst(dest_imp(concl th))));;
+UNDISCH = - : (thm -> thm)
+
+#Th10;;
+t1 ==> t2, t1 |- t3 ==> t2
+
+#UNDISCH Th10;;
+t1 ==> t2, t1, t3 |- t2
+
+#it = Th11;;
+true : bool
+\end{verbatim}\end{session}
+
+\noindent Each time \ml{UNDISCH\ $\Gamma\turn t_1\imp t_2$} is executed,
+the following proof is performed:
+
+\begin{enumerate}
+\item $t_1\turn t_1$ \hfill [Assumption introduction]
+\item $\Gamma\turn t_1\imp t_2$ \hfill [Hypothesis]
+\item $\Gamma,\ t_1\turn t_2$ \hfill [Modus Ponens applied to lines 2 and 1]
+\end{enumerate}
+
+The rules \ml{ADD\_ASSUM} and \ml{UNDISCH} are the first derived rules
+ defined when the \HOL\ system is built. For a description
+of the main rules see the section on derived rules in
+\DESCRIPTION.
+
+\section{Rewriting}
+
+An important  derived  rule  is  \ml{REWRITE\_RULE}.    This  takes  a  list of
+conjunctions of equations, \ie\ a list of theorems of the  form:  
+
+\[ \Gamma\turn (u_1 = v_1) \conj (u_2 = v_2) \conj \ldots\ \conj (u_n  = v_n)\]
+
+\noindent  and a theorem
+$\Delta\turn t$  and  repeatedly  replaces  instances  of  $u_i$ in  $t$ by the
+corresponding instance of $v_i$ until no further change occurs.   The result is
+a theorem $\Gamma\cup\Delta\turn t'$ where $t'$ is the result  of rewriting $t$
+in this way.  The session below illustrates the use of  \ml{REWRITE\_RULE}.  In
+it the list of equations is a list \ml{rewrite\_list} containing the pre-proved
+theorems \ml{ADD\_CLAUSES}  and   \ml{MULT\_CLAUSES}.     These  theorems  {\it
+autoload\/} from the theory \ml{arithmetic}.   This  means that  the first time
+they are mentioned in a session, which  is when  \ml{rewrite\_list} is defined,
+they are automatically fetched and bound to their \ML\ name.
+
+\begin{session}\begin{verbatim}
+#let rewrite_list = [ADD_CLAUSES;MULT_CLAUSES];;
+Theorem MULT_CLAUSES autoloaded from theory `arithmetic`.
+MULT_CLAUSES = 
+|- !m n.
+    (0 * m = 0) /\
+    (m * 0 = 0) /\
+    (1 * m = m) /\
+    (m * 1 = m) /\
+    ((SUC m) * n = (m * n) + n) /\
+    (m * (SUC n) = m + (m * n))
+
+Theorem ADD_CLAUSES autoloaded from theory `arithmetic`.
+ADD_CLAUSES = 
+|- (0 + m = m) /\
+   (m + 0 = m) /\
+   ((SUC m) + n = SUC(m + n)) /\
+   (m + (SUC n) = SUC(m + n))
+
+rewrite_list = 
+[|- (0 + m = m) /\
+    (m + 0 = m) /\
+    ((SUC m) + n = SUC(m + n)) /\
+    (m + (SUC n) = SUC(m + n));
+ |- !m n.
+     (0 * m = 0) /\
+     (m * 0 = 0) /\
+     (1 * m = m) /\
+     (m * 1 = m) /\
+     ((SUC m) * n = (m * n) + n) /\
+     (m * (SUC n) = m + (m * n))]
+: thm list
+\end{verbatim}\end{session}
+
+\begin{session}\begin{verbatim}
+#REWRITE_RULE rewrite_list (ASSUME "(m+0)<(1*n)+(SUC 0)");;
+(m + 0) < ((1 * n) + (SUC 0)) |- m < (SUC n)
+\end{verbatim}\end{session}
+
+\noindent This can then be rewritten using a pre-proved theorem \ml{LESS\_THM}:
+
+\begin{session}\begin{verbatim}
+REWRITE_RULE [LESS_THM] it;;
+Theorem LESS_THM autoloaded from theory `prim_rec`.
+LESS_THM = |- !m n. m < (SUC n) = (m = n) \/ m < n
+
+(m + 0) < ((1 * n) + (SUC 0)) |- (m = n) \/ m < n
+\end{verbatim}\end{session}
+
+\ml{REWRITE\_RULE} is not a primitive in \HOL, but is a derived rule. It is
+inherited from Cambridge \LCF\ and was implemented by Larry Paulson (see
+his paper \cite{lcp_rewrite} for details). In addition to the supplied equations,
+\ml{REWRITE\_RULE} has some built in standard simplifications:
+
+\begin{session}\begin{verbatim}
+#REWRITE_RULE [] (ASSUME "(T /\ x) \/ F ==> F");;
+T /\ x \/ F ==> F |- ~x
+\end{verbatim}\end{session}
+
+\noindent The complete list of these built-in rewrites is 
+held in the \ML\ variable \ml{basic\_rewrites}:
+
+\newpage % PBHACK
+
+\begin{session}\begin{verbatim}
+#basic_rewrites;;
+[|- !x. (x = x) = T;
+ |- !t.
+     ((T = t) = t) /\ ((t = T) = t) /\ ((F = t) = ~t) /\ ((t = F) = ~t);
+ |- (!t. ~~t = t) /\ (~T = F) /\ (~F = T);
+ |- !t.
+     (T /\ t = t) /\
+     (t /\ T = t) /\
+     (F /\ t = F) /\
+     (t /\ F = F) /\
+     (t /\ t = t);
+ |- !t.
+     (T \/ t = T) /\
+     (t \/ T = T) /\
+     (F \/ t = t) /\
+     (t \/ F = t) /\
+     (t \/ t = t);
+ |- !t.
+     (T ==> t = t) /\
+     (t ==> T = T) /\
+     (F ==> t = T) /\
+     (t ==> t = T) /\
+     (t ==> F = ~t);
+ |- !t1 t2. ((T => t1 | t2) = t1) /\ ((F => t1 | t2) = t2);
+ |- !t1 t2. t1 <=> t2 = (t1 = t2);
+ |- !t. (!x. t) = t;
+ |- !t. (?x. t) = t;
+ |- !t1 t2. (\x. t1)t2 = t1;
+ |- !x. FST x,SND x = x;
+ |- !x y. FST(x,y) = x;
+ |- !x y. SND(x,y) = y]
+: thm list
+\end{verbatim}\end{session}
+
+There are elaborate facilities in \HOL\ for producing customized rewriting tools
+which scan through terms in user programmed orders; \ml{REWRITE\_RULE} is the tip
+of an iceberg, see \DESCRIPTION\ for more details.
+
+
+
+\section{Tautologies}
+
+ICL Defence Systems have supplied a tautology checker as a library program.
+This takes any term \ml{"$t$"} and returns \ml{|-~$t$} if $t$ is an instance
+of a tautology of the propositional calculus.
+This checker is a derived rule and constructs (behind the scenes) a proof
+of any tautology. It is in the library \ml{taut} which is loaded with
+the function \ml{load\_library}.
+
+\begin{session}\begin{verbatim}
+#load_library `taut`;;
+Loading library `taut` ...
+evaluation failed     load -- foo/Library/taut/taut ml file not found
+\end{verbatim}\end{session}
+
+\noindent This error message shows that \HOL\ has not been installed
+properly; see Chapter~\ref{install}. The \ml{hol} being used for this
+session is on the directory {\small\verb%/tmp_mnt/home/flint/mjcg/hol%},
+but:
+
+\begin{session}\begin{verbatim}
+#HOLdir;;
+`wonk/foo/mumble` : string
+\end{verbatim}\end{session}
+
+\noindent which shows that \HOL\ thinks it is living on
+{\small\verb%wonk/foo/mumble%}. This is easy to fix:
+
+\begin{session}\begin{verbatim}
+#install `/tmp_mnt/home/flint/mjcg/hol`;;
+() : void
+
+HOLdir = `/tmp_mnt/home/flint/mjcg/hol` : string
+\end{verbatim}\end{session}
+
+\noindent Now the library \ml{taut} will load properly.
+
+\begin{session}\begin{verbatim}
+#load_library `taut`;;
+Loading library `taut` ...
+[fasl /tmp_mnt/home/flint/mjcg/hol/Library/taut/taut_ml.o]
+.......................
+Library `taut` loaded.
+() : void
+\end{verbatim}\end{session}
+
+The following session illustrates \ml{TAUT\_RULE}, which is one of the functions
+loaded when the library \ml{taut} is loaded.
+
+\begin{session}\begin{verbatim}
+#TAUT_RULE "((A ==> B) ==> A) ==> A";;
+|- ((A ==> B) ==> A) ==> A
+
+#TAUT_RULE "((A ==> B) ==> A) ==> B";;
+evaluation failed     TAC_PROOF -- TAUT_TAC - term not a tautology
+\end{verbatim}\end{session}
+
+\noindent \ml{TAUT\_RULE} has \ML\ type {\small\verb%term -> thm%} which
+is abbreviated to \ml{conv} by \ML\ (the motivation for this name is 
+discussed in the section on conversions in \DESCRIPTION).
+
+\begin{session}\begin{verbatim}
+#TAUT_RULE;;
+- : conv
+\end{verbatim}\end{session}
+
+\noindent Such type abbreviations are discussed in the next chapter.
+
+
+\chapter{Goal Oriented Proof: Tactics and Tacticals}
+\label{backward}\label{tactics}
+
+The style of forward proof described in the previous chapter is unnatural and
+too `low level' for many applications. An important advance in proof generating
+methodology was made by Robin Milner in the early 1970s when he invented the
+notion of {\it tactics\/}. A tactic is a function that does two things.
+\begin{myenumerate}
+\item Splits a `goal' into `subgoals'.
+\item Keeps track of the reason why solving the subgoals will solve the goal.
+\end{myenumerate}
+
+\noindent Consider, for example, the  rule of $\wedge$-introduction\footnote{In
+higher order logic this is a derived rule; in first  order logic  it is usually
+primitive.  In HOL the rule is called {\tt CONJ} and its derivation is given in
+\DESCRIPTION.}  shown below:  
+
+\[ \Gamma_1\turn
+t_1\qquad\qquad\qquad\Gamma_2\turn t_2\over \Gamma_1\cup\Gamma_2 \turn t_1\conj
+t_2 \]
+
+
+\noindent In \HOL,  $\wedge$-introduction is  represented by  the \ML\ function
+\ml{CONJ}:  
+
+\[\ml{CONJ}\ (\Gamma_1\turn t_1)\ (\Gamma_2\turn t_2) \ \ \leadsto\
+\ (\Gamma_1\cup\Gamma_2\turn  t_1\conj  t_2)\]
+
+\noindent  This  is   illustrated  in  the
+following new  session  (note  that  the  session  number  has  been  reset  to
+{\small\sl 1}):
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#top_print print_all_thm;;
+- : (thm -> void)
+
+#let Th1 = ASSUME "A:bool" and Th2 = ASSUME "B:bool";;
+Th1 = A |- A
+Th2 = B |- B
+
+#let Th3 = CONJ Th1 Th2;;
+Th3 = A, B |- A /\ B
+\end{verbatim}\end{session}
+
+Suppose the goal is to prove $A\conj B$, then this rule says 
+that it is sufficient
+to prove the two subgoals $A$ and $B$, because from $\turn A$ and $\turn B$
+the theorem $\turn A\conj B$ can be deduced. Thus:
+
+\begin{myenumerate}
+\item To prove $\turn A \conj B$ it is sufficient to 
+      prove $\turn A$ and $\turn B$.
+\item The justification for the reduction of the 
+goal  $\turn A \conj B$  to the two  subgoals  $\turn A$ 
+and $\turn B$ is the rule of $\wedge$-introduction.
+\end{myenumerate}
+
+A {\it goal\/} in \HOL\ is a pair
+\ml{([$t_1$;\ldots;$t_n$],$t$)} of \ML\ type
+{\small\verb%term list # term%}. An {\it achievement\/} of such a goal
+is a theorem
+\ml{$t_1$,$\ldots$,$t_n$\ |-\ $t$}. 
+A tactic is an \ML\ function that when applied to a goal generates subgoals
+together with a {\it justification function\/} or {\it validation\/}, 
+which will be an \ML\ derived inference
+rule, that can be used to infer an achievement of the original goal from
+achievements
+of the subgoals. 
+
+
+
+{\bf Aside:} \ML\ has a type abbreviating mechanism which is used to give mnemonic
+names to the various types associated with goal oriented proof.  Type abbreviations
+can be seen by evaluating \ml{print\_defined\_types()}:
+
+\begin{session}\begin{verbatim}
+#print_defined_types();;
+
+  proof = (thm list -> thm)
+  goal = (term list # term)
+  tactic = ((term list # term) -> subgoals)
+  thm_tactic = (thm -> tactic)
+  thm_tactical = ((thm -> tactic) -> thm_tactic)
+  conv = (term -> thm)
+  term_net -- an abstract type
+  subgoals = ((term list # term) list # proof)
+  goalstack -- an abstract type
+\end{verbatim}\end{session}
+
+\noindent The left hand side of these abbreviations can be used anywhere that the
+right hand side can (abstract types are explained elsewhere). The default is that
+the printer will print out abbreviations at top-level, but this behaviour can
+be changed (see the flag \ml{print\_lettypes} in \DESCRIPTION).
+{\bf End aside.}
+
+If $T$ is a tactic (\ie\ an \ML\ function of type \ml{tactic})  and $g$ 
+is a goal (\ie\ an \ML\ function of type \ml{goal}), then
+applying $T$ to $g$ (\ie\ evaluating the \ML\ 
+expression $T\ g$) will result in
+an object of \ML\ type {\small\verb%subgoals%}, \ie\ a pair whose 
+first component is a list of 
+goals and whose second component is a justification function, \ie\ has
+\ML\ type {\small\verb%proof%}.
+
+
+An example tactic is \ml{CONJ\_TAC} which implements (i) and (ii) above.
+For example, consider the utterly trivial goal of showing {\small\verb%T /\ T%},
+where \ml{T} is a constant that stands for $true$:
+
+\begin{session}\begin{verbatim}
+#let goal1 =([], "T /\ T");;
+goal1 = ([], "T /\ T") : (* list # term)
+
+#CONJ_TAC goal1;;
+([([], "T"); ([], "T")], -) : subgoals
+
+#let goal_list,just_fn = it;;
+goal_list = [([], "T"); ([], "T")] : goal list
+just_fn = - : proof
+\end{verbatim}\end{session}
+
+\noindent \ml{CONJ\_TAC} has produced a goal  list consisting  of two identical
+subgoals of just showing \ml{([],"T")}.  Now, there  is a  preproved theorem in
+\HOL, called \ml{TRUTH}, that achieves this goal:
+
+\begin{session}\begin{verbatim}
+#TRUTH;;
+|- T
+\end{verbatim}\end{session}
+
+\noindent Applying the justification function \ml{just\_fn} to a list
+of theorems achieving the goals in \ml{goal\_list} results
+in a theorem achieving the original goal:
+
+\begin{session}\begin{verbatim}
+#just_fn [TRUTH;TRUTH];;
+|- T /\ T
+\end{verbatim}\end{session}
+
+Although this  example  is trivial,  it does  illustrate the  essential idea of
+tactics.  Note that  tactics are  not special  theorem-proving primitives; they
+are just  \ML\  functions.   For example,  the definition  of \ml{CONJ\_TAC} is
+simply:
+
+\begin{hol}\begin{verbatim}
+   let CONJ_TAC (asl,w) =
+    let l,r = dest_conj w 
+    in
+    ([(asl,l); (asl,r)], \[th1;th2]. CONJ th1 th2)
+\end{verbatim}\end{hol}
+
+\noindent The \ML\ function \ml{dest\_conj} splits a conjunction into its
+two conjuncts:
+If \ml{(asl,"$t_1$}{\small\verb%/\%}\ml{$t_2$")} 
+is a goal, then \ml{CONJ\_TAC} splits
+it into the list of two subgoals \ml{(asl,$t_1$)} and
+\ml{(asl,$t_2$)}. The justification function, 
+{\small\verb%\[th1;th2]. CONJ th1 th2%}
+takes
+a list \ml{[$th_1$;$th_2$]} of theorems and applies the rule \ml{CONJ}
+to $th_1$ and $th_2$.
+
+To summarize:
+if $T$ is a tactic and $g$ 
+is a goal, then
+applying $T$ to $g$ will result in
+an object of \ML\ type {\small\verb%subgoals%}, \ie\ a pair whose 
+first component is a list of 
+goals and whose second component is a justification function, \ie\ has
+\ML\ type {\small\verb%proof%}. 
+
+Suppose $T\ g${\small\verb% = ([%}$g_1${\small\verb%;%}$\ldots${\small\verb%;%}$g_n${\small\verb%],%}$p${\small\verb%)%}. 
+The idea is that $g_1$ , $\ldots$ , $g_n$ are subgoals and $p$
+is a `justification' of the reduction of goal $g$ to subgoals 
+$g_1$ , $\ldots$ , $g_n$.
+Suppose further that the subgoals $g_1$ , $\ldots$ , $g_n$ have been solved. 
+This would mean that 
+theorems $th_1$ , $\ldots$ , $th_n$ had been proved
+such that each $th_i$ ($1\leq i\leq n$) `achieves' the goal $g_i$. 
+The justification $p$ (produced
+by applying $T$ to $g$) is an \ML\ 
+function which when applied to the list
+{\small\verb%[%}$th_1${\small\verb%;%}$\ldots${\small\verb%;%}$th_n${\small\verb%]%} returns a theorem, $th$, 
+which `achieves' the original goal $g$.
+Thus $p$ is a function for converting a solution of the subgoals to a
+solution of the original goal. If $p$ 
+does this successfully, then the tactic $T$ is
+called {\it valid\/}. 
+Invalid tactics cannot result in the proof of invalid theorems;
+the worst they can do is result in insolvable goals or unintended theorems
+being proved.
+If $T$ were invalid and were used
+to reduce goal $g$ to subgoals $g_1$ , $\ldots$ , $g_n$,
+then  effort might be spent proving
+theorems $th_1$ , $\ldots$ , $th_n$ to
+achieve the subgoals $g_1$ , $\ldots$ , $g_n$, 
+only to find out after the work is done that this is a blind alley
+because $p${\small\verb%[%}$th_1${\small\verb%;%}$\ldots${\small\verb%;%}$th_n${\small\verb%]%} 
+doesn't achieve $g$ (\ie\ it fails, 
+or else it achieves some other goal).
+
+A theorem {\it achieves\/} a goal if the assumptions of the theorem are
+included in the assumptions of the goal {\it and\/} if the conclusion of the
+theorems is equal (up to the renaming of bound variables) to the conclusion of
+the goal. More precisely, a theorem 
+\begin{center}
+$t_1$, $\dots$, $t_m${\small\verb% |- %}$t$
+\end{center}
+
+\noindent  achieves a goal
+\begin{center}
+{\small\verb%([%}$u_1${\small\verb%;%}$\ldots${\small\verb%;%}$u_n${\small\verb%],%}$u${\small\verb%)%} 
+\end{center}
+
+\noindent if and only if $\{t_1,\ldots,t_m\}$ 
+is a subset of $\{u_1,\ldots,u_n\}$ and $t$ is equal to $u$ (up
+to renaming of bound variables).  For example, the goal
+{\small\verb%(["x=y";"y=z";"z=w"],"x=z")%} is achieved by the theorem
+{\small\verb%x=y, y=z |- x=z%} (the assumption {\small\verb%"z=w"%} is not
+needed).
+
+A tactic {\it solves\/} a goal if it reduces the goal 
+to the empty list
+of subgoals. Thus $T$ solves $g$ if  $T\ g${\small\verb% = ([],%}$p${\small\verb%)%}.
+If this is the case and if $T$ is valid, then $p${\small\verb%[]%} 
+will evaluate to a theorem achieving $g$.
+Thus if $T$ solves $g$ then the \ML\ expression 
+{\small\verb%snd(%}$T\ g${\small\verb%)[]%} evaluates to
+a theorem achieving $g$.
+
+Tactics are specified using the following notation:
+
+\begin{center}
+\begin{tabular}{c} \\
+$goal$ \\ \hline \hline
+$goal_1\ \ \ goal_2 \ \ \ \cdots\ \ \ goal_n$ \\
+\end{tabular}
+\end{center}
+
+\noindent For example, a tactic called {\small\verb%CONJ_TAC%} is described by
+
+\begin{center}
+\begin{tabular}{c} \\
+$ t_1${\small\verb% /\ %}$t_2$ \\ \hline \hline
+$t_1\ \ \ \ \ \ \ t_2$ \\
+\end{tabular}
+\end{center}
+
+
+
+\noindent Thus {\small\verb%CONJ_TAC%} reduces a goal of the form 
+{\small\verb%(%}$\Gamma${\small\verb%,"%}$t_1${\small\verb%/\%}$t_2${\small\verb%")%} 
+to subgoals
+{\small\verb%(%}$\Gamma${\small\verb%,"%}$t_1${\small\verb%")%} and {\small\verb%(%}$\Gamma${\small\verb%,"%}$t_2${\small\verb%")%}.
+The fact that the assumptions of the top-level goal
+are propagated unchanged to the two subgoals is indicated by the absence
+of assumptions in the notation.
+
+Another example is {\small\verb%INDUCT_TAC%}, the tactic for doing mathematical induction
+on the natural numbers:
+
+\begin{center}
+\begin{tabular}{c} \\
+{\small\verb%!%}$n${\small\verb%.%}$t[n]$ \\ \hline \hline
+$t[${\small\verb%0%}$]$ {\small\verb%     %} $\{t[n]\}\ t[${\small\verb%SUC %}$n]$
+\end{tabular}
+\end{center}
+
+{\small\verb%INDUCT_TAC%} reduces a goal 
+{\small\verb%(%}$\Gamma${\small\verb%,"!%}$n${\small\verb%.%}$t[n]${\small\verb%")%} to a basis subgoal
+{\small\verb%(%}$\Gamma${\small\verb%,"%}$t[${\small\verb%0%}$]${\small\verb%")%} 
+and an induction step subgoal 
+{\small\verb%(%}$\Gamma\cup\{${\small\verb%"%}$t[n]${\small\verb%"%}$\}${\small\verb%,"%}$t[${\small\verb%SUC %}$n]${\small\verb%")%}.
+The extra induction assumption {\small\verb%"%}$t[n]${\small\verb%"%} 
+is indicated in the tactic notation with set brackets.
+
+\begin{session}\begin{verbatim}
+#INDUCT_TAC([], "!m n. m+n = n+m");;
+([([], "!n. 0 + n = n + 0");
+  (["!n. m + n = n + m"], "!n. (SUC m) + n = n + (SUC m)")],
+ -)
+: subgoals
+\end{verbatim}\end{session}
+
+\noindent The first subgoal is the basis case and the second subgoal is
+the step case.
+
+Tactics generally fail (in the \ML\ sense) if they are applied to 
+inappropriate
+goals. For example, {\small\verb%CONJ_TAC%} will fail if it is applied to a goal whose
+conclusion is not a conjunction. Some tactics never fail, for example
+{\small\verb%ALL_TAC%}
+
+
+\begin{center}
+\begin{tabular}{c} \\
+$t$ \\ \hline \hline
+$t$
+\end{tabular}
+\end{center}
+
+\noindent is the `identity tactic'; it reduces a goal 
+{\small\verb%(%}$\Gamma${\small\verb%,%}$t${\small\verb%)%} 
+to the single
+subgoal {\small\verb%(%}$\Gamma${\small\verb%,%}$t${\small\verb%)%}---\ie\ 
+it has no effect. {\small\verb%ALL_TAC%} is useful for writing
+complex tactics using tacticals (\eg\ see the definition of
+{\small\verb%REPEAT%} in Section~\ref{tacticals}).
+
+
+\section{Using tactics to prove theorems}   
+\label{using-tactics}
+
+Suppose goal $g$  is to be solved. If $g$
+is simple it might be possible
+to immediately think up a tactic, $T$ 
+say, which reduces it to the empty list of
+subgoals. If this is the case then executing:
+
+
+$\ ${\small\verb% let %}$gl${\small\verb%,%}$p${\small\verb% = %}$T\ g$
+
+
+\noindent will bind $p$ to a function which when applied to the empty list
+of theorems yields a theorem $th$ achieving $g$. 
+(The declaration above
+will also bind $gl$ to the empty list of goals.) Thus a theorem achieving 
+$g$ can be computed by executing:
+
+$\ ${\small\verb% let %}$th${\small\verb% = %}$p${\small\verb%[]%}
+
+
+\noindent This will be illustrated using \ml{REWRITE\_TAC} which takes a list
+of equations (empty in the example that follows) and tries to prove a goal
+by rewriting with these equations together with
+\ml{basic\_rewrites}:
+
+\begin{session}\begin{verbatim}
+#let goal2 = ([], "T /\ x ==> x \/ (y /\ F)");;
+goal2 = ([], "T /\ x ==> x \/ y /\ F") : (* list # term)
+
+#REWRITE_TAC [] goal2;;
+([], -) : subgoals
+
+#snd it [];;
+|- T /\ x ==> x \/ y /\ F
+\end{verbatim}\end{session}
+
+\noindent Proved theorems are usually stored in the current theory 
+so that
+they can be used in subsequent sessions.
+
+The built-in function
+ \ml{prove\_thm} of
+\ML\ type {\small\verb%(string # term # tactic) -> thm%} facilitates the use
+of tactics:
+{\small\verb%prove_thm(`foo`,%}$t${\small\verb%,%}$T${\small\verb%)%} proves
+the goal   {\small\verb%([],%}$t${\small\verb%)%}   (\ie\  the   goal  with  no
+assumptions and  conclusion  $t$)  using  tactic  $T$  and  saves the resulting
+theorem with name {\small\verb%foo%} on the current theory.
+
+If the theorem is not to be saved, the function \ml{prove} of type
+{\small\verb%(term # tactic) -> thm%} can be used.  Evaluating
+{\small\verb%prove(%}$t${\small\verb%,%}$T${\small\verb%)%} proves   the   goal
+{\small\verb%([],%}$t${\small\verb%)%} using $T$ and returns the result without
+saving it.  In both cases  the evaluation  fails if  $T$ does  not solve the
+goal {\small\verb%([],%}$t${\small\verb%)%}.
+
+
+When conducting a proof that involves many subgoals and tactics, it is necessary
+to keep track of all the justification functions  
+and compose them in the correct order.  While
+this is feasible even in large proofs, it is tedious.  \HOL\ provides a package
+for building and traversing the tree of subgoals, stacking the justification functions and
+applying them properly; this package was originally implemented for \LCF\ by 
+Larry Paulson.
+
+The subgoal package implements a simple framework for interactive proof. A proof
+tree is created and traversed top-down.  The current goal can be expanded
+into subgoals using a tactic; the subgoals are pushed onto a goal
+stack and the justification function onto a proof stack.
+Subgoals can be considered in any order.  If the tactic solves a
+subgoal (\ie\ returns an empty subgoal list), then the package proceeds to the
+next subgoal in the tree. 
+
+The function  \ml{set\_goal} of type \ml{goal -> void}
+initializes the subgoal package with a new goal. Usually
+top-level goals have no assumptions; the function \ml{g} is useful
+in this case and is defined by:
+
+\begin{hol}\begin{verbatim}
+   let g t = set_goal([],t)
+\end{verbatim}\end{hol}
+
+To illustrate the subgoal package the trivial theorem
+$\vdash \uquant{m}m+0=m$ will be proved from the definition of addition:
+
+\begin{session}\begin{verbatim}
+#ADD;;
+Definition ADD autoloaded from theory `arithmetic`.
+ADD = |- (!n. 0 + n = n) /\ (!m n. (SUC m) + n = SUC(m + n))
+
+|- (!n. 0 + n = n) /\ (!m n. (SUC m) + n = SUC(m + n))
+\end{verbatim}\end{session}
+
+\noindent Notice that \ml{ADD} specifies
+$0+m=m$ but not $m+0=m$. Of course, $\uquant{m\ n}m+n = n+m$ is true, but the first step of the proof is to show
+$\uquant{m}m+0=m$ from the definition of addition.
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#g "!m. m+0=m";;
+"!m. m + 0 = m"
+
+() : void
+\end{verbatim}\end{session}
+
+\noindent This sets up the goal. Next the goal is split into a basis and step case
+with \ml{INDUCT\_TAC}. To do this the function \ml{e} (or, equivalently,
+\ml{expand}) is used. This applies a tactic to the top goal on the stack, then
+pushes the resulting subgoals onto the goal stack, then prints the resulting
+subgoals. If there are no subgoals, the justification function is applied to the
+theorems solving the subgoals that have been proved and the resulting theorems are
+printed.
+
+\begin{session}\begin{verbatim}
+#e INDUCT_TAC;;
+OK..
+2 subgoals
+"(SUC m) + 0 = SUC m"
+    [ "m + 0 = m" ]
+
+"0 + 0 = 0"
+\end{verbatim}\end{session}
+
+\noindent The top of the goal stack is printed last. The basis case
+is an instance of the definition of addition, so is solved by rewriting with
+\ml{ADD}.
+
+\begin{session}\begin{verbatim}
+#e(REWRITE_TAC[ADD]);;
+OK..
+goal proved
+|- 0 + 0 = 0
+
+Previous subproof:
+"(SUC m) + 0 = SUC m"
+    [ "m + 0 = m" ]
+\end{verbatim}\end{session}
+
+\noindent The basis is solved and the goal
+stack popped so that its top is now the step case, namely showing
+that {\small\verb%(SUC m) + 0 = SUC m%} under the assumption
+{\small\verb%m + 0 = m%}. This goal can be solved by rewriting first
+with the definition of addition:
+
+\begin{session}\begin{verbatim}
+#e(REWRITE_TAC[ADD]);;
+OK..
+"SUC(m + 0) = SUC m"
+    [ "m + 0 = m" ]
+\end{verbatim}\end{session}
+
+\noindent and then with the assumption \ml{m+0=m}. The tactic
+\ml{ASM\_REWRITE\_TAC} is used to rewrite with the assumptions of a goal. It is
+just like \ml{REWRITE\_TAC} except that it adds the assumptions to the list of
+equations used for rewriting. For the example here no equations besides the
+assumptions are needed, so \ml{ASM\_REWRITE\_TAC} is given the empty list of
+equations.
+
+\begin{session}\begin{verbatim}
+#e(ASM_REWRITE_TAC[]);;
+OK..
+goal proved
+. |- SUC(m + 0) = SUC m
+. |- (SUC m) + 0 = SUC m
+|- !m. m + 0 = m
+
+Previous subproof:
+goal proved
+\end{verbatim}\end{session}
+
+\noindent The top goal is solved, hence the preceding goal (the step case)
+is solved too, and since the basis is already solved, the main goal is solved.
+
+The theorem achieving the goal can be extracted from the subgoal package with
+\ml{top\_thm}:
+
+\begin{session}\begin{verbatim}
+#top_thm();;
+|- !m. m + 0 = m
+\end{verbatim}\end{session}
+
+The proof just done can be `optimized'. For example, instead
+of first rewriting with \ml{ADD} (box 4) and then with the assumptions
+(box 5), a single rewriting with \ml{ADD} and the assumptions would suffice.
+To illustrate, the last two steps of the proof will be `undone' using the function
+\ml{backup} which restores the previous state of the goal and theorem stacks.
+
+\begin{session}\begin{verbatim}
+#backup();;
+"SUC(m + 0) = SUC m"
+    [ "m + 0 = m" ]
+
+() : void
+
+#backup();;
+"(SUC m) + 0 = SUC m"
+    [ "m + 0 = m" ]
+\end{verbatim}\end{session}
+
+\noindent The proof can now be completed in one step instead of two:
+
+\begin{session}\begin{verbatim}
+#e(ASM_REWRITE_TAC[ADD]);;
+OK..
+goal proved
+. |- (SUC m) + 0 = SUC m
+|- !m. m + 0 = m
+
+Previous subproof:
+goal proved
+\end{verbatim}\end{session}
+
+
+The order in which goals are attacked can be adjusted using \ml{rotate\ }$n$
+which rotates the goal stack by $n$. For example:
+
+\begin{session}\begin{verbatim}
+#backup();backup();;
+"(SUC m) + 0 = SUC m"
+    [ "m + 0 = m" ]
+
+2 subgoals
+"(SUC m) + 0 = SUC m"
+    [ "m + 0 = m" ]
+
+"0 + 0 = 0"
+
+() : void
+
+#rotate 1;;
+2 subgoals
+"0 + 0 = 0"
+
+"(SUC m) + 0 = SUC m"
+    [ "m + 0 = m" ]
+\end{verbatim}\end{session}
+
+\noindent The top goal is now the step case not the basis case, so expanding
+with a tactic will apply the tactic to the step case.
+
+\begin{session}\begin{verbatim}
+e(ASM_REWRITE_TAC[ADD]);;
+OK..
+goal proved
+. |- (SUC m) + 0 = SUC m
+
+Previous subproof:
+"0 + 0 = 0"
+\end{verbatim}\end{session}
+
+It is possible to do the whole proof in one step, but this requires a compound
+tactic built using the {\it tactical\/}\footnote{This word was invented by Robin
+Milner: `tactical' is to `tactic` as `functional' is to `function'.} \ml{THENL}.
+Tacticals are higher order operations for combining tactics.
+
+\section{Tacticals}
+\label{tacticals}
+
+A {\it tactical\/} 
+is an \ML\ function that returns a tactic (or tactics) as result.
+Tacticals may take various parameters; this is reflected in the various
+\ML\ types that the built-in tacticals have. Some important tacticals in 
+the \HOL\ system
+are listed below.
+
+
+\subsection{\tt THENL : tactic -> tactic list -> tactic}
+      
+If tactic $T$ produces $n$ subgoals and $T_1$, $\ldots$ ,
+$T_n$ are tactics
+then $T${\small\verb% THENL%} {\small\verb%[%}$T_1${\small\verb%;%}$\ldots${\small\verb%;%}$T_n${\small\verb%]%} 
+is a tactic which first applies $T$ and then
+applies $T_i$ to the $i$th subgoal produced by $T$. 
+The tactical {\small\verb%THENL%} is useful if one wants to do different
+things to different subgoals.
+
+\ml{THENL} can be illustrated by doing the proof of $\vdash \uquant{m}m+0=m$ in
+one step.
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#g "!m. m + 0 = m";;
+"!m. m + 0 = m"
+
+() : void
+
+#e(INDUCT_TAC THENL [REWRITE_TAC[ADD];ASM_REWRITE_TAC[ADD]]);;
+OK..
+goal proved
+|- !m. m + 0 = m
+
+Previous subproof:
+goal proved
+() : void
+\end{verbatim}\end{session}
+
+\noindent The compound tactic 
+{\small\verb%INDUCT_TAC THENL [REWRITE_TAC[ADD];ASM_REWRITE_TAC[ADD]]%}
+first applies \ml{INDUCT\_TAC} and then applies
+\ml{REWRITE\_TAC[ADD]} to the first subgoal (the basis) and
+\ml{ASM\_REWRITE\_TAC[ADD]} to the second subgoal (the step). 
+
+The tactical {\small\verb%THENL%} is useful for doing different things to different
+subgoals. The tactical \ml{THEN} can be used to apply the same tactic to all
+subgoals.
+
+\subsection{\tt THEN : tactic -> tactic -> tactic}\label{THEN}
+
+
+The tactical {\small\verb%THEN%} is an \ML\ infix. If $T_1$ and $T_2$ are tactics,
+then the \ML\ expression $T_1${\small\verb% THEN %}$T_2$ evaluates to a tactic
+which first applies $T_1$ and then applies $T_2$ to all the subgoals produced 
+by $T_1$. 
+
+In fact,
+\ml{ASM\_REWRITE\_TAC[ADD]} will solve the basis as well as the step
+case of the induction for $\uquant{m}m+0=m$, so there is an even
+simpler one-step proof than the one above:
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#g "!m. m+0 = m";;
+"!m. m + 0 = m"
+
+() : void
+
+#e(INDUCT_TAC THEN ASM_REWRITE_TAC[ADD]);;
+OK..
+goal proved
+|- !m. m + 0 = m
+
+Previous subproof:
+goal proved
+\end{verbatim}\end{session}
+
+\noindent This is typical: it is common to use a single tactic for several
+goals. Here, for example, are the first four consequences of the definition
+\ml{ADD} of addition that are pre-proved when the built-in theory
+\ml{arithmetic} \HOL\ is made.
+
+\begin{hol}\begin{verbatim}
+   let ADD_0 =
+    prove
+     ("!m. m + 0 = m",
+      INDUCT_TAC
+       THEN ASM_REWRITE_TAC[ADD]);;
+\end{verbatim}\end{hol}
+
+\begin{hol}\begin{verbatim}
+   let ADD_SUC =
+    prove
+     ("!m n. SUC(m + n) = m + SUC n",
+      INDUCT_TAC
+       THEN ASM_REWRITE_TAC[ADD]);;
+\end{verbatim}\end{hol}
+
+\begin{hol}\begin{verbatim}
+   let ADD_CLAUSES =
+    prove
+     ("(0 + m = m)              /\
+       (m + 0 = m)              /\
+       (SUC m + n = SUC(m + n)) /\
+       (m + SUC n = SUC(m + n))",
+      REWRITE_TAC[ADD;ADD_0;ADD_SUC]);;
+\end{verbatim}\end{hol}
+
+\begin{hol}\begin{verbatim}
+   let ADD_SYM =
+    prove
+    ("!m n. m + n = n + m",
+     INDUCT_TAC
+      THEN ASM_REWRITE_TAC[ADD_0;ADD;ADD_SUC]);;
+\end{verbatim}\end{hol}
+
+
+\noindent These proofs are performed when the \HOL\ system is made and the
+theorems are saved in the theory \ml{arithmetic}. The complete list of
+proofs for this built-in theory can be found in the file
+\ml{theories/mk\_arith\_thms.ml}.
+
+
+
+
+\subsection{\tt ORELSE : tactic -> tactic -> tactic}\label{ORELSE}
+
+The tactical {\small\verb%ORELSE%} 
+is an \ML\ infix. If $T_1$ and $T_2$ are tactics, 
+\index{tacticals!for alternation}
+then $T_1${\small\verb% ORELSE %}$T_2$ 
+evaluates to a tactic which applies $T_1$ unless that fails;
+if it fails,
+it applies $T_2$. \ml{ORELSE} is defined in \ML\ 
+as a curried infix by
+
+\begin{hol}
+   {\small\verb%(%}$T_1${\small\verb% ORELSE %}$T_2${\small\verb%)%} $g$ 
+   {\small\verb%=%}  $T_1 g$ {\small\verb%?%} $T_2 g$ 
+\end{hol}\index{alternation!of tactics|)}
+
+
+\subsection{\tt REPEAT : tactic -> tactic}
+
+If $T$ is a 
+tactic then {\small\verb%REPEAT %}$T$ is a tactic which repeatedly applies
+$T$ until it fails. This can be illustrated in conjunction with
+\ml{GEN\_TAC}, which is specified by:
+
+
+\begin{center}
+\begin{tabular}{c} \\
+{\small\verb%!%}$x${\small\verb%.%}$t[x]$
+\\ \hline \hline
+$t[x']$
+\\
+\end{tabular}
+\end{center}
+
+\begin{itemize}
+\item Where $x'$ is a variant of $x$ 
+not free in the goal or the assumptions.
+\end{itemize}
+
+\noindent \ml{GEN\_TAC} strips off one quantifier; 
+\ml{REPEAT\ GEN\_TAC} strips off all quantifiers:
+
+\begin{session}\begin{verbatim}
+#g "!x y z. x+(y+z) = (x+y)+z";;
+"!x y z. x + (y + z) = (x + y) + z"
+
+() : void
+
+#e GEN_TAC;;
+OK..
+"!y z. x + (y + z) = (x + y) + z"
+
+() : void
+
+#e(REPEAT GEN_TAC);;
+OK..
+"x + (y + z) = (x + y) + z"
+\end{verbatim}\end{session}
+
+
+\section{Some tactics built into HOL}
+
+This section contains a summary of some of the tactics built into the \HOL\ system
+(including those already discussed).
+The tactics given here are those that are used in the parity checking case 
+study.
+
+Recall that the \ML\ type {\small\verb%thm_tactic%} abbreviates {\small\verb%theorem->tactic%}, 
+and the type {\small\verb%conv%}\footnote{The type
+{\small{\tt conv}} comes from Larry Paulson's theory of conversions
+\cite{lcp_rewrite}.} abbreviates {\small\verb%term->thm%}.
+
+\subsection{\tt REWRITE\_TAC : thm list -> tactic}
+\label{rewrite}
+
+\begin{itemize}
+\item{\bf Summary:} {\small\verb%REWRITE_TAC[%}$th_1${\small\verb%;%}$\ldots${\small\verb%;%}$th_n${\small\verb%]%} 
+simplifies the goal by rewriting
+it with the explicitly given theorems $th_1$, $\ldots$ , $th_n$, 
+and various built-in rewriting rules.
+
+
+\begin{center}
+\begin{tabular}{c} \\
+$\{t_1, \ldots , t_m\}t$
+\\ \hline \hline
+$\{t_1, \ldots , t_m\}t'$
+\\
+\end{tabular}
+\end{center}
+
+\noindent where $t'$ is obtained from $t$ by rewriting with
+\begin{enumerate}
+\item  $th_1$, $\ldots$ , $th_n$ and
+\item  the standard rewrites held in the \ML\ variable {\small\verb%basic_rewrites%}.
+\end{enumerate}
+
+\item{\bf Uses:} Simplifying goals using previously proved theorems.
+
+\item{\bf Other rewriting tactics} (based on {\small\verb%REWRITE_TAC%}):
+\begin{enumerate}
+\item {\small\verb%ASM_REWRITE_TAC%} adds the assumptions of the goal to the list of
+theorems used for rewriting.
+\item {\small\verb%FILTER_ASM_REWRITE_TAC %}$p${\small\verb% [%}$th_1${\small\verb%;%}$\ldots${\small\verb%;%}$th_n${\small\verb%]%} 
+simplifies the goal by rewriting
+it with the explicitly given theorems $th_1$ , $\ldots$ , $th_n$ , 
+together with those
+assumptions of the goal which satisfy the predicate $p$ and also
+the built-in rewrites in the \ML\ variable {\small\verb%basic_rewrites%}.
+\item {\small\verb%PURE_ASM_REWRITE_TAC%} is like {\small\verb%ASM_REWRITE_TAC%}, but it
+doesn't use any built-in rewrites.
+\item {\small\verb%PURE_REWRITE_TAC%} uses neither the assumptions nor the built-in
+rewrites.
+\end{enumerate}
+\end{itemize}
+
+
+\subsection{\tt CONJ\_TAC : tactic}\label{CONJTAC}
+
+\begin{itemize}
+
+\item{\bf Summary:} Splits a 
+goal {\small\verb%"%}$t_1${\small\verb%/\%}$t_2${\small\verb%"%} into two subgoals {\small\verb%"%}$t_1${\small\verb%"%} 
+and {\small\verb%"%}$t_2${\small\verb%"%}.
+
+\begin{center}
+\begin{tabular}{c} \\
+$t_1${\small\verb% /\ %}$t_2$
+\\ \hline \hline
+$t_1\ \ \ \ \ \ t_2$
+\\
+\end{tabular}
+\end{center}
+
+\item{\bf Uses:} Solving conjunctive goals. 
+{\small\verb%CONJ_TAC%} is invoked by {\small\verb%STRIP_TAC%} (see below).
+
+\end{itemize}
+
+
+
+\subsection{\tt EQ\_TAC : tactic}\label{EQTAC}
+
+
+\begin{itemize}
+
+\item{\bf Summary:} 
+{\small\verb%EQ_TAC%}
+splits an equational goal into two implications (the `if-case' and
+the `only-if' case):
+
+\begin{center}
+
+
+
+\begin{tabular}{c} \\
+$u\ \ml{=}\ v$
+\\ \hline \hline
+$u\ \ml{==>}\ v\ \ \ \ \ v\ \ml{==>}\ u$
+\\
+\end{tabular}
+\end{center}
+
+\item{\bf Use:} Proving logical equivalences, \ie\ goals of the form
+``$u$\ml{=}$v$'' where $u$ and $v$ are boolean terms.
+
+\end{itemize}
+
+
+
+
+\subsection{\tt DISCH\_TAC : tactic}\label{DISCHTAC}
+
+\begin{itemize}
+
+\item{\bf Summary:} Moves the antecedent  
+of an implicative goal into the assumptions.
+
+\begin{center}
+\begin{tabular}{c} \\
+$u${\small\verb% ==> %}$v$
+\\ \hline \hline
+$\{u\}v$
+\\
+\end{tabular}
+\end{center}
+
+
+\item{\bf Uses:} Solving goals of the form 
+{\small\verb%"%}$u${\small\verb% ==> %}$v${\small\verb%"%} by assuming {\small\verb%"%}$u${\small\verb%"%} and then solving
+{\small\verb%"%}$v${\small\verb%"%}.
+{\small\verb%STRIP_TAC%} (see below) will invoke {\small\verb%DISCH_TAC%} on implicative goals.
+\end{itemize}
+
+\subsection{\tt GEN\_TAC : tactic}
+
+\begin{itemize}
+
+\item{\bf  Summary:} Strips off one universal quantifier.
+   
+
+\begin{center}
+\begin{tabular}{c} \\
+{\small\verb%!%}$x${\small\verb%.%}$t[x]$
+\\ \hline \hline
+$t[x']$
+\\
+\end{tabular}
+\end{center}
+
+\noindent Where $x'$ is a variant of $x$ 
+not free in the goal or the assumptions.
+
+\item{\bf   Uses:} Solving universally quantified goals. 
+{\small\verb%REPEAT GEN_TAC%} strips off all
+universal quantifiers and is often the first thing one does in a proof.
+{\small\verb%STRIP_TAC%} (see below) applies {\small\verb%GEN_TAC%} to universally quantified goals.
+\end{itemize}
+
+
+\subsection{\tt IMP\_RES\_TAC : tactic}
+
+\begin{itemize}
+
+\item{\bf Summary:}  {\small\verb%IMP_RES_TAC %}$th$ does a limited amount of
+automated theorem proving in the form of forward inference; it
+`resolves' the theorem $th$ with the 
+assumptions of the goal
+and adds any new results to the assumptions. The specification for
+\ml{IMP\_RES\_TAC} is:
+
+
+\begin{center}
+\begin{tabular}{c} \\
+$\{t_1,\ldots,t_m\}t$
+\\ \hline \hline
+$\{t_1,\ldots,t_m,u_1,\ldots,u_n\}t$
+\\
+\end{tabular}
+\end{center}
+
+\noindent  where $u_1$, $\dots$, $u_n$ 
+are derived by `resolving' the theorem $th$ with the existing assumptions 
+$t_1$, $\dots$, $t_m$. 
+Resolution in \HOL\ is not classical resolution, but just Modus Ponens with
+one-way pattern matching (not unification) and term and type instantiation. The
+general case is where $th$ is of the canonical form
+
+$\ \ \ ${\small\verb%|- !%}$x_1$$\ldots x_p${\small\verb%.%}$v_1$ {\small\verb%==>%} $v_2$ {\small\verb%==>%} $\ldots$ {\small\verb%==>%} $v_q$ {\small\verb%==>%} $v$
+
+\noindent {\small\verb%IMP_RES_TAC %}$th$ then tries to specialize $x_1$,
+$\dots$, $x_p$ in succession so that $v_1$, $\dots$, $v_q$ match members of
+$\{t_1,\ldots ,t_m\}$.  Each time a match is found for some antecedent $v_i$,
+for $i$ successively equal to $1$, $2$, \dots, $q$, a term and type
+instantiation is made and the rule of Modus Ponens is applied.  If all the
+antecedents $v_i$ (for $1 \leq i \leq q$) can be dismissed in this way, then
+the appropriate instance of $v$ is added to the assumptions. Otherwise, if only
+some initial sequence $v_1$, \dots, $v_k$ (for some $k$ where $1 < k < q$) of
+the assumptions can be dismissed, then the remaining implication:
+
+$\ \ \ ${\small\verb%|- %} $v_{k+1}$ {\small\verb%==>%} $\ldots$ {\small\verb%==>%} $v_q$ {\small\verb%==>%} $v$
+
+\noindent is added to the assumptions.
+
+For a more detailed description of resolution and \ml{IMP\_RES\_TAC},
+see \DESCRIPTION\ and \REFERENCE.  
+
+\item{\bf Uses:} Deriving new results from a previously proved implicative
+theorem, in combination with the current assumptions, so that
+subsequent tactics can use these new results.
+
+\end{itemize}
+
+
+        
+\subsection{\tt STRIP\_TAC : tactic}
+
+\begin{itemize}
+
+\item{\bf Summary:} Breaks a goal apart.
+{\small\verb%STRIP_TAC%} removes one outer connective from the goal, using
+{\small\verb%CONJ_TAC%}, {\small\verb%DISCH_TAC%}, {\small\verb%GEN_TAC%}, \etc\  
+If the goal is
+$t_1${\small\verb%/\%}$\cdots${\small\verb%/\%}$t_n${\small\verb% ==> %}$t$ 
+then {\small\verb%DISCH_TAC%} makes each $t_i$ into a separate assumption.
+
+\item{\bf Uses:} Useful for splitting a goal up into manageable pieces. 
+Often the best thing to do first is {\small\verb%REPEAT STRIP_TAC%}.
+\end{itemize}
+
+\subsection{\tt SUBST\_TAC : thm list -> thm}
+
+\begin{itemize}
+
+\item{\bf Summary:}
+{\small\verb%SUBST_TAC[|-%}$u_1${\small\verb%=%}$v_1${\small\verb%;%}$\ldots${\small\verb%;|-%}$u_n${\small\verb%=%}$v_n${\small\verb%]%}
+converts a goal $t[u_1,\ldots ,u_n]$
+to the subgoal form $t[v_1,\ldots ,v_n]$.
+
+\item{\bf Uses:} 
+To make replacements for terms in 
+situations in which {\small\verb%REWRITE_TAC%} is too
+general or would loop.
+\end{itemize}
+
+
+\subsection{\tt ACCEPT\_TAC : thm -> tactic}\label{ACCEPTTAC}
+
+
+\begin{itemize}
+
+\item{\bf Summary:} {\small\verb%ACCEPT_TAC %}$th$ 
+is a tactic that solves any goal that is 
+achieved by $th$.
+
+\item{\bf  Use:} Incorporating forward proofs, or theorems already
+proved, into goal directed proofs.
+For example, one might reduce a goal $g$ to 
+subgoals $g_1$, $\dots$, $g_n$ 
+using a tactic $T$ and then prove theorems $th_1$ , $\dots$, $th_n$ 
+respectively achieving 
+these goals by forward proof. The tactic
+
+\[\ml{  T THENL[ACCEPT\_TAC }th_1\ml{;}\ldots\ml{;ACCEPT\_TAC }th_n\ml{]}
+\]
+
+would then solve $g$, where \ml{THENL}
+\index{THENL@\ml{THENL}} is the tactical that applies
+the respective elements of the tactic list to the subgoals produced
+by \ml{T}.
+
+\end{itemize}
+
+
+
+\subsection{\tt ALL\_TAC : tactic}
+
+\begin{itemize}
+\item{\bf Summary:} Identity tactic for the tactical {\small\verb%THEN%}
+(see \DESCRIPTION).
+
+\item{\bf Uses:}
+\begin{enumerate}
+\item Writing tacticals (see description of {\small\verb%REPEAT%} 
+in \DESCRIPTION). 
+\item With {\small\verb%THENL%}; for example, if tactic $T$ produces two subgoals 
+and we want to apply $T_1$ 
+to the first one but to do nothing to the second, then 
+the tactic to use is $T${\small\verb% THENL[%}$T_1${\small\verb%;ALL_TAC]%}.
+\end{enumerate}
+\end{itemize}
+
+\subsection{\tt NO\_TAC : tactic}
+
+\begin{itemize}
+\item{\bf Summary:} Tactic that always fails.
+
+\item{\bf Uses:} Writing tacticals.
+\end{itemize}
+
+
+
+
+
+
+
+

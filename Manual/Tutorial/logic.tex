@@ -1,0 +1,743 @@
+\chapter{The HOL Logic}
+\label{HOLlogic}
+
+The \HOL\  system  supports {\it  higher order  logic}.   This is  a version of
+predicate calculus with three main extensions:
+
+\begin{itemize}
+\item Variables can range over functions and predicates
+(hence `higher order').
+\item The logic is {\it typed}.
+\item There is no separate syntactic category of {\it formulae\/}
+(terms of type \ml{bool} fulfill their role).
+\end{itemize}
+
+\section{Overview of higher order logic}
+
+It is assumed the reader is familiar with predicate logic.  The syntax
+and semantics of the particular logical system supported by \HOL\ is
+described in detail in \DESCRIPTION.  The table below summarizes the
+notation used.
+
+
+\bigskip
+
+\begin{center}
+\begin{tabular}{|l|l|l|l|} \hline
+\multicolumn{4}{|c|}{ } \\
+\multicolumn{4}{|c|}{\bf Terms of the HOL Logic} \\
+\multicolumn{4}{|c|}{ } \\
+{\it Kind of term} & {\it \HOL\ notation} &
+{\it Standard notation} &
+{\it Description} \\ \hline
+ & & & \\
+Truth & {\small\verb%T%} & $\top$ & {\it true}\\ \hline
+Falsity & {\small\verb%F%} & $\bot$ & {\it false}\\ \hline
+Negation & {\small\verb%~%}$t$ & $\neg t$ & {\it not}$\ t$\\ \hline
+Disjunction & $t_1${\small\verb%\/%}$t_2$ & $t_1\vee t_2$ &
+$t_1\ ${\it or}$\ t_2$ \\ \hline
+Conjunction & $t_1${\small\verb%/\%}$t_2$ & $t_1\wedge t_2$ &
+$t_1\ ${\it and}$\ t_2$ \\ \hline
+Implication & $t_1${\small\verb%==>%}$t_2$ & $t_1\imp t_2$ &
+$t_1\ ${\it implies}$\ t_2$ \\ \hline
+Equality & $t_1${\small\verb%=%}$t_2$ & $t_1 = t_2$ &
+$t_1\ ${\it equals}$\ t_2$ \\ \hline
+$\forall$-quantification & {\small\verb%!%}$x${\small\verb%.%}$t$ &
+$\uquant{x}t$ & {\it for\ all\ }$x: t$ \\ \hline
+$\exists$-quantification & {\small\verb%?%}$x${\small\verb%.%}$t$ &
+$\equant{x}\ t$ & {\it for\ some\ }$x: t$ \\ \hline
+$\hilbert$-term & {\small\verb%@%}$x${\small\verb%.%}$t$ &
+$\hquant{x}t$ & {\it an}$\ x\ ${\it such\ that:}$\ t$ \\ \hline
+Conditional & {\small\verb%(%}$t${\small\verb%=>%}$t_1${\small\verb%|%}$t_2${\small\verb%)%} &
+$(t\rightarrow t_1, t_2)$ & {\it if\ }$t${\it \ then\ }$t_1${\it\ else\ }$t_2$
+ \\ \hline
+\end{tabular}
+\end{center}\label{logic-table}
+
+\bigskip
+
+
+Terms of the \HOL\ logic are represented in \ML\ by an {\it abstract
+type\/}\footnote{Abstract types appear to  the user  as primitive  types with a
+collection of operations; they are described in
+\DESCRIPTION} called {\small\verb%term%}. They are normally input between
+quotation marks, and anything between a pair of quotation symbols is parsed as
+a logical term.   For example, the expression {\small\verb%"x /\ y ==> z"%}
+evaluates in \ML\ to a term representing
+{\small\verb%x%}$\wedge${\small\verb%y%}$\Rightarrow${\small\verb%z%}.  Terms
+can be manipulated by various built-in \ML\ functions. For  example, the \ML\
+function \ml{dest\_imp} with \ML\ type {\small\verb%term -> term # term%}
+splits an implication into a pair of terms consisting of its antecedent and
+consequent, and the \ML\ function \ml{dest\_conj} of type
+{\small\verb%term -> term * term%} splits a conjunction into its two conjuncts.
+
+\setcounter{sessioncount}{1}
+\begin{session}
+\begin{verbatim}
+#"x /\ y ==> z";;
+"x /\ y ==> z" : term
+
+#dest_imp it;;
+("x /\ y", "z") : (term # term)
+
+#dest_conj(fst it);;
+("x", "y") : (term # term)
+\end{verbatim}
+\end{session}
+
+Terms of the \HOL\ logic are quite similar to \ML\ expressions, and this can at
+first be confusing.  Indeed, terms of the logic have types similar  to those of
+\ML\ expressions.   For example,  {\small\verb%"(1,2)"%} is  an \ML\ expression
+with \ML\ type {\small\verb%term%}.  The \HOL\ type of this term is
+{\small\verb%num#num%}.  By contrast, the \ML\ expression
+{\small\verb%("1","2")%} has type {\small\verb%term#term%}.
+
+The types of \HOL\ terms form an \ML\ type called {\small\verb%type%}.
+Expressions having the form {\small\verb%": %}$\cdots${\small\verb% "%}
+evaluate to logical types.  The built-in function {\small\verb%type_of%}
+has \ML\ type {\small\verb%term->type%} and returns the logical type of a
+term.
+
+\begin{session}
+\begin{verbatim}
+#"(1,2)";;
+"1,2" : term
+
+#type_of it;;
+":num # num" : type
+
+#("1","2");;
+("1", "2") : (term # term)
+
+#type_of(fst it);;
+":num" : type
+\end{verbatim}
+\end{session}
+
+To try to minimise confusion between the logical types of \HOL\ terms and
+the \ML\ types of \ML\ expressions, the former will be referred to as {\it object
+language types\/} and the latter as {\it meta-language types\/}.  For example,
+{\small\verb%"(1,T)"%} is an \ML\ expression that has meta-language type
+{\small\verb%term%} and evaluates to a term with object language type
+{\small\verb%":num#bool"%}.
+
+
+\begin{session}
+\begin{verbatim}
+#"(1,T)";;
+"1,T" : term
+
+#type_of it;;
+":num # bool" : type
+\end{verbatim}
+\end{session}
+
+\HOL\ terms can be input using explicit {\it quotation\/}, as above, or
+they can be constructed using \ML\ constructor functions. The function
+{\small\verb%mk_var%} constructs a variable from a string and a type.  In
+the example below, three variables of type {\small\verb%bool%} are
+constructed.  These are used later.
+
+\begin{session}
+\begin{verbatim}
+#let x = mk_var(`x`,":bool")
+#and y = mk_var(`y`,":bool")
+#and z = mk_var(`z`,":bool");;
+x = "x" : term
+y = "y" : term
+z = "z" : term
+\end{verbatim}
+\end{session}
+
+The constructors {\small\verb%mk_conj%} and {\small\verb%mk_imp%} construct
+conjunctions and implications respectively.
+
+\begin{session}
+\begin{verbatim}
+#let t = mk_imp(mk_conj(x,y),z);;
+t = "x /\ y ==> z" : term
+\end{verbatim}
+\end{session}
+
+\section{Terms}
+
+There are only four different kinds of terms:
+\begin{enumerate}
+\item Variables.
+\item Constants.
+\item Function applications: \ml{"$t_1$\ $t_2$"}.
+\item $\lambda$-abstractions: {\small\verb%"\%}$x$\ml{.}$t$\ml{"}.
+\end{enumerate}
+
+Both variables and constants have a name and a type; the difference is that
+constants cannot be bound by quantifiers, and their type is fixed when they are
+declared (see below). The type checking algorithm uses the types of constants to
+infer the types of variables in the same quotation. If there is not enough type
+information a type checking error results:
+
+
+\begin{session}\begin{verbatim}
+#"~x";;
+"~x" : term
+
+#"x";;
+Indeterminate types:  "x:?"
+
+evaluation failed     types indeterminate in quotation
+\end{verbatim}\end{session}
+
+In the first case, the \HOL\ type checker  used the  known type \ml{bool->bool}
+of {\small\verb%~%}  to  deduce  that  the  variable  \ml{x}   must  have  type
+\ml{bool}.  In the second case, it cannot deduce the type of \ml{x}.  Unlike in
+\ML, there must be  enough information  in a  quotation to  fully determine the
+type of  all  subterms.    The  default  `scope'  of type  information for type
+checking is a single quotation, so a  type in  one quotation  cannot affect the
+type-checking of another.  This scoping can be altered by using the {\it sticky
+type\/} facility, which can be used to give default types to variables (see the
+appropriate section  of  \DESCRIPTION\ for  details).   If there  is not enough
+contextually-determined type information to resolve the types  of all variables
+in a quotation, then it is necessary to explicitly indicate  the required types
+by using \ml{"$term$:$type$"} as illustrated below.
+
+\begin{session}\begin{verbatim}
+#"x:num";;
+"x" : term
+
+#type_of it;;
+":num" : type
+\end{verbatim}\end{session}
+
+Functions have types of the form \ml{$\sigma_1$->$\sigma_2$}, where
+$\sigma_1$ and $\sigma_2$ are the types of the domain and range of the function,
+respectively.
+
+\begin{session}\begin{verbatim}
+#type_of "==>";;
+":bool -> (bool -> bool)" : type
+
+#type_of "+";;
+":num -> (num -> num)" : type
+\end{verbatim}\end{session}
+
+\noindent Both \ml{+} and \ml{==>} are infixes.  The  session below illustrates
+this; it also illustrates object language versus meta-language types.
+
+\begin{session}\begin{verbatim}
+#"(x+1), (t1==>t2)";;
+"x + 1,(t1 ==> t2)" : term
+
+#type_of it;;
+":num # bool" : type
+
+#"x=1","t1==>t2";;
+("x = 1", "t1 ==> t2") : (term # term)
+
+#type_of(fst it), type_of(snd it);;
+(":bool", ":bool") : (type # type)
+\end{verbatim}\end{session}
+
+\noindent The types of constants are declared in {\it theories}; this is
+described in Section~\ref{theories}.
+
+An application $t_1\ t_2$ is badly typed if $t_1$ is not a function:
+
+\begin{session}\begin{verbatim}
+#"1 2";;
+Badly typed application of:  "1"
+   which has type:           ":num"
+to the argument term:        "2"
+   which has type:           ":num"
+
+evaluation failed     mk_comb in quotation
+\end{verbatim}\end{session}
+
+\noindent or if it is a function, but $t_2$ is not in its range:
+
+\begin{session}\begin{verbatim}
+#"~1";;
+Badly typed application of:  "$~"
+   which has type:           ":bool -> bool"
+to the argument term:        "1"
+   which has type:           ":num"
+
+evaluation failed     mk_comb in quotation
+\end{verbatim}\end{session}
+
+The dollar in front of {\small\verb%~%} indicates that the constant has a special
+syntactic status (in this case a non-standard precedence). Putting
+{\small\verb%$%} in front of any symbol causes the parser to ignore any special
+syntactic status (like being an infix) it might have.
+
+\begin{session}\begin{verbatim}
+#"$==> t1 t2";;
+"t1 ==> t2" : term
+\end{verbatim}\end{session}
+
+Lambda-terms, or $\lambda$-terms, denote functions. The
+symbol `{\small\verb%\%}'
+is used as an {\small ASCII} approximation to $\lambda$.
+Thus `{\small\verb%\%}$x$\ml{.}$t$' should be read
+as `$\lquant{x}t$'. For example,
+{\small\verb%"\x. x+1"%} is a term that denotes the function
+$n\mapsto n{+}1$.
+
+\begin{session}\begin{verbatim}
+#"\x.x+1";;
+"\x. x + 1" : term
+
+#type_of it;;
+":num -> num" : type
+\end{verbatim}\end{session}
+
+\section{Theories}
+\label{theories}
+
+The result of a session with the \HOL\ system is an object called a {\it
+theory\/}.  This object is closely related to what a logician would call a
+theory, but there are some differences arising from the needs of mechanical
+proof.  A \HOL\ theory, like a logician's theory, contains sets of types,
+constants, definitions and axioms.  In addition, however, a \HOL\ theory
+contains an explicit list of theorems that have been proved from the axioms
+and definitions. Logicians normally do not need to distinguish theorems that
+have actually been proved from those that could be proved, hence they do not
+normally consider sets of proven theorems as part of a theory; rather, they
+take the theorems of a theory to be the (often infinite) set of all
+consequences of the axioms and definitions.  Another difference between
+logicians' theories and \HOL\ theories is that, for logicians, theories are
+relatively static objects, but in \HOL\ they can be thought of as potentially
+extendable. For example, the \HOL\ system provides tools for adding to
+theories and combining theories.  A typical interaction with \HOL\ consists in
+combining some existing theories, making some definitions, proving some
+theorems and then saving the resulting new theory.
+
+The purpose of the \HOL\ system is to provide tools to enable well-formed
+theories to be constructed.  All the theorems of such theories are logical
+consequences of the definitions and axioms of the theory.  The \HOL\ system
+ensures that only well-formed theories can be constructed by allowing
+theorems to be created by {\it formal proof\/} only.
+
+A theory is represented in the \HOL\  system as  a collection  of files, called
+theory files.  Each file has a name of the form $name$\ml{.th}, where $name$ is
+a string supplied by the user.
+
+Theory files are structured hierarchically to represent sequences of extensions of
+an initial theory called \ml{HOL}.
+Each theory file making up a theory records
+some types, constants, axioms and
+theorems, together with
+pointers to other theory files called its {\it parents\/}.
+This collection of reachable files is called the {\it
+ancestry\/} of the theory file. Axioms, definitions
+and theorems are named in the \HOL\ system by two strings: the name of the theory
+file where they are stored, together with a name within that file supplied by the
+user.
+Specifically,
+axioms, definitions and theorems
+are named by a pair of strings $\langle thy,name\rangle$
+where $thy$ is the name of the
+theory current when the item was declared and $name$
+is a specific name supplied by the user (see the functions
+\ml{new\_axiom}, \ml{new\_definition} \etc\ below).
+
+A typical piece of work with the \HOL\ system consists in a number of sessions. In
+the first of these a new theory, ${\cal T}$ say, is created by extending existing
+theories with a number of definitions. The concrete result of the session will be a
+theory file ${\cal T}$\ml{.th} whose contents are created during the
+session and whose ancestry represents the desired logical theory.  In subsequent
+sessions this theory is extended by proving new theorems which will be stored in
+the file ${\cal T}$\ml{.th}. The logical meaning of these sessions is that a new
+extension to ${\cal T}$ is created which replaces the old version.  Subsequent
+pieces of work can build on (\ie\ extend) the definitions and theorems of ${\cal
+T}$ by making it a parent of new theories.
+
+There are two modes of working with \HOL:   {\it  draft mode\/}  and {\it proof
+mode\/}.  In  draft  mode,  inconsistencies  can  be  introduced  by  asserting
+inconsistent axioms,  but  in  proof  mode only  consistency preserving actions
+(namely valid proof) can be done.  Draft mode is analogous to `super user mode'
+in Unix, in that it gives access to dangerous facilities.   Everything that can
+be done in proof mode can be done in draft mode, but not vice versa.
+
+There is always a {\it current theory\/}, whose name  is given  by the function
+\ml{current\_theory}.  This function maps the value void, written
+`\ml{()}' in \ML, to a string giving the name of the current theory.
+Thus the \ML\ expression
+\ml{current\_theory ()} evaluates to a string giving the name of the current
+theory.  Initially  \HOL\  is in  proof mode  with current theory
+called \ml{HOL}.  So evaluating \ml{current\_theory ()} immediately after
+initiating a \HOL\ session gives the value \ml{`HOL`}, as can be seen in
+the session shown below:
+
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+% hol
+
+          _  _    __    _      __    __
+   |___   |__|   |  |   |     |__|  |__|
+   |      |  |   |__|   |__   |__|  |__|
+
+          Version 2.0, built on Sep 1 1991
+
+#current_theory();;
+`HOL` : string
+
+#
+\end{verbatim}\end{session}
+
+Executing \ml{new\_theory`$thy$`} creates a new  theory called  $thy$; it fails
+if there already exists a file $thy$\ml{.th} in the current working
+directory (or in any directory on the current \HOL\ {\it search path\/},
+for a description of  which, see  the appropriate  section of
+\DESCRIPTION).
+
+\begin{session}\begin{verbatim}
+#new_theory `Peano`;;
+() : void
+\end{verbatim}\end{session}
+
+\noindent This starts a theory called \ml{Peano},  which is  to be  made into a
+theory containing Peano's postulates as axioms for the natural
+numbers.\footnote{An elaborate theory of numbers is built into \HOL, in which
+Peano's postulates  are  in  fact  derived  theorems rather  than postulated as
+axioms.}  These postulates, stated informally, are:
+
+\begin{list}{{\small\bf P\arabic{Peano}}}{\usecounter{Peano}
+\setlength{\leftmargin}{12mm}
+\setlength{\rightmargin}{7mm}
+\setlength{\labelwidth}{6mm}
+\setlength{\labelsep}{2mm}
+\setlength{\listparindent}{0mm}
+\setlength{\itemsep}{14pt plus1pt minus1pt}
+\setlength{\topsep}{3mm}
+\setlength{\parsep}{0mm}}
+
+\item There is a number $0$.
+\item There is a function \Suc\ called the successor function such that
+if $n$ is a number then $\Suc \ n$ is a number.
+\item $0$ is not the successor of any number.
+\item If two numbers have the same successor then they are equal.
+\item If a property holds of $0$, and if whenever it holds of a number then it
+also holds of the successor of the number, then the property holds of all
+numbers. This postulate is called {\it Mathematical Induction}.
+\end{list}
+
+To fomalize this in \HOL\ a new type is introduced called \ml{nat}:
+
+\begin{session}\begin{verbatim}
+#new_type 0 `nat`;;
+() : void
+\end{verbatim}\end{session}
+
+In general \ml{new\_type}$\ n\ \ml{`\ty{op}`}$ makes \ty{op}
+a new $n$-ary type operator in the current theory.
+Constant types are regarded as degenerate type operators with no arguments, thus
+the new type \ml{nat}
+is declared to be a $0$-ary type operator. The type operator \ml{list} is
+an example of a $1$-ary operator,
+types built with \ml{list} are written as \ml{$\sigma\ $list}. The type
+operator {\small\verb%prod%} is $2$-ary, types using it are written
+as \ml{($\sigma_1$,$\sigma_2$)prod} (which can, in fact, be written as
+$\sigma_1${\small\verb%#%}$\sigma_2$).
+
+The axioms {\small\bf P1} and {\small\bf P2} can now be formalized by declaring
+two new constants of type \ml{nat}
+to represent $0$ and \Suc.
+
+Evaluating \ml{new\_constant(`\con{c}`,}$\sigma$\ml{)} makes
+$\con{c}$ a new constant of type $\sigma$ in the current theory.
+This fails if:
+
+\begin{myenumerate}
+\item not in draft mode;
+\item there already exists a constant named $\con{c}$ in the current
+theory.
+\end{myenumerate}
+
+\begin{session}\begin{verbatim}
+#new_constant(`0`, ":nat");;
+evaluation failed     new_constant -- 0 clashes with existing constant
+\end{verbatim}\end{session}
+
+
+The symbol \ml{0}
+is already a constant of the built-in theory \ml{num}, and this prevents
+us using it as a constant of our new theory. The symbol \ml{O} will be used
+instead.
+
+\begin{session}\begin{verbatim}
+#new_constant(`O`,":nat");;
+() : void
+
+#new_constant(`Suc`, ":nat->nat");;
+() : void
+\end{verbatim}\end{session}
+
+
+
+The \HOL\ type checker ensures that {\small\bf P1} and {\small\bf P2} hold.
+{\small\bf P3} is now asserted as an axiom:
+
+\begin{session}\begin{verbatim}
+#new_axiom(`P3`, "!n. ~(O = Suc n)");;
+|- !n. ~(O = Suc n)
+\end{verbatim}\end{session}
+
+\noindent This creates an axiom in the current theory (\ie\ in \ml{Peano}) called
+\ml{P3}. Axiom {\small\bf P4} can be declared similarly:
+
+
+\begin{session}\begin{verbatim}
+#new_axiom(`P4`, "!m n. (Suc m = Suc n) ==> (m = n)");;
+|- !m n. (Suc m = Suc n) ==> (m = n)
+\end{verbatim}\end{session}
+
+The final Peano axiom is Mathematical Induction:
+
+\begin{session}\begin{verbatim}
+#new_axiom(`P5`,"!P. P O /\ (!n. P n ==> P(Suc n)) ==> (!n. P n)");;
+|- !P. P O /\ (!n. P n ==> P(Suc n)) ==> (!n. P n)
+\end{verbatim}\end{session}
+
+To inspect the theory, the function \ml{print\_theory} can be used:
+
+\begin{session}\begin{verbatim}
+#print_theory `Peano`;;
+The Theory Peano
+Parents --  HOL
+Types --  ":nat"
+Constants --  O ":nat"     Suc ":nat -> nat"
+Axioms --
+  P3  |- !n. ~(O = Suc n)
+  P4  |- !m n. (Suc m = Suc n) ==> (m = n)
+  P5  |- !P. P O /\ (!n. P n ==> P(Suc n)) ==> (!n. P n)
+
+******************** Peano ********************
+#\end{verbatim}\end{session}
+
+To end the session and write out the various declarations into the theory file
+\ml{Peano.th} the function \ml{close\_theory} is used.
+
+\begin{session}\begin{verbatim}
+#close_theory();;
+() : void
+
+#quit();;
+% ls Peano.th
+Peano.th
+%
+\end{verbatim}\end{session}
+
+\noindent The function \ml{quit} exits from the \HOL\ system.
+
+The preceding session set up a theory called \ml{Peano}. It is usual
+to include in `Peano arithmetic' axioms defining addition and multiplication.
+To do this a new session can be started and the theory extended.
+
+\begin{session}\begin{verbatim}
+% hol
+
+          _  _    __    _      __    __
+   |___   |__|   |  |   |     |__|  |__|
+   |      |  |   |__|   |__   |__|  |__|
+
+          Version 2.0 (Sun3/Franz), built on Sep 1 1991
+
+#extend_theory `Peano`;;
+Theory Peano loaded
+() : void
+\end{verbatim}\end{session}
+
+\noindent The two new axioms can now be added, but first constants \ml{add} and
+\ml{mult} must  be  declared  to  represent  addition  and  multiplication (the
+symbols \ml{+}  and  \ml{*}  are  already in  use).   These can  be declared as
+infixes using \ml{new\_infix} instead of \ml{new\_constant}.
+
+\begin{session}\begin{verbatim}
+#new_infix(`add`,":nat->nat->nat");;
+() : void
+
+#new_infix(`mult`,":nat->(nat->nat)");;
+() : void
+\end{verbatim}\end{session}
+
+\noindent Constants declared with \ml{new\_infix}
+must have a type of the form
+\ml{$\sigma$->($\sigma$->$\sigma$)}.
+
+Axioms defining \ml{add} and \ml{mult} can now be defined.
+
+\begin{session}\begin{verbatim}
+#new_axiom
+# (`add_def`,
+#  "(!n. O add n = n) /\ (!m n. (Suc m) add n = Suc(m add n))");;
+|- (!n. O add n = n) /\ (!m n. (Suc m) add n = Suc(m add n))
+
+#new_axiom
+# (`mult_def`,
+#  "(!n. O mult n = O) /\ (!m n. (Suc m) mult n = (m mult n) add n)");;
+|- (!n. O mult n = O) /\ (!m n. (Suc m) mult n = (m mult n) add n)
+\end{verbatim}\end{session}
+
+\noindent The theory \ml{Peano} has now been extended to contain the new
+definitions.
+
+This example shows how a theory is set up. How to prove consequences of axioms and
+definitions is described later. The \HOL\ system contains a built-in
+theory of numbers called \ml{num} which contains Peano's postulates and a
+(descendent)  theory \ml{arithmetic} containing the definitions of addition
+(\ml{+}) and multiplication (\ml{*}) and other things.
+In fact, Peano's
+postulates are theorems not axioms in the theory \ml{num}. The primitive constants
+\ml{0} and \ml{SUC} (corresponding to \ml{O} and \ml{Suc} in \ml{Peano}) are
+{\it defined\/} in terms of purely logical notions.
+In \HOL, {\it definitions\/} are a special kind of axiom that are
+guaranteed to be consistent. The commonest (but not only) form of a definition is:
+
+\[f\ x_1\ \ldots\ x_n = t\]
+
+\noindent where $f$ is declared to be a new constant satisfying this
+equation (and $t$ is a term whose free variables are included in the set
+$\{x_1,\ldots,x_n\}$).  Such definitions cannot be recursive because, for
+example:
+
+\[ f\ x = (f\ x)+1 \]
+
+\noindent would imply $0=1$ (subtract $f\ x$ from both sides)
+and is therefore inconsistent. An example of a definition is:
+
+\begin{session}\begin{verbatim}
+#new_definition(`Double_def`, "Double x = x add x");;
+|- !x. Double x = x add x
+\end{verbatim}\end{session}
+
+\noindent This definition both declares \ml{Double} as a new constant of the
+appropriate type and asserts the defining equation as a definitional axiom.
+
+\begin{session}\begin{verbatim}
+#print_theory `Peano`;;
+The Theory Peano
+Parents --  HOL
+Types --  ":nat"
+Constants --
+  add ":nat -> (nat -> nat)"     mult ":nat -> (nat -> nat)"
+  O ":nat"     Suc ":nat -> nat"     Double ":nat -> nat"
+Infixes --
+  add ":nat -> (nat -> nat)"     mult ":nat -> (nat -> nat)"
+Axioms --
+  P3  |- !n. ~(O = Suc n)
+  P4  |- !m n. (Suc m = Suc n) ==> (m = n)
+  P5  |- !P. P O /\ (!n. P n ==> P(Suc n)) ==> (!n. P n)
+  add_def  |- (!n. O add n = n) /\ (!m n. (Suc m) add n = Suc(m add n))
+  mult_def
+    |- (!n. O mult n = O) /\ (!m n. (Suc m) mult n = (m mult n) add n)
+
+Definitions --  Double_def  |- !x. Double x = x add x
+******************** Peano ********************
+\end{verbatim}\end{session}
+
+
+The use of axioms, as illustrated here, carries considerable  danger in general
+because it is very easy to assert inconsistent axioms.  It is thus safer to use
+only definitions.  At first sight this might appear impossible, but in fact all
+of ordinary  mathematics  can  be  developed  from  logic  by definition alone.
+Showing this was  the achievement  of Russell  and Whitehead  in their treatise
+{\sl Principia  Mathematica}  \cite{Principia}.    A   theory  containing  only
+definitions is called a {\it definitional theory\/}.   Many useful definitional
+theories are built into the \HOL\ system, or available as libraries.  Examples
+include theories of numbers  (both natural  numbers and  integers), sets, bags,
+finite trees, group theory, properties of fixed points and more.  Libraries are
+constantly being  added  to \HOL\  and users  are encouraged  to contribute new
+theories to the library when they develop them.
+
+\newpage % PBHACK
+
+The theory of numbers built into \HOL\ is a definitional theory that defines
+numbers logically. Peano's postulates are proved from the definitions of
+the type \ml{num} and the constants \ml{0} and \ml{SUC}.
+It follows from Peano's postulates that certain kinds of recursion equations are
+equivalent to non-recursive definitions. There is a built-in theory called
+\ml{prim\_rec} (for `primitive recursion') that supports this,
+together with tools for automatically transforming recursion equations into
+definitions. This is illustrated later but, for example, here are the built-in
+definitions of \ml{+} and \ml{*}:
+
+\begin{session}\begin{verbatim}
+#ADD;;
+Definition ADD autoloaded from theory `arithmetic`.
+ADD = |- (!n. 0 + n = n) /\ (!m n. (SUC m) + n = SUC(m + n))
+
+|- (!n. 0 + n = n) /\ (!m n. (SUC m) + n = SUC(m + n))
+
+#MULT;;
+Definition MULT autoloaded from theory `arithmetic`.
+MULT = |- (!n. 0 * n = 0) /\ (!m n. (SUC m) * n = (m * n) + n)
+
+|- (!n. 0 * n = 0) /\ (!m n. (SUC m) * n = (m * n) + n)
+\end{verbatim}\end{session}
+
+\noindent This also illustrates how certain built-in definitions (and theorems)
+are `autoloaded' from the theories where they are defined (\ml{arithmetic} in this
+case).
+
+\newpage % PBHACK
+
+The theory  \ml{arithmetic} contains  too many  pre-proved theorems  to show in
+full, but  here are  the constants,  definitions, and  the first  two (out of
+113) theorems.
+
+\begin{session}\begin{verbatim}
+#print_theory `arithmetic`;;
+The Theory arithmetic
+Parents --  BASIC-HOL     prim_rec
+Constants --
+  + ":num -> (num -> num)"     - ":num -> (num -> num)"
+  * ":num -> (num -> num)"     EXP ":num -> (num -> num)"
+  > ":num -> (num -> bool)"     <= ":num -> (num -> bool)"
+  >= ":num -> (num -> bool)"     MOD ":num -> (num -> num)"
+  DIV ":num -> (num -> num)"
+Infixes --
+  + ":num -> (num -> num)"     - ":num -> (num -> num)"
+  * ":num -> (num -> num)"     EXP ":num -> (num -> num)"
+  > ":num -> (num -> bool)"     <= ":num -> (num -> bool)"
+  >= ":num -> (num -> bool)"     MOD ":num -> (num -> num)"
+  DIV ":num -> (num -> num)"
+Definitions --
+  ADD  |- (!n. 0 + n = n) /\ (!m n. (SUC m) + n = SUC(m + n))
+  SUB
+    |- (!m. 0 - m = 0) /\
+       (!m n. (SUC m) - n = (m < n => 0 | SUC(m - n)))
+  MULT  |- (!n. 0 * n = 0) /\ (!m n. (SUC m) * n = (m * n) + n)
+  EXP  |- (!m. m EXP 0 = 1) /\ (!m n. m EXP (SUC n) = m * (m EXP n))
+  GREATER  |- !m n. m > n = n < m
+  LESS_OR_EQ  |- !m n. m <= n = m < n \/ (m = n)
+  GREATER_OR_EQ  |- !m n. m >= n = m > n \/ (m = n)
+  DIVISION
+    |- !n.
+        0 < n ==>
+        (!k. (k = ((k DIV n) * n) + (k MOD n)) /\ (k MOD n) < n)
+
+Theorems --
+  SUC_NOT  |- !n. ~(0 = SUC n)
+  ADD_0  |- !m. m + 0 = m
+  .
+  .
+  .
+\end{verbatim}\end{session}
+
+\noindent Note that \ml{DIV} is defined by a constant specification. See
+\DESCRIPTION\ for further explanation.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,1327 @@
+\chapter{How to program a proof tool}\label{tool}
+
+Users of \HOL\ can create their own theorem proving tools by combining
+predefined rules and tactics. The \ML\ type-discipline
+ensures that only logically sound methods can be used to create values
+of type \ml{thm}.
+In this chapter, a simple but real\footnote{The example
+is `real' in that the need for it came up last week.} example is described. 
+
+Several implementations of the tool are given to illustrate various styles
+of proof programming. The first implementation is the obvious one, but
+is very slow because of the `brute force' method used. The second
+implementation produces a much more streamlined proof, but still has a
+brute force component, namely the use of a tautology checker from the
+library \ml{taut}. The third implementation replaces the general
+tautology checker with a special purpose derived inference rule. The
+fourth and final implementation uses an optimised implementation of
+the special purpose rule; understanding it is left as an exercise in
+using \DESCRIPTION.
+
+The timings in this chapter are based on Version 1.12. Later versions
+of \HOL{} have an optimised tautology checker library due to Richard
+Boulton. This new tautology checker is actually faster than the
+special purpose derived rule described in
+Section~\ref{bogus-optimization}.  Thus with the new tautology checker
+the so called ``even more efficient implementation'' is actually
+slower than the program it replaces! This was only discovered (by
+Juanito Camilleri) during the preparation of Version 2 of the
+tutorial. Rather than completely rewriting the chapter, it was decided
+to leave it essentially as it was (except for the addition of this
+ paragraph). The methods
+that are described are still useful, and there is an important lesson
+here: optimizations can become obsolete.  The really dedicated reader
+could learn a lot by studying the old and new tautology checker
+({\small\verb%contrib/icl-taut%} and
+{\small\verb%Library/taut%}, respectively) to find out how they work.
+Besides improving the tautology library, Richard Boulton also
+reimplemented rewriting using ideas from Tom Melham and Roger Fleming.
+As a result, in versions later than 1.12 the various rewriting tools
+are quite a bit faster and generate fewer intermediate theorems.
+
+
+It is sometimes claimed that `\LCF-style' systems can never be
+practical, because the efficiency needed to handle real examples can
+only be obtained with decision procedures coded as primitive rules. It
+is hoped that this chapter, as well as the \ml{taut} library, shows
+that the truth of such claims is not obvious. Research is currently in
+progress to see if a variety of practical decision algorithms can be
+implemented as efficient derived rules.
+
+The tool described here is a tactic that puts conjunctions into the
+normal form obtained by right associating, sorting the conjuncts into
+a canonical order and then removing repetitions. This canonical order
+uses the built-in polymorphic infix \ml{<<}, which orders any pair of
+\ML\ values with the same type.
+
+\section{A simple implementation}
+
+A first implementation uses `brute-force' rewriting with
+the equations:
+
+\begin{hol}\begin{verbatim}
+   |- (t1 /\ t2) /\ t3 = t1 /\ (t2 /\ t3)     % Associativity          %
+
+   |- t1 /\ t2 = t2 /\ t1                     % Symmetry (if t2 << t1) %
+   |- t1 /\ (t2 /\ t3) = t2 /\ (t1 /\ t3)     % Symmetry (if t2 << t1) %
+
+   |- t /\ t = t                              % Cancel repeated terms  %
+   |- t1 /\ (t1 /\ t2) = t1 /\ t2             % Cancel repeated terms  %
+\end{verbatim}\end{hol}
+
+\noindent These equations are easily proved using the 
+library \ml{taut}. Note that \HOL\ Version 1.12 is used in
+this chapter. Versions of \HOL\ later than 1.12 contain improved
+rewriting tools and a new version of the library \ml{taut} (the old version
+of the library is preserved in the directory
+{\small\verb%contrib/icl-taut%}).
+
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+scaup% hol
+          _  _    __    _      __    __
+   |___   |__|   |  |   |     |__|  |__|
+   |      |  |   |__|   |__   |__|  |__|
+   
+          Version 1.12 (Sun3/Franz), built on Feb 23 1991
+
+#load_library `taut`;;
+Loading library `taut` ...
+........................
+Library `taut` loaded.
+() : void
+\end{verbatim}\end{session}
+
+\noindent The library \ml{taut} defines \ml{TAUT\_RULE}\footnote{The function \ml{TAUT\_RULE} has been replaced by a function called \ml{TAUT\_PROVE} 
+in the new version of the \ml{taut} library available in versions of 
+\HOL\ later than 1.12}
+which converts a term to the corresponding theorem, if the term is a tautology.
+\vfill
+\newpage
+\begin{session}\begin{verbatim}
+#let ASSOC = TAUT_RULE "(t1 /\ t2) /\ t3 = t1 /\ t2 /\ t3";;
+ASSOC = |- (t1 /\ t2) /\ t3 = t1 /\ t2 /\ t3
+
+#let SYM1 = TAUT_RULE "t1 /\ t2 = t2 /\ t1";;
+SYM1 = |- t1 /\ t2 = t2 /\ t1
+
+#let SYM2 = TAUT_RULE "t1 /\ t2 /\ t3 = t2 /\ t1 /\ t3";;
+SYM2 = |- t1 /\ t2 /\ t3 = t2 /\ t1 /\ t3
+
+#let CANCEL1 = TAUT_RULE "t /\ t = t";;
+CANCEL1 = |- t /\ t = t
+
+#let CANCEL2 = TAUT_RULE "t1 /\ t1 /\ t2 = t1 /\ t2";;
+CANCEL2 = |- t1 /\ t1 /\ t2 = t1 /\ t2
+\end{verbatim}\end{session}
+
+\noindent One cannot just use \ml{REWRITE\_TAC} with \ml{SYM1} and
+\ml{SYM2}, because it would loop.  What is needed is a special
+rewriting tool that will only apply symmetry when terms are out of
+order. Such a tool can be implemented as a {\it conversion\/}.
+
+Conversions are described in detail in \DESCRIPTION. The idea, which
+is due to Larry Paulson \cite{lcp_rewrite}, is that a conversion is an
+\ML\ function that maps a term $t_1$ to an equation:
+
+\medskip
+{\small\verb%|- %}$t_1${\small\verb% = %}$t_2$.  
+\medskip
+
+\noindent The intention is that a conversion will only apply to a
+subset of terms: on members of this subset it will generate an
+equation, on all other terms it will fail. Because conversions are so
+central to theorem-proving in \HOL, the \ML\ type
+{\small\verb%term->thm%} is abbreviated to {\small\verb%conv%}.
+Conversions are applied using the function:
+
+\begin{hol}\begin{verbatim}
+   REWR_CONV : thm -> conv
+\end{verbatim}\end{hol}
+
+\noindent This takes an equation {\small\verb%|- %}$t_1${\small\verb% = %}$t_2$
+and generates a conversion (\ie\ \ML\ function of type {\small\verb%term->thm%}) 
+that maps any term $u$ that matches $t_1$ to the theorem
+{\small\verb%|- %}$u${\small\verb% = %}$v$, where $v$ is 
+obtained by applying the substitution obtained by matching $u$ with $t_1$ to $t_2$.
+If $u$ doesn't match $t_1$ then the application of \ml{REWR\_CONV} fails.
+
+
+\begin{session}\begin{verbatim}
+#REWR_CONV ASSOC "(A /\ B) /\ C";;
+|- (A /\ B) /\ C = A /\ B /\ C
+
+#REWR_CONV ASSOC "A /\ (B /\ C)";;
+evaluation failed     REWR_CONV: lhs of theorem doesn't match term
+
+#REWR_CONV SYM1 "B /\ A";;
+|- B /\ A = A /\ B
+
+#REWR_CONV SYM1 "A \/ B";;
+evaluation failed     REWR_CONV: lhs of theorem doesn't match term
+\end{verbatim}\end{session}
+
+\noindent For our application, the required conversion should map
+a conjunction 
+
+\medskip
+$t_1${\small\verb% /\ (%}$t_{2_1}${\small\verb% /\ %}$t_{2_2}${\small\verb%)%} 
+\medskip
+
+\noindent in which 
+$t_{2_1}${\small\verb% << %}$t_1$ to the equational theorem:
+
+\medskip
+
+{\small\verb%|- %}$t_1${\small\verb% /\ (%}$t_{2_1}${\small\verb% /\ %}$t_{2_2}${\small\verb%)  =  %} $t_{2_1}${\small\verb% /\ (%}$t_1${\small\verb% /\ %}$t_{2_2}${\small\verb%)%} 
+
+\medskip
+
+\noindent If $t_1${\small\verb% << %}$t_{2_1}$ then the conversion fails
+(in the \ML\ sense) when applied to
+$t_1${\small\verb% /\ (%}$t_{2_1}${\small\verb% /\ %}$t_{2_2}${\small\verb%)%}.
+In addition, if the right conjunct is not itself a conjunction, then
+the conversion should reorder if necessary. More precisely, if the conversion
+is applied to $t_1${\small\verb% /\ %}$t_2$ where $t_2$ is not a conjunction and
+$t_2${\small\verb% << %}$t_1$, then it should generate the equation:
+
+\medskip
+{\small\verb%|- %}$t_1${\small\verb% /\ %}$t_2${\small\verb%  =  %}$t_2${\small\verb% /\ %}$t_1$
+\medskip
+
+\noindent Such a conversion is easily implemented in \ML\ using
+\ml{SYM1} and \ml{SYM2} proved above, together with the \ML\ syntax
+processing functions \ml{is\_conj} and \ml{dest\_conj}, where:
+
+\begin{hol}\begin{verbatim}
+   is_conj   : term -> bool 
+   dest_conj : term -> (term # term)
+\end{verbatim}\end{hol}
+
+\noindent These are functions that test whether a term is a conjunction, and
+splits a term into its two conjuncts, respectively. For example:
+
+\begin{session}\begin{verbatim}
+#is_conj "A /\ B";;
+true : bool
+
+#is_conj "A \/ B";;
+false : bool
+
+#dest_conj "A /\ B";;
+("A", "B") : (term # term)
+
+#dest_conj "A \/ B";;
+evaluation failed     dest_conj
+\end{verbatim}\end{session}
+
+The implementation of the special purpose conversion, 
+\ml{CONJ\_ORD\_CONV}, is now straightforward.
+
+
+\begin{session}\begin{verbatim}
+#let CONJ_ORD_CONV t =
+# let t1,t2 = dest_conj t
+# in
+# if is_conj t2
+#   then (let t21,t22 = dest_conj t2
+#         in
+#         if t21 << t1 then REWR_CONV SYM2 t else fail)
+#   else (if t2  << t1 then REWR_CONV SYM1 t else fail);;
+CONJ_ORD_CONV = - : conv
+\end{verbatim}\end{session}
+
+\noindent This is illustrated by:
+
+\begin{session}\begin{verbatim}
+#"A:bool" << "B:bool";;
+true : bool
+
+#"B:bool" << "C:bool";;
+true : bool
+
+#CONJ_ORD_CONV "B /\ A";;
+|- B /\ A = A /\ B
+
+#CONJ_ORD_CONV "A /\ B";;
+evaluation failed     fail
+\end{verbatim}\end{session}
+
+The process of normalizing a conjunction can be split into four phases:
+
+\begin{enumerate}
+\item Right associate the conjunction by repeatedly applying:
+\begin{quote}
+\ml{REWR\_CONV\ ASSOC}
+\end{quote}
+\item Put the conjuncts in canonical order by repeatedly applying:
+\begin{quote}
+\ml{CONJ\_ORD\_CONV}
+\end{quote}
+\item Remove repetitions of $t$ of the form $t${\small\verb% /\ %}$t$ 
+by repeatedly applying:
+\begin{quote}
+\ml{REWR\_CONV\ CANCEL1}
+\end{quote}
+\item Remove repetitions of $t_1$ in
+$t_1${\small\verb% /\ (%}$t_1${\small\verb% /\ %}$t_2${\small\verb%)%}
+by repeatedly applying:
+\begin{quote}
+\ml{REWR\_CONV\ CANCEL2}
+\end{quote}
+\end{enumerate}
+
+
+To implement this, a method of repeatedly applying a conversion to
+subterms of a term is needed. This is provided by the operator
+
+\begin{hol}\begin{verbatim}
+   TOP_DEPTH_CONV : conv -> conv
+\end{verbatim}\end{hol}
+
+\noindent If $c$ is a conversion then \ml{TOP\_DEPTH\_CONV}~$c$ is a
+conversion that repeatedly applies $c$ to all subterms until $c$ is no
+longer applicable to any subterms. The function \ml{TOP\_DEPTH\_CONV}
+is one of a family of operators that apply conversions throughout 
+terms. Members of this family differ in the order in which subterms
+are visited and the amount of repetition that is done. For more
+details, see the chapter on conversions in \DESCRIPTION.
+
+\begin{session}\begin{verbatim}
+#let ex1 = "A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D";;
+ex1 = "A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D" : term
+
+#REWR_CONV ASSOC ex1;;
+evaluation failed     REWR_CONV: lhs of theorem doesn't match term
+
+#TOP_DEPTH_CONV (REWR_CONV ASSOC) ex1;;
+|- A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D =
+   A /\ B /\ C /\ A /\ C /\ A /\ D /\ D
+\end{verbatim}\end{session}
+
+\noindent The right hand side of this theorem is \ml{ex1} in right-associated
+form. The conclusion of a theorem can be extracted with the \ML\ function
+\ml{concl} and the right hand side of an equation can be extracted with
+\ml{rhs}. Thus, continuing the session:
+
+\begin{session}\begin{verbatim}
+#let ex2 = rhs(concl it);;
+ex2 = "A /\ B /\ C /\ A /\ C /\ A /\ D /\ D" : term
+
+#TOP_DEPTH_CONV CONJ_ORD_CONV ex2;;
+|- A /\ B /\ C /\ A /\ C /\ A /\ D /\ D =
+   A /\ A /\ A /\ B /\ C /\ C /\ D /\ D
+\end{verbatim}\end{session}
+
+\noindent The right hand side of this is the result of canonicalizing
+the order of the conjuncts in the left hand side. Next, the repetitions
+can be eliminated using \ml{CANCEL1} and \ml{CANCEL2}.
+
+\begin{session}\begin{verbatim}
+#let ex3 = rhs(concl it);;
+ex3 = "A /\ A /\ A /\ B /\ C /\ C /\ D /\ D" : term
+
+#TOP_DEPTH_CONV (REWR_CONV CANCEL1) ex3;;
+|- A /\ A /\ A /\ B /\ C /\ C /\ D /\ D =
+   A /\ A /\ A /\ B /\ C /\ C /\ D
+\end{verbatim}\end{session}
+
+\begin{session}\begin{verbatim}
+#let ex4 = rhs(concl it);;
+ex4 = "A /\ A /\ A /\ B /\ C /\ C /\ D" : term
+
+#TOP_DEPTH_CONV (REWR_CONV CANCEL2) ex4;;
+|- A /\ A /\ A /\ B /\ C /\ C /\ D = A /\ B /\ C /\ D
+\end{verbatim}\end{session}
+
+
+To make the conjunction normalizer, the four stages just described
+must be performed in sequence. Conversions can be applied in sequence using
+the infixed function:
+
+\begin{hol}\begin{verbatim}
+   THENC : conv -> conv -> conv
+\end{verbatim}\end{hol}
+
+
+\noindent If $c_1\ t_1$ evaluates to $\ml{ |- }t_1\ml{=}t_2$ and
+$c_2\ t_2$ evaluates to $\ml{ |- }t_2\ml{=}t_3$, then
+$\ml{(}c_1\ \ml{THENC}\ c_2\ml{)}\ t_1$ evaluates to
+$\ml{\ |-\ }t_1\ml{=}t_3$. If the
+evaluation of $c_1\ t_1$ or the evaluation of $c_2\ t_2$ fails,
+then so does the evaluation of $c_1\ \ml{THENC}\ c_2$. \ml{THENC} is
+justified by the transitivity of equality.
+
+Using \ml{THENC}, the normalizer is defined by
+
+\begin{session}\begin{verbatim}
+#let CONJ_NORM_CONV =
+# TOP_DEPTH_CONV(REWR_CONV ASSOC)   THENC
+# TOP_DEPTH_CONV CONJ_ORD_CONV         THENC
+# TOP_DEPTH_CONV(REWR_CONV CANCEL1) THENC
+# TOP_DEPTH_CONV(REWR_CONV CANCEL2);;
+
+CONJ_NORM_CONV = - : conv
+
+#CONJ_NORM_CONV ex1;;
+|- A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D = A /\ B /\ C /\ D
+\end{verbatim}\end{session}
+
+This conversion can now be converted to a rule or tactic using the functions
+\ml{CONV\_RULE} or \ml{CONV\_TAC}, respectively.
+
+
+\begin{hol}
+\begin{verbatim}
+   CONV_RULE : conv -> thm -> thm
+   CONV_TAC  : conv -> tactic
+\end{verbatim}
+\end{hol}
+
+\noindent $\ml{CONV\_RULE}\ c\ \ml{(|- }t\ml{)}$ returns $\ml{|- }t'$, where
+$c\ t$ evaluates to the equation
+$\ml{|-}\ t\ml{=}t'$. 
+$\ml{CONV\_TAC}\ c$ is a tactic that
+converts the conclusion of a goal using $c$. For more details see \DESCRIPTION.
+
+\begin{session}\begin{verbatim}
+#let CONJ_NORM_TAC = CONV_TAC CONJ_NORM_CONV;;
+CONJ_NORM_TAC = - : tactic
+\end{verbatim}\end{session}
+
+Here is an example. It uses {\it antiquotation\/}: if $x$ is an \ML\
+indentifier bound to term, then occurrences of
+{\small\verb%^%}$x$ inside a quotation
+denotes the term bound to $x$.
+
+\begin{session}\begin{verbatim}
+#g "^ex1 ==> B";;
+"A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D ==> B"
+
+() : void
+
+#e CONJ_NORM_TAC;;
+OK..
+"A /\ B /\ C /\ D ==> B"
+\end{verbatim}\end{session}
+
+To summarize, here is the \ML\ code implementing the normalizer:
+
+\begin{hol}\begin{verbatim}
+   load_library `taut`;;
+
+   let ASSOC   = TAUT_RULE "(t1 /\ t2) /\ t3 = t1 /\ t2 /\ t3"
+   and SYM1    = TAUT_RULE "t1 /\ t2 = t2 /\ t1"
+   and SYM2    = TAUT_RULE "t1 /\ t2 /\ t3 = t2 /\ t1 /\ t3"
+   and CANCEL1 = TAUT_RULE "t /\ t = t"
+   and CANCEL2 = TAUT_RULE "t1 /\ t1 /\ t2 = t1 /\ t2";;
+
+   let CONJ_ORD_CONV t =
+    let t1,t2 = dest_conj t
+    in
+    if is_conj t2
+      then (let t21,t22 = dest_conj t2
+            in
+            if t21 << t1 then REWR_CONV SYM2 t else fail)
+      else (if t2  << t1 then REWR_CONV SYM1 t else fail);;
+
+   let CONJ_NORM_CONV =
+    TOP_DEPTH_CONV(REWR_CONV ASSOC)   THENC
+    TOP_DEPTH_CONV CONJ_ORD_CONV         THENC
+    TOP_DEPTH_CONV(REWR_CONV CANCEL1) THENC
+    TOP_DEPTH_CONV(REWR_CONV CANCEL2);;
+
+   let CONJ_NORM_TAC = CONV_TAC CONJ_NORM_CONV;;
+\end{verbatim}\end{hol} 
+
+\section{A more efficient implementation}
+
+The normalizer just given is rather slow. This can be shown by switching on the
+system timer using the function:
+
+\begin{hol}\begin{verbatim}
+   timer : bool -> bool
+\end{verbatim}\end{hol}
+
+\noindent Evaluating \ml{timer~true} switches on timing; evaluating
+\ml{timer~false} switches it off (the previous value of the timing flag
+is returned). Garbage collection times are also shown, together with a
+count of the number of intermediate theorems that are generated (which
+gives an estimate of the number of primitive inferences done).
+
+\begin{session}\begin{verbatim}
+#timer true;;
+false : bool
+Run time: 0.0s
+
+#CONJ_NORM_CONV ex1;;
+|- A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D = A /\ B /\ C /\ D
+Run time: 1.1s
+Garbage collection time: 0.5s
+Intermediate theorems generated: 73
+\end{verbatim}\end{session}
+
+\noindent Here is a bigger example:
+
+\begin{session}\begin{verbatim}
+#CONJ_NORM_CONV "^ex1 /\ (^ex1 /\ (^ex1 /\ ^ex1 /\ ^ex1) /\ ^ex1)";;
+|- (A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D) /\
+   (A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D) /\
+   ((A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D) /\
+    (A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D) /\
+    A /\
+    (B /\ C /\ A) /\
+    (C /\ A /\ D) /\
+    D) /\
+   A /\
+   (B /\ C /\ A) /\
+   (C /\ A /\ D) /\
+   D =
+   A /\ B /\ C /\ D
+Run time: 38.3s
+Garbage collection time: 11.5s
+Intermediate theorems generated: 16761
+\end{verbatim}\end{session}
+
+The reason that \ml{CONJ\_CANON\_CONV} is slow is because of the
+repeated pattern matching done during rewriting. A much more efficient
+approach is to normalize the conjunction by \ML\ programming outside
+the logic, and then to prove that the normalized term is equal to the
+original one. An even more efficient approach, which is not explored
+here, would be to avoid having to do this proof by verifing the
+normalization code by some sort of meta-theoretic
+reasoning about \ML. How to do this in
+\HOL\ is not clear, but work on this approach has been done in the
+context of {\small FOL} \cite{FOL}, the Boyer-Moore prover \cite{BoyerMoore}
+and Nuprl \cite{Nuprl}. These approaches all use logically
+sophisticated extra axioms, called reflection principles, that enable
+metatheorems to be `reflected' into the logic as object level
+theorems.
+
+To normalize the term by \ML\ programming, the conjuncts are extracted,
+repeated elements are deleted and the resulting list is sorted.
+
+\HOL\ already has a predefined function:
+
+\begin{hol}\begin{verbatim}
+   conjuncts : term -> term list
+\end{verbatim}\end{hol}
+
+\noindent for extracting conjuncts.
+\HOL\ also has a predefined \ML\ function for removing repeated elements of
+a list:
+
+
+\begin{hol}\begin{verbatim}
+   setify : * list -> * list
+\end{verbatim}\end{hol}
+
+\noindent Both \ml{conjuncts} and \ml{setify} are illustrated below:
+
+\begin{session}\begin{verbatim}
+#timer false;;
+true : bool
+
+#conjuncts ex1;;
+["A"; "B"; "C"; "A"; "C"; "A"; "D"; "D"] : term list
+
+#setify it;;
+["B"; "C"; "A"; "D"] : term list
+
+#let ex1_list = it;;
+ex1_list = ["B"; "C"; "A"; "D"] : term list
+\end{verbatim}\end{session}
+
+There is a predefined sorting function in \ML:
+
+\begin{session}\begin{verbatim}
+#sort;; 
+sort = - : (((* # *) -> bool) -> * list -> * list)
+
+#sort $< [3;2;5;6;1;1;7;9;3];;
+[1; 1; 2; 3; 3; 5; 6; 7; 9] : int list
+
+#sort $<< ex1_list;;
+["A"; "B"; "C"; "D"] : term list
+\end{verbatim}\end{session}
+
+Using this function, the list of conjuncts of the normalization of a
+term is easily computed.  The predefined \ML\ function:
+
+\begin{hol}\begin{verbatim}
+   list_mk_conj : term list -> term
+\end{verbatim}\end{hol}
+
+\noindent can then be used to build the normalized conjunction.
+
+
+\begin{session}\begin{verbatim}
+#ex1;;
+"A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D" : term
+
+#let ex1_norm = list_mk_conj(sort $<< (setify(conjuncts ex1)));;
+ex1_norm = "A /\ B /\ C /\ D" : term
+\end{verbatim}\end{session}
+
+\noindent The calculation of \ml{ex1\_norm} from \ml{ex1} has been
+done by (unverified) \ML\ code. What is required is the theorem
+asserting that they are equal. This can be proved using the tautology
+checker.
+
+\begin{session}\begin{verbatim}
+#TAUT_RULE "^ex1 = ^ex1_norm";;
+|- A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D = A /\ B /\ C /\ D
+\end{verbatim}\end{session}
+
+\noindent A conversion that normalizes conjunctions is thus:
+
+\begin{session}\begin{verbatim}
+#let CONJ_NORM_CONV2 t =
+# if is_conj t
+#  then TAUT_RULE "^t = ^(list_mk_conj(sort $<< (setify(conjuncts t))))"
+#  else fail;;
+CONJ_NORM_CONV2 = - : conv
+
+#CONJ_NORM_CONV2 ex1;;
+|- A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D = A /\ B /\ C /\ D
+\end{verbatim}\end{session}
+
+\noindent \ml{CONJ\_CANON\_CONV2} is more than an order of magnitude faster 
+than \ml{CONJ\_CANON\_CONV}:
+
+
+\begin{session}\begin{verbatim}
+#timer true;;
+false : bool
+Run time: 0.0s
+
+#CONJ_NORM_CONV2 "^ex1 /\ (^ex1 /\ (^ex1 /\ ^ex1 /\ ^ex1) /\ ^ex1)";;
+|- (A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D) /\
+   (A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D) /\
+   ((A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D) /\
+    (A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D) /\
+    A /\
+    (B /\ C /\ A) /\
+    (C /\ A /\ D) /\
+    D) /\
+   A /\
+   (B /\ C /\ A) /\
+   (C /\ A /\ D) /\
+   D =
+   A /\ B /\ C /\ D
+Run time: 1.9s
+Garbage collection time: 0.5s
+Intermediate theorems generated: 1273
+\end{verbatim}\end{session}
+
+\section{An even more efficient implementation}\label{bogus-optimization}
+
+Although the implementation just given is much faster than the first
+naive one, it can be improved further by replacing the call to the
+general tautology checker with a special purpose conjunction-equivalence
+prover.
+
+To see how this works, the equivalence of \ml{ex1} and \ml{ex1\_norm} will first
+be proved manually. The general form of this proof will then be abstracted into
+a derived rule.
+
+The goal is to prove that \ml{ex1} and \ml{ex1\_norm} are equal.
+
+\begin{session}\begin{verbatim}
+#timer false;;
+true : bool
+
+#g "^ex1 = ^ex1_norm";;
+"A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D = A /\ B /\ C /\ D"
+
+() : void
+\end{verbatim}\end{session}
+
+\noindent The predefined tactic \ml{EQ\_TAC} splits an equation into two
+implications (see Section~\ref{EQTAC}).
+
+\begin{session}\begin{verbatim}
+#e EQ_TAC;;
+OK..
+2 subgoals
+"A /\ B /\ C /\ D ==> A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D"
+
+"A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D ==> A /\ B /\ C /\ D"
+
+() : void
+\end{verbatim}\end{session}
+
+\noindent Each of these can be solved by:
+\begin{enumerate}
+\item moving the antecedent of the
+implication to the assumption list (using \ml{DISCH\_TAC}, see
+Section~\ref{DISCHTAC});
+\item breaking up the remaining
+goal (the consequent of the implication) into one subgoal per conjunct (using
+\ml{CONJ\_TAC}, see Section~\ref{CONJTAC});
+\item  solving each of these
+conjuncts using the antecedent (which is now an assumption)
+\end{enumerate}
+
+\noindent Step 1--3 are now done interactively.
+
+\begin{session}\begin{verbatim}
+#e DISCH_TAC;;
+OK..
+"A /\ B /\ C /\ D"
+    [ "A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D" ]
+
+() : void
+\end{verbatim}\end{session}
+
+\noindent \ml{CONJ\_TAC} is repeated using the tactical \ml{REPEAT}
+described in Section~\ref{THEN}.
+
+\begin{session}\begin{verbatim}
+#e (REPEAT CONJ_TAC);;
+OK..
+4 subgoals
+"D"
+    [ "A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D" ]
+
+"C"
+    [ "A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D" ]
+
+"B"
+    [ "A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D" ]
+
+"A"
+    [ "A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D" ]
+
+() : void
+\end{verbatim}\end{session}
+
+\noindent The final step is to use the assumption
+{\small\verb%"A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D"%} to solve each goal.
+To do this, the assumption is grabbed using the tactical:
+
+\begin{hol}\begin{verbatim}
+   POP_ASSUM : (thm -> tactic) -> tactic
+\end{verbatim}\end{hol}
+
+\noindent Given a function \ml{$f$ : thm -> tactic}, the tactic
+\ml{POP\_ASSUM}\ $f$ applies $f$ to the (assumed) first
+assumption of a goal
+and then applies the tactic created thereby to the original goal
+minus its top assumption:
+
+\begin{hol}\begin{alltt}
+   POP_ASSUM \(f\) ([\(t\sb{1}\);\(\ldots\);\(t\sb{n}\)],\(t\)) = \(f\) (ASSUME \(t\sb{1}\)) ([\(t\sb{2}\);\(\ldots\);\(t\sb{n}\)],\(t\))
+\end{alltt}\end{hol}
+
+\noindent \ML\ functions such as $f$,
+with type \ml{thm -> tactic} are abbreviated to \ml{thm\_tactic} (see
+\DESCRIPTION\ for further details).
+
+After grabbing the assumption, it is split into its individual conjunctions
+using the predefined derived rule:
+
+\begin{hol}\begin{verbatim}
+   CONJUNCTS : thm -> thm list
+\end{verbatim}\end{hol}
+
+\noindent For example:
+
+
+\begin{session}\begin{verbatim}
+#CONJUNCTS(ASSUME "A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D");;
+[. |- A; . |- B; . |- C; . |- A; . |- C; . |- A; . |- D; . |- D]
+: thm list
+\end{verbatim}\end{session}
+
+\noindent Among the individual conjuncts is the goal, which can thus be
+solved immediately using \ml{ACCEPT\_TAC} (see Section~\ref{ACCEPTTAC}).
+The appropriate assumption can be chosen with the predefined tactical
+\ml{MAP\_FIRST}, which
+is characterized by:
+
+\begin{hol}\begin{alltt}
+   MAP_FIRST \(f\) [\(x\sb{1}\); \(\ldots\) ;\(x\sb{n}\)]  =  \(f\)(\(x\sb{1}\)) ORELSE \(\ldots\) ORELSE \(f\)(\(x\sb{n}\))
+\end{alltt}\end{hol}
+
+\noindent Returning to the proof: the final step is now performed by
+popping the assumption and applying to it the function obtained by
+composing \ml{CONJUNCTS} and \ml{MAP\_FIRST} using the \ML\ infixed
+function composition operator \ml{o} 
+(where \ml{(}$f$~\ml{o}~$g$\ml{)}$x$~\ml{=}~$g$\ml{(}$f$\ml{(}$x$\ml{))}).
+
+\begin{session}\begin{verbatim}
+#e(POP_ASSUM(MAP_FIRST ACCEPT_TAC o CONJUNCTS));;
+OK..
+goal proved
+. |- A
+
+Previous subproof:
+3 subgoals
+"D"
+    [ "A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D" ]
+
+"C"
+    [ "A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D" ]
+
+"B"
+    [ "A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D" ]
+
+() : void
+\end{verbatim}\end{session}
+
+
+\noindent The remaining subgoals are solved identically. Stitching together
+the tactics just used results in:
+
+\begin{hol}\begin{verbatim}
+   EQ_TAC          THEN 
+   DISCH_TAC       THEN
+   REPEAT CONJ_TAC THEN 
+   POP_ASSUM(MAP_FIRST ACCEPT_TAC o CONJUNCTS)
+\end{verbatim}\end{hol}
+
+\noindent With this, the entire proof can be done in one step.
+
+\begin{session}\begin{verbatim}
+#g "^ex1 = ^ex1_norm";;
+"A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D = A /\ B /\ C /\ D"
+
+() : void
+
+#e(EQ_TAC          THEN 
+#  DISCH_TAC       THEN
+#  REPEAT CONJ_TAC THEN 
+#  POP_ASSUM(MAP_FIRST ACCEPT_TAC o CONJUNCTS));;
+OK..
+goal proved
+|- A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D = A /\ B /\ C /\ D
+
+Previous subproof:
+goal proved
+() : void
+\end{verbatim}\end{session}
+
+Using this tactic, a derived rule \ml{CONJ\_EQ} can be defined that proves
+two conjunctions equal. This is what is needed to replace the call to
+\ml{TAUT\_RULE}.
+\ml{CONJ\_EQ} is defined with the predefined function:
+
+\begin{hol}\begin{verbatim}
+   PROVE : term # tactic -> theorem
+\end{verbatim}\end{hol}
+
+\noindent \ml{PROVE}\ml{(}$t$\ml{,}$T$\ml{)} applies the tactic $T$ to
+the goal \ml{([],}$t$\ml{)}; if this goal is proved by $T$ then the
+resulting justification is applied to \ml{[]} to obtain the theorem
+\ml{|-}~$t$, which is returned. If $T$ does not solve the goal, then
+the application of \ml{PROVE} fails. Using \ml{PROVE}, the definition
+of \ml{CONJ\_EQ} is:
+
+\begin{hol}\begin{verbatim}
+   let CONJ_EQ t1 t2 = 
+    PROVE ("^t1 = ^t2", 
+           EQ_TAC          THEN 
+           DISCH_TAC       THEN
+           REPEAT CONJ_TAC THEN 
+           POP_ASSUM(MAP_FIRST ACCEPT_TAC o CONJUNCTS))
+\end{verbatim}\end{hol}
+
+
+\noindent Replacing the call to \ml{TAUT\_RULE} in the definition
+of \ml{CONJ\_NORM\_CONV2} results in:
+
+\begin{hol}\begin{verbatim}
+   let CONJ_NORM_CONV3 t =
+    if is_conj t
+     then CONJ_EQ t (list_mk_conj(sort $<< (setify(conjuncts t))))
+     else fail
+\end{verbatim}\end{hol}
+
+\noindent Continuing the session:
+
+\begin{session}\begin{verbatim}
+#let CONJ_EQ t1 t2 = 
+# PROVE ("^t1 = ^t2", 
+#        EQ_TAC          THEN 
+#        DISCH_TAC       THEN
+#        REPEAT CONJ_TAC THEN 
+#        POP_ASSUM(MAP_FIRST ACCEPT_TAC o CONJUNCTS));;
+CONJ_EQ = - : (term -> conv)
+
+#let CONJ_NORM_CONV3 t =
+# if is_conj t
+#  then CONJ_EQ t (list_mk_conj(sort $<< (setify(conjuncts t))))
+#  else fail;;
+CONJ_NORM_CONV3 = - : conv
+\end{verbatim}\end{session}
+
+\noindent \ml{CONJ\_NORM\_CONV3} is almost twice
+as efficient as \ml{CONJ\_NORM\_CONV2}. To show this, the timer is switched 
+back on.
+
+\begin{session}\begin{verbatim}
+#timer true;;
+false : bool
+Run time: 0.0s
+\end{verbatim}\end{session}
+
+\noindent Here is the big example with \ml{CONJ\_NORM\_CONV3}:
+
+\begin{session}\begin{verbatim}
+#CONJ_NORM_CONV3 "^ex1 /\ (^ex1 /\ (^ex1 /\ ^ex1 /\ ^ex1) /\ ^ex1)";;
+|- (A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D) /\
+   (A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D) /\
+   ((A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D) /\
+    (A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D) /\
+    A /\
+    (B /\ C /\ A) /\
+    (C /\ A /\ D) /\
+    D) /\
+   A /\
+   (B /\ C /\ A) /\
+   (C /\ A /\ D) /\
+   D =
+   A /\ B /\ C /\ D
+Run time: 1.0s
+Garbage collection time: 0.5s
+Intermediate theorems generated: 775
+\end{verbatim}\end{session}
+
+\section{Further optimizations}
+
+Further improvements are still possible. As an exercise the reader
+might want to decipher the following highly optimized definition of
+\ml{CONJ\_EQ}.
+
+The function \ml{PROVE\_CONJ}, defined below, 
+converts a term $t$ to the theorem \ml{|-}~$t$
+if that theorem occurs in a supplied list of theorems (\ml{ths} in the
+code below), or $t$ is a conjunction each of whose conjuncts occurs in
+the list. The definition of \ml{PROVE\_CONJ} uses the following
+predefined \ML\ functions:
+
+\begin{itemize}
+\item \ml{uncurry}~$f$~\ml{(}$x$\ml{,}$y$\ml{)}~~\ml{=}~~$f$~$x$~$y$
+
+\item \ml{(}$f${\small\verb% # %}$g$\ml{)}\ml{(}$x$\ml{,}$y$\ml{)}~~\ml{=}~~\ml{(}$f\ x$~\ml{,}~$g\ y$\ml{)}
+
+\item \ml{find}~$p$~\ml{[}$x_1\ml{;}\ldots\ml{;}x_n$\ml{]}~~=~~{\it the first $x_i$ for which $p\ x_i$ is true\/}
+
+\end{itemize}
+
+\noindent and the inference rule \ml{CONJ}:
+
+
+\[ \Gamma_1\turn
+t_1\qquad\qquad\qquad\Gamma_2\turn t_2\over \Gamma_1\cup\Gamma_2 \turn t_1\conj
+t_2 \]
+
+
+\noindent Here is the definition of \ml{PROVE\_CONJ}:
+
+\begin{hol}\begin{verbatim}
+   letrec PROVE_CONJ ths tm =
+    (uncurry CONJ ((PROVE_CONJ ths # PROVE_CONJ ths) (dest_conj tm))) ?
+    find (\th. concl th = tm) ths
+\end{verbatim}\end{hol}
+
+\noindent Using this, the optimized \ml{CONJ\_EQ}, called
+\ml{CONJ\_EQ2}, is defined using \ml{IMP\_ANTISYM\_RULE} (a predefined rule):
+
+
+\[ \Gamma_1 \turn t_1 \imp t_2 \qquad\qquad \Gamma_2\turn t_2 \imp t_1\over
+\Gamma_1 \cup \Gamma_2 \turn t_1 = t_2\]
+
+\noindent The definition is:
+
+\begin{hol}\begin{verbatim}
+   let CONJ_EQ2 t1 t2 =
+    let imp1 = DISCH t1 (PROVE_CONJ (CONJUNCTS(ASSUME t1)) t2)
+    and imp2 = DISCH t2 (PROVE_CONJ (CONJUNCTS(ASSUME t2)) t1) 
+    in IMP_ANTISYM_RULE imp1 imp2
+\end{verbatim}\end{hol}
+
+\noindent Loading these \ML\ function definitions into \HOL:
+
+\begin{session}\begin{verbatim}
+#letrec PROVE_CONJ ths tm =
+# (uncurry CONJ ((PROVE_CONJ ths # PROVE_CONJ ths) (dest_conj tm))) ?
+# find (\th. concl th = tm) ths;;
+PROVE_CONJ = - : (thm list -> conv)
+Run time: 0.0s
+
+#let CONJ_EQ2 t1 t2 =
+# let imp1 = DISCH t1 (PROVE_CONJ (CONJUNCTS(ASSUME t1)) t2)
+# and imp2 = DISCH t2 (PROVE_CONJ (CONJUNCTS(ASSUME t2)) t1) 
+# in IMP_ANTISYM_RULE imp1 imp2;;
+CONJ_EQ2 = - : (term -> conv)
+Run time: 0.0s
+\end{verbatim}\end{session}
+
+
+\noindent A version of \ml{CONJ\_NORM\_CONV} that
+uses \ml{CONJ\_EQ2} is defined by:
+
+\begin{hol}\begin{verbatim}
+   let CONJ_NORM_CONV4 t =
+    if is_conj t
+     then CONJ_EQ2 t (list_mk_conj(sort $<< (setify(conjuncts t))))
+     else fail
+\end{verbatim}\end{hol}
+
+
+\noindent Loading this into \ML:
+
+\begin{session}\begin{verbatim}
+#let CONJ_NORM_CONV4 t =
+# if is_conj t
+#  then CONJ_EQ2 t (list_mk_conj(sort $<< (setify(conjuncts t))))
+#  else fail;;
+CONJ_NORM_CONV4 = - : conv
+Run time: 0.0s
+\end{verbatim}\end{session}
+
+\noindent This is even faster than \ml{CONJ\_NORM\_CONV3}:
+
+\begin{session}\begin{verbatim}
+#CONJ_NORM_CONV4 "^ex1 /\ (^ex1 /\ (^ex1 /\ ^ex1 /\ ^ex1) /\ ^ex1)";;
+|- (A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D) /\
+   (A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D) /\
+   ((A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D) /\
+    (A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D) /\
+    A /\
+    (B /\ C /\ A) /\
+    (C /\ A /\ D) /\
+    D) /\
+   A /\
+   (B /\ C /\ A) /\
+   (C /\ A /\ D) /\
+   D =
+   A /\ B /\ C /\ D
+Run time: 0.4s
+Intermediate theorems generated: 155
+\end{verbatim}\end{session}
+
+\section{Normalizing all subterms}
+
+There is an important difference in the functionality of
+\ml{CONJ\_NORM\_CONV} and the various optimised versions of it. The
+difference is that \ml{CONJ\_NORM\_CONV} applies to any term,
+normalizing all subterms that are conjunctions. However the functions
+\ml{CONJ\_NORM\_CONV}{\small $n$} (where {\small $n = 2,3,4$}) all 
+fail on non-conjunctions.
+
+\begin{session}\begin{verbatim}
+#CONJ_NORM_CONV "^ex1 ==> ^ex1";;
+|- A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D ==>
+   A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D =
+   A /\ B /\ C /\ D ==> A /\ B /\ C /\ D
+Run time: 2.0s
+Garbage collection time: 0.6s
+Intermediate theorems generated: 1307
+
+#CONJ_NORM_CONV4 "^ex1 => ^ex1";;
+need 2 nd branch to conditional
+skipping: ex1 " ;; parse failed     
+
+#CONJ_NORM_CONV4 "^ex1 ==> ^ex1";;
+evaluation failed     fail
+\end{verbatim}\end{session}
+
+What is needed is a function that will apply a conversion to all
+conjunctive subterms of a term. Such a function is \ml{TOP\_DEPTH\_CONV}, however
+
+\begin{hol}\begin{verbatim}
+   TOP_DEPTH_CONV CONJ_NORM_CONV4
+\end{verbatim}\end{hol}
+
+\noindent would loop, because \ml{CONJ\_NORM\_CONV4} never fails on
+conjunctions, so \ml{TOP\_DEPTH\_CONV} would keep applying it forever!
+This is easily got around using:
+
+\begin{hol}\begin{verbatim}
+   CHANGED_CONV : conv -> conv
+\end{verbatim}\end{hol}
+
+\noindent \ml{CHANGED\_CONV}~$c$ behaves like $c$, except that if $c$
+has no effect, then \ml{CHANGED\_CONV}~$c$ fails.
+
+\begin{session}\begin{verbatim}
+#TOP_DEPTH_CONV(CHANGED_CONV CONJ_NORM_CONV4) "^ex1 ==> ^ex1";;
+|- A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D ==>
+   A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D =
+   A /\ B /\ C /\ D ==> A /\ B /\ C /\ D
+Run time: 0.5s
+Intermediate theorems generated: 292
+\end{verbatim}\end{session}
+
+Although this works, the scanning through subterms done by
+\ml{TOP\_DEPTH\_CONV} is a bit `brute force'. Further efficiency can
+be obtained by writing a special scanning function that
+just applies a conversion to maximal conjunctive subterms.
+This is provided by the code below. 
+The understanding of this is a fairly hard exercise for the reader. The
+section on conversions in \DESCRIPTION\ should be helpful.
+
+First, an auxiliary derived rule for combining two equations into
+a single equation by conjoining  the left hand sides and  the
+right hand sides.
+
+\begin{session}\begin{verbatim}
+#let MK_CONJ th1 th2 = MK_COMB(AP_TERM "$/\" th1, th2);;
+MK_CONJ = - : (thm -> thm -> thm)
+Run time: 0.0s
+\end{verbatim}\end{session}
+
+\noindent Next a function that conjoins the left hand sides and right
+hand sides of lists of equations.
+
+\begin{session}\begin{verbatim}
+#letrec MK_CONJL l =
+# if null l     then fail
+# if null(tl l) then hd l
+#               else MK_CONJ (hd l) (MK_CONJL(tl l));;
+MK_CONJL = - : proof
+Run time: 0.0s
+\end{verbatim}\end{session}
+
+\noindent Next, a function that applies a conversion $c$ to all
+conjunctive subterms of a term. This uses the \ML\ function:
+
+\bigskip
+\ml{map}~$f$~\ml{[}$x_1\ml{;}\ldots\ml{;}x_n$\ml{]}~~=~~\ml{[}$f\ x_1\ml{;}\ldots\ml{;}f\ x_n$\ml{]}
+
+\bigskip
+
+\noindent and the rules \ml{MK\_COMB}:
+
+
+\[ \Gamma_1 \turn f = g \qquad\qquad \Gamma_2\turn x = y \over
+\Gamma_1 \cup \Gamma_2 \turn f\ x = g\ y\]
+
+\noindent and \ml{MK\_ABS}:
+
+
+\[ \Gamma \turn \forall x.\ t_1 = t_2 \over
+\Gamma \turn (\lambda x.\ t_1) = (\lambda x.\ t_2)\]
+
+\noindent and \ml{GEN}:
+
+$$\Gamma\turn t\over\Gamma\turn\uquant{x} t$$
+\begin{itemize}
+\item Where $x$ is not free in $\Gamma$.
+\end{itemize}
+
+
+\noindent and \ml{REFL}: 
+
+$$ \over\turn t = t$$
+
+\begin{itemize}
+\item\ml{REFL}~$t$~~\ml{=}~~ $\turn t = t$.
+\end{itemize}
+
+\noindent The definition of \ml{CONJ\_DEPTH\_CONV} also uses:
+
+\begin{hol}\begin{verbatim}
+   is_comb   : term -> bool
+   dest_comb : term -> (term # term)
+
+   is_abs    : term -> bool
+   dest_abs  : term -> (term # term)
+\end{verbatim}\end{hol}
+
+\noindent which are the tests and destructors for combinations and
+abstractions, respectively.
+
+\begin{session}\begin{verbatim}
+#letrec CONJ_DEPTH_CONV c tm =
+# if is_conj tm 
+#  then (c THENC (MK_CONJL o map (CONJ_DEPTH_CONV c) o conjuncts)) tm
+# if is_comb tm
+#  then (let rator,rand = dest_comb tm in
+#         MK_COMB (CONJ_DEPTH_CONV c rator, CONJ_DEPTH_CONV c rand))
+# if is_abs tm 
+#  then (let bv,body = dest_abs tm in
+#         let bodyth = CONJ_DEPTH_CONV c body in
+#         MK_ABS (GEN bv bodyth))
+#   else (REFL tm);;
+CONJ_DEPTH_CONV = - : (conv -> conv)
+Run time: 0.0s
+\end{verbatim}\end{session}
+
+\noindent The next session shows that \ml{CONJ\_DEPTH\_CONV} is an
+improvement over \ml{TOP\_DEPTH\_CONV}.
+
+\begin{session}\begin{verbatim}
+#CONJ_DEPTH_CONV CONJ_NORM_CONV4 "^ex1 ==> ^ex1";;
+|- A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D ==>
+   A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D =
+   A /\ B /\ C /\ D ==> A /\ B /\ C /\ D
+Run time: 0.4s
+Intermediate theorems generated: 95
+\end{verbatim}\end{session}
+
+\noindent However, the figures show that we are getting to a point of
+diminishing returns.
+
+Finally, the tactic for normalizing all conjunctions in a goal is:
+
+\begin{session}\begin{verbatim}
+#let CONJ_NORM_TAC = CONV_TAC (CONJ_DEPTH_CONV CONJ_NORM_CONV4);;
+CONJ_NORM_TAC = - : tactic
+Run time: 0.0s
+\end{verbatim}\end{session}
+
+\noindent This is illustrated by:
+
+\begin{session}\begin{verbatim}
+#g "^ex1 ==> ^ex1 /\ ^ex1_norm";;
+"A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D ==>
+ (A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D) /\ A /\ B /\ C /\ D"
+
+() : void
+Run time: 0.1s
+
+#e CONJ_NORM_TAC;;
+OK..
+"A /\ B /\ C /\ D ==> A /\ B /\ C /\ D"
+
+() : void
+Run time: 0.3s
+Intermediate theorems generated: 110
+\end{verbatim}\end{session}
+
+\noindent To show how much faster the optimized version is, here is
+the last step repeated with the first version of the tool. The \ML\
+function \ml{b} backs up to the last goal.
+
+\begin{session}\begin{verbatim}
+#b();;
+"A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D ==>
+ (A /\ (B /\ C /\ A) /\ (C /\ A /\ D) /\ D) /\ A /\ B /\ C /\ D"
+
+() : void
+Run time: 0.1s
+\end{verbatim}\end{session}
+
+\noindent Expanding with the slow tactic:
+
+\begin{session}\begin{verbatim}
+#e(CONV_TAC CONJ_NORM_CONV);;
+OK..
+"A /\ B /\ C /\ D ==> A /\ B /\ C /\ D"
+
+() : void
+Run time: 3.5s
+Garbage collection time: 1.0s
+Intermediate theorems generated: 1932
+\end{verbatim}\end{session}
+
+\noindent it is 10 times slower and generates almost 20 times as many
+primitive inference steps!
+
+
+Here is the complete \ML\ program for the optimized normalizer.
+
+\begin{hol}\begin{verbatim}
+   letrec insert ord x l =
+    if null l 
+     then [x]
+    if ord(x,hd l)
+     then x.l
+     else hd l.(insert ord x (tl l));;
+
+   letrec sort ord l =
+    if null l
+     then []
+     else insert ord (hd l) (sort ord (tl l));;
+\end{verbatim}\end{hol}
+
+\begin{hol}\begin{verbatim}
+   letrec PROVE_CONJ ths tm =
+    (uncurry CONJ ((PROVE_CONJ ths # PROVE_CONJ ths) (dest_conj tm))) ?
+    find (\th. concl th = tm) ths;;
+
+   let CONJ_EQ t1 t2 =
+    let imp1 = DISCH t1 (PROVE_CONJ (CONJUNCTS(ASSUME t1)) t2)
+    and imp2 = DISCH t2 (PROVE_CONJ (CONJUNCTS(ASSUME t2)) t1) 
+    in IMP_ANTISYM_RULE imp1 imp2;;
+\end{verbatim}\end{hol}
+
+\begin{hol}\begin{verbatim}
+   let CONJ_NORM_CONV t =
+    if is_conj t
+     then CONJ_EQ t (list_mk_conj(sort $<< (setify(conjuncts t))))
+     else fail;;
+\end{verbatim}\end{hol}
+
+\begin{hol}\begin{verbatim}
+   let MK_CONJ th1 th2 = MK_COMB(AP_TERM "$/\" th1, th2);;
+
+   letrec MK_CONJL l =
+    if null l     then fail
+    if null(tl l) then hd l
+                  else MK_CONJ (hd l) (MK_CONJL(tl l));;
+\end{verbatim}\end{hol}
+
+\begin{hol}\begin{verbatim}
+   letrec CONJ_DEPTH_CONV c tm =
+    if is_conj tm 
+     then (c THENC (MK_CONJL o map (CONJ_DEPTH_CONV c) o conjuncts)) tm
+    if is_comb tm
+     then (let rator,rand = dest_comb tm in
+            MK_COMB (CONJ_DEPTH_CONV c rator, CONJ_DEPTH_CONV c rand))
+    if is_abs tm 
+     then (let bv,body = dest_abs tm in
+            let bodyth = CONJ_DEPTH_CONV c body in
+            MK_ABS (GEN bv bodyth))
+     else (REFL tm);;
+\end{verbatim}\end{hol}
+
+\begin{hol}\begin{verbatim}
+   let CONJ_NORM_TAC = CONV_TAC (CONJ_DEPTH_CONV CONJ_NORM_CONV);;
+\end{verbatim}\end{hol}
+
+
+Although the optimized implementation is much more efficient, it uses
+less general methods. An advantage of the simple implementation based
+on rewriting is that essentially the same algorithm can be used to
+normalize terms built out of any associative, commutative and
+idenpotent operation. The two exercises that follow (whose solutions are not
+supplied) suggest that the reader try to extract general principles from the
+conjunction normalizer and use these to implement generic tools.
+
+\subsection{Exercise 1}
+
+Implement a normalizer for any associative and commutative operator.
+
+\begin{hol}\begin{verbatim}
+   AC_CANON_CONV : thm # thm -> conv
+\end{verbatim}\end{hol}
+
+\noindent The two theorem arguments should be the
+associative and commutative laws for the operator. For example:
+
+\begin{hol}\begin{verbatim}
+   AC_CANON_CONV(ASSOC,SYM1)
+\end{verbatim}\end{hol}
+
+\noindent would be a canonicalizer for conjunctions.
+Use the `brute force' rewriting method described at the beginning of this chapter.
+
+\subsection{Exercise 2}
+
+
+Implement an optimized canonicalizer:
+
+\begin{hol}\begin{verbatim}
+   FAST_AC_CANON_CONV : thm # thm -> conv \end{verbatim}\end{hol}
+\noindent This should use tuned rewriting (\eg\ a generalization of
+\ml{CONJ\_DEPTH\_CONV}) and be as fast as possible. Try to think up
+tricks to minimise the amount of general matching and to make every
+inference count.
+
+

@@ -1,0 +1,13 @@
++ ===================================================================== +
+| HOL DISTRIBUTION DIRECTORY: Tutorial	(second edition)                |
++ ===================================================================== +
+
+
+This directory contains the LaTeX source for the HOL tutorial.  The
+directory
+
+   hol/Training/studies 
+
+contains the case studies that were in the first edition.
+
+

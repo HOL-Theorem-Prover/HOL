@@ -1,0 +1,63 @@
+% =====================================================================
+% HOL Manual LaTeX Source: tutorial
+% =====================================================================
+
+\documentclass[12pt]{book}
+\usepackage{fleqn}
+\usepackage{alltt}
+\usepackage{../LaTeX/layout}
+
+\renewcommand\leadsto\rightarrow
+
+% ---------------------------------------------------------------------
+% Input defined macros and commands
+% ---------------------------------------------------------------------
+\input{../LaTeX/commands}
+\input{../LaTeX/pic-macros}
+\input{../LaTeX/docmacros}
+
+% Counter Peano used in logic.tex
+\newcounter{Peano}
+\setcounter{Peano}{1}
+
+%\includeonly{title,contents,preface,../LaTeX/ack,intro,ml,logic,
+% proof,references,Studies/preface,Studies/parity/parity}
+%             Studies/microprocessor/all,
+%\includeonly{Studies/microprocessor/all}
+%\includeonly{Studies/int_mod/mod_arith_study/tutorial}
+%\includeonly{binomial}
+%\includeonly{parity}
+
+
+\begin{document}
+
+   \setlength{\unitlength}{1mm}           % unit of length = 1mm
+   \setlength{\baselineskip}{16pt}        % line spacing = 16pt
+
+   % ---------------------------------------------------------------------
+   % prelims
+   % ---------------------------------------------------------------------
+
+   \pagenumbering{roman}                  % roman page numbers for prelims
+   \setcounter{page}{1}                   % start at page 1
+
+   \include{title}                        % tutorial title page
+   \include{preface}                      % preface to entire tutorial
+   \input{../LaTeX/ack}                 % global acknowledgements
+   \tableofcontents
+
+   \pagenumbering{arabic}                % arabic page numbers
+   \setcounter{page}{1}                  % start at page 1
+
+   \include{intro}                       % intro: getting and installing hol
+   \include{ml}                          % intro to ml
+   \include{logic}                       % the HOL logic
+   \include{proof}                       % intro to proof in HOL
+   \include{parity}                      % parity example
+   \include{tool}                        % conjunction canonicalization tool
+   \include{binomial}                    % Andy Gordon's Binomial Thm in HOL
+   \include{references}                  % references
+
+\end{document}
+
+

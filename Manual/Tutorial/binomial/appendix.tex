@@ -1,0 +1,133 @@
+% appendix.tex %
+% Principal lemmas %
+
+% ----------------------------------------------------------------------------
+
+\section{Principal lemmas}
+\label{PrincipalLemmas}
+
+Binomial coefficients, \verb@CHOOSE@:
+\begin{session}
+\begin{verbatim}
+CHOOSE_LESS = |- !n k. n < k ==> (CHOOSE n k = 0)
+
+CHOOSE_SAME = |- !n. CHOOSE n n = 1
+\end{verbatim}
+\end{session}
+
+Algebraic laws:
+\begin{session}
+\begin{verbatim}
+RIGHT_CANCELLATION = 
+|- !plus. Group plus ==> (!a b c. (plus b a = plus c a) ==> (b = c))
+
+RING_0 = 
+|- !plus times.
+    RING(plus,times) ==>
+    (!a. times(Id plus)a = Id plus) /\ (!a. times a(Id plus) = Id plus)
+\end{verbatim}
+\end{session}
+
+\newpage
+Scalar powers:
+\begin{session}
+\begin{verbatim}
+POWER_1 = |- !plus. MONOID plus ==> (POWER plus 1 a = a)
+
+POWER_DISTRIB = 
+|- !plus times.
+    RING(plus,times) ==>
+    (!a b n. times a(POWER plus n b) = POWER plus n(times a b))
+
+POWER_ADD = 
+|- !plus.
+    MONOID plus ==>
+    (!m n a. POWER plus(m + n)a = plus(POWER plus m a)(POWER plus n a))
+\end{verbatim}
+\end{session}
+
+Reduction of lists:
+\begin{session}
+\begin{verbatim}
+REDUCE_APPEND = 
+|- !plus.
+    MONOID plus ==>
+    (!as bs.
+      REDUCE plus(APPEND as bs) = plus(REDUCE plus as)(REDUCE plus bs))
+
+REDUCE_MAP_MULT = 
+|- !plus times.
+    RING(plus,times) ==>
+    (!a bs. REDUCE plus(MAP(times a)bs) = times a(REDUCE plus bs))
+
+REDUCE_MAP = 
+|- !plus.
+    MONOID plus /\ COMMUTATIVE plus ==>
+    (!f g as.
+      REDUCE plus(MAP(\k. plus(f k)(g k))as) =
+      plus(REDUCE plus(MAP f as))(REDUCE plus(MAP g as)))
+\end{verbatim}
+\end{session}
+
+Subranges of the natural numbers:
+\begin{session}
+\begin{verbatim}
+RANGE_TOP = |- !n m. RANGE m(SUC n) = APPEND(RANGE m n)[m + n]
+
+RANGE_SHIFT = |- !n m. RANGE(SUC m)n = MAP SUC(RANGE m n)
+\end{verbatim}
+\end{session}
+
+\newpage
+$\Sigma$-notation:
+\begin{session}
+\begin{verbatim}
+SIGMA_ID = |- !plus m f. SIGMA(plus,m,0)f = Id plus
+
+SIGMA_LEFT_SPLIT = 
+|- !plus m n f. SIGMA(plus,m,SUC n)f = plus(f m)(SIGMA(plus,SUC m,n)f)
+
+SIGMA_RIGHT_SPLIT = 
+|- !plus.
+    MONOID plus ==>
+    (!m n f. SIGMA(plus,m,SUC n)f = plus(SIGMA(plus,m,n)f)(f(m + n)))
+
+SIGMA_SHIFT = 
+|- !plus m n f. SIGMA(plus,SUC m,n)f = SIGMA(plus,m,n)(f o SUC)
+
+SIGMA_MULT_COMM = 
+|- !plus times.
+    RING(plus,times) ==>
+    (!m n a f.
+      times a(SIGMA(plus,m,n)f) = SIGMA(plus,m,n)((times a) o f))
+
+SIGMA_PLUS_COMM = 
+|- !plus.
+    MONOID plus /\ COMMUTATIVE plus ==>
+    (!f g m n.
+      plus(SIGMA(plus,m,n)f)(SIGMA(plus,m,n)g) =
+      SIGMA(plus,m,n)(\k. plus(f k)(g k)))
+
+SIGMA_EXT = 
+|- !plus.
+    MONOID plus ==>
+    (!f g m n.
+      (!k. k < n ==> (f(m + k) = g(m + k))) ==>
+      (SIGMA(plus,m,n)f = SIGMA(plus,m,n)g))
+\end{verbatim}
+\end{session}
+
+Terms from the Binomial Theorem:
+\begin{session}
+\begin{verbatim}
+BINTERM_0 = 
+|- !plus times.
+    RING(plus,times) ==>
+    (!a b n. BINTERM plus times a b n 0 = POWER times n a)
+
+BINTERM_n = 
+|- !plus times.
+    RING(plus,times) ==>
+    (!a b n. BINTERM plus times a b n n = POWER times n b)
+\end{verbatim}
+\end{session}
