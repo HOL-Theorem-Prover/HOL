@@ -15,7 +15,7 @@ signature Parse = sig
      | Binder
 
   (* Parsing Types *)
-  val type_grammar : unit -> parse_type.grammar
+  val type_grammar : unit -> type_grammar.grammar
   val Type         : hol_type frag list -> hol_type
   val ==           : hol_type frag list -> 'a -> hol_type
 
@@ -51,6 +51,10 @@ signature Parse = sig
      - add_infix_type {precedence = 5, infix_form = SOME "+",
                        opname = "sum", associativity = RIGHT};
   *)
+  val temp_type_abbrev : string * hol_type -> unit
+  val type_abbrev : string * hol_type -> unit
+
+
 
   (* completely removes a type from the grammar *)
 (*  val remove_type : string -> unit
@@ -69,10 +73,10 @@ signature Parse = sig
     val typedTerm        : term frag list -> hol_type -> term
     val parse_in_context : term list -> term frag list -> term
     val parse_from_grammars :
-      (parse_type.grammar * term_grammar.grammar) ->
+      (type_grammar.grammar * term_grammar.grammar) ->
       ((hol_type frag list -> hol_type) * (term frag list -> term))
     val print_from_grammars :
-      (parse_type.grammar * term_grammar.grammar) ->
+      (type_grammar.grammar * term_grammar.grammar) ->
       ((Portable.ppstream -> hol_type -> unit) *
        (Portable.ppstream -> term -> unit))
 
@@ -121,7 +125,8 @@ signature Parse = sig
 
     (* the following functions affect the grammar, but not so that the
        grammar exported to disk will be modified *)
-    val temp_set_grammars : (parse_type.grammar * term_grammar.grammar) -> unit
+    val temp_set_grammars : (type_grammar.grammar * term_grammar.grammar) ->
+                            unit
     val temp_add_binder : (string * int) -> unit
     val temp_add_rule :
       {term_name : string, fixity : fixity,
@@ -193,7 +198,7 @@ signature Parse = sig
 
   val update_grms   : ('a -> unit) -> 'a -> unit
   val mk_local_grms
-    : (string * (parse_type.grammar * term_grammar.grammar)) list -> unit
+    : (string * (type_grammar.grammar * term_grammar.grammar)) list -> unit
 
 
   val hide   : string -> ({Name : string, Thy : string} list *
@@ -239,8 +244,8 @@ signature Parse = sig
   val AroundSameName   : PhraseBlockStyle
   val NoPhrasing       : PhraseBlockStyle
 
-  val min_grammars : parse_type.grammar * term_grammar.grammar
-  val current_lgrms : unit -> parse_type.grammar * term_grammar.grammar
+  val min_grammars : type_grammar.grammar * term_grammar.grammar
+  val current_lgrms : unit -> type_grammar.grammar * term_grammar.grammar
 
 
 end

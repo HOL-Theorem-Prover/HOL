@@ -1,16 +1,16 @@
 structure type_pp :> type_pp =
 struct
 
-open Feedback Type Portable parse_type HOLgrammars
+open Feedback Type Portable HOLgrammars type_grammar
 
-datatype mygrav 
-   = Sfx of int 
+datatype mygrav
+   = Sfx of int
    | Lfx of int * string
-   | Rfx of int * string 
+   | Rfx of int * string
    | Top
 
-datatype single_rule 
-   = SR 
+datatype single_rule
+   = SR
    | IR of associativity * string
 
 val ERR = mk_HOL_ERR "type_pp" "pp_type";

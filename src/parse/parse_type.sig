@@ -1,13 +1,5 @@
 signature parse_type =
 sig
-  type 'a token = 'a type_tokens.type_token
-  datatype grammar_rule =
-    SUFFIX of string list
-  | INFIX of {opname : string, parse_string : string} list *
-             HOLgrammars.associativity
-
-  type grammar
-  val rules : grammar -> (int * grammar_rule) list
 
   val parse_type :
     {vartype : string -> 'a,
@@ -15,7 +7,7 @@ sig
      qtyop : {Thy:string, Tyop:string, Args: 'a list} -> 'a,
      antiq : 'b -> 'a} ->
     bool ->
-    grammar ->
+    type_grammar.grammar ->
     ('a, 'b frag) monadic_parse.Parser
 
     (* The record of functions specify how to deal with the need to
@@ -29,19 +21,5 @@ sig
        The parameter is set to true for parsing datatype definitions, where
        it is useful to be able to mention types that don't actually exist
        yet. *)
-  val empty_grammar : grammar
-
-  val new_binary_tyop :
-    grammar -> {precedence : int,
-                infix_form : string option,
-                opname : string,
-                associativity : HOLgrammars.associativity} -> grammar
-  val new_tyop : grammar -> string -> grammar
-
-  val std_suffix_precedence : int
-
-  val merge_grammars : grammar * grammar -> grammar
-
-  val prettyprint_grammar : ppstream -> grammar -> unit
 
 end

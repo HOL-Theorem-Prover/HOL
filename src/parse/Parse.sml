@@ -1,7 +1,7 @@
 structure Parse :> Parse =
 struct
 
-open Feedback HolKernel HOLgrammars GrammarSpecials term_grammar
+open Feedback HolKernel HOLgrammars GrammarSpecials term_grammar type_grammar
 infixr -->
 
 type pp_element = term_grammar.pp_element
@@ -68,7 +68,7 @@ val TruePrefix   = fn n => RF (term_grammar.TruePrefix n)
  ---------------------------------------------------------------------------*)
 
 (* type grammar *)
-val the_type_grammar = ref parse_type.empty_grammar
+val the_type_grammar = ref type_grammar.empty_grammar
 val type_grammar_changed = ref false
 fun type_grammar() = !the_type_grammar
 
@@ -86,7 +86,7 @@ fun current_grammars() = (type_grammar(), term_grammar());
          local grammars
  ---------------------------------------------------------------------------*)
 
-val the_lty_grm = ref parse_type.empty_grammar
+val the_lty_grm = ref type_grammar.empty_grammar
 val the_ltm_grm = ref term_grammar.stdhol
 fun current_lgrms() = (!the_lty_grm, !the_ltm_grm);
 
@@ -554,6 +554,41 @@ fun add_infix_type (x as {Name, ParseName, Assoc, Prec}) = let in
                    ", Assoc = ", assocToString Assoc,
                    ", Prec = ", Int.toString Prec, "}"])
  end
+
+fun temp_type_abbrev (s, ty) = let
+  val params = Listsort.sort Type.compare (type_vars ty)
+  val (num_vars, pset) =
+      List.foldl (fn (ty,(i,pset)) => (i + 1, Binarymap.insert(pset,ty,i)))
+                 (0, Binarymap.mkDict Type.compare) params
+  fun mk_structure pset ty =
+      if is_vartype ty then type_grammar.PARAM (Binarymap.find(pset, ty))
+      else let
+          val {Thy,Tyop,Args} = dest_thy_type ty
+        in
+          type_grammar.TYOP {Thy = Thy, Tyop = Tyop,
+                             Args = map (mk_structure pset) Args}
+        end
+in
+  the_type_grammar := type_grammar.new_abbreviation (!the_type_grammar)
+                                                    (s, mk_structure pset ty);
+  type_grammar_changed := true;
+  term_grammar_changed := true
+end;
+
+fun type_abbrev (s, ty) = let
+in
+  temp_type_abbrev (s, ty);
+  update_grms ("temp_type_abbrev",
+               String.concat ["(", mlquote s, ", ",
+                              PP.pp_to_string (!Globals.linewidth)
+                                              (TheoryPP.pp_type "U" "T")
+                                              ty,
+                              ")"])
+end;
+
+
+
+
 
 (* Not persistent? *)
 fun temp_set_associativity (i,a) = let in
@@ -1082,7 +1117,7 @@ in
 end
 
 fun merge_grm (gname, (tyG0, tmG0)) (tyG1, tmG1) =
-  (parse_type.merge_grammars (tyG0, tyG1),
+  (type_grammar.merge_grammars (tyG0, tyG1),
    term_grammar.merge_grammars (tmG0, tmG1)
   )
   handle HOLgrammars.GrammarError s
@@ -1113,7 +1148,7 @@ in
 
 
 local fun sig_addn s = String.concat
-       ["val ", s, "_grammars : parse_type.grammar * term_grammar.grammar"]
+       ["val ", s, "_grammars : type_grammar.grammar * term_grammar.grammar"]
       open Portable
 in
 fun setup_grammars thyname =
@@ -1266,5 +1301,8 @@ val _ = temp_add_rule
           paren_style = OnlyIfNecessary};
 
 val min_grammars = current_grammars();
+
+(* hideous hack section *)
+    val _ = initialise_typrinter type_pp.pp_type
 
 end
