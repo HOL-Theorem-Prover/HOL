@@ -1380,22 +1380,37 @@ fun match_bvs t1 t2 acc =
   of (LAMB(v1,b1), LAMB(v2,b2))
       => let val n1 = fst(dest_var v1)
              val n2 = fst(dest_var v2)
-             val newacc =
-                 if n1 = n2 then acc
-                 else let
-                     val (bindings, rename_these) = acc
-                     val fvs = FVL [b2] empty_tmset
-                     fun f (v, acc) =
-                         if #1 (dest_var v) = n1 then HOLset.add(acc, v)
-                         else acc
-                   in
-                     (insert(n1,n2) bindings, HOLset.foldl f rename_these fvs)
-                   end
+             val newacc = if n1 = n2 then acc else insert(n1, n2) acc
          in
            match_bvs b1 b2 newacc
          end
   | (COMB(l1,r1), COMB(l2,r2)) => match_bvs l1 l2 (match_bvs r1 r2 acc)
   | otherwise => acc;
+
+(* bindings come from match_bvs, telling us which bound variables are going
+   to get renamed, and thmc is the conclusion of the pattern theorem.
+   acc is a set of free variables that need to get instantiated away *)
+fun look_for_avoids bindings thmc acc = let
+  val lfa = look_for_avoids bindings
+in
+  case dest_term thmc of
+    LAMB (v, b) => let
+      val (thm_n, _) = dest_var v
+    in
+      case Lib.total (rev_assoc thm_n) bindings of
+        SOME n => let
+          val fvs = FVL [b] empty_tmset
+          fun f (v, acc) =
+              if #1 (dest_var v) = n then HOLset.add(acc, v)
+              else acc
+        in
+          lfa b (HOLset.foldl f acc fvs)
+        end
+      | NONE => lfa b acc
+    end
+  | COMB (l,r) => lfa l (lfa r acc)
+  | _ => acc
+end
 
 
 (* ------------------------------------------------------------------------- *)
@@ -1640,9 +1655,10 @@ fun HO_PART_MATCH partfn th =
         val sth0 = INST_TYPE tyin sth
         val sth0c = concl sth0
         val (sth1, tmin') =
-            case match_bvs tm (partfn sth0c) ([], empty_tmset) of
-              ([],_) => (sth0, tmin)
-            | (bvms, avoids) => let
+            case match_bvs tm (partfn sth0c) [] of
+              [] => (sth0, tmin)
+            | bvms => let
+                val avoids = look_for_avoids bvms sth0c empty_tmset
                 fun f (v, acc) = (v |-> genvar (type_of v)) :: acc
                 val newinst = HOLset.foldl f [] avoids
                 val newthm = INST newinst sth0
@@ -2229,9 +2245,9 @@ ho_match_term also needs to be adjusted because it may be expecting to
 instantiate some of the pattern theorem's free variables.)
 
 So, the code in match_bvs figures out what renamings of bound
-variables need to happen, and also returns a set of free variables
-that need to be instantiated into genvars.  Then, given the example,
-the main code in HO_PART_MATCH will produce
+variables need to happen, and then a traversal of the *whole* thoerem
+takes to see what free variables need to be instantiated into genvars.
+Then, given the example, the main code in HO_PART_MATCH will produce
 
   (%gv /\ ?x. Q x) = (?x. %gv /\ Q x)
 
