@@ -32,22 +32,24 @@ val FORALL_DEF =
  Definition.new_definition
    ("FORALL_DEF",     Term `! = \P:'a->bool. P = \x. T`);
 
+val _ = (add_binder("!", std_binder_precedence); add_const "!");
+
 val EXISTS_DEF =
  Definition.new_definition
    ("EXISTS_DEF",     Term `? = \P:'a->bool. P ($@ P)`);
 
-val _ = (add_binder("!", std_binder_precedence); add_const "!");
 val _ = (add_binder("?", std_binder_precedence); add_const "?");
 
 val AND_DEF =
  Definition.new_definition
    ("AND_DEF",        Term `/\ = \t1 t2. !t. (t1 ==> t2 ==> t) ==> t`);
 
+val _ = (add_infix ("/\\", 400, RIGHT); add_const "/\\");
+
 val OR_DEF =
  Definition.new_definition
    ("OR_DEF",         Term `\/ = \t1 t2. !t. (t1 ==> t) ==> (t2 ==> t) ==> t`)
 
-val _ = (add_infix ("/\\", 400, RIGHT); add_const "/\\");
 val _ = (add_infix ("\\/", 300, RIGHT); add_const "\\/");
 
 val F_DEF =
@@ -60,28 +62,40 @@ val NOT_DEF =
  Definition.new_definition
    ("NOT_DEF",        Term `~ = \t. t ==> F`);
 
+val _ = add_const "~";
+
 val EXISTS_UNIQUE_DEF =
 Definition.new_definition
 ("EXISTS_UNIQUE_DEF", Term `?! = \P:'a->bool.
                                     $? P /\ !x y. P x /\ P y ==> (x=y)`);
 
+val _ = (add_binder ("?!", std_binder_precedence); add_const "?!")
+
 val LET_DEF =
  Definition.new_definition
    ("LET_DEF",        Term `LET = \(f:'a->'b) x. f x`);
+
+val _ = add_const "LET";
 
 val COND_DEF =
  Definition.new_definition
    ("COND_DEF",       Term `COND = \t t1 t2.
                                       @x:'a. ((t=T) ==> (x=t1)) /\
                                              ((t=F) ==> (x=t2))`);
+val _ = add_const "COND";
+
 val ONE_ONE_DEF =
  Definition.new_definition
    ("ONE_ONE_DEF",    Term `ONE_ONE = \f:'a->'b. !x1 x2.
                                          (f x1 = f x2) ==> (x1 = x2)`);
 
+val _ = add_const "ONE_ONE";
+
 val ONTO_DEF =
  Definition.new_definition
    ("ONTO_DEF",       Term `ONTO = \f:'a->'b. !y. ?x. y = f x`);
+
+val _ = add_const "ONTO";
 
 val TYPE_DEFINITION =
  Definition.new_definition
@@ -90,9 +104,7 @@ val TYPE_DEFINITION =
                               (!x' x''. (rep x' = rep x'') ==> (x' = x'')) /\
                               (!x. P x = (?x'. x = rep x'))`);
 
-val _ = add_binder ("?!", std_binder_precedence);
-val _ = List.app add_const
-           ["~", "?!", "LET", "COND", "ONE_ONE", "ONTO","TYPE_DEFINITION"];
+val _ = add_const "TYPE_DEFINITION";
 
 (*---------------------------------------------------------------------------*
  *   Parsing directives for some of the basic operators.                     *
@@ -166,17 +178,44 @@ val ARB_DEF =
 
 val bool_case_DEF =
  Definition.new_definition
-   ("bool_case_DEF",  Term`bool_case = \(x:'a) y b. COND b x y`);
+   ("bool_case_DEF",  Term `bool_case = \(x:'a) y b. COND b x y`);
 
 val _ = List.app add_const ["ARB", "bool_case"];
 
 val IN_DEF =
  Definition.new_definition
-   ("IN_DEF",  Term`IN = \x (f:'a->bool). f x`);
+   ("IN_DEF",         Term `IN = \x (f:'a->bool). f x`);
 
-val _ = (add_infix ("IN", 451, Parse.NONASSOC); add_const "IN");
+val _ = (add_infix ("IN", 425, Parse.NONASSOC); add_const "IN");
 
+val RES_FORALL_DEF =
+ Definition.new_definition
+   ("RES_FORALL_DEF", Term `RES_FORALL = \p m. !x : 'a. x IN p ==> m x`);
 
+val _ = (add_const "RES_FORALL"; associate_restriction ("!",  "RES_FORALL"));
+
+val RES_EXISTS_DEF =
+ Definition.new_definition
+   ("RES_EXISTS_DEF", Term `RES_EXISTS = \p m. ?x : 'a. x IN p /\ m x`);
+
+val _ = (add_const "RES_EXISTS"; associate_restriction ("?",  "RES_EXISTS"));
+
+val RES_EXISTS_UNIQUE_DEF =
+ Definition.new_definition
+   ("RES_EXISTS_UNIQUE_DEF",
+    Term `RES_EXISTS_UNIQUE =
+          \p m. ?(x : 'a) :: p. m x /\ !y :: p. m y ==> (y = x)`);
+
+val _ = add_const "RES_EXISTS_UNIQUE";
+val _ = associate_restriction ("?!",  "RES_EXISTS_UNIQUE");
+
+val RES_SELECT_DEF =
+ Definition.new_definition
+   ("RES_SELECT_DEF", Term `RES_SELECT = \p m. @x : 'a. x IN p /\ m x`);
+
+val _ = (add_const "RES_SELECT"; associate_restriction ("@",  "RES_SELECT"));
+
+(* Note: RES_ABSTRACT comes later, defined by new_specification *)
 
 (*---------------------------------------------------------------------------*
  *                   THEOREMS                                                *
@@ -3428,6 +3467,71 @@ in
   end
 end
 
+
+(*---------------------------------------------------------------------------
+     The definition of restricted abstraction.          
+ ---------------------------------------------------------------------------*)
+
+val RES_ABSTRACT_EXISTS =
+  let
+    fun B_CONV n = funpow n RATOR_CONV BETA_CONV
+    fun RHS th = rhs (concl th)
+    val p = Term `p : 'a -> bool`
+    val m = Term `m : 'a -> 'b`
+    val m1 = Term `m1 : 'a -> 'b`
+    val m2 = Term `m2 : 'a -> 'b`
+    val x = Term `x : 'a`
+    val witness = Term `\p m x. if x IN p then ^m x else ARB x`
+    val A1 = B_CONV 2 (Term `^witness ^p ^m ^x`)
+    val A2 = TRANS A1 (B_CONV 1 (RHS A1))
+    val A3 = TRANS A2 (BETA_CONV (RHS A2))
+    val A4 = EQT_INTRO (ASSUME (Term `^x IN ^p`))
+    val A5 = RATOR_CONV (RATOR_CONV (RAND_CONV (K A4))) (RHS A3)
+    val A6 = INST_TYPE [alpha |-> beta] COND_CLAUSE1
+    val A7 = SPECL [Term `^m ^x`, Term `ARB ^x : 'b`] A6
+    val A8 = DISCH (Term `^x IN ^p`) (TRANS (TRANS A3 A5) A7)
+    val A9 = GENL [Term `^p`, Term `^m`, Term `^x`] A8
+    (* Completed the first clause of the definition *)
+    val B1 = SPEC (Term `^x IN ^p`) EXCLUDED_MIDDLE
+    val B2 = UNDISCH A8
+    val B3 = INST [m |-> m1] B2
+    val B4 = INST [m |-> m2] B2
+    val B5 = SPEC_ALL (ASSUME (Term `!x. x IN ^p ==> (^m1 x = ^m2 x)`))
+    val B6 = TRANS B3 (TRANS (UNDISCH B5) (SYM B4))
+    val B7 = INST [m |-> m1] A3
+    val B8 = INST [m |-> m2] A3
+    val B9 = SYM (SPEC (Term `^x IN ^p`) EQ_CLAUSE4)
+    val B10 = EQ_MP B9 (ASSUME (Term `~(^x IN ^p)`))
+    val B11 = INST_TYPE [alpha |-> beta] COND_CLAUSE2
+    val B12 = RATOR_CONV (RATOR_CONV (RAND_CONV (K B10))) (RHS B7)
+    val B13 = TRANS B12 (SPECL [Term `^m1 ^x`, Term `ARB ^x : 'b`] B11)
+    val B14 = RATOR_CONV (RATOR_CONV (RAND_CONV (K B10))) (RHS B8)
+    val B15 = TRANS B14 (SPECL [Term `^m2 ^x`, Term `ARB ^x : 'b`] B11)
+    val B16 = TRANS (TRANS B7 B13) (SYM (TRANS B8 B15))
+    val B17 = DISJ_CASES B1 B6 B16
+    val B18 = ABS x B17
+    val B19 = CONV_RULE (RATOR_CONV (RAND_CONV ETA_CONV)) B18
+    val B20 = CONV_RULE (RAND_CONV ETA_CONV) B19
+    val B21 = DISCH (Term `!x. x IN ^p ==> (^m1 x = ^m2 x)`) B20
+    val B22 = GENL [p, m1, m2] B21
+    (* Cleaning up *)
+    val C1 = CONJ A9 B22
+    val C2 = EXISTS
+      (Term `?f.
+               (!p (m : 'a -> 'b) x. x IN p ==> (f p m x = m x)) /\
+               (!p m1 m2.
+                  (!x. x IN p ==> (m1 x = m2 x)) ==> (f p m1 = f p m2))`,
+       Term `\p (m : 'a -> 'b) x. (if x IN p then m x else ARB x)`) C1
+  in
+    C2
+  end;
+
+val RES_ABSTRACT_DEF =
+  Definition.new_specification
+  ("RES_ABSTRACT_DEF", ["RES_ABSTRACT"], RES_ABSTRACT_EXISTS);
+
+val _ = add_const "RES_ABSTRACT";
+val _ = associate_restriction ("\\", "RES_ABSTRACT");
 
 (*---------------------------------------------------------------------------
      From Joe Hurd : case analysis on the (4) functions in the
