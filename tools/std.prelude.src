@@ -14,7 +14,7 @@ end;
  *       Establish the basic environment.                                    *
  *---------------------------------------------------------------------------*)
 
-val _ = app load ["HolKernel", "boolLib", "goalstackLib"];
+app load ["Mosml", "Path", "boolLib", "goalstackLib"];
 
 open HolKernel Parse boolLib goalstackLib;
 
@@ -22,6 +22,22 @@ infix ++ && ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 infixr 3 -->;
 infix 8 via by;
 
+(*---------------------------------------------------------------------------*
+ *       Find out if bossLib is requested, by looking at argv.               *
+ *---------------------------------------------------------------------------*)
+
+val _ = 
+  case List.rev(Mosml.argv())
+   of end_init_path::_ =>
+        (case Path.base(Path.file end_init_path) 
+          of "end-init-boss" => 
+                let open TextIO
+                in output(stdOut,"\n...loading HOL power tools ...\n")
+                 ; flushOut stdOut
+                 ; load "bossLib"
+                end
+           | otherwise       => ())
+    | [] => raise Fail "std.prelude: bizarre invocation of HOL"
 
 (*---------------------------------------------------------------------------*
  *   Install prettyprinters                                                  *
@@ -65,7 +81,7 @@ end
  *---------------------------------------------------------------------------*)
 
 val _ = quotation := true
-val _ = Help.displayLines := 40;
+val _ = Help.displayLines := 60;
 
 (*---------------------------------------------------------------------------*
  *  Set up compile_theory function                                           *

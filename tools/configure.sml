@@ -13,17 +13,17 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir =
-val holdir   =
+val mosmldir = 
+val holdir   = 
 
-val OS       = "linux";   (* Operating system; choices are:
-                                "linux", "solaris", "unix", "winNT" *)
+val OS       = "linux";    (* Operating system; choices are:
+                                "linux", "solaris", "unix", "winNT"        *)
 
-val CC       = "gcc";     (* C compiler                                    *)
-val GNUMAKE  = "gnumake"; (* for bdd library and SMV                       *)
+val CC       = "gcc";      (* C compiler                                   *)
+val GNUMAKE  = "gnumake";  (* for bdd library and SMV                      *)
 
-val DEPDIR   = ".HOLMK";  (* local dir. where Holmake dependencies kept    *)
-val LN_S     = "ln -s";   (* only change if you are a HOL developer.       *)
+val DEPDIR   = ".HOLMK";   (* local dir. where Holmake dependencies kept   *)
+val LN_S     = "ln -s";    (* only change if you are a HOL developer.      *)
 
 (*---------------------------------------------------------------------------
           END user-settable parameters
@@ -286,17 +286,35 @@ val _ =
   end;
 
 (*---------------------------------------------------------------------------
-      Generate a shell script for running HOL.
+      Generate shell scripts for running HOL.
  ---------------------------------------------------------------------------*)
 
 val _ =
  let val _ = echo "Generating bin/hol."
      val mosml       = fullPath [mosmldir, "bin/mosml"]
      val std_prelude = fullPath [holdir, "std.prelude"]
-     val target      = fullPath [holdir, "bin/hol"]
+     val target      = fullPath [holdir, "bin/hol.bare"]
      val qend        = fullPath [holdir, "tools/end-init.sml"]
+     val target_boss = fullPath [holdir, "bin/hol"]
+     val qend_boss   = fullPath [holdir, "tools/end-init-boss.sml"]
  in
-   emit_hol_script target mosml std_prelude qend
+   emit_hol_script target mosml std_prelude qend;
+   emit_hol_script target_boss mosml std_prelude qend_boss
+ end;
+
+val _ =
+ let val _ = echo "Generating bin/hol.unquote."
+     val qfilter     = fullPath [holdir,   "bin/unquote"]
+     val target      = fullPath [holdir,   "bin/hol.bare.unquote"]
+     val target_boss = fullPath [holdir,   "bin/hol.unquote"]
+     val mosml       = fullPath [mosmldir, "bin/mosml"]
+     val std_prelude = fullPath [holdir,   "std.prelude"]
+     val qinit       = fullPath [holdir,   "tools/unquote-init.sml"]
+     val qend        = fullPath [holdir,   "tools/end-init.sml"]
+     val qend_boss   = fullPath [holdir,   "tools/end-init-boss.sml"]
+ in
+  emit_hol_unquote_script target qfilter mosml std_prelude qinit qend;
+  emit_hol_unquote_script target_boss qfilter mosml std_prelude qinit qend_boss
  end;
 
 (*---------------------------------------------------------------------------
@@ -346,28 +364,24 @@ val _ =
 
 
 (*---------------------------------------------------------------------------
-    Generate a shell script for running HOL through a preprocessor.
- ---------------------------------------------------------------------------*)
-
-val _ =
- let val _ = echo "Generating bin/hol.unquote."
-     val qfilter     = fullPath [holdir,   "bin/unquote"]
-     val target      = fullPath [holdir,   "bin/hol.unquote"]
-     val mosml       = fullPath [mosmldir, "bin/mosml"]
-     val std_prelude = fullPath [holdir,   "std.prelude"]
-     val qinit       = fullPath [holdir,   "tools/unquote-init.sml"]
-     val qend        = fullPath [holdir,   "tools/end-init.sml"]
- in
-   emit_hol_unquote_script target qfilter mosml std_prelude qinit qend
- end;
-
-
-(*---------------------------------------------------------------------------
     Configure the muddy library.
  ---------------------------------------------------------------------------*)
 
-val _ = use (fullPath [holdir, "tools", "config-muddy.sml"]);
-
+local val CFLAGS =
+        case OS
+         of "linux"   => SOME " -Dunix -O3 -fPIC $(CINCLUDE)"
+          | "solaris" => SOME " -Dunix -O3 $(CINCLUDE)"
+          |     _     => NONE
+      val DLLIBCOMP =
+        case OS
+         of "linux"   => SOME "ld -shared -o $@ $(COBJS) $(LIBS)"
+          | "solaris" => SOME "ld -G -B dynamic -o $@ $(COBJS) $(LIBS)"
+          |    _      => NONE
+      val ALL =
+        if OS="linux" orelse OS="solaris"
+        then SOME " muddy.so"
+        else NONE
+in
 val _ =
  let open TextIO
      val _ = echo "Setting up the muddy library Makefile."
@@ -393,7 +407,8 @@ val _ =
         "all:\n"        -->  String.concat["all: ",all,"\n"],
         "DLLIBCOMP"     -->  String.concat["\t", dllibcomp, "\n"]
         ]
-  end;
+  end
+end;
 
 (*---------------------------------------------------------------------------
            Configure the help database
@@ -401,10 +416,10 @@ val _ =
 
 val _ =
  let val _ = echo "Setting up the help Makefile."
-     val src2    = fullPath [holdir, "tools", "makebase.src"]
-     val target2 = fullPath [holdir, "help", "src", "makebase.sml"]
+     val src    = fullPath [holdir, "tools", "makebase.src"]
+     val target = fullPath [holdir, "help", "src", "makebase.sml"]
  in
-  fill_holes (src2,target2)
+  fill_holes (src,target)
    ["val HOLpath = __;\n"
       --> String.concat["val HOLpath = ", quote holdir, ";\n"]]
  end;
