@@ -15,6 +15,7 @@ Pretty print words as unsigned hexadecimal numbers.
 }
 
 \COMMENTS
+Only available after running {mkword.exe}.
 HOL will fail to parse the pretty printed output.
 
 \SEEALSO

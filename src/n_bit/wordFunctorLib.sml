@@ -6,27 +6,34 @@ functor wordFunctorLib (structure wordTheory : sig
   val word_L_def : Thm.thm
   val word_H_def : Thm.thm
   val word_T : Thm.thm
-  val MOD_WL_EVAL : Thm.thm
+  val MOD_WL_def : Thm.thm
   val MSBn_def : Thm.thm
   val ADD_EVAL2 : Thm.thm
   val MUL_EVAL2 : Thm.thm
-  val ONE_COMP_EVAL2 : Thm.thm
-  val TWO_COMP_EVAL2 : Thm.thm
+  val ONE_COMP_def : Thm.thm
+  val TWO_COMP_def : Thm.thm
+  val ONE_COMP_EVAL : Thm.thm
+  val TWO_COMP_EVAL : Thm.thm
   val word_sub : Thm.thm
-  val AND_EVAL2 : Thm.thm
-  val OR_EVAL2 : Thm.thm
-  val EOR_EVAL2 : Thm.thm
+  val AND_def : Thm.thm
+  val OR_def : Thm.thm
+  val EOR_def : Thm.thm
+  val AND_EVAL : Thm.thm
+  val OR_EVAL : Thm.thm
+  val EOR_EVAL : Thm.thm
   val LSL_EVAL : Thm.thm
   val LSR_THM : Thm.thm
   val ASR_THM : Thm.thm
   val ROR_THM : Thm.thm
-  val RRX_EVAL2 : Thm.thm
+  val RRX_EVAL : Thm.thm
+  val RRXn_def : Thm.thm
+  val LSR_ONE_def : Thm.thm
   val WORD_BIT_def : Thm.thm
   val WORD_BITS_def : Thm.thm
   val WORD_SLICE_def : Thm.thm
   val w2n_EVAL : Thm.thm
   val n2w_11 : Thm.thm
-  val MSB_EVAL2 : Thm.thm
+  val MSB_EVAL : Thm.thm
   val LSB_EVAL2 : Thm.thm
   val LT_EVAL : Thm.thm
   val LE_EVAL : Thm.thm
@@ -62,9 +69,31 @@ open HolKernel boolLib bossLib computeLib
 (* -------------------------------------------------------- *)
 
 val THE_WL = SIMP_RULE arith_ss [HB_def,arithmeticTheory.ADD1] WL_def;
+val MOD_WL_EVAL = REWRITE_RULE [THE_WL,GSYM MOD_2EXP_def] MOD_WL_def;
+
+val RRX_EVAL2 = GEN_ALL (REWRITE_RULE [GSYM DIV2_def,RRXn_def,LSR_ONE_def,HB_def] RRX_EVAL);
+
+val MSB_EVAL2 = GEN_ALL (REWRITE_RULE [MSBn_def,HB_def] MSB_EVAL);
+
+val ONE_COMP_EVAL2 = GEN_ALL (SIMP_RULE arith_ss [ONE_COMP_def,THE_WL] ONE_COMP_EVAL);
+val TWO_COMP_EVAL2 = GEN_ALL (SIMP_RULE arith_ss [TWO_COMP_def,THE_WL] TWO_COMP_EVAL);
+
+val OR_EVAL2 = GEN_ALL (SIMP_RULE bool_ss [OR_def,THE_WL] OR_EVAL);
+val AND_EVAL2 = GEN_ALL (SIMP_RULE bool_ss [AND_def,THE_WL] AND_EVAL);
+val EOR_EVAL2 = GEN_ALL (SIMP_RULE bool_ss [EOR_def,THE_WL] EOR_EVAL);
+
+val LT_EVAL = REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] LT_EVAL;
+val LE_EVAL = REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] LE_EVAL;
+val GT_EVAL = REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] GT_EVAL;
+val GE_EVAL = REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] GE_EVAL;
+val LO_EVAL = REWRITE_RULE [MOD_WL_EVAL] LO_EVAL;
+val LS_EVAL = REWRITE_RULE [MOD_WL_EVAL] LS_EVAL;
+val HI_EVAL = REWRITE_RULE [MOD_WL_EVAL] HI_EVAL;
+val HS_EVAL = REWRITE_RULE [MOD_WL_EVAL] HS_EVAL;
+
+(* -------------------------------------------------------- *)
 
 val wl = (numSyntax.dest_numeral o rhs o concl) THE_WL;
-
 val sn = Arbnum.toString wl;
 
 (* -------------------------------------------------------- *)

@@ -20,6 +20,9 @@ Turns off the pretty printing of words.
 > val it = ``n2w 12`` : term
 }
 
+\COMMENTS
+Only available after running {mkword.exe}.
+
 \SEEALSO
 pp_word_unsigned_bin, pp_word_unsigned_oct, pp_word_unsigned_hex,
 pp_word_signed_bin, pp_word_signed_oct, pp_word_signed_dec, pp_word_signed_hex

@@ -17,12 +17,7 @@ structure word = wordFunctor (val bits = n)
 
 (* --------------------------------------------------------------------- *)
 
-fun normPath s = Path.toString(Path.fromString s)
-fun itstrings f [] = raise Fail "itstrings: empty list"
-  | itstrings f [x] = x
-  | itstrings f (h::t) = f h (itstrings f t);
-fun fullPath slist = normPath
-   (itstrings (fn chunk => fn path => Path.concat (chunk,path)) slist);
+open wordUtil;
 
 fun bincopy file path =  (* Dead simple file copy - binary version *)
  let open BinIO
@@ -67,6 +62,15 @@ val _ =
 
 val _ = Systeml.systeml[MOSMLC, "-q", "-c", "-I", SIGOBJ_DIR, "Overlay.ui",
                         "wordFunctorLib.ui", lib_file ^ ".sml"];
+
+val _ = let
+  val {vol,...} = Path.fromString ""
+in
+  Systeml.systeml[Path.toString{arcs=["bin","sh"],isAbs=true,vol=vol},
+                  fullPath [Systeml.HOLDIR,"src","n_bit","wordn-doc"],
+                  fullPath [Systeml.HOLDIR,"src","n_bit","wordn-doc.sed"],
+                  fullPath [Systeml.HOLDIR,"src","n_bit","help","thms","wordn"]]
+end;
 
 (* --------------------------------------------------------------------- *)
 

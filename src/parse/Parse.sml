@@ -1303,7 +1303,7 @@ val _ = Theory.after_new_theory setup_grammars;
 
 
 fun export_theorems_as_docfiles dirname thms = let
-  val {arcs,...} = Path.fromString dirname
+  val {arcs,isAbs,vol} = Path.fromString dirname
   fun check_arcs checked arcs =
     case arcs of
       [] => checked
@@ -1325,7 +1325,7 @@ fun export_theorems_as_docfiles dirname thms = let
           check_arcs nextlevel xs
         end
       end
-  val dirname = check_arcs "" arcs
+  val dirname = check_arcs (Path.toString {arcs=[],isAbs=isAbs,vol=vol}) arcs
   fun write_thm (thname, thm) = let
     open Theory TextIO
     val outstream = openOut (Path.concat (dirname, thname^".doc"))

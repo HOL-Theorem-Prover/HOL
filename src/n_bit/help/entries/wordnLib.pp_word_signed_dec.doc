@@ -14,6 +14,9 @@ Pretty print words as signed (two's complement) decimal numbers.
 > val it = ``~n2w 4`` : term
 }
 
+\COMMENTS
+Only available after running {mkword.exe}.
+
 \SEEALSO
 pp_word_unsigned_bin, pp_word_unsigned_oct, pp_word_unsigned_hex,
 pp_word_signed_bin, pp_word_signed_oct, pp_word_signed_hex, pp_word_off

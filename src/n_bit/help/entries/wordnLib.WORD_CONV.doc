@@ -12,6 +12,9 @@ Evaluates word ground terms.
 > val it = |- n2w 8 - n2w 3 = n2w 5 : thm
 }
 
+\COMMENTS
+Only available after running {mkword.exe}.
+
 \SEEALSO
 numLib.REDUCE_CONV
 

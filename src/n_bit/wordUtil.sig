@@ -1,4 +1,4 @@
-signature abbrevUtil =
+signature wordUtil =
 sig
    val definition : string -> Abbrev.thm
    val LEFT_REWRITE_TAC : Abbrev.thm list -> Abbrev.tactic
@@ -15,4 +15,6 @@ sig
    val B_FULL_SIMP_TAC : Abbrev.thm list -> Abbrev.tactic
    val S_FULL_SIMP_TAC : Abbrev.thm list -> Abbrev.tactic
    val A_FULL_SIMP_TAC : Abbrev.thm list -> Abbrev.tactic
+   val fullPath : string list -> string
+   val export_doc_theorems : unit -> unit
 end

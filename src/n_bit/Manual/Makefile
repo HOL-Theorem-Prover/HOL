@@ -5,14 +5,15 @@
 # ---------------------------------------------------------------------
 # Pathname to the n-bit word help files
 # ---------------------------------------------------------------------
+HOLDIR=../../../
 Help=../help
 
 # ---------------------------------------------------------------------
 # Pathname to the doc-to-tex script and doc-to-tex.sed file
 # ---------------------------------------------------------------------
-DOCTOTEX=../../../help/src/Doc2Tex.exe
-DOCTOTEXTHM=../../../Manual/Reference/bin/doc-to-tex
-DOCTOTEXSED=../../../Manual/Reference/bin/doc-to-tex.sed
+DOCTOTEX=$(HOLDIR)/help/src/Doc2Tex.exe
+DOCTOTEXTHM=$(HOLDIR)/Manual/Reference/bin/doc-to-tex
+DOCTOTEXSED=$(HOLDIR)/Manual/Reference/bin/doc-to-tex.sed
 
 # ---------------------------------------------------------------------
 # Pathname to the makeindex script
@@ -44,10 +45,12 @@ ids:
 theorems:
 	@echo "\chapter{Pre-proved Theorems}" > theorems.tex
 	@echo "\input{theorems-intro}" >> theorems.tex
-	@echo "\section{Definitions}\label{defs}">>theorems.tex
-	/bin/sh ${DOCTOTEXTHM} ${DOCTOTEXSED} ${Help}/defs theorems.tex
-	@echo "\section{Theorems}">>theorems.tex
-	/bin/sh ${DOCTOTEXTHM} ${DOCTOTEXSED} ${Help}/thms theorems.tex
+	@echo "\section{The Theory \texttt{bits}}">>theorems.tex
+	/bin/sh ${DOCTOTEXTHM} ${DOCTOTEXSED} ${Help}/thms/bits theorems.tex
+	@echo "\section{The Theory \texttt{numeral\\_bits}}">>theorems.tex
+	/bin/sh ${DOCTOTEXTHM} ${DOCTOTEXSED} ${Help}/thms/numeral_bits theorems.tex
+	@echo "\section{The Theory \texttt{word<n>}}">>theorems.tex
+	/bin/sh ${DOCTOTEXTHM} ${DOCTOTEXSED} ${Help}/thms/wordn theorems.tex
 
 index:
 	${MAKEINDEX} word.idx

@@ -216,7 +216,7 @@ ADD_EVAL2 |- !a b. n2w a + n2w b = n2w (MOD_2EXP WL (a + b))
 > val it = |- n2w 21 <. n2w 56 = T : thm
 \end{verbatim}\end{session}
 
-The shift right operations are evaluated efficiently by using theorems that express the result in term of \ml{BITS}; for example, see \ml{ROR\_THM\_def} in Section~\ref{defs}.  This ensures that the run-time is still quick when shifting by a large value.
+The shift right operations are evaluated efficiently by using theorems that express the result in term of \ml{BITS}.  This ensures that the run-time is still quick when shifting by a large value.
 
 \begin{session}\begin{verbatim}
 - time WORD_CONV ``n2w 14 #>> 100001``;

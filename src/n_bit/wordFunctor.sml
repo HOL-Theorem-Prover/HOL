@@ -3,10 +3,10 @@ struct
 
 (*
    app load ["EquivType","pairTheory",
-             "numeralTheory","selectUtil","abbrevUtil","bitsTheory"];
+             "numeralTheory","selectUtil","wordUtil","bitsTheory"];
 *)
 
-open HolKernel boolLib abbrevUtil selectUtil Q Parse EquivType
+open HolKernel boolLib wordUtil selectUtil Q Parse EquivType
      computeLib bossLib simpLib numLib pairTheory numeralTheory
      arithmeticTheory prim_recTheory bitsTheory;
 
@@ -592,8 +592,6 @@ val _ = save_thm("WORD_NOT_NOT",WORD_NOT_NOT);
 val _ = save_thm("WORD_RIGHT_AND_OVER_OR",WORD_RIGHT_AND_OVER_OR);
 val _ = save_thm("WORD_RIGHT_OR_OVER_AND",WORD_RIGHT_OR_OVER_AND);
 val _ = save_thm("WORD_DE_MORGAN_THM",WORD_DE_MORGAN_THM);
-
-val THE_WL = SIMP_RULE arith_ss [HB_def,ADD1] WL_def;
 
 val word_L_def = save_thm("word_L_def",REWRITE_RULE [GSYM n2w_def] (definition "word_L_def"));
 val word_H_def = save_thm("word_H_def",REWRITE_RULE [GSYM n2w_def] (definition "word_H_def"));
@@ -1487,10 +1485,6 @@ val ROR_word_T = store_thm("ROR_word_T",
 
 (* -------------------------------------------------------- *)
 
-val MOD_WL_EVAL = save_thm("MOD_WL_EVAL",
-  REWRITE_RULE [THE_WL,GSYM MOD_2EXP_def] MOD_WL_def
-);
-
 val ADD_EVAL2 = save_thm("ADD_EVAL2",
   GEN_ALL (GEN_REWRITE_RULE (ONCE_DEPTH_CONV o RAND_CONV) empty_rewrites [GSYM MOD_WL_ELIM] ADD_EVAL)
 );
@@ -1499,36 +1493,11 @@ val MUL_EVAL2 = save_thm("MUL_EVAL2",
   GEN_ALL (GEN_REWRITE_RULE (ONCE_DEPTH_CONV o RAND_CONV) empty_rewrites [GSYM MOD_WL_ELIM] MUL_EVAL)
 );
 
-val ONE_COMP_EVAL2 = save_thm("ONE_COMP_EVAL2",
-  GEN_ALL (SIMP_RULE arith_ss [ONE_COMP_def,THE_WL] ONE_COMP_EVAL)
-);
-
-val TWO_COMP_EVAL2 = save_thm("TWO_COMP_EVAL2",
-  GEN_ALL (SIMP_RULE arith_ss [TWO_COMP_def,THE_WL] TWO_COMP_EVAL)
-);
-
 val LSR_ONE_EVAL2 = save_thm("LSR_ONE_EVAL2",
   GEN_ALL (REWRITE_RULE [LSR_ONE_def] LSR_ONE_EVAL)
 );
 
-val ASR_ONE_EVAL2 = save_thm("ASR_ONE_EVAL2",
-  GEN_ALL (REWRITE_RULE [ASR_ONE_def,LSR_ONE_def,HB_def] ASR_ONE_EVAL)
-);
-
-val ROR_ONE_EVAL2 = save_thm("ROR_ONE_EVAL2",
-  GEN_ALL (REWRITE_RULE [ROR_ONE_def,LSR_ONE_def,HB_def] ROR_ONE_EVAL)
-);
-
-val RRX_EVAL2 = save_thm("RRX_EVAL2",
-  GEN_ALL (REWRITE_RULE [GSYM DIV2_def,RRXn_def,LSR_ONE_def,HB_def] RRX_EVAL)
-);
-
 val LSB_EVAL2 = save_thm("LSB_EVAL2",GEN_ALL (REWRITE_RULE [LSB_ODD] LSB_EVAL));
-val MSB_EVAL2 = save_thm("MSB_EVAL2",GEN_ALL (REWRITE_RULE [MSBn_def,HB_def] MSB_EVAL));
-
-val OR_EVAL2  = save_thm("OR_EVAL2",GEN_ALL (SIMP_RULE bool_ss [OR_def,THE_WL] OR_EVAL));
-val AND_EVAL2 = save_thm("AND_EVAL2",GEN_ALL (SIMP_RULE bool_ss [AND_def,THE_WL] AND_EVAL));
-val EOR_EVAL2 = save_thm("EOR_EVAL2",GEN_ALL (SIMP_RULE bool_ss [EOR_def,THE_WL] EOR_EVAL));
 
 (* -------------------------------------------------------- *)
 
@@ -2485,7 +2454,7 @@ val WORD_ZERO_LOWER_T = store_thm("WORD_ZERO_LOWER_T",
 
 (* -------------------------------------------------------- *)
 
-val LT_EVAL = prove(
+val LT_EVAL = store_thm("LT_EVAL",
   `!m n. word_lt (n2w m) (n2w n) =
      let sm = MSBn m
      and sn = MSBn n
@@ -2493,7 +2462,7 @@ val LT_EVAL = prove(
   RW_TAC std_ss [WORD_LT_THM,MSB_EVAL,w2n_EVAL]
 );
 
-val LE_EVAL = prove(
+val LE_EVAL = store_thm("LE_EVAL",
   `!m n. word_le (n2w m) (n2w n) =
      let sm = MSBn m
      and sn = MSBn n
@@ -2501,7 +2470,7 @@ val LE_EVAL = prove(
   RW_TAC std_ss [WORD_LE_THM,MSB_EVAL,w2n_EVAL]
 );
 
-val GT_EVAL = prove(
+val GT_EVAL = store_thm("GT_EVAL",
   `!m n. word_gt (n2w m) (n2w n) =
      let sm = MSBn m
      and sn = MSBn n
@@ -2509,7 +2478,7 @@ val GT_EVAL = prove(
   RW_TAC std_ss [WORD_GT_THM,MSB_EVAL,w2n_EVAL] THEN DECIDE_TAC
 );
 
-val GE_EVAL = prove(
+val GE_EVAL = store_thm("GE_EVAL",
   `!m n. word_ge (n2w m) (n2w n) =
      let sm = MSBn m
      and sn = MSBn n
@@ -2517,34 +2486,25 @@ val GE_EVAL = prove(
   RW_TAC std_ss [WORD_GE_THM,MSB_EVAL,w2n_EVAL] THEN DECIDE_TAC
 );
 
-val LO_EVAL = prove(
+val LO_EVAL = store_thm("LO_EVAL",
   `!m n. word_lo (n2w m) (n2w n) = MOD_WL m < MOD_WL n`,
   RW_TAC bool_ss [WORD_LO_THM,w2n_EVAL]
 );
 
-val LS_EVAL = prove(
+val LS_EVAL = store_thm("LS_EVAL",
   `!m n. word_ls (n2w m) (n2w n) = MOD_WL m <= MOD_WL n`,
   RW_TAC bool_ss [WORD_LS_THM,w2n_EVAL]
 );
 
-val HI_EVAL = prove(
+val HI_EVAL = store_thm("HI_EVAL",
   `!m n. word_hi (n2w m) (n2w n) = MOD_WL m > MOD_WL n`,
   RW_TAC bool_ss [WORD_HI_THM,w2n_EVAL]
 );
 
-val HS_EVAL = prove(
+val HS_EVAL = store_thm("HS_EVAL",
   `!m n. word_hs (n2w m) (n2w n) = MOD_WL m >= MOD_WL n`,
   RW_TAC bool_ss [WORD_HS_THM,w2n_EVAL]
 );
-
-val LT_EVAL = save_thm("LT_EVAL",REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] LT_EVAL);
-val LE_EVAL = save_thm("LE_EVAL",REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] LE_EVAL);
-val GT_EVAL = save_thm("GT_EVAL",REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] GT_EVAL);
-val GE_EVAL = save_thm("GE_EVAL",REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] GE_EVAL);
-val LO_EVAL = save_thm("LO_EVAL",REWRITE_RULE [MOD_WL_EVAL] LO_EVAL);
-val LS_EVAL = save_thm("LS_EVAL",REWRITE_RULE [MOD_WL_EVAL] LS_EVAL);
-val HI_EVAL = save_thm("HI_EVAL",REWRITE_RULE [MOD_WL_EVAL] HI_EVAL);
-val HS_EVAL = save_thm("HS_EVAL",REWRITE_RULE [MOD_WL_EVAL] HS_EVAL);
 
 (* -------------------------------------------------------- *)
 
@@ -2566,6 +2526,7 @@ val _ = add_infix(">=.",450,HOLgrammars.RIGHT);
 (* -------------------------------------------------------- *)
 
 val _ = export_theory();
+val _ = export_theory_as_docfiles(fullPath[Systeml.HOLDIR,"src","n_bit","help","thms","wordn"]);
 
 (* -------------------------------------------------------- *)
 

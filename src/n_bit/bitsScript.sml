@@ -1,6 +1,6 @@
-(* load "abbrevUtil"; *)
+(* load "wordUtil"; *)
 open HolKernel boolLib bossLib Q simpLib numLib
-     arithmeticTheory prim_recTheory abbrevUtil;
+     arithmeticTheory prim_recTheory wordUtil;
 
 (* -------------------------------------------------------- *)
 
@@ -920,5 +920,6 @@ val MOD_ADD_1 = store_thm("MOD_ADD_1",
 (* -------------------------------------------------------- *)
 
 val _ = export_theory();
+val _ = export_doc_theorems();
 
 (* -------------------------------------------------------- *)

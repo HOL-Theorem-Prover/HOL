@@ -1,4 +1,4 @@
-structure abbrevUtil :> abbrevUtil =
+structure wordUtil :> wordUtil =
 struct
 
 open HolKernel boolLib Parse bossLib simpLib;
@@ -23,5 +23,15 @@ val A_RW_TAC = RW_TAC arith_ss;
 val B_FULL_SIMP_TAC = FULL_SIMP_TAC bool_ss;
 val S_FULL_SIMP_TAC = FULL_SIMP_TAC std_ss;
 val A_FULL_SIMP_TAC = FULL_SIMP_TAC arith_ss;
+
+fun normPath s = Path.toString(Path.fromString s)
+fun itstrings f [] = raise Fail "itstrings: empty list"
+  | itstrings f [x] = x
+  | itstrings f (h::t) = f h (itstrings f t);
+fun fullPath slist = normPath
+   (itstrings (fn chunk => fn path => Path.concat (chunk,path)) slist);
+
+fun export_doc_theorems() =
+  export_theory_as_docfiles (fullPath["help","thms",current_theory()])
 
 end

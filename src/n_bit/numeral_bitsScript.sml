@@ -1,5 +1,5 @@
-(* load "bitsTheory"; *)
-open HolKernel boolLib bossLib Q
+(* app load ["wordUtil","bitsTheory"]; *)
+open HolKernel boolLib bossLib Q wordUtil
      arithmeticTheory numeralTheory bitsTheory;
 
 (* -------------------------------------------------------- *)
@@ -128,5 +128,6 @@ val NUMERAL_MOD_2EXP = save_thm("NUMERAL_MOD_2EXP", SUC_RULE iMOD_2EXP_CLAUSES);
 (* -------------------------------------------------------- *)
  
 val _ = export_theory();
+val _ = export_doc_theorems();
  
 (* -------------------------------------------------------- *)
