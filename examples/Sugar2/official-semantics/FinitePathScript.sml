@@ -19,7 +19,7 @@
 ******************************************************************************)
 (* 
 quietdec := true;
-map load ["rich_listTheory", "intLib", "arithmeticTheory"];
+app load ["bossLib", "rich_listTheory", "intLib", "arithmeticTheory"];
 open listTheory rich_listTheory arithmeticTheory intLib;
 val _ = intLib.deprecate_int();
 quietdec := false;

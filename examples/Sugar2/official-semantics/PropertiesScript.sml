@@ -19,9 +19,9 @@
 quietdec := true;
 loadPath := "../official-semantics" :: "../regexp" :: !loadPath;
 map load 
- ["KripkeTheory", "UnclockedSemanticsTheory", "ClockedSemanticsTheory",
-  "RewritesTheory", "rich_listTheory", "intLib", "res_quanLib", 
-  "res_quanTheory"];
+ ["bossLib", "KripkeTheory", "UnclockedSemanticsTheory",
+  "ClockedSemanticsTheory", "RewritesTheory", "rich_listTheory", "intLib",
+  "res_quanLib", "res_quanTheory"];
 open KripkeTheory FinitePathTheory PathTheory SyntaxTheory 
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
      arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
@@ -1046,7 +1046,7 @@ val INIT_CLOCK_COMP_EQUIV =
               num_to_def,xnum_to_def,NEXT_RISE,ELEM_RESTN]
        THEN EQ_TAC
        THEN RW_TAC std_ss []
-       THEN Q.EXISTS_TAC `k`
+       THEN Q.EXISTS_TAC `x`
        THEN PROVE_TAC[SIMP_RULE arith_ss [] (Q.SPECL[`j`,`0`]ELEM_RESTN)],
       (* F_SUFFIX_IMP(s,f) *)
       INIT_TAC

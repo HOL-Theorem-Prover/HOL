@@ -18,9 +18,9 @@
 ******************************************************************************)
 (*
 quietdec := true;
-map load 
- ["SyntaxTheory", "PathTheory", "KripkeTheory", "UnclockedSemanticsTheory",
-  "rich_listTheory", "intLib","res_quanLib"];
+app load 
+ ["bossLib", "SyntaxTheory", "PathTheory", "KripkeTheory",
+  "UnclockedSemanticsTheory", "rich_listTheory", "intLib","res_quanLib"];
 open SyntaxTheory PathTheory KripkeTheory 
      UnclockedSemanticsTheory        (* Needed for S_SEM w c (S_CLOCK(r,c1)) *)
      listTheory rich_listTheory;
@@ -382,16 +382,16 @@ val F_SEM =
        THEN RW_TAC arith_ss []
        THEN RW_TAC arith_ss []
        THENL
-        [Q.EXISTS_TAC `k`
+        [Q.EXISTS_TAC `x`
           THEN RW_TAC arith_ss [FinitePathTheory.LENGTH_RESTN],
-         Q.EXISTS_TAC `k`
+         Q.EXISTS_TAC `x`
           THEN RW_TAC arith_ss [FinitePathTheory.LENGTH_RESTN],
          REPEAT DISJ2_TAC
-          THEN Q.EXISTS_TAC `i`
+          THEN Q.EXISTS_TAC `x`
           THEN RW_TAC arith_ss [FinitePathTheory.LENGTH_RESTN]
           THEN PROVE_TAC[],
          REPEAT DISJ2_TAC
-          THEN Q.EXISTS_TAC `i`
+          THEN Q.EXISTS_TAC `x`
           THEN RW_TAC arith_ss [FinitePathTheory.LENGTH_RESTN]
           THEN PROVE_TAC[]]);
   
