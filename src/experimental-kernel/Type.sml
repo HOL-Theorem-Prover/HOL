@@ -11,7 +11,7 @@ fun ERR f msg = HOL_ERR {origin_structure = "Type",
                          message = msg}
 
 type type_key = {Thy : string, Tyop : string }
-type type_info = { key : type_key, arity : int, uptodate : bool ref}
+type type_info = { key : type_key, arity : int, uptodate : bool} ref
 
 fun compare_key ({Thy = thy1, Tyop = op1}, {Thy = thy2, Tyop = op2}) =
     case String.compare(op1, op2) of
@@ -22,29 +22,28 @@ structure Map = Binarymap
 
 val operator_table = ref (Map.mkDict compare_key)
 
-fun prim_new_type (k as {Thy, Tyop}) n = let
-  val _ = n >= 0 orelse failwith "invalid arity"
-  val newdata = {key = k, arity = n, uptodate = ref true}
-in
-  case Map.peek (!operator_table,k) of
-    NONE => operator_table := Map.insert(!operator_table, k, newdata)
-  | SOME ({uptodate, ...}) => let
-    in
-      uptodate := false;
-      operator_table := Map.insert(!operator_table, k, newdata)
-    end
-end
-
 fun prim_delete_type (k as {Thy, Tyop}) = let
-  val (newtable, v) = Map.remove(!operator_table, k)
+  val (newtable, v as ref {key = {Tyop,Thy}, arity, ...}) =
+      Map.remove(!operator_table, k)
 in
   operator_table := newtable;
-  #uptodate v := false
+  v := {key = {Tyop = !Globals.old Tyop, Thy = Thy}, arity = arity,
+        uptodate = false}
 end handle Map.NotFound => raise ERR "prim_delete_type" "No such type"
+
+fun prim_new_type (k as {Thy, Tyop}) n = let
+  val _ = n >= 0 orelse failwith "invalid arity"
+  val newdata = ref {key = k, arity = n, uptodate = true}
+  val () = prim_delete_type k handle HOL_ERR _ => ()
+in
+  operator_table := Map.insert(!operator_table, k, newdata)
+end
+
+
 
 fun thy_types s = let
   fun f (k, tinfo) = if #Thy k = s then
-                  SOME (#Tyop k, #arity tinfo)
+                  SOME (#Tyop k, #arity (!tinfo))
                 else NONE
 in
   List.mapPartial f (Map.listItems (!operator_table))
@@ -69,7 +68,7 @@ datatype hol_type = Tyv of string
                   | Tyapp of type_info * hol_type list
 
 fun uptodate_type (Tyv s) = true
-  | uptodate_type (Tyapp(info, args)) = !(#uptodate info) andalso
+  | uptodate_type (Tyapp(info, args)) = #uptodate (!info) andalso
                                         List.all uptodate_type args
 
 fun dest_vartype (Tyv s) = s
@@ -100,7 +99,7 @@ end
 
 fun mk_type (opname, args) = let
   val info = first_decl "mk_type" opname
-  val aty = #arity info
+  val aty = #arity (!info)
 in
   if length args = aty then
     Tyapp (info, args)
@@ -112,13 +111,11 @@ end
 val bool = mk_type("bool", [])
 val ind = mk_type("ind", [])
 
-fun oldify r s = if not (!r) then String.concat ["(old->", s, "<-old)"] else s
-
 fun dest_type (Tyv _) = raise ERR "dest_type" "Type a variable"
   | dest_type (Tyapp(i, args)) = let
-      val {Thy, Tyop} = #key i
+      val {Thy, Tyop} = #key (!i)
     in
-      (oldify (#uptodate i) Tyop, args)
+      (Tyop, args)
     end
 
 fun is_type (Tyapp _) = true | is_type _ = false
@@ -126,20 +123,14 @@ fun is_type (Tyapp _) = true | is_type _ = false
 fun mk_thy_type {Thy, Tyop, Args} =
     case Map.peek(!operator_table, {Thy = Thy, Tyop = Tyop}) of
       NONE => raise ERR "mk_thy_type" "No such type"
-    | SOME i => let
-        val aty =  #arity i
-      in
-        if aty = length Args then Tyapp(i, Args)
-        else raise ERR "mk_thy_type" ("Expecting "^Int.toString aty^
-                                      " arguments for "^Tyop)
-      end
+    | SOME (i as ref {arity,...}) =>
+      if arity = length Args then Tyapp(i, Args)
+      else raise ERR "mk_thy_type" ("Expecting "^Int.toString arity^
+                                    " arguments for "^Tyop)
 
 fun dest_thy_type (Tyv _) = raise ERR "dest_thy_type" "Type a variable"
-  | dest_thy_type (Tyapp(i, args)) = let
-      val {Thy, Tyop} = #key i
-    in
-      {Thy = Thy, Tyop = oldify (#uptodate i) Tyop, Args = args}
-    end
+  | dest_thy_type (Tyapp(ref {key = {Thy,Tyop},...}, args)) =
+    {Thy = Thy, Tyop = Tyop, Args = args}
 
 fun decls s = let
   fun foldthis (k,v,acc) = if #Tyop k = s then k::acc else acc
@@ -147,7 +138,7 @@ in
   Map.foldl foldthis [] (!operator_table)
 end
 
-fun op_arity k = Option.map (#arity) (Map.peek(!operator_table, k))
+fun op_arity k = Option.map (#arity o !) (Map.peek(!operator_table, k))
 
 fun type_vars_set acc [] = acc
   | type_vars_set acc ((t as Tyv s) :: rest) =
@@ -160,9 +151,9 @@ fun compare0 (Tyv s1, Tyv s2) = String.compare(s1, s2)
   | compare0 (Tyapp _, Tyv _) = GREATER
   | compare0 (Tyapp(iref, iargs), Tyapp(jref, jargs)) = let
     in
-      if #uptodate iref = #uptodate jref then
+      if iref = jref then
         Lib.list_compare compare0 (iargs, jargs)
-      else compare_key(#key iref, #key jref)
+      else compare_key(#key (!iref), #key (!jref))
     end
 
 fun compare p = if Portable.pointer_eq p then EQUAL
