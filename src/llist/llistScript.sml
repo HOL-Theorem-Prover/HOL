@@ -521,9 +521,6 @@ val LMAP = new_specification {
 
 
 
-(* FILTER, which we'd also like, really depends on having the notions
-   of finite-ness defined. *)
-
 val LTAKE = new_recursive_definition {
   def = ``(LTAKE 0 ll = SOME []) /\
           (LTAKE (SUC n) ll =
@@ -687,6 +684,28 @@ val LMAP_APPEND = store_thm(
     MESON_TAC [LAPPEND, LMAP],
     SIMP_TAC hol_ss [LMAP, LAPPEND, LCONS_NOT_NIL, LHD_THM, LTL_THM] THEN
     MESON_TAC []
+  ]);
+
+val LAPPEND_ASSOC = store_thm(
+  "LAPPEND_ASSOC",
+  ``!ll1 ll2 ll3. LAPPEND (LAPPEND ll1 ll2) ll3 =
+                  LAPPEND ll1 (LAPPEND ll2 ll3)``,
+  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC [LLIST_BISIMULATION] THEN
+  Q.EXISTS_TAC `\ll1 ll2. ?l3 l4 l5. (ll1 = LAPPEND (LAPPEND l3 l4) l5) /\
+                                     (ll2 = LAPPEND l3 (LAPPEND l4 l5))` THEN
+  SIMP_TAC hol_ss [] THEN REPEAT STRIP_TAC THENL [
+    MESON_TAC [],
+    ELIM_TAC THEN STRUCT_CASES_TAC (Q.SPEC `l3` llist_CASES) THEN
+    SIMP_TAC hol_ss [LHD_THM, LAPPEND, LCONS_NOT_NIL, LTL_THM] THENL [
+      STRUCT_CASES_TAC (Q.SPEC `l4` llist_CASES) THEN
+      SIMP_TAC hol_ss [LHD_THM, LTL_THM, LAPPEND, LCONS_NOT_NIL] THENL [
+        STRUCT_CASES_TAC (Q.SPEC `l5` llist_CASES) THEN
+        SIMP_TAC hol_ss [LHD_THM, LTL_THM, LAPPEND, LCONS_NOT_NIL] THEN
+        MESON_TAC [LAPPEND],
+        MESON_TAC [LAPPEND]
+      ],
+      MESON_TAC [LAPPEND]
+    ]
   ]);
 
 val LMAP_MAP = store_thm(
@@ -955,6 +974,19 @@ val LFINITE_APPEND = store_thm(
     SIMP_TAC hol_ss [LFINITE_THM, LAPPEND]
   ]);
 
+val NOT_LFINITE_APPEND = store_thm(
+  "NOT_LFINITE_APPEND",
+  ``!ll1 ll2. ~LFINITE ll1 ==> (LAPPEND ll1 ll2 = ll1)``,
+  REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC [LLIST_BISIMULATION] THEN
+  Q.EXISTS_TAC `\ll1 ll2. ~LFINITE ll2 /\  ?ll3. ll1 = LAPPEND ll2 ll3` THEN
+  ASM_SIMP_TAC hol_ss [] THEN REPEAT STRIP_TAC THENL [
+    MESON_TAC [],
+    REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC (Q.SPEC `ll4` llist_CASES) THEN
+    FULL_SIMP_TAC hol_ss [LFINITE_THM, LAPPEND, LHD_THM, LTL_THM] THEN
+    MESON_TAC []
+  ]);
+
+
 val LLENGTH_MAP = store_thm(
   "LLENGTH_MAP",
   ``!ll f. LLENGTH (LMAP f ll) = LLENGTH ll``,
@@ -1154,60 +1186,113 @@ val LNTH_THM = store_thm(
 val minP = ``(option_APPLY P  (LNTH n ll) = SOME T) /\
              !m. m < n ==> (option_APPLY P (LNTH m ll) = SOME F)``
 
+val firstPelemAt = new_definition(
+  "firstPelemAt",
+  ``firstPelemAt P n ll =
+       option_case F P (LNTH n ll) /\
+       !m. m < n ==> (option_APPLY P (LNTH m ll) = SOME F)``);
+val never = new_definition(
+  "never",
+  ``never P ll = !n. ~firstPelemAt P n ll``);
+
+val never_THM = store_thm(
+  "never_THM",
+  ``(!P. never P LNIL = T) /\
+    (!P h t. never P (LCONS h t) = ~P h /\ never P t)``,
+  SIMP_TAC hol_ss [LNTH_THM, never, firstPelemAt] THEN
+  REPEAT GEN_TAC THEN EQ_TAC THENL [
+    DISCH_THEN STRIP_ASSUME_TAC THEN
+    FIRST_ASSUM (ASSUME_TAC o SIMP_RULE hol_ss [LNTH, LHD_THM] o
+                 Q.SPEC `0`) THEN
+    ASM_SIMP_TAC hol_ss [] THEN GEN_TAC THEN
+    FIRST_X_ASSUM (STRIP_ASSUME_TAC o SIMP_RULE hol_ss [LNTH_THM] o
+                   Q.SPEC `SUC n`) THEN ASM_SIMP_TAC hol_ss [] THEN
+    Cases_on `m` THEN FULL_SIMP_TAC hol_ss [LNTH_THM, LHD_THM] THEN
+    ASM_MESON_TAC [],
+    REPEAT STRIP_TAC THEN Cases_on `n` THENL [
+      ASM_SIMP_TAC hol_ss [LNTH_THM],
+      POP_ASSUM (STRIP_ASSUME_TAC o SIMP_RULE hol_ss [LNTH_THM] o
+                 Q.SPEC `n'`)
+      THENL [
+        ALL_TAC,
+        DISJ2_TAC THEN Q.EXISTS_TAC `SUC m`
+      ] THEN
+      ASM_SIMP_TAC hol_ss [LNTH_THM]
+    ]
+  ]);
+
+val firstPelemAt_SUC = store_thm(
+  "firstPelemAt_SUC",
+  ``!P n h t. firstPelemAt P (SUC n) (LCONS h t) ==> firstPelemAt P n t``,
+  SIMP_TAC hol_ss [firstPelemAt, LNTH_THM] THEN REPEAT STRIP_TAC THEN
+  ASM_SIMP_TAC hol_ss [] THEN
+  FIRST_X_ASSUM (ASSUME_TAC o GEN_ALL o SIMP_RULE hol_ss [LNTH_THM] o
+                 Q.SPEC `SUC q`) THEN RES_TAC);
+
 val LFILTER = new_specification {
   consts = [{const_name = "LFILTER", fixity = Prefix}], name = "LFILTER",
   sat_thm = prove(
-    ``?LFILTER.  (!P. LFILTER P LNIL = LNIL) /\
-                 (!P h t.
-                      LFILTER P (LCONS h t) = if P h then LCONS h (LFILTER P t)
-                                              else LFILTER P t)``,
+    ``?LFILTER.
+        !P ll. LFILTER P ll = if never P ll then LNIL
+                              else
+                                if P (THE (LHD ll)) then
+                                    LCONS (THE (LHD ll))
+                                          (LFILTER P (THE (LTL ll)))
+                                else
+                                    LFILTER P (THE (LTL ll))``,
     ASSUME_TAC (GEN_ALL
-       (Q.ISPEC `\ll. if (?n. ^minP) then
-                        let n = @n. ^minP in
+       (Q.ISPEC `\ll. if (?n. firstPelemAt P n ll) then
+                        let n = @n. firstPelemAt P n ll in
                           SOME (THE (LDROP (SUC n) ll),
                                 THE (LNTH n ll))
                       else NONE` llist_Axiom)) THEN
     POP_ASSUM (STRIP_ASSUME_TAC o CONV_RULE SKOLEM_CONV) THEN
     Q.EXISTS_TAC `g` THEN REPEAT STRIP_TAC THEN
-    POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `P`) THENL [
-      POP_ASSUM (K ALL_TAC) THEN
-      POP_ASSUM (ASSUME_TAC o SIMP_RULE hol_ss [LNTH_THM] o Q.SPEC `LNIL`) THEN
+    POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `P`) THEN
+    Cases_on `never P ll` THEN ASM_SIMP_TAC hol_ss [] THENL [
+      POP_ASSUM (fn neverthm =>
+        POP_ASSUM (K ALL_TAC) THEN
+        POP_ASSUM (ASSUME_TAC o Q.SPEC `ll`) THEN
+        ASSUME_TAC (SIMP_RULE hol_ss [never] neverthm)) THEN
       FULL_SIMP_TAC hol_ss [LHD_EQ_NONE],
+
+      Q.SUBGOAL_THEN `?h t. ll = LCONS h t`
+      (REPEAT_TCL CHOOSE_THEN SUBST_ALL_TAC)
+      THENL [
+        SPOSE_NOT_THEN
+         (fn th => `ll = LNIL` by ASM_MESON_TAC [llist_CASES, th]) THEN
+        ELIM_TAC THEN FULL_SIMP_TAC hol_ss [never, firstPelemAt, LNTH_THM],
+        ALL_TAC
+      ] THEN SIMP_TAC hol_ss [LHD_THM, LTL_THM] THEN
       Cases_on `P h` THENL [
-        POP_ASSUM (fn th =>
-           POP_ASSUM_LIST (MAP_EVERY (ASSUME_TAC o SIMP_RULE hol_ss [] o
-                                      Q.SPEC `LCONS h t`)) THEN
-           ASSUME_TAC th) THEN
-        Q.SUBGOAL_THEN `option_APPLY P (LNTH 0 (LCONS h t)) = SOME T`
-        ASSUME_TAC THENL [ASM_SIMP_TAC hol_ss [LNTH, LHD_THM], ALL_TAC] THEN
-        Q.SUBGOAL_THEN
-          `?n. (option_APPLY P (LNTH n (LCONS h t)) = SOME T) /\
-               !m. m < n ==> (option_APPLY P (LNTH m (LCONS h t)) = SOME F)`
+        REPEAT (FIRST_X_ASSUM (ASSUME_TAC o SIMP_RULE hol_ss [] o
+                               Q.SPEC `LCONS h t`)) THEN
+        Q.SUBGOAL_THEN `?n. firstPelemAt P n (LCONS h t)`
         (SUBST_ALL_TAC o EQT_INTRO) THENL [
-          Q.EXISTS_TAC `0` THEN ASM_SIMP_TAC hol_ss [],
+          Q.EXISTS_TAC `0` THEN ASM_SIMP_TAC hol_ss [firstPelemAt, LNTH_THM],
           ALL_TAC
-        ] THEN FULL_SIMP_TAC hol_ss [] THEN
-        Q.SUBGOAL_THEN `(@n. (\ll. ^minP) (LCONS h t)) = 0`
+        ] THEN RULE_ASSUM_TAC (SIMP_RULE hol_ss []) THEN
+        Q.SUBGOAL_THEN `(@n. firstPelemAt P n (LCONS h t)) = 0`
         (SUBST_ALL_TAC o SIMP_RULE hol_ss []) THENL [
-          SIMP_TAC hol_ss [] THEN
+          SIMP_TAC hol_ss [firstPelemAt] THEN
           Q.SUBGOAL_THEN
             `!x.
-               (option_APPLY P (LNTH x (LCONS h t)) = SOME T) /\
+               option_case F P (LNTH x (LCONS h t)) /\
                (!m. m < x ==> (option_APPLY P (LNTH m (LCONS h t)) = SOME F)) =
                (x = 0)`
           (fn th => SIMP_TAC hol_ss [th]) THEN
-          GEN_TAC THEN EQ_TAC THENL [ALL_TAC, ASM_SIMP_TAC hol_ss []] THEN
+          GEN_TAC THEN EQ_TAC THEN ASM_SIMP_TAC hol_ss [LNTH_THM] THEN
           STRIP_TAC THEN SPOSE_NOT_THEN ASSUME_TAC THEN
           `?m. x = SUC m` by ASM_MESON_TAC [arithmeticTheory.num_CASES] THEN
           ELIM_TAC THEN
           FIRST_X_ASSUM (ASSUME_TAC o SIMP_RULE hol_ss [] o Q.SPEC `0`) THEN
-          FULL_SIMP_TAC hol_ss [],
+          FULL_SIMP_TAC hol_ss [LNTH_THM],
           ALL_TAC
         ] THEN FULL_SIMP_TAC hol_ss [LDROP_THM, LNTH_THM] THEN
         ASM_SIMP_TAC hol_ss [LHDTL_EQ_SOME],
 
         (* ~ P h case *)
-        ASM_SIMP_TAC hol_ss [] THEN RULE_ASSUM_TAC (SIMP_RULE hol_ss []) THEN
+        FULL_SIMP_TAC hol_ss [never] THEN
         POP_ASSUM_LIST (MAP_EVERY
                         (fn th =>
                          if (is_forall (concl th)) then
@@ -1215,107 +1300,283 @@ val LFILTER = new_specification {
                            ASSUME_TAC th
                          else
                            ASSUME_TAC th) o List.rev) THEN
-        COND_CASES_TAC THENL [
-          POP_ASSUM STRIP_ASSUME_TAC THEN REPEAT STRIP_TAC THEN
-          Q.SUBGOAL_THEN `(@n. (\ll. ^minP) (LCONS h t)) = n`
-          (SUBST_ALL_TAC o SIMP_RULE hol_ss []) THENL [
-            SIMP_TAC hol_ss [] THEN
-            Q.SUBGOAL_THEN
-             `!x.
-               (option_APPLY P (LNTH x (LCONS h t)) = SOME T) /\
-               (!m. m < x ==> (option_APPLY P (LNTH m (LCONS h t)) = SOME F)) =
-               (x = n)`
-            (fn th => SIMP_TAC hol_ss [th]) THEN
-            GEN_TAC THEN EQ_TAC THENL [ALL_TAC, ASM_SIMP_TAC hol_ss []] THEN
-            REPEAT STRIP_TAC THEN SPOSE_NOT_THEN ASSUME_TAC THEN
-            STRIP_ASSUME_TAC (Q.SPECL [`x`, `n`]
-                              arithmeticTheory.LESS_LESS_CASES) THEN
-            RES_TAC THEN FULL_SIMP_TAC hol_ss [],
-            ALL_TAC
-          ] THEN
-          FULL_SIMP_TAC hol_ss [LDROP_THM, LTAKE_THM] THEN
-          `~(n = 0)` by (STRIP_TAC THEN ELIM_TAC THEN
-                         FULL_SIMP_TAC hol_ss [LNTH_THM]) THEN
-          POP_ASSUM (fn th =>
-            `?m. n = SUC m` by
-               ASM_MESON_TAC [arithmeticTheory.num_CASES, th]) THEN
-          ELIM_TAC THEN FULL_SIMP_TAC hol_ss [LNTH_THM] THEN
-          FIRST_X_ASSUM (ASSUME_TAC o GEN_ALL o
-                         SIMP_RULE hol_ss [LNTH_THM] o Q.SPEC `SUC q`) THEN
-          REPEAT (FIRST_X_ASSUM (ASSUME_TAC o SPEC ``t:'a llist``)) THEN
-          Q.SUBGOAL_THEN `?n. (\ll. ^minP) t`
-            (SUBST_ALL_TAC o EQT_INTRO o SIMP_RULE hol_ss [])
-          THENL [Q.EXISTS_TAC `m` THEN ASM_SIMP_TAC hol_ss [], ALL_TAC] THEN
-          FULL_SIMP_TAC hol_ss [] THEN
-          Q.SUBGOAL_THEN `(@n. (\ll. ^minP) t) = m`
-            (SUBST_ALL_TAC o SIMP_RULE hol_ss [])
-          THENL [
-            SIMP_TAC hol_ss [] THEN
-            Q.SUBGOAL_THEN
-             `!x.
-                (option_APPLY P (LNTH x t) = SOME T) /\
-                (!m. m < x ==> (option_APPLY P (LNTH m t) = SOME F)) =
-                (x = m)`
-            (fn th => SIMP_TAC hol_ss [th]) THEN
-            GEN_TAC THEN EQ_TAC THEN ASM_SIMP_TAC hol_ss [] THEN
-            REPEAT STRIP_TAC THEN SPOSE_NOT_THEN ASSUME_TAC THEN
-            `x < m \/ m < x`
-              by ASM_MESON_TAC [arithmeticTheory.LESS_LESS_CASES] THEN
-            RES_TAC THEN FULL_SIMP_TAC hol_ss [],
-            ALL_TAC
-          ] THEN
-          ASM_MESON_TAC [LHDTL_EQ_SOME],
-
-          (* case where there is no element satisfying P *)
-          SIMP_TAC hol_ss [] THEN DISCH_THEN (K ALL_TAC) THEN
-          DISCH_THEN (fn th =>
-                      `g P (LCONS h t) = LNIL`
-                           by ASM_MESON_TAC [LHD_EQ_NONE, th]) THEN
-          POP_ASSUM SUBST_ALL_TAC THEN
-          REPEAT (FIRST_X_ASSUM (ASSUME_TAC o Q.SPEC `t`)) THEN
-          Q.SUBGOAL_THEN `~(?n. (\ll. ^minP) t)`
-          (SUBST_ALL_TAC o EQF_INTRO o BETA_RULE)
-          THENL [
-            FULL_SIMP_TAC hol_ss [] THEN
-            REPEAT STRIP_TAC THEN
-            FIRST_ASSUM (STRIP_ASSUME_TAC o SIMP_RULE hol_ss [LNTH_THM] o
-                         Q.SPEC `SUC n`)
-            THENL [
-              ASM_SIMP_TAC hol_ss [],
-              Cases_on `m` THEN FULL_SIMP_TAC hol_ss [LNTH_THM] THEN
-              ASM_MESON_TAC []
-            ],
-            ALL_TAC
-          ] THEN FULL_SIMP_TAC hol_ss [] THEN
-          ASM_MESON_TAC [LHD_EQ_NONE]
-        ]
+        Q.SUBGOAL_THEN `?n. firstPelemAt P n (LCONS h t)`
+        (SUBST_ALL_TAC o EQT_INTRO) THENL [ASM_MESON_TAC [], ALL_TAC] THEN
+        SIMP_TAC hol_ss [] THEN
+        Q.SUBGOAL_THEN `(@n. firstPelemAt P n (LCONS h t)) = n`
+        (SUBST_ALL_TAC o SIMP_RULE hol_ss []) THENL [
+          FULL_SIMP_TAC hol_ss [firstPelemAt] THEN
+          Q.SUBGOAL_THEN
+           `!x.
+             option_case F P (LNTH x (LCONS h t)) /\
+             (!m. m < x ==> (option_APPLY P (LNTH m (LCONS h t)) = SOME F)) =
+             (x = n)`
+          (fn th => SIMP_TAC hol_ss [th]) THEN
+          GEN_TAC THEN EQ_TAC THEN ASM_SIMP_TAC hol_ss [] THEN
+          REPEAT STRIP_TAC THEN SPOSE_NOT_THEN ASSUME_TAC THEN
+          FULL_SIMP_TAC hol_ss [optionTheory.option_APPLY_EQ_SOME] THEN
+          `x < n \/ n < x`
+            by ASM_MESON_TAC [arithmeticTheory.LESS_LESS_CASES] THEN
+          RES_TAC THEN FULL_SIMP_TAC hol_ss [],
+          ALL_TAC
+        ] THEN SIMP_TAC hol_ss [LDROP_THM, LTAKE_THM] THEN
+        `~(n = 0)` by (STRIP_TAC THEN ELIM_TAC THEN
+                       FULL_SIMP_TAC hol_ss [LNTH_THM, firstPelemAt]) THEN
+        POP_ASSUM (fn th =>
+          `?m. n = SUC m` by
+             ASM_MESON_TAC [arithmeticTheory.num_CASES, th]) THEN
+        ELIM_TAC THEN REPEAT STRIP_TAC THEN
+        FULL_SIMP_TAC hol_ss [LNTH_THM] THEN
+        REPEAT (FIRST_X_ASSUM (ASSUME_TAC o SPEC ``t:'a llist``)) THEN
+        Q.SUBGOAL_THEN `?n. firstPelemAt P n t` (SUBST_ALL_TAC o EQT_INTRO)
+        THENL [
+          Q.EXISTS_TAC `m` THEN
+          FULL_SIMP_TAC hol_ss [firstPelemAt, LNTH_THM] THEN
+          FIRST_X_ASSUM (ACCEPT_TAC o GEN_ALL o SIMP_RULE hol_ss [LNTH_THM] o
+                         Q.SPEC `SUC q`),
+          ALL_TAC
+        ] THEN
+        FIRST_X_ASSUM (ASSUME_TAC o MATCH_MP firstPelemAt_SUC) THEN
+        RULE_ASSUM_TAC (SIMP_RULE hol_ss []) THEN
+        Q.SUBGOAL_THEN `(@n. firstPelemAt P n t) = m` SUBST_ALL_TAC THENL [
+          Q.SUBGOAL_THEN `!x. firstPelemAt P x t = (x = m)`
+          (fn th => SIMP_TAC hol_ss [th]) THEN
+          GEN_TAC THEN EQ_TAC THEN ASM_SIMP_TAC hol_ss [] THEN
+          REPEAT STRIP_TAC THEN SPOSE_NOT_THEN ASSUME_TAC THEN
+          `x < m \/ m < x`
+            by ASM_MESON_TAC [arithmeticTheory.LESS_LESS_CASES] THEN
+          FULL_SIMP_TAC hol_ss [firstPelemAt,
+                                optionTheory.option_APPLY_EQ_SOME] THEN
+          RES_TAC THEN FULL_SIMP_TAC hol_ss [],
+          ALL_TAC
+        ] THEN
+        ASM_MESON_TAC [LHDTL_EQ_SOME]
       ]
     ])};
 
-(*
+val LFILTER_THM = store_thm(
+  "LFILTER_THM",
+  ``(!P. LFILTER P LNIL = LNIL) /\
+    (!P h t. LFILTER P (LCONS h t) = if P h then LCONS h (LFILTER P t)
+                                     else LFILTER P t)``,
+  REPEAT STRIP_TAC THEN CONV_TAC (LHS_CONV (REWR_CONV LFILTER)) THEN
+  SIMP_TAC hol_ss [never_THM, LHD_THM, LTL_THM] THEN
+  Cases_on `P h` THEN ASM_SIMP_TAC hol_ss [] THEN
+  Cases_on `never P t` THEN ASM_SIMP_TAC hol_ss [] THEN
+  ONCE_REWRITE_TAC [LFILTER] THEN ASM_SIMP_TAC hol_ss []);
+
+val LL_ALL = new_definition(
+  "LL_ALL",
+  ``LL_ALL P ll = never ($~ o P) ll``);
+
+val LL_ALL_THM = store_thm(
+  "LL_ALL_THM",
+  ``(!P. LL_ALL P LNIL = T) /\
+    (!P h t. LL_ALL P (LCONS h t) = P h /\ LL_ALL P t)``,
+  SIMP_TAC hol_ss [LL_ALL, never_THM]);
+
+val LFILTER_NIL = store_thm(
+  "LFILTER_NIL",
+  ``!P ll. LL_ALL ($~ o P) ll ==> (LFILTER P ll = LNIL)``,
+  ONCE_REWRITE_TAC [LL_ALL, LFILTER] THEN
+  `!P. $~ o $~ o P = P` by (GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN
+                            SIMP_TAC hol_ss []) THEN
+  ASM_SIMP_TAC hol_ss []);
+
 val LFILTER_APPEND = store_thm(
   "LFILTER_APPEND",
-  ``!ll1 ll2 P.
-       LFILTER P (LAPPEND ll1 ll2) = LAPPEND (LFILTER P ll1) (LFILTER P ll2)``,
+  ``!P ll1 ll2. LFINITE ll1 ==>
+                (LFILTER P (LAPPEND ll1 ll2) =
+                 LAPPEND (LFILTER P ll1) (LFILTER P ll2))``,
+  REPEAT GEN_TAC THEN Q.ID_SPEC_TAC `ll1` THEN
+  Ho_resolve.MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
+  SIMP_TAC hol_ss [LAPPEND, LFILTER_THM] THEN REPEAT STRIP_TAC THEN
+  COND_CASES_TAC THEN ASM_SIMP_TAC hol_ss [LAPPEND]);
+
+val firstPelemAt_CONS = store_thm(
+  "firstPelemAt_CONS",
+  ``!P n h t. firstPelemAt P n (LCONS h t) =
+              (n = 0) /\ P h \/
+              ?m. (n = SUC m) /\ firstPelemAt P m t /\ ~P h``,
+  REPEAT GEN_TAC THEN Cases_on `n` THEN
+  SIMP_TAC hol_ss [firstPelemAt, LNTH_THM] THEN EQ_TAC THENL [
+    REPEAT STRIP_TAC THENL [
+      ASM_SIMP_TAC hol_ss [],
+      FIRST_X_ASSUM (ASSUME_TAC o SIMP_RULE hol_ss [LNTH_THM] o
+                     Q.SPEC `SUC m'`) THEN RES_TAC,
+      FIRST_X_ASSUM (ASSUME_TAC o SIMP_RULE hol_ss [LNTH_THM] o
+                     Q.SPEC `0`) THEN RES_TAC
+    ],
+    REPEAT STRIP_TAC THENL [
+      ASM_SIMP_TAC hol_ss [],
+      Cases_on `m` THEN ASM_SIMP_TAC hol_ss [LNTH_THM]
+    ]
+  ]);
+
+val LFLATTEN = new_specification {
+  consts = [{const_name = "LFLATTEN", fixity = Prefix}],
+  name = "LFLATTEN",
+  sat_thm = prove(
+    ``?LFLATTEN.
+      !ll. LFLATTEN (ll:'a llist llist) =
+             if LL_ALL ($= LNIL) ll then LNIL
+             else
+                if THE (LHD ll) = LNIL then
+                   LFLATTEN (THE (LTL ll))
+                else
+                   LCONS (THE (LHD (THE (LHD ll))))
+                         (LFLATTEN (LCONS (THE (LTL (THE (LHD ll))))
+                                          (THE (LTL ll))))``,
+    ASSUME_TAC (
+      Q.ISPEC `\ll. if LL_ALL ($= LNIL) ll then NONE
+                   else
+                     let n = @n. firstPelemAt ($~ o $= LNIL) n ll
+                     in
+                        let nlist = THE (LNTH n ll)
+                        in
+                            SOME(LCONS (THE (LTL nlist))
+                                       (THE (LDROP (SUC n) ll)),
+                                 THE (LHD nlist))` llist_Axiom) THEN
+    POP_ASSUM (Q.X_CHOOSE_THEN `g` STRIP_ASSUME_TAC) THEN
+    Q.EXISTS_TAC `g` THEN GEN_TAC THEN
+    Cases_on `LL_ALL ($= LNIL) ll` THEN ASM_SIMP_TAC hol_ss [] THENL [
+      `LTL (g ll) = NONE` by ASM_SIMP_TAC hol_ss [] THEN
+      ASM_MESON_TAC [LTL_EQ_NONE],
+      ALL_TAC
+    ] THEN
+    `?h t. ll = LCONS h t` by
+       (`~(ll = LNIL)` by (DISCH_THEN SUBST_ALL_TAC THEN
+                           FULL_SIMP_TAC hol_ss [LL_ALL_THM]) THEN
+        ASM_MESON_TAC [llist_CASES]) THEN
+    POP_ASSUM SUBST_ALL_TAC THEN
+    FULL_SIMP_TAC hol_ss [LHD_THM, LTL_THM] THEN
+    Cases_on `h = LNIL` THEN ASM_SIMP_TAC hol_ss [] THENL [
+      FULL_SIMP_TAC hol_ss [LL_ALL_THM] THEN
+      REPEAT (FIRST_X_ASSUM (fn th =>
+                             MP_TAC (Q.SPEC `LCONS LNIL t` th) THEN
+                             MP_TAC (Q.SPEC `t` th))) THEN
+      ASM_SIMP_TAC hol_ss [LL_ALL_THM] THEN ELIM_TAC THEN
+      POP_ASSUM (fn th =>
+        `?n. firstPelemAt ($~ o $= LNIL) n t`
+           by ASM_MESON_TAC [LL_ALL, never, th]) THEN
+      Q.SUBGOAL_THEN
+         `((@n. firstPelemAt ($~ o $= LNIL) n t) = n) /\
+          ((@n. firstPelemAt ($~ o $= LNIL) n (LCONS LNIL t)) = SUC n)`
+      (CONJUNCTS_THEN SUBST_ALL_TAC) THENL [
+         CONJ_TAC THENL [
+           Q.SUBGOAL_THEN `!x. firstPelemAt ($~ o $= LNIL) x t = (x = n)`
+           (fn th => SIMP_TAC hol_ss [th]),
+           Q.SUBGOAL_THEN
+             `!x. firstPelemAt ($~ o $= LNIL) x (LCONS LNIL t) = (x = SUC n)`
+           (fn th => SIMP_TAC hol_ss [th])
+         ] THEN
+         GEN_TAC THEN EQ_TAC THEN ASM_SIMP_TAC hol_ss [firstPelemAt_CONS] THEN
+         STRIP_TAC THEN SPOSE_NOT_THEN ASSUME_TAC THEN ELIM_TAC THEN
+         FULL_SIMP_TAC hol_ss [firstPelemAt,
+                               optionTheory.option_APPLY_EQ_SOME] THEN
+         POP_ASSUM (STRIP_ASSUME_TAC o
+                    MATCH_MP
+                    (ARITH_PROVE ``!x y. ~(x = y) ==> x < y \/ y < x``)) THEN
+         RES_TAC THEN FULL_SIMP_TAC hol_ss [],
+         ALL_TAC
+       ] THEN SIMP_TAC hol_ss [LDROP_THM, LNTH_THM] THEN
+       MESON_TAC [LHDTL_EQ_SOME],
+
+       (* ~(h = LNIL) *)
+       FULL_SIMP_TAC hol_ss [LL_ALL_THM] THEN
+       ASM_SIMP_TAC hol_ss [LHDTL_EQ_SOME] THEN
+       Q.SUBGOAL_THEN
+         `(@n. firstPelemAt ($~ o $= LNIL) n (LCONS h t)) = 0`
+       SUBST_ALL_TAC THENL [
+         Q.SUBGOAL_THEN `!x. firstPelemAt ($~ o $= LNIL) x (LCONS h t) =
+                             (x = 0)`
+         (fn th => SIMP_TAC hol_ss [th]) THEN
+         GEN_TAC THEN EQ_TAC THEN ASM_SIMP_TAC hol_ss [firstPelemAt_CONS],
+         ALL_TAC
+       ] THEN ASM_SIMP_TAC hol_ss [LL_ALL_THM, LNTH_THM, LDROP_THM]
+     ])};
+
+
+val LFLATTEN_THM = store_thm(
+  "LFLATTEN_THM",
+  ``(LFLATTEN LNIL = LNIL) /\
+    (!tl. LFLATTEN (LCONS LNIL t) = LFLATTEN t) /\
+    (!h t tl. LFLATTEN (LCONS (LCONS h t) tl) =
+              LCONS h (LFLATTEN (LCONS t tl)))``,
+  REPEAT STRIP_TAC THEN CONV_TAC (LHS_CONV (REWR_CONV LFLATTEN)) THEN
+  SIMP_TAC hol_ss [LL_ALL_THM, LHD_THM, LTL_THM, LCONS_NOT_NIL] THEN
+  COND_CASES_TAC THEN SIMP_TAC hol_ss [] THEN
+  ONCE_REWRITE_TAC [LFLATTEN] THEN ASM_SIMP_TAC hol_ss []);
+
+val LFLATTEN_EQ_NIL = store_thm(
+  "LFATTEN_NIL",
+  ``!ll. (LFLATTEN ll = LNIL) = LL_ALL ($= LNIL) ll``,
+  GEN_TAC THEN EQ_TAC THENL [
+    SIMP_TAC hol_ss [LL_ALL, never] THEN
+    CONV_TAC RIGHT_IMP_FORALL_CONV THEN GEN_TAC THEN
+    MAP_EVERY Q.ID_SPEC_TAC [`ll`, `n`] THEN Induct THENL [
+      SIMP_TAC hol_ss [firstPelemAt] THEN REPEAT STRIP_TAC THEN
+      `~(ll = LNIL)` by (STRIP_TAC THEN ELIM_TAC THEN
+                         FULL_SIMP_TAC hol_ss [LNTH_THM]) THEN
+      POP_ASSUM (fn th =>
+                 `?h t. ll = LCONS h t` by MESON_TAC [th, llist_CASES]) THEN
+      ELIM_TAC THEN FULL_SIMP_TAC hol_ss [LNTH_THM] THEN
+      POP_ASSUM (fn th =>
+                 `?h0 t0. h = LCONS h0 t0` by MESON_TAC [th, llist_CASES]) THEN
+      ELIM_TAC THEN FULL_SIMP_TAC hol_ss [LFLATTEN_THM, LCONS_NOT_NIL],
+
+      REPEAT STRIP_TAC THEN
+      `~(ll = LNIL)` by (STRIP_TAC THEN ELIM_TAC THEN
+                         FULL_SIMP_TAC hol_ss [firstPelemAt, LNTH_THM]) THEN
+      POP_ASSUM (fn th =>
+        `?h t. ll = LCONS h t` by MESON_TAC [th, llist_CASES]) THEN
+      ELIM_TAC THEN FULL_SIMP_TAC hol_ss [firstPelemAt_CONS] THEN
+      POP_ASSUM (SUBST_ALL_TAC o GSYM) THEN
+      FULL_SIMP_TAC hol_ss [LFLATTEN_THM] THEN ASM_MESON_TAC []
+   ],
+   ONCE_REWRITE_TAC [LFLATTEN] THEN SIMP_TAC hol_ss []
+ ]);
+
+val LFLATTEN_SINGLETON = store_thm(
+  "LFLATTEN_SINGLETON",
+  ``!h. LFLATTEN (LCONS h LNIL) = h``,
+  GEN_TAC THEN ONCE_REWRITE_TAC [LLIST_BISIMULATION] THEN
+  Q.EXISTS_TAC `\ll1 ll2. ll1 = LFLATTEN (LCONS ll2 LNIL)` THEN
+  SIMP_TAC hol_ss [] THEN GEN_TAC THEN
+  STRUCT_CASES_TAC (Q.SPEC `ll4` llist_CASES) THEN
+  SIMP_TAC hol_ss [LFLATTEN_THM, LCONS_NOT_NIL, LHD_THM, LTL_THM]);
+
+val LFLATTEN_APPEND = store_thm(
+  "LFLATTEN_APPEND",
+  ``!h t. LFLATTEN (LCONS h t) = LAPPEND h (LFLATTEN t)``,
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC [LLIST_BISIMULATION] THEN
-  Q.EXISTS_TAC
-    `\ll1 ll2. ?ll3 ll4. (ll1 = LFILTER P (LAPPEND ll3 ll4)) /\
-                         (ll2 = LAPPEND (LFILTER P ll3) (LFILTER P ll4))` THEN
+  Q.EXISTS_TAC `\ll1 ll2. ?h t. (ll1 = LFLATTEN (LCONS h t)) /\
+                                (ll2 = LAPPEND h (LFLATTEN t))` THEN
   SIMP_TAC hol_ss [] THEN REPEAT STRIP_TAC THENL [
-    ASM_MESON_TAC [],
-    ALL_TAC
-  ] THEN
-  ELIM_TAC THEN STRUCT_CASES_TAC (Q.SPEC `ll3'` llist_CASES) THEN
-  STRUCT_CASES_TAC (Q.SPEC `ll4'` llist_CASES) THEN
-  SIMP_TAC hol_ss [LFILTER, LAPPEND] THENL [
-    COND_CASES_TAC THENL [
-      SIMP_TAC hol_ss [LTL_THM, LCONS_11, LCONS_NOT_NIL] THEN
-      MAP_EVERY Q.EXISTS_TAC [`LNIL`, `t`] THEN
-      SIMP_TAC hol_ss [LFILTER, LAPPEND],
-      STRUCT_CASES_TAC (Q.SPEC `LFILTER P t` llist_CASES) THEN
-      SIMP_TAC hol_ss [LCONS_NOT_NIL, LTL_THM] THEN
-      MAP_EVERY Q.EXISTS_TAC [`LNIL`, `t'`] THEN
-      SIMP_TAC hol_ss [LFILTER, LAPPEND],
-*)
+    MESON_TAC [],
+    Cases_on `h = LNIL` THENL [
+      ELIM_TAC THEN SIMP_TAC hol_ss [LFLATTEN_THM, LAPPEND] THEN
+      Cases_on `LL_ALL ($= LNIL) t` THENL [
+        ASM_SIMP_TAC hol_ss [LFLATTEN_EQ_NIL],
+        ALL_TAC
+      ] THEN
+      `~(LFLATTEN t = LNIL)` by ASM_SIMP_TAC hol_ss [LFLATTEN_EQ_NIL] THEN
+      ASM_SIMP_TAC hol_ss [] THEN
+      POP_ASSUM (fn th =>
+        `?h0 t0. LFLATTEN t = LCONS h0 t0`
+           by ASM_MESON_TAC [llist_CASES, th]) THEN
+      ASM_SIMP_TAC hol_ss [LFLATTEN_THM, LTL_THM] THEN
+      MAP_EVERY Q.EXISTS_TAC [`t0`, `LNIL`] THEN
+      SIMP_TAC hol_ss [LFLATTEN_SINGLETON, LAPPEND_NIL_2ND, LFLATTEN_THM],
+
+      (* ~(h = LNIL) *)
+      POP_ASSUM (fn th =>
+        `?h0 t0. h = LCONS h0 t0` by ASM_MESON_TAC [llist_CASES, th]) THEN
+      ELIM_TAC THEN SIMP_TAC hol_ss [LAPPEND, LFLATTEN_THM, LCONS_NOT_NIL,
+                                     LHD_THM, LTL_THM] THEN
+      MESON_TAC []
+    ]
+  ]);
+
 val _ = export_theory();
 
