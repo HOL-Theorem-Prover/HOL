@@ -243,6 +243,7 @@ val EMPTY_SUBSET =
     ("EMPTY_SUBSET",
      (--`!s:'a set. EMPTY SUBSET s`--),
      REWRITE_TAC [SUBSET_DEF,NOT_IN_EMPTY]);
+val _ = export_rewrites ["EMPTY_SUBSET"]
 
 val SUBSET_EMPTY =
     store_thm
