@@ -99,11 +99,13 @@ val numeral_distrib = store_thm(
    (!n. 0 <= n = T) /\ (!n. NUMERAL n <= 0 = n <= ALT_ZERO) /\
    (!n m. NUMERAL n <= NUMERAL m = n<=m) /\
    (!n. n >= 0 = T) /\ (!n. NUMERAL n >= 0 = ALT_ZERO <= n) /\
-   (!n m. NUMERAL n >= NUMERAL m = m <= n)`,
+   (!n m. NUMERAL n >= NUMERAL m = m <= n) /\
+   (!n. ODD (NUMERAL n) = ODD n) /\ (!n. EVEN (NUMERAL n) = EVEN n) /\
+   ~ODD 0 /\ EVEN 0`,
   SIMP_TAC bool_ss [NUMERAL_DEF, GREATER_DEF, iZ, GREATER_OR_EQ,
                     LESS_OR_EQ, EQ_IMP_THM, DISJ_IMP_THM, ADD_CLAUSES,
                     ALT_ZERO, MULT_CLAUSES, EXP, PRE, NOT_LESS_0, SUB_0,
-                    NUMERAL_BIT1, NUMERAL_BIT2] THEN
+                    NUMERAL_BIT1, NUMERAL_BIT2, ODD, EVEN] THEN
   mesonLib.MESON_TAC [LESS_0_CASES]);
 
 val numeral_iisuc = store_thm(
@@ -275,7 +277,7 @@ val numeral_pre = store_thm(
 val our_M = Term
  `\f a. if a = ALT_ZERO then (zf:'a) else
         if (?n. (a = NUMERAL_BIT1 n))
-          then (b1f:'a->num->'a) 
+          then (b1f:'a->num->'a)
                   (f (@n. a = NUMERAL_BIT1 n)) (@n. a = NUMERAL_BIT1 n)
           else b2f (f (@n. a = NUMERAL_BIT2 n)) (@n. a = NUMERAL_BIT2 n)`;
 
@@ -591,6 +593,15 @@ val numeral_exp = store_thm(
   SIMP_TAC bool_ss [NUMERAL_BIT1, iSQR, NUMERAL_BIT2, EXP_ADD, EXP,
                     ADD_CLAUSES, ALT_ZERO, NUMERAL_DEF] THEN
   REPEAT STRIP_TAC THEN CONV_TAC (AC_CONV(MULT_ASSOC, MULT_SYM)));
+
+val _ = print "Even-ness and odd-ness of numerals\n"
+
+val numeral_evenodd = store_thm(
+  "numeral_evenodd",
+  Term`!n. EVEN ALT_ZERO /\ EVEN (NUMERAL_BIT2 n) /\ ~EVEN (NUMERAL_BIT1 n) /\
+           ~ODD ALT_ZERO /\ ~ODD (NUMERAL_BIT2 n) /\ ODD (NUMERAL_BIT1 n)`,
+  SIMP_TAC bool_ss [NUMERAL_BIT1, ALT_ZERO, NUMERAL_BIT2, ADD_CLAUSES,
+                    EVEN, ODD, EVEN_ADD, ODD_ADD]);
 
 (*
 val _ = print "Developing numeral rewrites for division\n"

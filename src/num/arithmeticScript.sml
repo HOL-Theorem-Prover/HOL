@@ -1034,6 +1034,22 @@ val MULT_MONO_EQ = store_thm("MULT_MONO_EQ",
       end THEN
       ASM_REWRITE_TAC[]]]]);
 
+val EQ_ADD_LCANCEL = prove(
+  Term`!m n p. (m + n = m + p) = (n = p)`,
+  INDUCT_TAC THEN ASM_REWRITE_TAC [ADD_CLAUSES, INV_SUC_EQ]);
+
+val EQ_ADD_RCANCEL = prove(
+  Term`!m n p. (m + p = n + p) = (m = n)`,
+  ONCE_REWRITE_TAC[ADD_COMM] THEN MATCH_ACCEPT_TAC EQ_ADD_LCANCEL);
+
+val EQ_MULT_LCANCEL = prove(
+  Term`!m n p. (m * n = m * p) = (m = 0) \/ (n = p)`,
+  INDUCT_TAC THEN REWRITE_TAC[MULT_CLAUSES, NOT_SUC] THEN
+  REPEAT INDUCT_TAC THEN
+  ASM_REWRITE_TAC[MULT_CLAUSES, ADD_CLAUSES, GSYM NOT_SUC, NOT_SUC] THEN
+  ASM_REWRITE_TAC[INV_SUC_EQ, GSYM ADD_ASSOC, EQ_ADD_LCANCEL]);
+
+
 val ADD_SUB = store_thm ("ADD_SUB",
  --`!a c. (a + c) - c = a`--,
    INDUCT_TAC THEN REWRITE_TAC [ADD_CLAUSES] THENL
