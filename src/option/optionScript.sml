@@ -268,6 +268,14 @@ val OPTION_MAP_EQ_NONE = store_thm(
   REPEAT GEN_TAC THEN OPTION_CASES_TAC ``x:'a option`` THEN
   REWRITE_TAC [option_CLAUSES]);
 
+val OPTION_MAP_EQ_NONE_both_ways = store_thm(
+  "OPTION_MAP_EQ_NONE_both_ways",
+  ``((OPTION_MAP f x = NONE) = (x = NONE)) /\
+    ((NONE = OPTION_MAP f x) = (x = NONE))``,
+  REWRITE_TAC [OPTION_MAP_EQ_NONE] THEN
+  CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])) THEN
+  REWRITE_TAC [OPTION_MAP_EQ_NONE])
+
 val OPTION_JOIN_EQ_SOME = store_thm(
   "OPTION_JOIN_EQ_SOME",
   Term`!(x:'a option option) y.
@@ -327,7 +335,7 @@ val _ = adjoin_to_theory
   end)};
 
 val _ = BasicProvers.export_rewrites
-          ["OPTION_MAP_EQ_SOME", "OPTION_MAP_EQ_NONE", "THE_DEF",
+          ["OPTION_MAP_EQ_SOME", "OPTION_MAP_EQ_NONE_both_ways", "THE_DEF",
            "IS_SOME_DEF", "IS_NONE_EQ_NONE", "NOT_IS_SOME_EQ_NONE",
            "option_case_ID", "option_case_SOME_ID", "option_case_def",
            "OPTION_MAP_DEF", "OPTION_JOIN_DEF", "SOME_11", "NOT_SOME_NONE"]
