@@ -94,6 +94,14 @@ fun index x =
     ind zero
   end
 
+fun index_ac x = let
+  fun ind n [] = failwith "index_ac"
+    | ind n (h::t) = if aconv x h then n else ind (n + one) t
+in
+  ind zero
+end
+
+
 fun remove P [] = failwith "remove"
   | remove P (h::t) = if P h then (h,t) else
       let
@@ -135,16 +143,6 @@ val PRESIMP_CONV =
     LEFT_FORALL_OR_THM, RIGHT_FORALL_OR_THM];
 
 val TAUT = TAUT_PROVE;
-
-val (UNDISCH_THEN:term->thm_tactic->tactic) =
-  fn tm => fn ttac => fn (asl,w) =>
-    let
-      val (thp,asl') = remove (fn tm' => (tm' = tm)) asl
-    in
-      ttac (ASSUME thp) (asl',w)
-    end;
-
-fun FIRST_X_ASSUM ttac = FIRST_ASSUM(fn th => UNDISCH_THEN (concl th) ttac);
 
 val NUM_LE_CONV = LE_CONV;
 val NUM_LT_CONV = LT_CONV;
@@ -640,7 +638,7 @@ val LINEAR_ADD =
               val _ = trace "v2 ="
               val _ = trace_term v2
             in
-              if v1 = v2 then
+              if aconv v1 v2 then
                 let
                   val th1 = INST [(l1,l1_tm), (l2,l2_tm),
                                   (r1,r1_tm), (r2,r2_tm)] pth1
@@ -672,7 +670,7 @@ val LINEAR_ADD =
                 val _ = trace "v2 ="
                 val _ = trace_term v2
               in
-                if v1 = v2 then
+                if aconv v1 v2 then
                   let
                     val th1 = INST [(l1,l1_tm), (r1,r1_tm), (tm2,tm2_tm)] pth4
                   in
@@ -698,7 +696,7 @@ val LINEAR_ADD =
                 val (l2,r2) = dest tm2
                 val v2 = rand l2
               in
-                if v1 = v2 then
+                if aconv v1 v2 then
                   let
                     val th1 = INST [(tm1,tm1_tm), (l2,l2_tm), (r2,r2_tm)] pth6
                   in
@@ -719,7 +717,7 @@ val LINEAR_ADD =
                   val _ = trace "can't add_dest term2 either"
                   val v2 = rand tm2
                 in
-                  if v1 = v2 then
+                  if aconv v1 v2 then
                     COEFF_CONV ltm
                   else if term_lt v1 v2 then
                     REFL ltm
@@ -1356,7 +1354,8 @@ val REAL_SIMPLE_ARITH_REFUTER =
         handle HOL_ERR _ =>
           let
             val allvars = itlist
-              (union o map rand o liteLib.binops add_tm o rand o concl) ths []
+              (op_union aconv o map rand o liteLib.binops add_tm o
+               rand o concl) ths []
             val vars =
               if mem one_tm allvars then one_tm::subtract allvars [one_tm]
               else one_tm::allvars
@@ -1367,7 +1366,7 @@ val REAL_SIMPLE_ARITH_REFUTER =
                 val right = rand t
                 val rights = liteLib.binops add_tm right
                 val cvps = map (((dest_intconst o rand)
-                                 F_F (C index vars)) o dest_comb) rights
+                                 F_F (C index_ac vars)) o dest_comb) rights
                 val k = ~((fst (rev_assoc zero cvps))
                                 handle HOL_ERR _ => zero)
                 val l = Lib.trye tl (map (fn v => (fst (rev_assoc v cvps)
