@@ -389,6 +389,18 @@ val BITS_SLICE_THM = store_thm("BITS_SLICE_THM",
   B_RW_TAC [SLICELT_THM,BITS_LT_HIGH,ZERO_LT_TWOEXP,SLICE_THM,MULT_DIV]
 );
 
+val BITS_SLICE_THM2 = store_thm("BITS_SLICE_THM2",
+  `!h l n. h <= h2 ==> (BITS h2 l (SLICE h l n) = BITS h l n)`,
+  REPEAT STRIP_TAC
+    THEN LEFT_REWRITE_TAC [BITS_THM]
+    THEN B_SIMP_TAC [SLICE_THM,ZERO_LT_TWOEXP,MULT_DIV]
+    THEN `SUC h - l <= SUC h2 - l` by DECIDE_TAC
+    THEN IMP_RES_TAC TWOEXP_MONO2 THEN POP_ASSUM (K ALL_TAC)
+    THEN ASSUME_TAC (SPECL [`h`,`l`,`n`] BITSLT_THM)
+    THEN IMP_RES_TAC LESS_LESS_EQ_TRANS
+    THEN ASM_B_SIMP_TAC [LESS_MOD]
+);
+
 val MOD_2EXP_MONO = store_thm("MOD_2EXP_MONO",
   `!n h l. l <= h ==> n MOD 2 EXP l <= n MOD 2 EXP SUC h`,
   REPEAT STRIP_TAC
@@ -399,6 +411,11 @@ val MOD_2EXP_MONO = store_thm("MOD_2EXP_MONO",
 val SLICE_COMP_THM = store_thm("SLICE_COMP_THM",
   `!h m l n. (SUC m) <= h /\ l <= m ==> (SLICE h (SUC m) n + SLICE m l n = SLICE h l n)`,
   B_RW_TAC [SLICE_def,MOD_2EXP_def,MOD_2EXP_MONO,GSYM LESS_EQ_ADD_SUB,SUB_ADD]
+);
+
+val SLICE_ZERO = store_thm("SLICE_ZERO",
+  `!h l n. h < l ==> (SLICE h l n = 0)`,
+  A_RW_TAC [SLICE_THM,BITS_ZERO]
 );
 
 (* -------------------------------------------------------- *)

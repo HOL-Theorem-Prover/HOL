@@ -9,7 +9,7 @@ struct
 infix 8 by;
 infix THEN THENC THENL ++ |->;
 
-open HolKernel boolLib selectUtil abbrevUtil Q Parse EquivType
+open HolKernel boolLib abbrevUtil selectUtil Q Parse EquivType
      computeLib bossLib simpLib numLib pairTheory numeralTheory
      arithmeticTheory prim_recTheory bitsTheory;
 
@@ -1389,6 +1389,77 @@ val ASR_LIMIT = store_thm("ASR_LIMIT",
 
 (* -------------------------------------------------------- *)
 
+val ZERO_SHIFT = store_thm("ZERO_SHIFT",
+  `(!n. w_0 << n = w_0) /\ (!n. w_0 >> n = w_0) /\
+   (!n. w_0 >>> n = w_0) /\ (!n. w_0 ROR n = w_0)`,
+  A_RW_TAC [MUL_EVAL,word_lsl_def,w_0,ASR_THM,BITS_ZERO2,MSBn_def,BIT_def,LSR_THM,ROR_THM]
+);
+
+val ZERO_SHIFT2 = store_thm("ZERO_SHIFT2",
+  `(!a. a << 0 = a) /\ (!a. a >> 0 = a) /\
+   (!a. a >>> 0 = a) /\ (!a. a ROR 0 = a)`,
+  A_RW_TAC [word_lsr_def,word_asr_def,word_ror_def,word_lsl_def,FUNPOW,GSYM w_1,MULT_CLAUSESw]
+);
+
+val lem = prove(
+  `!n. (2 * n - 1) DIV 2 = n - 1`,
+  Induct_on `n`
+    THEN A_SIMP_TAC [ADD1,LEFT_ADD_DISTRIB,SUC_SUB1,ONCE_REWRITE_RULE [MULT_COMM] ADD_DIV_ADD_DIV]
+);
+
+val lem2 = PROVE [MULT_COMM,MULT_ASSOC] `!(a:num) b c. a * (b * c) = b * (a * c)`;
+
+val lem3 = prove(
+  `!m n. (2 EXP (m + n) - 1) DIV 2 EXP n = 2 EXP m - 1`,
+  Induct_on `n`
+    THEN A_FULL_SIMP_TAC [EXP_ADD,EXP,ZERO_LT_TWOEXP,GSYM DIV_DIV_DIV_MULT,DIV1,lem,lem2]
+);
+
+val lem3b = prove(
+  `!m n. (2 EXP (m + n) - 1) MOD 2 EXP n = 2 EXP n - 1`,
+  Induct_on `m`
+    THEN STRIP_TAC
+    THENL [
+      A_SIMP_TAC [LESS_MOD,ZERO_LT_TWOEXP],
+      B_SIMP_TAC [ADD_CLAUSES,EXP,TIMES2]
+        THEN SUBST_OCCS_TAC [([1],SPECL [`m`,`n`,`2`] EXP_ADD)]
+        THEN ASM_B_SIMP_TAC [MOD_TIMES,ZERO_LT_TWOEXP,LESS_EQ_ADD_SUB,
+                             REWRITE_RULE [SYM ONE,LESS_EQ] ZERO_LT_TWOEXP]
+    ]
+);
+
+val LSB_COMP0 = (SIMP_RULE arith_ss [WL_def,GSYM LSBn_def,SYM COMP0_def] o SPEC `0`) ONE_COMP_TRUE;
+val MSB_COMP0 = (SIMP_RULE arith_ss [WL_def,GSYM MSBn_def,SYM COMP0_def] o SPEC `HB`) ONE_COMP_TRUE;
+
+val lem4 = SIMP_RULE arith_ss [GSYM ADD1] (SPECL [`n`,`1`] lem3);
+val lem5 = SIMP_RULE arith_ss [GSYM ADD1] (SPECL [`0`,`HB`] lem3b);
+
+val ASR_w_T = store_thm("ASR_w_T",
+  `!n. w_T >> n = w_T`,
+  Induct_on `n`
+    THENL [
+      REWRITE_TAC [ZERO_SHIFT2],
+      ASM_REWRITE_TAC [ASR_LEM,ASR_ONE_EVAL,w_T_def,GSYM wn_def,ASR_ONE_def,LSR_ONE,BITS_THM,EXP_1,
+                       SET_def,MSB_COMP0]
+        THEN A_SIMP_TAC [COMP0_def,ONE_COMP_def,MODw_THM,BITS_ZERO2,WL_def,lem4,lem5]
+        THEN REWRITE_TAC [EXP]
+    ]
+);
+
+val ROR_w_T = store_thm("ROR_w_T",
+  `!n. w_T ROR n = w_T`,
+  Induct_on `n`
+    THENL [
+      REWRITE_TAC [ZERO_SHIFT2],
+      ASM_REWRITE_TAC [ROR_LEM,ROR_ONE_EVAL,w_T_def,GSYM wn_def,ROR_ONE_def,LSR_ONE,BITS_THM,EXP_1,
+                       SET_def,LSB_COMP0]
+        THEN A_SIMP_TAC [COMP0_def,ONE_COMP_def,MODw_THM,BITS_ZERO2,WL_def,lem4,lem5]
+        THEN REWRITE_TAC [EXP]
+    ]
+);
+
+(* -------------------------------------------------------- *)
+
 val MODw_EVAL = save_thm("MODw_EVAL",
   GEN_ALL (SIMP_RULE arithr_ss [THE_WL] MODw_def)
 );
@@ -1487,6 +1558,16 @@ val SLICEw_ZERO_THM = store_thm("SLICEw_ZERO_THM",
 val SLICEw_COMP_THM = store_thm("SLICEw_COMP_THM",
   `!h m l a. (SUC m) <= h /\ l <= m ==> (SLICEw h (SUC m) a + SLICEw m l a = SLICEw h l a)`,
   B_RW_TAC [SLICEw_def,SLICE_COMP_THM]
+);
+
+val BITSw_ZERO = store_thm("BITSw_ZERO",
+  `!h l n. h < l ==> (BITSw h l n = 0)`,
+  B_RW_TAC [BITSw_def,BITS_ZERO]
+);
+
+val SLICEw_ZERO = store_thm("SLICEw_ZERO",
+  `!h l n. h < l ==> (SLICEw h l n = 0)`,
+  B_RW_TAC [SLICEw_def,SLICE_ZERO]
 );
 
 (* -------------------------------------------------------- *)
