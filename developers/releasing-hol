@@ -67,7 +67,6 @@ mv bin/README ../bin-README
 /bin/rm tools/Holmake/Holmake_{parse.{sig,sml},tokens.sml}
 (cd tools/quote-filter ; ../../bin/Holmake cleanAll)
 (cd help/src ; ../../bin/Holmake cleanAll)
-/bin/rm std.prelude
 /bin/rm bin/*
 
 mv ../bin-README bin/README
