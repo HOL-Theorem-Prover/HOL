@@ -296,6 +296,55 @@ let mdir v n ts = (* munge a directive *)
     "SHOWRULE" -> "\\showrule{"^texify_command (go ts)^"}%\n"
   | _          -> ""
 
+let balanced = [ ("(",")"); ("[","]"); ("{","}")]
+
+let rec readbal ds ts cf = (* read a balanced arg; cf=true ==> level 1 commas to }{ and remove level 1 parens *)
+  let rec bal ps ds ts =
+    let n = List.length ps
+    in
+    match ts with
+      (Sep(s)::ts) when List.mem_assoc s balanced  (* open *)
+                     -> let ds' = if n=0 && cf
+                                  then ds
+                                  else (Sep(s)::ds)
+                        in
+                        bal (List.assoc s balanced::ps) ds' ts
+    | (Sep(s)::ts) when n>0 && s = List.hd ps      (* close *)
+                     -> let ds' = if n=1 && cf
+                                  then ds
+                                  else Sep(s)::ds
+                        in
+                        if n=1
+                        then (List.rev ds',ts)
+                        else bal (List.tl ps) ds' ts
+    | (Sep(",")::ts) -> if n=1 && cf
+                        then bal ps (TeXNormal("}{")::ds) ts
+                        else bal ps (Sep(",")       ::ds) ts
+    | (t::ts)        -> bal ps (t::ds) ts
+    | []             -> raise BadArg
+  in
+  bal [] ds ts
+
+let rec readarg cf ts = (* read a single arg: spaces then (id.id.id or matched-paren string) *)
+  let rec sp ts =
+    match ts with
+      (White(_)::ts) -> sp ts
+    | _              -> ts
+  in
+  let rec dotted ds ts =
+    match ts with
+      (Sep(".")::Ident(s,true)::ts) -> dotted (Ident(s,true)::Sep(".")::ds) ts
+    | (Str(_)::_)                   -> raise BadArg
+    | (Ident(_,_)::_)               -> raise BadArg
+    | _                             -> (List.rev ds,ts)
+  in
+  match sp ts with
+    (Ident(s,true)::ts) -> dotted [Ident(s,true)] ts
+  | (Sep(s)::_) when List.mem_assoc s balanced
+                        -> readbal [] ts cf (* commas to add extra args? *)
+  | _                   -> raise BadArg
+
+
 let rec mtok v t =
   match t with
     Ident(s,true)  -> mident v s
@@ -317,46 +366,6 @@ let rec mtok v t =
   | TeXNormal(s)   -> s
   | HolStartTeX    -> "\\tscomm{"
   | HolEndTeX      -> "}"
-
-
-and readbal ds ts cf = (* read a balanced arg; cf=true ==> level 1 commas to }{ and remove level 1 parens *)
-  let rec bal n ds ts =
-    match ts with
-      (Sep(")")::ts) -> let ds' = if n==1 && cf
-                                  then ds
-                                  else Sep(")")::ds
-                        in
-                        if n<=1
-                        then (List.rev ds',ts)
-                        else bal (n-1) ds' ts
-    | (Sep("(")::ts) -> if n==0 && cf
-                        then bal (n+1) ds ts
-                        else bal (n+1) (Sep("(")::ds) ts
-    | (Sep(",")::ts) -> if n==1 && cf
-                        then bal n (TeXNormal("}{")::ds) ts
-                        else bal n (Sep(",")       ::ds) ts
-    | (t::ts)        -> bal n (t::ds) ts
-    | []             -> raise BadArg
-  in
-  bal 0 ds ts
-
-and readarg cf ts = (* read a single arg: spaces then (id.id.id or matched-paren string) *)
-  let rec sp ts =
-    match ts with
-      (White(_)::ts) -> sp ts
-    | _              -> ts
-  in
-  let rec dotted ds ts =
-    match ts with
-      (Sep(".")::Ident(s,true)::ts) -> dotted (Ident(s,true)::Sep(".")::ds) ts
-    | (Str(_)::_)                   -> raise BadArg
-    | (Ident(_,_)::_)               -> raise BadArg
-    | _                             -> (List.rev ds,ts)
-  in
-  match sp ts with
-    (Ident(s,true)::ts) -> dotted [Ident(s,true)] ts
-  | (Sep("(")::_)       -> readbal [] ts cf (* commas to add extra args? *)
-  | _                   -> raise BadArg
 
 
 and mcurry x c n cf v xs = (* munge n arguments of curried function c;
@@ -629,7 +638,7 @@ let latex_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm) as r) =
   in
   let texname  = texify_command n
   in
-  print_string ("\\newcommand{"^texname^"}{\\rrule"^(if side == [] then "n" else "c")
+  print_string ("\\newcommand{"^texname^"}{\\rrule"^(if side = [] then "n" else "c")
                          ^(match comm with Some _ -> "c" | None -> "n"));
   print_string ("{"^texify n^"}{"^texify cat^"}");
   print_string ("{"^(match desc with Some d -> munge pvs d | None -> "")^"}\n");
