@@ -45,6 +45,7 @@ sig
   val SUBGOAL_THEN   : Term.term -> thm_tactic -> tactic
   val CHANGED_TAC    : tactic -> tactic
 
+  val default_prover : term * tactic -> Thm.thm
   val set_prover     : (term * tactic -> Thm.thm) -> unit
   val restore_prover : unit -> unit
 
