@@ -3786,6 +3786,37 @@ val KoenigsLemma_WF = store_thm(
              relationTheory.inv_DEF] THEN
   METIS_TAC [KoenigsLemma]);
 
+val set_ss = arith_ss ++ SET_SPEC_ss;
+
+val SET_EQ_SUBSET = Q.store_thm
+("SET_EQ_SUBSET",
+ `!s1 s2. (s1 = s2) = s1 SUBSET s2 /\ s2 SUBSET s1`,
+ REPEAT (GEN_TAC ORELSE EQ_TAC)
+  THEN RW_TAC set_ss [SUBSET_DEF,SUBSET_ANTISYM]);
+
+val PSUBSET_EQN = Q.store_thm
+("PSUBSET_EQN",
+ `!s1 s2. s1 PSUBSET s2 = s1 SUBSET s2 /\ ~(s2 SUBSET s1)`,
+ PROVE_TAC [PSUBSET_DEF,SET_EQ_SUBSET]);
+
+val CROSS_EQNS = Q.store_thm
+("CROSS_EQNS",
+ `!(s1:'a set) (s2:'b set).
+  (({}:'a set)   CROSS s2 = ({}:('a#'b) set)) /\
+  ((a INSERT s1) CROSS s2 = (IMAGE (\y.(a,y)) s2) UNION (s1 CROSS s2))`,
+RW_TAC set_ss [CROSS_EMPTY,Once CROSS_INSERT_LEFT]
+  THEN MATCH_MP_TAC (PROVE [] (Term`(a=b) ==> (f a c = f b c)`))
+  THEN RW_TAC set_ss [CROSS_DEF,IMAGE_DEF,EXTENSION]
+  THEN METIS_TAC [ABS_PAIR_THM,IN_SING,FST,SND]);
+
+val count_EQN = Q.store_thm
+("count_EQN",
+ `!n. count n = if n = 0 then {} else 
+            let p = PRE n in p INSERT (count p)`,
+ REWRITE_TAC [count_def]
+  THEN Induct
+  THEN RW_TAC arith_ss [GSPEC_F]
+  THEN RW_TAC set_ss [EXTENSION,IN_SING,IN_INSERT]);
 
 val _ = export_rewrites
     [
@@ -3857,5 +3888,112 @@ val _ = adjoin_to_theory {sig_ps = SOME sigps,
 
 
 val _ = export_theory();
+
+
+(*
+  BIGINTER not defined at empty set, since no obvious UNIV exists.
+  COMPL a problem: no universe
+  REST and CHOICE are problems, but used only in ITSET?
+*)
+
+(*---------------------------------------------------------------------------*)
+(* Takes a curried constructor and maps it to a tupled version.              *)
+(*---------------------------------------------------------------------------*)
+
+fun tupled_constructor capp =
+ let open pairSyntax
+     val (c,args) = strip_comb capp
+     val target = type_of capp
+     val argtys = map type_of args
+     val cvar = mk_var(fst(dest_const c),list_mk_prod argtys --> target)
+     val new = list_mk_abs(args,mk_comb(cvar,list_mk_pair args))
+ in 
+    mk_thm([],mk_eq(c,new))
+ end;
+
+val reshape = BETA_RULE o 
+              PURE_REWRITE_RULE [tupled_constructor (Term`x INSERT s`)];
+
+val F_INTRO = PURE_REWRITE_RULE [PROVE[] (Term `~x = (x = F)`)];
+val T_INTRO = PURE_ONCE_REWRITE_RULE [PROVE[] (Term `x = (x = T)`)];
+
+fun scoped_parse q = 
+ let val (tyg,tmg) = (type_grammar(),term_grammar())
+     val tyg' = type_grammar.remove_abbreviation tyg "set"
+     val _ = temp_set_grammars(tyg',tmg)
+     val astl = ParseDatatype.parse q
+     val _ = temp_set_grammars(tyg,tmg)
+ in 
+   astl
+ end;
+
+(*---------------------------------------------------------------------------*)
+(* Export an ML model of (finite) sets. Although the representation used in  *)
+(* pred_set is 'a -> bool, the ML representation is a concrete type with     *)
+(* constructors EMPTY and INSERT. Which is quite different, but we wanted to *)
+(* be able to compute cardinality, which would not be possible with sets-as- *)
+(* predicates. An alternative would be to have a parallel theory of finite   *)
+(* sets, as in hol88, but that could lead to a proliferation of theories     *)
+(* which required sets.                                                      *)
+(*                                                                           *)
+(* The implementation is not efficient. Insertion is constant time, but      *)
+(* membership checks are linear and subset checks are quadratic.             *)
+(*---------------------------------------------------------------------------*)
+
+val _ = 
+ let open Drop
+     val setdecl = scoped_parse `set = EMPTY | INSERT of 'a => set`
+     val _ = new_type("set",1)
+  in try exportML ("set",
+    ABSDATATYPE (["'a"], setdecl)
+    :: OPEN ["num"]
+    :: MLSIG "type num = numML.num"
+    :: MLSIG "val IN       : ''a -> ''a set -> bool"
+    :: MLSIG "val UNION    : ''a set -> ''a set -> ''a set"
+    :: MLSIG "val INTER    : ''a set -> ''a set -> ''a set"
+    :: MLSIG "val DELETE   : ''a set -> ''a -> ''a set"
+    :: MLSIG "val DIFF     : ''a set -> ''a set -> ''a set"
+    :: MLSIG "val SUBSET   : ''a set -> ''a set -> bool"
+    :: MLSIG "val PSUBSET  : ''a set -> ''a set -> bool"
+    :: MLSIG "val IMAGE    : ('a -> 'b) -> 'a set -> 'b set"
+    :: MLSIG "val BIGUNION : ''a set set -> ''a set"
+    :: MLSIG "val BIGINTER : ''a set set -> ''a set"
+    :: MLSIG "val CARD     : ''a set -> num"
+    :: MLSIG "val DISJOINT : ''a set -> ''a set -> bool"
+    :: MLSIG "val CROSS    : ''a set -> ''b set -> (''a * ''b) set"
+    :: MLSIG "val SUM_IMAGE : (''a -> num) -> ''a set -> num"
+    :: MLSIG "val SUM_SET  : num set -> num"
+    :: MLSIG "val MAX_SET  : num set -> num"
+    :: MLSIG "val MIN_SET  : num set -> num"
+    :: MLSIG "val count    : num -> num set"
+    ::
+    (map (DEFN_NOSIG o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o reshape)
+     [CONJ (F_INTRO NOT_IN_EMPTY) IN_INSERT, 
+      CONJ (CONJUNCT1 UNION_EMPTY) INSERT_UNION, 
+      CONJ (CONJUNCT1 INTER_EMPTY) INSERT_INTER,
+      CONJ EMPTY_DELETE DELETE_INSERT,
+      CONJ DIFF_EMPTY DIFF_INSERT,
+      CONJ (T_INTRO (SPEC_ALL EMPTY_SUBSET)) INSERT_SUBSET,
+      PSUBSET_EQN,
+      CONJ IMAGE_EMPTY IMAGE_INSERT,
+      CONJ BIGUNION_EMPTY BIGUNION_INSERT,
+      CONJ BIGINTER_SING BIGINTER_INSERT,
+      CONJ CARD_EMPTY (UNDISCH (SPEC_ALL CARD_INSERT)),
+      CONJ (T_INTRO (CONJUNCT1 (SPEC_ALL DISJOINT_EMPTY))) DISJOINT_INSERT,
+      CROSS_EQNS,
+      let val [c1,c2] = CONJUNCTS (SPEC_ALL SUM_IMAGE_THM)
+      in CONJ c1 (UNDISCH (SPEC_ALL c2)) end,
+      let val [c1,c2] = CONJUNCTS SUM_SET_THM
+      in CONJ c1 (UNDISCH (SPEC_ALL c2)) end,
+      let val [c1,c2] = CONJUNCTS MAX_SET_THM
+      in CONJ c1 (UNDISCH (SPEC_ALL c2)) end,
+      MIN_SET_THM, count_EQN]
+    @
+     [MLSIG "val fromList : 'a list -> 'a set",
+      MLSIG "val toList   : 'a set -> 'a list",
+      MLSTRUCT "fun fromList alist = listML.FOLDL (fn s => fn a => INSERT(a,s)) EMPTY alist",
+      MLSTRUCT "fun toList EMPTY = []\n\
+               \    | toList (INSERT(a,s)) = a::toList s"]))
+end;
 
 end;
