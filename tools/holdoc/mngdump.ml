@@ -255,8 +255,11 @@ let rec do_var0 depth v s =
   (* return fully texified variable or number, or raise Not_found if it's not a var *)
   if s = "" then
     raise Not_found
-  else if List.mem s v || (depth < 1 && is_field s) then  (* field names often reused as var names *)
-    "\\tsvar{"^texify_math s^"}"
+  (* commented out for now:
+   * else if (List.mem s v || (depth < 1 && is_field s)) then
+   *   (* field names often reused as var names *)
+   *   "\\tsvar{"^texify_math s^"}"
+   *)
   else if Str.string_match (Str.regexp "[0-9]+") s 0 then  (* digits *)
     s
   else
@@ -271,7 +274,9 @@ let rec do_var0 depth v s =
                           Str.string_after s (Str.match_end ())) in
   if    List.mem s0 !(!curmodals.vAR_PREFIX_LIST)
      || List.mem_assoc s0 !(!curmodals.vAR_PREFIX_ALIST)
-     || ((List.mem s0 v || is_field s0) && !(!curmodals.sMART_PREFIX)) then (* treat as prefix *)
+     || (!(!curmodals.sMART_PREFIX) &&
+         (List.mem s0 v || is_field s0 ||
+          List.mem (s0^s1^s2) v || is_field (s0^s1^s2))) then  (* treat as prefix *)
                                               (* if smart, always do foo1 -> foo_1;
                                                  otherwise, only if foo is specified as a prefix *)
     (let sbase = (try List.assoc s0 !(!curmodals.vAR_PREFIX_ALIST)
