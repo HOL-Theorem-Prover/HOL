@@ -263,14 +263,6 @@ val SCANR = new_list_rec_definition("SCANR",
 
 
 (*--------------------------------------------------------------*)
-(* Reverse                                                      *)
-(*--------------------------------------------------------------*)
-val REVERSE = new_list_rec_definition ("REVERSE",
- (--`(REVERSE [] = []) /\
-  (!x l. REVERSE (CONS (x:'a) l) = SNOC x (REVERSE l))`--));
-
-
-(*--------------------------------------------------------------*)
 (* Concatenation of two lists                                   *)
 (* Spec:                                                        *)
 (*   APPEND [x0;...;xn-1] [x'0;...;x'm-1] =                     *)
@@ -570,11 +562,27 @@ val IS_PREFIX =
 
 (*---------------------------------------------------------------*)
 
-val REVERSE_SNOC = prove((--`!(x:'a) l. REVERSE (SNOC x l) = CONS x (REVERSE l)`--),
-    GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[SNOC,REVERSE]);
+val SNOC_APPEND = store_thm("SNOC_APPEND",
+   (--`!x (l:('a) list). SNOC x l = APPEND l [x]`--),
+   GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [SNOC,APPEND]);
 
-val REVERSE_REVERSE = prove((--`!l:('a)list. REVERSE (REVERSE l) = l`--),
-    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[REVERSE,REVERSE_SNOC]);
+val REVERSE_DEF = listTheory.REVERSE_DEF
+val REVERSE_REVERSE = listTheory.REVERSE_REVERSE
+
+val REVERSE = store_thm (
+  "REVERSE",
+  ``(REVERSE [] = []) /\
+    (!x:'a l. REVERSE (x::l) = SNOC x (REVERSE l))``,
+  REWRITE_TAC [REVERSE_DEF, SNOC_APPEND]);
+
+val REVERSE_SNOC = store_thm(
+  "REVERSE_SNOC",
+  ``!(x:'a) l. REVERSE (SNOC x l) = CONS x (REVERSE l)``,
+  GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[SNOC,REVERSE]);
+
+val REVERSE_APPEND = save_thm("REVERSE_APPEND", listTheory.REVERSE_APPEND);
+
+val REVERSE_REVERSE = save_thm("REVERSE_REVERSE", REVERSE_REVERSE);
 
 val forall_REVERSE = TAC_PROOF(([],
     (--`!P. (!l:('a)list. P(REVERSE l)) = (!l. P l)`--)),
@@ -908,15 +916,6 @@ val LENGTH_NOT_NULL = store_thm("LENGTH_NOT_NULL",
       REWRITE_TAC [LENGTH,NULL,NOT_LESS_0],
       REWRITE_TAC [LENGTH,NULL,LESS_0]]);
 
-val REVERSE_SNOC = store_thm("REVERSE_SNOC",
-    (--`!(x:'a) l. REVERSE (SNOC x l) = CONS x (REVERSE l)`--),
-    GEN_TAC THEN LIST_INDUCT_TAC
-    THEN ASM_REWRITE_TAC[SNOC,REVERSE]);
-
-val REVERSE_REVERSE = store_thm ("REVERSE_REVERSE",
-    (--`!l:('a)list. REVERSE (REVERSE l) = l`--),
-    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[REVERSE,REVERSE_SNOC]);
-
 val SNOC_INDUCT = save_thm("SNOC_INDUCT", prove_induction_thm SNOC_Axiom_old);
 val SNOC_CASES =  save_thm("SNOC_CASES", hd (prove_cases_thm SNOC_INDUCT));
 
@@ -955,10 +954,6 @@ val SNOC_REVERSE_CONS = store_thm ("SNOC_REVERSE_CONS",
   in
     REWRITE_TAC[th]
   end);
-
-val SNOC_APPEND = store_thm("SNOC_APPEND",
-   (--`!x (l:('a) list). SNOC x l = APPEND l [x]`--),
-   GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [SNOC,APPEND]);
 
 val MAP_SNOC  = store_thm("MAP_SNOC",
     (--`!(f:'a->'b) x (l:'a list). MAP f(SNOC x l) = SNOC(f x)(MAP f l)`--),
@@ -1090,12 +1085,6 @@ val APPEND_NIL = store_thm("APPEND_NIL",
 val APPEND_SNOC = store_thm("APPEND_SNOC",
     (--`!l1 (x:'a) l2. APPEND l1 (SNOC x l2) = SNOC x (APPEND l1 l2)`--),
     LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[APPEND,SNOC]);
-
-val REVERSE_APPEND = store_thm ("REVERSE_APPEND",
-    (--`!(l1:('a)list) l2.
-     REVERSE (APPEND l1 l2) = (APPEND (REVERSE l2) (REVERSE l1))`--),
-    LIST_INDUCT_TAC
-    THEN ASM_REWRITE_TAC[APPEND,APPEND_NIL,REVERSE,APPEND_SNOC]);
 
 val APPEND_FOLDR = store_thm("APPEND_FOLDR",
     (--`!(l1:'a list) l2. APPEND l1 l2  = FOLDR CONS l2 l1`--),

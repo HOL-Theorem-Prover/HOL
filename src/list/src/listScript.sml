@@ -790,6 +790,32 @@ val MEM_EL = store_thm(
     ASM_MESON_TAC []
   ]);
 
+(* --------------------------------------------------------------------- *)
+(* REVERSE                                                               *)
+(* --------------------------------------------------------------------- *)
+
+val REVERSE_DEF = new_recursive_definition {
+  name = "REVERSE_DEF",
+  rec_axiom = list_Axiom,
+  def = ``(REVERSE [] = []) /\
+          (REVERSE (h::t) = APPEND (REVERSE t) [h])``};
+
+val REVERSE_APPEND = store_thm(
+  "REVERSE_APPEND",
+  ``!l1 l2:'a list.
+       REVERSE (APPEND l1 l2) = APPEND (REVERSE l2) (REVERSE l1)``,
+  LIST_INDUCT_TAC THEN
+  ASM_REWRITE_TAC [APPEND, REVERSE_DEF, APPEND_NIL, APPEND_ASSOC]);
+
+val REVERSE_REVERSE = store_thm(
+  "REVERSE_REVERSE",
+  ``!l:'a list. REVERSE (REVERSE l) = l``,
+  LIST_INDUCT_TAC THEN
+  ASM_REWRITE_TAC [REVERSE_DEF, REVERSE_APPEND, APPEND]);
+
+(* --------------------------------------------------------------------- *)
+
+
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME
