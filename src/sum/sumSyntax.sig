@@ -23,6 +23,4 @@ sig
   val mk_outr     : term -> term
   val mk_sum_case : term * term * term -> term
 
-  val lift_sum : hol_type -> ('a -> term ) -> ('b -> term) 
-                          -> ('a,'b)sumML.sum -> term
 end
