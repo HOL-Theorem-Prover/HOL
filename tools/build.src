@@ -4,11 +4,16 @@
 
 (* The following lines are written at configuration time. *)
 
-val LN_S = _;
+open Systeml;
+
+val OS = _;
 val HOLDIR = _;
 val DEPDIR = _;
 val SRCDIRS = _;
 val GNUMAKE = _;
+
+val SYSTEML = if OS = "winNT" then winnt_systeml else unix_systeml;
+
 
 val SIGOBJ = Path.concat(HOLDIR, "sigobj");
 
@@ -21,53 +26,24 @@ fun fullPath slist = normPath
 
 fun quote s = String.concat["\"", s, "\""];
 
-local val Holmake_path = fullPath [HOLDIR, "bin/Holmake --qof"]
-      open Process
+local val Holmake_path = fullPath [HOLDIR, "bin/Holmake"]
 in
 fun Holmake dir =
-  if system Holmake_path = success
-  then ()
+  if SYSTEML [Holmake_path, "--qof"] = Process.success then ()
   else (print ("Build failed in directory "^dir^"\n");
         raise Fail "Couldn't make directory")
 end;
 
 
 fun gnumake dir =
-  if Process.system GNUMAKE = Process.success
-  then ()
+  if SYSTEML [GNUMAKE] = Process.success then ()
   else (print ("Build failed in directory "^dir
                 ^" ("^GNUMAKE^" failed).\n");
         raise Fail "Couldn't make directory");
 
-(*---------------------------------------------------------------------------
-           Compile a HOL directory in place. Some libraries,
-           e.g., the robdd libraries, need special treatment because
-           they come with external tools or C libraries.
- ---------------------------------------------------------------------------*)
-
-fun build_dir dir =
-  let val _ = FileSys.chDir dir
-      val _ = print ("Working in directory "^dir^"\n")
-  in
-   case #file(Path.splitDirFile dir)
-    of "muddyC"    => (gnumake dir handle _ => print(String.concat
-                         ["\nmuddyLib has NOT been built!! ",
-                          "(continuing anyway).\n\n"]))
-     | "smv.2.4.3" => (gnumake dir handle _ => print(String.concat
-                         ["\nCompilation of SMV fails!!",
-                          " temporal Lib has NOT been built!! ",
-                          "(continuing anyway).\n\n"]))
-     | _   => Holmake dir
-  end
-  handle OS.SysErr(s, erropt)
-    => (print ("OS error: "^s^" - "^
-            (case erropt of SOME s' => OS.errorMsg s' | _ => "") ^ "\n");
-        Process.exit Process.failure);
-
-(*---------------------------------------------------------------------------
-      Arrange for all executables and relevant .sig files
-      to reside in a common directory.
- ---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+   Some useful file-system utility functions
+   ---------------------------------------------------------------------- *)
 
 fun map_dir f dir =  (* map a function over the files in a directory *)
   let val dstrm = FileSys.openDir dir
@@ -92,9 +68,21 @@ fun copy file path =  (* Dead simple file copy *)
   in loop()
   end;
 
+fun bincopy file path =  (* Dead simple file copy - binary version *)
+ let open BinIO
+     val (istrm,ostrm) = (openIn file, openOut path)
+     fun loop() =
+       case input1 istrm
+        of SOME ch => (output1(ostrm,ch) ; loop())
+         | NONE    => (closeIn istrm; flushOut ostrm; closeOut ostrm)
+  in loop()
+  end;
+
+
+
 fun link s1 s2 =
   let open Process
-  in if system (String.concat[LN_S," ",s1," ",s2]) = success then ()
+  in if SYSTEML ["ln", "-s", s1, s2] = success then ()
      else (print ("Unable to link file "^quote s1^" to file "^quote s2^".\n");
            raise Fail "link")
   end;
@@ -130,6 +118,42 @@ fun transfer_file symlink targetdir (df as (dir,file)) =
                           | SOME file' => transfer cp (dir,file,file'))
      |    _         => ()
   end;
+
+
+(*---------------------------------------------------------------------------
+           Compile a HOL directory in place. Some libraries,
+           e.g., the robdd libraries, need special treatment because
+           they come with external tools or C libraries.
+ ---------------------------------------------------------------------------*)
+
+fun build_dir dir = let
+  val _ = FileSys.chDir dir
+  val _ = print ("Working in directory "^dir^"\n")
+in
+  case #file(Path.splitDirFile dir) of
+    "muddyC"    => let
+    in
+      case OS of
+        "winNT" => bincopy (fullPath [HOLDIR, "tools", "win-binaries",
+                                      "muddy.so"])
+                           (fullPath [HOLDIR, "sigobj", "muddy.so"])
+      | _ => gnumake dir handle _ =>
+                           print(String.concat
+                                 ["\nmuddyLib has NOT been built!! ",
+                                  "(continuing anyway).\n\n"])
+    end
+  | "smv.2.4.3" => (gnumake dir
+                    handle _ => print(String.concat
+                                      ["\nCompilation of SMV fails!!",
+                                       " temporal Lib has NOT been built!! ",
+                                       "(continuing anyway).\n\n"]))
+  | _ => Holmake dir
+end
+handle OS.SysErr(s, erropt) =>
+  (print ("OS error: "^s^" - "^
+          (case erropt of SOME s' => OS.errorMsg s' | _ => "") ^ "\n");
+   Process.exit Process.failure);
+
 
 (*---------------------------------------------------------------------------
         Transport a compiled directory to another location. The

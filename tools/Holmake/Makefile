@@ -25,12 +25,13 @@ Holmake: Holmake.uo Holdep.uo Parser.uo Lexer.uo Holmake_parse.uo \
 Holmake.sml: Holmake.src fake_src.pl Holdep.uo
 	perl fake_src.pl < Holmake.src > Holmake.sml
 
-Holmake.uo: Holmake.sml Holmake_rules.ui
+Holmake.uo: Holmake.sml Holmake_rules.ui Systeml.ui
 	$(MOSMLC) -c Holmake.sml
 Holdep.uo : Parser.ui Lexer.uo Holdep.sml ; $(MOSMLC) -c Holdep.sml
 Lexer.uo  : Parser.ui Lexer.sml           ; $(MOSMLC) -c Lexer.sml
 Parser.uo : Parser.sml Parser.ui          ; $(MOSMLC) -c Parser.sml
 Parser.ui : Parser.sig                    ; $(MOSMLC) -c Parser.sig
+Systeml.uo Systeml.ui: Systeml.sml        ; $(MOSMLC) -c Systeml.sml
 
 Parser.sml Parser.sig : Parser.grm        ; $(MOSMLYACC) Parser.grm
 Lexer.sml             : Lexer.lex         ; $(MOSMLLEX) Lexer.lex

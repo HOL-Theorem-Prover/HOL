@@ -1,15 +1,18 @@
 (* Unix configuration *)
 
-local val XABLE  = "chmod a+x"   (* set execute permission *)
-      open Process
+local
+  open Process
 in
-fun mk_xable file =
-  if system (XABLE^" "^file) = success then file
-  else (print ("unable to set execute permission on "^file^".\n");
-        raise Fail "mk_xable");
 
-val MK_XABLE_RHS =
-  String.concat ["(Process.system (\"",XABLE," \"^file); file)"];
+  val MK_XABLE_RHS = "(unix_systeml [\"chmod\", \"a+x\", file]; file)"
+  val systeml = unix_systeml
+  val SYSTEML_NAME = "unix_systeml"
+
+  fun mk_xable file =
+    if systeml ["chmod", "a+x", file] = success then file
+    else (print ("unable to set execute permission on "^file^".\n");
+          raise Fail "mk_xable");
+
 
 end;
 

@@ -4,22 +4,25 @@
      SML libraries.
  ---------------------------------------------------------------------------*)
 
-(* Copyright University of Cambridge, 1999 *)
+(* Copyright University of Cambridge, Michael Norrish, 1999-2001 *)
 (* Author: Michael Norrish *)
-
-(* Global parameters, which get set at configuration time *)
-
-val HOLDIR = _;
-val MOSMLDIR = _;
-val DEPDIR = _;
-fun MK_XABLE file = _;
-val DEFAULT_OVERLAY = _;
 
 (* magic to ensure that interruptions (SIGINTs) are actually seen by the
    linked executable as Interrupt exceptions *)
 prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
 val _ = catch_interrupt true;
 
+fun warn s = (TextIO.output(TextIO.stdErr, s); TextIO.flushOut TextIO.stdErr)
+
+open Systeml;
+
+(* Global parameters, which get set at configuration time *)
+val HOLDIR0 = _;
+val MOSMLDIR0 = _;
+val DEPDIR = ".HOLMK";
+fun MK_XABLE file = _;
+val SYSTEML = _;
+val DEFAULT_OVERLAY = _;
 
 fun normPath s = Path.toString(Path.fromString s)
 fun itlist f L base =
@@ -42,13 +45,6 @@ val spacify =
 
 fun nspaces f n = if n <= 0 then () else (f " "; nspaces f (n - 1))
 
-fun compile debug args =
-  let val comm = spacify (MOSMLCOMP::args)
-      val _ = if debug then print ("  with command "^comm^"\n") else ()
-  in
-    Process.system comm
-  end;
-
 fun collapse_bslash_lines s = let
   val charlist = explode s
   fun trans [] = []
@@ -64,13 +60,16 @@ in
 fun quote s = String.concat["\"", expand_backslash s, "\""]
 end;
 
-fun unquote_to file1 file2 = Process.system
-  (String.concat [UNQUOTER, " ",file1, " ",file2]);
 
 
 (** Command line parsing *)
 
-(*** list functions and others *)
+(*** list functions *)
+fun butlast0 _ [] = raise Fail "butlast - empty list"
+  | butlast0 acc [x] = List.rev acc
+  | butlast0 acc (h::t) = butlast0 (h::acc) t
+fun butlast l = butlast0 [] l
+
 fun member m [] = false
   | member m (x::xs) = if x = m then true else member m xs
 fun set_union s1 s2 =
@@ -146,7 +145,7 @@ fun parse_command_line list = let
   val (rem3, help) = find_alternative_tags  ["--help", "-h"] rem2
   val (rem4, show_version) = find_alternative_tags ["--version", "-v"] rem3
   val (rem5, rebuild_deps) = find_alternative_tags ["--rebuild_deps","-r"] rem4
-  val (rem6, actual_HOLDIR) = find_one_pairtag "--holdir" HOLDIR I rem5
+  val (rem6, cmdl_HOLDIRs) = find_pairs "--holdir" rem5
   val (rem7, no_sigobj) = find_alternative_tags ["--no_sigobj", "-n"] rem6
   val (rem8, allfast) = find_toggle "--fast" rem7
   val (rem9, fastfiles) = find_pairs "-f" rem8
@@ -156,17 +155,35 @@ fun parse_command_line list = let
     find_one_pairtag "--holmakefile" NONE SOME rem11
   val (rem13, no_overlay) = find_toggle "--no_overlay" rem12
   val (rem14, user_overlay) = find_one_pairtag "--overlay" NONE SOME rem13
+  val (rem15, cmdl_MOSMLDIRs) = find_pairs "--mosmldir" rem14
 in
-  {targets=rem14, debug=debug, show_usage=help, show_version=show_version,
+  {targets=rem15, debug=debug, show_usage=help, show_version=show_version,
    always_rebuild_deps=rebuild_deps,
    additional_includes=includes,
    dontmakes=dontmakes, no_sigobj = no_sigobj,
    quit_on_failure = qofp, no_hmakefile = no_hmakefile,
    allfast = allfast, fastfiles = fastfiles,
-   actual_HOLDIR = actual_HOLDIR,
    user_hmakefile = user_hmakefile,
    no_overlay = no_overlay,
-   user_overlay = user_overlay}
+   user_overlay = user_overlay,
+   cmdl_HOLDIR =
+     case cmdl_HOLDIRs of
+       []  => NONE
+     | [x] => SOME x
+     |  _  => let
+       in
+         warn "Ignoring all but last --holdir spec.\n";
+         SOME (List.last cmdl_HOLDIRs)
+       end,
+   cmdl_MOSMLDIR =
+     case cmdl_MOSMLDIRs of
+       [] => NONE
+     | [x] => SOME x
+     | _ => let
+       in
+         warn "Ignoring all but last --mosmldir spec.\n";
+         SOME (List.last cmdl_MOSMLDIRs)
+       end}
 end
 
 
@@ -174,14 +191,42 @@ end
 val {targets, debug, dontmakes, show_usage, show_version, allfast, fastfiles,
      always_rebuild_deps,
      additional_includes = cline_additional_includes,
-     actual_HOLDIR,
+     cmdl_HOLDIR, cmdl_MOSMLDIR,
      no_sigobj = cline_no_sigobj,
      quit_on_failure, no_hmakefile, user_hmakefile, no_overlay,
      user_overlay} =
   parse_command_line (CommandLine.arguments())
 
-val SIGOBJ    = normPath(Path.concat(actual_HOLDIR, "sigobj"));
+(* find HOLDIR by first looking at command-line, then looking for a
+   value compiled into the code.
+*)
+val HOLDIR =
+  case cmdl_HOLDIR of
+    NONE => HOLDIR0
+  | SOME s => s
 
+
+val SIGOBJ    = normPath(Path.concat(HOLDIR, "sigobj"));
+val UNQUOTER  = fullPath [HOLDIR, "bin/unquote"]
+fun unquote_to file1 file2 = SYSTEML [UNQUOTER, file1, file2]
+
+(* find MOSMLDIR by first looking at command-line, then looking for a
+   value compiled into the code, and then for the environment variable
+   MOSMLLIB.  This latter is set for Moscow ML's operation under
+   Windows, and will lead us to the right place. *)
+val MOSMLDIR =
+  case cmdl_MOSMLDIR of
+    NONE => MOSMLDIR0
+  | SOME s => s
+
+val MOSMLCOMP = fullPath [MOSMLDIR, "bin/mosmlc"]
+fun compile debug args = let
+  val _ = if debug then print ("  with command "^
+                               spacify(MOSMLCOMP::args)^"\n")
+          else ()
+in
+  SYSTEML (MOSMLCOMP:: args)
+end;
 
 val _ =
   if quit_on_failure andalso allfast then
@@ -246,14 +291,6 @@ fun extra_commands t =
 
 val no_sigobj = cline_no_sigobj orelse hmake_no_sigobj
 val std_include_flags = if no_sigobj then [] else ["-I", SIGOBJ]
-(*
-  if not use_sigobj then
-    List.foldr
-    (fn (s, L) => "-I" :: normPath (actual_HOLDIR^s) :: L)
-    [] SRCDIRS
-  else ["-I", SIGOBJ]
-*)
-
 
 fun run_extra_command c =
   case c of
@@ -304,7 +341,8 @@ fun run_extra_commands tgt commands =
 
 val _ = if (debug) then let
 in
-  print ("HOLDIR = "^actual_HOLDIR^"\n");
+  print ("HOLDIR = "^HOLDIR^"\n");
+  print ("MOSMLDIR = "^MOSMLDIR^"\n");
   print ("Targets = "^print_list targets^"\n");
   print ("Additional includes = "^print_list additional_includes^"\n");
   print ("Using HOL sigobj dir = "^Bool.toString (not no_sigobj) ^"\n")
@@ -767,7 +805,7 @@ in
         val _ =
           app (fn s => FileSys.remove s handle OS.SysErr _ => ())
           [thysmlfile, thysigfile]
-        val res2    = system (fullPath [FileSys.getDir(), script'])
+        val res2    = SYSTEML [fullPath [FileSys.getDir(), script']]
         val _       = app FileSys.remove [script', scriptuo, scriptui]
       in
         (res2 = success) andalso
@@ -811,7 +849,6 @@ fun make_up_to_date ctxt target = let
     if debug then (nspaces TextIO.print (length ctxt);
                    TextIO.print s)
     else ()
-  fun warn s = (TextIO.output(TextIO.stdErr, s); TextIO.flushOut TextIO.stdErr)
   val _ = print ("Working on target: "^fromFile target^"\n")
   val pdep = primary_dependent target
   val _ = List.all (fn d => d <> target) ctxt orelse
@@ -988,6 +1025,7 @@ val _ =
      "    --help | -h          : show this message\n",
      "    --holdir <directory> : use specified directory as HOL root\n",
      "    --holmakefile <file> : use file as Holmakefile\n",
+     "    --mosmldir directory : use specified directory as MoscowML root\n",
      "    --no_holmakefile     : don't use any Holmakefile\n",
      "    --no_overlay         : don't use an overlay file\n",
      "    --no_sigobj | -n     : don't use any HOL files from sigobj\n",

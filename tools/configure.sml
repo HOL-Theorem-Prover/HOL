@@ -13,8 +13,8 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = 
-val holdir   = 
+val mosmldir =
+val holdir   =
 
 val OS       = "linux";    (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT"        *)
@@ -30,7 +30,8 @@ val LN_S     = "ln -s";    (* only change if you are a HOL developer.      *)
  ---------------------------------------------------------------------------*)
 
 
-app load ["FileSys", "Process", "Path", "Substring", "BinIO"];
+app load ["FileSys", "Process", "Path",
+          "Substring", "BinIO", "Lexing", "Nonstdio"];
 
 fun normPath s = Path.toString(Path.fromString s)
 fun itstrings f [] = raise Fail "itstrings: empty list"
@@ -44,10 +45,40 @@ fun fullPath slist = normPath
      Load in OS-dependent stuff.
  ---------------------------------------------------------------------------*)
 
+(* first load in systeml functions *)
+val holmakedir = fullPath [holdir, "tools", "Holmake"];
+val _ =
+  if FileSys.access(fullPath [holmakedir, "Systeml.uo"],
+                    [FileSys.A_READ]) andalso
+     FileSys.access(fullPath [holmakedir, "Systeml.ui"], [FileSys.A_READ])
+  then let
+    val oldloadpath = !loadPath
+    val _ = loadPath := !loadPath @ [holmakedir]
+  in
+    load (fullPath [holmakedir, "Systeml"]);
+    loadPath := oldloadpath
+  end
+  else
+    use (fullPath [holmakedir, "Systeml.sml"]);
+
+
+open Systeml;
+
 local val OSkind = if OS="linux" orelse OS="solaris" then "unix" else OS
 in
 val _ = use (fullPath [holdir,"tools/config-"^OSkind^".sml"])
 end;
+
+(* now compile Systeml.sml; if necessary *)
+val compiler = fullPath [mosmldir, "bin", "mosmlc"];
+
+if not (FileSys.access("Holmake/Systeml.uo", [FileSys.A_READ])) then let
+  val cd = FileSys.getDir()
+in
+  FileSys.chDir (fullPath [holdir, "tools", "Holmake"]);
+  systeml [compiler, "-c", "Systeml.sml"];
+  FileSys.chDir cd
+end else ();
 
 
 (*---------------------------------------------------------------------------
@@ -67,19 +98,13 @@ val SRCDIRS =
   "src/res_quan/src",
   "src/word/theories", "src/word/src",
   "src/finite_map", "src/hol88", "src/real", "src/bag", "src/ring/src",
-  "src/temporal/src", "src/temporal/smv.2.4.3", "src/prob", "src/HolSat"]
-  @
-   (if OS="linux" orelse OS="solaris"
-    then ["src/muddy/muddyC", "src/muddy", "src/HolBdd"]
-    else [])
-  @
-   ["help/src"];
+  "src/temporal/src", "src/temporal/smv.2.4.3", "src/prob", "src/HolSat",
+  "src/muddy/muddyC", "src/muddy", "src/HolBdd"];
 
 (*---------------------------------------------------------------------------
           String and path operations.
  ---------------------------------------------------------------------------*)
 
-val space  = " ";
 fun echo s = (TextIO.output(TextIO.stdOut, s^"\n");
               TextIO.flushOut TextIO.stdOut);
 
@@ -160,25 +185,23 @@ val _ = echo "\nBeginning configuration.";
 
 val _ =
  let val _ = echo "Making bin/Holmake."
-     val current_dir = FileSys.getDir()
+     val cdir      = FileSys.getDir()
      val hmakedir  = normPath(Path.concat(holdir, "tools/Holmake"))
-     val _ = FileSys.chDir hmakedir
+     val _         = FileSys.chDir hmakedir
      val src       = "Holmake.src"
      val target    = "Holmake.sml"
-     val bin       = fullPath [holdir, "bin/Holmake"]
-     val compiler  = fullPath [mosmldir, "bin/mosmlc"]
+     val bin       = fullPath [holdir,   "bin/Holmake"]
      val lexer     = fullPath [mosmldir, "bin/mosmllex"]
      val yaccer    = fullPath [mosmldir, "bin/mosmlyac"]
   in
     fill_holes (src,target)
-       ["val HOLDIR = _;\n"
-          --> String.concat["val HOLDIR = ",    quote holdir,";\n"],
-        "val MOSMLDIR = _;\n"
-          -->  String.concat["val MOSMLDIR = ", quote mosmldir, ";\n"],
-        "val DEPDIR = _;\n"
-          -->  String.concat["val DEPDIR = ",   quote DEPDIR, ";\n"],
-        "fun MK_XABLE file = _;\n"
+       ["val HOLDIR0 ="
+          --> String.concat["val HOLDIR0 = ", quote holdir,";\n"],
+        "val MOSMLDIR0 ="
+          -->  String.concat["val MOSMLDIR0 = ", quote mosmldir, ";\n"],
+        "fun MK_XABLE"
           -->  String.concat["fun MK_XABLE file = ", MK_XABLE_RHS, ";\n"],
+        "val SYSTEML" --> String.concat["val SYSTEML = ", SYSTEML_NAME]];
         "val DEFAULT_OVERLAY = _;\n"
           --> "val DEFAULT_OVERLAY = SOME \"Overlay.ui\"\n"];
     systeml [yaccer, "Parser.grm"];
@@ -201,7 +224,7 @@ val _ =
     else
       systeml [compiler, "-o", bin, target];
     mk_xable bin;
-    FileSys.chDir current_dir
+    FileSys.chDir cdir
   end
 handle _ => (print "Couldn't build Holmake\n"; Process.exit Process.failure)
 
@@ -217,15 +240,15 @@ val _ =
      val bin    = fullPath [holdir, "bin/build"]
   in
    fill_holes (src,target)
-    ["val LN_S = _;\n" --> String.concat["val LN_S = ",quote LN_S,";\n"],
+    ["val OS =" --> String.concat["val OS = ", quote OS, ";\n"],
      "val HOLDIR = _;\n" --> String.concat["val HOLDIR = ",quote holdir,";\n"],
      "val DEPDIR = _;\n" --> String.concat["val DEPDIR = ",quote DEPDIR,";\n"],
      "val SRCDIRS = _;\n" --> String.concat["val SRCDIRS = \n","    [",
                                           full_paths("     ",holdir) SRCDIRS],
      "val GNUMAKE = _;\n" --> String.concat["val GNUMAKE = ",
                                               quote GNUMAKE,";\n"]];
-   Process.system (String.concat
-       [fullPath [mosmldir, "bin/mosmlc"], " -o ", bin, space, target]);
+   systeml [fullPath [mosmldir, "bin/mosmlc"], "-o", bin,
+            "-I", holmakedir, target];
    FileSys.remove (fullPath [holdir,"tools/build.ui"]);
    FileSys.remove (fullPath [holdir,"tools/build.uo"]);
    mk_xable bin
@@ -282,7 +305,8 @@ val _ =
      val target = fullPath [holdir, "src/0/Globals.sml"]
   in
    fill_holes (src,target)
-    ["val HOLDIR = _;\n" --> String.concat["val HOLDIR = ",quote holdir,";\n"]]
+    ["val HOLDIR =" -->
+     String.concat["val HOLDIR = ",quote holdir,";\n"]]
   end;
 
 (*---------------------------------------------------------------------------
@@ -341,26 +365,26 @@ val _ =
                 else (print "failed!) "; false))
        in
          if check_src() andalso
-            system (String.concat [CC," ", src," -o ", target]) = success
+            systeml [CC," ", src," -o ", target] = success
          then (mk_xable target; print "successful.\n") handle _
                 => print(String.concat["\n>>>>>Failed to move quote filter!",
                               "(continuing anyway)\n\n"])
          else print
              "\n>>>>>>Couldn't compile quote filter! (continuing anyway)\n\n"
        end
-  else
-   (let val src = fullPath[holdir, "src/quote-filter/hol_filt.exe"]
-        val target = fullPath[holdir, "bin/unquote.exe"]
-        val instrm = BinIO.openIn src
-        val ostrm = BinIO.openOut target
-        val v = BinIO.inputAll instrm
-        val _ = BinIO.output(ostrm,v)
-    in
-       BinIO.closeIn instrm;
-       BinIO.closeOut ostrm
-    end
-    handle e =>
-       print"\n>>>>>>Couldn't install quote filter! (continuing anyway)\n\n");
+  else let
+    val src = fullPath[holdir, "tools", "win-binaries", "hol_filt.exe"]
+    val target = fullPath[holdir, "bin", "unquote.exe"]
+    val instrm = BinIO.openIn src
+    val ostrm = BinIO.openOut target
+    val v = BinIO.inputAll instrm
+    val _ = BinIO.output(ostrm,v)
+  in
+    BinIO.closeIn instrm;
+    BinIO.closeOut ostrm
+  end
+handle e =>
+  print"\n>>>>>>Couldn't install quote filter! (continuing anyway)\n\n";
 
 
 (*---------------------------------------------------------------------------
@@ -394,8 +418,8 @@ val _ =
          in
            print (String.concat
                   ["   Warning! (non-fatal):\n    The muddy package is not ",
-                   "expected to build in OS flavour ", quote OS,
-                   ".\n   Only linux and solaris are currently supported.\n",
+                   "expected to build in OS flavour ", quote OS, ".\n",
+                   "   On winNT, muddy will be installed from binaries.\n",
                    "   End Warning.\n"]);
            ("unknownOS", "unknownOS", "unknownOS")
          end
