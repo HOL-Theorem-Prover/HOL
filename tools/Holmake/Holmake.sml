@@ -1082,7 +1082,7 @@ fun generate_all_plausible_targets () = let
   val extra_targets = [toFile (#target(hd extra_rules))] handle Empty => []
   fun find_files ds P =
     case FileSys.readDir ds of
-      NONE => []
+      NONE => (FileSys.closeDir ds; [])
     | SOME fname => if P fname then fname::find_files ds P
                                else find_files ds P
   val cds = FileSys.openDir "."
