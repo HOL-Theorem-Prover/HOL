@@ -3544,26 +3544,33 @@ end;
 
 val BOOL_FUN_INDUCT = save_thm("BOOL_FUN_INDUCT",BOOL_FUN_INDUCT);
 
-val _ = new_constant("magic__case_constant", Type`:'a -> ('a -> 'b) -> 'b`);
-val _ = new_constant("magic__case_split",
+val _ = new_constant(GrammarSpecials.case_special,
+                     Type`:'a -> ('a -> 'b) -> 'b`);
+val _ = new_constant(GrammarSpecials.case_split_special,
                      Type`:('a -> 'b) -> ('a -> 'b) -> 'a -> 'b`);
-val _ = new_constant("magic__case_arrow", Type`:'a -> 'b -> 'a -> 'b`);
+val _ = new_constant(GrammarSpecials.case_arrow_special,
+                     Type`:'a -> 'b -> 'a -> 'b`);
+
+val _ = let open GrammarSpecials
+        in app add_const [case_special, case_split_special,
+                          case_arrow_special]
+        end
 
 val _ = add_rule{pp_elements = [TOK "->"], fixity = Infixr 8,
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  paren_style = OnlyIfNecessary,
-                 term_name = "magic__case_arrow"}
+                 term_name = GrammarSpecials.case_arrow_special}
 
 val _ = add_rule{pp_elements = [TOK "||"], fixity = Infixr 6,
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  paren_style = OnlyIfNecessary,
-                 term_name = "magic__case_split"}
+                 term_name = GrammarSpecials.case_split_special}
 
-val _ = add_rule{pp_elements = [TOK "case", TM, TOK "of", TM, TOK "esac"],
+val _ = add_rule{pp_elements = [TOK "case", TM, TOK "of", TM, TOK "end"],
                  fixity = Closefix,
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  paren_style = OnlyIfNecessary,
-                 term_name = "magic__case_constant"}
+                 term_name = GrammarSpecials.case_special}
 
 val _ = export_theory();
 
