@@ -18,15 +18,15 @@ end;
 
 val ORD_CHR_CONV = lemma o dest_chr o dest_ord;
 
-val char_thms   = [CHR_ORD,CHAR_EQ_THM,ORD_11];
-val string_thms = STRING_11::STRING_DISTINCT::char_thms
+val char_eq_thms   = [CHR_ORD,CHAR_EQ_THM,ORD_11];
+val string_eq_thms = STRING_11::STRING_DISTINCT::char_eq_thms
 
 
 val char_EQ_CONV = 
    let open computeLib reduceLib
        val compset = num_compset ()
        val _ = add_conv (ord_tm, 1, ORD_CHR_CONV) compset
-       val _ = add_thms char_thms compset
+       val _ = add_thms char_eq_thms compset
    in 
       CBV_CONV compset
    end;
@@ -36,13 +36,15 @@ val string_EQ_CONV =
    let open computeLib reduceLib
        val compset = num_compset ()
        val _ = add_conv (ord_tm, 1, ORD_CHR_CONV) compset
-       val _ = add_thms string_thms compset
+       val _ = add_thms string_eq_thms compset
    in 
       CBV_CONV compset
    end;
 
+val string_rewrites = STRING_SIZE_DEF::STRING_CASE_DEF::
+                      EXPLODE_EQNS::IMPLODE_EQNS::string_eq_thms;
 
-val _ = computeLib.add_funs string_thms;
+val _ = computeLib.add_funs string_rewrites;
 val _ = computeLib.add_convs [(ord_tm, 1, ORD_CHR_CONV)];
 
 (*---------------------------------------------------------------------------

@@ -57,9 +57,9 @@ val ORD_BOUND = Q.store_thm
  PROVE_TAC [ORD_ONTO]);
 
 (*---------------------------------------------------------------------------
-    In our development, CHR is not a constructor. Is that 
-    really important? We can at least prove the following theorem
-    about equality of chars.
+    In our development, CHR is not a constructor. Is that really 
+    important? We can at least prove the following theorem about 
+    equality of chars.
  ---------------------------------------------------------------------------*)
 
 val CHAR_EQ_THM = Q.store_thm
@@ -80,7 +80,8 @@ REPEAT STRIP_TAC
 
 (*---------------------------------------------------------------------------
       Strings are represented as lists of characters. This gives us
-      EXPLODE and IMPLODE for free.
+      EXPLODE and IMPLODE as the functions mapping into, and from, the 
+      representation.
  ---------------------------------------------------------------------------*)
 
 val is_string = 
@@ -95,7 +96,7 @@ val STRING_TYPE = new_type_definition("string", STRING_EXISTS);
 
 val STRING_TYPE_FACTS = 
   define_new_type_bijections 
-      {ABS="IMPLODE", REP="EXPLODE",name="string_BIJ", tyax=STRING_TYPE};
+      {ABS="IMPLODE", REP="EXPLODE",name="string_bij", tyax=STRING_TYPE};
 
 val IMPLODE_EXPLODE = 
   save_thm("IMPLODE_EXPLODE", CONJUNCT1 STRING_TYPE_FACTS);
@@ -141,19 +142,19 @@ REPEAT GEN_TAC
     Case expression.
  ---------------------------------------------------------------------------*)
 
-val alt_string_case_def = 
+val ALT_STRING_CASE_DEF = 
 new_recursive_definition
- {name="alt_string_case_def",
+ {name="ALT_STRING_CASE_DEF",
   def = Term `(alt_string_case f (IMPLODE [])     = f []) /\
               (alt_string_case f (IMPLODE (c::t)) = f (c::t))`,
   rec_axiom = alt_string_Axiom};
 
-val alt_string_case_thm  = Q.store_thm
-("alt_string_case_thm",
+val ALT_STRING_CASE_THM  = Q.store_thm
+("ALT_STRING_CASE_THM",
  `!l f. alt_string_case f (IMPLODE l) = f l`,
  GEN_TAC 
    THEN STRUCT_CASES_TAC (Q.ISPEC `l:char list` listTheory.list_CASES)
-   THEN RW_TAC bool_ss [alt_string_case_def]);
+   THEN RW_TAC bool_ss [ALT_STRING_CASE_DEF]);
 
 (*---------------------------------------------------------------------------
     Standard constructors for strings, defined using IMPLODE and EXPLODE.
@@ -230,13 +231,65 @@ val STRING_CASES = Q.store_thm
  HO_MATCH_MP_TAC STRING_INDUCT_THM THEN PROVE_TAC[]);
 
 
-val string_case_def = 
+(*---------------------------------------------------------------------------
+     Case expressions over strings.
+ ---------------------------------------------------------------------------*)
+
+val STRING_CASE_DEF = 
 new_recursive_definition
- {name="string_case_def",
+ {name="STRING_CASE_DEF",
   def = Term `(string_case b f EMPTYSTRING  = b) /\
               (string_case b f (STRING c s) = f c s)`,
   rec_axiom = string_Axiom};
 
+
+val STRING_CASE_CONG = 
+ save_thm("STRING_CASE_CONG", case_cong_thm STRING_CASES STRING_CASE_DEF);
+ 
+(*---------------------------------------------------------------------------
+      Size of a string.
+ ---------------------------------------------------------------------------*)
+
+val STRING_SIZE_DEF = new_recursive_definition
+   {def = Term`(string_size "" = 0) /\
+               (string_size (STRING c s) = 1 + string_size s)`,
+    name="STRING_SIZE_DEF", rec_axiom = string_Axiom};
+
+
+(*---------------------------------------------------------------------------
+     Recursion equations for EXPLODE and IMPLODE 
+ ---------------------------------------------------------------------------*)
+
+val EXPLODE_EQNS = Q.store_thm
+("EXPLODE_EQNS",
+ `(EXPLODE EMPTYSTRING = []) /\ 
+  !c s. EXPLODE (STRING c s) = c::EXPLODE s`,
+ REWRITE_TAC [EMPTYSTRING_DEF,EXPLODE_IMPLODE,IMPLODE_EXPLODE,STRING_DEF]);
+
+val IMPLODE_EQNS = Q.store_thm
+("IMPLODE_EQNS",
+ `(IMPLODE [] = EMPTYSTRING) /\ 
+  !c s. IMPLODE (c::t) = STRING c (IMPLODE t)`,
+ REWRITE_TAC [EMPTYSTRING_DEF,EXPLODE_IMPLODE,IMPLODE_EXPLODE,STRING_DEF]);
+
+
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME
+ (fn ppstrm => let
+   val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
+ in
+   S "val _ = TypeBase.write";
+   S "  (TypeBase.mk_tyinfo";
+   S "     {ax=TypeBase.ORIG string_Axiom,";
+   S "      case_def=STRING_CASE_DEF,";
+   S "      case_cong=STRING_CASE_CONG,";
+   S "      induction=TypeBase.ORIG STRING_INDUCT_THM,";
+   S "      nchotomy=STRING_CASES,";
+   S "      size=SOME(Parse.Term`string_size`,TypeBase.ORIG STRING_SIZE_DEF),";
+   S "      one_one=SOME STRING_11,";
+   S "      distinct=SOME (CONJUNCT1 STRING_DISTINCT)});"
+ end)};
 
 (*---------------------------------------------------------------------------
       Raises all unary list operators to be string operators.

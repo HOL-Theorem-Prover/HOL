@@ -2,15 +2,12 @@
 |									|
 | LIBRARY	: string						|
 |									|
-| DESCRIPTION   : definition of logical types for ascii character codes |
-|		  and ascii character strings.				|
+| DESCRIPTION   : definition of logical types for characters and        |
+|		  and strings of characters.				|
 |									|
-| AUTHOR	: T Melham						|
-| DATE		: 88.04.20						|
-|									|
-| MODIFIED      : M. Gordon						|
-| DATE		: 23 March 89						|
-+ =====================================================================	+
+| AUTHOR	: K. Slind						|
+| DATE		: 11.02.01  						|
+| =====================================================================	+
 
 
 + --------------------------------------------------------------------- +
@@ -19,19 +16,21 @@
 |									|
 + --------------------------------------------------------------------- +
 
-    mk_ascii.sml      creates the theory of 8-bit ascii character codes
+    stringLib.{sig,sml}    Load all string functionality. Includes
+                           conversions for character equality,
+                           and string equality, as well as a conversion
+                           for proving instances of 
 
-    mk_string.sml     creates the theory of character strings
+                               ORD (CHAR m) = m
 
-    ascii_conv.sml    defines ascii_EQ_CONV, a conversion for inferring
-	  	      the equality (or otherwise) of ascii character codes.
 
-    string_conv.sml   axiom scheme string_CONV for string constants.
+    stringScript.sml       Creates the theory of character strings
 
-    string_rules.sml  defines string_EQ_CONV, a conversion for inferring
-	  	      the equality (or otherwise) of character strings.
+    stringSyntax.{sig,sml} Derived syntax operations for characters 
+                           and strings.
 
-    string.sml        loads the library into hol.
+    stringSimps.sml        Simplification set for strings, to be used
+                           by simpLib rewriters (also found in bossLib).
 
 + --------------------------------------------------------------------- +
 |									|
@@ -39,10 +38,7 @@
 |									|
 + --------------------------------------------------------------------- +
 
-   1) type "make_string hol90" to Unix while in this directory. You
-      should have write permission on theories/<theory_file_type>, where
-      <theory_file_type> is the value of Globals.theory_file_type in
-      hol90 (as set in sys_params.sml when hol90 was built).
+   1) invoke "Holmake" as a shell command
 
 
 + --------------------------------------------------------------------- +
@@ -51,17 +47,8 @@
 |									|
 + --------------------------------------------------------------------- +
 
-   1) This directory string should either be in your current working
-      directory, or in one of the one of the library directories listed
-      in !Globals.library_path.  You may add new library directory paths
-      to library_path by
-		Lib.cons_path <dir_path> Globals.library_path
-      All such paths must end in a "/".
+   1) type 
 
-   2) Check that either "string" is in your current ancestry, or that you
-      are in draft mode.  Loading the library string will add "string" to
-      the current ancestry if it is not already there, or fail trying.
+       load "stringLib";
 
-   3) To load the library, execute load_library "string".
-
-
+      into an interactive session of HOL.
