@@ -224,9 +224,9 @@ fun PRIM_STP_TAC ss finisher =
             (ASSUM_TAC VSUBST_TAC var_eq
                ORELSE ASSUMS_TAC (LIFT_SIMP ss) has_constr_eqn
                ORELSE ASSUM_TAC (LIFT_SIMP ss) breakable
-               ORELSE CONCL_TAC ASM_SIMP has_constr_eqn)
+               ORELSE CONCL_TAC ASM_SIMP has_constr_eqn
                ORELSE ASSUM_TAC (LIFT_SPLIT_SIMP ss ASM_SIMP) splittable
-               ORELSE CONCL_TAC (SPLIT_SIMP ASM_SIMP) splittable)
+               ORELSE CONCL_TAC (SPLIT_SIMP ASM_SIMP) splittable))
      THEN TRY finisher
   end
 end;
