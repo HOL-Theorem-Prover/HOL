@@ -40,7 +40,7 @@ parse `"` { ECHO lexbuf; STRING lexbuf  }
       print (drop_upto #":" (Lexing.getLexeme lexbuf));
       TYQUOTE lexbuf
     }
-  | "``" ws * ":^" { print "(Type [QUOTE \"\", ANTIQUOTE (";
+  | "``" ws * ":^" { print "(Type [QUOTE \":\", ANTIQUOTE (";
                      ANTIQUOTE lexbuf; TYQUOTE lexbuf }
   | "``" { print "(Term [QUOTE \""; TMQUOTE lexbuf }
   | "`"  { print "[QUOTE \""; QUOTE lexbuf }
