@@ -44,13 +44,24 @@ fun app_l20 l =
     n4,n2,O,n1,O,n1 ] @ l
 ;
 
+fun double l () = let val ll = l() in ll@ll end;
+fun triple l () = let val ll = l() in ll@(ll@ll) end;
+
+
 val L20 = app_l20 [];
 val L100 = funpow 5 app_l20 [];
-fun L200() = L100@L100;
-fun L400() = L200() @ L200();
-fun L1200() = L400() @ L400() @ L400();
+val L200 = double (fn _ => L100);
+val L400 = double L200;
+val L1200 = triple L400;
+val L2400 = double L1200;
+val L4800 = double L2400;
+val L9600 = double L4800;
+val L19200 = double L9600;
+val L38400 = double L19200;
 
 
 time (funpow 100 (fn() => (tri_heap (L200()); ()))) (); (* ~ 0.36s *)
-time (funpow 100 (fn() => (tri_heap (L1200()); ()))) (); (* ~ 4.3s *)
+time (funpow 100 (fn() => (tri_heap (L1200()); ()))) (); (* ~ 4.17s *)
+time (funpow 10 (fn() => (tri_heap (L19200()); ()))) (); (* ~ 15.7s *)
+time (funpow 10 (fn() => (tri_heap (L38400()); ()))) (); (* ~ 43.3s *)
 

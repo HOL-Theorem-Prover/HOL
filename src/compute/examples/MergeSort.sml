@@ -120,24 +120,27 @@ fun norm q = time (CBV_CONV rws) (--q--);
 fun norm q = timing.with_stats (timing.tickt "total" (CBV_CONV rws)) (--q--);
 *)
 
-(* rules.sml implemented witout expl. subst.: quadratic *)
-norm ` merge_sort L4 `;  (* ~ 0.03s *)
-norm ` merge_sort L12 `; (* ~ 0.11s *)
-norm ` merge_sort L20 `; (* ~ 0.30s *)
-norm ` merge_sort L40 `; (* ~ 0.89s *)
-norm ` merge_sort L100 `; (* ~ 3.5s *)
-norm ` merge_sort L200 `;  (* ~ 11.7s = 3300 times slower than Moscow ML *)
-norm ` merge_sort L1200 `; (* ~ 377s *)
+(* rules.sml implemented witout expl. subst.: quadratic
+ *   Ln    |  time on sprat
+ * --------+-----------------
+ *   L4    | ~ 0.03s
+ *   L12   | ~ 0.11s
+ *   L20   | ~ 0.30s
+ *   L40   | ~ 0.89s
+ *   L100  | ~ 3.5s
+ *   L200  | ~ 11.7s = 3300 times slower than Moscow ML
+ *   L1200 | ~ 377s
+ *)
 
 (* with expl. subst.: N.log N *)
-norm ` merge_sort L12 `; (* ~ 0.1s *)
-norm ` merge_sort L20 `; (* ~ 0.25s *)
-norm ` merge_sort L100 `; (* ~ 2.11s *)
-norm ` merge_sort L200 `; (* ~ 5.2s *)
-norm ` merge_sort L400 `; (* ~ 11.9s *)
-norm ` merge_sort L1200 `; (* ~ 43.4s *)
-val _ = norm ` merge_sort L19200 `; (* ~ 996s *)
-val _ = norm ` merge_sort L38400 `; (* ~ 2090s, 66Mo *)
+norm ` merge_sort L12 `; (* ~ 0.09s *)
+norm ` merge_sort L20 `; (* ~ 0.24s *)
+norm ` merge_sort L100 `; (* ~ 2.04s *)
+norm ` merge_sort L200 `; (* ~ 4.9s *)
+norm ` merge_sort L400 `; (* ~ 11.4s *)
+val _ = norm ` merge_sort L1200 `; (* ~ 41.6s / MosML: 0.043s --> 990 *)
+val _ = norm ` merge_sort L19200 `; (* ~ 996s / --> 634 *)
+val _ = norm ` merge_sort L38400 `; (* ~ 2090s, 66Mo / MosML: 4.3s --> 490 *)
 
 
 (* Comparison with REWRITE_CONV: exponential *)

@@ -126,7 +126,7 @@ local open bossLib;
     prove
       (--` !x y q r. x DIV y =
            if (x = r + q * y) /\ (r < y) then q else x DIV y `--,
-       ZAP_TAC bool_ss [DIV_UNIQUE] THEN
+       ZAP_TAC base_ss [DIV_UNIQUE] THEN
        MATCH_MP_TAC (DIV_UNIQUE) THEN
        EXISTS_TAC (--`r:num`--) THEN ZAP_TAC arith_ss []);
 
@@ -134,7 +134,7 @@ local open bossLib;
     prove
       (--` !x y q r. x MOD y = 
            if (x = r + q * y) /\ (r < y) then r else x MOD y `--,
-       ZAP_TAC bool_ss [] THEN
+       ZAP_TAC base_ss [] THEN
        MATCH_MP_TAC (arithmeticTheory.MOD_UNIQUE) THEN
        EXISTS_TAC (--`q:num`--) THEN ZAP_TAC arith_ss []);
 
@@ -202,7 +202,7 @@ reduce `123456789123456789 MOD 9876`; (* 0.88s *)
 
 
 (* "Bug" *)
-val th = SYM(ASSUME(--`x=0`--));
+val th = ASSUME(--`0=x`--);
 val tm = --`\(x:num).x=0`--;
 
 val rws = from_list(true,[th]);
