@@ -152,7 +152,7 @@ fun to_tyspecs ASTs =
             if Lib.mem s new_type_names
             then if null Args then tyname_as_tyvar s
                  else raise ERR "to_tyspecs"
-                     "Can't use new types as operators - leave them nullary"
+                     ("Omit arguments to new type:"^Lib.quote s)
             else
               case Thy of
                 NONE => mk_type(s, map mk_hol_type Args)
@@ -1067,9 +1067,41 @@ fun persistent_tyinfo tyinfos_etc =
     write_tyinfos (zip tyinfos etc)
   end;
 
+(*---------------------------------------------------------------------------*)
+(* Construct trivial theorem from which structure of original datatype can   *)
+(* recovered.                                                                *)
+(*---------------------------------------------------------------------------*)
+
+fun mk_datatype_presentation thy tyspecl =
+  let open ParseDatatype
+      fun mkc (n,_) = prim_mk_const{Name=n,Thy=thy}
+      fun type_dec (tyname,Constructors dforms) =
+          let val constrs = map mkc dforms
+              val tyn_var = mk_var(tyname,list_mk_fun(map type_of constrs,bool))
+          in
+            list_mk_comb(tyn_var,constrs)
+          end
+        | type_dec (tyname,Record fields) = 
+          let val fvars = map (mk_var o (I##pretypeToType)) fields
+              val tyn_var = mk_var(tyname,ind)
+              val record_var = mk_var("record",	
+                                      list_mk_fun(ind::map type_of fvars,bool))
+          in
+            list_mk_comb(record_var,tyn_var::fvars)
+          end
+  in 
+   (fst(hd tyspecl),list_mk_conj (map type_dec tyspecl))
+  end
+
+fun datatype_thm (n,M) = save_thm 
+  ("datatype_"^n,
+   EQT_ELIM (ISPEC M DATATYPE_TAG_THM));
+
 fun Hol_datatype q =
  let
+  val tyspecl = ParseDatatype.parse q
   val tyinfos_etc = primHol_datatype (TypeBase.theTypeBase()) q
+  val _     = datatype_thm (mk_datatype_presentation (current_theory()) tyspecl)
   val tynames = map (TypeBasePure.ty_name_of o #1) tyinfos_etc
   val tynames = filter (not o is_substring bigrec_subdivider_string) tynames
   val tynames = map Lib.quote tynames
@@ -1081,4 +1113,3 @@ fun Hol_datatype q =
  end handle ? as HOL_ERR _ => Raise (wrap_exn "Datatype" "Hol_datatype" ?);
 
 end
-

@@ -26,13 +26,13 @@
 (* code generation facility and a testing environment for HOL definitions.   *)
 (*                                                                           *)
 (* Exporting HOL definitions of types and functions consists of 2 things:    *)
-(* mapping HOL expressions into syntactically acceptable ML expressions and  *)
-(* installing those definitions in ML. The former operation is "just"        *)
+(* installing those definitions in ML and mapping HOL expressions into       *)
+(* syntactically acceptable ML expressions. The latter operation is "just"   *)
 (* prettyprinting, where the prettyprinter uses a table mapping HOL types    *)
 (* and constants to their ML counterparts. This table needs to be extensible *)
-(* as theories load. The latter operation requires an invocation of the ML   *)
+(* as theories load. The former operation requires an invocation of the ML   *)
 (* compiler. In MoscowML, there is not a way to do this in the batch system  *)
-(* which means that some deviousness is unfortunately required.              *)
+(* which means that some deviousness is, unfortunately, required.            *)
 (*                                                                           *)
 (*===========================================================================*)
 
@@ -72,7 +72,7 @@ val dest_string_literal_hook = ref (fn _ => raise ERR "dest_string_literal" "und
 val dest_list_hook  = ref (fn _ => raise ERR "dest_list" "undefined")
 
 (*---------------------------------------------------------------------------*)
-(* A prettyprinter from HOL to very basic ML, dealing with basic paired      *)
+(* A prettyprinter from HOL to very simple ML, dealing with basic paired     *)
 (* lambda calculus terms, plus literals (strings, nums, ints), notation for  *)
 (* lists, and case expressions.                                              *)
 (*---------------------------------------------------------------------------*)
@@ -105,74 +105,91 @@ fun term_to_ML ppstrm =
 
   and pp_cond i tm = 
          let val (b,a1,a2) = dest_cond tm
-         in lparen i 5000;
-            begin_block CONSISTENT 2;
+         in begin_block CONSISTENT 0;
+            lparen i 5000;
+            begin_block INCONSISTENT 2;
             add_string"if "; 
-            begin_block CONSISTENT 0; 
-            pp minprec b; end_block(); add_break(1,0);
-            add_string"then"; add_break(1,0); 
-            begin_block CONSISTENT 0; 
-            pp minprec a1; end_block(); add_break(1,0);
-            add_string"else"; add_break(1,0); 
-            begin_block CONSISTENT 0; 
-            pp minprec a2; end_block(); add_break(0,0);
+            begin_block CONSISTENT 0; pp minprec b; end_block(); 
+            add_break(1,0);
+            add_string"then "; 
+            begin_block CONSISTENT 0; pp minprec a1; end_block(); 
+            add_break(1,0);
+            add_string"else ";
+            begin_block CONSISTENT 0; pp minprec a2; end_block(); 
             end_block();
-            rparen i 5000
+            rparen i 5000;
+            end_block()
          end
   and pp_num_literal tm = 
          let val s = numML.toString(numSyntax.dest_numeral tm)
-         in add_string"("; add_break(0,0);
-            add_string "numML.fromString";
-            add_break(0,0);
-            add_string (mlquote s);
-            add_break(0,0);
-            add_string")"
+         in begin_block CONSISTENT 0
+          ; add_string"("; add_break(0,0)
+          ; add_string "numML.fromString"
+          ; add_break(0,0)
+          ; add_string (mlquote s)
+          ; add_break(0,0)
+          ; add_string")"
+          ; end_block()
          end
   and pp_int_literal tm = 
          let val s = Arbint.toString(!dest_int_literal_hook tm)
-         in add_string"("; add_break(0,0);
-            add_string "intML.fromString";
-            add_break(0,0);
-            add_string (mlquote s);
-            add_break(0,0);
-            add_string")"
+         in begin_block CONSISTENT 0
+          ; add_string"("; add_break(0,0)
+          ; add_string "intML.fromString"
+          ; add_break(0,0)
+          ; add_string (mlquote s)
+          ; add_break(0,0)
+          ; add_string")"
+          ; end_block()
          end
   and pp_string tm = add_string (mlquote (!dest_string_literal_hook tm))
   and pp_list tm = 
        let val els = !dest_list_hook tm
-       in add_string "["
+       in begin_block CONSISTENT 0
+        ; add_string "["
         ; begin_block INCONSISTENT 0
         ; pr_list (pp minprec)
                   (fn () => add_string",") 
                   (fn () => add_break(0,0)) els
         ; end_block()
         ; add_string "]"
+        ; end_block()
        end
   and pp_binop i tm = 
       let val (c,[t1,t2]) = strip_comb tm
           val j = prec_of c
-      in lparen i j
+      in begin_block CONSISTENT 0
+        ; lparen i j
+        ; begin_block CONSISTENT 0
         ; pp (j+1) t1
         ; add_break(1,0)
         ; pp_const c
         ; add_break(1,0)
         ; pp j t2
+        ; end_block()
         ; rparen i j
+        ; end_block()
       end
   and pp_pair i tm = 
       let val (t1,t2) = pairSyntax.dest_pair tm
           val j = prec_of pairSyntax.comma_tm
-      in lparen maxprec i
+      in begin_block CONSISTENT 0
+        ; lparen maxprec i
+        ; begin_block CONSISTENT 0
         ; pp (j+1) t1
         ; add_break(1,0)
         ; pp_const pairSyntax.comma_tm
         ; add_break(1,0)
         ; pp j t2
+        ; end_block()
         ; rparen maxprec i 
+        ; end_block()
       end
   and pp_let i tm =
       let val (vstruct,rhs,body) = pairSyntax.dest_plet tm
-      in  lparen i 5000
+      in  begin_block CONSISTENT 0
+        ; lparen i 5000
+        ; begin_block INCONSISTENT 2
         ; add_string "let val"
         ; add_break(1,0)
         ; pp minprec vstruct
@@ -186,10 +203,13 @@ fun term_to_ML ppstrm =
         ; pp minprec body
         ; add_break(1,0)
         ; add_string"end"
+        ; end_block()
         ; rparen i 5000
+        ; end_block()
       end
   and pp_case i (c,a,cases) =
-      (lparen i 5000
+      ( begin_block CONSISTENT 0
+        ; lparen i 5000
         ; begin_block INCONSISTENT 1
         ; add_string "case"
         ; add_break(1,0)
@@ -202,7 +222,8 @@ fun term_to_ML ppstrm =
                    (fn () => add_break(1,0)) cases
         ; rparen i 5000
         ; end_block()
-        ; rparen i 5000)
+        ; rparen i 5000
+        ; end_block())
   and pp_case_clause (pat,rhs) =
         (begin_block CONSISTENT 0
          ; pp minprec pat
@@ -216,7 +237,8 @@ fun term_to_ML ppstrm =
   and pp_const tm = add_string (const_map tm)
   and pp_comb i tm = 
        let val (f,args) = strip_comb tm
-       in lparen i maxprec
+       in begin_block CONSISTENT 0
+        ; lparen i maxprec
         ; if TypeBase.is_constructor f 
             then 
               (pp maxprec f; add_string "(";
@@ -224,9 +246,12 @@ fun term_to_ML ppstrm =
                        (fn () => add_string ",") 
                        (fn () => add_break(0,0)) args;
                add_string ")")
-            else pr_list (pp maxprec) (fn () => ()) 
-                         (fn () => add_break(1,0)) (f::args)
+            else (begin_block INCONSISTENT 2;
+                  pr_list (pp maxprec) (fn () => ()) 
+                          (fn () => add_break(1,0)) (f::args);
+                  end_block())
         ; rparen i maxprec
+        ; end_block()
        end
   and pp_abs i tm = 
        let val (vstruct,body) = pairSyntax.dest_pabs tm
@@ -273,9 +298,11 @@ fun pp_defn_as_ML ppstrm =
        let in 
            begin_block CONSISTENT 2
          ; add_string (s^" ")
-         ; pr_list pp_clause 
-                   (fn () => (add_newline(); add_string "|"))
-                   (fn () => add_break(1,0)) els
+         ; pp_clause (hd els)
+         ; add_newline()
+         ; pr_list (fn c => (add_string "| "; pp_clause c))
+                   (fn () => ())
+                   (fn () => add_newline()) (tl els)
          ; end_block()
        end
      fun pp tm =
@@ -495,7 +522,7 @@ fun pp_struct strm (s,elems) =
  end;
 
 
-fun pp_theory_as_ML strm1 strm2 (s,elems) =
+fun pp_theory_as_ML (strm1,strm2) (s,elems) =
  (pp_sig strm1 (s,elems);
   pp_struct strm2 (s,elems)
  );

@@ -125,17 +125,4 @@ fun pp_lifter_def ppstrm tyop =
  end;
 
 
-(*---------------------------------------------------------------------------*)
-(* Take a HOL type ty, synthesize a lifter for ty, and then generate a       *)
-(* string that---when treated as ML---will lift an ML expression of type ty  *)
-(* to the equivalent HOL term of type ty.                                    *)
-(*---------------------------------------------------------------------------*)
-
-fun lift_ML_as_string ty =
-  let val lifter_tm = TypeBasePure.type_lift (TypeBase.theTypeBase()) ty
-      val lifter_string = PP.pp_to_string 70 Parse.pp_term lifter_tm
-  in fn s =>
-       String.concat[lifter_string,"\n(",s,");\n"]
-  end
-
 end

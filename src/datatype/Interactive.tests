@@ -2,6 +2,7 @@
 (* Examples to test ML execution                                             *)
 (*---------------------------------------------------------------------------*)
 
+use "Interactive";
 
 Datatype `foo = One | Two`;
 
@@ -24,7 +25,7 @@ Weak_Function "occurs"
               `occurs x (Node y tlist) = (x=y) \/ EXISTS (occurs x) tlist`;
 
 
-Datatype `enum = One | Two | Three | Four of blef list
+Datatype `enum = OneA | TwoA | Three | Four of blef list
             ;
           blef = E | G`;
 
@@ -39,10 +40,67 @@ Datatype `funs = Q of 'a => 'b => bool => bool => bool => bool => bool
                          => bool => bool => bool => bool => bool => bool`;
 
 
+load "stringLib";
+
+Datatype `regexp =
+   Any                       (* Any character *)
+ | Epsilon                   (* Empty string *)
+ | Atom of char              (* Specific character *)
+ | Or of regexp => regexp    (* Union *)
+ | Then of regexp => regexp  (* Concatenation *)
+ | Repeat of regexp`;        (* Iterated concat, >= 0 *)
+
+val _ = remove_termtok{term_name = "COND",tok="=>"};  
+val _ = overload_on ("|", Term`$Or`);
+val _ = overload_on ("#", Term`$Then`);
+
+val _ = set_fixity "|" (Infixr 501);
+val _ = set_fixity "#" (Infixr 601);
+
+Weak_Function
+   "match"
+   `(match [] [] _              = T)
+/\  (match [] _  _              = F)
+/\  (match (Epsilon::t) w s     = match t w s)
+/\  (match (Any::t) [] s        = F)
+/\  (match (Any::t) (_::w) s    = match t w NONE) 
+/\  (match (Atom c::t) [] s     = F)
+/\  (match (Atom c::t) (d::w) s = (c=d) /\ match t w NONE) 
+/\  (match (r1|r2::t) w s       = match (r1::t) w s \/ match (r2::t) w s)
+/\  (match (r1#r2::t) w s       = match (r1::r2::t) w s)
+/\  (match (Repeat r::t) w s    = let stop = Repeat r::t in
+                                  if s = SOME stop then
+                                      F
+                                  else
+                                      match t w s \/ 
+                                      match (r::Repeat r::t) w (SOME stop))`;
+
+try Function `check r s = match [r] (EXPLODE s) NONE`;
+
+val Zero_tm = rhs(concl(EVAL(Term`Atom(HD(EXPLODE "0"))`))); 
+val One_tm = rhs(concl(EVAL(Term`Atom(HD(EXPLODE "1"))`))); 
+val Two_tm = rhs(concl(EVAL(Term`Atom(HD(EXPLODE "2"))`))); 
+val Three_tm = rhs(concl(EVAL(Term`Atom(HD(EXPLODE "3"))`))); 
+val a_tm = rhs(concl(EVAL(Term`Atom(HD(EXPLODE "a"))`))); 
+val b_tm = rhs(concl(EVAL(Term`Atom(HD(EXPLODE "b"))`))); 
+val c_tm = rhs(concl(EVAL(Term`Atom(HD(EXPLODE "c"))`)));
+
+val r0 = Term `^One_tm # ^Two_tm`;
+val r1 = Term `Repeat ^r0`
+val r2 = Term `Repeat Any # ^One_tm`;
+val r3 = Term `^r2 # ^r1`;
+
+termEval (Term `check ^r0 "12"`);
+termEval (Term `check ^r1 "12"`);
+termEval (Term `check ^r1 "12121212121212121212121212121212"`);
+termEval (Term `check ^r1 "12123"`);
+
 
 (*---------------------------------------------------------------------------*)
 (* Testing theory generation.                                                *)
 (*---------------------------------------------------------------------------*)
+
+open Drop;
 
 fun EQN defn = DEFN (LIST_CONJ (Defn.eqns_of defn));
 fun DATA q = (Hol_datatype q; ParseDatatype.parse q);
@@ -55,7 +113,7 @@ val list =
               | Delta of ('a # 'b)list
               | Elephant of bool list 
               | Zebra of 'a -> 'b -> bool`),
-   DEFN(Function `(mem x [] = F) /\ (mem x (h::t) = (x=h) \/ mem x t)`),
+   DEFN (Function `(mem x [] = F) /\ (mem x (h::t) = (x=h) \/ mem x t)`),
    DEFN (Function `insert x l = if mem x l then l else x::l`),
    EQN (Weak_Function "tree_els" 
               `tree_els els (Node x tlist) = 
@@ -63,4 +121,16 @@ val list =
    EQN (Weak_Function "occurs" 
               `occurs x (Node y tlist) = (x=y) \/ EXISTS (occurs x) tlist`)];
 
-pprint pp_theory_as_ML ("foo",list);
+fun pp_theory (s,elist) = 
+ let open Portable
+ in pprint pp_sig (s,elist);
+    pprint pp_struct (s,elist)
+ end;
+
+pp_theory ("foo",list);
+
+
+
+(* Useful for seeing what is going on.
+fun printML tm = try (Drop.pp_term_as_ML (Portable.stdOut_ppstream())) tm;
+*)

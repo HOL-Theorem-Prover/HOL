@@ -1,8 +1,9 @@
 numLib.prefer_num();
 
 (*---------------------------------------------------------------------------*)
-(* Evaluate a string in the current environment. This function is only       *)
-(* usable in interactive mode!                                               *) 
+(* Evaluate a string in the current environment, returning a term.           *)
+(*                                                                           *)
+(* This function is only usable in the interactive mode of Moscow ML!        *)
 (*---------------------------------------------------------------------------*)
 
 fun noisy_eval s = 
@@ -27,11 +28,11 @@ val checkingML = ref true;
 
 fun Function q =
  let val def = bossLib.Define q
-     val asMLstring = PP.pp_to_string 70 Drop.pp_defn_as_ML (concl def)
+     val def_as_MLstring = PP.pp_to_string 70 Drop.pp_defn_as_ML (concl def)
      val _ = if !checkingML then 
-               HOL_MESG ("Attempting ML definition:\n  "^asMLstring)
+               HOL_MESG ("Attempting ML definition:\n  "^def_as_MLstring)
              else ()
-     val _ = stringDecl asMLstring
+     val _ = stringDecl def_as_MLstring
  in def
  end;
 
@@ -42,11 +43,11 @@ fun Function q =
 fun Weak_Function s q =
  let val def = bossLib.Hol_defn s q
      val clauses = list_mk_conj(map concl (Defn.eqns_of def))
-     val asMLstring = PP.pp_to_string 70 Drop.pp_defn_as_ML clauses
+     val def_as_MLstring = PP.pp_to_string 70 Drop.pp_defn_as_ML clauses
      val _ = if !checkingML then 
-               HOL_MESG ("Attempting ML definition:\n  "^asMLstring)
+               HOL_MESG ("Attempting ML definition:\n"^def_as_MLstring)
              else ()
-     val _ = stringDecl asMLstring
+     val _ = stringDecl def_as_MLstring
  in def
  end;
 
@@ -58,32 +59,52 @@ fun Weak_Function s q =
 fun Datatype q = 
  let val _ = bossLib.Hol_datatype q
      val decls = ParseDatatype.parse q
-     val asMLstring = PP.pp_to_string 70 Drop.pp_datatype_as_ML decls
-     val _ = if !checkingML then 
-               HOL_MESG ("Attempting ML datatype declaration:\n  "^asMLstring)
+     val def_as_MLstring = PP.pp_to_string 70 Drop.pp_datatype_as_ML decls
+     val _ = if !checkingML then HOL_MESG 
+                ("Attempting ML datatype declaration:\n"^def_as_MLstring)
              else ()
  in 
-     stringDecl asMLstring; ()
+     stringDecl def_as_MLstring; ()
  end;
 
 
+(*---------------------------------------------------------------------------*)
+(* Take a HOL type ty, synthesize a lifter for ty, and then generate a       *)
+(* string that---when treated as ML---will lift an ML expression of type ty  *)
+(* to the equivalent HOL term of type ty.                                    *)
+(*---------------------------------------------------------------------------*)
+
+local 
+ fun lift ty =
+  let val lifter_tm = TypeBasePure.type_lift (TypeBase.theTypeBase()) ty
+      val lifter_string = PP.pp_to_string 70 Parse.pp_term lifter_tm
+  in fn s =>
+       String.concat[lifter_string,"\n(",s,");\n"]
+  end
+in
 (*===========================================================================*)
 (* Evaluate a HOL term by dropping it to ML and lifting the result of the    *)
 (* ensuing ML evaluation.                                                    *)
 (*===========================================================================*)
 
 fun termEval tm =
- let val asMLstring = PP.pp_to_string 70 Drop.pp_term_as_ML tm
-     val asMLstring' = Lift.lift_ML_as_string (type_of tm) asMLstring
+ let val tm_as_MLstring = PP.pp_to_string 70 Drop.pp_term_as_ML tm
+     val MLstring = lift (type_of tm) tm_as_MLstring
  in 
      if !checkingML then 
-        HOL_MESG ("Attempting ML evaluation of:\n  "^asMLstring')
+        HOL_MESG ("Attempting ML evaluation of:\n"^MLstring)
      else ()
-  ; stringEval asMLstring'
+  ; stringEval MLstring
   ; !EvalRef.r
- end;
+ end
+end;
 
-local val ML_tag = Tag.read "ML"
+
+(*---------------------------------------------------------------------------*)
+(* Conversion for ML evaluation. Adds a tag to the resulting theorem.        *)
+(*---------------------------------------------------------------------------*)
+
+local val ML_tag = Tag.read "ML_EVAL"
       val ML_eval_thm = Thm.mk_oracle_thm ML_tag
 in
 fun ML_EVAL_CONV tm = ML_eval_thm ([],mk_eq(tm,termEval tm))
