@@ -620,8 +620,6 @@ fun computeTrace report vm pth (th0,thsuc) =
  end;
 
 
-
-
 (* Test example (Solitaire)
 
 val vm = solitaire_varmap;
@@ -633,6 +631,61 @@ val (th0,thsuc) = (in_th0,in_thsuc);
 val trl = computeTrace report vm pth (th0,thsuc);
 
 *)
+
+(*****************************************************************************)
+(*  TraceBack                                                                *)
+(*   vm                                                                      *)
+(*   [vm ``f i s`` |--> bi,  ... , vm ``f 0 s`` |--> b0]                     *)
+(*   (|- R((v1,...,vn),(v1',...,vn')) = ...)                                 *)
+(*                                                                           *)
+(* computes a sequence of lists of the form                                  *)
+(*                                                                           *)
+(*  [((vm v1 |--> b1),(vm c1 |--> b1')),                                     *)
+(*                   .                                                       *)
+(*                   .                                                       *)
+(*                   .                 ,                                     *)
+(*   ((vm vn |--> bn),(vm cn |--> bn'))]                                     *)
+(*                                                                           *)
+(* where each such list specifies a state                                    *)
+(* in which state variable vj has value cj (0 <= j <= n).                    *)
+(*                                                                           *)
+(* If [s0,...,si] is the sequence of states, then                            *)
+(* R(s0,s1), R(s1,S2),...,R(s(i-1),si) and si satisfies bi and               *)
+(*****************************************************************************)
+
+
+val TraceBackPrevThm = ref TRUTH;
+
+fun TraceBack vm trl Rth =
+ let val (Rcon, s_s') = Term.dest_comb(lhs(concl(SPEC_ALL Rth)))
+     val (s,s') = pairSyntax.dest_pair s_s'
+     val _ = print "Computing simplified backward image theorem ... "
+     val PrevTh =
+      time
+       (simpLib.SIMP_RULE
+        boolSimps.bool_ss
+        [pairTheory.EXISTS_PROD,HolBddTheory.Eq_def,pairTheory.PAIR_EQ,Rth])
+       (ISPECL[Rcon,``Eq ^s'``,s]HolBddTheory.Prev_def)
+     val _ = (TraceBackPrevThm := PrevTh)
+     val PrevThTb = eqToTermBdd failfn vm PrevTh
+     val _ = print "done.\nSimplified theorem is !TraceBackPrevThm\n";
+     val prime_var = mk_var o (prime ## I) o dest_var
+     fun get_ass tb =
+      map
+       (fn (tb,tb')=>(BddVar true vm (prime_var(getTerm tb)), tb'))
+       (BddSatone tb)
+     fun stepback ass tb =
+      get_ass(BddOp(And,tb,BddRestrict ass PrevThTb))
+     val _ = print "Computing trace: "
+     val assl =
+      List.foldl
+       (fn (tb,assl) => (print "."; stepback (hd assl) tb :: assl))
+       [get_ass(hd trl)]
+       (tl trl)
+     val _ = print " done.\n"
+in
+ assl
+end;
 
 
 end;
