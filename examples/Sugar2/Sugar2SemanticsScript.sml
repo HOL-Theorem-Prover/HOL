@@ -283,9 +283,8 @@ val F_SEM_defn =
                   (F_SEM M (RESTN p i) (STRONG_CLOCK c) f 
                    \/
                    ?j :: PL p. i < j 
-                    /\ ?p' :: SAME_PATH_KIND p. 
-                         F_SEM M (RESTN p j) (WEAK_CLOCK B_TRUE) (F_BOOL(B_AND(c,b))) /\ 
-                         F_SEM M (PATH_CAT(PATH_SEG p (i,j-1),p')) (STRONG_CLOCK c) f))
+                    /\ ?p'. F_SEM M (RESTN p j) (WEAK_CLOCK B_TRUE) (F_BOOL(B_AND(c,b))) /\ 
+                            F_SEM M (PATH_CAT(PATH_SEG p (i,j-1),p')) (STRONG_CLOCK c) f))
     /\
     (F_SEM M p (STRONG_CLOCK c) (F_WEAK_CLOCK(f,c1)) =   
       F_SEM M p (WEAK_CLOCK c1) f)
@@ -360,10 +359,9 @@ val F_SEM_defn =
                   (F_SEM M (RESTN p i) (WEAK_CLOCK c) f 
                    \/
                    ?j :: PL p. i < j /\ 
-                     ?p' :: SAME_PATH_KIND p. 
-                      F_SEM M (RESTN p j) (WEAK_CLOCK B_TRUE) (F_BOOL(B_AND(c,b)))
-                      /\
-                      F_SEM M (PATH_CAT(PATH_SEG p (i,j-1),p')) (WEAK_CLOCK c) f))
+                     ?p'. F_SEM M (RESTN p j) (WEAK_CLOCK B_TRUE) (F_BOOL(B_AND(c,b)))
+                          /\
+                          F_SEM M (PATH_CAT(PATH_SEG p (i,j-1),p')) (WEAK_CLOCK c) f))
     /\
     (F_SEM M p (WEAK_CLOCK c) (F_WEAK_CLOCK(f,c1)) =   
       F_SEM M p (WEAK_CLOCK c1) f)

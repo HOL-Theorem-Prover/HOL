@@ -901,21 +901,20 @@ less than the length of $\pi$, i.e.~the predicate \pl is defined by
 We can then write ``$\forall i\in\pl~\pi.~\cdots~i~\cdots$'' and ``$\exists i\in\pl~\pi.~\cdots~i~\cdots$''
 for the locutions above. The name ``$\pl$'' is short for ``path length''
 
-Define $\sim~\pi~\pi'$ to mean that $\pi$ and $\pi'$ are similar in that they are
-either both finite or both infinite:
-
-~~$\sim~\pi~\pi'~=~(\rm{finite}~\pi~=~\rm{finite}~\pi')$
-
-We will write ``$\exists \pi'\in\sim~\pi.~\cdots~\pi'~\cdots$'' to restrict quantification
-of $\pi'$ to range of paths that are similar (in the sense just defined) to $\pi$. This
-comes up in the semantics of \texttt{abort} formulas.
+%Define $\sim~\pi~\pi'$ to mean that $\pi$ and $\pi'$ are similar in that they are
+%either both finite or both infinite:
+%
+%~~$\sim~\pi~\pi'~=~(\rm{finite}~\pi~=~\rm{finite}~\pi')$
+%
+%We will write ``$\exists \pi'\in\sim~\pi.~\cdots~\pi'~\cdots$'' to restrict quantification
+%of $\pi'$ to range of paths that are similar (in the sense just defined) to $\pi$. This
+%comes up in the semantics of \texttt{abort} formulas.
 
 Here is a version of the unclocked FL semantics that allows
 paths to be finite.
 
 
 {\begin{alltt}
-
     ({\FSem{M}{{\pi}}{{\c}}{\FBool{b}}} = {\BSem{M}{\lNoHat{M}(\pathEl{{\pi}}{0})}{b}})
     {\And}
     ({\FSem{M}{{\pi}}{{\c}}{\fNot{f}}} = {\Not}{\FSem{M}{{\pi}}{\c}{f}}))
@@ -944,18 +943,19 @@ paths to be finite.
     ({\FSem{M}{{\pi}}{{\c}}{\fAbort{f}{b}}} =
       ({\FSem{M}{\pi}{{\c}}{f }}
        {\Or}
-       {\ResExists{j}{\pi}}. 0 < j \And
-        \Exists{\Pi}'\In\Sim {\Pi}. {\FSem{M}{\restN{{\pi}}{j}}{\c}{{\FBool{b}}}} {\And} {\FSem{M}{\pathCat{\pathSeg{\pi}{(0,j-1)}}{{\pi}'}}{{\c}}{f}}))
+       {\ResExists{j}{\pi}}. 
+        0 < j \And \Exists{\Pi}'. {\FSem{M}{\restN{{\pi}}{j}}{\c}{{\FBool{b}}}} {\And} {\FSem{M}{\pathCat{\pathSeg{\pi}{(0,j-1)}}{{\pi}'}}{{\c}}{f}}))
 \end{alltt}}
 
-This semantics is similar to an existing unpublished semantics of unclocked 
-FL formulas\footnote{Personal communication from Cindy Eisner.},
-except that the restrictions ``$\in\pl\hspace*{0.5mm}\pi$'' and ``$\in\sim\hspace*{0.5mm}\pi$'' were added to the quantifications,
+This semantics was initially derived from an existing unpublished semantics of unclocked 
+FL formulas\footnote{Personal communication from Cindy Eisner.}.
+%except that the restrictions ``$\in\pl\hspace*{0.5mm}\pi$'' 
+%and ``$\in\sim\hspace*{0.5mm}\pi$'' were added to the quantifications,
 %and also the disjunct $\tt{({\exists}k.~\sSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))}{\c}{r2})}$
-and also some changes were made to
+%and also some changes were made to
 %was added to 
-the semantics of $\fWeakImp{r1}{r2}$ to get the proof of the equivalence with the clocked semantics
-in Section~\ref{FL} to go through.
+%the semantics of $\fWeakImp{r1}{r2}$ to get the proof of the equivalence with the clocked semantics
+%in Section~\ref{FL} to go through.
 
 The following four sub-sections are the manually typeset HOL semantics of \Sugar.
 
@@ -969,9 +969,12 @@ in Section~\ref{review}.
 %\vspace*{-4mm}
 
 {\begin{alltt}
-   ({\BSem{M}{l}{\bProp{p}}}   \(\hspace*{1.5mm}\)  = \(p\) {\In} P\(\sb{M}\) {\And} \(p\) {\In} l) \(\hspace*{0.5mm}\)           {\And}
-   ({\BSem{M}{l}{\bTrue}}     \(\hspace*{1.3mm}\)= T)                        \(\hspace*{1mm}\)  {\And}
-   ({\BSem{M}{l}{{\bNot{b}}}}    \(\hspace*{1.5mm}\)= {\Not}{\BSem{M}{l}{b}})      \(\hspace*{1.5mm}\)         {\And}
+   ({\BSem{M}{l}{\bProp{p}}}   \(\hspace*{1.5mm}\)  = \(p\) {\In} P\(\sb{M}\) {\And} \(p\) {\In} l) 
+   {\And}
+   ({\BSem{M}{l}{\bTrue}}     \(\hspace*{1.3mm}\)= T)       
+   {\And}
+   ({\BSem{M}{l}{{\bNot{b}}}}    \(\hspace*{1.5mm}\)= {\Not}{\BSem{M}{l}{b}})
+   {\And}
    ({\BSem{M}{l}{\bAnd{b1}{b2}}} \(\hspace*{0mm}\)= {\BSem{M}{l}{b1}} {\And} {\BSem{M}{l}{b2}})
 \end{alltt}}
 
@@ -1098,6 +1101,8 @@ and use the following two definitions:
                      {\Imp}
                      {\ResExists{k}{\pi}}. j \Leq k \And \SSem{M}{(\lHat{M} (\pathSeg{\pi}{(j,k)}))}{c}{r2})
     {\And}
+
+
     ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fWeakImp{r1}{r2}}} = 
      {\FSem{M}{{\pi}}{{\strongClock{c}}}{\fStrongImp{r1}{r2}}}
      {\Or}
@@ -1109,7 +1114,7 @@ and use the following two definitions:
                 ({\FSem{M}{\restN{{\pi}}{i}}{{\strongClock{c}}}{f }}
                  {\Or}
                  {\ResExists{j}{\pi}}. i \Le j \And 
-                   \Exists{\Pi}'\In\Sim {\Pi}. 
+                   \Exists{\Pi}'. 
                     {\FSem{M}{\restN{{\pi}}{j}}{\weakClock{\T}}{{\FBool{\bAnd{c}{b}}}}} {\And} {\FSem{M}{\pathCat{\pathSeg{\pi}{(i,j-1)}}{{\pi}'}}{{\strongClock{c}}}{f}}))
     {\And}
     ({\FSem{M}{{\pi}}{{\strongClock{c}}}{\fWeakClock{f}{c1}}} =   
@@ -1134,6 +1139,12 @@ and use the following two definitions:
                 \ResExists{j}{\pi}. 
                   i < j \And NextRise M {\Pi} c (i+1,j) \And {\FSem{M}{\restN{{\pi}}{j}}{{\strongClock{c}}}{f}})
     {\And}
+
+
+
+
+
+
     ({\FSem{M}{{\pi}}{{\weakClock{c}}}{\fUntil{f1}{f2}}} = 
       {\FSem{M}{{\pi}}{{\strongClock{c}}}{\fUntil{f1}{f2}}}  
        {\Or}
@@ -1432,9 +1443,9 @@ semantics in Section~\ref{SugarSemantics} is correct, but until
 further properties are proved we cannot be sure, and the experience so
 far suggests caution!
 
-Although the process of analysing the semantics using machine assisted
-proof has revealed a number of interesting issues, we expect eventually
-to converge on a semantics that, with high confidence, is correct.
+%Although the process of analysing the semantics using machine assisted
+%proof has revealed a number of interesting issues, we expect eventually
+%to converge on a semantics that, with high confidence, is correct.
 
 \section{Acknowledgements}
 

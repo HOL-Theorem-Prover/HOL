@@ -1,6 +1,6 @@
 (*****************************************************************************)
 (* Create PathTheory to support Sugar2Theory                                 *)
-(* Version with all finite paths non-empty                                   *)
+(* Version with finite paths are non-empty                                   *)
 (*****************************************************************************)
 
 (******************************************************************************
@@ -39,7 +39,7 @@ val CONCAT_def =
  Define `(CONCAT [] = []) /\ (CONCAT(l::ll) = l <> CONCAT ll)`;
 
 (******************************************************************************
-* A path is finite or infinite
+* A path is is finite ot infinite
 * Finite paths are non-empty and so are represented by a pair (x,xl) 
 * where x is the head and xl the tail
 ******************************************************************************)
@@ -60,10 +60,6 @@ val IS_INFINITE_PATH_def =
  Define `(IS_INFINITE_PATH(FINITE_PATH p)   = F)
          /\
          (IS_INFINITE_PATH(INFINITE_PATH f) = T)`;
-
-val SAME_PATH_KIND_def =
- Define
-  `SAME_PATH_KIND p1 p2 = (IS_INFINITE_PATH p1 = IS_INFINITE_PATH p2)`;
 
 (******************************************************************************
 * HEAD (p0 p1 p2 p3 ...) = p0
@@ -104,14 +100,6 @@ val NOT_IS_FINITE_PATH =
    Cases_on `p`
     THEN RW_TAC std_ss [IS_INFINITE_PATH_def,IS_FINITE_PATH_def]);
 
-val SAME_PATH_KIND =
- store_thm
-  ("SAME_PATH_KIND",
-   ``(SAME_PATH_KIND p1 p2 = (IS_INFINITE_PATH p1 = IS_INFINITE_PATH p2))
-     /\
-     (SAME_PATH_KIND p1 p2 = (IS_FINITE_PATH p1 = IS_FINITE_PATH p2))``,
-   PROVE_TAC[SAME_PATH_KIND_def,NOT_IS_FINITE_PATH]);
-
 val IS_INFINITE_PATH_REST =
  store_thm
   ("IS_INFINITE_PATH_REST",
@@ -148,7 +136,7 @@ val PATH_LENGTH_def =
  Define `PATH_LENGTH (FINITE_PATH p)   = 1 + LENGTH(SND p)`;
 
 (******************************************************************************
-* Finite paths are non-empty
+* Finiate paths are non-empty
 ******************************************************************************)
 
 val FINITE_PATH_NONEMPTY =
