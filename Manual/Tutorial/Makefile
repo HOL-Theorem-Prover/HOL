@@ -3,7 +3,7 @@
 # =====================================================================
 
 CHAPTERS = preface.tex intro.tex ml.tex euclid.tex proof.tex theories.tex \
-           title.tex combin.tex more-examples.tex
+           title.tex combin.tex more-examples.tex parity.tex
 
 default:
 	@echo "INSTRUCTIONS: Type \"make all\" to make the tutorial"
