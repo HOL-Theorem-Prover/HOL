@@ -19,7 +19,7 @@ sig
    val WF_TAC       : thm list -> tactic
    val TC_SIMP_CONV : thm list -> conv
    val TC_SIMP_TAC  : thm list -> thm list -> tactic
-   val WF_REL_TAC   : defn -> term quotation -> tactic
+   val WF_REL_TAC   : term quotation -> tactic
 
    (* Definitions with automated termination proof support *)
 

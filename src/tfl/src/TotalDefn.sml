@@ -218,13 +218,11 @@ fun TC_SIMP_TAC WFthl thl =
     Rquote is a quotation denoting the termination relation. 
  ---------------------------------------------------------------------------*)
 
-fun PRIM_WF_REL_TAC defn Rquote WFthms simps g =
-  (Defn.TC_INTRO_TAC defn 
-    THEN Q.EXISTS_TAC Rquote
-    THEN TC_SIMP_TAC WFthms simps) g;
+fun PRIM_WF_REL_TAC Rquote WFthms simps g =
+  (Q.EXISTS_TAC Rquote THEN TC_SIMP_TAC WFthms simps) g;
 
 
-fun WF_REL_TAC defn Rquote = PRIM_WF_REL_TAC defn Rquote [] default_simps;
+fun WF_REL_TAC Rquote = PRIM_WF_REL_TAC Rquote [] default_simps;
 
 
 (*---------------------------------------------------------------------------

@@ -1212,13 +1212,29 @@ fun Hol_Rdefn bindstem Rquote eqs_quote =
         Goalstack-based interface to termination proof.
  ---------------------------------------------------------------------------*)
 
+fun TC_TAC defn =
+ let open Resolve Rewrite Drule Tactical
+     infix THEN
+     val E = eqns_of defn
+     val I = Option.valOf (ind_of defn)
+     val tac = MATCH_MP_TAC
+                (PURE_REWRITE_RULE [boolTheory.AND_IMP_INTRO]
+                   (GEN_ALL(DISCH_ALL (CONJ E I))))
+               THEN PURE_REWRITE_TAC [Conv.GSYM boolTheory.CONJ_ASSOC]
+     val goal = ([],Psyntax.mk_conj(concl E, concl I))
+ in 
+   case tac goal
+    of ([([],g)],validation) => (([],g), fn th => validation [th])
+     | _  => raise ERR "TC_TAC" "unexpected output"
+ end;
+
 fun tgoal0 defn =
    if null (tcs_of defn)
    then raise ERR "tgoal" "no termination conditions"
-   else let val E = eqns_of defn
-            val I = Option.valOf (ind_of defn)
+   else let val (g,validation) = TC_TAC defn
+            val goalstack = GoalstackPure.prim_set_goal g validation
         in
-          goalstackLib.set_goal ([],Psyntax.mk_conj(concl E, concl I))
+          goalstackLib.add goalstack
         end
         handle HOL_ERR _ => raise ERR "tgoal" "";
 
@@ -1240,21 +1256,5 @@ fun tprove0 (defn,tactic) =
 fun tprove p =
   Lib.with_flag (goalstackLib.chatting,false)
        tprove0 p;
-
-
-(*---------------------------------------------------------------------------
-          Exposes the termination conditions from a goal set with
-          tgoal.
- ---------------------------------------------------------------------------*)
-
-fun TC_INTRO_TAC defn =
- let open Resolve Rewrite Drule
-     val E = eqns_of defn
-     val I = Option.valOf (ind_of defn)
- in MATCH_MP_TAC
-       (PURE_REWRITE_RULE [boolTheory.AND_IMP_INTRO]
-             (GEN_ALL(DISCH_ALL (CONJ E I))))
- end;
-
 
 end; (* Defn *)

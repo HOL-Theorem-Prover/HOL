@@ -43,11 +43,11 @@ sig
 
   val save_defn  : defn -> unit
 
+  val parse_defn : term quotation -> term * string list
+
   val tgoal      : defn -> proofs
   val tprove     : defn * tactic -> thm * thm
-  val TC_INTRO_TAC : defn -> tactic
 
-  val parse_defn : term quotation -> term * string list
 
 
    (* Historical relics *)
