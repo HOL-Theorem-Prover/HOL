@@ -1071,6 +1071,23 @@ val ROR_ADD = store_thm("ROR_ADD",
 
 (* -------------------------------------------------------- *)
 
+val wn_TIMES = prove(
+  `!a b. wn (a * 2 EXP WL + b) = wn b`,
+  ONCE_REWRITE_TAC [GSYM MODw_ELIM]
+    THEN B_SIMP_TAC [MODw_def,MOD_TIMES,ZERO_LT_TWOEXP]
+);
+
+val LSL_LIMIT = store_thm("LSL_LIMIT",
+  `!w n.  HB < n ==> (w << n = w_0)`,
+  B_RW_TAC [word_lsl_def]
+    THEN IMP_RES_TAC LESS_ADD_1
+    THEN RULE_ASSUM_TAC (REWRITE_RULE [GSYM ADD1,GSYM WL_def] o SIMP_RULE arith_ss [])
+    THEN ASM_A_SIMP_TAC [(REWRITE_RULE [ADD_0,SYM w_0] o SPECL [`2 EXP p`,`0`]) wn_TIMES,
+                         EXP_ADD,MULT_CLAUSESw]
+);
+
+(* -------------------------------------------------------- *)
+
 val MOD_MOD_DIV = store_thm("MOD_MOD_DIV",
   `!a b. INw (MODw a DIV 2 EXP b)`,
   A_RW_TAC [MODw_THM,BITS_DIV_THM]
@@ -1110,12 +1127,6 @@ val LSR_LIMIT = store_thm("LSR_LIMIT",
 (* -------------------------------------------------------- *)
 
 val MOD_WL = (GEN_ALL o CONJUNCT2 o SPEC_ALL o REWRITE_RULE [WL_POS] o SPEC `WL`) DIVISION;
-
-val wn_TIMES = prove(
-  `!a b. wn (a * 2 EXP WL + b) = wn b`,
-  ONCE_REWRITE_TAC [GSYM MODw_ELIM]
-    THEN B_SIMP_TAC [MODw_def,MOD_TIMES,ZERO_LT_TWOEXP]
-);
 
 val wn_TIMES2 = ONCE_REWRITE_RULE [ADD_COMM] wn_TIMES;
 
