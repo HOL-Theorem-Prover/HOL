@@ -63,6 +63,19 @@ val overload_info : grammar -> overload_info
 val fupdate_overload_info :
   (overload_info -> overload_info) -> grammar -> grammar
 
+(* known constants are those strings that the parsing process will
+   attempt to turn into constants.  This is independent of overloading;
+   because overloading is always over constants (something fixed by
+   design, but possibly open to change), an overloaded string will
+   always get resolved to a constant.  Non-overloaded strings will
+   only get resolved to constants if they appear in the "known constants"
+   list. *)
+val known_constants : grammar -> string list
+val hide_constant : string -> grammar -> grammar
+val show_constant : string -> grammar -> grammar
+val fupdate_known_constants :
+  (string list -> string list) -> grammar -> grammar
+
 val binders : grammar -> string list
 val is_binder : grammar -> string -> bool
 val binder_to_string : grammar -> binder -> string

@@ -164,16 +164,6 @@ end
 
 fun make_bvar (s,E) = (Preterm.Var{Name=s, Ty=lookup_bvar(s,E)}, E);
 
-(*---------------------------------------------------------------------------
-   Setting the visibility of identifiers.
- ---------------------------------------------------------------------------*)
-local val the_hidden = ref [] : string list ref
-in
- fun hide s   = (the_hidden := insert s (!the_hidden))
- fun reveal s = (the_hidden := set_diff (!the_hidden) [s])
- fun hidden s = mem s (!the_hidden)
-end;
-
 (* ----------------------------------------------------------------------
      Treatment of overloaded identifiers
  ---------------------------------------------------------------------- *)
@@ -216,13 +206,13 @@ end
 
 fun make_const s E = (gen_const s, E)
 
-fun make_atom oinfo s E = make_bvar(s,E)
+fun make_atom (oinfo, kcs) s E = make_bvar(s,E)
   handle HOL_ERR _ =>
-    if (hidden s) then
-      make_free_var (s,E)
+    if Overload.is_overloaded oinfo s then
+      (gen_overloaded_const oinfo s, E)
     else
-      if Overload.is_overloaded oinfo s then
-        (gen_overloaded_const oinfo s, E)
+      if not (Lib.mem s kcs) then
+        make_free_var  (s, E)
       else
         if String.isPrefix recsel_special s then
           raise ERROR "make_atom"
