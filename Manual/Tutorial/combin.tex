@@ -1,0 +1,931 @@
+\documentclass[12pt]{article}
+%poor man's infer
+\newcommand{\infer}[2]{\begin{array}{c}#2\\ \hline #1\end{array}}
+\newcommand{\eos}{\hfill{}$\cdots\diamond\cdots$\hfill{}\vspace{5mm}}
+
+\usepackage{pstricks}
+\usepackage{pst-node}
+\usepackage{alltt}
+\input{../LaTeX/commands}
+
+\title{Combinatory Logic}
+\author{Michael Norrish}
+\date{}
+
+\newcommand{\KC}{\con{K}}
+\newcommand{\SC}{\con{S}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+A formalisation of combinatory logic, building principally on a
+development done by Tom Melham.
+\end{abstract}
+
+
+\section{Introduction}
+\label{sec:Introduction}
+
+This small case study is a formalisation of combinatory logic.  This
+logic is of foundational importance in theoretical computer science,
+and has a very rich theory.  We aim to put HOL through its paces more
+than we intend to explore what is such a big field.  Nonetheless, we
+hope that as the formalisation proceeds, the nature of the object of
+study is reasonably clear.
+
+
+\section{The Type of Combinators}
+\label{sec:Type-Combinators}
+
+The first thing we need to do is define the type of
+\emph{combinators}.  There are just two of these, \KC{} and \SC, but
+we also need to be able to \emph{combine} them, and for this we need
+to introduce the notion of application.  For lack of a better ASCII
+symbol, we will use the hash (\#) to represent this in the logic:
+\begin{session}\begin{verbatim}
+- Hol_datatype `cl = K | S | # of cl => cl`;
+> val it = () : unit
+\end{verbatim}\end{session}
+
+We also want the \# to be an infix, so we set its fixity to be a tight
+left-associative infix:
+\begin{session}\begin{verbatim}
+- set_fixity ("#", Infixl 1100);
+> val it = () : unit
+\end{verbatim}\end{session}
+
+% C = S (S (K S) (S (K K) S)) (K K)
+
+
+\section{Combinator Reductions}
+\label{sec:Comb-Reduct}
+
+Combinatory logic is the study of how values of this type can evolve
+given various rules describing how they change.  Therefore, our next
+step is to define the reductions that combinators can undergo.  There
+are two basic rules:
+\[\begin{array}{l@{\;\;\rightarrow\;\;}l}
+\KC\;x\;y & x\\
+\SC\;f\;g\;x & (f x)(g x)
+\end{array}\]
+Here, in our description outside of HOL, we use juxtaposition instead
+of the \#.  Further, juxtaposition is also left-associative, so that
+$\con{K}\;x\;y$ should be read as $\con{K}\;\#\;x\;\#\;y$ which is in
+turn $(\con{K}\;\#\;x)\;\#\;y$.
+
+Given a term in the logic, we want these reductions to be able to fire
+at any point, not just at the top level, so we need two further
+congruence rules:\[
+\begin{array}{l}
+\infer{x\;y\;\;\rightarrow\;\;x'\;y}{x\;\;\rightarrow\;\;x'}\\[5mm]
+\infer{x\;y\;\;\rightarrow\;\;x\;y'}{y\;\;\rightarrow\;\;y'}
+\end{array}\]
+In HOL, we can capture this relation with an inductive definition.
+First we set our arrow symbol up as an infix to make everything that
+bit prettier:
+\begin{session}\begin{verbatim}
+- set_fixity ("-->", Infix(NONASSOC, 510));
+> val it = () : unit
+\end{verbatim}\end{session}
+    (By choosing to make our arrow symbol non-associative, we make it
+    a parse error to write \verb!x --> y --> z!. It would be nice to
+    be able to write this and have it mean \verb!x --> y /\ y --> z!,
+    but this is not presently possible with the HOL parser.)
+
+Our next step is to actually define the relation.  The function for
+doing this returns three separate theorems, so we bind each
+separately:
+\begin{session}\begin{verbatim}
+val (redn_rules, redn_ind, redn_cases) =
+  IndDefLib.Hol_reln
+    `(!x y f. x --> y   ==>    f # x --> f # y) /\
+     (!f g x. f --> g   ==>    f # x --> g # x) /\
+     (!x y.   K # x # y --> x) /\
+     (!f g x. S # f # g # x --> (f # x) # (g # x))`;
+> val redn_rules =
+    |- (!x y f. x --> y ==> f # x --> f # y) /\
+       (!f g x. f --> g ==> f # x --> g # x) /\
+       (!x y. K # x # y --> x) /\
+       !f g x. S # f # g # x --> f # x # (g # x) : thm
+  val redn_ind =
+    |- !-->'.
+         (!x y f. -->' x y ==> -->' (f # x) (f # y)) /\
+         (!f g x. -->' f g ==> -->' (f # x) (g # x)) /\
+         (!x y. -->' (K # x # y) x) /\
+         (!f g x. -->' (S # f # g # x) (f # x # (g # x))) ==>
+         !a0 a1. a0 --> a1 ==> -->' a0 a1 : thm
+  val redn_cases =
+    |- !a0 a1.
+         a0 --> a1 =
+         (?x y f. (a0 = f # x) /\ (a1 = f # y) /\ x --> y) \/
+         (?f g x. (a0 = f # x) /\ (a1 = g # x) /\ f --> g) \/
+         (?y. a0 = K # a1 # y) \/
+         ?f g x. (a0 = S # f # g # x) /\ (a1 = f # x # (g # x))
+    : thm
+\end{verbatim}\end{session}
+The theorem induction theorem \texttt{redn\_ind} looks a little
+strange because the induction predicate is given the name
+\texttt{-->'}.  We can change the name to make things prettier with
+the function \texttt{RENAME\_VARS\_CONV}, a conversion:
+\begin{session}\begin{verbatim}
+- val redn_ind = CONV_RULE (RENAME_VARS_CONV ["P"]) redn_ind;
+> val redn_ind =
+    |- !P.
+         (!x y f. P x y ==> P (f # x) (f # y)) /\
+         (!f g x. P f g ==> P (f # x) (g # x)) /\
+         (!x y. P (K # x # y) x) /\
+         (!f g x. P (S # f # g # x) (f # x # (g # x))) ==>
+         !a0 a1. a0 --> a1 ==> P a0 a1 : thm
+\end{verbatim}\end{session}
+
+Now, using our theorem \texttt{redn\_rules} we can demonstrate single
+steps of our reduction relation:
+\begin{session}\begin{verbatim}
+- PROVE [redn_rules] ``S # (K # x # x) --> S # x``;
+Meson search level: ...
+> val it = |- S # (K # x # x) --> S # x : thm
+\end{verbatim}\end{session}
+    The system we have just defined is as powerful as the
+    $\lambda$-calculus, Turing machines, and all the other standard
+    models of computation.
+
+    One useful result about the combinatory logic is that it is
+    \emph{confluent}.  Consider the term $\SC\;z\;(\KC\;\KC)\;(\KC\;
+    y\; x)$.  It can make two reductions, to $\SC\;z\;(\KC\;\KC)\;y$
+    and also to $(z\;(\KC\;y\;x))\,(\KC\;\KC\;(\KC\;y\;x))$.  Do these
+    two choices of reduction mean that from this point on the terms
+    have two completely separate histories?  Roughly speaking, to be
+    confluent means that the answer to this question is \emph{no}.
+
+
+\section{Transitive Closure and Confluence}
+\label{sec:Transitive-Clos-Conf}
+
+A notion crucial to that of confluence is that of \emph{transitive
+  closure}.  We have defined a system that evolves by specifying how
+an algebraic value can evolve into possible successor values in one
+step.  The natural next question is to ask for a characterisation of
+evolution over one or more steps of the $\rightarrow$ relation.
+
+In fact, we will define a relation that holds between two values if
+the second can be reached from the first in zero or more steps.  This
+is the \emph{reflexive, transitive closure} of our original relation.
+However, rather than tie our new definition to our original relation,
+we will develop this notion independently and prove a variety of
+results that are true of any system, not just our system of
+combinatory logic.
+
+So, we begin our abstract digression with another inductive
+definition.  Our new constant is \con{RTC}, such that
+$\con{RTC}\;R\;x\;y$ is true if it is possible to get from $x$ to $y$
+with zero or more ``steps'' of the $R$ relation.  We can express this
+idea with just two rules.  The first \[
+\infer{\con{RTC}\;R\;x\;x}{} \]
+says that it's always possible to get from $x$ to $x$ in zero or more
+steps.  The second \[
+\infer{\con{RTC}\;R\;x\;z}{R\;x\;y\qquad\con{RTC}\;R\;y\;z}
+\] says that if you can take a single step from $x$ to $y$, and then
+take zero or more steps to get $y$ to $z$, then it's possible to take
+zero or more steps to get between $x$ and $z$.  The realisation of
+these rules in HOL is again straightforward:
+\begin{session}\begin{verbatim}
+val (RTC_rules, RTC_ind, RTC_cases) =
+  IndDefLib.Hol_reln `
+    (!x.     RTC R x x) /\
+    (!x y z. R x y /\ RTC R y z ==> RTC R x z)`;
+<<HOL message: inventing new type variable names: 'a>>
+> val RTC_rules =
+    |- !R. (!x. RTC R x x) /\
+           !x y z. R x y /\ RTC R y z ==> RTC R x z : thm
+  val RTC_ind =
+    |- !R RTC'.
+         (!x. RTC' x x) /\
+         (!x y z. R x y /\ RTC' y z ==> RTC' x z) ==>
+         !a0 a1. RTC R a0 a1 ==> RTC' a0 a1 : thm
+  val RTC_cases =
+    |- !R a0 a1. RTC R a0 a1 = (a1 = a0) \/
+                               ?y. R a0 y /\ RTC R y a1 : thm
+\end{verbatim}\end{session}
+Now let us go back to the notion of confluence.  We want this to mean
+something like: ``though a system may take different paths in the
+short-term, it will always end up in the same place''.  Of course, a
+notion like ``short-term'' is hopelessly vague.   On the other hand,
+we can pin down a reasonable meaning for ``long-term'': let us worry
+about just those situations where the values can take no further
+steps.  This suggests our next definition (again parameterised by an
+arbitrary relation):
+\begin{session}\begin{verbatim}
+- val stopped_def = Define`stopped R x = !y. ~(R x y)`;
+<<HOL message: inventing new type variable names: 'a, 'b>>
+Definition has been stored under "stopped_def".
+> val stopped_def = |- !R x. stopped R x = !y. ~R x y : thm
+\end{verbatim}\end{session}
+In other words, a system is $R$-stopped at $x$ if there are no
+connections via $R$ to any other values.  (We could have written
+\verb!~?y. R x y! as our RHS for the definition above.)
+
+Now we can define confluence.  We will say that a system is confluent
+if it always ends up at the same end-point on starting from the same
+start-point:
+\begin{session}\begin{verbatim}
+val confluent_def = Define
+  `confluent R =
+    !x y z. RTC R x y /\ stopped R y /\
+            RTC R x z /\ stopped R z ==>
+            (y = z)`;
+<<HOL message: inventing new type variable names: 'a>>
+Definition has been stored under "confluent_def".
+> val confluent_def =
+    |- !R.
+         confluent R =
+         !x y z.
+           RTC R x y /\ stopped R y /\
+           RTC R x z /\ stopped R z ==> (y = z) : thm
+\end{verbatim}\end{session}
+    Clearly confluence is a nice property for a system to have.  Note
+    though that it does not imply that a system has no infinite
+    paths.  Rather it just says that any one starting point has no
+    more than one stopping point.
+
+    How might we establish confluence for a system?  One way is to
+    show this stronger property:\[
+    \forall x\, y\, z.\; \con{RTC}\;R\;x\;y \land
+    \con{RTC}\;R\;x\;z\land (y \neq z)\supset
+    \exists u.\;\con{RTC}\;R\;y\;u \land \con{RTC}\;R\;z\;u
+    \]  This property states of $R$ that we can ``complete the diamond'';
+    if we have \[
+    \begin{array}{ccc}
+      & \rnode{x}{x}\\[3mm]
+      \rnode{y}{y} && \rnode{z}{z}
+    \end{array}
+    \ncline[nodesep=1mm]{->}{x}{y}\ncline[nodesep=1mm]{->}{x}{z}
+    \] then there must be a $u$ such that \[
+    \begin{array}{ccc}
+      & \rnode{x2}{x}\\[3mm]
+      \rnode{y2}{y} && \rnode{z2}{z}\\[3mm]
+      & \rnode{u}{u}
+      \ncline[nodesep=1mm]{->}{x2}{y2}\ncline[nodesep=1mm]{->}{x2}{z2}
+      \ncline[nodesepB=1mm,linestyle=dotted]{->}{y2}{u}
+      \ncline[nodesepB=1mm,linestyle=dotted]{->}{z2}{u}
+    \end{array}
+    \]
+    Our condition above states that $\con{RTC}\;R$ has this property,
+    but this is clearly a property that might be true of any relation.
+    In fact, it is known as the Church-Rosser property, so we define
+    \con{CR} in the logic thus:
+\begin{session}\begin{verbatim}
+- val CR_def = Define
+    `CR R = !x y z. R x y /\ R x z /\ ~(y = z) ==>
+                    ?u. R y u /\ R z u`;
+<<HOL message: inventing new type variable names: 'a>>
+Definition has been stored under "CR_def".
+> val CR_def = |- !R. CR R = !x y z. R x y /\ R x z ==>
+                                     ?u. R y u /\ R z u : thm
+\end{verbatim}\end{session}
+    Now, let us prove our claim about Church-Rosser, that if a
+    reflexive and transitive closure is Church-Rosser, then the
+    relation is confluent.  We set up the goal, and rewrite with the
+    definitions of what it is to be Church-Rosser:
+\begin{session}\begin{verbatim}
+- g `!R. CR (RTC R) ==> confluent R`;
+<<HOL message: inventing new type variable names: 'a>>
+> val it =
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         !R. CR (RTC R) ==> confluent R
+
+- e (RW_TAC std_ss [CR_def, confluent_def])
+OK..
+1 subgoal:
+> val it =
+    y = z
+    ------------------------------------
+      0.  !x y z. RTC R x y /\ RTC R x z /\ ~(y = z) ==>
+                  ?u. RTC R y u /\ RTC R z u
+      1.  RTC R x y
+      2.  stopped R y
+      3.  RTC R x z
+      4.  stopped R z
+\end{verbatim}\end{session}
+    Our Church-Rosser property is now assumption 0, and we can use it
+    to infer that there is either a $u$ at the base of the diamond, or
+    that $y = z$, which second possibility is what we're after in any
+    case.
+\begin{session}\begin{verbatim}
+- e (`(y = z) \/ ?u. RTC R y u /\ RTC R z u` by PROVE_TAC []);
+OK..
+Meson search level: .........
+1 subgoal:
+> val it =
+    y = z
+    ------------------------------------
+      0.  !x y z. RTC R x y /\ RTC R x z /\ ~(y = z) ==>
+                  ?u. RTC R y u /\ RTC R z u
+      1.  RTC R x y
+      2.  stopped R y
+      3.  RTC R x z
+      4.  stopped R z
+      5.  RTC R y u
+      6.  RTC R z u
+     : goalstack
+\end{verbatim}\end{session}
+So, from $y$ we can take zero or more steps to get to $u$ and
+similarly from $z$.  But, we also know that we're $R$-stopped in both
+$y$ and $z$.  We can't take any steps at all from these values.  We
+don't have a contradiction, but we can conclude both that $u = y$ and
+$u = z$, but this means that $y = z$, which is our goal.  So we can
+finish with
+\begin{session}\begin{verbatim}
+- e (PROVE_TAC [stopped_def, RTC_cases]);
+OK..
+Meson search level: ..........
+
+Goal proved. [...]
+> val it =
+    Initial goal proved.
+    |- !R. CR (RTC R) ==> confluent R : goalstack
+\end{verbatim}\end{session}
+Packaged up so as to remove the sub-goal package commands, we can
+prove and save the theorem for future use by:
+\begin{session}\begin{verbatim}
+val CR_RTC_confluent = store_thm(
+  "CR_RTC_confluent",
+  ``!R. CR (RTC R) ==> confluent R``,
+  RW_TAC std_ss [CR_def, confluent_def] THEN
+  `(y = z) \/ ?u. RTC R y u /\ RTC R z u` by PROVE_TAC [] THEN
+  PROVE_TAC [stopped_def, RTC_cases]);
+\end{verbatim}\end{session}
+\eos{}
+
+So far so good.  How then do we show Church-Rosser (the ``diamond
+property'') for $\con{RTC}\;R$?  The answer that leaps to mind is to
+hope that if the original relation is Church-Rosser, then maybe the
+reflexive and transitive closure is too.  The theorem we want is \[
+\con{CR}\;R \supset \con{CR}\,(\con{RTC}\;R)\]
+Graphically, this is hoping that from \[
+\begin{array}{ccc}
+& \rnode{x1}{x}\\[3mm]
+\rnode{y1}{y} && \rnode{z1}{z}\\[3mm]
+& \rnode{u1}{u}
+\end{array}
+\ncline[nodesep=1mm]{->}{x1}{y1}
+\ncline[nodesep=1mm]{->}{x1}{z1}
+\ncline[nodesepB=1mm,linestyle=dotted]{->}{z1}{u1}
+\ncline[nodesepB=1mm,linestyle=dotted]{->}{y1}{u1}
+\] we will be able to conclude \[
+\begin{array}{ccccc}
+& & \rnode{x2}{x}\\[3mm]
+& \rnode{y2}{y} && \rnode{z2}{z}\\[3mm]
+& & \rnode{u2}{u}\\[3mm]
+ \;\;\;\;\rnode{p}{p}\;\;\;\; &&&& \;\;\;\;\rnode{q}{q}\;\;\;\;\\[15mm]
+&& \rnode{r}{r}
+\end{array}
+\ncline[nodesep=1mm]{->}{x2}{y2}
+\ncline[nodesep=1mm]{->}{x2}{z2}
+\ncline[nodesepB=1mm,linestyle=dotted]{->}{z2}{u2}
+\ncline[nodesepB=1mm,linestyle=dotted]{->}{y2}{u2}
+\ncline[nodesep=1mm,linestyle=dashed]{->}{y2}{p}
+\ncline[nodesep=1mm,linestyle=dashed]{->}{z2}{q}
+\ncline[nodesep=1mm,linestyle=dotted]{->}{p}{r}
+\ncline[nodesep=1mm,linestyle=dotted]{->}{q}{r}
+\] where the dashed lines indicate that these steps (from $x$ to $p$,
+for example) are using $\con{RTC}\;R$.  The presence of two instances
+of $\con{RTC}\;R$ is an indication that this proof will require two
+inductions.  With the first we will prove
+\[
+\begin{array}{ccccc}
+& & & \rnode{x3}{x}\\[3mm]
+& & \rnode{y3}{y} && \rnode{z3}{z}\\[3mm]
+& & & \rnode{u3}{u}\\[3mm]
+ \rnode{p2}{p}\\[3mm]
+& \rnode{r2}{r}
+\end{array}
+\ncline[nodesep=1mm]{->}{x3}{y3}
+\ncline[nodesep=1mm]{->}{x3}{z3}
+\ncline[nodesepB=1mm,linestyle=dotted]{->}{z3}{u3}
+\ncline[nodesepB=1mm,linestyle=dotted]{->}{y3}{u3}
+\ncline[nodesep=1mm,linestyle=dashed]{->}{y3}{p2}
+\ncline[nodesepB=1mm,linestyle=dotted]{->}{u3}{r2}
+\ncline[nodesepB=1mm,linestyle=dotted]{->}{p2}{r2}
+\]
+In other words, we want to show that if we take one step in one
+direction (to $z$) and many steps in another (to $p$), then the
+Church-Rosser property for $R$ will guarantee us the existence of $r$,
+to which will we be able to take many steps from both $p$ and $z$.
+
+We take some care to state the goal so that after stripping away the
+outermost assumption (that $R$ is Church-Rosser), it will match the
+induction principle for \con{RTC}.\footnote{In this and subsequent
+  proofs using the sub-goal package, we will present the proof manager
+  as if the goal to be proved is the first ever on this stack.  In
+  other words, we have done a \texttt{dropn 1;} after every successful
+  proof to remove the evidence of the old goal.  In practice, there is
+  no harm in leaving these goals on the proof manager's stack.}
+Further, bitter experience has taught us that it is not necesssary to
+worry about the possibility that $p$ and $z$ might be the same, so
+there is no need to include that as an assumption.  If we can prove
+our result with by assuming less, then it will go through alright when
+we come to state our final result.
+\begin{session}\begin{verbatim}
+- g `!R. CR R ==>
+         !x p. RTC R x p ==>
+               !z. R x z ==>
+                   ?u. RTC R p u /\ RTC R z u`;
+<<HOL message: inventing new type variable names: 'a>>
+> val it =
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         !R.
+           CR R ==>
+           !x p. RTC R x p ==> !z. R x z ==>
+                                   ?u. RTC R p u /\ RTC R z u
+\end{verbatim}\end{session}
+First, we strip away the Church-Rosser assumption (two things need to
+be stripped: the outermost universal quantifier and the antecedent of
+the implication):
+\begin{session}\begin{verbatim}
+- e (GEN_TAC THEN STRIP_TAC);
+OK..
+1 subgoal:
+> val it =
+    !x p. RTC R x p ==> !z. R x z ==> ?u. RTC R p u /\ RTC R z u
+    ------------------------------------
+      CR R
+\end{verbatim}\end{session}
+Now we can use the induction principle.  We use the higher-order
+backward chaining rule, \texttt{HO\_MATCH\_MP\_TAC}, which takes a
+theorem of the form $\vdash\;P\supset Q$, tries to instantiate it to
+make it $\vdash\;P'\supset Q'$, such that $Q'$ is the same as the goal
+to be proved, and then requires the user to prove $P'$.
+\begin{session}\begin{verbatim}
+- e (HO_MATCH_MP_TAC RTC_ind);
+OK..
+1 subgoal:
+> val it =
+    (!x z. R x z ==> ?u. RTC R x u /\ RTC R z u) /\
+    !x y z.
+      R x y /\ (!z'. R y z' ==> ?u. RTC R z u /\ RTC R z' u) ==>
+      !z'. R x z' ==> ?u. RTC R z u /\ RTC R z' u
+    ------------------------------------
+      CR R
+\end{verbatim}\end{session}
+Let's strip the goal as much as possible with the aim of making what
+remains to be proved easier to see:
+\begin{session}\begin{verbatim}
+- e (REPEAT STRIP_TAC);
+OK..
+2 subgoals:
+> val it =
+    ?u. RTC R z u /\ RTC R z' u
+    ------------------------------------
+      0.  CR R
+      1.  R x y
+      2.  !z'. R y z' ==> ?u. RTC R z u /\ RTC R z' u
+      3.  R x z'
+
+    ?u. RTC R x u /\ RTC R z u
+    ------------------------------------
+      0.  CR R
+      1.  R x z
+\end{verbatim}\end{session}
+This first goal is easy.  It corresponds to the case where the many
+steps from $x$ to $p$ are actually no steps at all, and $p$ and $x$
+are actually the same place.  In the other direction, $x$ has taken
+one step to $z$, and we need to find somewhere reachable in zero or
+more steps from both $x$ and $z$.  Given what we know so far, the only
+candidate is $z$ itself.  In fact, we don't even need to provide this
+witness explicitly, \texttt{PROVE\_TAC} will find it for us, as long
+as we tell it what the rules governing \con{RTC} are:
+\begin{session}\begin{verbatim}
+- e (PROVE_TAC [RTC_rules]);
+OK..
+Meson search level: .....
+
+Goal proved. [...]
+Remaining subgoals:
+> val it =
+    ?u. RTC R z u /\ RTC R z' u
+    ------------------------------------
+      0.  CR R
+      1.  R x y
+      2.  !z'. R y z' ==> ?u. RTC R z u /\ RTC R z' u
+      3.  R x z'
+\end{verbatim}\end{session}
+    And what of this remaining goal?  Assumptions one and three
+    between them are the top of an $R$-diamond, as long as $y$ and
+    $z'$ are different.  Let's use the fact that $R$ is Church-Rosser
+    and infer that either they are the same, or that there exists a
+    $v$ to which $y$ and $z'$ can both take single steps:
+\begin{session}\begin{verbatim}
+- e (`(y = z') \/ ?v. R y v /\ R z' v` by PROVE_TAC [CR_def]);
+OK..
+Meson search level: ............
+2 subgoals:
+> val it =
+    ?u. RTC R z u /\ RTC R z' u
+    ------------------------------------
+      0.  CR R
+      1.  R x y
+      2.  !z'. R y z' ==> ?u. RTC R z u /\ RTC R z' u
+      3.  R x z'
+      4.  R y v
+      5.  R z' v
+
+    ?u. RTC R z u /\ RTC R z' u
+    ------------------------------------
+      0.  CR R
+      1.  R x y
+      2.  !z'. R y z' ==> ?u. RTC R z u /\ RTC R z' u
+      3.  R x z'
+      4.  y = z'
+\end{verbatim}\end{session}
+Now we are really stuck.  All our assumptions allow is the existence
+of a single step from $x$ to $y$.  We can't apply our inductive
+hypothesis because we don't have proof of any step out of $y$.  Surely
+though, there are steps between $y$ and $z$.  Why do we not have
+$\con{RTC}\;R\;y\;z$ as an assumption?  The problem is the form of the
+induction principle:
+\begin{session}\begin{verbatim}
+- RTC_ind;
+> val it =
+    |- !R RTC'.
+         (!x. RTC' x x) /\
+         (!x y z. R x y /\ RTC' y z ==> RTC' x z) ==>
+         !a0 a1. RTC R a0 a1 ==> RTC' a0 a1 : thm
+\end{verbatim}\end{session}
+    It says that when we are proving the ``step'' or inductive case,
+    we can assume the predicate we are trying to prove for $y$ and $z$
+    (the \texttt{RTC'}) but doesn't allow us to assume
+    $\con{RTC}\;R\;y\;z$.  Such a rule would be valid, and is commonly
+    known as the \emph{strong induction principle}.  The strong
+    induction principle is something that we could derive
+    automatically, but let us strengthen the inductive hypothesis by
+    hand.  Inductive proofs often need strengthening in ways similar
+    to this, so this will be illustrative.
+
+We restate our goal as
+\newcommand{\bk}{\char'134}
+\begin{session}\begin{alltt}
+- g `!R. CR R ==>
+         !x p. RTC R x p ==>
+               \psframebox[linestyle=dashed]{RTC R x p /\bk} !z. R x z ==>
+                   ?u. RTC R p u /\bk{} RTC R z u`;
+[..]
+\end{alltt}\end{session}
+We apply the same tactics as before, and generate four (!) sub-goals:
+\begin{session}\begin{verbatim}
+- e (GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC RTC_ind THEN
+     REPEAT STRIP_TAC);
+OK..
+4 subgoals:
+> val it =
+    ?u. RTC R z u /\ RTC R z' u
+    ------------------------------------
+      0.  CR R
+      1.  R x y
+      2.  RTC R y z
+      3.  !z'. R y z' ==> ?u. RTC R z u /\ RTC R z' u
+      4.  R x z'
+
+    RTC R x z
+    ------------------------------------
+      0.  CR R
+      1.  R x y
+      2.  RTC R y z
+      3.  !z'. R y z' ==> ?u. RTC R z u /\ RTC R z' u
+
+    ?u. RTC R x u /\ RTC R z u
+    ------------------------------------
+      0.  CR R
+      1.  R x z
+
+    RTC R x x
+    ------------------------------------
+      CR R
+\end{verbatim}\end{session}
+The first and third goals are new, and represent the need to prove
+the inductive cases for the goal
+$\con{RTC}\;R\;x\;y\;\;\supset\;\;\con{RTC}\;R\;x\;y$.  They and the
+second goal can all be proved with the one tactic (as before):
+\begin{session}\begin{verbatim}
+- e (PROVE_TAC [RTC_rules]);
+\end{verbatim}\end{session}
+After three applications of the above, we are left with our last
+sub-goal:
+\begin{session}\begin{verbatim}
+Remaining subgoals:
+> val it =
+    ?u. RTC R z u /\ RTC R z' u
+    ------------------------------------
+      0.  CR R
+      1.  R x y
+      2.  RTC R y z
+      3.  !z'. R y z' ==> ?u. RTC R z u /\ RTC R z' u
+      4.  R x z'
+\end{verbatim}\end{session}
+Now we do have that extra assumption about steps of $R$ between $y$
+and $z$.  We again appeal to our Church-Rosser assumption:
+\begin{session}\begin{verbatim}
+- e (`(y = z') \/ ?v. R y v /\ R z' v` by PROVE_TAC [CR_def]);
+OK..
+Meson search level: ...........
+2 subgoals:
+> val it =
+    ?u. RTC R z u /\ RTC R z' u
+    ------------------------------------
+      0.  CR R
+      1.  R x y
+      2.  RTC R y z
+      3.  !z'. R y z' ==> ?u. RTC R z u /\ RTC R z' u
+      4.  R x z'
+      5.  R y v
+      6.  R z' v
+
+    ?u. RTC R z u /\ RTC R z' u
+    ------------------------------------
+      0.  CR R
+      1.  R x y
+      2.  RTC R y z
+      3.  !z'. R y z' ==> ?u. RTC R z u /\ RTC R z' u
+      4.  R x z'
+      5.  y = z'
+\end{verbatim}\end{session}
+In this case, the $u$ we must exhibit is simply $z$, and
+\texttt{PROVE\_TAC} can figure this out as well as we can:
+\begin{session}\begin{verbatim}
+- e (PROVE_TAC [RTC_rules]);
+OK..
+Meson search level: ........
+
+Goal proved. [...]
+Remaining subgoals:
+> val it =
+    ?u. RTC R z u /\ RTC R z' u
+    ------------------------------------
+      0.  CR R
+      1.  R x y
+      2.  RTC R y z
+      3.  !z'. R y z' ==> ?u. RTC R z u /\ RTC R z' u
+      4.  R x z'
+      5.  R y v
+      6.  R z' v
+\end{verbatim}\end{session}
+Now we can apply our induction hypothesis (assumption 2) to complete
+the long, lop-sided strip of the diamond.  We will conclude that there
+is a $u$ such that $\con{RTC}\;R\;z\;u$ and $\con{RTC}\;R\;v\;u$.  We
+actually need a $u$ such that $\con{RTC}\;R\;z'\;u$, but because there
+is a single $R$-step between $z'$ and $v$ we have that as well.  All
+we need to provide \texttt{PROVE\_TAC} is the rules for \con{RTC}:
+\begin{session}\begin{verbatim}
+- e (PROVE_TAC [RTC_rules]);
+OK..
+Meson search level: .......
+
+Goal proved. [...]
+> val it =
+    Initial goal proved.
+    |- !R.
+         CR R ==> !x p. RTC R x p ==>
+                        RTC R x p /\
+                        !z. R x z ==> ?u. RTC R p u /\ RTC R z u
+\end{verbatim}\end{session}
+    Again we can (and should) package up the lemma, avoiding the
+    sub-goal package commands:
+\begin{session}\begin{verbatim}
+val R_RTC_CR_lemma = prove(
+  ``!R. CR R ==>
+         !x p. RTC R x p ==>
+               RTC R x p /\
+               !z. R x z ==>
+                   ?u. RTC R p u /\ RTC R z u``,
+  GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC RTC_ind THEN
+  REPEAT STRIP_TAC THENL [
+    PROVE_TAC [RTC_rules],
+    PROVE_TAC [RTC_rules],
+    PROVE_TAC [RTC_rules],
+    `(y = z') \/ ?v. R y v /\ R z' v` by PROVE_TAC [CR_def] THEN
+    PROVE_TAC [RTC_rules]
+  ]);
+\end{verbatim}\end{session}
+    Finally, it's very easy to turn this into the result we really
+    want by getting rid of the spurious \texttt{RTC R x p}; we
+    simplify the theorem and contextual rewriting eliminates it
+    because it's a consequence of the antecendent of the implication:
+\begin{session}\begin{verbatim}
+val R_RTC_CR = save_thm(
+  "R_RTC_CR",
+  simpLib.SIMP_RULE std_ss [] R_RTC_CR_lemma);
+> val R_RTC_CR =
+    |- !R.
+         CR R ==> !x p. RTC R x p ==>
+                        !z. R x z ==> ?u. RTC R p u /\ RTC R z u
+\end{verbatim}\end{session}
+\eos{}
+
+Now we can move on to proving that if $R$ is Church-Rosser, so too is
+$\con{RTC}\;R$.  We want to prove this by induction again.  It's very
+tempting to state the goal as the obvious \[
+\con{CR}\;R\supset\con{CR}\,(\con{RTC}\;R)
+\] but doing so will actually make it harder to apply the induction
+principle when the time is right.  Better to start out with a
+statement of the goal that is very near in form to the induction
+princple.  So, we manually expand the meaning of \con{CR} and state
+our next goal thus:
+\begin{session}\begin{verbatim}
+- g `!R. CR R ==> !x y. RTC R x y ==>
+                        !z. RTC R x z ==>
+                            ?u. RTC R y u /\ RTC R z u`;
+<<HOL message: inventing new type variable names: 'a>>
+> val it =
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         !R.
+           CR R ==>
+           !x y. RTC R x y ==> !z. RTC R x z ==>
+                                   ?u. RTC R y u /\ RTC R z u
+\end{verbatim}\end{session}
+    Again we can do without the condition that $y$ and $z$ be unequal,
+    and just as before, we strip the \con{CR} assumption, apply the
+    induction principle, and strip repeatedly:
+\begin{session}\begin{verbatim}
+- e (GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC RTC_ind THEN
+     REPEAT STRIP_TAC);
+OK..
+2 subgoals:
+> val it =
+    ?u. RTC R z u /\ RTC R z' u
+    ------------------------------------
+      0.  CR R
+      1.  R x y
+      2.  !z'. RTC R y z' ==> ?u. RTC R z u /\ RTC R z' u
+      3.  RTC R x z'
+
+    ?u. RTC R x u /\ RTC R z u
+    ------------------------------------
+      0.  CR R
+      1.  RTC R x z
+\end{verbatim}\end{session}
+The first goal is again an easy one, corresponding to the case where
+the trip from $x$ to $y$ has been one of no steps whatsoever.
+\begin{session}\begin{verbatim}
+- e (PROVE_TAC [RTC_rules]);
+OK..
+Meson search level: ...
+
+Goal proved. [...]
+
+Remaining subgoals:
+> val it =
+    ?u. RTC R z u /\ RTC R z' u
+    ------------------------------------
+      0.  CR R
+      1.  R x y
+      2.  !z'. RTC R y z' ==> ?u. RTC R z u /\ RTC R z' u
+      3.  RTC R x z'
+\end{verbatim}\end{session}
+This goal is very similar to the one we saw earlier.  We have the top
+of a (``lop-sided'') diamond in assumptions 1 and 3, so we can infer
+the existence of a common destination for $y$ and $z'$:
+\begin{session}\begin{verbatim}
+- e (`?v. RTC R y v /\ RTC R z' v` by PROVE_TAC [R_RTC_CR]);
+OK..
+Meson search level: ............
+1 subgoal:
+> val it =
+    ?u. RTC R z u /\ RTC R z' u
+    ------------------------------------
+      0.  CR R
+      1.  R x y
+      2.  !z'. RTC R y z' ==> ?u. RTC R z u /\ RTC R z' u
+      3.  RTC R x z'
+      4.  RTC R y v
+      5.  RTC R z' v
+\end{verbatim}\end{session}
+    At this point in the last proof we were able to finish it all off
+    by just appealing to the rules for \con{RTC}.  This time it is not
+    quite so straightforward.  When we use the induction hypothesis
+    (assumption 2), we can conclude that there is a $u$ to which both
+    $z$ and $v$ can connect in zero or more steps, but in order to
+    show that this $u$ is reachable from $z'$, we need to be able to
+    conclude $\con{RTC}\;R\;z'\;u$ when we know that
+    $\con{RTC}\;R\;z'\;v$ (assumption 5 above) and
+    $\con{RTC}\;R\;v\;u$ (our consequence of the inductive
+    hypothesis).  We leave the proof of this general result as an
+    exercise, and here assume that it is already proved as the theorem
+    \texttt{RTC\_RTC}.
+\begin{session}\begin{verbatim}
+- e (PROVE_TAC [RTC_rules, RTC_RTC]);
+Meson search level: .......
+
+Goal proved. [...]
+> val it =
+    Initial goal proved.
+    |- !R.
+         CR R ==>
+         !x y. RTC R x y ==> !z. RTC R x z ==>
+                                 ?u. RTC R y u /\ RTC R z u
+\end{verbatim}\end{session}
+We can package this result up as a lemma and then prove the prettier
+version directly:
+\begin{session}\begin{verbatim}
+val CR_RTC_lemma = prove(
+  ``!R.
+       CR R ==>
+       !x y. RTC R x y ==> !z. RTC R x z ==>
+                               ?u. RTC R y u /\ RTC R z u``,
+  GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC RTC_ind THEN
+  REPEAT STRIP_TAC THENL [
+    PROVE_TAC [RTC_rules],
+    `?v. RTC R y v /\ RTC R z' v` by PROVE_TAC [R_RTC_CR] THEN
+    PROVE_TAC [RTC_RTC, RTC_rules]
+  ]);
+val CR_RTC = store_thm(
+  "CR_RTC",
+  ``!R. CR R ==> CR (RTC R)``,
+  PROVE_TAC [CR_def,CR_RTC_lemma]);
+\end{verbatim}\end{session}
+
+
+\subsection{Return to the Land of the Combinators}
+\label{sec:Return-to-Land}
+
+Now, surely we are in a position to return to the real object of study
+and prove confluence for combinatory logic.  We have done an abstract
+development and established that\[
+\begin{array}{ccccc}
+\con{CR}\;R & \supset & \con{CR}\,(\con{RTC}\;R)\\
+& & \land\\
+& & \con{CR}\,(\con{RTC}\;R) & \supset & \con{confluent}\;R\\
+\end{array}
+\]  (We have also established a couple of other useful results along
+the way.)
+
+\newcommand{\topk}{\KC\;\SC\;(\KC\;\KC\;\KC)} Sadly, it just isn't
+the case that $\rightarrow$ our one-step relation for combinators is
+Church-Rosser.  A counter-example is $\topk$.  Its possible evolution
+can be described graphically: \[
+\begin{array}{ccc}
+& \rnode{top}{\topk}\\[5mm]
+\rnode{left}{\SC} & & \rnode{right}{\KC\;\SC\;\KC}\\[5mm]
+& \rnode{bottom}{\SC}
+\end{array}
+\psset{nodesep=1mm}
+\ncline{->}{top}{left}
+\ncline{->}{top}{right}
+\ncline{->}{right}{bottom}
+\]
+If we had Church-Rosser, it should be possible to find a common
+destination for $\KC\;\SC\;\KC$ and $\SC$.  However, \SC{} doesn't
+admit any reductions whatsoever, so there isn't a common destination.
+
+If we don't have Church-Rosser, what do we have?  More significantly,
+what do we have that implies confluence?  If we examine the diagram
+above once more, we see that we almost seem to have a diamond property
+of a sort.  More importantly, this ``almost diamond'' does give us the
+right property.  We can prove:\[
+\begin{array}{c}
+  \left(
+    \begin{array}{ll}
+      \forall x\,y\,z. &
+      R\;x\;y\;\;\land\;\; R\;x\;z \;\;\;\supset\\
+      & \exists u.\;\con{RTC}\;R\;y\;u \;\;\land\;\;\con{RTC}\;R\;z\;u
+      \end{array}\right)\\
+    \supset\\
+    \left(
+      \begin{array}{ll}
+        \forall x\,y\,z. &
+        \con{RTC}\;R\;x\;y\;\;\land\;\;\con{RTC}\;R\;x\;z
+        \;\;\;\supset\\
+        & \exists u.\;\con{RTC}\;R\;y\;u
+        \;\;\land\;\;\con{RTC}\;R\;z\;u
+      \end{array}
+    \right)
+  \end{array}
+  \]
+Though a large formula, the proof is actually fairly straightforward,
+and we again leave it as an exercise.  We will assume in the remainder
+of the development that
+
+\section{Exercises}
+\label{sec:Exercises}
+
+\begin{enumerate}
+\item Prove that \[\con{RTC}\;R \;x\; y \;\;\land \;\;
+  \con{RTC}\;R\;y\;z\;\;\;\supset\;\;\; \con{RTC}\;R\;x\;z
+\] You will need to prove the goal by induction, and will probably
+  need to massage it slightly first to get it to match the appropriate
+  induction principle.  Store the theorem under the name
+  \texttt{RTC\_RTC}.
+\end{enumerate}
+
+\end{document}
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
