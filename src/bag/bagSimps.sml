@@ -95,7 +95,8 @@ val BAG_ss = SIMPSET
                               (BAG_EQ_tm, "=")],
    filter = NONE, dprocs = [],
    rewrs = [BAG_UNION_EMPTY, BAG_DIFF_EMPTY, SUB_BAG_REFL,
-            SUB_BAG_EMPTY]};
+            SUB_BAG_EMPTY,FINITE_EMPTY_BAG,
+            NOT_IN_EMPTY_BAG]};
 
 fun transform t =
   ((if is_sub_bag t then
