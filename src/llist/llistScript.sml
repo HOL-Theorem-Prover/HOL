@@ -830,7 +830,7 @@ val LLENGTH_THM = store_thm(
     Q.SUBGOAL_THEN `?!n. (LTAKE n (LCONS h t) = NONE) /\
                          !m. m < n ==> ?ll'. LTAKE m (LCONS h t) = SOME ll'`
     ASSUME_TAC THENL [
-      SIMP_TAC hol_ss [Ho_theorems.EXISTS_UNIQUE_THM] THEN CONJ_TAC THENL [
+      SIMP_TAC hol_ss [EXISTS_UNIQUE_THM] THEN CONJ_TAC THENL [
         POP_ASSUM (STRIP_ASSUME_TAC o
                    CONV_RULE numLib.EXISTS_LEAST_CONV o
                    SIMP_RULE hol_ss [LFINITE]) THEN Q.EXISTS_TAC `SUC n` THEN
@@ -848,7 +848,7 @@ val LLENGTH_THM = store_thm(
         (fn th => STRIP_ASSUME_TAC (SELECT_RULE th) THEN
                   Q.X_CHOOSE_THEN `LEN_ht` STRIP_ASSUME_TAC th)
         ASSUME_TAC o
-      SIMP_RULE hol_ss [Ho_theorems.EXISTS_UNIQUE_THM]) THEN
+      SIMP_RULE hol_ss [EXISTS_UNIQUE_THM]) THEN
     Q.SUBGOAL_THEN
        `(@n. (LTAKE n (LCONS h t) = NONE) /\
              !m. m < n ==> ?ll'. LTAKE m (LCONS h t) = SOME ll') = LEN_ht`
@@ -859,7 +859,7 @@ val LLENGTH_THM = store_thm(
     Q.SUBGOAL_THEN
        `?!n. (LTAKE n t = NONE) /\ !m. m < n ==> ?ll'. LTAKE m t = SOME ll'`
     ASSUME_TAC THENL [
-      SIMP_TAC hol_ss [Ho_theorems.EXISTS_UNIQUE_THM] THEN CONJ_TAC THENL [
+      SIMP_TAC hol_ss [EXISTS_UNIQUE_THM] THEN CONJ_TAC THENL [
         FIRST_X_ASSUM (STRIP_ASSUME_TAC o
                        CONV_RULE numLib.EXISTS_LEAST_CONV o
                        SIMP_RULE hol_ss [LFINITE]) THEN Q.EXISTS_TAC `n` THEN
@@ -875,7 +875,7 @@ val LLENGTH_THM = store_thm(
         (fn th => STRIP_ASSUME_TAC (SELECT_RULE th) THEN
                   Q.X_CHOOSE_THEN `LEN_t` STRIP_ASSUME_TAC th)
         ASSUME_TAC o
-      SIMP_RULE hol_ss [Ho_theorems.EXISTS_UNIQUE_THM]) THEN
+      SIMP_RULE hol_ss [EXISTS_UNIQUE_THM]) THEN
     Q.SUBGOAL_THEN `(@n. (LTAKE n t = NONE) /\
                          !m. m < n ==> ?ll'. LTAKE m t = SOME ll') = LEN_t`
     SUBST_ALL_TAC THENL [
