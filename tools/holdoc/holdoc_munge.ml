@@ -407,9 +407,9 @@ let rec mtok v t =
   | Sep(s)         -> texify s
   | Backtick       -> "\\texttt{`}"
   | DBacktick      -> "\\texttt{``}"
-  | TeXStartHol    -> "$"
+  | TeXStartHol    -> !hOLDELIMOPEN   (* "$" *)
   | TeXStartHol0   -> ""
-  | TeXEndHol      -> "$"
+  | TeXEndHol      -> !hOLDELIMCLOSE  (* "$" *)
   | TeXEndHol0     -> ""
   | TeXNormal(s)   -> s
   | HolStartTeX    -> "\\tsholcomm{"
@@ -452,11 +452,6 @@ and munge v xs xss = (* munge the first line of tokens *)
   | []                  -> (match xss with
                               [] -> ""
                             | (xs::xss) -> "{}\\\\\n{}"^munge v xs xss)
-
-and munget v s = (* munge a string *)
-  let hack_re1 = Str.regexp "\\[\\[" in
-  let hack_re2 = Str.regexp "\\]\\]" in
-  Str.global_replace hack_re2 "$" (Str.global_replace hack_re1 "$" s)
 
 and mungelab v s = (* munge the label *)
   let rec go xs =

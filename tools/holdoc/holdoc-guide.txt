@@ -236,6 +236,12 @@ formula.  This takes effect immediately.
 the beginning of a line) is ignored.  This takes effect immediately.
 
 
+(*[ HOLDELIM "$" "$" ]*) redefines the strings substituted for the
+enter-HOL-mode and exit-HOL-mode directives, [[ and ]].  These are
+normally just "$" and "$", but can be changed, e.g., to colourise the
+output of HOL strings.
+
+
 One for MNG source:
 
 %(*[ SHOWRULE select.4 ]*)

@@ -18,6 +18,8 @@ let hOL_CURRIED_ALIST = ref []
 let eCHO = ref true
 let rCSID = ref None
 let iNDENT = ref true
+let hOLDELIMOPEN  = ref "$" (* [[ *)
+let hOLDELIMCLOSE = ref "$" (* ]] *)
 
 open Hollex
 exception BadDirective
@@ -68,6 +70,17 @@ let dir_proc n ts =
     | []               -> prerr_endline ("Missing string in RCSID directive");
                           raise BadDirective
   in
+  let rec gostr ts =
+    match ts with
+      (White(_)::ts)   -> gostr ts
+    | (Indent(_)::ts)  -> gostr ts
+    | (Comment(_)::ts) -> gostr ts
+    | (Str(s)::ts)     -> (s,ts)
+    | (t::ts)          -> prerr_endline ("Unexpected token in string sequence: "^render_token t);
+                          raise BadDirective
+    | []               -> prerr_endline ("Missing string in string sequence");
+                          raise BadDirective
+  in
   match n with
   (* category lists *)
     "TYPE_LIST"       -> tYPE_LIST       := (go ts)  @ !tYPE_LIST
@@ -87,5 +100,7 @@ let dir_proc n ts =
   | "RCSID"           -> rCSID           := Some(goId ts)
   | "INDENT"          -> iNDENT := true
   | "NOINDENT"        -> iNDENT := false
+  | "HOLDELIM"        -> let (s1,ts1) = gostr ts in let (s2,_) = gostr ts1 in
+                         hOLDELIMOPEN := s1; hOLDELIMCLOSE := s2
   | _                 -> ()
 
