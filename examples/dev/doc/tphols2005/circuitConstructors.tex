@@ -152,3 +152,21 @@ $
 
 %\fbox{Can we put the diagrams back so that they all fit onto the rest of this page?}
 
+\begin{figure}[htb]
+   \centerline{
+      \subfigure[$\DEF{ATM}\ f$]{
+         \label{figAtom}\input{atm.eepic}\hspace*{0cm}}
+      \subfigure[$\DEF{SEQ}\ f\ g$]{
+         \label{figSeq}\input{seq.eepic}\hspace*{0cm}}
+      \subfigure[$\DEF{PAR}\ f\ g$]{
+         \label{figPar}\input{par.eepic}}}
+      \caption{\label{figSeqPar}Implementation of composite devices.}
+\end{figure}
+\begin{figure}[htb]
+   \centerline{
+       \subfigure[$\DEF{IF}\ e\ f\ g$]{
+           \label{figIf}\input{ifReduced.eepic}\hspace*{0.3cm}}
+       \subfigure[$\DEF{REC}\ e\ f\ g$]{
+           \label{figRec}\input{recReduced.eepic}\hspace*{0cm}}}
+   \caption{\label{figIfRec}The conditional and the recursive constructors.}
+\end{figure}
