@@ -55,17 +55,16 @@ val _ = new_theory "finite_map";
  --------------------------------------------------------------------------- *)
 
 val (rules,ind,cases) = 
-gen_new_inductive_definition 
-  bool_monoset
+new_inductive_definition 
   (Term`is_fmap (\a. INR one) 
    /\  (!f a b. is_fmap f ==> is_fmap (\x. if x=a then INL b else f x))`);
 
 
 val rule_list as [is_fmap_empty, is_fmap_update] = CONJUNCTS rules;
 
-val is_fmap_RULE_INDUCT_TAC = RULE_INDUCT_THEN ind STRIP_ASSUME_TAC;
+val is_fmap_RULE_INDUCT_TAC = IndDefRules.RULE_INDUCT_THEN ind STRIP_ASSUME_TAC;
 
-val strong_ind = derive_strong_induction(rule_list, ind);
+val strong_ind = IndDefRules.derive_strong_induction(rule_list, ind);
 
 
 (*---------------------------------------------------------------------------
@@ -1755,7 +1754,7 @@ val RRESTRICT_FUPDATE = Q.store_thm
  ---------------------------------------------------------------------------*)
 
 val (rules,FINITE_PRED_INDUCT,cases) = 
-  gen_new_inductive_definition bool_monoset
+  new_inductive_definition
     (Term`FINITE_PRED (\a. F) /\
     !f a. FINITE_PRED f ==> FINITE_PRED (\x. (x=a) \/ f x)`);
 
