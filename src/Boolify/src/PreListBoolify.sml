@@ -1,9 +1,7 @@
-(*---------------------------------------------------------------------------*
- * Setting information for types.                                            *
- *                                                                           *
- * Here we fill in the "boolify" entries in theTypeBase for some types       *
- * built before lists: bool,prod,sum,num,option, ...                         *
- *---------------------------------------------------------------------------*)
+(* ========================================================================= *)
+(* FILLING IN "BOOLIFY" ENTRIES IN THE TYPEBASE FOR TYPES BUILT BEFORE LISTS *)
+(* Created by Joe Hurd and Konrad Slind, July 2002                           *)
+(* ========================================================================= *)
 
 (*
 val () = loadPath := ["../../list/src"] @ !loadPath;
@@ -11,7 +9,7 @@ val () = loadPath := ["../../list/src"] @ !loadPath;
 
 (*
 *)
-structure PreListBoolify =
+structure PreListBoolify :> PreListBoolify =
 struct
 
 open HolKernel boolLib Parse pairSyntax numSyntax listSyntax
@@ -97,14 +95,18 @@ val one_info' = TypeBasePure.put_boolify one_boolify_info one_info;
       Writing all the boolification information to the typebase.
  ---------------------------------------------------------------------------*)
 
-val _ = TypeBase.write bool_info'
-val _ = TypeBase.write prod_info'
-val _ = TypeBase.write option_info'
-val _ = TypeBase.write list_info'
-val _ = TypeBase.write sum_info'
-val _ = TypeBase.write num_info'
+val _ = TypeBase.write [bool_info']
+val _ = TypeBase.write [prod_info']
+val _ = TypeBase.write [sum_info']
+val _ = TypeBase.write [option_info']
+val _ = TypeBase.write [list_info']
+val _ = TypeBase.write [num_info']
 (* See comment in unit section
-val _ = TypeBase.write one_info'
+val _ = TypeBase.write [one_info']
 *)
+
+val () = computeLib.add_funs
+  [bool_to_bool_def, prod_to_bool_def, sum_to_bool_def, option_to_bool_def,
+   list_to_bool_def, num_to_bool_def, one_to_bool_def];
 
 end

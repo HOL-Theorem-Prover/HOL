@@ -72,7 +72,7 @@ val list_to_bool_def =
         Nums (Norrish numeral encoding)
  ---------------------------------------------------------------------------*)
 
-val num_to_bool_def =
+val (num_to_bool_def, num_to_bool_ind) =
   Defn.tprove
   (Defn.Hol_defn "num_to_bool"
    `num_to_bool (n:num) = 
@@ -89,6 +89,9 @@ val num_to_bool_def =
     EQT_ELIM (ARITH_CONV (Term `2n*m - 2n = (m-1n)*2n`)),
     EQT_ELIM (ARITH_CONV (Term `x < SUC y = x <= y`))]);
 
+val _ = save_thm ("num_to_bool_def", num_to_bool_def);
+val _ = save_thm ("num_to_bool_ind", num_to_bool_ind);
+  
   (*--------------------------------------------------------------------
        Termination proof can also go: 
 

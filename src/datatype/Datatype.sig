@@ -19,7 +19,7 @@ sig
  val primHol_datatype : typeBase
                            -> hol_type quotation
                              -> (tyinfo * record_rw_names) list
- val write_tyinfo     : tyinfo * record_rw_names -> unit
+ val write_tyinfos    : (tyinfo * record_rw_names) list -> unit
  val Hol_datatype     : hol_type quotation -> unit
 
 end

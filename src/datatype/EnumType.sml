@@ -142,53 +142,6 @@ fun mk_size_definition ty =
  end
 
 (* ----------------------------------------------------------------------
-    Make a boolify definition for an enumerated type
-   ---------------------------------------------------------------------- *)
-
-local
-  fun list_constants () =
-    (prim_mk_const {Thy = "list", Name = "NIL"},
-     prim_mk_const {Thy = "list", Name = "CONS"});
-
-  fun case_const_n th =
-    let val l = strip_conj (concl th)
-    in ((#1 o strip_comb o lhs o #2 o strip_forall o hd) l, length l)
-    end;
-
-  fun booll _ _ Nil 0 = [Nil]
-    | booll ConsT ConsF Nil n =
-    let val l = booll ConsT ConsF Nil (n div 2)
-    in map (curry mk_comb ConsT) l @ map (curry mk_comb ConsF) l
-    end;
-
-  fun bool_lists Cons Nil n =
-    List.take (booll (mk_comb (Cons, T)) (mk_comb (Cons, F)) Nil (n - 1), n);
-
-  fun mk_boolify_tm case_def ty =
-    let
-      val (Nil, Cons) = list_constants ()
-      val (case_tm, n) = case_const_n case_def
-      val bool_list = mk_type ("list", [bool])
-      val case_tm = inst [alpha |-> bool_list] case_tm
-    in
-      list_mk_comb
-      (inst [alpha |-> bool_list] case_tm,
-       bool_lists (inst [alpha |-> bool] Cons) (inst [alpha |-> bool] Nil) n)
-    end;
-in
-  fun mk_boolify_definition case_def ty =
-    let
-      val tyname = #1 (dest_type ty)
-      val cname = tyname ^ "_to_bool"
-      val var_t = mk_var (cname, ty --> mk_type ("list", [bool]))
-      val boolify_tm  = mk_boolify_tm case_def ty
-      val def = new_definition (cname ^ "_def", mk_eq (var_t, boolify_tm))
-    in
-      (lhs (concl def), TypeBasePure.ORIG def)
-    end;
-end;
-
-(* ----------------------------------------------------------------------
     Prove distinctness theorem for an enumerated type
       (only done if there are not too many possibilities as there will
        be n-squared many of these)
@@ -377,7 +330,6 @@ fun enum_type_to_tyinfo (ty, constrs) = let
   val initiality = prove_initiality_thm (#REPconst result) TYPE constrs simpls
   val case_def = define_case initiality
   val case_cong = Prim_rec.case_cong_thm nchotomy case_def
-  val boolify = total (mk_boolify_definition case_def) TYPE
   open TypeBasePure
   val tyinfo0 =
       mk_tyinfo { ax = ORIG initiality,
@@ -386,7 +338,7 @@ fun enum_type_to_tyinfo (ty, constrs) = let
                   case_cong = case_cong,
                   nchotomy = nchotomy,
                   size = size,
-                  boolify = boolify,
+                  boolify = NONE,
                   one_one = NONE,
                   distinct = distinct }
 in
