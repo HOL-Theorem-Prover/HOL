@@ -36,7 +36,7 @@ val fst_tm      = prim_mk_const {Name="FST",     Thy="pair"};
 val snd_tm      = prim_mk_const {Name="SND",     Thy="pair"};
 val uncurry_tm  = prim_mk_const {Name="UNCURRY", Thy="pair"};
 val curry_tm    = prim_mk_const {Name="CURRY",   Thy="pair"};
-val pair_fun_tm = prim_mk_const {Name="##",      Thy="pair"};
+val pairfun_tm  = prim_mk_const {Name="##",      Thy="pair"};
 
 
 (*---------------------------------------------------------------------------
@@ -103,6 +103,56 @@ fun mk_snd tm =
   end
   handle HOL_ERR _ => raise ERR "mk_snd" "";
 
+fun mk_uncurry_tm(xt,yt,zt) = 
+  inst [alpha |-> xt, beta |-> yt, gamma |-> zt] uncurry_tm;
+
+fun is_uncurry_tm c = 
+ case total dest_thy_const c
+  of SOME{Name="UNCURRY",Thy="pair",...} => true
+   | otherwise => false;
+
+fun mk_curry (f,x,y) = 
+  let val (pty,rty) = dom_rng (type_of f)
+      val (aty,bty) = dest_prod pty
+  in list_mk_comb
+       (inst [alpha |-> aty, beta |-> bty, gamma |-> rty] curry_tm, [f,x,y])
+  end
+  handle HOL_ERR _ => raise ERR "mk_uncurry" "";
+
+fun mk_uncurry (f,x) = 
+  case strip_fun (type_of f)
+   of ([a,b],c) => mk_comb(mk_comb(mk_uncurry_tm(a,b,c),f),x)
+    | other => raise ERR "mk_uncurry" "";
+
+fun mk_pairfun(f,g,p) =
+ let val (df,rf) = dom_rng (type_of f)
+     val (dg,rg) = dom_rng (type_of g)
+ in list_mk_comb(inst[alpha |-> df, beta  |-> dg, 
+                      gamma |-> rf, delta |-> rg] pairfun_tm, [f,g,p])
+ end;
+
+
+val dest_fst     = dest_monop ("FST","pair")     (ERR "dest_fst" "")
+val dest_snd     = dest_monop ("SND","pair")     (ERR "dest_snd" "")
+val dest_uncurry = dest_binop ("UNCURRY","pair") (ERR "dest_uncurry" "");
+fun dest_curry tm = 
+  let val (M,y) = with_exn dest_comb tm (ERR "dest_curry" "")
+      val (f,x) = dest_binop ("CURRY","pair") (ERR "dest_curry" "") M
+  in (f,x,y)
+  end;
+
+fun dest_pairfun tm = 
+  let val (M,p) = with_exn dest_comb tm (ERR "dest_pairfun" "")
+      val (f,g) = dest_binop ("##","pair") (ERR "dest_pairfun" "") M
+  in (f,g,p)
+  end;
+
+val is_fst = can dest_fst
+val is_snd = can dest_snd
+val is_curry = can dest_curry
+val is_uncurry = can dest_uncurry
+val is_pairfun = can dest_pairfun;
+
 
 (*---------------------------------------------------------------------------*)
 (* Constructor, destructor and discriminator functions for paired            *)
@@ -111,22 +161,12 @@ fun mk_snd tm =
 (* Intentionally named so as to replace the existing operations on binders.  *)
 (*---------------------------------------------------------------------------*)
 
-fun mk_uncurry(xt,yt,zt) = 
-  inst [alpha |-> xt, beta |-> yt, gamma |-> zt] uncurry_tm;
-
-fun is_uncurry_tm c = 
- case total dest_thy_const c
-  of SOME{Name="UNCURRY",Thy="pair",...} => true
-   | otherwise => false;
-
 fun mk_pabs(vstruct,body) =
   if is_var vstruct then Term.mk_abs(vstruct, body)
   else let val (fst,snd) = dest_pair vstruct
-           val cab = mk_pabs(fst,mk_pabs(snd,body))
-           val unc = mk_uncurry(type_of fst,type_of snd,type_of body)
-       in mk_comb(unc, cab)
-       end 
-       handle HOL_ERR _ => raise ERR "mk_pabs" "";
+       in mk_comb(mk_uncurry_tm(type_of fst, type_of snd, type_of body),
+                  mk_pabs(fst,mk_pabs(snd,body)))
+       end handle HOL_ERR _ => raise ERR "mk_pabs" "";
 
 fun mk_pforall (p as (vstruct,_)) =
  mk_comb(inst [alpha |-> type_of vstruct] universal, mk_pabs p)
@@ -143,7 +183,6 @@ fun mk_pexists1 (p as (vstruct,_)) =
 fun mk_pselect (p as (vstruct,body)) =
  mk_comb(inst [alpha |-> type_of vstruct] select,mk_pabs p)
  handle HOL_ERR _ => raise ERR "mk_pselect" "";
-
 
 fun dest_pabs tm =
  Term.dest_abs tm

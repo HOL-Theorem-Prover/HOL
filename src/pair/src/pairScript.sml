@@ -346,14 +346,14 @@ val _ = save_thm("PEXISTS_THM",PEXISTS_THM);
      Standard helpful combinator
  ---------------------------------------------------------------------------*)
 
-val PROD_FUN = Q.new_infixr_definition
- ("PROD_FUN",
+val PRODFUN = Q.new_infixr_definition
+ ("PRODFUN",
   `## (f:'a->'c) (g:'b->'d) p = (f (FST p), g (SND p))`, 50);
 
-val PROD_FUN_THM = Q.store_thm
-("PROD_FUN_THM",
+val PRODFUN_THM = Q.store_thm
+("PRODFUN_THM",
  `!f g x y. (f##g) (x,y) = (f x, g y)`,
- REWRITE_TAC [PROD_FUN,FST,SND]);
+ REWRITE_TAC [PRODFUN,FST,SND]);
 
 (*---------------------------------------------------------------------------
     For TFL support.
