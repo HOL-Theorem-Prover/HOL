@@ -765,11 +765,11 @@ fun parse_term (G : grammar) typeparser = let
                 val numeral_part =
                   Literal.gen_mk_numeral
                        {mk_comb  = fn (x,y) => (COMB(x,y),locn),
-                        ZERO     = (QIDENT ("num"       , "0"           ),locn),
-                        ALT_ZERO = (QIDENT ("arithmetic", "ALT_ZERO"    ),locn),
-                        NUMERAL  = (QIDENT ("arithmetic", "NUMERAL"     ),locn),
-                        BIT1     = (QIDENT ("arithmetic", "NUMERAL_BIT1"),locn),
-                        BIT2     = (QIDENT ("arithmetic", "NUMERAL_BIT2"),locn)}
+                        ZERO     = (QIDENT ("num"       , "0"      ),locn),
+                        ALT_ZERO = (QIDENT ("arithmetic", "ZERO"   ),locn),
+                        NUMERAL  = (QIDENT ("arithmetic", "NUMERAL"),locn),
+                        BIT1     = (QIDENT ("arithmetic", "BIT1")  ,locn),
+                        BIT2     = (QIDENT ("arithmetic", "BIT2")  ,locn)}
                     (Arbnum.fromString dp)
                 fun inject_np NONE = numeral_part
                   | inject_np (SOME s) = (COMB((VAR s,locn), numeral_part),locn)

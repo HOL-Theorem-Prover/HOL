@@ -21,15 +21,15 @@ val iBITWISE_def = Define `iBITWISE = BITWISE`;
 
 (* -------------------------------------------------------- *)
 
-val SIMP_NUMERAL_BIT1 = (GSYM o SIMP_RULE arith_ss []) NUMERAL_BIT1;
+val SIMP_BIT1 = (GSYM o SIMP_RULE arith_ss []) BIT1;
 
 val iBITWISE = prove(
-  `(!op a b. iBITWISE 0 op a b = ALT_ZERO) /\
+  `(!op a b. iBITWISE 0 op a b = ZERO) /\
    (!x op a b.
      iBITWISE (SUC x) op a b =
        let w = iBITWISE x op (DIV2 a) (DIV2 b) in
-       if op (ODD a) (ODD b) then NUMERAL_BIT1 w else iDUB w)`,
-  RW_TAC arith_ss [iBITWISE_def,iDUB,SIMP_NUMERAL_BIT1,SBIT_def,EXP,
+       if op (ODD a) (ODD b) then BIT1 w else iDUB w)`,
+  RW_TAC arith_ss [iBITWISE_def,iDUB,SIMP_BIT1,SBIT_def,EXP,
                    LSB_ODD,GSYM DIV2_def,BITWISE_EVAL,LET_THM]
     THEN REWRITE_TAC [BITWISE_def,ALT_ZERO]
 );
@@ -46,9 +46,9 @@ val NUMERAL_BITWISE = store_thm("NUMERAL_BITWISE",
 
 val NUMERAL_DIV2 = store_thm("NUMERAL_DIV2",
    `(DIV2 0 = 0) /\
-     (!n. DIV2 (NUMERAL (NUMERAL_BIT1 n)) = NUMERAL n) /\
-     (!n. DIV2 (NUMERAL (NUMERAL_BIT2 n)) = NUMERAL (SUC n))`,
-  RW_TAC bool_ss [ALT_ZERO,NUMERAL_DEF,NUMERAL_BIT1,NUMERAL_BIT2]
+     (!n. DIV2 (NUMERAL (BIT1 n)) = NUMERAL n) /\
+     (!n. DIV2 (NUMERAL (BIT2 n)) = NUMERAL (SUC n))`,
+  RW_TAC bool_ss [ALT_ZERO,NUMERAL_DEF,BIT1,BIT2]
     THEN SIMP_TAC arith_ss [DIV2_def,ONCE_REWRITE_RULE [MULT_COMM] ADD_DIV_ADD_DIV]
 );
 
@@ -109,17 +109,17 @@ val iMOD_2EXP = prove(
 );
 
 val iMOD_2EXP_CLAUSES = prove(
-  `(!n. iMOD_2EXP 0 n = ALT_ZERO) /\
-   (!x n. iMOD_2EXP x ALT_ZERO = ALT_ZERO) /\
-   (!x n. iMOD_2EXP (SUC x) (NUMERAL_BIT1 n) = NUMERAL_BIT1 (iMOD_2EXP x n)) /\
-   (!x n. iMOD_2EXP (SUC x) (NUMERAL_BIT2 n) = iDUB (iMOD_2EXP x (SUC n)))`,
+  `(!n. iMOD_2EXP 0 n = ZERO) /\
+   (!x n. iMOD_2EXP x ZERO = ZERO) /\
+   (!x n. iMOD_2EXP (SUC x) (BIT1 n) = BIT1 (iMOD_2EXP x n)) /\
+   (!x n. iMOD_2EXP (SUC x) (BIT2 n) = iDUB (iMOD_2EXP x (SUC n)))`,
   RW_TAC arith_ss [iMOD_2EXP_def,iDUB,SBIT_def,numeral_evenodd,GSYM DIV2_def,
                    REWRITE_RULE [SYM ALT_ZERO,NUMERAL_DEF,ADD1] NUMERAL_DIV2]
     THENL [
       REWRITE_TAC [ALT_ZERO],
       REWRITE_TAC [ALT_ZERO]
         THEN REWRITE_TAC [MOD_2EXP_ZERO,(GSYM o REWRITE_RULE [NUMERAL_DEF]) iMOD_2EXP],
-      SIMP_TAC arith_ss [SPEC `iMOD_2EXP x n` NUMERAL_BIT1],
+      SIMP_TAC arith_ss [SPEC `iMOD_2EXP x n` BIT1],
       ONCE_REWRITE_TAC [(SYM o REWRITE_CONV [NUMERAL_DEF]) ``1``]
         THEN REWRITE_TAC [ADD1]
     ]

@@ -44,18 +44,17 @@ fun is_num2num_type ty =
    end handle HOL_ERR _ => false;
 
 (*---------------------------------------------------------------------------
-      Checks if t is a sequence of applications of NUMERAL_BIT1 
-      and NUMERAL_BIT2 to ALT_ZERO 
+    Checks if t is a sequence of applications of BIT1 and BIT2 to ZERO 
  ---------------------------------------------------------------------------*)
 
 fun is_nb t =
    if is_const t 
    then let val {Name, Thy, Ty} = dest_thy_const t
-        in Name = "ALT_ZERO" andalso Thy="arithmetic" andalso is_numtype Ty
+        in Name = "ZERO" andalso Thy="arithmetic" andalso is_numtype Ty
         end
    else let val (Rator, Rand) = dest_comb t
             val {Name, Thy, Ty} = dest_thy_const Rator
-        in (Name="NUMERAL_BIT1" orelse Name="NUMERAL_BIT2") 
+        in (Name="BIT1" orelse Name="BIT2") 
             andalso Thy = "arithmetic"
             andalso is_num2num_type Ty andalso is_nb Rand
         end
@@ -82,8 +81,8 @@ fun dest_numeral t =
          if is_comb t 
          then let val (Rator, Rand) = dest_comb t
               in case fst(dest_const Rator) 
-                  of "NUMERAL_BIT1" => two * dest Rand + one
-                   | "NUMERAL_BIT2" => two * dest Rand + two
+                  of "BIT1" => two * dest Rand + one
+                   | "BIT2" => two * dest Rand + two
                    | otherwise => raise ERR "dest_numeral" 
                                     "This should never ever happen"
               end

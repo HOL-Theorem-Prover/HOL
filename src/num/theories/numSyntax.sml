@@ -15,30 +15,30 @@ struct
 
   val num = mk_thy_type{Thy="num", Tyop="num", Args=[]}
 
-  val zero_tm      = prim_mk_const {Name="0",            Thy="num"}
-  val suc_tm       = prim_mk_const {Name="SUC",          Thy="num"}
-  val pre_tm       = prim_mk_const {Name="PRE",          Thy="prim_rec"}
-  val numeral_tm   = prim_mk_const {Name="NUMERAL",      Thy="arithmetic"}
-  val alt_zero_tm  = prim_mk_const {Name="ALT_ZERO",     Thy="arithmetic"}
-  val numeral_bit1 = prim_mk_const {Name="NUMERAL_BIT1", Thy="arithmetic"}
-  val numeral_bit2 = prim_mk_const {Name="NUMERAL_BIT2", Thy="arithmetic"}
-  val plus_tm      = prim_mk_const {Name="+",            Thy="arithmetic"}
-  val minus_tm     = prim_mk_const {Name="-",            Thy="arithmetic"}
-  val mult_tm      = prim_mk_const {Name="*",            Thy="arithmetic"}
-  val exp_tm       = prim_mk_const {Name="EXP",          Thy="arithmetic"}
-  val div_tm       = prim_mk_const {Name="DIV",          Thy="arithmetic"}
-  val mod_tm       = prim_mk_const {Name="MOD",          Thy="arithmetic"}
-  val less_tm      = prim_mk_const {Name="<",            Thy="prim_rec"}
-  val greater_tm   = prim_mk_const {Name=">",            Thy="arithmetic"}
-  val geq_tm       = prim_mk_const {Name=">=",           Thy="arithmetic"}
-  val leq_tm       = prim_mk_const {Name="<=",           Thy="arithmetic"}
-  val even_tm      = prim_mk_const {Name="EVEN",         Thy="arithmetic"}
-  val odd_tm       = prim_mk_const {Name="ODD",          Thy="arithmetic"}
-  val num_case_tm  = prim_mk_const {Name="num_case",     Thy="arithmetic"}
-  val fact_tm      = prim_mk_const {Name="FACT",         Thy="arithmetic"}
-  val funpow_tm    = prim_mk_const {Name="FUNPOW",       Thy="arithmetic"}
-  val while_tm     = prim_mk_const {Name="WHILE",        Thy="while"}
-  val least_tm     = prim_mk_const {Name="LEAST",        Thy="while"};
+  val zero_tm      = prim_mk_const {Name="0",       Thy="num"}
+  val suc_tm       = prim_mk_const {Name="SUC",     Thy="num"}
+  val pre_tm       = prim_mk_const {Name="PRE",     Thy="prim_rec"}
+  val numeral_tm   = prim_mk_const {Name="NUMERAL", Thy="arithmetic"}
+  val alt_zero_tm  = prim_mk_const {Name="ZERO",    Thy="arithmetic"}
+  val bit1         = prim_mk_const {Name="BIT1",    Thy="arithmetic"}
+  val bit2         = prim_mk_const {Name="BIT2",    Thy="arithmetic"}
+  val plus_tm      = prim_mk_const {Name="+",       Thy="arithmetic"}
+  val minus_tm     = prim_mk_const {Name="-",       Thy="arithmetic"}
+  val mult_tm      = prim_mk_const {Name="*",       Thy="arithmetic"}
+  val exp_tm       = prim_mk_const {Name="EXP",     Thy="arithmetic"}
+  val div_tm       = prim_mk_const {Name="DIV",     Thy="arithmetic"}
+  val mod_tm       = prim_mk_const {Name="MOD",     Thy="arithmetic"}
+  val less_tm      = prim_mk_const {Name="<",       Thy="prim_rec"}
+  val greater_tm   = prim_mk_const {Name=">",       Thy="arithmetic"}
+  val geq_tm       = prim_mk_const {Name=">=",      Thy="arithmetic"}
+  val leq_tm       = prim_mk_const {Name="<=",      Thy="arithmetic"}
+  val even_tm      = prim_mk_const {Name="EVEN",    Thy="arithmetic"}
+  val odd_tm       = prim_mk_const {Name="ODD",     Thy="arithmetic"}
+  val num_case_tm  = prim_mk_const {Name="num_case",Thy="arithmetic"}
+  val fact_tm      = prim_mk_const {Name="FACT",    Thy="arithmetic"}
+  val funpow_tm    = prim_mk_const {Name="FUNPOW",  Thy="arithmetic"}
+  val while_tm     = prim_mk_const {Name="WHILE",   Thy="while"}
+  val least_tm     = prim_mk_const {Name="LEAST",   Thy="while"};
 
 
 (*---------------------------------------------------------------------------
@@ -157,8 +157,8 @@ struct
     ALT_ZERO = alt_zero_tm,
     ZERO     = zero_tm,
     NUMERAL  = numeral_tm,
-    BIT1     = numeral_bit1,
-    BIT2     = numeral_bit2
+    BIT1     = bit1,
+    BIT2     = bit2
   };
 
   val dest_numeral = Literal.dest_numeral

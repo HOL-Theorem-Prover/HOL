@@ -355,11 +355,11 @@ val add_to_great = store_thm(
 open arithmeticTheory
 val INT_LT_ADD_NUMERAL = store_thm(
   "INT_LT_ADD_NUMERAL",
-  Term`!x:int y. x < x + &(NUMERAL (NUMERAL_BIT1 y)) /\
-                 x < x + &(NUMERAL (NUMERAL_BIT2 y)) /\
+  Term`!x:int y. x < x + &(NUMERAL (BIT1 y)) /\
+                 x < x + &(NUMERAL (BIT2 y)) /\
                  ~(x < x + ~(&(NUMERAL y)))`,
-  SIMP_TAC bool_ss [INT_LT_ADDR, INT_LT, NUMERAL_DEF, NUMERAL_BIT1,
-                    NUMERAL_BIT2, ADD_CLAUSES, prim_recTheory.LESS_0,
+  SIMP_TAC bool_ss [INT_LT_ADDR, INT_LT, NUMERAL_DEF, BIT1,BIT2, 
+                    ADD_CLAUSES, prim_recTheory.LESS_0,
                     INT_NEG_GT0, prim_recTheory.NOT_LESS_0]);
 
 

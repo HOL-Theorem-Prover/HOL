@@ -28,7 +28,7 @@ val numeral_pre     = numeralTheory.numeral_pre
 val numeral_lt      = numeralTheory.numeral_lt
 val numeral_distrib = numeralTheory.numeral_distrib
 val save_zero =
-  prove(Term`NUMERAL ALT_ZERO = 0`,
+  prove(Term`NUMERAL ZERO = 0`,
    REWRITE_TAC [arithmeticTheory.NUMERAL_DEF, arithmeticTheory.ALT_ZERO]);
 
 

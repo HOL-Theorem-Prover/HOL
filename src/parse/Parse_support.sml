@@ -229,12 +229,12 @@ local val num_ty = Pretype.Tyop{Thy="num", Tyop = "num", Args = []}
       fun mk_numeral l = Literal.gen_mk_numeral
           {mk_comb = mk_comb l,
           ZERO = Preterm.Const {Name="0",Thy="num",Ty=num_ty,Locn=locn.Loc_None},
-          ALT_ZERO = Preterm.Const{Name="ALT_ZERO",Thy="arithmetic",Ty=num_ty,Locn=l},
+          ALT_ZERO = Preterm.Const{Name="ZERO",Thy="arithmetic",Ty=num_ty,Locn=l},
           NUMERAL = Preterm.Const
                      {Name="NUMERAL",Thy="arithmetic",Ty=funty num_ty num_ty,Locn=l},
-          BIT1 = Preterm.Const {Name="NUMERAL_BIT1",
+          BIT1 = Preterm.Const {Name="BIT1",
                                 Thy="arithmetic",Ty=funty num_ty num_ty, Locn=l},
-          BIT2 = Preterm.Const {Name="NUMERAL_BIT2",
+          BIT2 = Preterm.Const {Name="BIT2",
                                 Thy="arithmetic",Ty=funty num_ty num_ty, Locn=l}}
 in
 fun make_string_literal l s =

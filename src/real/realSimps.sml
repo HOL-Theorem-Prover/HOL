@@ -78,20 +78,20 @@ val real_ac_SS = simpLib.SIMPSET {
 
    To do this, we specialise with terms of the form &v and ~&v.
    We could go "the whole hog" here and further specialise the v's to be
-   one of either NUMERAL (NUMERAL_BIT1 v), NUMERAL (NUMERAL_BIT2 v) or 0,
+   one of either NUMERAL (BIT1 v), NUMERAL (BIT2 v) or 0,
    but this seems over the top.
 *)
 
 open realSyntax
 
 val num_eq_0 = prove(
-  ``~(NUMERAL (NUMERAL_BIT1 n) = 0) /\ ~(NUMERAL (NUMERAL_BIT2 n) = 0)``,
+  ``~(NUMERAL (BIT1 n) = 0) /\ ~(NUMERAL (BIT2 n) = 0)``,
   REWRITE_TAC [numeralTheory.numeral_distrib, numeralTheory.numeral_eq]);
 
 fun two_nats  rv nv th = let
   open numSyntax
-  val nb1_t = mk_injected (mk_comb(numeral_tm, mk_comb(numeral_bit1, nv)))
-  val nb2_t = mk_injected (mk_comb(numeral_tm, mk_comb(numeral_bit2, nv)))
+  val nb1_t = mk_injected (mk_comb(numeral_tm, mk_comb(bit1, nv)))
+  val nb2_t = mk_injected (mk_comb(numeral_tm, mk_comb(bit2, nv)))
 in
   [INST [rv |-> nb1_t] th, INST [rv |-> nb2_t] th]
 end
@@ -191,13 +191,13 @@ val op_rwts = [to_numeraln mult_ints, to_numeraln add_ints, REAL_DIV_LZERO] @
 fun nat2nat th = let
   val simp = REWRITE_RULE [REAL_INJ, REAL_NEGNEG, REAL_NEG_EQ0, num_eq_0]
   val th0 =
-    map simp ([INST [``n:num`` |-> ``NUMERAL (NUMERAL_BIT1 n)``] th,
-               INST [``n:num`` |-> ``NUMERAL (NUMERAL_BIT2 n)``] th])
+    map simp ([INST [``n:num`` |-> ``NUMERAL (BIT1 n)``] th,
+               INST [``n:num`` |-> ``NUMERAL (BIT2 n)``] th])
 in
   List.concat
     (map (fn th => map simp
-                       [INST [``m:num`` |-> ``NUMERAL(NUMERAL_BIT1 m)``] th,
-                        INST [``m:num`` |-> ``NUMERAL(NUMERAL_BIT2 m)``] th])
+                       [INST [``m:num`` |-> ``NUMERAL(BIT1 m)``] th,
+                        INST [``m:num`` |-> ``NUMERAL(BIT2 m)``] th])
          th0)
 end
 
@@ -257,10 +257,10 @@ in
     end
 end
 
-val ecf_patterns = [``&(NUMERAL n) / &(NUMERAL (NUMERAL_BIT1 m))``,
-                    ``&(NUMERAL n) / &(NUMERAL (NUMERAL_BIT2 m))``,
-                    ``~&(NUMERAL n) / &(NUMERAL (NUMERAL_BIT1 m))``,
-                    ``~&(NUMERAL n) / &(NUMERAL (NUMERAL_BIT2 m))``]
+val ecf_patterns = [``&(NUMERAL n) / &(NUMERAL (BIT1 m))``,
+                    ``&(NUMERAL n) / &(NUMERAL (BIT2 m))``,
+                    ``~&(NUMERAL n) / &(NUMERAL (BIT1 m))``,
+                    ``~&(NUMERAL n) / &(NUMERAL (BIT2 m))``]
 
 val simpset_convs = map (fn p => {conv = K (K elim_common_factor),
                                   key = SOME ([], p),

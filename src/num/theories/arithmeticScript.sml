@@ -18,7 +18,7 @@ open HolKernel boolLib Parse Prim_rec simpLib boolSimps metisLib;
 
 
 (* interactive use:
-   app load ["prim_recTheory", "Q"];
+   app load ["prim_recTheory", "Q", "metisLib", "boolSimps"];
 *)
 
 val _ = new_theory "arithmetic";
@@ -64,13 +64,15 @@ val _ = set_fixity "+" (Infixl 500);
  *---------------------------------------------------------------------------*)
 
 val NUMERAL_DEF = new_definition("NUMERAL_DEF", --`NUMERAL (x:num) = x`--);
-val ALT_ZERO    = new_definition("ALT_ZERO",    --`ALT_ZERO = 0`--);
-val NUMERAL_BIT1 =
-  new_definition("NUMERAL_BIT1",
-                 --`NUMERAL_BIT1 n = n + (n + SUC 0)`--);
-val NUMERAL_BIT2 =
-  new_definition("NUMERAL_BIT2",
-                 --`NUMERAL_BIT2 n = n + (n + SUC (SUC 0))`--);
+
+val ALT_ZERO  = new_definition("ALT_ZERO",    --`ZERO = 0`--);
+
+val BIT1 =
+  new_definition("BIT1",
+                 --`BIT1 n = n + (n + SUC 0)`--);
+val BIT2 =
+  new_definition("BIT2",
+                 --`BIT2 n = n + (n + SUC (SUC 0))`--);
 
 val _ = new_definition(
   GrammarSpecials.nat_elim_term,
@@ -146,14 +148,12 @@ val FUNPOW = new_recursive_definition
  ---------------------------------------------------------------------------*)
 
 val ONE = store_thm("ONE", Term `1 = SUC 0`,
-REWRITE_TAC [NUMERAL_DEF, NUMERAL_BIT1, ALT_ZERO, ADD]);
+REWRITE_TAC [NUMERAL_DEF, BIT1, ALT_ZERO, ADD]);
 
 val TWO = store_thm("TWO", Term`2 = SUC 1`,
-REWRITE_TAC
-   [NUMERAL_DEF, NUMERAL_BIT2, ONE,
-    ADD, ALT_ZERO,NUMERAL_BIT1]);
+REWRITE_TAC [NUMERAL_DEF, BIT2, ONE, ADD, ALT_ZERO,BIT1]);
 
-val NORM_0 = store_thm("NORM_0",Term `NUMERAL ALT_ZERO = 0`,
+val NORM_0 = store_thm("NORM_0",Term `NUMERAL ZERO = 0`,
   REWRITE_TAC [NUMERAL_DEF, ALT_ZERO]);
 
 fun INDUCT_TAC g = INDUCT_THEN INDUCTION ASSUME_TAC g;
@@ -1007,8 +1007,7 @@ val LESS_SUB_ADD_LESS = store_thm("LESS_SUB_ADD_LESS",
 
 val TIMES2 = store_thm("TIMES2",
    --`!n. 2 * n = n + n`--,
-   REWRITE_TAC [MULT_CLAUSES, NUMERAL_DEF, NUMERAL_BIT2, ADD_CLAUSES,
-                ALT_ZERO]);
+   REWRITE_TAC [MULT_CLAUSES, NUMERAL_DEF, BIT2, ADD_CLAUSES,ALT_ZERO]);
 
 val LESS_MULT_MONO = store_thm("LESS_MULT_MONO",
  --`!m i n. ((SUC n) * m) < ((SUC n) * i) = (m < i)`--,
@@ -1403,7 +1402,7 @@ val ODD_MULT = store_thm("ODD_MULT",
 
 val two = prove(Term
   `2 = SUC 1`,
-  REWRITE_TAC [NUMERAL_DEF, NUMERAL_BIT1, NUMERAL_BIT2] THEN
+  REWRITE_TAC [NUMERAL_DEF, BIT1, BIT2] THEN
   ONCE_REWRITE_TAC [SYM (SPEC (--`0`--) NUMERAL_DEF)] THEN
   REWRITE_TAC [ADD_CLAUSES]);
 
@@ -2511,12 +2510,12 @@ val SUC_ELIM_THM = store_thm(
 val SUC_ELIM_NUMERALS = store_thm(
   "SUC_ELIM_NUMERALS",
   ``!f g. (!n. g (SUC n) = f n (SUC n)) =
-          (!n. g (NUMERAL (NUMERAL_BIT1 n)) =
-               f (NUMERAL (NUMERAL_BIT1 n) - 1) (NUMERAL (NUMERAL_BIT1 n))) /\
-          (!n. g (NUMERAL (NUMERAL_BIT2 n)) =
-               f (NUMERAL (NUMERAL_BIT1 n)) (NUMERAL (NUMERAL_BIT2 n)))``,
+          (!n. g (NUMERAL (BIT1 n)) =
+               f (NUMERAL (BIT1 n) - 1) (NUMERAL (BIT1 n))) /\
+          (!n. g (NUMERAL (BIT2 n)) =
+               f (NUMERAL (BIT1 n)) (NUMERAL (BIT2 n)))``,
   REPEAT GEN_TAC THEN EQ_TAC THEN
-  SIMP_TAC bool_ss [NUMERAL_DEF, NUMERAL_BIT1, NUMERAL_BIT2, ALT_ZERO,
+  SIMP_TAC bool_ss [NUMERAL_DEF, BIT1, BIT2, ALT_ZERO,
                     ADD_CLAUSES, SUB_MONO_EQ, SUB_0] THEN
   REPEAT STRIP_TAC THEN
   Q.SPEC_THEN `n` STRIP_ASSUME_TAC EVEN_OR_ODD THEN
