@@ -14,7 +14,7 @@ open HolKernel basicHol90Lib Parse Psyntax
 open numTheory arithmeticTheory prim_recTheory simpLib boolSimps
 open jrh_simplelib ind_typeTheory
 
-infix F_F THEN THENC THENL |-> ORELSEC 
+infix F_F THEN THENC THENL |-> ORELSEC
 infixr -->;
 
 (* ------------------------------------------------------------------------- *)
@@ -1226,6 +1226,26 @@ in
 
 end
 
+fun canonicalise_tyvars def thm = let
+  val thm_tyvars = Term.type_vars_in_term (concl thm)
+  val utys = Union (itlist (union o map snd o snd) def [])
+  val def_tyvars = Lib.mk_set (List.filter is_vartype utys)
+  fun gen_canonicals tyvs avoids =
+    case tyvs of
+      [] => []
+    | (tyv::tyvs) => let
+        val newtyname = Lib.gen_variant Lib.tyvar_vary avoids "'a"
+      in
+        (tyv |-> mk_vartype newtyname) ::
+        gen_canonicals tyvs (newtyname :: avoids)
+      end
+  val names_to_avoid = map dest_vartype def_tyvars
+in
+  Thm.INST_TYPE
+  (gen_canonicals (Lib.set_diff thm_tyvars def_tyvars) names_to_avoid)
+  thm
+end
+
 local
   fun is_nested vs ty =
     not (is_vartype ty) andalso not (intersect (type_vars ty) vs = [])
@@ -1244,16 +1264,41 @@ local
   in
     (fst(dest_const con)^id, map type_of args)
   end
-  fun create_auxiliary_clauses nty = let
+
+  (* returns a substitution that will map elements of check_these to
+     things not in check_these or avoids0.  Won't map an element of check_these
+     away unless it is in avoids0 *)
+  fun mk_thm_avoid check_these avoids0 = let
+    fun recurse cts avoids =
+      case cts of
+        [] => []
+      | (tyv1::tyvs) =>
+          if Lib.mem tyv1 avoids then let
+            val newtyv =
+              Lib.gen_variant Lib.tyvar_vary (check_these @ avoids) "'a"
+          in
+            (mk_vartype tyv1 |-> mk_vartype newtyv) ::
+            recurse tyvs (newtyv::avoids)
+          end
+          else
+            recurse tyvs avoids
+  in
+    recurse check_these avoids0
+  end
+  fun create_auxiliary_clauses nty avoids = let
     val id = fst(dest_var(safeid_genvar Type.bool))
     val (tycon,tyargs) = dest_type nty
-    val (k,ith,rth) =
+    val (k,ith,rth0) =
       valOf (get_nestedty_info tycon)
       handle Option.Option =>
         raise HOL_ERR {origin_function = "define_type_nested",
                        origin_structure = "ind_types",
                        message = ("Can't find definition for nested type: "^
                                   tycon)}
+    val rth0_tvs = map dest_vartype (Term.type_vars_in_term (concl rth0))
+    val avoid_tyal = mk_thm_avoid rth0_tvs avoids
+    val rth = Thm.INST_TYPE avoid_tyal rth0
+
     val (evs,bod) = strip_exists(snd(strip_forall(concl rth)))
     val cjs = map (lhand o snd o strip_forall) (conjuncts bod)
     val rtys = map (hd o snd o dest_type o type_of) evs
@@ -1272,6 +1317,7 @@ local
     val n = length(itlist (curry op@) (map (map fst o snd) def) [])
     val newtys = map fst def
     val utys = Union (itlist (union o map snd o snd) def [])
+    val utyvars = Lib.mk_set (List.filter is_vartype utys)
     val rectys = filter (is_nested newtys) utys
   in
     if rectys = [] then let
@@ -1280,7 +1326,8 @@ local
       (n,th1,th2)
     end else let
       val nty = hd rectys
-      val (k,tyal,ncls,ith,rth) = create_auxiliary_clauses nty
+      val (k,tyal,ncls,ith,rth) =
+        create_auxiliary_clauses nty (map dest_vartype utyvars)
       val cls = map (modify_clause tyal) def @ ncls
       val (_,ith1,rth1) = define_type_nested cls
       val xnewtys =
@@ -1356,10 +1403,8 @@ in
     val ith1 = SUBS cdefs ith0
     and rth1 = GENL tavs (SUBS cdefs (SPECL tavs rth0))
     val retval = (p,ith1,rth1)
-    val newentries = map (fn s => (String.extract(dest_vartype s, 1, NONE),
-                                   retval)) newtys
   in
-    (fn (a,b,c) => (munge_ind_thm b,c)) retval
+    (fn (a,b,c) => (munge_ind_thm b, canonicalise_tyvars def c)) retval
   end
 end
 
