@@ -107,6 +107,10 @@ val new_definition_hook = ref
        if null V then th 
        else raise ERR "new_definition" "bare post-processing phase"));
 
+val new_specification_hook = ref 
+ (fn _ => raise ERR "new_specification" 
+            "introduced constants have not been added to the parser")
+
 (*---------------------------------------------------------------------------*)
 (*                DEFINITION PRINCIPLES                                      *)
 (*---------------------------------------------------------------------------*)
@@ -161,9 +165,11 @@ fun new_specification (name, cnames, th) =
      val checked   = List.app (vOK (type_vars_in_term body)) V
      fun addc v s  = v |-> bind s (snd(dest_var v))
      val (wit,def) = mk_def (THEOREM th, subst (map2 addc V cnames) body)
+     val final     =  Theory.store_definition (name, cnames, wit, def)
  in 
-    Theory.store_definition (name, cnames, wit, def)
+    !new_specification_hook cnames   (* tell parser about the new names *)
+  ; final
  end
  handle e => raise (wrap_exn "Definition" "new_specification" e);
 
-end; (* Definition *)
+end (* Definition *)

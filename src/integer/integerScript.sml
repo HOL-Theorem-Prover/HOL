@@ -1709,10 +1709,7 @@ val int_div_exists0 = prove(
 val int_div_exists =
     CONV_RULE (BINDER_CONV SKOLEM_CONV THENC SKOLEM_CONV) int_div_exists0
 
-val int_div = new_specification {
-  consts = [{const_name = "int_div", fixity = Prefix}],
-  name = "int_div",
-  sat_thm = int_div_exists};
+val int_div = new_specification ("int_div", ["int_div"], int_div_exists);
 
 val _ = add_infix("/", 600, HOLgrammars.LEFT);
 val _ = overload_on("/", Term`int_div`)
@@ -1793,10 +1790,7 @@ val int_mod_exists =
     CONV_RULE (BINDER_CONV SKOLEM_CONV THENC SKOLEM_CONV) int_mod_exists0
 
 
-val int_mod = new_specification {
-  consts = [{const_name = "int_mod", fixity = Prefix}],
-  name = "int_mod",
-  sat_thm = int_mod_exists};
+val int_mod = new_specification ("int_mod",["int_mod"],int_mod_exists);
 
 val _ = add_infix("%", 650, HOLgrammars.LEFT);
 val _ = overload_on("%", Term`int_mod`);
@@ -2259,10 +2253,7 @@ val int_quot_exists =
     CONV_RULE (BINDER_CONV SKOLEM_CONV THENC SKOLEM_CONV) int_quot_exists0
 
 
-val int_quot = new_specification {
-  consts = [{const_name = "int_quot", fixity = Prefix}],
-  name = "int_quot",
-  sat_thm = int_quot_exists};
+val int_quot = new_specification ("int_quot",["int_quot"],int_quot_exists);
 
 val _ = add_infix("quot", 600, LEFT)
 val _ = overload_on("quot", ``int_quot``);
@@ -2388,10 +2379,7 @@ val int_rem_exists0 = prove(
 val int_rem_exists =
     CONV_RULE (BINDER_CONV SKOLEM_CONV THENC SKOLEM_CONV) int_rem_exists0
 
-val int_rem = new_specification {
-  consts = [{const_name = "int_rem", fixity = Prefix}],
-  name = "int_rem",
-  sat_thm = int_rem_exists};
+val int_rem = new_specification ("int_rem",["int_rem"],int_rem_exists);
 
 val _ = add_infix("rem", 650, LEFT);
 val _ = overload_on("rem", ``int_rem``);

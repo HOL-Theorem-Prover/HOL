@@ -23,29 +23,29 @@ val decode_prod = Define
        case p1 l 
         of NONE -> NONE
         || SOME(x:'a,l1:bool list) ->
-            (case p2 l1
+             case p2 l1
               of NONE -> NONE
-              || SOME(y:'b,l2:bool list) -> SOME((x,y),l2))`;
+              || SOME(y:'b,l2:bool list) -> SOME((x,y),l2)`;
 
 val decode_sum = Define
   `(decode_sum p1 p2   []   = NONE) /\
    (decode_sum p1 p2 (T::t) = 
-        (case p1 t
+         case p1 t
           of NONE -> NONE
-          || SOME(x:'a,rst) -> SOME(INL x,rst))) /\
+          || SOME(x:'a,rst) -> SOME(INL x,rst)) /\
    (decode_sum p1 p2 (F::t) = 
-         (case p2 t
-           of NONE -> NONE
-           || SOME(y:'b,rst:bool list) -> SOME(INR y,rst)))`;
+         case p2 t
+          of NONE -> NONE
+          || SOME(y:'b,rst:bool list) -> SOME(INR y,rst))`;
    
 val decode_num = Define
-  `(decode_num (T::T::t) = SOME(0:num,t))                         /\
-   (decode_num (T::F::t) = (case decode_num t
-                             of NONE -> NONE
-                             || SOME(v,t') -> SOME(2*v + 1, t'))) /\
-   (decode_num (F::t)    = (case decode_num t
-                             of NONE -> NONE
-                             || SOME(v,t') -> SOME(2*v + 2, t'))) /\
+  `(decode_num (T::T::t) = SOME(0:num,t))                       /\
+   (decode_num (T::F::t) = case decode_num t
+                            of NONE -> NONE
+                            || SOME(v,t') -> SOME(2*v + 1, t')) /\
+   (decode_num (F::t)    = case decode_num t
+                            of NONE -> NONE
+                            || SOME(v,t') -> SOME(2*v + 2, t')) /\
    (decode_num  _____    = NONE)`;
 
 val decode_num_ind = fetch "-" "decode_num_ind";
@@ -64,15 +64,15 @@ val decode_option = Define
 (*---------------------------------------------------------------------------*)
 
 val decode_list = TotalDefn.DefineSchema
-  `(decode_list [] = NONE)            /\
+  `(decode_list []     = NONE)        /\
    (decode_list (F::t) = SOME([],t))  /\  
    (decode_list (T::t) = 
       case f t 
        of NONE -> NONE
        || SOME(h,t') ->
-           (case decode_list t'
-             of NONE -> NONE
-             || SOME(tl, t'') -> SOME(h::tl, t'')))`;
+           case decode_list t'
+            of NONE -> NONE
+            || SOME(tl, t'') -> SOME(h::tl, t''))`;
    
 
 (*---------------------------------------------------------------------------*)
@@ -135,7 +135,55 @@ val wf_decode_unit = Q.prove
   (`wf_parser decode_unit`,
    RW_TAC list_ss [wf_parser,decode_unit]);
 
-val wf_decode_prod = Q.prove
+(*---------------------------------------------------------------------------*)
+(* Multiple ways of decomposing with products                                *)
+(*---------------------------------------------------------------------------*)
+
+val wf_decode_prod_A = Q.prove
+(`!f g. wf_parser f /\ swf_parser g ==> swf_parser (decode_prod f g)`,
+   REWRITE_TAC [wf_parser,swf_parser]
+     THEN REPEAT GEN_TAC THEN STRIP_TAC 
+     THEN Cases_on `l` 
+     THEN RW_TAC list_ss [decode_prod] 
+     THEN POP_ASSUM MP_TAC
+     THENL [Cases_on `f []`, Cases_on `f (h::t)`]
+     THEN RW_TAC std_ss []
+     THEN Cases_on `x'`
+     THENL [ALL_TAC, POP_ASSUM MP_TAC]
+     THEN RW_TAC std_ss []
+     THEN Cases_on `g r`
+     THEN RW_TAC std_ss []
+     THEN TRY (Q.PAT_ASSUM `SOME X = Y` MP_TAC)
+     THEN RW_TAC std_ss []
+     THEN Cases_on `x'`
+     THENL [ALL_TAC,POP_ASSUM MP_TAC]
+     THEN RW_TAC std_ss []
+     THEN PROVE_TAC [LENGTH,LESS_EQ_0,LESS_EQ_TRANS,NOT_LESS_0,
+                     DECIDE (Term`x < y ==> y <= z ==> x<z`)]);
+
+val wf_decode_prod_B = Q.prove
+(`!f g. swf_parser f /\ wf_parser g ==> swf_parser (decode_prod f g)`,
+   REWRITE_TAC [wf_parser,swf_parser]
+     THEN REPEAT GEN_TAC THEN STRIP_TAC 
+     THEN Cases_on `l` 
+     THEN RW_TAC list_ss [decode_prod] 
+     THEN POP_ASSUM MP_TAC
+     THENL [Cases_on `f []`, Cases_on `f (h::t)`]
+     THEN RW_TAC std_ss []
+     THEN Cases_on `x'`
+     THENL [ALL_TAC, POP_ASSUM MP_TAC]
+     THEN RW_TAC std_ss []
+     THENL [ALL_TAC, POP_ASSUM MP_TAC]
+     THEN Cases_on `g r`
+     THEN RW_TAC std_ss []
+     THEN Cases_on `x'`
+     THEN TRY (Q.PAT_ASSUM `SOME X = Y` MP_TAC)
+     THEN RW_TAC std_ss []
+     THEN PROVE_TAC [LENGTH,LESS_EQ_0,LESS_EQ_TRANS,NOT_LESS_0,
+                     DECIDE (Term`x < y ==> y <= z ==> x<z`),
+                     DECIDE (Term`x <= y ==> y < z ==> x<z`)]);
+
+val wf_decode_prod_C = Q.prove
   (`!f g. wf_parser f /\ wf_parser g ==> wf_parser (decode_prod f g)`,
    REWRITE_TAC [wf_parser]
      THEN REPEAT GEN_TAC THEN STRIP_TAC 
@@ -154,6 +202,15 @@ val wf_decode_prod = Q.prove
      THEN NTAC 2 (POP_ASSUM MP_TAC)
      THEN RW_TAC std_ss []
      THEN PROVE_TAC [LENGTH,LESS_EQ_0,LESS_EQ_TRANS]);
+
+
+val wf_decode_prod = Q.prove
+(`(!f g. wf_parser f /\ swf_parser g ==> swf_parser (decode_prod f g)) /\
+  (!f g. swf_parser f /\ wf_parser g ==> swf_parser (decode_prod f g)) /\
+  (!f g. wf_parser f /\ wf_parser g ==> wf_parser (decode_prod f g)) /\
+  (!f g. swf_parser f /\ swf_parser g ==> swf_parser (decode_prod f g))`,
+ PROVE_TAC 
+   [wf_decode_prod_A,wf_decode_prod_B,wf_decode_prod_C, swf_imp_wf_parser]);
 
 val swf_decode_sum = Q.prove
   (`!f g. wf_parser f /\ wf_parser g ==> swf_parser (decode_sum f g)`,
@@ -400,7 +457,46 @@ val (decode_utree_def, decode_utree_ind) = Defn.tprove (Hol_defn
         || SOME(_,l') -> (* N.B. bug in cong. rewriter when _ is () *)
              case decode_list decode_utree l'
               of NONE -> NONE
-              || SOME(tl,l'') -> SOME(uNode n tl, l'')`,
+              || SOME(tl,l'') -> SOME(uNode () tl, l'')`,
  WF_REL_TAC `measure LENGTH` THEN RW_TAC std_ss [] THEN
+ PROVE_TAC [LESS_LESS_EQ_TRANS,REWRITE_RULE [wf_parser] wf_decode_unit]);
+
+
+(*---------------------------------------------------------------------------*)
+(* Datatype of polymorphic n-ary trees.                                      *)
+(*---------------------------------------------------------------------------*)
+
+Hol_datatype `ptree = pNode of 'a => ptree list`;
+
+val (_,ptree_size_def) = TypeBase.size_of "ptree";
+
+val (encode_ptree_def, encode_ptree_ind) = Defn.tprove (Hol_defn 
+    "encode_ptree"
+    `encode_ptree f (pNode x tl) = 
+        APPEND (f x) (list_to_bool (encode_ptree f) tl)`,
+ WF_REL_TAC `measure (ptree_size (K 0) o SND)`
+   THEN Induct_on `tl`
+   THEN RW_TAC list_ss [ptree_size_def]
+   THENL [ALL_TAC, RES_THEN (MP_TAC o SPEC_ALL)]
+   THEN numLib.ARITH_TAC);
+
+val encode_ptree_def' = CONV_RULE (DEPTH_CONV ETA_CONV) encode_ptree_def;
+
+(*---------------------------------------------------------------------------*)
+(* Now decoding to ptree                                                     *)
+(*---------------------------------------------------------------------------*)
+
+val defn = Hol_defn
+    "decode_ptree"
+    `decode_ptree l = 
+       case f l
+        of NONE -> NONE
+        || SOME(x,l') -> 
+             case decode_list decode_ptree l'
+              of NONE -> NONE
+              || SOME(tl,l'') -> SOME(pNode x tl, l'')`;
+
+val (decode_ptree_def, decode_ptree_ind) = Defn.tprove (,
+ WF_REL_TAC `measure (LENGTH o SND)` THEN RW_TAC std_ss [] THEN
  PROVE_TAC [LESS_LESS_EQ_TRANS,REWRITE_RULE [wf_parser] wf_decode_unit]);
 

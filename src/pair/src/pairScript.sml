@@ -19,6 +19,7 @@ struct
  app load ["Q", "relationTheory", "mesonLib"];
  open Parse relationTheory mesonLib;
 *)
+
 open HolKernel Parse boolLib relationTheory mesonLib Rsyntax;
 
 val _ = new_theory "pair";
@@ -128,12 +129,9 @@ val ABS_PAIR_THM = Q.store_thm
  *        SND  = |- !x y. SND (x,y) = y                                      *
  *---------------------------------------------------------------------------*)
 
-val PAIR =
-  new_specification{name="PAIR",
-     sat_thm=Ho_Rewrite.REWRITE_RULE[SKOLEM_THM] (GSYM ABS_PAIR_THM),
-     consts=[{const_name="FST", fixity=Parse.Prefix},
-             {const_name="SND", fixity=Parse.Prefix}]};
-
+val PAIR = Definition.new_specification
+  ("PAIR", ["FST","SND"],
+   Ho_Rewrite.REWRITE_RULE[SKOLEM_THM] (GSYM ABS_PAIR_THM));
 
 local val th1 = REWRITE_RULE [PAIR_EQ] (SPEC (Term`(x,y):'a#'b`) PAIR)
       val (th2,th3) = (CONJUNCT1 th1, CONJUNCT2 th1)

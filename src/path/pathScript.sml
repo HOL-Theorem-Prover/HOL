@@ -98,9 +98,8 @@ val finite_thm = store_thm(
 
 val last_thm =
     new_specification
-    { consts = [{const_name = "last", fixity = Prefix}],
-      name = "last_thm",
-      sat_thm = prove(
+      ("last_thm", ["last"],
+       prove(
         ``?f. (!x. f (stopped_at x) = x) /\
               (!x r p. f (pcons x r p) = f p)``,
         Q.EXISTS_TAC `\p. if finite p then
@@ -111,7 +110,7 @@ val last_thm =
                    toList_THM, LFINITE_THM] THEN
         IMP_RES_TAC LFINITE_toList THEN
         `?h t. SND (fromPath p) = LCONS h t` by PROVE_TAC [llist_CASES] THEN
-        FULL_SIMP_TAC (srw_ss()) [toList_THM]) };
+        FULL_SIMP_TAC (srw_ss()) [toList_THM]));
 
 val path_bisimulation = store_thm(
   "path_bisimulation",
@@ -209,22 +208,20 @@ val pmap_thm = store_thm(
 
 val tail_def =
     new_specification
-    { consts = [{const_name = "tail", fixity = Prefix}],
-      name = "tail_def",
-      sat_thm = prove(``?f. !x r p. f (pcons x r p) = p``,
-                      Q.EXISTS_TAC `\p. if ?x r q. p = pcons x r q then
-                                          @q. ?x r. p = pcons x r q
-                                        else ARB` THEN
-                      SRW_TAC [][]) };
+      ("tail_def", ["tail"],
+       prove(``?f. !x r p. f (pcons x r p) = p``,
+             Q.EXISTS_TAC `\p. if ?x r q. p = pcons x r q then
+                                @q. ?x r. p = pcons x r q
+                               else ARB` THEN
+                      SRW_TAC [][]));
 
 val first_label_def =
     new_specification
-    { consts = [{const_name = "first_label", fixity = Prefix}],
-      name = "first_label_def",
-      sat_thm = prove(``?f. !x r p. f (pcons x r p) = r``,
+      ("first_label_def",["first_label"],
+       prove(``?f. !x r p. f (pcons x r p) = r``,
                       Q.EXISTS_TAC `\p. if ?x r q. p = pcons x r q then
                                           @r. ?x q. p = pcons x r q
-                                        else ARB` THEN SRW_TAC [][])};
+                                        else ARB` THEN SRW_TAC [][]));
 
 
 val length_def =
@@ -601,9 +598,7 @@ val chop_narrows_pconcat = store_thm(
 
 val labels_def =
     new_specification
-    { consts = [{const_name = "labels", fixity = Prefix}],
-      name = "labels_def",
-      sat_thm =
+     ("labels_def", ["labels"],
       prove(``?f. (!x. f (stopped_at x) = LNIL) /\
                   (!x r p. f (pcons x r p) = LCONS r (f p))``,
             STRIP_ASSUME_TAC
@@ -612,7 +607,7 @@ val labels_def =
                        llist_Axiom) THEN
             Q.EXISTS_TAC `g` THEN
             SRW_TAC [][LHDTL_EQ_SOME, GSYM LHD_EQ_NONE,
-                       combinTheory.o_THM, first_label_def, tail_def])};
+                       combinTheory.o_THM, first_label_def, tail_def]));
 
 
 val firstP_at_unique = store_thm(
@@ -638,9 +633,7 @@ val is_stopped_thm = store_thm(
 
 val filter_def =
     new_specification
-    { consts = [{const_name = "filter", fixity = Prefix}],
-      name = "filter_def",
-      sat_thm =
+     ("filter_def", ["filter"],
       prove(``?f. !P.
                     (!x. P x ==> (f P (stopped_at x) = stopped_at x)) /\
                     (!x r p.
@@ -685,7 +678,7 @@ val filter_def =
                         DECIDE ``0 < n /\ (n - 1 = m) = (n = m + 1)``]) THEN
                 ASM_SIMP_TAC (srw_ss())[last_thm, drop_def, tail_def]
               ]
-            ])};
+            ]));
 
 
 val filter_eq_stopped = prove(

@@ -459,8 +459,6 @@ fun prim_wfrec_definition thy name {R, functional} =
  handle HOL_ERR _ => raise ERR"prim_wfrec_definition" "";
 
 
-
-
 (*--------------------------------------------------------------------------*
  * This is a wrapper for "prim_wfrec_definition": it builds a functional,   *
  * calls "prim_wfrec_definition", then specializes the result. This gives   *

@@ -206,10 +206,10 @@ fun CONGR th =
    end;
 
 
-abstype simpls = RW of {thms :thm list list,
-                        congs :thm list list,
-                        rw_net:(term -> choice) Net.net,
-                        cong_net :(term -> thm) Net.net}
+abstype simpls = RW of {thms     : thm list list,
+                        congs    : thm list list,
+                        rw_net   : (term -> choice) Net.net,
+                        cong_net : (term -> thm) Net.net}
 with
 val empty_simpls = RW{thms = [[]],  congs = [[]],
                       rw_net = Net.empty,
@@ -455,7 +455,6 @@ fun vstrl_variants away0 vstrl =
           end
   end;
 
-
 fun thml_fvs thl =
    Lib.op_U aconv (map (fn th => let val (asl,c) = dest_thm th
                                  in free_varsl (c::asl)
@@ -469,30 +468,40 @@ fun dest_combn tm 0 = (tm,[])
      end;
 
 
-fun add_cntxt ADD = add_rws
-  | add_cntxt DONT_ADD = Lib.K;
+fun add_cntxt ADD = add_rws | add_cntxt DONT_ADD = Lib.K;
+
+(*---------------------------------------------------------------------------*)
+(* Handler for simple cong. rule antecedents: ones without quantification.   *)
+(* Most antecedents will be of the form "M = N", but we also allow, after    *)
+(* all other antecedents, non-equality formulas. These are simply assumed.   *)
+(* I call this "congruence rule loading", since the rules are then used      *)
+(* both to find instantiations for existential variables, and also to add    *)
+(* necessary extra termination conditions. See the work on bool list         *)
+(* decoders for an example. Probably this idea can be generalized more.      *)
+(*---------------------------------------------------------------------------*)
 
 fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
- let val (L,{lhs,rhs}) = (I##dest_eq)(strip_imp ant)
-     val outcome =
-     if (aconv lhs rhs) then NO_CHANGE (L,lhs)
-     else let val cps' =
-            case L of []  => cps
-                   |  _   => {context = (map ASSUME L @ cntxt,b),
-                              prover  = prover,
-                              simpls  = add_cntxt b simpls (map ASSUME L)}
-          in CHANGE(cnv cps' lhs) handle HOL_ERR _ => NO_CHANGE (L,lhs)
-                                       | UNCAHNGED => NO_CHANGE (L,lhs)
-          end
-  in case outcome
-       of (CHANGE th) => let val Mnew = boolSyntax.rhs(concl th)
+ case total ((I##dest_eq) o strip_imp) ant
+  of SOME (L,{lhs,rhs}) =>
+     let val outcome =
+         if aconv lhs rhs then NO_CHANGE (L,lhs)
+         else let val cps' =
+                case L 
+                 of []  => cps
+                  |  _   => {context = (map ASSUME L @ cntxt,b),
+                             prover  = prover,
+                             simpls  = add_cntxt b simpls (map ASSUME L)}
+              in CHANGE(cnv cps' lhs) handle HOL_ERR _ => NO_CHANGE (L,lhs)
+                                           | UNCHANGED => NO_CHANGE (L,lhs)
+              end
+     in case outcome
+         of CHANGE th => let val Mnew = boolSyntax.rhs(concl th)
                          in (CHANGE (itlist DISCH L th),
                              map (subst [rhs |-> Mnew]) rst)
                          end
-        |  _ => (outcome, map (subst [rhs |-> lhs]) rst)
-  end;
-
-
+          |  _ => (outcome, map (subst [rhs |-> lhs]) rst)
+     end
+  | NONE => (CHANGE(ASSUME ant), rst)    (* Not an equality, so just assume *)
 
 fun complex cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
 let val ant_frees = free_vars ant

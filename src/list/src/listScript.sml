@@ -221,7 +221,7 @@ val MAP2 =
       THEN ASM_REWRITE_TAC [HD,TL]
       end)
   in
-      new_specification{
+      Rsyntax.new_specification{
         name = "MAP2", sat_thm = lemma,
         consts = [{const_name="MAP2", fixity=Prefix}]
       }
@@ -704,7 +704,7 @@ val ZIP =
     THEN ASM_REWRITE_TAC[pairTheory.UNCURRY_DEF,HD,TL]
      end)
     in
-    new_specification
+    Rsyntax.new_specification
         {consts = [{const_name = "ZIP", fixity = Prefix}],
          name = "ZIP",
          sat_thm = lemma

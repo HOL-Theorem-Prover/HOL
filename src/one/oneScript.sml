@@ -1,6 +1,6 @@
 (* ===================================================================== *)
 (* FILE          : oneScript.sml                                         *)
-(* DESCRIPTION   : Creates the theory `one.th` containing the logical    *)
+(* DESCRIPTION   : Creates the theory "one" containing the logical       *)
 (*                 definition of the type :one, the type with only one   *)
 (*                 value.  The type :one is defined and the following    *)
 (*                 `axiomatization` is proven from the definition of the *)
@@ -26,9 +26,6 @@ struct
 
 open Lib HolKernel Parse boolLib;
 
-type thm = Thm.thm;
-infix THEN THENL;
-
 val _ = new_theory "one";
 
 (* ---------------------------------------------------------------------*)
@@ -47,8 +44,9 @@ val EXISTS_ONE_REP =
 (* Use the type definition mechanism to introduce the new type.		*)
 (* The theorem returned is:   |- ?rep. TYPE_DEFINITION (\b.b) rep	*)
 
-val one_TY_DEF = REWRITE_RULE [boolTheory.TYPE_DEFINITION_THM]
-       (new_type_definition("one", EXISTS_ONE_REP));
+val one_TY_DEF = 
+ REWRITE_RULE [boolTheory.TYPE_DEFINITION_THM]
+    (new_type_definition("one", EXISTS_ONE_REP));
 
 (* ---------------------------------------------------------------------*)
 (* The proof of the `axiom` for type :one follows.			*)
@@ -99,6 +97,13 @@ val one_Axiom = store_thm("one_Axiom",
      ONCE_REWRITE_TAC [one] THEN
      ASM_REWRITE_TAC[]]);
 
+val one_prim_rec = store_thm
+ ("one_prim_rec",
+  Term`!e:'a. ?fn. fn one = e`,
+  ACCEPT_TAC
+    (GEN_ALL (CONJUNCT1 (SPEC_ALL 
+      (CONV_RULE (DEPTH_CONV EXISTS_UNIQUE_CONV) one_Axiom)))));
+  
 (* ----------------------------------------------------------------------
     Set up the one value to print as (), by analogy with SML's unit
    ---------------------------------------------------------------------- *)
@@ -119,6 +124,64 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
    wouldn't matter if it did. *)
 
 val _ = overload_on ("()", ``one``);
+
+
+(*---------------------------------------------------------------------------
+    Define the case constant
+ ---------------------------------------------------------------------------*)
+
+val one_case_def =
+ new_recursive_definition
+   {def = Term `!(u:'a). case_one u one = u`,
+    rec_axiom = one_prim_rec, name = "one_case_def"};
+
+(* val one_size_def =
+  new_definition("one_size_def", Term `one_size (v:one) = 0`);
+*)
+
+val one_induction = Q.store_thm
+("one_induction",
+ `!P:one->bool. P one ==> !x. P x`,
+ GEN_TAC THEN DISCH_TAC THEN GEN_TAC 
+ THEN ONCE_ASM_REWRITE_TAC[one] THEN FIRST_ASSUM ACCEPT_TAC);
+
+
+(*
+TypeBasePure.gen_tyinfo
+    {ax=one_prim_rec,
+     ind=one_induction,
+     case_defs = one_case_def};
+!M M' x0.
+         (M = M') /\ ((M' = a) ==> (x0 = x0')) ==>
+         ((case M of a -> x0) = case M' of a -> x0')
+*)
+
+val one_cases = prove_cases_thm one_induction;
+
+(*
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME(fn ppstrm =>
+   let val S = PP.add_string ppstrm
+       fun NL() = PP.add_newline ppstrm
+   in
+      S "val _ = TypeBase.write";                           NL();
+      S "  (TypeBasePure.mk_tyinfo";                        NL();
+      S "     {ax=TypeBasePure.ORIG one_prim_rec,";            NL();
+      S "      case_def=one_case_def,";                     NL();
+      S "      case_cong=one_case_cong,";                   NL();
+      S "      induction=TypeBasePure.ORIG one_INDUCT,";    NL();
+      S "      nchotomy=one_CASES,";                        NL();
+      S "      size=NONE,";                                 NL();
+      S "      boolify=NONE,";                              NL();
+      S "      one_one=SOME INR_INL_11,";                   NL();
+      S "      distinct=SOME one_distinct});";              NL();
+      NL();
+      S "val _ = let open computeLib";                      NL();
+      S "        in add_thms [one_case_def]";              NL();
+      S "        end;"
+   end)};
+*)
 
 val _ = export_theory();
 

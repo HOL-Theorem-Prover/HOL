@@ -2,6 +2,7 @@ signature Rsyntax =
 sig
   type hol_type = Type.hol_type
   type term = Term.term
+  type thm = Thm.thm
 
   val mk_type       : {Args:hol_type list, Tyop:string} -> hol_type
   val mk_var        : {Name:string, Ty:hol_type} -> term 
@@ -41,7 +42,10 @@ sig
   val new_constant  : {Name:string, Ty:hol_type} -> unit
   val new_infix     : {Name:string, Prec:int, Ty:hol_type} -> unit
   val new_binder    : {Name:string, Ty:hol_type} -> unit
-
+  val new_specification : {name    : string, 
+                           sat_thm : thm,
+                           consts  : {const_name : string,
+                                      fixity : Parse.fixity} list} -> thm
   datatype lambda 
      = VAR   of {Name:string, Ty:hol_type}
      | CONST of {Name:string, Thy:string, Ty:hol_type}

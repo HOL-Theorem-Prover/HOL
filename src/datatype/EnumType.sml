@@ -295,7 +295,7 @@ fun define_case initiality =
                      (EXISTS(exists_tm,gfun) gclause_thms)
      val case_const_name = tyname^"_case"
  in
-    new_specification
+    Rsyntax.new_specification
       {consts=[{const_name=case_const_name,fixity=Prefix}],
        name = case_const_name^"_def",
        sat_thm = gexists}

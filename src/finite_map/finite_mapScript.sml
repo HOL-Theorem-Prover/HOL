@@ -38,6 +38,7 @@ local open pred_setLib listTheory in end
 val _ = new_theory "finite_map";
 
 val _ = set_fixity "'" (Infixl 2000);
+
 (* same level as function application, meaning that
 
     * SOME (f ' x)    prints as   SOME (f ' x)
@@ -595,11 +596,9 @@ val res_lemma = Q.prove
    ]
  ]);
 
-val DRESTRICT_DEF =
-  new_specification
-    {name = "DRESTRICT_DEF",
-     consts = [{fixity = Prefix, const_name="DRESTRICT"}],
-     sat_thm = CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) res_lemma};
+val DRESTRICT_DEF = new_specification
+  ("DRESTRICT_DEF", ["DRESTRICT"],
+   CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) res_lemma);
 
 
 val DRESTRICT_FEMPTY = Q.store_thm
@@ -698,11 +697,9 @@ val union_lemma = Q.prove
    PROVE_TAC []
  ]);
 
-val FUNION_DEF =
-  new_specification
-     {name = "FUNION_DEF",
-      consts = [{fixity = Prefix, const_name = "FUNION"}],
-      sat_thm = CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) union_lemma}
+val FUNION_DEF = new_specification
+  ("FUNION_DEF", ["FUNION"],
+   CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) union_lemma);
 
 
 val FUNION_FEMPTY_1 = Q.store_thm
@@ -795,11 +792,11 @@ val f_o_f_lemma = Q.prove
    ]
  ]);
 
-val f_o_f_DEF =
-  new_specification
-    {name = "f_o_f_DEF",
-     consts = [{fixity = Infixl 500, const_name = "f_o_f"}],
-     sat_thm = CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) f_o_f_lemma};
+val f_o_f_DEF = new_specification
+  ("f_o_f_DEF", ["f_o_f"],
+   CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) f_o_f_lemma);
+
+val _ = set_fixity "f_o_f" (Infixl 500);
 
 val f_o_f_FEMPTY_1 = Q.store_thm
 ("f_o_f_FEMPTY_1",
@@ -822,12 +819,11 @@ val o_f_lemma = Q.prove
    SRW_TAC [][FDOM_FUPDATE, FAPPLY_FUPDATE_THM]
  ]);
 
-val o_f_DEF =
-   new_specification
-     {name = "o_f_DEF",
-      consts = [{fixity = Infixl 500, const_name = "o_f"}],
-      sat_thm = CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) o_f_lemma};
+val o_f_DEF = new_specification
+  ("o_f_DEF", ["o_f"],
+   CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) o_f_lemma);
 
+val _ = set_fixity "o_f" (Infixl 500);
 
 val o_f_FDOM = Q.store_thm
 ("o_f_FDOM",
@@ -892,11 +888,9 @@ val ranres_lemma = Q.prove
    ]
  ]);
 
-val RRESTRICT_DEF =
-   new_specification
-     {name = "RRESTRICT_DEF",
-      consts = [{fixity = Prefix, const_name = "RRESTRICT"}],
-      sat_thm = CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) ranres_lemma};
+val RRESTRICT_DEF = new_specification
+  ("RRESTRICT_DEF", ["RRESTRICT"],
+   CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) ranres_lemma);
 
 val RRESTRICT_FEMPTY = Q.store_thm
 ("RRESTRICT_FEMPTY",
@@ -934,13 +928,10 @@ val ffmap_lemma = Q.prove
    ]
  ]);
 
-val FUN_FMAP_DEF =
-   new_specification
-     {name = "FUN_FMAP_DEF",
-      consts = [{fixity = Prefix, const_name = "FUN_FMAP"}],
-      sat_thm = CONV_RULE
-                  (ONCE_DEPTH_CONV RIGHT_IMP_EXISTS_CONV THENC
-                   ONCE_DEPTH_CONV SKOLEM_CONV) ffmap_lemma};
+val FUN_FMAP_DEF = new_specification
+  ("FUN_FMAP_DEF", ["FUN_FMAP"],
+   CONV_RULE (ONCE_DEPTH_CONV RIGHT_IMP_EXISTS_CONV THENC
+              ONCE_DEPTH_CONV SKOLEM_CONV) ffmap_lemma);
 
 
 (*---------------------------------------------------------------------------

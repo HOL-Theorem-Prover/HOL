@@ -18,7 +18,7 @@ struct
 open HolKernel boolLib Parse Prim_rec;
 
 (* interactive use:
-   app load ["prim_recTheory","primWFTheory", "QLib"];
+   app load ["prim_recTheory", "Q"];
 *)
 
 val _ = new_theory "arithmetic";
@@ -1828,12 +1828,10 @@ val MOD_DIV_exist = prove
             Now define MOD and DIV by a constant specification.
  ---------------------------------------------------------------------------*)
 
-val DIVISION = new_specification
-   {name = "DIVISION",
-    consts = [{fixity = Infixl 650, const_name = "MOD"},
-              {fixity = Infixl 600, const_name = "DIV"}],
-    sat_thm = MOD_DIV_exist};
+val DIVISION = new_specification ("DIVISION", ["MOD","DIV"], MOD_DIV_exist);
 
+val _ = set_fixity "MOD" (Infixl 650);
+val _ = set_fixity "DIV" (Infixl 600);
 
 (* ---------------------------------------------------------------------*)
 (* Properties of MOD and DIV that don't depend on uniqueness.           *)
@@ -1842,12 +1840,9 @@ val DIVISION = new_specification
 val MOD_ONE = store_thm("MOD_ONE",
 --`!k. k MOD (SUC 0) = 0`--,
    STRIP_TAC THEN
-   let val th = REWRITE_RULE [LESS_SUC_REFL]
-                             (SPEC (--`SUC 0`--) DIVISION)
-   in
-   MP_TAC (CONJUNCT2 (SPEC (--`k:num`--) th)) THEN
-   REWRITE_TAC [LESS_THM,NOT_LESS_0]
-   end);
+   MP_TAC (CONJUNCT2 (SPEC (--`k:num`--) 
+            (REWRITE_RULE [LESS_SUC_REFL] (SPEC (--`SUC 0`--) DIVISION)))) THEN
+   REWRITE_TAC [LESS_THM,NOT_LESS_0]);
 
 val DIV_LESS_EQ = store_thm("DIV_LESS_EQ",
  --`!n. 0<n ==> !k. (k DIV n) <= k`--,

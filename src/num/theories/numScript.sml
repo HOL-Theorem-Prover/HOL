@@ -11,11 +11,9 @@ val _ = new_theory "num";
  * Define successor `SUC_REP:ind->ind` on ind.
  *---------------------------------------------------------------------------*)
 
-val SUC_REP_DEF = new_specification {
-  name = "SUC_REP_DEF",
-  sat_thm = boolTheory.INFINITY_AX,
-  consts = [{fixity = Prefix, const_name = "SUC_REP"}]
-};
+val SUC_REP_DEF = new_specification 
+   ("SUC_REP_DEF",["SUC_REP"], boolTheory.INFINITY_AX);
+
 
 val ZERO_REP_EXISTS = prove(
   Term`?z. !y. ~(z = SUC_REP y)`,
@@ -29,11 +27,9 @@ val ZERO_REP_EXISTS = prove(
  * `ZERO_REP:ind` represents `0:num`
  *---------------------------------------------------------------------------*)
 
-val ZERO_REP_DEF = new_specification{
-  name = "ZERO_REP_DEF",
-  sat_thm = ZERO_REP_EXISTS,
-  consts = [{fixity = Prefix, const_name = "ZERO_REP"}]
-};
+val ZERO_REP_DEF = new_specification
+  ("ZERO_REP_DEF",["ZERO_REP"], ZERO_REP_EXISTS);
+
 
 (*---------------------------------------------------------------------------*)
 (* `IS_NUM:ind->bool` defines the subset of `:ind` used to represent 	     *)

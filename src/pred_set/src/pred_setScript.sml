@@ -104,11 +104,8 @@ val GSPEC_DEF_LEMMA =
 (*   GSPECIFICATION = |- !f v. v IN (GSPEC f) = (?x. v,T = f x)		 *)
 (* --------------------------------------------------------------------- *)
 
-val GSPECIFICATION =
-    new_specification
-      {name = "GSPECIFICATION",
-      sat_thm = GSPEC_DEF_LEMMA,
-      consts = [{const_name = "GSPEC", fixity = Prefix}]};
+val GSPECIFICATION = new_specification
+  ("GSPECIFICATION", ["GSPEC"], GSPEC_DEF_LEMMA);
 
 (* --------------------------------------------------------------------- *)
 (* load generalized specification code.					 *)
@@ -979,9 +976,7 @@ val CHOICE_EXISTS =
      CONV_TAC (ONCE_DEPTH_CONV NOT_FORALL_CONV) THEN
      REWRITE_TAC []);
 
-val CHOICE_DEF = new_specification
-                   {name= "CHOICE_DEF",sat_thm=CHOICE_EXISTS,
-                    consts=[{const_name="CHOICE",fixity=Prefix}]};
+val CHOICE_DEF = new_specification("CHOICE_DEF",["CHOICE"],CHOICE_EXISTS);
 
 (* ===================================================================== *)
 (* The REST of a set after removing a chosen element.			 *)
@@ -1388,8 +1383,8 @@ val lemma2 = TAC_PROOF (([],
 val LINV_DEF =
    let val th1 = CONV_RULE (ONCE_DEPTH_CONV RIGHT_IMP_EXISTS_CONV) lemma2
        val th2 = CONV_RULE SKOLEM_CONV th1
-   in new_specification{name="LINV_DEF",sat_thm=th2,
-                        consts=[{const_name="LINV",fixity=Prefix}]}
+   in 
+      new_specification("LINV_DEF",["LINV"],th2)
    end;
 
 val lemma3 = TAC_PROOF(([],
@@ -1414,8 +1409,8 @@ val lemma3 = TAC_PROOF(([],
 val RINV_DEF =
     let val th1 = CONV_RULE (ONCE_DEPTH_CONV RIGHT_IMP_EXISTS_CONV) lemma3
         val th2 = CONV_RULE SKOLEM_CONV th1
-    in new_specification{name="RINV_DEF",sat_thm=th2,
-                         consts=[{const_name="RINV",fixity=Prefix}]}
+    in 
+         new_specification("RINV_DEF",["RINV"],th2)
     end;
 
 (* ===================================================================== *)
@@ -1775,9 +1770,8 @@ val CARD_EXISTS = TAC_PROOF(([],
 (* Finally, introduce the CARD function via a constant specification.	*)
 (* ---------------------------------------------------------------------*)
 
-val CARD_DEF = new_specification
-                 {name="CARD_DEF", sat_thm=CARD_EXISTS,
-                  consts=[{const_name="CARD",fixity=Prefix}]};
+val CARD_DEF = new_specification ("CARD_DEF", ["CARD"], CARD_EXISTS);
+                  
 
 (* ---------------------------------------------------------------------*)
 (* Various cardinality results.						*)

@@ -9,9 +9,9 @@ structure Boolify =
 struct
 
 local
-  open HolKernel boolLib Parse pairSyntax numSyntax listSyntax combinSyntax
+  open HolKernel boolLib Parse 
+       pairSyntax sumSyntax optionSyntax numSyntax listSyntax combinSyntax
        arithmeticTheory
-  infix |->; infixr -->;
 
 val ERR = mk_HOL_ERR "Boolify";
 
@@ -68,8 +68,7 @@ val encInr   = Term `[F]`
 val cons_bool = inst [alpha |-> bool] listSyntax.cons_tm;
 
   val sum_info = Option.valOf(TypeBase.read "sum");
-  val sum_case = prim_mk_const{Name="sum_case", Thy="sum"}
-  val sum_case_into_Bool = inst [alpha |-> bit_list] sum_case
+  val sum_case_into_Bool = inst [alpha |-> bit_list] sumSyntax.sum_case_tm
   val f = mk_var("f",beta --> bit_list)
   val g = mk_var("g",gamma --> bit_list)
   val s = mk_var("s",mk_thy_type{Tyop="sum",Thy="sum",Args=[beta, gamma]})
@@ -84,11 +83,11 @@ val cons_bool = inst [alpha |-> bool] listSyntax.cons_tm;
  ---------------------------------------------------------------------------*)
 
   val option_info = Option.valOf (TypeBase.read "option")
-  val option_case_tm = prim_mk_const{Name="option_case",Thy="option"}
   val option_boolify_info =
        (let val f = mk_var("f",alpha --> bit_list)
             val t1 = mk_o(mk_comb(cons_bool,T),f)
-        in mk_abs(f,list_mk_comb(inst [beta |-> bit_list] option_case_tm,
+        in mk_abs(f,list_mk_comb(inst [beta |-> bit_list] 
+                                   optionSyntax.option_case_tm,
                     [listSyntax.mk_list([F],bool),t1]))
         end,
         TypeBasePure.ORIG optionTheory.option_case_def)
@@ -153,17 +152,19 @@ val EncodeNum =
       Hurd for pointing this out.) 
  ---------------------------------------------------------------------------*)
 
+  val unit_info = Option.valOf (TypeBase.read "unit")
   val unit_boolify_info =
        (mk_abs(mk_var("v",mk_thy_type{Tyop="one", Thy="one",Args=[]}),
                mk_nil bit_list),
         TypeBasePure.ORIG boolTheory.REFL_CLAUSE);
+  val unit_info' = TypeBasePure.put_boolify unit_boolify_info unit_info;
 
 in
    val _ = TypeBase.write bool_info'
    val _ = TypeBase.write prod_info'
+   val _ = TypeBase.write sum_info'
    val _ = TypeBase.write option_info'
    val _ = TypeBase.write list_info'
-   val _ = TypeBase.write sum_info'
    val _ = TypeBase.write num_info'
 end
 

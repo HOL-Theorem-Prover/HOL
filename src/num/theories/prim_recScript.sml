@@ -339,14 +339,12 @@ val SIMP_REC_REL_UNIQUE_RESULT = store_thm(
   ASSUME_TAC (Q.SPEC `n` LESS_SUC_REFL) THEN
   IMP_RES_TAC SIMP_REC_REL_UNIQUE);
 
-val SIMP_REC = new_specification{
-  name = "SIMP_REC",
-  sat_thm = ((CONJUNCT1 o
+val SIMP_REC = new_specification
+  ("SIMP_REC",["SIMP_REC"],
+  ((CONJUNCT1 o
               SIMP_RULE bool_ss [EXISTS_UNIQUE_THM] o
               SIMP_RULE bool_ss [UNIQUE_SKOLEM_THM])
-             SIMP_REC_REL_UNIQUE_RESULT),
-  consts = [{const_name = "SIMP_REC", fixity = Prefix}]
-};
+             SIMP_REC_REL_UNIQUE_RESULT));
 
 val LESS_SUC_SUC =
  store_thm

@@ -57,7 +57,7 @@ val NUMPAIR_INJ = store_thm (
   POP_ASSUM MP_TAC THEN REWRITE_TAC[NUMPAIR] THEN
   SIMP_TAC hol_ss [EQ_MULT_LCANCEL, EQ_ADD_RCANCEL, EXP_EQ_0]);
 
-val NUMPAIR_DEST = new_specification {
+val NUMPAIR_DEST = Rsyntax.new_specification {
   consts = [{const_name = "NUMFST", fixity = Prefix},
             {const_name = "NUMSND", fixity = Prefix}],
   name = "NUMPAIR_DEST",
@@ -79,7 +79,7 @@ val NUMSUM_INJ = store_thm(
   REPEAT COND_CASES_TAC THEN REWRITE_TAC[EVEN, EVEN_DOUBLE] THEN
   SIMP_TAC hol_ss [INV_SUC_EQ, EQ_MULT_LCANCEL]);
 
-val NUMSUM_DEST = new_specification{
+val NUMSUM_DEST = Rsyntax.new_specification{
   consts = [{const_name = "NUMLEFT", fixity = Prefix},
             {const_name = "NUMRIGHT", fixity = Prefix}],
   name = "NUMSUM_DEST",

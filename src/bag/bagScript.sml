@@ -1222,12 +1222,11 @@ val FINITE_BAGS_BCARD = prove(
   Term`!b. FINITE_BAG b ==> ?n. BAG_CARD_RELn b n`,
   HO_MATCH_MP_TAC FINITE_BAG_INDUCT THEN MESON_TAC [BCARD_imps]);
 
-val BAG_CARD = new_specification {
-  consts = [{const_name = "BAG_CARD", fixity = Prefix}],
-  name = "BAG_CARD",
-  sat_thm = CONV_RULE SKOLEM_CONV (
-    SIMP_RULE hol_ss
-      [GSYM boolTheory.RIGHT_EXISTS_IMP_THM] FINITE_BAGS_BCARD)};
+val BAG_CARD = new_specification
+  ("BAG_CARD",["BAG_CARD"],
+   CONV_RULE SKOLEM_CONV (
+    SIMP_RULE hol_ss 
+       [GSYM boolTheory.RIGHT_EXISTS_IMP_THM] FINITE_BAGS_BCARD));
 
 val BAG_CARD_EMPTY =
   (Q.SPEC `EMPTY_BAG`  >- SIMP_RULE hol_ss [FINITE_EMPTY_BAG] >-
@@ -1300,14 +1299,11 @@ val BAG_CARD_BAG_INN = Q.store_thm(
         CHOICE and REST for bags.
  ---------------------------------------------------------------------------*)
 
-val BAG_CHOICE_DEF =
-  new_specification
-   {name= "BAG_CHOICE_DEF",
-    sat_thm=Q.prove
-             (`?ch:('a -> num) -> 'a.
-                 !b. ~(b = {||}) ==> BAG_IN (ch b) b`,
-               PROVE_TAC [MEMBER_NOT_EMPTY]),
-    consts=[{const_name="BAG_CHOICE",fixity=Prefix}]};
+val BAG_CHOICE_DEF = new_specification
+  ("BAG_CHOICE_DEF",["BAG_CHOICE"],
+   Q.prove(`?ch:('a -> num) -> 'a. !b. ~(b = {||}) ==> BAG_IN (ch b) b`,
+           PROVE_TAC [MEMBER_NOT_EMPTY]));
+    
 
 (* ===================================================================== *)
 (* The REST of a bag after removing a chosen element.			 *)

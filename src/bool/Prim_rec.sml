@@ -253,7 +253,7 @@ fun new_recursive_definition0 ax name tm =
  let val eth = prove_recursive_functions_exist ax tm
      val (evs,bod) = strip_exists(concl eth)
  in
-  boolSyntax.new_specification
+  Rsyntax.new_specification
     {sat_thm=eth, name=name,
      consts = map (fn t => {const_name = #Name (dest_var t),
                             fixity = Parse.Prefix}) evs }

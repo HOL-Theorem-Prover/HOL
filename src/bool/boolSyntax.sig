@@ -116,7 +116,5 @@ sig
   val new_infixl_definition : string * term * int -> thm
   val new_infixr_definition : string * term * int -> thm
   val new_binder_definition : string * term -> thm
-  val new_specification     : {name:string, sat_thm:thm,
-                               consts:{const_name : string,
-                                       fixity : Parse.fixity} list} -> thm
+
 end

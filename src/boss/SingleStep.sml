@@ -287,9 +287,6 @@ fun SPOSE_NOT_THEN ttac =
      Assertional style reasoning
  ---------------------------------------------------------------------------*)
 
-infix on
-
-
 fun chop_at n frontacc l =
   if n <= 0 then (List.rev frontacc, l)
   else

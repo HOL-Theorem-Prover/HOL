@@ -258,23 +258,6 @@ fun new_type_definition (name, inhab_thm) =
      before
   Parse.add_type name;
 
-local fun foldfn ({const_name,fixity}, (ncs,cfs)) =
-                    (const_name::ncs, (const_name, fixity) :: cfs)
-in 
-fun new_specification {name,sat_thm,consts} = 
- let val (newconsts, consts_with_fixities) = List.foldl foldfn ([],[]) consts
-     val res = Definition.new_specification(name, List.rev newconsts, sat_thm)
-     fun add_rule' r = 
-          if #fixity r = Parse.Prefix then () else Parse.add_rule r
-     fun modify_grammar (name, fixity) = let in 
-           add_rule'(Parse.standard_spacing name fixity);
-           Parse.add_const name 
-         end
- in app modify_grammar consts_with_fixities;
-    res
- end
-end;
-
 fun new_constant (p as (Name,_)) = 
   Theory.new_constant p
      before 

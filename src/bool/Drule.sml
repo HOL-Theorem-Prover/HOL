@@ -1798,7 +1798,7 @@ fun define_new_type_bijections{name,ABS,REP,tyax} =
   else
   let val (_,[P,rep]) = strip_comb(snd(dest_exists(concl tyax)))
       val (a,r) = Type.dom_rng (type_of rep)
-  in boolSyntax.new_specification
+  in Rsyntax.new_specification
       {name=name,
        sat_thm=MP(SPEC P (INST_TYPE[beta |-> a, alpha |-> r]ABS_REP_THM)) tyax,
        consts = [{const_name=REP, fixity=Prefix},

@@ -3,8 +3,6 @@
 (* AUTHOR: Wai WONG                                     *)
 (* TRANSLATOR: Paul Curzon  1 June 1993, 1 Sep 1994     *)
 (* UPDATED for new res_quan theories by Joe Hurd, 2001  *)
-(* Writes: word_base.th                                 *)
-(* Uses: Libraries:  arith res_quan list                *)
 (* Description: Creates a theory for generic words      *)
 (* =====================================================*)
 
@@ -53,7 +51,7 @@ val ELL_LASTN = prove(
         THEN COND_REWRITE1_TAC ADD_SUB_LEM THEN REFL_TAC]]
        end);
 
-(*wa *)
+(* wa *)
 val ELL_BUTLASTN = prove(
     (--`!(l:('a)list) k j. ((j+k)<= LENGTH l) ==>
      (ELL j (BUTLASTN k l) = ELL (j+k) l)`--),
@@ -403,11 +401,7 @@ val WCAT_lemma = prove(
     THEN ASM_REWRITE_TAC[]
     end);
 
-val WCAT_DEF = new_specification
-{name="WCAT_DEF",
- consts=[{fixity=Prefix,const_name="WCAT"}],
- sat_thm=WCAT_lemma
-};
+val WCAT_DEF = Definition.new_specification ("WCAT_DEF",["WCAT"],WCAT_lemma);
 
 val WCAT_WSPLIT = TAC_PROOF(([],
   (--`!n. !w:('a)word::(PWORDLEN n). !m. (m <= n) ==> (WCAT(WSPLIT m w) = w)`--)),

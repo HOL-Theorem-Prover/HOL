@@ -135,15 +135,14 @@ val LENGTH_MAP22 = GEN_ALL (DISCH_ALL (CONJUNCT2 (SPEC_ALL (UNDISCH_ALL
     (SPEC_ALL LENGTH_MAP2)))));
 
 (* --------------------------------------------------------------------- *)
-(* WAND                                                                 *)
+(* WAND                                                                  *)
+(* WAND_DEF = |- !l1 l2. WAND(WORD l1)(WORD l2) = WORD(MAP2 $/\ l1 l2)   *)
 (* --------------------------------------------------------------------- *)
-(* WAND_DEF = |- !l1 l2. WAND(WORD l1)(WORD l2) = WORD(MAP2 $/\ l1 l2) *)
 
-val WAND_DEF = new_specification
- {name="WAND_DEF",
-  consts= [{fixity= Infixr 400,const_name="WAND"}],
-  sat_thm = (ISPEC (--`$/\`--) PBITBOP_EXISTS)
-};
+val WAND_DEF = Definition.new_specification
+  ("WAND_DEF",["WAND"], ISPEC (--`$/\`--) PBITBOP_EXISTS);
+
+val _ = set_fixity "WAND" (Infixr 400);
 
 val PBITBOP_WAND_lemma = prove(
     (--`!n. !w1:(bool)word ::PWORDLEN n. !w2:(bool)word ::PWORDLEN n.
@@ -166,11 +165,10 @@ val PBITBOP_WAND = save_thm("PBITBOP_WAND",
 (* --------------------------------------------------------------------- *)
 (* WOR_DEF = |- !l1 l2. WOR(WORD l1)(WORD l2) = WORD(MAP2 $\/ l1 l2)   *)
 
-val WOR_DEF = new_specification
- {name="WOR_DEF",
-  consts= [{fixity= Infixr 300,const_name="WOR"}],
-  sat_thm = (ISPEC (--`$\/`--) PBITBOP_EXISTS)
-};
+val WOR_DEF = Definition.new_specification
+  ("WOR_DEF",  ["WOR"],ISPEC (--`$\/`--) PBITBOP_EXISTS);
+
+val _ = set_fixity "WOR" (Infixr 300);
 
 val PBITBOP_WOR_lemma = prove(
     (--`!n. !w1:(bool)word ::PWORDLEN n. !w2:(bool)word ::PWORDLEN n.
@@ -189,15 +187,14 @@ val PBITBOP_WOR = save_thm("PBITBOP_WOR",
      (EQT_INTRO PBITBOP_WOR_lemma)));
 
 (* --------------------------------------------------------------------- *)
-(* WXOR                                                                 *)
+(* WXOR                                                                  *)
+(* |- !l1 l2. WXOR(WORD l1)(WORD l2) = WORD(MAP2(\x y. ~(x = y))l1 l2)   *)
 (* --------------------------------------------------------------------- *)
-(* |- !l1 l2. WXOR(WORD l1)(WORD l2) = WORD(MAP2(\x y. ~(x = y))l1 l2) *)
 
-val WXOR_DEF = new_specification
- {name="WXOR_DEF",
-  consts= [{fixity= Infixr 300,const_name="WXOR"}],
-  sat_thm = (ISPEC (--`(\x y:bool. ~(x = y))`--) PBITBOP_EXISTS)
-};
+val WXOR_DEF = Definition.new_specification
+ ("WXOR_DEF", ["WXOR"], ISPEC (--`(\x y:bool. ~(x = y))`--) PBITBOP_EXISTS);
+
+val _ = set_fixity "WXOR" (Infixr 300);
 
 val PBITBOP_WXOR_lemma = prove(
     (--`!n. !w1:(bool)word ::PWORDLEN n. !w2:(bool)word ::PWORDLEN n.

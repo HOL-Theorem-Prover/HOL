@@ -1396,6 +1396,8 @@ val _ = temp_add_rule
 val min_grammars = current_grammars();
 
 (* hideous hack section *)
+
     val _ = initialise_typrinter type_pp.pp_type
+    val _ = Definition.new_specification_hook := List.app add_const;
 
 end

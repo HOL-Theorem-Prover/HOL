@@ -639,7 +639,7 @@ fun new_gen_resq_definition flag (name, tm) = let
   val cname = (fst o dest_var o fst o dest_exists o concl) def_thm
 in
 
-  new_specification {name=name,
+  Rsyntax.new_specification {name=name,
                      consts= [{fixity = flag, const_name = cname}],
                      sat_thm = def_thm}
 end;

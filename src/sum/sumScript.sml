@@ -246,10 +246,7 @@ val ISL_DEF = TAC_PROOF(
   end);
 
 (* Then define ISL with a constant specification.			*)
-val ISL = new_specification
-  {name = "ISL",
-   consts = [{fixity = Prefix,const_name="ISL"}],
-   sat_thm = ISL_DEF};
+val ISL = new_specification("ISL",["ISL"], ISL_DEF);
 
 (* Derive the defining property for ISR.				*)
 val ISR_DEF = TAC_PROOF(
@@ -264,10 +261,7 @@ val ISR_DEF = TAC_PROOF(
   end);
 
 (* Then define ISR with a constant specification.			*)
-val ISR = new_specification
-  {name = "ISR",
-   consts = [{fixity=Prefix,const_name="ISR"}],
-   sat_thm = ISR_DEF};
+val ISR = new_specification("ISR",["ISR"], ISR_DEF);
 
 (* Derive the defining property of OUTL.				*)
 val OUTL_DEF = TAC_PROOF(([],
@@ -282,10 +276,7 @@ val OUTL_DEF = TAC_PROOF(([],
    end);
 
 (* Then define OUTL with a constant specification.			*)
-val OUTL = new_specification
-  {name = "OUTL",
-   consts = [{fixity = Prefix,const_name = "OUTL"}],
-   sat_thm = OUTL_DEF};
+val OUTL = new_specification("OUTL",["OUTL"], OUTL_DEF)
 
 (* Derive the defining property of OUTR.				*)
 val OUTR_DEF = TAC_PROOF(
@@ -300,10 +291,7 @@ val OUTR_DEF = TAC_PROOF(
    end);
 
 (* Then define OUTR with a constant specification.			*)
-val OUTR = new_specification
-  {name = "OUTR",
-   consts = [{fixity = Prefix,const_name = "OUTR"}],
-   sat_thm = OUTR_DEF};
+val OUTR = new_specification("OUTR", ["OUTR"], OUTR_DEF);
 
 
 

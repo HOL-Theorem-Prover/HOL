@@ -389,7 +389,7 @@ val FIRSTN =
         STRIP_ASSUME_TAC thm1 THEN EXISTS_TAC (--`firstn:num->('a)list->('a)list`--)
         THEN ASM_REWRITE_TAC[HD,TL])
    in
-    new_specification{name = "FIRSTN",
+    Rsyntax.new_specification{name = "FIRSTN",
                       sat_thm = thm,
                       consts =  [{const_name = "FIRSTN", fixity = Prefix}]
                      }
@@ -405,7 +405,7 @@ val BUTFIRSTN =
         STRIP_ASSUME_TAC thm2 THEN EXISTS_TAC (--`butfirstn:num->('a)list->('a)list`--)
         THEN ASM_REWRITE_TAC[HD,TL])
    in
-    new_specification{name = "BUTFIRSTN",
+    Rsyntax.new_specification{name = "BUTFIRSTN",
                       sat_thm = thm,
                       consts =  [{const_name = "BUTFIRSTN", fixity = Prefix}]
                      }
@@ -425,7 +425,7 @@ val SEG =
         ((BUTFIRSTN:num -> 'a list -> 'a list) k l)`--)
     THEN BETA_TAC THEN REWRITE_TAC[FIRSTN,BUTFIRSTN])
     in
-    new_specification{name = "SEG",
+    Rsyntax.new_specification{name = "SEG",
                       sat_thm = SEG_exists,
                       consts =  [{const_name = "SEG", fixity = Prefix}]
                      }
@@ -472,7 +472,7 @@ val LASTN =
         STRIP_ASSUME_TAC thm1 THEN EXISTS_TAC (--`lastn:num->('a)list->('a)list`--)
         THEN ASM_REWRITE_TAC[LAST,BUTLAST])
    in
-    new_specification{name = "LASTN",
+    Rsyntax.new_specification{name = "LASTN",
                       sat_thm = thm,
                       consts =  [{const_name = "LASTN", fixity = Prefix}]
                      }
@@ -488,7 +488,7 @@ val BUTLASTN =
         STRIP_ASSUME_TAC thm1 THEN EXISTS_TAC (--`butlastn:num->('a)list->('a)list`--)
         THEN ASM_REWRITE_TAC[BUTLAST])
     in
-    new_specification{name = "BUTLASTN",
+    Rsyntax.new_specification{name = "BUTLASTN",
                       sat_thm = thm,
                       consts =  [{const_name = "BUTLASTN", fixity = Prefix}]
                      }
@@ -547,7 +547,7 @@ val IS_PREFIX =
         THEN ASM_REWRITE_TAC[HD,TL,NULL_DEF]
         end)
    in
-    new_specification
+    Rsyntax.new_specification
         {consts = [{const_name = "IS_PREFIX", fixity = Prefix}],
          name = "IS_PREFIX",
          sat_thm = lemma
@@ -656,7 +656,7 @@ val IS_SUFFIX = let
         THEN ASM_REWRITE_TAC[BUTLAST,LAST,NULL_DEF,NOT_NULL_SNOC]
     end)
   in
-    new_specification
+    Rsyntax.new_specification
         {consts = [{const_name = "IS_SUFFIX", fixity = Prefix}],
          name = "IS_SUFFIX",
          sat_thm = lemma
@@ -680,7 +680,7 @@ val IS_SUBLIST =
         THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[HD,TL,NULL_DEF]
         end)
     in
-    new_specification
+    Rsyntax.new_specification
         {consts = [{const_name = "IS_SUBLIST", fixity = Prefix}],
          name = "IS_SUBLIST",
          sat_thm = lemma

@@ -65,9 +65,7 @@ val PSEUDO_LINEAR1_EXECUTE = save_thm
      (INST_TYPE [alpha |-> numSyntax.num] PSEUDO_EXECUTE));
 
 val pseudo_linear1_def = new_specification
-  {consts = [{const_name="pseudo_linear1",fixity=Prefix}],
-   name = "pseudo_linear1_def",
-   sat_thm = PSEUDO_LINEAR1_EXECUTE};
+  ("pseudo_linear1_def", ["pseudo_linear1"], PSEUDO_LINEAR1_EXECUTE);
 
 val pseudo_def = Define `pseudo = pseudo_linear1`;
 
