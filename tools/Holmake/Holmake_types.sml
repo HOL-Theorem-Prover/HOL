@@ -1,3 +1,8 @@
+structure Holmake_types :> Holmake_types =
+struct
+
+open internal_functions
+
 datatype pretoken = DEFN of string | RULE of string | EOF
 
 datatype frag = LIT of string | VREF of string
@@ -122,20 +127,6 @@ val extract_cmd_quotation = normquote [] o extract_quotation0 true []
 
 fun mem e [] = false
   | mem e (h::t) = e = h orelse mem e t
-fun find_unescaped cset = let
-  open Substring
-  fun recurse i ss =
-      case getc ss of
-        NONE => NONE
-      | SOME(c', ss') => if mem c' cset then SOME i
-                         else if c' = #"\\" then
-                           case getc ss' of
-                             NONE => NONE
-                           | SOME (_, ss'') => recurse (i + 2) ss''
-                         else recurse (i + 1) ss'
-in
-  recurse 0
-end
 
 fun strip_trailing_ws ss = let
   (* can't just use dropr Char.isSpace, because the first space
@@ -209,22 +200,6 @@ fun commafy0 [] = []
   | commafy0 (h::t) = h :: ", " :: commafy0 t
 val commafy = String.concat o commafy0
 
-fun callsubst(from,to,on) = let
-  open Substring
-  val (from,to,on) = (all from, all to, all on)
-  val _ = size from > 0 orelse
-          raise Fail "empty from argument to `subst' function"
-  fun recurse acc ss = let
-    val (ok, rest) = position (string from) ss
-  in
-    if size rest > 0 then
-      recurse (to::ok::acc) (slice(rest, size from, NONE))
-    else concat (List.rev (ok::acc))
-  end
-in
-  recurse [] on
-end
-
 fun perform_substitution env q = let
   open Substring
   fun finisher q =
@@ -245,8 +220,10 @@ fun perform_substitution env q = let
                   val fnname = string fnpart
                   val args =
                       tokens (fn c => c = #",") (dropl Char.isSpace spc_rest)
+                  val eval =
+                      finisher o recurse visited o extract_normal_quotation
                 in
-                  [LIT (make_function_call visited (fnname, args))]
+                  [LIT (function_call (fnname, args, eval))]
                 end
               else let
                   val _ = not (mem s visited) orelse
@@ -259,34 +236,6 @@ fun perform_substitution env q = let
         in
           result @ recurse visited rest
         end
-  and make_function_call visited (fnname, args) = let
-    val eval = finisher o recurse visited o extract_normal_quotation
-  in
-    case fnname of
-      "if" =>
-      if length args <> 2 andalso length args <> 3 then
-        raise Fail "Bad number of arguments to `if' function."
-      else let
-          val condition = dropr Char.isSpace (hd args)
-          val condition_evalled = eval condition
-        in
-          if condition_evalled <> "" then eval (List.nth(args, 1))
-          else if length args = 3 then eval (List.nth(args, 2))
-          else ""
-        end
-    | "subst" =>
-      if length args <> 3 then
-        raise Fail "Bad number of arguments to `subst' function."
-      else let
-          val args_evalled = map eval args
-          val tuple = case args_evalled of
-                        [x,y,z] => (x,y,z)
-                      | _ => raise Fail "Can't happen"
-        in
-          callsubst tuple
-        end
-    | _ => raise Fail ("Unknown function name: "^fnname)
-  end
 in
   finisher (recurse [] q)
 end
@@ -299,24 +248,6 @@ fun extend_env toks e s =
 
 fun empty_env s = []
 
-fun tokenize s = let
-  (* could be a call to tokens, but for escaped spaces getting in the way *)
-  open Substring
-  val ss = dropl Char.isSpace (all s)
-  fun recurse acc ss =
-      (* assumes first character of ss is not isSpace, or size ss = 0  *)
-      if size ss = 0 then List.rev acc
-      else
-        case find_unescaped [#" ", #"\t"] ss of
-          NONE => List.rev (string ss::acc)
-        | SOME i => let
-            val (t1, rest) = splitAt(ss, i)
-          in
-            recurse (string t1::acc) (dropl Char.isSpace rest)
-          end
-in
-  recurse [] ss
-end
 
 fun dequote s = let
   open Substring
@@ -360,3 +291,5 @@ fun mk_rules toks env =
         map mk_rule tgts @ mk_rules rest env
       end
     | _ :: rest => mk_rules rest env
+
+end (* struct *)
