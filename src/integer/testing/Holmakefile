@@ -4,11 +4,11 @@ all: test_coopers tcooper genproblem testdp gen_bc_problem test_omega
 
 test_coopers: test_coopers.uo ../Cooper.uo ../CooperShell.uo \
               ../CooperMath.uo ../CooperSyntax.uo ../CooperCore.uo \
-              ../jrhCore.uo ../IntDP_Munge.uo
+              ../jrhCore.uo ../IntDP_Munge.uo test_cases.uo
 	HOLMOSMLC -o test_coopers test_coopers.uo
 
 test_omega: test_omega.uo ../Omega.uo ../OmegaShell.uo ../OmegaSimple.uo \
-            ../IntDP_Munge.uo
+            ../IntDP_Munge.uo test_cases.uo
 	HOLMOSMLC -o test_omega test_omega.uo
 
 tcooper: tcooper.c
