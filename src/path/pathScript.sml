@@ -413,7 +413,8 @@ val PL_stopped_at = store_thm(
   ``!x. PL (stopped_at x) = {0}``,
   SRW_TAC [ARITH_ss][pred_setTheory.EXTENSION, PL_def, length_thm]);
 
-val PL_thm = save_thm("PL_thm", CONJ PL_stopped_at PL_pcons)
+val PL_thm = save_thm("PL_thm", CONJ PL_stopped_at PL_pcons);
+val _ = BasicProvers.export_rewrites ["PL_thm"]
 
 val PL_downward_closed = store_thm(
   "PL_downward_closed",
@@ -426,7 +427,7 @@ val firstP_at_def =
 
 val firstP_at_stopped = prove(
   ``!P x n. firstP_at P (stopped_at x) n = (n = 0) /\ P x``,
-  SIMP_TAC (srw_ss() ++ ARITH_ss) [firstP_at_def, PL_thm, EQ_IMP_THM,
+  SIMP_TAC (srw_ss() ++ ARITH_ss) [firstP_at_def, EQ_IMP_THM,
                                    FORALL_AND_THM]);
 
 val firstP_at_pcons = prove(
@@ -543,7 +544,7 @@ val mem_thm = store_thm(
   "mem_thm",
   ``(!x s. mem s (stopped_at x) = (s = x)) /\
     (!x r p s. mem s (pcons x r p) = (s = x) \/ mem s p)``,
-  SRW_TAC [][mem_def, PL_thm, RIGHT_AND_OVER_OR,
+  SRW_TAC [][mem_def, RIGHT_AND_OVER_OR,
              EXISTS_OR_THM, GSYM LEFT_EXISTS_AND_THM]);
 val _ = BasicProvers.export_rewrites ["mem_thm"]
 
@@ -563,9 +564,9 @@ val finite_drop = store_thm(
   "finite_drop",
   ``!p n. n IN PL p ==> (finite (drop n p) = finite p)``,
   Induct_on `n` THENL [
-    SRW_TAC [][drop_def],
+    SRW_TAC [][],
     CONV_TAC (HO_REWR_CONV FORALL_path) THEN
-    SRW_TAC [][PL_thm, drop_def]
+    SRW_TAC [][]
   ]);
 val _ = BasicProvers.export_rewrites ["finite_drop"]
 
@@ -579,7 +580,7 @@ val length_drop = store_thm(
     REPEAT STRIP_TAC THEN
     Cases_on `length p` THEN SRW_TAC [][drop_def],
     CONV_TAC (HO_REWR_CONV FORALL_path) THEN
-    SRW_TAC [][drop_def, PL_thm, length_thm] THEN
+    SRW_TAC [][length_thm] THEN
     Cases_on `length p` THEN SRW_TAC [numSimps.ARITH_ss][] THEN
     PROVE_TAC [finite_length]
   ]);
@@ -589,9 +590,9 @@ val PL_drop = store_thm(
   "PL_drop",
   ``!p i. i IN PL p ==> (PL (drop i p) = IMAGE (\n. n - i) (PL p))``,
   Induct_on `i` THENL [
-    SRW_TAC [][drop_def, PL_thm],
+    SRW_TAC [][],
     CONV_TAC (HO_REWR_CONV FORALL_path) THEN
-    SRW_TAC [][drop_def, PL_thm, pred_setTheory.EXTENSION, EQ_IMP_THM] THENL [
+    SRW_TAC [][pred_setTheory.EXTENSION, EQ_IMP_THM] THENL [
       SRW_TAC [][LEFT_AND_OVER_OR, EXISTS_OR_THM,
                  GSYM RIGHT_EXISTS_AND_THM] THEN PROVE_TAC [],
       SRW_TAC [][] THEN PROVE_TAC [arithmeticTheory.LESS_EQ_REFL],
@@ -615,7 +616,7 @@ val first_drop = store_thm(
   Induct THENL [
     SRW_TAC [][],
     CONV_TAC (HO_REWR_CONV FORALL_path) THEN
-    SRW_TAC [][PL_thm]
+    SRW_TAC [][]
   ]);
 val _ = BasicProvers.export_rewrites ["first_drop"]
 
@@ -625,7 +626,7 @@ val first_label_drop = store_thm(
   Induct THENL [
     SRW_TAC [][nth_label_def],
     CONV_TAC (HO_REWR_CONV FORALL_path) THEN
-    SRW_TAC [][nth_label_def, PL_thm]
+    SRW_TAC [][nth_label_def]
   ]);
 val _ = BasicProvers.export_rewrites ["first_label_drop"]
 
@@ -634,7 +635,7 @@ val tail_drop = store_thm(
   ``!i p. (i + 1) IN PL p ==> (tail (drop i p) = drop (i + 1) p)``,
   Induct THEN
   CONV_TAC (HO_REWR_CONV FORALL_path) THEN
-  SRW_TAC [][PL_thm, CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV drop_def] THEN
+  SRW_TAC [][CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV drop_def] THEN
   FULL_SIMP_TAC (srw_ss()) [DECIDE ``SUC x + y = SUC (x + y)``]);
 val _ = BasicProvers.export_rewrites ["tail_drop"]
 
@@ -644,7 +645,7 @@ val el_drop = store_thm(
   Induct_on `j` THENL [
     SRW_TAC [][],
     GEN_TAC THEN CONV_TAC (HO_REWR_CONV FORALL_path) THEN
-    SRW_TAC [][PL_thm, arithmeticTheory.ADD_CLAUSES]
+    SRW_TAC [][arithmeticTheory.ADD_CLAUSES]
   ]);
 val _ = BasicProvers.export_rewrites ["el_drop"]
 
@@ -670,7 +671,7 @@ val finite_take = store_thm(
   Induct_on `i` THENL [
     SRW_TAC [][finite_thm, take_def],
     CONV_TAC (HO_REWR_CONV FORALL_path) THEN
-    SRW_TAC [][PL_thm, take_def]
+    SRW_TAC [][take_def]
   ]);
 val _ = BasicProvers.export_rewrites ["finite_take"]
 
@@ -680,8 +681,7 @@ val length_take = store_thm(
   Induct_on `i`  THENL [
     SRW_TAC [][length_thm, take_def],
     CONV_TAC (HO_REWR_CONV FORALL_path) THEN
-    SRW_TAC [][PL_thm, take_def, length_thm, arithmeticTheory.ADD1,
-               finite_take]
+    SRW_TAC [][length_thm, arithmeticTheory.ADD1]
   ]);
 val _ = BasicProvers.export_rewrites ["length_take"]
 
@@ -690,9 +690,9 @@ val PL_take = store_thm(
   "PL_take",
   ``!p i. i IN PL p ==> (PL (take i p) = { n | n <= i })``,
   Induct_on `i` THENL [
-    SRW_TAC [][take_def, PL_thm],
+    SRW_TAC [][],
     CONV_TAC (HO_REWR_CONV FORALL_path) THEN
-    SRW_TAC [][take_def, PL_thm, pred_setTheory.EXTENSION, EQ_IMP_THM] THEN
+    SRW_TAC [][pred_setTheory.EXTENSION, EQ_IMP_THM] THEN
     SRW_TAC [][] THEN POP_ASSUM MP_TAC THEN Cases_on `x'` THEN SRW_TAC [][]
   ]);
 val _ = BasicProvers.export_rewrites ["PL_take"]
@@ -703,7 +703,7 @@ val last_take = store_thm(
   Induct_on `i` THENL [
     SRW_TAC [][],
     CONV_TAC (HO_REWR_CONV FORALL_path) THEN
-    SRW_TAC [][PL_thm]
+    SRW_TAC [][]
   ]);
 val _ = BasicProvers.export_rewrites ["last_take"]
 
@@ -771,6 +771,7 @@ val last_seg = store_thm(
   ``!i j p. i <= j /\ j IN PL p ==> (last (seg i j p) = el j p)``,
   REPEAT STRIP_TAC THEN IMP_RES_TAC PLdc_le THEN
   SRW_TAC [numSimps.ARITH_ss][seg_def]);
+val _ = BasicProvers.export_rewrites ["last_seg"]
 
 (* ----------------------------------------------------------------------
     labels p  = lazy list of a path's labels
@@ -1072,7 +1073,6 @@ val finite_plink = store_thm(
   Q.SPEC_THEN `p1` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) path_cases THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN
   SRW_TAC [][] THEN PROVE_TAC []);
-
 val _ = BasicProvers.export_rewrites ["finite_plink"]
 
 
@@ -1080,7 +1080,6 @@ val first_plink = store_thm(
   "first_plink",
   ``!p1 p2. (last p1 = first p2) ==> (first (plink p1 p2) = first p1)``,
   CONV_TAC (HO_REWR_CONV FORALL_path) THEN SRW_TAC [][]);
-
 val _ = BasicProvers.export_rewrites ["first_plink"]
 
 
@@ -1093,10 +1092,29 @@ val last_plink = store_thm(
                             (last (plink p1 p2) = last p2)`
         THEN1 PROVE_TAC [] THEN
   HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][]);
-
 val _ = BasicProvers.export_rewrites ["last_plink"]
 
 
+val okpath_take = store_thm(
+  "okpath_take",
+  ``!R p i. i IN PL p /\ okpath R p ==> okpath R (take i p)``,
+  Induct_on `i` THEN1 SRW_TAC [][] THEN
+  GEN_TAC THEN CONV_TAC (HO_REWR_CONV FORALL_path) THEN SRW_TAC [][]);
+val _ = BasicProvers.export_rewrites ["okpath_take"]
+
+val okpath_drop = store_thm(
+  "okpath_drop",
+  ``!R p i. i IN PL p /\ okpath R p ==> okpath R (drop i p)``,
+  Induct_on `i` THEN1 SRW_TAC [][] THEN
+  GEN_TAC THEN CONV_TAC (HO_REWR_CONV FORALL_path) THEN SRW_TAC [][]);
+val _ = BasicProvers.export_rewrites ["okpath_drop"]
+
+val okpath_seg = store_thm(
+  "okpath_seg",
+  ``!R p i j. i <= j /\ j IN PL p /\ okpath R p ==> okpath R (seg i j p)``,
+  SRW_TAC [][seg_def] THEN IMP_RES_TAC PLdc_le THEN
+  SRW_TAC [numSimps.ARITH_ss][]);
+val _ = BasicProvers.export_rewrites ["okpath_seg"]
 
 (* "strongly normalising" for labelled transition relations *)
 val SN_def = Define`
