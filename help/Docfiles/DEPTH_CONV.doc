@@ -64,7 +64,7 @@ constants within the logic. Thus, the effect of:
 \COMMENTS
 The implementation of this function uses failure to avoid rebuilding
 unchanged subterms. That is to say, during execution the exception
-{QCONV.UNCHANGED} may be generated and later trapped. The behaviour of
+{QConv.UNCHANGED} may be generated and later trapped. The behaviour of
 the function is dependent on this use of failure. So, if the
 conversion given as an argument happens to generate the same
 exception, the operation of {DEPTH_CONV} will be unpredictable.
