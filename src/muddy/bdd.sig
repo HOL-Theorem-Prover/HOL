@@ -291,7 +291,8 @@ end
    [restrict r assign] ... restrict the variables in assign to TRUE or
    FALSE in r.  [documentation not complete here].
 
-   [satone r] finds a satisfying variable assignment.
+   [satone r] finds a satisfying variable assignment.  Raises Domain
+   if r is equal to FALSE.
 
    [simplify r dom] tries to simplify r by restricting it to domain d,
    ie. 'r AND dom  =  dom AND (simplify r dom)'.

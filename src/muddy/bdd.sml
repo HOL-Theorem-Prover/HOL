@@ -198,8 +198,9 @@ struct
 
     val restrict : bdd -> bdd -> bdd = app2 (symb "mlbdd_bdd_restrict")
     
-    val satone : bdd -> assignment = app1 (symb "mlbdd_bdd_satone")
-
+    val satone_ : bdd -> assignment = app1 (symb "mlbdd_bdd_satone")
+    fun satone r = if equal r FALSE then raise Domain
+                   else satone_ r
 
     type nodetable = int * (varnum * int * int) Vector.vector
 
