@@ -120,6 +120,11 @@ for that field.
 of "infix auxiliary function" identifiers, typeset with
 \tsauxinfix{}. [roman, spacing]
 
+(*[ AUTO_BINDERS ]*) turns on automatic detection of variables, from
+lists of variables after a binder such as !.  This is on by default.
+
+(*[ NOAUTO_BINDERS ]*) turns it off.
+
 (*[ VAR_PREFIX_LIST id id id *]) adds the named identifiers to the
 list of variable prefixes; identifiers with these names, possibly with
 appended numbers, primes, or underscore-followed-by-variable, will be

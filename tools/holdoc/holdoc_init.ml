@@ -22,6 +22,7 @@ type modalsettings = {
   aUX_INFIX_LIST : string list ref;
   vAR_PREFIX_LIST : string list ref;
   vAR_PREFIX_ALIST : (string * string) list ref;
+  aUTO_BINDERS : bool ref;
   hOL_OP_LIST : string list ref;
   hOL_SYM_ALIST : (string * string) list ref;
   hOL_ID_ALIST : (string * string) list ref;
@@ -42,6 +43,7 @@ let curmodals = ref {
   aUX_INFIX_LIST = ref [];
   vAR_PREFIX_LIST = ref [];
   vAR_PREFIX_ALIST = ref [];
+  aUTO_BINDERS = ref true;
   hOL_OP_LIST = ref [];
   hOL_SYM_ALIST = ref [];
   hOL_ID_ALIST = ref [];
@@ -71,6 +73,7 @@ let new_mode name = (if List.mem_assoc name !modes then
                                        aUX_INFIX_LIST = ref !(!curmodals.aUX_INFIX_LIST);
                                        vAR_PREFIX_LIST = ref !(!curmodals.vAR_PREFIX_LIST);
                                        vAR_PREFIX_ALIST = ref !(!curmodals.vAR_PREFIX_ALIST);
+                                       aUTO_BINDERS = ref !(!curmodals.aUTO_BINDERS);
                                        hOL_OP_LIST = ref !(!curmodals.hOL_OP_LIST);
                                        hOL_SYM_ALIST = ref !(!curmodals.hOL_SYM_ALIST);
                                        hOL_ID_ALIST = ref !(!curmodals.hOL_ID_ALIST);

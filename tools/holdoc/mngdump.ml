@@ -538,7 +538,7 @@ and texrenderdirective_content : directive_content -> unit
 
 and renderholdoc : holdoc -> unit
     = fun d ->
-      let pvs = potential_vars d
+      let pvs = if !(!curmodals.aUTO_BINDERS) then potential_vars d else []
       in
       munge_holdoc pvs d
 

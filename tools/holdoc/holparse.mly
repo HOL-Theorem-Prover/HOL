@@ -50,6 +50,8 @@ let extractstrs ds =
 %token AUX_INFIX_LIST  
 %token VAR_PREFIX_LIST 
 %token VAR_PREFIX_ALIST
+%token AUTO_BINDERS
+%token NOAUTO_BINDERS
 %token HOL_OP_LIST     
 %token HOL_SYM_ALIST   
 %token HOL_ID_ALIST    
@@ -212,6 +214,8 @@ directive0 :
 | HOL_ID_ALIST      ident_alist     { DirThunk (fun () -> add_to_list (!curmodals.hOL_ID_ALIST     ) $2) }
 | HOL_CURRIED_ALIST curryspec_alist { DirThunk (fun () -> add_to_list (!curmodals.hOL_CURRIED_ALIST) $2) }
 /* other modals: */
+| AUTO_BINDERS      opt_whitestuff { DirThunk (fun () -> !curmodals.aUTO_BINDERS := true ) }
+| NOAUTO_BINDERS    opt_whitestuff { DirThunk (fun () -> !curmodals.aUTO_BINDERS := false) }
 | SMART_PREFIX      opt_whitestuff { DirThunk (fun () -> !curmodals.sMART_PREFIX := true ) }
 | NO_SMART_PREFIX   opt_whitestuff { DirThunk (fun () -> !curmodals.sMART_PREFIX := false) }
 | INDENT            opt_whitestuff { DirThunk (fun () -> !curmodals.iNDENT       := true ) }
