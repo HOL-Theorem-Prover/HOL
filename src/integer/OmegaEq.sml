@@ -321,6 +321,7 @@ time OmegaEq   ``?i j. (0 = 3 * i + 5 * j + ~1 * n + 0)``;
 
 time OmegaEq   ``?i j. (0 = 3 * i + 6 * j + ~1 * n + 0)``;
 
+time OmegaEq   ``?x y. (0 = 2 * x + 3 * y + 2) /\ (0 = 2 * x + 3 * y + 4)``
 
 *)
 
