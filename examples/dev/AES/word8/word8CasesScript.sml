@@ -39,7 +39,7 @@ Q.SPEC_TAC (`n`, `n`) THEN REPEAT (HO_MATCH_MP_TAC lem THEN x)
 
 end
 
-val cases = Q.prove (
+val nchotomy = Q.prove (
 `!x. ^(list_mk_disj (map (fn c => ``x = ^c``) (rev consts)))`,
 STRIP_TAC THEN CASES256 ``x:word8``
  (CONJ_TAC THENL [RW_TAC arith_ss [], ALL_TAC] THEN
@@ -84,6 +84,9 @@ CASES256 ``w:word8`` (SIMP_TAC arith_ss [] THEN CONJ_TAC THENL
 Cases_on `n` THEN RW_TAC arith_ss [])
 in 
 
+val word8_cases_def = Define
+`word8_cases = ^(list_mk_abs (vars, pr_witness))`
+
 val word8UniquePrimRec = BETA_RULE prim_rec
 
 val word8PrimRec = 
@@ -95,28 +98,31 @@ val induct = Prim_rec.prove_induction_thm word8UniquePrimRec
 end
 
 
-val _ = save_thm("word8UniquePrimRec",word8UniquePrimRec);
-val _ = save_thm("word8PrimRec",word8PrimRec);
-val _ = save_thm("word8Induct",induct);
-val _ = save_thm("word8Cases", cases);
 
-(*
 local 
 
-val inner_clauses =
-     Lib.map2 (fn c => fn v => ``^c -> ^v``) consts vars
-val inner_clauses2 = 
-    fold_term (fn (x, y) => ``^x || ^y``) inner_clauses
-
-fun mk_thm c v = 
-  foldr mk_forall
-        ``(case ^c of ^inner_clauses2) = ^v``
-        vars
+val f = #1 (dest_eq (concl word8_cases_def));
+val clauses =
+  map2 (fn c => fn v =>
+          ``^(mk_comb (list_mk_comb (f, vars), c)) = ^v``)
+       consts vars
+                 
+val thms = 
+  map (fn clause =>
+         prove (clause, PURE_ONCE_REWRITE_TAC [word8_cases_def] THEN WORD_TAC))
+      clauses
 
 in
+val cases = GENL vars (LIST_CONJ thms)
 
 end
-*)
+
+val _ = save_thm("word8Nchotomy", nchotomy)
+val _ = save_thm("word8UniquePrimRec",word8UniquePrimRec)
+val _ = save_thm("word8PrimRec",word8PrimRec)
+val _ = save_thm("word8Induct",induct)
+val _ = save_thm("word8Cases", cases)
+
 
 (*
 local
