@@ -1,6 +1,6 @@
 \DOC PURE_CASE_TAC
 
-\TYPE {tactic}
+\TYPE {PURE_CASE_TAC : tactic}
 
 \SYNOPSIS
 Case splits on a term {t} that features in the goal as {case t of ...}
