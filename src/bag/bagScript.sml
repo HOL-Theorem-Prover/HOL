@@ -1,7 +1,8 @@
 (*
    fun mload s = (print ("Loading "^s^"\n"); load s);
-   app mload ["pred_setTheory", "mnUtils", "QLib"];
-*)
+   app mload ["pred_setTheory", "mnUtils", "QLib", "numLib",
+              "BasicProvers", "SingleStep", "PairedDefinition"];
+ *)
 
 open HolKernel Parse boolLib numLib Prim_rec mnUtils pred_setTheory 
      BasicProvers SingleStep PairedDefinition;
@@ -1391,12 +1392,10 @@ RW_TAC bool_ss []
 
 val BAG_UNION_STABLE = Q.prove
 (`!b1 b2. (b1 = BAG_UNION b1 b2) = (b2 = {||})`,
- RW_TAC bool_ss [BAG_UNION,EMPTY_BAG_alt]
-   THEN CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN RW_TAC bool_ss []
-   THEN REPEAT (EQ_TAC ORELSE STRIP_TAC)
-   THENL [POP_ASSUM (MP_TAC o SPEC_ALL), ALL_TAC]
-   THEN RW_TAC num_ss []);
-
+ RW_TAC bool_ss [BAG_UNION,EMPTY_BAG_alt] THEN
+ CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC THEN
+ EQ_TAC THEN DISCH_THEN (fn th => GEN_TAC THEN MP_TAC(SPEC_ALL th)) THEN
+ RW_TAC num_ss []);
 
 val SUB_BAG_UNION_MONO = Q.store_thm
 ("SUB_BAG_UNION_MONO",
