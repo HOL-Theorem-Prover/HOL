@@ -2,7 +2,7 @@ open HolKernel basicHol90Lib Parse
 infix THEN THENC THENL |->
 infixr -->
 
-open integerTheory intLib Psyntax listTheory
+open integerTheory intSyntax intSimps Psyntax listTheory
 
 open simpLib boolSimps BasicProvers SingleStep
 infix ++

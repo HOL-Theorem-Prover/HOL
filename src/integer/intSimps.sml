@@ -1,8 +1,9 @@
-open HolKernel
+structure intSimps :> intSimps =
+struct
 
-open integerTheory
+open HolKernel basicHol90Lib integerTheory intSyntax;
 
-infix -->
+infix --> THENC
 
 val num_ty = mk_type{Tyop = "num", Args = []}
 val int_ty = mk_type{Tyop = "int", Args = []}
@@ -56,3 +57,33 @@ val INT_REDUCE_ss = simpLib.SIMPSET
    call to arithSimps.REDUCE_ss seems a bit dodgy somehow.  Still, you can
    be sure that only integers will get reduced when this ssdata value is
    used. *)
+
+val int_ss = simpLib.++(boolSimps.bool_ss, INT_REDUCE_ss)
+
+val REDUCE_CONV = simpLib.SIMP_CONV int_ss [];
+
+fun collect_additive_consts tm = let
+  val summands = strip_plus tm
+in
+  case summands of
+    [] => raise Fail "strip_plus returned [] in collect_additive_consts"
+  | [_] => NO_CONV tm
+  | _ => let
+    in
+      case partition is_int_literal summands of
+        ([], _) => NO_CONV tm
+      | ([_], _) => NO_CONV tm
+      | (_, []) => REDUCE_CONV tm
+      | (numerals, non_numerals) => let
+          val reorder_t = Psyntax.mk_eq(tm, 
+                           mk_plus(list_mk_plus non_numerals,
+                                   list_mk_plus numerals));
+          val reorder_thm =
+            EQT_ELIM(AC_CONV(INT_ADD_ASSOC, INT_ADD_COMM) reorder_t)
+        in
+          (K reorder_thm THENC REDUCE_CONV THENC REWRITE_CONV [INT_ADD_RID]) tm
+        end
+    end
+end
+
+end;

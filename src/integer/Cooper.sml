@@ -1,3 +1,6 @@
+structure Cooper :> Cooper =
+struct
+
 open HolKernel basicHol90Lib integerTheory Parse
 
 infix THEN THENC THENL |-> ## ORELSEC
@@ -7,7 +10,7 @@ val (Type,Term) = parse_from_grammars integerTheory.integer_grammars;
 fun -- q x = Term q
 fun == q x = Type q
 
-open arithmeticTheory Psyntax intLib int_arithTheory
+open arithmeticTheory Psyntax intSyntax int_arithTheory intSimps;
 
 fun ERR f msg = HOL_ERR {origin_function = f,
                          message = msg,
@@ -1261,7 +1264,7 @@ in
        term_to_string (hd subterms)^"...) but it was false")
 end
 
-fun ARITH_CONV tm = let
+fun COOPER_CONV tm = let
   fun stage2 tm =
     case non_presburger_subterms0 [] tm of
       [] => decide_fv_presburger tm
@@ -1277,7 +1280,8 @@ in
   dealwith_nats THENC stage2
 end tm
 
-val ARITH_PROVE = EQT_ELIM o ARITH_CONV
+val COOPER_PROVE = EQT_ELIM o COOPER_CONV
+val COOPER_TAC = CONV_TAC COOPER_PROVE;
 
 (*
 fun NUM_ARITH_CONV tm = let
@@ -1375,5 +1379,4 @@ fun NUM_ARITH_CONV tm = let
 
 *)
 
-
-
+end;

@@ -1,4 +1,5 @@
-signature intLib = sig
+signature intSyntax = 
+sig
 
   (* terms and types *)
   val int_ty : Type.hol_type
@@ -53,15 +54,5 @@ signature intLib = sig
 
   val is_divides : Term.term -> bool
   val mk_divides : (Term.term * Term.term) -> Term.term
-
-  (* theorem proving help *)
-  val int_ss : simpLib.simpset (* bool_ss + integer arithmetic *)
-  val REDUCE_CONV : Term.term -> Thm.thm  (* reduces all outstanding
-                                             integer arithmetic in a term *)
-  val collect_additive_consts : Term.term -> Thm.thm
-    (* collects all integer literals in an additive term and sums them;
-        e.g.:  3 + x + ~1  --> x + 2
-       the collected numeral always appears on the right *)
-
 
 end (* sig *)

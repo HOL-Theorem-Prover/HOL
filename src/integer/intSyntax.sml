@@ -1,8 +1,9 @@
-structure intLib :> intLib = struct
+structure intSyntax :> intSyntax = 
+struct
 
-open HolKernel basicHol90Lib Parse integerTheory Psyntax
+open HolKernel basicHol90Lib Parse integerTheory Psyntax;
 
-fun ERR f s = HOL_ERR {origin_structure = "intLib",
+fun ERR f s = HOL_ERR {origin_structure = "intSyntax",
                        origin_function = f,
                        message = s};
 
@@ -141,33 +142,6 @@ in
   else
     mk_comb(int_injection, Term.mk_numeral (toNat i))
 end
-
-val int_ss = simpLib.++(boolSimps.bool_ss, intSimps.INT_REDUCE_ss)
-val REDUCE_CONV = simpLib.SIMP_CONV int_ss []
-
-fun collect_additive_consts tm = let
-  val summands = strip_plus tm
-in
-  case summands of
-    [] => raise Fail "strip_plus returned [] in collect_additive_consts"
-  | [_] => NO_CONV tm
-  | _ => let
-    in
-      case partition is_int_literal summands of
-        ([], _) => NO_CONV tm
-      | ([_], _) => NO_CONV tm
-      | (_, []) => REDUCE_CONV tm
-      | (numerals, non_numerals) => let
-          val reorder_t = mk_eq(tm, mk_plus(list_mk_plus non_numerals,
-                                            list_mk_plus numerals));
-          val reorder_thm =
-            EQT_ELIM(AC_CONV(INT_ADD_ASSOC, INT_ADD_COMM) reorder_t)
-        in
-          (K reorder_thm THENC REDUCE_CONV THENC REWRITE_CONV [INT_ADD_RID]) tm
-        end
-    end
-end
-
 
 
 end (* struct *)
