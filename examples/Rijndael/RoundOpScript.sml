@@ -102,10 +102,10 @@ val NUM_TO_BYTE_TO_NUM = Q.store_thm
  ---------------------------------------------------------------------------*)
 
 val LeftShift = Define
-   `LeftShift (b7,b6,b5,b4,b3,b2,b1,b0) = (b6,b5,b4,b3,b2,b1,b0,F)`;
+   `LeftShift (b7,b6,b5,b4,b3,b2,b1,b0):word8 = (b6,b5,b4,b3,b2,b1,b0,F)`;
 
 val RightShift = Define
-   `RightShift (b7,b6,b5,b4,b3,b2,b1,b0) = (F,b7,b6,b5,b4,b3,b2,b1)`;
+   `RightShift (b7,b6,b5,b4,b3,b2,b1,b0):word8 = (F,b7,b6,b5,b4,b3,b2,b1)`;
 
 (*---------------------------------------------------------------------------
        Compare bits and bytes as if they were numbers. Not currently used
@@ -259,19 +259,19 @@ val XOR_BLOCK_IDEM = Q.store_thm
 (*---------------------------------------------------------------------------*)
 
 val to_state_def = Define
- `to_state (b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15) 
+ `to_state ((b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15) :block)
                 =
             (b0,b4,b8,b12,
              b1,b5,b9,b13,
              b2,b6,b10,b14,
-             b3,b7,b11,b15)`;
+             b3,b7,b11,b15) : state`;
 
 val from_state_def = Define
- `from_state (b0,b4,b8,b12,
+ `from_state((b0,b4,b8,b12,
               b1,b5,b9,b13,
               b2,b6,b10,b14,
-              b3,b7,b11,b15) 
- = (b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15)`;
+              b3,b7,b11,b15) :state)
+ = (b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15) : block`;
 
 
 val to_state_Inversion = Q.store_thm
@@ -293,15 +293,15 @@ val from_state_Inversion = Q.store_thm
 val _ = Parse.hide "S";   (* to make parameter S a variable *)
 
 val genSubBytes_def = try Define
-  `genSubBytes S (b00,b01,b02,b03,
-                  b10,b11,b12,b13,
-                  b20,b21,b22,b23,
-                  b30,b31,b32,b33) 
+  `genSubBytes S ((b00,b01,b02,b03,
+                   b10,b11,b12,b13,
+                   b20,b21,b22,b23,
+                   b30,b31,b32,b33) :state)
                           = 
              (S b00, S b01, S b02, S b03,
               S b10, S b11, S b12, S b13,
               S b20, S b21, S b22, S b23,
-              S b30, S b31, S b32, S b33)`;
+              S b30, S b31, S b32, S b33) :state`;
 
 val _ = Parse.reveal "S";
 
@@ -320,26 +320,26 @@ val SubBytes_Inversion = Q.store_thm
  ---------------------------------------------------------------------------*)
 
 val ShiftRows_def = Define
-  `ShiftRows (b00,b01,b02,b03,
-              b10,b11,b12,b13,
-              b20,b21,b22,b23,
-              b30,b31,b32,b33) 
+  `ShiftRows ((b00,b01,b02,b03,
+               b10,b11,b12,b13,
+               b20,b21,b22,b23,
+               b30,b31,b32,b33) :state)
                      =
              (b00,b01,b02,b03,
               b11,b12,b13,b10,
               b22,b23,b20,b21,
-              b33,b30,b31,b32)`;
+              b33,b30,b31,b32) :state`;
 
 val InvShiftRows_def = Define
-  `InvShiftRows (b00,b01,b02,b03,
-                 b11,b12,b13,b10,
-                 b22,b23,b20,b21,
-                 b33,b30,b31,b32)
+  `InvShiftRows ((b00,b01,b02,b03,
+                  b11,b12,b13,b10,
+                  b22,b23,b20,b21,
+                  b33,b30,b31,b32) :state)
                      =
                 (b00,b01,b02,b03,
                  b10,b11,b12,b13,
                  b20,b21,b22,b23,
-                 b30,b31,b32,b33)`; 
+                 b30,b31,b32,b33) :state`; 
 
 (*---------------------------------------------------------------------------
         InvShiftRows inverts ShiftRows
@@ -379,7 +379,7 @@ val InvShiftRows_InvSubBytes_Commute = Q.store_thm
  ---------------------------------------------------------------------------*)
 
 val xtime_def = Define
-  `xtime (b7,b6,b5,b4,b3,b2,b1,b0)
+  `xtime ((b7,b6,b5,b4,b3,b2,b1,b0) :word8)
      =
    if b7 then (b6,b5,b4,~b3,~b2,b1,~b0,T)
          else (b6,b5,b4,b3,b2,b1,b0,F)`;
@@ -664,10 +664,10 @@ val [E_HEX]    = decls "E_HEX";
 (*---------------------------------------------------------------------------*)
 
 val genMixColumns_def = Define
- `genMixColumns MC (b00,b01,b02,b03,
-                    b10,b11,b12,b13,
-                    b20,b21,b22,b23,
-                    b30,b31,b32,b33)
+ `genMixColumns MC ((b00,b01,b02,b03,
+                     b10,b11,b12,b13,
+                     b20,b21,b22,b23,
+                     b30,b31,b32,b33) :state)
  = let (b00', b10', b20', b30') = MC (b00,b10,b20,b30) in
    let (b01', b11', b21', b31') = MC (b01,b11,b21,b31) in
    let (b02', b12', b22', b32') = MC (b02,b12,b22,b32) in
@@ -676,7 +676,7 @@ val genMixColumns_def = Define
     (b00', b01', b02', b03',
      b10', b11', b12', b13',
      b20', b21', b22', b23',
-     b30', b31', b32', b33')`;
+     b30', b31', b32', b33') : state`;
 
 
 val MixColumns_def    = Define `MixColumns    = genMixColumns MultCol`;

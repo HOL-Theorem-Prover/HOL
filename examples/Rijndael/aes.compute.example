@@ -88,3 +88,44 @@ Count.apply EVAL N1;
 Count.apply EVAL N2;
 Count.apply EVAL N3;
 
+
+
+(*  In ML:
+
+  val key = 
+    ((false,(false,(false,(false,(false,(false,(false,false))))))),
+    ((false,(false,(false,(false,(false,(false,(false,true))))))),
+    ((false,(false,(false,(false,(false,(false,(true,false))))))),
+    ((false,(false,(false,(false,(false,(false,(true,true))))))),
+    ((false,(false,(false,(false,(false,(true,(false,false))))))),
+    ((false,(false,(false,(false,(false,(true,(false,true))))))),
+    ((false,(false,(false,(false,(false,(true,(true,false))))))),
+    ((false,(false,(false,(false,(false,(true,(true,true))))))),
+    ((false,(false,(false,(false,(true,(false,(false,false))))))),
+    ((false,(false,(false,(false,(true,(false,(false,true))))))),
+    ((false,(false,(false,(false,(true,(false,(true,false))))))),
+    ((false,(false,(false,(false,(true,(false,(true,true))))))),
+    ((false,(false,(false,(false,(true,(true,(false,false))))))),
+    ((false,(false,(false,(false,(true,(true,(false,true))))))),
+    ((false,(false,(false,(false,(true,(true,(true,false))))))),
+    (false,(false,(false,(false,(true,(true,(true,true))))))))))))))))))))))
+
+  val plaintext = 
+    ((false,(false,(false,(false,(false,(false,(false,false))))))),
+    ((false,(false,(false,(true,(false,(false,(false,true))))))),
+    ((false,(false,(true,(false,(false,(false,(true,false))))))),
+    ((false,(false,(true,(true,(false,(false,(true,true))))))),
+    ((false,(true,(false,(false,(false,(true,(false,false))))))),
+    ((false,(true,(false,(true,(false,(true,(false,true))))))),
+    ((false,(true,(true,(false,(false,(true,(true,false))))))),
+    ((false,(true,(true,(true,(false,(true,(true,true))))))),
+    ((true,(false,(false,(false,(true,(false,(false,false))))))),
+    ((true,(false,(false,(true,(true,(false,(false,true))))))),
+    ((true,(false,(true,(false,(true,(false,(true,false))))))),
+    ((true,(false,(true,(true,(true,(false,(true,true))))))),
+    ((true,(true,(false,(false,(true,(true,(false,false))))))),
+    ((true,(true,(false,(true,(true,(true,(false,true))))))),
+    ((true,(true,(true,(false,(true,(true,(true,false))))))),
+    (true,(true,(true,(true,(true,(true,(true,true))))))))))))))))))))));
+
+*)

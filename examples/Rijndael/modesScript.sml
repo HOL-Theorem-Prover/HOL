@@ -80,7 +80,7 @@ val CBC_Correct = Q.store_thm
 (*---------------------------------------------------------------------------*)
 
 val BYTE_TO_LIST_DEF = Define
-   `BYTE_TO_LIST (b7,b6,b5,b4,b3,b2,b1,b0) = [b7;b6;b5;b4;b3;b2;b1;b0]`;
+   `BYTE_TO_LIST ((b7,b6,b5,b4,b3,b2,b1,b0):word8) = [b7;b6;b5;b4;b3;b2;b1;b0]`;
 
 val LENGTH_BYTE_TO_LIST = Q.store_thm
 ("LENGTH_BYTE_TO_LIST",
@@ -269,20 +269,20 @@ val PADDED_LENGTH_THM = Q.store_thm
 (*---------------------------------------------------------------------------*)
 
 val BYTE_DEF = Define 
-  `(BYTE [] = []) /\
+  `(BYTE [] = []:word8 list) /\
    (BYTE (a::b::c::d::e::f::g::h::t) = (a,b,c,d,e,f,g,h)::BYTE t)`;
 
 val BLOCK_DEF = Define
- `(BLOCK [] = []) /\
+ `(BLOCK [] = []:block list) /\
   (BLOCK (a::b::c::d::e::f::g::h::i::j::k::l::m::n::p::q::t) 
        = (a,b,c,d,e,f,g,h,i,j,k,l,m,n,p,q)::BLOCK t)`;
 
 val UNBYTE_DEF = Define 
-   `(UNBYTE [] = []) /\
+   `(UNBYTE [] = [] :bool list) /\
     (UNBYTE ((a,b,c,d,e,f,g,h)::t) = a::b::c::d::e::f::g::h::UNBYTE t)`;
 
 val UNBLOCK_DEF = Define
- `(UNBLOCK [] = []) /\
+ `(UNBLOCK [] = []:word8 list) /\
   (UNBLOCK ((a,b,c,d,e,f,g,h,i,j,k,l,m,n,p,q)::t) = 
     a::b::c::d::e::f::g::h::i::j::k::l::m::n::p::q::UNBLOCK t)`;
 
@@ -381,5 +381,19 @@ val AES_CBC_CORRECT = Q.store_thm
   THEN Cases_on `AES key`
   THEN RW_TAC std_ss [FUN_EQ_THM,LET_THM]
   THEN METIS_TAC [CBC_Correct, PAD_TO_UNPAD_THM]);
+
+
+val _ = 
+  let open aesTheory EmitML
+  in exportML("modes",
+      MLSIG "type num = numML.num" ::
+      MLSTRUCT "type num = numML.num" ::
+      OPEN ["combin", "list", "aes"] ::
+      map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
+      [ ECB_DEF, CBC_ENC_DEF, CBC_DEC_DEF, BYTE_TO_LIST_DEF,
+        REPLICATE_DEF, PADDING_DEF, PAD_DEF, PADLEN_DEF, 
+        FRONT_DEF, UNPAD_DEF, BYTE_DEF, BLOCK_DEF, UNBYTE_DEF, UNBLOCK_DEF,
+        ENBLOCK_DEF, DEBLOCK_DEF, AES_CBC_DEF])
+  end
 
 val _ = export_theory();

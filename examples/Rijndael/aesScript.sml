@@ -5,7 +5,9 @@
 
 structure aesScript =
 struct
-
+(*
+  app load ["RoundOpTheory", "metisLib"];
+*)
 open HolKernel boolLib bossLib RoundOpTheory pairTools metisLib;
 
 (*---------------------------------------------------------------------------*)
@@ -24,18 +26,12 @@ val _ = new_theory "aes";
 (* Similar to:                                                               *)
 (*                                                                           *)
 (* (Round 0 [key] state = AddRoundKey key (ShiftRows (SubBytes state))) /\   *)
-(* (Round n (key::keys) state = Round (n-1) keys                             *)
-(*                                (AddRoundKey key                           *)
-(*                                  (MixColumns                              *)
-(*                                    (ShiftRows (SubBytes state)))))`;      *)
+(* (Round (SUC n) (key::keys) state =                                        *)
+(*     Round n keys                                                          *)
+(*        (AddRoundKey key                                                   *)
+(*             (MixColumns                                                   *)
+(*               (ShiftRows (SubBytes state)))))`;                           *)
 (*---------------------------------------------------------------------------*)
-
-(* || other -> FAIL Round ^(mk_var("need exactly one key",bool))
-                     n keys state)
-
-   [] -> FAIL Round ^(mk_var("no keys left",bool))
-                               n keys state
-*)
 
 val (Round_def, Round_ind) = Defn.tprove
  (Hol_defn 
@@ -208,7 +204,6 @@ val AES_def = Define
 (* each recursive call.                                                      *)
 (*---------------------------------------------------------------------------*)
 
-(* New rewriting screws up 
 val lemma = Q.prove
 (`!n t. 
     3 < n /\ n < 44 
@@ -216,17 +211,8 @@ val lemma = Q.prove
     ?h. expand (n+1) (h::t) = expand n t`,
  RW_TAC std_ss []
    THEN GEN_REWRITE_TAC (BINDER_CONV o RHS_CONV) empty_rewrites [expand_def]
-   THEN RW_TAC arith_ss []);
-*)
-val lemma = Q.prove
-(`!n t. 
-    3 < n /\ n < 44 
-      ==> 
-    ?h. expand (n+1) (h::t) = expand n t`,
- RW_TAC std_ss []
-   THEN GEN_REWRITE_TAC (BINDER_CONV o RHS_CONV) empty_rewrites [expand_def]
-   THEN RW_TAC arith_ss []
-   THEN METIS_TAC [markerTheory.Abbrev_def]);
+   THEN RW_TAC arith_ss [LET_THM]
+   THEN METIS_TAC []);
 
 
 (*---------------------------------------------------------------------------*)
@@ -389,7 +375,6 @@ val AES_Correct = Q.store_thm
    PROVE_TAC [SIMP_RULE std_ss [combinTheory.o_THM] lemma, keysched_length]);
 
 
-
 (*===========================================================================*)
 (* Alternative decryption approach and its correctness                       *)
 (*===========================================================================*)
@@ -535,10 +520,80 @@ val altAES_Correct = Q.store_thm
    PROVE_TAC [AES_Correct,altAES_eq_AES]);
 
 
+
+val Round_def' = Q.prove
+(`Round n keys state = 
+     if n=0 
+      then (case keys 
+             of [key] -> AddRoundKey key (ShiftRows (SubBytes state))
+             || other -> FAIL Round ^(mk_var("need exactly one key",bool))
+                              n keys state)
+      else (case keys
+             of [] -> FAIL Round ^(mk_var("no keys left",bool)) n keys state
+             || k::rst -> Round (n-1) rst
+                             (AddRoundKey k (MixColumns 
+                                 (ShiftRows (SubBytes state)))))`,
+ REPEAT CASE_TAC THENL
+   [RW_TAC std_ss [combinTheory.FAIL_THM],
+    RW_TAC std_ss [combinTheory.FAIL_THM],
+    RW_TAC std_ss [Once Round_def],
+    RW_TAC std_ss [Once Round_def],
+    RW_TAC std_ss [combinTheory.FAIL_THM],
+    RW_TAC std_ss [Once Round_def]]);
+
+
+val InvRound_def' = Q.prove
+(`InvRound n keys state =
+      if n=0 
+       then (case keys 
+              of [key] -> AddRoundKey key 
+                            (InvSubBytes
+                               (InvShiftRows state))
+              || other -> FAIL InvRound ^(mk_var("need exactly one key",bool))
+                              n keys state)
+       else (case keys
+              of [] -> FAIL InvRound ^(mk_var("no keys left",bool)) n keys state
+              || k::rst -> InvRound (n-1) rst
+                              (InvMixColumns 
+                                 (AddRoundKey k 
+                                   (InvSubBytes 
+                                     (InvShiftRows state)))))`,
+ REPEAT CASE_TAC THENL
+   [RW_TAC std_ss [combinTheory.FAIL_THM],
+    RW_TAC std_ss [combinTheory.FAIL_THM],
+    RW_TAC std_ss [Once InvRound_def],
+    RW_TAC std_ss [Once InvRound_def],
+    RW_TAC std_ss [combinTheory.FAIL_THM],
+    RW_TAC std_ss [Once InvRound_def]]);
+
+
+val EqInvRound_def' = Q.prove
+(`EqInvRound n keys state =
+      if n=0 
+       then (case keys 
+              of [key] -> AddRoundKey key 
+                            (InvShiftRows 
+                               (InvSubBytes(state)))
+              || other -> FAIL EqInvRound ^(mk_var("need exactly one key",bool))
+                              n keys state)
+       else (case keys
+              of [] -> FAIL EqInvRound ^(mk_var("no keys left",bool)) n keys state
+              || k::rst -> EqInvRound (n-1) rst
+                              (AddRoundKey k 
+                                (InvMixColumns 
+                                  (InvShiftRows
+                                     (InvSubBytes state)))))`,
+ REPEAT CASE_TAC THENL
+   [RW_TAC std_ss [combinTheory.FAIL_THM],
+    RW_TAC std_ss [combinTheory.FAIL_THM],
+    RW_TAC std_ss [Once EqInvRound_def],
+    RW_TAC std_ss [Once EqInvRound_def],
+    RW_TAC std_ss [combinTheory.FAIL_THM],
+    RW_TAC std_ss [Once EqInvRound_def]]);
+
 val _ = 
-  let open sboxTheory RoundOpTheory aesTheory EmitML
+  let open sboxTheory RoundOpTheory EmitML
   in exportML("aes",
-(*      OPEN ["num"] :: *)
       MLSTRUCT "type num = numML.num" ::
       MLSIG "type num = numML.num"
       :: 
@@ -554,10 +609,10 @@ val _ =
         xtime_def, ConstMult_def, PolyExp_def, 
         MultCol_def, InvMultCol_def,
         genMixColumns_def, MixColumns_def, InvMixColumns_def,
-        AddRoundKey_def, Round_def, InvRound_def, 
+        AddRoundKey_def, Round_def', InvRound_def', 
         XOR8x4_def, SubWord_def, RotWord_def, Rcon_def, unpack_def,
         expand_def, mk_keysched_def, AES_def, 
-        InvMix_def, InvMixify_def, EqInvRound_def, altAES_def])
+        InvMix_def, InvMixify_def, EqInvRound_def', altAES_def])
   end
 
 val _ = export_theory();
