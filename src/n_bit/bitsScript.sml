@@ -45,9 +45,6 @@ val DIVMOD_2EXP = save_thm("DIVMOD_2EXP",
 
 (* -------------------------------------------------------- *)
 
-val MOD1 = MOD_1
-val DIV1 = DIV_1
-
 val SUC_SUB = save_thm("SUC_SUB",SIMP_CONV arith_ss [ADD1] ``SUC a - a``);
 
 (* |- !n r. r < n ==> ((n + r) DIV n = 1) *)
@@ -161,7 +158,7 @@ val DIV_MOD_MOD_DIV2 = prove(
   REPEAT STRIP_TAC
     THEN Cases_on `c <= b`
     THENL [
-       POP_ASSUM (fn th => REWRITE_TAC [REWRITE_RULE [GSYM SUB_EQ_0] th,EXP,MOD1]
+       POP_ASSUM (fn th => REWRITE_TAC [REWRITE_RULE [GSYM SUB_EQ_0] th,EXP,MOD_1]
                              THEN ASSUME_TAC (MATCH_MP TWOEXP_MONO2 th))
          THEN ASSUME_TAC (SPECL [`c`,`a`] MOD_2EXP_LT)
          THEN IMP_RES_TAC LESS_LESS_EQ_TRANS
@@ -226,7 +223,7 @@ val BITS_ZERO2 = store_thm("BITS_ZERO2",
 
 (* |- !h n. BITS h 0 n = n MOD 2 EXP SUC h *)
 val BITS_ZERO3 = save_thm("BITS_ZERO3",
-  (GEN_ALL o SIMP_RULE bool_ss [CONJUNCT1 EXP,DIV1] o SPECL [`h`,`0`]) BITS_THM2
+  (GEN_ALL o SIMP_RULE bool_ss [CONJUNCT1 EXP,DIV_1] o SPECL [`h`,`0`]) BITS_THM2
 );
 
 val BITS_ZEROL = store_thm("BITS_ZEROL",
@@ -304,7 +301,7 @@ val ODD_MOD2_LEM = store_thm("ODD_MOD2_LEM",
 val LSB_ODD = store_thm("LSB_ODD",
   `LSBn = ODD`,
   ONCE_REWRITE_TAC [FUN_EQ_THM]
-    THEN A_SIMP_TAC [ODD_MOD2_LEM,LSBn_def,BIT_def,BITS_THM2,EXP,DIV1]
+    THEN A_SIMP_TAC [ODD_MOD2_LEM,LSBn_def,BIT_def,BITS_THM2,EXP,DIV_1]
 );
 
 (* -------------------------------------------------------- *)
@@ -372,7 +369,7 @@ val SLICE_THM = store_thm("SLICE_THM",
         THEN POP_ASSUM (fn th => ASSUME_TAC (SPEC `n` th))
         THEN IMP_RES_TAC LESS_OR
         THEN IMP_RES_TAC SUB_EQ_0
-        THEN ASM_SIMP_TAC arith_ss [EXP,MOD1,MULT_CLAUSES],
+        THEN ASM_SIMP_TAC arith_ss [EXP,MOD_1,MULT_CLAUSES],
       REWRITE_TAC [DIV_MOD_MOD_DIV2]
         THEN RULE_ASSUM_TAC (REWRITE_RULE [NOT_LESS])
         THEN SUBST_OCCS_TAC [([1],SPECL [`l`,`n MOD 2 EXP SUC h`] TWOEXP_DIVISION)]
@@ -654,7 +651,7 @@ val BITWISE_COR = store_thm("BITWISE_COR",
     THEN IMP_RES_TAC BITWISE_THM
     THEN NTAC 2 (WEAKEN_TAC (K true))
     THEN POP_ASSUM (fn th => REWRITE_TAC [GSYM th])
-    THEN ASM_REWRITE_TAC [BITS_THM,BIT_def,DIV1,EXP_1,SUC_SUB]
+    THEN ASM_REWRITE_TAC [BITS_THM,BIT_def,DIV_1,EXP_1,SUC_SUB]
 );
 
 val BITWISE_NOT_COR = store_thm("BITWISE_NOT_COR",
@@ -663,7 +660,7 @@ val BITWISE_NOT_COR = store_thm("BITWISE_NOT_COR",
     THEN IMP_RES_TAC BITWISE_THM
     THEN NTAC 2 (WEAKEN_TAC (K true))
     THEN POP_ASSUM (fn th => REWRITE_TAC [GSYM th])
-    THEN ASM_REWRITE_TAC [BITS_THM,BIT_def,GSYM NOT_MOD2_LEM,DIV1,EXP_1,SUC_SUB]
+    THEN ASM_REWRITE_TAC [BITS_THM,BIT_def,GSYM NOT_MOD2_LEM,DIV_1,EXP_1,SUC_SUB]
 );
 
 val BITWISE_BITS = store_thm("BITWISE_BITS",
@@ -813,7 +810,7 @@ val MOD_ZERO = prove(
 val MOD_PLUS_1 = store_thm("MOD_PLUS_1",
   `!n. 0 < n ==> !x. ((x + 1) MOD n = 0) = (x MOD n + 1 = n)`,
   REPEAT STRIP_TAC
-    THEN Cases_on `n = 1` THEN1 ASM_A_SIMP_TAC [MOD1]
+    THEN Cases_on `n = 1` THEN1 ASM_A_SIMP_TAC [MOD_1]
     THEN IMP_RES_TAC MOD_PLUS
     THEN POP_ASSUM (fn th => ONCE_REWRITE_TAC [GSYM th])
     THEN `1 < n` by ASM_A_SIMP_TAC []

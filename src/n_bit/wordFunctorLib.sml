@@ -93,7 +93,7 @@ fun word_n_print ln sys gravs d pps t = let
    val m = Arbnum.mod(n,Arbnum.pow(Arbnum.fromInt 2,ln))
 in
   if l = Term `n2w` then
-    add_string pps ("0x"^(Arbnum_ext.toHexString m))
+    add_string pps ("0x"^(Arbnum.toHexString m))
   else
     raise UserPP_Failed
 end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;

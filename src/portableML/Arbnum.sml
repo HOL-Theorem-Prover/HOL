@@ -393,6 +393,21 @@ fun toString n =
 
 fun pp_num ppstrm n = PP.add_string ppstrm (toString n);
 
+local
+  fun toHexChar n =
+      str (if Int.<(n, 10)
+           then chr (Int.+(ord #"0", n))
+           else chr (Int.-(Int.+(ord #"A", n), 10)))
+  val base = fromInt 16
+in
+  fun toHexString n =
+    let val (q,r) = divmod(n, base)
+        val s = toHexChar (toInt r)
+  in
+    if q = zero then s else toHexString q^s
+  end
+end
+
 (*  useful test code follows
 exception ArgsBad;
 

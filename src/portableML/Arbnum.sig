@@ -17,6 +17,7 @@ sig
   val less2      : num -> num
 
   val toString   : num -> string
+  val toHexString: num -> string
   val fromString : string -> num
   val fromInt    : int -> num
   val toInt      : num -> int    (* may raise Overflow *)
