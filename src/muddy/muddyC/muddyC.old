@@ -8,11 +8,10 @@
 #include <bvec.h>
 
 /* Mosml stuff */
-#include <mlvalues.h>
+#include <mlvalues.h> 
 #include <fail.h>
 #include <alloc.h>
 #include <memory.h>
-#include <globals.h>
 
 
 /* Reduced Ordered Binary Decision Diagrams: interface to
@@ -23,20 +22,20 @@
    really a BDD structure.  This will contain an integer which is a
    root number.  The root number cannot just be treated as an ordinary
    int for two reasons:
-
+   
    1. The gc cannot understand the root number (it would be confused
       by the untagged integer field)
 
-   2. The (camlrunm) gc don't know how to garbage collect a bdd
+   2. The (camlrunm) gc don't know how to garbage collect a bdd 
       (call bdd_delref from the bdd lib.)
-
+   
    This raises the question how to deallocate the bdd structure when
    it is no longer reachable.  One possibility is to use finalized
    objects, calling the bdd_delref function explicitly whenever a bdd
    value is about to be garbage-collected by the camlrunm runtime
    systemq.
 
-   A bdd should be a finalized object: a pair,
+   A bdd should be a finalized object: a pair, 
 
               header with Final_tag
 	      0: finalization function mlbdd_finalize
@@ -60,17 +59,17 @@ value mlbdd_alloc_final(mlsize_t len, final_fun fun)
   result = alloc_shr(len, Final_tag);
   Field (result, 0) = (value) fun;
   return result;
-}
+} 
 
 /* Sometimes it is nice to raise the Domain exception
  */
-#define RAISE_DOMAIN mlraise(Atom(SYS__EXN_DOMAIN))
+#define RAISE_DOMAIN mlraise(Atom(SMLEXN_DOMAIN))
 
-void mlbdd_errorhandler(int errorcode)
+void mlbdd_errorhandler(int errorcode) 
 {
   /* printf("mlbdd error: %d\n",errorcode); */
   failwith((char *) bdd_errstring(errorcode));
-}
+} 
 
 static char* pregc     = NULL;
 static char* postmosgc = NULL;
@@ -80,9 +79,9 @@ static int printgc = 0; /* Invariant: if printgc != 0 then will the
 static int joingc = 1;
 void mlbdd_gc(int num, bddGbcStat* foo)
 {
-  if(num==1) {
-    if(printgc) printf (pregc);
-    if(joingc) gc_full_major(Val_unit);
+  if(num==1) { 
+    if(printgc) printf (pregc); 
+    if(joingc) gc_full_major(Val_unit); 
            /*Jakob: Increases speed from fx. 17.6 to 15.3 = 13% in some cases*/
     if(joingc&&printgc) {printf (postmosgc); fflush(stdout);}
   }
@@ -129,7 +128,7 @@ value mlbdd_setprintgc(value print, value pre, value post1, value post2) /* ML *
     mlbdd_copy2cstring(post2, postgc);
     printgc = 1;
   }
-
+  
   return Val_unit;
 }
 
@@ -142,7 +141,7 @@ value mlbdd_bdd_init(value nodes, value cachesize) /* ML */
   bdd_error_hook(&mlbdd_errorhandler);
   /* bdd_gbc_hook(NULL); */
   bdd_gbc_hook(mlbdd_gc);
-  return Val_unit;
+  return Val_unit;    
 }
 
 /* ML type: unit -> unit */
@@ -161,14 +160,14 @@ value mlbdd_bdd_isrunning(value nill) /* ML */
 
 /* ML type: int -> unit */
 value mlbdd_bdd_setvarnum(value n) /* ML */
-{
+{ 
   bdd_setvarnum(Int_val(n));
   return Val_unit;
 }
 
 /* ML type: unit -> int */
 value mlbdd_getvarnum(value dummy) /* ML */
-{
+{ 
   return Val_long(bdd_varnum());
 }
 
@@ -176,14 +175,14 @@ value mlbdd_getvarnum(value dummy) /* ML */
 /* When the bdd becomes unreachable from the ML process, it will be
    garbage-collected, mlbdd_finalize() will be called on the bdd,
    which will do the necessary bdd-bookkeeping.  */
-void mlbdd_finalize(value obj)
+void mlbdd_finalize(value obj) 
 {
   bdd_delref(Bdd_val(obj));
 }
 
 /* Creation of a bdd makes a finalized pair (mlbdd_finalize, root) as
    described above. */
-value mlbdd_make(BDD root)
+value mlbdd_make(BDD root) 
 {
   value res;
   bdd_addref(root);
@@ -201,13 +200,13 @@ value mlbdd_root(value r) /* ML */
 
 /* ML type: varnum -> bdd */
 value mlbdd_bdd_ithvar(value i) /* ML */
-{
+{ 
   return mlbdd_make(bdd_ithvar(Int_val(i)));
 }
 
 /* ML type: varnum-> bdd */
 value mlbdd_bdd_nithvar(value i) /* ML */
-{
+{ 
   return mlbdd_make(bdd_nithvar(Int_val(i)));
 }
 
@@ -245,7 +244,7 @@ value mlbdd_bdd_high(value r) /* ML */
   return mlbdd_make(bdd_high(Bdd_val(r)));
 }
 
-/* Pass the opr constants from <bdd.h> to ML */
+/* Pass the opr constants from <bdd.h> to ML */ 
 /* ML type: unit -> int * int * int * int * int * int * int * int * int *int 	                   * int * int * int * int * int * int * int * int */
 value mlbdd_constants(value unit)	/* ML */
 {
@@ -276,7 +275,7 @@ value mlbdd_constants(value unit)	/* ML */
 /* ML type: bdd -> bdd -> int -> bdd */
 value mlbdd_bdd_apply(value left, value right, value opr) /* ML */
 {
-  return mlbdd_make(bdd_apply(Bdd_val(left),Bdd_val(right),
+  return mlbdd_make(bdd_apply(Bdd_val(left),Bdd_val(right), 
 				Int_val(opr)));
 }
 
@@ -401,7 +400,7 @@ value mlbdd_bdd_stats(value nill)
   return result;
 }
 
-/* ML type: bdd -> real */
+/* ML type: bdd -> real */ 
 value mlbdd_bdd_satcount(value r) /* ML */
 {
   return copy_double(bdd_satcount(Bdd_val(r)));
@@ -413,7 +412,7 @@ value mlbdd_bdd_satone(value r) /* ML */
   return mlbdd_make(bdd_satone(Bdd_val(r)));
 }
 
-/* ML type: bdd -> int */
+/* ML type: bdd -> int */ 
 value mlbdd_bdd_nodecount(value r) /* ML */
 {
   return Val_int(bdd_nodecount(Bdd_val(r)));
@@ -454,7 +453,7 @@ value mlbdd_makeset(value varvector) /* ML */
 
   /* we assume that vector is sorted on the ML side */
   result = mlbdd_make(bdd_makeset(v, size));
-
+ 
   /* memory allocated with stat_alloc, should be freed with
      stat_free.*/
   stat_free((char *) v);
@@ -503,18 +502,18 @@ value mlbdd_bdd_forall(value b1, value varset) /* ML */
 }
 
 /* ML type: bdd -> bdd -> int -> varSet -> bdd */
-value mlbdd_bdd_appall(value left, value right,
+value mlbdd_bdd_appall(value left, value right, 
 			 value opr,  value varset) /* ML */
 {
-  return mlbdd_make(bdd_appall(Bdd_val(left),Bdd_val(right),
+  return mlbdd_make(bdd_appall(Bdd_val(left),Bdd_val(right), 
 				 Int_val(opr), Bdd_val(varset)));
 }
 
 /* ML type: bdd -> bdd -> int -> varSet -> bdd */
-value mlbdd_bdd_appex(value left, value right,
+value mlbdd_bdd_appex(value left, value right, 
 			value opr,  value varset) /* ML */
 {
-  return mlbdd_make(bdd_appex(Bdd_val(left),Bdd_val(right),
+  return mlbdd_make(bdd_appex(Bdd_val(left),Bdd_val(right), 
 				 Int_val(opr), Bdd_val(varset)));
 }
 
@@ -666,7 +665,7 @@ value mlfdd_extdomain(value vector) /* ML */
   }
   k = fdd_extdomain(v, size);
   result = Val_int(k);
-
+ 
   /* memory allocated with stat_alloc, should be freed with
      stat_free.*/
   stat_free((char *) v);
@@ -678,7 +677,7 @@ value mlfdd_extdomain(value vector) /* ML */
 value mlfdd_clearall(value foo) /* ML */
 {
   fdd_clearall();
-
+  
   return Val_unit;
 }
 
@@ -708,7 +707,7 @@ value mlfdd_vars(value var) /* ML */
 
   n = fdd_varnum(Int_val(var));
   v = fdd_vars(Int_val(var));
-
+  
   if(n == 0)
     result = Atom(0);  /* The empty vector */
   else {
@@ -750,7 +749,7 @@ value mlfdd_makeset(value vector) /* ML */
   }
 
   result = mlbdd_make(fdd_makeset(v, size));
-
+ 
   /* memory allocated with stat_alloc, should be freed with
      stat_free.*/
   stat_free((char *) v);
@@ -807,17 +806,17 @@ BVEC BVEC_val(value obj) {
 /* When the bvec becomes unreachable from the ML process, it will be
    garbage-collected, mlbdd_finalize_bvec() will be called on the bvec,
    which will do the necessary bvec-bookkeeping.  */
-void mlbdd_finalize_bvec(value obj)
+void mlbdd_finalize_bvec(value obj) 
 {
   bvec_free(BVEC_val(obj));
 }
 
 /* Creation of a bvec makes a finalized pair (mlbdd_finalize, bitnum, bitvec) */
-value mlbdd_make_bvec(BVEC v)
+value mlbdd_make_bvec(BVEC v) 
 {
   value res;
   res = mlbdd_alloc_final(3, &mlbdd_finalize_bvec);
-  bvecbitnum_val(res) = v.bitnum;
+  bvecbitnum_val(res) = v.bitnum; 
   bvecbitvec_val(res) = v.bitvec;  /* Hopefully a pointer fits in a long */
   return res;
 }
