@@ -1,0 +1,10 @@
+Bugs fixed:
+-----------
+  * Automatic dependency analysis in Holmake could get confused (in
+    the presence of unbalanced `` "tokens") and bail out without much
+    in the way of an error message.  Fixed at least one instance of
+    this problem.
+
+New theories:
+-------------
+  * A theory of lazy lists
