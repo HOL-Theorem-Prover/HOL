@@ -408,11 +408,11 @@ local
   open Preterm TCPretype
   fun name_eq s M = ((s = #Name(dest_var M)) handle HOL_ERR _ => false)
   fun has_any_uvars pty =
-    case pty of
-      (UVar (ref NONE)) => true
-    | (UVar (ref (SOME pty'))) => has_any_uvars pty'
-    | Tyop(s, args) => List.exists has_any_uvars args
-    | Vartype _ => false
+    case pty 
+     of UVar (ref NONE)        => true
+      | UVar (ref (SOME pty')) => has_any_uvars pty'
+      | Tyop(s, args)          => List.exists has_any_uvars args
+      | Vartype _              => false
   fun give_types_to_fvs ctxt boundvars tm = let
     val gtf = give_types_to_fvs ctxt
   in
@@ -439,7 +439,7 @@ local
     | _ => ()
   end
 in
-  fun parse_in_context FVs q = let
+  fun parse_in_context0 FVs q = let
     val ptm = preTerm q
     val _ = Preterm.typecheck_phase1 (SOME(term_to_string, type_to_string)) ptm
     val _ = give_types_to_fvs FVs [] ptm
@@ -447,6 +447,10 @@ in
   in
     toTerm final_ptm
   end
+
+fun parse_in_context FVs q = 
+   Lib.with_flag(Globals.notify_on_tyvar_guess,false)
+      (parse_in_context0 FVs) q
 end
 
 (* ---------------------------------------------------------------------- *)
