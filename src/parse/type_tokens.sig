@@ -1,11 +1,12 @@
 signature type_tokens = sig
 
-  datatype 'a type_token 
+  datatype 'a type_token
       = TypeIdent of string
-      | TypeSymbol of string 
+      | QTypeIdent of string * string (* thy name * type name *)
+      | TypeSymbol of string
       | TypeVar of string
-      | Comma 
-      | LParen 
+      | Comma
+      | LParen
       | RParen
       | AQ of 'a
 

@@ -1,4 +1,4 @@
-signature parse_type = 
+signature parse_type =
 sig
   type 'a token = 'a type_tokens.type_token
   datatype grammar_rule =
@@ -12,6 +12,7 @@ sig
   val parse_type :
     {vartype : string -> 'a,
      tyop : (string * 'a list) -> 'a,
+     qtyop : {Thy:string, Tyop:string, Args: 'a list} -> 'a,
      antiq : 'b -> 'a} ->
     bool ->
     grammar ->

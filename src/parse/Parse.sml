@@ -107,11 +107,17 @@ fun remove_ty_aq t =
   if is_ty_antiq t then dest_ty_antiq t
   else raise ERROR "type parser" "antiquotation is not of a type"
 
+fun tyop_to_qtyop (tyop, args) =
+  case Type.decls tyop of
+    [] => raise ERROR "type parser" (tyop^" not a known type operator")
+  | {Thy,Tyop} :: _ => Pretype.Tyop{Thy = Thy, Tyop = Tyop, Args = args}
 
-val typ1_rec = {vartype = Pretype.Vartype, tyop = Pretype.Tyop,
+val typ1_rec = {vartype = Pretype.Vartype, qtyop = Pretype.Tyop,
+                tyop = tyop_to_qtyop,
                 antiq = Pretype.fromType o remove_ty_aq}
 
-val typ2_rec = {vartype = Pretype.Vartype, tyop = Pretype.Tyop,
+val typ2_rec = {vartype = Pretype.Vartype, qtyop = Pretype.Tyop,
+                tyop = tyop_to_qtyop,
                 antiq = Pretype.fromType}
 
 val type_parser1 =
@@ -466,7 +472,7 @@ local
     case pty
      of UVar (ref NONE)        => true
       | UVar (ref (SOME pty')) => has_any_uvars pty'
-      | Tyop(s, args)          => List.exists has_any_uvars args
+      | Tyop{Args,...}         => List.exists has_any_uvars Args
       | Vartype _              => false
   fun give_types_to_fvs ctxt boundvars tm = let
     val gtf = give_types_to_fvs ctxt
@@ -559,7 +565,7 @@ fun temp_set_associativity (i,a) = let in
 fun temp_add_infix(s, prec, associativity) =
  let open term_grammar Portable
  in
-   the_term_grammar 
+   the_term_grammar
     := add_rule (!the_term_grammar)
           {term_name=s, block_style=(AroundSamePrec, (INCONSISTENT,0)),
            fixity=Infix(associativity, prec),
@@ -963,7 +969,7 @@ fun hidden s =
 
 fun set_known_constants sl = let
   val (ok_names, bad_names) = partition (not o null o Term.decls) sl
-  val _ = List.app (fn s => WARN "set_known_constants" 
+  val _ = List.app (fn s => WARN "set_known_constants"
                                (s^" not a constant; ignored")) bad_names
 in
   app reveal ok_names

@@ -1,12 +1,13 @@
 structure type_tokens :> type_tokens =
 struct
 
-datatype 'a type_token 
+datatype 'a type_token
      = TypeIdent of string
+     | QTypeIdent of string * string
      | TypeSymbol of string
      | TypeVar of string
-     | Comma 
-     | LParen 
+     | Comma
+     | LParen
      | RParen
      | AQ of 'a
 
@@ -25,6 +26,9 @@ fun lex s =
    (symbol "," >> return Comma) ++
    (token (item #"'" >> normal_alpha_ident)  >-
     (fn s => return (TypeVar ("'"^s)))) ++
+   (token (many1_charP (fromLex Lexis.tyvar_ids)) >-
+    (fn thyname => item #"$" >> many1_charP (fromLex Lexis.tyvar_ids) >-
+     (fn tyname => return (QTypeIdent(thyname, tyname))))) ++
    (token (many1_charP (fromLex Lexis.tyvar_ids)) >- return o TypeIdent) ++
    (token (many1_charP (HOLsym ANDNOT ITEM #",")) >- return o TypeSymbol)) s
 

@@ -43,7 +43,7 @@ fun clean shr =
 
 local open Pretype
 in
-fun has_free_uvar (Tyop(s,A))         = List.exists has_free_uvar A
+fun has_free_uvar (Tyop{Args,...})    = List.exists has_free_uvar Args
   | has_free_uvar (UVar(ref(SOME t))) = has_free_uvar t
   | has_free_uvar (UVar(ref NONE))    = true
   | has_free_uvar (Vartype _)         = false
@@ -302,23 +302,24 @@ fun is_atom (Var _) = true
   | is_atom t = false
 
 
-local fun -->(ty1,ty2) = Pretype.Tyop("fun", [ty1, ty2])
-      infix  -->
-      fun type_of (Var{Ty, ...}) = Ty
-        | type_of (Const{Ty, ...}) = Ty
-        | type_of (Comb{Rator, ...}) = Pretype.chase (type_of Rator)
-        | type_of (Abs{Bvar,Body}) = type_of Bvar --> type_of Body
-        | type_of (Constrained(_,ty)) = ty
-        | type_of (Antiq tm) = Pretype.fromType (Term.type_of tm)
-        | type_of (Overloaded {Ty,...}) = Ty
-      fun default_typrinter x = "<hol_type>"
-      fun default_tmprinter x = "<term>"
+local
+  fun -->(ty1,ty2) = Pretype.Tyop{Thy = "min", Tyop = "fun", Args = [ty1, ty2]}
+  infix  -->
+  fun ptype_of (Var{Ty, ...}) = Ty
+    | ptype_of (Const{Ty, ...}) = Ty
+    | ptype_of (Comb{Rator, ...}) = Pretype.chase (ptype_of Rator)
+    | ptype_of (Abs{Bvar,Body}) = ptype_of Bvar --> ptype_of Body
+    | ptype_of (Constrained(_,ty)) = ty
+    | ptype_of (Antiq tm) = Pretype.fromType (Term.type_of tm)
+    | ptype_of (Overloaded {Ty,...}) = Ty
+  fun default_typrinter x = "<hol_type>"
+  fun default_tmprinter x = "<term>"
 in
 fun TC printers =
  let val (ptm, pty) =
       case printers
        of SOME (x,y) =>
-           let val typrint = Lib.say o y o Pretype.toType
+           let val typrint = Lib.say o y
                fun tmprint tm =
                   if Term.is_const tm
                      then (Lib.say (x tm ^ " " ^ y (Term.type_of tm)))
@@ -330,8 +331,8 @@ fun TC printers =
   fun check(Comb{Rator, Rand}) =
       (check Rator;
        check Rand;
-       Pretype.unify (type_of Rator)
-       (type_of Rand --> Pretype.new_uvar())
+       Pretype.unify (ptype_of Rator)
+       (ptype_of Rand --> Pretype.new_uvar())
        handle (e as Feedback.HOL_ERR{origin_structure="Pretype",
                                      origin_function="unify",message})
        => let val tmp = !Globals.show_types
@@ -345,11 +346,18 @@ fun TC printers =
                               \for the application of\n\n";
             ptm Rator';
             Lib.say "\n\n";
+
             if (is_atom Rator) then ()
-            else(Lib.say"which has type\n\n";pty(type_of Rator);Lib.say"\n\n");
+            else(Lib.say"which has type\n\n";
+                 pty(Term.type_of Rator');
+                 Lib.say"\n\n");
+
             Lib.say "to\n\n"; ptm Rand'; Lib.say "\n\n";
+
             if (is_atom Rand) then ()
-            else(Lib.say"which has type\n\n";pty(type_of Rand);Lib.say"\n\n");
+            else(Lib.say"which has type\n\n";
+                 pty(Term.type_of Rand');
+                 Lib.say"\n\n");
 
             Lib.say ("unification failure message: "^message^"\n");
             Globals.show_types := tmp;
@@ -357,20 +365,24 @@ fun TC printers =
           end)
     | check (Abs{Bvar, Body}) = (check Bvar; check Body)
     | check (Constrained(tm,ty)) =
-       (check tm; Pretype.unify (type_of tm) ty
+       (check tm; Pretype.unify (ptype_of tm) ty
        handle (e as Feedback.HOL_ERR{origin_structure="Pretype",
                                     origin_function="unify",message})
        => let val tmp = !Globals.show_types
               val _ = Globals.show_types := true
               val real_term = to_term (overloading_resolution tm)
                 handle e => (Globals.show_types := tmp; raise e)
+              val real_type = Pretype.toType ty
+                handle e => (Globals.show_types := tmp; raise e)
           in
             Lib.say "\nType inference failure: the term\n\n";
             ptm real_term; Lib.say "\n\n";
             if (is_atom tm) then ()
-            else(Lib.say"which has type\n\n";pty(type_of tm);Lib.say"\n\n");
+            else(Lib.say"which has type\n\n";
+                 pty(Term.type_of real_term);
+                 Lib.say"\n\n");
             Lib.say "can not be constrained to be of type\n\n";
-            pty ty;
+            pty real_type;
             Lib.say ("\n\nunification failure message: "^message^"\n");
             Globals.show_types := tmp;
             raise ERR"typecheck" "failed"

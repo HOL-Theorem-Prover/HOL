@@ -15,33 +15,52 @@ type grammar = (int * grammar_rule) list
 type 'a token = 'a type_token
 
 
-fun n_appls _ ([], t) = t
-  | n_appls pT (op1::ops, t) = n_appls pT (ops, pT(token_string op1, [t]))
-fun n_appls_l _ ([], t) = raise Fail "parse_type.n_appls_l: can't happen"
-  | n_appls_l pT (op1::ops, xs) = n_appls pT (ops, pT(token_string op1, xs))
 
 fun parse_type tyfns allow_unknown_suffixes G = let
-  val {vartype = pVartype, tyop = pType, antiq = pAQ} = tyfns
+  val {vartype = pVartype, tyop = pType, antiq = pAQ, qtyop} = tyfns
   val lex = type_tokens.lex
   (* extra fails on next two definitions will effectively make the stream
      push back the unwanted token *)
   fun itemP P = (lex >- (fn t => if P t then return t else fail)) ++ fail
 
+  (* can't use item for these, because this would require the token type
+     to be an equality type, which is icky *)
   fun is_LParen t = case t of LParen => true | _ => false
   fun is_RParen t = case t of RParen => true | _ => false
   fun is_Comma t = case t of Comma => true | _ => false
 
+  fun apply_tyop t args =
+    case t of
+      TypeIdent s => pType(s,args)
+    | QTypeIdent(thy,ty) => qtyop{Thy=thy,Tyop=ty,Args=args}
+    | _ => raise Fail "parse_type.apply_tyop: can't happen"
+
+  fun n_appls (ops, t) =
+    case ops of
+      [] => t
+    | oph::opt => n_appls (opt, apply_tyop oph [t])
+  fun n_appls_l ([], t) = raise Fail "parse_type.n_appls_l: can't happen"
+    | n_appls_l (op1::ops, xs) = n_appls (ops, apply_tyop op1 xs)
   fun parse_base_level f =
-    (itemP is_ident >- (fn t => return (pType(token_string t, [])))) ++
-    (itemP is_tvar >- (fn t => return (pVartype (token_string t)))) ++
-    (itemP is_aq >- (fn t => return (pAQ (dest_aq t)))) ++
-    (itemP is_LParen >> f >-> itemP is_RParen)
+    lex >-
+    (fn t =>
+     case t of
+       TypeIdent s => return (pType(s, []))
+     | QTypeIdent(thy,ty) => return (qtyop{Thy = thy, Tyop = ty, Args = []})
+     | TypeVar s => return (pVartype s)
+     | AQ x => return (pAQ x)
+     | LParen => (f >-> itemP is_RParen)
+     | _ => fail)
 
   fun parse_op slist =
-    itemP (fn t =>
-           is_ident t andalso
-           (allow_unknown_suffixes orelse
-            isSome (List.find (fn s => token_string t = s) slist)))
+    lex >-
+    (fn t =>
+     case t of
+       TypeIdent s =>
+         if allow_unknown_suffixes orelse Lib.mem s slist then return t
+         else fail
+     | QTypeIdent _ => return t
+     | _ => fail)
   fun parse_binop stlist = let
     fun doit t = let
       val result =
@@ -88,10 +107,10 @@ fun parse_type tyfns allow_unknown_suffixes G = let
      | SUFFIX slist =>
          (next_level >-                             (fn t =>
           many (parse_op slist) >-                  (fn oplist =>
-          return (n_appls pType (oplist, t))))) ++
+          return (n_appls (oplist, t))))) ++
          (tuple_arg >-                              (fn args =>
           many1 (parse_op slist) >-                 (fn oplist =>
-          return (n_appls_l pType (oplist, args)))))) strm
+          return (n_appls_l (oplist, args)))))) strm
   end
 in
   parse_term G

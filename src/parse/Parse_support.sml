@@ -167,16 +167,16 @@ fun make_bvar (s,E) = (Preterm.Var{Name=s, Ty=lookup_bvar(s,E)}, E);
      Treatment of overloaded identifiers
  ---------------------------------------------------------------------- *)
 
-fun gen_overloaded_const oinfo s = 
+fun gen_overloaded_const oinfo s =
  let open Overload
      val opinfo = valOf (info_for_name oinfo s)
          handle Option => raise Fail "gen_overloaded_const: invariant failure"
  in
-  case #actual_ops opinfo 
+  case #actual_ops opinfo
    of [{Ty,Name,Thy}] =>
          Preterm.Const{Name=Name, Thy=Thy,
                    Ty=Pretype.rename_typevars (Pretype.fromType Ty)}
-  | otherwise => 
+  | otherwise =>
      let val base_pretype0 = Pretype.fromType (#base_type opinfo)
          val new_pretype = Pretype.rename_typevars base_pretype0
      in Preterm.Overloaded{Name = s, Ty = new_pretype, Info = opinfo}
@@ -208,13 +208,13 @@ fun gen_overloaded_const oinfo s =
 fun make_const s E = (gen_const s, E)
 
 (*---------------------------------------------------------------------------
-    Making preterm string literals. 
+    Making preterm string literals.
  ---------------------------------------------------------------------------*)
 
-local val num_ty = Pretype.Tyop("num",[])
-      val char_ty = Pretype.Tyop("char",[])
-      val string_ty = Pretype.Tyop("string",[])
-      fun funty ty1 ty2 = Pretype.Tyop("fun",[ty1,ty2])
+local val num_ty = Pretype.Tyop{Thy="num", Tyop = "num", Args = []}
+      val char_ty = Pretype.Tyop{Thy="char", Tyop = "char", Args = []}
+      val string_ty = Pretype.Tyop{Thy = "string", Tyop = "string", Args = []}
+      fun funty ty1 ty2 = Pretype.Tyop{Thy="min", Tyop="fun", Args=[ty1,ty2]}
       fun mk_comb(ptm1,ptm2) = Preterm.Comb{Rator=ptm1,Rand=ptm2}
       val CHR = Preterm.Const
                    {Name="CHR",Thy="string",Ty=funty num_ty char_ty}
@@ -223,13 +223,13 @@ local val num_ty = Pretype.Tyop("num",[])
       val EMPTY = Preterm.Const
                       {Name="EMPTYSTRING",Thy="string",Ty=string_ty}
       fun mk_chr ptm = Preterm.Comb{Rator=CHR,Rand=ptm}
-      fun mk_string (ptm1,ptm2) = 
+      fun mk_string (ptm1,ptm2) =
           Preterm.Comb{Rator=Preterm.Comb{Rator=STRING,Rand=ptm1},Rand=ptm2}
       val mk_numeral = Literal.gen_mk_numeral
           {mk_comb = mk_comb,
           ZERO = Preterm.Const {Name="0",Thy="num",Ty=num_ty},
           ALT_ZERO = Preterm.Const{Name="ALT_ZERO",Thy="arithmetic",Ty=num_ty},
-          NUMERAL = Preterm.Const 
+          NUMERAL = Preterm.Const
                      {Name="NUMERAL",Thy="arithmetic",Ty=funty num_ty num_ty},
           BIT1 = Preterm.Const {Name="NUMERAL_BIT1",
                                 Thy="arithmetic",Ty=funty num_ty num_ty},
@@ -366,7 +366,7 @@ fun bind_restr_term binder vlist restr tm (E as {scope=scope0,...}:env)=
 
 fun split ty =
   case ty of
-    Pretype.Tyop("prod",Args) => Args
+    Pretype.Tyop{Thy="pair",Tyop = "prod",Args} => Args
   | _ => raise ERROR "split" "not a product";
 
 

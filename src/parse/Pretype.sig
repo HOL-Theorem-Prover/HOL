@@ -1,9 +1,9 @@
-signature Pretype = 
+signature Pretype =
 sig
 
- datatype pretype 
+ datatype pretype
     = Vartype of string
-    | Tyop of string * pretype list
+    | Tyop of {Thy:string,Tyop:string, Args: pretype list}
     | UVar of pretype option ref
 
 val tyvars : pretype -> string list
