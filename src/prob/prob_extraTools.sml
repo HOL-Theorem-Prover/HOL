@@ -35,7 +35,7 @@ val pred_set_rewrs
      IN_INTER, SET_EQ_EXT, SUBSET_DEF, IN_IMAGE, INTER_EMPTY,
      INTER_UNIV, UNION_EMPTY, UNION_UNIV, GSPECIFICATION];
 
-val pred_set_ss = simpLib.++(std_ss, simpLib.SIMPSET {
+val pred_set_ss = simpLib.++(boolSimps.bool_ss, simpLib.SIMPSET {
   ac = [],
   convs = [],
   dprocs = [],
@@ -47,7 +47,7 @@ fun PRED_SET_TAC ths
   = REPEAT (POP_ASSUM MP_TAC)
     ++ RW_TAC pred_set_ss ths
     ++ REPEAT (POP_ASSUM MP_TAC)
-    ++ RW_TAC std_ss (SPECIFICATION::ths);
+    ++ RW_TAC boolSimps.bool_ss (SPECIFICATION::ths);
 
 fun dest_binop tm
   = let val (tm', res2) = dest_comb tm
@@ -62,7 +62,7 @@ fun IN_LAMBDA_CONV ty tm
        else assert_false "IN_LAMBDA_CONV" "not the right form"
     end;
 
-fun pset_ss_ty ty = simpLib.++(std_ss, simpLib.SIMPSET {
+fun pset_ss_ty ty = simpLib.++(boolSimps.bool_ss, simpLib.SIMPSET {
   ac = [],
   convs = [{conv = (K o K) (IN_LAMBDA_CONV ty),
 	    key = SOME ([], ``(x:'a) IN y``),
@@ -77,7 +77,7 @@ fun PSET_TAC_ty ty ths
   = REPEAT (POP_ASSUM MP_TAC)
     ++ RW_TAC (pset_ss_ty ty) ths
     ++ REPEAT (POP_ASSUM MP_TAC)
-    ++ RW_TAC std_ss (INST_TYPE [alpha |-> ty] SPECIFICATION::ths);
+    ++ RW_TAC boolSimps.bool_ss (INST_TYPE [alpha |-> ty] SPECIFICATION::ths);
 
 open numSyntax;
 
