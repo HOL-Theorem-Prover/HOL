@@ -62,9 +62,10 @@ precedence.
    - dest_comb (--`T \/ T orelse F`--);
    > val it = {{Rator = (--`$orelse (T \/ T)`--),  Rand = (--`F`--)}} : ...
 }
+
 \SEEALSO
-precedence, constants, infixes, binders, is_constant, is_infix, is_binder,
-new_constant, new_binder, new_definition, new_infix_definition,
-new_binder_definition.
+add_infix, precedence, constants, infixes, binders, is_constant,
+is_infix, is_binder, new_constant, new_binder, new_definition,
+new_infix_definition, new_binder_definition.
 
 \ENDDOC
