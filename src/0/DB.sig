@@ -13,6 +13,11 @@ sig
   val find   : string -> data list
   val match  : string list -> Term.term -> data list (* first order matches *)
 
+  val theorem : string -> string -> thm
+  val theorems : string -> (string * thm) list
+  val gen_theorem : string -> string -> thm * class
+  val gen_theorems : string -> (string * thm * class) list
+
   val rawmatch  : (term -> term -> bool)
                   -> string list -> Term.term -> data list
 
