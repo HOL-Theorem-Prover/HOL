@@ -170,6 +170,8 @@ with
  fun USER_CONV {name,key,trace=trace_level,conv} =
   let val trace_string1 = "trying "^name^" on"
       val trace_string2 = name^" ineffectual"
+      val trace_string3 = name^" left term unchanged"
+      val trace_string4 = name^" raised an unusual exception (ignored)"
   in fn solver => fn stack => fn tm =>
       let val _ = trace(trace_level+2,REDUCE(trace_string1,tm))
           val thm = conv solver stack tm
@@ -177,8 +179,11 @@ with
         trace(trace_level,PRODUCE(tm,name,thm));
         thm
       end
-      handle e as HOL_ERR _
-      => (trace (trace_level+2,TEXT trace_string2); raise e)
+      handle e as HOL_ERR _ =>
+             (trace (trace_level+2,TEXT trace_string2); raise e)
+           | e as Conv.UNCHANGED =>
+             (trace (trace_level+2,TEXT trace_string3); raise e)
+           | e => (trace (trace_level, TEXT trace_string4); raise e)
   end;
 
  val any = mk_var("x",Type.alpha);
