@@ -5,45 +5,34 @@
 
 (* app load ["Mosml","Database","Parsspec"]; *)
 
-fun mkentry s = {comp = Database.Term(s, SOME"HOL"),
-                 file = s^".adoc", line = 0};
-
-fun mapfilter f [] = []
-  | mapfilter f (h::t) =
-     let val L = mapfilter f t
-     in f h::L handle Interrupt => raise Interrupt
-                    |        _  => L
-     end;
+fun mkentry s = {comp = Database.Term(String.substring(s, 0, size s - 5),
+                                      SOME"HOL"),
+                 file = s, line = 0};
 
 fun docdir_to_entries path (endpath, entries) =
   let val dir = Path.concat (path, endpath)
       val L0 = Mosml.listDir dir
-      val L1 = List.filter (fn s => not(s=".") andalso not(s="..")) L0
-      val L2 = mapfilter (fn s => String.substring(s,0,String.size s - 5)) L1
+      fun is_adocfile s =
+        size s > 5 andalso String.extract(s, size s - 5, NONE) = ".adoc"
+      val L1 = List.filter is_adocfile L0
   in
-    List.foldl (fn (e,l) => (mkentry e::l)) entries L2
+    List.foldl (fn (e,l) => (mkentry e::l)) entries L1
   end;
+
+val docdirs = let
+  val instr = TextIO.openIn "docdirs"
+  val wholefile = TextIO.inputAll instr
+  val _ = TextIO.closeIn instr
+in
+  String.tokens Char.isSpace wholefile
+end
+
 
 (*---------------------------------------------------------------------------
  * The database of all hol ".doc" files.
  *---------------------------------------------------------------------------*)
-fun buildDb holpath =
-let val doc_indices = List.foldl (docdir_to_entries holpath) []
-           ["help/ADocfiles",
-            "src/arith/help/entries",
-            "src/hol88/help/entries",
-            "src/list/help/entries",
-            "src/pair/help/entries",
-            "src/pred_set/help/entries",
-            "src/reduce/help/entries",
-            "src/res_quan/help/entries",
-            "src/set/help/entries",
-            "src/string/help/entries",
-            "src/taut/help/entries",
-            "src/unwind/help/entries",
-            "src/utils/help",
-            "src/word/help/entries"]
-
+fun buildDb holpath = let
+  val doc_indices = List.foldl (docdir_to_entries holpath) [] docdirs
     val all_indices =
        List.foldr (Parsspec.processfile [] (Path.concat(holpath,"sigobj")))
        doc_indices

@@ -6,8 +6,14 @@ When the HOL theories have all been built, typing
   make
 in this directory will create an index file for the HOL distribution.
 
+
+The file   docdirs   contains a list of directories that will be
+searched for .doc files, and all those found there will be indexed
+(and also turned into .adoc) files.
+
+
 -- Konrad Slind, Feb.28 1998.
--- Michael Norrish, 12 Aug 1999
+-- Michael Norrish, 12,26 Aug 1999
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

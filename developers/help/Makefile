@@ -3,14 +3,14 @@
 # This makefile should only be run by developers.  It is not intended for
 # distribution.
 
-MOSMLHOME=/homes/kl216/lang/ml/mosml
+MOSMLHOME=/local/scratch/kxs/144
 MOSMLC=${MOSMLHOME}/bin/mosmlc
 COMPFLAGS=-I ${MOSMLHOME}/src/compiler
 MOSMLLEX=${MOSMLHOME}/bin/mosmllex
 MOSMLYACC=${MOSMLHOME}/bin/mosmlyac
 
-all: mk_dbs ../../help/ADocfiles clean-doc.sed
-	./cleandocdir.sh ../../help/Docfiles ../../help/ADocfiles
+all: mk_dbs ../../help/ADocfiles gen-adoc.sed
+	./gen-adocs.sh docdirs
 	./mk_dbs ../../
 
 ../../help/ADocfiles:
@@ -38,6 +38,7 @@ clean:
 	rm -f Parser.sig Parser.sml Lexer.sml mk_dbs
 	rm -f *.ui
 	rm -f *.uo
+	./clean-adocs.sh docdirs
 
 ### DO NOT DELETE THIS LINE
 Parser.uo: Parser.ui
