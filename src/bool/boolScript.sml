@@ -175,6 +175,12 @@ infixr -->;
 
 val ERR = Feedback.mk_HOL_ERR "boolScript"
 
+val F = Term`F`
+val T = Term`T`;
+val conjunction = prim_mk_const{Name="/\\", Thy="bool"}
+val disjunction = prim_mk_const{Name="\\/", Thy="bool"}
+val negation    = prim_mk_const{Name="~",   Thy="bool"};
+
 val dest_neg    = dest_monop ("~","bool") (ERR"dest_neg" "");
 val dest_eq     = dest_binop("=","min") (ERR"dest_eq" "");
 val dest_disj   = dest_binop("\\/","bool") (ERR"dest_disj" "");
@@ -192,7 +198,7 @@ val lhs = fst o dest_eq;
 val rhs = snd o dest_eq;
 
 
-local val F = Term`F`   val imp = Term`$==>`  val notc = Term`$~`
+local val imp = Term`$==>`  val notc = Term`$~`
 in
 fun dest_imp M =
  let val (Rator,conseq) = dest_comb M 
@@ -246,8 +252,7 @@ fun QUANT_CONV conv = RAND_CONV(ABS_CONV conv);
 fun RIGHT_BETA th = TRANS th (BETA_CONV(snd(dest_eq(concl th))));
 fun UNDISCH th = MP th (ASSUME(fst(dest_imp(concl th))));
 
-fun FALSITY_CONV tm =
-  DISCH (--`F`--) (SPEC tm (EQ_MP F_DEF (ASSUME (--`F`--))));
+fun FALSITY_CONV tm = DISCH F (SPEC tm (EQ_MP F_DEF (ASSUME F)))
 
 fun UNFOLD_OR_CONV tm =
   let val (disj1,disj2) = dest_disj tm in
@@ -285,7 +290,7 @@ fun EQT_INTRO th =
    let val t = concl th
        val x = genvar bool
    in
-   BOOL_CASE (--`^x=T`--) x t (REFL (--`T`--))
+   BOOL_CASE (--`^x=T`--) x t (REFL T)
      (MP (FALSITY_CONV (--`F=T`--)) (EQ_MP (ASSUME(--`^t=F`--)) th))
    end;
 
@@ -294,9 +299,7 @@ fun EQT_INTRO th =
  *---------------------------------------------------------------------------*)
 
 val IMP_ANTISYM_AX =
- let val T = --`T`--
-     val F = --`F`--
-     val t1 = --`t1:bool`--
+ let val t1 = --`t1:bool`--
      val t2 = --`t2:bool`--
      fun dsch t1 t2 th = DISCH (--`^t2 ==> ^t1`--) 
                            (DISCH (--`^t1 ==> ^t2`--) th)
@@ -323,7 +326,7 @@ fun IMP_ANTISYM_RULE th1 th2 =
  * |- !t. F ==> t
  *---------------------------------------------------------------------------*)
 
-val FALSITY = let val t = --`t:bool`-- in GEN t (FALSITY_CONV t) end;
+val FALSITY = let val t = Term`t:bool` in GEN t (FALSITY_CONV t) end;
 val _ = save_thm("FALSITY", FALSITY);
 
 fun CONTR tm th = MP (SPEC tm FALSITY) th
@@ -3383,6 +3386,141 @@ in
     save_thm("UEXISTS_SIMP", mCONV_RULE (K mp') exp7)
   end
 end
+
+
+(*---------------------------------------------------------------------------
+     From Joe Hurd : case analysis on the (4) functions in the 
+     type :bool -> bool. 
+
+     val BOOL_FUN_CASES_THM =
+     |- !f. (f = \b. T) \/ (f = \b. F) \/ (f = \b. b) \/ (f = \b. ~b)
+ ---------------------------------------------------------------------------*)
+
+val BOOL_FUN_CASES_THM = 
+ let val x = mk_var("x",bool)
+     val f = mk_var("f",bool-->bool)
+     val KF    = Term `\b:bool.F`
+     val KT    = Term `\b:bool.T`
+     val Ibool = Term `\b:bool.b`
+     val dual  = Term `\b. ~b`
+     val fT    = mk_comb(f,T)
+     val fF    = mk_comb(f,F)
+     val fT_eq_T = mk_eq(fT,T)
+     val fF_eq_T = mk_eq(fF,T)
+     val fT_eq_F = mk_eq(fT,F)
+     val fF_eq_F = mk_eq(fF,F)
+     val final = Term `(f = ^KT) \/ (f = ^KF) \/ (f = ^Ibool) \/ (f = ^dual)`
+     val a0 = TRANS (ASSUME fT_eq_T) (SYM (BETA_CONV (mk_comb(KT,T))))
+     val a1 = TRANS (ASSUME fF_eq_T) (SYM (BETA_CONV (mk_comb(KT,F))))
+     val a2 = BOOL_CASE (Term`f x = ^KT x`) x x a0 a1
+     val a3 = EXT (GEN x a2)
+     val a  = DISJ1 a3 (Term`(f = \b. F) \/ (f = \b. b) \/ (f = \b. ~b)`)
+     val b0 = TRANS (ASSUME fT_eq_F) (SYM (BETA_CONV (mk_comb(KF,T))))
+     val b1 = TRANS (ASSUME fF_eq_F) (SYM (BETA_CONV (mk_comb(KF,F))))
+     val b2 = BOOL_CASE (Term`f x = ^KF x`) x x b0 b1
+     val b3 = EXT (GEN x b2)
+     val b4 = DISJ1 b3 (Term`(f = ^Ibool) \/ (f = \b. ~b)`)
+     val b  = DISJ2 (Term`f = ^KT`) b4
+     val c0 = TRANS (ASSUME fT_eq_T) (SYM (BETA_CONV (mk_comb(Ibool,T))))
+     val c1 = TRANS (ASSUME fF_eq_F) (SYM (BETA_CONV (mk_comb(Ibool,F))))
+     val c2 = BOOL_CASE (Term`f x = ^Ibool x`) x x c0 c1
+     val c3 = EXT (GEN x c2)
+     val c4 = DISJ1 c3 (Term`f = ^dual`)
+     val c5 = DISJ2 (Term `f = ^KF`) c4
+     val c  = DISJ2 (Term `f = ^KT`) c5
+     val d0 = TRANS (ASSUME fT_eq_F)
+                (TRANS (SYM (CONJUNCT1 (CONJUNCT2 NOT_CLAUSES)))
+                       (SYM (BETA_CONV (mk_comb(dual,T)))))
+     val d1 = TRANS (ASSUME fF_eq_T)
+               (TRANS (SYM (CONJUNCT2 (CONJUNCT2 NOT_CLAUSES)))
+                      (SYM (BETA_CONV (mk_comb(dual,F)))))
+     val d2 = BOOL_CASE (Term`f x = ^dual x`) x x d0 d1
+     val d3 = EXT (GEN x d2)
+     val d4 = DISJ2 (Term `f = ^Ibool`) d3
+     val d5 = DISJ2 (Term `f = ^KF`) d4
+     val d  = DISJ2 (Term`f = ^KT`) d5
+     val ad0 = DISCH fT_eq_T a
+     val ad1 = DISCH fT_eq_F d
+     val ad2 = BOOL_CASE (Term `(f T = x) ==> ^final`) x x ad0 ad1
+     val ad3 = SPEC fT (GEN x ad2)
+     val ad  = MP ad3 (REFL fT)
+     val bc0 = DISCH fT_eq_T c
+     val bc1 = DISCH fT_eq_F b
+     val bc2 = BOOL_CASE (Term `(f T = x) ==> ^final`) x x bc0 bc1
+     val bc3 = SPEC fT (GEN x bc2)
+     val bc  = MP bc3 (REFL fT)
+     val abcd0 = DISCH fF_eq_T ad
+     val abcd1 = DISCH fF_eq_F bc
+     val abcd2 = BOOL_CASE (Term`(f F = x) ==> ^final`) x x abcd0 abcd1
+     val abcd3 = SPEC fF (GEN x abcd2)
+     val abcd  = MP abcd3 (REFL fF)
+in
+   GEN f abcd
+end;
+
+val _ = save_thm("BOOL_FUN_CASES_THM",BOOL_FUN_CASES_THM);
+
+
+(*---------------------------------------------------------------------------
+     Another from Joe Hurd : consequence of BOOL_FUN_CASES_THM
+
+     BOOL_FUN_INDUCT = 
+     |- !P. P (\b. T) /\ P (\b. F) /\ P (\b. b) /\ P (\b. ~b) ==> !f. P f
+ ---------------------------------------------------------------------------*)
+
+  fun or_imp th0 =
+    let val (disj1, disj2) = dest_disj (concl th0)
+        val th1 = SYM (SPEC disj1 (CONJUNCT1 NOT_CLAUSES))
+        val th2 = MK_COMB (REFL disjunction, th1)
+        val th3 = MK_COMB (th2, REFL disj2)
+        val th4 = EQ_MP th3 th0
+        val th5 = SYM (SPECL [mk_neg disj1, disj2] IMP_DISJ_THM)
+    in
+      EQ_MP th5 th4
+    end
+
+  fun imp_and th0 =
+    let val (ant, conseq) = dest_imp (concl th0)
+      val (ant', conseq') = dest_imp conseq
+      val th1 = SPECL [ant, ant', conseq'] AND_IMP_INTRO
+    in
+      EQ_MP th1 th0
+    end
+
+
+val BOOL_FUN_INDUCT = 
+ let val f = mk_var("f",bool-->bool)
+     val g = mk_var("g",bool-->bool)
+     val f_eq_g = mk_eq(f,g)
+     val P = mk_var("P",(bool-->bool) --> bool)
+     val KF    = Term `\b:bool.F`
+     val KT    = Term `\b:bool.T`
+     val Ibool = Term `\b:bool.b`
+     val dual  = Term `\b. ~b`
+     val f0 = ASSUME (mk_neg(mk_comb(P,f)))
+     val f1 = ASSUME (mk_neg(mk_neg(f_eq_g)))
+     val f2 = EQ_MP (SPEC f_eq_g (CONJUNCT1 NOT_CLAUSES)) f1
+     val f3 = MK_COMB (REFL P, f2)
+     val f4 = MK_COMB (REFL negation, f3)
+     val f5 = UNDISCH (NOT_ELIM (EQ_MP f4 f0))
+     val f6 = CCONTR (mk_neg(f_eq_g)) f5
+     val f7  = GEN g (DISCH (mk_comb(P,g)) f6)
+     val a0 = SPEC f BOOL_FUN_CASES_THM
+     val a1 = MP (or_imp a0) (UNDISCH (SPEC KT f7))
+     val a2 = MP (or_imp a1) (UNDISCH (SPEC KF f7))
+     val a3 = MP (or_imp a2) (UNDISCH (SPEC Ibool f7))
+     val a  = MP (NOT_ELIM (UNDISCH (SPEC dual f7))) a3
+     val b0 = CCONTR (mk_comb(P,f)) a
+     val b1 = GEN f b0
+     val b2 = DISCH (mk_comb(P,dual)) b1
+     val b3 = imp_and (DISCH (mk_comb(P,Ibool)) b2)
+     val b4 = imp_and (DISCH (mk_comb(P,KF)) b3)
+     val b  = imp_and (DISCH (mk_comb(P,KT)) b4)
+in
+   GEN P b
+end;
+
+val BOOL_FUN_INDUCT = save_thm("BOOL_FUN_INDUCT",BOOL_FUN_INDUCT);
 
 
 val _ = export_theory();

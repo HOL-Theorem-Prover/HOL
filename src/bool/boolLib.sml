@@ -97,34 +97,6 @@ val UNIQUE_SKOLEM_THM = prove
       REPEAT STRIP_TAC THEN BETA_TAC THEN COND_CASES_TAC THEN
       ASM_REWRITE_TAC[],
       DISCH_THEN(MP_TAC o C AP_THM (--`x:'a`--)) THEN REWRITE_TAC[BETA_THM]]]);
+end (* local open *)
 
-
-(*---------------------------------------------------------------------------
-   From Joe Hurd : case analysis on the (4) functions in the type
-   :bool -> bool. Also slated for boolTheory.
- ---------------------------------------------------------------------------*)
-
-val BOOL_FUN_CASES_THM = prove(
- (* store_thm ("BOOL_FUN_CASES_THM", *)
-  Term `!f. (f = \b. F) \/ (f = \b. T) \/ (f = \b. b) \/ (f = \b. ~b)`,
-  GEN_TAC THEN CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
-    THEN ASM_CASES_TAC (Term`f T:bool`) 
-    THEN ASM_CASES_TAC (Term`f F:bool`)
-    THENL [DISJ2_TAC THEN DISJ1_TAC,
-           DISJ2_TAC THEN DISJ2_TAC THEN DISJ1_TAC,
-           DISJ2_TAC THEN DISJ2_TAC THEN DISJ2_TAC,
-           DISJ1_TAC]
-    THEN GEN_TAC 
-    THEN BOOL_CASES_TAC (Term`b:bool`) 
-    THEN ASM_REWRITE_TAC []);
-
-val BOOL_FUN_INDUCT = prove(
- (* store_thm ("BOOL_FUN_INDUCT", *)
-   Term`!P. P (\b. F) /\ P (\b. T) /\ P (\b. b) /\ P (\b. ~b) ==> !f. P f`,
-   REPEAT STRIP_TAC
-     THEN MP_TAC (SPEC (Term`f:bool->bool`) BOOL_FUN_CASES_THM)
-     THEN STRIP_TAC 
-     THEN ASM_REWRITE_TAC[])
 end;
-
-end
