@@ -15,10 +15,10 @@ DVIPS=dvips
 
 # files:
 
-MLSOURCES=hol_to_latex.ml holdoc_init.ml holdoc_munge.ml holparsesupp.ml \
+MLSOURCES=hol_to_latex.ml holdoc_init.ml holparsesupp.ml \
 	mng_to_latex.ml simpledump.ml simplemosmldump.ml simplemngdump.ml \
 	holdocmodel.ml holparsetools.ml mngdump.ml
-MLISOURCES=holdoc_init.mli holdoc_munge.mli holparsesupp.mli hollex.mli simpledump.mli holparsetools.mli mngdump.mli
+MLISOURCES=holdoc_init.mli holparsesupp.mli hollex.mli simpledump.mli holparsetools.mli mngdump.mli
 OTHERSOURCES=hollex.mll holparse.mly
 GENMLSOURCES=hollex.ml holparse.ml
 GENMLISOURCES=holparse.mli
@@ -36,9 +36,6 @@ simplemosmldump : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simpl
 	$(OCAMLOPT) str.cmxa $+ -o $@
 
 mng_to_latex : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx simpledump.cmx holparsetools.cmx mngdump.cmx mng_to_latex.cmx
-	$(OCAMLOPT) str.cmxa $+ -o $@
-
-hol_to_latex : holdoc_init.cmx holparsesupp.cmx hollex.cmx holparse.cmx holdoc_munge.cmx hol_to_latex.cmx
 	$(OCAMLOPT) str.cmxa $+ -o $@
 
 # other targets:
