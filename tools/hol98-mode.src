@@ -29,11 +29,17 @@
 (defvar hol-echo-commands-p nil
   "*Whether or not to echo the text of commands originating elsewhere.")
 
+(defvar hol-generate-locpragma-p t
+  "*Whether or not to generate (*#loc row col *) pragmas for HOL.")
+
 (put 'hol-term 'end-op
      (function (lambda () (skip-chars-forward "^`"))))
+(defvar hol-beg-pos nil) ; ugh, global, but easiest this way
 (put 'hol-term 'beginning-op
-     (function (lambda () (skip-chars-backward "^`"))))
-(defun hol-term-at-point () (thing-at-point 'hol-term))
+     (function (lambda () (skip-chars-backward "^`") (setq hol-beg-pos (point)))))
+(defun hol-term-at-point ()
+  (let ((s (thing-at-point 'hol-term)))
+    (with-hol-locpragma hol-beg-pos s)))
 
 ;;; makes buffer hol aware.  Currently this consists of no more than
 ;;; altering the syntax table if its major is sml-mode.
@@ -194,10 +200,26 @@ process in it."
              (signal (car e) (cdr e))))))))))
 
 
+(defun with-hol-locpragma (pos s)
+  (if hol-generate-locpragma-p
+      (concat (hol-locpragma-of-position pos) s)
+      s))
+
+(defun hol-locpragma-of-position (pos)
+  "Convert Elisp position into HOL location pragma.  Not for interactive use."
+  (let ((initial-point (point)))
+    (goto-char pos)
+    (let* ((rowstart (line-beginning-position))
+           (row      (+ (count-lines 1 pos)
+                      (if (= rowstart pos) 1 0)))
+           (col      (+ (current-column) 1)))
+      (goto-char initial-point)
+      (concat " (*#loc " row " " col " *)"))))
+
 (defun copy-region-as-hol-tactic (start end arg)
   "Send selected region to HOL process as tactic."
   (interactive "r\nP")
-  (let* ((region-string (buffer-substring start end))
+  (let* ((region-string (with-hol-locpragma start (buffer-substring start end)))
          (e-string (concat "goalstackLib." (if arg "expandf" "e")))
          (tactic-string
           (format "%s (%s) handle e => Raise e" e-string region-string)))
@@ -215,18 +237,18 @@ If prefix ARG is true, or if in transient mark mode, region is active and
 the region contains no backquotes, then send region instead."
   (interactive "P")
   (let ((txt (condition-case nil
-                 (buffer-substring (region-beginning) (region-end))
+                 (with-hol-locpragma region-beginning
+                    (buffer-substring (region-beginning) (region-end)))
                (error nil))))
     (if (or (and mark-active transient-mark-mode (= (count ?\` txt) 0))
             arg)
       (send-string-as-hol-goal txt)
     (send-string-as-hol-goal (hol-term-at-point)))))
 
-
 (defun copy-region-as-hol-definition (start end arg)
   "Send selected region to HOL process as definition/expression."
   (interactive "r\nP")
-  (let* ((buffer-string (buffer-substring start end))
+  (let* ((buffer-string (with-hol-locpragma start (buffer-substring start end)))
          (send-string (if arg
                          (concat "(" buffer-string ") handle e => Raise e")
                        buffer-string)))
