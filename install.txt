@@ -16,11 +16,19 @@ Building the Hol98 system.
 A. First, install Moscow ML. This is usually straightforward. The
    directory where it lives will be called <mosml-dir> in the following.
 
-   [ Notice that, if you intend to use ML embeddings of C libraries, 
+   [ Notice that, if you intend to use ML embeddings of C libraries,
      like the Robdd library, you are so far restricted to running on Linux,
      Solaris, and OSF/1. Furthermore, you may have to set a few shell
      variables in order to use C libraries; this is explained in the
      MoscowML installation directions.
+
+     Further note that if you are running on Windows, you must have
+     the PATH and MOSMLLIB environment variables set as described in
+     the installation guide for Moscow ML.  It seems that Windows
+     won't find the MoscowML DLL without the appropriate entry in
+     PATH, and Moscow ML won't run without knowing where its library
+     is.
+
    ]
 
 
@@ -31,28 +39,28 @@ B. Unpack Hol98 with the commands
    in Unix, or the appropriate clicking activity in Windows NT. The
    resulting directory will be called <hol-dir> in the following.  When
    fully built, <hol-dir> takes approximately 35M of disk space, so be
-   sure you have enough before starting.  
+   sure you have enough before starting.
 
 
-C. Enter the "tools" directory and edit the file "configure.sml". 
+C. Enter the "tools" directory and edit the file "configure.sml".
 
     (1) You must supply values for the following parameters:
 
             val mosmldir =
-            val holdir   = 
+            val holdir   =
 
         Both values must be absolute (full) pathnames. For example, my
-        local setup has 
+        local setup has
 
             val mosmldir = "/home/kxs/mosml";
             val holdir   = "/home/kxs/hol98";
 
     (2) The following parameter tells the build procedure what operating
-        system is being used. 
+        system is being used.
 
-            val OS = 
+            val OS =
 
-        The current choices for this are: "linux", "solaris", and "winNT".  
+        The current choices for this are: "linux", "solaris", and "winNT".
         If you are on a unix operating system that is not Linux or
         Solaris, it is OK to just put "unix"; however, this will imply
         that the robdd library will not be usable (it currently only
@@ -64,17 +72,19 @@ C. Enter the "tools" directory and edit the file "configure.sml".
            val CC = "gcc";
 
         This parameter may need to be changed, if "gcc" is not on your
-        machine, or can't be found along your path.
+        machine, or can't be found along your path.  We supply a
+        prebuilt executable for Windows machines, so if you have
+        selected "winNT" for your OS value, then you can ignore this.
 
     (4) The following parameter gives the path to the "gnumake" program,
-        which is required to build the robdd library. 
+        which is required to build the robdd library.
 
            val GNUMAKE = "gnumake";
 
         If you are building Hol98 on an OS that is *not* Solaris or
         Linux, the robdd library is not currently accessible. In such a
-        case, the value of GNUMAKE does not matter. 
- 
+        case, the value of GNUMAKE does not matter.
+
 
     (5) The following parameter gives the name of the local directory
         that Holmake uses to store its dependencies in. On Unix and
@@ -91,17 +101,17 @@ D. Perform the following 2 shell commands:
 
    The first command establishes some pathnames and the like; the
    second actually builds the system. In case of difficulty, the
-   configuration can be gone through by hand, by starting 
-   <mosmldir>/bin/mosml and stepping through tools/configure.sml. 
-   Similarly, the execution of build.sml can also be stepped through 
+   configuration can be gone through by hand, by starting
+   <mosmldir>/bin/mosml and stepping through tools/configure.sml.
+   Similarly, the execution of build.sml can also be stepped through
    in MoscowML. This can be somewhat time-consuming, but will help
-   pinpoint any problems. 
+   pinpoint any problems.
 
 
 E. If bin/build completes, successfully, you are done. From <hol-dir>
-   you can now access 
+   you can now access
 
-      bin/hol           * The standard Hol98 interactive system; 
+      bin/hol           * The standard Hol98 interactive system;
       bin/hol.unquote   * The interactive system with quote preprocessing;
       bin/Holmake       * A batch compiler for HOL directories;
       doc/man.ps        * A user manual for the system;
@@ -120,7 +130,7 @@ Dealing with failure.
            . version of MoscowML being used
            . version of Hol98 being built
 
-   * If a build attempt fails for some reason, you should attempt to invoke 
+   * If a build attempt fails for some reason, you should attempt to invoke
 
         bin/build -cleanAll
 
