@@ -17,9 +17,11 @@
 ******************************************************************************)
 (*
 quietdec := true;
+loadPath := "../official-semantics" :: "../regexp" :: !loadPath;
 map load 
- ["UnclockedSemanticsTheory", "ClockedSemanticsTheory","RewritesTheory",
-  "rich_listTheory", "intLib", "res_quanLib", "res_quanTheory"];
+ ["KripkeTheory", "UnclockedSemanticsTheory", "ClockedSemanticsTheory",
+  "RewritesTheory", "rich_listTheory", "intLib", "res_quanLib", 
+  "res_quanTheory"];
 open KripkeTheory FinitePathTheory PathTheory SyntaxTheory 
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
      arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
@@ -425,9 +427,9 @@ val INIT_TAC =
  RW_TAC (arith_ss  ++ resq_SS)
   [F_SEM_def,UF_SEM_def,F_CLOCK_FREE_def,RESTN_def,GSYM NEXT_RISE_def];
 in
-val F_SEM_STRONG_FREE_TRUE_LEMMA =
+val F_SEM_TRUE_LEMMA =
  store_thm
-  ("F_SEM_STRONG_FREE_TRUE_LEMMA",
+  ("F_SEM_TRUE_LEMMA",
    ``!f p. F_CLOCK_FREE f ==> (F_SEM p B_TRUE f = UF_SEM p f)``,
    INDUCT_THEN fl_induct ASSUME_TAC
     THENL
@@ -510,6 +512,12 @@ val F_SEM_STRONG_FREE_TRUE_LEMMA =
       (* F_STRONG_CLOCK(f,c) *)
       INIT_TAC]);
 end;
+
+val F_SEM_TRUE =
+ store_thm
+  ("F_SEM_TRUE",
+   ``!f. F_CLOCK_FREE f ==> !w. F_SEM w B_TRUE f = UF_SEM w f``,
+   PROVE_TAC[F_SEM_TRUE_LEMMA]);
 
 (******************************************************************************
 * Formula disjunction: f1 \/ f2
@@ -636,9 +644,7 @@ val UF_SEM_F_W_CLOCK =
 val S_CLOCK_COMP_CLOCK_FREE =
  store_thm
   ("S_CLOCK_COMP_CLOCK_FREE",
-   ``!r c. S_CLOCK_FREE(S_CLOCK_COMP c r)
-           /\
-           S_CLOCK_FREE(S_CLOCK_COMP c r)``,
+   ``!r c. S_CLOCK_FREE(S_CLOCK_COMP c r)``,
    INDUCT_THEN sere_induct ASSUME_TAC
     THEN RW_TAC std_ss [S_CLOCK_FREE_def,S_CLOCK_COMP_def]);
 
@@ -1125,11 +1131,13 @@ val F_CLOCK_COMP_CORRECT =
 * w |=T f <==> w |= T^{T}(f)
 ******************************************************************************)
 val F_TRUE_COMP_CORRECT_LEMMA =
- SIMP_CONV std_ss [B_SEM] ``B_SEM (ELEM w 0) B_TRUE``;
+ save_thm
+  ("F_TRUE_COMP_CORRECT_LEMMA",
+    SIMP_CONV std_ss [B_SEM] ``B_SEM (ELEM w 0) B_TRUE``);
 
-val F_TRUE_COMP_CORRECT =
+val F_TRUE_CLOCK_COMP_ELIM =
  store_thm
-  ("F_TRUE_COMP_CORRECT",
+  ("F_TRUE_CLOCK_COMP_ELIM",
    ``F_SEM w B_TRUE f = UF_SEM w (F_CLOCK_COMP B_TRUE f)``,
    PROVE_TAC
     [F_CLOCK_COMP_CORRECT,F_TRUE_COMP_CORRECT_LEMMA]);
@@ -1303,6 +1311,147 @@ val OLD_UF_SEM_UF_SEM =
       (* F_STRONG_CLOCK(f,c) *)
       INIT_TAC]);
 end;
+
+(******************************************************************************
+* F_ABORT_FREE f means f contains no abort statements
+******************************************************************************)
+val F_ABORT_FREE_def =
+ Define
+  `(F_ABORT_FREE (F_BOOL b)            = T)
+   /\
+   (F_ABORT_FREE (F_NOT f)             = F_ABORT_FREE f) 
+   /\
+   (F_ABORT_FREE (F_AND(f1,f2))        = F_ABORT_FREE f1 /\ F_ABORT_FREE f2)
+   /\
+   (F_ABORT_FREE (F_NEXT f)            = F_ABORT_FREE f)
+   /\
+   (F_ABORT_FREE (F_UNTIL(f1,f2))      = F_ABORT_FREE f1 /\ F_ABORT_FREE f2)
+   /\
+   (F_ABORT_FREE (F_SUFFIX_IMP(r,f))   = F_ABORT_FREE f)
+   /\
+   (F_ABORT_FREE (F_STRONG_IMP(r1,r2)) = T)
+   /\
+   (F_ABORT_FREE (F_WEAK_IMP(r1,r2))   = T)
+   /\
+   (F_ABORT_FREE (F_ABORT (f,b))       = F)
+   /\
+   (F_ABORT_FREE (F_STRONG_CLOCK(f,c)) = F_ABORT_FREE f)`;
+
+(******************************************************************************
+* Proof that if there are no aborts then
+* F_CLOCK_COMP and F_INIT_CLOCK_COMP are equivalent.
+******************************************************************************)
+local
+val INIT_TAC =
+ RW_TAC std_ss 
+  [F_ABORT_FREE_def,F_CLOCK_COMP_def,F_INIT_CLOCK_COMP_def,UF_SEM_def,B_SEM];
+in
+val ABORT_FREE_INIT_CLOCK_COMP_EQUIV =
+ store_thm
+  ("ABORT_FREE_INIT_CLOCK_COMP_EQUIV",
+   ``!f.
+      F_ABORT_FREE f 
+      ==> 
+      !w c. UF_SEM w (F_CLOCK_COMP c f) = UF_SEM w (F_INIT_CLOCK_COMP c f)``,
+   INDUCT_THEN fl_induct ASSUME_TAC
+    THENL
+     [(* F_BOOL b *)
+      INIT_TAC,
+      (* F_NOT b *)
+      INIT_TAC,
+      (* F_AND (f1,f2) *)
+      INIT_TAC,
+      (* F_NEXT f *)
+      INIT_TAC
+       THEN RW_TAC (arith_ss++resq_SS) [UF_SEM_F_U_CLOCK,RESTN_RESTN]
+       THEN Cases_on `w`
+       THEN RW_TAC arith_ss 
+             [LENGTH_def,GT_xnum_num_def,LENGTH_RESTN_INFINITE,
+              num_to_def,xnum_to_def,NEXT_RISE,ELEM_RESTN]
+       THEN EQ_TAC
+       THEN RW_TAC std_ss []
+       THEN Q.EXISTS_TAC `i`
+       THEN PROVE_TAC[SIMP_RULE arith_ss [] (Q.SPECL[`j`,`0`]ELEM_RESTN)],
+      (* F_UNTIL(f1,f2) f *)
+      INIT_TAC
+       THEN RW_TAC (arith_ss++resq_SS) [ELEM_RESTN,UF_SEM_F_IMPLIES,UF_SEM_def]
+       THEN Cases_on `w`
+       THEN RW_TAC arith_ss 
+             [LENGTH_def,GT_xnum_num_def,LENGTH_RESTN_INFINITE,
+              num_to_def,xnum_to_def,NEXT_RISE,ELEM_RESTN]
+       THEN EQ_TAC
+       THEN RW_TAC std_ss []
+       THEN Q.EXISTS_TAC `k`
+       THEN PROVE_TAC[SIMP_RULE arith_ss [] (Q.SPECL[`j`,`0`]ELEM_RESTN)],
+      (* F_SUFFIX_IMP(s,f) *)
+      INIT_TAC
+       THEN RW_TAC (arith_ss++resq_SS) [ELEM_RESTN,UF_SEM_F_IMPLIES,UF_SEM_def]
+       THEN Cases_on `w`
+       THEN RW_TAC (arith_ss ++resq_SS)
+             [LENGTH_def,GT_xnum_num_def,LENGTH_RESTN_INFINITE,UF_SEM_F_U_CLOCK,LENGTH_RESTN,
+              RESTN_FINITE,num_to_def,xnum_to_def,NEXT_RISE,ELEM_RESTN,RESTN_RESTN]
+       THEN EQ_TAC
+       THEN RW_TAC std_ss []
+       THEN RES_TAC
+       THEN Q.EXISTS_TAC `i`
+       THEN RW_TAC arith_ss []
+       THEN FULL_SIMP_TAC std_ss [GSYM(SIMP_RULE arith_ss [] (Q.SPECL[`i+j`,`0`]ELEM_RESTN))]
+       THEN PROVE_TAC[RESTN_FINITE],
+      (* F_STRONG_IMP(s1,s2) *)
+      INIT_TAC,
+      (* F_WEAK_IMP(s1,s2) *)
+      INIT_TAC,
+      (* F_ABORT(f,b)) *)
+      INIT_TAC,
+      (* F_STRONG_CLOCK(f,c) *)
+      INIT_TAC
+       THEN RW_TAC (arith_ss++resq_SS) [UF_SEM_F_U_CLOCK,RESTN_RESTN]
+       THEN Cases_on `w`
+       THEN RW_TAC arith_ss 
+             [LENGTH_def,GT_xnum_num_def,LENGTH_RESTN_INFINITE,
+              num_to_def,xnum_to_def,NEXT_RISE,ELEM_RESTN]
+       THEN EQ_TAC
+       THEN RW_TAC std_ss []
+       THEN Q.EXISTS_TAC `i`
+       THEN RW_TAC std_ss []
+       THEN PROVE_TAC[SIMP_RULE arith_ss [] (Q.SPECL[`j`,`0`]ELEM_RESTN)]]);
+end;
+
+val ABORT_FREE_F_CLOCK_COMP_CORRECT =
+ store_thm
+  ("ABORT_FREE_F_CLOCK_COMP_CORRECT",
+   ``!f. F_ABORT_FREE f ==>
+         !w c. F_SEM w c f = UF_SEM w (F_CLOCK_COMP c f)``,
+   PROVE_TAC[F_INIT_CLOCK_COMP_ELIM,F_INIT_CLOCK_COMP_CORRECT_def,
+             ABORT_FREE_INIT_CLOCK_COMP_EQUIV]);
+
+(******************************************************************************
+* Version of Define that doesn't add to the EVAL compset
+******************************************************************************)
+val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
+
+(******************************************************************************
+* Joe Hurd hack: EVAL should never get hold of this definition 
+******************************************************************************)
+val UNINT_def = pureDefine `UNINT x = x`;
+
+val F_CLOCK_COMP_ELIM =
+ store_thm
+  ("F_CLOCK_COMP_ELIM",
+   ``F_SEM w c f = 
+      if B_SEM (ELEM w 0) c
+       then UF_SEM w (F_CLOCK_COMP c f)
+       else (UNINT F_SEM) w c f``,
+   RW_TAC std_ss [UNINT_def,F_CLOCK_COMP_CORRECT]);
+
+val ABORT_FREE_F_CLOCK_COMP_CORRECT_COR =
+ store_thm
+  ("ABORT_FREE_F_CLOCK_COMP_CORRECT_COR",
+   ``F_SEM w c f = 
+      if F_ABORT_FREE f 
+       then UF_SEM w (F_CLOCK_COMP c f)
+       else (UNINT F_SEM) w c f``,
+   RW_TAC std_ss [UNINT_def,ABORT_FREE_F_CLOCK_COMP_CORRECT]);
 
 val _ = export_theory();
 
