@@ -13,9 +13,9 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = "/local/scratch/kxs/144";
-val holdir   = "/local/scratch/kxs/working";
-val OS       = "linux";   (* Operating system; choices are: 
+val mosmldir = _
+val holdir   = _
+val OS       = _          (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
 
 val CC       = "gcc";     (* C compiler (for building quote filter)        *)
@@ -68,7 +68,7 @@ val SRCDIRS =
   "src/res_quan/theories", "src/res_quan/src", "src/set/src",
   "src/pred_set/src", "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src", "src/integer", "src/BoyerMoore",
-  "src/hol90", "src/boss", "src/finite_map", "src/real", "src/bag", 
+  "src/hol90", "src/boss", "src/finite_map", "src/real", "src/bag",
   "src/robdd"];
 
 
@@ -224,7 +224,7 @@ val _ =
   end;
 
 (*---------------------------------------------------------------------------
-     Set the location of HOLDIR in Globals.src and write it to 
+     Set the location of HOLDIR in Globals.src and write it to
      src/0/Globals.sml
  ---------------------------------------------------------------------------*)
 
@@ -304,12 +304,12 @@ val _ =
      val _ = echo "Setting up the robdd library Makefile."
      val src    = fullPath [holdir, "tools/makefile.robdd.src"]
      val target = fullPath [holdir, "src/robdd/GNUmakefile"]
-     val (cflags,dllibcomp,all) = 
+     val (cflags,dllibcomp,all) =
         case (CFLAGS,DLLIBCOMP,ALL)
          of (SOME s1, SOME s2, SOME s3) => (s1,s2,s3)
           | _ => (print (String.concat
                    ["   Warning! (non-fatal):\n    The robdd package is not ",
-                    "expected to build in OS flavour ", quote OS, 
+                    "expected to build in OS flavour ", quote OS,
                 ".\n   Only linux and solaris are currently supported.\n",
                 "   End Warning.\n"]);
                   ("unknownOS","unknownOS","unknownOS"))
