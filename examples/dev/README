@@ -263,8 +263,8 @@ value of the reference combinational_constants) is:
    "+","-"];
 
 
-COMBINATIONAL : term -> bool
-----------------------------
+is_combinational : term -> bool
+-------------------------------
 
 Test whether a terms is a combinational function of its free variables
 (i.e. is built up using only combinational constants).

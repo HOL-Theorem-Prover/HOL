@@ -386,15 +386,25 @@ val combinational_constants =
 fun add_combinational l = 
  (combinational_constants := union l (!combinational_constants)); 
 
-fun COMBINATIONAL tm =
+fun is_combinational tm =
  is_var tm
   orelse (is_const tm 
            andalso  mem (fst(dest_const tm))  (!combinational_constants))
   orelse (is_abs tm
-           andalso COMBINATIONAL(body tm))
+           andalso is_combinational(body tm))
   orelse (is_comb tm
-           andalso COMBINATIONAL(rator tm)
-           andalso COMBINATIONAL(rand tm));
+           andalso is_combinational(rator tm)
+           andalso is_combinational(rand tm));
+
+(*****************************************************************************)
+(* Test if a term is built from combinational constants using only           *)
+(* function applicationn.                                                    *)
+(*****************************************************************************)
+fun is_combinational_const tm =
+ (is_const tm andalso  mem (fst(dest_const tm))  (!combinational_constants))
+  orelse (is_comb tm
+           andalso is_combinational_const(rator tm)
+           andalso is_combinational_const(rand tm));
    
 (*****************************************************************************)
 (* CompileExp exp                                                            *)
@@ -406,18 +416,18 @@ fun CompileExp tm =
                       handle HOL_ERR _ 
                       => raise ERR "CompileExp" "bad expression"
  in
-  if null args orelse COMBINATIONAL tm
+  if null args orelse is_combinational tm
    then ISPEC ``DEV ^tm`` DEV_IMP_REFL
    else
     case fst(dest_const opr) of
        "Seq" => let val tm1 = hd args
                     val tm2 = hd(tl args)
                 in
-                 if COMBINATIONAL tm1 
+                 if is_combinational tm1 
                   then MATCH_MP 
                         (ISPEC tm1 PRECEDE_DEV)
                         (CompileExp tm2)
-                  else if COMBINATIONAL tm2 
+                  else if is_combinational tm2 
                   then MATCH_MP 
                         (ISPEC tm2 FOLLOW_DEV)
                         (CompileExp tm1)
@@ -1129,7 +1139,7 @@ fun COMB_SYNTH_CONV tm =
            (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
-     else if is_const bdy orelse numSyntax.is_numeral bdy
+     else if is_combinational_const bdy
      then let val goal = ``^tm = CONSTANT ^bdy ^out_bus``
           in
            prove
@@ -1141,7 +1151,7 @@ fun COMB_SYNTH_CONV tm =
            (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
-     else if is_comb bdy andalso is_const(rator bdy)
+     else if is_comb bdy andalso is_combinational_const(rator bdy)
      then let val arg = rand bdy
               val v = genvar ``:^time_ty -> ^(type_of arg)``
               val goal =
@@ -1172,6 +1182,32 @@ fun COMB_SYNTH_CONV tm =
            (goal,
             REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM] 
              THEN GEN_BETA_TAC 
+             THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
+             THEN REWRITE_TAC[PAIR_EQ]
+             THEN EQ_TAC
+             THEN RW_TAC bool_ss [])
+           handle HOL_ERR _ =>
+           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+            if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
+          end
+     else if is_cond bdy
+     then let val (test_tm,then_tm,else_tm) = dest_cond bdy
+              val  sw = genvar ``:^time_ty -> ^(type_of test_tm)``
+              val  mux_in1 = genvar ``:^time_ty -> ^(type_of then_tm)``
+              val  mux_in2 = genvar ``:^time_ty -> ^(type_of else_tm)``
+              val goal = 
+                   ``^tm = 
+                     ?^sw ^mux_in1 ^mux_in2.
+                      COMB ^(mk_pabs(args, test_tm)) (^in_bus, ^sw)     /\
+                      COMB ^(mk_pabs(args, then_tm)) (^in_bus,^mux_in1) /\
+                      COMB ^(mk_pabs(args, else_tm)) (^in_bus,^mux_in2) /\
+                      MUX(^sw,^mux_in1,^mux_in2,^out_bus)``
+          in
+          prove
+           (goal,
+            REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM,MUX_def] 
+             THEN GEN_BETA_TAC 
+             THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
              THEN REWRITE_TAC[PAIR_EQ]
              THEN EQ_TAC
              THEN RW_TAC bool_ss [])
@@ -1205,7 +1241,7 @@ fun COMB_SYNTH_CONV tm =
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else (if_print "COMB_SYNTH_CONV warning, case not handled:\n";
-           if_print_term bdy;if_print"\n";
+           if_print_term tm;if_print"\n";
            raise ERR "COMB_SYNTH_CONV" "case not handled")
    end
   else raise ERR "COMB_SYNTH_COMB" "not an application of COMB to args";
@@ -1349,9 +1385,9 @@ val at_thms =
 (*****************************************************************************)
 val MAKE_NETLIST =
  CONV_RULE(RATOR_CONV(RAND_CONV(PABS_CONV EXISTS_OUT_CONV)))               o
- SIMP_RULE std_ss [UNCURRY]                                                o
  CONV_RULE
   (RATOR_CONV(RAND_CONV(PABS_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))        o
+ SIMP_RULE std_ss [UNCURRY]                                                o
  Ho_Rewrite.REWRITE_RULE [BUS_CONCAT_ELIM]                                 o
  Ho_Rewrite.REWRITE_RULE
    [FUN_EXISTS_PROD,LAMBDA_PROD,COMB_ID,COMB_CONSTANT_1,COMB_CONSTANT_2,
@@ -1367,6 +1403,7 @@ val MAKE_NETLIST =
    ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
    Ite_def,Par_def,Seq_def,o_THM];
 
+
 (*****************************************************************************)
 (* Compile a device implementation into a clocked circuit represented in HOL *)
 (*****************************************************************************)
@@ -1378,9 +1415,9 @@ val MAKE_CIRCUIT =
  Ho_Rewrite.REWRITE_RULE[GSYM LEFT_FORALL_IMP_THM,REG_CONCAT]              o
  DEV_IMP_FORALL                                                            o
  CONV_RULE(RATOR_CONV(RAND_CONV(PABS_CONV EXISTS_OUT_CONV)))               o
- SIMP_RULE std_ss [UNCURRY]                                                o
  CONV_RULE
   (RATOR_CONV(RAND_CONV(PABS_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))        o
+ SIMP_RULE std_ss [UNCURRY]                                                o
  Ho_Rewrite.REWRITE_RULE
   [BUS_CONCAT_ELIM,DFF_IMP_def,POSEDGE_IMP_def,LATCH_def,
    DEL_IMP_def,GSYM DEL_IMP_THM]                                           o
