@@ -86,6 +86,7 @@ val oldconstants_test = let
   val defn3 = new_definition("foo3", defn1_t)
   val c1 = lhs (concl defn1)
   val c2 = lhs (concl defn2)
+  val c3 = lhs (concl defn3)
   val _ = test (fn (c1,c2) => Term.compare(c1, c2) <> EQUAL) (c1, c2)
   val _ = test (not o uncurry aconv) (c1, c2)
   val _ = test (not o uncurry aconv) (c1, c3)
