@@ -277,12 +277,36 @@ fun update_fn tyi =
 
 val _ = TypeBase.register_update_fn update_fn
 
-fun get_srw_ss () = initialise_srw_ss()
+fun srw_ss () = initialise_srw_ss()
 
 fun SRW_TAC ssdl thl = let
-  val ss = foldl (fn (ssd, ss) => ss ++ ssd) (get_srw_ss()) ssdl
+  val ss = foldl (fn (ssd, ss) => ss ++ ssd) (srw_ss()) ssdl
 in
   PRIM_STP_TAC (ss && thl) NO_TAC
 end;
+
+fun export_rewrites slist = let
+  open Portable
+  val thyname = current_theory()
+  val rwts_name = thyname ^ "_rwts"
+  fun print_sig pps =
+      Portable.add_string pps ("val "^rwts_name^" : simpLib.ssdata")
+  fun print_export pps = let
+    val {add_string, add_break, begin_block, end_block,add_newline,...} =
+        with_ppstream pps
+  in
+    add_string ("val "^rwts_name^" = simpLib.rewrites [");
+    add_break(0,10);
+    begin_block INCONSISTENT 0;
+    pr_list add_string (fn () => add_string ",")
+            (fn () => add_break(1,0)) slist;
+    end_block();
+    add_string "];";
+    add_newline();
+    add_string ("val _ = BasicProvers.augment_srw_ss ["^rwts_name^"]\n")
+  end
+in
+  adjoin_to_theory{sig_ps = SOME print_sig, struct_ps = SOME print_export}
+end
 
 end;
