@@ -29,7 +29,7 @@ fun profile nm f x =
         result
       end
 
-fun reset1 nm = remove ptable nm handle ProfileEntryNotFound => ()
+fun reset1 nm = ignore (remove ptable nm) handle ProfileEntryNotFound => ()
 
 fun reset_all () = filter (fn x => false) ptable
 
