@@ -23,7 +23,7 @@ fun RULES_ERR function message =
 exception DEAD_CODE of string;
 
 (* less efficient implementation of Mk_comb, Mk_abs and Beta: *)
-
+(*
 fun Mk_comb th =
   let val {Rator,Rand} = dest_comb(rhs (concl th)) in
   (REFL Rator, REFL Rand, (fn th1 => fn th2 => TRANS th (MK_COMB(th1,th2))))
@@ -38,17 +38,26 @@ val Beta = Drule.RIGHT_BETA;
 
 fun Eta thm = TRANS thm (ETA_CONV (rhs (concl thm)));
 
-val lazy_beta_conv = beta_conv;
-
-fun dest_eq_ty tm =
-  let val{lhs,rhs} = dest_eq tm in
-  {lhs=lhs, rhs=rhs, ty=type_of lhs}
-  end;
-
 fun Spec tm thm = SPEC tm thm;
-
+*)
 (* end of inefficient implementation. *)
 
+(*
+val mk_comb_r = ref Thm.Mk_comb;
+val mk_abs_r = ref Thm.Mk_abs;
+val beta_r = ref Thm.Beta;
+val eta_r = ref Thm.Eta;
+val spec_r = ref Thm.Spec;
+
+
+local open timing in
+fun Mk_comb th = tickt "Mk_cmb" (!mk_comb_r) th;
+fun Mk_abs th = tickt "Mk_abs" (!mk_abs_r) th;
+fun Beta th = tickt "Beta" (!beta_r) th;
+fun Eta th = tickt "Eta" (!eta_r) th;
+fun Spec th = tickt "Spec" (!spec_r) th;
+end;
+*)
 
 fun try_eta thm = (Eta thm) handle HOL_ERR _ => thm;
 

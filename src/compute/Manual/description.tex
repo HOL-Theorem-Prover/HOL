@@ -61,9 +61,15 @@ other patterns. Abstractions cannot appear in patterns.
 \begin{eqnarray*}
 P & ::= & x \mid c~P_1 \ldots P_n
 \end{eqnarray*}
-Patterns must be linear, that is there cannot be two identical pattern
-variables (same name and same type). This corresponds to the usual
-definition scheme by pattern-matching.
+This corresponds to the usual definition scheme by pattern-matching,
+slightly extended. Patterns need not be linear. If a variable occurs
+several times, it is checked that the instantiations are
+$\alpha$-convertibles. Beware, that only the weakly reduced forms are
+compared. For instance, reflexivity fails to solve the folowing example:
+\begin{verbatim}
+(\x. x) = (\x. (\y.y) x)
+\end{verbatim}
+
 
 Simplification sets are mutable objects: one creates an empty set and
 then adds lists of theorems to it. Function \ml{new\_rws} returns a

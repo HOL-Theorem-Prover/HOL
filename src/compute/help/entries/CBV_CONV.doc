@@ -13,7 +13,7 @@ argument is rewritten using the equations added in the simplification set.
 
 \EXAMPLE
 {
-# val rws = from_list false [COND_CLAUSES];
+# val rws = from_list (false,[COND_CLAUSES]);
 > val rws = RWS<hash_table> : comp_rws;
 
 # CBV_CONV rws (--` (\x.x) ((\x.x) if T then 0 else 10) `--);

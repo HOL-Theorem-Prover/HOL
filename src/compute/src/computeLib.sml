@@ -8,6 +8,10 @@ type rewrite = rewrite;
 type comp_rws = comp_rws;
 
 
+type cbv_stack =
+  ((thm->thm->thm) * (thm * db fterm),
+   (thm->thm->thm) * bool * (thm * db fterm),
+   (thm->thm)) stack;
 
 fun stack_out (th, Ztop) = th
   | stack_out (th, Zrator{Rand=(mka,(thb,_)), Ctx}) =
@@ -17,8 +21,9 @@ fun stack_out (th, Ztop) = th
   | stack_out (th, Zabs{Bvar=mkl, Ctx}) = stack_out (mkl th, Ctx)
 ;
 
+
 fun initial_state rws t =
-  ((REFL t, mk_clos([],from_term (rws,[],t))), Ztop);
+  ((REFL t, mk_clos([],from_term (rws,[],t))), Ztop : cbv_stack);
 
 
 (* Precondition: f(arg) is a closure corresponding to b.
