@@ -18,7 +18,7 @@ complete list of all the axioms, definitions and theorems in \HOL, see
 \section{The theory {\tt min}}\label{minTheory}
 
 The starting theory of \HOL{} is the theory \ml{min}.
-\index{min, the HOL theory@\ml{min}, the \HOL\ theory|(} 
+\index{min, the HOL theory@\ml{min}, the \HOL\ theory|(}
 In this theory, the type constant {\small\verb+bool+} of booleans,
 the binary type operator $(\alpha,\beta)${\small\verb+fun+} of functions, and the type
 constant {\small\verb+ind+} of individuals are declared. Building on
@@ -33,7 +33,7 @@ are declared: equality, implication, and a choice operator:
   infix operator.
 \index{equality, in HOL logic@equality, in \HOL\ logic}
 \item [Implication] Implication
-  ({\small\verb+==> : bool -> bool -> bool+}) is the 
+  ({\small\verb+==> : bool -> bool -> bool+}) is the
   \emph{material implication} and is an infix operator that is
   right-associative, \ie, \verb+x ==> y ==> z+ parses to the same term
   as \verb+x ==> (y ==> z)+.
@@ -63,7 +63,7 @@ textbook on type theory \cite{Andrews}.
 \medskip
 
 \noindent No theorems or axioms are placed in theory \theoryimp{min}.
-The primitive rules of inference of \HOL{} depend on the presence of 
+The primitive rules of inference of \HOL{} depend on the presence of
 \theoryimp{min}.
 
 
@@ -265,7 +265,7 @@ useful constants.
 The constant {\small\verb+LET+}\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL\ logic!constant for} is used in representing terms
 containing local variable bindings (\ie\
 {\small\verb+let+}-terms)
-\index{let-terms, in HOL logic@\ml{let}-terms,in \HOL\ logic!definitional axiom for}. 
+\index{let-terms, in HOL logic@\ml{let}-terms,in \HOL\ logic!definitional axiom for}.
 For example, the concrete syntax
 {\small\verb+let v = M in N+} is translated by the parser to the term
 {\small\verb+LET (\v.N) M+}. For the full description of how
@@ -287,8 +287,8 @@ $x\texttt{ IN }P$ can be read as ``$x$ is an element of the set
 $P$'', or (more in line with its definition) as ``the predicate $P$ is
 true of $x$''.
 
-Finally, the polymorphic constant {\small\verb+ARB+}$:\alpha$ denotes 
-a fixed but arbitrary element. {\small\verb+ARB+} is occasionally 
+Finally, the polymorphic constant {\small\verb+ARB+}$:\alpha$ denotes
+a fixed but arbitrary element. {\small\verb+ARB+} is occasionally
 useful when attempting to deal with the issue of partiality.
 
 \subsubsection{Restricted quantifiers}\label{res-quant}
@@ -338,7 +338,7 @@ The \texttt{::} syntax is used with restricted quantifiers to allow
 arbitrary predicates to restrict binding variables. The \HOL{} parser
 allows restricted quantification of all of a sequence of binding
 variables by putting the restriction at the end of the sequence, thus
-with a universal quantification: 
+with a universal quantification:
 %
 \[
 \forall x \, y \, z \, {\tt ::} \; P \, . \; Q(x,y,z)
@@ -563,7 +563,7 @@ theorems supporting quantifier movement.
 \end{verbatim}
 \end{boxed}
 
-Also, a theorem justifying Skolemization ({\small\verb+SKOLEM_THM+}) is 
+Also, a theorem justifying Skolemization ({\small\verb+SKOLEM_THM+}) is
 proved. Many other theorems may be found in \theoryimp{bool} theory.
 
 \subsection{Combinators}
@@ -1532,7 +1532,7 @@ arithmetic operators.
 \end{hol}
 %
 Note that {\small\verb+EXP+} is an infix. The infix notation
-{\verb+**+} may be used in place of {\small\verb+EXP+}. Thus 
+{\verb+**+} may be used in place of {\small\verb+EXP+}. Thus
 ({\small\verb+x EXP y+}) means $x^y$, and so does ({\verb+x ** y+}).
 
 \paragraph{Comparison operators}
@@ -1556,7 +1556,7 @@ A full set of comparison operators is defined in terms of \verb+<+.
 
 A constant specification is used to introduce division ({\small\verb+DIV+}, infix) and
 modulus ({\small\verb+MOD+}, infix) operators, together with their
-characterizing property.  
+characterizing property.
 \begin{hol}
 \index{MOD@\ml{MOD}}
 \index{DIV@\ml{DIV}}
@@ -1687,9 +1687,9 @@ asymptotically efficient calculation. Theorems supporting arithmetic
 calculations on numerals can be found in the \theoryimp{numeral}
 theory; these are mechanized by the \verb+reduce+ library. Thus,
 arithmetic calculations are performed by deductive steps in \HOL.
-For example the following calculation of $2 ^{(1023 + 14)/9}$ takes 
+For example the following calculation of $2 ^{(1023 + 14)/9}$ takes
 approximately 70,000 primitive inference steps and returns in two
-seconds. 
+seconds.
 %
 \begin{boxed}
 {\small
@@ -1717,7 +1717,7 @@ operations, using the usual names for the operations, \eg \verb|+|,
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{verbatim}
-  - numSyntax.mk_numeral 
+  - numSyntax.mk_numeral
        (Arbnum.fromString "3432432423423423234");
   > val it = ``3432432423423423234`` : term
 
@@ -1766,9 +1766,9 @@ equation for any non-zero numeral.  For example:
 When other numeric theories are loaded (such as those for the reals or
 integers), numerals are overloaded so that the numeral {\small\verb+1+} can
 actually stand for a natural number, an integer or a real value. The
-parser has a pass of overloading resolution in which it attempts to 
+parser has a pass of overloading resolution in which it attempts to
 determine the actual type to give to a numeral. For example, in the
-following session, the theory of integers is loaded, whereupon the 
+following session, the theory of integers is loaded, whereupon the
 numeral \verb+2+ is taken to be an integer.
 %
 \begin{session}
@@ -2264,7 +2264,7 @@ of a non-empty list is dropped by {\small\verb+FRONT+}.
 %
 Joining the front part and the last element of a non-empty list yields
 the original list.  Both {\small\verb+LAST+} and {\small\verb+FRONT+}
-are unspecified on empty lists. 
+are unspecified on empty lists.
 
 
 \noindent For a complete list of available theorems in
@@ -2528,8 +2528,8 @@ finite $R$-paths:
 \subsection{Character strings (\theoryimp{string})}
 
 The theory \theoryimp{string} defines a type of characters and a type
-of finite strings built from those characters, along with a useful suite of 
-definitions for operating on strings. 
+of finite strings built from those characters, along with a useful suite of
+definitions for operating on strings.
 
 \paragraph {Characters}
 
@@ -2547,7 +2547,7 @@ hold:
 \paragraph {Strings}
 
 The type \verb+string+ is inductively characterized by the
-constructors 
+constructors
 %
 {\small
 \begin{verbatim}
@@ -2556,7 +2556,7 @@ constructors
 \end{verbatim}
 }
 %
-The \HOL{} parser maps the syntax \verb+""+ to 
+The \HOL{} parser maps the syntax \verb+""+ to
 {\small\verb+EMPTYSTRING+}, and the \HOL{} printer inverts this.
 The parser expands string literals of the form \verb+"+$c_1 c_2
 \ldots c_n$\verb+"+ to the compound term
@@ -2607,7 +2607,7 @@ surface syntax
 %
 {\small
 \begin{verbatim}
-   case s 
+   case s
     of "" -> e1
     || STRING c rst -> e2
 \end{verbatim}}
@@ -2627,13 +2627,13 @@ $\konst{string\_case}\ e_1 \ (\lambda c\; rst.\ e_2)\ s$ where the constant
 
 The length of a string ({\small\verb+STRLEN+}) is defined by primitive
 recursion. The concatenation of strings ({\small\verb+STRCAT+}) may be
-expressed recursively ({\small\verb+STRCAT_EQNS+})or as a fold 
+expressed recursively ({\small\verb+STRCAT_EQNS+})or as a fold
 ({\small\verb+STRCAT_EXPLODE+}):
 %
 {\small
 \begin{verbatim}
   STRLEN_DEF
-    |- (STRLEN "" = 0) /\ 
+    |- (STRLEN "" = 0) /\
        (STRLEN (STRING c s) = 1 + STRLEN s)
 
   STRCAT_EQNS = Q.store_thm
@@ -2664,13 +2664,13 @@ Strings are converted to lists of characters by
 \paragraph {Prefix checking}
 
 That string $s_1$ is a prefix of $s_2$ ({\small\verb+isPREFIX+}) can be
-defined by recursion ({\small\verb+isPREFIX_DEF+}). From this, the 
+defined by recursion ({\small\verb+isPREFIX_DEF+}). From this, the
 statement {\small\verb+isPREFIX_STRCAT+} can be easily derived.
 %
 {\small
 \begin{verbatim}
-  isPREFIX_DEF 
-    |- isPREFIX s1 s2 = 
+  isPREFIX_DEF
+    |- isPREFIX s1 s2 =
          case (DEST_STRING s1, DEST_STRING s2)
           of (NONE, _) -> T
           || (SOME __, NONE) -> F
@@ -2717,7 +2717,7 @@ trivial consequence of the definition shows:
 \begin{verbatim}
   SPECIFICATION  |- !P x. x IN P = P x
 \end{verbatim}}
-% 
+%
 \noindent Two sets are equal if they have the same elements.
 %
 {\small
@@ -2964,11 +2964,11 @@ proved:
 
 The special purpose set-theoretic notations
 {\small\verb%{%}$t_1 ;t_2 ; \ldots ; t_n${\small\verb%}%} and
-{\small\verb%{%}$t${\small\verb% | %}$p${\small\verb%}%} are recognized 
-by the \HOL{} parser and printer when the theory \theoryimp{pred\_set} 
+{\small\verb%{%}$t${\small\verb% | %}$p${\small\verb%}%} are recognized
+by the \HOL{} parser and printer when the theory \theoryimp{pred\_set}
 is loaded.
 
-The normal interpretation of 
+The normal interpretation of
 {\small\verb%{%}$t_1 ;t_2 ; \ldots ; t_n${\small\verb%}%} is the finite set containing just
 $t_1,t_2,\ldots, t_n$. This can be modelled by starting with the empty
   set and performing a sequence of insertions. For example, \verb+{1;2;3;4}+ parses to
@@ -2980,18 +2980,18 @@ $t_1,t_2,\ldots, t_n$. This can be modelled by starting with the empty
 
 \paragraph {Set comprehensions}
 
-The normal interpretation of 
+The normal interpretation of
 {\small\verb%{%}$t${\small\verb% | %}$p${\small\verb%}%} is
 the set of all $t$s such that $p$. In \HOL, such syntax parses to:
 %
 \texttt{GSPEC(\bs($x_1$,$\ldots$,$x_n$).($t$,$p$))}
 %
-\noindent where $x_1, \ldots, x_n$ are those free variables that 
-occur in both $t$ and $p$.  If there are no such free variables 
-then an error results. The order in which the variables are listed in 
+\noindent where $x_1, \ldots, x_n$ are those free variables that
+occur in both $t$ and $p$.  If there are no such free variables
+then an error results. The order in which the variables are listed in
 the variable structure of the paired abstraction is an unspecified
 function of the structure of $t$ (it is approximately left to
-right). For example, 
+right). For example,
 %
 \begin{hol}{\small\begin{verbatim}
    {p+q | p < q /\ q < r}
@@ -3010,20 +3010,20 @@ where \ml{GSPEC} is characterized by:
 \end{verbatim}}\end{hol}
 
 This somewhat cryptic specification can be understood by exercising an
-example. The syntax 
+example. The syntax
 %
 {\small
 \begin{verbatim}
    3 IN {p+q | p < q /\ q < r}
 \end{verbatim}}
 %
-is mapped by the \HOL{} parser to 
+is mapped by the \HOL{} parser to
 {\small
 \begin{verbatim}
    3 IN GSPEC(\(p,q). ((p+q), (p < q /\ q < r)))
 \end{verbatim}}
 %
-which, by {\small\verb+GSPECIFICATION+}, is equal to 
+which, by {\small\verb+GSPECIFICATION+}, is equal to
 {\small
 \begin{verbatim}
    ?x. (3,T) = (\(p,q). ((p+q), (p < q /\ q < r))) x
@@ -3098,7 +3098,7 @@ at all ({\small\verb+BAG_IN+}).
 A sub-bag relationship ({\small\verb+SUB_BAG+}) holds between $b_1$ and
 $b_2$ provided that every element in $b_1$ occurs at least as often in
 $b_2$. The notion of a proper sub-bag ({\small\verb+PSUB_BAG+}) is
-easily defined. 
+easily defined.
 %
 {\small
 \begin{verbatim}
@@ -3138,7 +3138,7 @@ The union ({\small\verb+BAG_UNION+}) and difference
 calculation on their elements. Deleting a single element from a bag
 may be expressed by taking the multiset difference with a single-element
 multiset; however, there is also a relational presentation
-({\small\verb+BAG_DELETE+}). 
+({\small\verb+BAG_DELETE+}).
 %
 {\small
 \begin{verbatim}
@@ -3198,7 +3198,7 @@ elements to $0$.
 {\small
 \begin{verbatim}
   BAG_IMAGE_DEF
-    |- BAG_IMAGE f b = 
+    |- BAG_IMAGE f b =
          \e. let sb = BAG_FILTER (\e0. f e0 = e) b
              in
                if FINITE_BAG sb then BAG_CARD sb else 0
@@ -3214,7 +3214,7 @@ built from the empty bag by a finite number of insertions.
 \begin{verbatim}
   FINITE_BAG
     |- FINITE_BAG b =
-         !P. P EMPTY_BAG /\ 
+         !P. P EMPTY_BAG /\
              (!b. P b ==> (!e. P (BAG_INSERT e b))) ==> P b
 \end{verbatim}}
 %
@@ -3225,12 +3225,12 @@ induction theorem.
 \begin{verbatim}
   FINITE_BAG_INDUCT
     |- !P. P {||} /\
-           (!b. P b ==> (!e. P (BAG_INSERT e b))) 
+           (!b. P b ==> (!e. P (BAG_INSERT e b)))
            ==> (!b. FINITE_BAG b ==> P b)
 
   STRONG_FINITE_BAG_INDUCT
-    |- !P. P {||} /\ 
-           (!b. FINITE_BAG b /\ P b ==> !e. P (BAG_INSERT e b)) 
+    |- !P. P {||} /\
+           (!b. FINITE_BAG b /\ P b ==> !e. P (BAG_INSERT e b))
            ==> (!b. FINITE_BAG b ==> P b)
 \end{verbatim}}
 %
@@ -3239,7 +3239,7 @@ total number of occurrences. It is only specified for finite multisets.
 %
 {\small
 \begin{verbatim}
- BAG_CARD_THM 
+ BAG_CARD_THM
    |- (BAG_CARD {||} = 0) /\
       (!b. FINITE_BAG b ==> !e. BAG_CARD (BAG_INSERT e b) = BAG_CARD b + 1)
 \end{verbatim}}
@@ -3248,7 +3248,7 @@ total number of occurrences. It is only specified for finite multisets.
 
 Recursive functions on multiset may be defined by wellfounded
 recursion. Usually, the totality of such a function is established by
-measuring the cardinality of the (finite) multiset. However, 
+measuring the cardinality of the (finite) multiset. However,
 a fold ({\small\verb+ITBAG+}) for finite sets is provided.
 Provided a function $f:\alpha\to\beta\to\beta$ obeys a condition
 known as \emph{left-commutativity}, namely, $f\;x\;(f\;y\;z) =
@@ -3313,13 +3313,13 @@ The following basic properties of relations are defined.
 
 The following basic operations on relations are defined: the empty
 relation ({\small\verb+EMPTY_REL+}), relation composition
-({\small\verb+O+, infix}), inversion ({\small\verb+inv+}), 
+({\small\verb+O+, infix}), inversion ({\small\verb+inv+}),
 domain ({\small\verb+RDOM+}), and range ({\small\verb+RRANGE+}).
 %
 \begin{hol}
 {\small
 \begin{verbatim}
-  EMPTY_REL_DEF  
+  EMPTY_REL_DEF
     |- !x y. EMPTY_REL x y = F
   O_DEF
     |- $O R1 R2 x z = ?y. R1 x y /\ R2 y z
@@ -3333,9 +3333,9 @@ domain ({\small\verb+RDOM+}), and range ({\small\verb+RRANGE+}).
 \end{hol}
 
 Set  operations lifted to work on relations include subset
-({\small\verb+RSUBSET+}, infix), 
+({\small\verb+RSUBSET+}, infix),
 union ({\small\verb+RUNION+}, infix),
-intersection ({\small\verb+RINTER+}, infix), 
+intersection ({\small\verb+RINTER+}, infix),
 complement ({\small\verb+RCOMPL+}), and universe ({\small\verb+RUNIV+}).
 %
 \begin{hol}
@@ -3390,11 +3390,11 @@ relation closed under transitivity and reflexivity.
 \begin{hol}
 {\small
 \begin{verbatim}
-  TC_DEF 
+  TC_DEF
     |- TC R a b =
          !P. (!x y. R x y ==> P x y) /\
              (!x y z. P x y /\ P y z ==> P x z) ==> P a b
-  RTC_DEF 
+  RTC_DEF
     |- RTC R a b =
          !P. (!x. P x x) /\
              (!x y z. R x y /\ P y z ==> P x z) ==> P a b
@@ -3410,10 +3410,10 @@ From these definitions, one can recover the initial rules.
     |- !R. (!x y. R x y ==> TC R x y) /\
            (!x y z. TC R x y /\ TC R y z ==> TC R x z)
   RTC_RULES
-    |- !R. (!x. RTC R x x) /\ 
+    |- !R. (!x. RTC R x x) /\
            (!x y z. R x y /\ RTC R y z ==> RTC R x z)
   RTC_RULES_RIGHT1
-    |- !R. (!x. RTC R x x) /\ 
+    |- !R. (!x. RTC R x x) /\
            (!x y z. RTC R x y /\ R y z ==> RTC R x z)
 \end{verbatim}}
 \end{hol}
@@ -3426,10 +3426,10 @@ from \verb+y+ to \verb+z+ on the left with a single \verb+R+-step from
 Similar alternative theorems are proved for case analysis and induction.
 
 For example, {\small\verb+TC_CASES1+} and {\small\verb+TC_CASES2+} in the
-following decompose {\small\verb+RTC R x z+} to either 
+following decompose {\small\verb+RTC R x z+} to either
 {\small\verb+R x y+} followed by {\small\verb+RTC R y z+}
 ({\small\verb+TC_CASES1+})
-or 
+or
 {\small\verb+RTC R x y+} followed by {\small\verb+R y z+}
 ({\small\verb+TC_CASES2+}).
 
@@ -3451,7 +3451,7 @@ or
 \end{verbatim}}
 \end{hol}
 
-As well as the basic induction theorems for {\small\verb+TC+} and 
+As well as the basic induction theorems for {\small\verb+TC+} and
 {\small\verb+RTC+}, there are so-called \emph{strong} induction
 theorems, which have stronger induction hypotheses.
 %
@@ -3460,10 +3460,10 @@ theorems, which have stronger induction hypotheses.
 \begin{verbatim}
   TC_INDUCT
     |- !R P. (!x y. R x y ==> P x y) /\
-             (!x y z. P x y /\ P y z ==> P x z) 
+             (!x y z. P x y /\ P y z ==> P x z)
              ==> !u v. TC R u v ==> P u v
   RTC_INDUCT
-    |- ! R P. (!x. P x x) /\ 
+    |- ! R P. (!x. P x x) /\
               (!x y z. R x y /\ P y z ==> P x z) ==>
               (!x y. RTC R x y ==> P x y)
   TC_STRONG_INDUCT
@@ -3471,7 +3471,7 @@ theorems, which have stronger induction hypotheses.
              (!x y z. P x y /\ P y z /\ TC R x y /\ TC R y z ==> P x z) ==>
              (!u v. TC R u v ==> P u v)
   RTC_STRONG_INDUCT
-    |- !R P. (!x. P x x) /\ 
+    |- !R P. (!x. P x x) /\
              (!x y z. R x y /\ RTC R y z /\ P y z ==> P x z) ==>
              (!x y. RTC R x y ==> P x y)
 \end{verbatim}}
@@ -3504,7 +3504,7 @@ principle of wellfounded induction ({\small\verb+WF_INDUCTION_THM+}).
 \begin{hol}
 {\small
 \begin{verbatim}
-  WF_DEF 
+  WF_DEF
     |- !R. WF R = !B. (?w. B w) ==> ?min. B min /\ !b. R b min ==> ~B b
   WF_INDUCTION_THM
     |- !R WF R ==> !P. (!x. (!y. R y x ==> P y) ==> P x) ==> !x. P x
@@ -3525,10 +3525,10 @@ induction theorems may be derived.
   WFP_CASES
     |- !R x. WFP R x = !y. R y x ==> WFP R y
   WFP_INDUCT
-    |- !R P. (!x. (!y. R y x ==> P y) ==> P x) 
+    |- !R P. (!x. (!y. R y x ==> P y) ==> P x)
              ==> !x. WFP R x ==> P x
   WFP_STRONG_INDUCT
-    |- !R. (!x. WFP R x /\ (!y. R y x ==> P y) ==> P x) 
+    |- !R. (!x. WFP R x /\ (!y. R y x ==> P y) ==> P x)
            ==> !x. WFP R x ==> P x
 \end{verbatim}}
 \end{hol}
@@ -3551,13 +3551,13 @@ function to be applied to $R$-smaller arguments in recursive calls..
 \begin{hol}
 {\small
 \begin{verbatim}
-  RESTRICT_DEF 
+  RESTRICT_DEF
     |- !f R x. RESTRICT f R x = \y. if R y x then f y else ARB
 
   WFREC_COROLLARY
     |- !M R f. (f = WFREC R M) ==> WF R ==> !x. f x = M (RESTRICT f R x) x
 
-  WF_RECURSION_THM 
+  WF_RECURSION_THM
     |- !R. WF R ==> !M. ?!f. !x. f x = M (RESTRICT f R x) x
 \end{verbatim}}
 \end{hol}
@@ -3581,11 +3581,11 @@ that they propagate wellfoundedness.
 
 \paragraph {Term Rewriting}
 
-A few basic definitions from Term Rewriting theory 
+A few basic definitions from Term Rewriting theory
 (the diamond property (\verb+diamond+), the Church-Rosser
 property ({\small\verb+CR+} and {\small\verb+WCR+}), and Strong
 Normalization ({\small\verb+SN+})) appear
-in \theoryimp{relation}. 
+in \theoryimp{relation}.
 %
 \begin{hol}
 {\small
@@ -3618,7 +3618,7 @@ type $\alpha\to\beta$, but additionally have only finitely many
 elements in their domain. The representing type is $\alpha\to\beta +
 \konst{one}$, where only a finite number of the $\alpha$ map to a
 $\beta$ and the rest map to \verb+one+. The syntax
-$\alpha$\verb+|->+$\beta$ is recognized by the parser as an
+$\alpha$\verb+ |-> +$\beta$ is recognized by the parser as an
 alternative to $(\alpha,\beta)$\verb+fmap+.
 
 \paragraph {Basic notions}
@@ -3626,7 +3626,7 @@ alternative to $(\alpha,\beta)$\verb+fmap+.
 The empty map ({\small\verb+FEMPTY+}), the domain of a map
 ({\small\verb+FDOM+}), the updating of a map
 ({\small\verb+FUPDATE+}), and the application of a map to an argument
-({\small\verb+FAPPLY+}) are the main notions in the theory. 
+({\small\verb+FAPPLY+}) are the main notions in the theory.
 %
 {\small
 \begin{verbatim}
@@ -3637,13 +3637,16 @@ The empty map ({\small\verb+FEMPTY+}), the domain of a map
 \end{verbatim}}
 
 The \HOL{} parser and printer will treat the syntax \verb+f ' x+ as
-the application of finite map \verb+f+ to argument \verb+x+, ie, as 
-{\small\verb+FAPPLY f x+}. Also, the notation \verb#f |+ (x,y)#
+the application of finite map \verb+f+ to argument \verb+x+, ie, as
+\verb+FAPPLY f x+. Note that there must be whitespace between the
+apostrophe character and the arguments to its left and right: a string
+of characters \texttt{f'x} will be interpreted as one lexical token,
+not three. Also, the notation \verb#f |+ (x,y)#
 represents the updating of finite map \verb+f+ by the pair
-\verb+(x,y)+, \ie, as {\small\verb+FUPDATE f (x,y)+}.
+\verb+(x,y)+, \ie, as \verb+FUPDATE f (x,y)+.
 
 The basic constants have obscure definitions from which the following
-are a few of the more perspicious properties that are derived:
+are a few of the more perspicuous properties that are derived:
 %
 {\small
 \begin{verbatim}
@@ -3653,18 +3656,16 @@ are a few of the more perspicious properties that are derived:
     |- !fm. FINITE (FDOM fm)
 
   FAPPLY_FUPDATE_THM
-    |- !f a b x. (f |+ (a,b)) ' x = if x=a then b else f'x
+    |- !f a b x. (f |+ (a,b)) ' x = if x=a then b else f ' x
 
   lookup_DEF
-    |- FLOOKUP f x = (if x IN FDOM f then SOME (f'x) else NONE)
+    |- FLOOKUP f x = (if x IN FDOM f then SOME (f ' x) else NONE)
   FRANGE_DEF
-    |- FRANGE f = {y | ?x. x IN FDOM f /\ (f'x = y)}
-  fmap_EQ_THM
-    |- !f g. (FDOM f = FDOM g) /\ 
-             (!x. x IN FDOM f ==> (FAPPLY f x = FAPPLY g x)) = (f = g)
-\end{verbatim}}
+    |- FRANGE f = {y | ?x. x IN FDOM f /\ (f ' x = y)}
+\end{verbatim}
+}
 
-There is support for iterated updates ({\small\verb+FUPDATE_LIST+},
+\noindent There is support for iterated updates ({\small\verb+FUPDATE_LIST+},
 infix) to a map:
 %
 {\small
@@ -3686,8 +3687,19 @@ There is an induction theorem for finite maps.
 \begin{verbatim}
   fmap_INDUCT
     |- !P. P FEMPTY /\
-           (!f. P f ==> !x y. ~(x IN FDOM f) ==> P (FUPDATE f (x,y))) 
+           (!f. P f ==> !x y. ~(x IN FDOM f) ==> P (FUPDATE f (x,y)))
           ==> !f. P f
+\end{verbatim}
+}
+
+\paragraph{Extensionality}
+Two finite maps are equal if they share the same domain and produce
+equal values on that domain:
+{\small
+\begin{verbatim}
+  fmap_EXT
+    |- !f g. (f = g) =
+             (FDOM f = FDOM g) /\ (!x. x IN FDOM f ==> (f ' x = g ' x))
 \end{verbatim}}
 
 \paragraph{Cardinality}
@@ -3698,14 +3710,14 @@ The cardinality of a finite map is the cardinality of its domain.
 \begin{verbatim}
   FCARD_DEF  |- FCARD fm = CARD (FDOM fm)
   FCARD_FUPDATE
-    |- !fm a b. FCARD (FUPDATE fm (a, b)) = 
+    |- !fm a b. FCARD (FUPDATE fm (a, b)) =
                   if a IN FDOM fm then FCARD fm else 1 + FCARD fm
 \end{verbatim}}
 
 \paragraph {Sub-maps}
 
 The notion of a finite map being a submap of another
-({\small\verb+SUBMAP+}, infix) is defined. 
+({\small\verb+SUBMAP+}, infix) is defined.
 {\small
 \begin{verbatim}
   SUBMAP_DEF
@@ -3722,13 +3734,24 @@ subtraction (\verb+\\+, infix).
 \begin{verbatim}
   DRESTRICT_DEF
     |- !f r. (FDOM (DRESTRICT f r) = FDOM f INTER r) /\
-             (!x. DRESTRICT f r ' x = 
+             (!x. DRESTRICT f r ' x =
                     (if x IN FDOM f INTER r then f ' x else FEMPTY ' x)
   DRESTRICT_FUPDATE
     |- !f r x y.
           DRESTRICT (FUPDATE f (x,y)) r =
             if x IN r then FUPDATE (DRESTRICT f r) (x,y) else DRESTRICT f r
 
+  fmap_domsub
+    |- fm \\ k = DRESTRICT fm (COMPL {k})
+   DOMSUB_FUPDATE_THM
+    |- !fm k1 k2 v. (fm |+ (k1,v)) \\ k2 =
+                     if (k1 = k2) then (fm \\ k2) else (fm \\ k2) |+ (k1, v)
+\end{verbatim}
+}
+\noindent A finite map may also be made smaller by limiting its range
+with the constant \texttt{RRESTRICT}:
+{\small
+\begin{verbatim}
   RRESTRICT_DEF
     |- !f r.
          (FDOM (RRESTRICT f r) = {x | x IN FDOM f /\ f ' x IN r}) /\
@@ -3742,13 +3765,8 @@ subtraction (\verb+\\+, infix).
          RRESTRICT (f |+ (x,y)) r =
          (if y IN r then RRESTRICT f r |+ (x,y)
                     else RRESTRICT (DRESTRICT f (COMPL {x})) r)
-
-  fmap_domsub
-    |- fm \\ k = DRESTRICT fm (COMPL {k})
-   DOMSUB_FUPDATE_THM
-    |- !fm k1 k2 v. (fm |+ (k1,v)) \\ k2 = 
-                     if (k1 = k2) then (fm \\ k2) else (fm \\ k2) |+ (k1, v)
-\end{verbatim}}
+\end{verbatim}
+}
 
 \paragraph {Union}
 
@@ -3761,7 +3779,7 @@ subtraction (\verb+\\+, infix).
 
   FUNION_FEMPTY_1  |- !g. FUNION FEMPTY g = g
   FUNION_FEMPTY_2  |- !f. FUNION f FEMPTY = f
-  FUNION_FUPDATE_1 
+  FUNION_FUPDATE_1
     |- !f g x y. FUNION (f |+ (x,y)) g = (FUNION f g) |+ (x,y)
   FUNION_FUPDATE_2
     |- !f g x y.
