@@ -74,8 +74,9 @@ end;
 local
   fun gconj tm = (TRY_CONV (RAND_CONV gconj) THENC REWR_CONV AND_IMP_INTRO) tm;
   val tconj = REWR_CONV (GSYM (CONJUNCT1 (SPEC_ALL IMP_CLAUSES)));
+  fun sel [] = tconj | sel [_] = ALL_CONV | sel (_ :: _ :: _) = gconj;
 in
-  val DISCH_CONJ = CONV_RULE (gconj ORELSEC tconj) o DISCH_ALL;
+  fun DISCH_CONJ th = CONV_RULE (sel (hyp th)) (DISCH_ALL th);
 end;
 
 local
@@ -87,7 +88,7 @@ local
 
   val vc_solve = prolog
     [wlp_abort_vc, wlp_skip_vc, wlp_assign_vc, wlp_seq_vc, wlp_demon_vc,
-     wlp_prob_vc, wlp_while_vc, wlp_cond_vc, wlp_assert_vc(*, leq_refl*)];
+     wlp_prob_vc, wlp_while_vc, wlp_cond_vc, wlp_assert_vc];
 in
   fun vc_tac (asl,goal) =
     let
