@@ -110,12 +110,12 @@ val FINITE_FVav =
 (*---------------------------------------------------------------------------*)
 
 val LEXI_DEF =
- Define
-    `(<< [] (CONS h t) = T)
- /\  (<< x  []         = F)
- /\  (<< (CONS h1 t1) (CONS h2 t2) = h1 < h2 \/ (h1=h2) /\ << t1 t2)`;
+ xDefine "LEXI"
+    `($<< [] (h::t) = T)
+ /\  ($<< x  []         = F)
+ /\  ($<< (h1::t1) (h2::t2) = h1 < h2 \/ (h1=h2) /\ $<< t1 t2)`;
 
-set_fixity "<<" (Infix 500);
+set_fixity "<<" (Infixr 501);
 
 
 (*---------------------------------------------------------------------------
@@ -133,11 +133,11 @@ val AV_DEF  =  define_mutual_functions
     (V (APLUS v1 v2)    f s  =  V v1 f s + V v2 f s) /\
     (V (AMINUS v1 v2)   f s  =  V v1 f s - V v2 f s) /\
     (V (AMULT v1 v2)    f s  =  V v1 f s * V v2 f s) /\
-    (V (ACONDV a v1 v2) f s  =  (A a f s => V v1 f s | V v2 f s)) /\
+    (V (ACONDV a v1 v2) f s  =  if A a f s then V v1 f s else V v2 f s) /\
     (V (ACALL fn vs)    f s  =  f fn (VS vs f s))
      /\
     (VS  []             f s  =  []) /\
-    (VS (CONS v vs)     f s  =  CONS (V v f s) (VS vs f s))
+    (VS (v::vs)         f s  =  V v f s :: VS vs f s)
      /\
     (A  ATRUE           f s  =  T) /\
     (A  AFALSE          f s  =  F) /\
@@ -146,12 +146,12 @@ val AV_DEF  =  define_mutual_functions
     (A (ALLESS vs1 vs2) f s  =  VS vs1 f s << VS vs2 f s) /\
     (A (AAND a1 a2)     f s  =  A a1 f s /\ A a2 f s) /\
     (A (AOR a1 a2)      f s  =  A a1 f s \/ A a2 f s) /\
-    (A (ANOT a)         f s  =  ~(A a f s)) /\
+    (A (ANOT a)         f s  =  ~A a f s) /\
     (A (AIMP a1 a2)     f s  =  (A a1 f s ==> A a2 f s)) /\
     (A (AEQB a1 a2)     f s  =  (A a1 f s = A a2 f s)) /\
-    (A (ACOND a1 a2 a3) f s  =  (A a1 f s => A a2 f s | A a3 f s)) /\
-    (A (AFORALL x a)    f s  =  !n. A a f (\y. y=x => n | s y)) /\
-    (A (AEXISTS x a)    f s  =  ?n. A a f (\y. y=x => n | s y))`};
+    (A (ACOND a1 a2 a3) f s  =  if A a1 f s then A a2 f s else A a3 f s) /\
+    (A (AFORALL x a)    f s  =  !n. A a f (\y. if y=x then n else s y)) /\
+    (A (AEXISTS x a)    f s  =  ?n. A a f (\y. if y=x then n else s y))`};
 
 
 val LENGTH_VS =
@@ -180,8 +180,8 @@ val AV_EQUIVALENCE =
    (!a f s1 s2. 
        (!x. x IN (FVa a) ==> (s1 x = s2 x)) ==> (A a f s1 = A a f s2))`,
 MUTUAL_INDUCT_THEN (#New_Ty_Induct_Thm def) ASSUME_TAC
-  THEN RW_TAC bool_ss [AV_DEF,FVav,NOT_IN_EMPTY,IN_INSERT,IN_UNION,IN_DELETE]
-  THEN ((AP_TERM_TAC THEN CONV_TAC FUN_EQ_CONV THEN RW_TAC bool_ss [])
+  THEN RW_TAC base_ss [AV_DEF,FVav,NOT_IN_EMPTY,IN_INSERT,IN_UNION,IN_DELETE]
+  THEN ((AP_TERM_TAC THEN CONV_TAC FUN_EQ_CONV THEN RW_TAC base_ss [])
          ORELSE PROVE_TAC []));
 
 
