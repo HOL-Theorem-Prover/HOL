@@ -2636,6 +2636,147 @@ val FORALL_NUM = store_thm(
   ``!P. (!n. P n) = P 0 /\ !n. P (SUC n)``,
   PROVE_TAC [num_CASES]);
 
+(* ********************************************************************** *)
+val _ = print "Miscellaneous theorems\n"
+(* ********************************************************************** *)
+
+val FUNPOW_SUC = store_thm
+  ("FUNPOW_SUC",
+   ``!f n x. FUNPOW f (SUC n) x = f (FUNPOW f n x)``,
+   GEN_TAC
+   THEN INDUCT_TAC
+   THENL [REWRITE_TAC [FUNPOW],
+          ONCE_REWRITE_TAC [FUNPOW]
+          THEN ASM_REWRITE_TAC []]);
+
+val LESS_EQUAL_DIFF = store_thm
+  ("LESS_EQUAL_DIFF",
+   ``!m n : num. m <= n ==> ?k. m = n - k``,
+   REPEAT GEN_TAC
+   THEN SPEC_TAC (``m:num``, ``m:num``)
+   THEN SPEC_TAC (``n:num``, ``n:num``)
+   THEN INDUCT_TAC
+   THENL [REWRITE_TAC [LESS_EQ_0, SUB_0],
+          REWRITE_TAC [LE]
+          THEN PROVE_TAC [SUB_0, SUB_MONO_EQ]]);
+
+val MOD_2 = store_thm
+  ("MOD_2",
+   ``!n. n MOD 2 = if EVEN n then 0 else 1``,
+   GEN_TAC
+   THEN MATCH_MP_TAC MOD_UNIQUE
+   THEN ASM_CASES_TAC ``EVEN n``
+   THEN POP_ASSUM MP_TAC
+   THEN REWRITE_TAC [EVEN_EXISTS, GSYM ODD_EVEN, ODD_EXISTS, ADD1]
+   THEN STRIP_TAC
+   THEN POP_ASSUM SUBST1_TAC
+   THEN Q.EXISTS_TAC `m`
+   THENL [PROVE_TAC [MULT_COMM, ADD_0, TWO, prim_recTheory.LESS_0],
+          (KNOW_TAC ``(?m' : num. 2 * m + 1 = 2 * m') = F``
+           THEN1 PROVE_TAC [EVEN_EXISTS, ODD_EXISTS, ADD1, EVEN_ODD])
+          THEN DISCH_THEN (fn th => REWRITE_TAC [th])
+          THEN PROVE_TAC [MULT_COMM, ONE, TWO, prim_recTheory.LESS_0,
+                          LESS_MONO_EQ]]);
+
+val EVEN_MOD2 = store_thm
+  ("EVEN_MOD2",
+   ``!x. EVEN x = (x MOD 2 = 0)``,
+   PROVE_TAC [MOD_2, SUC_NOT, ONE]);
+
+val SUC_MOD = store_thm
+  ("SUC_MOD",
+   ``!n a b. 0 < n ==> ((SUC a MOD n = SUC b MOD n) = (a MOD n = b MOD n))``,
+   REPEAT STRIP_TAC
+   THEN SIMP_TAC boolSimps.bool_ss [ADD1]
+   THEN MP_TAC (Q.SPEC `n` (GSYM MOD_PLUS))
+   THEN ASM_REWRITE_TAC []
+   THEN DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
+   THEN (REVERSE EQ_TAC THEN1 SIMP_TAC boolSimps.bool_ss [])
+   THEN IMP_RES_TAC MOD_MOD
+   THEN POP_ASSUM (fn th => MP_TAC (CONJ (Q.SPEC `a` th) (Q.SPEC `b` th)))
+   THEN DISCH_THEN
+        (fn th => CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [GSYM th])))
+   THEN ASM_SIMP_TAC boolSimps.bool_ss [MOD_PLUS]
+   THEN (KNOW_TAC ``a MOD n < n /\ b MOD n < n``
+         THEN1 RW_TAC boolSimps.bool_ss [DIVISION])
+   THEN Q.SPEC_TAC (`b MOD n`, `b`)
+   THEN Q.SPEC_TAC (`a MOD n`, `a`)
+   THEN SIMP_TAC boolSimps.bool_ss [GSYM ADD1]
+   THEN REPEAT STRIP_TAC
+   THEN ASM_CASES_TAC ``SUC a < n``
+   THENL [IMP_RES_TAC (GSYM DIVISION)
+          THEN POP_ASSUM (K ALL_TAC)
+          THEN POP_ASSUM (MP_TAC o Q.SPEC `SUC a`)
+          THEN ASM_SIMP_TAC boolSimps.bool_ss [LESS_DIV_EQ_ZERO, MULT, ADD]
+          THEN DISCH_THEN (ASSUME_TAC o SYM)
+          THEN MATCH_MP_TAC numTheory.INV_SUC
+          THEN ASM_SIMP_TAC boolSimps.bool_ss []
+          THEN MATCH_MP_TAC LESS_MOD
+          THEN MATCH_MP_TAC LESS_NOT_SUC
+          THEN ASM_REWRITE_TAC []
+          THEN ONCE_REWRITE_TAC [EQ_SYM_EQ]
+          THEN STRIP_TAC
+          THEN Q.PAT_ASSUM `X = Y MOD n` MP_TAC
+          THEN ASM_SIMP_TAC boolSimps.bool_ss [DIVMOD_ID]
+          THEN PROVE_TAC [SUC_NOT],
+          Q.PAT_ASSUM `X = Y` MP_TAC
+          THEN (KNOW_TAC ``SUC a = n`` THEN1 PROVE_TAC [LESS_NOT_SUC])
+          THEN POP_ASSUM (K ALL_TAC)
+          THEN ASM_SIMP_TAC boolSimps.bool_ss [DIVMOD_ID]
+          THEN STRIP_TAC
+          THEN DISCH_THEN (ASSUME_TAC o SYM)
+          THEN IMP_RES_TAC (GSYM DIVISION)
+          THEN POP_ASSUM (K ALL_TAC)
+          THEN POP_ASSUM (MP_TAC o Q.SPEC `SUC b`)
+          THEN ASM_SIMP_TAC boolSimps.bool_ss [ADD_0]
+          THEN MP_TAC (Q.SPEC `SUC b DIV n` num_CASES)
+          THEN (STRIP_TAC THEN1 PROVE_TAC [SUC_NOT, MULT])
+          THEN ASM_REWRITE_TAC []
+          THEN POP_ASSUM (K ALL_TAC)
+          THEN POP_ASSUM (K ALL_TAC)
+          THEN MP_TAC (Q.SPEC `n'` num_CASES)
+          THEN (STRIP_TAC
+                THEN1 (ASM_SIMP_TAC boolSimps.bool_ss [MULT, ADD]
+                       THEN PROVE_TAC [numTheory.INV_SUC]))
+          THEN ASM_SIMP_TAC boolSimps.bool_ss [MULT, ADD, GSYM ADD_ASSOC]
+          THEN STRIP_TAC
+          THEN (SUFF_TAC ``F`` THEN1 REWRITE_TAC [])
+          THEN (KNOW_TAC ``n + n <= SUC b``
+                THEN1 PROVE_TAC [LESS_EQ_ADD, ADD_COMM, LESS_EQ_REFL])
+          THEN REWRITE_TAC [NOT_LESS_EQUAL, ADD1]
+          THEN MATCH_MP_TAC LESS_EQ_LESS_TRANS
+          THEN Q.EXISTS_TAC `b + n`
+          THEN ASM_REWRITE_TAC [LESS_MONO_ADD_EQ, ADD_MONO_LESS_EQ, ONE]
+          THEN PROVE_TAC [LESS_OR]]);
+
+val DOUBLE_LT = store_thm
+  ("DOUBLE_LT",
+   ``!p q. 2 * p + 1 < 2 * q = 2 * p < 2 * q``,
+   REPEAT GEN_TAC
+   THEN (EQ_TAC THEN1 PROVE_TAC [ADD1, prim_recTheory.SUC_LESS])
+   THEN STRIP_TAC
+   THEN SIMP_TAC boolSimps.bool_ss [GSYM ADD1]
+   THEN MATCH_MP_TAC LESS_NOT_SUC
+   THEN ASM_REWRITE_TAC []
+   THEN PROVE_TAC [EVEN_ODD, EVEN_DOUBLE, ODD_DOUBLE]);
+
+val EXP2_LT = store_thm
+  ("EXP2_LT",
+   ``!m n. n DIV 2 < 2 ** m = n < 2 ** SUC m``,
+   REPEAT GEN_TAC
+   THEN MP_TAC (Q.SPEC `2` DIVISION)
+   THEN (KNOW_TAC ``0n < 2`` THEN1 REWRITE_TAC [TWO, prim_recTheory.LESS_0])
+   THEN SIMP_TAC boolSimps.bool_ss []
+   THEN STRIP_TAC
+   THEN DISCH_THEN (MP_TAC o Q.SPEC `n`)
+   THEN DISCH_THEN (fn th => CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [th])))
+   THEN ONCE_REWRITE_TAC [MULT_COMM]
+   THEN SIMP_TAC boolSimps.bool_ss [EXP, MOD_2]
+   THEN (ASM_CASES_TAC ``EVEN n`` THEN ASM_SIMP_TAC boolSimps.bool_ss [])
+   THENL [REWRITE_TAC [TWO, ADD_0, LESS_MULT_MONO],
+          REWRITE_TAC [DOUBLE_LT]
+          THEN REWRITE_TAC [TWO, ADD_0, LESS_MULT_MONO]]);
+
 (* ----------------------------------------------------------------------
     least n satisfying P
    ---------------------------------------------------------------------- *)
