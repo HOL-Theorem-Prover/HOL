@@ -4,7 +4,7 @@
               "BasicProvers", "SingleStep"];
 *)
 
-open HolKernel Parse boolLib numLib Prim_rec mnUtils pred_setTheory 
+open HolKernel Parse boolLib numLib Prim_rec mnUtils pred_setTheory
      BasicProvers SingleStep;
 
 infix THEN ORELSE THENL THENC ORELSEC >- ++ |->;
@@ -1001,7 +1001,7 @@ val FINITE_EMPTY_BAG = Q.store_thm(
 val FINITE_BAG_INSERT = Q.store_thm(
   "FINITE_BAG_INSERT",
   `!b. FINITE_BAG b ==> (!e. FINITE_BAG (BAG_INSERT e b))`,
-  SIMP_TAC hol_ss [FINITE_BAG]);
+  REWRITE_TAC [FINITE_BAG] THEN MESON_TAC []);
 
 val FINITE_BAG_INDUCT = Q.store_thm(
   "FINITE_BAG_INDUCT",
@@ -1126,13 +1126,13 @@ val BCARD_imps = prove(
   Term`(BAG_CARD_RELn EMPTY_BAG 0) /\
        (!b n. BAG_CARD_RELn b n ==>
            (!e. BAG_CARD_RELn (BAG_INSERT e b) (n + 1)))`,
-  SIMP_TAC hol_ss [BAG_CARD_RELn, arithmeticTheory.ADD1])
+  REWRITE_TAC [BAG_CARD_RELn, arithmeticTheory.ADD1] THEN MESON_TAC [])
 
 val BCARD_induct = prove(
   Term`!P. P EMPTY_BAG 0 /\
            (!b n. P b n ==> (!e. P (BAG_INSERT e b) (n + 1))) ==>
            (!b n. BAG_CARD_RELn b n ==> P b n)`,
-  SIMP_TAC hol_ss [BAG_CARD_RELn, arithmeticTheory.ADD1]);
+  REWRITE_TAC [BAG_CARD_RELn, arithmeticTheory.ADD1] THEN MESON_TAC []);
 
 val strong_BCARD_induct =
   (Q.SPEC `\b n. BAG_CARD_RELn b n /\ P b n` >-
@@ -1305,11 +1305,11 @@ val BAG_CARD_BAG_INN = Q.store_thm(
         CHOICE and REST for bags.
  ---------------------------------------------------------------------------*)
 
-val BAG_CHOICE_DEF = 
+val BAG_CHOICE_DEF =
   new_specification
    {name= "BAG_CHOICE_DEF",
     sat_thm=Q.prove
-             (`?ch:('a -> num) -> 'a. 
+             (`?ch:('a -> num) -> 'a.
                  !b. ~(b = {||}) ==> BAG_IN (ch b) b`,
                PROVE_TAC [MEMBER_NOT_EMPTY]),
     consts=[{const_name="BAG_CHOICE",fixity=Prefix}]};
@@ -1319,16 +1319,16 @@ val BAG_CHOICE_DEF =
 (* ===================================================================== *)
 
 val BAG_REST_DEF = Q.new_definition
- ("BAG_REST_DEF", 
+ ("BAG_REST_DEF",
   `BAG_REST b = BAG_DIFF b (EL_BAG (BAG_CHOICE b))`);
 
 
 val BAG_INSERT_CHOICE_REST = Q.store_thm
 ("BAG_INSERT_CHOICE_REST",
  `!b:^bag. ~(b = {||}) ==> (b = BAG_INSERT (BAG_CHOICE b) (BAG_REST b))`,
- REPEAT STRIP_TAC 
+ REPEAT STRIP_TAC
    THEN IMP_RES_THEN MP_TAC BAG_CHOICE_DEF
-   THEN RW_TAC num_ss 
+   THEN RW_TAC num_ss
         [BAG_INSERT,BAG_REST_DEF,BAG_DIFF,EL_BAG,BAG_IN,BAG_INN,
          EMPTY_BAG,combinTheory.K_DEF,FUN_EQ_THM]);
 
@@ -1343,7 +1343,7 @@ val SUB_BAG_REST = Q.store_thm
 val PSUB_BAG_REST = Q.store_thm
 ("PSUB_BAG_REST",
  `!b:^bag. ~(b = {||}) ==> PSUB_BAG (BAG_REST b) b`,
- REPEAT STRIP_TAC 
+ REPEAT STRIP_TAC
    THEN IMP_RES_THEN MP_TAC BAG_CHOICE_DEF
    THEN RW_TAC num_ss [BAG_REST_DEF,PSUB_BAG, SUB_BAG,BAG_IN, BAG_INN,
        BAG_DIFF,EL_BAG,BAG_INSERT,EMPTY_BAG,combinTheory.K_DEF,FUN_EQ_THM]
@@ -1354,7 +1354,7 @@ val PSUB_BAG_REST = Q.store_thm
 val SUB_BAG_DIFF_EQ = Q.store_thm
 ("SUB_BAG_DIFF_EQ",
  `!b1 b2. SUB_BAG b1 b2 ==> (b2 = BAG_UNION b1 (BAG_DIFF b2 b1))`,
- RW_TAC bool_ss [SUB_BAG,BAG_UNION,BAG_DIFF,BAG_INN,FUN_EQ_THM] 
+ RW_TAC bool_ss [SUB_BAG,BAG_UNION,BAG_DIFF,BAG_INN,FUN_EQ_THM]
    THEN MATCH_MP_TAC (ARITH `a >= b ==> (a = b + (a - b))`)
    THEN POP_ASSUM (MP_TAC o Q.SPECL [`x`, `b1 x`])
    THEN RW_TAC num_ss []);
@@ -1396,10 +1396,10 @@ RW_TAC bool_ss [PSUB_BAG]
   THEN `?d. b2 = BAG_UNION b1 d` by PROVE_TAC [SUB_BAG_DIFF_EQ]
   THEN RW_TAC bool_ss []
   THEN `~(d = {||})` by PROVE_TAC [BAG_UNION_STABLE]
-  THEN STRIP_ASSUME_TAC (Q.SPEC`d` BAG_cases) 
+  THEN STRIP_ASSUME_TAC (Q.SPEC`d` BAG_cases)
   THEN RW_TAC bool_ss [BAG_UNION_INSERT]
   THEN POP_ASSUM (K ALL_TAC)
-  THEN `FINITE_BAG (BAG_UNION b1 b0)` 
+  THEN `FINITE_BAG (BAG_UNION b1 b0)`
         by PROVE_TAC[FINITE_BAG_UNION, BAG_UNION_INSERT, FINITE_BAG_THM]
   THEN PROVE_TAC [BAG_CARD_THM, ARITH `x <y+1n = x <= y`,
                   SUB_BAG_CARD, SUB_BAG_UNION_MONO]);

@@ -15,7 +15,7 @@ struct
  ---------------------------------------------------------------------------*)
 
 local val ERR = mk_HOL_ERR "HolKernel"
-      infix |-> 
+      infix |->
       infixr -->
 in
 
@@ -25,7 +25,7 @@ in
 
 fun ty_antiq ty = mk_var("ty_antiq",ty)
 
-fun dest_ty_antiq tm = 
+fun dest_ty_antiq tm =
   case with_exn dest_var tm (ERR "dest_ty_antiq" "not a type antiquotation")
    of ("ty_antiq",Ty) => Ty
     |  _ => raise ERR "dest_ty_antiq" "not a type antiquotation";
@@ -46,7 +46,7 @@ fun dest_monop (name,thy) e M =
  end;
 end
 
-local fun dest tm = 
+local fun dest tm =
        let val (Rator,N) = dest_comb tm
            val (c,M) = dest_comb Rator
        in (dest_thy_const c,(M,N))
@@ -60,7 +60,7 @@ end;
 
 fun single x = [x];
 
-fun strip_binop dest = 
+fun strip_binop dest =
  let fun strip A [] = rev A
        | strip A (h::t) =
           case dest h
@@ -74,7 +74,7 @@ fun mk_binder c f (p as (Bvar,_)) =
    handle HOL_ERR {message,...} => raise ERR f message;
 
 
-local fun dest M = 
+local fun dest M =
        let val (c, Rand) = dest_comb M
        in (dest_thy_const c,dest_abs Rand)
        end
@@ -105,19 +105,19 @@ val strip_comb =
  let fun strip rands M =
       case destc M
        of NONE => (M, rands)
-        | SOME(Rator,Rand) => strip (Rand::rands) Rator 
+        | SOME(Rator,Rand) => strip (Rand::rands) Rator
  in strip []
  end
 end;
 
 
-datatype lambda 
+datatype lambda
    = VAR   of string * hol_type
    | CONST of {Name:string, Thy:string, Ty:hol_type}
    | COMB  of term * term
    | LAMB  of term * term;
 
-fun dest_term M = 
+fun dest_term M =
   COMB(dest_comb M) handle HOL_ERR _ =>
   LAMB(dest_abs M)  handle HOL_ERR _ =>
   VAR (dest_var M)  handle HOL_ERR _ =>
@@ -141,9 +141,9 @@ fun disch(w,wl) = Lib.gather (not o Term.aconv w) wl;
 
 fun find_term P =
  let fun find_tm tm =
-      if P tm then tm else 
-      if is_abs tm then find_tm (body tm) else 
-      if is_comb tm 
+      if P tm then tm else
+      if is_abs tm then find_tm (body tm) else
+      if is_comb tm
          then let val (Rator,Rand) = dest_comb tm
               in find_tm Rator handle HOL_ERR _ => find_tm Rand
               end
@@ -162,9 +162,9 @@ fun find_term P =
 fun find_terms P =
  let fun accum tl tm =
       let val tl' = if P tm then tm::tl else tl
-      in accum tl' (body tm) 
+      in accum tl' (body tm)
          handle HOL_ERR _ =>
-          if is_comb tm 
+          if is_comb tm
           then let val (r1,r2) = dest_comb tm
                in accum (accum tl' r1) r2
                end
@@ -230,93 +230,226 @@ fun subst_occs occ_lists tm_subst tm =
    end
 end;
 
-fun thm_free_vars th = 
+fun thm_free_vars th =
   let val (asl,c) = dest_thm th in free_varsl (c::asl) end;
 
 
 (*---------------------------------------------------------------------------
-       Higher order matching (from jrh via Don Syme)
+       Higher order matching (from jrh via Michael Norrish - June 2001)
  ---------------------------------------------------------------------------*)
 
-local exception NOT_FOUND
-      fun rev_assoc_nf x l = 
-        Lib.rev_assoc x l handle HOL_ERR _ => raise NOT_FOUND
-      fun safe_insert (n as (y,x)) l =
-        let val z = rev_assoc_nf x l
-        in if y = z then l else failwith "match: safe_insert"
-        end handle NOT_FOUND => n::l  (* binding not there *)
-      fun safe_inserta (n as (y,x)) l =
-        let val z = rev_assoc_nf x l
-        in if aconv y z then l else failwith "match: safe_inserta"
-        end handle NOT_FOUND => n::l
-      val mk_dummy =
-        let val name = fst(dest_var(genvar Type.alpha))
-        in fn tm => mk_var(name, type_of tm)
-        end
+local
+  exception NOT_FOUND
+  fun find_residue red [] = raise NOT_FOUND
+    | find_residue red ({redex,residue}::rest) = if red = redex then residue
+                                                 else find_residue red rest
+  fun in_dom x [] = false
+    | in_dom x ({redex,residue}::rest) = (x = redex) orelse in_dom x rest
+  fun safe_insert (n as {redex,residue}) l = let
+    val z = find_residue redex l
+  in
+    if residue = z then l
+    else failwith "match: safe_insert"
+  end handle NOT_FOUND => n::l  (* binding not there *)
+  fun safe_inserta (n as {redex,residue}) l = let
+    val z = find_residue redex l
+  in
+    if aconv residue z then l
+    else failwith "match: safe_inserta"
+  end handle NOT_FOUND => n::l
+  val mk_dummy = let
+    val name = fst(dest_var(genvar Type.alpha))
+  in fn ty => mk_var(name, ty)
+  end
+
+
+  fun term_pmatch lconsts env vtm ctm (sofar as (insts,homs)) =
+    if is_var vtm then let
+        val ctm' = find_residue vtm env
+      in
+        if ctm' = ctm then sofar else failwith "term_pmatch"
+      end handle NOT_FOUND =>
+                 if mem vtm lconsts then
+                   if ctm = vtm then sofar
+                   else
+                     failwith "term_pmatch: can't instantiate local constant"
+                 else (safe_inserta (vtm |-> ctm) insts, homs)
+    else if is_const vtm then let
+        val {Thy = vthy, Name = vname, Ty = vty} = dest_thy_const vtm
+        val {Thy = cthy, Name = cname, Ty = cty} = dest_thy_const ctm
+      in
+        if vname = cname andalso vthy = cthy then
+          if cty = vty then sofar
+          else (safe_insert (mk_dummy vty |-> mk_dummy cty) insts, homs)
+        else failwith "term_pmatch"
+      end
+    else if is_abs vtm then let
+        val (vv,vbod) = dest_abs vtm
+        val (cv,cbod) = dest_abs ctm
+        val (_, vty) = dest_var vv
+        val (_, cty) = dest_var cv
+        val sofar' = (safe_insert(mk_dummy vty |-> mk_dummy cty) insts, homs)
+      in
+        term_pmatch lconsts ((vv |-> cv)::env) vbod cbod sofar'
+      end
+    else let
+        val vhop = repeat rator vtm
+      in
+        if is_var vhop andalso not (mem vhop lconsts) andalso
+           not (in_dom vhop env)
+        then let
+            val vty = type_of vtm
+            val cty = type_of ctm
+            val insts' = if vty = cty then insts
+                         else safe_insert (mk_dummy vty |-> mk_dummy cty) insts
+          in
+            (insts', (env,ctm,vtm)::homs)
+          end
+        else let
+            val (lv,rv) = dest_comb vtm
+            val (lc,rc) = dest_comb ctm
+            val sofar' = term_pmatch lconsts env lv lc sofar
+          in
+            term_pmatch lconsts env rv rc sofar'
+          end
+      end
+
+fun type_match vty cty sofar =
+    if is_vartype vty then
+      if vty = cty orelse (find_residue vty sofar = cty handle _ => false)
+      then sofar
+      else (vty |-> cty)::sofar
+    else let
+        val {Thy = vthy, Tyop = vop, Args = vargs} = dest_thy_type vty
+        val {Thy = cthy, Tyop = cop, Args = cargs} = dest_thy_type cty
+      in
+        if vop = cop andalso cthy = vthy then
+          itlist2 type_match vargs cargs sofar
+        else failwith "type_match"
+      end
+
+fun get_type_insts insts =
+    itlist (fn {redex = x, residue = t} =>
+               type_match (snd (dest_var x)) (type_of t))
+           insts
+
+fun separate_insts insts = let
+  val (realinsts, patterns) = partition (is_var o #redex) insts
+  val betacounts =
+      if patterns = [] then []
+      else
+        itlist (fn {redex = p,...} =>
+                   fn sof => let
+                        val (hop,args) = strip_comb p
+                      in
+                        safe_insert (hop |-> length args) sof
+                      end handle _ =>
+                                 (HOL_WARNING "" ""
+                                  "Inconsistent patterning in h.o. match";
+                                  sof))
+        patterns []
+  val tyins = get_type_insts realinsts []
 in
-fun ho_match_term lconsts = 
- let fun match_term' env vtm ctm sofar =
-   case dest_term vtm
-    of VAR _ => 
-       (let val ctm' = rev_assoc_nf vtm env
-        in if ctm' = ctm then sofar else failwith "match: match_term"
-        end handle NOT_FOUND  (* vtm is a free var *)
-        => if mem vtm lconsts 
-           then if ctm=vtm then sofar
-                else failwith "match_term': can't instantiate local constant"
-           else 
-           if exists (can (C assoc env)) (free_vars ctm)
-           then failwith"match: free vars don't match terms with bound vars"
-           else if vtm=ctm then sofar else safe_inserta (ctm,vtm) sofar
-       )
-     | CONST{Name,Thy,...} => 
-           let val {Name=name,Thy=thy,...} = dest_thy_const ctm
-                   handle HOL_ERR _ => failwith "match: match_term" 
-           in if Name=name andalso Thy=thy
-              then safe_inserta (mk_dummy ctm,mk_dummy vtm) sofar
-              else failwith "match: match_term" 
-           end 
-     | LAMB (vv,vbod) =>
-           let val (cv,cbod) = dest_abs ctm
-               val sofar' = safe_inserta (mk_dummy cv,mk_dummy vv) sofar
-           in match_term' (insert (cv,vv) env) vbod cbod sofar' 
-           end
-     | COMB _ =>
-        let val (vhop,vargs) = strip_comb vtm
-            val (chop,cargs) = strip_comb ctm
-        in (if not (is_var vhop) 
-                orelse mem vhop lconsts 
-                orelse can (C rev_assoc env) vhop
-            then fail()
-            else let val vargs' = map (C rev_assoc env) vargs
-                 in if vargs' = cargs 
-                    then safe_inserta (chop,vhop) sofar
-                    else safe_inserta (list_mk_abs(vargs',ctm), vhop) sofar
-                 end
-           ) handle HOL_ERR _ 
-              => itlist2 (match_term' env) vargs cargs 
-                         (match_term' env vhop chop sofar)
-             handle HOL_ERR _
-              => let val (lv,rv) = dest_comb vtm
-                     val (lc,rc) = dest_comb ctm
-                 in match_term' env rv rc (match_term' env lv lc sofar)
-                 end
-        end
- in 
- fn vtm => fn ctm =>
-   let val rawins = match_term' [] vtm ctm []
-       val (cins,vins) = unzip rawins
-       val tytheta = match_type(list_mk_fun (map type_of vins, bool))
-                               (list_mk_fun (map type_of cins, bool))
-   in (norm_subst tytheta (map2 (curry op |->) vins cins), tytheta)
-   end 
- end
- handle e => raise (wrap_exn "HolKernel" "ho_match_term" e)
+  (betacounts,
+   mapfilter (fn {redex = x, residue = t} => let
+                   val x' = let val (xn,xty) = dest_var x
+                            in
+                              mk_var(xn, type_subst tyins xty)
+                            end
+                 in
+                   if t = x' then failwith "" else {redex = x', residue = t}
+                 end) realinsts,
+   tyins)
+end
+
+fun term_homatch lconsts tyins (insts, homs) =
+    if homs = [] then insts
+    else let
+        val (env,ctm,vtm) = hd homs
+      in
+        if is_var vtm then
+          if ctm = vtm then term_homatch lconsts tyins (insts, tl homs)
+          else let
+              val newtyins =
+                  safe_insert (snd (dest_var vtm) |-> type_of ctm) tyins
+              val newinsts = (vtm |-> ctm)::insts
+            in
+              term_homatch lconsts newtyins (newinsts, tl homs)
+            end
+        else (* vtm not a var *) let
+            val (vhop, vargs) = strip_comb vtm
+            val afvs = free_varsl vargs
+            val inst_fn = Term.inst tyins
+          in
+            (let
+               val tmins =
+                   map (fn a => (inst_fn a |->
+                                         (find_residue a env
+                                          handle _ =>
+                                                 find_residue a insts
+                                          handle _ =>
+                                                 if mem a lconsts then a
+                                                 else failwith ""))) afvs
+               val pats0 = map inst_fn vargs
+               val pats = map (Term.subst tmins) pats0
+               val vhop' = inst_fn vhop
+               val ictm = list_mk_comb(vhop', pats)
+               val ni = let
+                 val (chop,cargs) = strip_comb ctm
+               in
+                 if cargs = pats then
+                   if chop = vhop then insts
+                   else safe_inserta (vhop |-> chop) insts
+                 else let
+                     val ginsts = map (fn p => (p |->
+                                                (if is_var p then p
+                                                 else genvar(type_of p))))
+                                      pats
+                     val ctm' = Term.subst ginsts ctm
+                     val gvs = map #residue ginsts
+                     val abstm = list_mk_abs(gvs,ctm')
+                     val vinsts = safe_inserta (vhop |-> abstm) insts
+                     val icpair = (list_mk_comb(vhop',gvs) |-> ctm')
+                   in
+                     icpair::vinsts
+                   end
+               end
+             in
+               term_homatch lconsts tyins (ni,tl homs)
+             end) handle _ => let
+                           val (lc,rc) = dest_comb ctm
+                           val (lv,rv) = dest_comb vtm
+                           val pinsts_homs' =
+                               term_pmatch lconsts env rv rc
+                               (insts, (env,lc,lv)::(tl homs))
+                           val tyins' = get_type_insts (fst pinsts_homs') []
+                         in
+                           term_homatch lconsts tyins' pinsts_homs'
+                         end
+          end
+      end
+
+in
+
+fun ho_match_term0 lconsts vtm ctm = let
+  val pinsts_homs = term_pmatch lconsts [] vtm ctm ([], [])
+  val tyins = get_type_insts (fst pinsts_homs) []
+  val insts = term_homatch lconsts tyins pinsts_homs
+in
+  separate_insts insts
+end
+
+fun ho_match_term lconsts vtm ctm = let
+  val (bcs, tmins, tyins) = ho_match_term0 lconsts vtm ctm
+in
+  (tmins, tyins)
+end handle e => raise (wrap_exn "HolKernel" "ho_match_term" e)
+
 end;
 
 
 (*
-datatype theory 
+datatype theory
      = THEORY of {name : string,
                   types : (string * int),
                   consts : (string * hol_type) list,
@@ -347,8 +480,8 @@ end ;
 val CONSISTENT   = Portable.CONSISTENT
 val INCONSISTENT = Portable.INCONSISTENT;
 
-fun pp_theory {pp_thm,pp_type} ppstrm thy = 
-let 
+fun pp_theory {pp_thm,pp_type} ppstrm thy =
+let
   val {thid,con_wrt_disk,facts,overwritten,adjoin} = thy
   val {add_string,add_break,begin_block,end_block, add_newline,
        flush_ppstream,...} = Portable.with_ppstream ppstrm

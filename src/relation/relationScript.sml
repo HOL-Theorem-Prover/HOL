@@ -70,7 +70,7 @@ val TC_RULES = store_thm(
 val RTC_RULES = store_thm(
   "RTC_RULES",
   ``!R. (!x. RTC R (x:'a) x) /\ (!x y z. R x y /\ RTC R y z ==> RTC R x z)``,
-  SIMP_TAC bool_ss [RTC_DEF] THEN MESON_TAC []);
+  REWRITE_TAC [RTC_DEF] THEN MESON_TAC []);
 
 val RTC_STRONG_INDUCT = store_thm(
   "RTC_STRONG_INDUCT",
