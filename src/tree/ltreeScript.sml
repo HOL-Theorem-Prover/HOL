@@ -753,16 +753,16 @@ val _ = adjoin_to_theory
   let val S = PP.add_string ppstrm
       fun NL() = PP.add_newline ppstrm
   in
-    S "val _ = TypeBase.write";             NL();
-    S "  (TypeBase.mk_tyinfo";              NL();
-    S "     {ax=ltree_Axiom,";              NL();
-    S "      case_def=ltree_case_def,";     NL();
-    S "      case_cong=ltree_case_cong,";   NL();
-    S "      induction=ltree_Induct,";      NL();
-    S "      nchotomy=Node_onto,";          NL();
+    S "val _ = TypeBase.write";                           NL();
+    S "  (TypeBase.mk_tyinfo";                            NL();
+    S "     {ax=TypeBase.ORIG ltree_Axiom,";              NL();
+    S "      case_def=ltree_case_def,";                   NL();
+    S "      case_cong=ltree_case_cong,";                 NL();
+    S "      induction=TypeBase.ORIG ltree_Induct,";      NL();
+    S "      nchotomy=Node_onto,";                        NL();
     S "      size=SOME(Parse.Term`ltree_size:('a->num)->'a ltree->num`,"; NL();
-    S "                ltree_size_def),";   NL();
-    S "      one_one=SOME Node_11,";        NL();
+    S "                TypeBase.ORIG ltree_size_def),";   NL();
+    S "      one_one=SOME Node_11,";                      NL();
     S "      distinct=NONE});"
   end)};
 
