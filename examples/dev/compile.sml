@@ -12,6 +12,7 @@
 ******************************************************************************)
 (*
 quietdec := true;
+loadPath :="dff" :: !loadPath;
 map load  
  ["composeTheory","compileTheory", "hol88Lib" (*for subst*),"unwindLib"];
 open arithmeticTheory pairLib pairTheory PairRules combinTheory listTheory
@@ -1643,8 +1644,8 @@ val MAKE_NETLIST =
 (*                                                                           *)
 (* The monolitlic version after it is a bit faster by folding together       *)
 (* stages (e.g. only one invocation of EXISTS_OUT_CONV) and it seems to      *)
-(* sometimes make smaller circuits (fewe variables, e.g. for MULTd_cir       *)
-(* in booth/boothDevScript.sml -- I'm not sure why (needs investigation).    *)
+(* sometimes make smaller circuits (fewer variables, e.g. for MULTd_cir      *)
+(* in booth/boothDevScript.sml -- I'm not sure why: needs investigation).    *)
 (*****************************************************************************)
 
 (*********************** Next definition commented out ***********************
