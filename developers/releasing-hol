@@ -24,9 +24,9 @@ echo -n "Progress: "
 linecount=0
 (if [ "$name" = "today" ]
 then
-  cvs -d:ext:${userid}@cvs.hol.sf.net:/cvsroot/hol export -D tomorrow hol98
+  cvs -d:ext:${userid}@cvs.sf.net:/cvsroot/hol export -D tomorrow hol98
 else
-  cvs -d:ext:${userid}@cvs.hol.sf.net:/cvsroot/hol export -r $name hol98
+  cvs -d:ext:${userid}@cvs.sf.net:/cvsroot/hol export -r $name hol98
 fi) 2>&1 | tee /tmp/cvs-export.log |
   while read foo
   do  linecount=$[ $linecount + 1 ]
