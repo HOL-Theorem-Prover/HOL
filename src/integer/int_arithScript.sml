@@ -332,4 +332,10 @@ val INT_NUM_SUB = store_thm(
   ASM_SIMP_TAC bool_ss [SUB_EQ_0, LESS_OR_EQ] THEN
   PROVE_TAC [INT_SUB, NOT_LESS]);
 
+val INT_NUM_COND = store_thm(
+  "INT_NUM_COND",
+  Term`!b n m. int_of_num (if b then n else m) =
+               if b then &n else &m`,
+  SIMP_TAC (bool_ss ++ COND_elim_ss) [] THEN PROVE_TAC []);
+
 val _ = export_theory();

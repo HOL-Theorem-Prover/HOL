@@ -49,10 +49,17 @@ fun remove_bare_vars tm =
   then
     BINOP_CONV remove_bare_vars tm
   else if is_neg tm then RAND_CONV remove_bare_vars tm
+  else if is_negated tm then RAND_CONV remove_bare_vars tm
   else if is_var tm then REWR_CONV (GSYM INT_MUL_LID) tm
   else ALL_CONV tm
 
-val phase1_CONV = let
+local
+  val basic_rewrite_conv =
+    REWRITE_CONV [boolTheory.DE_MORGAN_THM, boolTheory.NOT_IMP, not_less,
+                  boolTheory.IMP_DISJ_THM, boolTheory.EQ_IMP_THM,
+                  elim_eq, elim_le, elim_ge, elim_gt,
+                  INT_SUB_CALCULATE, INT_RDISTRIB, INT_LDISTRIB,
+                  INT_NEG_LMUL, INT_NEG_ADD, INT_NEGNEG, INT_NEG_0]
   fun flip_muls tm =
     if is_mult tm andalso not (is_var (rand tm)) then let
       val mcands = strip_mult tm
@@ -63,19 +70,100 @@ val phase1_CONV = let
     end handle HOL_ERR {origin_structure = "Lib", ...} => ALL_CONV tm
     else if is_comb tm then
       (RATOR_CONV flip_muls THENC RAND_CONV flip_muls) tm
-    else
-      ALL_CONV tm
-
+         else
+           ALL_CONV tm
 in
+  val phase1_CONV =
   (* to push negations inwards; formula must be quantifier free *)
-  REDUCE_CONV THENC
-  REWRITE_CONV [boolTheory.DE_MORGAN_THM, boolTheory.NOT_IMP, not_less,
-                boolTheory.IMP_DISJ_THM, boolTheory.EQ_IMP_THM,
-                elim_eq, elim_le, elim_ge, elim_gt,
-                INT_SUB_CALCULATE, INT_RDISTRIB, INT_LDISTRIB,
-                INT_NEG_LMUL] THENC
-  remove_negated_vars THENC remove_bare_vars THENC flip_muls THENC REDUCE_CONV
+    REDUCE_CONV THENC basic_rewrite_conv THENC
+    remove_negated_vars THENC remove_bare_vars THENC flip_muls THENC
+    REDUCE_CONV
 end
+
+(*
+
+val true_tm = Term.mk_const {Name = "T", Ty = Type.bool}
+val false_tm = Term.mk_const {Name = "F", Ty = Type.bool}
+val AND_CLAUSES0 = CONJUNCTS (Q.ID_SPEC AND_CLAUSES)
+val OR_CLAUSES0 = CONJUNCTS (Q.ID_SPEC OR_CLAUSES)
+val T_and_l = GEN_ALL (List.nth(AND_CLAUSES0, 0))
+val T_and_r = GEN_ALL (List.nth(AND_CLAUSES0, 1))
+val F_and_l = GEN_ALL (List.nth(AND_CLAUSES0, 2))
+val F_and_r = GEN_ALL (List.nth(AND_CLAUSES0, 3))
+val T_or_l = GEN_ALL (List.nth(OR_CLAUSES0, 0))
+val T_or_r = GEN_ALL (List.nth(OR_CLAUSES0, 1))
+val F_or_l = GEN_ALL (List.nth(OR_CLAUSES0, 2))
+val F_or_r = GEN_ALL (List.nth(OR_CLAUSES0, 3))
+
+fun conjdisj_simplify tm = let
+  (* take a term and traverse it, simplifying out repeated occurrences
+     of leaf boolean terms.  Thus
+       atomic_p /\ (... atomic_p ... atomic_p ..)
+     becomes
+       atomic_p /\ ( ...   T ... T ... )
+  *)
+  exception Unchanged
+  fun BINOP_CONV c tm = let
+    val (f0, arg2) = dest_comb tm
+    val (f, arg1) = dest_comb f0
+    fun doit_on_right newrhs left_tm = let
+      val result0 = AP_TERM left_tm newrhs
+      val new_t = rhs (concl newrhs)
+    in
+      if new_t = true_tm then
+        if is_conj tm then
+          TRANS result0 (SPEC arg1 T_and_r)
+        else
+          TRANS result0 (SPEC arg1 T_or_r)
+      else if new_t = false_tm then
+        if is_conj tm then
+          TRANS result0 (SPEC arg1 F_and_r)
+        else
+          TRANS result0 (SPEC arg1 F_or_r)
+      else
+        result0
+    end
+  in
+    case SOME (c arg1) handle Unchanged => NONE of
+      NONE => doit_on_right (c arg2) f0 (* happy for Unchanged to propagate *)
+    | SOME newlhs => let
+        val new_t = rhs (concl newlhs)
+      in
+        if is_conj tm then let
+          val thm0 = AP_TERM f newlhs
+          val result0 = AP_THM thm0 arg2
+        in
+          if new_t = false_tm then
+            TRANS result0 (SPEC arg2 F_and_l)
+          else if new_t = true_tm then let
+            val result1 = TRANS result0 (SPEC arg2 T_and_l)
+          in
+            case SOME (c arg2) handle Unchanged of
+              SOME newrhs => TRANS result1 newrhs
+            | NONE => result1
+          end
+          else
+
+        end
+
+        else if is_disj tm andalso new_t = true_tm then let
+          val thm0 = AP_TERM f newlhs
+          val result0 = AP_THM thm0 arg2
+        in
+          TRANS result (SPEC arg2 T_or_l)
+        end
+        else if
+
+
+
+  fun base_traverse tm =
+    if is_disj tm orelse is_conj tm then BINOP_CONV base_traverse tm
+    else if tm = lhs then eq_thm else raise Unchanged
+
+
+
+*)
+
 
 fun sum_var_coeffs var tm = let
   open Arbint
@@ -1076,6 +1164,7 @@ val obvious_improvements =
                             INT_ADD_LID, INT_ADD_RID, INT_LT_ADD_NUMERAL,
                             INT_LT_LADD]
 
+
 val decide_pure_presburger_term = let
   (* no free variables allowed *)
   open boolSimps simpLib
@@ -1131,6 +1220,8 @@ fun non_presburger_subterms0 ctxt tm =
            is_minus tm orelse is_linear_mult tm) then
     Lib.union (non_presburger_subterms0 ctxt (land tm))
               (non_presburger_subterms0 ctxt (rand tm))
+  else if (is_divides tm andalso is_int_literal (land tm)) then
+    non_presburger_subterms0 ctxt (rand tm)
   else if is_int_literal tm then []
   else if is_var tm andalso type_of tm = int_ty then []
   else [(tm, not (List.exists (fn v => free_in v tm) ctxt))]
@@ -1176,30 +1267,32 @@ val dealwith_nats = let
   open arithmeticTheory simpLib boolSimps
   val rewrites = [GSYM INT_INJ, GSYM INT_LT, GSYM INT_LE,
                   GREATER_DEF, GREATER_EQ, GSYM INT_ADD,
-                  GSYM INT_MUL, INT_NUM_SUB, INT, PRE_SUB1]
+                  GSYM INT_MUL, INT_NUM_SUB, INT, PRE_SUB1, INT_NUM_COND]
 
   fun seek_natqs tm = let
   in
     if is_forall tm orelse is_exists tm orelse is_uexists tm then let
       val (bvar, body) = dest_abs (rand tm)
-      val inj_bvar = mk_comb(int_injection, bvar)
-      val rewrite_qaway =
-        REWR_CONV (if is_forall tm then INT_NUM_FORALL
-                   else if is_exists tm then INT_NUM_EXISTS
-                   else INT_NUM_UEXISTS) THENC
-        BINDER_CONV (RAND_CONV BETA_CONV)
     in
-      if type_of bvar = num_ty then
+      if type_of bvar = num_ty then let
+        val inj_bvar = mk_comb(int_injection, bvar)
+        val rewrite_qaway =
+          REWR_CONV (if is_forall tm then INT_NUM_FORALL
+          else if is_exists tm then INT_NUM_EXISTS
+               else INT_NUM_UEXISTS) THENC
+          BINDER_CONV (RAND_CONV BETA_CONV)
+      in
         BINDER_CONV (abs_inj inj_bvar) THENC rewrite_qaway THENC
         BINDER_CONV seek_natqs
+      end
       else
         BINDER_CONV seek_natqs
     end
+    else if is_neg tm then (* must test for is_neg before is_imp *)
+      RAND_CONV seek_natqs
     else if (is_conj tm orelse is_disj tm orelse is_eq tm orelse
              is_imp tm) then
       BINOP_CONV seek_natqs
-    else if is_neg tm then
-      RAND_CONV seek_natqs
     else if is_cond tm then
       RATOR_CONV (RATOR_CONV (RAND_CONV seek_natqs))
     else ALL_CONV
@@ -1281,14 +1374,7 @@ in
 end tm
 
 val COOPER_PROVE = EQT_ELIM o COOPER_CONV
-val COOPER_TAC = CONV_TAC COOPER_PROVE;
-
-(*
-fun NUM_ARITH_CONV tm = let
-  val elim_nat_quant
-  val munged = rhs (concl (SIMP_CONV bool_ss rewrites tm))
-*)
-
+val COOPER_TAC = CONV_TAC COOPER_CONV;
 
 (* good test examples:
 
@@ -1377,6 +1463,67 @@ fun NUM_ARITH_CONV tm = let
    decide_pure_presburger_term fpt3;
    decide_pure_presburger_term fpt4;
 
+*)
+
+
+
+(* Final testing:
+
+   map (fn s => (print (s^", ");
+                 ARITH_PROVE (concl (DB.theorem "arithmetic" s))
+                handle e => (print ("Couldn't cope with "^s);
+                             Raise e)))
+ [ "ZERO_LESS_EQ", "TWO",
+   "TIMES2", "SUC_SUB1", "SUC_ONE_ADD", "SUC_NOT",
+   "SUC_ADD_SYM",
+
+"SUB_SUB"], "SUB_RIGHT_SUB", "SUB_RIGHT_LESS_EQ",
+     "SUB_RIGHT_LESS", "SUB_RIGHT_GREATER_EQ", "SUB_RIGHT_GREATER",
+     "SUB_RIGHT_EQ", "SUB_RIGHT_ADD", "SUB_PLUS", "SUB_MONO_EQ", "SUB_LESS_OR",
+     "SUB_LESS_EQ_ADD", "SUB_LESS_EQ", "SUB_LESS_0", "SUB_LEFT_SUC",
+     "SUB_LEFT_SUB", "SUB_LEFT_LESS_EQ", "SUB_LEFT_LESS",
+     "SUB_LEFT_GREATER_EQ", "SUB_LEFT_GREATER", "SUB_LEFT_EQ", "SUB_LEFT_ADD",
+     "SUB_EQUAL_0", "SUB_EQ_EQ_0", "SUB_EQ_0", "SUB_ELIM_THM", "SUB_CANCEL",
+     "SUB_ADD", "SUB_0", "SUB", "RIGHT_SUB_DISTRIB", "RIGHT_ADD_DISTRIB",
+     "PRE_SUC_EQ", "PRE_SUB1", "PRE_SUB", "PRE_ELIM_THM", "OR_LESS", "ONE",
+     "ODD_OR_EVEN", "ODD_MULT", "ODD_EXISTS", "ODD_EVEN", "ODD_DOUBLE",
+     "ODD_ADD", "ODD", "NUMERAL_DEF", "NUMERAL_BIT2", "NUMERAL_BIT1",
+     "num_CASES", "num_case_def", "num_case_cong", "num_case_compute",
+     "NOT_ZERO_LT_ZERO", "NOT_SUC_LESS_EQ_0", "NOT_SUC_LESS_EQ",
+     "NOT_SUC_ADD_LESS_EQ", "NOT_ODD_EQ_EVEN", "NOT_NUM_EQ", "NOT_LESS_EQUAL",
+     "NOT_LESS", "NOT_LEQ", "NOT_GREATER_EQ", "NOT_GREATER", "NOT_EXP_0",
+     "MULT_SYM", "MULT_SUC_EQ", "MULT_SUC", "MULT_RIGHT_1", "MULT_MONO_EQ",
+     "MULT_LESS_EQ_SUC", "MULT_LEFT_1", "MULT_INCREASES", "MULT_EXP_MONO",
+     "MULT_EQ_1", "MULT_EQ_0", "MULT_DIV", "MULT_COMM", "MULT_CLAUSES",
+     "MULT_ASSOC", "MULT_0", "MULT", "MOD_UNIQUE", "MOD_TIMES", "MOD_PLUS",
+     "MOD_ONE", "MOD_MULT_MOD", "MOD_MULT", "MOD_MOD", "MOD_EQ_0",
+     "LESS_TRANS", "LESS_SUC_NOT", "LESS_SUC_EQ_COR", "LESS_SUB_ADD_LESS",
+     "LESS_OR_EQ_ADD", "LESS_OR_EQ", "LESS_OR", "LESS_NOT_SUC",
+     "LESS_MULT_MONO", "LESS_MULT2", "LESS_MONO_REV", "LESS_MONO_MULT",
+     "LESS_MONO_EQ", "LESS_MONO_ADD_INV", "LESS_MONO_ADD_EQ", "LESS_MONO_ADD",
+     "LESS_MOD", "LESS_LESS_SUC", "LESS_LESS_EQ_TRANS", "LESS_LESS_CASES",
+     "LESS_IMP_LESS_OR_EQ", "LESS_IMP_LESS_ADD", "LESS_EXP_SUC_MONO",
+     "LESS_EQUAL_ANTISYM", "LESS_EQUAL_ADD", "LESS_EQ_TRANS",
+     "LESS_EQ_SUC_REFL", "LESS_EQ_SUB_LESS", "LESS_EQ_REFL",
+     "LESS_EQ_MONO_ADD_EQ", "LESS_EQ_MONO", "LESS_EQ_LESS_TRANS",
+     "LESS_EQ_LESS_EQ_MONO", "LESS_EQ_IMP_LESS_SUC", "LESS_EQ_EXISTS",
+     "LESS_EQ_CASES", "LESS_EQ_ANTISYM", "LESS_EQ_ADD_SUB", "LESS_EQ_ADD",
+     "LESS_EQ_0", "LESS_EQ", "LESS_DIV_EQ_ZERO", "LESS_CASES_IMP",
+     "LESS_CASES", "LESS_ANTISYM", "LESS_ADD_SUC", "LESS_ADD_NONZERO",
+     "LESS_ADD_1", "LESS_ADD", "LESS_0_CASES", "LEFT_SUB_DISTRIB",
+     "LEFT_ADD_DISTRIB", "LE", "INV_PRE_LESS_EQ", "INV_PRE_LESS", "INV_PRE_EQ",
+     "GREATER_OR_EQ", "GREATER_EQ", "GREATER_DEF", "FUNPOW", "FUN_EQ_LEMMA",
+     "FACT_LESS", "FACT", "EXP_INJECTIVE", "EXP_EQ_1", "EXP_EQ_0",
+     "EXP_ALWAYS_BIG_ENOUGH", "EXP_ADD", "EXP_1", "EXP", "EXISTS_GREATEST",
+     "EVEN_OR_ODD", "EVEN_ODD_EXISTS", "EVEN_ODD", "EVEN_MULT", "EVEN_EXISTS",
+     "EVEN_DOUBLE", "EVEN_AND_ODD", "EVEN_ADD", "EVEN", "EQ_MULT_LCANCEL",
+     "EQ_MONO_ADD_EQ", "EQ_LESS_EQ", "EQ_ADD_RCANCEL", "EQ_ADD_LCANCEL",
+     "DIVMOD_ID", "DIVISION", "DIV_UNIQUE", "DIV_ONE", "DIV_MULT",
+     "DIV_LESS_EQ", "DIV_LESS", "DIV_DIV_DIV_MULT", "DA", "COMPLETE_INDUCTION",
+     "CANCEL_SUB", "ALT_ZERO", "ADD_SYM", "ADD_SUC", "ADD_SUB",
+     "ADD_MONO_LESS_EQ", "ADD_INV_0_EQ", "ADD_INV_0", "ADD_EQ_SUB", "ADD_EQ_1",
+     "ADD_EQ_0", "ADD_DIV_ADD_DIV", "ADD_COMM", "ADD_CLAUSES", "ADD_ASSOC",
+     "ADD_0", "ADD1", "ADD"]
 *)
 
 end;
