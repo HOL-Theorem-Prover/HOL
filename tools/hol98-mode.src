@@ -16,6 +16,7 @@
 (make-variable-buffer-local 'hol-loaded-modules)
 (set-default 'hol-buffer-ready nil)
 (set-default 'hol-buffer-name nil)
+(set-default 'hol-loaded-modules nil)
 
 (defvar hol98-executable HOL98-EXECUTABLE
   "*Path-name for the HOL98 executable.")
@@ -211,7 +212,7 @@ With prefix argument, drop the goal afterwards."
     (while (and (not done) (re-search-forward "(\\*\\|\\*)" end t))
         (if (string= (match-string 0) "*)")
             (progn
-              (kill-region (- start 2) (point))
+              (delete-region (- start 2) (point))
               (setq done t))
           ;; found a comment beginning
           (if (not (remove-sml-comments end)) (setq done t))))
@@ -221,7 +222,7 @@ With prefix argument, drop the goal afterwards."
 (defun remove-hol-term (end-marker)
   (let ((start (point)))
     (if (re-search-forward "`" end-marker t)
-        (kill-region (- start 1) (point))
+        (delete-region (- start 1) (point))
       (message "Incomplete HOL term/quotation in region given"))))
 
 (defun remove-hol-string (end-marker)
@@ -229,7 +230,7 @@ With prefix argument, drop the goal afterwards."
     (if (re-search-forward "\n\\|[^\\]\"" end-marker t)
         (if (string= (match-string 0) "\n")
             (message "String literal terminated by newline - not allowed!")
-          (kill-region (- start 1) (point))))))
+          (delete-region (- start 1) (point))))))
 
 
 (defun remove-sml-junk (start end)
@@ -245,36 +246,51 @@ With prefix argument, drop the goal afterwards."
               ((string= (match-string 0) "\"") (remove-hol-string m))))
       (set-marker m nil))))
 
-(defun remove-sml-lets-locals (start end &optional inbody &optional not-at-top)
+(defun remove-sml-lets-locals
+  (start end &optional looking-for-end &optional recursing)
   "Removes all local-in-ends and let-in-ends from a region.  We assume
 that the buffer has already had HOL terms, comments and strings removed."
   (interactive "r")
-  (let ((m (if (not not-at-top) (set-marker (make-marker) end) end)))
-    (if (not not-at-top) (goto-char start))
+  (let ((m (if (not recursing) (set-marker (make-marker) end) end))
+        retval)
+    (if (not recursing) (goto-char start))
     (if (re-search-forward "\\blet\\b\\|\\blocal\\b\\|\\bend\\b" m t)
         (let ((declstring (match-string 0)))
           (if (or (string= declstring "let") (string= declstring "local"))
-              (remove-sml-lets-locals (- (point) (length declstring)) m t t)
+              (and
+               (remove-sml-lets-locals (- (point) (length declstring)) m t t)
+               (remove-sml-lets-locals start m looking-for-end t)
+               (setq retval t))
             ;; found an "end"
-            (if (not inbody) (message "End without corresponding let/local")
-              (progn (kill-region start (point))
-                     (remove-sml-lets-locals (point) end nil t))))))
-    (if (not not-at-top) (set-marker m nil))))
+            (if (not looking-for-end)
+                (message "End without corresponding let/local")
+              (delete-region start (point))
+              (setq retval t))))
+      ;; didn't find anything
+      (if looking-for-end
+          (message "Let/local without corresponding end")
+        (setq retval t)))
+    (if (not recursing) (set-marker m nil))
+    retval))
 
+(defun word-list-to-regexp (words)
+  (mapconcat (lambda (s) (concat "\\b" s "\\b")) words "\\|"))
 
-
-
-
-
+(setq hol-open-terminator-regexp
+      (concat ";\\|"
+              (word-list-to-regexp
+               '("val" "fun" "in" "infix[lr]?" "open" "local"))))
 
 
 (defun send-string-to-hol (string)
   "Send a string to HOL process."
   (interactive "sString to send to HOL process: ")
   (let ((buf (ensure-hol-buffer-ok))
-        (tmpbuf (generate-new-buffer "*HOL temporary*")))
+        (tmpbuf (generate-new-buffer "*HOL temporary*"))
+        (old-mark-active mark-active))
     (save-excursion
       (set-buffer tmpbuf)
+      (setq hol-buffer-name buf) ; version of this variable in tmpbuf
       (insert string)
       (goto-char (point-min))
       (remove-sml-junk (point-min) (point-max))
@@ -285,12 +301,29 @@ that the buffer has already had HOL terms, comments and strings removed."
       (while (re-search-forward "\\([A-Za-z_][A-Za-z0-9_]*\\)\\.\\w+"
                                 (point-max) t)
         (hol-load-string (match-string 1)))
-      ;; next thing to do is to look for open declarations that are not
-      ;; in the scope of lets or locals
-      ; (goto-char (point-min))
-      ; (remove-sml-lets-locals (point) (point-max))
-      (send-raw-string-to-hol string))
-    (kill-buffer tmpbuf)))
+      ;; next thing to do is to look for open declarations
+      (goto-char (point-min))
+      ;; search through buffer for open declarations
+      (while (re-search-forward "\\bopen\\b" (point-max) t)
+        ;; point now after an open, now search forward to end of
+        ;; buffer or a semi-colon, or an infix declaration or a
+        ;; val or a fun or another open  (as per the regexp defined just
+        ;; before this function definition
+        (let ((start (point))
+              (end
+               (save-excursion
+                 (if (re-search-forward hol-open-terminator-regexp
+                                        (point-max) t)
+                     (- (point) (length (match-string 0)))
+                   (point-max)))))
+          (hol-load-modules-in-region start end nil))))
+    ;; then finally send the string
+    (send-raw-string-to-hol string)
+    (kill-buffer tmpbuf)
+    ;; deactivate-mark will have likely been set by all the editting actions
+    ;; in the temporary buffer.  We fix this here, thereby keeping the mark
+    ;; active, if it is active.
+    (if deactivate-mark (setq deactivate-mark nil))))
 
 (defun send-raw-string-to-hol (string)
   "Sends a string in the raw to HOL.  Not for interactive use."
@@ -364,24 +397,39 @@ that the buffer has already had HOL terms, comments and strings removed."
                   (setq hol-loaded-modules (cons s hol-loaded-modules)))
               (comint-send-string buf commandstring)))))))
 
+(defun hol-load-modules-in-region (start end arg)
+  "Attempts to load all of the words in the region as modules."
+  (interactive "rP")
+  (save-excursion
+    (goto-char start)
+    (while (re-search-forward "\\b\\w+\\b" end t)
+      (hol-load-string (match-string 0) arg))))
+
 (defun hol-load-file (arg)
   "Gets HOL session to \"load\" the file at point.
 If there is no filename at point, then prompt for file.  If the region
 is active (in transient mark mode) and it looks like it might be a
-module name, then send region instead. With prefix ARG prompt for a
-file-name to load.  With a positive numeric prefix arg load the requested
-file, even if the HOL mode thinks it already has been."
+module name or a white-space delimited list of module names, then send
+region instead. With prefix ARG prompt for a file-name to load.  With
+a positive numeric prefix arg load the requested file, even if the HOL
+mode thinks it already has been."
   (interactive "P")
   (let* ((wap (word-at-point))
          (txt (condition-case nil
                   (buffer-substring (region-beginning) (region-end))
                 (error nil)))
-         (s (cond (arg (read-string "Library to load: "))
-                  ((and mark-active transient-mark-mode
-                        (string-match "^\\w+$" txt)) txt)
-                  ((and wap (string-match "^\\w+$" wap)) wap)
-                  (t (read-string "Library to load: ")))))
-    (hol-load-string s (and arg (numberp arg) (> arg 0)))))
+         (last-argument (and arg (numberp arg) (> arg 0))))
+    (cond (arg
+           (hol-load-string (read-string "Library to load: ") last-argument))
+          ((and mark-active transient-mark-mode
+                (string-match "^(\\s-*\\w+)+\\s-*$" txt))
+           (hol-load-modules-in-region (region-beginning) (region-end) `
+                                       last-argument))
+          ((and wap (string-match "^\\w+$" wap))
+           (hol-load-string wap last-argument))
+          (t (hol-load-string (read-string "Library to load: ")
+                              last-argument)))))
+
 
 ;** hol map keys and function definitions
 
@@ -401,6 +449,7 @@ or at level 10 with a bare prefix. "
                     (t (make-comint "HOL98" hol98-executable)))))
     (setq hol-buffer-name (buffer-name buf))
     (switch-to-buffer buf)
+    (setq hol-loaded-modules nil)
     (setq hol-buffer-name (buffer-name buf))
     (setq comint-scroll-show-maximum-output t)))
 
