@@ -142,7 +142,9 @@ val syn052_1 = Hol_eval
 `Prove
    (NOT((NOT ^v1 OR ^v0) AND 
         (NOT ^v0 OR ^v1) AND 
-        (^v1 OR ^v0) AND (NOT ^v1 OR ^v1) AND (NOT ^v0 OR NOT ^v1)))`;
+        (^v1 OR ^v0)     AND 
+        (NOT ^v1 OR ^v1) AND 
+        (NOT ^v0 OR NOT ^v1)))`;
 
 val syn051_1 = Hol_eval
 `Prove
@@ -195,7 +197,7 @@ val syn030_1 = Hol_eval
         (NOT ^v1 OR ^v3) AND
         (NOT ^v2 OR NOT ^v3 OR ^v4)))`;
 
-val syn054_1 =  Hol_eval
+val syn054_1 = Hol_eval
 `Prove
   (NOT((NOT ^v1 OR NOT ^v7) AND
        (NOT ^v2 OR NOT ^v0) AND
@@ -209,7 +211,7 @@ val syn054_1 =  Hol_eval
        (NOT ^v6 OR NOT ^v5) AND
        (^v6 OR ^v7)))`;
 
-(* Takes a while ... is it looping? *)
+(* Takes a long time, but it gets there in the end. *)
 val gra001_1 = Hol_eval
 `Prove
   (NOT((NOT ^v1 OR ^v0) AND
@@ -224,6 +226,7 @@ val gra001_1 = Hol_eval
        (NOT ^v1 OR ^v3 OR ^v2) AND
        (NOT ^v3 OR NOT ^v4) AND
        (^v3 OR ^v4)))`;
+
 
 val syn321_1 =  Hol_eval
 `Prove
@@ -245,7 +248,7 @@ val syn321_1 =  Hol_eval
        (NOT ^v8 OR NOT ^v9)))` ;
 
 (*---------------------------------------------------------------------------
- The SML version
+         The SML version
 
 fun mem x [] = false
   | mem x (h::t) = (x=h) orelse mem x t;
@@ -401,7 +404,7 @@ time prove
        (NOT v6 OR NOT v5) AND
        (v6 OR v7)));
 
-(* Takes much longer, but it is not looping *)
+
 val gra001_1 = 
 time prove
   (NOT((NOT v1 OR v0) AND
@@ -437,5 +440,5 @@ time prove
        (NOT v8 OR NOT v9))) ;
 
 
- End of SML version.
+     End of SML version.
  ---------------------------------------------------------------------------*)

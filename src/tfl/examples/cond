@@ -2,8 +2,9 @@
  * CONDITIONAL EXPRESSIONS AND THEIR NORMALIZATION (Boyer and Moore).        *
  *---------------------------------------------------------------------------*)
 
-app load ["bossLib", "tflLib","QLib"];
-open bossLib; infix &&;
+app load ["bossLib","QLib"];
+open bossLib arithmeticTheory;
+infix &&;
 
 (*---------------------------------------------------------------------------*
  * Define the datatype of conditional expressions.                           *
@@ -14,117 +15,68 @@ Hol_datatype `cond = A of ind
 
 
 (*---------------------------------------------------------------------------*
- * Now a measure function for termination, due to Robert Shostak.            *
- *---------------------------------------------------------------------------*)
-
-val Meas_DEF = 
- Define
-     `(Meas (A i) = 1) /\
-      (Meas (IF x y z) = Meas x + (Meas x * Meas y) + (Meas x * Meas z))`;
-
-(*---------------------------------------------------------------------------*
  * The definition of the normalization function                              *
  *---------------------------------------------------------------------------*)
 
-val norm_def = tflLib.Rfunction "norm"
-  `measure Meas`
-  `(norm (A i) = A i) /\
-   (norm (IF (A x) y z) = IF (A x) (norm y) (norm z)) /\
-   (norm (IF (IF u v w) y z) = norm (IF u (IF v y z) (IF w y z)))`;
+val Norm_def = 
+ Hol_defn "Norm"
+     `(Norm (A i)               = A i)
+ /\   (Norm (IF (A x) y z)      = IF (A x) (Norm y) (Norm z)) 
+ /\   (Norm (IF (IF u v w) y z) = Norm (IF u (IF v y z) (IF w y z)))`;
 
 
 (*---------------------------------------------------------------------------*
- *  Required lemma for termination.                                          *
+ *  Termination, via a prim. rec measure function, due to Robert Shostak.    *
  *---------------------------------------------------------------------------*)
 
-val Meas_POSITIVE = Q.prove`!c. 0 < Meas c`
- (Induct 
-    THEN RW_TAC arith_ss [Meas_DEF]);
-
-local open arithmeticTheory 
-in 
-  val ads        = [LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB,
-                    GSYM ADD_ASSOC, GSYM MULT_ASSOC]
-  val LESS_MULT2 = LESS_MULT2
-  val MULTS      = MULT_CLAUSES
-  val ADDS       = ADD_CLAUSES
-  val ADD_SYM    = ADD_SYM
-end;
-
-val norm_terminates = save_thm("norm_terminates", 
-tflLib.prove_termination norm_def
-(ZAP_TAC (arith_ss && (Meas_DEF::ads))
-         [LESS_MULT2, Meas_POSITIVE, DECIDE `!y m. 0<y ==> m < n+y+m`]));
-
-val norm_eqns = save_thm("norm_eqns",
-  REWRITE_RULE [norm_terminates] (#rules norm_def));
-
-val norm_induction = save_thm("norm_induction",
-  REWRITE_RULE [norm_terminates] (DISCH_ALL (#induction norm_def)));
-
-
-(*---------------------------------------------------------------------------*
- * Define it again, using a lexicographic combination of relations. This is  *
- * the version given in the Boyer-Moore book.                                *
- *---------------------------------------------------------------------------*)
-
-val TDEPTH_DEF = 
+val Meas_def = 
  Define
-     `(TDEPTH (A i) = 0) /\
-      (TDEPTH (IF x y z) = TDEPTH x + 1)`;
+     `(Meas (A i) = 1)
+  /\  (Meas (IF x y z) = Meas x + (Meas x * Meas y + Meas x * Meas z))`;
+
+
+val Meas_POSITIVE = Q.prove
+(`!c. 0 < Meas c`, Induct THEN RW_TAC arith_ss [Meas_def]);
+
+
+val (Norm_eqns,Norm_ind) = 
+ Defn.tprove
+  (Norm_def,
+   WF_REL_TAC Norm_def `measure Meas`
+     THEN RW_TAC arith_ss 
+           [Meas_def,LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB,
+            GSYM ADD_ASSOC, GSYM MULT_ASSOC]
+     THEN PROVE_TAC [LESS_MULT2, Meas_POSITIVE, 
+                     DECIDE `!y m. 0<y ==> m < n+(y+m)`]);
+
+
+(*---------------------------------------------------------------------------*
+ * Another termination proof uses a lexicographic combination of             *
+ * relations. This is the version given in the Boyer-Moore book.             *
+ *---------------------------------------------------------------------------*)
+
+val Tdepth_def = 
+ Define
+     `(Tdepth (A i) = 0) /\
+      (Tdepth (IF x y z) = Tdepth x + 1)`;
 
 val Weight_def = 
  Define
      `(Weight (A i) = 1) /\
       (Weight (IF x y z) = Weight x * (Weight y + Weight z))`;
 
-val Weight_positive = Q.prove`!c. 0 < Weight c`
-  (Induct 
-    THEN ZAP_TAC (arith_ss && (Weight_def::ads))
+val Weight_positive = Q.prove
+(`!c. 0 < Weight c`,
+ Induct 
+    THEN ZAP_TAC (arith_ss && [Weight_def,GSYM ADD_ASSOC, GSYM MULT_ASSOC,
+                    LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB])
        [LESS_MULT2, DECIDE `!x y z. x < y ==> x < y + z`]);
 
-
-(*---------------------------------------------------------------------------*
- * Some support for dealing with the lexicographic ordering used to justify  *
- * the definition.                                                           *
- *---------------------------------------------------------------------------*)
-
-val point_to_prod_def = Define `## (f:'a->'b) (g:'a->'c) x = (f x, g x)`;
-set_fixity "##" (Infix 400);
-
-local open tflLib
-in
-fun Rdefine thml = 
-rfunction (Tfl.postprocess{WFtac = WF_TAC[],
-                       terminator = terminator, 
-                       simplifier = tc_simplifier thml}
-             (TypeBase.theTypeBase()))
-             REWRITE_RULE
-end;
-
-
-(*---------------------------------------------------------------------------*
- * Notice how the lexicographic combination of measure functions gets made.  *
- * It gets proved wellfounded automatically. It might be handy to have a     *
- * combinator for this case; something like                                  *
- *                                                                           *
- *    f1 XX f2 XX ... XX fn = inv_image ($< LEX ...LEX ($< LEX $<))          *
- *                                      (f1## ... ##fn)                      *
- *---------------------------------------------------------------------------*)
-
-val Ndef = Rdefine[point_to_prod_def] "inv_image"
-  `inv_image ($< LEX $<) (Weight##TDEPTH)`
-  `(N(A i) = A i) /\
-   (N(IF(A x) y z) = IF(A x) (N y) (N z)) /\
-   (N(IF(IF u v w) y z) = N(IF u (IF v y z) (IF w y z)))`;
-
-
-val Nterminates = save_thm("Nterminates",
-tflLib.prove_termination Ndef
-(ZAP_TAC (arith_ss && ads && [Weight_def,TDEPTH_DEF,MULTS,ADDS])
-   [Weight_positive, DECIDE `!y z. 0 < y ==> z < y+z`, ADD_SYM]));
-
-val Neqns = save_thm("Neqns",  REWRITE_RULE [Nterminates] (#rules Ndef));
-
-val Ninduction = save_thm("Ninduction",
-  REWRITE_RULE [Nterminates] (DISCH_ALL (#induction Ndef)));
+val (Norm_eqns,Norm_ind) = 
+Defn.tprove
+ (Norm_def,
+  WF_REL_TAC Norm_def `inv_image ($< LEX $<) (\x. (Weight x, Tdepth x))`
+     THEN ZAP_TAC (arith_ss && [Weight_def,Tdepth_def,
+            LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB, 
+            GSYM ADD_ASSOC, GSYM MULT_ASSOC, ADD_CLAUSES, MULT_CLAUSES])
+           [Weight_positive, DECIDE `!y z. 0 < y ==> z < y+z`, ADD_SYM]);

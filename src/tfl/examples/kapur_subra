@@ -25,7 +25,7 @@ Hol_datatype `arith = C     of num                   (* constant *)
                      Call-by-name evaluation
  ---------------------------------------------------------------------------*)
 
-val CBN_defn = Hol_fun "CBN_CBNh"
+val CBN_defn = Hol_defn "CBN_CBNh"
      `(CBN (C n, y, z)         = C n)
  /\   (CBN (V x, y, z)         = if x=y then CBNh z else V x)
  /\   (CBN (Plus a1 a2, y, z)  = Plus (CBN(a1,y,z)) (CBN(a2,y,z)))
@@ -55,7 +55,7 @@ val lookup_def =
                      Call-by-value evaluation
  ---------------------------------------------------------------------------*)
 
-val CBV_defn = Hol_fun "CBV"
+val CBV_defn = Hol_defn "CBV"
    `(CBV (C n, env)         = n)
 /\  (CBV (V x, env)         = lookup x env)
 /\  (CBV (Plus a1 a2, env)  = CBV(a1,env) + CBV(a2,env))
@@ -157,7 +157,7 @@ val KapurSubra = store_thm("KapurSubra",
                 CBV (x, (y, CBV(z,env))::env)`,
 REPEAT GEN_TAC THEN STRIP_TAC
  THEN MATCH_MP_TAC ind4
- THEN RW_TAC base_ss [CBN_eqns',CBV_eqns'',lookup_def]);
+ THEN RW_TAC std_ss [CBN_eqns',CBV_eqns'',lookup_def]);
 
 
 (*---------------------------------------------------------------------------
@@ -168,12 +168,35 @@ REPEAT GEN_TAC THEN STRIP_TAC
        This will require reasoning about the auxiliary functions
        used in defining CBN and CBV. Since CBN is mutual recursive 
        with CBNh and also a nested recursion, this makes things 
-       not completely obvious.
+       not completely obvious. We'll start with CBV, since that's
+       easier.
  ---------------------------------------------------------------------------*)
+
+local val [guess1,_] = TotalDefn.guessR CBV_defn
+in
+val CBVTerminates = Q.prove(`CBVTerminates ^guess1`,
+ RW_TAC std_ss [CBVTerminates_def,prim_recTheory.WF_measure]
+  THEN RW_TAC arith_ss 
+         [prim_recTheory.measure_def,relationTheory.inv_image_def,
+          #2(valOf(TypeBase.size_of(valOf(TypeBase.read"arith"))))])
+end;
+
+(*---------------------------------------------------------------------------
+   Now for the hard one.
+ ---------------------------------------------------------------------------*)
+
+g`CBNTerminates ^guess1`;
+
+val [guess1,_] = TotalDefn.guessR CBV_defn
+
+Defn.tgoal CBN_defn;
+e (WF_REL_TAC CBV_defn `^guess1` THEN RW_TAC arith_ss []);
+
 
 val SOME CBN_union = Defn.union_defn CBN_defn;
 val SOME CBN_aux   = Defn.aux_defn CBN_union;
 
 val SOME CBV_aux   = Defn.aux_defn CBV_defn;
 Defn.eqns_of CBV_aux;
+Defn.tcs_of CBV_aux;
 
