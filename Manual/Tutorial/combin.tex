@@ -359,8 +359,8 @@ prove and save the theorem for future use by:
 val confluent_normforms_unique = store_thm(
   "confluent_normforms_unique",
   ``!R. confluent R ==>
-        !x y z. RTC R x y /\ normform R y /\ RTC
-                R x z /\ normform R z ==> (y = z)``,
+        !x y z. RTC R x y /\ normform R y /\
+                RTC R x z /\ normform R z ==> (y = z)``,
   RW_TAC std_ss [confluent_def] THEN
   `?u. RTC R y u /\ RTC R z u` by PROVE_TAC [] THEN
   PROVE_TAC [normform_def, RTC_cases]);
