@@ -45,7 +45,9 @@ sig
   val CHECK_ASSUME_TAC    : thm_tactic
   val STRIP_ASSUME_TAC    : thm_tactic
   val STRUCT_CASES_TAC    : thm_tactic
+  val GEN_COND_CASES_TAC  : (term -> bool) -> tactic
   val COND_CASES_TAC      : tactic
+  val IF_CASES_TAC        : tactic
   val BOOL_CASES_TAC      : term -> tactic
   val STRIP_GOAL_THEN     : thm_tactic -> tactic
   val FILTER_GEN_TAC      : term -> tactic

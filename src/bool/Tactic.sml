@@ -392,12 +392,10 @@ val STRUCT_CASES_TAC =
  * 						[Revised: TFM 90.05.11]      *
  *---------------------------------------------------------------------------*)
 
-local fun ok_cond tm = 
-       not(is_const(#1(dest_cond tm))) handle HOL_ERR _ => false
-in
-val COND_CASES_TAC :tactic = fn (asl,w) =>
- let val cond = find_term (fn tm => ok_cond tm andalso free_in tm w) w
-                handle HOL_ERR _ => raise ERR "COND_CASES_TAC" ""
+
+fun GEN_COND_CASES_TAC P (asl,w) = 
+ let val cond = find_term (fn tm => P tm andalso free_in tm w) w
+                handle HOL_ERR _ => raise ERR "GEN_COND_CASES_TAC" ""
      val (cond,larm,rarm) = dest_cond cond
      val inst = INST_TYPE[Type.alpha |-> type_of larm] COND_CLAUSES
      val (ct,cf) = CONJ_PAIR (SPEC rarm (SPEC larm inst))
@@ -407,8 +405,30 @@ val COND_CASES_TAC :tactic = fn (asl,w) =>
      (fn th => SUBST1_TAC (EQF_INTRO th) THEN SUBST1_TAC cf THEN ASSUME_TAC th)
      (SPEC cond EXCLUDED_MIDDLE)
      (asl,w)
- end
-end;
+ end;
+
+
+fun bool_can P x = P x handle HOL_ERR _ => false;
+
+val COND_CASES_TAC = 
+  GEN_COND_CASES_TAC (bool_can (not o is_const o #1 o dest_cond))
+
+(*---------------------------------------------------------------------------
+      Version of COND_CASES_TAC that handles nested conditionals
+      in the test of a conditional nicely (by not putting them onto
+      the assumptions).
+ ---------------------------------------------------------------------------*)
+
+val IF_CASES_TAC = 
+  let fun test tm = 
+        let val (b,_,_) = dest_cond tm 
+        in if is_const b then false else
+           if is_cond b  then false else true
+        end handle HOL_ERR _ => false
+  in 
+    GEN_COND_CASES_TAC test
+  end;
+
 
 (*---------------------------------------------------------------------------*
  * Cases on  |- p=T  \/  p=F                                                 *

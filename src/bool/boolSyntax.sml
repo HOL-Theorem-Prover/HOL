@@ -109,13 +109,12 @@ fun dest_imp M =
                   handle HOL_ERR _ => raise dest_imp_err
 
 val dest_select  = dest_binder("@", "min")  (ERR"dest_select"  "not a \"@\"")
-val dest_forall  = dest_binder("!","bool")  (ERR"dest_forall"  "not a \"!\"")
-val dest_exists  = dest_binder("?","bool")  (ERR"dest_exists"  "not a \"?\"")
+val dest_forall  = dest_binder("!", "bool") (ERR"dest_forall"  "not a \"!\"")
+val dest_exists  = dest_binder("?", "bool") (ERR"dest_exists"  "not a \"?\"")
 val dest_exists1 = dest_binder("?!","bool") (ERR"dest_exists1" "not a \"?!\"")
-
-val dest_conj = dest_binop ("/\\","bool")  (ERR"dest_conj"    "not a \"/\\\"")
-val dest_disj = dest_binop ("\\/","bool")  (ERR"dest_disj"    "not a \"\\/\"")
-val dest_let  = dest_binop ("LET","bool")  (ERR"dest_let"     "not a let term")
+val dest_conj    = dest_binop("/\\","bool") (ERR"dest_conj"    "not a \"/\\\"")
+val dest_disj    = dest_binop("\\/","bool") (ERR"dest_disj"    "not a \"\\/\"")
+val dest_let     = dest_binop("LET","bool") (ERR"dest_let"    "not a let term")
 
 fun dest_cond M =
  let val (Rator,t2) = with_exn dest_comb M dest_cond_err
@@ -182,6 +181,15 @@ val strip_imp =
           | SOME(ant,conseq) => strip (ant::A) conseq
   in strip []
   end;
+
+val strip_neg =
+ let val destn = total dest_neg
+     fun strip A M = 
+       case destn M
+        of NONE => (M,A)
+         | SOME N => strip (A+1) N
+ in strip 0
+ end;
 
 fun gen_all tm = list_mk_forall (free_vars tm, tm);
 
@@ -253,13 +261,14 @@ fun new_specification {name,sat_thm,consts} =
      val res = Definition.new_specification(name, List.rev newconsts, sat_thm)
      fun add_rule' r = 
           if #fixity r = Parse.Prefix then () else Parse.add_rule r
-     fun modify_grammar (name, fixity) = 
-        let in add_rule'(Parse.standard_spacing name fixity);
-               Parse.add_const name
-        end
+     fun modify_grammar (name, fixity) = let in 
+           add_rule'(Parse.standard_spacing name fixity);
+           Parse.add_const name 
+         end
  in app modify_grammar consts_with_fixities;
     res
-end end;
+ end
+end;
 
 fun new_constant (p as (Name,_)) = 
   Theory.new_constant p
@@ -293,7 +302,8 @@ fun new_infix_type (x as {Name,Arity,ParseName,Prec,Assoc}) =
  end
 
 (*---------------------------------------------------------------------------
-      Delete the named constant from the current theory.
+      Delete the named constant from the current theory, and from the
+      current grammar.
  ---------------------------------------------------------------------------*)
 
 fun delete_const s = 
