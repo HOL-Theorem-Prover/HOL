@@ -1166,6 +1166,13 @@ val ROR_THM = store_thm("ROR_THM",
     ]
 );
 
+val ROR_CYCLE = store_thm("ROR_CYCLE",
+  `!w. RORw WL w = w`,
+  REPEAT STRIP_TAC
+    THEN STRUCT_CASES_TAC (SPEC `w` word_nchotomy)
+    THEN A_SIMP_TAC [DIVMOD_ID,WL_POS,ROR_THM,wn_TIMES2,SYM MODw_THM,MODw_ELIM]
+);
+
 (* -------------------------------------------------------- *)
 
 val lem = prove(
