@@ -5,7 +5,7 @@ open bossLib simpLib
 infix THEN THENL THENC &&
 infix 8 by
 
-val _ = new_theory "mncl";
+val _ = new_theory "cl";
 
 val _ = Hol_datatype `cl = S | K | # of cl => cl`;
 
@@ -103,15 +103,15 @@ val strong = prove(
 
 
 
-val _ = set_fixity("===>", Infix(NONASSOC, 510));
+val _ = set_fixity("-||->", Infix(NONASSOC, 510));
 val (predn_rules, predn_ind, predn_cases) =
     IndDefLib.Hol_reln
-      `(!x. x ===> x) /\
-       (!x y u v. x ===> y /\ u ===> v
+      `(!x. x -||-> x) /\
+       (!x y u v. x -||-> y /\ u -||-> v
                          ==>
-                  x # u ===> y # v) /\
-       (!x y. K # x # y ===> x) /\
-       (!f g x. S # f # g # x ===> (f # x) # (g # x))`;
+                  x # u -||-> y # v) /\
+       (!x y. K # x # y -||-> x) /\
+       (!f g x. S # f # g # x -||-> (f # x) # (g # x))`;
 
 val predn_ind = CONV_RULE (RENAME_VARS_CONV ["P"]) predn_ind;
 
@@ -125,21 +125,21 @@ val RTC_monotone = store_thm(
 val _ = set_fixity("-->*", Infix(NONASSOC, 510));
 val RTCredn_def = xDefine "RTCredn" `$-->* = RTC $-->`;
 
-val _ = set_fixity("===>*", Infix(NONASSOC, 510));
-val RTCpredn_def = xDefine "RTCpredn" `$===>* = RTC $===>`;
+val _ = set_fixity("-||->*", Infix(NONASSOC, 510));
+val RTCpredn_def = xDefine "RTCpredn" `$-||->* = RTC $-||->`;
 
 val RTCredn_rules =
   REWRITE_RULE [SYM RTCredn_def] (Q.ISPEC `$-->` RTC_rules)
 val RTCredn_ind =
   REWRITE_RULE [SYM RTCredn_def] (Q.ISPEC `$-->` RTC_ind)
 val RTCpredn_rules =
-  REWRITE_RULE [SYM RTCpredn_def] (Q.ISPEC `$===>` RTC_rules)
+  REWRITE_RULE [SYM RTCpredn_def] (Q.ISPEC `$-||->` RTC_rules)
 val RTCpredn_ind =
-  REWRITE_RULE [SYM RTCpredn_def] (Q.ISPEC `$===>` RTC_ind);
+  REWRITE_RULE [SYM RTCpredn_def] (Q.ISPEC `$-||->` RTC_ind);
 
 val RTCredn_RTCpredn = store_thm(
   "RTCredn_RTCpredn",
-  ``!x y. x -->* y   ==>   x ===>* y``,
+  ``!x y. x -->* y   ==>   x -||->* y``,
   SIMP_TAC std_ss [RTCredn_def, RTCpredn_def] THEN
   HO_MATCH_MP_TAC RTC_monotone THEN
   HO_MATCH_MP_TAC redn_ind THEN
@@ -156,7 +156,7 @@ val RTCredn_RTCredn = save_thm(
 
 val predn_RTCredn = store_thm(
   "predn_RTCredn",
-  ``!x y. x ===> y  ==>  x -->* y``,
+  ``!x y. x -||-> y  ==>  x -->* y``,
   HO_MATCH_MP_TAC predn_ind THEN
   PROVE_TAC [RTCredn_rules, redn_rules, RTCredn_RTCredn,
              RTCredn_ap_monotonic]);
@@ -164,13 +164,13 @@ val predn_RTCredn = store_thm(
 
 val RTCpredn_RTCredn = store_thm(
   "RTCpredn_RTCredn",
-  ``!x y. x ===>* y   ==>  x -->* y``,
+  ``!x y. x -||->* y   ==>  x -->* y``,
   HO_MATCH_MP_TAC RTCpredn_ind THEN
   PROVE_TAC [predn_RTCredn, RTCredn_RTCredn, RTCredn_rules]);
 
 val RTCpredn_EQ_RTCredn = store_thm(
   "RTCpredn_EQ_RTCredn",
-  ``$===>* = $-->*``,
+  ``$-||->* = $-->*``,
   CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN
   CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN
   PROVE_TAC [RTCpredn_RTCredn, RTCredn_RTCpredn]);
@@ -188,18 +188,18 @@ val S_predn = characterise ``S``;
 
 val Sx_predn0 = characterise ``S # x``;
 val Sx_predn = prove(
-  ``!x y. S # x ===> y = ?z. (y = S # z) /\ (x ===> z)``,
+  ``!x y. S # x -||-> y = ?z. (y = S # z) /\ (x -||-> z)``,
   REPEAT GEN_TAC THEN EQ_TAC THEN
   RW_TAC std_ss [Sx_predn0, predn_rules, S_predn]);
 
 val Kx_predn = prove(
-  ``!x y. K # x ===> y = ?z. (y = K # z) /\ (x ===> z)``,
+  ``!x y. K # x -||-> y = ?z. (y = K # z) /\ (x -||-> z)``,
   REPEAT GEN_TAC THEN EQ_TAC THEN
   RW_TAC std_ss [characterise ``K # x``, predn_rules, K_predn]);
 
 val Kxy_predn = prove(
-  ``!x y z. K # x # y ===> z =
-            (?u v. (z = K # u # v) /\ (x ===> u) /\ (y ===> v)) \/
+  ``!x y z. K # x # y -||-> z =
+            (?u v. (z = K # u # v) /\ (x -||-> u) /\ (y -||-> v)) \/
             (z = x)``,
   REPEAT GEN_TAC THEN EQ_TAC THEN
   RW_TAC std_ss [characterise ``K # x # y``, predn_rules,
@@ -207,16 +207,16 @@ val Kxy_predn = prove(
 
 
 val Sxy_predn = prove(
-  ``!x y z. S # x # y ===> z =
-            ?u v. (z = S # u # v) /\ (x ===> u) /\ (y ===> v)``,
+  ``!x y z. S # x # y -||-> z =
+            ?u v. (z = S # u # v) /\ (x -||-> u) /\ (y -||-> v)``,
   REPEAT GEN_TAC THEN EQ_TAC THEN
   RW_TAC std_ss [characterise ``S # x # y``, predn_rules,
                  S_predn, Sx_predn]);
 
 val Sxyz_predn = prove(
-  ``!w x y z. S # w # x # y ===> z =
+  ``!w x y z. S # w # x # y -||-> z =
               (?p q r. (z = S # p # q # r) /\
-                       w ===> p /\ x ===> q /\ y ===> r) \/
+                       w -||-> p /\ x -||-> q /\ y -||-> r) \/
               (z = (w # y) # (x # y))``,
   REPEAT GEN_TAC THEN EQ_TAC THEN
   RW_TAC std_ss [characterise ``S # w # x # y``, predn_rules,
@@ -228,18 +228,18 @@ val predn_strong_ind =
   IndDefRules.derive_strong_induction (CONJUNCTS predn_rules, predn_ind)
 
 val predn_diamond_lemma = prove(
-  ``!x y. x ===> y ==>
-          !z. x ===> z ==> ?u. y ===> u /\ z ===> u``,
+  ``!x y. x -||-> y ==>
+          !z. x -||-> z ==> ?u. y -||-> u /\ z -||-> u``,
   HO_MATCH_MP_TAC predn_strong_ind THEN REPEAT CONJ_TAC THENL [
     PROVE_TAC [predn_rules],
     REPEAT STRIP_TAC THEN
-    Q.PAT_ASSUM `x # y ===> z`
+    Q.PAT_ASSUM `x # y -||-> z`
       (STRIP_ASSUME_TAC o SIMP_RULE std_ss [x_ap_y_predn]) THEN
     RW_TAC std_ss [] THEN
     TRY (PROVE_TAC [predn_rules]) THENL [
-      `?w. (y = K # w) /\ (z ===> w)` by PROVE_TAC [Kx_predn] THEN
+      `?w. (y = K # w) /\ (z -||-> w)` by PROVE_TAC [Kx_predn] THEN
       RW_TAC std_ss [] THEN PROVE_TAC [predn_rules],
-      `?p q. (y = S # p # q) /\ (f ===> p) /\ (g ===> q)` by
+      `?p q. (y = S # p # q) /\ (f -||-> p) /\ (g -||-> q)` by
          PROVE_TAC [Sxy_predn] THEN
       RW_TAC std_ss [] THEN PROVE_TAC [predn_rules]
     ],
@@ -249,7 +249,7 @@ val predn_diamond_lemma = prove(
 
 val predn_diamond = store_thm(
   "predn_diamond",
-  ``diamond $===>``,
+  ``diamond $-||->``,
   PROVE_TAC [diamond_def, predn_diamond_lemma]);
 
 val confluent_redn = store_thm(
@@ -258,9 +258,6 @@ val confluent_redn = store_thm(
   PROVE_TAC [predn_diamond, RTCpredn_def,
              RTCredn_def, confluent_diamond_RTC,
              RTCpredn_EQ_RTCredn, diamond_RTC]);
-
-
-
 
 
 val _ = export_theory();
