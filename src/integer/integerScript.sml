@@ -437,6 +437,7 @@ end;
 
 val _ = Theory.save_thm ("INT_10",INT_10)
 val _ = Theory.save_thm ("INT_ADD_SYM",INT_ADD_SYM)
+val INT_ADD_COMM = Theory.save_thm("INT_ADD_COMM", INT_ADD_SYM);
 val _ = Theory.save_thm ("INT_MUL_SYM",INT_MUL_SYM)
 val _ = Theory.save_thm ("INT_ADD_ASSOC",INT_ADD_ASSOC)
 val _ = Theory.save_thm ("INT_MUL_ASSOC",INT_MUL_ASSOC)
@@ -1406,6 +1407,11 @@ val INT_EQ_SUB_RADD =
 	      THEN
 	      MATCH_ACCEPT_TAC INT_EQ_SUB_LADD);
 
+val INT_SUB =
+    store_thm("INT_SUB",
+              Term`!n m. m <= n ==> (&n - &m = &(n - m))`,
+              SIMP_TAC int_ss [INT_EQ_SUB_RADD, INT_ADD, INT_INJ]);
+
 val INT_SUB_SUB2 =
     store_thm("INT_SUB_SUB2",
 	      Term `!x y:int. x - (x - y) = y`,
@@ -2256,24 +2262,16 @@ val INT_MUL_SIGN_CASES = store_thm(
     SIMP_TAC int_ss [MULT_EQ_0, GSYM NOT_ZERO_LT_ZERO]
   ]);
 
-val INT_NEG_EXP = store_thm(
-  "INT_NEG_EXP",
-  Term`!n p:int.
-         p < 0 ==>
-         (EVEN n ==> 0 <= p ** n) /\ (ODD n ==> p ** n < 0)`,
+val INT_EXP_NEG = store_thm(
+  "INT_EXP_NEG",
+  Term`!n m.
+         (EVEN n ==> (~&m ** n = &(m EXP n))) /\
+         (ODD n ==> (~&m ** n = ~&(m EXP n)))`,
   Induct THENL [
-    SIMP_TAC int_ss [EVEN, ODD, int_exp, INT_LE],
-    SIMP_TAC int_ss [EVEN, ODD, GSYM EVEN_ODD, GSYM ODD_EVEN, int_exp] THEN
-    REPEAT STRIP_TAC THENL [
-      (* ODD n ?- 0 <= p * (p ** n) *)
-      Q.SUBGOAL_THEN (* suffices to show *) `0 < p * (p ** n)`
-                     (fn th => REWRITE_TAC [th, INT_LE_LT]) THEN
-      PROVE_TAC [INT_MUL_SIGN_CASES],
-      (* EVEN n ?- p * (p ** n) *)
-      REWRITE_TAC [INT_MUL_SIGN_CASES] THEN
-      `~(p ** n = 0)` by PROVE_TAC [INT_EXP_EQ0, INT_LT_REFL] THEN
-      PROVE_TAC [INT_LE_LT]
-    ]
+    SIMP_TAC int_ss [EVEN, ODD, int_exp, INT_LE, EXP],
+    ASM_SIMP_TAC int_ss [EVEN, ODD, GSYM EVEN_ODD, GSYM ODD_EVEN, int_exp,
+                         EXP, GSYM INT_NEG_LMUL, GSYM INT_NEG_RMUL, INT_MUL,
+                         INT_NEGNEG]
   ]);
 
 val INT_EXP_ADD_EXPONENTS = store_thm(
@@ -2324,5 +2322,62 @@ val INT_EXP_SUBTRACT_EXPONENTS = store_thm(
     ]
   ]);
 
-val _ = Globals.show_numeral_types := true
+(*----------------------------------------------------------------------*)
+(* Prove rewrites for calculation with integers                         *)
+(*----------------------------------------------------------------------*)
+
+val _ = print "Proving rewrites for calculation with integers\n"
+
+val INT_ADD_CALCULATE = store_thm(
+  "INT_ADD_CALCULATE",
+  Term`!p q n m.
+          (0 + p = p) /\ (p + 0 = p) /\
+          (&n + &m = &(n + m)) /\
+          (&n + ~&m = if m <= n then &(n - m) else ~&(m - n)) /\
+          (~p + q = q + ~p) /\ (~p + ~q = ~(p + q))`,
+  SIMP_TAC int_ss [INT_ADD_LID, INT_ADD_RID, INT_ADD, GSYM INT_NEG_ADD,
+                   INT_ADD_COMM] THEN
+  REPEAT GEN_TAC THEN COND_CASES_TAC THENL [
+    ASM_SIMP_TAC int_ss [GSYM int_sub, INT_EQ_SUB_RADD, INT_ADD, INT_INJ],
+    SIMP_TAC int_ss [GSYM int_sub, INT_EQ_SUB_RADD] THEN
+    CONV_TAC (RHS_CONV (REWR_CONV INT_ADD_COMM)) THEN
+    SIMP_TAC int_ss [GSYM int_sub, INT_EQ_SUB_LADD] THEN
+    ASM_SIMP_TAC int_ss [INT_ADD, INT_INJ]
+  ]);
+
+val INT_SUB_CALCULATE = save_thm("INT_SUB_CALCULATE", int_sub);
+
+val INT_MUL_CALCULATE = save_thm(
+  "INT_MUL_CALCULATE",
+  LIST_CONJ [INT_MUL, GSYM INT_NEG_LMUL, GSYM INT_NEG_RMUL, INT_NEGNEG]);
+
+val INT_DIV_CALCULATE = save_thm(
+  "INT_DIV_CALCULATE",
+  LIST_CONJ [INT_DIV, INT_DIV_NEG, INT_INJ, INT_NEG_EQ0, INT_NEGNEG]);
+
+val INT_MOD_CALCULATE = save_thm(
+  "INT_MOD_CALCULATE",
+  LIST_CONJ [INT_MOD, INT_MOD_NEG, INT_NEGNEG, INT_INJ, INT_NEG_EQ0]);
+
+val ODD_NB1 = prove(
+  Term`!n. ODD(NUMERAL_BIT1 n)`,
+  SIMP_TAC bool_ss [NUMERAL_BIT1, ODD, ADD_CLAUSES, ODD_ADD]);
+val EVEN_NB2 = prove(
+  Term`!n. EVEN(NUMERAL_BIT2 n)`,
+  SIMP_TAC bool_ss [NUMERAL_BIT2, ADD_CLAUSES, EVEN, EVEN_ADD]);
+
+
+val INT_EXP_CALCULATE = store_thm(
+  "INT_EXP_CALCULATE",
+  Term`!p:int n m.
+        (p ** 0 = 1) /\ (&n ** m = &(n EXP m)) /\
+        (~&n ** NUMERAL (NUMERAL_BIT1 m) =
+           ~&(n EXP NUMERAL (NUMERAL_BIT1 m))) /\
+        (~&n ** NUMERAL (NUMERAL_BIT2 m) =
+            &(n EXP NUMERAL (NUMERAL_BIT2 m)))`,
+  SIMP_TAC int_ss [INT_EXP, int_exp] THEN
+  SIMP_TAC int_ss [NUMERAL_DEF, ODD_NB1, EVEN_NB2, INT_EXP_NEG]);
+
+
+(* val _ = Globals.show_numeral_types := true *)
 val _ = export_theory();
