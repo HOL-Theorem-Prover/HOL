@@ -188,6 +188,11 @@ val min_ratrs =
     transform [(x, posneg), (y, nb12), (u, posneg0)]
               (SPECL [u, mk_div(x,y)] min_def)
 
+val abs1 = SPEC (mk_div(x,y)) realTheory.abs
+val abs1 = transform [(x,posneg), (y, nb12)] abs1
+val abs2 = SPEC x realTheory.abs
+val abs2 = transform [(x,posneg)] abs2
+
 val n = mk_var("n", numSyntax.num)
 val m = mk_var("m", numSyntax.num)
 fun to_numeraln th = INST [n |-> mk_comb(numSyntax.numeral_tm, n),
@@ -201,7 +206,8 @@ val op_rwts = [to_numeraln mult_ints, to_numeraln add_ints, REAL_DIV_LZERO] @
               sub1 @ sub2 @ sub3 @ sub4 @
               div_rats @ div_ratls @ div_ratrs @ div_eq_1 @
               max_ratls @ max_ratrs @ max_rats @ max_ints @
-              min_ratls @ min_ratrs @ min_rats @ min_ints
+              min_ratls @ min_ratrs @ min_rats @ min_ints @
+              abs1 @ abs2
 
 
 fun nat2nat th = let
@@ -341,6 +347,9 @@ fun contains_var tm =
           contains_var l orelse contains_var r
       end handle HOL_ERR _ => contains_var (dest_absval tm)
                               handle HOL_ERR _ => true
+ (* final default value is true because the term in question must be a
+    complicated non-presburger thing that will get treated as a variable
+    anyway. *)
 
 fun is_linear_mult tm = let
   val (l,r) = dest_mult tm
