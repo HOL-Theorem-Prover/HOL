@@ -73,7 +73,7 @@ val _ = set_MLname "CONS" "CONS_def";
 val _ = add_listform {separator = ";", leftdelim = "[", rightdelim = "]",
                       cons = "CONS", nilstr = "NIL"};
 
-val _ = add_rule {term_name = "CONS", fixity = Infixr 300,
+val _ = add_rule {term_name = "CONS", fixity = Infixr 450,
                   pp_elements = [TOK "::", BreakSpace(0,2)],
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundSameName, (PP.INCONSISTENT, 2))};
