@@ -1,6 +1,6 @@
 PRE_INCLUDES = ..
 
-all: test_coopers tcooper genproblem testdp gen_bc_problem
+all: test_coopers tcooper genproblem testdp testdp2 gen_bc_problem
 
 test_coopers: test_coopers.uo ../Cooper.uo ../profile.uo ../CooperShell.uo \
               ../CooperMath.uo ../CooperSyntax.uo ../CooperCore.uo \

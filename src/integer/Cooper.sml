@@ -51,7 +51,14 @@ end t
 (* this draws on similar code in Richard Boulton's natural number
    arithmetic decision procedure *)
 
-fun contains_var tm = can (find_term is_var) tm
+fun contains_var tm =
+    if numSyntax.is_numeral tm then false
+    else
+      case dest_term tm of
+        COMB(f,x) => contains_var f orelse contains_var x
+      | LAMB(v,b) => contains_var b
+      | VAR _ => true
+      | CONST{Ty, ...} => Ty = numSyntax.num orelse Ty = int_ty
 fun is_linear_mult tm =
   is_mult tm andalso
   not (contains_var (rand tm) andalso contains_var (rand (rator tm)))
@@ -110,7 +117,7 @@ fun nat_nonpresburgers tm =
     if is_forall tm orelse is_exists tm orelse is_exists1 tm then
       nat_nonpresburgers (body (rand tm))
     else if is_conj tm orelse is_disj tm orelse
-            (is_imp tm andalso not (is_imp tm)) orelse
+            (is_imp tm andalso not (is_neg tm)) orelse
             is_great tm orelse is_leq tm orelse is_eq tm orelse
             is_minus tm orelse is_less tm orelse is_geq tm orelse
             is_linear_mult tm
@@ -205,6 +212,32 @@ end tm handle HOL_ERR {origin_function = "REWR_CONV", ...} =>
   raise ERR "ARITH_CONV" "Uneliminable natural number term remains"
 
 
+fun tacTHEN t1 t2 tm = let
+  val (g1, v1) = t1 tm
+  val (g2, v2) = t2 g1
+in
+  (g2, v1 o v2)
+end
+fun tacALL tm = (tm, I)
+fun tacMAP_EVERY tlist =
+    case tlist of
+      [] => tacALL
+    | (t1::ts) => tacTHEN t1 (tacMAP_EVERY ts)
+fun tacCONV c tm = let
+  val thm = c tm
+in
+  (rhs (concl thm), TRANS thm)
+end
+fun tacRGEN t = let
+  val (fvs, body) = strip_forall t
+  val prove_it = EQT_INTRO o GENL fvs o EQT_ELIM
+in
+  (body, prove_it)
+end
+val tTHEN = fn (t1, t2) => tacTHEN t1 t2
+infix tTHEN
+
+
 local
   open arithmeticTheory numSyntax
   val rewrites = [GSYM INT_INJ, GSYM INT_LT, GSYM INT_LE,
@@ -239,25 +272,18 @@ local
   in
     recurse t
   end
-  fun tacTHEN t1 t2 tm = let
-    val (g1, v1) = t1 tm
-    val (g2, v2) = t2 g1
+  fun term_size t = let
+    val (f,x) = dest_comb t
   in
-    (g2, v1 o v2)
-  end
-  fun tacALL tm = (tm, I)
-  fun tacMAP_EVERY tlist =
-      case tlist of
-        [] => tacALL
-      | (t1::ts) => tacTHEN t1 (tacMAP_EVERY ts)
-  fun tacCONV c tm = let
-    val thm = c tm
-  in
-    (rhs (concl thm), TRANS thm)
-  end
-  fun subtm_rel (t1, t2) = if free_in t1 t2 then GREATER
-                           else if free_in t2 t1 then LESS
-                           else EQUAL
+    term_size f + term_size x
+  end handle HOL_ERR _ => term_size (body t) + 1
+      handle HOL_ERR _ => 1
+
+  fun subtm_rel (t1, t2) =
+      case Int.compare(term_size t1, term_size t2) of
+        LESS => GREATER
+      | EQUAL => EQUAL
+      | GREATER => LESS
 in
 val dealwith_nats = let
   val phase1 =
@@ -267,6 +293,11 @@ val dealwith_nats = let
   fun do_pbs tm = let
     val non_pbs =
         Listsort.sort subtm_rel (HOLset.listItems (nat_nonpresburgers tm))
+    val initially =
+        if null non_pbs then tacALL
+        else if goal_qtype tm = qsUNIV then
+          tacCONV move_quants_up tTHEN tacRGEN
+        else tacRGEN
     fun tactic subtm tm = let
       (* return both a newtm and a function that will convert a theorem
          of the form <new term> = T into tm = T *)
@@ -282,11 +313,11 @@ val dealwith_nats = let
       (newterm, prove_it)
     end
   in
-    tacMAP_EVERY (map tactic non_pbs)
+    initially tTHEN tacMAP_EVERY (map tactic non_pbs)
   end tm
 in
- tacTHEN (tacTHEN phase1 do_pbs)
-         (tacCONV (PURE_REWRITE_CONV rewrites THENC eliminate_nat_quants))
+ phase1 tTHEN do_pbs tTHEN
+ tacCONV (PURE_REWRITE_CONV rewrites THENC eliminate_nat_quants)
 end
 end (* local *)
 
@@ -320,26 +351,11 @@ fun decide_nonpbints_presburger subterms tm = let
       (mk_forall(gv, subst [subtm |-> gv] tm),
        EQT_INTRO o SPEC subtm o EQT_ELIM)
     end
-  fun gen_overall_tactic tmlist =
-    case tmlist of
-      [] => raise Fail "Can't happen in decide_nonpbints_presburger"
-    | [t] => tactic t
-    | (t::ts) => let
-        fun doit base = let
-          val (subgoal, vfn) = gen_overall_tactic ts base
-          val (finalgoal, vfn') = tactic t subgoal
-        in
-          (finalgoal, vfn o vfn')
-        end
-      in
-        doit
-      end
-  val overall_tactic = gen_overall_tactic subterms
-  val (goal, vfn) = overall_tactic tm
+  val (goal, vfn) = tacMAP_EVERY (map tactic subterms) tm
   val thm = decide_fv_presburger goal
 in
   vfn thm handle HOL_ERR _ =>
-    raise ERR "ARITH_CONV"
+    raise ERR "COOPER_CONV"
       ("Tried to prove generalised goal (generalising "^
        Parse.term_to_string (hd subterms)^"...) but it was false")
 end
@@ -350,11 +366,27 @@ fun COOPER_CONV tm = let
     case non_presburger_subterms0 [] tm of
       [] => decide_fv_presburger tm
     | non_pbs => let
-        fun bad_term (t,b) = not b orelse type_of t <> int_ty
       in
-        case List.find bad_term non_pbs of
-          NONE => decide_nonpbints_presburger (map #1 non_pbs) tm
-        | SOME (t,_) => raise ERR "ARITH_CONV"
+        case List.find (fn (t,_) => type_of t <> int_ty) non_pbs of
+          NONE => let
+            val (igoal, initvfn) =
+                case List.find (fn (_, b) => not b) non_pbs of
+                  NONE => (tm, I)
+                | SOME _ =>
+                  if goal_qtype tm = qsUNIV then
+                    (tacCONV move_quants_up tTHEN tacRGEN) tm
+                  else tacRGEN tm
+            val init_nonpbs = non_presburger_subterms0 [] igoal
+          in
+            case List.find (fn (_, b) => not b) init_nonpbs of
+              NONE =>
+              initvfn (decide_nonpbints_presburger (map #1 init_nonpbs) igoal)
+            | SOME (t, _) =>
+              raise ERR "COOPER_CONV"
+                    ("Couldn't free quantification over non-Presburger "^
+                     "sub-term "^Parse.term_to_string t)
+          end
+        | SOME (t,_) => raise ERR "COOPER_CONV"
             ("Not in the allowed subset; consider "^Parse.term_to_string t)
       end
 in

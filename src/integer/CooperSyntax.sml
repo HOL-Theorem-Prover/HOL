@@ -223,7 +223,9 @@ val move_quants_up =
                 NOT_EXISTS_CONV ORELSEC NOT_FORALL_CONV ORELSEC
                 AND_FORALL_CONV ORELSEC
                 LEFT_AND_FORALL_CONV ORELSEC RIGHT_AND_FORALL_CONV ORELSEC
-                LEFT_OR_FORALL_CONV ORELSEC RIGHT_OR_FORALL_CONV)
+                LEFT_OR_FORALL_CONV ORELSEC RIGHT_OR_FORALL_CONV ORELSEC
+                RIGHT_IMP_FORALL_CONV ORELSEC RIGHT_IMP_EXISTS_CONV ORELSEC
+                LEFT_IMP_FORALL_CONV ORELSEC LEFT_IMP_EXISTS_CONV)
 
 (* ---------------------------------------------------------------------- *)
 (* Takes !x. P x                                                          *)
