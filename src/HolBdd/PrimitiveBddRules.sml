@@ -276,7 +276,7 @@ fun BddCompose (TermBdd(vm,v,b)) (TermBdd(vm1,tm1,b1)) (TermBdd(vm2,tm2,b2)) =
 (*  --------------------------------------------------------------------     *)
 (*  vm (subst[v1|->ci,...,vi|->ci]tm)                                        *)
 (*  |-->                                                                     *)
-(*  restrict b (makeRestriction[(var b1,mlval c1),...,(var i, mlval ci)]     *)
+(*  restrict b (assignment[(var b1,mlval c1),...,(var i, mlval ci)]          *)
 (*****************************************************************************)
 
 exception BddRestrictError;
