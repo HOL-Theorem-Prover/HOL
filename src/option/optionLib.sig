@@ -1,5 +1,7 @@
 signature optionLib =
 sig
-   val option_rws : Thm.thm
+  include optionSyntax
+
+   val option_rws : thm
    val OPTION_rws : computeLib.compset -> unit
 end;

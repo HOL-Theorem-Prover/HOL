@@ -1,7 +1,7 @@
 structure optionLib :> optionLib = 
 struct
 
- open Parse optionTheory;
+ open Parse optionTheory optionSyntax;
 
 val option_rws = option_CLAUSES
 
