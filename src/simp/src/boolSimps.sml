@@ -88,6 +88,44 @@ val NOT_ss = rewrites [NOT_IMP,
                          TAUT (--`x \/ ~y = (y ==> x)`--),
                          TAUT(--`(~p = ~q) = (p = q)`--)];
 
+(* ----------------------------------------------------------------------
+ * COND_elim_ss
+ *
+ * Getting rid of as many conditional expression as possible.  Basic
+ * strategy is to lift conditional expressions until they have boolean
+ * type overall, in which case they can be written out using COND_EXPAND.
+ * For goals (which have top-level type of bool), this usually works
+ * well, but conditionals underneath lambda's won't disappear, as in
+ *    `P (\x. if Q then f x else g x) : bool`
+ * The lambda's that appear under foralls, existentials and the like are
+ * OK of course because the bodies of such abstractions have boolean type.
+ *
+ * Application of this simpset can result in completely incomprehensible
+ * boolean terms.
+ * ---------------------------------------------------------------------- *)
+
+infix THEN
+val COND_COND_SAME = prove(
+  Term`!P f g x y. (COND P f g) (COND P x y) = COND P (f x) (g y)`,
+  REPEAT GEN_TAC THEN COND_CASES_TAC THEN REWRITE_TAC []);
+
+fun celim_rand_CONV tm = let
+  val {Rand, Rator} = dest_comb tm
+  val (f, _) = strip_comb Rator
+  val proceed = #Name (dest_const f) <> "COND" handle HOL_ERR _ => true
+in
+  (if proceed then REWR_CONV boolTheory.COND_RAND else NO_CONV) tm
+end
+
+val COND_elim_ss =
+  simpLib.SIMPSET {ac = [], congs = [],
+                   convs = [{conv = K (K celim_rand_CONV),
+                             name = "conditional lifting at rand",
+                             key = SOME([], Term`(f:'a -> 'b) (COND P Q R)`),
+                             trace = 2}],
+                   dprocs = [], filter = NONE,
+                   rewrs = [boolTheory.COND_RATOR, boolTheory.COND_EXPAND,
+                            COND_COND_SAME]}
 
 end (* struct *)
 
