@@ -46,7 +46,11 @@ val el_tm        = prim_mk_const {Name = "EL",      Thy = "list"}
 val zip_tm       = prim_mk_const {Name = "ZIP",     Thy = "list"}
 val unzip_tm     = prim_mk_const {Name = "UNZIP",   Thy = "list"}
 val sum_tm       = prim_mk_const {Name = "SUM",     Thy = "list"}
+val reverse_tm   = prim_mk_const {Name = "REVERSE", Thy = "list"}
 val list_case_tm = prim_mk_const {Name = "list_case", Thy = "list"}
+val last_tm      = prim_mk_const {Name = "LAST",    Thy = "list"}
+val front_tm     = prim_mk_const {Name = "FRONT",   Thy = "list"}
+val all_distinct_tm = prim_mk_const {Name = "ALL_DISTINCT", Thy = "list"}
 
 fun eltype l = dest_list_type (type_of l);
 
@@ -89,6 +93,10 @@ fun mk_unzip l =
   end
 
 fun mk_sum l = mk_comb(inst[alpha |-> numSyntax.num] sum_tm,l);
+fun mk_reverse l = mk_comb(inst[alpha |-> eltype l] reverse_tm,l);
+fun mk_last l = mk_comb(inst[alpha |-> eltype l] last_tm,l);
+fun mk_front l = mk_comb(inst[alpha |-> eltype l] front_tm,l);
+fun mk_all_distinct l = mk_comb(inst[alpha |-> eltype l] all_distinct_tm,l);
 
 fun mk_list_case (n,c,l) = 
  case total dest_list_type (type_of l)
@@ -107,26 +115,31 @@ fun dest_nil tm =
    then dest_list_type (type_of tm)
    else raise ERR "dest_nil" "";
 
-val dest_cons   = dest_binop cons_tm   (ERR "dest_cons"   "not CONS")
-val dest_null   = dest_monop null_tm   (ERR "dest_null"   "not NULL")
-val dest_hd     = dest_monop hd_tm     (ERR "dest_hd"     "not HD")
-val dest_tl     = dest_monop tl_tm     (ERR "dest_tl"     "not TL")
-val dest_append = dest_binop append_tm (ERR "dest_append" "not APPEND")
-val dest_flat   = dest_monop flat_tm   (ERR "dest_flat"   "not FLAT")
-val dest_length = dest_monop length_tm (ERR "dest_length" "not LENGTH")
-val dest_map    = dest_binop map_tm    (ERR "dest_map"    "not MAP")
-val dest_map2   = dest_triop map2_tm   (ERR "dest_map2"   "not MAP2")
-val dest_mem    = dest_binop mem_tm    (ERR "dest_mem"    "not MEM")
-val dest_filter = dest_binop filter_tm (ERR "dest_filter" "not FILTER")
-val dest_foldr  = dest_triop foldr_tm  (ERR "dest_foldr"  "not FOLDR")
-val dest_foldl  = dest_triop foldl_tm  (ERR "dest_foldl"  "not FOLDL")
-val dest_every  = dest_binop every_tm  (ERR "dest_every"  "not EVERY")
-val dest_exists = dest_binop exists_tm (ERR "dest_exists" "not EXISTS")
-val dest_el     = dest_binop el_tm     (ERR "dest_el"     "not EL")
-val dest_zip    = pairSyntax.dest_pair 
-                   o dest_monop zip_tm (ERR "dest_zip"    "not ZIP")
-val dest_unzip  = dest_monop unzip_tm  (ERR "dest_unzip"  "not UNZIP")
-val dest_sum    = dest_monop sum_tm    (ERR "dest_sum"    "not SUM")
+val dest_cons    = dest_binop cons_tm   (ERR "dest_cons"   "not CONS")
+val dest_null    = dest_monop null_tm   (ERR "dest_null"   "not NULL")
+val dest_hd      = dest_monop hd_tm     (ERR "dest_hd"     "not HD")
+val dest_tl      = dest_monop tl_tm     (ERR "dest_tl"     "not TL")
+val dest_append  = dest_binop append_tm (ERR "dest_append" "not APPEND")
+val dest_flat    = dest_monop flat_tm   (ERR "dest_flat"   "not FLAT")
+val dest_length  = dest_monop length_tm (ERR "dest_length" "not LENGTH")
+val dest_map     = dest_binop map_tm    (ERR "dest_map"    "not MAP")
+val dest_map2    = dest_triop map2_tm   (ERR "dest_map2"   "not MAP2")
+val dest_mem     = dest_binop mem_tm    (ERR "dest_mem"    "not MEM")
+val dest_filter  = dest_binop filter_tm (ERR "dest_filter" "not FILTER")
+val dest_foldr   = dest_triop foldr_tm  (ERR "dest_foldr"  "not FOLDR")
+val dest_foldl   = dest_triop foldl_tm  (ERR "dest_foldl"  "not FOLDL")
+val dest_every   = dest_binop every_tm  (ERR "dest_every"  "not EVERY")
+val dest_exists  = dest_binop exists_tm (ERR "dest_exists" "not EXISTS")
+val dest_el      = dest_binop el_tm     (ERR "dest_el"     "not EL")
+val dest_zip     = pairSyntax.dest_pair 
+                   o dest_monop zip_tm  (ERR "dest_zip"    "not ZIP")
+val dest_unzip   = dest_monop unzip_tm  (ERR "dest_unzip"  "not UNZIP")
+val dest_sum     = dest_monop sum_tm    (ERR "dest_sum"    "not SUM")
+val dest_reverse = dest_monop reverse_tm (ERR "dest_reverse" "not REVERSE")
+val dest_last    = dest_monop last_tm   (ERR "dest_last" "not LAST")
+val dest_front   = dest_monop front_tm  (ERR "dest_front" "not FRONT")
+val dest_all_distinct = dest_monop reverse_tm 
+                          (ERR "dest_all_distinct" "not ALL_DISTINCT")
 
 val dest_list_case = dest_triop list_case_tm (ERR "dest_sum" "not list_case");
 
@@ -154,6 +167,10 @@ val is_el     = can dest_el
 val is_zip    = can dest_zip
 val is_unzip  = can dest_unzip
 val is_sum    = can dest_sum
+val is_last   = can dest_last
+val is_front  = can dest_front
+val is_all_distinct = can dest_all_distinct
+val is_reverse = can dest_reverse
 val is_list_case = can dest_list_case
 
 
