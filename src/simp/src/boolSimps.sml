@@ -5,6 +5,10 @@ open HolKernel Parse simpLib
      basicHol90Lib liteLib Ho_theorems pureSimps Ho_rewrite;
 infix THENQC ++;
 
+val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+fun -- q x = Term q
+fun == q x = Type q
+
 (* ---------------------------------------------------------------------
  * bool_ss
  *   This is essentially the same as the old REWRITE_TAC []
@@ -82,7 +86,7 @@ val NOT_ss = rewrites [NOT_IMP,
                          NOT_EXISTS_THM,
                          TAUT (--`~x \/ y = (x ==> y)`--),
                          TAUT (--`x \/ ~y = (y ==> x)`--),
-                         TAUT(--`(~p = ~q) = (p:bool = q)`--)];
+                         TAUT(--`(~p = ~q) = (p = q)`--)];
 
 
 end (* struct *)
