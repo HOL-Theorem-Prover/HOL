@@ -10,6 +10,7 @@ sig
   val fempty_t : term
   val fupdate_t : term
   val fapply_t : term
+  val fdom_t : term
 
   val mk_fempty : hol_type * hol_type -> term
   val dest_fempty : term -> hol_type * hol_type
@@ -22,5 +23,9 @@ sig
   val mk_fapply : term * term -> term
   val dest_fapply : term -> term * term
   val is_fapply : term -> bool
+
+  val mk_fdom : term -> term
+  val dest_fdom : term -> term
+  val is_fdom : term -> bool
 
 end;

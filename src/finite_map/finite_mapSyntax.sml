@@ -39,6 +39,9 @@ struct
   val fapply_t = mk_thy_const {Name = "FAPPLY", Thy = "finite_map",
                                Ty = sample_fmap_ty --> alpha --> beta}
 
+  val fdom_t = mk_thy_const { Name = "FDOM", Thy = "finite_map",
+                              Ty = sample_fmap_ty --> alpha --> bool}
+
   fun mk_fempty(a,b) = Term.inst [alpha |-> a, beta |-> b] fempty_t
   val is_fempty = same_const fempty_t
   fun dest_fempty t =
@@ -73,6 +76,21 @@ struct
   val mk_fapply = mk_binop fapply_t "mk_fapply"
   val dest_fapply = dest_binop fapply_t "fapply"
   val is_fapply = can dest_fapply
+
+  fun mk_fdom t = let
+    val (k_ty, v_ty) = dest_fmap_ty (type_of t)
+  in
+    mk_comb(Term.inst [alpha |-> k_ty, beta |-> v_ty] fdom_t, t)
+  end
+  fun dest_fdom t = let
+    val (f, x) = dest_comb t
+  in
+    if same_const f fdom_t then x
+    else raise ERR "dest_fdom" "Operator of term not FDOM"
+  end
+  val is_fdom = can dest_fdom
+
+
 
 
 end;
