@@ -1844,6 +1844,7 @@ val MOD_ONE = store_thm("MOD_ONE",
             (REWRITE_RULE [LESS_SUC_REFL] (SPEC (--`SUC 0`--) DIVISION)))) THEN
    REWRITE_TAC [LESS_THM,NOT_LESS_0]);
 
+(* |- x MOD 1 = 0 *)
 val MOD_1 = save_thm("MOD_1", REWRITE_RULE [SYM ONE] MOD_ONE);
 
 
@@ -2321,6 +2322,15 @@ val MOD_COMMON_FACTOR = store_thm(
   SUFF_TAC ``?m. n = SUC m`` THENL [
     STRIP_TAC THEN ASM_REWRITE_TAC [LESS_MULT_MONO],
     mesonLib.ASM_MESON_TAC [LESS_REFL, num_CASES]
+  ]);
+
+val X_MOD_Y_EQ_X = store_thm(
+  "X_MOD_Y_EQ_X",
+  ``!x y. 0 < y ==> ((x MOD y = x) = x < y)``,
+  REPEAT STRIP_TAC THEN EQ_TAC THENL [
+    mesonLib.ASM_MESON_TAC [DIVISION],
+    STRIP_TAC THEN MATCH_MP_TAC MOD_UNIQUE THEN
+    Q.EXISTS_TAC `0` THEN ASM_REWRITE_TAC [MULT_CLAUSES, ADD_CLAUSES]
   ]);
 
 (* ----------------------------------------------------------------------

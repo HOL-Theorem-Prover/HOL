@@ -320,7 +320,10 @@ val arithmetic_rewrites = [
 
    (* mins and maxs *)
    MIN_0, MAX_0, MIN_IDEM, MAX_IDEM, MIN_LE, MAX_LE, MIN_LT, MAX_LT,
-   MIN_MAX_EQ, MIN_MAX_LT
+   MIN_MAX_EQ, MIN_MAX_LT,
+
+   (* mods and divs *)
+   X_MOD_Y_EQ_X, DIVMOD_ID, DIV_1, MOD_1, LESS_MOD, ZERO_MOD, MOD_MOD
    ]
 end;
 
@@ -462,7 +465,7 @@ val _ = BasicProvers.augment_srw_ss [REDUCE_ss, ARITH_RWTS_ss]
 
 fun clear_arith_caches() = clear_cache arith_cache;
 
-local open arithmeticTheory 
+local open arithmeticTheory
 in
 val ARITH_AC_ss = ac_ss [(ADD_SYM,ADD_ASSOC), (MULT_SYM,MULT_ASSOC)]
 end
