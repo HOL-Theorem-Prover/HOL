@@ -22,9 +22,10 @@ fun fullPath slist = normPath
 fun quote s = String.concat["\"", s, "\""];
 
 local val Holmake_path = fullPath [HOLDIR, "bin/Holmake --qof"]
+      open Process
 in
 fun Holmake dir =
-  if Process.system Holmake_path = Process.success
+  if system Holmake_path = success
   then ()
   else (print ("Build failed in directory "^dir^"\n");
         raise Fail "Couldn't make directory")
@@ -56,7 +57,7 @@ fun build_dir dir =
                          ["\nCompilation of SMV fails!!",
                           " temporal Lib has NOT been built!! ",
                           "(continuing anyway).\n\n"]))
-     | _ => Holmake dir
+     | _   => Holmake dir
   end
   handle OS.SysErr(s, erropt)
     => (print ("OS error: "^s^" - "^
@@ -139,9 +140,9 @@ fun upload (src,target,symlink) =
     This allows us to have the build process only occur w.r.t. SIGOBJ
     (thus requiring only a single place to look for things).
  ---------------------------------------------------------------------------*)
+
 fun build_src symlink =
-   List.app (fn s => (build_dir s; upload(s,SIGOBJ,symlink)))
-            SRCDIRS;
+  List.app (fn s => (build_dir s; upload(s,SIGOBJ,symlink))) SRCDIRS;
 
 fun rem_file f =
  FileSys.remove f
@@ -151,7 +152,7 @@ fun rem_file f =
 fun clean_sigobj() =
   let val _ = print ("Cleaning out "^SIGOBJ^"\n")
   in
-    map_dir (rem_file o normPath o Path.concat) SIGOBJ
+     map_dir (rem_file o normPath o Path.concat) SIGOBJ
   end;
 
 fun build_hol symlink =
@@ -225,4 +226,6 @@ val _ =
     | [_,"-symlink"]  => build_hol true  (*    symbolic linking *)
     | [_,"-clean"]    => clean_dirs cleandir
     | [_,"-cleanAll"] => clean_dirs cleanAlldir
+    | [_,"clean"]    => clean_dirs cleandir
+    | [_,"cleanAll"] => clean_dirs cleanAlldir
     |     _           => errmsg help_mesg
