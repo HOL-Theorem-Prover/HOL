@@ -859,7 +859,7 @@ local
 in
   fun fol_thms_to_hol parm axioms pattern ths =
     (finalize_thms o match_pattern pattern o
-     map (translate parm (previous axioms) [] o rev o chat_proof)) ths
+     map (translate parm (previous axioms) [] o chat_proof)) ths
     handle HOL_ERR _ => raise ERR "fol_thms_to_hol" "proof translation error";
 end;
 

@@ -69,8 +69,6 @@ Known Bugs
    a  subgoal  on  one  occasion  but  diverge  on another. However, this
    situation isn't likely to arise in practice.
 
-   Using resolution as a solver is incomplete when equality is present.
-
 History and Credit
 
    This library was written by Joe Hurd, with the intention of evolving a
@@ -105,7 +103,18 @@ Etymology
 
 Change Log
 
-  Version 1.3: 18 June 2002
+  Version 1.4: 2 October 2003
+
+   Subgoals proved by MESON_TAC when HOL is built .......... 1982
+   Proved by METIS_TAC within 10s .......................... 1977
+
+  Between Versions 1.3 and 1.4
+
+     * Added an ordered resolution prover to the default set.
+     * Improved  resolution  performance  with a special-purpose datatype
+       for inter-reducing equations.
+
+  Version 1.3: 18 June 2003
 
    Subgoals proved by MESON_TAC when HOL is built .......... 1976
    Proved by METIS_TAC within 10s .......................... 1971

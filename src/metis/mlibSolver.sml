@@ -42,7 +42,7 @@ fun drop_after f =
   S.foldr (fn (x, xs) => S.CONS (x, if f x then K S.NIL else xs)) S.NIL;
 
 fun time_to_string t =
-  let val dp = if t < 10.0 then 2 else if t < 1000.0 then 1 else 0
+  let val dp = if t < 10.0 then 1 else 0
   in Real.fmt (StringCvt.FIX (SOME dp)) t
   end;
 
@@ -50,8 +50,6 @@ fun infs_to_string i =
   if i < 10000 then int_to_string i
   else if i < 10000000 then int_to_string (i div 1000) ^ "K"
   else int_to_string (i div 1000000) ^ "M";
-
-val name_to_string = str o hd o explode;
 
 fun option_case n _ NONE = n
   | option_case _ s (SOME _) = s;
@@ -142,12 +140,9 @@ type form =
 
 type node_data = {name : string, solver_con : form -> solver};
 
-datatype solver_node =
-  mlibSolver_node of {name : string, initial : string, solver_con : form -> solver};
+datatype solver_node = mlibSolver_node of node_data;
 
-fun mk_solver_node {name, solver_con} =
-  mlibSolver_node
-  {name = name, initial = (str o hd o explode) name, solver_con = solver_con};
+val mk_solver_node = mlibSolver_node;
 
 val pp_solver_node = pp_map (fn mlibSolver_node {name, ...} => name) pp_string;
 
@@ -179,12 +174,10 @@ val pp_cost_fn = pp_map fst pp_string;
 
 local
   fun name (mlibSolver_node {name, ...}) = name;
-  fun initial (mlibSolver_node {initial, ...}) = initial;
   fun seq f [] = ""
     | seq f (h :: t) = foldl (fn (n, s) => s ^ "," ^ f n) (f h) t;
 in
   fun combine_names csolvers = "[" ^ seq (name o snd) csolvers ^ "]";
-  fun combine_initials csolvers = "[" ^ seq (initial o snd) csolvers ^ "]";
 end;
 
 datatype subnode = Subnode of
@@ -211,9 +204,9 @@ in
     | l => SOME (snd (fst (min order l)))
 end;
 
-fun subnode_info (Subnode {name, used = {time, infs}, solns, ...}) =
-  name_to_string name ^ "(" ^ time_to_string time ^ "," ^
-  infs_to_string infs ^ ")" ^ (case solns of NONE => "*" | SOME _ => "");
+fun subnode_info (Subnode {name, used = {time,infs}, solns, ...}) =
+  name ^ (* "(" ^ *) time_to_string time ^ (* ^ "," ^ infs_to_string infs *)
+  (* ")" ^ *) (case solns of NONE => "*" | SOME _ => "");
 
 local
   fun seq f [] = ""
@@ -257,15 +250,14 @@ fun schedule check read stat =
     sched
   end;
 
-fun combine_solvers (n, i) csolvers {slice, units, thms, hyps} =
+fun combine_solvers n csolvers {slice, units, thms, hyps} =
   let
     val _ = chatting 2 andalso chat
-      (n ^ "--initializing--#thms=" ^ int_to_string (length thms) ^
-       "--#hyps=" ^ int_to_string (length hyps) ^ ".\n")
+      (n ^ "--initializing--#thms=" ^ int_to_string (length thms)
+       ^ "--#hyps=" ^ int_to_string (length hyps) ^ ".\n")
     val meter = ref (new_meter expired)
-    fun f (mlibSolver_node {initial, solver_con, ...}) =
-      (initial,
-       solver_con {slice = meter, units = units, thms = thms, hyps = hyps})
+    fun f (mlibSolver_node {name, solver_con}) =
+      (name, solver_con {slice=meter, units=units, thms=thms, hyps=hyps})
     val cnodes = map (I ## f) csolvers
     fun check () =
       check_meter (!slice) andalso (meter := sub_meter (!slice) (!SLICE); true)
@@ -276,47 +268,47 @@ fun combine_solvers (n, i) csolvers {slice, units, thms, hyps} =
   end;
 
 fun combine csolvers =
-  let
-    val n = combine_names csolvers
-    val i = combine_initials csolvers
-  in
-    mlibSolver_node
-    {name = n, initial = i, solver_con = combine_solvers (n, i) csolvers}
+  let val n = combine_names csolvers
+  in mlibSolver_node {name = n, solver_con = combine_solvers n csolvers}
   end;
 
 (* ------------------------------------------------------------------------- *)
 (* Overriding the 'natural' set of support from the problem.                 *)
 (* ------------------------------------------------------------------------- *)
 
-fun sos_solver_con filt name solver_con {slice, units, thms, hyps} =
+type sos_filter = {name : string, filter : thm -> bool};
+
+fun apply_sos_filter {name = sos, filter} (mlibSolver_node {name, solver_con}) =
   let
-    val _ = chatting 2 andalso chat
-      (name ^ "--initializing--#thms=" ^ int_to_string (length thms) ^
-       "--#hyps=" ^ int_to_string (length hyps) ^ ".\n")
-    val (hyps', thms') = List.partition filt (thms @ hyps)
+    fun solver_con' {slice, units, thms, hyps} =
+      let
+        val _ = chatting 2 andalso chat
+          (name ^ "--initializing--#thms=" ^ int_to_string (length thms) ^
+           "--#hyps=" ^ int_to_string (length hyps) ^
+           "--apply sos (" ^ sos ^ ").\n")
+        val (hyps', thms') = List.partition filter (thms @ hyps)
+      in
+        solver_con {slice = slice, units = units, thms = thms', hyps = hyps'}
+      end
   in
-    solver_con {slice = slice, units = units, thms = thms', hyps = hyps'}
+    mlibSolver_node {name = name, solver_con = solver_con'}
   end;
 
-fun set_of_support filt (mlibSolver_node {name, initial, solver_con}) =
-  let val name' = "!" ^ name
-  in
-    mlibSolver_node
-    {name = name', initial = initial,
-     solver_con = sos_solver_con filt name' solver_con}
-  end;
+val everything : sos_filter = {name = "everything", filter = K true};
 
-val everything : thm -> bool = K true;
+val one_negative : sos_filter =
+  {name = "one negative",
+   filter = (fn x => null x orelse List.exists negative x) o clause};
 
-val one_negative = (fn x => null x orelse List.exists negative x) o clause;
+val one_positive : sos_filter =
+  {name = "one positive",
+   filter = (fn x => null x orelse List.exists positive x) o clause};
 
-val one_positive = (fn x => null x orelse List.exists positive x) o clause;
+val all_negative : sos_filter =
+  {name = "all negative", filter = List.all negative o clause};
 
-val all_negative = List.all negative o clause;
-
-val all_positive = List.all positive o clause;
-
-val nothing : thm -> bool = K false;
+val all_positive : sos_filter =
+  {name = "all positive", filter = List.all positive o clause};
 
 (* ------------------------------------------------------------------------- *)
 (* Initializing a solver node makes it ready for action.                     *)

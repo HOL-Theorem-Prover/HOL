@@ -151,7 +151,7 @@ fun pp_proof pp =
     open PP
     fun pp_a (th,i) = (pp_thm pp th; add_newline pp; pp_inference' pp i)
     fun pp_x x = (add_newline pp; add_newline pp; pp_a x)
-    fun pp_p [] = raise BUG "pp_proof" "empty"
+    fun pp_p [] = raise ERR "pp_proof" "empty"
       | pp_p (h :: t) = (pp_a h; app pp_x t)
   in
     fn p =>
@@ -353,7 +353,7 @@ fun inference th =
     i
   end;
 
-val proof = thm_foldr (fn (th,l) => (th, inference th) :: l) [];
+val proof = rev o thm_foldr (fn (th,l) => (th, inference th) :: l) [];
 
 (* ------------------------------------------------------------------------- *)
 (* Contradictions and units.                                                 *)

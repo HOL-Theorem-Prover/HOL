@@ -60,6 +60,8 @@ fun subset a b =
    | SOME EQUAL => true
    | _ => false);
 
+fun equal a b = (case compare (a,b) of SOME EQUAL => true | _ => false);
+
 fun app f (a : 'a mset) = M.app f a;
 
 fun foldl f x (a : 'a mset) = M.foldl f x a;

@@ -464,15 +464,15 @@ fun mk_system parm units meter rules : 'a system =
      cut       = unit_cut lemmaizing units o cache_cut caching}
   end;
 
-fun meson' parm =
+fun meson' (name,parm) =
   mk_solver_node
-  {name = "meson",
+  {name = name,
    solver_con =
    fn {slice, units, thms, hyps} =>
    let
      val ruls = meson_rules thms hyps
      val _ = chatting 2 andalso chat
-       ("meson--initializing--#thms=" ^ int_to_string (length thms) ^
+       (name ^ "--initializing--#thms=" ^ int_to_string (length thms) ^
         "--#hyps=" ^ int_to_string (length hyps) ^
         "--#rules=" ^ int_to_string (num_rules ruls) ^
         "--#initial_rules=" ^ int_to_string (num_initial_rules ruls) ^ ".\n")
@@ -488,18 +488,18 @@ fun meson' parm =
      (S.map (unit_check goals) (S.flatten (S.map (f goals) (d 0))))
    end};
 
-val meson = meson' defaults;
+val meson = meson' ("meson",defaults);
 
-fun delta' parm =
+fun delta' (name,parm) =
   mk_solver_node
-  {name = "delta",
+  {name = name,
    solver_con =
    fn {slice, units, thms, hyps} =>
    let
      val ruls = meson_rules thms hyps
      val dgoals = thms_to_delta_goals hyps
      val _ = chatting 2 andalso chat
-       ("delta--initializing--#thms=" ^ int_to_string (length thms) ^
+       (name ^ "--initializing--#thms=" ^ int_to_string (length thms) ^
         "--#hyps=" ^ int_to_string (length hyps) ^
         "--#rules=" ^ int_to_string (num_rules ruls) ^
         "--#delta_goals=" ^ int_to_string (length dgoals) ^ ".\n")
@@ -519,13 +519,13 @@ fun delta' parm =
      | _ => fn goals => filter_meter slice (S.map (unit_check goals) (h ()))
    end};
 
-val delta = delta' defaults;
+val delta = delta' ("delta",defaults);
 
 val prolog_depth = case Int.maxInt of NONE => 1000000 | SOME i => i;
 
-fun prolog' parm =
+fun prolog' (name,parm) =
   mk_solver_node
-  {name = "prolog",
+  {name = name,
    solver_con =
    fn {slice, units, thms, hyps} =>
    let
@@ -538,6 +538,6 @@ fun prolog' parm =
      fn goals => S.map_thk f (fn () => raw_meson system goals prolog_depth) ()
    end};
 
-val prolog = prolog' defaults;
+val prolog = prolog' ("prolog",defaults);
 
 end

@@ -19,8 +19,8 @@ open mlibUseful mlibTerm;
 structure H = mlibHeap; local open mlibHeap in end;
 structure C = mlibClause; local open mlibClause in end;
 
-type 'a heap   = 'a H.heap;
-type clause    = C.clause;
+type 'a heap = 'a H.heap;
+type clause = C.clause;
 
 (* ------------------------------------------------------------------------- *)
 (* Chatting.                                                                 *)

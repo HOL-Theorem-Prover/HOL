@@ -126,7 +126,7 @@ fun bind f (g : 'a -> 's -> 'b * 's) = uncurry g o f;
 
 fun mmap f (m : 's -> 'a * 's) = bind m (unit o f);
 
-fun join (f : 's -> ('s -> 'a * 's) * 's) = bind f I;
+fun mjoin (f : 's -> ('s -> 'a * 's) * 's) = bind f I;
 
 fun mwhile c b = let fun f a = if c a then bind (b a) f else unit a in f end;
 
@@ -387,6 +387,8 @@ fun nchars x =
   in fn n => implode (dup x n [])
   end;
 
+fun join _ [] = "" | join s (h :: t) = foldl (fn (x,y) => y ^ s ^ x) h t;
+
 fun variant x vars = if mem x vars then variant (x ^ "'") vars else x;
 
 fun variant_num x vars =
@@ -408,6 +410,26 @@ fun dest_prefix p =
 fun is_prefix p = can (dest_prefix p);
 
 fun mk_prefix p s = p ^ s;
+
+fun align_table {left,pad} =
+  let
+    fun pad_col n s =
+      let val p = nchars pad (n - size s)
+      in if left then s ^ p else p ^ s
+      end
+    fun pad_cols (l as [] :: _) = map (K "\n") l
+      | pad_cols l =
+      let
+        val hs = map hd l
+        val (n,_) = min (Int.compare o swap) (map size hs)
+        val last_left = left andalso length (hd l) = 1
+        val hs = if last_left then hs else map (pad_col n) hs
+      in
+        zipwith (fn x => fn y => x ^ y) hs (pad_cols (map tl l))
+      end
+  in
+    fn [] => "" | l => String.concat (pad_cols l)
+  end;
 
 (* ------------------------------------------------------------------------- *)
 (* Reals.                                                                    *)
@@ -476,34 +498,6 @@ fun pp_triple pp_a pp_b pp_c =
   pp_bracket "(" ")"
   (pp_map (fn (a, b, c) => (a, (b, c)))
    (pp_binop "," pp_a (pp_binop "," pp_b pp_c)));
-
-local
-  fun pad1 n s = funpow (n - size s) (fn x => " " ^ x) s;
-
-  fun pad (l as [] :: _) = l
-    | pad l =
-    let
-      val hs = map hd l
-      val ts = pad (map tl l)
-      val (n,_) = min (Int.compare o swap) (map size hs)
-      val hs = map (pad1 n) hs
-    in
-      zipwith cons hs ts
-    end;
-
-  fun pp_row pp sl =
-    (pp_bracket "[ " " ]" (pp_sequence "" pp_string) pp sl;
-     PP.add_newline pp)
-in
-  fun pp_table pp tab =
-    let
-      val tab = pad tab
-    in
-      (PP.begin_block pp PP.INCONSISTENT 2;
-       app (pp_row pp) tab;
-       PP.end_block pp)
-    end;
-end;
   
 (* ------------------------------------------------------------------------- *)
 (* Sums.                                                                     *)
@@ -598,108 +592,5 @@ val host = Option.getOpt (OS.Process.getEnv "HOSTNAME", "unknown");
 val date = Date.fmt "%H:%M:%S %d/%m/%Y" o Date.fromTimeLocal o Time.now;
 
 val today = Date.fmt "%d/%m/%Y" o Date.fromTimeLocal o Time.now;
-
-(* ------------------------------------------------------------------------- *)
-(* Command line arguments.                                                   *)
-(* ------------------------------------------------------------------------- *)
-
-exception Optionexit of {message : string option, usage : bool, success : bool};
-
-type Opt = {switches : string list, arguments : string list,
-            description : string, processor : string * string list -> unit};
-
-type Allopts = {name : string, head : string, foot : string, opts : Opt list};
-
-val version_string = ref "";
-
-fun version_information () =
-  let
-    val s = !version_string
-  in
-    if s = "" then
-      raise Optionexit {message = SOME "no version information available",
-                        usage = false, success = true}
-    else
-      (print s;
-       raise Optionexit {message = NONE, usage = false, success = true})
-  end;
-
-val basic_options : Opt list =
-  [{switches = ["--verbosity"], arguments = ["0..10"],
-    description = "the degree of verbosity",
-    processor = fn (_,l) => trace_level := string_to_int (hd l)},
-   {switches = ["--secret"], arguments = [],
-    description = "process then hide the next option",
-    processor = fn _ => raise Fail "basic_options: --secret"},
-   {switches = ["--"], arguments = [],
-    description = "no more options",
-    processor = fn _ => raise Fail "basic_options: --"},
-   {switches = ["-?","-h","--help"], arguments = [],
-    description = "display all options and exit",
-    processor = fn _ => raise Optionexit
-    {message = SOME "displaying all options", usage = true, success = true}},
-   {switches = ["-v", "--version"], arguments = [],
-    description = "display version information",
-    processor = fn _ => version_information ()}];
-
-fun process_options ({name, head, foot, opts} : Allopts) =
-  let
-    fun exit true = OS.Process.exit OS.Process.success
-      | exit false = OS.Process.exit OS.Process.failure
-    fun join _ [] = raise Fail "process_options"
-      | join s ("" :: t) = "  " ^ join s t
-      | join s (h :: t) = foldl (fn (x,y) => y ^ s ^ x) h t
-    fun list_opts {switches = n, arguments = r, description = s, ...} =
-      (foldl (fn (x,y) => y ^ " " ^ x) (join ", " n) r, s)
-    val usage_message =
-      let
-        val l = map list_opts opts
-        val (n,_) = min (rev_order Int.compare) (map (size o fst) l)
-        fun f ((x,d),s) =
-          let val m = size x in s^"  "^x^nchars #" " (n + 2 - m) ^ d ^ "\n" end
-      in
-        head ^ foldl f "" l ^ foot
-      end
-    fun escape {message, usage, success} =
-      (case message of NONE => () | SOME m => print (name ^ ": " ^ m ^ "\n");
-       if usage then print usage_message else ();
-       exit success)
-
-    fun process [] = ([], [])
-      | process ("--" :: xs) = ([("--",[])], xs)
-      | process ("--secret" :: xs) = (tl ## I) (process xs)
-      | process (x :: xs) =
-      (case List.find (fn {switches = n, ...} => mem x n) opts of
-         NONE =>
-           if hd (explode x) <> #"-" orelse x = "-" then ([], x :: xs)
-           else escape {message = SOME ("unknown switch \"" ^ x ^ "\""),
-                        usage = true, success = false}
-       | SOME {arguments = r, processor = f, ...} =>
-         let
-           val m = length r
-           val () =
-             if m <= length xs then ()
-             else escape {message = SOME
-                          (x ^ " options needs "
-                           ^ (if m = 1 then "a following argument"
-                              else int_to_string m ^ " following arguments")
-                           ^ " (" ^ join " " r ^ ")"),
-                          usage = true, success = false}
-           val (ys,xs) = split xs m
-           val () = f (x,ys)
-         in
-           (cons (x,ys) ## I) (process xs)
-         end)
-  in
-    fn l =>
-    let
-      val () = if null l then version_information () else ()
-      val (a,b) = process l
-      val a = foldl (fn ((x,xs),ys) => x :: xs @ ys) [] (rev a)
-    in
-      (a,b)
-    end
-    handle Optionexit x => escape x
-  end;
 
 end

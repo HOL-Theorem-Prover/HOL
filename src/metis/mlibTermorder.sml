@@ -5,7 +5,7 @@
 (* ========================================================================= *)
 
 (*
-app load ["mlibOmega", "mlibTerm", "mlibSubst"];
+app load ["Binaryset", "mlibOmega", "mlibTerm", "mlibSubst"];
 *)
 
 (*
@@ -45,8 +45,7 @@ fun chat s = (trace s; true)
 type parameters =
   {weight     : string * int -> int,
    precedence : (string * int) * (string * int) -> order,
-   stickiness : int,               (* How long we keep the inequations: 0..2 *)
-   precision  : int};     (* How closely we approximate the term order: 0..1 *)
+   precision  : int};
 
 (* Default weight = uniform *)
 
@@ -61,22 +60,18 @@ val arity : (string * int) * (string * int) -> order =
 val defaults =
   {weight     = uniform,
    precedence = arity,
-   stickiness = 0,
-   precision  = 1};
-
-fun update_stickiness f (parm : parameters) : parameters =
-  let val {weight = w, precedence = p, stickiness = k, precision = r} = parm
-  in {weight = w, precedence = p, stickiness = f k, precision = r}
-  end;
+   precision  = 3};
 
 fun update_precision f (parm : parameters) : parameters =
-  let val {weight = w, precedence = p, stickiness = k, precision = r} = parm
-  in {weight = w, precedence = p, stickiness = k, precision = f r}
+  let val {weight = w, precedence = p, precision = r} = parm
+  in {weight = w, precedence = p, precision = f r}
   end;
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
+
+val eqn_sum = M.foldl (fn (_,n,m) => n + m) 0;
 
 fun eqn_var _ ("",_,vs) = vs | eqn_var f (v,_,vs) = f v vs;
 
@@ -123,24 +118,27 @@ fun divide_gcd eqn =
 
 (* If an equation satisfies this it's inconsistent: some var must be <= 0 *)
 fun inconsistent_eqn q =
-  M.all (fn ("",_) => true | (_,n) => n < 0) q andalso
-  M.foldl (fn (_,n,m) => n + m) 0 q < 0;
+  M.all (fn ("",_) => true | (_,n) => n < 0) q andalso eqn_sum q < 0;
 
 local
   (* If an equation satisfies pos then it's completely uninformative *)
   fun pos q =
-    M.all (fn ("",_) => true | (_,n) => 0 < n) q andalso
-    0 <= M.foldl (fn (_,n,m) => n + m) 0 q;
+    M.all (fn ("",_) => true | (_,n) => 0 <= n) q andalso 0 <= eqn_sum q;
 
   (* bad is a weaker condition, a compromise for efficiency *)
   fun bad q =
     0 <= M.foldl (fn ("",_,m) => m | (_,n,m) => n + m) 0 q andalso
     0 <= M.foldl (fn ("",_,m) => m | (_,n,m) => if 0<n then m+1 else m-1) 0 q;
+
+  (* An equation being unbounded is an incredibly weak condition *)
+  fun trivial q = M.nonzero q=0 orelse M.nonzero q=1 andalso 0<M.count q "";
+  fun unbounded q = M.exists (fn ("",_) => false | (_,n) => 0 < n) q;
 in
   fun good_eqn (parm : parameters) eqn =
     if inconsistent_eqn eqn then raise ERR "good_eqn" "inconsistent"
-    else if #stickiness parm <= 0 then false
-    else if #precision parm <= 0 then not (bad eqn)
+    else if #precision parm <= 0 then false
+    else if #precision parm <= 1 then not (unbounded eqn orelse trivial eqn)
+    else if #precision parm <= 2 then not (bad eqn)
     else not (pos eqn);
 end;
 
@@ -181,21 +179,20 @@ fun mk_eqn (parm : parameters) =
 (* A partial order on equations, designed to be quick to check.              *)
 (* ------------------------------------------------------------------------- *)
 
-fun stronger eqn1 eqn2 =
-  M.all (fn (v,i) => i <= M.count eqn2 v) eqn1 andalso
-  M.all (fn (v,i) => M.count eqn1 v <= i) eqn2;
+local
+  fun gen_stronger cmp eqn1 eqn2 =
+    M.all (fn ("",_) => true | (v,i) => i <= M.count eqn2 v) eqn1 andalso
+    M.all (fn ("",_) => true | (v,i) => M.count eqn1 v <= i) eqn2 andalso
+    cmp (eqn_sum eqn1, eqn_sum eqn2);
+in
+  val stronger = gen_stronger op<=;
+  val strictly_stronger = gen_stronger op<;
+end;
 
 fun weaker eqn1 eqn2 = stronger eqn2 eqn1;
-
-fun superfluous eqn eqns = List.exists (weaker eqn) eqns;
-
-fun strictly_stronger eqn1 eqn2 =
-  stronger eqn1 eqn2 andalso
-  (M.exists (fn (v,i) => i < M.count eqn2 v) eqn1 orelse
-   M.exists (fn (v,i) => M.count eqn1 v < i) eqn2);
-
 fun strictly_weaker eqn1 eqn2 = strictly_stronger eqn2 eqn1;
 
+fun superfluous eqn eqns = List.exists (weaker eqn) eqns;
 fun strictly_superfluous eqn eqns = List.exists (strictly_weaker eqn) eqns;
 
 (* ------------------------------------------------------------------------- *)
@@ -276,7 +273,12 @@ fun vars (TO (_,fvs,_,_)) = fvs;
 
 fun add_leq lr (to as TO (parm,vars,eqns,_)) =
   let
-    fun keep eqn = good_eqn parm eqn andalso not (superfluous eqn eqns)
+    fun keep eqn =
+      good_eqn parm eqn andalso
+      not (superfluous eqn eqns) andalso
+      (if not (strictly_superfluous (M.compl eqn) eqns) then true
+       else raise ERR "add_leq" "direct contradiction")
+
     fun inc eqn =
       let
         val () = chatto 1 "add_leq input" to
@@ -297,12 +299,16 @@ fun add_leq lr (to as TO (parm,vars,eqns,_)) =
 fun add_leqs lrs to = foldl (uncurry add_leq) to lrs;
 
 local
-  fun nicevar "" = "1" | nicevar v = v;
   fun table_to_string vars vars' tab =
-    PP.pp_to_string (!LINE_LENGTH) pp_table
-    (("" :: map nicevar vars) ::
-     map (fn v => nicevar v::map (int_to_string o M.count(B.find (tab,v)))vars)
-     vars');
+    let
+      fun nicevar "" = "1" | nicevar v = v;
+      fun nicerow l = "[" :: map (fn x => " " ^ x) (l @ ["]"])
+      fun makerow v =
+        nicevar v :: map (int_to_string o M.count (B.find (tab,v))) vars
+    in
+      align_table {left = false, pad = #" "}
+      (map nicerow (("" :: map nicevar vars) :: map makerow vars'))
+    end;
 
   fun new_vars vars mapl =
     let val (ls,rs) = unzip (map (fn x |-> y => (x,y)) mapl)
@@ -414,7 +420,7 @@ local
     | inconsistent NO_CONCL = false;
 
   (* Uncomment this check function to print out the linear arithmetic problems
-  val THRESHOLD = 0.1;
+  val THRESHOLD = 1.0;
 
   fun result_to_string (SATISFIABLE _) = "satisfiable"
     | result_to_string (CONTR _) = "inconsistent"
@@ -439,7 +445,6 @@ in
       val () = chatto 1 "consistent" to
     in
       if inconsistent (check (omega_eqns vars eqns)) then NONE
-      else if #stickiness parm <= 1 then SOME (TO (parm,[],[],true))
       else SOME (TO (parm,vars,eqns,true))
     end;
 (* This bug has now been fixed, but others may appear in the future :-)
@@ -502,7 +507,7 @@ installPP pp_termorder;
 installPP mlibSubst.pp_subst;
 installPP mlibThm.pp_thm;
 
-val to = empty;
+val to = empty defaults;
 val to = try (C add_leq to) (T`f x (f y z)`, T`f (f x y) z`);
 val x = (total o try) (C add_leq to) (T`f (f x y) z`, T`f x (f y z)`);
 val to = try (C add_leq to) (T`P (f a b)`, T`P x`);
@@ -513,7 +518,7 @@ val to = try (subst (("x" |-> T`v`) ::> |<>|)) to;
 val to = try (subst (("v" |-> T`f x x x x a a a a`) ::> |<>|)) to;
 val c = consistent to;
 
-val to = empty;
+val to = empty defaults;
 val to = try (C add_leq to) (T`P y`, T`P (g a b c d e f)`);
 val to = try (C add_leq to) (T`x + y`, T`y + x`);
 val to = try (C add_leq to) (T`x + y`, T`y + x`);
@@ -522,7 +527,7 @@ val c = consistent to;
 val to = try (subst (("x" |-> T`f w v`) ::> |<>|)) to;
 val c = consistent to;
 
-val to = empty;
+val to = empty defaults;
 val to = try (C add_leq to) (T`f x y`, T`f y x`);
 val to = try (subst (("x" |-> T`f x`) ::> |<>|)) to;
 val x = compare to (T`f x`, T`g y`);

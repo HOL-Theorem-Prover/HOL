@@ -25,7 +25,7 @@ datatype prover =
   mlibResolution of mlibResolution.parameters
 | mlibMeson of mlibMeson.parameters
 | Delta of mlibMeson.parameters
-type parameters = (mlibSolver.cost_fn * prover) list
+type parameters = (prover * mlibSolver.sos_filter option * mlibSolver.cost_fn) list
 
 val defaults             : parameters
 val parameters_to_string : parameters -> string
@@ -37,7 +37,7 @@ val metis  : solver_node                (* Uses defaults *)
 (* A user-friendly interface *)
 val settings : parameters ref           (* Initially defaults *)
 val limit    : limit ref                (* Initially unlimited *)
-val options  : mlibUseful.Opt list          (* Command-line options *)
+val options  : mlibOptions.opt list         (* Command-line options *)
 val prove    : formula -> thm option    (* Adds eq axioms, converts to CNF *)
 val query    : formula -> solver        (* Prolog query engine *)
 

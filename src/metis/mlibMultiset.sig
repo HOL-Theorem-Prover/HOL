@@ -15,6 +15,7 @@ val union    : 'a mset -> 'a mset -> 'a mset
 val compl    : 'a mset -> 'a mset
 val subtract : 'a mset -> 'a mset -> 'a mset
 val subset   : 'a mset -> 'a mset -> bool
+val equal    : 'a mset -> 'a mset -> bool
 val compare  : 'a mset * 'a mset -> order option
 val sign     : 'a mset -> order option                (* compare to empty *)
 val app      : ('a * int -> unit) -> 'a mset -> unit

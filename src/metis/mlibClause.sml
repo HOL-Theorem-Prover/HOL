@@ -42,30 +42,53 @@ fun chat s = (trace s; true)
 (* ------------------------------------------------------------------------- *)
 
 type parameters =
-  {literal_order  : bool,
-   term_order     : bool,
-   termorder_parm : mlibTermorder.parameters};
+  {term_order       : bool,
+   literal_order    : bool,
+   order_stickiness : int,
+   termorder_parm   : mlibTermorder.parameters};
 
 type 'a parmupdate = ('a -> 'a) -> parameters -> parameters;
 
 val defaults =
-  {literal_order  = true,
-   term_order     = true,
-   termorder_parm = T.defaults};
-
-fun update_literal_order f (parm : parameters) : parameters =
-  let val {literal_order = l, term_order = t, termorder_parm = x} = parm
-  in {literal_order = f l, term_order = t, termorder_parm = x}
-  end;
+  {term_order       = true,
+   literal_order    = false,
+   order_stickiness = 0,
+   termorder_parm   = T.defaults};
 
 fun update_term_order f (parm : parameters) : parameters =
-  let val {literal_order = l, term_order = t, termorder_parm = x} = parm
-  in {literal_order = l, term_order = f t, termorder_parm = x}
+  let
+    val {term_order = t, literal_order = l,
+         order_stickiness = s, termorder_parm = x} = parm
+  in
+    {term_order = f t, literal_order = l,
+     order_stickiness = s, termorder_parm = x}
+  end;
+
+fun update_literal_order f (parm : parameters) : parameters =
+  let
+    val {term_order = t, literal_order = l,
+         order_stickiness = s, termorder_parm = x} = parm
+  in
+    {term_order = t, literal_order = f l,
+     order_stickiness = s, termorder_parm = x}
+  end;
+
+fun update_order_stickiness f (parm : parameters) : parameters =
+  let
+    val {term_order = t, literal_order = l,
+         order_stickiness = s, termorder_parm = x} = parm
+  in
+    {term_order = t, literal_order = l,
+     order_stickiness = f s, termorder_parm = x}
   end;
 
 fun update_termorder_parm f (parm : parameters) : parameters =
-  let val {literal_order = l, term_order = t, termorder_parm = x} = parm
-  in {literal_order = l, term_order = t, termorder_parm = f x}
+  let
+    val {term_order = t, literal_order = l,
+         order_stickiness = s, termorder_parm = x} = parm
+  in
+    {term_order = t, literal_order = l,
+     order_stickiness = s, termorder_parm = f x}
   end;
 
 (* ------------------------------------------------------------------------- *)
@@ -86,20 +109,36 @@ fun dest_refl lit =
 
 val is_refl = can dest_refl;
 
+fun dest_peq lit = (I ## dest_eq) (dest_literal lit);
+fun mk_peq (s,xy) = mk_literal (s, mk_eq xy);
+
 fun psym lit =
   let
-    val (s,(x,y)) = (I ## dest_eq) (dest_literal lit)
+    val (s,(x,y)) = dest_peq lit
     val () = assert (x <> y) (ERR "psym" "refl")
   in
-    mk_literal (s, mk_eq (y,x))
+    mk_peq (s,(y,x))
   end;
+
+(* ------------------------------------------------------------------------- *)
+(* Objects are either predicates or sides of (dis)equations                  *)
+(* ------------------------------------------------------------------------- *)
+
+datatype obj = Pred of term | Eq of term;
+
+fun obj_subst sub (Pred tm) = Pred (term_subst sub tm)
+  | obj_subst sub (Eq tm) = Eq (term_subst sub tm);
+
+fun dest_pred a = [Pred (dest_atom a)];
+
+fun dest_eq_refl (x,y) = if x = y then [Eq x] else [Eq x, Eq y];
 
 fun object_map f g l =
   let val a = literal_atom l
-  in case total dest_eq a of NONE => f a | SOME xy => g xy
+  in case total dest_eq a of NONE => f a | SOME x_y => g x_y
   end;
 
-local val break = object_map (fn x => [dest_atom x]) (fn (x,y) => [x,y]);
+local val break = object_map dest_pred dest_eq_refl;
 in val objects = foldl (fn (h,t) => break h @ t) [];
 end;
 
@@ -107,23 +146,30 @@ end;
 (* mlibTerm and literal ordering                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-fun tm_order lrs c = T.add_leqs lrs c;
+fun tm_order (parm : parameters) lrs c =
+  let val c' = T.add_leqs lrs c
+  in if #order_stickiness parm <= 0 then c else c'
+  end;
 
 fun term_order (parm : parameters) l r c =
   if l = r then raise ERR "term_order" "refl"
-  else if #term_order parm then tm_order [(r,l)] c
+  else if #term_order parm then tm_order parm [(r,l)] c
   else c;
 
-fun obj_order (parm : parameters) xs ys c =
-  if #literal_order parm then tm_order (cart ys xs) c else c;
+local
+  fun f (Eq x) (Eq y) = SOME (x,y)
+    | f (Eq x) (Pred y) = NONE
+    | f (Pred x) (Eq y) = raise ERR "obj_order" "Pred > Eq"
+    | f (Pred x) (Pred y) = SOME (x,y);
+in
+  fun obj_order {literal_order = false, ...} _ _ c = c
+    | obj_order p xs ys c = tm_order p (List.mapPartial I (cartwith f ys xs)) c;
+end;
 
 fun lit_order {literal_order = false, ...} _ _ c = c
-  | lit_order (p as {literal_order = true, ...}) l ls c =
-  let
-    fun f (x,y) = if x = y then x else raise BUG "lit_order" "no eqs"
-    val x = object_map dest_atom f l
-  in
-    obj_order p [x] (objects ls) c
+  | lit_order p l ls c =
+  let val xs = object_map dest_pred dest_eq_refl l
+  in obj_order p xs (objects ls) c
   end;
 
 (* ------------------------------------------------------------------------- *)
@@ -139,8 +185,9 @@ fun constraint_subst sub to = T.subst sub to;
 fun merge_constraints sub to1 to2 =
   (T.merge (T.subst sub to1) (T.subst sub to2), sub);
 
-fun constraint_consistent to =
-  case T.consistent to of SOME to => to
+fun constraint_consistent (p : parameters) to =
+  case T.consistent to of
+    SOME to => if #order_stickiness p <= 1 then no_constraints p else to
   | NONE =>
     (chatting 1 andalso
      chat ("merge_orderings: resulting termorder is inconsistent:\n" ^
@@ -174,12 +221,12 @@ val is_empty = null o literals;
 
 fun dest_rewr cl =
   let
-    val {parm, thm, ...} = dest_clause cl
+    val {parm, thm, id, ...} = dest_clause cl
     val () = assert (#term_order parm) (ERR "dest_rewr" "no rewrs")
     val (x,y) = mlibThm.dest_unit_eq thm
     val () = assert (x <> y) (ERR "dest_rewr" "refl")
   in
-    thm
+    (id,thm)
   end;
 
 val is_rewr = can dest_rewr;
@@ -208,43 +255,47 @@ end;
 (* Using ordering constraints to cut down the set of possible inferences     *)
 (* ------------------------------------------------------------------------- *)
 
-fun largest_lits (CL (p,i,th,c)) =
-  let
-    val lits = mlibThm.clause th
-    val objs = objects lits
-    fun f pos (x,y) =
-      if x = y then [x]
-      else if pos then raise ERR "largest_lits" "no positive eqs"
-      else [x,y]
-    fun collect (n,l) =
-      let val xs = object_map (wrap o dest_atom) (f (positive l)) l
-      in (CL (p, i, th, obj_order p xs objs c), n) |-> l
-      end
-  in
-    List.mapPartial (total collect) (enumerate 0 lits)
-  end;
+local
+  fun fail _ = raise ERR "gen_largest_lits" "fail";
 
-fun gen_largest_eqs dest (CL (p,i,th,c)) =
-  let
-    val lits = mlibThm.clause th
-    val objs = objects lits
-    fun f ((n,l),acc) =
-      case total dest l of NONE => acc
-      | SOME (x,y) =>
-        let
-          fun g b z = (CL (p, i, th, obj_order p [z] objs c), n, b) |-> z
-        in
-          if x = y then acc
-          else ocons (total (g false) y) (ocons (total (g true) x) acc)
+  fun gen_largest_lits f g (CL (p,i,th,c)) =
+    let
+      val lits = mlibThm.clause th
+      val objs = objects lits
+      fun collect (n,l) =
+        let val xs = object_map f g l
+        in (CL (p, i, th, obj_order p xs objs c), n) |-> l
         end
-  in
-    foldl f [] (enumerate 0 lits)
-  end;
+    in
+      List.mapPartial (total collect) (enumerate 0 lits)
+    end;
+in
+  val largest_noneq_lits = gen_largest_lits dest_pred fail;
+  val largest_refl_lits = gen_largest_lits fail dest_eq_refl;
+  val largest_lits = gen_largest_lits dest_pred dest_eq_refl;
+end;
 
-val largest_eqs = gen_largest_eqs dest_eq;
-
-local fun dest l = dest_eq l handle ERR_EXN _ => dest_eq (negate l);
-in val largest_peqs = gen_largest_eqs dest;
+local
+  fun gen_largest_eqs dest (CL (p,i,th,c)) =
+    let
+      val lits = mlibThm.clause th
+      val objs = objects lits
+      fun f ((n,l),acc) =
+        case total dest l of
+          NONE => acc
+        | SOME (x,y) =>
+          let
+            fun g b z = (CL (p, i, th, obj_order p [Eq z] objs c), n, b) |-> z
+          in
+            if x = y then acc
+            else ocons (total (g false) y) (ocons (total (g true) x) acc)
+          end
+    in
+      foldl f [] (enumerate 0 lits)
+    end;
+in
+  val largest_eqs = gen_largest_eqs dest_eq;
+  val largest_peqs = gen_largest_eqs (snd o dest_peq);
 end;
 
 local
@@ -261,16 +312,25 @@ in
     let
       val lits = mlibThm.clause th
       val objs = objects lits
-      fun ok x = total (obj_order p [x] objs) c
+      fun ok x = total (obj_order p x objs) c
       fun collect ((n,l),acc) =
         let
           fun inc c = harvest (CL (p,i,th,c), n)
           fun f a =
-            (case ok (dest_atom a) of NONE => acc
+            (case ok (dest_pred a) of NONE => acc
              | SOME c => inc c (literal_subterms a) acc)
           fun g (x,y) =
-            (case ok x of NONE => I | SOME c => inc c (subterms [0] x))
-            (case ok y of NONE => acc | SOME c => inc c (subterms [1] y) acc)
+            if x = y then acc else
+              let
+                val acc =
+                  case ok [Eq y] of NONE => acc
+                  | SOME c => inc c (subterms [1] y) acc
+                val acc =
+                  case ok [Eq x] of NONE => acc
+                  | SOME c => inc c (subterms [0] x) acc
+              in
+                acc
+              end
         in
           object_map f g l
         end
@@ -278,6 +338,9 @@ in
       foldl collect [] (enumerate 0 lits)
     end;
 end;
+
+fun drop_order (cl as CL (p,i,th,c)) =
+  if T.null c then cl else CL (p, i, th, no_constraints p);
 
 (* ------------------------------------------------------------------------- *)
 (* Subsumption                                                               *)
@@ -301,11 +364,10 @@ fun size (REWR (_,r)) = mlibRewrite.size r;
 
 fun add cl rewrs =
   let
-    val th = dest_rewr cl
+    val (i,th) = dest_rewr cl
     val REWR (parm,rw) = rewrs
-    val CL (p,i,th,_) = cl
   in
-    (CL (p, i, th, no_constraints p), REWR (parm, mlibRewrite.add (i,th) rw))
+    REWR (parm, mlibRewrite.add (i,th) rw)
   end;
 
 fun reduce (REWR (p,r)) = REWR (p, mlibRewrite.reduce r);
@@ -402,10 +464,69 @@ end;
 (* Ordered resolution and paramodulation: these generate new clause ids      *)
 (* ------------------------------------------------------------------------- *)
 
+(*
+Factoring.
+
+This implementation tries hard to keep the number of generated clauses
+to a minimum, because performing simplification and subsumption
+testing on each new clause is the bottleneck of the prover.
+
+For each largest literal l in the input clause, we iterate through the
+set of all substitutions s that unify l with at least one other
+literal. Next apply the substitution s to the clause, and mark all the
+literals that are now equal to l with a X, and the others with a -,
+eg.
+
+X - - X - - - X -
+
+This is the 'hit list' for the new clause generated by (l,s). If we
+ever see the same hit list for another new clause C generated by an
+alternative (l',s'), then we can safely discard C immediately (since
+(i) the substitution s' must be equal to s, and (ii) the ordering
+constraints generated by setting l' to be a largest literal will be
+identical to those generated by l).
+
+With equality the situation becomes slightly more complicated. Now we
+have two kinds of hits: one as before (called an Id hit); and one for
+when we get a hit by applying symmetry to the (dis)equality literal
+(called a Sym hit). So now we get a list like:
+
+Sym - - Id - - - Sym -
+
+But this gives the same new clause as the hit list
+
+Id - - Sym - - - Id -
+
+so we always normalize the hit list by flipping Ids and Syms (if
+necessary) to make the first hit an Id.
+
+Unfortunately, this quotient function loses too much information
+because of ordering constraints. A (dis)equality literal M = N becomes
+a largest literal because one of M or N is a largest object in the
+clause. If M was the largest, then keep the first hit an Id. If N was
+the largest, then make the first hit a Sym. If in the previous step we
+had to flip all the hits to make the first hit an Id, then flip this
+first hit too.
+*)
+
 local
-  val empty = (S.empty (lex_compare bool_compare), []);
+  datatype hit = Id | Sym | Miss;
+  fun hit_compare (Id,Id) = EQUAL | hit_compare (Id,_) = LESS
+    | hit_compare (_,Id) = GREATER | hit_compare (Sym,Sym) = EQUAL
+    | hit_compare (Sym,_) = LESS | hit_compare (_,Sym) = GREATER
+    | hit_compare (Miss,Miss) = EQUAL;
+  fun hit _ [] _ = Miss | hit a (h :: t) x = if h = x then a else hit Sym t x;
+  fun first_hit true = Id | first_hit false = Sym;
+  fun flip_hit Id = Sym | flip_hit Sym = Id | flip_hit Miss = Miss;
+  fun norm_hits _ [] = raise BUG "norm_hits" ""
+    | norm_hits lr (Miss :: rest) = norm_hits lr rest
+    | norm_hits lr (Id :: rest) = first_hit lr :: rest
+    | norm_hits lr (Sym :: rest) = map flip_hit (first_hit lr :: rest);
+  fun calc_hits lr targs lits = norm_hits lr (map (hit Id targs) lits);
+
+  val empty = (S.empty (lex_compare hit_compare), []);
   fun is_new h (s,_) = not (S.member (s,h));
-  fun insert (h,c) (s,l) = (S.add (s,h), c :: l);
+  fun insert (h,c) (s,l) = (S.add (s,h), ocons c l);
   fun finish (_,l) = l;
 
   fun assimilate s l l' =
@@ -417,29 +538,36 @@ local
       s'
     end;
 
+  fun FAC x lits sub cl =
+    let
+      val CL (p,_,th,c) = INST sub cl
+      val th = mlibThm.EQ_FACTOR th
+      val c = obj_order p [obj_subst sub x] (objects lits) c
+      val c = constraint_consistent p c
+    in
+      CL (p, new_id (), th, c)
+    end;
+
   fun final cl sub lr x targs =
     let
-      fun fin acc =
+      fun f acc =
         let
           val lits = map (formula_subst sub) (literals cl)
-          val () = assert (List.all (not o is_refl) lits) (ERR "factor" "refl")
-          val hits = lr :: map (C mem (map (formula_subst sub) targs)) lits
-          val () = assert (is_new hits acc) (ERR "factor" "already seen")
-          val CL (p,_,th,c) = INST sub cl
-          val th = mlibThm.EQ_FACTOR th
-          val c = obj_order p [term_subst sub x] (objects lits) c
+          val () = assert (List.all (not o is_refl) lits) (ERR "final" "refl")
+          val hits = calc_hits lr (map (formula_subst sub) targs) lits
+          val () = assert (is_new hits acc) (ERR "final" "already seen")
         in
-          (hits, CL (p, new_id (), th, c))
+          (hits, total (FAC x lits sub) cl)
         end
     in
       fn acc =>
       if mlibSubst.null sub then acc
-      else case total fin acc of SOME x => insert x acc | NONE => acc
+      else case total f acc of SOME x => insert x acc | NONE => acc
     end;
 
   fun factor ((cl,n) |-> lit) =
     let
-      val x = object_map dest_atom fst lit
+      val x = object_map (Pred o dest_atom) (fn _ => raise BUG "factor" "") lit
       fun f [] acc = acc
         | f ((s,[]) :: paths) acc = f paths (final cl s true x [lit] acc)
         | f ((s, l :: ls) :: paths) acc =
@@ -457,10 +585,11 @@ local
 
   fun factor_eq ((cl,n,b) |-> x) =
     let
+      val x = Eq x
       val lit = List.nth (literals cl, n)
       val lit' = psym lit
       fun f [] acc = acc
-        | f ((s,[]) :: paths) acc = f paths (final cl s b x [lit, lit'] acc)
+        | f ((s,[]) :: paths) acc = f paths (final cl s b x [lit,lit'] acc)
         | f ((s, l :: ls) :: paths) acc =
         let
           val paths = (s,ls) :: paths
@@ -479,7 +608,7 @@ local
 
   fun FACTOR' cl =
     let
-      fun fac acc = foldl (uncurry factor) acc (largest_lits cl)
+      fun fac acc = foldl (uncurry factor) acc (largest_noneq_lits cl)
       fun fac_eq acc = foldl (uncurry factor_eq) acc (largest_peqs cl)
     in
       finish (fac (fac_eq empty))
@@ -499,7 +628,7 @@ in
 end;
 
 local
-  fun RESOLVE' (CL (p,_,th1,c1), n1) (CL (p',_,th2,c2), n2) =
+  fun RESOLVE' (CL (p,_,th1,c1), n1) (CL (_,_,th2,c2), n2) =
     let
       val lit1 = List.nth (mlibThm.clause th1, n1)
       val lit2 = List.nth (mlibThm.clause th2, n2)
@@ -510,7 +639,7 @@ local
       val th2 = mlibThm.INST env th2
       val th = mlibThm.EQ_FACTOR (mlibThm.RESOLVE lit th1 th2)
       val c = lit_order p lit (mlibThm.clause th) c
-      val c = constraint_consistent c
+      val c = constraint_consistent p c
     in
       CL (p, new_id (), th, c)
     end;
@@ -536,9 +665,9 @@ local
     | pick (1 :: _) (_,y) = y
     | pick _ _ = raise BUG "into_obj" "bad path";
 
-  fun into_obj p = object_map dest_atom (pick p);
+  fun into_obj p = object_map (Pred o dest_atom) (Eq o pick p);
 
-  fun PARAMODULATE' (CL (p,_,th1,c1), n1, lr1) (CL (p',_,th2,c2), n2, p2) =
+  fun PARAMODULATE' (CL (p,_,th1,c1), n1, lr1) (CL (_,_,th2,c2), n2, p2) =
     let
       val lit1 = List.nth (mlibThm.clause th1, n1)
       val lit2 = List.nth (mlibThm.clause th2, n2)
@@ -550,9 +679,9 @@ local
       val c = term_order p l1 r1 c
       val (lit1,lit2) = Df (mlibSubst.formula_subst env) (lit1,lit2)
       val (th1,th2) = Df (mlibThm.INST env) (th1,th2)
-      val c = obj_order p [l1] (objects (mlibThm.clause th1)) c
+      val c = obj_order p [Eq l1] (objects (mlibThm.clause th1)) c
       val c = obj_order p [into_obj p2 lit2] (objects (mlibThm.clause th2)) c
-      val c = constraint_consistent c
+      val c = constraint_consistent p c
       val th =
         let val eq_th = mlibThm.EQUALITY lit2 p2 r1 lr1 th2
         in mlibThm.EQ_FACTOR (mlibThm.RESOLVE lit1 th1 eq_th)

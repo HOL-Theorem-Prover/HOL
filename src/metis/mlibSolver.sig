@@ -64,13 +64,14 @@ val combine : (cost_fn * solver_node) list -> solver_node
 
 (* Overriding the 'natural' set of support from the problem. *)
 
-val set_of_support : (thm -> bool) -> solver_node -> solver_node
-val everything     : thm -> bool
-val one_negative   : thm -> bool
-val one_positive   : thm -> bool
-val all_negative   : thm -> bool        (* This one is used by mlibMetis.prove *)
-val all_positive   : thm -> bool
-val nothing        : thm -> bool
+type sos_filter = {name : string, filter : thm -> bool}
+val apply_sos_filter : sos_filter -> solver_node -> solver_node
+
+val everything   : sos_filter
+val one_negative : sos_filter
+val one_positive : sos_filter
+val all_negative : sos_filter     (* This one is used by mlibMetis.prove *)
+val all_positive : sos_filter
 
 (* Initializing a solver node makes it ready for action. *)
 

@@ -14,9 +14,12 @@ app load
 structure mlibMetis :> mlibMetis =
 struct
 
-open mlibUseful mlibTerm mlibThm mlibMeter mlibCanon mlibSolver mlibMeson mlibResolution;
+open mlibUseful mlibTerm mlibThm mlibMeter mlibCanon mlibSolver mlibOptions;
 
 infix |-> ::> @> oo ## ::* ::@;
+
+structure M = mlibMeson; local open mlibMeson in end;
+structure R = mlibResolution; local open mlibResolution in end;
 
 (* ------------------------------------------------------------------------- *)
 (* Aligning trace levels.                                                    *)
@@ -51,16 +54,21 @@ val () = traces := aligned_traces;
 (* ------------------------------------------------------------------------- *)
 
 datatype prover =
-  mlibResolution of mlibResolution.parameters
-| mlibMeson of mlibMeson.parameters
-| Delta of mlibMeson.parameters
+  mlibResolution of R.parameters
+| mlibMeson of M.parameters
+| Delta of M.parameters;
 
-type parameters = (mlibSolver.cost_fn * prover) list
+type parameters = (prover * sos_filter option * cost_fn) list;
 
-val default_resolution = (time_power 1.0, mlibResolution mlibResolution.defaults);
-val default_meson = (time_power 2.0, mlibMeson mlibMeson.defaults);
-val default_delta = (once_only, Delta mlibMeson.defaults);
-val defaults = [default_meson, default_resolution, default_delta];
+local val rl = R.update_clause_parm o mlibClause.update_literal_order o K;
+in val alt_mlibResolution = mlibResolution o rl true;
+end;
+
+val default_meson = (mlibMeson M.defaults, NONE, time_power 2.0);
+val default_resolution = (mlibResolution R.defaults,SOME everything,time_power 1.3);
+val default_delta = (Delta M.defaults, NONE, once_only);
+val alt_resolution = (alt_mlibResolution R.defaults, NONE, time_power 1.0);
+val defaults = [default_meson,default_resolution,default_delta,alt_resolution];
 
 local
   fun b2s true = "on" | b2s false = "off";
@@ -68,18 +76,17 @@ local
   fun io2s NONE = "NONE" | io2s (SOME i) = "SOME " ^ i2s i;
   val r2s = mlibUseful.real_to_string;
 
-  fun rp2s name (parm : mlibResolution.parameters) =
+  fun rp2s name (parm : R.parameters) =
     let
-      val {restart = r, clause_parm = c, sos_parm = a, set_parm = b} = parm
+      val {clause_parm = c, sos_parm = a, set_parm = b} = parm
       val {termorder_parm = t, ...} = c
     in
       name ^ ":\n" ^
-      "  restart .............. " ^ io2s r ^ "\n" ^
       "  clause_parm:\n" ^
-      "    literal_order ...... " ^ b2s (#literal_order c) ^ "\n" ^
       "    term_order ......... " ^ b2s (#term_order c) ^ "\n" ^
+      "    literal_order ...... " ^ b2s (#literal_order c) ^ "\n" ^
+      "    order_stickiness ... " ^ i2s (#order_stickiness c) ^ "\n" ^
       "    termorder_parm:\n" ^
-      "      stickiness ....... " ^ i2s (#stickiness t) ^ "\n" ^
       "      precision ........ " ^ i2s (#precision t) ^ "\n" ^
       "  sos_parm:\n" ^
       "    size_power ......... " ^ r2s (#size_power a) ^ "\n" ^
@@ -90,7 +97,7 @@ local
       "    splitting .......... " ^ i2s (#splitting b) ^ "\n"
     end;
 
-  fun mp2s name (parm : mlibMeson.parameters) =
+  fun mp2s name (parm : M.parameters) =
     name ^ ":\n" ^
     "  ancestor_pruning ..... " ^ b2s (#ancestor_pruning parm) ^ "\n" ^
     "  ancestor_cutting ..... " ^ b2s (#ancestor_cutting parm) ^ "\n" ^
@@ -103,10 +110,13 @@ local
     | p2s (mlibMeson m) = mp2s "meson" m
     | p2s (Delta d) = mp2s "delta" d;
 
-  fun f2s c = "cost_fn: " ^ PP.pp_to_string (!LINE_LENGTH) pp_cost_fn c ^ "\n";
+  fun s2s (s : sos_filter option) =
+    "sos: " ^ (case s of NONE => "natural" | SOME {name, ...} => name) ^ "\n";
+
+  fun c2s c = "cost_fn: " ^ PP.pp_to_string (!LINE_LENGTH) pp_cost_fn c ^ "\n";
 in
   fun parameters_to_string (parm : parameters) =
-    case map (fn (c,p) => p2s p ^ f2s c) parm of [] => ""
+    case map (fn (p,s,c) => p2s p ^ s2s s ^ c2s c) parm of [] => ""
     | h :: t => foldl (fn (x,y) => y ^ "\n" ^ x) h t;
 end;
 
@@ -115,11 +125,21 @@ end;
 (* ------------------------------------------------------------------------- *)
 
 local
-  fun mk_prover (mlibResolution p) = resolution' p
-    | mk_prover (mlibMeson p) = meson' p
-    | mk_prover (Delta p) = delta' p;
+  fun mk_prover (mlibResolution p) = ("r", fn n => R.resolution' (n,p))
+    | mk_prover (mlibMeson p) = ("m", fn n => M.meson' (n,p))
+    | mk_prover (Delta p) = ("d", fn n => M.delta' (n,p));
+
+  fun apply NONE slv = slv | apply (SOME s) slv = apply_sos_filter s slv;
+
+  fun mk_provers ((t,s,c),(l,v)) =
+    let
+      val (n,f) = mk_prover t
+      val n = variant n v
+    in
+      ((c, apply s (f n)) :: l, n :: v)
+    end
 in
-  fun metis' p = combine (map (I ## mk_prover) p);
+  val metis' = combine o rev o fst o foldl mk_provers ([],[]);
 end;
 
 val metis = metis' defaults;
@@ -133,38 +153,55 @@ val settings = ref defaults;
 val limit : limit ref = ref {time = NONE, infs = NONE};
 
 local
-  fun lift0 f (s,[]) = f s | lift0 _ _ = raise BUG "lift0" ""
-  fun lift1 f (s,[x]) = f (s,x) | lift1 _ _ = raise BUG "lift1" ""
-  fun lift2 f (s,[x,y]) = f (s,x,y) | lift2 _ _ = raise BUG "lift2" ""
+  fun lift0 f (s,[]) = f s | lift0 _ _ = raise BUG "lift0" "";
+  fun lift1 f (s,[x]) = f (s,x) | lift1 _ _ = raise BUG "lift1" "";
+  fun lift2 f (s,[x,y]) = f (s,x,y) | lift2 _ _ = raise BUG "lift2" "";
 
-  fun update_resolution _ f ((c,mlibResolution p) :: l) = (c,mlibResolution (f p)) :: l
+  fun lift_toggle f = lift0 (fn s => f s not);
+
+  fun lift_int m f = int_option (SOME 0, SOME m) (fn (s,i) => f s (K i));
+
+  fun lift_sign f = int_option (SOME ~1, SOME 1) (fn (s,i) => f s (K i));
+
+  fun lift_real f = real_option (SOME 0.0, NONE) (fn (s,r) => f s (K r));
+
+  fun update_resolution _ f ((mlibResolution p, s, c) :: l) =
+    (mlibResolution (f p), s, c) :: l
     | update_resolution p _ _ =
     raise Optionexit
       {success = false, usage = false,
        message = SOME ("create resolution prover " ^
                        "before tweaking parameter " ^ p)};
 
-  fun update_meson _ f ((c, mlibMeson p) :: rest) = (c, mlibMeson (f p)) :: rest
-    | update_meson _ f ((c, Delta p) :: rest) = (c, Delta (f p)) :: rest
+  fun update_meson _ f ((mlibMeson p, s, c) :: rest) = (mlibMeson (f p), s, c) :: rest
+    | update_meson _ f ((Delta p, s, c) :: rest) = (Delta (f p), s, c) :: rest
     | update_meson p _ _ =
     raise Optionexit
       {success = false, usage = false,
        message = SOME ("create meson or delta prover " ^
                        "before tweaking parameter " ^ p)};
 
-  fun update_cost s ((_,p) :: l) =
-    let
-      val n = string_to_int s
-      val c = if n = 0 then once_only else time_power (Real.fromInt n / 10.0)
-    in
-      (c,p) :: l
-    end
-    | update_cost _ _ =
+  fun update_sos (_,"P") ((p,_,c) :: l) = ((p, SOME all_positive, c) :: l)
+    | update_sos (_,"N") ((p,_,c) :: l) = ((p, SOME all_negative, c) :: l)
+    | update_sos (_,"-") ((p,_,c) :: l) = ((p, NONE, c) :: l)
+    | update_sos (_,"p") ((p,_,c) :: l) = ((p, SOME one_positive, c) :: l)
+    | update_sos (_,"n") ((p,_,c) :: l) = ((p, SOME one_negative, c) :: l)
+    | update_sos (_,"1") ((p,_,c) :: l) = ((p, SOME everything, c) :: l)
+    | update_sos (_,s) (_ :: _) =
+    raise Optionexit
+      {success = false, usage = false,
+       message = SOME ("unknown set of support: \"" ^ s ^ "\"")}
+    | update_sos _ [] =
+    raise Optionexit
+      {success = false, usage = false,
+       message = SOME "create a prover before specifying set of support"};
+
+  fun update_cost (_,r) ((p,s,_) :: l) =
+    (p, s, if Real.== (r, 0.0) then once_only else time_power r) :: l
+    | update_cost _ [] =
     raise Optionexit
       {success = false, usage = false,
        message = SOME "create a prover before specifying cost function"};
-
-  fun tlimit "-" = NONE | tlimit s = SOME (Real.fromInt (string_to_int s));
 
   val virgin_settings = ref true;
 
@@ -176,93 +213,89 @@ in
   val options =
     [{switches = ["-t","--time"], arguments = ["SECS"],
       description = "time per problem",
-      processor = lift1 (fn (_,x) => limit := {time = tlimit x, infs = NONE})},
+      processor =
+      let
+        fun f x = limit := {time = x, infs = NONE}
+      in
+        fn (_,["-"]) => f NONE
+         | x => real_option (SOME 0.0, NONE) (f o SOME o snd) x
+      end},
      {switches = ["-r","--resolution"], arguments = [],
       description = "create resolution prover",
       processor = lift0 (fn _ => change (cons default_resolution))},
-     {switches = ["","-rl","--literal-order"], arguments = [],
-      description = "toggle ordered resolution",
-      processor = lift0
-      (fn p =>
-       (change
-        o update_resolution p
-        o mlibResolution.update_clause_parm
-        o mlibClause.update_literal_order)
-       not)},
      {switches = ["","-rt","--term-order"], arguments = [],
       description = "toggle ordered paramodulation",
-      processor = lift0
+      processor = lift_toggle
       (fn p =>
-       (change
-        o update_resolution p
-        o mlibResolution.update_clause_parm
-        o mlibClause.update_term_order)
-       not)},
-     {switches = ["","-ro","--order-stickiness"], arguments = ["0..2"],
-      description = "stickiness of ordering constraints",
-      processor = lift1
-      (fn (p,x) =>
-       (change
-        o update_resolution p
-        o mlibResolution.update_clause_parm
-        o mlibClause.update_termorder_parm
-        o mlibTermorder.update_stickiness)
-       (K (string_to_int x)))},
-     {switches = ["","-rp","--order-precision"], arguments = ["0..1"],
+       change
+       o update_resolution p
+       o R.update_clause_parm
+       o mlibClause.update_term_order)},
+     {switches = ["","-rl","--literal-order"], arguments = [],
+      description = "toggle ordered resolution",
+      processor = lift_toggle
+      (fn p =>
+       change
+       o update_resolution p
+       o R.update_clause_parm
+       o mlibClause.update_literal_order)},
+     {switches = ["","-ro","--order-stickiness"], arguments = ["0..3"],
+      description = "stickiness of term order constraints",
+      processor = lift_int 3
+      (fn p =>
+       change
+       o update_resolution p
+       o R.update_clause_parm
+       o mlibClause.update_order_stickiness)},
+     {switches = ["","-rp","--order-precision"], arguments = ["0..3"],
       description = "precision of term order constraints",
-      processor = lift1
-      (fn (p,x) =>
-       (change
-        o update_resolution p
-        o mlibResolution.update_clause_parm
-        o mlibClause.update_termorder_parm
-        o mlibTermorder.update_precision)
-       (K (string_to_int x)))},
+      processor = lift_int 3
+      (fn p =>
+       change
+       o update_resolution p
+       o R.update_clause_parm
+       o mlibClause.update_termorder_parm
+       o mlibTermorder.update_precision)},
      {switches = ["","-rs","--subsumption"], arguments = ["0..2"],
       description = "amount of forward subsumption",
-      processor = lift1
-      (fn (p,x) =>
-       (change
-        o update_resolution p
-        o mlibResolution.update_set_parm
-        o mlibClauseset.update_subsumption)
-       (K (string_to_int x)))},
+      processor = lift_int 2
+      (fn p =>
+       change
+       o update_resolution p
+       o R.update_set_parm
+       o mlibClauseset.update_subsumption)},
      {switches = ["","-rw","--simplification"], arguments = ["0..2"],
       description = "amount of simplification by rewriting",
-      processor = lift1
-      (fn (p,x) =>
-       (change
-        o update_resolution p
-        o mlibResolution.update_set_parm
-        o mlibClauseset.update_simplification)
-       (K (string_to_int x)))},
+      processor = lift_int 2
+      (fn p =>
+       change
+       o update_resolution p
+       o R.update_set_parm
+       o mlibClauseset.update_simplification)},
      {switches = ["","-rx","--splitting"], arguments = ["0..2"],
       description = "amount of clause splitting",
-      processor = lift1
-      (fn (p,x) =>
-       (change
-        o update_resolution p
-        o mlibResolution.update_set_parm
-        o mlibClauseset.update_splitting)
-       (K (string_to_int x)))},
-     {switches = ["","-rz","--size-power"], arguments = ["N/10"],
+      processor = lift_int 2
+      (fn p =>
+       change
+       o update_resolution p
+       o R.update_set_parm
+       o mlibClauseset.update_splitting)},
+     {switches = ["","-rz","--size-power"], arguments = ["N"],
       description = "effect of clause size on weight",
-      processor = lift1
-      (fn (p,x) =>
-       (change
-        o update_resolution p
-        o mlibResolution.update_sos_parm
-        o mlibSupport.update_size_power)
-       (K (Real.fromInt (string_to_int x) / 10.0)))},
-     {switches = ["","-rn","--literal-power"], arguments = ["N/10"],
+      processor = lift_real
+      (fn p =>
+       change
+       o update_resolution p
+       o R.update_sos_parm
+       o mlibSupport.update_size_power)},
+     {switches = ["","-rn","--literal-power"], arguments = ["N"],
       description = "effect of #literals on clause weight",
-      processor = lift1
-      (fn (p,x) =>
-       (change
-        o update_resolution p
-        o mlibResolution.update_sos_parm
-        o mlibSupport.update_literal_power)
-       (K (Real.fromInt (string_to_int x) / 10.0)))},
+      processor = lift_real
+      (fn p =>
+       change
+       o update_resolution p
+       o R.update_sos_parm
+       o mlibSupport.update_literal_power)},
      {switches = ["-m","--meson"], arguments = [],
       description = "create model elimination prover",
       processor = lift0 (fn _ => change (cons default_meson))},
@@ -271,65 +304,63 @@ in
       processor = lift0 (fn _ => change (cons default_delta))},
      {switches = ["","-ma","--ancestor-pruning"], arguments = [],
       description = "toggle ancestor pruning",
-      processor = lift0
+      processor = lift_toggle
       (fn p =>
-       (change
-        o update_meson p
-        o mlibMeson.update_ancestor_pruning)
-       not)},
+       change
+       o update_meson p
+       o M.update_ancestor_pruning)},
      {switches = ["","-mb","--ancestor-cutting"], arguments = [],
       description = "toggle ancestor cutting",
-      processor = lift0
+      processor = lift_toggle
       (fn p =>
-       (change
-        o update_meson p
-        o mlibMeson.update_ancestor_cutting)
-       not)},
+       change
+       o update_meson p
+       o M.update_ancestor_cutting)},
      {switches = ["","-ms","--state-simplify"], arguments = [],
       description = "toggle state simplification",
-      processor = lift0
+      processor = lift_toggle
       (fn p =>
-       (change
-        o update_meson p
-        o mlibMeson.update_state_simplify)
-       not)},
+       change
+       o update_meson p
+       o M.update_state_simplify)},
      {switches = ["","-mc","--cache-cutting"], arguments = [],
       description = "toggle cache cutting",
-      processor = lift0
+      processor = lift_toggle
       (fn p =>
-       (change
-        o update_meson p
-        o mlibMeson.update_cache_cutting)
-       not)},
+       change
+       o update_meson p
+       o M.update_cache_cutting)},
      {switches = ["","-md","--divide-conquer"], arguments = [],
       description = "toggle divide & conquer searching",
-      processor = lift0
+      processor = lift_toggle
       (fn p =>
-       (change
-        o update_meson p
-        o mlibMeson.update_divide_conquer)
-       not)},
+       change
+       o update_meson p
+       o M.update_divide_conquer)},
      {switches = ["","-mu","--unit-lemmaizing"], arguments = [],
       description = "toggle unit lemmaizing",
-      processor = lift0
+      processor = lift_toggle
       (fn p =>
-       (change
-        o update_meson p
-        o mlibMeson.update_unit_lemmaizing)
-       not)},
-     {switches = ["-f","--cost-fn"], arguments = ["N/10"],
+       change
+       o update_meson p
+       o M.update_unit_lemmaizing)},
+     {switches = ["-s","--sos"], arguments = ["{P,N,-,p,n,1}"],
+      description = "specify the set of support",
+      processor = lift1 (change o update_sos)},
+     {switches = ["-c","--cost-fn"], arguments = ["N"],
       description = "specify cost function as time power",
-      processor = lift1 (fn (_,n) => (change o update_cost) n)}];
+      processor = real_option (SOME 0.0, NONE) (change o update_cost)}];
 end;
 
 local
   fun raw a b = (axiomatize a, axiomatize b, I);
 
   fun syn g =
-    ([], eq_axiomatize (Not (generalize g)), set_of_support all_negative);
+    ([], eq_axiomatize (Not (generalize g)), apply_sos_filter all_negative);
 in
   fun prove g =
     let
+      val g = generalize g
       val (thms, hyps, sos) =
         case g of Imp (a, Imp (b, False))
           => if is_cnf a andalso is_cnf b then raw a b else syn g
@@ -341,6 +372,7 @@ in
 end;
 
 fun query database =
-  initialize prolog {thms = axiomatize database, hyps = [], limit = unlimited};
+  initialize M.prolog
+  {thms = axiomatize database, hyps = [], limit = unlimited};
 
 end

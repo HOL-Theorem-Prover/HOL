@@ -416,12 +416,18 @@ local
   fun ins (parm : parameters) cl (cls,set,subs) =
     let
       val SET {units = u, rewrites = r, ...} = set
-      val is_rw = is_rewr cl
-      val (cl,r) = if is_rw then mlibClause.add cl r else (cl,r)
-      val _ = chatting 2 andalso is_rw andalso
-              chat ("\nrewrite set now:\n" ^ rewrs_to_string r ^ "\n")
+      val (cl,set) =
+        if not (is_rewr cl) then (cl,set) else
+          let
+            val cl = mlibClause.drop_order cl
+            val r = mlibClause.add cl r
+            val _ = chatting 2 andalso
+                    chat ("\nrewrite set now:\n" ^ rewrs_to_string r ^ "\n")
+            val set = update_rewrites r set
+          in
+            (cl,set)
+          end
       val set = update_units (add_unit cl u) set
-      val set = update_rewrites r set
       val subs = if #subsumption parm = 0 then subs else add_subsum cl subs
     in
       (cl :: cls, set, subs)

@@ -28,15 +28,15 @@ val update_divide_conquer   : bool Parmupdate
 val update_unit_lemmaizing  : bool Parmupdate
 
 (* The meson solver *)
-val meson' : parameters -> solver_node
+val meson' : string * parameters -> solver_node
 val meson  : solver_node                          (* Uses defaults *)
 
 (* The delta preprocessor as a solver *)
-val delta' : parameters -> solver_node
+val delta' : string * parameters -> solver_node
 val delta  : solver_node                          (* Uses defaults *)
 
 (* The prolog solver *)
-val prolog' : parameters -> solver_node
+val prolog' : string * parameters -> solver_node
 val prolog  : solver_node                         (* Uses defaults *)
 
 end

@@ -53,7 +53,7 @@ val equal   : ''a -> ''a -> bool
 val unit   : 'a -> 's -> 'a * 's
 val bind   : ('s -> 'a * 's) -> ('a -> 's -> 'b * 's) -> 's -> 'b * 's
 val mmap   : ('a -> 'b) -> ('s -> 'a * 's) -> 's -> 'b * 's
-val join   : ('s -> ('s -> 'a * 's) * 's) -> 's -> 'a * 's
+val mjoin  : ('s -> ('s -> 'a * 's) * 's) -> 's -> 'a * 's
 val mwhile : ('a -> bool) -> ('a -> 's -> 'a * 's) -> 'a -> 's -> 'a * 's
 
 (* Lists: note we count elements from 0 *)
@@ -109,11 +109,13 @@ val gcd           : int -> int -> int
 (* Strings *)
 val rot         : int -> char -> char
 val nchars      : char -> int -> string
+val join        : string -> string list -> string
 val variant     : string -> string list -> string
 val variant_num : string -> string list -> string
 val dest_prefix : string -> string -> string
 val is_prefix   : string -> string -> bool
 val mk_prefix   : string -> string -> string
+val align_table : {left : bool, pad : char} -> string list list -> string
 
 (* Reals *)
 val real_to_string : real -> string
@@ -137,7 +139,6 @@ val pp_porder   : order option pp
 val pp_list     : 'a pp -> 'a list pp
 val pp_pair     : 'a pp -> 'b pp -> ('a * 'b) pp
 val pp_triple   : 'a pp -> 'b pp -> 'c pp -> ('a * 'b * 'c) pp
-val pp_table    : string list list pp
 
 (* Sum datatype *)
 datatype ('a, 'b) sum = INL of 'a | INR of 'b
@@ -167,14 +168,5 @@ val with_flag    : 'r ref * ('r -> 'r) -> ('a -> 'b) -> 'a -> 'b
 val host  : string
 val date  : unit -> string
 val today : unit -> string
-
-(* Processing command line arguments *)
-exception Optionexit of {message : string option, usage : bool, success : bool}
-type Opt = {switches : string list, arguments : string list,
-            description : string, processor : string * string list -> unit}
-type Allopts = {name : string, head : string, foot : string, opts : Opt list}
-val version_string  : string ref
-val basic_options   : Opt list
-val process_options : Allopts -> string list -> string list * string list
 
 end
