@@ -2252,6 +2252,13 @@ MkIterThms : thm -> term -> term -> thm * thm
 val MakeSimpRecThm = SIMP_RULE bool_ss [LEFT_AND_OVER_OR,EXISTS_OR_THM]);
 
 (*****************************************************************************)
+(*  MkPrevThm (|- R((v1,...,vn),(v1',...,vn')) = ...) =                      *)
+(*    |- Prev R (Eq (v1',...,vn'))) (v1,...,vn) = ...                        *)
+(*****************************************************************************)
+$bnind&MkPrevThm%
+MkPrevThm : thm -> thm
+
+(*****************************************************************************)
 (*  asl |- t1 = t2   ass vm t1' |--> b                                       *)
 (*  ----------------------------------                                       *)
 (*      (asl U ass) vm t2' |--> b'                                           *)
@@ -2293,8 +2300,6 @@ exception BddApRestrictError;
 $bnind&BddApRestrict%
 BddApRestrict : term_bdd -> term -> term_bdd
 
-
-
 (*****************************************************************************)
 (* BddSubst applies a substitution [(oldtb1,newtb1),...,(oldtni,newtbi)]     *)
 (* to a term_bdd, where oldtbp (1 <= p <= i) must be of the form             *)
@@ -2307,18 +2312,14 @@ BddApRestrict : term_bdd -> term -> term_bdd
 (*****************************************************************************)
 
 (*****************************************************************************)
-(* Split a substitution                                                      *)
-(*                                                                           *)
-(*   [(oldtb1,newtb1),...,(oldtni,newtbi)]                                   *)
-(*                                                                           *)
+(* Split a substitution [(oldtb1,newtb1),...,(oldtni,newtbi)]                *)
 (* into a restriction and variable renaming, failing if this isn't possible  *)
 (*****************************************************************************) 
 
 val split_subst =
  List.partition 
-  (fn (tb,tb')=>
-    let val tm' = getTerm tb'
-    in (tm'=T) orelse (tm'=F) end);
+  (fn (tb,tb')=> let val tm' = getTerm tb' 
+                 in (tm'=T) orelse (tm'=F) end);
 
 (*****************************************************************************)
 (*                    [(ass1 vm v1 |--> b1 , ass1' vm tm1 |--> b1'),         *)
