@@ -54,10 +54,9 @@ val _ = new_theory "finite_map";
     notion of finiteness inductively.
  --------------------------------------------------------------------------- *)
 
-val (rules,ind,cases) = 
-new_inductive_definition 
-  (Term`is_fmap (\a. INR one) 
-   /\  (!f a b. is_fmap f ==> is_fmap (\x. if x=a then INL b else f x))`);
+val (rules,ind,cases) = new_inductive_definition 
+   `is_fmap (\a. INR one) 
+ /\ (!f a b. is_fmap f ==> is_fmap (\x. if x=a then INL b else f x))`;
 
 
 val rule_list as [is_fmap_empty, is_fmap_update] = CONJUNCTS rules;
@@ -1749,14 +1748,13 @@ val RRESTRICT_FUPDATE = Q.store_thm
        Functions as finite maps.
 
    We first define a function to test if a predicate is true for a finite
-   number of elements. Should actually be able to take this from
+   number of elements. We should actually be able to take this from
    pred_setTheory.
  ---------------------------------------------------------------------------*)
 
-val (rules,FINITE_PRED_INDUCT,cases) = 
-  new_inductive_definition
-    (Term`FINITE_PRED (\a. F) /\
-    !f a. FINITE_PRED f ==> FINITE_PRED (\x. (x=a) \/ f x)`);
+val (rules,FINITE_PRED_INDUCT,cases) = new_inductive_definition
+    `FINITE_PRED (\a. F)
+ /\  (!f a. FINITE_PRED f ==> FINITE_PRED (\x. (x=a) \/ f x))`;
 
 val rules_list as [FINITE_PRED_EMPTY, FINITE_PRED_UPDATE] = CONJUNCTS rules;
 
