@@ -313,39 +313,65 @@ clocked Dtype and Dff, and returns:
 See FactScript.sml for examples (e.g. FACT_cir).
 
 
-MAKE_VERILOG : string 
-                -> int 
-                -> int 
-                -> thm
-                -> (int * int * (string * string) list * int) list
-                -> unit
-------------------------------------------------------------------
+MAKE_VERILOG : string -> thm -> (string -> unit) -> unit
+--------------------------------------------------------
 
 Evaluating
 
  MAKE_VERILOG
-  file
-  maxtime 
-  period
+  name
   (|- InRise clk 
       ==>
-      (?v0 .... vn. (inp = inp1 <> ... <> inpu) /\
-                    (out = out1 <> ... <> outv) /\
-                    <circuit>)
+      (?v0 .... vn. <circuit>)
       ==>
-      DEV Spec (load at clk,inp at clk,done at clk,out at clk))
-  stimulus 
+      DEV Spec (load at clk,
+                (inp1 <> ... <> inpu) at clk,
+                done at clk,
+                (out1 <> ... <> outv) at clk))
+  output_stream
+
+creates a module called name that has the definitions of the modules
+used in <circuit>, and prints it and the definitions it needs to
+output_stream.
+
+The header is:
+
+ module name (clk,load,inp1,...,inpu,done,out1,...,outv);
+  input  clk,load;
+  input  [<size>:0] inp1,inp2;
+  output done;
+  output [<size>:0] out;
+  wire   clk,done;
+
+where <size> is the appropriate width computed from the types.  The
+internal variables v0, ... ,vn are declared to be wires of appropriate
+widths (computed from their types).
+
+
+MAKE_SIMULATION : int -> int -> thm 
+                  -> (int * int * (string * string) list * int) list 
+                  -> string -> (string -> unit) -> unit
+--------------------------------------------------------------------
+
+Evaluating
+
+ MAKE_SIMULATION maxtime period thm stimulus name out
  
-creates a file "file.vl" containing the definitions of the modules
-used in <circuit> and a module Main corresponding to the circuit
-represented by the supplied theorem (assumed made with MAKE_CIRCUIT).
+First calls 
+
+ MAKE_VERILOG name thm out 
+
+and then adds a clock and a module Main containing an instance of the
+clock and an instance of the module name.
 
 The module Main has a parameter maxtime giving the length of the
 simulation.
 
+The instance of Clock is created with time between edges as specified
+by the parameter period.
+
 The clock line clk and the handshake completion line done are declared
-to be boolean wires. The internal variables v0, ... ,vn are declared
-to be wires of appropriate widths (computed from their types).
+to be boolean wires. 
 
 The input load is declared to be a boolean register and the inputs
 inp1, ... ,inpu are declared to be registers of the appropriate width.
@@ -353,12 +379,6 @@ inp1, ... ,inpu are declared to be registers of the appropriate width.
 A dumpfile called "file.vcd" is created and clk, load, and signals
 inp1, ... ,inpu, done, out1, ... ,outv are declared to have their value
 changes dumped to the VCD file.
-
-The module Main also has an instance for each occurrence of a module
-in <circuit> (with the sizes computed from the types).
-
-An instance of Clock is created with time between edges as specified
-by the parameter period.
 
 The input variables are driven according to the parameter stimulus,
 which is an ML list of tuples of the form:
@@ -381,6 +401,39 @@ I am using Icarus Verilog for simulation
 (http://www.icarus.com/eda/verilog/) and GTKWave
 (http://www.cs.man.ac.uk/apt/tools/gtkwave/) for viewing VCD files.
 Both are public domain and seem to work.
+
+printToFile : string -> ((string -> unit) -> 'a) -> unit
+--------------------------------------------------------
+
+Evaluating 
+
+ printToFile file_name printer
+
+opens a file called file_name, applies printer to it and then flushes
+and closes the file.  
+
+Example: if thm is:
+
+ |- InRise clk 
+     ==>
+     (?v0 .... vn. <circuit>)
+     ==>
+     DEV 
+      Spec 
+      (load at clk,(inp1 <> inp2) at clk,done at clk,(out1 <> out2) at clk)
+
+then typical uses are:
+
+ printToFile "Foo.vl" (MAKE_VERILOG "Foo" thm)
+
+ printToFile 
+  "Foo.vl" 
+   (MAKE_SIMULATION "Foo" thm 1000 5 
+     [(10, 12, [("inp1", "5"),("inp2","7")], 15),
+      (10, 12, [("inp1", "5"),("inp2","0")], 15),
+      (10, 12, [("inp1", "3"),("inp2","3")], 15)])
+
+
 
 *******************************************************************************
 
@@ -568,4 +621,5 @@ ML reference "if_print_flag" to false.
 == [11.02.05: Holmakefile (thanks to MN) + code improvements (thanks to KXS) ==
 == [14.02.05: MJCG added vsynth (defines MAKE_VERILOG)                       ==
 == [15.02.05: MJCG revised MAKE_NETLIST and MAKE_CIRCUIT                     ==
+== [18.02.05: MJCG revised MAKE_VERILOG in vsynth; added MAKE_SIMULATION     ==
 ===============================================================================

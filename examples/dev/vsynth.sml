@@ -13,10 +13,10 @@
 quietdec := true;
 loadPath :="dff" :: !loadPath;
 map load  
- ["composeTheory","compileTheory", "hol88Lib" (*for subst*),
-  "FileSys","TextIO","Process","Char","String"];
+ ["composeTheory","compileTheory", "hol88Lib" (*for subst*),"compile",
+  "Date","FileSys","TextIO","Process","Char","String"];
 open arithmeticTheory pairLib pairTheory PairRules combinTheory listTheory
-     composeTheory compileTheory;
+     composeTheory compileTheory compile;
 quietdec := false;
 *)
 
@@ -39,6 +39,11 @@ open arithmeticTheory pairLib pairTheory PairRules combinTheory listTheory
 (* Error reporting function                                                  *)
 (*****************************************************************************)
 val ERR = mk_HOL_ERR "compile";
+
+(*****************************************************************************)
+(* Date and time                                                             *)
+(*****************************************************************************)
+fun date() = Date.fmt "%c" (Date.fromTimeLocal (Time.now ()));
 
 (*****************************************************************************)
 (* Boilerplate definitions of primitive components                           *)
@@ -655,19 +660,17 @@ fun strip_BUS_CONCAT tm =
 (*
 ** (|- InRise clk 
 **     ==>
-**     (?v0 .... vn. (inp = inp1 <> ... <> inpu) /\
-**                   (out = out1 <> ... <> outv) /\
-**                   M1(...) /\ ... \/ Mp(...))
+**     (?v0 .... vn. M1(...) /\ ... /\ Mp(...))
 **     ==>
-**     DEV Spec (load at clk,inp at clk,done at clk,out at clk))
+**     DEV Spec (load at clk,
+**               (inp1 <> ... <> inpu) at clk,
+**               done at clk,
+**               (out1 <> ... <> outv) at clk))
 **
 ** -->
 **
-** (``clk``, 
-**  (``load``,``inp``,``done``,``out``),
-**  [(``inp``,[``inp1``,...,``inpu``]),
-**   (``out``,[``out1``,...,``outv``])],
-    [``v0``, ... ,``vn``],
+** ((``clk``,``load``,[``inp1``,...,``inpu``],``done``,[``out1``,...,``outv``]),
+**  [``v0``, ... ,``vn``],
 **  [``M1(...)``, ... ,``Mp(...)``])
 *)
 
@@ -675,30 +678,15 @@ fun dest_cir thm =
  let val tm = concl(SPEC_ALL thm)
      val (tm1,tm2) = dest_imp tm
      val (tm3,tm4) = dest_imp tm2
-     val clk = rand tm1
-     val [load_tm,inp_tm,done_tm,out_tm] = map (rand o rator) (strip_pair(rand tm4))
+     val clk_tm = rand tm1
+     val [load_tm,inp_tm,done_tm,out_tm] =
+         map (rand o rator) (strip_pair(rand tm4))
      val (vars,bdy) = strip_exists tm3
      val tml = strip_conj bdy
-     val (inpeq,tml1) = 
-          if is_eq(hd tml) 
-              andalso is_var(lhs(hd tml))
-              andalso (fst(dest_var(lhs(hd tml))) = "inp")
-           then ([hd tml],tl tml)
-           else ([],tl tml)
-     val inpl = if null inpeq 
-                 then [] 
-                 else [(lhs(hd inpeq), strip_BUS_CONCAT(rhs(hd inpeq)))]
-     val (outeq,tml2) = 
-          if is_eq(hd tml1) 
-              andalso is_var(lhs(hd tml1))
-              andalso (fst(dest_var(lhs(hd tml1))) = "out")
-           then ([hd tml1],tl tml1)
-           else ([],tl tml1)
-     val outl = if null outeq 
-                 then [] 
-                 else [(lhs(hd outeq), strip_BUS_CONCAT(rhs(hd outeq)))]
+     val inpl = strip_BUS_CONCAT inp_tm
+     val outl = strip_BUS_CONCAT out_tm
  in
-  (clk, (load_tm,inp_tm,done_tm,out_tm), (inpl @ outl), vars, tml2)
+  ((clk_tm,load_tm,inpl,done_tm,outl), vars, tml)
  end;
 
 (*****************************************************************************)
@@ -706,59 +694,112 @@ fun dest_cir thm =
 (*****************************************************************************)
 fun var_name v = fst(dest_var v);
 
+(*****************************************************************************)
+(* Create a output stream to a file called file_name, apply a printer to     *)
+(* it and then flush and close the stream.                                   *)
+(*****************************************************************************)
+fun printToFile file_name printer =
+ let val outstr = TextIO.openOut file_name
+     fun out s = TextIO.output(outstr,s)
+ in
+ (printer out;
+  TextIO.flushOut outstr;
+  TextIO.closeOut outstr)
+ end;
+
+(*****************************************************************************)
+(* []              --> []                                                    *)
+(* ["s"]           --> ["s"]                                                 *)
+(* ["s1",...,"sn"] --> ["s1", "," , ... , ",", "sn"]                         *)
+(*****************************************************************************)
+fun add_commas [] = []
+ |  add_commas [s] = [s]
+ |  add_commas (s::sl) = s :: "," :: add_commas sl;
+
 (*
-** printVerilog 
-**  file_name 
-**  maxtime 
-**  period
+** MAKE_VERILOG
+**  name 
 **  (|- InRise clk 
 **      ==>
-**      (?v0 .... vn. (inp = inp1 <> ... <> inpu) /\
-**                    (out = out1 <> ... <> outv) /\
-**                    <circuit>)
+**      (?v0 .... vn. <circuit>)
 **      ==>
-**      DEV Spec (load at clk,inp at clk,done at clk,out at clk))
-**  stimulus 
+**      DEV Spec (load at clk,
+**                (inp1 <> ... <> inpu) at clk,
+**                done at clk,
+**                (out1 <> ... <> outv) at clk))
+**  output_stream
 ** 
-** creates a file "file_name.vl" containing the definitions of the
-** modules used in <circuit> and a module Main.
-** 
-** The module Main has a parameter maxtimes giving the length of the
-** simulation.
-** 
-** The clock line clk and the handshake completion line done are declared
-** to be boolean wires. The internal variables v0, ... ,vn are declared
-** to be wires of appropriate widths (computed from their types).
-** 
-** The input load is declared to be a boolean register and the inputs
-** inp1, ... ,inpu are declared to be registers of the appropriate width.
-** 
-** A dumpfile called "file_name.vcd" is created and clk, load, and signals
-** inp1, ... ,inpu, done, out1, ... ,outv are declared to have their value
-** changes dumped to the VCD file.
-** 
-** The module Main also has an instance for each occurrence of a module
-** in <circuit> (with the sizes computed from the types).
-** 
-** An instance of Clock is created with time between edges as specified
-** by the parameter period.
-** 
-** The input variables are driven according to the parameter stimulus,
-** which is an ML list of tuples of the form:
-** 
-**  (start_delay, load_delay, [("inp1",val),...,("inpu",val)], end_delay)
-** 
-** Each such tuple specifies a transaction:
-** 
-**  1. delay of start_delay;
-**  2. "load" is set to 0;
-**  3. delay of load_delay (a positive integer);
-**  4. each input is driven with the supplied value
-**     (a string that prints to a valid Verilog expression);
-**  5. delay of end_delay;
-**  6. "load" is driven high.
-
+** creates a module called name that has
+** the definitions of the modules used in <circuit>,
+** and prints it and the definitions it needs to output_stream.
+**
+** The header is:
+**
+**  module name (clk,load,inp1,...,inpu,done,out1,...,outv);
+**   input  clk,load;
+**   input  [<size>:0] inp1,inp2;
+**   output done;
+**   output [<size>:0] out;
+**   wire   clk,done;
+**
+** where <size> is the appropriate width computed from the types.
 *)
+
+(*
+printToFile "Foo.vl" (MAKE_VERILOG "Foo" thm);
+*)
+
+fun MAKE_VERILOG name thm out =
+ let val ((clk, load_tm,inpl,done_tm,outl), 
+          vars, 
+          modules) = dest_cir thm
+     val clk_name = var_name clk
+     val load_name = var_name load_tm
+     val inp_names = map var_name inpl
+     val done_name = var_name done_tm
+     val out_names = map var_name outl
+     val module_args = 
+          [clk_name,load_name] @ inp_names @ [done_name] @ out_names;
+     val module_names  = map (fst o dest_const o fst o strip_comb) modules
+     val _ = if not(null(subtract module_names (map fst (!module_lib))))
+              then (print "unknown module in circuit: ";
+                    print(hd(subtract module_names (map fst (!module_lib))));
+                    print "\n";
+                    raise ERR "MAKE_VERILOG" "unknown modules in circuit")
+              else ()
+ in
+ (out("// Definition of module " ^ name ^ " [Created: " ^ date() ^ "]\n\n// Definitions of components\n\n");
+  
+  map            (* Print definition of components *)
+   (fn(_,(def,_)) => out def)
+   (filter
+     (fn(name,_) => mem name module_names)
+     (!module_lib));
+  out("\n// Definition of module " ^ name ^ "\n");
+  out "module ";
+  out name; 
+  out " (";
+  map out (add_commas module_args);
+  out ");\n";
+  out(" input " ^ clk_name ^ "," ^ load_name ^ ";\n");
+  map 
+   (fn v => out(" input [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n")) 
+   inpl;
+  out(" output " ^ done_name ^ ";\n");
+  map 
+   (fn v => out(" output [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n")) 
+   outl;
+  out(" wire " ^ clk_name ^ "," ^ done_name ^ ";\n");
+  out "\n";
+  map 
+   (fn v => out(" wire [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n")) 
+   vars;
+  out "\n";
+  map
+   (termToVerilog out)
+   modules;
+  out"endmodule\n")
+ end;
 
 
 (* Example for testing
@@ -790,87 +831,53 @@ and thm = Adder_cir
 and stimulus =
  [(10, 12, [("inp1", "5"),("inp2","7")], 15),
   (10, 12, [("inp1", "5"),("inp2","0")], 15),
-  (10, 12, [("inp1", "3"),("inp2","3")], 15)];
+  (10, 12, [("inp1", "3"),("inp2","3")], 15)]
+and name = "Adder";
+
+printToFile "Foo.vl" (MAKE_SIMULATION maxtime period thm stimulus name);
 *)
 
-fun MAKE_VERILOG file_name maxtime period thm stimulus =
- let val outstr = TextIO.openOut(file_name^".vl")
-     fun out s = TextIO.output(outstr,s)
-     val _ = out("// " ^ file_name ^ "\n\n")
-     val (clk, 
-          (load_tm,inp_tm,done_tm,out_tm), 
-          in_outs, 
+
+fun MAKE_SIMULATION name thm maxtime period stimulus out =
+ let val ((clk, load_tm,inpl,done_tm,outl), 
           vars, 
           modules) = dest_cir thm
      val clk_name = var_name clk
      val load_name = var_name load_tm
-     val inp_name = var_name inp_tm
+     val inp_names = map var_name inpl
      val done_name = var_name done_tm
-     val out_name = var_name out_tm
-     val inputs = 
-          (mapcount 
-           (fn n => fn v => (mk_var((inp_name ^ Int.toString n), type_of v),v))
-           (assoc inp_tm in_outs)) handle _ => []
-     val outputs = 
-          (mapcount 
-           (fn n => fn v => (mk_var((out_name ^ Int.toString n), type_of v),v))
-           (assoc out_tm in_outs)) handle _ => []
-     val module_names  = map (fst o dest_const o fst o strip_comb) modules
-     val dump_var_names = 
-          [clk_name,load_name] @
-          (map (fn (inv,_) => var_name inv) inputs) @
-          (done_name ::
-           (map (fn (outv,_) => var_name outv) outputs))
-     val dump_vars = String.concat(tl(flatten(map (fn v => ["," , v]) dump_var_names)))
-     val _ = if not(null(subtract module_names (map fst (!module_lib))))
-              then (print "unknown module in circuit: ";
-                    print(hd(subtract module_names (map fst (!module_lib))));
-                    print "\n";
-                    raise ERR "MAKE_VERILOG" "unknown modules in circuit")
-              else ()
+     val out_names = map var_name outl
+     val module_args = 
+          [clk_name,load_name] @ inp_names @ [done_name] @ out_names;
+
  in
- (out ClockvDef; (* Print definition of Clock *)
-  map            (* Print definition of components *)
-   (fn(_,(def,_)) => out def)
-   (filter
-     (fn(name,_) => mem name module_names)
-     (!module_lib));
+ (MAKE_VERILOG name thm out;
+  out "\n";
+  out ClockvDef; (* Print definition of Clock *)
   out "module Main ();\n";
   out(" parameter maxtime = " ^ Int.toString maxtime ^ ";\n");
   out(" wire " ^ clk_name ^ ";\n");
   out(" reg " ^ load_name ^ ";\n");
   map 
-   (fn (v,_) => out(" reg [0:" ^ var2size v ^ "] " ^ var_name v ^ ";\n")) 
-   inputs;
+   (fn v => out(" reg [0:" ^ var2size v ^ "] " ^ var_name v ^ ";\n")) 
+   inpl;
   out(" wire " ^ done_name ^ ";\n");
   map 
-   (fn (v,_) => out(" wire [0:" ^ var2size v ^ "] " ^ var_name v ^ ";\n")) 
-   outputs;
-  map 
    (fn v => out(" wire [0:" ^ var2size v ^ "] " ^ var_name v ^ ";\n")) 
-   vars;
+   outl;
   out "\n";
   out(" initial #maxtime $finish;\n\n");
   out " initial\n  begin\n";
   map (printStimulusLine out load_name) stimulus;
   out " end\n";
   out "\n";
-  out(" initial\n  begin\n   $dumpfile(\"" ^file_name ^ ".vcd\");\n   $dumpvars(1," ^ dump_vars ^ ");\n  end\n");
-  out "\n";
-  map 
-   (fn (inv,v) => out(" assign " ^ var_name v ^ " = " ^ var_name inv ^ ";\n"))
-   inputs;
-  out "\n";
-  map 
-   (fn (outv,v) => out(" assign " ^ var_name outv ^ " = " ^ var_name v ^ ";\n"))
-   outputs;
+  out(" initial\n  begin\n   $dumpfile(\"" ^name ^ ".vcd\");\n   $dumpvars(1,");
+  map out (add_commas module_args);
+  out(");\n  end\n");
   out "\n";
   ClockvInst out [("period", Int.toString period)] [clk_name]; (* Create a clock *)
-  map
-   (termToVerilog out)
-   modules;
-  out"endmodule\n";
-  TextIO.flushOut outstr;
-  TextIO.closeOut outstr)
+  out(" " ^ name ^ "    " ^ name ^ " (");
+  map out (add_commas module_args);
+  out ");\n\n";
+  out"endmodule\n")
  end;
-
