@@ -1,0 +1,45 @@
+\DOC PAT_ASSUM
+
+\TYPE {Tactical.PAT_ASSUM : term -> thm_tactic -> tactic}
+
+\SYNOPSIS
+
+Finds the first assumption that matches the term argument, applies
+the theorem tactic to it, and removes this assumption.
+
+\KEYWORDS
+theorem-tactical, assumption.
+
+\DESCRIBE
+The tactic
+{
+   PAT_ASSUM tm ttac ([A1; ...; An], g)
+}
+\noindent finds the first {Ai} which matches {tm} (in the sense of
+{match_term}), and then passes this as the argument to {ttac}.
+
+\FAILURE
+Fails if the term doesn't match any of the assumptions, or if the
+theorem-tactic fails when applied to the first assumption that does
+match the term.
+
+\EXAMPLE
+The tactic
+{
+   PAT_ASSUM ``x:num = y`` SUBST_ALL_TAC
+}
+\noindent searches the assumptions for an equality over numbers and
+causes its right hand side to be substituted for its left hand side
+throughout the goal and assumptions.  It also removes the equality
+from the assumption list.  Using {FIRST_ASSUM} above would leave an
+equality on the assumption list of the form {x = x}.
+
+\COMMENT
+It is possible that the implementation of this function will change to
+use higher-order matching rather than {match_term} in the future.
+
+\SEEALSO
+ASSUM_LIST, EVERY, PAT_ASSUM, EVERY_ASSUM, FIRST, MAP_EVERY,
+MAP_FIRST, UNDISCH_THEN, match_term.
+
+\ENDDOC

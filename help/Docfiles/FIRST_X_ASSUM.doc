@@ -33,10 +33,10 @@ The tactic
    FIRST_X_ASSUM SUBST_ALL_TAC
 }
 \noindent searches the assumptions for an equality and causes its
-right hand side to be for its left hand side throughout the goal and
-assumptions.  It also removes the equality from the assumption list.
-Using {FIRST_ASSUM} above would leave an equality on the assumption
-list of the form {x = x}.  The tactic
+right hand side to be substituted for its left hand side throughout
+the goal and assumptions.  It also removes the equality from the
+assumption list.  Using {FIRST_ASSUM} above would leave an equality on
+the assumption list of the form {x = x}.  The tactic
 {
    FIRST_X_ASSUM MATCH_MP_TAC
 }
