@@ -230,7 +230,10 @@ the region contains no backquotes, then send region instead."
          (send-string (if arg
                          (concat "(" buffer-string ") handle e => Raise e")
                        buffer-string)))
-    (send-string-to-hol send-string hol-echo-commands-p)))
+    (send-string-to-hol send-string hol-echo-commands-p)
+    (if (> (length send-string) 300)
+        (send-string-to-hol
+         "val _ = print \"\\n*** Emacs/HOL command completed ***\\n\\n\""))))
 
 (defun hol-name-top-theorem (string arg)
   "Name the top theorem of the goalstackLib.
@@ -530,10 +533,13 @@ or at level 10 with a bare prefix. "
                    "Bool.toString (!Globals.%s)^\" ***\\n\"))")
            s s s s)))
 
-(defun hol-toggle-show-types ()
-  "Toggles the global show_types variable."
-  (interactive)
-  (hol-toggle-var "show_types"))
+(defun hol-toggle-show-types (arg)
+  "Toggles the global show_types variable. With prefix ARG toggles the related
+variable show_types_verbosely instead."
+  (interactive "P")
+  (if arg
+      (hol-toggle-var "show_types_verbosely")
+    (hol-toggle-var "show_types")))
 
 (defun hol-toggle-show-numeral-types()
   "Toggles the global show_numeral_types variable."
