@@ -1,52 +1,54 @@
 functor wordFunctorLib (structure wordTheory : sig
-  val HB_def : Thm.thm
-  val WL_def : Thm.thm
-  val word_0 : Thm.thm
-  val word_1 : Thm.thm
-  val word_L_def : Thm.thm
-  val word_H_def : Thm.thm
-  val word_T : Thm.thm
-  val MOD_WL_def : Thm.thm
-  val MSBn_def : Thm.thm
-  val ADD_EVAL2 : Thm.thm
-  val MUL_EVAL2 : Thm.thm
-  val ONE_COMP_def : Thm.thm
-  val TWO_COMP_def : Thm.thm
-  val ONE_COMP_EVAL : Thm.thm
-  val TWO_COMP_EVAL : Thm.thm
-  val word_sub : Thm.thm
-  val AND_def : Thm.thm
-  val OR_def : Thm.thm
-  val EOR_def : Thm.thm
-  val AND_EVAL : Thm.thm
-  val OR_EVAL : Thm.thm
-  val EOR_EVAL : Thm.thm
-  val LSL_EVAL : Thm.thm
-  val LSR_THM : Thm.thm
-  val ASR_THM : Thm.thm
-  val ROR_THM : Thm.thm
-  val RRX_EVAL : Thm.thm
-  val RRXn_def : Thm.thm
-  val LSR_ONE_def : Thm.thm
-  val WORD_BIT_def : Thm.thm
-  val WORD_BITS_def : Thm.thm
-  val WORD_SLICE_def : Thm.thm
-  val w2n_EVAL : Thm.thm
-  val n2w_11 : Thm.thm
-  val MSB_EVAL : Thm.thm
-  val LSB_EVAL2 : Thm.thm
-  val LT_EVAL : Thm.thm
-  val LE_EVAL : Thm.thm
-  val GT_EVAL : Thm.thm
-  val GE_EVAL : Thm.thm
-  val LO_EVAL : Thm.thm
-  val LS_EVAL : Thm.thm
-  val HI_EVAL : Thm.thm
-  val HS_EVAL : Thm.thm
-  val FORALL_WORD : Thm.thm
-  val EQUIV_def : Thm.thm
-  val ONE_COMP_THM : Thm.thm
-  val BITWISE_THM2 : Thm.thm
+  type thm = Thm.thm
+  val HB_def : thm
+  val WL_def : thm
+  val word_0 : thm
+  val word_1 : thm
+  val word_L_def : thm
+  val word_H_def : thm
+  val word_T : thm
+  val MOD_WL_def : thm
+  val MSBn_def : thm
+  val ADD_EVAL2 : thm
+  val MUL_EVAL2 : thm
+  val ONE_COMP_def : thm
+  val TWO_COMP_def : thm
+  val ONE_COMP_EVAL : thm
+  val TWO_COMP_EVAL : thm
+  val word_sub : thm
+  val AND_def : thm
+  val OR_def : thm
+  val EOR_def : thm
+  val AND_EVAL : thm
+  val OR_EVAL : thm
+  val EOR_EVAL : thm
+  val LSL_EVAL : thm
+  val LSR_THM : thm
+  val ASR_THM : thm
+  val ROR_THM : thm
+  val RRX_EVAL : thm
+  val RRXn_def : thm
+  val LSR_ONE_def : thm
+  val WORD_BIT_def : thm
+  val WORD_BITS_def : thm
+  val WORD_SLICE_def : thm
+  val w2n_EVAL : thm
+  val n2w_11 : thm
+  val MSB_EVAL : thm
+  val LSB_EVAL2 : thm
+  val LT_EVAL : thm
+  val LE_EVAL : thm
+  val GT_EVAL : thm
+  val GE_EVAL : thm
+  val LO_EVAL : thm
+  val LS_EVAL : thm
+  val HI_EVAL : thm
+  val HS_EVAL : thm
+  val FORALL_WORD : thm
+  val EQUIV_def : thm
+  val ONE_COMP_THM : thm
+  val BITWISE_THM2 : thm
+  val ONE_COMP_BITWISE_THM : thm
 end) : sig
   include Abbrev
 
@@ -55,6 +57,9 @@ end) : sig
   val WORD_CONV    : conv
   val WORD_RULE    : thm -> thm
   val WORD_TAC     : tactic
+
+  val NORM_TAC     : tactic
+  val WORD_EQ_TAC  : tactic
 
   val pp_word_signed_bin   : unit -> unit
   val pp_word_signed_oct   : unit -> unit
@@ -197,8 +202,8 @@ val NORM_TAC =
  SIMP_TAC std_ss [FORALL_WORD] THEN
  SIMP_TAC std_ss [ONE_COMP_EVAL, AND_EVAL, OR_EVAL, EOR_EVAL] THEN
  SIMP_TAC std_ss [n2w_11,GSYM EQUIV_def] THEN
- RW_TAC bool_ss
-    [EOR_def, AND_def, OR_def, ONE_COMP_THM, GSYM BITWISE_THM2, BITWISE_THM];
+ RW_TAC bool_ss [EOR_def, AND_def, OR_def, 
+                 ONE_COMP_BITWISE_THM, GSYM BITWISE_THM2, BITWISE_THM];
 
 val WORD_EQ_TAC = NORM_TAC THEN tautLib.TAUT_TAC;
 
