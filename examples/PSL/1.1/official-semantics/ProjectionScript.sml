@@ -1775,14 +1775,16 @@ val S_PROJ_S_REPEAT =
     THEN IMP_RES_TAC S_PROJ_CORRECT_CATN
     THEN POP_ASSUM(ASSUME_TAC o SIMP_RULE std_ss [S_PROJ_CORRECT_def] o SPEC_ALL)
     THEN PROVE_TAC[]);
-         
+
 val S_PROJ =
  store_thm
   ("S_PROJ",
-   ``!r l c. 
-      S_CLOCK_FREE r /\ TOP_FREE l /\ BOTTOM_FREE l
+   ``!r. 
+      S_CLOCK_FREE r 
       ==>
-      ((LENGTH l > 0 ==> CLOCK c (LAST l)) /\ US_SEM (LIST_PROJ l c) r = S_SEM l c r)``,
+      !l. TOP_FREE l /\ BOTTOM_FREE l
+          ==>
+          !c. (LENGTH l > 0 ==> CLOCK c (LAST l)) /\ US_SEM (LIST_PROJ l c) r = S_SEM l c r``,
    INDUCT_THEN sere_induct ASSUME_TAC
     THENL
      [(* S_BOOL b *)

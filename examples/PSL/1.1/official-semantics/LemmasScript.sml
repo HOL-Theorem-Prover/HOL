@@ -277,19 +277,22 @@ val Lemma2 =
        THEN RW_TAC list_ss [LAST_DEF]       
        THEN ASSUM_LIST
              (fn thl => 
-               ASSUME_TAC(SIMP_RULE list_ss [el 1 thl] (Q.SPECL [`h'::t'`,`c`] (el 5 thl))))
+               ASSUME_TAC
+                (SIMP_RULE list_ss [el 1 thl] (Q.SPECL [`h'::t'`,`c`] (el 5 thl))))
        THEN RW_TAC list_ss [LAST_APPEND_CONS],
       FULL_SIMP_TAC std_ss 
         [GSYM APPEND_CONS,
          REWRITE_RULE[DECIDE ``0 < n:num = n > 0``]LENGTH_NOT_NULL]
-       THEN SUBST_TAC (* Rewriting fails, maybe as ``l`` in RHS, but not LHS, of equation *)
+       THEN SUBST_TAC 
              [GSYM(SIMP_CONV list_ss [DECIDE ``m + SUC n - 1 = m + n``] 
                                      ``LENGTH(v1 <> (l:'a letter::v2)) - 1``)]
+             (* Rewriting fails, maybe as ``l`` in RHS, but not LHS, of equation *)
        THEN RW_TAC std_ss [ELEM_LENGTH,LENGTH_APPEND_CONS_NULL]
        THEN RW_TAC list_ss [LAST_APPEND_CONS]
        THEN ASSUM_LIST
              (fn thl => 
-               ASSUME_TAC(SIMP_RULE list_ss [el 1 thl] (Q.SPECL [`l::v2`,`c`] (el 5 thl))))
+               ASSUME_TAC
+                (SIMP_RULE list_ss [el 1 thl] (Q.SPECL [`l::v2`,`c`] (el 5 thl))))
        THEN PROVE_TAC
              [GSYM(SIMP_CONV list_ss [DECIDE ``m + SUC n - 1 = m + n``] 
                                      ``LENGTH(l:'a letter::v2) - 1``),
@@ -492,7 +495,8 @@ val CLOCK_TICK_BOTTOM_FREE =
         THEN `0 < LENGTH v` by DECIDE_TAC
         THEN ASSUM_LIST
               (fn thl => 
-                ASSUME_TAC(SIMP_RULE list_ss [el 1 thl,RESTN_def] (Q.SPEC `0` (el 9 thl))))
+                ASSUME_TAC
+                 (SIMP_RULE list_ss [el 1 thl,RESTN_def] (Q.SPEC `0` (el 9 thl))))
         THEN Cases_on `h` 
         THEN FULL_SIMP_TAC list_ss [BOTTOM_FREE_def,B_SEM_def],
       `LENGTH v = 0` by DECIDE_TAC
@@ -689,7 +693,8 @@ val SEL_CONCAT_def =
    /\
    (SEL_CONCAT (x::xl) k = 
      if k < LENGTH x
-      then (SEL x (0,k) <> TOP_ITER(LENGTH x - (k+1))) :: MAP (\v. TOP_ITER (LENGTH v)) xl
+      then 
+       (SEL x (0,k) <> TOP_ITER(LENGTH x - (k+1))) :: MAP (\v. TOP_ITER (LENGTH v)) xl
       else x :: SEL_CONCAT xl (k - LENGTH x))`;
 
 val SEL_CONCAT_LEMMA =
@@ -706,7 +711,8 @@ val SEL_CONCAT_LEMMA =
           [GSYM APPEND_ASSOC,APPEND_LEFT_CANCEL,TOP_ITER_APPEND,
            DECIDE ``k < m ==> (m + n - (k+1) = (m - (k+1)) + n)``]
     THEN ASSUM_LIST(fn thl => ASSUME_TAC(Q.SPEC `k - LENGTH h` (el 2 thl)))
-    THEN RW_TAC std_ss [DECIDE ``~(k:num < m) ==> (m + n - (k + 1) = n - (k - m + 1))``]);
+    THEN RW_TAC std_ss 
+           [DECIDE ``~(k:num < m) ==> (m + n - (k + 1) = n - (k - m + 1))``]);
 
 val LAMBDA_COMP =
  store_thm
@@ -782,7 +788,8 @@ val Lemma7 =
                    `TOP_ITER (LENGTH v2)`
              THEN Q.EXISTS_TAC `l` 
              THEN RW_TAC arith_ss [APPEND_RIGHT_CANCEL,APPEND_ASSOC]
-             THEN `LENGTH v1 < LENGTH(v1 <> [l])` by RW_TAC arith_ss [LENGTH_APPEND, LENGTH]
+             THEN `LENGTH v1 < LENGTH(v1 <> [l])` 
+                   by RW_TAC arith_ss [LENGTH_APPEND, LENGTH]
              THEN RW_TAC arith_ss [SEL_APPEND1]
              THEN `LENGTH(v1 <> [l]) - 1 = LENGTH v1`
                     by RW_TAC arith_ss [LENGTH_APPEND, LENGTH]
@@ -808,7 +815,8 @@ val Lemma7 =
                     TOP_ITER (LENGTH v1 + LENGTH v2 - k)`
              THEN Q.EXISTS_TAC `l` 
              THEN RW_TAC arith_ss [SEL_APPEND3,APPEND_LEFT_CANCEL,GSYM APPEND_ASSOC]
-             THEN ASSUM_LIST(fn thl => ASSUME_TAC(Q.SPEC `k - (LENGTH v1 + 1)` (el 2 thl)))
+             THEN ASSUM_LIST
+                   (fn thl => ASSUME_TAC(Q.SPEC `k - (LENGTH v1 + 1)` (el 2 thl)))
              THEN FULL_SIMP_TAC std_ss [LENGTH,LENGTH_APPEND]
              THEN `LENGTH [l] = 1` by RW_TAC list_ss []
              THEN IMP_RES_TAC
