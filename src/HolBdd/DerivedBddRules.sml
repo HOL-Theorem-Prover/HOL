@@ -824,19 +824,32 @@ fun findTrace vm Rth Pth Qth =
         MachineTransitionTheory.ReachIn_rec 
         (lhs(concl(SPEC_ALL Rth)))
         (lhs(concl(SPEC_ALL Pth))))
+     val (Rcon, s_s') = Term.dest_comb(lhs(concl(SPEC_ALL Rth)))
+     val (s,s') = pairSyntax.dest_pair s_s'
      val tr = computeTrace (fn n=>fn tb=>print".") vm Qth (in_th0,in_thsuc)
      val soln = traceBack vm tr Qth Rth
      val cl = 
       List.map 
        (fn(_,tbl)=> list_mk_pair(List.map (fn(_,tb)=> getTerm tb) tbl))
        soln
-     val initth = BddRhsOracle failfn vm (SPECL (strip_pair(hd cl)) Pth)
+     val initth = BddRhsOracle 
+                   failfn 
+                   vm 
+                   (SPECL (strip_pair(hd cl)) (GENL(strip_pair s)(SPEC_ALL Pth)))
      val transthl = 
       map 
        (fn (t,t') =>
-         BddRhsOracle failfn vm (SPECL (strip_pair t @ strip_pair t') Rth)) 
+         BddRhsOracle 
+           failfn 
+           vm 
+           (SPECL 
+             (strip_pair t @ strip_pair t') 
+             (GENL(strip_pair s @ strip_pair s')(SPEC_ALL Rth))))
        (zip (List.take(cl, length cl - 1)) (tl cl))
-     val finalth = BddRhsOracle failfn vm (SPECL (strip_pair(last cl)) Qth)
+     val finalth = BddRhsOracle failfn 
+                    vm 
+                    (SPECL (strip_pair(last cl)) 
+                    (GENL(strip_pair s)(SPEC_ALL Qth)))
  in
   (initth, transthl, finalth)
  end;
