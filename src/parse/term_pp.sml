@@ -25,7 +25,6 @@ val dest_pair = dest_binop (",", "pair") (PP_ERR "dest_pair" "")
 val is_pair = Lib.can dest_pair;
 
 fun mk_pair (fst,snd) = let
-  infixr -->
   val fsty = type_of fst
   val sndty = type_of snd
   val commaty = fsty --> sndty -->
@@ -47,6 +46,88 @@ fun string_of_nspaces n = String.concat (List.tabulate(n, (fn _ => " ")))
 val isPrefix = String.isPrefix
 
 fun lose_constrec_ty {Name,Ty,Thy} = {Name = Name, Thy = Thy}
+
+fun mk_casearrow(t1, t2) = let
+  val t1_ty = type_of t1
+  val t2_ty = type_of t2
+  val arrow_t = mk_thy_const{Name = case_arrow_special, Thy = "bool",
+                             Ty = t1_ty --> t2_ty --> t1_ty --> t2_ty}
+in
+  list_mk_comb(arrow_t, [t1, t2])
+end
+
+fun mk_casesplit(t1, t2) = let
+  val t1_ty = type_of t1
+  val split_t = mk_thy_const{Name = case_split_special, Thy = "bool",
+                             Ty = t1_ty --> t1_ty --> t1_ty}
+in
+  list_mk_comb(split_t, [t1, t2])
+end
+
+fun list_mk_split [] = raise PP_ERR "list_mk_split" "Empty list"
+  | list_mk_split [t] = t
+  | list_mk_split (h::t) = mk_casesplit(h, list_mk_split t)
+
+fun mk_case(split_on, cases) = let
+  val (cty as (ty1,ty2)) = dom_rng (type_of cases)
+  val case_t = mk_thy_const{Name = case_special, Thy = "bool",
+                            Ty = ty1 --> (ty1 --> ty2) --> ty2}
+in
+  list_mk_comb(case_t, [split_on, cases])
+end;
+
+(* while f is still of functional type, dest_abs the abs term and apply the
+   f to the variable just stripped from the abs *)
+fun apply_absargs f abs =
+    if can dom_rng (type_of f) then let
+        val (v, body) = dest_abs abs
+      in
+        apply_absargs (mk_comb(f, v)) body
+      end
+    else
+      (f, abs)
+
+exception CaseConversionFailed
+fun convert_case tm = let
+  val (casef, args) = strip_comb tm
+  val {Name = casefname, Thy = casefthy, ...} = dest_thy_const casef
+  val prim_case_t = prim_mk_const {Name = casefname, Thy = casefthy}
+  val (prim_fargs, _) = strip_fun (type_of prim_case_t)
+  val _ = length prim_fargs = length args orelse raise CaseConversionFailed
+  val (cases, split_on) = front_last args
+  val split_on_ty = type_of split_on
+  val (tyopname, _) = dest_type split_on_ty
+  val cs0 = type_constructors tyopname
+  val _ = length cs0 <> 0 orelse raise CaseConversionFailed
+  val _ = length cases = length cs0 orelse
+          raise CaseConversionFailed
+  (* life is complicated at this point by the fact that the constructors *)
+  (* may be polymorphic, and the actual split_on term may be an instance *)
+  (* of that polymorphic type *)
+  val (_, basety) = strip_fun (type_of (hd cs0))
+  (* We rely on the fact that types stored in the TypeBase will *)
+  (* never be functions, so we can just strip arrows to get at the *)
+  (* possibly polymorphic base type *)
+  val substitution = Type.match_type basety split_on_ty
+  val cs = map (inst substitution) cs0
+
+  fun mk_arrow (constructor, case_t) =
+    mk_casearrow(apply_absargs constructor case_t)
+  val arrows = ListPair.map mk_arrow (cs, cases)
+               handle HOL_ERR _ => raise CaseConversionFailed
+  (* this previous might fail if someone has a case term that has a split *)
+  (* term which isn't actually an abstraction of the right number of *)
+  (* variables. *)
+  (* For example, the defining theorem for list_case: *)
+  (* |- (list_case x f [] = x) /\ (list_case x f (h::t) = f h t) *)
+  (* In neither conjunct is the f an abstraction over two variables *)
+  val split = list_mk_split arrows
+in
+  mk_case(split_on, split)
+end
+
+
+
 
 open term_pp_types
 fun grav_name (Prec(n, s)) = s | grav_name _ = ""
@@ -345,6 +426,7 @@ fun pp_term (G : grammar) TyG = let
           AroundSameName => grav_name pgrav <> fname
         | AroundSamePrec => grav_prec pgrav <> fprec
         | AroundEachPhrase => true
+        | NoPhrasing => false
       fun bblock() = uncurry begin_block (#2 (#block_style rr))
     in
       if needed orelse addparens then (bblock, end_block) else (I, I)
@@ -558,6 +640,7 @@ fun pp_term (G : grammar) TyG = let
       val _ =
         if my_is_abs tm then (pr_abs tm; raise SimpleExit)
         else ()
+
       val _ = (* check for set comprehensions *)
         if
           is_const t1 andalso fst (dest_const t1) = "GSPEC" andalso
@@ -1098,6 +1181,20 @@ fun pp_term (G : grammar) TyG = let
         end
       | COMB(Rator, Rand) => let
           val (f, args) = strip_comb Rator
+          val () = (* check for case expressions *)
+              if is_const f then
+                case Overload.overloading_of_term overload_info f of
+                  SOME "case" =>
+                  (let
+                     val newt = convert_case tm
+                     val (t1, t2) = dest_comb newt
+                   in
+                     pr_term newt pgrav lgrav rgrav depth;
+                     raise SimpleExit
+                   end handle CaseConversionFailed => ())
+                | _ => ()
+              else ()
+
           fun is_atom tm = is_const tm orelse is_var tm
           fun pr_atomf fname =
            let val candidate_rules = lookup_term fname

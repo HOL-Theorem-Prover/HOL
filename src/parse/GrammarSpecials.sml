@@ -19,5 +19,27 @@ struct
   val case_split_special = "case_split__magic"
   val case_arrow_special = "case_arrow__magic"
 
+  open HolKernel
+  val compilefn = ref (NONE : (term -> term) option)
+  val constructorsfn = ref (NONE : (string -> term list) option)
+
+  fun compile_pattern_match t =
+      case !compilefn of
+        NONE => raise HOL_ERR {origin_function = "compile_pattern_match",
+                               origin_structure = "GrammarSpecials",
+                               message = "Function not initialised"}
+      | SOME f => f t
+  fun type_constructors s =
+      case !constructorsfn of
+        NONE => raise HOL_ERR {origin_function = "type_constructors",
+                               origin_structure = "GrammarSpecials",
+                               message = "Function not initialised"}
+      | SOME f => f s
+
+  fun set_case_specials (cmp,cnst) = (compilefn := SOME cmp;
+                                      constructorsfn := SOME cnst)
+
+  fun case_initialised () = isSome (!compilefn)
+
 
 end

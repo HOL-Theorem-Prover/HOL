@@ -610,6 +610,7 @@ fun ParenStyleToString Always = "Always"
 fun BlockStyleToString AroundSameName = "AroundSameName"
   | BlockStyleToString AroundSamePrec = "AroundSamePrec"
   | BlockStyleToString AroundEachPhrase = "AroundEachPhrase"
+  | BlockStyleToString NoPhrasing = "NoPhrasing"
 
 
 fun ppToString pp =

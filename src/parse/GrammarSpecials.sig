@@ -21,4 +21,10 @@ sig
   val case_split_special : string
   val case_arrow_special : string
 
+  val set_case_specials :
+      ((Term.term -> Term.term) * (string -> Term.term list)) -> unit
+  val compile_pattern_match : Term.term -> Term.term
+  val type_constructors : string -> Term.term list
+  val case_initialised : unit -> bool
+
 end

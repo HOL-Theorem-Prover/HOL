@@ -13,14 +13,6 @@ type pretype = Pretype.pretype
 type hol_type = Type.hol_type
 type term = Term.term
 
-val mk_functional_ref = ref (NONE : (term -> term) option)
-
-fun provide_case_information f =
-    case !mk_functional_ref of
-      NONE => mk_functional_ref := SOME f
-    | SOME f =>
-      raise ERR "provide_case_information" "can only call this function once"
-
 datatype preterm = Var   of {Name:string,  Ty:pretype}
                  | Const of {Name:string,  Thy:string, Ty:pretype}
                  | Overloaded of {Name:string, Ty:pretype,
@@ -470,9 +462,7 @@ in
 end
 
 fun remove_case_magic tm0 =
-    case !mk_functional_ref of
-      NONE => tm0
-    | SOME mk_functional => let
+    if GrammarSpecials.case_initialised() then let
         fun traverse t =
             if is_abs t then
               (mk_abs o (I ## traverse) o dest_abs) t
@@ -503,7 +493,8 @@ fun remove_case_magic tm0 =
                           list_mk_conj(map (fn (l,r) =>
                                                mk_eq(mk_comb(fakef, l), r))
                                        patbody_pairs)
-                      val functional = mk_functional fake_eqns
+                      val functional =
+                          GrammarSpecials.compile_pattern_match fake_eqns
                     in
                       mk_comb(rator (#2 (strip_abs functional)), split_on_t)
                     end
@@ -515,6 +506,7 @@ fun remove_case_magic tm0 =
       in
         traverse tm0
       end
+    else tm0
 
 
 

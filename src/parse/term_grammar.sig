@@ -24,6 +24,7 @@ sig
      = AroundSameName
      | AroundSamePrec
      | AroundEachPhrase
+     | NoPhrasing
 
   datatype ParenStyle
      = Always

@@ -3556,18 +3556,23 @@ val _ = let open GrammarSpecials
                           case_arrow_special]
         end
 
-val _ = add_rule{pp_elements = [TOK "->"], fixity = Infixr 8,
+val _ = add_rule{pp_elements = [HardSpace 1, TOK "->", BreakSpace(1,2)],
+                 fixity = Infixr 10,
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  paren_style = OnlyIfNecessary,
                  term_name = GrammarSpecials.case_arrow_special}
 
-val _ = add_rule{pp_elements = [TOK "||"], fixity = Infixr 6,
-                 block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+val _ = add_rule{pp_elements = [BreakSpace(1,0), TOK "||", HardSpace 1],
+                 fixity = Infixr 8,
+                 block_style = (NoPhrasing, (PP.CONSISTENT, 0)),
                  paren_style = OnlyIfNecessary,
                  term_name = GrammarSpecials.case_split_special}
 
-val _ = add_rule{pp_elements = [TOK "case", TM, TOK "of", TM, TOK "end"],
-                 fixity = Closefix,
+val _ = add_rule{pp_elements = [PPBlock([TOK "case", BreakSpace(1,2),
+                                         TM, BreakSpace(1,2), TOK "of"],
+                                        (PP.CONSISTENT, 0)),
+                                BreakSpace(1,3)],
+                 fixity = TruePrefix 7,
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  paren_style = OnlyIfNecessary,
                  term_name = GrammarSpecials.case_special}

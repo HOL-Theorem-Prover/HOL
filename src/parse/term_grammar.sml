@@ -16,7 +16,7 @@ open HOLgrammars GrammarSpecials
   (* these last two only used internally *)
 
     datatype PhraseBlockStyle =
-      AroundSameName | AroundSamePrec | AroundEachPhrase
+      AroundSameName | AroundSamePrec | AroundEachPhrase | NoPhrasing
     datatype ParenStyle =
       Always | OnlyIfNecessary | ParoundName | ParoundPrec
 

@@ -312,7 +312,8 @@ local val dBase = ref empty
 in
   fun theTypeBase() = !dBase;
 
-  fun write facts = (dBase := add (theTypeBase()) facts);
+  fun write facts = (dBase := add (theTypeBase()) facts;
+                     Parse.overload_on("case", case_const_of facts));
 end;
 
 fun read s = get (theTypeBase()) s;
@@ -371,9 +372,13 @@ val _ = TypeInfo.write bool_info;
             SOME tyi => SOME {constructors = TypeInfo.constructors_of tyi,
                               case_const = TypeInfo.case_const_of tyi}
           | NONE => NONE
+      open GrammarSpecials
     in
-      Preterm.provide_case_information
-        (#functional o Pmatch.mk_functional lookup)
+      set_case_specials (#functional o Pmatch.mk_functional lookup,
+                         (fn s =>
+                             case lookup s of
+                               NONE => []
+                             | SOME {constructors,...} => constructors))
     end
 
 end;
