@@ -72,9 +72,7 @@ fun getQual s =
   let open CharVector
       val len' = size s - 1
       fun parse n =
-        if n >= len' then
-	    ""				(* This can't happen *)
-        else if sub(s, n) = #"." then
+        if sub(s, n) = #"." then
 	    extract(s, 0, SOME n)
         else
 	    parse (n+1)
@@ -138,9 +136,9 @@ and TokenId = parse
     | [`!` `%` `&` `$` `#` `+` `-` `/` `:` `<` `=` `>` `?` `@` `\\`
        `~` `^` `|` `*`]+ )
     "."
-    ( [`A`-`Z` `a`-`z`] [ `A`-`Z` `a`-`z` `0`-`9` `_` `'`]*
+    ( [`A`-`Z` `a`-`z`] [ `A`-`Z` `a`-`z` `0`-`9` `_` `'` `.`]*
     | [`!` `%` `&` `$` `#` `+` `-` `/` `:` `<` `=` `>` `?` `@` `\\`
-       `~` `^` `|` `*`]+ )
+       `~` `^` `|` `*` `.`]+ )
       { mkQualId lexbuf }
   | _
       { lexError "ill-formed token" lexbuf }
