@@ -1,0 +1,58 @@
+To modify the lex file to create the Windows binary,
+
+apply the following patch to filter.lex and call the result
+winfilter.lex.
+
+----------------------------------------------------------------------
+42a43
+> #include <windows.h>
+46a48,49
+> #define YY_INPUT(buf,result,max_size) result = myinput(buf,max_size)
+>  static int myinput(char*, int);
+139,140d141
+< #include <signal.h>
+<
+149a151,173
+> int myinput(char *buf, int max_size)
+> {
+>   int c = '*', n = 0;
+>   while (n < max_size) {
+>     c = getc(yyin);
+>     if (c == EOF) {
+>       if (GetLastError() == ERROR_OPERATION_ABORTED) {
+>         SetLastError(0);
+>         continue;
+>       } else break;
+>     }
+>     if (c == '\n') break;
+>     buf[n] = (char) c;
+>     n++;
+>   }
+>   if (c == '\n') buf[n++] = (char)c;
+>   if (c == EOF && ferror(yyin)) {
+>     fprintf(stderr, "input in flex scanner failed\n");
+>     exit(EXIT_FAILURE);
+>   }
+>   return n;
+> }
+>
+168,169c192,193
+<   signal(SIGINT,SIG_IGN); /* Ignores Ctl-C; when HOL is interrupted,
+<                              the filter continues unaffected. */
+---
+>   SetConsoleCtrlHandler(NULL, TRUE);
+>
+----------------------------------------------------------------------
+
+Then, run
+
+  flex -owinfilter.c winfilter.lex
+
+Edit the C code in winfilter.c to remove the line
+
+#include <unistd.h>
+
+Then compile the resulting C file (works under VS6.0), and you will
+have a genuine, interrupt-ignoring quote-filter for MS Windows.
+
+
