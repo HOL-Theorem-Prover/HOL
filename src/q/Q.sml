@@ -101,6 +101,42 @@ val ISPEC = Drule.ISPEC o ptm;
 val ISPECL = Drule.ISPECL o map ptm;
 val ID_SPEC = W(Thm.SPEC o (#Bvar o dest_forall o concl))
 
+fun SPEC_THEN q thm ttac (g as (asl,w)) = let
+  val ctxt = free_varsl (w::asl)
+  val {Bvar,...} = Dsyntax.dest_forall (concl thm)
+  val t = ptm_with_ctxtty ctxt (type_of Bvar) q
+in
+  ttac (Thm.SPEC t thm) g
+end
+
+fun SPECL_THEN ql thm ttac (g as (asl,w)) = let
+  val ctxt = free_varsl (w::asl)
+  fun spec ql thm =
+    case ql of
+      [] => thm
+    | (q::qs) => let
+        val {Bvar,...} = Dsyntax.dest_forall (concl thm)
+        val t = ptm_with_ctxtty ctxt (type_of Bvar) q
+      in
+        spec qs (Thm.SPEC t thm)
+      end
+in
+  ttac (spec ql thm) g
+end
+
+fun ISPEC_THEN q thm ttac (g as (asl,w)) = let
+  val ctxt = free_varsl (w::asl)
+  val t = Parse.parse_in_context ctxt q
+in
+  ttac (Drule.ISPEC t thm) g
+end
+
+fun ISPECL_THEN ql thm ttac (g as (asl, w)) = let
+  val ctxt = free_varsl (w::asl)
+  val ts = map (Parse.parse_in_context ctxt) ql
+in
+  ttac (Drule.ISPECL ts thm) g
+end
 
 fun SPEC_TAC (q1,q2) (g as (asl,w)) = let
   val ctxt = free_varsl (w::asl)

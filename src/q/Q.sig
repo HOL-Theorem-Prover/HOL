@@ -32,6 +32,10 @@ sig
     val ISPEC : term quotation -> thm -> thm
     val ISPECL : term quotation list -> thm -> thm
     val SPEC_TAC : term quotation * term quotation -> tactic
+    val SPEC_THEN : term quotation -> thm -> thm_tactic -> tactic
+    val SPECL_THEN : term quotation list -> thm -> thm_tactic -> tactic
+    val ISPEC_THEN : term quotation -> thm -> thm_tactic -> tactic
+    val ISPECL_THEN : term quotation list -> thm -> thm_tactic -> tactic
     val ID_SPEC_TAC : term quotation -> tactic
     val SUBGOAL_THEN : term quotation -> thm_tactic -> tactic
     val TAUT_CONV : term quotation -> thm
