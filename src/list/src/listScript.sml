@@ -33,7 +33,7 @@ local open arithmeticTheory pairTheory in end;
  *---------------------------------------------------------------------------*)
 
 open HolKernel Parse boolLib Num_conv Prim_rec BasicProvers mesonLib
-     simpLib boolSimps pairTheory TotalDefn SingleStep;
+     simpLib boolSimps pairTheory TotalDefn SingleStep metisLib;;
 
 val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
 
@@ -263,14 +263,24 @@ val NULL = store_thm ("NULL",
 
 val list_INDUCT0 = TypeBase.induction_of "list";
 
-val list_INDUCT = store_thm
+val list_INDUCT = Q.store_thm
 ("list_INDUCT",
- --`!P. P [] /\ (!t. P t ==> !h. P (h::t)) ==> !l. P l`--,
+ `!P. P [] /\ (!t. P t ==> !h. P (h::t)) ==> !l. P l`,
  REWRITE_TAC [list_INDUCT0]);  (* must use REWRITE_TAC, ACCEPT_TAC refuses
                                    to respect bound variable names *)
 
 val list_induction  = save_thm("list_induction", list_INDUCT);
 val LIST_INDUCT_TAC = INDUCT_THEN list_INDUCT ASSUME_TAC;
+
+(*---------------------------------------------------------------------------*)
+(* List induction as a rewrite rule.                                         *)
+(* |- (!l. P l) = P [] /\ !h t. P t ==> P (h::t)                             *)
+(*---------------------------------------------------------------------------*)
+
+val FORALL_LIST = Q.store_thm 
+ ("FORALL_LIST_THM",
+  `(!l. P l) = P [] /\ !h t. P t ==> P (h::t)`,
+  METIS_TAC [list_INDUCT]);
 
 (*---------------------------------------------------------------------------*)
 (* Cases theorem: |- !l. (l = []) \/ (?t h. l = h::t)                        *)

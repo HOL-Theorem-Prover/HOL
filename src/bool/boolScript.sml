@@ -3520,6 +3520,21 @@ val bool_INDUCT = save_thm("bool_INDUCT",
      GEN P (DISCH tm1 th9)
  end);
 
+val FORALL_BOOL = save_thm 
+("FORALL_BOOL",
+ let val tm1 = Term `!b:bool. P b`
+     val tm2 = Term `P T /\ P F`
+     val th1 = ASSUME tm1
+     val th2 = CONJ (SPEC T th1) (SPEC F th1)
+     val th3 = DISCH tm1 th2
+     val th4 = ASSUME tm2
+     val th5 = MP (SPEC (Term `P:bool->bool`) bool_INDUCT) th4
+     val th6 = DISCH tm2 th5
+ in 
+   IMP_ANTISYM_RULE th3 th6
+ end);
+
+
 (*---------------------------------------------------------------------------
           Results about Unique existence.
  ---------------------------------------------------------------------------*)

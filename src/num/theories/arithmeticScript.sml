@@ -911,6 +911,11 @@ val COMPLETE_INDUCTION = store_thm("COMPLETE_INDUCTION",
   end);
 
 
+val FORALL_NUM_THM = Q.store_thm 
+ ("FORALL_NUM_THM",
+  `(!n. P n) = P 0 /\ !n. P n ==> P (SUC n)`,
+  METIS_TAC [INDUCTION]);
+
 (* ---------------------------------------------------------------------*)
 (* Some more theorems, mostly about subtraction.                        *)
 (* ---------------------------------------------------------------------*)

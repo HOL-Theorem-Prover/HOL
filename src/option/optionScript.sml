@@ -12,7 +12,7 @@
 (*                Dec.1998, in order to fit in with Datatype scheme       *)
 (* =======================================================================*)
 
-open HolKernel Parse boolLib;
+open HolKernel Parse boolLib metisLib;
 
 (*---------------------------------------------------------------------------
      Make sure that sumTheory and oneTheory is loaded.
@@ -101,6 +101,11 @@ val option_induction = store_thm (
   SPEC_TAC (Term`option_REP (x:'a option)`, Term`s:'a + one`) THEN
   HO_MATCH_MP_TAC sumTheory.sum_INDUCT THEN
   ONCE_REWRITE_TAC [oneTheory.one] THEN ASM_REWRITE_TAC []);
+
+val FORALL_OPTION = Q.store_thm 
+ ("FORALL_OPTION",
+  `(!opt. P opt) = P NONE /\ !x. P (SOME x)`,
+  METIS_TAC [option_induction]);
 
 val SOME_11 = store_thm("SOME_11",
   Term`!x y :'a. (SOME x = SOME y) = (x=y)`,
