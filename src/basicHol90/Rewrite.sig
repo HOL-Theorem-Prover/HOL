@@ -32,7 +32,7 @@ val add_implicit_rewrites : thm list -> unit
 
 val pp_rewrites   : Portable.ppstream -> rewrites -> unit
 val bool_rewrites : rewrites
-val monitoring    : bool ref
+val monitoring    : int ref
 
 val REWRITES_CONV    : rewrites -> conv
 val GEN_REWRITE_CONV : (conv -> conv) -> rewrites -> thm list -> conv
@@ -66,7 +66,7 @@ val FILTER_PURE_ASM_REWRITE_RULE :(term -> bool) -> thm list -> thm -> thm
 val FILTER_ASM_REWRITE_RULE :(term -> bool) -> thm list -> thm -> thm
 val FILTER_PURE_ONCE_ASM_REWRITE_RULE :(term -> bool) -> thm list -> thm -> thm
 val FILTER_ONCE_ASM_REWRITE_RULE :(term -> bool) -> thm list -> thm -> thm
-val FILTER_PURE_ASM_REWRITE_TAC :(term -> bool) -> thm list -> tactic 
+val FILTER_PURE_ASM_REWRITE_TAC :(term -> bool) -> thm list -> tactic
 val FILTER_ASM_REWRITE_TAC :(term -> bool) -> thm list -> tactic
 val FILTER_PURE_ONCE_ASM_REWRITE_TAC :(term -> bool) -> thm list -> tactic
 val FILTER_ONCE_ASM_REWRITE_TAC :(term -> bool) -> thm list -> tactic
