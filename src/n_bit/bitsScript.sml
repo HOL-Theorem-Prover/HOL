@@ -40,7 +40,7 @@ val BITWISE_def =
 val MOD1 = MOD_1
 val DIV1 = DIV_1
 
-val SUC_SUB = save_thm("SUC_SUB",SIMP_CONV arithr_ss [ADD1] ``SUC a - a``);
+val SUC_SUB = save_thm("SUC_SUB",SIMP_CONV arith_ss [ADD1] ``SUC a - a``);
 
 (* |- !n r. r < n ==> ((n + r) DIV n = 1) *)
 val DIV_MULT_1 = save_thm("DIV_MULT_1",
@@ -80,7 +80,7 @@ val TWOEXP_MONO = store_thm("TWOEXP_MONO",
   `!a b. a < b ==> 2 EXP a < 2 EXP b`,
   REPEAT STRIP_TAC
     THEN IMP_RES_TAC LESS_ADD_1
-    THEN ASM_R_SIMP_TAC [EXP_ADD,MULT_INCREASES2,ONE_LT_TWOEXP_SUCN,ZERO_LT_TWOEXP]
+    THEN ASM_A_SIMP_TAC [EXP_ADD,MULT_INCREASES2,ONE_LT_TWOEXP_SUCN,ZERO_LT_TWOEXP]
 );
 
 val TWOEXP_MONO2 = store_thm("TWOEXP_MONO2",
@@ -383,7 +383,7 @@ val SLICELT_THM = store_thm("SLICELT_THM",
   `!h l n. SLICE h l n < 2 EXP SUC h`,
   REPEAT STRIP_TAC
     THEN ASSUME_TAC (SPECL [`SUC h`,`n`] MOD_2EXP_LT)
-    THEN R_RW_TAC [SLICE_def,MOD_2EXP_def,ZERO_LT_TWOEXP,SUB_RIGHT_LESS]
+    THEN A_RW_TAC [SLICE_def,MOD_2EXP_def,ZERO_LT_TWOEXP,SUB_RIGHT_LESS]
 );
 
 val BITS_SLICE_THM = store_thm("BITS_SLICE_THM",
@@ -623,9 +623,9 @@ val BITWISE_LEM = prove(
   `!n op a b. BIT n (BITWISE (SUC n) op a b) = op (BIT n a) (BIT n b)`,
   A_RW_TAC [SBIT_def,BITWISE_def,NOT_BIT]
     THENL [
-       R_SIMP_TAC [BIT_def,BITS_THM,SUC_SUB,
+       A_SIMP_TAC [BIT_def,BITS_THM,SUC_SUB,
                   REWRITE_RULE [BITWISE_LT_2EXP] (SPECL [`BITWISE n op a b`,`2 EXP n`] DIV_MULT_1)],
-       R_SIMP_TAC [BITS_THM,LESS_DIV_EQ_ZERO,BITWISE_LT_2EXP,SUC_SUB]
+       A_SIMP_TAC [BITS_THM,LESS_DIV_EQ_ZERO,BITWISE_LT_2EXP,SUC_SUB]
     ]
 );
 
@@ -670,6 +670,45 @@ val BITWISE_NOT_COR = store_thm("BITWISE_NOT_COR",
     THEN NTAC 2 (WEAKEN_TAC (K true))
     THEN POP_ASSUM (fn th => REWRITE_TAC [GSYM th])
     THEN ASM_REWRITE_TAC [BITS_THM,BIT_def,GSYM NOT_MOD2_LEM,DIV1,EXP_1,SUC_SUB]
+);
+
+(* -------------------------------------------------------- *)
+
+(* |- !n h. SLICE h 0 n = BITS h 0 n *)
+val SLICE_COR = (GEN_ALL o SIMP_RULE arith_ss [] o SPECL [`n`,`h`,`0`]) SLICE_THM;
+ 
+val BITS_SUC2 = prove(
+  `!n a. BITS (SUC n) 0 a = SLICE (SUC n) (SUC n) a + BITS n 0 a`,
+  A_RW_TAC [GSYM SLICE_COR,SLICE_COMP_THM]
+);
+ 
+val lem = prove(
+  `!n a. a < 2 EXP SUC n ==> ~(2 EXP SUC n < a + 1)`,
+  A_RW_TAC [NOT_LESS,EXP]
+);
+ 
+val lem2 = MATCH_MP lem (REWRITE_RULE [SUB_0] (SPECL [`n`,`0`,`a`] BITSLT_THM));
+
+val BITWISE_ONE_COMP_LEM = store_thm("BITWISE_ONE_COMP_LEM",
+  `!n a b. BITWISE (SUC n) (\x y. ~x) a b = 2 EXP (SUC n) - 1 - BITS n 0 a`,
+  Induct_on `n`
+    THEN REPEAT STRIP_TAC
+    THENL [
+      A_RW_TAC [SBIT_def,BIT_def,BITWISE_def,NOT_BITS2],
+      A_RW_TAC [BITWISE_def,SBIT_def,REWRITE_RULE [SLICE_THM] BITS_SUC2]
+        THEN RULE_ASSUM_TAC (SIMP_RULE bool_ss [NOT_BIT,NOT_BITS,BIT_def])
+        THEN ASM_A_SIMP_TAC [MULT_CLAUSES]
+        THENL [
+           Cases_on `2 EXP SUC n = BITS n 0 a + 1`
+             THENL [
+               ASM_A_SIMP_TAC [SUB_RIGHT_ADD,EXP],
+               ASSUME_TAC lem2
+                 THEN `~(2 EXP SUC n <= BITS n 0 a + 1)` by ASM_A_SIMP_TAC []
+                 THEN ASM_A_SIMP_TAC [SUB_RIGHT_ADD,EXP]
+             ],
+           REWRITE_TAC [REWRITE_CONV [ADD_SUB,TIMES2] (Term`2 * a - a`),SUB_PLUS,EXP]
+        ]
+    ]
 );
 
 (* -------------------------------------------------------- *)

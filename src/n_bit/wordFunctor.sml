@@ -174,7 +174,7 @@ val INV_SUC_EQ_QT = prove(
     THENL [
       B_RW_TAC []
         THEN IMP_RES_TAC (REWRITE_RULE [EQUIV_def] SUC_EQUIV_COMP)
-        THEN R_FULL_SIMP_TAC [GSYM LESS_EQ_ADD_SUB,ADD1,MOD_WL_def,ONE_LT_EQ_TWOEXP]
+        THEN A_FULL_SIMP_TAC [GSYM LESS_EQ_ADD_SUB,ADD1,MOD_WL_def,ONE_LT_EQ_TWOEXP]
         THEN REWRITE_TAC [ONCE_REWRITE_RULE [ADD_COMM] SPEC_MOD_TIMES],
       REWRITE_TAC [ADD1]
         THEN ONCE_REWRITE_TAC [MOD_ADD]
@@ -254,8 +254,8 @@ val WORD_NEG_QT = prove(
     THEN Cases_on `1 + MOD_WL a = 2 EXP WL`
     THENL [
       RULE_ASSUM_TAC (SIMP_RULE bool_ss [GSYM SUC_ONE_ADD,GSYM PRE_SUC_EQ,ZERO_LT_TWOEXP])
-        THEN ASM_R_SIMP_TAC [MOD_WL_def,PRE_SUB1],
-      R_FULL_SIMP_TAC []
+        THEN ASM_A_SIMP_TAC [MOD_WL_def,PRE_SUB1],
+      A_FULL_SIMP_TAC []
     ]
 );
 
@@ -269,45 +269,6 @@ val BIT_EQUIV_THM =
    SIMP_RULE bool_ss [BITS_ZERO3,GSYM MOD_WL_def,GSYM WL_def,GSYM EQUIV_def,LESS_EQ_IMP_LESS_SUC,
                 REWRITE_RULE [GSYM LESS_EQ,GSYM WL_def] (ONCE_REWRITE_CONV [GSYM LESS_EQ_MONO] (Term`x <= HB`))]
                     (SPEC `HB` BIT_BITS_THM_0);
-
-(* -------------------------------------------------------- *)
-
-(* |- !n h. SLICE h 0 n = BITS h 0 n *)
-val SLICE_COR = (GEN_ALL o SIMP_RULE arithr_ss [] o SPECL [`n`,`h`,`0`]) SLICE_THM;
-
-val BITS_SUC2 = prove(
-  `!n a. BITS (SUC n) 0 a = SLICE (SUC n) (SUC n) a + BITS n 0 a`,
-  A_RW_TAC [GSYM SLICE_COR,SLICE_COMP_THM]
-);
-
-val lem = prove(
-  `!n a. a < 2 EXP SUC n ==> ~(2 EXP SUC n < a + 1)`,
-  A_RW_TAC [NOT_LESS,EXP]
-);
-
-val lem2 = MATCH_MP lem (REWRITE_RULE [SUB_0] (SPECL [`n`,`0`,`a`] BITSLT_THM));
-
-val BITWISE_ONE_COMP_LEM = store_thm("BITWISE_ONE_COMP_LEM",
-  `!n a b. BITWISE (SUC n) (\x y. ~x) a b = 2 EXP (SUC n) - 1 - BITS n 0 a`,
-  Induct_on `n`
-    THEN REPEAT STRIP_TAC
-    THENL [
-      R_RW_TAC [SBIT_def,BIT_def,BITWISE_def,NOT_BITS2],
-      A_RW_TAC [BITWISE_def,SBIT_def,REWRITE_RULE [SLICE_THM] BITS_SUC2]
-        THEN RULE_ASSUM_TAC (SIMP_RULE bool_ss [NOT_BIT,NOT_BITS,BIT_def])
-        THEN ASM_A_SIMP_TAC [MULT_CLAUSES]
-        THENL [
-           Cases_on `2 EXP SUC n = BITS n 0 a + 1`
-             THENL [
-               ASM_A_SIMP_TAC [SUB_RIGHT_ADD,EXP],
-               ASSUME_TAC lem2
-                 THEN `~(2 EXP SUC n <= BITS n 0 a + 1)` by ASM_A_SIMP_TAC []
-                 THEN ASM_A_SIMP_TAC [SUB_RIGHT_ADD,EXP]
-             ],
-           REWRITE_TAC [REWRITE_CONV [ADD_SUB,TIMES2] (Term`2 * a - a`),SUB_PLUS,EXP]
-        ]
-    ]
-);
 
 (* -------------------------------------------------------- *)
 
@@ -462,7 +423,7 @@ val ADD_DIV_ADD_DIV2 = ONCE_REWRITE_RULE [MULT_COMM] (SIMP_RULE arith_ss [] (SPE
 
 val BIT_DIV2 = prove(
   `!i. BIT n (i DIV 2) = BIT (SUC n) i`,
-  R_RW_TAC [BIT_def,BITS_THM,EXP,ZERO_LT_TWOEXP,DIV_DIV_DIV_MULT]
+  A_RW_TAC [BIT_def,BITS_THM,EXP,ZERO_LT_TWOEXP,DIV_DIV_DIV_MULT]
 );
 
 val lemma1 = prove(
@@ -502,7 +463,7 @@ val BITWISE_ISTEP = prove(
        A_FULL_SIMP_TAC [],
        Cases_on `n = 0`
          THENL [
-            R_RW_TAC [BITWISE_def,SBIT_def,BIT_DIV2],
+            A_RW_TAC [BITWISE_def,SBIT_def,BIT_DIV2],
             B_FULL_SIMP_TAC [NOT_ZERO_LT_ZERO,BITWISE_def,SUC_SUB1,BIT_DIV2,lemma1]
          ]
     ]
@@ -759,7 +720,7 @@ val _ = save_thm("WORD_RIGHT_AND_OVER_OR",WORD_RIGHT_AND_OVER_OR);
 val _ = save_thm("WORD_RIGHT_OR_OVER_AND",WORD_RIGHT_OR_OVER_AND);
 val _ = save_thm("WORD_DE_MORGAN_THM",WORD_DE_MORGAN_THM);
 
-val THE_WL = SIMP_RULE arithr_ss [HB_def,ADD1] WL_def;
+val THE_WL = SIMP_RULE arith_ss [HB_def,ADD1] WL_def;
 
 val word_L_def = save_thm("word_L_def",REWRITE_RULE [GSYM n2w_def] (definition "word_L_def"));
 val word_H_def = save_thm("word_H_def",REWRITE_RULE [GSYM n2w_def] (definition "word_H_def"));
@@ -1347,6 +1308,9 @@ val BITS00 = GEN_ALL (REWRITE_CONV [SUC_SUB,DIV_1,EXP,EXP_1,SYM TWO,BITS_THM] (T
 val SPEC_MOD_PLUS_1 = REWRITE_RULE [WL_POS] (SPEC `WL` MOD_PLUS_1);
 val SPEC_MOD_ADD_1  = REWRITE_RULE [WL_POS] (SPEC `WL` MOD_ADD_1);
 
+(* |- !n h. SLICE h 0 n = BITS h 0 n *)
+val SLICE_COR = (GEN_ALL o SIMP_RULE arith_ss [] o SPECL [`n`,`h`,`0`]) SLICE_THM;
+
 (* |- !n x. n #>> (SUC x) = word_ror1 (n #>> x) *)
 val ROR_LEM = GEN_ALL (RIGHT_REWRITE_RULE [GSYM word_ror_def]
                  (SIMP_CONV bool_ss [word_ror_def,FUNPOW_THM2] (Term`n #>> (SUC x)`)));
@@ -1362,18 +1326,18 @@ val ROR_THM = store_thm("ROR_THM",
     THENL [
        IMP_RES_TAC SPEC_MOD_PLUS_1
          THEN RULE_ASSUM_TAC (SIMP_RULE bool_ss [ADD_EQ_SUB,WL_GEQ_ONE,WL_SUB_ONE])
-         THEN R_RW_TAC [lem5,lem6,ADD1,WL_SUB_HB,EXP_1,n2w_TIMES,n2w_TIMES2,MOD_WL_THM,
+         THEN A_RW_TAC [lem5,lem6,ADD1,WL_SUB_HB,EXP_1,n2w_TIMES,n2w_TIMES2,MOD_WL_THM,
                         MOD_WL_ELIM,ADD_DIV_ADD_DIV,BITS_DIV_THM2,BITS_ZERO,
                         LSB_ODD,ODD_MOD2_LEM,MOD_TIMES]
          THENL [
-           R_RW_TAC [SBIT_def,BIT_def] THEN B_FULL_SIMP_TAC [NOT_BITS2],
+           A_RW_TAC [SBIT_def,BIT_def] THEN B_FULL_SIMP_TAC [NOT_BITS2],
            IMP_RES_TAC NOT_ZERO_ADD1
              THEN ASM_B_SIMP_TAC [SUC_SUB1,SIMP_RULE arith_ss [] (SPECL [`p`,`0`] BITS_SUC)]
          ],
        IMP_RES_TAC SPEC_MOD_ADD_1
          THEN A_RW_TAC [ADD1,BITS_DIV_THM2,WL_SUB_ONE,lem5]
          THENL [
-           R_SIMP_TAC [lem7,WL_def,LSB_ODD,ODD_MOD2_LEM,EXP,MOD_TIMES]
+           A_SIMP_TAC [lem7,WL_def,LSB_ODD,ODD_MOD2_LEM,EXP,MOD_TIMES]
              THEN A_SIMP_TAC [GSYM BITS00,BITS_COMP_THM,GSYM BIT_def,SLICE_COR,
                               REWRITE_RULE [ADD] (SPECL [`HB`,`0`] BIT_SLICE_LEM)],
            IMP_RES_TAC NOT_ZERO_ADD1 THEN POP_ASSUM (K ALL_TAC)
@@ -1519,10 +1483,10 @@ val ASR_THM = store_thm("ASR_THM",
         THEN A_FULL_SIMP_TAC [BITS_ZERO,lem9,SBIT_def]
         THEN ASM_A_SIMP_TAC [lem8c,lem4,BITS_ZERO,WL_SUB_HB,WL_SUB_SUC_X]
         THENL [
-          RW_TAC arithr_ss [WL_def,SUB_RIGHT_ADD,EXP,EXP_1,TWOEXP_LT_EQ1],
+          RW_TAC arith_ss [WL_def,SUB_RIGHT_ADD,EXP,EXP_1,TWOEXP_LT_EQ1],
           `x = HB` by DECIDE_TAC
-            THEN RW_TAC arithr_ss [WL_def,SUB_RIGHT_ADD,EXP,EXP_1,TWOEXP_LT_EQ1],
-          RW_TAC arithr_ss [WL_def,SUB_RIGHT_ADD,EXP,EXP_SUB_LESS_EQ]
+            THEN RW_TAC arith_ss [WL_def,SUB_RIGHT_ADD,EXP,EXP_1,TWOEXP_LT_EQ1],
+          RW_TAC arith_ss [WL_def,SUB_RIGHT_ADD,EXP,EXP_SUB_LESS_EQ]
             THEN IMP_RES_TAC lem10
             THEN A_FULL_SIMP_TAC [lem11]
             THEN REWRITE_TAC [TIMES2]
@@ -1618,7 +1582,7 @@ val ROR_word_T = store_thm("ROR_word_T",
 (* -------------------------------------------------------- *)
 
 val MOD_WL_EVAL = save_thm("MOD_WL_EVAL",
-  GEN_ALL (SIMP_RULE arithr_ss [THE_WL] MOD_WL_def)
+  GEN_ALL (SIMP_RULE arith_ss [THE_WL] MOD_WL_def)
 );
 
 val ADD_EVAL2 = save_thm("ADD_EVAL2",
@@ -1709,7 +1673,7 @@ val WORD_BITS_SLICE_THM = store_thm("WORD_BITS_SLICE_THM",
 
 val WORD_SLICE_ZERO_THM = store_thm("WORD_SLICE_ZERO_THM",
   `!n h. WORD_SLICE h 0 n = WORD_BITS h 0 n`,
-  R_RW_TAC [WORD_SLICE_THM]
+  A_RW_TAC [WORD_SLICE_THM]
 );
 
 val WORD_SLICE_COMP_THM = store_thm("WORD_SLICE_COMP_THM",
