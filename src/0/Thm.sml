@@ -220,6 +220,10 @@ fun MP (THM(o1,asl1,c1)) (THM(o2,asl2,c2)) =
  * Derived Rules -- these are here for efficiency purposes, and so that all  *
  * invocations of mk_thm are in Thm.                                         *
  *---------------------------------------------------------------------------*)
+(* Derived rules not using any axiom of boolTheory:
+ *   SYM, TRANS, ALPHA, MK_COMB, AP_TERM, AP_THM, EQ_MP, EQ_IMP_RULE,
+ *   Beta, Mk_comb, Mk_abs
+ *)
 
 (*---------------------------------------------------------------------------*
  *  Symmetry of =
@@ -282,20 +286,8 @@ fun TRANS th1 th2 =
  *            |- t1 = t2
  *
  * fun ALPHA t1 t2 =
- *  (if (t1=t2) then REFL t1
- *   else
- *   case (t1,t2)
- *     of (Comb(t11,t12), Comb(t21,t22))
- *          => let val th1 = ALPHA t11 t21
- *                 and th2 = ALPHA t12 t22
- *             in TRANS (AP_THM th1 t12) (AP_TERM t21 th2) end
- *      | (Abs(x1,_), Abs(x2,t2'))
- *         => let val th1 = ALPHA_CONV x2 t1
- *                val (_,t1') = dest_abs(rhs(concl th1))
- *                val th2 = ALPHA t1' t2'
- *            in TRANS th1 (ABS x2 th2) end
- *      | (_,_)  => THM_ERR "ALPHA" ""
- *  ) handle _ => THM_ERR "ALPHA" "";
+ *  TRANS (REFL t1) (REFL t2)
+ *  handle _ => THM_ERR "ALPHA" "";
  *---------------------------------------------------------------------------*)
 fun ALPHA t1 t2 =
    if (aconv t1 t2)
@@ -885,7 +877,7 @@ fun INST [] th = th
  *  ---------------------
  *     A |- t = m{x\n}
  *
- * Other implementation (less efficient, explicit subst.):
+ * Other implementation (less efficient not using explicit subst.):
  *   val Beta = Drule.RIGHT_BETA
  *)
 fun Beta th =

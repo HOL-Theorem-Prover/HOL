@@ -511,13 +511,15 @@ fun dest_term (Fv a) = VAR a
  *  | aconv tm1 tm2 = (tm1=tm2);                                             *
  *---------------------------------------------------------------------------*)
 
-local fun EQ (M:term,N:term) = Portable.pointer_eq(M,N)
+local fun EQ (M,N) = Portable.pointer_eq(M,N)
 in
 fun aconv t1 t2 = EQ(t1,t2) orelse
 (case(t1,t2) of
    (Comb{Rator=M,Rand=N},Comb{Rator=P,Rand=Q}) => aconv N Q andalso aconv M P
  | (Abs{Bvar=Fv{Ty=ty1,...}, Body=M},
     Abs{Bvar=Fv{Ty=ty2,...}, Body=N}) => (ty1=ty2) andalso (aconv M N)
+ | (Clos{Env=e1,Body=b1}, Clos{Env=e2,Body=b2}) =>
+     (EQ(e1,e2) andalso EQ(b1,b2)) orelse aconv (push_clos t1) (push_clos t2)
  | (Clos _, _) => aconv (push_clos t1) t2
  | (_, Clos _) => aconv t1 (push_clos t2)
  | (M,N) => (M=N))
