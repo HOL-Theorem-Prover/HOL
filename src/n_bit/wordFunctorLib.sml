@@ -175,7 +175,8 @@ in
 end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
 fun pp_word tc base =
-   Parse.temp_add_user_printer ({Tyop = thyname, Thy = thyname}, word_n_print tc base);
+   Parse.temp_add_user_printer 
+     ({Tyop = thyname, Thy = thyname}, word_n_print tc base);
 
 fun pp_word_signed_bin() = pp_word true binary;
 fun pp_word_signed_oct() = pp_word true octal;
@@ -185,7 +186,7 @@ fun pp_word_unsigned_bin() = pp_word false binary;
 fun pp_word_unsigned_oct() = pp_word false octal;
 fun pp_word_unsigned_hex() = pp_word false hexadecimal;
 
-fun pp_word_off() = Parse.remove_user_printer ({Tyop = thyname, Thy = thyname});
+fun pp_word_off() = Parse.remove_user_printer {Tyop=thyname, Thy=thyname};
 
 (* -------------------------------------------------------- *)
 
