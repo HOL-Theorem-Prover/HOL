@@ -495,27 +495,24 @@ end;
 
 val emptysubst = Binarymap.mkDict compare
 local 
+  open Binarymap
   fun addb [] A = A
     | addb ({redex,residue}::t) (A,b) = 
       addb t (if type_of redex = type_of residue
-              then (Binarymap.insert(A,redex,residue), 
+              then (insert(A,redex,residue), 
                     is_var redex andalso b)
               else raise ERR "subst" "redex has different type than residue")
-  fun mk_fun theta = 
-   let val (vmap,b) = addb theta (emptysubst, true)
-   in ((fn v => case Binarymap.peek(vmap,v) of NONE => v | SOME y => y), b)
-   end
 in
 fun subst [] = I 
   | subst theta = 
-    let val (lookup,b) = mk_fun theta
-        fun vsubs (v as Fv _) = lookup v
+    let val (fmap,b) = addb theta (emptysubst, true)
+        fun vsubs (v as Fv _) = (case peek(fmap,v) of NONE => v | SOME y => y)
           | vsubs (Comb(Rator,Rand)) = Comb(vsubs Rator, vsubs Rand)
           | vsubs (Abs(Bvar,Body)) = Abs(Bvar,vsubs Body)
           | vsubs (c as Clos _) = vsubs (push_clos c)
           | vsubs tm = tm
         fun subs tm =
-          case Lib.subst_assoc (aconv tm) theta
+          case peek(fmap,tm)
            of SOME residue => residue
 	    | NONE =>
               (case tm
