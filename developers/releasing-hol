@@ -1,15 +1,21 @@
 # this -*- shell-script -*- can be used to create a hol98 tar ball.
 
-if [ $# -ne 2 ]
+if [ $# -ne 3 ]
 then
-        echo "Usage: releasing-hol <releasename> <S/F user-id>"
-        echo "  <releasename> can be "today" for testing purposes..."
+        echo "Usage: releasing-hol <releasename> <S/F user-id> <mosmldir>"
+        echo "  <releasename> can be \"today\" for testing purposes..."
         exit 1
 fi
 name=$1
 userid=$2
+mosmldir=$3
 
-mosmldir=/local/scratch/mn200/Work/mosml
+if [ ! -x $mosmldir/bin/mosml ]
+then
+    echo "No mosml in $mosmldir/bin"
+    exit 1
+fi
+
 cd /tmp
 
 # use -r release-name for known release
@@ -33,18 +39,12 @@ else
   echo
 fi
 
-sed "s|^val mosmldir.*\$|val mosmldir = \"$mosmldir\"|" \
-   < hol98/tools/configure.sml | \
-   sed 's|^val holdir.*$|val holdir = "/tmp/hol98"|' > new-config
-mv hol98/tools/configure.sml /tmp
-mv new-config hol98/tools/configure.sml
-
 echo Removing all .cvsignore files
 find hol98 -name .cvsignore -exec /bin/rm \{} \;
 
-echo "Running configure script (original in /tmp)"
+echo "Running configure script"
 cd /tmp/hol98
-$mosmldir/bin/mosml < tools/configure.sml > /tmp/config-log 2>&1
+$mosmldir/bin/mosml < tools/smart-configure.sml > /tmp/config-log 2>&1
 if [ $? -ne 0 ] ; then
   echo "HOL configuration failed, consult /tmp/config.log" ; exit 1
 fi
@@ -110,7 +110,6 @@ cd /tmp/hol98
 /bin/rm -rf examples/sunrise
 /bin/rm -rf src/HolBdd/Manual
 /bin/rm -rf src/HolSat/doc
-mv /tmp/configure.sml tools
 
 mv bin/README ../bin-README
 /bin/rm tools/Holmake/*.{uo,ui} tools/hol98-mode.el

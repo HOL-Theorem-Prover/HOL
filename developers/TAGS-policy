@@ -43,6 +43,12 @@ Current branches:
   taupo-5-fixes-branch:
       initiated to branch off from the taupo-5 release to provide a
       taupo-6 release, while work continues on the Kananaskis series.
+      No intention to merge back into main branch.
+
+  kananaskis-1-fixes-branch:
+      initiated to allow release of Kananaskis-2, which does nothing
+      other than fix the Overflow bug.  No intention to merge back
+      into main branch.
 
 Other tags:
 -----------
@@ -53,6 +59,11 @@ Other tags:
   athabasca-5        - another semi-official release, fixing
                        athabasca-4 to run under MoscowML 1.44, and
                        also fixing a bug in the string library.
+
+  kananaskis-1       - release on the main branch (7 June 2002)
+
+  kananaskis-2       - release on the kananaskis-1-fixes-branch
+                       (8 March 2004)
 
   now-need-mosml-144 - tag marking switch to MoscowML 1.44 on the main
                        branch.
@@ -80,8 +91,9 @@ Other tags:
   start              - beginning of the repository, version slightly
                        predating athabasca-4
 
-  taupo-[1-5]        - releases on the main branch.
-
-  taupo-6            - release on taupo-5-fixes-branch.
-
+  taupo-[1-5]        - releases on the main branch.  (There was a
+                       taupo-6 release too, but there isn't a tag for
+                       it (bad!).  Instead, assume that what was
+                       released is the tip of the
+                       taupo-5-fixes-branch.)
 
