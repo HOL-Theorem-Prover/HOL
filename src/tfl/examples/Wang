@@ -71,6 +71,7 @@ in
 fun Eval q = Count.apply eval_iota (Term q)
 end;
 
+
 (*---------------------------------------------------------------------------
       Examples.
  ---------------------------------------------------------------------------*)
@@ -99,6 +100,9 @@ val ANDREWS = Eval `Prove
                 (OR (NOT ^q) (NOT ^r))`)
      (imp p s))`;
 
+val CLASSIC = Eval `Prove
+ ^(imp (imp (Term`AND ^p ^q`) r)
+       (Term `OR ^(imp p r) ^(imp q r)`))`;
 
 (*---------------------------------------------------------------------------
       The following are adapted from jrh's tautology collection
