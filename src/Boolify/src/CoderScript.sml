@@ -39,4 +39,22 @@ val domain_def =
 
 val _ = add_const "domain";
 
+val inverse_def = Define
+  `inverse e l =
+   if ?x t. l = APPEND (e x) t then SOME (@(x, t). l = APPEND (e x) t)
+   else NONE`;
+
+val inverse_none = prove
+  (``!e l. (inverse e l = NONE) = (!x t. ~(l = APPEND (e x) t))``,
+   RW_TAC std_ss [inverse_def] THEN
+   POP_ASSUM MP_TAC THEN
+   RW_TAC std_ss []);
+
+(*   
+val inverse_some = prove
+  (``!e l x t.
+       wf_encoder e ==>
+       ((inverse e l = SOME (x, t)) = (l = APPEND (e x) t))``,
+*)
+
 val _ = export_theory ();

@@ -16,39 +16,37 @@ val REVERSE = Tactical.REVERSE;
 
 val _ = new_theory "Decode";
 
-val apro = apropos o Term;
-
 (*---------------------------------------------------------------------------*)
 (* A well-formed monadic parser is one that doesn't increase the length of   *)
 (* the input by parsing it. A *strict* well-formed monadic parser decreases  *)
 (* the input by parsing it.                                                  *)
 (*---------------------------------------------------------------------------*)
 
-val wf_parser_def = Define
-  `wf_parser f =
+val wf_decoder_def = Define
+  `wf_decoder f =
    !a x b.
      (f a = SOME (x, b)) ==>
      ?c. (APPEND c b = a) /\ !d. f (APPEND c d) = SOME (x, d)`;
 
-val swf_parser_def = Define
-   `swf_parser f =
-    wf_parser f /\ !a x b. (f a = SOME (x, b)) ==> LENGTH b < LENGTH a`;
+val swf_decoder_def = Define
+   `swf_decoder f =
+    wf_decoder f /\ !a x b. (f a = SOME (x, b)) ==> LENGTH b < LENGTH a`;
 
-val swf_imp_wf_parser = Q.store_thm
-("swf_imp_wf_parser",
- `!f. swf_parser f ==> wf_parser f`,
- RW_TAC arith_ss [swf_parser_def]);
+val swf_imp_wf_decoder = Q.store_thm
+("swf_imp_wf_decoder",
+ `!f. swf_decoder f ==> wf_decoder f`,
+ RW_TAC arith_ss [swf_decoder_def]);
 
-val wf_parser_alt = store_thm
-  ("wf_parser_alt",
+val wf_decoder_alt = store_thm
+  ("wf_decoder_alt",
    ``!f.
-       wf_parser f =
+       wf_decoder f =
        !x a b.
          (f a = SOME (x, b)) ==>
          LENGTH b <= LENGTH a /\
          (!c. f (APPEND a c) = SOME (x, APPEND b c)) /\
          (?c. IS_PREFIX a c /\ (f c = SOME (x, [])))``,
-   SIMP_TAC bool_ss [wf_parser_def] THEN
+   SIMP_TAC bool_ss [wf_decoder_def] THEN
    REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
    [RES_TAC THEN
     Q.PAT_ASSUM `APPEND X Y = Z`
@@ -73,16 +71,16 @@ val wf_parser_alt = store_thm
     SIMP_TAC bool_ss [optionTheory.SOME_11, pairTheory.PAIR_EQ] THEN
     ASM_MESON_TAC []]);
 
-val swf_parser_alt = store_thm
-  ("swf_parser_alt",
+val swf_decoder_alt = store_thm
+  ("swf_decoder_alt",
    ``!f.
-       swf_parser f =
+       swf_decoder f =
        !x a b.
          (f a = SOME (x, b)) ==>
          LENGTH b < LENGTH a /\
          (!c. f (APPEND a c) = SOME (x, APPEND b c)) /\
          (?c. IS_PREFIX a c /\ (f c = SOME (x, [])))``,
-   SIMP_TAC bool_ss [swf_parser_def, wf_parser_alt] THEN
+   SIMP_TAC bool_ss [swf_decoder_def, wf_decoder_alt] THEN
    REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
    ASM_MESON_TAC [DECIDE ``!m n : num. m < n ==> m <= n``]);
 
@@ -143,7 +141,7 @@ val decode_option_def = Define
 (*                                                                           *)
 (* At the same time we partially instantiate decode_list_def and             *)
 (* decode_list_ind to a length measure, and require their arguments to be    *)
-(* wf_parsers.                                                               *)
+(* wf_decoders.                                                               *)
 (*---------------------------------------------------------------------------*)
 
 local
@@ -165,8 +163,8 @@ local
          ((!t v v1 v2.
              (f t = SOME v) /\ (v = (v1,v2)) ==> LENGTH v2 <= LENGTH t) ==>
           p) ==>
-       wf_parser f ==> p``,
-     RW_TAC std_ss [wf_parser_alt]);
+       wf_decoder f ==> p``,
+     RW_TAC std_ss [wf_decoder_alt]);
 
   val th = DISCH_ALL def;
   val th1 = Q.INST [`R` |-> `measure LENGTH`] th;
@@ -238,7 +236,7 @@ val decode_option_alt = store_thm
 
 val decode_list_alt = store_thm
   ("decode_list_alt",
-   ``wf_parser f ==>
+   ``wf_decoder f ==>
      (decode_list f l =
       case l of [] -> NONE
       || (T :: t) ->
@@ -259,8 +257,8 @@ val decode_list_alt = store_thm
 
 val wf_decode_bool = store_thm
   ("wf_decode_bool",
-   ``swf_parser decode_bool``,
-   REWRITE_TAC [swf_parser_alt] THEN
+   ``swf_decoder decode_bool``,
+   REWRITE_TAC [swf_decoder_alt] THEN
    REPEAT (DISCH_TAC ORELSE GEN_TAC) THEN
    POP_ASSUM (MP_TAC o REWRITE_RULE [decode_bool_alt]) THEN
    REPEAT CASE_TAC THEN
@@ -270,13 +268,13 @@ val wf_decode_bool = store_thm
 
 val wf_decode_unit = store_thm
   ("wf_decode_unit",
-   ``wf_parser decode_unit``,
-   RW_TAC list_ss [wf_parser_alt, decode_unit_def, IS_PREFIX]);
+   ``wf_decoder decode_unit``,
+   RW_TAC list_ss [wf_decoder_alt, decode_unit_def, IS_PREFIX]);
 
 val wf_decode_prod = store_thm
   ("wf_decode_prod",
-   ``!f g. wf_parser f /\ wf_parser g ==> wf_parser (decode_prod f g)``,
-   SIMP_TAC std_ss [wf_parser_def, decode_prod_def] THEN
+   ``!f g. wf_decoder f /\ wf_decoder g ==> wf_decoder (decode_prod f g)``,
+   SIMP_TAC std_ss [wf_decoder_def, decode_prod_def] THEN
    REPEAT GEN_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN
    REPEAT CASE_TAC THEN
    RW_TAC std_ss [] THEN
@@ -286,32 +284,32 @@ val wf_decode_prod = store_thm
 
 val wf_decode_prod1 = store_thm
   ("wf_decode_prod1",
-   ``!f g. swf_parser f /\ wf_parser g ==> swf_parser (decode_prod f g)``,
-   RW_TAC std_ss [swf_parser_def, wf_decode_prod, decode_prod_def] THEN
+   ``!f g. swf_decoder f /\ wf_decoder g ==> swf_decoder (decode_prod f g)``,
+   RW_TAC std_ss [swf_decoder_def, wf_decode_prod, decode_prod_def] THEN
    POP_ASSUM MP_TAC THEN
    REPEAT CASE_TAC THEN
    RW_TAC std_ss [] THEN
-   FULL_SIMP_TAC std_ss [wf_parser_alt] THEN
+   FULL_SIMP_TAC std_ss [wf_decoder_alt] THEN
    RES_TAC THEN
    ASM_MESON_TAC [LESS_EQ_LESS_TRANS]);
 
 val wf_decode_prod2 = store_thm
   ("wf_decode_prod2",
-   ``!f g. wf_parser f /\ swf_parser g ==> swf_parser (decode_prod f g)``,
-   RW_TAC std_ss [swf_parser_def, wf_decode_prod, decode_prod_def] THEN
+   ``!f g. wf_decoder f /\ swf_decoder g ==> swf_decoder (decode_prod f g)``,
+   RW_TAC std_ss [swf_decoder_def, wf_decode_prod, decode_prod_def] THEN
    POP_ASSUM MP_TAC THEN
    REPEAT CASE_TAC THEN
    RW_TAC std_ss [] THEN
-   FULL_SIMP_TAC std_ss [wf_parser_alt] THEN
+   FULL_SIMP_TAC std_ss [wf_decoder_alt] THEN
    RES_TAC THEN
    ASM_MESON_TAC [LESS_LESS_EQ_TRANS]);
 
 val swf_decode_sum = store_thm
   ("swf_decode_sum",
-   ``!f g. wf_parser f /\ wf_parser g ==> swf_parser (decode_sum f g)``,
-   RW_TAC std_ss [swf_parser_def] THENL
+   ``!f g. wf_decoder f /\ wf_decoder g ==> swf_decoder (decode_sum f g)``,
+   RW_TAC std_ss [swf_decoder_def] THENL
    [REPEAT (POP_ASSUM MP_TAC) THEN
-    RW_TAC std_ss [wf_parser_def] THEN
+    RW_TAC std_ss [wf_decoder_def] THEN
     POP_ASSUM (MP_TAC o REWRITE_RULE [decode_sum_alt]) THEN
     (REPEAT CASE_TAC THEN
      RW_TAC std_ss [] THEN
@@ -321,7 +319,7 @@ val swf_decode_sum = store_thm
      Q.EXISTS_TAC `F :: c` THEN
      RW_TAC std_ss [APPEND, decode_sum_def]],
     REPEAT (POP_ASSUM MP_TAC) THEN
-    RW_TAC std_ss [wf_parser_alt, decode_sum_alt] THEN
+    RW_TAC std_ss [wf_decoder_alt, decode_sum_alt] THEN
     REPEAT (POP_ASSUM MP_TAC) THEN
     REPEAT CASE_TAC THEN
     RW_TAC std_ss [] THEN
@@ -330,10 +328,10 @@ val swf_decode_sum = store_thm
 
 val swf_decode_option = store_thm
   ("swf_decode_option",
-   ``!f. wf_parser f ==> swf_parser (decode_option f)``,
-   RW_TAC std_ss [swf_parser_def] THENL
+   ``!f. wf_decoder f ==> swf_decoder (decode_option f)``,
+   RW_TAC std_ss [swf_decoder_def] THENL
    [POP_ASSUM MP_TAC THEN
-    RW_TAC std_ss [wf_parser_def] THEN
+    RW_TAC std_ss [wf_decoder_def] THEN
     POP_ASSUM (MP_TAC o REWRITE_RULE [decode_option_alt]) THEN
     (REPEAT CASE_TAC THEN
      RW_TAC std_ss []) THENL
@@ -343,7 +341,7 @@ val swf_decode_option = store_thm
      Q.EXISTS_TAC `[F]` THEN
      RW_TAC std_ss [APPEND, decode_option_def]],
     REPEAT (POP_ASSUM MP_TAC) THEN
-    RW_TAC std_ss [wf_parser_alt, decode_option_alt] THEN
+    RW_TAC std_ss [wf_decoder_alt, decode_option_alt] THEN
     POP_ASSUM MP_TAC THEN
     REPEAT CASE_TAC THEN
     RW_TAC std_ss [] THEN
@@ -357,11 +355,11 @@ val swf_decode_option = store_thm
 
 val wf_decode_num = store_thm
   ("wf_decode_num",
-   ``swf_parser decode_num``,
-   REWRITE_TAC [swf_parser_def] THEN
+   ``swf_decoder decode_num``,
+   REWRITE_TAC [swf_decoder_def] THEN
    MATCH_MP_TAC (DECIDE ``!a b. a /\ (a ==> b) ==> a /\ b``) THEN
    CONJ_TAC THENL
-   [SIMP_TAC std_ss [wf_parser_def] THEN
+   [SIMP_TAC std_ss [wf_decoder_def] THEN
     recInduct decode_num_ind THEN
     RW_TAC list_ss [decode_num_def] THENL
     [Q.EXISTS_TAC `[T; T]` THEN
@@ -378,7 +376,7 @@ val wf_decode_num = store_thm
      RES_TAC THEN
      Q.EXISTS_TAC `F::c` THEN
      RW_TAC std_ss [APPEND, decode_num_def]],
-    SIMP_TAC std_ss [wf_parser_alt] THEN
+    SIMP_TAC std_ss [wf_decoder_alt] THEN
     STRIP_TAC THEN
     recInduct decode_num_ind THEN
     RW_TAC list_ss [decode_num_def] THEN
@@ -390,12 +388,12 @@ val wf_decode_num = store_thm
 
 val wf_decode_list = store_thm
  ("wf_decode_list",
-  ``!f. wf_parser f ==> swf_parser (decode_list f)``,
+  ``!f. wf_decoder f ==> swf_decoder (decode_list f)``,
    REPEAT STRIP_TAC THEN
-   REWRITE_TAC [swf_parser_def] THEN
+   REWRITE_TAC [swf_decoder_def] THEN
    MATCH_MP_TAC (DECIDE ``!a b. a /\ (a ==> b) ==> a /\ b``) THEN
    CONJ_TAC THENL
-   [SIMP_TAC std_ss [wf_parser_def] THEN
+   [SIMP_TAC std_ss [wf_decoder_def] THEN
     recInduct (UNDISCH decode_list_ind) THEN
     RW_TAC list_ss [decode_list_def] THENL
     [Q.EXISTS_TAC `[F]` THEN
@@ -403,22 +401,22 @@ val wf_decode_list = store_thm
      POP_ASSUM MP_TAC THEN
      REPEAT CASE_TAC THEN
      RW_TAC std_ss [] THEN
-     Q.PAT_ASSUM `wf_parser f`
+     Q.PAT_ASSUM `wf_decoder f`
      (fn th =>
-      ASSUME_TAC (REWRITE_RULE [wf_parser_def] th) THEN ASSUME_TAC th) THEN
+      ASSUME_TAC (REWRITE_RULE [wf_decoder_def] th) THEN ASSUME_TAC th) THEN
      RES_TAC THEN
      Q.EXISTS_TAC `T :: APPEND c c'` THEN
      RW_TAC std_ss [APPEND, GSYM APPEND_ASSOC, decode_list_def]],
-    SIMP_TAC std_ss [wf_parser_alt] THEN
+    SIMP_TAC std_ss [wf_decoder_alt] THEN
     STRIP_TAC THEN
     recInduct (UNDISCH decode_list_ind) THEN
     RW_TAC list_ss [decode_list_def] THEN
     POP_ASSUM MP_TAC THEN
     REPEAT CASE_TAC THEN
     RW_TAC std_ss [] THEN
-    Q.PAT_ASSUM `wf_parser f`
+    Q.PAT_ASSUM `wf_decoder f`
     (fn th =>
-     ASSUME_TAC (REWRITE_RULE [wf_parser_alt] th) THEN ASSUME_TAC th) THEN
+     ASSUME_TAC (REWRITE_RULE [wf_decoder_alt] th) THEN ASSUME_TAC th) THEN
     RES_TAC THEN
     RW_TAC arith_ss []]);
 
@@ -426,19 +424,19 @@ val wf_decode_list = store_thm
 (* Congruence rule for decode_list. Reflects fact that decode_list calls     *)
 (* its argument on strictly smaller lists. The format of the rule is         *)
 (* slightly non-standard. Usually, antecedents are conditional rewrites. In  *)
-(* our case, we add the requirements wf_parser f and wf_parser g. These are  *)
+(* our case, we add the requirements wf_decoder f and wf_decoder g. These are  *)
 (* needed to prove the theorem. When the rule is used to extract termination *)
 (* conditions, the matched parser f (which will be used to instantiate g)    *)
-(* will have to be proved to be a wf_parser on the fly. Therefore, the       *)
+(* will have to be proved to be a wf_decoder on the fly. Therefore, the       *)
 (* condition prover in the T.C. extractor will have to be augmented to       *)
-(* understand how to prove wf_parser goals. Note that the wf_parser formulas *)
+(* understand how to prove wf_decoder goals. Note that the wf_decoder formulas *)
 (* appear after the other conditions. The conditions now get separated into  *)
 (* two conceptual blocks: the first, as before, finds the values for the     *)
 (* variables on the rhs of the conclusion (TC trapping happens here). The    *)
 (* second block is a collection of other goals, dependent on the variable    *)
 (* settings found in the first block, which need other theorem proving to    *)
-(* polish off. So we need a little "wf_parser" prover. It may also be        *)
-(* possible to handle schematic arguments by having the wf_parser prover     *)
+(* polish off. So we need a little "wf_decoder" prover. It may also be        *)
+(* possible to handle schematic arguments by having the wf_decoder prover     *)
 (* assume them.                                                              *)
 (*---------------------------------------------------------------------------*)
 
@@ -448,7 +446,7 @@ val th2 = UNDISCH (Q.SPEC `g` (Q.GEN `f` decode_list''));
 
 val decode_list_cong = store_thm
 ("decode_list_cong",
- ``wf_parser f /\ wf_parser g  ==>
+ ``wf_decoder f /\ wf_decoder g  ==>
    !l1 l2. 
       (l1=l2) /\ 
       (!l'. LENGTH l' < LENGTH l2 ==> (f l' = g l'))
@@ -467,8 +465,8 @@ val decode_list_cong = store_thm
       by (GEN_TAC THEN DISCH_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN
           MATCH_MP_TAC (DECIDE (Term `!a b c. a < b /\ b <= c ==> a < c`)) THEN
           Q.EXISTS_TAC `LENGTH r` THEN RW_TAC std_ss [] THEN
-          Q.PAT_ASSUM `wf_parser g` 
-               (MP_TAC o GSYM o REWRITE_RULE [wf_parser]) THEN
+          Q.PAT_ASSUM `wf_decoder g` 
+               (MP_TAC o GSYM o REWRITE_RULE [wf_decoder]) THEN
           PROVE_TAC [DECIDE(Term`x <= y ==> x <= SUC y`)])
     THENL [PROVE_TAC [TypeBase.distinct_of "option"],
            PROVE_TAC [TypeBase.distinct_of "option"],
@@ -482,8 +480,8 @@ val decode_list_cong_ideal = store_thm
  ``!l1 l2 f g. 
        (l1=l2) 
     /\ (!l'. LENGTH l' < LENGTH l2 ==> (f l' = g l')) 
-    /\ wf_parser f 
-    /\ wf_parser g
+    /\ wf_decoder f 
+    /\ wf_decoder g
     ==>
       (decode_list f l1 = decode_list g l2)``,
  PROVE_TAC [decode_list_cong]);
