@@ -1,7 +1,7 @@
 
 # =====================================================================
 # Makefile for new snow watching lantern logo
-# Last updated: MJCG Mon Apr 22 17:04:11 BST 2002
+# Last updated: MJCG Mon Apr 22 17:10:23 BST 2002
 # =====================================================================
 
 
@@ -13,8 +13,9 @@ clean:
 
 logo.gif: logo.obj
 	tgif -print -gif logo.obj
-	@echo "=======> logi.gif made"
+	@echo "=======> logo.gif made"
 
 logo.eps: logo.obj
 	tgif -print -eps logo.obj
 	@echo "=======> logo.eps made"
+
