@@ -11,7 +11,7 @@ let fullsymbol = symbol | `(` | `*`
 let nonparen = symbol | `*`
 let nonstar = symbol | `(`
 let ident = alpha (alpha | numeric)*
-let anysymb = ident | nonparen * `(` | (nonparen | `(` nonstar) *
+let anysymb = ident | nonparen * `(` | (nonparen | `(` nonstar) +
 let space = [` ` `\n` `\t` `\r`]
 
 rule base_token =
@@ -33,6 +33,8 @@ rule base_token =
  | `$` ? anysymb { BT_Ident (getLexeme lexbuf) }
  | "\""  { BT_Ident (String.implode (List.rev (string lexbuf [#"\""]))) }
  | space { base_token lexbuf }
+ | _     { raise LEX_ERR ("Character \""^getLexeme lexbuf^
+                          "\" is a lexical error") }
  | eof   { BT_EOI }
 
 and string =
