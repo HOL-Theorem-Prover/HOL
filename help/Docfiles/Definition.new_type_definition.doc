@@ -101,12 +101,9 @@ of the representations is required:
 Finally, we can introduce the constants and their property.
 {
    - val THREE = new_specification
-      {name = "THREE", 
-       sat_thm = PROVE [abs_distinct]
-                       (Term`?x y z:three. ~(x=y) /\ ~(y=z) /\ ~(z=x)`),
-       consts = [{const_name="e1", fixity=Prefix},
-                 {const_name="e2", fixity=Prefix},
-                 {const_name="e3", fixity=Prefix}]};
+       ("THREE", ["e1", "e2", "e3"],
+        PROVE [abs_distinct] 
+         (Term`?x y z:three. ~(x=y) /\ ~(y=z) /\ ~(z=x)`));
 
    > val THREE = |- ~(e1 = e2) /\ ~(e2 = e3) /\ ~(e3 = e1) : thm
 }
