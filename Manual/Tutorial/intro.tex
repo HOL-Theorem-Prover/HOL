@@ -15,15 +15,13 @@ The \HOL{} system can be downloaded from
 releases is $\langle${\it name}$\rangle$-$\langle${\it
   number}$\rangle$; the release described here is \holnversion.
 
-\section{The {\tt info-hol} mailing list}
+\section{The {\tt hol-info} mailing list}
 
-Phil Windley has started a mailing list:
-{\small\verb%info-hol@jaguar.cs.byu.edu%} which he set up to serve as a
-forum
-for discussing \HOL{} and disseminating news about it.  If you wish to be on
-this list (which is recommended for all users of \HOL), or know of other
-people who should be included, email to:
-{\small\verb%info-hol-request@jaguar.cs.byu.edu%}.
+The \texttt{hol-info} mailing list serves as a forum for discussing
+\HOL{} and disseminating news about it.  If you wish to be on this
+list (which is recommended for all users of \HOL), visit
+\url{http://lists.sourceforge.net/lists/listinfo/hol-info}.  This
+web-page can also be used to unsubscribe from the mailing list.
 
 \section{Installing HOL}
 
@@ -102,7 +100,7 @@ Enter `quit();' to quit.
 -
 HOL smart configuration.
 
-Determining configuration parameters...
+Determining configuration parameters: OS mosmldir holdir
 OS:       linux
 mosmldir: /home/mn200/mosml
 holdir:   /home/mn200/hol
@@ -138,21 +136,46 @@ $
 \end{session}
 
 
-\subsection{Editting \texttt{configure.sml} directly}
+\subsection{Overriding \texttt{smart-configure}}
 \label{sec:editting-configure}
 
 If \texttt{smart-configure} is unable to guess correct values for the
 three parameters, \texttt{mosmldir}, \texttt{holdir} and \texttt{OS},
-then you will need to edit the file \texttt{configure.sml} yourself to
-set these correctly.  At the top of this file three SML declarations
-are present, but commented out.  You will need to uncomment this
-section (remove the \texttt{(*} and \texttt{*)} markers), and provide
-sensible values.  The \texttt{mosmldir} value must be the name of the
-directory where the MoscowML implementation is on your machine.  The
-\texttt{holdir} value must be the name of the top-level directory
-listed in the first session above.  The \texttt{OS} value should be
-one of the strings specified in the accompanying comment.  All three
-strings must be enclosed in double quotes.
+then you will need to create a file called \texttt{config-override} in
+the root directory of the HOL distribution.  In this file, specify the
+correct value for the appropriate parameter by providing an ML binding
+for it.  Each of the three variables must be given a string as a
+possible value.  So, one might write
+
+\begin{session}
+\begin{verbatim}
+val OS = "unix";
+val holdir = "/local/scratch/myholdir";
+\end{verbatim}
+\end{session}
+
+The \texttt{config-override} file need only provide values for those
+variables that need overriding.
+
+With this file in place, the \texttt{smart-configure} program will use
+the values specified there rather than those it attempts to calculate
+itself.  The value given for the \texttt{OS} variable must be one of
+\texttt{"unix"}, \texttt{"linux"}, \texttt{"solaris"} or
+\texttt{"winNT"}.\footnote{It has been reported that \texttt{"unix"}
+  works as a value for the \texttt{OS} variable when building on
+  MacOS~X.}
+
+In extreme circumstances it is possible to edit the file
+\texttt{configure.sml} yourself to set configuration variables
+directly.  At the top of this file three SML declarations are present,
+but commented out.  You will need to uncomment this section (remove
+the \texttt{(*} and \texttt{*)} markers), and provide sensible values.
+The \texttt{mosmldir} value must be the name of the directory where
+the MoscowML implementation is on your machine.  The \texttt{holdir}
+value must be the name of the top-level directory listed in the first
+session above.  The \texttt{OS} value should be one of the strings
+specified in the accompanying comment.  All three strings must be
+enclosed in double quotes.
 
 The next two values (\texttt{CC} and \texttt{GNUMAKE}) are needed for
 ``optional'' components of the system.  The first gives a string
