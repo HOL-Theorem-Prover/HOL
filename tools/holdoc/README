@@ -26,6 +26,11 @@ extractDefinitions              a helper Perl script to build .imn
                                 identifies auxiliary functions from
                                 Define-defined constants.
 
+countClauses                    a helper Perl script to compute the
+                                number of clauses defined in a
+                                Net_Hol_reln definition, by reading
+                                the *Script.sml file.
+
 
 Source code:
 ~~~~~~~~~~~~
