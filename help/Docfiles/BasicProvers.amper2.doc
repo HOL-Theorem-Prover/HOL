@@ -6,7 +6,7 @@
 Infix operator for adding theorems into a simpset.
 
 \DESCRIBE
-{bossLib.&&} is identical to {BasicProvers.&&}.
+{BasicProvers.&&} is identical to {bossLib.&&}.
 
 \SEEALSO
 bossLib.&&.
