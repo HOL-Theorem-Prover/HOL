@@ -74,7 +74,7 @@ val INTSEQ_def = Define`
 
 val ABORTINST_def = Define`
   ABORTINST iregval onewinst ointstart ireg n z c v =
-    ~iregval \/ (onewinst /\ ~ointstart /\ ~(CONDITION_PASSED n z c v (BITSw 31 28 ireg)))`;
+    ~iregval \/ (onewinst /\ ~ointstart /\ ~CONDITION_PASSED n z c v (BITSw 31 28 ireg))`;
 
 (* --------------- *)
 
@@ -120,9 +120,12 @@ val PIPESTATIREGWRITE_def = Define`
 val PCCHANGE_def = Define`
   PCCHANGE rwa = let (w,a) = rwa in w /\ (a = 15)`;
 
+val ALIGN_EQ_def = Define`
+  ALIGN_EQ a b = (WORD_ALIGN a = WORD_ALIGN b)`;
+
 val PIPECHANGE_def = Define`
   PIPECHANGE areg apipea apipeb =
-    let aareg = WORD_ALIGN areg in (aareg = WORD_ALIGN apipea) \/ (aareg = WORD_ALIGN apipeb)`;
+    (ALIGN_EQ areg apipea) \/ (ALIGN_EQ areg apipeb)`;
 
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
@@ -183,17 +186,11 @@ val FIELD_def = Define`
     else if (is = t5) /\ (ic = ldr) \/ (is = t6) /\ (ic = swp) then
       if ~BITw 22 ireg then
          din
-      else if oareg = 0 then
-         w32 (BITSw 7 0 din)
-      else if oareg = 1 then
-         w32 (SLICEw 15 8 din)
-      else if oareg = 2 then
-         w32 (SLICEw 23 16 din)
-      else
-         w32 (SLICEw 31 24 din)
+      else let a = 8 * oareg in
+         w32 (SLICEw (a + 7) a din)
     else
        ARB`;
-       
+
 (* sctrlreg = reg[ireg[11:8]] *)
 (* Gives alub *)
 
@@ -305,7 +302,8 @@ val PSRWA_def = Define`
     and bit20 = BITw 20 ireg
     and bit19 = BITw 19 ireg
     and bit16 = BITw 16 ireg in
-      if bit20 /\ (((is = t3) /\ (ic = data_proc)) \/ ((is = t4) /\ (ic = reg_shift))) then
+      if bit20 /\ (((is = t3) /\ (ic = data_proc)) \/ ((is = t4) /\ (ic = reg_shift))) \/
+         (is = t3) /\ (ic = swi_ex) then
          (T,T)
       else if (is = t3) /\ (ic = mrs_msr) then
          if ~bit21 \/ (~bit19 /\ ~bit16) \/
@@ -313,8 +311,6 @@ val PSRWA_def = Define`
             (F,F)
          else
             (T,~bit22)
-      else if (is = t3) /\ (ic = swi_ex) then
-         (T,T)
       else if (is = t4) /\ (ic = swi_ex) then
          (T,F)
       else

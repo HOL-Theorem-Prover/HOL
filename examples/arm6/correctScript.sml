@@ -111,7 +111,7 @@ val ARM6_TCON_LEM1 = Count.apply store_thm("ARM6_TCON_LEM1",
                  THENL [
                    POP_ASSUM_LIST (K ALL_TAC)
                      THEN FINISH_OFF,
-                   RULE_ASSUM_TAC (SIMP_RULE std_ss [PIPECHANGE_def])
+                   RULE_ASSUM_TAC (SIMP_RULE std_ss [PIPECHANGE_def,ALIGN_EQ_def])
                      THEN POP_ASSUM_LIST (fn thl => ASSUME_TAC (hd thl))
                      THEN FINISH_OFF
                  ],
@@ -127,7 +127,7 @@ val ARM6_TCON_LEM1 = Count.apply store_thm("ARM6_TCON_LEM1",
                    PAT_ASSUM `~(x = 15)` (fn th => ASSUME_TAC th)
                      THEN POP_ASSUM_LIST (fn thl => ASSUME_TAC (hd thl))
                      THEN FINISH_OFF,
-                   RULE_ASSUM_TAC (SIMP_RULE std_ss [PIPECHANGE_def])
+                   RULE_ASSUM_TAC (SIMP_RULE std_ss [PIPECHANGE_def,ALIGN_EQ_def])
                      THEN FINISH_OFF
                  ]
              ], (* mrs_msr *)
@@ -265,7 +265,7 @@ val ARM6_TCON_LEM1 = Count.apply store_thm("ARM6_TCON_LEM1",
                      THEN ALU_STR3
                      THEN ALU_STR4
                      THEN NTAC 2 (UNFOLD_NEXT THEN ASM_SIMP_TAC (std_ss++CORE3_ss) [])
-                     THEN SIMP_TAC std_ss [PIPECHANGE_def]
+                     THEN SIMP_TAC std_ss [PIPECHANGE_def,ALIGN_EQ_def]
                      THEN Cases_on `BITw 25 i`
                      THEN ASM_SIMP_TAC std_ss []
                      THEN PAT_ASSUM `~(x = 15)` (fn th => ASSUME_TAC th)
@@ -277,7 +277,7 @@ val ARM6_TCON_LEM1 = Count.apply store_thm("ARM6_TCON_LEM1",
                  THEN PAT_ASSUM `~(~a \/ b)` (fn th => ASSUME_TAC (REWRITE_RULE [NOT_A_OR_B] th) THEN ASSUME_TAC th)
                  THEN ALU_STR3
                  THEN NTAC 2 (UNFOLD_NEXT THEN ASM_SIMP_TAC (std_ss++CORE3_ss) [])
-                 THEN SIMP_TAC std_ss [PIPECHANGE_def]
+                 THEN SIMP_TAC std_ss [PIPECHANGE_def,ALIGN_EQ_def]
                  THEN Cases_on `BITw 25 i`
                  THEN ASM_SIMP_TAC std_ss []
                  THEN POP_ASSUM_LIST (K ALL_TAC)
@@ -399,7 +399,7 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                  THEN Cases_on `PIPECHANGE (REG_READ6 reg (DECODE_MODE cpsr) (BITSw 19 16 i))
                                            (REG_READ6 reg usr 15) (REG_READ6 reg usr 15 - w32 4)`
                  THEN ASM_SIMP_TAC std_ss []
-                 THEN RULE_ASSUM_TAC (SIMP_RULE std_ss [PIPECHANGE_def])
+                 THEN RULE_ASSUM_TAC (SIMP_RULE std_ss [PIPECHANGE_def,ALIGN_EQ_def])
                  THEN RULE_ASSUM_TAC (ONCE_REWRITE_RULE [DISJ_COMM])
                  THEN Cases_on `BITw 22 i`  (* BYTE *)
                  THEN ASM_SIMP_TAC std_ss [BIT_W32_NUM,BITS_W32_NUM,SWP_def,DECODE_SWP_def]
@@ -409,9 +409,7 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                  THEN ASM_REWRITE_TAC []
                  THEN POP_ASSUM_LIST (fn thl => ASSUME_TAC (hd thl))
                  THEN RW_TAC arith_ss [INC_PC_READ,SLICE_ROR_THM,FIELD_def,OP_REG,RBA_def,
-                                       ZERO_SHIFT2,MEM_READ_BYTE_def,MEM_READ_WORD_def,MEMREAD_def,MEMWRITE_def]
-                 THEN IMP_RES_TAC MUST_BE_THREE
-                 THEN RW_TAC arith_ss [SLICE_ROR_THM],
+                                       ZERO_SHIFT2,MEM_READ_BYTE_def,MEM_READ_WORD_def,MEMREAD_def,MEMWRITE_def],
                UNFOLD_STATE
                  THEN SWP_ALU3
                  THEN SWP_ALU4
@@ -433,7 +431,7 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                  THEN Cases_on `PIPECHANGE (REG_READ6 reg (DECODE_MODE cpsr) (BITSw 19 16 i))
                                            (REG_READ6 reg usr 15) (REG_READ6 reg usr 15 - w32 4)`
                  THEN ASM_SIMP_TAC std_ss []
-                 THEN RULE_ASSUM_TAC (SIMP_RULE std_ss [PIPECHANGE_def])
+                 THEN RULE_ASSUM_TAC (SIMP_RULE std_ss [PIPECHANGE_def,ALIGN_EQ_def])
                  THEN RULE_ASSUM_TAC (ONCE_REWRITE_RULE [DISJ_COMM])
                  THEN Cases_on `BITw 22 i`  (* BYTE *)
                  THEN ASM_SIMP_TAC std_ss [BIT_W32_NUM,BITS_W32_NUM,SWP_def,DECODE_SWP_def]
@@ -445,8 +443,6 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                  THEN POP_ASSUM_LIST (fn thl => ASSUME_TAC (CONJ (hd thl) (hd (tl thl))))
                  THEN RW_TAC arith_ss [INC_PC_READ,SLICE_ROR_THM,FIELD_def,OP_INC_REG,RBA_def,
                                        ZERO_SHIFT2,MEM_READ_BYTE_def,MEM_READ_WORD_def,MEMREAD_def,MEMWRITE_def]
-                 THEN IMP_RES_TAC MUST_BE_THREE
-                 THEN RW_TAC arith_ss [SLICE_ROR_THM]
              ], (* mrs_msr *)
            Cases_on `BITw 21 i`
              THEN ASM_SIMP_TAC std_ss [RWA_def,PCCHANGE_def,iseq_distinct,iclass_distinct]
@@ -704,9 +700,7 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                          THEN REPEAT (STRIP_GOAL_THEN (fn th => REWRITE_TAC [SYM th]))
                          THEN Cases_on `BITw 22 i`  (* BYTE *)
                          THEN RW_TAC arith_ss [SLICE_ROR_THM,FIELD_def,OP_REG2,SWP_SHIFT,ROR2_THM,ZERO_SHIFT2,
-                                               MEM_READ_BYTE_def,MEM_READ_WORD_def,MEMREAD_def]
-                         THEN IMP_RES_TAC MUST_BE_THREE
-                         THEN RW_TAC arith_ss [SLICE_ROR_THM,OP_REG2,ROR2_THM],
+                                               MEM_READ_BYTE_def,MEM_READ_WORD_def,MEMREAD_def],
                        UNFOLD_STATE
                          THEN PAT_ASSUM `~a \/ b` (fn th => ASSUME_TAC (REWRITE_RULE [NOT_A_OR_B] th) THEN ASSUME_TAC th)
                          THEN ALU_LDR3
@@ -739,8 +733,6 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                          THEN Cases_on `BITw 22 i`  (* BYTE *)
                          THEN RW_TAC arith_ss [SLICE_ROR_THM,FIELD_def,OP_INC_REG2,SWP_SHIFT,
                                                ROR2_THM,ZERO_SHIFT2,MEM_READ_BYTE_def,MEM_READ_WORD_def,MEMREAD_def]
-                         THEN IMP_RES_TAC MUST_BE_THREE
-                         THEN RW_TAC arith_ss [SLICE_ROR_THM,OP_REG2,ROR2_THM]
                      ]
                  ],
                Cases_on `BITSw 15 12 i = 15`
@@ -773,9 +765,7 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                      THEN REPEAT (STRIP_GOAL_THEN (fn th => REWRITE_TAC [SYM th]))
                      THEN Cases_on `BITw 22 i`  (* BYTE *)
                      THEN RW_TAC arith_ss [SLICE_ROR_THM,FIELD_def,OP_REG,SWP_SHIFT,ROR2_THM,
-                                           ZERO_SHIFT2,MEM_READ_BYTE_def,MEM_READ_WORD_def,MEMREAD_def]
-                     THEN IMP_RES_TAC MUST_BE_THREE
-                     THEN RW_TAC arith_ss [SLICE_ROR_THM,OP_REG,ROR2_THM],
+                                           ZERO_SHIFT2,MEM_READ_BYTE_def,MEM_READ_WORD_def,MEMREAD_def],
                    UNFOLD_STATE
                      THEN PAT_ASSUM `~(~a \/ b)` (fn th => ASSUME_TAC (REWRITE_RULE [NOT_A_OR_B] th) THEN ASSUME_TAC th)
                      THEN ALU_LDR3
@@ -805,9 +795,6 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                      THEN Cases_on `BITw 22 i`  (* BYTE *)
                      THEN RW_TAC arith_ss [SLICE_ROR_THM,FIELD_def,SWP_SHIFT,ROR2_THM,
                                            ZERO_SHIFT2,MEM_READ_BYTE_def,MEM_READ_WORD_def,MEMREAD_def]
-                     THEN FULL_SIMP_TAC std_ss []
-                     THEN IMP_RES_TAC MUST_BE_THREE
-                     THEN RW_TAC arith_ss [SLICE_ROR_THM]
                  ]
              ], (* str *)
            IMP_RES_TAC STR_IMP_BITS
@@ -853,7 +840,7 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                                                BIT_W32_NUM,BITS_W32_NUM,LDR_STR_def,SHIFT_IMMEDIATE_THM2,
                                                ADDR_MODE2_def,DECODE_LDR_STR_def]
                      THEN PAT_ASSUM `~(a = 15)` (fn th => ASSUME_TAC th
-                                                           THEN SIMP_TAC std_ss [PIPE_OKAY_def,PIPECHANGE_def,FETCH_SUB8,
+                                                           THEN SIMP_TAC std_ss [PIPE_OKAY_def,PIPECHANGE_def,ALIGN_EQ_def,FETCH_SUB8,
                                                                         th,ADD_SUBw,GSYM ADD_SUB_SYM,ADD4_SUB8_THM])
                      THEN ONCE_REWRITE_TAC [CONJ_COMM]
                      THEN POP_ASSUM_LIST (fn thl => ASSUME_TAC (hd thl))
@@ -874,7 +861,7 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                                            ALUOUT_ALU_logic,ALUOUT_ADD,ALUOUT_SUB,UP_DOWN_def,REG_READ_SUB8_PC,
                                            BIT_W32_NUM,BITS_W32_NUM,LDR_STR_def,SHIFT_IMMEDIATE_THM2,
                                            ADDR_MODE2_def,DECODE_LDR_STR_def]
-                 THEN SIMP_TAC std_ss [PIPE_OKAY_def,PIPECHANGE_def,FETCH_SUB8,
+                 THEN SIMP_TAC std_ss [PIPE_OKAY_def,PIPECHANGE_def,ALIGN_EQ_def,FETCH_SUB8,
                                        ADD_SUBw,GSYM ADD_SUB_SYM,ADD4_SUB8_THM]
                  THEN ONCE_REWRITE_TAC [CONJ_COMM]
                  THEN POP_ASSUM_LIST (K ALL_TAC)

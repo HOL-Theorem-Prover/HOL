@@ -515,14 +515,6 @@ val SLICE_ROR_THM = store_thm("SLICE_ROR_THM",
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
 
-
-val MUST_BE_THREE = store_thm("MUST_BE_THREE",
-  `!a. ~(BITSw 1 0 a = 0) /\ ~(BITSw 1 0 a = 1) /\ ~(BITSw 1 0 a = 2) ==> (BITSw 1 0 a = 3)`,
-  STRIP_TAC
-    THEN ASSUME_TAC (SIMP_RULE arith_ss [] (SPECL [`1`,`0`,`a`] BITSwLT_THM))
-    THEN RW_TAC arith_ss []
-);
-
 val LDR_SHIFT_REG_T3 = store_thm("LDR_SHIFT_REG_T3",
   `!i oareg sctrl busb c. BITw 25 i ==>
           (SHIFTER ldr t3 i oareg sctrl busb c =
