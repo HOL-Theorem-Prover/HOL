@@ -1,0 +1,1068 @@
+\documentclass{llncs}
+\usepackage{epic,eepic,subfigure,alltt}
+\input{notation.tex}
+
+%-------------------------------------------------------------------------------
+\title{Higher-Level Hardware Synthesis in HOL\\[-4mm]
+%{\small(submitted to TPHOLs2004 under {\it  Emerging Trends})}
+}
+\author{Juliano Iyoda \and  Michael J. C. Gordon}
+\institute{University of Cambridge Computer Laboratory \\
+           William Gates Building, 15 JJ Thomson Avenue,
+           Cambridge CB3 0FD, U.K. \\
+           \begin{sl}\{Juliano.Iyoda,Mike.Gordon\}@cl.cam.ac.uk\end{sl}}
+\begin{document}
+\maketitle
+
+\vspace*{-5mm}
+%-------------------------------------------------------------------------------
+\thispagestyle{empty}
+
+\begin{abstract}
+  A simple functional language embedded in higher order logic is used
+  as a hardware description language. Our approach uses proof scripts
+  to synthesise circuits directly from logical specifications.  As
+  well as synthesising implementations, we also generate theorems
+  exhibiting their correctness. Our goal is to experiment with
+  synthesis by proof along a spectrum of automation ranging from
+  push-button compilation to user guided refinement.  This paper
+  describes formal compilation to synchronous implementations with a
+  handshaking interface.
+\vspace*{-2mm}
+\end{abstract}
+
+%-------------------------------------------------------------------------------
+\section{Introduction}
+\label{secIntroduction}
+%-------------------------------------------------------------------------------
+
+
+We describe an approach to hardware synthesis by mechanised proof.
+A compiler, implemented as a proof rule, transforms specifications
+expressed in a simple functional language embedded in higher order
+logic into hardware devices that interact via a handshaking protocol.
+This approach allows the designer to focus solely on the high level
+behaviour of the system without having to reason about the correctness
+of the circuit at the gate level.
+
+Our compilation method is partly inspired by SAFL \cite{MS01b},
+especially ideas in Richard Sharp's PhD \cite{Sha02}. Our long term
+goal is to develop correct-by-construction SAFL-like formal synthesis
+by proof. The current paper is only a very first proof-of-concept
+step.
+
+
+Higher order logic (HOL) \cite{GM93} has already been successfully
+applied to specify and verify hardware \cite{Fox01,Gor86,Mel93}, and
+functional programming languages have been used as hardware
+description languages \cite{CP02,O'D87,Sha02}.  Formal synthesis by
+proof has previously been investigated by, among others, Johnson and
+Bose \cite{Johnson90}, Hanna \cite{Hanna92}, Fourman \cite{fourman89b}
+and a researchers at Karlsruhe on high-level synthesis using the
+{\it Gropius\/} language \cite{Gropius1,Gropius2}. 
+
+The novelty of our work is (i) the details of the device interface,
+(ii) the implementation of synthesis by deduction (rather than by the
+application of pre-verified transformations) and (iii) the way
+synthesis results are encoded as composable theorems certifying the
+correctness of the synthesised implementations.
+
+Section~\ref{secASimpleLanguage} introduces the simple functional
+language used as source code.  Section~\ref{secHandshakingDevices}
+defines the specification of generic handshaking devices to be used
+during the compilation.
+
+The implementation and the verification of handshaking devices are
+presented in Section~\ref{secImplementingHandshakingDevices}. 
+The synthesis-by-proof algorithm is described in Section~\ref{secCompilingByProof}
+and is illustrated by a case study in Section~\ref{secTheFactorialCaseStudy}.
+Finally, conclusions and future work are
+outlined in Section~\ref{secConclusionAndFutureWork}.
+
+%-------------------------------------------------------------------------------
+\section{A Simple Language}
+\label{secASimpleLanguage}
+%-------------------------------------------------------------------------------
+In collaboration with Konrad Slind of the University of Utah, we
+eventually plan to compile from an ML-like subset of higher order
+logic, but in this paper we start from an intermediate language
+consisting of expressions built using a set of simple operators.
+These are quite expressive, and the construction of a front end to
+parse into the intermediate language is orthogonal to the work
+described here.
+
+We implement functions of type
+$
+\sigma_1\times\cdots\times\sigma_m \rightarrow \tau_1\times\cdots\times\tau_n
+$
+where $\sigma_1,\ldots,\sigma_m,\tau_1,\ldots,\tau_n$ are types of
+values that can be carried on busses.  In real applications, these
+types will often be words of different widths, but in this paper we
+will use booleans (\DEF{T} and \DEF{F} are the only values of type
+\TY{bool}) and natural numbers ($0,1,\ldots$ etc.~of type \TY{num}).
+Let $f, f_1, f_2,\ldots$ range over such functions.   The constructs
+of our language are expressions $e$ given in BNF by:
+\[
+\begin{array}{l}
+   e\ \bnfDef\           \DEF{Atm}~f\ 
+                  \bnfOR \DEF{Lib}~f\ 
+                  \bnfOR \DEF{Seq}~e_1~e_2\ 
+                  \bnfOR \DEF{Par}~e_1~e_2\ 
+                  \bnfOR \DEF{Ite}~e_1~e_2~e_3\ 
+                  \bnfOR \DEF{Rec}~e_1~e_2~e_3\ 
+\end{array}
+\]
+Both $\DEF{Atm}~f$ and $\DEF{Lib}~f$ implement function $f$.  The
+difference is that $\DEF{Atm}~f$ is constructed from a combinational
+circuit (see definition of \DEF{ATM} in Section~\ref{secImplementingHandshakingDevices}
+below) and $\DEF{Lib}~f$ assumes $f$ is in a library (initially
+assumed empty) of previously designed components (see
+Section~\ref{preverified} for an example). We make a
+shallow embedding of expressions in higher order logic by defining functions with the
+same names as the expression constructors by:
+\[
+\begin{array}{ll}
+\DEF{Lib}~f     &   = f\\
+\DEF{Atm}~f     &   = f\\
+\DEF{Seq}~f_1~f_2     &   = \lambda x.~f_2(f_1~x)\\
+\DEF{Par}~f_1~f_2     &   = \lambda x.~(f_1~x,~f_2~x)\\
+\DEF{Ite}~f_1~f_2~f_3 &   = \lambda x.~ \TT{if}~f_1~x~\TT{then}~f_2~x~\TT{else}~f_3~x\\
+\DEF{Rec}~f_1~f_2~f_3 &   = \epsilon f.~f~=~\lambda x.~\TT{if}~f_1~x~\TT{then}~f_2~x~\TT{else}~f(f_3~x)
+\end{array}
+\]
+$\DEF{Rec}~f_1~f_2~f_3$ uses
+Hilbert's $\epsilon$-operator, and so means ``choose a function f such
+that $f$ satisfies the equation $f = \lambda
+x.~\TT{if}~f_1~x~\TT{then}~f_2~x~\TT{else}~f(f_3~x)$''.
+In practise, $f_1$, $f_2$ and $f_3$ will be such that $f$ is uniquely determined.
+For example, taking:
+\[
+\begin{array}{ll}
+ f_1 & = \lambda(n,acc).~n=0\\
+ f_2 & = \lambda(n,acc).~(n,acc)\\
+ f_3 & = \lambda(n,acc).~(n{-}1,~n{\times}acc)
+\end{array}
+\]
+uniquely defines the function
+\[
+f=\lambda(n,acc).~\TT{if}~(n=0)~\TT{then}~(n,acc)~\TT{else}~f(n{-}1,~n{\times}acc)
+\]
+
+%In practise, $f_1$, $f_2$ and $f_3$ will be such that $f$ is uniquely determined.
+%For example, taking:
+%\[
+%\begin{array}{ll}
+% f_1 & = \lambda(n,acc).~n=0\\
+% f_2 & = \lambda(n,acc).~(0,acc)\\
+% f_3 & = \lambda(n,acc).~(n{-}1,~n{\times}acc)
+%\end{array}
+%\]
+%uniquely defines $f$ to be $\lambda(n,acc).~\DEF{Funpow}~f_3~n~(n,acc)$, where, for an
+%arbitrary function $g$, $\DEF{Funpow}~g~n$ is the composition of $g$
+%with itself $n$ times, so $\DEF{Funpow}~g~n~x = g^n~x$. This example
+%is used in Section~\ref{secTheFactorialCaseStudy} below.
+
+A program $p$ is a list of declarations
+$\langle c_1=e_1~\ldots~c_n=e_n\rangle$, where for $1\leq i\leq n$,
+$c_i$ is a new name and $e_i$ is an expression built out of
+library functions and $c_1,\ldots,c_{i-1}$.
+
+
+%-------------------------------------------------------------------------------
+\section{Handshaking Devices}
+\label{secHandshakingDevices}
+%-------------------------------------------------------------------------------
+
+
+Our compiler takes a pair 
+$(\langle c_1=e_1~\ldots~c_n=e_n\rangle,~e)$, consisting of a program
+$\langle c_1=e_1~\ldots~c_n=e_n\rangle$ and expression
+$e$.
+% built
+%out of library functions and $c_1,\ldots,c_{n}$. 
+It generates a
+clocked device that computes $e$ via a simple handshaking protocol.
+This section describes the protocol and its definition in HOL.
+
+Figure~\ref{figDev} shows a sequence of events that illustrates a
+transaction in which a handshaking device performs a single
+computation starting at a time $t$ and ending at a later time $t'$
+(where time counts cycles). 
+The variables \VAR{inp} and \VAR{out} represent the usual 
+input and output data, respectively. The wires \VAR{load} 
+and \VAR{done} control the access to the device.
+If \VAR{done} is asserted, it means that
+the device is idle and ready to compute a request. 
+Once a positive edge on \VAR{load} is detected,
+the device samples the input and starts to 
+compute the result (see when 
+(\mE{time = t}) and ($\mE{time} = t+1$) at Figure~\ref{figDev}).
+During the computation, \VAR{done} remains low and
+every call is ignored. Eventually, the device outputs the result
+and indicates its completion by asserting \VAR{done}.
+
+
+\begin{figure}[htb]
+\hspace*{-13mm}   {\input{dev.eepic}}
+   \caption{\label{figDev}A handshake protocol.}
+\end{figure}
+
+
+Suppose the device computes a function $f$.  At the start of a
+transaction (time $t$) the device must be outputting \DEF{T} on $done$
+(to indicate it is ready) and the environment must be asserting
+\DEF{F} on $load$ (i.e.~in a state such that a positive edge on $load$
+can be generated). A transaction is initiated by asserting (at time
+$t{+}1$) the value \DEF{T} on $load$ (i.e.~$load$ has a positive edge
+at time $t{+}1$), and this causes the device to read the value, $v$
+say, being input on $inp$ (at time $t{+}1$) and to de-assert $done$.
+The device then becomes insensitive to inputs until \DEF{T} is next
+asserted on $done$, at which time (say time $t' > t{+}1$) the value
+$f(v)$ computed will be output on $out$.
+
+The behaviour of hardware is modelled in HOL as a boolean-valued
+term whose free variables represent the external (observable) wires
+of the circuit. This term evaluates to true if the values 
+observed at the external wires could occur in the circuit.
+The variables are functions from natural numbers (representing
+time) to values. For a signal, the low value zero and
+the high value one are represented by false (\DEF{F}) 
+and true (\DEF{T}), respectively.
+
+Before specifying the behaviour of a handshaking device,
+the auxiliary predicates \DEF{Posedge} and \DEF{HoldF} are defined.
+
+A positive edge of a signal is defined as the transition of its
+value from low to high or, in our case, from \DEF{F} to \DEF{T}. 
+\DEF{Posedge} is specified by:
+\[
+\TURNST\ \DEF{Posedge}\ s\ t~ ~=~~ \IF{~t{=}0~}{~\DEF{F}~}{~(\NOT\hspace*{0.8mm} s(t{-}1)\ \AND\ s\ t~})
+\]
+Note that if the time is zero, it is assumed that no positive edge has
+occurred.
+
+The term \mE{\DEF{HoldF}\ (t_1,t_2)\ s} says that a
+signal \VAR{s} holds a low value \DEF{F} during a half-open interval
+starting at \sVAR{t}{1} to just before \sVAR{t}{2}.
+\[
+\TURNST\ \DEF{HoldF}\ (t_1,t_2)\ s = \forall t.\ t_1 \leq t < t_2\ \IMP\ \NOT(s\ t)
+\]
+
+The behaviour of the handshaking device computing a function $f$ is described by the term 
+$\DEF{Dev}\ f\ \VAR{(load,inp,done,out)}$ where:
+\[
+\begin{array}{l}
+\TURNST\ \DEF{Dev}\ f\ \VAR{(load,inp,done,out)} = \\
+~~\quad     (\forall t.\ \VAR{done}\ t\ \AND\ \DEF{Posedge}\ \VAR{load}\ (t{+}1)\ \\
+\phantom{~~\quad     (\forall t.~} \IMP \\
+\phantom{~~\quad     (\forall t.\ ~ } \exists t'.\ t' > t{+}1\ \AND\ \DEF{HoldF}\ (t{+}1,t')\ \VAR{done}\ \AND \\
+\phantom{~~\quad     (\forall t.\ ~ \exists t'.\ }  \VAR{done}\ t'\ \AND\ (\VAR{out}\ t' = f (\VAR{inp}\ (t{+}1))))\ \\
+~~\quad  \AND \\
+~~\quad (\forall t.\ \VAR{done}\ t\ \AND\ \NOT(\DEF{Posedge}\ \VAR{load}\ (t{+}1))\ \IMP  \VAR{done}\ (t{+}1))
+\end{array}
+\]
+The first conjunct in the right-hand side describes the context presented
+in Figure~\ref{figDev}. If the device is available and a positive
+edge occurs on \VAR{load}, there exists a time \VAR{t'} in future
+when \VAR{done} signals its termination and the output is produced.
+The value of the output at time \VAR{t'} is the result
+of applying \VAR{f} to the value of the input at time $\VAR{t}{+}1$.
+The signal \VAR{done} holds the value \DEF{F} during the computation.
+The second conjunct specifies the situation where no call
+is made on \VAR{load} and the device simply remains idle.
+
+
+%-------------------------------------------------------------------------------
+\section{Implementing Handshaking Devices}
+\label{secImplementingHandshakingDevices}
+%-------------------------------------------------------------------------------
+This section describes how we implement our language. Our convention
+is to use fully capitalised named for primitive circuits and circuit
+constructors.  First, we describe a circuit constructor \DEF{ATM} that
+builds a handshaking device from a combinational circuit. Next we
+describe circuit constructors \DEF{SEQ}, \DEF{PAR}, \DEF{ITE} and
+\DEF{REC} that compose handshaking devices corresponding to
+$\DEF{Seq}~e_1~e_2$, $\DEF{Par}~e_1~e_2$, $\DEF{Ite}~e_1~e_2~e_3$ and
+$\DEF{Rec}~e_1~e_2~e_3$, respectively.  The key property of these
+constructors that ensures they are correct are the following theorems
+(the notation \COMP{g}{f} denotes the function composition $\lambda
+x.~g(f~x)$):
+$$
+\begin{array}{l}
+\TURNST\ \DEF{ATM}\ f\ (\VAR{load,inp,done,out})\\
+\phantom{\TURNST\ } \IMP \  \DEF{Dev}\ f\ (\VAR{load,inp,done,out})\\
+
+\phantom{
+\TURNST\ \DEF{Total}(f_1,f_2,f_3) \AND \DEF{REC}\ (\DEF{Dev}\ f_1)\ (\DEF{Dev}\ f_2)\ (\DEF{Dev}\ f_3)\ 
+                   (\VAR{load,inp,done,out})}\\[-5mm]
+\end{array}$$
+$$\begin{array}{l}
+
+\TURNST\ \DEF{SEQ}\ (\DEF{Dev}\ f_1)\ (\DEF{Dev}\ f_2)\ (\VAR{load,inp,done,out})\\
+\phantom{\TURNST\ } \IMP \ \DEF{Dev}\ (\COMP{f_2}{f_1})\ (\VAR{load,inp,done,out})\\
+
+\phantom{
+\TURNST\ \DEF{Total}(f_1,f_2,f_3) \AND \DEF{REC}\ (\DEF{Dev}\ f_1)\ (\DEF{Dev}\ f_2)\ (\DEF{Dev}\ f_3)\ 
+                   (\VAR{load,inp,done,out})}\\[-5mm]
+\end{array}$$
+$$\begin{array}{l}
+
+\TURNST\ \DEF{PAR}\ (\DEF{Dev}\ f_1)\ (\DEF{Dev}\ f_2)\ (\VAR{load,inp,done,out})\\
+\phantom{\TURNST\ } \IMP \ \DEF{Dev}\ (\LAMBDA{x}{(f_1\ x, f_2\ x)})\ (\VAR{load,inp,done,out}) \\
+
+\phantom{
+\TURNST\ \DEF{Total}(f_1,f_2,f_3) \AND \DEF{REC}\ (\DEF{Dev}\ f_1)\ (\DEF{Dev}\ f_2)\ (\DEF{Dev}\ f_3)\ 
+                   (\VAR{load,inp,done,out})}\\[-5mm]
+\end{array}$$
+ $$\begin{array}{l}
+
+\TURNST\ \DEF{ITE}\ (\DEF{Dev}\ f_1)\ (\DEF{Dev}\ f_2)\ (\DEF{Dev}\ f_3)\ 
+                   (\VAR{load,inp,done,out})\\
+\phantom{\TURNST\ }  \IMP \ \DEF{Dev}\ (\LAMBDA{x}{\IF{f_1\ x}{f_2\ x}{f_3\ x}})\ (\VAR{load,inp,done,out})\\
+
+\phantom{
+\TURNST\ \DEF{Total}(f_1,f_2,f_3) \AND \DEF{REC}\ (\DEF{Dev}\ f_1)\ (\DEF{Dev}\ f_2)\ (\DEF{Dev}\ f_3)\ 
+                   (\VAR{load,inp,done,out})}\\[-5mm]
+\end{array}$$
+%We hope to prove a result for \DEF{REC} of the form:
+$$
+\begin{array}{l}
+\TURNST\ \DEF{Total}(f_1,f_2,f_3) \AND \DEF{REC}\ (\DEF{Dev}\ f_1)\ (\DEF{Dev}\ f_2)\ (\DEF{Dev}\ f_3)\ 
+                   (\VAR{load,inp,done,out})\\
+\phantom{\TURNST\ \ }  \IMP \ \DEF{Dev}\ (\DEF{Rec}~f_1~f_2~f_3)\ (\VAR{load,inp,done,out})
+\end{array}
+$$
+where $\DEF{Total}(f_1,f_2,f_3)$ is a predicate ensuring that 
+there is a unique function satisfying $f = \lambda
+x.~\TT{if}~f_1~x~\TT{then}~f_2~x~\TT{else}~f(f_3~x)$ and is defined by:
+\[
+\DEF{Total}(f_1,f_2,f_3)~=~\exists variant.~\forall x.~\neg(f_1~x)
+                                        \IMP variant(f_3~x) < variant~x
+\]
+
+The constructors \DEF{ATM},
+\DEF{SEQ}, \DEF{PAR}, \DEF{ITE} and \DEF{REC} use
+some primitive combinational hardware components
+\DEF{AND}, \DEF{OR}, \DEF{NOT} and \DEF{MUX}, and
+two primitive sequential components \DEF{DEL} and \DEF{DFF}.
+The behaviour of a combinational AND-gate
+is specified as a relation that constrains the value of the output
+to the conjunction of the inputs.
+\[
+\TURNST\ \DEF{AND}\ (\sVAR{in}{1},\sVAR{in}{2},\VAR{out}) = 
+   \forall t.\ \VAR{out}\ t = (\sVAR{in}{1}\ t\ \AND\ \sVAR{in}{2}\ t)
+\]
+A combinational OR-gate with inputs \sVAR{in}{1} and \sVAR{in}{2}
+and output \VAR{out} is defined in a similar way.
+\[
+\TURNST\ \DEF{OR}\ (\sVAR{in}{1},\sVAR{in}{2},\VAR{out}) = 
+   \forall t.\ \VAR{out}\ t = (\sVAR{in}{1}\ t\ \OR\ \sVAR{in}{2}\ t)
+\]
+An inverter simply outputs the negation of the input.
+\[
+\TURNST\ \DEF{NOT}\ (\VAR{inp},\VAR{out}) = 
+   \forall t.\ \VAR{out}\ t = \NOT(\VAR{inp}\ t)
+\]
+A multiplexer connects the input \sVAR{in}{1}
+to the output \VAR{out} if the selector \VAR{sel} has the value~\DEF{T}.
+Otherwise, it outputs the value of \sVAR{in}{2}.
+\[
+\TURNST\ \DEF{MUX}\ (\VAR{sel},\sVAR{in}{1},\sVAR{in}{2},\VAR{out}) = 
+   \forall t.\ \VAR{out}\ t = \IF{\VAR{sel}\ t}{\sVAR{in}{1}\ t}{\sVAR{in}{2}\ t}
+\]
+In general, a combinational component computing a function \VAR{f} is specified by:
+\[
+\TURNST\ \DEF{COMB}\ f\ \VAR{(inp,out)} = \forall t.\ \VAR{out}\ t = f (\VAR{inp}\ t)
+\]
+At any given time, this generic combinational device
+outputs \VAR{f} applied to the current value
+of the input.
+
+A delay outputs the value of the input at the previous time.
+\[
+\TURNST\ \DEF{DEL}\ (\VAR{inp},\VAR{out}) = 
+    (\VAR{out}\ 0 = \VAR{inp}\ 0)\ \AND\ 
+    (\forall t.\ \VAR{out} (t{+}1) = \VAR{inp}\ t)
+\]
+At time zero, the delay behaves as a wire.
+A D-type flip-flop \DEF{DFF} outputs the value of the input \VAR{d} on the
+positive edge of the signal~\VAR{clk}.
+If no positive edge occurs, the output \VAR{q} remains
+unchanged.
+\[
+\TURNST\ \DEF{DFF} (\VAR{d,clk,q})~ =~
+ \forall t.\ q (t{+}1) =  \IF{\DEF{Posedge}\ \VAR{clk}\ (t{+}1)}{d (t{+}1)}{q\ t}
+\]
+
+The connection between two components is modelled
+by the conjunction of their specifications.
+The physical connection is represented by
+the identically-labelled wires of the subcomponents.
+Moreover,  the existential quantifier hides the 
+internal wires of the composite device.
+
+For example, $\DEF{POSEDGE}(\VAR{inp},\VAR{out})$ specifies a composite
+device that asserts \DEF{T} on its output $\VAR{out}$ if and only if a positive edge
+has occurred on the input $\VAR{inp}$. Our implementation is:
+\[
+\TURNST\ \DEF{POSEDGE} (\VAR{inp},\VAR{out}) = 
+    \exists c_0~ c_1.\ \DEF{DEL} (\VAR{inp},c_0)\ \AND\
+                  \DEF{NOT} (c_0, c_1)\ \AND\ \DEF{AND} (c_1,\VAR{inp},\VAR{out})
+\]
+This component connects a \DEF{DEL}, \DEF{NOT} and \DEF{AND}
+by the internal wires \sVAR{c}{0} and \sVAR{c}{1}.
+The wire \sVAR{c}{0} has the value of the
+input at the previous time. The circuit outputs \DEF{T} if
+\sVAR{c}{0} has the value \DEF{F} and the current input is \DEF{T} ---
+which is exactly what characterises a positive edge.
+It is easy to show that \DEF{POSEDGE} has the 
+following property.
+\[
+\TURNST\ \DEF{POSEDGE} (\VAR{inp},\VAR{out})\ \IMP\
+         (\forall t.\ \VAR{out}\ t = \DEF{Posedge}\ \VAR{inp}\ t)
+\]
+
+The circuit \DEF{ATM} implements an atomic device.
+\[
+\begin{array}{l}
+\TURNST\ \DEF{ATM}\ f\ (\VAR{load,inp,done,out}) =\\
+\phantom{\TURNST\ ~~}    \exists c_0~ c_1.\ \DEF{POSEDGE} (\VAR{load}, c_0)\ \AND \ 
+\DEF{NOT} (c_0, \VAR{done})\ \AND\\
+\phantom{\TURNST\ ~~\exists c_0, c_1.\ }  \DEF{COMB}\ f\ (\VAR{inp},c_1)\ \AND\ \DEF{DEL} (c_1,\VAR{out})
+\end{array}
+\]
+This device takes one time unit to compute (see Figure~\ref{figAtom}).
+Although a combinational circuit is 
+clearly more efficient than an atomic device,
+this device is suitable for composing with other
+handshaking devices.
+
+The constructor \DEF{SEQ} specifies a circuit which combines
+two devices to compute in sequence.
+\[
+\begin{array}{l}
+\TURNST\ \DEF{SEQ}\ f\ g\ (\VAR{load,inp,done,out}) = \\
+\phantom{\TURNST\ ~~} \exists c_0~ c_1~ c_2~ c_3~ \VAR{data}.\\
+\phantom{\TURNST\ ~~\exists~}                      \DEF{NOT} (c_2,c_3) \ \AND \ 
+                      \DEF{OR} (c_3,\VAR{load},c_0) \ \AND \  f (c_0,\VAR{inp},c_1,\VAR{data}) \ \AND \\
+\phantom{\TURNST\ ~~ \exists~} 
+        g (c_1,\VAR{data},c_2,\VAR{out})\ \AND\ 
+        \DEF{AND} (c_1,c_2,\VAR{done}) 
+\end{array}
+\]
+The subcomponents \VAR{f} and \VAR{g} have the same interface of
+a handshaking device. The output of the component \VAR{f} 
+is the input of the component \VAR{g} (see the
+variables \sVAR{c}{1} and \VAR{data} in Figure~\ref{figSeq}).
+This composite device signals its completion when both \VAR{f} and 
+\VAR{g} terminate.
+
+\begin{figure}[htb]
+   \centerline{
+      \subfigure[$\DEF{ATM}\ f$]{
+         \label{figAtom}\input{atm.eepic}\hspace*{0cm}}
+      \subfigure[$\DEF{SEQ}\ f\ g$]{
+         \label{figSeq}\input{seq.eepic}\hspace*{0cm}}
+      \subfigure[$\DEF{PAR}\ f\ g$]{
+         \label{figPar}\input{par.eepic}}}
+      \caption{\label{figSeqPar}Implementation of composite devices.}
+\end{figure}
+
+The constructor \DEF{PAR} combines two devices in parallel.
+\[
+\begin{array}{l}
+\TURNST\ \DEF{PAR}\ f\ g\ (\VAR{load,inp,done,out}) = \\
+\phantom{\TURNST\ ~}     \exists c_0~c_1~\VAR{start}~\sVAR{done}{1}~\sVAR{done}{2}~
+                                 \sVAR{data}{1}~\sVAR{data}{2}~\sVAR{out}{1}~\sVAR{out}{2}.\\
+\phantom{\TURNST\ ~~ \exists~}
+       \DEF{POSEDGE} (\VAR{load},c_0)\ \AND\  
+       \DEF{DEL} (\VAR{done},c_1)\ \AND \ 
+       \DEF{AND} (c_0,c_1,\VAR{start})\ \AND\\
+\phantom{\TURNST\ ~~ \exists~}
+       f (\VAR{start},\VAR{inp},\sVAR{done}{1},\sVAR{data}{1})\ \AND \ 
+       g (\VAR{start},\VAR{inp},\sVAR{done}{2},\sVAR{data}{2})\ \AND\\
+\phantom{\TURNST\ ~~ \exists~}
+       \DEF{DFF} (\sVAR{data}{1},\sVAR{done}{1},\sVAR{out}{1})\ \AND \  
+       \DEF{DFF} (\sVAR{data}{2},\sVAR{done}{2},\sVAR{out}{2})\ \AND\\
+\phantom{\TURNST\ ~~ \exists~}
+       \DEF{AND} (\sVAR{done}{1},\sVAR{done}{2},done)\ \AND \ 
+       (\VAR{out} = \LAMBDA{t}{(\sVAR{out}{1}\ t,\sVAR{out}{2}\ t)})
+\end{array}
+\]
+The devices \VAR{f} and \VAR{g} are triggered simultaneously
+by \VAR{start}
+and return \sVAR{data}{1} and \sVAR{data}{2}, respectively
+(see Figure~\ref{figPar}). 
+As \VAR{f} and \VAR{g} may terminate at different times,
+their outputs are stored by DFFs and made available
+by \sVAR{out}{1} and \sVAR{out}{2}.
+The components \DEF{POSEDGE} and \DEF{DEL} prevent
+calls to either \VAR{f} or \VAR{g} during their computation.
+
+The conditional constructor \DEF{ITE} implements an if-then-else
+circuit from three subcomponents.
+\[
+\begin{array}{l}
+\TURNST\ \DEF{ITE}\ e\ f\ g\ (\VAR{load,inp,done,out}) =\\
+\phantom{\TURNST\ ~}
+   \exists c_0~c_1~c_2~\VAR{start}~\VAR{start'}~\VAR{done\_e}~\VAR{data\_e}~q~ 
+                          \VAR{not\_e}~\VAR{data\_f}~\VAR{data\_g}~\VAR{sel}\\
+\phantom{\TURNST\ ~\exists }
+                  \VAR{done\_f}~\VAR{done\_g}~
+                          \VAR{start\_f}~\VAR{start\_g}.\ \\
+\phantom{\TURNST\ ~\exists ~}
+           \DEF{POSEDGE} (\VAR{load},c_0)\ \AND\
+           \DEF{DEL} (\VAR{done},c_1)\ \AND\ \DEF{AND} (c_0,c_1,\VAR{start})\ \AND \\
+\phantom{\TURNST\ ~\exists ~}
+           e (\VAR{start},\VAR{inp},\VAR{done\_e},\VAR{data\_e})\ \AND\
+           \DEF{POSEDGE} (\VAR{done\_e},\VAR{start'})\ \AND \\
+\phantom{\TURNST\ ~\exists ~}
+           \DEF{DFF} (\VAR{data\_e},\VAR{done\_e},\VAR{sel})\ \AND\
+           \DEF{DFF} (\VAR{inp},\VAR{start},q)\ \AND \\
+\phantom{\TURNST\ ~\exists ~}
+           \DEF{AND} (\VAR{start'},\VAR{data\_e},\VAR{start\_f})\ \AND\
+           \DEF{NOT} (\VAR{data\_e},\VAR{not\_e})\ \AND \\
+\phantom{\TURNST\ ~\exists ~}
+           \DEF{AND} (\VAR{start'},\VAR{not\_e},\VAR{start\_g})\ \AND\
+           f (\VAR{start\_f},q,\VAR{done\_f},\VAR{data\_f})\ \AND\\
+\phantom{\TURNST\ ~\exists ~}
+           g (\VAR{start\_g},q,\VAR{done\_g},\VAR{data\_g})\ \AND\
+           \DEF{MUX} (\VAR{sel},\VAR{data\_f},\VAR{data\_g},out)\ \AND \\
+\phantom{\TURNST\ ~\exists ~}
+           \DEF{AND} (\VAR{done\_e},\VAR{done\_f},c_2)\ \AND\
+           \DEF{AND} (c_2,\VAR{done\_g},\VAR{done}) 
+\end{array}
+\]
+The device \VAR{e} implements a boolean test, while
+\VAR{f} and \VAR{g} implement the conditional branches.
+The output of \VAR{e} triggers either \VAR{f} or \VAR{g}
+(see the variable \VAR{data\_e} in Figure~\ref{figIf}).
+A multiplexer selects the right output based on the
+(stored) value of \VAR{data\_e}.
+The variable \VAR{done} is asserted if all subcomponents
+have terminated.
+
+\begin{figure}[htb]
+   \centerline{\input{if.eepic}}
+   \caption{\label{figIf}The conditional constructor: $\DEF{ITE}\ e\ f\ g$.}
+\end{figure}
+
+A function is tail-recursive if its recursive
+calls are the very last executed statements in the
+function. Tail-recursion is interesting
+for hardware compilation because it does not 
+require the compiler to allocate storage for 
+every function call.
+
+The language introduced in Section~\ref{secASimpleLanguage} 
+has an operator \DEF{Rec} for specifying tail-recursive functions ${\cal{F}}$
+of the form
+\[
+\begin{array}{l}
+\VAR{{\cal{F}}}\ \VAR{x} ~=~ \IF{\VAR{e}\ \VAR{x}}
+                         {\VAR{f}\ \VAR{x}}
+                         {\VAR{{\cal{F}}}(\VAR{g}\  \VAR{x})}
+\end{array}
+\]
+Such a function ${\cal{F}}$ is specified by $\DEF{Rec}~\VAR{e}~\VAR{f}~\VAR{g}$ as defined
+above. A handshaking circuit that implements ${\cal{F}}$ (if it is well-defined) is
+constructed using the \DEF{REC} constructor, where:
+\[
+\begin{array}{l}
+\TURNST\ \DEF{REC}\ e\ f\ g\ (\VAR{load,inp,done,out}) = \\
+\phantom{\TURNST\ ~}
+     \exists \VAR{done\_g}~ \VAR{data\_g}~ \VAR{start\_e}~ q~ \VAR{done\_e}~ 
+             \VAR{data\_e}~ \VAR{start\_f}~ \VAR{start\_g}~ \VAR{inp\_e}~ 
+             \VAR{done\_f}\\[-1mm]
+\phantom{\TURNST\ ~\exists }
+             \sVAR{c}{0}~ \sVAR{c}{1}~ 
+             \sVAR{c}{2}~ \sVAR{c}{3}~\sVAR{c}{4}~
+             \VAR{start}~ \VAR{sel}~ \VAR{start'}~ \VAR{not\_e}. \\[0.5mm]
+\phantom{\TURNST\ ~\exists~ }
+        \DEF{POSEDGE}(\VAR{load},\sVAR{c}{0})\ \AND\
+        \DEF{DEL}(\VAR{done},\sVAR{c}{1})\ \AND\
+        \DEF{AND}(\sVAR{c}{0},\sVAR{c}{1},\VAR{start})\ \AND \\
+\phantom{\TURNST\ ~\exists~ }
+        \DEF{OR}(\VAR{start,sel,start\_e})\ \AND\
+        \DEF{POSEDGE}(\VAR{done\_g,sel})\ \AND \\
+\phantom{\TURNST\ ~\exists~ }
+        \DEF{MUX}(\VAR{sel,data\_g,inp,inp\_e})\ \AND\
+           \DEF{DFF}(\VAR{inp\_e},\VAR{start\_e},q)\ \AND \\
+\phantom{\TURNST\ ~\exists~ }
+           e (\VAR{start\_e},\VAR{inp\_e},\VAR{done\_e},\VAR{data\_e}) \AND\
+        \DEF{POSEDGE}(\VAR{done\_e,start'})\ \AND \\
+\phantom{\TURNST\ ~\exists~ }
+        \DEF{AND}(\VAR{start',data\_e,start\_f})\ \AND\
+        \DEF{NOT}(\VAR{data\_e,not\_e})\ \AND \\
+\phantom{\TURNST\ ~\exists~ }
+        \DEF{AND}(\VAR{not\_e,start',start\_g})\ \AND\
+           f (\VAR{start\_f},q,\VAR{done\_f},\VAR{out})\ \AND\\
+\phantom{\TURNST\ ~\exists~ }
+           g (\VAR{start\_g},q,\VAR{done\_g},\VAR{data\_g})\ \AND\
+        \DEF{DEL}(\VAR{done\_g},\sVAR{c}{3})\ \AND\\
+\phantom{\TURNST\ ~\exists~ }
+        \DEF{AND}(\VAR{done\_g},\sVAR{c}{3},\sVAR{c}{4})\ \AND\
+        \DEF{AND}(\VAR{done\_f},\VAR{done\_e},\sVAR{c}{2})\ \AND\
+        \DEF{AND}(\sVAR{c}{2},\sVAR{c}{4},\VAR{done})
+\end{array}
+\]
+The recursive constructor is similar to the conditional one
+(see Figure~\ref{figRec}).
+The main difference is the connection between the
+``else'' branch and the circuit itself --- characterising a
+recursive call. A multiplexer selects the input from either
+the external environment or from the recursive call.
+The circuit terminates if every subcomponent terminates
+(see the variables \VAR{done\_e}, \VAR{done\_f} and \VAR{done\_g}
+in Figure~\ref{figRec}). Furthermore, the component \VAR{g}
+must have terminated at least one time unit before. This is
+necessary to distinguish a recursive call from the
+complete termination of the computation.
+
+\begin{figure}[htb]
+   \centerline{\input{rec.eepic}}
+   \caption{\label{figRec}The recursive constructor: $\DEF{REC}\ e\ f\ g$.}
+\end{figure}
+
+
+%-------------------------------------------------------------------------------
+\section{Compiling by Proof}
+\label{secCompilingByProof}
+%-------------------------------------------------------------------------------
+
+
+The prototype compiler we have implemented takes a program and an expression $(\langle
+c_1=e_1~\ldots~c_n=e_n\rangle,~e)$, where the expression $e$ is built
+out of library functions and $c_1,\ldots,c_{n}$. It generates
+a circuit ${\cal C}(\VAR{load,inp,done,out})$, represented as a term in higher order logic, 
+and returns a theorem:
+
+\vspace*{-2mm}
+
+\[
+\begin{array}{l}
+\TURNST\ \forall \hspace*{0.5mm} load~inp~done~out.~{\cal C}(\VAR{load,inp,done,out}) \IMP \DEF{Dev}~e~(\VAR{load,inp,done,out})
+\end{array}
+\]
+
+\vspace*{-2mm}
+
+\noindent The compilation procedure is a straightforward recursive application of the
+following theorems (which are proved from the key properties given in 
+Section~\ref{secImplementingHandshakingDevices}
+and the semantics of the expression and circuit constructors):
+$$\begin{array}{l}
+\texttt{ATM\_INTRO}\\
+~\TURNST\ \forall c~s.~\DEF{ATM}\ c\ s\  \IMP \  \DEF{Dev}\ c\ s\\
+\phantom{~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~}\\[-3mm]
+\end{array}$$
+\vspace*{-3mm}
+$$\begin{array}{l}
+\texttt{SEQ\_INTRO}\\
+~\TURNST\ \forall P_1~P_2~f_1~f_2.\\
+\phantom{~~\TURNST\ \forall~}
+(\forall s.~P_1~s \ \IMP\ \DEF{Dev}~f_1~s)~\AND~(\forall s.~P_2~s \ \IMP\ \DEF{Dev}~f_2~s)\\
+\phantom{~~\TURNST\ \forall~}
+ \IMP\\
+\phantom{~~\TURNST\ \forall~}
+\forall s.~\DEF{SEQ}\ P_1\ P_2\ s \ \IMP \ \DEF{Dev}\ (\DEF{Seq}~f_1~f_2)\ s\\
+\phantom{~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~}
+\end{array}$$
+\vspace*{-3mm}
+$$\begin{array}{l}
+\texttt{PAR\_INTRO}\\
+~\TURNST\ \forall P_1~P_2~f_1~f_2.\\
+\phantom{~~\TURNST\ \forall~}
+(\forall s.~P_1~s \ \IMP\ \DEF{Dev}~f_1~s)~\AND~(\forall s.~P_2~s \ \IMP\ \DEF{Dev}~f_2~s)\\
+\phantom{~~\TURNST\ \forall~}
+\IMP\\
+\phantom{~~\TURNST\ \forall~}
+\forall s.~ \DEF{PAR}\ P_1\ P_2\ s\ \IMP \ \DEF{Dev}\ (\DEF{Par}~f_1~f_2)\ s \\
+\phantom{~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~}
+\end{array}$$
+\vspace*{-3mm}
+$$\begin{array}{l}
+\texttt{ITE\_INTRO}\\
+~\TURNST\ \forall P_1~P_2~P_3~f_1~f_2~f_3.\\
+\phantom{~~\TURNST\ \forall~}
+(\forall s.~P_1~s \ \IMP\ \DEF{Dev}~f_1~s)~\AND\\
+\phantom{~~\TURNST\ \forall~}
+(\forall s.~P_2~s \ \IMP\ \DEF{Dev}~f_2~s)~\AND\\
+\phantom{~~\TURNST\ \forall~}
+(\forall s.~P_3~s \ \IMP\ \DEF{Dev}~f_3~s)\\
+\phantom{~~\TURNST\ \forall~}
+\IMP\\
+\phantom{~~\TURNST\ \forall~}
+\forall s.~ \DEF{ITE}\ P_1\ P_2\ P_3\ s\ 
+ \IMP \ \DEF{Dev}\ (\DEF{Ite}~f_1~f_2~f_3)\ s\\
+\phantom{~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~}
+\end{array}$$
+\vspace*{-3mm}
+$$\begin{array}{l}
+\texttt{REC\_INTRO}\\
+%{}[~\forall s.~\DEF{REC}\ (\DEF{Dev}\ f_1)\ (\DEF{Dev}\ f_2)\ (\DEF{Dev}\ f_3)\ s\ \IMP\ \DEF{Dev}\ 
+% (\DEF{Rec}~f_1~f_2~f_3)~]{}\\
+\TURNST\ \forall f_1~f_2~f_3~P_1~P_2~P_3.\\
+\phantom{\TURNST\ \forall~}
+\DEF{Total}(f_1,f_2,f_3)\\
+\phantom{\TURNST\ \forall~}
+\IMP\\
+\phantom{\TURNST\ \forall~}
+(\forall s.~P_1~s \ \IMP\ \DEF{Dev}~f_1~s)~\AND\\
+\phantom{\TURNST\ \forall~}
+(\forall s.~P_2~s \ \IMP\ \DEF{Dev}~f_2~s)~\AND\\
+\phantom{\TURNST\ \forall~}
+(\forall s.~P_3~s \ \IMP\ \DEF{Dev}~f_3~s)\\
+\phantom{\TURNST\ \forall~}
+\IMP\\
+\phantom{\TURNST\ \forall~}
+\forall s.~ \DEF{REC}\ P_1\ P_2\ P_3\ s\ 
+ \IMP \ \DEF{Dev}\ (\DEF{Rec}~f_1~f_2~f_3)\ s\\
+\phantom{~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~}
+\end{array}$$
+
+\noindent The theorem \texttt{REC\_INTRO} is an implication whose antecedent  is
+$\DEF{Total}(f_1,f_2,f_3)$.
+
+We will outline how our compiler works using an ML-style pseudo-code to
+describe the inferences that deductively transform a specification to
+an implementation. Theorems in the HOL system logic have the form
+$\Gamma\TURNST t$ where $\Gamma$ is a set of assumptions and $t$ is a
+conclusions that follows from the assumptions.
+
+
+The ML pseudo-code \texttt{SPEC~$[t_1,\ldots,t_n]$~$(\Gamma \TURNST \forall x_1\ldots x_n.~P(x_1,\ldots,x_n))$}
+evaluates to $\Gamma\TURNST P(t_1,\ldots,t_n)$. 
+\texttt{UNDISCH$(\Gamma\TURNST t_1\IMP t_2)$}
+evaluates to \texttt{$\Gamma\cup\{t_1\}\TURNST t_2$}.
+$\texttt{MATCH\_MP}~(\Gamma_1 \TURNST t)~(\Gamma_2\TURNST t_1\IMP t_2)$ matches $t_1$
+with $t$ and then instantiates the theorem $(\Gamma_2 \TURNST t_1\IMP t_2)$ to
+$(\Gamma_2 \TURNST t\IMP t')$ (where $t'$ is the instance of $t_2$
+corresponding to the match) and returns $\Gamma_1\cup\Gamma_2 \TURNST t'$, the result of
+applying Modus Ponens.  
+$(\Gamma_1 \TURNST
+t_1)~\texttt{AND}~(\Gamma_2 \TURNST t_2)$ evaluates to $(\Gamma_1\cup\Gamma_2 \TURNST t_1 \AND t_2)$.
+Evaluating \texttt{LibraryLookup~lib~$f$} searches the library \texttt{lib}
+for a theorem  of the form:
+
+%\vspace*{-4mm}
+
+\[
+\begin{array}{l}
+\TURNST\ \forall \hspace*{0.5mm} load~inp~done~out.~{\cal C}(\VAR{load,inp,done,out}) \IMP \DEF{Dev}~f~(\VAR{load,inp,done,out})
+\end{array}
+\]
+
+%\vspace*{-4mm}
+
+\noindent and uses the first one it finds (or raises an exception if no matching theorem found in \texttt{lib}).
+
+
+To compile $(p,~\texttt{e})$, first rewrite \texttt{e} with the
+definitions in $p$ to obtain an expanded expression \texttt{e'} that
+only contains atomic or library functions, and then recursively apply
+the rules below to evaluate \texttt{Compile~e'}.
+
+%\vspace*{-1mm}
+
+{\baselineskip10pt\begin{alltt}
+  Compile lib (Atm f) = 
+   SPEC f ATM_INTRO
+
+  Compile lib (Lib f) = 
+   LibraryLookup lib f
+
+  Compile lib (Seq e1 e2) = 
+   MATCH_MP SEQ_INTRO (Compile lib e1 AND Compile lib e2)
+
+  Compile lib (Par e1 e2) = 
+   MATCH_MP PAR_INTRO (Compile lib e1 AND Compile lib e2)
+
+  Compile lib (Ite e1 e2 e3) = 
+   MATCH_MP 
+    PAR_INTRO 
+    (Compile lib e1 AND Compile lib e2 AND Compile lib e3)
+
+  Compile lib (Rec e1 e2 e3) = 
+   MATCH_MP 
+    (UNDISCH(SPEC [e1,e2,e3] REC_INTRO))
+    (Compile lib e1 AND Compile lib e2 AND Compile lib e3)
+\end{alltt}}
+
+%\vspace*{-1mm}
+
+\noindent Note that evaluating \texttt{Compile lib (Rec e1 e2 e3)} 
+will generate a theorem with an assumption
+$\DEF{Total}(\texttt{e1},\texttt{e2},\texttt{e3})$.
+
+%\vspace*{-2mm}
+
+%-------------------------------------------------------------------------------
+\section{The Factorial Case Study}
+\label{secTheFactorialCaseStudy}
+%-------------------------------------------------------------------------------
+
+%\vspace*{-2mm}
+
+The tail-recursive function \DEF{FactIter} defined below can be used
+to compute the factorial function.
+
+%\vspace*{-2mm}
+
+\[
+\TURNST\ \DEF{FactIter}(n,acc) = \IF{(n=0)}{(n,acc)}{\DEF{FactIter}(n{-}1,n{\times}acc)}
+\]
+
+%\vspace*{-2mm}
+
+\noindent The variable \VAR{acc} accumulates the result of the
+computation. 
+Evaluating \DEF{FactIter}$(\VAR{n},1)$
+returns $(0,~n!)$, where $n!$ is the factorial of \VAR{n}.
+
+\subsection{Implementation with an atomic (combinational) multiplier}\label{atomic}
+
+The following program in our language computes $n!$.
+
+%\vspace*{-3mm}
+
+$$
+\begin{array}{ll}
+\mE{FactProg}~ =~ \langle \DEF{Test0}    &= \DEF{Atm}~\lambda n.~ n=0,\\
+\phantom{FactProg~ = ~ \langle}
+  \DEF{Ident}    &= \DEF{Atm}~\lambda (n,acc).~ (n,acc),\\
+\phantom{FactProg~ = ~ \langle}
+  \DEF{Dec}      &= \DEF{Atm}~\lambda n.~ n{-}1,\\
+\phantom{FactProg~ = ~ \langle}
+  \DEF{Mult}     &= \DEF{Atm}~\lambda (n,acc).~ n{\times}acc,\\
+\phantom{FactProg~ = ~ \langle}
+  \DEF{Fst}      &= \DEF{Atm}~\lambda (n,acc).~ n,\\
+\phantom{FactProg~ = ~ \langle}
+  \DEF{Snd}      &= \DEF{Atm}~\lambda (n,acc).~ acc,\\
+\phantom{FactProg~ = ~ \langle}
+  \DEF{PairOne}  &= \DEF{Atm}~\lambda n.~ (n,1),\\
+\phantom{FactProg~ = ~ \langle}
+  \DEF{FactIter} &= \DEF{Rec~(Seq~Fst~Test0)~Ident~(Par~(Seq~Fst~Dec)~Mult)},\\
+\phantom{FactProg~ = ~ \langle}
+  \DEF{Fact}     &= \DEF{Seq~PairOne~(Seq~FactIter~Snd)} \rangle
+\end{array}
+$$
+
+\noindent The expressions \DEF{Test0}, \DEF{Ident}, \DEF{Dec}, \DEF{Mult}, \DEF{Fst}, \DEF{Snd} and
+\DEF{PairOne} are assumed atomic (i.e.~implementable by combinational circuits). This is unrealistic 
+for \DEF{Mult}; see Section~\ref{preverified} for a (slightly) more realistic version.
+
+If we invoke the compiler on the program $(\mE{FactProg},\DEF{Fact})$ the result
+is:
+
+{\small\begin{alltt}
+[ TOTAL (Seq (\(\lambda\)(n,acc). n) (\(\lambda\)n. n = 0), (\(\lambda\)(n,acc). (n,acc)),
+         Par (Seq (\(\lambda\)(n,acc). n) (\(\lambda\)n. n-1)) (\(\lambda\)(n,acc). n\(\times\)acc)) ]
+    |- \(\forall\)load inp done out.
+         SEQ (ATM (\(\lambda\)n. (n,1)))
+           (SEQ
+              (REC (SEQ (ATM (\(\lambda\)(n,acc). n)) (ATM (\(\lambda\)n. n = 0)))
+                 (ATM (\(\lambda\)(n,acc). (n,acc)))
+                 (PAR
+                    (SEQ (ATM (\(\lambda\)(n,acc). n))
+                       (ATM (\(\lambda\)n. n-1)))
+                    (ATM (\(\lambda\)(n,acc). n\(\times\)acc))))
+              (ATM (\(\lambda\)(n,acc). acc))) (load,inp,done,out) 
+         \(\Rightarrow\)
+         Dev Fact (load,inp,done,out)
+\end{alltt}}
+
+The outcome is a theorem of the form $\Gamma\TURNST t$ where $\Gamma$
+is a singleton set consisting of an assumption expressing the totality
+of \DEF{FactIter}. Simplifying the assumption with the definitions of
+$\DEF{Seq}$ and $\DEF{Par}$ yields:
+\[
+\DEF{Total}((\lambda (n,acc).~n=0),(\lambda (n,acc).~(n,acc)), (\lambda (n,acc).~(n{-}1,n{\times}acc)))
+\]
+which is easily proved (with the function $(\lambda
+(x,y).~x)$ as the variant).  Once the totality assumption has been proved it can be
+eliminated. Furthermore, it is easy to prove by elementary arithmetic from the definitions of the
+components of $FactProg$ and the meanings of \DEF{Atm}, \DEF{Seq}, \DEF{Par}, \DEF{Ite} and \DEF{Rec}, that
+$\TURNST Fact = \lambda n.~n!$. The output of the compiler thus simplifies to:
+
+\newpage
+
+{\small\begin{alltt}
+ |- \(\forall\)load inp done out.
+         SEQ (ATM (\(\lambda\)n. (n,1)))
+           (SEQ
+              (REC (SEQ (ATM (\(\lambda\)(n,acc). n)) (ATM (\(\lambda\)n. n = 0)))
+                 (ATM (\(\lambda\)(n,acc). (n,acc)))
+                 (PAR
+                    (SEQ (ATM (\(\lambda\)(n,acc). n))
+                       (ATM (\(\lambda\)n. n-1)))
+                    (ATM (\(\lambda\)(n,acc). n\(\times\)acc))))
+              (ATM (\(\lambda\)(n,acc). acc))) (load,inp,done,out)
+         \(\Rightarrow\)
+         Dev \(({\lambda}n. n!)\) (load,inp,done,out)
+\end{alltt}}
+
+%\noindent which has the form: $\TURNST \mbox{\it implementation}\ \Rightarrow\ \mbox{\it specification}$.
+
+\vspace*{-6mm}
+
+\subsection{Implementation with a pre-verified multiplier}\label{preverified}
+
+The example above used 
+$\DEF{Mult}~=~\DEF{Atm}~\lambda (n,acc).~ n{\times}acc$. Such a combinational multiplier
+is unrealistic (except for small words). However,
+we can easily implement a (naive) sequential multiplier that works by
+repeated addition and so, more realistically, only assumes
+combinational addition (and decrementing):
+
+\vspace*{-4mm}
+
+$$
+\begin{array}{ll}
+\mE{MultProg}~ =\\
+~~ \langle \DEF{Test0}    &= \DEF{Atm}~\lambda m.~ m=0,\\
+\phantom{~~ \langle}
+  \DEF{Ident}    &= \DEF{Atm}~\lambda (m,n,acc).~ (m,n,acc),\\
+\phantom{~~ \langle}
+  \DEF{Dec}      &= \DEF{Atm}~\lambda m.~ m{-}1,\\
+\phantom{~~ \langle}
+  \DEF{AddAcc}     &= \DEF{Atm}~\lambda (m,n,acc).~ n{+}acc,\\
+\phantom{~~ \langle}
+  \DEF{Fst}      &= \DEF{Atm}~\lambda (m,n,acc).~m,\\
+\phantom{~~ \langle}
+  \DEF{Snd}      &= \DEF{Atm}~\lambda (m,n,acc).~n,\\
+\phantom{~~ \langle}
+  \DEF{Thd}      &= \DEF{Atm}~\lambda (m,n,acc).~acc,\\
+\phantom{~~ \langle}
+  \DEF{PairZero}  &= \DEF{Atm}~\lambda(m,n).~ (m,n,0),\\
+\phantom{~~ \langle}
+  \DEF{MultIter} &= \DEF{Rec~(Seq~Fst~Test0)~Ident~(Par~(Seq~Fst~Dec)~(Par~Snd~AddAcc))},\\
+\phantom{~~ \langle}
+  \DEF{Mult}     &= \DEF{Seq~PairZero~(Seq~MultIter~Thd)} \rangle
+\end{array}
+$$
+
+\vspace*{-2mm}
+
+Note that we have used the same names in \DEF{FactProg} and \DEF{MultProg} for
+different (though semantically related) expressions (e.g.~\DEF{Fst}).  This is not a problem
+as names are local to the program they occur in.
+
+Compiling $(\mE{MultProg},\DEF{Mult})$, simplifying and discharging
+the totality proof obligation (in a way very similar to the factorial example) results in:
+
+\vspace*{-2mm}
+
+{\small\begin{alltt}
+ |- \(\forall\)load inp done out.
+      SEQ (ATM_IMP (\(\lambda\)(m,n). (m,n,0)))
+        (SEQ
+           (REC (SEQ (ATM_IMP (\(\lambda\)(m,n,acc). m)) (ATM_IMP (\(\lambda\)m. m = 0)))
+              (ATM_IMP (\(\lambda\)(m,n,acc). (m,n,acc)))
+              (PAR (SEQ (ATM_IMP (\(\lambda\)(m,n,acc). m)) (ATM_IMP (\(\lambda\)m. m - 1)))
+                 (PAR (ATM_IMP (\(\lambda\)(m,n,acc). n))
+                    (ATM_IMP (\(\lambda\)(m,n,acc). n {+} acc)))))
+           (ATM_IMP (\(\lambda\)(m,n,acc). acc))) (load,inp,done,out) \(\Rightarrow\)
+      Dev (\(\lambda\)(m,n). m \(\times\) n) (load,inp,done,out)
+\end{alltt}}
+
+\vspace*{-2mm}
+
+\noindent After adding this theorem to the library, we can replace
+the combinational multiplier in the factorial example by
+$\DEF{Mult}~=~\DEF{Lib}~\lambda (n,acc).~ n{\times}acc$.
+
+If we recompile the factorial program after this change, the
+implementation of the multiplier is `inlined' and we get:
+
+
+
+{\small\begin{alltt}
+ |- \(\forall\)load inp done out.
+      SEQ (ATM_IMP (\(\lambda\)n. (n,1)))
+        (SEQ
+           (REC (SEQ (ATM_IMP (\(\lambda\)(n,acc). n)) (ATM_IMP (\(\lambda\)n. n = 0)))
+              (ATM_IMP (\(\lambda\)(n,acc). (n,acc)))
+              (PAR (SEQ (ATM_IMP (\(\lambda\)(n,acc). n)) (ATM_IMP (\(\lambda\)n. n - 1)))
+                 (SEQ (ATM_IMP (\(\lambda\)(m,n). (m,n,0)))
+                    (SEQ
+                       (REC
+                          (SEQ (ATM_IMP (\(\lambda\)(m,n,acc). m))
+                             (ATM_IMP (\(\lambda\)m. m = 0)))
+                          (ATM_IMP (\(\lambda\)(m,n,acc). (m,n,acc)))
+                          (PAR
+                             (SEQ (ATM_IMP (\(\lambda\)(m,n,acc). m))
+                                (ATM_IMP (\(\lambda\)m. m - 1)))
+                             (PAR (ATM_IMP (\(\lambda\)(m,n,acc). n))
+                                (ATM_IMP (\(\lambda\)(m,n,acc). n {+} acc)))))
+                       (ATM_IMP (\(\lambda\)(m,n,acc). acc))))))
+           (ATM_IMP (\(\lambda\)(n,acc). acc))) (load,inp,done,out) \(\Rightarrow\)
+      Dev \(({\lambda}n. n!)\) (load,inp,done,out)
+\end{alltt}}
+
+This is an implementation of the factorial with an `inner-loop' for each multiplication.
+Not an efficient circuit, but it illustrates hierarchical development.
+
+\vspace*{-1mm}
+
+%-------------------------------------------------------------------------------
+\section{Future Work}
+\label{secConclusionAndFutureWork}
+%-------------------------------------------------------------------------------
+
+\vspace*{-1mm}
+
+%A simple functional language embedded in higher order logic is used as a
+%hardware description language. We describe a proof-based methodology
+%for formal synthesis to synchronous circuits that compute the
+%top-level function of the source code with a composable handshaking interface.
+%As the implementations are correct-by-construction,
+%no verification at the gate-level of abstraction is necessary.
+
+The handshaking protocol for devices is
+preliminary and we plan to refine and extend it.  For example,
+$\DEF{Dev}\ f\ \VAR{(load,inp,done,out)}$ holds if
+\DEF{F} is continuously asserted on \VAR{done}. We need to prove some
+liveness results saying that if there is no posedge on \VAR{load} then
+eventually \VAR{done} will go to \DEF{T}. This property looks clearly
+true of \DEF{ATM} and should be compositional with respect to
+\DEF{Seq}, \DEF{Par}, \DEF{Ite} and \DEF{Rec} (assuming totality). 
+The compiler should also be able to generate handshaking devices
+that are shared by several callers. An arbiter would control
+the concurrent calls and preserve the handshaking behaviour. This may
+require us to extend the handshaking protocol to support more than one
+request (\VAR{load}) and acknowledge (\VAR{done}) line per device.
+
+
+In the future we plan to 
+explore formally validated optimisations to the compiler,
+perhaps using ideas from SAFL compilation \cite{Sha02}.
+
+Finally, the compiler could provide the choice to
+generate either machine code or pure hardware. 
+This feature would allow the user to
+partition the system into software and hardware
+parts and explore different designs.
+
+\vspace*{-1mm}
+
+%-------------------------------------------------------------------------------
+\section{Acknowledgements}
+\label{secAcknowledgements}
+%-------------------------------------------------------------------------------
+
+\vspace*{-1mm}
+
+Konrad Slind provided encouragement and motivation and also helped us
+with the use of TFL and the formulation and proof of \texttt{REC\_INTRO}.
+
+\vspace*{-1mm}
+
+%--------------------------------------------------------------------------------
+\bibliographystyle{plain}
+\bibliography{tphols2004}
+%-------------------------------------------------------------------------------
+\end{document}
+% LocalWords:  langle
+
+

@@ -1,0 +1,38 @@
+\setlength{\unitlength}{0.00083333in}
+%
+\begingroup\makeatletter\ifx\SetFigFont\undefined%
+\gdef\SetFigFont#1#2#3#4#5{%
+  \reset@font\fontsize{#1}{#2pt}%
+  \fontfamily{#3}\fontseries{#4}\fontshape{#5}%
+  \selectfont}%
+\fi\endgroup%
+{\renewcommand{\dashlinestretch}{30}
+\begin{picture}(1526,721)(0,-10)
+\path(458,363)(458,325)
+\path(548,363)(548,325)
+\path(362,361)(362,323)
+\path(502,362)(502,324)
+\path(410,362)(410,324)
+\path(949,166)(949,128)
+\path(1039,166)(1039,128)
+\path(853,164)(853,126)
+\path(993,165)(993,127)
+\path(901,165)(901,127)
+\path(457,159)(457,121)
+\path(547,159)(547,121)
+\path(361,157)(361,119)
+\path(501,158)(501,120)
+\path(409,158)(409,120)
+\path(557,450)(844,450)(844,41)
+	(557,41)(557,450)
+\path(849,339)(1047,339)
+\put(208,598){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}$t+1 < \mE{time} < t'$}}}}}
+\put(1091,310){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{done}}}}}}
+\put(1105,111){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{out}}}}}}
+\put(0,310){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{load}}}}}}
+\put(62,110){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{inp}}}}}}
+\put(1526,241){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\mbox{}}}}}}
+\put(488,36){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\mbox{}}}}}}
+\put(664,206){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}$f$}}}}}
+\end{picture}
+}

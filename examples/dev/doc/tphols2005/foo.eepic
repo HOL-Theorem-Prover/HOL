@@ -1,0 +1,119 @@
+\setlength{\unitlength}{0.00083333in}
+%
+\begingroup\makeatletter\ifx\SetFigFont\undefined%
+\gdef\SetFigFont#1#2#3#4#5{%
+  \reset@font\fontsize{#1}{#2pt}%
+  \fontfamily{#3}\fontseries{#4}\fontshape{#5}%
+  \selectfont}%
+\fi\endgroup%
+{\renewcommand{\dashlinestretch}{30}
+\begin{picture}(5760,1804)(0,-10)
+\path(3438,384)(3438,346)
+\path(3528,384)(3528,346)
+\path(3342,382)(3342,344)
+\path(3482,383)(3482,345)
+\path(3390,383)(3390,345)
+\path(3438,176)(3438,138)
+\path(3528,176)(3528,138)
+\path(3342,174)(3342,136)
+\path(3482,175)(3482,137)
+\path(3390,175)(3390,137)
+\path(3943,1225)(3943,1187)
+\path(4033,1225)(4033,1187)
+\path(3847,1223)(3847,1185)
+\path(3987,1224)(3987,1186)
+\path(3895,1224)(3895,1186)
+\path(3548,1528)(3835,1528)(3835,1119)
+	(3548,1119)(3548,1528)
+\path(3305,1187)(3357,1187)(3357,1291)
+	(3406,1291)(3406,1187)(3458,1187)
+	(3458,1293)(3505,1293)(3505,1187)(3549,1187)
+\path(3839,1396)(4037,1396)
+\path(3305,1394)(3352,1394)(3352,1501)
+	(3502,1501)(3502,1394)(3542,1394)
+\put(2977,1386){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{load}}}}}}
+\put(3031,1181){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{inp}}}}}}
+\put(4081,1366){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{done}}}}}}
+\put(4096,1170){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{out}}}}}}
+\put(3323,1687){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}$\mE{time} = t+1$}}}}}
+\path(1533,389)(1533,351)
+\path(1623,389)(1623,351)
+\path(1437,387)(1437,349)
+\path(1577,388)(1577,350)
+\path(1485,388)(1485,350)
+\path(2024,192)(2024,154)
+\path(2114,192)(2114,154)
+\path(1928,190)(1928,152)
+\path(2068,191)(2068,153)
+\path(1976,191)(1976,153)
+\path(1532,185)(1532,147)
+\path(1622,185)(1622,147)
+\path(1436,183)(1436,145)
+\path(1576,184)(1576,146)
+\path(1484,184)(1484,146)
+\path(2054,1217)(2054,1179)
+\path(2144,1217)(2144,1179)
+\path(1958,1215)(1958,1177)
+\path(2098,1216)(2098,1178)
+\path(2006,1216)(2006,1178)
+\path(1534,1213)(1534,1175)
+\path(1624,1213)(1624,1175)
+\path(1438,1211)(1438,1173)
+\path(1578,1212)(1578,1174)
+\path(1486,1212)(1486,1174)
+\path(1632,476)(1919,476)(1919,67)
+	(1632,67)(1632,476)
+\path(1924,365)(2122,365)
+\path(1940,1391)(1987,1391)(1987,1498)
+	(2137,1498)(2137,1391)(2177,1391)
+\path(1645,1514)(1932,1514)(1932,1105)
+	(1645,1105)(1645,1514)
+\path(1449,1399)(1647,1399)
+\put(1525,1693){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\mE{time = t}}}}}}
+\put(1283,624){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}$t+1 < \mE{time} < t'$}}}}}
+\put(2166,336){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{done}}}}}}
+\put(2180,137){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{out}}}}}}
+\put(1075,336){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{load}}}}}}
+\put(1137,136){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{inp}}}}}}
+\put(2250,1381){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{done}}}}}}
+\put(2250,1189){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{out}}}}}}
+\put(1160,1159){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{inp}}}}}}
+\put(1113,1377){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{load}}}}}}
+\path(4941,150)(4941,118)
+\path(5016,150)(5016,118)
+\path(4861,148)(4861,116)
+\path(4978,149)(4978,117)
+\path(4901,149)(4901,117)
+\path(3537,471)(3824,471)(3824,62)
+	(3537,62)(3537,471)
+\path(3832,348)(3879,348)(3879,455)
+	(4029,455)(4029,348)(4069,348)
+\path(3833,136)(3885,136)(3885,240)
+	(3934,240)(3934,136)(3986,136)
+	(3986,242)(4033,242)(4033,136)(4077,136)
+\path(4846,564)(4885,564)(4885,654)
+	(5010,654)(5010,564)(5044,564)
+\path(4864,431)(5029,431)
+\path(4828,261)(4872,261)(4872,347)
+	(4913,347)(4913,261)(4956,261)
+	(4956,349)(4995,349)(4995,261)(5032,261)
+\put(4837,102){\arc{180}{1.5708}{3.1416}}
+\put(4837,644){\arc{180}{3.1416}{4.7124}}
+\put(5658,644){\arc{180}{4.7124}{6.2832}}
+\put(5658,102){\arc{180}{0}{1.5708}}
+\path(4747,102)(4747,644)
+\path(4837,734)(5658,734)
+\path(5748,644)(5748,102)
+\path(5658,12)(4837,12)
+\put(3423,625){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\mE{time = t'}}}}}}
+\put(4142,338){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{done}}}}}}
+\put(2994,324){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{load}}}}}}
+\put(3066,128){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{inp}}}}}}
+\put(4133,123){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{out}}}}}}
+\put(0,179){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\mbox{}}}}}}
+\put(5128,257){\makebox(0,0)[lb]{\smash{{{\SetFigFont{7}{8.4}{\sfdefault}{\mddefault}{\updefault}valid data}}}}}
+\put(5123,105){\makebox(0,0)[lb]{\smash{{{\SetFigFont{7}{8.4}{\sfdefault}{\mddefault}{\updefault}don't care}}}}}
+\put(5127,419){\makebox(0,0)[lb]{\smash{{{\SetFigFont{7}{8.4}{\sfdefault}{\mddefault}{\updefault}0}}}}}
+\put(5120,560){\makebox(0,0)[lb]{\smash{{{\SetFigFont{7}{8.4}{\sfdefault}{\mddefault}{\updefault}1}}}}}
+\end{picture}
+}

@@ -1,0 +1,50 @@
+\setlength{\unitlength}{0.00083333in}
+%
+\begingroup\makeatletter\ifx\SetFigFont\undefined%
+\gdef\SetFigFont#1#2#3#4#5{%
+  \reset@font\fontsize{#1}{#2pt}%
+  \fontfamily{#3}\fontseries{#4}\fontshape{#5}%
+  \selectfont}%
+\fi\endgroup%
+{\renewcommand{\dashlinestretch}{30}
+\begin{picture}(1298,2472)(0,-10)
+\path(554,1527)(1286,1527)(1286,1312)
+	(554,1312)(554,1527)
+\path(1127,2317)(1127,1529)
+\path(743,1826)(743,1934)(866,1934)(866,2308)
+\path(650,1823)(650,1931)(527,1931)(527,2074)
+\path(554,985)(1286,985)(1286,770)
+	(554,770)(554,985)
+\path(699,766)(699,584)(502,584)(502,482)
+\path(706,1141)(408,1141)(407,483)
+\path(692,661)(12,664)(12,2293)
+	(521,2293)(521,2208)
+\put(662,2356){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{load}}}}}}
+\put(861,1372){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{f}}}}}}
+\put(853,830){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{g}}}}}}
+\put(1072,36){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{out}}}}}}
+\put(380,40){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{done}}}}}}
+\put(748,625){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\sVAR{c}{2}}}}}}
+\put(325,1929){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\sVAR{c}{3}}}}}}
+\put(1039,2361){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{inp}}}}}}
+\put(486,1600){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\sVAR{c}{0}}}}}}
+\put(221,1101){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\sVAR{c}{1}}}}}}
+\put(803,1095){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{data}}}}}}
+\put(526,2091){\ellipse{44}{44}}
+\path(528,2113)(618,2203)(438,2203)(528,2113)
+\put(466.000,447.004){\arc{226.009}{0.0089}{3.1327}}
+\path(354,441)(354,481)(580,481)(580,444)
+\put(734.966,1884.032){\arc{374.067}{1.8026}{3.1147}}
+\put(647.462,1886.378){\arc{379.362}{0.0389}{1.3338}}
+\put(689.529,2016.322){\arc{402.852}{0.7638}{2.3639}}
+\put(700,1144){\blacken\ellipse{48}{42}}
+\put(700,1144){\ellipse{48}{42}}
+\put(695,674){\blacken\ellipse{48}{42}}
+\put(695,674){\ellipse{48}{42}}
+\path(698,1704)(698,1527)
+\path(1132,1306)(1132,988)
+\path(703,1313)(703,977)
+\path(1136,767)(1136,159)
+\path(466,330)(466,153)
+\end{picture}
+}

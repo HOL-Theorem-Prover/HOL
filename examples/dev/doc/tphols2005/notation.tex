@@ -1,0 +1,38 @@
+%-------------------------------------------------------------------------------
+% File: notation.tex
+%-------------------------------------------------------------------------------
+
+%-------------------------------------------------------------------------------
+% BNF
+%-------------------------------------------------------------------------------
+\newcommand{\bnfSC}[1]{\ensuremath{\mathit{\langle#1\rangle}}} % Syntax construct
+\newcommand{\bnfDef}{\ensuremath{\mathit{::=}}} % ::=
+\newcommand{\bnfList}[1]{\ensuremath{\{#1\}}}
+\newcommand{\bnfOR}[1]{\ensuremath{|\ #1}}
+\newcommand{\bnfOpt}[1]{\ensuremath{[#1]}}
+
+%-------------------------------------------------------------------------------
+% Mathematics
+%-------------------------------------------------------------------------------
+\newcommand{\mE}[1]{\ensuremath{\mathit{#1}}} % Math environment
+\newcommand{\argm}[1]{\ensuremath{\vec{#1}}} % list of arguments or parameters
+\newcommand{\VAR}[1]{\ensuremath{\mathit{#1}}} % variable
+\newcommand{\OR}{\ensuremath{\vee}} % logical OR
+\newcommand{\AND}{\ensuremath{\wedge}} % logical AND
+\newcommand{\NOT}{\ensuremath{\neg}} % logical NOT
+%\newcommand{\IF}[3]{\ensuremath{#1\, \rightarrow\, #2\, \mid\ #3}} % logical IF
+\newcommand{\IF}[3]{\ensuremath{\texttt{if}~#1~\texttt{then}~#2~\texttt{else}~#3}} % logical IF
+\newcommand{\TURNST}{\ensuremath{\vdash}} % turnstile
+\newcommand{\IMP}{\ensuremath{\Rightarrow}} % implies
+\newcommand{\NIMP}{\ensuremath{\not\supset}} % doesn't imply
+\newcommand{\DEF}[1]{\ensuremath{\mathsf{#1}}} % definition
+\newcommand{\sVAR}[2]{\ensuremath{\mE{#1}_{#2}}} % variable with subscript
+\newcommand{\LAMBDA}[2]{\ensuremath{\lambda\, #1.\ #2}} % lambda abstraction
+\newcommand{\COMP}[2]{\ensuremath{#1 \circ #2}} % function compositon
+\newcommand{\MULT}{\ensuremath{\cdot}} % multiplication
+
+%\newtheorem{example}{Example}
+
+% added by MJCG
+\newcommand{\TY}[1]{\ensuremath{\sl{#1}}} % type
+\newcommand{\TT}[1]{\ensuremath{\texttt{#1}}} % keyword

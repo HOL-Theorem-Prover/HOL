@@ -1,0 +1,35 @@
+\setlength{\unitlength}{0.00083333in}
+%
+\begingroup\makeatletter\ifx\SetFigFont\undefined%
+\gdef\SetFigFont#1#2#3#4#5{%
+  \reset@font\fontsize{#1}{#2pt}%
+  \fontfamily{#3}\fontseries{#4}\fontshape{#5}%
+  \selectfont}%
+\fi\endgroup%
+{\renewcommand{\dashlinestretch}{30}
+\begin{picture}(1739,1353)(0,-10)
+\path(1134,577)(1591,577)(1591,370)
+	(1134,370)(1134,577)
+\put(1224,421){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\DEF{DEL}}}}}}
+\path(995,1007)(1727,1007)(1727,792)
+	(995,792)(995,1007)
+\path(12,1003)(903,1003)(903,805)
+	(12,805)(12,1003)
+\put(298,1235){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{load}}}}}}
+\put(258,36){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{done}}}}}}
+\put(234,642){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\sVAR{c}{0}}}}}}
+\put(1225,1242){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{inp}}}}}}
+\put(1421,655){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\sVAR{c}{1}}}}}}
+\put(1225,37){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\VAR{out}}}}}}
+\put(120,847){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}\DEF{POSEDGE}}}}}}
+\put(1108,847){\makebox(0,0)[lb]{\smash{{{\SetFigFont{9}{10.8}{\sfdefault}{\mddefault}{\updefault}$\DEF{Comb}\ f$}}}}}
+\put(443,423){\ellipse{34}{34}}
+\path(444,440)(514,509)(375,509)(444,440)
+\path(453,1177)(453,1000)
+\path(446,403)(446,201)
+\path(445,795)(445,510)
+\path(1357,1179)(1357,1002)
+\path(1353,793)(1353,576)
+\path(1349,368)(1349,191)
+\end{picture}
+}
