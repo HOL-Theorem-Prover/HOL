@@ -1,4 +1,4 @@
-signature Net_HOLextras = sig
+signature HolDoc = sig
 
 (*
 

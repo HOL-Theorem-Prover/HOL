@@ -1,4 +1,4 @@
-structure Net_HOLextras :> Net_HOLextras = struct
+structure HolDoc :> HolDoc = struct
 
 (*
 
