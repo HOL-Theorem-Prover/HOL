@@ -67,7 +67,7 @@ val SRCDIRS =
   "src/res_quan/theories", "src/res_quan/src", "src/set/src",
   "src/pred_set/src", "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src", "src/integer", "src/BoyerMoore",
-  "src/hol90", "src/finite_map", "src/real", "src/bag",
+  "src/hol90", "src/finite_map", "src/real", "src/bag", "src/ring/src",
   "src/robdd","src/muddy"];
 
 
