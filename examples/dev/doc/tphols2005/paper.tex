@@ -3,7 +3,12 @@
 \input{notation.tex}
 
 %--------------------------------------------------------------------------
-\title{A Proof-Producing Hardware Compiler for a Subset of Higher Order Logic}
+%\title{A Proof-Producing Hardware Compiler for a Subset of Higher Order Logic}
+%
+
+\title{{\tiny REVISED APRIL 05, 2005}\\
+       A Proof-Producing Hardware Compiler\\
+       for a Subset of Higher Order Logic}
 
 \author{}
 \institute{}
@@ -316,7 +321,7 @@ we get:
 \(   \Rightarrow                                                                                   \)
 \(   ({\exists}v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 ...                               \)
 \(     ... v125 v126 v127 v128.                                                                   \)
-\(     \DEF{CONSTANT} 1 v0 {\wedge} \DEF{FlipFlopT}(clk,load,v20) {\wedge} \DEF{NOT}(v20,v19) {\wedge}        \)
+\(     \DEF{CONSTANT} 1 v0 {\wedge} \DEF{DtypeT}(clk,load,v20) {\wedge} \DEF{NOT}(v20,v19) {\wedge}        \)
 \(     \DEF{AND}(v19,load,v18) {\wedge} \DEF{Dtype}(clk,done,v17) {\wedge} \DEF{AND}(v18,v17,v16) {\wedge} \)
 
        \(\raisebox{3mm}{\vdots}\)
@@ -328,7 +333,7 @@ we get:
 %\vspace*{-2.5mm}
 
 This theorem uses explicitly clocked registers \DEF{Dtype} and
-\DEF{FlipFlopT} (defined in Section~\ref{secImplementation}) and states
+\DEF{DtypeT} (defined in Section~\ref{secImplementation}) and states
 that, assuming a live clock ($\DEF{InfRise}~clk$ means $clk$
 has infinitely many rising edges), then the behaviour of the
 synthesised circuit implements a handshake computing
@@ -356,7 +361,7 @@ module FACT (clk,load,inp,done,out);
 
  CONSTANT   CONSTANT_0 (v0);          defparam CONSTANT_0.size  = 31;
                                       defparam CONSTANT_0.value = 1;
- FlipFlopT  FlipFlopT_0 (clk,load,v20);
+ DtypeT     DtypeT_0 (clk,load,v20);
  NOT        NOT_0 (v20,v19);
  AND        AND_0 (v19,load,v18);
  Dtype      Dtype_0 (clk,done,v17);   defparam Dtype_0.size = 0;
@@ -369,26 +374,23 @@ endmodule
 \newpage
 
 If this is run though a Verilog simulator and the
-resulting waveform viewed, then we can see that if \texttt{8}
-is input on \texttt{Main.inp} then \texttt{40320} is
+resulting waveform viewed, then we can see that if \texttt{4}
+is input on \texttt{Main.inp} then \texttt{24} is
 being output on \texttt{Main.out} when \texttt{Main.done} goes high.
 
-\vspace*{-24mm}
+\vspace*{5mm}
 
+%\mbox{}\hspace*{-5mm}\scalebox{0.83}{\includegraphics{gtkwave.epsi}}
 
-\mbox{}\hspace*{-5mm}\scalebox{1.85}{\includegraphics[viewport = -30 340 250 269.5, clip = true]{gtkwave.epsi}}
+\mbox{}\hspace*{-5mm}\scalebox{0.83}{\includegraphics[viewport = 0 30 500 110, clip = true]{gtkwave.epsi}}
 
-
+%\mbox{}\hspace*{-5mm}\scalebox{1.85}{\includegraphics[viewport = -30 340 250 269.5, clip = true]{gtkwave.epsi}}
 %\vspace*{-16mm}
 %\mbox{}\hspace*{-7mm}{\includegraphics[viewport = 0 400 350 220, clip = true]{gtkwave.epsi}}
 %\newpage
-
 %\mbox{}\hspace*{-5mm}{\includegraphics[viewport = 0 500 360 220, clip = true]{gtkwave.epsi}}
 %\mbox{}\hspace*{-5mm}{\includegraphics[width=150mm,height=50mm]{gtkwave.epsi}}
-
-
-
-\vspace*{50mm}
+%\vspace*{50mm}
 
 %--------------------------------------------------------------------------
 \section{Specification}
@@ -767,7 +769,7 @@ $\DEF{Dtype}(ck,d,q) ~=~ \forall t.~q(t{+}1) = \texttt{if}~\DEF{Posedge}~ck~(t{+
 
 \vspace*{1mm}
 
-$\DEF{FlipFlopT}(ck,d,q) ~ = ~ (q~0~ =~\DEF{T})~\wedge~\DEF{Dtype}(ck,d,q)$
+$\DEF{DtypeT}(ck,d,q) ~ = ~ (q~0~ =~\DEF{T})~\wedge~\DEF{Dtype}(ck,d,q)$
 
 \vspace*{1mm}
 
@@ -790,7 +792,7 @@ Melham shows in his monograph that:
 \vspace*{-1mm}
 
 {\baselineskip14pt\begin{alltt}
-\( \vdash \DEF{InfRise} \VAR{clk} \Rightarrow {\forall}d q. \DEF{FlipFlopT}(\VAR{clk},d,q) \Rightarrow \DEF{DELT}(d \DEF{at} \VAR{clk}, q \DEF{at} \VAR{clk})  \)
+\( \vdash \DEF{InfRise} \VAR{clk} \Rightarrow {\forall}d q. \DEF{DtypeT}(\VAR{clk},d,q) \Rightarrow \DEF{DELT}(d \DEF{at} \VAR{clk}, q \DEF{at} \VAR{clk})  \)
 \end{alltt}}
 
 \vspace*{-1mm}
@@ -810,7 +812,7 @@ $\vdash \DEF{InfRise}~\VAR{clk}~\IMP~{\it{Imp}}~\IMP~\DEF{Dev}~f~(\VAR{load}~\DE
 
 The term ${\it{Imp}}$ represents the compiled implementation of $\DEF{Dev}~f$ in higher order logic.
 It differs from ${\it{Imp}}_C$ produced by Step~3 in having an explicit clock and using
-registers $\DEF{Dtype}$ and $\DEF{FlipFlopF}$ rather than \texttt{DEL} and \texttt{DELT}.
+registers $\DEF{Dtype}$ and $\DEF{DtypeF}$ rather than \texttt{DEL} and \texttt{DELT}.
 
 \vspace*{-3mm}
 

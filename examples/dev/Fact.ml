@@ -4,6 +4,7 @@
 (*****************************************************************************)
 
 quietdec := true;
+val _ = set_trace "show_alias_printing_choices" 0;
 loadPath :="dff" :: !loadPath;
 map load  ["compile","intLib","vsynth","dffTheory"];
 open arithmeticTheory intLib pairLib pairTheory PairRules combinTheory
@@ -130,8 +131,10 @@ period_default  := 10;
 maxtime_default := 1300;
 *)
 
+(*
 dump_all_flag := true; 
+*)
 
-SIMULATE FACT_cir [("inp","8")];
+SIMULATE FACT_cir [("inp","4")];
 
 val _ = export_theory();

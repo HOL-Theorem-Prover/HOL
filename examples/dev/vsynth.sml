@@ -1028,43 +1028,42 @@ fun MAKE_VERILOG name thm out =
 
 
 (* Example for testing
-val stimulus =
- [(10, 12, [("inp1", "5"),("inp2","7")], 15),
-  (10, 12, [("inp1", "0"),("inp2","5")], 15),
-  (10, 12, [("inp1", "3"),("inp2","3")], 15)];
+val out      = print
+and clk_name = "clk"
+and load_name = "load"
+and done_name = "done"
+and stimulus  = [("inp1", "5"),("inp2","7")];
 *)
 
 (*****************************************************************************)
-(* Print in Verilog one line of a stimulus specification                     *)
+(* Print test bench stimulus in Verilog                                      *)
 (*****************************************************************************)
-fun printStimulusLine 
- (out:string->unit) load_name (start_delay, load_delay, in_stim, end_delay) =
- (out("   " ^ "#" ^ Int.toString start_delay ^ "\n");
-  out("   " ^ load_name ^ " = 0;\n");
-  out("   " ^ "#" ^ Int.toString load_delay ^ "\n");
+fun printStimulus (out:string->unit) clk_name load_name done_name stimulus =
+ (out(" always @(posedge " ^ clk_name ^") if (" ^ done_name ^ ")\n");
+  out("                        begin\n");
+  out("                         #1 " ^ load_name ^ " = 1;\n");
+  out("                         #1 ");
   map 
-   (fn (inname,inval) => out("   " ^ inname ^ " = " ^ inval ^ ";\n"))
-   in_stim;
-  out("   " ^ "#" ^ Int.toString end_delay ^ "\n");
-  out("   " ^ load_name ^ " = 1;\n"));
+   (fn (inname,inval) => out(inname ^ " = " ^ inval ^ "; "))
+   stimulus;
+  out("\n");
+  out("                         forever @(posedge " ^ clk_name ^ ") if (" ^ done_name ^ ") $finish;\n");
+  out("                        end\n"));
+
 
 (* Example for testing
-val maxtime = 1000
-and period  = 5
+val period  = 5
 and file_name = "foo"
 and thm = Adder_cir
-and stimulus =
- [(10, 12, [("inp1", "5"),("inp2","7")], 15),
-  (10, 12, [("inp1", "5"),("inp2","0")], 15),
-  (10, 12, [("inp1", "3"),("inp2","3")], 15)]
+and stimulus =[("inp1", "5"),("inp2","7")]
 and name = "Adder"
 and dump_all = true;
 
-printToFile "Foo.vl" (MAKE_SIMULATION maxtime period thm stimulus name);
+printToFile "Foo.vl" (MAKE_SIMULATION period thm stimulus name);
 *)
 
 
-fun MAKE_SIMULATION name thm maxtime period stimulus dump_all out =
+fun MAKE_SIMULATION name thm period stimulus dump_all out =
  let val (spec_tm,
           (clk, load_tm,inpl,done_tm,outl), 
           vars, 
@@ -1082,21 +1081,15 @@ fun MAKE_SIMULATION name thm maxtime period stimulus dump_all out =
   out "\n";
   out ClockvDef; (* Print definition of Clock *)
   out "module Main ();\n";
-  out(" parameter maxtime = " ^ Int.toString maxtime ^ ";\n");
   out(" wire " ^ clk_name ^ ";\n");
-  out(" reg " ^ load_name ^ ";\n");
+  out(" reg  " ^ load_name ^ ";\n");
   map 
-   (fn v => out(" reg [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n")) 
+   (fn v => out(" reg  [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n")) 
    inpl;
   out(" wire " ^ done_name ^ ";\n");
   map 
    (fn v => out(" wire [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n")) 
    outl;
-  out "\n";
-  out(" initial #maxtime $finish;\n\n");
-  out " initial\n  begin\n";
-  map (printStimulusLine out load_name) stimulus;
-  out " end\n";
   out "\n";
   out(" initial\n  begin\n   $dumpfile(\"" ^name ^ ".vcd\");\n");
   (if dump_all
@@ -1106,6 +1099,9 @@ fun MAKE_SIMULATION name thm maxtime period stimulus dump_all out =
       map out (add_commas module_args);
       out ");\n"));
   out"  end\n\n";
+  out(" initial " ^ load_name ^ " = 0;\n\n");
+  printStimulus out clk_name load_name done_name stimulus;
+  out "\n";
   ClockvInst out [("period", Int.toString period)] [clk_name]; (* Create a clock *)
   out(" " ^ name ^ "    " ^ name ^ " (");
   map out (add_commas module_args);
@@ -1150,7 +1146,7 @@ val dump_all_flag = ref false;
 **                (inp1 <> ... <> inpu) at clk,
 **                done at clk,
 **                (out1 <> ... <> outv) at clk))
-**  maxtime period stimulus (!dump_all_flag)
+**  period stimulus (!dump_all_flag)
 ** 
 ** Prints translation to Verilog and a stimulus to a file Spec.vl and creates 
 ** a module Main that invokes module Spec connected to a simulation environment
@@ -1158,12 +1154,12 @@ val dump_all_flag = ref false;
 ** (fails if Spec isn't a constant)
 *)
 
-fun PRINT_SIMULATION thm maxtime period stimulus =
+fun PRINT_SIMULATION thm period stimulus =
  let val name = fst(dest_const(#1(dest_cir thm)))
  in
   printToFile 
    (name ^ ".vl")
-   (MAKE_SIMULATION name thm maxtime period stimulus (!dump_all_flag))
+   (MAKE_SIMULATION name thm period stimulus (!dump_all_flag))
  end;
 
 (*****************************************************************************)
@@ -1248,66 +1244,6 @@ fun MAKE_NET_VERILOG name thm out =
   out"endmodule\n")
  end;
 
-
-fun MAKE_NET_SIMULATION name thm maxtime period stimulus dump_all out =
- let val (spec_tm,
-          (load_tm,inpl,done_tm,outl), 
-          vars, 
-          modules) = dest_net thm
-     val load_name = var_name load_tm
-     val inp_names = map var_name inpl
-     val done_name = var_name done_tm
-     val out_names = map var_name outl
-     val module_args = 
-          [load_name] @ inp_names @ [done_name] @ out_names;
-
- in
- (MAKE_NET_VERILOG name thm out;
-  out "\n";
-  out "module Main ();\n";
-  out(" parameter maxtime = " ^ Int.toString maxtime ^ ";\n");
-  out(" reg " ^ load_name ^ ";\n");
-  map 
-   (fn v => out(" reg [0:" ^ var2size v ^ "] " ^ var_name v ^ ";\n")) 
-   inpl;
-  out(" wire " ^ done_name ^ ";\n");
-  map 
-   (fn v => out(" wire [0:" ^ var2size v ^ "] " ^ var_name v ^ ";\n")) 
-   outl;
-  out "\n";
-  out(" initial #maxtime $finish;\n\n");
-  out " initial\n  begin\n";
-  map (printStimulusLine out load_name) stimulus;
-  out " end\n";
-  out "\n";
-  out(" initial\n  begin\n   $dumpfile(\"" ^name ^ ".vcd\");\n");
-  (if dump_all
-    then out("   $dumpvars(1, " ^ name ^ ");\n")
-    else
-     (out("   $dumpvars(1,");
-      map out (add_commas module_args);
-      out ");\n"));
-  out"  end\n\n";
-  out(" " ^ name ^ "    " ^ name ^ " (");
-  map out (add_commas module_args);
-  out ");\n\n";
-  out"endmodule\n")
- end;
-
-fun PRINT_NET_VERILOG thm =
- let val name = fst(dest_const(#1(dest_net thm)))
- in
-  printToFile (name ^ ".vl") (MAKE_NET_VERILOG name thm)
- end;
-
-fun PRINT_NET_SIMULATION thm maxtime period stimulus =
- let val name = fst(dest_const(#1(dest_net thm)))
- in
-  printToFile 
-   (name ^ ".vl")
-   (MAKE_NET_SIMULATION name thm maxtime period stimulus (!dump_all_flag))
- end;
-
 (*****************************************************************************)
 (* User resettable paths of Icaraus Verilog and GTKWave                      *)
 (*****************************************************************************)
@@ -1337,16 +1273,13 @@ and inputs = [("inp", "5")];
 (* Default values for simulation                                             *)
 (*****************************************************************************)
 
-val maxtime_default  = ref 5000
-and period_default   = ref 5
-and stimulus_default = ref(fn (inputs:(string * string) list)
-                           => [(10, 10, inputs, 23)]);
+val period_default   = ref 5;
 
-fun SIMULATE thm inputs =
+fun SIMULATE thm stimulus =
  let val name = fst(dest_const(#1(dest_cir thm)))
      val vvp_file = (name ^ ".vvp")
      val vcd_file = (name ^ ".vcd")
-     val _ = PRINT_SIMULATION thm (!maxtime_default) (!period_default) ((!stimulus_default) inputs)
+     val _ = PRINT_SIMULATION thm (!period_default) stimulus
      val iverilog_command = ((!iverilog_path) ^ " -o " ^ vvp_file ^ " " ^ name ^ ".vl")
      val code1 = Process.system iverilog_command
      val _ = if isSuccess code1

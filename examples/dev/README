@@ -363,7 +363,7 @@ the evaluating:
 
 dumps Verilog using 
 
- PRINT_SIMULATION thm (!maxtime_default) (!period_default) ((!stimulus_default) inputs)
+ PRINT_SIMULATION thm (!period_default) [("inp1","val1"),...,("inpn","valn")]
 
 (see below). It then runs Icarus Verilog on fun.vl and then calls
 gtkwave on fun.vcd. It assumes the following are where iverilog, vvp
@@ -377,28 +377,22 @@ Update these references if your versions are installed at different
 places. You can also change the references maxtime_default,
 period_default and stimulus_default, which are initially set by:
 
- val maxtime_default  = ref 1000
- and period_default   = ref 5
- and stimulus_default = ref(fn (inputs:(string * string) list)
-                            => [(10, 10, inputs, 15)]);
+ val period_default   = ref 5;
 
 
-MAKE_SIMULATION : thm -> int -> int -> (int*int*(string*string)list*int)list -> unit
-------------------------------------------------------------------------------------
+PRINT_SIMULATION : thm -> int -> (string * string) list -> unit
+---------------------------------------------------------------
 
 Evaluating
 
- PRINT_SIMULATION thm maxtime period stimulus out
+ PRINT_SIMULATION thm period stimulus
  
-prints both the Verilog corresponding to th (see PRINT_VERILOG) and
+prints both the Verilog corresponding to thm (see PRINT_VERILOG) and
 then adds a clock and a module Main containing an instance of the
 clock and an instance of the module generated from thm.
 
-The module Main has a parameter maxtime giving the length of the
-simulation.
-
 The instance of Clock is created with time between edges as specified
-by the parameter period.
+by the parameter period (so really period is 2*period).
 
 The clock line clk and the handshake completion line done are declared
 to be boolean wires. 
@@ -415,29 +409,10 @@ then changes to all variables are dumped.
 The input variables are driven according to the parameter stimulus,
 which is an ML list of tuples of the form:
 
- (start_delay, load_delay, [("inp1",val),...,("inpu",val)], end_delay)
+ [("inp1",val),...,("inpu",val)]
 
-Each such tuple specifies a transaction:
-
- 1. delay of start_delay;
- 2. "load" is set to 0;
- 3. delay of load_delay (a positive integer);
- 4. each input is driven with the supplied value
-    (a string that prints to a valid Verilog expression);
- 5. delay of end_delay;
- 6. "load" is driven high.
-
-Example:
-
- PRINT_SIMULATION
- (|- InfRise clk ==>
-     <circuit>   ==>
-     DEV Mult (load at clk,(inp1 <> inp2) at clk,done at clk,out at clk))
-  1000 
-  5 
-  [(10, 12, [("inp1", "5"),("inp2","7")], 15),
-   (10, 12, [("inp1", "5"),("inp2","0")], 15),
-   (10, 12, [("inp1", "3"),("inp2","3")], 15)]
+where each input is driven with the supplied value (a string that
+prints to a valid Verilog expression).
 
 I am using Icarus Verilog for simulation
 (http://www.icarus.com/eda/verilog/) and GTKWave
@@ -633,4 +608,5 @@ ML reference "if_print_flag" to false.
 == [15.02.05: MJCG revised MAKE_NETLIST and MAKE_CIRCUIT                     ==
 == [18.02.05: MJCG revised MAKE_VERILOG in vsynth; added MAKE_SIMULATION     ==
 == [28.02.05: MJCG revised added SIMULATE to run iverilog and gtkwave        ==
+== [05.04.05: MJCG updated file                                              ==
 ===============================================================================
