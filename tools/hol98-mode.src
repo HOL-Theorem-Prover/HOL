@@ -237,7 +237,7 @@ If prefix ARG is true, or if in transient mark mode, region is active and
 the region contains no backquotes, then send region instead."
   (interactive "P")
   (let ((txt (condition-case nil
-                 (with-hol-locpragma region-beginning
+                 (with-hol-locpragma (region-beginning)
                     (buffer-substring (region-beginning) (region-end)))
                (error nil))))
     (if (or (and mark-active transient-mark-mode (= (count ?\` txt) 0))
