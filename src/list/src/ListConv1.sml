@@ -571,7 +571,7 @@ val list_FOLD_CONV =
 			        message=(origin_function^": "^message)});
 
 val SUM_CONV =
-    list_FOLD_CONV (rich_listTheory.SUM_FOLDR) numLib.ADD_CONV;
+    list_FOLD_CONV (rich_listTheory.SUM_FOLDR) reduceLib.ADD_CONV;
 
 (*---------------------------------------------------------------------*)
 (* Filter                                                              *)

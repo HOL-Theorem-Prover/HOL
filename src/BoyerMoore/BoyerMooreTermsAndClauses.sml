@@ -231,7 +231,7 @@ val EQ_F =
 fun prove_terms_not_eq l r =
    let fun STRUCT_CONV tm =
           (bool_EQ_CONV ORELSEC
-           numLib.num_EQ_CONV ORELSEC
+           reduceLib.NEQ_CONV ORELSEC
            (fn tm => let val (l,r) = dest_eq tm
                          val ty_name = (#Tyop o Rsyntax.dest_type) (type_of l)
                          val ty_conv =

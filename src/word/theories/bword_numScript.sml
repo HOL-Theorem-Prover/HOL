@@ -10,11 +10,12 @@
 
 
 open HolKernel Parse basicHol90Lib Let_conv Num_conv Num_induct;
-open Define_type Base;
 open arithLib numLib res_quanLib;
 open rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory;
-infix THEN THENL THENC ORELSE ORELSEC;
 open Cond_rewrite Res_quan word_baseTheory word_bitopTheory word_numTheory;
+open Base;
+
+infix THEN THENL THENC ORELSE ORELSEC;
 
 val _ = new_theory "bword_num";
 

@@ -233,7 +233,7 @@ fun solve_goal_tac dist_ftn (asms, gl) =
     let val asm = hd asms
 	val thm1 = AP_TERM dist_ftn (ASSUME asm)
 	val thm2 = REWRITE_RULE [dist_aux_ftns_thm] thm1
-	val thm3 = CONV_RULE numLib.num_EQ_CONV thm2
+	val thm3 = CONV_RULE reduceLib.NEQ_CONV thm2
     in
 	ACCEPT_TAC thm3 (asms, gl)
     end

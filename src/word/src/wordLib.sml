@@ -4,7 +4,7 @@ struct
 local open wordTheory in end;
 
 open res_quanLib listLib numLib;
-open HolKernel Parse basicHol90Lib Num_conv;
+open HolKernel Parse basicHol90Lib;
 infix THEN THENL THENC ##;
 
  type term = Term.term
@@ -138,7 +138,7 @@ val LESS_CONV =
            end    	
      else if (m = n)
      then EQF_INTRO (MATCH_MP NOT_LESS_EQ
-                         (EQT_ELIM (num_EQ_CONV (--`^M = ^N`--))))
+                         (EQT_ELIM (reduceLib.NEQ_CONV (--`^M = ^N`--))))
      else  let val t = mk_comb{Rator=mk_comb{Rator=(--`<`--),Rand=M},Rand=N}
            in
     	    EQF_INTRO (PURE_REWRITE_RULE[AND_CLAUSES, less_conv t]
@@ -223,7 +223,7 @@ val pwordlen_funs =
             in
     	       MP (CONV_RULE
     	          ((RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV)
-                     ADD_CONV)
+                     reduceLib.ADD_CONV)
     	          (SPECL [m,k] (word_inst_thm ((hd tms), wd) 
     	    	   (word_baseTheory.WSEG_PWORDLEN))))
        	         (prove_less_eq ((int_of_term m) + (int_of_term k))
@@ -246,7 +246,7 @@ val pwordlen_funs =
      	     then raise WORD_LIB_ERR{function="pwordlen_funs",
                                       message="theorems and term do not match"}
      	     else 
-    	     (CONV_RULE ((RATOR_CONV o RAND_CONV) ADD_CONV)
+    	     (CONV_RULE ((RATOR_CONV o RAND_CONV) reduceLib.ADD_CONV)
     	      (itlist word_inst_thm [(n2,w2), (n1,w1)]
     	    	(word_baseTheory.WCAT_PWORDLEN))))
             end )
@@ -317,7 +317,7 @@ val WSEG_WSEG_CONV =
    let fun check s = assert (fn x => #Name(dest_const x) = s)
    val thm' = word_baseTheory.WSEG_WSEG
    fun add_less_eq_conv k m n =
-    	(((RATOR_CONV o RAND_CONV) ADD_CONV) THENC LESS_EQ_CONV)
+    	(((RATOR_CONV o RAND_CONV) reduceLib.ADD_CONV) THENC LESS_EQ_CONV)
     	(mk_comb{Rator=mk_comb{Rator=(--`<=`--),
                                Rand=mk_comb{Rator=mk_comb{Rator=(--`$+`--),
                                                           Rand=k},
@@ -330,7 +330,7 @@ val WSEG_WSEG_CONV =
     val (_,[m1,k1,w]) = ((check "WSEG") ## I) (strip_comb s)
     val thm = GQSPECL [N, w, m1, k1, m2, k2] thm'
     in
-    (RIGHT_CONV_RULE ((RATOR_CONV o RAND_CONV) ADD_CONV) 
+    (RIGHT_CONV_RULE ((RATOR_CONV o RAND_CONV) reduceLib.ADD_CONV) 
     (MP thm (CONJ (EQT_ELIM (add_less_eq_conv m1 k1 N))
     	    	 (EQT_ELIM (add_less_eq_conv m2 k2 m1)))))
     end

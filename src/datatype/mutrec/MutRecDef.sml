@@ -1317,7 +1317,7 @@ val rep_abs_eq_simps =
     map
     (fn {type_name,applied_joint_constructor,...} =>
      (REWRITE_RULE rep_abs_thms
-      (CONV_RULE (DEPTH_CONV numLib.num_EQ_CONV)
+      (CONV_RULE (DEPTH_CONV reduceLib.NEQ_CONV)
        (REWRITE_RULE [lemma,joint_select_def]
 	(SYM (SPEC applied_joint_constructor
 	      (CONJUNCT2 (List.nth
@@ -1347,7 +1347,7 @@ val not_rep_abs_thms =
 	  (map (SYM o SPEC_ALL o CONJUNCT2) rep_abs_thms)) THEN
 	 (PURE_ONCE_REWRITE_TAC [joint_select_def]) THEN
 	 (COND_CASES_TAC ORELSE ALL_TAC) THEN (ONCE_REWRITE_TAC[]) THEN
-	 (CONV_TAC (DEPTH_CONV numLib.num_EQ_CONV)) THEN
+	 (CONV_TAC (DEPTH_CONV reduceLib.NEQ_CONV)) THEN
 	 (ONCE_REWRITE_TAC[]))))
       type_names)
      spec_cases)

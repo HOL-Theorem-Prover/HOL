@@ -8,11 +8,11 @@
 
 
 open HolKernel Parse basicHol90Lib Let_conv Num_conv Num_induct;
-open Define_type Base;
 open arithLib numLib res_quanLib;
 open rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory;
 open Cond_rewrite Res_quan;
 open word_baseTheory word_numTheory bword_numTheory;
+open Base;
 
 infix THEN THENL THENC ORELSE ORELSEC;
 

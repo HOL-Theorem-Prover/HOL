@@ -9,12 +9,15 @@
 (* PC 18/11/93: SEG ->WSEG *)
 
 
-open HolKernel Parse basicHol90Lib Let_conv Num_conv Num_induct;
-open Define_type Base;
-open arithLib numLib res_quanLib;
+open HolKernel Parse basicHol90Lib Let_conv;
+open Base numLib res_quanLib;
 open rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory;
-infix THEN THENL THENC ORELSE ORELSEC;
 open Cond_rewrite Res_quan word_baseTheory;
+
+infix THEN THENL THENC ORELSE ORELSEC;
+
+
+val ARITH_TAC = Base.ARITH_TAC;
 
 val _ = new_theory "word_bitop";
 
@@ -437,7 +440,7 @@ val SHL_WSEG = store_thm("SHL_WSEG",
     (--`!n. !w:('a)word::PWORDLEN n. ! m k. ((m + k) <= n) ==> (0 < m) ==>
      (!f b. SHL f (WSEG m k w) b = ((BIT (k+(m-1)) w),
       (f => (WCAT((WSEG (m-1) k w),(WSEG 1 k w))) |
-            (WCAT((WSEG (m-1) k w),(WORD[b])))))) `--),
+            (WCAT((WSEG (m-1) k w),(WORD[b]))))))`--),
     let fun f t1 tms =
         ((IMP_RES_THEN SUBST1_TAC) o (fn th => MATCH_MP th t1)
     	  o (PURE_ONCE_REWRITE_RULE[ADD_CLAUSES]) o (SPECL tms))
