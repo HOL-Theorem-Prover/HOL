@@ -1,0 +1,8 @@
+export MPATH="$MPATH -> formalize"
+
+for dir in ho_prover subtypes RSA formalize prob groups miller
+do
+        cd $dir
+        m $*
+        cd ..
+done

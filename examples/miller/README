@@ -1,0 +1,34 @@
+This example is a verification of the Miller-Rabin probabilistic
+primality test incorporating version 2 of probability theory and some
+cute example probabilistic programs.
+
+The reason I haven't incorporated it into src/ is that it takes about
+2 hours to build, and carries a lot of `baggage' from my experiments
+with proof tools.
+
+The most convenient way to build it is change to the examples/miller/
+directory, and use the `m' bash script (it also understands `m clean'
+to clean the directories). If this doesn't work, or you can't do this,
+then there's a longer version:
+
+cd ho_prover
+Holmake --qof
+cd ../subtypes
+Holmake -I ../ho_prover --qof
+cd ../RSA
+Holmake --qof
+cd ../formalize
+Holmake -I ../ho_prover -I ../subtypes -I ../RSA --qof
+cd ../prob
+Holmake -I ../ho_prover -I ../subtypes -I ../RSA -I ../formalize --qof
+cd ../groups
+Holmake -I ../ho_prover -I ../subtypes -I ../RSA -I ../formalize --qof
+cd ../miller
+Holmake -I ../ho_prover -I ../subtypes -I ../RSA -I ../formalize -I ../prob -I ../groups --qof
+cd ..
+
+It does build RIGHT NOW, but is quite sensitive to changes in the HOL
+proof tools. I'll try and support it (especially if anyone uses it),
+but sadly it might become more trouble than it's worth.
+
+Joe Hurd, 9 January 2002
