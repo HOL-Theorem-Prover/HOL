@@ -1,15 +1,17 @@
-
-
-We describe correct-by-construction compilation of
-function definitions in higher order logic to hardware.  
-The key idea of our approach is to automatically prove theorems of the
-form $\vdash {\it{Imp}}\Longrightarrow\DEF{Dev}~f$, where
-{\it{Imp}} is a term describing a circuit, $\DEF{Dev}~f$ specifies
-that function $f$ is computed by a four-phase handshake and the
-operator $\Longrightarrow$ means that the implementation meets the
-specification.  Several different representations of implementations
-are created, with the lowest level corresponding to
-synthesisable Verilog.
+One approach to formal hardware verification starts with a design and
+then proves that it satisfies a specification.  In this paper we
+repackage some of the ideas underlying such a `verification flow' into
+an alternative `synthesis flow' in which implementations are compiled
+by proof from specifications.  Starting from a simple functional
+specification in higher order logic, we describe a
+correct-by-construction compilation to hardware.  The key idea is to
+automatically generate theorems of the form $\vdash
+{\it{Imp}}\Longrightarrow\DEF{Dev}~f$, where {\it{Imp}} is a term
+describing a circuit, $\DEF{Dev}~f$ specifies that function $f$ is
+computed by a four-phase handshake and the operator $\Longrightarrow$
+means that the implementation meets the specification.  Several
+different representations of implementations are created, with the
+lowest level corresponding to synthesisable Verilog.
 
 
 Our system is implemented in HOL4, but the ideas could be
