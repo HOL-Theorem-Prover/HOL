@@ -426,7 +426,15 @@ in
       if always_rebuild_deps orelse argname forces_update_of depfile then
         runholdep arg depfile
       else ()
-    val phase1 = get_dependencies_from_file depfile
+    val phase1 =
+      (* circumstances can arise in which the dependency file won't be
+         built, and won't exist; mainly because the file we're trying to
+         compute dependencies for doesn't exist either.  In this case, we
+         can only return the empty list *)
+      if FileSys.access (depfile, [FileSys.A_READ]) then
+        get_dependencies_from_file depfile
+      else
+        []
   in
     case f of
       UO x =>
@@ -669,6 +677,12 @@ in
 end handle CircularDependency => cache_insert (target, false)
          | Fail s => raise Fail s
          | OS.SysErr(s, _) => raise Fail ("Operating system error: "^s)
+         | General.Io{function,name,cause = OS.SysErr(s,_)} =>
+             raise Fail ("Got I/O exception for function "^function^
+                         " with name "^name^" and cause "^s)
+         | General.Io{function,name,...} =>
+               raise Fail ("Got I/O exception for function "^function^
+                         " with name "^name)
          | x => raise Fail "Got an unknown exception in make_up_to_date"
 
 exception DirNotFound
