@@ -40,27 +40,10 @@ val op>> = op THEN1;
 
 (* JEH: Defns moved to boolTheory: the following versions remove lambdas *)
 
-val RES_FORALL = store_thm
-  ("RES_FORALL",
-   ``!p m. RES_FORALL p m = !x. x IN p ==> m x``,
-   RW_TAC bool_ss [RES_FORALL_DEF]);
-
-val RES_EXISTS = store_thm
-  ("RES_EXISTS",
-   ``!p m. RES_EXISTS p m = ?x. x IN p /\ m x``,
-   RW_TAC bool_ss [RES_EXISTS_DEF]);
-
-val RES_EXISTS_UNIQUE = store_thm
-  ("RES_EXISTS_UNIQUE",
-   ``!p m.
-       RES_EXISTS_UNIQUE p m =
-       (?x :: p. m x) /\ !x y :: p. m x /\ m y ==> (x = y)``,
-   RW_TAC bool_ss [RES_EXISTS_UNIQUE_DEF]);
-
-val RES_SELECT = store_thm
-  ("RES_SELECT",
-   ``!p m. RES_SELECT p m = @x. x IN p /\ m x``,
-   RW_TAC bool_ss [RES_SELECT_DEF]);
+val RES_FORALL = save_thm("RES_FORALL", RES_FORALL_THM)
+val RES_EXISTS = save_thm("RES_EXISTS", RES_EXISTS_THM)
+val RES_EXISTS_UNIQUE = save_thm("RES_EXISTS_UNIQUE", RES_EXISTS_UNIQUE_THM)
+val RES_SELECT = save_thm("RES_SELECT", RES_SELECT_THM)
 
 val RES_ABSTRACT = save_thm ("RES_ABSTRACT", RES_ABSTRACT_DEF);
 
@@ -118,7 +101,7 @@ val RES_FORALL_NULL = store_thm
    RW_TAC bool_ss [RES_FORALL, EXTENSION, NOT_IN_EMPTY]
    THEN Cases_on `m`
    THEN PROVE_TAC []);
-   
+
 (* --------------------------------------------------------------------- *)
 (* RES_EXISTS	    	    	    					*)
 (* --------------------------------------------------------------------- *)
@@ -172,7 +155,7 @@ val RES_EXISTS_NULL = store_thm
    RW_TAC bool_ss [RES_EXISTS, EXTENSION, NOT_IN_EMPTY]
    THEN Cases_on `m`
    THEN PROVE_TAC []);
-   
+
 val RES_EXISTS_ALT = store_thm
   ("RES_EXISTS_ALT",
    ``!(p : 'a -> bool) m.

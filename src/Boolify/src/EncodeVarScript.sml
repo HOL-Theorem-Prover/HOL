@@ -43,7 +43,7 @@ val fixed_width_univ = store_thm
        wf_coder c /\ fixed_width n c ==>
        ((!x. domain c x ==> phi x) =
         !w :: of_length n. phi (decoder c w))``,
-   RW_TAC bool_ss [RES_FORALL_DEF, fixed_width_def, of_length_def]
+   RW_TAC bool_ss [RES_FORALL_THM, fixed_width_def, of_length_def]
    ++ REPEAT (STRIP_TAC ORELSE EQ_TAC)
    ++ PROVE_TAC [wf_coder, wf_coder_closed]);
 
@@ -52,7 +52,7 @@ val of_length_univ_suc = store_thm
    ``!phi n.
        (!w :: of_length (SUC n). phi (w : 'a list)) =
        (!x. !w :: of_length n. phi (x :: w))``,
-   SIMP_TAC bool_ss [RES_FORALL_DEF, of_length_def] THEN
+   SIMP_TAC bool_ss [RES_FORALL_THM, of_length_def] THEN
    REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
    [Q.PAT_ASSUM `!x. Q x` MATCH_MP_TAC THEN
     ASM_SIMP_TAC arith_ss [LENGTH],
@@ -64,7 +64,7 @@ val of_length_univ_suc = store_thm
 val of_length_univ_zero = store_thm
   ("of_length_univ_zero",
    ``!phi. (!w :: of_length 0. phi w) = phi ([] : 'a list)``,
-   SIMP_TAC bool_ss [RES_FORALL_DEF, of_length_def, LENGTH_NIL]);
+   SIMP_TAC bool_ss [RES_FORALL_THM, of_length_def, LENGTH_NIL]);
 
 val fixed_width_exists = store_thm
   ("fixed_width_exists",
@@ -72,7 +72,7 @@ val fixed_width_exists = store_thm
        wf_coder c /\ fixed_width n c ==>
        ((?x. domain c x /\ phi x) =
         ?w :: of_length n. phi (decoder c w))``,
-   RW_TAC bool_ss [RES_EXISTS_DEF, fixed_width_def, of_length_def]
+   RW_TAC bool_ss [RES_EXISTS_THM, fixed_width_def, of_length_def]
    ++ REPEAT (STRIP_TAC ORELSE EQ_TAC)
    ++ PROVE_TAC [wf_coder, wf_coder_closed]);
 
@@ -81,7 +81,7 @@ val of_length_exists_suc = store_thm
    ``!phi n.
        (?w :: of_length (SUC n). phi (w : 'a list)) =
        (?x. ?w :: of_length n. phi (x :: w))``,
-   SIMP_TAC bool_ss [RES_EXISTS_DEF, of_length_def] THEN
+   SIMP_TAC bool_ss [RES_EXISTS_THM, of_length_def] THEN
    REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
    [MP_TAC (ISPEC ``x:'a list`` list_CASES) THEN
     (STRIP_TAC THEN1 FULL_SIMP_TAC arith_ss [LENGTH]) THEN
@@ -95,7 +95,7 @@ val of_length_exists_suc = store_thm
 val of_length_exists_zero = store_thm
   ("of_length_exists_zero",
    ``!phi. (?w :: of_length 0. phi w) = phi ([] : 'a list)``,
-   SIMP_TAC bool_ss [RES_EXISTS_DEF, of_length_def, LENGTH_NIL]);
+   SIMP_TAC bool_ss [RES_EXISTS_THM, of_length_def, LENGTH_NIL]);
 
 (*---------------------------------------------------------------------------
      Units

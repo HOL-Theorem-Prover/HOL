@@ -2983,6 +2983,96 @@ val COND_CONG =
 val _ = save_thm("COND_CONG", COND_CONG);
 
 
+(* ----------------------------------------------------------------------
+    RES_FORALL_CONG
+       |- (P = Q) ==> (!x. x IN Q ==> (f x = g x)) ==>
+          (RES_FORALL P f = RES_FORALL Q g)
+
+    RES_EXISTS_CONG
+       |- (P = Q) ==> (!x. x IN Q ==> (f x = g x)) ==>
+          (RES_EXISTS P f = RES_EXISTS P g)
+   ---------------------------------------------------------------------- *)
+
+val (RES_FORALL_CONG, RES_EXISTS_CONG) = let
+  (* stuff in common to both *)
+  val aset_ty = alpha --> bool
+  val [P,Q,f,g] = map (fn s => mk_var(s, aset_ty)) ["P", "Q", "f", "g"]
+  val PeqQ_t = mk_eq(P, Q)
+  val PeqQ_th = ASSUME PeqQ_t
+  val x = mk_var("x", alpha)
+  val fx_t = mk_comb(f, x)
+  val gx_t = mk_comb(g, x)
+  val IN_t = prim_mk_const {Thy = "bool", Name = "IN"}
+  val xINP_t = list_mk_comb(IN_t, [x, P])
+  val xINP_th = ASSUME xINP_t
+  val xINQ_t = list_mk_comb(IN_t, [x, Q])
+  val xINQ_th = ASSUME xINQ_t
+  val xINP_eq_xINQ_th = AP_TERM (mk_comb(IN_t, x)) PeqQ_th
+  val (xINP_imp_xINQ, xINQ_imp_xINP) = EQ_IMP_RULE xINP_eq_xINQ_th
+  val feqg_t = mk_forall(x, mk_imp(xINQ_t, mk_eq(mk_comb(f,x), mk_comb(g, x))))
+  val feqg_th = SPEC x (ASSUME feqg_t)
+  val feqg_th = MP feqg_th xINQ_th
+  val (f_imp_g_th, g_imp_f_th) = EQ_IMP_RULE feqg_th
+
+  fun mk_res th args =
+      List.foldl (RIGHT_BETA o uncurry (C AP_THM)) th args
+
+  (* forall thm *)
+  val resfa_t = prim_mk_const {Thy = "bool", Name = "RES_FORALL"}
+  val res_pf_t = list_mk_comb(resfa_t, [P, f])
+  val res_qg_t = list_mk_comb(resfa_t, [Q, g])
+  val resfa_pf_eqn = mk_res RES_FORALL_DEF [P, f]
+  val resfa_qg_eqn = mk_res RES_FORALL_DEF [Q, g]
+
+  val resfa_pf_eq_th = SPEC x (EQ_MP resfa_pf_eqn (ASSUME res_pf_t))
+  val g_th = MP f_imp_g_th (MP resfa_pf_eq_th xINP_th)
+  val xinq_imp_g_th =
+      GEN x (DISCH xINQ_t (PROVE_HYP (UNDISCH xINQ_imp_xINP) g_th))
+  val rfa_pf_imp_rfa_qg =
+      DISCH res_pf_t (EQ_MP (SYM resfa_qg_eqn) xinq_imp_g_th)
+
+  val resfa_qg_eq_th = SPEC x (EQ_MP resfa_qg_eqn (ASSUME res_qg_t))
+  val f_th = MP g_imp_f_th (MP resfa_qg_eq_th xINQ_th)
+  val xinp_imp_f_th =
+      GEN x (DISCH xINP_t (PROVE_HYP (UNDISCH xINP_imp_xINQ) f_th))
+  val rfa_qg_imp_rfa_pf =
+      DISCH res_qg_t (EQ_MP (SYM resfa_pf_eqn) xinp_imp_f_th)
+  val fa_eqn = IMP_ANTISYM_RULE rfa_pf_imp_rfa_qg rfa_qg_imp_rfa_pf
+
+  (* exists thm *)
+  val resex_t = prim_mk_const {Thy = "bool", Name = "RES_EXISTS"}
+  val res_pf_t = list_mk_comb(resex_t, [P, f])
+  val res_qg_t = list_mk_comb(resex_t, [Q, g])
+  val resex_pf_eqn = mk_res RES_EXISTS_DEF [P, f]
+  val resex_qg_eqn = mk_res RES_EXISTS_DEF [Q, g]
+
+  val pf_exbody_th = EQ_MP resex_pf_eqn (ASSUME res_pf_t)
+  val pf_body_th = ASSUME(mk_conj(xINP_t, fx_t))
+  val (new_xINP_th, fx_th) = CONJ_PAIR pf_body_th
+  val new_xINQ_th = MP xINP_imp_xINQ new_xINP_th
+  val new_gx_th = PROVE_HYP new_xINQ_th (MP f_imp_g_th fx_th)
+  val qg_exists =
+      EXISTS(rhs (concl resex_qg_eqn), x) (CONJ new_xINQ_th new_gx_th)
+  val pf_chosen = CHOOSE(x,EQ_MP resex_pf_eqn (ASSUME res_pf_t)) qg_exists
+  val ex_pf_imp_qg = DISCH res_pf_t (EQ_MP (SYM resex_qg_eqn) pf_chosen)
+
+  val qg_exbody_th = EQ_MP resex_qg_eqn (ASSUME res_qg_t)
+  val qg_body_th = ASSUME(mk_conj(xINQ_t, gx_t))
+  val (new_xINQ_th, gx_th) = CONJ_PAIR qg_body_th
+  val new_xINP_th = MP xINQ_imp_xINP new_xINQ_th
+  val new_fx_th = PROVE_HYP new_xINQ_th (MP g_imp_f_th gx_th)
+  val pf_exists =
+      EXISTS (rhs (concl resex_pf_eqn), x) (CONJ new_xINP_th new_fx_th)
+  val qg_chosen = CHOOSE(x, EQ_MP resex_qg_eqn (ASSUME res_qg_t)) pf_exists
+  val ex_qg_imp_pf = DISCH res_qg_t (EQ_MP (SYM resex_pf_eqn) qg_chosen)
+
+  val ex_eqn = IMP_ANTISYM_RULE ex_pf_imp_qg ex_qg_imp_pf
+
+in
+  (save_thm("RES_FORALL_CONG", DISCH PeqQ_t (DISCH feqg_t fa_eqn)),
+   save_thm("RES_EXISTS_CONG", DISCH PeqQ_t (DISCH feqg_t ex_eqn)))
+end
+
 (* ------------------------------------------------------------------------- *)
 (* Monotonicity.                                                             *)
 (* ------------------------------------------------------------------------- *)
@@ -3604,6 +3694,19 @@ val RES_ABSTRACT_DEF =
 
 val _ = add_const "RES_ABSTRACT";
 val _ = associate_restriction ("\\", "RES_ABSTRACT");
+
+
+val (RES_FORALL_THM, RES_EXISTS_THM, RES_EXISTS_UNIQUE_THM, RES_SELECT_THM) =
+    let
+      val Pf = map (fn s => mk_var(s, alpha --> bool)) ["P", "f"]
+      fun mk_eq th =
+          GENL Pf (List.foldl (RIGHT_BETA o uncurry (C AP_THM)) th Pf)
+    in
+      (save_thm("RES_FORALL_THM", mk_eq RES_FORALL_DEF),
+       save_thm("RES_EXISTS_THM", mk_eq RES_EXISTS_DEF),
+       save_thm("RES_EXISTS_UNIQUE_THM", mk_eq RES_EXISTS_UNIQUE_DEF),
+       save_thm("RES_SELECT_THM", mk_eq RES_SELECT_DEF))
+    end
 
 (*---------------------------------------------------------------------------
      From Joe Hurd : case analysis on the (4) functions in the

@@ -87,7 +87,7 @@ local val IMP_CONG = REWRITE_RULE [GSYM AND_IMP_INTRO] IMP_CONG
       val COND_CONG = REWRITE_RULE [GSYM AND_IMP_INTRO] COND_CONG
 in
 val CONG_ss = SIMPSET
-  {congs = [IMP_CONG, COND_CONG],
+  {congs = [IMP_CONG, COND_CONG, RES_FORALL_CONG, RES_EXISTS_CONG],
    convs = [], rewrs = [], filter=NONE, ac=[], dprocs=[]}
 end;
 

@@ -128,7 +128,9 @@ let
    val vars = free_vars (concl congrule')
    fun reprocess_flag assum = if is_var assum then false else true;
    val reprocess_flags =
-       map (map reprocess_flag o fst o strip_imp_until_rel vars) conditions
+       map (map reprocess_flag o fst o strip_imp_until_rel vars o
+            #2 o strip_forall)
+           conditions
 
 in fn {relation,solver,depther,freevars} =>
   if (relation <> rel) then failwith "not applicable" else fn tm =>
