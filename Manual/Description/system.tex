@@ -354,13 +354,18 @@ which enables types and terms to be input using a fairly standard
 syntax.  The \HOL\ printer also outputs types and terms using this
 syntax\index{printing, in HOL logic@printing, in \HOL\ logic!of quotation syntax}. 
 
-For example, the \ML\ expression {\small\verb%Type `:bool -> bool`%} denotes
-exactly the same value (of \ML\ type {\small\verb%type%}) as
+For example, the \ML\ expression 
+
+\begin{verbatim}
+    Type `:bool -> bool`
+\end{verbatim}
+
+denotes exactly the same value (of \ML\ type {\small\verb%type%}) as
 
 \begin{hol}\index{bool, the type in HOL logic@\ml{bool}, the type in
 \HOL\ logic} 
 \begin{verbatim}
-   mk_type("fun",[mk_type("bool",[]), mk_type("bool",[])])
+    mk_type("fun",[mk_type("bool",[]), mk_type("bool",[])])
 \end{verbatim}\end{hol}
 
 \noindent and
@@ -370,8 +375,6 @@ instead of\footnote{In order to be processed successfully, the latter
 quotation (which features a numeral) requires the theory of arithmetic
 to have already been loaded. This can be accomplished by 
 {\tt load "arithmeticTheory"}.}
-%{\small\verb%load "arithmeticTheory"%}.}
-
 
 \newpage %PBHACK
 
@@ -544,11 +547,41 @@ type {\small\verb+:int+}.
 Note that the symbol {\small\verb+~+} stands for two different constants in
 the second quotation; its first occurrence is boolean negation, while
 the other two occurrences are the additive inverse operation for integers.
-For more information on how to set up and use overloading, consult the
-reference manual.
+For more information on how to set up and use overloading, consult
+\REFERENCE.
 
 
-\subsection{Type quotation}
+\subsection{Antiquotation}
+
+Within a quotation, expressions of the form
+{\small\verb%^(%}$t${\small\verb%)%}\index{ antiquotation, in HOL logic@{\small\verb+^+} (antiquotation, in \HOL\ logic)} (where $t$ is an \ML\ expression of
+type\index{type checking, in HOL logic@type checking, in \HOL\ logic!antiquotation in} {\small\verb%term%} or {\small\verb%type%}) are called {\it
+antiquotations\/}\index{terms, in HOL logic@terms, in \HOL\ logic!antiquotation}\index{antiquotation, in HOL logic terms@antiquotation, in \HOL\ logic terms}.
+An antiquotation {\small\verb%^(%}$t${\small\verb%)%}
+evaluates to the \ML\ value of $t$. For example,
+{\small\verb%"x \/ ^(mk_conj("y:bool","z:bool"))"%} evaluates to the same
+term as {\small\verb%"x \/ (y /\ z)"%}. The most common use of antiquotation
+is when the term $t$ is just an \ML\ variable $x$. In this case
+{\small\verb%^(%}$x${\small\verb%)%} can be abbreviated by
+{\small\verb%^%}$x$.
+
+The following session illustrates antiquotation.
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#let y = "x+1";;
+y = "x + 1" : term
+
+#let z = "y = ^y";;
+z = "y = x + 1" : term
+
+#"!x:num.?y:num.^z";;
+"!x. ?y. y = x + 1" : term
+\end{verbatim}\end{session}
+
+
+
+\section{Ways to construct types and terms}
 
 \index{type variables, in HOL logic@type variables, in \HOL\ logic!constructor for}
 \index{type constructors!in HOL logic@in \HOL\ logic}
@@ -576,7 +609,7 @@ The expressions in the same row are equivalent.
 {\it Constructor expression}  \\ \hline
  & & \\
 Type variable &
-{\small\verb+: '+}$alphanum$  & {\small\verb%mk_vartype("'%$alphanum$\verb%")%}   \\ \hline
+{\small\verb+: '+}{\small $alphanum$}  & {\small\verb%mk_vartype("'%$alphanum$\verb%")%}   \\ \hline
 Type constant &
 $:op$ & {\small\verb%mk_type("%}$op${\small\verb%",[])%}   \\ \hline
 Function type &
@@ -590,39 +623,10 @@ Compound type &
 \end{tabular}
 \end{center}
 
-% \begin{center}
-% \index{compound types, in HOL logic@compound types, in \HOL\ logic!constructors for}
-% \index{ type variables, in HOL logic@\ml{*,\,**,\,}$\ldots$ (type variables, in \HOL\ logic)}
-% \index{types, in HOL logic@types, in \HOL\ logic!constructors for}
-% \index{ function type operator, in HOL logic@\ml{->} (function type operator, in \HOL\ logic)}
-% \index{mk_vartype@\ml{mk\_vartype}}
-% \index{mk_type@\ml{mk\_type}}
-% \begin{tabular}{|l|l|l|} \hline
-% \multicolumn{3}{|c|}{ } \\
-% \multicolumn{3}{|c|}{\bf Types} \\
-% \multicolumn{3}{|c|}{ } \\
-% {\it Kind of type} & {\it \ML\ quotation} &
-% {\it Constructor expression}  \\ \hline
-%  & & \\
-% Type variable &
-% {\small\verb%`:'%}$ident${\small\verb%`%} & {\small\verb%mk_vartype('%}$ident${\small\verb%)%}   \\ \hline
-% Type constant &
-% {\small\verb%`:%}$op${\small\verb%`%} & {\small\verb%mk_type(`%}$op${\small\verb%`,[])%}   \\ \hline
-% Function type &
-% {\small\verb%`:%}$\sigma_1${\small\verb%->%}$\sigma_2${\small\verb%`%} &
-% {\small\verb%mk_type("fun", [`:%}$\sigma_1${\small\verb%`, `:%}$\sigma_2${\small\verb%`])%} \\ \hline
-% Compound type &
-% {\small\verb%`:(%}$\sigma_1${\small\verb%,%} $\ldots$ {\small\verb%,%} $\sigma_n${\small\verb%)%}$op${\small\verb%`%} &
-% {\small\verb%mk_type("%}$op${\small\verb%", [":%}$\sigma_1${\small\verb%`,%} $\ldots$ {\small\verb%,`:%}$\sigma_n${\small\verb%`])%}
-% \\ \hline
-% \end{tabular}
-% \end{center}
-
-\index{ type quotes, in ML@\ml{`:$\cdots$`} (type quotes, in \ML)|)}
-
-\subsection{Term quotation}
+\index{type quotes, in ML@\ml{`:$\cdots$`} (type quotes, in \ML)|)}
 
 \index{terms, in HOL logic@terms, in \HOL\ logic!syntax of|(}
+
 Equivalent ways of inputting the four primitive kinds of term are shown in
 the next table.
 
@@ -660,8 +664,7 @@ Abstraction & {\small\verb%\%}$x${\small\verb%.%}$t$ &
 \end{tabular}
 \end{center}\index{type checking, in HOL logic@type checking, in \HOL\ logic!of quotation syntax|)}
 
-\subsection{Derived syntactic forms}
-\label{derived-terms}
+\subsection{Derived syntactic forms}\label{derived-terms}
 
 \index{type checking, in HOL logic@type checking, in \HOL\ logic!special forms in|(}
 \index{quotation, in HOL logic@quotation, in \HOL\ logic!of non-primitive terms|(}
@@ -827,26 +830,20 @@ $t\ t_1 \cdots t_n$ &
 \ml{list\_mk\_pair}\index{list_mk_pair@\ml{list\_mk\_pair}}
 for conjunctions, disjunctions, implications and tuples respectively.
 The corresponding destructor functions are called \ml{strip\_comb}, \etc,
-except that there is no \ml{strip\_conj} or \ml{strip\_disj}. Instead there are
-functions called \ml{conjuncts} and \ml{disjuncts}, but it should be noted
-that these are not proper inverses of \ml{list\_mk\_conj} and
-\ml{list\_mk\_disj}.
 \index{term constructors, in HOL logic@term constructors, in \HOL\ logic|)}
 \index{terms, in HOL logic@terms, in \HOL\ logic!constructors for|)}
 
 
-
-\subsection{Conditionals}
-\label{conditionals}
+\subsubsection{Conditionals}\label{conditionals}
 
 A conditional\index{terms, in HOL logic@terms, in \HOL\ logic!conditional}\index{conditional predicate, in HOL logic@conditional predicate, in \HOL\ logic}\index{conditionals, in HOL logic@conditionals, in \HOL\ logic}
- term \ml{"$t_1\ $=>$\ t_2\ $|$\ t_3$"} means
-`if $t_1$ then $t_2$ else
-$t_3$' and abbreviates the application
-\ml{"COND\ $t_1\ t_2\ t_3$"}, where \ml{COND}\index{COND@\ml{COND}}\index{conditionals, in HOL logic@conditionals, in \HOL\ logic}
-is a predefined
-constant of the theory \ml{bool} (see Section~\ref{boolthy}).
-An iterated conditional
+ term \ml{$t_1\ $=>$\ t_2\ $|$\ t_3$} means
+"if $t_1$ then $t_2$ else
+$t_3$" and abbreviates the application
+\ml{COND\ $t_1\ t_2\ t_3$}, where \ml{COND}\index{COND@\ml{COND}}\index{conditionals, in HOL logic@conditionals, in \HOL\ logic}
+is a constant defined in the theory \ml{bool} (see Section~\ref{boolthy}).
+The syntax \ml{`if $t_1\ $then$\ t_2\ $else$\ t_3$`} is also permitted. An
+iterated conditional 
 
 \[
 t_{11}\ \ml{=>}\ t_{12}\ \ml{|}\
@@ -869,230 +866,26 @@ t_{11}\ \ml{=>}\ t_{12}\ \ml{|}\
 \[\ml{COND}\ t_{11}\ t_{12}\ \ml{(COND}\ t_{21}\ t_{22}\ \ldots\
 \ml{(COND}\ t_{n1}\ t_{n2}\ t_{n3}\ml{)}\ \ldots\ \ml{)}\]
 
-\subsection{Paired abstractions}
-\label{HOL-varstruct}
-\index{pairs, in HOL logic@pairs, in \HOL\ logic!in abstractions|(}
-\index{UNCURRY@\ml{UNCURRY}|(}
-
-\index{terms, in HOL logic@terms, in \HOL\ logic!pair|(}
-\index{parsing, of HOL logic@parsing, of \HOL\ logic!of quotation syntax|(}
-\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!paired|(}
-\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!uncurrying, in paired|(}
-The quotation parser\index{parsing, of HOL logic@parsing, of \HOL\ logic!of function abstractions}\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!abbreviation for multiple}\index{terms, in HOL logic@terms, in \HOL\ logic!function abstraction}
- will convert\footnote{Only when the theory of pairs is loaded.}
-{\small\verb%"\(%}$x_1${\small\verb%,%}$x_2${\small\verb%).%}$t${\small\verb%"%}
-to {\small\verb%"UNCURRY(\%}$x_1\ x_2${\small\verb%.%}$t${\small\verb%)"%},
-where the constant {\small\verb%UNCURRY%}
-is defined by:
-
-\begin{hol}\begin{verbatim}
-   UNCURRY f (x,y)  =  f x y
-\end{verbatim}\end{hol}
-
-\noindent See Section~\ref{prod} for more details and an explanation
-of pair terms \ml{($t_1$,$t_2$)}.
-The transformation is done recursively so that, for example,
-
-
-\begin{hol}\begin{alltt}
-   "\verb%\%(\m{x\sb{1}},\m{x\sb{2}},\m{x\sb{3}}).\m{t}"
-\end{alltt}\end{hol}
-
-\noindent is converted to
-
-\begin{hol}\begin{alltt}
-   "UNCURRY \verb%\%\m{x\sb{1}}.UNCURRY(\verb%\%\m{x\sb{2}},\m{x\sb{3}}.\m{t}))"
-\end{alltt}\end{hol}
-
-\noindent More generally,
-the quotation parser repeatedly applies the transformation:
-
-\begin{hol}\begin{alltt}
-   "\verb%\%(\m{v\sb{1}},\m{v\sb{2}}).\m{t}"\m{\quad \leadsto\quad }"UNCURRY(\verb%\%\m{v\sb{1}}.\verb%\%\m{v\sb{2}}.\m{t})"
-\end{alltt}\end{hol}
-
-\noindent until no more variable structures remain. For example:
-
-\begin{flushleft}
-\begin{tabular}{@{}ll}
-{\small\verb%   "\(%}$x${\small\verb%,%}$y${\small\verb%).%}$t${\small\verb%"%}
-&$\leadsto\ \ ${\small\verb%"UNCURRY(\%}$x\
-y${\small\verb%.%}$t${\small\verb%)"%}\\
-{\small\verb%   "\(%}$x_1${\small\verb%,%}$x_2${\small\verb%,%}$\ldots${\small\verb%,%}$x_n${\small\verb%).%}$t${\small\verb%"%}
-&$\leadsto\ \ ${\small\verb%"UNCURRY(\%}$x_1${\small\verb%.\(%}$x_2${\small\verb%,%}$\ldots${\small\verb%,%}$x_n${\small\verb%).%}$t${\small\verb%)"%}\\
-{\small\verb%   "\((%}$x_1${\small\verb%,%}$\ldots${\small\verb%,%}$x_n${\small\verb%),%}$y_1${\small\verb%,%}$\ldots${\small\verb%,%}$y_m${\small\verb%).%}t{\small\verb%"%}
-&$\leadsto\ \ ${\small\verb%"UNCURRY(\(%}$x_1${\small\verb%,%}$\ldots${\small\verb%,%}$x_n${\small\verb%).\(%}$y_1${\small\verb%,%}$\ldots${\small\verb%,%}$y_m${\small\verb%).%}$t${\small\verb%)"%}\\
-\end{tabular}
-\end{flushleft}
-
-\index{parsing, of HOL logic@parsing, of \HOL\ logic!of quotation syntax|)}
-The \HOL\ top-level printer\index{printing, in HOL logic@printing, in \HOL\ logic!of function abstractions}
- inverts these transformations. For example:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#"\((a,b),(x,y)). a+b < x*y";;
-"\((a,b),x,y). a + b < x * y" : term
-
-#set_flag(`print_uncurry`,false);;
-true : bool
-
-#"\((a,b),(x,y)). (a+b) < (x*y)";;
-"UNCURRY(UNCURRY(\a b. UNCURRY(\x y. (a + b) < (x * y))))" : term
-\end{verbatim}\end{session}
-
-Note that a variable structure like \ml{"(x,y)"} in
-{\small\verb%"\(x,y).x+y"%}
-is not a subterm
-of the abstraction\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!subterms of} in which it occurs; it disappears on parsing\index{binders, in HOL logic@binders, in \HOL\ logic!parsing of}\index{parsing, of HOL logic@parsing, of \HOL\ logic!of binders}. This can
-lead to unexpected errors (accompanied by obscure error messages).
-For example:
+For example, 
 
 \begin{session}\begin{verbatim}
-#"\(x,y).x+y";;
-"\(x,y). x + y" : term
+- Term `b => c => d => e | f | g | h`;
+<<HOL message: inventing new type variable names: 'a.>>
 
-#let p = "(x:num,y:num)";;
-p = "x,y" : term
+> val it =
+    `(if b then (if c then (if d then e else f) else g) else h)`
+    : Term.term
 
-#"\^p.x+y";;
-evaluation failed     mk_abs in quotation
+- Term `if b then if c then if d then e else f else g else h`;
+<<HOL message: inventing new type variable names: 'a.>>
+
+> val it =
+    `(if b then (if c then (if d then e else f) else g) else h)`
+    : Term.term
 \end{verbatim}\end{session}
 
-Furthermore, if the type checker complains, it may print out
-diagnostic messages referring to the transformed term:
-
-\begin{session}\begin{verbatim}
-#"\(x,y). x+1";;
-Indeterminate types:
-    "UNCURRY:(num -> (?1 -> num)) -> (num * ?2 -> num)"
-
-evaluation failed     types indeterminate in quotation
-\end{verbatim}\end{session}
-
-If $b$ is a binder, then
-\ml{"}$b$\ml{(}$x_1${\small\verb%,%}$x_2${\small\verb%).%}$t${\small\verb%"%}
-is parsed as
-{\small\verb%"$%}$b${\small\verb%(\(%}$x_1${\small\verb%,%}$x_2${\small\verb%).%}$t${\small\verb%)"%}, and hence transformed as above.
-For example, {\small\verb%"!(x,y).x>y"%} parses to
-{\small\verb%"$!(UNCURRY(\x.\y.$> x y))"%} (where {\small{\tt >}} is an infixed
-constant of the theory {\small\verb%num%} meaning `is greater than')\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!paired|)}.
-\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!uncurrying, in paired|)}\index{pairs, in HOL logic@pairs, in \HOL\ logic!in abstractions|)}\index{terms, in HOL logic@terms, in \HOL\ logic!pair|)}\index{UNCURRY@\ml{UNCURRY}|)}
-
-
-%A good exercise for the reader would be to understand why this use
-%of \ml{UNCURRY} supports the intuitive meaning suggested by the surface
-%notation.
-
-Applications of paired abstraction to tuples can be $\beta$-reduced using
-\ml{PAIRED\_BETA\_CONV} (see Section~\ref{genbeta}).
-
-\subsection{{\tt let}-terms}
-\label{let-exp}
-
-
-The quotation parser\index{parsing, of HOL logic@parsing, of \HOL\ logic!of let-terms@of \ml{let}-terms}
- accepts \ml{let}-terms\index{terms, in HOL logic@terms, in \HOL\ logic!let-@\ml{let}-}\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL\ logic!as abbreviations} superficially similar to those in
-\ML. For example, the following terms are allowed:
-
-\begin{hol}\begin{verbatim}
-   "let x = 1 and y = 2 in x+y"
-
-   "let f(x,y) = (x*x)+(y*y) and a = 20*20 and b = 50*49 in f(a,b)"
-\end{verbatim}\end{hol}
-
-As with paired abstractions, \ml{let}-terms are actually abbreviations for
-ordinary  terms which are specially supported by the parser and pretty printer.
-The constant \ml{LET}\index{LET@\ml{LET}} is defined (in the theory \ml{bool}) by:
-
-\begin{hol}\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!relation to let-terms@relation to \ml{let}-terms}
-\begin{verbatim}
-   LET = (\f x. f x)
-\end{verbatim}\end{hol}
-
-\noindent and is used to encode \ml{let}-terms in the logic. The parser
-repeatedly applies the transformations:
-
-\bigskip
-
-\noindent
-{\small\begin{tabular}{@{}ll}
-{\small\verb%   "let %}$f\ v_1\ \ldots\ v_n${\small\verb% = %}$t_1${\small\verb% in %}$t_2${\small\verb%"%}
-&$\leadsto\ \ ${\small\verb%"LET(\%}$f${\small\verb%.%}$t_2$
-{\small\verb%)(\%}$v_1\ \ldots\ v_n${\small\verb%.%}$t_1${\small\verb%)"%}\\
-{\small\verb%   "let (%}$v_1${\small\verb%,%}$\ldots${\small\verb%,%}$v_n${\small\verb%) = %}$t_1${\small\verb% in %}$t_2${\small\verb%"%}
-&$\leadsto\ \ ${\small\verb%"LET(\(%}$v_1${\small\verb%,%}$\ldots${\small\verb%,%}$v_n${\small\verb%).%}$t_2${\small\verb%)%}$t_1${\small\verb%"%}\\
-{\small\verb%   "let %}$v_1${\small\verb%=%}$t_1${\small\verb% and %}$\ldots${\small\verb% and %}$v_n${\small\verb%=%}$t_n${\small\verb% in %}$t${\small\verb%"%}
-&$\leadsto\ \ ${\small\verb%"LET(%}$\ldots${\small\verb%(LET(LET(\%}$v_1\ldots v_n${\small\verb%.%}$t${\small\verb%)%}$t_1${\small\verb%)%}$t_2${\small\verb%)%}$\ldots${\small\verb%)%}$t_n${\small\verb%"%}\\
-\end{tabular}}
-
-\bigskip
-
-
-\noindent The printer\index{printing, in HOL logic@printing, in \HOL\ logic!of let-terms@of \ml{let}-terms} inverts these transformations if the flag
-\ml{print\_let} is \ml{true}.  For example:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#"let x = 1 and y = 2 in x+y";;
-"let x = 1 and y = 2 in x + y" : term
-
-#set_flag(`print_let`,false);;
-true : bool
-
-#"let x = 1 and y = 2 in x+y";;
-"LET(LET(\x y. x + y)1)2"
-
-#"let (x,y) = (1,2) in x+y";;
-"LET(UNCURRY(\x y. x + y))(1,2)" : term
-\end{verbatim}\end{session}
-
-Note that, as with uncurried terms, the underlying representation in \HOL\ can
-manifest itself in error messages. For example:
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#"let x = y in z";;
-Indeterminate types:  "LET:(?1 -> ?2) -> (?3 -> ?4)"
-
-evaluation failed     types indeterminate in quotation
-\end{verbatim}\end{session}
-
-The reader is recommended to convince himself or herself that the
-translations of \ml{let}-terms represent the intuitive meaning suggested by
-the surface syntax.\index{quotation, in HOL logic@quotation, in \HOL\ logic|)}\index{quotation, in HOL logic@quotation, in \HOL\ logic!of non-primitive terms|)}\index{terms, in HOL logic@terms, in \HOL\ logic!syntax of|)}\index{type checking, in HOL logic@type checking, in \HOL\ logic!special forms in|)}
-
-\ml{let}-terms can be simplified with \ml{let\_CONV} -- see Section~\ref{let-terms}.
-
-
-\subsection{Antiquotation}
-
-Within a quotation, expressions of the form
-{\small\verb%^(%}$t${\small\verb%)%}\index{ antiquotation, in HOL logic@{\small\verb+^+} (antiquotation, in \HOL\ logic)} (where $t$ is an \ML\ expression of
-type\index{type checking, in HOL logic@type checking, in \HOL\ logic!antiquotation in} {\small\verb%term%} or {\small\verb%type%}) are called {\it
-antiquotations\/}\index{terms, in HOL logic@terms, in \HOL\ logic!antiquotation}\index{antiquotation, in HOL logic terms@antiquotation, in \HOL\ logic terms}.
-An antiquotation {\small\verb%^(%}$t${\small\verb%)%}
-evaluates to the \ML\ value of $t$. For example,
-{\small\verb%"x \/ ^(mk_conj("y:bool","z:bool"))"%} evaluates to the same
-term as {\small\verb%"x \/ (y /\ z)"%}. The most common use of antiquotation
-is when the term $t$ is just an \ML\ variable $x$. In this case
-{\small\verb%^(%}$x${\small\verb%)%} can be abbreviated by
-{\small\verb%^%}$x$.
-
-The following session illustrates antiquotation.
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#let y = "x+1";;
-y = "x + 1" : term
-
-#let z = "y = ^y";;
-z = "y = x + 1" : term
-
-#"!x:num.?y:num.^z";;
-"!x. ?y. y = x + 1" : term
-\end{verbatim}\end{session}
-
+Note that the system alway prints out conditionals in the "if $t_1$ then
+$t_2$ else $t_3$" form. 
 
 \section{Theorems}
 \label{avra_theorems}
@@ -2649,69 +2442,52 @@ The collection of theories distributed with the \HOL\ system
 \index{ancestry, of HOL system theories@ancestry, of \HOL\ system
 theories} 
 is:
-
-\begin{center}\index{BASIC-HOL@\ml{BASIC-HOL}}\index{bool, the HOL theory@\ml{bool}, the \HOL\ theory}\index{ind, the theory@\ml{ind}, the theory}
-\begin{picture}(65,115)
-
-\thicklines
-
-
-% -----------------------------------------------------------
-% Lines in theory hierarchy graph
-% -----------------------------------------------------------
-
-\put(40,5){\line(-4,1){20}}      % HOL --> tydefs
-\put(40,5){\line(0,1){5}}        % HOL --> sum
-\put(40,5){\line(4,1){20}}       % HOL --> one
-
-\put(20,15){\line(0,1){5}}       % tydefs --> ltree
-\put(40,15){\line(-2,3){10}}     % sum    --> combin
-
-\put(20,25){\line(-2,1){10}}     % ltree --> tree
-\put(20,25){\line(2,1){10}}      % ltree --> combin
-
-\put(10,35){\line(0,1){5}}       % tree --> list
-\put(10,45){\line(0,1){5}}       % list --> arithmetic
-\put(10,55){\line(0,1){5}}       % arithmetics --> prim_rec
-\put(10,65){\line(0,1){5}}       % prim_rec --> num
-
-\put(10,75){\line(4,1){20}}      % num --> BASIC-HOL
-
-\put(30,85){\line(0,1){5}}       % BASIC-HOL --> ind
-\put(30,95){\line(0,1){5}}       % ind --> bool
-\put(30,105){\line(0,1){5}}      % bool --> PPLAMB
-\put(30,35){\line(0,1){45}}      % combin --> BASIC-HOL
-\put(60,20){\line(-1,2){30}}     % one --> BASIC-HOL
-\put(60,15){\line(0,1){5}}       % one --> BASIC-HOL
-
-
-
-% -----------------------------------------------------------
-% Theory names:
-% -----------------------------------------------------------
-
-\put(40,2.5){\makebox(0,0){\texttt{HOL}}}
-
-\put(20,12.5){\makebox(0,0){\texttt{tydefs}}}
-\put(40,12.5){\makebox(0,0){\texttt{sum}}}
-\put(60,12.5){\makebox(0,0){\texttt{one}}}
-
-\put(20,22.5){\makebox(0,0){\texttt{ltree}}}
-
-\put(30,32.5){\makebox(0,0){\texttt{combin}}}
-\put(10,32.5){\makebox(0,0){\texttt{tree}}}
-
-\put(10,42.5){\makebox(0,0){\texttt{list}}}
-\put(10,52.5){\makebox(0,0){\texttt{arithmetic}}}
-\put(10,62.5){\makebox(0,0){\texttt{prim\_rec}}}
-\put(10,72.5){\makebox(0,0){\texttt{num}}}
-\put(30,82.5){\makebox(0,0){\texttt{BASIC-HOL}}}
-\put(30,92.5){\makebox(0,0){\texttt{ind}}}
-\put(30,102.5){\makebox(0,0){\texttt{bool}}}
-\put(30,112.5){\makebox(0,0){\texttt{PPLAMB}}}
-
-\end{picture}
+The theories listed in Table \ref{nativeTheories} come
+pre-built in the system (we have omitted a few of the less commonly used
+ones).
+\begin{table}
+\begin{center}
+\begin{tabular}{|r|l|} \hline
+minTheory & the origin theory \\
+boolTheory & definitions of logical operators and basic axioms \\
+pairTheory & basic theory of pairs \\
+numTheory & Peano's axioms derived from the axiom of infinity \\
+prim\_recTheory, & the primitive recursion theorem \\
+arithmeticTheory & Peano arithmetic development \\
+integerTheory & integers, by John Harrison \\
+TCTheory & transitive closure of a relation \\
+primWFTheory & wellfounded relations, plus WF induction and recursion \\
+WFTheory & instances of wellfoundedness at various types \\
+setTheory & sets as a separate type (includes finite sets) \\
+pred\_setTheory & sets as predicates (includes finite sets) \\
+bagTheory & bags (also known as \emph{multi-sets})\\
+listTheory & lists  \\
+rich\_listTheory & extended theory of lists \\
+optionTheory & the ``option'' type \\
+finite\_mapTheory & finite maps from $\alpha$ to $\beta$ \\
+ltreeTheory & polymorphic finitely branching trees \\
+combinTheory & combinators \\
+sumTheory & disjoint sums \\
+restr\_binderTheory & definitions of binder restrictions \\
+res\_quanTheory & restricted quantifier support \\
+asciiTheory & ascii \\
+stringTheory & strings \\
+wordTheory & ({\it plus others}) theory of bitstrings \\
+realTheory & ({\it plus others}) real numbers and analysis \\
+HOLTheory & equivalent to HOL theory from hol88/90\\  \hline
+\end{tabular}
+\caption{Native Theories}\label{nativeTheories}
 \end{center}
+\end{table}
+
+% \begin{center}\index{BASIC-HOL@\ml{BASIC-HOL}}\index{bool, the HOL
+% theory@\ml{bool}, the \HOL\ theory}\index{ind, the theory@\ml{ind},
+% the theory} 
+
+\begin{figure}
+\centerline{\psfig{figure=hol98.pic}}
+\caption{System dependencies}
+\end{figure}
 
 \noindent In the rest of this section, each of these theories is briefly
 described.  A complete list of all the definitions and theorems in each
@@ -2908,7 +2684,6 @@ and the selectors
 defined by the equations shown below.
 
 
-
 \begin{hol}\index{COMMA_DEF@\ml{COMMA\_DEF}}
 \index{FST_DEF@\ml{FST\_DEF}}
 \index{SND_DEF@\ml{SND\_DEF}}
@@ -2947,6 +2722,206 @@ axioms in the theory \ml{bool} .
 \index{product types!in HOL logic@in \HOL\ logic|)}
 \index{representing types, in HOL logic@representing types, in \HOL\ logic!pair example of|)}
 \index{bool, the HOL theory@\ml{bool}, the \HOL\ theory|)}
+
+
+\subsubsection{Paired abstractions}
+\label{HOL-varstruct}
+\index{pairs, in HOL logic@pairs, in \HOL\ logic!in abstractions|(}
+\index{UNCURRY@\ml{UNCURRY}|(}
+
+\index{terms, in HOL logic@terms, in \HOL\ logic!pair|(}
+\index{parsing, of HOL logic@parsing, of \HOL\ logic!of quotation syntax|(}
+\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!paired|(}
+\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!uncurrying, in paired|(}
+The quotation parser\index{parsing, of HOL logic@parsing, of \HOL\ logic!of function abstractions}\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!abbreviation for multiple}\index{terms, in HOL logic@terms, in \HOL\ logic!function abstraction}
+ will convert\footnote{Only when the theory of pairs is loaded.}
+{\small\verb%"\(%}$x_1${\small\verb%,%}$x_2${\small\verb%).%}$t${\small\verb%"%}
+to {\small\verb%"UNCURRY(\%}$x_1\ x_2${\small\verb%.%}$t${\small\verb%)"%},
+where the constant {\small\verb%UNCURRY%}
+is defined by:
+
+\begin{hol}\begin{verbatim}
+   UNCURRY f (x,y)  =  f x y
+\end{verbatim}\end{hol}
+
+\noindent See Section~\ref{prod} for more details and an explanation
+of pair terms \ml{($t_1$,$t_2$)}.
+The transformation is done recursively so that, for example,
+
+
+\begin{hol}\begin{alltt}
+   "\verb%\%(\m{x\sb{1}},\m{x\sb{2}},\m{x\sb{3}}).\m{t}"
+\end{alltt}\end{hol}
+
+\noindent is converted to
+
+\begin{hol}\begin{alltt}
+   "UNCURRY \verb%\%\m{x\sb{1}}.UNCURRY(\verb%\%\m{x\sb{2}},\m{x\sb{3}}.\m{t}))"
+\end{alltt}\end{hol}
+
+\noindent More generally,
+the quotation parser repeatedly applies the transformation:
+
+\begin{hol}\begin{alltt}
+   "\verb%\%(\m{v\sb{1}},\m{v\sb{2}}).\m{t}"\m{\quad \leadsto\quad }"UNCURRY(\verb%\%\m{v\sb{1}}.\verb%\%\m{v\sb{2}}.\m{t})"
+\end{alltt}\end{hol}
+
+\noindent until no more variable structures remain. For example:
+
+\begin{flushleft}
+\begin{tabular}{@{}ll}
+{\small\verb%   "\(%}$x${\small\verb%,%}$y${\small\verb%).%}$t${\small\verb%"%}
+&$\leadsto\ \ ${\small\verb%"UNCURRY(\%}$x\
+y${\small\verb%.%}$t${\small\verb%)"%}\\
+{\small\verb%   "\(%}$x_1${\small\verb%,%}$x_2${\small\verb%,%}$\ldots${\small\verb%,%}$x_n${\small\verb%).%}$t${\small\verb%"%}
+&$\leadsto\ \ ${\small\verb%"UNCURRY(\%}$x_1${\small\verb%.\(%}$x_2${\small\verb%,%}$\ldots${\small\verb%,%}$x_n${\small\verb%).%}$t${\small\verb%)"%}\\
+{\small\verb%   "\((%}$x_1${\small\verb%,%}$\ldots${\small\verb%,%}$x_n${\small\verb%),%}$y_1${\small\verb%,%}$\ldots${\small\verb%,%}$y_m${\small\verb%).%}t{\small\verb%"%}
+&$\leadsto\ \ ${\small\verb%"UNCURRY(\(%}$x_1${\small\verb%,%}$\ldots${\small\verb%,%}$x_n${\small\verb%).\(%}$y_1${\small\verb%,%}$\ldots${\small\verb%,%}$y_m${\small\verb%).%}$t${\small\verb%)"%}\\
+\end{tabular}
+\end{flushleft}
+
+\index{parsing, of HOL logic@parsing, of \HOL\ logic!of quotation syntax|)}
+The \HOL\ top-level printer\index{printing, in HOL logic@printing, in \HOL\ logic!of function abstractions}
+ inverts these transformations. For example:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#"\((a,b),(x,y)). a+b < x*y";;
+"\((a,b),x,y). a + b < x * y" : term
+
+#set_flag(`print_uncurry`,false);;
+true : bool
+
+#"\((a,b),(x,y)). (a+b) < (x*y)";;
+"UNCURRY(UNCURRY(\a b. UNCURRY(\x y. (a + b) < (x * y))))" : term
+\end{verbatim}\end{session}
+
+Note that a variable structure like \ml{"(x,y)"} in
+{\small\verb%"\(x,y).x+y"%}
+is not a subterm
+of the abstraction\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!subterms of} in which it occurs; it disappears on parsing\index{binders, in HOL logic@binders, in \HOL\ logic!parsing of}\index{parsing, of HOL logic@parsing, of \HOL\ logic!of binders}. This can
+lead to unexpected errors (accompanied by obscure error messages).
+For example:
+
+\begin{session}\begin{verbatim}
+#"\(x,y).x+y";;
+"\(x,y). x + y" : term
+
+#let p = "(x:num,y:num)";;
+p = "x,y" : term
+
+#"\^p.x+y";;
+evaluation failed     mk_abs in quotation
+\end{verbatim}\end{session}
+
+Furthermore, if the type checker complains, it may print out
+diagnostic messages referring to the transformed term:
+
+\begin{session}\begin{verbatim}
+#"\(x,y). x+1";;
+Indeterminate types:
+    "UNCURRY:(num -> (?1 -> num)) -> (num * ?2 -> num)"
+
+evaluation failed     types indeterminate in quotation
+\end{verbatim}\end{session}
+
+If $b$ is a binder, then
+\ml{"}$b$\ml{(}$x_1${\small\verb%,%}$x_2${\small\verb%).%}$t${\small\verb%"%}
+is parsed as
+{\small\verb%"$%}$b${\small\verb%(\(%}$x_1${\small\verb%,%}$x_2${\small\verb%).%}$t${\small\verb%)"%}, and hence transformed as above.
+For example, {\small\verb%"!(x,y).x>y"%} parses to
+{\small\verb%"$!(UNCURRY(\x.\y.$> x y))"%} (where {\small{\tt >}} is an infixed
+constant of the theory {\small\verb%num%} meaning `is greater than')\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!paired|)}.
+\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!uncurrying, in paired|)}\index{pairs, in HOL logic@pairs, in \HOL\ logic!in abstractions|)}\index{terms, in HOL logic@terms, in \HOL\ logic!pair|)}\index{UNCURRY@\ml{UNCURRY}|)}
+
+
+%A good exercise for the reader would be to understand why this use
+%of \ml{UNCURRY} supports the intuitive meaning suggested by the surface
+%notation.
+
+Applications of paired abstraction to tuples can be $\beta$-reduced using
+\ml{PAIRED\_BETA\_CONV} (see Section~\ref{genbeta}).
+
+
+\subsubsection{{\tt let}-terms}
+\label{let-exp}
+
+
+The quotation parser\index{parsing, of HOL logic@parsing, of \HOL\ logic!of let-terms@of \ml{let}-terms}
+ accepts \ml{let}-terms\index{terms, in HOL logic@terms, in \HOL\ logic!let-@\ml{let}-}\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL\ logic!as abbreviations} superficially similar to those in
+\ML. For example, the following term is allowed:
+
+\begin{hol}\begin{verbatim}
+   "let x = 1 and y = 2 in x+y"
+
+   "let f(x,y) = (x*x)+(y*y) and a = 20*20 and b = 50*49 in f(a,b)"
+\end{verbatim}\end{hol}
+
+\ml{let}-terms are actually abbreviations for ordinary  terms which are
+specially supported by the parser and pretty printer. 
+The constant \ml{LET}\index{LET@\ml{LET}} is defined (in the theory \ml{bool}) by:
+
+\begin{hol}\index{function abstraction, in HOL logic@function abstraction, in \HOL\ logic!relation to let-terms@relation to \ml{let}-terms}
+\begin{verbatim}
+   LET = (\f x. f x)
+\end{verbatim}\end{hol}
+
+\noindent and is used to encode \ml{let}-terms in the logic. The parser
+repeatedly applies the transformations:
+
+\bigskip
+
+\noindent
+{\small\begin{tabular}{@{}ll}
+{\small\verb%   "let %}$f\ v_1\ \ldots\ v_n${\small\verb% = %}$t_1${\small\verb% in %}$t_2${\small\verb%"%}
+&$\leadsto\ \ ${\small\verb%"LET(\%}$f${\small\verb%.%}$t_2$
+{\small\verb%)(\%}$v_1\ \ldots\ v_n${\small\verb%.%}$t_1${\small\verb%)"%}\\
+{\small\verb%   "let (%}$v_1${\small\verb%,%}$\ldots${\small\verb%,%}$v_n${\small\verb%) = %}$t_1${\small\verb% in %}$t_2${\small\verb%"%}
+&$\leadsto\ \ ${\small\verb%"LET(\(%}$v_1${\small\verb%,%}$\ldots${\small\verb%,%}$v_n${\small\verb%).%}$t_2${\small\verb%)%}$t_1${\small\verb%"%}\\
+{\small\verb%   "let %}$v_1${\small\verb%=%}$t_1${\small\verb% and %}$\ldots${\small\verb% and %}$v_n${\small\verb%=%}$t_n${\small\verb% in %}$t${\small\verb%"%}
+&$\leadsto\ \ ${\small\verb%"LET(%}$\ldots${\small\verb%(LET(LET(\%}$v_1\ldots v_n${\small\verb%.%}$t${\small\verb%)%}$t_1${\small\verb%)%}$t_2${\small\verb%)%}$\ldots${\small\verb%)%}$t_n${\small\verb%"%}\\
+\end{tabular}}
+
+\bigskip
+
+
+\noindent The printer\index{printing, in HOL logic@printing, in \HOL\ logic!of let-terms@of \ml{let}-terms} inverts these transformations if the flag
+\ml{print\_let} is \ml{true}.  For example:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#"let x = 1 and y = 2 in x+y";;
+"let x = 1 and y = 2 in x + y" : term
+
+#set_flag(`print_let`,false);;
+true : bool
+
+#"let x = 1 and y = 2 in x+y";;
+"LET(LET(\x y. x + y)1)2"
+
+#"let (x,y) = (1,2) in x+y";;
+"LET(UNCURRY(\x y. x + y))(1,2)" : term
+\end{verbatim}\end{session}
+
+Note that, as with uncurried terms, the underlying representation in \HOL\ can
+manifest itself in error messages. For example:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#"let x = y in z";;
+Indeterminate types:  "LET:(?1 -> ?2) -> (?3 -> ?4)"
+
+evaluation failed     types indeterminate in quotation
+\end{verbatim}\end{session}
+
+The reader is recommended to convince himself or herself that the
+translations of \ml{let}-terms represent the intuitive meaning suggested by
+the surface syntax.\index{quotation, in HOL logic@quotation, in \HOL\ logic|)}\index{quotation, in HOL logic@quotation, in \HOL\ logic!of non-primitive terms|)}\index{terms, in HOL logic@terms, in \HOL\ logic!syntax of|)}\index{type checking, in HOL logic@type checking, in \HOL\ logic!special forms in|)}
+
+\ml{let}-terms can be simplified with \ml{let\_CONV} -- see Section~\ref{let-terms}.
+
+
+
 
 \subsection{The theory {\tt relation}}
 
