@@ -24,6 +24,12 @@ val append_def = Define_rw
 /\ (append (x :: l1) l2 = x :: (append l1 l2)) `
 ;
 
+val double_def = Define_rw ` double l = append l l `
+;
+
+val triple_def = Define_rw ` triple l = append l (append l l) `
+;
+
 (* merge sort *)
 
 val merge_def = Define_rw
@@ -69,43 +75,38 @@ val n2 = --`SUC ^n1 `--;
 val n3 = --`SUC ^n2 `--;
 val n4 = --`SUC ^n3 `--;
 
+val l0 = --`[] : num list`--;
+
+fun app_l4 l = --` ^n2 :: 0 :: ^n1 :: 0 :: ^l `--;
+
 fun app_l20 l =
        --` ^n2 :: 0 :: ^n1 :: 0 :: ^n1 :: ^n3 :: ^n4 ::
            ^n1 :: 0 :: ^n1 :: ^n3 :: 0 :: ^n1 :: ^n3 ::
            ^n4 :: ^n2 :: 0 :: ^n1 :: 0 :: ^n1 :: ^l `--
 ;
 
-val L0 = --`[] : num list`--;
-val L20 = app_l20 L0;
-val L100 = funpow 5 app_l20 L0;
+
+val L2_def   = Define_rw ` L2   = [ ^n2; 0] `;
+val L4_def   = Define_rw ` L4   = ^(app_l4 l0) `;
+val L8_def   = Define_rw ` L8   = ^(funpow 2 app_l4 l0) `;
+val L12_def  = Define_rw ` L12  = ^(funpow 3 app_l4 l0) `;
+val L16_def  = Define_rw ` L16  = ^(funpow 4 app_l4 l0) `;
+val L20'_def = Define_rw ` L20' = ^(funpow 5 app_l4 l0) `;
+val L40'_def = Define_rw ` L40' = double L20' `;
+val L80'_def = Define_rw ` L80' = double L40'`;
 
 
-val L2_def   = Define_rw ` L2 = [ ^n2; 0] `;
-val L4_def   = Define_rw ` L4 = [ ^n2; 0; ^n1; 0] `;
-val L8_def   = Define_rw ` L8 = [ ^n2; 0; ^n1; 0; ^n2; 0; ^n1; 0] `;
-val L12_def  = Define_rw
-    ` L12 = [ ^n2; 0; ^n1; 0; ^n2; 0; ^n1; 0; ^n2; 0; ^n1; 0] `;
-val L16_def  = Define_rw
-  ` L16 = [ ^n2; 0; ^n1; 0; ^n2; 0; ^n1; 0; ^n2; 0; ^n1; 0; ^n2; 0; ^n1; 0] `;
-val L20'_def = Define_rw
-  ` L20' = [ ^n2; 0; ^n1; 0; ^n2; 0; ^n1; 0; ^n2; 0; ^n1; 0; ^n2; 0; ^n1; 0;
-	     ^n2; 0; ^n1; 0] `;
-val L40'_def   = Define_rw ` L40' = append L20' L20'`;
-val L80'_def   = Define_rw ` L80' = append L40' L40'`;
-
-
-val L20_def    = Define_rw ` L20 = ^L20 `;
-val L40_def    = Define_rw ` L40 = append L20 L20`;
-
-val L100_def   = Define_rw ` L100 = ^L100 `;
-val L200_def   = Define_rw ` L200 = append L100 L100 `;
-val L400_def   = Define_rw ` L400 = append L200 L200 `;
-val L1200_def  = Define_rw ` L1200 = append L400 (append L400 L400) `;
-val L2400_def  = Define_rw ` L2400 = append L1200 L1200 `;
-val L4800_def  = Define_rw ` L4800 = append L2400 L2400 `;
-val L9600_def  = Define_rw ` L9600 = append L4800 L4800 `;
-val L19200_def = Define_rw ` L19200 = append L9600 L9600 `;
-val L38400_def = Define_rw ` L38400 = append L19200 L19200 `;
+val L20_def    = Define_rw ` L20    = ^(app_l20 l0) `;
+val L40_def    = Define_rw ` L40    = double L20`;
+val L100_def   = Define_rw ` L100   = ^(funpow 5 app_l20 l0) `;
+val L200_def   = Define_rw ` L200   = double L100 `;
+val L400_def   = Define_rw ` L400   = double L200 `;
+val L1200_def  = Define_rw ` L1200  = triple L400 `;
+val L2400_def  = Define_rw ` L2400  = double L1200 `;
+val L4800_def  = Define_rw ` L4800  = double L2400 `;
+val L9600_def  = Define_rw ` L9600  = double L4800 `;
+val L19200_def = Define_rw ` L19200 = double L9600 `;
+val L38400_def = Define_rw ` L38400 = double L19200 `;
 
 
 (* Save the useful thms *)
@@ -119,13 +120,13 @@ fun norm q = time (CBV_CONV rws) (--q--);
 (* rules.sml implemented witout expl. subst. *)
 norm ` merge_sort L4 `;  (* ~ 0.03s *)
 norm ` merge_sort L12 `; (* ~ 0.11s *)
-norm ` merge_sort L20 `; (* ~ 0.31s *)
+norm ` merge_sort L20 `; (* ~ 0.30s *)
 norm ` merge_sort L40 `; (* ~ 0.89s *)
-norm ` merge_sort L200 `;  (* ~ 11.3s = 3300 times slower than Moscow ML *)
-norm ` merge_sort L1200 `; (* ~ 393s *)
+norm ` merge_sort L200 `;  (* ~ 11.7s = 3300 times slower than Moscow ML *)
+norm ` merge_sort L1200 `; (* ~ 377s *)
 
 
-(* Compare with REWRITE_CONV *)
+(* Comparison with REWRITE_CONV *)
 
 fun rw_norm q = time (REWRITE_CONV sort_thms) (--q--);
 
