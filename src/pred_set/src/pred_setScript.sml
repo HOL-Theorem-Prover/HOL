@@ -1976,6 +1976,27 @@ val LESS_CARD_DIFF =
      IMP_RES_TAC (PURE_ONCE_REWRITE_RULE [GSYM NOT_LESS] th4)
      end);
 
+val FINITE_COMPLETE_INDUCTION = store_thm(
+  "FINITE_COMPLETE_INDUCTION",
+  Term`!P.
+          (!x. (!y. y PSUBSET x ==> P y) ==> FINITE x ==> P x) ==>
+          !x. FINITE x ==> P x`,
+  GEN_TAC THEN STRIP_TAC THEN
+  MATCH_MP_TAC ((BETA_RULE o
+                 Q.ISPEC `\x. FINITE x ==> P x` o
+                 REWRITE_RULE [prim_recTheory.WF_measure] o
+                 Q.ISPEC `measure CARD`)
+                relationTheory.WF_INDUCTION_THM) THEN
+  REPEAT STRIP_TAC THEN
+  RULE_ASSUM_TAC (REWRITE_RULE [AND_IMP_INTRO]) THEN
+  Q.PAT_ASSUM `!x. (!y. y PSUBSET x ==> P y) /\ FINITE x ==>
+                   P x` MATCH_MP_TAC THEN
+  ASM_REWRITE_TAC [] THEN REPEAT STRIP_TAC THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THEN
+  ASM_REWRITE_TAC [prim_recTheory.measure_def,
+                   relationTheory.inv_image_def] THEN
+  BETA_TAC THEN mesonLib.ASM_MESON_TAC [PSUBSET_FINITE, CARD_PSUBSET]);
+
 (* =====================================================================*)
 (* Infiniteness								*)
 (* =====================================================================*)
@@ -2535,10 +2556,6 @@ val FINITE_WEAK_ENUMERATE = store_thm(
     ]
   ]);
 
-
-
-
-
 (* ===================================================================== *)
 (* Big union (union of set of sets)                                      *)
 (* ===================================================================== *)
@@ -2650,13 +2667,93 @@ val CARD_SING_CROSS = store_thm(
      by ASM_MESON_TAC [IN_CROSS, FST, SND, IN_SING] THEN
   ASM_SIMP_TAC bool_ss [CARD_INSERT]);
 
-(*
 val CARD_CROSS = store_thm(
   "CARD_CROSS",
   ``!P Q. FINITE P /\ FINITE Q ==> (CARD (P CROSS Q) = CARD P * CARD Q)``,
+  SIMP_TAC bool_ss [GSYM AND_IMP_INTRO, RIGHT_FORALL_IMP_THM] THEN
+  Ho_resolve.MATCH_MP_TAC FINITE_INDUCT THEN
+  SIMP_TAC bool_ss [CROSS_EMPTY, CARD_EMPTY, CARD_INSERT,
+                    MULT_CLAUSES] THEN
+  ONCE_REWRITE_TAC [CROSS_INSERT_LEFT] THEN
+  REPEAT STRIP_TAC THEN
+  `FINITE (P CROSS Q)` by ASM_MESON_TAC [FINITE_CROSS] THEN
+  `FINITE ({e} CROSS Q)` by ASM_MESON_TAC [FINITE_CROSS, FINITE_SING] THEN
+  Q.SUBGOAL_THEN `({e} CROSS Q) INTER (P CROSS Q) = {}` ASSUME_TAC THENL [
+    SIMP_TAC bool_ss [IN_INTER, EXTENSION, IN_CROSS, IN_SING,
+                      NOT_IN_EMPTY] THEN
+    ASM_MESON_TAC [],
+    ALL_TAC
+  ] THEN
+  CONV_TAC (LHS_CONV (REWR_CONV (GSYM ADD_0))) THEN
+  POP_ASSUM (SUBST1_TAC o GSYM o REWRITE_RULE [CARD_EMPTY] o
+             Q.AP_TERM `CARD`) THEN
+  ASM_SIMP_TAC bool_ss [CARD_UNION, CARD_SING_CROSS, ADD_COMM]);
 
-*)
+val CROSS_SUBSET = store_thm(
+  "CROSS_SUBSET",
+  Term`!P Q P0 Q0. (P0 CROSS Q0) SUBSET (P CROSS Q) =
+                   (P0 = {}) \/ (Q0 = {}) \/
+                   P0 SUBSET P /\ Q0 SUBSET Q`,
+  SIMP_TAC bool_ss [IN_CROSS, SUBSET_DEF, FORALL_PROD, FST, SND,
+                    NOT_IN_EMPTY, EXTENSION] THEN
+  MESON_TAC []);
 
+
+val FINITE_CROSS_EQ_lemma0 = prove(
+  Term`!x. FINITE x ==>
+           !P Q. (x = P CROSS Q) ==>
+                 (P = {}) \/ (Q = {}) \/ FINITE P /\ FINITE Q`,
+  Ho_resolve.MATCH_MP_TAC FINITE_COMPLETE_INDUCTION THEN
+  REPEAT STRIP_TAC THEN POP_ASSUM SUBST_ALL_TAC THEN
+  `(P = {}) \/ ?p P0. (P = p INSERT P0) /\ ~(p IN P0)` by
+     MESON_TAC [SET_CASES] THEN
+  `(Q = {}) \/ ?q Q0. (Q = q INSERT Q0) /\ ~(q IN Q0)` by
+     MESON_TAC [SET_CASES] THEN
+  ASM_SIMP_TAC bool_ss [NOT_INSERT_EMPTY, FINITE_INSERT] THEN
+  REPEAT (FIRST_X_ASSUM SUBST_ALL_TAC) THEN
+  Q.PAT_ASSUM `FINITE X` MP_TAC THEN
+  ONCE_REWRITE_TAC [CROSS_INSERT_LEFT] THEN
+  ONCE_REWRITE_TAC [CROSS_INSERT_RIGHT] THEN
+  SIMP_TAC bool_ss [FINITE_UNION, FINITE_SING, CROSS_SINGS] THEN
+  REPEAT STRIP_TAC THENL [
+    Q.SUBGOAL_THEN
+       `(P0 CROSS {q}) PSUBSET ((p INSERT P0) CROSS (q INSERT Q0)) \/
+        (P0 = {})`
+    STRIP_ASSUME_TAC THENL [
+      ASM_SIMP_TAC bool_ss [PSUBSET_DEF, CROSS_SUBSET, SUBSET_INSERT,
+                            SUBSET_REFL, EXTENSION, IN_CROSS, IN_INSERT,
+                            FORALL_PROD, FST, SND, NOT_IN_EMPTY,
+                            SUBSET_DEF, IN_SING] THEN
+      ASM_MESON_TAC [],
+      POP_ASSUM (ANTE_RES_THEN (MP_TAC o Q.SPECL [`P0`, `{q}`])) THEN
+      MESON_TAC [FINITE_EMPTY, NOT_INSERT_EMPTY],
+      ASM_SIMP_TAC bool_ss [FINITE_EMPTY]
+    ],
+    Q.SUBGOAL_THEN
+       `({p} CROSS Q0) PSUBSET ((p INSERT P0) CROSS (q INSERT Q0)) \/
+        (Q0 = {})`
+    STRIP_ASSUME_TAC THENL [
+      ASM_SIMP_TAC bool_ss [PSUBSET_DEF, CROSS_SUBSET, SUBSET_INSERT,
+                            SUBSET_REFL, EXTENSION, IN_CROSS, IN_INSERT,
+                            FORALL_PROD, FST, SND, NOT_IN_EMPTY,
+                            SUBSET_DEF, IN_SING] THEN
+      ASM_MESON_TAC [],
+      POP_ASSUM (ANTE_RES_THEN (MP_TAC o Q.SPECL [`{p}`, `Q0`])) THEN
+      MESON_TAC [FINITE_EMPTY, NOT_INSERT_EMPTY],
+      ASM_SIMP_TAC bool_ss [FINITE_EMPTY]
+    ]
+  ]);
+
+val FINITE_CROSS_EQ_lemma =
+  SIMP_RULE bool_ss [GSYM RIGHT_FORALL_IMP_THM] FINITE_CROSS_EQ_lemma0
+
+val FINITE_CROSS_EQ = store_thm(
+  "FINITE_CROSS_EQ",
+  ``!P Q. FINITE (P CROSS Q) = (P = {}) \/ (Q = {}) \/
+                               FINITE P /\ FINITE Q``,
+  REPEAT GEN_TAC THEN EQ_TAC THEN
+  MESON_TAC [FINITE_CROSS_EQ_lemma, FINITE_CROSS, FINITE_EMPTY,
+             CROSS_EMPTY]);
 
 val _ = export_theory();
 
