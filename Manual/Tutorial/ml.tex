@@ -45,27 +45,28 @@ position in the complete session).
 
 The interactions in these boxes should be understood as occurring in
 sequence.  For example, variable bindings made in earlier boxes are
-assumed to persist to later ones.  To enter the \HOL{} system one types
-{\small\verb|hol|} or {\small\verb|hol.unquote|} to Unix, possibly
-  preceded by path information if the \HOL{} system's \texttt{bin}
-  directory is not in one's path.  The \HOL{} system then prints a
-  sign-on message and puts one into \ML.  The \ML{} prompt is
-  {\small\verb|-|}, so lines beginning with {\small\verb|-|} are typed
-  by the user and other lines are the system's responses.
+assumed to persist to later ones.  To enter the \HOL{} system one
+types {\small\verb|hol|} or {\small\verb|hol.noquote|} to Unix,
+possibly preceded by path information if the \HOL{} system's
+\texttt{bin} directory is not in one's path.  The \HOL{} system then
+prints a sign-on message and puts one into \ML.  The \ML{} prompt is
+{\small\verb|-|}, so lines beginning with {\small\verb|-|} are typed
+by the user and other lines are the system's responses.
 
   Here, as elsewhere in the \TUTORIAL{}, we will be assuming use of
-  {\small\verb|hol.unquote|}.
+  {\small\verb|hol|}.
 
 \setcounter{sessioncount}{0}
 \begin{session}\begin{alltt}
-\$ bin/hol.unquote
-[loading HOL power tools ************* ]
+\$ bin/hol
+
 -----------------------------------------------------------------
-       HOL98 [\holnsversion (built Fri Apr 12 15:34:35 2002)]
+       HOL-4 [\holnsversion (built Fri Apr 12 15:34:35 2002)]
 
        For introductory HOL help, type: help "hol";
 -----------------------------------------------------------------
 
+[loading HOL power tools ************* ]
 [closing file "/local/scratch/mn200/Work/hol98/tools/end-init-boss.sml"]
 - 1 :: [2,3,4,5];
 > val it = [1, 2, 3, 4, 5] : int list

@@ -13,12 +13,12 @@
 \section{Introduction}
 \label{sec:Introduction}
 
-This small case study is a formalisation of combinatory logic.  This
-logic is of foundational importance in theoretical computer science,
-and has a very rich theory.  The example builds principally on a
-development done by Tom Melham.  The complete script for the
-development is available as \texttt{clScript.sml} in the
-\texttt{examples/ind\_def} directory of the distribution.  It is
+This small case study is a formalisation of (variable-free)
+combinatory logic.  This logic is of foundational importance in
+theoretical computer science, and has a very rich theory.  The example
+builds principally on a development done by Tom Melham.  The complete
+script for the development is available as \texttt{clScript.sml} in
+the \texttt{examples/ind\_def} directory of the distribution.  It is
 self-contained and so includes the answers to the exercises set at the
 end of this document.
 
@@ -99,7 +99,7 @@ doing this returns three separate theorems, so we bind each
 separately:
 \begin{session}\begin{verbatim}
 val (redn_rules, redn_ind, redn_cases) =
-  IndDefLib.Hol_reln
+  Hol_reln
     `(!x y f. x --> y   ==>    f # x --> f # y) /\
      (!f g x. f --> g   ==>    f # x --> g # x) /\
      (!x y.   K # x # y --> x) /\
@@ -223,7 +223,7 @@ are annoying.)
 val _ = hide "RTC";
 
 val (RTC_rules, RTC_ind, RTC_cases) =
-  IndDefLib.Hol_reln `
+  Hol_reln `
     (!x.     RTC R x x) /\
     (!x y z. R x y /\ RTC R y z ==> RTC R x z)`;
 <<HOL message: inventing new type variable names: 'a>>
@@ -599,7 +599,7 @@ val R_RTC_diamond = store_thm(
 \end{verbatim}\end{session}
 \eos{}
 
-Now we can move on to proving that if $R$ has the diamond proprety, so
+Now we can move on to proving that if $R$ has the diamond property, so
 too does $\con{RTC}\;R$.  We want to prove this by induction again.
 It's very tempting to state the goal as the obvious \[
 \con{diamond}\;R\supset\con{diamond}\,(\con{RTC}\;R)
@@ -790,7 +790,7 @@ reduction because of its own parallel lines:
     application ($\KC\;x\;y$) can reduce, its RHS (\KC) can't.
 \begin{session}\begin{verbatim}
 - val (predn_rules, predn_ind, predn_cases) =
-    IndDefLib.Hol_reln
+    Hol_reln
       `(!x. x -||-> x) /\
        (!x y u v. x -||-> y /\ u -||-> v
                          ==>

@@ -86,8 +86,8 @@ Now you will need to rebuild \HOL{} from the sources.\footnote{It is
   possible that pre-built systems may soon be available from the
   web-page mentioned above.}
 
-Before beginning you must have a current version of MoscowML.  In
-particular, you must have version 2.00.  MoscowML is available on the
+Before beginning you must have a current version of Moscow~ML.  In
+particular, you must have version 2.01.  Moscow~ML is available on the
 web from \url{http://www.dina.kvl.dk/~sestoft/mosml.html}.
 When you have \texttt{mosml} installed, and are in the root directory
 of the distribution, the next step is to run \texttt{smart-configure}:
@@ -95,7 +95,7 @@ of the distribution, the next step is to run \texttt{smart-configure}:
 \begin{session}
 \begin{alltt}
 \$ mosml < tools/smart-configure.sml
-Moscow ML version 2.00 (June 2000)
+Moscow ML version 2.01 (January 2004)
 Enter `quit();' to quit.
 -
 HOL smart configuration.
@@ -118,10 +118,10 @@ stage, consult Section~\ref{sec:editting-configure} below.
 The next step is to run the \texttt{build} program.  This should
 result in a great deal of output as all of the system code is compiled
 and the theories built.  Eventually, a \HOL{} system\footnote{Four
-  \HOL{} executables are produced: \textsf{hol}, \textsf{hol.unquote},
-  \textsf{hol.bare} and \textsf{hol.bare.unquote}.  The second of
-  these will be used for most examples in the \TUTORIAL{}.} is
-produced in the \texttt{bin/} directory.
+  \HOL{} executables are produced: \textsf{hol}, \textsf{hol.noquote},
+  \textsf{hol.bare} and \textsf{hol.bare.noquote}.  The first of these
+  will be used for most examples in the \TUTORIAL{}.} is produced in
+the \texttt{bin/} directory.
 
 \begin{session}
 \begin{verbatim}
@@ -171,7 +171,7 @@ directly.  At the top of this file three SML declarations are present,
 but commented out.  You will need to uncomment this section (remove
 the \texttt{(*} and \texttt{*)} markers), and provide sensible values.
 The \texttt{mosmldir} value must be the name of the directory where
-the MoscowML implementation is on your machine.  The \texttt{holdir}
+the Moscow~ML implementation is on your machine.  The \texttt{holdir}
 value must be the name of the top-level directory listed in the first
 session above.  The \texttt{OS} value should be one of the strings
 specified in the accompanying comment.  All three strings must be
@@ -203,12 +203,12 @@ $
 
 \noindent Now, at either this level (in the \texttt{tools} directory)
 or at the level above, the \texttt{configure.sml} script must be piped
-into the MoscowML interpreter (called \texttt{mosml}).
+into the Moscow~ML interpreter (called \texttt{mosml}).
 
 \begin{session}
 \begin{verbatim}
 $ mosml < tools/configure.sml
-Moscow ML version 2.00 (June 2000)
+Moscow ML version 2.01 (January 2004)
 Enter `quit();' to quit.
 - > val mosmldir = "/home/mn200/mosml" : string
   val holdir = "/home/mn200/hol" : string
@@ -223,7 +223,7 @@ Making bin/build.
 - Setting up the standard prelude.
 - Setting up src/0/Globals.sml.
 - Generating bin/hol.
-- Generating bin/hol.unquote.
+- Generating bin/hol.noquote.
 - Attempting to compile quote filter ... successful.
 - Setting up the muddy library Makefile.
 - Setting up the help Makefile.

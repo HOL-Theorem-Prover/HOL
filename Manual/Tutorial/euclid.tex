@@ -32,14 +32,13 @@ new context (via \ml{Hol\_datatype} and \ml{Define} from
 the proof tools from \ml{bossLib} (or if they fail to do the job, from
 lower-level libraries).
 
-First, we start the system. We will use make use of the quotation
-pre-processor in the example, so we invoke
-\ml{.../<holdir>/bin/hol.unquote}.  Now, we ``\ml{open}'' the
-arithmetic theory, and specialize the rewriter provided by
-\ml{bossLib} to a simplification set that knows about arithmetic.  The
-former means that all of the \ML{} bindings from the \HOL{} theory of
-arithmetic are available at the top level.  The latter is not
-necessary, but serves to make some of the proofs typeset more nicely.
+First, we start the system, with the command \ml{<holdir>/bin/hol}.
+Now, we ``\ml{open}'' the arithmetic theory, and specialize the
+rewriter provided by \ml{bossLib} to a simplification set that knows
+about arithmetic.  The former means that all of the \ML{} bindings
+from the \HOL{} theory of arithmetic are available at the top level.
+The latter is not necessary, but is a convenient abbreviation and
+serves to make some of the proofs typeset more nicely.
 \begin{session}
 \begin{verbatim}
 - open arithmeticTheory;
@@ -1485,13 +1484,13 @@ compiled using the script
 file is already close to being in the right form.  It has all of the
 proofs of the theorems in ``sewn-up'' form so that when run, it does
 not involve the goal-stack at all.  In its given form, it can be run
-as input to \textsf{hol.unquote} thus:
+as input to \textsf{hol} thus:
 
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{verbatim}
 $ cd examples/
-$ ../bin/hol.unquote < euclid.sml
+$ ../bin/hol < euclid.sml
   ...
 
 > val EUCLID = |- !n. ?p. n < p /\ prime p : thm
@@ -1571,7 +1570,7 @@ directory that we created, we can demonstrate:
 
 \begin{session}
 \begin{alltt}
-\$ ../../bin/hol.unquote
+\$ ../../bin/hol
 [...]
 
 [closing file "/local/scratch/mn200/Work/hol98/tools/end-init-boss.sml"]
