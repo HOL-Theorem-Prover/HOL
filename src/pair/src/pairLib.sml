@@ -14,4 +14,16 @@ open pairSyntax PairedLambda
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 
 
+(*  
+    open Pair_basic Pair_both1 Pair_forall Pair_exists Pair_both2 Pair_conv
+
+    val _ = Lib.cons_path (!Globals.HOLdir^"library/pair/help/defs/") 
+                           Globals.help_path;
+    val _ = Lib.cons_path (!Globals.HOLdir^"library/pair/help/entries/") 
+                          Globals.help_path;
+    val _ = Lib.cons_path (!Globals.HOLdir^"library/pair/help/thms/") 
+                          Globals.help_path;
+    val _ = Lib.say "Pair library - Copyright (c) Jim Grundy 1992\n";
+*)
+
 end;

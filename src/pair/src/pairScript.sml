@@ -239,6 +239,7 @@ val UNCURRY_ONE_ONE_THM =
 
 val _ = save_thm("UNCURRY_ONE_ONE_THM",UNCURRY_ONE_ONE_THM);
 
+
 (* ------------------------------------------------------------------------- *)
 (* pair_Axiom = |- !f. ?fn. !x y. fn (x,y) = f x y                           *)
 (* ------------------------------------------------------------------------- *)
@@ -295,7 +296,9 @@ val FORALL_PROD = Q.store_thm("FORALL_PROD",
    ]
  THEN ASM_REWRITE_TAC[]);
 
+
 val pair_induction = save_thm("pair_induction", #2 (EQ_IMP_RULE FORALL_PROD));
+
 
 (* ------------------------------------------------------------------------- *)
 (* PFORALL_THM = |- !P. (!x y. P x y) = (!(x,y). P x y)                      *)
