@@ -230,11 +230,8 @@ fun funpow n f x =
    end;
 
 
-local fun enum i [] = []
-        | enum i (h::t) = (i,h)::enum (i+1) t
-in
-fun enumerate l = enum 0 l
-end;
+fun enumerate i [] = []
+  | enumerate i (h::t) = (i,h)::enumerate (i+1) t
 
 (*---------------------------------------------------------------------------*
  * For loops                                                                 *

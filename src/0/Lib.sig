@@ -53,7 +53,7 @@ sig
   val mapfilter : ('a -> 'b) -> 'a list -> 'b list
   val flatten : 'a list list -> 'a list
   val pluck : ('a -> bool) -> 'a list -> 'a * 'a list
-  val enumerate : 'a list -> (int * 'a) list
+  val enumerate : int -> 'a list -> (int * 'a) list
   val assoc : ''a -> (''a * 'b) list -> 'b
   val assoc1 : ''a -> (''a * 'b) list -> (''a * 'b) option
   val assoc2 : ''a -> ('b * ''a) list -> ('b * ''a) option

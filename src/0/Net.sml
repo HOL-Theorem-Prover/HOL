@@ -80,26 +80,30 @@ fun net_assoc label =
  end;
 
 
-fun match tm net =
- let fun mtch tm net =
-      let val label = label_of tm
-          val child = net_assoc label net
-          val Vnet = net_assoc V net
-          val nets = 
+local 
+  fun mtch tm (NODE []) = []
+    | mtch tm net =
+       let val label = label_of tm
+           val Vnet = net_assoc V net
+           val nets = 
             case label
              of V => []
-              | Cnst _ => [child] 
-              | Lam => mtch (#Body(break_abs tm)) child
+              | Cnst _ => [net_assoc label net] 
+              | Lam => mtch (#Body(break_abs tm)) (net_assoc Lam net)
               | Cmb => let val {Rator,Rand} = Term.dest_comb tm
                        in itlist(append o mtch Rand)
-                                (mtch Rator child) [] end
-      in 
+                                (mtch Rator (net_assoc Cmb net)) [] 
+                       end
+       in 
          itlist (fn NODE [] => I | net => cons net) nets [Vnet]
-      end
- in
-   itlist (fn LEAF L => append (map #2 L) | _ => I)
-          (mtch tm net) []
- end;
+       end
+in 
+fun match tm net =
+  if is_empty net then []  
+  else
+    itlist (fn LEAF L => append (map #2 L) | _ => fn y => y)
+           (mtch tm net) []
+end;
 
 (*---------------------------------------------------------------------------
         Finding the elements mapped by a term in a term net.
@@ -289,7 +293,9 @@ fun follow tm net =
  end;
 
 fun lookup tm net = 
- itlist (fn (LEAF L) => (fn A => (List.map #2 L @ A)) | (NODE _) => I)
-        (follow tm net)  [];
+ if is_empty net then []
+ else
+   itlist (fn (LEAF L) => (fn A => (List.map #2 L @ A)) | (NODE _) => I)
+          (follow tm net)  [];
 
 end (* Net *)
