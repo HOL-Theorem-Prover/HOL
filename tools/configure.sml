@@ -13,8 +13,8 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = "/homes/kl216/lang/ml/mosml"
-val holdir   = "/local/scratch/mn200/Work/hol98"
+val mosmldir = _
+val holdir   = _
 val OS       = "unix";    (* Operating system; alternatives are: winNT      *)
 val CC       = "gcc";     (* C compiler (for building quote filter)         *)
 
@@ -180,6 +180,19 @@ val _ =
    FileSys.remove (fullPath [holdir,"tools/build.uo"]);
    mk_xable bin
   end;
+
+val _ = let
+  open TextIO
+  val _ = echo "Making hol98-mode.el (for Emacs)"
+  val src = fullPath [holdir, "tools/hol98-mode.src"]
+  val target = fullPath [holdir, "tools/hol98-mode.el"]
+in
+  fill_holes (src, target)
+  ["(defvar hol98-executable HOL98-EXECUTABLE\n" -->
+   ("(defvar hol98-executable \n  "^
+    quote (fullPath [holdir, "bin/hol.unquote"])^
+    "\n")]
+end
 
 
 val _ =

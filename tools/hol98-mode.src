@@ -17,7 +17,7 @@
 (set-default 'hol-buffer-ready nil)
 (set-default 'hol-buffer-name nil)
 
-(defvar hol98-executable "/local/scratch/kxs/hol98.3/bin/hol.enquote"
+(defvar hol98-executable HOL98-EXECUTABLE
   "*Path-name for the HOL98 executable.")
 
 (put 'hol-term 'end-op
