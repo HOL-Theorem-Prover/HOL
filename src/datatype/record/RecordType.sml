@@ -361,6 +361,9 @@ fun prove_recordtype_thms (tyinfo, fields) = let
   val thms = map (C (curry prove) tactic) goals
   val fupdfupd_thm =
       save_thm(typename^"_fupdfupds", LIST_CONJ (map GEN_ALL thms))
+  val fupdfupds_comp_thm =
+      save_thm(typename^"_fupdfupds_comp",
+               LIST_CONJ (map munge_to_composition thms))
 
   (* do updates of (different) updates *)
   (* this is for canonicalisation of update sequences *)
@@ -412,6 +415,11 @@ fun prove_recordtype_thms (tyinfo, fields) = let
       if length fupdcanon_thms > 0 then
         save_thm(typename^"_fupdcanon",
                  LIST_CONJ (map GEN_ALL fupdcanon_thms))
+      else TRUTH
+  val fupdcanon_comp_thm =
+      if length fupdcanon_thms > 0 then
+        save_thm(typename^"_fupdcanon_comp",
+                 LIST_CONJ (map munge_to_composition fupdcanon_thms))
       else TRUTH
 
   val oneone_thm = valOf (TypeBasePure.one_one_of tyinfo)
@@ -556,10 +564,11 @@ fun prove_recordtype_thms (tyinfo, fields) = let
   val new_simpls = let
     val new_simpls0 =  [accupd_thm, accessor_thm, updfn_thm, updacc_thm,
                         updupd_thm, accfupd_thm, literal_equality,
-                        literal_11, fupdfupd_thm]
+                        literal_11, fupdfupd_thm, fupdfupds_comp_thm]
   in
     if not (null upd_canon_thms) then
-      updcanon_thm :: fupdcanon_thm ::  updcanon_comp_thm :: new_simpls0
+      updcanon_thm :: fupdcanon_thm ::  updcanon_comp_thm ::
+      fupdcanon_comp_thm :: new_simpls0
     else new_simpls0
   end
   val new_tyinfo = update_tyinfo new_simpls tyinfo
@@ -599,9 +608,9 @@ fun prove_recordtype_thms (tyinfo, fields) = let
      map (concat typename)
      (["_accessors", "_updates", "_updates_eq_literal", "_updaccs",
        "_accupds", "_accfupds", "_updupds", "_fupdfupds",
-       "_literal_11"] @
+       "_literal_11", "_fupdfupds_comp"] @
       (if not (null upd_canon_thms) then
-         ["_updcanon", "_updcanon_comp", "_fupdcanon"]
+         ["_updcanon", "_updcanon_comp", "_fupdcanon", "_fupdcanon_comp"]
        else []))
   in
     (new_tyinfo,
