@@ -370,6 +370,20 @@ val EXISTS_MEM = store_thm(
   GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [EXISTS_DEF, MEM] THEN
   mesonLib.MESON_TAC []);
 
+val EVERY_APPEND = store_thm(
+  "EVERY_APPEND",
+  ``!P (l1:'a list) l2.
+        EVERY P (APPEND l1 l2) = EVERY P l1 /\ EVERY P l2``,
+  GEN_TAC THEN LIST_INDUCT_TAC THEN
+  ASM_REWRITE_TAC [APPEND, EVERY_DEF, CONJ_ASSOC]);
+
+val EXISTS_APPEND = store_thm(
+  "EXISTS_APPEND",
+  ``!P (l1:'a list) l2.
+       EXISTS P (APPEND l1 l2) = EXISTS P l1 \/ EXISTS P l2``,
+  GEN_TAC THEN LIST_INDUCT_TAC THEN
+  ASM_REWRITE_TAC [APPEND, EXISTS_DEF, DISJ_ASSOC]);
+
 val NOT_EVERY = store_thm(
   "NOT_EVERY",
   ``!P l. ~EVERY P l = EXISTS ($~ o P) l``,

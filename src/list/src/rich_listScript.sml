@@ -3157,6 +3157,9 @@ val OR_EL_FOLDR = save_thm("OR_EL_FOLDR",
     (REWRITE_RULE[SOME_EL_FOLDR,I_THM](AP_THM OR_EL_DEF (--`l:bool list`--)))));
 
 val MAP2_ZIP = save_thm("MAP2_ZIP", listTheory.MAP2_ZIP);
+val ZIP = save_thm("ZIP", listTheory.ZIP);
+val UNZIP = save_thm("UNZIP", listTheory.UNZIP);
+
 
 val _ = export_theory();
 
