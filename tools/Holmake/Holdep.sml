@@ -1,10 +1,10 @@
-(* Holdep -- computing dependencies for a (list of) Moscow ML 
+(* Holdep -- computing dependencies for a (list of) Moscow ML
    source files. Also has knowledge of HOL script and theory files.
    Handles strings and nested comments correctly;
 
    DOES NOT normalize file names under DOS. (yet)
 
-  This has been adapted from the mosmldep in the MoscowML compiler 
+  This has been adapted from the mosmldep in the MoscowML compiler
   sources, first by Ken Larsen and later by Konrad Slind.
 *)
 
@@ -46,7 +46,7 @@ local val path    = ref [""]
         | lpcl ("-D"::dir::tail) = (objDir := dir        ; lpcl tail)
         | lpcl l                 = l
 in
-fun parseComLine l = 
+fun parseComLine l =
   let val s = lpcl l
   in
     path := List.rev (!path);
@@ -59,7 +59,7 @@ fun access cdir s ext =
   in if inDir cdir then SOME s
      else case List.find inDir (!path)
            of SOME dir => SOME(addDir (Path.concat(dir, !objDir)) s)
-            | NONE     => NONE 
+            | NONE     => NONE
   end
 
 fun mktarget s = addDir (!objDir) s
@@ -67,29 +67,54 @@ end;
 
 local val res = ref [];
 in
-fun isTheory s = 
-  case List.rev(String.explode s) 
-   of #"y" :: #"r" :: #"o" :: #"e" :: #"h" :: #"T" :: n::ame => 
-	    SOME(String.implode(List.rev (n::ame)))
-    | _ => NONE 
+fun isTheory s =
+  case List.rev(String.explode s) of
+    #"y" :: #"r" :: #"o" :: #"e" :: #"h" :: #"T" :: n::ame =>
+      SOME(String.implode(List.rev (n::ame)))
+  | _ => NONE
 
 fun isScript s = String.isPrefix "tpircS" (srev s)
 fun addThExt s s' ext = addExt (addDir (Path.dir s') s) ext
 fun outname cdir s =
-  case isTheory s 
-   of SOME n => (case access cdir (n^"Script") "sig" 
-                  of SOME s' => res := addThExt s s' "ui" :: !res
-                   | _  => (case access cdir (n^"Script") "sml" 
-                             of SOME s' => res := addThExt s s' "uo" :: !res
-                              | _       => ()))
-    | _ => (case access cdir s "sig" 
-             of SOME s' => res := addExt s' "ui" :: !res
-              | _       => (case access cdir s "sml" 
-                             of SOME s' => res := addExt s' "uo" :: !res
-                              | _       => ()))
-fun scriptout cdir s = 
-  case isTheory s 
-   of SOME n => (case access cdir (n^"Script") "sml" 
+  case isTheory s of
+    SOME n => let
+    in
+      case access cdir (n^"Script") "sig" of
+        SOME s' => res := addThExt s s' "ui" :: !res
+      | _  => let
+        in
+          case access cdir (n^"Script") "sml" of
+            SOME s' => res := addThExt s s' "uo" :: !res
+          | _       => ()
+        end
+    end
+  | _ => let
+    in
+      case access cdir s "sig" of
+        SOME s' => res := addExt s' "ui" :: !res
+      | _       => let
+        in
+          case access cdir s "sml" of
+            SOME s' => res := addExt s' "uo" :: !res
+          | _       => let
+            in
+              (* this case added to cover the situations where we think we
+                 are dependent on module foo, but we can't find foo.sml or
+                 foo.sig.  This can happen when foo.sml exists in some
+                 HOL directory but no foo.sig.  In this situation, the HOL
+                 build process only copies foo.ui and foo.uo across to sigobj,
+                 so making the dependency analysis ignore foo.  We cover
+                 this possibility by looking to see if we can see a .uo
+                 file; if so, we can retain the dependency *)
+              case access cdir s "uo" of
+                SOME s' => res := addExt s' "uo" :: !res
+              | NONE => ()
+            end
+        end
+    end
+fun scriptout cdir s =
+  case isTheory s
+   of SOME n => (case access cdir (n^"Script") "sml"
                   of SOME s' => res := addThExt s s' "uo" :: !res
                    | _       => ())
     | _      => (case access cdir s "sml"
@@ -99,7 +124,7 @@ fun scriptout cdir s =
 fun beginentry objext target =
   let val target' = mktarget target
       val targetname = addExt target' objext
-  in 
+  in
     res := [targetname ^ ":"];
     if objext = "uo" andalso FileSys.access(addExt target "sig", [])
     then res := addExt target' "ui" :: !res
@@ -107,7 +132,7 @@ fun beginentry objext target =
   end;
 
 fun endentry() = (* for non-file-based Holdep *)
-  if length (!res) > 1 
+  if length (!res) > 1
   then String.concat (spacify (rev ("\n" :: !res)))
    else ""
 end;
@@ -122,11 +147,11 @@ fun read srcext objext filename =
      val curr_dir = Path.dir filename
      val files0   = (beginentry objext (manglefilename filename);
                      app insert names;
-                     Polyhash.apply 
+                     Polyhash.apply
                         (outname curr_dir o manglefilename o #1) mentions;
                      endentry ())
  in
-   if isScript filename 
+   if isScript filename
    then
       (beginentry "" (manglefilename filename);
        app insert names;
@@ -140,7 +165,7 @@ fun read srcext objext filename =
 fun processfile filename =
     let (* val _ = output(std_err, "Processing " ^ filename ^ "\n"); *)
 	val {base, ext} = Path.splitBaseExt filename
-    in 
+    in
 	case ext of
 	    SOME "sig" => read "sig" "ui" base
 	  | SOME "sml" => read "sml" "uo" base
