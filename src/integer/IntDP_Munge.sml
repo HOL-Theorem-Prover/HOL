@@ -338,12 +338,12 @@ in
 val dealwith_nats = let
   val phase1 =
       tacCONV (ONCE_DEPTH_CONV normalise_mult THENC
+               elim_div_mod THENC
                (* eliminate nasty subtractions *)
                TOP_DEPTH_CONV (Thm_convs.SUB_NORM_CONV ORELSEC
                                NBOOL_COND_RATOR_CONV ORELSEC
                                NBOOL_COND_RAND_CONV ORELSEC
-                               COND_ABS_CONV) THENC
-               elim_div_mod)
+                               COND_ABS_CONV))
   fun do_pbs tm = let
     val non_pbs =
         Listsort.sort subtm_rel (HOLset.listItems (nat_nonpresburgers tm))

@@ -55,6 +55,8 @@ val terms_to_test =
    ("DIV1", Term`!x. 0 <= x = x / 2 <= x`),
    ("DIV2", Term`!x. (x / 2 = x) = (x = 0)`),
    ("NDIV1", Term`!x. 0 < x ==> x DIV 2 < x`),
+   ("KXSDIV1", Term`!n. ~(n = 0) /\ EVEN n ==> (n - 2) DIV 2 < n`),
+   ("KXSDIV2", Term`!n. ~(n = 0) /\ ~EVEN n ==> (n - 1) DIV 2 < n`),
    ("sub_zero_coeff", Term`!x y:int. 0 < x ==> y - x < y`),
    ("10000.9391",
     Term`~(v <
