@@ -300,6 +300,17 @@ val nnf_mutrec_eqns =
  /\   (nnfneg (p AND q) = (nnfneg p) OR (nnfneg q))
  /\   (nnfneg (p OR q)  = (nnfneg p) AND (nnfneg q))`;
 
+
+(*---------------------------------------------------------------------------
+    Equivalence of nnf and nnfpos is straightforward.
+ ---------------------------------------------------------------------------*)
+
+val nnf_eq_nnfpos = Q.prove
+(`!p. nnf p = nnfpos p`,
+  recInduct nnf0_ind 
+    THEN RW_TAC std_ss [nnf0_eqns,nnf_mutrec_eqns]);
+
+
 (*---------------------------------------------------------------------------
     Evaluation with nnfpos. First tell computeLib about nnf_mutrec_eqns.
  ---------------------------------------------------------------------------*)
@@ -318,9 +329,53 @@ Eval `nnfpos ^syn321_1`;
 
 
 
+(*---------------------------------------------------------------------------
+        Conjunctive normal form (also from Paulson's ML book). 
+ ---------------------------------------------------------------------------*)
+
+val distrib_def =
+ Define 
+    `(distrib p (q AND r) = distrib p q AND distrib p r)
+ /\  (distrib (q AND r) p = distrib q p AND distrib r p)
+ /\  (distrib p q         = p OR q)`;
+
+
+val cnf_def =
+ Define 
+    `(cnf (p AND q) = cnf p AND cnf q)
+ /\  (cnf (p OR q)  = distrib (cnf p) (cnf q))
+ /\  (cnf p         = p)`;
+
+
+val Value_def =
+ Define 
+   `(Value P (VAR x)   = P x)
+ /\ (Value P (NOT p)   = ~Value P p)
+ /\ (Value P (p AND q) = Value P p /\ Value P q)
+ /\ (Value P (p OR q)  = Value P p \/ Value P q)`;
+
+
+val Value_distrib_disj = Q.prove
+(`!p q P. Value P (distrib p q) = Value P p \/ Value P q`,
+ recInduct (theorem "distrib_ind")
+   THEN RW_TAC std_ss [distrib_def, Value_def]
+   THEN PROVE_TAC []);
+
+
+val Value_cnf_stable = Q.prove
+(`!p Q. Value Q (cnf p) = Value Q p`,
+ Induct
+   THEN RW_TAC std_ss [cnf_def, Value_def, Value_distrib_disj]);
+
+
+val Value_nnf_stable = Q.prove
+(`!p Q. Value Q (nnf p) = Value Q p`,
+  recInduct nnf0_ind 
+    THEN RW_TAC std_ss [nnf0_eqns,Value_def]);
+
 
 (*---------------------------------------------------------------------------
-         The SML version of Wang's algorithm.
+         An SML version of Wang's algorithm.
 
 fun mem x [] = false
   | mem x (h::t) = (x=h) orelse mem x t;
@@ -349,6 +404,9 @@ infixr 5 AND;
 infixr 4 OR;
 
 fun Wang M = Prv [] [] [M] [];
+
+
+ *************************  Examples  *****************************
 
 val x = VAR "x"; val y = VAR "y"; val z = VAR "z"; val p = VAR "p";
 val q = VAR "q"; val r = VAR "r"; val s = VAR "s";

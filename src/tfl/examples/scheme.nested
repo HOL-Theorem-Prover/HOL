@@ -1,0 +1,100 @@
+(*---------------------------------------------------------------------------
+   An example from Larry Paulson's book "ML for the Working 
+   Programmer" (first edition, p. 225):
+
+     "Our approach to program schemes is simpler than resorting 
+      to domain theory, but is less general. In domain theory
+      it is simple to prove that any ML function of the form
+
+          fun h x = if p x then x else h(h(g x))
+
+      satisfies 
+
+          h (h x) = h x
+
+      for all x -- regardless of whether the function terminates. Our
+      approach cannot easily handle this. What well-founded relation
+      should we use to demonstrate the termination of the nested 
+      recursive call in h?"
+
+   Under our approach, the answer is that the goal should be made
+   contingent on the existence of a termination relation. Then 
+   recursion induction is valid, and the desired theorem thereby 
+   proved, provided that "h" has been defined by a recursive schema
+   (note that h is schematic in p and g).
+ ---------------------------------------------------------------------------*)
+
+load "bossLib"; open bossLib;
+
+show_assums := true;
+
+
+(*---------------------------------------------------------------------------
+     The variables p and g are parameters.
+ ---------------------------------------------------------------------------*)
+
+val H_def = Define `H x = if p x then x else H (H (g x))`;
+
+
+(*---------------------------------------------------------------------------
+       H_fact =
+            [!x. ~p x ==> R (H_aux R g p (g x)) x, 
+             !x. ~p x ==> R (g x) x, 
+             WF R ]
+            |- 
+               !x. H g p (H g p x) = H g p x
+ ---------------------------------------------------------------------------*)
+
+val H_fact = TAC_PROOF
+((hyp H_def, Term`!x. H g p (H g p x) = H g p x`),
+ recInduct (theorem "H_ind") 
+    THEN RW_TAC std_ss []
+    THEN ONCE_REWRITE_TAC [H_def] 
+    THEN PROVE_TAC [H_def]);
+
+
+(*---------------------------------------------------------------------------
+     P.S. Notice that, since H is a nested function, the termination
+          conditions of H are really those of an auxiliary function
+          H_aux. In an invocation of Define, the system derives 
+          the recursion equations for H_aux but doesn't keep them,
+          since it can derive the recursion equations for H.
+
+          If you want more information, the functions in the Defn
+          structure help:
+
+            val H_defn = 
+                Defn.Hol_defn "H" 
+                              `H x = if p x then x else H (H (g x))`;
+
+            - Defn.eqns_of H_defn;
+             > val it =
+             > [WF R, !x. ~p x ==> R (g x) x, 
+             >  !x. ~p x ==> R (H_aux R g p (g x)) x]
+             > |- H g p x = (if p x then x else H g p (H g p (g x))) : thm
+
+            val SOME aux_defn = Defn.aux_defn H_defn;
+             > val aux_defn = <defn> : Defn.defn
+
+            Defn.eqns_of aux_defn;
+             > val it =
+             > |- WF R ==>
+             >    (~p x ==> R (g x) x) ==>
+             >    (~p x ==> R (H_aux R g p (g x)) x) 
+             >    ==>
+             >   (H_aux R g p x = 
+             >     (if p x then x else H_aux R g p (H_aux R g p (g x)))) :thm
+
+            Defn.ind_of aux_defn;;
+            > val it =
+            >  SOME [WF R, !x. ~p x ==> R (g x) x]
+            >       |- !P.
+            >            (!x. (~p x ==> P (g x)) /\
+            >                 (~p x ==>
+            >                  R (H_aux R g p (g x)) x ==>
+            >                  P (H_aux R g p (g x))) ==> P x) 
+            >            ==>
+            >              !v. P v : thm option
+
+
+ ---------------------------------------------------------------------------*)

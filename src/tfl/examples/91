@@ -134,7 +134,7 @@ WF_REL_TAC N_defn `measure \x. 101 - x` THENL
      [`Nine1((x+11)+11) > 100` by PROVE_TAC [ARITH`x-11 > 100 ==> x>100`] THEN
       `Nine1(Nine1((x+11)+11)) = Nine1((x+11)+11) -10` by PROVE_TAC[eqn1] 
         THEN Q.PAT_ASSUM `Nine1 (x+11) = M` (SUBST_ALL_TAC o SYM) 
-        THEN PROVE_TAC[ARITH`x>100==>x-11<x-10`,arithmeticTheory.LESS_TRANS],
+        THEN PROVE_TAC[ARITH`x>100 ==> x-11<x-10`,arithmeticTheory.LESS_TRANS],
       RES_TAC 
        THEN IMP_RES_THEN SUBST_ALL_TAC (ARITH`w+11<y ==> ((y-11)+11 = y)`)
        THEN PROVE_TAC [eqn2,arithmeticTheory.LESS_TRANS]]],
@@ -151,7 +151,7 @@ WF_REL_TAC N_defn `measure \x. 101 - x` THENL
       Now try some computations with N.
  ---------------------------------------------------------------------------*)
 
-local open computeLib
+local open computeLib arithmeticTheory
       val compset = reduceLib.reduce_rws()
       val _ = add_thms [GREATER_EQ, GREATER_DEF] compset
       val _ = add_thms [N_eqn] compset

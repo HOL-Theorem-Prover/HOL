@@ -44,15 +44,14 @@ val iota_length = Q.prove
   THENL [DECIDE_TAC,
          RW_TAC std_ss [arithmeticTheory.ONE,arithmeticTheory.ADD_CLAUSES] 
            THEN RW_TAC std_ss [arithmeticTheory.ADD1] THEN
-           Cases_on `bot = top` 
-           THENL [RW_TAC std_ss [] 
-                    THEN ONCE_REWRITE_TAC [iota_eqn]
-                    THEN RW_TAC list_ss [],
-                  `bot+1 <= top` by DECIDE_TAC THEN
-                  `LENGTH (iota (bot+1) top) = (top - (bot+1)) + 1` by RES_TAC
-                     THEN Q.PAT_ASSUM `x = y` SUBST_ALL_TAC
-                     THEN Q.PAT_ASSUM `x ==> y` (K ALL_TAC)
-                     THEN DECIDE_TAC]]);
+           Cases_on `bot = top` THENL 
+            [RW_TAC std_ss [] 
+               THEN ONCE_REWRITE_TAC [iota_eqn] THEN RW_TAC list_ss [],
+             `bot+1 <= top` by DECIDE_TAC THEN
+             `LENGTH (iota (bot+1) top) = (top - (bot+1)) + 1` by RES_TAC
+               THEN Q.PAT_ASSUM `x = y` SUBST_ALL_TAC
+               THEN WEAKEN_TAC(fn tm => is_imp tm andalso not(is_neg tm))
+               THEN DECIDE_TAC]]);
 
 (*---------------------------------------------------------------------------
       Some computations with iota.

@@ -48,6 +48,8 @@ val baRec_def0 =
           else baRec (APPEND (dest h) t, v))`;
 
 
+load "multisetTheory";  (* not currently in release *)
+
 val APPEND_Summ = Q.prove
 `!l1 l2. 
     list_to_mset (APPEND l1 l2) = Summ (list_to_mset l1) (list_to_mset l2)`

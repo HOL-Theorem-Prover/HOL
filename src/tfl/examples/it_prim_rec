@@ -3,25 +3,37 @@
      We start with Ackermann's function.
  ---------------------------------------------------------------------------*)
 
-app load ["tflLib", "QLib"];
-open tflLib arithTools RW;
+app load ["bossLib", "QLib"];
+open bossLib;
 
-val ack_def = Rfunction "ack_def" `^pred LEX ^pred` 
-  `(ack (0,n) =  n+1) /\
-   (ack (SUC m,0) = ack (m, 1)) /\
-   (ack (SUC m, SUC n) = ack (m, ack (SUC m, n)))`;
+val Ack_def = 
+ Hol_defn "Ack" 
+  `(Ack (0,n) =  n+1) /\
+   (Ack (SUC m,0) = Ack (m, 1)) /\
+   (Ack (SUC m, SUC n) = Ack (m, Ack (SUC m, n)))`;
 
-val ack_eqns = save_thm("ack_eqns", #rules ack_def);
-val ack_induction = save_thm("ack_induction", #induction ack_def);
 
-val ack_positive = Q.store_thm("ack_pos",  `!x y. 0 < ack(x,y)`,
-REC_INDUCT_TAC ack_induction THEN ONCE_RW_TAC[ack_eqns] 
- THEN RW_TAC[] THEN ARITH_TAC);
+val pred = Term `\x y. y = SUC x`;
 
-val ack_grows_faster_than_plus = Q.store_thm("ack_grows_faster_than_plus",  
-`!x y. x+y < ack(x,y)`,
-REC_INDUCT_TAC ack_induction 
-  THEN ONCE_RW_TAC[ack_eqns] THEN RW_TAC[] THEN ARITH_TAC);
+val (Ack_eqns,Ack_ind) = 
+Defn.tprove
+  (Ack_def, 
+   WF_REL_TAC Ack_def `^pred LEX ^pred`);
+
+
+val Ack_positive = Q.prove
+(`!x y. 0 < Ack(x,y)`,
+  recInduct Ack_ind 
+    THEN ONCE_REWRITE_TAC[Ack_eqns] 
+    THEN PROVE_TAC [DECIDE `0 < x + 1`]);
+
+
+val Ack_grows_faster_than_plus = Q.prove
+(`!x y. x+y < Ack(x,y)`,
+ recInduct Ack_ind
+  THEN ONCE_REWRITE_TAC[Ack_eqns] 
+  THEN RW_TAC arith_ss []);
+
 
 
 (*---------------------------------------------------------------------------*
@@ -30,25 +42,33 @@ REC_INDUCT_TAC ack_induction
  * functions about the same time, but Hilbert preferred Ackermann's.         *
  *---------------------------------------------------------------------------*)
 
-val Sudan_def = Rfunction "Sudan_def" `^pred LEX (inv_image ^pred SND)`
-`(Sudan 0 (x,y)           = x+y) /\
- (Sudan (SUC n) (x,0)     = x)   /\
- (Sudan (SUC n) (x,SUC y) = Sudan n (Sudan (SUC n) (x,y), 
-                                     Sudan (SUC n) (x,y) + SUC y))`;
+val Sudan_def = 
+ Hol_defn "Sudan" 
+   `(Sudan 0 (x,y)           = x+y)
+ /\ (Sudan (SUC n) (x,0)     = x)
+ /\ (Sudan (SUC n) (x,SUC y) = Sudan n (Sudan (SUC n) (x,y), 
+                                        Sudan (SUC n) (x,y) + SUC y))`;
 
-val eqns = save_thm("Sudan_eqns", #rules Sudan_def);
-val induction = save_thm("Sudan_induction", #induction Sudan_def);
+
+val (Sudan_eqns, Sudan_ind) = 
+Defn.tprove
+  (Sudan_def, 
+   WF_REL_TAC Sudan_def `^pred LEX (inv_image ^pred SND)`);
 
 
 (*---------------------------------------------------------------------------
        A Harvey Friedman function (from May 1999 FOM posting).
  ---------------------------------------------------------------------------*)
 
-val V_def = Rfunction "V_def" `^pred LEX ^pred LEX ^pred` 
+val V_def = 
+ Hol_defn "V" 
    `(V (SUC 0, n, m)                = n) 
 /\  (V (SUC(SUC k), n, SUC 0)       = V (SUC k, SUC n, SUC n))
 /\  (V (SUC(SUC k), n, SUC (SUC m)) = V (SUC k, V(SUC(SUC k),n,SUC m)+1,
                                                 V(SUC(SUC k),n,SUC m)+1))`;
 
-val V_eqns = save_thm("V_eqns", #rules V_def);
-val V_induction = save_thm("V_induction", #induction V_def);
+val (V_eqns, V_ind) = 
+Defn.tprove
+  (V_def, 
+   WF_REL_TAC V_def `^pred LEX ^pred LEX ^pred`);
+
