@@ -105,7 +105,7 @@ a variable or a constant.
    let  in  and  \  ;  =>  |  :  :=  with  updated_by
 \end{verbatim}}
 
-\subsection{Type variable names}
+\subsubsection{Type variable names}
 \label{tyvars}
 
 The name of a type variable in the \HOL\ logic is a string
@@ -369,11 +369,17 @@ denotes exactly the same value (of \ML\ type {\small\verb%type%}) as
 \end{verbatim}\end{hol}
 
 \noindent and
-{\small\verb%Term `\x.x+1`%}\index{function abstraction, in HOL
-logic@function abstraction, in \HOL\ logic} can be used
+
+\begin{verbatim}
+    Term `\x.x+1`
+\end{verbatim}
+
+\index{function abstraction, in HOL
+logic@function abstraction, in \HOL\ logic} 
+\noindent can be used
 instead of\footnote{In order to be processed successfully, the latter
 quotation (which features a numeral) requires the theory of arithmetic
-to have already been loaded. This can be accomplished by
+to have already been loaded. This can be accomplished by 
 {\tt load "arithmeticTheory"}.}
 
 \newpage %PBHACK
@@ -559,8 +565,8 @@ type\index{type checking, in HOL logic@type checking, in \HOL\ logic!antiquotati
 antiquotations\/}\index{terms, in HOL logic@terms, in \HOL\ logic!antiquotation}\index{antiquotation, in HOL logic terms@antiquotation, in \HOL\ logic terms}.
 An antiquotation {\small\verb%^(%}$t${\small\verb%)%}
 evaluates to the \ML\ value of $t$. For example,
-{\small\verb%"x \/ ^(mk_conj("y:bool","z:bool"))"%} evaluates to the same
-term as {\small\verb%"x \/ (y /\ z)"%}. The most common use of antiquotation
+{\small\verb%Term `x \/ ^(mk_conj(Term`y:bool`, Term`z:bool`))`%} evaluates to the same
+term as {\small\verb%Term `x \/ (y /\ z)`%}. The most common use of antiquotation
 is when the term $t$ is just an \ML\ variable $x$. In this case
 {\small\verb%^(%}$x${\small\verb%)%} can be abbreviated by
 {\small\verb%^%}$x$.
@@ -569,14 +575,46 @@ The following session illustrates antiquotation.
 
 \setcounter{sessioncount}{1}
 \begin{session}\begin{verbatim}
-#let y = "x+1";;
-y = "x + 1" : term
+- load "arithmeticTheory"; 
+> val it = () : unit
 
-#let z = "y = ^y";;
-z = "y = x + 1" : term
+- val y = Term `x+1`;
+> val y = `x + 1` : term
 
-#"!x:num.?y:num.^z";;
-"!x. ?y. y = x + 1" : term
+val z = Term `y = ^y`;
+> val z = `y = x + 1` : Term.term
+
+- Term `!x:num.?y:num.^z`;
+> val it = `!x. ?y. y = x + 1` : term
+\end{verbatim}\end{session}
+
+\noindent Types may be antiquoted as well:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+- val pred = Type `:'a -> bool`;
+> val pred = `:'a -> bool` : hol_type
+
+- Type`:^pred -> bool`;
+> val it = `:('a -> bool) -> bool` : hol_type
+\end{verbatim}\end{session}
+
+One requirement of the system is that antiquoting a type into a term
+quotation requires the use of {\small\verb+ty_antiq+}. For example,
+
+\begin{session}\begin{verbatim}
+- Term `!P:^pred. P x ==> Q x`;
+
+! Toplevel input:
+! Term `!P:^pred. P x ==> Q x`;
+!           ^^^^
+! Type clash: expression of type
+!   Type.hol_type
+! cannot have type
+!   Term.term
+
+- Term `!P:^(ty_antiq pred). P x ==> Q x`;
+> val it = `!P. P x ==> Q x` : term
 \end{verbatim}\end{session}
 
 
@@ -837,13 +875,11 @@ The corresponding destructor functions are called \ml{strip\_comb}, \etc,
 \subsubsection{Conditionals}\label{conditionals}
 
 A conditional\index{terms, in HOL logic@terms, in \HOL\ logic!conditional}\index{conditional predicate, in HOL logic@conditional predicate, in \HOL\ logic}\index{conditionals, in HOL logic@conditionals, in \HOL\ logic}
- term \ml{$t_1\ $=>$\ t_2\ $|$\ t_3$} means
-"if $t_1$ then $t_2$ else
-$t_3$" and abbreviates the application
+ term \ml{`if $t_1\ $then$\ t_2\ $else$\ t_3$`} abbreviates the application
 \ml{COND\ $t_1\ t_2\ t_3$}, where \ml{COND}\index{COND@\ml{COND}}\index{conditionals, in HOL logic@conditionals, in \HOL\ logic}
 is a constant defined in the theory \ml{bool} (see Section~\ref{boolthy}).
-The syntax \ml{`if $t_1\ $then$\ t_2\ $else$\ t_3$`} is also permitted. An
-iterated conditional
+The syntax \ml{$t_1\ $=>$\ t_2\ $|$\ t_3$} is also permitted. An
+iterated conditional 
 
 \[
 t_{11}\ \ml{=>}\ t_{12}\ \ml{|}\
@@ -866,26 +902,27 @@ t_{11}\ \ml{=>}\ t_{12}\ \ml{|}\
 \[\ml{COND}\ t_{11}\ t_{12}\ \ml{(COND}\ t_{21}\ t_{22}\ \ldots\
 \ml{(COND}\ t_{n1}\ t_{n2}\ t_{n3}\ml{)}\ \ldots\ \ml{)}\]
 
-For example,
+\noindent For example, 
 
 \begin{session}\begin{verbatim}
-- Term `b => c => d => e | f | g | h`;
-<<HOL message: inventing new type variable names: 'a.>>
-
-> val it =
-    `(if b then (if c then (if d then e else f) else g) else h)`
-    : Term.term
-
 - Term `if b then if c then if d then e else f else g else h`;
 <<HOL message: inventing new type variable names: 'a.>>
 
 > val it =
     `(if b then (if c then (if d then e else f) else g) else h)`
-    : Term.term
+    : term
+
+- Term `b => c => d => e | f | g | h`;
+<<HOL message: inventing new type variable names: 'a.>>
+
+> val it =
+    `(if b then (if c then (if d then e else f) else g) else h)`
+    : term
+
 \end{verbatim}\end{session}
 
-Note that the system alway prints out conditionals in the "if $t_1$ then
-$t_2$ else $t_3$" form.
+\noindent Note that the system alway prints out conditionals in the "if $t_1$ then
+$t_2$ else $t_3$" form. 
 
 \section{Theorems}
 \label{avra_theorems}
@@ -942,7 +979,7 @@ and likewise to represent the
 conclusion of a sequent.
 Sets in this context
 are represented by lists, so the set of hypotheses of a sequent\index{sequents!representation of, in HOL logic@representation of, in \HOL\ logic}
-is represented by a list of {\small\verb%":bool"%}-typed terms.
+is represented by a list of {\small\verb%`:bool`%}-typed terms.
 
 A theorem in the abstract is represented concretely in the \HOL\
 system by a value with the \ML\ abstract type
@@ -993,59 +1030,134 @@ in Section~\ref{HOL-theory}.
 %Section~\ref{rules}.
 To anticipate, the axiom \ml{BOOL\_CASES\_AX}
 mentioned in Chapter~\ref{logic} is printed in \HOL\ as follows
-(where \ml{"T"} and \ml{"F"}
+(where \ml{T} and \ml{F}
 are the \HOL\ logic's constants representing truth and
 falsity, respectively):
 
 \begin{hol}
 \index{F@\ml{F}!axiom for}
 \begin{verbatim}
-   |- !t. (t = T) \/ (t = F)
+   |- !t. (t = T) \/ (t = F) : thm
 \end{verbatim}\end{hol}
 
 \noindent Note the special print format\index{printing, in HOL logic@printing, in \HOL\ logic!of theorems},
  with the approximation
 to the abstract $\vdash$ notation\index{theorem notation, in HOL logic@theorem notation, in \HOL\ logic|(}, \ml{|-}, used to indicate \ML\ type
 {\small\verb%thm%} status;
-the absence of \HOL\ quotation marks\index{ theorem marker, in HOL logic@\ml{"|-} (theorem marker, in \HOL\ logic)}
- in the \ml{|-} context; and
-the absence of type information following the printed term.
-The session below illustrates
-the use of the destructor functions:
+as well as the absence of \HOL\ quotation marks\index{ theorem marker, in HOL logic@\ml{"|-} (theorem marker, in \HOL\ logic)}
+ in the \ml{|-} context.
+The session below illustrates the use of the destructor functions:
 
 \setcounter{sessioncount}{1}
 \begin{session}\begin{verbatim}
-#let th = BOOL_CASES_AX;;
-th = |- !t. (t = T) \/ (t = F)
+- val th = BOOL_CASES_AX;
+> val th = |- !t. (t = T) \/ (t = F) : thm
 
-#hyp th;;
-[] : term list
+- hyp th;
+> val it = [] : term list
 
-#concl th;;
-"!t. (t = T) \/ (t = F)" : term
+- concl th;
+> val it = `!t. (t = T) \/ (t = F)` : term
 
-#type_of it;;
-":bool" : type
+- type_of it;
+> val it = `:bool` : hol_type
 \end{verbatim}\end{session}\index{turnstile notation|)}
 
 \noindent In addition to the print conventions mentioned above,
 the printing of theorems prints hypotheses\index{printing, in HOL logic@printing, in \HOL\ logic!of hypotheses of theorems}
  as periods (\ie\ full stops or
-dots).  The function \ml{print\_all\_thm}\index{print_all_thm@\ml{print\_all\_thm}} prints theorems with
+dots).  The flag \ml{show\_assums}\index{show_assums@\ml{show\_assums}} prints theorems with
 hypotheses shown in full. These points are illustrated with a
 theorem inferred, for example purposes, from another axiom mentioned
 in Chapter~\ref{logic}: \ml{SELECT\_AX}.
 
 \setcounter{sessioncount}{1}
 \begin{session}\begin{verbatim}
-th = . |- P($@ P)
+- val th = UNDISCH (SPEC_ALL SELECT_AX);
+> val th =  [.] |- P ($@ P) : thm
 
-#print_all_thm th;;
-P x |- P($@ P)() : void
+- show_assums := true;
+> val it = () : unit
+
+- th;
+> val it =  [P x] |- P ($@ P) : Thm.thm
 \end{verbatim}\end{session}\index{theorem notation, in HOL logic@theorem notation, in \HOL\ logic|)}
+\subsection{Oracles}
 
 \subsection{Oracles}
-\label{avra_theorems}
+
+Hol98 extends the LCF tradition by allowing the use of an \emph {oracle}
+mechanism to allow arbitrary formulas to become elements of the
+\verb+thm+ type. By use of this mechanism, Hol98 can utilize the results
+of arbitrary proof procedures.\footnote{Some care should be taken with
+proof procedures for theories lacking a formalization in the HOL
+logic. The product of such procedures can be used in HOL without damage;
+however, in the end it won't be clear --- at least in HOL --- what has
+been proven.} In spite of such liberalness, the system can still make
+strong assertions about the security of ML objects of type \verb+thm+.
+
+To avoid unsoundness, the system attaches a \emph{tag} to any theorem
+coming from an oracle. The system propagates this tag through every
+inference that the theorem participates in. If it happens that falsity
+becomes derived, the offending oracle can be found by examining the tags
+component of the theorem. A theorem proved without use of any oracle
+will have an empty tag, and can thus be considered to have been proved
+in the HOL logic.
+
+Tagged theorems can be created via
+\begin{hol}
+\index{mk_oracle_thm@\ml{mk\_oracle\_thm}!type of}
+\begin{verbatim}
+    val mk_oracle_thm : tag -> term list * term -> thm
+\end{verbatim}\end{hol}
+
+which directly creates the requested theorem and attaches the given tag to
+it. Tags may be created with
+\begin{hol}
+\index{Tag.read@\ml{Tag.read}!making tags}
+\begin{verbatim}
+     Tag.read : string -> tag.
+\end{verbatim}
+\end{hol}
+
+As well as providing principled access to the results of external
+reasoners, tags are used to implement some useful `system' operations on
+theorems. For example, one can directly create a theorem via the function
+\verb+mk_thm+. The tag \verb+MK_THM+ gets attached to each theorem
+created with this call. This allows users to directly create useful
+theorems, \eg, to use as test data for derived rules of inference.
+Another tag is used to implement validity checking in tactics.
+
+The tags in a theorem can be viewed by setting \verb+Globals.show_tags+ to
+true. For example, we have\footnote{Hol98 currently also uses tags for
+tracking the use of axioms in proofs.}
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+- Globals.show_tags := true;
+> val it = () : unit
+
+- mk_thm([], Term `F`);;
+> val it = [oracles: MK_THM] [axioms: ] [] |- F : Thm.thm
+\end{verbatim}\end{session}\index{mk_thm@mk_thm)}
+
+There are three elements to the left of the turnstile in the fully printed
+representation of a theorem: the first two comprise the tags component and the
+third is the standard assumption list. The tag component of a theorem
+can be extracted by
+ \begin{verbatim}
+     Thm.tag : thm -> tag
+ \end{verbatim}
+\noindent and prettyprinted by
+ \begin{verbatim}
+     Tag.pp : ppstream -> tag -> unit.
+ \end{verbatim}
+
+\noindent{\bf Remark}
+
+No serious attempt is made to prevent spoofing: a person may attach tag
+\verb+X+ on an assertion coming from tool \verb+Y+ if desired. However, the
+tags for \verb+mk_thm+ and validity checking cannot be spoofed.
+
 
 \section{Theories}\index{theories, in HOL logic@theories, in \HOL\ logic!representation of|(}
 \label{theoryfns}
@@ -1070,10 +1182,11 @@ theorems of ${\cal T}$.
 \end{myenumerate}
 
 Such a theory is represented  in the  \HOL\ system  as a  collection of files,
-called theory files\index{theory files|(}. Each  file has  a name  of the  form $name$\ml{.th}, where
-$name$ is a string supplied by the user.  Various additional pieces of
+called theory files\index{theory files|(}. Each  file is an ML structure
+with a name  of the  form $name$\ml{Theory}, where
+$name$ is a string supplied by the user when the theory is created.  Various additional pieces of
 information are stored in the theory files, including the parsing status of the
-constants (\ie\ whether they are infixes or binders), as well as several items
+constants (\eg\ whether they are infixes or binders), as well as several items
 involving concepts not yet introduced: type abbreviations (see
 Section~\ref{typeabbrev} for this); and which axioms are definitions, type
 definitions or specifications (see Section~\ref{avra_definitional} for the last
@@ -1081,17 +1194,19 @@ three).
 
 Theory files are structured hierarchically to represent sequences of
 extensions of an initial theory (see Section~\ref{extensions}) called
-\ml{HOL}\index{HOL@\ml{HOL}}. Each theory file making up a theory records some types, constants,
+\ml{min}\index{min@\ml{min}}. Each theory file making up a theory records some types, constants,
 axioms and theorems, together with pointers to other theory files called its
 {\it parents\/}\index{parents, of HOL theories@parents, of \HOL\ theories}.  The theory represented by such a theory file is obtained by
 taking the union of all the types, constants, axioms and theorems in the file,
 together with the types, constants, axioms and theorems in all the theory
 files reachable by following pointers to parents. This collection of reachable
 files is called the {\it ancestry\/}\index{ancestry, of HOL system theories@ancestry, of \HOL\ system theories}\index{theories, in HOL logic@theories, in \HOL\ logic!hierarchies of}
-of the theory file. Axioms (including
-definitions and specifications) and theorems are named in the \HOL\ system by
-two strings: the name of the theory file in which they are stored, together with
-a name supplied by the user\index{theory files|)}.
+of the theory file. 
+
+% Axioms (including
+% definitions and specifications) and theorems are named in the \HOL\ system by
+% two strings: the name of the theory file in which they are stored, together with
+% a name supplied by the user\index{theory files|)}.
 
 The data stored in a single theory file is called a {\it theory segment\/}\index{theory segments};
 this is not really a logical concept, but rather a concept of the
@@ -1119,28 +1234,20 @@ which replaces the old version.  Subsequent pieces of work can build on (\ie\
 extend) the definitions and theorems of ${\cal T}$ by making it a parent of
 new theories.
 
-There are two modes of working with \HOL: {\it draft mode\/}\index{draft mode, in HOL system@draft mode, in \HOL\ system} and {\it proof
-mode\/}\index{proof mode, in HOL system@proof mode, in \HOL\ system}.
-In the former, the sets ${\sf Struc}_{\cal T}$, ${\sf Sig}_{\cal T}$
-and ${\sf Axioms}_{\cal T}$ can be extended; in the latter only ${\sf
-Theorems}_{\cal T}$ can be changed. In draft mode, inconsistencies can be
-introduced by asserting inconsistent axioms, but in proof mode only
-consistency-preserving actions (namely valid proof) can be evaluated. Draft mode is
-analogous to `super user mode' in Unix, in that it gives access to dangerous
-facilities. Everything that can be done in proof mode can be done in draft
-mode, but not vice versa.
-
 There is always a {\it current theory\/} which is the theory represented by
 the current theory segment together with its ancestry. The name of the current
 theory is returned by the \ML\ function:
 
 \begin{boxed}\index{current_theory@\ml{current\_theory}|pin}
 \begin{verbatim}
-   current_theory : void -> string
+   current_theory : unit -> string
 \end{verbatim}\end{boxed}
 
-Initially \HOL\ is in proof mode with current
-theory called \ml{HOL}, which is described in Section~\ref{HOL-theory}\index{theories, in HOL logic@theories, in \HOL\ logic!representation of|)}.
+On startup, the current theory of \HOL\ is \ml{scratch}, which is an
+empty theory, having the theory {\small\verb+bool+} as its sole
+parent. This is a very simple logical setting, for example, common types
+such as those for numbers and pairs are not present, and users typically load
+in whatever logical context they desire.
 
 \subsection{Primitive ML functions for creating theories}
 \label{theoryprims}
@@ -1483,71 +1590,6 @@ variables which occur in the term
 {\small\verb%\%}$x_1\ \cdots\ x_n$\ml{.}\  $t$\ml{[}$x_1$\ml{,}$\ \ldots\
 $\ml{,}$x_n$\ml{]}.
 \end{myenumerate}
-
-% =====================================================================
-% Following section deleted [TFM 90.12.01]
-
-% Specifications with assumptions\index{constant specifications, in HOL
-% logic@constant specifications, in \HOL\ logic!with
-% assumptions|(}\index{assumptions!in constant specifications} are sometimes
-% convenient. Rather than generalize the primitive mechanism to support this,
-% \HOL\ achieves the same effect by providing a way of encoding specifications
-% with assumptions as specifications without them.  This encoding uses the
-% infix constant
-% \ml{IS\_ASSUMPTION\_OF}\index{IS_ASSUMPTION_OF@\ml{IS\_ASSUMPTION\_OF}|(},
-% which has type \ml{bool->bool->bool} and is
-% defined (in the theory \ml{bool})
-% to be equal to the primitive constant \ml{==>}.  A theorem of the form
-% $t_1$\ml{,}$t_2$\ml{,}$\ldots$\ml{,}$t_n$\ml{\ |-\ }$t$ is logically
-% equivalent to the following theorem without assumptions:
-
-% \[\ml{|-\ }  \begin{array}[t]{@{}l}
-%         t_1\ \ml{IS\_ASSUMPTION\_OF}\\
-%           t_2\ \ml{IS\_ASSUMPTION\_OF}\\
-%           \qquad\qquad \vdots\\
-%           t_n\ \ml{IS\_ASSUMPTION\_OF}\ t\\
-% \end{array} \]
-
-% If the flag \ml{undisch\_defs} is \ml{true} (the default), then a
-% specification that encodes a theorem with assumptions using
-% \ml{IS\_ASSUMPTION\_OF} will be returned by the \ML\ definition retrieving
-% functions (\ie\ \ml{definition} and \ml{definitions}) as a theorem with
-% assumptions. For example, specifying \ml{c} by:
-
-% \begin{hol}\begin{verbatim}
-%    |- ?x. (?x.t[x]) IS_ASSUMPTION_OF t[x]
-% \end{verbatim}\end{hol}
-
-% \noindent will result in \ml{c} being defined\index{defining mechanisms, for
-% HOL logic@defining mechanisms, for \HOL\ logic} by:
-
-% \begin{hol}\begin{verbatim}
-%    ?x.t[x] |- t[c]
-% \end{verbatim}\end{hol}
-
-% \noindent(although, in fact, \ml{|- (?x.t[x]) IS\_ASSUMPTION\_OF t[c]}, is
-% what is actually stored). Note that the constant \ml{==>} could not be used
-% instead of \ml{IS\_ASSUMPTION\_OF}, because there would then be no way of
-% preventing the specification:
-
-
-% \begin{hol}\begin{verbatim}
-%    |- ?x.t[x] ==> t[c]
-% \end{verbatim}\end{hol}
-
-% \noindent being interpreted as the specification:
-
-% \begin{hol}\begin{verbatim}
-%    ?x.t[x] |- t[c]
-% \end{verbatim}\end{hol}
-
-% \noindent These two specifications are logically equivalent, but there may be
-% pragmatic reasons for wanting one form or the other.  \index{constant
-% specifications, in HOL logic@constant specifications, in \HOL\ logic!with
-% assumptions|)} \index{extension, of HOL logic@extension, of \HOL\ logic!by
-% constant specification|)}\index{constant specification extension, of HOL
-% logic@constant specification extension, of \HOL\ logic!ML function for@\ML\
-% function for|)} \index{IS_ASSUMPTION_OF@\ml{IS\_ASSUMPTION\_OF}|)}
 
 \subsubsection{Type definitions}\index{extension, of HOL logic@extension, of \HOL\ logic!by type definition|(}
 \label{type-defs}\index{type definitions, in HOL logic@type definitions, in \HOL\ logic|(}
@@ -2019,8 +2061,8 @@ The theory {\small\verb%bool%}\index{ind, the theory@\ml{ind}, the
 theory} also introduces the type {\small\verb%ind%}\index{ind, the type@\ml{ind}, the type} of
 {\it individuals\/}\index{individuals}
  and the {\it Axiom of Infinity\/}\index{axiom of infinity}. This axiom states
-that the set denoted by {\small\verb%ind%} is infinite. The four other axioms of
-the theory {\small\verb%bool%}, the rules of inference in
+that the set denoted by {\small\verb%ind%} is infinite. The four other
+axioms of the theory {\small\verb%bool%}, the rules of inference in
 Section~\ref{rules} and the Axiom of Infinity are, together, sufficient for
 developing all of standard mathematics. Thus, in principle, the user of the
 \HOL\ system should never need to make a non-definitional\index{axioms!dispensibility of adding}\index{definitional theories} theory. In
@@ -3285,30 +3327,31 @@ theorems, see \REFERENCE.
 \subsubsection{The theory {\tt numeral}}\label{numeral}\index{numeral,
 the construction of in HOL logic@\ml{numeral}, the construction of in \HOL\ logic}
 
-Associated with the theory \ml{num} are the numerals of type
-\ml{:num}\index{num, the type in HOL logic@\ml{num}, the type in \HOL\
-  logic}, conceptually an infinite family of constants: \ml{1},
-\ml{2}, \ml{3}, etc.  However, this conception is logically suspect
-within the \HOL\ framework, so all numerals other than $0$ are actually
-values, built up using the following (actual) constants:
+The type \ml{:num}\index{num, the type in \HOL\
+  logic@\ml{num}, the type in \HOL\ logic}, is typically thought of as
+  providing an infinite collection of numerals: \ml{1}, \ml{2}, \ml{3},
+  etc.  However, the \HOL\ logic has no way to define an infinite
+  family of constants, thus all numerals other than $0$ are actually
+  built up using the constants introduced by the following definitions:
 \begin{itemize}
 \item $\vdash \forall x.\, \ml{NUMERAL}(x) = x$
 \item $\vdash \forall x.\, \ml{NUMERAL\_BIT1}(x) = 2x + 1$
 \item $\vdash \forall x.\, \ml{NUMERAL\_BIT2}(x) = 2x + 2$
 \item $\vdash \ml{ALT\_ZERO} = 0$
 \end{itemize}
-\noindent The numeral $5$ is actually represented by the term
+
+\noindent For example, the numeral $5$ is represented by the term
 \[
    \ml{NUMERAL}(\ml{NUMERAL\_BIT1}(\ml{NUMERAL\_BIT2}(\ml{ALT\_ZERO})))
 \]
-but the parser and pretty-printer ``conspire'' to make such terms
-appear as numerals.  This binary representation for numerals allows for
-efficient calculation.  Theorems detailing the way in which such
-calculations can proceed are to be found in the theory \ml{numeral}.
+but the \HOL\ parser and pretty-printer make such terms
+appear as numerals. This binary representation for numerals allows for
+asymptotically efficient calculation. Theorems supporting arithmetic 
+calculations involving numerals can be found in the \ml{numeral} theory;
+these are mechanized by the \ml{reduce} library.
 
-For some purposes, it is useful to think of numerals as if equivalent
-to chains of \ml{SUC}-terms applied to 0.  This view is supported with
-the \ML\ function \ml{num\_CONV}, found in the \ml{numLib} library.
+Numerals are related to numbers via the derived inference rule
+\ml{num\_CONV}, found in the \ml{numLib} library.
 
 \begin{boxed}
 \index{num_CONV@\ml{num\_CONV}|pin}
@@ -3316,56 +3359,66 @@ the \ML\ function \ml{num\_CONV}, found in the \ml{numLib} library.
    numLib.num_CONV : term -> thm
 \end{verbatim}\end{boxed}
 
-\noindent which can be used to generate the ``\ml{SUC}'' equation for any
-non-zero numeral.  For example:
+\noindent \ml{num\_CONV} can be used to generate the ``\ml{SUC}''
+equation for any non-zero numeral.  For example:
 
 \setcounter{sessioncount}{1}
 \begin{session}\begin{verbatim}
-- load "numLib";
-> val it = () : unit
-- val num_CONV = numLib.num_CONV;
-> val num_CONV = fn : Term.term -> Thm.thm
+- load "numLib"; open numLib;
 
-- val thm1 = numLib.num_CONV ``1``;
-> val thm1 = |- 1 = SUC 0 : Thm.thm
+- num_CONV (Term `1`);
+> val it = |- 1 = SUC 0 : thm
 
-- val thm2 = num_CONV ``2``;
-> val thm2 = |- 2 = SUC 1 : Thm.thm
+- num_CONV (Term `2`);
+> val it = |- 2 = SUC 1 : thm
 
-- val thm3 = num_CONV ``3141592653``;
-> val thm3 = |- 3141592653 = SUC 3141592652 : Thm.thm
+- num_CONV (Term `3141592653`);
+> val it = |- 3141592653 = SUC 3141592652 : thm
 \end{verbatim}\end{session}
 
-\noindent (The \ml{num\_CONV} function does its work entirely within
-the HOL logic, using the definitions provided above; it is not
-extra-logical as it was in previous versions of \HOL{}.)
+\noindent The \ml{num\_CONV} function works purely by inference, using
+the definitions provided above.\footnote{In previous versions of \HOL,
+\ml{num\_CONV} would not prove its result, which was not in keeping with
+the \LCF\ approach, and which moreover made \ml{num\_CONV} dependent on
+the underlying implementation of numbers. This made \ml{num\_CONV}
+incomplete on \ML\ systems without arbitrary-sized numbers.}
 
 When other numeric theories are loaded (such as those for the reals or
-integers), numerals are overloaded so that the string \ml{``1``} can
+integers), numerals are overloaded so that the numeral {\small\verb+1+} can
 actually stand for a natural number, an integer or a real value.  In
-order to be absolutely unambiguous about which type is intended the
-user can use single character suffixes (`\ml{n}' for the natural
-numbers, and `\ml{i}' for the integers):
+order to precisely specify the desired type, the user can use single
+character suffixes (`\ml{n}' for the natural numbers, and `\ml{i}' for
+the integers): 
 
 \begin{session}
 \begin{verbatim}
 - load "integerTheory";
 > val it = () : unit
-- ``2``;
-<<HOL message: more than one resolution of overloading was possible.>>
-> val it = ``2`` : Term.term
-- type_of it;
-> val it = ``:int`` : Type.hol_type
 
-- ``2n``;
-> val it = ``2`` : Term.term
+- Term`2`;
+<<HOL message: more than one resolution of overloading was possible.>>
+> val it = `2` : term
+
 - type_of it;
-> val it = ``:num`` : Type.hol_type
-- ``21i``;
-> val it = ``21`` : Term.term
+> val it = `:int` : hol_type
+
+- Term`2n`;
+> val it = `2` : term
+
 - type_of it;
-> val it = ``:int`` : Type.hol_type
+> val it = `:num` : hol_type
+
+- type_of (Term `42i`);
+> val it = `:int` : hol_type
 \end{verbatim}\end{session}
+
+Question: what does $42i$ mean? There's a different map for the
+integers. Need to discuss it in the theory of integers.
+
+Question: are the character suffixes recognized by the direct
+construction routines?
+
+Question: how are new character suffixes created?
 
 
 \subsection{The theory {\tt list}}\label{avra_list}\index{list, the type operator in HOL logic@\ml{list}, the type operator in \HOL\ logic}
@@ -3432,43 +3485,30 @@ are proved and stored in the theory \ml{list}.
    NOT_CONS_NIL  |- !h t. ~(CONS h t = [])
 \end{verbatim}\end{hol}
 
-A derived rule\index{induction rule!for lists, in HOL logic@for lists, in \HOL\ logic}
- of structural induction called \ml{LIST\_INDUCT}\index{LIST_INDUCT@\ml{LIST\_INDUCT}}\index{LIST_INDUCT_TAC@\ml{LIST\_INDUCT\_TAC}} is provided,
-together with an associated structural induction tactic \ml{LIST\_INDUCT\_TAC}.
-These automate the use of the theorem \ml{list\_INDUCT}. See the \REFERENCE\
-documentation  on these two functions for details.
-
 The theorem  \ml{list\_Axiom}  shown  above  is  analogous   to  the  primitive
 recursion theorem\index{primitive recursion theorem!for lists} on the
 natural numbers discussed above in
 Section~\ref{num-prim-rec}.  It  states  the  validity  of  primitive recursive
 definitions on lists, and can be used to justify any such definition.  The \ML\
-functions
+function
 
 \begin{boxed}
-\index{new_list_rec_definition@\ml{new\_list\_rec\_definition}|pin}
-\index{new_infix_list_rec_definition@\ml{new\_infix\_list\_rec\_definition}}
+\index{new_recursive_definition@\ml{new\_recursive\_definition}|pin}
 \begin{verbatim}
-   new_list_rec_definition       : (string # term) -> thm
-   new_infix_list_rec_definition : (string # term) -> thm
+   new_recursive_definition : fixity -> thm -> string -> term -> thm
 \end{verbatim}\end{boxed}
 
-\noindent use this theorem to do automatic\index{primitive recursion theorem!automated use of, in HOL system@automated use of, in \HOL\ system}
+\noindent uses this theorem to do automatic\index{primitive recursion theorem!automated use of, in HOL system@automated use of, in \HOL\ system}
  proofs of the existence of primitive
 recursive functions on lists and then make constant specifications to introduce
-constants that  denote  such  functions.   They are
-analogous to the corresponding functions
-\ml{new\_prim\_rec\_definition} and      \ml{new\_infix\_prim\_rec\_definition}
-discussed in Section~\ref{num-prim-rec}.  For example, the \HOL\ system defines
-a length function, \ml{LENGTH}, on lists  by
-the  primitive recursive  definition on lists
-shown below:
+constants that  denote  such  functions.  For example, the \HOL\ system defines
+a length function, \ml{LENGTH}, on lists by the primitive recursive
+definition on lists shown below:
 
 \begin{hol}\begin{verbatim}
-   new_list_rec_definition
-     (`LENGTH`,
-     "(LENGTH NIL = 0) /\
-      (!h:*. !t. LENGTH (CONS h t) = SUC (LENGTH t))")
+   new_recursive_definition Prefix list_Axiom "LENGTH"
+      (Term `(LENGTH NIL = 0) /\
+             (!h t. LENGTH (h::t) = SUC (LENGTH t))`)
 \end{verbatim}\end{hol}
 
 \noindent When this \ML\
@@ -3479,12 +3519,12 @@ stores the resulting theorem:
 
 
 \begin{hol}\begin{verbatim}
-    LENGTH   |- (LENGTH[] = 0) /\ (!h t. LENGTH(CONS h t) = SUC(LENGTH t))
+    LENGTH   |- (LENGTH[] = 0) /\ (!h t. LENGTH(h::t) = SUC(LENGTH t))
 \end{verbatim}\end{hol}
 
 \noindent in the current theory (in this case, the theory \ml{list}).
 
-Using  \ml{new\_list\_rec\_definition},   the  predicate   \ml{NULL}  and  the
+The predicate \ml{NULL}  and  the
 selectors \ml{HD} and  \ml{TL} are  defined\index{list definitions, in HOL logic@list definitions, in \HOL\ logic}
  in  the theory  \ml{list} by the
 specifications:
@@ -3497,9 +3537,9 @@ specifications:
 \begin{verbatim}
    NULL |- NULL[] /\ (!h t. ~NULL(CONS h t))
 
-   HD   |- !(h:*) t. HD(CONS h t) = h
+   HD   |- !h t. HD(CONS h t) = h
 
-   TL   |- !(h:*) t. TL(CONS h t) = t
+   TL   |- !h t. TL(CONS h t) = t
 \end{verbatim}\end{hol}
 
 \noindent The following primitive recursive definitions of functions on lists
@@ -3524,28 +3564,26 @@ are also made in the theory \ml{list}:
 \index{EVERY, the HOL constant@\ml{EVERY}, the \HOL\ constant}
 \index{EVERY_DEF@\ml{EVERY\_DEF}}
 \begin{verbatim}
-   SUM        |- (SUM[] = 0) /\ (!h t. SUM(CONS h t) = h + (SUM t))
+   SUM        |- (SUM [] = 0) /\ (!h t. SUM(h::t) = h + SUM t)
 
-   APPEND     |- (!l. APPEND[]l = l) /\
-                 (!l1 l2 h. APPEND(CONS h l1)l2 = CONS h(APPEND l1 l2))
+   APPEND     |- (!l. APPEND [] l = l) /\
+                 (!l1 l2 h. APPEND (h::l1) l2 = h::APPEND l1 l2)
 
-   FLAT       |- (FLAT[] = []) /\ (!h t. FLAT(CONS h t) = APPEND h(FLAT t))
+   FLAT       |- (FLAT[] = []) /\ (!h t. FLAT(h::t) = APPEND h (FLAT t))
 
-   LENGTH     |- (LENGTH[] = 0) /\ (!h t. LENGTH(CONS h t) = SUC(LENGTH t))
+   LENGTH     |- (LENGTH [] = 0) /\ (!h t. LENGTH (h::t) = SUC(LENGTH t))
 
-   MAP        |- (!f. MAP f[] = []) /\
-                 (!f h t. MAP f(CONS h t) = CONS(f h)(MAP f t))
+   MAP        |- (!f. MAP f [] = []) /\
+                 (!f h t. MAP f (h::t) = f h::MAP f t)
 
-   EL         |- (!l. EL 0 l = HD l) /\ (!l n. EL(SUC n)l = EL n(TL l))
+   EL         |- (!l. EL 0 l = HD l) /\ (!l n. EL (SUC n)l = EL n (TL l))
 
-   EVERY_DEF  |- (!P. EVERY P[] = T) /\
-                 (!P h t. EVERY P(CONS h t) = P h /\ EVERY P t)
+   EVERY_DEF  |- (!P. EVERY P [] = T) /\
+                 (!P h t. EVERY P (h::t) = P h /\ EVERY P t)
 \end{verbatim}\end{hol}
 
-\noindent There is also a selection of pre-proved theorems about lists stored
-in the theory \ml{list}. These are autoloaded when their names are first
-mentioned during any \HOL\ session. For a complete list of available theorems,
-see \REFERENCE.
+\noindent For a complete list of available theorems about lists, see
+\REFERENCE. 
 
 \index{list theorems, in HOL logic@list theorems, in \HOL\ logic|)} \index{
 lists, in HOL logic@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (lists, in \HOL\
@@ -4031,7 +4069,6 @@ true : bool
 #"DURING x::(m,n). p x";;
 "RES_DURING(m,n)(\x. p x)" : term
 \end{verbatim}\end{session}
-
 
 
 \subsection{The theory {\tt option}}
@@ -5093,358 +5130,6 @@ logic is summarized in the table below.
 \end{center}
 
 
-\subsection{Sticky types and default types}
-\label{stickytypes}
-
-\index{sticky types, in HOL logic@sticky types, in \HOL\ logic|(}
-\index{types, in HOL logic@types, in \HOL\ logic!default|(}
-\index{types, in HOL logic@types, in \HOL\ logic!sticky|(}
-\index{type checking, in HOL logic@type checking, in \HOL\ logic!sticky types in|(}
-\index{HOL system@\HOL\ system!sticky types in|(}
-\index{default types, in HOL logic@default types, in \HOL\ logic|(}
-The quotation type checker  normally requires that there be enough information
-in a quotation to fully determine the types of all subterms of the term being
-type checked. This information comes from two sources:
-
-\begin{myenumerate}
-\item the generic\index{types, in HOL logic@types, in \HOL\ logic!generic}
- types of constants, and
-\item explicit type\index{types, in HOL logic@types, in \HOL\ logic!explicit printing of}
- information given after a colon.
-\end{myenumerate}
-
-\noindent If sticky types are  activated (by  setting the  flag \ml{sticky} to
-\ml{true}) then the last type a variable had in  a session  is remembered, and
-this is used as a default type during type checking.   The sticky  type is only
-used, however, if the variable in question is completely  unconstrained by its
-context in the quotation.  If the context partially  determines the  type of a
-variable, then sticky types are not used.  For example, in the term \ml{"f 1"}
-the variable \ml{f} is constrained to have a function type, but the range type
-is not  determined.    In  the quotation  \ml{"(f,1)"} the  variable \ml{f} is
-completely unconstrained.   In  the latter  case an  (appropriate) sticky type
-would resolve the typing, but in the former  it would  not.   Sticky types can
-never cause  the type checking  of a  quotation to  fail when  it would succeed
-without them.
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#set_flag(`sticky`,true);;
-false : bool
-
-#"f:num->num";;
-"f" : term
-
-#"f 1";;
-Indeterminate types:  "f:num -> ?"
-
-evaluation failed     types indeterminate in quotation
-
-#"f";;
-"f" : term
-\end{verbatim}\end{session}
-
-A name can be given a sticky type explicity with the function:
-
-\begin{boxed}
-\index{set_sticky_type@\ml{set\_sticky\_type}|pin}
-\begin{verbatim}
-   set_sticky_type : string # type -> void
-\end{verbatim}\end{boxed}
-
-\noindent  This sets sticky types whether or not sticky
-types are active.
-
-Note that the flag \ml{sticky} controls whether types  are automatically stuck
-onto names; it does not control  whether such  sticky types  are actually used
-during type checking:  sticky types are always used if they are defined.
-
-Sticky types can be removed with the function:
-
-\begin{boxed}
-\index{remove_sticky_type@\ml{remove\_sticky\_type}|pin}
-\begin{verbatim}
-   remove_sticky_type : string -> type
-\end{verbatim}\end{boxed}
-
-\noindent The sticky type is returned (failure if the variable does not
-have a sticky type). A function to return the sticky type of a variable
-can be defined by:
-
-\begin{hol}\begin{verbatim}
-   let sticky_type v =
-    let ty = remove_sticky_type v
-    in
-    (set_sticky_type(v,ty);ty)
-\end{verbatim}\end{hol}
-
-\noindent The list of sticky types active in a session is computed by the
-function:
-
-\begin{boxed}
-\index{sticky_list@\ml{sticky\_list}|pin}
-\begin{verbatim}
-   sticky_list : void -> (string # type) list
-\end{verbatim}\end{boxed}\index{default types, in HOL logic@default types, in \HOL\ logic|)}\index{HOL system@\HOL\ system!sticky types in|)}\index{type checking, in HOL logic@type checking, in \HOL\ logic!sticky types in|)}
-\index{types, in HOL logic@types, in \HOL\ logic!sticky|)}
-\index{types, in HOL logic@types, in \HOL\ logic!default|)}
-\index{sticky types, in HOL logic@sticky types, in \HOL\ logic|)}
-
-\subsection{Interface maps}
-
-An interface map\index{interface maps|(}\index{HOL system@\HOL\ system!interface maps in|(} is a list of pairs of strings:
-
-\begin{hol}\begin{alltt}
-   [`\m{a\sb{1}}`,`\m{c\sb{1}}`; \m{\ldots} ;`\m{a\sb{n}}`,`\m{c\sb{n}}`]
-\end{alltt}\end{hol}
-
-
-If such a map is active, then whenever $a_i$ (for $1\leq i \leq n$) occurs as a
-constant or  variable  in  a quoted  term, it  is translated  (by the quotation
-parser) to  $c_i$,  which  must  be  an  existing constant  (`$a$' is for
-`abbreviation' and `$c$' for `constant').
-
-The function:
-
-\begin{boxed}
-\index{set_interface_map@\ml{set\_interface\_map}|pin}
-\begin{verbatim}
-   set_interface_map : string list -> string list
-\end{verbatim}\end{boxed}
-
-\noindent installs an interface map (the previous map is undone and returned).
-The effect of executing:
-
-\begin{hol}\begin{alltt}
-   set_interface_map [`\m{a\sb{1}}`,`\m{c\sb{1}}`; \m{\ldots} ;`\m{a\sb{n}}`,`\m{c\sb{n}}`];;
-\end{alltt}\end{hol}
-
-\noindent is to install
-\ml{[`\m{a_1}`,`\m{c_1}`;\m{\ \ldots\ } ;`\m{a_n}`,`\m{c_n}`]}
-as the current interface map.  Any
-binder\index{binders, in HOL logic@binders, in \HOL\ logic!under interface maps} or infix\index{infixes, in HOL logic@infixes, in \HOL\ logic!under interface maps} status (including precedences)\index{precedence, in HOL logic@precedence, in \HOL\ logic!under interface maps} of $c_i$ is propagated
-to $a_i$ in the order:
-
-
-\[ {\it status\/}(c_1)\;\;\leadsto\;\; a_1\;\; {\rm then}\;\;
-   {\it status\/}(c_2)\;\;\leadsto\;\; a_2\;\; {\rm then}\;\;\;
-    \ldots\;\;\;{\rm then}\;\; {\it status\/}(c_n)\;\;\leadsto\;\;a_n \]
-
-
-
-\noindent This order can be important. For example, if $ix$ is the
-name of an
-infixed constant and $c$ the name of a non-infixed
-constant, then executing:
-
-{\def\con#1{\mbox{\normalsize\sf #1}}
-\begin{hol}\begin{alltt}
-   set\_interface\_map[`\m{c}`,`\m{ix}`; `\m{ix}`,`\m{c}`];;
-\end{alltt}\end{hol}}
-
-
-\noindent will result in both $c$ and $ix$ being infixes; but
-executing:
-
-{\def\con#1{\mbox{\normalsize\sf #1}}
-\begin{hol}\begin{alltt}
-   set\_interface\_map[`\m{ix}`,`\m{c}`; `\m{c}`,`\m{ix}`];;
-\end{alltt}\end{hol}}
-
-
-\noindent results in neither $c$ nor $ix$ being an infix:
-
-The current interface map is given by:
-
-
-\begin{boxed}
-\index{interface_map@\ml{interface\_map}|pin}
-\begin{verbatim}
-   interface_map : void -> string list
-\end{verbatim}\end{boxed}
-
-\index{printing, in HOL logic@printing, in \HOL\ logic!under interface maps|(}
-To avoid parsing and printing ambiguities, maps must be  single valued (\ie\
-one  abbreviation  cannot  abbreviate  two  constants)  and one-to-one (\ie\
-different abbreviations must map to  different constants).   Furthermore, if
-$a_i$ is already a constant  then it  must be  given an  abbreviation by the
-map.  For example:
-
-\begin{hol}\begin{verbatim}
-   set_interface_map[`+`,`APPEND`];;
-\end{verbatim}\end{hol}
-
-\noindent is not allowed because it would make it unclear how to print
-pre-existing terms involving \ml{+}. To avoid this problem, an abbreviation
-for the old \ml{+} must also be provided.
-
-The flag \ml{interface\_print}\index{interface_print@\ml{interface\_print}}
- determines whether the inverse of the current
-interface map is applied when printing.
-This should be useful for debugging as
-it shows what is `really there'\index{printing, in HOL logic@printing, in \HOL\ logic!under interface maps|)}.
-
-The following functions are also provided:
-
-
-\begin{boxed}
-\index{is_constant@\ml{is\_constant}|pin}
-\index{is_infix@\ml{is\_infix}|pin}
-\index{is_binder@\ml{is\_binder}|pin}
-\index{constants, in HOL logic@constants, in \HOL\ logic!indicator function for}
-\begin{verbatim}
-   is_constant : string -> bool
-   is_infix    : string -> bool
-   is_binder   : string -> bool
-\end{verbatim}\end{boxed}
-
-\noindent these tell whether a string is the name of a constant, infix\index{infixes, in HOL logic@infixes, in \HOL\ logic!indicator functions for} or
-binder\index{binders, in HOL logic@binders, in \HOL\ logic!indicator functions for} respectively (note: being an infix or binder entails being a constant).
-
-The function
-
-\begin{boxed}
-\index{allowed_constant@\ml{allowed\_constant}|pin}
-\begin{verbatim}
-   allowed_constant : string -> bool
-\end{verbatim}\end{boxed}
-
-\noindent tests whether a string has the correct lexical structure to be a
-constant.
-
-The function:
-
-\begin{boxed}
-\index{draft_mode@\ml{draft\_mode}|pin}
-\begin{verbatim}
-   draft_mode : void -> bool
-\end{verbatim}\end{boxed}
-
-\noindent returns \ml{true} in draft mode\index{draft mode, in HOL system@draft mode, in \HOL\ system}\footnote{See Section~\ref{theoryfns}
-for an explanation of `draft mode'.} and \ml{false} otherwise.
-
-The following sessions illustrate the use of interface maps (the comments are
-provided by the author, not by the system). They
-also show the great potential of interface maps for
-generating confusion! The first session illustrates checking that
-interface maps are well formed.
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#set_interface_map[`+`,`APPEND`];;
-evaluation failed     + would become hidden
-
-#set_interface_map[`+`,`APPEND`;`+`,`++`];;
-evaluation failed     interface map not single valued
-
-#set_interface_map[`+`,`APPEND`;`++`,`+`];;
-[] : (string # string) list
-\end{verbatim}\end{session}
-
-\noindent The next session shows the propagation of infix status by the interface map declared above:
-
-\begin{session}\begin{verbatim}
-#"1 ++ 2";;                           % ++ is not an infix. %
-Badly typed application of:  "1"
-   which has type:           ":num"
-to the argument term:        "++"
-   which has type:           ":num -> (num -> num)"
-
-evaluation failed     mk_comb in quotation
-
-#"++ 1 2";;
-"++ 1 2" : term
-
-#set_interface_map[`++`,`+`; `+`,`APPEND`];;
-[(`+`,`APPEND`); (`++`,`+`)] : (string # string) list
-
-#"1 ++ 2";;
-"1 ++ 2" : term
-\end{verbatim}\end{session}
-
-\noindent Setting the flag \ml{interface\_print} to \ml{false}
-causes the true form of terms to be shown.
-
-\begin{session}\begin{verbatim}
-#set_flag(`interface_print`, false);;
-true : bool
-
-#"1 ++ 2";;
-"1 + 2" : term
-
-#dest_const "++";;           % This illustrates potential for confusion. %
-`+`,":num -> (num -> num)" : (string # type)
-\end{verbatim}\end{session}
-
-\noindent Continuing:
-\vfill
-\newpage
-\begin{session}\begin{verbatim}
-#"[1]+[2]";;                 % APPEND is not an infix. %
-Badly typed application of:  "[1]"
-   which has type:           ":(num)list"
-to the argument term:        "APPEND"
-   which has type:           ":(?1)list -> ((?1)list -> (?1)list)"
-
-evaluation failed     mk_comb in quotation
-
-#"+[1][2]";;
-"APPEND[1][2]" : term
-
-#"APPEND [1] [2]";;
-"APPEND[1][2]" : term
-\end{verbatim}\end{session}
-
-\noindent Here is an example illustrating the kind of thing to avoid.
-
-\begin{session}\begin{verbatim}
-#ADD1;;                     % Built in theorem. %
-Theorem ADD1 autoloaded from theory `arithmetic`.
-ADD1 = |- !m. SUC m = m + 1
-
-|- !m. SUC m = m + 1
-
-#set_flag(`interface_print`, true);;
-false : bool
-
-#ADD1;;
-|- !m. SUC m = m ++ 1
-
-#set_interface_map[`+`,`-`; `-`,`+`];;
-[`++`,`+`; `+`,`APPEND`] : (string # string) list
-
-#ADD1;;
-|- !m. SUC m = m - 1
-\end{verbatim}\end{session}
-
-There are some subtleties and rough edges to the current implementation
-of interface maps. For example, any special parsing or printing properties
-of special constants (\ml{!}, \ml{?}, {\small\verb%/\%}, {\small\verb%\/%},
-\etc) are transferred to the names that abbreviate them. For example, notice the
-disappearing spaces in the next session.
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#set_interface_map[`Forall`,`!`; `Exists`,`?`];;
-[] : (string # string) list
-
-#"Forall x. Exists y. x < y";;
-"Forallx. Existsy. x < y" : term
-\end{verbatim}\end{session}
-
-\noindent This happens because the printer does not print spaces after
-\ml{!} and \ml{?} and this behaviour gets transferred to \ml{Forall} and
-\ml{Exists} by the interface map.
-It would be straightforward, but rather messy, to have the printer insert
-spaces after \ml{Forall} and \ml{Exists}. This will be implemented, and other
-changes or additions, if experience indicates it is sensible.
-Interface maps are still rather
-experimental, and it is expected that various details will need
-modification as experience is gained. A feature
-not currently implemented, but possibly useful, would
-allow the relative precedences of user-defined infixes to be adjusted.
-\index{HOL system@\HOL\ system!interface maps in|)}
-\index{interface maps|)}
-
 \subsection{Hiding constants}
 \label{hidden}
 
@@ -5591,92 +5276,3 @@ previous setting  is
 returned.    Executing  \ml{timer}$\ b$  is equivalent to
 setting the flag \ml{timing} to the value $b$.
 
-\subsection{User-programmable quotation typechecker}
-\index{quotation, in HOL logic@quotation, in \HOL\ logic!typechecker for|(}
-
-The typechecker for \HOL\ quotations contains a number of arbitrary
-design decisions. Several people have suggested changes, e.g. that
-full Hindley/Milner type inference be performed. Rather than try to
-create a single new improved typechecker, a facility is now provided
-that enables the user to write his or her own one and then to install
-it in the system.
-
-\index{preterms|(}
-The \ML\ abstract type {\small\verb%preterm%} represents the parse trees of \HOL\
-terms. A typechecker is a function of type {\small\verb%preterm->term%}. If the flag
-\ml{preterm} is set to \ml{true} (the default is \ml{false}), then \HOL\ will use
-whatever \ML\ function is currently bound to the name
-\ml{preterm\_handler} as
-the quotation typechecker. The way this works is that when
-\ml{preterm} is true the parser produces a preterm rather than a term,
-and then wraps a call of \ml{preterm\_handler}
-around the quotation.\index{type checking, in HOL logic@type checking,
-in \HOL\ logic!user programmed} Other uses of preterms are possible, for example
-as patterns for describing terms.
-
-The definition of the \ML\ type {\small\verb%preterm%} is:
-
-\begin{hol}\index{preterm@\ml{preterm}!the type}\begin{alltt}
-   rectype preterm =
-     preterm_var      of string                        \({\it Variables}\)
-   | preterm_const    of string                        \({\it Constants}\)
-   | preterm_comb     of preterm * preterm             \({\it Combinations}\)
-   | preterm_abs      of preterm * preterm             \({\it Abstractions}\)
-   | preterm_typed    of preterm * type                \({\it Explicit typing}\)
-   | preterm_antiquot of term                          \({\it Antiquotation}\)
-\end{alltt}\end{hol}
-
-The function:
-
-\begin{boxed}\index{preterm_to_term@\ml{preterm\_to\_term}|pin}
-\begin{verbatim}
-   preterm_to_term : preterm -> term
-\end{verbatim}\end{boxed}
-
-\noindent invokes the standard \HOL\ typechecker on a preterm and returns the
-resulting typechecked term (or causes the standard error message).\index{preterms|)}
-
-
-
-The following is a rather contrived example:
-
-\setcounter{sessioncount}{1}
-\begin{session}\index{preterm_handler@\ml{preterm\_handler}|pin}
-\begin{verbatim}
-#letref p_reg = preterm_var `x`;;
-p_reg = preterm_var `x` : preterm
-
-#let preterm_handler p = p_reg:=p;
-                         print_string `Typechecking ... `;
-                         print_newline();
-                         preterm_to_term p;;
-preterm_handler = - : (preterm -> term)
-\end{verbatim}\end{session}
-
-\begin{session}
-\begin{verbatim}
-#set_flag(`preterm`,true);;
-false : bool
-
-#"x+y";;
-Typechecking ...
-"x + y" : term
-
-#p_reg;;
-preterm_comb((preterm_comb((preterm_const `+`), preterm_var `x`)),
-             preterm_var `y`)
-: preterm
-\end{verbatim}\end{session}
-
-\noindent Different top-level typechecking can be defined by using a
-different definition of the function
-\ml{preterm\_handler}. Note that quotations and their typechecking
-is purely a `user interface' feature, so changing the typechecker does
-not compromise the logical soundness of \HOL.\index{quotation, in HOL logic@quotation, in \HOL\ logic!typechecker for|)}
-
-
-
-%%% Local Variables:
-%%% mode: latex
-%%% TeX-master: "description"
-%%% End:
