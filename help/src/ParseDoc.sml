@@ -108,7 +108,6 @@ fun find_doc ss = let
   val _ = isEmpty ssa orelse raise ParseError "Text before \\DOC"
   val (docpart, rest) = position "\n" ss
   val docheader = slice(docpart, 1, NONE)
-  val _ = size docheader > 4 orelse raise ParseError "Empty \\DOC part"
 in
   (docheader, slice(rest,1,NONE))
 end
@@ -201,9 +200,34 @@ fun parse_type ss =
   in elim_double_braces ss'
   end
 
-fun trimws [] = []
-  | trimws [TEXT ss] = [TEXT (dropr Char.isSpace ss)]
-  | trimws (x::xs) = x :: trimws xs
+fun trimws mlist =
+    case mlist of
+      [] => []
+    | [TEXT ss] => let val newss = dropr Char.isSpace ss
+                   in
+                     if size newss > 0 then [TEXT newss] else []
+                   end
+    | (x::xs) => x :: trimws xs
+
+
+
+(* if the firstpass has an empty DOC component, then give it a full one
+   generated from the name of the file. *)
+fun name_from_fname fname = let
+  val ss0 = all (Path.file fname)
+  val (ss1,_) = position ".doc" ss0
+in
+  case tokens (equal #".") ss1 of
+    [] => raise Fail "Can't happen"
+  | [x] => x
+  | (_::y::_) => y
+end
+
+fun install_doc_part fname sections =
+    case sections of
+      (FIELD("DOC", []) :: ss) =>
+         FIELD("DOC", [TEXT (name_from_fname fname)]) :: ss
+    | x => x
 
 fun parse_file docfile =
  let fun db_out (BRKT ss) = BRKT (elim_double_braces ss)
@@ -218,8 +242,9 @@ fun parse_file docfile =
                              (dropr (Char.isSpace \/ equal #".") ss))
          | otherwise =>
            FIELD (tag, trimws (List.map db_out (paragraphs (markup ss))))
+     val firstpass = List.map section (to_sections (fetch_contents docfile))
   in
-     List.map section (to_sections (fetch_contents docfile))
+   install_doc_part docfile firstpass
   end handle ParseError s => raise ParseError (docfile^": "^s)
            | x => (warn ("Exception raised in "^docfile^"\n"); raise x)
 
