@@ -4,7 +4,8 @@
 
 \SYNOPSIS General-purpose function definition facility.
 
-\KEYWORDS definition, recursive function, mutual recursion.
+\KEYWORDS definition, abbreviation, recursive function, 
+          mutual recursion, recursion schemas.
 
 \DESCRIBE
 
@@ -14,7 +15,11 @@ successful, the specification is derived from the definition. The
 derived specification is returned to the user, and also stored in the
 current theory. {Define} may be used to define abbreviations, recursive
 functions, and mutually recursive functions. Also, recursion schemes may
-be processed by {Define}. 
+be processed by {Define}. An induction theorem may be stored in the
+current theory as a by-product of {Define}'s execution. This induction
+theorem follows the recursion structure of the function, and may be
+useful when proving properties of the function.
+
 
 {Define} takes as input a quotation representing a conjunction of
 equations. The specified function(s) may be phrased using ML-style 
@@ -25,21 +30,22 @@ following grammar:
         spec ::= <eqn>
              |   <eqn> /\ <spec>
 
-         eqn ::= <fname> <pat> ... <pat> = <term>
+         eqn ::= <alphanumeric> <pat> ... <pat> = <term>
 
 
          pat ::= <variable>
              |   <wildcard>
-             |   C_n <pat>_1 ... <pat>_n
+             |   <cname>                          (* 0-ary constructor *)
+             |   (<cname>_n <pat>_1 ... <pat>_n)  (* constructor appl. *)
  
-       fname ::= <alphanumeric>
+       cname ::= <alphanumeric> | <symbolic>
 
     wildcard ::= _  
              |   _<wildcard>
 
 }
 
-When processing a specification of a recursive function, {Define} must
+When processing the specification of a recursive function, {Define} must
 perform a termination proof. It automatically constructs termination
 conditions for the function, and invokes a termination prover in an
 attempt to prove the termination conditions.
@@ -53,16 +59,16 @@ succeed or fail.
 
 If it succeeds, then {Define} stores the specified equations in the
 current theory segment. An induction theorem customized for the defined
-function is also stored in the current segment. (Note, however, that an
-induction theorem for primitive recursive functions is not stored, since
-that would be identical to the induction theorem resulting from the
-declaration of the datatype.)
+function is also stored in the current segment. Note, however, that an
+induction theorem is not stored for primitive recursive functions, since
+that theorem would be identical to the induction theorem resulting from
+the declaration of the datatype.
 
 If the termination proof fails, then {Define} fails.  
 
-In general, {Define} attempts to derive exactly the conjunction of
-specified equations. However, the rich syntax of patterns allows some
-ambiguity. For example, the input
+In general, {Define} attempts to derive exactly the specified
+conjunction of equations. However, the rich syntax of patterns allows
+some ambiguity. For example, the input
 
 {    Define `(f 0 _ = 1)
        /\    (f _ 0 = 2)`
@@ -72,21 +78,21 @@ is ambiguous at {f 0 0}: should the result be {1} or {2}? The system
 attempts to resolve this ambiguity in the same way as compilers and
 interpreters for functional languages. Namely, a conjunction of
 equations is treated as being processed left-conjunct first, followed by
-processing the right conjunct. In the example above, the right-hand side
-of the first clause is taken as the value of {f 0 0}. In the
-implementation, ambiguities arising from such overlapping patterns are
-systematically translated away in a pre-processing step.  
+processing the right conjunct. Therefore, in the example above, the
+right-hand side of the first clause is taken as the value of {f 0 0}. In
+the implementation, ambiguities arising from such overlapping patterns
+are systematically translated away in a pre-processing step.
 
 Another case of vagueness in patterns is shown above: the specification
 is `incomplete` since it does not tell us how {f} should behave when
 applied to two non-zero arguments: e.g., {f (SUC m) (SUC n)}. In the
 implementation, such missing clauses are filled in, and have the value
-{ARB}. This `pattern-completion` step is a way of turning descriptions of 
-partial functions into total functions suitable for HOL. However, since
-the user has failed to completely specify the function, the system takes
-that as a hint that the user is not interested in using the function
-at the missing-but-filled-in clauses, thus such clauses are dropped from
-the final theorem.
+{ARB}. This `pattern-completion` step is a way of turning descriptions
+of partial functions into total functions suitable for HOL. However,
+since the user has not completely specified the function, the system
+takes that as a hint that the user is not interested in using the
+function at the missing-but-filled-in clauses, and so such clauses are
+dropped from the final theorem.
 
 In summary, {Define} will derive the unambiguous and complete
 equations
@@ -119,21 +125,18 @@ clause is taken.
 
 Since the names used to store elements in the current theory segment
 are transformed into ML bindings after the theory is exported, it is
-important that every invocation of {Define} generates names that will 
+required that every invocation of {Define} generates names that will 
 be valid ML identifiers. For this reason, {Define} requires alphanumeric
 function names. If one wishes to define symbolic identifiers, the
 ML function {xDefine} should be used.
 
-An induction theorem may be stored in the current theory as a by-product
-of {Define}'s execution. This induction theorem follows the recursion
-structure of the function, and is often useful when proving properties
-of the function.
-
 
 \FAILURE
 
-If the input to {Define} fails to parse and typecheck, {Define} will
-fail.
+{Define} fails if its input fails to parse and typecheck.
+
+{Define} fails if the name of the function being defined is not
+alphanumeric.
 
 If {Define} cannot prove the termination of the specified recursive
 function, then {Define} fails. In that case, one has to embark on the
@@ -175,7 +178,6 @@ theorem.
     Define `(flatten  []           = [])
        /\   (flatten ([]::rst)     = flatten rst)
        /\   (flatten ((h::t)::rst) = h::flatten(t::rst))`
-
 
     <<HOL message: inventing new type variable names: 'a>>
 
@@ -267,12 +269,12 @@ parameters only occur on right hand sides, is transformed into one
 in which the parameters become arguments to the function being defined.
 This is the expected behaviour. 
 
-{Define} may be used to define mutually recursive functions. Suppose we
-define a datatype of propositions. Then a function for putting a 
-proposition into negation normal form can be defined:
+{Define} may be used to define mutually recursive functions. We can
+define a datatype of propositions and a function for putting a
+proposition into negation normal form as follows:
 
 {
-    Hol_datatype 
+    - Hol_datatype 
         `prop = VAR of 'a
               | NOT of prop
               | AND of prop => prop
@@ -360,13 +362,23 @@ input to {Define} should instead be a term. However, some important
 pre-processing happens in {Define} that would not be possible if the 
 input was a term.
 
-{Define} can be thought of as a mechanization of the well-founded
+{Define} can be thought of as a mechanization of a well-founded
 recursion theorem, which can be found in {relationTheory}.
 
 {Define} currently has a rather weak termination prover. For example, it
 always fails to prove the termination of nested recursive functions. 
 
+{bossLib.Define} is most commonly used. {TotalDefn.Define} is identical
+to {bossLib.Define}, except that the {TotalDefn} structure comes with
+less baggage---it depends only on {numLib} and {pairLib}---than
+{bossLib}.
 
-\SEEALSO xDefine, Hol_defn, tgoal, tprove, WF_REL_TAC, recInduct.
+{Define} automatically adds the definition it makes into the hidden
+`compset` accessed by {bossLib.EVAL}. 
+
+
+\SEEALSO 
+
+xDefine, Hol_defn, tgoal, tprove, WF_REL_TAC, recInduct.
 
 \ENDDOC

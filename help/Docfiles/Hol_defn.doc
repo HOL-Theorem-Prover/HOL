@@ -1,0 +1,227 @@
+\DOC Hol_defn
+
+\TYPE {Hol_defn : string -> term quotation -> defn}
+
+\SYNOPSIS General-purpose function definition facility.
+
+\KEYWORDS definition, recursive definition.
+
+
+\DESCRIBE
+
+{Hol_defn} allows one to define functions, recursive functions in
+particular, while deferring termination issues.  {Hol_defn} should be
+used to define a function when {Define} or {xDefine} fails, or when the
+context required by {Define} or {xDefine} is too much.
+
+{Hol_defn} takes the same arguments as {xDefine}.
+
+{Hol_defn s q} automatically synthesizes termination constraints for the
+function specified by {q}, defines the function, and proves an induction
+theorem. All these results are packaged up in the returned {defn}
+value. The {defn} type is best thought of as an intermediate step in the
+process of deriving the unconstrained equations and induction theorem
+for the function.
+
+\FAILURE
+
+{Hol_defn s q} fails if {s} is not an alphanumeric identifier.
+
+{Hol_defn s q} fails if {q} fails to parse or typecheck.
+
+{Hol_defn} may extract unsatisfiable termination conditions when asked
+to define a higher-order recursion involving a higher-order function
+that the termination condition extraction mechanism of {Hol_defn} is
+unaware of.
+
+
+\EXAMPLE
+
+The following examples use the fact that a prettyprinter for the {defn}
+type has been installed, and prints out a summary of the known
+information on the function.
+
+{
+    - Hol_defn "qsort"
+          `(qsort ___ [] = []) /\
+           (qsort ord (x::rst) = 
+              APPEND (qsort ord (FILTER ($~ o ord x) rst))
+                (x :: qsort ord (FILTER (ord x) rst)))`;
+
+    <<HOL message: inventing new type variable names: 'a>>
+    > val it =
+        HOL function definition (recursive)
+    
+        Equation(s) :
+         [...]
+        |- (qsort v0 [] = []) /\
+           (qsort ord (x::rst) =
+            APPEND (qsort ord (FILTER ($~ o ord x) rst))
+              (x::qsort ord (FILTER (ord x) rst)))
+    
+        Induction :
+         [...]
+        |- !P.
+             (!v0. P v0 []) /\
+             (!ord x rst.
+                P ord (FILTER ($~ o ord x) rst) /\ 
+                P ord (FILTER (ord x) rst) ==> P ord (x::rst))
+               ==> !v v1. P v v1
+    
+        Termination conditions :
+          0. WF R
+          1. !rst x ord. R (ord,FILTER ($~ o ord x) rst) (ord,x::rst)
+          2. !rst x ord. R (ord,FILTER (ord x) rst) (ord,x::rst)
+}
+
+Other styles of function that {Define} fails on currently are nested
+recursion and higher-order recursion; in these cases, {Hol_defn} should
+be used.  In the following we first define a standard nested recursion.
+In processing this definition, an auxiliary function {N_aux} is defined. 
+The termination conditions of {N} are phrased in terms of {N_aux}
+for technical reasons.
+
+{
+    Hol_defn "ninety1"
+        `N x = if x>100 then x-10 
+                        else N(N(x+11))`;
+
+    > val it =
+        HOL function definition (nested recursion)
+    
+        Equation(s) :
+         [...] |- N x = (if x > 100 then x - 10 else N (N (x + 11)))
+    
+        Induction :
+         [...]
+        |- !P.
+             (!x. (~(x > 100) ==> P (x + 11)) /\ 
+                  (~(x > 100) ==> P (N (x + 11))) ==> P x)
+             ==>
+              !v. P v
+    
+        Termination conditions :
+          0. WF R
+          1. !x. ~(x > 100) ==> R (x + 11) x
+          2. !x. ~(x > 100) ==> R (N_aux R (x + 11)) x
+}
+
+A `higher-order` recursion is one in which a higher-order function is
+used to apply the recursive function to arguments. In order for the
+correct termination conditions to be proved, congruence rules for the
+higher order function must be known to the termination condition
+extraction mechanism. Congruence rules for most of the usual
+higher-order functions on lists, are already known to the mechanism. For
+example, the correct termination conditions are synthesized in the
+following definition of a `map` operation over a type of arbitrarily
+(finitely) branching trees:
+
+{ 
+    - Hol_datatype `ltree = Node of 'a => ltree list`;
+    > val it = () : unit
+
+   - Defn.Hol_defn 
+         "ltree_map"
+         `ltree_map (f:'a->'b) (Node v tl) 
+            = Node (f v) (MAP (ltree_map f) tl)`;
+
+    > val it =
+        HOL function definition (recursive)
+    
+        Equation(s) :
+         [..] |- ltree_map f (Node v tl) 
+                  = Node (f v) (MAP (\a. ltree_map f a) tl)
+    
+        Induction :
+         [..]
+        |- !P.
+             (!f v tl. (!a. MEM a tl ==> P f a) ==> P f (Node v tl))
+             ==>
+            !v v1. P v v1
+    
+        Termination conditions :
+          0. WF R
+          1. !v f tl a. MEM a tl ==> R (f,a) (f,Node v tl)
+
+}
+
+However, at times, one must manually prove and install a congruence
+theorem for a higher-order function. For example, suppose we define a
+higher-order function {SIGMA} for summing the results of a function in a
+list. We then use {SIGMA} in the definition of a similar function on the
+{ltree} type.
+
+{
+    - Define `(SIGMA f [] = 0) /\
+              (SIGMA f (h::t) = f h + SIGMA f t)`;
+
+    - Defn.Hol_defn 
+         "ltree_sigma"
+         `ltree_sigma f (Node v tl) = f v + SIGMA (ltree_sigma f) tl`;
+
+    > val it = 
+      HOL function definition (recursive)
+    
+        Equation(s) :
+         [..] |- ltree_sigma f (Node v tl) 
+                   = f v + SIGMA (\a. ltree_sigma f a) tl
+    
+        Induction :
+         [..] |- !P. (!f v tl. (!a. P f a) ==> P f (Node v tl)) 
+                     ==> !v v1. P v v1
+    
+        Termination conditions :
+          0. WF R
+          1. !tl v f a. R (f,a) (f,Node v tl) : defn
+}
+
+The termination conditions for {ltree_sigma} seem to require finding a
+wellfounded relation {R} such that the pair {(f,a)} is {R}-less than
+{(f, Node v tl)}. However, this is a hopeless task, since there is no
+apparent relation between {a} and {Node v tl}, besides the fact that
+they are both {ltree}s. The termination condition extractor has not
+performed properly, because it didn't have a congruence rule for
+{SIGMA}. Such a congruence theorem is the following:
+
+{
+    !l1 l2 f g. 
+        (l1=l2) /\ (!x. MEM x l2 ==> (f x = g x))
+                ==>
+     (SIGMA f l1 = SIGMA g l2)
+}
+
+After telling {Hol_defn} about this theorem (by use of
+{DefnBase.add_congs}), the termination conditions extracted for the
+definition are provable, since {a} is a proper subterm of {Node v tl}.
+
+{
+    Defn.Hol_defn 
+       "ltree_sigma"
+       `ltree_sigma f (Node v tl) = f v + SIGMA (ltree_sigma f) tl`;
+
+    > val it =
+        HOL function definition (recursive)
+    
+        Equation(s) :  ...  (* as before *)
+        Induction :    ...  (* as before *)
+    
+        Termination conditions :
+          0. WF R
+          1. !v f tl a. MEM a tl ==> R (f,a) (f,Node v tl)
+}
+
+\COMMENTS
+
+An invocation of {Hol_defn} is usually the first step in a multi-step
+process that ends with unconstrained recursion equations for a function,
+along with an induction theorem. {Hol_defn} is used to construct the
+function and synthesize its termination conditions; next, one invokes
+{tgoal} to set up a goal to prove termination of the function.  The
+termination proof usually starts with an invocation of {WF_REL_TAC}. After
+the proof is over, the desired recursion equations and induction theorem
+are available for further use.
+
+\SEEALSO tgoal, WF_REL_TAC, tprove, Define, xDefine, 
+         read_congs, write_congs.
+
+\ENDDOC
