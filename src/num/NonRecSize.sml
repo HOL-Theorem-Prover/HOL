@@ -8,11 +8,10 @@
 structure NonRecSize =
 struct
 
+local open pairTheory sumTheory optionTheory arithmeticTheory in end;
+
 local
   open HolKernel boolLib Parse pairSyntax numSyntax
-  infix |->; infixr -->;
-
-  local open pairTheory sumTheory optionTheory arithmeticTheory in end;
 
   val bool_info = Option.valOf (TypeBase.read "bool");
   val bool_size_info = (rator(mk_bool_case(zero_tm,zero_tm,mk_arb bool)),
@@ -43,6 +42,11 @@ local
   val sum_size_info = (tm,TypeBasePure.ORIG sumTheory.sum_case_def)
   val sum_info' = TypeBasePure.put_size sum_size_info sum_info
 
+  val one_info = Option.valOf (TypeBase.read "one")
+  val one_size_info = (rator(oneSyntax.mk_one_case zero_tm),
+                        TypeBasePure.ORIG oneTheory.one_case_rw)
+  val one_info' = TypeBasePure.put_size one_size_info one_info
+
   val option_info = Option.valOf (TypeBase.read "option")
   val option_case_tm = prim_mk_const{Name="option_case",Thy="option"}
   val option_size_info =
@@ -57,8 +61,9 @@ local
 in
    val _ = TypeBase.write [bool_info']
    val _ = TypeBase.write [prod_info']
-   val _ = TypeBase.write [option_info']
    val _ = TypeBase.write [sum_info']
+   val _ = TypeBase.write [one_info']
+   val _ = TypeBase.write [option_info']
 end
 
-end;
+end
