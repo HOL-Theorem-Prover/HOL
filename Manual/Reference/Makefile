@@ -75,8 +75,8 @@ index:
 	${MAKEINDEX}  reference.idx
 
 all:
-	make clean; make tex; make reference; make index; make reference
-	make pdf ps
+	make clean; make tex && (make reference; make index; make reference; \
+                                 make pdf ps)
 
 thmdoc:
 	(cd $(THMDIR)axioms;    make thmdoc) ;
