@@ -355,32 +355,20 @@ end;
     directories where external tools have been built.
  ---------------------------------------------------------------------------*)
 
-fun cleandir dir =
-  let fun efile s =
-        case Path.ext s
-         of SOME "ui" => true
-          | SOME "uo" => true
-          | SOME "so" => true         (* for dynlibs, like muddyLib *)
-          | SOME "o"  => true         (* for C libraries *)
-          | SOME "xable"  => true     (* for executables *)
-          |    _          => suffixCheck s
-      fun del (d,f) = if efile f then rem_file (fullPath [d,f]) else ()
-  in
-    map_dir del dir
-  end;
+infix called_in
+fun (cmd called_in dir) = let
+  val dir0 = FileSys.getDir()
+  val _ = FileSys.chDir dir
+in
+  SYSTEML cmd before FileSys.chDir dir0
+end
 
-fun cleanAlldir dir = (* clean directory d and also remove d/DEPDIR *)
-  let val _ = cleandir dir
-      val depdir = Path.concat(dir,DEPDIR)
-  in
-    if (FileSys.isDir depdir handle _ => false)
-    then (map_dir (rem_file o normPath o Path.concat) depdir;
-          FileSys.rmDir depdir handle e
-           => (print ("Unable to remove directory "^depdir^".\n"); ()))
-    else ()
-  end;
+fun cleandir dir = ignore ([HOLMAKE, "clean"] called_in dir)
+fun cleanAlldir dir = ignore ([HOLMAKE, "cleanAll"] called_in dir)
 
-fun clean_dirs f = clean_sigobj() before List.app f SRCDIRS;
+fun clean_dirs f =
+    clean_sigobj() before
+    List.app f (fullPath [HOLDIR, "help", "src"] :: SRCDIRS);
 
 fun errmsg s = TextIO.output(TextIO.stdErr, s ^ "\n");
 val help_mesg = "Usage: build\n\
