@@ -26,6 +26,7 @@ become constrained by termination conditions. The main insight driving
 the proof is that if the function named "q" above terminates then 
 so does "p". 
 
+load "bossLib"; open bossLib;
 
 val G_def = Define `G x = if b1 x then G (g x) else x`
 val H_def = Define `H x = if b1 x \/ b2 x then H (g x) else x`;
