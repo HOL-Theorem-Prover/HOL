@@ -167,7 +167,7 @@ fun tyinfol() = TypeBasePure.listItems (TypeBase.theTypeBase());
 fun hash_const c = Polyhash.hash (#Name(dest_thy_const c));
 
 fun mkCSET () = 
- let val CSET = PolyHash.mkTable (hash_const, uncurry same_const)
+ let val CSET = Polyhash.mkTable (hash_const, uncurry same_const)
                                  (31, ERR "CSET" "not found")
      val inCSET = Option.isSome o Polyhash.peek CSET
      fun addCSET c = Polyhash.insert CSET (c,c)
