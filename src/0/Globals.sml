@@ -18,7 +18,7 @@ open Portable;
  * Installation-specific information.                                        *
  *---------------------------------------------------------------------------*)
 
-val HOLDIR = "/local/scratch/mn200/Work/taupo-hol98/hol98";
+val HOLDIR = "/local/scratch/kxs/working";
 
 
 (*---------------------------------------------------------------------------*
@@ -27,16 +27,6 @@ val HOLDIR = "/local/scratch/mn200/Work/taupo-hol98/hol98";
 
 val release = "Taupo";
 val version = 0;
-
-(*---------------------------------------------------------------------------*
- * Bogus hack for defining negation. Hack is required because "~" is the     *
- * only prefix; therefore, it is allowed to be a constant, but not allowed   *
- * to be part of another constant.                                           *
- *---------------------------------------------------------------------------*)
-
-val neg_defined_ref = ref false
-fun neg_defined() = !neg_defined_ref
-fun assert_neg_defined() = neg_defined_ref := true
 
 (*---------------------------------------------------------------------------*
  * Bogus hack for informing parser whether numbers have been defined.        *
@@ -52,18 +42,11 @@ end;
  * Bogus hack for defining strings                                         *
  *-------------------------------------------------------------------------*)
 
-local
-val defined = ref false
+local val defined = ref false
 in
 fun strings_defined() = !defined
 fun assert_strings_defined() = defined := true
 end;
-
-(*---------------------------------------------------------------------------*
- * "Temporary" hack.                                                         *
- *---------------------------------------------------------------------------*)
-
-val in_type_spec = ref NONE:string option ref;
 
 (*---------------------------------------------------------------------------*
  * Controlling the display of exceptions                                     *

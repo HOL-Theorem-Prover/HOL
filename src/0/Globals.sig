@@ -43,7 +43,7 @@ sig
   val goal_line        : string ref
 
   val old              : (string -> string) ref
-  val in_type_spec     : string option ref
+(*  val in_type_spec     : string option ref *)
   val tilde_symbols    : string list ref
 
   val output_HOL_ERR   : ({origin_structure : string,
@@ -57,8 +57,9 @@ sig
                   stack_infixes :bool ref,
                   in_at_end : bool ref}
 
-  val reserved_identifiers : {symbolic : string list,
+(*  val reserved_identifiers : {symbolic : string list,
                               alphanumeric : string list}
+*)
 
   val nums_defined           : unit -> bool
   val strings_defined        : unit -> bool
