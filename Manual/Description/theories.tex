@@ -697,15 +697,16 @@ and \ml{C},
 \end{hol}
 
 Having the symbols \ml{o}, \ml{S}, \ml{K}, \ml{I}, \ml{W}, and \ml{C}
-as built-in constants
-\index{variables, in HOL logic@variables, in \HOL{} logic!with constant names}
-is sometimes inconvenient because they are often wanted
-as mnemonic names for variables (\eg\ \ml{S} to range over sets and
-\ml{o} to range over outputs).  Variables (though not constants) with
-these names can be used in the current system if \ml{o}, \ml{S}, \ml{K},
+as built-in constants \index{variables, in HOL logic@variables, in
+  \HOL{} logic!with constant names} is sometimes inconvenient because
+they are often wanted as mnemonic names for variables (\eg\ \ml{S} to
+range over sets and \ml{o} to range over outputs).\footnote{Constants
+  declared in new theories can freely re-use these names, with
+  ambiguous inputs resolved by type inference.}  Variables with these
+names can be used in the current system if \ml{o}, \ml{S}, \ml{K},
 \ml{I}, \ml{W}, and \ml{C} are first hidden (see
 Section~\ref{hidden}).  In fact, this happens so often with the
-constant \holtxt{C}, that it is ``hidden'' by default.  While hidden,
+constant \holtxt{C} that it is ``hidden'' by default.  While hidden,
 it must be written in fully-qualified form, as \holtxt{combin\$C}.
 %
 \index{ function composition operator, in HOL logic@\ml{o} (function composition operator), in \HOL{} logic|)}
@@ -1344,7 +1345,7 @@ pre-proved in the form:
 \begin{hol}
 \index{NOT_SUC@\ml{NOT\_SUC}}
 \index{INV_SUC@\ml{INV\_SUC}}
-\index{INDUCTION@\ml{INDUCTION}}
+\index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for natural numbers}
 \begin{verbatim}
    NOT_SUC    |- !n. ~(SUC n = 0)
    INV_SUC    |- !m n. (SUC m = SUC n) ==> (m = n)
@@ -1352,13 +1353,11 @@ pre-proved in the form:
 \end{verbatim}
 \end{hol}
 
-In higher order logic, Peano's axioms are sufficient for developing number
-theory because addition and multiplication can be defined. In first order
-logic these must be taken as primitive.  Note also that
-\ml{INDUCTION}
-\index{induction rule!for numbers, in HOL logic@for numbers, in \HOL{} logic}
-could not be stated as a single axiom in first order logic because
-predicates (\eg\ \holtxt{P}) cannot be quantified.
+In higher order logic, Peano's axioms are sufficient for developing
+number theory because addition and multiplication can be defined. In
+first order logic these must be taken as primitive.  Note also that
+\ml{INDUCTION} could not be stated as a single axiom in first order
+logic because predicates (\eg\ \holtxt{P}) cannot be quantified.
 
 \subsubsection{The theory \theoryimp{prim\_rec}}
 \label{prim_rec}
@@ -1717,7 +1716,7 @@ The factorial of a number is a primitive recursive definition.
 \end{hol}
 
 \paragraph{Function iteration}
-\index{FUNPOW@\ml{FUNPOW}}
+\index{FUNPOW, the HOL constant@\ml{FUNPOW}, the \HOL{} constant}
 
 The iterated application $f^n x$ of a function $f : \konst{num} \to
 \konst{num}$ is defined by primitive recursion. The definition
@@ -2066,8 +2065,439 @@ theorem.
 \index{real numbers, the HOL theory of@real numbers, the \HOL{} theory of|)}
 
 \subsection{Theories of $n$-bit words}
+\index{n-bit words, the HOL theory of@$n$-bit words, the \HOL{} theory of|(}
 
-Anthony's package.
+{
+\newcommand{\bitwise}{\ensuremath\mathtt{bitwise}}
+\newcommand{\slice}{\ensuremath\mathtt{slice}}
+\newcommand{\bits}{\ensuremath\mathtt{bits}}
+\newcommand{\minn}{\ensuremath\mathtt{min}}
+\newcommand{\bit}{\ensuremath\mathtt{bit}}
+\newcommand{\suc}{\ensuremath\mathtt{suc}}
+\newlength{\entrysize}
+\newcommand{\cdotfill}{\hspace*{\fill}\ensuremath{\cdots}\hspace*{\fill}}
+% This macro below didn't seem to work; don't know why.
+% \def\cdotfill{
+%%   \leavevmode
+%%   \cleaders \hb@xt@ 1.2em{\hss$\cdot$\hss}\hfill
+%%   \kern\z@}
+
+
+\HOL{} provides support for reasoning about natural numbers as
+fixed-width bit strings.  This is done with a special executable
+called \ml{mkword.exe}, which makes $n$-bit numbers available.  For
+example, \ml{mkword.exe~16} builds the theory \theoryimp{word16},
+which defines the type \holtxt{word16}, and all of the appropriate
+operations on that type.  Such types are prevalent in computer
+architectures where, for example, one might find: bytes/octets
+(\ml{word8}), half-words (\ml{word16}), words (\ml{word32}) and
+long-words (\ml{word64}).
+
+Another theory of words in \HOL{}, Wai Wong's \theoryimp{word} theory,
+is more generic.  It supports words with differing number bases and
+word lengths~\cite{wong}.  The underlying data type for that theory is
+the list: the theory was developed on top of Paul Curzon's
+\ml{rich\_list} theory.  However, \HOL's type system does not directly
+support predicate sub-types and so, when using the theory, word
+lengths must be explicitly declared with the insertion of predicates.
+
+In the \theoryimp{word$\langle{}n\rangle$} theories, $n$-bit words are
+represented as equivalence classes of natural numbers, \ie{} sets of
+numbers equivalent modulo $2^n$.  This has been implemented in \HOL{}
+via an \ML{} functor which makes use of the system's equivalence type
+package.  Each theory instance is for a \emph{fixed} word size---this
+works well provided that only a small group of word sizes are
+required.  Word operations and theorems are lifted from the
+representing type \ie{} from natural number operations.  Consequently,
+the word operations are naturally and concisely defined.  Natural
+number theorems and reductions are used in proving word theorems and
+for ground-term (variable free) evaluation.
+
+\paragraph{Generating a word theory}
+
+\index{mkword.exe executable@\ml{mkword.exe} executable}
+\index{n-bit words, the HOL theory of@$n$-bit words, the \HOL{} theory of!generating instances of}
+The executable \ml{mkword.exe} in the \ml{n\_bit} library constructs a
+word theory for a given word length.\footnote{The word length cannot
+  be zero.}  This command creates \ml{Theory.sml} and \ml{Lib.sml}
+files with the prefix \ml{word$\langle{}n\rangle$} in the working
+directory and these sources are then compiled. When the \ml{-sys}
+option is selected the object files are copied to the \ml{SIGOBJ}
+directory.\footnote{However, there will not be an on-line help entry
+  for the new theory.}  The word theory does not have a script file
+and so \ml{Holmake} does not automatically update these theories \eg{}
+when \HOL\ is re-built.  The easiest way to manage this is to use a
+\ml{Holmakefile} which includes the necessary calls to
+\ml{mkword.exe}, as in the sample file \ml{Holmakefile.example-32}, in
+the directory \ml{<holdir>/help}.
+
+
+\subsubsection{Bits}
+\label{bits}
+
+The most basic theory in the library is the theory \ml{bits} -- this
+theory defines some bit operations over the natural numbers and is
+used in defining some $n$-bit word operations.  (No new data types are
+provided by this theory, and it does not need to be built by the
+\ml{mkword.exe} executable.)  The main functions are: \holtxt{BITS},
+\holtxt{SLICE}, \holtxt{BIT} and \holtxt{BITWISE}.  These are defined
+using operations from the theory \theoryimp{arithmetic}; in
+particular, \holtxt{DIV}, \holtxt{MOD} and \holtxt{EXP}.  The
+predicate \holtxt{BIT n b} is true if, and only if, the bit $n$ of
+number $b$ has value one.  The other operations are illustrated in
+Figures~\ref{bits-slice} and~\ref{bitwise}.
+\index{BITS, the HOL constant@\holtxt{BITS}, the \HOL{} constant}%
+\index{SLICE, the HOL constant@\holtxt{SLICE}, the \HOL{} constant}%
+\index{BIT, the HOL constant@\ml{BIT}, the \HOL{} constant}%
+\index{BITWISE, the HOL constant@\ml{BITWISE}, the \HOL{} constant}%
+
+\begin{figure}
+\begin{center}
+\input{figs/bits.tex} \\[3mm]
+(a) \ml{BITS h l b}. \\[6mm]
+\input{figs/slice.tex} \\[3mm]
+(b) \ml{SLICE h l b}.
+\end{center}
+\caption{Bit field functions.\label{bits-slice}}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+\input{figs/bitw.tex}
+\end{center}
+\caption{\ml{BITWISE l f a b}. Here $x\diamond y = (f(x)(y) \Rightarrow 1 \mid 0)$.\label{bitwise}}
+\end{figure}
+
+The \ml{numeral\_bits} theory provides a group of theorems which allow the \ml{bits} theory functions to be evaluated more efficiently.
+This is done be working with \HOL's internal representation of numerals \ie{} in terms of \ml{ALT\_ZERO}, \ml{NUMERAL\_BIT1} and \ml{NUMERAL\_BIT2}.
+
+Some of the most significant (useful) theorems in \ml{bits} theory are presented (in Cartesian form) below:
+\begin{eqnarray*}
+\mathtt{SLICE\_THM} & \vdash & \forall n\,h\,l.\ \;\slice(h,l,n) = \bits(h,l,n) * 2^n \\[4pt]
+\mathtt{BITS\_COMP\_THM2} & \vdash & \forall h_1\,l_1\,h_2\,l_2\,n.\\*
+&& \ \bits(h_2,l_2,\bits(h_1,l_1,n)) = \bits(\minn(h_1,h_2 + l_1),l_2 + l_1,n) \\[4pt]
+\mathtt{SLICE\_COMP\_THM} & \vdash &
+   \forall h\,m\,l\,n.\ \;\suc(m) \leq h \mbox{ and } l \leq m \Rightarrow \\*
+&& \quad \slice(h,\suc(m),n) + \slice(m,l,n) = \slice(h,l,n) \\[4pt]
+\mathtt{SLICE\_COMP\_THM2} & \vdash &
+   \forall h_2\,l_2\,h_1\,l_1\,n.\ \; h_2 \leq h_1 \mbox{ and } l_1 \leq l_2 \Rightarrow \\*
+&& \quad \slice(h_2,l_2,\slice(h_1,l_1,n)) = \slice(h_2,l_2,n) \\[4pt]
+\mathtt{BITWISE\_THM} & \vdash &
+   \forall x\,n\,f\,a\,b.\ \;
+        x < n \Rightarrow \\*
+&& \quad \bit(x,\bitwise(n,f,a,b)) = f(\bit(x,a),\bit(x,b))
+\end{eqnarray*}
+
+\noindent
+The theorem \ml{SLICE\_THM} shows that \ml{SLICE} is a shifted version
+of \ml{BITS}.  The theorems \ml{BITS\_COMP\_THM2} and
+\ml{SLICE\_COMP\_THM2} are used in simplifying repeated applications
+of \ml{BITS} and \ml{SLICE}.  The theorem \ml{SLICE\_COMP\_THM} shows
+that adjoining slices of the same number can be combined into a single
+slice.  Finally, theorem \ml{BITWISE\_THM} shows that every bit in the
+result of a \ml{BITWISE} operations is the expected single-bit
+function of the corresponding bits in the arguments.
+
+%% Section~\ref{mkword} shows how to build a word theory for a given word
+%% length.  The construction of the word type is described in
+%% Section~\ref{type}.  Word constants and operations are discussed in
+%% Section~\ref{ops} -- this includes: maps to/from the natural numbers;
+%% bit field, arithmetic and Boolean operations; as well as orderings and
+%% shifts.  Ground term evaluation and pretty printing are discussed in
+%% Section~\ref{eval}, and finally Section~\ref{multiple} shows how to
+%% work with multiple word sizes.
+
+
+\subsubsection{The word type---constants and operations} \label{type}
+
+The word type is declared in \HOL{} using the function
+\ml{define\_equivalence\_type}, which is in the library
+\ml{datatype/equiv}.  The following equivalence relation is used to
+construct the word type:
+\[ a \equiv b = (a \bmod 2^\ell = b \bmod 2^\ell) \]
+where $\ell$ is the word length.  One can observe that this relation
+is reflexive, symmetric and transitive.  The \emph{representing type}
+for words is $\mathtt{num}\rightarrow\mathtt{bool}$ \ie{} words are
+represented by the $2^\ell$ unique predicates ${\equiv_a}$ where
+${\equiv_a}(b) = (a \equiv b)$.  That is, one can consider the
+predicate ${\equiv_i}$ to be representing the $\ell-bit$ word with
+value $i \bmod 2^\ell$.  Observe that for all $j$ and $i < 2^\ell$:
+${\equiv_{j\cdot 2^\ell + i}} = {\equiv_i}$.
+
+The \HOL\ constant \ml{WL} is equal to the word length $\ell$ and
+\ml{HB} is the highest bit position, that is, $\ell - 1$.
+
+\paragraph{Mapping To and From the Natural Numbers}
+
+The function \ml{w2n} maps a word to a natural number; when given a
+word represented by the predicate ${\equiv_i}$ the value returned is
+$i \bmod 2^\ell$ -- this is the \emph{standard class representative}
+for the equivalence class.  The function \ml{n2w} maps a natural
+numbers to a word: for number $i$ the returned word has representative
+${\equiv_i}$.
+
+The map \ml{n2w} is the primary means of constructing new words -- a
+group of theorems are provided which enable word operations to be
+evaluated via natural number reductions; see Section~\ref{eval}.
+
+\paragraph{Bits and Slices}
+
+The map \ml{w2n} is used to define the functions: \ml{WORD\_BITS},
+\ml{WORD\_BIT} and \ml{WORD\_SLICE}.  The word is mapped to a natural
+number before applying the corresponding function from
+Section~\ref{bits}.  The predicates \ml{LSB} and \ml{MSB} specialise
+\ml{WORD\_BIT} to bit positions zero and $\ell - 1$ respectively.
+
+\paragraph{Arithmetic and Orderings}
+
+Addition, negation (two's complement), subtraction and multiplication
+are all provided.  The two's complement maps ${\equiv_i}$ to
+${\equiv_{2^\ell - (i \bmod 2^\ell)}}$ and subtraction is the addition
+of the two's complement.
+
+Eight orderings are provided: these are signed and unsigned versions
+of $<$, $\leq$, $>$ and $\geq$.  The unsigned versions are suffixed by
+a full-stop; for example, \ml{<.} is unsigned less than.  The signed
+versions are for the two's complement representation \ie{} where bit
+$\ell - 1$ is taken to have value $-2^\ell$.  (At present, maps to and
+from the integers have not been provided.)  The orderings are defined
+using the function \ml{CMP\_NZCV} -- this subtracts one word from
+another and returns the negative, zero, carry and overflow flag
+values.  For example, \ml{a <.\ b} is true when the carry flag for
+\ml{a - b} is false.  A group of theorems are provided to connect
+these orderings with their natural number counterparts; for example,
+\ml{LO\_EVAL} (see Section~\ref{eval}).
+
+\paragraph{Shifts}
+
+Five types of shifting are supported: logical shift left (which is
+synonymous with arithmetic shift left) and four types of shift right.
+Shifting left $i$ places is defined to be multiplication by the word
+with value $2^i$.  Rotating left $i$ places can be achieved by
+rotating right $\ell - i$ places.  Figure~\ref{right-one} shows the
+natural number (one place) shift operations upon which the word shift
+rights are based: these are lifted to words, giving the operations
+\ml{word\_ror1}, \ml{word\_lsr1}, \ml{word\_asr1} and \ml{RRX}.  The
+first three operations can be iterated and this gives the operations:
+rotate right (\ml{\#>>}), logical shift right (\ml{>>>}) and
+arithmetic shift right (\ml{>>}).  The theorems \ml{ROR\_THM},
+\ml{LSR\_THM} and \ml{ASR\_THM} provide a more helpful semantics for
+these operations; they are especially useful for ground-term
+evaluation, see Section~\ref{eval}.
+
+\begin{figure}
+\begin{center}
+\setlength{\entrysize}{7.5mm}
+\input{figs/ror.tex} \\[3mm]
+(a) Rotate right (\ml{ROR\_ONE}). \\[6mm]
+\input{figs/lsr.tex} \\[3mm]
+(b) Logical shift right (\ml{LSR\_ONE}). \\[6mm]
+\input{figs/asr.tex} \\[3mm]
+(c) Arithmetic shift right (\ml{ASR\_ONE}). \\[6mm]
+\input{figs/rrx.tex} \\[3mm]
+(d) Rotate right with extend (\ml{RRXn c}).
+\end{center}
+\caption{One place shift right operations.\label{right-one}}
+\end{figure}
+
+\paragraph{Boolean Operations}
+
+The one's complement (bitwise bit inversion) is given by the function
+\ml{NOT} and this maps ${\equiv_i}$ to ${\equiv_{2^\ell -1 - (i \bmod
+    2^\ell)}}$.  Bitwise conjunction (\ml{\&}), disjunction (\ml{|})
+and exclusive-or (\ml{\#}) are also defined.  These operations are
+lifted versions of the function \ml{BITWISE} specialised to the word
+length $\ell$ together with the appropriate Boolean operation.
+
+\paragraph{Word Constants}
+
+The following table shows the values for some pre-defined word constants:
+\begin{center}
+\small
+\begin{tabular}{cc}
+Constant & Numeric Value \\
+\noalign{\smallskip}
+\hline
+\noalign{\smallskip}
+\ml{word\_{}0} & $0$ \\
+\ml{word\_{}1} & $1$ \\
+\ml{word\_T} & $2^\ell - 1$ \\
+\ml{word\_L} & $2^{\ell - 1}$ \\
+\ml{word\_H} & $2^{\ell - 1} - 1$
+\end{tabular}
+\end{center}
+
+The constant \ml{word\_T} represents `true' for the Boolean operations
+-- every bit is set high.  Likewise, \ml{word\_{}0} represents the
+number zero and also `false'.  In the two's complement system
+\ml{word\_L} is the most negative value and \ml{word\_H} is the most
+positive value.  This is captured the theorems \ml{WORD\_L\_LESS\_EQ}
+and \ml{WORD\_LESS\_EQ\_H}.
+
+\paragraph{Table of Operators}
+
+The strength and associativity of the word operations are as follows:
+\begin{center}
+\small
+\begin{tabular}{lccc}
+Constant & (Overloaded) Symbol & Strength & Associativity \\
+\noalign{\smallskip}
+\hline
+\noalign{\smallskip}
+\ml{word\_lt} & \ml{<} & 450 & right \\
+\ml{word\_le} & \ml{<=} & 450 & right \\
+\ml{word\_gt} & \ml{>} & 450 & right \\
+\ml{word\_ge} & \ml{>=} & 450 & right \\
+\ml{word\_lo} & \ml{<.} & 450 & right \\
+\ml{word\_ls} & \ml{<=.} & 450 & right \\
+\ml{word\_hi} & \ml{>.} & 450 & right \\
+\ml{word\_hs} & \ml{>=.} & 450 & right \\
+\ml{word\_add} & \ml{+} & 500 & left \\
+\ml{word\_sub} & \ml{-} & 500 & left \\
+\ml{word\_mul} & \ml{*} & 550 & left \\
+\ml{bitwise\_or} & \ml{|} & 625 & left \\
+\ml{bitwise\_eor} & \ml{\#} & 625 & left \\
+\ml{bitwise\_and} & \ml{\&} & 650 & left \\
+\ml{word\_lsl} & \ml{<<} & 680 & left \\
+\ml{word\_lsr} & \ml{>>>} & 680 & left \\
+\ml{word\_asr} & \ml{>>} & 680 & left \\
+\ml{word\_ror} & \ml{\#>>} & 680 & left \\
+\ml{word\_{}1comp} & \ml{NOT} & 900 & trueprefix \\
+\ml{word\_{}2comp} & \verb"~" & 900 & trueprefix \\
+\end{tabular}
+\end{center}
+
+\subsubsection{Evaluation and Pretty Printing} \label{eval}
+
+The conversion \ml{WORD\_CONV} can be used to evaluate word
+expressions.  This is achieved by providing re-write theorems for word
+terms containing the map \ml{n2w}.  For example, word addition and
+unsigned less-than can be evaluated using the theorems:
+
+\begin{hol}
+\begin{verbatim}
+   ADD_EVAL |- !a b. n2w a + n2w b = n2w (a + b)
+    LO_EVAL |- !m n. n2w m <. n2w n = MOD_2EXP WL m < MOD_2EXP WL n
+\end{verbatim}
+\end{hol}
+
+\noindent Natural number reductions can be used to evaluate the right-hand side.  In practice it is helpful to ensure that word computations return the standard class representative, therefore the follow theorem is used for addition:
+
+\begin{hol}
+\begin{verbatim}
+   ADD_EVAL2 |- !a b. n2w a + n2w b = n2w (MOD_2EXP WL (a + b))
+\end{verbatim}
+\end{hol}
+
+\noindent This is illustrated for eight bit words in the session below.
+
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+- load "word8Lib";
+- open word8Lib;
+> ..
+- WORD_CONV ``n2w 250 + n2w 8``;
+> val it = |- 250w + 8w = 2w : thm
+- WORD_CONV ``n2w 21 <. n2w 56``;
+> val it = |- 21w <. 56w = T : thm
+\end{verbatim}
+\end{session}
+
+The shift right operations are evaluated efficiently by using theorems
+that express the result in term of \ml{BITS}.  This ensures that the
+run-time is still quick when shifting by a large value.
+
+\begin{session}
+\begin{verbatim}
+- time WORD_CONV ``n2w 14 #>> 100001``;
+runtime: 0.020s,    gctime: 0.010s,     systime: 0.000s.
+> val it = |- 14w #>> 100001 = 7w : thm
+\end{verbatim}
+\end{session}
+
+\index{printing, in HOL logic@printing, in \HOL{} logic!of n-bit word values@of $n$-bit word values}
+It is possible to display word values as signed (two's complement)
+decimals or as signed or unsigned binary, octal or hexadecimal
+numbers.  The pretty printing directives are listed in \REFERENCE.
+These functions are helpful when checking the results of computations.
+\begin{session}
+\begin{verbatim}
+- pp_word_unsigned_bin();
+> val it = () : unit
+- WORD_CONV ``n2w 219 #>> 5``;
+> val it = |- 0b11011011w #>> 5 = 0b11011110w : thm
+- pp_word_signed_dec();
+> val it = () : unit
+- WORD_CONV ``n2w 20 - n2w 24``;
+> val it = |- 20w - 24w = ~4w : thm
+\end{verbatim}
+\end{session}
+
+\noindent Pretty printing can be turned off using the function \ml{pp\_word\_off}.
+
+\subsubsection{Working with Multiple Word Sizes} \label{multiple}
+
+The executable \ml{mkword.exe} can be run as many times as is needed
+-- generating theories for different word sizes.  If multiple word
+theories are opened then one has to ensure that the operator
+overloading is resolved correctly.  The session below shows how to do
+this by declaring the type of a variable, or by using the theory
+names.  These methods are also required when opening other theories;
+for example \ml{arithmetic} and \ml{integer}.
+
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+- open word8Theory word4Theory;
+- val _ = show_types := true;
+
+- ``a + b``;
+<<HOL message: more than one resolution of overloading was possible>>
+> val it = ``(a :word4) + (b :word4)`` : term
+
+- ``(a:word8) + b``;
+> val it = ``(a :word8) + (b :word8)`` : term
+
+- ``word8$word_add a b``;
+> val it = ``(a :word8) + (b :word8)`` : term
+
+- WORD_SUB_SUB;
+> val it = |- !(a :word4) (b :word4) (c :word4). a - (b - c) = a + c - b : thm
+
+- word8Theory.WORD_SUB_SUB;
+> val it = |- !(a :word8) (b :word8) (c :word8). a - (b - c) = a + c - b : thm
+\end{verbatim}
+\end{session}
+
+It is possible to define concatenation and casting functions by first
+mapping words to the natural numbers using \ml{w2n} and then
+constructing words with \ml{n2w}.  The function \ml{SIGN\_EXTEND} is
+provided in \ml{bits} theory to make it easier to define two's
+complement conversions.
+\begin{session}
+\begin{verbatim}
+- show_types:=false;
+> val it = () : unit
+
+- app load ["word8Lib","word4Lib"];
+> val it = () : unit
+
+- word4Lib.pp_word_unsigned_bin();
+> val it = () : unit
+
+- word8Lib.pp_word_unsigned_bin();
+> val it = () : unit
+
+- word4Lib.WORD_CONV ``word8$n2w (SIGN_EXTEND 4 8 (w2n (n2w 12)))``;
+<<HOL message: more than one resolution of overloading was possible>>
+> val it = |- n2w (SIGN_EXTEND 4 8 (w2n 0b1100w)) = 0b11111100w : thm
+\end{verbatim}
+\end{session}
+
+\index{n-bit words, the HOL theory of@$n$-bit words, the \HOL{} theory of|)}
+} % matches bracket at beginning of n-bit section, where some n-bit
+  % specific macros are defined
 
 \section{Sequences}
 
@@ -2087,8 +2517,8 @@ and a standard collection of list processing functions are
 defined. The primitive constructors {\small\verb+NIL+} and {\small\verb+CONS+}
 %
 \begin{hol}
-\index{NIL@\ml{NIL}}
-\index{CONS@\ml{CONS}}
+\index{NIL, the HOL constant@\holtxt{NIL}, the \HOL{} constant}
+\index{CONS, the HOL constant@\holtxt{CONS}, the \HOL{} constant}
 {\small
 \begin{verbatim}
    NIL  : 'a list
@@ -2098,15 +2528,17 @@ defined. The primitive constructors {\small\verb+NIL+} and {\small\verb+CONS+}
 %
 are used to build lists and have been defined from the representing type for
 lists. The \HOL{} parser
+%
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!of list expressions}
-has been specially  modified to  parse the expression
-{\small\verb%[]%} into {\small\verb%NIL%}, to parse the expression
-{\small\verb%h :: t%} into {\small\verb%CONS h t%}, and to parse the expression
-{\small\verb%[%}$t_1${\small\verb%;%}$t_2${\small\verb%;%}$\ldots${\small\verb%;%}$t_n${\small\verb%]%}
-into {\small\verb%CONS %}$t_1${\small\verb% (CONS %}$t_2 \cdots\
-${\small\verb%(CONS %}$t_n${\small\verb%  NIL)%}$\  \cdots\ ${\small\verb%)%}.
-The \HOL{} printer
+%
+has been specially modified to parse the expression \holtxt{[]} into
+\holtxt{NIL}, to parse the expression \holtxt{h::t} into \holtxt{CONS
+  h t}, and to parse the expression \holtxt{[$t_1$;$t_2$;\dots;$t_n$]}
+into \holtxt{CONS $t_1$ (CONS $t_2$ $\cdots$ (CONS $t_n$ NIL)
+  $\cdots$)}.  The \HOL{} printer
+%
 \index{printing, in HOL logic@printing, in \HOL{} logic!of list expressions}
+%
 reverses these transformations.
 
 Based on the inductive characterization of the type, the following
@@ -2117,11 +2549,7 @@ are proved and stored in the theory \ml{list}.
 \begin{hol}
 \index{list_Axiom@\ml{list\_Axiom}}
 \index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic}
-\index{list_INDUCT@\ml{list\_INDUCT}}
-\index{list_CASES@\ml{list\_CASES}}
-\index{CONS_11@\ml{CONS\_{11}}}
-\index{NOT_NIL_CONS@\ml{NOT\_NIL\_CONS}}
-\index{NOT_CONS_NIL@\ml{NOT\_CONS\_NIL}}
+\index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for lists}
 \index{characterizing theorem!for lists}
 {\small
 \begin{verbatim}
@@ -3021,8 +3449,11 @@ built from the empty set by a finite number of insertions.
 \end{verbatim}
 }
 %
+\noindent
 A set is infinite iff it is not finite. The finite sets have an
-induction theorem :
+induction theorem:
+%
+\index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for finite sets}
 %
 {\small
 \begin{verbatim}
@@ -3119,11 +3550,12 @@ from which a recursive characterization and other useful theorems are derived.
 %
 {\small
 \begin{verbatim}
- SUM_IMAGE_DEF
-   |- !f s. SIGMA f s = ITSET (\e acc. f e + acc) s 0
- SUM_IMAGE_THM
-   |- !f. (SIGMA f {} = 0) /\
-          !e s. FINITE s ==> (SIGMA f (e INSERT s) = f e + SIGMA f (s DELETE e))
+   SUM_IMAGE_DEF
+     |- !f s. SIGMA f s = ITSET (\e acc. f e + acc) s 0
+   SUM_IMAGE_THM
+     |- !f. (SIGMA f {} = 0) /\
+            !e s. FINITE s ==>
+                  (SIGMA f (e INSERT s) = f e + SIGMA f (s DELETE e))
 \end{verbatim}
 }
 
@@ -3142,8 +3574,8 @@ a predicate on a relation.
 %
 {\small
 \begin{verbatim}
- finite_branching_def
-  |- !R. finitely_branching R = !x. FINITE {y | R x y}
+   finite_branching_def
+    |- !R. finitely_branching R = !x. FINITE {y | R x y}
 \end{verbatim}
 }
 %
@@ -3151,9 +3583,10 @@ a predicate on a relation.
 proved:
 {\small
 \begin{verbatim}
- KoenigsLemma
-  |- finitely_branching R ==>
-       !x. ~FINITE {y | RTC R x y} ==> ?f. (f 0 = x) /\ !n. R (f n) (f (SUC n))
+   KoenigsLemma
+    |- finitely_branching R ==>
+         !x. ~FINITE {y | RTC R x y} ==>
+              ?f. (f 0 = x) /\ !n. R (f n) (f (SUC n))
 \end{verbatim}
 }
 
@@ -3442,6 +3875,8 @@ built from the empty bag by a finite number of insertions.
 \noindent The finite multisets have an induction theorem, and also a strong
 induction theorem.
 %
+\index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for finite bags}
+%
 {\small
 \begin{verbatim}
    FINITE_BAG_INDUCT
@@ -3492,9 +3927,9 @@ in a tail-recursive fashion.
 \noindent A recursive version is also available:
 {\small
 \begin{verbatim}
- COMMUTING_ITBAG_RECURSES
-   |- !f e b a. (!x y z. f x (f y z) = f y (f x z)) /\ FINITE_BAG b ==>
-                (ITBAG f (BAG_INSERT e b) a = f e (ITBAG f b a))
+   COMMUTING_ITBAG_RECURSES
+     |- !f e b a. (!x y z. f x (f y z) = f y (f x z)) /\ FINITE_BAG b ==>
+                  (ITBAG f (BAG_INSERT e b) a = f e (ITBAG f b a))
 \end{verbatim}
 }
 
@@ -3516,22 +3951,22 @@ The following basic properties of relations are defined.
 \begin{hol}
 {\small
 \begin{verbatim}
-  transitive_def
-    |- transitive R = !x y z. R x y /\ R y z ==> R x z
-  reflexive_def
-    |- reflexive R = (!x. R x x)
-  irreflexive_def
-    |- irreflexive R = (!x. ~R x x)
-  symmetric_def
-    |- symmetric R = (!x y. R x y = R y x)
-  antisymmetric_def
-    |- antisymmetric R = (!x y. R x y /\ R y x ==> (x = y))
-  equivalence_def
-    |- equivalence R = reflexive R /\ symmetric R /\ transitive R
-  trichotomous
-    |- trichotomous R = !a b. R a b \/ R b a \/ (a = b)
-  total_def
-    |- total R = (!x y. R x y \/ R y x)
+   transitive_def
+     |- transitive R = !x y z. R x y /\ R y z ==> R x z
+   reflexive_def
+     |- reflexive R = (!x. R x x)
+   irreflexive_def
+     |- irreflexive R = (!x. ~R x x)
+   symmetric_def
+     |- symmetric R = (!x y. R x y = R y x)
+   antisymmetric_def
+     |- antisymmetric R = (!x y. R x y /\ R y x ==> (x = y))
+   equivalence_def
+     |- equivalence R = reflexive R /\ symmetric R /\ transitive R
+   trichotomous
+     |- trichotomous R = !a b. R a b \/ R b a \/ (a = b)
+   total_def
+     |- total R = (!x y. R x y \/ R y x)
 \end{verbatim}
 }
 \end{hol}
@@ -3632,20 +4067,21 @@ relation closed under transitivity and reflexivity.
 }
 \end{hol}
 
+\noindent
 From these definitions, one can recover the initial rules.
 %
 \begin{hol}
 {\small
 \begin{verbatim}
-  TC_RULES
-    |- !R. (!x y. R x y ==> TC R x y) /\
-           (!x y z. TC R x y /\ TC R y z ==> TC R x z)
-  RTC_RULES
-    |- !R. (!x. RTC R x x) /\
-           (!x y z. R x y /\ RTC R y z ==> RTC R x z)
-  RTC_RULES_RIGHT1
-    |- !R. (!x. RTC R x x) /\
-           (!x y z. RTC R x y /\ R y z ==> RTC R x z)
+   TC_RULES
+     |- !R. (!x y. R x y ==> TC R x y) /\
+            (!x y z. TC R x y /\ TC R y z ==> TC R x z)
+   RTC_RULES
+     |- !R. (!x. RTC R x x) /\
+            (!x y z. R x y /\ RTC R y z ==> RTC R x z)
+   RTC_RULES_RIGHT1
+     |- !R. (!x. RTC R x x) /\
+            (!x y z. RTC R x y /\ R y z ==> RTC R x z)
 \end{verbatim}
 }
 \end{hol}
@@ -3669,17 +4105,17 @@ or
 \begin{hol}
 {\small
 \begin{verbatim}
-  TC_CASES1
-    |- !R x z. TC R x z ==> R x z \/ ?y. R x y /\ TC R y z
-  TC_CASES2
-    |- !R x z. TC R x z ==> R x z \/ ?y. TC R x y /\ R y z
+   TC_CASES1
+     |- !R x z. TC R x z ==> R x z \/ ?y. R x y /\ TC R y z
+   TC_CASES2
+     |- !R x z. TC R x z ==> R x z \/ ?y. TC R x y /\ R y z
 
-  RTC_CASES1
-    |- !R x y. RTC R x y = (x = y) \/ ?u. R x u /\ RTC R u y
-  RTC_CASES2
-    |- !R x y. RTC R x y = (x = y) \/ ?u. RTC R x u /\ R u y
-  RTC_CASES_RTC_TWICE
-    |- !R x y. RTC R x y = ?u. RTC R x u /\ RTC R u y
+   RTC_CASES1
+     |- !R x y. RTC R x y = (x = y) \/ ?u. R x u /\ RTC R u y
+   RTC_CASES2
+     |- !R x y. RTC R x y = (x = y) \/ ?u. RTC R x u /\ R u y
+   RTC_CASES_RTC_TWICE
+     |- !R x y. RTC R x y = ?u. RTC R x u /\ RTC R u y
 \end{verbatim}
 }
 \end{hol}
@@ -3754,18 +4190,18 @@ induction theorems may be derived.
 \begin{hol}
 {\small
 \begin{verbatim}
-  WFP_DEF
-    |- WFP R a = !P. (!x. (!y. R y x ==> P y) ==> P x) ==> P a
-  WFP_RULES
-    |- !R x. (!y. R y x ==> WFP R y) ==> WFP R x
-  WFP_CASES
-    |- !R x. WFP R x = !y. R y x ==> WFP R y
-  WFP_INDUCT
-    |- !R P. (!x. (!y. R y x ==> P y) ==> P x)
-             ==> !x. WFP R x ==> P x
-  WFP_STRONG_INDUCT
-    |- !R. (!x. WFP R x /\ (!y. R y x ==> P y) ==> P x)
-           ==> !x. WFP R x ==> P x
+   WFP_DEF
+     |- WFP R a = !P. (!x. (!y. R y x ==> P y) ==> P x) ==> P a
+   WFP_RULES
+     |- !R x. (!y. R y x ==> WFP R y) ==> WFP R x
+   WFP_CASES
+     |- !R x. WFP R x = !y. R y x ==> WFP R y
+   WFP_INDUCT
+     |- !R P. (!x. (!y. R y x ==> P y) ==> P x)
+              ==> !x. WFP R x ==> P x
+   WFP_STRONG_INDUCT
+     |- !R. (!x. WFP R x /\ (!y. R y x ==> P y) ==> P x)
+            ==> !x. WFP R x ==> P x
 \end{verbatim}
 }
 \end{hol}
@@ -3788,14 +4224,14 @@ function to be applied to $R$-smaller arguments in recursive calls..
 \begin{hol}
 {\small
 \begin{verbatim}
-  RESTRICT_DEF
-    |- !f R x. RESTRICT f R x = \y. if R y x then f y else ARB
+   RESTRICT_DEF
+     |- !f R x. RESTRICT f R x = \y. if R y x then f y else ARB
 
-  WFREC_COROLLARY
-    |- !M R f. (f = WFREC R M) ==> WF R ==> !x. f x = M (RESTRICT f R x) x
+   WFREC_COROLLARY
+     |- !M R f. (f = WFREC R M) ==> WF R ==> !x. f x = M (RESTRICT f R x) x
 
-  WF_RECURSION_THM
-    |- !R. WF R ==> !M. ?!f. !x. f x = M (RESTRICT f R x) x
+   WF_RECURSION_THM
+     |- !R. WF R ==> !M. ?!f. !x. f x = M (RESTRICT f R x) x
 \end{verbatim}
 }
 \end{hol}

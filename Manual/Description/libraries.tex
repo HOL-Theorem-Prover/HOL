@@ -1265,7 +1265,7 @@ Users can augment the stateful \simpset{} themselves with the function
 \end{boxed}
 The strings passed to \ml{export\_rewrites} are the names of theorems
 in the current segment (those that will be exported when
-\ml{export\_theory} is called.  Not only are these theorems added to
+\ml{export\_theory} is called).  Not only are these theorems added to
 the underlying \simpset{} in the current session, but they will be
 added in future sessions when the current theory is reloaded.
 \begin{session}
@@ -1290,8 +1290,8 @@ As a general rule, \ml{(srw\_ss())} includes all of its context's
 ``obvious rewrites'', as well as code to do standard calculations
 (such as the arithmetic performed in the above example).  It does not
 include decision procedures that may exhibit occasional poor
-performance, so these \simpset{} fragments containing these should be
-added manually.
+performance, so the \simpset{} fragments containing these procedures
+should be added manually to those simplification invocations that need them.
 
 \subsection{\Simpset{} fragments}
 
