@@ -156,9 +156,15 @@ in
      val red_defn = #rhs(dest_eq(concl   (* remove zero additions *)
                        ((DEPTH_CONV BETA_CONV
                            THENC Rewrite.PURE_REWRITE_CONV zero_rws) defn)))
+     val defn_name = let
+       val type_name = #1 (hd vs)
+     in
+       if length dtys = 1 then type_name ^ "_size_def"
+       else type_name ^ "_size_full_def"
+     end
  in
-    SOME (new_recursive_definition
-          {name= #1 (hd vs)^"_size_full_def", rec_axiom = ax, def = red_defn})
+    SOME (new_recursive_definition {name= defn_name, rec_axiom = ax,
+                                    def = red_defn})
  end
  handle HOL_ERR _ => NONE
 end;
@@ -329,6 +335,7 @@ fun make_tyinfo_persist (tyinfo, extras) = let
   fun name s = TypeBase.ty_name_of tyinfo ^ s
   val one_one = TypeBase.one_one_of tyinfo
   val distinct = TypeBase.distinct_of tyinfo
+  val ax = TypeBase.axiom_of tyinfo
   val _ = save_thm (name"_case_cong",TypeBase.case_cong_of tyinfo)
   val _ = save_thm (name"_induction",TypeBase.induction_of tyinfo)
   val _ = save_thm (name"_nchotomy",TypeBase.nchotomy_of tyinfo)
@@ -343,7 +350,9 @@ fun make_tyinfo_persist (tyinfo, extras) = let
     | SOME th => (save_thm(name "_distinct", th); "SOME "^name "_distinct")
   val size_info =
     case TypeBase.size_of tyinfo of
-      SOME (tm, def) => (save_thm(name "_size_def", def);
+      SOME (tm, def) => (if length (Prim_rec.new_types ax) <> 1 then
+                           ignore (save_thm(name "_size_def", def))
+                         else ();
                          SOME (tm, name "_size_def"))
     | NONE => NONE
 in
