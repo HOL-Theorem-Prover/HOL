@@ -88,6 +88,39 @@ Q. Are error messages during the build like the following a source for
 
      > /local/scratch/kxs/144/bin/mosmlyac: 4 shift/reduce conflicts.
 
+Q. What's the syntax to make a real number like 1.23 ? (1)
+
+  -- You will need to write 1 + 23/100 (or 123/100, or ...).  There's
+     no support currently for decimal constants.  To make it explicit
+     that you mean a real (and not an integer), you can write
+     123r/100, where the "r" suffix forces the numeral to be a real.
+     (This will likely only be an issue if you have both integerTheory
+     and realTheory loaded.)
+
+Q. What's the integer and real versions of num's DECIDE and arith_ss?
+   (1)
+
+  -- For the integers, you can use intLib.COOPER_{CONV,PROVE,TAC} The
+     performance of this is not very good at present, but it decides
+     small goals with small coefficients quickly enough.  It's
+     complete for Presburger arithmetic over both :num and :int (so
+     you can mix your quantifiers, and it also proves
+       !x:num. ~(2 * x = 5)
+     which ARITH_CONV and DECIDE both fail to prove.)
+
+     For the reals, realLib.REAL_ARITH proves universal goals.
+
+Q. Is there a nice way to print an arbitrary theory, or list its
+   axioms etc? (print_theory, axioms, theorems, etc only work on
+   current theory) (1)
+
+  -- You can use
+       DB.theorems "thyname"
+
+     to get a list of theorems in a theory.  Often, the nicest
+     presentation is the theory file's signature itself.  For example,
+     listTheory.sig, in <holdir>/src/list/src/.
+
 Q. Why can't I write ``MAP ~ x``? (1)
 
   -- When you attempt this, you will get the error message
