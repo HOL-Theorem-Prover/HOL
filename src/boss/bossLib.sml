@@ -128,7 +128,7 @@ fun preview qthing =
          in
            map (ptm_dest_var o fst o ptm_strip_comb) L
          end
-       | preev qtm =
+       | preev qtm =  (* not clear that this is useful *)
           let val tm = Parse.Term qtm
               val eqs = strip_conj tm
               open Psyntax
@@ -143,20 +143,62 @@ fun preview qthing =
              "unable to find name of function(s) to be defined"
 end;
 
+(*---------------------------------------------------------------------------
+      MoscowML returns lists of QUOTE'd strings when a quote is spread 
+      over more than one line. "norm_quotel" concatenates all adjacent
+      QUOTE elements in this list. 
+ ---------------------------------------------------------------------------*)
 
-fun Hol_fun bindstem (qtm as [QUOTE _]) =
-     let val names = preview qtm
-         val allnames = map dollar names @ names
-         val _ = List.app Parse.hide allnames
-         val eqs = Parse.Term qtm 
-                    handle e => (List.app Parse.reveal allnames; raise e)
-         val _ = List.app Parse.reveal allnames
-         val defn = Defn.define bindstem eqs
-     in 
-        Halts.proveTotal defn
-     end 
-  | Hol_fun bindstem qtm = 
-      Halts.proveTotal (Defn.define bindstem (Parse.Term qtm));
+fun norm_quotel [] = []
+  | norm_quotel [x] = [x]
+  | norm_quotel (QUOTE s1::QUOTE s2::rst) = norm_quotel (QUOTE(s1^s2)::rst)
+  | norm_quotel (h::rst) = h::norm_quotel rst;
+
+fun Hol_fun bindstem ql = 
+ let fun eqs (qtm as [QUOTE _]) =
+           let val names = preview qtm
+               val allnames = map dollar names @ names
+               val _ = List.app Parse.hide allnames
+               val eqs = Parse.Term qtm 
+                     handle e => (List.app Parse.reveal allnames; raise e)
+               val _ = List.app Parse.reveal allnames
+           in 
+             eqs
+           end 
+       | eqs qtm = Parse.Term qtm
+ in
+    Defn.define bindstem (eqs (norm_quotel ql))
+ end;
+
+
+fun const_of th =
+  let val hd_eqn = 
+       snd(strip_imp(snd(strip_forall(hd(strip_conj(concl th))))))
+  in
+    fst(strip_comb(#lhs(dest_eq hd_eqn)))
+  end;
+
+fun constants_of defn =
+  let val eqns = Defn.eqns_of defn
+      val nest_eqns = case Defn.aux_defn defn
+                       of NONE => [] 
+                        | SOME nest => [Defn.eqns_of nest]
+      val mut_eqns = case Defn.union_defn defn
+                      of NONE => [] 
+                       | SOME mut => 
+                           Defn.eqns_of mut 
+                            ::(case Defn.aux_defn mut
+                                of NONE => []
+                                 | SOME nest => [Defn.eqns_of nest])
+      val alleqns = eqns::(nest_eqns@mut_eqns)
+      val consts = map const_of alleqns
+  in 
+      consts
+  end;
+
+
+val ind_suffix = ref "ind";
+val def_suffix = ref "def";
 
 
 (*---------------------------------------------------------------------------
@@ -164,48 +206,111 @@ fun Hol_fun bindstem (qtm as [QUOTE _]) =
 
         1. It creates a bindstem for the definition to be made.
         2. It makes the definition, using Hol_fun.
-        3. It attempts to prove termination. If this fails, then
-           Define fails.
+        3. Hol_fun attempts to prove termination. If this fails, then
+           Define fails (and cleans up after itself).
         4. Otherwise, if the definition is not recursive or is
            primitive recursive, the defining equations alone are returned.
         5. Else, the definition is not a trivial recursion, and the
            following steps are made:
 
                  5a. The induction theorem is stored under bindname_ind
-                 5b. The recursion equations are stored under bindname
+                 5b. The recursion equations are stored under bindname_def
 
            Then the recursion equations are returned to the user.
  ---------------------------------------------------------------------------*)
 
-fun Define qtm = 
- let val bindstem =
-       case preview qtm
-        of []    => raise BOSS_ERR "Define" "Can't find name of function"
-         | [x]   => if Lexis.ok_identifier x then x 
-                    else #Name(dest_var
-                            (Lib.with_flag(Globals.priming,SOME"")
-                                mk_primed_var{Name=x,Ty=bool}))
-         | names => #Name(dest_var
-                      (Lib.with_flag(Globals.priming,SOME"")
-                                mk_primed_var{Name="mutual",Ty=bool}))
+local val mut_namesl = ref []:string list list ref
+      val sort = Lib.sort (curry (op= :string*string->bool))
+      fun index_of x [] i = NONE
+        | index_of x (y::rst) i = if x=y then SOME i else index_of x rst (i+1)
+      fun inc_mutl names =
+        let val names' = sort names
+        in case index_of names' (!mut_namesl) 0
+            of NONE => (mut_namesl := !mut_namesl@[names']; 
+                        Option.valOf(index_of names' (!mut_namesl) 0))
+             | SOME i => i
+        end
+      val symbr = ref 0
+      fun gen_symbolic_name() = 
+         let val s = "symbol_"^Lib.int_to_string (!symbr)
+         in Portable.inc symbr; s
+         end
+in
+fun Define ql =
+ let val qtm = norm_quotel ql
+     val names = preview qtm
+     val bindstem =
+        case names
+         of []  => raise BOSS_ERR "Define" "Can't find name of function"
+          | [x] => if Lexis.ok_identifier x then x
+                   else let val name = gen_symbolic_name()
+                        in
+                          Lib.say (String.concat
+                             ["Non-alphanumeric being defined.\n ",
+                              "Invented stem for binding(s): ", 
+                              Lib.quote name,".\n"]);
+                          name
+                        end
+          |  _  =>
+             let val name = "mutrec"^Lib.int_to_string(inc_mutl names)
+             in 
+               Lib.say (String.concat
+                  ["Mutually recursive definition.\n ",
+                   "Invented stem for bindings is ", 
+                   Lib.quote name,".\n"]);
+               name
+             end
+               
      val defn = Hol_fun bindstem qtm
  in
-   case Defn.tcs_of defn
-    of [] => if (Defn.nonrec defn orelse Defn.primrec defn)
-             then Defn.eqns_of defn
-             else let val ind = Option.valOf (Defn.ind_of defn)
-                  in 
-                     save_thm(bindstem^"_ind", ind); 
-                     save_thm(bindstem^"_eqns", Defn.eqns_of defn)
-                  end
-     | _  => raise BOSS_ERR "Define" "Unable to prove termination"
- end;
-
+   if Defn.abbrev defn orelse Defn.primrec defn 
+   then let val newbindstem = bindstem ^"_"^ !def_suffix
+        in
+           Theory.set_MLname bindstem newbindstem;
+           Lib.say ("Definition stored under "^Lib.quote newbindstem^".\n");
+           Defn.eqns_of defn
+        end
+   else
+   if not(null(Defn.parameters defn)) 
+   then let val ind = Option.valOf (Defn.ind_of defn)
+            val defname = bindstem ^"_"^ !def_suffix
+            val indname = bindstem ^"_"^ !ind_suffix
+        in
+          Lib.say (String.concat
+           ["Schematic definition.\nEquations stored under ",
+            Lib.quote defname, " in current theory.\nInduction stored under ",
+            Lib.quote indname, " in current theory.\n"]);
+          save_thm(indname, ind);
+          save_thm(defname, Defn.eqns_of defn)
+        end
+   else 
+    let val defn' = Halts.proveTotal defn handle HOL_ERR _ => defn
+    in 
+       if null(Defn.tcs_of defn')
+       then let val ind = Option.valOf (Defn.ind_of defn')
+                val defname = bindstem ^"_"^ !def_suffix
+                val indname = bindstem ^"_"^ !ind_suffix
+            in
+               Lib.say (String.concat
+                ["Equations stored under ",
+                 Lib.quote defname, ".\nInduction stored under ",
+                 Lib.quote indname, ".\n"]);
+               save_thm(indname, ind);
+               save_thm(defname, Defn.eqns_of defn')
+            end
+       else (Lib.say (String.concat
+               ["Unable to prove totality: use Hol_fun for ",
+               "do-it-yourself termination proofs.\n"]);
+             mapfilter delete_const (map dest_atom (constants_of defn));
+             Theory.scrub();
+             raise BOSS_ERR "Define" "Unable to prove termination")
+    end
+ end end;
 
 
 
 (*---------------------------------------------------------------------------
-         High level interactive operations
+            High level interactive proof operations
  ---------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------*
@@ -219,14 +324,23 @@ val TERM_INTRO_TAC =
  REPEAT_TCL STRIP_THM_THEN
      (fn th => TRY (SUBST_ALL_TAC th) THEN ASSUME_TAC th);
 
-
+fun away gfrees0 bvlist =
+  rev(fst
+    (rev_itlist (fn v => fn (plist,gfrees) =>
+       let val v' = prim_variant gfrees v
+       in ((v,v')::plist, v'::gfrees)
+       end) bvlist ([], gfrees0)));
+    
 fun FREEUP [] g = ALL_TAC g
-  | FREEUP W (g as (_,w)) =
-  let val (V,_) = strip_forall w
-      val others = set_diff V W
-  in
-    (REPEAT GEN_TAC THEN MAP_EVERY ID_SPEC_TAC (rev others)) g
-  end;
+  | FREEUP tofree (g as (asl,w)) =
+     let val (V,_) = strip_forall w
+         val gfrees = free_varsl (w::asl)
+         val Vmap = away gfrees V
+         val tobind = map snd (gather (fn (v,_) => not (mem v tofree)) Vmap)
+     in
+       (MAP_EVERY X_GEN_TAC (map snd Vmap)
+          THEN MAP_EVERY ID_SPEC_TAC (rev tobind)) g
+     end;
 
 (*---------------------------------------------------------------------------*
  * Do case analysis on given term. The quotation is parsed into a term M that*
@@ -234,11 +348,12 @@ fun FREEUP [] g = ALL_TAC g
  * then the match of the names must be exact. Once the term to split over is *
  * known, its type and the associated facts are obtained and used to do the  *
  * split with. If M is a variable, it might be quantified in the goal. If so,*
- * we try to unquantify it so that the case split has meaning.               *
+ * we try to unquantify the goal so that the case split has meaning.         *
  *                                                                           *
  * It can happen that the given term is not found anywhere in the goal. If   *
  * the term is boolean, we do a case-split on whether it is true or false.   *
  *---------------------------------------------------------------------------*)
+
 datatype category = Free of term
                   | Bound of term list * term
                   | Alien of term
@@ -404,7 +519,6 @@ fun Induct (g as (_,w)) =
  in
    Induct_on [QUOTE Name] g
  end;
-
 
 
 

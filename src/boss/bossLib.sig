@@ -17,6 +17,9 @@ in
   val Hol_fun      : string -> term quotation -> defn
   val Define       : term quotation -> thm
 
+  val ind_suffix : string ref
+  val def_suffix : string ref
+
   (* Fetch the rewrite rules for a type. *)
   val type_rws : string -> thm list
 
