@@ -295,7 +295,7 @@ val _ = adjoin_to_theory
       fun NL() = PP.add_newline ppstrm
   in
     S "val _ = TypeBase.write";                              NL();
-    S "  (TypeBasePure.mk_tyinfo";                           NL();
+    S "  [TypeBasePure.mk_tyinfo";                           NL();
     S "     {ax=TypeBasePure.ORIG option_Axiom,";            NL();
     S "      case_def=option_case_def,";                     NL();
     S "      case_cong=option_case_cong,";                   NL();
@@ -304,7 +304,7 @@ val _ = adjoin_to_theory
     S "      size=NONE,";                                    NL();
     S "      boolify=NONE,";                                 NL();
     S "      one_one=SOME SOME_11,";                         NL();
-    S "      distinct=SOME NOT_NONE_SOME});";                NL();
+    S "      distinct=SOME NOT_NONE_SOME}];";                NL();
     NL();
     S "val option_Induct = Rewrite.ONCE_REWRITE_RULE ";               NL();
     S "                      [boolTheory.CONJ_SYM] option_induction"; NL();

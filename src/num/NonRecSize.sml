@@ -55,10 +55,10 @@ local
   val option_info' = TypeBasePure.put_size option_size_info option_info
 
 in
-   val _ = TypeBase.write bool_info'
-   val _ = TypeBase.write prod_info'
-   val _ = TypeBase.write option_info'
-   val _ = TypeBase.write sum_info'
+   val _ = TypeBase.write [bool_info']
+   val _ = TypeBase.write [prod_info']
+   val _ = TypeBase.write [option_info']
+   val _ = TypeBase.write [sum_info']
 end
 
 end;

@@ -417,7 +417,7 @@ val _ = adjoin_to_theory
    in
       S "val pair_rws = [PAIR, FST, SND];";                  NL();
       S "val _ = TypeBase.write";                            NL();
-      S "  (TypeBasePure.mk_tyinfo";                         NL();
+      S "  [TypeBasePure.mk_tyinfo";                         NL();
       S "     {ax=TypeBasePure.ORIG pair_Axiom,";            NL();
       S "      case_def=pair_case_thm,";                     NL();
       S "      case_cong=pair_case_cong,";                   NL();
@@ -426,7 +426,7 @@ val _ = adjoin_to_theory
       S "      size=NONE,";                                  NL();
       S "      boolify=NONE,";                               NL();
       S "      one_one=SOME CLOSED_PAIR_EQ,";                NL();
-      S "      distinct=NONE});"
+      S "      distinct=NONE}];"
   end)};
 
 

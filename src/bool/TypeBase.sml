@@ -15,15 +15,24 @@ val ERR = mk_HOL_ERR "TypeBase";
  * Create the database.                                                     *
  *--------------------------------------------------------------------------*)
 
+fun list_compose [] x = x | list_compose (f :: fs) x = list_compose fs (f x);
+
 local val dBase = ref empty
-      val update_fns = ref ([]:(tyinfo -> unit) list)
+      val update_fns = ref ([]:(tyinfo list -> tyinfo list) list)
 in
   fun theTypeBase() = !dBase
 
-  fun register_update_fn f = (update_fns := f :: !update_fns)
-  fun write facts = (dBase := add (theTypeBase()) facts;
-                     Parse.temp_overload_on("case", case_const_of facts);
-                     app (fn f => f facts) (!update_fns));
+  fun register_update_fn f = (update_fns := !update_fns @ [f])
+  fun write tyinfos =
+    let
+      fun write1 tyinfo =
+        (dBase := add (theTypeBase()) tyinfo;
+         Parse.temp_overload_on("case", case_const_of tyinfo))
+      val tyinfos = list_compose (!update_fns) tyinfos
+      val () = app write1 tyinfos
+    in
+      tyinfos
+    end;
 end;
 
 fun read s = get (theTypeBase()) s;
@@ -70,7 +79,7 @@ val [bool_info] = TypeBasePure.gen_tyinfo {ax=boolTheory.boolAxiom,
                               ind=boolTheory.bool_INDUCT,
                               case_defs = [boolTheory.bool_case_thm]};
 
-val _ = write bool_info;
+val _ = write [bool_info];
 
 (* ---------------------------------------------------------------------- *
  * Install case transformation function for parser                        *

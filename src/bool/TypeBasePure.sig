@@ -68,6 +68,7 @@ sig
 
   (* Size of a type *)
 
-   val type_size : typeBase -> hol_type -> term
+   val type_size    : typeBase -> hol_type -> term
+   val type_boolify : typeBase -> hol_type -> term
 
 end

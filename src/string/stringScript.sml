@@ -360,7 +360,7 @@ val _ = adjoin_to_theory
    val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
  in
    S "val _ = TypeBase.write";
-   S "  (TypeBasePure.mk_tyinfo";
+   S "  [TypeBasePure.mk_tyinfo";
    S "     {ax=TypeBasePure.ORIG string_Axiom,";
    S "      case_def=STRING_CASE_DEF,";
    S "      case_cong=STRING_CASE_CONG,";
@@ -369,7 +369,7 @@ val _ = adjoin_to_theory
    S "      size=SOME(Parse.Term`STRLEN`,TypeBasePure.ORIG STRLEN_DEF),";
    S "      boolify=NONE,";
    S "      one_one=SOME STRING_11,";
-   S "      distinct=SOME (CONJUNCT1 STRING_DISTINCT)});";
+   S "      distinct=SOME (CONJUNCT1 STRING_DISTINCT)}];";
    S " ";
    S "val _ = computeLib.add_funs";
    S "        [STRING_CASE_DEF,STRLEN_DEF,EXPLODE_EQNS,IMPLODE_EQNS,";

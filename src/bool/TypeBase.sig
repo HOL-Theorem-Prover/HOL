@@ -10,10 +10,10 @@ sig
    (* Imperative database of datatype facts and associated operations. *)
 
    val theTypeBase        : unit -> typeBase
-   val write              : tyinfo -> unit
+   val write              : tyinfo list -> tyinfo list
    val read               : string -> tyinfo option
    val elts               : unit -> tyinfo list
-   val register_update_fn : (tyinfo -> unit) -> unit
+   val register_update_fn : (tyinfo list -> tyinfo list) -> unit
 
    val axiom_of           : string -> thm
    val induction_of       : string -> thm

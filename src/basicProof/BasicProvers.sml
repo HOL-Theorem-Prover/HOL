@@ -283,11 +283,11 @@ val bool_ss = boolSimps.bool_ss;
        just when a datatype is declared.
  ---------------------------------------------------------------------------*)
 
-val (srw_ss : simpset ref) = ref bool_ss
+val (srw_ss : simpset ref) = ref bool_ss;
 
-val srw_ss_initialised = ref false
+val srw_ss_initialised = ref false;
 
-val pending_updates = ref ([]: simpLib.ssdata list)
+val pending_updates = ref ([]: simpLib.ssdata list);
 
 fun initialise_srw_ss() =
   if !srw_ss_initialised then !srw_ss
@@ -297,20 +297,21 @@ fun initialise_srw_ss() =
    ; srw_ss := foldl (fn (ssd,ss) => ss ++ ssd) (!srw_ss) (!pending_updates)
    ; srw_ss_initialised := true
    ; !srw_ss
-  end
+  end;
 
 fun augment_srw_ss ssdl =
     if !srw_ss_initialised then
       srw_ss := foldl (fn (ssd,ss) => ss ++ ssd) (!srw_ss) ssdl
     else
-      pending_updates := !pending_updates @ ssdl
+      pending_updates := !pending_updates @ ssdl;
 
 fun update_fn tyi
-  = augment_srw_ss [simpLib.rewrites (TypeBasePure.simpls_of tyi)]
+  = augment_srw_ss [simpLib.rewrites (TypeBasePure.simpls_of tyi)];
 
-val _ = TypeBase.register_update_fn update_fn
+val () =
+  TypeBase.register_update_fn (fn tyinfos => (app update_fn tyinfos; tyinfos))
 
-fun srw_ss () = initialise_srw_ss()
+fun srw_ss () = initialise_srw_ss();
 
 fun SRW_TAC ssdl thl = let
   val ss = foldl (fn (ssd, ss) => ss ++ ssd) (srw_ss()) ssdl

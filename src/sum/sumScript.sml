@@ -374,7 +374,7 @@ val _ = adjoin_to_theory
        fun NL() = PP.add_newline ppstrm
    in
       S "val _ = TypeBase.write";                           NL();
-      S "  (TypeBasePure.mk_tyinfo";                        NL();
+      S "  [TypeBasePure.mk_tyinfo";                        NL();
       S "     {ax=TypeBasePure.ORIG sum_Axiom,";            NL();
       S "      case_def=sum_case_def,";                     NL();
       S "      case_cong=sum_case_cong,";                   NL();
@@ -383,7 +383,7 @@ val _ = adjoin_to_theory
       S "      size=NONE,";                                 NL();
       S "      boolify=NONE,";                              NL();
       S "      one_one=SOME INR_INL_11,";                   NL();
-      S "      distinct=SOME sum_distinct});";              NL();
+      S "      distinct=SOME sum_distinct}];";              NL();
       NL();
       S "val _ = let open computeLib";                      NL();
       S "        in add_thms (map lazyfy_thm";              NL();

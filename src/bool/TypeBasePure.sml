@@ -335,21 +335,18 @@ fun type_size db ty =
    end
 end
 
-(*
 (*---------------------------------------------------------------------------
     Map a HOL type (ty) into a term having type :ty -> bool list.
  ---------------------------------------------------------------------------*)
 
-local fun tyboolify_env db = Option.map fst o 
-                             Option.composePartial (boolify_of,get db)
-      fun list ty  = mk_thy_type{Tyop="num",Thy="num",Args=[]}
-      fun K0 ty = mk_abs{Bvar=mk_var{Name="v",Ty=ty}, Body=Zero()};
+local
+  fun tyboolify_env db =
+    Option.map fst o Option.composePartial (boolify_of, get db)
+  fun undef _ = raise ERR "type_boolify" "unknown type"
+  fun theta ty =
+    if is_vartype ty then raise ERR "type_boolify" "type variable" else NONE
 in
-fun type_boolify db ty =
-   let fun theta ty = if is_vartype ty then SOME (K0 ty) else NONE
-   in typeValue (theta,tysize_env db,K0) ty
-   end
+  fun type_boolify db = typeValue (theta, tyboolify_env db, undef)
 end
-*)
 
 end
