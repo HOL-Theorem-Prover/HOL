@@ -122,6 +122,7 @@ standard Oppen-style pretty-printing package.) They are
    val AroundEachPhrase : term_grammar.PhraseBlockStyle
    val AroundSamePrec   : term_grammar.PhraseBlockStyle
    val AroundSameName   : term_grammar.PhraseBlockStyle
+   val NoPhrasing       : term_grammar.PhraseBlockStyle
 }
 \noindent The two spacing values provide ways of specifying
 white-space should be added when terms are printed.  Use of
@@ -179,7 +180,10 @@ will cause the creation of a new block for the phrase if it is at a
 different precedence level from its parent, while the latter creates
 the block if the parent name is not the same.  The former is
 appropriate for {+} and {-} which are at the same precedence level,
-while the latter is appropriate for {/\}.
+while the latter is appropriate for {/\}.  Finally, the {NoPhrasing}
+style causes there to be no block at all around terms controlled by
+this rule.  The intention in using such a style is to have block
+structure controlled by the level above.
 
 \FAILURE
 This function will fail if the {pp_element} list does not have {TOK}
