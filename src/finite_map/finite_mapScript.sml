@@ -843,11 +843,20 @@ val o_f_FDOM = Q.store_thm
  `!f:'b -> 'c. !g:'a |->'b. FDOM  g = FDOM (f o_f g)`,
 REWRITE_TAC [o_f_DEF]);
 
+val FDOM_o_f = save_thm("FDOM_o_f", GSYM o_f_FDOM);
+val _ = BasicProvers.export_rewrites ["FDOM_o_f"]
+
 val o_f_FAPPLY = Q.store_thm
-("o_f_APPLY",
+("o_f_FAPPLY",
  `!f:'b->'c. !g:('a,'b) fmap.
    !x. x IN FDOM  g ==> (FAPPLY (f o_f g) x = f (FAPPLY g x))`,
  SRW_TAC [][o_f_DEF]);
+
+val o_f_FEMPTY = store_thm(
+  "o_f_FEMPTY",
+  ``f o_f FEMPTY = FEMPTY``,
+  SRW_TAC [][GSYM fmap_EQ_THM, FDOM_o_f])
+val _ = BasicProvers.export_rewrites ["o_f_FEMPTY"]
 
 (*---------------------------------------------------------------------------
           Range of a finite map
@@ -1059,6 +1068,19 @@ val FRANGE_FUPDATE_DOMSUB = store_thm(
 
 val _ = export_rewrites ["DOMSUB_FEMPTY", "DOMSUB_FUPDATE", "FDOM_DOMSUB",
                          "DOMSUB_FAPPLY", "FRANGE_FUPDATE_DOMSUB"]
+
+val o_f_FUPDATE = store_thm(
+  "o_f_FUPDATE",
+  ``f o_f (fm |+ (k,v)) = (f o_f (fm \\ k)) |+ (k, f v)``,
+  SRW_TAC [][GSYM fmap_EQ_THM]
+  THENL [
+    SRW_TAC [][pred_setTheory.EXTENSION] THEN PROVE_TAC [],
+    SRW_TAC [][GSYM fmap_EQ_THM, o_f_FAPPLY],
+    Cases_on `x = k` THEN
+    SRW_TAC [][GSYM fmap_EQ_THM, o_f_FAPPLY, NOT_EQ_FAPPLY,
+               DOMSUB_FAPPLY_NEQ]
+  ]);
+val _ = BasicProvers.export_rewrites ["o_f_FUPDATE"]
 
 (* ----------------------------------------------------------------------
     Iterated updates
