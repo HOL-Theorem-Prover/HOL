@@ -7,6 +7,7 @@ load "ringTheory";
 *)
 
 open HolKernel Parse basicHol90Lib abs_tools;
+open BasicProvers SingleStep Datatype;
 
 val _ = new_theory "ringNorm";
 
@@ -64,7 +65,7 @@ val _ = asm_save_thm("spolynom_simplify_def", spolynom_simplify_def);
 
 
 
-fun ARW_TAC l = RW_TAC base_ss
+fun ARW_TAC l = RW_TAC bool_ss
     ([ #mult_one_left rth, #mult_one_right rth,
        #plus_zero_left rth, #plus_zero_right rth,
        #mult_zero_left rth, #mult_zero_right rth ]@l);

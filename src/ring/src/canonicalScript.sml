@@ -5,6 +5,7 @@ load "quoteTheory";
 load "prelimTheory";
 *)
 open HolKernel Parse basicHol90Lib abs_tools;
+open BasicProvers SingleStep Datatype;
 
 val _ = new_theory "canonical";
 
@@ -32,14 +33,14 @@ val { plus_sym, plus_assoc, mult_sym, mult_assoc, distr_left,
 
 (* useful tacs *)
 val APP_DIFF = REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC);
-fun ARW_TAC l = RW_TAC base_ss
+fun ARW_TAC l = BasicProvers.RW_TAC bool_ss
     ([ mult_one_left, mult_one_right,
        plus_zero_left, plus_zero_right,
-       mult_zero_left, mult_zero_right, compare_def ]@l);
+       mult_zero_left, mult_zero_right, compare_def]@l);
 
 
 
-val _ = bossLib.Hol_datatype
+val _ = Hol_datatype
  ` canonical_sum = 
      Nil_monom
    | Cons_monom of 'a => index list => canonical_sum

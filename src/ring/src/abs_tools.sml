@@ -1,10 +1,10 @@
-open bossLib abstraction;
+open abstraction;
 
 local
 open HolKernel Parse basicHol90Lib
 in
 
-(* My stuffs: adding implicit arguments to preterms and bossLib.Define *)
+(* My stuffs: adding implicit arguments to preterms and TotalDefn.Define *)
 
 
 local open parse_term in
@@ -56,7 +56,7 @@ fun --q _ = Term q;
 fun Define q =
   let val tm = --q--
       val tm' = abstraction.param_eq tm
-  in bossLib.Define [ANTIQUOTE tm']
+  in TotalDefn.Define [ANTIQUOTE tm']
   end;
 
 (*

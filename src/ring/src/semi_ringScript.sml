@@ -3,6 +3,7 @@ load "abs_tools";
 load "RecordType";
 *)
 open HolKernel Parse basicHol90Lib abs_tools;
+open BasicProvers SingleStep Datatype;
 
 infix ORELSE THEN THENL o |->;
 infix 8 by;
@@ -13,11 +14,12 @@ val _ = new_theory "semi_ring";
 val APP_DIFF = REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC);
 
 
-val semi_ring_record = RecordType.create_record "semi_ring"
-    [ ("SR0", ==`:'a`==),
-      ("SR1", ==`:'a`==),
-      ("SRP", ==`:'a->'a->'a`==),
-      ("SRM", ==`:'a->'a->'a`==) ];
+val _ = Hol_datatype 
+          `semi_ring = <| SR0 : 'a;
+                          SR1 : 'a;
+                          SRP : 'a -> 'a -> 'a;
+                          SRM : 'a -> 'a -> 'a
+                       |>`;
 
 val sr = --`r:'a semi_ring`--;
 val _ = add_parameter sr;

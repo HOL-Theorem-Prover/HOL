@@ -5,6 +5,7 @@ load "semi_ringTheory";
 *)
 
 open HolKernel Parse basicHol90Lib abs_tools;
+open BasicProvers SingleStep Datatype;
 
 infix ORELSE THEN THENL o;
 infix 8 by;
@@ -15,13 +16,12 @@ val _ = new_theory "ring";
 fun EQ_TRANS_TAC t = MATCH_MP_TAC EQ_TRANS THEN EXISTS_TAC t THEN CONJ_TAC;
 
 
-val ring_record = RecordType.create_record "ring"
-    [ ("R0", ==`:'a`==),
-      ("R1", ==`:'a`==),
-      ("RP", ==`:'a->'a->'a`==),
-      ("RM", ==`:'a->'a->'a`==),
-      ("RN", ==`:'a->'a`==) ];
-
+val _ = Hol_datatype `ring = <| R0 : 'a;
+                                R1 : 'a;
+                                RP : 'a -> 'a -> 'a;
+                                RM : 'a -> 'a -> 'a;
+                                RN : 'a -> 'a
+                             |>`;
 
 val r = --`r:'a ring`--;
 val _ = app (C add_impl_param [r]) ["R0","R1","RP","RM","RN"];
@@ -104,7 +104,7 @@ val semi_ring_of_def = Define
 val ring_is_semi_ring = asm_store_thm
     ("ring_is_semi_ring",
      --` is_semi_ring semi_ring_of`--,
-RW_TAC base_ss [ semi_ring_of_def, semi_ringTheory.is_semi_ring_def,
+RW_TAC bool_ss [ semi_ring_of_def, semi_ringTheory.is_semi_ring_def,
 		 semi_ringTheory.semi_ring_accessors] THEN
 MAP_FIRST MATCH_ACCEPT_TAC
   [ plus_sym,plus_assoc,mult_sym,mult_assoc,plus_zero_left,mult_one_left,
