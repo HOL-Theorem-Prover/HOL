@@ -24,7 +24,8 @@ sig
  val ARITH_PROVE              : conv
  val ARITH_TAC                : tactic
 
- val BOUNDED_CONV             : conv -> conv
+ val BOUNDED_FORALL_CONV      : conv -> conv
+ val BOUNDED_EXISTS_CONV      : conv -> conv
 
  val num_ss                   : simpLib.simpset
 

@@ -247,22 +247,44 @@ val ARITH_TAC   = CONV_TAC ARITH_CONV;
 (*---------------------------------------------------------------------------*)
 (* If "c" is a number constant,                                              *)
 (*                                                                           *)
-(*    BOUNDED_CONV cnv `!n. n < c ==> P n`                                   *)
+(*    BOUNDED_FORALL_CONV cnv `!n. n < c ==> P n`                            *)
 (*                                                                           *)
 (* generates "P (c-1) /\ !n. < (c-1) ==> P n"  and applies cnv to the first  *)
 (* conjunct "P (c-1)". With NTAC or REPEATC, this can be used to prove       *)
 (* bounded quantifications.                                                  *)
 (*---------------------------------------------------------------------------*)
 
-fun BOUNDED_CONV cnv M = 
+fun BOUNDED_FORALL_CONV cnv M = 
  let open reduceLib arithmeticTheory
      val c = snd(dest_less(fst(dest_imp(snd(dest_forall M)))))
-     val thm = MP (SPEC c BOUNDED_THM) 
+     val thm = MP (SPEC c BOUNDED_FORALL_THM) 
                   (EQT_ELIM(REDUCE_CONV (mk_less(zero_tm,c))))
  in 
    (HO_REWR_CONV thm THENC LAND_CONV cnv THENC REDUCE_CONV) M
  end 
- handle e => raise wrap_exn "numLib" "BOUNDED_CONV" e;
+ handle e => raise wrap_exn "numLib" "BOUNDED_FORALL_CONV" e;
+
+
+(*---------------------------------------------------------------------------*)
+(* If "c" is a number constant,                                              *)
+(*                                                                           *)
+(*    BOUNDED_EXISTS_CONV cnv `?n. n < c /\ P n`                             *)
+(*                                                                           *)
+(* generates "P (c-1) \/ ?n. n < (c-1) /\ P n"  and applies cnv to the first *)
+(* conjunct "P (c-1)". With NTAC or REPEATC, this can be used to prove       *)
+(* bounded quantifications.                                                  *)
+(*---------------------------------------------------------------------------*)
+
+fun BOUNDED_EXISTS_CONV cnv M = 
+ let open reduceLib arithmeticTheory
+     val c = snd(dest_less(fst(dest_conj(snd(dest_exists M)))))
+     val thm = MP (SPEC c BOUNDED_EXISTS_THM) 
+                  (EQT_ELIM(REDUCE_CONV (mk_less(zero_tm,c))))
+ in 
+   (HO_REWR_CONV thm THENC LAND_CONV cnv THENC REDUCE_CONV) M
+ end 
+ handle e => raise wrap_exn "numLib" "BOUNDED_EXISTS_CONV" e;
+
 
 (*---------------------------------------------------------------------------
     Simplification set for numbers (and booleans).

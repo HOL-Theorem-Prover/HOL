@@ -2712,7 +2712,7 @@ val FORALL_NUM = store_thm(
   PROVE_TAC [num_CASES]);
 
 
-val BOUNDED_THM = Q.store_thm("BOUNDED_THM",
+val BOUNDED_FORALL_THM = Q.store_thm("BOUNDED_FORALL_THM",
 `!c. 0<c ==> ((!n. n < c ==> P n) = P (c-1) /\ !n. n < (c-1) ==> P n)`,
  RW_TAC boolSimps.bool_ss [] THEN EQ_TAC THENL
   [REPEAT STRIP_TAC 
@@ -2722,6 +2722,15 @@ val BOUNDED_THM = Q.store_thm("BOUNDED_THM",
         THEN Q.EXISTS_TAC `c-1`
         THEN ASM_REWRITE_TAC [SUB_LESS_EQ,SUB_LEFT_LESS]],
    METIS_TAC [SUB_LESS_OR,LESS_OR_EQ]]);
+
+
+val BOUNDED_EXISTS_THM = Q.store_thm("BOUNDED_EXISTS_THM",
+`!c. 0<c ==> ((?n. n < c /\ P n) = P (c-1) \/ ?n. n < (c-1) /\ P n)`,
+ REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
+  [METIS_TAC [SUB_LESS_OR,LESS_REFL,LESS_EQ_LESS_TRANS,LESS_LESS_CASES],
+   METIS_TAC [num_CASES,LESS_REFL,SUC_SUB1,LESS_SUC_REFL],
+   METIS_TAC [SUB_LEFT_LESS,ADD1,SUC_LESS]]);
+
 
 (* ********************************************************************** *)
 val _ = print "Miscellaneous theorems\n"
