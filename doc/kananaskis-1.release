@@ -24,6 +24,9 @@ Bugs fixed:
     of the record type began with an "x" or a "z", or if the name of
     the type was "r1" or "r2".  Thanks to Steve Brackin for the report
     of these bugs.
+  * Fixed a bug in Hol_datatype where some forms of nested recursive
+    definitions were failing.  Thanks to Kim Sunesen for the bug
+    report.
 
 New features:
 -------------
