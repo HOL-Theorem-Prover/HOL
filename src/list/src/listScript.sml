@@ -35,6 +35,7 @@ val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
  *---------------------------------------------------------------------------*)
 
 open HolKernel Parse boolLib Num_conv Prim_rec;
+open BasicProvers
 
 val _ = new_theory "list";
 
@@ -158,6 +159,7 @@ val MEM = new_recursive_definition
        rec_axiom = list_Axiom,
        def = --`(!x. MEM x [] = F) /\
             (!x h t. MEM x (h::t) = (x=h) \/ MEM x t)`--};
+val _ = export_rewrites ["MEM"]
 
 val FILTER = new_recursive_definition
       {name = "FILTER",
@@ -426,6 +428,7 @@ val MEM_APPEND = store_thm(
   ``!e l1 l2. MEM e (APPEND l1 l2) = MEM e l1 \/ MEM e l2``,
   GEN_TAC THEN LIST_INDUCT_TAC THEN
   ASM_REWRITE_TAC [APPEND, MEM, DISJ_ASSOC]);
+val _ = export_rewrites ["MEM_APPEND"]
 
 val EVERY_APPEND = store_thm(
   "EVERY_APPEND",
@@ -848,6 +851,7 @@ val REVERSE_DEF = new_recursive_definition {
   rec_axiom = list_Axiom,
   def = ``(REVERSE [] = []) /\
           (REVERSE (h::t) = APPEND (REVERSE t) [h])``};
+val _ = export_rewrites ["REVERSE_DEF"]
 
 val REVERSE_APPEND = store_thm(
   "REVERSE_APPEND",
@@ -861,7 +865,13 @@ val REVERSE_REVERSE = store_thm(
   ``!l:'a list. REVERSE (REVERSE l) = l``,
   LIST_INDUCT_TAC THEN
   ASM_REWRITE_TAC [REVERSE_DEF, REVERSE_APPEND, APPEND]);
-val _ = BasicProvers.export_rewrites ["REVERSE_REVERSE"]
+val _ = export_rewrites ["REVERSE_REVERSE"]
+
+val MEM_REVERSE = store_thm(
+  "MEM_REVERSE",
+  ``!l x. MEM x (REVERSE l) = MEM x l``,
+  Induct THEN SRW_TAC [][] THEN PROVE_TAC []);
+val _ = export_rewrites ["MEM_REVERSE"]
 
 
 (* ----------------------------------------------------------------------
@@ -924,6 +934,19 @@ val ALL_DISTINCT_FILTER = store_thm(
                 FORALL_AND_THM, CONS_11, EQ_IMP_THM, lemma] THEN
   metisLib.METIS_TAC []);
 
+(* ----------------------------------------------------------------------
+    LIST_TO_SET
+   ---------------------------------------------------------------------- *)
+
+val LIST_TO_SET =
+    new_definition("LIST_TO_SET", ``LIST_TO_SET = combin$C MEM``);
+
+val IN_LIST_TO_SET = store_thm(
+  "IN_LIST_TO_SET",
+  ``x IN LIST_TO_SET l = MEM x l``,
+  SRW_TAC [][LIST_TO_SET, boolTheory.IN_DEF]);
+val _ = export_rewrites ["IN_LIST_TO_SET"]
+
 (* --------------------------------------------------------------------- *)
 
 val _ = adjoin_to_theory
@@ -958,13 +981,13 @@ val _ = adjoin_to_theory
 
 val _ = BasicProvers.export_rewrites
           ["APPEND", "APPEND_11", "EL", "EVERY_DEF", "FLAT", "HD",
-           "LENGTH", "MAP", "MAP2", "MEM", "NULL_DEF", "REVERSE_DEF",
+           "LENGTH", "MAP", "MAP2", "NULL_DEF",
            "SUM", "TL", "APPEND_ASSOC", "CONS", "CONS_11",
            "LENGTH_APPEND", "LENGTH_MAP", "MAP_APPEND",
            "NOT_CONS_NIL", "NOT_NIL_CONS", "MAP_EQ_NIL", "APPEND_NIL",
            "CONS_ACYCLIC", "list_case_def", "APPEND_eq_NIL", "ZIP",
            "UNZIP", "EVERY_APPEND", "EXISTS_APPEND", "EVERY_SIMP",
-           "EXISTS_SIMP", "NOT_EVERY", "NOT_EXISTS", "MEM_APPEND",
+           "EXISTS_SIMP", "NOT_EVERY", "NOT_EXISTS",
            "LAST_CONS", "FRONT_CONS", "FOLDL", "FOLDR", "FILTER",
            "ALL_DISTINCT"];
 

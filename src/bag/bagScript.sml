@@ -1,5 +1,6 @@
 open HolKernel Parse boolLib boolSimps
-     numLib Prim_rec mnUtils pred_setTheory  BasicProvers SingleStep;
+     numLib Prim_rec mnUtils pred_setTheory  BasicProvers SingleStep
+     metisLib
 
 val hol_ss = mn_ss;
 
@@ -54,6 +55,17 @@ val BAG_INSERT = new_definition (
 val _ = add_listform {cons = "BAG_INSERT", nilstr = "EMPTY_BAG",
                       separator = [TOK ";", BreakSpace(1,0)],
                       leftdelim = [TOK "{|"], rightdelim = [TOK "|}"]};
+
+val BAG_cases = Q.store_thm(
+  "BAG_cases",
+  `!b. (b = EMPTY_BAG) \/ (?b0 e. b = BAG_INSERT e b0)`,
+  SIMP_TAC hol_ss [EMPTY_BAG, BAG_INSERT] THEN
+  CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN
+  SIMP_TAC hol_ss [] THEN GEN_TAC THEN
+  Q.ASM_CASES_TAC `!x. b x = 0` THEN ARWT THEN
+  FULL_SIMP_TAC hol_ss [] THEN MAP_EVERY Q.EXISTS_TAC [
+    `\y. if (y = x) then b x - 1 else b y`, `x`
+  ] THEN ASM_SIMP_TAC hol_ss [fCOND_OUT_THM, aCOND_OUT_THM]);
 
 val BAG_INTER = Q.new_definition(
   "BAG_INTER",
@@ -971,6 +983,15 @@ val IN_SET_OF_BAG = Q.store_thm(
   SIMP_TAC hol_ss [SET_OF_BAG, SPECIFICATION]);
 val _ = export_rewrites ["IN_SET_OF_BAG"]
 
+val SET_OF_BAG_EQ_EMPTY = store_thm(
+  "SET_OF_BAG_EQ_EMPTY",
+  ``!b. (({} = SET_OF_BAG b) = (b = {||})) /\
+        ((SET_OF_BAG b = {}) = (b = {||}))``,
+  GEN_TAC THEN
+  Q.SPEC_THEN `b` STRIP_ASSUME_TAC BAG_cases THEN
+  SRW_TAC [][SET_OF_BAG_INSERT]);
+val _ = export_rewrites ["SET_OF_BAG_EQ_EMPTY"]
+
 val _ = print "Bag disjointness\n"
 val BAG_DISJOINT = new_definition(
   "BAG_DISJOINT",
@@ -1164,17 +1185,6 @@ val BCARD_rwts = prove(
                        BAG_CARD_RELn b0 m)`,
   MESON_TAC [BCARD_R_cases, BCARD_imps]);
 
-val BAG_cases = Q.store_thm(
-  "BAG_cases",
-  `!b. (b = EMPTY_BAG) \/ (?b0 e. b = BAG_INSERT e b0)`,
-  SIMP_TAC hol_ss [EMPTY_BAG, BAG_INSERT] THEN
-  CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN
-  SIMP_TAC hol_ss [] THEN GEN_TAC THEN
-  Q.ASM_CASES_TAC `!x. b x = 0` THEN ARWT THEN
-  FULL_SIMP_TAC hol_ss [] THEN MAP_EVERY Q.EXISTS_TAC [
-    `\y. if (y = x) then b x - 1 else b y`, `x`
-  ] THEN ASM_SIMP_TAC hol_ss [fCOND_OUT_THM, aCOND_OUT_THM]);
-
 val BCARD_BINSERT_indifferent = prove(
   Term`!b n. BAG_CARD_RELn b n ==>
              !b0 e. (b = BAG_INSERT e b0) ==>
@@ -1353,6 +1363,75 @@ val BAG_IN_BAG_FILTER = store_thm(
   ``BAG_IN e (BAG_FILTER P b) = P e /\ BAG_IN e b``,
   SRW_TAC [][BAG_IN]);
 val _ = export_rewrites ["BAG_IN_BAG_FILTER"]
+
+val SET_OF_BAG_EQ_INSERT = store_thm(
+  "SET_OF_BAG_EQ_INSERT",
+  ``!b e s.
+      (e INSERT s = SET_OF_BAG b) =
+      ?b0 eb. (b = BAG_UNION eb b0) /\
+              (s = SET_OF_BAG b0) /\
+              (!e'. BAG_IN e' eb ==> (e' = e)) /\
+              (~(e IN s) ==> BAG_IN e eb)``,
+  REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+    `BAG_IN e b` by METIS_TAC [IN_INSERT, IN_SET_OF_BAG] THEN
+    Cases_on `e IN s` THENL [
+      MAP_EVERY Q.EXISTS_TAC [`b`, `{||}`] THEN
+      SRW_TAC [][] THEN METIS_TAC [ABSORPTION],
+      MAP_EVERY Q.EXISTS_TAC [`BAG_FILTER ((~) o (=) e) b`,
+                              `BAG_FILTER ((=) e) b`] THEN
+      REPEAT CONJ_TAC THENL [
+        SRW_TAC [boolSimps.DNF_ss, boolSimps.CONJ_ss]
+                [BAG_EXTENSION, BAG_INN_BAG_UNION] THEN
+        PROVE_TAC [BAG_INN_0],
+        FULL_SIMP_TAC (srw_ss()) [EXTENSION] THEN PROVE_TAC [],
+        SRW_TAC [][],
+        SRW_TAC [][]
+      ]
+    ],
+    SRW_TAC [][EXTENSION, BAG_IN_BAG_UNION] THEN
+    FULL_SIMP_TAC (srw_ss()) [] THEN PROVE_TAC []
+  ]);
+
+val FINITE_SET_OF_BAG = store_thm(
+  "FINITE_SET_OF_BAG",
+  ``!b. FINITE (SET_OF_BAG b) = FINITE_BAG b``,
+  Q_TAC SUFF_TAC
+        `(!b:'a bag. FINITE_BAG b ==> FINITE (SET_OF_BAG b)) /\
+         (!s:'a set. FINITE s ==>
+                     !b. (s = SET_OF_BAG b) ==> FINITE_BAG b)` THEN1
+         METIS_TAC [] THEN CONJ_TAC
+  THENL [
+    HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN
+    SRW_TAC [][SET_OF_BAG_INSERT],
+    HO_MATCH_MP_TAC FINITE_INDUCT THEN
+    SRW_TAC [][SET_OF_BAG_EQ_INSERT, SET_OF_BAG_EQ_EMPTY] THEN
+    SRW_TAC [][FINITE_BAG_UNION] THEN
+    Q_TAC SUFF_TAC `!n b e. (b e = n) /\ (!e'. BAG_IN e' b ==> (e' = e)) ==>
+                            FINITE_BAG b` THEN1 METIS_TAC [] THEN
+    REPEAT (POP_ASSUM (K ALL_TAC)) THEN Induct THENL [
+      REPEAT STRIP_TAC THEN
+      Q_TAC SUFF_TAC `b = {||}` THEN1 SRW_TAC [][] THEN
+      SRW_TAC [][BAG_EXTENSION] THEN
+      FULL_SIMP_TAC (srw_ss()) [BAG_INN, BAG_IN] THEN EQ_TAC THENL [
+        SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
+        `b e' >= 1`
+           by PROVE_TAC [numLib.ARITH_PROVE
+                           ``x >= n /\ ~(n = 0) ==> x >= 1n``] THEN
+        `b e' = 0` by PROVE_TAC [] THEN
+        FULL_SIMP_TAC (srw_ss()) [],
+        SIMP_TAC (srw_ss()) []
+      ],
+      REPEAT STRIP_TAC THEN
+      `BAG_IN e b` by SRW_TAC [numSimps.ARITH_ss][BAG_IN, BAG_INN] THEN
+      `?b0. b = BAG_INSERT e b0`
+         by PROVE_TAC [BAG_IN_BAG_DELETE, BAG_DELETE] THEN
+      POP_ASSUM SUBST_ALL_TAC THEN
+      FULL_SIMP_TAC (srw_ss()) [BAG_IN_BAG_INSERT, DISJ_IMP_THM] THEN
+      `b0 e = n`
+        by FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) [BAG_INSERT] THEN
+      PROVE_TAC []
+    ]
+  ]);
 
 (* ----------------------------------------------------------------------
     IMAGE for bags.
