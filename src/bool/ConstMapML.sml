@@ -12,7 +12,9 @@ fun LEX c1 c2 ((x1,x2),(y1,y2)) =
    of EQUAL => c2 (x2,y2)
     | other => other;
 
-val alph = Lib.with_flag (Feedback.emit_WARNING,false) mk_vartype "''a";
+val [eq_alpha,eq_beta,eq_gamma] = 
+   List.map (with_flag (Feedback.emit_WARNING,false) Type.mk_vartype) 
+            ["''a", "''b", "''c"];
 
 (*---------------------------------------------------------------------------*)
 (* The initial constant map has equality, conjunction, disjunction,          *)
@@ -42,7 +44,7 @@ in
 val ConstMapRef = ref
   (insert(insert(insert(insert(insert(insert
     (initConstMap,
-     equality, ("","=",    alph-->alph-->bool)),
+     equality, ("","=",    eq_alpha-->eq_alpha-->bool)),
      negation, ("","not",  bool-->bool)),
      T,        ("","true", bool)),
      F,        ("","false",bool)),
