@@ -109,6 +109,7 @@ sig
                         -> (term,term)subst -> (term,term)subst
   val thy_consts     : string -> term list
   val compare        : term * term -> order
+  val aconv_compare  : term * term -> order
   val is_clos        : term -> bool
   val push_clos      : term -> term
   val norm_clos      : term -> term

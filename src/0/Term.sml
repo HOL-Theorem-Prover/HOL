@@ -114,7 +114,7 @@ local fun tyV (Fv(_,Ty)) k         = k (Type.type_vars Ty)
         | tyV (Bv _) k             = k []
         | tyV (Const(_,GRND _)) k  = k []
         | tyV (Const(_,POLY Ty)) k = k (Type.type_vars Ty)
-        | tyV (Comb(Rator,Rand)) k = tyV Rand (fn q1 => tyV Rator 
+        | tyV (Comb(Rator,Rand)) k = tyV Rand (fn q1 => tyV Rator
                                               (fn q2 => k (union q2 q1)))
         | tyV (Abs(Bvar,Body)) k   = tyV Body (fn q1 => tyV Bvar
                                               (fn q2 => k (union q2 q1)))
@@ -528,7 +528,7 @@ fun aconv t1 t2 = EQ(t1,t2) orelse
  case(t1,t2)
   of (Comb(M,N), Comb(P,Q))              => aconv N Q andalso aconv M P
    | (Abs(Fv(_,ty1),M),Abs(Fv(_,ty2),N)) => ty1=ty2 andalso aconv M N
-   | (Clos(e1,b1),Clos(e2,b2))       
+   | (Clos(e1,b1),Clos(e2,b2))
                  => (EQ(e1,e2) andalso EQ(b1,b2)) orelse
                     aconv (push_clos t1) (push_clos t2)
    | (Clos _, _) => aconv (push_clos t1) t2
@@ -722,13 +722,13 @@ fun prim_mk_imp tm1 tm2  = Comb(Comb(imp, tm1),tm2);
 
 local val Const(eqid,_) = eqc
       fun get ty = case Type.dest_thy_type ty
-                    of {Args = h::_, ...} => h 
+                    of {Args = h::_, ...} => h
                      | _ => raise ERR "dest_eq_ty" ""
 in
-fun dest_eq_ty t = 
-  let val (Rator,N) = dest_comb t 
+fun dest_eq_ty t =
+  let val (Rator,N) = dest_comb t
   in case dest_comb Rator
-      of (Const(id,holty),M) 
+      of (Const(id,holty),M)
           => if eqid=id then (M,N, get (to_hol_type holty))
                         else raise ERR "dest_eq_ty" ""
        | otherwise => raise ERR "dest_eq_ty" ""
@@ -767,6 +767,35 @@ fun compare (t1 as Clos _, t2)     = compare (push_clos t1, t2)
   | compare (Abs(u,M),Abs(v,N))    = (case compare (u,v)
                                        of EQUAL => compare (M,N) | x => x)
   | compare (Abs _, _)             = GREATER;
+
+fun aconv_compare (t1, t2) =
+    case (t1, t2) of
+      (t1 as Clos _, t2)     => aconv_compare (push_clos t1, t2)
+    | (t1, t2 as Clos _)     => aconv_compare (t1, push_clos t2)
+    | (u as Fv _, v as Fv _) => var_compare (u,v)
+    | (Fv _, _)              => LESS
+    | (Bv _, Fv _)           => GREATER
+    | (Bv i, Bv j)           => Int.compare (i,j)
+    | (Bv _, _)              => LESS
+    | (Const _, Fv _)        => GREATER
+    | (Const _, Bv _)        => GREATER
+    | (Const(c1,ty1),
+       Const(c2,ty2))        => (case KernelTypes.compare (c1,c2) of
+                                  EQUAL => Type.compare (to_hol_type ty1,
+                                                         to_hol_type ty2)
+                                | x => x)
+    | (Const _, _)           => LESS
+    | (Comb(M,N),Comb(P,Q))  => (case aconv_compare (M,P) of
+                                  EQUAL => aconv_compare (N,Q)
+                                | x => x)
+    | (Comb _, Abs _)        => LESS
+    | (Comb _, _)            => GREATER
+    | (Abs(Fv(_, ty1),M),
+       Abs(Fv(_, ty2),N))    => (case Type.compare(ty1,ty2) of
+                                   EQUAL => aconv_compare (M,N)
+                                 | x => x)
+    | (Abs _, _)             => GREATER;
+
 
 
 (*---------------------------------------------------------------------------*

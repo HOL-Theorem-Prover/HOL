@@ -37,7 +37,7 @@ Net.uo: Net.sml Term.uo
 Type-sig.uo: Type-sig.sml
 	HOLMOSMLC -c -toplevel Type-sig.sml
 
-Term-sig.uo: Type.uo
+Term-sig.uo: Type.uo Term-sig.sml
 	HOLMOSMLC -c -toplevel Type.ui Term-sig.sml
 
 Tag-sig.uo: Tag-sig.sml
