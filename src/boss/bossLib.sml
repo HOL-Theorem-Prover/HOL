@@ -155,7 +155,7 @@ fun norm_quotel [] = []
   | norm_quotel (h::rst) = h::norm_quotel rst;
 
 fun Hol_fun bindstem ql = 
- let fun eqs (qtm as [QUOTE _]) =
+ let fun eqs qtm =
            let val names = preview qtm
                val allnames = map dollar names @ names
                val _ = List.app Parse.hide allnames
@@ -165,7 +165,7 @@ fun Hol_fun bindstem ql =
            in 
              eqs
            end 
-       | eqs qtm = Parse.Term qtm
+(*       | eqs qtm = Parse.Term qtm *)
  in
     Defn.define bindstem (eqs (norm_quotel ql))
  end;
