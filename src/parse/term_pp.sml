@@ -83,6 +83,20 @@ fun apply_absargs f abs =
     else
       (f, abs)
 
+(*---------------------------------------------------------------------------
+       Type antiquotations (required in term parser)
+ ---------------------------------------------------------------------------*)
+
+fun ty_antiq ty = mk_var("ty_antiq",ty)
+
+fun dest_ty_antiq tm =
+  case with_exn dest_var tm (ERR "dest_ty_antiq" "not a type antiquotation")
+   of ("ty_antiq",Ty) => Ty
+    |  _ => raise ERR "dest_ty_antiq" "not a type antiquotation";
+
+val is_ty_antiq = Lib.can dest_ty_antiq
+
+
 exception CaseConversionFailed
 fun convert_case tm = let
   val (casef, args) = strip_comb tm

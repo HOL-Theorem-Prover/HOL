@@ -65,7 +65,7 @@ REWRITE_TAC [ELEM_def,RESTN_def,REST_def,DECIDE ``1 = SUC 0``, DECIDE ``0+1=SUC 
 FULL_SIMP_TAC std_ss [ELEM_def,RESTN_def,REST_def,DECIDE ``SUC n + 1 = SUC (SUC n)``,DECIDE ``n+1 = SUC n``] (* infinite, SUC n *)
 ]);
 
-val PATH_REST = prove(``!(p:'state path) (M: ('prop,'state) kripke_structure) (s:'state). PATH M p s ==> PATH M (REST p) (ELEM p 1)``,
+val PATH_REST = prove(``!(p:'state path) (M: ('state,'prop) kripke_structure) (s:'state). PATH M p s ==> PATH M (REST p) (ELEM p 1)``,
 Induct_on `p` THENL [
  SIMP_TAC std_ss [PATH_def,IS_INFINITE_def],
  REWRITE_TAC [PATH_def]
@@ -76,7 +76,7 @@ Induct_on `p` THENL [
   THEN POP_ASSUM (fn t => ASSUME_TAC (SPEC ``(n:num)+1`` t))
   THEN FULL_SIMP_TAC arith_ss []]]);
 
-val EG_LEMMA = prove(``!(M :('prop, 'state) kripke_structure) (f:'prop ctl) (s:'state). C_SEM M (C_EG f) s = C_SEM M (C_AND(f,C_EX (C_EG f))) s``,
+val EG_LEMMA = prove(``!(M :('state,'prop) kripke_structure) (f:'prop ctl) (s:'state). C_SEM M (C_EG f) s = C_SEM M (C_AND(f,C_EX (C_EG f))) s``,
 REPEAT GEN_TAC THEN EQ_TAC THENL [
 REWRITE_TAC [C_SEM_def]
 THEN REPEAT STRIP_TAC THENL [
@@ -142,7 +142,7 @@ val Nf2 = Define `(Nf2 (R:'state # 'state -> bool) (s:'state) (0:num) = s) /\ (N
 val unc = Define `unc R = \x y. R(x,y)`;
 val unc_thm = prove(``!P x y. P(x,y) = (unc P) x y``,PROVE_TAC [unc]);
 
-val EU_LEMMA = prove(``!(M :('prop, 'state) kripke_structure) (f:'prop ctl) (g:'prop ctl) (s:'state). TOTAL M.R ==>
+val EU_LEMMA = prove(``!(M :('state,'prop) kripke_structure) (f:'prop ctl) (g:'prop ctl) (s:'state). TOTAL M.R ==>
 			(C_SEM M (C_EU(f,g)) s = C_SEM M (C_NOT(C_AND(C_NOT g,C_NOT(C_AND(f,C_EX (C_EU(f,g))))))) s)``,
 REPEAT GEN_TAC THEN STRIP_TAC THEN EQ_TAC THENL [
 REWRITE_TAC [C_SEM_def,PATH_def]
@@ -168,7 +168,7 @@ THEN FULL_SIMP_TAC arith_ss []], (* ==> *)
 REWRITE_TAC [C_SEM_def,PATH_def]
 THEN SIMP_TAC std_ss []
 THEN STRIP_TAC THENL [ (* 2 *)
-EXISTS_TAC ``INFINITE (Nf2  (M :('prop, 'state) kripke_structure).R (s :'state))``
+EXISTS_TAC ``INFINITE (Nf2  (M :('state,'prop) kripke_structure).R (s :'state))``
 THEN SIMP_TAC std_ss [Nf2,IS_INFINITE_def,ELEM_def,RESTN_INFINITE,HEAD_def]
 THEN FULL_SIMP_TAC arith_ss [TOTAL_def]
 THEN CONJ_TAC THENL [
@@ -182,7 +182,7 @@ THEN CONJ_TAC THENL [
   THEN ASSUM_LIST PROVE_TAC, (* 0 *)
   FULL_SIMP_TAC arith_ss [ELEM_def,RESTN_INFINITE,HEAD_def,TOTAL_def,Nf2]
   THEN PAT_ASSUM ``!(s:'state). ?(s':'state). M.R (s,s')``
-  (fn t => ASSUME_TAC (SPEC ``@(r:'state). (M :('prop, 'state) kripke_structure).R (Nf2 M.R s n,r)`` t))
+  (fn t => ASSUME_TAC (SPEC ``@(r:'state). (M :('state,'prop) kripke_structure).R (Nf2 M.R s n,r)`` t))
   THEN FULL_SIMP_TAC std_ss [unc_thm]
   THEN REWRITE_TAC [SELECT_THM]
   THEN ASSUM_LIST PROVE_TAC], (* SUC *)
@@ -206,14 +206,14 @@ THEN CONJ_TAC THENL [
 				REWRITE_TAC [(CONV_RULE (LHS_CONV (SIMP_CONV std_ss [ELEM_def,RESTN_INFINITE,HEAD_def]))) t])
     THEN PAT_ASSUM ``ELEM (p:'state path) 0 = s`` (fn t => REWRITE_TAC [SYM t])
     THEN ONCE_REWRITE_TAC [DECIDE ``(1:num) = 0 + 1``]
-    THEN PAT_ASSUM ``!n. (M :('prop, 'state) kripke_structure).R (ELEM p n,ELEM p (n + 1))``
+    THEN PAT_ASSUM ``!n. (M :('state,'prop) kripke_structure).R (ELEM p n,ELEM p (n + 1))``
     (fn t => REWRITE_TAC [SPEC ``0:num`` t])], (* infinite,0 *)
     ONCE_REWRITE_TAC [ELEM_def]
     THEN ONCE_REWRITE_TAC [RESTN_INFINITE]
     THEN ONCE_REWRITE_TAC [HEAD_def]
     THEN SIMP_TAC arith_ss []
     THEN ONCE_REWRITE_TAC [DECIDE ``SUC n = n + 1``]
-    THEN PAT_ASSUM ``!n. (M :('prop, 'state) kripke_structure).R (ELEM p' n,ELEM p' (n + 1))``
+    THEN PAT_ASSUM ``!n. (M :('state,'prop) kripke_structure).R (ELEM p' n,ELEM p' (n + 1))``
     (fn t => REWRITE_TAC [SPEC ``n:num`` t])], (* SUC, R(p_n,p_(n+1)) *)
   EXISTS_TAC ``SUC k``
   THEN ONCE_REWRITE_TAC [ELEM_def]
@@ -316,7 +316,7 @@ recInduct (theorem "CTL2MU_ind") THEN REPEAT CONJ_TAC THENL [
 
 val Nf = Define `(Nf (R:'state # 'state -> bool) (s:'state) (q:'state) (0:num) = s) /\ (Nf R s q (SUC n) = if (n=0) then q else (@r. R(Nf R s q n,r)))`;
 
-val STATES_FV_ENV_INV_SPEC = prove(``!(f: 'prop ctl) (M: ('prop,'state) kripke_structure) X.
+val STATES_FV_ENV_INV_SPEC = prove(``!(f: 'prop ctl) (M: ('state,'prop) kripke_structure) X.
 				      (STATES (CTL2MU f) (ctl2muks M)  EMPTY_ENV[[["Q"<--X]]]
 				       = STATES (CTL2MU f) (ctl2muks M) EMPTY_ENV)``,
 recInduct (theorem "CTL2MU_ind") THEN SIMP_TAC std_ss [FV_CTL2MU,NOT_IN_EMPTY] THEN REPEAT CONJ_TAC THENL [
@@ -337,7 +337,7 @@ THEN SIMP_TAC std_ss [ENV_UPDATE]]);
 val Nf3 = Define `(Nf3 (R:'state # 'state -> bool) (x:'state) (q:'state) (0:num) = x)
 	  /\ (Nf3 R x q (SUC n) = if (n=0) then q else (@r. R(Nf3 R x q n,r)))`;
 
-val CTL2MU_AND_LEM = prove(``!(M: ('prop,'state) kripke_structure) f1 f2 . C_SEM M (C_AND(f1,f2)) = C_SEM M f1 INTER C_SEM M f2``,
+val CTL2MU_AND_LEM = prove(``!(M: ('state,'prop) kripke_structure) f1 f2 . C_SEM M (C_AND(f1,f2)) = C_SEM M f1 INTER C_SEM M f2``,
 REPEAT GEN_TAC
 THEN REWRITE_TAC [FUN_EQ_THM]
 THEN REWRITE_TAC [INTER_DEF]
@@ -345,7 +345,7 @@ THEN SIMP_TAC std_ss [SET_GSPEC]
 THEN SIMP_TAC std_ss [IN_DEF]
 THEN REWRITE_TAC [C_SEM_def]);
 
-val CTL2MU_OR_LEM = prove(``!(M: ('prop,'state) kripke_structure) f1 f2 . C_SEM M (C_NOT(C_AND(C_NOT f1,C_NOT f2))) = C_SEM M f1 UNION C_SEM M f2``,
+val CTL2MU_OR_LEM = prove(``!(M: ('state,'prop) kripke_structure) f1 f2 . C_SEM M (C_NOT(C_AND(C_NOT f1,C_NOT f2))) = C_SEM M f1 UNION C_SEM M f2``,
 REPEAT GEN_TAC
 THEN REWRITE_TAC [FUN_EQ_THM]
 THEN REWRITE_TAC [UNION_DEF]
@@ -353,7 +353,7 @@ THEN SIMP_TAC std_ss [SET_GSPEC]
 THEN SIMP_TAC std_ss [IN_DEF]
 THEN SIMP_TAC std_ss [C_SEM_def]);
 
-val CTL2MU_EG_LEM = prove(``!(M: ('prop,'state) kripke_structure) (f:'prop ctl). TOTAL M.R /\ wfKS (ctl2muks M) ==>
+val CTL2MU_EG_LEM = prove(``!(M: ('state,'prop) kripke_structure) (f:'prop ctl). TOTAL M.R /\ wfKS (ctl2muks M) ==>
 			  (STATES <<".">> (RV "Q") (ctl2muks M) EMPTY_ENV[[["Q"<--C_SEM M (C_EG f)]]] = C_SEM M (C_EX (C_EG f)))``,
 REPEAT STRIP_TAC
 THEN SIMP_TAC std_ss [EXTENSION]
@@ -366,7 +366,7 @@ THEN SIMP_TAC std_ss [C_SEM_def]
 THEN SIMP_TAC std_ss [KS_TRANSITION_def,ctl2muks_def,KS_accfupds,combinTheory.K_DEF] THEN (CONV_TAC (DEPTH_CONV BETA_CONV))
 THEN EQ_TAC THENL [
  STRIP_TAC
- THEN EXISTS_TAC ``INFINITE (Nf3 (M: ('prop,'state) kripke_structure).R x q)``
+ THEN EXISTS_TAC ``INFINITE (Nf3 (M: ('state,'prop) kripke_structure).R x q)``
  THEN CONJ_TAC THENL [
   FULL_SIMP_TAC std_ss [PATH_def,TOTAL_def]
   THEN REPEAT CONJ_TAC THENL [ (* 3 *)
@@ -379,7 +379,7 @@ THEN EQ_TAC THENL [
     THEN ASM_REWRITE_TAC [], (* 0 *)
     FULL_SIMP_TAC arith_ss [ELEM_def,RESTN_INFINITE,HEAD_def,TOTAL_def,Nf3]
     THEN PAT_ASSUM ``!(s:'state). ?(s':'state). M.R (s,s')``
-    (fn t => ASSUME_TAC (SPEC ``(if n = 0 then q else @(r:'state). (M: ('prop,'state) kripke_structure).R (Nf3 M.R x q n,r))`` t))
+    (fn t => ASSUME_TAC (SPEC ``(if n = 0 then q else @(r:'state). (M: ('state,'prop) kripke_structure).R (Nf3 M.R x q n,r))`` t))
     THEN FULL_SIMP_TAC std_ss [unc_thm]
     THEN REWRITE_TAC [SELECT_THM]
     THEN ASSUM_LIST PROVE_TAC]], (* conj_3 *)
@@ -392,12 +392,12 @@ THEN EQ_TAC THENL [
   THEN CONJ_TAC THENL [
    FULL_SIMP_TAC std_ss [PATH_def]
    THEN PAT_ASSUM ``ELEM (p:'state path) 0 = x`` (fn t => ONCE_REWRITE_TAC [SYM t])
-   THEN PAT_ASSUM `` !n. (M: ('prop,'state) kripke_structure).R (ELEM p n,ELEM p (n + 1))`` (fn t => ASSUME_TAC (SPEC ``0:num`` t))
+   THEN PAT_ASSUM `` !n. (M: ('state,'prop) kripke_structure).R (ELEM p n,ELEM p (n + 1))`` (fn t => ASSUME_TAC (SPEC ``0:num`` t))
    THEN FULL_SIMP_TAC arith_ss [],
    EXISTS_TAC ``p' : 'state path``
    THEN ASM_REWRITE_TAC []]]); (* <== *)
 
-val CTL2MU_EU_LEM = prove(``!(M: ('prop,'state) kripke_structure) (f:'prop ctl) (g:'prop ctl). TOTAL M.R /\ wfKS (ctl2muks M) ==>
+val CTL2MU_EU_LEM = prove(``!(M: ('state,'prop) kripke_structure) (f:'prop ctl) (g:'prop ctl). TOTAL M.R /\ wfKS (ctl2muks M) ==>
 		       (STATES <<".">> (RV "Q") (ctl2muks M) EMPTY_ENV[[["Q"<--C_SEM M (C_EU(f,g))]]] = C_SEM M (C_EX (C_EU(f,g))))``,
 REPEAT STRIP_TAC
 THEN SIMP_TAC std_ss [EXTENSION]
@@ -410,7 +410,7 @@ THEN SIMP_TAC std_ss [C_SEM_def]
 THEN SIMP_TAC std_ss [KS_TRANSITION_def,ctl2muks_def,KS_accfupds,combinTheory.K_DEF] THEN (CONV_TAC (DEPTH_CONV BETA_CONV))
 THEN EQ_TAC THENL [
  STRIP_TAC
- THEN EXISTS_TAC ``INFINITE (Nf3 (M: ('prop,'state) kripke_structure).R x q)``
+ THEN EXISTS_TAC ``INFINITE (Nf3 (M: ('state,'prop) kripke_structure).R x q)``
  THEN CONJ_TAC THENL [
   FULL_SIMP_TAC std_ss [PATH_def,TOTAL_def]
   THEN REPEAT CONJ_TAC THENL [ (* 3 *)
@@ -423,7 +423,7 @@ THEN EQ_TAC THENL [
     THEN ASM_REWRITE_TAC [], (* 0 *)
     FULL_SIMP_TAC arith_ss [ELEM_def,RESTN_INFINITE,HEAD_def,TOTAL_def,Nf3]
     THEN PAT_ASSUM ``!(s:'state). ?(s':'state). M.R (s,s')``
-    (fn t => ASSUME_TAC (SPEC ``(if n = 0 then q else @(r:'state). (M: ('prop,'state) kripke_structure).R (Nf3 M.R x q n,r))`` t))
+    (fn t => ASSUME_TAC (SPEC ``(if n = 0 then q else @(r:'state). (M: ('state,'prop) kripke_structure).R (Nf3 M.R x q n,r))`` t))
     THEN FULL_SIMP_TAC std_ss [unc_thm]
     THEN REWRITE_TAC [SELECT_THM]
     THEN ASSUM_LIST PROVE_TAC]], (* conj_3 *)
@@ -436,16 +436,16 @@ THEN EQ_TAC THENL [
   THEN CONJ_TAC THENL [
    FULL_SIMP_TAC std_ss [PATH_def]
    THEN PAT_ASSUM ``ELEM (p:'state path) 0 = x`` (fn t => ONCE_REWRITE_TAC [SYM t])
-   THEN PAT_ASSUM `` !n. (M: ('prop,'state) kripke_structure).R (ELEM p n,ELEM p (n + 1))`` (fn t => ASSUME_TAC (SPEC ``0:num`` t))
+   THEN PAT_ASSUM `` !n. (M: ('state,'prop) kripke_structure).R (ELEM p n,ELEM p (n + 1))`` (fn t => ASSUME_TAC (SPEC ``0:num`` t))
    THEN FULL_SIMP_TAC arith_ss [],
    EXISTS_TAC ``p' : 'state path``
    THEN ASM_REWRITE_TAC []]]); (* <== *)
 
 val CTL_GFP = Define `
-(GFP (M: ('prop,'state) kripke_structure) (f: 'prop ctl) (0:num) = (UNIV:'state -> bool)) /\
+(GFP (M: ('state,'prop) kripke_structure) (f: 'prop ctl) (0:num) = (UNIV:'state -> bool)) /\
 (GFP M f (SUC n) = C_SEM M f INTER {s | ?s'. M.R(s,s') /\ s' IN GFP M f n})`;
 
-val CTL_GFP_EQ_CTL2MU_GFP = prove(``!(f: 'prop ctl) (s:'state) (M: ('prop,'state) kripke_structure).
+val CTL_GFP_EQ_CTL2MU_GFP = prove(``!(f: 'prop ctl) (s:'state) (M: ('state,'prop) kripke_structure).
 	  ((C_SEM M f = MU_SAT (CTL2MU f) (ctl2muks M) EMPTY_ENV) /\ wfKS (ctl2muks M) )
 	  ==> (BIGINTER {P | ?i. P = GFP M f i}
 	       = BIGINTER {P | ?i. P = FP ((CTL2MU f) /\ <<".">> (RV "Q")) "Q" (ctl2muks M) EMPTY_ENV[[["Q"<--(ctl2muks M).S]]] i})``,
@@ -466,7 +466,7 @@ THEN Induct_on `n` THENL [
  THEN SIMP_TAC std_ss [SET_SPEC]
  THEN SIMP_TAC std_ss [IN_DEF,MU_SAT_def]]);
 
-val CTL_GFP_CLOSURE = prove(``!(f: 'prop ctl) (s:'state) (M: ('prop,'state) kripke_structure).
+val CTL_GFP_CLOSURE = prove(``!(f: 'prop ctl) (s:'state) (M: ('state,'prop) kripke_structure).
 	  ((C_SEM M f = MU_SAT (CTL2MU f) (ctl2muks M) EMPTY_ENV) /\ wfKS (ctl2muks M) /\  FINITE (ctl2muks M).S
            /\ (!(f: 'prop ctl). IMF (CTL2MU f)))
 	 ==> (s IN BIGINTER {P | ?i. P = GFP M f i}
@@ -589,7 +589,7 @@ REPEAT STRIP_TAC
 THEN IMP_RES_TAC GFP_CLOSURE_IMP_EG_LEM1
 THEN ASSUM_LIST (fn t => PROVE_TAC ( GFP_CLOSURE_IMP_EG_LEM2::t)));
 
-val GFP_CLOSURE_IMP_EG_LEM = prove (``!(f: 'prop ctl) (s:'state) (M: ('prop,'state) kripke_structure).
+val GFP_CLOSURE_IMP_EG_LEM = prove (``!(f: 'prop ctl) (s:'state) (M: ('state,'prop) kripke_structure).
 ((C_SEM M f = MU_SAT (CTL2MU f) (ctl2muks M) EMPTY_ENV) /\ wfKS (ctl2muks M) /\  FINITE (ctl2muks M).S
            /\ (!(f: 'prop ctl). IMF (CTL2MU f))) /\
 (s IN BIGINTER {P | ?i. P = GFP M f i}) ==> ?p. PATH M p s /\ !n::0 to LENGTH p. C_SEM M f (ELEM p n)``,
@@ -609,7 +609,7 @@ THEN POP_ASSUM (fn t => ASSUME_TAC ((CONV_RULE unwindLib.FORALL_CONJ_CONV) t))
 THEN FULL_SIMP_TAC resq_ss [PATH_def,LENGTH_def,xnum_to_def,IN_DEF]
 THEN FULL_SIMP_TAC  arith_ss [ELEM_def,RESTN_INFINITE,HEAD_def,IS_INFINITE_def,DECIDE ``SUC n = n + 1``]);
 
-val CTL_GFP_SUBSET_EG = prove(``!(f: 'prop ctl) (M: ('prop,'state) kripke_structure).
+val CTL_GFP_SUBSET_EG = prove(``!(f: 'prop ctl) (M: ('state,'prop) kripke_structure).
 ((C_SEM M f = MU_SAT (CTL2MU f) (ctl2muks M) EMPTY_ENV) /\ wfKS (ctl2muks M) /\  FINITE (ctl2muks M).S
            /\ (!(f: 'prop ctl). IMF (CTL2MU f)))
 ==> BIGINTER {P | ?i. P = GFP M f i} SUBSET C_SEM M (C_EG f)``,
@@ -620,10 +620,10 @@ THEN IMP_RES_TAC GFP_CLOSURE_IMP_EG_LEM
 THEN FULL_SIMP_TAC std_ss [IN_DEF]);
 
 val CTL_LFP = Define `
-(LFP (M: ('prop,'state) kripke_structure) (f: 'prop ctl) (g:'prop ctl) (0:num) = ({}:'state -> bool)) /\
+(LFP (M: ('state,'prop) kripke_structure) (f: 'prop ctl) (g:'prop ctl) (0:num) = ({}:'state -> bool)) /\
 (LFP M f g (SUC n) = C_SEM M g UNION (C_SEM M f INTER {s | ?s'. M.R(s,s') /\ s' IN LFP M f g n}))`;
 
-val CTL_LFP_EQ_CTL2MU_LFP = prove(``!(f: 'prop ctl) (g: 'prop ctl) (s:'state) (M: ('prop,'state) kripke_structure).
+val CTL_LFP_EQ_CTL2MU_LFP = prove(``!(f: 'prop ctl) (g: 'prop ctl) (s:'state) (M: ('state,'prop) kripke_structure).
 	  ((C_SEM M f = MU_SAT (CTL2MU f) (ctl2muks M) EMPTY_ENV)
 	   /\ (C_SEM M g = MU_SAT (CTL2MU g) (ctl2muks M) EMPTY_ENV) /\ (wfKS (ctl2muks M)))
 	  ==> (BIGUNION {P | ?i. P = LFP M f g i}
@@ -667,7 +667,7 @@ THEN FULL_SIMP_TAC arith_ss [LENGTH]]);
 val IDX_BIGUNION = prove(``!P s. s IN BIGUNION {p | ?i. p = P i} = ?i. s IN P i``,
 SIMP_TAC std_ss [BIGUNION,SET_SPEC] THEN PROVE_TAC []);
 
-val CTL_LFP_LEM = prove(``!(f: 'prop ctl) (g: 'prop ctl) (s:'state) (M: ('prop,'state) kripke_structure).
+val CTL_LFP_LEM = prove(``!(f: 'prop ctl) (g: 'prop ctl) (s:'state) (M: ('state,'prop) kripke_structure).
 C_SEM M (C_EU(f,g)) s ==> s IN BIGUNION {P | ?(i:num). P = LFP M f g i}``,
 REWRITE_TAC [C_SEM_def] THEN REPEAT STRIP_TAC
 THEN Induct_on `p` THENL [
@@ -677,9 +677,9 @@ THEN Induct_on `p` THENL [
  THEN SIMP_TAC arith_ss []
  THEN SPEC_TAC (``INFINITE (f':num->'state)``,``p:'state path``)
  THEN REPEAT STRIP_TAC
- THEN UNDISCH_TAC ``!(j :num). j < (k :num) ==> C_SEM (M :('prop, 'state) kripke_structure) (f :'prop ctl) (ELEM (p :'state path) j)``
- THEN UNDISCH_TAC `` C_SEM (M :('prop, 'state) kripke_structure) (g :'prop ctl)  (ELEM (p :'state path) (k :num))``
- THEN UNDISCH_TAC ``PATH (M :('prop, 'state) kripke_structure) (p :'state path) (s :'state)``
+ THEN UNDISCH_TAC ``!(j :num). j < (k :num) ==> C_SEM (M :('state,'prop) kripke_structure) (f :'prop ctl) (ELEM (p :'state path) j)``
+ THEN UNDISCH_TAC `` C_SEM (M :('state,'prop) kripke_structure) (g :'prop ctl)  (ELEM (p :'state path) (k :num))``
+ THEN UNDISCH_TAC ``PATH (M :('state,'prop) kripke_structure) (p :'state path) (s :'state)``
  THEN SPEC_TAC (``s:'state``,``s:'state``)
  THEN Induct_on `LENGTH (PREFIX (p:'state path) (k:num))` THENL [
   REPEAT STRIP_TAC
@@ -726,7 +726,7 @@ THEN Induct_on `p` THENL [
     THEN RES_TAC
     THEN PAT_ASSUM ``C_SEM x y z ==> t`` (fn t => ALL_TAC)
     THEN SUBGOAL_THEN ``(!j. j < (k:num) - 1
-		==> C_SEM (M: ('prop,'state) kripke_structure)  f (ELEM (p:'state path) (j + 1)))`` ASSUME_TAC THENL [
+		==> C_SEM (M: ('state,'prop) kripke_structure)  f (ELEM (p:'state path) (j + 1)))`` ASSUME_TAC THENL [
      GEN_TAC
      THEN IMP_RES_TAC (DECIDE ``~((k:num)=0) ==> (j<k-1 = j+1<k)``)
      THEN POP_ASSUM (fn _ => POP_ASSUM (fn _ => POP_ASSUM (fn t => REWRITE_TAC [t])))
@@ -755,14 +755,14 @@ THEN Induct_on `p` THENL [
       THEN ONCE_REWRITE_TAC [DECIDE ``(1:num) = 0+1``]
       THEN ASSUM_LIST PROVE_TAC]]]]]]);
 
-val CTL2MU_LEM = prove(``!(f: 'prop ctl) (M: ('prop,'state) kripke_structure).
+val CTL2MU_LEM = prove(``!(f: 'prop ctl) (M: ('state,'prop) kripke_structure).
 		      ((!(f: 'prop ctl). IMF (CTL2MU f)) /\ TOTAL M.R /\ wfKS (ctl2muks M) /\ FINITE (ctl2muks M).S) ==>
 		      (C_SEM M f = MU_SAT (CTL2MU f) (ctl2muks M) EMPTY_ENV)``,
 REWRITE_TAC [FUN_EQ_THM]
 THEN CONV_TAC (STRIP_QUANT_CONV (RIGHT_IMP_FORALL_CONV))
 THEN CONV_TAC (QUANT_CONV SWAP_VARS_CONV)
 THEN CONV_TAC SWAP_VARS_CONV
-THEN ONCE_REWRITE_TAC [GEN_ALPHA_CONV ``s:'state`` `` !(x :'state) (f :'prop ctl) (M :('prop, 'state) kripke_structure).
+THEN ONCE_REWRITE_TAC [GEN_ALPHA_CONV ``s:'state`` `` !(x :'state) (f :'prop ctl) (M :('state,'prop) kripke_structure).
       (!(f :'prop ctl). IMF (CTL2MU f)) /\  (TOTAL :('state # 'state -> bool) -> bool) M.R /\ wfKS (ctl2muks M) /\ FINITE (ctl2muks M).S
       ==> (C_SEM M f x = MU_SAT (CTL2MU f) (ctl2muks M) EMPTY_ENV x)``]
 THEN CONV_TAC SWAP_VARS_CONV
@@ -794,14 +794,14 @@ THEN EQ_TAC THENL [
  THEN EXISTS_TAC ``ELEM (p:'state path) ((0:num)+1)``
  THEN REPEAT STRIP_TAC THENL [
   PAT_ASSUM ``ELEM (p:'state path) 0 = s`` (fn t => ONCE_REWRITE_TAC [SYM t])
-  THEN PAT_ASSUM ``!n. (M: ('prop,'state) kripke_structure).R (ELEM (p:'state path) n,ELEM p (n + 1))``
+  THEN PAT_ASSUM ``!n. (M: ('state,'prop) kripke_structure).R (ELEM (p:'state path) n,ELEM p (n + 1))``
   (fn t => ASSUME_TAC (SPEC ``0:num`` t))
   THEN FULL_SIMP_TAC arith_ss [],
   FULL_SIMP_TAC std_ss []], (* ==> *)
  CONV_TAC LEFT_IMP_EXISTS_CONV
  THEN GEN_TAC THEN
  CONV_TAC RIGHT_IMP_EXISTS_CONV
- THEN EXISTS_TAC ``INFINITE (Nf (M: ('prop,'state) kripke_structure).R s q)``
+ THEN EXISTS_TAC ``INFINITE (Nf (M: ('state,'prop) kripke_structure).R s q)``
  THEN REPEAT STRIP_TAC THENL [
  REWRITE_TAC [IS_INFINITE_def], (* INFINITE p *)
  SIMP_TAC std_ss [ELEM_def,RESTN_def,REST_def,HEAD_def,listTheory.HD,Nf], (* ELEM p 0 = s *)
@@ -812,8 +812,8 @@ THEN EQ_TAC THENL [
   THEN REWRITE_TAC [Nf,DECIDE ``1=SUC 0``]
   THEN ASM_REWRITE_TAC [], (* 0 *)
   FULL_SIMP_TAC arith_ss [ELEM_def,RESTN_INFINITE,HEAD_def,TOTAL_def,Nf]
-  THEN PAT_ASSUM ``!s. ?s'. (M: ('prop,'state) kripke_structure).R (s,s')``
-  (fn t => ASSUME_TAC (SPEC ``(if n = 0 then q else @r. (M: ('prop,'state) kripke_structure).R (Nf M.R s q n,r))`` t))
+  THEN PAT_ASSUM ``!s. ?s'. (M: ('state,'prop) kripke_structure).R (s,s')``
+  (fn t => ASSUME_TAC (SPEC ``(if n = 0 then q else @r. (M: ('state,'prop) kripke_structure).R (Nf M.R s q n,r))`` t))
   THEN FULL_SIMP_TAC std_ss [unc_thm]
   THEN REWRITE_TAC [SELECT_THM]
   THEN ASSUM_LIST PROVE_TAC], (* SUC n *)
@@ -847,7 +847,7 @@ THEN EQ_TAC THENL [
   THEN POP_ASSUM (fn t => FULL_SIMP_TAC std_ss [SYM t])
   THEN FULL_SIMP_TAC std_ss [GSYM CTL2MU_AND_LEM,
 			     REWRITE_RULE [GSYM FUN_EQ_THM]
-					  (GENL [``(M: ('prop,'state) kripke_structure)``,``f:'prop ctl``] EG_LEMMA)]], (* SUC,==>*)
+					  (GENL [``(M: ('state,'prop) kripke_structure)``,``f:'prop ctl``] EG_LEMMA)]], (* SUC,==>*)
   RES_TAC
   THEN POP_ASSUM (fn t => ALL_TAC)
   THEN POP_ASSUM (fn t => ALL_TAC)
@@ -910,12 +910,12 @@ THEN EQ_TAC THENL [
   THEN FULL_SIMP_TAC std_ss [GSYM CTL2MU_AND_LEM,GSYM CTL2MU_OR_LEM,
 			     (CONV_RULE (RAND_CONV(REWRITE_CONV [GSYM FUN_EQ_THM])))
 				 ((CONV_RULE FORALL_IMP_CONV)
-				      (ISPECL [``(M: ('prop,'state) kripke_structure)``,``f:'prop ctl``,``g:'prop ctl``]
+				      (ISPECL [``(M: ('state,'prop) kripke_structure)``,``f:'prop ctl``,``g:'prop ctl``]
 								     EU_LEMMA))]]]]);
 
 val CTL2MU = save_thm("CTL2MU",SIMP_RULE std_ss [IMF_CTL] CTL2MU_LEM);
 
-val CTL2MU_MODEL = save_thm("CTL2MU_MODEL",prove(``!(f: 'prop ctl) (M: ('prop,'state) kripke_structure).
+val CTL2MU_MODEL = save_thm("CTL2MU_MODEL",prove(``!(f: 'prop ctl) (M: ('state,'prop) kripke_structure).
 		      (TOTAL M.R /\ wfKS (ctl2muks M) /\ FINITE (ctl2muks M).S) ==>
 		      (CTL_MODEL_SAT M f = MU_MODEL_SAT (CTL2MU f) (ctl2muks M) EMPTY_ENV)``,
 REPEAT STRIP_TAC THEN REWRITE_TAC [MU_MODEL_SAT_def,CTL_MODEL_SAT_def]

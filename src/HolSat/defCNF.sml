@@ -208,7 +208,7 @@ val _ = time DEF_CNF_CONV' valid1;
 
 (* The pigeon-hole principle *)
 
-fun test n = (((time DEF_CNF_CONV' THENC time PRETTIFY_VARS_CONV) o time (mk_neg o var_pigeon)) n; n);
+fun test n = (((time DEF_CNF_CONV') o time (mk_neg o var_pigeon)) n; n);
 
 test 8;
 test 9;

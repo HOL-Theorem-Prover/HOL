@@ -14,6 +14,7 @@ val Q_ERR = mk_HOL_ERR "Q";
 
 val ptm = Parse.Term
 val pty = Parse.Type;
+val ty_antiq = Parse.ty_antiq;
 
 fun normalise_quotation frags =
   case frags of

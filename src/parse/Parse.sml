@@ -104,6 +104,11 @@ fun fixity s =
  ---------------------------------------------------------------------------*)
 
 (* type parsing *)
+
+val ty_antiq = term_pp.ty_antiq;
+val dest_ty_antiq = term_pp.dest_ty_antiq;
+val is_ty_antiq = term_pp.is_ty_antiq;
+
 fun remove_ty_aq t =
   if is_ty_antiq t then dest_ty_antiq t
   else raise ERROR "type parser" "antiquotation is not of a type"
