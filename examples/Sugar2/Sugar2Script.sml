@@ -1059,17 +1059,74 @@ val F_OR_def =
  Define
   `F_OR(f1,f2) = F_NOT(F_AND(F_NOT f1, F_NOT f2))`;
 
+val UF_SEM_F_OR =
+ store_thm
+  ("UF_SEM_F_OR",
+   ``UF_SEM M p (F_OR(f1,f2)) = UF_SEM M p f1 \/ UF_SEM M p f2``,
+   RW_TAC std_ss [UF_SEM,F_OR_def]);
+
 val F_F_def =
  Define
   `F_F f = F_UNTIL(F_BOOL B_TRUE, f)`;
+
+val UF_SEM_F_F =
+ store_thm
+  ("UF_SEM_F_F",
+   ``UF_SEM M p (F_F f) = ?i :: PL p. UF_SEM M (RESTN p i) f``,
+   RW_TAC std_ss [UF_SEM,F_F_def,B_SEM_def,RES_FORALL]);
 
 val F_G_def =
  Define
   `F_G f = F_NOT(F_F(F_NOT f))`;
 
+val UF_SEM_F_G =
+ store_thm
+  ("UF_SEM_F_G",
+   ``UF_SEM M p (F_G f) = !i :: PL p. UF_SEM M (RESTN p i) f``,
+   RW_TAC std_ss [UF_SEM,F_G_def,UF_SEM_F_F,RES_EXISTS,RES_FORALL]
+    THEN PROVE_TAC[]);
+
+val UF_SEM_NOT_F_G =
+ store_thm
+  ("UF_SEM_NOT_F_G",
+   ``~(UF_SEM M p (F_G f)) =
+       ?i :: PL p. UF_SEM M (RESTN p i) (F_NOT f)``,
+   RW_TAC std_ss [UF_SEM,F_G_def,UF_SEM_F_F,RES_EXISTS,RES_FORALL]
+    THEN PROVE_TAC[]);
+
+val WOP_EQ =
+ prove
+  (``!P. (?n. P n) = ?n. P n /\ !m. m < n ==> ~P m``,
+   PROVE_TAC[WOP]);
+
+val WOP_Inst_Lemma =
+ SIMP_RULE std_ss []
+  (ISPEC
+  ``\(x :num).
+        x IN PL (p :'e path) /\
+        ~UF_SEM (M :'a # 'b # 'c # ('d -> bool) # ('e -> 'd -> bool))
+           (RESTN p x) (f :'d fl)``
+  WOP_EQ);
+
+val UF_SEM_WOP_NOT_F_G =
+ store_thm
+  ("UF_WOP_SEM_NOT_F_G",
+   ``~(UF_SEM M p (F_G f)) =
+       ?i :: PL p. UF_SEM M (RESTN p i) (F_NOT f) /\
+                   !j :: PL p. j < i ==> UF_SEM M (RESTN p j) f``,
+   RW_TAC std_ss [UF_SEM,F_G_def,UF_SEM_F_F,RES_EXISTS,RES_FORALL]
+    THEN EQ_TAC
+    THEN PROVE_TAC[WOP_Inst_Lemma]);
+
 val F_W_def =
  Define
   `F_W(f1,f2) = F_OR(F_UNTIL(f1,f2), F_G f1)`;
+
+val UF_SEM_F_W =
+ store_thm
+  ("UF_SEM_F_W",
+   ``UF_SEM M p (F_W(f1,f2)) = UF_SEM M p (F_UNTIL(f1,f2)) \/ UF_SEM M p (F_G f1)``,
+   RW_TAC std_ss [UF_SEM,F_W_def,UF_SEM_F_OR]);
 
 val F_W_CLOCK_def =
  Define
@@ -1163,6 +1220,76 @@ val F_CLOCK_COMP_def =
     /\
     (F_CLOCK_COMP (WEAK_CLOCK c) (F_STRONG_CLOCK(f,c1)) =   
       F_CLOCK_COMP (STRONG_CLOCK c1) f)`;
+
+(******************************************************************************
+* p |=k= f  <==>  p |= (F_CLOCK_COMP k f)
+* where k is (STRONG_CLOCK c) or (WEAK_CLOCK c)
+*
+* We proceed case by case.
+******************************************************************************)
+
+val F_BOOL_STRONG_CLOCK_COMP_ELIM =
+ store_thm
+  ("F_BOOL_STRONG_CLOCK_COMP_ELIM",
+   ``!b M p c.
+      F_SEM M p (STRONG_CLOCK c) (F_BOOL b) =
+       UF_SEM M p (F_CLOCK_COMP (STRONG_CLOCK c) (F_BOOL b))``,
+   RW_TAC std_ss [F_SEM_def, UF_SEM_def, F_CLOCK_COMP_def,PATH_EL_RESTN,
+                  F_U_CLOCK_def, F_W_CLOCK_def,FIRST_RISE,B_SEM_def,L_def,
+                  RES_FORALL,RES_EXISTS,PL_def,pred_setTheory.SPECIFICATION]
+    THEN EQ_TAC
+    THEN RW_TAC std_ss []
+    THENL
+     [PROVE_TAC[],
+      Q.EXISTS_TAC `x`
+       THEN RW_TAC std_ss []
+       THEN `IS_FINITE_PATH p ==> j < PATH_LENGTH p`
+              by ZAP_TAC arith_ss [DECIDE``m<n ==> n<p ==> m<p``]
+       THEN PROVE_TAC[]]);
+
+val PL_MONO =
+ store_thm
+  ("PL_MONO",
+   ``!m n. m <= n ==> !p. PL p n ==> PL p m``,
+  RW_TAC arith_ss [PL_def]
+   THEN RES_TAC
+   THEN DECIDE_TAC);
+
+val PL_LESS_MONO =
+ store_thm
+  ("PL_LESS_MONO",
+   ``!m n. m < n ==> !p. PL p n ==> PL p m``,
+  RW_TAC arith_ss [PL_def]
+   THEN RES_TAC
+   THEN DECIDE_TAC);
+
+val F_BOOL_WEAK_CLOCK_COMP_ELIM =
+ store_thm
+  ("F_BOOL_WEAK_CLOCK_COMP_ELIM",
+   ``!b M p c.
+      F_SEM M p (WEAK_CLOCK c) (F_BOOL b) =
+       UF_SEM M p (F_CLOCK_COMP (WEAK_CLOCK c) (F_BOOL b))``,
+   RW_TAC std_ss [F_SEM_def, UF_SEM_def, F_CLOCK_COMP_def,F_W_CLOCK_def,
+                  UF_SEM_F_W,FIRST_RISE,PATH_EL_RESTN]
+    THEN Cases_on `UF_SEM M p (F_G (F_BOOL (B_NOT c)))`
+    THEN RW_TAC std_ss []
+    THENL
+     [RW_TAC std_ss [RES_FORALL, IN_DEF]
+       THEN FULL_SIMP_TAC std_ss
+             [UF_SEM,B_SEM_def,UF_SEM_F_G,RES_FORALL,IN_DEF,PATH_EL_RESTN,L_def]
+       THEN RES_TAC,
+      FULL_SIMP_TAC std_ss
+            [UF_SEM_WOP_NOT_F_G,RES_FORALL,RES_EXISTS,IN_DEF,UF_SEM,
+             PATH_EL_RESTN,B_SEM_def,L_def]
+       THEN RW_TAC std_ss [RES_FORALL,RES_EXISTS,IN_DEF,B_SEM_def]
+       THEN EQ_TAC
+       THEN RW_TAC std_ss []
+       THENL
+        [Q.EXISTS_TAC `x`
+          THEN RW_TAC std_ss []
+          THEN PROVE_TAC[PL_LESS_MONO],
+         MAP_EVERY Cases_on [`x''< x`, `x < x''`, `x'< x`, `x < x'`]
+          THEN PROVE_TAC[DECIDE``~(m < n)==>~(n < m)==>(m=n)``]]]);
 
 val _ = export_theory();
 
