@@ -388,85 +388,6 @@ val MSB_WELLDEF = prove(
 
 (* -------------------------------------------------------- *)
 
-val BIT_SET_NOT_ZERO = prove(
-  `!a. (a MOD 2 = 1) ==> (1 <= a)`,
-  SPOSE_NOT_THEN STRIP_ASSUME_TAC
-    THEN `a = 0` by DECIDE_TAC
-    THEN A_FULL_SIMP_TAC [ZERO_MOD]
-);
-
-val BIT_SET_NOT_ZERO_COR = prove(
-  `!x n op a b. x < n ==> op (BIT x a) (BIT x b) ==> (1 <= (BITWISE n op a b DIV 2 EXP x))`,
-  REPEAT STRIP_TAC THEN ASM_B_SIMP_TAC [BITWISE_COR,BIT_SET_NOT_ZERO]
-);
-
-val BIT_SET_NOT_ZERO_COR2 = REWRITE_RULE [DIV_1,EXP] (SPEC `0` BIT_SET_NOT_ZERO_COR);
-
-val ADD_DIV_ADD_DIV2 = ONCE_REWRITE_RULE [MULT_COMM] (SIMP_RULE arith_ss [] (SPEC `2` ADD_DIV_ADD_DIV));
-
-val BIT_DIV2 = prove(
-  `!i. BIT n (i DIV 2) = BIT (SUC n) i`,
-  A_RW_TAC [BIT_def,BITS_THM,EXP,ZERO_LT_TWOEXP,DIV_DIV_DIV_MULT]
-);
-
-val lemma1 = prove(
-  `!a b n. 0 < n ==> ((a + SBIT b n) DIV 2 = a DIV 2 + SBIT b (n - 1))`,
-  A_RW_TAC [SBIT_def]
-    THEN IMP_RES_TAC LESS_ADD_1
-    THEN A_FULL_SIMP_TAC [GSYM ADD1,ADD_DIV_ADD_DIV2,EXP]
-);
-
-val lemma2 = prove(
-  `!b n. 2 * (SBIT b n) = SBIT b (n + 1)`,
-  B_RW_TAC [MULT_CLAUSES,SBIT_def,GSYM ADD1,EXP]
-);
-
-val lemma3 = prove(
-  `!n op a b. 0 < n ==> (BITWISE n op a b MOD 2 = SBIT (op (LSBn a) (LSBn b)) 0)`,
-  B_RW_TAC [LSBn_def]
-    THEN POP_ASSUM (fn th => ONCE_REWRITE_TAC [MATCH_MP ((GSYM o SPEC `0`) BITWISE_THM) th])
-    THEN B_RW_TAC [GSYM LSBn_def,LSB_ODD,ODD_MOD2_LEM,SBIT_def,EXP]
-    THEN B_FULL_SIMP_TAC [GSYM NOT_MOD2_LEM]
-);
-
-val lemma4 = prove(
-  `!n op a b. 0 < n /\ BITWISE n op a b <= SBIT (op (LSBn a) (LSBn b)) 0 ==>
-              (BITWISE n op a b = SBIT (op (LSBn a) (LSBn b)) 0)`,
-  A_RW_TAC [LSBn_def,SBIT_def,EXP]
-    THEN IMP_RES_TAC BIT_SET_NOT_ZERO_COR2
-    THEN ASM_A_SIMP_TAC []
-);
-
-val BITWISE_ISTEP = prove(
-  `!n op a b. 0 < n ==> (BITWISE n op (a DIV 2) (b DIV 2) =
-                        (BITWISE n op a b) DIV 2 + SBIT (op (BIT n a) (BIT n b)) (n - 1))`,
-  Induct_on `n`
-    THEN REPEAT STRIP_TAC
-    THENL [
-       A_FULL_SIMP_TAC [],
-       Cases_on `n = 0`
-         THENL [
-            A_RW_TAC [BITWISE_def,SBIT_def,BIT_DIV2],
-            B_FULL_SIMP_TAC [NOT_ZERO_LT_ZERO,BITWISE_def,SUC_SUB1,BIT_DIV2,lemma1]
-         ]
-    ]
-);
-
-val BITWISE_EVAL = store_thm("BITWISE_EVAL",
-  `!n op a b. BITWISE (SUC n) op a b =
-         2 * (BITWISE n op (a DIV 2) (b DIV 2)) + SBIT (op (LSBn a) (LSBn b)) 0`,
-  REPEAT STRIP_TAC
-    THEN Cases_on `n = 0`
-    THENL [
-       A_RW_TAC [BITWISE_def,MULT_CLAUSES,LSBn_def],
-       A_FULL_SIMP_TAC [BITWISE_def,NOT_ZERO_LT_ZERO,BITWISE_ISTEP,
-                        DIV_MULT_THM2,LEFT_ADD_DISTRIB,SUB_ADD,lemma2,lemma3]
-         THEN A_RW_TAC [SUB_RIGHT_ADD,lemma4]
-    ]
-);
-
-(* -------------------------------------------------------- *)
-
 val BITWISE_WELLDEF = prove(
   `!op a b c d. a == b /\ c == d ==> (BITWISE WL op) a c == (BITWISE WL op) b d`,
   RW_TAC bool_ss [WL_def,EQUIV_def,MOD_WL_THM]
@@ -1434,25 +1355,21 @@ val ASR_THM = store_thm("ASR_THM",
            let s = BITS HB x' n in
              n2w (if MSBn n then 2 EXP WL - 2 EXP (WL - x') + s else s)`,
   Induct_on `x`
-    THEN REPEAT STRIP_TAC
+    THEN REPEAT STRIP_TAC THEN1 A_SIMP_TAC [word_asr_def,FUNPOW,MIN_DEF,SYM MOD_WL_THM,MOD_WL_ELIM]
+    THEN POP_ASSUM (fn th => S_RW_TAC [th,REDUCE_RULE (SPEC `F` SBIT_def),lem3,lem7,
+                             lem,lem2,MIN_DEF,ASR_LEM,ASR_ONE_EVAL,ASR_ONE_def])
+    THEN A_FULL_SIMP_TAC [BITS_ZERO,lem9,SBIT_def]
+    THEN ASM_A_SIMP_TAC [lem8c,lem4,BITS_ZERO,WL_SUB_HB,WL_SUB_SUC_X]
     THENL [
-      A_RW_TAC [word_asr_def,FUNPOW,MIN_DEF,SYM MOD_WL_THM,MOD_WL_ELIM],
-      POP_ASSUM
-        (fn th => S_RW_TAC [th,REDUCE_RULE (SPEC `F` SBIT_def),lem3,lem7,
-                            lem,lem2,MIN_DEF,ASR_LEM,ASR_ONE_EVAL,ASR_ONE_def])
-        THEN A_FULL_SIMP_TAC [BITS_ZERO,lem9,SBIT_def]
-        THEN ASM_A_SIMP_TAC [lem8c,lem4,BITS_ZERO,WL_SUB_HB,WL_SUB_SUC_X]
-        THENL [
-          RW_TAC arith_ss [WL_def,SUB_RIGHT_ADD,EXP,EXP_1,TWOEXP_LT_EQ1],
-          `x = HB` by DECIDE_TAC
-            THEN RW_TAC arith_ss [WL_def,SUB_RIGHT_ADD,EXP,EXP_1,TWOEXP_LT_EQ1],
-          RW_TAC arith_ss [WL_def,SUB_RIGHT_ADD,EXP,EXP_SUB_LESS_EQ]
-            THEN IMP_RES_TAC lem10
-            THEN A_FULL_SIMP_TAC [lem11]
-            THEN REWRITE_TAC [TIMES2]
-            THEN ONCE_REWRITE_TAC [DECIDE (Term `(a:num) + b + c = a + c + b`)]
-            THEN REWRITE_TAC [ADD_SUB]
-        ]
+       A_RW_TAC [WL_def,SUB_RIGHT_ADD,EXP,EXP_1,TWOEXP_LT_EQ1],
+       `x = HB` by DECIDE_TAC
+         THEN A_RW_TAC [WL_def,SUB_RIGHT_ADD,EXP,EXP_1,TWOEXP_LT_EQ1],
+       A_RW_TAC [WL_def,SUB_RIGHT_ADD,EXP,EXP_SUB_LESS_EQ]
+         THEN IMP_RES_TAC lem10
+         THEN A_FULL_SIMP_TAC [lem11]
+         THEN REWRITE_TAC [TIMES2]
+         THEN ONCE_REWRITE_TAC [DECIDE (Term `(a:num) + b + c = a + c + b`)]
+         THEN REWRITE_TAC [ADD_SUB]
     ]
 );
 
