@@ -1,47 +1,49 @@
 local
   open HolKernel HOLgrammars
 in
-  datatype fixity = RF of term_grammar.rule_fixity | Prefix | Binder
-  (* these are convenience values *)
-  val Infixl : int -> fixity
-  val Infixr : int -> fixity
-  val Infix : (associativity * int) -> fixity
-  val TruePrefix : int -> fixity
-  val Closefix : fixity
-  val Suffix : int -> fixity
 
-  val fixity : string -> fixity
+  datatype fixity 
+     = RF of term_grammar.rule_fixity 
+     | Prefix 
+     | Binder
+
+  val fromTGfixity : term_grammar.rule_fixity -> fixity
+  val LEFT       : associativity
+  val RIGHT      : associativity
+  val NONASSOC   : associativity
+
+  val Infixl     : int -> fixity
+  val Infixr     : int -> fixity
+  val Infix      : associativity * int -> fixity
+  val TruePrefix : int -> fixity
+  val Closefix   : fixity
+  val Suffix     : int -> fixity
+  val fixity     : string -> fixity
 
   (* more constructors/values that come across from term_grammar *)
+
   val TM : term_grammar.pp_element
   val TOK : string -> term_grammar.pp_element
   val BreakSpace : (int * int) -> term_grammar.pp_element
   val HardSpace : int -> term_grammar.pp_element
   val BeginFinalBlock : term_grammar.block_info -> term_grammar.pp_element
   val EndInitialBlock : term_grammar.block_info -> term_grammar.pp_element
-  val PPBlock :
-    (term_grammar.pp_element list * term_grammar.block_info) ->
-    term_grammar.pp_element
+  val PPBlock : term_grammar.pp_element list * term_grammar.block_info
+                -> term_grammar.pp_element
 
   val OnlyIfNecessary : term_grammar.ParenStyle
   val ParoundName : term_grammar.ParenStyle
 
   val AroundEachPhrase : term_grammar.PhraseBlockStyle
-  val AroundSamePrec : term_grammar.PhraseBlockStyle
-  val AroundSameName : term_grammar.PhraseBlockStyle
+  val AroundSamePrec   : term_grammar.PhraseBlockStyle
+  val AroundSameName   : term_grammar.PhraseBlockStyle
 
-
-
-  val fromTGfixity : term_grammar.rule_fixity -> fixity
-  val LEFT : associativity
-  val RIGHT : associativity
-  val NONASSOC : associativity
 
   (* Parsing Types *)
-  val Type : hol_type frag list -> hol_type
-  val == : hol_type frag list -> 'a -> hol_type
-
   val type_grammar : unit -> parse_type.grammar
+  val Type         : hol_type frag list -> hol_type
+  val ==           : hol_type frag list -> 'a -> hol_type
+
 
   (* the parsing algorithm for types admits the possibility that type
      suffixes might be of looser binding than infixes, but the
@@ -213,6 +215,5 @@ in
   val hide : string -> unit
   val reveal : string -> unit
   val hidden : string -> bool
-
 
 end
