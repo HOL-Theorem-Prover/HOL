@@ -54,6 +54,8 @@ fun emit_hol_unquote_script target qfilter mosml std_prelude qinit qend =
  end
 end
 
+end (* local *)
+
 end; (* struct *)
 
 
