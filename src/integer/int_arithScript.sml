@@ -285,6 +285,7 @@ val subtract_to_small = store_thm(
     ]
   ]);
 
+
 open arithmeticTheory
 val INT_LT_ADD_NUMERAL = store_thm(
   "INT_LT_ADD_NUMERAL",
@@ -294,5 +295,33 @@ val INT_LT_ADD_NUMERAL = store_thm(
   SIMP_TAC bool_ss [INT_LT_ADDR, INT_LT, NUMERAL_DEF, NUMERAL_BIT1,
                     NUMERAL_BIT2, ADD_CLAUSES, prim_recTheory.LESS_0,
                     INT_NEG_GT0, prim_recTheory.NOT_LESS_0]);
+
+
+val INT_NUM_FORALL = store_thm(
+  "INT_NUM_FORALL",
+  Term`(!n:num. P (&n)) = (!x:int. 0 <= x ==> P x)`,
+  EQ_TAC THEN REPEAT STRIP_TAC THENL [
+    PROVE_TAC [NUM_POSINT_EXISTS],
+    POP_ASSUM MATCH_MP_TAC THEN SIMP_TAC bool_ss [INT_LE, ZERO_LESS_EQ]
+  ]);
+
+val INT_NUM_EXISTS = store_thm(
+  "INT_NUM_EXISTS",
+  Term`(?n:num. P(&n)) = (?x:int. 0 <= x /\ P x)`,
+  EQ_TAC THEN REPEAT STRIP_TAC THENL [
+    PROVE_TAC [INT_LE, ZERO_LESS_EQ],
+    PROVE_TAC [NUM_POSINT_EXISTS]
+  ]);
+
+val INT_NUM_UEXISTS = store_thm(
+  "INT_NUM_UEXISTS",
+  Term`(?!n:num. P (&n)) = (?!x:int. 0 <= x /\ P x)`,
+  EQ_TAC THEN SIMP_TAC bool_ss [EXISTS_UNIQUE_THM] THEN
+  REPEAT STRIP_TAC THENL [
+    PROVE_TAC [INT_LE, ZERO_LESS_EQ],
+    PROVE_TAC [INT_INJ, NUM_POSINT_EXISTS],
+    PROVE_TAC [NUM_POSINT_EXISTS],
+    PROVE_TAC [INT_INJ, ZERO_LESS_EQ, INT_LE]
+  ]);
 
 val _ = export_theory();

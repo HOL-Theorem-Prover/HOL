@@ -19,8 +19,11 @@ val plus_tm = Term`$+ : int -> int -> int`
 val minus_tm = Term`$- : int -> int -> int`
 val mult_tm = Term`$* : int -> int -> int`
 val less_tm = Term`$< : int -> int -> bool`
-val lesseq_tm = Term`$<= : int -> int -> bool`
+val leq_tm = Term`$<= : int -> int -> bool`
+val great_tm = Term`$> : int -> int -> bool`
+val geq_tm = Term`$>= : int -> int -> bool`
 val divides_tm = Term`$int_divides : int -> int -> bool`;
+val absval_tm = Term`ABS : int -> int`;
 val min_tm = Term.mk_const{Name = "int_min", Ty = int_ty --> int_ty --> int_ty}
 val zero_tm = Term`0i`
 
@@ -78,19 +81,28 @@ in
   recurse [] tm
 end
 
-fun is_less tm = let
+fun mk_absval tm = mk_comb(absval_tm, tm)
+fun is_absval tm = is_comb tm andalso rator tm = absval_tm
+
+fun is_bin_relop reltm tm = let
   val (hd, args) = strip_comb tm
 in
-  length args = 2 andalso hd = less_tm
+  length args = 2 andalso hd = reltm
 end
+
+val is_less = is_bin_relop less_tm
 fun mk_less (tm1, tm2) = list_mk_comb(less_tm, [tm1, tm2])
 
-fun is_lesseq tm = let
-  val (hd, args) = strip_comb tm
-in
-  length args = 2 andalso hd = lesseq_tm
-end
-fun mk_lesseq (tm1, tm2) = list_mk_comb(lesseq_tm, [tm1, tm2])
+val is_leq = is_bin_relop leq_tm
+fun mk_leq (tm1, tm2) = list_mk_comb(leq_tm, [tm1, tm2])
+
+val is_great = is_bin_relop great_tm
+fun mk_great (tm1, tm2) = list_mk_comb(great_tm, [tm1, tm2])
+
+val is_geq = is_bin_relop geq_tm
+fun mk_geq (tm1, tm2) = list_mk_comb(geq_tm, [tm1, tm2])
+
+
 
 fun is_divides tm = let
   val (hd, args) = strip_comb tm
@@ -102,13 +114,13 @@ fun mk_divides (tm1, tm2) = list_mk_comb(divides_tm, [tm1, tm2])
 
 val int_injection =
   Rsyntax.mk_const{Name = "int_of_num", Ty = num_ty --> int_ty}
-val int_negation =
-  Rsyntax.mk_const{Name = "int_neg", Ty = int_ty --> int_ty}
+val negate_tm = Rsyntax.mk_const{Name = "int_neg", Ty = int_ty --> int_ty}
 fun is_int_literal t =
   (rator t = int_injection andalso Term.is_numeral (rand t)) orelse
-  (rator t = int_negation andalso is_int_literal (rand t))
+  (rator t = negate_tm andalso is_int_literal (rand t))
   handle HOL_ERR _ => false
-fun is_negated tm = is_comb tm andalso rator tm = int_negation
+fun is_negated tm = is_comb tm andalso rator tm = negate_tm
+fun mk_negated tm = mk_comb(negate_tm, tm)
 
 
 fun int_of_term tm = let
@@ -117,7 +129,7 @@ fun int_of_term tm = let
     raise ERR "int_of_term" "applied to non-literal"
   val (l,r) = dest_comb tm
 in
-  if l = int_negation then Arbint.~(int_of_term r)
+  if l = negate_tm then Arbint.~(int_of_term r)
   else Arbint.fromNat (Term.dest_numeral r)
 end
 
@@ -125,7 +137,7 @@ fun term_of_int i = let
   open Arbint
 in
   if i < zero then
-    mk_comb(int_negation, term_of_int (~i))
+    mk_negated (term_of_int (~i))
   else
     mk_comb(int_injection, Term.mk_numeral (toNat i))
 end

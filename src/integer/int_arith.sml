@@ -552,7 +552,7 @@ fun phase4_CONV tm = let
   val disj1 = let
     val i = genvar int_ty
     val restriction = mk_conj(mk_less(zero_tm, i),
-                              mk_lesseq(i, delta_tm))
+                              mk_leq(i, delta_tm))
   in
     mk_exists(i, mk_conj(restriction, mk_comb(neginf, i)))
   end
@@ -574,7 +574,7 @@ fun phase4_CONV tm = let
     val b = genvar int_ty
     val j = genvar int_ty
     val brestriction = list_mk_comb(MEM_tm, [b, bis_list_tm])
-    val jrestriction = mk_conj(mk_less(zero_tm, j), mk_lesseq(j, delta_tm))
+    val jrestriction = mk_conj(mk_less(zero_tm, j), mk_leq(j, delta_tm))
   in
     (list_mk_exists([b,j], mk_conj(mk_conj(brestriction, jrestriction),
                                    mk_comb(F, mk_plus(b,j)))),
@@ -1071,15 +1071,132 @@ val obvious_improvements =
                             INT_ADD_LID, INT_ADD_RID, INT_LT_ADD_NUMERAL,
                             INT_LT_LADD]
 
-fun decide_pure_presburger_term tm = let
+val decide_pure_presburger_term = let
   (* no free variables allowed *)
+  open boolSimps simpLib
+  infix ++
+  val phase0_CONV =
+    (* rewrites out conditional expression and absolute value terms *)
+    SIMP_CONV (bool_ss ++ COND_elim_ss) [INT_ABS]
+  fun mainwork tm = let
+  in
+    case find_low_quantifier tm of
+      NONE => REDUCE_CONV
+    | SOME f =>
+        f eliminate_quantifier THENC obvious_improvements THENC
+        mainwork
+  end tm
 in
-  case find_low_quantifier tm of
-    NONE => REDUCE_CONV
-  | SOME f =>
-      f eliminate_quantifier THENC obvious_improvements THENC
-      decide_pure_presburger_term
-end tm
+  phase0_CONV THENC mainwork
+end
+
+datatype pb_analysis = SUBVARS of int | BADDIES of term list
+
+(* this draws on similar code in Richard Boulton's natural number
+   arithmetic decision procedure *)
+
+fun contains_var tm = can (find_term is_var) tm
+fun is_linear_mult tm =
+  is_mult tm andalso
+  not (contains_var (rand tm) andalso contains_var (rand (rator tm)))
+fun land tm = rand (rator tm)
+
+(* returns a list of pairs, where the first element of each pair is a non-
+   Presburger term that occurs in tm, and where the second is a boolean
+   that is true if none of the variables that occur in the term are
+   bound by a quantifier. *)
+fun non_presburger_subterms0 ctxt tm =
+  if is_forall tm orelse is_uexists tm orelse is_exists tm then let
+    val abst = rand tm
+  in
+    non_presburger_subterms0 (Lib.union [bvar abst] ctxt) (body abst)
+  end
+  else if is_neg tm orelse is_absval tm orelse is_negated tm then
+    non_presburger_subterms0 ctxt (rand tm)
+  else if (is_cond tm) then let
+    val (b, t1, t2) = dest_cond tm
+  in
+    Lib.U [non_presburger_subterms0 ctxt b, non_presburger_subterms0 ctxt t1,
+           non_presburger_subterms0 ctxt t2]
+  end
+  else if (is_great tm orelse is_geq tm orelse is_eq tm orelse
+           is_less tm orelse is_leq tm orelse is_conj tm orelse
+           is_disj tm orelse is_imp tm orelse is_plus tm orelse
+           is_minus tm orelse is_linear_mult tm) then
+    Lib.union (non_presburger_subterms0 ctxt (land tm))
+              (non_presburger_subterms0 ctxt (rand tm))
+  else if is_int_literal tm then []
+  else if is_var tm andalso type_of tm = int_ty then []
+  else [(tm, not (List.exists (fn v => free_in v tm) ctxt))]
+
+val is_presburger = null o non_presburger_subterms0 []
+val non_presburger_subterms = map #1 o non_presburger_subterms0 []
+
+fun decide_fv_presburger tm = let
+  fun is_int_const tm = type_of tm = int_ty andalso is_const tm
+  val fvs = free_vars tm @ (Lib.mk_set (find_terms is_int_const tm))
+  fun dest_atom tm = dest_const tm handle HOL_ERR _ => dest_var tm
+  fun gen(bv, t) =
+    if is_var bv then mk_forall(bv, t)
+    else let
+      val gv = genvar int_ty
+    in
+      mk_forall(gv, Term.subst [bv |-> gv] t)
+    end
+in
+  if null fvs then
+    decide_pure_presburger_term tm
+  else let
+    val newtm = List.foldr gen tm fvs   (* as there are no non-presburger
+                                           sub-terms, all these variables
+                                           will be of integer type *)
+  in
+    EQT_INTRO (SPECL fvs (EQT_ELIM (decide_pure_presburger_term newtm)))
+  end handle HOL_ERR _ =>
+    raise ERR "INT_ARITH_CONV"
+      ("Tried to prove generalised goal (generalising "^
+       #1 (dest_atom (hd fvs))^"...) but it was false")
+end
+
+(* subterms is a list of subterms all of integer type *)
+fun decide_nonpbints_presburger subterms tm = let
+  fun gen (subterm, base) = let
+    val gv = genvar int_ty
+  in
+    mk_forall(gv, Term.subst [subterm |-> gv] base)
+  end
+  val newgoal = List.foldr gen tm subterms
+in
+  EQT_INTRO (SPECL subterms (EQT_ELIM (decide_fv_presburger newgoal)))
+  handle HOL_ERR _ =>
+    raise ERR "INT_ARITH_CONV"
+      ("Tried to prove generalised goal (generalising "^
+       term_to_string (hd subterms)^"...) but it was false")
+end
+
+fun INT_ARITH_CONV tm =
+  case non_presburger_subterms0 [] tm of
+    [] => decide_fv_presburger tm
+  | non_pbs => let
+      fun bad_term (t,b) = not b orelse type_of t <> int_ty
+    in
+      case List.find bad_term non_pbs of
+        NONE => decide_nonpbints_presburger (map #1 non_pbs) tm
+      | SOME (t,_) => raise ERR "INT_ARITH_CONV"
+          ("Not in the allowed subset; consider "^term_to_string t)
+    end
+
+val INT_ARITH_PROVE = EQT_ELIM o INT_ARITH_CONV
+
+(*
+fun NUM_ARITH_CONV tm = let
+  open arithmeticTheory simpLib boolSimps
+  val rewrites = [GSYM INT_INJ, GSYM INT_LT, GSYM INT_LE,
+                  GREATER_DEF, GREATER_EQ, GSYM INT_ADD,
+                  GSYM INT_MUL]
+  val elim_nat_quant
+  val munged = rhs (concl (SIMP_CONV bool_ss rewrites tm))
+*)
 
 
 (* good test examples:
