@@ -71,8 +71,8 @@ val stopped_at_not_pcons = store_thm(
   ``!x y r p. ~(stopped_at x = pcons y r p) /\ ~(pcons y r p = stopped_at x)``,
   SRW_TAC [][stopped_at_def, pcons_def]);
 
-val _ = augment_srw_ss [rewrites [stopped_at_11, pcons_11,
-                                  stopped_at_not_pcons]]
+val _ = BasicProvers.export_rewrites ["stopped_at_11", "pcons_11",
+                                      "stopped_at_not_pcons"]
 
 val path_cases = store_thm(
   "path_cases",
@@ -96,6 +96,8 @@ val finite_thm = store_thm(
     (!x r p. finite (pcons x r p : ('a,'b) path) = finite p)``,
   SRW_TAC [][finite_def, pcons_def, stopped_at_def, llistTheory.LFINITE_THM]);
 
+val _ = BasicProvers.export_rewrites ["finite_thm"]
+
 val last_thm =
     new_specification
       ("last_thm", ["last"],
@@ -111,6 +113,8 @@ val last_thm =
         IMP_RES_TAC LFINITE_toList THEN
         `?h t. SND (fromPath p) = LCONS h t` by PROVE_TAC [llist_CASES] THEN
         FULL_SIMP_TAC (srw_ss()) [toList_THM]));
+
+val _ = BasicProvers.export_rewrites ["first_thm", "last_thm"]
 
 val path_bisimulation = store_thm(
   "path_bisimulation",
@@ -215,6 +219,8 @@ val tail_def =
                                else ARB` THEN
                       SRW_TAC [][]));
 
+val _ = BasicProvers.export_rewrites ["tail_def"]
+
 val first_label_def =
     new_specification
       ("first_label_def",["first_label"],
@@ -222,6 +228,8 @@ val first_label_def =
                       Q.EXISTS_TAC `\p. if ?x r q. p = pcons x r q then
                                           @r. ?x q. p = pcons x r q
                                         else ARB` THEN SRW_TAC [][]));
+
+val _ = BasicProvers.export_rewrites ["first_label_def"]
 
 
 val length_def =
@@ -289,7 +297,7 @@ val path_Axiom = store_thm(
   ASM_SIMP_TAC (srw_ss()) [] THEN
   `(lvt = NONE) \/ (?m t. lvt = SOME (m, t))` by
       PROVE_TAC [pairTheory.ABS_PAIR_THM, optionTheory.option_CASES] THEN
-  ASM_SIMP_TAC (srw_ss()) [first_thm, combinTheory.o_THM] THENL [
+  ASM_SIMP_TAC (srw_ss()) [] THENL [
     SRW_TAC [][stopped_at_def] THEN
     Q_TAC SUFF_TAC `LHD (g (v, NONE)) = NONE` THEN1
       PROVE_TAC [LHD_EQ_NONE] THEN
@@ -345,9 +353,9 @@ val finite_pconcat = store_thm(
                                        finite p1 /\ finite p2)` THEN1
         PROVE_TAC [] THEN
   CONJ_TAC THEN HO_MATCH_MP_TAC finite_path_ind THEN
-  SRW_TAC [][finite_thm, pconcat_thm, pconcat_eq_stopped,
+  SRW_TAC [][pconcat_thm, pconcat_eq_stopped,
              pconcat_eq_pcons] THEN
-  SRW_TAC [][finite_thm] THEN PROVE_TAC []);
+  SRW_TAC [][] THEN PROVE_TAC []);
 
 val PL_def = Define`PL p = { i | finite p ==> i < THE (length p) }`
 
@@ -360,7 +368,7 @@ val PL_pcons = store_thm(
   "PL_pcons",
   ``!x r q. PL (pcons x r q) = 0 INSERT IMAGE SUC (PL q)``,
   SRW_TAC [ARITH_ss]
-          [PL_def, pred_setTheory.EXTENSION, finite_thm, length_thm,
+          [PL_def, pred_setTheory.EXTENSION, length_thm,
            EQ_IMP_THM, arithmeticTheory.ADD1]
   THENL [
     Cases_on `x'` THEN
@@ -373,8 +381,7 @@ val PL_pcons = store_thm(
 val PL_stopped_at = store_thm(
   "PL_stopped_at",
   ``!x. PL (stopped_at x) = {0}``,
-  SRW_TAC [ARITH_ss][pred_setTheory.EXTENSION, PL_def, length_thm,
-                     finite_thm]);
+  SRW_TAC [ARITH_ss][pred_setTheory.EXTENSION, PL_def, length_thm]);
 
 val PL_thm = save_thm("PL_thm", CONJ PL_stopped_at PL_pcons)
 
@@ -390,22 +397,22 @@ val firstP_at_def =
 val firstP_at_stopped = prove(
   ``!P x n. firstP_at P (stopped_at x) n = (n = 0) /\ P x``,
   SIMP_TAC (srw_ss() ++ ARITH_ss) [firstP_at_def, PL_thm, EQ_IMP_THM,
-                                   FORALL_AND_THM, el_def, first_thm]);
+                                   FORALL_AND_THM, el_def]);
 
 val firstP_at_pcons = prove(
   ``!P n x r p.
        firstP_at P (pcons x r p) n =
           (n = 0) /\ P x \/ 0 < n /\ ~P x /\ firstP_at P p (n - 1)``,
  REPEAT GEN_TAC THEN Cases_on `n` THENL [
-   SRW_TAC [ARITH_ss][firstP_at_def, PL_pcons, el_def, first_thm],
-   SRW_TAC [ARITH_ss][firstP_at_def, PL_pcons, el_def, tail_def,
+   SRW_TAC [ARITH_ss][firstP_at_def, PL_pcons, el_def],
+   SRW_TAC [ARITH_ss][firstP_at_def, PL_pcons, el_def,
                       EQ_IMP_THM]
    THENL [
      FIRST_X_ASSUM (Q.SPEC_THEN `0` MP_TAC) THEN
-     SRW_TAC [ARITH_ss][el_def, first_thm],
+     SRW_TAC [ARITH_ss][el_def],
      FIRST_X_ASSUM (Q.SPEC_THEN `SUC j` MP_TAC) THEN
-     SRW_TAC [ARITH_ss][el_def, tail_def],
-     Cases_on `j` THEN SRW_TAC [ARITH_ss][el_def, first_thm, tail_def]
+     SRW_TAC [ARITH_ss][el_def],
+     Cases_on `j` THEN SRW_TAC [ARITH_ss][el_def]
    ]
  ]);
 
@@ -424,7 +431,7 @@ val firstP_at_zero = store_thm(
   "firstP_at_zero",
   ``!P p. firstP_at P p 0 = P (first p)``,
   GEN_TAC THEN CONV_TAC (HO_REWR_CONV FORALL_path) THEN
-  SIMP_TAC (srw_ss()) [first_thm, firstP_at_thm]);
+  SIMP_TAC (srw_ss()) [firstP_at_thm]);
 
 val exists_def = Define`exists P p = ?i. firstP_at P p i`
 val every_def = Define`every P p = ~exists ($~ o P) p`
@@ -444,7 +451,9 @@ val every_thm = store_thm(
   "every_thm",
   ``!P. (!x. every P (stopped_at x) = P x) /\
         (!x r p. every P (pcons x r p) = P x /\ every P p)``,
-  SRW_TAC [][every_def, exists_thm, combinTheory.o_THM]);
+  SRW_TAC [][every_def, exists_thm]);
+
+val _ = BasicProvers.export_rewrites ["exists_thm", "every_thm"]
 
 val not_every = store_thm(
   "not_every",
@@ -455,6 +464,8 @@ val not_exists = store_thm(
   "not_exists",
   ``!P p. ~exists P p = every ($~ o P) p``,
   SRW_TAC [boolSimps.ETA_ss][every_def, combinTheory.o_DEF]);
+
+val _ = BasicProvers.export_rewrites ["not_exists", "not_every"]
 
 val exists_el = store_thm(
   "exists_el",
@@ -468,15 +479,15 @@ val exists_el = store_thm(
 val every_el = store_thm(
   "every_el",
   ``!P p. every P p = !i. i IN PL p ==> P (el i p)``,
-  SRW_TAC [][every_def, exists_el, combinTheory.o_THM] THEN PROVE_TAC []);
+  REWRITE_TAC [every_def, exists_el] THEN SRW_TAC [][] THEN PROVE_TAC []);
 
 val every_coinduction = store_thm(
   "every_coinduction",
   ``!P Q. (!x. P (stopped_at x) ==> Q x) /\
           (!x r p. P (pcons x r p) ==> Q x /\ P p) ==>
           (!p. P p ==> every Q p)``,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
-  SIMP_TAC (srw_ss()) [every_def, exists_def, GSYM RIGHT_FORALL_IMP_THM] THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC [every_def, exists_def] THEN
+  SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM] THEN
   CONV_TAC SWAP_VARS_CONV THEN Induct THEN
   CONV_TAC (HO_REWR_CONV FORALL_path) THENL [
     SRW_TAC [][firstP_at_thm, combinTheory.o_THM] THEN PROVE_TAC [],
@@ -488,14 +499,13 @@ val double_neg_lemma = prove(``$~ o $~ o P = P``,
 
 val exists_induction = save_thm(
   "exists_induction",
-  (SIMP_RULE (srw_ss()) [combinTheory.o_THM, double_neg_lemma] o
+  (SIMP_RULE (srw_ss()) [double_neg_lemma] o
    Q.SPECL [`(~) o P`, `(~) o Q`] o
    CONV_RULE (STRIP_QUANT_CONV
                 (FORK_CONV (EVERY_CONJ_CONV
                               (STRIP_QUANT_CONV CONTRAPOS_CONV),
                             STRIP_QUANT_CONV CONTRAPOS_CONV)) THENC
-              SIMP_CONV (srw_ss()) [not_every, DISJ_IMP_THM,
-                                    FORALL_AND_THM]))
+              SIMP_CONV (srw_ss()) [DISJ_IMP_THM, FORALL_AND_THM]))
   every_coinduction);
 
 val mem_def = Define`mem s p = ?i. i IN PL p /\ (s = el i p)`;
@@ -504,12 +514,13 @@ val mem_thm = store_thm(
   "mem_thm",
   ``(!x s. mem s (stopped_at x) = (s = x)) /\
     (!x r p s. mem s (pcons x r p) = (s = x) \/ mem s p)``,
-  SRW_TAC [][mem_def, PL_thm, el_def, first_thm, RIGHT_AND_OVER_OR,
-             EXISTS_OR_THM, GSYM LEFT_EXISTS_AND_THM, tail_def]);
+  SRW_TAC [][mem_def, PL_thm, el_def, RIGHT_AND_OVER_OR,
+             EXISTS_OR_THM, GSYM LEFT_EXISTS_AND_THM]);
 
 val drop_def = Define`(drop 0 p = p) /\
                       (drop (SUC n) p = drop n (tail p))`;
 
+val _ = BasicProvers.export_rewrites ["mem_thm", "drop_def"]
 
 val chop_narrows_def =
     Define`chop_narrows n p =
@@ -534,7 +545,7 @@ val chop_narrows_thm = store_thm(
                   NONE -> NONE
                || SOME (seg1, lab, seg2) -> SOME(pcons x r seg1, lab, seg2))``,
   ONCE_REWRITE_TAC [chop_narrows_def] THEN
-  SRW_TAC [][alt_length_thm, first_thm, first_label_def, tail_def,
+  SRW_TAC [][alt_length_thm,
              DECIDE ``(1 = SUC z) = (z = 0)``, length_never_zero]
   THENL [
     ONCE_REWRITE_TAC [chop_narrows_def] THEN SRW_TAC [][],
@@ -553,8 +564,7 @@ val chop_narrows_eq_SOME = store_thm(
   CONV_TAC SWAP_VARS_CONV THEN SIMP_TAC (srw_ss()) [PL_def] THEN Induct THEN
   GEN_TAC THEN
   Q.SPEC_THEN `p` STRUCT_CASES_TAC path_cases THEN
-  SRW_TAC [numSimps.REDUCE_ss, ARITH_ss][PL_def, length_thm, finite_thm,
-                                         chop_narrows_thm,
+  SRW_TAC [numSimps.REDUCE_ss, ARITH_ss][PL_def, length_thm, chop_narrows_thm,
                                          arithmeticTheory.ADD1] THEN
   `finite q ==> i + 1 < THE (length q)` by (SRW_TAC [][] THEN
                                             RES_TAC THEN
@@ -574,14 +584,14 @@ val chop_narrows_pconcat = store_thm(
        by PROVE_TAC [chop_narrows_eq_SOME] THEN
     ASM_SIMP_TAC (srw_ss()) [] THEN
     Q.SPEC_THEN `p` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) path_cases THEN
-    FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [PL_def, finite_thm, length_thm,
+    FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [PL_def, length_thm,
                                           chop_narrows_thm] THEN
-    SRW_TAC [][pconcat_thm, finite_thm],
+    SRW_TAC [][pconcat_thm],
 
     Q.SPEC_THEN `p` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC)
                 path_cases
     THENL [
-      FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [finite_thm, length_thm,
+      FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [length_thm,
                                             chop_narrows_thm, PL_def],
 
       FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [PL_pcons,
@@ -592,7 +602,7 @@ val chop_narrows_pconcat = store_thm(
                                   chop_narrows_eq_SOME] THEN
       FIRST_ASSUM (ASSUME_TAC o Q.AP_TERM `THE`) THEN
       FIRST_X_ASSUM (Q.SPEC_THEN `q` MP_TAC) THEN
-      FULL_SIMP_TAC (srw_ss()) [finite_thm, pconcat_thm]
+      FULL_SIMP_TAC (srw_ss()) [pconcat_thm]
     ]
   ]);
 
@@ -606,8 +616,9 @@ val labels_def =
                             else SOME (tail p, first_label p)`
                        llist_Axiom) THEN
             Q.EXISTS_TAC `g` THEN
-            SRW_TAC [][LHDTL_EQ_SOME, GSYM LHD_EQ_NONE,
-                       combinTheory.o_THM, first_label_def, tail_def]));
+            SRW_TAC [][LHDTL_EQ_SOME, GSYM LHD_EQ_NONE]));
+
+val _ = BasicProvers.export_rewrites ["labels_def"]
 
 
 val firstP_at_unique = store_thm(
@@ -617,9 +628,9 @@ val firstP_at_unique = store_thm(
   CONV_TAC SWAP_VARS_CONV THEN Induct THENL [
     SIMP_TAC (srw_ss()) [firstP_at_zero] THEN
     CONV_TAC (HO_REWR_CONV FORALL_path) THEN
-    SRW_TAC [][first_thm, firstP_at_thm],
+    SRW_TAC [][firstP_at_thm],
     CONV_TAC (HO_REWR_CONV FORALL_path) THEN
-    SRW_TAC [ARITH_ss][first_thm, firstP_at_thm] THEN
+    SRW_TAC [ARITH_ss][firstP_at_thm] THEN
     `m - 1 = n` by PROVE_TAC [] THEN SRW_TAC [ARITH_ss][]
   ]);
 
@@ -630,6 +641,8 @@ val is_stopped_thm = store_thm(
   ``(!x. is_stopped (stopped_at x) = T) /\
     (!x r p. is_stopped (pcons x r p) = F)``,
   SRW_TAC [][is_stopped_def]);
+
+val _ = BasicProvers.export_rewrites ["is_stopped_thm"]
 
 val filter_def =
     new_specification
@@ -652,18 +665,18 @@ val filter_def =
                                 else SOME(first_label r, tail r))`)
                  path_Axiom) THEN
             Q.EXISTS_TAC `\P p. if exists P p then g P p else ARB` THEN
-            SIMP_TAC (srw_ss()) [exists_thm] THEN REPEAT STRIP_TAC THENL [
+            SIMP_TAC (srw_ss()) [] THEN REPEAT STRIP_TAC THENL [
               ONCE_ASM_REWRITE_TAC [] THEN
               FIRST_X_ASSUM (K ALL_TAC o assert (is_forall o concl)) THEN
-              ASM_SIMP_TAC (srw_ss()) [firstP_at_thm, drop_def, last_thm,
-                                       is_stopped_def, first_thm],
+              ASM_SIMP_TAC (srw_ss()) [firstP_at_thm, drop_def,
+                                       is_stopped_def],
               Cases_on `P x` THENL [
-                POP_ASSUM (fn th => REWRITE_TAC [th] THEN ASSUME_TAC th) THEN
+                FIRST_ASSUM (fn th => REWRITE_TAC [th]) THEN
                 FIRST_X_ASSUM (CONV_TAC o LAND_CONV o REWR_CONV o
                                assert (is_forall o concl)) THEN
-                SRW_TAC [][firstP_at_thm, drop_def, last_thm, is_stopped_def,
-                           tail_def, first_thm, first_label_def] THEN RES_TAC,
-                POP_ASSUM (fn th => REWRITE_TAC [th] THEN ASSUME_TAC th) THEN
+                SRW_TAC [][firstP_at_thm] THEN
+                FULL_SIMP_TAC bool_ss [every_def, double_neg_lemma],
+                FIRST_ASSUM (fn th => REWRITE_TAC [th]) THEN
                 COND_CASES_TAC THEN REWRITE_TAC [] THEN
                 FIRST_X_ASSUM (fn th =>
                                   ONCE_REWRITE_TAC
@@ -676,7 +689,7 @@ val filter_def =
                           by PROVE_TAC [firstP_at_unique] THEN
                       FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [
                         DECIDE ``0 < n /\ (n - 1 = m) = (n = m + 1)``]) THEN
-                ASM_SIMP_TAC (srw_ss())[last_thm, drop_def, tail_def]
+                ASM_SIMP_TAC (srw_ss())[drop_def]
               ]
             ]));
 
@@ -746,6 +759,8 @@ val okpath_thm = store_thm(
     CONV_TAC (LAND_CONV (REWR_CONV okpath_cases)) THEN SRW_TAC [][]
   ]);
 
+val _ = BasicProvers.export_rewrites ["okpath_thm"]
+
 val finite_okpath_ind = store_thm(
   "finite_okpath_ind",
   ``!R.
@@ -757,16 +772,74 @@ val finite_okpath_ind = store_thm(
   Q_TAC SUFF_TAC `!sigma. finite sigma ==> okpath R sigma ==> P sigma` THEN1
         PROVE_TAC [] THEN
   HO_MATCH_MP_TAC finite_path_ind THEN
-  ASM_SIMP_TAC (srw_ss()) [okpath_thm]);
+  ASM_SIMP_TAC (srw_ss()) []);
 
-val _ = BasicProvers.export_rewrites ["stopped_at_11", "pcons_11",
-                                      "stopped_at_not_pcons", "last_thm",
-                                      "tail_def", "first_thm", "finite_thm",
-                                      "first_label_def", "okpath_thm",
-                                      "labels_def", "exists_thm", "every_thm",
-                                      "is_stopped_thm", "drop_def",
-                                      "not_exists", "not_every", "mem_thm"
-                                      ]
+val plink_def = new_specification(
+  "plink_def",
+  ["plink"],
+  prove(``?f. (!x p. f (stopped_at x) p = p) /\
+              (!x r p1 p2. f (pcons x r p1) p2 = pcons x r (f p1 p2))``,
+        STRIP_ASSUME_TAC
+        (Q.ISPEC `\pair. let pullapart g p = (first p,
+                                              if is_stopped p then NONE
+                                              else SOME (first_label p,
+                                                         g (tail p)))
+                         in
+                           case pair of
+                              (NONE, p) -> pullapart (\t. (NONE, t)) p
+                           || (SOME p1, p2) ->
+                              if is_stopped p1 then
+                                pullapart (\t. (NONE, t)) p2
+                              else
+                                pullapart (\t. (SOME t, p2)) p1`
+                 path_Axiom) THEN
+        Q.EXISTS_TAC `\p1 p2. g (SOME p1, p2)` THEN
+        SIMP_TAC (srw_ss()) [] THEN
+        FIRST_ASSUM (fn th => CONV_TAC
+                              (BINOP_CONV
+                               (STRIP_QUANT_CONV
+                                (LAND_CONV (REWR_CONV th))))) THEN
+        SIMP_TAC (srw_ss()) [] THEN
+        Ho_Rewrite.ONCE_REWRITE_TAC [FORALL_path] THEN
+        SIMP_TAC (srw_ss()) [] THEN
+        ONCE_REWRITE_TAC [path_bisimulation] THEN GEN_TAC THEN
+        Q.EXISTS_TAC `\p1 p2. (p1 = g (NONE, p2))` THEN
+        SIMP_TAC (srw_ss()) [] THEN
+        Ho_Rewrite.ONCE_REWRITE_TAC [FORALL_path] THEN
+        SIMP_TAC (srw_ss()) [] THEN
+        POP_ASSUM  (fn th => CONV_TAC
+                              (BINOP_CONV
+                               (STRIP_QUANT_CONV
+                                (LAND_CONV (REWR_CONV th))))) THEN
+        SRW_TAC [][]));
+
+val _ = BasicProvers.export_rewrites ["plink_def"]
+
+val plink_okpath = store_thm(
+  "plink_okpath",
+  ``!R p1. okpath R p1 /\ finite p1 ==>
+           !p2. okpath R p2 /\ (last p1 = first p2) ==>
+                okpath R (plink p1 p2)``,
+  GEN_TAC THEN HO_MATCH_MP_TAC finite_okpath_ind THEN
+  SRW_TAC [][] THEN
+  Q.ISPEC_THEN `p` (REPEAT_TCL STRIP_THM_THEN ASSUME_TAC) path_cases THEN
+  FULL_SIMP_TAC (srw_ss()) []);
+
+val finite_plink = store_thm(
+  "finite_plink",
+  ``!p1 p2. finite (plink p1 p2) = finite p1 /\ finite p2``,
+  Q_TAC SUFF_TAC
+     `(!p1:('a,'b)path. finite p1 ==>
+                        !p2. finite p2 ==> finite (plink p1 p2)) /\
+      !p:('a,'b)path.   finite p ==>
+                        !p1 p2. (p = plink p1 p2) ==> finite p1 /\ finite p2`
+     THEN1 PROVE_TAC [] THEN CONJ_TAC THEN
+  HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][] THEN
+  Q.SPEC_THEN `p1` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) path_cases THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN
+  SRW_TAC [][] THEN PROVE_TAC []);
+
+val _ = BasicProvers.export_rewrites ["finite_plink"]
 
 val _ = export_theory();
 
