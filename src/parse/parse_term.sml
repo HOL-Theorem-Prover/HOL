@@ -703,7 +703,14 @@ fun parse_term (G : grammar) typeparser = let
                   end
                 | NONE =>
                   if null num_info then
-                    (print "No numerals currently allowed.\n"; raise Temp)
+                    if dp = "0" then
+                      (Lib.mesg true
+                       ("0 treated specially and allowed - "^
+                        "no other numerals permitted");
+                      NonTerminal (inject_np NONE))
+                    else
+                      (Lib.mesg true  "No numerals currently allowed";
+                       raise Temp)
                   else
                     NonTerminal (inject_np (#2 (hd num_info)))
               end
