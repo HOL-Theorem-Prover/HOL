@@ -326,6 +326,7 @@ end
 
 fun mk_redconv0 pat = {name = "REDUCE_CONV (arithmetic reduction)", trace = 2,
                        key = SOME([], pat), conv = K (K reducer)}
+fun mk_unary_rconv op_t = mk_redconv0 (mk_comb(op_t, x))
 fun mk_redconv op_t = mk_redconv0 (list_mk_comb(op_t, [x, y]))
 
 val ARITH_ss = simpLib.SIMPSET
@@ -334,7 +335,9 @@ val ARITH_ss = simpLib.SIMPSET
 
 
 val REDUCE_ss = simpLib.SIMPSET
-  {convs = map mk_redconv [--`$*`--, --`$+`--, --`$-`--,
+  {convs = mk_unary_rconv (--`EVEN`--) ::
+           mk_unary_rconv (--`ODD`--)  ::
+           map mk_redconv [--`$*`--, --`$+`--, --`$-`--,
                            --`$DIV`--, --`$MOD`--, --`$EXP`--,
                            --`$<`--, --`$<=`--, --`$>`--,
                            --`$>=`--, --`$= : num -> num -> bool`--],
