@@ -1062,6 +1062,10 @@ val _ = adjoin_to_theory
 (*---------------------------------------------------------------------------*)
 
 val LENGTH_THM = REWRITE_RULE [arithmeticTheory.ADD1] LENGTH;
+val HD_NIL = Q.prove(`HD [] = FAIL HD ^(mk_var("Empty list",bool)) []`,
+                     REWRITE_TAC [combinTheory.FAIL_THM]);
+val TL_NIL = Q.prove(`TL [] = FAIL TL ^(mk_var("Empty list",bool)) []`,
+                     REWRITE_TAC [combinTheory.FAIL_THM]);
 
 val _ = 
  let open Drop 
@@ -1070,7 +1074,7 @@ val _ =
          :: OPEN ["num"]
          ::
          map (DEFN o PURE_REWRITE_RULE[arithmeticTheory.NUMERAL_DEF])
-             [NULL_DEF, HD, TL, APPEND, FLAT, MAP,
+             [NULL_DEF, CONJ HD_NIL HD, CONJ TL_NIL TL, APPEND, FLAT, MAP,
               MEM, FILTER, FOLDR, FOLDL, EVERY_DEF,
               EXISTS_DEF, MAP2, ZIP, UNZIP_THM, REVERSE_DEF,
               LAST_CONS, FRONT_CONS, ALL_DISTINCT, EL_compute, LENGTH_THM])
