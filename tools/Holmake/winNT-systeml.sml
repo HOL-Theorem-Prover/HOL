@@ -33,13 +33,6 @@ fun fullPath slist =
     normPath (List.foldl (fn (p1,p2) => Path.concat(p2,p1))
                          (hd slist) (tl slist))
 
-
-fun normPath s = Path.toString(Path.fromString s)
-
-fun fullPath slist =
-    normPath (List.foldl (fn (p1,p2) => Path.concat(p2,p1))
-                         (hd slist) (tl slist))
-
 val HOLDIR =
 val MOSMLDIR =
 val OS =
