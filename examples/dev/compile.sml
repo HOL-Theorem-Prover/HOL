@@ -525,13 +525,17 @@ fun CompileConvert defth = Compile(Convert defth);
 fun RecCompileConvert defth totalth =
  let val (l,r) = dest_eq(concl(SPEC_ALL defth))
      val (func,args) = dest_comb l 
+     val impth = 
+        (GEN_BETA_RULE o
+         SIMP_RULE std_ss [Seq_def,Par_def,Ite_def])
+        (DISCH_ALL(Compile (RecConvert defth totalth)))
+     val h = fst(dest_imp(concl impth))
+     val hthm = prove (h,RW_TAC std_ss [LAMBDA_PROD,totalth])
  in
-  (SIMP_RULE std_ss [UNPAIR_TOTAL totalth] o
-  GEN_BETA_RULE o
-  SIMP_RULE std_ss [Seq_def,Par_def,Ite_def])
-  (DISCH_ALL(Compile (RecConvert defth totalth)))
+  SIMP_RULE std_ss [] (MP impth hthm)
  end;
 
+(* (SIMP_RULE std_ss [UNPAIR_TOTAL totalth] o  *)
 
 fun mk_measure tm = 
    let open numSyntax
@@ -564,13 +568,13 @@ val default_simps =
 (* parse errors result. Also, the name of the defined function must be       *)
 (* alphanumeric.                                                             *)
 (*                                                                           *)
-(* One can also not mention the measure function, as in Define:              *)
+(* One can also omit the measure function, as in Define:                     *)
 (*                                                                           *)
 (*     hwDefine `eqns`                                                       *)
 (*                                                                           *)
 (* which will accept either non-recursive or recursive specifications. It    *)
 (* returns a triple (|- eqns, |- ind, |- dev) where the ind theorem should   *)
-(* be ignored (it will be numTheory.INDUCTION.                               *)
+(* be ignored for non(it will be boolTheory.TRUTH).                          *)
 (*---------------------------------------------------------------------------*)
 
 fun hwDefine defq =
@@ -594,13 +598,13 @@ fun hwDefine defq =
             val (defth,ind) = Defn.tprove(defn, tac)
             val (lt,rt) = boolSyntax.dest_eq(concl defth)
             val (func,args) = dest_comb lt
-            val (b,t1,t2) = dest_cond rt
-            val fb = mk_pabs(args,b)
+            val (test,t1,t2) = dest_cond rt
+            val fb = mk_pabs(args,test)
             val f1 = mk_pabs(args,t1)
             val f2 = mk_pabs(args,rand t2)
             val totalth = prove
                     (Term`TOTAL(^fb,^f1,^f2)`,
-                     RW_TAC std_ss [TOTAL_def]
+                     RW_TAC std_ss [TOTAL_def,pairTheory.FORALL_PROD]
                       THEN EXISTS_TAC typedf
                       THEN TotalDefn.TC_SIMP_TAC [] default_simps)
             val devth = PURE_REWRITE_RULE [GSYM DEV_IMP_def]
@@ -612,7 +616,7 @@ fun hwDefine defq =
         let val defth = Define defq
             val devth = PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
                           (CompileConvert defth)
-        in (defth,numTheory.INDUCTION,devth)
+        in (defth,boolTheory.TRUTH,devth)
         end
  end;
 
@@ -1425,7 +1429,7 @@ fun bus_split tm =
 
 fun IN_OUT_SPLIT th =
  let val (tm1,tm2) = dest_dev_imp(concl th)
-     val ("fun",[ty1,ty2]) = dest_type(type_of tm2)
+     val (ty1,ty2) = dom_rng (type_of tm2)
      val [load_ty,inp_ty,done_ty,out_ty] = strip_prodtype ty1
      val args_tm = 
           list_mk_pair
