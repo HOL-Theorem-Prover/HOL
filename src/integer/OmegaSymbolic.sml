@@ -1,4 +1,4 @@
-structure OmegaSymbolic =
+structure OmegaSymbolic :> OmegaSymbolic =
 struct
 
 (* This file implements the horrid part of the Omega test, when you have to
