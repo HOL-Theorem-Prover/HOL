@@ -1,24 +1,27 @@
-<html>
-<head><title>HOL Frequently Asked Questions</title></head>
-<BODY BGCOLOR="#fbf2e7">
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
+
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
+<link rel="stylesheet" href="index.css" type="text/css">
+<title>HOL Frequently Asked Questions</title></head>
+<body>
 
 <h1>HOL Frequently Asked Questions</h1>
-<p>
 <h2>Contents</h2>
 
-<UL>
+<ul>
 <li> <a href = "#Build">Build failures and warnings</a>
 <li> <a href = "#Quotes">Quotes and Antiquotes</a>
-<li> <a href = "#Parsing">Parsing</a>
-<li> <a href = "#Assumptions">Manipulating Hypotheses</strong>
+<li> <a href = "#Parsing">Parsing and printing</a>
+<li> <a href = "#Assumptions">Manipulating Hypotheses</a>
 <li> <a href = "#HOL_ERR"><code>HOL_ERR</code></a>
 <li> <a href = "#Locating">Locating things</a>
 <li> <a href = "#Misc">Miscellaneous</a>
-</UL>
+</ul>
 
-<p><hr><p>
+<hr>
 
-<h2><a name = "Build"> Build Failures and Warnings</a> </h2>
+<h2 id = "Build"> Build Failures and Warnings</h2>
 
 <dl>
 <dt>
@@ -50,20 +53,20 @@
      reporting it.  If it doesn't in your case, please get back to us.
 </p></dd>
 <dt>
-<strong> Are error messages during the build like the following a
-source for concern? </strong>
+<strong> Should I be concerned by error messages during the build process? </strong></dt>
+<dd> <p> Neither </p>
 <pre>
-    &gt; File "Term.sml", line 1328, characters 10-42:
-    &gt; !   let val {const=Const(r1,_),theory,place} = const_decl name
-    &gt; !           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    &gt; ! Warning: pattern matching is not exhaustive
+   &gt; File "Term.sml", line 1328, characters 10-42:
+   &gt; !   let val {const=Const(r1,_),theory,place} = const_decl name
+   &gt; !           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   &gt; ! Warning: pattern matching is not exhaustive
 </pre>
-</dt>
-<dd> No.  Nor is the following sort of output, when configuring the
-system before building:
+<p> nor the following sort of output, when configuring the
+system before building:</p>
 <pre>
-    &gt; /local/scratch/kxs/144/bin/mosmlyac: 4 shift/reduce conflicts.
+   &gt; /local/scratch/kxs/144/bin/mosmlyac: 4 shift/reduce conflicts.
 </pre>
+<p> represent problems. </p>
 </dd>
 
     <dt><strong> How do I build old versions of HOL, such as Taupo-6
@@ -168,7 +171,7 @@ system before building:
      <code>ty_antiq</code>.
 </dl>
 <hr>
-<h2><a name = "Parsing">Parsing</a></h2>
+<h2 id = "Parsing">Parsing</h2>
 
 <dl>
 <dt><strong>Why can't I write <code>``MAP ~ x``</code>?</strong>
@@ -208,14 +211,60 @@ system before building:
      These changes can be made to persist when the current
      theory is exported.  For example:</p>
 <pre>
-    - load "listTheory";
-    - set_fixity "MEM" (Infixr 450);
-    &gt; val it = () : unit
-    - listTheory.MEM;
-    &gt; val it =
-            |- (!x. x MEM [] = F) /\ !x h t. x MEM (h::t) = (x = h) \/ x MEM t
-            : thm
+   - load "listTheory";
+   - set_fixity "MEM" (Infixr 450);
+   &gt; val it = () : unit
+   - listTheory.MEM;
+   &gt; val it =
+           |- (!x. x MEM [] = F) /\ !x h t. x MEM (h::t) = (x = h) \/ x MEM t
+           : thm
 </pre>
+
+<dt><strong>How do I print a term with all the pretty-printing turned
+off?</strong></dt>
+<dd>
+    <p> To print a term <code>t</code> try </p>
+<pre>
+   print_term_by_grammar boolTheory.bool_grammars t
+</pre>
+    <p> This still retains pretty-printing for all of the constants in
+<code>boolTheory</code>, including <code>COND</code>.  If you really
+want to see even <code>/\</code>, <code>!</code> etc in their raw
+form, try</p>
+<pre>
+   print_term_by_grammar min_grammars t
+</pre>
+<p> For example: </p>
+<pre>
+   - print_term_by_grammar min_grammars  (concl AND_CLAUSES);
+   bool$!
+     (\t.
+        bool$/\ (bool$/\ bool$T t = t)
+          (bool$/\ (bool$/\ t bool$T = t)
+             (bool$/\ (bool$/\ bool$F t = bool$F)
+                (bool$/\ (bool$/\ t bool$F = bool$F) (bool$/\ t t = t)))))
+   > val it = () : unit
+</pre><p> and </p>
+<pre>
+   - print_term_by_grammar min_grammars  (concl COND_CLAUSES);
+   bool$!
+     (\t1.
+        bool$!
+          (\t2.
+             bool$/\ (bool$COND bool$T t1 t2 = t1)
+               (bool$COND bool$F t1 t2 = t2)))
+   > val it = () : unit
+</pre>
+<p>
+    Note that even in <code>min_grammars</code>, <code>=</code>,
+    <code>@</code> and <code>==></code> are treated
+    specially.</p></dd>
+
+
+
+
+
+
 
 <dt><strong>I want to have the parser transform the concrete syntax
 <code>``P[e/v]``</code> into <code>``(\v. P) e``</code>.</strong></dt>
@@ -230,7 +279,7 @@ In order to state the above, you'd need to actually write
 <pre>
     { (P v)[e/v] } v := e { P v }
 </pre>
-to make it clear that v might exist in the post-condition.</p>
+<p> to make it clear that <code>v</code> might exist in the post-condition.</p>
 
 <p>And given this, you might as well write:
 </p>
@@ -271,7 +320,7 @@ need to do:
     <code>Absyn</code>, which
       will turn <code>P[e/v]</code> into abstract syntax corresponding
       to
-        <blockquote><code>``foo P e v``</code></blockquote>
+        <blockquote><p><code>``foo P e v``</code></p></blockquote>
       You then traverse the term looking for this pattern and turning
       it into <code>(\v. P) e</code>.  You would also raise an error
       at this stage if <code>v</code> wasn't a variable.
@@ -407,9 +456,9 @@ Best thing currently is to look at the implementation of
 </pre>
 
 means (roughly):
-    <blockquote> when you see constant <em>M</em> applied to
+    <blockquote> <p> when you see constant <em>M</em> applied to
     <em>n</em> subterms (i.e., <em>M</em> is fully applied to its
-    arguments), apply conversion c </blockquote>
+    arguments), apply conversion <em>c</em> </p></blockquote>
 
 <p>
 <dt><strong> I can't find help on <code>IN</code>. What theory defined
@@ -421,14 +470,15 @@ constants to their place of definition though.
 <p>
 You can always figure out the originating theory by
 
-<pre>  dest_thy_const : term -&gt; {Theory : string, Name : string, Ty : hol_type}
+<pre>
+   dest_thy_const : term -&gt; {Theory : string, Name : string, Ty : hol_type}
 </pre>
 <p>
 Using <code>decls name</code> will give you all the declared constants that
 have the given name.
 
 </dl>
-<P><HR><P>
+<hr>
 <h2><a name = "Misc">Miscellaneous</a></h2>
 
 <dl>
@@ -438,7 +488,10 @@ scripts take <code>-I &lt;dir&gt;</code> flags to indicate that the
 system should look in the specified directories for object files
 (whether theories or libraries).  You can rebuild theories in later
 directories by calling <code>Holmake</code> with the appropriate
-<code>-I</code> flags.
+<code>-I</code> flags.  Directories that should be examined for
+&ldquo;include files&rdquo; can also be specified with an
+<code>INCLUDES=</code> directive in a <code>Holmakefile</code>.
+See the DESCRIPTION manual for more on this.
 
 <p>
 
@@ -460,13 +513,12 @@ could write:
 
 </dl>
 <hr>
-<center>
+<p>
 <small>
-<!-- Source file: faq.html<BR> !-->
 Page last updated on $Date$ by $Author$
 <br>
 Maintained by Konrad Slind
- (<a href="mailto:slind@cs.utah.edu">slind@cs.utah.edu</a>)</small><br>
-</center>
+ (<a href="mailto:slind@cs.utah.edu">slind@cs.utah.edu</a>)</small></p>
+
 </body>
 </html>
