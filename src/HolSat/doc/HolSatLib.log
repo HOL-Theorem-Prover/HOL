@@ -1,0 +1,223 @@
+This is TeX, Version 3.14159 (Web2C 7.3.1) (format=latex 2000.9.6)  1 JUN 2001 20:21
+**HolSatLib
+(HolSatLib.tex
+LaTeX2e <2000/06/01>
+Babel <v3.6Z> and hyphenation patterns for english, ukenglish, french, german, 
+dumylang, nohyphenation, loaded.
+(/nfs/repl/texmf.local/tex/latex/0006/base/article.cls
+Document Class: article 2000/05/19 v1.4b Standard LaTeX document class
+(/nfs/repl/texmf.local/tex/latex/0006/base/size12.clo
+File: size12.clo 2000/05/19 v1.4b Standard LaTeX file (size option)
+)
+\c@part=\count79
+\c@section=\count80
+\c@subsection=\count81
+\c@subsubsection=\count82
+\c@paragraph=\count83
+\c@subparagraph=\count84
+\c@figure=\count85
+\c@table=\count86
+\abovecaptionskip=\skip41
+\belowcaptionskip=\skip42
+\bibindent=\dimen102
+)
+(/nfs/repl/texmf.local/tex/latex/0006/base/alltt.sty
+Package: alltt 1997/06/16 v2.0g defines alltt environment
+)
+(/nfs/repl/texmf.local/tex/latex/0006/graphics/epsfig.sty
+Package: epsfig 1999/02/16 v1.7a (e)psfig emulation (SPQR)
+
+(/nfs/repl/texmf.local/tex/latex/0006/graphics/graphicx.sty
+Package: graphicx 1999/02/16 v1.0f Enhanced LaTeX Graphics (DPC,SPQR)
+
+(/nfs/repl/texmf.local/tex/latex/0006/graphics/keyval.sty
+Package: keyval 1999/03/16 v1.13 key=value parser (DPC)
+\KV@toks@=\toks14
+)
+(/nfs/repl/texmf.local/tex/latex/0006/graphics/graphics.sty
+Package: graphics 1999/02/16 v1.0l Standard LaTeX Graphics (DPC,SPQR)
+
+(/nfs/repl/texmf.local/tex/latex/0006/graphics/trig.sty
+Package: trig 1999/03/16 v1.09 sin cos tan (DPC)
+)
+(/nfs/repl/texmf/tex/latex/config/graphics.cfg)
+Package graphics Info: Driver file: dvips.def on input line 80.
+
+(/nfs/repl/texmf.local/tex/latex/0006/graphics/dvips.def
+File: dvips.def 1999/02/16 v3.0i Driver-dependant file (DPC,SPQR)
+))
+\Gin@req@height=\dimen103
+\Gin@req@width=\dimen104
+)
+\epsfxsize=\dimen105
+\epsfysize=\dimen106
+)
+(/nfs/repl/texmf/tex/generic/pstricks/pstricks.sty
+Package: pstricks 1997/03/25 package wrapper for PSTricks pstricks.tex
+
+(/nfs/repl/texmf/tex/generic/pstricks/pstricks.tex
+`PSTricks' v97 patch 10  <1999/03/24> (tvz)
+\pst@dima=\dimen107
+\pst@dimb=\dimen108
+\pst@dimc=\dimen109
+\pst@dimd=\dimen110
+\pst@dimg=\dimen111
+\pst@dimh=\dimen112
+\pst@hbox=\box26
+\pst@boxg=\box27
+\pst@cnta=\count87
+\pst@cntb=\count88
+\pst@cntc=\count89
+\pst@cntd=\count90
+\pst@cntg=\count91
+\pst@cnth=\count92
+\pst@toks=\toks15
+(/nfs/repl/texmf/tex/generic/pstricks/pstricks.con)
+\psunit=\dimen113
+\psxunit=\dimen114
+\psyunit=\dimen115
+\pslinewidth=\dimen116
+\pst@customdefs=\toks16
+\pslinearc=\dimen117
+\everypsbox=\toks17
+\psframesep=\dimen118
+\pslabelsep=\dimen119
+\theoverlaybox=\box28
+))
+(/nfs/repl/texmf.local/tex/latex/0006/tools/xspace.sty
+Package: xspace 1997/10/13 v1.06 Space after command names (DPC)
+)
+\minipagewidth=\skip43
+\hsbw=\skip44
+ (HolSatLib.aux)
+\openout1 = `HolSatLib.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 103.
+LaTeX Font Info:    ... okay on input line 103.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 103.
+LaTeX Font Info:    ... okay on input line 103.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 103.
+LaTeX Font Info:    ... okay on input line 103.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 103.
+LaTeX Font Info:    ... okay on input line 103.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 103.
+LaTeX Font Info:    ... okay on input line 103.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 103.
+LaTeX Font Info:    ... okay on input line 103.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <17.28> on input line 110.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <12> on input line 110.
+File: saturn.ps Graphic file (type eps)
+
+<saturn.ps>
+Overfull \hbox (5.55295pt too wide) in paragraph at lines 132--133
+[][] 
+ []
+
+[1
+
+]
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <8> on input line 154.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <6> on input line 154.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <7> on input line 164.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <5> on input line 164.
+ [1] (HolSatLib.toc)
+\tf@toc=\write3
+\openout3 = `HolSatLib.toc'.
+
+ [2] [1]
+
+LaTeX Font Warning: Command \small invalid in math mode on input line 275.
+
+[2]
+Underfull \hbox (badness 10000) in paragraph at lines 312--313
+
+ []
+
+
+Overfull \hbox (36.03415pt too wide) in paragraph at lines 321--321
+ []   \OT1/cmtt/m/n/10.95 Cnf.sml HolSatLib.sig HolSatLib.sml SatSolvers.sml do
+c sat_solvers[] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 323--324
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 346--347
+
+ []
+
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <10.95> on input line 348.
+
+Underfull \hbox (badness 10000) in paragraph at lines 351--352
+
+ []
+
+[3]
+Overfull \hbox (12.40814pt too wide) in paragraph at lines 401--401
+[]                 \OT1/cmtt/m/n/10.95 notime_run     : string -> string * stri
+ng -> string,[] 
+ []
+
+
+Overfull \hbox (58.39764pt too wide) in paragraph at lines 401--401
+[]                 \OT1/cmtt/m/n/10.95 time_run       : string -> (string * str
+ing) * int -> string,[] 
+ []
+
+[4] [5]
+Overfull \hbox (17.72507pt too wide) in paragraph at lines 470--472
+[]\OT1/cmr/m/n/12 the ac-tual com-mand ex-e-cuted can be seen in the ref-er-enc
+e [] 
+ []
+
+
+Overfull \hbox (23.32591pt too wide) in paragraph at lines 479--482
+[]\OT1/cmr/m/n/12 the pres-ence of the string given as the value of the field \
+OT1/cmtt/m/n/12 failure[]string
+ []
+
+
+Overfull \hbox (22.17836pt too wide) in paragraph at lines 502--505
+[]\OT1/cmr/m/n/12 if a model is found the re-sult is the tagged the-o-rem []\OT
+1/cmtt/m/n/10.95 |- \OT1/cmr/m/it/12 model[] \OT1/cmtt/m/n/10.95 ==> \OT1/cmr/m
+/it/12 term\OT1/cmr/m/n/12 ,
+ []
+
+[6]
+Overfull \hbox (6.8793pt too wide) in paragraph at lines 524--526
+[]\OT1/cmr/m/n/12 if \OT1/cmr/m/it/12 term \OT1/cmr/m/n/12 is found to be un-sa
+t-is-fi-able by \OT1/cmr/m/it/12 solver\OT1/cmr/m/n/12 , the ex-cep-tion []
+ []
+
+
+Overfull \hbox (39.33907pt too wide) in paragraph at lines 536--541
+\OT1/cmtt/m/n/12 ftp://dimacs.rutgers.edu/pub/challenge/satisfiability/benchmar
+ks/cnf/\OT1/cmr/m/n/12 . 
+ []
+
+
+Overfull \hbox (59.88509pt too wide) in paragraph at lines 553--591
+[][] 
+ []
+
+[7] [8] (HolSatLib.aux) ) 
+Here is how much of TeX's memory you used:
+ 1445 strings out of 25878
+ 15708 string characters out of 196953
+ 73086 words of memory out of 263001
+ 4406 multiletter control sequences out of 10000+0
+ 13482 words of font info for 48 fonts, out of 400000 for 1000
+ 22 hyphenation exceptions out of 1000
+ 32i,9n,21p,218b,437s stack positions out of 300i,100n,500p,50000b,4000s
+
+Output written on HolSatLib.dvi (11 pages, 23020 bytes).
