@@ -344,72 +344,85 @@ fun pp_term (G : grammar) TyG = let
 
   fun my_is_abs tm = can my_dest_abs tm
 
-  fun strip_vstructs bnder res tm =
+  fun dest_vstruct bnder res t =
       case bnder of
         NONE => let
-          fun strip vs t =
-              if my_is_abs t then let
-                  val (bv, body) = my_dest_abs t
+        in
+          case (Lib.total my_dest_abs t, res) of
+            (SOME (bv, body), _) => (Simple bv, body)
+          | (NONE, NONE) =>
+               raise PP_ERR "dest_vstruct" "term not an abstraction"
+          | (NONE, SOME s) => let
+            in
+              case dest_term t of
+                COMB (Rator, Rand) => let
                 in
-                  strip ((Simple bv)::vs) body
+                  case dest_term Rator of
+                    COMB(rator1, rand1) =>
+                    if has_name s rator1 andalso my_is_abs Rand then let
+                        val (bv, body) = my_dest_abs Rand
+                      in
+                        (Restricted{Bvar = bv, Restrictor = rand1}, body)
+                      end
+                    else raise PP_ERR "dest_vstruct" "term not an abstraction"
+                  | _ => raise PP_ERR "dest_vstruct" "term not an abstraction"
+                end
+              | _ => raise PP_ERR "dest_vstruct" "term not an abstraction"
+            end
+        end
+      | SOME s => let
+        in
+          case (dest_term t) of
+            COMB(Rator,Rand) => let
+            in
+              if has_name s Rator andalso my_is_abs Rand then let
+                  val (bv, body) = my_dest_abs Rand
+                in
+                  (Simple bv, body)
                 end
               else
                 case res of
-                  NONE => (List.rev vs, t)
+                  NONE => raise PP_ERR "dest_vstruct" "term not an abstraction"
                 | SOME s => let
                   in
-                    case dest_term t of
-                      COMB(Rator, Rand) => let
-                      in
-                        case dest_term Rator of
-                          COMB(rator1, rand1) =>
-                          if has_name s rator1 andalso my_is_abs Rand then let
-                              val (bv, body) = my_dest_abs Rand
-                            in
-                              strip
-                                (Restricted{Bvar = bv, Restrictor = rand1}::vs)
-                                body
-                            end
-                          else (List.rev vs, t)
-                        | _ => (List.rev vs, t)
-                      end
-                    | _ => (List.rev vs, t)
+                    case (dest_term Rator) of
+                      COMB(rator1, rand1) =>
+                      if has_name s rator1 andalso my_is_abs Rand then let
+                          val (bv, body) = my_dest_abs Rand
+                        in
+                            (Restricted{Bvar = bv, Restrictor = rand1}, body)
+                        end
+                      else
+                        raise PP_ERR "dest_vstruct" "term not an abstraction"
+                    | _ =>
+                      raise PP_ERR "dest_vstruct" "term not an abstraction"
                   end
-        in
-          strip [] tm
+            end
+          | _ => raise PP_ERR "dest_vstruct" "term not an abstraction"
         end
-      | SOME s => let
-          fun strip vs t =
-              case (dest_term t) of
-                COMB(Rator,Rand) => let
-                in
-                  if has_name s Rator andalso my_is_abs Rand then let
-                      val (bv, body) = my_dest_abs Rand
-                    in
-                      strip ((Simple bv)::vs) body
-                    end
-                  else
-                    case res of
-                      NONE => (List.rev vs, t)
-                    | SOME s => let
-                      in
-                        case (dest_term Rator) of
-                          COMB(rator1, rand1) =>
-                          if has_name s rator1 andalso my_is_abs Rand then let
-                              val (bv, body) = my_dest_abs Rand
-                            in
-                              strip
-                                (Restricted{Bvar = bv, Restrictor = rand1}::vs)
-                                body
-                            end
-                          else (List.rev vs, t)
-                        | _ => (List.rev vs, t)
-                      end
-                end
-              | _ => (List.rev vs, t)
-        in
-          strip [] tm
-        end
+
+
+  fun strip_vstructs bnder res tm = let
+    fun strip acc t = let
+      val (bvar, body) = dest_vstruct bnder res t
+    in
+      strip (bvar::acc) body
+    end handle HOL_ERR _ => (List.rev acc, t)
+  in
+    strip [] tm
+  end
+
+  fun strip_nvstructs bnder res n tm = let
+    fun strip n acc tm =
+        if n <= 0 then (List.rev acc, tm)
+        else let
+            val (bvar, body) = dest_vstruct bnder res tm
+          in
+            strip (n - 1) (bvar :: acc) body
+          end
+  in
+    strip n [] tm
+  end
 
 
   fun pr_term binderp showtypes showtypes_v vars_seen pps tm
@@ -1043,29 +1056,26 @@ fun pp_term (G : grammar) TyG = let
         pr_term rhs_t Top Top Top (depth - 1);
         bvars_seen := old_seen
       end
-      val (values, abstraction) = find_base [] tm
-      val (varnames, body) = strip_vstructs NONE NONE abstraction
+      val (values, abstr) = find_base [] tm
+      val (varnames, body) =
+          strip_nvstructs NONE NONE (length values) abstr
+      val name_value_pairs = ListPair.zip (varnames, values)
+      val addparens = lgrav <> RealTop orelse rgrav <> RealTop
+      val old_bvars_seen = !bvars_seen
     in
-      if length varnames = length values then let
-        val name_value_pairs = ListPair.zip (varnames, values)
-        val addparens = lgrav <> RealTop orelse rgrav <> RealTop
-        val old_bvars_seen = !bvars_seen
-      in
-        pbegin addparens; begin_block INCONSISTENT 2;
-        add_string "let"; spacep true;
-        begin_block INCONSISTENT 0;
-        pr_list pr_leteq (fn () => (spacep true; add_string "and"))
-                (fn () => spacep true) name_value_pairs;
-        end_block();
-        spacep true; add_string "in"; spacep true;
-        (* a lie! but it works *)
-        pr_term body RealTop RealTop RealTop (depth - 1);
-        bvars_seen := old_bvars_seen;
-        end_block(); pend addparens
-      end
-      else
-        uncurry (pr_comb tm) (dest_comb tm)
-    end
+      pbegin addparens; begin_block INCONSISTENT 2;
+      add_string "let"; spacep true;
+      begin_block INCONSISTENT 0;
+      pr_list pr_leteq (fn () => (spacep true; add_string "and"))
+              (fn () => spacep true) name_value_pairs;
+      end_block();
+      spacep true; add_string "in"; spacep true;
+      (* a lie! but it works *)
+      pr_term body RealTop RealTop RealTop (depth - 1);
+      bvars_seen := old_bvars_seen;
+      end_block(); pend addparens
+    end handle HOL_ERR _ => uncurry (pr_comb tm) (dest_comb tm)
+
     fun print_ty_antiq tm = let
       val ty = dest_ty_antiq tm
     in
