@@ -54,14 +54,19 @@ end handle HOL_ERR _ => (UNBOUNDED, thm)
 fun mk_rewr_convdata thm =
  let val (tag,thm') = dest_tagged_rewrite thm
      val th = SPEC_ALL thm'
-     val _ = trace(2, LZ_TEXT(fn () => "New rewrite: " ^ thm_to_string th))
  in
-   {name   = "<rewrite>",
-     key   = SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
-     trace = 100, (* no need to provide extra tracing here;
-                     COND_REWR_CONV provides enough tracing itself *)
-     conv  = appconv (COND_REWR_CONV th, tag)}
- end;
+   SOME {name   = "<rewrite>",
+         key   = SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
+         trace = 100, (* no need to provide extra tracing here;
+                         COND_REWR_CONV provides enough tracing itself *)
+         conv  = appconv (COND_REWR_CONV th, tag)} before
+   trace(2, LZ_TEXT(fn () => "New rewrite: " ^ thm_to_string th))
+   handle HOL_ERR _ =>
+          (trace (2, LZ_TEXT(fn () =>
+                                thm_to_string th ^
+                                " dropped (conversion to rewrite failed)"));
+           NONE)
+ end
 
 (*---------------------------------------------------------------------------*)
 (* Composable simpset fragments                                              *)
@@ -172,7 +177,7 @@ with
      SS {mk_rewrs=mk_rewrs',travrules,initial_net,dprocs=dprocs'})
   = let val mk_rewrs = case filter of SOME f => f oo mk_rewrs' | _ => mk_rewrs'
         val rewrs' = flatten (map mk_rewrs (ac_rewrites ac@rewrs))
-        val newconvdata = convs @ map mk_rewr_convdata rewrs'
+        val newconvdata = convs @ List.mapPartial mk_rewr_convdata rewrs'
         val net = net_add_convs initial_net newconvdata
     in
        SS {mk_rewrs=mk_rewrs,
@@ -195,7 +200,7 @@ with
     let fun addcontext (context,thms) =
           let val net = (raise context) handle CONVNET net => net
           in CONVNET (net_add_convs net
-                         (map mk_rewr_convdata
+                         (List.mapPartial mk_rewr_convdata
                            (flatten (map mk_rewrs thms))))
           end
         fun apply {solver,context,stack} tm =
