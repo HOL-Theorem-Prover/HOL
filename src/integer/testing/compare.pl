@@ -25,6 +25,10 @@ close(FILE2);
 
 $accum_absolute = 0;
 $accum_percent = 0;
+
+$accum_file1 = 0;
+$accum_file2 = 0;
+
 $zero_worseners = 0;
 $biggest_worsening = 0;
 $biggest_improvement = 0;
@@ -35,6 +39,8 @@ foreach (@keys) {
   $file1 = $file1_hash{$_};
   $file2 = $file2_hash{$_};
   next if (!defined $file2) ;
+  $accum_file1 += $file1;
+  $accum_file2 += $file2;
   $absolute_improvement = $file1 - $file2;
   if ($absolute_improvement >= 0) {
     if ($absolute_improvement > $biggest_improvement) {
@@ -56,6 +62,8 @@ foreach (@keys) {
   if ($file1 == 0.0) { $zero_worseners += $file2; }
 }
 $count = @keys;
+printf "Total time in file1: %6.3f\n", $accum_file1;
+printf "Total time in file2: %6.3f\n", $accum_file2;
 printf "Absolute improvement: %6.3f\n", $accum_absolute;
 printf "Average improvement: %6.3f\n", $accum_absolute / $count;
 printf "Biggest worsening: %6.3f (by %s)\n", $biggest_worsening, $worst;
