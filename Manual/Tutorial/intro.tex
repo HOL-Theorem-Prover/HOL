@@ -11,8 +11,8 @@ are always interested in ports to other platforms.
 \section{Getting HOL}
 
 The \HOL{} system can be downloaded from
-\url{http://www.cl.cam.ac.uk/Research/HVG/FTP/}.  The naming scheme
-for \holn{} releases is $\langle${\it name}$\rangle$-$\langle${\it
+\url{http://hol.sourceforge.net}.  The naming scheme for \holn{}
+releases is $\langle${\it name}$\rangle$-$\langle${\it
   number}$\rangle$; the release described here is \holnversion.
 
 \section{The {\tt info-hol} mailing list}
@@ -47,7 +47,6 @@ contain the following:
 {\tt bin} & Directory for HOL executables & Directory\\
 {\tt sigobj} & Directory for \ML{} object files & Directory\\
 {\tt src} & \ML{} sources of \HOL & Directory\\
-{\tt Manual} & Files for \HOL{} system documentation & Directory\\
 {\tt help} & Help files for \HOL{} system & Directory\\
 {\tt examples} & Example source files & Directory\\
 \hline
@@ -56,7 +55,7 @@ contain the following:
 
 The session in the box below shows a typical distribution directory.
 The \HOL{} distribution has been placed on a PC running Linux in the
-directory {\small\tt /local/scratch/mn200/hol/}.
+directory {\small\tt /home/mn200/hol/}.
 
 All sessions in this documentation will be displayed in boxes with a
 number in the top right hand corner.  This number indicates whether
@@ -78,7 +77,7 @@ Chapter~\ref{ML}.
 \begin{session}
 \begin{verbatim}
 $ pwd
-/local/scratch/mn200/hol
+/home/mn200/hol
 $ ls -F
 COPYRIGHT  bin/  examples/  install.txt  src/
 README     doc/  help/      sigobj/      tools/
@@ -90,56 +89,70 @@ Now you will need to rebuild \HOL{} from the sources.\footnote{It is
   web-page mentioned above.}
 
 Before beginning you must have a current version of MoscowML.  In
-particular, you must have version 2.00 or later.  MoscowML is
-available on the web from
-\url{http://www.dina.kvl.dk/~sestoft/mosml.html}. The first step of
-the installation process is to edit the file
-\texttt{tools/configure.sml}.  At the top of the file are the
-parameters that need to be set.
+particular, you must have version 2.00.  MoscowML is available on the
+web from \url{http://www.dina.kvl.dk/~sestoft/mosml.html}.
+When you have \texttt{mosml} installed, and are in the root directory
+of the distribution, the next step is to run \texttt{smart-configure}:
+
+\begin{session}
+\begin{alltt}
+\$ mosml < tools/smart-configure.sml
+Moscow ML version 2.00 (June 2000)
+Enter `quit();' to quit.
+-
+HOL smart configuration.
+
+Determining configuration parameters...
+OS:       linux
+mosmldir: /home/mn200/mosml
+holdir:   /home/mn200/hol
+
+Configuration will begin with above values.  If they are wrong
+press Control-C.
+\end{alltt}
+\end{session}
+
+Assuming you don't interrupt the configuration process, this will
+build the \texttt{Holmake} and \texttt{build} programs, and move them
+into the \texttt{hol/bin} directory.  If something goes wrong at this
+stage, consult Section~\ref{sec:editting-configure} below.
+
+The next step is to run the \texttt{build} program.  This should
+result in a great deal of output as all of the system code is compiled
+and the theories built.  Eventually, a \HOL{} system\footnote{Four
+  \HOL{} executables are produced: \textsf{hol}, \textsf{hol.unquote},
+  \textsf{hol.bare} and \textsf{hol.bare.unquote}.  The second of
+  these will be used for most examples in the \TUTORIAL{}.} is
+produced in the \texttt{bin/} directory.
 
 \begin{session}
 \begin{verbatim}
-$ cd tools/
-$ head -30 configure.sml
-(*---------------------------------------------------------------------------
-              HOL configuration script
+$ bin/build
+  ...
+  ...
+Uploading files to /home/mn200/hol/sigobj
 
-   First, edit the following user-settable parameters. Then execute this
-   file by going
-
-      mosml < configure.sml
-
- ---------------------------------------------------------------------------*)
-
-
-(*---------------------------------------------------------------------------
-          BEGIN user-settable parameters
- ---------------------------------------------------------------------------*)
-
-val mosmldir = _
-val holdir   = _
-val OS       = _         (* Operating system; choices are:
-                                "linux", "solaris", "unix", "winNT" *)
-
-val CC       = "gcc";     (* C compiler (for building quote filter)        *)
-val GNUMAKE  = "gnumake"; (* for robdd library                             *)
-
-val DEPDIR   = ".HOLMK";  (* local dir. where Holmake dependencies kept    *)
-val LN_S     = "ln -s";   (* only change if you are a HOL developer.       *)
-
-(*---------------------------------------------------------------------------
-          END user-settable parameters
- ---------------------------------------------------------------------------*)
+Hol built successfully.
+$
 \end{verbatim}
 \end{session}
 
-The first three parameters \emph{must} be set to sensible values.  The
-\texttt{mosmldir} value must be the name of the directory where the
-MoscowML implementation is on your machine.  The \texttt{holdir} value
-must be the name of the top-level directory listed in the first
-session above.  The \texttt{OS} value should be one of the strings
-specified in the accompanying comment.   All three strings must be
-enclosed in double quotes.
+
+\subsection{Editting \texttt{configure.sml} directly}
+\label{sec:editting-configure}
+
+If \texttt{smart-configure} is unable to guess correct values for the
+three parameters, \texttt{mosmldir}, \texttt{holdir} and \texttt{OS},
+then you will need to edit the file \texttt{configure.sml} yourself to
+set these correctly.  At the top of this file three SML declarations
+are present, but commented out.  You will need to uncomment this
+section (remove the \texttt{(*} and \texttt{*)} markers), and provide
+sensible values.  The \texttt{mosmldir} value must be the name of the
+directory where the MoscowML implementation is on your machine.  The
+\texttt{holdir} value must be the name of the top-level directory
+listed in the first session above.  The \texttt{OS} value should be
+one of the strings specified in the accompanying comment.  All three
+strings must be enclosed in double quotes.
 
 The next two values (\texttt{CC} and \texttt{GNUMAKE}) are needed for
 ``optional'' components of the system.  The first gives a string
@@ -153,8 +166,8 @@ something like:
 \begin{verbatim}
 $ more configure.sml
   ...
-val mosmldir = "/local/scratch/kxs/200";
-val holdir   = "/local/scratch/mn200/hol";
+val mosmldir = "/home/mn200/mosml";
+val holdir   = "/home/mn200/hol";
 val OS       = "linux"       (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
 
@@ -167,18 +180,15 @@ $
 
 \noindent Now, at either this level (in the \texttt{tools} directory)
 or at the level above, the \texttt{configure.sml} script must be piped
-into the MoscowML interpreter (called \texttt{mosml}).  This process
-creates a suite of useful tools that will be used to build the full
-system.  In particular, it will compile \textsf{Holmake} and
-\textsf{build} and put them in the \texttt{bin} directory.
+into the MoscowML interpreter (called \texttt{mosml}).
 
 \begin{session}
 \begin{verbatim}
-$ /local/scratch/kxs/200/bin/mosml < configure.sml
+$ mosml < tools/configure.sml
 Moscow ML version 2.00 (June 2000)
 Enter `quit();' to quit.
-- > val mosmldir = "/local/scratch/kxs/200" : string
-  val holdir = "/local/scratch/mn200/Work/hol" : string
+- > val mosmldir = "/home/mn200/mosml" : string
+  val holdir = "/home/mn200/hol" : string
   val OS = "linux" : string
 - > val CC = "gcc" : string
   ...
@@ -197,26 +207,6 @@ Making bin/build.
 -
 Finished configuration!
 -
-$
-\end{verbatim}
-\end{session}
-
-\noindent The next step is to run the \textsf{build} program.  This should
-result in a great deal of output as all of the system code is compiled
-and the theories built.  Eventually, a \HOL{} system\footnote{Four
-  \HOL{} executables are produced: \textsf{hol}, \textsf{hol.unquote},
-  \textsf{hol.bare} and \textsf{hol.bare.unquote}.  The second of
-  these will be used for most examples in the \TUTORIAL{}.} is
-produced in the \texttt{bin/} directory.
-
-\begin{session}
-\begin{verbatim}
-$ ../bin/build
-  ...
-  ...
-Uploading files to /local/scratch/mn200/Work/hol/sigobj
-
-Hol built successfully.
 $
 \end{verbatim}
 \end{session}

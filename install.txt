@@ -60,7 +60,22 @@ B. Unpack HOL with the commands
    starting.
 
 
-C. Enter the "tools" directory and edit the file "configure.sml".
+C. Enter the "tools" directory and type
+
+       mosml < smart-configure.sml
+
+                    ------------------------------
+
+   This should guess some configuration options, and then build some
+   of HOL's support tools.  If this appears to work correctly, proceed
+   to step D below.
+
+   If smart-configure guesses the options incorrectly, then you will
+   need to provide them yourself by editting the file "configure.sml".
+   The three parameters are mosmldir, holdir and OS.  Incomplete
+   declarations for these parameters are commented out at the top of
+   configure.sml.  You will need to uncomment this section of the file
+   and fill in correct values:
 
     (1) You must supply values for the following parameters:
 
@@ -97,34 +112,24 @@ C. Enter the "tools" directory and edit the file "configure.sml".
         versions of "Windows NT", "Windows 2000", and (we believe)
         "Windows XP".
 
-    (3) The following parameter gives the path to the "gnumake" program,
-        which is required to build the muddy library.
+    Lower in the file, you may find that you need to alter the binding
+    given for GNUMAKE, which is required to build the muddy library.
 
            val GNUMAKE = "gnumake";
 
-        If you are building HOL on an OS that is *not* Solaris or
-        Linux, the muddy library is not currently accessible. In such a
-        case, the value of GNUMAKE does not matter.
+    If you are building HOL on an OS that is *not* Solaris or Linux,
+    the muddy library is not currently accessible. In such a case, the
+    value of GNUMAKE does not matter.
 
-    (4) The following parameter gives the name of the local directory
-        that Holmake uses to store its dependencies in. On Unix and
-        WindowsNT, this name does not have to be changed.
-
-           val DEPDIR = ".HOLMK";
-
-D. Perform the following 2 shell commands:
-
-       <mosml-dir>/bin/mosml < configure.sml
+D. Now perform the following shell command:
 
        <hol-dir>/bin/build
 
-   The first command establishes some pathnames and the like; the
-   second actually builds the system. In case of difficulty, the
-   configuration can be gone through by hand, by starting
-   <mosmldir>/bin/mosml and stepping through tools/configure.sml.
-   Similarly, the execution of build.sml can also be stepped through
-   in MoscowML. This can be somewhat time-consuming, but will help
-   pinpoint any problems.
+   This builds the system. In case of difficulty, the configuration
+   can be gone through by hand, by starting <mosmldir>/bin/mosml and
+   stepping through tools/configure.sml.  Similarly, the execution of
+   build.sml can also be stepped through in MoscowML. This can be
+   somewhat time-consuming, but will help pinpoint any problems.
 
    The build program ends up creating two copies of every ML object
    file.  To save space on Unix, use the -symlink option.  This option
