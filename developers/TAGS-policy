@@ -1,0 +1,35 @@
+Brief notes on the use of CVS tags in the hol98 source repository.
+------------------------------------------------------------------
+
+If working on branch <b>, then the following tags should be defined:
+
+ <b>_branch:
+     the branch tag
+ <b>_branch_point:
+     a normal tag on the main branch where branch <b> begins
+ <b>_branch_ends:
+     a normal tag on branch <b> where the branch ends and/or is about
+     to participate in a merge
+ <b>_branch_merge_begins:
+     a normal tag on the main branch, where a merge from branch <b> is
+     about to begin
+ <b>_branch_merge_ends:
+     a normal tag on the main branch, after a merge from branch <b>
+     has been done and everything cleaned up.
+
+Current branches:
+-----------------
+  term_with_closure: initiated by Bruno Barras as an investigation
+                     into representing substitutions as closures.
+  parse: initiated by Michael Norrish as a reworking of the hol90
+         parser.  Finished, and merged back into the main branch to
+         start the Taupo series of releases.
+
+
+Other tags:
+-----------
+  athabasca-4   - a semi-official release, used as the basis for much
+                  of the first year's work on the Prosper project.
+  now-need-mosml-144 - tag marking switch to MoscowML 1.44
+  start - beginning of the repository, version slightly predating
+          athabasca-4
