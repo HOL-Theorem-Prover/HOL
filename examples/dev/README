@@ -369,9 +369,11 @@ to be boolean wires.
 The input load is declared to be a boolean register and the inputs
 inp1, ... ,inpu are declared to be registers of the appropriate width.
 
-A dumpfile called "file.vcd" is created and clk, load, and signals
-inp1, ... ,inpu, done, out1, ... ,outv are declared to have their value
-changes dumped to the VCD file.
+A dumpfile called "file.vcd" is created. If the reference variable
+dump_all_flag is false (the default) then only changes to clk, load,
+and signals inp1, ... ,inpu, done, out1, ... ,outv are declared to
+have their changes dumped to the VCD file. If dump_all_flag is true,
+then changes to all variables are dumped.
 
 The input variables are driven according to the parameter stimulus,
 which is an ML list of tuples of the form:

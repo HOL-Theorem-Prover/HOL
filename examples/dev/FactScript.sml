@@ -195,7 +195,19 @@ val FACT_cir =
 (*****************************************************************************)
 (* Print Verilog to file FACT.vl                                             *)
 (*****************************************************************************)
-val _ = PRINT_VERILOG FACT_cir;
+val _ = PRINT_VERILOG FACT_cir;  (* N.B. FACT.vl overwritten by stuff below! *)
+
+(*****************************************************************************)
+(* Print Verilog + a simulation environment to FACT.vl                       *)
+(* Run using: iverilog -o FACT.vvp FACT.vl; vvp FACT.vvp                     *)
+(*****************************************************************************)
+val _ = (dump_all_flag:=true);(* dump changes of all variables into VCD file *)
+val _ =
+ PRINT_SIMULATION
+  FACT_cir
+   1000
+   5 
+   [(10, 10, [("inp", "5")], 15)];
 
 (*****************************************************************************)
 (* Temporary hack to work around a system prettyprinter bug                  *)
@@ -203,3 +215,4 @@ val _ = PRINT_VERILOG FACT_cir;
 val _ = temp_overload_on(" * ", numSyntax.mult_tm);
 
 val _ = export_theory();
+
