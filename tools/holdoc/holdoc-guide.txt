@@ -303,5 +303,26 @@ Wish list
 
 - have some mechanism for general sub/superscripting
 
+- allow symbolic parametric things, eg -->_  for a unary \tran{...}
+
+- have more control over curried functions - at present seems no way
+  to set
+
+    col { < labi=ei > as <lab1:T1 ,..,  labn : Tn>  } { M' } { <lab1:T1, ..,labn:Tn> }
+
+  with
+
+   col     "\Mcolour " 3 true
+
+  (from update/Update2/dynamicML.mng).  If you do it as is, the parser
+  sees the commas (despite the fact that they are under some kind of
+  bracket) and splits the first argument up. If you set the flag to
+  'false' and comma-separate the arguments, it doesn't strip off the
+  outer braces.   (but, changing the munger to recognise source-level
+  bracket correspondence would need us to be able to tell it which
+  symbols bracket-match which other eg to cope with <<   <=  >>
+  correctly.
+
+
  --==[ THE END ]==--
 
