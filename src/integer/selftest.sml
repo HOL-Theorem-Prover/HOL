@@ -1,19 +1,28 @@
+fun die s = (print (s^"\n"); Process.exit Process.failure)
+
 val progs = ["test_omega.exe", "test_coopers.exe"]
 
 val _ = FileSys.chDir "testing"
+        handle OS.SysErr _ => die "No testing directory"
+open Systeml
+
+
+fun cleanup () = systeml [HOLDIR ^ "/bin/Holmake", "cleanAll"]
 
 val () =
-    if Systeml.systeml (Globals.HOLDIR^"/bin/Holmake" :: progs) = Process.success then
-      ()
-    else (print "Couldn't compile test programs!\n" ; Process.exit Process.failure)
+    if cleanup() = Process.success then ()
+    else die "Couldn't cleanup in testing directory";
+
+val () =
+    if systeml (HOLDIR^"/bin/Holmake" :: progs) = Process.success then ()
+    else die "Couldn't compile test programs!" ;
 
 
 fun can_run s = FileSys.access (s, [FileSys.A_EXEC])
 
 val _ =
     case List.find (not o can_run) progs of
-      SOME s => (print ("No sign of test program: "^s^"; failing\n");
-                 Process.exit Process.failure)
+      SOME s => die ("No sign of test program: "^s^"; failing")
     | NONE => ()
 
 fun run s = let
@@ -22,6 +31,8 @@ fun run s = let
 in
   Systeml.systeml [fname] = Process.success
 end
+
+val _ = Process.atExit (ignore o cleanup)
 
 val _ = Process.exit (if List.all run progs then Process.success
                       else Process.failure)
