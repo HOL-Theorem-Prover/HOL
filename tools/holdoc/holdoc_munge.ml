@@ -187,35 +187,33 @@ let texify_command s =
         (Str.global_substitute (Str.regexp "[0-9]+"      )  f
                                s)
 
-let dotexify tlist s =
-  let go c =
-    try List.assoc c tlist
-    with Not_found -> String.make 1 c
-  in
-  let mapString f s =
-    let rec mapS f i n s =
-      if i>=n then [] else f (String.get s i) :: mapS f (i+1) n s
-    in
-    mapS f 0 (String.length s) s
-  in
-  String.concat "" (mapString go s)
 
-
-let texify s = dotexify texify_list s
-
-let texify_text s = if String.length s > 1024 then
-                       "SORRY, COMMENT TOO BIG FOR BROKEN HOLDOC TO PROCESS"
-                    else
-                       dotexify texify_text_list s
-
-let texifys sep ss =
+let sepBy sep ss =
   let rec go ss =
     match ss with
-      []      -> []
-    | [s]     -> [texify s]
-    | (s::ss) -> texify s :: sep :: go ss
+      []      -> [""]
+    | [s]     -> [s]
+    | (s::ss) -> s::sep::go ss
   in
   String.concat "" (go ss)
+
+let dotexify tlist =
+  let re = Str.regexp (sepBy "\\|" (List.map (function (c,_) -> Str.quote (String.make 1 c)) tlist))
+  in
+  let go s =
+    match s with
+      Str.Text(s)  -> s
+    | Str.Delim(s) -> List.assoc (String.get s 0) tlist
+  in
+  function s ->
+    String.concat "" (List.map go (Str.full_split re s))
+
+let texify = dotexify texify_list
+
+let texify_text = dotexify texify_text_list
+
+let texifys sep ss =
+  sepBy sep (List.map texify ss)
 
 
 (* recognisers for various syntactic categories *)
