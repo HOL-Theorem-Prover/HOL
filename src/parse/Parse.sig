@@ -104,8 +104,7 @@ signature Parse = sig
 
     (* overloading and records *)
     val overload_on : string * term -> unit
-    val overload_on_by_nametype :
-      string -> {Name: string, Thy: string, Ty: hol_type} -> unit
+    val overload_on_by_nametype : string -> {Name: string, Thy: string} -> unit
     val clear_overloads_on : string -> unit
     val add_record_field : string * term -> unit
     val add_record_update : string * term -> unit
@@ -139,7 +138,7 @@ signature Parse = sig
 
     val temp_overload_on : string * term -> unit
     val temp_overload_on_by_nametype :
-      string -> {Name: string, Thy: string, Ty: hol_type} -> unit
+      string -> {Name: string, Thy: string} -> unit
     val temp_clear_overloads_on : string -> unit
     val temp_add_record_field : string * term -> unit
     val temp_add_record_update : string * term -> unit

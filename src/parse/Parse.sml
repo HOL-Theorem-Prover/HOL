@@ -40,6 +40,8 @@ fun ftoString [] = ""
   | ftoString (QUOTE s :: rest) = s ^ ftoString rest
   | ftoString (ANTIQUOTE x :: rest) = "..." ^ ftoString rest
 
+fun lose_constrec_ty {Name,Thy,Ty} = {Name = Name, Thy = Thy}
+
 (*---------------------------------------------------------------------------
     Fixity stuff
  ---------------------------------------------------------------------------*)
@@ -807,36 +809,34 @@ fun clear_prefs_for_term s = let in
         Overloading
  -------------------------------------------------------------------------*)
 
-fun temp_overload_on_by_nametype s {Name, Thy, Ty} =
+fun temp_overload_on_by_nametype s {Name, Thy} =
  let open term_grammar
  in the_term_grammar
        := fupdate_overload_info
           (Overload.add_actual_overloading
-              {opname=s, realname=Name, realthy=Thy, realtype=Ty})
+              {opname=s, realname=Name, realthy=Thy})
              (term_grammar());
     term_grammar_changed := true
  end
 
-fun overload_on_by_nametype s (r as {Name, Thy, Ty}) = let in
+fun overload_on_by_nametype s (r as {Name, Thy}) = let in
    temp_overload_on_by_nametype s r;
    update_grms ("(temp_overload_on_by_nametype "^quote s^")",
                 String.concat
-                [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, ", ",
-                 "Ty = ",
-                 Portable.pp_to_string 75 (TheoryPP.pp_type "U" "T") Ty, "}"])
+                [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"])
  end
 
 fun temp_overload_on (s, t) =
-  temp_overload_on_by_nametype s (dest_thy_const t)
-  handle HOL_ERR _ => raise ERROR "overload_on"
-    "Can't have non-constants as targets of overloading"
-       | Overload.OVERLOAD_ERR s => raise ERROR "temp_overload_on" s
+  temp_overload_on_by_nametype s (lose_constrec_ty (dest_thy_const t))
+  handle Overload.OVERLOAD_ERR s => raise ERROR "temp_overload_on" s
+       | HOL_ERR _ => raise ERROR "overload_on"
+           "Can't have non-constants as targets of overloading"
 
 fun overload_on (s, t) =
-  overload_on_by_nametype s (dest_thy_const t)
-  handle HOL_ERR _ => raise ERROR "overload_on"
-    "Can't have non-constants as targets of overloading"
-       | Overload.OVERLOAD_ERR s => raise ERROR "overload_on" s
+  overload_on_by_nametype s (lose_constrec_ty (dest_thy_const t))
+  handle Overload.OVERLOAD_ERR s => raise ERROR "temp_overload_on" s
+       | HOL_ERR _ => raise ERROR "overload_on"
+           "Can't have non-constants as targets of overloading"
 
 fun temp_clear_overloads_on s = let open term_grammar in
   the_term_grammar :=
@@ -899,11 +899,11 @@ fun temp_add_numeral_form (c, stropt) = let
   val fromNum_type = num --> alpha
   val const_record =
     case stropt of
-      NONE => {Name = nat_elim_term, Thy = "arithmetic", Ty = num --> num}
+      NONE => {Name = nat_elim_term, Thy = "arithmetic"}
     | SOME s =>
         case Term.decls s of
           [] => raise ERROR "add_numeral_form" ("No constant with name "^s)
-        | h::_ => dest_thy_const h
+        | h::_ => lose_constrec_ty (dest_thy_const h)
 in
   temp_add_bare_numeral_form (c, stropt);
   temp_overload_on_by_nametype (fromNum_str) const_record

@@ -49,6 +49,8 @@ fun strip_comb tm = acc_strip_comb tm [];
 fun string_of_nspaces n = String.concat (List.tabulate(n, (fn _ => " ")))
 val isPrefix = String.isPrefix
 
+fun lose_constrec_ty {Name,Ty,Thy} = {Name = Name, Thy = Thy}
+
 datatype grav = Top | RealTop | Prec of (int * string)
 fun grav_name (Prec(n, s)) = s | grav_name _ = ""
 fun grav_prec (Prec(n,s)) = n | grav_prec _ = ~1
@@ -370,7 +372,7 @@ fun pp_term (G : grammar) TyG = let
          or not the restrictor might print an endbinding token. *)
 
     infix might_print nmight_print
-    fun (r as {Name,Thy,Ty}) nmight_print str = let
+    fun (r as {Name,Thy}) nmight_print str = let
       val actual_name0 =
         case Overload.overloading_of_nametype overload_info r of
           NONE => Name
@@ -394,7 +396,7 @@ fun pp_term (G : grammar) TyG = let
         COMB{Rator, Rand} => Rator might_print str orelse Rand might_print str
       | LAMB{Body,...} => Body might_print str
       | VAR{Name,Ty} => Name = str
-      | CONST x => x nmight_print str
+      | CONST x => (lose_constrec_ty x) nmight_print str
 
 
     fun pr_res_vstructl restrictor res_op vsl = let
@@ -464,15 +466,19 @@ fun pp_term (G : grammar) TyG = let
     fun pr_numeral injtermopt tm = let
       open Overload
       val numty = Type.mk_type {Tyop = "num", Args = []}
-      val num2numty = Type.-->(numty, numty)
+      infixr -->
+      val num2numty = numty --> numty
       val numinfo_search_string = Option.map (#Name o dest_const) injtermopt
       val inj_record =
         case injtermopt of
-          NONE => {Name = nat_elim_term, Thy = "arithmetic", Ty = num2numty}
+          NONE => {Name = nat_elim_term, Thy = "arithmetic",
+                   Ty = numty --> numty}
         | SOME t => dest_thy_const t
-      val {Name = injname0, Thy = injthy, Ty = injty} = inj_record
+      val injty = #Ty inj_record
+      val (crec as {Name = injname0, Thy = injthy}) =
+        lose_constrec_ty (inj_record)
       val injname =
-        case overloading_of_nametype overload_info inj_record of
+        case overloading_of_nametype overload_info crec of
           NONE => injname0
         | SOME s => s
     in

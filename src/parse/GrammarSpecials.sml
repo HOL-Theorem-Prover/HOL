@@ -11,7 +11,7 @@ struct
   val recnil_special = " _ record nil"
   val vs_cons_special = " _ vs cons"
   val resquan_special = " _ res quan special"
-  val nat_elim_term = " _ elim_nat"
+  val nat_elim_term = "nat_elim__magic"
   val fromNum_str = "&"
   val std_binder_precedence = 0
 

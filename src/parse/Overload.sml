@@ -11,10 +11,14 @@ open HolKernel Lexis
 *)
 
 type const_rec = {Name : string, Ty : hol_type, Thy : string}
+
+fun lose_constrec_ty {Name,Ty,Thy} = {Name = Name, Thy = Thy}
+
 type overloaded_op_info =
   {overloaded_op: string, base_type : Type.hol_type,
    actual_ops : const_rec list}
-type overload_info = (overloaded_op_info list * (const_rec * string) list)
+type overload_info = (overloaded_op_info list *
+                      ({Name:string,Thy:string} * string) list)
 
 val null_oinfo = ([],[])
 
@@ -132,10 +136,11 @@ end
 fun remove_overloaded_form s (oinfo:overload_info) = let
   val (op2cnst, cnst2op) = oinfo
   val (okopc, badopc) = Lib.partition (fn x => #overloaded_op x <> s) op2cnst
-  (* will keep okopc, but should now remove all pairs of the form
+  (* will keep okopc, but should now remove from cnst2op all pairs of the form
        (c, s)
      where c is an actual op from one of the badopc and s is the s above *)
-  val allbad_ops = List.concat (map #actual_ops badopc)
+  val allbad_ops =
+    List.concat (map (map lose_constrec_ty o #actual_ops) badopc)
   fun goodcop (crec, str) =
     str <> s orelse
     Lib.mem crec allbad_ops
@@ -156,13 +161,17 @@ fun ntys_equal {Ty = ty1,Name = n1, Thy = thy1}
    there for a given operator, don't mind.  In either case, make sure that
    it's at the head of the list, meaning that it will be the first choice
    in ambigous resolutions. *)
-fun add_actual_overloading {opname, realname, realtype, realthy} oinfo = let
-  val newrec = {Ty = realtype, Name = realname, Thy = realthy}
+fun add_actual_overloading {opname, realname, realthy} oinfo = let
+  val cnst = prim_mk_const{Name = realname, Thy = realthy}
+    handle HOL_ERR _ =>
+      raise OVERLOAD_ERR ("No such constant: "^realthy^"$"^realname)
+  val newrec = {Ty = type_of cnst, Name = realname, Thy = realthy}
+  val newrec' = lose_constrec_ty newrec
   val (opc0, cop0) = oinfo
   val opc =
     if is_overloaded oinfo opname then let
       val {base_type, ...} = valOf (info_for_name oinfo opname)
-      val newbase = anti_unify base_type realtype
+      val newbase = anti_unify base_type (#Ty newrec)
     in
       valOf (fupd_list_at_P (fn x => #overloaded_op x = opname)
              ((fupd_actual_ops
@@ -172,13 +181,14 @@ fun add_actual_overloading {opname, realname, realtype, realthy} oinfo = let
              opc0)
     end
     else
-      {actual_ops = [newrec], overloaded_op = opname, base_type = realtype} ::
+      {actual_ops = [newrec], overloaded_op = opname,
+       base_type = #Ty newrec} ::
       opc0
-  val cop = if opname <> realname then update_assoc newrec opname cop0
+  val cop = if opname <> realname then update_assoc newrec' opname cop0
             else (* opname = realname - possible that newrec binds to some
                                         other in the map; need to remove
                                         this *)
-              List.filter (fn (r,v) => r <> newrec) cop0
+              List.filter (fn (r,v) => r <> newrec') cop0
 in
   (opc, cop)
 end
@@ -187,34 +197,22 @@ end
 fun myfind f [] = NONE
   | myfind f (x::xs) = case f x of (v as SOME _) => v | NONE => myfind f xs
 
-fun myassoc (searchrecord as {Name,Ty,Thy}) alist =
-  case alist of
-    [] => NONE
-  | (({Name = n, Thy = thy, Ty = ty}, s)::rs) =>
-      if n = Name andalso thy = Thy andalso Lib.can (Type.match_type ty) Ty
-      then SOME s
-      else myassoc searchrecord rs
-
-
-
 fun overloading_of_term (oinfo:overload_info) t =
   if not (Term.is_const t) then NONE
-  else myassoc (Term.dest_thy_const t) (#2 oinfo)
+  else
+    Option.map #2
+    (Lib.assoc1 (lose_constrec_ty (Term.dest_thy_const t)) (#2 oinfo))
 
-fun overloading_of_nametype (oinfo:overload_info) r = myassoc r (#2 oinfo)
+fun overloading_of_nametype (oinfo:overload_info) r =
+  Option.map #2 (Lib.assoc1 r (#2 oinfo))
 
 fun rev_append [] rest = rest
   | rev_append (x::xs) rest = rev_append xs (x::rest)
 
-fun compare_crec ({Name = n1, Ty = ty1, Thy = thy1},
-                  {Name = n2, Ty = ty2, Thy = thy2}) =
+fun compare_crec ({Name = n1, Thy = thy1},
+                  {Name = n2, Thy = thy2}) =
   case String.compare(thy1, thy2) of
-    EQUAL => let
-    in
-      case String.compare(n1, n2) of
-        EQUAL => Type.compare(ty1, ty2)
-      | x => x
-    end
+    EQUAL => String.compare (n1, n2)
   | x => x
 
 fun merge_oinfos (O1:overload_info) (O2:overload_info) = let
@@ -276,7 +274,8 @@ fun remove_omapping crec str oplist =
     [] => []
   | (r::rs) =>
       if #overloaded_op r = str then let
-        val new_rec0 = fupd_actual_ops (List.filter (fn opr => opr <> crec)) r
+        fun ok_actual oprec = lose_constrec_ty oprec <> crec
+        val new_rec0 = fupd_actual_ops (List.filter ok_actual) r
       in
         if (null (#actual_ops new_rec0)) then rs
         else new_rec0::rs

@@ -27,18 +27,18 @@ sig
   val is_overloaded : overload_info -> string -> bool
   val overloading_of_term : overload_info -> Term.term -> string option
   val overloading_of_nametype :
-    overload_info -> {Name : string, Thy : string, Ty : hol_type} ->
+    overload_info -> {Name : string, Thy : string} ->
     string option
 
   val add_actual_overloading:
-    {opname: string, realname: string, realthy : string,
-     realtype: Type.hol_type} ->
+    {opname: string, realname: string, realthy : string} ->
     overload_info -> overload_info
 
   val merge_oinfos : overload_info -> overload_info -> overload_info
 
   val known_constants : overload_info -> string list
 
-  val remove_mapping : const_rec -> string -> overload_info -> overload_info
+  val remove_mapping :
+    {Name:string, Thy:string} -> string -> overload_info -> overload_info
 
 end
