@@ -1,0 +1,21 @@
+\DOC disch
+
+\TYPE {disch : ((term * term list) -> term list)}
+
+\SYNOPSIS
+Removes those elements of a list of terms that are alpha equivalent to a
+given term.
+
+\DESCRIBE
+Given a pair {("t",tl)}, {disch} removes those elements of {tl} that are
+alpha equivalent to {"t"}.
+
+\EXAMPLE
+{
+disch (Term`\x:bool.T`, [Term`A = T`,Term`B = 3`,Term`\y:bool.T`]);
+[`A = T`,`B = 3`] : term list
+}
+\SEEALSO
+Lib.filter.
+
+\ENDDOC

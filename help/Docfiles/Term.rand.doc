@@ -1,0 +1,17 @@
+\DOC rand
+
+\TYPE {rand : (term -> term)}
+
+\SYNOPSIS
+Returns the operand from a combination (function application).
+
+\DESCRIBE
+{rand "t1 t2"} returns {"t2"}.
+
+\FAILURE
+Fails with {rand} if term is not a combination.
+
+\SEEALSO
+Term.rator, Term.dest_comb.
+
+\ENDDOC

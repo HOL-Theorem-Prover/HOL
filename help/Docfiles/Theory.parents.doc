@@ -1,0 +1,57 @@
+\DOC parents
+
+\TYPE {parents : string -> string list}
+
+\SYNOPSIS
+Lists the parent theories of a named theory.
+
+\DESCRIBE
+The function {parents} returns a list of strings that identify the
+parent theories of a named theory. The function does not recursively
+descend the theory hierarchy in search of the `leaf' theories.
+The named theory must be the current theory or an ancestor of the
+current theory.
+
+\FAILURE
+Fails if the named theory is not an ancestor of the current theory.
+
+\EXAMPLE
+Initially, the only parent is the basic {bool} theory:
+{
+   - new_theory "myTheory";
+   <<HOL message: Created theory "myTheory">>
+   > val it = () : unit
+
+   - parents "myTheory";
+   > val it = ["bool"] : string list
+
+   - load "bossLib"; 
+   > val it = () : unit
+
+   - parents "-";
+   > val it = ["list", "option"] : string list
+
+   - parents "option";
+    > val it = ["sum", "one"] : string list
+
+   - parents "string";
+   ! Uncaught exception: 
+   ! HOL_ERR
+}
+\noindent However, loading the string library creates another
+link in the theory graph:
+{
+   - load "stringLib";
+   > val it = () : unit
+
+   - parents "string";
+   > val it = ["list"] : string list
+
+   - parents "myTheory";
+   > val it = ["string", "option"] : string list
+}
+
+\SEEALSO
+Theory.ancestry.
+
+\ENDDOC

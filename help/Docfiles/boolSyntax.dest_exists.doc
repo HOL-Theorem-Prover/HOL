@@ -1,0 +1,17 @@
+\DOC dest_exists
+
+\TYPE {dest_exists : term -> term * term}
+
+\SYNOPSIS
+Breaks apart a existentially quantified term into quantified variable and body.
+
+\DESCRIBE
+If {M} has the form {?x. t}, then {dest_exists M} returns {(x,t)}.
+
+\FAILURE
+Fails if {M} is not a existential quantification.
+
+\SEEALSO
+boolSyntax.mk_exists, boolSyntax.is_exists, boolSyntax.strip_exists.
+
+\ENDDOC

@@ -1,0 +1,17 @@
+\DOC B
+
+\TYPE {B : ('a -> 'b) -> ('c -> 'a) -> 'c -> 'b}
+
+\KEYWORDS
+combinator, compose.
+
+\SYNOPSIS
+Performs curried function-composition: {B f g x} = {f (g x)}.
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+Lib, Lib.##, Lib.A, Lib.C, Lib.I, Lib.K, Lib.S, Lib.W.
+
+\ENDDOC

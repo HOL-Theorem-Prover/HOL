@@ -1,0 +1,17 @@
+\DOC pair
+
+\TYPE {pair : 'a -> 'b -> 'a * 'b}
+
+\SYNOPSIS 
+Makes two values into a pair.
+
+\DESCRIBE
+{pair x y} returns {(x,y)}.
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+Lib.fst, Lib.snd, Lib.curry, Lib.uncurry.
+
+\ENDDOC

@@ -1,0 +1,14 @@
+\DOC version
+
+\TYPE {Globals.version : string}
+
+\SYNOPSIS
+The version of the {HOL} system being run.
+
+\EXAMPLE
+{
+  - Globals.version;
+
+  val it = "Kananaskis" : string
+}
+\ENDDOC

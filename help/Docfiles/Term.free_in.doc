@@ -1,0 +1,35 @@
+\DOC free_in
+
+\TYPE {free_in : (term -> term -> bool)}
+
+\SYNOPSIS
+Tests if one term is free in another.
+
+\DESCRIBE
+When applied to two terms {t1} and {t2}, the function {free_in} returns
+{true} if {t1} is free in {t2}, and {false} otherwise. It is not necessary
+that {t1} be simply a variable.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+In the following example {free_in} returns {false} because the {x} in {SUC x}
+in the second term is bound:
+{
+   - free_in (Term `SUC x`) 
+             (Term `!x. SUC x = x + 1`);
+   > val it = false : bool
+}
+\noindent whereas the following call returns {true} because the first instance
+of {x} in the second term is free, even though there is also a bound instance:
+{
+   - free_in (Term `x:bool`)
+             (Term `x /\ ?x. x=T`);
+   > val it = true : bool
+}
+
+\SEEALSO
+Term.free_vars, Term.FV, hol88Lib.frees, hol88Lib.freesl.
+
+\ENDDOC

@@ -1,0 +1,65 @@
+\DOC new_specification
+
+\BLTYPE
+new_specification :
+{{name:string, sat_thm:thm,
+ consts:{{const_name:string, fixity:fixity}} list}} -> thm
+\ELTYPE
+
+\SYNOPSIS
+Introduces a constant or constants satisfying a given property.
+
+\DESCRIBE
+The ML function {new_specification} implements the primitive rule of
+constant specification for the HOL logic.
+Evaluating:
+{
+   new_specification {{name=name, sat_thm = |- ?x1...xn. t,
+                      consts = [{{const_name = "c1", fixity = f1}}, ...,
+                                {{const_name = "cn", fixity = fn}}]}}
+}
+\noindent simultaneously introduces new constants named {c1},...,{cn}
+satisfying the property:
+{
+   |- t[c1,...,cn/x1,...,xn]
+}
+\noindent This theorem is stored, with name {name}, as a definition in
+the current theory segment. It is also returned by the call to
+{new_specification} The fixities {f1}, ..., {fn} are values which
+determine the parsing status of the new constants. Typical fixity
+values are {Prefix}, {Binder}, {Infixl n}, {Infixr n}, {Suffix n},
+{TruePrefix n} or {Closefix}. 
+
+\FAILURE
+{new_specification} fails if the theorem argument has assumptions or
+free variables. It also fails if the supplied constant names 
+{c1}, ..., {cn} are not distinct. Finally, failure occurs if
+some {ci} does not contain all the type variables that occur in 
+the term {?x1...xn. t}. 
+
+\USES
+{new_specification} can be used to introduce constants that satisfy a given
+property without having to make explicit equational constant definitions for
+them.  For example, the built-in constants {MOD} and {DIV} are defined in the
+system by first proving the theorem:
+{
+   th |- ?MOD DIV.
+         !n. (0 < n) ==>
+             !k. ((k = (((DIV k n) * n) + (MOD k n))) /\ ((MOD k n) < n))
+}
+\noindent and then making the constant specification:
+{
+   - val DIVISION = 
+        new_specification
+            {{name = "DIVISION",
+             consts = [{{fixity = Infixl 650, const_name = "MOD"}},
+                       {{fixity = Infixl 600, const_name = "DIV"}}],
+             sat_thm = th}};
+}
+\noindent This introduces the constants {MOD} and {DIV} with the defining
+property shown above.
+
+\SEEALSO
+Definition.new_definition, boolSyntax.new_binder_definition, boolSyntax.new_infixl_definition, boolSyntax.new_infixr_definition, TotalDefn.Define.
+
+\ENDDOC

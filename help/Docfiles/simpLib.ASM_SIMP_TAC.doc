@@ -1,0 +1,37 @@
+\DOC ASM_SIMP_TAC
+
+\TYPE {ASM_SIMP_TAC : simpset -> thm list -> tactic}
+
+\SYNOPSIS
+Simplifies a goal using the simpset, the provided theorems, and the
+goal's assumptions.
+
+\KEYWORDS
+simplification, rewriting, tactic.
+
+\LIBRARY simpLib
+
+\DESCRIBE
+{ASM_SIMP_TAC} does a simplification of the goal, adding both the
+assumptions and the provided theorem to the given simpset as
+rewrites.  This simpset is then applied to the goal in the manner
+explained in the entry for {SIMP_CONV}.
+
+{ASM_SIMP_TAC} is to {SIMP_TAC}, as {ASM_REWRITE_TAC} is to
+{REWRITE_TAC}.
+
+\FAILURE
+{ASM_SIMP_TAC} never fails, though it may diverge.
+
+\EXAMPLE
+Here, {hol_ss} and the one assumption are used to demonstrate the
+proof of a simple arithmetic fact:
+{
+   - ASM_SIMP_TAC hol_ss [] ([Term`x < y`], Term`x + y < y + y`);
+   > val it = ([], fn) : tactic_result
+}
+
+\SEEALSO
+simpLib.++, boolSimps.bool_ss, simpLib.FULL_SIMP_TAC, hol_ss, simpLib.mk_simpset, simpLib.SIMP_CONV, simpLib.SIMP_TAC.
+
+\ENDDOC

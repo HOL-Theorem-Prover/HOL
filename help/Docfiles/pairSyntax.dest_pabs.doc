@@ -1,0 +1,19 @@
+\DOC dest_pabs
+
+\TYPE {dest_pabs : term -> term * term}
+
+\SYNOPSIS
+Breaks apart a paired abstraction into abstracted varstruct and body.
+
+\DESCRIBE
+{dest_pabs} is a term destructor for paired abstractions: if {M} has 
+the form {\(v1..(..)..vn). t}, then {dest_pabs M} returns
+{((v1..(..)..vn), t)}.
+
+\FAILURE
+Fails unless the term is a paired abstraction.
+
+\SEEALSO
+pairSyntax.mk_pabs, pairSyntax.is_pabs, Term.dest_abs, Term.dest_var, Term.dest_const, Term.dest_comb.
+
+\ENDDOC

@@ -1,0 +1,23 @@
+\DOC CONJUNCT1
+
+\TYPE {CONJUNCT1 : (thm -> thm)}
+
+\SYNOPSIS
+Extracts left conjunct of theorem.
+
+\KEYWORDS
+rule, conjunction.
+
+\DESCRIBE
+{
+    A |- t1 /\ t2
+   ---------------  CONJUNCT1
+       A |- t1
+}
+\FAILURE
+Fails unless the input theorem is a conjunction.
+
+\SEEALSO
+Drule.BODY_CONJUNCTS, Thm.CONJUNCT2, Drule.CONJ_PAIR, Thm.CONJ, Drule.LIST_CONJ, Drule.CONJ_LIST, Drule.CONJUNCTS.
+
+\ENDDOC

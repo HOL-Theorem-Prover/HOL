@@ -1,0 +1,47 @@
+\DOC inst
+
+\TYPE {inst : hol_type subst -> term -> term}
+
+\SYNOPSIS
+Performs type instantiations in a term. 
+
+\DESCRIBE
+The function {inst} should be used as follows:
+{
+   inst [{{redex_1, residue_1}},...,{{redex_n, residue_n}}] tm
+}
+\noindent where each `redex' is a {hol_type} variables, and each `residue'
+is a {hol_type} and {tm} a term to be type-instantiated. This call will
+replace each occurrence of a {redex} in {tm} by its associated
+{residue}. Replacement is done in parallel, i.e., once a {redex} has been
+replaced by its {residue}, at some place in the term, that {residue} at that
+place will not itself be replaced in the current call. Bound term
+variables may be renamed in order to preserve the term structure.
+
+\FAILURE
+Never fails. A {redex} that is not a variable is simply ignored.
+
+\EXAMPLE
+{
+- show_types := true;
+> val it = () : unit
+
+- let val tm = Term`(x:'a) = (x:'a)`
+  in inst [{{redex = alpha, residue = Type`:num`}}] tm
+  end;
+> val it = `(x :num) = x` : term
+
+- inst [{{redex = bool, residue = Type`:num`}}] (Term`x:bool`);
+> val it = `(x :bool)` : term
+
+- let val x1 = Term`x:bool`
+      val x2 = Term`x:'a`
+  in inst [alpha |-> bool] (mk_abs(x1,x2))
+  end;
+> val it = `\(x' :bool). (x :bool)` : term
+}
+
+\SEEALSO
+Type.type_subst, Lib.|->.
+
+\ENDDOC

@@ -1,0 +1,16 @@
+\DOC gamma 
+
+\TYPE {gamma : hol_type}
+
+\SYNOPSIS
+Common type variable.
+
+\LIBRARY Type
+
+\DESCRIBE
+The ML variable {Type.gamma} is bound to the type variable {'c}.
+
+\SEEALSO
+alpha, Type.beta, Type.delta, Type.bool.
+
+\ENDDOC

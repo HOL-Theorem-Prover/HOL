@@ -1,0 +1,17 @@
+\DOC mk_abs
+
+\TYPE {mk_abs : term * term -> term}
+
+\SYNOPSIS
+Constructs an abstraction.
+
+\DESCRIBE
+{mk_abs (v, t)} returns the abstraction {\v. t}.
+
+\FAILURE
+Fails if {v} is not a variable.
+
+\SEEALSO
+Term.dest_abs, Term.is_abs, boolSyntax.list_mk_abs, Term.mk_var, Term.mk_const, Term.mk_comb.
+
+\ENDDOC

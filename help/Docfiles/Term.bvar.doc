@@ -1,0 +1,17 @@
+\DOC bvar
+
+\TYPE {bvar : (term -> term)}
+
+\SYNOPSIS
+Returns the bound variable of an abstraction.
+
+\DESCRIBE
+{bvar `\v. t`} returns {`v`}.
+
+\FAILURE
+Fails unless the term is an abstraction.
+
+\SEEALSO
+Term.body, Term.dest_abs.
+
+\ENDDOC

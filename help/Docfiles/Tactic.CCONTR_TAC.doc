@@ -1,0 +1,25 @@
+\DOC CCONTR_TAC
+
+\TYPE {CCONTR_TAC : tactic}
+
+\SYNOPSIS
+Prepares for a proof by Classical contradiction.
+
+\KEYWORDS
+tactic, contradiction.
+
+\DESCRIBE
+{CCONTR_TAC} takes a theorem {A' |- F} and completely solves the goal.
+This is an invalid tactic unless {A'} is a subset of {A}.  
+{
+    A ?- t
+   ========  CCONTR_TAC (A' |- F)
+
+}
+\FAILURE
+Fails unless the theorem is contradictory, i.e. has {F} as its conclusion.
+
+\SEEALSO
+Tactic.CHECK_ASSUME_TAC, Thm.CCONTR, CCCONTR, Drule.CONTRAPOS, Thm.NOT_ELIM.
+
+\ENDDOC

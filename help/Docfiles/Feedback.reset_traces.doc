@@ -1,0 +1,18 @@
+\DOC reset_traces
+
+\TYPE {reset_traces : unit -> unit}
+
+\SYNOPSIS
+Resets all registered tracing variables to their default values.
+
+\KEYWORDS
+Tracing.
+
+\FAILURE
+Fails if a {set} function associated with a "functional" trace
+(see {register_ftrace}) fails.
+
+\SEEALSO
+Feedback, Feedback.set_trace, Feedback.register_trace, Feedback.reset_trace, Feedback.trace, Feedback.traces.
+
+\ENDDOC

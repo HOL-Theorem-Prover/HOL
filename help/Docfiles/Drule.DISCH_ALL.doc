@@ -1,0 +1,30 @@
+\DOC DISCH_ALL
+
+\TYPE {DISCH_ALL : (thm -> thm)}
+
+\SYNOPSIS
+Discharges all hypotheses of a theorem.
+
+\KEYWORDS
+rule, discharge, assumption, implication.
+
+\DESCRIBE
+{
+         A1, ..., An |- t
+   ----------------------------  DISCH_ALL
+    |- A1 ==> ... ==> An ==> t
+}
+\FAILURE
+{DISCH_ALL} will not fail if there are no hypotheses to discharge, it will
+simply return the theorem unchanged.
+
+\COMMENTS
+Users should not rely on the hypotheses being discharged in any particular
+order.  Two or more alpha-convertible hypotheses will be discharged by a
+single implication; users should not rely on which hypothesis appears in the
+implication.
+
+\SEEALSO
+Thm.DISCH, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Drule.NEG_DISCH, Tactic.FILTER_DISCH_TAC, Thm_cont.FILTER_DISCH_THEN, Tactic.STRIP_TAC, Drule.UNDISCH, Drule.UNDISCH_ALL, Tactic.UNDISCH_TAC.
+
+\ENDDOC

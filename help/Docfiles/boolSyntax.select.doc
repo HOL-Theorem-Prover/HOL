@@ -1,0 +1,16 @@
+\DOC select
+
+\TYPE {select : term}
+
+\SYNOPSIS
+Constant denoting Hilbert's choice operator.
+
+\LIBRARY boolSyntax
+
+\DESCRIBE
+The ML variable {boolSyntax.select} is bound to the term {min$@}.
+
+\SEEALSO
+boolSyntax.equality, boolSyntax.implication, boolSyntax.T, boolSyntax.F, boolSyntax.universal, boolSyntax.existential, boolSyntax.exists1, boolSyntax.conjunction, boolSyntax.disjunction, boolSyntax.negation, boolSyntax.conditional, boolSyntax.bool_case, boolSyntax.let_tm, boolSyntax.arb.
+
+\ENDDOC

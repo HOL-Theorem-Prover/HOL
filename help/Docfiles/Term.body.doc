@@ -1,0 +1,17 @@
+\DOC body
+
+\TYPE {body : (term -> term)}
+
+\SYNOPSIS
+Returns the body of an abstraction.
+
+\DESCRIBE
+{body `\v. t`} returns {`t`}.
+
+\FAILURE
+Fails unless the term is an abstraction.
+
+\SEEALSO
+Term.bvar, Term.dest_abs.
+
+\ENDDOC

@@ -1,0 +1,18 @@
+\DOC is_const
+
+\TYPE {is_const : (term -> bool)}
+
+\SYNOPSIS
+Tests a term to see if it is a constant.
+
+\DESCRIBE
+{is_const "const:ty"} returns {true}. If the term is not a constant the
+result is {false}.
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+Term.mk_const, Term.dest_const, Term.is_var, Term.is_comb, Term.is_abs.
+
+\ENDDOC

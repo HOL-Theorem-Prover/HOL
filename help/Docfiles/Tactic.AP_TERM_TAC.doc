@@ -1,0 +1,30 @@
+\DOC AP_TERM_TAC
+
+\TYPE {AP_TERM_TAC : tactic}
+
+\SYNOPSIS
+Strips a function application from both sides of an equational goal.
+
+\LIBRARY bool
+
+\STRUCTURE Tactic
+
+\KEYWORDS
+tactic.
+
+\DESCRIBE
+{AP_TERM_TAC} reduces a goal of the form {A ?- f x = f y} by stripping away
+the function applications, giving the new goal {A ?- x = y}.
+{
+    A ?- f x = f y
+   ================  AP_TERM_TAC
+     A ?- x = y
+}
+\FAILURE
+Fails unless the goal is equational, with both sides being applications
+of the same function.
+
+\SEEALSO
+Thm.AP_TERM, Thm.AP_THM, Tactic.AP_THM_TAC.
+
+\ENDDOC

@@ -1,0 +1,21 @@
+\DOC
+
+\TYPE {set_diff : ''a list -> ''a list -> ''a list}
+
+\SYNOPSIS
+Computes the set-theoretic difference of two `sets'.
+
+\KEYWORDS
+list, set.
+
+\DESCRIBE
+{set_diff l1 l2} returns a list consisting of those elements of {l1} that do
+not appear in {l2}. It is identical to {Lib.subtract}.
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+Lib.subtract, Lib.mk_set, Lib.set_eq, Lib.union, Lib.intersect.
+
+\ENDDOC
