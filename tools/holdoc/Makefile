@@ -36,7 +36,7 @@ mng_to_latex : $(MNG_TO_LATEX_OBJS)
 # document targets:
 
 Net_hostLTSScript.tex : ../HOL-model/Net_hostLTSScript.sml lts_to_latex
-	cat ../HOL-model/Net.mni $< | ./lts_to_latex 2>&1 > $@ \
+	cat ../HOL-model/Net.imn $< | ./lts_to_latex 2>&1 > $@ \
 		| sort -u | tee Net_hostLTSScript.errs
 
 hostlts.dvi : hostlts.tex Net_hostLTSScript.tex ltsmunge.sty
