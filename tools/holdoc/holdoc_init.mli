@@ -12,6 +12,8 @@ val hOL_OP_LIST : string list ref
 val hOL_SYM_ALIST : (string * string) list ref
 val hOL_ID_ALIST : (string * string) list ref
 
+val eCHO : bool ref
+
 exception BadDirective
 
 val dir_proc : string -> Hollex.token list -> unit

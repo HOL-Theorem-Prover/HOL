@@ -635,6 +635,8 @@ let mng_latex_render () =
   Stream.iter (fun t -> match t with
                           DirBlk("VARS",ts) -> pvs := !pvs @ dir_var_vars ts
                         | DirBlk(n,ts)      -> ignore (dir_proc n ts)
-                        | _                 -> print_string (mtok !pvs t))
+                        | _                 -> if !eCHO
+                                               then print_string (mtok !pvs t)
+                                               else ())
               textokstream
 

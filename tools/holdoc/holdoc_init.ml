@@ -13,6 +13,9 @@ let hOL_OP_LIST = ref []
 let hOL_SYM_ALIST = ref []
 let hOL_ID_ALIST = ref []
 
+(* other settings *)
+let eCHO = ref true
+
 open Hollex
 exception BadDirective
 
@@ -38,6 +41,7 @@ let dir_proc n ts =
     | []               -> []
   in
   match n with
+  (* category lists *)
     "TYPE_LIST"       -> tYPE_LIST       := (go ts)  @ !tYPE_LIST
   | "CON_LIST"        -> cON_LIST        := (go ts)  @ !cON_LIST
   | "FIELD_LIST"      -> fIELD_LIST      := (go ts)  @ !fIELD_LIST
@@ -48,5 +52,8 @@ let dir_proc n ts =
   | "HOL_OP_LIST"     -> hOL_OP_LIST     := (go ts)  @ !hOL_OP_LIST
   | "HOL_SYM_ALIST"   -> hOL_SYM_ALIST   := (go2 ts) @ !hOL_SYM_ALIST
   | "HOL_ID_ALIST"    -> hOL_ID_ALIST    := (go2 ts) @ !hOL_ID_ALIST
+  (* other *)
+  | "ECHO"            -> eCHO := true
+  | "NOECHO"          -> eCHO := false
   | _                 -> ()
 
