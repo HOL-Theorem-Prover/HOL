@@ -7,8 +7,8 @@ load "bossLib"; open bossLib;
 
 val PARITY_def = 
  Define
-     `(PARITY 0 f      = T) 
-   /\ (PARITY(SUC n) f = if f (SUC n) then ~PARITY n f else PARITY n f)`;
+     `(PARITY 0 f       = T) 
+   /\ (PARITY (SUC n) f = if f (SUC n) then ~PARITY n f else PARITY n f)`;
 
 
 val UNIQUENESS_LEMMA = prove(
@@ -25,7 +25,7 @@ val UNIQUENESS_LEMMA = prove(
 
 val ONE_def = Define `ONE(out:num->bool) = !t. out t = T`;
 
-val NOT_def = Define`NOT(inp, out:num->bool) = !t. out t = ~inp t`;
+val NOT_def = Define `NOT(inp, out:num->bool) = !t. out t = ~inp t`;
 
 val MUX_def = Define`
     MUX(sw,in1,in2,out:num->bool) =
@@ -65,6 +65,6 @@ val PARITY_CORRECT = prove(
     ``!inp out. PARITY_IMP(inp,out) 
                    ==> 
                 !t. out t = PARITY t inp``,
-    RW_TAC base_ss []
+    RW_TAC std_ss []
       THEN MATCH_MP_TAC UNIQUENESS_LEMMA 
       THEN PROVE_TAC [PARITY_LEMMA]);

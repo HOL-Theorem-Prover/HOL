@@ -2,8 +2,7 @@ structure binomialScript =
 struct
 
 open HolKernel Parse basicHol90Lib bossLib
-     arithmeticTheory 
-     factorialTheory powerTheory summationTheory ;
+     arithmeticTheory factorialTheory powerTheory summationTheory ;
 
 infix THEN THENC THENL;
 infix 8 by;

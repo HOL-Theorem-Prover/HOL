@@ -117,8 +117,10 @@ recInduct gcd_ind THEN ARW [GCD]
   THEN Q.PAT_ASSUM `$! M` MATCH_MP_TAC
   THENL [`?z. x = y+z` by (Q.EXISTS_TAC `x-y` THEN DECIDE_TAC),
          `?z. y = x+z` by (Q.EXISTS_TAC `y-x` THEN DECIDE_TAC)]
-  THEN RW_TAC base_ss [DECIDE `(x + y) - x = y`]
-  THEN PROVE_TAC [DIVIDES_ADD_2,ADD_ASSOC,MULT_CLAUSES,ADD_CLAUSES,LEFT_ADD_DISTRIB]);
+  THEN RW_TAC std_ss [DECIDE `(x + y) - x = y`]
+  THEN PROVE_TAC [DIVIDES_ADD_2,ADD_ASSOC,MULT_CLAUSES,
+                  ADD_CLAUSES,LEFT_ADD_DISTRIB]);
+
 
 val L_EUCLIDES = store_thm("L_EUCLIDES",
                            Term `!a b c. (gcd a b = 1) /\ divides b (a*c) ==> divides b c`,
