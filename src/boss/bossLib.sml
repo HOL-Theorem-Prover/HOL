@@ -262,6 +262,7 @@ fun Define ql =
              end
                
      val defn = Hol_fun bindstem qtm
+                 handle e => (Lib.say "Unable to define function!\n"; raise e)
  in
    if Defn.abbrev defn orelse Defn.primrec defn 
    then let val newbindstem = bindstem ^"_"^ !def_suffix
@@ -299,7 +300,7 @@ fun Define ql =
                save_thm(defname, Defn.eqns_of defn')
             end
        else (Lib.say (String.concat
-               ["Unable to prove totality: use Hol_fun for ",
+               ["Unable to prove totality! Use Hol_fun for ",
                "do-it-yourself termination proofs.\n"]);
              mapfilter delete_const (map dest_atom (constants_of defn));
              Theory.scrub();
@@ -526,8 +527,24 @@ fun Induct (g as (_,w)) =
                           Proof Automation
  ---------------------------------------------------------------------------*)
 
-fun PROVE thl tm = Tactical.prove (Parse.Term tm, mesonLib.MESON_TAC thl);
-val PROVE_TAC    = mesonLib.ASM_MESON_TAC;
+ 
+local val EXPAND_COND_TAC = REWRITE_TAC [boolTheory.COND_EXPAND]
+      val EXPAND_COND = REWRITE_RULE [boolTheory.COND_EXPAND]
+in
+fun PROVE thl tm = Tactical.prove (Parse.Term tm, 
+ EXPAND_COND_TAC THEN mesonLib.MESON_TAC (map EXPAND_COND thl))
+
+fun PROVE_TAC thl = 
+  REPEAT (POP_ASSUM MP_TAC)
+    THEN EXPAND_COND_TAC
+    THEN mesonLib.ASM_MESON_TAC (map EXPAND_COND thl)
+
+fun GEN_PROVE_TAC x y z thl =   (* only for ZAP_TAC *)
+  REPEAT (POP_ASSUM MP_TAC)
+    THEN EXPAND_COND_TAC
+    THEN mesonLib.GEN_MESON_TAC 0 12 1 (map EXPAND_COND thl)
+
+end;
 
 val DECIDE     = decisionLib.DECIDE o Parse.Term
 val DECIDE_TAC = decisionLib.DECIDE_TAC
@@ -656,9 +673,12 @@ fun STP_TAC ss finisher =
 end;
 
 fun RW_TAC ss thl = STP_TAC (ss && thl) NO_TAC
+
+
 fun ZAP_TAC ss thl =
-   STP_TAC ss (tautLib.TAUT_TAC ORELSE DECIDE_TAC
-               ORELSE mesonLib.GEN_MESON_TAC 0 12 1 thl);
+   STP_TAC ss (tautLib.TAUT_TAC 
+                 ORELSE DECIDE_TAC
+                 ORELSE GEN_PROVE_TAC 0 12 1 thl);
 
 (*---------------------------------------------------------------------------*
  * A simple aid to reasoning by contradiction.                               *
