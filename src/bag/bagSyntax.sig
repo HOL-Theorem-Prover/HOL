@@ -1,9 +1,6 @@
-signature bagLib = 
+signature bagSyntax =
 sig
-  include Abbrev
-  type cache = Cache.cache
-  type ssdata = simpLib.ssdata
-
+   include Abbrev
 
   val EMPTY_BAG_tm : term
   val BAG_DIFF_tm : term
@@ -33,13 +30,5 @@ sig
 
   val mk_bag : term list * hol_type -> term
   val dest_bag : term -> term list * hol_type
-
-
-  val BAG_AC_ss     : ssdata
-  val CANCEL_CONV   : conv
-  val BAG_ss        : ssdata
-  val SBAG_SOLVE_ss : ssdata
-  val SBAG_SOLVE    : thm list -> term -> thm
-  val sbag_cache    : cache
 
 end
