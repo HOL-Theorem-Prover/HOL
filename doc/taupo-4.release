@@ -3,6 +3,7 @@ Bugs fixed:
   * The arithmetic decision procedure embedded in the simplifier was
     adding too much context in some cases, and thereby failing to
     prove goals that were really within its scope.
+  * pred_setLib was failing to load.
 
 New theories:
 -------------
