@@ -21,7 +21,7 @@ sig
   val hyp      : thm -> Term.term list
   val concl    : thm -> Term.term
   val dest_thm : thm ->  Term.term list * Term.term
-  val hyp_union     : thm list -> Term.term list
+  val tag_hyp_union : thm list -> tag * Term.term list
   val thm_free_vars : thm -> Term.term list
 
   (* The primitive rules of inference *)

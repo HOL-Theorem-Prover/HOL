@@ -47,7 +47,9 @@ fun union_hyp asl1 asl2 =
 
 val bool = Type.bool;
 fun thm_free_vars (THM(_,asl,c)) = free_varsl (c::asl);
-fun hyp_union thm_list = itlist (union_hyp o hyp) thm_list [];
+fun tag_hyp_union thm_list =
+  (itlist (Tag.merge o tag) (tl thm_list) (tag (hd thm_list)),
+   itlist (union_hyp o hyp) thm_list []);
 fun dom_ty ty = fst (Type.dom_rng ty)
 fun rng_ty ty = snd (Type.dom_rng ty)
 
@@ -881,7 +883,7 @@ fun INST [] th = th
 
 (*    A |- t = (\x.m) n
  *  ---------------------
- *     A |- t = m{n}
+ *     A |- t = m{x\n}
  *)
 fun Beta th =
    let val {lhs, rhs, ty} = dest_eq_ty (concl th)
@@ -897,16 +899,30 @@ fun Beta th =
 fun Eta th =
    let val {lhs, rhs, ty} = dest_eq_ty (concl th)
    in make_thm Count.EtaConv (std_tag, hyp th,
-		          mk_eq_nocheck ty lhs (eta_conv rhs))
+		              mk_eq_nocheck ty lhs (eta_conv rhs))
    end
    handle HOL_ERR _ => THM_ERR "Eta" "";
 
 
-(*                     |- u = u        |- v = v
- *                         ...            ...
- *    A |- t = u v    A' |- u = u'    A'' |- v = v'
- *  ------------------------------------------------
- *            A u A' u A'' |- t = u' v'
+(* This rule behaves like a tactic: given a goal (reducing the rhs of thm),
+ * it returns two subgoals (reducing the rhs of th1 and th2), together
+ * with a validation (mkthm), that builds the normal form of t from the
+ * normal forms of u and v.
+ * NB: we do not have to typecheck the rator u, and we replaced the alpha
+ * conversion test with pointer equality.
+ *
+ *                     |- u = u    (th1)        |- v = v    (th2)
+ *       (thm)             ...                     ...
+ *    A |- t = u v    A' |- u = u' (th1')     A'' |- v = v' (th2')
+ *  ----------------------------------------------------------------
+ *                A u A' u A'' |- t = u' v'
+ *
+ * Could be implemented outside Thm as:
+ *   fun Mk_comb th =
+ *     let val {Rator,Rand} = dest_comb(rhs (concl th))
+ *         fun mka th1 th2 = TRANS th (MK_COMB(th1,th2)) in
+ *     (REFL Rator, REFL Rand, mka)
+ *     end
  *)
 fun Mk_comb thm =
    let val {lhs, rhs, ty} = dest_eq_ty (concl thm)
@@ -916,8 +932,7 @@ fun Mk_comb thm =
              val _ = Assert (EQ(lhs1,Rator)) "" ""
              val {lhs=lhs2, rhs=rhs2} = dest_eq (concl th2')
              val _ = Assert (EQ(lhs2,Rand)) "" ""
-             val hyps = hyp_union [thm, th1', th2']
-	     val ocls = Tag.merge (tag thm) (Tag.merge (tag th1') (tag th2'))
+             val (ocls,hyps) = tag_hyp_union [thm, th1', th2']
          in make_thm Count.MkComb
 	   (ocls, hyps,mk_eq_nocheck ty lhs (mk_comb{Rator=rhs1,Rand=rhs2}))
          end
@@ -929,21 +944,25 @@ fun Mk_comb thm =
    end
    handle HOL_ERR _ => THM_ERR "Mk_comb" "";
 
-(*                      |- u = u
- *                          ...
- *    A |- t = \x.u    A' |- u = u'
- *  ----------------------------------
+(*                      |- u = u    (th1)
+ *       (thm)              ...
+ *    A |- t = \x.u    A' |- u = u' (th1')
+ *  ---------------------------------------- x not in FV(A')
  *            A u A' |- t = \x.u'
+ *
+ *   fun Mk_abs th =
+ *     let val {Bvar,Body} = dest_abs(rhs (concl th)) in
+ *     (Bvar, REFL Body, (fn th1 => TRANS th (ABS Bvar th1)))
+ *     end
  *)
 fun Mk_abs thm =
    let val {lhs, rhs, ty} = dest_eq_ty (concl thm)
        val {Bvar,Body} = dest_abs rhs
        fun mkthm th1' =
-         let val {lhs=lhs1, rhs=rhs1,...} = dest_eq_ty (concl th1')
+         let val {lhs=lhs1, rhs=rhs1} = dest_eq (concl th1')
              val _ = Assert (EQ(lhs1,Body)) "" ""
              val _ = Assert (not(mem Bvar (free_varsl (hyp th1')))) "" ""
-             val hyps = hyp_union [thm, th1']
-             val ocls = Tag.merge (tag thm) (tag th1')
+             val (ocls,hyps) = tag_hyp_union [thm, th1']
          in make_thm Count.Abs
 	   (ocls, hyps, mk_eq_nocheck ty lhs (mk_abs{Bvar=Bvar, Body=rhs1}))
          end
