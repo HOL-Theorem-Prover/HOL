@@ -84,7 +84,7 @@ fun varmap_to_sed_script file varmap_pairs =
 in
 
 fun dotLabelledTermBdd file label tb = 
- let val (ass,vm,tm,bdd) = dest_term_bdd tb;
+ let val (_,ass,vm,tm,bdd) = dest_term_bdd tb;
      val pairs           = Binarymap.listItems vm;
      val glab            = ("label=\""^label^"\"");
      val gsize           = "size=\"7.5,8\""

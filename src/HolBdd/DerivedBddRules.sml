@@ -226,7 +226,7 @@ fun bddToTerm varmap =
 (*****************************************************************************)
 
 fun TermBddToEqThm tb =
- let val (_,vm,tm,b) = dest_term_bdd tb
+ let val (_,_,vm,tm,b) = dest_term_bdd tb
      val tm' = bddToTerm vm b
      val tb' = GenTermToTermBdd failfn vm tm'
  in
@@ -375,7 +375,7 @@ val MakeSimpRecThm =
 (*****************************************************************************)
 
 fun BddApThm th tb =
- let val (_,vm,t1',b) = dest_term_bdd tb
+ let val (_,_,vm,t1',b) = dest_term_bdd tb
  in
   BddEqMp (REWR_CONV th t1') tb 
    handle HOL_ERR _ => hol_err "REWR_CONV failed" "BddApthm"
@@ -395,7 +395,7 @@ fun BddApThm th tb =
 exception BddApRestrictError;
 
 fun BddApRestrict tb tm =
- let val (_,vm,t,_) = dest_term_bdd tb
+ let val (_,_,vm,t,_) = dest_term_bdd tb
      val (sub_tm,sub_ty) = match_term t tm
      val _ = if null sub_ty 
               then () 
@@ -426,7 +426,7 @@ fun BddApRestrict tb tm =
 exception BddApReplaceError;
 
 fun BddApReplace tb tm =
- let val (_,vm,t,b) = dest_term_bdd tb
+ let val (_,_,vm,t,b) = dest_term_bdd tb
      val (tml,tyl)  = match_term t tm
      val _          = if null tyl then () else raise BddApReplaceError
      val tbl        = (List.map 
@@ -507,7 +507,7 @@ fun BddSubst tbl tb =
 exception BddApSubstError;
 
 fun BddApSubst tb tm =
- let val (_,vm,t,b) = dest_term_bdd tb
+ let val (_,_,vm,t,b) = dest_term_bdd tb
      val (tml,tyl)  = match_term t tm
      val _          = if null tyl then () else (print "type match problem\n";
                                                 raise BddApSubstError)
@@ -669,7 +669,7 @@ fun computeFixedpoint report vm (th0,thsuc) =
 exception BddSatoneError;
 
 fun BddSatone tb =
- let val (_,vm,tm,b) = dest_term_bdd tb
+ let val (_,_,vm,tm,b) = dest_term_bdd tb
      val assl        = bdd.getAssignment(bdd.satone b)
      val vml         = Varmap.dest vm
  in
@@ -881,7 +881,7 @@ open computeLib
 val compset = bool_compset()
 in
 fun findModel tb = 
- let val (ass,vm,t,b) = dest_term_bdd tb
+ let val (_,ass,vm,t,b) = dest_term_bdd tb
      val assl         = bdd.getAssignment(bdd.satone b)
      val vml          = Varmap.dest vm
      val setl         = List.map 

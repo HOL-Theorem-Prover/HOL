@@ -26,6 +26,7 @@ signature PrimitiveBddRules = sig
 
   val BddListCompose : (term_bdd * term_bdd) list -> term_bdd -> term_bdd
   val BddVar : bool -> varmap -> Term.term -> term_bdd
+  val getTag : term_bdd -> Thm.tag
   val getAssums : term_bdd -> assums
   val BddThmOracle : term_bdd -> Thm.thm
   val getVarmap : term_bdd -> varmap
@@ -33,7 +34,7 @@ signature PrimitiveBddRules = sig
   val BddEqMp : Thm.thm -> term_bdd -> term_bdd
   val BddfindModel : term_bdd -> term_bdd
   val getTerm : term_bdd -> Term.term
-  val dest_term_bdd : term_bdd -> assums * varmap * Term.term * bdd.bdd
+  val dest_term_bdd : term_bdd -> Thm.tag * assums * varmap * Term.term * bdd.bdd
   val BddExists : Term.term list -> term_bdd -> term_bdd
   val BddAppex : Term.term list -> bdd.bddop * term_bdd * term_bdd -> term_bdd
   val getBdd : term_bdd -> bdd.bdd
@@ -52,5 +53,4 @@ signature PrimitiveBddRules = sig
   val BddSupportContractVarmap : Term.term -> term_bdd -> term_bdd
   val termApply : Term.term -> Term.term -> bdd.bddop -> Term.term
   val BddIte : term_bdd * term_bdd * term_bdd -> term_bdd  
-  val HolBddTag : Tag.tag
 end
