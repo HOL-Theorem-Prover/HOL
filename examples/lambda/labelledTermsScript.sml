@@ -7,6 +7,8 @@ open swapTheory chap3Theory chap2Theory ncTheory ncLib
 
 local open pred_setLib in end
 
+val _ = augment_srw_ss [boolSimps.LET_ss]
+
 val _ = new_theory "labelledTerms";
 
 

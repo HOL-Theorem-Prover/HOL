@@ -5,6 +5,9 @@ open bossLib ncLib
 open ncTheory fixedPointTheory pred_setTheory pred_setLib
 open swapTheory BasicProvers
 
+val _ = augment_srw_ss [rewrites [LET_THM]]
+val std_ss = std_ss ++ rewrites [LET_THM]
+
 val _ = new_theory "chap2";
 
 val (ctxt_rules, ctxt_indn, ctxt_cases) =  (* p. 10 *)

@@ -686,7 +686,7 @@ Q.EXISTS_TAC
          let vs = {z | !y. z IN dFV (f y)} in
          let  v = @v. ~(v IN vs)
          in dLAMBDA v (f v)`
- THEN RW_TAC std_ss []
+ THEN RW_TAC std_ss [LET_THM]
  THEN MATCH_MP_TAC (GSYM dALPHA_STRONG) THEN RW_TAC std_ss []
  THEN MATCH_MP_TAC lemma5
  THEN Q.EXISTS_TAC `{z | !y. z IN dFV([x |-> dVAR y] u)}`

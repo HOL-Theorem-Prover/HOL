@@ -20,7 +20,7 @@ val PAIR0_ss =
                PAIR_MAP_THM, UNCURRY_DEF],
               filter=NONE,ac=[],dprocs=[],congs=[]}
 
-val PAIR_ss = merge_ss [PAIR0_ss, boolSimps.LET_ss]
+val PAIR_ss = PAIR0_ss
 
 val _ = BasicProvers.augment_srw_ss [PAIR_ss];
 

@@ -18,11 +18,12 @@ val op>> = op THEN1;
 
 local
   infix ++;
-  open simpLib;
+  open simpLib boolSimps
 in
   val std_ss' =
-    (boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ optionSimps.OPTION_ss ++
-     numSimps.REDUCE_ss ++ sumSimps.SUM_ss ++ boolSimps.ETA_ss);
+    (bool_ss ++ pairSimps.PAIR_ss ++ optionSimps.OPTION_ss ++
+     numSimps.REDUCE_ss ++ sumSimps.SUM_ss ++ ETA_ss ++ LET_ss)
+  val arith_ss = arith_ss ++ LET_ss
 end;
 
 (* ------------------------------------------------------------------------- *)

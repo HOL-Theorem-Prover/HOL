@@ -8,6 +8,9 @@ open HolKernel boolLib bossLib Q simpLib PairRules
 
 val _ = new_theory "correct";
 
+val std_ss = std_ss ++ boolSimps.LET_ss
+val arith_ss = arith_ss ++ boolSimps.LET_ss
+
 (* -------------------------------------------------------- *)
 (* val _ = Count.counting_thms true; *)
 val _ = numLib.prefer_num();
@@ -28,7 +31,7 @@ val DUR_ARM6_WELL = store_thm("DUR_ARM6_WELL",
     THEN SIMP_TAC (pureSimps.pure_ss++numSimps.REDUCE_ss) [ISPEC `$< 0` COND_RAND,COND_ID,lem]
     THEN SIMP_TAC std_ss []
 );
- 
+
 val IMM_ARM6_THM = store_thm("IMM_ARM6_THM",
   `UIMMERSION IMM_ARM6 STATE_ARM6 DUR_ARM6`,
   RW_TAC bool_ss [UIMMERSION_def,DUR_ARM6_WELL,IMM_ARM6_def]
@@ -300,7 +303,7 @@ val ARM6_TCON_LEM1 = Count.apply store_thm("ARM6_TCON_LEM1",
         ]
     ]
 );
- 
+
 val ARM6_TCON_ONE = GEN_ALL (SIMP_RULE bool_ss [] ARM6_TCON_LEM1);
 
 val INIT = REWRITE_RULE [GSYM FUN_EQ_THM] (CONJUNCT1 STATE_ARM6_def);
@@ -910,5 +913,5 @@ val CORRECT_ARM6 = store_thm("CORRECT_ARM6",
 );
 
 (* -------------------------------------------------------- *)
- 
+
 val _ = export_theory();

@@ -4,6 +4,8 @@ open simpLib boolSimps bossLib BasicProvers metisLib
 
 val _ = new_theory "swap"
 
+val _ = augment_srw_ss [rewrites [LET_THM]]
+
 open ncTheory NEWLib pred_setTheory
 
 (* ----------------------------------------------------------------------

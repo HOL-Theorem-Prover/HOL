@@ -891,7 +891,7 @@ val BETA_EXISTS = Q.prove(
  `?beta.
      !u t x. beta (LAM x u) t = [t/x]u`,
 Q.EXISTS_TAC `\lam t. let x = @x. ~(x IN (FV lam)) in [t/x](BODY lam x)`
-   THEN RW_TAC std_ss [BODY_DEF]
+   THEN RW_TAC std_ss [BODY_DEF, LET_THM]
    THEN STRIP_ASSUME_TAC (SPEC_ALL lemma)
    THEN RW_TAC std_ss [lemma15a,lemma14a]);
 
@@ -1096,6 +1096,7 @@ val size_def = new_specification (
            `X` |-> `{}`] o
    INST_TYPE [beta |-> numSyntax.num]) nc_RECURSION2)
 
+val _ = augment_srw_ss [rewrites [LET_THM]]
 val size_isub = store_thm(
   "size_isub",
   ``!t R. RENAMING R ==> (size (t ISUB R) = size t)``,

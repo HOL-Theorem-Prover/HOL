@@ -3,9 +3,9 @@ open HolKernel boolLib bossLib Q wordUtil
      arithmeticTheory numeralTheory bitsTheory;
 
 (* -------------------------------------------------------- *)
- 
+
 val _ = new_theory "numeral_bits";
- 
+
 (* -------------------------------------------------------- *)
 
 val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
@@ -29,7 +29,8 @@ val iBITWISE = prove(
      iBITWISE (SUC x) op a b =
        let w = iBITWISE x op (DIV2 a) (DIV2 b) in
        if op (ODD a) (ODD b) then NUMERAL_BIT1 w else iDUB w)`,
-  RW_TAC arith_ss [iBITWISE_def,iDUB,SIMP_NUMERAL_BIT1,SBIT_def,EXP,LSB_ODD,GSYM DIV2_def,BITWISE_EVAL]
+  RW_TAC arith_ss [iBITWISE_def,iDUB,SIMP_NUMERAL_BIT1,SBIT_def,EXP,
+                   LSB_ODD,GSYM DIV2_def,BITWISE_EVAL,LET_THM]
     THEN REWRITE_TAC [BITWISE_def,ALT_ZERO]
 );
 
@@ -42,7 +43,7 @@ val NUMERAL_BITWISE = store_thm("NUMERAL_BITWISE",
     !x op a b. BITWISE x op (NUMERAL a) (NUMERAL b) = NUMERAL (iBITWISE x op (NUMERAL a) (NUMERAL b))`,
   REWRITE_TAC [iBITWISE_def,NUMERAL_DEF]
 );
- 
+
 val NUMERAL_DIV2 = store_thm("NUMERAL_DIV2",
    `(DIV2 0 = 0) /\
      (!n. DIV2 (NUMERAL (NUMERAL_BIT1 n)) = NUMERAL n) /\
@@ -129,8 +130,8 @@ val iMOD_2EXP = save_thm("iMOD_2EXP",CONJ MOD_2EXP_ZERO iMOD_2EXP);
 val NUMERAL_MOD_2EXP = save_thm("NUMERAL_MOD_2EXP", SUC_RULE iMOD_2EXP_CLAUSES);
 
 (* -------------------------------------------------------- *)
- 
+
 val _ = export_theory();
 val _ = export_doc_theorems();
- 
+
 (* -------------------------------------------------------- *)

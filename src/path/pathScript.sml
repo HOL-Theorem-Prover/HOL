@@ -4,6 +4,8 @@ open bossLib llistTheory BasicProvers metisLib
 
 local open pred_setLib fixedPointTheory in end
 
+val _ = augment_srw_ss [rewrites [LET_THM]]
+
 val _ = new_theory "path";
 
 val path_TY_DEF = new_type_definition (

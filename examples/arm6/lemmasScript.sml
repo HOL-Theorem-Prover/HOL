@@ -7,6 +7,9 @@ open HolKernel boolLib bossLib Q numLib
 
 val _ = new_theory "lemmas";
 
+val std_ss = std_ss ++ boolSimps.LET_ss
+val arith_ss = arith_ss ++ boolSimps.LET_ss
+
 (* -------------------------------------------------------- *)
 
 val _ = prefer_num();
@@ -67,10 +70,10 @@ val SHIFT_REGISTER_THM2 = store_thm("SHIFT_REGISTER_THM2",
 fun case_i i =
   Cases_on [QUOTE ("opc="^(Int.toString i))]
     THENL [POP_ASSUM (fn th => REWRITE_TAC [th]) THEN REDUCE_TAC,ALL_TAC];
- 
+
 fun num_CONV_i i =
   FULL_SIMP_TAC bool_ss [num_CONV ((mk_numeral o Arbnum.fromInt) i)];
- 
+
 fun op_range i j f =
   if i > j then
     ALL_TAC
@@ -81,7 +84,7 @@ val TEST_OR_COMP_THM = store_thm("TEST_OR_COMP_THM",
   `!opc. opc < 16 ==> (TEST_OR_COMP opc = (BITS 3 2 opc = 2))`,
   REPEAT STRIP_TAC
     THEN SIMP_TAC arith_ss [TEST_OR_COMP_def,BITS_THM]
-    THEN op_range 0 15 case_i 
+    THEN op_range 0 15 case_i
     THEN op_range 1 15 num_CONV_i
     THEN RULE_ASSUM_TAC REDUCE_RULE
     THEN SPOSE_NOT_THEN (K ALL_TAC) THEN REPEAT (POP_ASSUM MP_TAC)
@@ -124,7 +127,7 @@ val ARITHMETIC_THM = store_thm("ARITHMETIC_THM",
       (BIT 2 opc \/ BIT 1 opc) /\ (~BIT 3 opc \/ ~BIT 2 opc))`,
   REPEAT STRIP_TAC
     THEN SIMP_TAC arith_ss [ARITHMETIC_def,BIT_def,BITS_THM]
-    THEN op_range 0 15 case_i 
+    THEN op_range 0 15 case_i
     THEN op_range 1 15 num_CONV_i
     THEN RULE_ASSUM_TAC REDUCE_RULE
     THEN SPOSE_NOT_THEN (K ALL_TAC) THEN REPEAT (POP_ASSUM MP_TAC)
@@ -205,23 +208,23 @@ val PC_WRITE_MODE_FREE = store_thm("PC_WRITE_MODE_FREE",
   `!r m p. REG_WRITE r m 15 p = REG_WRITE r usr 15 p`,
   RW_TAC bool_ss [mode_num2register_def,REG_WRITE_def]
 );
- 
+
 val PC_READ_MODE_FREE = store_thm("PC_READ_MODE_FREE",
   `!r m p. REG_READ6 r m 15 = REG_READ6 r usr 15`,
   RW_TAC bool_ss [REG_READ6_def]
 );
- 
+
 val REG_WRITE_READ_PC = store_thm("REG_WRITE_READ_PC",
   `!r m p. REG_READ6 (REG_WRITE r m 15 p) usr 15 = p`,
   RW_TAC bool_ss [REG_READ6_def,FETCH_PC_def,REG_WRITE_def,SUBST_def,
                   mode_num2register_def,r15,register2num_thm]
 );
- 
+
 val REG_WRITE_WRITE_PC = store_thm("REG_WRITE_WRITE_PC",
   `!r m1 m2 p1 p2. REG_WRITE (REG_WRITE r m1 15 p1) m2 15 p2 = REG_WRITE r m2 15 p2`,
   RW_TAC bool_ss [REG_WRITE_def,SUBST_EQ,mode_num2register_def]
 );
- 
+
 val NOT_PC_THM = store_thm("NOT_PC_THM",
   `!m1 m2 n. n < 16 /\ ~(n = 15) ==> ~(mode_num2register m1 n = mode_num2register m2 15)`,
   RW_TAC bool_ss [mode_num2register_def,USER_def]
@@ -237,7 +240,7 @@ val REG_WRITE_COMMUTES = store_thm("REG_WRITE_COMMUTES",
        REG_WRITE (REG_WRITE r m2 n d) m1 15 p)`,
   RW_TAC bool_ss [REG_WRITE_def,SUBST_NE_COMMUTES,NOT_PC_THM]
 );
- 
+
 val REG_WRITE_READ_R14 = store_thm("REG_WRITE_READ_R14",
   `!r m m2 d x. REG_READ6 (REG_WRITE (REG_WRITE r m 14 d) m2 15 x) m 14 = d`,
   REPEAT STRIP_TAC
@@ -247,7 +250,7 @@ val REG_WRITE_READ_R14 = store_thm("REG_WRITE_READ_R14",
     THEN Cases_on `m`
     THEN FULL_SIMP_TAC arith_ss [mode_case_def,mode_distinct,GSYM mode_distinct,num2register_11,register2num_11]
 );
- 
+
 val REG_WRITE_WRITE_R14 = store_thm("REG_WRITE_WRITE_R14",
   `!r m d1 d2. REG_WRITE (REG_WRITE r m 14 d1) m 14 d2 = REG_WRITE r m 14 d2`,
   RW_TAC bool_ss [REG_WRITE_def,SUBST_EQ,USER_def,mode_num2register_def]
@@ -259,7 +262,7 @@ val BIT0_OPC = store_thm("BIT0_OPC",
   `!a. BIT 0 (WORD_BITS 24 21 a) = WORD_BIT 21 a`,
   SIMP_TAC arith_ss [BIT_def,WORD_BIT_THM,WORD_BITS_COMP_THM]
 );
- 
+
 val BIT2_OPC = store_thm("BIT2_OPC",
   `!i. BIT 2 (WORD_BITS 24 21 i) = WORD_BIT 23 i`,
   SIMP_TAC arith_ss [BIT_def,WORD_BIT_THM,WORD_BITS_COMP_THM]
@@ -274,7 +277,7 @@ val ALUOUT_ALU_logic = store_thm("ALUOUT_ALU_logic",
   `!a. ALUOUT (ALU_logic a) = a`,
   REWRITE_TAC [ALUOUT_def,ALU_logic_def]
 );
- 
+
 (* -------------------------------------------------------- *)
 
 val DECODE_INST_NOT_UNEXEC = store_thm("DECODE_INST_NOT_UNEXEC",
@@ -288,24 +291,24 @@ val NOT_A_OR_B = store_thm("NOT_A_OR_B",
   `!A B. ~A \/ B = ~(A /\ ~B)`,
   RW_TAC bool_ss []
 );
- 
+
 (* -------------------------------------------------------- *)
- 
+
 val SUBST_EQ2 = store_thm("SUBST_EQ2",
   `!m a. SUBST m (a,m a) = m`,
   STRIP_TAC THEN SIMP_TAC bool_ss [FUN_EQ_THM,SUBST_def]
 );
- 
+
 val SUB8_INV = store_thm("SUB8_INV",
   `!r. SUB8_PC (ADD8_PC r) = r`,
   RW_TAC bool_ss [WORD_ADD_SUB,SUB8_PC_def,ADD8_PC_def,SUBST_EQ,SUBST_EQ2,SUBST_def]
 );
- 
+
 val FETCH_SUB8 = store_thm("FETCH_SUB8",
   `!r.  FETCH_PC (SUB8_PC r) = REG_READ6 r usr 15 - w32 8`,
   RW_TAC bool_ss [FETCH_PC_def,REG_READ6_def,SUB8_PC_def,SUBST_def]
 );
- 
+
 val mode_num2register_15 = GEN_ALL (SIMP_RULE arith_ss [SYM r15] (SPECL [`m`,`15`] mode_num2register_def));
 
 val REG_READ_SUB8_PC = store_thm("REG_READ_SUB8_PC",
@@ -315,19 +318,19 @@ val REG_READ_SUB8_PC = store_thm("REG_READ_SUB8_PC",
     THEN SUBST_TAC [SYM (SPEC `m` mode_num2register_15)]
     THEN ASM_SIMP_TAC bool_ss [NOT_PC_THM]
 );
- 
+
 val NOOP_REG = store_thm("NOOP_REG",
   `!r m.  INC_PC (SUB8_PC r) = SUB8_PC (REG_WRITE r m 15 (REG_READ6 r usr 15 + w32 4))`,
   RW_TAC bool_ss [INC_PC_def,SUB8_PC_def,REG_WRITE_def,REG_READ6_def,mode_num2register_def,
                   SYM r15,FETCH_PC_def,SUBST_def,SUBST_EQ,WORD_ADD_SUB_SYM]
 );
- 
+
 val OP_REG_LEM = store_thm("OP_REG_LEM",
   `!r m d. REG_WRITE (SUB8_PC r) m 15 d = SUB8_PC (REG_WRITE r m 15 (d + w32 4 + w32 4))`,
   RW_TAC bool_ss [mode_num2register_def,SYM r15,REG_WRITE_def,
                   SUB8_PC_def,SUBST_def,SUBST_EQ,ADD4_ADD4_SUB8_THM]
 );
- 
+
 val INC_REG_LEM = store_thm("INC_REG_LEM",
   `!r m n d. n < 16 /\ ~(n = 15) ==> (REG_WRITE (SUB8_PC r) m n d = SUB8_PC (REG_WRITE r m n d))`,
   RW_TAC bool_ss [FETCH_PC_def,SUB8_PC_def,REG_WRITE_def]
@@ -342,21 +345,21 @@ val OP_REG = store_thm("OP_REG",
     THEN SIMP_TAC std_ss [ONCE_REWRITE_RULE [PC_WRITE_MODE_FREE] NOOP_REG,
                           REG_WRITE_WRITE_PC,OP_REG_LEM]
 );
- 
+
 val INC_WB_REG = store_thm("INC_WB_REG",
   `!r m d. INC_PC (SUB8_PC (REG_WRITE r m 15 d)) = SUB8_PC (REG_WRITE r m 15 (d + w32 4))`,
   ONCE_REWRITE_TAC [PC_WRITE_MODE_FREE]
     THEN SIMP_TAC std_ss [ONCE_REWRITE_RULE [PC_WRITE_MODE_FREE] NOOP_REG,
                           REG_WRITE_READ_PC,REG_WRITE_WRITE_PC]
 );
- 
+
 val INC_PC_READ = store_thm("INC_PC_READ",
   `!r m n. n < 16 ==> (REG_READ (INC_PC (SUB8_PC r)) m n =
              REG_READ6 (REG_WRITE r m 15 (REG_READ6 r usr 15 + w32 4)) m n)`,
   ONCE_REWRITE_TAC [PC_WRITE_MODE_FREE]
     THEN SIMP_TAC bool_ss [ONCE_REWRITE_RULE [PC_WRITE_MODE_FREE] NOOP_REG,REG_READ_SUB8_PC]
 );
- 
+
 val OP_INC_REG = store_thm("OP_INC_REG",
   `!r m n. n < 16 /\ ~(n = 15) ==> (REG_WRITE (INC_PC (SUB8_PC r)) m n d =
        SUB8_PC (REG_WRITE (REG_WRITE r m n d) m 15 (REG_READ6 r usr 15 + w32 4)))`,
@@ -376,7 +379,7 @@ val OP_REG2 = store_thm("OP_REG2",
       ASM_SIMP_TAC bool_ss [ONCE_REWRITE_RULE [PC_WRITE_MODE_FREE] NOOP_REG,REG_WRITE_COMMUTES,                           REG_WRITE_WRITE_PC,INC_REG_LEM,OP_REG_LEM]
     ]
 );
- 
+
 val OP_INC_REG2 = store_thm("OP_INC_REG2",
   `!r m m2 m3 n n2 x y.  n < 16 /\ n2 < 16 /\ ~(n = 15) /\ ~(n2 = 15) ==>
     (REG_WRITE (REG_WRITE (INC_PC (SUB8_PC r)) m n x) m2 n2 y =
@@ -385,7 +388,7 @@ val OP_INC_REG2 = store_thm("OP_INC_REG2",
   ONCE_REWRITE_TAC [PC_WRITE_MODE_FREE]
     THEN SIMP_TAC bool_ss [ONCE_REWRITE_RULE [PC_WRITE_MODE_FREE] NOOP_REG,INC_REG_LEM,REG_WRITE_COMMUTES]
 );
- 
+
 val LINK_REG = store_thm("LINK_REG",
   `!r m m2 x y.  REG_WRITE (REG_WRITE (SUB8_PC r) m 14 x) usr 15 y =
                  SUB8_PC (REG_WRITE (REG_WRITE r m 14 x) m2 15 (y + w32 4 + w32 4))`,
@@ -399,14 +402,14 @@ val BRANCH_REG = store_thm("BRANCH_REG",
   ONCE_REWRITE_TAC [PC_WRITE_MODE_FREE]
     THEN SIMP_TAC arith_ss [OP_REG_LEM]
 );
- 
+
 (* -------------------------------------------------------- *)
 
 val MSR_ALU = store_thm("MSR_ALU",
   `!i alua alub c. WORD_BIT 21 i ==> (ALU6 mrs_msr t3 i alua alub c = ALU_logic alub)`,
   RW_TAC arith_ss [WORD_BIT_THM,BIT_def,WORD_BITS_COMP_THM,ALU6_def]
 );
- 
+
 val MRS_ALU = store_thm("MRS_ALU",
   `!i alua alub c. ~WORD_BIT 21 i ==> (ALU6 mrs_msr t3 i alua alub c = ALU_logic alua)`,
   RW_TAC arith_ss [WORD_BIT_THM,BIT_def,WORD_BITS_COMP_THM,ALU6_def]
@@ -593,7 +596,7 @@ val ONE_COMP_THREE_ADD = store_thm("ONE_COMP_THREE_ADD",
     THEN REWRITE_TAC [GSYM WORD_ADD_ASSOC]
     THEN WORD_TAC
 );
- 
+
 val CPSR_WRITE_READ = store_thm("CPSR_WRITE_READ",
   `(!psr m x. CPSR_READ (SPSR_WRITE psr m x) = CPSR_READ psr) /\
    (!psr x. CPSR_READ (CPSR_WRITE psr x) = x)`,
@@ -615,7 +618,7 @@ val DECODE_MODE_THM = store_thm("DECODE_MODE_THM",
   `!m psr x y. DECODE_MODE (w2n (SET_IFMODE x y m psr)) = m`,
   Cases THEN RW_TAC arith_ss [SET_IFMODE_def,DECODE_MODE_def,DECODE_MODE_LEM]
 );
-  
+
 val PSR_WRITE_COMM = store_thm("PSR_WRITE_COMM",
   `!psr m x y. SPSR_WRITE (CPSR_WRITE psr x) m y = CPSR_WRITE (SPSR_WRITE psr m y) x`,
   RW_TAC bool_ss [SPSR_WRITE_def,CPSR_WRITE_def,USER_def,mode2psr_def]
@@ -624,5 +627,5 @@ val PSR_WRITE_COMM = store_thm("PSR_WRITE_COMM",
 );
 
 (* -------------------------------------------------------- *)
- 
+
 val _ = export_theory();

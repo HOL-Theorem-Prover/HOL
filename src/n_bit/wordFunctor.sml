@@ -15,6 +15,9 @@ val PROVE = fn thl => fn q => PROVE thl (Term q);
 val RIGHT_REWRITE_RULE =
      GEN_REWRITE_RULE (RAND_CONV o DEPTH_CONV) empty_rewrites;
 
+val std_ss = std_ss ++ rewrites [LET_THM]
+val arith_ss = arith_ss ++ rewrites [LET_THM]
+
 (* -------------------------------------------------------- *)
 
 (*val bits = 32;*)
@@ -312,10 +315,10 @@ val AND_ABSORB_QT = (GEN `a` o GEN `b`)
   (SIMP_RULE bool_ss [BITWISE_THM,PROVE [] `!a b. a \/ (a /\ b) = a`,GSYM AND_def,GSYM OR_def]
   (SPECL [`a`,`$\/`,`a`,`BITWISE WL $/\ a b`] BITWISE_THM2));
 
-val AND_IDEM_QT = 
+val AND_IDEM_QT =
   GEN_ALL (SIMP_RULE bool_ss [AND_CLAUSES,GSYM AND_def] (SPECL [`a`,`$/\`,`a`,`a`] BITWISE_THM2));
 
-val OR_COMP_QT = 
+val OR_COMP_QT =
   GEN_ALL (SIMP_RULE bool_ss [EXCLUDED_MIDDLE,ONE_COMP_TRUE,ONE_COMP_THM,GSYM OR_def,GSYM COMP0_def]
           (SPECL [`ONE_COMP 0`,`$\/`,`a`,`ONE_COMP a`] BITWISE_THM2));
 
@@ -1865,7 +1868,8 @@ val LEM2_TAC =
     THEN IMP_RES_TAC MSB_THM3b
     THEN IMP_RES_TAC MSB_THM4b
     THEN ASM_SIMP_TAC arith_ss [WORD_LT,WORD_GT,WORD_LE,WORD_GE,word_sub_def,
-           ADD_EVAL3,ADD_EVAL,MSB_EVAL,MSBn_def,word_0,n2w_11,MOD_WL_THM,BITS_ZERO2,BIT_def]
+                                ADD_EVAL3,ADD_EVAL,MSB_EVAL,MSBn_def,word_0,
+                                n2w_11,MOD_WL_THM,BITS_ZERO2,BIT_def]
     THEN ASM_SIMP_TAC arith_ss [BITS_ZERO3]
     THEN PROVE_TAC [w2n_11];
 
@@ -1951,7 +1955,7 @@ val w2n_word_0 = SIMP_CONV arith_ss [word_0,w2n_EVAL,MOD_WL_THM,BITS_ZERO2] (Ter
 val lem11 = prove(
   `!a b. ~(HB = 0) /\ ~MSB a /\ ~MSB b /\ MSB (a - b) ==> w2n a < w2n b`,
   REWRITE_TAC [word_sub_def,ADD_EVAL3]
-    THEN NTAC 2 STRIP_TAC 
+    THEN NTAC 2 STRIP_TAC
     THEN Cases_on `b = word_0`
     THENL [
       ASM_REWRITE_TAC [WORD_NEG_0,w2n_word_0,ADD_0,w2n_ELIM] THEN DECIDE_TAC,
@@ -1978,7 +1982,7 @@ val lem11 = prove(
 val lem12 = prove(
   `!a b. ~(HB = 0) /\ ~MSB a /\ ~MSB b /\ ~MSB (a - b) ==> ~(w2n a < w2n b)`,
   REWRITE_TAC [word_sub_def,ADD_EVAL3]
-    THEN NTAC 2 STRIP_TAC 
+    THEN NTAC 2 STRIP_TAC
     THEN Cases_on `b = word_0` THEN1 ASM_SIMP_TAC arith_ss [w2n_word_0]
     THEN RW_TAC bool_ss [MSB_EVAL,MSBn_def]
     THEN POP_ASSUM MP_TAC

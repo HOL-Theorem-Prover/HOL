@@ -15,7 +15,7 @@ fun ERR f msg = raise (HOL_ERR {origin_function = f,
 fun vsubst_tac defthm =
   HO_MATCH_MP_TAC simple_induction THEN
   SRW_TAC [][SUB_LAM_SWAP_RWT, SUB_THM, SUB_VAR, defthm,
-             swap_subst_out, swap_thm]
+             swap_subst_out, swap_thm, LET_THM]
 
 exception ProofFailed of (term list * term) list
 local

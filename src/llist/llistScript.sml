@@ -21,7 +21,7 @@ val UNCURRY_THM = pairTheory.UNCURRY
 
 val hol_ss = bool_ss ++ optionSimps.OPTION_ss ++ listSimps.LIST_ss ++
                         numSimps.ARITH_ss ++ numSimps.REDUCE_ss ++
-                        pairSimps.PAIR_ss ++ rewrites [UNCURRY_THM] ++
+                        pairSimps.PAIR_ss ++ rewrites [UNCURRY_THM, LET_THM] ++
                         combinSimps.COMBIN_ss
 
 val PAIR_EQ = pairTheory.PAIR_EQ
