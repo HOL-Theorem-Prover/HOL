@@ -15,12 +15,6 @@ IMPORTANT
 
 - some space between s and h.s in select.2, select_3
 
-? for the timed, it would be nice to write fupdate ts (x,y) as
-ts\oplus(x\maptso y)
-
-? also, Timed(x,d) as (x)_d   (is x the largest well-bracketed
-string?)
-
 REMAINDER
 
 ~~~~~~~~~
@@ -60,6 +54,7 @@ open Holdoc_init
 exception Trailing (* there is trailing info in the file *)
 exception BadLabel
 exception BadDirective (* ill-positioned directive *)
+exception BadArg (* problem parsing arg of curried fun *)
 
 (* a useful helper *)
 let isIndent t =
@@ -333,10 +328,11 @@ let texify_text s = dotexify texify_text_list s
 
 (* recognisers for various syntactic categories *)
 
-let is_rule s = try 
-                  (String.index s '.' ) <> (String.length s) -1
-                with
-                  Not_found -> false
+let is_rule s =
+  Str.string_match
+     (Str.regexp ".*_[0-9]+")
+     s
+     0
 
 let is_type s = List.mem s !tYPE_LIST
 
@@ -351,6 +347,15 @@ let is_aux s = List.mem s !aUX_LIST
 let is_aux_infix s = List.mem s !aUX_INFIX_LIST
 
 let is_var_prefix s = List.mem s !vAR_PREFIX_LIST
+
+let hOL_CURRIED_ALIST = ref [
+    ("FUPDATE",("\\Mfupdate",2))
+  ; ("Timed",("\\Mtimed",1))
+]
+
+let is_curried s =
+  try Some (List.assoc s !hOL_CURRIED_ALIST)
+  with Not_found -> None
 
 let var_prefix s =
   let _ = (Str.search_forward
@@ -386,6 +391,8 @@ let is_holop s = List.mem s !hOL_OP_LIST
 (* dump an unrecognised string to stderr *)
 let write_unseen_string s = prerr_endline ("  \"" ^ s ^ "\"  ; ")
 
+(* dump a warning to stderr *)
+let write_warning s = prerr_endline ("WARNING: " ^ s ^ ".")
 
 (* Now use all the above in munging tokens, lists of tokens, etc *)
 
@@ -447,6 +454,60 @@ let rec mtok v t =
   | HolStartTeX    -> "\\tscomm{"
   | HolEndTeX      -> "}"
 
+
+and readbal ds ts cf = (* read a balanced arg; cf=true ==> level 1 commas to }{ and remove level 1 parens *)
+  let rec bal n ds ts =
+    match ts with
+      (Sep(")")::ts) -> let ds' = if n==1 && cf
+                                  then ds
+                                  else Sep(")")::ds
+                        in
+                        if n<=1
+                        then (List.rev ds',ts)
+                        else bal (n-1) ds' ts
+    | (Sep("(")::ts) -> if n==0 && cf
+                        then bal (n+1) ds ts
+                        else bal (n+1) (Sep("(")::ds) ts
+    | (Sep(",")::ts) -> if n==1 && cf
+                        then bal n (TeXNormal("}{")::ds) ts
+                        else bal n (Sep(",")       ::ds) ts
+    | (t::ts)        -> bal n (t::ds) ts
+    | []             -> raise BadArg
+  in
+  bal 0 ds ts
+
+and readarg ts = (* read a single arg: spaces then (id.id.id or matched-paren string) *)
+  let rec sp ts =
+    match ts with
+      (White(_)::ts) -> sp ts
+    | _              -> ts
+  in
+  let rec dotted ds ts =
+    match ts with
+      (Sep(".")::Ident(s,true)::ts) -> dotted (Ident(s,true)::Sep(".")::ds) ts
+    | (White(_)::_)                 -> (List.rev ds,ts)
+    | _                             -> raise BadArg
+  in
+  match sp ts with
+    (Ident(s,true)::ts) -> dotted [Ident(s,true)] ts
+  | (Sep("(")::_)       -> readbal [] ts true  (* commas add extra args *)
+  | _                   -> raise BadArg
+
+
+and mcurry x c n v xs = (* munge n arguments of curried function c; return string and remainder *)
+  let wrap ys = "{"^munge v ys^"}"
+  in
+  let rec go n args ts =
+    if n <= 0 then (c^String.concat "" (List.map wrap (List.rev args)),ts)
+    else match readarg ts with
+           (ds,ts) -> go (n-1) (ds::args) ts
+  in
+  try
+    go n [] xs
+  with
+    BadArg -> write_warning ("curry parse failed: "^mtok v x^" ==> "^c) ;
+              (mtok v x,xs)  (* abort curry parse; do it uncurried *)
+
 and munges v ls = (* munge a list of lines *)
   match ls with
     (l::[]) -> munge v l
@@ -455,8 +516,13 @@ and munges v ls = (* munge a list of lines *)
 
 and munge v xs = (* munge a line of tokens *)
   match xs with
-    (x::xs) -> mtok v x^munge v xs
-  | []      -> ""
+    (Ident(s,true)::xs) -> (match is_curried s with
+                              Some (c,n) -> let (s,xs') = mcurry (Ident(s,true)) c n v xs
+                                            in
+                                            s^munge v xs'
+                            | None       -> mtok v (Ident(s,true))^munge v xs)
+  | (x::xs)             -> mtok v x^munge v xs
+  | []                  -> ""
 
 and munget v s = (* munge a string *)
   let hack_re1 = Str.regexp "\\[\\[" in
