@@ -649,12 +649,19 @@ variable show_types_verbosely instead."
   (interactive)
   (send-raw-string-to-hol "goalstackLib.drop()" hol-echo-commands-p))
 
-(defun hol-open-string (module-name)
-  "Opens HOL modules, prompting for the name of the module to load."
-  (interactive "sName of module to (load and) open: ")
-  (progn
+(defun hol-open-string (prefixp)
+  "Opens HOL modules, prompting for the name of the module to load.
+With prefix ARG, toggles quietdec variable before and after opening,
+potentially saving a great deal of time as tediously large modules are
+printed out.  (That's assuming that quietdec is false to start with.)"
+  (interactive "P")
+  (let* ((prompt0 "Name of module to (load and) open")
+         (prompt (concat prompt0 (if prefixp " (toggling quietness)") ": "))
+         (module-name (read-string prompt)))
     (hol-load-string module-name)
-    (send-raw-string-to-hol (concat "open " module-name) hol-echo-commands-p)))
+    (if prefixp (hol-toggle-quietdec))
+    (send-raw-string-to-hol (concat "open " module-name) hol-echo-commands-p)
+    (if prefixp (hol-toggle-quietdec))))
 
 (defun hol-db-match (tm)
   "Does a DB.match [] on the given TERM (given as a string, without quotes)."
