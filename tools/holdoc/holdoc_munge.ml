@@ -173,6 +173,8 @@ let texify_text_list =
   ;('{', "\\{")
   ;('}', "\\}")
   ;('#', "\\#")
+  ;('<', "\\textless ")
+  ;('>', "\\textgreater ")
   ]
 
 let texify_command s =
