@@ -1051,6 +1051,8 @@ fun mk_defn stem eqns =
      then mutrec_defn (facts,stem,eqns) 
      else
      let val (tup_eqs,stem',untuple) = pairf(stem,eqns)
+          handle HOL_ERR _ => raise ERR "mk_defn" 
+               "failure in internal translation to tupled format"
          val wfrec_res = wfrec_eqns facts tup_eqs 
      in
         if exists I (#3 (unzip3 (#extracta wfrec_res)))   (* nested *)
