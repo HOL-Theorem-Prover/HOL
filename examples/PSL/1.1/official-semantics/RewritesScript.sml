@@ -76,7 +76,7 @@ val F_U_CLOCK_def =
 
 (******************************************************************************
 * Weakly on first posedge.
-* On first posedge, if there is a posedge: [!c U (c /\ f)]
+* On first posedge, if there is a posedge: [!c W (c /\ f)]
 ******************************************************************************)
 val F_W_CLOCK_def =
  Define
