@@ -25,7 +25,7 @@ witness trace if appropriate.
 
 Load the library and initialise the bdd engine
 {
-   - app [load "holCheckLib"];
+   - app load ["holCheckLib"];
    > val it = () : unit
    - bdd.init 100000 10000;
    > val it = () : unit
