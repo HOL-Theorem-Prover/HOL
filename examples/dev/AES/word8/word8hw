@@ -47,7 +47,6 @@ val iter_mult1_dev =
 val iter_mult1_Netlist = 
   MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) iter_mult1_dev);
 
-
 (*---------------------------------------------------------------------------*)
 (* Round operations.                                                         *)
 (*---------------------------------------------------------------------------*)

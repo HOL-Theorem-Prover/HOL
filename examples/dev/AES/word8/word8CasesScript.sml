@@ -3,7 +3,11 @@
 (*===========================================================================*)
 
 (* Interactive mode:
-  load "word8Lib";*)
+  load "word8Lib";
+  quietdec := true;
+  open word8Lib word8Theory;
+  quietdec := false;
+*)
 
 open HolKernel Parse boolLib bossLib word8Lib word8Theory
 
@@ -29,7 +33,8 @@ fun CASES256 w x =
 RW_TAC std_ss [] THEN (POP_ASSUM MP_TAC) THEN
 Q.SPEC_TAC (`n`, `n`) THEN REPEAT (HO_MATCH_MP_TAC lem THEN x)
 
-val nchotomy = Q.prove (
+val nchotomy = Q.store_thm (
+"word8Nchotomy",
 `!x. ^(list_mk_disj (map (fn c => ``x = ^c``) (rev consts)))`,
 STRIP_TAC THEN CASES256 ``x:word8``
  (CONJ_TAC THENL [RW_TAC arith_ss [], ALL_TAC] THEN
@@ -39,8 +44,7 @@ STRIP_TAC THEN CASES256 ``x:word8``
                    Q.SPEC_TAC (`n`, `n`)]) THEN
 Cases THEN RW_TAC arith_ss [])
 
-val _ = save_thm ("word8Nchotomy", nchotomy);
-
+(*
 fun mk_body low hi var results = 
   if low = hi then
     List.nth (results, low)
@@ -52,9 +56,35 @@ fun mk_body low hi var results =
     end
 
 val body = mk_body 0 255 ``x:word8`` vars
+*)
+
+fun exp2 0 = 1
+  | exp2 n = 2 * (exp2 (n - 1))
+
+fun mk_body var results num 0 = List.nth (results, num)
+  | mk_body var results num n =
+      mk_cond (``WORD_BIT ^(numSyntax.term_of_int (n - 1)) ^var``,
+               mk_body var results (num + (exp2 (n - 1))) (n - 1),
+               mk_body var results num (n - 1))
+  
+val body = mk_body ``x:word8`` vars 0 8
 
 val word8_cases_def = Define
 `word8_cases = ^(list_mk_abs (vars, ``\x.^body``))`;
+
+fun build_term f n = ``^f (n2w ^(numSyntax.term_of_int n))``
+fun calls f = map (build_term f) (upto 0 255)
+fun TAC1 x = GEN_REWRITE_TAC (LHS_CONV o RAND_CONV) empty_rewrites [x]
+fun TAC2 x = GEN_REWRITE_TAC (RHS_CONV o RAND_CONV) empty_rewrites [x]
+
+val word8Cases = Q.store_thm (
+"word8Cases",
+`!f. f = ^(list_mk_comb (``word8_cases``, calls ``f:word8->'a``))`,
+STRIP_TAC THEN PURE_ONCE_REWRITE_TAC [word8_cases_def] THEN BETA_TAC THEN
+CONV_TAC FUN_EQ_CONV THEN STRIP_TAC THEN 
+STRIP_ASSUME_TAC (Q.SPEC `w` nchotomy) THEN
+POP_ASSUM (fn x => TAC1 x THEN TAC2 x) THEN
+WORD_TAC)
 
 (*
 val f = #1 (dest_eq (concl word8_cases_def));

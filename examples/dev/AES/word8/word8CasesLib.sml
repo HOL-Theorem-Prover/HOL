@@ -3,8 +3,7 @@
 (*===========================================================================*)
 
 (* Interactive mode:
-  load "word8Lib";
-  load "word8CasesTheory";
+  app load ["word8Lib", "word8CasesTheory"];
   quietdec := true;
   open word8Lib word8Theory word8CasesTheory;
   quietdec := false;
@@ -143,6 +142,21 @@ fun word8Define q =
 
 fun word8Cases_on var = STRIP_ASSUME_TAC (Q.SPEC var word8Nchotomy) ;
 
+fun word8GenTable f eval_case = 
+LIST_CONJ (map (fn n => eval_case (mk_comb (f, mk_n2w n)))
+               (upto 0 255))
+
+fun word8GenCases f eval_case = 
+let val table_thm = word8GenTable (Term f) eval_case
+    val thm = (REWRITE_RULE [table_thm, COND_ID] o
+               Q.ISPEC f o
+               BETA_RULE o 
+               PURE_ONCE_REWRITE_RULE [FUN_EQ_THM] o
+               PURE_ONCE_REWRITE_RULE [word8_cases_def])
+              word8Cases
+in
+  (thm, table_thm)
+end
 
 end
 

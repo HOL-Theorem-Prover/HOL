@@ -21,10 +21,10 @@ fun n2w_TAC v = STRIP_ASSUME_TAC (Q.SPEC v word_nchotomy) THEN
                 ASM_REWRITE_TAC []
 
 val EQ_BIT_THM = Q.prove (
-`!a b. (a = b) = (!n. n < 8 ==> (BIT n (w2n a) = BIT n (w2n b)))`,
+`!a b. (a = b) = (!n. n < 8 ==> (WORD_BIT n a = WORD_BIT n b))`,
 REPEAT STRIP_TAC THEN n2w_TAC `a` THEN n2w_TAC `b` THEN
-RW_TAC arith_ss [n2w_11, w2n_EVAL, MOD_WL_THM, GSYM BIT_BITS_THM, HB_def,
-                 LE_LT1, BIT_OF_BITS_THM])
+RW_TAC arith_ss [BIT_EVAL, n2w_11, w2n_EVAL, MOD_WL_THM, GSYM BIT_BITS_THM,
+                 HB_def, LE_LT1, BIT_OF_BITS_THM])
 
 (*---------------------------------------------------------------------------
     Multiply a byte (representing a polynomial) by x. 
@@ -58,8 +58,9 @@ val xtime_distrib = Q.store_thm
  RW_TAC std_ss [EQ_BIT_THM, xtime_def, MSB_lem, WORD_EOR_ID] THEN
  FULL_SIMP_TAC std_ss [] THEN RW_TAC std_ss [] THEN
  n2w_TAC `a` THEN n2w_TAC `b` THEN
- RW_TAC arith_ss [EOR_EVAL, LSL_EVAL, HB_def, MUL_EVAL, w2n_EVAL, MOD_WL_THM,
-                  MIN_DEF, BIT_OF_BITS_THM, EOR_def, WL_def, BITWISE_THM] THEN
+ RW_TAC arith_ss [BIT_EVAL, EOR_EVAL, LSL_EVAL, HB_def, MUL_EVAL, w2n_EVAL,
+                  MOD_WL_THM, MIN_DEF, BIT_OF_BITS_THM, EOR_def, WL_def,
+                  BITWISE_THM] THEN
  PURE_ONCE_REWRITE_TAC [Q.prove (`!a. a * 2 = a * 2 ** 1`, RW_TAC arith_ss [])]
  THEN
  Cases_on `n<1` THEN
@@ -170,15 +171,19 @@ LIST_CONJ (map instantiate [``0x2w ** x``, ``0x3w ** x``, ``0x9w ** x``,
 val eval_mult =
 WORD_RULE o PURE_REWRITE_CONV [mult_thm, xtime_def]
 
-fun build_table arg1 = 
-LIST_CONJ (map (fn x => eval_mult ``^arg1 ** n2w ^(numSyntax.term_of_int x)``)
-               (upto 0 255))
+fun build_table arg1 = word8GenCases `$** ^arg1` eval_mult
 
-val mult_tables =
-LIST_CONJ (map (Count.apply build_table)
+val (mult_tables, mult_ifs) =
+let val (ifs, tables) =
+        unzip (map (Count.apply build_table)
                [``0x2w``, ``0x3w``, ``0x9w``, ``0xBw``, ``0xDw``, ``0xEw``])
+in
+(LIST_CONJ tables, LIST_CONJ ifs)
+end
 
+val _ = save_thm ("mult_unroll", mult_thm)
 val _ = save_thm ("mult_tables", mult_tables)
+val _ = save_thm ("mult_ifs", mult_ifs)
  
 (*---------------------------------------------------------------------------*)
 (* Directly looking up answers in specialized tables is equivalent to        *)
