@@ -195,7 +195,7 @@ fun universalise_clauses tm =
      val spcls = map (snd o strip_forall) rawcls
      val lpats = map (strip_comb o lhand) spcls
      val ufns = itlist (insert o fst) lpats []
-     val fvs = map (fn t => subtract (free_vars t) ufns) rawcls
+     val fvs = map (fn t => subtract (free_vars_lr t) ufns) rawcls
      val gcls = map2 (curry list_mk_forall) fvs rawcls
  in
    list_mk_conj gcls
