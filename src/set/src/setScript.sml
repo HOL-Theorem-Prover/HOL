@@ -135,10 +135,11 @@ val GSPEC_DEF = new_definition("GSPEC_DEF",
      --`GSPEC f = SPEC(\x:'a. ?y:'b. (x,T) = f y)`--);
 (* the phrase "gspec special" is dealt with in the translation from
    pre-pre-terms to terms *)
-val _ = add_rule("gspec special", Closefix,
-                 [term_grammar.TOK "{", term_grammar.TM,
-                  term_grammar.TOK "|", term_grammar.TM,
-                  term_grammar.TOK "}"])
+val _ = add_rule{term_name = "gspec special", fixity = Closefix,
+                 pp_elements = [TOK "{", TM, HardSpace 1, TOK "|",
+                                BreakSpace(1,0),TM, TOK "}"],
+                 paren_style = OnlyIfNecessary,
+                 block_style = (AroundEachPhrase, (PP.CONSISTENT, 0))};
 
 (* --------------------------------------------------------------------- *)
 (* Set up the {x1;...;xn} notation.					 *)

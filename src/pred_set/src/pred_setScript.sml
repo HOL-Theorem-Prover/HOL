@@ -117,10 +117,11 @@ val SET_SPEC_CONV = PGspec.SET_SPEC_CONV GSPECIFICATION;
 (* define_set_abstraction_syntax "GSPEC"; *)
 (* set_flag("print_set",true); *)
 
-val _ = add_rule("gspec special", Closefix,
-                 [term_grammar.TOK "{", term_grammar.TM,
-                  term_grammar.TOK "|", term_grammar.TM,
-                  term_grammar.TOK "}"])
+val _ = add_rule{term_name = "gspec special", fixity = Closefix,
+                 pp_elements = [TOK "{", TM, HardSpace 1, TOK "|",
+                                BreakSpace(1,0),TM, TOK "}"],
+                 paren_style = OnlyIfNecessary,
+                 block_style = (AroundEachPhrase, (PP.CONSISTENT, 0))};
 (* the phrase "gspec special" is dealt with in the translation from
    pre-pre-terms to terms *)
 
