@@ -13,10 +13,6 @@ val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
 
 val ERR = mk_HOL_ERR "TotalDefn";
 
-fun mk_pabs{varstruct,body} = pairSyntax.mk_abs(varstruct,body)
-fun mk_pair{fst,snd} = pairSyntax.mk_pair(fst,snd)
-val GEN_BETA_CONV = pairSyntax.GEN_BETA_CONV
-
 fun proper_subterm tm1 tm2 =
   not(aconv tm1 tm2) andalso Lib.can (find_term (aconv tm1)) tm2;
 
