@@ -25,7 +25,6 @@ val HTML_DIR   = Path.toString(Path.fromString(Path.concat
                     (Globals.HOLDIR,"help/theorygraph")));
 val SIGOBJ_DIR = Path.toString(Path.fromString(Path.concat
                     (Globals.HOLDIR,"sigobj")));
-(* val BASE_URL   = "http://www.cl.cam.ac.uk/ftp/hvg/hol98/HTML"; *)
 
 (*---------------------------------------------------------------------------
      Extract dot-friendly digraph from HOL theory graph.
@@ -41,6 +40,11 @@ fun ancestor_nodes thy =
   in (thys, pairs)
   end
 end;
+
+(*---------------------------------------------------------------------------*)
+(* There are lots of parameters that can be played with here. See the dot    *)
+(* manual for tweakables.                                                    *)
+(*---------------------------------------------------------------------------*)
 
 fun pp_dot_file {size,ranksep,nodesep} (dom,pairs) ppstrm =
  let open Portable 
@@ -189,9 +193,9 @@ fun load_theories thyl = app (load o C concat "Theory") thyl;
   load_theories sys_theories;
   val ancs = ancestor_nodes "-";
 
-  val all_theories = min::sys_theories;
+  val all_theories = "min"::sys_theories;
   val paths = map(fn s => Path.concat (HTML_DIR,s^"Theory.html")) all_theories;
-  map2 print_theory_as_html all_theories paths
+  map2 print_theory_as_html all_theories paths;
 
   (* The following works on W2K with dot version 1.84 *)
 
