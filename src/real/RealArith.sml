@@ -42,35 +42,32 @@ val _ = HOL_MESG "loading RealArith";
 (* ---------------------------------------------------------------------- *)
 
 local
-  fun trace_on s = print s (* print automatically flushes *)
-  fun trace_off s = ()
-  val current_trace = ref trace_off
+  open Int
   val traceval = ref 0
 
-  fun trace_pure s = (!current_trace) s
-  val _ = register_ftrace ("RealArith dp",
-                           ((fn () => !traceval),
-                            (fn 0 => (traceval := 0;
-                                      current_trace := trace_off)
-                              | _ => (traceval := 1;
-                                      current_trace := trace_on))),
-                           1)
-  fun trace_line () = trace_pure "\n"
+  fun trace_pure s () = print s
+  fun check f = if !traceval > 0 then f() else ()
+  infix >>
+  fun (f >> g) () = (f () ; g ())
+  val _ = register_trace ("RealArith dp", traceval, 1)
+  fun trace_line () = print "\n"
   local
-    fun tl f [] = ()
+    fun tl f [] = (fn () => ())
       | tl f [h] = f h
-      | tl f (h::t) = (f h; trace_pure ", "; tl f t)
+      | tl f (h::t) = (f h >> trace_pure ", " >> tl f t)
   in
-    fun trace_list_pure f l = (trace_pure "["; tl f l; trace_pure "]")
+    fun trace_list_pure f l () =
+        (trace_pure "[" >> tl f l >> trace_pure "]") ()
   end
-  fun trace_term_pure t = trace_pure (term_to_string t)
+  fun trace_term_pure t () = print (term_to_string t)
   fun trace_thm_pure t = trace_term_pure (concl t)
 in
-  fun trace s = trace_pure (s ^ "\n")
-  fun trace_term t = (trace_term_pure t; trace_line ())
-  fun trace_term_list l = (trace_list_pure trace_term_pure l; trace_line ())
-  fun trace_thm t = (trace_thm_pure t; trace_line ())
-  fun trace_thm_list l = (trace_list_pure trace_thm_pure l; trace_line ())
+  fun trace s = check (trace_pure (s ^ "\n"))
+  fun trace_term t = check (trace_term_pure t >> trace_line)
+  fun trace_term_list l =
+      check (trace_list_pure trace_term_pure l >> trace_line)
+  fun trace_thm t = check (trace_thm_pure t >> trace_line)
+  fun trace_thm_list l = check (trace_list_pure trace_thm_pure l >> trace_line)
 end;
 
 (* ------------------------------------------------------------------------- *)
