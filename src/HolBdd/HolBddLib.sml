@@ -5,7 +5,7 @@ load "PrimitiveBddRules";
 load "DerivedBddRules";
 *)
 
-open Varmap PrintBdd PrimitiveBddRules DerivedBddRules DerivedBddRulesTheory;
+open Varmap PrintBdd PrimitiveBddRules DerivedBddRules MachineTransitionTheory;
 
 
 (*****************************************************************************)
