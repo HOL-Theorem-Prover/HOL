@@ -83,7 +83,6 @@ in
     REDUCE_CONV
 end
 
-(*
 
 val AND_CLAUSES0 = CONJUNCTS (Q.ID_SPEC AND_CLAUSES)
 val OR_CLAUSES0 = CONJUNCTS (Q.ID_SPEC OR_CLAUSES)
@@ -96,6 +95,7 @@ val T_or_r = GEN_ALL (List.nth(OR_CLAUSES0, 1))
 val F_or_l = GEN_ALL (List.nth(OR_CLAUSES0, 2))
 val F_or_r = GEN_ALL (List.nth(OR_CLAUSES0, 3))
 
+(*
 fun conjdisj_simplify tm = let
   (* take a term and traverse it, simplifying out repeated occurrences
      of leaf boolean terms.  Thus
@@ -165,6 +165,58 @@ fun conjdisj_simplify tm = let
 
 *)
 
+val simple_disj_congruence =
+  tautLib.TAUT_PROVE (Term`!p q r. (~p ==> (q = r)) ==>
+                                   (p \/ q = p \/ r)`)
+val simple_conj_congruence =
+  tautLib.TAUT_PROVE (Term`!p q r. (p ==> (q = r)) ==>
+                                   (p /\ q = p /\ r)`)
+val notnot_P = CONJUNCT1 NOT_CLAUSES
+
+fun congruential_simplification tm = let
+  fun LAND_CONV c = RATOR_CONV (RAND_CONV c)
+in
+  if is_disj tm then let
+    val (d1, d2) = dest_disj tm
+  in
+    if is_disj d1 then
+      REWR_CONV (GSYM DISJ_ASSOC) THENC congruential_simplification
+    else if is_conj d1 then
+      LAND_CONV congruential_simplification THENC
+      RAND_CONV congruential_simplification
+    else let
+      val notd1_t = mk_neg d1
+      val notd1_thm = ASSUME notd1_t
+      val notd1 =
+        if is_neg d1 then CONV_RULE (REWR_CONV notnot_P) notd1_thm
+        else notd1_thm
+      val d2_rewritten = DISCH notd1_t  (REWRITE_CONV [notd1] d2)
+    in
+      K (MATCH_MP simple_disj_congruence d2_rewritten) THENC
+      (REWR_CONV T_or_r ORELSEC REWR_CONV F_or_r ORELSEC
+       RAND_CONV congruential_simplification)
+    end
+  end else if is_conj tm then let
+    val (c1, c2) = dest_conj tm
+  in
+    if is_conj c1 then
+      REWR_CONV (GSYM CONJ_ASSOC) THENC congruential_simplification
+    else if is_disj c1 then
+      LAND_CONV congruential_simplification THENC
+      RAND_CONV congruential_simplification
+    else let
+      val c2_rewritten = DISCH c1 (REWRITE_CONV [ASSUME c1] c2)
+    in
+      K (MATCH_MP simple_conj_congruence c2_rewritten) THENC
+      (REWR_CONV T_and_r ORELSEC REWR_CONV F_and_r ORELSEC
+       RAND_CONV congruential_simplification)
+    end
+  end else ALL_CONV
+end tm
+
+
+
+
 
 fun sum_var_coeffs var tm = let
   open Arbint
@@ -187,34 +239,36 @@ fun conv_at Left = RATOR_CONV o RAND_CONV
   | conv_at Right = RAND_CONV
 
 (* moves summands from one side or the other of a less-than term *)
-fun move_terms_from dir P tm = let
-  val arg = term_at dir tm
-  val arg_summands = strip_plus arg
+local
+  val myrewrite_conv = REWRITE_CONV [INT_NEG_ADD, INT_NEGNEG, INT_NEG_LMUL]
 in
-  case partition P arg_summands of
-    ([], to_stay) => REFL tm  (* none to move *)
-  | (to_move, []) => let
-      (* all must move *)
-      val move_conv =
-        case dir of
-          Left => REWR_CONV move_all_right
-        | Right => REWR_CONV move_all_left
-    in
-      (move_conv THENC REWRITE_CONV [INT_NEG_ADD, INT_NEGNEG,
-                                     INT_NEG_LMUL]) tm
-    end
-  | (to_move, to_stay) => let
-      val new_arg = mk_plus(list_mk_plus to_move, list_mk_plus to_stay)
-      val arg_eq_new = EQT_ELIM (AC_CONV (INT_ADD_ASSOC, INT_ADD_COMM)
-                                         (mk_eq(arg, new_arg)))
-      val move_conv =
-        case dir of
-          Left => REWR_CONV move_left_right
-        | Right => REWR_CONV move_left_left
-    in
-      (conv_at dir (K arg_eq_new) THENC move_conv THENC
-       REWRITE_CONV [INT_NEG_ADD, INT_NEGNEG, INT_NEG_LMUL]) tm
-    end
+  fun move_terms_from dir P tm = let
+    val arg = term_at dir tm
+    val arg_summands = strip_plus arg
+  in
+    case partition P arg_summands of
+      ([], to_stay) => REFL tm  (* none to move *)
+    | (to_move, []) => let
+        (* all must move *)
+        val move_conv =
+          case dir of
+            Left => REWR_CONV move_all_right
+          | Right => REWR_CONV move_all_left
+      in
+        (move_conv THENC myrewrite_conv) tm
+      end
+    | (to_move, to_stay) => let
+        val new_arg = mk_plus(list_mk_plus to_move, list_mk_plus to_stay)
+        val arg_eq_new = EQT_ELIM (AC_CONV (INT_ADD_ASSOC, INT_ADD_COMM)
+                                   (mk_eq(arg, new_arg)))
+        val move_conv =
+          case dir of
+            Left => REWR_CONV move_left_right
+          | Right => REWR_CONV move_left_left
+      in
+        (conv_at dir (K arg_eq_new) THENC move_conv THENC myrewrite_conv) tm
+      end
+  end
 end
 
 fun collect_terms tm = let
@@ -257,49 +311,53 @@ end
    where both c1 and c2 are positive constants
 *)
 val INT_DIVIDES_NEG = CONV_RULE (DEPTH_CONV FORALL_AND_CONV) INT_DIVIDES_NEG
-fun phase2_CONV var tm = let
-  val land = rand o rator
-  fun dealwith_negative_divides tm = let
-    val coeff = if is_plus (rand tm) then land (land (rand tm))
-                else land (rand tm)
-  in
-    if is_negated coeff then
-      REWR_CONV (GSYM (CONJUNCT1 INT_DIVIDES_NEG)) THENC
-      REWRITE_CONV [INT_NEG_ADD, INT_NEG_LMUL, INT_NEGNEG]
-    else
-      ALL_CONV
-  end tm
-  fun collect_up_other_freevars tm = let
-    val fvs = free_vars tm
-  in
-    EVERY_CONV (map collect_in_sum fvs) tm
-  end
+local
+  val myrewrite_conv = REWRITE_CONV [INT_NEG_ADD, INT_NEG_LMUL, INT_NEGNEG]
 in
-  if is_disj tm orelse is_conj tm then
-    BINOP_CONV (phase2_CONV var) tm
-  else if is_less tm then let
-    open Arbint
-    val var_onL = sum_var_coeffs var (rand (rator tm))
-    val var_onR = sum_var_coeffs var (rand tm)
-    val (dir1, dir2) = if var_onL < var_onR then (Left, Right)
-                       else (Right, Left)
-    val move_CONV =
-      move_terms_from dir1 (free_in var) THENC
-      move_terms_from dir2 (not o free_in var)
+  fun phase2_CONV var tm = let
+    val land = rand o rator
+    fun dealwith_negative_divides tm = let
+      val coeff = if is_plus (rand tm) then land (land (rand tm))
+                  else land (rand tm)
+    in
+      if is_negated coeff then
+        REWR_CONV (GSYM (CONJUNCT1 INT_DIVIDES_NEG)) THENC myrewrite_conv
+      else
+        ALL_CONV
+    end tm
+    fun collect_up_other_freevars tm = let
+      val fvs =
+        Listsort.sort (String.compare o (#1 ## #1) o (dest_var ## dest_var))
+        (free_vars tm)
+    in
+      EVERY_CONV (map collect_in_sum fvs) tm
+    end
   in
-    (move_CONV THENC conv_at dir2 collect_terms THENC
-     conv_at dir1 collect_up_other_freevars THENC
-     TRY_CONV (conv_at dir1 collect_additive_consts) THENC
-     simpLib.SIMP_CONV int_ss [INT_MUL_LZERO, INT_ADD_LID, INT_ADD_RID]) tm
-  end else if is_neg tm then RAND_CONV (phase2_CONV var) tm
-  else if is_divides tm then
-    (TRY_CONV (REWR_CONV (CONJUNCT2 INT_DIVIDES_NEG)) THENC
-     RAND_CONV (collect_in_sum var) THENC REDUCE_CONV THENC
-     dealwith_negative_divides THENC
-     REWRITE_CONV [INT_MUL_LZERO] THENC REDUCE_CONV) tm
-  else ALL_CONV tm
+    if is_disj tm orelse is_conj tm then
+      BINOP_CONV (phase2_CONV var) tm
+    else if is_less tm then let
+      open Arbint
+      val var_onL = sum_var_coeffs var (rand (rator tm))
+      val var_onR = sum_var_coeffs var (rand tm)
+      val (dir1, dir2) = if var_onL < var_onR then (Left, Right)
+                         else (Right, Left)
+      val move_CONV =
+        move_terms_from dir1 (free_in var) THENC
+        move_terms_from dir2 (not o free_in var)
+    in
+      (move_CONV THENC conv_at dir2 collect_terms THENC
+       conv_at dir1 collect_up_other_freevars THENC
+       TRY_CONV (conv_at dir1 collect_additive_consts) THENC
+       simpLib.SIMP_CONV int_ss [INT_MUL_LZERO, INT_ADD_LID, INT_ADD_RID]) tm
+    end else if is_neg tm then RAND_CONV (phase2_CONV var) tm
+    else if is_divides tm then
+      (TRY_CONV (REWR_CONV (CONJUNCT2 INT_DIVIDES_NEG)) THENC
+       RAND_CONV (collect_in_sum var) THENC REDUCE_CONV THENC
+       dealwith_negative_divides THENC
+       REWRITE_CONV [INT_MUL_LZERO] THENC REDUCE_CONV) tm
+    else ALL_CONV tm
+  end
 end
-
 (* phase three takes all of the coefficients of the variable we're
    eliminating, and calculates their LCM.  Every term is then altered to
    be of the form
@@ -409,48 +467,51 @@ fun calc_lcm ints =
 (* this phase has to be done at the level of the existential quantifier *)
 (* assume that the existential quantifier still has occurrences of the
    bound variable in the body *)
-fun phase3_CONV term = let
-  val (var, body) = Psyntax.dest_exists term
-  (* first calculate the desired LCM *)
-  val coeffs = find_coeffs var body
-  val lcm = calc_lcm coeffs
-  (* now descend to each less-than term, and update the coefficients of
-     var to be the same lcm *)
-  fun multiply_by_CONV i tm = let
-    val zero_lti = EQT_ELIM (REDUCE_CONV (mk_less(zero_tm, term_of_int i)))
-    val divides_conv =
-      REWR_CONV (MATCH_MP justify_divides zero_lti) THENC
-      RAND_CONV (TRY_CONV (REWR_CONV INT_LDISTRIB)) THENC REDUCE_CONV
-  in
-    if is_divides tm then divides_conv
-    else if is_neg tm then RAND_CONV divides_conv
-    else REWR_CONV (MATCH_MP justify_multiplication zero_lti)
-  end tm
-
-  fun LCMify term =
-    if is_disj term orelse is_conj term then
-      BINOP_CONV LCMify term
-    else
-      case (find_coeff var term) of
-        NONE => ALL_CONV term
-      | SOME c => multiply_by_CONV (Arbint.div(lcm, c)) term
-
-  fun absify_CONV tm = let
-    val arg = mk_mult(term_of_int lcm, var)
-    val body = Term.subst[(arg |-> var)] tm
-  in
-    SYM (BETA_CONV (mk_comb(mk_abs(var, body), arg)))
-  end
-
+local
+  val myrewrite_conv = REWRITE_CONV [INT_LDISTRIB, INT_RDISTRIB, INT_MUL_ASSOC]
 in
-  (BINDER_CONV (LCMify THENC
-                REWRITE_CONV [INT_LDISTRIB, INT_RDISTRIB, INT_MUL_ASSOC] THENC
-                REDUCE_CONV THENC absify_CONV) THENC
-   REWR_CONV lcm_eliminate THENC
-   RENAME_VARS_CONV [#Name (Term.dest_var var)] THENC
-   BINDER_CONV (RATOR_CONV (RAND_CONV BETA_CONV)) THENC
-   DEPTH_CONV collect_additive_consts)
-  term
+  fun phase3_CONV term = let
+    val (var, body) = Psyntax.dest_exists term
+    (* first calculate the desired LCM *)
+    val coeffs = find_coeffs var body
+    val lcm = calc_lcm coeffs
+    (* now descend to each less-than term, and update the coefficients of
+     var to be the same lcm *)
+    fun multiply_by_CONV i tm = let
+      val zero_lti = EQT_ELIM (REDUCE_CONV (mk_less(zero_tm, term_of_int i)))
+      val divides_conv =
+        REWR_CONV (MATCH_MP justify_divides zero_lti) THENC
+        RAND_CONV (TRY_CONV (REWR_CONV INT_LDISTRIB)) THENC REDUCE_CONV
+    in
+      if is_divides tm then divides_conv
+      else if is_neg tm then RAND_CONV divides_conv
+      else REWR_CONV (MATCH_MP justify_multiplication zero_lti)
+    end tm
+
+    fun LCMify term =
+      if is_disj term orelse is_conj term then
+        BINOP_CONV LCMify term
+      else
+        case (find_coeff var term) of
+          NONE => ALL_CONV term
+        | SOME c => multiply_by_CONV (Arbint.div(lcm, c)) term
+
+    fun absify_CONV tm = let
+      val arg = mk_mult(term_of_int lcm, var)
+      val body = Term.subst[(arg |-> var)] tm
+    in
+      SYM (BETA_CONV (mk_comb(mk_abs(var, body), arg)))
+    end
+
+  in
+    (BINDER_CONV (LCMify THENC myrewrite_conv THENC
+                  REDUCE_CONV THENC absify_CONV) THENC
+     REWR_CONV lcm_eliminate THENC
+     RENAME_VARS_CONV [#Name (Term.dest_var var)] THENC
+     BINDER_CONV (RATOR_CONV (RAND_CONV BETA_CONV)) THENC
+     DEPTH_CONV collect_additive_consts)
+    term
+  end
 end
 
 fun resquan_remove tm =
@@ -1080,67 +1141,71 @@ val phase5_CONV = let
     LAND_CONV (BINDER_CONV (LAND_CONV resquan_remove THENC expand) THENC
                SIMP_CONV int_ss [EXISTS_OR_THM]) THENC
     TRY_CONV (REWR_CONV simple_bool_2 ORELSEC REWR_CONV simple_bool_3)
+  val prc_conv = PURE_REWRITE_CONV [RIGHT_AND_OVER_OR, LEFT_AND_OVER_OR,
+                                    listTheory.MEM, OR_CLAUSES, AND_CLAUSES,
+                                    NOT_CLAUSES, INT_DIVIDES_1]
   fun do_rhs tm = let
     val f = if is_disj tm then RAND_CONV
             else if is_exists tm then I
             else K ALL_CONV
     val c =
       STRIP_QUANT_CONV
-      (LAND_CONV (RAND_CONV resquan_remove THENC
-                  PURE_REWRITE_CONV [RIGHT_AND_OVER_OR, LEFT_AND_OVER_OR,
-                                     listTheory.MEM, OR_CLAUSES, AND_CLAUSES,
-                                     NOT_CLAUSES]) THENC
-       expand) THENC
+      (LAND_CONV (RAND_CONV resquan_remove THENC prc_conv) THENC expand) THENC
       SIMP_CONV int_ss [EXISTS_OR_THM]
   in
     f c tm
   end
 in
   do_lhs THENC do_rhs THENC
-  REWRITE_CONV [INT_DIVIDES_1] THENC
   DEPTH_CONV collect_additive_consts
 end
 
-
-fun eliminate_existential tm = let
-  val (bvar, body) = dest_exists tm
-    handle HOL_ERR _ =>
-      raise ERR "eliminate_existential" "term not an exists"
-  val base_case =
-    BINDER_CONV (phase1_CONV THENC phase2_CONV bvar) THENC
-    PURE_REWRITE_CONV [AND_CLAUSES, OR_CLAUSES] THENC
-    ((REWR_CONV EXISTS_SIMP THENC REWRITE_CONV []) ORELSEC
-     (phase3_CONV THENC phase4_CONV THENC phase5_CONV))
+local
+  val prc_conv = PURE_REWRITE_CONV [AND_CLAUSES, OR_CLAUSES]
 in
-  if is_disj body then
-    EXISTS_OR_CONV THENC (RAND_CONV eliminate_existential) THENC
-    RATOR_CONV (RAND_CONV eliminate_existential)
-  else
-    base_case
-end tm
+  fun eliminate_existential tm = let
+    val (bvar, body) = dest_exists tm
+      handle HOL_ERR _ =>
+        raise ERR "eliminate_existential" "term not an exists"
+    val base_case =
+      BINDER_CONV (phase1_CONV THENC phase2_CONV bvar THENC
+                   congruential_simplification THENC prc_conv) THENC
+      ((REWR_CONV EXISTS_SIMP THENC REWRITE_CONV []) ORELSEC
+       (phase3_CONV THENC phase4_CONV THENC phase5_CONV))
+  in
+    if is_disj body then
+      EXISTS_OR_CONV THENC (RAND_CONV eliminate_existential) THENC
+      RATOR_CONV (RAND_CONV eliminate_existential)
+    else
+      base_case
+  end tm
+end
 
 val NOT_EXISTS_THM =
   GEN_ALL (SYM (PURE_REWRITE_RULE [NOT_CLAUSES]
                 (BETA_RULE (Q.SPEC `\x. ~ P x` boolTheory.NOT_EXISTS_THM))))
 
-fun eliminate_quantifier tm = let
-  (* assume that there are no quantifiers below the one we're eliminating *)
+local
+  val prc_conv = PURE_REWRITE_CONV [DE_MORGAN_THM, NOT_CLAUSES, NOT_IMP]
 in
-  if is_forall tm then
-    Ho_rewrite.REWR_CONV NOT_EXISTS_THM THENC
-    PURE_REWRITE_CONV [DE_MORGAN_THM, NOT_CLAUSES, NOT_IMP] THENC
-    RAND_CONV eliminate_existential
-  else if is_exists tm then
-    eliminate_existential
-  else if is_uexists tm then
-    Ho_rewrite.REWR_CONV EXISTS_UNIQUE_THM THENC
-    RAND_CONV (BINDER_CONV eliminate_quantifier THENC
-               eliminate_quantifier) THENC
-    RATOR_CONV (RAND_CONV eliminate_quantifier)
-  else
-    raise ERR "eliminate_quantifier"
-      "Not a forall or an exists or a unique exists"
-end tm
+  fun eliminate_quantifier tm = let
+  (* assume that there are no quantifiers below the one we're eliminating *)
+  in
+    if is_forall tm then
+      Ho_rewrite.REWR_CONV NOT_EXISTS_THM THENC prc_conv THENC
+      RAND_CONV eliminate_existential
+    else if is_exists tm then
+      eliminate_existential
+    else if is_uexists tm then
+      Ho_rewrite.REWR_CONV EXISTS_UNIQUE_THM THENC
+      RAND_CONV (BINDER_CONV eliminate_quantifier THENC
+                 eliminate_quantifier) THENC
+      RATOR_CONV (RAND_CONV eliminate_quantifier)
+    else
+      raise ERR "eliminate_quantifier"
+        "Not a forall or an exists or a unique exists"
+  end tm
+end
 
 fun find_low_quantifier tm = let
   fun underc g f =
@@ -1230,13 +1295,13 @@ val decide_pure_presburger_term = let
   infix ++
   val phase0_CONV =
     (* rewrites out conditional expression and absolute value terms *)
-    SIMP_CONV (bool_ss ++ COND_elim_ss) [INT_ABS]
+    SIMP_CONV bool_ss [INT_ABS] THENC specialised_cond_elim
   fun mainwork tm = let
   in
     case find_low_quantifier tm of
       NONE => REDUCE_CONV
     | SOME f =>
-        f eliminate_quantifier THENC obvious_improvements THENC
+        f (eliminate_quantifier THENC obvious_improvements) THENC
         mainwork
   end tm
 in
@@ -1435,155 +1500,5 @@ end tm
 
 val COOPER_PROVE = EQT_ELIM o COOPER_CONV
 val COOPER_TAC = CONV_TAC COOPER_CONV;
-
-(* good test examples:
-
-   val var = ``x:int``
-   fun gen_tm tm0 = let
-     val thm1 = (BINDER_CONV (phase1_CONV THENC phase2_CONV var) THENC
-                 phase3_CONV) tm0
-   in
-     rhs (concl thm1)
-   end
-
-   val tm = gen_tm ``?x. 2 int_divides x + 1 \/ 3*x < 9 ==> ~(x = 10)``
-
-   open int_arith
-   val it0 = ``?x. 2 int_divides x + 1 \/ 3*x < 9 ==> ~(x = 10)``
-   val it1 = ``?x:int. x < y``
-   val it2 = ``?x:int. 2 * x < 2 * y``
-   val it3 = ``?x:int. 4 * x + 3 * y = 10``
-   val it4 = ``?x:int. x < y /\ y < z ==> x < z``
-   val it5 = ``?x:int. ~(x < y /\ y < z ==> x < z)``
-   val it6 = ``?x:int. ~4 int_divides x + 5``
-   val it7 = ``?x:int. ~4 int_divides 4 - x``
-   val it8 = ``?x:int. x + x = 2 * x``
-   val it9 = ``?x:int. y + z = 0n``
-   val it10 = ``?y:int. 4 * x + 3 * y = 10``
-   val it11 = ``?x:int. x < 3i /\ y:int < z``;
-
-   (* true statements *)
-   val pt1 = ``!x:int y z. x < y /\ y < z ==> x < z``
-   val pt2 = ``?x y:int. 4 * x + 3 * y = 10``;
-   val pt3 = ``!x. 3i * x < 4 * x ==> x > 0``
-   val pt4 = ``?y. !x:int. x + y = x``
-   val pt5 = ``?y. (!x:int. x + y = x) /\
-                   !y'. (!x. x + y' = x) ==> (y = y')``
-   val pt6 = ``!x. 3 int_divides x /\ 2 int_divides x ==> 6 int_divides x``
-   val pt7 = ``?!y:int. !x. x + y = x``
-   val pt8 = ``!x. ?!y. x + y = 0i``
-   val pt9 = ``?x y. (x + y = 6i) /\ (2 * x + 3 * y = 11)``
-   val pt10 = ``!x z:int. ?!y. x - y = z``
-   val pt11 = ``!x y z:int. 2 * x < y /\ y < 2 * z ==>
-                            ?w. ((y = 2 * w) \/ (y = 2 * w + 1)) /\
-                                x <= w /\ w < z``;
-
-
-   (* false statements *)
-   val fpt1 = ``?x. x * 4 = 6i``
-   val fpt2 = ``!x y:int. x < y \/ y < x``
-   val fpt3 = ``!x y z:int. 2 * x < y /\ y < 2 * z ==>
-                            (y = x + 1) \/ (x < y /\ y < z)``
-   val fpt4 = ``?x y:int. 3 * x + 3 * y = 10``;
-
-   fun p15 tm = let
-     val (var, _) = dest_exists tm
-   in
-     (BINDER_CONV (phase1_CONV var THENC phase2_CONV var) THENC
-      phase3_CONV THENC phase4_CONV THENC phase5_CONV) tm
-   end;
-
-   eliminate_existential it0;
-   eliminate_existential it1;
-   eliminate_existential it2;
-   eliminate_existential it3;
-   eliminate_existential it4;
-   eliminate_existential it5;
-   eliminate_existential it6;
-   eliminate_existential it7;
-   eliminate_existential it8;
-   eliminate_existential it9;
-   eliminate_existential it10;
-   eliminate_existential it11;
-
-   decide_pure_presburger_term pt1;
-   decide_pure_presburger_term pt2;
-   decide_pure_presburger_term pt3;
-   decide_pure_presburger_term pt4;
-   decide_pure_presburger_term pt5;
-   decide_pure_presburger_term pt6;
-   decide_pure_presburger_term pt7;
-   decide_pure_presburger_term pt8;
-   decide_pure_presburger_term pt9;
-   decide_pure_presburger_term pt10;
-   decide_pure_presburger_term pt11;
-
-   decide_pure_presburger_term fpt1;
-   decide_pure_presburger_term fpt2;
-   decide_pure_presburger_term fpt3;
-   decide_pure_presburger_term fpt4;
-
-*)
-
-
-
-(* Final testing:
-
-   map (fn s => (print (s^", ");
-                 ARITH_PROVE (concl (DB.theorem "arithmetic" s))
-                handle e => (print ("Couldn't cope with "^s);
-                             Raise e)))
- [ "ZERO_LESS_EQ", "TWO",
-   "TIMES2", "SUC_SUB1", "SUC_ONE_ADD", "SUC_NOT",
-   "SUC_ADD_SYM",
-
-"SUB_SUB"], "SUB_RIGHT_SUB", "SUB_RIGHT_LESS_EQ",
-     "SUB_RIGHT_LESS", "SUB_RIGHT_GREATER_EQ", "SUB_RIGHT_GREATER",
-     "SUB_RIGHT_EQ", "SUB_RIGHT_ADD", "SUB_PLUS", "SUB_MONO_EQ", "SUB_LESS_OR",
-     "SUB_LESS_EQ_ADD", "SUB_LESS_EQ", "SUB_LESS_0", "SUB_LEFT_SUC",
-     "SUB_LEFT_SUB", "SUB_LEFT_LESS_EQ", "SUB_LEFT_LESS",
-     "SUB_LEFT_GREATER_EQ", "SUB_LEFT_GREATER", "SUB_LEFT_EQ", "SUB_LEFT_ADD",
-     "SUB_EQUAL_0", "SUB_EQ_EQ_0", "SUB_EQ_0", "SUB_ELIM_THM", "SUB_CANCEL",
-     "SUB_ADD", "SUB_0", "SUB", "RIGHT_SUB_DISTRIB", "RIGHT_ADD_DISTRIB",
-     "PRE_SUC_EQ", "PRE_SUB1", "PRE_SUB", "PRE_ELIM_THM", "OR_LESS", "ONE",
-     "ODD_OR_EVEN", "ODD_MULT", "ODD_EXISTS", "ODD_EVEN", "ODD_DOUBLE",
-     "ODD_ADD", "ODD", "NUMERAL_DEF", "NUMERAL_BIT2", "NUMERAL_BIT1",
-     "num_CASES", "num_case_def", "num_case_cong", "num_case_compute",
-     "NOT_ZERO_LT_ZERO", "NOT_SUC_LESS_EQ_0", "NOT_SUC_LESS_EQ",
-     "NOT_SUC_ADD_LESS_EQ", "NOT_ODD_EQ_EVEN", "NOT_NUM_EQ", "NOT_LESS_EQUAL",
-     "NOT_LESS", "NOT_LEQ", "NOT_GREATER_EQ", "NOT_GREATER", "NOT_EXP_0",
-     "MULT_SYM", "MULT_SUC_EQ", "MULT_SUC", "MULT_RIGHT_1", "MULT_MONO_EQ",
-     "MULT_LESS_EQ_SUC", "MULT_LEFT_1", "MULT_INCREASES", "MULT_EXP_MONO",
-     "MULT_EQ_1", "MULT_EQ_0", "MULT_DIV", "MULT_COMM", "MULT_CLAUSES",
-     "MULT_ASSOC", "MULT_0", "MULT", "MOD_UNIQUE", "MOD_TIMES", "MOD_PLUS",
-     "MOD_ONE", "MOD_MULT_MOD", "MOD_MULT", "MOD_MOD", "MOD_EQ_0",
-     "LESS_TRANS", "LESS_SUC_NOT", "LESS_SUC_EQ_COR", "LESS_SUB_ADD_LESS",
-     "LESS_OR_EQ_ADD", "LESS_OR_EQ", "LESS_OR", "LESS_NOT_SUC",
-     "LESS_MULT_MONO", "LESS_MULT2", "LESS_MONO_REV", "LESS_MONO_MULT",
-     "LESS_MONO_EQ", "LESS_MONO_ADD_INV", "LESS_MONO_ADD_EQ", "LESS_MONO_ADD",
-     "LESS_MOD", "LESS_LESS_SUC", "LESS_LESS_EQ_TRANS", "LESS_LESS_CASES",
-     "LESS_IMP_LESS_OR_EQ", "LESS_IMP_LESS_ADD", "LESS_EXP_SUC_MONO",
-     "LESS_EQUAL_ANTISYM", "LESS_EQUAL_ADD", "LESS_EQ_TRANS",
-     "LESS_EQ_SUC_REFL", "LESS_EQ_SUB_LESS", "LESS_EQ_REFL",
-     "LESS_EQ_MONO_ADD_EQ", "LESS_EQ_MONO", "LESS_EQ_LESS_TRANS",
-     "LESS_EQ_LESS_EQ_MONO", "LESS_EQ_IMP_LESS_SUC", "LESS_EQ_EXISTS",
-     "LESS_EQ_CASES", "LESS_EQ_ANTISYM", "LESS_EQ_ADD_SUB", "LESS_EQ_ADD",
-     "LESS_EQ_0", "LESS_EQ", "LESS_DIV_EQ_ZERO", "LESS_CASES_IMP",
-     "LESS_CASES", "LESS_ANTISYM", "LESS_ADD_SUC", "LESS_ADD_NONZERO",
-     "LESS_ADD_1", "LESS_ADD", "LESS_0_CASES", "LEFT_SUB_DISTRIB",
-     "LEFT_ADD_DISTRIB", "LE", "INV_PRE_LESS_EQ", "INV_PRE_LESS", "INV_PRE_EQ",
-     "GREATER_OR_EQ", "GREATER_EQ", "GREATER_DEF", "FUNPOW", "FUN_EQ_LEMMA",
-     "FACT_LESS", "FACT", "EXP_INJECTIVE", "EXP_EQ_1", "EXP_EQ_0",
-     "EXP_ALWAYS_BIG_ENOUGH", "EXP_ADD", "EXP_1", "EXP", "EXISTS_GREATEST",
-     "EVEN_OR_ODD", "EVEN_ODD_EXISTS", "EVEN_ODD", "EVEN_MULT", "EVEN_EXISTS",
-     "EVEN_DOUBLE", "EVEN_AND_ODD", "EVEN_ADD", "EVEN", "EQ_MULT_LCANCEL",
-     "EQ_MONO_ADD_EQ", "EQ_LESS_EQ", "EQ_ADD_RCANCEL", "EQ_ADD_LCANCEL",
-     "DIVMOD_ID", "DIVISION", "DIV_UNIQUE", "DIV_ONE", "DIV_MULT",
-     "DIV_LESS_EQ", "DIV_LESS", "DIV_DIV_DIV_MULT", "DA", "COMPLETE_INDUCTION",
-     "CANCEL_SUB", "ALT_ZERO", "ADD_SYM", "ADD_SUC", "ADD_SUB",
-     "ADD_MONO_LESS_EQ", "ADD_INV_0_EQ", "ADD_INV_0", "ADD_EQ_SUB", "ADD_EQ_1",
-     "ADD_EQ_0", "ADD_DIV_ADD_DIV", "ADD_COMM", "ADD_CLAUSES", "ADD_ASSOC",
-     "ADD_0", "ADD1", "ADD"]
-*)
 
 end;
