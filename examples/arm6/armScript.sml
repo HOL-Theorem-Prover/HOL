@@ -605,7 +605,7 @@ val SUBST_NE_COMMUTES = store_thm("SUBST_NE_COMMUTES",
 );
 
 val SUBST_COMMUTES = store_thm("SUBST_COMMUTES",
-  `!m a b d e. a < b ==> (SUBST (SUBST m (b,d)) (a,e) = SUBST (SUBST m (a,e)) (b,d))`,
+  `!m (a:num) b d e. a < b ==> (SUBST (SUBST m (b,d)) (a,e) = SUBST (SUBST m (a,e)) (b,d))`,
   REPEAT STRIP_TAC
     THEN IMP_RES_TAC LESS_NOT_EQ
     THEN ASM_SIMP_TAC std_ss [SUBST_NE_COMMUTES]

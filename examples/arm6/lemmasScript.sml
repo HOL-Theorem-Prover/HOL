@@ -1,4 +1,4 @@
-(* app load ["word32Theory","word32Lib","armTheory","coreTheory"]; *)
+(* app load ["word32Theory","word32Lib","armTheory","coreTheory","metisLib"]; *)
 open HolKernel boolLib bossLib Q Parse numLib
      arithmeticTheory bitsTheory word32Theory word32Lib
      armTheory coreTheory;
@@ -83,8 +83,9 @@ val TEST_OR_COMP_THM = store_thm("TEST_OR_COMP_THM",
     THEN IMP_RES_TAC LESS_NOT_SUC
     THEN REPEAT (PAT_ASSUM `~(a = b)` (K ALL_TAC))
     THEN RULE_ASSUM_TAC REDUCE_RULE
-    THEN PAT_ASSUM `a < b` (fn th => FULL_SIMP_TAC bool_ss [th])
-    THEN NTAC 13 (POP_ASSUM (K ALL_TAC))
+    THEN `15 < opc` by metisLib.METIS_TAC []
+    THEN PAT_ASSUM `opc < 16` ASSUME_TAC
+    THEN POP_ASSUM_LIST (fn thl => MAP_EVERY ASSUME_TAC (List.take (thl,2)))
     THEN DECIDE_TAC
 );
 
@@ -130,8 +131,9 @@ val ARITHMETIC_THM = store_thm("ARITHMETIC_THM",
     THEN IMP_RES_TAC LESS_NOT_SUC
     THEN REPEAT (PAT_ASSUM `~(a = b)` (K ALL_TAC))
     THEN RULE_ASSUM_TAC REDUCE_RULE
-    THEN PAT_ASSUM `a < b` (fn th => FULL_SIMP_TAC bool_ss [th])
-    THEN NTAC 13 (POP_ASSUM (K ALL_TAC))
+    THEN `15 < opc` by metisLib.METIS_TAC []
+    THEN PAT_ASSUM `opc < 16` ASSUME_TAC
+    THEN POP_ASSUM_LIST (fn thl => MAP_EVERY ASSUME_TAC (List.take (thl,2)))
     THEN DECIDE_TAC
 );
 
@@ -505,7 +507,7 @@ val ALUOUT_SUB = store_thm("ALUOUT_SUB",
   REPEAT STRIP_TAC
     THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
     THEN STRUCT_CASES_TAC (SPEC `b` word_nchotomy)
-    THEN RW_TAC arith_ss [ALUOUT_def,SUB_def,ALU_arith_def,DIVMOD_2EXP_def,SBIT_def,GSYM MOD_WL_EVAL,
+    THEN RW_TAC arith_ss [ALUOUT_def,SUB_def,ALU_arith_neg_def,DIVMOD_2EXP_def,SBIT_def,GSYM MOD_WL_EVAL,
                           word_sub,TWO_COMP_EVAL,ADD_EVAL,w2n_EVAL,GSYM MOD_ADD,MOD_WL_ELIM]
 );
 
