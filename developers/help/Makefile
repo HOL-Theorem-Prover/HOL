@@ -8,7 +8,6 @@ MOSMLC=${MOSMLHOME}/bin/mosmlc
 COMPFLAGS=-I ${MOSMLHOME}/src/compiler
 MOSMLLEX=${MOSMLHOME}/bin/mosmllex
 MOSMLYACC=${MOSMLHOME}/bin/mosmlyac
-
 DOCDIRFILE = ../../tools/documentation-directories
 
 index: ./mk_dbs adoc-files
@@ -16,8 +15,6 @@ index: ./mk_dbs adoc-files
 
 adoc-files: $(DOCDIRFILE)
 	./gen-adocs.sh $(DOCDIRFILE) && touch adoc-files
-
-
 
 mk_dbs: mk_dbs.uo Database.uo Lexer.uo Parser.uo Parsspec.uo
 	$(MOSMLC) $(COMPFLAGS) -o $@ mk_dbs.uo

@@ -15,18 +15,20 @@ fun mkentry s = let
       String.substring(s,0,size s - 8)
   end
 in
-  {comp = Database.Term(content, SOME"HOL"), file = s, line = 0}
+  {comp=Database.Term(content, SOME"HOL"), file=s, line=0}
 end
 
+local fun is_adocfile s = 
+         size s>5 andalso String.extract(s, size s - 5, NONE) = ".adoc"
+in
 fun docdir_to_entries path (endpath, entries) =
   let val dir = Path.concat (path, endpath)
       val L0 = Mosml.listDir dir
-      fun is_adocfile s =
-        size s > 5 andalso String.extract(s, size s - 5, NONE) = ".adoc"
       val L1 = List.filter is_adocfile L0
   in
     List.foldl (fn (e,l) => (mkentry e::l)) entries L1
-  end;
+  end
+end;
 
 val docdirs = let
   val instr = TextIO.openIn "../../tools/documentation-directories"
@@ -53,21 +55,22 @@ fun buildDb holpath = let
   val all_indices =
     List.foldr foldfn doc_indices
     ["Const_def.sig", "Parse.sig", "Theory.sig", "Const_spec.sig",
-     "Parse_support.sig", "Count.sig", "Hol_pp.sig", (*"PoD.sig", *)
-     "Thm.sig", "Dsyntax.sig", "Preterm.sig", "Exception.sig",
+     "Parse_support.sig", "Count.sig", "Hol_pp.sig", 
+     "Thm.sig", "Dsyntax.sig", "Preterm.sig", "Absyn.sig", "Exception.sig",
      "Type.sig", "Lexis.sig", "Type_def.sig", "Lib.sig",
-     "Globals.sig", "Net.sig", "Term.sig",
+     "Globals.sig", "Net.sig", "Term.sig", "AncestorDB.sig", "DB.sig",
 
      (* basicHol90Lib *)
-     "Prim_rec.sig", "Tactical.sig", "Conv.sig", "Psyntax.sig",
-     "Drule.sig", "Resolve.sig", "Thm_cont.sig",
-     "Rewrite.sig", "Type_def_support.sig", "Rsyntax.sig", "Tactic.sig",
+     "Prim_rec.sig", "Tactical.sig", "Conv.sig", "Tactic.sig",
+     "Drule.sig", "Resolve.sig", "Thm_cont.sig", "Rewrite.sig", 
+     "Type_def_support.sig", "Rsyntax.sig", "Psyntax.sig",
+     "TypeBase.sig", "DefnBase.sig",
 
      (* jrh ind_defs *)
      "IndDefLib.sig",
 
      (* Integer *)
-     "integerTheory.sig", (* "useful.sig", *)
+     "integerTheory.sig", "Cooper.sig", "intLib.sig",
 
      (* arithLib *)
      "Arith.sig","Norm_arith.sig","Sol_ranges.sig","Term_coeffs.sig",
@@ -84,7 +87,7 @@ fun buildDb holpath = let
      "combinTheory.sig",
 
      (* datatype *)
-     "Datatype.sig","TypeBase.sig",
+     "Datatype.sig",
      "Define_type.sig","rec_typeTheory.sig",
      "RecordType.sig", "EquivType.sig",
 
@@ -113,6 +116,9 @@ fun buildDb holpath = let
      "ListConv1.sig","rich_listTheory.sig","listTheory.sig",
      "ListConv2.sig","listLib.sig","operatorTheory.sig",
 
+     (* lazy list *)
+     "llistTheory.sig",
+
      (* lite *)
      "liteLib.sig",
 
@@ -129,8 +135,8 @@ fun buildDb holpath = let
      "ExistsFuns.sig","StringTable.sig","nested_recLib.sig",
 
      (* num *)
-     "Num_conv.sig","arithmeticTheory.sig","numTheory.sig",
-     "Num_induct.sig","numLib.sig","prim_recTheory.sig",
+     "numTheory.sig", "prim_recTheory.sig", "arithmeticTheory.sig",
+     "numeralTheory.sig", "numLib.sig",
 
      (* one *)
      "oneTheory.sig",
@@ -142,7 +148,7 @@ fun buildDb holpath = let
      "Let_conv.sig","Pair_conv.sig","pairLib.sig",
      "Pair_basic.sig","Pair_exists.sig","pairTheory.sig",
      "Pair_both1.sig","Pair_forall.sig",
-     "Pair_both2.sig","Pair_syn.sig",
+     "Pair_both2.sig","Pair_syn.sig", "pairTools.sig",
 
      (* pred_set *)
      "PFset_conv.sig","PSet_ind.sig","pred_setTheory.sig",
@@ -177,18 +183,15 @@ fun buildDb holpath = let
      "Ascii.sig","String_conv.sig","stringLib.sig",
      "asciiTheory.sig","stringTheory.sig",
 
-     (* sums *)
+     (* disjoint union *)
      "sumTheory.sig",
 
      (* tautLib *)
      "tautLib.sig",
 
      (* TFL *)
-     "Context.sig","Thry.sig",(* "listTools.sig" *)"RW.sig",
-     "USyntax.sig","pairTools.sig","Rules.sig",
-     "Defn.sig",
-     "relationTheory.sig", "Tfl.sig","tflLib.sig",
-     "Thms.sig",
+     "RW.sig", "Defn.sig", "TotalDefn.sig",
+     "relationTheory.sig", 
 
      (* tree theories *)
      "treeTheory.sig", "ltreeTheory.sig",
@@ -196,14 +199,47 @@ fun buildDb holpath = let
      (* unwind *)
      "unwindLib.sig",
 
-     (* phb *)
+     (* boss *)
      "bossLib.sig",
 
      (* word *)
      "wordLib.sig",
      "bword_arithTheory.sig","wordTheory.sig","word_numTheory.sig",
      "bword_bitopTheory.sig","word_baseTheory.sig",
-     "bword_numTheory.sig","word_bitopTheory.sig"]
+     "bword_numTheory.sig","word_bitopTheory.sig",
+
+     (* HolBdd*)
+     "HolBdd.sig", "HolBddTheory.sig", "StateEnum.sig",
+     "bdd.sig", "bvec.sig", "fdd.sig", "muddyLib.sig",
+
+     (* computeLib *)
+     "computeLib.sig", "compute_rules.sig",
+
+     (* temporalLib *)
+     "Omega_AutomataTheory.sig", "Past_Temporal_LogicTheory.sig",
+     "Temporal_LogicTheory.sig", "temporalLib.sig",
+
+     (* multisets *)
+     "bagTheory.sig",
+
+     (* basic automated proof *)
+     "BasicProvers.sig",
+
+     (* real numbers *)
+     "Diff.sig", "limTheory.sig", "realTheory.sig",
+     "RealArith.sig", "netsTheory.sig", "realaxTheory.sig",
+     "RealSS.sig", "polyTheory.sig", "seqTheory.sig",
+     "hratTheory.sig", "powserTheory.sig", "topologyTheory.sig",
+     "hrealTheory.sig", "realLib.sig", "transcTheory.sig",
+
+     (* Rings *)
+
+     "abstraction.sig",        "prelimTheory.sig",
+     "canonicalTheory.sig",    "quoteTheory.sig",
+     "integerRingLib.sig",     "ringLib.sig",
+     "integerRingTheory.sig",  "ringNormTheory.sig",
+     "numRingLib.sig",         "ringTheory.sig",
+     "numRingTheory.sig",      "semi_ringTheory.sig"]
 
  in
    Database.writebase (Path.concat(holpath, Path.concat ("help", "HOLdbase")),
