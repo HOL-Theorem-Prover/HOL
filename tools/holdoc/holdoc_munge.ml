@@ -462,7 +462,7 @@ and munge v xs xss = (* munge the first line of tokens *)
   | (x::xs)             -> mtok v x^munge v xs xss
   | []                  -> (match xss with
                               [] -> ""
-                            | (xs::xss) -> "{}\\\\\n{}"^munge v xs xss)
+                            | (xs::xss) -> munge v xs xss)
 
 and mungelab v s = (* munge the label *)
   let rec go xs =
