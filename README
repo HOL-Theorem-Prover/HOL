@@ -1,13 +1,12 @@
-This is the distribution directory for the Taupo release of HOL98.
+This is the distribution directory for the Kananaskis release of HOL-4.
 The following is a brief listing of what's available.
 
      install.txt    * Installation instructions 
-     doc/man.ps     * User manual
      bin/           * Executables
      src/           * The system sources
      examples/      * Some examples 
-     tools/         * Support for building Hol98
-     help/          * Online help support
-     sigobj/        * Collection of all signatures and code
-     std.prelude    * File loaded at the beginning of each Hol98 run. 
-
+     tools/         * Support for building the system
+     help/          * Help support
+     Manual/        * Reference manual
+     sigobj/        * Collection of all signatures and compiled code
+     std.prelude    * File loaded at the beginning of each HOL session. 
