@@ -12,4 +12,6 @@ sig
  val num_EQ_CONV : Abbrev.conv
  val EXISTS_LEAST_CONV : Abbrev.conv
  val EXISTS_GREATEST_CONV : Abbrev.conv
+ val num_CONV : Abbrev.conv
+ val INDUCT_TAC : Abbrev.tactic
 end;

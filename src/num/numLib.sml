@@ -8,6 +8,7 @@
 (* TRANSLATOR    : Konrad Slind, University of Calgary                   *)
 (* UPDATE        : October'94 bugfix to num_EQ_CONV (KLS;bugfix from tfm)*)
 (* UPDATE        : January'99 fix to use "Norrish" numerals (MN)         *)
+(* UPDATE        : August'99 to incorporate num_CONV and INDUCT_TAC      *)
 (* ===================================================================== *)
 
 
@@ -208,4 +209,8 @@ fun EXISTS_GREATEST_CONV tm =
    handle _ => raise NUM_ERR{function = "EXISTS_GREATEST_CONV",message = ""}
 end;
 
-end; (* Num_lib *)
+
+val num_CONV = Num_conv.num_CONV
+val INDUCT_TAC = Num_induct.INDUCT_TAC
+
+end; (* numLib *)
