@@ -23,6 +23,13 @@ operator that is not necessarily nullary, so that if the {Tyop}-{Thy}
 pair is {list}-{list} for example, then the printing function will be
 called on all values of type {:x list}, where {x} is any type.
 
+Additionally, if the provided type-operator is {{Tyop = "'a", Thy = ""}}
+(an otherwise impossible value), then the user printer will be called
+on polymorphic values (of type {:'a}, {:'b} etc).  Finally, if the
+type-operator is {{Tyop = "", Thy = ""}} (again a value that can not
+correspond to any real type), then the user's printing function is
+called on all terms.
+
 The user-supplied function may choose not to print anything for the
 given term and hand back control to the standard printer by raising
 the exception {term_pp_types.UserPP_Failed}.  All other exceptions
@@ -38,7 +45,7 @@ to be
      sysprinter -> (grav * grav * grav) -> int -> Portable.ppstream ->
      term -> unit
 }
-where the type {grav} is
+where the type {grav} (also from {term_pp_types}) is
 {
    datatype grav = Top | RealTop | Prec of (int * string)
 }
@@ -215,5 +222,5 @@ For extending the pretty-printer in ways not possible to encompass
 with the built-in grammar rules for concrete syntax.
 
 \SEEALSO
-Parse.remove_user_printer.
+Parse.add_rule,Parse.remove_user_printer.
 \ENDDOC

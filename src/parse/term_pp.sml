@@ -474,26 +474,31 @@ fun pp_term (G : grammar) TyG = let
     strip n [] tm
   end
 
+  val allterm_uprinter = Binarymap.peek(uprinters, {Name = "", Thy = ""})
+  val polyty_uprinter = Binarymap.peek(uprinters, {Name = "'a", Thy = ""})
+
 
   fun pr_term binderp showtypes showtypes_v vars_seen pps tm
               pgrav lgrav rgrav depth = let
     val _ =
-        if printers_exist then
-          case Lib.total dest_thy_type (type_of tm) of
-            NONE => ()
-          | SOME {Tyop,Thy,Args} => let
-            in
-              case Binarymap.peek(uprinters, {Name = Tyop, Thy = Thy}) of
-                NONE => ()
-              | SOME f => let
-                  fun sysprint (pg,lg,rg) depth tm =
-                      pr_term false showtypes showtypes_v vars_seen pps tm
-                              pg lg rg depth
-                in
-                  f sysprint (pgrav, lgrav, rgrav) depth pps tm;
-                  raise SimpleExit
-                end handle UserPP_Failed => ()
-            end
+        if printers_exist then let
+            fun sysprint (pg,lg,rg) depth tm =
+                pr_term false showtypes showtypes_v vars_seen pps tm
+                        pg lg rg depth
+            val printfn_for_ty =
+                case Lib.total dest_thy_type (type_of tm) of
+                  NONE => polyty_uprinter
+                | SOME {Tyop,Thy,Args} =>
+                  Binarymap.peek(uprinters, {Name = Tyop, Thy = Thy})
+            fun printwith f = (f sysprint (pgrav, lgrav, rgrav) depth pps tm;
+                               raise SimpleExit)
+                handle UserPP_Failed => ()
+          in
+            case (printfn_for_ty, allterm_uprinter) of
+              (SOME f, _) => printwith f
+            | (NONE, SOME f) => printwith f
+            | (NONE, NONE) => ()
+          end
         else ()
 
     val {fvars_seen, bvars_seen} = vars_seen
