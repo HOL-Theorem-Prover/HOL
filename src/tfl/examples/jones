@@ -1,12 +1,12 @@
 (*---------------------------------------------------------------------------
 
-      Examples (some typed in by Ken Larsen) from 
+      Examples (some typed in by Ken Friis Larsen) from 
 
         "The Size-Change Principle for Program Termination",
            Lee, Jones, Ben-Amram, Proceedings of POPL 2001
  ---------------------------------------------------------------------------*)
 
-        
+load "bossLib"; open bossLib;
 
 (*---------------------------------------------------------------------------
   1.   Reverse function, with accumulating parameter. Automatic.
@@ -73,8 +73,8 @@ val perm_defn =
 val (perm_eqns,perm_ind) = Defn.tprove
 (perm_defn,
  WF_REL_TAC 
-    `measure (\(l1,l2). 
-        if NULL l1 then 2 * LENGTH l2 else LENGTH l1 + LENGTH l2)`
+    `measure \(l1,l2). 
+        if NULL l1 then 2 * LENGTH l2 else LENGTH l1 + LENGTH l2`
   THEN RW_TAC list_ss []);
 
 
