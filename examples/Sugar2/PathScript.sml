@@ -155,6 +155,16 @@ val PATH_CONS_def =
      INFINITE_PATH(\n. if n=0 then x else f(n-1)))`;
 
 (******************************************************************************
+* PATH_EL (RESTN p n) 0 = PATH_EL p n
+******************************************************************************)
+val PATH_EL_RESTN =
+ store_thm
+  ("PATH_EL_RESTN",
+   ``!n p. PATH_EL (RESTN p n) 0 = PATH_EL p n``,
+   Induct
+    THEN RW_TAC list_ss [RESTN_def,PATH_EL_def]);
+
+(******************************************************************************
 * PATH_CAT(w,p) creates a new path by concatenating w in front of p
 ******************************************************************************)
 val PATH_CAT_def = 

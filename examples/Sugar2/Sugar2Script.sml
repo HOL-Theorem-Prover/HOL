@@ -709,29 +709,29 @@ end;
 ******************************************************************************)
 val S_CLOCK_COMP_def =
  Define
-  `(S_CLOCK_COMP clk (S_BOOL b) = 
-     (S_CAT (S_REPEAT (S_BOOL (B_NOT clk)),S_BOOL(B_AND(clk, b)))))
+  `(S_CLOCK_COMP c (S_BOOL b) = 
+     (S_CAT (S_REPEAT (S_BOOL (B_NOT c)),S_BOOL(B_AND(c, b)))))
    /\
-   (S_CLOCK_COMP clk (S_CAT(r1,r2)) =  
-     S_CAT(S_CLOCK_COMP clk r1, S_CLOCK_COMP clk r2))
+   (S_CLOCK_COMP c (S_CAT(r1,r2)) =  
+     S_CAT(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2))
    /\
-   (S_CLOCK_COMP clk (S_FUSION(r1,r2)) = 
-     S_FUSION(S_CLOCK_COMP clk r1, S_CLOCK_COMP clk r2))
+   (S_CLOCK_COMP c (S_FUSION(r1,r2)) = 
+     S_FUSION(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2))
    /\
-   (S_CLOCK_COMP clk (S_OR(r1,r2)) = 
-     S_OR(S_CLOCK_COMP clk r1, S_CLOCK_COMP clk r2))
+   (S_CLOCK_COMP c (S_OR(r1,r2)) = 
+     S_OR(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2))
    /\
-   (S_CLOCK_COMP clk (S_RIG_AND(r1,r2))  = 
-     S_RIG_AND(S_CLOCK_COMP clk r1, S_CLOCK_COMP clk r2))
+   (S_CLOCK_COMP c (S_RIG_AND(r1,r2))  = 
+     S_RIG_AND(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2))
    /\
-   (S_CLOCK_COMP clk (S_FLEX_AND(r1,r2)) = 
-     S_FLEX_AND(S_CLOCK_COMP clk r1, S_CLOCK_COMP clk r2))
+   (S_CLOCK_COMP c (S_FLEX_AND(r1,r2)) = 
+     S_FLEX_AND(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2))
    /\
-   (S_CLOCK_COMP clk (S_REPEAT r) = 
-     S_REPEAT(S_CLOCK_COMP clk r))
+   (S_CLOCK_COMP c (S_REPEAT r) = 
+     S_REPEAT(S_CLOCK_COMP c r))
    /\
-   (S_CLOCK_COMP clk (S_CLOCK(r, clk1)) = 
-     S_CLOCK_COMP clk1 r)`;
+   (S_CLOCK_COMP c (S_CLOCK(r, c1)) = 
+     S_CLOCK_COMP c1 r)`;
 
 (******************************************************************************
 * Some ad hoc lemmas followed by a gross proof that S_CLOCK_COMP works
@@ -850,6 +850,124 @@ val S_CLOCK_COMP_ELIM =
           [`wlist`,`\l. B_SEM (M :'b # 'c # 'd # ('a -> bool) # 'e) l (B_NOT c)`]
           (INST_TYPE[``:'a``|->``:'a->bool``]EVERY_EL_SINGLETON_LENGTH)))
        THEN RW_TAC list_ss [EL_APPEND2]]);
+
+(******************************************************************************
+* Some abbreviations needed for definition of F_CLOCK_COMP
+******************************************************************************)
+
+val F_U_CLOCK_def =
+ Define
+  `F_U_CLOCK c f = F_UNTIL(F_BOOL(B_NOT c),F_AND(F_BOOL c, f))`;
+
+val F_OR_def =
+ Define
+  `F_OR(f1,f2) = F_NOT(F_AND(F_NOT f1, F_NOT f2))`;
+
+val F_F_def =
+ Define
+  `F_F f = F_UNTIL(F_BOOL B_TRUE, f)`;
+
+val F_G_def =
+ Define
+  `F_G f = F_NOT(F_F(F_NOT f))`;
+
+val F_W_def =
+ Define
+  `F_W(f1,f2) = F_OR(F_UNTIL(f1,f2), F_G f1)`;
+
+val F_W_CLOCK_def =
+ Define
+  `F_W_CLOCK c f = F_W(F_BOOL(B_NOT c),F_AND(F_BOOL c, f))`;
+
+
+(******************************************************************************
+* Rules for compiling clocked FL formulas to unclocked formulas
+* (from B.1, page 66 and 67, of Sugar 2.0 Accellera document)
+******************************************************************************)
+val F_CLOCK_COMP_def =
+ Define
+  `(F_CLOCK_COMP (STRONG_CLOCK c) (F_BOOL b) = 
+     F_U_CLOCK c (F_BOOL b))
+    /\
+    (F_CLOCK_COMP (STRONG_CLOCK c) (F_NOT f) = 
+      F_NOT(F_CLOCK_COMP (WEAK_CLOCK c) f))
+    /\
+    (F_CLOCK_COMP (STRONG_CLOCK c) (F_AND(f1,f2)) = 
+      F_U_CLOCK c (F_AND(F_CLOCK_COMP (STRONG_CLOCK c) f1, 
+                         F_CLOCK_COMP (STRONG_CLOCK c) f2)))
+    /\
+    (F_CLOCK_COMP (STRONG_CLOCK c) (F_NEXT f) = 
+      F_U_CLOCK c (F_NEXT(F_CLOCK_COMP (STRONG_CLOCK c) f)))
+    /\
+    (F_CLOCK_COMP (STRONG_CLOCK c) (F_UNTIL(f1,f2)) = 
+      F_UNTIL(F_U_CLOCK c f1, F_U_CLOCK c f2))
+    /\
+    (F_CLOCK_COMP (STRONG_CLOCK c) (F_SUFFIX_IMP(r,f)) = 
+      F_U_CLOCK c (F_SUFFIX_IMP(S_CLOCK_COMP c r, 
+                                F_CLOCK_COMP (STRONG_CLOCK c) f)))
+    /\
+    (F_CLOCK_COMP (STRONG_CLOCK c) (F_STRONG_IMP(r1,r2)) = 
+      F_U_CLOCK c (F_STRONG_IMP (S_CLOCK_COMP c r1,
+                                 S_CLOCK_COMP c r2)))
+    /\
+    (F_CLOCK_COMP (STRONG_CLOCK c) (F_WEAK_IMP(r1,r2)) = 
+      F_U_CLOCK c (F_OR
+                    (F_STRONG_IMP(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2),
+                     F_AND
+                      (F_G(F_F(F_BOOL c)),
+                       F_WEAK_IMP(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2)))))
+    /\
+    (F_CLOCK_COMP (STRONG_CLOCK c) (F_ABORT (f,b)) =
+      F_U_CLOCK c (F_ABORT(F_CLOCK_COMP (STRONG_CLOCK c) f, B_AND(c,b))))
+    /\
+    (F_CLOCK_COMP (STRONG_CLOCK c) (F_WEAK_CLOCK(f,c1)) =   
+      F_CLOCK_COMP (WEAK_CLOCK c1) f)
+    /\
+    (F_CLOCK_COMP (STRONG_CLOCK c) (F_STRONG_CLOCK(f,c1)) =   
+      F_CLOCK_COMP (STRONG_CLOCK c1) f)
+    /\ 
+(******************************************************************************
+* Start of weak clock clauses
+******************************************************************************)
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_BOOL b) = 
+      F_W_CLOCK c (F_BOOL b))
+    /\
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_NOT f) = 
+      F_NOT(F_CLOCK_COMP (STRONG_CLOCK c) f))
+    /\
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_AND(f1,f2)) = 
+      F_W_CLOCK c (F_AND(F_CLOCK_COMP (WEAK_CLOCK c) f1, 
+                         F_CLOCK_COMP (WEAK_CLOCK c) f2)))
+    /\
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_NEXT f) = 
+      F_W_CLOCK c (F_NEXT(F_CLOCK_COMP (WEAK_CLOCK c) f)))
+    /\
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_UNTIL(f1,f2)) = 
+      F_UNTIL(F_W_CLOCK c f1, F_W_CLOCK c f2))
+    /\
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_SUFFIX_IMP(r,f)) = 
+      F_W_CLOCK c (F_SUFFIX_IMP(S_CLOCK_COMP c r, 
+                                F_CLOCK_COMP (WEAK_CLOCK c) f)))
+    /\
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_STRONG_IMP(r1,r2)) = 
+      F_W_CLOCK c (F_OR
+                    (F_STRONG_IMP(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2),
+                     F_AND
+                      (F_F(F_G(F_BOOL(B_NOT c))),
+                       F_WEAK_IMP(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2)))))
+    /\
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_WEAK_IMP(r1,r2)) = 
+      F_W_CLOCK c (F_WEAK_IMP (S_CLOCK_COMP c r1,
+                               S_CLOCK_COMP c r2)))
+    /\
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_ABORT (f,b)) =
+      F_W_CLOCK c (F_ABORT(F_CLOCK_COMP (WEAK_CLOCK c) f, B_AND(c,b))))
+    /\
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_WEAK_CLOCK(f,c1)) =   
+      F_CLOCK_COMP (WEAK_CLOCK c1) f)
+    /\
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_STRONG_CLOCK(f,c1)) =   
+      F_CLOCK_COMP (STRONG_CLOCK c1) f)`;
 
 val _ = export_theory();
 
