@@ -29,7 +29,7 @@ val BIT_def         = Define `BIT b n = (BITS b b n = 1)`;
  
 val SLICE_def       = Define `SLICE h l n = MOD_2EXP (SUC h) n - MOD_2EXP l n`;
  
-val LSB_def         = Define `LSB = BIT 0`;
+val LSBn_def        = Define `LSBn = BIT 0`;
 
 val BITWISE_def =
   Define`
@@ -294,9 +294,9 @@ val ODD_MOD2_LEM = store_thm("ODD_MOD2_LEM",
 (* -------------------------------------------------------- *)
 
 val LSB_ODD = store_thm("LSB_ODD",
-  `LSB = ODD`,
+  `LSBn = ODD`,
   ONCE_REWRITE_TAC [FUN_EQ_THM]
-    THEN A_SIMP_TAC [ODD_MOD2_LEM,LSB_def,BIT_def,BITS2_THM,EXP,DIV1]
+    THEN A_SIMP_TAC [ODD_MOD2_LEM,LSBn_def,BIT_def,BITS2_THM,EXP,DIV1]
 );
 
 (* -------------------------------------------------------- *)
