@@ -77,7 +77,8 @@ val _ = Datatype.Hol_datatype `list = NIL | CONS of 'a => list`;
 
 val _ = set_MLname "CONS" "CONS_def";
 
-val _ = add_listform {separator = ";", leftdelim = "[", rightdelim = "]",
+val _ = add_listform {separator = [TOK ";", BreakSpace(1,0)],
+                      leftdelim = [TOK "["], rightdelim = [TOK "]"],
                       cons = "CONS", nilstr = "NIL"};
 
 val _ = add_rule {term_name = "CONS", fixity = Infixr 450,

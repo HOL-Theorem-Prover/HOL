@@ -68,6 +68,9 @@ exception PrecConflict of stack_terminal * stack_terminal
 
 val complained_already = ref false;
 
+fun first_tok [] = raise Fail "Shouldn't happen parse_term 133"
+  | first_tok (RE (TOK s)::_) = s
+  | first_tok (_ :: t) = first_tok t
 
 fun mk_prec_matrix G = let
   exception NotFound
@@ -131,9 +134,9 @@ fun mk_prec_matrix G = let
     | CLOSEFIX rules => app (insert_oplist o rule_elements) rules
     | LISTRULE rlist => let
         fun process r = let
-          val left = STD_HOL_TOK (#leftdelim r)
-          val right = STD_HOL_TOK (#rightdelim r)
-          val separator = STD_HOL_TOK (#separator r)
+          val left = STD_HOL_TOK (first_tok (#leftdelim r))
+          val right = STD_HOL_TOK (first_tok (#rightdelim r))
+          val separator = STD_HOL_TOK (first_tok (#separator r))
         in
           insert (left, right) EQUAL;
           insert (left, separator) EQUAL;
@@ -175,7 +178,8 @@ fun mk_prec_matrix G = let
           | CLOSEFIX rules => map (f o rule_elements) rules
           | LISTRULE rlist => let
               fun process r =
-                [f (map TOK [#leftdelim r, #separator r, #rightdelim r])]
+                [f (map (TOK o first_tok)
+                        [#leftdelim r, #separator r, #rightdelim r])]
             in
               List.concat (map process rlist)
             end
@@ -409,10 +413,12 @@ fun mk_ruledb (G:grammar) = let
     | CLOSEFIX rules => app (insert_rule closefix_rule closefix_f) rules
     | LISTRULE rlist => let
         fun process r = let
-          val nil_pattern = [TOK (#leftdelim r), TOK (#rightdelim r)]
-          val singleton_pat = [TOK (#leftdelim r), TM, TOK (#rightdelim r)]
-          val doubleton_pat = [TOK (#leftdelim r), TM, TOK (#separator r),
-                               TM, TOK (#rightdelim r)]
+          val ldelim = TOK (first_tok (#leftdelim r))
+          val rdelim = TOK (first_tok (#rightdelim r))
+          val sep = TOK (first_tok (#separator r))
+          val nil_pattern =   [ldelim, rdelim]
+          val singleton_pat = [ldelim, TM, rdelim]
+          val doubleton_pat = [ldelim, TM, sep, TM, rdelim]
           val insert = Polyhash.insert table
           val summary = listfix_rule {cons = #cons r, nilstr = #nilstr r}
         in

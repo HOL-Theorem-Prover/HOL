@@ -67,8 +67,8 @@ signature Parse = sig
   val add_rule   : {term_name : string, fixity :fixity,
                     pp_elements: pp_element list, paren_style : ParenStyle,
                     block_style : PhraseBlockStyle * block_info} -> unit
-  val add_listform : {separator : string, leftdelim : string,
-                      rightdelim : string, cons : string,
+  val add_listform : {separator : pp_element list, leftdelim : pp_element list,
+                      rightdelim : pp_element list, cons : string,
                       nilstr : string} -> unit
   val add_numeral_form : (char * string option) -> unit
   val add_bare_numeral_form : (char * string option) -> unit
@@ -108,8 +108,9 @@ signature Parse = sig
      pp_elements: pp_element list, paren_style : ParenStyle,
      block_style : PhraseBlockStyle * block_info}  -> unit
   val temp_add_infix : (string * int * associativity) -> unit
-  val temp_add_listform : {separator : string, leftdelim : string,
-                           rightdelim : string, cons : string,
+  val temp_add_listform : {separator : pp_element list,
+                           leftdelim : pp_element list,
+                           rightdelim : pp_element list, cons : string,
                            nilstr : string} -> unit
   val temp_add_numeral_form : (char * string option) -> unit
   val temp_add_bare_numeral_form : (char * string option) -> unit

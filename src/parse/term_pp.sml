@@ -262,6 +262,10 @@ val prettyprint_bigrecs = ref true;
 
 val _ = register_btrace ("pp_bigrecs", prettyprint_bigrecs)
 
+fun first_tok [] = raise Fail "Shouldn't happen term_pp 133"
+  | first_tok (RE (TOK s)::_) = s
+  | first_tok (_ :: t) = first_tok t
+
 fun pp_term (G : grammar) TyG = let
   val {restr_binders,lambda,endbinding,type_intro,res_quanop} = specials G
   val overload_info = overload_info G
@@ -499,6 +503,41 @@ fun pp_term (G : grammar) TyG = let
     fun pend b = if b then add_string ")" else ()
     fun spacep b = if b then add_break(1, 0) else ()
     fun sizedbreak n = add_break(n, 0)
+
+    (* els is a list of pp_elements; args is a list of terms to be inserted
+       in place of RE TM elements.  Returns the unused args *)
+    fun print_ellist (lprec, cprec, rprec) (els, args) = let
+      val recurse = print_ellist (lprec, cprec, rprec)
+    in
+      case els of
+        [] => args
+      | (e :: es) => let
+        in
+          case e of
+            PPBlock(more_els, (sty, ind)) => let
+              val _ = begin_block sty ind
+              val rest = recurse (more_els, args)
+              val _ = end_block()
+            in
+              recurse (es, rest)
+            end
+          | HardSpace n => (add_string (string_of_nspaces n);
+                            recurse (es, args))
+          | BreakSpace (n, m) => (add_break(n,m); recurse (es, args))
+          | RE (TOK s) => (add_string s; recurse (es, args))
+          | RE TM => (pr_term (hd args) Top Top Top (depth - 1);
+                      recurse (es, tl args))
+          | FirstTM => (pr_term (hd args) cprec lprec cprec (depth - 1);
+                        recurse (es, tl args))
+          | LastTM => (pr_term (hd args) cprec cprec rprec (depth - 1);
+                       recurse (es, tl args))
+          | EndInitialBlock _ => raise Fail "term_pp - encountered EIB"
+          | BeginFinalBlock _ => raise Fail "term_pp - encountered BFB"
+        end
+    end
+
+
+
     fun pr_vstruct bv = let
       val pr_t =
         if showtypes then full_pr_term true true showtypes_v vars_seen pps
@@ -700,6 +739,9 @@ fun pp_term (G : grammar) TyG = let
       val _ =
         if my_is_abs tm then (pr_abs tm; raise SimpleExit)
         else ()
+
+
+
 
       val _ = (* check for set comprehensions *)
         if
@@ -906,12 +948,14 @@ fun pp_term (G : grammar) TyG = let
             end
             fun print_updlist updates = let
             in
-              add_string ldelim;
+              print_ellist (Top,Top,Top) (ldelim, []);
               begin_block INCONSISTENT 0;
-              pr_list print_update (fn () => add_string sep)
-              (fn () => add_break (1,0)) updates;
+              pr_list print_update
+                     (fn () => ignore (print_ellist(Top,Top,Top) (sep, [])))
+                     (fn () => ()) updates;
               end_block ();
-              add_string rdelim
+              print_ellist (Top,Top,Top) (rdelim, []);
+              ()
             end
           in
             if is_const base andalso fst (dest_const base) = "ARB" then
@@ -974,7 +1018,8 @@ fun pp_term (G : grammar) TyG = let
       val nilrule = find_partial check_rule rules
     in
       case nilrule of
-        SOME r => add_string (#leftdelim r ^ #rightdelim r)
+        SOME r => (ignore (print_ellist (Top,Top,Top) (#leftdelim r, []));
+                   ignore (print_ellist (Top,Top,Top) (#rightdelim r, [])))
       | NONE => let
           (* if only rule is a list form rule and we've got to here, it
              will be a rule allowing this to the cons part of a list form.
@@ -1006,35 +1051,6 @@ fun pp_term (G : grammar) TyG = let
               end
             | x => block_up_els (x::acc) es
           end
-      fun recurse_els (lprec, cprec, rprec) (els, args) = let
-        val recurse = recurse_els (lprec, cprec, rprec)
-      in
-        case els of
-          [] => args
-        | (e :: es) => let
-          in
-            case e of
-              PPBlock(more_els, (sty, ind)) => let
-                val _ = begin_block sty ind
-                val rest = recurse (more_els, args)
-                val _ = end_block()
-              in
-                recurse (es, rest)
-              end
-            | HardSpace n => (add_string (string_of_nspaces n);
-                              recurse (es, args))
-            | BreakSpace (n, m) => (add_break(n,m); recurse (es, args))
-            | RE (TOK s) => (add_string s; recurse (es, args))
-            | RE TM => (pr_term (hd args) Top Top Top (depth - 1);
-                        recurse (es, tl args))
-            | FirstTM => (pr_term (hd args) cprec lprec cprec (depth - 1);
-                          recurse (es, tl args))
-            | LastTM => (pr_term (hd args) cprec cprec rprec (depth - 1);
-                         recurse (es, tl args))
-            | EndInitialBlock _ => raise Fail "term_pp - encountered EIB"
-            | BeginFinalBlock _ => raise Fail "term_pp - encountered BFB"
-          end
-      end
     in
       case frule of
         INFIX(STD_infix(lst, fassoc)) => let
@@ -1059,7 +1075,7 @@ fun pp_term (G : grammar) TyG = let
             block_by_style(addparens, rr, pgrav, fname, fprec)
         in
           pbegin addparens; begblock();
-          recurse_els (lprec, prec, rprec) (pp_elements, arg_terms);
+          print_ellist (lprec, prec, rprec) (pp_elements, arg_terms);
           endblock (); pend addparens
         end
       | INFIX RESQUAN_OP => raise Fail "Res. quans shouldn't arise"
@@ -1083,7 +1099,7 @@ fun pp_term (G : grammar) TyG = let
             block_by_style(addparens, rr, pgrav, fname, fprec)
         in
           pbegin addparens; begblock();
-          recurse_els (lprec, prec, Top) (pp_elements, real_args);
+          print_ellist (lprec, prec, Top) (pp_elements, real_args);
           endblock(); pend addparens
         end
       | SUFFIX TYPE_annotation =>
@@ -1105,7 +1121,7 @@ fun pp_term (G : grammar) TyG = let
             block_by_style(addparens, rr, pgrav, fname, fprec)
         in
           pbegin addparens; begblock();
-          recurse_els (Top, prec, rprec) (pp_elements, real_args);
+          print_ellist (Top, prec, rprec) (pp_elements, real_args);
           endblock(); pend addparens
         end
       | PREFIX (BINDER _) => let
@@ -1138,7 +1154,7 @@ fun pp_term (G : grammar) TyG = let
           val elements = #elements rr
         in
           uncurry begin_block (#2 (#block_style rr)) ;
-          recurse_els (Top, Top, Top) (elements, args @ [Rand]);
+          print_ellist (Top, Top, Top) (elements, args @ [Rand]);
           end_block()
         end
       | LISTRULE lrules => let
@@ -1160,14 +1176,16 @@ fun pp_term (G : grammar) TyG = let
               else let
               in
                 pr_term head Top Top Top (depth - 1);
-                add_string sep; spacep true;
+                print_ellist (Top,Top,Top) (sep, []);
                 recurse tail
               end
             end
           in
-            add_string ldelim; begin_block INCONSISTENT 0;
+            print_ellist (Top,Top,Top) (ldelim, []) ;
+            begin_block INCONSISTENT 0;
             recurse tm;
-            end_block(); add_string rdelim
+            end_block();
+            ignore (print_ellist (Top,Top,Top) (rdelim, []))
           end
         in
           pr_list tm

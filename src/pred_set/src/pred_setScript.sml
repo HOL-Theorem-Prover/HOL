@@ -605,7 +605,8 @@ val INSERT_DEF =
 (* set up sets as a list-form  the {x1;...;xn} notation                  *)
 (* --------------------------------------------------------------------- *)
 
-val _ = add_listform {leftdelim = "{", rightdelim = "}", separator = ";",
+val _ = add_listform {leftdelim = [TOK "{"], rightdelim = [TOK "}"],
+                      separator = [TOK ";", BreakSpace(1,0)],
                       cons = "INSERT", nilstr = "EMPTY"};
 
 (* --------------------------------------------------------------------- *)
@@ -2981,7 +2982,7 @@ val _ = save_thm("ITSET_EMPTY",
                   REWRITE_RULE []
                       (MATCH_MP (SPEC (Term`{}`) ITSET_THM) FINITE_EMPTY));
 
-(* Could also prove by 
+(* Could also prove by
 
     PROVE_TAC [FINITE_INSERT,ITSET_THM,NOT_INSERT_EMPTY]);
 *)

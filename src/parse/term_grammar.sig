@@ -62,9 +62,9 @@ sig
      | FNAPP of rule_record list
 
   type listspec =
-     {separator  : string,
-      leftdelim  : string,
-      rightdelim : string,
+     {separator  : pp_element list,
+      leftdelim  : pp_element list,
+      rightdelim : pp_element list,
       cons       : string,
       nilstr     : string}
 
@@ -154,9 +154,7 @@ sig
   val find_prefix_lhses : grammar -> stack_terminal list
 
   val add_binder : grammar -> (string * int) -> grammar
-  val add_listform : grammar -> {separator : string, leftdelim : string,
-                                 rightdelim : string, cons : string,
-                                 nilstr : string} -> grammar
+  val add_listform : grammar -> listspec -> grammar
   datatype rule_fixity
      = Infix of associativity * int
      | Closefix

@@ -81,8 +81,8 @@ datatype infix_rule =
        | FNAPP of rule_record list
 
 type listspec =
-  {separator : string, leftdelim : string, rightdelim : string,
-   cons : string, nilstr : string}
+  {separator : pp_element list, leftdelim : pp_element list,
+   rightdelim : pp_element list, cons : string, nilstr : string}
 
 datatype grammar_rule =
          PREFIX of prefix_rule
@@ -319,7 +319,9 @@ val stdhol : grammar =
                         block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                         paren_style = Always}]),
             (NONE,
-             LISTRULE [{separator = ";", leftdelim = "<|", rightdelim = "|>",
+             LISTRULE [{separator = [RE (TOK ";"), BreakSpace(1,0)],
+                        leftdelim = [RE (TOK "<|")],
+                        rightdelim = [RE (TOK "|>")],
                         cons = reccons_special, nilstr = recnil_special}])],
    specials = {lambda = "\\", type_intro = ":", endbinding = ".",
                restr_binders = [], res_quanop = "::"},
@@ -328,6 +330,10 @@ val stdhol : grammar =
    user_additions = {parsers = Binarymap.mkDict String.compare,
                      printers = Binarymap.mkDict nthy_compare}
    }
+
+fun first_tok [] = raise Fail "Shouldn't happen parse_term 133"
+  | first_tok (RE (TOK s)::_) = s
+  | first_tok (_ :: t) = first_tok t
 
 local
   open stmonad
@@ -358,7 +364,9 @@ local
         mmap (specials_from_elm o rule_elements o #elements) rules
     | LISTRULE rlist => let
         fun process r =
-          add (#separator r) >> add (#leftdelim r) >> add (#rightdelim r)
+          add (first_tok (#separator r)) >>
+          add (first_tok (#leftdelim r)) >>
+          add (first_tok (#rightdelim r))
       in
         mmap process rlist
       end
@@ -387,7 +395,7 @@ fun find_suffix_rhses (G : grammar) = let
     | select (CLOSEFIX rules) =
         map (rel_list_to_toklist o rule_elements o #elements) rules
     | select (LISTRULE rlist) =
-        map (fn r => [STD_HOL_TOK (#rightdelim r)]) rlist
+        map (fn r => [STD_HOL_TOK (first_tok (#rightdelim r))]) rlist
     | select _ = []
   val suffix_rules = List.concat (map (select o #2) (rules G))
 in
@@ -405,7 +413,7 @@ fun find_prefix_lhses (G : grammar) = let
     | CLOSEFIX rules =>
         map (rel_list_to_toklist o rule_elements o #elements) rules
     | (LISTRULE rlist) =>
-        map (fn r => [STD_HOL_TOK (#leftdelim r)]) rlist
+        map (fn r => [STD_HOL_TOK (first_tok (#leftdelim r))]) rlist
     | _ => []
   end
   val prefix_rules = List.concat (map (select o #2) (rules G))
@@ -424,9 +432,9 @@ fun compatible_listrule (G:grammar) arg = let
           LISTRULE rlist => let
             fun check [] = NONE
               | check (r::rs) = let
-                  val rule_sep = #separator r
-                  val rule_left = #leftdelim r
-                  val rule_right = #rightdelim r
+                  val rule_sep = first_tok (#separator r)
+                  val rule_left = first_tok (#leftdelim r)
+                  val rule_right = first_tok (#rightdelim r)
                 in
                   if rule_sep = separator andalso rule_left = leftdelim andalso
                     rule_right = rightdelim then
@@ -602,8 +610,9 @@ in
   | LISTRULE rlist => let
       fun lrule_ok r =
         (#cons r <> term_name andalso #nilstr r <> term_name)  orelse
-        (#leftdelim r <> tok andalso #rightdelim r <> tok andalso
-         #separator r <> tok)
+        (first_tok (#leftdelim r) <> tok andalso
+         first_tok (#rightdelim r) <> tok andalso
+         first_tok (#separator r) <> tok)
     in
       LISTRULE (List.filter lrule_ok rlist)
     end
@@ -651,7 +660,29 @@ fun add_grule G0 r = G0 Gmerge [r]
 fun add_binder G0 (s, prec) =
   G0 Gmerge [(SOME prec, PREFIX (BINDER [BinderString s]))]
 
-fun add_listform G lrule = G Gmerge [(NONE, LISTRULE [lrule])]
+fun add_listform G lrule = let
+  fun ok_el e =
+      case e of
+        EndInitialBlock _ => false
+      | BeginFinalBlock _ => false
+      | RE TM => false
+      | LastTM => false
+      | FirstTM => false
+      | _ => true
+  fun check_els els =
+      case List.find (not o ok_el) els of
+        NONE => ()
+      | SOME s => raise GrammarError "Invalid pp_element in listform"
+  fun is_tok (RE (TOK _)) = true
+    | is_tok _ = false
+  fun one_tok pps =
+    if length (List.filter is_tok pps) = 1 then ()
+    else raise GrammarError "Must have exactly one TOK in listform elements"
+  val {separator, leftdelim, rightdelim, ...} = lrule
+  val _ = app check_els [separator, leftdelim, rightdelim]
+in
+  G Gmerge [(NONE, LISTRULE [lrule])]
+end
 
 fun prefer_form_with_tok (G0:grammar) (r as {term_name,tok}) = let
   val G1 = clear_prefs_for term_name G0
@@ -898,8 +929,9 @@ fun prettyprint_grammar pstrm (G :grammar) = let
     | INFIX VSCONS => add_string "TM TM  (binder argument concatenation)"
     | LISTRULE lrs => let
         fun pr_lrule {leftdelim, rightdelim, separator, ...} =
-          add_string ("\""^leftdelim^"\" ... \""^rightdelim^
-                      "\"  (separator = \""^ separator^"\")")
+          add_string ("\""^first_tok leftdelim^"\" ... \""^
+                      first_tok rightdelim^
+                      "\"  (separator = \""^ first_tok separator^"\")")
       in
         begin_block CONSISTENT 0;
         pr_list pr_lrule (fn () => add_string " |")

@@ -819,9 +819,9 @@ fun add_listform (x as {separator,leftdelim,rightdelim,cons,nilstr}) = let in
     update_grms "add_listform"
                 ("temp_add_listform",
                  String.concat
-                   ["{separator = ",   quote separator,
-                    ", leftdelim = ",  quote leftdelim,
-                    ", rightdelim = ", quote rightdelim,
+                   ["{separator = [",   pplistToString separator, "]\n",
+                    ", leftdelim = [",  pplistToString leftdelim, "]\n",
+                    ", rightdelim = [", pplistToString rightdelim, "]\n",
                     ", cons = ",       quote cons,
                     ", nilstr = ",     quote nilstr,
                     "}"])

@@ -52,7 +52,8 @@ val BAG_INSERT = new_definition (
   Term`BAG_INSERT (e:'a) b = (\x. if (x = e) then b e + 1 else b x)`);
 
 val _ = add_listform {cons = "BAG_INSERT", nilstr = "EMPTY_BAG",
-                      separator = ";", leftdelim = "{|", rightdelim = "|}"};
+                      separator = [TOK ";", BreakSpace(1,0)],
+                      leftdelim = [TOK "{|"], rightdelim = [TOK "|}"]};
 
 val BAG_INTER = Q.new_definition(
   "BAG_INTER",
@@ -1225,7 +1226,7 @@ val FINITE_BAGS_BCARD = prove(
 val BAG_CARD = new_specification
   ("BAG_CARD",["BAG_CARD"],
    CONV_RULE SKOLEM_CONV (
-    SIMP_RULE hol_ss 
+    SIMP_RULE hol_ss
        [GSYM boolTheory.RIGHT_EXISTS_IMP_THM] FINITE_BAGS_BCARD));
 
 val BAG_CARD_EMPTY =
@@ -1303,7 +1304,7 @@ val BAG_CHOICE_DEF = new_specification
   ("BAG_CHOICE_DEF",["BAG_CHOICE"],
    Q.prove(`?ch:('a -> num) -> 'a. !b. ~(b = {||}) ==> BAG_IN (ch b) b`,
            PROVE_TAC [MEMBER_NOT_EMPTY]));
-    
+
 
 (* ===================================================================== *)
 (* The REST of a bag after removing a chosen element.			 *)
