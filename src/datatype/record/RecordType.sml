@@ -372,11 +372,23 @@ in
 
     fun prove_semi11 upd_t = let
       fun tac s = STRUCT_CASES_TAC (SPEC (Psyntax.mk_var(s,typ)) cases_thm)
+      val r1 = mk_var("r1", typ)
+      val r2 = mk_var("r2", typ)
+      val upd_tty = type_of upd_t
+      val (dom_ty, _) = dom_rng upd_tty
+      val x = mk_var("x", dom_ty)
+      val y = mk_var("y", dom_ty)
+      val hyp_eq = mk_eq(list_mk_comb(upd_t, [x,r1]),
+                         list_mk_comb(upd_t, [y,r2]))
+      val concl_eq = mk_eq(x,y)
+      val goal = mk_imp(hyp_eq, concl_eq)
+      val thm0 =
+        prove(goal,
+              MAP_EVERY tac ["r1", "r2"] THEN
+              REWRITE_TAC [updfn_thm, oneone_thm] THEN STRIP_TAC)
     in
-      store_thm(#Name (Rsyntax.dest_const upd_t)^ "_semi11",
-                --`!x y r1 r2. (^upd_t x r1 = ^upd_t y r2) ==> (x = y)`--,
-                REPEAT GEN_TAC THEN MAP_EVERY tac ["r1", "r2"] THEN
-                REWRITE_TAC [updfn_thm, oneone_thm] THEN STRIP_TAC)
+      save_thm(#Name (Rsyntax.dest_const upd_t)^ "_semi11",
+               GENL [x,y,r1,r2] thm0)
     end
     val _ = map prove_semi11 updfn_terms
 
@@ -394,13 +406,15 @@ in
         accfn_terms
       val rhs = list_mk_conj rhs_tms
       val thmname = typename ^ "_component_equality"
-      val goal = list_mk_forall([var1, var2], mk_eq(lhs, rhs))
+      val goal = mk_eq(lhs, rhs)
       val tactic =
         REPEAT GEN_TAC THEN
         MAP_EVERY (STRUCT_CASES_TAC o C SPEC cases_thm) [var1, var2] THEN
         REWRITE_TAC [oneone_thm, accessor_thm]
+      val thm0 = prove(goal, tactic)
     in
-      val component_wise_equality = store_thm(thmname, goal, tactic)
+      val component_wise_equality =
+        save_thm(thmname, GENL [var1, var2] thm0)
     end
 
     (* prove that a complete chain of updates over any value is
