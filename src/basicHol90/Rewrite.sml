@@ -231,30 +231,25 @@ and FILTER_ONCE_ASM_REWRITE_TAC f thl =
           (fn asl => ONCE_REWRITE_TAC ((filter (f o concl) asl) @ thl));
 
 
-(*---------------------------------------------------------------------------
- * SUBST_MATCH (|-u=v) th   searches for an instance of u in
- * (the conclusion of) th and then substitutes the corresponding
- * instance of v. 
+(*---------------------------------------------------------------------------*
+ * SUBST_MATCH (|-u=v) th   searches for an instance of u in                 *
+ * (the conclusion of) th and then substitutes the corresponding             *
+ * instance of v.                                                            *
  *---------------------------------------------------------------------------*)
-local exception FIND_MATCH_ERR
-      fun find_match u =
-         let fun find_mt t =
-               Term.match_term u t   
-                handle HOL_ERR _ => find_mt(Term.rator t) 
-                handle HOL_ERR _ => find_mt(Term.rand t)  
-                handle HOL_ERR _ => find_mt(#Body(Term.dest_abs t)) 
-                handle HOL_ERR _ => raise FIND_MATCH_ERR
-         in
-           find_mt
-         end
-in
+
 fun SUBST_MATCH eqth th =
-   let val (tm_inst,ty_inst) = find_match (Dsyntax.lhs(concl eqth)) (concl th)
-   in
-     SUBS [INST tm_inst (INST_TYPE ty_inst eqth)] th
-   end
-   handle FIND_MATCH_ERR => raise ERR "SUBST_MATCH" ""
-end;
+ let val matchr = Term.match_term (Dsyntax.lhs(concl eqth))
+     fun find_match t =
+            matchr t              handle HOL_ERR _ => 
+            find_match(Term.rator t) handle HOL_ERR _ => 
+            find_match(Term.rand t)  handle HOL_ERR _ => 
+            find_match(#Body(Term.dest_abs t)) 
+     val (tm_inst,ty_inst) = find_match (concl th)
+ in
+    SUBS [INST tm_inst (INST_TYPE ty_inst eqth)] th
+ end
+ handle HOL_ERR _ => raise ERR "SUBST_MATCH" "";
+
 
 
 end; (* REWRITE *)
