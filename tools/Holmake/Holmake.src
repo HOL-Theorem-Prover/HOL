@@ -6,7 +6,6 @@
 
 (* Copyright University of Cambridge, 1999 *)
 (* Author: Michael Norrish *)
-(* $Id$ *)
 
 (* Global parameters, which get set at configuration time *)
 
@@ -490,6 +489,7 @@ in
     end
   | BuildScript s => let
       val scriptsml_file = SML (Script s)
+      val scriptsml = fromFile scriptsml_file
       val script   = s^"Script"
       val scriptuo = script^".uo"
       val scriptui = script^".ui"
@@ -501,26 +501,26 @@ in
                      " to produce theory building executable\n")
     in
       if compile debug (include_flags@["-o", script, scriptuo]) = success
-      then let val script' = MK_XABLE script
-               val thysmlfile = s^"Theory.sml"
-               val thysigfile = s^"Theory.sig"
-               val _ =
-                 app (fn s => FileSys.remove s handle OS.SysErr _ => ())
-                 [thysmlfile, thysigfile]
-               val res2    = system (fullPath [".", script'])
-               val _       = app FileSys.remove [script', scriptuo, scriptui]
-               val thyproduced =
-                 (FileSys.access(thysmlfile, [FileSys.A_READ]) orelse
-                  (print (script'^" didn't produce "^thysmlfile^"; \
-                         \maybe need export_theory in Script\n");
-                   false)) andalso
-                 (FileSys.access(thysigfile, [FileSys.A_READ]) orelse
-                  (print (script'^" didn't produce "^thysigfile^"; \
-                         \maybe need export_theory in Script\n");
-                   false))
-           in
-             res2 = success andalso thyproduced
-           end
+      then let
+        val script' = MK_XABLE script
+        val thysmlfile = s^"Theory.sml"
+        val thysigfile = s^"Theory.sig"
+        val _ =
+          app (fn s => FileSys.remove s handle OS.SysErr _ => ())
+          [thysmlfile, thysigfile]
+        val res2    = system (fullPath [".", script'])
+        val _       = app FileSys.remove [script', scriptuo, scriptui]
+      in
+        (res2 = success) andalso
+        (FileSys.access(thysmlfile, [FileSys.A_READ]) orelse
+         (print ("Script file "^script'^" didn't produce "^thysmlfile^"; \n\
+                 \  maybe need export_theory() at end of "^scriptsml^"\n");
+         false)) andalso
+        (FileSys.access(thysigfile, [FileSys.A_READ]) orelse
+         (print ("Script file "^script'^" didn't produce "^thysigfile^"; \n\
+                 \  maybe need export_theory() at end of "^scriptsml^"\n");
+         false))
+      end
       else (print ("Failed to build script file, "^script^"\n"); false)
     end handle CompileFailed => false
              | FileNotFound => false
