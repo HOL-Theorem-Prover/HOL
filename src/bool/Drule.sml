@@ -1257,16 +1257,17 @@ fun GSPEC th =
  * should be free in the theorem, except for outer bound variables.          *
  *---------------------------------------------------------------------------*)
 
-fun PART_MATCH partfn th =
-  let val pth = GSPEC (GEN_ALL th)
-      val conclfvs = Term.FVL [concl th] empty_tmset
-      val hypfvs = Thm.hyp_frees th
-      val hyptyvars = HOLset.listItems (Thm.hyp_tyvars th)
-      val pat = partfn(concl pth)
-      val matchfn =
-          match_terml hyptyvars (HOLset.intersection(conclfvs, hypfvs)) pat
-  in fn tm => INST_TY_TERM (matchfn tm) pth
-  end;
+fun PART_MATCH partfn th = let
+  val th = SPEC_ALL th
+  val conclfvs = Term.FVL [concl th] empty_tmset
+  val hypfvs = Thm.hyp_frees th
+  val hyptyvars = HOLset.listItems (Thm.hyp_tyvars th)
+  val pat = partfn(concl th)
+  val matchfn =
+      match_terml hyptyvars (HOLset.intersection(conclfvs, hypfvs)) pat
+in
+  (fn tm => INST_TY_TERM (matchfn tm) th)
+end;
 
 
 (* -------------------------------------------------------------------- *)
