@@ -1,4 +1,5 @@
 MANIFEST
+========
 
 dBScript.sml : develops a theory of (untyped) de-Bruijn terms.
 
@@ -20,9 +21,20 @@ in
                 Michael Norrish
                 Proceedings of the Merlin 2003 Workshop
 
+NEWLib.{sig,sml} :
+               simple tactics to use with the NEW constant.
+
+swapScript.sml :
+               The theory of permutations (over strings, sets, and
+               importantly, terms).  Proof of a recursion principle
+               for functions over terms.  (This work is described in
+               "Recursive function definition for terms with binders",
+               Michael Norrish.  TPHOLs'04, LNCS 3223.)
+
 ncLib.{sig,sml} :
-               some simple tools for doing proofs with name-carrying
-               syntax.
+               Tools for doing proofs with name-carrying syntax,
+               including function definition and facilities from
+               NEWLib.
 
 chap2Script.sml :
                mechanisation of chapter 2 of Hankin's "Lambda calculi:
@@ -59,9 +71,13 @@ raw_syntaxScript.sml :
           --------------------------------------------------
 
 sttScript.sml :
-               A proof that a typing relation for the simply typed
-               lambda calculus (the details of which are sketched)
-               satisfies a weakening property: if a term has a type in
-               a context G, then it has the same type in a "wider"
-               context G'.  Thanks to Randy Pollack for the suggestion
-               to try this proof.
+               Proofs suggested by Randy Pollack:
+               1.  A proof that a typing relation for the simply typed
+                   lambda calculus (the details of which are sketched)
+                   satisfies a weakening property: if a term has a
+                   type in a context G, then it has the same type in a
+                   "wider" context G'.
+               2.  A proof that this original typing relation is
+                   equivalent to another relation, where the second
+                   relation has an infinitary (universally quantified)
+                   hypothesis in the rule for the abstraction case.
