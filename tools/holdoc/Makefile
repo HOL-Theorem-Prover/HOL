@@ -9,7 +9,7 @@ DVIPS=dvips
 
 # main target:
 
-all: simpledump simpletexdump lts_to_latex mng_to_latex
+all: simpledump simpletexdump lts_to_latex mng_to_latex hol_to_latex
 
 # program targets:
 
@@ -32,6 +32,11 @@ MNG_TO_LATEX_OBJS=hollex.cmo holdoc_init.cmo holdoc_munge.cmo mng_to_latex.cmo
 
 mng_to_latex : $(MNG_TO_LATEX_OBJS)
 	$(OCAMLC) str.cma $(MNG_TO_LATEX_OBJS) -o mng_to_latex
+
+HOL_TO_LATEX_OBJS=hollex.cmo holdoc_init.cmo holdoc_munge.cmo hol_to_latex.cmo
+
+hol_to_latex : $(HOL_TO_LATEX_OBJS)
+	$(OCAMLC) str.cma $(HOL_TO_LATEX_OBJS) -o hol_to_latex
 
 # document targets:
 

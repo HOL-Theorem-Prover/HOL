@@ -8,3 +8,5 @@ val lts_latex_render : unit -> unit
 (* render stdin (LaTeX with embedded HOL) into LaTeX on stdout *)
 val mng_latex_render : unit -> unit
 
+(* render stdin (HOL source) into LaTeX on stdout *)
+val hol_latex_render : unit -> unit

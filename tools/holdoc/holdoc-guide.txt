@@ -185,6 +185,12 @@ the specified TeX, literally.  Since HOL strings have no escapes, you
 don't need to escape the backslash, but you can't write a double
 quote.
 
+Note that in TeX, you should usually append a space, thus:
+
+   (*[ HOL_SYM_ALIST --> "\longrightarrow " ]*)
+
+in case the next character is not a backslash or other delimiter!
+
 
 The last two are a bit different.
 
