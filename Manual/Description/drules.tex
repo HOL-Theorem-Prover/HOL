@@ -1,0 +1,1348 @@
+\chapter{Derived Inference Rules}
+\label{derived-rules}
+
+The notion of {\it proof\/} was defined in the abstract in Chapter~\ref{logic}:
+a proof of a sequent $(\Gamma,t)$
+from a set of sequents $\Delta$ (with respect to a deductive system
+${\cal D}$)
+was defined to be a chain of sequents culminating in $(\Gamma,t)$, such
+that every element of the chain either belongs to $\Delta$ or else
+follows from $\Delta$ and earlier elements of the chain by
+deduction.
+The notion of a {\it theorem\/} was also defined in Chapter~\ref{logic}:
+a theorem of a deductive system is a sequent that follows from the
+empty set of sequents by deduction; \ie, it is the last element of a proof
+from the empty set of sequents, in the deductive system.
+In this section, proofs and theorems are made concrete in \HOL.
+
+The deductive system of \HOL\
+was sketched in Section~\ref{rules}, where
+the eight families of primitive inferences making up the
+deductive system were specified by diagrams. It was explained that
+these families of inferences are represented in \HOL\ via
+\ML\ functions, and that theorems
+are represented by an \ML\ abstract type called \ml{thm}.\index{thm@\ml{thm}}
+The eight \ML\ functions corresponding to the inferences
+are operations of the type \ml{thm}, and each of the eight
+returns a value of type \ml{thm}. It was explained that the
+type \ml{thm} has primitive destructors, but no primitive
+constructor; and that in that way, the logic is protected against
+the computation of theorems except by functions representing
+primitive inferences, or compositions of these.
+
+Finally, the primitive \HOL\ logic was supplemented by three primitive
+constants and five axioms, to form the basic logic\footnote{This
+corresponds to the \HOL\ theory {\tt BASIC-HOL}; see
+Section~\ref{HOL-ancestry}}.
+The primitive inferences, together with the primitive constants,
+the five axioms, and a collection of definitions,
+give a starting point for constructing proofs,
+and hence computing theorems. However, proving even the simplest
+theorems from this minimal basis costs considerable effort. The
+basis does not immediately provide the transitivity
+of equality, for example, or a means of universal quantification;
+both of these themselves have to be derived.
+
+\section{Simple derivations}
+
+As an illustration of a proof in \HOL\, the following chain of theorems
+forms a proof (from the empty set, in the
+\HOL\ deductive system), for the particular terms \ml{"}$t_1$\ml{"} and \ml{"}$t_2$\ml{"}, both of \HOL\ type \ml{":bool"}:
+
+\begin{enumerate}
+\item $t_1$\ml{ ==> }$t_2$\ml{ |- }$t_1$\ml{ ==> }$t_2$
+
+\item $t_1$\ml{ |- }$t_1$
+
+\item $t_1$\ml{ ==> }$t_2$\ml{, }$t_1$\ml{ |- }$t_2$
+\end{enumerate}
+
+\noindent That is, the third theorem follows from the first and second.
+
+In the session below, the proof is performed in the \HOL\ system,
+using the \ML\ functions \ml{ASSUME}\index{ASSUME@\ml{ASSUME}} and
+\ml{MP}.
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#top_print print_all_thm;;
+- : (thm -> void)
+
+#let th1 = ASSUME "t1 ==> t2";;
+th1 = t1 ==> t2 |- t1 ==> t2
+
+#let th2 = ASSUME "t1:bool";;
+th2 = t1 |- t1
+
+#MP th1 th2;;
+t1 ==> t2, t1 |- t2
+\end{verbatim}\end{session}
+
+\noindent More briefly, one could evaluate the following, and `count'\index{counting inferences, in HOL proofs@counting inferences, in \HOL\ proofs} the
+invocations of functions representing primitive inferences.
+
+\begin{session}\begin{verbatim}
+#set_flag(`timing`, true);;
+false : bool
+Run time: 0.0s
+
+#MP(ASSUME "t1 ==> t2")(ASSUME "t1:bool");;
+t1 ==> t2, t1 |- t2
+Run time: 0.0s
+Intermediate theorems generated: 3
+\end{verbatim}\end{session}
+
+\noindent Each of the three
+inference steps of the abstract proof
+corresponds
+to the application\index{inferences, in HOL logic@inferences, in \HOL\ logic!as ML function applications@as \ML\ function applications}\index{proof steps, as ML function applications@proof steps, as \ML\ function applications}\index{proof!the notion of, in HOL system@the notion of, in \HOL\ system} of an \ML\ function in the performance of the proof in \HOL; and each of the \ML\
+functions corresponds to a primitive inference of the deductive
+system.
+
+It is worth emphasising that, in either case, every
+primitive inference in the proof chain is made, in the sense
+that for each inference, the corresponding \ML\ function is evaluated.  That is,
+\HOL\ permits no short-cut around the necessity of performing
+complete proofs.  The short-cut provided by derived\index{inferences, in HOL logic@inferences, in \HOL\ logic!in derived rules} inference rules
+(as implemented in \ML) is around the necessity of {\it specifying\/}
+every step; something that would be impossible for a proof of any
+length. It can be seen from this that the derived rule,\index{proofs, in HOL logic@proofs, in \HOL\ logic!as ML function applications@as \ML\ function applications}\index{proofs, in HOL logic@proofs, in \HOL\ logic!as generated by derived rules}\index{derived rules, in HOL logic@derived rules, in \HOL\ logic!importance of} and its representation as an \ML\ function, is essential to the \HOL\
+methodology; theorem proving would be otherwise impossible.
+
+There are, of course, an infinite number of proofs, of the `form'
+shown in the example,
+that can be conducted in \HOL: one for every pair of \ml{":bool"}-typed terms.
+Moreover, every time a theorem of the form
+
+$$t_1 \ \imp \ t_2, \ t_1 \ \vdash \ t_2$$
+
+\noindent is required, its proof must be constructed anew. To capture the
+general pattern of inference, an \ML\ function can be written to
+implement an inference rule as a derivation from the primitive inferences.
+Abstractly, a {\it derived inference rule\/}\index{derived rules, in HOL logic@derived rules, in \HOL\ logic!justification of}
+is a rule that can be justified on the basis of the
+primitive inference rules (and/or the axioms).
+In the present case, the rule required `undischarges' assumptions.
+It is specified for \HOL\ by
+
+\bigskip
+
+\begin{center}
+\begin{tabular}{c}
+$\Gamma${\small\verb% |- %}$t_1${\small\verb% ==> %}$t_2$\\ \hline
+$\Gamma\cup\{t_1\}${\small\verb% |- %}$t_2$
+\end{tabular}
+\end{center}
+
+\bigskip
+
+\noindent This general rule is valid because from a \HOL\ theorem of the
+form $\Gamma${\small\verb% |- %}$t_1${\small\verb%==>%}$t_2$, the theorem
+$\Gamma\cup\{t_1\}${\small\verb% |- %}$t_2$ can be derived
+as for the specific instance above.
+The rule can be implemented in \ML\ as a function (\ml{UNDISCH},
+say)\index{UNDISCH@\ml{UNDISCH}} that calls the
+appropriate sequence of primitive
+inferences. The \ML\ definition of \ml{UNDISCH} is simply
+
+\begin{session}\begin{verbatim}
+#let UNDISCH th = MP th (ASSUME(fst(dest_imp(concl th))));;
+UNDISCH = - : (thm -> thm)
+\end{verbatim}\end{session}
+
+\noindent This provides a function that maps a theorem to a theorem;
+that is, performs proofs in \HOL.
+The following session illustrates the use of the derived rule, on
+a consequence of the axiom \ml{IMP\_ANTISYM\_AX}. (The inferences are
+counted\index{counting inferences, in HOL proofs@counting inferences, in \HOL\ proofs}.)
+Assume that the printing of theorems has been adjusted as above and \ml{th}
+is bound as shown below:
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#th;;
+|- (t1 ==> t2) ==> (t2 ==> t1) ==> (t1 = t2)
+Run time: 0.0s
+
+#set_flag(`timing`,true);;
+true : bool
+Run time: 0.0s
+
+#UNDISCH th;;
+t1 ==> t2 |- (t2 ==> t1) ==> (t1 = t2)
+Run time: 0.1s
+Intermediate theorems generated: 2
+
+#UNDISCH it;;
+t1 ==> t2, t2 ==> t1 |- t1 = t2
+Run time: 0.0s
+Intermediate theorems generated: 2
+\end{verbatim}\end{session}
+
+\noindent Each successful application of {\small\verb%UNDISCH%}
+to a theorem invokes an application
+of {\small\verb%ASSUME%}, followed by an application of {\small\verb%MP%};
+\ml{UNDISCH} constructs the
+2-step proof for any given theorem (of appropriate form).
+As can be
+seen, it relies on the class of \ML\ functions that access \HOL\ syntax:
+in particular, \ml{concl} to produce the conclusion
+of the theorem, \ml{dest\_imp} to separate the implication, and the
+selector \ml{fst} to choose the antecedent.
+
+This particular example is very simple, but a derived inference rule
+can perform proofs of arbitrary length.  It can also make use of
+previously defined rules.  In this way, the
+normal inference patterns can be developed much more quickly and easily;
+transitivity, generalization, and so on,
+support the familiar patterns of inference.
+
+A number of derived inference rules are
+pre-defined when the \HOL\ system is entered
+(of which \ml{UNDISCH} is one of the first).
+In Section~\ref{avra_standard}, the
+abstract derivations are given for the pre-defined rules
+that reflect the more usual inference patterns of
+the predicate (and lambda) calculi.
+Like those shown, some of the pre-defined
+derived rules in \HOL\ generate relatively short proofs.
+Others invoke thousands of primitive inferences,
+and clearly save a great deal of effort. Furthermore,
+rules can be defined by the user to make still larger steps, or to
+implement more specialized patterns.
+
+All of the pre-defined derived rules in \HOL\ are described
+in \REFERENCE.
+
+\section{Rewriting}
+\label{avra_rewrite}
+
+\index{rewriting!rules for|(}
+\index{REWRITE_RULE@\ml{REWRITE\_RULE}|(}
+Included in the set of derived inferences that are pre-defined in \HOL\
+is a group of rules with complex definitions that do a limited amount
+of `automatic' theorem-proving in the form of rewriting.
+The ideas and implementation were originally developed by Milner\index{Milner, R.}
+and Wadsworth\index{Wadsworth, C.} for
+Edinburgh \LCF,\index{LCF@\LCF!Edinburgh} and were later implemented more flexibly and efficiently
+by Paulson\index{Paulson, L.} and Huet\index{Huet, G.} for Cambridge \LCF.\index{LCF@\LCF!Cambridge}  They appear in \HOL\ in
+the Cambridge form. The basic rewriting rule is \ml{REWRITE\_RULE}.
+All of the rewriting rules are described in detail in \REFERENCE.
+
+\ml{REWRITE\_RULE} uses a list of equational theorems\index{equational theorems, in HOL logic@equational theorems, in \HOL\ logic!use of in rewriting}\index{theorems, in HOL logic@theorems, in \HOL\ logic!equational}
+(theorems whose conclusions can be regarded as having the form
+$t_1${\small\verb% = %}$t_2$) to replace
+any subterms of an object theorem that `match' $t_1$ by the
+corresponding instance of $t_2$. The rule matches recursively and to any depth,
+until no more replacements can be made,
+using internally defined search, matching and
+instantiation\index{type instantiation, in HOL logic@type instantiation, in \HOL\ logic!in rewriting rule} algorithms.  The validity
+ of \ml{REWRITE\_RULE} rests
+ultimately on the primitive rules \ml{SUBST} (for making the substitutions);
+\ml{INST\_TYPE}\index{INST_TYPE@\ml{INST\_TYPE}} (for instantiating types); and the derived rules for
+generalization and specialization (see Sections~\ref{avra_gen}
+and \ref{avra_spec}) for instantiating terms.  The definition
+of \ml{REWRITE\_RULE} in \ML\
+also relies on a large number of general and \HOL-oriented
+\ML\ functions. The implementation is partly described in
+Chapter~\ref{avra_conv}.
+
+In practice, the derived rule \ml{REWRITE\_RULE} plays a central role
+in proofs, because it takes over a very large number of inferences
+which may happen in a complex and unpredictable order. It is unlike
+any other primitive or pre-defined rule, first because of the number of
+inferences it generates\footnote{The number of inferences performed
+by this rule
+is generally `inflated'; \ie\ is generally greater than the length of the
+proof itself, if the proof could be `seen'.  This is because,
+in the current implementation, some
+inference is done during the search phase that is not necessarily in
+support of successful replacements.}; and second because its outcome is often
+unexpected. Its power is increased by the fact that any existing
+equational theorem can be supplied as a `rewrite rule', including
+a standard \HOL\ set of pre-proved tautologies; and these rewrite
+rules can interact with each other in the rewriting process to
+transform the original theorem.
+
+The application of \ml{REWRITE\_RULE}, in the session below,
+illustrates that replacements are made at all levels of the
+structure of a term.
+The example is numerical;
+the infixes {\small\verb%"$>"%} and {\small\verb%"$<"%} are
+the usual `greater than'  and `less than' relations, respectively,
+and \ml{"SUC"}, the
+usual successor function.
+Use is made of the pre-existing definition of {\small\verb%"$>"%}:
+\ml{GREATER} (see \REFERENCE).
+The timing\index{counting inferences, in HOL proofs@counting inferences, in \HOL\ proofs} facility is used again, for interest, and the printing
+of theorems is adjusted as above.
+
+
+\setcounter{sessioncount}{1}
+\begin{session}\begin{verbatim}
+#top_print print_all_thm;;
+- : (thm -> void)
+
+#set_flag(`timing`,true);;
+false : bool
+Run time: 0.0s
+
+#REWRITE_RULE
+ [GREATER]
+ (ASSUME "SUC 4 > 0 = (SUC 3 > 0 = (SUC 2 > 0 = (SUC 1 > 0 = SUC 0 > 0)))");;
+##Definition GREATER autoloaded from theory `arithmetic`.
+GREATER = |- !m n. m > n = n < m
+Run time: 1.5s
+Intermediate theorems generated: 1
+
+(SUC 4) > 0 =
+((SUC 3) > 0 = ((SUC 2) > 0 = ((SUC 1) > 0 = (SUC 0) > 0)))
+|- 0 < (SUC 4) =
+   (0 < (SUC 3) = (0 < (SUC 2) = (0 < (SUC 1) = 0 < (SUC 0))))
+Run time: 0.3s
+Intermediate theorems generated: 23
+\end{verbatim}\end{session}
+
+\noindent Notice that rewriting
+equations can be extracted from
+universally quantified theorems.
+To construct the
+proof step-wise, with all of the instantiations,
+substitutions, and uses of transitivity, \etc,
+would be a lengthy process. The rewriting rules make it easy,
+and do so whilst still generating the entire chain of inferences.
+\index{REWRITE_RULE@\ml{REWRITE\_RULE}|)}
+\index{rewriting!rules for|)}
+
+\section{Derivation of the standard rules}
+\label{avra_standard}
+
+\index{derived rules, in HOL logic@derived rules, in \HOL\ logic!pre-defined|(}
+The \HOL\ system provides all the standard introduction
+and elimination rules of the predicate calculus pre-defined
+as derived inferences.
+It is these derived rules, rather than the primitive rules, that
+one normally uses in practice.
+In this section, the derivations of some of the standard
+rules are given, in sequence. These derivations only use the axioms and
+definitions in the theory \ml{bool}
+(see Section~\ref{boolthy}), the eight primitive inferences of the \HOL\
+logic, and inferences defined earlier in the sequence.
+
+Theorems,\index{theorems, in HOL logic@theorems, in \HOL\ logic!as inference rules} in accordance with the definition given
+at the beginning of this chapter,
+are treated as rules without hypotheses; thus the derivation
+of a theorem resembles the derivation of a rule except in not having
+hypotheses. (The derivation of \ml{TRUTH},
+Section~\ref{avra_T}, is the only example given of this,
+but there are several others in \HOL.)
+There are also some rules that are intrinsically more general than theorems.
+For example, for any two terms $t_1$ and $t_2$, the theorem
+$\vdash(\lquant{x}t_1)t_2 = t_1[t_2/x]$ follows by the primitive
+rule \rul{BETA\_CONV}. The rule \ml{BETA\_CONV}
+returns a theorem for each pair of terms $t_1$ and $t_2$, and is
+therefore equivalent to an infinite family\index{families of inferences, in HOL logic@families of inferences, in \HOL\ logic} of theorems. No single theorem
+can be expressed in the \HOL\ logic that is equivalent to \rul{BETA\_CONV}.\index{theorems, in HOL logic@theorems, in \HOL\ logic!rules inexpressible as}\index{beta-conversion, in HOL logic@beta-conversion, in \HOL\ logic!not expressible as a theorem}
+(See Chapter~\ref{avra_conv} for further discussion of this point.)
+(\ml{UNDISCH} is not a rule of this sort, as it can, in fact,
+be expressed as a theorem.)
+
+For each derivation given below, there is an \ML\ function definition in
+the \HOL\ system that
+implements the derived rule as a procedure in \ML. The actual
+implementation in the
+\HOL\ system differs in some cases
+from the derivations given here, since the system code has
+been optimised for improved performance.
+
+In addition, for reasons that are mostly historical, not all the
+inferences that are derived in terms of the abstract logic are actually derived
+in the current version of the \HOL\ system.
+That is, there are
+currently about forty rules that are installed in the system on an `axiomatic'
+basis, all of which should be derived by explicit inference.
+Although the current status of these rules is not satisfactory,
+and it is planned, as a high priority,
+to derive them properly in a future version, their current status
+does not actually compromise the consistency of the logic.  In effect,
+the existing \HOL\ system has a deductive system more comprehensive
+than the one presented abstractly, but the model outlined in
+Chapter~\ref{semantics} would easily extend to cover it.
+\index{derived rules, in HOL logic@derived rules, in \HOL\ logic!pre-defined|)}
+
+For reference, in \HOL\ Version 2.0 the following rules that should be
+derived\index{inference rules, of HOL logic@inference rules, of \HOL\ logic!some not properly derived|(}\index{rules in HOL logic, some not properly derived@rules in \HOL\ logic, some not properly derived|(} are not derived, but (for efficiency) are implemented as primitives. The list includes some conversions and conversion-valued functions (conversions are
+discussed in Chapter~\ref{avra_conv}).
+\vfill
+\newpage
+
+\begin{hol}
+\index{derived rules, in HOL logic@derived rules, in \HOL\ logic!list of axiomatic}
+\index{AP_TERM@\ml{AP\_TERM}}
+\index{AP_THM@\ml{AP\_THM}}
+\index{CCONTR@\ml{CCONTR}}
+\index{CHOOSE@\ml{CHOOSE}}
+\index{CONJ@\ml{CONJ}}
+\index{CONJUNCT1@\ml{CONJUNCT1}}
+\index{CONJUNCT2@\ml{CONJUNCT2}}
+\index{DISJ_CASES@\ml{DISJ\_CASES}}
+\index{DISJ1@\ml{DISJ1}}
+\index{DISJ2@\ml{DISJ2}}
+\index{EQ_IMP_RULE@\ml{EQ\_IMP\_RULE}}
+\index{EQ_MP@\ml{EQ\_MP}}
+\index{EQT_INTRO@\ml{EQT\_INTRO}}
+\index{ETA_CONV@\ml{ETA\_CONV}}
+\index{EXISTS@\ml{EXISTS}}
+\index{EXT@\ml{EXT}}
+\index{GEN@\ml{GEN}}
+\index{MK_ABS@\ml{MK\_ABS}}
+\index{MK_COMB@\ml{MK\_COMB}}
+\index{num_CONV@\ml{num\_CONV}}
+\index{SPEC@\ml{SPEC}}
+\index{SUBS@\ml{SUBS}}
+\index{SUBS_OCCS@\ml{SUBS\_OCCS}}
+\index{SUBST_CONV@\ml{SUBST\_CONV}}
+\index{SYM@\ml{SYM}}
+\index{TRANS@\ml{TRANS}}
+\begin{verbatim}
+   ADD_ASSUM              CONTR                  IMP_ANTISYM_RULE
+   ALPHA                  DEF_EXISTS_RULE        IMP_TRANS
+   AP_TERM                DISJ_CASES             INST
+   AP_THM                 DISJ1                  MK_ABS
+   SUBS                   DISJ2                  MK_COMB
+   SUBS_OCCS              EQ_IMP_RULE            MK_EXISTS
+   CCONTR                 EQ_MP                  NOT_ELIM
+   CHOOSE                 EQT_INTRO              NOT_INTRO
+   CONJ                   ETA_CONV               num_CONV
+   EXISTS                 SPEC                   TRANS
+   EXT                    SUBST_CONV             CONJUNCT1
+   GEN                    SYM                    CONJUNCT2
+\end{verbatim}\end{hol}
+\index{inference rules, of HOL logic@inference rules, of \HOL\ logic!some not properly derived|)}
+\index{rules in HOL logic, some not properly derived@rules in \HOL\ logic, some not properly derived|)}
+
+\index{inference rules, of HOL logic@inference rules, of \HOL\ logic!derived|(}
+The derivations that follow consist of sequences of numbered steps each of
+which
+\begin{enumerate}
+\item is an axiom, or
+\item is a hypothesis of the rule being derived, or
+\item follows from preceding steps by a rule of inference (either primitive
+or previously derived).
+\end{enumerate}
+
+\noindent Note that the abbreviation \ml{conv} is used for the \ML\
+type \ml{term -> thm}.\footnote{This stands for `conversion', as
+explained in Chapter~\ref{avra_conv}.}
+
+\subsection{Adding an assumption}\index{derived rules, in HOL logic@derived rules, in \HOL\ logic!list and derivations of some|(}
+
+\begin{boxed}
+\index{ADD_ASSUM@\ml{ADD\_ASSUM}|pin}
+\begin{verbatim}
+   ADD_ASSUM : term -> thm -> thm
+\end{verbatim}\end{boxed}
+
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma\turn t\over \Gamma,\ t'\turn t$$
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $t'\turn t'$ \hfill [\rul{ASSUME}]
+\item $\Gamma\turn t$ \hfill [Hypothesis]
+\item $\Gamma\turn t'\imp t$ \hfill [\rul{DISCH} 2]
+\item $\Gamma,\ t'\turn t$ \hfill [\rul{MP} 3,1]
+\end{proof}
+
+
+
+%\subsection{Undischarging [\rul{UNDISCH}]}
+\subsection{Undischarging}
+
+
+\begin{boxed}
+\index{implication, in HOL logic@implication, in \HOL\ logic!inference rules for}
+\index{UNDISCH@\ml{UNDISCH}|pin}
+\begin{verbatim}
+   UNDISCH : thm -> thm
+\end{verbatim}\end{boxed}
+
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma\turn t_1\imp t_2 \over\Gamma,\ t_1\turn t_2$$
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $t_1\turn t_1$ \hfill [\rul{ASSUME}]
+\item $\Gamma\turn t_1\imp t_2$ \hfill [Hypothesis]
+\item $\Gamma,\ t_1\turn t_2$ \hfill [\rul{MP} 2,1]
+\end{proof}
+
+
+
+
+\subsection{Symmetry of equality}
+
+
+\begin{boxed}
+\index{SYM@\ml{SYM}|pin}
+\index{symmetry of equality rule, in HOL logic@symmetry of equality rule, in \HOL\ logic}
+\index{equality, in HOL logic@equality, in \HOL\ logic!symmetry rule for}
+\begin{verbatim}
+   SYM : thm -> thm
+\end{verbatim}\end{boxed}
+
+
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma\turn t_1 = t_2\over \Gamma\turn t_2 = t_1$$
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\Gamma\turn t_1=t_2$\hfill [Hypothesis]
+\item $\turn t_1=t_1$ \hfill [\rul{REFL}]
+\item $\Gamma\turn t_2=t_1$\hfill [\rul{SUBST} 1,2]
+\end{proof}
+
+
+
+\subsection{Transitivity of equality}
+
+
+\begin{boxed}
+\index{transitivity of equality rule, in HOL logic@transitivity of equality rule, in \HOL\ logic}
+\index{equality, in HOL logic@equality, in \HOL\ logic!transitivity rule for}
+\index{TRANS@\ml{TRANS}|pin}
+\begin{verbatim}
+   TRANS : thm -> thm -> thm
+\end{verbatim}\end{boxed}
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma_1\turn t_1=t_2\qquad\qquad\qquad \Gamma_2\turn t_2=t_3 \over
+\Gamma_1\cup\Gamma_2\turn t_1=t_3$$
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\Gamma_2\turn t_2=t_3$\hfill [Hypothesis]
+\item $\Gamma_1\turn t_1=t_2$\hfill [Hypothesis]
+\item $\Gamma_1\cup\Gamma_2\turn t_1=t_3$\hfill [\rul{SUBST} 1,2]
+\end{proof}
+
+
+
+\subsection{Application of a term to a theorem}\index{function application, in HOL logic@function application, in \HOL\ logic!inference rules for}
+
+\begin{boxed}
+\index{AP_TERM@\ml{AP\_TERM}|pin}
+\begin{verbatim}
+   AP_TERM : term -> thm -> thm
+\end{verbatim}\end{boxed}
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma\turn t_1=t_2\over\Gamma\turn t\ t_1 = t\ t_2$$
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\Gamma\turn t_1=t_2$\hfill [Hypothesis]
+\item $\turn t\ t_1 = t\ t_1$ \hfill [\rul{REFL}]
+\item $\Gamma\turn t\ t_1 = t\ t_2$ \hfill [\rul{SUBST} 1,2]
+\end{proof}
+
+
+
+\subsection{Application of a theorem to a term}
+
+\begin{boxed}
+\index{AP_THM@\ml{AP\_THM}|pin}
+\begin{verbatim}
+   AP_THM : thm -> conv
+\end{verbatim}\end{boxed}
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma\turn t_1=t_2\over \Gamma\turn t_1\ t = t_2\ t$$
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\Gamma\turn t_1=t_2$\hfill [Hypothesis]
+\item$\turn t_1\ t = t_1\ t$\hfill [\rul{REFL}]
+\item $\Gamma\turn t_1\ t = t_2\ t$\hfill [\rul{SUBST} 1,2]
+\end{proof}
+
+
+
+\subsection{Modus Ponens for equality}
+\label{avra_eq_mp}
+
+\begin{boxed}
+\index{EQ_MP@\ml{EQ\_MP}|pin}
+\index{equality, in HOL logic@equality, in \HOL\ logic!MP rule for@\ml{MP} rule for}
+\begin{verbatim}
+   EQ_MP : thm -> thm -> thm
+\end{verbatim}\end{boxed}
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma_1\turn t_1=t_2\qquad\qquad\qquad \Gamma_2\turn t_1\over
+\Gamma_1\cup\Gamma_2\turn t_2$$
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\Gamma_1\turn t_1=t_2$ \hfill [Hypothesis]
+\item $\Gamma_2\turn t_1$ \hfill [Hypothesis]
+\item $\Gamma_1\cup\Gamma_2\turn t_2$ \hfill [\rul{SUBST} 1,2]
+\end{proof}
+
+
+
+
+\subsection{Implication from equality}
+\index{equality, in HOL logic@equality, in \HOL\ logic!other rules for|(}
+\index{implication, in HOL logic@implication, in \HOL\ logic!inference rules for}
+\begin{boxed}
+\index{EQ_IMP_RULE@\ml{EQ\_IMP\_RULE}|pin}
+\begin{verbatim}
+   EQ_IMP_RULE : thm -> (thm # thm)
+\end{verbatim}\end{boxed}
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma\turn t_1=t_2\over
+\Gamma\turn t_1\imp t_2 \qquad\qquad\qquad \Gamma\turn t_2\imp t_1$$
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\Gamma\turn t_1=t_2$ \hfill [Hypothesis]
+\item $t_1\turn t_1$ \hfill [\rul{ASSUME}]
+\item $\Gamma,\ t_1\turn t_2$ \hfill [\rul{EQ\_MP} 1,2]
+\item $\Gamma\turn t_1\imp t_2$ \hfill [\rul{DISCH} 3]
+\item $\Gamma\turn t_2=t_1$ \hfill [\rul{SYM} 1]
+\item $t_2\turn t_2$ \hfill [\rul{ASSUME}]
+\item $\Gamma,\ t_2\turn t_1$ \hfill [\rul{EQ\_MP} 5,6]
+\item $\Gamma\turn t_2\imp t_1$ \hfill [\rul{DISCH} 7]
+\item $\Gamma\turn t_1\imp t_2$ and $\Gamma\turn t_2\imp t_1$\hfill [4,8]
+\end{proof}
+
+
+
+\subsection{\T-Introduction}
+\label{avra_T}
+
+\index{T@\ml{T}!rules of inference for|(}
+\begin{hol}\begin{verbatim}
+   TRUTH
+\end{verbatim}\end{hol}
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\turn\T$$
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\turn \T = ((\lquant{x}x)=(\lquant{x}x))$\hfill [Definition of \T]
+\item $\turn ((\lquant{x}x)=(\lquant{x}x)) = \T$\hfill [\rul{SYM} 1]
+\item $\turn (\lquant{x}x)=(\lquant{x}x)$\hfill [\rul{REFL}]
+\item $\turn\T$ \hfill [\rul{EQ\_MP} 2,3]
+\end{proof}
+
+
+
+
+\subsection{Equality-with-\T\ elimination}
+
+\begin{boxed}
+\index{EQT_ELIM@\ml{EQT\_ELIM}|pin}
+\begin{verbatim}
+   EQT_ELIM : thm -> thm
+\end{verbatim}\end{boxed}
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma\turn t = \T\over \Gamma\turn t$$
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\Gamma\turn t = \T$\hfill [Hypothesis]
+\item $\Gamma\turn \T = t$\hfill [\rul{SYM} 1]
+\item $\turn \T$\hfill [\rul{TRUTH}]
+\item $\Gamma\turn t$\hfill [\rul{EQ\_MP} 2,3]
+\end{proof}
+
+
+\subsection{Specialization ($\forall$-elimination)}
+
+\begin{boxed}
+\index{SPEC@\ml{SPEC}|pin}
+\index{specialization rule, in HOL logic@specialization rule, in \HOL\ logic}
+\begin{verbatim}
+   SPEC : term -> thm -> thm
+\end{verbatim}\end{boxed}
+
+\label{avra_spec}
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma\turn \uquant{x}t\over \Gamma\turn t[t'/x]$$
+\begin{itemize}
+\item $t[t'/x]$ denotes the result of substituting $t'$ for free\index{free variables, in HOL logic@free variables, in \HOL\ logic}
+occurrences of $x$ in $t$, with the restriction that no free variables in $t'$
+become bound after substitution.
+\end{itemize}
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\turn \forall = (\lquant{P}P = (\lquant{x}\T))$ \hfill
+[\rul{INST\_TYPE} applied to the definition of $\forall$]
+\item $\Gamma\turn \forall(\lquant{x}t)$\hfill [Hypothesis]
+\item $\Gamma\turn (\lquant{P}P=(\lquant{x}\T))(\lquant{x}t)$\hfill
+[\rul{SUBST} 1,2]
+\item $\turn  (\lquant{P}P=(\lquant{x}\T))(\lquant{x}t) =
+((\lquant{x}t)=(\lquant{x}\T))$\hfill [\rul{BETA\_CONV}]
+\item $\Gamma\turn (\lquant{x}t)=(\lquant{x}\T)$\hfill [\rul{EQ\_MP} 4,3]
+\item $\Gamma\turn (\lquant{x}t)\ t' = (\lquant{x}\T)\ t'$ \hfill
+[\rul{AP\_THM} 5]
+\item $\turn (\lquant{x}t)\ t' = t[t'/x]$ \hfill [\rul{BETA\_CONV}]
+\item $\Gamma\turn t[t'/x] = (\lquant{x}t)\ t'$ \hfill [\rul{SYM} 7]
+\item $\Gamma\turn t[t'/x] = (\lquant{x}\T)\ t'$ \hfill [\rul{TRANS} 8,6]
+\item $\turn (\lquant{x}\T)\ t' = \T$ \hfill [\rul{BETA\_CONV}]
+\item $\Gamma\turn t[t'/x] = \T$ \hfill [\rul{TRANS} 9,10]
+\item $\Gamma\turn t[t'/x]$ \hfill [\rul{EQT\_ELIM} 11]
+\end{proof}
+
+
+
+
+\subsection{Equality-with-\T\ introduction}
+
+\begin{boxed}
+\index{EQT_INTRO@\ml{EQT\_INTRO}|pin}
+\begin{verbatim}
+   EQT_INTRO : thm -> thm
+\end{verbatim}\end{boxed}
+
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma\turn t\over\Gamma\turn t=\T$$
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\turn\uquant{b_1\ b_2}(b_1\imp b_2)\imp(b_2\imp b_1)\imp(b_1=b_2)$
+\hfill [Axiom]
+\item $\turn\uquant{b_2}(t\imp b_2)\imp(b_2\imp t)\imp(t=b_2)$
+\hfill [\rul{SPEC} 1]
+\item $\turn(t\imp\T)\imp(\T\imp t)\imp(t=\T)$\hfill [\rul{SPEC} 2]
+\item $\turn\T$\hfill [\rul{TRUTH}]
+\item $\turn t\imp\T$\hfill [\rul{DISCH} 4]
+\item $\turn(\T\imp t)\imp(t=\T)$\hfill [\rul{MP} 3,5]
+\item $\Gamma \turn t$\hfill [Hypothesis]
+\item $\Gamma\turn\T\imp t$\hfill [\rul{DISCH} 7]
+\item $\Gamma\turn t=\T$\hfill [\rul{MP} 6,8]
+\end{proof}
+\index{equality, in HOL logic@equality, in \HOL\ logic!other rules for|)}
+\index{T@\ml{T}!rules of inference for|)}
+
+
+\subsection{Generalization ($\forall$-introduction)}\index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic!inference rules for}
+
+
+\begin{boxed}
+\index{GEN@\ml{GEN}|pin}
+\index{generalization rule, in HOL logic@generalization rule, in \HOL\ logic}
+\begin{verbatim}
+   GEN : term -> thm -> thm
+\end{verbatim}\end{boxed}
+
+\label{avra_gen}
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma\turn t\over\Gamma\turn\uquant{x} t$$
+\begin{itemize}
+\item Where $x$ is not free in $\Gamma$.
+\end{itemize}
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\Gamma\turn t$\hfill [Hypothesis]
+\item $\Gamma\turn t = \T$\hfill [\rul{EQT\_INTRO} 1]
+\item $\Gamma\turn(\lquant{x}t)=(\lquant{x}\T)$\hfill [\rul{ABS} 2]
+\item $\turn \forall(\lquant{x}t) = \forall(\lquant{x}t)$\hfill [\rul{REFL}]
+\item $\turn \forall = (\lquant{P} P =(\lquant{x}\T))$\hfill
+[\rul{INST\_TYPE} applied to the definition of $\forall$]
+\item $\turn\forall(\lquant{x}t)=(\lquant{P} P=(\lquant{x}\T))(\lquant{x}t)$
+\hfill [\rul{SUBST} 5,4]
+\item $\turn(\lquant{P} P=(\lquant{x}\T))(\lquant{x}t)=((\lquant{x}t)
+=(\lquant{x}\T))$\hfill [\rul{BETA\_CONV}]
+\item $\turn\forall(\lquant{x}t) = ((\lquant{x}t)=(\lquant{x}\T))$
+\hfill [\rul{TRANS} 6,7]
+\item $\turn((\lquant{x}t)=(\lquant{x}\T)) = \forall(\lquant{x}\T)$
+\hfill [\rul{SYM} 8]
+\item $\Gamma\turn\forall(\lquant{x}t)$\hfill [\rul{EQ\_MP} 9,3]
+\end{proof}
+
+
+
+\subsection{Simple $\alpha$-conversion}
+
+\begin{boxed}\begin{verbatim}
+   SIMPLE_ALPHA
+\end{verbatim}\end{boxed}
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\turn(\lquant{x_1}t\ x_1) = (\lquant{x_2}t\ x_2)$$
+\begin{itemize}
+\item Where neither $x_1$ nor $x_2$ occurs free in $t$.\footnote{\ml{SIMPLE\_ALPHA} is
+included here because it is
+used in a subsequent derivation, but it is not actually in the
+\HOL\ system, as it is subsumed by other functions.}
+\end{itemize}
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item$\turn(\lquant{x_1}t\ x_1)\ x = t\ x$\hfill [\rul{BETA\_CONV}]
+\item$\turn(\lquant{x_2}t\ x_2)\ x = t\ x$\hfill [\rul{BETA\_CONV}]
+\item $\turn t\ x = (\lquant{x_2}t\ x_2)\ x$\hfill [\rul{SYM} 2]
+\item $\turn (\lquant{x_1}t\ x_1)\ x = (\lquant{x_2}t\ x_2)\ x$
+\hfill [\rul{TRANS} 1,3]
+\item $\turn(\lquant{x}(\lquant{x_1}t\ x_1)\ x) =
+(\lquant{x}(\lquant{x_2}t\ x_2)\ x)$\hfill [\rul{ABS} 4]
+\item $\turn\uquant{f}(\lquant{x}f\ x) = f$\hfill
+[Appropriately type-instantiated axiom]
+\item $\turn(\lquant{x}(\lquant{x_1}t\ x_1)x) = \lquant{x_1}t\ x_1$
+\hfill [\rul{SPEC} 6]
+\item $\turn(\lquant{x}(\lquant{x_2}t\ x_2)x) = \lquant{x_2}t\ x_2$
+\hfill [\rul{SPEC} 6]
+\item $\turn (\lquant{x_1}t\ x_1) = (\lquant{x}(\lquant{x_1}t\ x_1)x)$
+\hfill [\rul{SYM} 7]
+\item $\turn (\lquant{x_1}t\ x_1) = (\lquant{x}(\lquant{x_2}t\ x_2)x)$
+\hfill [\rul{TRANS} 9,5]
+\item $\turn(\lquant{x_1}t\ x_1)=(\lquant{x_2}t\ x_2)$\hfill
+[\rul{TRANS} 10,8]
+\end{proof}
+
+
+
+
+\subsection{$\eta$-conversion}
+
+\begin{boxed}
+\index{ETA_CONV@\ml{ETA\_CONV}|pin}
+\begin{verbatim}
+   ETA_CONV : conv
+\end{verbatim}\end{boxed}
+\vspace{12pt plus2pt minus1pt}
+
+$$\turn(\lquant{x'}t\ x') = t$$
+\begin{itemize}
+\item Where $x'$ does not occur free\index{free variables, in HOL logic@free variables, in \HOL\ logic} in $t$ (we use $x'$ rather than just $x$
+to motivate the use of \rul{SIMPLE\_ALPHA} in the derivation below).
+\end{itemize}
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\turn\uquant{f}(\lquant{x}f\ x) = f$\hfill
+[Appropriately type-instantiated axiom]
+\item  $\turn(\lquant{x}t\ x) = t$\hfill [\rul{SPEC} 1]
+\item $\turn(\lquant{x'}t\ x')=(\lquant{x}t\ x)$\hfill [\rul{SIMPLE\_ALPHA}]
+\item $\turn(\lquant{x'}t\ x')=t$\hfill [\rul{TRANS} 3,2]
+\end{proof}
+
+
+
+\subsection{Extensionality}
+\index{universal quantifier, in HOL logic@universal quantifier, in \HOL\ logic!inference rules for}
+
+\begin{boxed}
+\index{EXT@\ml{EXT}|pin}
+\index{extensionality rule, in HOL logic@extensionality rule, in \HOL\ logic}
+\begin{verbatim}
+   EXT : thm -> thm
+\end{verbatim}\end{boxed}
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma\turn\uquant{x} t_1\ x = t_2\ x\over\Gamma\turn t_1=t_2$$
+\begin{itemize}
+\item Where $x$ is not free\index{free variables, in HOL logic@free variables, in \HOL\ logic} in $t_1$ or $t_2$.
+\end{itemize}
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\Gamma\turn\uquant{x}t_1\ x=t_2\ x$\hfill [Hypothesis]
+\item $\Gamma\turn t_1\ x'=t_2\ x'$\hfill [\rul{SPEC} 1 ($x'$ is a fresh)]
+\item $\Gamma\turn(\lquant{x'}t_1\ x') = (\lquant{x'}t_2\ x')$\hfill
+        [\rul{ABS} 2]
+\item $\turn(\lquant{x'}t_1\ x') = t_1$\hfill [\rul{ETA\_CONV}]
+\item $\turn t_1 = (\lquant{x'}t_1\ x')$\hfill [\rul{SYM} 4]
+\item $\Gamma\turn t_1 = (\lquant{x'}t_2\ x')$\hfill [\rul{TRANS} 5,3]
+\item $\turn(\lquant{x'}t_2\ x') = t_2$\hfill [\rul{ETA\_CONV}]
+\item $\Gamma\turn t_1=t_2$\hfill [\rul{TRANS} 6,7]
+\end{proof}
+
+
+
+
+\subsection{$\hilbert$-introduction}
+
+\begin{boxed}
+\index{choice operator, in HOL logic@choice operator, in \HOL\ logic!inference rules for}
+\index{SELECT_INTRO@\ml{SELECT\_INTRO}|pin}
+\begin{verbatim}
+   SELECT_INTRO : thm -> thm
+\end{verbatim}\end{boxed}
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma\turn t_1\ t_2\over\Gamma\turn t_1(\hilbert\ t_1)$$
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\turn\uquant{P\ x}P\ x\imp P(\hilbert\ P)$\hfill [Suitably
+type-instantiated axiom]
+\item $\turn t_1\ t_2 \imp t_1(\hilbert\ t_1)$\hfill [\rul{SPEC} 1 (twice)]
+\item $\Gamma\turn t_1\ t_2$\hfill [Hypothesis]
+\item $\Gamma\turn t_1(\hilbert\ t_1)$\hfill [\rul{MP} 2,3]
+\end{proof}
+
+
+
+
+\subsection{$\hilbert$-elimination}
+
+\begin{boxed}
+\index{choice operator, in HOL logic@choice operator, in \HOL\ logic!inference rules for}
+\index{SELECT_ELIM@\ml{SELECT\_ELIM}|pin}
+\begin{verbatim}
+   SELECT_ELIM : thm -> (term # thm) -> thm
+\end{verbatim}\end{boxed}
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma_1\turn t_1(\hilbert\ t_1)\qquad\qquad\qquad\Gamma_2,\ t_1\ v\turn t
+\over \Gamma_1\cup\Gamma_2\turn t$$
+\begin{itemize}
+\item Where $v$ occurs nowhere except in the assumption $t_1\ v$ of the second
+hypothesis.
+\end{itemize}
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\Gamma_2,\ t_1\ v\turn t$ \hfill [Hypothesis]
+\item $\Gamma_2\turn t_1\ v\imp t$\hfill [\rul{DISCH} 1]
+\item $\Gamma_2\turn\uquant{v}t_1\ v\imp t$\hfill [\rul{GEN} 2]
+\item $\Gamma_2\turn t_1(\hilbert\ t_1)\imp t$\hfill [\rul{SPEC} 3]
+\item $\Gamma_1\turn t_1(\hilbert\ t_1)$\hfill [Hypothesis]
+\item $\Gamma_1\cup\Gamma_2\turn t$\hfill [\rul{MP} 4,5]
+\end{proof}
+
+
+
+
+\subsection{$\exists$-introduction}
+\index{existential quantifier, in HOL logic@existential quantifier, in \HOL\ logic!inference rules for|(}
+
+\begin{boxed}
+\index{EXISTS@\ml{EXISTS}|pin}
+\begin{verbatim}
+   EXISTS : (term # term) -> thm -> thm
+\end{verbatim}\end{boxed}
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma\turn t_1[t_2]\over \Gamma\turn \equant{x}t_1[x]$$
+\begin{itemize}
+\item Where $t_1[t_2]$ denotes a term $t_1$ with some free\index{free variables, in HOL logic@free variables, in \HOL\ logic}
+occurrences of $t_2$
+singled out, and $t_1[x]$ denotes the result of replacing these
+occurrences of $t_1$ by $x$, subject to the restriction that $x$
+doesn't become bound after substitution.
+\end{itemize}
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\turn(\lquant{x}t_1[x])t_2= t_1[t_2]$\hfill [\rul{BETA\_CONV}]
+\item $\turn t_1[t_2] = (\lquant{x}t_1[x])t_2$\hfill [\rul{SYM} 1]
+\item $\Gamma\turn t_1[t_2]$\hfill [Hypothesis]
+\item $\Gamma\turn(\lquant{x}t_1[x])t_2$\hfill [\rul{EQ\_MP} 2,3]
+\item $\Gamma\turn(\lquant{x}t_1[x])(\hilbert(\lquant{x}t_1[x]))$\hfill
+[\rul{SELECT\_INTRO} 4]
+\item $\turn \exists = \lquant{P} P(\hilbert\ P)$\hfill
+[\rul{INST\_TYPE} applied to the definition of $\exists$]
+\item $\turn\exists(\lquant{x}t_1[x]) =
+(\lquant{P}P(\hilbert\ P))(\lquant{x}t_1[x])$\hfill [\rul{AP\_THM} 6]
+\item $\turn(\lquant{P}P(\hilbert\ P))(\lquant{x}t_1[x]) =
+(\lquant{x}t_1[x])(\hilbert(\lquant{x}t_1[x]))$\hfill [\rul{BETA\_CONV}]
+\item $\turn\exists(\lquant{x}t_1[x]) =
+(\lquant{x}t_1[x])(\hilbert(\lquant{x}t_1[x]))$\hfill [\rul{TRANS} 7,8]
+\item $\turn(\lquant{x}t_1[x])(\hilbert(\lquant{x}t_1[x])) =
+\exists(\lquant{x}t_1[x])$\hfill [\rul{SYM} 9]
+\item $\Gamma\turn\exists(\lquant{x}t_1[x])$\hfill [\rul{EQ\_MP} 10,5]
+\end{proof}
+
+
+
+\subsection{$\exists$-elimination}
+
+\begin{boxed}
+\index{CHOOSE@\ml{CHOOSE}|pin}
+\begin{verbatim}
+   CHOOSE : (term # thm) -> thm -> thm
+\end{verbatim}\end{boxed}
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma_1\turn\equant{x}t[x]\qquad\qquad\qquad \Gamma_2,\ t[v]\turn t'
+\over \Gamma_1\cup\Gamma_2\turn t'$$
+\begin{itemize}
+\item Where $t[v]$ denotes a term $t$ with some free\index{free variables, in HOL logic@free variables, in \HOL\ logic}
+occurrences of the variable $v$
+singled out, and $t[x]$ denotes the result of replacing these
+occurrences of $v$ by $x$, subject to the restriction that $x$ doesn't become
+bound after substitution.
+\end{itemize}
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\turn \exists = \lquant{P} P(\hilbert\ P)$\hfill
+[\rul{INST\_TYPE} applied to the definition of $\exists$]
+\item $\turn\exists(\lquant{x}t[x]) =
+(\lquant{P}P(\hilbert\ P))(\lquant{x}t[x])$\hfill [\rul{AP\_THM} 1]
+\item $\Gamma_1\turn\exists(\lquant{x}t[x])$\hfill [Hypothesis]
+\item $\Gamma_1\turn (\lquant{P}P(\hilbert\ P))(\lquant{x}t[x])$
+\hfill [\rul{EQ\_MP} 2,3]
+\item $\turn(\lquant{P}P(\hilbert\ P))(\lquant{x}t[x]) =
+(\lquant{x}t[x])(\hilbert(\lquant{x}t[x]))$\hfill [\rul{BETA\_CONV}]
+\item $\Gamma_1\turn(\lquant{x}t[x])(\hilbert(\lquant{x}t[x])$\hfill
+[\rul{EQ\_MP} 5,4]
+\item $\turn(\lquant{x}t[x])v = t[v]$\hfill [\rul{BETA\_CONV}]
+\item $\turn t[v] =(\lquant{x}t[x])v$\hfill [\rul{SYM} 7]
+\item $\Gamma_2,\ t[v]\turn t'$\hfill [Hypothesis]
+\item $\Gamma_2\turn t[v]\imp t'$\hfill [\rul{DISCH} 9]
+\item $\Gamma_2\turn(\lquant{x}t[x])v\imp t'$\hfill [\rul{SUBST} 8,10]
+\item $\Gamma_2,\ (\lquant{x}t[x])v\turn t'$\hfill [\rul{UNDISCH} 11]
+\item $\Gamma_1\cup\Gamma_2\turn t'$\hfill [\rul{SELECT\_ELIM} 6,12]
+\end{proof}
+\index{existential quantifier, in HOL logic@existential quantifier, in \HOL\ logic!inference rules for|)}
+
+\subsection{Use of a definition}
+
+\begin{boxed}
+\index{RIGHT_BETA@\ml{RIGHT\_BETA}|pin}
+\begin{verbatim}
+   RIGHT_BETA : thm -> thm
+\end{verbatim}\end{boxed}
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma\turn t = \lquant{x}t'[x]
+\over \Gamma\turn t\ t = t'[t]$$
+\begin{itemize}
+\item Where  $t$ does not contain $x$.
+\end{itemize}
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\Gamma\turn t = \lquant{x} t'[x]$\hfill
+[Suitably type-instantiated hypothesis]
+\item $\Gamma\turn t\ t =
+(\lquant{x}t'[x])\ t$\hfill
+[\rul{AP\_THM} 1 ]
+\item $\turn(\lquant{x}t'[x])\ t =
+t'[t]$\hfill [\rul{BETA\_CONV}]
+\item $\Gamma\turn t\ t = t'[t]$\hfill
+[\rul{TRANS} 2,3]
+\end{proof}
+
+
+\subsection{Use of a definition}
+
+\begin{boxed}
+\index{RIGHT_LIST_BETA@\ml{RIGHT\_LIST\_BETA}|pin}
+\begin{verbatim}
+   RIGHT_LIST_BETA : thm -> thm
+\end{verbatim}\end{boxed}
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma\turn t = \lquant{x_1\cdots x_n}t'[x_1,\ldots,x_n]
+\over \Gamma\turn t\ t_1\cdots t_n = t'[t_1,\ldots,t_n]$$
+\begin{itemize}
+\item Where none of the $t_i$ contain any of the $x_i$.
+\end{itemize}
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\Gamma\turn t = \lquant{x_1\cdots x_n} t'[x_1,\ldots,x_n]$\hfill
+[Suitably type-instantiated hypothesis]
+\item $\Gamma\turn t\ t_1\cdots t_n =
+(\lquant{x_1\cdots x_n}t'[x_1,\ldots,x_n])\ t_1\cdots t_n$\hfill
+[\rul{AP\_THM} 1 (n times)]
+\item $\turn(\lquant{x_1\cdots x_n}t'[x_1,\ldots,x_n])\ t_1\cdots t_n =
+t'[t_1,\ldots,t_n]$\hfill [\rul{BETA\_CONV} (n times)]
+\item $\Gamma\turn t\ t_1\cdots t_n = t'[t_1,\ldots,t_n]$\hfill
+[\rul{TRANS} 2,3]
+\end{proof}
+
+
+
+
+
+\subsection{$\wedge$-introduction}
+\label{avra_conj}
+
+
+\begin{boxed}
+\index{CONJ@\ml{CONJ}|pin}
+\index{conjunction, in HOL logic@conjunction, in \HOL\ logic!inference rule for}
+\begin{verbatim}
+   CONJ : thm -> thm -> thm
+\end{verbatim}\end{boxed}
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma_1\turn t_1\qquad\qquad\qquad\Gamma_2\turn t_2\over
+\Gamma_1\cup\Gamma_2 \turn t_1\conj t_2$$
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\turn \conj = \lquant{b_1\ b_2}\uquant{b}(b_1\imp(b_2\imp b))\imp b$
+\hfill [Definition of $\conj$]
+\item $\turn t_1\conj t_2 = \uquant{b}(t_1\imp(t_2\imp b))\imp b$\hfill
+[\rul{RIGHT\_LIST\_BETA} 1]
+\item $t_1\imp(t_2\imp b)\turn t_1\imp(t_2\imp b)$\hfill [\rul{ASSUME}]
+\item $\Gamma_1\turn t_1$\hfill [Hypothesis]
+\item $\Gamma_1,\ t_1\imp(t_2\imp b)\turn t_2\imp b$\hfill [\rul{MP} 3,4]
+\item $\Gamma_2\turn t_2$\hfill [Hypothesis]
+\item $\Gamma_1\cup\Gamma_2,\ t_1\imp(t_2\imp b)\turn b$\hfill [\rul{MP} 5,6]
+\item $\Gamma_1\cup \Gamma_2\turn(t_1\imp(t_2\imp b))\imp b$\hfill
+[\rul{DISCH} 7]
+\item $\Gamma_1\cup \Gamma_2\turn \uquant{b}(t_1\imp(t_2\imp b))\imp b$\hfill
+[\rul{GEN} 8]
+\item $\Gamma_1\cup \Gamma_2\turn t_1\conj t_2$\hfill
+[\rul{EQ\_MP} (\rul{SYM} 2),9]
+\end{proof}
+
+
+
+
+\subsection{$\wedge$-elimination}
+
+
+\begin{boxed}
+\index{CONJUNCT1@\ml{CONJUNCT1}|pin}
+\index{CONJUNCT2@\ml{CONJUNCT2}|pin}
+\begin{verbatim}
+   CONJUNCT1 : thm -> thm, CONJUNCT2 : thm -> thm
+\end{verbatim}\end{boxed}
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma\turn t_1\conj t_2\over
+\Gamma\turn t_1\qquad\qquad\qquad \Gamma\turn t_2$$
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\turn \conj = \lquant{b_1\ b_2}\uquant{b}(b_1\imp(b_2\imp b))\imp b$
+\hfill [Definition of $\conj$]
+\item $\turn t_1\conj t_2 = \uquant{b}(t_1\imp(t_2\imp b))\imp b$\hfill
+[\rul{RIGHT\_LIST\_BETA} 1]
+\item $\Gamma\turn t_1\conj t_2$\hfill [Hypothesis]
+\item $\Gamma\turn \uquant{b}(t_1\imp(t_2\imp b))\imp b$\hfill
+[\rul{EQ\_MP} 2,3]
+\item $\Gamma\turn (t_1\imp(t_2\imp t_1))\imp t_1$\hfill [\rul{SPEC} 4]
+\item $t_1\turn t_1$\hfill [\rul{ASSUME}]
+\item $t_1 \turn t_2\imp t_1$\hfill [\rul{DISCH} 6]
+\item $\turn t_1\imp(t_2\imp t_1)$\hfill [\rul{DISCH} 7]
+\item $\Gamma\turn t_1$\hfill [\rul{MP} 5,8]
+\item $\Gamma\turn (t_1\imp(t_2\imp t_2))\imp t_2$\hfill [\rul{SPEC} 4]
+\item $t_2\turn t_2$\hfill [\rul{ASSUME}]
+\item $\turn t_2\imp t_2$\hfill [\rul{DISCH} 11]
+\item $\turn t_1\imp(t_2\imp t_2)$\hfill [\rul{DISCH} 12]
+\item $\Gamma\turn t_2$\hfill [\rul{MP} 10,13]
+\item $\Gamma\turn t_1$ and $\Gamma\turn t_2$\hfill [9,14]
+\end{proof}
+
+
+
+
+\subsection{Right $\vee$-introduction}\index{disjunction, in HOL logic@disjunction, in \HOL\ logic!inference rule for|(}
+
+\begin{boxed}
+\index{DISJ1@\ml{DISJ1}|pin}
+\begin{verbatim}
+   DISJ1 : thm -> conv
+\end{verbatim}\end{boxed}
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma\turn t_1\over \Gamma\turn t_1\disj t_2$$
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\turn \disj =
+\lquant{b_1\ b_2}\uquant{b}(b_1\imp b)\imp(b_2\imp b)\imp b$
+\hfill [Definition of $\disj$]
+\item $\turn t_1\disj t_2 = \uquant{b}(t_1\imp b)\imp(t_2\imp b)\imp b$
+\hfill [\rul{RIGHT\_LIST\_BETA} 1]
+\item $\Gamma\turn t_1$\hfill [Hypothesis]
+\item $t_1\imp b\turn t_1\imp b$\hfill [\rul{ASSUME}]
+\item $\Gamma,\ t_1\imp b\turn b$\hfill [\rul{MP} 4,3]
+\item $\Gamma,\ t_1\imp b\turn(t_2\imp b)\imp b$\hfill [\rul{DISCH} 5]
+\item $\Gamma\turn (t_1\imp b)\imp(t_2\imp b)\imp b$\hfill [\rul{DISCH} 6]
+\item $\Gamma\turn \uquant{b}(t_1\imp b)
+\imp(t_2\imp b)\imp b$\hfill [\rul{GEN} 7]
+\item $\Gamma\turn t_1\disj t_2$\hfill [\rul{EQ\_MP} (\rul{SYM} 2),8]
+\end{proof}
+
+
+
+
+\subsection{Left $\vee$-introduction}
+
+
+\begin{boxed}
+\index{DISJ2@\ml{DISJ2}|pin}
+\begin{verbatim}
+   DISJ2 : term -> thm -> thm
+\end{verbatim}\end{boxed}
+
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma\turn t_2\over \Gamma\turn t_1\disj t_2$$
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\turn \disj =
+\lquant{b_1\ b_2}\uquant{b}(b_1\imp b)\imp(b_2\imp b)\imp b$
+\hfill [Definition of $\disj$]
+\item $\turn t_1\disj t_2 = \uquant{b}(t_1\imp b)\imp(t_2\imp b)\imp b$
+\hfill [\rul{RIGHT\_LIST\_BETA} 1]
+\item $\Gamma\turn t_2$\hfill [Hypothesis]
+\item $t_2\imp b\turn t_2\imp b$\hfill [\rul{ASSUME}]
+\item $\Gamma,\ t_2\imp b\turn b$\hfill [\rul{MP} 4,3]
+\item $\Gamma\turn(t_2\imp b)\imp b$\hfill [\rul{DISCH} 5]
+\item $\Gamma\turn (t_1\imp b)\imp(t_2\imp b)\imp b$\hfill [\rul{DISCH} 6]
+\item $\Gamma\turn \uquant{b}(t_1\imp b)
+\imp(t_2\imp b)\imp b$\hfill [\rul{GEN} 7]
+\item $\Gamma\turn t_1\disj t_2$\hfill [\rul{EQ\_MP} (\rul{SYM} 2),8]
+\end{proof}
+
+
+\subsection{$\vee$-elimination}
+
+\begin{boxed}
+\index{DISJ_CASES@\ml{DISJ\_CASES}|pin}
+\begin{verbatim}
+   DISJ_CASES : thm -> thm -> thm -> thm
+\end{verbatim}\end{boxed}
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma\turn t_1\disj t_2\qquad\qquad\qquad\Gamma_1,\ t_1\turn t
+\qquad\qquad\qquad \Gamma_2,\ t_2\turn t\over
+\Gamma\cup\Gamma_1\cup\Gamma_2\turn t$$
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\turn \disj =
+\lquant{b_1\ b_2}\uquant{b}(b_1\imp b)\imp(b_2\imp b)\imp b$
+\hfill [Definition of $\disj$]
+\item $\turn t_1\disj t_2 = \uquant{b}(t_1\imp b)\imp(t_2\imp b)\imp b$
+\hfill [\rul{RIGHT\_LIST\_BETA} 1]
+\item $\Gamma\turn t_1\disj t_2$\hfill [Hypothesis]
+\item $\Gamma\turn\uquant{b}(t_1\imp b)\imp(t_2\imp b)\imp b$\hfill
+[\rul{EQ\_MP} 2,3]
+\item $\Gamma\turn(t_1\imp t)\imp(t_2\imp t)\imp t$\hfill [\rul{SPEC} 4]
+\item $\Gamma_1,\ t_1\turn t$\hfill [Hypothesis]
+\item $\Gamma_1\turn t_1\imp t$\hfill [\rul{DISCH} 6]
+\item $\Gamma\cup \Gamma_1\turn (t_2\imp t)\imp t$\hfill [\rul{MP} 5,7]
+\item $\Gamma_2,\ t_2\turn t$\hfill [Hypothesis]
+\item $\Gamma_2\turn t_2\imp t$\hfill [\rul{DISCH} 9]
+\item $\Gamma\cup \Gamma_1\cup \Gamma_2\turn t$\hfill [\rul{MP} 8,10]
+\end{proof}
+\index{disjunction, in HOL logic@disjunction, in \HOL\ logic!inference rule for|)}
+
+
+
+
+\subsection{Classical contradiction rule}
+\index{F@\ml{F}!rules of inference for}
+
+\begin{boxed}
+\index{CCONTR@\ml{CCONTR}|pin}
+\index{contradiction rule, in HOL logic@contradiction rule, in \HOL\ logic}
+\begin{verbatim}
+   CCONTR : term -> thm -> thm
+\end{verbatim}\end{boxed}
+
+\vspace{12pt plus2pt minus1pt}
+
+$$\Gamma,\ \neg t\turn \F\over \Gamma\turn t$$
+
+\vspace{12pt plus2pt minus1pt}
+
+\begin{proof}
+\item $\turn \neg = \lquant{b}b\imp\F$\hfill [Definition of $\neg$]
+\item $\turn \neg t = t\imp\F$\hfill [\rul{RIGHT\_LIST\_BETA} 1]
+\item $\Gamma,\ \neg t\turn\F$\hfill [Hypothesis]
+\item $\Gamma\turn \neg t\imp\F$\hfill  [\rul{DISCH} 3]
+\item $\Gamma\turn (t\imp\F)\imp\F$\hfill [\rul{SUBST} 2,4]
+\item $t = \F\turn t = \F$\hfill [\rul{ASSUME}]
+\item $\Gamma,\ t=\F\turn (\F\imp\F)\imp\F$\hfill [\rul{SUBST} 6,5]
+\item $\F\turn\F$\hfill [\rul{ASSUME}]
+\item $\turn \F\imp\F$\hfill [\rul{DISCH} 8]
+\item $\Gamma,\ t=\F\turn\F$\hfill [\rul{MP} 7,9]
+\item $\turn \F = \uquant{b}b$\hfill [Definition of $\F$]
+\item $\Gamma,\ t=\F\turn \uquant{b}b$\hfill [\rul{SUBST} 11,10]
+\item $\Gamma,\ t=\F\turn t$\hfill [\rul{SPEC} 12]
+\item $\turn \uquant{b} (b = \T)\disj(b = \F)$\hfill [Axiom]
+\item $\turn (t = \T)\disj(t = \F)$\hfill [\rul{SPEC} 14]
+\item $t=\T\turn t=\T$\hfill [\rul{ASSUME}]
+\item $t=\T\turn t$\hfill [\rul{EQT\_ELIM} 16]
+\item $\Gamma\turn t$\hfill [\rul{DISJ\_CASES} 15,17,13]
+\end{proof}
+\index{derived rules, in HOL logic@derived rules, in \HOL\ logic!list and derivations of some|)}
+\index{inference rules, of HOL logic@inference rules, of \HOL\ logic!derived|)}
+
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:
